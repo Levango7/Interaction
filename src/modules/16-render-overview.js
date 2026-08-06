@@ -145,7 +145,27 @@ function renderPieChart(dist){
   return `<div class="stats-pie-wrap"><div class="stats-pie-chart">${svg}</div><div class="stats-pie-legend">${legend}</div></div>`;
 }
 /**
- * 渲染统计视图（关键指标卡片 + 趋势图 + 饼图 + 习惯链成功率）
+ * 渲染完成时段分布网格（7 行周几 × 3 列时段，色块用 var(--heat-0..4)）
+ * @param {Array<Array<{dow:number,period:number,count:number}>>} grid - calcHourDist 返回值
+ * @returns {string} HTML 字符串
+ */
+function renderHourDistGrid(grid){
+  const max = Math.max(1, ...grid.flat().map(c => c.count));
+  const lvl = c => c === 0 ? 0 : c / max <= 0.25 ? 1 : c / max <= 0.5 ? 2 : c / max <= 0.75 ? 3 : 4;
+  const dows = ["一","二","三","四","五","六","日"];
+  const periods = ["早（5-12）","午（12-18）","晚（18-5）"];
+  let html = `<div class="hourdist"><div class="hourdist-head"></div>` +
+    periods.map(p => `<div class="hourdist-head">${p}</div>`).join("");
+  grid.forEach((row, dow) => {
+    html += `<div class="hourdist-dow">周${dows[dow]}</div>`;
+    row.forEach(cell => {
+      html += `<div class="hourdist-cell hd-l${lvl(cell.count)}" title="周${dows[dow]} · ${periods[cell.period]}：${cell.count} 个完成"></div>`;
+    });
+  });
+  return html + `</div>`;
+}
+/**
+ * 渲染统计视图（关键指标卡片 + 趋势图 + 饼图 + 时段分布 + 习惯链成功率）
  * @returns {void}
  */
 function renderStats(){
@@ -156,24 +176,30 @@ function renderStats(){
       `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`;
     return;
   }
-  // 关键指标卡片
+  // 关键指标卡片（P3：新增平均周期；本周完成带周环比角标）
+  const avg = calcAvgCycle();
+  const wow = calcWeekOverWeek();
+  const wowBadge = wow.delta === null ? `<span class="stats-wow muted">环比 -</span>`
+    : `<span class="stats-wow ${wow.delta >= 0 ? "up" : "down"}">${wow.delta >= 0 ? "↑" : "↓"} ${Math.abs(wow.delta)}%</span>`;
   const cards = [
     { label: "总任务数", value: stats.total },
     { label: "已完成", value: stats.done },
     { label: "完成率", value: stats.rate + "%" },
+    { label: "平均周期", value: avg.days === null ? "-" : avg.days + " 天" },
     { label: "最长 streak", value: stats.bestStreak + " 天" },
-    { label: "本周完成", value: stats.weekDone }
+    { label: "本周完成", value: stats.weekDone, badge: wowBadge }
   ];
   const cardsHtml = `<div class="stats-cards">` + cards.map(c =>
-    `<div class="stats-card"><div class="stats-card-val">${c.value}</div><div class="stats-card-lbl">${c.label}</div></div>`
+    `<div class="stats-card"><div class="stats-card-val">${c.value}${c.badge || ""}</div><div class="stats-card-lbl">${c.label}</div></div>`
   ).join("") + `</div>`;
-  // 趋势图（周/月切换）
+  // 趋势图（周/双周/月切换）
   const trendData = calcTrend(_statsTrendDays);
   const trendChart = renderTrendChart(trendData, "var(--accent)");
   const trendHtml = `<div class="card"><h2>${UI_ICONS.stats} 任务完成趋势</h2>` +
     `<p class="sub">最近 ${_statsTrendDays} 天每天完成任务数</p>` +
     `<div class="stats-trend-tabs">` +
       `<button type="button" class="stats-tab${_statsTrendDays === 7 ? " active" : ""}" data-trend-days="7">周（7 天）</button>` +
+      `<button type="button" class="stats-tab${_statsTrendDays === 14 ? " active" : ""}" data-trend-days="14">双周（14 天）</button>` +
       `<button type="button" class="stats-tab${_statsTrendDays === 30 ? " active" : ""}" data-trend-days="30">月（30 天）</button>` +
     `</div>` +
     `<div class="stats-trend-chart">${trendChart}</div></div>`;
@@ -181,6 +207,9 @@ function renderStats(){
   const dist = calcSceneDist();
   const pieHtml = `<div class="card"><h2>${UI_ICONS.stats} 场景分布</h2>` +
     `<p class="sub">各场景任务总数占比</p>${renderPieChart(dist)}</div>`;
+  // 完成时段分布（最近 30 天）
+  const hourHtml = `<div class="card"><h2>${UI_ICONS.stats} 完成时段分布</h2>` +
+    `<p class="sub">最近 30 天：周几 × 时段完成任务数（颜色越深越多）</p>${renderHourDistGrid(calcHourDist(30))}</div>`;
   // 习惯链成功率
   const chains = calcChainSuccess();
   const chainsHtml = chains.length ? chains.map(c => {
@@ -203,13 +232,13 @@ function renderStats(){
   const chainCard = `<div class="card"><h2>${UI_ICONS.stats} 习惯链成功率</h2>` +
     `<p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>${chainsHtml}</div>`;
 
-  $("#main").innerHTML = cardsHtml + trendHtml + pieHtml + chainCard +
+  $("#main").innerHTML = cardsHtml + trendHtml + pieHtml + hourHtml + chainCard +
     `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`;
 
-  // 绑定周/月切换
+  // 绑定周/双周/月切换
   $$(".stats-tab").forEach(b => b.onclick = () => {
     const d = parseInt(b.dataset.trendDays, 10);
-    if(d === 7 || d === 30){ _statsTrendDays = d; renderStats(); }
+    if(d === 7 || d === 14 || d === 30){ _statsTrendDays = d; renderStats(); }
   });
 }
 function renderGlob(q){

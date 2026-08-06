@@ -40,6 +40,81 @@ function renderLinksBox(){
   if(selSrc && !selSrc.options.length) selSrc.innerHTML = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
   if(selDst && !selDst.options.length) selDst.innerHTML = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
 }
+/* P1：场景变更后强制刷新习惯链表单的场景下拉（含自定义场景） */
+function refreshChainScSelects(){
+  const opts = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
+  const selSrc = $("#chainAddSrc"), selDst = $("#chainAddDst");
+  if(selSrc) selSrc.innerHTML = opts;
+  if(selDst) selDst.innerHTML = opts;
+}
+/* ---------- P1：场景管理面板（设置抽屉） ---------- */
+const ICON_LABELS = { overview:"总览", plus:"加号", check:"对勾", chat:"对话", download:"下载", upload:"上传", gear:"齿轮", theme:"月亮", stats:"柱状图", copy:"复制", trash:"垃圾桶" };
+function renderScBox(){
+  const box=$("#scBox"); if(!box) return;
+  const ov = loadScOverrides();
+  const builtinRows = BUILTIN_SC_KEYS.map(k=>{
+    const s = SCENARIOS[k], o = ov[k]||{};
+    const overridden = o.name || o.color;
+    return `<div class="chain-row" data-sc="${esc(k)}">
+      <span class="chain-ic" style="color:${s.color}">${s.icon||""}</span>
+      <input class="sc-edit-name" value="${esc(s.name)}" maxlength="12" aria-label="场景名称" style="max-width:90px">
+      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label="场景颜色" style="width:40px;padding:2px">
+      <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label="保存改名换色">✓</button>
+      ${overridden?`<button type="button" class="chain-cancel sc-reset" data-screset="${esc(k)}" aria-label="恢复默认">恢复</button>`:""}
+    </div>`;
+  }).join("");
+  const customRows = loadCustomScenarios().map(cs=>{
+    const s = SCENARIOS[cs.key]||{};
+    return `<div class="chain-row" data-sc="${esc(cs.key)}">
+      <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
+      <input class="sc-edit-name" value="${esc(cs.name)}" maxlength="12" aria-label="场景名称" style="max-width:90px">
+      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="场景颜色" style="width:40px;padding:2px">
+      <span class="chain-arr" style="font-size:11px;color:var(--muted)">自定义</span>
+      <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="保存">✓</button>
+      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="删除场景">×</button>
+    </div>`;
+  }).join("");
+  box.innerHTML = builtinRows + customRows;
+  // 图标下拉填充（仅首次）
+  const iconSel = $("#scAddIcon");
+  if(iconSel && !iconSel.options.length) iconSel.innerHTML = CUSTOM_ICON_KEYS.map(k=>`<option value="${k}">${esc(ICON_LABELS[k]||k)}</option>`).join("");
+  // 颜色选择器默认值从令牌填充（仅首次）
+  const addColor = $("#scAddColor");
+  if(addColor && !addColor.value) addColor.value = scenarioDefaultColor();
+  // 事件绑定
+  box.querySelectorAll(".sc-save").forEach(b=> b.onclick=()=>{
+    const row = b.closest(".chain-row"), key = row.getAttribute("data-sc");
+    const name = row.querySelector(".sc-edit-name").value;
+    const color = row.querySelector(".sc-edit-color").value;
+    const r = BUILTIN_SC_KEYS.includes(key)
+      ? setBuiltinOverride(key, {name, color})
+      : updateCustomScenario(key, {name, color});
+    if(!r.ok){ toast(r.err||"保存失败","warn"); return; }
+    toast("场景已更新","ok"); openDrawerRefresh();
+  });
+  box.querySelectorAll(".sc-reset").forEach(b=> b.onclick=()=>{
+    const key = b.closest(".chain-row").getAttribute("data-sc");
+    resetBuiltinOverride(key); toast("已恢复默认","ok"); openDrawerRefresh();
+  });
+  box.querySelectorAll(".sc-del").forEach(b=> b.onclick=()=>{
+    const key = b.closest(".chain-row").getAttribute("data-sc");
+    if(!confirm("确定删除该场景？（场景下有任务时不可删除）")) return;
+    const r = removeCustomScenario(key);
+    if(!r.ok){ toast(r.err||"删除失败","warn"); return; }
+    toast("场景已删除","ok"); openDrawerRefresh();
+  });
+  const addBtn=$("#scAddBtn"); if(addBtn) addBtn.onclick=()=>{
+    const name = $("#scAddName").value, color = $("#scAddColor").value, iconKey = $("#scAddIcon").value;
+    const r = addCustomScenario(name, color, iconKey);
+    if(!r.ok){ toast(r.err||"添加失败","warn"); return; }
+    $("#scAddName").value = "";
+    toast("已添加场景","ok"); openDrawerRefresh();
+  };
+}
+/* 抽屉打开中的自刷新：重填场景面板 + 链下拉，保留抽屉打开状态 */
+function openDrawerRefresh(){
+  renderScBox(); refreshChainScSelects(); render();
+}
 /* 把当前 active profile 的字段填入表单（name/base/key/model） */
 function fillProfileForm(p){
   $("#cfgName").value = (p && p.name) || "";
@@ -71,6 +146,7 @@ function openDrawer(){ const cfg=getCfg();
   const notifyCb=$("#cfgNotify"); if(notifyCb) notifyCb.checked=getNotifyEnabled();
   const thSel=$("#cfgTheme"); if(thSel) thSel.value = (cfg.theme==="light"||cfg.theme==="dark") ? cfg.theme : "system";
   const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
+  renderScBox();
   renderProfileSelect();
   fillProfileForm(getActiveProfile());
   const hint=$("#cfgKeyHint"); if(hint) hint.style.display="none";

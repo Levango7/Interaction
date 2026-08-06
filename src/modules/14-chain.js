@@ -160,6 +160,53 @@ function calcStats(){
   return { total, done, rate, bestStreak, weekDone };
 }
 
+/* ---------- P3 统计深化：平均周期 / 周环比 / 完成时段分布 ---------- */
+/**
+ * 平均周期：已完成任务从创建到完成的平均耗时（天）
+ * @returns {{days:number|null,count:number}} days 保留 1 位小数；无有效样本时为 null
+ */
+function calcAvgCycle(){
+  const tasks = getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt && t.created);
+  const valid = tasks.filter(t => t.doneAt >= t.created);
+  if(!valid.length) return { days: null, count: 0 };
+  const sum = valid.reduce((s, t) => s + (t.doneAt - t.created), 0);
+  return { days: Math.round(sum / valid.length / 86400000 * 10) / 10, count: valid.length };
+}
+/**
+ * 周环比：本周完成数 vs 上周完成数
+ * @returns {{thisWeek:number,lastWeek:number,delta:number|null}} delta 为变化百分比（整数），上周为 0 时 null
+ */
+function calcWeekOverWeek(){
+  const tasks = getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt);
+  const now = new Date(); const wd = (now.getDay() + 6) % 7;
+  const thisMon = new Date(now); thisMon.setDate(now.getDate() - wd); thisMon.setHours(0, 0, 0, 0);
+  const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
+  const thisWeek = tasks.filter(t => t.doneAt >= thisMon.getTime()).length;
+  const lastWeek = tasks.filter(t => t.doneAt >= lastMon.getTime() && t.doneAt < thisMon.getTime()).length;
+  const delta = lastWeek > 0 ? Math.round((thisWeek - lastWeek) / lastWeek * 100) : null;
+  return { thisWeek, lastWeek, delta };
+}
+/**
+ * 完成时段分布：最近 days 天内，按周几（周一→周日）× 时段（早 5-12 / 午 12-18 / 晚 18-5）统计完成数
+ * @param {number} [days=30] - 统计窗口天数
+ * @returns {Array<Array<{dow:number,period:number,count:number}>>} 7×3 网格；period 0=早 1=午 2=晚
+ */
+function calcHourDist(days){
+  days = Math.max(1, Math.min(365, Number(days) || 30));
+  const since = Date.now() - days * 86400000;
+  const grid = [];
+  for(let d = 0; d < 7; d++){ grid.push([{dow:d,period:0,count:0},{dow:d,period:1,count:0},{dow:d,period:2,count:0}]); }
+  getTasks().forEach(t => {
+    if(t.deletedAt || t.status !== "done" || !t.doneAt || t.doneAt < since) return;
+    const d = new Date(t.doneAt);
+    const dow = (d.getDay() + 6) % 7;           // 周一=0 … 周日=6
+    const h = d.getHours();
+    const period = h >= 5 && h < 12 ? 0 : h >= 12 && h < 18 ? 1 : 2;
+    grid[dow][period].count++;
+  });
+  return grid;
+}
+
 /* ---------- A2 热力图数据（最近 weeks×7 天，默认 12 周=84 天） ---------- */
 /**
  * 热力图数据：最近 weeks×7 天每天的任务完成数与密度等级

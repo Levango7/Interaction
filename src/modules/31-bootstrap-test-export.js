@@ -46,6 +46,11 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // T1-T5 Quick Wins 增强（UI 软删 / 回收站批量与自动清理 / CSV·MD 导出 / 主题跟随系统 / 焦点陷阱）访问器
     restoreRecycleBatch, purgeRecycleBatch, getRecyclePolicy, setRecyclePolicy, cleanupRecycle,
     buildTasksCSV, buildTasksMD, doExportCSV, doExportMD, trapFocus, closeRecycleModal,
+    // P5' 命令面板增强（模糊搜索 / 最近使用）访问器
+    fuzzyScore, getCmdRecent, pushCmdRecent,
+    // P1 自定义场景访问器（供测试驱动与断言）
+    addCustomScenario, updateCustomScenario, removeCustomScenario,
+    setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
