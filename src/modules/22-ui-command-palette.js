@@ -7,6 +7,8 @@ function buildCmds(q){
     {label:"新建任务", icon:UI_ICONS.plus, sub:"N", run:()=>{ if(getActive()==="overview"){setActive("office");render();} const f=$("#taskForm"); if(f) f.title.focus(); }},
     {label:"切换明暗主题", icon:UI_ICONS.theme, run:toggleTheme},
     {label:"导出 JSON 备份", icon:UI_ICONS.download, run:doExport},
+    {label:"导出任务 CSV", icon:UI_ICONS.download, run:doExportCSV},
+    {label:"导出任务 Markdown", icon:UI_ICONS.download, run:doExportMD},
     {label:"导入恢复", icon:UI_ICONS.upload, run:()=> $("#fileInput").click()},
     {label:"清空全部数据", icon:UI_ICONS.trash, run:doClear},
     {label:"打开设置", icon:UI_ICONS.gear, run:openDrawer},

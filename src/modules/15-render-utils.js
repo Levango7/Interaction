@@ -55,7 +55,7 @@ function renderSide(){
     setActive(b.dataset.sc); render();
   });
 }
-/* ---------- 回收站（D3：软删除任务的恢复 / 永久删除入口） ---------- */
+/* ---------- 回收站（D3：软删除任务的恢复 / 永久删除入口；T2：批量操作 + 自动清理策略） ---------- */
 function openRecycle(){
   const all = load(PREFIX+"tasks", []);
   const del = all.filter(t=>t.deletedAt).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
@@ -64,6 +64,7 @@ function openRecycle(){
     const w = new Date(t.deletedAt);
     const whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
     return `<div class="recycle-item" data-id="${esc(t.id)}">
+      <input type="checkbox" class="recycle-chk" data-chk="${esc(t.id)}" aria-label="选择 ${esc(t.title)}">
       <span class="recycle-dot" style="background:${sm.color}"></span>
       <span class="recycle-title">${esc(t.title)}</span>
       <span class="recycle-sc">${sm.name}</span>
@@ -72,19 +73,40 @@ function openRecycle(){
       <button type="button" class="recycle-purge" data-purge="${esc(t.id)}">彻底删除</button>
     </div>`;
   }).join("") : `<div class="recycle-empty">回收站为空</div>`;
+  const policy = getRecyclePolicy();
+  const policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
   const html = `<div class="recycle-modal" id="recycleModal">
     <div class="recycle-card">
       <div class="recycle-header"><h2>回收站</h2><button type="button" class="recycle-close" id="recycleClose">✕</button></div>
       <div class="recycle-list">${items}</div>
-      ${del.length ? `<div class="recycle-footer"><button type="button" class="recycle-clear" id="recycleClear">清空回收站</button></div>` : ""}
+      ${del.length ? `<div class="recycle-footer">
+        <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
+        <button type="button" class="recycle-batch" id="recycleBatchRestore">批量恢复</button>
+        <button type="button" class="recycle-batch" id="recycleBatchPurge">批量删除</button>
+        <span class="recycle-policy">${policyLabel}</span>
+        <button type="button" class="recycle-clear" id="recycleClear">清空回收站</button>
+      </div>` : ""}
     </div></div>`;
   document.body.insertAdjacentHTML("beforeend", html);
-  const close = ()=>{ const m=$("#recycleModal"); if(m) m.remove(); };
+  const modal=$("#recycleModal");
+  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card")); // T5：焦点锁在弹窗内
+  const close = ()=> closeRecycleModal();
   const closeBtn = $("#recycleClose"); if(closeBtn) closeBtn.onclick = close;
-  const modal = $("#recycleModal"); if(modal) modal.onclick = e=>{ if(e.target===modal) close(); };
+  if(modal) modal.onclick = e=>{ if(e.target===modal) close(); };
   $$("#recycleModal [data-restore]").forEach(b=> b.onclick=()=>{ restoreRecycle(b.dataset.restore); close(); });
   $$("#recycleModal [data-purge]").forEach(b=> b.onclick=()=>{ purgeRecycle(b.dataset.purge); close(); });
   const clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的任务将永久删除，不可恢复。")){ clearRecycle(); close(); } };
+  const selAll=$("#recycleSelAll"); if(selAll) selAll.onchange=()=> $$("#recycleModal .recycle-chk").forEach(c=>{ c.checked=selAll.checked; });
+  const bRestore=$("#recycleBatchRestore"); if(bRestore) bRestore.onclick=()=>{
+    const ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
+    if(!ids.length){ toast("请先勾选要恢复的任务","warn"); return; }
+    restoreRecycleBatch(ids); close();
+  };
+  const bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=()=>{
+    const ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
+    if(!ids.length){ toast("请先勾选要删除的任务","warn"); return; }
+    if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); close(); }
+  };
 }
 function restoreRecycle(id){
   const all = load(PREFIX+"tasks", []);
@@ -92,17 +114,90 @@ function restoreRecycle(id){
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast("已恢复任务", "ok"); render();
 }
+function restoreRecycleBatch(ids){
+  const set = new Set(ids);
+  const all = load(PREFIX+"tasks", []);
+  const next = all.map(t=> set.has(t.id) ? Object.assign({}, t, { deletedAt: undefined }) : t);
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("已恢复 "+ids.length+" 条任务", "ok"); render();
+}
 function purgeRecycle(id){
   const all = load(PREFIX+"tasks", []);
   const next = all.filter(t=>t.id!==id);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast("已永久删除", "ok"); render();
 }
+function purgeRecycleBatch(ids){
+  const set = new Set(ids);
+  const all = load(PREFIX+"tasks", []);
+  const next = all.filter(t=>!set.has(t.id));
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("已永久删除 "+ids.length+" 条任务", "ok"); render();
+}
 function clearRecycle(){
   const all = load(PREFIX+"tasks", []);
   const next = all.filter(t=>!t.deletedAt);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast("回收站已清空", "ok"); render();
+}
+/* ---------- 回收站自动清理策略（T2） ---------- */
+const RECYCLE_POLICY_KEY = PREFIX+"recycle_policy"; // "off" | "7" | "30" | "90"，默认 "30"
+function getRecyclePolicy(){
+  const v = load(RECYCLE_POLICY_KEY, "30");
+  return (v==="off"||v==="7"||v==="30"||v==="90") ? v : "30";
+}
+function setRecyclePolicy(v){
+  save(RECYCLE_POLICY_KEY, (v==="off"||v==="7"||v==="30"||v==="90") ? v : "30");
+}
+/** 启动时清理超期软删任务；返回清理条数（0 表示无动作） */
+function cleanupRecycle(){
+  const policy = getRecyclePolicy();
+  if(policy==="off") return 0;
+  const days = parseInt(policy,10);
+  const cutoff = Date.now() - days*86400000;
+  const all = load(PREFIX+"tasks", []);
+  const expired = all.filter(t=>t.deletedAt && t.deletedAt < cutoff);
+  if(!expired.length) return 0;
+  const next = all.filter(t=>!(t.deletedAt && t.deletedAt < cutoff));
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("回收站已自动清理 "+expired.length+" 条超过 "+days+" 天的任务","ok");
+  return expired.length;
+}
+/* ---------- 焦点陷阱（T5 无障碍：Tab 循环锁在容器内，关闭后焦点归还触发元素） ---------- */
+/**
+ * 在容器内启用 Tab 焦点循环；返回 release() 用于解除并归还焦点
+ * @param {Element} container - 模态容器
+ * @returns {Function|null} release 函数；容器无效时返回 null
+ */
+function trapFocus(container){
+  if(!container || typeof container.querySelectorAll!=="function") return null;
+  const SEL='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const prev=document.activeElement;
+  function onKey(e){
+    if(e.key!=="Tab") return;
+    const items=[].slice.call(container.querySelectorAll(SEL));
+    if(!items.length) return;
+    const first=items[0], last=items[items.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+  container.addEventListener("keydown", onKey);
+  const first=container.querySelector(SEL);
+  if(first && typeof first.focus==="function"){ try{ first.focus(); }catch(e){ /* noop */ } }
+  return function release(){
+    container.removeEventListener("keydown", onKey);
+    if(prev && typeof prev.focus==="function" && document.contains(prev)){ try{ prev.focus(); }catch(e){ /* noop */ } }
+  };
+}
+/**
+ * 关闭回收站弹窗（含焦点陷阱解除）；返回是否关闭了弹窗
+ * @returns {boolean}
+ */
+function closeRecycleModal(){
+  const m=$("#recycleModal"); if(!m) return false;
+  if(typeof m._releaseTrap==="function"){ try{ m._releaseTrap(); }catch(e){ /* noop */ } }
+  m.remove();
+  return true;
 }
 /* 侧边栏折叠：事件委托绑定在 #side 上（不随 innerHTML 重建丢失），启动时恢复持久化状态 */
 function setupSideToggle(){

@@ -126,3 +126,80 @@ function checkCount(){
   else { banner.classList.remove("show"); }
 }
 
+/* ---------- T3：CSV / Markdown 导出（任务数据多格式） ---------- */
+const TASK_STATUS_TEXT = { todo:"待办", doing:"进行中", done:"已完成" };
+/* 状态文本（未知状态原样返回） */
+function statusText(st){ return TASK_STATUS_TEXT[st] || (st||""); }
+/* CSV 字段转义：含逗号/引号/换行时用双引号包裹并转义内部引号 */
+function csvField(v){
+  const s = String(v===null||v===undefined?"":v);
+  return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+/**
+ * 构建任务 CSV 文本（纯函数；BOM 由下载包装层添加）
+ * @param {Task[]} tasks - 任务数组（默认取活跃任务）
+ * @returns {string} CSV 文本
+ */
+function buildTasksCSV(tasks){
+  const list = Array.isArray(tasks) ? tasks : getActiveTasks();
+  const header = ["场景","标题","状态","优先级","截止日期","标签","创建日期","完成日期"];
+  const rows = list.map(t=>[
+    scMeta(t.sc).name,
+    t.title||"",
+    statusText(t.status),
+    t.priority||"",
+    t.due||"",
+    (t.tags||[]).join(" "),
+    t.created ? new Date(t.created).toISOString().slice(0,10) : "",
+    t.doneAt ? new Date(t.doneAt).toISOString().slice(0,10) : ""
+  ]);
+  return [header].concat(rows).map(r=>r.map(csvField).join(",")).join("\r\n");
+}
+/**
+ * 构建任务 Markdown 文本（纯函数；按场景分组表格）
+ * @param {Task[]} tasks - 任务数组（默认取活跃任务）
+ * @returns {string} Markdown 文本
+ */
+function buildTasksMD(tasks){
+  const list = Array.isArray(tasks) ? tasks : getActiveTasks();
+  const lines = ["# Agent 工作台 · 任务清单（"+todayStr()+"）", ""];
+  if(!list.length){ lines.push("> 暂无任务。"); return lines.join("\n"); }
+  const total = list.length, done = list.filter(t=>t.status==="done").length;
+  lines.push("共 "+total+" 条，已完成 "+done+" 条，完成率 "+(total?Math.round(done/total*100):0)+"%。", "");
+  ORDER.forEach(sc=>{
+    const ts = list.filter(t=>t.sc===sc);
+    if(!ts.length) return;
+    lines.push("## "+scMeta(sc).name, "");
+    lines.push("| 标题 | 状态 | 优先级 | 截止日期 | 标签 |", "| --- | --- | --- | --- | --- |");
+    ts.forEach(t=>{
+      lines.push("| "+String(t.title||"").replace(/\|/g,"\\|")
+        +" | "+statusText(t.status)
+        +" | "+(t.priority||"-")
+        +" | "+(t.due||"-")
+        +" | "+((t.tags||[]).join(" ")||"-")+" |");
+    });
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+/* 通用文本下载（BOM 可选；CSV 带 BOM 保证 Excel 直接打开不乱码） */
+function downloadTextFile(content, filename, mime, withBOM){
+  const blob = new Blob([withBOM ? "\uFEFF"+content : content], {type:mime});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function doExportCSV(){
+  const list = getActiveTasks();
+  if(!list.length){ toast("当前没有可导出的任务","warn"); return; }
+  downloadTextFile(buildTasksCSV(list), "agent-workbench-tasks-"+todayStr()+".csv", "text/csv;charset=utf-8", true);
+  toast("已导出 CSV（"+list.length+" 条任务）","ok");
+}
+function doExportMD(){
+  const list = getActiveTasks();
+  if(!list.length){ toast("当前没有可导出的任务","warn"); return; }
+  downloadTextFile(buildTasksMD(list), "agent-workbench-tasks-"+todayStr()+".md", "text/markdown;charset=utf-8", false);
+  toast("已导出 Markdown（"+list.length+" 条任务）","ok");
+}
+

@@ -25,7 +25,7 @@
   --surface-hover:#f0f0f4; --surface-muted:#f2f2f5;
   /* 文本层次 */
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.22);
-  --text-dim:#424245; --text-dim-2:#6e6e73; --text-dim-3:#515154; --text-faint:#8e8e93;
+  --text-dim:#424245; --text-dim-2:#6e6e73; --text-dim-3:#515154; --text-faint:#707074;
   /* 语义色（柔和、不刺眼） */
   --danger:#d83b3b; --danger-soft:#fdeeee; --danger-border:#f3c4c4;
   --danger-overdue-bg:#fef6f6; --danger-overdue-border:#f0c8c8;
@@ -456,11 +456,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== 暗色主题（Apple Dark 风格：深灰而非纯黑，文字偏暖白） ===== */
 :root[data-theme="dark"]{
   --bg:#1c1c1e; --panel:#2c2c2e; --panel2:#323334; --line:#3a3a3c;
-  --text:#f2f2f4; --muted:#98989d; --accent:#5b9bf5;
+  --text:#f2f2f4; --muted:#a0a0a5; --accent:#5b9bf5;
   --shadow:0 1px 3px rgba(0,0,0,.5);
   --surface-hover:#3a3a3c; --surface-muted:#3a3a3c;
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.22);
-  --text-dim:#dcdce0; --text-dim-2:#98989d; --text-dim-3:#c4c4c8; --text-faint:#8e8e93;
+  --text-dim:#dcdce0; --text-dim-2:#a0a0a5; --text-dim-3:#c4c4c8; --text-faint:#a0a0a5;
   --danger:#ff6b6b; --danger-soft:#3a2020; --danger-border:#5a3030;
   --danger-overdue-bg:#3a2020; --danger-overdue-border:#5a3030;
   --warn:#e0a83a; --warn-soft:#3a2e1a;
@@ -584,8 +584,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .recycle-restore:hover{background:var(--surface-hover);color:var(--text)}
 .recycle-purge:hover{background:var(--danger-soft);color:var(--danger)}
 .recycle-empty{padding:var(--space-6);text-align:center;color:var(--muted);font-size:var(--fs-base)}
-.recycle-footer{padding:var(--space-4) var(--space-6);border-top:1px solid var(--line);display:flex;justify-content:flex-end}
-.recycle-clear{padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:var(--fs-sm);
+.recycle-footer{padding:var(--space-4) var(--space-6);border-top:1px solid var(--line);display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.recycle-selall{display:flex;align-items:center;gap:var(--space-1);font-size:var(--fs-sm);color:var(--text-dim);cursor:pointer;margin:0}
+.recycle-selall input{width:auto}
+.recycle-batch{padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);font-size:var(--fs-sm);
+  border:1px solid var(--line);background:var(--panel);color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.recycle-batch:hover{background:var(--surface-hover);color:var(--text)}
+.recycle-policy{font-size:var(--fs-xs);color:var(--muted)}
+.recycle-chk{width:auto;flex-shrink:0}
+.recycle-clear{margin-left:auto;padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:var(--fs-sm);
   border:1px solid var(--danger-border);background:var(--panel);color:var(--danger);cursor:pointer;transition:background var(--transition-fast)}
 .recycle-clear:hover{background:var(--danger-soft)}
 
@@ -916,6 +923,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <label style="font-size:14px;font-weight:600">数据管理</label>
     <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
       <button type="button" class="addbtn" id="btnExport" aria-label="导出 JSON" style="--sc:var(--accent);flex:1;min-width:90px">导出 JSON</button>
+      <button type="button" class="addbtn" id="btnExportCSV" aria-label="导出 CSV" style="--sc:var(--accent);flex:1;min-width:70px">导出 CSV</button>
+      <button type="button" class="addbtn" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent);flex:1;min-width:70px">导出 MD</button>
       <button type="button" class="addbtn" id="btnImport" aria-label="导入恢复" style="--sc:var(--accent);flex:1;min-width:90px">导入恢复</button>
       <button type="button" class="addbtn danger" id="btnClear" aria-label="清空数据" style="--sc:var(--danger,var(--muted));flex:1;min-width:90px">清空数据</button>
     </div>
@@ -923,6 +932,28 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <input type="checkbox" id="exportKeyOpt">
       <span>导出时包含 AI Key（明文，请自行妥善保管）</span>
     </label>
+  </div>
+
+  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <label style="font-size:14px;font-weight:600">外观与回收站</label>
+    <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
+      <label for="cfgTheme" style="margin:0;flex-shrink:0">主题</label>
+      <select id="cfgTheme" style="flex:1;min-width:120px">
+        <option value="light">亮色</option>
+        <option value="dark">暗色</option>
+        <option value="system">跟随系统</option>
+      </select>
+    </div>
+    <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
+      <label for="cfgRecyclePolicy" style="margin:0;flex-shrink:0">回收站自动清理</label>
+      <select id="cfgRecyclePolicy" style="flex:1;min-width:120px">
+        <option value="off">关闭</option>
+        <option value="7">7 天后</option>
+        <option value="30">30 天后</option>
+        <option value="90">90 天后</option>
+      </select>
+    </div>
+    <p class="hint" style="margin:4px 0 0">「跟随系统」随操作系统明暗自动切换。回收站自动清理在每次启动时生效，超期软删任务将被永久删除。</p>
   </div>
 
   <div class="row switch" id="autoLaunchRow" style="display:none;border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -954,7 +985,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </div>
 
   <p class="hint">兼容 OpenAI 接口格式（OpenAI / DeepSeek / 通义 / 豆包 等均可）。Key 仅存本机浏览器。启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
-  <div style="margin-top:10px;font-size:12px;color:var(--muted)">Agent 工作台 v1.0.0 · 纯本地 · 单文件</div>
+  <div style="margin-top:10px;font-size:12px;color:var(--muted)">Agent 工作台 · 纯本地 · 单文件</div>
 </div>
 
 <div id="toasts" role="status" aria-live="polite"></div>

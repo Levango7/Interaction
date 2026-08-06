@@ -3,7 +3,7 @@
 document.addEventListener("keydown", e=>{
   // M5：Esc 关闭回收站弹窗 / 设置抽屉（命令面板有自身 Esc 处理，互不冲突）
   if(e.key==="Escape"){
-    if($("#recycleModal")){ const m=$("#recycleModal"); if(m) m.remove(); return; }
+    if(closeRecycleModal()) return;
     if($("#drawer") && $("#drawer").classList.contains("show")){ closeDrawer(); return; }
     return;
   }

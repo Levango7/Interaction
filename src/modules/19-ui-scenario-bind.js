@@ -25,8 +25,11 @@ function bindScenario(){
     setTasks(tasks); render();
   });
   $$("[data-del]").forEach(b=> b.onclick=()=>{
-    if(!confirm("删除这条任务？")) return;
-    setTasks(getTasks().filter(t=>t.id!==b.dataset.del)); render();
+    if(!confirm("删除这条任务？（将进入回收站，可恢复）")) return;
+    const tasks=getTasks();
+    const t=tasks.find(x=>x.id===b.dataset.del);
+    if(t && !t.deletedAt){ t.deletedAt=Date.now(); setTasks(tasks); } // T1：软删除，与 AI delete_task 行为统一
+    render();
   });
   $$("[data-rdel]").forEach(b=> b.onclick=()=>{
     if(!confirm("删除这条记录？")) return;

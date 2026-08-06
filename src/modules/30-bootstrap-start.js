@@ -9,6 +9,7 @@ seed();
 
 (async function startup(){
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
+  cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
   applyTheme();
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
   setupRipple(); // T4.3 底部导航点击涟漪效果（事件委托）

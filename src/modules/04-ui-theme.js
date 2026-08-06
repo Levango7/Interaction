@@ -1,14 +1,39 @@
 // ===== UI Layer (交互层·主题与通知) =====
 /* ---------- 主题 / 通知 ---------- */
+/* T4：主题三态（light / dark / system）。system 跟随 prefers-color-scheme 实时切换；
+   旧值 light/dark 行为不变；theme 未定义时默认 system（新用户首启即跟随系统）。 */
+let _mqlListenerInstalled = false;
+function _systemPrefersDark(){
+  try{ return !!(typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches); }
+  catch(e){ return false; } // matchMedia 不可用（jsdom/旧浏览器）：回退亮色
+}
 function applyTheme(){
-  const cfg=getCfg(); const th = cfg.theme==="dark"?"dark":(cfg.theme==="light"?"light":null);
-  if(th) document.documentElement.setAttribute("data-theme", th);
+  const cfg=getCfg();
+  const pref = cfg.theme || "system";
+  let th;
+  if(pref==="dark") th="dark";
+  else if(pref==="light") th="light";
+  else th = _systemPrefersDark() ? "dark" : "light";
+  if(th==="dark") document.documentElement.setAttribute("data-theme", "dark");
   else document.documentElement.removeAttribute("data-theme");
+  // system 模式：注册一次系统主题变化监听（幂等，多次 applyTheme 不重复注册）
+  if(pref==="system" && !_mqlListenerInstalled){
+    try{
+      if(typeof window.matchMedia === "function"){
+        const mql = window.matchMedia("(prefers-color-scheme: dark)");
+        const onChange = ()=>{ const c=getCfg(); if((c.theme||"system")==="system") applyTheme(); };
+        if(typeof mql.addEventListener === "function") mql.addEventListener("change", onChange);
+        else if(typeof mql.addListener === "function") mql.addListener(onChange); // Safari <14 兼容
+        _mqlListenerInstalled = true;
+      }
+    }catch(e){ /* matchMedia 异常：保持当前主题 */ }
+  }
 }
 async function toggleTheme(){
   const cfg=getCfg(); const cur=document.documentElement.getAttribute("data-theme");
   const next = cur==="dark"?"light":"dark";
   cfg.theme=next; try{ await persistCfg(cfg); }catch(e){ save(PREFIX+"cfg", cfg); } applyTheme();
+  const sel=$("#cfgTheme"); if(sel) sel.value=next;
   toast("已切换为"+(next==="dark"?"暗色":"亮色")+"主题", "ok");
 }
 /**

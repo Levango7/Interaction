@@ -18,6 +18,8 @@ function showMemories(){
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
 }
 $("#btnExport").onclick = doExport;
+$("#btnExportCSV").onclick = doExportCSV;
+$("#btnExportMD").onclick = doExportMD;
 $("#btnImport").onclick = ()=> $("#fileInput").click();
 $("#fileInput").onchange = e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=""; };
 $("#btnClear").onclick = doClear;

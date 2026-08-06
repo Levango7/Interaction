@@ -69,6 +69,8 @@ function openDrawer(){ const cfg=getCfg();
   $("#cfgEnabled").checked=!!cfg.enabled;
   $("#cfgAgent").checked = cfg.agent!==false; // 默认开启（cfg.agent 未定义时视为开）
   const notifyCb=$("#cfgNotify"); if(notifyCb) notifyCb.checked=getNotifyEnabled();
+  const thSel=$("#cfgTheme"); if(thSel) thSel.value = (cfg.theme==="light"||cfg.theme==="dark") ? cfg.theme : "system";
+  const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
   renderProfileSelect();
   fillProfileForm(getActiveProfile());
   const hint=$("#cfgKeyHint"); if(hint) hint.style.display="none";
@@ -163,6 +165,8 @@ async function saveCfg(){
       profiles,
       activeId
     });
+    // T4：主题三态持久化（light/dark/system）
+    const thSel=$("#cfgTheme"); if(thSel) cfg.theme = thSel.value;
     // 清掉可能残留的旧单 cfg 字段（已迁入 profiles）
     delete cfg.base; delete cfg.key; delete cfg.model;
     _cfgCache = cfg;
@@ -185,6 +189,8 @@ async function saveCfg(){
       if(cb) l.enabled=cb.checked;
     });
     save(PREFIX+"links", links);
+    // T2：回收站自动清理策略即时生效（独立于 cfg，单独键存储）
+    const rpSel=$("#cfgRecyclePolicy"); if(rpSel) setRecyclePolicy(rpSel.value);
     if(isElectron()){
       const al=$("#cfgAutoLaunch");
       if(al) window.electronAPI.setAutoLaunch(al.checked);
@@ -195,6 +201,7 @@ async function saveCfg(){
         key: (ap && ap.key) || undefined }); }catch(e){ /* 忽略 */ }
     }
     alert("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"));
+    applyTheme(); // T4：主题变更（含跟随系统）立即生效
     closeDrawer(); render();
   }catch(e){
     // 保存异常：诊断 + 提示，不让设置面板卡死

@@ -43,6 +43,9 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // T3.1 AI 增强（取消/重试/流式）访问器（供测试驱动与断言）
     abortChat, retryChat, createChatController, showChatThinking, runChatLoop,
     getChat, appendChat,
+    // T1-T5 Quick Wins 增强（UI 软删 / 回收站批量与自动清理 / CSV·MD 导出 / 主题跟随系统 / 焦点陷阱）访问器
+    restoreRecycleBatch, purgeRecycleBatch, getRecyclePolicy, setRecyclePolicy, cleanupRecycle,
+    buildTasksCSV, buildTasksMD, doExportCSV, doExportMD, trapFocus, closeRecycleModal,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
