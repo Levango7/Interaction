@@ -309,7 +309,7 @@ if (!gotLock){
           clearTimeout(timer);
           if(err && err.name === "AbortError") throw new Error("请求超时（30 秒），请检查网络或上游服务");
           if(err && err.message && (err.message.indexOf("API Key") >= 0 || err.message.indexOf("服务异常") >= 0 || err.message.indexOf("API 返回错误") >= 0)) throw err;
-          if(attempt < 2){ await sleep(500 * (attempt + 1)); continue; }
+          if(attempt < 2){ await sleep(1000 * (attempt + 1)); continue; }
           throw new Error("请求失败：" + (err && err.message ? err.message : String(err)));
         }
       }

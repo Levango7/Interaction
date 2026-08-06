@@ -23,13 +23,13 @@ workspace/
 cd electron
 npm install          # 安装 electron + electron-builder（首次需联网）
 npm start            # 开发预览，直接起一个原生窗口
-npm run dist         # 打包成 Windows 安装包（dist/*.exe，NSIS）
+npm run dist         # 打包成 Windows 便携版 exe（dist/*.exe，portable，免安装）
 ```
 
 ## 说明
 - `npm install` / `npm run dist` 都需要网络下载 Electron 及其构建依赖，
   沙箱环境无法代跑，请在本地 Windows 上执行。
-- 打包产物在 `electron/dist/`，双击安装即可，数据与浏览器版一样存于本机。
+- 打包产物在 `electron/dist/`，绿色便携版双击即用，数据与浏览器版一样存于本机。
 - 如需自定义图标，放一个 `icon.ico` 并在 `package.json` 的 `win.icon` 指过去。
 - 仍想零安装？回到根目录双击 `启动Agent工作台.bat`（Edge `--app` 模式）即可，
   体验几乎一致，只是窗口由 Edge 托管而非独立 exe。

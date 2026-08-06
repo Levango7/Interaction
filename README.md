@@ -91,6 +91,7 @@
    - **复制**：基于现有 profile 克隆一份再微调。
    - 每个 profile 独立存储，切换不丢配置。
 3. Key **仅存本机浏览器**（`wb_agent_cfg`，AES-GCM 加密），不上传任何服务器。
+   - **威胁模型（诚实说明）**：浏览器形态下加密用的设备密钥与密文同存 localStorage，属**混淆级防护**——防随手翻看，不防本机恶意进程读取。需要操作系统级保护（Windows DPAPI）请用 Electron 版，Key 由主进程 `safeStorage` 加密保管，不进渲染进程。
 4. **跨域**：从 `file://` 直接调 API 可能被浏览器 CORS 拦截。最稳妥用 **`启动本地服务.bat`**（`http://localhost:8123`）打开再启用 AI。
 
 ---
@@ -101,16 +102,16 @@
 
 ---
 
-## 六、构建 Electron 安装包（需联网）
+## 六、构建 Electron 便携包（需联网）
 
 ```bash
 cd electron
 npm install          # 下载 Electron + electron-builder（~100MB+，沙箱无法代跑）
 npm start            # 开发预览
-npm run dist         # 打包 Windows NSIS 安装包 → electron/dist/*.exe
+npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/dist/*.exe
 ```
 
-打包后 `agent-workbench.html` 随 `build.files` 带入资源，`main.js` 的 `resolveHtml()` 按 `app.isPackaged` 解析路径，开发与打包两种布局都能正确加载同一份 HTML。
+`prebuild` 会先把仓库根的 `agent-workbench.html` 复制进 `electron/`，`build.files` 白名单（`main.js` / `preload.js` / `package.json` / `agent-workbench.html`）将其带入产物；`main.js` 的 `resolveHtml()` 按 `app.isPackaged` 解析路径，开发与打包两种布局都能正确加载同一份 HTML。
 
 > 桌面端进阶能力（托盘、自启、窗口图标）依赖 Electron 主进程，须在本机 `npm install && npm run dist` 后体验。
 

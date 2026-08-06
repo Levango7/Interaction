@@ -7,7 +7,7 @@
  *   - 其他请求：network-first（失败回退缓存）
  * 缓存版本号变更后，activate 会清理所有非当前版本的旧缓存。
  */
-var CACHE_VERSION = "v2-20260806";
+var CACHE_VERSION = "v3-20260806";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // 预缓存核心资源（相对路径 ./ 适配 gh-pages 子路径部署）
