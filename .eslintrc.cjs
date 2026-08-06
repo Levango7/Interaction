@@ -32,13 +32,14 @@ module.exports = {
     "tmp.js",
     "tmp.css",
     "*.md",
-    "数擎*.html"
+    "数擎*.html",
+    "src/"
   ],
   overrides: [
     {
       files: ["*.html"],
       rules: {
-        "no-undef": "off",
+        "no-undef": "error",
         "no-unused-vars": "off"
       }
     },

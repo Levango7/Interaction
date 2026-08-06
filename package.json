@@ -9,8 +9,10 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "E2E=1 npx playwright test",
     "e2e:install": "npx playwright install chromium",
-    "lint": "npx eslint agent-workbench.html && node scripts/lint-colors.mjs agent-workbench.html",
-    "lint:fix": "npx eslint agent-workbench.html --fix",
+    "build": "node scripts/build.mjs",
+    "build:check": "node scripts/build.mjs --check",
+    "lint": "npm run build && npx eslint agent-workbench.html && node scripts/lint-colors.mjs agent-workbench.html",
+    "lint:fast": "npx eslint agent-workbench.html && node scripts/lint-colors.mjs agent-workbench.html",
     "typecheck": "npx --yes -p typescript@5 tsc --noEmit || echo typecheck: html project, tsc skipped (declared in tsconfig.json)",
     "serve": "python -m http.server 8123"
   },
