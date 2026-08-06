@@ -518,6 +518,7 @@ function renderToday(){
         <span class="dot" style="background:${s.color}"></span>
         <span class="title">${esc(x.title)}</span>
         <span class="sc-name">${s.name}</span>
+        <button type="button" class="mini snooze-btn" data-snooze="${esc(x.id)}" title="30 分钟后再提醒">稍后</button>
       </li>`;
     }).join("") + `</ul>`;
   }

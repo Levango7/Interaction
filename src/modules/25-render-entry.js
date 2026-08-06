@@ -12,6 +12,12 @@ function render(){
     const cfg=getCfg();
     $("#main").innerHTML = renderToday() + renderMainHTML();
     bindScenario();
+    // P9：「稍后提醒」按钮绑定（Top3 待处理任务）
+    $$("#main [data-snooze]").forEach(b=> b.onclick=()=>{
+      snoozeTask(b.getAttribute("data-snooze"), 30);
+      toast("已设置 30 分钟后再提醒","ok");
+      render();
+    });
     if(cfg.enabled) renderChat();
   }catch(e){
     // 渲染异常：诊断 + fallback UI（提示导出备份后清空），不让白屏

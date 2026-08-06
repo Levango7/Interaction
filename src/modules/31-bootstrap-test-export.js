@@ -51,6 +51,9 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // P1 自定义场景访问器（供测试驱动与断言）
     addCustomScenario, updateCustomScenario, removeCustomScenario,
     setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,
+    // 第三轮：P8 多维筛选+保存视图 / P2' 习惯链有向图 / P9 稍后提醒+免打扰 访问器
+    renderChainGraph, getGlobViews, saveGlobView, removeGlobView, _applyGlobFilters,
+    snoozeTask, getQuietHours, setQuietHours, isQuietTime,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）

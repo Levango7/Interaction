@@ -144,6 +144,14 @@ function openDrawer(){ const cfg=getCfg();
   $("#cfgEnabled").checked=!!cfg.enabled;
   $("#cfgAgent").checked = cfg.agent!==false; // 默认开启（cfg.agent 未定义时视为开）
   const notifyCb=$("#cfgNotify"); if(notifyCb) notifyCb.checked=getNotifyEnabled();
+  // P9：免打扰时段控件回填（小时下拉 0-23，仅首次填充）
+  const qStart=$("#cfgQuietStart"), qEnd=$("#cfgQuietEnd");
+  if(qStart && !qStart.options.length) qStart.innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join("");
+  if(qEnd && !qEnd.options.length) qEnd.innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join("");
+  const q=getQuietHours();
+  if($("#cfgQuiet")) $("#cfgQuiet").checked=!!q.enabled;
+  if(qStart) qStart.value=String(q.start);
+  if(qEnd) qEnd.value=String(q.end);
   const thSel=$("#cfgTheme"); if(thSel) thSel.value = (cfg.theme==="light"||cfg.theme==="dark") ? cfg.theme : "system";
   const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
   renderScBox();
@@ -267,6 +275,12 @@ async function saveCfg(){
     save(PREFIX+"links", links);
     // T2：回收站自动清理策略即时生效（独立于 cfg，单独键存储）
     const rpSel=$("#cfgRecyclePolicy"); if(rpSel) setRecyclePolicy(rpSel.value);
+    // P9：免打扰时段即时生效（独立于 cfg，单独键存储）
+    setQuietHours({
+      enabled: !!($("#cfgQuiet") && $("#cfgQuiet").checked),
+      start: parseInt(($("#cfgQuietStart")&&$("#cfgQuietStart").value)||"22",10),
+      end: parseInt(($("#cfgQuietEnd")&&$("#cfgQuietEnd").value)||"8",10)
+    });
     if(isElectron()){
       const al=$("#cfgAutoLaunch");
       if(al) window.electronAPI.setAutoLaunch(al.checked);

@@ -278,6 +278,21 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .hcell.l0{background:var(--heat-0)}.hcell.l1{background:var(--heat-1)}.hcell.l2{background:var(--heat-2)}.hcell.l3{background:var(--heat-3)}.hcell.l4{background:var(--heat-4)}
 .dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px}
 .bars{display:flex;flex-direction:column;gap:var(--space-2)}
+/* P2'：跨场景习惯链有向图 */
+.chain-graph-wrap{margin-top:var(--space-2);overflow-x:auto}
+.chain-graph{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+/* P8：全局筛选控件 + 保存视图 */
+.glob-filters{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.glob-filters input,.glob-filters select{min-width:120px;flex:1}
+.glob-views{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.glob-view-chip{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
+  background:var(--surface-muted);border-radius:var(--radius-full,var(--radius));font-size:var(--fs-xs);cursor:pointer;color:var(--text-dim)}
+.glob-view-chip:hover{background:var(--surface-hover)}
+.glob-view-chip .gv-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:var(--fs-sm);padding:0 var(--space-1)}
+.glob-view-chip .gv-del:hover{color:var(--danger)}
+.glob-view-save{padding:var(--space-1) var(--space-3);background:none;border:1px dashed var(--line);
+  border-radius:var(--radius-full,var(--radius));font-size:var(--fs-xs);color:var(--muted);cursor:pointer}
+.glob-view-save:hover{color:var(--accent);border-color:var(--accent)}
 .bar{display:flex;align-items:center;gap:var(--space-3);font-size:var(--fs-sm)}
 .bar .nm{width:48px;flex-shrink:0}
 .bar .track{flex:1;height:14px;background:var(--surface-muted);border-radius:7px;overflow:hidden}
@@ -987,6 +1002,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <label for="cfgNotify" style="margin:0">开启任务到期 / 习惯链断链 / 每日汇总提醒</label>
     </div>
     <p class="hint" style="margin:4px 0 8px">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</p>
+    <div class="row switch" style="padding:4px 0 0;border:0;margin:0;align-items:center;gap:6px">
+      <input type="checkbox" id="cfgQuiet" style="width:auto">
+      <label for="cfgQuiet" style="margin:0">免打扰时段</label>
+      <select id="cfgQuietStart" aria-label="免打扰开始时间"></select>
+      <span style="font-size:12px;color:var(--muted)">至</span>
+      <select id="cfgQuietEnd" aria-label="免打扰结束时间"></select>
+    </div>
+    <p class="hint" style="margin:4px 0 8px">免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。</p>
   </div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">

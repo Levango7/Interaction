@@ -34,8 +34,15 @@ function renderOverview(){
   }).join("");
 
   $("#main").innerHTML =
-    `<div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选）</p>
-      <input id="globSearch" placeholder="输入关键词，如 周报 / 塞尔达 / 跑步…">
+    `<div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选，支持场景 / 状态 / 日期 / 标签组合）</p>
+      <div class="glob-filters">
+        <input id="globSearch" placeholder="关键词，如 周报 / 跑步…">
+        <select id="globFSc" aria-label="按场景筛选"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
+        <select id="globFStatus" aria-label="按状态筛选"><option value="">全部状态</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select>
+        <select id="globFDate" aria-label="按日期筛选"><option value="">不限日期</option><option value="today">今天到期</option><option value="overdue">已逾期</option><option value="week">本周到期</option></select>
+        <input id="globFTag" placeholder="标签，如 urgent">
+      </div>
+      <div class="glob-views" id="globViews"></div>
       <div id="globRes" style="margin-top:10px"></div></div>
      <div class="card"><h2>${UI_ICONS.overview} 数据总览</h2>
        <p class="sub">跨场景的任务完成趋势与密度</p>
@@ -48,6 +55,12 @@ function renderOverview(){
      <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>`;
 
   const gs=$("#globSearch"); if(gs) gs.oninput=()=> renderGlob(gs.value.trim().toLowerCase());
+  ["globFSc","globFStatus","globFDate","globFTag"].forEach(id=>{
+    const el=$("#"+id); if(!el) return;
+    if(id==="globFTag"){ el.oninput=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
+    else { el.onchange=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
+  });
+  renderGlobViews();
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
   const cr=$("#coachRefresh");
   if(cr) cr.onclick=()=>{ try{ localStorage.removeItem(COACH_CACHE_KEY); }catch(e){ /* noop */ } renderOverview(); };
@@ -241,15 +254,97 @@ function renderStats(){
     if(d === 7 || d === 14 || d === 30){ _statsTrendDays = d; renderStats(); }
   });
 }
+/* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
+const GLOB_VIEWS_KEY = PREFIX+"glob_views";
+function getGlobViews(){
+  const arr = load(GLOB_VIEWS_KEY, []);
+  return Array.isArray(arr) ? arr.filter(v=>v && v.name) : [];
+}
+function saveGlobView(name){
+  name = String(name===null||name===undefined?"":name).trim();
+  if(!name) return {ok:false, err:"请输入视图名称"};
+  if(name.length > 16) return {ok:false, err:"视图名称过长（最多 16 字）"};
+  const views = getGlobViews();
+  const f = _readGlobFilters();
+  const exists = views.findIndex(v=>v.name===name);
+  const entry = { name, q:f.q, sc:f.sc, status:f.status, date:f.date, tag:f.tag };
+  if(exists>=0) views[exists]=entry; else views.push(entry);
+  save(GLOB_VIEWS_KEY, views);
+  return {ok:true};
+}
+function removeGlobView(name){
+  save(GLOB_VIEWS_KEY, getGlobViews().filter(v=>v.name!==name));
+}
+function _readGlobFilters(){
+  const v = id=>{ const el=$("#"+id); return el ? (el.value||"") : ""; };
+  return { q:v("globSearch").trim().toLowerCase(), sc:v("globFSc"), status:v("globFStatus"), date:v("globFDate"), tag:v("globFTag").trim().toLowerCase() };
+}
+function _applyGlobFilters(f){
+  const today = todayStr();
+  // 本周一（周一为一周起点，与 weekRange 对齐）
+  const d=new Date(); const day=(d.getDay()+6)%7;
+  const mon=new Date(d); mon.setDate(d.getDate()-day); mon.setHours(0,0,0,0);
+  const monStr = mon.getFullYear()+"-"+pad(mon.getMonth()+1)+"-"+pad(mon.getDate());
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  const sunStr = sun.getFullYear()+"-"+pad(sun.getMonth()+1)+"-"+pad(sun.getDate());
+  return getActiveTasks().filter(x=>{
+    if(!x || x.deletedAt) return false;
+    if(f.q && !(x.title||"").toLowerCase().includes(f.q)) return false;
+    if(f.sc && x.sc!==f.sc) return false;
+    if(f.status && x.status!==f.status) return false;
+    if(f.tag){
+      const tags=(x.tags||[]).map(t=>String(t).toLowerCase());
+      if(!tags.some(t=>t.includes(f.tag))) return false;
+    }
+    if(f.date==="today"){ if(x.due!==today) return false; }
+    else if(f.date==="overdue"){ if(!(x.due && x.due<today && x.status!=="done")) return false; }
+    else if(f.date==="week"){ if(!(x.due && x.due>=monStr && x.due<=sunStr)) return false; }
+    return true;
+  });
+}
+function renderGlobViews(){
+  const box=$("#globViews"); if(!box) return;
+  const views=getGlobViews();
+  box.innerHTML = (views.length
+    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="应用视图">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="删除视图">×</button></span>`).join("")
+    : "") + `<button type="button" class="glob-view-save" id="globViewSave" title="保存当前筛选为视图">＋ 保存视图</button>`;
+  $$("#globViews [data-view]").forEach(ch=>{
+    ch.onclick = e=>{
+      if(e.target.closest(".gv-del")) return; // 删除按钮单独处理
+      const v=getGlobViews().find(x=>x.name===ch.getAttribute("data-view"));
+      if(!v) return;
+      $("#globSearch").value=v.q||""; $("#globFSc").value=v.sc||""; $("#globFStatus").value=v.status||""; $("#globFDate").value=v.date||""; $("#globFTag").value=v.tag||"";
+      renderGlob((v.q||"").toLowerCase());
+    };
+  });
+  $$("#globViews [data-view-del]").forEach(b=>{
+    b.onclick=()=>{ removeGlobView(b.getAttribute("data-view-del")); renderGlobViews(); };
+  });
+  const sv=$("#globViewSave"); if(sv) sv.onclick=()=>{
+    const name = (typeof prompt==="function") ? prompt("视图名称：") : null;
+    if(name===null) return;
+    const r=saveGlobView(name);
+    if(!r.ok){ toast(r.err||"保存失败","warn"); return; }
+    toast("已保存视图","ok"); renderGlobViews();
+  };
+}
 function renderGlob(q){
   const res=$("#globRes"); if(!res) return;
-  if(!q){ res.innerHTML=""; return; }
-  const tasks=getActiveTasks().filter(x=>!x.deletedAt && x.title.toLowerCase().includes(q));
-  const recs=[]; ORDER.forEach(sc=> getRec(sc).forEach(r=>{
-    const t=String(r.title||""); if(t.toLowerCase().includes(q)) recs.push({sc,title:t}); }));
+  const f=_readGlobFilters();
+  // 兼容：renderGlob(q) 直传关键词时同步输入框语义（q 优先）
+  if(typeof q==="string") f.q=q.trim().toLowerCase();
+  const hasFilter = f.q||f.sc||f.status||f.date||f.tag;
+  if(!hasFilter){ res.innerHTML=""; return; }
+  const tasks=_applyGlobFilters(f);
+  const recs=[];
+  if(f.q && !f.sc && !f.status && !f.date && !f.tag){
+    // 仅关键词时保留资料库检索（与原行为一致）
+    ORDER.forEach(sc=> getRec(sc).forEach(r=>{
+      const t=String(r.title||""); if(t.toLowerCase().includes(f.q)) recs.push({sc,title:t}); }));
+  }
   let html="";
   if(tasks.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">任务 (${tasks.length})</div><ul class="list">`+
-    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}</div></div></li>`).join("")+`</ul>`;
+    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}${t.due?" · "+t.due:""}${(t.tags&&t.tags.length)?" · "+t.tags.map(esc).join("/"):""}</div></div></li>`).join("")+`</ul>`;
   if(recs.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">资料 (${recs.length})</div><ul class="list">`+
     recs.map(r=>`<li><div class="body"><div class="t">${esc(r.title)}</div><div class="m">${SCENARIOS[r.sc].name}</div></div></li>`).join("")+`</ul>`;
   res.innerHTML=html||renderEmpty("no-search");

@@ -401,7 +401,68 @@ function renderHabitChainCard(){
     `<p class="sub">每个场景的连续天数与完成密度</p>` +
     `<h3>当前 Streak</h3><div class="streak-row">${streakBadges}</div>` +
     `<h3>热力图</h3>${heatmaps}` +
+    `<h3>场景链路图</h3>${renderChainGraph()}` +
     `<h3>习惯链状态</h3>${renderHabitChainStatus()}` +
     `</div>`;
+}
+
+/* ---------- P2'：跨场景习惯链有向图（内联 SVG，纯渲染函数） ----------
+ * 节点 = 参与链路的场景（按 ORDER 顺序环形布局），边 = 启用的链（曲线 + 箭头 + 关键词标签）；
+ * 禁用的链以虚线显示。自定义场景自动纳入。 */
+/**
+ * 场景名折行（≤5 字单行，否则对半折两行）
+ * @param {string} nm
+ * @returns {string[]}
+ */
+function _graphNameLines(nm){
+  nm = String(nm||"");
+  if(nm.length <= 5) return [nm];
+  const mid = Math.ceil(nm.length/2);
+  return [nm.slice(0, mid), nm.slice(mid)];
+}
+/**
+ * 渲染跨场景习惯链有向图
+ * @returns {string} HTML 字符串（.chain-graph-wrap > svg）
+ */
+function renderChainGraph(){
+  const links = getLinks().filter(l => l && l.fromSc && l.toSc);
+  if(!links.length) return `<div class="empty">暂无习惯链</div>`;
+  // 节点：参与链路的场景，按 ORDER 顺序环形排布
+  const scs = ORDER.filter(sc => links.some(l => l.fromSc===sc || l.toSc===sc));
+  if(!scs.length) return `<div class="empty">暂无习惯链</div>`;
+  const W=360, H=270, CX=W/2, CY=H/2, NR=26;
+  const R = Math.min(W, H)/2 - NR - 30;
+  const pos = {};
+  scs.forEach((sc, i)=>{
+    const ang = -Math.PI/2 + i*(2*Math.PI/scs.length);
+    pos[sc] = { x: CX + R*Math.cos(ang), y: CY + R*Math.sin(ang) };
+  });
+  const defs = `<defs><marker id="wbChainArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>`;
+  // 边：起点/终点缩进到节点圆周外，控制点向圆心偏转成曲线（双向边自然分离）
+  const edges = links.map(l=>{
+    const p1 = pos[l.fromSc], p2 = pos[l.toSc];
+    if(!p1 || !p2 || l.fromSc === l.toSc) return "";
+    const dx = p2.x-p1.x, dy = p2.y-p1.y, dist = Math.sqrt(dx*dx+dy*dy) || 1;
+    const ux = dx/dist, uy = dy/dist;
+    const sx = p1.x + ux*(NR+3), sy = p1.y + uy*(NR+3);
+    const ex = p2.x - ux*(NR+7), ey = p2.y - uy*(NR+7);
+    const mx = (sx+ex)/2, my = (sy+ey)/2, k = 0.18;
+    const cxp = mx + (CX-mx)*k, cyp = my + (CY-my)*k;
+    const lx = mx + (CX-mx)*0.34, ly = my + (CY-my)*0.34;
+    const disabled = l.enabled === false;
+    return `<path d="M${sx.toFixed(1)},${sy.toFixed(1)} Q${cxp.toFixed(1)},${cyp.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" fill="none" style="stroke:${disabled?"var(--line)":"var(--muted)"}" stroke-width="1.6"${disabled?' stroke-dasharray="4 3"':""} marker-end="url(#wbChainArrow)"/>` +
+      (l.kw ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="9" style="fill:var(--muted)">${esc(l.kw)}</text>` : "");
+  }).join("");
+  // 节点：圆 + 场景名（超 5 字折两行）
+  const nodes = scs.map(sc=>{
+    const p = pos[sc], s = SCENARIOS[sc] || { name: sc, color: "var(--muted)" };
+    const lines = _graphNameLines(s.name);
+    const txt = lines.length === 1
+      ? `<text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[0])}</text>`
+      : `<text x="${p.x.toFixed(1)}" y="${(p.y-1.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[0])}</text>` +
+        `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[1])}</text>`;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${NR}" style="fill:var(--panel);stroke:${s.color}" stroke-width="2"/>${txt}`;
+  }).join("");
+  return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="跨场景习惯链有向图">${defs}${edges}${nodes}</svg></div>`;
 }
 

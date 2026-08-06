@@ -13,6 +13,77 @@ const CHAIN_BREAK_KEY = "wb_chain_break_notified";
 const DIGEST_DATE_KEY = "wb_digest_date";
 const NOTIFY_INTERVAL_MS = 60000; // 60s 检查一次
 
+/* ---------- P9：稍后提醒（snooze）与免打扰时段 ----------
+ * 存储键（不带 PREFIX，按任务契约）：
+ *   wb_notify_snooze   { [taskId]: timestamp }  该时间戳前不再提醒此任务
+ *   wb_notify_quiet    { enabled, start, end }  免打扰时段（整点小时，支持跨天如 22→8）
+ */
+const SNOOZE_KEY = "wb_notify_snooze";
+const QUIET_KEY = "wb_notify_quiet";
+
+function getSnoozeMap(){
+  const m = load(SNOOZE_KEY, {});
+  return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
+}
+/**
+ * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
+ * @param {string} id - 任务 id
+ * @param {number} [minutes] - 延后分钟数（默认 30，非法值回退 30）
+ * @returns {boolean}
+ */
+function snoozeTask(id, minutes){
+  if(!id) return false;
+  const mins = (typeof minutes === "number" && minutes > 0) ? minutes : 30;
+  const m = getSnoozeMap();
+  m[id] = Date.now() + mins * 60000;
+  save(SNOOZE_KEY, m);
+  save(NOTIFY_IDS_KEY, load(NOTIFY_IDS_KEY, []).filter(function(x){ return x !== id; }));
+  return true;
+}
+function _snoozedUntil(id){
+  const v = getSnoozeMap()[id];
+  return (typeof v === "number") ? v : 0;
+}
+/* 清理过期 snooze 记录（防键无限增长；checkDueTasks 时顺带调用） */
+function _purgeExpiredSnooze(now){
+  const m = getSnoozeMap(); let changed = false;
+  Object.keys(m).forEach(function(k){ if(m[k] <= now){ delete m[k]; changed = true; } });
+  if(changed) save(SNOOZE_KEY, m);
+}
+
+function getQuietHours(){
+  const q = load(QUIET_KEY, null);
+  const base = { enabled: false, start: 22, end: 8 };
+  if(!q || typeof q !== "object" || Array.isArray(q)) return base;
+  return {
+    enabled: q.enabled === true,
+    start: (typeof q.start === "number" && q.start >= 0 && q.start <= 23) ? Math.floor(q.start) : 22,
+    end: (typeof q.end === "number" && q.end >= 0 && q.end <= 23) ? Math.floor(q.end) : 8
+  };
+}
+function setQuietHours(patch){
+  const next = Object.assign({}, getQuietHours(), patch || {});
+  next.enabled = !!next.enabled;
+  next.start = (typeof next.start === "number" && next.start >= 0 && next.start <= 23) ? Math.floor(next.start) : 22;
+  next.end = (typeof next.end === "number" && next.end >= 0 && next.end <= 23) ? Math.floor(next.end) : 8;
+  save(QUIET_KEY, next);
+  return next;
+}
+/**
+ * 免打扰判定（纯函数；支持跨天时段如 22→8）
+ * @param {number} [now] - 当前时间戳（默认 Date.now()）
+ * @param {{enabled:boolean,start:number,end:number}} [quiet] - 免打扰配置（默认读存储）
+ * @returns {boolean}
+ */
+function isQuietTime(now, quiet){
+  const q = quiet || getQuietHours();
+  if(!q || !q.enabled) return false;
+  const h = new Date(now === undefined ? Date.now() : now).getHours();
+  if(q.start === q.end) return true; // 起止相同 = 全天免打扰
+  if(q.start < q.end) return h >= q.start && h < q.end;
+  return h >= q.start || h < q.end; // 跨天
+}
+
 /**
  * 读取通知开关状态
  * @returns {boolean}
@@ -53,12 +124,15 @@ function _dueStartMs(due){
  * @returns {Array<{id:string,title:string,sc:string,due:string,msg:string}>}
  */
 function checkDueTasks(now){
-  const today = _ymd(new Date(now === undefined ? Date.now() : now));
+  const ts = now === undefined ? Date.now() : now;
+  const today = _ymd(new Date(ts));
   const tasks = getTasks();
   const notifiedIds = load(NOTIFY_IDS_KEY, []);
+  _purgeExpiredSnooze(ts);
   return tasks.filter(t =>
     t && t.id && t.status !== "done" && !t.deletedAt && t.due &&
     !notifiedIds.includes(t.id) &&
+    _snoozedUntil(t.id) <= ts &&
     String(t.due) <= today
   ).map(t => ({
     id: t.id,
@@ -172,6 +246,8 @@ function runNotifyCheck(){
   const stats = { due: 0, breaks: 0, digest: false };
   if(!getNotifyEnabled()) return stats;
   const now = Date.now();
+  // P9：免打扰时段内不推送（任务不标记已提醒，时段结束后补提醒）
+  if(isQuietTime(now)) return stats;
   // 1. 到期任务
   const due = checkDueTasks(now);
   if(due.length){

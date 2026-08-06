@@ -278,6 +278,21 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .hcell.l0{background:var(--heat-0)}.hcell.l1{background:var(--heat-1)}.hcell.l2{background:var(--heat-2)}.hcell.l3{background:var(--heat-3)}.hcell.l4{background:var(--heat-4)}
 .dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px}
 .bars{display:flex;flex-direction:column;gap:var(--space-2)}
+/* P2'：跨场景习惯链有向图 */
+.chain-graph-wrap{margin-top:var(--space-2);overflow-x:auto}
+.chain-graph{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+/* P8：全局筛选控件 + 保存视图 */
+.glob-filters{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.glob-filters input,.glob-filters select{min-width:120px;flex:1}
+.glob-views{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.glob-view-chip{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
+  background:var(--surface-muted);border-radius:var(--radius-full,var(--radius));font-size:var(--fs-xs);cursor:pointer;color:var(--text-dim)}
+.glob-view-chip:hover{background:var(--surface-hover)}
+.glob-view-chip .gv-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:var(--fs-sm);padding:0 var(--space-1)}
+.glob-view-chip .gv-del:hover{color:var(--danger)}
+.glob-view-save{padding:var(--space-1) var(--space-3);background:none;border:1px dashed var(--line);
+  border-radius:var(--radius-full,var(--radius));font-size:var(--fs-xs);color:var(--muted);cursor:pointer}
+.glob-view-save:hover{color:var(--accent);border-color:var(--accent)}
 .bar{display:flex;align-items:center;gap:var(--space-3);font-size:var(--fs-sm)}
 .bar .nm{width:48px;flex-shrink:0}
 .bar .track{flex:1;height:14px;background:var(--surface-muted);border-radius:7px;overflow:hidden}
@@ -987,6 +1002,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <label for="cfgNotify" style="margin:0">开启任务到期 / 习惯链断链 / 每日汇总提醒</label>
     </div>
     <p class="hint" style="margin:4px 0 8px">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</p>
+    <div class="row switch" style="padding:4px 0 0;border:0;margin:0;align-items:center;gap:6px">
+      <input type="checkbox" id="cfgQuiet" style="width:auto">
+      <label for="cfgQuiet" style="margin:0">免打扰时段</label>
+      <select id="cfgQuietStart" aria-label="免打扰开始时间"></select>
+      <span style="font-size:12px;color:var(--muted)">至</span>
+      <select id="cfgQuietEnd" aria-label="免打扰结束时间"></select>
+    </div>
+    <p class="hint" style="margin:4px 0 8px">免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。</p>
   </div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -1076,7 +1099,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.1.3";
+const VERSION = "1.1.4";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -2833,8 +2856,69 @@ function renderHabitChainCard(){
     `<p class="sub">每个场景的连续天数与完成密度</p>` +
     `<h3>当前 Streak</h3><div class="streak-row">${streakBadges}</div>` +
     `<h3>热力图</h3>${heatmaps}` +
+    `<h3>场景链路图</h3>${renderChainGraph()}` +
     `<h3>习惯链状态</h3>${renderHabitChainStatus()}` +
     `</div>`;
+}
+
+/* ---------- P2'：跨场景习惯链有向图（内联 SVG，纯渲染函数） ----------
+ * 节点 = 参与链路的场景（按 ORDER 顺序环形布局），边 = 启用的链（曲线 + 箭头 + 关键词标签）；
+ * 禁用的链以虚线显示。自定义场景自动纳入。 */
+/**
+ * 场景名折行（≤5 字单行，否则对半折两行）
+ * @param {string} nm
+ * @returns {string[]}
+ */
+function _graphNameLines(nm){
+  nm = String(nm||"");
+  if(nm.length <= 5) return [nm];
+  const mid = Math.ceil(nm.length/2);
+  return [nm.slice(0, mid), nm.slice(mid)];
+}
+/**
+ * 渲染跨场景习惯链有向图
+ * @returns {string} HTML 字符串（.chain-graph-wrap > svg）
+ */
+function renderChainGraph(){
+  const links = getLinks().filter(l => l && l.fromSc && l.toSc);
+  if(!links.length) return `<div class="empty">暂无习惯链</div>`;
+  // 节点：参与链路的场景，按 ORDER 顺序环形排布
+  const scs = ORDER.filter(sc => links.some(l => l.fromSc===sc || l.toSc===sc));
+  if(!scs.length) return `<div class="empty">暂无习惯链</div>`;
+  const W=360, H=270, CX=W/2, CY=H/2, NR=26;
+  const R = Math.min(W, H)/2 - NR - 30;
+  const pos = {};
+  scs.forEach((sc, i)=>{
+    const ang = -Math.PI/2 + i*(2*Math.PI/scs.length);
+    pos[sc] = { x: CX + R*Math.cos(ang), y: CY + R*Math.sin(ang) };
+  });
+  const defs = `<defs><marker id="wbChainArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>`;
+  // 边：起点/终点缩进到节点圆周外，控制点向圆心偏转成曲线（双向边自然分离）
+  const edges = links.map(l=>{
+    const p1 = pos[l.fromSc], p2 = pos[l.toSc];
+    if(!p1 || !p2 || l.fromSc === l.toSc) return "";
+    const dx = p2.x-p1.x, dy = p2.y-p1.y, dist = Math.sqrt(dx*dx+dy*dy) || 1;
+    const ux = dx/dist, uy = dy/dist;
+    const sx = p1.x + ux*(NR+3), sy = p1.y + uy*(NR+3);
+    const ex = p2.x - ux*(NR+7), ey = p2.y - uy*(NR+7);
+    const mx = (sx+ex)/2, my = (sy+ey)/2, k = 0.18;
+    const cxp = mx + (CX-mx)*k, cyp = my + (CY-my)*k;
+    const lx = mx + (CX-mx)*0.34, ly = my + (CY-my)*0.34;
+    const disabled = l.enabled === false;
+    return `<path d="M${sx.toFixed(1)},${sy.toFixed(1)} Q${cxp.toFixed(1)},${cyp.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" fill="none" style="stroke:${disabled?"var(--line)":"var(--muted)"}" stroke-width="1.6"${disabled?' stroke-dasharray="4 3"':""} marker-end="url(#wbChainArrow)"/>` +
+      (l.kw ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="9" style="fill:var(--muted)">${esc(l.kw)}</text>` : "");
+  }).join("");
+  // 节点：圆 + 场景名（超 5 字折两行）
+  const nodes = scs.map(sc=>{
+    const p = pos[sc], s = SCENARIOS[sc] || { name: sc, color: "var(--muted)" };
+    const lines = _graphNameLines(s.name);
+    const txt = lines.length === 1
+      ? `<text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[0])}</text>`
+      : `<text x="${p.x.toFixed(1)}" y="${(p.y-1.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[0])}</text>` +
+        `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[1])}</text>`;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${NR}" style="fill:var(--panel);stroke:${s.color}" stroke-width="2"/>${txt}`;
+  }).join("");
+  return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="跨场景习惯链有向图">${defs}${edges}${nodes}</svg></div>`;
 }
 
 // ===== Render Layer (渲染层·小工具) =====
@@ -3357,6 +3441,7 @@ function renderToday(){
         <span class="dot" style="background:${s.color}"></span>
         <span class="title">${esc(x.title)}</span>
         <span class="sc-name">${s.name}</span>
+        <button type="button" class="mini snooze-btn" data-snooze="${esc(x.id)}" title="30 分钟后再提醒">稍后</button>
       </li>`;
     }).join("") + `</ul>`;
   }
@@ -3647,8 +3732,15 @@ function renderOverview(){
   }).join("");
 
   $("#main").innerHTML =
-    `<div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选）</p>
-      <input id="globSearch" placeholder="输入关键词，如 周报 / 塞尔达 / 跑步…">
+    `<div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选，支持场景 / 状态 / 日期 / 标签组合）</p>
+      <div class="glob-filters">
+        <input id="globSearch" placeholder="关键词，如 周报 / 跑步…">
+        <select id="globFSc" aria-label="按场景筛选"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
+        <select id="globFStatus" aria-label="按状态筛选"><option value="">全部状态</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select>
+        <select id="globFDate" aria-label="按日期筛选"><option value="">不限日期</option><option value="today">今天到期</option><option value="overdue">已逾期</option><option value="week">本周到期</option></select>
+        <input id="globFTag" placeholder="标签，如 urgent">
+      </div>
+      <div class="glob-views" id="globViews"></div>
       <div id="globRes" style="margin-top:10px"></div></div>
      <div class="card"><h2>${UI_ICONS.overview} 数据总览</h2>
        <p class="sub">跨场景的任务完成趋势与密度</p>
@@ -3661,6 +3753,12 @@ function renderOverview(){
      <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>`;
 
   const gs=$("#globSearch"); if(gs) gs.oninput=()=> renderGlob(gs.value.trim().toLowerCase());
+  ["globFSc","globFStatus","globFDate","globFTag"].forEach(id=>{
+    const el=$("#"+id); if(!el) return;
+    if(id==="globFTag"){ el.oninput=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
+    else { el.onchange=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
+  });
+  renderGlobViews();
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
   const cr=$("#coachRefresh");
   if(cr) cr.onclick=()=>{ try{ localStorage.removeItem(COACH_CACHE_KEY); }catch(e){ /* noop */ } renderOverview(); };
@@ -3854,15 +3952,97 @@ function renderStats(){
     if(d === 7 || d === 14 || d === 30){ _statsTrendDays = d; renderStats(); }
   });
 }
+/* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
+const GLOB_VIEWS_KEY = PREFIX+"glob_views";
+function getGlobViews(){
+  const arr = load(GLOB_VIEWS_KEY, []);
+  return Array.isArray(arr) ? arr.filter(v=>v && v.name) : [];
+}
+function saveGlobView(name){
+  name = String(name===null||name===undefined?"":name).trim();
+  if(!name) return {ok:false, err:"请输入视图名称"};
+  if(name.length > 16) return {ok:false, err:"视图名称过长（最多 16 字）"};
+  const views = getGlobViews();
+  const f = _readGlobFilters();
+  const exists = views.findIndex(v=>v.name===name);
+  const entry = { name, q:f.q, sc:f.sc, status:f.status, date:f.date, tag:f.tag };
+  if(exists>=0) views[exists]=entry; else views.push(entry);
+  save(GLOB_VIEWS_KEY, views);
+  return {ok:true};
+}
+function removeGlobView(name){
+  save(GLOB_VIEWS_KEY, getGlobViews().filter(v=>v.name!==name));
+}
+function _readGlobFilters(){
+  const v = id=>{ const el=$("#"+id); return el ? (el.value||"") : ""; };
+  return { q:v("globSearch").trim().toLowerCase(), sc:v("globFSc"), status:v("globFStatus"), date:v("globFDate"), tag:v("globFTag").trim().toLowerCase() };
+}
+function _applyGlobFilters(f){
+  const today = todayStr();
+  // 本周一（周一为一周起点，与 weekRange 对齐）
+  const d=new Date(); const day=(d.getDay()+6)%7;
+  const mon=new Date(d); mon.setDate(d.getDate()-day); mon.setHours(0,0,0,0);
+  const monStr = mon.getFullYear()+"-"+pad(mon.getMonth()+1)+"-"+pad(mon.getDate());
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  const sunStr = sun.getFullYear()+"-"+pad(sun.getMonth()+1)+"-"+pad(sun.getDate());
+  return getActiveTasks().filter(x=>{
+    if(!x || x.deletedAt) return false;
+    if(f.q && !(x.title||"").toLowerCase().includes(f.q)) return false;
+    if(f.sc && x.sc!==f.sc) return false;
+    if(f.status && x.status!==f.status) return false;
+    if(f.tag){
+      const tags=(x.tags||[]).map(t=>String(t).toLowerCase());
+      if(!tags.some(t=>t.includes(f.tag))) return false;
+    }
+    if(f.date==="today"){ if(x.due!==today) return false; }
+    else if(f.date==="overdue"){ if(!(x.due && x.due<today && x.status!=="done")) return false; }
+    else if(f.date==="week"){ if(!(x.due && x.due>=monStr && x.due<=sunStr)) return false; }
+    return true;
+  });
+}
+function renderGlobViews(){
+  const box=$("#globViews"); if(!box) return;
+  const views=getGlobViews();
+  box.innerHTML = (views.length
+    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="应用视图">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="删除视图">×</button></span>`).join("")
+    : "") + `<button type="button" class="glob-view-save" id="globViewSave" title="保存当前筛选为视图">＋ 保存视图</button>`;
+  $$("#globViews [data-view]").forEach(ch=>{
+    ch.onclick = e=>{
+      if(e.target.closest(".gv-del")) return; // 删除按钮单独处理
+      const v=getGlobViews().find(x=>x.name===ch.getAttribute("data-view"));
+      if(!v) return;
+      $("#globSearch").value=v.q||""; $("#globFSc").value=v.sc||""; $("#globFStatus").value=v.status||""; $("#globFDate").value=v.date||""; $("#globFTag").value=v.tag||"";
+      renderGlob((v.q||"").toLowerCase());
+    };
+  });
+  $$("#globViews [data-view-del]").forEach(b=>{
+    b.onclick=()=>{ removeGlobView(b.getAttribute("data-view-del")); renderGlobViews(); };
+  });
+  const sv=$("#globViewSave"); if(sv) sv.onclick=()=>{
+    const name = (typeof prompt==="function") ? prompt("视图名称：") : null;
+    if(name===null) return;
+    const r=saveGlobView(name);
+    if(!r.ok){ toast(r.err||"保存失败","warn"); return; }
+    toast("已保存视图","ok"); renderGlobViews();
+  };
+}
 function renderGlob(q){
   const res=$("#globRes"); if(!res) return;
-  if(!q){ res.innerHTML=""; return; }
-  const tasks=getActiveTasks().filter(x=>!x.deletedAt && x.title.toLowerCase().includes(q));
-  const recs=[]; ORDER.forEach(sc=> getRec(sc).forEach(r=>{
-    const t=String(r.title||""); if(t.toLowerCase().includes(q)) recs.push({sc,title:t}); }));
+  const f=_readGlobFilters();
+  // 兼容：renderGlob(q) 直传关键词时同步输入框语义（q 优先）
+  if(typeof q==="string") f.q=q.trim().toLowerCase();
+  const hasFilter = f.q||f.sc||f.status||f.date||f.tag;
+  if(!hasFilter){ res.innerHTML=""; return; }
+  const tasks=_applyGlobFilters(f);
+  const recs=[];
+  if(f.q && !f.sc && !f.status && !f.date && !f.tag){
+    // 仅关键词时保留资料库检索（与原行为一致）
+    ORDER.forEach(sc=> getRec(sc).forEach(r=>{
+      const t=String(r.title||""); if(t.toLowerCase().includes(f.q)) recs.push({sc,title:t}); }));
+  }
   let html="";
   if(tasks.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">任务 (${tasks.length})</div><ul class="list">`+
-    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}</div></div></li>`).join("")+`</ul>`;
+    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}${t.due?" · "+t.due:""}${(t.tags&&t.tags.length)?" · "+t.tags.map(esc).join("/"):""}</div></div></li>`).join("")+`</ul>`;
   if(recs.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">资料 (${recs.length})</div><ul class="list">`+
     recs.map(r=>`<li><div class="body"><div class="t">${esc(r.title)}</div><div class="m">${SCENARIOS[r.sc].name}</div></div></li>`).join("")+`</ul>`;
   res.innerHTML=html||renderEmpty("no-search");
@@ -4597,6 +4777,77 @@ const CHAIN_BREAK_KEY = "wb_chain_break_notified";
 const DIGEST_DATE_KEY = "wb_digest_date";
 const NOTIFY_INTERVAL_MS = 60000; // 60s 检查一次
 
+/* ---------- P9：稍后提醒（snooze）与免打扰时段 ----------
+ * 存储键（不带 PREFIX，按任务契约）：
+ *   wb_notify_snooze   { [taskId]: timestamp }  该时间戳前不再提醒此任务
+ *   wb_notify_quiet    { enabled, start, end }  免打扰时段（整点小时，支持跨天如 22→8）
+ */
+const SNOOZE_KEY = "wb_notify_snooze";
+const QUIET_KEY = "wb_notify_quiet";
+
+function getSnoozeMap(){
+  const m = load(SNOOZE_KEY, {});
+  return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
+}
+/**
+ * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
+ * @param {string} id - 任务 id
+ * @param {number} [minutes] - 延后分钟数（默认 30，非法值回退 30）
+ * @returns {boolean}
+ */
+function snoozeTask(id, minutes){
+  if(!id) return false;
+  const mins = (typeof minutes === "number" && minutes > 0) ? minutes : 30;
+  const m = getSnoozeMap();
+  m[id] = Date.now() + mins * 60000;
+  save(SNOOZE_KEY, m);
+  save(NOTIFY_IDS_KEY, load(NOTIFY_IDS_KEY, []).filter(function(x){ return x !== id; }));
+  return true;
+}
+function _snoozedUntil(id){
+  const v = getSnoozeMap()[id];
+  return (typeof v === "number") ? v : 0;
+}
+/* 清理过期 snooze 记录（防键无限增长；checkDueTasks 时顺带调用） */
+function _purgeExpiredSnooze(now){
+  const m = getSnoozeMap(); let changed = false;
+  Object.keys(m).forEach(function(k){ if(m[k] <= now){ delete m[k]; changed = true; } });
+  if(changed) save(SNOOZE_KEY, m);
+}
+
+function getQuietHours(){
+  const q = load(QUIET_KEY, null);
+  const base = { enabled: false, start: 22, end: 8 };
+  if(!q || typeof q !== "object" || Array.isArray(q)) return base;
+  return {
+    enabled: q.enabled === true,
+    start: (typeof q.start === "number" && q.start >= 0 && q.start <= 23) ? Math.floor(q.start) : 22,
+    end: (typeof q.end === "number" && q.end >= 0 && q.end <= 23) ? Math.floor(q.end) : 8
+  };
+}
+function setQuietHours(patch){
+  const next = Object.assign({}, getQuietHours(), patch || {});
+  next.enabled = !!next.enabled;
+  next.start = (typeof next.start === "number" && next.start >= 0 && next.start <= 23) ? Math.floor(next.start) : 22;
+  next.end = (typeof next.end === "number" && next.end >= 0 && next.end <= 23) ? Math.floor(next.end) : 8;
+  save(QUIET_KEY, next);
+  return next;
+}
+/**
+ * 免打扰判定（纯函数；支持跨天时段如 22→8）
+ * @param {number} [now] - 当前时间戳（默认 Date.now()）
+ * @param {{enabled:boolean,start:number,end:number}} [quiet] - 免打扰配置（默认读存储）
+ * @returns {boolean}
+ */
+function isQuietTime(now, quiet){
+  const q = quiet || getQuietHours();
+  if(!q || !q.enabled) return false;
+  const h = new Date(now === undefined ? Date.now() : now).getHours();
+  if(q.start === q.end) return true; // 起止相同 = 全天免打扰
+  if(q.start < q.end) return h >= q.start && h < q.end;
+  return h >= q.start || h < q.end; // 跨天
+}
+
 /**
  * 读取通知开关状态
  * @returns {boolean}
@@ -4637,12 +4888,15 @@ function _dueStartMs(due){
  * @returns {Array<{id:string,title:string,sc:string,due:string,msg:string}>}
  */
 function checkDueTasks(now){
-  const today = _ymd(new Date(now === undefined ? Date.now() : now));
+  const ts = now === undefined ? Date.now() : now;
+  const today = _ymd(new Date(ts));
   const tasks = getTasks();
   const notifiedIds = load(NOTIFY_IDS_KEY, []);
+  _purgeExpiredSnooze(ts);
   return tasks.filter(t =>
     t && t.id && t.status !== "done" && !t.deletedAt && t.due &&
     !notifiedIds.includes(t.id) &&
+    _snoozedUntil(t.id) <= ts &&
     String(t.due) <= today
   ).map(t => ({
     id: t.id,
@@ -4756,6 +5010,8 @@ function runNotifyCheck(){
   const stats = { due: 0, breaks: 0, digest: false };
   if(!getNotifyEnabled()) return stats;
   const now = Date.now();
+  // P9：免打扰时段内不推送（任务不标记已提醒，时段结束后补提醒）
+  if(isQuietTime(now)) return stats;
   // 1. 到期任务
   const due = checkDueTasks(now);
   if(due.length){
@@ -4808,6 +5064,12 @@ function render(){
     const cfg=getCfg();
     $("#main").innerHTML = renderToday() + renderMainHTML();
     bindScenario();
+    // P9：「稍后提醒」按钮绑定（Top3 待处理任务）
+    $$("#main [data-snooze]").forEach(b=> b.onclick=()=>{
+      snoozeTask(b.getAttribute("data-snooze"), 30);
+      toast("已设置 30 分钟后再提醒","ok");
+      render();
+    });
     if(cfg.enabled) renderChat();
   }catch(e){
     // 渲染异常：诊断 + fallback UI（提示导出备份后清空），不让白屏
@@ -5176,6 +5438,14 @@ function openDrawer(){ const cfg=getCfg();
   $("#cfgEnabled").checked=!!cfg.enabled;
   $("#cfgAgent").checked = cfg.agent!==false; // 默认开启（cfg.agent 未定义时视为开）
   const notifyCb=$("#cfgNotify"); if(notifyCb) notifyCb.checked=getNotifyEnabled();
+  // P9：免打扰时段控件回填（小时下拉 0-23，仅首次填充）
+  const qStart=$("#cfgQuietStart"), qEnd=$("#cfgQuietEnd");
+  if(qStart && !qStart.options.length) qStart.innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join("");
+  if(qEnd && !qEnd.options.length) qEnd.innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join("");
+  const q=getQuietHours();
+  if($("#cfgQuiet")) $("#cfgQuiet").checked=!!q.enabled;
+  if(qStart) qStart.value=String(q.start);
+  if(qEnd) qEnd.value=String(q.end);
   const thSel=$("#cfgTheme"); if(thSel) thSel.value = (cfg.theme==="light"||cfg.theme==="dark") ? cfg.theme : "system";
   const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
   renderScBox();
@@ -5299,6 +5569,12 @@ async function saveCfg(){
     save(PREFIX+"links", links);
     // T2：回收站自动清理策略即时生效（独立于 cfg，单独键存储）
     const rpSel=$("#cfgRecyclePolicy"); if(rpSel) setRecyclePolicy(rpSel.value);
+    // P9：免打扰时段即时生效（独立于 cfg，单独键存储）
+    setQuietHours({
+      enabled: !!($("#cfgQuiet") && $("#cfgQuiet").checked),
+      start: parseInt(($("#cfgQuietStart")&&$("#cfgQuietStart").value)||"22",10),
+      end: parseInt(($("#cfgQuietEnd")&&$("#cfgQuietEnd").value)||"8",10)
+    });
     if(isElectron()){
       const al=$("#cfgAutoLaunch");
       if(al) window.electronAPI.setAutoLaunch(al.checked);
@@ -5584,6 +5860,9 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // P1 自定义场景访问器（供测试驱动与断言）
     addCustomScenario, updateCustomScenario, removeCustomScenario,
     setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,
+    // 第三轮：P8 多维筛选+保存视图 / P2' 习惯链有向图 / P9 稍后提醒+免打扰 访问器
+    renderChainGraph, getGlobViews, saveGlobView, removeGlobView, _applyGlobFilters,
+    snoozeTask, getQuietHours, setQuietHours, isQuietTime,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
