@@ -34,7 +34,7 @@ $("#btnTheme").onclick = toggleTheme;
 $("#btnCmd").onclick = openCmd;
 $("#btnHelp").onclick = renderHelp;
 $("#btnRecover").onclick = recoverAutoBackup;
-$("#btnClearMem").onclick = ()=>{ save(PREFIX+"memory",[]); updateAgentStatus(); toast("已清空工作记忆","ok"); };
+$("#btnClearMem").onclick = ()=>{ if(!confirm("确定清空全部工作记忆？此操作不可恢复。")) return; save(PREFIX+"memory",[]); updateAgentStatus(); toast("已清空工作记忆","ok"); };
 $("#btnCancelGoal").onclick = ()=>{ const g=cancelGoal(); updateAgentStatus(); toast(g?("已取消目标「"+g.title+"」"):"当前无进行中目标","ok"); };
 
 /* ---------- T3.4 通知提醒开关绑定 ---------- */
@@ -95,7 +95,7 @@ $("#chainResetBtn").onclick = ()=>{
 $("#linksBox").addEventListener("click", e=>{
   const t = e.target;
   const delBtn = t.closest("[data-del]");
-  if(delBtn){ const id = delBtn.getAttribute("data-del"); removeCustomLink(id); renderLinksBox(); return; }
+  if(delBtn){ const id = delBtn.getAttribute("data-del"); if(!confirm("确定删除这条习惯链？")) return; removeCustomLink(id); renderLinksBox(); return; }
   const saveBtn = t.closest("[data-save]");
   if(saveBtn){
     const id = saveBtn.getAttribute("data-save");
@@ -130,4 +130,6 @@ $("#cmdInput").onkeydown = e=>{
   else if(e.key==="Enter"){ e.preventDefault(); runCmd(cmdSel); }
   else if(e.key==="Escape"){ closeCmd(); }
 };
+// L1：输入时实时过滤命令（openCmd 仅初次渲染空列表，此前打字不刷新）
+$("#cmdInput").oninput = e=> renderCmd(e.target.value);
 

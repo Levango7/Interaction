@@ -34,6 +34,11 @@ export function loadApp() {
       if (typeof window.ReadableStream === "undefined" && typeof ReadableStream !== "undefined") {
         Object.defineProperty(window, "ReadableStream", { value: ReadableStream, writable: true, configurable: true });
       }
+      // 测试环境：jsdom 未实现 confirm/alert（默认返回 false / 抛 Not implemented）。
+      // 注入默认「确认」与空实现，使依赖确认框的交互（导入覆盖、清空记忆、删除习惯链等）
+      // 在测试中可继续推进；真实浏览器行为不受影响。
+      window.confirm = function () { return true; };
+      window.alert = function () {};
     },
   });
   return dom.window;

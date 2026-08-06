@@ -28,7 +28,14 @@ function load(k, def){
  * @param {string} k - 存储键
  * @param {*} v - 要存储的值
  */
-function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+function save(k, v){
+  try{ localStorage.setItem(k, JSON.stringify(v)); }
+  catch(e){
+    // M8：配额耗尽 / 隐私模式禁用存储时不再静默崩溃，给出可观测告警
+    if(typeof pushDiag === "function") pushDiag("error", "save failed: "+(e&&e.message||e), {where:"save", key:k});
+    try{ toast("本地存储写入失败（可能空间已满），部分数据未保存。", "error"); }catch(e2){ /* toast 不可用静默降级 */ }
+  }
+}
 /**
  * 轻量响应式 store（T2.3 状态管理）
  * @param {*} initial - 初始状态

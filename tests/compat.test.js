@@ -283,7 +283,7 @@ describe("T5.3 浏览器兼容 · crypto.subtle 不存在降级明文", () => {
     }
   });
 
-  it("d3: persistCfg 在 crypto 不可用时存明文 cfg", async () => {
+  it("d3: persistCfg 在 crypto 不可用时剥离明文 Key（仅存非敏感配置，不落明文）", async () => {
     const win = await boot();
     const { persistCfg, getCfg, initCrypto, _resetCrypto, PREFIX } = win.__test;
     _resetCrypto();
@@ -298,8 +298,11 @@ describe("T5.3 浏览器兼容 · crypto.subtle 不存在降级明文", () => {
       };
       await persistCfg(cfg);
       const stored = JSON.parse(win.localStorage.getItem(PREFIX + "cfg"));
-      // key 应为明文（未加密）
-      expect(stored.profiles[0].key).toBe("sk-plain-persist");
+      // D4 安全护栏：不可用时绝不写明文 Key，应被剥离（而非明文落盘）
+      expect(stored.profiles[0].key).toBe("");
+      // 非敏感配置仍应正常持久化
+      expect(stored.enabled).toBe(true);
+      expect(stored.profiles[0].name).toBe("Test");
     } finally {
       Object.defineProperty(win.crypto, "subtle", { value: subtle, configurable: true });
     }
@@ -364,19 +367,21 @@ describe("T5.3 浏览器兼容 · ReadableStream 不存在 fallback 一次性渲
     }
   });
 
-  it("e3: chatOnce 在有 ReadableStream 时 SSE 响应走流式分支", async () => {
+  it("e3: chatOnce 统一走 json()（L2/L3 已清理 SSE 流式分支；有 ReadableStream 时也按非流式 json 返回）", async () => {
     const win = await boot();
     setupAiProfile(win);
     const { chatOnce } = win.__test;
-    // ReadableStream 存在 → 走流式
+    // ReadableStream 存在，但 chatOnce 不再区分 SSE，始终按 json 解析
     expect(win.__test.isReadableStreamSupported()).toBe(true);
-    const chunks = [
+    const sseResp = mockSSEResponse([
       "data: " + JSON.stringify({ choices: [{ delta: { content: "Stream" } }] }) + "\n\n",
       "data: [DONE]\n\n"
-    ];
-    setFetch(win, vi.fn(() => Promise.resolve(mockSSEResponse(chunks))));
+    ]);
+    // 覆盖 json 为正常返回：清理流式分支后，chatOnce 始终走 json 路径
+    sseResp.json = () => Promise.resolve({ choices: [{ message: { content: "JSON-content" } }] });
+    setFetch(win, vi.fn(() => Promise.resolve(sseResp)));
     const j = await chatOnce([{ role: "user", content: "hi" }]);
-    expect(j.choices[0].message.content).toBe("Stream");
+    expect(j.choices[0].message.content).toBe("JSON-content");
   });
 });
 

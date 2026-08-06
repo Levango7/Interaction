@@ -22,7 +22,7 @@ function weekRange(){
 function thisWeekDone(sc){
   const d=new Date(); const day=(d.getDay()+6)%7;
   const mon=new Date(d); mon.setDate(d.getDate()-day); mon.setHours(0,0,0,0);
-  return getTasks().filter(t=>t.sc===sc&&t.status==="done"&&t.doneAt&&t.doneAt>=mon.getTime());
+  return getActiveTasks().filter(t=>t.sc===sc&&t.status==="done"&&t.doneAt&&t.doneAt>=mon.getTime());
 }
 
 /* ---------- 渲染：侧边导航 ---------- */
@@ -34,20 +34,75 @@ const SIDE_TOGGLE_HTML = `<button class="side-toggle" id="sideToggle" aria-label
  * @returns {void}
  */
 function renderSide(){
-  const tasks = getTasks();
+  const tasks = getActiveTasks();
   const totalOpen = tasks.filter(t=>t.status!=="done").length;
   const overview = `<button class="nav-item ${active==="overview"?"active":""}" data-sc="overview" style="--sc:var(--text-dim)">
     ${UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">总览</span><span class="cnt">${totalOpen}</span></button>`;
   const statsBtn = `<button class="nav-item ${active==="stats"?"active":""}" data-sc="stats" style="--sc:var(--text-dim)">
     ${UI_ICONS.stats.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">统计</span><span class="cnt">${tasks.length}</span></button>`;
+  const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
+  const recycleBtn = `<button class="nav-item" data-recycle="1" style="--sc:var(--muted)" title="回收站（已删除任务）">
+    ${UI_ICONS.trash.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">回收站</span>${recycleCount?`<span class="cnt">${recycleCount}</span>`:""}</button>`;
   const items = ORDER.map(sc=>{
     const s = SCENARIOS[sc];
     const open = tasks.filter(t=>t.sc===sc && t.status!=="done").length;
     return `<button class="nav-item ${sc===active?"active":""}" data-sc="${sc}" style="--sc:${s.color}">
       ${(SCENARIOS[sc].icon || "").replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">${s.name}</span><span class="cnt">${open}</span></button>`;
   }).join("");
-  $("#side").innerHTML = SIDE_TOGGLE_HTML + overview + statsBtn + items;
-  $$("#side .nav-item").forEach(b=> b.onclick = ()=>{ setActive(b.dataset.sc); render(); });
+  $("#side").innerHTML = SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + items;
+  $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
+    if(b.dataset.recycle){ openRecycle(); return; }
+    setActive(b.dataset.sc); render();
+  });
+}
+/* ---------- 回收站（D3：软删除任务的恢复 / 永久删除入口） ---------- */
+function openRecycle(){
+  const all = load(PREFIX+"tasks", []);
+  const del = all.filter(t=>t.deletedAt).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
+  const items = del.length ? del.map(t=>{
+    const sm = scMeta(t.sc);
+    const w = new Date(t.deletedAt);
+    const whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
+    return `<div class="recycle-item" data-id="${esc(t.id)}">
+      <span class="recycle-dot" style="background:${sm.color}"></span>
+      <span class="recycle-title">${esc(t.title)}</span>
+      <span class="recycle-sc">${sm.name}</span>
+      <span class="recycle-when">${whenStr}</span>
+      <button type="button" class="recycle-restore" data-restore="${esc(t.id)}">恢复</button>
+      <button type="button" class="recycle-purge" data-purge="${esc(t.id)}">彻底删除</button>
+    </div>`;
+  }).join("") : `<div class="recycle-empty">回收站为空</div>`;
+  const html = `<div class="recycle-modal" id="recycleModal">
+    <div class="recycle-card">
+      <div class="recycle-header"><h2>回收站</h2><button type="button" class="recycle-close" id="recycleClose">✕</button></div>
+      <div class="recycle-list">${items}</div>
+      ${del.length ? `<div class="recycle-footer"><button type="button" class="recycle-clear" id="recycleClear">清空回收站</button></div>` : ""}
+    </div></div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const close = ()=>{ const m=$("#recycleModal"); if(m) m.remove(); };
+  const closeBtn = $("#recycleClose"); if(closeBtn) closeBtn.onclick = close;
+  const modal = $("#recycleModal"); if(modal) modal.onclick = e=>{ if(e.target===modal) close(); };
+  $$("#recycleModal [data-restore]").forEach(b=> b.onclick=()=>{ restoreRecycle(b.dataset.restore); close(); });
+  $$("#recycleModal [data-purge]").forEach(b=> b.onclick=()=>{ purgeRecycle(b.dataset.purge); close(); });
+  const clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的任务将永久删除，不可恢复。")){ clearRecycle(); close(); } };
+}
+function restoreRecycle(id){
+  const all = load(PREFIX+"tasks", []);
+  const next = all.map(t=> t.id===id ? Object.assign({}, t, { deletedAt: undefined }) : t);
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("已恢复任务", "ok"); render();
+}
+function purgeRecycle(id){
+  const all = load(PREFIX+"tasks", []);
+  const next = all.filter(t=>t.id!==id);
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("已永久删除", "ok"); render();
+}
+function clearRecycle(){
+  const all = load(PREFIX+"tasks", []);
+  const next = all.filter(t=>!t.deletedAt);
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("回收站已清空", "ok"); render();
 }
 /* 侧边栏折叠：事件委托绑定在 #side 上（不随 innerHTML 重建丢失），启动时恢复持久化状态 */
 function setupSideToggle(){
@@ -332,7 +387,7 @@ function greeting(){
 // 优先级权重：P0 最优先，无优先级最后
 function _priWeight(p){ return p==="P0"?0 : p==="P1"?1 : p==="P2"?2 : 3; }
 function renderToday(){
-  const tasks = getTasks();
+  const tasks = getActiveTasks();
   const t = todayStr();
   const total = tasks.length, done = tasks.filter(x=>x.status==="done").length;
   // 今日到期 + 逾期待办（due <= 今天）
@@ -363,7 +418,7 @@ function renderToday(){
     top3Html = `<div class="empty">今天没有待处理的事项，去各场景添加任务吧</div>`;
   }else{
     top3Html = `<ul class="top3-list">` + top3.map(x=>{
-      const s = SCENARIOS[x.sc];
+      const s = scMeta(x.sc);
       return `<li class="top3-item">
         <span class="dot" style="background:${s.color}"></span>
         <span class="title">${esc(x.title)}</span>
@@ -385,12 +440,11 @@ function renderToday(){
     else if(s.current > 0){ icon = "🔥"; label = s.current + "天"; }
     else if(triggered){ icon = "✓"; label = "已触发"; }
     else { icon = "○"; label = "未开始"; }
-    const fromColor = SCENARIOS[l.fromSc] ? SCENARIOS[l.fromSc].color : "var(--muted)";
-    const toColor = SCENARIOS[l.toSc] ? SCENARIOS[l.toSc].color : "var(--muted)";
+    const fs = scMeta(l.fromSc), ts = scMeta(l.toSc);
     return `<button class="chain-pill" data-chain-sc="${l.fromSc}"${enabled?"":" disabled"}>
-      <span style="color:${fromColor}">${SCENARIOS[l.fromSc].name}</span>
+      <span style="color:${fs.color}">${fs.name}</span>
       <span class="arr">→</span>
-      <span style="color:${toColor}">${SCENARIOS[l.toSc].name}</span>
+      <span style="color:${ts.color}">${ts.name}</span>
       <span class="fire">${icon}</span>
       <span class="chain-label">${label}</span>
     </button>`;

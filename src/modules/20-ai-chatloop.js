@@ -2,10 +2,10 @@
 /* ---------- AI 对话（带工具调用） ---------- */
 /**
  * 单次 AI 对话调用（OpenAI 兼容协议）。Electron 模式经主进程代理；浏览器直连兜底
- * T3.1 增强：支持外部 signal（取消）、流式 SSE（onDelta 实时回调）、自动重试
+ * T3.1 增强：支持外部 signal（取消）、自动重试
  * 重试矩阵（与主进程 chat 对齐）：网络错误 / 429 / 5xx 退避重试；取消 / 超时 / 401 / 其他 4xx 不重试
  * @param {Array<{role:string,content:string,tool_calls?:Object[],tool_call_id?:string}>} messages
- * @param {{signal?:AbortSignal, onDelta?:(fullContent:string)=>void, retry?:number}} [opts] - signal 取消；onDelta 流式回调；retry 自动重试次数（默认 3）
+ * @param {{signal?:AbortSignal, retry?:number}} [opts] - signal 取消；retry 自动重试次数（默认 3）
  * @returns {Promise<Object>} OpenAI 风格的响应 JSON
  */
 async function chatOnce(messages, opts){
@@ -58,21 +58,8 @@ async function chatOnce(messages, opts){
           }
           throw new Error("API 返回错误："+r.status);
         }
-        // T3.1 流式 SSE：Content-Type 含 text/event-stream 且 body 可读
-        // T5.3 浏览器兼容：ReadableStream 不可用时 fallback 到一次性 JSON 渲染
-        const ct=(r.headers && typeof r.headers.get==="function") ? (r.headers.get("content-type")||"") : "";
-        const streamAvail = (typeof ReadableStream !== "undefined")
-          && r.body
-          && (r.body instanceof ReadableStream || typeof r.body.getReader === "function");
-        if(ct.indexOf("text/event-stream")>=0 && streamAvail){
-          let content="";
-          await readSSEStream(r, function(delta){
-            content += delta;
-            if(opts.onDelta){ try{ opts.onDelta(content); }catch(e){ /* 回调失败不中断流 */ } }
-          });
-          return { choices:[{ message:{ content: content } }] };
-        }
-        // fallback：一次性 JSON
+        // fallback：一次性 JSON（chatOnce 未请求 stream，服务端按非流式返回；
+        // 历史 SSE 流式分支因服务端未返回 text/event-stream 而不可达，按 L2/L3 清理移除）
         return await r.json();
       }catch(err){
         // 取消 / 超时：不重试，直接抛出
@@ -103,43 +90,3 @@ async function chatOnce(messages, opts){
     throw e;
   }
 }
-
-/**
- * 解析 SSE 流（OpenAI 兼容 data: {json}\n\n 格式）。逐 chunk 读取并按事件边界切分，
- * buffer 拼接处理不完整 chunk；遇到 data: [DONE] 终止。
- * @param {Response} response - 含可读 body 的 fetch 响应
- * @param {(delta:string)=>void} onDelta - 每收到一段 delta.content 调用
- * @returns {Promise<void>}
- */
-async function readSSEStream(response, onDelta){
-  const reader=response.body.getReader();
-  const decoder=new TextDecoder();
-  let buffer="";
-  for(;;){
-    const chunk=await reader.read();
-    if(chunk.done) break;
-    buffer += decoder.decode(chunk.value, { stream:true });
-    // 按 \n\n 分割事件（兼容 \r\n\r\n）
-    let idx;
-    while((idx=buffer.indexOf("\n\n"))>=0){
-      const evt=buffer.slice(0, idx);
-      buffer=buffer.slice(idx+2);
-      // 解析每行 data:
-      const lines=evt.split(/\r?\n/);
-      for(let i=0;i<lines.length;i++){
-        const line=lines[i];
-        if(line.indexOf("data:")!==0) continue;
-        const data=line.slice(5).trim();
-        if(!data) continue;
-        if(data==="[DONE]") return;
-        try{
-          const j=JSON.parse(data);
-          const choice=j.choices && j.choices[0];
-          const delta=choice && (choice.delta || choice.message);
-          if(delta && delta.content){ onDelta(delta.content); }
-        }catch(e){ /* 忽略非 JSON data 行 */ }
-      }
-    }
-  }
-}
-

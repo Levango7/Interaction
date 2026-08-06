@@ -32,16 +32,16 @@ function bindScenario(){
     if(!confirm("删除这条记录？")) return;
     setRec(active, getRec(active).filter(r=>r.id!==b.dataset.rdel)); render();
   });
-  $$("[data-done]").forEach(b=> b.onclick=()=>{ completeTask(b.dataset.done); render(); });
   // A3：习惯链状态条点击 → 跳转到对应场景
   $$("[data-chain-sc]").forEach(b=> b.onclick=()=>{
     const sc = b.dataset.chainSc;
     if(SCENARIOS[sc]){ setActive(sc); render(); }
   });
   $$("[data-copy]").forEach(b=> b.onclick=()=>{
+    const o=b.innerHTML;
     navigator.clipboard.writeText(b.dataset.val).then(()=>{
-      const o=b.innerHTML; b.innerHTML="已复制"; setTimeout(()=>b.innerHTML=o,1200);
-    });
+      b.innerHTML="已复制"; setTimeout(()=>b.innerHTML=o,1200);
+    }).catch(()=>{ b.innerHTML="复制失败"; setTimeout(()=>b.innerHTML=o,1200); });
   });
   const tf=$("#tagFilter"); if(tf) tf.oninput=()=>{
     const q=tf.value.trim().toLowerCase();

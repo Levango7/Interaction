@@ -167,7 +167,17 @@ async function saveCfg(){
     delete cfg.base; delete cfg.key; delete cfg.model;
     _cfgCache = cfg;
     try{ await persistCfg(cfg); }
-    catch(e){ if(isElectron()){ const rest = Object.assign({}, cfg); save(PREFIX+"cfg", rest); } else save(PREFIX+"cfg", cfg); }
+    catch(e){
+      // D4：持久化失败兜底——浏览器态绝不写明文 Key，剥离后保存非敏感配置并告警
+      if(isElectron()){ const rest = Object.assign({}, cfg); save(PREFIX+"cfg", rest); }
+      else {
+        const safe = Object.assign({}, cfg);
+        if(Array.isArray(safe.profiles)) safe.profiles = safe.profiles.map(p=>Object.assign({},p,{key:""}));
+        if(typeof safe.key === "string") delete safe.key;
+        save(PREFIX+"cfg", safe);
+        try{ toast("⚠ 加密持久化失败，AI Key 未保存（安全起见已丢弃）。", "warn"); }catch(e2){ /* noop */ }
+      }
+    }
     // T3.2：同步链启用状态（chain-toggle 实时已保存，此处兜底处理旧 lk_ id 与新 chain-toggle）
     const links=getLinks();
     links.forEach(l=>{

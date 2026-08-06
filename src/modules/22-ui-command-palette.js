@@ -16,7 +16,7 @@ function buildCmds(q){
     {label:"查看总览", icon:UI_ICONS.overview, run:()=>{active="overview";render();}}
   ];
   const scs=ORDER.map(sc=>({label:"切到 "+SCENARIOS[sc].name, icon:SCENARIOS[sc].icon || "", run:()=>{setActive(sc);render();}}));
-  const tasks=getTasks().filter(t=>t.status!=="done").slice(0,12)
+  const tasks=getActiveTasks().filter(t=>t.status!=="done").slice(0,12)
     .map(t=>({label:t.title, icon:SCENARIOS[t.sc].icon || "", sub:SCENARIOS[t.sc].name, run:()=>{setActive(t.sc);render();}}));
   let items=acts.concat(scs, tasks);
   if(q) items=items.filter(it=> (it.label||"").toLowerCase().includes(q) || (it.sub&&it.sub.toLowerCase().includes(q)));

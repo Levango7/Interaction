@@ -6,7 +6,7 @@
  */
 function renderMainHTML(){
   const s = SCENARIOS[active];
-  const tasksAll = getTasks().filter(x=>x.sc===active);
+  const tasksAll = getActiveTasks().filter(x=>x.sc===active);
   const tasks = tasksAll;
   const open = tasks.filter(x=>x.status!=="done");
   const recs = getRec(active);
@@ -106,6 +106,6 @@ function renderMainHTML(){
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
      ${renderExtra(active)}
      ${chatCard}
-     <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v1.0.0</div>`;
+     <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v${VERSION}</div>`;
 }
 

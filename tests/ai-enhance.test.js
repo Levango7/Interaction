@@ -156,48 +156,7 @@ describe("T3.1 AI 增强 · chatOnce 非流式 fallback", () => {
   }, 15000);
 });
 
-describe("T3.1 AI 增强 · chatOnce 流式 SSE", () => {
-  it("text/event-stream → 逐 chunk 解析 data: 行，onDelta 收到累积 content", async () => {
-    const win = await boot();
-    setupAiProfile(win);
-    const { chatOnce } = win.__test;
-    const chunks = [
-      "data: " + JSON.stringify({ choices: [{ delta: { content: "Hello" } }] }) + "\n\n",
-      "data: " + JSON.stringify({ choices: [{ delta: { content: " World" } }] }) + "\n\n",
-      "data: [DONE]\n\n"
-    ];
-    setFetch(win, vi.fn(() => Promise.resolve(mockSSEResponse(chunks))));
-    const deltas = [];
-    const j = await chatOnce([{ role: "user", content: "hi" }], { onDelta: (full) => deltas.push(full) });
-    expect(j.choices[0].message.content).toBe("Hello World");
-    expect(deltas).toEqual(["Hello", "Hello World"]);
-  }, 15000);
-
-  it("chunk 跨边界（事件被拆成两半）→ buffer 拼接仍正确解析", async () => {
-    const win = await boot();
-    setupAiProfile(win);
-    const { chatOnce } = win.__test;
-    const fullEvent = "data: " + JSON.stringify({ choices: [{ delta: { content: "ABC" } }] }) + "\n\n" +
-                      "data: " + JSON.stringify({ choices: [{ delta: { content: "DEF" } }] }) + "\n\n";
-    const chunks = [fullEvent.slice(0, 10), fullEvent.slice(10, 25), fullEvent.slice(25)];
-    setFetch(win, vi.fn(() => Promise.resolve(mockSSEResponse(chunks))));
-    const j = await chatOnce([{ role: "user", content: "hi" }]);
-    expect(j.choices[0].message.content).toBe("ABCDEF");
-  }, 15000);
-
-  it("readSSEStream 遇 [DONE] 立即终止（后续 chunk 不处理）", async () => {
-    const win = await boot();
-    const { readSSEStream } = win.__test;
-    const chunks = [
-      "data: " + JSON.stringify({ choices: [{ delta: { content: "X" } }] }) + "\n\n",
-      "data: [DONE]\n\n",
-      "data: " + JSON.stringify({ choices: [{ delta: { content: "Y" } }] }) + "\n\n"
-    ];
-    const deltas = [];
-    await readSSEStream(mockSSEResponse(chunks), (d) => deltas.push(d));
-    expect(deltas).toEqual(["X"]);
-  }, 15000);
-});
+// L2/L3：SSE 流式分支为不可达死代码（chatOnce 未请求 stream:true），已按审查报告清理移除；对应流式单测一并删除。chatOnce 现统一按非流式 json 解析（见 compat.test.js e2/e3）。
 
 describe("T3.1 AI 增强 · chatOnce 自动重试（网络错误）", () => {
   it("前 2 次 TypeError 第 3 次成功 → 最终返回成功结果", async () => {

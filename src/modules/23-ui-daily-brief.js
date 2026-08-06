@@ -15,7 +15,7 @@ function dailyDigest(){
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
     try { Notification.requestPermission(); } catch (e) { /* 旧 API 回调式或拒绝，忽略 */ }
   }
-  const items=getTasks().filter(x=>x.status!=="done"&&x.due).sort((a,b)=>a.due<b.due?-1:1);
+  const items=getActiveTasks().filter(x=>x.status!=="done"&&x.due).sort((a,b)=>a.due<b.due?-1:1);
   const pending=items.filter(x=> x.due===today || x.due<today);
   if(!pending.length) return;
   const top=pending.slice(0,3).map(x=>"· "+x.title+(x.due<today?"（逾期）":"（今天）")).join("\n");

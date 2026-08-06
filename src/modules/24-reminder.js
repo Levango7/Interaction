@@ -163,8 +163,9 @@ function markDigestSent(today){
   save(DIGEST_DATE_KEY, today || todayStr());
 }
 /**
- * 执行一次通知检查：到期任务 + 断链 + 每日 digest。
+ * 执行一次通知检查：到期任务 + 断链。
  * 副作用函数：调用 notifySystem 展示，并标记已提醒。未开启通知时直接返回。
+ * 每日 digest 由 startup 的 dailyDigest() 统一处理（见 ui-daily-brief.js），此处不重复推送。
  * @returns {{due:number,breaks:number,digest:boolean}} 触发计数
  */
 function runNotifyCheck(){
@@ -185,13 +186,8 @@ function runNotifyCheck(){
     markChainBreakNotified(breaks.map(b => b.id), todayStr());
     stats.breaks = breaks.length;
   }
-  // 3. 每日 digest
-  const dig = dailyDigestNotify(now);
-  if(dig){
-    try{ notifySystem(dig.msg, ""); }catch(e){ pushDiag("error", "notify digest: "+(e&&e.message||e), {where:"notify"}); }
-    markDigestSent(todayStr());
-    stats.digest = true;
-  }
+  // 注：每日播报（digest）统一由启动时的 dailyDigest() 负责（使用 last_open 去重），
+  // 此处不再重复推送，避免与启动播报形成「双每日播报」（D6 修复）。
   return stats;
 }
 /**

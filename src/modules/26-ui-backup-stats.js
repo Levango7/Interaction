@@ -1,6 +1,6 @@
 // ===== UI Layer (交互层·备份与统计) =====
 /* ---------- 备份 / 统计 ---------- */
-function allKeys(){ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)); }
+function allKeys(){ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }
 function doExport(){
   const data = {}; allKeys().forEach(k=> data[k]=localStorage.getItem(k));
   // P0-5：跨设备导出显式告警（不静默丢 Key）。安全默认：浏览器态不勾选不出明文。
@@ -36,7 +36,8 @@ function doImport(file){
   reader.onload = async ()=>{
     try{
       const data = JSON.parse(reader.result);
-      Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX)) localStorage.setItem(k, data[k]); });
+      if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
+      Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY) localStorage.setItem(k, data[k]); });
       _cfgCache = null; _deviceKey = null;
       try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 */ }
 

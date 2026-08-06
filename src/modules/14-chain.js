@@ -30,7 +30,7 @@ function runLinks(src){
       tasks.push({id:uid(), sc:l.toSc, title:l.taskTitle, due:shiftDay(0),
         priority:l.priority||"", status:"todo", doneAt:null, note:"由场景联动自动生成", tags:["联动"], created:Date.now()});
       setTasks(tasks);
-      added++; names.push(SCENARIOS[l.toSc].name);
+      added++; names.push(scMeta(l.toSc).name);
     }
   });
   if(added){
@@ -328,12 +328,11 @@ function renderHabitChainStatus(){
       String(t.title||"").toLowerCase().includes(String(l.kw||"").toLowerCase())
     ).length;
     const enabled = l.enabled !== false;
-    const fromColor = SCENARIOS[l.fromSc] ? SCENARIOS[l.fromSc].color : "var(--muted)";
-    const toColor = SCENARIOS[l.toSc] ? SCENARIOS[l.toSc].color : "var(--muted)";
+    const fm = scMeta(l.fromSc), tm = scMeta(l.toSc);
     return `<div class="lk${enabled ? "" : " disabled"}">` +
-      `<span style="color:${fromColor}">${SCENARIOS[l.fromSc].name}</span>` +
+      `<span style="color:${fm.color}">${fm.name}</span>` +
       `<span class="arr">→</span>` +
-      `<span style="color:${toColor}">${SCENARIOS[l.toSc].name}</span>` +
+      `<span style="color:${tm.color}">${tm.name}</span>` +
       `<span class="cnt">触发 ${triggered} 次</span></div>`;
   }).join("");
   return `<div class="link-status">${items}</div>`;

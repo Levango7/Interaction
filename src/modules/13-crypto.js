@@ -80,21 +80,34 @@ async function persistCfg(cfg){
     save(PREFIX+"cfg", rest);
     return;
   }
-  if(!_cryptoReady){ save(PREFIX+"cfg", cfg); return; }
+  // D4 安全护栏：Web Crypto 不可用时，绝不写入明文 Key。
+  // 仅持久化非敏感配置（profiles 元数据/启用状态等），丢弃 Key 并提示用户重新在安全上下文录入。
+  if(!_cryptoReady){
+    const safe = Object.assign({}, cfg);
+    if(Array.isArray(safe.profiles)){
+      safe.profiles = safe.profiles.map(p => Object.assign({}, p, { key: "" }));
+    }
+    if(typeof safe.key === "string"){ delete safe.key; }
+    save(PREFIX+"cfg", safe);
+    try{ if(typeof toast === "function") toast("⚠ 当前环境不支持加密存储，AI Key 出于安全未保存（已丢弃）。请在 https:// 或本机应用中重新录入。", "warn"); }catch(e){ /* noop */ }
+    return;
+  }
   const mem = Object.assign({}, cfg);
   // 多 Profile：遍历加密每个 profile 的 key
   if(Array.isArray(mem.profiles)){
     mem.profiles = await Promise.all(mem.profiles.map(async p => {
       const np = Object.assign({}, p);
       if(typeof np.key === "string" && np.key){
-        try{ np.key = await encryptKey(np.key); }catch(e){ /* 保留原值 */ }
+        try{ np.key = await encryptKey(np.key); }
+        catch(e){ np.key = ""; } // D4：加密失败则丢弃，不落明文
       }
       return np;
     }));
   }
   // 兼容：若仍存在顶层 key（旧数据未迁移），也加密
   if(typeof mem.key === "string" && mem.key){
-    try{ mem.key = await encryptKey(mem.key); }catch(e){ /* 保留原值 */ }
+    try{ mem.key = await encryptKey(mem.key); }
+    catch(e){ delete mem.key; } // D4：加密失败则丢弃
   }
   save(PREFIX+"cfg", mem);
 }

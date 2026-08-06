@@ -134,24 +134,9 @@ async function runChatLoop(messages, hist){
     let guard=0;
     const maxLoops = activeGoal()? AGENT_GOAL_LOOP_MAX : 6; // 目标激活时放宽循环，支撑多步自主执行
     while(guard++<maxLoops){
-      // T3.1 流式实时更新：在聊天区追加临时 assistant 消息 DOM，逐段 mdToHtml 渲染
-      let streamEl=null;
       // T5.3 浏览器兼容：chatController.ac 可为 null（AbortController 不可用），此时不传 signal
       const chatSignal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
-      const j=await chatOnce(messages, {
-        signal: chatSignal,
-        onDelta: function(full){
-          if(!streamEl){
-            streamEl=document.createElement("div");
-            streamEl.className="msg assistant md-body streaming";
-            const chat=$("#chat"); if(chat) chat.appendChild(streamEl);
-          }
-          streamEl.innerHTML=mdToHtml(full);
-          scrollChat();
-        }
-      });
-      // 流式完成后移除临时 DOM（最终内容由 renderChat 统一渲染，避免重复）
-      if(streamEl){ streamEl.remove(); }
+      const j=await chatOnce(messages, { signal: chatSignal });
       const msg = j.choices && j.choices[0] && j.choices[0].message;
       if(!msg) throw new Error("空响应");
       if(msg.tool_calls && msg.tool_calls.length){

@@ -41,7 +41,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     _backupBroken, _validateAndMigrateTasks, _validateCfg, _validateLinks,
     chatOnce, doExport,
     // T3.1 AI 增强（取消/重试/流式）访问器（供测试驱动与断言）
-    abortChat, retryChat, createChatController, readSSEStream, showChatThinking, runChatLoop,
+    abortChat, retryChat, createChatController, showChatThinking, runChatLoop,
     getChat, appendChat,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,

@@ -29,7 +29,7 @@ function execTool(name, args, force){
     if(name==="list_tasks"){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
       const st = ["","todo","doing","done"].includes(args.status)? args.status : "";
-      let t = getTasks().filter(x=>x.sc===sc); if(st) t=t.filter(x=>x.status===st);
+      let t = getActiveTasks().filter(x=>x.sc===sc); if(st) t=t.filter(x=>x.status===st);
       return JSON.stringify({count:t.length, items:t.slice(0,20).map(x=>({title:x.title,status:x.status,due:x.due}))});
     }
     if(name==="complete_task"){
@@ -64,7 +64,7 @@ function execTool(name, args, force){
         return JSON.stringify({ok:false, confirm:"将删除：「"+ft.task.title+"」（id "+ft.task.id+"）。发送「确认」以继续，其他内容取消。", op:"delete_task", task_id:ft.task.id, title:ft.task.title});
       }
       ft.task.deletedAt=Date.now(); setTasks(ft.tasks); // ③ 软删除：进回收站，可恢复
-      return JSON.stringify({ok:true, msg:"已删除（进入回收站，可在看板底部恢复）："+ft.task.title});
+      return JSON.stringify({ok:true, msg:"已删除（进入左侧「回收站」，可恢复）："+ft.task.title});
     }
     if(name==="add_record"){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;

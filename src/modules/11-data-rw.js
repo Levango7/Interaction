@@ -6,6 +6,13 @@
  */
 function getTasks(){ return taskStore.get(); }
 /**
+ * 读取未删除（活跃）任务列表：在 getTasks() 基础上过滤软删除标记 deletedAt。
+ * 仅用于「读取 / 渲染」场景；写入路径（create/complete/update 等）仍须使用原始 getTasks()，
+ * 否则 setTasks 回写会丢失软删除任务（D3 防护）。
+ * @returns {Task[]}
+ */
+function getActiveTasks(){ return taskStore.get().filter(t=>!t.deletedAt); }
+/**
  * 写入全部任务并触发自动备份（T2.3：先更新 taskStore 再持久化，store 变更会防抖触发 render）
  * @param {Task[]} a
  */

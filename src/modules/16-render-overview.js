@@ -5,7 +5,7 @@
  * @returns {void}
  */
 function renderOverview(){
-  const tasks = getTasks();
+  const tasks = getActiveTasks();
   const days=[], counts=[];
   for(let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i);
     days.push(pad(d.getMonth()+1)+"/"+pad(d.getDate()));
@@ -45,7 +45,7 @@ function renderOverview(){
      </div>
      ${renderHabitChainCard()}
      ${renderCoachCard()}
-     <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v1.0.0</div>`;
+     <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>`;
 
   const gs=$("#globSearch"); if(gs) gs.oninput=()=> renderGlob(gs.value.trim().toLowerCase());
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
@@ -153,7 +153,7 @@ function renderStats(){
   // T4.2：无任何任务数据时显示 no-stats 空状态（替代空图表/空饼图）
   if(stats.total === 0){
     $("#main").innerHTML = `<div class="card">` + renderEmpty("no-stats") + `</div>` +
-      `<div class="foot">Agent 工作台 · 数据统计 · v1.0.0</div>`;
+      `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`;
     return;
   }
   // 关键指标卡片
@@ -204,7 +204,7 @@ function renderStats(){
     `<p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>${chainsHtml}</div>`;
 
   $("#main").innerHTML = cardsHtml + trendHtml + pieHtml + chainCard +
-    `<div class="foot">Agent 工作台 · 数据统计 · v1.0.0</div>`;
+    `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`;
 
   // 绑定周/月切换
   $$(".stats-tab").forEach(b => b.onclick = () => {
@@ -215,12 +215,12 @@ function renderStats(){
 function renderGlob(q){
   const res=$("#globRes"); if(!res) return;
   if(!q){ res.innerHTML=""; return; }
-  const tasks=getTasks().filter(x=>x.title.toLowerCase().includes(q));
+  const tasks=getActiveTasks().filter(x=>!x.deletedAt && x.title.toLowerCase().includes(q));
   const recs=[]; ORDER.forEach(sc=> getRec(sc).forEach(r=>{
     const t=String(r.title||""); if(t.toLowerCase().includes(q)) recs.push({sc,title:t}); }));
   let html="";
   if(tasks.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">任务 (${tasks.length})</div><ul class="list">`+
-    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${SCENARIOS[t.sc].name} · ${t.status}</div></div></li>`).join("")+`</ul>`;
+    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}</div></div></li>`).join("")+`</ul>`;
   if(recs.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">资料 (${recs.length})</div><ul class="list">`+
     recs.map(r=>`<li><div class="body"><div class="t">${esc(r.title)}</div><div class="m">${SCENARIOS[r.sc].name}</div></div></li>`).join("")+`</ul>`;
   res.innerHTML=html||renderEmpty("no-search");

@@ -59,7 +59,7 @@
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.1.0";
+const VERSION = "1.1.1";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -96,4 +96,16 @@ const MVP_SCOPE = {
 };
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
+/**
+ * 安全获取场景元数据（D3/L4/M7 防护）：任务或链引用了非法/损坏的 sc 时，
+ * 返回带降级 name/color/icon 的对象，避免 SCENARIOS[sc].name 抛错导致整页渲染崩溃。
+ * @param {string} sc - 场景键
+ * @returns {{name:string,color:string,icon:string}}
+ */
+function scMeta(sc){
+  const s = SCENARIOS[sc];
+  return s ? { name: s.name, color: s.color, icon: s.icon || "" }
+           : { name: "?", color: "var(--muted)", icon: "" };
+}
 
