@@ -182,11 +182,11 @@ function trapFocus(container){
     else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
   }
   container.addEventListener("keydown", onKey);
-  const first=container.querySelector(SEL);
+  const first=/** @type {HTMLElement} */(container.querySelector(SEL));
   if(first && typeof first.focus==="function"){ try{ first.focus(); }catch(e){ /* noop */ } }
   return function release(){
     container.removeEventListener("keydown", onKey);
-    if(prev && typeof prev.focus==="function" && document.contains(prev)){ try{ prev.focus(); }catch(e){ /* noop */ } }
+    if(prev && typeof /** @type {HTMLElement} */(prev).focus==="function" && document.contains(prev)){ try{ /** @type {HTMLElement} */(prev).focus(); }catch(e){ /* noop */ } }
   };
 }
 /**
@@ -455,7 +455,7 @@ function renderEmpty(type){
  * withSkeleton：包装渲染函数，先显示骨架屏，300ms 后执行真实渲染
  * 用于模拟数据加载延迟，提升感知性能（避免白屏 / 突然弹出内容）
  * @param {() => void} fn - 真实渲染函数（无参，操作 DOM）
- * @param {string} [skeletonType="board"] - 骨架屏类型，传给 renderSkeleton
+ * @param {"chat"|"stats"|"board"|"list"} [skeletonType="board"] - 骨架屏类型，传给 renderSkeleton
  * @returns {void}
  */
 function withSkeleton(fn, skeletonType){
@@ -633,8 +633,8 @@ function _onboardBindStep(step){
   const modal = document.getElementById("onboardModal");
   const close = ()=>{ if(modal) modal.remove(); };
   if(step === 1){
-    document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(b=> b.onclick=()=>{
-      _onboardSelectedSc = b.dataset.sc;
+    document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(b=> /** @type {HTMLElement} */(b).onclick=()=>{
+      _onboardSelectedSc = /** @type {HTMLElement} */(b).dataset.sc;
       document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(x=> x.classList.remove("selected"));
       b.classList.add("selected");
     });
@@ -642,7 +642,7 @@ function _onboardBindStep(step){
     if(skip) skip.onclick = ()=>{ close(); _onboardRenderStep(2); };
     const create = document.getElementById("onboardCreate");
     if(create) create.onclick = ()=>{
-      const input = document.getElementById("onboardTaskInput");
+      const input = /** @type {HTMLInputElement} */(document.getElementById("onboardTaskInput"));
       const title = input ? input.value.trim() : "";
       if(!title){ toast("请输入任务标题", "warn"); return; }
       const tasks = getTasks();
@@ -663,7 +663,7 @@ function _onboardBindStep(step){
       setTasks(tasks);
       completeTask(t.id);
       toast("已模拟触发：交付完成 → 自动生成学习充电任务", "ok");
-      trigger.disabled = true; trigger.textContent = "已触发";
+      /** @type {HTMLButtonElement} */(trigger).disabled = true; trigger.textContent = "已触发";
     };
     const next = document.getElementById("onboardNext");
     if(next) next.onclick = ()=>{ close(); _onboardRenderStep(3); };

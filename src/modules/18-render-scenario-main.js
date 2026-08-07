@@ -109,6 +109,7 @@ function renderMainHTML(){
       ${taskForm}${filterHtml}${kanban}</div>
      <div class="card"><h2>${s.name} · ${rec.label}</h2>
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
+     ${renderSceneSections(active)}
      ${renderExtra(active)}
      ${chatCard}
      <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v${VERSION}</div>`;

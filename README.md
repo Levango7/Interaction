@@ -1,4 +1,4 @@
-# Agent 工作台（v1.1.5）
+# Agent 工作台（v1.1.6）
 
 一个跑在 Windows 上的**套壳 Agent 工作台**：把办公 / 编程 / 学习 / 生活四类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -128,7 +128,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v1.1.5**（与 `electron/package.json` 的 `version` 一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md) 与代码内 `VERSION` 常量。
+当前版本 **v1.1.6**（与 `electron/package.json` 的 `version` 一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md) 与代码内 `VERSION` 常量。
 
 ## 相关文件
 

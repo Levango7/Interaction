@@ -965,6 +965,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" class="addbtn" id="btnExportCSV" aria-label="导出 CSV" style="--sc:var(--accent);flex:1;min-width:70px">导出 CSV</button>
       <button type="button" class="addbtn" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent);flex:1;min-width:70px">导出 MD</button>
       <button type="button" class="addbtn" id="btnImport" aria-label="导入恢复" style="--sc:var(--accent);flex:1;min-width:90px">导入恢复</button>
+      <button type="button" class="addbtn" id="btnIdbRestore" aria-label="从本地库恢复" style="--sc:var(--accent);flex:1;min-width:90px">本地库恢复</button>
       <button type="button" class="addbtn danger" id="btnClear" aria-label="清空数据" style="--sc:var(--danger,var(--muted));flex:1;min-width:90px">清空数据</button>
     </div>
     <label class="expkey" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);margin:8px 0 0">
@@ -1058,6 +1059,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
  * @property {number|null} doneAt
  * @property {string[]} tags
  * @property {number} created
+ * @property {number} [updatedAt]
  * @property {string} [due]
  * @property {string} [priority] - ""|P0|P1|P2
  * @property {boolean} [linked]
@@ -1081,6 +1083,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
  * @property {boolean} [enabled]
  * @property {string} [theme]
  * @property {boolean} [agent]
+ * @property {string} [base]
+ * @property {string} [key]
+ * @property {string} [model]
+ * @property {number} [aiTimeoutSec]
+ * @property {number} [aiTemperature]
  */
 
 /**
@@ -1104,7 +1111,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.1.5";
+const VERSION = "1.1.6";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -1139,7 +1146,13 @@ const MVP_SCOPE = {
     "Electron 下 AI Key 由主进程保管，渲染进程 cfg 中 key 为空占位（P0-3）",
   ],
 };
+/**
+ * DOM 查询辅助：渐进式类型化阶段返回 any（DOM 元素属性异构：value/checked/自定义标志位），
+ * 后续随 JSDoc 细化逐步收紧。
+ * @type {(s:string, r?:ParentNode)=>any}
+ */
 const $ = (s, r=document) => r.querySelector(s);
+/** @type {(s:string, r?:ParentNode)=>any[]} */
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
 /**
@@ -1206,7 +1219,10 @@ function load(k, def){
  * @param {*} v - 要存储的值
  */
 function save(k, v){
-  try{ localStorage.setItem(k, JSON.stringify(v)); }
+  try{
+    localStorage.setItem(k, JSON.stringify(v));
+    idbQueueMirror(k, v); // 架构项①：异步镜像到 IndexedDB（去抖批量，不阻塞；jsdom/无 IDB 环境 no-op）
+  }
   catch(e){
     // M8：配额耗尽 / 隐私模式禁用存储时不再静默崩溃，给出可观测告警
     if(typeof pushDiag === "function") pushDiag("error", "save failed: "+(e&&e.message||e), {where:"save", key:k});
@@ -1242,6 +1258,197 @@ function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.get
 function esc(s){ return String(s===null||s===undefined?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function sameDay(ts,y,m,d){ const t=new Date(ts); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
 
+// ===== Data Layer (数据层·IndexedDB 持久镜像) =====
+/* ---------- IDB 持久存储镜像（架构项①：容量与可靠性） ----------
+ * 设计契约：
+ *   - localStorage 仍是同步真相源（load/save 热路径不变，live-get 语义保留）
+ *   - IDB 为异步持久镜像：save 写入后异步入队、去抖批量落盘（不阻塞 UI）
+ *   - 无 indexedDB 环境（jsdom/隐私模式/旧内核）全部函数安全 no-op
+ *   - 镜像范围：仅 wb_agent_* / wb_custom_links（用户数据键）
+ *   - 恢复入口：设置页「从本地库恢复」（idbRestoreAll），用于 localStorage 被清/配额丢失场景
+ */
+const IDB_NAME = "wb_agent_idb";
+const IDB_STORE = "kv";
+const IDB_VERSION = 1;
+/** IDB 镜像覆盖的键前缀（用户数据键） */
+const IDB_MIRROR_PREFIXES = ["wb_agent_", "wb_custom_links"];
+
+/** 判断键是否属于 IDB 镜像范围 */
+function idbShouldMirror(k){
+  return IDB_MIRROR_PREFIXES.some(p => k === p || k.startsWith(p));
+}
+
+let _idbDbPromise = null;
+/**
+ * 打开 IDB 连接（单例 Promise 缓存）
+ * @returns {Promise<IDBDatabase|null>} 不可用时 null
+ */
+function idbOpen(){
+  if(_idbDbPromise) return _idbDbPromise;
+  _idbDbPromise = new Promise(resolve => {
+    try{
+      if(typeof indexedDB === "undefined"){ resolve(null); return; }
+      const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+      req.onupgradeneeded = () => { try{ req.result.createObjectStore(IDB_STORE); }catch(e){ /* 已存在 */ } };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    }catch(e){ resolve(null); }
+  });
+  return _idbDbPromise;
+}
+
+/**
+ * 单键事务包装
+ * @param {IDBTransactionMode} mode - "readonly" | "readwrite"
+ * @param {function(IDBObjectStore):IDBRequest} fn - 事务内操作
+ * @returns {Promise<*>} 请求结果；不可用时 undefined
+ */
+function idbTxn(mode, fn){
+  return idbOpen().then(db => new Promise(resolve => {
+    if(!db){ resolve(undefined); return; }
+    try{
+      const tx = db.transaction(IDB_STORE, mode);
+      const st = tx.objectStore(IDB_STORE);
+      const req = fn(st);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(undefined);
+    }catch(e){ resolve(undefined); }
+  }));
+}
+
+/** 写单键到 IDB 镜像 */
+function idbMirrorKey(k, v){ return idbTxn("readwrite", st => st.put(v, k)); }
+/** 读单键 IDB 镜像 */
+function idbReadKey(k){ return idbTxn("readonly", st => st.get(k)); }
+/** 删除单键 IDB 镜像 */
+function idbDeleteKey(k){ return idbTxn("readwrite", st => st.delete(k)); }
+
+/* ---------- 去抖批量写入队列（save 钩子） ---------- */
+let _idbQueue = {};
+let _idbTimer = null;
+const IDB_FLUSH_MS = 300;
+
+/**
+ * save 落盘后的 IDB 镜像入口：入队 + 去抖
+ * 值为 undefined 表示删除该键镜像
+ * @param {string} k
+ * @param {*} v
+ */
+function idbQueueMirror(k, v){
+  if(!idbShouldMirror(k)) return;
+  _idbQueue[k] = v;
+  if(_idbTimer) clearTimeout(_idbTimer);
+  _idbTimer = setTimeout(() => { idbFlushQueue().catch(() => {}); }, IDB_FLUSH_MS);
+}
+
+/**
+ * 立即冲刷镜像队列（导出，供测试与页面隐藏前手动刷新）
+ * @returns {Promise<number>} 实际写入/删除的键数
+ */
+function idbFlushQueue(){
+  const entries = Object.keys(_idbQueue);
+  const q = _idbQueue; _idbQueue = {};
+  if(_idbTimer){ clearTimeout(_idbTimer); _idbTimer = null; }
+  if(!entries.length) return Promise.resolve(0);
+  return idbOpen().then(db => new Promise(resolve => {
+    if(!db){ resolve(0); return; }
+    let n = 0;
+    try{
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      const st = tx.objectStore(IDB_STORE);
+      entries.forEach(k => { const v = q[k]; if(v === undefined){ st.delete(k); } else { st.put(v, k); } n++; });
+      tx.oncomplete = () => resolve(n);
+      tx.onerror = () => resolve(n);
+      tx.onabort = () => resolve(n);
+    }catch(e){ resolve(0); }
+  }));
+}
+
+/**
+ * 列出 IDB 镜像中的全部键
+ * @returns {Promise<string[]>}
+ */
+function idbKeys(){
+  return idbOpen().then(db => new Promise(resolve => {
+    if(!db){ resolve([]); return; }
+    try{
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).getAllKeys();
+      req.onsuccess = () => resolve(/** @type {string[]} */(req.result) || []);
+      req.onerror = () => resolve([]);
+    }catch(e){ resolve([]); }
+  }));
+}
+
+/**
+ * 从 IDB 镜像恢复 localStorage 中缺失的键（只补缺失，不覆盖现存值）
+ * @returns {Promise<string[]>} 实际恢复的键列表
+ */
+function idbRestoreAll(){
+  return idbKeys().then(async keys => {
+    const restored = [];
+    for(const k of keys){
+      if(!idbShouldMirror(k)) continue;
+      let has = false;
+      try{ has = localStorage.getItem(k) !== null; }catch(e){ has = false; }
+      if(has) continue;
+      const v = await idbReadKey(k);
+      if(v === undefined || v === null) continue;
+      try{ localStorage.setItem(k, JSON.stringify(v)); restored.push(k); }catch(e){ /* 配额不足等：跳过 */ }
+    }
+    return restored;
+  });
+}
+
+/**
+ * 全量重镜像：把 localStorage 中属于镜像范围的键写入 IDB（启动/恢复后调用）
+ * @returns {Promise<number>} 镜像键数
+ */
+function idbMirrorAll(){
+  let keys = [];
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && idbShouldMirror(k)) keys.push(k);
+    }
+  }catch(e){ keys = []; }
+  keys.forEach(k => {
+    let v = null;
+    try{ v = JSON.parse(localStorage.getItem(k)); }catch(e){ v = null; }
+    if(v !== null) _idbQueue[k] = v;
+  });
+  return idbFlushQueue();
+}
+
+/**
+ * 清空 IDB 镜像中的全部键（清空数据时调用，避免恢复出"僵尸数据"）
+ * @returns {Promise<number>} 删除键数
+ */
+function idbClearAll(){
+  return idbOpen().then(db => new Promise(resolve => {
+    if(!db){ resolve(0); return; }
+    try{
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      const req = tx.objectStore(IDB_STORE).clear();
+      req.onsuccess = () => resolve(1);
+      req.onerror = () => resolve(0);
+    }catch(e){ resolve(0); }
+  }));
+}
+
+/**
+ * IDB 持久层初始化（startup 调用）：仅做 localStorage → IDB 全量镜像。
+ * 注意：不在启动时自动恢复缺失键——避免与「清空数据」意图冲突（恢复仅限用户手动触发）。
+ * @returns {Promise<{mirrored:number}>}
+ */
+function initIdb(){
+  return idbOpen().then(async db => {
+    if(!db) return { mirrored: 0 };
+    const mirrored = await idbMirrorAll();
+    return { mirrored };
+  });
+}
 // ===== Util Layer (Markdown 解析·T3.5) =====
 /**
  * 安全 URL 协议过滤：仅允许 http/https/mailto 与无协议（相对路径/锚点），
@@ -1297,6 +1504,7 @@ function mdToHtml(str){
   if(str==="") return "";
   const s = esc(str);
   const lines = s.split(/\r?\n/);
+  /** @type {Array<{type:string, html?:string, lines?:string[]}>} */
   const blocks = [];
   let paraLines = [];
   function flushPara(){
@@ -2845,8 +3053,10 @@ function analyzeBehavior(){
   const tasks = getTasks();
   const recentDone = tasks.filter(t => t.status === "done" && t.doneAt && t.doneAt >= since);
   const totalDone = recentDone.length;
+  /** @type {{ [sc:string]: number }} */
   const byScenario = {};
   ORDER.forEach(sc => { byScenario[sc] = recentDone.filter(t => t.sc === sc).length; });
+  /** @type {{ [sc:string]: { current:number, best:number } }} */
   const streaks = {};
   ORDER.forEach(sc => { const s = calcStreak(sc); streaks[sc] = { current: s.current, best: s.best }; });
   // links：最近 14 天内每条习惯链的触发次数
@@ -3222,11 +3432,11 @@ function trapFocus(container){
     else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
   }
   container.addEventListener("keydown", onKey);
-  const first=container.querySelector(SEL);
+  const first=/** @type {HTMLElement} */(container.querySelector(SEL));
   if(first && typeof first.focus==="function"){ try{ first.focus(); }catch(e){ /* noop */ } }
   return function release(){
     container.removeEventListener("keydown", onKey);
-    if(prev && typeof prev.focus==="function" && document.contains(prev)){ try{ prev.focus(); }catch(e){ /* noop */ } }
+    if(prev && typeof /** @type {HTMLElement} */(prev).focus==="function" && document.contains(prev)){ try{ /** @type {HTMLElement} */(prev).focus(); }catch(e){ /* noop */ } }
   };
 }
 /**
@@ -3495,7 +3705,7 @@ function renderEmpty(type){
  * withSkeleton：包装渲染函数，先显示骨架屏，300ms 后执行真实渲染
  * 用于模拟数据加载延迟，提升感知性能（避免白屏 / 突然弹出内容）
  * @param {() => void} fn - 真实渲染函数（无参，操作 DOM）
- * @param {string} [skeletonType="board"] - 骨架屏类型，传给 renderSkeleton
+ * @param {"chat"|"stats"|"board"|"list"} [skeletonType="board"] - 骨架屏类型，传给 renderSkeleton
  * @returns {void}
  */
 function withSkeleton(fn, skeletonType){
@@ -3673,8 +3883,8 @@ function _onboardBindStep(step){
   const modal = document.getElementById("onboardModal");
   const close = ()=>{ if(modal) modal.remove(); };
   if(step === 1){
-    document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(b=> b.onclick=()=>{
-      _onboardSelectedSc = b.dataset.sc;
+    document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(b=> /** @type {HTMLElement} */(b).onclick=()=>{
+      _onboardSelectedSc = /** @type {HTMLElement} */(b).dataset.sc;
       document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(x=> x.classList.remove("selected"));
       b.classList.add("selected");
     });
@@ -3682,7 +3892,7 @@ function _onboardBindStep(step){
     if(skip) skip.onclick = ()=>{ close(); _onboardRenderStep(2); };
     const create = document.getElementById("onboardCreate");
     if(create) create.onclick = ()=>{
-      const input = document.getElementById("onboardTaskInput");
+      const input = /** @type {HTMLInputElement} */(document.getElementById("onboardTaskInput"));
       const title = input ? input.value.trim() : "";
       if(!title){ toast("请输入任务标题", "warn"); return; }
       const tasks = getTasks();
@@ -3703,7 +3913,7 @@ function _onboardBindStep(step){
       setTasks(tasks);
       completeTask(t.id);
       toast("已模拟触发：交付完成 → 自动生成学习充电任务", "ok");
-      trigger.disabled = true; trigger.textContent = "已触发";
+      /** @type {HTMLButtonElement} */(trigger).disabled = true; trigger.textContent = "已触发";
     };
     const next = document.getElementById("onboardNext");
     if(next) next.onclick = ()=>{ close(); _onboardRenderStep(3); };
@@ -4174,6 +4384,48 @@ const CARD_REGISTRY = {
 
   none:    { render: () => "",    bind: () => {} },
 };
+/** 内置卡片键（禁止被 registerCard 覆盖） */
+const _CARD_BUILTIN = Object.keys(CARD_REGISTRY);
+/**
+ * 架构项② 渲染扩展：注册自定义卡片类型到 CARD_REGISTRY
+ * @param {string} key - 卡片类型键（场景 extraCard 引用）
+ * @param {{render:function, bind:function}} def - 渲染/绑定函数
+ * @returns {{ok:boolean, err?:string}}
+ */
+function registerCard(key, def){
+  if(!key || typeof key !== "string") return {ok:false, err:"无效的卡片键"};
+  if(!def || typeof def.render !== "function") return {ok:false, err:"render 必须是函数"};
+  if(_CARD_BUILTIN.includes(key)) return {ok:false, err:"不能覆盖内置卡片："+key};
+  if(CARD_REGISTRY[key]) return {ok:false, err:"卡片已注册："+key};
+  CARD_REGISTRY[key] = { render: def.render, bind: typeof def.bind === "function" ? def.bind : () => {} };
+  return {ok:true};
+}
+/* 架构项② 渲染扩展：场景扩展区注册表（sc → 扩展段数组），未来区块注入无需改 renderMainHTML */
+const SCENE_SECTION_REGISTRY = {};
+/**
+ * 注册场景扩展区（渲染到场景页资料库之后、专属卡片之前）
+ * @param {string} sc - 场景键；"*" 表示所有场景
+ * @param {{render:function, bind?:function}} def
+ * @returns {{ok:boolean, err?:string}}
+ */
+function registerSceneSection(sc, def){
+  if(!sc || typeof sc !== "string") return {ok:false, err:"无效的场景键"};
+  if(!def || typeof def.render !== "function") return {ok:false, err:"render 必须是函数"};
+  (SCENE_SECTION_REGISTRY[sc] = SCENE_SECTION_REGISTRY[sc] || []).push(def);
+  return {ok:true};
+}
+/** 读取场景生效的扩展区列表（"*" 全局 + 场景专属） */
+function getSceneSections(sc){
+  return (SCENE_SECTION_REGISTRY["*"] || []).concat(SCENE_SECTION_REGISTRY[sc] || []);
+}
+/** 渲染场景全部扩展区 HTML（空则 ""） */
+function renderSceneSections(sc){
+  return getSceneSections(sc).map(s => { try{ return s.render(sc) || ""; }catch(e){ return ""; } }).join("");
+}
+/** 绑定场景全部扩展区事件（异常隔离，不影响其他段） */
+function bindSceneSections(sc){
+  getSceneSections(sc).forEach(s => { try{ if(s.bind) s.bind(sc); }catch(e){ /* noop */ } });
+}
 function renderExtra(sc){
   const r = CARD_REGISTRY[SCENARIOS[sc].extraCard || "none"];
   return r ? r.render(sc) : "";
@@ -4352,6 +4604,7 @@ function renderMainHTML(){
       ${taskForm}${filterHtml}${kanban}</div>
      <div class="card"><h2>${s.name} · ${rec.label}</h2>
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
+     ${renderSceneSections(active)}
      ${renderExtra(active)}
      ${chatCard}
      <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v${VERSION}</div>`;
@@ -4410,6 +4663,7 @@ function bindScenario(){
   const bs=$("#boardSearch"); if(bs) bs.oninput=applyBoardFilter;   // B2：标题搜索接线
   const sf=$("#boardStatusFilter"); if(sf) sf.onchange=applyBoardFilter; // B2：状态筛选接线
   bindExtra(active);
+  bindSceneSections(active);
   const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
 }
@@ -5018,7 +5272,7 @@ function fuzzyScore(text, q){
 /**
  * 构建命令列表（命令/场景/任务三组；无查询时「最近使用」置顶；有查询时模糊匹配按分值排序）
  * @param {string} [q] - 查询词
- * @returns {Array<{label:string,group?:string,run:Function}>}
+ * @returns {Array<{label:string,group?:string,icon?:string,sub?:string,run:Function}>}
  */
 function buildCmds(q){
   q=(q||"").toLowerCase();
@@ -5482,7 +5736,7 @@ function doImport(file){
   const reader = new FileReader();
   reader.onload = async ()=>{
     try{
-      const data = JSON.parse(reader.result);
+      const data = JSON.parse(/** @type {string} */(reader.result));
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY) localStorage.setItem(k, data[k]); });
       _cfgCache = null; _deviceKey = null;
@@ -5563,8 +5817,19 @@ function doImport(file){
 function doClear(){
   if(!confirm("确定清空全部数据？此操作不可恢复！")) return;
   allKeys().forEach(k=> localStorage.removeItem(k));
+  idbClearAll().catch(() => {}); // 架构项①：同步清 IDB 镜像，避免恢复出僵尸数据
   toast("已清空，页面将重新载入示例", "ok"); // B3：alert 改 toast；延迟重载让提示可见
   setTimeout(()=> location.reload(), 900);
+}
+/**
+ * 架构项①：从 IndexedDB 镜像恢复 localStorage 中缺失的键（只补缺失，不覆盖现存值）
+ */
+function doIdbRestore(){
+  idbRestoreAll().then(restored => {
+    if(!restored.length){ toast("本地库没有可恢复的数据", "warn"); return; }
+    toast("已恢复 "+restored.length+" 项数据", "ok");
+    setTimeout(()=> location.reload(), 900);
+  }).catch(()=> toast("本地库不可用", "error"));
 }
 function checkCount(){
   const n = allKeys().reduce((s,k)=>{
@@ -5983,7 +6248,7 @@ document.addEventListener("keydown", e=>{
   if((e.ctrlKey||e.metaKey) && (e.key==="y"||e.key==="Y")){
     e.preventDefault(); if(redoTasks()){ render(); toast("已重做","ok"); } return;
   }
-  const t=e.target;
+  const t=/** @type {HTMLElement} */(e.target);
   if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT")) return;
   if(e.key>="1" && e.key<="4"){ const sc=ORDER[+e.key-1]; if(sc){ setActive(sc); render(); } }
   else if(e.key==="g"||e.key==="G"){ active="overview"; render(); } // 总览为瞬态视图，不持久化（契约已知例外）
@@ -6019,6 +6284,7 @@ $("#btnExportMD").onclick = doExportMD;
 $("#btnImport").onclick = ()=> $("#fileInput").click();
 $("#fileInput").onchange = e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=""; };
 $("#btnClear").onclick = doClear;
+$("#btnIdbRestore").onclick = doIdbRestore;
 $("#bannerExport").onclick = doExport;
 $("#btnGear").onclick = openDrawer;
 $("#drawerClose").onclick = closeDrawer;
@@ -6142,6 +6408,8 @@ seed();
 
 (async function startup(){
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
+  // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
+  initIdb().catch(() => {});
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
   applyTheme();
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
@@ -6278,7 +6546,14 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     isAbortSupported: function(){ return (typeof AbortController !== "undefined" && typeof AbortSignal !== "undefined"); },
     isReadableStreamSupported: function(){ return (typeof ReadableStream !== "undefined"); },
     isCryptoReady: function(){ return _cryptoReady; },
-    resetCryptoWarn: function(){ _cryptoWarned = false; }
+    resetCryptoWarn: function(){ _cryptoWarned = false; },
+    // 架构项① IndexedDB 持久镜像
+    idbShouldMirror, idbOpen, idbMirrorKey, idbReadKey, idbDeleteKey,
+    idbQueueMirror, idbFlushQueue, idbKeys, idbRestoreAll, idbMirrorAll,
+    idbClearAll, initIdb, doIdbRestore,
+    // 架构项② 渲染扩展（卡片注册 + 场景扩展区注册）
+    registerCard, registerSceneSection, getSceneSections,
+    renderSceneSections, bindSceneSections
   };
 }
 </script>

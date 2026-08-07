@@ -13,6 +13,7 @@
  * @property {number|null} doneAt
  * @property {string[]} tags
  * @property {number} created
+ * @property {number} [updatedAt]
  * @property {string} [due]
  * @property {string} [priority] - ""|P0|P1|P2
  * @property {boolean} [linked]
@@ -36,6 +37,11 @@
  * @property {boolean} [enabled]
  * @property {string} [theme]
  * @property {boolean} [agent]
+ * @property {string} [base]
+ * @property {string} [key]
+ * @property {string} [model]
+ * @property {number} [aiTimeoutSec]
+ * @property {number} [aiTemperature]
  */
 
 /**
@@ -59,7 +65,7 @@
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.1.5";
+const VERSION = "1.1.6";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -94,7 +100,13 @@ const MVP_SCOPE = {
     "Electron 下 AI Key 由主进程保管，渲染进程 cfg 中 key 为空占位（P0-3）",
   ],
 };
+/**
+ * DOM 查询辅助：渐进式类型化阶段返回 any（DOM 元素属性异构：value/checked/自定义标志位），
+ * 后续随 JSDoc 细化逐步收紧。
+ * @type {(s:string, r?:ParentNode)=>any}
+ */
 const $ = (s, r=document) => r.querySelector(s);
+/** @type {(s:string, r?:ParentNode)=>any[]} */
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
 /**

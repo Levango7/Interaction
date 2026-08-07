@@ -47,7 +47,7 @@ function fuzzyScore(text, q){
 /**
  * 构建命令列表（命令/场景/任务三组；无查询时「最近使用」置顶；有查询时模糊匹配按分值排序）
  * @param {string} [q] - 查询词
- * @returns {Array<{label:string,group?:string,run:Function}>}
+ * @returns {Array<{label:string,group?:string,icon?:string,sub?:string,run:Function}>}
  */
 function buildCmds(q){
   q=(q||"").toLowerCase();

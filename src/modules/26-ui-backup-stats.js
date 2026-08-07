@@ -35,7 +35,7 @@ function doImport(file){
   const reader = new FileReader();
   reader.onload = async ()=>{
     try{
-      const data = JSON.parse(reader.result);
+      const data = JSON.parse(/** @type {string} */(reader.result));
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY) localStorage.setItem(k, data[k]); });
       _cfgCache = null; _deviceKey = null;
@@ -116,8 +116,19 @@ function doImport(file){
 function doClear(){
   if(!confirm("确定清空全部数据？此操作不可恢复！")) return;
   allKeys().forEach(k=> localStorage.removeItem(k));
+  idbClearAll().catch(() => {}); // 架构项①：同步清 IDB 镜像，避免恢复出僵尸数据
   toast("已清空，页面将重新载入示例", "ok"); // B3：alert 改 toast；延迟重载让提示可见
   setTimeout(()=> location.reload(), 900);
+}
+/**
+ * 架构项①：从 IndexedDB 镜像恢复 localStorage 中缺失的键（只补缺失，不覆盖现存值）
+ */
+function doIdbRestore(){
+  idbRestoreAll().then(restored => {
+    if(!restored.length){ toast("本地库没有可恢复的数据", "warn"); return; }
+    toast("已恢复 "+restored.length+" 项数据", "ok");
+    setTimeout(()=> location.reload(), 900);
+  }).catch(()=> toast("本地库不可用", "error"));
 }
 function checkCount(){
   const n = allKeys().reduce((s,k)=>{

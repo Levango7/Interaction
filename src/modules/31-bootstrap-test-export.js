@@ -90,6 +90,13 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     isAbortSupported: function(){ return (typeof AbortController !== "undefined" && typeof AbortSignal !== "undefined"); },
     isReadableStreamSupported: function(){ return (typeof ReadableStream !== "undefined"); },
     isCryptoReady: function(){ return _cryptoReady; },
-    resetCryptoWarn: function(){ _cryptoWarned = false; }
+    resetCryptoWarn: function(){ _cryptoWarned = false; },
+    // 架构项① IndexedDB 持久镜像
+    idbShouldMirror, idbOpen, idbMirrorKey, idbReadKey, idbDeleteKey,
+    idbQueueMirror, idbFlushQueue, idbKeys, idbRestoreAll, idbMirrorAll,
+    idbClearAll, initIdb, doIdbRestore,
+    // 架构项② 渲染扩展（卡片注册 + 场景扩展区注册）
+    registerCard, registerSceneSection, getSceneSections,
+    renderSceneSections, bindSceneSections
   };
 }

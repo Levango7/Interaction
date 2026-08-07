@@ -7,6 +7,48 @@ const CARD_REGISTRY = {
 
   none:    { render: () => "",    bind: () => {} },
 };
+/** 内置卡片键（禁止被 registerCard 覆盖） */
+const _CARD_BUILTIN = Object.keys(CARD_REGISTRY);
+/**
+ * 架构项② 渲染扩展：注册自定义卡片类型到 CARD_REGISTRY
+ * @param {string} key - 卡片类型键（场景 extraCard 引用）
+ * @param {{render:function, bind:function}} def - 渲染/绑定函数
+ * @returns {{ok:boolean, err?:string}}
+ */
+function registerCard(key, def){
+  if(!key || typeof key !== "string") return {ok:false, err:"无效的卡片键"};
+  if(!def || typeof def.render !== "function") return {ok:false, err:"render 必须是函数"};
+  if(_CARD_BUILTIN.includes(key)) return {ok:false, err:"不能覆盖内置卡片："+key};
+  if(CARD_REGISTRY[key]) return {ok:false, err:"卡片已注册："+key};
+  CARD_REGISTRY[key] = { render: def.render, bind: typeof def.bind === "function" ? def.bind : () => {} };
+  return {ok:true};
+}
+/* 架构项② 渲染扩展：场景扩展区注册表（sc → 扩展段数组），未来区块注入无需改 renderMainHTML */
+const SCENE_SECTION_REGISTRY = {};
+/**
+ * 注册场景扩展区（渲染到场景页资料库之后、专属卡片之前）
+ * @param {string} sc - 场景键；"*" 表示所有场景
+ * @param {{render:function, bind?:function}} def
+ * @returns {{ok:boolean, err?:string}}
+ */
+function registerSceneSection(sc, def){
+  if(!sc || typeof sc !== "string") return {ok:false, err:"无效的场景键"};
+  if(!def || typeof def.render !== "function") return {ok:false, err:"render 必须是函数"};
+  (SCENE_SECTION_REGISTRY[sc] = SCENE_SECTION_REGISTRY[sc] || []).push(def);
+  return {ok:true};
+}
+/** 读取场景生效的扩展区列表（"*" 全局 + 场景专属） */
+function getSceneSections(sc){
+  return (SCENE_SECTION_REGISTRY["*"] || []).concat(SCENE_SECTION_REGISTRY[sc] || []);
+}
+/** 渲染场景全部扩展区 HTML（空则 ""） */
+function renderSceneSections(sc){
+  return getSceneSections(sc).map(s => { try{ return s.render(sc) || ""; }catch(e){ return ""; } }).join("");
+}
+/** 绑定场景全部扩展区事件（异常隔离，不影响其他段） */
+function bindSceneSections(sc){
+  getSceneSections(sc).forEach(s => { try{ if(s.bind) s.bind(sc); }catch(e){ /* noop */ } });
+}
 function renderExtra(sc){
   const r = CARD_REGISTRY[SCENARIOS[sc].extraCard || "none"];
   return r ? r.render(sc) : "";

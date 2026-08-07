@@ -2,6 +2,23 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.1.6] - 2026-08-08
+
+### Added（第五轮 · 架构三项一次性落地）
+- **架构项① IndexedDB 持久镜像**：新增 `02b-data-idb.js`——localStorage 仍是同步真相源，IDB 作为异步持久镜像（save 后去抖批量落盘）；镜像范围 `wb_agent_*` / `wb_custom_links`；设置页新增「本地库恢复」入口（只补缺失、不覆盖现存值）；无 indexedDB 环境（jsdom/隐私模式/旧内核）全链路安全降级。清空数据时同步清 IDB 镜像，避免恢复出僵尸数据。
+- **架构项② 渲染扩展**：`CARD_REGISTRY` 开放为 `registerCard()` 注册 API（内置键保护）；新增场景扩展区注册表 `registerSceneSection()`（支持 `"*"` 全局段），场景页渲染/绑定自动接入扩展段，未来新增区块无需改 `renderMainHTML`。
+- **架构项③ 构建现代化（E3）**：
+  - `build.mjs --prod` 生产构建 → `agent-workbench.prod.html`，剥离 `__test` 测试钩子模块（已验证产物无 `window.__test` 赋值与 `__TEST_GATE__`）；
+  - `package.json` 新增 `build:prod` 脚本，`typecheck` 从占位改为真实 `tsc -p jsconfig.json` 门禁；
+  - 新增 `jsconfig.json`（checkJs 渐进类型化）+ `src/global.d.ts`（Window.electronAPI/__test 类型增强）；
+  - CI 新增 typecheck 步骤；部署流水线改为构建生产产物后部署。
+
+### Fixed
+- 源码类型检查清零：补全 Cfg/Task typedef（updatedAt、base/key/model、aiTimeoutSec/aiTemperature 等）、markdown blocks 联合类型、streak 索引签名、FileReader.result 断言、onboarding/trapFocus DOM 断言等 17 处，`npm run typecheck` 现为 0 错误真实门禁。
+
+### Tests
+- 新增 `tests/round5-loop1-idb.test.js`（7 用例）、`tests/round5-loop2-render-ext.test.js`（8 用例）；全量 **42 文件 / 515 用例全绿**；build --check 字节级等价 / lint-colors PASS / ESLint 0 error / typecheck 0 error。
+
 ## [v1.1.5] - 2026-08-07
 
 ### Added（深度审查报告采纳 · B1–B8 四批次）

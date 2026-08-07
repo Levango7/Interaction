@@ -273,8 +273,10 @@ function analyzeBehavior(){
   const tasks = getTasks();
   const recentDone = tasks.filter(t => t.status === "done" && t.doneAt && t.doneAt >= since);
   const totalDone = recentDone.length;
+  /** @type {{ [sc:string]: number }} */
   const byScenario = {};
   ORDER.forEach(sc => { byScenario[sc] = recentDone.filter(t => t.sc === sc).length; });
+  /** @type {{ [sc:string]: { current:number, best:number } }} */
   const streaks = {};
   ORDER.forEach(sc => { const s = calcStreak(sc); streaks[sc] = { current: s.current, best: s.best }; });
   // links：最近 14 天内每条习惯链的触发次数

@@ -1,8 +1,8 @@
 {
   "name": "agent-workbench",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "private": true,
-  "description": "Agent 工作台 v1.1.5 — 多场景任务 / 记录 / AI 助手单文件应用。工程化入口：测试、颜色令牌门禁、本地预览。",
+  "description": "Agent 工作台 v1.1.6 — 多场景任务 / 记录 / AI 助手单文件应用。工程化入口：测试、颜色令牌门禁、本地预览。",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
@@ -10,10 +10,11 @@
     "e2e": "E2E=1 npx playwright test",
     "e2e:install": "npx playwright install chromium",
     "build": "node scripts/build.mjs",
+    "build:prod": "node scripts/build.mjs --prod",
     "build:check": "node scripts/build.mjs --check",
     "lint": "npm run build && npx eslint agent-workbench.html && node scripts/lint-colors.mjs agent-workbench.html",
     "lint:fast": "npx eslint agent-workbench.html && node scripts/lint-colors.mjs agent-workbench.html",
-    "typecheck": "npx --yes -p typescript@5 tsc --noEmit || echo typecheck: html project, tsc skipped (declared in tsconfig.json)",
+    "typecheck": "npx --yes -p typescript@5.5.4 tsc -p jsconfig.json",
     "serve": "python -m http.server 8123"
   },
   "devDependencies": {

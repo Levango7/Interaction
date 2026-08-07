@@ -51,6 +51,7 @@ function bindScenario(){
   const bs=$("#boardSearch"); if(bs) bs.oninput=applyBoardFilter;   // B2：标题搜索接线
   const sf=$("#boardStatusFilter"); if(sf) sf.onchange=applyBoardFilter; // B2：状态筛选接线
   bindExtra(active);
+  bindSceneSections(active);
   const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
 }

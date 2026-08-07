@@ -17,7 +17,9 @@ jobs:
       - name: Prepare deploy files
         run: |
           mkdir -p _deploy
-          cp agent-workbench.html _deploy/
+          npm ci
+          npm run build:prod
+          cp agent-workbench.prod.html _deploy/agent-workbench.html
           cp manifest.json _deploy/
           cp icon.svg _deploy/
           cp service-worker.js _deploy/

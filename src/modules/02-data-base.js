@@ -29,7 +29,10 @@ function load(k, def){
  * @param {*} v - 要存储的值
  */
 function save(k, v){
-  try{ localStorage.setItem(k, JSON.stringify(v)); }
+  try{
+    localStorage.setItem(k, JSON.stringify(v));
+    idbQueueMirror(k, v); // 架构项①：异步镜像到 IndexedDB（去抖批量，不阻塞；jsdom/无 IDB 环境 no-op）
+  }
   catch(e){
     // M8：配额耗尽 / 隐私模式禁用存储时不再静默崩溃，给出可观测告警
     if(typeof pushDiag === "function") pushDiag("error", "save failed: "+(e&&e.message||e), {where:"save", key:k});

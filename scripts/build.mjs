@@ -11,8 +11,9 @@
  * output is byte-identical to the original monolithic file (verified by --check).
  *
  * Usage:
- *   node scripts/build.mjs          # build -> agent-workbench.html
+ *   node scripts/build.mjs          # dev/test build -> agent-workbench.html (含 __test 钩子，运行时有门控)
  *   node scripts/build.mjs --check  # build in-memory, diff vs current file, exit 1 on mismatch
+ *   node scripts/build.mjs --prod   # 生产构建 -> agent-workbench.prod.html（剥离 __test 钩子模块）
  *
  * NOTE: src/ is the source of truth. agent-workbench.html is GENERATED.
  * Do not hand-edit agent-workbench.html; edit src/ and re-run build.
@@ -28,7 +29,11 @@ const root = join(__dirname, '..');
 const SHELL_TOP = join(root, 'src', 'shell', 'top.html');
 const SHELL_BOTTOM = join(root, 'src', 'shell', 'bottom.html');
 const MOD_DIR = join(root, 'src', 'modules');
-const OUT = join(root, 'agent-workbench.html');
+// 架构项③：生产构建剥离 __test 钩子模块（测试/本地构建保留，运行时有门控）
+const PROD = process.argv.includes('--prod');
+const TEST_EXPORT_MOD = '31-bootstrap-test-export.js';
+const PROD_STUB = Buffer.from('// [prod build] test hooks stripped (source: src/modules/' + TEST_EXPORT_MOD + ')\n');
+const OUT = PROD ? join(root, 'agent-workbench.prod.html') : join(root, 'agent-workbench.html');
 
 function fail(msg) {
   console.error('[build] ' + msg);
@@ -42,7 +47,13 @@ if (!existsSync(MOD_DIR)) fail(`missing ${MOD_DIR}`);
 const mods = readdirSync(MOD_DIR).filter((f) => f.endsWith('.js')).sort();
 
 const parts = [readFileSync(SHELL_TOP)];
-for (const m of mods) parts.push(readFileSync(join(MOD_DIR, m)));
+for (const m of mods) {
+  if (PROD && m === TEST_EXPORT_MOD) {
+    parts.push(PROD_STUB); // 生产构建：剥离 __test 钩子
+  } else {
+    parts.push(readFileSync(join(MOD_DIR, m)));
+  }
+}
 parts.push(readFileSync(SHELL_BOTTOM));
 
 const out = Buffer.concat(parts);

@@ -23,6 +23,7 @@ $("#btnExportMD").onclick = doExportMD;
 $("#btnImport").onclick = ()=> $("#fileInput").click();
 $("#fileInput").onchange = e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=""; };
 $("#btnClear").onclick = doClear;
+$("#btnIdbRestore").onclick = doIdbRestore;
 $("#bannerExport").onclick = doExport;
 $("#btnGear").onclick = openDrawer;
 $("#drawerClose").onclick = closeDrawer;

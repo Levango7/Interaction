@@ -53,6 +53,7 @@ function mdToHtml(str){
   if(str==="") return "";
   const s = esc(str);
   const lines = s.split(/\r?\n/);
+  /** @type {Array<{type:string, html?:string, lines?:string[]}>} */
   const blocks = [];
   let paraLines = [];
   function flushPara(){
