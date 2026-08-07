@@ -920,6 +920,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="row"><label>模型</label><input id="cfgModel" placeholder="gpt-4o-mini"></div>
   <div class="row"><label>请求超时（秒，5~120）</label><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
   <div class="row"><label>温度 Temperature（0~2）</label><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
+  <div class="row"><label>工作记忆容量（条，20~500）</label><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
   <div class="row"><button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button></div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -1088,6 +1089,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
  * @property {string} [model]
  * @property {number} [aiTimeoutSec]
  * @property {number} [aiTemperature]
+ * @property {number} [memMax]
  */
 
 /**
@@ -1111,7 +1113,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.1.6";
+const VERSION = "1.1.7";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -2149,12 +2151,23 @@ const TOOLS = [
 ];
 
 /* ---------- Agent 引擎：记忆 / 目标 / 多步编排（A-P3：在既有 chatOnce + TOOLS 契约上扩展，不另起链路） ---------- */
-const AGENT_MEM_MAX = 60;        // 工作记忆容量（环形截断，防无限增长）
+const AGENT_MEM_MAX = 60;        // 工作记忆容量默认值（R5：可在设置页配置，见 getMemMax）
 const AGENT_GOAL_LOOP_MAX = 12;  // 目标激活时 runChatLoop 循环上限（无目标时仍用默认 6）
+
+/**
+ * R5：读取工作记忆容量（cfg.memMax，默认 60，钳制到 20~500）
+ * @returns {number}
+ */
+function getMemMax(){
+  const cfg = getCfg() || {};
+  let n = Number(cfg.memMax);
+  if(!isFinite(n)) n = AGENT_MEM_MAX;
+  return Math.min(500, Math.max(20, Math.round(n)));
+}
 
 /* 记忆：中短期工作记忆。scope=global 全场景通用；否则按场景键隔离。 */
 function getMemories(){ return load(PREFIX+"memory", []); }
-function saveMemories(a){ save(PREFIX+"memory", a.slice(-AGENT_MEM_MAX)); }
+function saveMemories(a){ save(PREFIX+"memory", a.slice(-getMemMax())); }
 function addMemory(scope, text){
   const rec = { id: uid(), scope: scope||"global", text: String(text||"").trim(), ts: Date.now(), hits: 0 };
   if(!rec.text) return null;
@@ -6076,6 +6089,8 @@ function openDrawer(){ const cfg=getCfg();
   // B8：AI 请求参数回填（空 = 使用默认值 30s / 0.7）
   const toInp=$("#cfgAiTimeout"); if(toInp) toInp.value = (cfg.aiTimeoutSec!==undefined && isFinite(Number(cfg.aiTimeoutSec))) ? String(cfg.aiTimeoutSec) : "";
   const teInp=$("#cfgAiTemperature"); if(teInp) teInp.value = (cfg.aiTemperature!==undefined && isFinite(Number(cfg.aiTemperature))) ? String(cfg.aiTemperature) : "";
+  // R5：工作记忆容量回填（空 = 默认 60）
+  const mmInp=$("#cfgMemMax"); if(mmInp) mmInp.value = (cfg.memMax!==undefined && isFinite(Number(cfg.memMax))) ? String(cfg.memMax) : "";
   renderScBox();
   renderProfileSelect();
   fillProfileForm(getActiveProfile());
@@ -6176,6 +6191,8 @@ async function saveCfg(){
     // B8：AI 请求参数（超时秒数 / 温度）持久化；留空 = 用默认值（30s / 0.7），范围校验在 getAiParams 与主进程
     const toInp=$("#cfgAiTimeout"); if(toInp){ const v=toInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTimeoutSec=Number(v); else delete cfg.aiTimeoutSec; }
     const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
+    // R5：工作记忆容量持久化；留空 = 默认 60，范围校验在 getMemMax（20~500）
+    const mmInp=$("#cfgMemMax"); if(mmInp){ const v=mmInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.memMax=Number(v); else delete cfg.memMax; }
     // 清掉可能残留的旧单 cfg 字段（已迁入 profiles）
     delete cfg.base; delete cfg.key; delete cfg.model;
     _cfgCache = cfg;
@@ -6553,7 +6570,9 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     idbClearAll, initIdb, doIdbRestore,
     // 架构项② 渲染扩展（卡片注册 + 场景扩展区注册）
     registerCard, registerSceneSection, getSceneSections,
-    renderSceneSections, bindSceneSections
+    renderSceneSections, bindSceneSections,
+    // 第六轮 R5：工作记忆容量可配置
+    getMemMax
   };
 }
 </script>

@@ -273,14 +273,17 @@ function saveAiConfig(cfg){
 }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-/* ---------- B8：轻量滚动日志（userData/logs/app.log，上限约 1MB 自动截断） ---------- */
+/* ---------- B8/R3：轻量滚动日志（userData/logs/app.log，JSON Lines，上限约 1MB 自动截断） ---------- */
+function formatLogLine(scope, msg){
+  return JSON.stringify({ ts: new Date().toISOString(), scope, msg }) + "\n";
+}
 function logLine(scope, msg){
   try{
     const dir = path.join(app.getPath("userData"), "logs");
     if(!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive:true });
     const file = path.join(dir, "app.log");
-    const stamp = new Date().toISOString();
-    fs.appendFileSync(file, "["+stamp+"] ["+scope+"] "+msg+"\n");
+    // R3：结构化 JSON Lines，便于机器解析（每行一个 {ts, scope, msg}）
+    fs.appendFileSync(file, formatLogLine(scope, msg));
     // 滚动：超过 1MB 保留后 512KB
     const st = fs.statSync(file);
     if(st.size > 1024*1024){

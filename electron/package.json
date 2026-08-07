@@ -1,6 +1,6 @@
 {
   "name": "agent-workbench",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Windows 套壳 Agent 工作台（Electron 封装，含系统托盘与开机自启）",
   "main": "main.js",
   "scripts": {
@@ -31,12 +31,8 @@
       "target": [
         "portable"
       ],
-      "icon": null,
+      "icon": "icon.ico",
       "signingHashAlgorithms": []
-    },
-    "publish": {
-      "provider": "generic",
-      "url": "https://your-update-server.com/agent-workbench/"
     }
   },
   "dependencies": {

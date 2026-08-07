@@ -66,19 +66,17 @@ npm run dist         # 打包成 Windows 便携版 exe（dist/*.exe，portable�
 5. 任何更新错误（网络不通、服务器未配置、签名校验失败等）均**静默忽略**，不影响应用正常启动与使用。
 
 ### 配置 feed 服务器
-`package.json` 已写入占位配置：
+默认 **未写入** `publish` 配置——避免打包版每次启动都向占位域名发起无效的更新检查请求。
+如需启用自动更新，在 `package.json` 的 `build` 节点自行添加你自己的静态服务器地址（OSS / S3 / 自建 nginx 均可），该目录需要能公开访问 `latest.yml` 和安装包 `.exe`。例如：
 ```json
 "build": {
   "publish": {
     "provider": "generic",
-    "url": "https://your-update-server.com/agent-workbench/"
+    "url": "https://your-bucket.oss-cn-hangzhou.aliyuncs.com/agent-workbench/"
   }
 }
 ```
-把 `url` 改成你自己的静态服务器地址（OSS / S3 / 自建 nginx 均可），该目录需要能公开访问 `latest.yml` 和安装包 `.exe`。例如：
-```json
-"url": "https://your-bucket.oss-cn-hangzhou.aliyuncs.com/agent-workbench/"
-```
+未配置 `publish` 时，`autoUpdater.checkForUpdates()` 会因缺少 feed 而报错，已被主进程 try/catch 静默忽略，不影响应用启动与使用。
 
 ### 发布新版本
 1. 改 `package.json` 的 `version`（如 `"1.0.1"`）。

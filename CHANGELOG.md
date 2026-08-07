@@ -2,6 +2,20 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.1.7] - 2026-08-08
+
+### Fixed（第六轮 · tabbit 评估报告核实修复 R1–R5）
+- **R1 移除 publish 占位配置**：`electron/package.json` 删除 `build.publish` 占位（`your-update-server.com`），避免打包版每次启动向假域名发起无效的更新检查请求；`electron/README.md` 同步更新「配置 feed 服务器」段落说明默认未写入 publish。
+- **R3 主进程日志结构化**：`logLine` 由纯文本 `[ts] [scope] msg` 改为 JSON Lines（每行 `{ts, scope, msg}`），便于机器解析；滚动截断逻辑（>1MB 保留后 512KB）与失败静默兜底不变。提取 `formatLogLine` 纯函数便于测试。
+
+### Added
+- **R2 exe 图标**：新增 `scripts/make-icon.mjs`（与托盘图标同款「圆角蓝底+白色 A 字标」像素逻辑，导出 `drawIcon`/`makeIco`/`crc32`/`pngChunk` 供测试，CLI 有运行入口守卫）；生成产物 `electron/icon.ico`（32×32 PNG-in-ICO）入库；`build.win.icon` 指向 `icon.ico`；根 `package.json` 新增 `make:icon` 脚本。
+- **R4 src 纳入 ESLint**：`.eslintrc.cjs` 新增 `src/**/*.js` override（全局拼接架构下关闭 `no-undef`/`no-unused-vars`/`prefer-const` 跨模块误报，其余 recommended 规则照常）；新增 `lint:src` 脚本；CI 接入 `npm run lint:src` 步骤。
+- **R5 工作记忆容量可配置**：`AGENT_MEM_MAX` 从常量改为配置读取（`cfg.memMax`，默认 60，钳制 20~500）；设置页新增「工作记忆容量（条，20~500）」输入项；`getMemMax()` 提供运行时钳制读取。
+
+### Tests
+- 新增 `tests/round6-icon.test.js`（4 用例：ICO 结构/像素内容/crc32）、`tests/round6-log.test.js`（1 用例：日志 JSON 格式）、`tests/round6-memmax.test.js`（5 用例：容量钳制+环形截断）；全量 **45 文件 / 525 用例全绿**；build --check 字节级等价 / lint-colors PASS / ESLint 0 error / lint:src PASS / typecheck 0 error。
+
 ## [v1.1.6] - 2026-08-08
 
 ### Added（第五轮 · 架构三项一次性落地）

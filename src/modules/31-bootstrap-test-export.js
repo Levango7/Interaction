@@ -97,6 +97,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     idbClearAll, initIdb, doIdbRestore,
     // 架构项② 渲染扩展（卡片注册 + 场景扩展区注册）
     registerCard, registerSceneSection, getSceneSections,
-    renderSceneSections, bindSceneSections
+    renderSceneSections, bindSceneSections,
+    // 第六轮 R5：工作记忆容量可配置
+    getMemMax
   };
 }

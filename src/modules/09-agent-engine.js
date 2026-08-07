@@ -1,10 +1,21 @@
 /* ---------- Agent 引擎：记忆 / 目标 / 多步编排（A-P3：在既有 chatOnce + TOOLS 契约上扩展，不另起链路） ---------- */
-const AGENT_MEM_MAX = 60;        // 工作记忆容量（环形截断，防无限增长）
+const AGENT_MEM_MAX = 60;        // 工作记忆容量默认值（R5：可在设置页配置，见 getMemMax）
 const AGENT_GOAL_LOOP_MAX = 12;  // 目标激活时 runChatLoop 循环上限（无目标时仍用默认 6）
+
+/**
+ * R5：读取工作记忆容量（cfg.memMax，默认 60，钳制到 20~500）
+ * @returns {number}
+ */
+function getMemMax(){
+  const cfg = getCfg() || {};
+  let n = Number(cfg.memMax);
+  if(!isFinite(n)) n = AGENT_MEM_MAX;
+  return Math.min(500, Math.max(20, Math.round(n)));
+}
 
 /* 记忆：中短期工作记忆。scope=global 全场景通用；否则按场景键隔离。 */
 function getMemories(){ return load(PREFIX+"memory", []); }
-function saveMemories(a){ save(PREFIX+"memory", a.slice(-AGENT_MEM_MAX)); }
+function saveMemories(a){ save(PREFIX+"memory", a.slice(-getMemMax())); }
 function addMemory(scope, text){
   const rec = { id: uid(), scope: scope||"global", text: String(text||"").trim(), ts: Date.now(), hits: 0 };
   if(!rec.text) return null;

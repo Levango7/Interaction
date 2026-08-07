@@ -32,8 +32,7 @@ module.exports = {
     "tmp.js",
     "tmp.css",
     "*.md",
-    "数擎*.html",
-    "src/"
+    "数擎*.html"
   ],
   overrides: [
     {
@@ -41,6 +40,17 @@ module.exports = {
       rules: {
         "no-undef": "error",
         "no-unused-vars": "off"
+      }
+    },
+    {
+      // R4：src/modules 为「全局拼接」架构（build.mjs 按文件名串联为单一 <script> 作用域），
+      // 模块间通过全局函数/变量互相引用，故关闭 no-undef / no-unused-vars（跨模块引用会被误报），
+      // 其余 recommended 规则照常生效。
+      files: ["src/**/*.js"],
+      rules: {
+        "no-undef": "off",
+        "no-unused-vars": "off",
+        "prefer-const": "off"
       }
     },
     {

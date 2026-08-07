@@ -157,6 +157,8 @@ function openDrawer(){ const cfg=getCfg();
   // B8：AI 请求参数回填（空 = 使用默认值 30s / 0.7）
   const toInp=$("#cfgAiTimeout"); if(toInp) toInp.value = (cfg.aiTimeoutSec!==undefined && isFinite(Number(cfg.aiTimeoutSec))) ? String(cfg.aiTimeoutSec) : "";
   const teInp=$("#cfgAiTemperature"); if(teInp) teInp.value = (cfg.aiTemperature!==undefined && isFinite(Number(cfg.aiTemperature))) ? String(cfg.aiTemperature) : "";
+  // R5：工作记忆容量回填（空 = 默认 60）
+  const mmInp=$("#cfgMemMax"); if(mmInp) mmInp.value = (cfg.memMax!==undefined && isFinite(Number(cfg.memMax))) ? String(cfg.memMax) : "";
   renderScBox();
   renderProfileSelect();
   fillProfileForm(getActiveProfile());
@@ -257,6 +259,8 @@ async function saveCfg(){
     // B8：AI 请求参数（超时秒数 / 温度）持久化；留空 = 用默认值（30s / 0.7），范围校验在 getAiParams 与主进程
     const toInp=$("#cfgAiTimeout"); if(toInp){ const v=toInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTimeoutSec=Number(v); else delete cfg.aiTimeoutSec; }
     const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
+    // R5：工作记忆容量持久化；留空 = 默认 60，范围校验在 getMemMax（20~500）
+    const mmInp=$("#cfgMemMax"); if(mmInp){ const v=mmInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.memMax=Number(v); else delete cfg.memMax; }
     // 清掉可能残留的旧单 cfg 字段（已迁入 profiles）
     delete cfg.base; delete cfg.key; delete cfg.model;
     _cfgCache = cfg;
