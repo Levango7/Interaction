@@ -211,8 +211,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   display:flex;justify-content:space-between;align-items:center;color:var(--text-dim);letter-spacing:.01em}
 .kcol h4 .n{background:var(--surface-muted);border-radius:10px;padding:1px 8px;font-size:var(--fs-xs);color:var(--text-dim-2)}
 .kcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
-  padding:var(--space-3);margin-bottom:var(--space-2);transition:box-shadow var(--transition-fast),transform var(--transition-fast)}
+  padding:var(--space-3);margin-bottom:var(--space-2);transition:box-shadow var(--transition-fast),transform var(--transition-fast);cursor:grab}
 .kcard:hover{box-shadow:var(--shadow-2);transform:translateY(-1px)}
+.kcard:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kcard.dragging{opacity:.45;transform:scale(.98);box-shadow:none}
+.kcol.drag-over{border-color:var(--accent);background:var(--accent-soft)}
 .kcard .t{font-size:var(--fs-base);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kcard .m{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);line-height:1.5}
 .kcard .m.od{color:var(--danger);font-weight:600}
@@ -915,6 +918,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="hint" id="cfgKeyHint" style="display:none;font-size:11px;color:var(--muted);margin:-6px 0 8px">已保存在本机（Electron 主进程保管，不写入网页存储）</div>
   <p class="hint" style="font-size:11px;color:var(--muted);margin:-4px 0 8px">🔒 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
   <div class="row"><label>模型</label><input id="cfgModel" placeholder="gpt-4o-mini"></div>
+  <div class="row"><label>请求超时（秒，5~120）</label><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
+  <div class="row"><label>温度 Temperature（0~2）</label><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
   <div class="row"><button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button></div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -1099,7 +1104,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.1.4";
+const VERSION = "1.1.5";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -2225,7 +2230,118 @@ function getActiveTasks(){ return taskStore.get().filter(t=>!t.deletedAt); }
  * 写入全部任务并触发自动备份（T2.3：先更新 taskStore 再持久化，store 变更会防抖触发 render）
  * @param {Task[]} a
  */
-function setTasks(a){ taskStore.set(a); save(PREFIX+"tasks", a); scheduleAutoBackup(); }
+function setTasks(a){
+  _pushUndo(taskStore.get()); // B6：写入前记录变更前快照（undo/redo 恢复时 _undoGuard 跳过）
+  taskStore.set(a); save(PREFIX+"tasks", a); scheduleAutoBackup();
+}
+
+/* ---------- B6：undo/redo 操作历史栈（任务数组快照式，上限 50） ---------- */
+let _undoStack = [];   // 历史快照（变更前的任务数组深拷贝）
+let _redoStack = [];   // 重做栈
+let _undoGuard = false; // 防重入：undo/redo 恢复时不再记录历史
+const UNDO_LIMIT = 50;
+/**
+ * 记录一次任务变更前的快照（setTasks 调用方在写入前调用；内部自动防重入）
+ * @param {Task[]} prev - 变更前的任务数组
+ */
+function _pushUndo(prev){
+  if(_undoGuard) return;
+  try{ _undoStack.push(JSON.stringify(prev)); }catch(e){ return; } // 序列化失败不阻塞业务
+  if(_undoStack.length > UNDO_LIMIT) _undoStack.shift();
+  _redoStack = []; // 新操作清空重做栈
+}
+/** 清空撤销/重做栈（导入/恢复/清空数据后调用，避免跨数据状态误撤销） */
+function clearUndoStack(){ _undoStack = []; _redoStack = []; }
+/** @returns {boolean} 是否可撤销 */
+function canUndo(){ return _undoStack.length > 0; }
+/** @returns {boolean} 是否可重做 */
+function canRedo(){ return _redoStack.length > 0; }
+/**
+ * 撤销上一步任务操作：恢复最近的快照，当前状态入重做栈
+ * @returns {boolean} 是否执行了撤销
+ */
+function undoTasks(){
+  if(!_undoStack.length) return false;
+  const snap = _undoStack.pop();
+  let prev = null;
+  try{ prev = JSON.parse(snap); }catch(e){ return false; }
+  _undoGuard = true;
+  try{
+    _redoStack.push(JSON.stringify(getTasks()));
+    setTasks(prev);
+  }finally{ _undoGuard = false; }
+  return true;
+}
+/**
+ * 重做被撤销的任务操作
+ * @returns {boolean} 是否执行了重做
+ */
+function redoTasks(){
+  if(!_redoStack.length) return false;
+  const snap = _redoStack.pop();
+  let next = null;
+  try{ next = JSON.parse(snap); }catch(e){ return false; }
+  _undoGuard = true;
+  try{
+    _undoStack.push(JSON.stringify(getTasks()));
+    setTasks(next);
+  }finally{ _undoGuard = false; }
+  return true;
+}
+/**
+ * 更新指定任务的字段（A1：UI 编辑与 AI update_task 共用的存储入口）。
+ * 仅允许白名单字段；title 为空串视为无效；status 走 completeTask 语义。
+ * @param {string} id - 任务 id
+ * @param {Object} patch - 待更新字段 {title?, due?, priority?, tags?, status?, note?}
+ * @returns {boolean} 是否更新成功
+ */
+function updateTask(id, patch){
+  if(!id || !patch) return false;
+  const tasks = getTasks();
+  const i = tasks.findIndex(t=>t.id===id && !t.deletedAt);
+  if(i<0) return false;
+  const t = tasks[i];
+  if(patch.title!==undefined){
+    const title = String(patch.title).trim();
+    if(!title) return false;
+    t.title = title;
+  }
+  if(patch.due!==undefined) t.due = patch.due;
+  if(patch.priority!==undefined && ["","P0","P1","P2"].includes(patch.priority)) t.priority = patch.priority;
+  if(Array.isArray(patch.tags)) t.tags = patch.tags.map(String).filter(Boolean);
+  if(patch.note!==undefined) t.note = String(patch.note);
+  if(patch.status && patch.status!==t.status){
+    if(patch.status==="done"){ setTasks(tasks); return completeTask(id); }
+    if(["todo","doing"].includes(patch.status)){ t.status=patch.status; t.doneAt=null; }
+  }
+  t.updatedAt = Date.now();
+  setTasks(tasks);
+  return true;
+}
+/**
+ * 拖拽重排任务（B4）：把任务移动到 beforeId 之前；beforeId 为 null 时移到所在列末尾。
+ * targetStatus 与当前状态不同时变更状态；拖入 done 列走 completeTask（触发场景联动）。
+ * @param {string} id - 被拖任务 id
+ * @param {string|null} beforeId - 目标位置前一张卡片 id（null=列末尾）
+ * @param {string} [targetStatus] - 目标列状态 todo/doing/done
+ * @returns {boolean} 是否重排成功
+ */
+function reorderTask(id, beforeId, targetStatus){
+  if(!id) return false;
+  const tasks = getTasks();
+  const i = tasks.findIndex(t=>t.id===id && !t.deletedAt);
+  if(i<0) return false;
+  const t = tasks.splice(i,1)[0];
+  if(targetStatus && targetStatus!==t.status && ["todo","doing"].includes(targetStatus)){
+    t.status = targetStatus; t.doneAt = null;
+  }
+  let j = beforeId ? tasks.findIndex(x=>x.id===beforeId && !x.deletedAt) : -1;
+  if(j<0) j = tasks.length;
+  tasks.splice(j, 0, t);
+  setTasks(tasks);
+  if(targetStatus==="done" && t.status!=="done") return completeTask(id); // 完成态 + 联动
+  return true;
+}
 /**
  * 读取指定场景的资料库记录
  * @param {string} sc - 场景键
@@ -2260,6 +2376,7 @@ function recoverAutoBackup(){
   if(!snap){ toast("没有可用的自动备份", "warn"); return false; }
   Object.keys(snap).forEach(k=>{ if(k==="_ts") return; localStorage.setItem(k, snap[k]); });
   _cfgCache = null; _deviceKey = null;
+  clearUndoStack(); // B6：恢复备份后清空撤销栈，避免跨数据状态误撤销
   try{ initCrypto(); }catch(e){ /* 降级明文 */ }
 
   toast("已从自动备份恢复（"+new Date(snap._ts||Date.now()).toLocaleString()+"）", "ok");
@@ -4148,8 +4265,12 @@ function renderMainHTML(){
     <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button>
   </form>`;
 
-  const tagFilterHTML = `<div class="form-row" style="margin-bottom:10px"><div class="fld" style="max-width:240px"><label>按标签筛选（留空=全部）</label>
-    <input id="tagFilter" placeholder="如 周报 / urgent"></div></div>`;
+  const tagFilterHTML = `<div class="form-row" style="margin-bottom:10px">
+    <div class="fld" style="max-width:220px"><label>搜索任务（A3）</label><input id="boardSearch" placeholder="输入标题关键词"></div>
+    <div class="fld" style="max-width:140px"><label>状态</label>
+      <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
+    <div class="fld" style="max-width:200px"><label>标签（留空=全部）</label><input id="tagFilter" placeholder="如 周报 / urgent"></div>
+  </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
   let kanban, filterHtml;
@@ -4170,11 +4291,12 @@ function renderMainHTML(){
         if(st==="todo") btns=`<button data-move="${x.id}:doing">→ 进行中</button>`;
         if(st==="doing") btns=`<button data-move="${x.id}:todo">← 待办</button><button data-move="${x.id}:done">→ 完成</button>`;
         if(st==="done") btns=`<button data-move="${x.id}:doing">← 进行中</button>`;
-        return `<div class="kcard" data-tags="${(x.tags||[]).join(" ")}"><div class="t">${esc(x.title)}</div>
+        return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="t">${esc(x.title)}</div>
           <div class="m">${pri} ${due}${tags}</div><div class="kbtns">${btns}
+          <button data-edit="${x.id}">编辑</button>
           <button data-del="${x.id}" style="margin-left:auto;color:var(--danger)">删除</button></div></div>`;
       }).join("") : `<div class="empty" style="margin:4px">空</div>`;
-      return `<div class="kcol"><h4>${colName[st]} <span class="n">${list.length}</span></h4>${cards}</div>`;
+      return `<div class="kcol" data-drop="${st}"><h4>${colName[st]} <span class="n">${list.length}</span></h4>${cards}</div>`;
     }).join("") + `</div>`;
     filterHtml = tagFilterHTML;
   }
@@ -4268,6 +4390,7 @@ function bindScenario(){
     if(t && !t.deletedAt){ t.deletedAt=Date.now(); setTasks(tasks); } // T1：软删除，与 AI delete_task 行为统一
     render();
   });
+  $$("[data-edit]").forEach(b=> b.onclick=()=> openTaskEdit(b.dataset.edit)); // A1：任务编辑弹窗
   $$("[data-rdel]").forEach(b=> b.onclick=()=>{
     if(!confirm("删除这条记录？")) return;
     setRec(active, getRec(active).filter(r=>r.id!==b.dataset.rdel)); render();
@@ -4283,14 +4406,9 @@ function bindScenario(){
       b.innerHTML="已复制"; setTimeout(()=>b.innerHTML=o,1200);
     }).catch(()=>{ b.innerHTML="复制失败"; setTimeout(()=>b.innerHTML=o,1200); });
   });
-  const tf=$("#tagFilter"); if(tf) tf.oninput=()=>{
-    const q=tf.value.trim().toLowerCase();
-    $$(".kcard").forEach(card=>{
-      const tg=(card.dataset.tags||"").split(" ").filter(Boolean);
-      const ok = !q || tg.some(t=>t.toLowerCase().includes(q));
-      card.style.display = ok? "" : "none";
-    });
-  };
+  const tf=$("#tagFilter"); if(tf) tf.oninput=applyBoardFilter;
+  const bs=$("#boardSearch"); if(bs) bs.oninput=applyBoardFilter;   // B2：标题搜索接线
+  const sf=$("#boardStatusFilter"); if(sf) sf.onchange=applyBoardFilter; // B2：状态筛选接线
   bindExtra(active);
   const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
@@ -4314,8 +4432,189 @@ function bindExtra(sc){
   if(r && r.bind) r.bind(sc);
 }
 
+/* ---------- B4：看板拖拽排序（HTML5 DnD，零依赖） ---------- */
+/**
+ * 看板拖拽初始化：事件委托绑在 #main（静态元素），不随 innerHTML 重建丢失。
+ * 同列拖拽=改顺序；跨列拖拽=改状态（拖入已完成列走 completeTask 触发场景联动）。
+ * @returns {void}
+ */
+function setupKanbanDnD(){
+  const main = $("#main");
+  if(!main || main._dndBound) return;
+  main._dndBound = true;
+  let dragId = null;
+  main.addEventListener("dragstart", e=>{
+    const card = e.target.closest(".kcard[data-drag]");
+    if(!card) return;
+    dragId = card.getAttribute("data-drag");
+    try{ e.dataTransfer.setData("text/plain", dragId); e.dataTransfer.effectAllowed = "move"; }catch(_){}
+    card.classList.add("dragging");
+  });
+  main.addEventListener("dragend", e=>{
+    const card = e.target.closest(".kcard[data-drag]");
+    if(card) card.classList.remove("dragging");
+    $$(".kcol.drag-over", main).forEach(c=>c.classList.remove("drag-over"));
+    dragId = null;
+  });
+  main.addEventListener("dragover", e=>{
+    const col = e.target.closest(".kcol[data-drop]");
+    if(!col || !dragId) return;
+    e.preventDefault(); // 允许 drop
+    if(e.dataTransfer) e.dataTransfer.dropEffect = "move"; // 测试环境无 DataTransfer 时跳过
+    $$(".kcol.drag-over", main).forEach(c=>c.classList.remove("drag-over"));
+    col.classList.add("drag-over");
+  });
+  main.addEventListener("dragleave", e=>{
+    const col = e.target.closest(".kcol[data-drop]");
+    if(col && !col.contains(e.relatedTarget)) col.classList.remove("drag-over");
+  });
+  main.addEventListener("drop", e=>{
+    const col = e.target.closest(".kcol[data-drop]");
+    if(!col || !dragId) return;
+    e.preventDefault();
+    col.classList.remove("drag-over");
+    const st = col.getAttribute("data-drop");
+    // 计算插入位置：落在某张卡片上半区 → 插到它前面；否则列末尾
+    let beforeId = null;
+    const target = e.target.closest(".kcard[data-drag]");
+    if(target && target.getAttribute("data-drag") !== dragId){
+      const r = target.getBoundingClientRect();
+      if(e.clientY < r.top + r.height/2) beforeId = target.getAttribute("data-drag");
+      else{
+        const next = target.nextElementSibling;
+        if(next && next.classList.contains("kcard")) beforeId = next.getAttribute("data-drag");
+      }
+    }
+    const id = dragId; dragId = null;
+    if(reorderTask(id, beforeId, st)){ render(); }
+  });
+}
+
+/* ---------- B5：看板卡片键盘操作（Enter=编辑 / Delete=软删进回收站） ---------- */
+/**
+ * 看板键盘操作初始化：事件委托绑在 #main，卡片获焦时 Enter 打开编辑、Delete 软删。
+ * @returns {void}
+ */
+function setupKanbanKeyboard(){
+  const main = $("#main");
+  if(!main || main._kbdBound) return;
+  main._kbdBound = true;
+  main.addEventListener("keydown", e=>{
+    const card = e.target.closest(".kcard[data-drag]");
+    if(!card) return;
+    // 焦点在卡片内的按钮/输入上时不劫持（保留原生行为）
+    const t = e.target;
+    if(t !== card) return;
+    const id = card.getAttribute("data-drag");
+    if(e.key === "Enter"){ e.preventDefault(); openTaskEdit(id); }
+    else if(e.key === "Delete"){
+      e.preventDefault();
+      if(!confirm("删除这条任务？（将进入回收站，可恢复）")) return;
+      const tasks = getTasks();
+      const tk = tasks.find(x=>x.id===id);
+      if(tk && !tk.deletedAt){ tk.deletedAt = Date.now(); setTasks(tasks); } // 与 UI 删除按钮同语义
+      render();
+    }
+  });
+}
+
+/* ---------- B2：场景内联合筛选（标题搜索 × 状态 × 标签） ---------- */
+/**
+ * 按当前筛选控件值过滤看板卡片：标题关键词 AND 状态 AND 标签（任一为空=不限）
+ * @returns {void}
+ */
+function applyBoardFilter(){
+  const q = $("#boardSearch") ? $("#boardSearch").value.trim().toLowerCase() : "";
+  const st = $("#boardStatusFilter") ? $("#boardStatusFilter").value : "";
+  const tg = $("#tagFilter") ? $("#tagFilter").value.trim().toLowerCase() : "";
+  $$(".kcard").forEach(card=>{
+    const titleOk = !q || (card.dataset.title||"").toLowerCase().includes(q);
+    const statusOk = !st || card.dataset.status===st;
+    const tags = (card.dataset.tags||"").split(" ").filter(Boolean);
+    const tagOk = !tg || tags.some(t=>t.toLowerCase().includes(tg));
+    card.style.display = (titleOk && statusOk && tagOk) ? "" : "none";
+  });
+}
+
+/* ---------- A1：任务编辑弹窗 ---------- */
+/**
+ * 打开任务编辑弹窗（复用回收站弹窗的焦点陷阱与关闭交互）
+ * @param {string} id - 任务 id
+ * @returns {void}
+ */
+function openTaskEdit(id){
+  const t = getActiveTasks().find(x=>x.id===id);
+  if(!t){ toast("任务不存在或已删除","warn"); return; }
+  const s = SCENARIOS[t.sc] || scMeta(t.sc);
+  const statusSel = [["todo","待办"],["doing","进行中"],["done","已完成"]].map(([v,l])=>
+    `<option value="${v}" ${t.status===v?"selected":""}>${l}</option>`).join("");
+  const priSel = ["","P0","P1","P2"].map(v=>
+    `<option value="${v}" ${t.priority===v?"selected":""}>${v||"-"}</option>`).join("");
+  const html = `<div class="recycle-modal" id="taskEditModal">
+    <div class="recycle-card" style="max-width:560px">
+      <div class="recycle-header"><h2>编辑任务</h2><button type="button" class="recycle-close" id="taskEditClose">✕</button></div>
+      <form id="taskEditForm" style="padding:var(--space-5) var(--space-6);display:flex;flex-direction:column;gap:var(--space-4)">
+        <div class="fld"><label>任务标题</label><input name="title" value="${esc(t.title)}" required></div>
+        <div class="form-row" style="margin-bottom:0">
+          <div class="fld"><label>截止日期</label><input name="due" type="date" value="${esc(t.due||"")}"></div>
+          <div class="fld"><label>优先级</label><select name="priority">${priSel}</select></div>
+          <div class="fld"><label>状态</label><select name="status">${statusSel}</select></div>
+        </div>
+        <div class="fld"><label>标签（逗号分隔）</label><input name="tags" value="${esc((t.tags||[]).join(", "))}"></div>
+        <div class="fld"><label>备注</label><textarea name="note" rows="3">${esc(t.note||"")}</textarea></div>
+        <div style="display:flex;gap:var(--space-2);justify-content:flex-end">
+          <button type="button" class="btn-ghost" id="taskEditCancel">取消</button>
+          <button type="submit" class="addbtn" style="--sc:${s.color}">保存</button>
+        </div>
+      </form>
+    </div></div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const modal = $("#taskEditModal");
+  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
+  const close = ()=>{ if(modal._releaseTrap) modal._releaseTrap(); modal.remove(); };
+  $("#taskEditClose").onclick = close;
+  $("#taskEditCancel").onclick = close;
+  modal.onclick = e=>{ if(e.target===modal) close(); };
+  $("#taskEditForm").onsubmit = e=>{
+    e.preventDefault();
+    const f = e.target;
+    const gv = n => { const el = f.querySelector('[name="'+n+'"]'); return el ? el.value : ""; };
+    const tagsRaw = gv("tags");
+    const tags = tagsRaw.trim()? tagsRaw.split(/[,，]/).map(x=>x.trim()).filter(Boolean) : [];
+    const ok = updateTask(id, { title:gv("title"), due:gv("due"), priority:gv("priority"), status:gv("status"), tags, note:gv("note") });
+    if(ok){ toast("已保存任务修改","ok"); close(); render(); }
+    else toast("保存失败：标题不能为空","warn");
+  };
+  const first = modal.querySelector("input[name=title]"); if(first) first.focus();
+}
+/**
+ * B1：关闭任务编辑弹窗（若存在）；供 ESC 链式关闭调用
+ * @returns {boolean} 是否关闭了弹窗
+ */
+function closeTaskEditModal(){
+  const m=$("#taskEditModal"); if(!m) return false;
+  if(typeof m._releaseTrap==="function"){ try{ m._releaseTrap(); }catch(e){ /* noop */ } }
+  m.remove();
+  return true;
+}
+
 // ===== AI Layer (AI 层·对话循环) =====
 /* ---------- AI 对话（带工具调用） ---------- */
+/**
+ * B8：读取 AI 请求参数（超时秒数 / 温度），带默认值与范围校验。
+ * 存储于 cfg 顶层（非 profile 字段），浏览器与 Electron 双路径共用。
+ * @returns {{timeoutSec:number, temperature:number}}
+ */
+function getAiParams(){
+  const cfg = getCfg() || {};
+  let timeoutSec = Number(cfg.aiTimeoutSec);
+  if(!isFinite(timeoutSec)) timeoutSec = 30;
+  timeoutSec = Math.min(120, Math.max(5, Math.round(timeoutSec))); // 5~120s
+  let temperature = Number(cfg.aiTemperature);
+  if(!isFinite(temperature)) temperature = 0.7;
+  temperature = Math.min(2, Math.max(0, temperature)); // 0~2
+  return { timeoutSec, temperature };
+}
 /**
  * 单次 AI 对话调用（OpenAI 兼容协议）。Electron 模式经主进程代理；浏览器直连兜底
  * T3.1 增强：支持外部 signal（取消）、自动重试
@@ -4331,11 +4630,14 @@ async function chatOnce(messages, opts){
     const cfg=getCfg();
     const ap=getActiveProfile();
     const model=(ap && ap.model) || "gpt-4o-mini";
-    const body={ model, messages, temperature:0.7 };
+    const aiParams=getAiParams(); // B8：超时/温度可配置（默认 30s / 0.7）
+    const body={ model, messages, temperature:aiParams.temperature };
     if(cfg.enabled){ body.tools=TOOLS; body.tool_choice="auto"; }
 
     // Electron 模式：经主进程代理（Key 不进渲染进程/localStorage），一并规避 CORS（P0-3）
+    // B8：超时参数随请求传给主进程（主进程读取后应用，非法值回退默认）
     if(isElectron()){
+      body.timeoutSec = aiParams.timeoutSec;
       return await window.electronAPI.chat(body);
     }
 
@@ -4350,13 +4652,13 @@ async function chatOnce(messages, opts){
           method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+(ap?ap.key:"")},
           body:JSON.stringify(body)
         };
-        // 外部 signal 优先（取消）；否则用 30s 超时
+        // 外部 signal 优先（取消）；否则用配置的超时（B8，默认 30s）
         // T5.3 浏览器兼容：AbortSignal.timeout 在旧浏览器无之，try/catch 守卫；signal 不可用时不挂 signal（fetch 无超时但不崩）
         if(opts.signal){ fetchOpts.signal=opts.signal; }
         else {
           try{
             if(typeof AbortSignal !== "undefined" && AbortSignal && typeof AbortSignal.timeout === "function"){
-              fetchOpts.signal=AbortSignal.timeout(30000);
+              fetchOpts.signal=AbortSignal.timeout(aiParams.timeoutSec*1000);
             }
           }catch(e){ /* AbortSignal.timeout 不可用：不挂 signal，fetch 走默认无超时 */ }
         }
@@ -4380,7 +4682,7 @@ async function chatOnce(messages, opts){
       }catch(err){
         // 取消 / 超时：不重试，直接抛出
         if(err && (err.name==="AbortError" || err.name==="TimeoutError")){
-          if(err.name==="TimeoutError") throw new Error("请求超时（30 秒），请检查网络或上游服务");
+          if(err.name==="TimeoutError") throw new Error("请求超时（"+aiParams.timeoutSec+" 秒），请检查网络或上游服务");
           throw err;
         }
         // 网络错误（TypeError）：退避重试，间隔 1s*(attempt+1)（用 name 检查避免跨 realm instanceof 失效）
@@ -4473,6 +4775,80 @@ function showChatThinking(on){
   }
 }
 let pendingConfirm = null; // ② 待确认的危险操作（delete/update）：{toolCalls:[{name,id,args}], title, assistantMsg, sc}
+/**
+ * A2：执行已确认的危险操作（Modal 确认与打字确认共用入口）
+ * @returns {Promise<void>}
+ */
+async function confirmPendingDanger(){
+  if(!pendingConfirm || pendingConfirm.sc!==active){ pendingConfirm=null; closeConfirmModal(); return; }
+  const hist=getChat(active);
+  hist.push({role:"user", content:"确认"});
+  // 补全上一轮被延后的 assistant(tool_calls) + 工具回执，B1 安全
+  hist.push(pendingConfirm.assistantMsg);
+  const messages=[{role:"system", content:chatSysPrompt("确认")}].concat(hist.map(m=>({...m})));
+  for(const c of pendingConfirm.toolCalls){
+    const res=execTool(c.name, c.args, true); // 强制（已确认）
+    let rj=null; try{ rj=JSON.parse(res); }catch(e){}
+    const tm={role:"tool", tool_call_id:c.id, content:res, _disp:(rj&&rj.msg)||("工具 "+c.name)};
+    messages.push(tm); hist.push(tm);
+  }
+  pendingConfirm=null;
+  closeConfirmModal();
+  await runChatLoop(messages, hist);
+}
+/**
+ * A2：取消待确认的危险操作（Modal 取消与打字取消共用入口）
+ * @param {string} userText - 用户输入文本（打字取消路径）
+ */
+function cancelPendingDanger(userText){
+  const title = pendingConfirm ? pendingConfirm.title : "危险操作";
+  const hist=getChat(active);
+  if(hist.length && hist[hist.length-1].role==="assistant" && !hist[hist.length-1].tool_calls) hist.pop(); // 移除待确认提示
+  hist.push({role:"user", content:userText});
+  hist.push({role:"assistant", content:"已取消操作：「"+title+"」。"});
+  pendingConfirm=null;
+  closeConfirmModal();
+  if(hist.length>50) hist.splice(0, hist.length-50);
+  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
+}
+/**
+ * A2：关闭危险操作确认模态框（若存在）
+ * @returns {boolean} 是否关闭了模态框（供 ESC 链式关闭判断）
+ */
+function closeConfirmModal(){
+  const m=$("#aiConfirmModal"); if(!m) return false;
+  if(m._releaseTrap) m._releaseTrap();
+  m.remove();
+  return true;
+}
+/**
+ * A2：打开危险操作确认模态框（替代纯打字确认；打字确认保留一个版本兼容）
+ */
+function openConfirmModal(){
+  if(!pendingConfirm) return;
+  closeConfirmModal();
+  const ops = pendingConfirm.toolCalls.map(c=> c.name==="delete_task"?"删除任务":"修改任务");
+  const uniq = [...new Set(ops)];
+  const html = `<div class="recycle-modal" id="aiConfirmModal">
+    <div class="recycle-card" style="max-width:440px">
+      <div class="recycle-header"><h2>危险操作确认</h2></div>
+      <div style="padding:var(--space-5) var(--space-6)">
+        <p style="margin:0 0 var(--space-2)">AI 助手请求执行<strong>${uniq.join("、")}</strong>：</p>
+        <p style="margin:0 0 var(--space-4);font-weight:600">${esc(pendingConfirm.title)}</p>
+        <p class="sub" style="margin:0 0 var(--space-4)">确认后不可撤销（删除会进入回收站）。也可以在聊天框发送「确认」继续。</p>
+        <div style="display:flex;gap:var(--space-2);justify-content:flex-end">
+          <button type="button" class="btn-ghost" id="aiConfirmNo">取消</button>
+          <button type="button" class="btn-danger" id="aiConfirmYes">确认执行</button>
+        </div>
+      </div>
+    </div></div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const modal=$("#aiConfirmModal");
+  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
+  $("#aiConfirmYes").onclick = ()=> confirmPendingDanger();
+  $("#aiConfirmNo").onclick = ()=> cancelPendingDanger("取消");
+  modal.onclick = e=>{ if(e.target===modal) cancelPendingDanger("取消"); };
+}
 function chatSysPrompt(userText){
   return (SCENARIOS[active]?.sysprompt || "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。")
     +"\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。"
@@ -4485,32 +4861,12 @@ async function onChatSubmit(e){
   const f=e.target; const text=f.msg.value.trim(); if(!text) return;
   f.msg.value="";
   const hist=getChat(active);
-  // ② 拦截待确认的危险操作（不与模型交互）
+  // ② 拦截待确认的危险操作（不与模型交互）；A2：打字确认保留一个版本兼容
   if(pendingConfirm){
-    if(pendingConfirm.sc!==active){ pendingConfirm=null; }
+    if(pendingConfirm.sc!==active){ pendingConfirm=null; closeConfirmModal(); }
     else {
       const yes=/^(确认|确定|执行|yes|confirm|y|ok)$/i.test(text.trim());
-      if(yes){
-        hist.push({role:"user", content:text});
-        // 补全上一轮被延后的 assistant(tool_calls) + 工具回执，B1 安全
-        hist.push(pendingConfirm.assistantMsg);
-        const messages=[{role:"system", content:chatSysPrompt(text)}].concat(hist.map(m=>({...m})));
-        for(const c of pendingConfirm.toolCalls){
-          const res=execTool(c.name, c.args, true); // 强制（已确认）
-          let rj=null; try{ rj=JSON.parse(res); }catch(e){}
-          const tm={role:"tool", tool_call_id:c.id, content:res, _disp:(rj&&rj.msg)||("工具 "+c.name)};
-          messages.push(tm); hist.push(tm);
-        }
-        pendingConfirm=null;
-        await runChatLoop(messages, hist);
-      } else {
-        if(hist.length && hist[hist.length-1].role==="assistant" && !hist[hist.length-1].tool_calls) hist.pop(); // 移除待确认提示
-        hist.push({role:"user", content:text});
-        hist.push({role:"assistant", content:"已取消操作：「"+(pendingConfirm.title||"危险操作")+"」。"});
-        pendingConfirm=null;
-        if(hist.length>50) hist.splice(0, hist.length-50);
-        save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
-      }
+      if(yes){ await confirmPendingDanger(); } else { cancelPendingDanger(text); }
       return;
     }
   }
@@ -4555,7 +4911,7 @@ async function runChatLoop(messages, hist){
           const titles = calls.map(c=>{ const ft=findTask(c.args.task_id); return ft? ft.task.title : c.args.task_id; }).filter(Boolean);
           pendingConfirm={ toolCalls:calls, title:titles.join("、")||"未知任务", assistantMsg:msg, sc:active };
           hist.push({role:"assistant", content:"（待确认）将执行删除/修改操作：「"+(titles.join("、")||"未知")+"」。发送「确认」以继续，其他内容取消。"});
-          render(); break;
+          render(); openConfirmModal(); break; // A2：同时弹出确认模态框
         }
         // 无危险：完整 assistant + tool（含 tool_calls / tool_call_id）入 hist，B1 安全
         messages.push(msg); hist.push(msg);
@@ -5064,6 +5420,8 @@ function render(){
     const cfg=getCfg();
     $("#main").innerHTML = renderToday() + renderMainHTML();
     bindScenario();
+    setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
+    setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
     // P9：「稍后提醒」按钮绑定（Top3 待处理任务）
     $$("#main [data-snooze]").forEach(b=> b.onclick=()=>{
       snoozeTask(b.getAttribute("data-snooze"), 30);
@@ -5128,6 +5486,7 @@ function doImport(file){
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY) localStorage.setItem(k, data[k]); });
       _cfgCache = null; _deviceKey = null;
+      clearUndoStack(); // B6：导入后清空撤销栈，避免跨数据状态误撤销
       try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 */ }
 
       // P0-5：解析「有效 Key」——跨设备后原密文/OS 存储可能已失效
@@ -5204,7 +5563,8 @@ function doImport(file){
 function doClear(){
   if(!confirm("确定清空全部数据？此操作不可恢复！")) return;
   allKeys().forEach(k=> localStorage.removeItem(k));
-  alert("已清空，页面将重新载入示例"); location.reload();
+  toast("已清空，页面将重新载入示例", "ok"); // B3：alert 改 toast；延迟重载让提示可见
+  setTimeout(()=> location.reload(), 900);
 }
 function checkCount(){
   const n = allKeys().reduce((s,k)=>{
@@ -5448,6 +5808,9 @@ function openDrawer(){ const cfg=getCfg();
   if(qEnd) qEnd.value=String(q.end);
   const thSel=$("#cfgTheme"); if(thSel) thSel.value = (cfg.theme==="light"||cfg.theme==="dark") ? cfg.theme : "system";
   const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
+  // B8：AI 请求参数回填（空 = 使用默认值 30s / 0.7）
+  const toInp=$("#cfgAiTimeout"); if(toInp) toInp.value = (cfg.aiTimeoutSec!==undefined && isFinite(Number(cfg.aiTimeoutSec))) ? String(cfg.aiTimeoutSec) : "";
+  const teInp=$("#cfgAiTemperature"); if(teInp) teInp.value = (cfg.aiTemperature!==undefined && isFinite(Number(cfg.aiTemperature))) ? String(cfg.aiTemperature) : "";
   renderScBox();
   renderProfileSelect();
   fillProfileForm(getActiveProfile());
@@ -5545,6 +5908,9 @@ async function saveCfg(){
     });
     // T4：主题三态持久化（light/dark/system）
     const thSel=$("#cfgTheme"); if(thSel) cfg.theme = thSel.value;
+    // B8：AI 请求参数（超时秒数 / 温度）持久化；留空 = 用默认值（30s / 0.7），范围校验在 getAiParams 与主进程
+    const toInp=$("#cfgAiTimeout"); if(toInp){ const v=toInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTimeoutSec=Number(v); else delete cfg.aiTimeoutSec; }
+    const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
     // 清掉可能残留的旧单 cfg 字段（已迁入 profiles）
     delete cfg.base; delete cfg.key; delete cfg.model;
     _cfgCache = cfg;
@@ -5584,7 +5950,7 @@ async function saveCfg(){
         base: (ap && ap.base) || "", model: (ap && ap.model) || "", enabled: !!cfg.enabled,
         key: (ap && ap.key) || undefined }); }catch(e){ /* 忽略 */ }
     }
-    alert("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"));
+    toast("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"), "ok"); // B3：alert 改 toast，不阻塞交互
     applyTheme(); // T4：主题变更（含跟随系统）立即生效
     closeDrawer(); render();
   }catch(e){
@@ -5597,13 +5963,26 @@ async function saveCfg(){
 // ===== UI Layer (交互层·快捷键) =====
 /* ---------- 快捷键 ---------- */
 document.addEventListener("keydown", e=>{
-  // M5：Esc 关闭回收站弹窗 / 设置抽屉（命令面板有自身 Esc 处理，互不冲突）
+  // M5：Esc 链式关闭弹窗（按层级：编辑/确认 → 回收站 → 设置抽屉）
+  // B1 修复：抽屉打开类是 open 不是 show，原判断永不生效；同时纳入任务编辑与 AI 确认弹窗
   if(e.key==="Escape"){
+    if(closeTaskEditModal()) return;
+    if(closeConfirmModal()) return;
     if(closeRecycleModal()) return;
-    if($("#drawer") && $("#drawer").classList.contains("show")){ closeDrawer(); return; }
+    if($("#drawer") && $("#drawer").classList.contains("open")){ closeDrawer(); return; }
     return;
   }
   if((e.ctrlKey||e.metaKey) && (e.key==="k"||e.key==="K")){ e.preventDefault(); openCmd(); return; }
+  // B6：撤销/重做任务操作（Ctrl+Z / Ctrl+Y；macOS 的 Cmd+Shift+Z 重做）
+  if((e.ctrlKey||e.metaKey) && !e.altKey && (e.key==="z"||e.key==="Z")){
+    e.preventDefault();
+    if(e.shiftKey){ if(redoTasks()){ render(); toast("已重做","ok"); } }
+    else { if(undoTasks()){ render(); toast("已撤销","ok"); } }
+    return;
+  }
+  if((e.ctrlKey||e.metaKey) && (e.key==="y"||e.key==="Y")){
+    e.preventDefault(); if(redoTasks()){ render(); toast("已重做","ok"); } return;
+  }
   const t=e.target;
   if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT")) return;
   if(e.key>="1" && e.key<="4"){ const sc=ORDER[+e.key-1]; if(sc){ setActive(sc); render(); } }
@@ -5863,6 +6242,16 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // 第三轮：P8 多维筛选+保存视图 / P2' 习惯链有向图 / P9 稍后提醒+免打扰 访问器
     renderChainGraph, getGlobViews, saveGlobView, removeGlobView, _applyGlobFilters,
     snoozeTask, getQuietHours, setQuietHours, isQuietTime,
+    // 第四轮 A1：任务编辑（UI 编辑与 AI update_task 共用的存储入口 + 编辑弹窗）
+    updateTask, openTaskEdit, closeTaskEditModal,
+    // 第四轮批次①：场景内联合筛选 + AI 确认弹窗关闭（ESC 链）
+    applyBoardFilter, closeConfirmModal, doClear,
+    // 第四轮批次②：看板拖拽排序 + 键盘操作（B4/B5）
+    reorderTask, setupKanbanDnD, setupKanbanKeyboard,
+    // 第四轮批次③：undo/redo 操作历史栈（B6）
+    undoTasks, redoTasks, canUndo, canRedo, clearUndoStack,
+    // 第四轮批次④：AI 请求参数（超时/温度）可配置（B8）
+    getAiParams,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）

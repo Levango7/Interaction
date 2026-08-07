@@ -12,6 +12,8 @@ function render(){
     const cfg=getCfg();
     $("#main").innerHTML = renderToday() + renderMainHTML();
     bindScenario();
+    setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
+    setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
     // P9：「稍后提醒」按钮绑定（Top3 待处理任务）
     $$("#main [data-snooze]").forEach(b=> b.onclick=()=>{
       snoozeTask(b.getAttribute("data-snooze"), 30);

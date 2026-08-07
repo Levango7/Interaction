@@ -39,6 +39,7 @@ function doImport(file){
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY) localStorage.setItem(k, data[k]); });
       _cfgCache = null; _deviceKey = null;
+      clearUndoStack(); // B6：导入后清空撤销栈，避免跨数据状态误撤销
       try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 */ }
 
       // P0-5：解析「有效 Key」——跨设备后原密文/OS 存储可能已失效
@@ -115,7 +116,8 @@ function doImport(file){
 function doClear(){
   if(!confirm("确定清空全部数据？此操作不可恢复！")) return;
   allKeys().forEach(k=> localStorage.removeItem(k));
-  alert("已清空，页面将重新载入示例"); location.reload();
+  toast("已清空，页面将重新载入示例", "ok"); // B3：alert 改 toast；延迟重载让提示可见
+  setTimeout(()=> location.reload(), 900);
 }
 function checkCount(){
   const n = allKeys().reduce((s,k)=>{

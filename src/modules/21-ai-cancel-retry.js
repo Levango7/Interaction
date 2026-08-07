@@ -65,6 +65,80 @@ function showChatThinking(on){
   }
 }
 let pendingConfirm = null; // ② 待确认的危险操作（delete/update）：{toolCalls:[{name,id,args}], title, assistantMsg, sc}
+/**
+ * A2：执行已确认的危险操作（Modal 确认与打字确认共用入口）
+ * @returns {Promise<void>}
+ */
+async function confirmPendingDanger(){
+  if(!pendingConfirm || pendingConfirm.sc!==active){ pendingConfirm=null; closeConfirmModal(); return; }
+  const hist=getChat(active);
+  hist.push({role:"user", content:"确认"});
+  // 补全上一轮被延后的 assistant(tool_calls) + 工具回执，B1 安全
+  hist.push(pendingConfirm.assistantMsg);
+  const messages=[{role:"system", content:chatSysPrompt("确认")}].concat(hist.map(m=>({...m})));
+  for(const c of pendingConfirm.toolCalls){
+    const res=execTool(c.name, c.args, true); // 强制（已确认）
+    let rj=null; try{ rj=JSON.parse(res); }catch(e){}
+    const tm={role:"tool", tool_call_id:c.id, content:res, _disp:(rj&&rj.msg)||("工具 "+c.name)};
+    messages.push(tm); hist.push(tm);
+  }
+  pendingConfirm=null;
+  closeConfirmModal();
+  await runChatLoop(messages, hist);
+}
+/**
+ * A2：取消待确认的危险操作（Modal 取消与打字取消共用入口）
+ * @param {string} userText - 用户输入文本（打字取消路径）
+ */
+function cancelPendingDanger(userText){
+  const title = pendingConfirm ? pendingConfirm.title : "危险操作";
+  const hist=getChat(active);
+  if(hist.length && hist[hist.length-1].role==="assistant" && !hist[hist.length-1].tool_calls) hist.pop(); // 移除待确认提示
+  hist.push({role:"user", content:userText});
+  hist.push({role:"assistant", content:"已取消操作：「"+title+"」。"});
+  pendingConfirm=null;
+  closeConfirmModal();
+  if(hist.length>50) hist.splice(0, hist.length-50);
+  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
+}
+/**
+ * A2：关闭危险操作确认模态框（若存在）
+ * @returns {boolean} 是否关闭了模态框（供 ESC 链式关闭判断）
+ */
+function closeConfirmModal(){
+  const m=$("#aiConfirmModal"); if(!m) return false;
+  if(m._releaseTrap) m._releaseTrap();
+  m.remove();
+  return true;
+}
+/**
+ * A2：打开危险操作确认模态框（替代纯打字确认；打字确认保留一个版本兼容）
+ */
+function openConfirmModal(){
+  if(!pendingConfirm) return;
+  closeConfirmModal();
+  const ops = pendingConfirm.toolCalls.map(c=> c.name==="delete_task"?"删除任务":"修改任务");
+  const uniq = [...new Set(ops)];
+  const html = `<div class="recycle-modal" id="aiConfirmModal">
+    <div class="recycle-card" style="max-width:440px">
+      <div class="recycle-header"><h2>危险操作确认</h2></div>
+      <div style="padding:var(--space-5) var(--space-6)">
+        <p style="margin:0 0 var(--space-2)">AI 助手请求执行<strong>${uniq.join("、")}</strong>：</p>
+        <p style="margin:0 0 var(--space-4);font-weight:600">${esc(pendingConfirm.title)}</p>
+        <p class="sub" style="margin:0 0 var(--space-4)">确认后不可撤销（删除会进入回收站）。也可以在聊天框发送「确认」继续。</p>
+        <div style="display:flex;gap:var(--space-2);justify-content:flex-end">
+          <button type="button" class="btn-ghost" id="aiConfirmNo">取消</button>
+          <button type="button" class="btn-danger" id="aiConfirmYes">确认执行</button>
+        </div>
+      </div>
+    </div></div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const modal=$("#aiConfirmModal");
+  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
+  $("#aiConfirmYes").onclick = ()=> confirmPendingDanger();
+  $("#aiConfirmNo").onclick = ()=> cancelPendingDanger("取消");
+  modal.onclick = e=>{ if(e.target===modal) cancelPendingDanger("取消"); };
+}
 function chatSysPrompt(userText){
   return (SCENARIOS[active]?.sysprompt || "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。")
     +"\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。"
@@ -77,32 +151,12 @@ async function onChatSubmit(e){
   const f=e.target; const text=f.msg.value.trim(); if(!text) return;
   f.msg.value="";
   const hist=getChat(active);
-  // ② 拦截待确认的危险操作（不与模型交互）
+  // ② 拦截待确认的危险操作（不与模型交互）；A2：打字确认保留一个版本兼容
   if(pendingConfirm){
-    if(pendingConfirm.sc!==active){ pendingConfirm=null; }
+    if(pendingConfirm.sc!==active){ pendingConfirm=null; closeConfirmModal(); }
     else {
       const yes=/^(确认|确定|执行|yes|confirm|y|ok)$/i.test(text.trim());
-      if(yes){
-        hist.push({role:"user", content:text});
-        // 补全上一轮被延后的 assistant(tool_calls) + 工具回执，B1 安全
-        hist.push(pendingConfirm.assistantMsg);
-        const messages=[{role:"system", content:chatSysPrompt(text)}].concat(hist.map(m=>({...m})));
-        for(const c of pendingConfirm.toolCalls){
-          const res=execTool(c.name, c.args, true); // 强制（已确认）
-          let rj=null; try{ rj=JSON.parse(res); }catch(e){}
-          const tm={role:"tool", tool_call_id:c.id, content:res, _disp:(rj&&rj.msg)||("工具 "+c.name)};
-          messages.push(tm); hist.push(tm);
-        }
-        pendingConfirm=null;
-        await runChatLoop(messages, hist);
-      } else {
-        if(hist.length && hist[hist.length-1].role==="assistant" && !hist[hist.length-1].tool_calls) hist.pop(); // 移除待确认提示
-        hist.push({role:"user", content:text});
-        hist.push({role:"assistant", content:"已取消操作：「"+(pendingConfirm.title||"危险操作")+"」。"});
-        pendingConfirm=null;
-        if(hist.length>50) hist.splice(0, hist.length-50);
-        save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
-      }
+      if(yes){ await confirmPendingDanger(); } else { cancelPendingDanger(text); }
       return;
     }
   }
@@ -147,7 +201,7 @@ async function runChatLoop(messages, hist){
           const titles = calls.map(c=>{ const ft=findTask(c.args.task_id); return ft? ft.task.title : c.args.task_id; }).filter(Boolean);
           pendingConfirm={ toolCalls:calls, title:titles.join("、")||"未知任务", assistantMsg:msg, sc:active };
           hist.push({role:"assistant", content:"（待确认）将执行删除/修改操作：「"+(titles.join("、")||"未知")+"」。发送「确认」以继续，其他内容取消。"});
-          render(); break;
+          render(); openConfirmModal(); break; // A2：同时弹出确认模态框
         }
         // 无危险：完整 assistant + tool（含 tool_calls / tool_call_id）入 hist，B1 安全
         messages.push(msg); hist.push(msg);

@@ -22,8 +22,12 @@ function renderMainHTML(){
     <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button>
   </form>`;
 
-  const tagFilterHTML = `<div class="form-row" style="margin-bottom:10px"><div class="fld" style="max-width:240px"><label>按标签筛选（留空=全部）</label>
-    <input id="tagFilter" placeholder="如 周报 / urgent"></div></div>`;
+  const tagFilterHTML = `<div class="form-row" style="margin-bottom:10px">
+    <div class="fld" style="max-width:220px"><label>搜索任务（A3）</label><input id="boardSearch" placeholder="输入标题关键词"></div>
+    <div class="fld" style="max-width:140px"><label>状态</label>
+      <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
+    <div class="fld" style="max-width:200px"><label>标签（留空=全部）</label><input id="tagFilter" placeholder="如 周报 / urgent"></div>
+  </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
   let kanban, filterHtml;
@@ -44,11 +48,12 @@ function renderMainHTML(){
         if(st==="todo") btns=`<button data-move="${x.id}:doing">→ 进行中</button>`;
         if(st==="doing") btns=`<button data-move="${x.id}:todo">← 待办</button><button data-move="${x.id}:done">→ 完成</button>`;
         if(st==="done") btns=`<button data-move="${x.id}:doing">← 进行中</button>`;
-        return `<div class="kcard" data-tags="${(x.tags||[]).join(" ")}"><div class="t">${esc(x.title)}</div>
+        return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="t">${esc(x.title)}</div>
           <div class="m">${pri} ${due}${tags}</div><div class="kbtns">${btns}
+          <button data-edit="${x.id}">编辑</button>
           <button data-del="${x.id}" style="margin-left:auto;color:var(--danger)">删除</button></div></div>`;
       }).join("") : `<div class="empty" style="margin:4px">空</div>`;
-      return `<div class="kcol"><h4>${colName[st]} <span class="n">${list.length}</span></h4>${cards}</div>`;
+      return `<div class="kcol" data-drop="${st}"><h4>${colName[st]} <span class="n">${list.length}</span></h4>${cards}</div>`;
     }).join("") + `</div>`;
     filterHtml = tagFilterHTML;
   }

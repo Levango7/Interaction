@@ -1,6 +1,21 @@
 // ===== AI Layer (AI 层·对话循环) =====
 /* ---------- AI 对话（带工具调用） ---------- */
 /**
+ * B8：读取 AI 请求参数（超时秒数 / 温度），带默认值与范围校验。
+ * 存储于 cfg 顶层（非 profile 字段），浏览器与 Electron 双路径共用。
+ * @returns {{timeoutSec:number, temperature:number}}
+ */
+function getAiParams(){
+  const cfg = getCfg() || {};
+  let timeoutSec = Number(cfg.aiTimeoutSec);
+  if(!isFinite(timeoutSec)) timeoutSec = 30;
+  timeoutSec = Math.min(120, Math.max(5, Math.round(timeoutSec))); // 5~120s
+  let temperature = Number(cfg.aiTemperature);
+  if(!isFinite(temperature)) temperature = 0.7;
+  temperature = Math.min(2, Math.max(0, temperature)); // 0~2
+  return { timeoutSec, temperature };
+}
+/**
  * 单次 AI 对话调用（OpenAI 兼容协议）。Electron 模式经主进程代理；浏览器直连兜底
  * T3.1 增强：支持外部 signal（取消）、自动重试
  * 重试矩阵（与主进程 chat 对齐）：网络错误 / 429 / 5xx 退避重试；取消 / 超时 / 401 / 其他 4xx 不重试
@@ -15,11 +30,14 @@ async function chatOnce(messages, opts){
     const cfg=getCfg();
     const ap=getActiveProfile();
     const model=(ap && ap.model) || "gpt-4o-mini";
-    const body={ model, messages, temperature:0.7 };
+    const aiParams=getAiParams(); // B8：超时/温度可配置（默认 30s / 0.7）
+    const body={ model, messages, temperature:aiParams.temperature };
     if(cfg.enabled){ body.tools=TOOLS; body.tool_choice="auto"; }
 
     // Electron 模式：经主进程代理（Key 不进渲染进程/localStorage），一并规避 CORS（P0-3）
+    // B8：超时参数随请求传给主进程（主进程读取后应用，非法值回退默认）
     if(isElectron()){
+      body.timeoutSec = aiParams.timeoutSec;
       return await window.electronAPI.chat(body);
     }
 
@@ -34,13 +52,13 @@ async function chatOnce(messages, opts){
           method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+(ap?ap.key:"")},
           body:JSON.stringify(body)
         };
-        // 外部 signal 优先（取消）；否则用 30s 超时
+        // 外部 signal 优先（取消）；否则用配置的超时（B8，默认 30s）
         // T5.3 浏览器兼容：AbortSignal.timeout 在旧浏览器无之，try/catch 守卫；signal 不可用时不挂 signal（fetch 无超时但不崩）
         if(opts.signal){ fetchOpts.signal=opts.signal; }
         else {
           try{
             if(typeof AbortSignal !== "undefined" && AbortSignal && typeof AbortSignal.timeout === "function"){
-              fetchOpts.signal=AbortSignal.timeout(30000);
+              fetchOpts.signal=AbortSignal.timeout(aiParams.timeoutSec*1000);
             }
           }catch(e){ /* AbortSignal.timeout 不可用：不挂 signal，fetch 走默认无超时 */ }
         }
@@ -64,7 +82,7 @@ async function chatOnce(messages, opts){
       }catch(err){
         // 取消 / 超时：不重试，直接抛出
         if(err && (err.name==="AbortError" || err.name==="TimeoutError")){
-          if(err.name==="TimeoutError") throw new Error("请求超时（30 秒），请检查网络或上游服务");
+          if(err.name==="TimeoutError") throw new Error("请求超时（"+aiParams.timeoutSec+" 秒），请检查网络或上游服务");
           throw err;
         }
         // 网络错误（TypeError）：退避重试，间隔 1s*(attempt+1)（用 name 检查避免跨 realm instanceof 失效）

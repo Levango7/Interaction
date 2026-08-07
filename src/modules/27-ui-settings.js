@@ -154,6 +154,9 @@ function openDrawer(){ const cfg=getCfg();
   if(qEnd) qEnd.value=String(q.end);
   const thSel=$("#cfgTheme"); if(thSel) thSel.value = (cfg.theme==="light"||cfg.theme==="dark") ? cfg.theme : "system";
   const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
+  // B8：AI 请求参数回填（空 = 使用默认值 30s / 0.7）
+  const toInp=$("#cfgAiTimeout"); if(toInp) toInp.value = (cfg.aiTimeoutSec!==undefined && isFinite(Number(cfg.aiTimeoutSec))) ? String(cfg.aiTimeoutSec) : "";
+  const teInp=$("#cfgAiTemperature"); if(teInp) teInp.value = (cfg.aiTemperature!==undefined && isFinite(Number(cfg.aiTemperature))) ? String(cfg.aiTemperature) : "";
   renderScBox();
   renderProfileSelect();
   fillProfileForm(getActiveProfile());
@@ -251,6 +254,9 @@ async function saveCfg(){
     });
     // T4：主题三态持久化（light/dark/system）
     const thSel=$("#cfgTheme"); if(thSel) cfg.theme = thSel.value;
+    // B8：AI 请求参数（超时秒数 / 温度）持久化；留空 = 用默认值（30s / 0.7），范围校验在 getAiParams 与主进程
+    const toInp=$("#cfgAiTimeout"); if(toInp){ const v=toInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTimeoutSec=Number(v); else delete cfg.aiTimeoutSec; }
+    const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
     // 清掉可能残留的旧单 cfg 字段（已迁入 profiles）
     delete cfg.base; delete cfg.key; delete cfg.model;
     _cfgCache = cfg;
@@ -290,7 +296,7 @@ async function saveCfg(){
         base: (ap && ap.base) || "", model: (ap && ap.model) || "", enabled: !!cfg.enabled,
         key: (ap && ap.key) || undefined }); }catch(e){ /* 忽略 */ }
     }
-    alert("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"));
+    toast("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"), "ok"); // B3：alert 改 toast，不阻塞交互
     applyTheme(); // T4：主题变更（含跟随系统）立即生效
     closeDrawer(); render();
   }catch(e){

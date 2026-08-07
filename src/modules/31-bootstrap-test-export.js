@@ -54,6 +54,16 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // 第三轮：P8 多维筛选+保存视图 / P2' 习惯链有向图 / P9 稍后提醒+免打扰 访问器
     renderChainGraph, getGlobViews, saveGlobView, removeGlobView, _applyGlobFilters,
     snoozeTask, getQuietHours, setQuietHours, isQuietTime,
+    // 第四轮 A1：任务编辑（UI 编辑与 AI update_task 共用的存储入口 + 编辑弹窗）
+    updateTask, openTaskEdit, closeTaskEditModal,
+    // 第四轮批次①：场景内联合筛选 + AI 确认弹窗关闭（ESC 链）
+    applyBoardFilter, closeConfirmModal, doClear,
+    // 第四轮批次②：看板拖拽排序 + 键盘操作（B4/B5）
+    reorderTask, setupKanbanDnD, setupKanbanKeyboard,
+    // 第四轮批次③：undo/redo 操作历史栈（B6）
+    undoTasks, redoTasks, canUndo, canRedo, clearUndoStack,
+    // 第四轮批次④：AI 请求参数（超时/温度）可配置（B8）
+    getAiParams,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）

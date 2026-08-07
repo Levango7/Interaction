@@ -25,13 +25,56 @@ function pngChunk(type, data){
   return Buffer.concat([len, t, data, crc]);
 }
 function makeTrayIcon(){
+  // B7：程序化绘制「圆角蓝底 + 白色 A 字标」（零外部文件依赖），替代原纯色方块
   const W = 32, H = 32;
+  const px = new Array(W * H).fill(null); // 每像素 [r,g,b,a]
+  const R = 8; // 圆角半径
+  function sdRoundRect(x, y){
+    const qx = Math.abs(x - 16) - (16 - R), qy = Math.abs(y - 16) - (16 - R);
+    const ox = Math.max(qx, 0), oy = Math.max(qy, 0);
+    return Math.sqrt(ox * ox + oy * oy) + Math.min(Math.max(qx, qy), 0) - R;
+  }
+  function segDist(x, y, ax, ay, bx, by){ // 点到线段距离
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2)) : 0;
+    const px2 = ax + t * dx, py2 = ay + t * dy;
+    return Math.sqrt((x - px2) * (x - px2) + (y - py2) * (y - py2));
+  }
+  const STROKE = 3.6; // 笔画宽度
+  for (let y = 0; y < H; y++){
+    for (let x = 0; x < W; x++){
+      const cx = x + 0.5, cy = y + 0.5;
+      // 圆角蓝底（1px 抗锯齿）
+      const d = sdRoundRect(cx, cy);
+      if (d > 0.5) continue; // 完全透明
+      const cover = Math.max(0, Math.min(1, 0.5 - d));
+      px[y * W + x] = [0x0a, 0x6c, 0xbd, Math.round(255 * cover)];
+      // 白色 A：左斜边 / 右斜边 / 横杠
+      const dA = Math.min(
+        segDist(cx, cy, 16, 6.5, 8.5, 25.5),
+        segDist(cx, cy, 16, 6.5, 23.5, 25.5),
+        segDist(cx, cy, 11.6, 18.5, 20.4, 18.5)
+      );
+      const aCover = Math.max(0, Math.min(1, (STROKE / 2 + 0.5) - dA)) * cover;
+      if (aCover > 0){
+        const base = px[y * W + x];
+        px[y * W + x] = [
+          Math.round(base[0] + (255 - base[0]) * aCover),
+          Math.round(base[1] + (255 - base[1]) * aCover),
+          Math.round(base[2] + (255 - base[2]) * aCover),
+          Math.max(base[3], Math.round(255 * cover))
+        ];
+      }
+    }
+  }
   const raw = Buffer.alloc((W * 4 + 1) * H);
   for (let y = 0; y < H; y++){
     raw[y * (W * 4 + 1)] = 0; // 每行过滤字节
     for (let x = 0; x < W; x++){
       const o = y * (W * 4 + 1) + 1 + x * 4;
-      raw[o] = 0x00; raw[o + 1] = 0x67; raw[o + 2] = 0xc0; raw[o + 3] = 255; // #0067c0
+      const p = px[y * W + x];
+      if (p){ raw[o] = p[0]; raw[o + 1] = p[1]; raw[o + 2] = p[2]; raw[o + 3] = p[3]; }
     }
   }
   const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -230,6 +273,23 @@ function saveAiConfig(cfg){
 }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
+/* ---------- B8：轻量滚动日志（userData/logs/app.log，上限约 1MB 自动截断） ---------- */
+function logLine(scope, msg){
+  try{
+    const dir = path.join(app.getPath("userData"), "logs");
+    if(!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive:true });
+    const file = path.join(dir, "app.log");
+    const stamp = new Date().toISOString();
+    fs.appendFileSync(file, "["+stamp+"] ["+scope+"] "+msg+"\n");
+    // 滚动：超过 1MB 保留后 512KB
+    const st = fs.statSync(file);
+    if(st.size > 1024*1024){
+      const buf = fs.readFileSync(file);
+      fs.writeFileSync(file, buf.slice(buf.length - 512*1024));
+    }
+  }catch(e){ /* 日志失败绝不阻塞业务 */ }
+}
+
 /* ---------- 开机自启（由设置抽屉开关控制） ---------- */
 ipcMain.handle("get-auto-launch", () => {
   try { return !!app.getLoginItemSettings().openAtLogin; } catch (e) { return false; }
@@ -279,17 +339,25 @@ if (!gotLock){
       const cfg = loadAiConfig();
       if(!cfg || !cfg.key) throw new Error("AI 未配置：请先在设置中填写 API Key");
       const base = (cfg.base || "https://api.openai.com/v1").replace(/\/+$/,"");
+      // B8：温度 / 超时由前端配置传入，带范围校验，非法值回退默认（0.7 / 30s）
+      let temperature = Number(arg && arg.temperature);
+      if(!isFinite(temperature)) temperature = 0.7;
+      temperature = Math.min(2, Math.max(0, temperature));
+      let timeoutSec = Number(arg && arg.timeoutSec);
+      if(!isFinite(timeoutSec)) timeoutSec = 30;
+      timeoutSec = Math.min(120, Math.max(5, Math.round(timeoutSec)));
       const body = {
         model: (arg && typeof arg.model === "string" && arg.model) ? arg.model : (cfg.model || "gpt-4o-mini"),
         messages: (arg && Array.isArray(arg.messages)) ? arg.messages : [],
-        temperature: 0.7
+        temperature
       };
       if(arg && Array.isArray(arg.tools)) body.tools = arg.tools;
       if(arg && arg.tool_choice) body.tool_choice = arg.tool_choice;
+      logLine("chat", "request model="+body.model+" temp="+temperature+" timeout="+timeoutSec+"s");
       let lastErr = null;
       for(let attempt = 0; attempt < 3; attempt++){
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 30000);
+        const timer = setTimeout(() => ctrl.abort(), timeoutSec * 1000);
         try{
           const r = await fetch(base + "/chat/completions", {
             method: "POST",
@@ -304,12 +372,14 @@ if (!gotLock){
             if(r.status >= 500){ lastErr = new Error("服务异常，请稍后重试"); await sleep(1000 * (attempt + 1)); continue; }
             throw new Error("API 返回错误：" + r.status);
           }
+          logLine("chat", "ok status="+r.status);
           return await r.json();
         }catch(err){
           clearTimeout(timer);
-          if(err && err.name === "AbortError") throw new Error("请求超时（30 秒），请检查网络或上游服务");
+          if(err && err.name === "AbortError") throw new Error("请求超时（"+timeoutSec+" 秒），请检查网络或上游服务");
           if(err && err.message && (err.message.indexOf("API Key") >= 0 || err.message.indexOf("服务异常") >= 0 || err.message.indexOf("API 返回错误") >= 0)) throw err;
           if(attempt < 2){ await sleep(1000 * (attempt + 1)); continue; }
+          logLine("chat", "error "+(err && err.message ? err.message : String(err)));
           throw new Error("请求失败：" + (err && err.message ? err.message : String(err)));
         }
       }

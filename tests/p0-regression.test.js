@@ -427,9 +427,11 @@ describe("P0-3 契约 · 用例 7：Key 不离开主进程（静态校验）", (
     expect(main).toMatch(/"Authorization":\s*"Bearer "\s*\+\s*cfg\.key/);
   });
 
-  it("main：fetch 带 AbortController 30s 超时", () => {
+  it("main：fetch 带 AbortController 超时（B8：可配置，默认 30s）", () => {
     expect(main).toMatch(/new AbortController\(\)/);
-    expect(main).toMatch(/30000/);
+    // B8：超时由前端 timeoutSec 传入并校验，非法值回退默认 30；不再硬编码 30000
+    expect(main).toMatch(/timeoutSec = 30/);
+    expect(main).toMatch(/setTimeout\(\(\) => ctrl\.abort\(\), timeoutSec \* 1000\)/);
   });
 
   it("main：AES-256-GCM 结构与算法与复现一致", () => {

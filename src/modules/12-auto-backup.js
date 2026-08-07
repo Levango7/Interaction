@@ -18,6 +18,7 @@ function recoverAutoBackup(){
   if(!snap){ toast("没有可用的自动备份", "warn"); return false; }
   Object.keys(snap).forEach(k=>{ if(k==="_ts") return; localStorage.setItem(k, snap[k]); });
   _cfgCache = null; _deviceKey = null;
+  clearUndoStack(); // B6：恢复备份后清空撤销栈，避免跨数据状态误撤销
   try{ initCrypto(); }catch(e){ /* 降级明文 */ }
 
   toast("已从自动备份恢复（"+new Date(snap._ts||Date.now()).toLocaleString()+"）", "ok");

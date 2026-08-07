@@ -2,6 +2,24 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.1.5] - 2026-08-07
+
+### Added（深度审查报告采纳 · B1–B8 四批次）
+- **B4 · 看板拖拽排序**：HTML5 原生拖拽（零依赖）——同列排序、跨列改状态；拖入「已完成」走 `completeTask`（触发场景联动）；落点列高亮反馈。
+- **B5 · 看板键盘操作**：卡片 `tabindex=0` 可聚焦 + `aria-label`；`Enter` 打开编辑弹窗、`Delete` 软删进回收站；`:focus-visible` 焦点轮廓。
+- **B6 · undo/redo 操作历史栈**：任务数组快照式撤销/重做（上限 50，防重入守卫）；`Ctrl+Z` / `Ctrl+Y` / `Cmd+Shift+Z` 快捷键；覆盖创建/编辑/删除/拖拽/完成；导入/恢复/清空后自动清栈。
+- **B8 · AI 请求参数可配置**：设置页新增「请求超时（5~120s）」「温度（0~2）」，浏览器与 Electron 双路径生效，非法值回退默认（30s / 0.7）。
+
+### Changed
+- **B1 · ESC 链式关闭修复**：修正抽屉 ESC 判断类名错误（`show`→`open`），并把任务编辑 / AI 确认弹窗纳入 ESC 链（编辑→确认→回收站→抽屉）。
+- **B2 · 场景内筛选接线**：`boardSearch` / `boardStatusFilter` / `tagFilter` 三维联合过滤（标题 × 状态 × 标签）正式生效。
+- **B3 · alert 改 toast**：保存设置与清空数据两处阻塞式 `alert()` 替换为非阻塞 toast（清空延迟重载让提示可见）。
+- **B7 · 托盘/窗口图标重绘**：纯色方块 → 圆角蓝底 + 白色「A」字标（程序化绘制，零外部文件依赖，抗锯齿）。
+- **Electron 可观测性**：主进程新增滚动日志（`userData/logs/app.log`，约 1MB 自动截断），记录 AI 请求/错误。
+
+### Tests
+- 新增 4 个测试文件（批次①~④）共 42 用例；全量 500 用例通过；build --check 字节级等价 / lint-colors PASS / ESLint 0 error。
+
 ## [v1.1.4] - 2026-08-07
 
 ### Added（第三轮 Tier 2 剩余产品项）

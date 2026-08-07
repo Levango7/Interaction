@@ -211,8 +211,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   display:flex;justify-content:space-between;align-items:center;color:var(--text-dim);letter-spacing:.01em}
 .kcol h4 .n{background:var(--surface-muted);border-radius:10px;padding:1px 8px;font-size:var(--fs-xs);color:var(--text-dim-2)}
 .kcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
-  padding:var(--space-3);margin-bottom:var(--space-2);transition:box-shadow var(--transition-fast),transform var(--transition-fast)}
+  padding:var(--space-3);margin-bottom:var(--space-2);transition:box-shadow var(--transition-fast),transform var(--transition-fast);cursor:grab}
 .kcard:hover{box-shadow:var(--shadow-2);transform:translateY(-1px)}
+.kcard:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kcard.dragging{opacity:.45;transform:scale(.98);box-shadow:none}
+.kcol.drag-over{border-color:var(--accent);background:var(--accent-soft)}
 .kcard .t{font-size:var(--fs-base);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kcard .m{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);line-height:1.5}
 .kcard .m.od{color:var(--danger);font-weight:600}
@@ -915,6 +918,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="hint" id="cfgKeyHint" style="display:none;font-size:11px;color:var(--muted);margin:-6px 0 8px">已保存在本机（Electron 主进程保管，不写入网页存储）</div>
   <p class="hint" style="font-size:11px;color:var(--muted);margin:-4px 0 8px">🔒 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
   <div class="row"><label>模型</label><input id="cfgModel" placeholder="gpt-4o-mini"></div>
+  <div class="row"><label>请求超时（秒，5~120）</label><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
+  <div class="row"><label>温度 Temperature（0~2）</label><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
   <div class="row"><button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button></div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
