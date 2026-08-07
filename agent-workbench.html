@@ -25,7 +25,7 @@
   --surface-hover:#f0f0f4; --surface-muted:#f2f2f5;
   /* 文本层次 */
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.22);
-  --text-dim:#424245; --text-dim-2:#6e6e73; --text-dim-3:#515154; --text-faint:#8e8e93;
+  --text-dim:#424245; --text-dim-2:#6e6e73; --text-dim-3:#515154; --text-faint:#707074;
   /* 语义色（柔和、不刺眼） */
   --danger:#d83b3b; --danger-soft:#fdeeee; --danger-border:#f3c4c4;
   --danger-overdue-bg:#fef6f6; --danger-overdue-border:#f0c8c8;
@@ -33,6 +33,8 @@
   --ok:#34a853; --accent-soft:#e8f1fb;
   /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/习惯链图标引用） */
   --sc-office:#0a6cbd; --sc-code:#34a853; --sc-study:#d97706; --sc-life:#7c5cbf;
+  /* 自定义场景默认色（P1：color input 默认值 / 非法色值回退） */
+  --scenario-default:#7c5cbf;
   /* 横幅 / 工具消息 */
   --banner-bg:#fff8e6; --banner-border:#f3e2b0; --banner-ink:#8a6d1b; --banner-border-2:#e3c766;
   /* 杂项 / 阴影 / 遮罩 */
@@ -276,6 +278,21 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .hcell.l0{background:var(--heat-0)}.hcell.l1{background:var(--heat-1)}.hcell.l2{background:var(--heat-2)}.hcell.l3{background:var(--heat-3)}.hcell.l4{background:var(--heat-4)}
 .dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px}
 .bars{display:flex;flex-direction:column;gap:var(--space-2)}
+/* P2'：跨场景习惯链有向图 */
+.chain-graph-wrap{margin-top:var(--space-2);overflow-x:auto}
+.chain-graph{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+/* P8：全局筛选控件 + 保存视图 */
+.glob-filters{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.glob-filters input,.glob-filters select{min-width:120px;flex:1}
+.glob-views{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.glob-view-chip{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
+  background:var(--surface-muted);border-radius:var(--radius-full,var(--radius));font-size:var(--fs-xs);cursor:pointer;color:var(--text-dim)}
+.glob-view-chip:hover{background:var(--surface-hover)}
+.glob-view-chip .gv-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:var(--fs-sm);padding:0 var(--space-1)}
+.glob-view-chip .gv-del:hover{color:var(--danger)}
+.glob-view-save{padding:var(--space-1) var(--space-3);background:none;border:1px dashed var(--line);
+  border-radius:var(--radius-full,var(--radius));font-size:var(--fs-xs);color:var(--muted);cursor:pointer}
+.glob-view-save:hover{color:var(--accent);border-color:var(--accent)}
 .bar{display:flex;align-items:center;gap:var(--space-3);font-size:var(--fs-sm)}
 .bar .nm{width:48px;flex-shrink:0}
 .bar .track{flex:1;height:14px;background:var(--surface-muted);border-radius:7px;overflow:hidden}
@@ -456,11 +473,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== 暗色主题（Apple Dark 风格：深灰而非纯黑，文字偏暖白） ===== */
 :root[data-theme="dark"]{
   --bg:#1c1c1e; --panel:#2c2c2e; --panel2:#323334; --line:#3a3a3c;
-  --text:#f2f2f4; --muted:#98989d; --accent:#5b9bf5;
+  --text:#f2f2f4; --muted:#a0a0a5; --accent:#5b9bf5;
   --shadow:0 1px 3px rgba(0,0,0,.5);
   --surface-hover:#3a3a3c; --surface-muted:#3a3a3c;
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.22);
-  --text-dim:#dcdce0; --text-dim-2:#98989d; --text-dim-3:#c4c4c8; --text-faint:#8e8e93;
+  --text-dim:#dcdce0; --text-dim-2:#a0a0a5; --text-dim-3:#c4c4c8; --text-faint:#a0a0a5;
   --danger:#ff6b6b; --danger-soft:#3a2020; --danger-border:#5a3030;
   --danger-overdue-bg:#3a2020; --danger-overdue-border:#5a3030;
   --warn:#e0a83a; --warn-soft:#3a2e1a;
@@ -519,6 +536,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .cmd li .sub{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)}
 .cmd li.sel{background:var(--accent);color:var(--on-accent)}
 .cmd li.sel .ci,.cmd li.sel .sub{color:var(--on-accent)}
+.cmd li.cmd-group{padding:var(--space-1) var(--space-3) 2px;font-size:var(--fs-xs);font-weight:600;
+  color:var(--text-faint);cursor:default;letter-spacing:.02em}
+.cmd li.cmd-empty{cursor:default}
 
 /* ===== Toast ===== */
 #toasts{position:fixed;top:var(--space-4);left:50%;transform:translateX(-50%);z-index:60;
@@ -560,6 +580,41 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .help-keys td{padding:var(--space-2) var(--space-2);border-bottom:1px solid var(--line)}
 .help-keys kbd{background:var(--panel2);border:1px solid var(--kbd-border);border-radius:var(--radius-sm);
   padding:2px 6px;font-size:var(--fs-xs);font-family:"SF Mono",monospace}
+
+/* ===== 回收站弹窗（D3：软删除任务的恢复 / 永久删除入口） ===== */
+.recycle-modal{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;
+  z-index:100;padding:var(--space-4)}
+.recycle-card{background:var(--panel);border-radius:var(--radius-xl);max-width:520px;width:100%;max-height:85vh;
+  display:flex;flex-direction:column;box-shadow:0 8px 32px var(--shadow-overlay)}
+.recycle-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-5) var(--space-6);
+  border-bottom:1px solid var(--line);flex-shrink:0}
+.recycle-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em}
+.recycle-close{font-size:var(--fs-lg);padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);
+  color:var(--muted);transition:background var(--transition-fast),color var(--transition-fast)}
+.recycle-close:hover{background:var(--surface-hover);color:var(--text)}
+.recycle-list{padding:var(--space-4) var(--space-6);overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:var(--space-2)}
+.recycle-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border:1px solid var(--line);
+  border-radius:var(--radius-md);background:var(--panel2)}
+.recycle-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.recycle-title{flex:1;font-size:var(--fs-base);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recycle-sc{font-size:var(--fs-xs);color:var(--muted);flex-shrink:0}
+.recycle-when{font-size:var(--fs-xs);color:var(--text-faint);flex-shrink:0;font-variant-numeric:tabular-nums}
+.recycle-restore,.recycle-purge{padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);font-size:var(--fs-sm);
+  border:1px solid var(--line);background:var(--panel);color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.recycle-restore:hover{background:var(--surface-hover);color:var(--text)}
+.recycle-purge:hover{background:var(--danger-soft);color:var(--danger)}
+.recycle-empty{padding:var(--space-6);text-align:center;color:var(--muted);font-size:var(--fs-base)}
+.recycle-footer{padding:var(--space-4) var(--space-6);border-top:1px solid var(--line);display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.recycle-selall{display:flex;align-items:center;gap:var(--space-1);font-size:var(--fs-sm);color:var(--text-dim);cursor:pointer;margin:0}
+.recycle-selall input{width:auto}
+.recycle-batch{padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);font-size:var(--fs-sm);
+  border:1px solid var(--line);background:var(--panel);color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.recycle-batch:hover{background:var(--surface-hover);color:var(--text)}
+.recycle-policy{font-size:var(--fs-xs);color:var(--muted)}
+.recycle-chk{width:auto;flex-shrink:0}
+.recycle-clear{margin-left:auto;padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:var(--fs-sm);
+  border:1px solid var(--danger-border);background:var(--panel);color:var(--danger);cursor:pointer;transition:background var(--transition-fast)}
+.recycle-clear:hover{background:var(--danger-soft)}
 
 /* ===== 侧边栏折叠按钮（默认隐藏，>=1024px 显示；移动端不需要） ===== */
 .side-toggle{display:none;align-items:center;justify-content:center;gap:var(--space-2);width:100%;
@@ -858,8 +913,22 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="row"><label>API Base URL</label><input id="cfgBase" placeholder="https://api.openai.com/v1"></div>
   <div class="row"><label>API Key</label><input id="cfgKey" type="password" placeholder="sk-..."></div>
   <div class="hint" id="cfgKeyHint" style="display:none;font-size:11px;color:var(--muted);margin:-6px 0 8px">已保存在本机（Electron 主进程保管，不写入网页存储）</div>
+  <p class="hint" style="font-size:11px;color:var(--muted);margin:-4px 0 8px">🔒 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
   <div class="row"><label>模型</label><input id="cfgModel" placeholder="gpt-4o-mini"></div>
   <div class="row"><button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button></div>
+
+  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <label style="font-size:14px;font-weight:600">场景管理</label>
+    <p class="hint" style="margin:4px 0 8px">可新增自定义场景，或为内置场景改名 / 换色。场景下有任务时不可删除（防止数据丢失）。改动保存后，侧栏、命令面板、统计与习惯链自动生效。</p>
+    <div id="scBox"></div>
+    <div class="chain-add-form">
+      <label style="font-size:13px">添加自定义场景</label>
+      <input id="scAddName" placeholder="场景名（如 健身）" maxlength="12">
+      <input id="scAddColor" type="color" aria-label="场景颜色" style="width:44px;padding:2px">
+      <select id="scAddIcon" aria-label="场景图标"></select>
+      <button type="button" class="addbtn" id="scAddBtn" style="--sc:var(--accent);padding:4px 10px">添加</button>
+    </div>
+  </div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
     <label style="font-size:14px;font-weight:600">习惯链管理</label>
@@ -888,6 +957,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <label style="font-size:14px;font-weight:600">数据管理</label>
     <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
       <button type="button" class="addbtn" id="btnExport" aria-label="导出 JSON" style="--sc:var(--accent);flex:1;min-width:90px">导出 JSON</button>
+      <button type="button" class="addbtn" id="btnExportCSV" aria-label="导出 CSV" style="--sc:var(--accent);flex:1;min-width:70px">导出 CSV</button>
+      <button type="button" class="addbtn" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent);flex:1;min-width:70px">导出 MD</button>
       <button type="button" class="addbtn" id="btnImport" aria-label="导入恢复" style="--sc:var(--accent);flex:1;min-width:90px">导入恢复</button>
       <button type="button" class="addbtn danger" id="btnClear" aria-label="清空数据" style="--sc:var(--danger,var(--muted));flex:1;min-width:90px">清空数据</button>
     </div>
@@ -895,6 +966,28 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <input type="checkbox" id="exportKeyOpt">
       <span>导出时包含 AI Key（明文，请自行妥善保管）</span>
     </label>
+  </div>
+
+  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <label style="font-size:14px;font-weight:600">外观与回收站</label>
+    <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
+      <label for="cfgTheme" style="margin:0;flex-shrink:0">主题</label>
+      <select id="cfgTheme" style="flex:1;min-width:120px">
+        <option value="light">亮色</option>
+        <option value="dark">暗色</option>
+        <option value="system">跟随系统</option>
+      </select>
+    </div>
+    <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
+      <label for="cfgRecyclePolicy" style="margin:0;flex-shrink:0">回收站自动清理</label>
+      <select id="cfgRecyclePolicy" style="flex:1;min-width:120px">
+        <option value="off">关闭</option>
+        <option value="7">7 天后</option>
+        <option value="30">30 天后</option>
+        <option value="90">90 天后</option>
+      </select>
+    </div>
+    <p class="hint" style="margin:4px 0 0">「跟随系统」随操作系统明暗自动切换。回收站自动清理在每次启动时生效，超期软删任务将被永久删除。</p>
   </div>
 
   <div class="row switch" id="autoLaunchRow" style="display:none;border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -909,6 +1002,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <label for="cfgNotify" style="margin:0">开启任务到期 / 习惯链断链 / 每日汇总提醒</label>
     </div>
     <p class="hint" style="margin:4px 0 8px">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</p>
+    <div class="row switch" style="padding:4px 0 0;border:0;margin:0;align-items:center;gap:6px">
+      <input type="checkbox" id="cfgQuiet" style="width:auto">
+      <label for="cfgQuiet" style="margin:0">免打扰时段</label>
+      <select id="cfgQuietStart" aria-label="免打扰开始时间"></select>
+      <span style="font-size:12px;color:var(--muted)">至</span>
+      <select id="cfgQuietEnd" aria-label="免打扰结束时间"></select>
+    </div>
+    <p class="hint" style="margin:4px 0 8px">免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。</p>
   </div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -926,7 +1027,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </div>
 
   <p class="hint">兼容 OpenAI 接口格式（OpenAI / DeepSeek / 通义 / 豆包 等均可）。Key 仅存本机浏览器。启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
-  <div style="margin-top:10px;font-size:12px;color:var(--muted)">Agent 工作台 v1.0.0 · 纯本地 · 单文件</div>
+  <div style="margin-top:10px;font-size:12px;color:var(--muted)">Agent 工作台 · 纯本地 · 单文件</div>
 </div>
 
 <div id="toasts" role="status" aria-live="polite"></div>
@@ -998,7 +1099,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.1.0";
+const VERSION = "1.1.4";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -1035,6 +1136,18 @@ const MVP_SCOPE = {
 };
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
+/**
+ * 安全获取场景元数据（D3/L4/M7 防护）：任务或链引用了非法/损坏的 sc 时，
+ * 返回带降级 name/color/icon 的对象，避免 SCENARIOS[sc].name 抛错导致整页渲染崩溃。
+ * @param {string} sc - 场景键
+ * @returns {{name:string,color:string,icon:string}}
+ */
+function scMeta(sc){
+  const s = SCENARIOS[sc];
+  return s ? { name: s.name, color: s.color, icon: s.icon || "" }
+           : { name: "?", color: "var(--muted)", icon: "" };
+}
 
 // ===== Bootstrap (诊断基础设施·跨层) =====
 // 损坏数据诊断寄存器：键为 k，值为原始串（供未来「导出恢复」/ 诊断使用）
@@ -1087,7 +1200,14 @@ function load(k, def){
  * @param {string} k - 存储键
  * @param {*} v - 要存储的值
  */
-function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+function save(k, v){
+  try{ localStorage.setItem(k, JSON.stringify(v)); }
+  catch(e){
+    // M8：配额耗尽 / 隐私模式禁用存储时不再静默崩溃，给出可观测告警
+    if(typeof pushDiag === "function") pushDiag("error", "save failed: "+(e&&e.message||e), {where:"save", key:k});
+    try{ toast("本地存储写入失败（可能空间已满），部分数据未保存。", "error"); }catch(e2){ /* toast 不可用静默降级 */ }
+  }
+}
 /**
  * 轻量响应式 store（T2.3 状态管理）
  * @param {*} initial - 初始状态
@@ -1236,15 +1356,40 @@ function mdToHtml(str){
 
 // ===== UI Layer (交互层·主题与通知) =====
 /* ---------- 主题 / 通知 ---------- */
+/* T4：主题三态（light / dark / system）。system 跟随 prefers-color-scheme 实时切换；
+   旧值 light/dark 行为不变；theme 未定义时默认 system（新用户首启即跟随系统）。 */
+let _mqlListenerInstalled = false;
+function _systemPrefersDark(){
+  try{ return !!(typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches); }
+  catch(e){ return false; } // matchMedia 不可用（jsdom/旧浏览器）：回退亮色
+}
 function applyTheme(){
-  const cfg=getCfg(); const th = cfg.theme==="dark"?"dark":(cfg.theme==="light"?"light":null);
-  if(th) document.documentElement.setAttribute("data-theme", th);
+  const cfg=getCfg();
+  const pref = cfg.theme || "system";
+  let th;
+  if(pref==="dark") th="dark";
+  else if(pref==="light") th="light";
+  else th = _systemPrefersDark() ? "dark" : "light";
+  if(th==="dark") document.documentElement.setAttribute("data-theme", "dark");
   else document.documentElement.removeAttribute("data-theme");
+  // system 模式：注册一次系统主题变化监听（幂等，多次 applyTheme 不重复注册）
+  if(pref==="system" && !_mqlListenerInstalled){
+    try{
+      if(typeof window.matchMedia === "function"){
+        const mql = window.matchMedia("(prefers-color-scheme: dark)");
+        const onChange = ()=>{ const c=getCfg(); if((c.theme||"system")==="system") applyTheme(); };
+        if(typeof mql.addEventListener === "function") mql.addEventListener("change", onChange);
+        else if(typeof mql.addListener === "function") mql.addListener(onChange); // Safari <14 兼容
+        _mqlListenerInstalled = true;
+      }
+    }catch(e){ /* matchMedia 异常：保持当前主题 */ }
+  }
 }
 async function toggleTheme(){
   const cfg=getCfg(); const cur=document.documentElement.getAttribute("data-theme");
   const next = cur==="dark"?"light":"dark";
   cfg.theme=next; try{ await persistCfg(cfg); }catch(e){ save(PREFIX+"cfg", cfg); } applyTheme();
+  const sel=$("#cfgTheme"); if(sel) sel.value=next;
   toast("已切换为"+(next==="dark"?"暗色":"亮色")+"主题", "ok");
 }
 /**
@@ -1317,6 +1462,181 @@ const DEFAULT_LINKS = [
   {id:"l2", name:"复习完成 → 编程实践", fromSc:"study",  kw:"复习", toSc:"code",  taskTitle:"奖励：写个有趣的小项目 30 分钟", priority:"P2", enabled:true},
   {id:"l3", name:"项目上线 → 生活犒劳", fromSc:"code",   kw:"上线", toSc:"life",  taskTitle:"犒劳：吃顿好的 / 看部想看的片",     priority:"P2", enabled:true}
 ];
+
+/* ---------- P1：自定义场景（用户增删场景 + 内置场景改名/换色） ----------
+ * 设计：SCENARIOS/ORDER 虽为 const，但指向可变对象/数组——在 07-store 初始化 chats
+ * 之前完成注册，即可让侧栏/命令面板/统计/链路/AI 工具 enum 全链路自动兼容。
+ * 存储键均以 PREFIX 开头 → 自动纳入导出备份（allKeys）。 */
+const CUSTOM_SC_KEY = PREFIX + "scenarios_custom";      // 自定义场景列表
+const SC_OVERRIDE_KEY = PREFIX + "scenarios_overrides"; // 内置场景改名/换色覆盖
+const BUILTIN_SC_KEYS = ["office","code","study","life"];
+const CUSTOM_ICON_KEYS = ["overview","plus","check","chat","download","upload","gear","theme","stats","copy","trash"];
+/* 内置场景原始 name/color 快照（覆盖前保存，供重置与幂等重注册） */
+const SC_ORIGINALS = {};
+BUILTIN_SC_KEYS.forEach(k => { SC_ORIGINALS[k] = { name: SCENARIOS[k].name, color: SCENARIOS[k].color }; });
+
+function loadCustomScenarios(){
+  const arr = load(CUSTOM_SC_KEY, []);
+  return Array.isArray(arr) ? arr.filter(s => s && typeof s.key === "string" && typeof s.name === "string") : [];
+}
+/**
+ * 读取自定义场景默认色令牌（var(--scenario-default)）；读取失败回退生活场景色
+ * @returns {string} 十六进制色值
+ */
+function scenarioDefaultColor(){
+  try{
+    const v = getComputedStyle(document.documentElement).getPropertyValue("--scenario-default").trim();
+    return /^#[0-9a-fA-F]{6}$/.test(v) ? v : SC_ORIGINALS.life.color;
+  }catch(e){ return SC_ORIGINALS.life.color; }
+}
+function saveCustomScenarios(arr){ save(CUSTOM_SC_KEY, arr); }
+function loadScOverrides(){
+  const o = load(SC_OVERRIDE_KEY, {});
+  return (o && typeof o === "object" && !Array.isArray(o)) ? o : {};
+}
+function saveScOverrides(o){ save(SC_OVERRIDE_KEY, o); }
+/* 自定义场景图标解析：UI_ICONS[key]，未知键回退总览图标 */
+function resolveScIcon(iconKey){
+  const i = UI_ICONS[iconKey];
+  return (typeof i === "string" && i) ? i : UI_ICONS.overview;
+}
+/* 自定义场景存储对象 → SCENARIOS 注册条目（通用资料库字段 + none 专属卡片） */
+function toScenarioEntry(s){
+  return {
+    name: s.name,
+    color: (/^#[0-9a-fA-F]{6}$/.test(s.color||"")) ? s.color : scenarioDefaultColor(),
+    icon: resolveScIcon(s.iconKey),
+    sysprompt: s.sysprompt || ("你是「"+s.name+"」场景助手，帮用户梳理该场景的任务与资料。回答简洁、可执行。"),
+    extraCard: "none",
+    record: { label: (s.name||"")+"资料",
+      fields: [ {k:"title",label:"标题",type:"text"}, {k:"note",label:"备注",type:"textarea"} ] },
+    custom: true,
+    _iconKey: s.iconKey || "overview"
+  };
+}
+/**
+ * 把自定义场景与内置覆盖注册进 SCENARIOS/ORDER（幂等，可重复调用）。
+ * 启动时在 07-store 初始化 chats 前执行一次；CRUD 后再执行以热更新。
+ * @returns {void}
+ */
+function registerCustomScenarios(){
+  // ① 内置场景：先还原原始值，再应用改名/换色覆盖
+  const ov = loadScOverrides();
+  BUILTIN_SC_KEYS.forEach(k => {
+    const base = SCENARIOS[k]; if(!base || !SC_ORIGINALS[k]) return;
+    base.name = SC_ORIGINALS[k].name; base.color = SC_ORIGINALS[k].color;
+    const o = ov[k];
+    if(o && typeof o.name === "string" && o.name.trim()) base.name = o.name.trim();
+    if(o && typeof o.color === "string" && /^#[0-9a-fA-F]{6}$/.test(o.color)) base.color = o.color;
+  });
+  // ② 移除上一轮注册的自定义场景（幂等重注册）
+  Object.keys(SCENARIOS).forEach(k => { if(!BUILTIN_SC_KEYS.includes(k)) delete SCENARIOS[k]; });
+  for(let i = ORDER.length - 1; i >= 0; i--){ if(!BUILTIN_SC_KEYS.includes(ORDER[i])) ORDER.splice(i, 1); }
+  // ③ 注册当前自定义场景
+  loadCustomScenarios().forEach(s => {
+    if(SCENARIOS[s.key]) return; // 键冲突防御
+    SCENARIOS[s.key] = toScenarioEntry(s);
+    ORDER.push(s.key);
+  });
+}
+registerCustomScenarios(); // 模块顶层：先于 07-store 的 chats/active 初始化
+
+/**
+ * 添加自定义场景
+ * @param {string} name - 场景名（≤12 字，不与现有场景重名）
+ * @param {string} color - 十六进制色值（非法时回退默认紫）
+ * @param {string} iconKey - CUSTOM_ICON_KEYS 之一（非法时回退 overview）
+ * @returns {{ok:boolean, err?:string, key?:string}}
+ */
+function addCustomScenario(name, color, iconKey){
+  name = String(name===null||name===undefined?"":name).trim();
+  if(!name) return {ok:false, err:"场景名称不能为空"};
+  if(name.length > 12) return {ok:false, err:"场景名称过长（最多 12 字）"};
+  const dup = ORDER.some(k => SCENARIOS[k] && (SCENARIOS[k].name||"").toLowerCase() === name.toLowerCase());
+  if(dup) return {ok:false, err:"已存在同名场景"};
+  const key = "sc_" + uid();
+  const arr = loadCustomScenarios();
+  arr.push({ key, name,
+    color: (/^#[0-9a-fA-F]{6}$/.test(color||"")) ? color : scenarioDefaultColor(),
+    iconKey: CUSTOM_ICON_KEYS.includes(iconKey) ? iconKey : "overview",
+    created: Date.now() });
+  saveCustomScenarios(arr);
+  registerCustomScenarios();
+  return {ok:true, key};
+}
+/**
+ * 修改自定义场景（名称/颜色/图标）
+ * @param {string} key - 场景键
+ * @param {{name?:string,color?:string,iconKey?:string}} patch
+ * @returns {{ok:boolean, err?:string}}
+ */
+function updateCustomScenario(key, patch){
+  patch = patch || {};
+  const arr = loadCustomScenarios();
+  const i = arr.findIndex(s => s.key === key);
+  if(i < 0) return {ok:false, err:"场景不存在"};
+  const s = arr[i];
+  if(typeof patch.name === "string"){
+    const nm = patch.name.trim();
+    if(!nm) return {ok:false, err:"场景名称不能为空"};
+    if(nm.length > 12) return {ok:false, err:"场景名称过长（最多 12 字）"};
+    s.name = nm;
+  }
+  if(typeof patch.color === "string" && /^#[0-9a-fA-F]{6}$/.test(patch.color)) s.color = patch.color;
+  if(typeof patch.iconKey === "string" && CUSTOM_ICON_KEYS.includes(patch.iconKey)) s.iconKey = patch.iconKey;
+  arr[i] = s; saveCustomScenarios(arr);
+  registerCustomScenarios();
+  return {ok:true};
+}
+/**
+ * 删除自定义场景（内置场景禁删；场景下仍有任务时禁删，防数据孤儿）
+ * @param {string} key - 场景键
+ * @returns {{ok:boolean, err?:string}}
+ */
+function removeCustomScenario(key){
+  if(BUILTIN_SC_KEYS.includes(key)) return {ok:false, err:"内置场景不可删除"};
+  if(!SCENARIOS[key]) return {ok:false, err:"场景不存在"};
+  const hasTasks = getTasks().some(t => t.sc === key); // 含软删任务：数据契约从严
+  if(hasTasks) return {ok:false, err:"该场景下还有任务，请先处理后再删除"};
+  saveCustomScenarios(loadCustomScenarios().filter(s => s.key !== key));
+  if(getActive() === key) setActive("office"); // 当前场景被删 → 回退办公
+  if(typeof chats === "object" && chats) delete chats[key];
+  try{ localStorage.removeItem(PREFIX+"rec_"+key); }catch(e){ /* 资料键清理失败不阻塞 */ }
+  registerCustomScenarios();
+  return {ok:true};
+}
+/**
+ * 内置场景改名/换色（覆盖持久化；传 name 或 color 其一即可）
+ * @param {string} key - 内置场景键（office/code/study/life）
+ * @param {{name?:string,color?:string}} patch
+ * @returns {{ok:boolean, err?:string}}
+ */
+function setBuiltinOverride(key, patch){
+  if(!BUILTIN_SC_KEYS.includes(key)) return {ok:false, err:"仅内置场景支持改名/换色"};
+  patch = patch || {};
+  const ov = loadScOverrides();
+  const cur = ov[key] || {};
+  if(typeof patch.name === "string"){
+    const nm = patch.name.trim();
+    if(!nm) return {ok:false, err:"场景名称不能为空"};
+    if(nm.length > 12) return {ok:false, err:"场景名称过长（最多 12 字）"};
+    cur.name = nm;
+  }
+  if(typeof patch.color === "string" && /^#[0-9a-fA-F]{6}$/.test(patch.color)) cur.color = patch.color;
+  ov[key] = cur; saveScOverrides(ov);
+  registerCustomScenarios();
+  return {ok:true};
+}
+/**
+ * 重置内置场景覆盖（恢复原始名称/颜色）
+ * @param {string} key - 内置场景键
+ * @returns {void}
+ */
+function resetBuiltinOverride(key){
+  const ov = loadScOverrides();
+  delete ov[key]; saveScOverrides(ov);
+  registerCustomScenarios();
+}
 
 // ===== Store 实例（T2.3 状态管理） =====
 // taskStore：任务列表；linkStore：场景联动规则；cfgStore：配置（只读快照，crypto 层管理 _cfgCache，store 不介入 cfg 写入）
@@ -1506,7 +1826,7 @@ function execTool(name, args, force){
     if(name==="list_tasks"){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
       const st = ["","todo","doing","done"].includes(args.status)? args.status : "";
-      let t = getTasks().filter(x=>x.sc===sc); if(st) t=t.filter(x=>x.status===st);
+      let t = getActiveTasks().filter(x=>x.sc===sc); if(st) t=t.filter(x=>x.status===st);
       return JSON.stringify({count:t.length, items:t.slice(0,20).map(x=>({title:x.title,status:x.status,due:x.due}))});
     }
     if(name==="complete_task"){
@@ -1541,7 +1861,7 @@ function execTool(name, args, force){
         return JSON.stringify({ok:false, confirm:"将删除：「"+ft.task.title+"」（id "+ft.task.id+"）。发送「确认」以继续，其他内容取消。", op:"delete_task", task_id:ft.task.id, title:ft.task.title});
       }
       ft.task.deletedAt=Date.now(); setTasks(ft.tasks); // ③ 软删除：进回收站，可恢复
-      return JSON.stringify({ok:true, msg:"已删除（进入回收站，可在看板底部恢复）："+ft.task.title});
+      return JSON.stringify({ok:true, msg:"已删除（进入左侧「回收站」，可恢复）："+ft.task.title});
     }
     if(name==="add_record"){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
@@ -1895,6 +2215,13 @@ function seed(){
  */
 function getTasks(){ return taskStore.get(); }
 /**
+ * 读取未删除（活跃）任务列表：在 getTasks() 基础上过滤软删除标记 deletedAt。
+ * 仅用于「读取 / 渲染」场景；写入路径（create/complete/update 等）仍须使用原始 getTasks()，
+ * 否则 setTasks 回写会丢失软删除任务（D3 防护）。
+ * @returns {Task[]}
+ */
+function getActiveTasks(){ return taskStore.get().filter(t=>!t.deletedAt); }
+/**
  * 写入全部任务并触发自动备份（T2.3：先更新 taskStore 再持久化，store 变更会防抖触发 render）
  * @param {Task[]} a
  */
@@ -2021,21 +2348,34 @@ async function persistCfg(cfg){
     save(PREFIX+"cfg", rest);
     return;
   }
-  if(!_cryptoReady){ save(PREFIX+"cfg", cfg); return; }
+  // D4 安全护栏：Web Crypto 不可用时，绝不写入明文 Key。
+  // 仅持久化非敏感配置（profiles 元数据/启用状态等），丢弃 Key 并提示用户重新在安全上下文录入。
+  if(!_cryptoReady){
+    const safe = Object.assign({}, cfg);
+    if(Array.isArray(safe.profiles)){
+      safe.profiles = safe.profiles.map(p => Object.assign({}, p, { key: "" }));
+    }
+    if(typeof safe.key === "string"){ delete safe.key; }
+    save(PREFIX+"cfg", safe);
+    try{ if(typeof toast === "function") toast("⚠ 当前环境不支持加密存储，AI Key 出于安全未保存（已丢弃）。请在 https:// 或本机应用中重新录入。", "warn"); }catch(e){ /* noop */ }
+    return;
+  }
   const mem = Object.assign({}, cfg);
   // 多 Profile：遍历加密每个 profile 的 key
   if(Array.isArray(mem.profiles)){
     mem.profiles = await Promise.all(mem.profiles.map(async p => {
       const np = Object.assign({}, p);
       if(typeof np.key === "string" && np.key){
-        try{ np.key = await encryptKey(np.key); }catch(e){ /* 保留原值 */ }
+        try{ np.key = await encryptKey(np.key); }
+        catch(e){ np.key = ""; } // D4：加密失败则丢弃，不落明文
       }
       return np;
     }));
   }
   // 兼容：若仍存在顶层 key（旧数据未迁移），也加密
   if(typeof mem.key === "string" && mem.key){
-    try{ mem.key = await encryptKey(mem.key); }catch(e){ /* 保留原值 */ }
+    try{ mem.key = await encryptKey(mem.key); }
+    catch(e){ delete mem.key; } // D4：加密失败则丢弃
   }
   save(PREFIX+"cfg", mem);
 }
@@ -2145,7 +2485,7 @@ function runLinks(src){
       tasks.push({id:uid(), sc:l.toSc, title:l.taskTitle, due:shiftDay(0),
         priority:l.priority||"", status:"todo", doneAt:null, note:"由场景联动自动生成", tags:["联动"], created:Date.now()});
       setTasks(tasks);
-      added++; names.push(SCENARIOS[l.toSc].name);
+      added++; names.push(scMeta(l.toSc).name);
     }
   });
   if(added){
@@ -2273,6 +2613,53 @@ function calcStats(){
   const mon = new Date(now); mon.setDate(now.getDate() - wd); mon.setHours(0, 0, 0, 0);
   const weekDone = tasks.filter(t => t.status === "done" && t.doneAt && t.doneAt >= mon.getTime()).length;
   return { total, done, rate, bestStreak, weekDone };
+}
+
+/* ---------- P3 统计深化：平均周期 / 周环比 / 完成时段分布 ---------- */
+/**
+ * 平均周期：已完成任务从创建到完成的平均耗时（天）
+ * @returns {{days:number|null,count:number}} days 保留 1 位小数；无有效样本时为 null
+ */
+function calcAvgCycle(){
+  const tasks = getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt && t.created);
+  const valid = tasks.filter(t => t.doneAt >= t.created);
+  if(!valid.length) return { days: null, count: 0 };
+  const sum = valid.reduce((s, t) => s + (t.doneAt - t.created), 0);
+  return { days: Math.round(sum / valid.length / 86400000 * 10) / 10, count: valid.length };
+}
+/**
+ * 周环比：本周完成数 vs 上周完成数
+ * @returns {{thisWeek:number,lastWeek:number,delta:number|null}} delta 为变化百分比（整数），上周为 0 时 null
+ */
+function calcWeekOverWeek(){
+  const tasks = getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt);
+  const now = new Date(); const wd = (now.getDay() + 6) % 7;
+  const thisMon = new Date(now); thisMon.setDate(now.getDate() - wd); thisMon.setHours(0, 0, 0, 0);
+  const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
+  const thisWeek = tasks.filter(t => t.doneAt >= thisMon.getTime()).length;
+  const lastWeek = tasks.filter(t => t.doneAt >= lastMon.getTime() && t.doneAt < thisMon.getTime()).length;
+  const delta = lastWeek > 0 ? Math.round((thisWeek - lastWeek) / lastWeek * 100) : null;
+  return { thisWeek, lastWeek, delta };
+}
+/**
+ * 完成时段分布：最近 days 天内，按周几（周一→周日）× 时段（早 5-12 / 午 12-18 / 晚 18-5）统计完成数
+ * @param {number} [days=30] - 统计窗口天数
+ * @returns {Array<Array<{dow:number,period:number,count:number}>>} 7×3 网格；period 0=早 1=午 2=晚
+ */
+function calcHourDist(days){
+  days = Math.max(1, Math.min(365, Number(days) || 30));
+  const since = Date.now() - days * 86400000;
+  const grid = [];
+  for(let d = 0; d < 7; d++){ grid.push([{dow:d,period:0,count:0},{dow:d,period:1,count:0},{dow:d,period:2,count:0}]); }
+  getTasks().forEach(t => {
+    if(t.deletedAt || t.status !== "done" || !t.doneAt || t.doneAt < since) return;
+    const d = new Date(t.doneAt);
+    const dow = (d.getDay() + 6) % 7;           // 周一=0 … 周日=6
+    const h = d.getHours();
+    const period = h >= 5 && h < 12 ? 0 : h >= 12 && h < 18 ? 1 : 2;
+    grid[dow][period].count++;
+  });
+  return grid;
 }
 
 /* ---------- A2 热力图数据（最近 weeks×7 天，默认 12 周=84 天） ---------- */
@@ -2443,12 +2830,11 @@ function renderHabitChainStatus(){
       String(t.title||"").toLowerCase().includes(String(l.kw||"").toLowerCase())
     ).length;
     const enabled = l.enabled !== false;
-    const fromColor = SCENARIOS[l.fromSc] ? SCENARIOS[l.fromSc].color : "var(--muted)";
-    const toColor = SCENARIOS[l.toSc] ? SCENARIOS[l.toSc].color : "var(--muted)";
+    const fm = scMeta(l.fromSc), tm = scMeta(l.toSc);
     return `<div class="lk${enabled ? "" : " disabled"}">` +
-      `<span style="color:${fromColor}">${SCENARIOS[l.fromSc].name}</span>` +
+      `<span style="color:${fm.color}">${fm.name}</span>` +
       `<span class="arr">→</span>` +
-      `<span style="color:${toColor}">${SCENARIOS[l.toSc].name}</span>` +
+      `<span style="color:${tm.color}">${tm.name}</span>` +
       `<span class="cnt">触发 ${triggered} 次</span></div>`;
   }).join("");
   return `<div class="link-status">${items}</div>`;
@@ -2470,8 +2856,69 @@ function renderHabitChainCard(){
     `<p class="sub">每个场景的连续天数与完成密度</p>` +
     `<h3>当前 Streak</h3><div class="streak-row">${streakBadges}</div>` +
     `<h3>热力图</h3>${heatmaps}` +
+    `<h3>场景链路图</h3>${renderChainGraph()}` +
     `<h3>习惯链状态</h3>${renderHabitChainStatus()}` +
     `</div>`;
+}
+
+/* ---------- P2'：跨场景习惯链有向图（内联 SVG，纯渲染函数） ----------
+ * 节点 = 参与链路的场景（按 ORDER 顺序环形布局），边 = 启用的链（曲线 + 箭头 + 关键词标签）；
+ * 禁用的链以虚线显示。自定义场景自动纳入。 */
+/**
+ * 场景名折行（≤5 字单行，否则对半折两行）
+ * @param {string} nm
+ * @returns {string[]}
+ */
+function _graphNameLines(nm){
+  nm = String(nm||"");
+  if(nm.length <= 5) return [nm];
+  const mid = Math.ceil(nm.length/2);
+  return [nm.slice(0, mid), nm.slice(mid)];
+}
+/**
+ * 渲染跨场景习惯链有向图
+ * @returns {string} HTML 字符串（.chain-graph-wrap > svg）
+ */
+function renderChainGraph(){
+  const links = getLinks().filter(l => l && l.fromSc && l.toSc);
+  if(!links.length) return `<div class="empty">暂无习惯链</div>`;
+  // 节点：参与链路的场景，按 ORDER 顺序环形排布
+  const scs = ORDER.filter(sc => links.some(l => l.fromSc===sc || l.toSc===sc));
+  if(!scs.length) return `<div class="empty">暂无习惯链</div>`;
+  const W=360, H=270, CX=W/2, CY=H/2, NR=26;
+  const R = Math.min(W, H)/2 - NR - 30;
+  const pos = {};
+  scs.forEach((sc, i)=>{
+    const ang = -Math.PI/2 + i*(2*Math.PI/scs.length);
+    pos[sc] = { x: CX + R*Math.cos(ang), y: CY + R*Math.sin(ang) };
+  });
+  const defs = `<defs><marker id="wbChainArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>`;
+  // 边：起点/终点缩进到节点圆周外，控制点向圆心偏转成曲线（双向边自然分离）
+  const edges = links.map(l=>{
+    const p1 = pos[l.fromSc], p2 = pos[l.toSc];
+    if(!p1 || !p2 || l.fromSc === l.toSc) return "";
+    const dx = p2.x-p1.x, dy = p2.y-p1.y, dist = Math.sqrt(dx*dx+dy*dy) || 1;
+    const ux = dx/dist, uy = dy/dist;
+    const sx = p1.x + ux*(NR+3), sy = p1.y + uy*(NR+3);
+    const ex = p2.x - ux*(NR+7), ey = p2.y - uy*(NR+7);
+    const mx = (sx+ex)/2, my = (sy+ey)/2, k = 0.18;
+    const cxp = mx + (CX-mx)*k, cyp = my + (CY-my)*k;
+    const lx = mx + (CX-mx)*0.34, ly = my + (CY-my)*0.34;
+    const disabled = l.enabled === false;
+    return `<path d="M${sx.toFixed(1)},${sy.toFixed(1)} Q${cxp.toFixed(1)},${cyp.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" fill="none" style="stroke:${disabled?"var(--line)":"var(--muted)"}" stroke-width="1.6"${disabled?' stroke-dasharray="4 3"':""} marker-end="url(#wbChainArrow)"/>` +
+      (l.kw ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="9" style="fill:var(--muted)">${esc(l.kw)}</text>` : "");
+  }).join("");
+  // 节点：圆 + 场景名（超 5 字折两行）
+  const nodes = scs.map(sc=>{
+    const p = pos[sc], s = SCENARIOS[sc] || { name: sc, color: "var(--muted)" };
+    const lines = _graphNameLines(s.name);
+    const txt = lines.length === 1
+      ? `<text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[0])}</text>`
+      : `<text x="${p.x.toFixed(1)}" y="${(p.y-1.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[0])}</text>` +
+        `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[1])}</text>`;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${NR}" style="fill:var(--panel);stroke:${s.color}" stroke-width="2"/>${txt}`;
+  }).join("");
+  return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="跨场景习惯链有向图">${defs}${edges}${nodes}</svg></div>`;
 }
 
 // ===== Render Layer (渲染层·小工具) =====
@@ -2498,7 +2945,7 @@ function weekRange(){
 function thisWeekDone(sc){
   const d=new Date(); const day=(d.getDay()+6)%7;
   const mon=new Date(d); mon.setDate(d.getDate()-day); mon.setHours(0,0,0,0);
-  return getTasks().filter(t=>t.sc===sc&&t.status==="done"&&t.doneAt&&t.doneAt>=mon.getTime());
+  return getActiveTasks().filter(t=>t.sc===sc&&t.status==="done"&&t.doneAt&&t.doneAt>=mon.getTime());
 }
 
 /* ---------- 渲染：侧边导航 ---------- */
@@ -2510,20 +2957,170 @@ const SIDE_TOGGLE_HTML = `<button class="side-toggle" id="sideToggle" aria-label
  * @returns {void}
  */
 function renderSide(){
-  const tasks = getTasks();
+  const tasks = getActiveTasks();
   const totalOpen = tasks.filter(t=>t.status!=="done").length;
   const overview = `<button class="nav-item ${active==="overview"?"active":""}" data-sc="overview" style="--sc:var(--text-dim)">
     ${UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">总览</span><span class="cnt">${totalOpen}</span></button>`;
   const statsBtn = `<button class="nav-item ${active==="stats"?"active":""}" data-sc="stats" style="--sc:var(--text-dim)">
     ${UI_ICONS.stats.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">统计</span><span class="cnt">${tasks.length}</span></button>`;
+  const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
+  const recycleBtn = `<button class="nav-item" data-recycle="1" style="--sc:var(--muted)" title="回收站（已删除任务）">
+    ${UI_ICONS.trash.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">回收站</span>${recycleCount?`<span class="cnt">${recycleCount}</span>`:""}</button>`;
   const items = ORDER.map(sc=>{
     const s = SCENARIOS[sc];
     const open = tasks.filter(t=>t.sc===sc && t.status!=="done").length;
     return `<button class="nav-item ${sc===active?"active":""}" data-sc="${sc}" style="--sc:${s.color}">
       ${(SCENARIOS[sc].icon || "").replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">${s.name}</span><span class="cnt">${open}</span></button>`;
   }).join("");
-  $("#side").innerHTML = SIDE_TOGGLE_HTML + overview + statsBtn + items;
-  $$("#side .nav-item").forEach(b=> b.onclick = ()=>{ setActive(b.dataset.sc); render(); });
+  $("#side").innerHTML = SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + items;
+  $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
+    if(b.dataset.recycle){ openRecycle(); return; }
+    setActive(b.dataset.sc); render();
+  });
+}
+/* ---------- 回收站（D3：软删除任务的恢复 / 永久删除入口；T2：批量操作 + 自动清理策略） ---------- */
+function openRecycle(){
+  const all = load(PREFIX+"tasks", []);
+  const del = all.filter(t=>t.deletedAt).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
+  const items = del.length ? del.map(t=>{
+    const sm = scMeta(t.sc);
+    const w = new Date(t.deletedAt);
+    const whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
+    return `<div class="recycle-item" data-id="${esc(t.id)}">
+      <input type="checkbox" class="recycle-chk" data-chk="${esc(t.id)}" aria-label="选择 ${esc(t.title)}">
+      <span class="recycle-dot" style="background:${sm.color}"></span>
+      <span class="recycle-title">${esc(t.title)}</span>
+      <span class="recycle-sc">${sm.name}</span>
+      <span class="recycle-when">${whenStr}</span>
+      <button type="button" class="recycle-restore" data-restore="${esc(t.id)}">恢复</button>
+      <button type="button" class="recycle-purge" data-purge="${esc(t.id)}">彻底删除</button>
+    </div>`;
+  }).join("") : `<div class="recycle-empty">回收站为空</div>`;
+  const policy = getRecyclePolicy();
+  const policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
+  const html = `<div class="recycle-modal" id="recycleModal">
+    <div class="recycle-card">
+      <div class="recycle-header"><h2>回收站</h2><button type="button" class="recycle-close" id="recycleClose">✕</button></div>
+      <div class="recycle-list">${items}</div>
+      ${del.length ? `<div class="recycle-footer">
+        <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
+        <button type="button" class="recycle-batch" id="recycleBatchRestore">批量恢复</button>
+        <button type="button" class="recycle-batch" id="recycleBatchPurge">批量删除</button>
+        <span class="recycle-policy">${policyLabel}</span>
+        <button type="button" class="recycle-clear" id="recycleClear">清空回收站</button>
+      </div>` : ""}
+    </div></div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const modal=$("#recycleModal");
+  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card")); // T5：焦点锁在弹窗内
+  const close = ()=> closeRecycleModal();
+  const closeBtn = $("#recycleClose"); if(closeBtn) closeBtn.onclick = close;
+  if(modal) modal.onclick = e=>{ if(e.target===modal) close(); };
+  $$("#recycleModal [data-restore]").forEach(b=> b.onclick=()=>{ restoreRecycle(b.dataset.restore); close(); });
+  $$("#recycleModal [data-purge]").forEach(b=> b.onclick=()=>{ purgeRecycle(b.dataset.purge); close(); });
+  const clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的任务将永久删除，不可恢复。")){ clearRecycle(); close(); } };
+  const selAll=$("#recycleSelAll"); if(selAll) selAll.onchange=()=> $$("#recycleModal .recycle-chk").forEach(c=>{ c.checked=selAll.checked; });
+  const bRestore=$("#recycleBatchRestore"); if(bRestore) bRestore.onclick=()=>{
+    const ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
+    if(!ids.length){ toast("请先勾选要恢复的任务","warn"); return; }
+    restoreRecycleBatch(ids); close();
+  };
+  const bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=()=>{
+    const ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
+    if(!ids.length){ toast("请先勾选要删除的任务","warn"); return; }
+    if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); close(); }
+  };
+}
+function restoreRecycle(id){
+  const all = load(PREFIX+"tasks", []);
+  const next = all.map(t=> t.id===id ? Object.assign({}, t, { deletedAt: undefined }) : t);
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("已恢复任务", "ok"); render();
+}
+function restoreRecycleBatch(ids){
+  const set = new Set(ids);
+  const all = load(PREFIX+"tasks", []);
+  const next = all.map(t=> set.has(t.id) ? Object.assign({}, t, { deletedAt: undefined }) : t);
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("已恢复 "+ids.length+" 条任务", "ok"); render();
+}
+function purgeRecycle(id){
+  const all = load(PREFIX+"tasks", []);
+  const next = all.filter(t=>t.id!==id);
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("已永久删除", "ok"); render();
+}
+function purgeRecycleBatch(ids){
+  const set = new Set(ids);
+  const all = load(PREFIX+"tasks", []);
+  const next = all.filter(t=>!set.has(t.id));
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("已永久删除 "+ids.length+" 条任务", "ok"); render();
+}
+function clearRecycle(){
+  const all = load(PREFIX+"tasks", []);
+  const next = all.filter(t=>!t.deletedAt);
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("回收站已清空", "ok"); render();
+}
+/* ---------- 回收站自动清理策略（T2） ---------- */
+const RECYCLE_POLICY_KEY = PREFIX+"recycle_policy"; // "off" | "7" | "30" | "90"，默认 "30"
+function getRecyclePolicy(){
+  const v = load(RECYCLE_POLICY_KEY, "30");
+  return (v==="off"||v==="7"||v==="30"||v==="90") ? v : "30";
+}
+function setRecyclePolicy(v){
+  save(RECYCLE_POLICY_KEY, (v==="off"||v==="7"||v==="30"||v==="90") ? v : "30");
+}
+/** 启动时清理超期软删任务；返回清理条数（0 表示无动作） */
+function cleanupRecycle(){
+  const policy = getRecyclePolicy();
+  if(policy==="off") return 0;
+  const days = parseInt(policy,10);
+  const cutoff = Date.now() - days*86400000;
+  const all = load(PREFIX+"tasks", []);
+  const expired = all.filter(t=>t.deletedAt && t.deletedAt < cutoff);
+  if(!expired.length) return 0;
+  const next = all.filter(t=>!(t.deletedAt && t.deletedAt < cutoff));
+  save(PREFIX+"tasks", next); scheduleAutoBackup();
+  toast("回收站已自动清理 "+expired.length+" 条超过 "+days+" 天的任务","ok");
+  return expired.length;
+}
+/* ---------- 焦点陷阱（T5 无障碍：Tab 循环锁在容器内，关闭后焦点归还触发元素） ---------- */
+/**
+ * 在容器内启用 Tab 焦点循环；返回 release() 用于解除并归还焦点
+ * @param {Element} container - 模态容器
+ * @returns {Function|null} release 函数；容器无效时返回 null
+ */
+function trapFocus(container){
+  if(!container || typeof container.querySelectorAll!=="function") return null;
+  const SEL='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const prev=document.activeElement;
+  function onKey(e){
+    if(e.key!=="Tab") return;
+    const items=[].slice.call(container.querySelectorAll(SEL));
+    if(!items.length) return;
+    const first=items[0], last=items[items.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+  container.addEventListener("keydown", onKey);
+  const first=container.querySelector(SEL);
+  if(first && typeof first.focus==="function"){ try{ first.focus(); }catch(e){ /* noop */ } }
+  return function release(){
+    container.removeEventListener("keydown", onKey);
+    if(prev && typeof prev.focus==="function" && document.contains(prev)){ try{ prev.focus(); }catch(e){ /* noop */ } }
+  };
+}
+/**
+ * 关闭回收站弹窗（含焦点陷阱解除）；返回是否关闭了弹窗
+ * @returns {boolean}
+ */
+function closeRecycleModal(){
+  const m=$("#recycleModal"); if(!m) return false;
+  if(typeof m._releaseTrap==="function"){ try{ m._releaseTrap(); }catch(e){ /* noop */ } }
+  m.remove();
+  return true;
 }
 /* 侧边栏折叠：事件委托绑定在 #side 上（不随 innerHTML 重建丢失），启动时恢复持久化状态 */
 function setupSideToggle(){
@@ -2808,7 +3405,7 @@ function greeting(){
 // 优先级权重：P0 最优先，无优先级最后
 function _priWeight(p){ return p==="P0"?0 : p==="P1"?1 : p==="P2"?2 : 3; }
 function renderToday(){
-  const tasks = getTasks();
+  const tasks = getActiveTasks();
   const t = todayStr();
   const total = tasks.length, done = tasks.filter(x=>x.status==="done").length;
   // 今日到期 + 逾期待办（due <= 今天）
@@ -2839,11 +3436,12 @@ function renderToday(){
     top3Html = `<div class="empty">今天没有待处理的事项，去各场景添加任务吧</div>`;
   }else{
     top3Html = `<ul class="top3-list">` + top3.map(x=>{
-      const s = SCENARIOS[x.sc];
+      const s = scMeta(x.sc);
       return `<li class="top3-item">
         <span class="dot" style="background:${s.color}"></span>
         <span class="title">${esc(x.title)}</span>
         <span class="sc-name">${s.name}</span>
+        <button type="button" class="mini snooze-btn" data-snooze="${esc(x.id)}" title="30 分钟后再提醒">稍后</button>
       </li>`;
     }).join("") + `</ul>`;
   }
@@ -2861,12 +3459,11 @@ function renderToday(){
     else if(s.current > 0){ icon = "🔥"; label = s.current + "天"; }
     else if(triggered){ icon = "✓"; label = "已触发"; }
     else { icon = "○"; label = "未开始"; }
-    const fromColor = SCENARIOS[l.fromSc] ? SCENARIOS[l.fromSc].color : "var(--muted)";
-    const toColor = SCENARIOS[l.toSc] ? SCENARIOS[l.toSc].color : "var(--muted)";
+    const fs = scMeta(l.fromSc), ts = scMeta(l.toSc);
     return `<button class="chain-pill" data-chain-sc="${l.fromSc}"${enabled?"":" disabled"}>
-      <span style="color:${fromColor}">${SCENARIOS[l.fromSc].name}</span>
+      <span style="color:${fs.color}">${fs.name}</span>
       <span class="arr">→</span>
-      <span style="color:${toColor}">${SCENARIOS[l.toSc].name}</span>
+      <span style="color:${ts.color}">${ts.name}</span>
       <span class="fire">${icon}</span>
       <span class="chain-label">${label}</span>
     </button>`;
@@ -3106,7 +3703,7 @@ function renderHelp(){
  * @returns {void}
  */
 function renderOverview(){
-  const tasks = getTasks();
+  const tasks = getActiveTasks();
   const days=[], counts=[];
   for(let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i);
     days.push(pad(d.getMonth()+1)+"/"+pad(d.getDate()));
@@ -3135,8 +3732,15 @@ function renderOverview(){
   }).join("");
 
   $("#main").innerHTML =
-    `<div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选）</p>
-      <input id="globSearch" placeholder="输入关键词，如 周报 / 塞尔达 / 跑步…">
+    `<div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选，支持场景 / 状态 / 日期 / 标签组合）</p>
+      <div class="glob-filters">
+        <input id="globSearch" placeholder="关键词，如 周报 / 跑步…">
+        <select id="globFSc" aria-label="按场景筛选"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
+        <select id="globFStatus" aria-label="按状态筛选"><option value="">全部状态</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select>
+        <select id="globFDate" aria-label="按日期筛选"><option value="">不限日期</option><option value="today">今天到期</option><option value="overdue">已逾期</option><option value="week">本周到期</option></select>
+        <input id="globFTag" placeholder="标签，如 urgent">
+      </div>
+      <div class="glob-views" id="globViews"></div>
       <div id="globRes" style="margin-top:10px"></div></div>
      <div class="card"><h2>${UI_ICONS.overview} 数据总览</h2>
        <p class="sub">跨场景的任务完成趋势与密度</p>
@@ -3146,9 +3750,15 @@ function renderOverview(){
      </div>
      ${renderHabitChainCard()}
      ${renderCoachCard()}
-     <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v1.0.0</div>`;
+     <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>`;
 
   const gs=$("#globSearch"); if(gs) gs.oninput=()=> renderGlob(gs.value.trim().toLowerCase());
+  ["globFSc","globFStatus","globFDate","globFTag"].forEach(id=>{
+    const el=$("#"+id); if(!el) return;
+    if(id==="globFTag"){ el.oninput=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
+    else { el.onchange=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
+  });
+  renderGlobViews();
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
   const cr=$("#coachRefresh");
   if(cr) cr.onclick=()=>{ try{ localStorage.removeItem(COACH_CACHE_KEY); }catch(e){ /* noop */ } renderOverview(); };
@@ -3246,7 +3856,27 @@ function renderPieChart(dist){
   return `<div class="stats-pie-wrap"><div class="stats-pie-chart">${svg}</div><div class="stats-pie-legend">${legend}</div></div>`;
 }
 /**
- * 渲染统计视图（关键指标卡片 + 趋势图 + 饼图 + 习惯链成功率）
+ * 渲染完成时段分布网格（7 行周几 × 3 列时段，色块用 var(--heat-0..4)）
+ * @param {Array<Array<{dow:number,period:number,count:number}>>} grid - calcHourDist 返回值
+ * @returns {string} HTML 字符串
+ */
+function renderHourDistGrid(grid){
+  const max = Math.max(1, ...grid.flat().map(c => c.count));
+  const lvl = c => c === 0 ? 0 : c / max <= 0.25 ? 1 : c / max <= 0.5 ? 2 : c / max <= 0.75 ? 3 : 4;
+  const dows = ["一","二","三","四","五","六","日"];
+  const periods = ["早（5-12）","午（12-18）","晚（18-5）"];
+  let html = `<div class="hourdist"><div class="hourdist-head"></div>` +
+    periods.map(p => `<div class="hourdist-head">${p}</div>`).join("");
+  grid.forEach((row, dow) => {
+    html += `<div class="hourdist-dow">周${dows[dow]}</div>`;
+    row.forEach(cell => {
+      html += `<div class="hourdist-cell hd-l${lvl(cell.count)}" title="周${dows[dow]} · ${periods[cell.period]}：${cell.count} 个完成"></div>`;
+    });
+  });
+  return html + `</div>`;
+}
+/**
+ * 渲染统计视图（关键指标卡片 + 趋势图 + 饼图 + 时段分布 + 习惯链成功率）
  * @returns {void}
  */
 function renderStats(){
@@ -3254,27 +3884,33 @@ function renderStats(){
   // T4.2：无任何任务数据时显示 no-stats 空状态（替代空图表/空饼图）
   if(stats.total === 0){
     $("#main").innerHTML = `<div class="card">` + renderEmpty("no-stats") + `</div>` +
-      `<div class="foot">Agent 工作台 · 数据统计 · v1.0.0</div>`;
+      `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`;
     return;
   }
-  // 关键指标卡片
+  // 关键指标卡片（P3：新增平均周期；本周完成带周环比角标）
+  const avg = calcAvgCycle();
+  const wow = calcWeekOverWeek();
+  const wowBadge = wow.delta === null ? `<span class="stats-wow muted">环比 -</span>`
+    : `<span class="stats-wow ${wow.delta >= 0 ? "up" : "down"}">${wow.delta >= 0 ? "↑" : "↓"} ${Math.abs(wow.delta)}%</span>`;
   const cards = [
     { label: "总任务数", value: stats.total },
     { label: "已完成", value: stats.done },
     { label: "完成率", value: stats.rate + "%" },
+    { label: "平均周期", value: avg.days === null ? "-" : avg.days + " 天" },
     { label: "最长 streak", value: stats.bestStreak + " 天" },
-    { label: "本周完成", value: stats.weekDone }
+    { label: "本周完成", value: stats.weekDone, badge: wowBadge }
   ];
   const cardsHtml = `<div class="stats-cards">` + cards.map(c =>
-    `<div class="stats-card"><div class="stats-card-val">${c.value}</div><div class="stats-card-lbl">${c.label}</div></div>`
+    `<div class="stats-card"><div class="stats-card-val">${c.value}${c.badge || ""}</div><div class="stats-card-lbl">${c.label}</div></div>`
   ).join("") + `</div>`;
-  // 趋势图（周/月切换）
+  // 趋势图（周/双周/月切换）
   const trendData = calcTrend(_statsTrendDays);
   const trendChart = renderTrendChart(trendData, "var(--accent)");
   const trendHtml = `<div class="card"><h2>${UI_ICONS.stats} 任务完成趋势</h2>` +
     `<p class="sub">最近 ${_statsTrendDays} 天每天完成任务数</p>` +
     `<div class="stats-trend-tabs">` +
       `<button type="button" class="stats-tab${_statsTrendDays === 7 ? " active" : ""}" data-trend-days="7">周（7 天）</button>` +
+      `<button type="button" class="stats-tab${_statsTrendDays === 14 ? " active" : ""}" data-trend-days="14">双周（14 天）</button>` +
       `<button type="button" class="stats-tab${_statsTrendDays === 30 ? " active" : ""}" data-trend-days="30">月（30 天）</button>` +
     `</div>` +
     `<div class="stats-trend-chart">${trendChart}</div></div>`;
@@ -3282,6 +3918,9 @@ function renderStats(){
   const dist = calcSceneDist();
   const pieHtml = `<div class="card"><h2>${UI_ICONS.stats} 场景分布</h2>` +
     `<p class="sub">各场景任务总数占比</p>${renderPieChart(dist)}</div>`;
+  // 完成时段分布（最近 30 天）
+  const hourHtml = `<div class="card"><h2>${UI_ICONS.stats} 完成时段分布</h2>` +
+    `<p class="sub">最近 30 天：周几 × 时段完成任务数（颜色越深越多）</p>${renderHourDistGrid(calcHourDist(30))}</div>`;
   // 习惯链成功率
   const chains = calcChainSuccess();
   const chainsHtml = chains.length ? chains.map(c => {
@@ -3304,24 +3943,106 @@ function renderStats(){
   const chainCard = `<div class="card"><h2>${UI_ICONS.stats} 习惯链成功率</h2>` +
     `<p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>${chainsHtml}</div>`;
 
-  $("#main").innerHTML = cardsHtml + trendHtml + pieHtml + chainCard +
-    `<div class="foot">Agent 工作台 · 数据统计 · v1.0.0</div>`;
+  $("#main").innerHTML = cardsHtml + trendHtml + pieHtml + hourHtml + chainCard +
+    `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`;
 
-  // 绑定周/月切换
+  // 绑定周/双周/月切换
   $$(".stats-tab").forEach(b => b.onclick = () => {
     const d = parseInt(b.dataset.trendDays, 10);
-    if(d === 7 || d === 30){ _statsTrendDays = d; renderStats(); }
+    if(d === 7 || d === 14 || d === 30){ _statsTrendDays = d; renderStats(); }
   });
+}
+/* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
+const GLOB_VIEWS_KEY = PREFIX+"glob_views";
+function getGlobViews(){
+  const arr = load(GLOB_VIEWS_KEY, []);
+  return Array.isArray(arr) ? arr.filter(v=>v && v.name) : [];
+}
+function saveGlobView(name){
+  name = String(name===null||name===undefined?"":name).trim();
+  if(!name) return {ok:false, err:"请输入视图名称"};
+  if(name.length > 16) return {ok:false, err:"视图名称过长（最多 16 字）"};
+  const views = getGlobViews();
+  const f = _readGlobFilters();
+  const exists = views.findIndex(v=>v.name===name);
+  const entry = { name, q:f.q, sc:f.sc, status:f.status, date:f.date, tag:f.tag };
+  if(exists>=0) views[exists]=entry; else views.push(entry);
+  save(GLOB_VIEWS_KEY, views);
+  return {ok:true};
+}
+function removeGlobView(name){
+  save(GLOB_VIEWS_KEY, getGlobViews().filter(v=>v.name!==name));
+}
+function _readGlobFilters(){
+  const v = id=>{ const el=$("#"+id); return el ? (el.value||"") : ""; };
+  return { q:v("globSearch").trim().toLowerCase(), sc:v("globFSc"), status:v("globFStatus"), date:v("globFDate"), tag:v("globFTag").trim().toLowerCase() };
+}
+function _applyGlobFilters(f){
+  const today = todayStr();
+  // 本周一（周一为一周起点，与 weekRange 对齐）
+  const d=new Date(); const day=(d.getDay()+6)%7;
+  const mon=new Date(d); mon.setDate(d.getDate()-day); mon.setHours(0,0,0,0);
+  const monStr = mon.getFullYear()+"-"+pad(mon.getMonth()+1)+"-"+pad(mon.getDate());
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  const sunStr = sun.getFullYear()+"-"+pad(sun.getMonth()+1)+"-"+pad(sun.getDate());
+  return getActiveTasks().filter(x=>{
+    if(!x || x.deletedAt) return false;
+    if(f.q && !(x.title||"").toLowerCase().includes(f.q)) return false;
+    if(f.sc && x.sc!==f.sc) return false;
+    if(f.status && x.status!==f.status) return false;
+    if(f.tag){
+      const tags=(x.tags||[]).map(t=>String(t).toLowerCase());
+      if(!tags.some(t=>t.includes(f.tag))) return false;
+    }
+    if(f.date==="today"){ if(x.due!==today) return false; }
+    else if(f.date==="overdue"){ if(!(x.due && x.due<today && x.status!=="done")) return false; }
+    else if(f.date==="week"){ if(!(x.due && x.due>=monStr && x.due<=sunStr)) return false; }
+    return true;
+  });
+}
+function renderGlobViews(){
+  const box=$("#globViews"); if(!box) return;
+  const views=getGlobViews();
+  box.innerHTML = (views.length
+    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="应用视图">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="删除视图">×</button></span>`).join("")
+    : "") + `<button type="button" class="glob-view-save" id="globViewSave" title="保存当前筛选为视图">＋ 保存视图</button>`;
+  $$("#globViews [data-view]").forEach(ch=>{
+    ch.onclick = e=>{
+      if(e.target.closest(".gv-del")) return; // 删除按钮单独处理
+      const v=getGlobViews().find(x=>x.name===ch.getAttribute("data-view"));
+      if(!v) return;
+      $("#globSearch").value=v.q||""; $("#globFSc").value=v.sc||""; $("#globFStatus").value=v.status||""; $("#globFDate").value=v.date||""; $("#globFTag").value=v.tag||"";
+      renderGlob((v.q||"").toLowerCase());
+    };
+  });
+  $$("#globViews [data-view-del]").forEach(b=>{
+    b.onclick=()=>{ removeGlobView(b.getAttribute("data-view-del")); renderGlobViews(); };
+  });
+  const sv=$("#globViewSave"); if(sv) sv.onclick=()=>{
+    const name = (typeof prompt==="function") ? prompt("视图名称：") : null;
+    if(name===null) return;
+    const r=saveGlobView(name);
+    if(!r.ok){ toast(r.err||"保存失败","warn"); return; }
+    toast("已保存视图","ok"); renderGlobViews();
+  };
 }
 function renderGlob(q){
   const res=$("#globRes"); if(!res) return;
-  if(!q){ res.innerHTML=""; return; }
-  const tasks=getTasks().filter(x=>x.title.toLowerCase().includes(q));
-  const recs=[]; ORDER.forEach(sc=> getRec(sc).forEach(r=>{
-    const t=String(r.title||""); if(t.toLowerCase().includes(q)) recs.push({sc,title:t}); }));
+  const f=_readGlobFilters();
+  // 兼容：renderGlob(q) 直传关键词时同步输入框语义（q 优先）
+  if(typeof q==="string") f.q=q.trim().toLowerCase();
+  const hasFilter = f.q||f.sc||f.status||f.date||f.tag;
+  if(!hasFilter){ res.innerHTML=""; return; }
+  const tasks=_applyGlobFilters(f);
+  const recs=[];
+  if(f.q && !f.sc && !f.status && !f.date && !f.tag){
+    // 仅关键词时保留资料库检索（与原行为一致）
+    ORDER.forEach(sc=> getRec(sc).forEach(r=>{
+      const t=String(r.title||""); if(t.toLowerCase().includes(f.q)) recs.push({sc,title:t}); }));
+  }
   let html="";
   if(tasks.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">任务 (${tasks.length})</div><ul class="list">`+
-    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${SCENARIOS[t.sc].name} · ${t.status}</div></div></li>`).join("")+`</ul>`;
+    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}${t.due?" · "+t.due:""}${(t.tags&&t.tags.length)?" · "+t.tags.map(esc).join("/"):""}</div></div></li>`).join("")+`</ul>`;
   if(recs.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">资料 (${recs.length})</div><ul class="list">`+
     recs.map(r=>`<li><div class="body"><div class="t">${esc(r.title)}</div><div class="m">${SCENARIOS[r.sc].name}</div></div></li>`).join("")+`</ul>`;
   res.innerHTML=html||renderEmpty("no-search");
@@ -3411,7 +4132,7 @@ function reviewCard(){
  */
 function renderMainHTML(){
   const s = SCENARIOS[active];
-  const tasksAll = getTasks().filter(x=>x.sc===active);
+  const tasksAll = getActiveTasks().filter(x=>x.sc===active);
   const tasks = tasksAll;
   const open = tasks.filter(x=>x.status!=="done");
   const recs = getRec(active);
@@ -3511,7 +4232,7 @@ function renderMainHTML(){
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
      ${renderExtra(active)}
      ${chatCard}
-     <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v1.0.0</div>`;
+     <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v${VERSION}</div>`;
 }
 
 // ===== UI Layer (交互层·场景绑定) =====
@@ -3541,23 +4262,26 @@ function bindScenario(){
     setTasks(tasks); render();
   });
   $$("[data-del]").forEach(b=> b.onclick=()=>{
-    if(!confirm("删除这条任务？")) return;
-    setTasks(getTasks().filter(t=>t.id!==b.dataset.del)); render();
+    if(!confirm("删除这条任务？（将进入回收站，可恢复）")) return;
+    const tasks=getTasks();
+    const t=tasks.find(x=>x.id===b.dataset.del);
+    if(t && !t.deletedAt){ t.deletedAt=Date.now(); setTasks(tasks); } // T1：软删除，与 AI delete_task 行为统一
+    render();
   });
   $$("[data-rdel]").forEach(b=> b.onclick=()=>{
     if(!confirm("删除这条记录？")) return;
     setRec(active, getRec(active).filter(r=>r.id!==b.dataset.rdel)); render();
   });
-  $$("[data-done]").forEach(b=> b.onclick=()=>{ completeTask(b.dataset.done); render(); });
   // A3：习惯链状态条点击 → 跳转到对应场景
   $$("[data-chain-sc]").forEach(b=> b.onclick=()=>{
     const sc = b.dataset.chainSc;
     if(SCENARIOS[sc]){ setActive(sc); render(); }
   });
   $$("[data-copy]").forEach(b=> b.onclick=()=>{
+    const o=b.innerHTML;
     navigator.clipboard.writeText(b.dataset.val).then(()=>{
-      const o=b.innerHTML; b.innerHTML="已复制"; setTimeout(()=>b.innerHTML=o,1200);
-    });
+      b.innerHTML="已复制"; setTimeout(()=>b.innerHTML=o,1200);
+    }).catch(()=>{ b.innerHTML="复制失败"; setTimeout(()=>b.innerHTML=o,1200); });
   });
   const tf=$("#tagFilter"); if(tf) tf.oninput=()=>{
     const q=tf.value.trim().toLowerCase();
@@ -3594,10 +4318,10 @@ function bindExtra(sc){
 /* ---------- AI 对话（带工具调用） ---------- */
 /**
  * 单次 AI 对话调用（OpenAI 兼容协议）。Electron 模式经主进程代理；浏览器直连兜底
- * T3.1 增强：支持外部 signal（取消）、流式 SSE（onDelta 实时回调）、自动重试
+ * T3.1 增强：支持外部 signal（取消）、自动重试
  * 重试矩阵（与主进程 chat 对齐）：网络错误 / 429 / 5xx 退避重试；取消 / 超时 / 401 / 其他 4xx 不重试
  * @param {Array<{role:string,content:string,tool_calls?:Object[],tool_call_id?:string}>} messages
- * @param {{signal?:AbortSignal, onDelta?:(fullContent:string)=>void, retry?:number}} [opts] - signal 取消；onDelta 流式回调；retry 自动重试次数（默认 3）
+ * @param {{signal?:AbortSignal, retry?:number}} [opts] - signal 取消；retry 自动重试次数（默认 3）
  * @returns {Promise<Object>} OpenAI 风格的响应 JSON
  */
 async function chatOnce(messages, opts){
@@ -3650,21 +4374,8 @@ async function chatOnce(messages, opts){
           }
           throw new Error("API 返回错误："+r.status);
         }
-        // T3.1 流式 SSE：Content-Type 含 text/event-stream 且 body 可读
-        // T5.3 浏览器兼容：ReadableStream 不可用时 fallback 到一次性 JSON 渲染
-        const ct=(r.headers && typeof r.headers.get==="function") ? (r.headers.get("content-type")||"") : "";
-        const streamAvail = (typeof ReadableStream !== "undefined")
-          && r.body
-          && (r.body instanceof ReadableStream || typeof r.body.getReader === "function");
-        if(ct.indexOf("text/event-stream")>=0 && streamAvail){
-          let content="";
-          await readSSEStream(r, function(delta){
-            content += delta;
-            if(opts.onDelta){ try{ opts.onDelta(content); }catch(e){ /* 回调失败不中断流 */ } }
-          });
-          return { choices:[{ message:{ content: content } }] };
-        }
-        // fallback：一次性 JSON
+        // fallback：一次性 JSON（chatOnce 未请求 stream，服务端按非流式返回；
+        // 历史 SSE 流式分支因服务端未返回 text/event-stream 而不可达，按 L2/L3 清理移除）
         return await r.json();
       }catch(err){
         // 取消 / 超时：不重试，直接抛出
@@ -3695,46 +4406,6 @@ async function chatOnce(messages, opts){
     throw e;
   }
 }
-
-/**
- * 解析 SSE 流（OpenAI 兼容 data: {json}\n\n 格式）。逐 chunk 读取并按事件边界切分，
- * buffer 拼接处理不完整 chunk；遇到 data: [DONE] 终止。
- * @param {Response} response - 含可读 body 的 fetch 响应
- * @param {(delta:string)=>void} onDelta - 每收到一段 delta.content 调用
- * @returns {Promise<void>}
- */
-async function readSSEStream(response, onDelta){
-  const reader=response.body.getReader();
-  const decoder=new TextDecoder();
-  let buffer="";
-  for(;;){
-    const chunk=await reader.read();
-    if(chunk.done) break;
-    buffer += decoder.decode(chunk.value, { stream:true });
-    // 按 \n\n 分割事件（兼容 \r\n\r\n）
-    let idx;
-    while((idx=buffer.indexOf("\n\n"))>=0){
-      const evt=buffer.slice(0, idx);
-      buffer=buffer.slice(idx+2);
-      // 解析每行 data:
-      const lines=evt.split(/\r?\n/);
-      for(let i=0;i<lines.length;i++){
-        const line=lines[i];
-        if(line.indexOf("data:")!==0) continue;
-        const data=line.slice(5).trim();
-        if(!data) continue;
-        if(data==="[DONE]") return;
-        try{
-          const j=JSON.parse(data);
-          const choice=j.choices && j.choices[0];
-          const delta=choice && (choice.delta || choice.message);
-          if(delta && delta.content){ onDelta(delta.content); }
-        }catch(e){ /* 忽略非 JSON data 行 */ }
-      }
-    }
-  }
-}
-
 // ===== AI Layer (AI 层·取消/重试控制器) =====
 let chatController=null;       // { ac, timer, aborted, reason }
 let lastChatRequest=null;      // { messages, hist } 用于重试
@@ -3871,24 +4542,9 @@ async function runChatLoop(messages, hist){
     let guard=0;
     const maxLoops = activeGoal()? AGENT_GOAL_LOOP_MAX : 6; // 目标激活时放宽循环，支撑多步自主执行
     while(guard++<maxLoops){
-      // T3.1 流式实时更新：在聊天区追加临时 assistant 消息 DOM，逐段 mdToHtml 渲染
-      let streamEl=null;
       // T5.3 浏览器兼容：chatController.ac 可为 null（AbortController 不可用），此时不传 signal
       const chatSignal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
-      const j=await chatOnce(messages, {
-        signal: chatSignal,
-        onDelta: function(full){
-          if(!streamEl){
-            streamEl=document.createElement("div");
-            streamEl.className="msg assistant md-body streaming";
-            const chat=$("#chat"); if(chat) chat.appendChild(streamEl);
-          }
-          streamEl.innerHTML=mdToHtml(full);
-          scrollChat();
-        }
-      });
-      // 流式完成后移除临时 DOM（最终内容由 renderChat 统一渲染，避免重复）
-      if(streamEl){ streamEl.remove(); }
+      const j=await chatOnce(messages, { signal: chatSignal });
       const msg = j.choices && j.choices[0] && j.choices[0].message;
       if(!msg) throw new Error("空响应");
       if(msg.tool_calls && msg.tool_calls.length){
@@ -3958,43 +4614,123 @@ function renderChat(){
 function scrollChat(){ const el=$("#chat"); if(el) el.scrollTop=el.scrollHeight; }
 
 // ===== UI Layer (交互层·命令面板) =====
-/* ---------- 命令面板 ---------- */
+/* ---------- 命令面板（P5' 增强：模糊搜索 / 分组 / 最近使用） ---------- */
 let cmdItems=[], cmdSel=0;
+const CMD_RECENT_KEY = PREFIX+"cmd_recent";
+/**
+ * 读取最近使用命令标签（最多 5 条，最新在前）
+ * @returns {string[]}
+ */
+function getCmdRecent(){
+  const v = load(CMD_RECENT_KEY, []);
+  return Array.isArray(v) ? v.filter(x=>typeof x==="string" && x).slice(0,5) : [];
+}
+/**
+ * 记录命令使用：去重并置顶，最多保留 5 条
+ * @param {string} label - 命令标签
+ * @returns {void}
+ */
+function pushCmdRecent(label){
+  if(!label) return;
+  const list = getCmdRecent().filter(x=>x!==label);
+  list.unshift(label);
+  save(CMD_RECENT_KEY, list.slice(0,5));
+}
+/**
+ * 模糊匹配打分：子串命中 > 子序列命中；连续匹配与首字符命中加分
+ * @param {string} text - 候选文本
+ * @param {string} q - 查询词（内部转小写）
+ * @returns {number} >0 匹配（分值），-1 不匹配
+ */
+function fuzzyScore(text, q){
+  q = String(q||"").toLowerCase();
+  if(!q) return 10;
+  const s = String(text||"").toLowerCase();
+  const i0 = s.indexOf(q);
+  if(i0 >= 0) return 200 - Math.min(i0, 100) + (i0===0 ? 20 : 0); // 子串：基础高分，开头命中再加
+  let pos = 0, score = 0, prev = -2;
+  for(let qi=0; qi<q.length; qi++){
+    const f = s.indexOf(q[qi], pos);
+    if(f < 0) return -1;
+    score += 1;
+    if(f === prev + 1) score += 4; // 连续匹配加分
+    if(f === 0) score += 6;        // 首字符加分
+    prev = f; pos = f + 1;
+  }
+  return score;
+}
+/**
+ * 构建命令列表（命令/场景/任务三组；无查询时「最近使用」置顶；有查询时模糊匹配按分值排序）
+ * @param {string} [q] - 查询词
+ * @returns {Array<{label:string,group?:string,run:Function}>}
+ */
 function buildCmds(q){
   q=(q||"").toLowerCase();
   const acts=[
-    {label:"新建任务", icon:UI_ICONS.plus, sub:"N", run:()=>{ if(getActive()==="overview"){setActive("office");render();} const f=$("#taskForm"); if(f) f.title.focus(); }},
-    {label:"切换明暗主题", icon:UI_ICONS.theme, run:toggleTheme},
-    {label:"导出 JSON 备份", icon:UI_ICONS.download, run:doExport},
-    {label:"导入恢复", icon:UI_ICONS.upload, run:()=> $("#fileInput").click()},
-    {label:"清空全部数据", icon:UI_ICONS.trash, run:doClear},
-    {label:"打开设置", icon:UI_ICONS.gear, run:openDrawer},
-    {label:"查看工作记忆", icon:UI_ICONS.chat, run:showMemories},
-    {label:"清空工作记忆", icon:UI_ICONS.trash, run:()=>{ save(PREFIX+"memory",[]); toast("已清空工作记忆","ok"); }},
-    {label:"取消当前目标", icon:UI_ICONS.trash, run:()=>{ const g=cancelGoal(); toast(g?("已取消目标「"+g.title+"」"):"当前无进行中目标","ok"); }},
-    {label:"查看总览", icon:UI_ICONS.overview, run:()=>{active="overview";render();}}
+    {label:"新建任务", icon:UI_ICONS.plus, sub:"N", group:"命令", run:()=>{ if(getActive()==="overview"){setActive("office");render();} const f=$("#taskForm"); if(f) f.title.focus(); }},
+    {label:"切换明暗主题", icon:UI_ICONS.theme, group:"命令", run:toggleTheme},
+    {label:"导出 JSON 备份", icon:UI_ICONS.download, group:"命令", run:doExport},
+    {label:"导出任务 CSV", icon:UI_ICONS.download, group:"命令", run:doExportCSV},
+    {label:"导出任务 Markdown", icon:UI_ICONS.download, group:"命令", run:doExportMD},
+    {label:"导入恢复", icon:UI_ICONS.upload, group:"命令", run:()=> $("#fileInput").click()},
+    {label:"清空全部数据", icon:UI_ICONS.trash, group:"命令", run:doClear},
+    {label:"打开设置", icon:UI_ICONS.gear, group:"命令", run:openDrawer},
+    {label:"查看工作记忆", icon:UI_ICONS.chat, group:"命令", run:showMemories},
+    {label:"清空工作记忆", icon:UI_ICONS.trash, group:"命令", run:()=>{ save(PREFIX+"memory",[]); toast("已清空工作记忆","ok"); }},
+    {label:"取消当前目标", icon:UI_ICONS.trash, group:"命令", run:()=>{ const g=cancelGoal(); toast(g?("已取消目标「"+g.title+"」"):"当前无进行中目标","ok"); }},
+    {label:"查看总览", icon:UI_ICONS.overview, group:"命令", run:()=>{active="overview";render();}}
   ];
-  const scs=ORDER.map(sc=>({label:"切到 "+SCENARIOS[sc].name, icon:SCENARIOS[sc].icon || "", run:()=>{setActive(sc);render();}}));
-  const tasks=getTasks().filter(t=>t.status!=="done").slice(0,12)
-    .map(t=>({label:t.title, icon:SCENARIOS[t.sc].icon || "", sub:SCENARIOS[t.sc].name, run:()=>{setActive(t.sc);render();}}));
-  let items=acts.concat(scs, tasks);
-  if(q) items=items.filter(it=> (it.label||"").toLowerCase().includes(q) || (it.sub&&it.sub.toLowerCase().includes(q)));
-  return items;
+  const scs=ORDER.map(sc=>({label:"切到 "+SCENARIOS[sc].name, icon:SCENARIOS[sc].icon || "", group:"场景", run:()=>{setActive(sc);render();}}));
+  const tasks=getActiveTasks().filter(t=>t.status!=="done").slice(0,12)
+    .map(t=>({label:t.title, icon:SCENARIOS[t.sc].icon || "", sub:SCENARIOS[t.sc].name, group:"任务", trackRecent:false, run:()=>{setActive(t.sc);render();}}));
+  const items=acts.concat(scs, tasks);
+  if(q){
+    // 模糊匹配：标签+副标题联合打分，按分值降序
+    return items
+      .map(it=>Object.assign({}, it, { _score: fuzzyScore((it.label||"")+(it.sub?" "+it.sub:""), q) }))
+      .filter(it=> it._score > 0)
+      .sort((a,b)=> b._score - a._score);
+  }
+  // 无查询：「最近使用」组置顶（去重复制，执行幂等）
+  const recentLabels = getCmdRecent();
+  if(!recentLabels.length) return items;
+  const recent = [];
+  recentLabels.forEach(lb=>{
+    const src = items.find(it=> it.label===lb);
+    if(src) recent.push(Object.assign({}, src, { group:"最近", recent:true }));
+  });
+  return recent.concat(items);
 }
+/**
+ * 渲染命令列表（分组头 + 可选项；可选项带 data-i，分组头不参与选择）
+ * @param {string} [q] - 查询词
+ * @returns {void}
+ */
 function renderCmd(q){
   cmdItems=buildCmds(q); cmdSel=0;
   const ul=$("#cmdList"); if(!ul) return;
-  if(!cmdItems.length){ ul.innerHTML=`<li style="color:var(--muted);cursor:default;justify-content:center">无匹配</li>`; return; }
-  ul.innerHTML=cmdItems.map((it,i)=>`<li class="${i===cmdSel?"sel":""}" data-i="${i}">
-    <span class="ci">${it.icon}</span><span>${esc(it.label)}</span>${it.sub?`<span class="sub">${esc(it.sub)}</span>`:""}</li>`).join("");
-  [...ul.querySelectorAll("li")].forEach(li=>{
+  if(!cmdItems.length){ ul.innerHTML=`<li class="cmd-empty" style="color:var(--muted);cursor:default;justify-content:center">无匹配</li>`; return; }
+  let html="", lastGroup=null;
+  cmdItems.forEach((it,i)=>{
+    const g = it.group || "";
+    if(g && g!==lastGroup){ html += `<li class="cmd-group">${esc(g)}</li>`; lastGroup=g; }
+    html += `<li class="${i===cmdSel?"sel":""}" data-i="${i}">
+    <span class="ci">${it.icon}</span><span>${esc(it.label)}</span>${it.sub?`<span class="sub">${esc(it.sub)}</span>`:""}</li>`;
+  });
+  ul.innerHTML=html;
+  [...ul.querySelectorAll("li[data-i]")].forEach(li=>{
     li.onmouseenter=()=>{ cmdSel=+li.dataset.i; updateCmdSel(); };
     li.onclick=()=> runCmd(+li.dataset.i);
   });
 }
 function updateCmdSel(){ const ul=$("#cmdList"); if(!ul) return;
-  [...ul.querySelectorAll("li")].forEach((li,i)=> li.classList.toggle("sel", i===cmdSel)); }
-function runCmd(i){ const it=cmdItems[i]; if(!it||!it.run) return; closeCmd(); it.run(); }
+  [...ul.querySelectorAll("li[data-i]")].forEach(li=> li.classList.toggle("sel", +li.dataset.i===cmdSel)); }
+/**
+ * 执行命令（记录最近使用；task 跳转类不计入）
+ * @param {number} i - cmdItems 下标
+ * @returns {void}
+ */
+function runCmd(i){ const it=cmdItems[i]; if(!it||!it.run) return; if(it.trackRecent!==false) pushCmdRecent(it.label); closeCmd(); it.run(); }
 /**
  * 打开命令面板（清空输入、渲染全部命令、聚焦输入框）
  * @returns {void}
@@ -4002,7 +4738,6 @@ function runCmd(i){ const it=cmdItems[i]; if(!it||!it.run) return; closeCmd(); i
 function openCmd(){ const c=$("#cmd"); if(!c) return; c.classList.add("show"); $("#cmdOverlay").classList.add("show");
   const i=$("#cmdInput"); i.value=""; renderCmd(""); i.focus(); }
 function closeCmd(){ $("#cmd").classList.remove("show"); $("#cmdOverlay").classList.remove("show"); }
-
 // ===== UI Layer (交互层·每日播报) =====
 /* ---------- 每日播报 ---------- */
 // PWA 通知：优先用系统 Notification API（已授权时），否则 fallback 到 toast
@@ -4020,7 +4755,7 @@ function dailyDigest(){
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
     try { Notification.requestPermission(); } catch (e) { /* 旧 API 回调式或拒绝，忽略 */ }
   }
-  const items=getTasks().filter(x=>x.status!=="done"&&x.due).sort((a,b)=>a.due<b.due?-1:1);
+  const items=getActiveTasks().filter(x=>x.status!=="done"&&x.due).sort((a,b)=>a.due<b.due?-1:1);
   const pending=items.filter(x=> x.due===today || x.due<today);
   if(!pending.length) return;
   const top=pending.slice(0,3).map(x=>"· "+x.title+(x.due<today?"（逾期）":"（今天）")).join("\n");
@@ -4041,6 +4776,77 @@ const NOTIFY_IDS_KEY = "wb_notified_ids";
 const CHAIN_BREAK_KEY = "wb_chain_break_notified";
 const DIGEST_DATE_KEY = "wb_digest_date";
 const NOTIFY_INTERVAL_MS = 60000; // 60s 检查一次
+
+/* ---------- P9：稍后提醒（snooze）与免打扰时段 ----------
+ * 存储键（不带 PREFIX，按任务契约）：
+ *   wb_notify_snooze   { [taskId]: timestamp }  该时间戳前不再提醒此任务
+ *   wb_notify_quiet    { enabled, start, end }  免打扰时段（整点小时，支持跨天如 22→8）
+ */
+const SNOOZE_KEY = "wb_notify_snooze";
+const QUIET_KEY = "wb_notify_quiet";
+
+function getSnoozeMap(){
+  const m = load(SNOOZE_KEY, {});
+  return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
+}
+/**
+ * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
+ * @param {string} id - 任务 id
+ * @param {number} [minutes] - 延后分钟数（默认 30，非法值回退 30）
+ * @returns {boolean}
+ */
+function snoozeTask(id, minutes){
+  if(!id) return false;
+  const mins = (typeof minutes === "number" && minutes > 0) ? minutes : 30;
+  const m = getSnoozeMap();
+  m[id] = Date.now() + mins * 60000;
+  save(SNOOZE_KEY, m);
+  save(NOTIFY_IDS_KEY, load(NOTIFY_IDS_KEY, []).filter(function(x){ return x !== id; }));
+  return true;
+}
+function _snoozedUntil(id){
+  const v = getSnoozeMap()[id];
+  return (typeof v === "number") ? v : 0;
+}
+/* 清理过期 snooze 记录（防键无限增长；checkDueTasks 时顺带调用） */
+function _purgeExpiredSnooze(now){
+  const m = getSnoozeMap(); let changed = false;
+  Object.keys(m).forEach(function(k){ if(m[k] <= now){ delete m[k]; changed = true; } });
+  if(changed) save(SNOOZE_KEY, m);
+}
+
+function getQuietHours(){
+  const q = load(QUIET_KEY, null);
+  const base = { enabled: false, start: 22, end: 8 };
+  if(!q || typeof q !== "object" || Array.isArray(q)) return base;
+  return {
+    enabled: q.enabled === true,
+    start: (typeof q.start === "number" && q.start >= 0 && q.start <= 23) ? Math.floor(q.start) : 22,
+    end: (typeof q.end === "number" && q.end >= 0 && q.end <= 23) ? Math.floor(q.end) : 8
+  };
+}
+function setQuietHours(patch){
+  const next = Object.assign({}, getQuietHours(), patch || {});
+  next.enabled = !!next.enabled;
+  next.start = (typeof next.start === "number" && next.start >= 0 && next.start <= 23) ? Math.floor(next.start) : 22;
+  next.end = (typeof next.end === "number" && next.end >= 0 && next.end <= 23) ? Math.floor(next.end) : 8;
+  save(QUIET_KEY, next);
+  return next;
+}
+/**
+ * 免打扰判定（纯函数；支持跨天时段如 22→8）
+ * @param {number} [now] - 当前时间戳（默认 Date.now()）
+ * @param {{enabled:boolean,start:number,end:number}} [quiet] - 免打扰配置（默认读存储）
+ * @returns {boolean}
+ */
+function isQuietTime(now, quiet){
+  const q = quiet || getQuietHours();
+  if(!q || !q.enabled) return false;
+  const h = new Date(now === undefined ? Date.now() : now).getHours();
+  if(q.start === q.end) return true; // 起止相同 = 全天免打扰
+  if(q.start < q.end) return h >= q.start && h < q.end;
+  return h >= q.start || h < q.end; // 跨天
+}
 
 /**
  * 读取通知开关状态
@@ -4082,12 +4888,15 @@ function _dueStartMs(due){
  * @returns {Array<{id:string,title:string,sc:string,due:string,msg:string}>}
  */
 function checkDueTasks(now){
-  const today = _ymd(new Date(now === undefined ? Date.now() : now));
+  const ts = now === undefined ? Date.now() : now;
+  const today = _ymd(new Date(ts));
   const tasks = getTasks();
   const notifiedIds = load(NOTIFY_IDS_KEY, []);
+  _purgeExpiredSnooze(ts);
   return tasks.filter(t =>
     t && t.id && t.status !== "done" && !t.deletedAt && t.due &&
     !notifiedIds.includes(t.id) &&
+    _snoozedUntil(t.id) <= ts &&
     String(t.due) <= today
   ).map(t => ({
     id: t.id,
@@ -4192,14 +5001,17 @@ function markDigestSent(today){
   save(DIGEST_DATE_KEY, today || todayStr());
 }
 /**
- * 执行一次通知检查：到期任务 + 断链 + 每日 digest。
+ * 执行一次通知检查：到期任务 + 断链。
  * 副作用函数：调用 notifySystem 展示，并标记已提醒。未开启通知时直接返回。
+ * 每日 digest 由 startup 的 dailyDigest() 统一处理（见 ui-daily-brief.js），此处不重复推送。
  * @returns {{due:number,breaks:number,digest:boolean}} 触发计数
  */
 function runNotifyCheck(){
   const stats = { due: 0, breaks: 0, digest: false };
   if(!getNotifyEnabled()) return stats;
   const now = Date.now();
+  // P9：免打扰时段内不推送（任务不标记已提醒，时段结束后补提醒）
+  if(isQuietTime(now)) return stats;
   // 1. 到期任务
   const due = checkDueTasks(now);
   if(due.length){
@@ -4214,13 +5026,8 @@ function runNotifyCheck(){
     markChainBreakNotified(breaks.map(b => b.id), todayStr());
     stats.breaks = breaks.length;
   }
-  // 3. 每日 digest
-  const dig = dailyDigestNotify(now);
-  if(dig){
-    try{ notifySystem(dig.msg, ""); }catch(e){ pushDiag("error", "notify digest: "+(e&&e.message||e), {where:"notify"}); }
-    markDigestSent(todayStr());
-    stats.digest = true;
-  }
+  // 注：每日播报（digest）统一由启动时的 dailyDigest() 负责（使用 last_open 去重），
+  // 此处不再重复推送，避免与启动播报形成「双每日播报」（D6 修复）。
   return stats;
 }
 /**
@@ -4257,6 +5064,12 @@ function render(){
     const cfg=getCfg();
     $("#main").innerHTML = renderToday() + renderMainHTML();
     bindScenario();
+    // P9：「稍后提醒」按钮绑定（Top3 待处理任务）
+    $$("#main [data-snooze]").forEach(b=> b.onclick=()=>{
+      snoozeTask(b.getAttribute("data-snooze"), 30);
+      toast("已设置 30 分钟后再提醒","ok");
+      render();
+    });
     if(cfg.enabled) renderChat();
   }catch(e){
     // 渲染异常：诊断 + fallback UI（提示导出备份后清空），不让白屏
@@ -4276,7 +5089,7 @@ function render(){
 
 // ===== UI Layer (交互层·备份与统计) =====
 /* ---------- 备份 / 统计 ---------- */
-function allKeys(){ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)); }
+function allKeys(){ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }
 function doExport(){
   const data = {}; allKeys().forEach(k=> data[k]=localStorage.getItem(k));
   // P0-5：跨设备导出显式告警（不静默丢 Key）。安全默认：浏览器态不勾选不出明文。
@@ -4312,7 +5125,8 @@ function doImport(file){
   reader.onload = async ()=>{
     try{
       const data = JSON.parse(reader.result);
-      Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX)) localStorage.setItem(k, data[k]); });
+      if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
+      Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY) localStorage.setItem(k, data[k]); });
       _cfgCache = null; _deviceKey = null;
       try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 */ }
 
@@ -4401,6 +5215,83 @@ function checkCount(){
   else { banner.classList.remove("show"); }
 }
 
+/* ---------- T3：CSV / Markdown 导出（任务数据多格式） ---------- */
+const TASK_STATUS_TEXT = { todo:"待办", doing:"进行中", done:"已完成" };
+/* 状态文本（未知状态原样返回） */
+function statusText(st){ return TASK_STATUS_TEXT[st] || (st||""); }
+/* CSV 字段转义：含逗号/引号/换行时用双引号包裹并转义内部引号 */
+function csvField(v){
+  const s = String(v===null||v===undefined?"":v);
+  return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+/**
+ * 构建任务 CSV 文本（纯函数；BOM 由下载包装层添加）
+ * @param {Task[]} tasks - 任务数组（默认取活跃任务）
+ * @returns {string} CSV 文本
+ */
+function buildTasksCSV(tasks){
+  const list = Array.isArray(tasks) ? tasks : getActiveTasks();
+  const header = ["场景","标题","状态","优先级","截止日期","标签","创建日期","完成日期"];
+  const rows = list.map(t=>[
+    scMeta(t.sc).name,
+    t.title||"",
+    statusText(t.status),
+    t.priority||"",
+    t.due||"",
+    (t.tags||[]).join(" "),
+    t.created ? new Date(t.created).toISOString().slice(0,10) : "",
+    t.doneAt ? new Date(t.doneAt).toISOString().slice(0,10) : ""
+  ]);
+  return [header].concat(rows).map(r=>r.map(csvField).join(",")).join("\r\n");
+}
+/**
+ * 构建任务 Markdown 文本（纯函数；按场景分组表格）
+ * @param {Task[]} tasks - 任务数组（默认取活跃任务）
+ * @returns {string} Markdown 文本
+ */
+function buildTasksMD(tasks){
+  const list = Array.isArray(tasks) ? tasks : getActiveTasks();
+  const lines = ["# Agent 工作台 · 任务清单（"+todayStr()+"）", ""];
+  if(!list.length){ lines.push("> 暂无任务。"); return lines.join("\n"); }
+  const total = list.length, done = list.filter(t=>t.status==="done").length;
+  lines.push("共 "+total+" 条，已完成 "+done+" 条，完成率 "+(total?Math.round(done/total*100):0)+"%。", "");
+  ORDER.forEach(sc=>{
+    const ts = list.filter(t=>t.sc===sc);
+    if(!ts.length) return;
+    lines.push("## "+scMeta(sc).name, "");
+    lines.push("| 标题 | 状态 | 优先级 | 截止日期 | 标签 |", "| --- | --- | --- | --- | --- |");
+    ts.forEach(t=>{
+      lines.push("| "+String(t.title||"").replace(/\|/g,"\\|")
+        +" | "+statusText(t.status)
+        +" | "+(t.priority||"-")
+        +" | "+(t.due||"-")
+        +" | "+((t.tags||[]).join(" ")||"-")+" |");
+    });
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+/* 通用文本下载（BOM 可选；CSV 带 BOM 保证 Excel 直接打开不乱码） */
+function downloadTextFile(content, filename, mime, withBOM){
+  const blob = new Blob([withBOM ? "\uFEFF"+content : content], {type:mime});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function doExportCSV(){
+  const list = getActiveTasks();
+  if(!list.length){ toast("当前没有可导出的任务","warn"); return; }
+  downloadTextFile(buildTasksCSV(list), "agent-workbench-tasks-"+todayStr()+".csv", "text/csv;charset=utf-8", true);
+  toast("已导出 CSV（"+list.length+" 条任务）","ok");
+}
+function doExportMD(){
+  const list = getActiveTasks();
+  if(!list.length){ toast("当前没有可导出的任务","warn"); return; }
+  downloadTextFile(buildTasksMD(list), "agent-workbench-tasks-"+todayStr()+".md", "text/markdown;charset=utf-8", false);
+  toast("已导出 Markdown（"+list.length+" 条任务）","ok");
+}
+
 // ===== UI Layer (交互层·设置抽屉) =====
 /* ---------- 设置抽屉 ---------- */
 /* 渲染单个链行（含启用 toggle、源图标、关键词、→、目标图标、目标名、删除按钮） */
@@ -4443,6 +5334,81 @@ function renderLinksBox(){
   if(selSrc && !selSrc.options.length) selSrc.innerHTML = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
   if(selDst && !selDst.options.length) selDst.innerHTML = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
 }
+/* P1：场景变更后强制刷新习惯链表单的场景下拉（含自定义场景） */
+function refreshChainScSelects(){
+  const opts = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
+  const selSrc = $("#chainAddSrc"), selDst = $("#chainAddDst");
+  if(selSrc) selSrc.innerHTML = opts;
+  if(selDst) selDst.innerHTML = opts;
+}
+/* ---------- P1：场景管理面板（设置抽屉） ---------- */
+const ICON_LABELS = { overview:"总览", plus:"加号", check:"对勾", chat:"对话", download:"下载", upload:"上传", gear:"齿轮", theme:"月亮", stats:"柱状图", copy:"复制", trash:"垃圾桶" };
+function renderScBox(){
+  const box=$("#scBox"); if(!box) return;
+  const ov = loadScOverrides();
+  const builtinRows = BUILTIN_SC_KEYS.map(k=>{
+    const s = SCENARIOS[k], o = ov[k]||{};
+    const overridden = o.name || o.color;
+    return `<div class="chain-row" data-sc="${esc(k)}">
+      <span class="chain-ic" style="color:${s.color}">${s.icon||""}</span>
+      <input class="sc-edit-name" value="${esc(s.name)}" maxlength="12" aria-label="场景名称" style="max-width:90px">
+      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label="场景颜色" style="width:40px;padding:2px">
+      <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label="保存改名换色">✓</button>
+      ${overridden?`<button type="button" class="chain-cancel sc-reset" data-screset="${esc(k)}" aria-label="恢复默认">恢复</button>`:""}
+    </div>`;
+  }).join("");
+  const customRows = loadCustomScenarios().map(cs=>{
+    const s = SCENARIOS[cs.key]||{};
+    return `<div class="chain-row" data-sc="${esc(cs.key)}">
+      <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
+      <input class="sc-edit-name" value="${esc(cs.name)}" maxlength="12" aria-label="场景名称" style="max-width:90px">
+      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="场景颜色" style="width:40px;padding:2px">
+      <span class="chain-arr" style="font-size:11px;color:var(--muted)">自定义</span>
+      <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="保存">✓</button>
+      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="删除场景">×</button>
+    </div>`;
+  }).join("");
+  box.innerHTML = builtinRows + customRows;
+  // 图标下拉填充（仅首次）
+  const iconSel = $("#scAddIcon");
+  if(iconSel && !iconSel.options.length) iconSel.innerHTML = CUSTOM_ICON_KEYS.map(k=>`<option value="${k}">${esc(ICON_LABELS[k]||k)}</option>`).join("");
+  // 颜色选择器默认值从令牌填充（仅首次）
+  const addColor = $("#scAddColor");
+  if(addColor && !addColor.value) addColor.value = scenarioDefaultColor();
+  // 事件绑定
+  box.querySelectorAll(".sc-save").forEach(b=> b.onclick=()=>{
+    const row = b.closest(".chain-row"), key = row.getAttribute("data-sc");
+    const name = row.querySelector(".sc-edit-name").value;
+    const color = row.querySelector(".sc-edit-color").value;
+    const r = BUILTIN_SC_KEYS.includes(key)
+      ? setBuiltinOverride(key, {name, color})
+      : updateCustomScenario(key, {name, color});
+    if(!r.ok){ toast(r.err||"保存失败","warn"); return; }
+    toast("场景已更新","ok"); openDrawerRefresh();
+  });
+  box.querySelectorAll(".sc-reset").forEach(b=> b.onclick=()=>{
+    const key = b.closest(".chain-row").getAttribute("data-sc");
+    resetBuiltinOverride(key); toast("已恢复默认","ok"); openDrawerRefresh();
+  });
+  box.querySelectorAll(".sc-del").forEach(b=> b.onclick=()=>{
+    const key = b.closest(".chain-row").getAttribute("data-sc");
+    if(!confirm("确定删除该场景？（场景下有任务时不可删除）")) return;
+    const r = removeCustomScenario(key);
+    if(!r.ok){ toast(r.err||"删除失败","warn"); return; }
+    toast("场景已删除","ok"); openDrawerRefresh();
+  });
+  const addBtn=$("#scAddBtn"); if(addBtn) addBtn.onclick=()=>{
+    const name = $("#scAddName").value, color = $("#scAddColor").value, iconKey = $("#scAddIcon").value;
+    const r = addCustomScenario(name, color, iconKey);
+    if(!r.ok){ toast(r.err||"添加失败","warn"); return; }
+    $("#scAddName").value = "";
+    toast("已添加场景","ok"); openDrawerRefresh();
+  };
+}
+/* 抽屉打开中的自刷新：重填场景面板 + 链下拉，保留抽屉打开状态 */
+function openDrawerRefresh(){
+  renderScBox(); refreshChainScSelects(); render();
+}
 /* 把当前 active profile 的字段填入表单（name/base/key/model） */
 function fillProfileForm(p){
   $("#cfgName").value = (p && p.name) || "";
@@ -4472,6 +5438,17 @@ function openDrawer(){ const cfg=getCfg();
   $("#cfgEnabled").checked=!!cfg.enabled;
   $("#cfgAgent").checked = cfg.agent!==false; // 默认开启（cfg.agent 未定义时视为开）
   const notifyCb=$("#cfgNotify"); if(notifyCb) notifyCb.checked=getNotifyEnabled();
+  // P9：免打扰时段控件回填（小时下拉 0-23，仅首次填充）
+  const qStart=$("#cfgQuietStart"), qEnd=$("#cfgQuietEnd");
+  if(qStart && !qStart.options.length) qStart.innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join("");
+  if(qEnd && !qEnd.options.length) qEnd.innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join("");
+  const q=getQuietHours();
+  if($("#cfgQuiet")) $("#cfgQuiet").checked=!!q.enabled;
+  if(qStart) qStart.value=String(q.start);
+  if(qEnd) qEnd.value=String(q.end);
+  const thSel=$("#cfgTheme"); if(thSel) thSel.value = (cfg.theme==="light"||cfg.theme==="dark") ? cfg.theme : "system";
+  const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
+  renderScBox();
   renderProfileSelect();
   fillProfileForm(getActiveProfile());
   const hint=$("#cfgKeyHint"); if(hint) hint.style.display="none";
@@ -4566,11 +5543,23 @@ async function saveCfg(){
       profiles,
       activeId
     });
+    // T4：主题三态持久化（light/dark/system）
+    const thSel=$("#cfgTheme"); if(thSel) cfg.theme = thSel.value;
     // 清掉可能残留的旧单 cfg 字段（已迁入 profiles）
     delete cfg.base; delete cfg.key; delete cfg.model;
     _cfgCache = cfg;
     try{ await persistCfg(cfg); }
-    catch(e){ if(isElectron()){ const rest = Object.assign({}, cfg); save(PREFIX+"cfg", rest); } else save(PREFIX+"cfg", cfg); }
+    catch(e){
+      // D4：持久化失败兜底——浏览器态绝不写明文 Key，剥离后保存非敏感配置并告警
+      if(isElectron()){ const rest = Object.assign({}, cfg); save(PREFIX+"cfg", rest); }
+      else {
+        const safe = Object.assign({}, cfg);
+        if(Array.isArray(safe.profiles)) safe.profiles = safe.profiles.map(p=>Object.assign({},p,{key:""}));
+        if(typeof safe.key === "string") delete safe.key;
+        save(PREFIX+"cfg", safe);
+        try{ toast("⚠ 加密持久化失败，AI Key 未保存（安全起见已丢弃）。", "warn"); }catch(e2){ /* noop */ }
+      }
+    }
     // T3.2：同步链启用状态（chain-toggle 实时已保存，此处兜底处理旧 lk_ id 与新 chain-toggle）
     const links=getLinks();
     links.forEach(l=>{
@@ -4578,6 +5567,14 @@ async function saveCfg(){
       if(cb) l.enabled=cb.checked;
     });
     save(PREFIX+"links", links);
+    // T2：回收站自动清理策略即时生效（独立于 cfg，单独键存储）
+    const rpSel=$("#cfgRecyclePolicy"); if(rpSel) setRecyclePolicy(rpSel.value);
+    // P9：免打扰时段即时生效（独立于 cfg，单独键存储）
+    setQuietHours({
+      enabled: !!($("#cfgQuiet") && $("#cfgQuiet").checked),
+      start: parseInt(($("#cfgQuietStart")&&$("#cfgQuietStart").value)||"22",10),
+      end: parseInt(($("#cfgQuietEnd")&&$("#cfgQuietEnd").value)||"8",10)
+    });
     if(isElectron()){
       const al=$("#cfgAutoLaunch");
       if(al) window.electronAPI.setAutoLaunch(al.checked);
@@ -4588,6 +5585,7 @@ async function saveCfg(){
         key: (ap && ap.key) || undefined }); }catch(e){ /* 忽略 */ }
     }
     alert("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"));
+    applyTheme(); // T4：主题变更（含跟随系统）立即生效
     closeDrawer(); render();
   }catch(e){
     // 保存异常：诊断 + 提示，不让设置面板卡死
@@ -4599,12 +5597,22 @@ async function saveCfg(){
 // ===== UI Layer (交互层·快捷键) =====
 /* ---------- 快捷键 ---------- */
 document.addEventListener("keydown", e=>{
+  // M5：Esc 关闭回收站弹窗 / 设置抽屉（命令面板有自身 Esc 处理，互不冲突）
+  if(e.key==="Escape"){
+    if(closeRecycleModal()) return;
+    if($("#drawer") && $("#drawer").classList.contains("show")){ closeDrawer(); return; }
+    return;
+  }
   if((e.ctrlKey||e.metaKey) && (e.key==="k"||e.key==="K")){ e.preventDefault(); openCmd(); return; }
   const t=e.target;
   if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT")) return;
   if(e.key>="1" && e.key<="4"){ const sc=ORDER[+e.key-1]; if(sc){ setActive(sc); render(); } }
   else if(e.key==="g"||e.key==="G"){ active="overview"; render(); } // 总览为瞬态视图，不持久化（契约已知例外）
-  else if(e.key==="n"||e.key==="N"){ if(active==="overview"){setActive("office");render();} const f=$("#taskForm"); if(f) f.title.focus(); }
+  // M6：N 在总览/统计等无表单视图也能跳到场景并聚焦新建任务
+  else if(e.key==="n"||e.key==="N"){
+    if(active==="overview"||active==="stats"){ setActive("office"); }
+    render(); const f=$("#taskForm"); if(f) f.title.focus();
+  }
 });
 
 // ===== UI Layer (交互层·全局事件绑定) =====
@@ -4627,6 +5635,8 @@ function showMemories(){
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
 }
 $("#btnExport").onclick = doExport;
+$("#btnExportCSV").onclick = doExportCSV;
+$("#btnExportMD").onclick = doExportMD;
 $("#btnImport").onclick = ()=> $("#fileInput").click();
 $("#fileInput").onchange = e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=""; };
 $("#btnClear").onclick = doClear;
@@ -4643,7 +5653,7 @@ $("#btnTheme").onclick = toggleTheme;
 $("#btnCmd").onclick = openCmd;
 $("#btnHelp").onclick = renderHelp;
 $("#btnRecover").onclick = recoverAutoBackup;
-$("#btnClearMem").onclick = ()=>{ save(PREFIX+"memory",[]); updateAgentStatus(); toast("已清空工作记忆","ok"); };
+$("#btnClearMem").onclick = ()=>{ if(!confirm("确定清空全部工作记忆？此操作不可恢复。")) return; save(PREFIX+"memory",[]); updateAgentStatus(); toast("已清空工作记忆","ok"); };
 $("#btnCancelGoal").onclick = ()=>{ const g=cancelGoal(); updateAgentStatus(); toast(g?("已取消目标「"+g.title+"」"):"当前无进行中目标","ok"); };
 
 /* ---------- T3.4 通知提醒开关绑定 ---------- */
@@ -4704,7 +5714,7 @@ $("#chainResetBtn").onclick = ()=>{
 $("#linksBox").addEventListener("click", e=>{
   const t = e.target;
   const delBtn = t.closest("[data-del]");
-  if(delBtn){ const id = delBtn.getAttribute("data-del"); removeCustomLink(id); renderLinksBox(); return; }
+  if(delBtn){ const id = delBtn.getAttribute("data-del"); if(!confirm("确定删除这条习惯链？")) return; removeCustomLink(id); renderLinksBox(); return; }
   const saveBtn = t.closest("[data-save]");
   if(saveBtn){
     const id = saveBtn.getAttribute("data-save");
@@ -4739,6 +5749,8 @@ $("#cmdInput").onkeydown = e=>{
   else if(e.key==="Enter"){ e.preventDefault(); runCmd(cmdSel); }
   else if(e.key==="Escape"){ closeCmd(); }
 };
+// L1：输入时实时过滤命令（openCmd 仅初次渲染空列表，此前打字不刷新）
+$("#cmdInput").oninput = e=> renderCmd(e.target.value);
 
 // ===== Bootstrap (启动) =====
 /* ---------- 启动 ---------- */
@@ -4751,6 +5763,7 @@ seed();
 
 (async function startup(){
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
+  cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
   applyTheme();
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
   setupRipple(); // T4.3 底部导航点击涟漪效果（事件委托）
@@ -4837,8 +5850,19 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     _backupBroken, _validateAndMigrateTasks, _validateCfg, _validateLinks,
     chatOnce, doExport,
     // T3.1 AI 增强（取消/重试/流式）访问器（供测试驱动与断言）
-    abortChat, retryChat, createChatController, readSSEStream, showChatThinking, runChatLoop,
+    abortChat, retryChat, createChatController, showChatThinking, runChatLoop,
     getChat, appendChat,
+    // T1-T5 Quick Wins 增强（UI 软删 / 回收站批量与自动清理 / CSV·MD 导出 / 主题跟随系统 / 焦点陷阱）访问器
+    restoreRecycleBatch, purgeRecycleBatch, getRecyclePolicy, setRecyclePolicy, cleanupRecycle,
+    buildTasksCSV, buildTasksMD, doExportCSV, doExportMD, trapFocus, closeRecycleModal,
+    // P5' 命令面板增强（模糊搜索 / 最近使用）访问器
+    fuzzyScore, getCmdRecent, pushCmdRecent,
+    // P1 自定义场景访问器（供测试驱动与断言）
+    addCustomScenario, updateCustomScenario, removeCustomScenario,
+    setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,
+    // 第三轮：P8 多维筛选+保存视图 / P2' 习惯链有向图 / P9 稍后提醒+免打扰 访问器
+    renderChainGraph, getGlobViews, saveGlobView, removeGlobView, _applyGlobFilters,
+    snoozeTask, getQuietHours, setQuietHours, isQuietTime,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
