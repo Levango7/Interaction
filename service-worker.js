@@ -6,9 +6,20 @@
  *   - 跨域 API 请求（http/https 且非同源）：stale-while-revalidate
  *   - 其他请求：network-first（失败回退缓存）
  * 缓存版本号变更后，activate 会清理所有非当前版本的旧缓存。
+ *
+ * v1.4-F PWA 增强：
+ *   - Background Sync API：'sync' 事件处理离线排队操作（sync-tasks）
+ *   - Web Push：'push' 事件显示通知，'pushsubscriptionchange' 处理订阅失效
+ *   - 离线操作队列存储在 IndexedDB（wb_sync_queue）+ localStorage 兜底
  */
-var CACHE_VERSION = "v10-20260808";
+var CACHE_VERSION = "v11-20260808";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
+
+// v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
+var SYNC_DB = "wb-sync-db";
+var SYNC_STORE = "syncQueue";
+// v1.4-F：通知默认图标（相对路径，SW 作用域内）
+var NOTIFY_ICON = "./icon.svg";
 
 // R15: 单个缓存条目容量上限，超过则按 FIFO 删除最旧的
 var MAX_CACHE_ENTRIES = 50;
@@ -180,3 +191,206 @@ self.addEventListener("fetch", function (event) {
     })
   );
 });
+
+// ===== v1.4-F Background Sync API：离线操作排队，恢复网络后自动同步 =====
+/**
+ * 打开同步队列 IndexedDB（SW 上下文无法访问 localStorage）。
+ * @returns {Promise<IDBObjectStore|null>}
+ */
+function _openSyncStore() {
+  return new Promise(function (resolve) {
+    if (typeof indexedDB === "undefined") { resolve(null); return; }
+    try {
+      var req = indexedDB.open(SYNC_DB, 1);
+      req.onupgradeneeded = function (e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains(SYNC_STORE)) {
+          db.createObjectStore(SYNC_STORE, { keyPath: "id", autoIncrement: true });
+        }
+      };
+      req.onsuccess = function (e) {
+        var db = e.target.result;
+        try {
+          var tx = db.transaction(SYNC_STORE, "readwrite");
+          resolve(tx.objectStore(SYNC_STORE));
+        } catch (err) { resolve(null); }
+      };
+      req.onerror = function () { resolve(null); };
+    } catch (e) { resolve(null); }
+  });
+}
+
+/**
+ * 读取同步队列中所有待同步操作。
+ * @returns {Promise<Array<{id:number,op:string,payload:*,ts:number}>>}
+ */
+function _readSyncQueue() {
+  return _openSyncStore().then(function (store) {
+    if (!store) return [];
+    return new Promise(function (resolve) {
+      var r = store.getAll();
+      r.onsuccess = function () { resolve(r.result || []); };
+      r.onerror = function () { resolve([]); };
+    });
+  });
+}
+
+/**
+ * 从队列中删除已成功同步的条目。
+ * @param {number} id - 队列条目 id
+ * @returns {Promise<void>}
+ */
+function _deleteSyncItem(id) {
+  return _openSyncStore().then(function (store) {
+    if (!store) return undefined;
+    return new Promise(function (resolve) {
+      var r = store.delete(id);
+      r.onsuccess = function () { resolve(); };
+      r.onerror = function () { resolve(); };
+    });
+  });
+}
+
+/**
+ * 处理单个同步操作：发送到服务器（框架，不实际发送；只标记成功）。
+ * 真实部署时此处应改为 fetch(serverEndpoint, {method:'POST', body:JSON.stringify(item.payload)})。
+ * @param {{op:string,payload:*,ts:number}} item - 待同步操作
+ * @returns {Promise<boolean>} 是否成功
+ */
+function _processSyncItem(item) {
+  // 框架实现：记录到诊断日志，返回成功（不实际发送）
+  // 真实部署替换为：
+  //   return fetch(SYNC_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'},
+  //     body:JSON.stringify({op:item.op, payload:item.payload, ts:item.ts})})
+  //     .then(function(r){ return r.ok; }).catch(function(){ return false; });
+  return Promise.resolve(true);
+}
+
+/**
+ * 同步事件处理：遍历队列，逐条处理，成功的删除，失败的保留待下次同步。
+ * @param {Event} event - sync 事件
+ */
+function handleSyncEvent(event) {
+  if (!event || !event.tag) return;
+  // 仅处理我们注册的 sync-tasks 标签
+  if (event.tag !== "sync-tasks") return;
+  event.waitUntil(
+    _readSyncQueue().then(function (queue) {
+      if (!queue.length) return undefined;
+      return Promise.all(queue.map(function (item) {
+        return _processSyncItem(item).then(function (ok) {
+          if (ok) return _deleteSyncItem(item.id);
+          return undefined;
+        });
+      }));
+    }).catch(function () { /* 同步失败保留队列，下次再试 */ })
+  );
+}
+
+// 注册 sync 事件监听（浏览器不支持 Background Sync 时此行不会触发）
+if (typeof self !== "undefined" && "sync" in self) {
+  self.addEventListener("sync", handleSyncEvent);
+}
+
+// ===== v1.4-F Web Push：'push' 事件显示通知 =====
+/**
+ * 显示 Push 通知（需 Notification 权限；无权限时静默失败）。
+ * @param {string} title - 通知标题
+ * @param {Object} opts - Notification options（body/tag/icon 等）
+ * @returns {Promise<void>}
+ */
+function _showNotification(title, opts) {
+  if (typeof self === "undefined" || !self.registration || typeof Notification === "undefined") {
+    return Promise.resolve();
+  }
+  // 权限不足时静默跳过（用户在页面端可看到 toast，SW 端不强制打扰）
+  if (Notification.permission !== "granted") return Promise.resolve();
+  var finalOpts = Object.assign({
+    icon: NOTIFY_ICON,
+    badge: NOTIFY_ICON,
+    tag: "wb-push",
+    renotify: false,
+    data: {}
+  }, opts || {});
+  try {
+    return Promise.resolve(self.registration.showNotification(title, finalOpts));
+  } catch (e) { return Promise.resolve(); }
+}
+
+/**
+ * 解析 push 事件 payload（支持任意 JSON / 纯文本 / 空）。
+ * @param {PushEvent} event - push 事件
+ * @returns {{title:string, body:string, tag?:string}}
+ */
+function _parsePushPayload(event) {
+  var title = "Agent 工作台";
+  var body = "你有一条新通知";
+  var tag = "wb-push";
+  try {
+    if (event && event.data) {
+      // 优先按 JSON 解析
+      try {
+        var j = event.data.json();
+        if (j && typeof j === "object") {
+          if (typeof j.title === "string") title = j.title;
+          if (typeof j.body === "string") body = j.body;
+          if (typeof j.tag === "string") tag = j.tag;
+        }
+      } catch (e1) {
+        // JSON 解析失败，按纯文本处理
+        var txt = "";
+        try { txt = event.data.text(); } catch (e2) {}
+        if (txt) body = txt;
+      }
+    }
+  } catch (e) { /* 解析失败用默认值 */ }
+  return { title: title, body: body, tag: tag };
+}
+
+// 注册 push 事件监听
+if (typeof self !== "undefined" && "push" in self) {
+  self.addEventListener("push", function (event) {
+    var p = _parsePushPayload(event);
+    event.waitUntil(_showNotification(p.title, { body: p.body, tag: p.tag }));
+  });
+}
+
+/**
+ * pushsubscriptionchange 事件：订阅失效时通知所有客户端重新订阅。
+ * 真实部署应在此处把新订阅 POST 到服务器 push-subscription endpoint。
+ */
+if (typeof self !== "undefined" && "pushsubscriptionchange" in self) {
+  self.addEventListener("pushsubscriptionchange", function (event) {
+    event.waitUntil(
+      Promise.resolve().then(function () {
+        // 通知所有客户端订阅已失效（页面端会重新 subscribePush）
+        if (self.clients && typeof self.clients.matchAll === "function") {
+          return self.clients.matchAll({ type: "window" }).then(function (cls) {
+            cls.forEach(function (c) {
+              try { c.postMessage({ type: "PUSH_SUBSCRIPTION_CHANGE" }); } catch (e) { /* noop */ }
+            });
+          });
+        }
+        return undefined;
+      }).catch(function () { /* 静默 */ })
+    );
+  });
+}
+
+// ===== v1.4-F 通知点击：聚焦/打开应用窗口 =====
+if (typeof self !== "undefined" && "notificationclick" in self) {
+  self.addEventListener("notificationclick", function (event) {
+    event.waitUntil(
+      Promise.resolve().then(function () {
+        if (!self.clients || typeof self.clients.matchAll !== "function") return undefined;
+        return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (cls) {
+          // 已有窗口则聚焦，否则打开新窗口
+          for (var i = 0; i < cls.length; i++) {
+            try { cls[i].focus(); return undefined; } catch (e) { /* 继续尝试下一个 */ }
+          }
+          return self.clients.openWindow("./");
+        });
+      }).catch(function () { /* 静默 */ })
+    );
+  });
+}
