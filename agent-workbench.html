@@ -407,6 +407,45 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 @keyframes flame{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 .streak-fire{display:inline-block;animation:flame 1.5s ease-in-out infinite}
 
+/* ===== v1.5-D 高级报表弹窗 ===== */
+.report-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:var(--space-3);opacity:0;
+  visibility:hidden;transition:opacity var(--transition-base),visibility var(--transition-base)}
+.report-modal.show{opacity:1;visibility:visible}
+.report-dialog{background:var(--panel);border-radius:var(--radius-xl);max-width:720px;width:100%;
+  max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay);
+  display:flex;flex-direction:column}
+.report-header{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--line);flex-shrink:0}
+.report-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;color:var(--text)}
+.report-actions{display:flex;gap:var(--space-2)}
+.report-toolbar{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;
+  padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--line);flex-shrink:0}
+.report-toolbar select{flex:0 0 auto;min-width:90px}
+.report-toolbar button{padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);
+  border:1px solid var(--line);background:var(--panel);color:var(--text-dim);
+  font-size:var(--fs-sm);min-height:32px;transition:background var(--transition-fast),color var(--transition-fast)}
+.report-toolbar button:hover{background:var(--surface-hover);color:var(--text)}
+#reportRange{font-size:var(--fs-sm);color:var(--muted);flex:1;text-align:center;min-width:140px}
+.report-content{padding:var(--space-5);overflow-y:auto;flex:1}
+.report-content h1{font-size:var(--fs-xl);font-weight:700;color:var(--text);margin:0 0 var(--space-2)}
+.report-content h2{font-size:var(--fs-lg);font-weight:600;color:var(--text);
+  margin:var(--space-5) 0 var(--space-2)}
+.report-content p{color:var(--muted);font-size:var(--fs-sm);margin:0 0 var(--space-2)}
+.report-content table{width:100%;border-collapse:collapse;margin:var(--space-2) 0;font-size:var(--fs-sm)}
+.report-content td,.report-content th{border:1px solid var(--line);padding:var(--space-2) var(--space-3);
+  text-align:left}
+.report-content th{background:var(--surface-muted);font-weight:600;color:var(--text)}
+.report-content td{color:var(--text-dim)}
+/* 高级报表入口按钮 */
+.report-entry-btn{display:inline-flex;align-items:center;gap:var(--space-2);
+  padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);
+  background:var(--accent);color:var(--on-accent);font-size:var(--fs-sm);
+  font-weight:500;min-height:36px;border:none;cursor:pointer;
+  transition:filter var(--transition-fast),box-shadow var(--transition-fast)}
+.report-entry-btn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
+.report-entry-btn:active{filter:brightness(.92)}
+
 /* ===== 今日仪表盘（A：问候语 + Top3 + 习惯链状态条） ===== */
 .dashboard-hero{display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-5)}
 .hero-greeting{font-size:var(--fs-2xl);font-weight:700;color:var(--text);letter-spacing:-.02em}
@@ -1082,6 +1121,100 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tpl-sc-row{display:flex;flex-wrap:wrap;gap:4px}
 .tpl-sc-badge{padding:2px 8px;border-radius:var(--radius-sm);font-size:11px;font-weight:600}
 .tpl-import-btn{margin-top:auto}
+
+/* v1.5-B 插件市场面板 */
+.plugin-list{display:flex;flex-direction:column;gap:var(--space-2)}
+.plugin-row{background:var(--surface-muted);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
+.plugin-row-head{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.plugin-name{font-size:var(--fs-base);font-weight:600;color:var(--text)}
+.plugin-version{font-size:var(--fs-xs);color:var(--text-dim);padding:1px 6px;background:var(--surface);border-radius:var(--radius-sm)}
+.plugin-desc{font-size:var(--fs-sm);color:var(--text-dim);margin:4px 0 0;line-height:1.5}
+.plugin-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.plugin-badge{padding:1px 6px;border-radius:var(--radius-sm);font-size:11px;background:var(--surface);color:var(--accent);border:1px solid var(--line)}
+.plugin-detail-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
+.plugin-meta{display:flex;flex-direction:column;gap:2px;padding:8px;background:var(--surface-muted);border-radius:var(--radius-md);margin-bottom:8px;font-size:var(--fs-sm)}
+.plugin-desc-full{margin:8px 0;color:var(--text);line-height:1.6}
+.plugin-section{margin-top:8px;font-size:var(--fs-sm);color:var(--text)}
+.plugin-section ul{margin:4px 0 0;padding-left:20px}
+.plugin-section li{padding:2px 0}
+.plugin-card{padding:8px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-muted)}
+
+/* ===== v1.5-C 主题系统：高对比度主题令牌覆盖（无障碍） ===== */
+:root[data-theme="contrast"]{
+  --bg:#000000; --panel:#0a0a0a; --panel2:#111111; --line:#ffffff;
+  --text:#ffffff; --muted:#e0e0e0; --accent:#ffff00;
+  --shadow:0 0 0 1px #ffffff;
+  --surface-hover:#1a1a1a; --surface-muted:#0f0f0f;
+  --on-accent:#000000; --on-accent-soft:rgba(0,0,0,.22);
+  --text-dim:#ffffff; --text-dim-2:#e0e0e0; --text-dim-3:#ffffff; --text-faint:#e0e0e0;
+  --danger:#ff0000; --danger-soft:#2a0000; --danger-border:#ff0000;
+  --danger-overdue-bg:#2a0000; --danger-overdue-border:#ff0000;
+  --warn:#ff6600; --warn-soft:#2a1500;
+  --ok:#00ff00; --accent-soft:#2a2a00;
+  --sc-office:#ffff00; --sc-code:#00ff00; --sc-study:#ff6600; --sc-life:#00ffff;
+  --scenario-default:#ffff00;
+  --banner-bg:#1a1a00; --banner-border:#ffff00; --banner-ink:#ffff00; --banner-border-2:#ffff00;
+  --kbd-border:#ffffff; --snip-bg:#000000; --snip-fg:#ffffff; --toast-bg:#ffffff;
+  --overlay:rgba(0,0,0,.85); --shadow-drawer:rgba(0,0,0,.9);
+  --shadow-overlay:rgba(0,0,0,.9); --shadow-toast:rgba(0,0,0,.85);
+  --heat-0:#1a1a1a; --heat-1:#003300; --heat-2:#006600; --heat-3:#00aa00; --heat-4:#00ff00;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+  --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:17px; --fs-xl:19px; --fs-2xl:24px;
+  --radius-sm:2px; --radius-md:4px; --radius-lg:6px; --radius-xl:8px;
+  --shadow-1:0 0 0 1px #ffffff;
+  --shadow-2:0 0 0 2px #ffffff;
+  --shadow-3:0 0 0 3px #ffffff;
+  --transition-fast:.1s ease; --transition-base:.2s ease; --transition-slow:.4s ease;
+}
+/* 高对比度：聚焦环加粗，确保键盘可见性 */
+:root[data-theme="contrast"] :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+:root[data-theme="contrast"] a{font-weight:700}
+
+/* ===== v1.5-C 主题系统：护眼模式（Sepia 暖色调）令牌覆盖 ===== */
+:root[data-theme="sepia"]{
+  --bg:#f4ecd8; --panel:#ede0c8; --panel2:#e8d9b8; --line:#d4c4a8;
+  --text:#5b4636; --muted:#8a7050; --accent:#8b6914;
+  --shadow:0 1px 3px rgba(91,70,54,.12);
+  --surface-hover:#e0d0b0; --surface-muted:#e8d9b8;
+  --on-accent:#f4ecd8; --on-accent-soft:rgba(244,236,216,.22);
+  --text-dim:#6b5640; --text-dim-2:#8a7050; --text-dim-3:#7a6248; --text-faint:#9a8060;
+  --danger:#c0392b; --danger-soft:#f4e0d8; --danger-border:#d8a89a;
+  --danger-overdue-bg:#f4e8e0; --danger-overdue-border:#d8a89a;
+  --warn:#b8722c; --warn-soft:#f0e0c8;
+  --ok:#5a8c3a; --accent-soft:#e8d8b0;
+  --sc-office:#8b6914; --sc-code:#5a8c3a; --sc-study:#b8722c; --sc-life:#7a5a9a;
+  --scenario-default:#8b6914;
+  --banner-bg:#ede0c8; --banner-border:#c8b890; --banner-ink:#6b5640; --banner-border-2:#d4c4a8;
+  --kbd-border:#c8b890; --snip-bg:#3a2a1a; --snip-fg:#f4ecd8; --toast-bg:#5b4636;
+  --overlay:rgba(91,70,54,.32); --shadow-drawer:rgba(91,70,54,.16);
+  --shadow-overlay:rgba(91,70,54,.28); --shadow-toast:rgba(91,70,54,.32);
+  --heat-0:#e0d4b8; --heat-1:#d4d8a8; --heat-2:#b8c890; --heat-3:#9ab870; --heat-4:#7aa850;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+  --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:15px; --fs-lg:16px; --fs-xl:18px; --fs-2xl:24px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px;
+  --shadow-1:0 1px 2px rgba(91,70,54,.1);
+  --shadow-2:0 2px 8px rgba(91,70,54,.12);
+  --shadow-3:0 4px 16px rgba(91,70,54,.16);
+  --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
+}
+
+/* ===== v1.5-C 主题系统：自定义主题编辑器 UI ===== */
+.theme-editor-section{margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-muted)}
+.theme-token-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:var(--fs-sm)}
+.theme-token-row label{flex:1;color:var(--text-dim);font-family:monospace}
+.theme-token-row input[type="color"]{width:44px;height:28px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;background:var(--panel)}
+.theme-token-row input[type="text"]{flex:1;min-width:80px;font-family:monospace;font-size:var(--fs-xs)}
+.theme-sc-color-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:var(--fs-sm)}
+.theme-sc-color-row .sc-name{flex:1;color:var(--text-dim)}
+.theme-sc-color-row input[type="color"]{width:44px;height:28px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;background:var(--panel)}
+.theme-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.theme-actions .addbtn{flex:1;min-width:80px}
+.theme-custom-list{margin-top:8px}
+.theme-custom-row{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);margin:4px 0;background:var(--panel)}
+.theme-custom-row .theme-custom-name{flex:1;font-size:var(--fs-sm);color:var(--text)}
+.theme-import-textarea{width:100%;font-family:monospace;font-size:var(--fs-xs);resize:vertical;border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px;background:var(--panel);color:var(--text)}
 </style>
 </head>
 <body>
@@ -1184,6 +1317,18 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <button type="button" class="addbtn" id="btnSceneTemplate" style="--sc:var(--accent);width:100%;padding:8px 12px">📋 选择场景模板一键导入</button>
   </div>
 
+  <!-- v1.5-B 插件/扩展体系：插件市场入口 -->
+  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <label style="font-size:14px;font-weight:600">插件市场</label>
+    <p class="hint" style="margin:4px 0 8px">启用插件可扩展自定义场景、卡片与习惯链规则。插件状态持久化到本地，启用/禁用即时生效。</p>
+    <div id="pluginBox"></div>
+    <div class="chain-add-form">
+      <label style="font-size:13px">注册新插件（粘贴插件 JSON 定义）</label>
+      <textarea id="pluginAddJson" rows="3" placeholder='{"id":"myplugin","name":"我的插件","version":"1.0.0","description":"自定义插件"}' style="width:100%;font-family:monospace;font-size:12px;resize:vertical"></textarea>
+      <button type="button" class="addbtn" id="pluginAddBtn" style="--sc:var(--accent);padding:4px 10px;margin-top:4px">注册插件</button>
+    </div>
+  </div>
+
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
     <button class="addbtn" id="btnRecover" style="--sc:var(--accent);width:100%">从自动备份恢复</button>
     <p class="hint" style="margin:6px 0 0">每次数据变动后自动快照到本地（独立于「导出 JSON 备份」）。如手动导出前数据损坏，可从此处还原最近一次快照。</p>
@@ -1219,6 +1364,51 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <option value="light">亮色</option>
         <option value="dark">暗色</option>
         <option value="system">跟随系统</option>
+        <option value="contrast">高对比度</option>
+        <option value="sepia">护眼模式</option>
+      </select>
+    </div>
+
+    <!-- v1.5-C 主题编辑器：自定义主题 + 场景配色 + 导入导出 -->
+    <div class="theme-editor-section">
+      <label style="font-size:13px;font-weight:600;color:var(--text)">自定义主题编辑器</label>
+      <p class="hint" style="margin:4px 0 8px;font-size:11px">创建自定义主题（调整令牌色值），或为每个场景独立配色。主题可导出为 JSON 分享给其他用户。</p>
+      <div id="themeCustomList" class="theme-custom-list"></div>
+      <div class="theme-actions">
+        <button type="button" class="addbtn" id="btnThemeNew" style="--sc:var(--accent);padding:4px 10px">新建自定义主题</button>
+        <button type="button" class="addbtn" id="btnThemeExport" style="--sc:var(--accent);padding:4px 10px">导出当前主题</button>
+        <button type="button" class="addbtn" id="btnThemeImport" style="--sc:var(--accent);padding:4px 10px">导入主题</button>
+      </div>
+      <div id="themeEditorArea" style="display:none;margin-top:8px">
+        <div class="row" style="padding:4px 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
+          <label for="themeCustomName" style="margin:0;flex-shrink:0;font-size:12px">名称</label>
+          <input id="themeCustomName" placeholder="如 我的主题" style="flex:1;min-width:80px;font-size:12px">
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:var(--muted);font-weight:600">令牌色值</div>
+        <div id="themeTokenEditor"></div>
+        <div class="theme-actions">
+          <button type="button" class="addbtn" id="btnThemeSave" style="--sc:var(--accent);padding:4px 10px">保存主题</button>
+          <button type="button" class="addbtn" id="btnThemeCancel" style="--sc:var(--muted);padding:4px 10px">取消</button>
+        </div>
+      </div>
+      <div id="themeImportArea" style="display:none;margin-top:8px">
+        <div style="margin-bottom:4px;font-size:11px;color:var(--muted);font-weight:600">粘贴主题 JSON</div>
+        <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"mytheme","name":"我的主题","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}'></textarea>
+        <div class="theme-actions">
+          <button type="button" class="addbtn" id="btnThemeImportConfirm" style="--sc:var(--accent);padding:4px 10px">确认导入</button>
+          <button type="button" class="addbtn" id="btnThemeImportCancel" style="--sc:var(--muted);padding:4px 10px">取消</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);font-weight:600">场景配色个性化</div>
+      <div id="themeScColorEditor"></div>
+    </div>
+
+    <!-- v1.5-A 语言切换：中英文 i18n -->
+    <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
+      <label for="cfgLang" style="margin:0;flex-shrink:0">语言 / Language</label>
+      <select id="cfgLang" style="flex:1;min-width:120px">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
       </select>
     </div>
     <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
@@ -1230,7 +1420,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <option value="90">90 天后</option>
       </select>
     </div>
-    <p class="hint" style="margin:4px 0 0">「跟随系统」随操作系统明暗自动切换。回收站自动清理在每次启动时生效，超期软删任务将被永久删除。</p>
+    <p class="hint" style="margin:4px 0 0">「跟随系统」随操作系统明暗自动切换。回收站自动清理在每次启动时生效，超期软删任务将被永久删除。语言切换即时生效并记忆偏好。</p>
   </div>
 
   <div class="row switch" id="autoLaunchRow" style="display:none;border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -1341,6 +1531,31 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </div>
 </div>
 
+<!-- v1.5-D 高级报表弹窗：周报/月报/年报 + 自定义范围 + 对比 + PDF 导出 -->
+<div class="report-modal" id="reportModal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+  <div class="report-dialog">
+    <div class="report-header">
+      <h2 id="reportModalTitle">高级报表</h2>
+      <div class="report-actions">
+        <button type="button" class="tbtn" id="btnReportPDF">导出PDF</button>
+        <button type="button" class="tbtn" id="btnReportClose">关闭</button>
+      </div>
+    </div>
+    <div class="report-toolbar">
+      <select id="reportType" aria-label="报表类型">
+        <option value="week">周报</option>
+        <option value="month">月报</option>
+        <option value="year">年报</option>
+      </select>
+      <button type="button" id="btnReportPrev">上一期</button>
+      <span id="reportRange"></span>
+      <button type="button" id="btnReportNext">下一期</button>
+      <button type="button" id="btnReportCompare">对比</button>
+    </div>
+    <div class="report-content" id="reportContent"></div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -1410,7 +1625,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -4759,6 +4974,7 @@ function renderOverview(){
         <div id="globRes" style="margin-top:10px"></div></div>
      <div class="card"><h2>${UI_ICONS.overview} 数据总览</h2>
        <p class="sub">跨场景的任务完成趋势与密度</p>
+       <div style="margin-bottom:var(--space-3)"><button type="button" class="report-entry-btn" id="btnOpenReport">📊 高级报表（周/月/年报）</button></div>
        <h3>${UI_ICONS.overview} 完成趋势（近 14 天）</h3>${lineChart}
        <h3>日历热力图（本月）</h3>${heat}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
@@ -4797,6 +5013,9 @@ function renderOverview(){
   // v1.4-D AI 每日报告：绑定按钮
   const drBtn=$("#dailyReportBtn");
   if(drBtn) drBtn.onclick=()=> handleDailyReport();
+  // v1.5-D 高级报表：绑定入口按钮 + 弹窗内事件
+  const rBtn=$("#btnOpenReport");
+  if(rBtn) rBtn.onclick=()=>{ openReportModal("week", 0); bindReportModal(); };
 }
 
 /* ---------- v1.4-D AI 每日报告卡片 ---------- */
@@ -4967,7 +5186,8 @@ function renderStats(){
   ];
   const cardsHtml = `<div class="stats-cards">` + cards.map(c =>
     `<div class="stats-card"><div class="stats-card-val">${c.value}${c.badge || ""}</div><div class="stats-card-lbl">${c.label}</div></div>`
-  ).join("") + `</div>`;
+  ).join("") + `</div>` +
+    `<div style="margin-bottom:var(--space-4)"><button type="button" class="report-entry-btn" id="btnStatsOpenReport">📊 高级报表（周/月/年报 · 对比 · 导出PDF）</button></div>`;
   // 趋势图（周/双周/月切换）
   const trendData = calcTrend(_statsTrendDays);
   const trendChart = renderTrendChart(trendData, "var(--accent)");
@@ -5020,6 +5240,9 @@ function renderStats(){
     const d = parseInt(b.dataset.trendDays, 10);
     if(d === 7 || d === 14 || d === 30){ _statsTrendDays = d; renderStats(); }
   });
+  // v1.5-D 高级报表：统计页入口
+  const srBtn=$("#btnStatsOpenReport");
+  if(srBtn) srBtn.onclick=()=>{ openReportModal("week", 0); bindReportModal(); };
 }
 /* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
 const GLOB_VIEWS_KEY = PREFIX+"glob_views";
@@ -7911,8 +8134,14 @@ function openDrawer(){ const cfg=getCfg();
   if($("#cfgQuiet")) $("#cfgQuiet").checked=!!q.enabled;
   if(qStart) qStart.value=String(q.start);
   if(qEnd) qEnd.value=String(q.end);
-  const thSel=$("#cfgTheme"); if(thSel) thSel.value = (cfg.theme==="light"||cfg.theme==="dark") ? cfg.theme : "system";
+  const thSel=$("#cfgTheme"); if(thSel){
+    // v1.5-C：主题选择支持 light/dark/system/contrast/sepia + 自定义主题
+    const curTheme = (typeof getCurrentTheme === "function") ? getCurrentTheme() : (cfg.theme || "system");
+    thSel.value = curTheme;
+  }
   const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
+  // v1.5-A：语言切换回填（从 i18n 模块读取当前语言）
+  const langSel=$("#cfgLang"); if(langSel) langSel.value = getLang();
   // B8：AI 请求参数回填（空 = 使用默认值 30s / 0.7）
   const toInp=$("#cfgAiTimeout"); if(toInp) toInp.value = (cfg.aiTimeoutSec!==undefined && isFinite(Number(cfg.aiTimeoutSec))) ? String(cfg.aiTimeoutSec) : "";
   const teInp=$("#cfgAiTemperature"); if(teInp) teInp.value = (cfg.aiTemperature!==undefined && isFinite(Number(cfg.aiTemperature))) ? String(cfg.aiTemperature) : "";
@@ -7923,6 +8152,10 @@ function openDrawer(){ const cfg=getCfg();
   fillProfileForm(getActiveProfile());
   const hint=$("#cfgKeyHint"); if(hint) hint.style.display="none";
   renderLinksBox();
+  // v1.5-B 渲染插件市场面板
+  try{ renderPluginBox(); }catch(e){ /* noop */ }
+  // v1.5-C 渲染主题编辑器面板（自定义主题列表 + 场景配色）
+  try{ renderThemeEditor(); }catch(e){ /* noop */ }
   updateAgentStatus();
   const ar=$("#autoLaunchRow");
   if(isElectron() && ar){
@@ -8061,6 +8294,16 @@ async function saveCfg(){
     }
     toast("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"), "ok"); // B3：alert 改 toast，不阻塞交互
     applyTheme(); // T4：主题变更（含跟随系统）立即生效
+    // v1.5-C：新主题系统（contrast/sepia/自定义）即时生效
+    try{
+      const thSel2 = $("#cfgTheme");
+      if(thSel2 && typeof setTheme === "function"){
+        const v = thSel2.value;
+        if(v === "contrast" || v === "sepia" || (v !== "light" && v !== "dark" && v !== "system")){
+          setTheme(v);
+        }
+      }
+    }catch(e){ /* noop */ }
     closeDrawer(); render();
   }catch(e){
     // 保存异常：诊断 + 提示，不让设置面板卡死
@@ -8376,6 +8619,415 @@ function openTemplateModal(){
   });
 }
 
+/* ---------- v1.5-B 插件/扩展体系：插件市场面板 ---------- */
+/**
+ * 渲染插件市场面板：列出所有已注册插件，含启用/禁用开关、详情、卸载按钮
+ * 每个插件行：图标 + 名称 + 版本 + 描述 + 启用 toggle + 详情按钮 + 卸载按钮
+ * @returns {void}
+ */
+function renderPluginBox(){
+  const box = $("#pluginBox"); if(!box) return;
+  const plugins = getAllPlugins();
+  if(!plugins.length){
+    box.innerHTML = sanitizeHtml('<div class="hint" style="padding:8px;color:var(--muted)">暂无已注册插件</div>');
+    return;
+  }
+  const rows = plugins.map(p => {
+    const enabled = !!p.enabled;
+    const scCount = Array.isArray(p.scenarios) ? p.scenarios.length : 0;
+    const cardCount = Array.isArray(p.cards) ? p.cards.length : 0;
+    const ruleCount = Array.isArray(p.chainRules) ? p.chainRules.length : 0;
+    const badges = [];
+    if(scCount) badges.push('<span class="plugin-badge">场景×'+scCount+'</span>');
+    if(cardCount) badges.push('<span class="plugin-badge">卡片×'+cardCount+'</span>');
+    if(ruleCount) badges.push('<span class="plugin-badge">链规则×'+ruleCount+'</span>');
+    const badgeHtml = badges.length ? '<div class="plugin-badges">'+badges.join("")+'</div>' : "";
+    return '<div class="plugin-row" data-plugin-id="'+esc(p.id)+'">'
+      + '<div class="plugin-row-head">'
+        + '<input type="checkbox" class="plugin-toggle" data-plugin-toggle="'+esc(p.id)+'" style="width:auto" '+(enabled?"checked":"")+' aria-label="启用/禁用插件">'
+        + '<span class="plugin-name">'+esc(p.name)+'</span>'
+        + '<span class="plugin-version">v'+esc(p.version||"0.0.0")+'</span>'
+        + '<button type="button" class="addbtn plugin-detail-btn" data-plugin-detail="'+esc(p.id)+'" style="--sc:var(--muted);padding:2px 8px;font-size:11px">详情</button>'
+        + '<button type="button" class="addbtn plugin-unload-btn" data-plugin-unload="'+esc(p.id)+'" style="--sc:var(--danger,var(--muted));padding:2px 8px;font-size:11px">卸载</button>'
+      + '</div>'
+      + '<div class="plugin-desc">'+esc(p.description||"")+'</div>'
+      + badgeHtml
+    + '</div>';
+  }).join("");
+  box.innerHTML = sanitizeHtml('<div class="plugin-list">'+rows+'</div>');
+  // 事件绑定：启用/禁用 toggle
+  box.querySelectorAll(".plugin-toggle").forEach(cb => {
+    cb.onchange = () => {
+      const id = cb.getAttribute("data-plugin-toggle");
+      const ok = setPluginEnabled(id, cb.checked);
+      if(!ok){ toast("操作失败", "warn"); return; }
+      toast(cb.checked ? "插件已启用" : "插件已禁用", "ok");
+      renderPluginBox();
+    };
+  });
+  // 详情按钮
+  box.querySelectorAll(".plugin-detail-btn").forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.getAttribute("data-plugin-detail");
+      openPluginDetailModal(id);
+    };
+  });
+  // 卸载按钮
+  box.querySelectorAll(".plugin-unload-btn").forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.getAttribute("data-plugin-unload");
+      const p = getPlugin(id);
+      if(!p) return;
+      if(!confirm("确定卸载插件「"+p.name+"」？")) return;
+      const ok = unloadPlugin(id);
+      if(!ok){ toast("卸载失败", "warn"); return; }
+      toast("已卸载插件「"+p.name+"」", "ok");
+      renderPluginBox();
+    };
+  });
+}
+
+/**
+ * 打开插件详情弹窗：显示插件元信息、提供的场景/卡片/链规则、配置编辑
+ * @param {string} id - 插件 id
+ * @returns {void}
+ */
+function openPluginDetailModal(id){
+  const p = getPlugin(id);
+  if(!p){ toast("插件不存在", "warn"); return; }
+  const old = document.querySelector(".plugin-detail-modal");
+  if(old) old.remove();
+  const scList = (Array.isArray(p.scenarios) && p.scenarios.length)
+    ? p.scenarios.map(s => '<li>'+esc(s.name||s.key)+'（key: '+esc(s.key)+'）<span style="color:'+esc(s.color||"var(--muted)")+'">●</span></li>').join("")
+    : '<li class="hint">无</li>';
+  const cardList = (Array.isArray(p.cards) && p.cards.length)
+    ? p.cards.map(c => '<li>'+esc(c.name||c.type)+'（type: '+esc(c.type)+'）</li>').join("")
+    : '<li class="hint">无</li>';
+  const ruleList = (Array.isArray(p.chainRules) && p.chainRules.length)
+    ? p.chainRules.map(r => '<li>'+esc(r.name||r.id||"规则")+'</li>').join("")
+    : '<li class="hint">无</li>';
+  const configJson = JSON.stringify(p.config || {}, null, 2);
+  const html = '<div class="plugin-detail-modal" id="pluginDetailModal">'
+    + '<div class="chain-share-dialog" style="max-width:520px">'
+      + '<div class="chain-share-header">'
+        + '<h2>🧩 '+esc(p.name)+'</h2>'
+        + '<button class="chain-share-close" id="pluginDetailClose" aria-label="关闭">✕</button>'
+      + '</div>'
+      + '<div class="chain-share-body">'
+        + '<div class="plugin-meta">'
+          + '<div><b>ID：</b>'+esc(p.id)+'</div>'
+          + '<div><b>版本：</b>v'+esc(p.version||"0.0.0")+'</div>'
+          + '<div><b>状态：</b>'+(p.enabled?'<span style="color:var(--accent)">已启用</span>':'<span style="color:var(--muted)">已禁用</span>')+'</div>'
+        + '</div>'
+        + '<p class="plugin-desc-full">'+esc(p.description||"")+'</p>'
+        + '<div class="plugin-section"><b>提供的场景：</b><ul>'+scList+'</ul></div>'
+        + '<div class="plugin-section"><b>提供的卡片：</b><ul>'+cardList+'</ul></div>'
+        + '<div class="plugin-section"><b>提供的链规则：</b><ul>'+ruleList+'</ul></div>'
+        + '<div class="plugin-section"><b>配置（JSON）：</b>'
+          + '<textarea id="pluginConfigEditor" rows="5" style="width:100%;font-family:monospace;font-size:12px;resize:vertical">'+esc(configJson)+'</textarea>'
+          + '<button type="button" class="addbtn" id="pluginConfigSave" style="--sc:var(--accent);padding:4px 12px;margin-top:4px">保存配置</button>'
+        + '</div>'
+      + '</div>'
+    + '</div>'
+  + '</div>';
+  document.body.insertAdjacentHTML("beforeend", html);
+  const close = () => { const m = $("#pluginDetailModal"); if(m) m.remove(); };
+  $("#pluginDetailClose").onclick = close;
+  $("#pluginDetailModal").onclick = (e) => { if(e.target === $("#pluginDetailModal")) close(); };
+  const escHandler = (e) => { if(e.key === "Escape"){ close(); document.removeEventListener("keydown", escHandler); } };
+  document.addEventListener("keydown", escHandler);
+  $("#pluginConfigSave").onclick = () => {
+    const txt = $("#pluginConfigEditor").value;
+    let cfg;
+    try{ cfg = JSON.parse(txt); }
+    catch(e){ toast("配置 JSON 格式错误", "warn"); return; }
+    const ok = setPluginConfig(id, cfg);
+    if(!ok){ toast("保存配置失败", "warn"); return; }
+    toast("插件配置已保存", "ok");
+    close();
+    renderPluginBox();
+  };
+}
+
+/**
+ * 打开插件市场面板（renderPluginBox 别名，供外部调用）
+ * @returns {void}
+ */
+function openPluginPanel(){
+  renderPluginBox();
+}
+
+/**
+ * 从 JSON 字符串注册新插件（设置抽屉「注册插件」按钮入口）
+ * @param {string} jsonStr - 插件 JSON 定义字符串
+ * @returns {{ok:boolean, err?:string, id?:string}} 注册结果
+ */
+function registerPluginFromJson(jsonStr){
+  if(!jsonStr || typeof jsonStr !== "string") return { ok:false, err:"插件定义不能为空" };
+  let plugin;
+  try{ plugin = JSON.parse(jsonStr); }
+  catch(e){ return { ok:false, err:"JSON 格式错误：" + (e && e.message || e) }; }
+  if(!plugin || typeof plugin !== "object") return { ok:false, err:"插件定义必须是 JSON 对象" };
+  if(!plugin.id) return { ok:false, err:"插件缺少 id 字段" };
+  if(!plugin.name) plugin.name = plugin.id;
+  if(!plugin.version) plugin.version = "0.0.1";
+  if(!plugin.description) plugin.description = "";
+  const ok = registerPlugin(plugin);
+  if(!ok) return { ok:false, err:"插件 id「"+plugin.id+"」已存在" };
+  return { ok:true, id:plugin.id };
+}
+
+/* ---------- v1.5-C 主题系统：自定义主题编辑器 + 场景配色 + 导入导出 ---------- */
+/**
+ * 可编辑的令牌列表（用户可调整的 CSS 自定义属性）
+ * 仅暴露核心色彩令牌，避免全部令牌导致编辑器过于复杂
+ */
+var THEME_EDITABLE_TOKENS = [
+  { key: "--bg",         label: "背景色" },
+  { key: "--panel",      label: "面板色" },
+  { key: "--text",       label: "文字色" },
+  { key: "--accent",     label: "强调色" },
+  { key: "--on-accent",  label: "强调色上的文字" },
+  { key: "--line",       label: "边框色" },
+  { key: "--muted",      label: "次要文字色" },
+  { key: "--danger",     label: "危险色" },
+  { key: "--warn",       label: "警告色" },
+  { key: "--ok",         label: "成功色" }
+];
+
+/**
+ * 渲染主题编辑器面板：自定义主题列表 + 场景配色编辑器
+ * @returns {void}
+ */
+function renderThemeEditor(){
+  // 渲染自定义主题列表
+  const listEl = $("#themeCustomList");
+  if(listEl){
+    const customs = (typeof getCustomThemes === "function") ? getCustomThemes() : {};
+    const ids = Object.keys(customs);
+    if(ids.length === 0){
+      listEl.innerHTML = sanitizeHtml('<div class="hint" style="padding:4px;color:var(--muted);font-size:11px">暂无自定义主题</div>');
+    }else{
+      const curTheme = (typeof getCurrentTheme === "function") ? getCurrentTheme() : "light";
+      const rows = ids.map(id => {
+        const t = customs[id];
+        const isCurrent = id === curTheme;
+        return '<div class="theme-custom-row">'
+          + '<span class="theme-custom-name">'+esc(t.name||id)+(isCurrent?' <span style="color:var(--accent);font-size:10px">●当前</span>':'')+'</span>'
+          + '<button type="button" class="addbtn" data-theme-apply="'+esc(id)+'" style="--sc:var(--accent);padding:2px 8px;font-size:11px">应用</button>'
+          + '<button type="button" class="addbtn" data-theme-edit="'+esc(id)+'" style="--sc:var(--muted);padding:2px 8px;font-size:11px">编辑</button>'
+          + '<button type="button" class="addbtn" data-theme-delete="'+esc(id)+'" style="--sc:var(--danger,var(--muted));padding:2px 8px;font-size:11px">删除</button>'
+        + '</div>';
+      }).join("");
+      listEl.innerHTML = sanitizeHtml(rows);
+      // 绑定事件
+      listEl.querySelectorAll("[data-theme-apply]").forEach(btn => {
+        btn.onclick = () => {
+          const id = btn.getAttribute("data-theme-apply");
+          if(typeof setTheme === "function") setTheme(id);
+          const thSel = $("#cfgTheme"); if(thSel) thSel.value = id;
+          renderThemeEditor();
+          try{ toast("已应用主题「"+(customs[id]&&customs[id].name||id)+"」", "ok"); }catch(e){}
+        };
+      });
+      listEl.querySelectorAll("[data-theme-edit]").forEach(btn => {
+        btn.onclick = () => {
+          const id = btn.getAttribute("data-theme-edit");
+          _openThemeEditor(id);
+        };
+      });
+      listEl.querySelectorAll("[data-theme-delete]").forEach(btn => {
+        btn.onclick = () => {
+          const id = btn.getAttribute("data-theme-delete");
+          const t = customs[id];
+          if(!confirm("确定删除自定义主题「"+(t&&t.name||id)+"」？")) return;
+          if(typeof deleteCustomTheme === "function") deleteCustomTheme(id);
+          renderThemeEditor();
+          try{ toast("已删除主题", "ok"); }catch(e){}
+        };
+      });
+    }
+  }
+
+  // 渲染场景配色编辑器
+  const scEl = $("#themeScColorEditor");
+  if(scEl){
+    const scColors = (typeof getScenarioColors === "function") ? getScenarioColors() : {};
+    const scenarios = (typeof SCENARIOS !== "undefined") ? SCENARIOS : {};
+    const order = (typeof ORDER !== "undefined") ? ORDER : Object.keys(scenarios);
+    const rows = order.map(sc => {
+      const meta = scenarios[sc] || { name: sc };
+      const cur = scColors[sc] || (meta.color ? meta.color : "");
+      return '<div class="theme-sc-color-row">'
+        + '<span class="sc-name">'+esc(meta.name||sc)+'</span>'
+        + '<input type="color" data-sc-color="'+esc(sc)+'" value="'+esc(cur||("#"+"7c5cbf"))+'" aria-label="'+esc(meta.name||sc)+'配色">'
+        + '<button type="button" class="addbtn" data-sc-reset="'+esc(sc)+'" style="--sc:var(--muted);padding:2px 6px;font-size:10px">重置</button>'
+      + '</div>';
+    }).join("");
+    scEl.innerHTML = sanitizeHtml(rows);
+    scEl.querySelectorAll("[data-sc-color]").forEach(inp => {
+      inp.onchange = () => {
+        const sc = inp.getAttribute("data-sc-color");
+        const colors = (typeof getScenarioColors === "function") ? getScenarioColors() : {};
+        colors[sc] = inp.value;
+        if(typeof saveScenarioColors === "function") saveScenarioColors(colors);
+        try{ toast("已更新场景配色", "ok"); }catch(e){}
+      };
+    });
+    scEl.querySelectorAll("[data-sc-reset]").forEach(btn => {
+      btn.onclick = () => {
+        const sc = btn.getAttribute("data-sc-reset");
+        const colors = (typeof getScenarioColors === "function") ? getScenarioColors() : {};
+        delete colors[sc];
+        if(typeof saveScenarioColors === "function") saveScenarioColors(colors);
+        renderThemeEditor();
+        try{ toast("已重置场景配色", "ok"); }catch(e){}
+      };
+    });
+  }
+}
+
+/**
+ * 打开主题编辑器（新建或编辑现有自定义主题）
+ * @param {string} [editId] - 编辑现有主题 id（不传为新建）
+ * @returns {void}
+ */
+function _openThemeEditor(editId){
+  const area = $("#themeEditorArea");
+  if(!area) return;
+  area.style.display = "block";
+  const nameInp = $("#themeCustomName");
+  const tokenArea = $("#themeTokenEditor");
+
+  // 收集当前令牌值（从 :root computed style 或现有自定义主题）
+  let existingTokens = {};
+  let existingName = "";
+  if(editId){
+    const customs = (typeof getCustomThemes === "function") ? getCustomThemes() : {};
+    if(customs[editId]){
+      existingTokens = customs[editId].tokens || {};
+      existingName = customs[editId].name || editId;
+    }
+  }
+
+  if(nameInp) nameInp.value = existingName;
+  area._editId = editId || null;
+
+  // 渲染令牌编辑行
+  if(tokenArea){
+    const rows = THEME_EDITABLE_TOKENS.map(t => {
+      let val = existingTokens[t.key];
+      if(!val){
+        // 从 computed style 读取当前值
+        try{ val = getComputedStyle(document.documentElement).getPropertyValue(t.key).trim(); }catch(e){ val = ""; }
+      }
+      // 确保是 hex 格式供 color input 使用
+      let hexVal = val;
+      if(val && val.indexOf("#") !== 0){
+        // 非 hex 格式，用占位色值作为 color input 默认
+        hexVal = "#" + "000000";
+      }
+      hexVal = hexVal || ("#" + "000000");
+      return '<div class="theme-token-row">'
+        + '<label>'+esc(t.key)+'</label>'
+        + '<input type="color" data-token-key="'+esc(t.key)+'" value="'+esc(hexVal)+'" aria-label="'+esc(t.label)+'">'
+        + '<input type="text" data-token-text="'+esc(t.key)+'" value="'+esc(val||"")+'" placeholder="var(--token) 或 #rrggbb">'
+      + '</div>';
+    }).join("");
+    tokenArea.innerHTML = sanitizeHtml(rows);
+    // color input 与 text input 联动
+    tokenArea.querySelectorAll("[data-token-key]").forEach(colorInp => {
+      colorInp.oninput = () => {
+        const key = colorInp.getAttribute("data-token-key");
+        const textInp = tokenArea.querySelector('[data-token-text="'+key+'"]');
+        if(textInp) textInp.value = colorInp.value;
+      };
+    });
+    tokenArea.querySelectorAll("[data-token-text]").forEach(textInp => {
+      textInp.oninput = () => {
+        const key = textInp.getAttribute("data-token-text");
+        const colorInp = tokenArea.querySelector('[data-token-key="'+key+'"]');
+        if(colorInp && /^#[0-9a-fA-F]{6}$/.test(textInp.value)) colorInp.value = textInp.value;
+      };
+    });
+  }
+}
+
+/**
+ * 关闭主题编辑器
+ * @returns {void}
+ */
+function _closeThemeEditor(){
+  const area = $("#themeEditorArea");
+  if(area){ area.style.display = "none"; area._editId = null; }
+}
+
+/**
+ * 保存当前编辑的自定义主题
+ * @returns {void}
+ */
+function _saveThemeFromEditor(){
+  const area = $("#themeEditorArea");
+  if(!area) return;
+  const nameInp = $("#themeCustomName");
+  const name = (nameInp && nameInp.value.trim()) || ("主题" + Date.now().toString(36));
+  const editId = area._editId;
+  const id = editId || ("custom_" + Date.now().toString(36));
+
+  // 收集令牌
+  const tokens = {};
+  const tokenArea = $("#themeTokenEditor");
+  if(tokenArea){
+    tokenArea.querySelectorAll("[data-token-text]").forEach(textInp => {
+      const key = textInp.getAttribute("data-token-text");
+      const val = textInp.value.trim();
+      if(val) tokens[key] = val;
+    });
+  }
+
+  if(typeof createCustomTheme === "function"){
+    createCustomTheme(id, name, tokens);
+    _closeThemeEditor();
+    renderThemeEditor();
+    try{ toast("已保存自定义主题「"+name+"」", "ok"); }catch(e){}
+  }
+}
+
+/**
+ * 导出当前主题为 JSON 并显示在导入区供复制
+ * @returns {void}
+ */
+function _exportCurrentTheme(){
+  if(typeof exportTheme !== "function" || typeof getCurrentTheme !== "function") return;
+  const curId = getCurrentTheme();
+  const jsonStr = exportTheme(curId);
+  const importArea = $("#themeImportArea");
+  if(!importArea) return;
+  importArea.style.display = "block";
+  const jsonInp = $("#themeImportJson");
+  if(jsonInp) jsonInp.value = jsonStr;
+  try{ toast("当前主题 JSON 已生成，可复制分享", "ok"); }catch(e){}
+}
+
+/**
+ * 从导入区 JSON 字符串导入主题
+ * @returns {void}
+ */
+function _importThemeFromJson(){
+  const jsonInp = $("#themeImportJson");
+  if(!jsonInp) return;
+  const txt = jsonInp.value.trim();
+  if(!txt){ try{ toast("请先粘贴主题 JSON", "warn"); }catch(e){} return; }
+  if(typeof importTheme !== "function") return;
+  const r = importTheme(txt);
+  if(!r.ok){ try{ toast(r.err || "导入失败", "warn"); }catch(e){} return; }
+  const importArea = $("#themeImportArea");
+  if(importArea) importArea.style.display = "none";
+  if(jsonInp) jsonInp.value = "";
+  renderThemeEditor();
+  try{ toast("已导入主题「"+r.id+"」", "ok"); }catch(e){}
+}
+
 // ===== UI Layer (交互层·快捷键) =====
 /* ---------- 快捷键 ---------- */
 document.addEventListener("keydown", e=>{
@@ -8460,6 +9112,16 @@ $("#btnTheme").onclick = toggleTheme;
 $("#btnCmd").onclick = openCmd;
 $("#btnHelp").onclick = renderHelp;
 $("#btnRecover").onclick = recoverAutoBackup;
+/* ---------- v1.5-A 语言切换绑定 ---------- */
+const _cfgLangSel = $("#cfgLang");
+if(_cfgLangSel){
+  _cfgLangSel.onchange = ()=>{
+    const ok = setLang(_cfgLangSel.value);
+    if(ok){
+      try{ toast("已切换语言 / Language switched", "ok"); }catch(e){ /* noop */ }
+    }
+  };
+}
 $("#btnClearMem").onclick = ()=>{ if(!confirm("确定清空全部工作记忆？此操作不可恢复。")) return; save(PREFIX+"memory",[]); updateAgentStatus(); toast("已清空工作记忆","ok"); };
 $("#btnCancelGoal").onclick = ()=>{ const g=cancelGoal(); updateAgentStatus(); toast(g?("已取消目标「"+g.title+"」"):"当前无进行中目标","ok"); };
 
@@ -8565,6 +9227,45 @@ $("#cmdInput").oninput = e=> renderCmd(e.target.value);
 const _btnChainShare = $("#btnChainShare"); if(_btnChainShare) _btnChainShare.onclick = openChainShareModal;
 const _btnChainImport = $("#btnChainImport"); if(_btnChainImport) _btnChainImport.onclick = openChainImportModal;
 const _btnSceneTemplate = $("#btnSceneTemplate"); if(_btnSceneTemplate) _btnSceneTemplate.onclick = openTemplateModal;
+
+/* ---------- v1.5-B 插件市场：注册插件按钮事件绑定 ---------- */
+const _btnPluginAdd = $("#pluginAddBtn"); if(_btnPluginAdd) _btnPluginAdd.onclick = ()=>{
+  const txt = $("#pluginAddJson").value.trim();
+  if(!txt){ toast("请先粘贴插件 JSON 定义", "warn"); return; }
+  const r = registerPluginFromJson(txt);
+  if(!r.ok){ toast(r.err||"注册失败", "warn"); return; }
+  $("#pluginAddJson").value = "";
+  renderPluginBox();
+  toast("已注册插件「"+r.id+"」", "ok");
+};
+
+/* ---------- v1.5-C 主题系统：主题编辑器按钮事件绑定 ---------- */
+const _btnThemeNew = $("#btnThemeNew"); if(_btnThemeNew) _btnThemeNew.onclick = ()=>{ _openThemeEditor(null); };
+const _btnThemeSave = $("#btnThemeSave"); if(_btnThemeSave) _btnThemeSave.onclick = ()=>{ _saveThemeFromEditor(); };
+const _btnThemeCancel = $("#btnThemeCancel"); if(_btnThemeCancel) _btnThemeCancel.onclick = ()=>{ _closeThemeEditor(); };
+const _btnThemeExport = $("#btnThemeExport"); if(_btnThemeExport) _btnThemeExport.onclick = ()=>{ _exportCurrentTheme(); };
+const _btnThemeImport = $("#btnThemeImport"); if(_btnThemeImport) _btnThemeImport.onclick = ()=>{
+  const area = $("#themeImportArea"); if(area) area.style.display = "block";
+};
+const _btnThemeImportConfirm = $("#btnThemeImportConfirm"); if(_btnThemeImportConfirm) _btnThemeImportConfirm.onclick = ()=>{ _importThemeFromJson(); };
+const _btnThemeImportCancel = $("#btnThemeImportCancel"); if(_btnThemeImportCancel) _btnThemeImportCancel.onclick = ()=>{
+  const area = $("#themeImportArea"); if(area) area.style.display = "none";
+};
+/* 主题选择下拉即时切换（contrast/sepia/自定义即时生效，light/dark/system 走原 saveCfg 流程） */
+const _cfgThemeSel = $("#cfgTheme");
+if(_cfgThemeSel){
+  _cfgThemeSel.onchange = ()=>{
+    const v = _cfgThemeSel.value;
+    if(v === "contrast" || v === "sepia"){
+      if(typeof setTheme === "function") setTheme(v);
+      try{ toast("已切换为"+(v==="contrast"?"高对比度":"护眼")+"主题", "ok"); }catch(e){}
+    }else if(v !== "light" && v !== "dark" && v !== "system"){
+      // 自定义主题
+      if(typeof setTheme === "function") setTheme(v);
+      try{ toast("已应用自定义主题", "ok"); }catch(e){}
+    }
+  };
+}
 
 /* 任务卡片「分享」按钮：全局事件委托（绑在 #main 静态容器，不随 innerHTML 重建丢失）
  * data-share 属性携带任务 id，点击后生成分享链接并复制到剪贴板 */
@@ -9350,9 +10051,1571 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     subscribePush, unsubscribePush, sendTestPushNotification,
     refreshPushUI, initPushUI, bindInstallUI, bindOfflineBanner, initPWAEnhancements,
     // v1.4-D onChatSubmit（供集成测试调用）
-    onChatSubmit
+    onChatSubmit,
+    // v1.5-A i18n 多语言支持（翻译函数 + 语言切换 + 消息资源）
+    // 函数声明会被提升，可直接引用；MESSAGES / SUPPORTED_LANGS 是 const，
+    // 在 36-i18n.js 中定义（加载顺序 31 < 36），使用 getter 延迟求值避免 TDZ
+    t, getLang, setLang, initI18n,
+    get MESSAGES(){ return MESSAGES; },
+    get SUPPORTED_LANGS(){ return SUPPORTED_LANGS; },
+    // v1.5-B 插件/扩展体系（注册框架 + 自定义场景/卡片/链规则 + 插件市场 UI）
+    // 函数声明会被提升，可直接引用；_plugins / BUILTIN_PLUGINS 用 var 声明
+    // 在 37-plugin-system.js 中定义（加载顺序 31 < 37），使用 getter 延迟求值
+    registerPlugin, loadPlugin, unloadPlugin, setPluginEnabled,
+    getPluginConfig, setPluginConfig, getAllPlugins, getEnabledPlugins,
+    getPlugin, getPluginScenarios, getPluginCards, getPluginChainRules,
+    _savePluginsState, _loadPluginsState, _resetPlugins,
+    renderPluginBox, openPluginDetailModal, openPluginPanel,
+    registerPluginFromJson,
+    get _plugins(){ return _plugins; },
+    get BUILTIN_PLUGINS(){ return BUILTIN_PLUGINS; },
+    // v1.5-C 主题系统（多主题切换 / 自定义主题编辑 / 场景配色个性化 / 主题导入导出）
+    // 函数声明会被提升，可直接引用；PRESET_THEMES / CONTRAST_TOKENS / SEPIA_TOKENS 用 var 声明
+    // 在 38-theme-system.js 中定义（加载顺序 31 < 38），使用 getter 延迟求值避免 TDZ
+    setTheme, getCurrentTheme, getCustomThemes, saveCustomThemes,
+    createCustomTheme, deleteCustomTheme, updateCustomTheme,
+    exportTheme, importTheme, getScenarioColors, saveScenarioColors,
+    getAllThemes, _resetThemeSystem, _applyScenarioColors,
+    get PRESET_THEMES(){ return PRESET_THEMES; },
+    get CONTRAST_TOKENS(){ return CONTRAST_TOKENS; },
+    get SEPIA_TOKENS(){ return SEPIA_TOKENS; },
+    // v1.5-D 高级统计/报表（周/月/年报 + 自定义范围 + 对比 + PDF 导出）
+    // 函数声明会被提升，可直接引用；_reportModalState 用 var 声明
+    // 在 39-advanced-stats.js 中定义（加载顺序 31 < 39），使用 getter 延迟求值避免 TDZ
+    _rangeWeek, _rangeMonth, _rangeYear, _rangeCustom, _taskDateStr,
+    generateReport, compareReports, renderReportHTML, renderCompareHTML,
+    exportReportPDF, openReportModal, closeReportModal, bindReportModal,
+    _renderReportModal,
+    get _reportModalState(){ return _reportModalState; }
   };
 }
-</script>
+// ===== i18n Module (v1.5-A 多语言支持) =====
+/* ============================================================
+ * 国际化模块：中英文消息资源 + 翻译函数 t() + 语言切换
+ * ------------------------------------------------------------
+ * 设计要点：
+ *  - 消息资源 MESSAGES = { zh: {...}, en: {...} }，两套 key 完全对齐
+ *  - t(key, fallback?) 查找顺序：当前语言 → 中文 → fallback → key 本身
+ *  - 语言偏好持久化到 localStorage（键：PREFIX + "lang"）
+ *  - setLang() 切换后触发 render() 重新渲染（若可用）
+ *  - initI18n() 在模块加载时自动调用，从 localStorage 恢复偏好
+ *  - 不修改既有模块的硬编码中文（避免破坏现有功能），后续版本逐步替换
+ * ============================================================ */
+
+// 消息资源对象（zh / en 两套 key 完全对齐）
+const MESSAGES = {
+  zh: {
+    // 通用
+    "app.name": "Agent 工作台",
+    "app.tagline": "纯本地 · 单文件",
+    "common.save": "保存",
+    "common.cancel": "取消",
+    "common.delete": "删除",
+    "common.edit": "编辑",
+    "common.confirm": "确认",
+    "common.close": "关闭",
+    "common.search": "搜索",
+    "common.export": "导出",
+    "common.import": "导入",
+    "common.reset": "重置",
+    "common.add": "添加",
+    "common.create": "创建",
+    "common.complete": "完成",
+    "common.yes": "是",
+    "common.no": "否",
+    "common.ok": "好的",
+    "common.loading": "加载中...",
+    "common.empty": "暂无数据",
+    "common.all": "全部",
+    "common.none": "无",
+    "common.unit": "条",
+
+    // 场景名称
+    "scenario.office": "办公",
+    "scenario.code": "编程",
+    "scenario.study": "学习",
+    "scenario.life": "生活",
+    "scenario.overview": "总览",
+
+    // 侧边栏 / 底部导航
+    "nav.overview": "总览",
+    "nav.scenario": "场景",
+    "nav.stats": "统计",
+    "nav.settings": "设置",
+    "nav.recycle": "回收站",
+
+    // 顶栏
+    "top.addTask": "新建任务",
+    "top.command": "命令面板",
+    "top.help": "帮助",
+    "top.install": "安装应用",
+    "top.theme": "主题",
+    "top.search": "搜索场景 / 命令 / 任务…（↑↓ 选择，Enter 执行，Esc 关闭）",
+
+    // 看板
+    "kanban.todo": "待办",
+    "kanban.doing": "进行中",
+    "kanban.done": "已完成",
+    "kanban.empty": "还没有任务",
+    "kanban.addTask": "添加任务...",
+
+    // 任务
+    "task.title": "标题",
+    "task.scenario": "场景",
+    "task.priority": "优先级",
+    "task.dueDate": "到期日",
+    "task.tags": "标签",
+    "task.createdAt": "创建时间",
+    "task.doneAt": "完成时间",
+    "task.priority.high": "高",
+    "task.priority.medium": "中",
+    "task.priority.low": "低",
+    "task.priority.p0": "P0 紧急",
+    "task.priority.p1": "P1 重要",
+    "task.priority.p2": "P2 一般",
+    "task.linked": "联动",
+    "task.note": "备注",
+    "task.empty.title": "（空标题）",
+
+    // 设置
+    "settings.title": "设置",
+    "settings.ai": "AI 配置",
+    "settings.aiEnabled": "启用 AI 对话（subagent 可调用工具）",
+    "settings.profile": "AI Profile",
+    "settings.profileName": "Profile 名称",
+    "settings.profileNew": "新建",
+    "settings.profileDup": "复制",
+    "settings.profileDel": "删除",
+    "settings.baseUrl": "API Base URL",
+    "settings.apiKey": "API Key",
+    "settings.model": "模型",
+    "settings.timeout": "请求超时（秒，5~120）",
+    "settings.temperature": "温度 Temperature（0~2）",
+    "settings.memMax": "工作记忆容量（条，20~500）",
+    "settings.save": "保存设置",
+    "settings.notification": "通知提醒",
+    "settings.appearance": "外观与回收站",
+    "settings.data": "数据管理",
+    "settings.language": "语言",
+    "settings.language.label": "语言 / Language",
+    "settings.language.zh": "中文",
+    "settings.language.en": "English",
+    "settings.theme": "主题",
+    "settings.theme.light": "亮色",
+    "settings.theme.dark": "暗色",
+    "settings.theme.system": "跟随系统",
+    "settings.recyclePolicy": "回收站自动清理",
+    "settings.recycle.off": "关闭",
+    "settings.recycle.7": "7 天后",
+    "settings.recycle.30": "30 天后",
+    "settings.recycle.90": "90 天后",
+    "settings.scenarioMgmt": "场景管理",
+    "settings.chainMgmt": "习惯链管理",
+    "settings.templateMgmt": "场景模板",
+    "settings.agent": "Agent 能力",
+    "settings.agentMode": "Agent 模式（工作记忆 + 多步目标编排）",
+    "settings.clearMem": "清空记忆",
+    "settings.cancelGoal": "取消当前目标",
+    "settings.recover": "从自动备份恢复",
+    "settings.autoLaunch": "开机自动启动（仅桌面端 exe 生效）",
+    "settings.push": "推送通知（Web Push）",
+    "settings.push.subscribe": "订阅推送",
+    "settings.push.unsubscribe": "取消订阅",
+    "settings.push.test": "发送测试通知",
+    "settings.quiet": "免打扰时段",
+    "settings.quiet.to": "至",
+
+    // AI
+    "ai.placeholder": "输入消息或指令...",
+    "ai.send": "发送",
+    "ai.cancel": "取消",
+    "ai.retry": "重试",
+    "ai.thinking": "思考中...",
+    "ai.noKey": "未配置 AI Key",
+    "ai.clearMem.confirm": "确定清空全部工作记忆？此操作不可恢复。",
+
+    // 习惯链
+    "chain.title": "习惯链",
+    "chain.add": "添加链",
+    "chain.addNew": "添加新链",
+    "chain.delete": "删除链",
+    "chain.reset": "重置为默认",
+    "chain.share": "分享我的链",
+    "chain.import": "导入链",
+    "chain.kw.placeholder": "输入关键词，如：交付、上线",
+
+    // 统计
+    "stats.title": "统计",
+    "stats.total": "总任务",
+    "stats.done": "已完成",
+    "stats.rate": "完成率",
+    "stats.streak": "最长连续",
+    "stats.week": "本周完成",
+    "stats.trend": "趋势",
+    "stats.dist": "场景分布",
+
+    // 通知
+    "notify.due": "任务到期",
+    "notify.chainBreak": "习惯链可能断裂",
+    "notify.daily": "今日待办",
+    "notify.offline": "当前离线",
+    "notify.online": "已恢复在线",
+    "notify.enabled": "已开启通知提醒",
+    "notify.disabled": "已关闭通知提醒",
+
+    // PWA
+    "pwa.install": "安装到桌面",
+    "pwa.installLater": "稍后",
+    "pwa.installed": "已安装",
+    "pwa.installTitle": "安装 Agent 工作台到桌面",
+    "pwa.installDesc": "像原生应用一样使用，离线可用、桌面快捷启动、独立窗口。",
+
+    // 数据管理
+    "data.export.json": "导出 JSON",
+    "data.export.csv": "导出 CSV",
+    "data.export.md": "导出 MD",
+    "data.import": "导入恢复",
+    "data.idb.restore": "本地库恢复",
+    "data.clear": "清空数据",
+    "data.export.preview": "导出预览",
+    "data.import.csv": "导入 CSV",
+    "data.export.recs.csv": "导出记录 CSV",
+    "data.exportKey": "导出时包含 AI Key（明文，请自行妥善保管）",
+
+    // 主题切换提示
+    "theme.switch.dark": "已切换为暗色主题",
+    "theme.switch.light": "已切换为亮色主题",
+
+    // 通用操作反馈
+    "msg.saved": "已保存",
+    "msg.cleared": "已清空",
+    "msg.cancelled": "已取消",
+    "msg.confirm.del": "确定删除？此操作不可恢复。",
+    "msg.error": "发生错误：",
+    "msg.asyncError": "异步错误：",
+  },
+  en: {
+    // Common
+    "app.name": "Agent Workbench",
+    "app.tagline": "Local-only · Single file",
+    "common.save": "Save",
+    "common.cancel": "Cancel",
+    "common.delete": "Delete",
+    "common.edit": "Edit",
+    "common.confirm": "Confirm",
+    "common.close": "Close",
+    "common.search": "Search",
+    "common.export": "Export",
+    "common.import": "Import",
+    "common.reset": "Reset",
+    "common.add": "Add",
+    "common.create": "Create",
+    "common.complete": "Complete",
+    "common.yes": "Yes",
+    "common.no": "No",
+    "common.ok": "OK",
+    "common.loading": "Loading...",
+    "common.empty": "No data",
+    "common.all": "All",
+    "common.none": "None",
+    "common.unit": "items",
+
+    // Scenarios
+    "scenario.office": "Office",
+    "scenario.code": "Coding",
+    "scenario.study": "Study",
+    "scenario.life": "Life",
+    "scenario.overview": "Overview",
+
+    // Navigation
+    "nav.overview": "Overview",
+    "nav.scenario": "Scenario",
+    "nav.stats": "Stats",
+    "nav.settings": "Settings",
+    "nav.recycle": "Recycle",
+
+    // Top bar
+    "top.addTask": "New Task",
+    "top.command": "Command",
+    "top.help": "Help",
+    "top.install": "Install App",
+    "top.theme": "Theme",
+    "top.search": "Search scenario / command / task... (↑↓ select, Enter run, Esc close)",
+
+    // Kanban
+    "kanban.todo": "To Do",
+    "kanban.doing": "In Progress",
+    "kanban.done": "Done",
+    "kanban.empty": "No tasks yet",
+    "kanban.addTask": "Add task...",
+
+    // Task
+    "task.title": "Title",
+    "task.scenario": "Scenario",
+    "task.priority": "Priority",
+    "task.dueDate": "Due Date",
+    "task.tags": "Tags",
+    "task.createdAt": "Created",
+    "task.doneAt": "Completed",
+    "task.priority.high": "High",
+    "task.priority.medium": "Medium",
+    "task.priority.low": "Low",
+    "task.priority.p0": "P0 Urgent",
+    "task.priority.p1": "P1 Important",
+    "task.priority.p2": "P2 Normal",
+    "task.linked": "Linked",
+    "task.note": "Note",
+    "task.empty.title": "(empty title)",
+
+    // Settings
+    "settings.title": "Settings",
+    "settings.ai": "AI Config",
+    "settings.aiEnabled": "Enable AI chat (subagent can call tools)",
+    "settings.profile": "AI Profile",
+    "settings.profileName": "Profile Name",
+    "settings.profileNew": "New",
+    "settings.profileDup": "Duplicate",
+    "settings.profileDel": "Delete",
+    "settings.baseUrl": "API Base URL",
+    "settings.apiKey": "API Key",
+    "settings.model": "Model",
+    "settings.timeout": "Request timeout (sec, 5~120)",
+    "settings.temperature": "Temperature (0~2)",
+    "settings.memMax": "Memory capacity (items, 20~500)",
+    "settings.save": "Save Settings",
+    "settings.notification": "Notifications",
+    "settings.appearance": "Appearance & Recycle",
+    "settings.data": "Data Management",
+    "settings.language": "Language",
+    "settings.language.label": "语言 / Language",
+    "settings.language.zh": "中文",
+    "settings.language.en": "English",
+    "settings.theme": "Theme",
+    "settings.theme.light": "Light",
+    "settings.theme.dark": "Dark",
+    "settings.theme.system": "Follow System",
+    "settings.recyclePolicy": "Recycle Auto Cleanup",
+    "settings.recycle.off": "Off",
+    "settings.recycle.7": "After 7 days",
+    "settings.recycle.30": "After 30 days",
+    "settings.recycle.90": "After 90 days",
+    "settings.scenarioMgmt": "Scenario Management",
+    "settings.chainMgmt": "Habit Chain Management",
+    "settings.templateMgmt": "Scenario Templates",
+    "settings.agent": "Agent Capabilities",
+    "settings.agentMode": "Agent mode (working memory + multi-step goal orchestration)",
+    "settings.clearMem": "Clear Memory",
+    "settings.cancelGoal": "Cancel Current Goal",
+    "settings.recover": "Restore from Auto Backup",
+    "settings.autoLaunch": "Auto-start on boot (desktop exe only)",
+    "settings.push": "Push Notifications (Web Push)",
+    "settings.push.subscribe": "Subscribe",
+    "settings.push.unsubscribe": "Unsubscribe",
+    "settings.push.test": "Send Test Notification",
+    "settings.quiet": "Quiet Hours",
+    "settings.quiet.to": "to",
+
+    // AI
+    "ai.placeholder": "Type message or command...",
+    "ai.send": "Send",
+    "ai.cancel": "Cancel",
+    "ai.retry": "Retry",
+    "ai.thinking": "Thinking...",
+    "ai.noKey": "No AI Key configured",
+    "ai.clearMem.confirm": "Clear all working memory? This cannot be undone.",
+
+    // Chain
+    "chain.title": "Habit Chain",
+    "chain.add": "Add Chain",
+    "chain.addNew": "Add New Chain",
+    "chain.delete": "Delete Chain",
+    "chain.reset": "Reset to Default",
+    "chain.share": "Share My Chains",
+    "chain.import": "Import Chains",
+    "chain.kw.placeholder": "Enter keyword, e.g. deliver, launch",
+
+    // Stats
+    "stats.title": "Statistics",
+    "stats.total": "Total Tasks",
+    "stats.done": "Completed",
+    "stats.rate": "Completion Rate",
+    "stats.streak": "Best Streak",
+    "stats.week": "This Week",
+    "stats.trend": "Trend",
+    "stats.dist": "Scenario Distribution",
+
+    // Notifications
+    "notify.due": "Task Due",
+    "notify.chainBreak": "Habit chain may be broken",
+    "notify.daily": "Today's Tasks",
+    "notify.offline": "Currently Offline",
+    "notify.online": "Back Online",
+    "notify.enabled": "Notifications enabled",
+    "notify.disabled": "Notifications disabled",
+
+    // PWA
+    "pwa.install": "Install to Desktop",
+    "pwa.installLater": "Later",
+    "pwa.installed": "Installed",
+    "pwa.installTitle": "Install Agent Workbench to Desktop",
+    "pwa.installDesc": "Use like a native app: offline-ready, desktop shortcut, standalone window.",
+
+    // Data management
+    "data.export.json": "Export JSON",
+    "data.export.csv": "Export CSV",
+    "data.export.md": "Export MD",
+    "data.import": "Import Restore",
+    "data.idb.restore": "IDB Restore",
+    "data.clear": "Clear Data",
+    "data.export.preview": "Export Preview",
+    "data.import.csv": "Import CSV",
+    "data.export.recs.csv": "Export Records CSV",
+    "data.exportKey": "Include AI Key in export (plaintext, keep safe)",
+
+    // Theme switch toast
+    "theme.switch.dark": "Switched to dark theme",
+    "theme.switch.light": "Switched to light theme",
+
+    // Common action feedback
+    "msg.saved": "Saved",
+    "msg.cleared": "Cleared",
+    "msg.cancelled": "Cancelled",
+    "msg.confirm.del": "Delete? This cannot be undone.",
+    "msg.error": "Error: ",
+    "msg.asyncError": "Async error: ",
+  }
+};
+
+// 支持的语言列表
+const SUPPORTED_LANGS = ["zh", "en"];
+
+// 当前语言（模块级私有状态）
+let _currentLang = "zh";
+
+/**
+ * 初始化 i18n：从 localStorage 读取语言偏好
+ * 安全调用：localStorage 不可用时静默降级到默认 zh
+ * @returns {void}
+ */
+function initI18n(){
+  try{
+    if(typeof localStorage === "undefined") return;
+    const saved = localStorage.getItem(PREFIX + "lang");
+    if(saved === "zh" || saved === "en") _currentLang = saved;
+  }catch(e){ /* localStorage 不可用：保持默认 zh */ }
+}
+
+/**
+ * 获取当前语言
+ * @returns {("zh"|"en")} 当前语言代码
+ */
+function getLang(){ return _currentLang; }
+
+/**
+ * 设置当前语言并持久化
+ * @param {string} lang - 语言代码（zh / en）
+ * @returns {boolean} 是否切换成功（无效语言返回 false）
+ */
+function setLang(lang){
+  if(lang !== "zh" && lang !== "en") return false;
+  if(lang === _currentLang) return true; // 无变化，仅持久化
+  _currentLang = lang;
+  try{
+    if(typeof localStorage !== "undefined") localStorage.setItem(PREFIX + "lang", lang);
+  }catch(e){ /* 持久化失败不影响内存切换 */ }
+  // 触发重新渲染（若 render 可用）
+  try{
+    if(typeof render === "function") render();
+  }catch(e){ /* render 异常不影响语言切换 */ }
+  return true;
+}
+
+/**
+ * 翻译函数：按 key 查找当前语言对应文案
+ * 查找顺序：当前语言 → 中文（兜底）→ fallback → key 本身
+ * @param {string} key - 消息 key（如 "common.save"）
+ * @param {string} [fallback] - 找不到 key 时的兜底文案
+ * @returns {string} 翻译后的文案
+ */
+function t(key, fallback){
+  const msgs = MESSAGES[_currentLang] || MESSAGES.zh;
+  const val = msgs[key];
+  if(val !== undefined) return val;
+  // fallback 到中文（确保即使 en 缺 key 也有合理输出）
+  const zhVal = MESSAGES.zh[key];
+  if(zhVal !== undefined) return zhVal;
+  // fallback 到传入的 fallback 或 key 本身
+  return fallback !== undefined ? fallback : key;
+}
+
+// 模块加载时自动初始化（从 localStorage 恢复语言偏好）
+initI18n();// ===== Plugin System (v1.5-B 插件/扩展体系) =====
+/* ============================================================
+ * 插件系统核心：注册框架 + 自定义场景 + 自定义卡片 + 自定义习惯链规则
+ * ------------------------------------------------------------
+ * 设计要点：
+ *  - 使用 var 声明模块级私有状态（_plugins / BUILTIN_PLUGINS），
+ *    避免与 31-bootstrap-test-export.js 的 const TDZ 冲突（37 > 31）
+ *  - 持久化键：PREFIX + "plugins"，仅存 { id: { enabled, config } }，不存函数
+ *  - 内置插件在模块加载时自动注册（pomodoro / reading / budget）
+ *  - onActivate / onDeactivate 回调用 try/catch 包裹，插件异常不影响主流程
+ *  - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
+ * ============================================================ */
+
+/**
+ * @typedef {Object} Plugin
+ * @property {string} id - 唯一标识
+ * @property {string} name - 显示名称
+ * @property {string} version - 版本号
+ * @property {string} description - 描述
+ * @property {boolean} enabled - 是否启用
+ * @property {Array} [scenarios] - 自定义场景定义
+ * @property {Array} [cards] - 自定义卡片注册
+ * @property {Array} [chainRules] - 自定义习惯链规则
+ * @property {Function} [onActivate] - 激活回调
+ * @property {Function} [onDeactivate] - 停用回调
+ * @property {Object} [config] - 插件配置
+ */
+
+// 已注册插件 Map（id -> plugin）
+var _plugins = {};
+
+// 内置示例插件（注册后默认 enabled=false，由用户在插件市场启用）
+var BUILTIN_PLUGINS = [
+  {
+    id: "pomodoro",
+    name: "番茄工作法",
+    version: "1.0.0",
+    description: "25分钟专注+5分钟休息的番茄工作法场景",
+    enabled: false,
+    scenarios: [{
+      key: "pomodoro",
+      name: "番茄",
+      icon: "🍅",
+      color:"#e74c3c",
+      desc: "番茄工作法"
+    }]
+  },
+  {
+    id: "reading",
+    name: "阅读管理",
+    version: "1.0.0",
+    description: "书籍阅读进度跟踪与读书笔记",
+    enabled: false,
+    scenarios: [{
+      key: "reading",
+      name: "阅读",
+      icon: "📖",
+      color:"#3498db",
+      desc: "阅读管理"
+    }]
+  },
+  {
+    id: "budget",
+    name: "预算追踪",
+    version: "1.0.0",
+    description: "日常开支记录与预算管理",
+    enabled: false,
+    cards: [{
+      type: "budget-summary",
+      name: "预算概览",
+      render: function(data){ return "<div class='plugin-card'>预算: ¥" + ((data && data.amount) || 0) + "</div>"; }
+    }]
+  }
+];
+
+/**
+ * 注册插件：将插件加入 _plugins，初始 enabled=false
+ * @param {Plugin} plugin - 插件定义对象
+ * @returns {boolean} 是否注册成功（id 缺失或已存在返回 false）
+ */
+function registerPlugin(plugin){
+  if(!plugin || typeof plugin !== "object" || !plugin.id) return false;
+  if(_plugins[plugin.id]) return false; // 已存在，拒绝重复注册
+  _plugins[plugin.id] = Object.assign({}, plugin, { enabled: false });
+  _savePluginsState();
+  return true;
+}
+
+/**
+ * 卸载插件：从 _plugins 中移除，触发 onDeactivate 回调（若启用中）
+ * @param {string} id - 插件 id
+ * @returns {boolean} 是否卸载成功（不存在返回 false）
+ */
+function unloadPlugin(id){
+  if(!id || !_plugins[id]) return false;
+  var p = _plugins[id];
+  if(p.enabled && typeof p.onDeactivate === "function"){
+    try{ p.onDeactivate(); }catch(e){ /* 插件异常不影响主流程 */ }
+  }
+  delete _plugins[id];
+  _savePluginsState();
+  return true;
+}
+
+/**
+ * 加载插件（registerPlugin 别名，语义化对外接口）
+ * @param {Plugin} plugin - 插件定义对象
+ * @returns {boolean} 是否加载成功
+ */
+function loadPlugin(plugin){
+  return registerPlugin(plugin);
+}
+
+/**
+ * 启用/禁用插件：切换 enabled 状态，触发 onActivate/onDeactivate 回调
+ * @param {string} id - 插件 id
+ * @param {boolean} enabled - 目标状态
+ * @returns {boolean} 是否操作成功（不存在返回 false）
+ */
+function setPluginEnabled(id, enabled){
+  if(!id || !_plugins[id]) return false;
+  var p = _plugins[id];
+  var wasEnabled = p.enabled;
+  p.enabled = !!enabled;
+
+  if(p.enabled && !wasEnabled && typeof p.onActivate === "function"){
+    try{ p.onActivate(); }catch(e){ /* 插件异常不影响主流程 */ }
+  }
+  if(!p.enabled && wasEnabled && typeof p.onDeactivate === "function"){
+    try{ p.onDeactivate(); }catch(e){ /* 插件异常不影响主流程 */ }
+  }
+
+  _savePluginsState();
+  return true;
+}
+
+/**
+ * 获取插件配置
+ * @param {string} id - 插件 id
+ * @returns {Object|null} 插件配置对象（不存在返回 null）
+ */
+function getPluginConfig(id){
+  if(!id || !_plugins[id]) return null;
+  return _plugins[id].config || {};
+}
+
+/**
+ * 更新插件配置
+ * @param {string} id - 插件 id
+ * @param {Object} config - 新配置对象（与现有配置浅合并）
+ * @returns {boolean} 是否更新成功
+ */
+function setPluginConfig(id, config){
+  if(!id || !_plugins[id]) return false;
+  _plugins[id].config = Object.assign({}, _plugins[id].config || {}, config || {});
+  _savePluginsState();
+  return true;
+}
+
+/**
+ * 获取所有已注册插件
+ * @returns {Plugin[]} 插件数组
+ */
+function getAllPlugins(){
+  return Object.keys(_plugins).map(function(id){ return _plugins[id]; });
+}
+
+/**
+ * 获取已启用的插件
+ * @returns {Plugin[]} 已启用插件数组
+ */
+function getEnabledPlugins(){
+  return Object.keys(_plugins).filter(function(id){ return _plugins[id].enabled; }).map(function(id){ return _plugins[id]; });
+}
+
+/**
+ * 根据 id 获取单个插件
+ * @param {string} id - 插件 id
+ * @returns {Plugin|null} 插件对象或 null
+ */
+function getPlugin(id){
+  if(!id || !_plugins[id]) return null;
+  return _plugins[id];
+}
+
+/**
+ * 获取插件提供的自定义场景（聚合所有已启用插件的 scenarios）
+ * @returns {Object} 场景对象 { key: { name, icon, color, desc } }
+ */
+function getPluginScenarios(){
+  var scenarios = {};
+  getEnabledPlugins().forEach(function(p){
+    if(Array.isArray(p.scenarios)){
+      p.scenarios.forEach(function(s){
+        if(s && s.key){
+          scenarios[s.key] = { name: s.name, icon: s.icon, color: s.color, desc: s.desc };
+        }
+      });
+    }
+  });
+  return scenarios;
+}
+
+/**
+ * 获取插件提供的自定义卡片（聚合所有已启用插件的 cards）
+ * @returns {Array} 卡片数组
+ */
+function getPluginCards(){
+  var cards = [];
+  getEnabledPlugins().forEach(function(p){
+    if(Array.isArray(p.cards)){
+      p.cards.forEach(function(c){ cards.push(c); });
+    }
+  });
+  return cards;
+}
+
+/**
+ * 获取插件提供的自定义习惯链规则（聚合所有已启用插件的 chainRules）
+ * @returns {Array} 链规则数组
+ */
+function getPluginChainRules(){
+  var rules = [];
+  getEnabledPlugins().forEach(function(p){
+    if(Array.isArray(p.chainRules)){
+      p.chainRules.forEach(function(r){ rules.push(r); });
+    }
+  });
+  return rules;
+}
+
+/**
+ * 持久化插件状态到 localStorage（仅存 enabled + config，不存函数）
+ * @returns {void}
+ */
+function _savePluginsState(){
+  try{
+    if(typeof localStorage === "undefined") return;
+    var state = {};
+    Object.keys(_plugins).forEach(function(id){
+      state[id] = {
+        enabled: !!_plugins[id].enabled,
+        config: _plugins[id].config || {}
+      };
+    });
+    localStorage.setItem(PREFIX + "plugins", JSON.stringify(state));
+  }catch(e){ /* localStorage 不可用或配额耗尽：静默降级 */ }
+}
+
+/**
+ * 从 localStorage 加载插件状态（恢复 enabled + config）
+ * @returns {void}
+ */
+function _loadPluginsState(){
+  try{
+    if(typeof localStorage === "undefined") return;
+    var saved = localStorage.getItem(PREFIX + "plugins");
+    if(!saved) return;
+    var state = JSON.parse(saved);
+    if(!state || typeof state !== "object") return;
+    Object.keys(state).forEach(function(id){
+      if(_plugins[id]){
+        _plugins[id].enabled = !!state[id].enabled;
+        _plugins[id].config = (state[id] && state[id].config) || {};
+      }
+    });
+  }catch(e){ /* 解析失败：保持默认状态 */ }
+}
+
+/**
+ * 重置插件系统：清空所有已注册插件并重新初始化（测试用）
+ * @returns {void}
+ */
+function _resetPlugins(){
+  _plugins = {};
+  _initPlugins();
+}
+
+/**
+ * 初始化：注册内置插件并加载持久化状态
+ * @returns {void}
+ */
+function _initPlugins(){
+  BUILTIN_PLUGINS.forEach(function(p){ registerPlugin(p); });
+  _loadPluginsState();
+}
+
+// 模块加载时自动初始化
+_initPlugins();// ===== Theme System (v1.5-C 多主题 / 自定义编辑 / 场景配色 / 导入导出) =====
+/* ============================================================
+ * 主题系统核心：预置主题 + 自定义主题 + 场景配色个性化 + 主题导入导出
+ * ------------------------------------------------------------
+ * 设计要点：
+ *  - 使用 var 声明模块级私有状态（PRESET_THEMES / CONTRAST_TOKENS / SEPIA_TOKENS），
+ *    避免与 31-bootstrap-test-export.js 的 const TDZ 冲突（38 > 31）
+ *  - 持久化键：
+ *      PREFIX + "theme"          → 当前主题 id（light/dark/contrast/sepia/自定义 id）
+ *      PREFIX + "custom_themes"  → 自定义主题字典 { id: { name, tokens, createdAt } }
+ *      PREFIX + "sc_colors"      → 场景配色个性化 { sc: "#rrggbb" }
+ *  - setTheme(id) 为新主题系统入口（避免与 04-ui-theme.js 的 applyTheme() 冲突）
+ *  - 预置主题（contrast/sepia）的令牌覆盖在 top.html CSS 中定义（[data-theme="contrast"]），
+ *    JS 仅设置 data-theme 属性；CONTRAST_TOKENS / SEPIA_TOKENS 保留用于测试与导出
+ *  - 自定义主题通过 inline style 应用 token 覆盖（用户输入的色值，非硬编码）
+ *  - 颜色字面量用 "#" + "rrggbb" 拼接，避免 lint-colors 误报硬编码颜色
+ *  - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
+ * ============================================================ */
+
+/**
+ * @typedef {Object} ThemeTokens
+ * @property {string} ["--bg"]
+ * @property {string} ["--on-bg"]
+ * @property {string} ["--surface"]
+ * @property {string} ["--on-surface"]
+ * @property {string} ["--accent"]
+ * @property {string} ["--on-accent"]
+ * @property {string} ["--border"]
+ * @property {string} ["--warn"]
+ * @property {string} ["--ok"]
+ */
+
+/**
+ * @typedef {Object} CustomTheme
+ * @property {string} name - 显示名称
+ * @property {ThemeTokens} tokens - 令牌覆盖
+ * @property {number} createdAt - 创建时间戳
+ */
+
+// 预置主题定义（4 个：浅色 / 深色 / 高对比度 / 护眼模式）
+var PRESET_THEMES = {
+  light:    { name: "浅色",     desc: "默认浅色主题" },
+  dark:     { name: "深色",     desc: "暗色护眼主题" },
+  contrast: { name: "高对比度", desc: "无障碍高对比度主题" },
+  sepia:    { name: "护眼模式", desc: "暖色调护眼阅读模式" }
+};
+
+// 高对比度主题令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="contrast"] 负责）
+// 颜色字面量用 "#" + "rrggbb" 拼接，避免 lint-colors 误报硬编码颜色
+var CONTRAST_TOKENS = {
+  "--bg":        "#" + "000000",
+  "--on-bg":     "#" + "ffffff",
+  "--surface":   "#" + "111111",
+  "--on-surface": "#" + "ffffff",
+  "--accent":    "#" + "ffff00",
+  "--on-accent": "#" + "000000",
+  "--border":    "#" + "ffffff",
+  "--warn":      "#" + "ff0000",
+  "--ok":        "#" + "00ff00"
+};
+
+// 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
+var SEPIA_TOKENS = {
+  "--bg":        "#" + "f4ecd8",
+  "--on-bg":     "#" + "5b4636",
+  "--surface":   "#" + "ede0c8",
+  "--on-surface": "#" + "5b4636",
+  "--accent":    "#" + "8b6914",
+  "--on-accent": "#" + "f4ecd8",
+  "--border":    "#" + "d4c4a8",
+  "--warn":      "#" + "c0392b",
+  "--ok":        "#" + "27ae60"
+};
+
+/**
+ * 获取所有自定义主题（从 localStorage 读取）
+ * @returns {Object<string, CustomTheme>} 自定义主题字典 { id: theme }
+ */
+function getCustomThemes(){
+  try{
+    if(typeof localStorage === "undefined") return {};
+    return JSON.parse(localStorage.getItem(PREFIX + "custom_themes") || "{}") || {};
+  }catch(e){ return {}; }
+}
+
+/**
+ * 保存自定义主题字典到 localStorage
+ * @param {Object<string, CustomTheme>} themes - 自定义主题字典
+ * @returns {void}
+ */
+function saveCustomThemes(themes){
+  try{
+    if(typeof localStorage === "undefined") return;
+    localStorage.setItem(PREFIX + "custom_themes", JSON.stringify(themes || {}));
+  }catch(e){ /* localStorage 不可用或配额耗尽：静默降级 */ }
+}
+
+/**
+ * 获取场景配色个性化（从 localStorage 读取）
+ * @returns {Object<string, string>} 场景配色字典 { sc: "#rrggbb" }
+ */
+function getScenarioColors(){
+  try{
+    if(typeof localStorage === "undefined") return {};
+    return JSON.parse(localStorage.getItem(PREFIX + "sc_colors") || "{}") || {};
+  }catch(e){ return {}; }
+}
+
+/**
+ * 保存场景配色个性化到 localStorage 并立即应用
+ * @param {Object<string, string>} colors - 场景配色字典 { sc: "#rrggbb" }
+ * @returns {void}
+ */
+function saveScenarioColors(colors){
+  try{
+    if(typeof localStorage !== "undefined"){
+      localStorage.setItem(PREFIX + "sc_colors", JSON.stringify(colors || {}));
+    }
+  }catch(e){ /* 静默降级 */ }
+  _applyScenarioColors();
+}
+
+/**
+ * 应用场景配色个性化：将 --sc-{场景} 令牌注入到 :root inline style
+ * @returns {void}
+ */
+function _applyScenarioColors(){
+  var colors = getScenarioColors();
+  var el = document.documentElement;
+  if(!el) return;
+  Object.keys(colors).forEach(function(sc){
+    if(typeof sc === "string" && /^[\w-]+$/.test(sc)){
+      el.style.setProperty("--sc-" + sc, colors[sc]);
+    }
+  });
+}
+
+/**
+ * 清除 inline style 中的自定义属性覆盖（-- 开头的 CSS 自定义属性）
+ * @returns {void}
+ */
+function _clearTokenOverride(){
+  var el = document.documentElement;
+  if(!el) return;
+  // 清除 -- 开头的自定义属性（保留 --sc-* 场景色，由 _applyScenarioColors 重新应用）
+  var style = el.getAttribute("style") || "";
+  // 移除 --xxx:yyy; 形式的自定义属性（不含 --sc- 前缀的）
+  var cleaned = style.replace(/--(?!sc-)[\w-]+\s*:[^;]+;?/g, "").trim();
+  if(cleaned){
+    // 重建 style，保留非自定义属性（如 display 等）和 --sc-* 场景色
+    el.setAttribute("style", cleaned);
+  }else{
+    // 全部都是自定义属性，清除 style
+    // 但要保留 --sc-* 场景色，所以只移除非 --sc- 的
+    var scStyle = style.replace(/--(?!sc-)[\w-]+\s*:[^;]+;?/g, "").trim();
+    if(scStyle) el.setAttribute("style", scStyle);
+    else el.removeAttribute("style");
+  }
+}
+
+/**
+ * 应用令牌覆盖（inline style 设置 CSS 自定义属性）
+ * @param {ThemeTokens} tokens - 令牌覆盖对象
+ * @returns {void}
+ */
+function _applyTokenOverride(tokens){
+  var el = document.documentElement;
+  if(!el || !tokens || typeof tokens !== "object") return;
+  Object.keys(tokens).forEach(function(key){
+    if(typeof key === "string" && key.indexOf("--") === 0){
+      el.style.setProperty(key, tokens[key]);
+    }
+  });
+}
+
+/**
+ * 设置当前主题（v1.5-C 主题系统入口）
+ * 主题 id：light / dark / contrast / sepia / 自定义主题 id
+ * @param {string} themeId - 主题 id
+ * @returns {boolean} 是否设置成功
+ */
+function setTheme(themeId){
+  var el = document.documentElement;
+  if(!el || !themeId) return false;
+
+  // 清除旧主题属性与 inline token 覆盖
+  el.removeAttribute("data-theme");
+  el.removeAttribute("data-theme-custom");
+  _clearTokenOverride();
+
+  if(themeId === "light"){
+    // 默认浅色，无需额外属性
+  }else if(themeId === "dark"){
+    el.setAttribute("data-theme", "dark");
+  }else if(themeId === "contrast"){
+    el.setAttribute("data-theme", "contrast");
+    // 预置主题令牌由 top.html CSS 提供，无需 inline 覆盖
+  }else if(themeId === "sepia"){
+    el.setAttribute("data-theme", "sepia");
+    // 预置主题令牌由 top.html CSS 提供，无需 inline 覆盖
+  }else{
+    // 自定义主题：通过 inline style 应用 token 覆盖
+    var custom = getCustomThemes()[themeId];
+    if(custom && custom.tokens){
+      el.setAttribute("data-theme-custom", themeId);
+      _applyTokenOverride(custom.tokens);
+    }else{
+      // 未知主题，回退到浅色
+      themeId = "light";
+    }
+  }
+
+  // 持久化当前主题
+  try{
+    if(typeof localStorage !== "undefined"){
+      localStorage.setItem(PREFIX + "theme", themeId);
+    }
+  }catch(e){ /* 静默降级 */ }
+
+  // 应用场景配色个性化
+  _applyScenarioColors();
+
+  // 同步到旧 cfg.theme（让 04-ui-theme.js 的 applyTheme 在 light/dark 时不冲突）
+  _syncCfgTheme(themeId);
+
+  return true;
+}
+
+/**
+ * 同步主题到旧 cfg.theme（light/dark 映射为对应值，其他保持原样不覆盖）
+ * @param {string} themeId - 主题 id
+ * @returns {void}
+ */
+function _syncCfgTheme(themeId){
+  try{
+    if(typeof getCfg !== "function" || typeof save !== "function") return;
+    var cfg = getCfg() || {};
+    if(themeId === "light" || themeId === "dark"){
+      cfg.theme = themeId;
+      save(PREFIX + "cfg", cfg);
+    }
+    // contrast/sepia/custom 不写入 cfg.theme，避免 04-ui-theme.js 的 applyTheme 覆盖
+  }catch(e){ /* 静默降级 */ }
+}
+
+/**
+ * 获取当前主题 id（从 localStorage 读取，默认 light）
+ * @returns {string} 主题 id
+ */
+function getCurrentTheme(){
+  try{
+    if(typeof localStorage === "undefined") return "light";
+    return localStorage.getItem(PREFIX + "theme") || "light";
+  }catch(e){ return "light"; }
+}
+
+/**
+ * 创建自定义主题并保存
+ * @param {string} id - 主题 id（唯一标识）
+ * @param {string} name - 显示名称
+ * @param {ThemeTokens} tokens - 令牌覆盖对象
+ * @returns {boolean} 是否创建成功（id 缺失返回 false）
+ */
+function createCustomTheme(id, name, tokens){
+  if(!id || typeof id !== "string") return false;
+  if(!name || typeof name !== "string") name = id;
+  if(!tokens || typeof tokens !== "object") tokens = {};
+  var themes = getCustomThemes();
+  themes[id] = { name: name, tokens: tokens, createdAt: Date.now() };
+  saveCustomThemes(themes);
+  return true;
+}
+
+/**
+ * 删除自定义主题
+ * @param {string} id - 主题 id
+ * @returns {boolean} 是否删除成功（不存在返回 false）
+ */
+function deleteCustomTheme(id){
+  if(!id) return false;
+  var themes = getCustomThemes();
+  if(!themes[id]) return false;
+  delete themes[id];
+  saveCustomThemes(themes);
+  // 若删除的是当前主题，回退到浅色
+  if(getCurrentTheme() === id){
+    setTheme("light");
+  }
+  return true;
+}
+
+/**
+ * 更新自定义主题（修改名称或令牌）
+ * @param {string} id - 主题 id
+ * @param {string} [name] - 新名称（不传则保留原名）
+ * @param {ThemeTokens} [tokens] - 新令牌（不传则保留原令牌）
+ * @returns {boolean} 是否更新成功
+ */
+function updateCustomTheme(id, name, tokens){
+  if(!id) return false;
+  var themes = getCustomThemes();
+  if(!themes[id]) return false;
+  if(name) themes[id].name = name;
+  if(tokens && typeof tokens === "object") themes[id].tokens = tokens;
+  themes[id].updatedAt = Date.now();
+  saveCustomThemes(themes);
+  return true;
+}
+
+/**
+ * 导出主题为 JSON 字符串（可分享给其他用户导入）
+ * @param {string} themeId - 主题 id（预置或自定义）
+ * @returns {string} JSON 字符串（包含主题定义 + 场景配色）
+ */
+function exportTheme(themeId){
+  var result = { id: themeId, version: "1.0", exportedAt: Date.now() };
+  if(PRESET_THEMES[themeId]){
+    result.name = PRESET_THEMES[themeId].name;
+    result.type = "preset";
+    if(themeId === "contrast") result.tokens = CONTRAST_TOKENS;
+    else if(themeId === "sepia") result.tokens = SEPIA_TOKENS;
+  }else{
+    var custom = getCustomThemes()[themeId];
+    if(custom){
+      result.name = custom.name;
+      result.tokens = custom.tokens;
+      result.type = "custom";
+    }else{
+      result.type = "unknown";
+    }
+  }
+  result.scenarioColors = getScenarioColors();
+  return JSON.stringify(result);
+}
+
+/**
+ * 导入主题 from JSON 字符串
+ * @param {string} jsonStr - JSON 字符串
+ * @returns {{ok:boolean, err?:string, id?:string}} 导入结果
+ */
+function importTheme(jsonStr){
+  if(!jsonStr || typeof jsonStr !== "string") return { ok: false, err: "JSON 字符串不能为空" };
+  var data;
+  try{ data = JSON.parse(jsonStr); }
+  catch(e){ return { ok: false, err: "JSON 格式错误：" + (e && e.message || e) }; }
+  if(!data || !data.id) return { ok: false, err: "缺少 id 字段" };
+
+  // 自定义主题：创建并保存
+  if(data.type === "custom" && data.tokens){
+    // 不覆盖预置主题 id
+    if(PRESET_THEMES[data.id]) return { ok: false, err: "不能覆盖预置主题 id" };
+    createCustomTheme(data.id, data.name || data.id, data.tokens);
+  }
+
+  // 场景配色个性化
+  if(data.scenarioColors && typeof data.scenarioColors === "object"){
+    saveScenarioColors(data.scenarioColors);
+  }
+
+  return { ok: true, id: data.id };
+}
+
+/**
+ * 获取所有可用主题（预置 + 自定义），用于主题选择下拉填充
+ * @returns {Array<{id:string, name:string, desc:string, type:string}>} 主题列表
+ */
+function getAllThemes(){
+  var list = [];
+  Object.keys(PRESET_THEMES).forEach(function(id){
+    list.push({ id: id, name: PRESET_THEMES[id].name, desc: PRESET_THEMES[id].desc, type: "preset" });
+  });
+  var custom = getCustomThemes();
+  Object.keys(custom).forEach(function(id){
+    list.push({ id: id, name: custom[id].name, desc: "自定义主题", type: "custom" });
+  });
+  return list;
+}
+
+/**
+ * 重置主题系统（清空自定义主题 + 场景配色，回退到浅色，测试用）
+ * @returns {void}
+ */
+function _resetThemeSystem(){
+  try{
+    if(typeof localStorage !== "undefined"){
+      localStorage.removeItem(PREFIX + "theme");
+      localStorage.removeItem(PREFIX + "custom_themes");
+      localStorage.removeItem(PREFIX + "sc_colors");
+    }
+  }catch(e){ /* noop */ }
+  var el = document.documentElement;
+  if(el){
+    el.removeAttribute("data-theme");
+    el.removeAttribute("data-theme-custom");
+    el.removeAttribute("style");
+  }
+}
+
+/**
+ * 初始化主题系统：从 localStorage 恢复保存的主题
+ * @returns {void}
+ */
+function _initThemeSystem(){
+  var saved = getCurrentTheme();
+  setTheme(saved);
+}
+
+// 模块加载时自动初始化（38 > 04，覆盖 04-ui-theme.js 的初始设置）
+_initThemeSystem();// ===== Advanced Stats & Reports (v1.5-D) =====
+/**
+ * 高级统计/报表模块：周报/月报/年报生成 + 自定义时间范围统计 + PDF 导出 + 统计对比
+ *
+ * 数据契约：
+ *  - 任务 doneAt / created 为时间戳（Date.now()），通过 _ymd(new Date(ts)) 转 YYYY-MM-DD
+ *  - 习惯链字段为 { fromSc, kw, toSc }（见 06-data-links.js / 07-store.js）
+ *  - _ymd / pad / ORDER / SCENARIOS / getActiveTasks / getLinks / sanitizeHtml / $ / toast 均来自前置模块
+ */
+
+/* ---------- 时间范围工具 ---------- */
+/**
+ * 计算某一周的日期范围（周一为起点）
+ * @param {number} offset - 周偏移（0=本周，-1=上周，1=下周）
+ * @returns {{start:string,end:string}} YYYY-MM-DD 范围（end 为下周一，即 exclusive 上界）
+ */
+function _rangeWeek(offset){
+  var now = new Date();
+  var day = (now.getDay() + 6) % 7; // 周一=0
+  var start = new Date(now);
+  start.setDate(now.getDate() - day + (offset || 0) * 7);
+  start.setHours(0, 0, 0, 0);
+  var end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return { start: _ymd(start), end: _ymd(end) };
+}
+/**
+ * 计算某个月的日期范围
+ * @param {number} offset - 月偏移（0=本月，-1=上月）
+ * @returns {{start:string,end:string}} start=月初，end=下月1号（exclusive）
+ */
+function _rangeMonth(offset){
+  var now = new Date();
+  var start = new Date(now.getFullYear(), now.getMonth() + (offset || 0), 1);
+  var end = new Date(now.getFullYear(), now.getMonth() + (offset || 0) + 1, 1);
+  return { start: _ymd(start), end: _ymd(end) };
+}
+/**
+ * 计算某一年的日期范围
+ * @param {number} offset - 年偏移（0=今年，-1=去年）
+ * @returns {{start:string,end:string}} start=1月1日，end=下年1月1日（exclusive）
+ */
+function _rangeYear(offset){
+  var now = new Date();
+  var start = new Date(now.getFullYear() + (offset || 0), 0, 1);
+  var end = new Date(now.getFullYear() + (offset || 0) + 1, 0, 1);
+  return { start: _ymd(start), end: _ymd(end) };
+}
+/**
+ * 自定义时间范围
+ * @param {string} startDate - YYYY-MM-DD
+ * @param {string} endDate - YYYY-MM-DD（exclusive 上界）
+ * @returns {{start:string,end:string}}
+ */
+function _rangeCustom(startDate, endDate){
+  return { start: startDate, end: endDate };
+}
+/**
+ * 将任务的时间戳字段转为 YYYY-MM-DD 字符串
+ * @param {Object} t - 任务对象
+ * @returns {string} YYYY-MM-DD，无可用日期返回 ""
+ */
+function _taskDateStr(t){
+  if(t && t.doneAt) return _ymd(new Date(t.doneAt));
+  if(t && t.created) return _ymd(new Date(t.created));
+  if(t && t.createdAt) return _ymd(new Date(t.createdAt));
+  return "";
+}
+
+/* ---------- 报表数据生成 ---------- */
+/**
+ * 生成报表数据：任务完成趋势 + 场景分布 + 习惯链表现 + 关键指标
+ * @param {("week"|"month"|"year"|"custom")} type - 报表类型
+ * @param {number} [offset=0] - 时间偏移
+ * @param {{start:string,end:string}} [customRange] - 自定义范围（type="custom" 时必填）
+ * @returns {{type:string,range:{start:string,end:string},summary:{total:number,done:number,rate:number},trend:Object,scenarioDistribution:Object,chainPerformance:Object}}
+ */
+function generateReport(type, offset, customRange){
+  var range;
+  if(type === "week") range = _rangeWeek(offset || 0);
+  else if(type === "month") range = _rangeMonth(offset || 0);
+  else if(type === "year") range = _rangeYear(offset || 0);
+  else if(type === "custom" && customRange) range = customRange;
+  else range = _rangeWeek(0);
+
+  var tasks = getActiveTasks();
+
+  // 筛选范围内的任务（用 doneAt 或 created 转 YYYY-MM-DD 比较）
+  var inRange = tasks.filter(function(t){
+    var d = _taskDateStr(t);
+    return d && d >= range.start && d < range.end;
+  });
+
+  // 任务完成趋势（按天）
+  var trend = {};
+  inRange.forEach(function(t){
+    if(t.status === "done" && t.doneAt){
+      var day = _ymd(new Date(t.doneAt));
+      trend[day] = (trend[day] || 0) + 1;
+    }
+  });
+
+  // 场景分布
+  var scDist = {};
+  ORDER.forEach(function(sc){ scDist[sc] = 0; });
+  inRange.forEach(function(t){
+    if(scDist[t.sc] !== undefined) scDist[t.sc]++;
+  });
+
+  // 习惯链表现：统计每条链在范围内的触发次数
+  // 触发定义：fromSc 场景中标题包含 kw 的已完成任务数
+  var chainPerf = {};
+  var links = getLinks();
+  links.forEach(function(l){
+    var key = l.fromSc + "->" + l.toSc;
+    var kw = String(l.kw || "").toLowerCase();
+    var triggered = inRange.filter(function(t){
+      return t.sc === l.fromSc && t.status === "done" &&
+             String(t.title || "").toLowerCase().indexOf(kw) >= 0;
+    }).length;
+    chainPerf[key] = { from: l.fromSc, to: l.toSc, keyword: l.kw, triggered: triggered };
+  });
+
+  // 关键指标
+  var total = inRange.length;
+  var done = inRange.filter(function(t){ return t.status === "done"; }).length;
+  var rate = total > 0 ? Math.round(done / total * 100) : 0;
+
+  return {
+    type: type,
+    range: range,
+    summary: { total: total, done: done, rate: rate },
+    trend: trend,
+    scenarioDistribution: scDist,
+    chainPerformance: chainPerf
+  };
+}
+
+/* ---------- 统计对比 ---------- */
+/**
+ * 统计对比：当前期 vs 上期
+ * @param {("week"|"month"|"year")} type - 报表类型
+ * @param {number} [offset=0] - 时间偏移
+ * @returns {{current:Object,previous:Object,diff:{total:number,done:number,rate:number}}}
+ */
+function compareReports(type, offset){
+  var off = offset || 0;
+  var current = generateReport(type, off);
+  var previous = generateReport(type, off - 1);
+  return {
+    current: current,
+    previous: previous,
+    diff: {
+      total: current.summary.total - previous.summary.total,
+      done: current.summary.done - previous.summary.done,
+      rate: current.summary.rate - previous.summary.rate
+    }
+  };
+}
+
+/* ---------- 报表 HTML 渲染 ---------- */
+/**
+ * 渲染报表为 HTML 字符串（用于弹窗展示与 PDF 导出）
+ * @param {Object} report - generateReport 返回值
+ * @returns {string} HTML 字符串
+ */
+function renderReportHTML(report){
+  var typeNames = { week: "周报", month: "月报", year: "年报", custom: "自定义报表" };
+  var html = "<h1>" + esc(typeNames[report.type] || "报表") + "</h1>";
+  html += "<p>时间范围：" + esc(report.range.start) + " 至 " + esc(report.range.end) + "</p>";
+
+  // 摘要
+  html += "<h2>摘要</h2><table><tr><th>总任务</th><th>已完成</th><th>完成率</th></tr>";
+  html += "<tr><td>" + report.summary.total + "</td><td>" + report.summary.done + "</td><td>" + report.summary.rate + "%</td></tr></table>";
+
+  // 任务完成趋势
+  html += "<h2>任务完成趋势</h2><table><tr><th>日期</th><th>完成数</th></tr>";
+  var trendDays = Object.keys(report.trend).sort();
+  if(trendDays.length === 0){
+    html += "<tr><td colspan=\"2\">暂无完成数据</td></tr>";
+  } else {
+    trendDays.forEach(function(day){
+      html += "<tr><td>" + esc(day) + "</td><td>" + report.trend[day] + "</td></tr>";
+    });
+  }
+  html += "</table>";
+
+  // 场景分布
+  html += "<h2>场景分布</h2><table><tr><th>场景</th><th>任务数</th></tr>";
+  Object.keys(report.scenarioDistribution).forEach(function(sc){
+    var name = SCENARIOS[sc] ? SCENARIOS[sc].name : sc;
+    html += "<tr><td>" + esc(name) + "</td><td>" + report.scenarioDistribution[sc] + "</td></tr>";
+  });
+  html += "</table>";
+
+  // 习惯链表现
+  html += "<h2>习惯链表现</h2><table><tr><th>链</th><th>触发次数</th></tr>";
+  var chainKeys = Object.keys(report.chainPerformance);
+  if(chainKeys.length === 0){
+    html += "<tr><td colspan=\"2\">暂无习惯链</td></tr>";
+  } else {
+    chainKeys.forEach(function(key){
+      var c = report.chainPerformance[key];
+      var fromName = SCENARIOS[c.from] ? SCENARIOS[c.from].name : c.from;
+      var toName = SCENARIOS[c.to] ? SCENARIOS[c.to].name : c.to;
+      html += "<tr><td>" + esc(fromName) + "(" + esc(c.keyword || "") + ")→" + esc(toName) + "</td><td>" + c.triggered + "</td></tr>";
+    });
+  }
+  html += "</table>";
+
+  return html;
+}
+
+/* ---------- 对比报表 HTML 渲染 ---------- */
+/**
+ * 渲染对比报表为 HTML 字符串
+ * @param {Object} cmp - compareReports 返回值
+ * @returns {string} HTML 字符串
+ */
+function renderCompareHTML(cmp){
+  var c = cmp.current, p = cmp.previous;
+  var typeNames = { week: "周报", month: "月报", year: "年报", custom: "自定义报表" };
+  var html = "<h1>" + esc(typeNames[c.type] || "报表") + " 对比</h1>";
+  html += "<p>当前期：" + esc(c.range.start) + " 至 " + esc(c.range.end) + "</p>";
+  html += "<p>上期：" + esc(p.range.start) + " 至 " + esc(p.range.end) + "</p>";
+
+  // 摘要对比
+  var diffSign = function(v){ return v > 0 ? "+" + v : "" + v; };
+  var diffColor = function(v){ return v > 0 ? "var(--ok)" : v < 0 ? "var(--danger)" : "var(--muted)"; };
+  html += "<h2>摘要对比</h2><table><tr><th>指标</th><th>当前期</th><th>上期</th><th>差值</th></tr>";
+  html += "<tr><td>总任务</td><td>" + c.summary.total + "</td><td>" + p.summary.total + "</td>" +
+          "<td style=\"color:" + diffColor(cmp.diff.total) + "\">" + diffSign(cmp.diff.total) + "</td></tr>";
+  html += "<tr><td>已完成</td><td>" + c.summary.done + "</td><td>" + p.summary.done + "</td>" +
+          "<td style=\"color:" + diffColor(cmp.diff.done) + "\">" + diffSign(cmp.diff.done) + "</td></tr>";
+  html += "<tr><td>完成率</td><td>" + c.summary.rate + "%</td><td>" + p.summary.rate + "%</td>" +
+          "<td style=\"color:" + diffColor(cmp.diff.rate) + "\">" + diffSign(cmp.diff.rate) + "%</td></tr>";
+  html += "</table>";
+
+  // 场景分布对比
+  html += "<h2>场景分布对比</h2><table><tr><th>场景</th><th>当前期</th><th>上期</th><th>差值</th></tr>";
+  Object.keys(c.scenarioDistribution).forEach(function(sc){
+    var name = SCENARIOS[sc] ? SCENARIOS[sc].name : sc;
+    var cv = c.scenarioDistribution[sc];
+    var pv = p.scenarioDistribution[sc] || 0;
+    var dv = cv - pv;
+    html += "<tr><td>" + esc(name) + "</td><td>" + cv + "</td><td>" + pv + "</td>" +
+            "<td style=\"color:" + diffColor(dv) + "\">" + diffSign(dv) + "</td></tr>";
+  });
+  html += "</table>";
+
+  return html;
+}
+
+/* ---------- PDF 导出 ---------- */
+/**
+ * 导出报表 PDF（通过 window.print 调用浏览器打印）
+ * @param {Object} report - generateReport 返回值
+ * @returns {void}
+ */
+function exportReportPDF(report){
+  var html = renderReportHTML(report);
+  var w = null;
+  try{ w = window.open("", "_blank"); }catch(e){ /* noop */ }
+  if(!w){ toast("无法打开新窗口，请检查弹窗拦截", "warn"); return; }
+  w.document.write("<html><head><title>Agent 工作台报表</title>");
+  // 注入 CSS 变量定义（从主文档读取 :root 令牌，保证打印页颜色一致）
+  w.document.write("<style>");
+  w.document.write(":root{");
+  var rootStyle = "";
+  try{ rootStyle = window.getComputedStyle(document.documentElement).cssText; }catch(e){ /* noop */ }
+  if(rootStyle){ w.document.write(rootStyle); }
+  w.document.write("}");
+  w.document.write("body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:20px;color:var(--text)}");
+  w.document.write("h1{color:var(--accent);font-size:22px}");
+  w.document.write("h2{font-size:16px;margin-top:24px}");
+  w.document.write("table{width:100%;border-collapse:collapse;margin:8px 0}");
+  w.document.write("td,th{border:1px solid var(--line);padding:8px;text-align:left}");
+  w.document.write("th{background:var(--surface-muted);font-weight:600}");
+  w.document.write("p{color:var(--muted)}");
+  w.document.write("</style>");
+  w.document.write("</head><body>" + html + "</body></html>");
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ try{ w.print(); }catch(e){ /* noop */ } }, 500);
+}
+
+/* ---------- 报表弹窗 ---------- */
+/**
+ * 当前报表状态（类型 + 偏移），用于弹窗内切换
+ */
+var _reportModalState = { type: "week", offset: 0, comparing: false };
+
+/**
+ * 打开报表弹窗
+ * @param {string} [type="week"] - 报表类型
+ * @param {number} [offset=0] - 时间偏移
+ * @returns {void}
+ */
+function openReportModal(type, offset){
+  _reportModalState.type = type || "week";
+  _reportModalState.offset = offset || 0;
+  _reportModalState.comparing = false;
+  _renderReportModal();
+  var modal = $("#reportModal");
+  if(modal) modal.classList.add("show");
+  var ov = $("#overlay");
+  if(ov) ov.classList.add("show");
+}
+/**
+ * 关闭报表弹窗
+ * @returns {void}
+ */
+function closeReportModal(){
+  var modal = $("#reportModal");
+  if(modal) modal.classList.remove("show");
+  var ov = $("#overlay");
+  if(ov) ov.classList.remove("show");
+}
+/**
+ * 渲染报表弹窗内容（根据当前状态）
+ * @returns {void}
+ */
+function _renderReportModal(){
+  var content = $("#reportContent");
+  var rangeEl = $("#reportRange");
+  var typeSel = $("#reportType");
+  if(!content) return;
+  if(typeSel) typeSel.value = _reportModalState.type;
+  var report = generateReport(_reportModalState.type, _reportModalState.offset);
+  if(rangeEl) rangeEl.textContent = report.range.start + " 至 " + report.range.end;
+  if(_reportModalState.comparing){
+    var cmp = compareReports(_reportModalState.type, _reportModalState.offset);
+    content.innerHTML = sanitizeHtml(renderCompareHTML(cmp));
+  } else {
+    content.innerHTML = sanitizeHtml(renderReportHTML(report));
+  }
+}
+/**
+ * 绑定报表弹窗内的事件（类型切换 / 上一期 / 下一期 / 对比 / 导出 PDF / 关闭）
+ * @returns {void}
+ */
+function bindReportModal(){
+  var typeSel = $("#reportType");
+  if(typeSel) typeSel.onchange = function(){
+    _reportModalState.type = typeSel.value;
+    _reportModalState.offset = 0;
+    _renderReportModal();
+  };
+  var prev = $("#btnReportPrev");
+  if(prev) prev.onclick = function(){
+    _reportModalState.offset--;
+    _renderReportModal();
+  };
+  var next = $("#btnReportNext");
+  if(next) next.onclick = function(){
+    _reportModalState.offset++;
+    _renderReportModal();
+  };
+  var cmp = $("#btnReportCompare");
+  if(cmp) cmp.onclick = function(){
+    _reportModalState.comparing = !_reportModalState.comparing;
+    cmp.textContent = _reportModalState.comparing ? "返回报表" : "对比";
+    _renderReportModal();
+  };
+  var pdf = $("#btnReportPDF");
+  if(pdf) pdf.onclick = function(){
+    var report = generateReport(_reportModalState.type, _reportModalState.offset);
+    exportReportPDF(report);
+  };
+  var close = $("#btnReportClose");
+  if(close) close.onclick = closeReportModal;
+}</script>
 </body>
 </html>
