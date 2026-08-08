@@ -7,7 +7,7 @@
  *   - 其他请求：network-first（失败回退缓存）
  * 缓存版本号变更后，activate 会清理所有非当前版本的旧缓存。
  */
-var CACHE_VERSION = "v7-20260808";
+var CACHE_VERSION = "v8-20260808";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // R15: 单个缓存条目容量上限，超过则按 FIFO 删除最旧的
