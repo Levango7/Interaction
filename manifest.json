@@ -2,7 +2,7 @@
   "id": "agent-workbench",
   "name": "Agent 工作台",
   "short_name": "工作台",
-  "description": "个人效率工具 - 任务管理、AI 辅助、间隔复习",
+  "description": "习惯链驱动的智能任务管理 PWA",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
