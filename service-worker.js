@@ -10,6 +10,9 @@
 var CACHE_VERSION = "v3-20260806";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
+// R15: 单个缓存条目容量上限，超过则按 FIFO 删除最旧的
+var MAX_CACHE_ENTRIES = 50;
+
 // 预缓存核心资源（相对路径 ./ 适配 gh-pages 子路径部署）
 var PRECACHE_URLS = [
   "./",
@@ -47,6 +50,22 @@ function isCrossOriginHttp(url, origin) {
   return (url.protocol === "https:" || url.protocol === "http:") && url.origin !== origin;
 }
 
+/**
+ * R15: 缓存容量清理——若指定 cache 条目数超过 MAX_CACHE_ENTRIES，按 FIFO 删除最旧的。
+ * Service Worker Cache API 不暴露 LRU 元数据，keys() 返回顺序近似插入顺序，故删前者。
+ * @param {Cache} cache 已打开的 Cache 实例
+ * @returns {Promise<void>}
+ */
+function trimCacheEntries(cache) {
+  return cache.keys().then(function (keys) {
+    if (keys.length <= MAX_CACHE_ENTRIES) return undefined;
+    var toRemove = keys.slice(0, keys.length - MAX_CACHE_ENTRIES);
+    return Promise.all(toRemove.map(function (req) {
+      return cache.delete(req);
+    }));
+  });
+}
+
 // ===== install：预缓存核心资源 =====
 self.addEventListener("install", function (event) {
   event.waitUntil(
@@ -59,7 +78,7 @@ self.addEventListener("install", function (event) {
   );
 });
 
-// ===== activate：清旧版本缓存 + 接管客户端 =====
+// ===== activate：清旧版本缓存 + 容量限制 + 接管客户端 =====
 self.addEventListener("activate", function (event) {
   event.waitUntil(
     caches.keys()
@@ -69,6 +88,12 @@ self.addEventListener("activate", function (event) {
           if (k !== CACHE_NAME) return caches.delete(k);
           return undefined;
         }));
+      })
+      .then(function () {
+        // R15: 容量限制——当前缓存条目超过 MAX_CACHE_ENTRIES 时删除最旧的
+        return caches.open(CACHE_NAME).then(function (cache) {
+          return trimCacheEntries(cache);
+        });
       })
       .then(function () { return self.clients.claim(); })
   );
@@ -121,7 +146,9 @@ self.addEventListener("fetch", function (event) {
       caches.match(req).then(function (cached) {
         // 后台拉取并更新缓存（不阻塞响应）
         var fetchPromise = fetch(req).then(function (resp) {
-          if (resp && (resp.status === 200 || resp.type === "opaque")) {
+          // R15: 不缓存 opaque 响应（跨域 no-cors 产物，缓存可能产生意外行为）
+          if (resp && resp.type === "opaque") return resp;
+          if (resp && resp.status === 200) {
             var copy = resp.clone();
             caches.open(CACHE_NAME).then(function (cache) {
               cache.put(req, copy).catch(function () {});
