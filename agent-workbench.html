@@ -277,7 +277,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== 图表 / 热力图 ===== */
 .chart-wrap{width:100%;overflow-x:auto}
-.heat{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--space-1);max-width:360px}
+.heat{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--space-1);max-width:360px;margin:0 auto}
 .hcell{aspect-ratio:1;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;
   font-size:10px;color:var(--text-dim-3)}
 .hcell.l0{background:var(--heat-0)}.hcell.l1{background:var(--heat-1)}.hcell.l2{background:var(--heat-2)}.hcell.l3{background:var(--heat-3)}.hcell.l4{background:var(--heat-4)}
@@ -317,7 +317,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .streak-badge.hot{background:var(--warn-soft);color:var(--warn)}
 .streak-badge.cold{background:var(--danger-soft);color:var(--danger)}
 .heatmap-wrap{margin-top:var(--space-2);overflow-x:auto;padding-bottom:var(--space-1)}
-.heatmap-svg{display:block}
+.heatmap-svg{display:block;margin:0 auto}
 .heatmap-svg .cell{stroke:var(--panel);stroke-width:1px}
 .heatmap-svg .cell.l0{fill:var(--heat-0)}.heatmap-svg .cell.l1{fill:var(--heat-1)}
 .heatmap-svg .cell.l2{fill:var(--heat-2)}.heatmap-svg .cell.l3{fill:var(--heat-3)}
@@ -333,6 +333,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .heat-fold summary::before{content:"▸ ";font-size:var(--fs-xs)}
 .heat-fold[open] summary::before{content:"▾ "}
 .heat-fold summary:hover{text-decoration:underline}
+/* ===== 完成时段分布网格 ===== */
+.hourdist{display:grid;grid-template-columns:auto repeat(3,1fr);gap:var(--space-1);max-width:420px;margin:0 auto;padding:var(--space-2) 0}
+.hourdist-head{font-size:var(--fs-xs);color:var(--muted);text-align:center;padding:var(--space-1) 0;font-weight:500}
+.hourdist-dow{font-size:var(--fs-xs);color:var(--text-dim);display:flex;align-items:center;justify-content:center;padding:var(--space-1)}
+.hourdist-cell{aspect-ratio:1;border-radius:var(--radius-sm);min-height:28px;border:1px solid var(--line)}
+.hourdist-cell.hd-l0{background:var(--heat-0)}
+.hourdist-cell.hd-l1{background:var(--heat-1)}
+.hourdist-cell.hd-l2{background:var(--heat-2)}
+.hourdist-cell.hd-l3{background:var(--heat-3)}
+.hourdist-cell.hd-l4{background:var(--heat-4)}
 .link-status{margin-top:var(--space-2)}
 .link-status .lk{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);
   border:1px solid var(--line);border-radius:var(--radius-md);margin-bottom:var(--space-2);
@@ -363,10 +373,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .stats-tab:hover{background:var(--surface-hover)}
 .stats-tab.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .stats-trend-chart{overflow-x:auto;padding-bottom:var(--space-1)}
-.stats-trend-svg{display:block;max-width:100%;height:auto}
-.stats-pie-wrap{display:flex;align-items:center;gap:var(--space-5);flex-wrap:wrap}
+.stats-trend-svg{display:block;max-width:100%;height:auto;margin:0 auto}
+.stats-pie-wrap{display:flex;align-items:center;gap:var(--space-5);flex-wrap:wrap;justify-content:center}
 .stats-pie-chart{flex-shrink:0}
-.stats-pie-svg{display:block}
+.stats-pie-svg{display:block;margin:0 auto}
 .stats-pie-empty{color:var(--muted);font-size:var(--fs-sm);padding:var(--space-5);text-align:center}
 .stats-pie-legend{display:flex;flex-direction:column;gap:var(--space-2);flex:1;min-width:180px}
 .stats-pie-legend-item{display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm)}
@@ -1100,7 +1110,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.3.2";
+const VERSION = "1.3.3";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -3318,9 +3328,9 @@ const SIDE_TOGGLE_HTML = `<button class="side-toggle" id="sideToggle" aria-label
 function renderSide(){
   const tasks = getActiveTasks();
   const totalOpen = tasks.filter(t=>t.status!=="done").length;
-  const overview = `<button class="nav-item ${active==="overview"?"active":""}" data-sc="overview" style="--sc:var(--accent)">
+  const overview = `<button class="nav-item ${active==="overview"?"active":""}" data-sc="overview" style="--sc:#4a3c8e">
     ${UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">总览</span><span class="cnt">${totalOpen}</span></button>`;
-  const statsBtn = `<button class="nav-item ${active==="stats"?"active":""}" data-sc="stats" style="--sc:var(--accent)">
+  const statsBtn = `<button class="nav-item ${active==="stats"?"active":""}" data-sc="stats" style="--sc:#038387">
     ${UI_ICONS.stats.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">统计</span><span class="cnt">${tasks.length}</span></button>`;
   const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
   const recycleBtn = `<button class="nav-item" data-recycle="1" style="--sc:var(--muted)" title="回收站（已删除任务）">
