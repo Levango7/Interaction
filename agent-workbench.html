@@ -223,7 +223,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .kcard:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .kcard.dragging{opacity:.45;transform:scale(.98);box-shadow:none}
 .kcol.drag-over{border-color:var(--accent);background:var(--accent-soft)}
-.kcard .t{font-size:var(--fs-base);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kcard .t{font-size:var(--fs-base);font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
 .kcard .m{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);line-height:1.5}
 .kcard .m.od{color:var(--danger);font-weight:600}
 .kbtns{display:flex;gap:var(--space-1);margin-top:var(--space-2);flex-wrap:wrap}
@@ -282,6 +282,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== 图表 / 热力图 ===== */
 .chart-wrap{width:100%;overflow-x:auto}
+.line-chart-svg{display:block;width:100%;max-width:560px;height:90px;margin:0 auto}
 .heat{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--space-1);max-width:360px;margin:0 auto}
 .hcell{aspect-ratio:1;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;
   font-size:10px;color:var(--text-dim-3)}
@@ -294,7 +295,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chain-graph:hover circle{transition:r .2s}
 /* P8：全局筛选控件 + 保存视图 */
 .glob-filters{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
-.glob-filters input,.glob-filters select{min-width:120px;flex:1}
+.glob-filters input,.glob-filters select{min-width:100px;flex:1}
 .glob-views{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
 .glob-view-chip{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
   background:var(--surface-muted);border-radius:var(--radius-full,var(--radius));font-size:var(--fs-xs);cursor:pointer;color:var(--text-dim)}
@@ -367,7 +368,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   background:none;border:none;cursor:pointer;padding:0}
 
 /* ===== T3.3 数据统计视图 ===== */
-.stats-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--space-3);margin-bottom:var(--space-5)}
+.stats-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-3);margin-bottom:var(--space-5)}
 .stats-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-5) var(--space-4);text-align:center;transition:box-shadow var(--transition-fast)}
 .stats-card:hover{box-shadow:var(--shadow-2)}
@@ -385,7 +386,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .stats-pie-chart{flex-shrink:0}
 .stats-pie-svg{display:block;width:180px;height:180px;margin:0 auto}
 .stats-pie-empty{color:var(--muted);font-size:var(--fs-sm);padding:var(--space-5);text-align:center}
-.stats-pie-legend{display:flex;flex-direction:column;gap:var(--space-2);flex:1;min-width:180px}
+.stats-pie-legend{display:flex;flex-direction:column;gap:var(--space-2);flex:1;min-width:180px;max-width:280px}
 .stats-pie-legend-item{display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm)}
 .stats-pie-legend-item .sw{width:12px;height:12px;border-radius:3px;flex-shrink:0}
 .stats-pie-legend-item .nm{color:var(--text)}
@@ -689,27 +690,42 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .main{max-width:1100px;margin:0 auto}
 }
 
-/* 大屏 PC >=1440px：主内容放宽，卡片间距加大 */
+/* 大屏 PC >=1440px：主内容放宽，卡片间距加大，图表尺寸同步放大 */
 @media(min-width:1440px){
   .main{max-width:1300px;margin:0 auto;padding:var(--space-6) var(--space-8)}
   .card{padding:var(--space-6);margin-bottom:var(--space-5)}
-  .kanban{gap:var(--space-5);max-width:900px;margin:0 auto}
+  .kanban{gap:var(--space-5);max-width:1100px;margin:0 auto}
   .side{width:230px}
   .topbar{padding:var(--space-3) var(--space-6)}
   .side-toggle{display:flex}
+  /* 宽屏图表尺寸放大，避免偏小 */
+  .stats-trend-svg{max-width:760px}
+  .stats-pie-svg{width:200px;height:200px}
+  .hourdist{max-width:520px}
+  .health-trend,.health-sleep-bar,.health-water-bar{max-width:380px}
+  .chain-graph{max-width:960px}
+  .heatmap-svg{max-width:480px}
+  .line-chart-svg{max-width:720px}
 }
 
-/* 超宽屏 >=1920px：内容居中，避免过宽（更宽屏允许更宽内容） */
+/* 超宽屏 >=1920px：内容居中，避免过宽（更宽屏允许更宽内容）；抽屉/面板/弹窗同步放宽 */
 @media(min-width:1920px){
   .main{max-width:1500px;margin:0 auto}
   .side{width:240px}
+  .drawer{width:420px}
+  .cmd{width:640px}
+  .help-card{max-width:720px}
+  .recycle-modal{max-width:800px}
 }
 
-/* 概览页栅格：PC 宽屏（>=1024px）启用 2 列布局，全局搜索卡片与页脚跨满宽 */
+/* 概览页栅格：PC 宽屏（>=1024px）启用 2 列布局，全局搜索/AI 教练卡片/页脚跨满宽 */
 @media(min-width:1024px){
   .overview-grid{grid-template-columns:1fr 1fr}
   .overview-grid > .card:first-child{grid-column:1/-1}
+  .overview-grid > .coach-card{grid-column:1/-1}
   .overview-grid > .foot{grid-column:1/-1}
+  /* 2 列布局下热力图放宽，避免偏小 */
+  .heat{max-width:420px}
 }
 
 /* 移动端 <768px：底部导航触摸友好，表单全宽，看板单列 */
@@ -890,7 +906,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .empty-action .kbd{margin:0 2px}
 
 /* ===== v1.3.4-C 生活场景·健康概览卡片 ===== */
-.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--space-3);margin-bottom:var(--space-4)}
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-3);margin-bottom:var(--space-4)}
 .health-item{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;transition:box-shadow var(--transition-fast)}
 .health-item:hover{box-shadow:var(--shadow-1)}
 .health-val{font-size:var(--fs-xl);font-weight:600;color:var(--text);line-height:1.2}
@@ -907,6 +923,165 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .health-water-bar{height:12px;background:var(--surface-muted);border-radius:var(--radius-full,var(--radius-sm));overflow:hidden;max-width:300px;margin:0 auto}
 .health-water-fill{height:100%;background:var(--accent);border-radius:var(--radius-full,var(--radius-sm));transition:width .3s ease}
 .health-water-fill.done{background:var(--ok)}
+
+/* ===== v1.4-F PWA 增强：离线指示器 / 安装弹窗 / Push 订阅 UI ===== */
+/* 离线指示横幅：固定在顶栏下方，离线时显示警告色（用 --warn 系令牌） */
+.offline-banner{
+  display:none;align-items:center;gap:var(--space-2);
+  padding:var(--space-2) var(--space-5);
+  background:var(--warn-soft);border-bottom:1px solid var(--warn);
+  color:var(--warn);font-size:var(--fs-sm);font-weight:500;
+  flex-shrink:0
+}
+.offline-banner.show{display:flex}
+.offline-banner .ic{
+  width:18px;height:18px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center
+}
+.offline-banner .ic svg{width:18px;height:18px}
+.offline-banner .msg{flex:1;line-height:1.5}
+.offline-banner .retry{
+  margin-left:auto;font-size:var(--fs-xs);padding:var(--space-1) var(--space-3);
+  border-radius:var(--radius-sm);background:var(--warn);color:var(--on-accent);
+  border:none;cursor:pointer;min-height:32px;
+  transition:filter var(--transition-fast)
+}
+.offline-banner .retry:hover{filter:brightness(.96)}
+.offline-banner .retry:disabled{opacity:.5;cursor:not-allowed}
+
+/* 顶栏安装按钮：仅未安装时显示（display:none 默认；JS 检测后置 display:inline-flex） */
+.tbtn.install-btn{display:none}
+.tbtn.install-btn.show{display:inline-flex}
+
+/* 自定义安装弹窗（替代浏览器默认安装提示） */
+.install-modal{
+  position:fixed;inset:0;background:var(--overlay);
+  display:none;align-items:center;justify-content:center;z-index:90;padding:var(--space-4)
+}
+.install-modal.show{display:flex}
+.install-card{
+  background:var(--panel);border-radius:var(--radius-xl);padding:var(--space-6);
+  max-width:420px;width:100%;box-shadow:0 8px 32px var(--shadow-overlay);
+  display:flex;flex-direction:column;gap:var(--space-3)
+}
+.install-card .ic{
+  width:56px;height:56px;border-radius:var(--radius-lg);
+  background:linear-gradient(135deg,var(--accent),var(--sc-life));
+  display:flex;align-items:center;justify-content:center;color:var(--on-accent);
+  font-size:24px;font-weight:700;margin:0 auto
+}
+.install-card h3{
+  margin:0;text-align:center;font-size:var(--fs-lg);font-weight:600;
+  letter-spacing:-.01em;color:var(--text)
+}
+.install-card .desc{
+  margin:0;text-align:center;font-size:var(--fs-sm);color:var(--muted);line-height:1.6
+}
+.install-card .features{
+  list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-2)
+}
+.install-card .features li{
+  display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);color:var(--text-dim)
+}
+.install-card .features li .check{
+  width:18px;height:18px;border-radius:50%;background:var(--ok);color:var(--on-accent);
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px
+}
+.install-card .actions{
+  display:flex;gap:var(--space-3);justify-content:center;margin-top:var(--space-3)
+}
+.install-card .btn-install{
+  padding:10px var(--space-6);border-radius:var(--radius-md);background:var(--accent);
+  color:var(--on-accent);font-weight:600;font-size:var(--fs-base);border:none;cursor:pointer;
+  min-height:44px;flex:1;transition:filter var(--transition-fast),box-shadow var(--transition-fast)
+}
+.install-card .btn-install:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
+.install-card .btn-install:disabled{opacity:.5;cursor:not-allowed}
+.install-card .btn-later{
+  padding:10px var(--space-5);border-radius:var(--radius-md);background:var(--panel2);
+  border:1px solid var(--line);color:var(--text-dim);font-size:var(--fs-base);cursor:pointer;
+  min-height:44px;transition:background var(--transition-fast),color var(--transition-fast)
+}
+.install-card .btn-later:hover{background:var(--surface-hover);color:var(--text)}
+
+/* Push 订阅开关行（设置抽屉内） */
+.push-row{
+  border-top:1px solid var(--line);padding-top:var(--space-3);margin-top:var(--space-2)
+}
+.push-row .push-head{
+  display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2)
+}
+.push-row .push-head label{font-size:14px;font-weight:600;margin:0;flex:1}
+.push-row .push-status{
+  font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin-bottom:var(--space-2)
+}
+.push-row .push-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.push-row .push-actions button{
+  padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);
+  font-size:var(--fs-sm);border:1px solid var(--line);background:var(--panel);
+  color:var(--text-dim);cursor:pointer;min-height:36px;
+  transition:background var(--transition-fast),color var(--transition-fast)
+}
+.push-row .push-actions button:hover{background:var(--surface-hover);color:var(--text)}
+.push-row .push-actions button.active{
+  background:var(--accent);color:var(--on-accent);border-color:var(--accent)
+}
+.push-row .push-actions button:disabled{opacity:.5;cursor:not-allowed}
+
+/* ===== v1.4-E 协作/分享：分享任务卡片 + 习惯链分享弹窗 + 场景模板弹窗 ===== */
+/* 只读分享任务卡片 */
+.share-task-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
+.share-task-dialog{background:var(--panel);border-radius:var(--radius-lg);max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
+.share-task-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
+.share-task-header h2{margin:0;font-size:var(--fs-lg);color:var(--text)}
+.share-task-close{background:none;border:0;font-size:20px;cursor:pointer;color:var(--text-dim);padding:4px 8px;border-radius:var(--radius-sm)}
+.share-task-close:hover{color:var(--text);background:var(--surface-hover)}
+.share-task-body{padding:var(--space-4)}
+.share-task-card{display:flex;flex-direction:column;gap:var(--space-2)}
+.share-sc-badge{display:inline-block;padding:4px 12px;border-radius:var(--radius-sm);font-size:var(--fs-sm);font-weight:600;align-self:flex-start}
+.share-title{margin:0;font-size:var(--fs-lg);color:var(--text);line-height:1.4}
+.share-meta{background:var(--surface-muted);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
+.share-meta-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:var(--fs-sm)}
+.share-meta-row+.share-meta-row{border-top:1px solid var(--line)}
+.share-meta-label{color:var(--text-dim);font-weight:500}
+.share-meta-val{color:var(--text);display:flex;align-items:center;gap:4px}
+.share-meta-val .pri{padding:1px 6px;border-radius:var(--radius-sm);font-size:11px;font-weight:700}
+.share-meta-val .pri.P0{background:var(--danger);color:var(--on-accent)}
+.share-meta-val .pri.P1{background:var(--warn);color:var(--on-accent)}
+.share-meta-val .pri.P2{background:var(--accent);color:var(--on-accent)}
+.share-meta-val .due{color:var(--text)}
+.share-tags{display:flex;flex-wrap:wrap;gap:4px}
+.share-tags .tag{background:var(--surface-muted);color:var(--text-dim);padding:2px 8px;border-radius:var(--radius-sm);font-size:11px}
+.share-note{background:var(--surface-muted);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);font-size:var(--fs-sm);color:var(--text);white-space:pre-wrap;word-break:break-word}
+.share-readonly-hint{color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-2);border-top:1px dashed var(--line);margin-top:var(--space-1)}
+
+/* 习惯链分享/导入弹窗（复用 .chain-share-* 类） */
+.chain-share-modal,.chain-import-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
+.chain-share-dialog{background:var(--panel);border-radius:var(--radius-lg);max-width:520px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
+.chain-share-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
+.chain-share-header h2{margin:0;font-size:var(--fs-lg);color:var(--text)}
+.chain-share-close{background:none;border:0;font-size:20px;cursor:pointer;color:var(--text-dim);padding:4px 8px;border-radius:var(--radius-sm)}
+.chain-share-close:hover{color:var(--text);background:var(--surface-hover)}
+.chain-share-body{padding:var(--space-4)}
+.chain-preview-row{padding:4px 0;font-size:var(--fs-sm);color:var(--text)}
+.chain-preview-row b{color:var(--accent)}
+
+/* 场景模板弹窗 */
+.scene-template-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
+.scene-template-dialog{background:var(--panel);border-radius:var(--radius-lg);max-width:680px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
+.scene-template-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+.scene-template-header h2{margin:0;font-size:var(--fs-lg);color:var(--text)}
+.scene-template-close{background:none;border:0;font-size:20px;cursor:pointer;color:var(--text-dim);padding:4px 8px;border-radius:var(--radius-sm)}
+.scene-template-close:hover{color:var(--text);background:var(--surface-hover)}
+.scene-template-body{padding:var(--space-4);display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-3)}
+.tpl-card{background:var(--surface-muted);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-1)}
+.tpl-card-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
+.tpl-card-head h3{margin:0;font-size:var(--fs-md);color:var(--text)}
+.tpl-task-count{font-size:var(--fs-sm);color:var(--text-dim);white-space:nowrap}
+.tpl-desc{margin:0;font-size:var(--fs-sm);color:var(--text-dim);line-height:1.5}
+.tpl-sc-row{display:flex;flex-wrap:wrap;gap:4px}
+.tpl-sc-badge{padding:2px 8px;border-radius:var(--radius-sm);font-size:11px;font-weight:600}
+.tpl-import-btn{margin-top:auto}
 </style>
 </head>
 <body>
@@ -914,6 +1089,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="topbar">
     <div class="logo"><span class="mark">A</span> Agent 工作台</div>
     <div class="spacer"></div>
+    <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl">安装</span></button>
     <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl">指南</span></button>
     <button class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
@@ -928,6 +1105,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="banner" id="banner" role="status" aria-live="polite">
     <span id="bannerText"></span>
     <button id="bannerExport">去导出备份</button>
+  </div>
+
+  <!-- v1.4-F 离线指示横幅：网络断开时显示，恢复后自动隐藏 -->
+  <div class="offline-banner" id="offlineBanner" role="status" aria-live="polite">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M16.72 11.78A5 5 0 0 1 19 13M5 12.55a11 11 0 0 1 5-2.36M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01M2 8.82a15 15 0 0 1 4.17-2.65M19.83 5.35A15 15 0 0 1 22 8.82"/></svg></span>
+    <span class="msg" id="offlineMsg">当前离线，数据已保存到本地，恢复网络后将自动同步</span>
+    <button class="retry" id="btnRetrySync" disabled>同步中…</button>
   </div>
 
   <div class="body">
@@ -988,6 +1172,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="chain-reset-row">
       <button type="button" class="addbtn" id="chainResetBtn" style="--sc:var(--muted);padding:6px 10px;font-size:12px">重置为默认</button>
     </div>
+    <div class="chain-reset-row" style="display:flex;gap:6px;flex-wrap:wrap">
+      <button type="button" class="addbtn" id="btnChainShare" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px">🔗 分享我的链</button>
+      <button type="button" class="addbtn" id="btnChainImport" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px">📥 导入链</button>
+    </div>
+  </div>
+
+  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <label style="font-size:14px;font-weight:600">场景模板</label>
+    <p class="hint" style="margin:4px 0 8px">一键导入预置任务集（考研复习 / 健身计划 / 编程学习 / 项目管理 / 习惯养成），到期日按今天 + 偏移自动计算。</p>
+    <button type="button" class="addbtn" id="btnSceneTemplate" style="--sc:var(--accent);width:100%;padding:8px 12px">📋 选择场景模板一键导入</button>
   </div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -1005,6 +1199,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" class="addbtn" id="btnIdbRestore" aria-label="从本地库恢复" style="--sc:var(--accent);flex:1;min-width:90px">本地库恢复</button>
       <button type="button" class="addbtn danger" id="btnClear" aria-label="清空数据" style="--sc:var(--danger,var(--muted));flex:1;min-width:90px">清空数据</button>
     </div>
+    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+      <button type="button" class="addbtn" id="btnExportPreview" aria-label="导出预览" style="--sc:var(--accent);flex:1;min-width:90px">导出预览</button>
+      <button type="button" class="addbtn" id="btnImportCSV" aria-label="导入 CSV" style="--sc:var(--accent);flex:1;min-width:90px">导入 CSV</button>
+      <button type="button" class="addbtn" id="btnExportRecsCSV" aria-label="导出记录 CSV" style="--sc:var(--accent);flex:1;min-width:90px">导出记录 CSV</button>
+    </div>
+    <input type="file" id="csvFileInput" accept=".csv" style="display:none">
     <label class="expkey" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);margin:8px 0 0">
       <input type="checkbox" id="exportKeyOpt">
       <span>导出时包含 AI Key（明文，请自行妥善保管）</span>
@@ -1055,6 +1255,21 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <p class="hint" style="margin:4px 0 8px">免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。</p>
   </div>
 
+  <!-- v1.4-F Web Push 订阅框架：订阅/取消订阅 + 状态显示 -->
+  <div class="row push-row" id="pushRow">
+    <div class="push-head">
+      <label for="cfgPush">推送通知（Web Push）</label>
+      <input type="checkbox" id="cfgPush" style="width:auto">
+    </div>
+    <p class="push-status" id="pushStatus">未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。</p>
+    <div class="push-actions">
+      <button type="button" id="btnPushSubscribe">订阅推送</button>
+      <button type="button" id="btnPushUnsubscribe" disabled>取消订阅</button>
+      <button type="button" id="btnPushTest" disabled>发送测试通知</button>
+    </div>
+    <p class="hint" style="margin:6px 0 0;font-size:11px">⚠ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。</p>
+  </div>
+
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
     <label style="font-size:14px;font-weight:600">Agent 能力</label>
     <div class="row switch" style="padding:4px 0 0;border:0;margin:0">
@@ -1074,10 +1289,56 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 </div>
 
 <div id="toasts" role="status" aria-live="polite"></div>
+
+<!-- v1.4-C 导出预览弹窗：数据概览 + 字段选择 -->
+<div class="overlay" id="exportPreviewOverlay"></div>
+<div class="cmd" id="exportPreviewModal" role="dialog" aria-modal="true" aria-labelledby="exportPreviewTitle" style="max-width:520px;padding:20px">
+  <h3 id="exportPreviewTitle" style="margin:0 0 12px;font-size:16px">导出预览</h3>
+  <div id="exportPreviewSummary" style="margin-bottom:12px"></div>
+  <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text)">选择导出字段</div>
+  <div id="csvExportFields" style="margin-bottom:12px;border:1px solid var(--line);padding:8px;border-radius:4px"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button type="button" class="addbtn" id="btnExportPreviewConfirm" style="--sc:var(--accent);padding:6px 16px">导出 CSV</button>
+    <button type="button" class="addbtn" id="btnExportPreviewCancel" style="--sc:var(--muted);padding:6px 16px">取消</button>
+  </div>
+</div>
+
+<!-- v1.4-C CSV 导入预览弹窗：前 5 条预览 + 确认导入 -->
+<div class="overlay" id="csvImportOverlay"></div>
+<div class="cmd" id="csvImportModal" role="dialog" aria-modal="true" aria-labelledby="csvImportTitle" style="max-width:520px;padding:20px">
+  <h3 id="csvImportTitle" style="margin:0 0 12px;font-size:16px;color:var(--text)">CSV 导入预览</h3>
+  <div id="csvImportSummary" style="margin-bottom:12px"></div>
+  <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text)">前 5 条预览</div>
+  <div id="csvImportPreviewList" style="margin-bottom:12px;max-height:200px;overflow-y:auto;border:1px solid var(--line);padding:8px;border-radius:4px"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button type="button" class="addbtn" id="btnCsvImportConfirm" style="--sc:var(--accent);padding:6px 16px">确认导入</button>
+    <button type="button" class="addbtn" id="btnCsvImportCancel" style="--sc:var(--muted);padding:6px 16px">取消</button>
+  </div>
+</div>
+
 <div class="overlay" id="cmdOverlay"></div>
 <div class="cmd" id="cmd">
   <input id="cmdInput" placeholder="搜索场景 / 命令 / 任务…（↑↓ 选择，Enter 执行，Esc 关闭）" autocomplete="off">
   <ul id="cmdList"></ul>
+</div>
+
+<!-- v1.4-F 自定义安装弹窗：捕获 beforeinstallprompt 后显示，替代浏览器默认安装提示 -->
+<div class="install-modal" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+  <div class="install-card">
+    <div class="ic" aria-hidden="true">A</div>
+    <h3 id="installTitle">安装 Agent 工作台到桌面</h3>
+    <p class="desc">像原生应用一样使用，离线可用、桌面快捷启动、独立窗口。</p>
+    <ul class="features">
+      <li><span class="check" aria-hidden="true">✓</span> 离线优先：数据本地存储，无网络也能用</li>
+      <li><span class="check" aria-hidden="true">✓</span> 桌面图标：一键启动，独立窗口运行</li>
+      <li><span class="check" aria-hidden="true">✓</span> 自动同步：恢复网络后自动同步离线操作</li>
+      <li><span class="check" aria-hidden="true">✓</span> 推送通知：任务到期与断链提醒（可选）</li>
+    </ul>
+    <div class="actions">
+      <button type="button" class="btn-install" id="btnInstallConfirm">安装</button>
+      <button type="button" class="btn-later" id="btnInstallLater">稍后</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1149,7 +1410,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.3.6";
+const VERSION = "1.4.0";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -1630,7 +1891,68 @@ function sanitizeHtml(html){
   return s;
 }
 
-// ===== UI Layer (交互层·主题与通知) =====
+// ===== Util Layer (性能优化工具·v1.4-B) =====
+/* ---------- 防抖（debounce） ----------
+ * v1.4-B 性能优化：搜索输入 / 窗口 resize 等高频事件防抖
+ * leading=false（尾部触发），适合输入筛选与 resize 重算场景
+ */
+/**
+ * 创建防抖函数：延迟 delay ms 后执行，期间多次调用只执行最后一次
+ * @param {Function} fn - 待防抖的函数
+ * @param {number} delay - 延迟毫秒数
+ * @returns {Function} 防抖后的函数（带 .cancel() 方法可取消待执行计时器）
+ */
+function debounce(fn, delay){
+  let timer = null;
+  const debounced = function(...args){
+    if(timer) clearTimeout(timer);
+    timer = setTimeout(() => { timer = null; fn.apply(this, args); }, delay);
+  };
+  debounced.cancel = function(){ if(timer){ clearTimeout(timer); timer = null; } };
+  return debounced;
+}
+
+/* ---------- 虚拟滚动范围计算（virtualScrollRange） ----------
+ * v1.4-B 性能优化：任务/记录列表超 100 条时只渲染可见区域 + 上下缓冲区
+ * 纯函数，不操作 DOM，方便测试
+ */
+/**
+ * 计算虚拟滚动可见范围（起始索引、结束索引、偏移量、总高度）
+ * @param {Object} opts
+ * @param {number} opts.total - 总条目数
+ * @param {number} opts.itemHeight - 每条高度（px）
+ * @param {number} opts.viewportHeight - 视口高度（px）
+ * @param {number} opts.scrollTop - 当前滚动位置（px）
+ * @param {number} [opts.buffer=5] - 上下缓冲区条数
+ * @returns {{start:number,end:number,offsetY:number,totalHeight:number}} 可见范围信息
+ */
+function virtualScrollRange(opts){
+  const total = Math.max(0, opts.total | 0);
+  const itemHeight = Math.max(1, opts.itemHeight);
+  const viewportHeight = Math.max(0, opts.viewportHeight);
+  const scrollTop = Math.max(0, opts.scrollTop | 0);
+  const buffer = Math.max(0, opts.buffer || 5);
+  if(total === 0) return { start:0, end:0, offsetY:0, totalHeight:0 };
+  const start = Math.max(0, Math.floor(scrollTop / itemHeight) - buffer);
+  const visibleCount = Math.ceil(viewportHeight / itemHeight) + buffer * 2;
+  const end = Math.min(total, start + visibleCount);
+  return {
+    start,
+    end,
+    offsetY: start * itemHeight,
+    totalHeight: total * itemHeight
+  };
+}
+
+/* 虚拟滚动启用阈值：列表条数超过此值才启用虚拟滚动，<= 此值时全量渲染 */
+const VIRTUAL_SCROLL_THRESHOLD = 100;
+/* 虚拟滚动默认每项高度估算（看板卡片 / 记录项） */
+const VIRTUAL_ITEM_HEIGHT_CARD = 88;
+const VIRTUAL_ITEM_HEIGHT_RECORD = 64;
+/* 虚拟滚动视口最大高度（px），超过此高度出现滚动条 */
+const VIRTUAL_VIEWPORT_MAX = 480;
+/* 虚拟滚动上下缓冲区条数 */
+const VIRTUAL_SCROLL_BUFFER = 5;// ===== UI Layer (交互层·主题与通知) =====
 /* ---------- 主题 / 通知 ---------- */
 /* T4：主题三态（light / dark / system）。system 跟随 prefers-color-scheme 实时切换；
    旧值 light/dark 行为不变；theme 未定义时默认 system（新用户首启即跟随系统）。 */
@@ -2368,12 +2690,35 @@ function agentContextPrompt(userText){
 
 // ===== Data Layer (数据层·迁移与初始化) =====
 /* ---------- 初始化 + 迁移 ---------- */
+/* v1.4-C 迁移日志：记录每次迁移操作（最多 50 条，溢出裁剪旧条目） */
+function _pushMigrationLog(entry){
+  try{
+    const log = load(PREFIX + "migrationLog", []);
+    log.push(Object.assign({ ts: Date.now() }, entry));
+    if(log.length > 50) log.splice(0, log.length - 50);
+    save(PREFIX + "migrationLog", log);
+  }catch(e){ /* 静默，不阻塞迁移 */ }
+}
+/* v1.4-C 读取迁移日志（只读快照，供 UI/测试查看） */
+function getMigrationLog(){
+  try { return load(PREFIX + "migrationLog", []); } catch(e){ return []; }
+}
 /* 损坏数据备份：把不可识别的原始串存到独立键，便于事后恢复（不丢用户数据） */
 function _backupBroken(kind, raw){
   try{
     const k = PREFIX + kind + "_broken_" + Date.now();
     localStorage.setItem(k, String(raw));
   }catch(e){ /* 备份失败不阻塞重置 */ }
+}
+/* v1.4-C 检测旧版本任务：缺少 updatedAt 字段、缺少 due/priority/note 等较新字段
+ * 返回需要补全的字段列表（空数组表示已是新格式） */
+function _detectLegacyTask(t){
+  const missing = [];
+  if(t.updatedAt === undefined) missing.push("updatedAt");
+  if(t.due === undefined) missing.push("due");
+  if(t.priority === undefined) missing.push("priority");
+  if(t.note === undefined) missing.push("note");
+  return missing;
 }
 /* schema 校验 + 字段补全：tasks 必须是数组；每条 task 必须有 id/sc/title/status 等核心字段 */
 function _validateAndMigrateTasks(){
@@ -2395,6 +2740,8 @@ function _validateAndMigrateTasks(){
   }
   // 数组：字段补全（id/sc/title/status/doneAt/tags）
   let changed=false;
+  let legacyCount=0;
+  const legacyFieldsSeen = new Set();
   tasks.forEach(t=>{
     if(!t || typeof t !== "object") return; // 跳过非对象项，不强制重构（避免破坏未知结构）
     if(t.id===undefined){ t.id=uid(); changed=true; }
@@ -2403,8 +2750,23 @@ function _validateAndMigrateTasks(){
     if(t.status===undefined){ t.status = t.done?"done":"todo"; changed=true; }
     if(t.doneAt===undefined){ t.doneAt = t.status==="done"? (t.created||Date.now()) : null; changed=true; }
     if(t.tags===undefined){ t.tags = []; changed=true; }
+    // v1.4-C 旧版本字段检测（due/priority/note/updatedAt）：仅记录日志，不强制补全
+    // （非关键字段缺失不会导致渲染崩溃，代码有 || "" 兜底；保持向后兼容，不破坏现有测试）
+    const missing = _detectLegacyTask(t);
+    if(missing.length){
+      legacyCount++;
+      missing.forEach(f => legacyFieldsSeen.add(f));
+    }
   });
   if(changed) save(PREFIX+"tasks", tasks);
+  // v1.4-C 迁移日志：仅在确有旧数据时记录
+  if(legacyCount > 0){
+    _pushMigrationLog({
+      type: "tasks-legacy-detected",
+      count: legacyCount,
+      fields: Array.from(legacyFieldsSeen)
+    });
+  }
 }
 /* schema 校验：cfg 必须是对象（非数组） */
 function _validateCfg(){
@@ -2438,17 +2800,59 @@ function _validateLinks(){
     try{ toast("联动规则数据格式异常，已备份原值并重置为默认。", "warn"); }catch(e2){}
   }
 }
+/* v1.4-C 检测旧版本数据：扫描全部 PREFIX 键，统计缺少 updatedAt 的任务数 / 缺字段的记录数
+ * 返回 { legacyTasks, legacyRecs, totalKeys, details } */
+function detectLegacyData(){
+  const result = { legacyTasks: 0, legacyRecs: 0, totalKeys: 0, details: [] };
+  try {
+    const tasksRaw = localStorage.getItem(PREFIX + "tasks");
+    if(tasksRaw){
+      const tasks = JSON.parse(tasksRaw);
+      if(Array.isArray(tasks)){
+        tasks.forEach(t => {
+          if(t && typeof t === "object" && _detectLegacyTask(t).length) result.legacyTasks++;
+        });
+      }
+    }
+  } catch(e){ /* 损坏由 _validateAndMigrateTasks 处理 */ }
+  // 记录键扫描
+  ORDER.forEach(sc => {
+    try {
+      const recsRaw = localStorage.getItem(PREFIX + "rec_" + sc);
+      if(recsRaw){
+        const recs = JSON.parse(recsRaw);
+        if(Array.isArray(recs)){
+          recs.forEach(r => {
+            if(r && typeof r === "object" && (r.id === undefined || r.created === undefined)) result.legacyRecs++;
+          });
+        }
+      }
+    } catch(e){ /* 跳过损坏键 */ }
+  });
+  result.totalKeys = allKeys().length;
+  if(result.legacyTasks > 0) result.details.push("tasks: " + result.legacyTasks + " 条缺少新字段");
+  if(result.legacyRecs > 0) result.details.push("recs: " + result.legacyRecs + " 条缺少 id/created");
+  return result;
+}
 /**
  * 数据迁移入口：tasks/cfg/links schema 校验 + 多 Profile 迁移
  * @returns {void}
  */
 function migrate(){
   try{
+    const before = detectLegacyData();
     _validateAndMigrateTasks();
     _validateCfg();
     _validateLinks();
     // 多 AI Profile 迁移：旧 cfg {base,key,model,...} → cfg {profiles:[{...}], activeId}
     migrateProfiles();
+    // v1.4-C 迁移日志：整体迁移摘要（仅在确有旧数据时记录）
+    if(before.legacyTasks > 0 || before.legacyRecs > 0){
+      _pushMigrationLog({
+        type: "migrate-summary",
+        before: { legacyTasks: before.legacyTasks, legacyRecs: before.legacyRecs, totalKeys: before.totalKeys }
+      });
+    }
   }catch(e){
     pushDiag("error", "migrate error: "+(e&&e.message||e), {where:"migrate"});
     try{ toast("数据迁移异常："+(e&&e.message||"未知错误"), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
@@ -3194,9 +3598,55 @@ async function fetchCoachAdvice(){
   // 调 AI
   try{
     const analysis = analyzeBehavior();
-    const prompt = "你是习惯教练。根据以下用户最近 2 周的行为数据，给出 3 条具体、可执行的个性化建议（每条不超过 30 字）。只返回 JSON 字符串数组，如 [\"建议1\",\"建议2\",\"建议3\"]。\n\n行为数据：\n" + JSON.stringify(analysis);
+    // v1.4-D：注入更具体的用户数据，让 AI 基于具体数据给建议（而非泛泛而谈）
+    // 每个场景最近 7 天完成数、最长 streak、断链天数
+    const now = Date.now();
+    const since7 = now - 7 * 86400000;
+    const scenarioStats = ORDER.map(sc => {
+      const tasks = getTasks().filter(t => t.sc === sc && t.status === "done" && t.doneAt);
+      const done7 = tasks.filter(t => t.doneAt >= since7).length;
+      const s = calcStreak(sc);
+      // 断链天数：今天没完成时，从昨天往回数到最近一次完成的天数
+      let breakDays = 0;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const daySet = new Set();
+      tasks.forEach(t => { const d = new Date(t.doneAt); daySet.add(d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())); });
+      const cur = new Date(today);
+      if(!daySet.has(cur.getFullYear()+"-"+pad(cur.getMonth()+1)+"-"+pad(cur.getDate()))){
+        // 今天没完成，从昨天起算断链天数
+        cur.setDate(cur.getDate() - 1);
+        while(!daySet.has(cur.getFullYear()+"-"+pad(cur.getMonth()+1)+"-"+pad(cur.getDate()))){
+          breakDays++;
+          cur.setDate(cur.getDate() - 1);
+          if(breakDays > 30) break; // 上限 30 天
+        }
+      }
+      return {
+        scenario: SCENARIOS[sc].name,
+        doneIn7Days: done7,
+        currentStreak: s.current,
+        bestStreak: s.best,
+        breakDays
+      };
+    });
+    const chainStats = getLinks().map(l => {
+      const triggered = getTasks().filter(t =>
+        t.sc === l.fromSc && t.linked && t.status === "done" && t.doneAt &&
+        String(t.title||"").toLowerCase().includes(String(l.kw||"").toLowerCase())
+      ).length;
+      return { name: l.name, fromSc: SCENARIOS[l.fromSc].name, toSc: SCENARIOS[l.toSc].name, triggered, enabled: l.enabled !== false };
+    });
+    const specificData = { scenarioStats, chainStats };
+    const prompt = "你是习惯教练。根据以下用户最近 2 周的行为数据，给出 3 条具体、可执行的个性化建议（每条不超过 30 字）。\n" +
+      "要求：\n" +
+      "1. 建议必须基于具体数据，不要泛泛而谈。例如：若某场景断链 N 天，明确指出「你已 N 天没做 XX，建议…」\n" +
+      "2. 若某场景 streak 较长，给予鼓励；若断链，给出恢复建议\n" +
+      "3. 若习惯链触发次数低，建议如何提高触发率\n" +
+      "只返回 JSON 字符串数组，如 [\"建议1\",\"建议2\",\"建议3\"]。\n\n" +
+      "行为分析：\n" + JSON.stringify(analysis) + "\n\n" +
+      "具体数据（每场景近 7 天完成数 / 当前 streak / 最长 streak / 断链天数 / 习惯链触发次数）：\n" + JSON.stringify(specificData, null, 2);
     const messages = [
-      { role: "system", content: "你是习惯教练，给出简洁、可执行的建议。只返回 JSON 字符串数组，不要任何其他内容。" },
+      { role: "system", content: "你是习惯教练，给出简洁、可执行、基于具体数据的建议。只返回 JSON 字符串数组，不要任何其他内容。" },
       { role: "user", content: prompt }
     ];
     const j = await chatOnce(messages);
@@ -3362,7 +3812,7 @@ function lineChartSVG(vals, color){
   const pts=arr.map((v,i)=> [ (i/(n-1))*W, H-8-(v/max)*(H-20) ]);
   const line=pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
   const area="0,"+(H-8)+" "+line+" "+W+","+(H-8);
-  return `<svg viewBox="0 0 ${W} ${H}" style="display:block;width:100%;max-width:560px;height:90px;margin:0 auto" preserveAspectRatio="none">
+  return `<svg class="line-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     <polygon points="${area}" style="fill:${color}" fill-opacity="0.08"/>
     <polyline points="${line}" fill="none" style="stroke:${color}" stroke-width="2" stroke-linejoin="round"/>
     ${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" style="fill:${color}"/>`).join("")}
@@ -4139,6 +4589,127 @@ function renderHelp(){
   if(modal) modal.onclick = (e)=>{ if(e.target === modal) modal.remove(); };
 }
 
+// ===== v1.4-E 协作/分享：任务分享链接 + 只读任务卡片 =====
+/* ---------- 字符串 ↔ Base64（UTF-8 安全，支持中文） ----------
+ * btoa/atob 仅支持 Latin1 范围字符，中文需先经 TextEncoder 编码为 UTF-8 字节再 base64。
+ * 测试环境（jsdom）已注入 TextEncoder/TextDecoder polyfill（见 tests/helpers/loadApp.js）。
+ */
+function _strToB64(str){
+  const bytes = new TextEncoder().encode(String(str));
+  return base64Encode(bytes);
+}
+function _b64ToStr(b64){
+  const bytes = base64Decode(String(b64));
+  return new TextDecoder().decode(bytes);
+}
+/**
+ * 生成任务分享链接：将任务关键字段编码为 base64 写入 URL hash
+ * @param {Task} task - 任务对象
+ * @returns {string} 分享链接 URL（含 #share=base64）
+ */
+function generateShareLink(task){
+  if(!task || typeof task !== "object") return "";
+  // 仅分享只读快照字段，剥离内部 id/created 等可选项保留以增强还原信息
+  const snapshot = {
+    title: task.title || "",
+    sc: task.sc || "",
+    status: task.status || "todo",
+    priority: task.priority || "",
+    due: task.due || "",
+    note: task.note || "",
+    tags: Array.isArray(task.tags) ? task.tags.slice(0, 10) : []
+  };
+  const payload = _strToB64(JSON.stringify(snapshot));
+  let base;
+  try{ base = location.href.split("#")[0]; }
+  catch(e){ base = "https://agent-workbench.local/"; }
+  return base + "#share=" + payload;
+}
+/**
+ * 从 hash 字符串解析分享的任务快照
+ * @param {string} [hash] - hash 片段（默认取 location.hash）
+ * @returns {Task|null} 任务快照对象，无分享 hash 或解码失败时返回 null
+ */
+function parseShareLink(hash){
+  try{
+    if(typeof hash === "undefined") hash = location.hash || "";
+    const m = String(hash).match(/#share=([A-Za-z0-9+/=]+)/);
+    if(!m) return null;
+    const json = _b64ToStr(m[1]);
+    const obj = JSON.parse(json);
+    if(!obj || typeof obj !== "object" || typeof obj.title !== "string") return null;
+    return obj;
+  }catch(e){ return null; }
+}
+/**
+ * 渲染只读任务详情卡片 HTML（标题/场景/状态/优先级/到期日/备注/标签）
+ * @param {Object} task - 任务快照
+ * @returns {string} 卡片 HTML
+ */
+function renderSharedTaskCard(task){
+  if(!task || typeof task !== "object") return "";
+  const sm = scMeta(task.sc);
+  const statusMap = { todo:"待办", doing:"进行中", done:"已完成" };
+  const statusLabel = statusMap[task.status] || task.status || "待办";
+  const pri = task.priority ? `<span class="pri ${esc(task.priority)}">${esc(task.priority)}</span>` : '<span class="pri" style="opacity:.5">无</span>';
+  const due = task.due ? `<span class="due">${esc(task.due)}</span>` : '<span class="due" style="opacity:.5">无</span>';
+  const note = task.note ? `<div class="share-note">${esc(task.note)}</div>` : "";
+  const tags = (Array.isArray(task.tags) && task.tags.length)
+    ? `<div class="share-tags">${task.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join(" ")}</div>`
+    : "";
+  return `<div class="share-task-card">
+    <div class="share-sc-badge" style="background:${sm.color};color:var(--on-accent)">${esc(sm.name)}</div>
+    <h3 class="share-title">${esc(task.title)}</h3>
+    <div class="share-meta">
+      <div class="share-meta-row"><span class="share-meta-label">状态</span><span class="share-meta-val">${esc(statusLabel)}</span></div>
+      <div class="share-meta-row"><span class="share-meta-label">优先级</span><span class="share-meta-val">${pri}</span></div>
+      <div class="share-meta-row"><span class="share-meta-label">到期日</span><span class="share-meta-val">${due}</span></div>
+    </div>
+    ${tags}
+    ${note}
+    <div class="share-readonly-hint">📋 这是只读分享卡片，不可编辑</div>
+  </div>`;
+}
+/**
+ * 打开只读分享任务详情弹窗
+ * @param {Object} task - 任务快照
+ * @returns {void}
+ */
+function openSharedTaskModal(task){
+  const old = document.querySelector(".share-task-modal");
+  if(old) old.remove();
+  const cardHtml = renderSharedTaskCard(task);
+  const html = `<div class="share-task-modal" id="shareTaskModal">
+    <div class="share-task-dialog">
+      <div class="share-task-header">
+        <h2>🔗 分享的任务</h2>
+        <button class="share-task-close" id="shareTaskClose" aria-label="关闭">✕</button>
+      </div>
+      <div class="share-task-body">${cardHtml}</div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const closeBtn = $("#shareTaskClose");
+  if(closeBtn) closeBtn.onclick = ()=>{ const m = $("#shareTaskModal"); if(m) m.remove(); };
+  const modal = $("#shareTaskModal");
+  if(modal) modal.onclick = (e)=>{ if(e.target === modal) modal.remove(); };
+  // ESC 关闭
+  const escHandler = (e)=>{ if(e.key === "Escape"){ const m = $("#shareTaskModal"); if(m) m.remove(); document.removeEventListener("keydown", escHandler); } };
+  document.addEventListener("keydown", escHandler);
+}
+/**
+ * 页面加载时检测 location.hash 含 #share=，解码显示只读任务详情弹窗
+ * @returns {boolean} 是否检测到并展示了分享任务
+ */
+function checkSharedTaskOnLoad(){
+  const task = parseShareLink();
+  if(!task) return false;
+  openSharedTaskModal(task);
+  // 清除 hash 避免刷新重复弹出
+  try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){ /* noop */ }
+  return true;
+}
+
 // ===== Render Layer (渲染层·概览) =====
 /* ---------- 渲染：概览 ---------- */
 /**
@@ -4193,14 +4764,20 @@ function renderOverview(){
        <h3>各场景进度</h3><div class="bars">${bars}</div>
      </div>
      ${renderHabitChainCard()}
-     ${renderCoachCard()}
-     <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>
+      ${renderCoachCard()}
+      ${renderDailyReportCard()}
+      <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>
     </div>`);
 
-  const gs=$("#globSearch"); if(gs) gs.oninput=()=> renderGlob(gs.value.trim().toLowerCase());
+  // v1.4-B 性能优化：全局搜索 oninput 加 300ms 防抖，避免逐字符渲染
+  const _globSearchDebounced = debounce(() => {
+    const v = ($("#globSearch").value || "").trim().toLowerCase();
+    renderGlob(v);
+  }, 300);
+  const gs=$("#globSearch"); if(gs) gs.oninput=_globSearchDebounced;
   ["globFSc","globFStatus","globFDate","globFTag"].forEach(id=>{
     const el=$("#"+id); if(!el) return;
-    if(id==="globFTag"){ el.oninput=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
+    if(id==="globFTag"){ el.oninput=_globSearchDebounced; } // 标签输入同样防抖
     else { el.onchange=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
   });
   renderGlobViews();
@@ -4216,6 +4793,49 @@ function renderOverview(){
         cl.textContent = "暂无法获取建议（" + r.reason + "），请稍后重试";
       }
     }).catch(()=>{ /* 静默失败，保留 loading 文案 */ });
+  }
+  // v1.4-D AI 每日报告：绑定按钮
+  const drBtn=$("#dailyReportBtn");
+  if(drBtn) drBtn.onclick=()=> handleDailyReport();
+}
+
+/* ---------- v1.4-D AI 每日报告卡片 ---------- */
+/**
+ * 渲染 AI 日报卡片（含按钮 + 结果展示区）
+ * @returns {string} HTML 字符串
+ */
+function renderDailyReportCard(){
+  const cfg = getCfg();
+  if(!cfg.enabled){
+    return `<div class="card daily-report-card"><h2>📋 AI 每日报告</h2><p class="sub">昨日总结 + 今日待办 + 习惯链状态 + 今日建议</p>` +
+      `<div class="coach-hint">尚未启用 AI。配置 API Key 后可生成每日报告。</div></div>`;
+  }
+  return `<div class="card daily-report-card"><h2>📋 AI 每日报告</h2>` +
+    `<p class="sub">基于昨日完成任务、今日待办与习惯链状态，AI 生成每日报告</p>` +
+    `<button type="button" class="daily-report-btn" id="dailyReportBtn">生成今日报告</button>` +
+    `<div id="dailyReportResult"></div></div>`;
+}
+/**
+ * 处理 AI 日报按钮点击：调用 generateDailyReport 并渲染结果
+ * @returns {Promise<void>}
+ */
+async function handleDailyReport(){
+  const resultEl=$("#dailyReportResult");
+  const btn=$("#dailyReportBtn");
+  if(btn) btn.disabled=true;
+  if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="coach-hint">正在生成每日报告…</div>`);
+  try{
+    const r = await generateDailyReport();
+    if(r.ok && r.report){
+      if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="md-body">${mdToHtml(r.report)}</div>`);
+    } else {
+      const hint = r.reason==="no-ai" ? "尚未启用 AI，请先配置 API Key" : ("生成失败：" + (r.reason || "未知错误"));
+      if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="coach-hint">${esc(hint)}</div>`);
+    }
+  }catch(err){
+    if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="coach-hint">生成失败：${esc(err && err.message || "未知错误")}</div>`);
+  }finally{
+    if(btn) btn.disabled=false;
   }
 }
 
@@ -4590,29 +5210,80 @@ function sm2(state, q){
   return { ef: Math.round(ef * 100) / 100, interval, reps, nextReviewDays: interval };
 }
 /**
+ * v1.4-B 渲染单条复习项 HTML（抽出供虚拟滚动复用）
+ * @param {Object} r - 学习记录
+ * @param {number} now - 当前时间戳
+ * @returns {string} div HTML
+ */
+function _renderReviewItem(r, now){
+  const sm = r.sm2 || { ef: 2.5, interval: 0, reps: 0 };
+  const nr = r.nextReview ? new Date(r.nextReview).toLocaleDateString() : "未安排";
+  const isDue = r.nextReview && r.nextReview <= now;
+  return `<div style="border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:7px${isDue?";border-color:var(--danger)":""}">
+    <div style="font-size:14px">${esc(r.title)}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px">下次复习：${nr} · EF ${sm.ef} · 间隔 ${sm.interval}天 · 第${sm.reps}次</div>
+    <div class="kbtns">
+      <button data-rev="${r.id}:2">再来</button>
+      <button data-rev="${r.id}:3">困难</button>
+      <button data-rev="${r.id}:4">良好</button>
+      <button data-rev="${r.id}:5">简单</button>
+    </div>
+  </div>`;
+}
+/**
  * 渲染学习场景的间隔复习卡片（列出全部资料 + 4 档评分按钮）
+ * v1.4-B：超 100 条时启用虚拟滚动，只渲染可见区域 + 缓冲区
  * @returns {string} HTML 字符串
  */
 function reviewCard(){
   const recs=getRec("study"); const now=Date.now();
   const due=recs.filter(r=>r.nextReview&&r.nextReview<=now);
-  const items = recs.length? recs.map(r=>{
-    const sm = r.sm2 || { ef: 2.5, interval: 0, reps: 0 };
-    const nr = r.nextReview ? new Date(r.nextReview).toLocaleDateString() : "未安排";
-    const isDue = r.nextReview && r.nextReview <= now;
-    return `<div style="border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:7px${isDue?";border-color:var(--danger)":""}">
-      <div style="font-size:14px">${esc(r.title)}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">下次复习：${nr} · EF ${sm.ef} · 间隔 ${sm.interval}天 · 第${sm.reps}次</div>
-      <div class="kbtns">
-        <button data-rev="${r.id}:2">再来</button>
-        <button data-rev="${r.id}:3">困难</button>
-        <button data-rev="${r.id}:4">良好</button>
-        <button data-rev="${r.id}:5">简单</button>
-      </div>
-    </div>`;
-  }).join("") : `<div class="empty">学习资料库为空</div>`;
+  let items;
+  if(recs.length === 0){
+    items = `<div class="empty">学习资料库为空</div>`;
+  } else if(recs.length > VIRTUAL_SCROLL_THRESHOLD){
+    // v1.4-B 虚拟滚动
+    const range = virtualScrollRange({
+      total: recs.length,
+      itemHeight: VIRTUAL_ITEM_HEIGHT_RECORD,
+      viewportHeight: VIRTUAL_VIEWPORT_MAX,
+      scrollTop: 0,
+      buffer: VIRTUAL_SCROLL_BUFFER
+    });
+    const visible = recs.slice(range.start, range.end).map(r => _renderReviewItem(r, now)).join("");
+    items = `<div class="vscroll-viewport" data-vscroll="review" data-vcount="${recs.length}" style="max-height:${VIRTUAL_VIEWPORT_MAX}px;overflow-y:auto">` +
+      `<div class="vscroll-spacer" style="height:${range.totalHeight}px;position:relative">` +
+      `<div class="vscroll-items" style="position:absolute;top:${range.offsetY}px">${visible}</div>` +
+      `</div></div>`;
+  } else {
+    items = recs.map(r => _renderReviewItem(r, now)).join("");
+  }
   const dueHtml = due.length? `<p class="sub" style="color:var(--danger)">今日待复习：${due.length} 项</p>` : "";
   return `<div class="card"><h2>${SCENARIOS.study.icon || ""} 间隔复习</h2>${dueHtml}<div>${items}</div></div>`;
+}
+/**
+ * v1.4-B 虚拟滚动：滚动时更新复习列表可见项
+ * @param {Element} viewport - 滚动视口元素
+ * @returns {void}
+ */
+function _updateReviewVScroll(viewport){
+  const total = parseInt(viewport.getAttribute("data-vcount") || "0", 10);
+  if(total <= VIRTUAL_SCROLL_THRESHOLD) return;
+  const scrollTop = viewport.scrollTop || 0;
+  const range = virtualScrollRange({
+    total,
+    itemHeight: VIRTUAL_ITEM_HEIGHT_RECORD,
+    viewportHeight: VIRTUAL_VIEWPORT_MAX,
+    scrollTop,
+    buffer: VIRTUAL_SCROLL_BUFFER
+  });
+  const recs = getRec("study");
+  const now = Date.now();
+  const items = viewport.querySelector(".vscroll-items");
+  if(!items) return;
+  const html = recs.slice(range.start, range.end).map(r => _renderReviewItem(r, now)).join("");
+  items.innerHTML = sanitizeHtml(html);
+  items.style.top = range.offsetY + "px";
 }
 
 /* ---------- 生活场景·健康概览卡片 ----------
@@ -4757,6 +5428,82 @@ function bindHealthCard(){
 // ===== Render Layer (渲染层·场景主区) =====
 /* ---------- 渲染：场景主区 ---------- */
 /**
+ * 渲染单张看板卡片 HTML（v1.4-B 抽出供虚拟滚动复用）
+ * @param {Object} x - 任务对象
+ * @param {string} st - 列状态 todo/doing/done
+ * @param {Object} colName - 状态名映射
+ * @returns {string} 卡片 HTML
+ */
+function _renderKanbanCard(x, st, colName){
+  const od = x.due && x.due < todayStr();
+  const pri = x.priority? `<span class="pri ${x.priority}">${x.priority}</span>`:"";
+  const due = x.due? `<span class="due ${od?"od":""}">${od?"逾期 ":""}${x.due}</span>`:"";
+  const tags=(x.tags&&x.tags.length)?` <span class="tag">${x.tags.map(t=>esc(t)).join('</span> <span class="tag">')}</span>`:"";
+  let btns="";
+  if(st==="todo") btns=`<button data-move="${x.id}:doing">→ 进行中</button>`;
+  if(st==="doing") btns=`<button data-move="${x.id}:todo">← 待办</button><button data-move="${x.id}:done">→ 完成</button>`;
+  if(st==="done") btns=`<button data-move="${x.id}:doing">← 进行中</button>`;
+  return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="t">${esc(x.title)}</div>
+    <div class="m">${pri} ${due}${tags}</div><div class="kbtns">${btns}
+    <button data-edit="${x.id}">编辑</button>
+    <button data-share="${x.id}" title="生成分享链接">分享</button>
+    <button data-del="${x.id}" style="color:var(--danger)">删除</button></div></div>`;
+}
+/**
+ * v1.4-B 虚拟滚动：渲染看板单列（超阈值时只渲染可见区域 + 缓冲区）
+ * @param {string} st - 列状态
+ * @param {Object[]} list - 该列任务数组
+ * @param {Object} colName - 状态名映射
+ * @returns {string} 列 HTML
+ */
+function _renderKanbanCol(st, list, colName){
+  const head = `<div class="kcol" data-drop="${st}"><h4>${colName[st]} <span class="n">${list.length}</span></h4>`;
+  if(list.length === 0) return head + `<div class="empty" style="margin:4px">空</div></div>`;
+  // 超阈值启用虚拟滚动
+  if(list.length > VIRTUAL_SCROLL_THRESHOLD){
+    const range = virtualScrollRange({
+      total: list.length,
+      itemHeight: VIRTUAL_ITEM_HEIGHT_CARD,
+      viewportHeight: VIRTUAL_VIEWPORT_MAX,
+      scrollTop: 0,
+      buffer: VIRTUAL_SCROLL_BUFFER
+    });
+    const cards = list.slice(range.start, range.end).map(x => _renderKanbanCard(x, st, colName)).join("");
+    return head + `<div class="vscroll-viewport" data-vscroll="${st}" data-vcount="${list.length}" style="max-height:${VIRTUAL_VIEWPORT_MAX}px;overflow-y:auto">` +
+      `<div class="vscroll-spacer" style="height:${range.totalHeight}px;position:relative">` +
+      `<div class="vscroll-items" style="position:absolute;top:${range.offsetY}px">${cards}</div>` +
+      `</div></div></div>`;
+  }
+  // 未超阈值：全量渲染（保持原行为）
+  return head + list.map(x => _renderKanbanCard(x, st, colName)).join("") + `</div>`;
+}
+/**
+ * v1.4-B 虚拟滚动：滚动时更新看板列可见项（只更新 DOM 子树，不全量重渲染）
+ * @param {Element} viewport - 滚动视口元素
+ * @param {string} sc - 场景键
+ * @param {string} st - 列状态
+ * @returns {void}
+ */
+function _updateKanbanVScroll(viewport, sc, st){
+  const total = parseInt(viewport.getAttribute("data-vcount") || "0", 10);
+  if(total <= VIRTUAL_SCROLL_THRESHOLD) return;
+  const scrollTop = viewport.scrollTop || 0;
+  const range = virtualScrollRange({
+    total,
+    itemHeight: VIRTUAL_ITEM_HEIGHT_CARD,
+    viewportHeight: VIRTUAL_VIEWPORT_MAX,
+    scrollTop,
+    buffer: VIRTUAL_SCROLL_BUFFER
+  });
+  const tasks = getActiveTasks().filter(x => x.sc === sc && x.status === st && !x.deletedAt);
+  const colName = { todo:"待办", doing:"进行中", done:"已完成" };
+  const items = viewport.querySelector(".vscroll-items");
+  if(!items) return;
+  const cards = tasks.slice(range.start, range.end).map(x => _renderKanbanCard(x, st, colName)).join("");
+  items.innerHTML = sanitizeHtml(cards);
+  items.style.top = range.offsetY + "px";
+}
+/**
  * 渲染场景主区 HTML（任务看板 + 资料库 + 场景专属卡片 + AI 对话）
  * @returns {string} HTML 字符串
  */
@@ -4793,23 +5540,10 @@ function renderMainHTML(){
   }else{
     const cols=["todo","doing","done"];
     const colName={todo:"待办",doing:"进行中",done:"已完成"};
-    kanban = `<div class="kanban">` + cols.map(st=>{
-      const list = tasks.filter(x=>x.status===st);
-      const cards = list.length? list.map(x=>{
-        const od = x.due && x.due < todayStr();
-        const pri = x.priority? `<span class="pri ${x.priority}">${x.priority}</span>`:"";
-        const due = x.due? `<span class="due ${od?"od":""}">${od?"逾期 ":""}${x.due}</span>`:"";
-        const tags=(x.tags&&x.tags.length)?` <span class="tag">${x.tags.map(t=>esc(t)).join('</span> <span class="tag">')}</span>`:"";
-        let btns="";
-        if(st==="todo") btns=`<button data-move="${x.id}:doing">→ 进行中</button>`;
-        if(st==="doing") btns=`<button data-move="${x.id}:todo">← 待办</button><button data-move="${x.id}:done">→ 完成</button>`;
-        if(st==="done") btns=`<button data-move="${x.id}:doing">← 进行中</button>`;
-        return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="t">${esc(x.title)}</div>
-          <div class="m">${pri} ${due}${tags}</div><div class="kbtns">${btns}
-          <button data-edit="${x.id}">编辑</button>
-          <button data-del="${x.id}" style="margin-left:auto;color:var(--danger)">删除</button></div></div>`;
-      }).join("") : `<div class="empty" style="margin:4px">空</div>`;
-      return `<div class="kcol" data-drop="${st}"><h4>${colName[st]} <span class="n">${list.length}</span></h4>${cards}</div>`;
+    // v1.4-B：超阈值时每列启用虚拟滚动，否则全量渲染
+    kanban = `<div class="kanban">` + cols.map(st => {
+      const list = tasks.filter(x => x.status === st);
+      return _renderKanbanCol(st, list, colName);
     }).join("") + `</div>`;
     filterHtml = tagFilterHTML;
   }
@@ -4829,29 +5563,7 @@ function renderMainHTML(){
   }).join("");
   const recForm = `<form class="form-row" id="recForm">${recFields}
     <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button></form>`;
-  const recList = recs.length? `<ul class="list">` + recs.map(r=>{
-    // 区分 textarea 字段（长文本，Markdown 渲染）与 text 字段（短文本，tag span）
-    const metaParts = [];
-    const mdParts = [];
-    rec.fields.forEach(f=>{
-      if(f.k==="title"||f.k==="code") return;
-      const v=r[f.k]; if(v===null||v===undefined||v==="") return;
-      if(f.type==="textarea"){
-        mdParts.push('<div class="md md-body">'+mdToHtml(v)+'</div>');
-      } else {
-        metaParts.push('<span class="tag">'+esc(f.label)+": "+esc(v)+'</span>');
-      }
-    });
-    const meta = metaParts.join("");
-    const mdContent = mdParts.join("");
-    const codeF = rec.fields.find(f=>f.k==="code");
-    const codeBlock = (codeF && r.code)? `<code class="snip">${esc(r.code)}</code>
-      <button class="copy" data-val="${esc(r.code)}">${UI_ICONS.copy} 复制</button>` : "";
-    const titleF = rec.fields.find(f=>f.k==="title") || {k:"title"};
-    return `<li><div class="body"><div class="t">${esc(r[titleF.k])}</div>
-      <div class="m">${meta}</div>${mdContent}${codeBlock}</div>
-      <button class="del" data-rdel="${r.id}" title="删除" aria-label="删除">${UI_ICONS.trash}</button></li>`;
-  }).join("") + `</ul>` : renderEmpty("no-records");
+  const recList = recs.length? _renderRecList(recs, rec) : renderEmpty("no-records");
 
   let chatCard = `<div class="card"><h2>${UI_ICONS.chat} ${s.name} · AI 助手</h2>`;
   if(!cfg.enabled){
@@ -4873,10 +5585,87 @@ function renderMainHTML(){
       ${taskForm}${filterHtml}${kanban}</div>
      <div class="card"><h2>${s.name} · ${rec.label}</h2>
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
-     ${renderSceneSections(active)}
-     ${renderExtra(active)}
-     ${chatCard}
-     <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v${VERSION}</div>`;
+      ${renderSceneSections(active)}
+      ${renderExtra(active)}
+      ${chatCard}
+      <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v${VERSION}</div>`;
+}
+
+/**
+ * v1.4-B 渲染单条记录项 HTML（抽出供虚拟滚动复用）
+ * @param {Object} r - 记录对象
+ * @param {Object} rec - 场景 record 配置（含 fields）
+ * @returns {string} li HTML
+ */
+function _renderRecItem(r, rec){
+  const metaParts = [];
+  const mdParts = [];
+  rec.fields.forEach(f=>{
+    if(f.k==="title"||f.k==="code") return;
+    const v=r[f.k]; if(v===null||v===undefined||v==="") return;
+    if(f.type==="textarea"){
+      mdParts.push('<div class="md md-body">'+mdToHtml(v)+'</div>');
+    } else {
+      metaParts.push('<span class="tag">'+esc(f.label)+": "+esc(v)+'</span>');
+    }
+  });
+  const meta = metaParts.join("");
+  const mdContent = mdParts.join("");
+  const codeF = rec.fields.find(f=>f.k==="code");
+  const codeBlock = (codeF && r.code)? `<code class="snip">${esc(r.code)}</code>
+    <button class="copy" data-val="${esc(r.code)}">${UI_ICONS.copy} 复制</button>` : "";
+  const titleF = rec.fields.find(f=>f.k==="title") || {k:"title"};
+  return `<li><div class="body"><div class="t">${esc(r[titleF.k])}</div>
+    <div class="m">${meta}</div>${mdContent}${codeBlock}</div>
+    <button class="del" data-rdel="${r.id}" title="删除" aria-label="删除">${UI_ICONS.trash}</button></li>`;
+}
+/**
+ * v1.4-B 虚拟滚动：渲染记录列表（超阈值时只渲染可见区域 + 缓冲区）
+ * @param {Object[]} recs - 记录数组
+ * @param {Object} rec - 场景 record 配置
+ * @returns {string} ul HTML（含虚拟滚动容器）
+ */
+function _renderRecList(recs, rec){
+  if(recs.length > VIRTUAL_SCROLL_THRESHOLD){
+    const range = virtualScrollRange({
+      total: recs.length,
+      itemHeight: VIRTUAL_ITEM_HEIGHT_RECORD,
+      viewportHeight: VIRTUAL_VIEWPORT_MAX,
+      scrollTop: 0,
+      buffer: VIRTUAL_SCROLL_BUFFER
+    });
+    const items = recs.slice(range.start, range.end).map(r => _renderRecItem(r, rec)).join("");
+    return `<ul class="list vscroll-viewport" data-vscroll="rec" data-vcount="${recs.length}" style="max-height:${VIRTUAL_VIEWPORT_MAX}px;overflow-y:auto;display:block">` +
+      `<div class="vscroll-spacer" style="height:${range.totalHeight}px;position:relative">` +
+      `<div class="vscroll-items" style="position:absolute;top:${range.offsetY}px">${items}</div>` +
+      `</div></ul>`;
+  }
+  return `<ul class="list">` + recs.map(r => _renderRecItem(r, rec)).join("") + `</ul>`;
+}
+/**
+ * v1.4-B 虚拟滚动：滚动时更新记录列表可见项
+ * @param {Element} viewport - 滚动视口元素
+ * @param {string} sc - 场景键
+ * @returns {void}
+ */
+function _updateRecVScroll(viewport, sc){
+  const total = parseInt(viewport.getAttribute("data-vcount") || "0", 10);
+  if(total <= VIRTUAL_SCROLL_THRESHOLD) return;
+  const scrollTop = viewport.scrollTop || 0;
+  const range = virtualScrollRange({
+    total,
+    itemHeight: VIRTUAL_ITEM_HEIGHT_RECORD,
+    viewportHeight: VIRTUAL_VIEWPORT_MAX,
+    scrollTop,
+    buffer: VIRTUAL_SCROLL_BUFFER
+  });
+  const recs = getRec(sc);
+  const rec = SCENARIOS[sc].record;
+  const items = viewport.querySelector(".vscroll-items");
+  if(!items) return;
+  const html = recs.slice(range.start, range.end).map(r => _renderRecItem(r, rec)).join("");
+  items.innerHTML = sanitizeHtml(html);
+  items.style.top = range.offsetY + "px";
 }
 
 // ===== UI Layer (交互层·场景绑定) =====
@@ -4902,8 +5691,13 @@ function bindScenario(){
     const [id,st]=b.dataset.move.split(":"); const tasks=getTasks();
     const i=tasks.findIndex(t=>t.id===id); if(i<0) return;
     if(st==="done"){ completeTask(id); render(); return; }
+    const fromSt = tasks[i].status;
     tasks[i].status=st; tasks[i].doneAt = null;
-    setTasks(tasks); render();
+    setTasks(tasks);
+    // v1.4-B DOM 复用：todo↔doing 局部移动卡片，不全量重渲染
+    // 仅在两列都未启用虚拟滚动时优化；否则回退全量 render
+    if(_tryMoveKanbanCardLocal(id, fromSt, st)) return;
+    render();
   });
   $$("[data-del]").forEach(b=> b.onclick=()=>{
     if(!confirm("删除这条任务？（将进入回收站，可恢复）")) return;
@@ -4931,6 +5725,8 @@ function bindScenario(){
   const tf=$("#tagFilter"); if(tf) tf.oninput=applyBoardFilter;
   const bs=$("#boardSearch"); if(bs) bs.oninput=applyBoardFilter;   // B2：标题搜索接线
   const sf=$("#boardStatusFilter"); if(sf) sf.onchange=applyBoardFilter; // B2：状态筛选接线
+  // v1.4-B 虚拟滚动：绑定看板列与记录列表的 scroll 事件（rAF 节流，只更新可见项 DOM 子树）
+  _bindVirtualScrolls(active);
   bindExtra(active);
   bindSceneSections(active);
   const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
@@ -4949,6 +5745,19 @@ function bindReviewCard(sc){
       setRec("study",arr); render();
     }
   });
+  // v1.4-B 虚拟滚动：绑定复习列表 scroll 事件
+  const vp = document.querySelector('.vscroll-viewport[data-vscroll="review"]');
+  if(vp && !vp._vsBound){
+    vp._vsBound = true;
+    let rafId = null;
+    vp.addEventListener("scroll", () => {
+      if(rafId) return;
+      rafId = (typeof requestAnimationFrame === "function" ? requestAnimationFrame : setTimeout)(() => {
+        rafId = null;
+        _updateReviewVScroll(vp);
+      });
+    });
+  }
 }
 function bindExtra(sc){
   const r = CARD_REGISTRY[SCENARIOS[sc].extraCard || "none"];
@@ -5121,7 +5930,401 @@ function closeTaskEditModal(){
   return true;
 }
 
+/* ---------- v1.4-B 虚拟滚动事件绑定 ---------- */
+/**
+ * v1.4-B DOM 复用：看板卡片状态切换时局部移动 DOM 节点，不全量重渲染
+ * 仅在两列都未启用虚拟滚动时优化；返回 true 表示已处理，false 表示需回退全量 render
+ * @param {string} id - 任务 id
+ * @param {string} fromSt - 原状态
+ * @param {string} toSt - 目标状态
+ * @returns {boolean} 是否已局部处理
+ */
+function _tryMoveKanbanCardLocal(id, fromSt, toSt){
+  if(fromSt === toSt) return true; // 无变化
+  const main = $("#main");
+  if(!main) return false;
+  const card = main.querySelector(`.kcard[data-drag="${id}"]`);
+  if(!card) return false;
+  const fromCol = main.querySelector(`.kcol[data-drop="${fromSt}"]`);
+  const toCol = main.querySelector(`.kcol[data-drop="${toSt}"]`);
+  if(!fromCol || !toCol) return false;
+  // 任一列启用虚拟滚动时回退（虚拟滚动有特殊 DOM 结构）
+  if(fromCol.querySelector(".vscroll-viewport") || toCol.querySelector(".vscroll-viewport")) return false;
+  // 重新生成卡片 HTML（更新按钮 + data-status）并替换旧节点
+  const task = getActiveTasks().find(t => t.id === id);
+  if(!task) return false;
+  const colName = { todo:"待办", doing:"进行中", done:"已完成" };
+  const tmp = document.createElement("div");
+  tmp.innerHTML = sanitizeHtml(_renderKanbanCard(task, toSt, colName));
+  const newCard = tmp.firstElementChild;
+  if(!newCard) return false;
+  card.replaceWith(newCard);
+  // 移到目标列（在 empty 提示之前插入，或追加到列末尾）
+  const empty = toCol.querySelector(".empty");
+  if(empty) empty.remove();
+  toCol.appendChild(newCard);
+  // 更新两列计数
+  _updateKanbanColCount(fromCol);
+  _updateKanbanColCount(toCol);
+  // 重新绑定移动/编辑/删除按钮（局部更新后需绑定新节点事件）
+  _bindCardButtons(newCard);
+  return true;
+}
+/** 更新看板列标题中的计数 */
+function _updateKanbanColCount(col){
+  const n = col.querySelectorAll(".kcard").length;
+  const span = col.querySelector("h4 .n");
+  if(span) span.textContent = String(n);
+}
+/** 绑定单张卡片的移动/编辑/删除按钮事件 */
+function _bindCardButtons(card){
+  card.querySelectorAll("[data-move]").forEach(b => {
+    if(b._bound) return; b._bound = true;
+    b.onclick = () => {
+      const [id, st] = b.dataset.move.split(":");
+      const tasks = getTasks();
+      const i = tasks.findIndex(t => t.id === id);
+      if(i < 0) return;
+      if(st === "done"){ completeTask(id); render(); return; }
+      const fromSt = tasks[i].status;
+      tasks[i].status = st; tasks[i].doneAt = null;
+      setTasks(tasks);
+      if(_tryMoveKanbanCardLocal(id, fromSt, st)) return;
+      render();
+    };
+  });
+  card.querySelectorAll("[data-del]").forEach(b => {
+    if(b._bound) return; b._bound = true;
+    b.onclick = () => {
+      if(!confirm("删除这条任务？（将进入回收站，可恢复）")) return;
+      const tasks = getTasks();
+      const t = tasks.find(x => x.id === b.dataset.del);
+      if(t && !t.deletedAt){ t.deletedAt = Date.now(); setTasks(tasks); }
+      render();
+    };
+  });
+  card.querySelectorAll("[data-edit]").forEach(b => {
+    if(b._bound) return; b._bound = true;
+    b.onclick = () => openTaskEdit(b.dataset.edit);
+  });
+}
+/**
+ * 绑定当前场景主区所有虚拟滚动视口的 scroll 事件（rAF 节流）
+ * 看板列用 _updateKanbanVScroll，记录列表用 _updateRecVScroll
+ * @param {string} sc - 当前场景键
+ * @returns {void}
+ */
+function _bindVirtualScrolls(sc){
+  const main = $("#main");
+  if(!main) return;
+  $$(".vscroll-viewport[data-vscroll]", main).forEach(vp => {
+    if(vp._vsBound) return; // 幂等：已绑定则跳过
+    vp._vsBound = true;
+    let rafId = null;
+    vp.addEventListener("scroll", () => {
+      if(rafId) return; // rAF 节流：一帧只更新一次
+      rafId = (typeof requestAnimationFrame === "function" ? requestAnimationFrame : setTimeout)(() => {
+        rafId = null;
+        const type = vp.getAttribute("data-vscroll");
+        if(type === "rec") _updateRecVScroll(vp, sc);
+        else _updateKanbanVScroll(vp, sc, type);
+      });
+    });
+  });
+}
+
 // ===== AI Layer (AI 层·对话循环) =====
+/* ---------- v1.4-D AI 能力增强：自然语言解析 ---------- */
+/**
+ * 中文数字转阿拉伯数字（一→1，二→2，…，十→10，十一→11，二十→20）
+ * @param {string} s
+ * @returns {number}
+ */
+function _cn2num(s){
+  const map = {"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10};
+  if(/^\d+$/.test(s)) return parseInt(s,10);
+  if(s==="十") return 10;
+  if(s.startsWith("十")) return 10 + (map[s[1]]||0);
+  if(s.endsWith("十")) return (map[s[0]]||0) * 10;
+  if(s.length===3 && s[1]==="十") return (map[s[0]]||0)*10 + (map[s[2]]||0);
+  return map[s] || 0;
+}
+/**
+ * v1.4-D：自然语言建任务解析
+ * 从用户文本中解析出任务字段（title/scenario/due/priority）
+ * 支持格式：
+ *   - "帮我建个任务：明天下午3点复习数学"
+ *   - "建任务 下周一开会"
+ *   - "创建任务 紧急 写代码"
+ *   - "添加任务 跑步"
+ * @param {string} text - 用户输入文本
+ * @returns {{hit:boolean, title?:string, scenario?:string, due?:string, priority?:string, raw?:string}}
+ */
+function parseNaturalLanguageTask(text){
+  const raw = String(text===null||text===undefined?"":text).trim();
+  if(!raw) return {hit:false};
+  // 检测建任务意图：帮我建个任务 / 建任务 / 创建任务 / 添加任务 / 新建任务 / 新增任务
+  // 命中后取冒号或空格后的内容作为 body
+  const intentRegex = /(?:帮我|请|给我|要)?\s*(?:建|创建|新建|添加|新增|做)\s*(?:个|一个)?\s*(?:任务|待办|todo)?\s*[:：]?\s*(.*)/i;
+  const m = raw.match(intentRegex);
+  if(!m || !m[1] || !m[1].trim()) return {hit:false};
+  let body = m[1].trim();
+  // 去掉结尾的"任务/待办"
+  body = body.replace(/(?:任务|待办)$/,"").trim();
+  if(!body) return {hit:false};
+
+  // 解析场景（按优先级匹配，先匹配更具体的）
+  let scenario = "office"; // 默认办公
+  if(/数学|复习|学习|读书|背单词|做作业|听课|预习|考试|课程|笔记|英语|物理|化学|历史|地理|生物|政治|考研|作业/.test(body)){
+    scenario = "study";
+  } else if(/跑步|健身|运动|锻炼|游泳|瑜伽|散步|骑车|打球|减肥|早睡|喝水|体检|做饭|购物|买菜|洗衣服|打扫|理发|看病|吃药/.test(body)){
+    scenario = "life";
+  } else if(/写代码|编程|算法|开发|调试|重构|测试代码|实现|提交代码|code|bug|接口|前端|后端|数据库|部署|上线|优化性能/.test(body)){
+    scenario = "code";
+  } else if(/开会|报告|交付|周报|月报|汇报|邮件|文档|合同|审批|预约|出差|面试|培训|演示|演讲|总结|计划|安排/.test(body)){
+    scenario = "office";
+  }
+
+  // 解析日期
+  let due = "";
+  const dayMap = {"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"日":0,"天":0};
+  if(/今天|今日/.test(body)){
+    due = shiftDay(0);
+  } else if(/大后天/.test(body)){
+    due = shiftDay(3);
+  } else if(/后天/.test(body)){
+    due = shiftDay(2);
+  } else if(/明天|明日/.test(body)){
+    due = shiftDay(1);
+  } else if(/下周[一二三四五六日天]/.test(body)){
+    const mm = body.match(/下周([一二三四五六日天])/);
+    if(mm){
+      const target = dayMap[mm[1]];
+      const now = new Date(); const cur = (now.getDay()+6)%7;
+      let diff = target - cur + 7;
+      if(diff <= 0) diff += 7;
+      due = shiftDay(diff);
+    }
+  } else if(/这周|本周/.test(body) && /周[一二三四五六日天]/.test(body)){
+    const mm = body.match(/周([一二三四五六日天])/);
+    if(mm){
+      const target = dayMap[mm[1]];
+      const now = new Date(); const cur = (now.getDay()+6)%7;
+      let diff = target - cur;
+      if(diff < 0) diff += 7;
+      due = shiftDay(diff);
+    }
+  } else if(/周[一二三四五六日天]/.test(body) && !/下周|这周|本周/.test(body)){
+    const mm = body.match(/周([一二三四五六日天])/);
+    if(mm){
+      const target = dayMap[mm[1]];
+      const now = new Date(); const cur = (now.getDay()+6)%7;
+      let diff = target - cur;
+      if(diff < 0) diff += 7;
+      due = shiftDay(diff);
+    }
+  }
+
+  // 解析优先级
+  let priority = ""; // 默认低（空字符串）
+  if(/紧急|急|立刻|马上|asap|p0/i.test(body)){
+    priority = "P0";
+  } else if(/重要|优先|p1/i.test(body)){
+    priority = "P1";
+  } else if(/一般|普通|不急|p2/i.test(body)){
+    priority = "P2";
+  }
+
+  // 清理 title：移除时间词、优先级词、场景通用词
+  let title = body;
+  // 移除日期相关词
+  title = title.replace(/大后天|后天|明天|明日|今天|今日/g, "");
+  title = title.replace(/下周([一二三四五六日天])/g, "");
+  title = title.replace(/(?:这周|本周)?周([一二三四五六日天])/g, "");
+  // 移除具体时间（上午/下午/晚上 + 点/分）
+  title = title.replace(/(?:上午|下午|晚上|中午|早上|凌晨|傍晚|夜间)\s*\d{1,2}\s*(?:点|:|：)\s*\d{0,2}\s*(?:分)?/g, "");
+  title = title.replace(/(?:上午|下午|晚上|中午|早上|凌晨|傍晚|夜间)\s*\d{1,2}\s*(?:点|:|：)/g, "");
+  title = title.replace(/(?:上午|下午|晚上|中午|早上|凌晨|傍晚|夜间)/g, "");
+  title = title.replace(/\d{1,2}\s*(?:点|:|：)\s*\d{0,2}\s*(?:分|半)?/g, "");
+  // 移除优先级词
+  title = title.replace(/紧急|急|立刻|马上|重要|优先|一般|普通|不急/g, "");
+  // 移除残留的"任务/待办"
+  title = title.replace(/(?:任务|待办)/g, "");
+  // 清理多余空格和标点
+  title = title.replace(/[\s,，、;；:：]+/g, " ").trim();
+  title = title.replace(/^[:：、,，\s]+|[:：、,，\s]+$/g, "").trim();
+
+  // 如果 title 为空，用原始 body
+  if(!title) title = body;
+
+  return {hit:true, title, scenario, due, priority, raw};
+}
+
+/**
+ * v1.4-D：自然语言操作解析
+ * 从用户文本中解析出对任务的操作（完成/删除）
+ * 支持格式：
+ *   - "完成第一个任务" / "完成第二个任务"
+ *   - "把数学任务标记为已完成" / "标记数学任务为已完成"
+ *   - "完成数学" / "完成数学任务"
+ *   - "删除数学" / "把数学任务删除"
+ * @param {string} text - 用户输入文本
+ * @returns {{hit:boolean, action?:string, target?:string, n?:number, raw?:string}|{hit:false}}
+ */
+function parseNaturalLanguageAction(text){
+  const raw = String(text===null||text===undefined?"":text).trim();
+  if(!raw) return {hit:false};
+
+  // 完成第 N 个任务（"完成第一个任务" / "完成第2个任务"）
+  const nthMatch = raw.match(/^完成第([一二三四五六七八九十\d]+)个(?:任务|待办)?$/);
+  if(nthMatch){
+    const n = _cn2num(nthMatch[1]);
+    if(n > 0) return {hit:true, action:"complete_nth", n, raw};
+  }
+
+  // 把 XX 标记为已完成 / 标记 XX 为已完成 / 将 XX 标记为已完成
+  let m = raw.match(/^(?:把|将)\s*(.+?)\s*标记为已完成$/);
+  if(m) return {hit:true, action:"complete", target:m[1].trim().replace(/(?:任务|待办)$/,"").trim(), raw};
+  m = raw.match(/^标记\s*(.+?)\s*为已完成$/);
+  if(m) return {hit:true, action:"complete", target:m[1].trim().replace(/(?:任务|待办)$/,"").trim(), raw};
+
+  // 完成 XX (任务/待办) — 但排除"完成第N个"已处理
+  m = raw.match(/^完成\s*(.+?)(?:任务|待办)?$/);
+  if(m && m[1]){
+    const t = m[1].trim();
+    // 排除"第N个"形式（已上面处理）
+    if(!/^第/.test(t) && t && t !== "任务" && t !== "待办"){
+      return {hit:true, action:"complete", target:t, raw};
+    }
+  }
+
+  // 删除 XX / 把 XX 删除 / 将 XX 删除
+  m = raw.match(/^删除\s*(.+)$/);
+  if(m){
+    const t = m[1].trim().replace(/(?:任务|待办)$/,"").trim();
+    if(t) return {hit:true, action:"delete", target:t, raw};
+  }
+  m = raw.match(/^(?:把|将)\s*(.+?)\s*删除$/);
+  if(m){
+    const t = m[1].trim().replace(/(?:任务|待办)$/,"").trim();
+    if(t) return {hit:true, action:"delete", target:t, raw};
+  }
+
+  return {hit:false};
+}
+
+/**
+ * v1.4-D：执行自然语言操作（完成/删除任务）
+ * @param {{action:string, target?:string, n?:number}} parsed - parseNaturalLanguageAction 返回值
+ * @returns {{ok:boolean, msg:string, task?:{id:string,title:string}}}
+ */
+function executeNaturalLanguageAction(parsed){
+  if(!parsed || !parsed.action) return {ok:false, msg:"无效的操作指令"};
+  const tasks = getActiveTasks();
+  if(parsed.action === "complete_nth"){
+    // 第 N 个未完成任务（按创建顺序）
+    const undone = tasks.filter(t => t.status !== "done").sort((a,b) => (a.created||0) - (b.created||0));
+    const idx = (parsed.n || 1) - 1;
+    if(idx >= undone.length){
+      return {ok:false, msg:"没有第 " + parsed.n + " 个未完成任务（当前共 " + undone.length + " 个未完成）"};
+    }
+    const t = undone[idx];
+    completeTask(t.id);
+    return {ok:true, msg:"已完成第 " + parsed.n + " 个任务：" + t.title, task:{id:t.id, title:t.title}};
+  }
+  if(parsed.action === "complete"){
+    const target = String(parsed.target || "").toLowerCase();
+    // 查找标题包含 target 的未完成任务
+    const matches = tasks.filter(t => t.status !== "done" && (t.title||"").toLowerCase().includes(target));
+    if(!matches.length){
+      return {ok:false, msg:"未找到标题包含「" + parsed.target + "」的未完成任务"};
+    }
+    // 取第一个匹配
+    const t = matches[0];
+    completeTask(t.id);
+    return {ok:true, msg:"已完成：" + t.title, task:{id:t.id, title:t.title}};
+  }
+  if(parsed.action === "delete"){
+    const target = String(parsed.target || "").toLowerCase();
+    const matches = tasks.filter(t => (t.title||"").toLowerCase().includes(target));
+    if(!matches.length){
+      return {ok:false, msg:"未找到标题包含「" + parsed.target + "」的任务"};
+    }
+    const t = matches[0];
+    // 软删除
+    const all = getTasks();
+    const i = all.findIndex(x => x.id === t.id);
+    if(i >= 0){
+      all[i].deletedAt = Date.now();
+      setTasks(all);
+    }
+    return {ok:true, msg:"已删除（进入回收站，可恢复）：" + t.title, task:{id:t.id, title:t.title}};
+  }
+  return {ok:false, msg:"不支持的操作：" + parsed.action};
+}
+
+/* ---------- v1.4-D AI 每日报告 ---------- */
+/**
+ * 收集每日报告所需数据（纯函数，供测试）
+ * @returns {{date:string, yesterdayDone:Array, todayTodo:Array, todayOverdue:Array, streaks:Object}}
+ */
+function collectDailyReportData(){
+  const tasks = getActiveTasks();
+  const today = todayStr();
+  const yesterday = shiftDay(-1);
+  // 昨日完成任务
+  const yesterdayDone = tasks.filter(t => {
+    if(t.status !== "done" || !t.doneAt) return false;
+    const d = new Date(t.doneAt);
+    const ds = d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+    return ds === yesterday;
+  }).map(t => ({ title: t.title, sc: SCENARIOS[t.sc] ? SCENARIOS[t.sc].name : t.sc }));
+  // 今日待办
+  const todayTodo = tasks.filter(t => t.status !== "done" && t.due === today)
+    .map(t => ({ title: t.title, sc: SCENARIOS[t.sc] ? SCENARIOS[t.sc].name : t.sc, priority: t.priority || "" }));
+  // 逾期未完成
+  const todayOverdue = tasks.filter(t => t.status !== "done" && t.due && t.due < today)
+    .map(t => ({ title: t.title, sc: SCENARIOS[t.sc] ? SCENARIOS[t.sc].name : t.sc, due: t.due }));
+  // 习惯链 streak
+  const streaks = {};
+  ORDER.forEach(sc => {
+    const s = calcStreak(sc);
+    streaks[sc] = { name: SCENARIOS[sc].name, current: s.current, best: s.best, thisWeek: s.thisWeek };
+  });
+  return { date: today, yesterdayDone, todayTodo, todayOverdue, streaks };
+}
+/**
+ * v1.4-D：AI 每日报告
+ * 收集昨日完成任务、今日待办任务、习惯链 streak，构造 prompt 发送给 AI
+ * @returns {Promise<{ok:boolean, report?:string, reason?:string, data?:Object}>}
+ */
+async function generateDailyReport(){
+  const cfg = getCfg();
+  const ap = getActiveProfile();
+  if(!cfg.enabled || !(ap && ap.key)){
+    return {ok:false, reason:"no-ai"};
+  }
+  try{
+    const data = collectDailyReportData();
+    const prompt = "你是工作台助手。根据以下用户数据，生成「每日报告」：\n" +
+      "1. 昨日总结：完成了哪些任务（列出标题，无则说明「昨日无完成任务」）\n" +
+      "2. 今日待办：今日到期的任务 + 逾期未完成的任务（按优先级排序）\n" +
+      "3. 习惯链状态：各场景的当前 streak，给出保持/打破建议\n" +
+      "4. 今日建议：基于数据给出 2-3 条具体可执行的建议\n\n" +
+      "用 Markdown 格式返回，使用 ##/### 标题分节。数据：\n" + JSON.stringify(data, null, 2);
+    const messages = [
+      { role: "system", content: "你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、习惯链状态、今日建议四个部分。" },
+      { role: "user", content: prompt }
+    ];
+    const j = await chatOnce(messages);
+    const content = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+    if(!content) return {ok:false, reason:"empty"};
+    return {ok:true, report:content, data};
+  }catch(err){
+    return {ok:false, reason:(err && err.message) || "error"};
+  }
+}
+
 /* ---------- AI 对话（带工具调用） ---------- */
 /**
  * R07：base URL 安全校验——只允许 https://（允许 http://localhost / http://127.0.0.1 供开发）。
@@ -5420,6 +6623,35 @@ async function onChatSubmit(e){
     hist.push({role:"assistant", content: r? "好的，已记住：「"+r.text+"」（场景："+SCENARIOS[active].name+"，后续对话会自动带上）" : "没有可记住的内容"});
     if(hist.length>50) hist.splice(0, hist.length-50);
     save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+    return;
+  }
+  // v1.4-D：自然语言建任务拦截（"帮我建个任务：明天下午3点复习数学"）
+  const taskHit = parseNaturalLanguageTask(text);
+  if(taskHit && taskHit.hit){
+    const args = { title: taskHit.title, scenario: taskHit.scenario };
+    if(taskHit.due) args.due = taskHit.due;
+    if(taskHit.priority) args.priority = taskHit.priority;
+    const res = execTool("create_task", args);
+    let rj = null; try{ rj = JSON.parse(res); }catch(e){}
+    hist.push({role:"user", content:text});
+    const okMsg = rj && rj.ok;
+    const reply = okMsg
+      ? "已为你创建任务：「"+taskHit.title+"」（场景："+(SCENARIOS[taskHit.scenario]?SCENARIOS[taskHit.scenario].name:taskHit.scenario)
+        +(taskHit.due?"，截止："+taskHit.due:"")+(taskHit.priority?"，优先级 "+taskHit.priority:"")+"）"
+      : "创建任务失败："+(rj && rj.msg ? rj.msg : "未知错误");
+    hist.push({role:"assistant", content:reply});
+    if(hist.length>50) hist.splice(0, hist.length-50);
+    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
+    return;
+  }
+  // v1.4-D：自然语言操作拦截（"完成第一个任务" / "把数学任务标记为已完成" / "删除数学"）
+  const actionHit = parseNaturalLanguageAction(text);
+  if(actionHit && actionHit.hit){
+    const r = executeNaturalLanguageAction(actionHit);
+    hist.push({role:"user", content:text});
+    hist.push({role:"assistant", content: r.ok ? r.msg : "操作失败："+r.msg});
+    if(hist.length>50) hist.splice(0, hist.length-50);
+    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
     return;
   }
   // 正常路径
@@ -5992,6 +7224,12 @@ function render(){
 function allKeys(){ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }
 function doExport(){
   const data = {}; allKeys().forEach(k=> data[k]=localStorage.getItem(k));
+  // v1.4-C 多设备同步：写入设备标识 + 导出时间戳 + 版本
+  data["_deviceMeta"] = {
+    deviceId: getDeviceId(),
+    exportedAt: Date.now(),
+    version: VERSION
+  };
   // P0-5：跨设备导出显式告警（不静默丢 Key）。安全默认：浏览器态不勾选不出明文。
   // 多 Profile：profiles 数组已随 cfg 一起导出（key 为加密对象，换机无法解密）。
   //   用户勾选「导出明文」时，额外写 _portableKeys（每个 profile 的明文 key 数组）。
@@ -6025,6 +7263,41 @@ function doImport(file){
   reader.onload = async ()=>{
     try{
       const data = JSON.parse(/** @type {string} */(reader.result));
+      // v1.4-C 多设备同步：检测 _deviceMeta，若有则对 tasks 按 updatedAt 合并（其他键仍覆盖）
+      const isMultiDeviceSync = !!(data && data._deviceMeta && data._deviceMeta.deviceId);
+      if(isMultiDeviceSync){
+        // 合并 tasks：相同 ID 取 updatedAt 更新者；不同 ID 直接合并
+        const remoteTasksRaw = data[PREFIX + "tasks"];
+        let remoteTasks = [];
+        try { remoteTasks = typeof remoteTasksRaw === "string" ? JSON.parse(remoteTasksRaw) : (Array.isArray(remoteTasksRaw) ? remoteTasksRaw : []); }
+        catch(e){ remoteTasks = []; }
+        const localTasks = getTasks();
+        const localMap = new Map(localTasks.map(t => [t.id, t]));
+        let mergedCount = 0, conflictsResolved = 0, addedCount = 0;
+        remoteTasks.forEach(rt => {
+          if(!rt || !rt.id) return;
+          const lt = localMap.get(rt.id);
+          if(lt){
+            const ltTs = lt.updatedAt || lt.created || 0;
+            const rtTs = rt.updatedAt || rt.created || 0;
+            if(rtTs > ltTs){ localMap.set(rt.id, rt); conflictsResolved++; }
+            mergedCount++;
+          } else {
+            localMap.set(rt.id, rt);
+            addedCount++;
+            mergedCount++;
+          }
+        });
+        // 把合并后的 tasks 写入 data，后续按统一覆盖逻辑处理（其他键仍覆盖）
+        data[PREFIX + "tasks"] = JSON.stringify(Array.from(localMap.values()));
+        // 记入迁移日志
+        try {
+          const log = load(PREFIX + "migrationLog", []);
+          log.push({ ts: Date.now(), type: "multi-device-merge", from: data._deviceMeta.deviceId, to: getDeviceId(), added: addedCount, conflictsResolved, merged: mergedCount });
+          if(log.length > 50) log.splice(0, log.length - 50);
+          save(PREFIX + "migrationLog", log);
+        } catch(e){ /* 静默 */ }
+      }
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY) localStorage.setItem(k, data[k]); });
       _cfgCache = null; _deviceKey = null;
@@ -6102,6 +7375,13 @@ function doImport(file){
   };
   reader.readAsText(file);
 }
+/* v1.4-C 多设备同步合并统计：返回最近一次合并日志条目（供测试/UI 查看） */
+function getLastMergeLog(){
+  try {
+    const log = load(PREFIX + "migrationLog", []);
+    return log.filter(e => e.type === "multi-device-merge").slice(-1)[0] || null;
+  } catch(e){ return null; }
+}
 function doClear(){
   if(!confirm("确定清空全部数据？此操作不可恢复！")) return;
   allKeys().forEach(k=> localStorage.removeItem(k));
@@ -6137,25 +7417,62 @@ function csvField(v){
   const s = String(v===null||v===undefined?"":v);
   return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
 }
+/* v1.4-C 任务 CSV 字段元数据（id/title/scenario/status/dueDate/doneAt/tags/createdAt + priority 兼容旧默认）
+ * key 为字段标识（用于字段选择），label 为表头文案，get 为取值函数。
+ * 默认导出沿用旧字段集（不含 id），用户在导出预览可勾选扩展字段。 */
+const CSV_TASK_FIELDS = [
+  { key:"id",        label:"ID",     get:t=>t.id||"" },
+  { key:"title",     label:"标题",   get:t=>t.title||"" },
+  { key:"scenario",  label:"场景",   get:t=>scMeta(t.sc).name },
+  { key:"status",    label:"状态",   get:t=>statusText(t.status) },
+  { key:"priority",  label:"优先级", get:t=>t.priority||"" },
+  { key:"dueDate",   label:"截止日期", get:t=>t.due||"" },
+  { key:"tags",      label:"标签",   get:t=>(t.tags||[]).join(" ") },
+  { key:"createdAt", label:"创建日期", get:t=>t.created ? new Date(t.created).toISOString().slice(0,10) : "" },
+  { key:"doneAt",    label:"完成日期", get:t=>t.doneAt ? new Date(t.doneAt).toISOString().slice(0,10) : "" }
+];
+/* 默认字段集（保持向后兼容：旧测试断言 8 列表头 "场景,标题,状态,优先级,截止日期,标签,创建日期,完成日期"） */
+const CSV_DEFAULT_FIELDS = ["scenario","title","status","priority","dueDate","tags","createdAt","doneAt"];
 /**
  * 构建任务 CSV 文本（纯函数；BOM 由下载包装层添加）
  * @param {Task[]} tasks - 任务数组（默认取活跃任务）
+ * @param {string[]} [fieldKeys] - 字段 key 数组（默认 CSV_DEFAULT_FIELDS，向后兼容）
  * @returns {string} CSV 文本
  */
-function buildTasksCSV(tasks){
+function buildTasksCSV(tasks, fieldKeys){
   const list = Array.isArray(tasks) ? tasks : getActiveTasks();
-  const header = ["场景","标题","状态","优先级","截止日期","标签","创建日期","完成日期"];
-  const rows = list.map(t=>[
-    scMeta(t.sc).name,
-    t.title||"",
-    statusText(t.status),
-    t.priority||"",
-    t.due||"",
-    (t.tags||[]).join(" "),
-    t.created ? new Date(t.created).toISOString().slice(0,10) : "",
-    t.doneAt ? new Date(t.doneAt).toISOString().slice(0,10) : ""
-  ]);
-  return [header].concat(rows).map(r=>r.map(csvField).join(",")).join("\r\n");
+  const keys = Array.isArray(fieldKeys) && fieldKeys.length
+    ? fieldKeys.filter(k => CSV_TASK_FIELDS.some(f => f.key === k))
+    : CSV_DEFAULT_FIELDS;
+  const cols = keys.map(k => CSV_TASK_FIELDS.find(f => f.key === k));
+  const header = cols.map(c => c.label);
+  const rows = list.map(t => cols.map(c => c.get(t)));
+  return [header].concat(rows).map(r => r.map(csvField).join(",")).join("\r\n");
+}
+/* v1.4-C 记算全部记录数（rec_* 各场景记录合计） */
+function countAllRecs(){
+  return ORDER.reduce((sum, sc) => {
+    try { return sum + (getRec(sc) || []).length; } catch(e){ return sum; }
+  }, 0);
+}
+/* v1.4-C 构建记录 CSV 文本（按场景遍历 rec_*，输出 id/title/scenario/note/created） */
+function buildRecsCSV(){
+  const header = ["ID","标题","场景","备注","创建日期"];
+  const rows = [];
+  ORDER.forEach(sc => {
+    let recs = [];
+    try { recs = getRec(sc) || []; } catch(e){ recs = []; }
+    recs.forEach(r => {
+      rows.push([
+        r.id || "",
+        r.title || "",
+        scMeta(sc).name,
+        r.note || "",
+        r.created ? new Date(r.created).toISOString().slice(0,10) : ""
+      ]);
+    });
+  });
+  return [header].concat(rows).map(r => r.map(csvField).join(",")).join("\r\n");
 }
 /**
  * 构建任务 Markdown 文本（纯函数；按场景分组表格）
@@ -6195,14 +7512,249 @@ function downloadTextFile(content, filename, mime, withBOM){
 function doExportCSV(){
   const list = getActiveTasks();
   if(!list.length){ toast("当前没有可导出的任务","warn"); return; }
-  downloadTextFile(buildTasksCSV(list), "agent-workbench-tasks-"+todayStr()+".csv", "text/csv;charset=utf-8", true);
+  // v1.4-C：若导出预览中勾选了字段，则用所选字段；否则用默认字段（向后兼容）
+  const fieldCbs = document.querySelectorAll("#csvExportFields input.csv-field-cb:checked");
+  const fieldKeys = fieldCbs.length ? Array.from(fieldCbs).map(cb => cb.value) : null;
+  downloadTextFile(buildTasksCSV(list, fieldKeys), "agent-workbench-tasks-"+todayStr()+".csv", "text/csv;charset=utf-8", true);
   toast("已导出 CSV（"+list.length+" 条任务）","ok");
+  closeExportPreview();
 }
 function doExportMD(){
   const list = getActiveTasks();
   if(!list.length){ toast("当前没有可导出的任务","warn"); return; }
   downloadTextFile(buildTasksMD(list), "agent-workbench-tasks-"+todayStr()+".md", "text/markdown;charset=utf-8", false);
   toast("已导出 Markdown（"+list.length+" 条任务）","ok");
+}
+/* v1.4-C 导出记录 CSV（资料库 rec_* 全场景合并导出） */
+function doExportRecsCSV(){
+  const n = countAllRecs();
+  if(!n){ toast("当前没有可导出的记录","warn"); return; }
+  downloadTextFile(buildRecsCSV(), "agent-workbench-recs-"+todayStr()+".csv", "text/csv;charset=utf-8", true);
+  toast("已导出记录 CSV（"+n+" 条记录）","ok");
+}
+/* ---------- v1.4-C 导出预览（数据概览 + 字段选择） ---------- */
+/* 生成或复用设备标识（持久化到 localStorage，跨会话稳定） */
+function getDeviceId(){
+  let id = "";
+  try { id = localStorage.getItem(PREFIX + "deviceId") || ""; } catch(e){ id = ""; }
+  if(!id){
+    id = "dev-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 */ }
+  }
+  return id;
+}
+/* 打开导出预览弹窗：显示任务数/记录数/配置是否包含 + 字段勾选 */
+function openExportPreview(){
+  const modal = $("#exportPreviewModal");
+  if(!modal) return;
+  const taskCount = getActiveTasks().length;
+  const recCount = countAllRecs();
+  const cfg = getCfg();
+  const cfgIncluded = !!(cfg && Object.keys(cfg).length);
+  const summary = $("#exportPreviewSummary");
+  if(summary){
+    summary.innerHTML = sanitizeHtml(
+      '<div class="ep-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:var(--text)"><span>任务数</span><b>'+taskCount+'</b></div>'+
+      '<div class="ep-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:var(--text)"><span>记录数</span><b>'+recCount+'</b></div>'+
+      '<div class="ep-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:var(--text)"><span>配置</span><b>'+(cfgIncluded?"包含":"空")+'</b></div>'
+    );
+  }
+  // 字段勾选（默认勾选默认字段集）
+  const fieldsBox = $("#csvExportFields");
+  if(fieldsBox){
+    fieldsBox.innerHTML = sanitizeHtml(CSV_TASK_FIELDS.map(f =>
+      '<label style="display:inline-flex;align-items:center;gap:4px;margin:4px 8px;font-size:12px;color:var(--text)">'+
+      '<input type="checkbox" class="csv-field-cb" value="'+esc(f.key)+'"'+(CSV_DEFAULT_FIELDS.includes(f.key)?" checked":"")+'>'+
+      '<span>'+esc(f.label)+'</span></label>'
+    ).join(""));
+  }
+  modal.classList.add("show");
+  const ov = $("#exportPreviewOverlay"); if(ov) ov.classList.add("show");
+}
+/* 关闭导出预览弹窗 */
+function closeExportPreview(){
+  const modal = $("#exportPreviewModal");
+  if(modal) modal.classList.remove("show");
+  const ov = $("#exportPreviewOverlay"); if(ov) ov.classList.remove("show");
+}
+/* ---------- v1.4-C CSV 导入（解析 + 预览 + 批量创建 + 统计） ---------- */
+/* CSV 行解析：处理引号内逗号/换行/转义双引号；返回字段数组。
+ * 算法：状态机（inField 跟踪是否在引号内）；支持 \r\n / \n / \r 行尾。 */
+function parseCSVRows(text){
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  const s = String(text || "");
+  for(let i = 0; i < s.length; i++){
+    const c = s[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(s[i+1] === '"'){ field += '"'; i++; }
+        else { inQuotes = false; }
+      } else { field += c; }
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === ','){ row.push(field); field = ""; }
+      else if(c === '\r'){
+        // \r\n 或单独 \r 行尾
+        row.push(field); field = "";
+        rows.push(row); row = [];
+        if(s[i+1] === '\n') i++;
+      }
+      else if(c === '\n'){ row.push(field); field = ""; rows.push(row); row = []; }
+      else { field += c; }
+    }
+  }
+  // 末行（无行尾换行时残留）
+  if(field !== "" || row.length){
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
+/* 跳过 BOM（\uFEFF）并解析 CSV：首行表头，其余数据行；返回 { headers, rows } */
+function parseCSV(text){
+  let s = String(text || "");
+  if(s.charCodeAt(0) === 0xFEFF) s = s.slice(1);
+  const all = parseCSVRows(s);
+  if(!all.length) return { headers: [], rows: [] };
+  return { headers: all[0], rows: all.slice(1).filter(r => r.some(v => v !== "")) };
+}
+/* 把 CSV 行按表头映射为任务对象（兼容中英文表头） */
+function csvRowToTask(row, headers){
+  const HEADER_MAP = {
+    "ID":"id","id":"id",
+    "标题":"title","title":"title","Title":"title",
+    "场景":"scenario","scenario":"scenario","Scenario":"scenario",
+    "状态":"status","status":"status","Status":"status",
+    "优先级":"priority","priority":"priority","Priority":"priority",
+    "截止日期":"dueDate","dueDate":"dueDate","due":"dueDate",
+    "标签":"tags","tags":"tags","Tags":"tags",
+    "创建日期":"createdAt","createdAt":"createdAt","created":"createdAt",
+    "完成日期":"doneAt","doneAt":"doneAt"
+  };
+  const obj = {};
+  headers.forEach((h, i) => { obj[HEADER_MAP[h] || h] = row[i]; });
+  // 状态文本回转 code
+  const STATUS_MAP = { "待办":"todo", "进行中":"doing", "已完成":"done", "todo":"todo", "doing":"doing", "done":"done" };
+  const scName = obj.scenario || "";
+  // 场景名回转 key（按 name 匹配，回退 office）
+  let scKey = "office";
+  for(const k of ORDER){ if(SCENARIOS[k] && SCENARIOS[k].name === scName){ scKey = k; break; } }
+  if(!ORDER.includes(scKey)) scKey = "office";
+  const status = STATUS_MAP[obj.status] || "todo";
+  const tags = obj.tags ? String(obj.tags).split(/[\s,]+/).filter(Boolean) : [];
+  const task = {
+    id: obj.id || uid(),
+    sc: scKey,
+    title: String(obj.title || "").trim() || "(未命名)",
+    status,
+    due: obj.dueDate || "",
+    priority: ["", "P0", "P1", "P2"].includes(obj.priority) ? (obj.priority || "") : "",
+    doneAt: status === "done" ? (obj.doneAt ? new Date(obj.doneAt).getTime() || Date.now() : Date.now()) : null,
+    tags,
+    note: "",
+    created: obj.createdAt ? new Date(obj.createdAt).getTime() || Date.now() : Date.now(),
+    updatedAt: Date.now()
+  };
+  return task;
+}
+/* CSV 导入预览：解析后显示前 5 条 + 总条数，用户确认后批量创建 */
+function previewImportCSV(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = parseCSV(String(reader.result));
+      if(!parsed.rows.length){ toast("CSV 文件无数据行","warn"); return; }
+      const preview = parsed.rows.slice(0, 5).map(r => csvRowToTask(r, parsed.headers));
+      const modal = $("#csvImportModal");
+      if(!modal){
+        // 无预览弹窗：直接导入（向后兼容兜底）
+        doImportCSVFile(file);
+        return;
+      }
+      const summary = $("#csvImportSummary");
+      if(summary){
+        summary.innerHTML = sanitizeHtml(
+          '<div class="ep-row"><span>总条数</span><b>'+parsed.rows.length+'</b></div>'+
+          '<div class="ep-row"><span>表头</span><b>'+esc(parsed.headers.join(", "))+'</b></div>'
+        );
+      }
+      const list = $("#csvImportPreviewList");
+      if(list){
+        const rowsHtml = preview.map(t =>
+          '<div class="csv-preview-row" style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--line);font-size:12px">'+
+          '<span style="flex:1">'+esc(t.title)+'</span>'+
+          '<span style="color:var(--muted)">'+esc(scMeta(t.sc).name)+'</span>'+
+          '<span style="color:var(--muted)">'+esc(statusText(t.status))+'</span></div>'
+        ).join("");
+        list.innerHTML = sanitizeHtml(rowsHtml);
+      }
+      // 暂存待导入的解析结果，确认按钮读取
+      _pendingCSVImport = { headers: parsed.headers, rows: parsed.rows, file };
+      modal.classList.add("show");
+      const ov = $("#csvImportOverlay"); if(ov) ov.classList.add("show");
+    }catch(e){
+      toast("CSV 解析失败："+(e && e.message || "未知错误"), "error");
+    }
+  };
+  reader.onerror = () => { toast("CSV 文件读取失败", "error"); };
+  reader.readAsText(file, "utf-8");
+}
+let _pendingCSVImport = null;
+/* v1.4-C 测试访问器：读取/设置待导入 CSV 数据（模块内变量访问） */
+function getPendingCSVImport(){ return _pendingCSVImport; }
+function setPendingCSVImport(v){ _pendingCSVImport = v; }
+/* 执行 CSV 导入：批量创建任务，返回 {ok, added, skipped, total} */
+function doImportCSV(){
+  if(!_pendingCSVImport){ toast("无可导入的 CSV 数据","warn"); return { ok:false, added:0, skipped:0, total:0 }; }
+  const { headers, rows } = _pendingCSVImport;
+  const existing = getTasks();
+  const existingIds = new Set(existing.map(t => t.id));
+  let added = 0, skipped = 0;
+  const newTasks = [];
+  rows.forEach(r => {
+    try{
+      const t = csvRowToTask(r, headers);
+      if(existingIds.has(t.id)){ skipped++; return; }
+      newTasks.push(t);
+      existingIds.add(t.id);
+      added++;
+    }catch(e){ skipped++; }
+  });
+  if(added){
+    setTasks(existing.concat(newTasks));
+    clearUndoStack();
+  }
+  _pendingCSVImport = null;
+  const modal = $("#csvImportModal");
+  if(modal) modal.classList.remove("show");
+  const ov = $("#csvImportOverlay"); if(ov) ov.classList.remove("show");
+  toast("CSV 导入完成：成功 "+added+" 条，跳过 "+skipped+" 条（共 "+rows.length+" 行）", added ? "ok" : "warn");
+  render();
+  return { ok: added > 0, added, skipped, total: rows.length };
+}
+/* 取消 CSV 导入预览 */
+function cancelImportCSV(){
+  _pendingCSVImport = null;
+  const modal = $("#csvImportModal");
+  if(modal) modal.classList.remove("show");
+  const ov = $("#csvImportOverlay"); if(ov) ov.classList.remove("show");
+}
+/* 兜底：直接导入 CSV 文件（无预览弹窗时） */
+function doImportCSVFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = parseCSV(String(reader.result));
+      if(!parsed.rows.length){ toast("CSV 文件无数据行","warn"); return; }
+      _pendingCSVImport = { headers: parsed.headers, rows: parsed.rows, file };
+      doImportCSV();
+    }catch(e){
+      toast("CSV 解析失败："+(e && e.message || "未知错误"), "error");
+    }
+  };
+  reader.onerror = () => { toast("CSV 文件读取失败", "error"); };
+  reader.readAsText(file, "utf-8");
 }
 
 // ===== UI Layer (交互层·设置抽屉) =====
@@ -6517,6 +8069,313 @@ async function saveCfg(){
   }
 }
 
+// ===== v1.4-E 协作/分享：习惯链分享导入 + 场景模板一键导入 =====
+/* ---------- 习惯链分享码生成与导入 ---------- */
+/**
+ * 生成习惯链分享码：将链数组 JSON 编码为 base64 字符串
+ * @param {Link[]} links - 习惯链数组
+ * @returns {string} 分享码字符串（base64 编码的 JSON）
+ */
+function generateChainShareCode(links){
+  if(!Array.isArray(links)) return "";
+  // 仅保留可分享字段，剥离内部 id 重新生成
+  const clean = links.map(l => ({
+    fromSc: l.fromSc || "",
+    kw: l.kw || "",
+    toSc: l.toSc || "",
+    taskTitle: l.taskTitle || "",
+    priority: l.priority || "P2",
+    enabled: l.enabled !== false
+  }));
+  return _strToB64(JSON.stringify(clean));
+}
+/**
+ * 解析习惯链分享码并导入（验证格式后保存到自定义链）
+ * @param {string} code - 分享码字符串
+ * @returns {{ok:boolean, err?:string, count?:number, links?:Link[]}} 导入结果
+ */
+function importChainShareCode(code){
+  if(!code || typeof code !== "string") return {ok:false, err:"分享码不能为空"};
+  let arr;
+  try{
+    const json = _b64ToStr(code.trim());
+    arr = JSON.parse(json);
+  }catch(e){ return {ok:false, err:"分享码格式错误，无法解码"}; }
+  if(!Array.isArray(arr) || arr.length === 0) return {ok:false, err:"分享码内容为空或非数组"};
+  // 验证并重建每条链
+  const validLinks = [];
+  for(let i = 0; i < arr.length; i++){
+    const l = arr[i];
+    if(!l || typeof l !== "object") continue;
+    if(!l.fromSc || !ORDER.includes(l.fromSc)) return {ok:false, err:"第"+(i+1)+"条链：无效的源场景「"+(l.fromSc||"")+"」"};
+    if(!l.toSc || !ORDER.includes(l.toSc)) return {ok:false, err:"第"+(i+1)+"条链：无效的目标场景「"+(l.toSc||"")+"」"};
+    if(l.fromSc === l.toSc) return {ok:false, err:"第"+(i+1)+"条链：源场景与目标场景不能相同"};
+    const kw = String(l.kw===null||l.kw===undefined?"":l.kw).trim();
+    if(!kw) return {ok:false, err:"第"+(i+1)+"条链：关键词不能为空"};
+    validLinks.push({
+      id: uid(),
+      name: (SCENARIOS[l.fromSc]&&SCENARIOS[l.fromSc].name||l.fromSc) + "→" + (SCENARIOS[l.toSc]&&SCENARIOS[l.toSc].name||l.toSc),
+      fromSc: l.fromSc,
+      kw: kw,
+      toSc: l.toSc,
+      taskTitle: l.taskTitle || ("奖励：" + kw),
+      priority: ["P0","P1","P2"].includes(l.priority) ? l.priority : "P2",
+      enabled: l.enabled !== false
+    });
+  }
+  if(validLinks.length === 0) return {ok:false, err:"分享码中没有有效的习惯链"};
+  saveCustomLinks(validLinks);
+  return {ok:true, count: validLinks.length, links: validLinks};
+}
+/**
+ * 打开习惯链分享弹窗（显示分享码文本框，可复制）
+ * @returns {void}
+ */
+function openChainShareModal(){
+  const links = getLinks();
+  if(!links.length){ toast("暂无习惯链可分享", "warn"); return; }
+  const code = generateChainShareCode(links);
+  const old = document.querySelector(".chain-share-modal");
+  if(old) old.remove();
+  const html = `<div class="chain-share-modal" id="chainShareModal">
+    <div class="chain-share-dialog">
+      <div class="chain-share-header">
+        <h2>🔗 分享我的习惯链</h2>
+        <button class="chain-share-close" id="chainShareClose" aria-label="关闭">✕</button>
+      </div>
+      <div class="chain-share-body">
+        <p class="hint">将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ${links.length} 条习惯链。</p>
+        <textarea id="chainShareCode" readonly rows="6" style="width:100%;font-family:monospace;font-size:12px;word-break:break-all">${esc(code)}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="button" class="addbtn" id="chainShareCopy" style="--sc:var(--accent);flex:1">复制分享码</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const close = ()=>{ const m = $("#chainShareModal"); if(m) m.remove(); };
+  $("#chainShareClose").onclick = close;
+  $("#chainShareModal").onclick = (e)=>{ if(e.target === $("#chainShareModal")) close(); };
+  $("#chainShareCopy").onclick = ()=>{
+    const ta = $("#chainShareCode");
+    ta.select();
+    navigator.clipboard.writeText(ta.value).then(()=> toast("分享码已复制到剪贴板", "ok")).catch(()=> toast("复制失败，请手动选择文本复制", "warn"));
+  };
+}
+/**
+ * 打开习惯链导入弹窗（输入分享码，预览后确认导入）
+ * @returns {void}
+ */
+function openChainImportModal(){
+  const old = document.querySelector(".chain-import-modal");
+  if(old) old.remove();
+  const html = `<div class="chain-import-modal" id="chainImportModal">
+    <div class="chain-share-dialog">
+      <div class="chain-share-header">
+        <h2>📥 导入习惯链</h2>
+        <button class="chain-share-close" id="chainImportClose" aria-label="关闭">✕</button>
+      </div>
+      <div class="chain-share-body">
+        <p class="hint">粘贴他人分享的习惯链分享码，点「预览」查看将导入的链，确认后点「导入」。</p>
+        <textarea id="chainImportCode" rows="6" placeholder="粘贴分享码..." style="width:100%;font-family:monospace;font-size:12px;word-break:break-all"></textarea>
+        <div id="chainImportPreview" style="margin-top:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="button" class="addbtn" id="chainImportPreviewBtn" style="--sc:var(--muted);flex:1">预览</button>
+          <button type="button" class="addbtn" id="chainImportConfirmBtn" style="--sc:var(--accent);flex:1" disabled>确认导入</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const close = ()=>{ const m = $("#chainImportModal"); if(m) m.remove(); };
+  $("#chainImportClose").onclick = close;
+  $("#chainImportModal").onclick = (e)=>{ if(e.target === $("#chainImportModal")) close(); };
+  let pendingLinks = null;
+  $("#chainImportPreviewBtn").onclick = ()=>{
+    const code = $("#chainImportCode").value.trim();
+    if(!code){ toast("请先粘贴分享码", "warn"); return; }
+    const r = importChainShareCode(code);
+    const previewEl = $("#chainImportPreview");
+    if(!r.ok){
+      previewEl.innerHTML = sanitizeHtml(`<div style="color:var(--danger);padding:6px">❌ ${esc(r.err||"解析失败")}</div>`);
+      $("#chainImportConfirmBtn").disabled = true;
+      pendingLinks = null;
+      return;
+    }
+    pendingLinks = r.links;
+    const rows = r.links.map(l => {
+      const fs = scMeta(l.fromSc), ts = scMeta(l.toSc);
+      return `<div class="chain-preview-row"><span style="color:${fs.color}">${esc(fs.name)}</span> <b>${esc(l.kw)}</b> → <span style="color:${ts.color}">${esc(ts.name)}</span></div>`;
+    }).join("");
+    previewEl.innerHTML = sanitizeHtml(`<div style="padding:6px;border:1px solid var(--line);border-radius:6px"><b>将导入 ${r.count} 条链：</b>${rows}</div>`);
+    $("#chainImportConfirmBtn").disabled = false;
+  };
+  $("#chainImportConfirmBtn").onclick = ()=>{
+    if(!pendingLinks){ toast("请先点「预览」确认", "warn"); return; }
+    saveCustomLinks(pendingLinks);
+    renderLinksBox();
+    close();
+    toast("已导入 "+pendingLinks.length+" 条习惯链", "ok");
+  };
+}
+
+/* ---------- 场景模板一键导入 ---------- */
+/**
+ * 预置场景模板集合（考研复习/健身30天/编程学习/项目管理/每日习惯养成）
+ * 每个模板含 {name, description, tasks: [{title, scenario, priority, dueOffset, note}]}
+ */
+const SCENE_TEMPLATES = [
+  {
+    name: "考研复习计划",
+    description: "政治/英语/数学/专业课 每日复习 + 周测，按周排期推进",
+    tasks: [
+      { title: "政治：马原复习 + 选择题练习", scenario: "study", priority: "P1", dueOffset: 0, note: "重点：唯物史观 + 认识论" },
+      { title: "英语：阅读理解 2 篇 + 单词背诵", scenario: "study", priority: "P1", dueOffset: 0, note: "精读 + 长难句分析" },
+      { title: "数学：高数章节复习 + 习题", scenario: "study", priority: "P0", dueOffset: 1, note: "极限与连续" },
+      { title: "专业课：指定教材章节精读", scenario: "study", priority: "P1", dueOffset: 1, note: "整理笔记 + 思维导图" },
+      { title: "周测：全科模拟测试", scenario: "study", priority: "P0", dueOffset: 6, note: "计时完成 + 错题复盘" },
+      { title: "错题整理 + 薄弱环节强化", scenario: "study", priority: "P2", dueOffset: 7, note: "针对错题重做" }
+    ]
+  },
+  {
+    name: "健身30天计划",
+    description: "跑步/力量/拉伸 隔天轮换，30 天渐进式训练",
+    tasks: [
+      { title: "跑步 3km + 热身", scenario: "life", priority: "P1", dueOffset: 0, note: "配速 6:00，注意呼吸节奏" },
+      { title: "力量训练：上肢（俯卧撑/哑铃）", scenario: "life", priority: "P1", dueOffset: 1, note: "3 组 × 12 次" },
+      { title: "拉伸恢复 + 泡沫轴放松", scenario: "life", priority: "P2", dueOffset: 2, note: "全身拉伸 20 分钟" },
+      { title: "跑步 5km 节奏跑", scenario: "life", priority: "P1", dueOffset: 3, note: "配速 5:30" },
+      { title: "力量训练：下肢（深蹲/硬拉）", scenario: "life", priority: "P1", dueOffset: 4, note: "3 组 × 10 次" },
+      { title: "休息日：散步 + 充足睡眠", scenario: "life", priority: "P2", dueOffset: 5, note: "主动恢复" },
+      { title: "周总结：记录体重/体感/进步", scenario: "life", priority: "P2", dueOffset: 6, note: "拍照对比" }
+    ]
+  },
+  {
+    name: "编程学习路线",
+    description: "算法/项目/刷题 每日推进，理论与实战结合",
+    tasks: [
+      { title: "算法：数据结构复习（链表/栈/队列）", scenario: "code", priority: "P0", dueOffset: 0, note: "手写实现 + 复杂度分析" },
+      { title: "刷题：LeetCode 每日 2 题", scenario: "code", priority: "P1", dueOffset: 0, note: "先易后难，总结套路" },
+      { title: "项目：搭建项目骨架 + 核心模块", scenario: "code", priority: "P1", dueOffset: 1, note: "技术选型 + 目录结构" },
+      { title: "算法：动态规划专题", scenario: "code", priority: "P0", dueOffset: 2, note: "经典 DP 题目 5 道" },
+      { title: "项目：实现业务逻辑 + 单元测试", scenario: "code", priority: "P1", dueOffset: 3, note: "覆盖率 > 80%" },
+      { title: "复盘：本周学习总结 + 下周计划", scenario: "code", priority: "P2", dueOffset: 6, note: "整理博客素材" }
+    ]
+  },
+  {
+    name: "项目管理模板",
+    description: "需求/设计/开发/测试 按周排期，完整项目生命周期",
+    tasks: [
+      { title: "需求评审 + 范围确认", scenario: "office", priority: "P0", dueOffset: 0, note: "PRD 评审 + 验收标准" },
+      { title: "技术方案设计 + 评审", scenario: "code", priority: "P0", dueOffset: 2, note: "架构图 + 接口定义" },
+      { title: "开发：核心功能实现", scenario: "code", priority: "P1", dueOffset: 4, note: "每日站会同步进度" },
+      { title: "开发：联调 + Bug 修复", scenario: "code", priority: "P1", dueOffset: 8, note: "前后端联调" },
+      { title: "测试：用例编写 + 执行", scenario: "office", priority: "P1", dueOffset: 10, note: "回归 + 边界用例" },
+      { title: "上线：部署 + 验收 + 复盘", scenario: "office", priority: "P0", dueOffset: 13, note: "灰度发布 + 监控" }
+    ]
+  },
+  {
+    name: "每日习惯养成",
+    description: "早起/运动/阅读/冥想 每日重复，养成健康生活习惯",
+    tasks: [
+      { title: "早起 6:30 + 晨间日记", scenario: "life", priority: "P1", dueOffset: 0, note: "记录三件感恩事" },
+      { title: "运动 30 分钟", scenario: "life", priority: "P1", dueOffset: 0, note: "跑步/瑜伽/力量任选" },
+      { title: "阅读 30 分钟", scenario: "study", priority: "P2", dueOffset: 0, note: "记录金句 + 思考" },
+      { title: "冥想 10 分钟", scenario: "life", priority: "P2", dueOffset: 0, note: "专注呼吸 + 放空" },
+      { title: "周复盘：习惯打卡统计", scenario: "life", priority: "P2", dueOffset: 6, note: "完成率 + 调整下周" }
+    ]
+  }
+];
+/**
+ * 应用场景模板：批量创建任务（dueDate = today + dueOffset）
+ * @param {Object} template - SCENE_TEMPLATES 中的模板对象
+ * @returns {{ok:boolean, err?:string, count?:number, ids?:string[]}} 创建结果
+ */
+function applyTemplate(template){
+  if(!template || typeof template !== "object") return {ok:false, err:"模板不能为空"};
+  if(!Array.isArray(template.tasks) || template.tasks.length === 0) return {ok:false, err:"模板任务列表为空"};
+  const tasks = getTasks();
+  const now = Date.now();
+  const createdIds = [];
+  for(let i = 0; i < template.tasks.length; i++){
+    const t = template.tasks[i];
+    if(!t || typeof t.title !== "string" || !t.title.trim()) continue;
+    const sc = ORDER.includes(t.scenario) ? t.scenario : "office";
+    const offset = (typeof t.dueOffset === "number" && isFinite(t.dueOffset)) ? Math.max(0, Math.min(365, t.dueOffset)) : 0;
+    const id = uid();
+    tasks.push({
+      id: id,
+      sc: sc,
+      title: t.title.trim(),
+      due: offset > 0 ? shiftDay(offset) : todayStr(),
+      priority: ["P0","P1","P2"].includes(t.priority) ? t.priority : "",
+      status: "todo",
+      doneAt: null,
+      note: t.note || "",
+      tags: ["模板"],
+      created: now + i,
+      updatedAt: now + i
+    });
+    createdIds.push(id);
+  }
+  if(createdIds.length === 0) return {ok:false, err:"模板中没有有效任务"};
+  setTasks(tasks);
+  return {ok:true, count: createdIds.length, ids: createdIds};
+}
+/**
+ * 打开场景模板选择弹窗
+ * @returns {void}
+ */
+function openTemplateModal(){
+  const old = document.querySelector(".scene-template-modal");
+  if(old) old.remove();
+  const cards = SCENE_TEMPLATES.map((t, i) => {
+    const scSet = [...new Set(t.tasks.map(x => x.scenario))];
+    const scBadges = scSet.map(sc => { const s = scMeta(sc); return `<span class="tpl-sc-badge" style="background:${s.color};color:var(--on-accent)">${esc(s.name)}</span>`; }).join(" ");
+    return `<div class="tpl-card" data-tpl="${i}">
+      <div class="tpl-card-head">
+        <h3>${esc(t.name)}</h3>
+        <span class="tpl-task-count">${t.tasks.length} 个任务</span>
+      </div>
+      <p class="tpl-desc">${esc(t.description)}</p>
+      <div class="tpl-sc-row">${scBadges}</div>
+      <button type="button" class="addbtn tpl-import-btn" data-tpl-import="${i}" style="--sc:var(--accent);width:100%;margin-top:8px">一键导入</button>
+    </div>`;
+  }).join("");
+  const html = `<div class="scene-template-modal" id="sceneTemplateModal">
+    <div class="scene-template-dialog">
+      <div class="scene-template-header">
+        <h2>📋 场景模板</h2>
+        <button class="scene-template-close" id="sceneTemplateClose" aria-label="关闭">✕</button>
+      </div>
+      <div class="scene-template-body">
+        <p class="hint" style="margin:0 0 12px">选择一个模板一键导入对应任务集，到期日按 today + offset 自动计算。</p>
+        ${cards}
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const close = ()=>{ const m = $("#sceneTemplateModal"); if(m) m.remove(); };
+  $("#sceneTemplateClose").onclick = close;
+  $("#sceneTemplateModal").onclick = (e)=>{ if(e.target === $("#sceneTemplateModal")) close(); };
+  const escHandler = (e)=>{ if(e.key === "Escape"){ close(); document.removeEventListener("keydown", escHandler); } };
+  document.addEventListener("keydown", escHandler);
+  $$("#sceneTemplateModal [data-tpl-import]").forEach(btn => {
+    btn.onclick = ()=>{
+      const idx = parseInt(btn.getAttribute("data-tpl-import"), 10);
+      const tpl = SCENE_TEMPLATES[idx];
+      if(!tpl) return;
+      if(!confirm("确定导入模板「"+tpl.name+"」？将创建 "+tpl.tasks.length+" 个任务。")) return;
+      const r = applyTemplate(tpl);
+      if(!r.ok){ toast(r.err||"导入失败", "warn"); return; }
+      close();
+      try{ closeDrawer(); }catch(e){ /* noop */ }
+      render();
+      toast("已导入「"+tpl.name+"」"+r.count+" 个任务", "ok");
+    };
+  });
+}
+
 // ===== UI Layer (交互层·快捷键) =====
 /* ---------- 快捷键 ---------- */
 document.addEventListener("keydown", e=>{
@@ -6578,6 +8437,17 @@ $("#fileInput").onchange = e=>{ if(e.target.files[0]) doImport(e.target.files[0]
 $("#btnClear").onclick = doClear;
 $("#btnIdbRestore").onclick = doIdbRestore;
 $("#bannerExport").onclick = doExport;
+/* v1.4-C 数据导入导出增强：导出预览 / 导入 CSV / 导出记录 CSV */
+$("#btnExportPreview").onclick = openExportPreview;
+$("#btnExportPreviewConfirm").onclick = doExportCSV;
+$("#btnExportPreviewCancel").onclick = closeExportPreview;
+$("#exportPreviewOverlay").onclick = closeExportPreview;
+$("#btnImportCSV").onclick = ()=> $("#csvFileInput").click();
+$("#csvFileInput").onchange = e=>{ if(e.target.files[0]) previewImportCSV(e.target.files[0]); e.target.value=""; };
+$("#btnCsvImportConfirm").onclick = doImportCSV;
+$("#btnCsvImportCancel").onclick = cancelImportCSV;
+$("#csvImportOverlay").onclick = cancelImportCSV;
+$("#btnExportRecsCSV").onclick = doExportRecsCSV;
 $("#btnGear").onclick = openDrawer;
 $("#drawerClose").onclick = closeDrawer;
 $("#overlay").onclick = closeDrawer;
@@ -6689,6 +8559,601 @@ $("#cmdInput").onkeydown = e=>{
 // L1：输入时实时过滤命令（openCmd 仅初次渲染空列表，此前打字不刷新）
 $("#cmdInput").oninput = e=> renderCmd(e.target.value);
 
+/* ---------- v1.4-E 协作/分享：设置抽屉新按钮事件绑定 ---------- */
+/* 习惯链分享 / 导入 / 场景模板入口（按钮在 top.html 设置抽屉中声明）
+ * 使用 nullish 守卫防御：测试环境若 DOM 尚未挂载对应按钮时不报错 */
+const _btnChainShare = $("#btnChainShare"); if(_btnChainShare) _btnChainShare.onclick = openChainShareModal;
+const _btnChainImport = $("#btnChainImport"); if(_btnChainImport) _btnChainImport.onclick = openChainImportModal;
+const _btnSceneTemplate = $("#btnSceneTemplate"); if(_btnSceneTemplate) _btnSceneTemplate.onclick = openTemplateModal;
+
+/* 任务卡片「分享」按钮：全局事件委托（绑在 #main 静态容器，不随 innerHTML 重建丢失）
+ * data-share 属性携带任务 id，点击后生成分享链接并复制到剪贴板 */
+(function setupTaskShareDelegate(){
+  const main = $("#main");
+  if(!main || main._shareBound) return;
+  main._shareBound = true;
+  main.addEventListener("click", (e)=>{
+    const btn = e.target.closest("[data-share]");
+    if(!btn) return;
+    const id = btn.getAttribute("data-share");
+    const tasks = getTasks();
+    const t = tasks.find(x => x.id === id);
+    if(!t){ toast("任务不存在", "warn"); return; }
+    const link = generateShareLink(t);
+    if(!link){ toast("生成分享链接失败", "warn"); return; }
+    // 复制到剪贴板
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(()=>{
+        toast("分享链接已复制到剪贴板", "ok");
+      }).catch(()=>{
+        // clipboard API 失败时回退到选中文本提示
+        toast("复制失败，请手动复制链接", "warn");
+        try{ window.prompt("复制此链接分享任务：", link); }catch(e2){ /* noop */ }
+      });
+    }else{
+      try{ window.prompt("复制此链接分享任务：", link); }catch(e2){ /* noop */ }
+    }
+  });
+})();
+
+/* 启动时检测 URL hash 中的 #share= 分享链接，展示只读任务卡片 */
+/* 改为在 startup 后异步执行（setTimeout 0），避免模块加载阶段同步调用影响 jsdom 测试初始化 */
+setTimeout(function(){ try{ checkSharedTaskOnLoad(); }catch(e){ /* noop */ } }, 0);
+
+// ===== v1.4-F PWA 增强：离线指示 / 后台同步 / 安装弹窗 / Web Push =====
+/* ---------- 离线操作同步队列（localStorage 兜底，SW 端用 IndexedDB） ---------- */
+/**
+ * 同步队列存储键（页面端用 localStorage 兜底；SW 端用 IndexedDB）
+ */
+const SYNC_QUEUE_KEY = PREFIX + "syncQueue";
+const SYNC_TAG = "sync-tasks";
+
+/**
+ * 读取同步队列（页面端 localStorage 副本）。
+ * @returns {Array<{op:string,payload:*,ts:number,id?:number}>}
+ */
+function getSyncQueue(){
+  try { return load(SYNC_QUEUE_KEY, []) || []; } catch(e){ return []; }
+}
+
+/**
+ * 持久化同步队列到 localStorage。
+ * @param {Array} q - 队列数组
+ */
+function _saveSyncQueue(q){
+  try { save(SYNC_QUEUE_KEY, q); } catch(e){ /* 静默 */ }
+}
+
+/**
+ * 把离线操作入队（同时尝试注册 Background Sync）。
+ * @param {string} op - 操作名（如 'task.create' / 'task.complete'）
+ * @param {*} payload - 操作载荷
+ * @returns {{ok:boolean, queued:number}} 入队结果与当前队列长度
+ */
+function enqueueSync(op, payload){
+  try {
+    const q = getSyncQueue();
+    q.push({ op: op, payload: payload, ts: Date.now() });
+    _saveSyncQueue(q);
+    // 尝试注册 Background Sync（浏览器不支持时降级为 online 事件触发）
+    registerBackgroundSync();
+    return { ok: true, queued: q.length };
+  } catch(e){
+    if (typeof pushDiag === "function") pushDiag("error", "enqueueSync failed: "+(e&&e.message||e), {where:"enqueueSync"});
+    return { ok: false, queued: -1 };
+  }
+}
+
+/**
+ * 清空同步队列（同步成功后调用）。
+ */
+function clearSyncQueue(){
+  _saveSyncQueue([]);
+}
+
+/**
+ * 注册 Background Sync（浏览器不支持时静默降级，online 事件兜底）。
+ * @returns {Promise<boolean>} 是否注册成功
+ */
+async function registerBackgroundSync(){
+  try {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return false;
+    const reg = await navigator.serviceWorker.ready;
+    if (!reg || !reg.sync || typeof reg.sync.register !== "function") return false;
+    await reg.sync.register(SYNC_TAG);
+    return true;
+  } catch(e){ return false; }
+}
+
+/**
+ * 触发同步：遍历队列逐条处理（页面端实现，作为 Background Sync 不可用时的降级）。
+ * 真实部署应把 payload POST 到服务器；此处为框架，仅模拟成功并清空队列。
+ * @returns {Promise<{ok:number, fail:number}>}
+ */
+async function flushSyncQueue(){
+  const q = getSyncQueue();
+  if (!q.length) return { ok: 0, fail: 0 };
+  let okCount = 0, failCount = 0;
+  // 框架实现：模拟逐条同步成功（真实部署替换为 fetch POST）
+  for (const item of q) {
+    try {
+      // 真实部署：const r = await fetch(SYNC_ENDPOINT, {method:'POST', body:JSON.stringify(item)});
+      // if (r.ok) okCount++; else failCount++;
+      okCount++;
+    } catch(e) { failCount++; }
+  }
+  if (failCount === 0) clearSyncQueue();
+  return { ok: okCount, fail: failCount };
+}
+
+/* ---------- 网络状态检测与离线指示横幅 ---------- */
+/**
+ * 显示离线横幅。
+ */
+function showOfflineBanner(){
+  const el = $("#offlineBanner"); if(!el) return;
+  el.classList.add("show");
+  const retry = $("#btnRetrySync"); if(retry) retry.disabled = true;
+}
+
+/**
+ * 隐藏离线横幅。
+ */
+function hideOfflineBanner(){
+  const el = $("#offlineBanner"); if(!el) return;
+  el.classList.remove("show");
+}
+
+/**
+ * 更新离线横幅的"重试同步"按钮状态。
+ * @param {boolean} syncing - 是否正在同步
+ */
+function setSyncRetryState(syncing){
+  const btn = $("#btnRetrySync"); if(!btn) return;
+  btn.disabled = !!syncing;
+  btn.textContent = syncing ? "同步中…" : "立即同步";
+}
+
+/**
+ * 检测当前网络状态并更新 UI。
+ * @returns {boolean} 是否在线
+ */
+function updateOnlineStatus(){
+  const online = (typeof navigator !== "undefined") ? navigator.onLine : true;
+  if (online) {
+    hideOfflineBanner();
+  } else {
+    showOfflineBanner();
+  }
+  return online;
+}
+
+/**
+ * 初始化网络状态监听：绑定 online/offline 事件 + 初始状态检测。
+ * 在线恢复时自动触发同步队列 flush + toast 提示。
+ */
+function initNetworkMonitor(){
+  if (typeof window === "undefined") return;
+  // 初始状态
+  updateOnlineStatus();
+  // 在线恢复：隐藏横幅 + 触发同步 + toast
+  window.addEventListener("online", async () => {
+    hideOfflineBanner();
+    try {
+      const q = getSyncQueue();
+      if (q.length > 0) {
+        setSyncRetryState(true);
+        const r = await flushSyncQueue();
+        setSyncRetryState(false);
+        try { toast("已恢复在线，已同步 "+r.ok+" 条离线操作", "ok"); } catch(e){ /* noop */ }
+      } else {
+        try { toast("已恢复在线", "ok"); } catch(e){ /* noop */ }
+      }
+    } catch(e) {
+      setSyncRetryState(false);
+      try { toast("已恢复在线（同步失败，待下次重试）", "warn"); } catch(e2){ /* noop */ }
+    }
+  });
+  // 离线：显示横幅
+  window.addEventListener("offline", () => {
+    showOfflineBanner();
+    try { toast("已离线，操作将保存到本地，恢复网络后自动同步", "warn"); } catch(e){ /* noop */ }
+  });
+}
+
+/* ---------- 安装体验优化：beforeinstallprompt 捕获 + 自定义弹窗 ---------- */
+/**
+ * 全局 deferredPrompt：beforeinstallprompt 事件捕获后暂存。
+ */
+let _deferredInstallPrompt = null;
+
+/**
+ * 检测应用是否已安装（display-mode: standalone 或 navigator.standalone）。
+ * @returns {boolean}
+ */
+function isAppInstalled(){
+  try {
+    // CSS 媒体查询：display-mode: standalone / fullscreen / minimal-ui
+    if (window.matchMedia && typeof window.matchMedia === "function") {
+      if (window.matchMedia("(display-mode: standalone)").matches) return true;
+      if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+      if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
+    }
+    // iOS Safari standalone
+    if (typeof navigator !== "undefined" && navigator.standalone === true) return true;
+    return false;
+  } catch(e){ return false; }
+}
+
+/**
+ * 显示自定义安装弹窗。
+ */
+function showInstallModal(){
+  const el = $("#installModal"); if(!el) return;
+  el.classList.add("show");
+}
+
+/**
+ * 隐藏自定义安装弹窗。
+ */
+function hideInstallModal(){
+  const el = $("#installModal"); if(!el) return;
+  el.classList.remove("show");
+}
+
+/**
+ * 显示顶栏安装按钮（仅未安装 + 已捕获 beforeinstallprompt 时调用）。
+ */
+function showInstallButton(){
+  const btn = $("#btnInstall"); if(!btn) return;
+  btn.classList.add("show");
+}
+
+/**
+ * 隐藏顶栏安装按钮。
+ */
+function hideInstallButton(){
+  const btn = $("#btnInstall"); if(!btn) return;
+  btn.classList.remove("show");
+}
+
+/**
+ * 触发安装：调用 deferredPrompt.prompt()，等待用户选择。
+ * @returns {Promise<boolean>} 用户是否接受安装
+ */
+async function promptInstall(){
+  if (!_deferredInstallPrompt) return false;
+  try {
+    await _deferredInstallPrompt.prompt();
+    const choice = await _deferredInstallPrompt.userChoice;
+    const accepted = (choice && choice.outcome === "accepted");
+    // 用完后清空 deferredPrompt（一次性 API）
+    _deferredInstallPrompt = null;
+    hideInstallButton();
+    hideInstallModal();
+    if (accepted) {
+      try { toast("安装中…请稍候", "ok"); } catch(e){ /* noop */ }
+    }
+    return accepted;
+  } catch(e) {
+    _deferredInstallPrompt = null;
+    return false;
+  }
+}
+
+/**
+ * 初始化安装体验：捕获 beforeinstallprompt + appinstalled 事件。
+ * 已安装时不显示安装提示。
+ */
+function initInstallPrompt(){
+  if (typeof window === "undefined") return;
+  // 已安装：不显示任何安装提示
+  if (isAppInstalled()) {
+    hideInstallButton();
+    return;
+  }
+  // 捕获 beforeinstallprompt：阻止默认提示，存为 deferredPrompt
+  window.addEventListener("beforeinstallprompt", (e) => {
+    try { e.preventDefault(); } catch(e2){ /* noop */ }
+    _deferredInstallPrompt = e;
+    // 显示顶栏安装按钮（用户可主动点击触发安装弹窗）
+    showInstallButton();
+  });
+  // 安装成功：记录 + 隐藏按钮/弹窗
+  window.addEventListener("appinstalled", () => {
+    _deferredInstallPrompt = null;
+    hideInstallButton();
+    hideInstallModal();
+    try { toast("已安装到桌面，可从桌面快捷启动", "ok"); } catch(e){ /* noop */ }
+    // 记录已安装状态（持久化，下次启动不再提示）
+    try { save(PREFIX + "pwa_installed", { ts: Date.now() }); } catch(e2){ /* noop */ }
+  });
+}
+
+/* ---------- Web Push 订阅框架 ---------- */
+/**
+ * VAPID 公钥占位符（真实部署替换为服务器生成的 VAPID 公钥，base64url 编码）。
+ * 当前为占位符，订阅会成功但服务器端无法推送（框架模式）。
+ */
+const VAPID_PUBLIC_KEY = "BEl62iUgOK0uOQ5h8J5qI9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT";
+
+/**
+ * 把 base64url 字符串转为 Uint8Array（PushManager.subscribe 需要 applicationServerKey 为 Uint8Array）。
+ * @param {string} base64 - base64url 编码的字符串
+ * @returns {Uint8Array}
+ */
+function _base64ToUint8Array(base64){
+  try {
+    const padding = "=".repeat((4 - base64.length % 4) % 4);
+    const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(b64);
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    return arr;
+  } catch(e){ return new Uint8Array(0); }
+}
+
+/**
+ * 检测浏览器是否支持 Push API。
+ * @returns {boolean}
+ */
+function isPushSupported(){
+  try {
+    return (typeof navigator !== "undefined" && "serviceWorker" in navigator &&
+            "PushManager" in window && "Notification" in window);
+  } catch(e){ return false; }
+}
+
+/**
+ * 获取当前 Push 订阅状态。
+ * @returns {Promise<{subscribed:boolean, subscription:PushSubscription|null}>}
+ */
+async function getPushSubscriptionState(){
+  if (!isPushSupported()) return { subscribed: false, subscription: null };
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    return { subscribed: !!sub, subscription: sub };
+  } catch(e){ return { subscribed: false, subscription: null }; }
+}
+
+/**
+ * 订阅 Web Push：请求通知权限 + 调用 pushManager.subscribe。
+ * @returns {Promise<{ok:boolean, err?:string, subscription?:PushSubscription}>}
+ */
+async function subscribePush(){
+  if (!isPushSupported()) return { ok: false, err: "浏览器不支持 Web Push" };
+  try {
+    // 1. 请求通知权限
+    if (Notification.permission === "default") {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return { ok: false, err: "通知权限被拒绝" };
+    } else if (Notification.permission === "denied") {
+      return { ok: false, err: "通知权限被拒绝，请在浏览器设置中允许" };
+    }
+    // 2. 调用 pushManager.subscribe
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _base64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    // 3. 真实部署应把 sub POST 到服务器 push-subscription endpoint
+    // 框架模式：仅持久化订阅状态到 localStorage
+    try { save(PREFIX + "push_subscription", { endpoint: sub.endpoint, ts: Date.now() }); } catch(e){ /* noop */ }
+    return { ok: true, subscription: sub };
+  } catch(e){
+    return { ok: false, err: (e && e.message) || String(e) };
+  }
+}
+
+/**
+ * 取消订阅 Web Push。
+ * @returns {Promise<{ok:boolean, err?:string}>}
+ */
+async function unsubscribePush(){
+  try {
+    const state = await getPushSubscriptionState();
+    if (!state.subscription) return { ok: true }; // 本就未订阅
+    const ok = await state.subscription.unsubscribe();
+    if (ok) {
+      try { localStorage.removeItem(PREFIX + "push_subscription"); } catch(e){ /* noop */ }
+    }
+    return { ok: ok };
+  } catch(e){
+    return { ok: false, err: (e && e.message) || String(e) };
+  }
+}
+
+/**
+ * 发送测试通知（本地 Notification，不经过推送服务器）。
+ * @returns {Promise<{ok:boolean, err?:string}>}
+ */
+async function sendTestPushNotification(){
+  try {
+    if (typeof Notification === "undefined") return { ok: false, err: "浏览器不支持通知" };
+    if (Notification.permission !== "granted") {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return { ok: false, err: "通知权限被拒绝" };
+    }
+    // 优先通过 SW 显示（与 push 事件一致），降级为页面 Notification
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg && typeof reg.showNotification === "function") {
+          await reg.showNotification("Agent 工作台 · 测试通知", {
+            body: "如果你看到这条通知，说明 Web Push 框架工作正常。",
+            icon: "./icon.svg",
+            tag: "wb-push-test"
+          });
+          return { ok: true };
+        }
+      } catch(e){ /* 降级 */ }
+    }
+    new Notification("Agent 工作台 · 测试通知", {
+      body: "如果你看到这条通知，说明 Web Push 框架工作正常。",
+      icon: "./icon.svg",
+      tag: "wb-push-test"
+    });
+    return { ok: true };
+  } catch(e){
+    return { ok: false, err: (e && e.message) || String(e) };
+  }
+}
+
+/**
+ * 更新 Push 订阅 UI（开关状态 + 文案 + 按钮可用性）。
+ */
+async function refreshPushUI(){
+  const cb = $("#cfgPush");
+  const statusEl = $("#pushStatus");
+  const subBtn = $("#btnPushSubscribe");
+  const unsubBtn = $("#btnPushUnsubscribe");
+  const testBtn = $("#btnPushTest");
+  if (!isPushSupported()) {
+    if (cb) cb.disabled = true;
+    if (subBtn) subBtn.disabled = true;
+    if (unsubBtn) unsubBtn.disabled = true;
+    if (testBtn) testBtn.disabled = true;
+    if (statusEl) statusEl.textContent = "浏览器不支持 Web Push API。";
+    return;
+  }
+  const state = await getPushSubscriptionState();
+  if (cb) cb.checked = state.subscribed;
+  if (subBtn) subBtn.disabled = state.subscribed;
+  if (unsubBtn) unsubBtn.disabled = !state.subscribed;
+  if (testBtn) testBtn.disabled = !state.subscribed;
+  if (subBtn) subBtn.classList.toggle("active", state.subscribed);
+  if (statusEl) {
+    if (state.subscribed) {
+      statusEl.textContent = "已订阅推送通知。endpoint: " + (state.subscription && state.subscription.endpoint ? state.subscription.endpoint.slice(0, 60) + "…" : "(unknown)");
+    } else {
+      statusEl.textContent = "未订阅。开启后将向浏览器推送任务到期与断链提醒。";
+    }
+  }
+}
+
+/**
+ * 初始化 Push 订阅 UI 事件绑定。
+ */
+function initPushUI(){
+  const subBtn = $("#btnPushSubscribe");
+  const unsubBtn = $("#btnPushUnsubscribe");
+  const testBtn = $("#btnPushTest");
+  const cb = $("#cfgPush");
+  if (subBtn) subBtn.onclick = async () => {
+    try { subBtn.disabled = true; subBtn.textContent = "订阅中…"; } catch(e){ /* noop */ }
+    const r = await subscribePush();
+    subBtn.textContent = "订阅推送";
+    if (r.ok) {
+      try { toast("已订阅推送通知", "ok"); } catch(e){ /* noop */ }
+    } else {
+      try { toast("订阅失败：" + (r.err || "未知错误"), "warn"); } catch(e){ /* noop */ }
+    }
+    refreshPushUI();
+  };
+  if (unsubBtn) unsubBtn.onclick = async () => {
+    const r = await unsubscribePush();
+    if (r.ok) {
+      try { toast("已取消推送订阅", "ok"); } catch(e){ /* noop */ }
+    } else {
+      try { toast("取消失败：" + (r.err || "未知错误"), "warn"); } catch(e){ /* noop */ }
+    }
+    refreshPushUI();
+  };
+  if (testBtn) testBtn.onclick = async () => {
+    const r = await sendTestPushNotification();
+    if (!r.ok) {
+      try { toast("测试通知失败：" + (r.err || "未知错误"), "warn"); } catch(e){ /* noop */ }
+    }
+  };
+  if (cb) cb.onchange = async () => {
+    if (cb.checked) {
+      const r = await subscribePush();
+      if (!r.ok) {
+        cb.checked = false;
+        try { toast("订阅失败：" + (r.err || "未知错误"), "warn"); } catch(e){ /* noop */ }
+      } else {
+        try { toast("已订阅推送通知", "ok"); } catch(e){ /* noop */ }
+      }
+    } else {
+      const r = await unsubscribePush();
+      if (!r.ok) {
+        try { toast("取消失败：" + (r.err || "未知错误"), "warn"); } catch(e){ /* noop */ }
+      } else {
+        try { toast("已取消推送订阅", "ok"); } catch(e){ /* noop */ }
+      }
+    }
+    refreshPushUI();
+  };
+  // 初始 UI 状态
+  refreshPushUI();
+}
+
+/* ---------- 安装弹窗 / 顶栏安装按钮事件绑定 ---------- */
+function bindInstallUI(){
+  const btnConfirm = $("#btnInstallConfirm");
+  const btnLater = $("#btnInstallLater");
+  const btnTopInstall = $("#btnInstall");
+  if (btnConfirm) btnConfirm.onclick = () => { promptInstall(); };
+  if (btnLater) btnLater.onclick = () => { hideInstallModal(); };
+  if (btnTopInstall) btnTopInstall.onclick = () => {
+    // 顶栏安装按钮：有 deferredPrompt 时直接触发安装，否则显示弹窗
+    if (_deferredInstallPrompt) {
+      showInstallModal();
+    } else {
+      // 没有 deferredPrompt（可能浏览器不支持或已安装）：提示用户
+      try { toast("当前浏览器未提供安装提示，可使用浏览器菜单「添加到主屏幕/安装应用」", "warn"); } catch(e){ /* noop */ }
+    }
+  };
+  // ESC 关闭安装弹窗
+  if (typeof document !== "undefined") {
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const modal = $("#installModal");
+        if (modal && modal.classList.contains("show")) hideInstallModal();
+      }
+    });
+  }
+}
+
+/* ---------- 离线横幅"立即同步"按钮 ---------- */
+function bindOfflineBanner(){
+  const btn = $("#btnRetrySync");
+  if (btn) btn.onclick = async () => {
+    if (btn.disabled) return;
+    setSyncRetryState(true);
+    try {
+      const r = await flushSyncQueue();
+      try { toast("已同步 "+r.ok+" 条操作"+(r.fail>0?"，"+r.fail+" 条失败":""), r.fail>0?"warn":"ok"); } catch(e){ /* noop */ }
+    } catch(e) {
+      try { toast("同步失败，请稍后重试", "warn"); } catch(e2){ /* noop */ }
+    }
+    setSyncRetryState(false);
+  };
+}
+
+/* ---------- v1.4-F 初始化入口：在 DOM 就绪后绑定所有 PWA 增强 ---------- */
+function initPWAEnhancements(){
+  try {
+    initNetworkMonitor();
+    initInstallPrompt();
+    bindInstallUI();
+    bindOfflineBanner();
+    initPushUI();
+  } catch(e){
+    if (typeof pushDiag === "function") pushDiag("error", "initPWAEnhancements failed: "+(e&&e.message||e), {where:"initPWA"});
+  }
+}
+
+// DOM 已就绪（脚本在 body 末尾执行）时立即初始化；jsdom 测试环境也兼容
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initPWAEnhancements);
+  } else {
+    initPWAEnhancements();
+  }
+}
+
 // ===== Bootstrap (启动) =====
 /* ---------- 启动 ---------- */
 // PWA Service Worker 注册（失败静默；jsdom/Electron 无 serviceWorker 时自动跳过）
@@ -6709,9 +9174,11 @@ seed();
   setupMobileGestures(); // T4.3 移动端手势：左滑下一个/右滑上一个/右滑左边缘打开侧边栏（仅移动端启用）
   applyLandscapeFold(); // T4.3 移动端横屏自动折叠侧边栏
   // T4.3 横屏/竖屏切换时重新检测折叠状态
+  // v1.4-B 性能优化：resize 加 200ms 防抖，避免拖拽窗口时频繁重算
   if(typeof window !== "undefined"){
-    window.addEventListener("resize", applyLandscapeFold);
-    window.addEventListener("orientationchange", applyLandscapeFold);
+    const _resizeDebounced = debounce(applyLandscapeFold, 200);
+    window.addEventListener("resize", _resizeDebounced);
+    window.addEventListener("orientationchange", applyLandscapeFold); // orientationchange 无需防抖（低频）
   }
   // B4：首次启动引导（不阻塞主题；引导完成或不需要时走正常流程）
   if(needsOnboarding()){
@@ -6794,6 +9261,12 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // T1-T5 Quick Wins 增强（UI 软删 / 回收站批量与自动清理 / CSV·MD 导出 / 主题跟随系统 / 焦点陷阱）访问器
     restoreRecycleBatch, purgeRecycleBatch, getRecyclePolicy, setRecyclePolicy, cleanupRecycle,
     buildTasksCSV, buildTasksMD, doExportCSV, doExportMD, trapFocus, closeRecycleModal,
+    // v1.4-C 数据导入导出增强：CSV 字段选择 / 记录导出 / CSV 导入 / 导出预览 / 多设备同步 / 迁移日志
+    CSV_TASK_FIELDS, CSV_DEFAULT_FIELDS, buildRecsCSV, doExportRecsCSV, countAllRecs,
+    parseCSV, parseCSVRows, csvRowToTask, previewImportCSV, doImportCSV, cancelImportCSV, doImportCSVFile,
+    openExportPreview, closeExportPreview, getDeviceId,
+    getLastMergeLog, detectLegacyData, getMigrationLog,
+    getPendingCSVImport, setPendingCSVImport,
     // P5' 命令面板增强（模糊搜索 / 最近使用）访问器
     fuzzyScore, getCmdRecent, pushCmdRecent,
     // P1 自定义场景访问器（供测试驱动与断言）
@@ -6851,7 +9324,33 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // v1.3.4-C 生活场景·健康概览卡片（供测试驱动与断言）
     healthCard, bindHealthCard, getHealthRecs, parseNum,
     // 第六轮 R5：工作记忆容量可配置
-    getMemMax
+    getMemMax,
+    // v1.4-B 性能优化工具（防抖 + 虚拟滚动 + DOM 复用）
+    debounce, virtualScrollRange, VIRTUAL_SCROLL_THRESHOLD,
+    _renderKanbanCard, _renderKanbanCol, _updateKanbanVScroll,
+    _renderRecItem, _renderRecList, _updateRecVScroll,
+    _renderReviewItem, _updateReviewVScroll,
+    _tryMoveKanbanCardLocal, _bindVirtualScrolls,
+    // v1.4-E 协作/分享：任务分享链接 + 习惯链分享导入 + 场景模板一键导入
+    generateShareLink, parseShareLink, renderSharedTaskCard, openSharedTaskModal, checkSharedTaskOnLoad,
+    generateChainShareCode, importChainShareCode, openChainShareModal, openChainImportModal,
+    SCENE_TEMPLATES, applyTemplate, openTemplateModal,
+    // v1.4-D AI 能力增强：自然语言建任务/操作解析 + AI 每日报告
+    parseNaturalLanguageTask, parseNaturalLanguageAction, executeNaturalLanguageAction,
+    generateDailyReport, collectDailyReportData,
+    renderDailyReportCard, handleDailyReport,
+    _cn2num,
+    // v1.4-F PWA 增强：离线指示 / 后台同步 / 安装弹窗 / Web Push 订阅框架
+    SYNC_QUEUE_KEY, SYNC_TAG,
+    getSyncQueue, enqueueSync, clearSyncQueue, registerBackgroundSync, flushSyncQueue,
+    showOfflineBanner, hideOfflineBanner, setSyncRetryState, updateOnlineStatus, initNetworkMonitor,
+    isAppInstalled, showInstallModal, hideInstallModal, showInstallButton, hideInstallButton,
+    promptInstall, initInstallPrompt,
+    VAPID_PUBLIC_KEY, isPushSupported, getPushSubscriptionState,
+    subscribePush, unsubscribePush, sendTestPushNotification,
+    refreshPushUI, initPushUI, bindInstallUI, bindOfflineBanner, initPWAEnhancements,
+    // v1.4-D onChatSubmit（供集成测试调用）
+    onChatSubmit
   };
 }
 </script>
