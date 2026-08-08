@@ -2176,7 +2176,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.6.0";
+const VERSION = "1.7.0";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -2744,6 +2744,60 @@ function saveHybridData(type, data){
       return { storage: "local", size: size, error: true };
     }
   });
+}
+
+/* ============================================================
+ * v1.7-B 模型缓存 store（IDB V2 'models' 逻辑 store）
+ * ============================================================
+ * 设计契约：
+ *   - 复用 IDB V2 单 store 'data'，用复合键 ['models', modelId] 区分
+ *   - 元数据字段：{modelId, version, size, blob, cachedAt, lastUsed, __store:'models'}
+ *   - IDB 不可用时调用方负责降级到内存（54-offline-ai.js 中处理）
+ *   - idbPutModel / idbGetModel / idbDeleteModel / idbListModels
+ * ============================================================ */
+var IDB_MODELS_STORE = "models";
+
+/**
+ * 写入/更新模型缓存记录
+ * @param {string} modelId - 模型 ID
+ * @param {Object} record - 缓存记录（{modelId, version, size, blob, cachedAt, lastUsed}）
+ * @returns {Promise<*>} idbPut 返回值（undefined 表示 IDB 不可用）
+ */
+function idbPutModel(modelId, record){
+  var mid = String(modelId || "").trim();
+  if(!mid) return Promise.resolve(undefined);
+  var rec = Object.assign({}, record || {}, { id: mid, modelId: mid });
+  return idbPut(IDB_MODELS_STORE, rec);
+}
+
+/**
+ * 读取模型缓存记录
+ * @param {string} modelId
+ * @returns {Promise<Object|undefined>} 缓存记录或 undefined
+ */
+function idbGetModel(modelId){
+  var mid = String(modelId || "").trim();
+  if(!mid) return Promise.resolve(undefined);
+  return idbGet(IDB_MODELS_STORE, mid);
+}
+
+/**
+ * 删除模型缓存记录
+ * @param {string} modelId
+ * @returns {Promise<*>}
+ */
+function idbDeleteModel(modelId){
+  var mid = String(modelId || "").trim();
+  if(!mid) return Promise.resolve(undefined);
+  return idbDelete(IDB_MODELS_STORE, mid);
+}
+
+/**
+ * 列出所有模型缓存记录
+ * @returns {Promise<Array<Object>>}
+ */
+function idbListModels(){
+  return idbGetAll(IDB_MODELS_STORE);
 }
 
 /**
@@ -12113,7 +12167,100 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // Web Worker 池（52 > 31，函数声明提升安全；var 用 getter）
     createWorkerPool, workerExecute, workerTerminate, getWorkerStatus, isWorkerAvailable,
     get _workerPool(){ return _workerPool; },
-    get _workerAvailable(){ return _workerAvailable; }
+    get _workerAvailable(){ return _workerAvailable; },
+    // v1.7-A AI 深度增强：Agent 自主执行 + 多轮对话记忆 + RAG 知识检索 + AI 代码审查
+    // 函数声明会被提升，可直接引用；53 > 31，但函数声明提升使引用安全
+    // _ragIndex / _agentRunLog / CONVERSATIONS_KEY / LONG_TERM_MEMORY_KEY / RAG_INDEX_KEY 用 var 声明
+    // 在 53-ai-deep.js 中定义（加载顺序 31 < 53），使用 getter 延迟求值避免 TDZ
+    // aiAgentAutoRun / _notifyNotesChanged 在 40/47 中定义（> 31），函数声明提升安全
+    agentPlan, agentExecuteStep, agentVerify, agentRun, agentReflect,
+    saveConversation, loadConversation, listConversations,
+    summarizeConversation, getRelevantMemory, addLongTermMemory,
+    buildIndex, tfidfScore, ragRetrieve, ragAugment,
+    indexFromNotes, indexFromTasks, saveRagIndex, loadRagIndex,
+    reviewCode, detectSecurityIssues, suggestOptimization, reviewScore,
+    aiAgentAutoRun, _notifyNotesChanged,
+    get _ragIndex(){ return _ragIndex; },
+    get _agentRunLog(){ return _agentRunLog; },
+    get CONVERSATIONS_KEY(){ return CONVERSATIONS_KEY; },
+    get LONG_TERM_MEMORY_KEY(){ return LONG_TERM_MEMORY_KEY; },
+    get RAG_INDEX_KEY(){ return RAG_INDEX_KEY; },
+    // v1.7-B 离线AI与边缘计算：WebLLM + ONNX Runtime + 模型缓存 + 隐私优先
+    // 函数声明会被提升，可直接引用；54 > 31，但函数声明提升使引用安全
+    // _webllmEngine / _onnxSession / _modelCacheFallback / _privacyPolicy / _dataFlowAuditLog 用 var 声明
+    // PRIVACY_LEVELS / WEBLLM_MODELS / ONNX_MODELS / PRIVACY_POLICY_KEY 用 var 声明
+    // 在 54-offline-ai.js 中定义（加载顺序 31 < 54），使用 getter 延迟求值避免 TDZ
+    // idbPutModel / idbGetModel / idbDeleteModel / idbListModels 在 02b 中定义（< 31，可直接引用）
+    initWebLLM, webllmChat, webllmAvailable, webllmListModels,
+    webllmLoadProgress, webllmUnload,
+    initONNX, onnxClassify, onnxNER, onnxAvailable, onnxListModels,
+    cacheModel, getCachedModel, removeCachedModel, listCachedModels,
+    getCacheSize, clearModelCache, ensureModelLoaded,
+    markSensitive, sanitizeForCloud, shouldProcessLocally,
+    setPrivacyPolicy, getPrivacyPolicy, auditDataFlow,
+    getDataFlowAuditLog, clearDataFlowAuditLog, _resetOfflineAI,
+    idbPutModel, idbGetModel, idbDeleteModel, idbListModels,
+    get PRIVACY_LEVELS(){ return PRIVACY_LEVELS; },
+    get WEBLLM_MODELS(){ return WEBLLM_MODELS; },
+    get ONNX_MODELS(){ return ONNX_MODELS; },
+    get PRIVACY_POLICY_KEY(){ return PRIVACY_POLICY_KEY; },
+    get _webllmEngine(){ return _webllmEngine; },
+    get _onnxSession(){ return _onnxSession; },
+    get _modelCacheFallback(){ return _modelCacheFallback; },
+    get _privacyPolicy(){ return _privacyPolicy; },
+    get _dataFlowAuditLog(){ return _dataFlowAuditLog; },
+    // v1.7-C 高级分析与预测：ML 行为预测 + 生产力评分 + 习惯养成 + 推荐引擎
+    // 函数声明会被提升，可直接引用；55 > 31，但函数声明提升使引用安全
+    // HABIT_PHASES / HABIT_K_* 用 var 声明，使用 getter 延迟求值避免 TDZ
+    predictCompletionRate, predictBestWorkHour, predictFocusTrend,
+    exponentialSmoothing, linearRegression, movingAverage, detectAnomaly, computeStats,
+    calcProductivityScore, focusScore, habitScore, efficiencyScore,
+    habitModel, habitPrediction, habitStage,
+    recommend, collaborativeFilter, contentBasedRecommend, hybridRecommend,
+    get HABIT_PHASES(){ return HABIT_PHASES; },
+    get HABIT_K_FORMATION(){ return HABIT_K_FORMATION; },
+    get HABIT_K_CONSOLIDATION(){ return HABIT_K_CONSOLIDATION; },
+    get HABIT_K_STABILIZATION(){ return HABIT_K_STABILIZATION; },
+    // v1.7-C 智能排期
+    // 函数声明会被提升，可直接引用；56 > 31，但函数声明提升使引用安全
+    // TASK_TYPE_ENERGY / PRIORITY_SCORE 用 var 声明，使用 getter 延迟求值避免 TDZ
+    smartSchedule, scoreTask, urgencyScore, importanceScore, energyMatch,
+    optimizeSchedule, suggestBreaks, renderScheduleView,
+    get TASK_TYPE_ENERGY(){ return TASK_TYPE_ENERGY; },
+    get PRIORITY_SCORE(){ return PRIORITY_SCORE; },
+    // v1.7-C 情绪分析
+    // 函数声明会被提升，可直接引用；57 > 31，但函数声明提升使引用安全
+    // SENTIMENT_DICT / EMOTION_KEYWORDS 用 var 声明，使用 getter 延迟求值避免 TDZ
+    analyzeSentiment, analyzeSentimentTrend, sentimentScore, detectEmotion, emotionTrend,
+    get SENTIMENT_DICT(){ return SENTIMENT_DICT; },
+    get EMOTION_KEYWORDS(){ return EMOTION_KEYWORDS; },
+    // v1.7-D 实时协作落地：CRDT 协同编辑 + 在线状态 + 操作同步 + 冲突解决 + 离线队列 + WS 消息协议
+    // 函数声明会被提升，可直接引用；58 > 31，但函数声明提升使引用安全
+    // OP_LOGS_KEY / OFFLINE_QUEUE_KEY / PRESENCE_STALE_TIMEOUT 用 var 声明
+    // _opLogs / _offlineQueues 用 var 声明，使用 getter 延迟求值避免 TDZ
+    // 在 58-crdt-collab.js 中定义（加载顺序 31 < 58），使用 getter 延迟求值避免 TDZ
+    // CRDT 协同编辑框架
+    createCRDTDoc, crdtSet, crdtGet, crdtDelete, crdtToArray, crdtMerge,
+    crdtEncode, crdtDecode, crdtApplyOp,
+    // 在线状态管理
+    PresenceManager, pmJoin, pmLeave, pmUpdateCursor, pmUpdateActivity,
+    pmGetOnline, pmGetPresence, pmHeartbeat, pmCleanupStale,
+    // 操作同步
+    createOpLog, logOp, getOpsSince, syncOps, applyOps, compactOpLog,
+    // 冲突解决
+    lwwResolve, crdtResolve, fieldMerge, arrayUnionMerge,
+    // 离线队列
+    createOfflineQueue, enqueueOffline, dequeueOffline, flushOfflineQueue,
+    getOfflineQueueSize, clearOfflineQueue,
+    // WebSocket 消息协议
+    encodeMessage, decodeMessage, createSyncMessage, createPresenceMessage,
+    // 重置
+    _resetCRDTCollab,
+    get OP_LOGS_KEY(){ return OP_LOGS_KEY; },
+    get OFFLINE_QUEUE_KEY(){ return OFFLINE_QUEUE_KEY; },
+    get PRESENCE_STALE_TIMEOUT(){ return PRESENCE_STALE_TIMEOUT; },
+    get _opLogs(){ return _opLogs; },
+    get _offlineQueues(){ return _offlineQueues; }
   };
 }
 // ===== i18n Module (v1.5-A 多语言支持) =====
@@ -13677,13 +13824,30 @@ async function _aiChatText(messages){
 /* ---------- 1) AI 自动拆解复杂任务 ---------- */
 /**
  * AI 自动拆解复杂任务为 3-5 个子任务
+ * v1.7-A：可选使用 agentPlan 做更智能的本地分解（通过 useLocalPlan 选项启用）
  * @param {string} taskTitle - 任务标题
  * @param {string} [scenario] - 场景键（office/code/study/life），可选
+ * @param {Object} [opts] - 选项 {useLocalPlan: boolean}，可选（v1.7-A）
  * @returns {Promise<Array<{title:string,priority:string}>|null>} 子任务列表；无 AI Key 或失败返回 null
  */
-async function aiDecomposeTask(taskTitle, scenario){
+async function aiDecomposeTask(taskTitle, scenario, opts){
   const profile = getActiveProfile();
-  if(!profile || !profile.key) return null;
+
+  /* v1.7-A：显式启用 useLocalPlan 时，无 AI Key 降级使用 agentPlan 本地分解 */
+  if(!profile || !profile.key){
+    if(opts && opts.useLocalPlan && typeof agentPlan === "function"){
+      const steps = agentPlan(taskTitle, {scenario: scenario});
+      if(steps && steps.length){
+        return steps.map(function(s){
+          return {
+            title: (s.params && (s.params.title || s.params.task_id || s.params.query)) || s.action,
+            priority: "medium"
+          };
+        });
+      }
+    }
+    return null;
+  }
 
   let prompt = "请将以下任务拆解为3-5个可执行的子任务，每个子任务一行，格式：子任务标题|优先级(high/medium/low)\n";
   prompt += "场景：" + (SCENARIOS[scenario] ? SCENARIOS[scenario].name : (scenario || "通用")) + "\n";
@@ -13696,6 +13860,19 @@ async function aiDecomposeTask(taskTitle, scenario){
   ]);
   if(resp === null) return null;
   return parseDecomposeResult(resp);
+}
+
+/**
+ * v1.7-A：AI Agent 自主执行集成入口
+ * 将目标交给 agentRun 自主执行（plan→execute→verify→修正）
+ * @param {string} goal - 目标描述
+ * @param {Object} [context] - 上下文
+ * @param {number} [maxSteps] - 最大步数
+ * @returns {Object} agentRun 执行结果 {goal, steps, log, success, summary}
+ */
+function aiAgentAutoRun(goal, context, maxSteps){
+  if(typeof agentRun !== "function") return {goal: goal, steps: [], log: [], success: false, summary: "agentRun 不可用"};
+  return agentRun(goal, context, maxSteps);
 }
 
 /**
@@ -14930,6 +15107,7 @@ function createNote(title, content, tags, category){
   };
   notes.push(note);
   saveNotes(notes);
+  _notifyNotesChanged();
   return note;
 }
 /**
@@ -14952,6 +15130,7 @@ function updateNote(id, updates){
   }
   note.updatedAt = Date.now();
   saveNotes(notes);
+  _notifyNotesChanged();
   return true;
 }
 /**
@@ -14965,6 +15144,7 @@ function deleteNote(id){
   var filtered = notes.filter(function(n){ return n.id !== id; });
   if(filtered.length === notes.length) return false;
   saveNotes(filtered);
+  _notifyNotesChanged();
   return true;
 }
 /**
@@ -15388,6 +15568,23 @@ function _bindKnowledgeBaseEvents(){
       try{ toast("标签「" + tag + "」共 " + tagged.length + " 条笔记", "ok"); }catch(e){}
     }
   });
+}
+
+/* ---------- v1.7-A 笔记变更钩子：自动更新 RAG 索引 ----------
+ * 笔记 CRUD 后调用 _notifyNotesChanged，触发 RAG 索引重建（若已存在）。
+ * 53-ai-deep.js 编号 > 47，但函数声明提升使 _onNotesChanged 引用安全。
+ * 设计：钩子失败不影响笔记操作；仅当索引已存在时才重建，避免无谓开销。
+ */
+/**
+ * 笔记变更通知：触发 RAG 索引自动更新
+ * @returns {void}
+ */
+function _notifyNotesChanged(){
+  try{
+    if(typeof _onNotesChanged === "function"){
+      _onNotesChanged();
+    }
+  }catch(e){ /* 钩子失败静默降级，不影响笔记操作 */ }
 }// ===== Full-Text Search (v1.6-D 知识管理) =====
 /* ---------- 全文搜索：跨任务 / 记录 / 笔记搜索 + 关键词高亮 ----------
  * 能力：
@@ -16702,6 +16899,7 @@ var _shares = {};             // 分享信息表：{ boardId: { link, role, crea
 
 /**
  * 创建协作会话
+ * v1.7-D：集成 CRDT 文档（crdtDoc 属性），用 CRDT 接口管理协同编辑状态
  * @param {string} roomId - 房间 ID
  * @param {Object} userInfo - 用户信息 { id, name, ... }
  * @returns {Object|null} 协作会话对象，失败返回 null
@@ -16710,11 +16908,19 @@ function createCollabSession(roomId, userInfo){
   if(!roomId || typeof roomId !== "string") return null;
   if(_collabSessions[roomId]) return _collabSessions[roomId]; // 已存在则返回现有
   var user = userInfo && typeof userInfo === "object" ? userInfo : { id: "anonymous", name: "匿名用户" };
+  // v1.7-D：初始化 CRDT 文档（若 58-crdt-collab.js 已加载则用其 createCRDTDoc，否则 null）
+  var crdtDoc = (typeof createCRDTDoc === "function") ? createCRDTDoc(roomId) : null;
+  // v1.7-D：初始化操作日志（若 createOpLog 可用）
+  var opLog = (typeof createOpLog === "function") ? createOpLog(roomId) : null;
   var session = {
     roomId: roomId,
     owner: user,
     presence: [ _normalizePresence(user) ],
     document: null,
+    // v1.7-D：CRDT 文档（无冲突协同编辑）
+    crdtDoc: crdtDoc,
+    // v1.7-D：操作日志（增量同步）
+    opLog: opLog,
     changes: [],
     createdAt: Date.now(),
     updatedAt: Date.now()
@@ -16785,6 +16991,7 @@ function leaveSession(session, user){
 
 /**
  * 广播文档变更（模拟，存到 session.changes 数组）
+ * v1.7-D：变更同时记录到操作日志（session.opLog），用 CRDT 接口同步
  * @param {Object} session - 协作会话对象
  * @param {Object} change - 变更对象 { type, payload, userId, ... }
  * @returns {Object|null} 变更记录，失败返回 null
@@ -16800,6 +17007,14 @@ function broadcastChange(session, change){
   };
   session.changes.push(record);
   session.updatedAt = Date.now();
+  // v1.7-D：若变更携带 CRDT 操作（op 字段），记录到操作日志
+  if(c.op && session.opLog && typeof logOp === "function"){
+    logOp(session.opLog, c.op);
+  }
+  // v1.7-D：若变更携带 CRDT 操作且 session.crdtDoc 存在，应用到 CRDT 文档
+  if(c.op && session.crdtDoc && typeof crdtApplyOp === "function"){
+    crdtApplyOp(session.crdtDoc, c.op);
+  }
   if(session.roomId && _collabSessions[session.roomId]){
     _collabSessions[session.roomId] = session;
   }
@@ -17725,6 +17940,4378 @@ function getWorkerStatus(){
     active: active,
     queueLength: (_workerPool.queue && _workerPool.queue.length) || 0
   };
-}</script>
+}// ===== AI Deep Enhancement (v1.7-A AI 深度增强) =====
+/* ============================================================
+ * v1.7-A AI 深度增强
+ * ------------------------------------------------------------
+ *  四大能力：
+ *   1) AI Agent 自主执行：多步规划→执行→验证→修正循环
+ *      - agentPlan / agentExecuteStep / agentVerify / agentRun / agentReflect
+ *   2) 多轮对话记忆：对话上下文持久化 + 摘要压缩 + 长期记忆向量检索
+ *      - saveConversation / loadConversation / listConversations
+ *      - summarizeConversation / getRelevantMemory / addLongTermMemory
+ *   3) RAG 知识检索：TF-IDF 索引 + 相似度检索 + 上下文增强
+ *      - buildIndex / tfidfScore / ragRetrieve / ragAugment
+ *      - indexFromNotes / indexFromTasks
+ *   4) AI 代码审查：模式匹配 + 安全漏洞检测 + 性能优化建议
+ *      - reviewCode / detectSecurityIssues / suggestOptimization / reviewScore
+ *
+ *  设计约定：
+ *   - 使用 var 声明模块级私有状态（53 > 31，避免 TDZ）
+ *   - 持久化键（带 PREFIX）：wb_conversations / wb_long_term_memory / wb_rag_index
+ *   - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
+ *   - 颜色用 var(--token) CSS 令牌（lint-colors 门禁）
+ *   - innerHTML 赋值由调用方用 sanitizeHtml 包裹
+ *   - Agent 自主执行安全：限制 maxSteps（默认 10），每步 try-catch，不无限循环
+ *   - RAG 用 TF-IDF，不依赖外部向量数据库，索引存 localStorage
+ *   - 代码审查用模式匹配，不依赖 AI API（本地分析）
+ *   - 对话记忆摘要简单：提取最后 N 条 + 关键词，不依赖 AI
+ *   - execTool / getNotes / getTasks / getActiveTasks / SCENARIOS / ORDER
+ *     在更早模块定义（08/11/47/00），可直接引用
+ * ============================================================ */
+
+/* ---------- 持久化键 ---------- */
+var CONVERSATIONS_KEY = "wb_conversations";
+var LONG_TERM_MEMORY_KEY = "wb_long_term_memory";
+var RAG_INDEX_KEY = "wb_rag_index";
+
+/* ---------- 模块级私有状态（var 声明，避免 TDZ） ---------- */
+var _ragIndex = null;          // RAG 索引缓存（{docs, df, N, avgLen}）
+var _agentRunLog = [];         // 最近一次 agentRun 执行日志
+
+/* ============================================================
+ * 1. AI Agent 自主执行：plan → execute → verify → 修正
+ * ============================================================ */
+
+/**
+ * AI 规划：将目标分解为步骤列表
+ * 本地启发式分解（不依赖 AI API）：按标点/连词切分目标为子步骤
+ * @param {string} goal - 目标描述
+ * @param {Object} [context] - 上下文（可选 {scenario, tasks, notes}）
+ * @returns {Array<{action:string, params:Object, expect:string}>} 步骤列表
+ */
+function agentPlan(goal, context){
+  var g = String(goal || "").trim();
+  if(!g) return [];
+  context = context || {};
+
+  /* 启发式 1：目标含「然后」「接着」「再」「，」等连接词 → 按连接词切分 */
+  var sepRe = /然后|接着|再|之后|，|;|；|。\s*/g;
+  var parts = g.split(sepRe).map(function(s){ return s.trim(); }).filter(Boolean);
+
+  /* 启发式 2：识别常见动作关键词，映射到 execTool 工具 */
+  var steps = parts.map(function(p){
+    return _planStepFromText(p, context);
+  });
+
+  /* 若切分后只有 1 步，尝试按动词关键词再分解 */
+  if(steps.length <= 1){
+    var verbRe = /(创建|新增|添加|完成|删除|更新|查询|搜索|列出|查看|导出|规划|分析|检查|执行)/g;
+    var verbs = g.match(verbRe) || [];
+    if(verbs.length > 1){
+      /* 按动词位置切分 */
+      var chunks = [];
+      var lastIdx = 0;
+      for(var i = 1; i < verbs.length; i++){
+        var idx = g.indexOf(verbs[i], lastIdx + 1);
+        if(idx > lastIdx){
+          chunks.push(g.slice(lastIdx, idx).trim());
+          lastIdx = idx;
+        }
+      }
+      chunks.push(g.slice(lastIdx).trim());
+      steps = chunks.filter(Boolean).map(function(p){ return _planStepFromText(p, context); });
+    }
+  }
+
+  /* 兜底：若仍无步骤，整体作为一个步骤 */
+  if(!steps.length){
+    steps = [_planStepFromText(g, context)];
+  }
+
+  /* 限制最多 8 步，防止过度分解 */
+  return steps.slice(0, 8);
+}
+
+/**
+ * 从单段文本推断步骤（动作 + 参数 + 预期）
+ * @param {string} text - 步骤文本
+ * @param {Object} context - 上下文
+ * @returns {{action:string, params:Object, expect:string}}
+ */
+function _planStepFromText(text, context){
+  var t = String(text || "").trim();
+  var action = "noop";
+  var params = {};
+  var expect = "执行成功";
+
+  /* 创建任务 */
+  if(/创建|新增|添加|建一个|新建/.test(t)){
+    action = "create_task";
+    params.title = t.replace(/^(请)?\s*(创建|新增|添加|建一个|新建)/, "").replace(/(任务|待办)?$/, "").trim() || t;
+    if(context.scenario) params.scenario = context.scenario;
+    expect = "任务已创建";
+  }
+  /* 完成任务 */
+  else if(/完成|标记完成|标记为完成|做完/.test(t)){
+    action = "complete_task";
+    var m = t.match(/["「『]([^"」』]+)["」』]/);
+    params.task_id = m ? m[1] : t.replace(/^(请)?\s*(完成|标记完成|标记为完成|做完)/, "").trim();
+    expect = "任务已完成";
+  }
+  /* 删除任务 */
+  else if(/删除|移除|去掉/.test(t)){
+    action = "delete_task";
+    var m2 = t.match(/["「『]([^"」』]+)["」』]/);
+    params.task_id = m2 ? m2[1] : t.replace(/^(请)?\s*(删除|移除|去掉)/, "").trim();
+    expect = "任务已删除";
+  }
+  /* 查询/列出 */
+  else if(/查询|列出|查看|显示|列出所有|列表/.test(t)){
+    action = "list_tasks";
+    if(context.scenario) params.scenario = context.scenario;
+    expect = "返回任务列表";
+  }
+  /* 搜索 */
+  else if(/搜索|查找|找/.test(t)){
+    action = "search";
+    params.query = t.replace(/^(请)?\s*(搜索|查找|找)/, "").trim() || t;
+    expect = "返回搜索结果";
+  }
+  /* 概览 */
+  else if(/概览|统计|总览|overview/.test(t)){
+    action = "query_overview";
+    expect = "返回概览统计";
+  }
+  /* 导出 */
+  else if(/导出|备份|export/.test(t)){
+    action = "export_data";
+    expect = "已触发导出";
+  }
+  /* 默认：noop，仅记录文本 */
+  else {
+    action = "noop";
+    params.text = t;
+    expect = "已记录";
+  }
+
+  return {action: action, params: params, expect: expect};
+}
+
+/**
+ * 执行单步：调用 execTool 或其他工具
+ * @param {{action:string, params:Object, expect:string}} step - 步骤
+ * @param {Object} [context] - 上下文
+ * @returns {{ok:boolean, result:*, raw:string}} 执行结果
+ */
+function agentExecuteStep(step, context){
+  context = context || {};
+  if(!step || !step.action){
+    return {ok: false, result: null, raw: JSON.stringify({ok: false, msg: "步骤无效"})};
+  }
+  /* noop：仅记录，不调用工具 */
+  if(step.action === "noop"){
+    return {ok: true, result: {msg: "noop", text: step.params && step.params.text}, raw: JSON.stringify({ok: true, msg: "noop"})};
+  }
+  try{
+    var raw = execTool(step.action, step.params || {}, true);
+    var parsed = null;
+    try{ parsed = JSON.parse(raw); }catch(e){ parsed = raw; }
+    var ok = parsed && typeof parsed === "object" && parsed.ok === true;
+    return {ok: ok, result: parsed, raw: raw};
+  }catch(e){
+    return {ok: false, result: null, raw: JSON.stringify({ok: false, error: String(e)})};
+  }
+}
+
+/**
+ * 验证结果是否符合预期
+ * @param {*} result - 执行结果（agentExecuteStep 的返回值或解析后的对象）
+ * @param {string} [expect] - 预期描述
+ * @returns {{verified:boolean, reason:string}} 验证结果
+ */
+function agentVerify(result, expect){
+  /* result 可能是 agentExecuteStep 的返回 {ok, result, raw}，也可能是直接的对象 */
+  var ok = false;
+  if(result && typeof result === "object"){
+    if(typeof result.ok === "boolean"){
+      ok = result.ok;
+    } else if(result.result && typeof result.result === "object" && typeof result.result.ok === "boolean"){
+      ok = result.result.ok;
+    }
+  }
+  var exp = String(expect || "").trim();
+  var reason = ok ? "执行成功" : "执行失败";
+  /* 若预期包含「失败」字样，则 ok=false 才算验证通过（用于负向验证） */
+  if(exp && /失败|不|无/.test(exp) && !ok){
+    reason = "符合预期（负向验证）";
+    return {verified: true, reason: reason};
+  }
+  return {verified: ok, reason: reason};
+}
+
+/**
+ * 反思失败原因，生成修正方案
+ * @param {{action:string, params:Object, expect:string}} failedStep - 失败的步骤
+ * @param {string|Error} error - 错误信息
+ * @param {Object} [context] - 上下文
+ * @returns {{action:string, params:Object, expect:string, reason:string}} 修正后的步骤
+ */
+function agentReflect(failedStep, error, context){
+  context = context || {};
+  var err = String(error && error.message ? error.message : error || "未知错误");
+  var step = failedStep || {action: "noop", params: {}, expect: ""};
+  var reason = "反思：" + err;
+
+  /* 反思策略 1：create_task 失败 → 简化标题重试 */
+  if(step.action === "create_task"){
+    var title = (step.params && step.params.title) || "";
+    if(title.length > 50){
+      return {
+        action: "create_task",
+        params: Object.assign({}, step.params, {title: title.slice(0, 50)}),
+        expect: step.expect,
+        reason: reason + "；标题过长，已截断重试"
+      };
+    }
+    if(!title.trim()){
+      return {
+        action: "create_task",
+        params: Object.assign({}, step.params, {title: "未命名任务"}),
+        expect: step.expect,
+        reason: reason + "；标题为空，使用默认标题重试"
+      };
+    }
+  }
+
+  /* 反思策略 2：complete_task / delete_task 失败 → task_id 可能是标题片段，原样重试一次 */
+  if(step.action === "complete_task" || step.action === "delete_task" || step.action === "update_task"){
+    return {
+      action: step.action,
+      params: step.params,
+      expect: step.expect,
+      reason: reason + "；任务定位失败，建议检查任务 id 或标题"
+    };
+  }
+
+  /* 反思策略 3：未知工具 → 降级为 noop */
+  if(/未知工具/.test(err)){
+    return {
+      action: "noop",
+      params: {text: JSON.stringify(step)},
+      expect: "已记录",
+      reason: reason + "；未知工具，降级为 noop"
+    };
+  }
+
+  /* 默认：原样重试 */
+  return {
+    action: step.action,
+    params: step.params,
+    expect: step.expect,
+    reason: reason
+  };
+}
+
+/**
+ * 自主执行循环：plan → execute → verify → 修正，最多 maxSteps 步
+ * @param {string} goal - 目标描述
+ * @param {Object} [context] - 上下文
+ * @param {number} [maxSteps] - 最大步数（默认 10，上限 20）
+ * @returns {{goal:string, steps:Array, log:Array, success:boolean, summary:string}} 执行结果
+ */
+function agentRun(goal, context, maxSteps){
+  var g = String(goal || "").trim();
+  context = context || {};
+  var max = Math.min(20, Math.max(1, Number(maxSteps) || 10));
+
+  if(!g){
+    _agentRunLog = [];
+    return {goal: "", steps: [], log: [], success: false, summary: "目标为空"};
+  }
+
+  var plan = agentPlan(g, context);
+  var log = [];
+  var stepIdx = 0;
+  var successCount = 0;
+  var failCount = 0;
+  var retryCount = 0;
+  var maxRetries = 2;  /* 每步最多重试 2 次 */
+
+  while(stepIdx < plan.length && log.length < max){
+    var step = plan[stepIdx];
+    var attempt = 0;
+    var lastResult = null;
+    var verified = false;
+    var reflection = null;
+
+    while(attempt <= maxRetries && log.length < max){
+      lastResult = agentExecuteStep(step, context);
+      var v = agentVerify(lastResult, step.expect);
+      verified = v.verified;
+      if(verified) break;
+
+      /* 失败：反思并修正 */
+      var err = (lastResult && lastResult.raw) || v.reason;
+      reflection = agentReflect(step, err, context);
+      attempt++;
+      retryCount++;
+      if(reflection && reflection.action && reflection.action !== step.action){
+        step = reflection;  /* 应用修正方案 */
+      } else if(reflection && reflection.action === step.action){
+        step = reflection;  /* 同动作，参数可能已修正 */
+      }
+    }
+
+    log.push({
+      step: step,
+      result: lastResult,
+      verified: verified,
+      reflection: reflection,
+      attempts: attempt + 1
+    });
+    if(verified) successCount++; else failCount++;
+    stepIdx++;
+  }
+
+  _agentRunLog = log;
+  var success = failCount === 0 && successCount > 0;
+  var summary = "目标「" + g + "」执行完成：" + successCount + " 步成功，" + failCount + " 步失败，" + retryCount + " 次重试";
+
+  return {
+    goal: g,
+    steps: plan,
+    log: log,
+    success: success,
+    summary: summary
+  };
+}
+
+/* ============================================================
+ * 2. 多轮对话记忆：持久化 + 摘要压缩 + 长期记忆向量检索
+ * ============================================================ */
+
+/**
+ * 持久化对话到 localStorage
+ * @param {Object} conv - 对话对象 {id, title, messages, summary, createdAt}
+ * @returns {boolean} 是否保存成功
+ */
+function saveConversation(conv){
+  if(!conv || typeof conv !== "object") return false;
+  try{
+    var all = _loadAllConversations();
+    var c = {
+      id: conv.id || ("conv_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6)),
+      title: conv.title || (conv.messages && conv.messages.length ? String(conv.messages[0].content || "").slice(0, 30) : "新对话"),
+      messages: Array.isArray(conv.messages) ? conv.messages : [],
+      summary: conv.summary || "",
+      createdAt: conv.createdAt || Date.now(),
+      updatedAt: Date.now()
+    };
+    /* 找到并替换或新增 */
+    var found = false;
+    for(var i = 0; i < all.length; i++){
+      if(all[i].id === c.id){ all[i] = c; found = true; break; }
+    }
+    if(!found) all.push(c);
+    localStorage.setItem(PREFIX + CONVERSATIONS_KEY, JSON.stringify(all));
+    return true;
+  }catch(e){ return false; }
+}
+
+/**
+ * 加载对话
+ * @param {string} id - 对话 ID
+ * @returns {Object|null} 对话对象或 null
+ */
+function loadConversation(id){
+  if(!id) return null;
+  var all = _loadAllConversations();
+  for(var i = 0; i < all.length; i++){
+    if(all[i].id === id) return all[i];
+  }
+  return null;
+}
+
+/**
+ * 列出所有对话
+ * @returns {Array<Object>} 对话列表（按 updatedAt 降序）
+ */
+function listConversations(){
+  var all = _loadAllConversations();
+  return all.sort(function(a, b){
+    return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
+  });
+}
+
+/**
+ * 摘要压缩：提取关键信息，压缩旧消息
+ * 策略：保留最后 N 条原文 + 提取前 N 条的关键句 + 关键词云
+ * @param {Array<{role:string, content:string, timestamp:number}>} messages - 消息列表
+ * @param {number} [keepLast] - 保留最后几条原文（默认 4）
+ * @returns {{summary:string, kept:Array, keywords:string[]}} 摘要结果
+ */
+function summarizeConversation(messages, keepLast){
+  if(!Array.isArray(messages)) return {summary: "", kept: [], keywords: []};
+  var n = Math.max(1, Number(keepLast) || 4);
+  var msgs = messages.filter(function(m){ return m && m.content; });
+
+  if(msgs.length <= n){
+    return {
+      summary: msgs.map(function(m){ return (m.role || "?") + ": " + String(m.content).slice(0, 80); }).join(" | "),
+      kept: msgs.slice(),
+      keywords: _extractKeywords(msgs.map(function(m){ return m.content; }).join(" "))
+    };
+  }
+
+  var head = msgs.slice(0, msgs.length - n);
+  var tail = msgs.slice(msgs.length - n);
+
+  /* 提取 head 的关键句（每条取首句） */
+  var headSummary = head.map(function(m){
+    var c = String(m.content);
+    var firstSentence = c.split(/[。！？!?.\n]/)[0] || c;
+    return (m.role || "?") + ": " + firstSentence.slice(0, 60);
+  }).join(" | ");
+
+  var keywords = _extractKeywords(msgs.map(function(m){ return m.content; }).join(" "));
+  var summary = "【历史摘要】" + headSummary + "（共 " + head.length + " 条已压缩）";
+
+  return {summary: summary, kept: tail, keywords: keywords};
+}
+
+/**
+ * 检索相关长期记忆（简单向量相似度：词袋 + 余弦）
+ * @param {string} query - 查询文本
+ * @param {number} [topK] - 返回前 K 条（默认 5）
+ * @returns {Array<{memory:Object, score:number}>} 相关记忆列表
+ */
+function getRelevantMemory(query, topK){
+  var q = String(query || "").trim();
+  if(!q) return [];
+  var k = Math.max(1, Number(topK) || 5);
+  var all = _loadAllLongTermMemory();
+  if(!all.length) return [];
+
+  var qVec = _textToVector(q);
+  var scored = all.map(function(m){
+    var mVec = _textToVector(m.content || "");
+    var score = _cosineSimilarity(qVec, mVec);
+    return {memory: m, score: score};
+  });
+  scored.sort(function(a, b){ return b.score - a.score; });
+  return scored.slice(0, k).filter(function(x){ return x.score > 0; });
+}
+
+/**
+ * 添加长期记忆
+ * @param {string} content - 记忆内容
+ * @param {Object} [metadata] - 元数据 {type, tags, source, ...}
+ * @returns {Object|null} 添加后的记忆对象，失败返回 null
+ */
+function addLongTermMemory(content, metadata){
+  var c = String(content || "").trim();
+  if(!c) return null;
+  try{
+    var all = _loadAllLongTermMemory();
+    var m = {
+      id: "mem_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
+      content: c,
+      metadata: metadata || {},
+      vector: _textToVector(c),
+      createdAt: Date.now()
+    };
+    all.push(m);
+    /* 限制最多 500 条长期记忆，超出删除最早的 */
+    if(all.length > 500) all = all.slice(all.length - 500);
+    localStorage.setItem(PREFIX + LONG_TERM_MEMORY_KEY, JSON.stringify(all));
+    return m;
+  }catch(e){ return null; }
+}
+
+/* ---------- 对话记忆内部辅助 ---------- */
+function _loadAllConversations(){
+  try{
+    var raw = localStorage.getItem(PREFIX + CONVERSATIONS_KEY);
+    if(!raw) return [];
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){ return []; }
+}
+
+function _loadAllLongTermMemory(){
+  try{
+    var raw = localStorage.getItem(PREFIX + LONG_TERM_MEMORY_KEY);
+    if(!raw) return [];
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){ return []; }
+}
+
+/**
+ * 提取关键词（简单词频统计，取 top 10）
+ * @param {string} text - 文本
+ * @returns {string[]} 关键词列表
+ */
+function _extractKeywords(text){
+  var t = String(text || "");
+  if(!t) return [];
+  /* 中文分词简化：按标点和空格切分，过滤停用词和短词 */
+  var stopWords = {"的":1, "了":1, "是":1, "在":1, "我":1, "你":1, "他":1, "她":1, "它":1, "这":1, "那":1, "和":1, "与":1, "或":1, "及":1, "也":1, "都":1, "就":1, "不":1, "没":1, "有":1, "要":1, "会":1, "能":1, "可以":1, "请":1, "把":1, "被":1, "对":1, "为":1, "上":1, "下":1, "中":1, "里":1, "外":1, "前":1, "后":1};
+  var tokens = t.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>]+/).filter(Boolean);
+  var freq = {};
+  for(var i = 0; i < tokens.length; i++){
+    var w = tokens[i];
+    if(w.length < 2) continue;
+    if(stopWords[w]) continue;
+    freq[w] = (freq[w] || 0) + 1;
+  }
+  return Object.keys(freq).sort(function(a, b){ return freq[b] - freq[a]; }).slice(0, 10);
+}
+
+/**
+ * 文本转向量（词袋模型：词频）
+ * 中文按字切分，英文按空格/标点切分，提升中文检索效果
+ * @param {string} text - 文本
+ * @returns {Object<string, number>} 词频向量
+ */
+function _textToVector(text){
+  var t = String(text || "").toLowerCase();
+  if(!t) return {};
+  var vec = {};
+  /* 英文按空格/标点切分 */
+  var parts = t.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>0-9]+/);
+  for(var i = 0; i < parts.length; i++){
+    var p = parts[i];
+    if(!p) continue;
+    if(/^[a-z_]+$/.test(p)){
+      /* 英文词 */
+      if(p.length >= 2) vec[p] = (vec[p] || 0) + 1;
+      continue;
+    }
+    /* 中文按字切分 */
+    for(var j = 0; j < p.length; j++){
+      var ch = p.charAt(j);
+      if(/[\u4e00-\u9fa5]/.test(ch)) vec[ch] = (vec[ch] || 0) + 1;
+    }
+  }
+  return vec;
+}
+
+/**
+ * 余弦相似度
+ * @param {Object<string, number>} a - 向量 A
+ * @param {Object<string, number>} b - 向量 B
+ * @returns {number} 相似度 [0, 1]
+ */
+function _cosineSimilarity(a, b){
+  if(!a || !b) return 0;
+  var keys = Object.keys(a);
+  var dot = 0;
+  var normA = 0;
+  var normB = 0;
+  for(var i = 0; i < keys.length; i++){
+    var k = keys[i];
+    normA += a[k] * a[k];
+    if(b[k] !== undefined) dot += a[k] * b[k];
+  }
+  var bKeys = Object.keys(b);
+  for(var j = 0; j < bKeys.length; j++){
+    normB += b[bKeys[j]] * b[bKeys[j]];
+  }
+  if(normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+/* ============================================================
+ * 3. RAG 知识检索：TF-IDF 索引 + 相似度检索 + 上下文增强
+ * ============================================================ */
+
+/**
+ * 构建 TF-IDF 索引
+ * @param {Array<{id:string, content:string, type:string, metadata:Object}>} documents - 文档列表
+ * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
+ */
+function buildIndex(documents){
+  var docs = Array.isArray(documents) ? documents.filter(function(d){
+    return d && d.content && String(d.content).trim();
+  }) : [];
+
+  /* 文档频率（DF）：每个词在多少篇文档中出现 */
+  var df = {};
+  var totalLen = 0;
+  for(var i = 0; i < docs.length; i++){
+    var tokens = _tokenize(docs[i].content);
+    var seen = {};
+    for(var j = 0; j < tokens.length; j++){
+      var w = tokens[j];
+      seen[w] = true;
+    }
+    var keys = Object.keys(seen);
+    for(var k = 0; k < keys.length; k++){
+      df[keys[k]] = (df[keys[k]] || 0) + 1;
+    }
+    totalLen += tokens.length;
+    /* 缓存 token 频次到文档上，避免重复计算 */
+    docs[i]._tf = _termFreq(tokens);
+    docs[i]._len = tokens.length;
+  }
+
+  var N = docs.length;
+  var avgLen = N > 0 ? totalLen / N : 0;
+
+  var index = {docs: docs, df: df, N: N, avgLen: avgLen};
+  _ragIndex = index;
+  return index;
+}
+
+/**
+ * 计算 TF-IDF 分数（query 对 doc）
+ * @param {string} query - 查询文本
+ * @param {Object} doc - 文档对象（含 _tf 缓存）
+ * @param {Object} [index] - 索引对象（默认用 _ragIndex）
+ * @returns {number} TF-IDF 分数
+ */
+function tfidfScore(query, doc, index){
+  var idx = index || _ragIndex;
+  if(!idx || !doc) return 0;
+  var qTokens = _tokenize(query);
+  if(!qTokens.length) return 0;
+
+  var tf = doc._tf || _termFreq(_tokenize(doc.content));
+  var df = idx.df || {};
+  var N = idx.N || 1;
+  var score = 0;
+
+  /* query 中每个词的 TF-IDF 累加 */
+  var qFreq = {};
+  for(var i = 0; i < qTokens.length; i++){
+    qFreq[qTokens[i]] = (qFreq[qTokens[i]] || 0) + 1;
+  }
+
+  var keys = Object.keys(qFreq);
+  for(var k = 0; k < keys.length; k++){
+    var w = keys[k];
+    if(tf[w] === undefined) continue;
+    var qTf = qFreq[w] / qTokens.length;
+    var dTf = tf[w] / (doc._len || Object.keys(tf).length || 1);
+    var dFreq = df[w] || 0;
+    if(dFreq === 0) continue;
+    var idf = Math.log(1 + N / dFreq);
+    score += qTf * dTf * idf;
+  }
+
+  return score;
+}
+
+/**
+ * 检索最相关的 K 篇文档
+ * @param {string} query - 查询文本
+ * @param {number} [topK] - 返回前 K 篇（默认 5）
+ * @returns {Array<{doc:Object, score:number}>} 相关文档列表
+ */
+function ragRetrieve(query, topK){
+  var q = String(query || "").trim();
+  if(!q) return [];
+  var k = Math.max(1, Number(topK) || 5);
+  var idx = _ragIndex;
+  if(!idx || !idx.docs || !idx.docs.length) return [];
+
+  var scored = idx.docs.map(function(doc){
+    return {doc: doc, score: tfidfScore(q, doc, idx)};
+  });
+  scored.sort(function(a, b){ return b.score - a.score; });
+  return scored.slice(0, k).filter(function(x){ return x.score > 0; });
+}
+
+/**
+ * 用检索结果增强 AI 上下文（拼接相关内容到 prompt）
+ * @param {string} query - 原始查询
+ * @param {Array<{doc:Object, score:number}>} retrievedDocs - 检索结果
+ * @returns {string} 增强后的 prompt
+ */
+function ragAugment(query, retrievedDocs){
+  var q = String(query || "");
+  var docs = Array.isArray(retrievedDocs) ? retrievedDocs : [];
+  if(!docs.length) return q;
+
+  var contextParts = docs.map(function(item, i){
+    var d = item.doc || {};
+    var content = String(d.content || "").slice(0, 200);
+    var type = d.type || "文档";
+    var meta = d.metadata ? " " + JSON.stringify(d.metadata) : "";
+    return "[" + (i + 1) + "] (" + type + meta + ") " + content;
+  });
+
+  return "【相关知识】\n" + contextParts.join("\n") + "\n\n【用户问题】\n" + q;
+}
+
+/**
+ * 从笔记系统构建索引
+ * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
+ */
+function indexFromNotes(){
+  var notes = (typeof getNotes === "function") ? getNotes() : [];
+  var docs = notes.map(function(n){
+    return {
+      id: n.id,
+      content: (n.title || "") + " " + (n.content || "") + " " + ((n.tags || []).join(" ")),
+      type: "note",
+      metadata: {title: n.title, category: n.category, tags: n.tags}
+    };
+  });
+  return buildIndex(docs);
+}
+
+/**
+ * 从任务记录构建索引
+ * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
+ */
+function indexFromTasks(){
+  var tasks = (typeof getActiveTasks === "function") ? getActiveTasks() : [];
+  var docs = tasks.map(function(t){
+    return {
+      id: t.id,
+      content: (t.title || "") + " " + (t.note || "") + " " + ((t.tags || []).join(" ")),
+      type: "task",
+      metadata: {title: t.title, scenario: t.sc, status: t.status, priority: t.priority}
+    };
+  });
+  return buildIndex(docs);
+}
+
+/**
+ * 持久化 RAG 索引到 localStorage
+ * @param {Object} [index] - 索引对象（默认用 _ragIndex）
+ * @returns {boolean} 是否保存成功
+ */
+function saveRagIndex(index){
+  var idx = index || _ragIndex;
+  if(!idx) return false;
+  try{
+    /* 剥离 _tf / _len 等内部缓存，只持久化必要字段 */
+    var docs = (idx.docs || []).map(function(d){
+      return {
+        id: d.id,
+        content: d.content,
+        type: d.type,
+        metadata: d.metadata,
+        _tf: d._tf,
+        _len: d._len
+      };
+    });
+    var serializable = {docs: docs, df: idx.df, N: idx.N, avgLen: idx.avgLen};
+    localStorage.setItem(PREFIX + RAG_INDEX_KEY, JSON.stringify(serializable));
+    return true;
+  }catch(e){ return false; }
+}
+
+/**
+ * 从 localStorage 加载 RAG 索引
+ * @returns {Object|null} 索引对象或 null
+ */
+function loadRagIndex(){
+  try{
+    var raw = localStorage.getItem(PREFIX + RAG_INDEX_KEY);
+    if(!raw) return null;
+    var parsed = JSON.parse(raw);
+    if(!parsed || !Array.isArray(parsed.docs)) return null;
+    _ragIndex = parsed;
+    return parsed;
+  }catch(e){ return null; }
+}
+
+/* ---------- RAG 内部辅助 ---------- */
+/**
+ * 分词（中英文混合：英文按空格/标点，中文按字）
+ * @param {string} text - 文本
+ * @returns {string[]} 词列表
+ */
+function _tokenize(text){
+  var t = String(text || "").toLowerCase();
+  if(!t) return [];
+  /* 简化分词：英文按空格/标点切分，中文按字切分 */
+  var tokens = [];
+  var parts = t.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>0-9]+/);
+  for(var i = 0; i < parts.length; i++){
+    var p = parts[i];
+    if(!p) continue;
+    /* 英文词直接加入 */
+    if(/^[a-z_]+$/.test(p)){
+      if(p.length >= 2) tokens.push(p);
+      continue;
+    }
+    /* 中文按字切分（简化） */
+    for(var j = 0; j < p.length; j++){
+      var ch = p.charAt(j);
+      if(/[\u4e00-\u9fa5]/.test(ch)) tokens.push(ch);
+    }
+  }
+  return tokens;
+}
+
+/**
+ * 词频统计
+ * @param {string[]} tokens - 词列表
+ * @returns {Object<string, number>} 词频映射
+ */
+function _termFreq(tokens){
+  var freq = {};
+  for(var i = 0; i < tokens.length; i++){
+    var w = tokens[i];
+    freq[w] = (freq[w] || 0) + 1;
+  }
+  return freq;
+}
+
+/* ============================================================
+ * 4. AI 代码审查：模式匹配 + 安全漏洞检测 + 性能优化建议
+ * ============================================================ */
+
+/**
+ * AI 审查代码片段（本地分析，不依赖 AI API）
+ * @param {string} code - 代码片段
+ * @param {string} [language] - 编程语言（默认 javascript）
+ * @param {Object} [context] - 上下文（可选）
+ * @returns {{issues:Array, score:number, summary:string}} 审查结果
+ */
+function reviewCode(code, language, context){
+  var c = String(code || "");
+  var lang = String(language || "javascript").toLowerCase();
+  if(!c.trim()){
+    return {issues: [], score: 100, summary: "代码为空"};
+  }
+
+  var issues = [];
+
+  /* 安全漏洞检测 */
+  var secIssues = detectSecurityIssues(c);
+  for(var i = 0; i < secIssues.length; i++){
+    secIssues[i].category = "security";
+    issues.push(secIssues[i]);
+  }
+
+  /* 性能优化建议 */
+  var perfIssues = suggestOptimization(c);
+  for(var j = 0; j < perfIssues.length; j++){
+    perfIssues[j].category = "performance";
+    issues.push(perfIssues[j]);
+  }
+
+  /* 代码风格/质量检测（语言相关） */
+  var styleIssues = _detectStyleIssues(c, lang);
+  for(var k = 0; k < styleIssues.length; k++){
+    styleIssues[k].category = "style";
+    issues.push(styleIssues[k]);
+  }
+
+  var score = reviewScore(issues);
+  var summary = _buildReviewSummary(issues, score, c);
+
+  return {issues: issues, score: score, summary: summary};
+}
+
+/**
+ * 安全漏洞检测（模式匹配）
+ * @param {string} code - 代码片段
+ * @returns {Array<{type:string, severity:string, line:number, message:string, suggestion:string}>} 问题列表
+ */
+function detectSecurityIssues(code){
+  var c = String(code || "");
+  var lines = c.split("\n");
+  var issues = [];
+
+  /* 检测模式列表 */
+  var patterns = [
+    /* 硬编码密钥/密码 */
+    {re: /(?:api[_-]?key|apikey|secret|password|passwd|pwd|token|access[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/i,
+     type: "hardcoded_secret", severity: "high",
+     msg: "疑似硬编码密钥/密码", sug: "使用环境变量或配置文件管理敏感信息"},
+    /* SQL 注入（字符串拼接：execute 调用参数中含 + 或 ${ 且含 SQL 关键词） */
+    {re: /(?:execute|query|exec)\s*\(\s*[^)]*(?:select|insert|update|delete|drop|where)\b[^)]*(?:\+|\$\{)/i,
+     type: "sql_injection", severity: "high",
+     msg: "疑似 SQL 注入（字符串拼接）", sug: "使用参数化查询或预编译语句"},
+    /* eval 使用 */
+    {re: /\beval\s*\(/,
+     type: "eval_usage", severity: "high",
+     msg: "使用 eval() 可能导致代码注入", sug: "避免使用 eval，改用 JSON.parse 或 Function 构造器"},
+    /* innerHTML 赋值（XSS 风险） */
+    {re: /\.innerHTML\s*=\s*[^;]*[a-zA-Z_$]/,
+     type: "xss_risk", severity: "medium",
+     msg: "直接赋值 innerHTML 可能存在 XSS 风险", sug: "使用 sanitizeHtml 包裹或 textContent"},
+    /* document.write */
+    {re: /document\.write\s*\(/,
+     type: "document_write", severity: "medium",
+     msg: "使用 document.write 可能导致 XSS", sug: "使用 DOM API 或 innerHTML（已消毒）"},
+    /* 命令注入（child_process exec 字符串拼接） */
+    {re: /(?:exec|execSync|spawn)\s*\(\s*["'`].*(?:\+|\$\{)/,
+     type: "command_injection", severity: "high",
+     msg: "疑似命令注入（字符串拼接）", sug: "使用 execFile 或传入参数数组"},
+    /* 危险的正则表达式（ReDoS） */
+    {re: /new RegExp\s*\(\s*["'`].*(?:\([^)]*\+\)|\([^)]*\*\))/,
+     type: "redos_risk", severity: "medium",
+     msg: "疑似 ReDoS 风险的正则表达式", sug: "简化正则或使用安全正则库"},
+    /* http 明文传输 */
+    {re: /http:\/\/(?!localhost|127\.0\.0\.1)/,
+     type: "insecure_http", severity: "low",
+     msg: "使用明文 HTTP 传输", sug: "使用 HTTPS 加密传输"},
+    /* localStorage 存储敏感数据 */
+    {re: /localStorage\.setItem\s*\(\s*["'].*(?:token|password|secret|key|auth)["']/i,
+     type: "insecure_storage", severity: "medium",
+     msg: "在 localStorage 存储敏感数据", sug: "敏感数据应加密存储或使用 sessionStorage/IndexedDB"},
+    /* prototype 污染 */
+    {re: /__proto__|constructor\s*\[|prototype\s*\[/,
+     type: "prototype_pollution", severity: "high",
+     msg: "疑似原型链污染", sug: "避免直接操作 __proto__，使用 Object.create"},
+    /* innerHTML + 用户输入 */
+    {re: /innerHTML\s*=\s*.*(?:prompt|confirm|location\.hash|document\.cookie)/,
+     type: "xss_user_input", severity: "high",
+     msg: "innerHTML 赋值用户输入，XSS 风险高", sug: "必须对用户输入进行转义/消毒"}
+  ];
+
+  for(var p = 0; p < patterns.length; p++){
+    var pat = patterns[p];
+    var match = null;
+    var re = new RegExp(pat.re.source, pat.re.flags + (pat.re.flags.indexOf("g") >= 0 ? "" : "g"));
+    while((match = re.exec(c)) !== null){
+      /* 计算行号 */
+      var lineNum = c.slice(0, match.index).split("\n").length;
+      issues.push({
+        type: pat.type,
+        severity: pat.severity,
+        line: lineNum,
+        message: pat.msg,
+        suggestion: pat.sug
+      });
+      if(re.lastIndex === match.index) re.lastIndex++;  /* 防止零宽匹配死循环 */
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * 性能优化建议（模式匹配）
+ * @param {string} code - 代码片段
+ * @returns {Array<{type:string, severity:string, line:number, message:string, suggestion:string}>} 建议列表
+ */
+function suggestOptimization(code){
+  var c = String(code || "");
+  var issues = [];
+
+  /* 检测模式列表 */
+  var patterns = [
+    /* for 循环内重复读取 length */
+    {re: /for\s*\(\s*(?:var|let|const)?\s*\w+\s*=\s*0\s*;\s*\w+\s*<\s*\w+\.length\s*;\s*\w+\+\+/,
+     type: "loop_length", severity: "low",
+     msg: "循环条件中重复读取 length", sug: "缓存 length 到局部变量：for(var i=0, len=arr.length; i<len; i++)"},
+    /* 嵌套循环（O(n²)） */
+    {re: /for\s*\([^)]*\)\s*\{[^}]*for\s*\(/,
+     type: "nested_loop", severity: "medium",
+     msg: "嵌套循环可能导致 O(n²) 复杂度", sug: "考虑使用哈希表或优化算法降低复杂度"},
+    /* 同步 IO（fs.readFileSync） */
+    {re: /readFileSync|writeFileSync|execSync|existsSync/,
+     type: "sync_io", severity: "medium",
+     msg: "同步 IO 调用阻塞事件循环", sug: "使用异步版本 readFile/writeFile"},
+    /* 大量 DOM 操作未批量 */
+    {re: /for\s*\([^)]*\)\s*\{[^}]*(?:appendChild|insertBefore|createElement)/,
+     type: "dom_loop", severity: "medium",
+     msg: "循环内 DOM 操作可能触发频繁重排", sug: "使用 DocumentFragment 批量操作或 requestAnimationFrame"},
+    /* 未使用 debounce 的事件监听 */
+    {re: /addEventListener\s*\(\s*["'](?:scroll|resize|input|mousemove)["']\s*,/,
+     type: "no_debounce", severity: "low",
+     msg: "高频事件未防抖", sug: "使用 debounce/throttle 节流"},
+    /* JSON.parse 未 try-catch（简化检测：直接匹配 JSON.parse 调用） */
+    {re: /JSON\.parse\s*\(/,
+     type: "unsafe_parse", severity: "low",
+     msg: "JSON.parse 建议包裹 try-catch", sug: "包裹 try-catch 防止解析失败崩溃"},
+    /* Promise 未 await/catch */
+    {re: /\w+\([^)]*\)\s*\.\s*then\s*\(\s*(?:[^)]*\)\s*)?(?![^;]*catch)/,
+     type: "unhandled_promise", severity: "medium",
+     msg: "Promise 可能未处理 rejection", sug: "添加 .catch() 或使用 async/await + try-catch"},
+    /* 重复正则编译 */
+    {re: /for\s*\([^)]*\)\s*\{[^}]*new RegExp\s*\(/,
+     type: "regex_in_loop", severity: "low",
+     msg: "循环内重复编译正则表达式", sug: "将正则提到循环外编译一次"},
+    /* console.log 残留 */
+    {re: /console\.log\s*\(/,
+     type: "console_log", severity: "low",
+     msg: "残留 console.log 调试代码", sug: "移除调试代码或使用条件日志"},
+    /* var 声明（应使用 let/const） */
+    {re: /\bvar\s+\w+/,
+     type: "var_decl", severity: "low",
+     msg: "使用 var 声明（函数作用域，易出错）", sug: "使用 let/const 声明块作用域变量"}
+  ];
+
+  for(var p = 0; p < patterns.length; p++){
+    var pat = patterns[p];
+    try{
+      var re = new RegExp(pat.re.source, (pat.re.flags || "") + "g");
+      var match = null;
+      while((match = re.exec(c)) !== null){
+        var lineNum = c.slice(0, match.index).split("\n").length;
+        issues.push({
+          type: pat.type,
+          severity: pat.severity,
+          line: lineNum,
+          message: pat.msg,
+          suggestion: pat.sug
+        });
+        if(re.lastIndex === match.index) re.lastIndex++;
+      }
+    }catch(e){ /* 正则编译失败：跳过该模式 */ }
+  }
+
+  return issues;
+}
+
+/**
+ * 代码风格/质量检测
+ * @param {string} code - 代码片段
+ * @param {string} lang - 语言
+ * @returns {Array} 问题列表
+ */
+function _detectStyleIssues(code, lang){
+  var c = String(code || "");
+  var issues = [];
+  var lines = c.split("\n");
+
+  /* 行长度检测 */
+  for(var i = 0; i < lines.length; i++){
+    if(lines[i].length > 120){
+      issues.push({
+        type: "long_line",
+        severity: "low",
+        line: i + 1,
+        message: "行长度超过 120 字符（" + lines[i].length + "）",
+        suggestion: "拆分长行以提升可读性"
+      });
+    }
+  }
+
+  /* TODO/FIXME 标记 */
+  var todoRe = /(?:TODO|FIXME|HACK|XXX)\b/g;
+  var m = null;
+  while((m = todoRe.exec(c)) !== null){
+    var lineNum = c.slice(0, m.index).split("\n").length;
+    issues.push({
+      type: "todo",
+      severity: "low",
+      line: lineNum,
+      message: "未完成的标记：" + m[0],
+      suggestion: "完成或转为 issue 跟踪"
+    });
+  }
+
+  /* 空函数体 */
+  var emptyFnRe = /function\s*\w*\s*\([^)]*\)\s*\{\s*\}/g;
+  while((m = emptyFnRe.exec(c)) !== null){
+    var emptyLineNum = c.slice(0, m.index).split("\n").length;
+    issues.push({
+      type: "empty_function",
+      severity: "low",
+      line: emptyLineNum,
+      message: "空函数体",
+      suggestion: "添加实现或注释说明"
+    });
+  }
+
+  return issues;
+}
+
+/**
+ * 计算代码质量评分（0-100）
+ * 评分规则：100 - Σ(severity 权重)
+ *   high=15, medium=8, low=3
+ * @param {Array<{severity:string}>} issues - 问题列表
+ * @returns {number} 评分 [0, 100]
+ */
+function reviewScore(issues){
+  if(!Array.isArray(issues) || !issues.length) return 100;
+  var weights = {high: 15, medium: 8, low: 3};
+  var total = 0;
+  for(var i = 0; i < issues.length; i++){
+    var sev = issues[i] && issues[i].severity;
+    total += weights[sev] || 5;
+  }
+  return Math.max(0, 100 - total);
+}
+
+/**
+ * 构建审查摘要
+ * @param {Array} issues - 问题列表
+ * @param {number} score - 评分
+ * @param {string} code - 代码
+ * @returns {string} 摘要
+ */
+function _buildReviewSummary(issues, score, code){
+  var lines = String(code || "").split("\n").length;
+  var parts = [];
+  parts.push("代码行数：" + lines + "，评分：" + score + "/100");
+
+  if(!issues.length){
+    parts.push("未发现问题。");
+    return parts.join("；");
+  }
+
+  /* 按严重度统计 */
+  var counts = {high: 0, medium: 0, low: 0};
+  for(var i = 0; i < issues.length; i++){
+    var sev = issues[i].severity || "low";
+    counts[sev] = (counts[sev] || 0) + 1;
+  }
+  var parts2 = [];
+  if(counts.high) parts2.push("高危 " + counts.high);
+  if(counts.medium) parts2.push("中等 " + counts.medium);
+  if(counts.low) parts2.push("低 " + counts.low);
+  parts.push("问题：" + parts2.join("、"));
+
+  /* 按类别统计 */
+  var cats = {};
+  for(var j = 0; j < issues.length; j++){
+    var cat = issues[j].category || "other";
+    cats[cat] = (cats[cat] || 0) + 1;
+  }
+  var catParts = [];
+  var catKeys = Object.keys(cats);
+  for(var k = 0; k < catKeys.length; k++){
+    catParts.push(catKeys[k] + " " + cats[catKeys[k]]);
+  }
+  parts.push("类别：" + catParts.join("、"));
+
+  return parts.join("；");
+}
+
+/* ============================================================
+ * 5. 笔记变更钩子：自动更新 RAG 索引
+ * ============================================================ */
+
+/**
+ * 笔记变更后自动更新 RAG 索引（钩子函数）
+ * 调用时机：createNote / updateNote / deleteNote 之后
+ * @returns {void}
+ */
+function _onNotesChanged(){
+  try{
+    /* 仅当已有索引时才更新，避免无谓重建 */
+    if(_ragIndex && _ragIndex.docs && _ragIndex.docs.length){
+      indexFromNotes();
+      saveRagIndex();
+    }
+  }catch(e){ /* 钩子失败不影响笔记操作 */ }
+}// ===== Offline AI & Edge Computing (v1.7-B 离线AI与边缘计算) =====
+/* ============================================================
+ * v1.7-B 离线AI与边缘计算
+ * ------------------------------------------------------------
+ *  四大能力：
+ *   1) WebLLM 本地推理框架：浏览器中运行量化大模型（API 框架，不实际下载）
+ *      - initWebLLM / webllmChat / webllmAvailable / webllmListModels
+ *      - webllmLoadProgress / webllmUnload
+ *   2) ONNX Runtime Web 框架：小模型推理（文本分类 / NER）
+ *      - initONNX / onnxClassify / onnxNER / onnxAvailable / onnxListModels
+ *   3) 模型缓存管理：IndexedDB 持久化 + 版本管理 + 清理
+ *      - cacheModel / getCachedModel / removeCachedModel / listCachedModels
+ *      - getCacheSize / clearModelCache / ensureModelLoaded
+ *   4) 隐私优先架构：敏感数据标记 + 本地处理策略 + 数据过滤
+ *      - markSensitive / sanitizeForCloud / shouldProcessLocally
+ *      - setPrivacyPolicy / getPrivacyPolicy / auditDataFlow
+ *
+ *  设计约定：
+ *   - 使用 var 声明模块级私有状态（54 > 31，避免 TDZ）
+ *   - 持久化键：wb_privacy_policy（隐私策略）、模型缓存走 IDB V2 'models' store
+ *   - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
+ *   - 颜色用 var(--token) CSS 令牌（lint-colors 门禁）
+ *   - innerHTML 赋值由调用方用 sanitizeHtml 包裹
+ *   - WebLLM/ONNX 只做 API 框架：检测 WebGPU/Worker 可用性，不实际下载模型
+ *   - WebLLM 不可用时降级到云端 AI（chatOnce），ONNX 不可用时用关键词规则 fallback
+ *   - 模型缓存在 IDB 不可用时降级到内存 Map（_modelCacheFallback）
+ *   - 隐私过滤稳健：未知字段默认不敏感，已知敏感字段必须过滤
+ *   - chatOnce / getCfg / idbPut / idbGet / idbDelete / idbGetAll / isIDBAvailable
+ *     在更早模块定义（20/07/02b），可直接引用
+ *   - idbPutModel / idbGetModel / idbDeleteModel / idbListModels 在 02b 中新增（< 54）
+ * ============================================================ */
+
+/* ---------- 持久化键 ---------- */
+var PRIVACY_POLICY_KEY = "wb_privacy_policy";
+
+/* ---------- 隐私级别常量 ---------- */
+var PRIVACY_LEVELS = {
+  PUBLIC: "public",
+  INTERNAL: "internal",
+  CONFIDENTIAL: "confidential",
+  RESTRICTED: "restricted"
+};
+
+/* ---------- 模块级私有状态（var 声明，避免 TDZ） ---------- */
+var _webllmEngine = null;           // WebLLM 引擎实例（模拟）
+var _webllmCurrentModel = null;     // 当前已加载的模型 ID
+var _webllmLoadProgress = 0;        // 模型加载进度 0-100
+var _webllmLoading = false;         // 是否正在加载
+var _webllmAvailable = (function(){
+  try{
+    /* WebLLM 需要 WebGPU + Worker + WASM 支持 */
+    return (typeof navigator !== "undefined") &&
+           (typeof navigator.gpu !== "undefined") &&
+           (typeof Worker !== "undefined") &&
+           (typeof WebAssembly !== "undefined");
+  }catch(e){ return false; }
+})();
+
+var _onnxSession = null;            // ONNX Runtime 会话（模拟）
+var _onnxCurrentModel = null;       // 当前已加载的 ONNX 模型路径
+var _onnxAvailable = (function(){
+  try{
+    /* ONNX Runtime Web 需要 WASM 支持；window.ort 是 onnxruntime-web 注入 */
+    return (typeof WebAssembly !== "undefined") &&
+           (typeof window !== "undefined") &&
+           (typeof window.ort !== "undefined");
+  }catch(e){ return false; }
+})();
+
+/* 模型缓存内存降级（IDB 不可用时使用） */
+var _modelCacheFallback = new Map();
+
+/* 隐私策略缓存 */
+var _privacyPolicy = null;
+
+/* 数据流审计日志（内存，最多保留 200 条） */
+var _dataFlowAuditLog = [];
+var _DATA_FLOW_AUDIT_MAX = 200;
+
+/* ============================================================
+ * 1. WebLLM 本地推理框架
+ * ============================================================ */
+
+/* 预定义 WebLLM 可用模型列表（不实际下载，仅元数据） */
+var WEBLLM_MODELS = [
+  { id: "Llama-3.2-1B-Instruct-q4f16_1-MLC",  name: "Llama-3.2-1B-Instruct",  size: "0.9GB",  description: "Meta Llama 3.2 1B 参数量化模型，适合轻量对话", quantization: "q4f16_1" },
+  { id: "Llama-3.2-3B-Instruct-q4f16_1-MLC",  name: "Llama-3.2-3B-Instruct",  size: "2.0GB",  description: "Meta Llama 3.2 3B 参数量化模型，平衡质量与速度", quantization: "q4f16_1" },
+  { id: "Phi-3.5-mini-instruct-q4f16_1-MLC",  name: "Phi-3.5-mini-instruct",  size: "2.4GB",  description: "Microsoft Phi-3.5 mini 量化模型，推理能力强", quantization: "q4f16_1" },
+  { id: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",  name: "Qwen2.5-1.5B-Instruct",  size: "1.5GB",  description: "阿里 Qwen2.5 1.5B 量化模型，中文友好", quantization: "q4f16_1" },
+  { id: "gemma-2-2b-it-q4f16_1-MLC",          name: "gemma-2-2b-it",          size: "1.6GB",  description: "Google Gemma 2 2B 量化模型", quantization: "q4f16_1" },
+  { id: "SmolLM2-1.7B-Instruct-q4f16_1-MLC",  name: "SmolLM2-1.7B-Instruct",  size: "1.0GB",  description: "HuggingFace SmolLM2 轻量模型", quantization: "q4f16_1" }
+];
+
+/**
+ * 检测 WebLLM 是否可用（WebGPU + Worker + WASM）
+ * @returns {boolean}
+ */
+function webllmAvailable(){
+  return _webllmAvailable && _webllmEngine !== null;
+}
+
+/**
+ * 列出可用 WebLLM 模型
+ * @returns {Array<{id:string,name:string,size:string,description:string,quantization:string}>}
+ */
+function webllmListModels(){
+  /* 返回深拷贝避免外部修改 */
+  return WEBLLM_MODELS.map(function(m){
+    return { id: m.id, name: m.name, size: m.size, description: m.description, quantization: m.quantization };
+  });
+}
+
+/**
+ * 获取模型加载进度（0-100）
+ * @returns {number}
+ */
+function webllmLoadProgress(){
+  return _webllmLoadProgress;
+}
+
+/**
+ * 初始化 WebLLM 引擎并加载指定模型
+ * 仅做 API 框架：模拟加载进度推进，不实际下载模型文件
+ * @param {string} modelId - 模型 ID（来自 WEBLLM_MODELS）
+ * @returns {Promise<{ok:boolean, modelId:string, reason?:string}>}
+ */
+function initWebLLM(modelId){
+  var mid = String(modelId || "").trim();
+  if(!mid){
+    return Promise.resolve({ ok: false, modelId: "", reason: "modelId 为空" });
+  }
+  /* 校验模型 ID 是否在预定义列表 */
+  var found = null;
+  for(var i = 0; i < WEBLLM_MODELS.length; i++){
+    if(WEBLLM_MODELS[i].id === mid){ found = WEBLLM_MODELS[i]; break; }
+  }
+  if(!found){
+    return Promise.resolve({ ok: false, modelId: mid, reason: "未知模型 ID" });
+  }
+  /* WebLLM 不可用：返回失败但提供降级建议 */
+  if(!_webllmAvailable){
+    return Promise.resolve({ ok: false, modelId: mid, reason: "WebLLM 不可用（需要 WebGPU + Worker + WASM），请使用 webllmChat 降级到云端" });
+  }
+  /* 已加载同一模型：直接返回成功 */
+  if(_webllmEngine && _webllmCurrentModel === mid){
+    _webllmLoadProgress = 100;
+    return Promise.resolve({ ok: true, modelId: mid });
+  }
+  /* 模拟加载流程：进度从 0 推进到 100 */
+  if(_webllmLoading){
+    return Promise.resolve({ ok: false, modelId: mid, reason: "正在加载其他模型，请先 webllmUnload" });
+  }
+  _webllmLoading = true;
+  _webllmLoadProgress = 0;
+  _webllmCurrentModel = mid;
+  return new Promise(function(resolve){
+    /* 模拟分阶段加载：0 → 30 → 60 → 90 → 100 */
+    var stages = [0, 30, 60, 90, 100];
+    var idx = 0;
+    function tick(){
+      if(idx >= stages.length){
+        _webllmEngine = { modelId: mid, createdAt: Date.now() };
+        _webllmLoading = false;
+        _webllmLoadProgress = 100;
+        resolve({ ok: true, modelId: mid });
+        return;
+      }
+      _webllmLoadProgress = stages[idx];
+      idx++;
+      setTimeout(tick, 5);
+    }
+    tick();
+  });
+}
+
+/**
+ * 卸载 WebLLM 模型释放内存
+ * @returns {{ok:boolean, reason?:string}}
+ */
+function webllmUnload(){
+  if(!_webllmEngine){
+    return { ok: false, reason: "无已加载模型" };
+  }
+  _webllmEngine = null;
+  _webllmCurrentModel = null;
+  _webllmLoadProgress = 0;
+  _webllmLoading = false;
+  return { ok: true };
+}
+
+/**
+ * 本地模型推理
+ * WebLLM 不可用或未加载时降级到云端 AI（chatOnce）
+ * @param {string} prompt - 用户输入
+ * @param {{maxTokens?:number, temperature?:number, fallback?:boolean}} [options]
+ * @returns {Promise<{ok:boolean, text:string, source:"webllm"|"cloud"|"empty", reason?:string}>}
+ */
+function webllmChat(prompt, options){
+  var p = String(prompt || "").trim();
+  if(!p){
+    return Promise.resolve({ ok: false, text: "", source: "empty", reason: "prompt 为空" });
+  }
+  options = options || {};
+  /* WebLLM 可用且已加载：模拟本地推理 */
+  if(webllmAvailable() && _webllmCurrentModel){
+    var modelName = _webllmCurrentModel;
+    /* 模拟本地推理输出（不实际运行模型） */
+    var simulated = "[本地模型 " + modelName + "] " + p.slice(0, 200);
+    return Promise.resolve({ ok: true, text: simulated, source: "webllm" });
+  }
+  /* 降级到云端 AI：调用 chatOnce */
+  if(options.fallback === false){
+    return Promise.resolve({ ok: false, text: "", source: "empty", reason: "WebLLM 不可用且 fallback 已禁用" });
+  }
+  try{
+    if(typeof chatOnce !== "function"){
+      return Promise.resolve({ ok: false, text: "", source: "empty", reason: "chatOnce 不可用" });
+    }
+    return chatOnce([{ role: "user", content: p }], { retry: 1 })
+      .then(function(resp){
+        /* OpenAI 风格响应：choices[0].message.content */
+        var text = "";
+        try{
+          if(resp && resp.choices && resp.choices[0] && resp.choices[0].message){
+            text = resp.choices[0].message.content || "";
+          }
+        }catch(e){ text = ""; }
+        return { ok: true, text: text, source: "cloud" };
+      })
+      .catch(function(err){
+        return { ok: false, text: "", source: "cloud", reason: String(err && err.message || err) };
+      });
+  }catch(e){
+    return Promise.resolve({ ok: false, text: "", source: "empty", reason: "chatOnce 调用异常：" + String(e) });
+  }
+}
+
+/* ============================================================
+ * 2. ONNX Runtime Web 框架
+ * ============================================================ */
+
+/* 预定义 ONNX 可用模型列表 */
+var ONNX_MODELS = [
+  { id: "sentiment-bert",     path: "onnx/sentiment-bert.onnx",     type: "classification", description: "BERT 情感分析（正/负）",        size: "420MB" },
+  { id: "topic-roberta",      path: "onnx/topic-roberta.onnx",      type: "classification", description: "RoBERTa 主题分类（科技/财经/体育/娱乐）", size: "480MB" },
+  { id: "spam-distilbert",    path: "onnx/spam-distilbert.onnx",    type: "classification", description: "DistilBERT 垃圾信息分类",        size: "260MB" },
+  { id: "ner-bert",           path: "onnx/ner-bert.onnx",           type: "ner",            description: "BERT 命名实体识别（人/地/组/时）", size: "430MB" }
+];
+
+/**
+ * 检测 ONNX Runtime 是否可用
+ * @returns {boolean}
+ */
+function onnxAvailable(){
+  return _onnxAvailable && _onnxSession !== null;
+}
+
+/**
+ * 列出可用 ONNX 模型
+ * @returns {Array<{id:string,path:string,type:string,description:string,size:string}>}
+ */
+function onnxListModels(){
+  return ONNX_MODELS.map(function(m){
+    return { id: m.id, path: m.path, type: m.type, description: m.description, size: m.size };
+  });
+}
+
+/**
+ * 初始化 ONNX Runtime 会话
+ * 仅做 API 框架：模拟会话创建，不实际加载 ONNX 模型文件
+ * @param {string} modelPath - 模型路径或 ID
+ * @returns {Promise<{ok:boolean, modelPath:string, reason?:string}>}
+ */
+function initONNX(modelPath){
+  var mp = String(modelPath || "").trim();
+  if(!mp){
+    return Promise.resolve({ ok: false, modelPath: "", reason: "modelPath 为空" });
+  }
+  /* 校验模型路径或 ID 是否在预定义列表 */
+  var found = null;
+  for(var i = 0; i < ONNX_MODELS.length; i++){
+    if(ONNX_MODELS[i].id === mp || ONNX_MODELS[i].path === mp){ found = ONNX_MODELS[i]; break; }
+  }
+  if(!found){
+    return Promise.resolve({ ok: false, modelPath: mp, reason: "未知模型路径或 ID" });
+  }
+  /* ONNX Runtime 不可用：返回失败 */
+  if(!_onnxAvailable){
+    return Promise.resolve({ ok: false, modelPath: mp, reason: "ONNX Runtime 不可用（需要 WASM + window.ort），将降级到关键词规则" });
+  }
+  /* 模拟会话创建 */
+  _onnxSession = { modelPath: mp, type: found.type, createdAt: Date.now() };
+  _onnxCurrentModel = mp;
+  return Promise.resolve({ ok: true, modelPath: mp });
+}
+
+/**
+ * 文本分类（情感/主题/垃圾信息）
+ * ONNX 不可用时降级到关键词规则 fallback
+ * @param {string} text - 输入文本
+ * @param {string} modelType - 分类类型：sentiment / topic / spam
+ * @returns {Promise<{label:string, score:number, source:"onnx"|"rule", reason?:string}>}
+ */
+function onnxClassify(text, modelType){
+  var t = String(text || "").trim();
+  if(!t){
+    return Promise.resolve({ label: "neutral", score: 0, source: "rule", reason: "text 为空" });
+  }
+  var mt = String(modelType || "sentiment").trim();
+  /* ONNX 可用且已加载：模拟推理 */
+  if(onnxAvailable() && _onnxSession){
+    return Promise.resolve(_onnxSimulateClassify(t, mt));
+  }
+  /* 降级到关键词规则 */
+  return Promise.resolve(_onnxRuleClassify(t, mt));
+}
+
+/**
+ * 模拟 ONNX 分类推理（不实际运行模型）
+ */
+function _onnxSimulateClassify(text, modelType){
+  /* 用简单规则模拟模型输出，但标记 source 为 onnx */
+  var rule = _onnxRuleClassify(text, modelType);
+  return { label: rule.label, score: Math.min(1, rule.score + 0.1), source: "onnx" };
+}
+
+/**
+ * 关键词规则分类 fallback
+ * @param {string} text
+ * @param {string} modelType
+ * @returns {{label:string, score:number, source:"rule"}}
+ */
+function _onnxRuleClassify(text, modelType){
+  var t = String(text || "").toLowerCase();
+  if(modelType === "sentiment"){
+    /* 情感分析：正/负/中性 */
+    var posWords = ["好", "棒", "优秀", "喜欢", "满意", "good", "great", "excellent", "happy", "love", "nice", "wonderful"];
+    var negWords = ["坏", "差", "糟糕", "讨厌", "不满", "bad", "terrible", "awful", "hate", "horrible", "worst", "sad"];
+    var pos = 0, neg = 0;
+    for(var i = 0; i < posWords.length; i++){ if(t.indexOf(posWords[i]) >= 0) pos++; }
+    for(var j = 0; j < negWords.length; j++){ if(t.indexOf(negWords[j]) >= 0) neg++; }
+    if(pos > neg) return { label: "positive", score: Math.min(1, 0.5 + 0.1 * pos), source: "rule" };
+    if(neg > pos) return { label: "negative", score: Math.min(1, 0.5 + 0.1 * neg), source: "rule" };
+    return { label: "neutral", score: 0.5, source: "rule" };
+  }
+  if(modelType === "topic"){
+    /* 主题分类：科技/财经/体育/娱乐 */
+    if(/科技|技术|ai|编程|代码|software|tech|computer/.test(t))  return { label: "tech",      score: 0.8, source: "rule" };
+    if(/财经|股票|投资|金融|经济|stock|finance|market/.test(t))   return { label: "finance",   score: 0.8, source: "rule" };
+    if(/体育|足球|篮球|比赛|运动|sport|football|basketball/.test(t)) return { label: "sport",   score: 0.8, source: "rule" };
+    if(/娱乐|电影|音乐|明星|游戏|entertainment|movie|music|game/.test(t)) return { label: "entertainment", score: 0.8, source: "rule" };
+    return { label: "other", score: 0.3, source: "rule" };
+  }
+  if(modelType === "spam"){
+    /* 垃圾信息分类 */
+    if(/免费|中奖|click|free|winner|prize|urgent|立即|限时/.test(t)) return { label: "spam",    score: 0.85, source: "rule" };
+    return { label: "ham", score: 0.8, source: "rule" };
+  }
+  /* 未知类型：返回 neutral */
+  return { label: "neutral", score: 0.3, source: "rule", reason: "未知 modelType: " + modelType };
+}
+
+/**
+ * 命名实体识别（NER）
+ * ONNX 不可用时降级到规则匹配
+ * @param {string} text - 输入文本
+ * @returns {Promise<Array<{entity:string, type:string, start:number, end:number}>>}
+ */
+function onnxNER(text){
+  var t = String(text || "");
+  if(!t.trim()){
+    return Promise.resolve([]);
+  }
+  /* ONNX 可用且已加载：模拟 NER */
+  if(onnxAvailable() && _onnxSession){
+    return Promise.resolve(_onnxSimulateNER(t));
+  }
+  /* 降级到规则匹配 */
+  return Promise.resolve(_onnxRuleNER(t));
+}
+
+/**
+ * 模拟 ONNX NER（基于规则但标记为 onnx）
+ */
+function _onnxSimulateNER(text){
+  return _onnxRuleNER(text);
+}
+
+/**
+ * 规则 NER：识别人名/地名/组织/时间
+ * 简单规则：识别常见模式
+ * @param {string} text
+ * @returns {Array<{entity:string, type:string, start:number, end:number}>}
+ */
+function _onnxRuleNER(text){
+  var result = [];
+  /* 人名：张三/李四/王五等常见示例名 */
+  var personRe = /([张王李赵刘陈杨黄周吴徐孙马朱胡郭林何高罗郑][一-龥]{1,2})/g;
+  var m;
+  while((m = personRe.exec(text)) !== null){
+    result.push({ entity: m[1], type: "PERSON", start: m.index, end: m.index + m[1].length });
+  }
+  /* 地名：北京/上海/广州/深圳/杭州等 */
+  var placeRe = /(北京|上海|广州|深圳|杭州|南京|成都|武汉|西安|重庆|天津|苏州|长沙|青岛|大连|厦门)/g;
+  while((m = placeRe.exec(text)) !== null){
+    result.push({ entity: m[1], type: "LOCATION", start: m.index, end: m.index + m[1].length });
+  }
+  /* 组织：公司/集团/大学/部门 */
+  var orgRe = /([一-龥]{2,8}(公司|集团|大学|学院|部门|研究院|研究所))/g;
+  while((m = orgRe.exec(text)) !== null){
+    result.push({ entity: m[1], type: "ORGANIZATION", start: m.index, end: m.index + m[1].length });
+  }
+  /* 时间：YYYY-MM-DD 或 YYYY年MM月DD日 */
+  var timeRe = /(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?)/g;
+  while((m = timeRe.exec(text)) !== null){
+    result.push({ entity: m[1], type: "TIME", start: m.index, end: m.index + m[1].length });
+  }
+  return result;
+}
+
+/* ============================================================
+ * 3. 模型缓存管理
+ * ============================================================ */
+
+/**
+ * 缓存模型文件到 IndexedDB（带元数据）
+ * IDB 不可用时降级到内存 Map
+ * @param {string} modelId - 模型 ID
+ * @param {Blob|ArrayBuffer|string} blob - 模型数据
+ * @param {{version?:string, size?:number}} [meta] - 额外元数据
+ * @returns {Promise<{ok:boolean, modelId:string, storage:"idb"|"memory", reason?:string}>}
+ */
+function cacheModel(modelId, blob, meta){
+  var mid = String(modelId || "").trim();
+  if(!mid){
+    return Promise.resolve({ ok: false, modelId: "", storage: "memory", reason: "modelId 为空" });
+  }
+  if(blob === undefined || blob === null){
+    return Promise.resolve({ ok: false, modelId: mid, storage: "memory", reason: "blob 为空" });
+  }
+  meta = meta || {};
+  /* 估算大小 */
+  var size = meta.size || _estimateBlobSize(blob);
+  var record = {
+    modelId: mid,
+    version: meta.version || "1.0.0",
+    size: size,
+    blob: blob,
+    cachedAt: Date.now(),
+    lastUsed: Date.now()
+  };
+  /* IDB 可用：走 idbPutModel */
+  try{
+    if(typeof isIDBAvailable === "function" && isIDBAvailable() && typeof idbPutModel === "function"){
+      return idbPutModel(mid, record).then(function(ret){
+        if(ret === undefined){
+          /* IDB 写入失败 → 降级内存 */
+          _modelCacheFallback.set(mid, record);
+          return { ok: true, modelId: mid, storage: "memory", reason: "idb 写入失败，降级内存" };
+        }
+        return { ok: true, modelId: mid, storage: "idb" };
+      }).catch(function(){
+        _modelCacheFallback.set(mid, record);
+        return { ok: true, modelId: mid, storage: "memory", reason: "idb 异常，降级内存" };
+      });
+    }
+  }catch(e){ /* fall through to memory */ }
+  /* IDB 不可用：内存降级 */
+  _modelCacheFallback.set(mid, record);
+  return Promise.resolve({ ok: true, modelId: mid, storage: "memory" });
+}
+
+/**
+ * 估算 blob 大小（字节）
+ */
+function _estimateBlobSize(blob){
+  try{
+    if(blob === null || blob === undefined) return 0;
+    if(typeof Blob !== "undefined" && blob instanceof Blob) return blob.size;
+    if(typeof ArrayBuffer !== "undefined" && blob instanceof ArrayBuffer) return blob.byteLength;
+    if(typeof blob === "string") return blob.length;
+    if(blob && typeof blob === "object" && typeof blob.byteLength === "number") return blob.byteLength;
+    return JSON.stringify(blob).length;
+  }catch(e){ return 0; }
+}
+
+/**
+ * 从 IndexedDB 获取缓存的模型
+ * @param {string} modelId
+ * @returns {Promise<{modelId:string, version:string, size:number, blob:*, cachedAt:number, lastUsed:number}|null>}
+ */
+function getCachedModel(modelId){
+  var mid = String(modelId || "").trim();
+  if(!mid) return Promise.resolve(null);
+  /* 先查内存降级（可能 IDB 不可用） */
+  if(_modelCacheFallback.has(mid)){
+    var rec = _modelCacheFallback.get(mid);
+    rec.lastUsed = Date.now();
+    _modelCacheFallback.set(mid, rec);
+    return Promise.resolve(_cloneRecord(rec));
+  }
+  /* 再查 IDB */
+  try{
+    if(typeof isIDBAvailable === "function" && isIDBAvailable() && typeof idbGetModel === "function"){
+      return idbGetModel(mid).then(function(v){
+        if(v === undefined || v === null) return null;
+        /* 更新 lastUsed（best-effort，不阻塞读） */
+        try{
+          v.lastUsed = Date.now();
+          if(typeof idbPutModel === "function") idbPutModel(mid, v);
+        }catch(e){}
+        return _cloneRecord(v);
+      });
+    }
+  }catch(e){}
+  return Promise.resolve(null);
+}
+
+/**
+ * 克隆缓存记录（避免外部修改内部状态）
+ */
+function _cloneRecord(rec){
+  if(!rec || typeof rec !== "object") return null;
+  return {
+    modelId: rec.modelId,
+    version: rec.version,
+    size: rec.size,
+    blob: rec.blob,
+    cachedAt: rec.cachedAt,
+    lastUsed: rec.lastUsed
+  };
+}
+
+/**
+ * 删除缓存的模型
+ * @param {string} modelId
+ * @returns {Promise<{ok:boolean, modelId:string}>}
+ */
+function removeCachedModel(modelId){
+  var mid = String(modelId || "").trim();
+  if(!mid) return Promise.resolve({ ok: false, modelId: "" });
+  /* 删内存 */
+  var memDeleted = _modelCacheFallback.delete(mid);
+  /* 删 IDB */
+  try{
+    if(typeof isIDBAvailable === "function" && isIDBAvailable() && typeof idbDeleteModel === "function"){
+      return idbDeleteModel(mid).then(function(){
+        return { ok: true, modelId: mid };
+      }).catch(function(){
+        return { ok: memDeleted, modelId: mid };
+      });
+    }
+  }catch(e){}
+  return Promise.resolve({ ok: memDeleted, modelId: mid });
+}
+
+/**
+ * 列出所有缓存模型及大小
+ * @returns {Promise<Array<{modelId:string, version:string, size:number, cachedAt:number, lastUsed:number}>>}
+ */
+function listCachedModels(){
+  /* 收集内存 + IDB */
+  var memList = [];
+  _modelCacheFallback.forEach(function(rec, key){
+    memList.push({
+      modelId: rec.modelId || key,
+      version: rec.version,
+      size: rec.size,
+      cachedAt: rec.cachedAt,
+      lastUsed: rec.lastUsed
+    });
+  });
+  try{
+    if(typeof isIDBAvailable === "function" && isIDBAvailable() && typeof idbListModels === "function"){
+      return idbListModels().then(function(idbList){
+        var idbArr = (idbList || []).map(function(rec){
+          return {
+            modelId: rec.modelId,
+            version: rec.version,
+            size: rec.size,
+            cachedAt: rec.cachedAt,
+            lastUsed: rec.lastUsed
+          };
+        });
+        /* 合并去重（内存优先） */
+        var memIds = {};
+        for(var i = 0; i < memList.length; i++) memIds[memList[i].modelId] = true;
+        for(var j = 0; j < idbArr.length; j++){
+          if(!memIds[idbArr[j].modelId]) memList.push(idbArr[j]);
+        }
+        return memList;
+      }).catch(function(){
+        return memList;
+      });
+    }
+  }catch(e){}
+  return Promise.resolve(memList);
+}
+
+/**
+ * 获取总缓存大小（字节）
+ * @returns {Promise<number>}
+ */
+function getCacheSize(){
+  return listCachedModels().then(function(list){
+    var total = 0;
+    for(var i = 0; i < list.length; i++){
+      total += (list[i].size || 0);
+    }
+    return total;
+  });
+}
+
+/**
+ * 清空所有模型缓存
+ * @returns {Promise<{ok:boolean, removed:number}>}
+ */
+function clearModelCache(){
+  var memCount = _modelCacheFallback.size;
+  _modelCacheFallback.clear();
+  try{
+    if(typeof isIDBAvailable === "function" && isIDBAvailable() && typeof idbDeleteModel === "function" && typeof idbListModels === "function"){
+      return idbListModels().then(function(list){
+        var arr = list || [];
+        var promises = arr.map(function(rec){
+          return idbDeleteModel(rec.modelId).catch(function(){ return null; });
+        });
+        return Promise.all(promises).then(function(){
+          return { ok: true, removed: memCount + arr.length };
+        });
+      }).catch(function(){
+        return { ok: true, removed: memCount };
+      });
+    }
+  }catch(e){}
+  return Promise.resolve({ ok: true, removed: memCount });
+}
+
+/**
+ * 确保模型已加载：先查缓存，没有则下载 + 缓存
+ * 由于测试环境无法实际下载，下载函数由调用方提供（downloader）
+ * @param {string} modelId
+ * @param {{downloader?:Function, version?:string}} [options]
+ * @returns {Promise<{ok:boolean, modelId:string, source:"cache"|"download", reason?:string}>}
+ */
+function ensureModelLoaded(modelId, options){
+  var mid = String(modelId || "").trim();
+  if(!mid){
+    return Promise.resolve({ ok: false, modelId: "", source: "cache", reason: "modelId 为空" });
+  }
+  options = options || {};
+  /* 先查缓存 */
+  return getCachedModel(mid).then(function(cached){
+    if(cached){
+      return { ok: true, modelId: mid, source: "cache" };
+    }
+    /* 缓存未命中：调用 downloader 下载 */
+    if(typeof options.downloader !== "function"){
+      return { ok: false, modelId: mid, source: "download", reason: "未提供 downloader，无法下载模型" };
+    }
+    try{
+      var dlPromise = options.downloader(mid);
+      if(!dlPromise || typeof dlPromise.then !== "function"){
+        return { ok: false, modelId: mid, source: "download", reason: "downloader 未返回 Promise" };
+      }
+      return dlPromise.then(function(blob){
+        if(blob === undefined || blob === null){
+          return { ok: false, modelId: mid, source: "download", reason: "downloader 返回空 blob" };
+        }
+        return cacheModel(mid, blob, { version: options.version }).then(function(){
+          return { ok: true, modelId: mid, source: "download" };
+        });
+      }).catch(function(err){
+        return { ok: false, modelId: mid, source: "download", reason: "下载失败：" + String(err && err.message || err) };
+      });
+    }catch(e){
+      return { ok: false, modelId: mid, source: "download", reason: "downloader 异常：" + String(e) };
+    }
+  });
+}
+
+/* ============================================================
+ * 4. 隐私优先架构
+ * ============================================================ */
+
+/* 默认敏感字段名（小写匹配） */
+var _DEFAULT_SENSITIVE_FIELDS = [
+  "password", "passwd", "pwd",
+  "apikey", "api_key", "secret", "token", "accesstoken", "access_token",
+  "refreshtoken", "refresh_token",
+  "email", "phone", "mobile", "idcard", "ssn",
+  "creditcard", "credit_card", "cvv",
+  "address", "birthdate", "birthday"
+];
+
+/* 默认隐私策略 */
+var _DEFAULT_PRIVACY_POLICY = {
+  /* 敏感字段名列表（小写） */
+  sensitiveFields: _DEFAULT_SENSITIVE_FIELDS.slice(),
+  /* 字段名 → 隐私级别映射（高隐私字段强制本地处理） */
+  fieldLevels: {
+    password: PRIVACY_LEVELS.RESTRICTED,
+    passwd: PRIVACY_LEVELS.RESTRICTED,
+    pwd: PRIVACY_LEVELS.RESTRICTED,
+    apikey: PRIVACY_LEVELS.RESTRICTED,
+    api_key: PRIVACY_LEVELS.RESTRICTED,
+    secret: PRIVACY_LEVELS.RESTRICTED,
+    token: PRIVACY_LEVELS.RESTRICTED,
+    accesstoken: PRIVACY_LEVELS.RESTRICTED,
+    access_token: PRIVACY_LEVELS.RESTRICTED,
+    refreshtoken: PRIVACY_LEVELS.RESTRICTED,
+    refresh_token: PRIVACY_LEVELS.RESTRICTED,
+    idcard: PRIVACY_LEVELS.RESTRICTED,
+    ssn: PRIVACY_LEVELS.RESTRICTED,
+    creditcard: PRIVACY_LEVELS.RESTRICTED,
+    credit_card: PRIVACY_LEVELS.RESTRICTED,
+    cvv: PRIVACY_LEVELS.RESTRICTED,
+    email: PRIVACY_LEVELS.CONFIDENTIAL,
+    phone: PRIVACY_LEVELS.CONFIDENTIAL,
+    mobile: PRIVACY_LEVELS.CONFIDENTIAL,
+    address: PRIVACY_LEVELS.CONFIDENTIAL,
+    birthdate: PRIVACY_LEVELS.CONFIDENTIAL,
+    birthday: PRIVACY_LEVELS.CONFIDENTIAL
+  },
+  /* 操作 → 最低隐私级别（高于此级别的数据必须本地处理） */
+  operationMinLevels: {
+    "cloud.ai": PRIVACY_LEVELS.INTERNAL,
+    "cloud.sync": PRIVACY_LEVELS.INTERNAL,
+    "cloud.backup": PRIVACY_LEVELS.INTERNAL,
+    "cloud.share": PRIVACY_LEVELS.CONFIDENTIAL
+  },
+  /* 是否启用本地处理降级 */
+  localFallbackEnabled: true
+};
+
+/**
+ * 获取当前隐私策略（带缓存，从 localStorage 读取）
+ * @returns {Object} 隐私策略对象
+ */
+function getPrivacyPolicy(){
+  if(_privacyPolicy) return _privacyPolicy;
+  try{
+    var raw = localStorage.getItem(PRIVACY_POLICY_KEY);
+    if(raw){
+      _privacyPolicy = JSON.parse(raw);
+      /* 合并默认值（避免旧版策略缺字段） */
+      _privacyPolicy = _mergePolicy(_DEFAULT_PRIVACY_POLICY, _privacyPolicy);
+      return _privacyPolicy;
+    }
+  }catch(e){}
+  _privacyPolicy = _clonePolicy(_DEFAULT_PRIVACY_POLICY);
+  return _privacyPolicy;
+}
+
+/**
+ * 设置隐私策略并持久化到 localStorage
+ * @param {Object} policy - 隐私策略
+ * @returns {{ok:boolean, reason?:string}}
+ */
+function setPrivacyPolicy(policy){
+  if(!policy || typeof policy !== "object"){
+    return { ok: false, reason: "policy 必须是对象" };
+  }
+  try{
+    /* 校验：sensitiveFields 必须是数组（若提供） */
+    if("sensitiveFields" in policy && !Array.isArray(policy.sensitiveFields)){
+      return { ok: false, reason: "sensitiveFields 必须是数组" };
+    }
+    /* 校验：fieldLevels 必须是对象（若提供） */
+    if("fieldLevels" in policy && (!policy.fieldLevels || typeof policy.fieldLevels !== "object" || Array.isArray(policy.fieldLevels))){
+      return { ok: false, reason: "fieldLevels 必须是对象" };
+    }
+    var merged = _mergePolicy(_DEFAULT_PRIVACY_POLICY, policy);
+    _privacyPolicy = merged;
+    localStorage.setItem(PRIVACY_POLICY_KEY, JSON.stringify(merged));
+    return { ok: true };
+  }catch(e){
+    return { ok: false, reason: "持久化失败：" + String(e && e.message || e) };
+  }
+}
+
+/**
+ * 克隆隐私策略
+ */
+function _clonePolicy(p){
+  return {
+    sensitiveFields: (p.sensitiveFields || []).slice(),
+    fieldLevels: Object.assign({}, p.fieldLevels || {}),
+    operationMinLevels: Object.assign({}, p.operationMinLevels || {}),
+    localFallbackEnabled: p.localFallbackEnabled !== false
+  };
+}
+
+/**
+ * 合并隐私策略（base 为默认值，override 覆盖）
+ */
+function _mergePolicy(base, override){
+  return {
+    sensitiveFields: Array.isArray(override.sensitiveFields) ? override.sensitiveFields.slice() : base.sensitiveFields.slice(),
+    fieldLevels: Object.assign({}, base.fieldLevels, override.fieldLevels || {}),
+    operationMinLevels: Object.assign({}, base.operationMinLevels, override.operationMinLevels || {}),
+    localFallbackEnabled: (typeof override.localFallbackEnabled === "boolean") ? override.localFallbackEnabled : base.localFallbackEnabled
+  };
+}
+
+/**
+ * 判断字段名是否为敏感字段
+ * @param {string} fieldName
+ * @returns {boolean}
+ */
+function _isSensitiveField(fieldName){
+  var fn = String(fieldName || "").toLowerCase();
+  var policy = getPrivacyPolicy();
+  var fields = policy.sensitiveFields || [];
+  for(var i = 0; i < fields.length; i++){
+    if(String(fields[i]).toLowerCase() === fn) return true;
+  }
+  return false;
+}
+
+/**
+ * 获取字段的隐私级别
+ * @param {string} fieldName
+ * @returns {string} 隐私级别（PRIVACY_LEVELS 之一），未知字段返回 PUBLIC
+ */
+function _getFieldLevel(fieldName){
+  var fn = String(fieldName || "").toLowerCase();
+  var policy = getPrivacyPolicy();
+  var levels = policy.fieldLevels || {};
+  if(levels[fn]) return levels[fn];
+  /* 字段名包含敏感关键词时升级 */
+  if(_isSensitiveField(fieldName)) return PRIVACY_LEVELS.CONFIDENTIAL;
+  return PRIVACY_LEVELS.PUBLIC;
+}
+
+/**
+ * 标记敏感字段
+ * 给数据对象打上 __sensitiveFields 标记，不修改原值
+ * @param {Object} data - 数据对象
+ * @param {string[]} fields - 敏感字段名列表
+ * @returns {Object} 带标记的新对象（不修改原对象）
+ */
+function markSensitive(data, fields){
+  if(data === null || data === undefined || typeof data !== "object"){
+    return data;
+  }
+  var fieldArr = Array.isArray(fields) ? fields.slice() : [];
+  var copy = Array.isArray(data) ? data.slice() : Object.assign({}, data);
+  /* 标记敏感字段元数据 */
+  if(!Array.isArray(copy)){
+    Object.defineProperty(copy, "__sensitiveFields", {
+      value: fieldArr.map(function(f){ return String(f).toLowerCase(); }),
+      enumerable: false,
+      writable: true,
+      configurable: true
+    });
+  }
+  return copy;
+}
+
+/**
+ * 过滤敏感数据，不发送到云端
+ * 深度遍历对象，删除敏感字段（递归）
+ * @param {*} data - 输入数据
+ * @param {string[]} [sensitiveFields] - 自定义敏感字段列表（不传则用策略）
+ * @returns {*} 过滤后的新对象（不修改原对象）
+ */
+function sanitizeForCloud(data, sensitiveFields){
+  if(data === null || data === undefined) return data;
+  /* 基础类型直接返回 */
+  var t = typeof data;
+  if(t === "string" || t === "number" || t === "boolean") return data;
+  /* 函数不发送 */
+  if(t === "function") return undefined;
+  /* 自定义敏感字段列表 */
+  if(Array.isArray(sensitiveFields) && sensitiveFields.length){
+    var customPolicy = _mergePolicy(_DEFAULT_PRIVACY_POLICY, { sensitiveFields: sensitiveFields });
+    return _sanitizeWithPolicy(data, customPolicy);
+  }
+  return _sanitizeWithPolicy(data, getPrivacyPolicy());
+}
+
+/**
+ * 用指定策略过滤数据
+ */
+function _sanitizeWithPolicy(data, policy){
+  if(data === null || data === undefined) return data;
+  var t = typeof data;
+  if(t === "string" || t === "number" || t === "boolean") return data;
+  if(t === "function") return undefined;
+  /* 数组：递归过滤每个元素 */
+  if(Array.isArray(data)){
+    return data.map(function(item){ return _sanitizeWithPolicy(item, policy); });
+  }
+  /* 对象：删除敏感字段 */
+  var result = {};
+  var keys = Object.keys(data);
+  for(var i = 0; i < keys.length; i++){
+    var k = keys[i];
+    /* 跳过内部元数据字段 */
+    if(k === "__sensitiveFields") continue;
+    if(_isSensitiveFieldWithPolicy(k, policy)){
+      /* 敏感字段：替换为 [REDACTED] 占位 */
+      result[k] = "[REDACTED]";
+    } else {
+      result[k] = _sanitizeWithPolicy(data[k], policy);
+    }
+  }
+  return result;
+}
+
+/**
+ * 用指定策略判断字段是否敏感
+ */
+function _isSensitiveFieldWithPolicy(fieldName, policy){
+  var fn = String(fieldName || "").toLowerCase();
+  var fields = policy.sensitiveFields || [];
+  for(var i = 0; i < fields.length; i++){
+    if(String(fields[i]).toLowerCase() === fn) return true;
+  }
+  return false;
+}
+
+/**
+ * 判断是否应该本地处理（高隐私数据不发送云端）
+ * @param {*} data - 数据
+ * @param {string} privacyLevel - 隐私级别（PRIVACY_LEVELS 之一）
+ * @returns {boolean} true 表示应该本地处理
+ */
+function shouldProcessLocally(data, privacyLevel){
+  /* 显式指定级别：高于 INTERNAL 的都本地处理 */
+  var level = String(privacyLevel || PRIVACY_LEVELS.PUBLIC).toLowerCase();
+  if(level === PRIVACY_LEVELS.RESTRICTED || level === PRIVACY_LEVELS.CONFIDENTIAL){
+    return true;
+  }
+  /* 数据本身含敏感字段：本地处理 */
+  if(data && typeof data === "object"){
+    var keys = Object.keys(data);
+    for(var i = 0; i < keys.length; i++){
+      if(_isSensitiveField(keys[i])){
+        var fieldLevel = _getFieldLevel(keys[i]);
+        if(fieldLevel === PRIVACY_LEVELS.RESTRICTED || fieldLevel === PRIVACY_LEVELS.CONFIDENTIAL){
+          return true;
+        }
+      }
+    }
+  }
+  /* 数据带 __sensitiveFields 标记：本地处理 */
+  if(data && typeof data === "object" && data.__sensitiveFields && data.__sensitiveFields.length){
+    return true;
+  }
+  return false;
+}
+
+/**
+ * 审计数据流：记录数据发送到哪，是否含敏感信息
+ * @param {*} data - 发送的数据
+ * @param {string} destination - 目的地（如 "cloud.ai" / "cloud.sync" / "local.idb"）
+ * @returns {{ok:boolean, hasSensitive:boolean, destination:string, timestamp:number, summary:string}}
+ */
+function auditDataFlow(data, destination){
+  var dest = String(destination || "unknown");
+  var hasSensitive = false;
+  var sensitiveFields = [];
+  /* 检测数据中是否含敏感字段（值为 [REDACTED] 占位表示已过滤，不算泄露） */
+  if(data && typeof data === "object"){
+    var keys = Object.keys(data);
+    for(var i = 0; i < keys.length; i++){
+      if(_isSensitiveField(keys[i])){
+        /* 已被 [REDACTED] 占位的字段不算敏感泄露 */
+        if(data[keys[i]] === "[REDACTED]") continue;
+        hasSensitive = true;
+        sensitiveFields.push(keys[i]);
+      }
+    }
+  }
+  /* 检测 __sensitiveFields 标记 */
+  if(data && typeof data === "object" && Array.isArray(data.__sensitiveFields) && data.__sensitiveFields.length){
+    hasSensitive = true;
+    sensitiveFields = sensitiveFields.concat(data.__sensitiveFields);
+  }
+  var entry = {
+    timestamp: Date.now(),
+    destination: dest,
+    hasSensitive: hasSensitive,
+    sensitiveFields: sensitiveFields,
+    dataSize: _estimateBlobSize(data)
+  };
+  /* 写入审计日志（最多保留 _DATA_FLOW_AUDIT_MAX 条） */
+  _dataFlowAuditLog.push(entry);
+  if(_dataFlowAuditLog.length > _DATA_FLOW_AUDIT_MAX){
+    _dataFlowAuditLog = _dataFlowAuditLog.slice(-_DATA_FLOW_AUDIT_MAX);
+  }
+  var summary = "数据流审计 → " + dest + "：" + (hasSensitive ? "含敏感字段 [" + sensitiveFields.join(",") + "]" : "无敏感字段") + "，大小 " + entry.dataSize + " 字节";
+  return { ok: true, hasSensitive: hasSensitive, destination: dest, timestamp: entry.timestamp, summary: summary };
+}
+
+/**
+ * 获取数据流审计日志（导出辅助函数，便于测试与 UI 展示）
+ * @returns {Array}
+ */
+function getDataFlowAuditLog(){
+  return _dataFlowAuditLog.slice();
+}
+
+/**
+ * 清空数据流审计日志
+ * @returns {void}
+ */
+function clearDataFlowAuditLog(){
+  _dataFlowAuditLog = [];
+}
+
+/**
+ * 重置离线 AI 模块状态（测试用）
+ * @returns {void}
+ */
+function _resetOfflineAI(){
+  _webllmEngine = null;
+  _webllmCurrentModel = null;
+  _webllmLoadProgress = 0;
+  _webllmLoading = false;
+  _onnxSession = null;
+  _onnxCurrentModel = null;
+  _modelCacheFallback = new Map();
+  _privacyPolicy = null;
+  _dataFlowAuditLog = [];
+}// ===== ML Behavior Prediction (v1.7-C ML行为预测 + 生产力评分 + 习惯养成 + 推荐引擎) =====
+/* ============================================================
+ * v1.7-C 高级分析与预测 · ML 行为预测模块
+ * ------------------------------------------------------------
+ *  本模块提供 4 大能力：
+ *   1) ML 行为预测：基于历史数据预测用户行为
+ *      - predictCompletionRate(task, historicalData)  预测任务完成概率
+ *      - predictBestWorkHour(historicalData)          预测最佳工作时段 top3
+ *      - predictFocusTrend(historicalData, days)      预测专注度趋势（指数平滑）
+ *      - exponentialSmoothing(data, alpha)            指数平滑
+ *      - linearRegression(x, y)                       简单线性回归 y = a*x + b
+ *      - movingAverage(data, window)                  移动平均
+ *      - detectAnomaly(value, mean, stdDev)           Z-score 异常检测
+ *      - computeStats(data)                           均值/标准差/最小/最大
+ *   2) 生产力评分：综合评分体系
+ *      - calcProductivityScore(tasks, records, habits) 综合评分 0-100
+ *      - focusScore(records)        专注度评分（基于番茄钟/时间追踪）
+ *      - habitScore(habits)         习惯连续性评分（基于 streak 长度）
+ *      - efficiencyScore(tasks, records) 效率评分（实际 vs 预估耗时）
+ *   3) 习惯养成模型：21 天/66 天曲线拟合
+ *      - habitModel(days, completed)        习惯养成曲线拟合
+ *      - habitPrediction(history, targetDay) 预测第 N 天完成概率
+ *      - habitStage(day)                    习惯阶段（建立/巩固/稳定/维持）
+ *   4) 个性化推荐引擎：协同过滤 + 内容推荐
+ *      - recommend(userHistory, allTasks, topK)        个性化推荐主入口
+ *      - collaborativeFilter(userId, userTaskMatrix)  协同过滤
+ *      - contentBasedRecommend(task, userHistory)      基于内容推荐
+ *      - hybridRecommend(userHistory, allTasks, topK)  混合推荐
+ *
+ *  设计约定：
+ *   - 使用 var 声明模块级私有状态（55 > 31，避免 TDZ）
+ *   - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
+ *   - ML 用简单统计方法（指数平滑/线性回归/Z-score），不依赖外部 ML 库
+ *   - 推荐引擎用简单协同过滤 + 内容匹配，不依赖外部推荐系统
+ *   - 输入容错：空数据/非法数据返回安全默认值
+ *   - calcStreak / getTasks / getRec 等在更早模块定义（< 55），可直接引用
+ * ============================================================ */
+
+/* ---------- 模块级常量 ---------- */
+var HABIT_PHASES = {
+  FORMATION: "formation",       // 1-7 天 建立期
+  CONSOLIDATION: "consolidation", // 8-21 天 巩固期
+  STABILIZATION: "stabilization", // 22-66 天 稳定期
+  MAINTENANCE: "maintenance"    // 67+ 天 维持期
+};
+
+/* 习惯养成曲线参数（基于 21/66 天模型的经验拟合） */
+var HABIT_K_FORMATION = 0.25;   // 建立期衰减系数
+var HABIT_K_CONSOLIDATION = 0.08; // 巩固期衰减系数
+var HABIT_K_STABILIZATION = 0.03; // 稳定期衰减系数
+
+/* ---------- 基础统计函数 ---------- */
+
+/**
+ * 计算数据集的统计量：均值/标准差/最小/最大/计数
+ * @param {number[]} data - 数值数组
+ * @returns {{mean:number,stdDev:number,min:number,max:number,count:number,sum:number}}
+ */
+function computeStats(data){
+  if(!Array.isArray(data) || data.length === 0){
+    return { mean: 0, stdDev: 0, min: 0, max: 0, count: 0, sum: 0 };
+  }
+  var n = data.length;
+  var sum = 0, min = data[0], max = data[0];
+  for(var i = 0; i < n; i++){
+    var v = Number(data[i]) || 0;
+    sum += v;
+    if(v < min) min = v;
+    if(v > max) max = v;
+  }
+  var mean = sum / n;
+  var sqSum = 0;
+  for(var j = 0; j < n; j++){
+    var d = (Number(data[j]) || 0) - mean;
+    sqSum += d * d;
+  }
+  var stdDev = Math.sqrt(sqSum / n);
+  return { mean: mean, stdDev: stdDev, min: min, max: max, count: n, sum: sum };
+}
+
+/**
+ * 指数平滑：s_t = alpha * x_t + (1-alpha) * s_{t-1}
+ * @param {number[]} data - 输入序列
+ * @param {number} alpha - 平滑系数 0-1，默认 0.3
+ * @returns {number[]} 平滑后的序列（与输入等长）
+ */
+function exponentialSmoothing(data, alpha){
+  if(typeof alpha !== "number" || alpha <= 0 || alpha > 1) alpha = 0.3;
+  if(!Array.isArray(data) || data.length === 0) return [];
+  var out = [];
+  var prev = Number(data[0]) || 0;
+  out.push(prev);
+  for(var i = 1; i < data.length; i++){
+    var x = Number(data[i]) || 0;
+    prev = alpha * x + (1 - alpha) * prev;
+    out.push(prev);
+  }
+  return out;
+}
+
+/**
+ * 简单线性回归：y = a*x + b
+ * @param {number[]} x - 自变量
+ * @param {number[]} y - 因变量
+ * @returns {{a:number,b:number,r2:number}} 斜率/截距/决定系数
+ */
+function linearRegression(x, y){
+  if(!Array.isArray(x) || !Array.isArray(y) || x.length === 0 || x.length !== y.length){
+    return { a: 0, b: 0, r2: 0 };
+  }
+  var n = x.length;
+  if(n === 1) return { a: 0, b: Number(y[0]) || 0, r2: 0 };
+  var sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+  for(var i = 0; i < n; i++){
+    var xi = Number(x[i]) || 0;
+    var yi = Number(y[i]) || 0;
+    sumX += xi; sumY += yi;
+    sumXY += xi * yi;
+    sumX2 += xi * xi;
+    sumY2 += yi * yi;
+  }
+  var denom = n * sumX2 - sumX * sumX;
+  if(Math.abs(denom) < 1e-12) return { a: 0, b: sumY / n, r2: 0 };
+  var a = (n * sumXY - sumX * sumY) / denom;
+  var b = (sumY - a * sumX) / n;
+  /* 决定系数 R^2 */
+  var meanY = sumY / n;
+  var ssTot = sumY2 - n * meanY * meanY;
+  var ssRes = 0;
+  for(var j = 0; j < n; j++){
+    var yj = Number(y[j]) || 0;
+    var xj = Number(x[j]) || 0;
+    var r = yj - (a * xj + b);
+    ssRes += r * r;
+  }
+  var r2 = Math.abs(ssTot) < 1e-12 ? 0 : 1 - ssRes / ssTot;
+  return { a: a, b: b, r2: r2 };
+}
+
+/**
+ * 移动平均：以 window 大小的滑动窗口取均值
+ * @param {number[]} data - 输入序列
+ * @param {number} window - 窗口大小，默认 3
+ * @returns {number[]} 移动平均序列（长度 = data.length - window + 1）
+ */
+function movingAverage(data, window){
+  if(!Array.isArray(data) || data.length === 0) return [];
+  if(typeof window !== "number" || window < 1) window = 3;
+  if(window > data.length) window = data.length;
+  var out = [];
+  for(var i = 0; i <= data.length - window; i++){
+    var s = 0;
+    for(var j = 0; j < window; j++){
+      s += Number(data[i + j]) || 0;
+    }
+    out.push(s / window);
+  }
+  return out;
+}
+
+/**
+ * Z-score 异常检测：|Z| > 2 视为异常
+ * @param {number} value - 待检测值
+ * @param {number} mean - 均值
+ * @param {number} stdDev - 标准差
+ * @returns {{isAnomaly:boolean, zScore:number}}
+ */
+function detectAnomaly(value, mean, stdDev){
+  var v = Number(value) || 0;
+  var m = Number(mean) || 0;
+  var sd = Number(stdDev) || 0;
+  if(sd < 1e-12) return { isAnomaly: false, zScore: 0 };
+  var z = (v - m) / sd;
+  return { isAnomaly: Math.abs(z) > 2, zScore: z };
+}
+
+/* ---------- ML 行为预测 ---------- */
+
+/**
+ * 预测任务完成概率（0-1）
+ * 综合考虑：历史类似任务完成率 + 时间因素 + 场景因素
+ * @param {Object} task - 任务对象 {scenario, priority, dueDate, est}
+ * @param {Array} historicalData - 历史任务数组 [{scenario, priority, completed, hour, est}]
+ * @returns {number} 完成概率 0-1
+ */
+function predictCompletionRate(task, historicalData){
+  if(!task || typeof task !== "object") return 0.5;
+  if(!Array.isArray(historicalData) || historicalData.length === 0) return 0.5;
+  /* 筛选同场景历史任务 */
+  var sameScene = historicalData.filter(function(h){
+    return h && h.scenario === task.scenario;
+  });
+  if(sameScene.length === 0) return 0.5;
+  /* 基础完成率 */
+  var completed = sameScene.filter(function(h){ return h.completed; }).length;
+  var baseRate = completed / sameScene.length;
+  /* 优先级调整：高优先级完成率略高 */
+  var pri = task.priority || "M";
+  var priBoost = 0;
+  if(pri === "H" || pri === "high" || pri === 2) priBoost = 0.1;
+  else if(pri === "L" || pri === "low" || pri === 0) priBoost = -0.05;
+  /* 截止日期因素：距离越近完成概率略高（紧迫感） */
+  var dueFactor = 0;
+  if(task.dueDate){
+    var now = new Date();
+    var due = new Date(task.dueDate);
+    var days = Math.round((due - now) / 86400000);
+    if(days >= 0 && days <= 1) dueFactor = 0.05;
+    else if(days < 0) dueFactor = -0.1; /* 已过期降低概率 */
+  }
+  /* 时间因素：上午完成率略高 */
+  var hour = new Date().getHours();
+  var timeFactor = (hour >= 9 && hour <= 12) ? 0.03 : 0;
+  var rate = baseRate + priBoost + dueFactor + timeFactor;
+  return Math.max(0, Math.min(1, rate));
+}
+
+/**
+ * 预测最佳工作时段（top3）
+ * 统计每小时完成任务数，返回 top3 时段
+ * @param {Array} historicalData - [{completedAt, hour, completed}]
+ * @returns {Array<{hour:number, count:number}>} top3 时段
+ */
+function predictBestWorkHour(historicalData){
+  if(!Array.isArray(historicalData) || historicalData.length === 0) return [];
+  var hourCount = {};
+  for(var i = 0; i < 24; i++) hourCount[i] = 0;
+  for(var j = 0; j < historicalData.length; j++){
+    var h = historicalData[j];
+    if(!h || !h.completed) continue;
+    var hr = (typeof h.hour === "number") ? h.hour : (h.completedAt ? new Date(h.completedAt).getHours() : -1);
+    if(hr >= 0 && hr < 24) hourCount[hr]++;
+  }
+  var arr = [];
+  for(var k = 0; k < 24; k++) arr.push({ hour: k, count: hourCount[k] });
+  arr.sort(function(a, b){ return b.count - a.count; });
+  /* 仅返回 count > 0 的 top3 */
+  var top3 = arr.filter(function(x){ return x.count > 0; }).slice(0, 3);
+  return top3;
+}
+
+/**
+ * 预测专注度趋势（指数平滑，alpha=0.3）
+ * @param {Array} historicalData - [{date, focusScore}] 或 [number]
+ * @param {number} days - 预测未来天数，默认 7
+ * @returns {{history:number[], predicted:number[], trend:string}}
+ */
+function predictFocusTrend(historicalData, days){
+  if(typeof days !== "number" || days < 1) days = 7;
+  if(!Array.isArray(historicalData) || historicalData.length === 0){
+    return { history: [], predicted: [], trend: "stable" };
+  }
+  var series = historicalData.map(function(d){
+    if(typeof d === "number") return d;
+    return (d && typeof d.focusScore === "number") ? d.focusScore : 0;
+  });
+  var smoothed = exponentialSmoothing(series, 0.3);
+  /* 用最近一段平滑值线性外推 */
+  var last = smoothed[smoothed.length - 1] || 0;
+  var reg = linearRegression(
+    smoothed.map(function(_, i){ return i; }),
+    smoothed
+  );
+  var predicted = [];
+  for(var i = 1; i <= days; i++){
+    var p = last + reg.a * i;
+    predicted.push(Math.max(0, Math.min(100, p)));
+  }
+  var trend = "stable";
+  if(reg.a > 0.5) trend = "up";
+  else if(reg.a < -0.5) trend = "down";
+  return { history: smoothed, predicted: predicted, trend: trend };
+}
+
+/* ---------- 生产力评分 ---------- */
+
+/**
+ * 专注度评分（0-100）：基于番茄钟/时间追踪数据
+ * @param {Array} records - [{type, duration, focusCount}]
+ * @returns {number} 0-100
+ */
+function focusScore(records){
+  if(!Array.isArray(records) || records.length === 0) return 0;
+  var totalFocus = 0, totalDur = 0, focusSessions = 0;
+  for(var i = 0; i < records.length; i++){
+    var r = records[i];
+    if(!r) continue;
+    var dur = Number(r.duration) || 0;
+    totalDur += dur;
+    if(r.type === "focus" || r.type === "pomo" || r.type === "pomodoro"){
+      totalFocus += dur;
+      focusSessions++;
+    }
+    if(r.focusCount) focusSessions += Number(r.focusCount) || 0;
+  }
+  if(totalDur === 0 && focusSessions === 0) return 0;
+  /* 焦点时长占比 70% + 焦点会话数 30% */
+  var ratio = totalDur > 0 ? totalFocus / totalDur : 0;
+  var sessionScore = Math.min(100, focusSessions * 10);
+  return Math.round(ratio * 70 + sessionScore * 0.3);
+}
+
+/**
+ * 习惯连续性评分（0-100）：基于 streak 长度
+ * @param {Array} habits - [{streak, target, name}]
+ * @returns {number} 0-100
+ */
+function habitScore(habits){
+  if(!Array.isArray(habits) || habits.length === 0) return 0;
+  var total = 0, maxStreak = 0;
+  for(var i = 0; i < habits.length; i++){
+    var h = habits[i];
+    if(!h) continue;
+    var s = Number(h.streak) || 0;
+    total += s;
+    if(s > maxStreak) maxStreak = s;
+  }
+  /* 平均 streak 占 60% + 最大 streak 占 40%，归一化到 100 */
+  var avg = total / habits.length;
+  var avgScore = Math.min(100, avg * 5);     /* 20 天平均 -> 100 */
+  var maxScore = Math.min(100, maxStreak * 1.5); /* 66 天最大 -> 99 */
+  return Math.round(avgScore * 0.6 + maxScore * 0.4);
+}
+
+/**
+ * 效率评分（0-100）：完成任务平均耗时 vs 预估耗时
+ * @param {Array} tasks - [{est, actual, completed}]
+ * @param {Array} records - [{taskId, duration}]
+ * @returns {number} 0-100
+ */
+function efficiencyScore(tasks, records){
+  if(!Array.isArray(tasks) || tasks.length === 0) return 0;
+  var ratios = [];
+  for(var i = 0; i < tasks.length; i++){
+    var t = tasks[i];
+    if(!t || !t.completed) continue;
+    var est = Number(t.est) || 0;
+    var actual = Number(t.actual) || 0;
+    /* 若 actual 缺失，从 records 汇总 */
+    if(!actual && Array.isArray(records)){
+      var sum = 0;
+      for(var j = 0; j < records.length; j++){
+        if(records[j] && records[j].taskId === t.id){
+          sum += Number(records[j].duration) || 0;
+        }
+      }
+      actual = sum;
+    }
+    if(est > 0 && actual > 0){
+      /* ratio = est / actual：>1 表示比预估快（高效），<1 表示慢 */
+      ratios.push(est / actual);
+    }
+  }
+  if(ratios.length === 0) return 0;
+  var sumR = 0;
+  for(var k = 0; k < ratios.length; k++) sumR += ratios[k];
+  var avgR = sumR / ratios.length;
+  /* ratio=1 -> 100, ratio=0.5 -> 50, ratio>=1.2 -> 100 */
+  var score = Math.min(100, avgR * 100);
+  return Math.round(score);
+}
+
+/**
+ * 综合生产力评分（0-100）
+ * 完成率(30%) + 专注度(25%) + 习惯连续性(25%) + 效率(20%)
+ * @param {Array} tasks - 任务数组
+ * @param {Array} records - 记录数组
+ * @param {Array} habits - 习惯数组
+ * @returns {{total:number, completionRate:number, focus:number, habit:number, efficiency:number}}
+ */
+function calcProductivityScore(tasks, records, habits){
+  tasks = Array.isArray(tasks) ? tasks : [];
+  records = Array.isArray(records) ? records : [];
+  habits = Array.isArray(habits) ? habits : [];
+  /* 完成率 */
+  var completionRate = 0;
+  if(tasks.length > 0){
+    var done = tasks.filter(function(t){ return t && t.completed; }).length;
+    completionRate = Math.round((done / tasks.length) * 100);
+  }
+  var focus = focusScore(records);
+  var habit = habitScore(habits);
+  var eff = efficiencyScore(tasks, records);
+  var total = Math.round(
+    completionRate * 0.3 + focus * 0.25 + habit * 0.25 + eff * 0.2
+  );
+  return {
+    total: total,
+    completionRate: completionRate,
+    focus: focus,
+    habit: habit,
+    efficiency: eff
+  };
+}
+
+/* ---------- 习惯养成模型 ---------- */
+
+/**
+ * 习惯养成阶段
+ * 1-7 天: 建立期（formation）
+ * 8-21 天: 巩固期（consolidation）
+ * 22-66 天: 稳定期（stabilization）
+ * 67+ 天: 维持期（maintenance）
+ * @param {number} day - 第几天
+ * @returns {{stage:string, label:string, progress:number}}
+ */
+function habitStage(day){
+  var d = Math.max(0, Math.floor(Number(day) || 0));
+  if(d <= 7){
+    return { stage: HABIT_PHASES.FORMATION, label: "建立期", progress: d / 7 };
+  }
+  if(d <= 21){
+    return { stage: HABIT_PHASES.CONSOLIDATION, label: "巩固期", progress: (d - 7) / 14 };
+  }
+  if(d <= 66){
+    return { stage: HABIT_PHASES.STABILIZATION, label: "稳定期", progress: (d - 21) / 45 };
+  }
+  return { stage: HABIT_PHASES.MAINTENANCE, label: "维持期", progress: 1 };
+}
+
+/**
+ * 习惯养成曲线拟合（21 天/66 天模型）
+ * 基于衰减指数模型：P(d) = 1 - k * exp(-k_phase * d)
+ * @param {number} days - 总天数
+ * @param {number} completed - 已完成天数
+ * @returns {{probability:number, stage:string, curvePoint:number}}
+ */
+function habitModel(days, completed){
+  var d = Math.max(0, Math.floor(Number(days) || 0));
+  var c = Math.max(0, Math.floor(Number(completed) || 0));
+  if(d === 0) return { probability: 0, stage: HABIT_PHASES.FORMATION, curvePoint: 0 };
+  if(c > d) c = d;
+  /* 实际完成率 */
+  var actualRate = c / d;
+  /* 理论曲线点：根据阶段使用不同衰减系数 */
+  var stage = habitStage(d);
+  var k;
+  if(d <= 7) k = HABIT_K_FORMATION;
+  else if(d <= 21) k = HABIT_K_CONSOLIDATION;
+  else if(d <= 66) k = HABIT_K_STABILIZATION;
+  else k = HABIT_K_STABILIZATION / 2;
+  /* 理论概率：随天数增长趋向 1 */
+  var theoretical = 1 - Math.exp(-k * d);
+  /* 综合概率：实际完成率 70% + 理论曲线 30% */
+  var probability = actualRate * 0.7 + theoretical * 0.3;
+  return {
+    probability: Math.max(0, Math.min(1, probability)),
+    stage: stage.stage,
+    curvePoint: theoretical
+  };
+}
+
+/**
+ * 预测第 N 天的完成概率
+ * 基于历史完成数据 + 习惯曲线外推
+ * @param {Array} history - [{day, completed}] 或 [0/1]
+ * @param {number} targetDay - 预测第几天
+ * @returns {number} 0-1
+ */
+function habitPrediction(history, targetDay){
+  var t = Math.max(1, Math.floor(Number(targetDay) || 1));
+  if(!Array.isArray(history) || history.length === 0){
+    /* 无历史时用纯理论曲线 */
+    var k0 = t <= 7 ? HABIT_K_FORMATION : (t <= 21 ? HABIT_K_CONSOLIDATION : HABIT_K_STABILIZATION);
+    return Math.max(0, Math.min(1, 1 - Math.exp(-k0 * t)));
+  }
+  /* 解析历史为 {day, completed} */
+  var parsed = history.map(function(h, i){
+    if(typeof h === "number") return { day: i + 1, completed: h === 1 };
+    if(h && typeof h === "object") return { day: h.day || (i + 1), completed: !!h.completed };
+    return { day: i + 1, completed: false };
+  });
+  var totalDays = parsed.length;
+  var doneDays = parsed.filter(function(p){ return p.completed; }).length;
+  /* 用 habitModel 拟合当前状态 */
+  var model = habitModel(totalDays, doneDays);
+  /* 趋势外推：若历史完成率 > 0.6，预测概率略增；否则略减 */
+  var trend = doneDays / totalDays;
+  var k = t <= 7 ? HABIT_K_FORMATION : (t <= 21 ? HABIT_K_CONSOLIDATION : HABIT_K_STABILIZATION);
+  var theoretical = 1 - Math.exp(-k * t);
+  /* 综合：实际趋势 60% + 理论曲线 40% */
+  var prob = trend * 0.6 + theoretical * 0.4;
+  /* 若目标天 > 历史天数，且当前趋势好，则提升 */
+  if(t > totalDays && trend > 0.6) prob += 0.05;
+  return Math.max(0, Math.min(1, prob));
+}
+
+/* ---------- 个性化推荐引擎 ---------- */
+
+/**
+ * 协同过滤：基于用户-任务矩阵推荐
+ * 找到与目标用户最相似的 K 个用户，推荐他们喜欢而目标用户未接触的任务
+ * @param {string|number} userId - 目标用户 ID
+ * @param {Object} userTaskMatrix - { userId: { taskId: rating } }
+ * @returns {{similar:Array, recommended:Array}}
+ */
+function collaborativeFilter(userId, userTaskMatrix){
+  if(!userId || !userTaskMatrix || typeof userTaskMatrix !== "object"){
+    return { similar: [], recommended: [] };
+  }
+  var target = userTaskMatrix[userId];
+  if(!target) return { similar: [], recommended: [] };
+  var otherIds = Object.keys(userTaskMatrix).filter(function(id){ return id !== String(userId); });
+  if(otherIds.length === 0) return { similar: [], recommended: [] };
+  /* 计算余弦相似度 */
+  function cosine(a, b){
+    var keys = new Set(Object.keys(a).concat(Object.keys(b)));
+    var dot = 0, na = 0, nb = 0;
+    keys.forEach(function(k){
+      var va = Number(a[k]) || 0;
+      var vb = Number(b[k]) || 0;
+      dot += va * vb;
+      na += va * va;
+      nb += vb * vb;
+    });
+    if(na === 0 || nb === 0) return 0;
+    return dot / (Math.sqrt(na) * Math.sqrt(nb));
+  }
+  var sims = otherIds.map(function(id){
+    return { userId: id, sim: cosine(target, userTaskMatrix[id]) };
+  }).filter(function(s){ return s.sim > 0; }).sort(function(a, b){ return b.sim - a.sim; });
+  /* 取 top3 相似用户 */
+  var top = sims.slice(0, 3);
+  /* 推荐这些相似用户高评分、目标用户未评分的任务 */
+  var recommended = [];
+  var seen = new Set(Object.keys(target));
+  top.forEach(function(s){
+    var other = userTaskMatrix[s.userId];
+    Object.keys(other).forEach(function(tid){
+      if(!seen.has(tid) && (Number(other[tid]) || 0) >= 3){
+        recommended.push({ taskId: tid, score: (Number(other[tid]) || 0) * s.sim });
+      }
+    });
+  });
+  recommended.sort(function(a, b){ return b.score - a.score; });
+  return { similar: top, recommended: recommended };
+}
+
+/**
+ * 基于内容的推荐：根据用户历史偏好推荐相似任务
+ * @param {Object} task - 待评估任务 {scenario, priority, tags, title}
+ * @param {Array} userHistory - 用户历史 [{scenario, priority, tags, completed, title}]
+ * @returns {number} 匹配度 0-1
+ */
+function contentBasedRecommend(task, userHistory){
+  if(!task || !Array.isArray(userHistory) || userHistory.length === 0) return 0;
+  var score = 0;
+  var total = 0;
+  for(var i = 0; i < userHistory.length; i++){
+    var h = userHistory[i];
+    if(!h) continue;
+    total++;
+    var s = 0;
+    /* 场景匹配 */
+    if(h.scenario && task.scenario && h.scenario === task.scenario) s += 0.4;
+    /* 优先级匹配 */
+    if(h.priority && task.priority && String(h.priority) === String(task.priority)) s += 0.2;
+    /* 标签匹配（Jaccard 相似度） */
+    if(Array.isArray(h.tags) && Array.isArray(task.tags) && h.tags.length > 0){
+      var inter = h.tags.filter(function(t){ return task.tags.indexOf(t) >= 0; }).length;
+      var uni = new Set(h.tags.concat(task.tags)).size;
+      if(uni > 0) s += 0.3 * (inter / uni);
+    }
+    /* 标题关键词匹配 */
+    if(h.title && task.title){
+      var words = String(task.title).split(/\s+/).filter(function(w){ return w.length > 1; });
+      var hit = words.filter(function(w){ return String(h.title).indexOf(w) >= 0; }).length;
+      if(words.length > 0) s += 0.1 * (hit / words.length);
+    }
+    /* 仅对已完成的历史加分 */
+    if(h.completed) s *= 1.2;
+    score += Math.min(1, s);
+  }
+  return total > 0 ? score / total : 0;
+}
+
+/**
+ * 混合推荐：协同过滤 + 内容推荐加权
+ * @param {Array} userHistory - 用户历史
+ * @param {Array} allTasks - 全部候选任务
+ * @param {number} topK - 返回 top K，默认 5
+ * @returns {Array<{task:Object, score:number, source:string}>}
+ */
+function hybridRecommend(userHistory, allTasks, topK){
+  if(typeof topK !== "number" || topK < 1) topK = 5;
+  if(!Array.isArray(allTasks) || allTasks.length === 0) return [];
+  userHistory = Array.isArray(userHistory) ? userHistory : [];
+  var results = [];
+  /* 已接触的任务 ID 集合 */
+  var seenIds = new Set(userHistory.map(function(h){ return h && h.id; }).filter(Boolean));
+  for(var i = 0; i < allTasks.length; i++){
+    var t = allTasks[i];
+    if(!t || seenIds.has(t.id)) continue;
+    var contentScore = contentBasedRecommend(t, userHistory);
+    /* 协同分需要 userTaskMatrix，这里简化：用历史完成率作为协同信号 */
+    var collabScore = 0;
+    if(userHistory.length > 0){
+      var sameScene = userHistory.filter(function(h){ return h && h.scenario === t.scenario; });
+      if(sameScene.length > 0){
+        var done = sameScene.filter(function(h){ return h.completed; }).length;
+        collabScore = done / sameScene.length;
+      }
+    }
+    /* 混合：内容 60% + 协同 40% */
+    var hybrid = contentScore * 0.6 + collabScore * 0.4;
+    if(hybrid > 0){
+      results.push({
+        task: t,
+        score: hybrid,
+        source: hybrid >= 0.5 ? "strong" : (hybrid >= 0.2 ? "normal" : "weak")
+      });
+    }
+  }
+  results.sort(function(a, b){ return b.score - a.score; });
+  return results.slice(0, topK);
+}
+
+/**
+ * 个性化推荐主入口（hybridRecommend 别名）
+ * @param {Array} userHistory - 用户历史
+ * @param {Array} allTasks - 全部任务
+ * @param {number} topK - 返回数量
+ * @returns {Array} 推荐列表
+ */
+function recommend(userHistory, allTasks, topK){
+  return hybridRecommend(userHistory, allTasks, topK);
+}// ===== Smart Schedule (v1.7-C 智能排期) =====
+/* ============================================================
+ * v1.7-C 高级分析与预测 · 智能排期模块
+ * ------------------------------------------------------------
+ *  AI 根据任务优先级 / 截止日期 / 用户习惯自动排程，生成每日最优任务顺序
+ *   - smartSchedule(tasks, userPrefs, date)   智能排程主函数
+ *   - scoreTask(task, userPrefs, currentTime)  任务评分
+ *   - urgencyScore(task)                      紧急度评分（基于 dueDate 距离）
+ *   - importanceScore(task)                   重要性评分（基于 priority）
+ *   - energyMatch(task, hour, userPrefs)      精力匹配（深度/创意/简单）
+ *   - optimizeSchedule(scored, constraints)   优化排程
+ *   - suggestBreaks(schedule)                 建议休息时间（每 90 分钟）
+ *   - renderScheduleView(schedule)            渲染排程视图 HTML
+ *
+ *  设计约定：
+ *   - 使用 var 声明模块级私有状态（56 > 31，避免 TDZ）
+ *   - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
+ *   - 排程算法用贪心 + 评分排序，不需要复杂优化算法
+ *   - 颜色用 var(--token) CSS 令牌（lint-colors 门禁）
+ *   - innerHTML 赋值由调用方用 sanitizeHtml 包裹
+ *   - esc / sanitizeHtml 在更早模块定义（< 56），可直接引用
+ * ============================================================ */
+
+/* ---------- 常量 ---------- */
+/* 任务类型 → 适合时段（用于精力匹配） */
+var TASK_TYPE_ENERGY = {
+  deep:    { best: [9, 10, 11, 14, 15], weight: 1.0 },   // 深度工作：上午
+  creative:{ best: [13, 14, 15, 16], weight: 1.0 },      // 创意工作：下午
+  simple:  { best: [19, 20, 21, 22, 8], weight: 1.0 },   // 简单任务：晚上
+  meeting: { best: [10, 11, 14, 15, 16], weight: 0.9 },  // 会议：白天
+  review:  { best: [9, 10, 16, 17], weight: 0.9 }        // 复核：上下午
+};
+
+/* 优先级 → 重要性分值 */
+var PRIORITY_SCORE = {
+  H: 1.0, high: 1.0, 2: 1.0,
+  M: 0.6, medium: 0.6, 1: 0.6,
+  L: 0.3, low: 0.3, 0: 0.3
+};
+
+/* ---------- 评分函数 ---------- */
+
+/**
+ * 紧急度评分（0-1）：基于 dueDate 距离
+ * 距离越近越紧急；已过期最紧急
+ * @param {Object} task - {dueDate}
+ * @returns {number} 0-1
+ */
+function urgencyScore(task){
+  if(!task || !task.dueDate) return 0.3; /* 无截止日期：中等偏低 */
+  var now = new Date();
+  var due = new Date(task.dueDate);
+  if(isNaN(due.getTime())) return 0.3;
+  var days = (due - now) / 86400000;
+  if(days < 0) return 1.0;          /* 已过期 */
+  if(days === 0) return 0.95;       /* 今天到期 */
+  if(days <= 1) return 0.85;        /* 明天到期 */
+  if(days <= 3) return 0.7;         /* 3 天内 */
+  if(days <= 7) return 0.5;         /* 一周内 */
+  if(days <= 14) return 0.3;        /* 两周内 */
+  return 0.1;                       /* 远期 */
+}
+
+/**
+ * 重要性评分（0-1）：基于 priority 字段
+ * @param {Object} task - {priority}
+ * @returns {number} 0-1
+ */
+function importanceScore(task){
+  if(!task) return 0.3;
+  var pri = task.priority;
+  if(pri === null || pri === undefined) return 0.3;
+  var key = String(pri).toLowerCase();
+  if(Object.prototype.hasOwnProperty.call(PRIORITY_SCORE, key)) return PRIORITY_SCORE[key];
+  if(Object.prototype.hasOwnProperty.call(PRIORITY_SCORE, String(pri))) return PRIORITY_SCORE[String(pri)];
+  return 0.3;
+}
+
+/**
+ * 精力匹配度（0-1）：任务类型与当前小时是否匹配
+ * 深度工作上午 / 创意工作下午 / 简单任务晚上
+ * @param {Object} task - {type, scenario}
+ * @param {number} hour - 0-23
+ * @param {Object} userPrefs - {energyCurve} 可选自定义精力曲线
+ * @returns {number} 0-1
+ */
+function energyMatch(task, hour, userPrefs){
+  if(typeof hour !== "number" || hour < 0 || hour > 23) hour = new Date().getHours();
+  if(!task) return 0.5;
+  /* 任务类型：优先 task.type，否则按 scenario 推断 */
+  var type = task.type;
+  if(!type){
+    var sc = task.scenario;
+    if(sc === "code") type = "deep";
+    else if(sc === "study") type = "deep";
+    else if(sc === "office") type = "meeting";
+    else if(sc === "life" || sc === "health") type = "simple";
+    else type = "simple";
+  }
+  var cfg = TASK_TYPE_ENERGY[type] || TASK_TYPE_ENERGY.simple;
+  /* 用户自定义精力曲线覆盖 */
+  if(userPrefs && Array.isArray(userPrefs.energyCurve) && userPrefs.energyCurve.length === 24){
+    var curve = userPrefs.energyCurve;
+    if(cfg.best.indexOf(hour) >= 0){
+      return Math.max(0, Math.min(1, 0.7 + (Number(curve[hour]) || 0) * 0.3));
+    }
+    return Math.max(0, Math.min(1, (Number(curve[hour]) || 0) * 0.6));
+  }
+  /* 默认：最佳时段 1.0，相邻时段 0.7，其他 0.3 */
+  if(cfg.best.indexOf(hour) >= 0) return cfg.weight;
+  /* 相邻时段 */
+  for(var i = 0; i < cfg.best.length; i++){
+    if(Math.abs(cfg.best[i] - hour) === 1) return cfg.weight * 0.7;
+  }
+  return cfg.weight * 0.3;
+}
+
+/**
+ * 任务综合评分（0-1）
+ * 紧急度 × 重要性 × 精力匹配度，再加权
+ * @param {Object} task - 任务
+ * @param {Object} userPrefs - 用户偏好
+ * @param {number} currentTime - 当前小时 0-23
+ * @returns {{total:number, urgency:number, importance:number, energy:number}}
+ */
+function scoreTask(task, userPrefs, currentTime){
+  if(typeof currentTime !== "number") currentTime = new Date().getHours();
+  var u = urgencyScore(task);
+  var im = importanceScore(task);
+  var en = energyMatch(task, currentTime, userPrefs);
+  /* 加权：紧急度 40% + 重要性 40% + 精力 20%，并保证乘积效应 */
+  var weighted = u * 0.4 + im * 0.4 + en * 0.2;
+  /* 乘积效应：高紧急+高重要任务额外加分 */
+  var product = u * im * 0.3;
+  var total = Math.max(0, Math.min(1, weighted + product));
+  return { total: total, urgency: u, importance: im, energy: en };
+}
+
+/* ---------- 排程优化 ---------- */
+
+/**
+ * 优化排程：考虑时间约束 / 休息间隔 / 任务切换成本
+ * @param {Array} scored - 已评分任务 [{task, score}]
+ * @param {Object} constraints - {maxHours, breakInterval, maxTasks}
+ * @returns {Array} 优化后的排程 [{task, score, startTime, endTime, break:bool}]
+ */
+function optimizeSchedule(scored, constraints){
+  if(!Array.isArray(scored) || scored.length === 0) return [];
+  constraints = constraints || {};
+  var maxHours = Number(constraints.maxHours) || 8;
+  var breakInterval = Number(constraints.breakInterval) || 90;
+  var maxTasks = Number(constraints.maxTasks) || scored.length;
+  /* 按评分降序排列 */
+  var sorted = scored.slice().sort(function(a, b){
+    return (b.score.total || b.score || 0) - (a.score.total || a.score || 0);
+  });
+  var schedule = [];
+  var totalMin = 0;
+  var maxMin = maxHours * 60;
+  var count = 0;
+  for(var i = 0; i < sorted.length && count < maxTasks; i++){
+    var item = sorted[i];
+    var t = item.task;
+    /* 估算任务时长（分钟） */
+    var est = Number(t && t.est) || 30;
+    if(totalMin + est > maxMin) {
+      /* 超出时间预算，跳过 */
+      continue;
+    }
+    var startMin = totalMin;
+    var endMin = totalMin + est;
+    schedule.push({
+      task: t,
+      score: item.score,
+      startTime: _minToHHMM(startMin),
+      endTime: _minToHHMM(endMin),
+      startMin: startMin,
+      endMin: endMin,
+      isBreak: false
+    });
+    totalMin = endMin;
+    count++;
+    /* 每 breakInterval 分钟插入休息 */
+    if(totalMin % breakInterval < est && totalMin < maxMin && i < sorted.length - 1){
+      var breakMin = 15;
+      schedule.push({
+        task: null,
+        score: null,
+        startTime: _minToHHMM(totalMin),
+        endTime: _minToHHMM(totalMin + breakMin),
+        startMin: totalMin,
+        endMin: totalMin + breakMin,
+        isBreak: true,
+        label: "休息"
+      });
+      totalMin += breakMin;
+    }
+  }
+  return schedule;
+}
+
+/* 分钟转 HH:MM */
+function _minToHHMM(min){
+  var h = Math.floor(min / 60);
+  var m = min % 60;
+  return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+}
+
+/**
+ * 建议休息时间：每 90 分钟一个休息
+ * @param {Array} schedule - 排程列表
+ * @returns {Array<{after:string, duration:number, reason:string}>}
+ */
+function suggestBreaks(schedule){
+  if(!Array.isArray(schedule) || schedule.length === 0) return [];
+  var breaks = [];
+  var workMin = 0;
+  var lastTaskEnd = null;
+  for(var i = 0; i < schedule.length; i++){
+    var item = schedule[i];
+    if(!item) continue;
+    if(item.isBreak) {
+      workMin = 0; /* 已有休息，重置 */
+      continue;
+    }
+    var est = (item.endMin || 0) - (item.startMin || 0);
+    workMin += est;
+    lastTaskEnd = item.endTime;
+    if(workMin >= 90){
+      breaks.push({
+        after: item.endTime,
+        duration: 15,
+        reason: "连续工作 " + workMin + " 分钟，建议休息"
+      });
+      workMin = 0;
+    }
+  }
+  return breaks;
+}
+
+/* ---------- 主函数 ---------- */
+
+/**
+ * 智能排程主函数
+ * @param {Array} tasks - 待排程任务
+ * @param {Object} userPrefs - 用户偏好 {energyCurve, workStart, workEnd}
+ * @param {Date|string} date - 排程日期
+ * @returns {{schedule:Array, breaks:Array, summary:Object}}
+ */
+function smartSchedule(tasks, userPrefs, date){
+  if(!Array.isArray(tasks) || tasks.length === 0){
+    return { schedule: [], breaks: [], summary: { total: 0, completed: 0, hours: 0 } };
+  }
+  userPrefs = userPrefs || {};
+  /* 排程日期 → 当前小时 */
+  var now = (date) ? new Date(date) : new Date();
+  var hour = now.getHours();
+  /* 过滤未完成任务 */
+  var pending = tasks.filter(function(t){ return t && !t.completed; });
+  /* 评分 */
+  var scored = pending.map(function(t){
+    return { task: t, score: scoreTask(t, userPrefs, hour) };
+  });
+  /* 优化排程 */
+  var constraints = {
+    maxHours: userPrefs.maxHours || 8,
+    breakInterval: 90,
+    maxTasks: userPrefs.maxTasks || pending.length
+  };
+  var schedule = optimizeSchedule(scored, constraints);
+  /* 建议休息 */
+  var breaks = suggestBreaks(schedule);
+  /* 汇总 */
+  var totalMin = 0;
+  var taskCount = 0;
+  for(var i = 0; i < schedule.length; i++){
+    if(schedule[i] && !schedule[i].isBreak){
+      totalMin += (schedule[i].endMin - schedule[i].startMin);
+      taskCount++;
+    }
+  }
+  return {
+    schedule: schedule,
+    breaks: breaks,
+    summary: {
+      total: pending.length,
+      scheduled: taskCount,
+      hours: Math.round(totalMin / 60 * 10) / 10
+    }
+  };
+}
+
+/* ---------- 渲染 ---------- */
+
+/**
+ * 渲染排程视图 HTML
+ * @param {Array} schedule - 排程列表
+ * @returns {string} HTML 字符串
+ */
+function renderScheduleView(schedule){
+  if(!Array.isArray(schedule) || schedule.length === 0) {
+    return '<div class="schedule-empty">暂无排程数据</div>';
+  }
+  var rows = [];
+  for(var i = 0; i < schedule.length; i++){
+    var item = schedule[i];
+    if(!item) continue;
+    if(item.isBreak){
+      rows.push(
+        '<div class="schedule-row break">' +
+          '<span class="time">' + esc(item.startTime) + '-' + esc(item.endTime) + '</span>' +
+          '<span class="label">☕ 休息</span>' +
+        '</div>'
+      );
+    } else {
+      var t = item.task || {};
+      var title = esc(t.title || t.name || "未命名");
+      var pri = esc(t.priority || "M");
+      var score = item.score ? (item.score.total || 0).toFixed(2) : "0.00";
+      rows.push(
+        '<div class="schedule-row task">' +
+          '<span class="time">' + esc(item.startTime) + '-' + esc(item.endTime) + '</span>' +
+          '<span class="title">' + title + '</span>' +
+          '<span class="pri pri-' + pri + '">' + pri + '</span>' +
+          '<span class="score">' + score + '</span>' +
+        '</div>'
+      );
+    }
+  }
+  return '<div class="schedule-view">' + rows.join("") + '</div>';
+}// ===== Sentiment Analysis (v1.7-C 情绪分析) =====
+/* ============================================================
+ * v1.7-C 高级分析与预测 · 情绪分析模块
+ * ------------------------------------------------------------
+ *  分析任务记录 / 评论中的情绪趋势，用关键词词典 + ONNX 模型 fallback
+ *   - SENTIMENT_DICT                 情绪词典（正面/负面/程度副词）
+ *   - sentimentScore(text)           情绪评分（-1 到 1）
+ *   - analyzeSentiment(text)         情绪分析主函数 {score, label, confidence}
+ *   - analyzeSentimentTrend(texts)   多段文本情绪趋势
+ *   - detectEmotion(text)            情绪检测（joy/anger/sadness/fear/surprise/disgust）
+ *   - emotionTrend(records)          从任务记录分析情绪趋势
+ *
+ *  设计约定：
+ *   - 使用 var 声明模块级常量（57 > 31，避免 TDZ）
+ *   - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
+ *   - 情绪分析用关键词词典，不依赖 ONNX（ONNX 为可选 fallback）
+ *   - ONNX 不可用时自动降级到关键词词典
+ *   - 输入容错：空文本/非字符串返回 neutral
+ * ============================================================ */
+
+/* ---------- 情绪词典 ---------- */
+var SENTIMENT_DICT = {
+  /* 正面词（权重 1-3） */
+  positive: {
+    "好": 1, "棒": 2, "优秀": 3, "完美": 3, "满意": 2, "开心": 2, "快乐": 2,
+    "成功": 2, "完成": 1, "顺利": 2, "高效": 2, "喜欢": 2, "爱": 2, "赞": 3,
+    "不错": 1, "可以": 1, "行": 1, "ok": 1, "good": 2, "great": 3, "nice": 2,
+    "excellent": 3, "perfect": 3, "happy": 2, "love": 3, "like": 1, "well": 1,
+    "done": 1, "finish": 1, "success": 2, "win": 2, "best": 3, "awesome": 3,
+    "wonderful": 3, "amazing": 3, "进展": 1, "突破": 2, "提升": 2, "进步": 2
+  },
+  /* 负面词（权重 1-3） */
+  negative: {
+    "差": 2, "坏": 2, "糟": 3, "失败": 3, "错误": 2, "问题": 1, "困难": 1,
+    "难": 1, "烦": 2, "累": 2, "疲惫": 3, "失望": 2, "沮丧": 3, "愤怒": 3,
+    "生气": 2, "讨厌": 2, "恨": 3, "不行": 2, "无法": 1, "缺失": 1, "bug": 2,
+    "bad": 2, "wrong": 2, "error": 2, "fail": 3, "failure": 3, "hate": 3,
+    "sad": 2, "angry": 3, "tired": 2, "difficult": 1, "hard": 1, "stuck": 2,
+    "broken": 3, "crash": 3, "issue": 1, "problem": 1, "pain": 2, "suck": 3
+  },
+  /* 程度副词（乘数） */
+  intensifiers: {
+    "很": 1.5, "非常": 2, "超级": 2.5, "极其": 2.5, "特别": 1.8, "十分": 2,
+    "相当": 1.5, "比较": 1.2, "稍微": 0.5, "有点": 0.7, "略": 0.5,
+    "very": 1.5, "really": 1.8, "extremely": 2.5, "quite": 1.5, "pretty": 1.3,
+    "super": 2, "so": 1.5, "too": 1.5
+  },
+  /* 否定词 */
+  negators: {
+    "不": 1, "没": 1, "无": 1, "非": 1, "未": 1, "别": 1,
+    "not": 1, "no": 1, "never": 1, "without": 1, "none": 1
+  }
+};
+
+/* ---------- 情绪类型词典（用于 detectEmotion） ---------- */
+var EMOTION_KEYWORDS = {
+  joy: ["开心", "快乐", "高兴", "愉快", "兴奋", "满意", "棒", "赞", "完美",
+        "happy", "joy", "excited", "glad", "pleased", "great", "awesome"],
+  anger: ["愤怒", "生气", "恼火", "气", "烦", "讨厌", "恨", "操",
+          "angry", "mad", "furious", "hate", "annoyed"],
+  sadness: ["悲伤", "难过", "伤心", "失落", "沮丧", "失望", "哭", "郁闷",
+            "sad", "depressed", "down", "unhappy", "blue", "cry"],
+  fear: ["害怕", "恐惧", "担心", "焦虑", "紧张", "怕", "慌",
+         "fear", "afraid", "scared", "worry", "anxious", "nervous"],
+  surprise: ["惊讶", "吃惊", "震惊", "意外", "没想到", "哇",
+             "surprise", "shocked", "wow", "unexpected"],
+  disgust: ["恶心", "厌恶", "反感", "嫌弃", "讨厌", "呕",
+            "disgust", "gross", "eww", "nasty"]
+};
+
+/* ---------- 核心函数 ---------- */
+
+/**
+ * 情绪评分（-1 到 1）
+ * 基于关键词词典 + 程度副词 + 否定词
+ * @param {string} text - 输入文本
+ * @returns {number} -1 到 1
+ */
+function sentimentScore(text){
+  if(!text || typeof text !== "string") return 0;
+  var lower = text.toLowerCase();
+  var score = 0;
+  var posHit = 0, negHit = 0;
+  /* 扫描正面词 */
+  Object.keys(SENTIMENT_DICT.positive).forEach(function(word){
+    var weight = SENTIMENT_DICT.positive[word];
+    var idx = lower.indexOf(word);
+    while(idx >= 0){
+      var w = weight;
+      /* 检查前缀程度副词 */
+      w *= _scanModifier(lower, idx);
+      score += w;
+      posHit++;
+      idx = lower.indexOf(word, idx + word.length);
+    }
+  });
+  /* 扫描负面词 */
+  Object.keys(SENTIMENT_DICT.negative).forEach(function(word){
+    var weight = SENTIMENT_DICT.negative[word];
+    var idx = lower.indexOf(word);
+    while(idx >= 0){
+      var w = weight;
+      w *= _scanModifier(lower, idx);
+      score -= w;
+      negHit++;
+      idx = lower.indexOf(word, idx + word.length);
+    }
+  });
+  if(posHit + negHit === 0) return 0;
+  /* 归一化到 -1 ~ 1 */
+  return Math.max(-1, Math.min(1, score / (posHit + negHit + 2)));
+}
+
+/**
+ * 扫描前缀修饰词（程度副词 + 否定词）
+ * 程度副词（如"非常"）中的字符不应被否定词（如"非"）误判，
+ * 故先定位程度副词覆盖区间，否定词扫描时跳过这些区间。
+ * @param {string} text - 全文
+ * @param {number} idx - 当前词起始位置
+ * @returns {number} 修饰乘数（含否定翻转）
+ */
+function _scanModifier(text, idx){
+  var mult = 1;
+  var negated = false;
+  /* 检查前 6 个字符内是否有修饰词 */
+  var start = Math.max(0, idx - 6);
+  var prefix = text.substring(start, idx);
+  var prefixStart = start;
+  /* 先扫描程度副词，记录其覆盖的字符区间（相对全文位置） */
+  var intensifierRanges = [];
+  Object.keys(SENTIMENT_DICT.intensifiers).forEach(function(w){
+    var pos = prefix.indexOf(w);
+    while(pos >= 0){
+      mult *= SENTIMENT_DICT.intensifiers[w];
+      intensifierRanges.push([prefixStart + pos, prefixStart + pos + w.length]);
+      pos = prefix.indexOf(w, pos + w.length);
+    }
+  });
+  /* 否定词扫描：跳过程度副词覆盖的区间，避免"非常"中的"非"被误判 */
+  Object.keys(SENTIMENT_DICT.negators).forEach(function(w){
+    var pos = prefix.indexOf(w);
+    while(pos >= 0){
+      var absStart = prefixStart + pos;
+      var absEnd = absStart + w.length;
+      var inIntensifier = intensifierRanges.some(function(r){
+        return absStart >= r[0] && absEnd <= r[1];
+      });
+      if(!inIntensifier) negated = !negated;
+      pos = prefix.indexOf(w, pos + w.length);
+    }
+  });
+  if(negated) mult *= -1;
+  return mult;
+}
+
+/**
+ * 情绪分析主函数
+ * @param {string} text - 输入文本
+ * @returns {{score:number, label:string, confidence:number}}
+ */
+function analyzeSentiment(text){
+  if(!text || typeof text !== "string" || text.trim().length === 0){
+    return { score: 0, label: "neutral", confidence: 0 };
+  }
+  var score = sentimentScore(text);
+  var label, confidence;
+  if(score > 0.15){
+    label = "positive";
+    confidence = Math.min(1, score * 2);
+  } else if(score < -0.15){
+    label = "negative";
+    confidence = Math.min(1, Math.abs(score) * 2);
+  } else {
+    label = "neutral";
+    confidence = 1 - Math.abs(score) * 2;
+  }
+  return { score: score, label: label, confidence: Math.max(0, Math.min(1, confidence)) };
+}
+
+/**
+ * 情绪趋势分析：多段文本的情绪变化
+ * @param {Array<string>} texts - 多段文本
+ * @returns {{scores:Array, labels:Array, trend:string, avgScore:number}}
+ */
+function analyzeSentimentTrend(texts){
+  if(!Array.isArray(texts) || texts.length === 0){
+    return { scores: [], labels: [], trend: "stable", avgScore: 0 };
+  }
+  var scores = [];
+  var labels = [];
+  for(var i = 0; i < texts.length; i++){
+    var r = analyzeSentiment(texts[i]);
+    scores.push(r.score);
+    labels.push(r.label);
+  }
+  /* 趋势：用线性回归斜率判断 */
+  var sum = 0;
+  for(var j = 0; j < scores.length; j++) sum += scores[j];
+  var avg = sum / scores.length;
+  var trend = "stable";
+  if(scores.length >= 2){
+    var first = scores[0];
+    var last = scores[scores.length - 1];
+    var diff = last - first;
+    if(diff > 0.2) trend = "improving";
+    else if(diff < -0.2) trend = "declining";
+  }
+  return { scores: scores, labels: labels, trend: trend, avgScore: avg };
+}
+
+/**
+ * 情绪检测：识别具体情绪类型
+ * @param {string} text - 输入文本
+ * @returns {{emotion:string, confidence:number, scores:Object}}
+ */
+function detectEmotion(text){
+  if(!text || typeof text !== "string" || text.trim().length === 0){
+    return { emotion: "neutral", confidence: 0, scores: {} };
+  }
+  var lower = text.toLowerCase();
+  var scores = {};
+  var maxEmotion = "neutral";
+  var maxScore = 0;
+  Object.keys(EMOTION_KEYWORDS).forEach(function(emo){
+    var s = 0;
+    var hits = 0;
+    EMOTION_KEYWORDS[emo].forEach(function(kw){
+      var idx = lower.indexOf(kw);
+      while(idx >= 0){
+        s += 1;
+        hits++;
+        idx = lower.indexOf(kw, idx + kw.length);
+      }
+    });
+    scores[emo] = s;
+    if(s > maxScore){
+      maxScore = s;
+      maxEmotion = emo;
+    }
+  });
+  /* 置信度：基于命中次数 */
+  var total = 0;
+  Object.keys(scores).forEach(function(k){ total += scores[k]; });
+  var confidence = total > 0 ? maxScore / total : 0;
+  if(maxScore === 0) return { emotion: "neutral", confidence: 0, scores: scores };
+  return { emotion: maxEmotion, confidence: confidence, scores: scores };
+}
+
+/**
+ * 从任务记录分析情绪趋势
+ * @param {Array} records - [{content, text, note, comment, date}]
+ * @returns {{trend:string, emotions:Array, sentimentTrend:Object, dominantEmotion:string}}
+ */
+function emotionTrend(records){
+  if(!Array.isArray(records) || records.length === 0){
+    return {
+      trend: "stable",
+      emotions: [],
+      sentimentTrend: { scores: [], labels: [], trend: "stable", avgScore: 0 },
+      dominantEmotion: "neutral"
+    };
+  }
+  /* 提取每条记录的文本 */
+  var texts = records.map(function(r){
+    if(!r) return "";
+    return [r.content, r.text, r.note, r.comment].filter(Boolean).join(" ");
+  });
+  /* 情绪评分趋势 */
+  var sTrend = analyzeSentimentTrend(texts);
+  /* 每条记录的情绪类型 */
+  var emotions = [];
+  var emoCount = {};
+  for(var i = 0; i < records.length; i++){
+    var e = detectEmotion(texts[i]);
+    emotions.push(e.emotion);
+    emoCount[e.emotion] = (emoCount[e.emotion] || 0) + 1;
+  }
+  /* 主导情绪 */
+  var dominant = "neutral";
+  var maxC = 0;
+  Object.keys(emoCount).forEach(function(k){
+    if(emoCount[k] > maxC){
+      maxC = emoCount[k];
+      dominant = k;
+    }
+  });
+  return {
+    trend: sTrend.trend,
+    emotions: emotions,
+    sentimentTrend: sTrend,
+    dominantEmotion: dominant
+  };
+}// ===== CRDT Realtime Collaboration (v1.7-D 实时协作落地) =====
+/* ============================================================
+ * v1.7-D 实时协作落地：CRDT 协同编辑 + 在线状态 + 操作同步 +
+ *                      冲突解决 + 离线队列 + WebSocket 消息协议
+ * ------------------------------------------------------------
+ * 设计要点：
+ *  - 使用 var 声明模块级私有状态（_opLogs / _offlineQueues），
+ *    避免与 31-bootstrap-test-export.js 的 const TDZ 冲突（58 > 31）
+ *  - 持久化键（不带 PREFIX，按任务契约）：
+ *      wb_op_logs / wb_offline_queue
+ *  - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
+ *  - CRDT 不实际引 Yjs，实现简化版 CRDT 接口（基于操作日志 + LWW）
+ *  - WebSocket 只做消息协议，不实际连接服务器
+ *  - 离线队列持久化要稳健，队列操作不崩溃
+ *  - 冲突解决要确定性：相同输入总是产生相同输出
+ *  - innerHTML 赋值由调用方用 sanitizeHtml 包裹
+ *  - 颜色用 var(--token) CSS 令牌（lint-colors 门禁）
+ * ============================================================ */
+
+/* ---------- 持久化键 ---------- */
+var OP_LOGS_KEY = "wb_op_logs";
+var OFFLINE_QUEUE_KEY = "wb_offline_queue";
+
+/* ---------- 模块级私有状态（var 声明，避免 TDZ） ---------- */
+var _opLogs = {};          // 操作日志表：{ docId: opLog }
+var _offlineQueues = {};   // 离线队列表：{ queueId: queue }（单例主队列 id="main"）
+
+/* ---------- 默认超时 ---------- */
+var PRESENCE_STALE_TIMEOUT = 30000;  // 30 秒无心跳视为离线
+
+/* ============================================================
+ * 1. CRDT 协同编辑框架（模拟 Yjs Y.Map，基于操作日志 + LWW）
+ * ============================================================ */
+
+/**
+ * 创建 CRDT 文档（模拟 Yjs Y.Map，支持并发编辑无冲突）
+ * @param {string} docId - 文档 ID
+ * @returns {Object|null} CRDT 文档对象，失败返回 null
+ */
+function createCRDTDoc(docId){
+  if(!docId || typeof docId !== "string") return null;
+  return {
+    docId: docId,
+    // 数据映射：{ key: { value, timestamp, origin } }
+    map: {},
+    // 操作日志（按时间顺序）
+    ops: [],
+    // 当前版本号（操作数）
+    version: 0,
+    // 创建时间
+    createdAt: Date.now(),
+    // 最后更新时间
+    updatedAt: Date.now()
+  };
+}
+
+/**
+ * 设置键值（记录操作到 OpLog）
+ * @param {Object} doc - CRDT 文档
+ * @param {string} key - 键
+ * @param {*} value - 值
+ * @param {string} [origin] - 操作来源（userId/clientId）
+ * @returns {Object|null} 操作记录，失败返回 null
+ */
+function crdtSet(doc, key, value, origin){
+  if(!doc || !key || typeof key !== "string") return null;
+  var ts = Date.now();
+  var op = {
+    type: "set",
+    key: key,
+    value: value,
+    timestamp: ts,
+    origin: origin || "anonymous",
+    version: doc.version + 1
+  };
+  return crdtApplyOp(doc, op);
+}
+
+/**
+ * 获取键值
+ * @param {Object} doc - CRDT 文档
+ * @param {string} key - 键
+ * @returns {*} 键值（不存在返回 undefined）
+ */
+function crdtGet(doc, key){
+  if(!doc || !key || !doc.map) return undefined;
+  var entry = doc.map[key];
+  return entry ? entry.value : undefined;
+}
+
+/**
+ * 删除键
+ * @param {Object} doc - CRDT 文档
+ * @param {string} key - 键
+ * @param {string} [origin] - 操作来源
+ * @returns {Object|null} 操作记录，失败返回 null
+ */
+function crdtDelete(doc, key, origin){
+  if(!doc || !key || typeof key !== "string") return null;
+  var ts = Date.now();
+  var op = {
+    type: "delete",
+    key: key,
+    value: null,
+    timestamp: ts,
+    origin: origin || "anonymous",
+    version: doc.version + 1
+  };
+  return crdtApplyOp(doc, op);
+}
+
+/**
+ * 转为数组（用于 Y.Array 模拟）
+ * @param {Object} doc - CRDT 文档
+ * @returns {Array} 键值对数组 [{key, value, timestamp}]
+ */
+function crdtToArray(doc){
+  if(!doc || !doc.map) return [];
+  var arr = [];
+  for(var k in doc.map){
+    if(Object.prototype.hasOwnProperty.call(doc.map, k)){
+      var entry = doc.map[k];
+      arr.push({ key: k, value: entry.value, timestamp: entry.timestamp });
+    }
+  }
+  // 按 key 排序，保证确定性
+  arr.sort(function(a, b){
+    if(a.key < b.key) return -1;
+    if(a.key > b.key) return 1;
+    return 0;
+  });
+  return arr;
+}
+
+/**
+ * 合并两个 CRDT 文档（基于操作日志合并，无冲突）
+ * - 合并 ops 日志（去重）
+ * - 重放所有操作（按 timestamp 排序），得到最终状态
+ * - 版本号取最大值
+ * @param {Object} localDoc - 本地文档
+ * @param {Object} remoteDoc - 远程文档
+ * @returns {Object|null} 合并后的文档（新对象），失败返回 null
+ */
+function crdtMerge(localDoc, remoteDoc){
+  if(!localDoc || !remoteDoc) return null;
+  // 合并操作日志（基于 opId 去重）
+  var seenIds = {};
+  var mergedOps = [];
+  var allOps = (localDoc.ops || []).concat(remoteDoc.ops || []);
+  // 按 timestamp 稳定排序
+  allOps.sort(function(a, b){
+    if(a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+    if(a.version !== b.version) return a.version - b.version;
+    return 0;
+  });
+  for(var i = 0; i < allOps.length; i++){
+    var op = allOps[i];
+    var opId = _opId(op);
+    if(!seenIds[opId]){
+      seenIds[opId] = true;
+      mergedOps.push(op);
+    }
+  }
+  // 创建新文档，重放所有操作
+  var newDoc = createCRDTDoc(localDoc.docId || remoteDoc.docId);
+  newDoc.ops = mergedOps;
+  newDoc.version = Math.max(localDoc.version || 0, remoteDoc.version || 0);
+  // 重放操作得到最终 map 状态
+  newDoc.map = {};
+  for(var j = 0; j < mergedOps.length; j++){
+    _applyOpToMap(newDoc.map, mergedOps[j]);
+  }
+  newDoc.createdAt = Math.min(localDoc.createdAt || Date.now(), remoteDoc.createdAt || Date.now());
+  newDoc.updatedAt = Math.max(localDoc.updatedAt || 0, remoteDoc.updatedAt || 0);
+  return newDoc;
+}
+
+/**
+ * 编码 CRDT 文档为可传输格式（JSON）
+ * @param {Object} doc - CRDT 文档
+ * @returns {string|null} JSON 字符串，失败返回 null
+ */
+function crdtEncode(doc){
+  if(!doc) return null;
+  try{
+    return JSON.stringify(doc);
+  }catch(e){
+    return null;
+  }
+}
+
+/**
+ * 解码为 CRDT 文档
+ * @param {string} encoded - JSON 字符串
+ * @returns {Object|null} CRDT 文档，失败返回 null
+ */
+function crdtDecode(encoded){
+  if(!encoded || typeof encoded !== "string") return null;
+  try{
+    var doc = JSON.parse(encoded);
+    if(!doc || typeof doc !== "object") return null;
+    // 兜底字段
+    if(!doc.map) doc.map = {};
+    if(!doc.ops) doc.ops = [];
+    if(typeof doc.version !== "number") doc.version = 0;
+    return doc;
+  }catch(e){
+    return null;
+  }
+}
+
+/**
+ * 应用单个操作到文档
+ * @param {Object} doc - CRDT 文档
+ * @param {Object} op - 操作 {type, key, value, timestamp, origin, version}
+ * @returns {Object|null} 操作记录，失败返回 null
+ */
+function crdtApplyOp(doc, op){
+  if(!doc || !op || !op.type || !op.key) return null;
+  // 规范化操作
+  var normOp = {
+    type: op.type,
+    key: op.key,
+    value: op.value,
+    timestamp: op.timestamp || Date.now(),
+    origin: op.origin || "anonymous",
+    version: op.version || (doc.version + 1)
+  };
+  // 应用到 map（LWW：相同 key 取 timestamp 新的）
+  _applyOpToMap(doc.map || (doc.map = {}), normOp);
+  // 记入操作日志
+  doc.ops = doc.ops || [];
+  doc.ops.push(normOp);
+  // 更新版本号
+  doc.version = Math.max(doc.version || 0, normOp.version);
+  doc.updatedAt = Date.now();
+  return normOp;
+}
+
+/**
+ * 内部：应用操作到 map（LWW 语义）
+ * @param {Object} map - 数据映射
+ * @param {Object} op - 操作
+ * @returns {void}
+ */
+function _applyOpToMap(map, op){
+  var existing = map[op.key];
+  if(op.type === "set"){
+    // LWW：新操作 timestamp >= 现有才覆盖
+    if(!existing || op.timestamp >= existing.timestamp){
+      map[op.key] = { value: op.value, timestamp: op.timestamp, origin: op.origin };
+    }
+  }else if(op.type === "delete"){
+    // delete 也走 LWW：若 delete.timestamp >= 现有，则删除
+    if(!existing || op.timestamp >= existing.timestamp){
+      delete map[op.key];
+    }
+  }
+}
+
+/**
+ * 内部：生成操作唯一 ID（用于去重）
+ * @param {Object} op - 操作
+ * @returns {string} 操作 ID
+ */
+function _opId(op){
+  return op.type + "|" + op.key + "|" + op.timestamp + "|" + (op.origin || "") + "|" + (op.version || 0);
+}
+
+/* ============================================================
+ * 2. 在线状态管理（PresenceManager）
+ * ============================================================ */
+
+/**
+ * 创建在线状态管理器（工厂函数）
+ * @returns {Object} PresenceManager 实例
+ */
+function PresenceManager(){
+  return {
+    // 在线用户表：{ userId: { userInfo, cursor, activity, joinedAt, lastActive } }
+    users: {}
+  };
+}
+
+/**
+ * 用户加入（更新在线列表）
+ * @param {Object} pm - PresenceManager 实例
+ * @param {string} userId - 用户 ID
+ * @param {Object} userInfo - 用户信息 { name, avatar, ... }
+ * @returns {Object|null} 用户状态，失败返回 null
+ */
+function pmJoin(pm, userId, userInfo){
+  if(!pm || !userId) return null;
+  var info = userInfo && typeof userInfo === "object" ? userInfo : {};
+  var now = Date.now();
+  var existing = pm.users[userId];
+  pm.users[userId] = {
+    userInfo: info,
+    cursor: existing ? existing.cursor : null,
+    activity: existing ? existing.activity : { type: "idle", taskId: null },
+    joinedAt: existing ? existing.joinedAt : now,
+    lastActive: now
+  };
+  return pm.users[userId];
+}
+
+/**
+ * 用户离开
+ * @param {Object} pm - PresenceManager 实例
+ * @param {string} userId - 用户 ID
+ * @returns {boolean} 是否成功移除
+ */
+function pmLeave(pm, userId){
+  if(!pm || !userId) return false;
+  if(!pm.users[userId]) return false;
+  delete pm.users[userId];
+  return true;
+}
+
+/**
+ * 更新光标位置
+ * @param {Object} pm - PresenceManager 实例
+ * @param {string} userId - 用户 ID
+ * @param {Object} cursor - 光标 { taskId, field, start, end }
+ * @returns {Object|null} 更新后的用户状态，失败返回 null
+ */
+function pmUpdateCursor(pm, userId, cursor){
+  if(!pm || !userId || !pm.users[userId]) return null;
+  pm.users[userId].cursor = cursor && typeof cursor === "object" ? cursor : null;
+  pm.users[userId].lastActive = Date.now();
+  return pm.users[userId];
+}
+
+/**
+ * 更新当前活动
+ * @param {Object} pm - PresenceManager 实例
+ * @param {string} userId - 用户 ID
+ * @param {Object} activity - 活动 { type: 'editing'|'viewing'|'idle', taskId }
+ * @returns {Object|null} 更新后的用户状态，失败返回 null
+ */
+function pmUpdateActivity(pm, userId, activity){
+  if(!pm || !userId || !pm.users[userId]) return null;
+  var act = activity && typeof activity === "object" ? activity : { type: "idle", taskId: null };
+  pm.users[userId].activity = {
+    type: act.type || "idle",
+    taskId: act.taskId || null
+  };
+  pm.users[userId].lastActive = Date.now();
+  return pm.users[userId];
+}
+
+/**
+ * 获取在线用户列表
+ * @param {Object} pm - PresenceManager 实例
+ * @returns {Array<Object>} 在线用户列表
+ */
+function pmGetOnline(pm){
+  if(!pm || !pm.users) return [];
+  var list = [];
+  for(var uid in pm.users){
+    if(Object.prototype.hasOwnProperty.call(pm.users, uid)){
+      var u = pm.users[uid];
+      list.push({
+        userId: uid,
+        userInfo: u.userInfo,
+        activity: u.activity,
+        cursor: u.cursor,
+        joinedAt: u.joinedAt,
+        lastActive: u.lastActive
+      });
+    }
+  }
+  return list;
+}
+
+/**
+ * 获取单个用户状态
+ * @param {Object} pm - PresenceManager 实例
+ * @param {string} userId - 用户 ID
+ * @returns {Object|null} 用户状态，不存在返回 null
+ */
+function pmGetPresence(pm, userId){
+  if(!pm || !userId || !pm.users[userId]) return null;
+  var u = pm.users[userId];
+  return {
+    userId: userId,
+    userInfo: u.userInfo,
+    activity: u.activity,
+    cursor: u.cursor,
+    joinedAt: u.joinedAt,
+    lastActive: u.lastActive
+  };
+}
+
+/**
+ * 心跳（更新最后活跃时间）
+ * @param {Object} pm - PresenceManager 实例
+ * @param {string} userId - 用户 ID
+ * @returns {boolean} 是否成功更新
+ */
+function pmHeartbeat(pm, userId){
+  if(!pm || !userId || !pm.users[userId]) return false;
+  pm.users[userId].lastActive = Date.now();
+  return true;
+}
+
+/**
+ * 清理超时用户（默认 30 秒无心跳视为离线）
+ * @param {Object} pm - PresenceManager 实例
+ * @param {number} [timeout] - 超时毫秒数（默认 30000）
+ * @returns {Array<string>} 被清理的 userId 列表
+ */
+function pmCleanupStale(pm, timeout){
+  if(!pm || !pm.users) return [];
+  var to = typeof timeout === "number" ? timeout : PRESENCE_STALE_TIMEOUT;
+  var now = Date.now();
+  var removed = [];
+  for(var uid in pm.users){
+    if(Object.prototype.hasOwnProperty.call(pm.users, uid)){
+      var u = pm.users[uid];
+      if(now - u.lastActive > to){
+        delete pm.users[uid];
+        removed.push(uid);
+      }
+    }
+  }
+  return removed;
+}
+
+/* ============================================================
+ * 3. 操作同步（OpLog）
+ * ============================================================ */
+
+/**
+ * 创建操作日志
+ * @param {string} docId - 文档 ID
+ * @returns {Object|null} 操作日志对象，失败返回 null
+ */
+function createOpLog(docId){
+  if(!docId || typeof docId !== "string") return null;
+  return {
+    docId: docId,
+    ops: [],
+    version: 0
+  };
+}
+
+/**
+ * 记录操作到日志
+ * @param {Object} opLog - 操作日志
+ * @param {Object} op - 操作
+ * @returns {Object|null} 记录的操作，失败返回 null
+ */
+function logOp(opLog, op){
+  if(!opLog || !op || typeof op !== "object") return null;
+  var normOp = {
+    type: op.type || "set",
+    key: op.key,
+    value: op.value,
+    timestamp: op.timestamp || Date.now(),
+    origin: op.origin || "anonymous",
+    version: op.version || (opLog.version + 1)
+  };
+  opLog.ops = opLog.ops || [];
+  opLog.ops.push(normOp);
+  opLog.version = Math.max(opLog.version || 0, normOp.version);
+  _saveOpLogs();
+  return normOp;
+}
+
+/**
+ * 获取自某版本以来的所有操作
+ * @param {Object} opLog - 操作日志
+ * @param {number} version - 起始版本
+ * @returns {Array<Object>} 操作列表
+ */
+function getOpsSince(opLog, version){
+  if(!opLog || !opLog.ops) return [];
+  var v = typeof version === "number" ? version : 0;
+  var result = [];
+  for(var i = 0; i < opLog.ops.length; i++){
+    if(opLog.ops[i].version > v){
+      result.push(opLog.ops[i]);
+    }
+  }
+  return result;
+}
+
+/**
+ * 同步操作日志（合并去重）
+ * @param {Object} localOpLog - 本地操作日志
+ * @param {Object} remoteOpLog - 远程操作日志
+ * @returns {Object|null} 合并后的操作日志（新对象），失败返回 null
+ */
+function syncOps(localOpLog, remoteOpLog){
+  if(!localOpLog || !remoteOpLog) return null;
+  var seenIds = {};
+  var mergedOps = [];
+  var allOps = (localOpLog.ops || []).concat(remoteOpLog.ops || []);
+  // 按 timestamp 稳定排序
+  allOps.sort(function(a, b){
+    if(a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+    if(a.version !== b.version) return a.version - b.version;
+    return 0;
+  });
+  for(var i = 0; i < allOps.length; i++){
+    var op = allOps[i];
+    var opId = _opId(op);
+    if(!seenIds[opId]){
+      seenIds[opId] = true;
+      mergedOps.push(op);
+    }
+  }
+  return {
+    docId: localOpLog.docId || remoteOpLog.docId,
+    ops: mergedOps,
+    version: Math.max(localOpLog.version || 0, remoteOpLog.version || 0)
+  };
+}
+
+/**
+ * 批量应用操作
+ * @param {Object} doc - CRDT 文档
+ * @param {Array<Object>} ops - 操作列表
+ * @returns {Array<Object>} 已应用的操作列表
+ */
+function applyOps(doc, ops){
+  if(!doc || !Array.isArray(ops)) return [];
+  var applied = [];
+  for(var i = 0; i < ops.length; i++){
+    var r = crdtApplyOp(doc, ops[i]);
+    if(r) applied.push(r);
+  }
+  return applied;
+}
+
+/**
+ * 压缩操作日志（合并连续操作，减少日志大小）
+ * 策略：对同一 key，只保留最后一次操作（按 timestamp 最新）
+ * @param {Object} opLog - 操作日志
+ * @returns {Object|null} 压缩后的操作日志（新对象），失败返回 null
+ */
+function compactOpLog(opLog){
+  if(!opLog) return null;
+  var ops = opLog.ops || [];
+  // 按 key 分组，每组保留 timestamp 最大的操作
+  var byKey = {};
+  var order = [];  // 保留首次出现顺序
+  for(var i = 0; i < ops.length; i++){
+    var op = ops[i];
+    var k = op.key;
+    if(!byKey[k]){
+      byKey[k] = op;
+      order.push(k);
+    }else{
+      // 取 timestamp 更大的（相同 timestamp 取 version 更大）
+      if(op.timestamp > byKey[k].timestamp ||
+         (op.timestamp === byKey[k].timestamp && op.version > byKey[k].version)){
+        byKey[k] = op;
+      }
+    }
+  }
+  var compacted = [];
+  for(var j = 0; j < order.length; j++){
+    compacted.push(byKey[order[j]]);
+  }
+  // 按 timestamp 排序
+  compacted.sort(function(a, b){
+    if(a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+    return a.version - b.version;
+  });
+  return {
+    docId: opLog.docId,
+    ops: compacted,
+    version: opLog.version || 0
+  };
+}
+
+/**
+ * 内部：从 localStorage 加载操作日志到内存
+ * @returns {void}
+ */
+function _loadOpLogs(){
+  try{
+    if(typeof localStorage === "undefined") return;
+    var raw = localStorage.getItem(PREFIX + OP_LOGS_KEY);
+    if(!raw){ _opLogs = {}; return; }
+    var parsed = JSON.parse(raw);
+    _opLogs = (parsed && typeof parsed === "object") ? parsed : {};
+  }catch(e){ _opLogs = {}; }
+}
+
+/**
+ * 内部：持久化操作日志到 localStorage
+ * @returns {boolean} 是否保存成功
+ */
+function _saveOpLogs(){
+  try{
+    if(typeof localStorage === "undefined") return false;
+    localStorage.setItem(PREFIX + OP_LOGS_KEY, JSON.stringify(_opLogs));
+    return true;
+  }catch(e){ return false; }
+}
+
+/* ============================================================
+ * 4. 冲突解决
+ * ============================================================ */
+
+/**
+ * Last-Write-Wins 冲突解决（比较 timestamp，新的胜出）
+ * @param {Object} local - 本地值 { value, timestamp }
+ * @param {Object} remote - 远程值 { value, timestamp }
+ * @param {string} [field] - 字段名（可选，用于日志）
+ * @returns {Object} 胜出的值 { value, timestamp, source }
+ */
+function lwwResolve(local, remote, field){
+  var l = local && typeof local === "object" ? local : { value: local, timestamp: 0 };
+  var r = remote && typeof remote === "object" ? remote : { value: remote, timestamp: 0 };
+  var lTs = typeof l.timestamp === "number" ? l.timestamp : 0;
+  var rTs = typeof r.timestamp === "number" ? r.timestamp : 0;
+  if(rTs > lTs){
+    return { value: r.value, timestamp: rTs, source: "remote" };
+  }
+  if(lTs > rTs){
+    return { value: l.value, timestamp: lTs, source: "local" };
+  }
+  // timestamp 相同：确定性 tie-break——按 JSON 字符串字典序，保证相同输入相同输出
+  var lJson = JSON.stringify(l.value);
+  var rJson = JSON.stringify(r.value);
+  if(rJson >= lJson){
+    return { value: r.value, timestamp: rTs, source: "remote" };
+  }
+  return { value: l.value, timestamp: lTs, source: "local" };
+}
+
+/**
+ * CRDT 合并策略（基于操作日志合并，无冲突）
+ * @param {Object} local - 本地文档 { map, ops, version }
+ * @param {Object} remote - 远程文档 { map, ops, version }
+ * @returns {Object|null} 合并后的 map，失败返回 null
+ */
+function crdtResolve(local, remote){
+  if(!local || !remote) return null;
+  // 复用 crdtMerge 逻辑
+  var merged = crdtMerge(local, remote);
+  return merged ? merged.map : null;
+}
+
+/**
+ * 单字段合并（strategy: 'lww'|'crdt'|'array_union'）
+ * @param {Object} local - 本地值
+ * @param {Object} remote - 远程值
+ * @param {string} field - 字段名
+ * @param {string} [strategy] - 合并策略（默认 'lww'）
+ * @returns {*} 合并后的值
+ */
+function fieldMerge(local, remote, field, strategy){
+  var s = strategy || "lww";
+  if(s === "lww"){
+    return lwwResolve(local, remote, field).value;
+  }
+  if(s === "crdt"){
+    var resolved = crdtResolve(
+      { map: { f: local && typeof local === "object" ? local : { value: local, timestamp: 0 } }, ops: [], version: 0 },
+      { map: { f: remote && typeof remote === "object" ? remote : { value: remote, timestamp: 0 } }, ops: [], version: 0 }
+    );
+    if(resolved && resolved.f) return resolved.f.value;
+    return undefined;
+  }
+  if(s === "array_union"){
+    var lArr = Array.isArray(local) ? local : (local && Array.isArray(local.value) ? local.value : []);
+    var rArr = Array.isArray(remote) ? remote : (remote && Array.isArray(remote.value) ? remote.value : []);
+    return arrayUnionMerge(lArr, rArr);
+  }
+  // 未知策略 fallback 到 lww
+  return lwwResolve(local, remote, field).value;
+}
+
+/**
+ * 数组并集合并（用于标签等）
+ * @param {Array} localArr - 本地数组
+ * @param {Array} remoteArr - 远程数组
+ * @returns {Array} 并集数组（去重，保持首次出现顺序）
+ */
+function arrayUnionMerge(localArr, remoteArr){
+  var l = Array.isArray(localArr) ? localArr : [];
+  var r = Array.isArray(remoteArr) ? remoteArr : [];
+  var seen = {};
+  var result = [];
+  for(var i = 0; i < l.length; i++){
+    var key = JSON.stringify(l[i]);
+    if(!seen[key]){
+      seen[key] = true;
+      result.push(l[i]);
+    }
+  }
+  for(var j = 0; j < r.length; j++){
+    var key2 = JSON.stringify(r[j]);
+    if(!seen[key2]){
+      seen[key2] = true;
+      result.push(r[j]);
+    }
+  }
+  return result;
+}
+
+/* ============================================================
+ * 5. 离线队列
+ * ============================================================ */
+
+/**
+ * 创建离线操作队列
+ * @returns {Object} 离线队列对象
+ */
+function createOfflineQueue(){
+  return {
+    queue: []
+  };
+}
+
+/**
+ * 入队离线操作
+ * @param {Object} queue - 离线队列
+ * @param {Object} op - 操作
+ * @returns {Object|null} 入队后的操作，失败返回 null
+ */
+function enqueueOffline(queue, op){
+  if(!queue || !op) return null;
+  queue.queue = queue.queue || [];
+  var normOp = op && typeof op === "object" ? op : null;
+  if(!normOp) return null;
+  var entry = {
+    type: normOp.type || "set",
+    key: normOp.key,
+    value: normOp.value,
+    timestamp: normOp.timestamp || Date.now(),
+    origin: normOp.origin || "anonymous",
+    version: normOp.version || 0,
+    enqueuedAt: Date.now()
+  };
+  queue.queue.push(entry);
+  _saveOfflineQueue(queue);
+  return entry;
+}
+
+/**
+ * 出队
+ * @param {Object} queue - 离线队列
+ * @returns {Object|null} 出队的操作，空队列返回 null
+ */
+function dequeueOffline(queue){
+  if(!queue || !queue.queue || queue.queue.length === 0) return null;
+  var op = queue.queue.shift();
+  _saveOfflineQueue(queue);
+  return op;
+}
+
+/**
+ * 上线后刷新队列（依次执行 syncFn）
+ * @param {Object} queue - 离线队列
+ * @param {Function} syncFn - 同步函数 (op) => result
+ * @returns {Array} 同步结果列表 [{ op, result, ok }]
+ */
+function flushOfflineQueue(queue, syncFn){
+  if(!queue || !queue.queue) return [];
+  var results = [];
+  var fn = typeof syncFn === "function" ? syncFn : null;
+  while(queue.queue.length > 0){
+    var op = queue.queue.shift();
+    var entry = { op: op, result: null, ok: false };
+    if(fn){
+      try{
+        entry.result = fn(op);
+        entry.ok = true;
+      }catch(e){
+        entry.result = null;
+        entry.ok = false;
+      }
+    }
+    results.push(entry);
+  }
+  _saveOfflineQueue(queue);
+  return results;
+}
+
+/**
+ * 获取队列大小
+ * @param {Object} queue - 离线队列
+ * @returns {number} 队列长度
+ */
+function getOfflineQueueSize(queue){
+  if(!queue || !queue.queue) return 0;
+  return queue.queue.length;
+}
+
+/**
+ * 清空队列
+ * @param {Object} queue - 离线队列
+ * @returns {boolean} 是否成功清空
+ */
+function clearOfflineQueue(queue){
+  if(!queue) return false;
+  queue.queue = [];
+  _saveOfflineQueue(queue);
+  return true;
+}
+
+/**
+ * 内部：持久化离线队列到 localStorage
+ * @param {Object} queue - 离线队列
+ * @returns {boolean} 是否保存成功
+ */
+function _saveOfflineQueue(queue){
+  try{
+    if(typeof localStorage === "undefined") return false;
+    localStorage.setItem(PREFIX + OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    return true;
+  }catch(e){ return false; }
+}
+
+/**
+ * 内部：从 localStorage 加载离线队列
+ * @returns {Object|null} 离线队列，失败返回 null
+ */
+function _loadOfflineQueue(){
+  try{
+    if(typeof localStorage === "undefined") return null;
+    var raw = localStorage.getItem(PREFIX + OFFLINE_QUEUE_KEY);
+    if(!raw) return null;
+    var parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed !== "object") return null;
+    if(!Array.isArray(parsed.queue)) parsed.queue = [];
+    return parsed;
+  }catch(e){ return null; }
+}
+
+/* ============================================================
+ * 6. WebSocket 消息协议（扩展 v1.6-F 框架）
+ * ============================================================ */
+
+/**
+ * 编码 WS 消息
+ * @param {string} type - 消息类型（'presence'|'op'|'sync'|'ack'|'error'|'cursor'|'activity'）
+ * @param {*} payload - 消息负载
+ * @returns {Object|null} 消息对象 { type, payload, timestamp, msgId }，失败返回 null
+ */
+function encodeMessage(type, payload){
+  if(!type || typeof type !== "string") return null;
+  return {
+    type: type,
+    payload: payload,
+    timestamp: Date.now(),
+    msgId: _genMsgId()
+  };
+}
+
+/**
+ * 解码 WS 消息
+ * @param {string|Object} raw - 原始消息（JSON 字符串或对象）
+ * @returns {Object|null} 解码后的消息，失败返回 null
+ */
+function decodeMessage(raw){
+  if(!raw) return null;
+  var msg = raw;
+  if(typeof raw === "string"){
+    try{
+      msg = JSON.parse(raw);
+    }catch(e){
+      return null;
+    }
+  }
+  if(!msg || typeof msg !== "object") return null;
+  if(!msg.type || typeof msg.type !== "string") return null;
+  return {
+    type: msg.type,
+    payload: msg.payload,
+    timestamp: msg.timestamp || 0,
+    msgId: msg.msgId || null
+  };
+}
+
+/**
+ * 内部：生成消息 ID
+ * @returns {string} 消息 ID
+ */
+function _genMsgId(){
+  return "msg_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+/**
+ * 创建同步消息
+ * @param {string} docId - 文档 ID
+ * @param {Array<Object>} ops - 操作列表
+ * @returns {Object|null} 同步消息，失败返回 null
+ */
+function createSyncMessage(docId, ops){
+  if(!docId) return null;
+  return encodeMessage("sync", {
+    docId: docId,
+    ops: Array.isArray(ops) ? ops : []
+  });
+}
+
+/**
+ * 创建 presence 消息
+ * @param {string} userId - 用户 ID
+ * @param {Object} status - 状态 { type, taskId, cursor }
+ * @returns {Object|null} presence 消息，失败返回 null
+ */
+function createPresenceMessage(userId, status){
+  if(!userId) return null;
+  return encodeMessage("presence", {
+    userId: userId,
+    status: status && typeof status === "object" ? status : {}
+  });
+}
+
+/* ============================================================
+ * 7. 重置（供测试间复位）
+ * ============================================================ */
+
+/**
+ * 重置 CRDT 协作模块状态（供测试间复位）
+ * @returns {void}
+ */
+function _resetCRDTCollab(){
+  _opLogs = {};
+  _offlineQueues = {};
+}
+
+/* ============================================================
+ * 8. 初始化（页面加载时从 localStorage 恢复）
+ * ============================================================ */
+(function _initCRDTCollab(){
+  try{
+    if(typeof localStorage === "undefined") return;
+    _loadOpLogs();
+  }catch(e){ /* noop */ }
+})();</script>
 </body>
 </html>
