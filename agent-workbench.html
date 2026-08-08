@@ -634,6 +634,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .nav-sep{height:1px;background:var(--line);margin:var(--space-2) var(--space-3)}
 
 /* ===== 响应式断点（4 断点 + 顶栏窄屏 + 横屏） ===== */
+/* >=768px 通用：侧边栏折叠效果（所有显示折叠按钮的断点共享，确保 768-1023 / 1024-1439 / >=1440 三段均有视觉变化） */
+@media(min-width:768px){
+  .side{transition:width var(--transition-base)}
+  .side.collapsed{width:56px}
+  .side.collapsed .nav-item .nm,
+  .side.collapsed .nav-item .cnt{display:none}
+  .side.collapsed .nav-item{justify-content:center;padding:11px 0}
+}
+
 /* 顶栏窄屏 <600px：隐藏按钮文字只留图标 */
 @media(max-width:600px){
   .tbtn{padding:var(--space-2);gap:0}
@@ -650,13 +659,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .side-toggle{display:flex}
 }
 
-/* 小屏 PC 1024-1439px：侧边栏可折叠 */
+/* 小屏 PC 1024-1439px：侧边栏可折叠（折叠效果由 >=768px 通用规则提供） */
 @media(min-width:1024px) and (max-width:1439px){
-  .side{width:210px;transition:width var(--transition-base)}
-  .side.collapsed{width:56px}
-  .side.collapsed .nav-item .nm,
-  .side.collapsed .nav-item .cnt{display:none}
-  .side.collapsed .nav-item{justify-content:center;padding:11px 0}
+  .side{width:210px}
   .side-toggle{display:flex}
   .main{max-width:1100px}
 }
