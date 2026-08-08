@@ -284,8 +284,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px}
 .bars{display:flex;flex-direction:column;gap:var(--space-2)}
 /* P2'：跨场景习惯链有向图 */
-.chain-graph-wrap{margin-top:var(--space-2);overflow-x:auto}
-.chain-graph{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.chain-graph-wrap{margin-top:var(--space-2);overflow-x:auto;position:relative}
+.chain-graph{display:block;width:100%;max-width:800px;height:auto;margin:0 auto}
+.chain-graph:hover circle{transition:r .2s}
 /* P8：全局筛选控件 + 保存视图 */
 .glob-filters{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
 .glob-filters input,.glob-filters select{min-width:120px;flex:1}
@@ -317,7 +318,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .streak-badge.hot{background:var(--warn-soft);color:var(--warn)}
 .streak-badge.cold{background:var(--danger-soft);color:var(--danger)}
 .heatmap-wrap{margin-top:var(--space-2);overflow-x:auto;padding-bottom:var(--space-1)}
-.heatmap-svg{display:block;margin:0 auto}
+.heatmap-svg{display:block;width:100%;max-width:400px;height:auto;margin:0 auto}
 .heatmap-svg .cell{stroke:var(--panel);stroke-width:1px}
 .heatmap-svg .cell.l0{fill:var(--heat-0)}.heatmap-svg .cell.l1{fill:var(--heat-1)}
 .heatmap-svg .cell.l2{fill:var(--heat-2)}.heatmap-svg .cell.l3{fill:var(--heat-3)}
@@ -350,6 +351,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .link-status .lk:hover{background:var(--panel2)}
 .link-status .lk .arr{color:var(--muted)}
 .link-status .lk .cnt{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)}
+.link-status .lk .last{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap}
 .link-status .lk.disabled{opacity:.5}
 .coach-card .coach-item{display:flex;gap:var(--space-2);padding:var(--space-2) var(--space-3);
   border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--radius-md) var(--radius-md) 0;
@@ -373,10 +375,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .stats-tab:hover{background:var(--surface-hover)}
 .stats-tab.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .stats-trend-chart{overflow-x:auto;padding-bottom:var(--space-1)}
-.stats-trend-svg{display:block;max-width:100%;height:auto;margin:0 auto}
-.stats-pie-wrap{display:flex;align-items:center;gap:var(--space-5);flex-wrap:wrap;justify-content:center}
+.stats-trend-svg{display:block;width:100%;max-width:600px;height:auto;margin:0 auto}
+.stats-pie-wrap{display:flex;align-items:center;gap:var(--space-5);flex-wrap:wrap;justify-content:center;text-align:center}
 .stats-pie-chart{flex-shrink:0}
-.stats-pie-svg{display:block;margin:0 auto}
+.stats-pie-svg{display:block;width:180px;height:180px;margin:0 auto}
 .stats-pie-empty{color:var(--muted);font-size:var(--fs-sm);padding:var(--space-5);text-align:center}
 .stats-pie-legend{display:flex;flex-direction:column;gap:var(--space-2);flex:1;min-width:180px}
 .stats-pie-legend-item{display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm)}
@@ -393,6 +395,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .stats-chain-fill{height:100%;border-radius:10px;background:var(--accent);transition:width .3s}
 .stats-chain-rate{position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:var(--fs-xs);
   font-weight:600;color:var(--text);line-height:20px}
+.stats-chain-ring{display:flex;justify-content:center;align-items:center;padding:var(--space-2) 0}
+.stats-chain-ring-svg{display:block}
+/* 火焰动画（习惯链 streak ≥ 3） */
+@keyframes flame{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.streak-fire{display:inline-block;animation:flame 1.5s ease-in-out infinite}
 
 /* ===== 今日仪表盘（A：问候语 + Top3 + 习惯链状态条） ===== */
 .dashboard-hero{display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-5)}
@@ -596,17 +603,18 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .help-keys kbd{background:var(--panel2);border:1px solid var(--kbd-border);border-radius:var(--radius-sm);
   padding:2px 6px;font-size:var(--fs-xs);font-family:"SF Mono",monospace}
 
-/* ===== 回收站弹窗（D3：软删除任务的恢复 / 永久删除入口） ===== */
-.recycle-modal{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;
-  z-index:100;padding:var(--space-4)}
-.recycle-card{background:var(--panel);border-radius:var(--radius-xl);max-width:520px;width:100%;max-height:85vh;
-  display:flex;flex-direction:column;box-shadow:0 8px 32px var(--shadow-overlay)}
-.recycle-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-5) var(--space-6);
+/* ===== 回收站页面（D3：软删除任务的恢复 / 永久删除入口；v1.3.4-B 全屏页面视图） ===== */
+.recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);max-width:720px;margin:0 auto}
+.recycle-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden}
+.recycle-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-5) var(--space-6);
   border-bottom:1px solid var(--line);flex-shrink:0}
-.recycle-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em}
-.recycle-close{font-size:var(--fs-lg);padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);
-  color:var(--muted);transition:background var(--transition-fast),color var(--transition-fast)}
-.recycle-close:hover{background:var(--surface-hover);color:var(--text)}
+.recycle-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;flex:1}
+.recycle-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
+  border-radius:var(--radius-md);border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
+  font-size:var(--fs-sm);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.recycle-back:hover{background:var(--surface-hover);color:var(--text)}
+.recycle-count{font-size:var(--fs-xs);color:var(--muted);flex-shrink:0;font-variant-numeric:tabular-nums}
 .recycle-list{padding:var(--space-4) var(--space-6);overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:var(--space-2)}
 .recycle-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2)}
@@ -868,6 +876,25 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .empty-text strong{color:var(--text-dim);font-weight:600}
 .empty-action{margin-top:var(--space-3)}
 .empty-action .kbd{margin:0 2px}
+
+/* ===== v1.3.4-C 生活场景·健康概览卡片 ===== */
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--space-3);margin-bottom:var(--space-4)}
+.health-item{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;transition:box-shadow var(--transition-fast)}
+.health-item:hover{box-shadow:var(--shadow-1)}
+.health-val{font-size:var(--fs-xl);font-weight:600;color:var(--text);line-height:1.2}
+.health-lbl{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
+.health-section{margin-bottom:var(--space-4)}
+.health-section:last-child{margin-bottom:0}
+.health-section h3{font-size:var(--fs-base);font-weight:600;margin:var(--space-3) 0 var(--space-2);color:var(--text)}
+.health-trend{display:block;width:100%;max-width:300px;height:auto;margin:0 auto}
+.health-trend-meta{font-size:var(--fs-xs);color:var(--muted);text-align:center;margin-top:var(--space-2)}
+.health-sleep-bar{display:flex;align-items:flex-end;gap:var(--space-1);height:60px;margin-top:var(--space-2);max-width:300px;margin-left:auto;margin-right:auto}
+.health-sleep-col{flex:1;background:var(--accent);border-radius:var(--radius-sm) var(--radius-sm) 0 0;min-height:4px;opacity:0.7;transition:opacity var(--transition-fast)}
+.health-sleep-col:hover{opacity:1}
+.health-water{margin-top:var(--space-2)}
+.health-water-bar{height:12px;background:var(--surface-muted);border-radius:var(--radius-full,var(--radius-sm));overflow:hidden;max-width:300px;margin:0 auto}
+.health-water-fill{height:100%;background:var(--accent);border-radius:var(--radius-full,var(--radius-sm));transition:width .3s ease}
+.health-water-fill.done{background:var(--ok)}
 </style>
 </head>
 <body>
@@ -1110,7 +1137,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.3.3";
+const VERSION = "1.3.4";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -1692,10 +1719,15 @@ const SCENARIOS = {
 
   life:{ name:"生活", color:"#7b61ff",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
-    sysprompt:"你是一个生活事务管家，帮用户打理日常待办、购物清单、缴费与提醒、家庭与个人事务。回答实用、贴心、有条理。",
-    extraCard:"none",
-    record:{ label:"生活备忘",
-      fields:[{k:"title",label:"事项",type:"text"},{k:"cat",label:"分类",type:"text"},{k:"note",label:"备注",type:"textarea"}] } }
+    sysprompt:"你是一个生活与健康管家，帮用户管理日常事务、运动记录、体重追踪、睡眠记录和喝水提醒。回答实用、贴心、有条理。",
+    extraCard:"health",
+    record:{ label:"生活记录",
+      fields:[
+        {k:"type",label:"类型",type:"select",options:["日常事务","运动记录","体重追踪","睡眠记录","喝水记录"]},
+        {k:"title",label:"标题",type:"text"},
+        {k:"value",label:"数值",type:"text",placeholder:"如：5km / 65.2kg / 7.5h / 8杯"},
+        {k:"note",label:"备注",type:"textarea"}
+      ] } }
 };
 const ORDER = ["office","code","study","life"];
 
@@ -3061,7 +3093,7 @@ function heatmapData(sc, weeks){
 function renderHeatmap(sc){
   const weeks = 12;
   const data = heatmapData(sc, weeks);
-  const cell = 12, gap = 3, labelW = 16;
+  const cell = 16, gap = 4, labelW = 22;
   const colW = cell + gap;
   const W = labelW + weeks * colW + gap;
   const H = 7 * colW + gap;
@@ -3081,7 +3113,7 @@ function renderHeatmap(sc){
     `<text x="2" y="${gap + i * colW + cell - 2}" font-size="9" fill="var(--muted)">${wd}</text>`
   ).join("");
   const legend = `<div class="heatmap-legend">少 <span class="sw l0"></span><span class="sw l1"></span><span class="sw l2"></span><span class="sw l3"></span><span class="sw l4"></span> 多</div>`;
-  return `<div class="heatmap-wrap"><svg class="heatmap-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-label="${SCENARIOS[sc] ? SCENARIOS[sc].name : sc} 热力图">${labels}${cells}</svg></div>${legend}`;
+  return `<div class="heatmap-wrap"><svg class="heatmap-svg" viewBox="0 0 ${W} ${H}" aria-label="${SCENARIOS[sc] ? SCENARIOS[sc].name : sc} 热力图">${labels}${cells}</svg></div>${legend}`;
 }
 
 /* ---------- A3 行为分析（最近 14 天） ---------- */
@@ -3193,28 +3225,47 @@ function renderCoachCard(){
 function renderHabitChainStatus(){
   const links = getLinks();
   const tasks = getTasks();
+  const now = Date.now();
   const items = links.map(l => {
-    const triggered = tasks.filter(t =>
+    const triggeredTasks = tasks.filter(t =>
       t.sc === l.fromSc && t.linked &&
       String(t.title||"").toLowerCase().includes(String(l.kw||"").toLowerCase())
-    ).length;
+    );
+    const triggered = triggeredTasks.length;
     const enabled = l.enabled !== false;
     const fm = scMeta(l.fromSc), tm = scMeta(l.toSc);
+    // 最近触发时间
+    let lastText = "尚未触发";
+    if(triggered > 0){
+      const lastDone = Math.max(...triggeredTasks.map(t => t.doneAt || 0));
+      const daysAgo = Math.floor((now - lastDone) / 86400000);
+      if(daysAgo <= 0) lastText = "上次触发：今天";
+      else if(daysAgo === 1) lastText = "上次触发：1 天前";
+      else lastText = `上次触发：${daysAgo} 天前`;
+    }
     return `<div class="lk${enabled ? "" : " disabled"}">` +
       `<span style="color:${fm.color}">${fm.name}</span>` +
       `<span class="arr">→</span>` +
       `<span style="color:${tm.color}">${tm.name}</span>` +
-      `<span class="cnt">触发 ${triggered} 次</span></div>`;
+      `<span class="cnt">触发 ${triggered} 次</span>` +
+      `<span class="last">${lastText}</span></div>`;
   }).join("");
   return `<div class="link-status">${items}</div>`;
 }
 /* A5 渲染：习惯链可视化卡片（streak + 热力图折叠 + 链状态） */
 function renderHabitChainCard(){
-  // streak 行
+  // streak 行（streak ≥ 3 火焰动画；断链警告）
   const streakBadges = ORDER.map(sc => {
     const s = calcStreak(sc);
     const cls = s.current >= 3 ? "hot" : (s.current === 0 ? "cold" : "");
-    const fire = s.current > 0 ? `🔥<b>${s.current}</b>天` : "未开始";
+    let fire;
+    if(s.current >= 3){
+      fire = `<span class="streak-fire">🔥</span><b>${s.current}</b>天`;
+    } else if(s.current === 0){
+      fire = `<span style="color:var(--danger)">⚠️ 未开始</span>`;
+    } else {
+      fire = `🔥<b>${s.current}</b>天`;
+    }
     return `<span class="streak-badge ${cls}"><span class="sc-name">${SCENARIOS[sc].name}</span><span class="fire">${fire}</span></span>`;
   }).join("");
   // 每个场景的热力图（折叠）
@@ -3254,7 +3305,7 @@ function renderChainGraph(){
   // 节点：参与链路的场景，按 ORDER 顺序环形排布
   const scs = ORDER.filter(sc => links.some(l => l.fromSc===sc || l.toSc===sc));
   if(!scs.length) return `<div class="empty">暂无习惯链</div>`;
-  const W=360, H=270, CX=W/2, CY=H/2, NR=26;
+  const W=480, H=360, CX=W/2, CY=H/2, NR=26;
   const R = Math.min(W, H)/2 - NR - 30;
   const pos = {};
   scs.forEach((sc, i)=>{
@@ -3347,7 +3398,9 @@ function renderSide(){
     setActive(b.dataset.sc); render();
   });
 }
-/* ---------- 回收站（D3：软删除任务的恢复 / 永久删除入口；T2：批量操作 + 自动清理策略） ---------- */
+/* ---------- 回收站（D3：软删除任务的恢复 / 永久删除入口；T2：批量操作 + 自动清理策略） ----------
+   v1.3.4-B：改为全屏页面视图（渲染到 #main，与 renderStats 一致），不再创建 modal overlay。
+   保留 id=recycleModal 与 .recycle-card 以兼容 closeRecycleModal 与焦点陷阱。 */
 function openRecycle(){
   const all = load(PREFIX+"tasks", []);
   const del = all.filter(t=>t.deletedAt).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
@@ -3367,9 +3420,15 @@ function openRecycle(){
   }).join("") : `<div class="recycle-empty">回收站为空</div>`;
   const policy = getRecyclePolicy();
   const policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
+  const countLabel = del.length ? del.length+" 条任务" : "";
+  // 页面视图：渲染到 #main（与 renderStats 一致），保留 id=recycleModal / .recycle-card 以兼容关闭逻辑与焦点陷阱
   const html = `<div class="recycle-modal" id="recycleModal">
     <div class="recycle-card">
-      <div class="recycle-header"><h2>回收站</h2><button type="button" class="recycle-close" id="recycleClose">✕</button></div>
+      <div class="recycle-header">
+        <button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button>
+        <h2>回收站</h2>
+        <span class="recycle-count">${countLabel}</span>
+      </div>
       <div class="recycle-list">${items}</div>
       ${del.length ? `<div class="recycle-footer">
         <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
@@ -3378,26 +3437,28 @@ function openRecycle(){
         <span class="recycle-policy">${policyLabel}</span>
         <button type="button" class="recycle-clear" id="recycleClear">清空回收站</button>
       </div>` : ""}
-    </div></div>`;
-  document.body.insertAdjacentHTML("beforeend", html);
+    </div>
+    <div class="foot">Agent 工作台 · 回收站 · v${VERSION}</div>
+  </div>`;
+  $("#main").innerHTML = sanitizeHtml(html);
   const modal=$("#recycleModal");
-  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card")); // T5：焦点锁在弹窗内
+  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card")); // T5：焦点锁在页面内
   const close = ()=> closeRecycleModal();
-  const closeBtn = $("#recycleClose"); if(closeBtn) closeBtn.onclick = close;
-  if(modal) modal.onclick = e=>{ if(e.target===modal) close(); };
-  $$("#recycleModal [data-restore]").forEach(b=> b.onclick=()=>{ restoreRecycle(b.dataset.restore); close(); });
-  $$("#recycleModal [data-purge]").forEach(b=> b.onclick=()=>{ purgeRecycle(b.dataset.purge); close(); });
-  const clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的任务将永久删除，不可恢复。")){ clearRecycle(); close(); } };
+  const backBtn = $("#recycleBack"); if(backBtn) backBtn.onclick = close;
+  // restore/purge/clear 内部已调用 render()，会自动覆盖 #main 返回原视图，无需手动 close
+  $$("#recycleModal [data-restore]").forEach(b=> b.onclick=()=>{ restoreRecycle(b.dataset.restore); });
+  $$("#recycleModal [data-purge]").forEach(b=> b.onclick=()=>{ purgeRecycle(b.dataset.purge); });
+  const clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的任务将永久删除，不可恢复。")){ clearRecycle(); } };
   const selAll=$("#recycleSelAll"); if(selAll) selAll.onchange=()=> $$("#recycleModal .recycle-chk").forEach(c=>{ c.checked=selAll.checked; });
   const bRestore=$("#recycleBatchRestore"); if(bRestore) bRestore.onclick=()=>{
     const ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
     if(!ids.length){ toast("请先勾选要恢复的任务","warn"); return; }
-    restoreRecycleBatch(ids); close();
+    restoreRecycleBatch(ids);
   };
   const bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=()=>{
     const ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
     if(!ids.length){ toast("请先勾选要删除的任务","warn"); return; }
-    if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); close(); }
+    if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); }
   };
 }
 function restoreRecycle(id){
@@ -3482,13 +3543,14 @@ function trapFocus(container){
   };
 }
 /**
- * 关闭回收站弹窗（含焦点陷阱解除）；返回是否关闭了弹窗
+ * 关闭回收站页面（含焦点陷阱解除），并 render() 返回之前的视图；返回是否关闭了页面
  * @returns {boolean}
  */
 function closeRecycleModal(){
   const m=$("#recycleModal"); if(!m) return false;
   if(typeof m._releaseTrap==="function"){ try{ m._releaseTrap(); }catch(e){ /* noop */ } }
   m.remove();
+  render(); // 返回之前的视图（与"返回按钮"语义一致）
   return true;
 }
 /* 侧边栏折叠：事件委托绑定在 #side 上（不随 innerHTML 重建丢失），启动时恢复持久化状态 */
@@ -4154,7 +4216,7 @@ let _statsTrendDays = 7;
  */
 function renderTrendChart(data, color){
   const c = color || "var(--accent)";
-  const W = 320, H = 120, padL = 28, padR = 8, padT = 10, padB = 24;
+  const W = 560, H = 180, padL = 36, padR = 12, padT = 14, padB = 28;
   const n = data.length;
   if(n === 0) return "";
   const max = Math.max(1, ...data.map(d => d.count));
@@ -4185,7 +4247,7 @@ function renderTrendChart(data, color){
   const dots = pts.map(p =>
     `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="${c}"><title>${data[pts.indexOf(p)].date}：${data[pts.indexOf(p)].count} 个</title></circle>`
   ).join("");
-  return `<svg class="stats-trend-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="任务完成趋势图">` +
+  return `<svg class="stats-trend-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="任务完成趋势图">` +
     grid + xLabels +
     `<polygon points="${area}" fill="${c}" fill-opacity="0.08"/>` +
     `<polyline points="${line}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>` +
@@ -4198,11 +4260,11 @@ function renderTrendChart(data, color){
  */
 function renderPieChart(dist){
   const total = dist.reduce((s, d) => s + d.count, 0);
-  const R = 60, CX = 70, CY = 70;
+  const R = 80, CX = 90, CY = 90;
   if(total === 0){
     return `<div class="stats-pie-empty">暂无任务数据</div>`;
   }
-  let svg = `<svg class="stats-pie-svg" viewBox="0 0 140 140" width="140" height="140" role="img" aria-label="场景分布饼图">`;
+  let svg = `<svg class="stats-pie-svg" viewBox="0 0 180 180" role="img" aria-label="场景分布饼图">`;
   let acc = 0;
   dist.forEach(d => {
     if(d.count === 0) return;
@@ -4290,12 +4352,19 @@ function renderStats(){
   // 完成时段分布（最近 30 天）
   const hourHtml = `<div class="card"><h2>${UI_ICONS.stats} 完成时段分布</h2>` +
     `<p class="sub">最近 30 天：周几 × 时段完成任务数（颜色越深越多）</p>${renderHourDistGrid(calcHourDist(30))}</div>`;
-  // 习惯链成功率
+  // 习惯链成功率（SVG 环形进度图）
   const chains = calcChainSuccess();
+  const _ringR = 20, _ringC = 2 * Math.PI * _ringR;
   const chainsHtml = chains.length ? chains.map(c => {
     const fromColor = SCENARIOS[c.fromSc] ? SCENARIOS[c.fromSc].color : "var(--muted)";
     const toColor = SCENARIOS[c.toSc] ? SCENARIOS[c.toSc].color : "var(--muted)";
     const enabledCls = c.enabled ? "" : " disabled";
+    const dashOffset = _ringC * (1 - c.rate / 100);
+    const ringSvg = `<svg class="stats-chain-ring-svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="成功率 ${c.rate}%">` +
+      `<circle cx="24" cy="24" r="${_ringR}" fill="none" stroke="var(--surface-muted)" stroke-width="4"/>` +
+      `<circle cx="24" cy="24" r="${_ringR}" fill="none" stroke="${fromColor}" stroke-width="4" stroke-dasharray="${_ringC.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" transform="rotate(-90 24 24)" stroke-linecap="round"/>` +
+      `<text x="24" y="28" text-anchor="middle" font-size="11" fill="var(--text)">${c.rate}%</text>` +
+    `</svg>`;
     return `<div class="stats-chain${enabledCls}">` +
       `<div class="stats-chain-head">` +
         `<span style="color:${fromColor}">${esc(SCENARIOS[c.fromSc] ? SCENARIOS[c.fromSc].name : c.fromSc)}</span>` +
@@ -4303,10 +4372,7 @@ function renderStats(){
         `<span style="color:${toColor}">${esc(SCENARIOS[c.toSc] ? SCENARIOS[c.toSc].name : c.toSc)}</span>` +
         `<span class="stats-chain-meta">触发 ${c.triggered} / 源完成 ${c.sourceDone}</span>` +
       `</div>` +
-      `<div class="stats-chain-bar">` +
-        `<div class="stats-chain-fill" style="width:${c.rate}%"></div>` +
-        `<span class="stats-chain-rate">${c.rate}%</span>` +
-      `</div>` +
+      `<div class="stats-chain-ring">${ringSvg}</div>` +
     `</div>`;
   }).join("") : `<div class="empty">暂无习惯链</div>`;
   const chainCard = `<div class="card"><h2>${UI_ICONS.stats} 习惯链成功率</h2>` +
@@ -4423,6 +4489,7 @@ function renderGlob(q){
 const CARD_REGISTRY = {
   report:  { render: reportCard,  bind: bindReportCard },
   review:  { render: reviewCard,  bind: bindReviewCard },
+  health:  { render: healthCard,  bind: bindHealthCard },
 
   none:    { render: () => "",    bind: () => {} },
 };
@@ -4534,6 +4601,144 @@ function reviewCard(){
   return `<div class="card"><h2>${SCENARIOS.study.icon || ""} 间隔复习</h2>${dueHtml}<div>${items}</div></div>`;
 }
 
+/* ---------- 生活场景·健康概览卡片 ----------
+ * v1.3.4-C 生活场景增强：运动记录 / 体重追踪 / 睡眠记录 / 喝水提醒
+ * 数据源：getRec("life")（生活场景资料库记录），按 record.type 字段分类筛选
+ * 兼容：无 type 字段的旧记录默认归为"日常事务"，不参与健康统计
+ * 渲染：内联 SVG 折线图 / 条形图 / 进度条，零外部依赖，颜色全部走 var(--token)
+ */
+/** 健康记录类型枚举（与 05-bootstrap-config.js life.record.fields.type.options 对齐） */
+const HEALTH_TYPES = { EXERCISE:"运动记录", WEIGHT:"体重追踪", SLEEP:"睡眠记录", WATER:"喝水记录" };
+/**
+ * 取生活场景全部记录，补齐旧记录的 type 字段（兼容 v1.3.3 之前的生活备忘）
+ * @returns {Object[]}
+ */
+function getHealthRecs(){
+  return getRec("life").map(r=> Object.assign({}, r, { type: r.type || "日常事务" }));
+}
+/**
+ * 解析记录 value 字段中的首个数值（如 "5km"→5、"65.2kg"→65.2、"7.5h"→7.5、"8杯"→8）
+ * @param {string} v
+ * @returns {number}
+ */
+function parseNum(v){
+  if(typeof v !== "string" && typeof v !== "number") return 0;
+  const m = String(v).match(/-?\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : 0;
+}
+/** 判断时间戳是否在今天 */
+function isToday(ts){
+  if(!ts) return false;
+  const d = new Date(ts), n = new Date();
+  return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
+}
+/** 本周一 00:00 的时间戳（周一为一周起点） */
+function weekStartTs(){
+  const d = new Date(); const day = (d.getDay()+6)%7;
+  const mon = new Date(d); mon.setDate(d.getDate()-day); mon.setHours(0,0,0,0);
+  return mon.getTime();
+}
+/**
+ * 体重趋势内联 SVG 折线图（最近 5 次体重记录）
+ * @param {Object[]} recs - 体重记录（按时间升序）
+ * @returns {string} SVG 字符串
+ */
+function weightTrendSVG(recs){
+  const vals = recs.map(r=>parseNum(r.value)).filter(v=>v>0);
+  if(vals.length < 1) return `<div class="empty" style="margin:var(--space-2) 0">暂无体重数据</div>`;
+  const arr = vals.length===1 ? [vals[0], vals[0]] : vals;
+  const W = 300, H = 90, pad = 8;
+  const min = Math.min(...arr), max = Math.max(...arr);
+  const span = (max - min) || 1; // 避免除 0
+  const n = arr.length;
+  const pts = arr.map((v,i)=>[
+    (i/(n-1))*W,
+    H - pad - ((v - min)/span)*(H - pad*2)
+  ]);
+  const line = pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+  const area = "0,"+(H-pad)+" "+line+" "+W+","+(H-pad);
+  return `<svg class="health-trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="体重趋势图">
+    <polygon points="${area}" style="fill:var(--accent)" fill-opacity="0.08"/>
+    <polyline points="${line}" fill="none" style="stroke:var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    ${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" style="fill:var(--accent)"/>`).join("")}
+  </svg><div class="health-trend-meta">${min.toFixed(1)} – ${max.toFixed(1)} kg · 最近 ${vals.length} 次</div>`;
+}
+/**
+ * 睡眠条形图（最近 7 条睡眠记录，每条高度按小时数映射）
+ * @param {Object[]} recs - 睡眠记录（按时间升序）
+ * @returns {string} HTML 字符串
+ */
+function sleepBarsHTML(recs){
+  const recent = recs.slice(-7);
+  if(recent.length < 1) return `<div class="empty" style="margin:var(--space-2) 0">暂无睡眠数据</div>`;
+  const vals = recent.map(r=>parseNum(r.value));
+  const max = Math.max(8, ...vals); // 默认 8h 为参考满刻度
+  const bars = vals.map(v=>{
+    const h = Math.max(4, (v/max)*56); // 最小 4px 高度，最大 56px
+    const title = v ? v.toFixed(1)+"h" : "—";
+    return `<div class="health-sleep-col" style="height:${h.toFixed(1)}px" title="${esc(title)}"></div>`;
+  }).join("");
+  const avg = vals.filter(v=>v>0).length ? (vals.reduce((a,b)=>a+b,0)/vals.filter(v=>v>0).length).toFixed(1) : "—";
+  return `<div class="health-sleep-bar">${bars}</div><div class="health-trend-meta">最近 ${vals.length} 天 · 平均 ${avg} h</div>`;
+}
+/**
+ * 喝水进度条（今日喝水杯数 / 目标 8 杯）
+ * @param {Object[]} recs - 今日喝水记录
+ * @param {number} [goal=8] - 目标杯数
+ * @returns {string} HTML 字符串
+ */
+function waterProgressHTML(recs, goal){
+  const g = goal || 8;
+  const cups = recs.reduce((sum,r)=>{
+    const n = parseNum(r.value);
+    return sum + (n > 0 ? n : 1); // 有数值用数值，否则计 1 杯
+  }, 0);
+  const pct = Math.min(100, Math.round((cups/g)*100));
+  const done = cups >= g;
+  return `<div class="health-water">
+    <div class="health-water-bar"><div class="health-water-fill${done?" done":""}" style="width:${pct}%"></div></div>
+    <div class="health-trend-meta">${cups} / ${g} 杯${done?" · 已达成目标":""}</div>
+  </div>`;
+}
+/**
+ * 渲染生活场景的健康概览卡片：运动概览 + 体重趋势 + 睡眠概览 + 喝水进度
+ * @returns {string} HTML 字符串
+ */
+function healthCard(){
+  const all = getHealthRecs();
+  const exerciseRecs = all.filter(r=>r.type===HEALTH_TYPES.EXERCISE);
+  const weightRecs   = all.filter(r=>r.type===HEALTH_TYPES.WEIGHT).sort((a,b)=>(a.created||0)-(b.created||0));
+  const sleepRecs    = all.filter(r=>r.type===HEALTH_TYPES.SLEEP).sort((a,b)=>(a.created||0)-(b.created||0));
+  const waterRecs    = all.filter(r=>r.type===HEALTH_TYPES.WATER);
+
+  // 本周运动
+  const ws = weekStartTs();
+  const weekExercise = exerciseRecs.filter(r=>(r.created||0) >= ws);
+  const weekDistance = weekExercise.reduce((s,r)=>s + parseNum((r.value||"").match(/[\d.]+/)?.[0] || 0), 0);
+  // 今日喝水
+  const todayWater = waterRecs.filter(r=>isToday(r.created));
+
+  return `<div class="card"><h2>📊 健康概览</h2>
+    <p class="sub">运动 · 体重 · 睡眠 · 喝水　本地记录，自动汇总</p>
+    <div class="health-grid">
+      <div class="health-item"><div class="health-val">${weekExercise.length}</div><div class="health-lbl">本周运动（次）</div></div>
+      <div class="health-item"><div class="health-val">${weekDistance.toFixed(1)}</div><div class="health-lbl">本周距离（km）</div></div>
+      <div class="health-item"><div class="health-val">${todayWater.reduce((s,r)=>{const n=parseNum(r.value);return s+(n>0?n:1);},0)}/8</div><div class="health-lbl">今日喝水（杯）</div></div>
+      <div class="health-item"><div class="health-val">${sleepRecs.length? (sleepRecs.slice(-7).map(r=>parseNum(r.value)).filter(v=>v>0).reduce((a,b)=>a+b,0)/Math.max(1,sleepRecs.slice(-7).map(r=>parseNum(r.value)).filter(v=>v>0).length)).toFixed(1):"—"}</div><div class="health-lbl">近 7 天均睡（h）</div></div>
+    </div>
+    <div class="health-section"><h3>体重趋势</h3>${weightTrendSVG(weightRecs.slice(-5))}</div>
+    <div class="health-section"><h3>睡眠概览</h3>${sleepBarsHTML(sleepRecs)}</div>
+    <div class="health-section"><h3>今日喝水</h3>${waterProgressHTML(todayWater, 8)}</div>
+  </div>`;
+}
+/**
+ * 绑定健康概览卡片交互（预留：未来可加水喝 +1 按钮、体重快速录入等）
+ * @returns {void}
+ */
+function bindHealthCard(){
+  // 当前版本为纯展示卡片，无交互绑定；预留 hook 供后续扩展
+}
+
 
 // ===== Render Layer (渲染层·场景主区) =====
 /* ---------- 渲染：场景主区 ---------- */
@@ -4596,8 +4801,16 @@ function renderMainHTML(){
   }
 
   const recFields = rec.fields.map(f=>{
-    const inp = f.type==="textarea" ? `<textarea name="${f.k}" placeholder="${f.label}"></textarea>`
-      : `<input name="${f.k}" type="${f.type==="number"?"number":"text"}" placeholder="${f.label}">`;
+    let inp;
+    if(f.type==="textarea"){
+      inp = `<textarea name="${f.k}" placeholder="${f.label}"></textarea>`;
+    } else if(f.type==="select"){
+      const opts = (f.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
+      inp = `<select name="${f.k}">${opts}</select>`;
+    } else {
+      const ph = f.placeholder || f.label;
+      inp = `<input name="${f.k}" type="${f.type==="number"?"number":"text"}" placeholder="${esc(ph)}">`;
+    }
     return `<div class="fld"><label>${f.label}</label>${inp}</div>`;
   }).join("");
   const recForm = `<form class="form-row" id="recForm">${recFields}
@@ -4668,7 +4881,7 @@ function bindScenario(){
   };
   $("#recForm").onsubmit = e=>{
     e.preventDefault(); const f=e.target; const obj={id:uid(), created:Date.now()};
-    SCENARIOS[active].record.fields.forEach(fl=> obj[fl.k]=f[fl.k].value.trim());
+    SCENARIOS[active].record.fields.forEach(fl=> obj[fl.k]=f.elements[fl.k].value.trim());
     const arr=getRec(active); arr.unshift(obj); setRec(active, arr); render();
   };
   $$("[data-move]").forEach(b=> b.onclick=()=>{
@@ -6621,6 +6834,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // 架构项② 渲染扩展（卡片注册 + 场景扩展区注册）
     registerCard, registerSceneSection, getSceneSections,
     renderSceneSections, bindSceneSections,
+    // v1.3.4-C 生活场景·健康概览卡片（供测试驱动与断言）
+    healthCard, bindHealthCard, getHealthRecs, parseNum,
     // 第六轮 R5：工作记忆容量可配置
     getMemMax
   };
