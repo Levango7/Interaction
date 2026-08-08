@@ -1569,6 +1569,31 @@ function mdToHtml(str){
   flushPara();
   return blocks.map(b => b.type==="block" ? b.html : "<p>"+b.lines.map(inlineMd).join("<br>")+"</p>").join("");
 }
+/**
+ * 轻量 HTML 消毒器（零依赖）。
+ * 移除危险标签和属性，保留安全 HTML。
+ * @param {string} html - 原始 HTML 字符串
+ * @returns {string} 消毒后的安全 HTML
+ */
+function sanitizeHtml(html){
+  if (!html || typeof html !== "string") return "";
+  let s = html;
+  // 1. 移除危险标签（script/style/link/meta/title/base/head）
+  s = s.replace(/<\s*(script|style|link|meta|title|base|head)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
+  s = s.replace(/<\s*(script|style|link|meta|title|base|head)\b[^>]*\/?\s*>/gi, "");
+  // 2. 移除 iframe/object/embed/applet
+  s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
+  s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*\/?\s*>/gi, "");
+  // 3. 移除所有 on* 事件属性
+  s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  // 4. 移除 javascript:/vbscript:/data: 协议的 href 和 src（有引号）
+  s = s.replace(/(href|src)\s*=\s*(["'])\s*(javascript|vbscript|data)\s*:[^"']*\2/gi, "$1=\"\"");
+  // 4b. 无引号情况
+  s = s.replace(/(href|src)\s*=\s*(javascript|vbscript|data)\s*:[^\s>]*/gi, "$1=\"\"");
+  // 5. 移除 CSS expression()
+  s = s.replace(/expression\s*\(/gi, "");
+  return s;
+}
 
 // ===== UI Layer (交互层·主题与通知) =====
 /* ---------- 主题 / 通知 ---------- */
@@ -3313,7 +3338,7 @@ function renderSide(){
     return `<button class="nav-item ${sc===active?"active":""}" data-sc="${sc}" style="--sc:${s.color}">
       ${(SCENARIOS[sc].icon || "").replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">${s.name}</span><span class="cnt">${open}</span></button>`;
   }).join("");
-  $("#side").innerHTML = SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + items;
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + items);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     if(b.dataset.recycle){ openRecycle(); return; }
     setActive(b.dataset.sc); render();
@@ -3725,7 +3750,7 @@ function renderEmpty(type){
 function withSkeleton(fn, skeletonType){
   const main = document.getElementById("main");
   if(main){
-    main.innerHTML = renderSkeleton(skeletonType || "board");
+    main.innerHTML = sanitizeHtml(renderSkeleton(skeletonType || "board"));
   }
   setTimeout(function(){
     if(typeof fn === "function") fn();
@@ -4072,7 +4097,7 @@ function renderOverview(){
       <span class="v">${dn}/${tot}</span></div>`;
   }).join("");
 
-  $("#main").innerHTML =
+  $("#main").innerHTML = sanitizeHtml(
     `<div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选，支持场景 / 状态 / 日期 / 标签组合）</p>
       <div class="glob-filters">
         <input id="globSearch" placeholder="关键词，如 周报 / 跑步…">
@@ -4091,7 +4116,7 @@ function renderOverview(){
      </div>
      ${renderHabitChainCard()}
      ${renderCoachCard()}
-     <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>`;
+     <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>`);
 
   const gs=$("#globSearch"); if(gs) gs.oninput=()=> renderGlob(gs.value.trim().toLowerCase());
   ["globFSc","globFStatus","globFDate","globFTag"].forEach(id=>{
@@ -4224,8 +4249,8 @@ function renderStats(){
   const stats = calcStats();
   // T4.2：无任何任务数据时显示 no-stats 空状态（替代空图表/空饼图）
   if(stats.total === 0){
-    $("#main").innerHTML = `<div class="card">` + renderEmpty("no-stats") + `</div>` +
-      `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`;
+    $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>` +
+      `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`);
     return;
   }
   // 关键指标卡片（P3：新增平均周期；本周完成带周环比角标）
@@ -4284,8 +4309,8 @@ function renderStats(){
   const chainCard = `<div class="card"><h2>${UI_ICONS.stats} 习惯链成功率</h2>` +
     `<p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>${chainsHtml}</div>`;
 
-  $("#main").innerHTML = cardsHtml + trendHtml + pieHtml + hourHtml + chainCard +
-    `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`;
+  $("#main").innerHTML = sanitizeHtml(cardsHtml + trendHtml + pieHtml + hourHtml + chainCard +
+    `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`);
 
   // 绑定周/双周/月切换
   $$(".stats-tab").forEach(b => b.onclick = () => {
@@ -4344,9 +4369,9 @@ function _applyGlobFilters(f){
 function renderGlobViews(){
   const box=$("#globViews"); if(!box) return;
   const views=getGlobViews();
-  box.innerHTML = (views.length
+  box.innerHTML = sanitizeHtml((views.length
     ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="应用视图">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="删除视图">×</button></span>`).join("")
-    : "") + `<button type="button" class="glob-view-save" id="globViewSave" title="保存当前筛选为视图">＋ 保存视图</button>`;
+    : "") + `<button type="button" class="glob-view-save" id="globViewSave" title="保存当前筛选为视图">＋ 保存视图</button>`);
   $$("#globViews [data-view]").forEach(ch=>{
     ch.onclick = e=>{
       if(e.target.closest(".gv-del")) return; // 删除按钮单独处理
@@ -4373,7 +4398,7 @@ function renderGlob(q){
   // 兼容：renderGlob(q) 直传关键词时同步输入框语义（q 优先）
   if(typeof q==="string") f.q=q.trim().toLowerCase();
   const hasFilter = f.q||f.sc||f.status||f.date||f.tag;
-  if(!hasFilter){ res.innerHTML=""; return; }
+  if(!hasFilter){ res.innerHTML=sanitizeHtml(""); return; }
   const tasks=_applyGlobFilters(f);
   const recs=[];
   if(f.q && !f.sc && !f.status && !f.date && !f.tag){
@@ -4386,7 +4411,7 @@ function renderGlob(q){
     tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}${t.due?" · "+t.due:""}${(t.tags&&t.tags.length)?" · "+t.tags.map(esc).join("/"):""}</div></div></li>`).join("")+`</ul>`;
   if(recs.length) html+=`<div style="font-size:13px;color:var(--muted);margin:6px 0">资料 (${recs.length})</div><ul class="list">`+
     recs.map(r=>`<li><div class="body"><div class="t">${esc(r.title)}</div><div class="m">${SCENARIOS[r.sc].name}</div></div></li>`).join("")+`</ul>`;
-  res.innerHTML=html||renderEmpty("no-search");
+  res.innerHTML=sanitizeHtml(html||renderEmpty("no-search"));
 }
 
 // ===== Render Layer (渲染层·场景细分模块) =====
@@ -4670,8 +4695,8 @@ function bindScenario(){
   $$("[data-copy]").forEach(b=> b.onclick=()=>{
     const o=b.innerHTML;
     navigator.clipboard.writeText(b.dataset.val).then(()=>{
-      b.innerHTML="已复制"; setTimeout(()=>b.innerHTML=o,1200);
-    }).catch(()=>{ b.innerHTML="复制失败"; setTimeout(()=>b.innerHTML=o,1200); });
+      b.innerHTML=sanitizeHtml("已复制"); setTimeout(()=>b.innerHTML=sanitizeHtml(o),1200);
+    }).catch(()=>{ b.innerHTML=sanitizeHtml("复制失败"); setTimeout(()=>b.innerHTML=sanitizeHtml(o),1200); });
   });
   const tf=$("#tagFilter"); if(tf) tf.oninput=applyBoardFilter;
   const bs=$("#boardSearch"); if(bs) bs.oninput=applyBoardFilter;   // B2：标题搜索接线
@@ -4869,6 +4894,21 @@ function closeTaskEditModal(){
 // ===== AI Layer (AI 层·对话循环) =====
 /* ---------- AI 对话（带工具调用） ---------- */
 /**
+ * R07：base URL 安全校验——只允许 https://（允许 http://localhost / http://127.0.0.1 供开发）。
+ * 防止配置错误或恶意配置导致 Key 明文发往 http:// 公网。
+ * @param {string} base
+ * @returns {boolean}
+ */
+function validateBaseUrl(base){
+  if (!base || typeof base !== "string") return false;
+  try {
+    const u = new URL(base);
+    if (u.protocol === "https:") return true;
+    if (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) return true;
+    return false;
+  } catch (e){ return false; }
+}
+/**
  * B8：读取 AI 请求参数（超时秒数 / 温度），带默认值与范围校验。
  * 存储于 cfg 顶层（非 profile 字段），浏览器与 Electron 双路径共用。
  * @returns {{timeoutSec:number, temperature:number}}
@@ -4911,6 +4951,10 @@ async function chatOnce(messages, opts){
 
     // 浏览器 / Edge / 本地服务：直连兜底（P0-10：超时 + 错误分级）
     const base=((ap && ap.base) || "https://api.openai.com/v1").replace(/\/+$/,"");
+    // R07：base URL 安全校验——只允许 https://（允许 http://localhost 供开发），非法 URL 直接报错不发送请求
+    if (!validateBaseUrl(base)) {
+      throw new Error("AI base URL 不安全：必须使用 https:// 协议（开发环境可用 http://localhost）");
+    }
     // 重试矩阵（与 electron/main.js 主进程 chat 对齐）：网络错误(TypeError)/429/5xx 退避重试，
     // 间隔 1s*(attempt+1)；AbortError/TimeoutError/401/其他 4xx 不重试
     let lastErr=null;
@@ -5217,7 +5261,7 @@ async function runChatLoop(messages, hist){
 function renderChat(){
   const el=$("#chat"); if(!el) return;
   const hist=getChat(active);
-  el.innerHTML = hist.length? hist.map(m=>{
+  el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
     if(m.role==="tool") return `<div class="msg tool">${esc(m._disp || m.content)}</div>`;
     if(m.role==="assistant" && m.tool_calls && m.tool_calls.length){
       const s=m.tool_calls.map(tc=>"调用工具 "+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
@@ -5230,7 +5274,7 @@ function renderChat(){
     if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">重试</button></div>`;
     if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
     return `<div class="msg ${m.role}">${esc(m.content||"")}</div>`;
-  }).join("") : `<div class="msg assistant">你好，我是${SCENARIOS[active].name}助手，可以直接让我「建个任务」「查总览」「搜索」。</div>`;
+  }).join("") : `<div class="msg assistant">你好，我是${SCENARIOS[active].name}助手，可以直接让我「建个任务」「查总览」「搜索」。</div>`);
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
   scrollChat();
@@ -5333,7 +5377,7 @@ function buildCmds(q){
 function renderCmd(q){
   cmdItems=buildCmds(q); cmdSel=0;
   const ul=$("#cmdList"); if(!ul) return;
-  if(!cmdItems.length){ ul.innerHTML=`<li class="cmd-empty" style="color:var(--muted);cursor:default;justify-content:center">无匹配</li>`; return; }
+  if(!cmdItems.length){ ul.innerHTML=sanitizeHtml(`<li class="cmd-empty" style="color:var(--muted);cursor:default;justify-content:center">无匹配</li>`); return; }
   let html="", lastGroup=null;
   cmdItems.forEach((it,i)=>{
     const g = it.group || "";
@@ -5341,7 +5385,7 @@ function renderCmd(q){
     html += `<li class="${i===cmdSel?"sel":""}" data-i="${i}">
     <span class="ci">${it.icon}</span><span>${esc(it.label)}</span>${it.sub?`<span class="sub">${esc(it.sub)}</span>`:""}</li>`;
   });
-  ul.innerHTML=html;
+  ul.innerHTML=sanitizeHtml(html);
   [...ul.querySelectorAll("li[data-i]")].forEach(li=>{
     li.onmouseenter=()=>{ cmdSel=+li.dataset.i; updateCmdSel(); };
     li.onclick=()=> runCmd(+li.dataset.i);
@@ -5686,7 +5730,7 @@ function render(){
     if(active==="overview"){ renderOverview(); return; }
     if(active==="stats"){ renderStats(); return; }
     const cfg=getCfg();
-    $("#main").innerHTML = renderToday() + renderMainHTML();
+    $("#main").innerHTML = sanitizeHtml(renderToday() + renderMainHTML());
     bindScenario();
     setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
     setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
@@ -5702,12 +5746,12 @@ function render(){
     pushDiag("error", "render error: "+(e&&e.message||e), {where:"render"});
     const main = document.getElementById("main");
     if(main){
-      main.innerHTML = '<div class="card" style="text-align:center;padding:40px">'+
+      main.innerHTML = sanitizeHtml('<div class="card" style="text-align:center;padding:40px">'+
         '<h2>⚠️ 数据异常</h2>'+
         '<p style="color:var(--muted);margin:16px 0">渲染时发生错误，建议导出备份后清空数据。</p>'+
         '<button class="mini" onclick="doExport()" style="margin:8px">导出备份</button>'+
         '<button class="mini" onclick="if(confirm(\'确定清空？\')){localStorage.clear();location.reload();}" style="margin:8px;background:var(--danger)">清空数据</button>'+
-        '</div>';
+        '</div>');
     }
     try{ toast("渲染异常："+(e&&e.message||"未知错误"), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
   }
@@ -5967,18 +6011,18 @@ function _renderChainEditRow(l){
 function renderLinksBox(){
   const box=$("#linksBox"); if(!box) return;
   const links=getLinks();
-  box.innerHTML = links.map(l=>_renderChainRow(l)).join("");
+  box.innerHTML = sanitizeHtml(links.map(l=>_renderChainRow(l)).join(""));
   // 填充添加表单的下拉（仅首次填充，避免覆盖用户选择）
   const selSrc = $("#chainAddSrc"), selDst = $("#chainAddDst");
-  if(selSrc && !selSrc.options.length) selSrc.innerHTML = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
-  if(selDst && !selDst.options.length) selDst.innerHTML = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
+  if(selSrc && !selSrc.options.length) selSrc.innerHTML = sanitizeHtml(ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join(""));
+  if(selDst && !selDst.options.length) selDst.innerHTML = sanitizeHtml(ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join(""));
 }
 /* P1：场景变更后强制刷新习惯链表单的场景下拉（含自定义场景） */
 function refreshChainScSelects(){
   const opts = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
   const selSrc = $("#chainAddSrc"), selDst = $("#chainAddDst");
-  if(selSrc) selSrc.innerHTML = opts;
-  if(selDst) selDst.innerHTML = opts;
+  if(selSrc) selSrc.innerHTML = sanitizeHtml(opts);
+  if(selDst) selDst.innerHTML = sanitizeHtml(opts);
 }
 /* ---------- P1：场景管理面板（设置抽屉） ---------- */
 const ICON_LABELS = { overview:"总览", plus:"加号", check:"对勾", chat:"对话", download:"下载", upload:"上传", gear:"齿轮", theme:"月亮", stats:"柱状图", copy:"复制", trash:"垃圾桶" };
@@ -6007,10 +6051,10 @@ function renderScBox(){
       <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="删除场景">×</button>
     </div>`;
   }).join("");
-  box.innerHTML = builtinRows + customRows;
+  box.innerHTML = sanitizeHtml(builtinRows + customRows);
   // 图标下拉填充（仅首次）
   const iconSel = $("#scAddIcon");
-  if(iconSel && !iconSel.options.length) iconSel.innerHTML = CUSTOM_ICON_KEYS.map(k=>`<option value="${k}">${esc(ICON_LABELS[k]||k)}</option>`).join("");
+  if(iconSel && !iconSel.options.length) iconSel.innerHTML = sanitizeHtml(CUSTOM_ICON_KEYS.map(k=>`<option value="${k}">${esc(ICON_LABELS[k]||k)}</option>`).join(""));
   // 颜色选择器默认值从令牌填充（仅首次）
   const addColor = $("#scAddColor");
   if(addColor && !addColor.value) addColor.value = scenarioDefaultColor();
@@ -6060,9 +6104,9 @@ function renderProfileSelect(){
   const cfg = getCfg();
   const sel = $("#cfgProfileSelect");
   const profiles = (cfg && Array.isArray(cfg.profiles)) ? cfg.profiles : [];
-  sel.innerHTML = profiles.length
+  sel.innerHTML = sanitizeHtml(profiles.length
     ? profiles.map(p=>`<option value="${esc(p.id)}">${esc(p.name || "未命名")}</option>`).join("")
-    : `<option value="">（无 Profile）</option>`;
+    : `<option value="">（无 Profile）</option>`);
   const ap = getActiveProfile();
   sel.value = ap ? ap.id : "";
   // 删除按钮：只剩 1 个时禁用
@@ -6079,8 +6123,8 @@ function openDrawer(){ const cfg=getCfg();
   const notifyCb=$("#cfgNotify"); if(notifyCb) notifyCb.checked=getNotifyEnabled();
   // P9：免打扰时段控件回填（小时下拉 0-23，仅首次填充）
   const qStart=$("#cfgQuietStart"), qEnd=$("#cfgQuietEnd");
-  if(qStart && !qStart.options.length) qStart.innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join("");
-  if(qEnd && !qEnd.options.length) qEnd.innerHTML = Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join("");
+  if(qStart && !qStart.options.length) qStart.innerHTML = sanitizeHtml(Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join(""));
+  if(qEnd && !qEnd.options.length) qEnd.innerHTML = sanitizeHtml(Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}:00</option>`).join(""));
   const q=getQuietHours();
   if($("#cfgQuiet")) $("#cfgQuiet").checked=!!q.enabled;
   if(qStart) qStart.value=String(q.start);
@@ -6341,7 +6385,7 @@ function _enterChainEdit(id){
   const row = box.querySelector('.chain-row[data-id="'+id+'"]');
   if(!row) return;
   const tmp = document.createElement("div");
-  tmp.innerHTML = _renderChainEditRow(l);
+  tmp.innerHTML = sanitizeHtml(_renderChainEditRow(l));
   row.replaceWith(tmp.firstChild);
   const kwInput = box.querySelector('.chain-edit-row[data-edit-id="'+id+'"] .chain-edit-kw');
   if(kwInput){ kwInput.focus(); kwInput.select(); }
@@ -6354,7 +6398,7 @@ function _exitChainEdit(id){
   const links = getLinks();
   const l = links.find(x=>x.id===id); if(!l) return;
   const tmp = document.createElement("div");
-  tmp.innerHTML = _renderChainRow(l);
+  tmp.innerHTML = sanitizeHtml(_renderChainRow(l));
   editRow.replaceWith(tmp.firstChild);
 }
 /* 添加新链按钮 */
@@ -6538,10 +6582,12 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     undoTasks, redoTasks, canUndo, canRedo, clearUndoStack,
     // 第四轮批次④：AI 请求参数（超时/温度）可配置（B8）
     getAiParams,
+    // R07：base URL 安全校验（供测试驱动与断言）
+    validateBaseUrl,
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
-    mdToHtml, escapeHtml: esc, safeUrl, inlineMd,
+    mdToHtml, escapeHtml: esc, safeUrl, inlineMd, sanitizeHtml,
     // T3.2 习惯链 UI 编辑（自定义链 CRUD + 渲染辅助）
     getCustomLinks, saveCustomLinks, addCustomLink, removeCustomLink,
     updateCustomLink, toggleCustomLink, resetCustomLinks,
