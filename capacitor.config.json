@@ -1,0 +1,17 @@
+{
+  "appId": "com.interaction.agent",
+  "appName": "Agent工作台",
+  "webDir": ".",
+  "server": { "androidScheme": "https" },
+  "plugins": {
+    "PushNotifications": { "presentationStyle": "badge" },
+    "LocalNotifications": { "smallIcon": "ic_stat_icon" },
+    "Camera": { "permissions": ["camera", "photos"] },
+    "Geolocation": { "permissions": ["location"] },
+    "Filesystem": { "permissions": ["filesystem"] },
+    "Share": {},
+    "Haptics": {},
+    "Device": {},
+    "BiometricAuth": {}
+  }
+}
