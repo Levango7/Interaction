@@ -12,7 +12,7 @@
  *   - Web Push：'push' 事件显示通知，'pushsubscriptionchange' 处理订阅失效
  *   - 离线操作队列存储在 IndexedDB（wb_sync_queue）+ localStorage 兜底
  */
-var CACHE_VERSION = "v15-20260810";
+var CACHE_VERSION = "v15-20260810b";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
