@@ -2185,7 +2185,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.8.5";
+const VERSION = "1.8.6";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -3211,6 +3211,13 @@ function sanitizeHtml(html){
   s = s.replace(/(href|src)\s*=\s*(javascript|vbscript|data)\s*:[^\s>]*/gi, "$1=\"\"");
   // 5. 移除 CSS expression()
   s = s.replace(/expression\s*\(/gi, "");
+  // 6. 移除 SVG/math 标签及其内容（XSS 载荷常见载体）
+  s = s.replace(/<\s*(svg|math)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
+  s = s.replace(/<\s*(svg|math)\b[^>]*\/?\s*>/gi, "");
+  // 7. 移除其他危险标签：form/input/button/template/noscript/noembed/noframes
+  s = s.replace(/<\s*\/?\s*(form|input|button|template|noscript|noembed|noframes)\b[^>]*>/gi, "");
+  // 8. 防御 HTML 实体编码绕过（&#x...; / &#...; 形式的 < > " '）
+  s = s.replace(/&#x?0*(?:3[ce]|6[02c]|7[2-9a-f]|1[06]|2[02-7])\b/gi, "");
   return s;
 }
 
@@ -9757,9 +9764,9 @@ function render(){
 
 // ===== UI Layer (交互层·备份与统计) =====
 /* ---------- 备份 / 统计 ---------- */
-function allKeys(){ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }
+function allKeys(){ try{ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }catch(e){ return []; } }
 function doExport(){
-  const data = {}; allKeys().forEach(k=> data[k]=localStorage.getItem(k));
+  const data = {}; allKeys().forEach(k=>{ try{ data[k]=localStorage.getItem(k); }catch(e){ /* 静默降级 */ } });
   // v1.4-C 多设备同步：写入设备标识 + 导出时间戳 + 版本
   data["_deviceMeta"] = {
     deviceId: getDeviceId(),
@@ -9835,7 +9842,7 @@ function doImport(file){
         } catch(e){ /* 静默 */ }
       }
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
-      Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY) localStorage.setItem(k, data[k]); });
+      Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
       _cfgCache = null; _deviceKey = null;
       clearUndoStack(); // B6：导入后清空撤销栈，避免跨数据状态误撤销
       try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 */ }
@@ -9920,7 +9927,7 @@ function getLastMergeLog(){
 }
 function doClear(){
   if(!confirm("确定清空全部数据？此操作不可恢复！")) return;
-  allKeys().forEach(k=> localStorage.removeItem(k));
+  allKeys().forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){ /* 静默降级 */ } });
   idbClearAll().catch(() => {}); // 架构项①：同步清 IDB 镜像，避免恢复出僵尸数据
   toast("已清空，页面将重新载入示例", "ok"); // B3：alert 改 toast；延迟重载让提示可见
   setTimeout(()=> location.reload(), 900);
@@ -14492,7 +14499,7 @@ function exportReportPDF(report){
   w.document.write("th{background:var(--surface-muted);font-weight:600}");
   w.document.write("p{color:var(--muted)}");
   w.document.write("</style>");
-  w.document.write("</head><body>" + html + "</body></html>");
+  w.document.write("</head><body>" + sanitizeHtml(html) + "</body></html>");
   w.document.close();
   w.focus();
   setTimeout(function(){ try{ w.print(); }catch(e){ /* noop */ } }, 500);
@@ -17141,6 +17148,12 @@ function _evalCondition(condition, context){
     try{ return !!condition(context); }catch(e){ return false; }
   }
   if(typeof condition === "string"){
+    // 安全白名单：先剥离字符串字面量，再检测危险字符/关键字
+    var sanitized = condition.replace(/'[^']*'/g, '""').replace(/"[^"]*"/g, '""');
+    // 禁止赋值、代码块、数组下标、标签等危险字符
+    if(/[;{}=[\]]/.test(sanitized)) return false;
+    // 禁止危险标识符（构造函数、宿主对象、动态执行、模块加载等）
+    if(/\b(new|function|this|window|document|eval|setTimeout|setInterval|fetch|require|import|process|global|self|top|parent|frames|constructor|prototype|__proto__|call|apply|bind)\b/i.test(sanitized)) return false;
     try{
       /* eslint-disable no-new-func */
       var fn = new Function("context", "return (" + condition + ");");
