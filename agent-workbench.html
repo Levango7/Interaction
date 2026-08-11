@@ -97,9 +97,23 @@ a:hover{text-decoration:underline}
 
 /* ===== 整体布局：顶栏 / 侧栏 / 主区 ===== */
 .app{display:flex;flex-direction:column;height:100vh}
-.topbar{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-5);
-  background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap;
+/* 两级顶栏：row1 = 品牌 + 系统级；row2 = 应用级工具（小而鲜明） */
+.topbar{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;
+  background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0;
   backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px)}
+.tb-row1{display:flex;align-items:center;gap:var(--space-2);
+  padding:var(--space-2) var(--space-5)}
+.tb-row2{display:flex;align-items:center;gap:var(--space-2);
+  padding:var(--space-1) var(--space-5) var(--space-2);
+  border-top:1px solid var(--surface-muted);flex-wrap:nowrap;overflow-x:auto}
+.tb-row2 .tbtn{min-height:30px;padding:4px var(--space-2);font-size:var(--fs-xs);
+  color:var(--text-dim-2);border:1px solid var(--line);background:var(--panel2);
+  border-radius:var(--radius-full,var(--radius-md));flex-shrink:0}
+.tb-row2 .tbtn:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.tb-row2 .tbtn svg{width:15px;height:15px}
+.tb-row2 .pomo-widget,.tb-row2 .tracker-widget{flex-shrink:0;padding:2px var(--space-2);gap:var(--space-1)}
+.tb-row2 .pomo-display,.tb-row2 .tracker-display{min-width:0;font-size:var(--fs-xs)}
+.tb-row2 .pomo-actions button,.tb-row2 .tracker-actions button{min-height:26px;padding:0 var(--space-2);font-size:var(--fs-xs)}
 .logo{display:flex;align-items:center;gap:var(--space-2);font-weight:600;font-size:var(--fs-lg);letter-spacing:-.01em}
 .logo .mark{width:28px;height:28px;border-radius:var(--radius-md);background:var(--brand-grad);
   display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-size:var(--fs-base);
@@ -754,7 +768,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .card{padding:var(--space-6);margin-bottom:var(--space-5)}
   .kanban{gap:var(--space-5);max-width:1100px;margin:0 auto}
   .side{width:230px}
-  .topbar{padding:var(--space-3) var(--space-6)}
+  .tb-row1{padding:var(--space-2) var(--space-6)}
+  .tb-row2{padding:var(--space-1) var(--space-6) var(--space-2)}
   .side-toggle{display:flex}
   /* 宽屏图表尺寸放大，避免偏小 */
   .stats-trend-svg{max-width:760px}
@@ -788,7 +803,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* 移动端 <768px：底部导航触摸友好，表单全宽，看板单列 */
 @media(max-width:767px){
-  .topbar{padding:var(--space-2) var(--space-3);gap:var(--space-1);flex-wrap:nowrap;overflow-x:auto}
+  .tb-row1{padding:var(--space-2) var(--space-3)}
+  .tb-row2{padding:var(--space-1) var(--space-2) var(--space-2);gap:var(--space-1)}
   .tbtn{padding:var(--space-2);flex-shrink:0}
   .tbtn .lbl{display:none}
   .body{flex-direction:column}
@@ -836,7 +852,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .onboard-btn-primary, .onboard-btn-secondary{min-height:44px}
   .help-close{min-height:44px;min-width:44px}
   /* 顶栏按钮间距加大，避免误触 */
-  .topbar{gap:var(--space-2)}
+  .tb-row1{gap:var(--space-2)}
+  .tb-row2{gap:var(--space-2)}
   /* 表单输入触摸友好 */
   input, select, textarea{min-height:44px;font-size:var(--fs-lg)}
   /* 看板卡片触摸友好 */
@@ -1630,8 +1647,23 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <a href="#main" class="skip-link" aria-label="跳转到主内容">跳转到主内容</a>
 <div class="app">
   <div class="topbar">
+    <!-- 第一行：品牌 + 系统级操作（指南/命令/主题/设置/安装） -->
+    <div class="tb-row1">
     <div class="logo"><span class="mark">A</span> Agent 工作台</div>
     <div class="spacer"></div>
+    <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl">指南</span></button>
+    <button class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl">命令</span></button>
+    <button class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
+    <button class="tbtn" id="btnGear" title="设置" aria-label="设置">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1-.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1-.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="lbl">设置</span></button>
+    <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl">安装</span></button>
+    </div>
+    <!-- 第二行：应用级工具（小而鲜明） -->
+    <div class="tb-row2">
     <!-- v1.6-B 生产力工具：番茄钟 / 时间追踪 / 日历视图入口 -->
     <div class="pomo-widget" id="pomoWidget" role="group" aria-label="番茄钟" title="番茄钟">
       <span class="pomo-icon" aria-hidden="true">🍅</span>
@@ -1672,16 +1704,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="lbl">协作</span></button>
     <button class="tbtn share-btn" id="btnShare" title="看板分享" aria-label="生成看板分享链接">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="11" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="12.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="11.49"/></svg><span class="lbl">分享</span></button>
-    <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl">安装</span></button>
-    <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl">指南</span></button>
-    <button class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl">命令</span></button>
-    <button class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
-    <button class="tbtn" id="btnGear" title="设置" aria-label="设置">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="lbl">设置</span></button>
+    </div><!-- /tb-row2 -->
     <input type="file" id="fileInput" accept="application/json" style="display:none">
   </div>
 
@@ -12375,10 +12398,15 @@ if (typeof window !== "undefined") {
 // ===== Bootstrap (测试导出·__test) =====
 // 门控：仅本地/测试上下文挂载约 100 个内部函数，线上（https 正式域名）不暴露内部 API。
 // 命中条件：file://（Edge/Electron 本地形态）、localhost/127.0.0.1（本地服务 + jsdom 测试）、URL 显式带 __test=1。
+/* __TEST_GATE__：测试钩子挂载门控（安全收紧 v1.8.9+）
+ * file:// 已移除——本地双击打开（最终用户最常见形态）不再挂载测试钩子，
+ * 避免 devtools 可访问内部函数/数据。测试与调试入口收敛为：
+ *   · localhost / 127.0.0.1（vitest/jsdom 与本地服务模式）
+ *   · 任意环境显式追加 ?__test=1（开发者自查）
+ */
 var __TEST_GATE__ = (function(){
   try{
     if(typeof location === "undefined") return false;
-    if(location.protocol === "file:") return true;
     if(location.hostname === "localhost" || location.hostname === "127.0.0.1") return true;
     return /[?&]__test=1/.test(location.search || "");
   }catch(e){ return false; }

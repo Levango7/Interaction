@@ -1,10 +1,10 @@
 // ===== Bootstrap (测试导出·__test) =====
-// 门控：仅本地/测试上下文挂载约 100 个内部函数，线上（https 正式域名）不暴露内部 API。
-// 命中条件：file://（Edge/Electron 本地形态）、localhost/127.0.0.1（本地服务 + jsdom 测试）、URL 显式带 __test=1。
+// 门控：仅本地/测试上下文挂载约 100 个内部函数，线上（https 正式域名）与本地双击 file:// 均不暴露内部 API。
+// 命中条件：localhost/127.0.0.1（本地服务 + jsdom 测试）、URL 显式带 __test=1。
+// 安全收紧 v1.8.9+：file:// 已移除（与 agent-workbench.html 真相源对齐）。
 var __TEST_GATE__ = (function(){
   try{
     if(typeof location === "undefined") return false;
-    if(location.protocol === "file:") return true;
     if(location.hostname === "localhost" || location.hostname === "127.0.0.1") return true;
     return /[?&]__test=1/.test(location.search || "");
   }catch(e){ return false; }
