@@ -22,14 +22,14 @@
 :root{
   /* ===== Apple Minimalist 配色（柔和、干净、有呼吸感） ===== */
   --bg:#f5f5f7; --panel:#ffffff; --panel2:#fafafc; --line:#e5e5ea;
-  --text:#1d1d1f; --muted:#6e6e73; --accent:#0a6cbd;
+  --text:#1d1d1f; --muted:#5e5e63; --accent:#0a6cbd;
   --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.04);
   --safe:env(safe-area-inset-bottom);
   /* 表面层次 */
   --surface-hover:#f0f0f4; --surface-muted:#f2f2f5;
   /* 文本层次 */
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.22);
-  --text-dim:#424245; --text-dim-2:#6e6e73; --text-dim-3:#515154; --text-faint:#707074;
+  --text-dim:#424245; --text-dim-2:#6e6e73; --text-dim-3:#515154; --text-faint:#646469;
   /* 语义色（柔和、不刺眼） */
   --danger:#d83b3b; --danger-soft:#fdeeee; --danger-border:#f3c4c4;
   --danger-overdue-bg:#fef6f6; --danger-overdue-border:#f0c8c8;
@@ -2188,7 +2188,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.8.7";
+const VERSION = "1.8.8";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -2264,6 +2264,7 @@ function pushDiag(level, msg, ctx){
   }catch(e){ /* 诊断自身失败绝不能影响业务 */ }
 }
 function getDiag(){ return _diagLog.slice(); }
+
 
 "use strict";
 
@@ -2506,6 +2507,7 @@ function load(k, def){
     return raw ? JSON.parse(raw) : def;
   }catch(e){
     // 解析失败：保留「损坏的原始串」供恢复，不再静默丢数据；返回默认值，不抛。
+    try{ pushDiag("error", "load parse error: "+(e&&e.message||e), {where:"load", key:k}); }catch(_){}
     if(typeof raw === "string"){
       _corrupted[k] = raw;
       if(!_corruptWarned){
@@ -2906,7 +2908,7 @@ function idbClear(store){
               st.delete(k);
               n++;
             }
-          }catch(e){}
+          }catch(e){ try{ pushDiag("error", "idb clear keys parse error: "+(e&&e.message||e), {where:"idbClearKeys"}); }catch(_){} }
         });
         tx.oncomplete = () => resolve(n);
         tx.onerror = () => resolve(n);
@@ -2935,7 +2937,7 @@ function getHybridData(type){
   try{
     const raw = localStorage.getItem(HYBRID_PREFIX + type);
     if(raw !== null) return Promise.resolve(JSON.parse(raw));
-  }catch(e){}
+  }catch(e){ try{ pushDiag("error", "getHybridData ls read error: "+(e&&e.message||e), {where:"getHybridData"}); }catch(_){} }
   /* 再从 IDB 读 */
   return idbGet("hybrid", type).then(v => {
     if(v !== undefined && v !== null && v.data !== undefined) return v.data;
@@ -3048,11 +3050,11 @@ function migrateToIDBIfNeeded(){
   try{
     const tasks = JSON.parse(localStorage.getItem(PREFIX + "tasks") || "[]");
     taskCount = Array.isArray(tasks) ? tasks.length : 0;
-  }catch(e){}
+  }catch(e){ try{ pushDiag("error", "migrate tasks count error: "+(e&&e.message||e), {where:"migrateTasksCount"}); }catch(_){} }
   try{
     const recs = JSON.parse(localStorage.getItem(PREFIX + "recs") || "[]");
     recCount = Array.isArray(recs) ? recs.length : 0;
-  }catch(e){}
+  }catch(e){ try{ pushDiag("error", "migrate recs count error: "+(e&&e.message||e), {where:"migrateRecsCount"}); }catch(_){} }
   const total = taskCount + recCount;
   if(total < IDB_THRESHOLD){
     return Promise.resolve({ migrated: false, reason: "below threshold", count: total });
@@ -3064,8 +3066,8 @@ function migrateToIDBIfNeeded(){
     }
     /* 迁移任务和记录到 IDB */ 
     let tasks = [], recs = [];
-    try{ tasks = JSON.parse(localStorage.getItem(PREFIX + "tasks") || "[]"); }catch(e){}
-    try{ recs = JSON.parse(localStorage.getItem(PREFIX + "recs") || "[]"); }catch(e){}
+    try{ tasks = JSON.parse(localStorage.getItem(PREFIX + "tasks") || "[]"); }catch(e){ try{ pushDiag("error", "migrate tasks data error: "+(e&&e.message||e), {where:"migrateTasksData"}); }catch(_){} }
+    try{ recs = JSON.parse(localStorage.getItem(PREFIX + "recs") || "[]"); }catch(e){ try{ pushDiag("error", "migrate recs data error: "+(e&&e.message||e), {where:"migrateRecsData"}); }catch(_){} }
     return Promise.all([
       idbPut("tasks", { id: "all", items: tasks }),
       idbPut("records", { id: "all", items: recs })
@@ -3227,8 +3229,8 @@ function sanitizeHtml(html){
     // 6. 移除 SVG/math 标签及其内容（XSS 载荷常见载体）
     s = s.replace(/<\s*(svg|math)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
     s = s.replace(/<\s*(svg|math)\b[^>]*\/?\s*>/gi, "");
-    // 7. 移除其他危险标签：form/input/button/template/noscript/noembed/noframes
-    s = s.replace(/<\s*\/?\s*(form|input|button|template|noscript|noembed|noframes)\b[^>]*>/gi, "");
+    // 7. 移除其他危险标签：template/noscript/noembed/noframes
+    s = s.replace(/<\s*\/?\s*(template|noscript|noembed|noframes)\b[^>]*>/gi, "");
     // 8. 防御 HTML 实体编码绕过（&#x...; / &#...; 形式的 < > " '）
     //    覆盖前导零变体、大写 hex 变体、无分号变体（具体正则见下方）
     s = s.replace(/&#x?0*(?:3[ce]|6[02c]|7[2-9a-f]|1[06]|2[02-7])\b/gi, "");
@@ -4024,7 +4026,7 @@ linkStore.get = () => load(PREFIX+"links", null) || DEFAULT_LINKS.slice();
 let _renderTimer = null;
 taskStore.subscribe(() => {
   if(_renderTimer) clearTimeout(_renderTimer);
-  _renderTimer = setTimeout(() => { try{ render(); }catch(e){} }, 50);
+  _renderTimer = setTimeout(() => { try{ render(); }catch(e){ try{ pushDiag("error", "render schedule error: "+(e&&e.message||e), {where:"renderSchedule"}); }catch(_){} } }, 50);
 });
 
 /**
@@ -6517,12 +6519,14 @@ function openSharedTaskModal(task){
   </div>`;
   document.body.insertAdjacentHTML("beforeend", html);
   const closeBtn = $("#shareTaskClose");
-  if(closeBtn) closeBtn.onclick = ()=>{ const m = $("#shareTaskModal"); if(m) m.remove(); };
+  // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器
+  const _ac = new AbortController();
+  const _close = ()=>{ _ac.abort(); const m = $("#shareTaskModal"); if(m) m.remove(); };
+  if(closeBtn) closeBtn.onclick = _close;
   const modal = $("#shareTaskModal");
-  if(modal) modal.onclick = (e)=>{ if(e.target === modal) modal.remove(); };
+  if(modal) modal.onclick = (e)=>{ if(e.target === modal) _close(); };
   // ESC 关闭
-  const escHandler = (e)=>{ if(e.key === "Escape"){ const m = $("#shareTaskModal"); if(m) m.remove(); document.removeEventListener("keydown", escHandler); } };
-  document.addEventListener("keydown", escHandler);
+  document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") _close(); }, { signal: _ac.signal });
 }
 /**
  * 页面加载时检测 location.hash 含 #share=，解码显示只读任务详情弹窗
@@ -9027,7 +9031,7 @@ function abortChat(){
   if(!chatController.ac) return false; // T5.3 AbortController 不可用：静默返回 false
   chatController.aborted=true;
   chatController.reason="user";
-  try{ chatController.ac.abort(new Error("user-cancel")); }catch(e){}
+  try{ chatController.ac.abort(new Error("user-cancel")); }catch(e){ try{ pushDiag("error", "cancelChat abort error: "+(e&&e.message||e), {where:"cancelChat"}); }catch(_){} }
   if(chatController.timer){ clearTimeout(chatController.timer); }
   return true;
 }
@@ -9076,7 +9080,7 @@ async function confirmPendingDanger(){
   const messages=[{role:"system", content:chatSysPrompt("确认")}].concat(hist.map(m=>({...m})));
   for(const c of pendingConfirm.toolCalls){
     const res=execTool(c.name, c.args, true); // 强制（已确认）
-    let rj=null; try{ rj=JSON.parse(res); }catch(e){}
+    let rj=null; try{ rj=JSON.parse(res); }catch(e){ try{ pushDiag("error", "confirm tool result parse error: "+(e&&e.message||e), {where:"confirmExecTool"}); }catch(_){} }
     const tm={role:"tool", tool_call_id:c.id, content:res, _disp:(rj&&rj.msg)||("工具 "+c.name)};
     messages.push(tm); hist.push(tm);
   }
@@ -9175,7 +9179,7 @@ async function onChatSubmit(e){
     if(taskHit.due) args.due = taskHit.due;
     if(taskHit.priority) args.priority = taskHit.priority;
     const res = execTool("create_task", args);
-    let rj = null; try{ rj = JSON.parse(res); }catch(e){}
+    let rj = null; try{ rj = JSON.parse(res); }catch(e){ try{ pushDiag("error", "NL task result parse error: "+(e&&e.message||e), {where:"nlCreateTask"}); }catch(_){} }
     hist.push({role:"user", content:text});
     const okMsg = rj && rj.ok;
     const reply = okMsg
@@ -10946,11 +10950,12 @@ function openTemplateModal(){
     </div>
   </div>`;
   document.body.insertAdjacentHTML("beforeend", html);
-  const close = ()=>{ const m = $("#sceneTemplateModal"); if(m) m.remove(); };
+  // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器
+  const _ac = new AbortController();
+  const close = ()=>{ _ac.abort(); const m = $("#sceneTemplateModal"); if(m) m.remove(); };
   $("#sceneTemplateClose").onclick = close;
   $("#sceneTemplateModal").onclick = (e)=>{ if(e.target === $("#sceneTemplateModal")) close(); };
-  const escHandler = (e)=>{ if(e.key === "Escape"){ close(); document.removeEventListener("keydown", escHandler); } };
-  document.addEventListener("keydown", escHandler);
+  document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") close(); }, { signal: _ac.signal });
   $$("#sceneTemplateModal [data-tpl-import]").forEach(btn => {
     btn.onclick = ()=>{
       const idx = parseInt(btn.getAttribute("data-tpl-import"), 10);
@@ -11079,11 +11084,12 @@ function openPluginDetailModal(id){
     + '</div>'
   + '</div>';
   document.body.insertAdjacentHTML("beforeend", html);
-  const close = () => { const m = $("#pluginDetailModal"); if(m) m.remove(); };
+  // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器
+  const _ac = new AbortController();
+  const close = () => { _ac.abort(); const m = $("#pluginDetailModal"); if(m) m.remove(); };
   $("#pluginDetailClose").onclick = close;
   $("#pluginDetailModal").onclick = (e) => { if(e.target === $("#pluginDetailModal")) close(); };
-  const escHandler = (e) => { if(e.key === "Escape"){ close(); document.removeEventListener("keydown", escHandler); } };
-  document.addEventListener("keydown", escHandler);
+  document.addEventListener("keydown", (e) => { if(e.key === "Escape") close(); }, { signal: _ac.signal });
   $("#pluginConfigSave").onclick = () => {
     const txt = $("#pluginConfigEditor").value;
     let cfg;
@@ -18772,7 +18778,7 @@ function workerTerminate(){
           w._resolvers = {};
         }
         w.terminate();
-      }catch(e){}
+      }catch(e){ try{ pushDiag("error", "worker pool terminate error: "+(e&&e.message||e), {where:"workerPoolTerminate"}); }catch(_){} }
     }
   }
   /* 拒绝所有排队任务 */ 
