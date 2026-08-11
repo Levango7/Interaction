@@ -9,11 +9,14 @@
  * 命令：
  *   node scripts/build.mjs                # 锁死：提示以 HTML 为源，不落盘、退出码 0
  *   node scripts/build.mjs --check        # 版本一致性校验（六处）+ HTML 完整性检查
- *   node scripts/build.mjs --prod         # 生产构建 -> agent-workbench.prod.html
- *                                          #   （truth HTML 直通，仅把 __TEST_GATE__ 硬置为 false）
+ *   node scripts/build.mjs --prod         # 生产构建，产出部署四件套：
+ *                                          #   agent-workbench.prod.html（__TEST_GATE__ 硬置 false）
+ *                                          #   service-worker.prod.js（CACHE_VERSION 自动 bump：
+ *                                          #     v{应用版本}-{UTC时间戳}，杜绝"改了 HTML 但 PWA 吃旧缓存"）
  *
  * 注意：不再有 src->HTML 字节拼接。--prod 通过把 __TEST_GATE__ 置 false 来
  * 停用测试钩子（块仍在但不执行/不暴露），避免物理剥离导致的括号配对风险。
+ * 部署/hooks 请用 .prod 产物；仓库内的 service-worker.js 保持开发基线值不变。
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -61,16 +64,35 @@ if (CHECK) {
   process.exit(0);
 }
 
-/* ---------- --prod：truth HTML 直通 + 停用测试钩子 ---------- */
+/* ---------- --prod：truth HTML 直通 + 停用测试钩子 + SW 缓存版本自动 bump ---------- */
 if (PROD) {
   const html = readFileSync(TRUTH_HTML, 'utf8');
-  // 把 __TEST_GATE__ 的计算结果硬置为 false：测试钩子块不执行，生产永不暴露内部 API。
-  // 仅替换 IIFE 头，保留块体（死代码），不做有风险的物理剥离。
+  // 1) 把 __TEST_GATE__ 的计算结果硬置为 false：测试钩子块不执行，生产永不暴露内部 API。
+  //    仅替换 IIFE 头，保留块体（死代码），不做有风险的物理剥离。
   const RE = /var __TEST_GATE__ = \(function\(\)\{[\s\S]*?\}\)\(\);/;
   if (!RE.test(html)) fail('未找到 __TEST_GATE__ 定义，无法安全生成生产构建');
   const prodHtml = html.replace(RE, 'var __TEST_GATE__ = false; /* [prod build] test hooks disabled */');
   writeFileSync(PROD_HTML, prodHtml);
   console.log(`[build] wrote ${PROD_HTML} (${prodHtml.length} bytes, sha256:${sha(Buffer.from(prodHtml))}) · __TEST_GATE__=false`);
+
+  // 2) SW 缓存版本自动 bump：从真相源提取应用版本，叠加 UTC 时间戳，
+  //    保证每次 prod 构建产物的 CACHE_VERSION 全局唯一 → SW activate 必然清旧缓存，
+  //    根治"改了 HTML 但 PWA 用户一直看到旧版"的问题。
+  const SW_SRC = join(root, 'service-worker.js');
+  const SW_PROD = join(root, 'service-worker.prod.js');
+  if (existsSync(SW_SRC)) {
+    const appVer = (() => { const m = html.match(/const VERSION = "([^"]+)"/); return m ? m[1] : 'dev'; })();
+    const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14); // yyyyMMddHHmmss（UTC）
+    const newCacheVer = `v${appVer}-${ts}`;
+    const sw = readFileSync(SW_SRC, 'utf8');
+    const SW_RE = /var CACHE_VERSION = "[^"]*";/;
+    if (!SW_RE.test(sw)) fail('service-worker.js 中未找到 CACHE_VERSION 定义');
+    const swProd = sw.replace(SW_RE, `var CACHE_VERSION = "${newCacheVer}"; /* [prod build] auto-bumped */`);
+    writeFileSync(SW_PROD, swProd);
+    console.log(`[build] wrote ${SW_PROD} · CACHE_VERSION=${newCacheVer}`);
+  } else {
+    console.warn('[build] 未找到 service-worker.js，跳过 SW 产物（不影响 HTML 构建）');
+  }
   process.exit(0);
 }
 

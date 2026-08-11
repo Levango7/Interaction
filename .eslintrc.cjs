@@ -58,6 +58,11 @@ module.exports = {
       parserOptions: { sourceType: "module" }
     },
     {
+      // scripts 下 ESM 构建脚本（.mjs 始终为 module）
+      files: ["scripts/**/*.mjs"],
+      parserOptions: { sourceType: "module" }
+    },
+    {
       files: ["service-worker.js"],
       env: { serviceworker: true, browser: false, node: false }
     }

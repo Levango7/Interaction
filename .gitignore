@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 agent-workbench.prod.html
+service-worker.prod.js
 
 # 临时文件
 tmp.*
