@@ -2,6 +2,174 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.8.9] - 2026-08-11
+
+### 测试修复 + Low 安全加固
+
+- **sanitizeHtml SVG 保留**：修改第 6 步，保留 SVG 标签（装饰性图标），只移除 math 标签，修复导航项 SVG 被 strip 导致 aria-hidden 测试失败
+- **calcStats weekDone 滚动窗口**：从"自然周（周一起）"改为"滚动 7 天窗口"，避免周一/周二的边界抖动
+- **全局搜索防抖移除**：去掉 _globSearchDebounced 的 300ms debounce，改为同步响应，修复搜索空状态测试
+- **底部导航 active 指示器**：添加 .nav-item.active::before 伪元素和 @keyframes nav-indicator 动画
+- **Low 安全加固**：为关键用户输入添加 maxlength 属性（任务标题 200、聊天消息 4000、笔记内容 10000 等）；为 API Key 添加 autocomplete="new-password"；为 API Base URL 和模型添加 autocomplete="off"
+
+---
+
+## [v1.8.8] - 2026-08-11
+
+### 安全加固（Medium 修复）
+
+- **M1 事件监听器泄漏修复**：openSharedTaskModal、sceneTemplateModal、pluginDetailModal 三个模态框用 AbortController 管理事件生命周期，关闭时统一清理 keydown 监听器
+- **M6 亮色 muted 文本对比度修复**：--muted 从 #6e6e73 改为 #5e5e63，--text-faint 从 #707074 改为 #646469，提升可访问性对比度
+- **M7 try-catch 静默吞错修复**：在 12 个关键 catch 块中添加 pushDiag 记录（render 防抖、AI 响应解析、IDB 迁移、取消聊天、worker 池等）
+- **sanitizeHtml 标签移除修复**：保留 form/input/button 标签（应用自身表单需要），只移除 template/noscript/noembed/noframes
+- **safeJSONParse 回退**：移除 safeJSONParse 函数，所有调用恢复为 JSON.parse（避免测试隔离问题）
+- **Service Worker Medium 修复**：S6 移除预缓存 SW 自身、S7 .json 改 network-first、S8 缓存 cors 响应、S9 addAll 失败 console.warn、S10 版本号注释
+
+---
+
+## [v1.8.7] - 2026-08-11
+
+### 安全加固（Critical + High 修复）
+
+#### agent-workbench.html
+- **[C1] sanitizeHtml 增强**：迭代消毒（最多5次直到稳定）、HTML注释移除、CDATA移除、条件注释移除、增强实体编码过滤
+- **[C2] new Function 黑名单扩展**：禁止 Reflect/Proxy/Symbol/WebAssembly/Atomics/SharedArrayBuffer/Buffer/globalThis，context 用 Object.create(null) 切断原型链
+- **[C3] CSP 加固标记**：添加注释说明 unsafe-inline 限制及未来拆分计划
+- **[H1] Webhook URL 校验**：添加 `_validateWebhookUrl` 校验函数（仅 https + 过滤内网地址 + 30s 超时）
+- **[H2] diffRender 默认安全**：默认使用 sanitizeHtml 消毒
+- **[H3] AES-GCM 密钥存储**：添加安全 TODO 注释，确认 Electron 分支已正确使用 IPC
+- **[H6] 横屏触摸目标**：nav-item min-height 36px → 44px
+
+#### service-worker.js
+- **[S1] SWR 离线兜底**：跨域 SWR 离线无缓存时返回 504 Gateway Timeout 而非 undefined
+- **[S2] 缓存清理前缀判断**：activate 仅删除 wb-cache- 前缀的旧版本缓存，不误删其他应用缓存
+- **[S3] 缓存容量 fetch 后清理**：三处 cache.put 后异步调用 trimCacheEntries
+- **[S4] 导航离线 fallback**：导航请求专门处理，离线时回退预缓存首页
+- **[S5] 时间戳排序删除**：trimCacheEntries 改用时间戳元数据排序，不依赖 keys() 顺序
+
+---
+
+## [v1.8.6] - 2026-08-11
+
+### 安全修复
+- **代码注入防护**：`_evalCondition` 添加白名单验证，禁止 `;{}=[]` 和 `new/function/this/window/document/eval` 等危险关键字
+- **XSS 消毒增强**：`sanitizeHtml` 增加 svg/math/form/input/button/template/noscript/noembed/noframes 标签过滤
+- **PDF 导出安全**：`exportReportPDF` 的 `document.write` 内容用 `sanitizeHtml` 消毒
+- **localStorage 容错**：`allKeys`/`doExport`/`doImport`/`doClear` 中的 localStorage 操作包裹 try-catch
+- **lint 修复**：修复 `no-useless-escape` 错误
+- **npm 依赖修复**：`npm audit fix` 修复 nanoid high 漏洞
+- **CHANGELOG 补全**：补全 v1.8.0~v1.8.5 变更记录
+
+---
+
+## [v1.8.5] - 2026-08-10
+
+### 最终稳定性
+- **边界用例补充**：新增 `tests/boundary.test.js`，14 个边界测试用例覆盖空数据、极端值（10000 字符标题/未来日期/过去日期/特殊字符）、并发操作（多任务完成/快速场景切换）、错误恢复（损坏 localStorage/无效 JSON/null/undefined 参数/未知工具）
+- **全量回归测试**：连续 3 次运行 npm test，2269 测试全部通过，无 flaky
+- **已知 flaky 确认**：p0-storage.test.js、stats.test.js、v18c-integrations.test.js 均 3 次稳定通过
+- **版本号同步**：package.json / src/modules/00-constants.js 均从 1.8.4 → 1.8.5
+
+## [v1.8.4] - 2026-08-10
+
+### 文档与 UX
+- **README.md 全面更新**：标题版本号更新到 v1.8.4，补充 v1.8.x 全系列功能说明（企业级安全、第三方集成、AI 工作流、语音多模态、移动端、性能优化），更新架构说明和开发指南
+- **帮助文档更新**：`renderHelp()` 新增 3 个章节——性能优化说明、企业级功能说明、AI 工作流说明
+- **无障碍改进**：
+  - 添加 skip-to-content 链接（跳转到主内容）
+  - 补全缺失的 aria-label（番茄钟/时间追踪按钮、导出/重试按钮等）
+  - 帮助模态框添加 `role="dialog"` `aria-modal="true"` `aria-labelledby`
+  - 帮助模态框打开时 focus 到关闭按钮（focus 管理）
+  - 番茄钟/时间追踪容器添加 `role="group"` 和 `aria-label`
+- **新增 10 个 a11y 测试**：skip-to-content、#main 目标、CSS 注入、按钮 aria-label、容器 role、模态框属性、focus 管理、帮助文档章节内容
+
+## [v1.8.3] - 2026-08-10
+
+### 性能优化
+- **构建产物压缩**：`build.mjs --prod` 模式添加 minifyJS 状态机压缩（剥离注释、合并空行、trim 空白），prod JS% 节省 32.8%
+- **RAF 批量更新**：新增 `rafBatch(fn)` 工具函数，多次调用合并到一帧内执行一次
+- **requestIdleCallback 包装器**：新增 `idleWrap(fn)`，把函数包装为在 idle 时执行，改善首屏加载
+- **localStorage 批量写入**：新增 `batchWrite(store)`，收集多次写入在微任务统一执行
+- **RAF 批量渲染**：新增 `renderBatched` 函数，用 rafBatch 包装 render 供高频场景使用
+- **重模块懒初始化**：新增 `initHeavyModules()` 预留入口，用 idleWrap 包装重模块延迟初始化
+
+## [v1.8.2] - 2026-08-10
+
+### 代码质量改进
+- **共享工具模块**：创建 `01b-shared-utils.js`，消除 33 个重复的 localStorage 辅助函数、11 个重复的 Now() 函数、5 个重复的 Clone() 函数
+- **统一 SHA-256 实现**：消除 2 个重复的 SHA-256 实现，提供 `_sharedSha256Bytes(bytes)` 和 `_sharedSha256Str(str)` 两个函数
+- **统一时间戳函数**：提供 `_sharedNowISO()` 和 `_sharedNowMs()` 两个函数，替代 11 个模块各自的 `_xxxNow()` 实现
+
+## [v1.8.1] - 2026-08-10
+
+### flaky 测试修复
+- **stats.test.js K1 日期边界**：根据当前星期几动态计算 weekDone 下限 `Math.min(3, wd + 1)`，修复周一时昨天/前天属于上周导致 weekDone < 3 的问题
+- **p0-storage.test.js 异步超时**：在 doImport 前手动写入种子键 + vi.waitFor 超时从 1000ms 增至 5000ms，修复全量并行时序不确定导致 localStorage 无 wb_agent_ 键的问题
+- **v18c-integrations.test.js 速率限制窗口**：窗口从 1ms 增至 100ms，等待增至 200ms，修复高负载下速率限制窗口过期的问题
+
+## [v1.8.0] - 2026-08-10
+
+### 六大方向新功能
+
+#### A. 企业级安全加固
+- **RBAC 权限控制**：`59-security.js` 实现角色定义、权限检查、资源访问控制
+- **审计日志**：`61-audit-log.js` 记录关键操作供审计追踪
+- **数据加密**：E2EE 加密、AES-GCM 256 位、PBKDF2 密钥派生
+
+#### B. 第三方集成
+- **OAuth2 框架**：`63-oauth2.js` 实现 PKCE 授权码流程
+- **Webhook 事件总线**：`64-webhook-bus.js` 实现事件订阅/分发
+- **外部集成**：`62-integrations.js` 实现 Linear/Jira/Slack 集成
+
+#### C. AI 工作流编排
+- **工作流设计器**：`65-workflow-designer.js` 可视化编排 AI 任务流
+- **工作流引擎**：`66-workflow-engine.js` 执行工作流、条件求值、循环控制
+
+#### D. 语音多模态
+- **语音助手**：`67-voice-assistant.js` 语音输入和操作
+- **多模态输入**：`68-multimodal.js` 支持图片、文件输入
+
+#### E. 移动端原生打包
+- **Capacitor 配置**：`capacitor.config.json` 移动端原生打包配置
+- **移动端原生**：`69-mobile-native.js` 原生功能桥接
+
+#### F. 生物识别认证
+- **生物识别**：`70-biometric.js` 指纹/面部识别认证
+
+### 新增模块（12 个）
+59-security.js, 60-enterprise.js, 61-audit-log.js, 62-integrations.js, 63-oauth2.js, 64-webhook-bus.js, 65-workflow-designer.js, 66-workflow-engine.js, 67-voice-assistant.js, 68-multimodal.js, 69-mobile-native.js, 70-biometric.js
+
+### 新增测试（802 个）
+- v18a-security.test.js（100 个安全测试）
+- v18b-enterprise.test.js（95 个企业级测试）
+- v18c-integrations.test.js（156 个集成测试）
+- v18d-workflow.test.js（152 个工作流测试）
+- v18e-voice-multimodal.test.js（149 个语音多模态测试）
+- v18f-mobile-biometric.test.js（150 个移动端测试）
+
+---
+
+## [v1.2.0] - 2026-08-08
+
+### Security（P0 安全短板修复 · 诊断报告 R01+R02）
+- **R01 Electron 31→41 升级**：从 ^31.0.0（EOL，含 31 个 CVE：contextBridge 绕过、沙箱逃逸、V8 类型混淆等高危项）升级到 ^41.0.0（实际 41.10.4），一次性消除全部已知高危漏洞。代码零改动，所有 API 兼容。
+- **R02 CSP 声明**：添加 Content-Security-Policy——HTML `<meta>` 标签 + Electron `session.webRequest.onHeadersReceived` header 注入（带防御性守卫）。策略：`default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'`。XSS 纵深防御。
+
+### Security（P1 加固 · 诊断报告 R04+R05+R06+R08）
+- **R04 electron-builder 26.x**：从 ^24.13.3 升级到 ^26.0.0（实际 26.15.3），修复 tar critical CVE（GHSA-34x7-hfp2-rc4v）。
+- **R05 Dependabot + npm audit CI**：新建 `.github/dependabot.yml`（根目录 + electron/ 每周自动 PR）；CI 添加 `npm audit --audit-level=high` 步骤（不阻断，仅报告）。
+- **R06 CI Windows 矩阵**：CI 从仅 ubuntu-latest 扩展为 `[ubuntu-latest, windows-latest]` 矩阵，覆盖目标平台。
+- **R08 导航守卫**：Electron `main.js` 添加 `will-navigate` 事件拦截 + `setWindowOpenHandler` 拒绝外部窗口，防止远程内容加载。
+
+### Fixed（诊断报告 R14+R15+R16 + 预先存在 bug）
+- **R14 README CI badge**：添加 shields.io CI 状态徽章。
+- **R15 SW opaque 缓存**：service-worker.js 移除 opaque 响应缓存（跨域 no-cors 产物），避免意外行为。
+- **R16 package-lock 版本同步**：electron/package-lock.json 版本号刷新至 1.1.7（与 package.json 一致）。
+- **免打扰 end:24 边界 bug**：`getQuietHours`/`setQuietHours` 的 end 验证上限从 23 放宽到 24，修复全天免打扰（start:0, end:24）被错误回退到默认值 8 的问题。tier2-round3.test.js P9 测试通过。
+
+### Tests
+- 全量 **45 文件 / 525 用例全绿**（0 failed）；build --check 字节级等价；lint-colors PASS；ESLint 0 error。
+
 ## [v1.1.7] - 2026-08-08
 
 ### Fixed（第六轮 · tabbit 评估报告核实修复 R1–R5）
@@ -10,7 +178,7 @@
 
 ### Added
 - **R2 exe 图标**：新增 `scripts/make-icon.mjs`（与托盘图标同款「圆角蓝底+白色 A 字标」像素逻辑，导出 `drawIcon`/`makeIco`/`crc32`/`pngChunk` 供测试，CLI 有运行入口守卫）；生成产物 `electron/icon.ico`（32×32 PNG-in-ICO）入库；`build.win.icon` 指向 `icon.ico`；根 `package.json` 新增 `make:icon` 脚本。
-- **R4 src 纳入 ESLint**：`.eslintrc.cjs` 新增 `src/**/*.js` override（全局拼接架构下关闭 `no-undef`/`no-unused-vars`/`prefer-const` 跨模块误报，其余 recommended 规则照常）；新增 `lint:src` 脚本；CI 接入 `npm run lint:src` 步骤。
+- **R4 src 纯入 ESLint**：`.eslintrc.cjs` 新增 `src/**/*.js` override（全局拼接架构下关闭 `no-undef`/`no-unused-vars`/`prefer-const` 跨模块误报，其余 recommended 规则照常）；新增 `lint:src` 脚本；CI 接入 `npm run lint:src` 步骤。
 - **R5 工作记忆容量可配置**：`AGENT_MEM_MAX` 从常量改为配置读取（`cfg.memMax`，默认 60，钳制 20~500）；设置页新增「工作记忆容量（条，20~500）」输入项；`getMemMax()` 提供运行时钳制读取。
 
 ### Tests

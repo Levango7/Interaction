@@ -1,6 +1,6 @@
 {
   "name": "agent-workbench",
-  "version": "1.1.7",
+  "version": "1.8.9",
   "private": true,
   "description": "Agent 工作台 v1.1.7 — 多场景任务 / 记录 / AI 助手单文件应用。工程化入口：测试、颜色令牌门禁、本地预览。",
   "scripts": {
