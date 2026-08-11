@@ -41,6 +41,8 @@
   --scenario-default:#7c5cbf;
   /* 横幅 / 工具消息 */
   --banner-bg:#fff8e6; --banner-border:#f3e2b0; --banner-ink:#8a6d1b; --banner-border-2:#e3c766;
+  /* 品牌渐变（logo 标识，随主题切换微调） */
+  --brand-grad:linear-gradient(135deg,#0067c0,#9b4dca);
   /* 杂项 / 阴影 / 遮罩 */
   --kbd-border:#d8d8dc; --snip-bg:#1e1e22; --snip-fg:#e4e4e8; --toast-bg:#1d1d1f;
   --overlay:rgba(0,0,0,.32); --shadow-drawer:rgba(0,0,0,.08);
@@ -99,7 +101,7 @@ a:hover{text-decoration:underline}
   background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap;
   backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px)}
 .logo{display:flex;align-items:center;gap:var(--space-2);font-weight:600;font-size:var(--fs-lg);letter-spacing:-.01em}
-.logo .mark{width:28px;height:28px;border-radius:var(--radius-md);background:linear-gradient(135deg,#0067c0,#9b4dca);
+.logo .mark{width:28px;height:28px;border-radius:var(--radius-md);background:var(--brand-grad);
   display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-size:var(--fs-base);
   box-shadow:var(--shadow-1)}
 .topbar .spacer{flex:1}
@@ -259,7 +261,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-form input{flex:1;min-width:0}
 .chat-form .addbtn{flex-shrink:0}
 .msg.tool{background:var(--banner-bg);border:1px dashed var(--banner-border-2);font-size:var(--fs-xs);color:var(--banner-ink)}
-.chat-form input{flex:1}
 /* T3.1 AI 增强：取消/重试/思考中/已取消/失败样式（全部令牌色） */
 .chat-toolbar{display:flex;align-items:center;gap:var(--space-3);margin:0 0 var(--space-2);min-height:20px}
 .chat-thinking{color:var(--muted);font-size:var(--fs-xs);font-style:italic;animation:wb-pulse 1.2s ease-in-out infinite}
@@ -570,6 +571,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --overlay:rgba(0,0,0,.55); --shadow-drawer:rgba(0,0,0,.4);
   --shadow-overlay:rgba(0,0,0,.55); --shadow-toast:rgba(0,0,0,.5);
   --heat-0:#3a3a3c; --heat-1:#1e3a26; --heat-2:#2a5c39; --heat-3:#3a8f47; --heat-4:#4cd964;
+  /* 品牌渐变（暗色下提高亮度保持辨识度） */
+  --brand-grad:linear-gradient(135deg,#3b9eff,#b57ae8);
   /* ===== T4.1 设计令牌体系（暗色覆盖：间距/字号/圆角/过渡与亮色一致，阴影加深以保持可见性） ===== */
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;

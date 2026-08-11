@@ -11,8 +11,15 @@ tmp.*
 _lc_*
 err.txt
 _verify*
+_deploy*
 _syntax_check.js
 _fix_deploy.py
+_scratch/
+baseline*
+test-*.txt
+test-safe.js
+test-onb.txt
+test-p0.txt
 
 # vitest 时间戳文件
 *.timestamp-*
@@ -20,6 +27,7 @@ _fix_deploy.py
 # 工作目录
 .workbuddy/
 .wb-preview-profile/
+.inscode/
 
 # 系统文件
 Thumbs.db
