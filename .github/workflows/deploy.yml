@@ -22,7 +22,8 @@ jobs:
           cp agent-workbench.prod.html _deploy/agent-workbench.html
           cp manifest.json _deploy/
           cp icon.svg _deploy/
-          cp service-worker.js _deploy/
+          # SW 用 prod 产物（CACHE_VERSION 已自动 bump，确保客户端吃到新 HTML 而非旧缓存）
+          cp service-worker.prod.js _deploy/service-worker.js
           # 创建 index.html 跳转
           echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=agent-workbench.html"></head></html>' > _deploy/index.html
       - name: Deploy to gh-pages
