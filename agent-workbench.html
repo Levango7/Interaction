@@ -14,6 +14,9 @@
 <link rel="preload" href="./icon.svg" as="image" type="image/svg+xml">
 <link rel="preload" href="./manifest.json" as="fetch" crossorigin>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<!-- SECURITY TODO [C3]: 当前 CSP 保留 script-src 'unsafe-inline' 是因为本应用为单文件内联 JS 架构，
+     移除 unsafe-inline 会导致应用完全无法运行。真正的修复依赖于 H4（模块化拆分为外部 JS/CSS 文件），
+     拆分完成后可改用 nonce 或 hash 策略并移除 unsafe-inline。当前阶段仅做标记，不做破坏性变更。 -->
 <title>Agent 工作台</title>
 <style>
 :root{
@@ -858,7 +861,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 @media(max-width:767px) and (orientation:landscape){
   /* 横屏时侧边栏高度更小，导航项更紧凑 */
   .side{padding:var(--space-1) var(--space-2)}
-  .nav-item{min-height:36px;min-width:48px;padding:var(--space-1) var(--space-2)}
+  .nav-item{min-height:44px;min-width:48px;padding:var(--space-1) var(--space-2)}
   .nav-item .nm{font-size:var(--fs-xs)}
   /* 主内容区域增高：减小底部 padding */
   .main{padding:var(--space-2) var(--space-3) 52px}
@@ -2185,7 +2188,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.8.6";
+const VERSION = "1.8.7";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -3197,27 +3200,46 @@ function mdToHtml(str){
 function sanitizeHtml(html){
   if (!html || typeof html !== "string") return "";
   let s = html;
-  // 1. 移除危险标签（script/style/link/meta/title/base/head）
-  s = s.replace(/<\s*(script|style|link|meta|title|base|head)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
-  s = s.replace(/<\s*(script|style|link|meta|title|base|head)\b[^>]*\/?\s*>/gi, "");
-  // 2. 移除 iframe/object/embed/applet
-  s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
-  s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*\/?\s*>/gi, "");
-  // 3. 移除所有 on* 事件属性
-  s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-  // 4. 移除 javascript:/vbscript:/data: 协议的 href 和 src（有引号）
-  s = s.replace(/(href|src)\s*=\s*(["'])\s*(javascript|vbscript|data)\s*:[^"']*\2/gi, "$1=\"\"");
-  // 4b. 无引号情况
-  s = s.replace(/(href|src)\s*=\s*(javascript|vbscript|data)\s*:[^\s>]*/gi, "$1=\"\"");
-  // 5. 移除 CSS expression()
-  s = s.replace(/expression\s*\(/gi, "");
-  // 6. 移除 SVG/math 标签及其内容（XSS 载荷常见载体）
-  s = s.replace(/<\s*(svg|math)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
-  s = s.replace(/<\s*(svg|math)\b[^>]*\/?\s*>/gi, "");
-  // 7. 移除其他危险标签：form/input/button/template/noscript/noembed/noframes
-  s = s.replace(/<\s*\/?\s*(form|input|button|template|noscript|noembed|noframes)\b[^>]*>/gi, "");
-  // 8. 防御 HTML 实体编码绕过（&#x...; / &#...; 形式的 < > " '）
-  s = s.replace(/&#x?0*(?:3[ce]|6[02c]|7[2-9a-f]|1[06]|2[02-7])\b/gi, "");
+  // 0. 移除 HTML 注释、CDATA、IE 条件注释（这些可被用于绕过正则消毒）
+  s = s.replace(/<!--[\s\S]*?-->/g, "");
+  s = s.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, "");
+  s = s.replace(/<!\[if[\s\S]*?<!\[endif\]>/gi, "");
+  // 迭代消毒：循环执行替换直到结果不再变化（最多 5 次），防止嵌套标签绕过
+  for (var _iter = 0; _iter < 5; _iter++) {
+    var prev = s;
+    // 1. 移除危险标签（script/style/link/meta/title/base/head）
+    s = s.replace(/<\s*(script|style|link|meta|title|base|head)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
+    s = s.replace(/<\s*(script|style|link|meta|title|base|head)\b[^>]*\/?\s*>/gi, "");
+    // 2. 移除 iframe/object/embed/applet
+    s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
+    s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*\/?\s*>/gi, "");
+    // 3. 移除所有 on* 事件属性
+    s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+    // 4. 移除 javascript:/vbscript:/data: 协议的 href 和 src（有引号）
+    s = s.replace(/(href|src)\s*=\s*(["'])\s*(javascript|vbscript|data)\s*:[^"']*\2/gi, "$1=\"\"");
+    // 4b. 无引号情况
+    s = s.replace(/(href|src)\s*=\s*(javascript|vbscript|data)\s*:[^\s>]*/gi, "$1=\"\"");
+    // 5. 移除 CSS expression() 及其编码变体（\28 / \x28 等编码括号）
+    s = s.replace(/expression\s*\(/gi, "");
+    s = s.replace(/expression\s*\\28/gi, "");
+    s = s.replace(/expression\s*\\x28/gi, "");
+    s = s.replace(/expression\s*\\00028/gi, "");
+    // 6. 移除 SVG/math 标签及其内容（XSS 载荷常见载体）
+    s = s.replace(/<\s*(svg|math)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
+    s = s.replace(/<\s*(svg|math)\b[^>]*\/?\s*>/gi, "");
+    // 7. 移除其他危险标签：form/input/button/template/noscript/noembed/noframes
+    s = s.replace(/<\s*\/?\s*(form|input|button|template|noscript|noembed|noframes)\b[^>]*>/gi, "");
+    // 8. 防御 HTML 实体编码绕过（&#x...; / &#...; 形式的 < > " '）
+    //    覆盖前导零变体、大写 hex 变体、无分号变体（具体正则见下方）
+    s = s.replace(/&#x?0*(?:3[ce]|6[02c]|7[2-9a-f]|1[06]|2[02-7])\b/gi, "");
+    s = s.replace(/&#x0*3[ce];?/gi, "");
+    s = s.replace(/&#x0*6[02c];?/gi, "");
+    s = s.replace(/&#0*60;?/gi, "");
+    s = s.replace(/&#0*62;?/gi, "");
+    s = s.replace(/&#0*34;?/gi, "");
+    s = s.replace(/&#0*39;?/gi, "");
+    if (s === prev) break; // 已收敛，提前退出
+  }
   return s;
 }
 
@@ -3402,7 +3424,8 @@ function diffRender(container, newHTML, options){
   if(!container) return { changed: false, reason: "no container" };
   const opts = options || {};
   const html = (typeof newHTML === "string") ? newHTML : "";
-  const safeHtml = opts.sanitize ? opts.sanitize(html) : html;
+  // 安全默认：即使调用者未传入 sanitize，也使用 sanitizeHtml 消毒，避免 XSS
+  const safeHtml = (opts.sanitize || sanitizeHtml)(html);
   /* 对比当前 innerHTML 与新 innerHTML */ 
   const current = container.innerHTML;
   if(current === safeHtml){
@@ -4845,6 +4868,11 @@ function _resetCrypto(){ _deviceKey = null; _cfgCache = null; _cryptoReady = fal
 async function ensureDeviceKey(){
   if(_deviceKey) return _deviceKey;
   if(!_cryptoReady) return null;
+  // SECURITY TODO [H3]: 浏览器环境下设备密钥与密文同存储于 localStorage，无法抵御 XSS——
+  //   一旦页面被注入脚本即可读出 DK_KEY 还原所有 API Key。建议迁移到 IndexedDB 存储
+  //   （扩展默认无 IDB 访问权限，可降低泄露面），或通过 WebWorker + postMessage 隔离。
+  //   Electron 分支已在 persistCfg() 中通过 IPC 将 Key 交主进程保管（见 4897 行附近），
+  //   渲染进程只持久化非敏感配置，该路径已确认安全。
   const raw = localStorage.getItem(DK_KEY);
   if(raw){
     try{
@@ -17152,12 +17180,17 @@ function _evalCondition(condition, context){
     var sanitized = condition.replace(/'[^']*'/g, '""').replace(/"[^"]*"/g, '""');
     // 禁止赋值、代码块、数组下标、标签等危险字符
     if(/[;{}=[\]]/.test(sanitized)) return false;
-    // 禁止危险标识符（构造函数、宿主对象、动态执行、模块加载等）
-    if(/\b(new|function|this|window|document|eval|setTimeout|setInterval|fetch|require|import|process|global|self|top|parent|frames|constructor|prototype|__proto__|call|apply|bind)\b/i.test(sanitized)) return false;
+    // 禁止危险标识符（构造函数、宿主对象、动态执行、模块加载、原型链逃逸等）
+    // [C2] 扩展黑名单：增加 Reflect/Proxy/Symbol/WebAssembly/Atomics/SharedArrayBuffer/Buffer/globalThis
+    //     防止通过 Reflect/Function 构造器或全局对象绕过沙箱
+    if(/\b(new|function|this|window|document|eval|setTimeout|setInterval|fetch|require|import|process|global|globalThis|self|top|parent|frames|constructor|prototype|__proto__|call|apply|bind|Reflect|Proxy|Symbol|WebAssembly|Atomics|SharedArrayBuffer|Buffer)\b/i.test(sanitized)) return false;
     try{
       /* eslint-disable no-new-func */
+      // [C2] 切断原型链：用 Object.create(null) 创建无原型的 context 副本，
+      //     防止 context.constructor.constructor("...") 逃逸到 Function 构造器
+      var safeCtx = Object.assign(Object.create(null), context || {});
       var fn = new Function("context", "return (" + condition + ");");
-      return !!fn(context);
+      return !!fn(safeCtx);
     }catch(e){ return false; }
   }
   return false;
@@ -17295,6 +17328,21 @@ function getWebhooks(){
  * @param {Object} payload - 负载
  * @returns {Promise<Object>} 触发结果
  */
+// [H1] Webhook URL 安全校验：仅允许 http/https 协议，过滤内网/链路本地/0.0.0.0 段，
+//     开发环境允许 localhost。防止 SSRF 攻击内网服务。
+function _validateWebhookUrl(urlStr){
+  try{
+    var u = new URL(urlStr);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    var h = u.hostname;
+    // 开发环境允许 localhost
+    if (h === "localhost" || h === "127.0.0.1" || h === "::1") return true;
+    // 过滤内网地址段（RFC1918）与链路本地（169.254/16）及 0.0.0.0/8
+    if (/^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)/.test(h)) return false;
+    if (/^0\./.test(h)) return false;
+    return true;
+  }catch(e){ return false; }
+}
 function triggerWebhook(id, payload){
   return new Promise(function(resolve){
     var hook = null;
@@ -17304,6 +17352,12 @@ function triggerWebhook(id, payload){
     if(!hook){ resolve({ ok: false, error: "webhook not found" }); return; }
     if(!hook.enabled){ resolve({ ok: false, error: "webhook disabled" }); return; }
     if(!hook.url){ resolve({ ok: false, error: "no url" }); return; }
+    // [H1] URL 安全校验：阻止 SSRF
+    if(!_validateWebhookUrl(hook.url)){
+      resolve({ ok: false, error: "blocked: unsafe url" });
+      try{ toast("Webhook URL 不安全，已阻止", "error"); }catch(e){}
+      return;
+    }
     hook.lastTriggered = Date.now();
     hook.triggerCount = (hook.triggerCount || 0) + 1;
     _saveWebhooks();
@@ -17312,11 +17366,16 @@ function triggerWebhook(id, payload){
       return;
     }
     try{
-      fetch(hook.url, {
+      // [H1] 添加 30s 超时，防止挂起
+      var fetchOpts = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload || {})
-      }).then(function(res){
+      };
+      if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+        fetchOpts.signal = AbortSignal.timeout(30000);
+      }
+      fetch(hook.url, fetchOpts).then(function(res){
         resolve({ ok: res.ok, status: res.status, id: id });
       }).catch(function(e){
         resolve({ ok: false, error: (e && e.message) || String(e) });
