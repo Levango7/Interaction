@@ -12,6 +12,8 @@
  *   - Web Push：'push' 事件显示通知，'pushsubscriptionchange' 处理订阅失效
  *   - 离线操作队列存储在 IndexedDB（wb_sync_queue）+ localStorage 兜底
  */
+// TODO: 缓存版本号需与应用 VERSION 同步更新（当前应用版本 1.8.7）
+// 建议未来构建时自动注入：CACHE_VERSION = "v" + APP_VERSION + "-" + Date.now()
 var CACHE_VERSION = "v15-20260810c";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
@@ -29,12 +31,12 @@ var PRECACHE_URLS = [
   "./",
   "./agent-workbench.html",
   "./manifest.json",
-  "./icon.svg",
-  "./service-worker.js"
+  "./icon.svg"
 ];
 
 // 同源静态资源扩展名（cache-first 命中范围）
-var STATIC_EXT = [".html", ".json", ".svg", ".js", ".css"];
+// S7: .json 不在此列——manifest.json 等配置数据需及时更新，走 network-first 策略
+var STATIC_EXT = [".html", ".svg", ".js", ".css"];
 
 /**
  * 判断给定 URL 是否为同源静态资源（按扩展名匹配）。
@@ -144,7 +146,7 @@ self.addEventListener("install", function (event) {
     caches.open(CACHE_NAME)
       .then(function (cache) {
         // addAll 要求所有 URL 都成功；任一失败则跳过缓存但不阻塞安装
-        return cache.addAll(PRECACHE_URLS).catch(function () { /* 静默：部分资源缓存失败仍允许 SW 安装 */ });
+        return cache.addAll(PRECACHE_URLS).catch(function (e) { console.warn("[SW] precache addAll failed:", e); /* 不阻塞安装：部分资源缓存失败仍允许 SW 安装 */ });
       })
       .then(function () { return self.skipWaiting(); })
   );
@@ -266,7 +268,7 @@ self.addEventListener("fetch", function (event) {
   // (3) 其他请求：network-first（失败回退缓存）
   event.respondWith(
     fetch(req).then(function (resp) {
-      if (resp && resp.status === 200 && resp.type === "basic") {
+      if (resp && resp.status === 200 && (resp.type === "basic" || resp.type === "cors")) {
         var copy = resp.clone();
         caches.open(CACHE_NAME).then(function (cache) {
           _putWithTimestamp(cache, req, copy).then(function () {
