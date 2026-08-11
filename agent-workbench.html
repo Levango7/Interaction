@@ -116,6 +116,10 @@ a:hover{text-decoration:underline}
 .tb-row2 .pomo-widget,.tb-row2 .tracker-widget{flex-shrink:0;padding:2px var(--space-2);gap:var(--space-1)}
 .tb-row2 .pomo-display,.tb-row2 .tracker-display{min-width:0;font-size:var(--fs-xs)}
 .tb-row2 .pomo-actions button,.tb-row2 .tracker-actions button{min-height:26px;padding:0 var(--space-2);font-size:var(--fs-xs)}
+/* 第二行视觉分组：视图组(日历起)、动作组(搜索起)之前自动拉开间距，形成 计时|视图|动作 三大块。
+   用 auto margin 而非插 <span> 分隔符——不动 HTML 结构、按钮 id 不变，纯 CSS 副作用最小。 */
+.tb-row2 > #btnCalendar{margin-left:var(--space-3)}
+.tb-row2 > #btnSearchTop{margin-left:auto}
 .logo{display:flex;align-items:center;gap:var(--space-2);font-weight:600;font-size:var(--fs-lg);letter-spacing:-.01em}
 .logo .mark{width:28px;height:28px;border-radius:var(--radius-md);background:var(--brand-grad);
   display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-size:var(--fs-base);
@@ -15456,7 +15460,8 @@ function renderGanttChart(){
   var range = maxDate - minDate;
 
   // 生成 SVG
-  var W = 800, labelW = 100, barAreaW = W - labelW - 20;
+  // labelW 加到 150：给中文标题留足宽度，避免溢出挤压右侧任务条
+  var W = 800, labelW = 150, barAreaW = W - labelW - 20;
   var H = tasks.length * 28 + 30;
   var svg = '<svg class="gantt-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="任务甘特图">';
   // 顶部时间轴基线
@@ -15482,8 +15487,14 @@ function renderGanttChart(){
               : "var(--muted)";
     // 任务条
     svg += '<rect x="' + x1.toFixed(1) + '" y="' + y + '" width="' + w.toFixed(1) + '" height="18" fill="' + color + '" rx="3"><title>' + esc(t.title || "") + '（' + esc(t.due || "") + '）</title></rect>';
-    // 任务标签（左侧）
-    var label = (t.title || "").length > 12 ? (t.title || "").slice(0, 11) + "…" : (t.title || "");
+    // 任务标签（左侧）：按视觉宽度截断（中文≈2 单位宽，英文 1 单位），上限 22 单位紧贴 labelW=150 区宽
+    var rawTitle = t.title || "";
+    var wAcc = 0, cut = rawTitle.length;
+    for (var ci = 0; ci < rawTitle.length; ci++){
+      wAcc += (/[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/.test(rawTitle.charAt(ci)) ? 2 : 1);
+      if (wAcc > 22){ cut = ci; break; }
+    }
+    var label = cut < rawTitle.length ? rawTitle.slice(0, Math.max(1, cut - 1)) + "…" : rawTitle;
     svg += '<text x="6" y="' + (y + 13) + '" class="gantt-label" font-size="11" fill="var(--text)">' + esc(label) + '</text>';
   });
   svg += '</svg>';
