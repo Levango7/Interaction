@@ -106,6 +106,8 @@ a:hover{text-decoration:underline}
 .tb-row2{display:flex;align-items:center;gap:var(--space-2);
   padding:var(--space-1) var(--space-5) var(--space-2);
   border-top:1px solid var(--surface-muted);flex-wrap:nowrap;overflow-x:auto}
+/* 居右对齐（auto margin 而非 justify-content:flex-end：窄屏溢出时仍可从左滚动到所有按钮） */
+.tb-row2 > :first-child{margin-left:auto}
 .tb-row2 .tbtn{min-height:30px;padding:4px var(--space-2);font-size:var(--fs-xs);
   color:var(--text-dim-2);border:1px solid var(--line);background:var(--panel2);
   border-radius:var(--radius-full,var(--radius-md));flex-shrink:0}
