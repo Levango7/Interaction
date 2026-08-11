@@ -61,19 +61,80 @@ function isCrossOriginHttp(url, origin) {
   return (url.protocol === "https:" || url.protocol === "http:") && url.origin !== origin;
 }
 
+// S5: 时间戳元数据键的虚拟路径前缀（同源，相对于 SW 作用域）
+var TS_BASE = "./__wb_cache_ts__/";
+
 /**
- * R15: 缓存容量清理——若指定 cache 条目数超过 MAX_CACHE_ENTRIES，按 FIFO 删除最旧的。
- * Service Worker Cache API 不暴露 LRU 元数据，keys() 返回顺序近似插入顺序，故删前者。
+ * S5: 生成时间戳元数据的 Request（同源虚拟路径，避免与真实资源冲突）。
+ * @param {Request} req 原始请求
+ * @returns {Request}
+ */
+function _tsRequest(req) {
+  return new Request(TS_BASE + encodeURIComponent(req.url), { method: "GET" });
+}
+
+/**
+ * S5: 判断 Request 是否为时间戳元数据键。
+ * @param {Request} req
+ * @returns {boolean}
+ */
+function _isTsRequest(req) {
+  try {
+    var u = new URL(req.url, self.location.href);
+    return u.pathname.indexOf("__wb_cache_ts__/") !== -1;
+  } catch (e) { return false; }
+}
+
+/**
+ * S5: 带时间戳的 cache.put——同时存储原始条目和时间戳元数据，用于 LRU 排序。
+ * @param {Cache} cache 已打开的 Cache 实例
+ * @param {Request} req 原始请求
+ * @param {Response} resp 原始响应
+ * @returns {Promise<void>}
+ */
+function _putWithTimestamp(cache, req, resp) {
+  var tsReq = _tsRequest(req);
+  var tsResp = new Response(String(Date.now()));
+  return Promise.all([
+    cache.put(req, resp),
+    cache.put(tsReq, tsResp)
+  ]).then(function () { return undefined; });
+}
+
+/**
+ * R15/S5: 缓存容量清理——若原始条目数超过 MAX_CACHE_ENTRIES，按时间戳删除最旧的。
+ * 时间戳元数据存储在 __wb_cache_ts__/ 前缀的辅助键中，避免依赖 keys() 顺序（规范不保证）。
  * @param {Cache} cache 已打开的 Cache 实例
  * @returns {Promise<void>}
  */
 function trimCacheEntries(cache) {
   return cache.keys().then(function (keys) {
-    if (keys.length <= MAX_CACHE_ENTRIES) return undefined;
-    var toRemove = keys.slice(0, keys.length - MAX_CACHE_ENTRIES);
-    return Promise.all(toRemove.map(function (req) {
-      return cache.delete(req);
-    }));
+    // 分离原始条目和时间戳元数据条目
+    var realKeys = [];
+    for (var i = 0; i < keys.length; i++) {
+      if (!_isTsRequest(keys[i])) realKeys.push(keys[i]);
+    }
+    if (realKeys.length <= MAX_CACHE_ENTRIES) return undefined;
+    // 读取所有原始条目的时间戳
+    return Promise.all(realKeys.map(function (k) {
+      return cache.match(_tsRequest(k)).then(function (r) {
+        if (!r) return { key: k, ts: 0 };
+        return r.text().then(function (t) {
+          return { key: k, ts: parseInt(t, 10) || 0 };
+        }).catch(function () { return { key: k, ts: 0 }; });
+      });
+    })).then(function (entries) {
+      // 按时间戳升序排序（最旧的在前）
+      entries.sort(function (a, b) { return a.ts - b.ts; });
+      var toRemove = entries.slice(0, entries.length - MAX_CACHE_ENTRIES);
+      return Promise.all(toRemove.map(function (e) {
+        // 删除原始条目和对应的时间戳元数据
+        return Promise.all([
+          cache.delete(e.key),
+          cache.delete(_tsRequest(e.key))
+        ]);
+      }));
+    });
   });
 }
 
@@ -94,9 +155,9 @@ self.addEventListener("activate", function (event) {
   event.waitUntil(
     caches.keys()
       .then(function (keys) {
-        // 删除所有非当前版本的缓存（前缀 wb-cache- 但版本不同）
+        // S2: 仅删除 wb-cache- 前缀的旧版本缓存，避免误删其他应用缓存
         return Promise.all(keys.map(function (k) {
-          if (k !== CACHE_NAME) return caches.delete(k);
+          if (k.startsWith("wb-cache-") && k !== CACHE_NAME) return caches.delete(k);
           return undefined;
         }));
       })
@@ -130,6 +191,25 @@ self.addEventListener("fetch", function (event) {
 
   var origin = self.location.origin;
 
+  // S4: 导航请求专门处理——离线时回退到预缓存的首页，避免白屏
+  if (req.mode === "navigate") {
+    event.respondWith(
+      caches.match(req).then(function (cached) {
+        if (cached) return cached;
+        return fetch(req).catch(function () {
+          // 离线时回退到预缓存的首页
+          return caches.match("./").then(function (fallback) {
+            if (fallback) return fallback;
+            return caches.match("./agent-workbench.html").then(function (fb2) {
+              return fb2 || new Response("", { status: 504, statusText: "Offline" });
+            });
+          });
+        });
+      })
+    );
+    return;
+  }
+
   // (1) 同源静态资源：cache-first
   if (isStaticAsset(url, origin)) {
     event.respondWith(
@@ -139,7 +219,10 @@ self.addEventListener("fetch", function (event) {
           if (resp && resp.status === 200 && resp.type === "basic") {
             var copy = resp.clone();
             caches.open(CACHE_NAME).then(function (cache) {
-              cache.put(req, copy).catch(function () {});
+              _putWithTimestamp(cache, req, copy).then(function () {
+                // S3: put 成功后异步清理容量，不阻塞响应
+                trimCacheEntries(cache).catch(function () {});
+              }).catch(function () {});
             }).catch(function () {});
           }
           return resp;
@@ -162,12 +245,18 @@ self.addEventListener("fetch", function (event) {
           if (resp && resp.status === 200) {
             var copy = resp.clone();
             caches.open(CACHE_NAME).then(function (cache) {
-              cache.put(req, copy).catch(function () {});
+              _putWithTimestamp(cache, req, copy).then(function () {
+                // S3: put 成功后异步清理容量，不阻塞响应
+                trimCacheEntries(cache).catch(function () {});
+              }).catch(function () {});
             }).catch(function () {});
           }
           return resp;
-        }).catch(function () { /* 离线时静默，返回 cached 或兜底 */ });
-        // 有缓存先返回，否则等网络
+        }).catch(function () {
+          // S1: 离线兜底——避免返回 undefined 导致 respondWith(undefined) 报错
+          return new Response("Gateway Timeout", { status: 504, statusText: "Gateway Timeout" });
+        });
+        // 有缓存先返回，否则等网络（fetchPromise 已保证不返回 undefined）
         return cached || fetchPromise;
       })
     );
@@ -180,7 +269,10 @@ self.addEventListener("fetch", function (event) {
       if (resp && resp.status === 200 && resp.type === "basic") {
         var copy = resp.clone();
         caches.open(CACHE_NAME).then(function (cache) {
-          cache.put(req, copy).catch(function () {});
+          _putWithTimestamp(cache, req, copy).then(function () {
+            // S3: put 成功后异步清理容量，不阻塞响应
+            trimCacheEntries(cache).catch(function () {});
+          }).catch(function () {});
         }).catch(function () {});
       }
       return resp;
