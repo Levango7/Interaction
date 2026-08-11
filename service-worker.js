@@ -12,9 +12,9 @@
  *   - Web Push：'push' 事件显示通知，'pushsubscriptionchange' 处理订阅失效
  *   - 离线操作队列存储在 IndexedDB（wb_sync_queue）+ localStorage 兜底
  */
-// TODO: 缓存版本号需与应用 VERSION 同步更新（当前应用版本 1.8.7）
-// 建议未来构建时自动注入：CACHE_VERSION = "v" + APP_VERSION + "-" + Date.now()
-var CACHE_VERSION = "v15-20260810c";
+// 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
+// 命名约定：v{应用版本}-{日期}{当日序号}。当前应用版本 1.8.9。
+var CACHE_VERSION = "v1.8.9-20260812a";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
