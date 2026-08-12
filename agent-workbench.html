@@ -91,6 +91,10 @@ textarea{resize:vertical;min-height:80px}
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
 
+/* 内联图标：与文字基线对齐（emoji 矢量化统一层） */
+.ic-inline{display:inline-flex;align-items:center;vertical-align:-2px;margin-right:3px;color:inherit}
+.ic-inline svg{display:block}
+
 /* ===== 滚动条美化（细、不抢眼） ===== */
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -1781,7 +1785,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="row"><label>API Base URL</label><input id="cfgBase" placeholder="https://api.openai.com/v1" maxlength="500" autocomplete="off"></div>
   <div class="row"><label>API Key</label><input id="cfgKey" type="password" placeholder="sk-..." maxlength="500" autocomplete="new-password"></div>
   <div class="hint" id="cfgKeyHint" style="display:none;font-size:11px;color:var(--muted);margin:-6px 0 8px">已保存在本机（Electron 主进程保管，不写入网页存储）</div>
-  <p class="hint" style="font-size:11px;color:var(--muted);margin:-4px 0 8px">🔒 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
+  <p class="hint" style="font-size:11px;color:var(--muted);margin:-4px 0 8px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
   <div class="row"><label>模型</label><input id="cfgModel" placeholder="gpt-4o-mini" maxlength="100" autocomplete="off"></div>
   <div class="row"><label>请求超时（秒，5~120）</label><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
   <div class="row"><label>温度 Temperature（0~2）</label><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
@@ -1818,15 +1822,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" class="addbtn" id="chainResetBtn" style="--sc:var(--muted);padding:6px 10px;font-size:12px">重置为默认</button>
     </div>
     <div class="chain-reset-row" style="display:flex;gap:6px;flex-wrap:wrap">
-      <button type="button" class="addbtn" id="btnChainShare" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px">🔗 分享我的链</button>
-      <button type="button" class="addbtn" id="btnChainImport" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px">📥 导入链</button>
+      <button type="button" class="addbtn" id="btnChainShare" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的链</button>
+      <button type="button" class="addbtn" id="btnChainImport" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入链</button>
     </div>
   </div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
     <label style="font-size:14px;font-weight:600">场景模板</label>
     <p class="hint" style="margin:4px 0 8px">一键导入预置任务集（考研复习 / 健身计划 / 编程学习 / 项目管理 / 习惯养成），到期日按今天 + 偏移自动计算。</p>
-    <button type="button" class="addbtn" id="btnSceneTemplate" style="--sc:var(--accent);width:100%;padding:8px 12px">📋 选择场景模板一键导入</button>
+    <button type="button" class="addbtn" id="btnSceneTemplate" style="--sc:var(--accent);width:100%;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>选择场景模板一键导入</button>
   </div>
 
   <!-- v1.6-D 知识管理入口：笔记管理 / 知识库 / 全文搜索 -->
@@ -1834,9 +1838,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <label style="font-size:14px;font-weight:600">知识管理</label>
     <p class="hint" style="margin:4px 0 8px">Markdown 笔记系统（标签分类 + 任务关联）+ 知识库（按主题分类）+ 全文搜索（任务/记录/笔记，关键词高亮）。</p>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button type="button" class="addbtn" id="btnNotes" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px">📝 笔记管理</button>
-      <button type="button" class="addbtn" id="btnKnowledgeBase" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px">📚 知识库</button>
-      <button type="button" class="addbtn" id="btnSearch" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px">🔍 全文搜索</button>
+      <button type="button" class="addbtn" id="btnNotes" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>笔记管理</button>
+      <button type="button" class="addbtn" id="btnKnowledgeBase" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>知识库</button>
+      <button type="button" class="addbtn" id="btnSearch" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>全文搜索</button>
     </div>
   </div>
 
@@ -3280,6 +3284,8 @@ function mdToHtml(str){
  * @param {string} html - 原始 HTML 字符串
  * @returns {string} 消毒后的安全 HTML
  */
+/* emoji→矢量统一入口：模板字符串/innerHTML 用 ${ic("name")} 注入 */
+function ic(name){ const v=(UI_ICONS&&UI_ICONS[name])||""; return v?'<span class="ic-inline">'+v+"</span>":""; }
 function sanitizeHtml(html){
   if (!html || typeof html !== "string") return "";
   let s = html;
@@ -3873,7 +3879,23 @@ const UI_ICONS = {
   gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   theme:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>',
   sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>',
-  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10m6 10V4m6 16v-7m6 7V8"/></svg>'
+  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10m6 10V4m6 16v-7m6 7V8"/></svg>',
+  /* emoji 矢量化补齐（单引号包裹，供模板字符串 / innerHTML 用） */
+  flame:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.5 3 5 5 5 9a5 5 0 0 1-10 0c0-1.5.6-2.6 1.2-3.6.7 1 1.3 1.6 2.3 1.6C10 8 11 5.5 12 3z"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  chartBar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>',
+  target:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
+  brain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 3 3 3 0 0 0 1 4 3 3 0 0 0 3 3 3 3 0 0 0 4 2V4z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 3 3 3 0 0 1-1 4 3 3 0 0 1-3 3 3 3 0 0 1-4 2V4z"/></svg>',
+  chain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  robot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg>',
+  puzzle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>',
+  clipboard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  wave:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 6c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>',
+  book2:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M6 9v6M18 9a9 9 0 0 0-9 9"/></svg>'
 };
 
 // ===== Bootstrap (配置常量) =====
@@ -5550,7 +5572,7 @@ async function fetchCoachAdvice(){
 function renderCoachCard(){
   const cfg = getCfg();
   if(!cfg.enabled){
-    return `<div class="card coach-card"><h2>🎯 AI 习惯教练</h2><p class="sub">基于最近 2 周行为数据给出 3 条个性化建议</p>` +
+    return `<div class="card coach-card"><h2>${ic("target")}AI 习惯教练</h2><p class="sub">基于最近 2 周行为数据给出 3 条个性化建议</p>` +
       `<div class="coach-hint">尚未启用 AI。点击右上角「设置」配置 API Key 后，AI 教练将分析你的习惯模式并给出建议。</div></div>`;
   }
   const cache = load(COACH_CACHE_KEY, null);
@@ -5560,7 +5582,7 @@ function renderCoachCard(){
   } else {
     adviceHtml = `<div class="coach-hint" id="coachLoading">正在分析你的行为数据…</div>`;
   }
-  return `<div class="card coach-card"><h2>🎯 AI 习惯教练</h2>` +
+  return `<div class="card coach-card"><h2>${ic("target")}AI 习惯教练</h2>` +
     `<p class="sub">基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）<button class="coach-refresh" id="coachRefresh" type="button">刷新</button></p>${adviceHtml}</div>`;
 }
 
@@ -5603,11 +5625,11 @@ function renderHabitChainCard(){
     const cls = s.current >= 3 ? "hot" : (s.current === 0 ? "cold" : "");
     let fire;
     if(s.current >= 3){
-      fire = `<span class="streak-fire">🔥</span><b>${s.current}</b>天`;
+      fire = `<span class="streak-fire">${ic("flame")}</span><b>${s.current}</b>天`;
     } else if(s.current === 0){
       fire = `<span style="color:var(--danger)">⚠️ 未开始</span>`;
     } else {
-      fire = `🔥<b>${s.current}</b>天`;
+      fire = `${ic("flame")}<b>${s.current}</b>天`;
     }
     return `<span class="streak-badge ${cls}"><span class="sc-name">${SCENARIOS[sc].name}</span><span class="fire">${fire}</span></span>`;
   }).join("");
@@ -5615,7 +5637,7 @@ function renderHabitChainCard(){
   const heatmaps = ORDER.map(sc =>
     `<details class="heat-fold"><summary>${SCENARIOS[sc].name} 完成热力图（最近 12 周）</summary>${renderHeatmap(sc)}</details>`
   ).join("");
-  return `<div class="card"><h2>🔗 习惯链可视化</h2>` +
+  return `<div class="card"><h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>习惯链可视化</h2>` +
     `<p class="sub">每个场景的连续天数与完成密度</p>` +
     `<h3>当前 Streak</h3><div class="streak-row">${streakBadges}</div>` +
     `<h3>热力图</h3>${heatmaps}` +
@@ -6237,7 +6259,7 @@ function renderToday(){
     );
     let icon, label;
     if(!enabled){ icon = "⏸"; label = "已暂停"; }
-    else if(s.current > 0){ icon = "🔥"; label = s.current + "天"; }
+    else if(s.current > 0){ icon = "~"; label = s.current + "天"; }
     else if(triggered){ icon = "✓"; label = "已触发"; }
     else { icon = "○"; label = "未开始"; }
     const fs = scMeta(l.fromSc), ts = scMeta(l.toSc);
@@ -6253,7 +6275,7 @@ function renderToday(){
   return `<div class="card">
     <div class="dashboard-hero">
       <div>
-        <div class="hero-greeting">${greeting()} 👋</div>
+        <div class="hero-greeting">${greeting()}</div>
         <div class="hero-sub">今天有 ${pendingToday.length} 件事待处理 · 已完成 ${done} 件 · 习惯链 ${chainsActive} 条进行中</div>
       </div>
       <div class="hero-right">${ring}</div>
@@ -6284,7 +6306,7 @@ function _onboardRenderStep(step){
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
-        <div class="onboard-title">欢迎使用 Agent 工作台 👋</div>
+        <div class="onboard-title">欢迎使用 Agent 工作台</div>
         <div class="onboard-desc">这是一个帮你管理任务、养成习惯的工具。先创建你的第一个任务吧！</div>
         <div class="onboard-scenarios" id="onboardSc">
           ${ORDER.map(sc=>`<button type="button" class="onboard-sc-btn${sc===_onboardSelectedSc?" selected":""}" data-sc="${sc}">${SCENARIOS[sc].name}</button>`).join("")}
@@ -6300,7 +6322,7 @@ function _onboardRenderStep(step){
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
-        <div class="onboard-title">习惯链 — 让正反馈转起来 🔗</div>
+        <div class="onboard-title">习惯链 — 让正反馈转起来</div>
         <div class="onboard-desc">完成任务可以触发习惯链。比如交付任务完成后自动提醒你学习充电。</div>
         <div class="onboard-chain-demo">
           <span style="color:${SCENARIOS.office.color};font-size:18px;font-weight:600">${SCENARIOS.office.name}</span>
@@ -6318,7 +6340,7 @@ function _onboardRenderStep(step){
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
-        <div class="onboard-title">配置 AI 助手 🤖（可选）</div>
+        <div class="onboard-title">配置 AI 助手（可选）</div>
         <div class="onboard-desc">配置 AI 后，每个场景都有专属 AI 助手帮你建任务、查总览、搜索。</div>
         <div class="onboard-actions">
           <button type="button" class="onboard-btn-secondary" id="onboardSkip">稍后再说</button>
@@ -6405,7 +6427,7 @@ function renderHelp(){
   const html = `<div class="help-modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
     <div class="help-card">
       <div class="help-header">
-        <h2 id="helpModalTitle">📖 使用指南</h2>
+        <h2 id="helpModalTitle">${ic("book")}使用指南</h2>
         <button class="help-close" id="helpClose" aria-label="关闭使用指南" type="button">✕</button>
       </div>
       <div class="help-body">
@@ -6588,7 +6610,7 @@ function renderSharedTaskCard(task){
     </div>
     ${tags}
     ${note}
-    <div class="share-readonly-hint">📋 这是只读分享卡片，不可编辑</div>
+    <div class="share-readonly-hint"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>这是只读分享卡片，不可编辑</div>
   </div>`;
 }
 /**
@@ -6603,7 +6625,7 @@ function openSharedTaskModal(task){
   const html = `<div class="share-task-modal" id="shareTaskModal">
     <div class="share-task-dialog">
       <div class="share-task-header">
-        <h2>🔗 分享的任务</h2>
+        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享的任务</h2>
         <button class="share-task-close" id="shareTaskClose" aria-label="关闭">✕</button>
       </div>
       <div class="share-task-body">${cardHtml}</div>
@@ -6897,7 +6919,7 @@ function renderOverview(){
         <div id="globRes" style="margin-top:10px"></div></div>
      <div class="card"><h2>${UI_ICONS.overview} 数据总览</h2>
        <p class="sub">跨场景的任务完成趋势与密度</p>
-       <div style="margin-bottom:var(--space-3)"><button type="button" class="report-entry-btn" id="btnOpenReport">📊 高级报表（周/月/年报）</button></div>
+       <div style="margin-bottom:var(--space-3)"><button type="button" class="report-entry-btn" id="btnOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报）</button></div>
        <h3>${UI_ICONS.overview} 完成趋势（近 14 天）</h3>${lineChart}
        <h3>日历热力图（本月）</h3>${heat}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
@@ -6953,10 +6975,10 @@ function renderOverview(){
 function renderDailyReportCard(){
   const cfg = getCfg();
   if(!cfg.enabled){
-    return `<div class="card daily-report-card"><h2>📋 AI 每日报告</h2><p class="sub">昨日总结 + 今日待办 + 习惯链状态 + 今日建议</p>` +
+    return `<div class="card daily-report-card"><h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>AI 每日报告</h2><p class="sub">昨日总结 + 今日待办 + 习惯链状态 + 今日建议</p>` +
       `<div class="coach-hint">尚未启用 AI。配置 API Key 后可生成每日报告。</div></div>`;
   }
-  return `<div class="card daily-report-card"><h2>📋 AI 每日报告</h2>` +
+  return `<div class="card daily-report-card"><h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>AI 每日报告</h2>` +
     `<p class="sub">基于昨日完成任务、今日待办与习惯链状态，AI 生成每日报告</p>` +
     `<button type="button" class="daily-report-btn" id="dailyReportBtn">生成今日报告</button>` +
     `<div id="dailyReportResult"></div></div>`;
@@ -6993,10 +7015,10 @@ async function handleDailyReport(){
 function renderAiRecommendCard(){
   const cfg = getCfg();
   if(!cfg.enabled){
-    return `<div class="card ai-recommend-card"><h2>🤖 AI 智能推荐</h2><p class="sub">基于待办/已完成/逾期任务，推荐下一步行动</p>` +
+    return `<div class="card ai-recommend-card"><h2>${ic("robot")}AI 智能推荐</h2><p class="sub">基于待办/已完成/逾期任务，推荐下一步行动</p>` +
       `<div class="coach-hint">尚未启用 AI。配置 API Key 后可获得个性化行动建议。</div></div>`;
   }
-  return `<div class="card ai-recommend-card"><h2>🤖 AI 智能推荐</h2>` +
+  return `<div class="card ai-recommend-card"><h2>${ic("robot")}AI 智能推荐</h2>` +
     `<p class="sub">基于你的任务数据，AI 推荐 3 条下一步行动</p>` +
     `<button type="button" class="ai-recommend-btn" id="aiRecommendBtn">获取智能推荐</button>` +
     `<div id="aiRecommendResult"></div></div>`;
@@ -7156,7 +7178,7 @@ function renderStats(){
   const cardsHtml = `<div class="stats-cards">` + cards.map(c =>
     `<div class="stats-card"><div class="stats-card-val">${c.value}${c.badge || ""}</div><div class="stats-card-lbl">${c.label}</div></div>`
   ).join("") + `</div>` +
-    `<div style="margin-bottom:var(--space-4)"><button type="button" class="report-entry-btn" id="btnStatsOpenReport">📊 高级报表（周/月/年报 · 对比 · 导出PDF）</button></div>`;
+    `<div style="margin-bottom:var(--space-4)"><button type="button" class="report-entry-btn" id="btnStatsOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报 · 对比 · 导出PDF）</button></div>`;
   // 趋势图（周/双周/月切换）
   const trendData = calcTrend(_statsTrendDays);
   const trendChart = renderTrendChart(trendData, "var(--accent)");
@@ -7595,7 +7617,7 @@ function healthCard(){
   // 今日喝水
   const todayWater = waterRecs.filter(r=>isToday(r.created));
 
-  return `<div class="card"><h2>📊 健康概览</h2>
+  return `<div class="card"><h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>健康概览</h2>
     <p class="sub">运动 · 体重 · 睡眠 · 喝水　本地记录，自动汇总</p>
     <div class="health-grid">
       <div class="health-item"><div class="health-val">${weekExercise.length}</div><div class="health-lbl">本周运动（次）</div></div>
@@ -10828,7 +10850,7 @@ function openChainShareModal(){
   const html = `<div class="chain-share-modal" id="chainShareModal">
     <div class="chain-share-dialog">
       <div class="chain-share-header">
-        <h2>🔗 分享我的习惯链</h2>
+        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的习惯链</h2>
         <button class="chain-share-close" id="chainShareClose" aria-label="关闭">✕</button>
       </div>
       <div class="chain-share-body">
@@ -10860,7 +10882,7 @@ function openChainImportModal(){
   const html = `<div class="chain-import-modal" id="chainImportModal">
     <div class="chain-share-dialog">
       <div class="chain-share-header">
-        <h2>📥 导入习惯链</h2>
+        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入习惯链</h2>
         <button class="chain-share-close" id="chainImportClose" aria-label="关闭">✕</button>
       </div>
       <div class="chain-share-body">
@@ -11033,7 +11055,7 @@ function openTemplateModal(){
   const html = `<div class="scene-template-modal" id="sceneTemplateModal">
     <div class="scene-template-dialog">
       <div class="scene-template-header">
-        <h2>📋 场景模板</h2>
+        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>场景模板</h2>
         <button class="scene-template-close" id="sceneTemplateClose" aria-label="关闭">✕</button>
       </div>
       <div class="scene-template-body">
@@ -11156,7 +11178,7 @@ function openPluginDetailModal(id){
   const html = '<div class="plugin-detail-modal" id="pluginDetailModal">'
     + '<div class="chain-share-dialog" style="max-width:520px">'
       + '<div class="chain-share-header">'
-        + '<h2>🧩 '+esc(p.name)+'</h2>'
+        + '<h2>${ic("puzzle")}'+esc(p.name)+'</h2>'
         + '<button class="chain-share-close" id="pluginDetailClose" aria-label="关闭">✕</button>'
       + '</div>'
       + '<div class="chain-share-body">'
@@ -11570,7 +11592,7 @@ function showMemories(){
   const hist=getChat(active);
   const mems=getMemories();
   const lines = mems.length ? mems.map(m=>"- ["+(m.scope==="global"?"全局":(SCENARIOS[m.scope]?SCENARIOS[m.scope].name:m.scope))+"] "+m.text+"（id:"+m.id+"）").join("\n") : "（暂无记忆。对我说「记住：xxx」或在对话中让我用 remember 工具记住即可）";
-  hist.push({role:"assistant", content:"🧠 工作记忆（"+mems.length+" 条）：\n"+lines});
+  hist.push({role:"assistant", content:"工作记忆（"+mems.length+" 条）：\n"+lines});
   if(hist.length>50) hist.splice(0, hist.length-50);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
 }
@@ -13715,7 +13737,7 @@ var BUILTIN_PLUGINS = [
     scenarios: [{
       key: "pomodoro",
       name: "番茄",
-      icon: "🍅",
+      icon: '',
       color:"#e74c3c",
       desc: "番茄工作法"
     }]
@@ -13729,7 +13751,7 @@ var BUILTIN_PLUGINS = [
     scenarios: [{
       key: "reading",
       name: "阅读",
-      icon: "📖",
+      icon: '',
       color:"#3498db",
       desc: "阅读管理"
     }]
@@ -28017,7 +28039,7 @@ var NODE_TYPES = {
   subAgent:    { label: "子Agent",    color: "var(--c-primary)", icon: "A", category: "agent",    single: false, required: false },
   aiReasoning: { label: "AI推理",     color: "var(--c-primary)", icon: "✦", category: "agent",    single: false, required: false },
   toolExec:    { label: "工具执行",   color: "var(--c-accent)",  icon: "⚙", category: "action",  single: false, required: false },
-  schedule:    { label: "定时触发",   color: "var(--c-accent)",  icon: "⏰", category: "trigger", single: false, required: false },
+  schedule:    { label: "定时触发",   color: "var(--c-accent)",  icon: "◷", category: "trigger", single: false, required: false },
   approval:    { label: "人工审批",   color: "var(--c-warning)", icon: "✎", category: "action",  single: false, required: false },
   notify:      { label: "通知",       color: "var(--c-info)",    icon: "✉", category: "action",  single: false, required: false }
 };
@@ -31350,7 +31372,7 @@ function multimodalPreviewAttachment(id){
       '<div class="mm-preview-meta" style="color:var(--c-text-soft);font-size:12px;margin-top:4px;">' + safeName + ' · ' + sizeText + '</div>' +
       '</div>';
   }else{
-    var icon = "📄";
+    var icon = "▤";
     html = '<div class="mm-preview mm-preview-file" data-id="' + _mmEscapeHtml(a.id) + '" style="border:1px solid var(--c-border);padding:8px;border-radius:4px;display:flex;align-items:center;gap:8px;">' +
       '<span class="mm-file-icon" style="font-size:24px;">' + icon + '</span>' +
       '<div class="mm-file-info">' +
