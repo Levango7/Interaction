@@ -703,7 +703,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   padding:2px 6px;font-size:var(--fs-xs);font-family:"SF Mono",monospace}
 
 /* ===== 回收站页面（D3：软删除任务的恢复 / 永久删除入口；v1.3.4-B 全屏页面视图） ===== */
-.recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);max-width:720px;margin:0 auto}
+/* 回收站页面撑满主区高度，footer 用 margin-top:auto 始终压到底部（内容短也不悬空） */
+.recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);max-width:720px;margin:0 auto;
+  min-height:calc(100% - 2 * var(--space-6))}
+.recycle-modal .foot{margin-top:auto;padding-bottom:var(--space-2)}
 .recycle-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden}
 .recycle-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-5) var(--space-6);
@@ -1694,8 +1697,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl">命令</span></button>
     <button class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
-    <button class="tbtn" id="btnGear" title="设置" aria-label="设置">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1-.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1-.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="lbl">设置</span></button>
+    <!-- 设置已迁移至侧栏底部（id="btnGear" 保留，data-gear 事件委托 × openDrawer） -->
     <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl">安装</span></button>
     </div>
@@ -5725,7 +5727,8 @@ function renderSide(){
   const statsBtn = `<button class="nav-item ${active==="stats"?"active":""}" data-sc="stats" style="--sc:#038387">
     ${UI_ICONS.stats.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">统计</span><span class="cnt">${tasks.length}</span></button>`;
   const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
-  const recycleBtn = `<button class="nav-item" data-recycle="1" style="--sc:var(--muted)" title="回收站（已删除任务）">
+  // 回收站进回收站态时高亮（active==="recycle"）；修复点击回收站后其他场景仍亮的问题
+  const recycleBtn = `<button class="nav-item ${active==="recycle"?"active":""}" data-recycle="1" style="--sc:var(--muted)" title="回收站（已删除任务）">
     ${UI_ICONS.trash.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">回收站</span>${recycleCount?`<span class="cnt">${recycleCount}</span>`:""}</button>`;
   const items = ORDER.map(sc=>{
     const s = SCENARIOS[sc];
@@ -5733,9 +5736,13 @@ function renderSide(){
     return `<button class="nav-item ${sc===active?"active":""}" data-sc="${sc}" style="--sc:${s.color}">
       ${(SCENARIOS[sc].icon || "").replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">${s.name}</span><span class="cnt">${open}</span></button>`;
   }).join("");
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + '<div class="nav-sep"></div>' + items);
+  // 设置入口迁移至侧栏底部（与总体/统计/回收站同组）；保留 id="btnGear"（a11y 测试断言它存在）
+  const gearBtn = `<button class="nav-item" data-gear="1" id="btnGear" style="--sc:var(--muted)" title="设置" aria-label="设置">
+    ${UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">设置</span></button>`;
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + gearBtn + '<div class="nav-sep"></div>' + items);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
-    if(b.dataset.recycle){ openRecycle(); return; }
+    if(b.dataset.recycle){ setActive("recycle"); render(); return; }
+    if(b.dataset.gear){ openDrawer(); return; }
     setActive(b.dataset.sc); render();
   });
 }
@@ -5891,6 +5898,8 @@ function closeRecycleModal(){
   const m=$("#recycleModal"); if(!m) return false;
   if(typeof m._releaseTrap==="function"){ try{ m._releaseTrap(); }catch(e){ /* noop */ } }
   m.remove();
+  // 关闭后若 active 仍是 recycle，会循环回到回收站页 → 重置为 overview
+  if(getActive()==="recycle") setActive("overview");
   render(); // 返回之前的视图（与"返回按钮"语义一致）
   return true;
 }
@@ -9849,6 +9858,7 @@ function render(){
     renderSide();
     if(active==="overview"){ renderOverview(); return; }
     if(active==="stats"){ renderStats(); return; }
+    if(active==="recycle"){ openRecycle(); return; }
     const cfg=getCfg();
     $("#main").innerHTML = sanitizeHtml(renderToday() + renderMainHTML());
     bindScenario();
@@ -11583,7 +11593,7 @@ $("#btnCsvImportConfirm").onclick = doImportCSV;
 $("#btnCsvImportCancel").onclick = cancelImportCSV;
 $("#csvImportOverlay").onclick = cancelImportCSV;
 $("#btnExportRecsCSV").onclick = doExportRecsCSV;
-$("#btnGear").onclick = openDrawer;
+// 设置按钮 id="btnGear" 已迁移到侧栏尾部，点击由 renderSide 的 data-gear 事件委托接管
 $("#drawerClose").onclick = closeDrawer;
 $("#overlay").onclick = closeDrawer;
 $("#cfgSave").onclick = saveCfg;
