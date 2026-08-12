@@ -1703,7 +1703,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="tb-row2">
     <!-- v1.6-B 生产力工具：番茄钟 / 时间追踪 / 日历视图入口 -->
     <div class="pomo-widget" id="pomoWidget" role="group" aria-label="番茄钟" title="番茄钟">
-      <span class="pomo-icon" aria-hidden="true">🍅</span>
+      <span class="pomo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
       <span class="pomo-display" id="pomoDisplay" aria-live="polite">空闲 25:00</span>
       <span class="pomo-count" id="pomoCount" aria-label="今日番茄完成数">0</span>
       <span class="pomo-actions">
@@ -1712,7 +1712,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       </span>
     </div>
     <div class="tracker-widget" id="trackerWidget" role="group" aria-label="时间追踪" title="时间追踪">
-      <span class="tracker-icon" aria-hidden="true">⏱</span>
+      <span class="tracker-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg></span>
       <span class="tracker-display" id="trackerDisplay" aria-live="polite">00:00:00</span>
       <span class="tracker-actions">
         <button type="button" id="btnTrackerPause" class="warn" disabled aria-label="暂停时间追踪">暂停</button>
@@ -2119,6 +2119,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" class="viz-modal-close" id="btnMindmapClose" aria-label="关闭思维导图">&times;</button>
     </div>
     <div class="viz-modal-body" id="mindmapModalBody"></div>
+  </div>
+</div>
+
+<!-- 日历视图弹窗：复用 renderCalendarView（原本未接入的死代码函数） -->
+<div class="viz-modal" id="calendarModal" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+  <div class="viz-modal-card">
+    <div class="viz-modal-header">
+      <h2 id="calendarModalTitle">日历视图</h2>
+      <button type="button" class="viz-modal-close" id="btnCalendarClose" aria-label="关闭日历视图">&times;</button>
+    </div>
+    <div class="viz-modal-body" id="calendarModalBody"></div>
   </div>
 </div>
 
@@ -11707,9 +11718,33 @@ const _btnMindmap = $("#btnMindmap"); if(_btnMindmap) _btnMindmap.onclick = func
 const _btnMindmapClose = $("#btnMindmapClose"); if(_btnMindmapClose) _btnMindmapClose.onclick = function(){ if(typeof closeMindmapModal === "function") closeMindmapModal(); };
 const _btnDashboard = $("#btnDashboard"); if(_btnDashboard) _btnDashboard.onclick = function(){ if(typeof openDashboardModal === "function") openDashboardModal(); };
 const _btnDashboardClose = $("#btnDashboardClose"); if(_btnDashboardClose) _btnDashboardClose.onclick = function(){ if(typeof closeDashboardModal === "function") closeDashboardModal(); };
+// 日历 / 自动化按钮绑定（之前从未接上：日历缺 modal + 无人调用 openAutomationModal）
+const _btnCalendar = $("#btnCalendar");
+if(_btnCalendar) _btnCalendar.onclick = function(){
+  var m = $("#calendarModal");
+  if(!m) return;
+  var b = $("#calendarModalBody");
+  if(b) b.innerHTML = sanitizeHtml(renderCalendarView(0));
+  m.classList.add("show");
+};
+const _btnCalendarClose = $("#btnCalendarClose");
+if(_btnCalendarClose) _btnCalendarClose.onclick = function(){ var m=$("#calendarModal"); if(m) m.classList.remove("show"); };
+const _btnAutomation = $("#btnAutomation");
+if(_btnAutomation) _btnAutomation.onclick = function(){ if(typeof openAutomationModal === "function") openAutomationModal(); };
+const _btnAutomationClose = $("#btnAutomationClose");
+if(_btnAutomationClose) _btnAutomationClose.onclick = function(){ var m=$("#automationModal"); if(m) m.classList.remove("show"); };
+// 番茄钟 / 时间追踪 组件按钮（此前纯装饰，未绑定）
+const _btnPomoStart = $("#btnPomoStart");
+if(_btnPomoStart) _btnPomoStart.onclick = function(){ if(typeof startPomodoro === "function") startPomodoro(); };
+const _btnPomoStop = $("#btnPomoStop");
+if(_btnPomoStop) _btnPomoStop.onclick = function(){ if(typeof stopPomodoro === "function") stopPomodoro(); };
+const _btnTrackerPause = $("#btnTrackerPause");
+if(_btnTrackerPause) _btnTrackerPause.onclick = function(){ if(typeof pauseTracking === "function") pauseTracking(); };
+const _btnTrackerStop = $("#btnTrackerStop");
+if(_btnTrackerStop) _btnTrackerStop.onclick = function(){ if(typeof stopTracking === "function") stopTracking(); };
 /* 弹窗背景点击关闭 */
 (function setupVizModalBgClose(){
-  ["ganttModal","mindmapModal","dashboardModal"].forEach(function(id){
+  ["ganttModal","mindmapModal","dashboardModal","calendarModal","automationModal"].forEach(function(id){
     var m = document.getElementById(id);
     if(!m || m._bgCloseBound) return;
     m._bgCloseBound = true;
