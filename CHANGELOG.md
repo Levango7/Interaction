@@ -2,6 +2,21 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.9.0] - 2026-08-13
+
+### 安全加固 + Electron 升级 + 文档清理
+
+- **P0-1 Electron 版本升级**：electron ^31.0.0→^41.0.0，electron-builder ^24.13.3→^26.0.0，修复 20+ CVE
+- **P0-3 electron 目录 npm audit fix**：10 漏洞（9 high, 1 critical）→ 0 漏洞
+- **P0-2 根目录 npm audit**：残留 6 漏洞位于 esbuild→vite→vitest devDependencies 链，不影响生产安全（agent-workbench.html 是单文件应用，不打包 vitest）
+- **P1-1 Electron AI 取消链路**：提交未跟踪的 abortChat 功能（agent-workbench.html +20/-1, electron/main.js +45/-3, electron/preload.js +4/-1）
+- **P2-12 AI 重试语义统一**：确认 chatOnce 浏览器侧与 Electron 侧重试矩阵已对齐（429/5xx 退避重试 3 次，退避 1s/2s/3s）
+- **P2-13 __test 门控**：确认 __TEST_GATE__ 已存在（仅 localhost 或 __test=1 参数时挂载 window.__test）
+- **P1-7/P1-8 文档清理**：删除 tests/debug-render.test.js 调试文件
+- **P2-9/P2-10 报告更新**：更新 ServiceWorker缓存策略分析报告.md（S1-S13 修复状态总览）和 Interaction_项目七维评估报告.md（2026-08-13 复审章节）
+
+---
+
 ## [v1.8.9] - 2026-08-11
 
 ### 测试修复 + Low 安全加固

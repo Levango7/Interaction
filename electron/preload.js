@@ -13,5 +13,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // P0-3：AI 配置与代理（Key 仅存主进程，渲染进程经 IPC 委托请求，规避 CORS + Key 暴露）
   getAiConfig: () => ipcRenderer.invoke("get-ai-config"),
   setAiConfig: (cfg) => ipcRenderer.invoke("set-ai-config", cfg),
-  chat: (arg) => ipcRenderer.invoke("chat", arg)
+  chat: (arg) => ipcRenderer.invoke("chat", arg),
+  // P1-1：取消进行中的 AI 请求（主进程 fetch 对应 AbortController）
+  abortChat: () => ipcRenderer.send("abort-chat")
 });

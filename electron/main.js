@@ -322,6 +322,19 @@ if (!gotLock){
     applyAppMenu();
 
     // AI 配置与代理（P0-3）：Key 由主进程保管，渲染进程经 IPC 委托请求
+    // P1-1 取消链路：按 sender 维护活跃 chat 请求的 AbortController，供 abort-chat IPC 中止
+    const chatAborters = new Map(); // webContentsId -> Set<AbortController>
+    function trackChatAborter(webContentsId, ctrl){
+      let set = chatAborters.get(webContentsId);
+      if(!set){ set = new Set(); chatAborters.set(webContentsId, set); }
+      set.add(ctrl);
+    }
+    function untrackChatAborter(webContentsId, ctrl){
+      const set = chatAborters.get(webContentsId);
+      if(!set) return;
+      set.delete(ctrl);
+      if(set.size === 0) chatAborters.delete(webContentsId);
+    }
     ipcMain.handle("set-ai-config", (e, incoming) => {
       if(!incoming || typeof incoming !== "object") return { ok:false };
       const cur = loadAiConfig() || {};
@@ -358,8 +371,16 @@ if (!gotLock){
       if(arg && arg.tool_choice) body.tool_choice = arg.tool_choice;
       logLine("chat", "request model="+body.model+" temp="+temperature+" timeout="+timeoutSec+"s");
       let lastErr = null;
+      const senderId = e.sender && e.sender.id;
       for(let attempt = 0; attempt < 3; attempt++){
         const ctrl = new AbortController();
+        let cancelledByUser = false;
+        if(senderId) trackChatAborter(senderId, ctrl);
+        // P1-1：用户取消经 abort-chat IPC 触发（signal.reason 标记 user-cancel）
+        const finish = () => { if(senderId) untrackChatAborter(senderId, ctrl); };
+        ctrl.signal.addEventListener("abort", () => {
+          if(ctrl.signal.reason && ctrl.signal.reason.__userCancel) cancelledByUser = true;
+        });
         const timer = setTimeout(() => ctrl.abort(), timeoutSec * 1000);
         try{
           const r = await fetch(base + "/chat/completions", {
@@ -369,17 +390,22 @@ if (!gotLock){
             signal: ctrl.signal
           });
           clearTimeout(timer);
+          finish();
           if(!r.ok){
             if(r.status === 401) throw new Error("API Key 无效，请检查设置中的 Key");
-            if(r.status === 429){ lastErr = new Error("请求过于频繁，稍后重试"); await sleep(1000 * (attempt + 1)); continue; }
-            if(r.status >= 500){ lastErr = new Error("服务异常，请稍后重试"); await sleep(1000 * (attempt + 1)); continue; }
+            if(r.status === 429){ finish(); lastErr = new Error("请求过于频繁，稍后重试"); await sleep(1000 * (attempt + 1)); continue; }
+            if(r.status >= 500){ finish(); lastErr = new Error("服务异常，请稍后重试"); await sleep(1000 * (attempt + 1)); continue; }
             throw new Error("API 返回错误：" + r.status);
           }
           logLine("chat", "ok status="+r.status);
           return await r.json();
         }catch(err){
           clearTimeout(timer);
-          if(err && err.name === "AbortError") throw new Error("请求超时（"+timeoutSec+" 秒），请检查网络或上游服务");
+          finish();
+          if(err && err.name === "AbortError"){
+            if(cancelledByUser) throw new Error("__USER_CANCEL__"); // P1-1：取消特殊标记，前端识别为"已取消"
+            throw new Error("请求超时（"+timeoutSec+" 秒），请检查网络或上游服务");
+          }
           if(err && err.message && (err.message.indexOf("API Key") >= 0 || err.message.indexOf("服务异常") >= 0 || err.message.indexOf("API 返回错误") >= 0)) throw err;
           if(attempt < 2){ await sleep(1000 * (attempt + 1)); continue; }
           logLine("chat", "error "+(err && err.message ? err.message : String(err)));
@@ -387,6 +413,19 @@ if (!gotLock){
         }
       }
       throw lastErr || new Error("请求失败");
+    });
+    // P1-1：渲染进程主动取消进行中的 chat 请求（Electron 版取消按钮）
+    ipcMain.on("abort-chat", (e) => {
+      if(!e.sender || !e.sender.id) return;
+      const set = chatAborters.get(e.sender.id);
+      if(!set) return;
+      set.forEach((ctrl) => {
+        try{
+          const reason = new Error("user-cancel");
+          reason.__userCancel = true;
+          ctrl.abort(reason);
+        }catch(err2){ /* noop */ }
+      });
     });
 
     // 自动更新：仅打包态加载 electron-updater，静默失败，不自动下载（用户手动决定）
