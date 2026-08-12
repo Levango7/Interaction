@@ -2289,7 +2289,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.8.9";
+const VERSION = "1.9.0";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -8904,9 +8904,27 @@ async function chatOnce(messages, opts){
 
     // Electron 模式：经主进程代理（Key 不进渲染进程/localStorage），一并规避 CORS（P0-3）
     // B8：超时参数随请求传给主进程（主进程读取后应用，非法值回退默认）
+    // P1-1：订阅外部 signal 用户取消 → 通知主进程中断 fetch，让"取消按钮"在 Electron 下生效
     if(isElectron()){
       body.timeoutSec = aiParams.timeoutSec;
-      return await window.electronAPI.chat(body);
+      let _userAborted = false;
+      if(opts.signal && typeof opts.signal.addEventListener === "function"){
+        const onAbort = () => {
+          _userAborted = true;
+          try{ if(window.electronAPI && typeof window.electronAPI.abortChat === "function") window.electronAPI.abortChat(); }catch(e){ /* noop */ }
+        };
+        if(opts.signal.aborted) onAbort();
+        else opts.signal.addEventListener("abort", onAbort, { once: true });
+      }
+      try{
+        return await window.electronAPI.chat(body);
+      }catch(err){
+        // 主进程用户取消：AbortError（signal 已 abort）或 __USER_CANCEL__ 标记 → 转 AbortError 供上游显示"已取消"
+        if(_userAborted || (err && String(err && err.message || err).indexOf("__USER_CANCEL__") >= 0)){
+          const e2 = new Error("user-cancel"); e2.name = "AbortError"; throw e2;
+        }
+        throw err;
+      }
     }
 
     // 浏览器 / Edge / 本地服务：直连兜底（P0-10：超时 + 错误分级）
@@ -12609,7 +12627,13 @@ if (typeof window !== "undefined") {
  *   · localhost / 127.0.0.1（vitest/jsdom 与本地服务模式）
  *   · 任意环境显式追加 ?__test=1（开发者自查）
  */
-var __TEST_GATE__ = false; /* [prod build] test hooks disabled */
+var __TEST_GATE__ = (function(){
+  try{
+    if(typeof location === "undefined") return false;
+    if(location.hostname === "localhost" || location.hostname === "127.0.0.1") return true;
+    return /[?&]__test=1/.test(location.search || "");
+  }catch(e){ return false; }
+})();
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
