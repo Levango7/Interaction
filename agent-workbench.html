@@ -51,6 +51,9 @@
   --shadow-overlay:rgba(0,0,0,.28); --shadow-toast:rgba(0,0,0,.32);
   /* 热力图等级（柔和绿阶） */
   --heat-0:#ededf0; --heat-1:#d4ead4; --heat-2:#a8d8a8; --heat-3:#6cbf6c; --heat-4:#3a9d3a;
+  /* ===== 层级令牌体系（替代魔法数字，后层级必高于先层级） =====
+     base→sticky→sidebar(移动底栏) →overlay→drawer→popover(命令面板) →modal(全屏弹窗) →toast(最顶) →max(skip-link 跳链) */
+  --z-under:2; --z-sticky:20; --z-sidebar:40; --z-overlay:50; --z-drawer:60; --z-popover:70; --z-modal:80; --z-toast:90; --z-max:100;
   /* ===== T4.1 设计令牌体系（系统化间距/字号/圆角/阴影/过渡） ===== */
   /* 间距体系（4px 基线网格） */
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
@@ -72,6 +75,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
   background:var(--bg);color:var(--text);font-size:var(--fs-base);line-height:1.6;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+/* ===== 交互动效基架（P1④）：所有按钮统一按下反馈 + 禁用态，组件不再各写各的 =====
+   用最低特异性的元素选择器兜底；各组件已有的 :active/:disabled 规则（更高特异性）优先覆盖本基架 */
+button{transition:transform var(--transition-fast),opacity var(--transition-fast)}
+button:active:not([disabled]){transform:scale(.97)}
+button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
+button[disabled]:active{transform:none}
 input,select,textarea{font-family:inherit;font-size:var(--fs-lg);border:1px solid var(--line);
   border-radius:var(--radius-md);padding:10px 12px;background:var(--panel);color:var(--text);width:100%;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
@@ -81,7 +90,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 :focus:not(:focus-visible){outline:none}
 
 /* ===== skip-to-content 链接（a11y：键盘用户跳过顶栏直达主内容） ===== */
-.skip-link{position:absolute;top:-999px;left:0;z-index:10000;background:var(--accent);
+.skip-link{position:absolute;top:-999px;left:0;z-index:var(--z-max);background:var(--accent);
   color:var(--on-accent);padding:var(--space-2) var(--space-4);
   border-radius:0 0 var(--radius-sm) 0;text-decoration:none;font-weight:600;
   transition:top var(--transition-fast)}
@@ -96,6 +105,8 @@ a:hover{text-decoration:underline}
 .ic-inline svg{display:block}
 
 /* ===== 滚动条美化（细、不抢眼） ===== */
+/* 标准方案：Firefox/Edge/现代 Chrome 均支持；覆盖 webkit 之外的裸条内核 */
+html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--surface-muted);border-radius:4px}
@@ -220,8 +231,11 @@ a:hover{text-decoration:underline}
   transition:filter var(--transition-fast),box-shadow var(--transition-fast)}
 .mini:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .mini:active{filter:brightness(.92)}
+/* 空态统一对外配方：.empty-state 为推荐组件类（新增处推荐用它）
+   .empty / .empty-hint 为兼容别名，与推荐配方视觉对齐（居中、虚线边框、统一表面色） */
 .empty{color:var(--muted);font-size:var(--fs-sm);padding:var(--space-4);text-align:center;
-  background:var(--panel2);border:1px dashed var(--line);border-radius:var(--radius-md)}
+  background:var(--panel2);border:1px dashed var(--line);border-radius:var(--radius-md);
+  display:flex;align-items:center;justify-content:center;min-height:var(--space-8)}
 
 /* ===== 表单 ===== */
 .form-row{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-3)}
@@ -462,7 +476,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .streak-fire{display:inline-block;animation:flame 1.5s ease-in-out infinite}
 
 /* ===== v1.5-D 高级报表弹窗 ===== */
-.report-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;
+.report-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);
   display:flex;align-items:center;justify-content:center;padding:var(--space-3);opacity:0;
   visibility:hidden;transition:opacity var(--transition-base),visibility var(--transition-base)}
 .report-modal.show{opacity:1;visibility:visible}
@@ -524,7 +538,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chain-pill:disabled{opacity:.5;cursor:not-allowed}
 
 /* ===== Onboarding 引导弹窗（B） ===== */
-.onboard-modal{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:100}
+.onboard-modal{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:var(--z-modal)}
 .onboard-card{background:var(--panel);border-radius:var(--radius-xl);padding:var(--space-8);max-width:480px;
   width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
 .onboard-step{font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-2);text-transform:uppercase;letter-spacing:.05em}
@@ -548,11 +562,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .onboard-chain-demo .arr{font-size:var(--fs-xl);color:var(--muted)}
 
 /* ===== 抽屉 / 设置 ===== */
-.overlay{position:fixed;inset:0;background:var(--overlay);z-index:40;display:none;transition:opacity var(--transition-base)}
+.overlay{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-overlay);display:none;transition:opacity var(--transition-base)}
 .overlay.show{display:block}
 .drawer{position:fixed;top:0;right:0;height:100%;width:380px;max-width:92vw;background:var(--panel);
   border-left:1px solid var(--line);box-shadow:-4px 0 24px var(--shadow-drawer);
-  transform:translateX(100%);transition:transform var(--transition-base);z-index:50;
+  transform:translateX(100%);transition:transform var(--transition-base);z-index:var(--z-drawer);
   padding:var(--space-6);overflow:auto}
 .drawer.open{transform:none}
 .drawer h2{font-size:var(--fs-lg);font-weight:600;margin:0 0 var(--space-4);
@@ -650,7 +664,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== 命令面板 ===== */
 .cmd{position:fixed;top:18%;left:50%;transform:translateX(-50%);width:560px;max-width:92vw;
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  box-shadow:0 12px 40px var(--shadow-overlay);z-index:55;padding:var(--space-3);display:none}
+  box-shadow:0 12px 40px var(--shadow-overlay);z-index:var(--z-popover);padding:var(--space-3);display:none}
 .cmd.show{display:block}
 .cmd input{margin-bottom:var(--space-2)}
 .cmd ul{list-style:none;margin:0;padding:0;max-height:340px;overflow:auto}
@@ -666,18 +680,19 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .cmd li.cmd-empty{cursor:default}
 
 /* ===== Toast ===== */
-#toasts{position:fixed;top:var(--space-4);left:50%;transform:translateX(-50%);z-index:60;
+#toasts{position:fixed;top:var(--space-4);left:50%;transform:translateX(-50%);z-index:var(--z-toast);
   display:flex;flex-direction:column;gap:var(--space-2);align-items:center;pointer-events:none}
 .toast{background:var(--toast-bg);color:var(--on-accent);padding:var(--space-3) var(--space-5);
   border-radius:var(--radius-lg);font-size:var(--fs-base);box-shadow:0 4px 16px var(--shadow-toast);
   max-width:90vw;opacity:0;transition:opacity var(--transition-fast);white-space:pre-line;
-  text-align:center;line-height:1.6;font-weight:500}
+  text-align:center;line-height:1.6;font-weight:500;
+  display:inline-flex;align-items:center;justify-content:center}
 .toast.warn{background:var(--warn)}
 .toast.ok{background:var(--ok)}
 
 /* ===== 使用指南 modal ===== */
 .help-modal{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;
-  z-index:100;padding:var(--space-4)}
+  z-index:var(--z-modal);padding:var(--space-4)}
 .help-card{background:var(--panel);border-radius:var(--radius-xl);max-width:640px;width:100%;max-height:85vh;
   display:flex;flex-direction:column;box-shadow:0 8px 32px var(--shadow-overlay)}
 .help-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-5) var(--space-6);
@@ -849,7 +864,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .tbtn .lbl{display:none}
   .body{flex-direction:column}
   .side{width:100%;position:fixed;bottom:0;left:0;right:0;display:flex;gap:var(--space-1);overflow-x:auto;
-    padding:var(--space-1) var(--space-2);padding-bottom:calc(var(--space-1) + var(--safe));z-index:20;border-right:none;
+    padding:var(--space-1) var(--space-2);padding-bottom:calc(var(--space-1) + var(--safe));z-index:var(--z-sidebar);border-right:none;
     border-top:1px solid var(--line);background:var(--panel)}
   .nav-item{flex-direction:column;gap:2px;width:auto;margin:0;padding:var(--space-2) var(--space-3);font-size:var(--fs-xs);
     flex-shrink:0;min-height:44px;min-width:56px;justify-content:center}
@@ -1071,7 +1086,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* 自定义安装弹窗（替代浏览器默认安装提示） */
 .install-modal{
   position:fixed;inset:0;background:var(--overlay);
-  display:none;align-items:center;justify-content:center;z-index:90;padding:var(--space-4)
+  display:none;align-items:center;justify-content:center;z-index:var(--z-modal);padding:var(--space-4)
 }
 .install-modal.show{display:flex}
 .install-card{
@@ -1145,7 +1160,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== v1.4-E 协作/分享：分享任务卡片 + 习惯链分享弹窗 + 场景模板弹窗 ===== */
 /* 只读分享任务卡片 */
-.share-task-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
+.share-task-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
 .share-task-dialog{background:var(--panel);border-radius:var(--radius-lg);max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
 .share-task-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
 .share-task-header h2{margin:0;font-size:var(--fs-lg);color:var(--text)}
@@ -1171,7 +1186,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .share-readonly-hint{color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-2);border-top:1px dashed var(--line);margin-top:var(--space-1)}
 
 /* 习惯链分享/导入弹窗（复用 .chain-share-* 类） */
-.chain-share-modal,.chain-import-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
+.chain-share-modal,.chain-import-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
 .chain-share-dialog{background:var(--panel);border-radius:var(--radius-lg);max-width:520px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
 .chain-share-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
 .chain-share-header h2{margin:0;font-size:var(--fs-lg);color:var(--text)}
@@ -1182,7 +1197,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chain-preview-row b{color:var(--accent)}
 
 /* 场景模板弹窗 */
-.scene-template-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
+.scene-template-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
 .scene-template-dialog{background:var(--panel);border-radius:var(--radius-lg);max-width:680px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
 .scene-template-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
 .scene-template-header h2{margin:0;font-size:var(--fs-lg);color:var(--text)}
@@ -1207,7 +1222,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .plugin-desc{font-size:var(--fs-sm);color:var(--text-dim);margin:4px 0 0;line-height:1.5}
 .plugin-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .plugin-badge{padding:1px 6px;border-radius:var(--radius-sm);font-size:11px;background:var(--surface);color:var(--accent);border:1px solid var(--line)}
-.plugin-detail-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
+.plugin-detail-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
 .plugin-meta{display:flex;flex-direction:column;gap:2px;padding:8px;background:var(--surface-muted);border-radius:var(--radius-md);margin-bottom:8px;font-size:var(--fs-sm)}
 .plugin-desc-full{margin:8px 0;color:var(--text);line-height:1.6}
 .plugin-section{margin-top:8px;font-size:var(--fs-sm);color:var(--text)}
@@ -1403,7 +1418,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* 看板卡片批量模式样式 */
 .kcard.batch-mode{cursor:default}
-.kcard .batch-chk-wrap{position:absolute;top:4px;right:4px;z-index:2}
+.kcard .batch-chk-wrap{position:absolute;top:4px;right:4px;z-index:var(--z-under)}
 .kcard .batch-chk{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
 .kcard.batch-selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent-soft)}
 .kcard{position:relative}
@@ -1414,7 +1429,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tbtn.cal-btn{display:inline-flex}
 
 /* 日历视图弹窗 */
-.cal-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:none;
+.cal-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:none;
   align-items:center;justify-content:center;padding:var(--space-3)}
 .cal-modal.show{display:flex}
 .cal-modal-card{background:var(--panel);border-radius:var(--radius-xl);max-width:680px;width:100%;
@@ -1439,7 +1454,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tbtn.gantt-btn,.tbtn.mindmap-btn,.tbtn.dashboard-btn{display:inline-flex}
 
 /* 通用可视化弹窗（复用 cal-modal 风格） */
-.viz-modal{position:fixed;inset:0;background:var(--overlay);z-index:1000;display:none;
+.viz-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:none;
   align-items:center;justify-content:center;padding:var(--space-3)}
 .viz-modal.show{display:flex}
 .viz-modal-card{background:var(--panel);border-radius:var(--radius-xl);max-width:920px;width:100%;
@@ -1522,9 +1537,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .type-badge-note{background:var(--surface-muted);color:var(--ok)}
 .search-highlight{background:var(--warn-soft);color:var(--warn);padding:0 2px;border-radius:2px;font-weight:600}
 
-/* 空状态提示 */
+/* 空状态提示（兼容别名，与 .empty-state 视觉对齐：居中、虚线边框、统一表面色） */
 .empty-hint{color:var(--muted);font-size:var(--fs-sm);text-align:center;padding:var(--space-5) 0;
-  background:var(--panel2);border:1px dashed var(--line);border-radius:var(--radius-md);margin:0}
+  background:var(--panel2);border:1px dashed var(--line);border-radius:var(--radius-md);margin:0;
+  display:flex;align-items:center;justify-content:center;min-height:var(--space-8)}
 
 /* 甘特图 SVG */
 .gantt-chart{width:100%;height:auto;display:block}
@@ -1781,15 +1797,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" class="addbtn" id="cfgProfileDel" style="--sc:var(--danger,var(--muted));padding:4px 10px;white-space:nowrap">删除</button>
     </div>
   </div>
-  <div class="row"><label>Profile 名称</label><input id="cfgName" placeholder="如 OpenAI / Anthropic / 本地 Ollama" maxlength="100" autocomplete="off"></div>
-  <div class="row"><label>API Base URL</label><input id="cfgBase" placeholder="https://api.openai.com/v1" maxlength="500" autocomplete="off"></div>
-  <div class="row"><label>API Key</label><input id="cfgKey" type="password" placeholder="sk-..." maxlength="500" autocomplete="new-password"></div>
+  <div class="row"><label for="cfgName">Profile 名称</label>><input id="cfgName" placeholder="如 OpenAI / Anthropic / 本地 Ollama" maxlength="100" autocomplete="off"></div>
+  <div class="row"><label for="cfgBase">API Base URL</label>><input id="cfgBase" placeholder="https://api.openai.com/v1" maxlength="500" autocomplete="off"></div>
+  <div class="row"><label for="cfgKey">API Key</label>><input id="cfgKey" type="password" placeholder="sk-..." maxlength="500" autocomplete="new-password"></div>
   <div class="hint" id="cfgKeyHint" style="display:none;font-size:11px;color:var(--muted);margin:-6px 0 8px">已保存在本机（Electron 主进程保管，不写入网页存储）</div>
   <p class="hint" style="font-size:11px;color:var(--muted);margin:-4px 0 8px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
-  <div class="row"><label>模型</label><input id="cfgModel" placeholder="gpt-4o-mini" maxlength="100" autocomplete="off"></div>
-  <div class="row"><label>请求超时（秒，5~120）</label><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
-  <div class="row"><label>温度 Temperature（0~2）</label><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
-  <div class="row"><label>工作记忆容量（条，20~500）</label><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
+  <div class="row"><label for="cfgModel">模型</label>><input id="cfgModel" placeholder="gpt-4o-mini" maxlength="100" autocomplete="off"></div>
+  <div class="row"><label for="cfgAiTimeout">请求超时（秒，5~120）</label>><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
+  <div class="row"><label for="cfgAiTemperature">温度 Temperature（0~2）</label>><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
+  <div class="row"><label for="cfgMemMax">工作记忆容量（条，20~500）</label>><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
   <div class="row"><button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button></div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -3857,9 +3873,25 @@ async function toggleTheme(){
  * @param {("ok"|"warn"|"error"|"danger"|string)} [type] - 通知类型
  * @returns {void}
  */
+// toast 类型图标映射（toast 可访问的最小公共感知）
+const TOAST_ICONS = {
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg>',
+  error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
+  danger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>'
+};
 function toast(msg, type){
   let c=$("#toasts"); if(!c){ c=document.createElement("div"); c.id="toasts"; c.setAttribute("role","status"); c.setAttribute("aria-live","polite"); document.body.appendChild(c); }
-  const d=document.createElement("div"); d.className="toast"+(type?" "+type:""); d.textContent=msg;
+  const d=document.createElement("div"); d.className="toast"+(type?" "+type:"");
+  // 图标 DOM 插入（非 textContent）：保住 XSS 防线，纯视觉增强
+  const key = (type && TOAST_ICONS[type]) ? type : null;
+  if(key){
+    const icEl=document.createElement("span"); icEl.className="ic-inline"; icEl.style.margin="0 6px 0 0";
+    // 可信的静态 SVG 字符串（无用户输入），直接用 innerHTML
+    icEl.innerHTML = TOAST_ICONS[key];
+    d.appendChild(icEl);
+  }
+  d.appendChild(document.createTextNode(msg)); // 用户输入走 textNode，不怕 XSS
   // 危险/错误提示：改为 assertive alert，确保读屏立即播报（a11y）
   if(type==="error"||type==="danger"){ d.setAttribute("role","alert"); d.setAttribute("aria-live","assertive"); }
   c.appendChild(d); requestAnimationFrame(()=> d.style.opacity="1");
@@ -5937,6 +5969,74 @@ function setupSideToggle(){
   try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") side.classList.add("collapsed"); }catch(_){}
 }
 
+/* ---------- P0② 模态框统一 a11y 基座（延迟绑定，不依赖各弹窗的调用点） ----------
+ * 设计：不改 23 个弹窗各自的 open/close 逻辑，全局委托接管三件事：
+ *   1) Esc → 关闭"最上层"可见弹窗（优先点其关闭按钮以复用清理逻辑，否则兜底 remove show）
+ *   2) 遮罩点击（点击弹窗自身空白处 = backdrop）→ 关闭
+ *   3) 弹窗打开时挂焦点陷阱（trapFocus），关闭时释放
+ * 新弹窗只要带 role="dialog" 即自动获得全部能力。
+ */
+function _visibleModals(){
+  return $$("[role='dialog']").filter(function(m){
+    return m.classList.contains("show") ||
+           (m.style && m.style.display !== "none" && m.style.display !== "") ||
+           (m.offsetParent !== null && getComputedStyle(m).display !== "none");
+  });
+}
+/* 焦点陷阱随弹窗显隐自动挂/卸（MutationObserver 监听 class/style 变化） */
+function setupModalFocusAutoTrap(){
+  if(typeof MutationObserver === "undefined") return;
+  const seen = new WeakMap(); // modal -> releaseFn
+  function sync(){
+    $$("[role='dialog']").forEach(function(m){
+      const visible = m.classList.contains("show") ||
+                      (m.style && m.style.display !== "none" && m.style.display !== "") ||
+                      (m.offsetParent !== null && getComputedStyle(m).display !== "none");
+      const has = seen.has(m);
+      if(visible && !has){
+        const card = m.querySelector(".viz-modal-card,.recycle-card,.onboard-card,.help-card,.chain-card,.modal-card") || m;
+        const rel = typeof trapFocus === "function" ? trapFocus(card) : null;
+        if(rel) seen.set(m, rel);
+      }else if(!visible && has){
+        try{ seen.get(m)(); }catch(e){}
+        seen.delete(m);
+      }
+    });
+  }
+  try{
+    const mo = new MutationObserver(function(muts){
+      for(const mu of muts){
+        if(mu.type === "attributes" && (mu.attributeName === "class" || mu.attributeName === "style")){ sync(); return; }
+      }
+    });
+    mo.observe(document.body, { subtree:true, attributes:true, attributeFilter:["class","style"] });
+  }catch(e){ /* noop */ }
+  sync();
+}
+function setupModalA11yBase(){
+  // Esc：关最上层可见弹窗
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Escape") return;
+    const mods = _visibleModals();
+    if(!mods.length) return;
+    const top = mods[mods.length - 1];
+    // 优先点它自己的关闭按钮（复用各弹窗的清理逻辑）
+    const closeBtn = top.querySelector("[id$='Close'],[aria-label^='关闭'],.viz-modal-close,.recycle-back,.help-close");
+    if(closeBtn){ try{ closeBtn.click(); }catch(_){ top.classList.remove("show"); top.style.display="none"; } }
+    else{ top.classList.remove("show"); if(top.style) top.style.display="none"; }
+  });
+  // 遮罩点击关闭（点到弹窗背景自身而非内容卡片）
+  document.addEventListener("click", function(e){
+    const m = e.target && e.target.closest && e.target.closest("[role='dialog']");
+    if(m && e.target === m){
+      const closeBtn = m.querySelector("[id$='Close'],[aria-label^='关闭'],.viz-modal-close,.recycle-back,.help-close");
+      if(closeBtn){ try{ closeBtn.click(); }catch(_){} }
+      else{ m.classList.remove("show"); if(m.style) m.style.display="none"; }
+    }
+  });
+  setupModalFocusAutoTrap();
+}
+
 /* ---------- T4.3 移动端增强：手势支持 + 触摸优化 + 横屏适配 ---------- */
 /**
  * 计算滑动方向和距离（纯函数，方便测试）
@@ -7740,10 +7840,10 @@ function renderMainHTML(){
   </form>`;
 
   const tagFilterHTML = `<div class="form-row" style="margin-bottom:10px">
-    <div class="fld" style="max-width:220px"><label>搜索任务（A3）</label><input id="boardSearch" placeholder="输入标题关键词" maxlength="200"></div>
+    <div class="fld" style="max-width:220px"><label for="boardSearch">搜索任务（A3）</label>><input id="boardSearch" placeholder="输入标题关键词" maxlength="200"></div>
     <div class="fld" style="max-width:140px"><label>状态</label>
       <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
-    <div class="fld" style="max-width:200px"><label>标签（留空=全部）</label><input id="tagFilter" placeholder="如 周报 / urgent" maxlength="200"></div>
+    <div class="fld" style="max-width:200px"><label for="tagFilter">标签（留空=全部）</label>><input id="tagFilter" placeholder="如 周报 / urgent" maxlength="200"></div>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
@@ -12429,6 +12529,7 @@ seed();
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
   applyTheme();
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
+  try{ setupModalA11yBase(); }catch(e){ pushDiag("error","modalA11y init: "+(e&&e.message||e),{where:"modalA11y"}); } // P0② 模态框统一 Esc/遮罩/焦点陷阱基座
   setupRipple(); // T4.3 底部导航点击涟漪效果（事件委托）
   setupMobileGestures(); // T4.3 移动端手势：左滑下一个/右滑上一个/右滑左边缘打开侧边栏（仅移动端启用）
   applyLandscapeFold(); // T4.3 移动端横屏自动折叠侧边栏
