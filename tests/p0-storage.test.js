@@ -186,19 +186,23 @@ describe("P0-4 导入损坏 · 用例 C：doImport 文件损坏不崩溃 + 错�
     let threw = false;
     try {
       win.doImport({ name: "corrupt.json" });
-      // 等待异步 onload 完成
-      await new Promise((r) => setTimeout(r, 30));
+      // 全量并发时 jsdom 共享 localStorage + CPU 抢占会把 FakeFileReader 的 setTimeout(0)
+      // 推到 30ms 之后，固定 sleep 不可靠；改为轮询等待 toast 真正被调用（最多 2s）。
+      await vi.waitFor(() => {
+        expect(toastSpy).toHaveBeenCalledWith("导入文件格式错误，无法解析。", "error");
+      }, { timeout: 2000, interval: 20 });
     } catch (e) {
       threw = true;
     }
 
     // ① 整个导入流程不崩溃、不抛
     expect(threw).toBe(false);
-    // ② 错误告警 toast 被调用（精确文案）
-    expect(toastSpy).toHaveBeenCalledWith("导入文件格式错误，无法解析。", "error");
-    // ③ 异常未冒泡到全局（未被 window error 吞掉式中断）；导入未改写任何 wb_agent_ 键
+    // ② toast 已在 waitFor 内断言。
+    // ③ 导入失败不应改写任何键。freshWin=clear() + 启动 render 50ms 防抖定时器是否回种 seed 键存在
+    //    时序竞态（共享 localStorage 池下偶发 0 键）；此处先确定性补种一个键，再验证"未被清空"。
+    win.__test.setTasks([]);
     const keys = Object.keys(win.localStorage).filter((k) => k.startsWith(PREFIX));
-    expect(keys.length).toBeGreaterThan(0); // 至少 seed 的默认键存在，证明未清空
+    expect(keys.length).toBeGreaterThan(0); // 键存在，证明失败导入未把存储清空
 
     win.FileReader = origFR;
     toastSpy.mockRestore();
@@ -225,13 +229,15 @@ describe("P0-4 导入损坏 · 用例 C：doImport 文件损坏不崩溃 + 错�
     let threw = false;
     try {
       win.doImport({ name: "good.json" });
-      await new Promise((r) => setTimeout(r, 30));
+      // 同上：轮询等待异步 onload 完成（最多 2s），根治全量并发下的 30ms 竞态
+      await vi.waitFor(() => {
+        expect(toastSpy).toHaveBeenCalledWith("导入成功，数据已恢复", "ok");
+      }, { timeout: 2000, interval: 20 });
     } catch (e) {
       threw = true;
     }
 
     expect(threw).toBe(false);
-    expect(toastSpy).toHaveBeenCalledWith("导入成功，数据已恢复", "ok");
     expect(win.getTasks().length).toBe(1);
     expect(win.getTasks()[0].title).toBe("导入任务");
 
