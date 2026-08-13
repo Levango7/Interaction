@@ -874,12 +874,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== 回收站页面（D3：软删除任务的恢复 / 永久删除入口；v1.3.4-B 全屏页面视图） ===== */
 /* v1.9：回收站宽高铺满 main-wrap——移除 max-width 限制，让列表/表格宽度撑满内容区 */
 /* v1.9.3：.recycle-modal 加 margin-bottom:var(--space-5) 与 .card 一致；
-   .recycle-list 上下 padding 增加到 var(--space-6) 让边框间距更长；
-   .recycle-card 加 min-height:calc(100vh - 300px) 让内容块上下更高，空回收站时不触发滚动条。 */
+   .recycle-list 上下 padding 增大到 var(--space-7) 让内容块上下边框间距更长（卡片高度由内容决定，与其他页面 .card 一致）。 */
 .recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5)}
 .recycle-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden;
-  min-height:calc(100vh - 300px)}
+  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden}
 .recycle-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-5) var(--space-6);
   border-bottom:1px solid var(--line);flex-shrink:0}
 .recycle-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;flex:1}
@@ -888,7 +886,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   font-size:var(--fs-sm);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
 .recycle-back:hover{background:var(--surface-hover);color:var(--text)}
 .recycle-count{font-size:var(--fs-xs);color:var(--muted);flex-shrink:0;font-variant-numeric:tabular-nums}
-.recycle-list{padding:var(--space-6) var(--space-6);display:flex;flex-direction:column;gap:var(--space-2)}
+.recycle-list{padding:var(--space-7) var(--space-6);display:flex;flex-direction:column;gap:var(--space-2)}
 .recycle-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2)}
 .recycle-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -1993,15 +1991,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" class="addbtn" id="cfgProfileDel" style="--sc:var(--danger,var(--muted));padding:4px 10px;white-space:nowrap">删除</button>
     </div>
   </div>
-  <div class="row"><label for="cfgName">Profile 名称</label>><input id="cfgName" placeholder="如 OpenAI / Anthropic / 本地 Ollama" maxlength="100" autocomplete="off"></div>
-  <div class="row"><label for="cfgBase">API Base URL</label>><input id="cfgBase" placeholder="https://api.openai.com/v1" maxlength="500" autocomplete="off"></div>
-  <div class="row"><label for="cfgKey">API Key</label>><input id="cfgKey" type="password" placeholder="sk-..." maxlength="500" autocomplete="new-password"></div>
+  <div class="row"><label for="cfgName">Profile 名称</label><input id="cfgName" placeholder="如 OpenAI / Anthropic / 本地 Ollama" maxlength="100" autocomplete="off"></div>
+  <div class="row"><label for="cfgBase">API Base URL</label><input id="cfgBase" placeholder="https://api.openai.com/v1" maxlength="500" autocomplete="off"></div>
+  <div class="row"><label for="cfgKey">API Key</label><input id="cfgKey" type="password" placeholder="sk-..." maxlength="500" autocomplete="new-password"></div>
   <div class="hint" id="cfgKeyHint" style="display:none;font-size:11px;color:var(--muted);margin:-6px 0 8px">已保存在本机（Electron 主进程保管，不写入网页存储）</div>
   <p class="hint" style="font-size:11px;color:var(--muted);margin:-4px 0 8px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
-  <div class="row"><label for="cfgModel">模型</label>><input id="cfgModel" placeholder="gpt-4o-mini" maxlength="100" autocomplete="off"></div>
-  <div class="row"><label for="cfgAiTimeout">请求超时（秒，5~120）</label>><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
-  <div class="row"><label for="cfgAiTemperature">温度 Temperature（0~2）</label>><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
-  <div class="row"><label for="cfgMemMax">工作记忆容量（条，20~500）</label>><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
+  <div class="row"><label for="cfgModel">模型</label><input id="cfgModel" placeholder="gpt-4o-mini" maxlength="100" autocomplete="off"></div>
+  <div class="row"><label for="cfgAiTimeout">请求超时（秒，5~120）</label><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
+  <div class="row"><label for="cfgAiTemperature">温度 Temperature（0~2）</label><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
+  <div class="row"><label for="cfgMemMax">工作记忆容量（条，20~500）</label><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
   <div class="row"><button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button></div>
 
   <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
@@ -5995,6 +5993,8 @@ function renderSide(){
   // 三组分割：监控组(总览/统计/回收站) → 功能组(场景项) → 系统组(设置/指南)，组间细分割线 .nav-sep
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + '<div class="nav-sep"></div>' + items + '<div class="nav-sep"></div>' + gearBtn + helpBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
+    // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
+    const _m = $("#main"); if(_m) _m.scrollTop = 0;
     if(b.dataset.recycle){ setActive("recycle"); render(); return; }
     if(b.dataset.gear){ openDrawer(); return; }
     if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
@@ -6724,6 +6724,12 @@ function helpSection(id, title, content){
 // v1.9：从 modal 改为页面渲染到 #main（撑满主内容区），保留折叠面板交互与 a11y focus 管理
 // v1.8.4：新增「性能优化 / 企业级功能 / AI 工作流」3 章节
 function renderHelp(){
+  // v1.9.3：若设置页(drawer-page)正在显示，先移回并恢复 #main，避免指南渲染到隐藏的 #main
+  const _drawer = $("#drawer");
+  if(_drawer && _drawer.classList.contains("drawer-page")){
+    _moveDrawerHome();
+    _drawer.classList.remove("open");
+  }
   const html = `<div class="help-page" id="helpPage">
     <div class="help-header">
       <h2 id="helpPageTitle">${ic("book")}使用指南</h2>
@@ -6821,7 +6827,7 @@ function renderHelp(){
   $("#main").innerHTML = sanitizeHtml(html);
   appendFoot();
   const backBtn = $("#helpBack");
-  if(backBtn) backBtn.onclick = ()=>{ render(); };
+  if(backBtn) backBtn.onclick = ()=>{ const _m = $("#main"); if(_m) _m.scrollTop = 0; render(); };
   // a11y：打开页面时 focus 到返回按钮，避免 focus 残留在背景元素
   try{
     if(backBtn && typeof backBtn.focus === "function") backBtn.focus();
