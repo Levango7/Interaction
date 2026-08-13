@@ -5985,10 +5985,12 @@ function renderSide(){
       ${(SCENARIOS[sc].icon || "").replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">${s.name}</span><span class="cnt">${open}</span></button>`;
   }).join("");
   // 设置入口迁移至侧栏底部（与总体/统计/回收站同组）；保留 id="btnGear"（a11y 测试断言它存在）
-  const gearBtn = `<button class="nav-item" data-gear="1" id="btnGear" style="--sc:var(--muted)" title="设置" aria-label="设置">
+  const _gearActive = ($("#drawer") && $("#drawer").classList.contains("drawer-page")) ? " active" : "";
+  const gearBtn = `<button class="nav-item${_gearActive}" data-gear="1" id="btnGear" style="--sc:var(--muted)" title="设置" aria-label="设置">
     ${UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">设置</span></button>`;
   // 指南入口迁移至侧栏底部（v1.9 顶栏精简：从顶栏移除 btnHelp，改由侧栏 data-help 委托调用 renderHelp）
-  const helpBtn = `<button class="nav-item" data-help="1" id="sideBtnHelp" style="--sc:var(--muted)" title="使用指南" aria-label="使用指南">
+  const _helpActive = $("#helpPage") ? " active" : "";
+  const helpBtn = `<button class="nav-item${_helpActive}" data-help="1" id="sideBtnHelp" style="--sc:var(--muted)" title="使用指南" aria-label="使用指南">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nm">指南</span></button>`;
   // 三组分割：监控组(总览/统计/回收站) → 功能组(场景项) → 系统组(设置/指南)，组间细分割线 .nav-sep
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + '<div class="nav-sep"></div>' + items + '<div class="nav-sep"></div>' + gearBtn + helpBtn);
@@ -6832,6 +6834,7 @@ function renderHelp(){
   try{
     if(backBtn && typeof backBtn.focus === "function") backBtn.focus();
   }catch(e){ /* noop：jsdom 或异常环境下 focus 可能不可用 */ }
+  renderSide(); // v1.9.3：更新侧边栏高亮（指南按钮 active）
 }
 
 // ===== v1.4-E 协作/分享：任务分享链接 + 只读任务卡片 =====
@@ -11281,6 +11284,7 @@ function openDrawer(){ const cfg=getCfg();
      appendFoot() 默认往 #main 追加，但设置页面 #main 已隐藏，需往 #drawer 追加。
      幂等：先移除已有 .foot 再追加。 */
   _appendDrawerFoot();
+  renderSide(); // v1.9.3：更新侧边栏高亮（设置按钮 active）
 }
 /* 往 #drawer 末尾追加尾栏（设置页面专用，与 appendFoot 结构一致） */
 function _appendDrawerFoot(){
