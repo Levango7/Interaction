@@ -701,11 +701,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   overflow:auto !important;
   flex:1 1 0 !important;
   display:block !important;
-  background:var(--panel);
-  /* v1.9.2：移除 border / border-radius，与 #main 视觉一致（避免多 2px 间距与圆角差异） */
+  background:transparent;
+  /* v1.9.3：background 改为 transparent 与 #main 一致（#main 无背景色，显示 body 的 var(--bg)） */
   border:none;
   border-radius:0;
   margin:0 !important;
+  min-width:0;
   min-height:0;
 }
 /* 设置页面标题行：标题左 + 返回右（与 help-header 风格一致） */
@@ -844,9 +845,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   color:var(--muted);transition:background var(--transition-fast),color var(--transition-fast)}
 .help-close:hover{background:var(--surface-hover);color:var(--text)}
 .help-body{padding:var(--space-4) var(--space-6);overflow-y:auto;flex:1}
-/* ===== 使用指南页面（v1.9：从 modal 改为页面渲染到 #main，撑满主内容区） ===== */
-.help-page{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  display:flex;flex-direction:column;overflow:hidden}
+/* ===== 使用指南页面（v1.9：从 modal 改为页面渲染到 #main，撑满主内容区；v1.9.3：去 border/overflow，加 margin-bottom 与 .card 一致） ===== */
+.help-page{background:var(--panel);
+  display:flex;flex-direction:column;margin-bottom:var(--space-5)}
 .help-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text-dim);cursor:pointer;
   background:none;border:1px solid var(--line);transition:background var(--transition-fast),color var(--transition-fast)}
@@ -13286,13 +13287,7 @@ if (typeof window !== "undefined") {
  *   · localhost / 127.0.0.1（vitest/jsdom 与本地服务模式）
  *   · 任意环境显式追加 ?__test=1（开发者自查）
  */
-var __TEST_GATE__ = (function(){
-  try{
-    if(typeof location === "undefined") return false;
-    if(location.hostname === "localhost" || location.hostname === "127.0.0.1") return true;
-    return /[?&]__test=1/.test(location.search || "");
-  }catch(e){ return false; }
-})();
+var __TEST_GATE__ = false; /* [prod build] test hooks disabled */
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
