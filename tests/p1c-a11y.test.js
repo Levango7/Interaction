@@ -2,7 +2,7 @@
  * P1-c 可访问性 · 回归验证
  * ----------------------------------------------------------------------------
  * 验证 a11y 增强已落地：
- *   ① live region：#toasts role=status/aria-live=polite；#banner aria-live=polite。
+ *   ① live region：#toasts role=status/aria-live=polite；#msgPanel aria-live=polite（消息中心替代 banner）。
  *   ② 工具栏 6 个图标按钮均有 aria-label，内联 SVG 标记为装饰(aria-hidden)。
  *   ③ 抽屉关闭按钮 aria-label。
  *   ④ 渲染后导航项 SVG 装饰化(aria-hidden)。
@@ -54,10 +54,18 @@ describe("P1-c 可访问性", () => {
     expect(t.getAttribute("aria-live")).toBe("polite");
   });
 
-  it("#banner 为 aria-live=polite", () => {
-    const b = doc.getElementById("banner");
-    expect(b, "#banner 应存在").toBeTruthy();
-    expect(b.getAttribute("aria-live")).toBe("polite");
+  it("#msgPanel 为 aria-live=polite（消息中心 live region，替代 banner）", () => {
+    const p = doc.getElementById("msgPanel");
+    expect(p, "#msgPanel 应存在").toBeTruthy();
+    expect(p.getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("顶栏 #btnMessages 含 aria-label 与装饰化 SVG", () => {
+    const b = doc.getElementById("btnMessages");
+    expect(b, "#btnMessages 应存在").toBeTruthy();
+    expect(b.hasAttribute("aria-label") && b.getAttribute("aria-label").length > 0, "#btnMessages 应有非空 aria-label").toBe(true);
+    const svg = b.querySelector("svg");
+    expect(!svg || svg.getAttribute("aria-hidden") === "true", "#btnMessages 内 SVG 应 aria-hidden").toBe(true);
   });
 
   it("工具栏图标按钮均有 aria-label，且内联 SVG 标记为装饰(aria-hidden)", () => {

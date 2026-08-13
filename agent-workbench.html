@@ -114,38 +114,49 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 
 /* ===== 整体布局：顶栏 / 侧栏 / 主区 ===== */
 .app{display:flex;flex-direction:column;height:100vh}
-/* 两级顶栏：row1 = 品牌 + 系统级；row2 = 应用级工具（小而鲜明） */
-.topbar{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;
+/* 单行顶栏：品牌 + spacer + 系统级按钮居右 */
+.topbar{display:flex;flex-direction:row;align-items:center;gap:var(--space-3);
+  padding:var(--space-4) var(--space-6);
   background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0;
   backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px)}
-.tb-row1{display:flex;align-items:center;gap:6px;
-  padding:var(--space-2) var(--space-5)}
-.tb-row2{display:flex;align-items:center;gap:var(--space-2);
-  padding:var(--space-1) var(--space-5) var(--space-2);
-  /* 与第一行的分界：细线 + 微妙的表面层次差，像两张卡片叠放而非一行切开 */
-  border-top:1px solid var(--line);
+/* 正文工具行（原顶栏第二行，移至主区上方，小而鲜明） */
+.toolbar-row{display:flex;align-items:center;gap:var(--space-2);
+  padding:var(--space-2) var(--space-5);
+  border-bottom:1px solid var(--line);
   background:var(--tb-row2-bg);
-  flex-wrap:nowrap;overflow-x:auto}
+  flex-wrap:nowrap;overflow-x:auto;flex-shrink:0}
 /* 居右对齐（auto margin 而非 justify-content:flex-end：窄屏溢出时仍可从左滚动到所有按钮） */
-.tb-row2 > :first-child{margin-left:auto}
-.tb-row2 .tbtn{min-height:30px;padding:4px var(--space-2);font-size:var(--fs-xs);
-  color:var(--text-dim-2);border:1px solid var(--line);background:var(--panel2);
+.toolbar-row > :first-child{margin-left:auto}
+.toolbar-row .tbtn{min-height:30px;padding:4px var(--space-2);font-size:var(--fs-xs);
+  color:var(--text-dim-2);border:1px solid var(--line);background:var(--panel);
   border-radius:var(--radius-full,var(--radius-md));flex-shrink:0}
-.tb-row2 .tbtn:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);
+.toolbar-row .tbtn:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);
   box-shadow:var(--shadow-1)}
-.tb-row2 .tbtn:active{transform:scale(.97)}
-.tb-row2 .tbtn svg{width:15px;height:15px}
-/* 第二行形状语言统一：widget 也改胶囊圆角，告别"按钮圆胶囊 + widget 方块"的混杂 */
-.tb-row2 .pomo-widget,.tb-row2 .tracker-widget{flex-shrink:0;padding:2px var(--space-2);gap:var(--space-1);
-  border-radius:var(--radius-full);border:1px solid var(--line);background:var(--panel2)}
-.tb-row2 .pomo-display,.tb-row2 .tracker-display{min-width:0;font-size:var(--fs-xs)}
-.tb-row2 .pomo-actions button,.tb-row2 .tracker-actions button{min-height:26px;padding:0 var(--space-2);font-size:var(--fs-xs)}
+.toolbar-row .tbtn:active{transform:scale(.97)}
+.toolbar-row .tbtn svg{width:15px;height:15px}
+/* 工具行形状语言统一：widget 也改胶囊圆角，告别"按钮圆胶囊 + widget 方块"的混杂 */
+.toolbar-row .pomo-widget,.toolbar-row .tracker-widget{flex-shrink:0;padding:2px var(--space-2);gap:var(--space-1);
+  border-radius:var(--radius-full);border:1px solid var(--line);background:var(--panel)}
+.toolbar-row .pomo-display,.toolbar-row .tracker-display{min-width:0;font-size:var(--fs-xs)}
+.toolbar-row .pomo-actions button,.toolbar-row .tracker-action button{min-height:26px;padding:0 var(--space-2);font-size:var(--fs-xs)}
 /* 三大块之间加竖线分隔符（::before 伪元素，零 HTML 改动），边界一目了然 */
-.tb-row2 > #btnCalendar{margin-left:var(--space-3);position:relative}
-.tb-row2 > #btnSearchTop{margin-left:auto;position:relative}
-.tb-row2 > #btnCalendar::before,
-.tb-row2 > #btnSearchTop::before{content:"";position:absolute;left:-6px;top:50%;
+.toolbar-row > #btnCalendar{margin-left:var(--space-3);position:relative}
+.toolbar-row > #btnSearchTop{margin-left:auto;position:relative}
+.toolbar-row > #btnCalendar::before,
+.toolbar-row > #btnSearchTop::before{content:"";position:absolute;left:-6px;top:50%;
   transform:translateY(-50%);width:1px;height:14px;background:var(--line);pointer-events:none}
+/* “更多”按钮：跟随搜索按钮居右，与搜索按钮保持小间距（无竖线分隔，避免视觉过密） */
+.toolbar-row > #btnMore{flex-shrink:0}
+/* 更多工具下拉菜单：次常用工具收起于此（fixed 定位，JS 计算坐标） */
+.more-menu{position:fixed;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-3);z-index:var(--z-popover);
+  padding:var(--space-2);display:flex;flex-direction:column;gap:var(--space-1);min-width:140px}
+.more-menu .tbtn{justify-content:flex-start;width:100%;min-height:32px;
+  padding:var(--space-1) var(--space-3);font-size:var(--fs-sm);color:var(--text-dim);
+  border:1px solid transparent;background:transparent;border-radius:var(--radius-md)}
+.more-menu .tbtn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--line)}
+.more-menu .tbtn svg{width:16px;height:16px;flex-shrink:0}
+.more-menu .tbtn .lbl{font-size:var(--fs-sm)}
 /* logo 与右侧系统按钮对齐：行高统一为 36px（同 .tbtn min-height），消除基线不齐 */
 .logo{display:flex;align-items:center;gap:var(--space-2);font-weight:600;font-size:var(--fs-lg);
   letter-spacing:-.01em;min-height:36px;flex-shrink:0}
@@ -161,15 +172,42 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .tbtn:active{background:var(--surface-muted)}
 .tbtn.danger:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger-border)}
 .tbtn svg{width:18px;height:18px}
+/* 系统级消息按钮角标（红色小圆点 / 未读数） */
+.tbtn{position:relative}
+.tbtn .badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;
+  padding:0 4px;border-radius:8px;background:var(--danger);color:var(--on-accent);
+  font-size:10px;font-weight:600;line-height:16px;text-align:center;pointer-events:none}
 
-/* ===== 横幅 ===== */
-.banner{background:var(--banner-bg);border-bottom:1px solid var(--banner-border);color:var(--banner-ink);
-  padding:var(--space-2) var(--space-5);font-size:var(--fs-sm);display:none;align-items:center;gap:var(--space-2)}
-.banner.show{display:flex}
-.banner button{margin-left:auto;text-decoration:underline;font-size:var(--fs-sm);color:var(--banner-ink)}
+/* ===== 系统级消息中心：下拉面板 ===== */
+.msg-panel{position:fixed;top:52px;right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
+  max-height:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-3);z-index:var(--z-popover);display:flex;flex-direction:column;overflow:hidden}
+.msg-panel-header{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);flex-shrink:0}
+.msg-panel-title{font-weight:600;font-size:var(--fs-base)}
+.msg-panel-actions{display:flex;gap:var(--space-2)}
+.msg-mini-btn{padding:2px var(--space-2);font-size:var(--fs-xs);border:1px solid var(--line);
+  border-radius:var(--radius-sm);background:var(--panel2);color:var(--text-dim);cursor:pointer}
+.msg-mini-btn:hover{background:var(--surface-hover);color:var(--text)}
+.msg-list{flex:1;overflow-y:auto;padding:0;list-style:none;margin:0}
+.msg-item{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);
+  display:flex;gap:var(--space-3);align-items:flex-start}
+.msg-item:last-child{border-bottom:none}
+.msg-item.unread{background:var(--accent-soft)}
+.msg-item-icon{flex-shrink:0;width:20px;height:20px;color:var(--accent);display:flex;align-items:center;justify-content:center}
+.msg-item-icon svg{width:20px;height:20px}
+.msg-item-body{flex:1;min-width:0}
+.msg-item-title{font-weight:600;font-size:var(--fs-sm);margin-bottom:2px}
+.msg-item-text{font-size:var(--fs-xs);color:var(--muted);line-height:1.4;word-break:break-word}
+.msg-item-time{font-size:10px;color:var(--text-faint);margin-top:4px}
+.msg-item-action{flex-shrink:0;font-size:var(--fs-xs);color:var(--accent);
+  text-decoration:underline;cursor:pointer;background:transparent;border:none;padding:0}
+.msg-item-action:hover{color:var(--on-accent);background:var(--accent)}
+.msg-empty{text-align:center;padding:var(--space-6);color:var(--muted);font-size:var(--fs-sm)}
 
 /* ===== 主体：侧栏 + 主区 ===== */
 .body{flex:1;display:flex;min-height:0}
+.main-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
 .side{width:220px;background:var(--panel);border-right:1px solid var(--line);
   padding:var(--space-3) var(--space-2);overflow:auto;flex-shrink:0;transition:width .2s ease}
 .nav-item{display:flex;align-items:center;gap:var(--space-3);width:100%;padding:10px var(--space-3);
@@ -325,6 +363,75 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   margin-left:var(--space-2);min-height:auto;background:transparent;border-radius:var(--radius-sm)}
 .chat-retry:hover{color:var(--on-accent);background:var(--accent)}
 .msg.assistant.md-body.streaming{opacity:.7}
+
+/* ===== 右侧 AI 聊天面板（三栏布局：左导航 | 中内容 | 右 AI 聊天） =====
+   设计要点：
+   - 固定宽度 360px，flex-shrink:0 不被压缩
+   - 内部 flex column：header / 消息区(flex:1) / 输入区
+   - 复用现有 #chat / #chatForm / #chatThinking / #chatCancel 元素（移出主内容区，挂到面板）
+   - 折叠态：宽度归零 + overflow:hidden，配 transition 平滑过渡
+   - 响应式：中屏收窄到 300px，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
+.chat-panel{width:360px;flex-shrink:0;display:flex;flex-direction:column;
+  border-left:1px solid var(--line);background:var(--panel);
+  transition:width var(--transition-fast) ease,transform var(--transition-fast) ease}
+.chat-panel.collapsed{width:0;overflow:hidden;border-left-color:transparent}
+.chat-panel-header{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:var(--space-2)}
+.chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2)}
+.chat-panel-title svg{width:16px;height:16px;color:var(--accent)}
+.chat-panel-collapse{padding:2px var(--space-2);font-size:var(--fs-xs);color:var(--text-dim);
+  background:transparent;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;
+  min-height:auto;line-height:1.4;transition:background var(--transition-fast),color var(--transition-fast)}
+.chat-panel-collapse:hover{background:var(--surface-hover);color:var(--text)}
+/* 模型选择下拉框：复用 cfg.profiles，切换 active profile */
+.chat-model-select{font-size:var(--fs-xs);padding:2px var(--space-2);border:1px solid var(--line);
+  border-radius:var(--radius-md);background:var(--panel);color:var(--text);max-width:140px;cursor:pointer;
+  min-height:24px;line-height:1.4;flex-shrink:1;overflow:hidden;text-overflow:ellipsis;
+  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.chat-model-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.chat-model-select:hover{border-color:var(--accent)}
+/* 面板内消息区：覆盖 .chat 原有边框/高度，让其填满面板 */
+.chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
+  padding:var(--space-3);background:transparent;margin-bottom:0;display:flex;flex-direction:column;gap:var(--space-2)}
+.chat-panel .chat-toolbar{margin:0;padding:var(--space-2) var(--space-3);border-top:1px solid var(--line);
+  justify-content:flex-start;min-height:24px}
+/* 底部输入区：附件按钮 + textarea + 发送按钮 */
+.chat-input-area{padding:var(--space-2);border-top:1px solid var(--line);
+  display:flex;gap:var(--space-2);align-items:flex-end;margin:0}
+.chat-attach-btn{flex-shrink:0;padding:var(--space-2);border:1px solid var(--line);
+  border-radius:var(--radius-md);background:var(--panel2);color:var(--text-dim);cursor:pointer;
+  min-height:36px;min-width:36px;font-size:var(--fs-base);line-height:1;
+  transition:background var(--transition-fast),color var(--transition-fast)}
+.chat-attach-btn:hover{background:var(--surface-hover);color:var(--text)}
+.chat-attach-btn svg{width:16px;height:16px}
+.chat-text-input{flex:1;resize:none;min-height:36px;max-height:120px;padding:var(--space-2);
+  border:1px solid var(--line);border-radius:var(--radius-md);font-size:var(--fs-sm);
+  background:var(--panel2);color:var(--text);font-family:inherit;line-height:1.5;
+  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.chat-text-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.chat-send-btn{flex-shrink:0;padding:0 var(--space-4);border:none;border-radius:var(--radius-md);
+  background:var(--accent);color:var(--on-accent);font-size:var(--fs-sm);font-weight:500;
+  min-height:36px;cursor:pointer;
+  transition:filter var(--transition-fast),box-shadow var(--transition-fast)}
+.chat-send-btn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
+.chat-send-btn:active{filter:brightness(.92)}
+/* 折叠后的侧边条（窄屏浮动按钮的替代：折叠时显示一条窄轨道，点击展开） */
+.chat-panel-rail{width:24px;flex-shrink:0;border-left:1px solid var(--line);background:var(--panel);
+  display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);
+  font-size:var(--fs-xs);writing-mode:vertical-rl;letter-spacing:.1em;padding:var(--space-3) 0;
+  transition:background var(--transition-fast),color var(--transition-fast)}
+.chat-panel-rail:hover{background:var(--surface-hover);color:var(--text)}
+.chat-panel-rail.show{display:flex}
+/* 响应式：中屏收窄，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
+@media (max-width:1023px){
+  .chat-panel{width:300px}
+}
+@media (max-width:767px){
+  .chat-panel{position:fixed;top:0;right:0;bottom:0;width:100%;max-width:360px;z-index:var(--z-popover);
+    transform:translateX(100%);box-shadow:var(--shadow-3)}
+  .chat-panel.show{transform:translateX(0)}
+  .chat-panel.collapsed{width:100%;max-width:360px;overflow:visible;transform:translateX(100%);border-left-color:var(--line)}
+}
 
 /* ===== Markdown 渲染体（T3.5）·AI 回复与记录长文本共用 ===== */
 .md-body>:first-child{margin-top:0}
@@ -579,6 +686,41 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   border-radius:var(--radius-sm);transition:background var(--transition-fast),color var(--transition-fast)}
 .drawer .close:hover{background:var(--surface-hover);color:var(--text)}
 
+/* ===== 设置页面（v1.9：从侧边栏抽屉改为正常页面，铺满 main-wrap） ===== */
+/* 通过 JS 把 #drawer 移到 .main-wrap 里并加 .drawer-page class，覆盖原 fixed 抽屉样式 */
+.drawer-page{
+  position:relative !important;
+  top:auto !important; right:auto !important;
+  height:auto !important; width:auto !important; max-width:none !important;
+  transform:none !important;
+  border-left:none !important;
+  box-shadow:none !important;
+  z-index:auto !important;
+  /* v1.9.1：padding 与 #main 一致（上下 --space-6，左右 --space-7） */
+  padding:var(--space-6) var(--space-7) !important;
+  overflow:auto !important;
+  flex:1 1 0 !important;
+  display:block !important;
+  background:var(--panel);
+  /* v1.9.2：移除 border / border-radius，与 #main 视觉一致（避免多 2px 间距与圆角差异） */
+  border:none;
+  border-radius:0;
+  margin:0 !important;
+  min-height:0;
+}
+/* 设置页面标题行：标题左 + 返回右（与 help-header 风格一致） */
+.drawer-page > h2{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:var(--space-4);margin-bottom:var(--space-4);
+  border-bottom:1px solid var(--line);
+}
+.drawer-page > h2 > .close{
+  font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);
+  border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
+  border-radius:var(--radius-md);line-height:1.4;
+}
+.drawer-page > h2 > .close:hover{background:var(--surface-hover);color:var(--text)}
+
 /* ===== 习惯链管理（T3.2） ===== */
 .chain-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-1);border-radius:var(--radius-sm)}
 .chain-row.disabled{opacity:.45}
@@ -702,6 +844,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   color:var(--muted);transition:background var(--transition-fast),color var(--transition-fast)}
 .help-close:hover{background:var(--surface-hover);color:var(--text)}
 .help-body{padding:var(--space-4) var(--space-6);overflow-y:auto;flex:1}
+/* ===== 使用指南页面（v1.9：从 modal 改为页面渲染到 #main，撑满主内容区） ===== */
+.help-page{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  display:flex;flex-direction:column;overflow:hidden}
+.help-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
+  border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text-dim);cursor:pointer;
+  background:none;border:1px solid var(--line);transition:background var(--transition-fast),color var(--transition-fast)}
+.help-back:hover{background:var(--surface-hover);color:var(--text)}
 .help-section{margin-bottom:var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden}
 .help-section summary{padding:var(--space-3) var(--space-4);cursor:pointer;font-weight:600;font-size:var(--fs-base);
   background:var(--panel2);list-style:none;transition:background var(--transition-fast)}
@@ -722,12 +871,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   padding:2px 6px;font-size:var(--fs-xs);font-family:"SF Mono",monospace}
 
 /* ===== 回收站页面（D3：软删除任务的恢复 / 永久删除入口；v1.3.4-B 全屏页面视图） ===== */
-/* 回收站页面撑满主区高度，footer 用 margin-top:auto 始终压到底部（内容短也不悬空） */
-.recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);max-width:720px;margin:0 auto;
-  min-height:calc(100% - 2 * var(--space-6))}
-.recycle-modal .foot{margin-top:auto;padding-bottom:var(--space-2)}
+/* v1.9：回收站宽高铺满 main-wrap——移除 max-width 限制，让列表/表格宽度撑满内容区 */
+/* v1.9.3：.recycle-modal 加 margin-bottom:var(--space-5) 与 .card 一致；
+   .recycle-list 上下 padding 增加到 var(--space-6) 让边框间距更长；
+   .recycle-card 加 min-height:calc(100vh - 300px) 让内容块上下更高，空回收站时不触发滚动条。 */
+.recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5)}
 .recycle-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden}
+  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden;
+  min-height:calc(100vh - 300px)}
 .recycle-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-5) var(--space-6);
   border-bottom:1px solid var(--line);flex-shrink:0}
 .recycle-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;flex:1}
@@ -736,7 +887,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   font-size:var(--fs-sm);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
 .recycle-back:hover{background:var(--surface-hover);color:var(--text)}
 .recycle-count{font-size:var(--fs-xs);color:var(--muted);flex-shrink:0;font-variant-numeric:tabular-nums}
-.recycle-list{padding:var(--space-4) var(--space-6);overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:var(--space-2)}
+.recycle-list{padding:var(--space-6) var(--space-6);display:flex;flex-direction:column;gap:var(--space-2)}
 .recycle-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2)}
 .recycle-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -796,53 +947,46 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .main{padding:var(--space-4) var(--space-4)}
   .form-row .fld{min-width:140px}
   .side-toggle{display:flex}
-  /* 第二行左右起点与内容块边框对齐（侧栏180 + 主区边距16） */
-  .tb-row2{padding:var(--space-1) var(--space-4) var(--space-2) calc(180px + var(--space-4))}
-  .app:has(.side.collapsed) .tb-row2{padding-left:calc(56px + var(--space-4))}
+  /* 工具行铺满 main-wrap，统一左右 padding（不再用 calc 对齐侧栏） */
+  .toolbar-row{padding:var(--space-1) var(--space-4) var(--space-2)}
 }
 
 /* 小屏 PC 1024-1439px：侧边栏可折叠（折叠效果由 >=768px 通用规则提供） */
 @media(min-width:1024px) and (max-width:1439px){
   .side{width:210px}
   .side-toggle{display:flex}
-  .main{max-width:1100px;margin:0 auto}
-  /* 第二行对齐内容块左边框（侧栏210 + 主区边距28） */
-  .tb-row2{padding:var(--space-1) var(--space-7) var(--space-2) calc(210px + var(--space-7))}
-  .app:has(.side.collapsed) .tb-row2{padding-left:calc(56px + var(--space-7))}
+  /* 工具行铺满 main-wrap，统一左右 padding */
+  .toolbar-row{padding:var(--space-1) var(--space-7) var(--space-2)}
 }
 
 /* 大屏 PC >=1440px：主内容放宽，卡片间距加大，图表尺寸同步放大 */
 @media(min-width:1440px){
-  .main{max-width:1300px;margin:0 auto;padding:var(--space-6) var(--space-8)}
+  .main{padding:var(--space-6) var(--space-8)}
   .card{padding:var(--space-6);margin-bottom:var(--space-5)}
-  .kanban{gap:var(--space-5);max-width:1100px;margin:0 auto}
+  .kanban{gap:var(--space-5)}
   .side{width:230px}
-  .tb-row1{padding:var(--space-2) var(--space-6)}
-  /* 第二行对齐内容块左边框（侧栏230 + 主区边距32），右端对齐主区右边距 */
-  .tb-row2{padding:var(--space-1) var(--space-8) var(--space-2) calc(230px + var(--space-8))}
-  .app:has(.side.collapsed) .tb-row2{padding-left:calc(56px + var(--space-8))}
+  .topbar{padding:var(--space-3) var(--space-6)}
+  /* 工具行在固定宽度(1200px)内居中，统一左右 padding */
+  .toolbar-row{padding:var(--space-1) var(--space-8) var(--space-2)}
   .side-toggle{display:flex}
   /* 宽屏图表尺寸放大，避免偏小 */
   .stats-trend-svg{max-width:760px}
   .stats-pie-svg{width:200px;height:200px}
   .hourdist{max-width:520px}
   .health-trend,.health-sleep-bar,.health-water-bar{max-width:380px}
-  .chain-graph{max-width:960px}
+
   .heatmap-svg{max-width:480px}
   .line-chart-svg{max-width:720px}
 }
 
-/* 超宽屏 >=1920px：内容居中，避免过宽（更宽屏允许更宽内容）；抽屉/面板/弹窗同步放宽 */
+/* 超宽屏 >=1920px：内容铺满 main-wrap；抽屉/面板/弹窗同步放宽 */
 @media(min-width:1920px){
-  .main{max-width:1500px;margin:0 auto}
   .side{width:240px}
-  /* 第二行左边框继续跟随侧栏 240px */
-  .tb-row2{padding-left:calc(240px + var(--space-8))}
-  .app:has(.side.collapsed) .tb-row2{padding-left:calc(56px + var(--space-8))}
+  /* 工具行铺满 main-wrap（继承基础规则，无需 calc 对齐侧栏） */
   .drawer{width:420px}
   .cmd{width:640px}
   .help-card{max-width:720px}
-  .recycle-modal{max-width:800px}
+  /* v1.9：回收站宽高铺满，不再限制 max-width */
 }
 
 /* 概览页栅格：PC 宽屏（>=1024px）启用 2 列布局，全局搜索/AI 教练卡片/页脚跨满宽 */
@@ -857,9 +1001,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* 移动端 <768px：底部导航触摸友好，表单全宽，看板单列 */
 @media(max-width:767px){
-  .tb-row1{padding:var(--space-2) var(--space-3)}
-  /* 第二行与内容块边距对齐（.main padding 16px，侧栏已变底栏不占左侧） */
-  .tb-row2{padding:var(--space-1) var(--space-4) var(--space-2);gap:var(--space-1)}
+  .topbar{padding:var(--space-3) var(--space-3)}
+  /* 工具行与内容块边距对齐（.main padding 16px，侧栏已变底栏不占左侧） */
+  .toolbar-row{padding:var(--space-1) var(--space-4) var(--space-2);gap:var(--space-1)}
   .tbtn{padding:var(--space-2);flex-shrink:0}
   .tbtn .lbl{display:none}
   .body{flex-direction:column}
@@ -870,7 +1014,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     flex-shrink:0;min-height:44px;min-width:56px;justify-content:center}
   .nav-item .nm{font-size:var(--fs-xs)}
   .nav-item .cnt{display:none}
-  .main{padding:var(--space-3) var(--space-4) calc(80px + var(--safe));max-width:none;font-size:var(--fs-md)}
+  .main{padding:var(--space-3) var(--space-4) calc(80px + var(--safe));font-size:var(--fs-md)}
   .form-row{flex-direction:column}
   .form-row .fld{min-width:100%;max-width:none}
   .kanban{grid-template-columns:1fr}
@@ -907,8 +1051,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .onboard-btn-primary, .onboard-btn-secondary{min-height:44px}
   .help-close{min-height:44px;min-width:44px}
   /* 顶栏按钮间距加大，避免误触 */
-  .tb-row1{gap:var(--space-2)}
-  .tb-row2{gap:var(--space-2)}
+  .topbar{gap:var(--space-2)}
+  .toolbar-row{gap:var(--space-2)}
   /* 表单输入触摸友好 */
   input, select, textarea{min-height:44px;font-size:var(--fs-lg)}
   /* 看板卡片触摸友好 */
@@ -1521,6 +1665,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .search-input{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:var(--radius-md);
   font-size:var(--fs-base);background:var(--panel);color:var(--text);margin-bottom:var(--space-4)}
 .search-input:focus{outline:none;border-color:var(--accent)}
+/* v1.9：全局搜索弹窗加宽（1100px → 1300px），搜索框左右更舒展 */
+#searchModal .viz-modal-card{max-width:1300px}
 .search-results{display:flex;flex-direction:column;gap:var(--space-2)}
 .search-summary{margin:0 0 var(--space-3);font-size:var(--fs-sm);color:var(--text-dim);font-weight:500}
 .search-item{display:flex;align-items:flex-start;gap:var(--space-2);padding:var(--space-2) var(--space-3);
@@ -1707,70 +1853,27 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <a href="#main" class="skip-link" aria-label="跳转到主内容">跳转到主内容</a>
 <div class="app">
   <div class="topbar">
-    <!-- 第一行：品牌 + 系统级操作（指南/命令/主题/设置/安装） -->
-    <div class="tb-row1">
+    <!-- 单行：品牌 + spacer + 系统级按钮居右（命令/主题/消息/安装）；指南已迁移至侧栏底部 -->
     <div class="logo"><span class="mark">A</span> Agent 工作台</div>
     <div class="spacer"></div>
-    <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南">
+    <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
+    <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南" style="display:none">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl">指南</span></button>
     <button class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl">命令</span></button>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></button>
     <button class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
+    <!-- 系统级消息中心：未读角标 + 下拉面板（替代 v1.4 横幅 banner） -->
+    <button class="tbtn" id="btnMessages" title="消息" aria-label="消息">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="lbl">消息</span><span class="badge" id="msgBadge" style="display:none"></span></button>
     <!-- 设置已迁移至侧栏底部（id="btnGear" 保留，data-gear 事件委托 × openDrawer） -->
+    <button class="tbtn" id="btnDownload" title="导出数据" aria-label="导出数据">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl">下载</span></button>
     <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl">安装</span></button>
-    </div>
-    <!-- 第二行：应用级工具（小而鲜明） -->
-    <div class="tb-row2">
-    <!-- v1.6-B 生产力工具：番茄钟 / 时间追踪 / 日历视图入口 -->
-    <div class="pomo-widget" id="pomoWidget" role="group" aria-label="番茄钟" title="番茄钟">
-      <span class="pomo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
-      <span class="pomo-display" id="pomoDisplay" aria-live="polite">空闲 25:00</span>
-      <span class="pomo-count" id="pomoCount" aria-label="今日番茄完成数">0</span>
-      <span class="pomo-actions">
-        <button type="button" id="btnPomoStart" class="primary" aria-label="开始番茄钟">开始</button>
-        <button type="button" id="btnPomoStop" class="danger" aria-label="停止番茄钟">停止</button>
-      </span>
-    </div>
-    <div class="tracker-widget" id="trackerWidget" role="group" aria-label="时间追踪" title="时间追踪">
-      <span class="tracker-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg></span>
-      <span class="tracker-display" id="trackerDisplay" aria-live="polite">00:00:00</span>
-      <span class="tracker-actions">
-        <button type="button" id="btnTrackerPause" class="warn" disabled aria-label="暂停时间追踪">暂停</button>
-        <button type="button" id="btnTrackerStop" class="danger" disabled aria-label="停止时间追踪">停止</button>
-      </span>
-    </div>
-    <button class="tbtn cal-btn" id="btnCalendar" title="日历视图" aria-label="日历视图">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="lbl">日历</span></button>
-    <!-- v1.6-C 数据可视化入口：甘特图 / 思维导图 / 自定义仪表盘 -->
-    <button class="tbtn gantt-btn" id="btnGantt" title="甘特图" aria-label="甘特图">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/><rect x="9" y="10" width="10" height="4" rx="1"/><rect x="7" y="16" width="6" height="4" rx="1"/></svg><span class="lbl">甘特</span></button>
-    <button class="tbtn mindmap-btn" id="btnMindmap" title="思维导图" aria-label="思维导图">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="9.5" y1="9.5" x2="6.5" y2="6.5"/><line x1="14.5" y1="9.5" x2="17.5" y2="6.5"/><line x1="9.5" y1="14.5" x2="6.5" y2="17.5"/><line x1="14.5" y1="14.5" x2="17.5" y2="17.5"/></svg><span class="lbl">导图</span></button>
-    <button class="tbtn dashboard-btn" id="btnDashboard" title="自定义仪表盘" aria-label="自定义仪表盘">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="lbl">仪表盘</span></button>
-    <!-- v1.6-D 知识管理入口：全文搜索 / 笔记 / 知识库 -->
-    <button class="tbtn search-btn" id="btnSearchTop" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl">搜索</span></button>
-    <button class="tbtn notes-btn" id="btnNotesTop" title="笔记管理" aria-label="笔记管理">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><span class="lbl">笔记</span></button>
-    <!-- v1.6-E 自动化工作流入口：规则引擎 / 定时任务 / 工作流 / webhook -->
-    <button class="tbtn automation-btn" id="btnAutomation" title="自动化工作流" aria-label="自动化工作流">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg><span class="lbl">自动化</span></button>
-    <!-- v1.6-F 实时协作入口：评论 / 协作面板 / 看板分享 -->
-    <button class="tbtn collab-btn" id="btnCollab" title="实时协作" aria-label="实时协作面板">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="lbl">协作</span></button>
-    <button class="tbtn share-btn" id="btnShare" title="看板分享" aria-label="生成看板分享链接">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="11" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="12.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="11.49"/></svg><span class="lbl">分享</span></button>
-    </div><!-- /tb-row2 -->
     <input type="file" id="fileInput" accept="application/json" style="display:none">
   </div>
 
-  <div class="banner" id="banner" role="status" aria-live="polite">
-    <span id="bannerText"></span>
-    <button id="bannerExport" aria-label="去导出备份">去导出备份</button>
-  </div>
 
   <!-- v1.4-F 离线指示横幅：网络断开时显示，恢复后自动隐藏 -->
   <div class="offline-banner" id="offlineBanner" role="status" aria-live="polite">
@@ -1781,13 +1884,105 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
   <div class="body">
     <nav class="side" id="side"></nav>
-    <main class="main" id="main"></main>
+    <div class="main-wrap">
+      <!-- 正文第一行：应用级工具（原顶栏第二行，小而鲜明） -->
+      <div class="toolbar-row">
+      <!-- v1.6-B 生产力工具：番茄钟 / 时间追踪 / 日历视图入口 -->
+      <div class="pomo-widget" id="pomoWidget" role="group" aria-label="番茄钟" title="番茄钟">
+        <span class="pomo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+        <span class="pomo-display" id="pomoDisplay" aria-live="polite">空闲 25:00</span>
+        <span class="pomo-count" id="pomoCount" aria-label="今日番茄完成数">0</span>
+        <span class="pomo-actions">
+          <button type="button" id="btnPomoStart" class="primary" aria-label="开始番茄钟">开始</button>
+          <button type="button" id="btnPomoStop" class="danger" aria-label="停止番茄钟">停止</button>
+        </span>
+      </div>
+      <div class="tracker-widget" id="trackerWidget" role="group" aria-label="时间追踪" title="时间追踪">
+        <span class="tracker-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+        <span class="tracker-display" id="trackerDisplay" aria-live="polite">00:00:00</span>
+        <span class="tracker-actions">
+          <button type="button" id="btnTrackerPause" class="warn" disabled aria-label="暂停时间追踪">暂停</button>
+          <button type="button" id="btnTrackerStop" class="danger" disabled aria-label="停止时间追踪">停止</button>
+        </span>
+      </div>
+      <button class="tbtn cal-btn" id="btnCalendar" title="日历视图" aria-label="日历视图">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="lbl">日历</span></button>
+      <!-- v1.6-D 知识管理入口：全文搜索（常用） -->
+      <button class="tbtn search-btn" id="btnSearchTop" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl">搜索</span></button>
+      <!-- 更多工具：收起次常用工具（甘特/导图/仪表盘/笔记/自动化/协作/分享），点击弹出下拉菜单 -->
+      <button class="tbtn more-btn" id="btnMore" title="更多工具" aria-label="更多工具" aria-haspopup="true" aria-expanded="false">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span class="lbl">更多</span></button>
+      </div><!-- /toolbar-row -->
+      <!-- 更多工具下拉菜单：次常用工具收起于此（按钮 id/class 与原 toolbar-row 中保持一致，JS 事件绑定无需改动） -->
+      <div class="more-menu" id="moreMenu" role="menu" aria-label="更多工具" style="display:none">
+        <button class="tbtn gantt-btn" id="btnGantt" role="menuitem" title="甘特图" aria-label="甘特图">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/><rect x="9" y="10" width="10" height="4" rx="1"/><rect x="7" y="16" width="6" height="4" rx="1"/></svg><span class="lbl">甘特</span></button>
+        <button class="tbtn mindmap-btn" id="btnMindmap" role="menuitem" title="思维导图" aria-label="思维导图">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="9.5" y1="9.5" x2="6.5" y2="6.5"/><line x1="14.5" y1="9.5" x2="17.5" y2="6.5"/><line x1="9.5" y1="14.5" x2="6.5" y2="17.5"/><line x1="14.5" y1="14.5" x2="17.5" y2="17.5"/></svg><span class="lbl">导图</span></button>
+        <button class="tbtn dashboard-btn" id="btnDashboard" role="menuitem" title="自定义仪表盘" aria-label="自定义仪表盘">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="lbl">仪表盘</span></button>
+        <button class="tbtn notes-btn" id="btnNotesTop" role="menuitem" title="笔记管理" aria-label="笔记管理">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><span class="lbl">笔记</span></button>
+        <button class="tbtn automation-btn" id="btnAutomation" role="menuitem" title="自动化工作流" aria-label="自动化工作流">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg><span class="lbl">自动化</span></button>
+        <button class="tbtn collab-btn" id="btnCollab" role="menuitem" title="实时协作" aria-label="实时协作面板">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="lbl">协作</span></button>
+        <button class="tbtn share-btn" id="btnShare" role="menuitem" title="看板分享" aria-label="生成看板分享链接">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="11" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="12.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="11.49"/></svg><span class="lbl">分享</span></button>
+      </div>
+      <main class="main" id="main"></main>
+    </div>
+    <!-- 右侧 AI 聊天面板（三栏布局第三栏）：常驻显示，复用 #chat/#chatForm/#chatThinking/#chatCancel
+         数据源仍为 getChat(active)（保留跟随场景切换以兼容现有测试契约，未来可切换为全局 panelChat）
+         窄屏默认隐藏，加 .show 滑入；折叠按钮在 header -->
+    <aside class="chat-panel" id="chatPanel" aria-label="AI 助手面板">
+      <div class="chat-panel-header">
+        <span class="chat-panel-title">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          AI 助手
+        </span>
+        <select id="chatModelSelect" class="chat-model-select" aria-label="选择 AI 模型" title="切换大模型 Profile">
+          <!-- options 由 bindChatPanel() 动态填充 -->
+        </select>
+        <button class="chat-panel-collapse" id="chatPanelCollapse" type="button" title="折叠/展开聊天面板" aria-label="折叠聊天面板">◀</button>
+      </div>
+      <!-- 消息区：复用 #chat id，renderChat() 渲染到此 -->
+      <div class="chat" id="chat"></div>
+      <!-- 工具栏：思考中指示 + 取消按钮（复用 #chatThinking / #chatCancel） -->
+      <div class="chat-toolbar" id="chatToolbar">
+        <span class="chat-thinking" id="chatThinking" style="display:none">思考中…</span>
+        <button class="chat-cancel" id="chatCancel" type="button" style="display:none">取消</button>
+      </div>
+      <!-- 底部输入区：附件按钮 + textarea + 发送按钮（复用 #chatForm，onChatSubmit 通过 f.msg.value 取值） -->
+      <form class="chat-input-area" id="chatForm">
+        <button class="chat-attach-btn" id="chatAttachBtn" type="button" title="添加文本附件" aria-label="添加文本附件">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <textarea class="chat-text-input" name="msg" id="chatTextInput" placeholder="问 AI 助手，或让它「建个任务/查总览」…" autocomplete="off" maxlength="4000" rows="1"></textarea>
+        <button class="chat-send-btn" type="submit" title="发送（输入框为空时尝试粘贴剪贴板）" aria-label="发送消息">发送</button>
+      </form>
+    </aside>
+    <!-- 折叠后的侧边条：点击展开聊天面板（窄屏/折叠态显示） -->
+    <div class="chat-panel-rail" id="chatPanelRail" title="展开 AI 助手" aria-label="展开 AI 助手面板" role="button" tabindex="0">AI 助手</div>
   </div>
+</div>
+
+<!-- 系统级消息中心：下拉面板（替代 v1.4 banner 横幅） -->
+<div class="msg-panel" id="msgPanel" style="display:none" role="dialog" aria-label="消息中心" aria-live="polite">
+  <div class="msg-panel-header">
+    <span class="msg-panel-title">消息</span>
+    <div class="msg-panel-actions">
+      <button id="msgMarkAllRead" class="msg-mini-btn" aria-label="全部标记为已读">全部已读</button>
+      <button id="msgClearAll" class="msg-mini-btn" aria-label="清空所有消息">清空</button>
+    </div>
+  </div>
+  <div class="msg-list" id="msgList"></div>
 </div>
 
 <div class="overlay" id="overlay"></div>
 <div class="drawer" id="drawer">
-  <h2>设置 <button class="close" id="drawerClose" aria-label="关闭设置">&times;</button></h2>
+  <h2>设置 <button class="close" id="drawerClose" aria-label="返回上一视图">← 返回</button></h2>
   <div class="row switch"><input type="checkbox" id="cfgEnabled" style="width:auto"> <label for="cfgEnabled" style="margin:0">启用 AI 对话（subagent 可调用工具）</label></div>
   <div class="row"><label>AI Profile</label>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -5793,10 +5988,15 @@ function renderSide(){
   // 设置入口迁移至侧栏底部（与总体/统计/回收站同组）；保留 id="btnGear"（a11y 测试断言它存在）
   const gearBtn = `<button class="nav-item" data-gear="1" id="btnGear" style="--sc:var(--muted)" title="设置" aria-label="设置">
     ${UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">设置</span></button>`;
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + gearBtn + '<div class="nav-sep"></div>' + items);
+  // 指南入口迁移至侧栏底部（v1.9 顶栏精简：从顶栏移除 btnHelp，改由侧栏 data-help 委托调用 renderHelp）
+  const helpBtn = `<button class="nav-item" data-help="1" id="sideBtnHelp" style="--sc:var(--muted)" title="使用指南" aria-label="使用指南">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nm">指南</span></button>`;
+  // 三组分割：监控组(总览/统计/回收站) → 功能组(场景项) → 系统组(设置/指南)，组间细分割线 .nav-sep
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + '<div class="nav-sep"></div>' + items + '<div class="nav-sep"></div>' + gearBtn + helpBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     if(b.dataset.recycle){ setActive("recycle"); render(); return; }
     if(b.dataset.gear){ openDrawer(); return; }
+    if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
     setActive(b.dataset.sc); render();
   });
 }
@@ -5840,7 +6040,7 @@ function openRecycle(){
         <button type="button" class="recycle-clear" id="recycleClear">清空回收站</button>
       </div>` : ""}
     </div>
-    <div class="foot">Agent 工作台 · 回收站 · v${VERSION}</div>
+
   </div>`;
   $("#main").innerHTML = sanitizeHtml(html);
   const modal=$("#recycleModal");
@@ -6519,18 +6719,16 @@ function helpSection(id, title, content){
   return `<details class="help-section"${id==="快速上手"?" open":""}><summary>${title}</summary><div class="help-content">${content}</div></details>`;
 }
 
-// renderHelp() — 渲染使用指南 modal（10 章节，内联内容，details 原生折叠）
-// v1.8.4：新增「性能优化 / 企业级功能 / AI 工作流」3 章节；添加 role=dialog + focus 管理（a11y）
+// renderHelp() — 渲染使用指南页面（10 章节，内联内容，details 原生折叠）
+// v1.9：从 modal 改为页面渲染到 #main（撑满主内容区），保留折叠面板交互与 a11y focus 管理
+// v1.8.4：新增「性能优化 / 企业级功能 / AI 工作流」3 章节
 function renderHelp(){
-  const old = document.querySelector(".help-modal");
-  if(old) old.remove();
-  const html = `<div class="help-modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
-    <div class="help-card">
-      <div class="help-header">
-        <h2 id="helpModalTitle">${ic("book")}使用指南</h2>
-        <button class="help-close" id="helpClose" aria-label="关闭使用指南" type="button">✕</button>
-      </div>
-      <div class="help-body">
+  const html = `<div class="help-page" id="helpPage">
+    <div class="help-header">
+      <h2 id="helpPageTitle">${ic("book")}使用指南</h2>
+      <button class="help-back" id="helpBack" aria-label="返回上一视图" type="button">← 返回</button>
+    </div>
+    <div class="help-body">
         ${helpSection("快速上手", "快速上手", `
           <p>3 步开始使用：</p>
           <ol>
@@ -6618,17 +6816,14 @@ function renderHelp(){
           <p><b>注意</b>：数据存于浏览器 localStorage，清浏览器数据会丢失！请定期导出备份。</p>
         `)}
       </div>
-    </div>
   </div>`;
-  document.body.insertAdjacentHTML("beforeend", html);
-  const closeBtn = $("#helpClose");
-  const modal = $("#helpModal");
-  if(closeBtn) closeBtn.onclick = ()=>{ if(modal) modal.remove(); };
-  // 点击遮罩关闭
-  if(modal) modal.onclick = (e)=>{ if(e.target === modal) modal.remove(); };
-  // a11y：打开模态框时 focus 到关闭按钮，避免 focus 残留在背景元素
+  $("#main").innerHTML = sanitizeHtml(html);
+  appendFoot();
+  const backBtn = $("#helpBack");
+  if(backBtn) backBtn.onclick = ()=>{ render(); };
+  // a11y：打开页面时 focus 到返回按钮，避免 focus 残留在背景元素
   try{
-    if(closeBtn && typeof closeBtn.focus === "function") closeBtn.focus();
+    if(backBtn && typeof backBtn.focus === "function") backBtn.focus();
   }catch(e){ /* noop：jsdom 或异常环境下 focus 可能不可用 */ }
 }
 
@@ -7028,8 +7223,7 @@ function renderOverview(){
        ${renderCoachCard()}
        ${renderDailyReportCard()}
        ${renderAiRecommendCard()}
-       <div class="foot">Agent 工作台 · 数据存于本机浏览器 · 记得定期导出备份 · v${VERSION}</div>
-    </div>`);
+     </div>`);
 
   // 全局搜索 oninput 同步响应（保证空状态即时渲染；搜索范围小，无需防抖）
   const _globSearchDebounced = () => {
@@ -7258,8 +7452,7 @@ function renderStats(){
   const stats = calcStats();
   // T4.2：无任何任务数据时显示 no-stats 空状态（替代空图表/空饼图）
   if(stats.total === 0){
-    $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>` +
-      `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`);
+    $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>`);
     return;
   }
   // 关键指标卡片（P3：新增平均周期；本周完成带周环比角标）
@@ -7323,8 +7516,7 @@ function renderStats(){
   const chainCard = `<div class="card"><h2>${UI_ICONS.stats} 习惯链成功率</h2>` +
     `<p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>${chainsHtml}</div>`;
 
-  $("#main").innerHTML = sanitizeHtml(cardsHtml + trendHtml + pieHtml + hourHtml + chainCard +
-    `<div class="foot">Agent 工作台 · 数据统计 · v${VERSION}</div>`);
+  $("#main").innerHTML = sanitizeHtml(cardsHtml + trendHtml + pieHtml + hourHtml + chainCard);
 
   // 绑定周/双周/月切换
   $$(".stats-tab").forEach(b => b.onclick = () => {
@@ -7840,7 +8032,7 @@ function renderMainHTML(){
   </form>`;
 
   const tagFilterHTML = `<div class="form-row" style="margin-bottom:10px">
-    <div class="fld" style="max-width:220px"><label for="boardSearch">搜索任务（A3）</label>><input id="boardSearch" placeholder="输入标题关键词" maxlength="200"></div>
+    <div class="fld" style="max-width:480px"><label for="boardSearch">搜索任务（A3）</label>><input id="boardSearch" placeholder="输入标题关键词" maxlength="200"></div>
     <div class="fld" style="max-width:140px"><label>状态</label>
       <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
     <div class="fld" style="max-width:200px"><label for="tagFilter">标签（留空=全部）</label>><input id="tagFilter" placeholder="如 周报 / urgent" maxlength="200"></div>
@@ -7879,20 +8071,9 @@ function renderMainHTML(){
     <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button></form>`;
   const recList = recs.length? _renderRecList(recs, rec) : renderEmpty("no-records");
 
-  let chatCard = `<div class="card"><h2>${UI_ICONS.chat} ${s.name} · AI 助手</h2>`;
-  if(!cfg.enabled){
-    chatCard += `<p class="sub">尚未启用 AI：点击右上角「设置」填入 API Key，subagent 即可对话并调用工具修改数据。</p>`;
-  }else{
-    chatCard += `<div class="chat" id="chat"></div>
-      <div class="chat-toolbar">
-        <span class="chat-thinking" id="chatThinking" style="display:none">思考中…</span>
-        <button class="chat-cancel" id="chatCancel" type="button" style="display:none">取消</button>
-      </div>
-      <form class="chat-form" id="chatForm">
-        <input name="msg" placeholder="问 ${s.name} 助手，或让它「建个任务/查总览」…" autocomplete="off" maxlength="4000">
-        <button class="addbtn" type="submit" style="--sc:${s.color}">发送</button></form>`;
-  }
-  chatCard += `</div>`;
+  // 右侧 AI 聊天面板已把 #chat/#chatForm/#chatThinking/#chatCancel 移出主内容区（静态 HTML，三栏布局第三栏）
+  // 主内容区不再渲染 chatCard（避免重复 DOM id）；renderChat() 直接渲染到右侧面板的 #chat
+  const chatCard = "";
 
   return `<div class="card"><h2>${SCENARIOS[active].icon || ""} ${s.name} · 任务看板</h2>
       <p class="sub">${open.length} 项待办 · 带截止日期的任务会汇总到顶部「今天要处理」</p>
@@ -7901,8 +8082,7 @@ function renderMainHTML(){
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
       ${renderSceneSections(active)}
       ${renderExtra(active)}
-      ${chatCard}
-      <div class="foot">快捷键：<span class="kbd">1-4</span>切换场景 <span class="kbd">G</span>总览 <span class="kbd">N</span>新建任务 <span class="kbd">Ctrl+K</span>命令面板 · Agent 工作台 · 数据存于本机 · v${VERSION}</div>`;
+       ${chatCard}`;
 }
 
 /**
@@ -8043,8 +8223,8 @@ function bindScenario(){
   _bindVirtualScrolls(active);
   bindExtra(active);
   bindSceneSections(active);
-  const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
-  const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
+  // 右侧 AI 聊天面板的 #chatForm/#chatCancel 已移到静态 HTML（三栏布局第三栏），
+  // 由 bindChatPanel() 在启动时一次性绑定，不再随 render() 重建，故此处移除原绑定。
 }
 function bindReportCard(sc){
   if((sc==="office"||sc==="code") && $("#copyRep")) $("#copyRep").onclick=()=> navigator.clipboard.writeText($("#repTxt").value);
@@ -9151,7 +9331,7 @@ function enhanceChatVoiceUI(){
         btn.innerHTML = sanitizeHtml(VOICE_ICON_MIC);
         return;
       }
-      const inputEl = document.querySelector('#chatForm input[name="msg"]');
+      const inputEl = document.querySelector('#chatForm [name="msg"]'); // 兼容 input 与 textarea（右侧面板用 textarea）
       const ok = startVoiceInput(function(text, isFinal){
         if(inputEl){
           inputEl.value = text;
@@ -9535,6 +9715,175 @@ function renderChat(){
   try{ enhanceChatVoiceUI(); }catch(e){ /* 语音 UI 增强失败不影响聊天 */ }
 }
 function scrollChat(){ const el=$("#chat"); if(el) el.scrollTop=el.scrollHeight; }
+
+/**
+ * 右侧 AI 聊天面板未启用态：在 #chat 显示「尚未启用 AI」提示（替代原主内容区 chatCard 的未启用文案）
+ * @returns {void}
+ */
+function renderChatDisabled(){
+  const el=$("#chat"); if(!el) return;
+  const s = SCENARIOS[active] || {name:""};
+  el.innerHTML = sanitizeHtml('<div class="msg assistant">你好，我是'+esc(s.name)+'助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>');
+}
+
+/* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------
+ * 面板内 #chatForm / #chatCancel / #chatThinking / #chatTextInput / #chatAttachBtn / #chatPanelCollapse / #chatPanelRail
+ * 均为静态 HTML（不随 render() 重建），故此函数在启动时调用一次即可。
+ * 复用现有 onChatSubmit / abortChat / retryChat，不引入新数据源（保留 getChat(active) 兼容测试契约）。
+ */
+/**
+ * 绑定右侧 AI 聊天面板事件：表单提交、取消、附件按钮、折叠/展开、textarea 自适应高度
+ * 幂等：重复调用不会重复绑定（用 _bound 标记）
+ * @returns {boolean} 是否成功绑定（面板不存在返回 false）
+ */
+function bindChatPanel(){
+  const panel=$("#chatPanel"); if(!panel || panel._bound) return false;
+  panel._bound=true;
+  // 模型选择器：复用 cfg.profiles / getActiveProfile()，切换后即时生效（落盘 + 提示）
+  const modelSelect=$("#chatModelSelect");
+  if(modelSelect){
+    const refreshModelSelect=()=>{
+      const c=getCfg();
+      const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
+      if(profiles.length === 0){
+        modelSelect.innerHTML = sanitizeHtml(`<option value="">未配置模型</option>`);
+        modelSelect.disabled = true;
+        modelSelect.title = "未配置 AI Profile，点击打开设置";
+        return;
+      }
+      modelSelect.disabled = false;
+      modelSelect.title = "切换大模型 Profile";
+      const cur = c.activeId || profiles[0].id;
+      modelSelect.innerHTML = sanitizeHtml(profiles.map(p =>
+        `<option value="${esc(p.id)}"${p.id===cur?" selected":""}>${esc(p.name)} · ${esc(p.model || "")}</option>`
+      ).join(""));
+    };
+    refreshModelSelect();
+    modelSelect.onchange=()=>{
+      const v = modelSelect.value;
+      if(!v) return;
+      const c = getCfg();
+      if(!c || !Array.isArray(c.profiles)) return;
+      const p = c.profiles.find(x => x.id === v);
+      if(!p) return;
+      c.activeId = v;
+      saveCfg(c);
+      try{ toast("已切换到「" + (p.name || "未命名") + " · " + (p.model || "") + "」", "ok"); }catch(e){ /* noop */ }
+      // 切换后立即重新渲染聊天（让后续请求使用新 profile）
+      try{ if(typeof renderChat === "function") renderChat(); }catch(e){ /* noop */ }
+    };
+    // 点击「未配置模型」时跳转到设置抽屉
+    modelSelect.onclick=()=>{
+      const c = getCfg();
+      const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
+      if(profiles.length === 0 && typeof openDrawer === "function"){
+        openDrawer();
+      }
+    };
+    // 暴露刷新方法供外部（如设置保存后）调用
+    panel._refreshModelSelect = refreshModelSelect;
+  }
+  // 表单提交：复用 onChatSubmit（其内部通过 f.msg.value 取值，兼容 textarea）
+  const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
+  // 取消按钮：复用 abortChat
+  const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
+  // 附件按钮：点击触发隐藏文件选择器，选中文本文件后内容追加到输入框
+  const attachBtn=$("#chatAttachBtn");
+  if(attachBtn){
+    const fileInput=document.createElement("input");
+    fileInput.type="file";
+    fileInput.accept="text/*,.txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log";
+    fileInput.style.display="none";
+    document.body.appendChild(fileInput);
+    attachBtn.onclick=()=> fileInput.click();
+    fileInput.onchange=()=>{
+      const f=fileInput.files && fileInput.files[0];
+      if(!f) return;
+      // 限制 1MB 以内（避免大文件撑爆输入框）
+      if(f.size > 1024*1024){
+        try{ toast("文件过大（>1MB），请选择更小的文本文件","warn"); }catch(e){ /* noop */ }
+        return;
+      }
+      const reader=new FileReader();
+      reader.onload=()=>{
+        const ta=$("#chatTextInput"); if(!ta) return;
+        const content=String(reader.result || "");
+        const header="\n\n--- 附件："+f.name+" ---\n";
+        const tail="\n--- /附件 ---\n";
+        // 追加到输入框末尾（保留已有内容）
+        ta.value=(ta.value? ta.value+"\n":"")+header+content+tail;
+        // 触发 input 事件以自适应高度
+        ta.dispatchEvent(new Event("input",{bubbles:true}));
+        ta.focus();
+      };
+      reader.onerror=()=>{
+        try{ toast("读取文件失败","error"); }catch(e){ /* noop */ }
+      };
+      reader.readAsText(f);
+      // 重置 value 允许重复选同一文件
+      fileInput.value="";
+    };
+  }
+  // textarea 自适应高度：输入时根据内容调整高度（min 36px / max 120px）
+  const ta=$("#chatTextInput");
+  if(ta){
+    const autoResize=()=>{
+      ta.style.height="auto";
+      ta.style.height=Math.min(120, Math.max(36, ta.scrollHeight))+"px";
+    };
+    ta.addEventListener("input", autoResize);
+    // Ctrl+Enter / Cmd+Enter 提交
+    ta.addEventListener("keydown", e=>{
+      if((e.ctrlKey || e.metaKey) && e.key==="Enter"){
+        e.preventDefault();
+        const form=$("#chatForm"); if(form) form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit",{cancelable:true}));
+      }
+    });
+  }
+  // 折叠/展开按钮：切换 .collapsed 类，同步显示侧边条
+  const collapseBtn=$("#chatPanelCollapse");
+  const rail=$("#chatPanelRail");
+  const toggleCollapse=()=>{
+    panel.classList.toggle("collapsed");
+    const collapsed=panel.classList.contains("collapsed");
+    if(collapseBtn) collapseBtn.textContent=collapsed ? "▶" : "◀";
+    if(rail) rail.classList.toggle("show", collapsed);
+    // 持久化折叠状态
+    try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }catch(e){ /* noop */ }
+  };
+  if(collapseBtn) collapseBtn.onclick=toggleCollapse;
+  if(rail){
+    rail.onclick=toggleCollapse;
+    rail.addEventListener("keydown", e=>{
+      if(e.key==="Enter" || e.key===" "){ e.preventDefault(); toggleCollapse(); }
+    });
+  }
+  // 恢复持久化折叠状态
+  try{
+    if(load(PREFIX+"chat_panel_collapsed","0")==="1"){
+      panel.classList.add("collapsed");
+      if(collapseBtn) collapseBtn.textContent="▶";
+      if(rail) rail.classList.add("show");
+    }
+  }catch(e){ /* noop */ }
+  // 窄屏默认隐藏：监听窗口宽度，<768px 时加 .show 才显示（与 .collapsed 区分）
+  if(typeof window !== "undefined"){
+    const applyResponsive=()=>{
+      const w=window.innerWidth || 0;
+      if(w<768){
+        // 窄屏：默认隐藏（除非已 .show）
+        panel.classList.add("narrow");
+      }else{
+        panel.classList.remove("narrow");
+        panel.classList.remove("show");
+      }
+    };
+    applyResponsive();
+    const debouncedResize=(typeof debounce==="function") ? debounce(applyResponsive,200) : applyResponsive;
+    window.addEventListener("resize", debouncedResize);
+  }
+  return true;
+}
 
 // ===== UI Layer (交互层·命令面板) =====
 /* ---------- 命令面板（P5' 增强：模糊搜索 / 分组 / 最近使用） ---------- */
@@ -9993,14 +10342,38 @@ function stopNotifyScheduler(){
  * 渲染入口：侧边栏 + 主区（overview 或 今日仪表盘+场景主区）+ 绑定 + chat
  * @returns {void}
  */
+/**
+ * 统一尾栏：在 #main 末尾追加页脚（所有页面统一）
+ * 幂等：重复调用不会重复追加（先移除已有 foot 再追加）
+ * @returns {void}
+ */
+function appendFoot(){
+  const main = $("#main"); if(!main) return;
+  // 移除已有 foot（避免重复）
+  const existing = main.querySelector(":scope > .foot");
+  if(existing) existing.remove();
+  const footEl = document.createElement("div");
+  footEl.className = "foot";
+  footEl.textContent = "Agent 工作台 · v" + VERSION;
+  main.appendChild(footEl);
+}
+
 function render(){
   try{
+    // v1.9：设置改为正常页面后，若 #drawer 在 .main-wrap 里（设置页面正在显示），
+    // 切换场景/其他视图时需先把 #drawer 移回原位置并恢复 #main 显示
+    const _drawer = $("#drawer");
+    if(_drawer && _drawer.classList.contains("drawer-page")){
+      _moveDrawerHome();
+      _drawer.classList.remove("open");
+    }
     renderSide();
-    if(active==="overview"){ renderOverview(); return; }
-    if(active==="stats"){ renderStats(); return; }
-    if(active==="recycle"){ openRecycle(); return; }
+    if(active==="overview"){ renderOverview(); appendFoot(); return; }
+    if(active==="stats"){ renderStats(); appendFoot(); return; }
+    if(active==="recycle"){ openRecycle(); appendFoot(); return; }
     const cfg=getCfg();
     $("#main").innerHTML = sanitizeHtml(renderToday() + renderMainHTML());
+    appendFoot();
     bindScenario();
     setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
     setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
@@ -10011,6 +10384,7 @@ function render(){
       render();
     });
     if(cfg.enabled) renderChat();
+    else renderChatDisabled(); // 右侧面板显示「尚未启用 AI」提示（替代原主内容区 chatCard 的未启用态）
   }catch(e){
     // 渲染异常：诊断 + fallback UI（提示导出备份后清空），不让白屏
     pushDiag("error", "render error: "+(e&&e.message||e), {where:"render"});
@@ -10207,13 +10581,149 @@ function doIdbRestore(){
     setTimeout(()=> location.reload(), 900);
   }).catch(()=> toast("本地库不可用", "error"));
 }
+
+/* ---------- 系统级消息中心 ----------
+ * 替代 v1.4 banner 横幅：消息存储于 localStorage（key = PREFIX + "messages"）
+ * 结构：[{id, type, title, body, action:{label, fn}, time, read}]
+ * - addMessage(type, title, body, action)：去重（同 type+title 仅保留最新一条），最多 50 条
+ * - renderMsgPanel()：使用 DOM API 创建元素（避免 sanitizeHtml 丢失 data 属性与事件）
+ * - updateMsgBadge()：刷新顶栏角标未读数
+ * 消息类型：backup / system / offline（对应 MSG_ICONS 图标）
+ */
+var MSG_KEY = PREFIX + "messages";
+var MSG_ICONS = {
+  backup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  system: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+  offline: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M16.72 11.78A5 5 0 0 1 19 13M5 12.55a11 11 0 0 1 5-2.36M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01M2 8.82a15 15 0 0 1 4.17-2.65M19.83 5.35A15 15 0 0 1 22 8.82"/></svg>'
+};
+function getMessages(){
+  try{ return JSON.parse(localStorage.getItem(MSG_KEY)) || []; }catch(e){ return []; }
+}
+function saveMessages(list){
+  try{ localStorage.setItem(MSG_KEY, JSON.stringify(list)); }catch(e){ /* noop */ }
+}
+function addMessage(type, title, body, action){
+  var list = getMessages();
+  // 去重：同 type+title 只保留最新一条
+  list = list.filter(function(m){ return !(m.type === type && m.title === title); });
+  list.unshift({
+    id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+    type: type || "system",
+    title: title || "",
+    body: body || "",
+    action: action || null,  // {label, fn} fn 是全局函数名字符串
+    time: new Date().toISOString(),
+    read: false
+  });
+  // 最多保留 50 条
+  if(list.length > 50) list = list.slice(0, 50);
+  saveMessages(list);
+  updateMsgBadge();
+}
+function markMessageRead(id){
+  var list = getMessages();
+  list.forEach(function(m){ if(m.id === id) m.read = true; });
+  saveMessages(list);
+  updateMsgBadge();
+}
+function markAllMessagesRead(){
+  var list = getMessages();
+  list.forEach(function(m){ m.read = true; });
+  saveMessages(list);
+  updateMsgBadge();
+}
+function clearMessages(){
+  saveMessages([]);
+  updateMsgBadge();
+  renderMsgPanel();
+}
+function getUnreadCount(){
+  return getMessages().filter(function(m){ return !m.read; }).length;
+}
+function updateMsgBadge(){
+  var n = getUnreadCount();
+  var badge = $("#msgBadge");
+  if(!badge) return;
+  if(n > 0){
+    badge.textContent = n > 99 ? "99+" : String(n);
+    badge.style.display = "";
+  } else {
+    badge.style.display = "none";
+  }
+}
+function renderMsgPanel(){
+  var list = getMessages();
+  var container = $("#msgList");
+  if(!container) return;
+  // 清空列表（DOM API，避免 innerHTML 残留）
+  while(container.firstChild){ container.removeChild(container.firstChild); }
+  if(!list.length){
+    var empty = document.createElement("div");
+    empty.className = "msg-empty";
+    empty.textContent = "暂无消息";
+    container.appendChild(empty);
+    return;
+  }
+  list.forEach(function(m){
+    var item = document.createElement("div");
+    item.className = "msg-item" + (m.read ? "" : " unread");
+    item.setAttribute("data-msg-id", m.id);
+
+    // 图标
+    var iconWrap = document.createElement("span");
+    iconWrap.className = "msg-item-icon";
+    iconWrap.setAttribute("aria-hidden", "true");
+    var iconSvg = MSG_ICONS[m.type] || MSG_ICONS.system;
+    iconWrap.innerHTML = iconSvg; // 静态可信 SVG 字符串
+    item.appendChild(iconWrap);
+
+    // 主体
+    var body = document.createElement("div");
+    body.className = "msg-item-body";
+
+    var titleEl = document.createElement("div");
+    titleEl.className = "msg-item-title";
+    titleEl.textContent = m.title; // 用户输入走 textContent，防 XSS
+    body.appendChild(titleEl);
+
+    if(m.body){
+      var textEl = document.createElement("div");
+      textEl.className = "msg-item-text";
+      textEl.textContent = m.body;
+      body.appendChild(textEl);
+    }
+
+    var timeEl = document.createElement("div");
+    timeEl.className = "msg-item-time";
+    try{
+      var d = new Date(m.time);
+      timeEl.textContent = (d.getMonth()+1)+"月"+d.getDate()+"日 "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+    }catch(e){ timeEl.textContent = ""; }
+    body.appendChild(timeEl);
+    item.appendChild(body);
+
+    // 操作按钮
+    if(m.action && m.action.label){
+      var btn = document.createElement("button");
+      btn.className = "msg-item-action";
+      btn.type = "button";
+      btn.textContent = m.action.label;
+      btn.setAttribute("data-msg-id", m.id);
+      btn.setAttribute("data-msg-fn", m.action.fn || "");
+      item.appendChild(btn);
+    }
+    container.appendChild(item);
+  });
+}
+
 function checkCount(){
   const n = allKeys().reduce((s,k)=>{
     try{ return s + (JSON.parse(localStorage.getItem(k))?.length||0); }catch(e){ return s; }
   }, 0);
-  const banner=$("#banner"), bt=$("#bannerText");
-  if(n>=30){ bt.textContent = "数据已积累 "+n+" 条，建议导出备份防止丢失"; banner.classList.add("show"); }
-  else { banner.classList.remove("show"); }
+  // v1.4 banner 已移除：改为消息中心推送（去重，同 title 仅保留最新一条）
+  if(n>=30){
+    addMessage("backup", "数据备份提醒", "数据已积累 "+n+" 条，建议导出备份防止丢失", {label:"去导出", fn:"doExport"});
+  }
 }
 
 /* ---------- T3：CSV / Markdown 导出（任务数据多格式） ---------- */
@@ -10678,9 +11188,12 @@ function renderScBox(){
     toast("已添加场景","ok"); openDrawerRefresh();
   };
 }
-/* 抽屉打开中的自刷新：重填场景面板 + 链下拉，保留抽屉打开状态 */
+/* 设置页面打开中的自刷新：重填场景面板 + 链下拉，保留设置页面打开状态
+ * v1.9：设置改为正常页面后，不能调用 render()（会把 #drawer 移回原位置关闭设置页面），
+ * 只刷新侧栏（场景列表）即可，设置面板内的 scBox/linksBox 已由 renderScBox/refreshChainScSelects 重填 */
 function openDrawerRefresh(){
-  renderScBox(); refreshChainScSelects(); render();
+  renderScBox(); refreshChainScSelects();
+  try{ renderSide(); }catch(e){ /* noop */ }
 }
 /* 把当前 active profile 的字段填入表单（name/base/key/model） */
 function fillProfileForm(p){
@@ -10752,8 +11265,56 @@ function openDrawer(){ const cfg=getCfg();
       if(c && c.keySet && hint){ hint.style.display="block"; $("#cfgKey").placeholder="已保存（主进程保管）"; }
     }).catch(()=>{});
   }
-  $("#drawer").classList.add("open"); $("#overlay").classList.add("show"); }
-function closeDrawer(){ $("#drawer").classList.remove("open"); $("#overlay").classList.remove("show"); }
+  /* v1.9：设置从侧边栏抽屉改为正常页面——把 #drawer 移到 .main-wrap 里，加 .drawer-page class
+     覆盖原 fixed 抽屉样式，铺满 main-wrap；隐藏 #main（避免并排显示）。
+     保留 #drawer.classList.add("open") 以兼容现有测试（round4-batch1 断言 .open 类）。 */
+  _moveDrawerToMainWrap();
+  $("#drawer").classList.add("open");
+  /* v1.9.1：设置页面底部追加尾栏（与 #main 各页面保持一致）。
+     appendFoot() 默认往 #main 追加，但设置页面 #main 已隐藏，需往 #drawer 追加。
+     幂等：先移除已有 .foot 再追加。 */
+  _appendDrawerFoot();
+}
+/* 往 #drawer 末尾追加尾栏（设置页面专用，与 appendFoot 结构一致） */
+function _appendDrawerFoot(){
+  const drawer = $("#drawer"); if(!drawer) return;
+  const existing = drawer.querySelector(":scope > .foot");
+  if(existing) existing.remove();
+  const footEl = document.createElement("div");
+  footEl.className = "foot";
+  footEl.textContent = "Agent 工作台 · v" + VERSION;
+  drawer.appendChild(footEl);
+}
+/* 把 #drawer 移到 .main-wrap 里（设置页面铺满 main-wrap），隐藏 #main */
+function _moveDrawerToMainWrap(){
+  const drawer = $("#drawer");
+  const mainWrap = document.querySelector(".main-wrap");
+  const main = $("#main");
+  if(!drawer || !mainWrap || !main) return;
+  if(drawer.parentNode !== mainWrap){
+    mainWrap.appendChild(drawer);
+  }
+  drawer.classList.add("drawer-page");
+  main.style.display = "none";
+}
+/* 把 #drawer 移回原位置（#overlay 之后），恢复 #main 显示 */
+function _moveDrawerHome(){
+  const drawer = $("#drawer");
+  const overlay = $("#overlay");
+  const main = $("#main");
+  if(!drawer) return;
+  drawer.classList.remove("drawer-page");
+  if(main) main.style.display = "";
+  if(overlay && drawer.parentNode !== overlay.parentNode){
+    overlay.parentNode.insertBefore(drawer, overlay.nextSibling);
+  }
+}
+function closeDrawer(){
+  $("#drawer").classList.remove("open");
+  $("#overlay").classList.remove("show");
+  _moveDrawerHome();
+  render();
+}
 /* 切换 active profile：更新 cfg.activeId 并重新填表单（不保存，用户点「保存设置」才落盘） */
 function switchProfile(id){
   const cfg = getCfg();
@@ -10889,7 +11450,7 @@ async function saveCfg(){
         }
       }
     }catch(e){ /* noop */ }
-    closeDrawer(); render();
+    closeDrawer(); /* v1.9：closeDrawer 已内置 render()，无需再调用 */
   }catch(e){
     // 保存异常：诊断 + 提示，不让设置面板卡死
     pushDiag("error", "saveCfg error: "+(e&&e.message||e), {where:"saveCfg"});
@@ -11198,8 +11759,7 @@ function openTemplateModal(){
       const r = applyTemplate(tpl);
       if(!r.ok){ toast(r.err||"导入失败", "warn"); return; }
       close();
-      try{ closeDrawer(); }catch(e){ /* noop */ }
-      render();
+      try{ closeDrawer(); }catch(e){ /* noop */ } /* v1.9：closeDrawer 已内置 render() */
       toast("已导入「"+tpl.name+"」"+r.count+" 个任务", "ok");
     };
   });
@@ -11721,7 +12281,54 @@ $("#btnImport").onclick = ()=> $("#fileInput").click();
 $("#fileInput").onchange = e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=""; };
 $("#btnClear").onclick = doClear;
 $("#btnIdbRestore").onclick = doIdbRestore;
-$("#bannerExport").onclick = doExport;
+/* 系统级消息中心：顶栏按钮交互（替代 v1.4 banner 横幅） */
+$("#btnMessages").onclick = function(e){
+  e.stopPropagation();
+  var panel = $("#msgPanel");
+  if(!panel) return;
+  if(panel.style.display === "none"){
+    renderMsgPanel();
+    panel.style.display = "";
+    // 打开 1s 后标记所有已读（让用户先看到未读高亮）
+    setTimeout(function(){
+      if(panel.style.display !== "none"){
+        markAllMessagesRead();
+        renderMsgPanel();
+      }
+    }, 1000);
+  } else {
+    panel.style.display = "none";
+  }
+};
+// 点击面板外关闭
+document.addEventListener("click", function(e){
+  var panel = $("#msgPanel");
+  var btn = $("#btnMessages");
+  if(panel && panel.style.display !== "none" && btn){
+    if(!panel.contains(e.target) && !btn.contains(e.target)){
+      panel.style.display = "none";
+    }
+  }
+});
+// 全部已读 / 清空
+$("#msgMarkAllRead").onclick = function(){ markAllMessagesRead(); renderMsgPanel(); };
+$("#msgClearAll").onclick = function(){ clearMessages(); };
+// 消息操作按钮（事件委托：执行 action.fn 全局函数并关闭面板）
+$("#msgList").addEventListener("click", function(e){
+  var t = e.target;
+  if(t && t.classList && t.classList.contains("msg-item-action")){
+    var fn = t.getAttribute("data-msg-fn");
+    var id = t.getAttribute("data-msg-id");
+    if(fn && typeof window[fn] === "function"){
+      try{ window[fn](); }catch(err){ /* noop */ }
+    }
+    if(id) markMessageRead(id);
+    var panel = $("#msgPanel");
+    if(panel) panel.style.display = "none";
+  }
+});
+// 启动时刷新角标状态（确保刷新后未读数正确）
+updateMsgBadge();
 /* v1.4-C 数据导入导出增强：导出预览 / 导入 CSV / 导出记录 CSV */
 $("#btnExportPreview").onclick = openExportPreview;
 $("#btnExportPreviewConfirm").onclick = doExportCSV;
@@ -11744,7 +12351,58 @@ $("#cfgProfileDel").onclick = delProfile;
 $("#btnTheme").onclick = toggleTheme;
 $("#btnCmd").onclick = openCmd;
 $("#btnHelp").onclick = renderHelp;
+/* 顶栏下载按钮：复用 doExport（导出 JSON 备份） */
+const _btnDownload = $("#btnDownload"); if(_btnDownload) _btnDownload.onclick = doExport;
 $("#btnRecover").onclick = recoverAutoBackup;
+/* ---------- 更多工具下拉菜单（v1.9 UI 精简：次常用工具收起） ----------
+   点击 #btnMore 切换菜单显示并定位到按钮下方；点击菜单外或选中某项后关闭。
+   菜单内按钮 id/class 与原 toolbar-row 中保持一致，事件绑定在上文已统一处理。 */
+(function setupMoreMenu(){
+  const moreBtn = $("#btnMore");
+  const menu = $("#moreMenu");
+  if(!moreBtn || !menu) return;
+  moreBtn.onclick = function(e){
+    e.stopPropagation();
+    const isOpen = menu.style.display !== "none";
+    if(isOpen){
+      menu.style.display = "none";
+      moreBtn.setAttribute("aria-expanded", "false");
+    } else {
+      const rect = moreBtn.getBoundingClientRect();
+      menu.style.display = "";
+      // 定位到按钮下方左对齐；若右侧溢出视口则右对齐
+      const menuW = menu.offsetWidth || 140;
+      let left = rect.left;
+      if(left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+      if(left < 8) left = 8;
+      menu.style.top = (rect.bottom + 4) + "px";
+      menu.style.left = left + "px";
+      moreBtn.setAttribute("aria-expanded", "true");
+    }
+  };
+  // 点击菜单外关闭
+  document.addEventListener("click", function(e){
+    if(menu.style.display === "none") return;
+    if(!menu.contains(e.target) && e.target !== moreBtn && !moreBtn.contains(e.target)){
+      menu.style.display = "none";
+      moreBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+  // 菜单项点击后关闭（委托：任一 .tbtn 被点即关闭）
+  menu.addEventListener("click", function(e){
+    if(e.target.closest(".tbtn")){
+      menu.style.display = "none";
+      moreBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+  // Esc 关闭
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape" && menu.style.display !== "none"){
+      menu.style.display = "none";
+      moreBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+})();
 /* ---------- v1.5-A 语言切换绑定 ---------- */
 const _cfgLangSel = $("#cfgLang");
 if(_cfgLangSel){
@@ -12547,6 +13205,7 @@ seed();
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
   applyTheme();
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
+  try{ bindChatPanel(); }catch(e){ pushDiag("error","bindChatPanel init: "+(e&&e.message||e),{where:"bindChatPanel"}); } // 右侧 AI 聊天面板事件绑定（三栏布局第三栏，静态 HTML 一次性绑定）
   try{ setupModalA11yBase(); }catch(e){ pushDiag("error","modalA11y init: "+(e&&e.message||e),{where:"modalA11y"}); } // P0② 模态框统一 Esc/遮罩/焦点陷阱基座
   setupRipple(); // T4.3 底部导航点击涟漪效果（事件委托）
   setupMobileGestures(); // T4.3 移动端手势：左滑下一个/右滑上一个/右滑左边缘打开侧边栏（仅移动端启用）
@@ -12763,6 +13422,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     refreshPushUI, initPushUI, bindInstallUI, bindOfflineBanner, initPWAEnhancements,
     // v1.4-D onChatSubmit（供集成测试调用）
     onChatSubmit,
+    // Task 138：右侧 AI 聊天面板（三栏布局第三栏）访问器
+    bindChatPanel, renderChatDisabled,
     // v1.5-A i18n 多语言支持（翻译函数 + 语言切换 + 消息资源）
     // 函数声明会被提升，可直接引用；MESSAGES / SUPPORTED_LANGS 是 const，
     // 在 36-i18n.js 中定义（加载顺序 31 < 36），使用 getter 延迟求值避免 TDZ
@@ -13357,7 +14018,11 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     get _bioProtectedActions(){ return _bioProtectedActions; },
     get _bioRetryCount(){ return _bioRetryCount; },
     // v1.8.3 性能优化：重模块懒初始化入口（initHeavyModules 在 30-bootstrap-start.js 定义，30 < 31 可直接引用）
-    initHeavyModules
+    initHeavyModules,
+    // 系统级消息中心访问器（供测试驱动与断言）
+    getMessages, addMessage, markMessageRead, markAllMessagesRead,
+    clearMessages, getUnreadCount, updateMsgBadge, renderMsgPanel,
+    get MSG_KEY(){ return MSG_KEY; }
   };
 }
 // ===== i18n Module (v1.5-A 多语言支持) =====

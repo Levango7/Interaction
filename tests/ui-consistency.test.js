@@ -16,9 +16,10 @@ describe("UI 一致性 · 令牌体系", () => {
     expect(bare, `发现裸 z-index 数字: ${bare?.join(",")}`).toBeNull();
   });
 
-  it("topbar 两级布局存在（tb-row1 / tb-row2）", () => {
-    expect(html).toContain('class="tb-row1"');
-    expect(html).toContain('class="tb-row2"');
+  it("topbar 单行布局 + 正文工具行存在（toolbar-row / main-wrap）", () => {
+    expect(html).toContain('class="topbar"');
+    expect(html).toContain('class="toolbar-row"');
+    expect(html).toContain('class="main-wrap"');
     expect(html).toContain("--brand-grad");
   });
 
