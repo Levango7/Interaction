@@ -42,6 +42,13 @@
 - **指南页卡片样式**：补回 1px 边框 + 圆角 + 阴影（v1.9.3 曾去 border 导致扁平白块，与其他页不一致）
 - **PWA 缓存修复**：bump CACHE_VERSION v1.9.3-20260814e→f——e 版缓存使浏览器持续显示旧 UI（cache-first 导航缓存）
 
+### 三次修订（SW 更新可感知化 + 侧栏高亮状态机）
+
+- **SW 更新可感知化**：bump CACHE_VERSION → v1.9.3-20260814g；启动时主动 `reg.update()` 检查，新 SW 就绪后 toast「新版本已就绪，点击刷新」（点击即 reload）——解决「改了但用户一直看旧缓存」的交付缺口
+- **页脚 build 标记**：新增 `BUILD_TAG` 常量，页脚显示 `v1.9.3 · b20260814g`，用户可自证是否已加载最新版
+- **侧栏高亮改显式状态机**：新增模块级 `uiView`（main/settings/help），openDrawer/renderHelp/render 显式赋值，renderSide 弃 DOM 嗅探（#drawer 是否 drawer-page、#helpPage 是否存在）——根治「设置/指南双高亮且切换不消失」的时序问题
+- **回归测试**：tests/ui-consistency.test.js 新增 7 用例（高亮状态机全链路 5 例 + 页脚 build 标记 2 例）
+
 ---
 
 ## [v1.9.2] - 2026-08-13

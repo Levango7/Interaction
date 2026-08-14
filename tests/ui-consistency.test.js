@@ -6,6 +6,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadApp } from "./helpers/loadApp.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(__dirname, "..", "agent-workbench.html"), "utf8");
@@ -92,5 +93,120 @@ describe("UI 一致性 · 组件语义", () => {
   it("第二行背景令牌（--tb-row2-bg）在暗色主题有覆盖", () => {
     expect(html).toMatch(/--tb-row2-bg:/);
     expect(html).toMatch(/data-theme="dark"[\s\S]*--tb-row2-bg/);
+  });
+});
+
+/**
+ * 侧栏高亮状态机（v1.9.3g）
+ * 高亮由显式 uiView 状态驱动（openDrawer→settings / renderHelp→help / render→main），
+ * 弃 DOM 嗅探。以下用例锁住全链路，防止「设置/指南双高亮且切换不消失」回潮。
+ */
+describe("UI 一致性 · 侧栏高亮状态机（uiView）", () => {
+  let win, __test;
+  beforeEach(async () => {
+    win = await loadApp();
+    __test = win.__test;
+  });
+
+  // 返回 {gear, help, sc:{office:boolean,...}, activeCount}
+  function highlightState() {
+    const side = win.document.querySelector("#side");
+    const navItems = [...side.querySelectorAll(".nav-item")];
+    const isActive = (el) => el.classList.contains("active");
+    const gear = navItems.find((b) => b.dataset.gear);
+    const help = navItems.find((b) => b.dataset.help);
+    const scMap = {};
+    for (const sc of __test.ORDER) {
+      scMap[sc] = navItems.some((b) => b.dataset.sc === sc && isActive(b));
+    }
+    const activeCount = navItems.filter(isActive).length;
+    return {
+      gear: gear ? isActive(gear) : false,
+      help: help ? isActive(help) : false,
+      sc: scMap,
+      activeCount,
+    };
+  }
+
+  it("openDrawer() 后仅 #btnGear 高亮，其余 nav-item 均不高亮", () => {
+    __test.openDrawer();
+    const h = highlightState();
+    expect(win.document.getElementById("btnGear").classList.contains("active")).toBe(true);
+    expect(h.help).toBe(false);
+    expect(Object.values(h.sc).every((v) => v === false)).toBe(true);
+    expect(h.activeCount).toBe(1);
+  });
+
+  it("renderHelp() 后仅 #sideBtnHelp 高亮，gear 与场景均不高亮", () => {
+    __test.renderHelp();
+    const h = highlightState();
+    expect(win.document.getElementById("sideBtnHelp").classList.contains("active")).toBe(true);
+    expect(h.gear).toBe(false);
+    expect(Object.values(h.sc).every((v) => v === false)).toBe(true);
+    expect(h.activeCount).toBe(1);
+  });
+
+  it("指南页点击场景按钮 → gear/help 均不高亮，且场景按钮高亮", () => {
+    __test.renderHelp();
+    const btn = win.document.querySelector('#side .nav-item[data-sc="office"]');
+    expect(btn).toBeTruthy();
+    btn.click();
+    const h = highlightState();
+    expect(h.gear).toBe(false);
+    expect(h.help).toBe(false);
+    expect(h.sc.office).toBe(true);
+    expect(h.activeCount).toBe(1);
+  });
+
+  it("全链路 openDrawer → renderHelp → 场景 render 后无高亮残留", () => {
+    __test.openDrawer();
+    expect(highlightState().gear).toBe(true);
+    __test.renderHelp();
+    const h1 = highlightState();
+    expect(h1.help).toBe(true);
+    expect(h1.gear).toBe(false);
+    __test.setActive("office");
+    __test.render();
+    const h2 = highlightState();
+    expect(h2.gear).toBe(false);
+    expect(h2.help).toBe(false);
+    expect(h2.sc.office).toBe(true);
+    expect(h2.activeCount).toBe(1);
+  });
+
+  it("主视图下场景高亮正常（uiView===\"main\"）", () => {
+    __test.setActive("study");
+    __test.render();
+    const h = highlightState();
+    expect(h.gear).toBe(false);
+    expect(h.help).toBe(false);
+    expect(h.sc.study).toBe(true);
+    expect(h.activeCount).toBe(1);
+  });
+});
+
+/**
+ * 页脚 build 标记（v1.9.3g）
+ * 页脚文本含 b{BUILD_TAG}，用于用户自证是否已加载最新版（PWA 缓存排查）。
+ */
+describe("UI 一致性 · 页脚 build 标记", () => {
+  let win, __test;
+  beforeEach(async () => {
+    win = await loadApp();
+    __test = win.__test;
+  });
+
+  it("#main > .foot 文本含 b20260814g", () => {
+    __test.render();
+    const foot = win.document.querySelector("#main > .foot");
+    expect(foot).toBeTruthy();
+    expect(foot.textContent).toMatch(/v1\.9\.3 · b20260814g/);
+  });
+
+  it("openDrawer() 后 #drawer > .foot 文本含 b20260814g", () => {
+    __test.openDrawer();
+    const foot = win.document.querySelector("#drawer > .foot");
+    expect(foot).toBeTruthy();
+    expect(foot.textContent).toMatch(/b20260814g/);
   });
 });

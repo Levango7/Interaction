@@ -14,8 +14,8 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。当前应用版本 1.9.3。
-// v1.9.3-20260814f：设置页卡片化、回收站间距、指南页卡片样式等 UI 变更后 bump（此前 e 版缓存导致用户看到旧 UI）。
-var CACHE_VERSION = "v1.9.3-20260814f";
+// v1.9.3-20260814g：SW 更新可感知化——主动 reg.update() 检查 + 「新版本已就绪」toast 引导 + 页脚 build 标记（b20260814g）。
+var CACHE_VERSION = "v1.9.3-20260814g";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）

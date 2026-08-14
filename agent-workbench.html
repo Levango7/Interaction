@@ -2492,6 +2492,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
 const VERSION = "1.9.3";
+// 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
+// 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
+const BUILD_TAG = "20260814g";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -4098,6 +4101,7 @@ function toast(msg, type){
   if(type==="error"||type==="danger"){ d.setAttribute("role","alert"); d.setAttribute("aria-live","assertive"); }
   c.appendChild(d); requestAnimationFrame(()=> d.style.opacity="1");
   setTimeout(()=>{ d.style.opacity="0"; setTimeout(()=> d.remove(), 250); }, 3600);
+  return d; // v1.9.3g：返回元素，供调用方挂点击（如 SW 更新提示「点击刷新」）
 }
 
 // UI_ICONS：仅承载 chrome 图标（A-P2-7，FB-1）。场景图标已收编进 SCENARIOS[sc].icon。
@@ -4481,6 +4485,9 @@ function resetCustomLinks(){
 }
 
 let active = load(PREFIX+"active","office");
+// v1.9.3g：当前视图状态机——"main"（场景/总览/统计/回收站）| "settings"（设置页）| "help"（指南页）。
+// 侧栏高亮据此渲染（renderSide 弃 DOM 嗅探），由 openDrawer / renderHelp / render 显式赋值。
+let uiView = "main";
 const chats = {};
 ORDER.forEach(sc=> chats[sc] = load(PREFIX+"chat_"+sc, []).slice(-50) );
 
@@ -5981,10 +5988,11 @@ const SIDE_TOGGLE_HTML = `<button class="side-toggle" id="sideToggle" aria-label
 function renderSide(){
   const tasks = getActiveTasks();
   const totalOpen = tasks.filter(t=>t.status!=="done").length;
-  // 设置/指南激活时，其他按钮取消高亮（避免多个菜单一起高亮）
-  const _gearActive = ($("#drawer") && $("#drawer").classList.contains("drawer-page")) ? " active" : "";
-  const _helpActive = $("#helpPage") ? " active" : "";
-  const _effActive = (_gearActive || _helpActive) ? "" : active;
+  // v1.9.3g：显式视图状态机（uiView），弃 DOM 嗅探——高亮由 openDrawer/renderHelp/render 显式设置，
+  // 不再依赖 #drawer 是否含 drawer-page、#helpPage 是否存在等时序性 DOM 状态
+  const _gearActive = (uiView==="settings") ? " active" : "";
+  const _helpActive = (uiView==="help") ? " active" : "";
+  const _effActive = (uiView==="main") ? active : "";
   const overview = `<button class="nav-item ${_effActive==="overview"?"active":""}" data-sc="overview" style="--sc:#4a3c8e">
     ${UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">总览</span><span class="cnt">${totalOpen}</span></button>`;
   const statsBtn = `<button class="nav-item ${_effActive==="stats"?"active":""}" data-sc="stats" style="--sc:#038387">
@@ -6847,6 +6855,7 @@ function renderHelp(){
   try{
     if(backBtn && typeof backBtn.focus === "function") backBtn.focus();
   }catch(e){ /* noop：jsdom 或异常环境下 focus 可能不可用 */ }
+  uiView = "help"; // v1.9.3g：显式视图状态，侧栏高亮据此渲染（弃 DOM 嗅探）
   renderSide(); // v1.9.3：更新侧边栏高亮（指南按钮 active）
 }
 
@@ -10381,7 +10390,7 @@ function appendFoot(){
   if(existing) existing.remove();
   const footEl = document.createElement("div");
   footEl.className = "foot";
-  footEl.textContent = "Agent 工作台 · v" + VERSION;
+  footEl.textContent = "Agent 工作台 · v" + VERSION + " · b" + BUILD_TAG;
   main.appendChild(footEl);
 }
 
@@ -10395,6 +10404,7 @@ function render(){
       _drawer.classList.remove("open");
     }
     const _help = $("#helpPage"); if(_help) _help.remove();
+    uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     renderSide();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
     if(active==="stats"){ renderStats(); appendFoot(); return; }
@@ -11307,6 +11317,7 @@ function openDrawer(){ const cfg=getCfg();
   /* v1.9：设置从侧边栏抽屉改为正常页面——把 #drawer 移到 .main-wrap 里，加 .drawer-page class
      覆盖原 fixed 抽屉样式，铺满 main-wrap；隐藏 #main（避免并排显示）。
      保留 #drawer.classList.add("open") 以兼容现有测试（round4-batch1 断言 .open 类）。 */
+  uiView = "settings"; // v1.9.3g：显式视图状态，侧栏高亮据此渲染（弃 DOM 嗅探）
   _moveDrawerToMainWrap();
   $("#drawer").classList.add("open");
   /* v1.9.1：设置页面底部追加尾栏（与 #main 各页面保持一致）。
@@ -11323,7 +11334,7 @@ function _appendDrawerFoot(){
   if(existing) existing.remove();
   const footEl = document.createElement("div");
   footEl.className = "foot";
-  footEl.textContent = "Agent 工作台 · v" + VERSION;
+  footEl.textContent = "Agent 工作台 · v" + VERSION + " · b" + BUILD_TAG;
   drawer.appendChild(footEl);
 }
 /* 把 #drawer 移到 .main-wrap 里（设置页面铺满 main-wrap），隐藏 #main */
@@ -13234,9 +13245,33 @@ if (typeof document !== "undefined") {
 
 // ===== Bootstrap (启动) =====
 /* ---------- 启动 ---------- */
-// PWA Service Worker 注册（失败静默；jsdom/Electron 无 serviceWorker 时自动跳过）
+// PWA Service Worker 注册 + 更新检测（失败静默；jsdom/Electron 无 serviceWorker 时自动跳过）
+// v1.9.3g：主动 reg.update() + updatefound/statechange 监听，新 SW 就绪后 toast「点击刷新」，
+// 解决「改了但用户一直看旧缓存」的交付缺口（页脚 b{BUILD_TAG} 可自证版本）。
+let _swReloadPrompted = false;
+function _promptSwReload(){
+  if(_swReloadPrompted) return;
+  _swReloadPrompted = true;
+  const t = toast("新版本已就绪，点击刷新", "ok");
+  if(t){
+    t.style.cursor = "pointer";
+    t.addEventListener("click", function(){ try{ location.reload(); }catch(e){ /* noop */ } });
+  }
+}
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./service-worker.js").catch(function () { /* 静默失败 */ });
+  navigator.serviceWorker.register("./service-worker.js").then(function(reg){
+    // 主动检查更新（浏览器默认约 24h 才检查一次；每次打开都检查，保证修复尽快可见）
+    try{ reg.update(); }catch(e){ /* noop */ }
+    reg.addEventListener("updatefound", function(){
+      const nw = reg.installing; if(!nw) return;
+      nw.addEventListener("statechange", function(){
+        // skipWaiting 后新 SW 会直接 activated；此时刷新即可命中新缓存
+        if(nw.state === "activated") _promptSwReload();
+      });
+    });
+    // 多标签页场景：另一标签已触发更新且新 SW 已就绪
+    if(reg.waiting) _promptSwReload();
+  }).catch(function () { /* 静默失败 */ });
 }
 migrate();
 seed();

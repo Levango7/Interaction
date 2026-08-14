@@ -132,6 +132,8 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 当前版本 **v1.9.3**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v1.9.3 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+
 ## 相关文件
 
 - `agent-workbench.html` — 工作台本体（核心交付物）
