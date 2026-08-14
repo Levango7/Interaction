@@ -845,9 +845,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   color:var(--muted);transition:background var(--transition-fast),color var(--transition-fast)}
 .help-close:hover{background:var(--surface-hover);color:var(--text)}
 .help-body{padding:var(--space-4) var(--space-6);overflow-y:auto;flex:1}
-/* ===== 使用指南页面（v1.9：从 modal 改为页面渲染到 #main，撑满主内容区；v1.9.3：去 border/overflow，加 margin-bottom 与 .card 一致） ===== */
-.help-page{background:var(--panel);
-  display:flex;flex-direction:column;margin-bottom:var(--space-5)}
+/* ===== 使用指南页面（v1.9：从 modal 改为页面渲染到 #main，撑满主内容区） ===== */
+/* v1.9.4：与 .card/.recycle-card 视觉一致——补回 1px 边框 + 圆角 + 阴影（v1.9.3 曾去 border，导致指南页
+   呈无边框扁平白块，与其他页面卡片风格不一致）；overflow:hidden 让 header 顶部圆角裁切 */
+.help-page{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-1);display:flex;flex-direction:column;margin-bottom:var(--space-5);overflow:hidden}
 .help-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text-dim);cursor:pointer;
   background:none;border:1px solid var(--line);transition:background var(--transition-fast),color var(--transition-fast)}

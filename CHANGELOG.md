@@ -27,6 +27,21 @@
 - **多余 `>` 字符修复**：设置页面、看板搜索 / 标签过滤显示的多余 `>` 字符
 - **侧边栏按钮高亮**：设置 / 指南激活时对应按钮高亮，其余按钮取消高亮
 
+### 二次修订（IPC 审计 F1-F8 + 页面一致性 + PWA 缓存修复）
+
+- **F1 base URL 安全校验**：chat 仅允许 https:// 或 http://localhost/127.0.0.1，非法 base 直接拒绝、不发请求
+- **F2 取消语义**：按 sender 维护 pendingCancel，退避 sleep 窗口内取消不再丢，下一轮不发请求（抛 __USER_CANCEL__）
+- **F3 per-profile 配置**：ai-config 升级 per-profile 结构（旧单配置自动迁移 __legacy__），chat 按 profileId 取 base/model/key；前端 7 处调用点适配
+- **F4 Key 清除**：set-ai-config 支持 key:null 显式清除，删 Profile 后主进程残留 Key 被清理
+- **F5** 移除未使用的 __ELECTRON__ 注入
+- **F6** webhook 校验器收紧（http:// 仅限本机，与 CSP 对齐）
+- **F7** electron-ipc 测试 +12 用例；p0-regression 契约断言同步 per-profile
+- **F8** CI 增加 npm run build:check 版本护栏
+- **设置页卡片化**：标题「设置 ← 返回」移入卡片头部（settings-head），与回收站/指南页 header 模式一致；移除卡内旧版「纯本地」尾巴
+- **回收站间距**：移除 .recycle-card min-height 强制拉伸，页脚紧贴内容（实测单条数据 718px→344px）
+- **指南页卡片样式**：补回 1px 边框 + 圆角 + 阴影（v1.9.3 曾去 border 导致扁平白块，与其他页不一致）
+- **PWA 缓存修复**：bump CACHE_VERSION v1.9.3-20260814e→f——e 版缓存使浏览器持续显示旧 UI（cache-first 导航缓存）
+
 ---
 
 ## [v1.9.2] - 2026-08-13
