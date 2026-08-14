@@ -710,17 +710,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   min-height:0;
 }
 /* 设置页面标题行：标题左 + 返回右（与 help-header 风格一致） */
-.drawer-page > h2{
-  display:flex;align-items:center;justify-content:space-between;
-  padding-bottom:var(--space-4);margin-bottom:var(--space-4);
-  border-bottom:1px solid var(--line);
-}
-.drawer-page > h2 > .close{
+.settings-card{overflow:hidden}
+.settings-head{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--line);flex-shrink:0}
+.settings-head h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em}
+.settings-head .close{
   font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);
   border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
   border-radius:var(--radius-md);line-height:1.4;
 }
-.drawer-page > h2 > .close:hover{background:var(--surface-hover);color:var(--text)}
+.settings-head .close:hover{background:var(--surface-hover);color:var(--text)}
+.settings-body{padding:var(--space-5) var(--space-6)}
 
 /* ===== 习惯链管理（T3.2） ===== */
 .chain-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-1);border-radius:var(--radius-sm)}
@@ -874,11 +874,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== 回收站页面（D3：软删除任务的恢复 / 永久删除入口；v1.3.4-B 全屏页面视图） ===== */
 /* v1.9：回收站宽高铺满 main-wrap——移除 max-width 限制，让列表/表格宽度撑满内容区 */
 /* v1.9.3：.recycle-modal 加 margin-bottom:var(--space-5) 与 .card 一致；
-   .recycle-list 上下 padding 增大到 var(--space-7) 让内容块上下边框间距更长（卡片高度由内容决定，与其他页面 .card 一致）。 */
+   .recycle-card 不设 min-height（高度由内容决定），避免空/少数据时拉伸卡片导致页脚被顶到视口底部 */
 .recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5)}
 .recycle-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden;
-  min-height:calc(100vh - 246px)}
+  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden}
 .recycle-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-5) var(--space-6);
   border-bottom:1px solid var(--line);flex-shrink:0}
 .recycle-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;flex:1}
@@ -887,7 +886,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   font-size:var(--fs-sm);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
 .recycle-back:hover{background:var(--surface-hover);color:var(--text)}
 .recycle-count{font-size:var(--fs-xs);color:var(--muted);flex-shrink:0;font-variant-numeric:tabular-nums}
-.recycle-list{padding:var(--space-8) var(--space-6);display:flex;flex-direction:column;gap:var(--space-2)}
+.recycle-list{padding:var(--space-5) var(--space-6);display:flex;flex-direction:column;gap:var(--space-2)}
 .recycle-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2)}
 .recycle-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -1982,8 +1981,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 <div class="overlay" id="overlay"></div>
 <div class="drawer" id="drawer">
-  <h2>设置 <button class="close" id="drawerClose" aria-label="返回上一视图">← 返回</button></h2>
-  <div class="card" style="padding:var(--space-6)">
+  <div class="card settings-card" style="padding:0;overflow:hidden">
+    <div class="settings-head">
+      <h2>设置</h2>
+      <button class="close" id="drawerClose" aria-label="返回上一视图">← 返回</button>
+    </div>
+    <div class="settings-body">
   <div class="row switch"><input type="checkbox" id="cfgEnabled" style="width:auto"> <label for="cfgEnabled" style="margin:0">启用 AI 对话（subagent 可调用工具）</label></div>
   <div class="row"><label>AI Profile</label>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -2221,7 +2224,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </div>
 
   <p class="hint">兼容 OpenAI 接口格式（OpenAI / DeepSeek / 通义 / 豆包 等均可）。Key 仅存本机浏览器。启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
-  <div style="margin-top:10px;font-size:12px;color:var(--muted)">Agent 工作台 · 纯本地 · 单文件</div>
+    </div>
   </div>
 </div>
 
@@ -5327,7 +5330,7 @@ async function initCrypto(){
         let legacy = "";
         if(p.key && isEncKey(p.key)){ try{ legacy = await decryptKey(p.key); }catch(e){ legacy = ""; } }
         else if(typeof p.key === "string" && p.key){ legacy = p.key; }
-        profilesOut.push({ id: p.id, base: p.base||"", model: p.model||"", key: legacy || undefined });
+        profilesOut.push({ id: p.id || "__legacy__", base: p.base||"", model: p.model||"", key: legacy || undefined });
       }
       raw.profiles = raw.profiles.map(p => Object.assign({}, p, { key: "" }));
       save(PREFIX+"cfg", raw);
