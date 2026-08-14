@@ -130,15 +130,6 @@ function createWindow(){
 
   win.loadFile(resolveHtml());
 
-  // 窗口就绪后注入 Electron 环境标记，供 Web 版检测运行环境（禁用 SW 注册等）
-  // 守卫：测试 mock 的 BrowserWindow 实例无 webContents，避免破坏 IPC 单测
-  if (win.webContents && typeof win.webContents.executeJavaScript === "function"){
-    win.webContents.on("did-finish-load", () => {
-      try { win.webContents.executeJavaScript("window.__ELECTRON__=true").catch(() => {}); }
-      catch (e) { /* 注入失败不影响主功能 */ }
-    });
-  }
-
   // 关闭窗口 → 隐藏到托盘（仅托盘菜单的「退出」才真正退出）
   win.on("close", (e) => {
     if (!willQuit){ e.preventDefault(); win.hide(); }
@@ -242,20 +233,37 @@ function legacyDecrypt(buf){
   return JSON.parse(d.update(buf.subarray(28), "utf8", "utf8") + d.final("utf8"));
 }
 
+/* F3：ai-config 结构归一化——新版为 { enabled, profiles: { id: {base, model, key} } }；
+ * 旧版单配置 { base, model, key, enabled } 自动迁移到 profiles.__legacy__。 */
+function normalizeAiConfig(raw){
+  if(!raw || typeof raw !== "object") return null;
+  if(raw.profiles && typeof raw.profiles === "object"){
+    return { enabled: !!raw.enabled, profiles: raw.profiles };
+  }
+  if(typeof raw.base === "string" || typeof raw.key === "string" || typeof raw.model === "string"){
+    return {
+      enabled: !!raw.enabled,
+      profiles: { __legacy__: { base: raw.base || "", model: raw.model || "", key: raw.key || "" } }
+    };
+  }
+  return null;
+}
 function loadAiConfig(){
   try{
     const p = aiConfigPath();
     if(!fs.existsSync(p)) return null;
     const buf = fs.readFileSync(p);
+    let raw = null;
     // 优先 safeStorage（真实加密）
     if(safeStorage && safeStorage.isEncryptionAvailable()){
-      try{ return JSON.parse(safeStorage.decryptString(buf)); }
+      try{ raw = JSON.parse(safeStorage.decryptString(buf)); }
       catch(e){ /* 可能是旧格式或文件损坏 → 尝试迁移 */ }
     }
-    // 迁移旧格式（成功则用新格式重写）
-    const legacy = legacyDecrypt(buf);
-    saveAiConfig(legacy);
-    return legacy;
+    if(!raw) raw = legacyDecrypt(buf); // 旧版派生密钥格式（一次性迁移读取）
+    const norm = normalizeAiConfig(raw);
+    if(!norm) return null;
+    if(!raw.profiles) saveAiConfig(norm); // 旧单配置 → 迁移为新结构并重写
+    return norm;
   }catch(e){ return null; }
 }
 function saveAiConfig(cfg){
@@ -272,6 +280,19 @@ function saveAiConfig(cfg){
   fs.writeFileSync(aiConfigPath(), Buffer.concat([iv, tag, enc]));
 }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+/* ---------- F1：base URL 安全校验（与浏览器端 validateBaseUrl 对齐） ----------
+ * 只允许 https:// 与 http://localhost / http://127.0.0.1（供本地代理/开发）。
+ * 防止配置损坏或恶意配置导致 API Key 明文发往 http:// 公网端点。 */
+function isSafeBaseUrl(base){
+  if(!base || typeof base !== "string") return false;
+  try{
+    const u = new URL(base);
+    if(u.protocol === "https:") return true;
+    if(u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) return true;
+    return false;
+  }catch(e){ return false; }
+}
 
 /* ---------- B8/R3：轻量滚动日志（userData/logs/app.log，JSON Lines，上限约 1MB 自动截断） ---------- */
 function formatLogLine(scope, msg){
@@ -324,6 +345,7 @@ if (!gotLock){
     // AI 配置与代理（P0-3）：Key 由主进程保管，渲染进程经 IPC 委托请求
     // P1-1 取消链路：按 sender 维护活跃 chat 请求的 AbortController，供 abort-chat IPC 中止
     const chatAborters = new Map(); // webContentsId -> Set<AbortController>
+    const pendingCancelBySender = new Map(); // F2：webContentsId -> 取消标记（退避 sleep 窗口内也生效）
     function trackChatAborter(webContentsId, ctrl){
       let set = chatAborters.get(webContentsId);
       if(!set){ set = new Set(); chatAborters.set(webContentsId, set); }
@@ -337,24 +359,66 @@ if (!gotLock){
     }
     ipcMain.handle("set-ai-config", (e, incoming) => {
       if(!incoming || typeof incoming !== "object") return { ok:false };
-      const cur = loadAiConfig() || {};
+      const cur = loadAiConfig() || { enabled:false, profiles:{} };
       const next = {
-        base:    typeof incoming.base    === "string" ? incoming.base    : (cur.base    || ""),
-        model:   typeof incoming.model   === "string" ? incoming.model   : (cur.model   || ""),
-        enabled: typeof incoming.enabled === "boolean" ? incoming.enabled : !!cur.enabled
+        enabled: typeof incoming.enabled === "boolean" ? incoming.enabled : !!cur.enabled,
+        profiles: {}
       };
-      if(typeof incoming.key === "string" && incoming.key) next.key = incoming.key; // 空/undefined → 保留既有
+      // 先复制既有 profiles（未提及的 profile 保留 base/model/key）
+      if(cur.profiles && typeof cur.profiles === "object"){
+        for(const id of Object.keys(cur.profiles)) next.profiles[id] = Object.assign({}, cur.profiles[id]);
+      }
+      const applyEntry = (id, p, prev) => {
+        const entry = {
+          base:  typeof p.base  === "string" ? p.base  : (prev.base  || ""),
+          model: typeof p.model === "string" ? p.model : (prev.model || "")
+        };
+        if(p.key === null) entry.key = "";                    // F4：显式清除
+        else if(typeof p.key === "string" && p.key.length) entry.key = p.key; // 新 Key
+        else if(typeof prev.key === "string") entry.key = prev.key;           // 省略/空串 → 保留既有
+        next.profiles[id] = entry;
+      };
+      if(Array.isArray(incoming.profiles)){
+        for(const p of incoming.profiles){
+          if(!p || typeof p !== "object" || typeof p.id !== "string" || !p.id) continue;
+          applyEntry(p.id, p, next.profiles[p.id] || {});
+        }
+      } else {
+        // 旧单配置兼容：写入 __legacy__
+        applyEntry("__legacy__", incoming, next.profiles.__legacy__ || {});
+      }
       saveAiConfig(next);
       return { ok:true };
     });
     ipcMain.handle("get-ai-config", () => {
-      const c = loadAiConfig() || {};
-      return { base: c.base||"", model: c.model||"", enabled: !!c.enabled, keySet: !!(c.key && c.key.length) };
+      const c = loadAiConfig() || { enabled:false, profiles:{} };
+      const profiles = [];
+      if(c.profiles && typeof c.profiles === "object"){
+        for(const id of Object.keys(c.profiles)){
+          const p = c.profiles[id] || {};
+          profiles.push({ id, base: p.base || "", model: p.model || "", keySet: !!(p.key && p.key.length) });
+        }
+      }
+      return { enabled: !!c.enabled, profiles };
     });
     ipcMain.handle("chat", async (e, arg) => {
       const cfg = loadAiConfig();
-      if(!cfg || !cfg.key) throw new Error("AI 未配置：请先在设置中填写 API Key");
-      const base = (cfg.base || "https://api.openai.com/v1").replace(/\/+$/,"");
+      if(!cfg) throw new Error("AI 未配置：请先在设置中填写 API Key");
+      // F3：按 profileId 取对应 profile 的 base/model/key；缺省回退 __legacy__ → 唯一 → 第一个
+      const profiles = (cfg.profiles && typeof cfg.profiles === "object") ? cfg.profiles : {};
+      const pid = (arg && typeof arg.profileId === "string" && arg.profileId) ? arg.profileId : "";
+      let prof = pid && profiles[pid];
+      if(!prof){
+        prof = profiles.__legacy__ || null;
+        if(!prof){
+          const ids = Object.keys(profiles);
+          if(ids.length) prof = profiles[ids[0]];
+        }
+      }
+      if(!prof || !prof.key) throw new Error("AI 未配置：请先在设置中填写 API Key");
+      const base = (prof.base || "https://api.openai.com/v1").replace(/\/+$/,"");
+      // F1：base URL 协议校验——非法直接拒绝，不发请求（Key 只发往 https 或本机 http）
+      if(!isSafeBaseUrl(base)) throw new Error("AI base URL 不安全，已阻止请求");
       // B8：温度 / 超时由前端配置传入，带范围校验，非法值回退默认（0.7 / 30s）
       let temperature = Number(arg && arg.temperature);
       if(!isFinite(temperature)) temperature = 0.7;
@@ -363,7 +427,7 @@ if (!gotLock){
       if(!isFinite(timeoutSec)) timeoutSec = 30;
       timeoutSec = Math.min(120, Math.max(5, Math.round(timeoutSec)));
       const body = {
-        model: (arg && typeof arg.model === "string" && arg.model) ? arg.model : (cfg.model || "gpt-4o-mini"),
+        model: (arg && typeof arg.model === "string" && arg.model) ? arg.model : (prof.model || "gpt-4o-mini"),
         messages: (arg && Array.isArray(arg.messages)) ? arg.messages : [],
         temperature
       };
@@ -372,7 +436,14 @@ if (!gotLock){
       logLine("chat", "request model="+body.model+" temp="+temperature+" timeout="+timeoutSec+"s");
       let lastErr = null;
       const senderId = e.sender && e.sender.id;
+      // F2：新请求先清除残留取消标记（上一次的取消不应影响本次）
+      if(senderId) pendingCancelBySender.delete(senderId);
       for(let attempt = 0; attempt < 3; attempt++){
+        // F2：退避 sleep 窗口内用户可能已取消——每轮发请求前复查标记
+        if(senderId && pendingCancelBySender.get(senderId)){
+          pendingCancelBySender.delete(senderId);
+          throw new Error("__USER_CANCEL__");
+        }
         const ctrl = new AbortController();
         let cancelledByUser = false;
         if(senderId) trackChatAborter(senderId, ctrl);
@@ -385,7 +456,7 @@ if (!gotLock){
         try{
           const r = await fetch(base + "/chat/completions", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + cfg.key },
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + prof.key },
             body: JSON.stringify(body),
             signal: ctrl.signal
           });
@@ -417,6 +488,9 @@ if (!gotLock){
     // P1-1：渲染进程主动取消进行中的 chat 请求（Electron 版取消按钮）
     ipcMain.on("abort-chat", (e) => {
       if(!e.sender || !e.sender.id) return;
+      // F2：先置取消标记——即使请求正处于退避 sleep 窗口（无活跃 controller），
+      // 下一轮循环也会在发请求前捕获该标记并抛 __USER_CANCEL__
+      pendingCancelBySender.set(e.sender.id, true);
       const set = chatAborters.get(e.sender.id);
       if(!set) return;
       set.forEach((ctrl) => {

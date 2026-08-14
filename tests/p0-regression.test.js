@@ -422,9 +422,10 @@ describe("P0-3 契约 · 用例 7：Key 不离开主进程（静态校验）", (
   it("main：Key 仅来自 loadAiConfig()，chat 入参不读 arg.key", () => {
     expect(main).toMatch(/const cfg = loadAiConfig\(\);/);
     expect(main).not.toMatch(/arg\.key/); // 绝不接收渲染进程传入的 key
-    // 请求体由 arg 构造，Authorization 仅用主进程 cfg.key
+    // 请求体由 arg 构造，Authorization 仅用主进程 per-profile 的 prof.key（F3）
     expect(main).toMatch(/messages:\s*\(arg && Array\.isArray\(arg\.messages\)\) \? arg\.messages : \[\]/);
-    expect(main).toMatch(/"Authorization":\s*"Bearer "\s*\+\s*cfg\.key/);
+    expect(main).toMatch(/let prof = pid && profiles\[pid\]/); // F3：按 profileId 解析 base/model/key
+    expect(main).toMatch(/"Authorization":\s*"Bearer "\s*\+\s*prof\.key/);
   });
 
   it("main：fetch 带 AbortController 超时（B8：可配置，默认 30s）", () => {

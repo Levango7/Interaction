@@ -5320,14 +5320,14 @@ async function initCrypto(){
 
   // Electron 模式：Key 由主进程保管。渲染进程不解密、不持有明文 Key（P0-3）
   if(isElectron()){
+    // F3：一次性把 profiles 结构上报主进程（消除「多 profile 循环 setAiConfig 后者覆盖前者」）
+    const profilesOut = [];
     if(raw && Array.isArray(raw.profiles)){
-      // 旧版迁移：把每个 profile 的本地残留 Key 上报主进程后清除
       for(const p of raw.profiles){
-        if(!p.key) continue;
         let legacy = "";
-        if(isEncKey(p.key)){ try{ legacy = await decryptKey(p.key); }catch(e){ legacy = ""; } }
+        if(p.key && isEncKey(p.key)){ try{ legacy = await decryptKey(p.key); }catch(e){ legacy = ""; } }
         else if(typeof p.key === "string" && p.key){ legacy = p.key; }
-        if(legacy){ try{ await window.electronAPI.setAiConfig({ base: p.base||"", model: p.model||"", enabled: !!raw.enabled, key: legacy }); }catch(e){ /* 忽略 */ } }
+        profilesOut.push({ id: p.id, base: p.base||"", model: p.model||"", key: legacy || undefined });
       }
       raw.profiles = raw.profiles.map(p => Object.assign({}, p, { key: "" }));
       save(PREFIX+"cfg", raw);
@@ -5336,9 +5336,12 @@ async function initCrypto(){
       let legacy = "";
       if(isEncKey(raw.key)){ try{ legacy = await decryptKey(raw.key); }catch(e){ legacy = ""; } }
       else if(typeof raw.key === "string" && raw.key){ legacy = raw.key; }
-      if(legacy){ try{ await window.electronAPI.setAiConfig({ base: raw.base||"", model: raw.model||"", enabled: !!raw.enabled, key: legacy }); }catch(e){ /* 忽略 */ } }
+      profilesOut.push({ id: raw.activeId || "__legacy__", base: raw.base||"", model: raw.model||"", key: legacy || undefined });
       const rest = Object.assign({}, raw); delete rest.key;
       save(PREFIX+"cfg", rest);
+    }
+    if(profilesOut.length){
+      try{ await window.electronAPI.setAiConfig({ enabled: !!raw.enabled, profiles: profilesOut }); }catch(e){ /* 忽略 */ }
     }
     _cfgCache = Object.assign({}, raw, { key: "" });
     return _cfgCache;
@@ -9102,6 +9105,10 @@ async function chatOnce(messages, opts){
     // P1-1：订阅外部 signal 用户取消 → 通知主进程中断 fetch，让"取消按钮"在 Electron 下生效
     if(isElectron()){
       body.timeoutSec = aiParams.timeoutSec;
+
+      // F3：带上当前激活 profile id，主进程按 id 取 base/model/key
+
+      if(ap && ap.id) body.profileId = ap.id;
       let _userAborted = false;
       if(opts.signal && typeof opts.signal.addEventListener === "function"){
         const onAbort = () => {
@@ -10508,8 +10515,14 @@ function doImport(file){
       const cfg = getCfg();
       const hasProfiles = cfg && Array.isArray(cfg.profiles) && cfg.profiles.length;
       if(isElectron()){
-        try{ const c = await window.electronAPI.getAiConfig(); effectiveKey = (c && c.keySet) ? "__set__" : ""; }
-        catch(e){ effectiveKey = ""; }
+        // F3：按激活 profile 查主进程 keySet（不再用旧顶层 c.keySet）
+        try{
+          const c = await window.electronAPI.getAiConfig();
+          const ap = getActiveProfile();
+          const list = (c && Array.isArray(c.profiles)) ? c.profiles : [];
+          const mine = ap && list.find(x => x.id === ap.id);
+          effectiveKey = (mine && mine.keySet) ? "__set__" : "";
+        }catch(e){ effectiveKey = ""; }
       } else {
         effectiveKey = (getActiveProfile() && getActiveProfile().key) || "";
       }
@@ -10518,10 +10531,11 @@ function doImport(file){
         if(Array.isArray(data._portableKeys) && data._portableKeys.length && hasProfiles){
           if(isElectron()){
             try{
-              const ap = getActiveProfile();
+              // F3：_portableKeys 按 profile 逐项写入主进程（一次性全量同步）
+              const profilesOut = cfg.profiles.map((p, i) => ({ id: p.id, base: p.base || "", model: p.model || "", key: data._portableKeys[i] || undefined }));
+              await window.electronAPI.setAiConfig({ enabled: !!cfg.enabled, profiles: profilesOut });
               const idx = cfg.profiles.findIndex(p => p.id === cfg.activeId);
               const k = (idx >= 0 && data._portableKeys[idx]) || data._portableKeys[0] || "";
-              await window.electronAPI.setAiConfig({ base: (ap && ap.base) || "", model: (ap && ap.model) || "", enabled: !!cfg.enabled, key: k });
               effectiveKey = k ? "__set__" : "";
             }catch(e){ effectiveKey = ""; }
           } else {
@@ -10536,7 +10550,7 @@ function doImport(file){
           if(isElectron()){
             try{
               const ap = getActiveProfile();
-              await window.electronAPI.setAiConfig({ base: (ap && ap.base) || "", model: (ap && ap.model) || "", enabled: !!cfg.enabled, key: data._portableKey });
+              await window.electronAPI.setAiConfig({ enabled: !!cfg.enabled, profiles: [{ id: (ap && ap.id) || cfg.activeId || "__legacy__", base: (ap && ap.base) || "", model: (ap && ap.model) || "", key: data._portableKey }] });
               effectiveKey = "__set__";
             }catch(e){ effectiveKey = ""; }
           } else {
@@ -11278,7 +11292,11 @@ function openDrawer(){ const cfg=getCfg();
       .catch(()=>{ ar.style.display="none"; });
     // 主进程保管 Key：显示已保存提示，输入留空（空值保存=保留既有）
     window.electronAPI.getAiConfig().then(c=>{
-      if(c && c.keySet && hint){ hint.style.display="block"; $("#cfgKey").placeholder="已保存（主进程保管）"; }
+      // F3：按激活 profile 查 keySet（主进程返回 profiles 数组）
+      const list = (c && Array.isArray(c.profiles)) ? c.profiles : [];
+      const ap = getActiveProfile();
+      const mine = ap && list.find(x => x.id === ap.id);
+      if(mine && mine.keySet && hint){ hint.style.display="block"; $("#cfgKey").placeholder="已保存（主进程保管）"; }
     }).catch(()=>{});
   }
   /* v1.9：设置从侧边栏抽屉改为正常页面——把 #drawer 移到 .main-wrap 里，加 .drawer-page class
@@ -11450,11 +11468,13 @@ async function saveCfg(){
     if(isElectron()){
       const al=$("#cfgAutoLaunch");
       if(al) window.electronAPI.setAutoLaunch(al.checked);
-      // Key 交给主进程保管（空值=保留既有），base/model/enabled 同步过去（P0-3）
-      const ap = getActiveProfile();
-      try{ await window.electronAPI.setAiConfig({
-        base: (ap && ap.base) || "", model: (ap && ap.model) || "", enabled: !!cfg.enabled,
-        key: (ap && ap.key) || undefined }); }catch(e){ /* 忽略 */ }
+      // F3：全量同步 profiles 到主进程（Key 空值=保留既有，base/model 随配置更新）
+      // F4：对已删除的 profile 显式传 key:null，清除主进程残留 Key
+      const profilesOut = cfg.profiles.map(p => ({ id: p.id, base: p.base || "", model: p.model || "", key: (p.id === activeId) ? (p.key || undefined) : undefined }));
+      const removedIds = new Set((old.profiles || []).map(p => p.id));
+      cfg.profiles.forEach(p => removedIds.delete(p.id));
+      removedIds.forEach(id => profilesOut.push({ id, key: null }));
+      try{ await window.electronAPI.setAiConfig({ enabled: !!cfg.enabled, profiles: profilesOut }); }catch(e){ /* 忽略 */ }
     }
     toast("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"), "ok"); // B3：alert 改 toast，不阻塞交互
     applyTheme(); // T4：主题变更（含跟随系统）立即生效
@@ -18296,6 +18316,8 @@ function _validateWebhookUrl(urlStr){
     var h = u.hostname;
     // 开发环境允许 localhost
     if (h === "localhost" || h === "127.0.0.1" || h === "::1") return true;
+    // F6：http:// 仅限本机——公网 http 在浏览器/Electron 下都会被 CSP connect-src 'self' https: 静默拦截，直接拒绝避免「校验通过却发不出去」
+    if (u.protocol === "http:") return false;
     // 过滤内网地址段（RFC1918）与链路本地（169.254/16）及 0.0.0.0/8
     if (/^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)/.test(h)) return false;
     if (/^0\./.test(h)) return false;

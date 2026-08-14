@@ -9,6 +9,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import Module from "node:module";
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 // vi.mock 工厂会被提升到文件顶部，因此工厂内不能直接引用外部 const 变量。
 // 用 vi.hoisted 把共享容器与 stub 工厂也提升到顶部，工厂与测试体通过引用读写同一对象。
@@ -58,6 +61,11 @@ const { ipcHandlers, mockAppRef, createElectronStub, originalLoadRef, cachedStub
       })),
       Menu: { buildFromTemplate: vi.fn() },
       nativeImage: { createFromBuffer: vi.fn() },
+      safeStorage: {
+        isEncryptionAvailable: () => true,
+        encryptString: (s) => Buffer.from(s, "utf8"),
+        decryptString: (buf) => (Buffer.isBuffer(buf) ? buf.toString("utf8") : String(buf)),
+      },
       ipcMain: {
         handle: (key, fn) => {
           ipcHandlers[key] = fn;
@@ -155,6 +163,188 @@ describe("Electron IPC: 开机自启", () => {
       openAtLogin: false,
       path: "C:/fake/app.exe",
       args: [],
+    });
+  });
+});
+
+/* ============================================================
+ * 阶段二·F1-F7：AI 配置与 chat 安全（IPC 加固）
+ * 覆盖：base URL 校验 / 取消语义（含退避窗口）/ 429 重试 / 超时 /
+ *       per-profile 存储 / key 保留与清除 / 旧单配置迁移
+ * 策略：app.getPath 指向真实临时目录（ai-config.enc 读写真实发生），
+ *       safeStorage mock 为「原样字符串往返」，fetch 用 stubGlobal 接管。
+ * ============================================================ */
+describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
+  let tmpDir = null;
+  let origGetPathImpl = null;
+
+  const cfgPath = () => path.join(tmpDir, "ai-config.enc");
+  const freshConfig = (obj) => writeFileSync(cfgPath(), JSON.stringify(obj));
+  const readConfigFile = () => {
+    try { return JSON.parse(readFileSync(cfgPath(), "utf8")); }
+    catch (e) { return null; }
+  };
+  const makeAbortError = () => { const e = new Error("aborted"); e.name = "AbortError"; return e; };
+  const installFetch = (behavior, status) => {
+    const calls = [];
+    const pending = [];
+    const fn = vi.fn((url, opts) => {
+      calls.push({ url, opts });
+      if (behavior === "pending"){
+        return new Promise((resolve, reject) => {
+          pending.push({ resolve, reject });
+          if (opts && opts.signal){
+            if (opts.signal.aborted){ reject(makeAbortError()); return; }
+            opts.signal.addEventListener("abort", () => reject(makeAbortError()));
+          }
+        });
+      }
+      if (behavior === "status"){
+        return Promise.resolve({ ok: false, status });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: 1, choices: [{ message: { content: "hi" } }] }) });
+    });
+    vi.stubGlobal("fetch", fn);
+    return { fn, calls, pending };
+  };
+  const chatReq = (extra) => Object.assign({ profileId: "p1", messages: [], temperature: 0.7, timeoutSec: 5 }, extra);
+
+  beforeEach(async () => {
+    await ensureMain();
+    const app = mockAppRef.current;
+    if (origGetPathImpl === null){
+      origGetPathImpl = app.getPath.getMockImplementation();
+    }
+    tmpDir = mkdtempSync(path.join(os.tmpdir(), "aw-ipc-"));
+    app.getPath.mockReturnValue(tmpDir);
+  });
+  afterEach(() => {
+    if (tmpDir){ try { rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* noop */ } tmpDir = null; }
+    const app = mockAppRef.current;
+    if (app && origGetPathImpl !== null) app.getPath.mockImplementation(origGetPathImpl);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  describe("F1 base URL 校验", () => {
+    it("http:// 公网 base 直接拒绝且不发请求", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "http://evil.example.com/v1", model: "m", key: "k" } } });
+      const { calls } = installFetch();
+      await expect(ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq())).rejects.toThrow("AI base URL 不安全");
+      expect(calls.length).toBe(0);
+    });
+    it("http://localhost 放行并携带 Key", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "http://localhost:1234/v1", model: "m", key: "secret" } } });
+      const { calls } = installFetch();
+      const r = await ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq());
+      expect(r.choices[0].message.content).toBe("hi");
+      expect(calls.length).toBe(1);
+      expect(calls[0].url).toBe("http://localhost:1234/v1/chat/completions");
+      expect(calls[0].opts.headers.Authorization).toBe("Bearer secret");
+    });
+    it("未配置（无 ai-config.enc）抛 AI 未配置", async () => {
+      const { calls } = installFetch();
+      await expect(ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq())).rejects.toThrow("AI 未配置");
+      expect(calls.length).toBe(0);
+    });
+  });
+
+  describe("F3 per-profile 取配置", () => {
+    it("chat 按 profileId 取对应 base/model/key", async () => {
+      freshConfig({
+        enabled: true,
+        profiles: {
+          a: { base: "https://a.example.com/v1", model: "ma", key: "ka" },
+          b: { base: "https://b.example.com/v1", model: "mb", key: "kb" },
+        },
+      });
+      const { calls } = installFetch();
+      const r = await ipcHandlers["chat"]({ sender: { id: "s1" } }, Object.assign(chatReq(), { profileId: "b" }));
+      expect(r.choices[0].message.content).toBe("hi");
+      expect(calls.length).toBe(1);
+      expect(calls[0].url).toBe("https://b.example.com/v1/chat/completions");
+      expect(calls[0].opts.headers.Authorization).toBe("Bearer kb");
+    });
+  });
+
+  describe("F2 重试 / 超时 / 取消", () => {
+    it("429 退避重试 3 次后报「请求过于频繁」", async () => {
+      vi.useFakeTimers();
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      const { calls } = installFetch("status", 429);
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq());
+      const assertion = expect(p).rejects.toThrow("请求过于频繁"); // 先 attach，避免 advance 期间 unhandled rejection
+      await vi.advanceTimersByTimeAsync(7000);
+      await assertion;
+      expect(calls.length).toBe(3);
+    });
+    it("请求超时抛超时错误", async () => {
+      vi.useFakeTimers();
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      installFetch("pending");
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq({ timeoutSec: 5 }));
+      const assertion = expect(p).rejects.toThrow("请求超时"); // 先 attach
+      await vi.advanceTimersByTimeAsync(6000);
+      await assertion;
+    });
+    it("进行中取消 → __USER_CANCEL__", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      installFetch("pending");
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq());
+      ipcHandlers["abort-chat"]({ sender: { id: "s1" } });
+      await expect(p).rejects.toThrow("__USER_CANCEL__");
+    });
+    it("退避 sleep 窗口内取消 → 下一轮不发出请求", async () => {
+      vi.useFakeTimers();
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      const { calls } = installFetch("status", 429);
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq());
+      const assertion = expect(p).rejects.toThrow("__USER_CANCEL__"); // 先 attach
+      await vi.advanceTimersByTimeAsync(500); // 第一次 429 已返回，处于第一次退避 sleep 中
+      ipcHandlers["abort-chat"]({ sender: { id: "s1" } });
+      await vi.advanceTimersByTimeAsync(3000); // sleep 结束 → 循环顶部捕获标记
+      await assertion;
+      expect(calls.length).toBe(1);
+    });
+  });
+
+  describe("F3/F4 set/get-ai-config", () => {
+    it("profiles 结构往返（不含明文 key）", async () => {
+      await ipcHandlers["set-ai-config"]({}, {
+        enabled: true,
+        profiles: [
+          { id: "a", base: "https://a/v1", model: "ma", key: "ka" },
+          { id: "b", base: "https://b/v1", model: "mb", key: "kb" },
+        ],
+      });
+      const c = await ipcHandlers["get-ai-config"]();
+      expect(c.enabled).toBe(true);
+      expect(c.profiles).toEqual([
+        { id: "a", base: "https://a/v1", model: "ma", keySet: true },
+        { id: "b", base: "https://b/v1", model: "mb", keySet: true },
+      ]);
+      // 明文 key 绝不出现在返回值
+      expect(JSON.stringify(c)).not.toContain("ka");
+      expect(JSON.stringify(c)).not.toContain("kb");
+    });
+    it("key 省略 → 保留既有", async () => {
+      await ipcHandlers["set-ai-config"]({}, { enabled: true, profiles: [{ id: "a", base: "https://a/v1", model: "ma", key: "ka" }] });
+      await ipcHandlers["set-ai-config"]({}, { enabled: true, profiles: [{ id: "a", base: "https://a2/v1", model: "ma2" }] });
+      const c = await ipcHandlers["get-ai-config"]();
+      expect(c.profiles[0]).toMatchObject({ id: "a", base: "https://a2/v1", model: "ma2", keySet: true });
+    });
+    it("key:null → 清除（F4）", async () => {
+      await ipcHandlers["set-ai-config"]({}, { enabled: true, profiles: [{ id: "a", base: "https://a/v1", model: "ma", key: "ka" }] });
+      await ipcHandlers["set-ai-config"]({}, { enabled: true, profiles: [{ id: "a", key: null }] });
+      const c = await ipcHandlers["get-ai-config"]();
+      expect(c.profiles[0].keySet).toBe(false);
+    });
+    it("旧单配置自动迁移到 __legacy__ 并重写文件", async () => {
+      freshConfig({ base: "https://old/v1", model: "mo", key: "oldkey", enabled: true });
+      const c = await ipcHandlers["get-ai-config"]();
+      expect(c.profiles).toEqual([{ id: "__legacy__", base: "https://old/v1", model: "mo", keySet: true }]);
+      const file = readConfigFile();
+      expect(file.profiles.__legacy__.key).toBe("oldkey");
     });
   });
 });
