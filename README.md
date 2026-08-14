@@ -1,4 +1,4 @@
-# Agent 工作台（v1.8.9）
+# Agent 工作台（v1.9.3）
 
 一个跑在 Windows 上的**套壳 Agent 工作台**：把办公 / 编程 / 学习 / 生活四类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -75,7 +75,9 @@
 |---|---|---|
 | `electronAPI.getAutoLaunch()` | `ipcRenderer.invoke` | `ipcMain.handle("get-auto-launch")` |
 | `electronAPI.setAutoLaunch(on)` | `ipcRenderer.send` | `ipcMain.on("set-auto-launch")` |
-| `electronAPI.platform / version / isPackaged` | `contextBridge` 静态值 | — |
+| `electronAPI.version()` | `ipcRenderer.invoke` | `ipcMain.handle("get-version")` |
+| `electronAPI.isPackaged()` | `ipcRenderer.invoke` | `ipcMain.handle("get-packaged")` |
+| `electronAPI.platform` | `contextBridge` 静态值 | — |
 
 `contextIsolation: true` + `nodeIntegration: false` + `sandbox: true`，预加载脚本仅暴露最小且明确的 API，符合 Electron 安全基线。
 
@@ -128,7 +130,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v1.8.9**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v1.9.3**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 相关文件
 
