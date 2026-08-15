@@ -7,10 +7,13 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # v1.11.1：补 Windows 矩阵——项目为 Windows-first（.bat 启动器 + Electron win portable），
+    # 此前仅在 ubuntu 验证；lint:src / typecheck 随 src/modules 归档移除（见 git tag archive/src-snapshot-v1.9.9）
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest]
         node-version: [20]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,5 +24,3 @@ jobs:
       - run: npm test
       - run: npm run build:check
       - run: npm run lint
-      - run: npm run lint:src
-      - run: npm run typecheck

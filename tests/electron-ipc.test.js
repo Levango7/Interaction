@@ -102,6 +102,15 @@ afterAll(() => {
   }
 });
 
+// v1.11.1 [M4]：主进程 IPC 已加 sender 信任校验（assertTrustedSender 要求 senderFrame.url 为 file://），
+// 测试事件对象需模拟真实渲染端形态。
+function trustedEv(id){
+  return { sender: { id: id || "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } };
+}
+function forgedEv(){
+  return { sender: { id: "evil" }, senderFrame: { url: "https://evil.example.com/index.html" } };
+}
+
 // 动态 import main.js 触发顶层注册（含 ipcMain.handle/on 注册与 app.whenReady 副作用）。
 // 用 mainLoaded 守卫避免重复 import 触发重复注册/重复副作用。
 let mainLoaded = false;
@@ -128,7 +137,7 @@ describe("Electron IPC: 开机自启", () => {
     await ensureMain();
     const mockApp = mockAppRef.current;
     mockApp.getLoginItemSettings.mockReturnValue({ openAtLogin: true });
-    const result = await ipcHandlers["get-auto-launch"]();
+    const result = await ipcHandlers["get-auto-launch"](trustedEv());
     expect(result).toBe(true);
     expect(mockApp.getLoginItemSettings).toHaveBeenCalled();
   });
@@ -139,14 +148,14 @@ describe("Electron IPC: 开机自启", () => {
     mockApp.getLoginItemSettings.mockImplementation(() => {
       throw new Error("perm");
     });
-    const result = await ipcHandlers["get-auto-launch"]();
+    const result = await ipcHandlers["get-auto-launch"](trustedEv());
     expect(result).toBe(false);
   });
 
   it("set-auto-launch(true) 调用 setLoginItemSettings with openAtLogin:true", async () => {
     await ensureMain();
     const mockApp = mockAppRef.current;
-    ipcHandlers["set-auto-launch"]({}, true);
+    ipcHandlers["set-auto-launch"](trustedEv(), true);
     expect(mockApp.setLoginItemSettings).toHaveBeenCalledWith({
       openAtLogin: true,
       path: "C:/fake/app.exe",
@@ -158,7 +167,7 @@ describe("Electron IPC: 开机自启", () => {
     await ensureMain();
     const mockApp = mockAppRef.current;
     mockApp.setLoginItemSettings.mockClear();
-    ipcHandlers["set-auto-launch"]({}, false);
+    ipcHandlers["set-auto-launch"](trustedEv(), false);
     expect(mockApp.setLoginItemSettings).toHaveBeenCalledWith({
       openAtLogin: false,
       path: "C:/fake/app.exe",
@@ -230,13 +239,13 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
     it("http:// 公网 base 直接拒绝且不发请求", async () => {
       freshConfig({ enabled: true, profiles: { p1: { base: "http://evil.example.com/v1", model: "m", key: "k" } } });
       const { calls } = installFetch();
-      await expect(ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq())).rejects.toThrow("AI base URL 不安全");
+      await expect(ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq())).rejects.toThrow("AI base URL 不安全");
       expect(calls.length).toBe(0);
     });
     it("http://localhost 放行并携带 Key", async () => {
       freshConfig({ enabled: true, profiles: { p1: { base: "http://localhost:1234/v1", model: "m", key: "secret" } } });
       const { calls } = installFetch();
-      const r = await ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq());
+      const r = await ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq());
       expect(r.choices[0].message.content).toBe("hi");
       expect(calls.length).toBe(1);
       expect(calls[0].url).toBe("http://localhost:1234/v1/chat/completions");
@@ -244,7 +253,7 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
     });
     it("未配置（无 ai-config.enc）抛 AI 未配置", async () => {
       const { calls } = installFetch();
-      await expect(ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq())).rejects.toThrow("AI 未配置");
+      await expect(ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq())).rejects.toThrow("AI 未配置");
       expect(calls.length).toBe(0);
     });
   });
@@ -259,7 +268,7 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
         },
       });
       const { calls } = installFetch();
-      const r = await ipcHandlers["chat"]({ sender: { id: "s1" } }, Object.assign(chatReq(), { profileId: "b" }));
+      const r = await ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, Object.assign(chatReq(), { profileId: "b" }));
       expect(r.choices[0].message.content).toBe("hi");
       expect(calls.length).toBe(1);
       expect(calls[0].url).toBe("https://b.example.com/v1/chat/completions");
@@ -272,7 +281,7 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
       vi.useFakeTimers();
       freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
       const { calls } = installFetch("status", 429);
-      const p = ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq());
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq());
       const assertion = expect(p).rejects.toThrow("请求过于频繁"); // 先 attach，避免 advance 期间 unhandled rejection
       await vi.advanceTimersByTimeAsync(7000);
       await assertion;
@@ -282,7 +291,7 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
       vi.useFakeTimers();
       freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
       installFetch("pending");
-      const p = ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq({ timeoutSec: 5 }));
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq({ timeoutSec: 5 }));
       const assertion = expect(p).rejects.toThrow("请求超时"); // 先 attach
       await vi.advanceTimersByTimeAsync(6000);
       await assertion;
@@ -290,18 +299,18 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
     it("进行中取消 → __USER_CANCEL__", async () => {
       freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
       installFetch("pending");
-      const p = ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq());
-      ipcHandlers["abort-chat"]({ sender: { id: "s1" } });
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq());
+      ipcHandlers["abort-chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } });
       await expect(p).rejects.toThrow("__USER_CANCEL__");
     });
     it("退避 sleep 窗口内取消 → 下一轮不发出请求", async () => {
       vi.useFakeTimers();
       freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
       const { calls } = installFetch("status", 429);
-      const p = ipcHandlers["chat"]({ sender: { id: "s1" } }, chatReq());
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq());
       const assertion = expect(p).rejects.toThrow("__USER_CANCEL__"); // 先 attach
       await vi.advanceTimersByTimeAsync(500); // 第一次 429 已返回，处于第一次退避 sleep 中
-      ipcHandlers["abort-chat"]({ sender: { id: "s1" } });
+      ipcHandlers["abort-chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } });
       await vi.advanceTimersByTimeAsync(3000); // sleep 结束 → 循环顶部捕获标记
       await assertion;
       expect(calls.length).toBe(1);
@@ -310,14 +319,14 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
 
   describe("F3/F4 set/get-ai-config", () => {
     it("profiles 结构往返（不含明文 key）", async () => {
-      await ipcHandlers["set-ai-config"]({}, {
+      await ipcHandlers["set-ai-config"](trustedEv(), {
         enabled: true,
         profiles: [
           { id: "a", base: "https://a/v1", model: "ma", key: "ka" },
           { id: "b", base: "https://b/v1", model: "mb", key: "kb" },
         ],
       });
-      const c = await ipcHandlers["get-ai-config"]();
+      const c = await ipcHandlers["get-ai-config"](trustedEv());
       expect(c.enabled).toBe(true);
       expect(c.profiles).toEqual([
         { id: "a", base: "https://a/v1", model: "ma", keySet: true },
@@ -328,23 +337,78 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
       expect(JSON.stringify(c)).not.toContain("kb");
     });
     it("key 省略 → 保留既有", async () => {
-      await ipcHandlers["set-ai-config"]({}, { enabled: true, profiles: [{ id: "a", base: "https://a/v1", model: "ma", key: "ka" }] });
-      await ipcHandlers["set-ai-config"]({}, { enabled: true, profiles: [{ id: "a", base: "https://a2/v1", model: "ma2" }] });
-      const c = await ipcHandlers["get-ai-config"]();
+      await ipcHandlers["set-ai-config"](trustedEv(), { enabled: true, profiles: [{ id: "a", base: "https://a/v1", model: "ma", key: "ka" }] });
+      await ipcHandlers["set-ai-config"](trustedEv(), { enabled: true, profiles: [{ id: "a", base: "https://a2/v1", model: "ma2" }] });
+      const c = await ipcHandlers["get-ai-config"](trustedEv());
       expect(c.profiles[0]).toMatchObject({ id: "a", base: "https://a2/v1", model: "ma2", keySet: true });
     });
     it("key:null → 清除（F4）", async () => {
-      await ipcHandlers["set-ai-config"]({}, { enabled: true, profiles: [{ id: "a", base: "https://a/v1", model: "ma", key: "ka" }] });
-      await ipcHandlers["set-ai-config"]({}, { enabled: true, profiles: [{ id: "a", key: null }] });
-      const c = await ipcHandlers["get-ai-config"]();
+      await ipcHandlers["set-ai-config"](trustedEv(), { enabled: true, profiles: [{ id: "a", base: "https://a/v1", model: "ma", key: "ka" }] });
+      await ipcHandlers["set-ai-config"](trustedEv(), { enabled: true, profiles: [{ id: "a", key: null }] });
+      const c = await ipcHandlers["get-ai-config"](trustedEv());
       expect(c.profiles[0].keySet).toBe(false);
     });
     it("旧单配置自动迁移到 __legacy__ 并重写文件", async () => {
       freshConfig({ base: "https://old/v1", model: "mo", key: "oldkey", enabled: true });
-      const c = await ipcHandlers["get-ai-config"]();
+      const c = await ipcHandlers["get-ai-config"](trustedEv());
       expect(c.profiles).toEqual([{ id: "__legacy__", base: "https://old/v1", model: "mo", keySet: true }]);
       const file = readConfigFile();
       expect(file.profiles.__legacy__.key).toBe("oldkey");
+    });
+  });
+
+  /* ============================================================
+   * v1.11.1 [M4] IPC sender 信任校验 + [M1] 导航守卫注册 + [L2] 自愈
+   * 覆盖：伪造来源（https senderFrame）调用敏感 IPC 被拒；
+   *       get-auto-launch 对不可信来源返回 false（fail-closed 不抛错）；
+   *       web-contents-created 全局守卫已在主进程注册（冒烟）；
+   *       注册路径失效时按当前 exe 重新注册。
+   * ============================================================ */
+  describe("M4 sender 信任校验 / M1 导航守卫 / L2 自愈", () => {
+    it("伪造来源调用 chat 被拒绝（不受信任的调用来源）", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      const { calls } = installFetch();
+      await expect(ipcHandlers["chat"](forgedEv(), chatReq())).rejects.toThrow("不受信任");
+      expect(calls.length).toBe(0);
+    });
+    it("伪造来源调用 set-ai-config 被拒绝且不落盘", async () => {
+      freshConfig({ enabled: false, profiles: {} });
+      // set-ai-config 为同步 handler：真实 Electron 会把同步抛错包装为 invoke 的
+      // rejected promise；mock 直调表现为同步 throw，两种形态都验证拒绝语义。
+      expect(() => ipcHandlers["set-ai-config"](forgedEv(), { enabled: true, profiles: [] })).toThrow("不受信任");
+      expect(readConfigFile()).toEqual({ enabled: false, profiles: {} });
+    });
+    it("get-auto-launch 对不可信来源返回 false（fail-closed 不抛错）", async () => {
+      const mockApp = mockAppRef.current;
+      mockApp.getLoginItemSettings.mockReturnValue({ openAtLogin: true });
+      const result = await ipcHandlers["get-auto-launch"](forgedEv());
+      expect(result).toBe(false);
+    });
+    it("set-auto-launch 对不可信来源不产生副作用", async () => {
+      const mockApp = mockAppRef.current;
+      mockApp.setLoginItemSettings.mockClear();
+      ipcHandlers["set-auto-launch"](forgedEv(), true);
+      expect(mockApp.setLoginItemSettings).not.toHaveBeenCalled();
+    });
+    it("M1 冒烟：主进程源码含全局导航守卫（web-contents-created + setWindowOpenHandler + will-navigate）", async () => {
+      // restoreMocks 会清空 mock 调用记录，import 期的 app.on 注册无法事后断言——
+      // 改为对 main.js 源码做静态冒烟：三要素齐备即守卫已接线（行为级验证由 e2e/打包态覆盖）。
+      const { fileURLToPath } = await import("node:url");
+      const mainSrc = readFileSync(fileURLToPath(new URL("../electron/main.js", import.meta.url)), "utf8");
+      expect(mainSrc).toContain('app.on("web-contents-created"');
+      expect(mainSrc).toContain("setWindowOpenHandler");
+      expect(mainSrc).toContain('"will-navigate"');
+      expect(mainSrc).toContain("shell.openExternal");
+    });
+    it("L2 自愈：注册路径与当前 exe 不一致时 get-auto-launch 触发重新注册", async () => {
+      const mockApp = mockAppRef.current;
+      // 本 describe 的 beforeEach 将 getPath 整体指向 tmpDir，这里恢复 exe 的真实 mock 返回值
+      mockApp.getPath.mockImplementation((k) => (k === "exe" ? "C:/fake/app.exe" : "C:/fake"));
+      mockApp.getLoginItemSettings.mockReturnValue({ openAtLogin: true, path: "C:/moved/old-app.exe" });
+      mockApp.setLoginItemSettings.mockClear();
+      const result = await ipcHandlers["get-auto-launch"](trustedEv());
+      expect(result).toBe(true);
+      expect(mockApp.setLoginItemSettings).toHaveBeenCalledWith({ openAtLogin: true, path: "C:/fake/app.exe", args: [] });
     });
   });
 });

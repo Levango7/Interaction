@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, safeStorage } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, safeStorage, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const zlib = require("zlib");
@@ -158,21 +158,22 @@ function buildAppMenu(){
     });
   }
 
-  // 视图菜单：重载 / 强制重载 / 开发者工具 / 全屏
-  template.push({
-    label: "视图",
-    submenu: [
-      { role: "reload", label: "重载" },
-      { role: "forceReload", label: "强制重载" },
-      { role: "toggleDevTools", label: "开发者工具" },
-      { type: "separator" },
-      { role: "resetZoom", label: "重置缩放" },
-      { role: "zoomIn", label: "放大" },
-      { role: "zoomOut", label: "缩小" },
-      { type: "separator" },
-      { role: "togglefullscreen", label: "全屏" }
-    ]
-  });
+  // 视图菜单：重载 / 强制重载 / 全屏（v1.11.1 [L7]：开发者工具仅开发态保留，
+  // 生产构建不再经 Alt 菜单暴露 devtools 入口）
+  const viewSubmenu = [
+    { role: "reload", label: "重载" },
+    { role: "forceReload", label: "强制重载" }
+  ];
+  if (!app.isPackaged) viewSubmenu.push({ role: "toggleDevTools", label: "开发者工具" });
+  viewSubmenu.push(
+    { type: "separator" },
+    { role: "resetZoom", label: "重置缩放" },
+    { role: "zoomIn", label: "放大" },
+    { role: "zoomOut", label: "缩小" },
+    { type: "separator" },
+    { role: "togglefullscreen", label: "全屏" }
+  );
+  template.push({ label: "视图", submenu: viewSubmenu });
 
   // 帮助菜单：关于（showAboutPanel 带 app 名/版本/描述）
   template.push({
@@ -315,21 +316,64 @@ function logLine(scope, msg){
 }
 
 /* ---------- 开机自启（由设置抽屉开关控制） ---------- */
-ipcMain.handle("get-auto-launch", () => {
-  try { return !!app.getLoginItemSettings().openAtLogin; } catch (e) { return false; }
+/* v1.11.1 [M4]：IPC sender 信任校验——仅接受来自本应用 file:// 页面的调用，
+ * 远程/未知来源（如被导航守卫拦下之前曾可能创建的远程窗口）一律拒绝。
+ * senderFrame 在 ipcMain 事件上始终存在；缺失或非 file:// 视为不可信（fail-closed）。 */
+function assertTrustedSender(e){
+  let url = "";
+  try{ url = (e && e.senderFrame && e.senderFrame.url) || ""; }catch(err){ url = ""; }
+  if(url.startsWith("file://")) return;
+  throw new Error("IPC 拒绝：不受信任的调用来源");
+}
+ipcMain.handle("get-auto-launch", (e) => {
+  try {
+    assertTrustedSender(e);
+    const s = app.getLoginItemSettings();
+    // v1.11.1 [L2]：portable exe 被移动/改名后旧注册路径静默失效——发现路径不一致时按当前 exe 重新注册自愈
+    if (s && s.openAtLogin && s.path && path.resolve(s.path) !== path.resolve(app.getPath("exe"))){
+      try { app.setLoginItemSettings({ openAtLogin: true, path: app.getPath("exe"), args: [] }); } catch (e2){ /* 忽略权限错误 */ }
+    }
+    return !!s.openAtLogin;
+  } catch (e) { return false; }
 });
 ipcMain.on("set-auto-launch", (e, on) => {
+  try { assertTrustedSender(e); } catch (err) { return; }
   try {
     app.setLoginItemSettings({ openAtLogin: !!on, path: app.getPath("exe"), args: [] });
   } catch (e) { /* 忽略权限错误 */ }
 });
 
 // 供 preload 在 sandbox 下取元信息（sandbox:true 时 preload 无法访问 app）
-ipcMain.handle("get-version", () => app.getVersion());
-ipcMain.handle("get-packaged", () => app.isPackaged);
+ipcMain.handle("get-version", (e) => { assertTrustedSender(e); return app.getVersion(); });
+ipcMain.handle("get-packaged", (e) => { assertTrustedSender(e); return app.isPackaged; });
 
 // Windows 下确保任务栏分组 / 通知正确归属
 app.setAppUserModelId("com.agent.workbench");
+
+/* v1.11.1 [M1]：全局导航守卫——此前 setWindowOpenHandler / will-navigate 均为 0 命中，
+ * 新窗口继承 webPreferences（含 preload），远程页面理论上可获 window.electronAPI。
+ * 现策略：远程 URL 一律转系统浏览器打开并拒绝应用内加载；file://（本应用页面）与
+ * about:blank（报表打印窗口 window.open("")+document.write 使用）放行。
+ * 挂在 web-contents-created 上，覆盖主窗口与所有子窗口。 */
+function _isInternalUrl(url){
+  try{
+    const u = new URL(url);
+    return u.protocol === "file:" || u.protocol === "about:";
+  }catch(e){ return false; }
+}
+app.on("web-contents-created", (event, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (_isInternalUrl(url)) return { action: "allow" };
+    shell.openExternal(url).catch(() => {});
+    return { action: "deny" };
+  });
+  contents.on("will-navigate", (e, url) => {
+    if (!_isInternalUrl(url)){
+      e.preventDefault();
+      shell.openExternal(url).catch(() => {});
+    }
+  });
+});
 
 // 单实例锁：避免重复双击 exe 打开多个窗口
 const gotLock = app.requestSingleInstanceLock();
@@ -358,6 +402,7 @@ if (!gotLock){
       if(set.size === 0) chatAborters.delete(webContentsId);
     }
     ipcMain.handle("set-ai-config", (e, incoming) => {
+      assertTrustedSender(e); // v1.11.1 [M4]
       if(!incoming || typeof incoming !== "object") return { ok:false };
       const cur = loadAiConfig() || { enabled:false, profiles:{} };
       const next = {
@@ -390,7 +435,8 @@ if (!gotLock){
       saveAiConfig(next);
       return { ok:true };
     });
-    ipcMain.handle("get-ai-config", () => {
+    ipcMain.handle("get-ai-config", (e) => {
+      assertTrustedSender(e); // v1.11.1 [M4]
       const c = loadAiConfig() || { enabled:false, profiles:{} };
       const profiles = [];
       if(c.profiles && typeof c.profiles === "object"){
@@ -402,6 +448,10 @@ if (!gotLock){
       return { enabled: !!c.enabled, profiles };
     });
     ipcMain.handle("chat", async (e, arg) => {
+      assertTrustedSender(e); // v1.11.1 [M4]
+      // v1.11.1 [镜像警示]：本重试矩阵与真相源内联 chatOnce 为跨进程双实现（无共享构建管线），
+      // 修改前必读：① 先更新 tests/electron-ipc.test.js F2 与 tests/ai-retry-contract.test.js 契约用例；
+      // ② 同步修改对侧（agent-workbench.html chatOnce）重试/钳制/错误文案；③ 完全合并依赖 H4 拆分。
       const cfg = loadAiConfig();
       if(!cfg) throw new Error("AI 未配置：请先在设置中填写 API Key");
       // F3：按 profileId 取对应 profile 的 base/model/key；缺省回退 __legacy__ → 唯一 → 第一个
@@ -487,6 +537,7 @@ if (!gotLock){
     });
     // P1-1：渲染进程主动取消进行中的 chat 请求（Electron 版取消按钮）
     ipcMain.on("abort-chat", (e) => {
+      try { assertTrustedSender(e); } catch (err) { return; } // v1.11.1 [M4]
       if(!e.sender || !e.sender.id) return;
       // F2：先置取消标记——即使请求正处于退避 sleep 窗口（无活跃 controller），
       // 下一轮循环也会在发请求前捕获该标记并抛 __USER_CANCEL__
@@ -502,18 +553,9 @@ if (!gotLock){
       });
     });
 
-    // 自动更新：仅打包态加载 electron-updater，静默失败，不自动下载（用户手动决定）
-    if (app.isPackaged){
-      try {
-        const { autoUpdater } = require("electron-updater");
-        autoUpdater.autoDownload = false;
-        autoUpdater.on("update-available", (info) => {
-          if (win){ win.webContents.send("update-available", info); }
-        });
-        autoUpdater.on("error", () => { /* 静默，不打扰用户 */ });
-        autoUpdater.checkForUpdates().catch(() => {});
-      } catch (e) { /* electron-updater 未装时静默 */ }
-    }
+    /* v1.11.1 [M5]：electron-updater 更新链路已整体移除——三处断点（portable 目标不支持
+     * 自动更新 / 无 publish 配置 / 渲染端 preload 无 update-available 监听）使其从未可用。
+     * 分发形态维持 portable + 手动下载：更新 = 从 GitHub Releases 重新下载。 */
   });
 }
 

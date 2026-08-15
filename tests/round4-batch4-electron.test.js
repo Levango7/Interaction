@@ -61,6 +61,11 @@ afterAll(() => {
   if (originalLoadRef.current) { Module._load = originalLoadRef.current; originalLoadRef.current = null; }
 });
 
+// v1.11.1 [M4]：主进程 IPC 已加 sender 信任校验，测试事件需带 file:// 的 senderFrame
+function trustedEv(){
+  return { sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } };
+}
+
 // 预置旧版派生密钥格式的 ai-config.enc，使 loadAiConfig 能解出带 key 的配置
 beforeAll(async () => {
   const key = crypto.createHash("sha256").update("agent-workbench::ai::" + os.hostname() + "::" + (process.env.USERNAME || process.env.USER || "")).digest();
@@ -124,7 +129,7 @@ describe("B8 · 主进程 chat 参数钳制", () => {
     global.fetch = fetchMock;
     const stSpy = vi.spyOn(global, "setTimeout");
     try {
-      await expect(handlers.chat({}, { messages: [{ role: "user", content: "hi" }], temperature: 5, timeoutSec: 999 }))
+      await expect(handlers.chat(trustedEv(), { messages: [{ role: "user", content: "hi" }], temperature: 5, timeoutSec: 999 }))
         .rejects.toThrow("API Key 无效");
       // 请求体温度已钳制
       const call = fetchMock.mock.calls[0];
@@ -143,7 +148,7 @@ describe("B8 · 主进程 chat 参数钳制", () => {
     global.fetch = fetchMock;
     const stSpy = vi.spyOn(global, "setTimeout");
     try {
-      await expect(handlers.chat({}, { messages: [], temperature: "abc", timeoutSec: "xyz" }))
+      await expect(handlers.chat(trustedEv(), { messages: [], temperature: "abc", timeoutSec: "xyz" }))
         .rejects.toThrow("API Key 无效");
       const body = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(body.temperature).toBe(0.7);

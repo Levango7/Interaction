@@ -1,6 +1,46 @@
 # Changelog
 
-本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
+本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
+
+## [v1.11.1] - 2026-08-16
+
+### 安全与可靠性修复轮（对照《项目全景审查报告》20 项风险清单）
+
+**严重项修复（C1/C2）**
+- **C1 自动备份自包含递归**：快照此前会把备份键自身装入下一次快照，体积随备份次数超线性膨胀（JSON 转义放大），约二三十次写入即撞 5MB 配额且静默吞错失效。现快照排除自身键 + 1.5MB 单条体积上限 + 失败接入诊断寄存器（pushDiag）与一次性 toast，不再静默降级。新增回归测试 `tests/c1-autobackup-recursion.test.js`
+- **C2 条件求值沙箱 Unicode 绕过**：弃用"字符过滤 + 黑名单 + new Function"路线（黑名单对 `\uXXXX` 标识符转义不可收敛），字符串条件改经 `wfEvalCondition` 白名单递归下降解析器求值（无 eval、无全局对象可达、不可解析一律返回 false）。解析器补齐 `===`/`!==` 与数组字面量语法。新增回归测试 `tests/c2-evalcondition-hardening.test.js`
+
+**Electron 安全加固（M1/M4/L2/L7）**
+- M1：主进程注册全局导航守卫（`web-contents-created` → `setWindowOpenHandler` + `will-navigate`），远程 URL 一律转系统浏览器并拒绝应用内加载，新窗口不再可能继承 preload 拿到 electronAPI
+- M4：全部 IPC handler 增加 `assertTrustedSender` 校验（仅接受本应用 file:// 页面调用，fail-closed）
+- L2：开机自启注册路径失效时（portable exe 被移动）按当前路径自动重新注册
+- L7：生产构建不再保留"开发者工具"菜单项（仅开发态）
+
+**Electron 更新链路（M5）**
+- 移除 electron-updater 依赖与死代码（portable 目标 + 无 publish 配置 + 渲染端无监听三处断点使其从未可用）。更新方式明确为：从 GitHub Releases 重新下载
+
+**Service Worker（M8/L9）**
+- M8：预缓存由原子 `addAll` 改为逐 URL 容错——关键离线壳资源（入口页/真相源 HTML）失败阻塞 install，非关键资源（icon/manifest）失败仅告警，避免"空离线壳"静默上线
+- L9：跨域 SWR 缓存增加 24h TTL（过期条目视为未命中）；cache.put / trim 失败不再双层静默
+- 版本日志注释不再内嵌 service-worker.js（与 CHANGELOG 双份维护易漂移）
+
+**诚实性修复（M6）**
+- 离线同步桩不再"模拟成功并清空队列"：未配置服务器端点时保留队列并如实提示（"仅保存在本地"），恢复在线/立即同步的 toast 不再谎报"已同步 N 条"
+
+**数据可靠性（L3/L8）**
+- L3：IndexedDB 镜像队列在 `pagehide` / `visibilitychange(hidden)` 时立即冲刷，极端关闭不再缺最后一批写入
+- L8：首次启用 AI 时给出数据出境告知（相关任务/资料上下文将发送到配置的 AI 端点）
+
+**工程与门禁（P0 版本漂移 / M7 口径 / M9）**
+- **发版脚本 `npm run release <版本号>`**：一次性统一 bump package.json ×2 / manifest / HTML（VERSION+BUILD_TAG）/ SW（CACHE_VERSION）+ 两份 lockfile 版本字段 + 自动自检，终结"手改版本号导致多源漂移"
+- `build:check` 版本门禁由六源改为四源（lockfile 退出硬门禁——npm 生态版本滞后是常态，由 release 脚本维护同步）
+- M7：`src/modules` v1.9.9 孤儿快照归档删除（git tag `archive/src-snapshot-v1.9.9`，恢复用 `git checkout` 此 tag）；`.eslintrc.cjs` 过时的"全局拼接"注释移除；README 标题从 v1.9.5 更新至当前版本
+- M9：删除 vercel.json 部署双轨残留（实际部署走 deploy.yml → gh-pages）
+- 清理死配置与杂物：tsconfig.json（无引用）、vitest.config.mjs（陈旧副本）、.inscode/（IDE 残留 44 文件）、_scratch/（临时产物）、`lint:fast` 重复脚本、jsconfig/typecheck/lint:src 随 src 归档移除
+- lint 扩围：`npm run lint` 现覆盖 electron/main.js + preload.js + service-worker.js（此前三文件无任何 lint 门禁）
+- CI：补 windows-latest 矩阵（项目为 Windows-first）；步骤链移除 lint:src/typecheck
+- manifest.json 补 `version` 字段
+- AI 调用链双实现（main.js chat IPC ↔ HTML chatOnce）：双侧增加镜像警示注释，新增 `tests/ai-retry-contract.test.js` 把重试矩阵钉成可执行契约（完全合并依赖 H4 拆分）
 
 ## [v1.11.0] - 2026-08-15
 

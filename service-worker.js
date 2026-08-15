@@ -13,12 +13,8 @@
  *   - 离线操作队列存储在 IndexedDB（wb_sync_queue）+ localStorage 兜底
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
-// 命名约定：v{应用版本}-{日期}{当日序号}。当前应用版本 1.11.0。
-// v1.11.0-20260815d：顶栏主题按钮显示主题名（亮色/暗色/跟随）+ 正文 msgBar 可下拉展开前 3 条未读 + 聊天面板 hover 边框高亮 + 输入区重排（模型下拉嵌入·小附件·图标发送键·生成中变暂停）+ 标题栏风格统一（紧凑型 page-head + page-head-loose 兼容传统尺寸）。
-// v1.10.0-20260815d：侧栏折叠字号缩小（单行两字）+ 顶栏 6 按钮竖排 + 概览页 page-head + 待办栏展开 + 模型选择回聊天头部 + 市场归功能组 + 聊天输入上下 padding + 仓库 4 tab（热/温/冷/无用）+ 图表商店（拖拽画布）+ 应用 popover 五项（日历·天气·闹钟·指针特效·萌宠）。
-// v1.9.9-20260815c：顶栏顺序调整（搜索·命令·消息·主题·下载·更多）+ 折叠回归侧栏顶部 + 侧栏 4 组大重排（全局/场景/功能/系统）+ 仓库 3 tab（热/温/冷）+ 文档改名 + Agent 新增占位入口。
-// v1.9.8-20260815c：侧栏四组对齐设计图（全局/场景/功能/系统）+ 折叠按钮+消息栏+大模型选择器迁正文顶部第二行。
-var CACHE_VERSION = "v1.11.0-20260815d";
+// 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
+var CACHE_VERSION = "v1.11.1-20260815e";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -108,6 +104,29 @@ function _putWithTimestamp(cache, req, resp) {
 }
 
 /**
+ * v1.11.1 [L9]: SWR 专用——带 TTL 的缓存命中判断，过期条目视为未命中（走网络），
+ * 避免跨域 GET 响应体（可能含鉴权数据）被无限期复用。时间戳元数据缺失或读取失败
+ * 时回退旧行为（视为命中），与既有 LRU 时间戳机制（S5）共用同一份元数据。
+ * @param {Cache} cache
+ * @param {Request} req
+ * @param {number} ttlMs
+ * @returns {Promise<Response|null>}
+ */
+var SWR_TTL_MS = 24 * 60 * 60 * 1000; // 24 小时
+function _cachedWithinTtl(cache, req, ttlMs) {
+  return cache.match(req).then(function (cached) {
+    if (!cached) return null;
+    return cache.match(_tsRequest(req)).then(function (r) {
+      if (!r) return cached;
+      return r.text().then(function (t) {
+        var ts = parseInt(t, 10) || 0;
+        return (Date.now() - ts) <= ttlMs ? cached : null;
+      }).catch(function () { return cached; });
+    });
+  });
+}
+
+/**
  * R15/S5: 缓存容量清理——若原始条目数超过 MAX_CACHE_ENTRIES，按时间戳删除最旧的。
  * 时间戳元数据存储在 __wb_cache_ts__/ 前缀的辅助键中，避免依赖 keys() 顺序（规范不保证）。
  * @param {Cache} cache 已打开的 Cache 实例
@@ -149,8 +168,16 @@ self.addEventListener("install", function (event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function (cache) {
-        // addAll 要求所有 URL 都成功；任一失败则跳过缓存但不阻塞安装
-        return cache.addAll(PRECACHE_URLS).catch(function (e) { console.warn("[SW] precache addAll failed:", e); /* 不阻塞安装：部分资源缓存失败仍允许 SW 安装 */ });
+        // v1.11.1 [M8/S9]：预缓存由原子 addAll 改为逐 URL 容错——非关键资源（icon/manifest）
+        // 失败仅告警跳过；关键离线壳资源（入口页与真相源 HTML）失败则抛错阻塞 install，
+        // 避免"空离线壳"静默上线（旧实现 addAll 失败仅 console.warn 后仍 skipWaiting 安装）。
+        var CRITICAL_PRECACHE = { "./": true, "./agent-workbench.html": true };
+        return Promise.all(PRECACHE_URLS.map(function (u) {
+          return cache.add(u).catch(function (e) {
+            if (CRITICAL_PRECACHE[u]) throw e;
+            console.warn("[SW] precache 非关键资源失败（跳过）:", u, e);
+          });
+        }));
       })
       .then(function () { return self.skipWaiting(); })
   );
@@ -240,30 +267,34 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
-  // (2) 跨域 API 请求：stale-while-revalidate
+  // (2) 跨域 API 请求：stale-while-revalidate（v1.11.1 [L9]：带 24h TTL——过期条目视为未命中，
+  //     避免跨域 GET 响应体（可能含鉴权数据）被无限期复用；cache.put 失败不再双层静默）
   if (isCrossOriginHttp(url, origin)) {
     event.respondWith(
-      caches.match(req).then(function (cached) {
+      caches.open(CACHE_NAME).then(function (cache) {
+        return _cachedWithinTtl(cache, req, SWR_TTL_MS).then(function (cached) {
         // 后台拉取并更新缓存（不阻塞响应）
         var fetchPromise = fetch(req).then(function (resp) {
           // R15: 不缓存 opaque 响应（跨域 no-cors 产物，缓存可能产生意外行为）
           if (resp && resp.type === "opaque") return resp;
           if (resp && resp.status === 200) {
             var copy = resp.clone();
-            caches.open(CACHE_NAME).then(function (cache) {
-              _putWithTimestamp(cache, req, copy).then(function () {
+            caches.open(CACHE_NAME).then(function (cache2) {
+              _putWithTimestamp(cache2, req, copy).then(function () {
                 // S3: put 成功后异步清理容量，不阻塞响应
-                trimCacheEntries(cache).catch(function () {});
-              }).catch(function () {});
-            }).catch(function () {});
+                trimCacheEntries(cache2).catch(function (e) { console.warn("[SW] trimCacheEntries failed:", e); });
+              }).catch(function (e) { console.warn("[SW] SWR cache put failed:", e); });
+            }).catch(function (e) { console.warn("[SW] SWR caches.open failed:", e); });
           }
           return resp;
         }).catch(function () {
-          // S1: 离线兜底——避免返回 undefined 导致 respondWith(undefined) 报错
-          return new Response("Gateway Timeout", { status: 504, statusText: "Gateway Timeout" });
+          // S1: 离线兜底——避免返回 undefined 导致 respondWith(undefined) 报错；
+          // [L9] TTL 过期且离线时按约定返回 504（跨域 API 的新鲜度优先于可用性）
+          return cached || new Response("Gateway Timeout", { status: 504, statusText: "Gateway Timeout" });
         });
         // 有缓存先返回，否则等网络（fetchPromise 已保证不返回 undefined）
         return cached || fetchPromise;
+        });
       })
     );
     return;
@@ -276,10 +307,10 @@ self.addEventListener("fetch", function (event) {
         var copy = resp.clone();
         caches.open(CACHE_NAME).then(function (cache) {
           _putWithTimestamp(cache, req, copy).then(function () {
-            // S3: put 成功后异步清理容量，不阻塞响应
-            trimCacheEntries(cache).catch(function () {});
-          }).catch(function () {});
-        }).catch(function () {});
+            // S3: put 成功后异步清理容量，不阻塞响应（v1.11.1 [L9/S13]：失败可观测，不再静默）
+            trimCacheEntries(cache).catch(function (e) { console.warn("[SW] trimCacheEntries failed:", e); });
+          }).catch(function (e) { console.warn("[SW] cache put failed:", e); });
+        }).catch(function (e) { console.warn("[SW] caches.open failed:", e); });
       }
       return resp;
     }).catch(function () {
@@ -351,16 +382,12 @@ function _deleteSyncItem(id) {
 
 /**
  * 处理单个同步操作：发送到服务器（框架，不实际发送；只标记成功）。
- * 真实部署时此处应改为 fetch(serverEndpoint, {method:'POST', body:JSON.stringify(item.payload)})。
- * @param {{op:string,payload:*,ts:number}} item - 待同步操作
+ * 真实部署时此处应改为 fetch(serverEndpoint, {method:'POST', body:JSON.stringify(_item.payload)})。
+ * v1.11.1 [M6]：与页面端 flushSyncQueue 同口径——当前为框架桩，仅保底返回成功，
+ * 不得谎报"已同步到服务器"；文案与真实端点接线见页面端 SYNC_ENDPOINT 注释。
  * @returns {Promise<boolean>} 是否成功
  */
-function _processSyncItem(item) {
-  // 框架实现：记录到诊断日志，返回成功（不实际发送）
-  // 真实部署替换为：
-  //   return fetch(SYNC_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'},
-  //     body:JSON.stringify({op:item.op, payload:item.payload, ts:item.ts})})
-  //     .then(function(r){ return r.ok; }).catch(function(){ return false; });
+function _processSyncItem() {
   return Promise.resolve(true);
 }
 

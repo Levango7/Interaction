@@ -3,6 +3,7 @@
   "name": "Agent 工作台",
   "short_name": "工作台",
   "description": "习惯链驱动的智能任务管理 PWA",
+  "version": "1.11.1",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -11,7 +12,10 @@
   "background_color": "#f3f3f3",
   "lang": "zh-CN",
   "dir": "ltr",
-  "categories": ["productivity", "utilities"],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "prefer_related_applications": false,
   "icons": [
     {
@@ -27,21 +31,39 @@
       "short_name": "看板",
       "description": "打开任务看板总览",
       "url": "./#overview",
-      "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [
+        {
+          "src": "./icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
     },
     {
       "name": "统计",
       "short_name": "统计",
       "description": "查看任务统计与热力图",
       "url": "./#stats",
-      "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [
+        {
+          "src": "./icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
     },
     {
       "name": "设置",
       "short_name": "设置",
       "description": "打开应用设置",
       "url": "./#settings",
-      "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [
+        {
+          "src": "./icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
     }
   ],
   "screenshots": [

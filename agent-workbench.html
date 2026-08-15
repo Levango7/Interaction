@@ -3186,10 +3186,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.11.0";
+const VERSION = "1.11.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260815d";
+const BUILD_TAG = "20260815e";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -5865,13 +5865,36 @@ function setRec(sc, a){ save(PREFIX+"rec_"+sc, a); scheduleAutoBackup(); }
 
 /* ---------- P1-b 自动备份（防抖快照，独立于手动导出） ---------- */
 const AUTO_BACKUP_KEY = PREFIX + "autobackup";
+const AUTO_BACKUP_MAX_BYTES = 1.5 * 1024 * 1024; // 单条快照体积上限：业务数据异常膨胀时拒绝写入，防写爆配额
 let _autoBackupTimer = null;
+let _autoBackupFailWarned = false; // 失败告警去重：同会话只提醒一次
 function snapshotAutoBackup(){
   try{
-    const data = {}; allKeys().forEach(k=> data[k] = localStorage.getItem(k));
+    // v1.11.1 [C1] 修复：快照必须排除备份键自身——此前 allKeys() 含备份键本身，
+    // 每次快照把上一份完整快照原样嵌入（JSON 转义使膨胀超线性），约二三十次写入
+    // 即撞 5MB 配额，且 catch 静默吞错导致备份失效无感知、反噬主存储写入。
+    const data = {};
+    allKeys().forEach(k=>{ if(k === AUTO_BACKUP_KEY) return; data[k] = localStorage.getItem(k); });
     data._ts = Date.now();
-    localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(data));
-  }catch(e){ /* 存储异常时静默降级，不阻塞业务写入 */ }
+    const serialized = JSON.stringify(data);
+    if(serialized.length > AUTO_BACKUP_MAX_BYTES){
+      if(!_autoBackupFailWarned){
+        _autoBackupFailWarned = true;
+        if (typeof pushDiag === "function") pushDiag("error", "自动备份快照超体积上限已跳过（业务数据可能异常膨胀）", {where:"snapshotAutoBackup"});
+        try{ toast("自动备份已暂停：数据体积异常增大，请检查或导出清理", "warn"); }catch(e2){ /* toast 不可用时静默 */ }
+      }
+      return;
+    }
+    localStorage.setItem(AUTO_BACKUP_KEY, serialized);
+  }catch(e){
+    // v1.11.1 [C1] 修复第 3 项：存储异常不再静默——接入诊断寄存器 + 一次性 toast，
+    // 避免"备份机制已失效但用户无感知"（原有静默降级注释即审查报告 C1 的直接病灶）。
+    if(!_autoBackupFailWarned){
+      _autoBackupFailWarned = true;
+      if (typeof pushDiag === "function") pushDiag("error", "自动备份写入失败: "+(e&&e.message||e), {where:"snapshotAutoBackup"});
+      try{ toast("自动备份写入失败："+(e&&e.message||"存储异常"), "error"); }catch(e2){ /* toast 不可用时静默 */ }
+    }
+  }
 }
 function scheduleAutoBackup(){
   if(_autoBackupTimer) return; // 防抖：合并同一事件循环内的多次写入
@@ -10776,6 +10799,9 @@ async function chatOnce(messages, opts){
     }
     // 重试矩阵（与 electron/main.js 主进程 chat 对齐）：网络错误(TypeError)/429/5xx 退避重试，
     // 间隔 1s*(attempt+1)；AbortError/TimeoutError/401/其他 4xx 不重试
+    // v1.11.1 [镜像警示]：本矩阵与 electron/main.js chat IPC 为跨进程双实现（无共享构建管线），
+    // 修改任何一侧前必读：① 先更新 tests/ai-retry-contract.test.js 与 tests/electron-ipc.test.js F2
+    // 契约用例；② 同步修改对侧重试/钳制/错误文案；③ 完全合并依赖 H4 拆分（构建期共享源码）。
     let lastErr=null;
     for(let attempt=0; attempt<maxRetry; attempt++){
       try{
@@ -13307,6 +13333,12 @@ async function saveCfg(){
       removedIds.forEach(id => profilesOut.push({ id, key: null }));
       try{ await window.electronAPI.setAiConfig({ enabled: !!cfg.enabled, profiles: profilesOut }); }catch(e){ /* 忽略 */ }
     }
+    // v1.11.1 [L8]：首次启用 AI 时给出数据出境告知——AI 请求会把相关任务/资料上下文
+    // 发送到用户配置的端点（默认 api.openai.com），此前无任何提示。
+    if(cfg.enabled && !load(PREFIX+"ai_privacy_ack", null)){
+      save(PREFIX+"ai_privacy_ack", Date.now());
+      try{ toast("提示：启用 AI 后，相关任务/资料上下文将发送到你配置的 AI 端点（默认 api.openai.com）", "warn"); }catch(e2){ /* noop */ }
+    }
     toast("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"), "ok"); // B3：alert 改 toast，不阻塞交互
     applyTheme(); // T4：主题变更（含跟随系统）立即生效
     // v1.5-C：新主题系统（contrast/sepia/自定义）即时生效
@@ -14671,14 +14703,19 @@ async function registerBackgroundSync(){
 
 /**
  * 触发同步：遍历队列逐条处理（页面端实现，作为 Background Sync 不可用时的降级）。
- * 真实部署应把 payload POST 到服务器；此处为框架，仅模拟成功并清空队列。
- * @returns {Promise<{ok:number, fail:number}>}
+ * v1.11.1 [M6] 修复：未配置服务器端点时不再"模拟成功并清空"（原实现会把队列静默
+ * 丢弃并谎报已同步）。真实部署：设置 SYNC_ENDPOINT 后按注释中的 fetch 实现发送。
+ * @returns {Promise<{ok:number, fail:number, skipped:boolean}>}
  */
+const SYNC_ENDPOINT = ""; // 真实部署时填写，如 "https://your-server/api/sync"
 async function flushSyncQueue(){
   const q = getSyncQueue();
-  if (!q.length) return { ok: 0, fail: 0 };
+  if (!q.length) return { ok: 0, fail: 0, skipped: false };
+  if (!SYNC_ENDPOINT) {
+    // 未配置端点：保留队列（不清空、不谎报成功），交由调用方给出诚实提示
+    return { ok: 0, fail: q.length, skipped: true };
+  }
   let okCount = 0, failCount = 0;
-  // 框架实现：模拟逐条同步成功（真实部署替换为 fetch POST）
   for (const item of q) {
     try {
       // 真实部署：const r = await fetch(SYNC_ENDPOINT, {method:'POST', body:JSON.stringify(item)});
@@ -14687,7 +14724,7 @@ async function flushSyncQueue(){
     } catch(e) { failCount++; }
   }
   if (failCount === 0) clearSyncQueue();
-  return { ok: okCount, fail: failCount };
+  return { ok: okCount, fail: failCount, skipped: false };
 }
 
 /* ---------- 网络状态检测与离线指示横幅 ---------- */
@@ -14749,7 +14786,9 @@ function initNetworkMonitor(){
         setSyncRetryState(true);
         const r = await flushSyncQueue();
         setSyncRetryState(false);
-        try { toast("已恢复在线，已同步 "+r.ok+" 条离线操作", "ok"); } catch(e){ /* noop */ }
+        // v1.11.1 [M6]：未配置同步端点时如实提示，不谎报"已同步"
+        if (r.skipped) { try { toast("已恢复在线（未配置同步服务器，"+r.fail+" 条离线操作仅保存在本地）", "warn"); } catch(e){ /* noop */ } }
+        else { try { toast("已恢复在线，已同步 "+r.ok+" 条离线操作", "ok"); } catch(e){ /* noop */ } }
       } else {
         try { toast("已恢复在线", "ok"); } catch(e){ /* noop */ }
       }
@@ -14761,7 +14800,8 @@ function initNetworkMonitor(){
   // 离线：显示横幅
   window.addEventListener("offline", () => {
     showOfflineBanner();
-    try { toast("已离线，操作将保存到本地，恢复网络后自动同步", "warn"); } catch(e){ /* noop */ }
+    // v1.11.1 [M6]：不再承诺"自动同步"（当前未配置同步服务器）
+    try { toast("已离线，操作将保存在本地", "warn"); } catch(e){ /* noop */ }
   });
 }
 
@@ -15128,7 +15168,9 @@ function bindOfflineBanner(){
     setSyncRetryState(true);
     try {
       const r = await flushSyncQueue();
-      try { toast("已同步 "+r.ok+" 条操作"+(r.fail>0?"，"+r.fail+" 条失败":""), r.fail>0?"warn":"ok"); } catch(e){ /* noop */ }
+      // v1.11.1 [M6]：未配置同步端点时如实提示，不谎报"已同步"
+      if (r.skipped) { try { toast("未配置同步服务器，"+r.fail+" 条操作仅保存在本地", "warn"); } catch(e){ /* noop */ } }
+      else { try { toast("已同步 "+r.ok+" 条操作"+(r.fail>0?"，"+r.fail+" 条失败":""), r.fail>0?"warn":"ok"); } catch(e){ /* noop */ } }
     } catch(e) {
       try { toast("同步失败，请稍后重试", "warn"); } catch(e2){ /* noop */ }
     }
@@ -15287,6 +15329,12 @@ if (typeof window !== "undefined") {
 // 页面关闭/刷新前再补一份快照，覆盖启动后未触发写操作的场景
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", snapshotAutoBackup);
+  // v1.11.1 [L3]：IDB 镜像为去抖批量落盘，极端关闭场景会缺最后一批写入——
+  // pagehide / visibilitychange(hidden) 时立即冲刷镜像队列（best-effort：至少让事务进入提交）
+  window.addEventListener("pagehide", function(){ try{ idbFlushQueue().catch(function(){}); }catch(e){ /* noop */ } });
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "hidden"){ try{ idbFlushQueue().catch(function(){}); }catch(e){ /* noop */ } }
+  });
 }
 
 // ===== Bootstrap (测试导出·__test) =====
@@ -20151,21 +20199,14 @@ function _evalCondition(condition, context){
     try{ return !!condition(context); }catch(e){ return false; }
   }
   if(typeof condition === "string"){
-    // 安全白名单：先剥离字符串字面量，再检测危险字符/关键字
-    var sanitized = condition.replace(/'[^']*'/g, '""').replace(/"[^"]*"/g, '""');
-    // 禁止赋值、代码块、数组下标、标签等危险字符
-    if(/[;{}=[\]]/.test(sanitized)) return false;
-    // 禁止危险标识符（构造函数、宿主对象、动态执行、模块加载、原型链逃逸等）
-    // [C2] 扩展黑名单：增加 Reflect/Proxy/Symbol/WebAssembly/Atomics/SharedArrayBuffer/Buffer/globalThis
-    //     防止通过 Reflect/Function 构造器或全局对象绕过沙箱
-    if(/\b(new|function|this|window|document|eval|setTimeout|setInterval|fetch|require|import|process|global|globalThis|self|top|parent|frames|constructor|prototype|__proto__|call|apply|bind|Reflect|Proxy|Symbol|WebAssembly|Atomics|SharedArrayBuffer|Buffer)\b/i.test(sanitized)) return false;
+    // v1.11.1 [C2] 修复：弃用"字符过滤 + 黑名单 + new Function"路线——黑名单对
+    // \uXXXX 等标识符转义不可收敛（转义后的文本不命中字面正则，new Function 解析
+    // 时却还原为任意标识符），静态推演可绕过执行任意 JS。改为复用下方工作流引擎的
+    // wfEvalCondition（:31xxx，白名单递归下降解析器）：无 eval、无全局对象可达，
+    // 语法仅限字面量/成员访问/比较/逻辑/算术/in/contains；不可解析一律返回 false（fail-closed）。
     try{
-      /* eslint-disable no-new-func */
-      // [C2] 切断原型链：用 Object.create(null) 创建无原型的 context 副本，
-      //     防止 context.constructor.constructor("...") 逃逸到 Function 构造器
       var safeCtx = Object.assign(Object.create(null), context || {});
-      var fn = new Function("context", "return (" + condition + ");");
-      return !!fn(safeCtx);
+      return !!wfEvalCondition(condition, safeCtx);
     }catch(e){ return false; }
   }
   return false;
@@ -32040,6 +32081,12 @@ _WfExprTokenizer.prototype.tokenize = function(){
       }
       continue;
     }
+    // 三字符运算符（v1.11.1：兼容 JS 严格相等写法 === / !==，供 _evalCondition 复用本解析器）
+    var three = s.substr(i, 3);
+    if(three === "===" || three === "!=="){
+      tokens.push({ type: "op", value: three });
+      i += 3; continue;
+    }
     // 多字符运算符
     var two = s.substr(i, 2);
     if(two === "==" || two === "!=" || two === ">=" || two === "<=" || two === "&&" || two === "||"){
@@ -32100,10 +32147,10 @@ _WfExprParser.prototype.parseAnd = function(){
 };
 _WfExprParser.prototype.parseEquality = function(){
   var left = this.parseComparison();
-  while(this.peek() && this.peek().type === "op" && (this.peek().value === "==" || this.peek().value === "!=")){
+  while(this.peek() && this.peek().type === "op" && (this.peek().value === "==" || this.peek().value === "!=" || this.peek().value === "===" || this.peek().value === "!==")){
     var op = this.next().value;
     var right = this.parseComparison();
-    if(op === "==") left = left === right;
+    if(op === "==" || op === "===") left = left === right;
     else left = left !== right;
   }
   return left;
@@ -32178,6 +32225,20 @@ _WfExprParser.prototype.parsePrimary = function(){
     var v = this.parseOr();
     this.expect("op", ")");
     return v;
+  }
+  // v1.11.1：数组字面量（供 in ['a','b'] 一类条件使用；纯数据构造，无执行语义）
+  if(t.type === "op" && t.value === "["){
+    this.next();
+    var arr = [];
+    if(this.peek() && !(this.peek().type === "op" && this.peek().value === "]")){
+      arr.push(this.parseOr());
+      while(this.peek() && this.peek().type === "op" && this.peek().value === ","){
+        this.next();
+        arr.push(this.parseOr());
+      }
+    }
+    this.expect("op", "]");
+    return arr;
   }
   if(t.type === "ident"){
     this.next();

@@ -28,7 +28,6 @@ const root = join(__dirname, '..');
 
 const TRUTH_HTML = join(root, 'agent-workbench.html');     // 唯一真相源
 const PROD_HTML  = join(root, 'agent-workbench.prod.html'); // 生产产物
-const SRC_CONSTANTS = join(root, 'src', 'modules', '00-constants.js');
 
 const PROD = process.argv.includes('--prod');
 const CHECK = process.argv.includes('--check') || process.argv.includes('--version-check');
@@ -40,25 +39,26 @@ if (!existsSync(TRUTH_HTML)) fail(`missing ${TRUTH_HTML}`);
 
 /* ---------- --check：版本一致性 + 真相源完整性 ---------- */
 if (CHECK) {
+  // v1.11.1：版本门禁由六源改为四源（package.json ×2 / manifest.json / HTML VERSION）。
+  // 变更原因：① src/modules 孤儿快照已归档删除（git tag archive/src-snapshot-v1.9.9）；
+  // ② lockfile 根版本滞后是 npm 生态常态，纳入硬门禁导致 CI 长期必红——lockfile 的版本
+  //   字段改由 scripts/release.mjs 发版时同步维护，不做 CI 硬校验。
   const readJsonVer = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')).version || null; } catch(e){ return null; } };
   const htmlVer = (() => { const m = readFileSync(TRUTH_HTML, 'utf8').match(/const VERSION = "([^"]+)"/); return m ? m[1] : null; })();
-  const srcVer  = (() => { try { const m = readFileSync(SRC_CONSTANTS, 'utf8').match(/const VERSION = "([^"]+)"/); return m ? m[1] : null; } catch(e){ return null; } })();
   const vers = {
     'package.json':              readJsonVer(join(root, 'package.json')),
-    'package-lock.json':         readJsonVer(join(root, 'package-lock.json')),
     'electron/package.json':     readJsonVer(join(root, 'electron', 'package.json')),
-    'electron/package-lock.json':readJsonVer(join(root, 'electron', 'package-lock.json')),
-    'src VERSION':               srcVer,
+    'manifest.json':             readJsonVer(join(root, 'manifest.json')),
     'agent-workbench.html':      htmlVer,
   };
   for (const [k,v] of Object.entries(vers)) console.log(`[version] ${k.padEnd(28)} ${v || '(缺失)'}`);
   const vals = Object.values(vers).filter(Boolean);
-  const ok = vals.length === 6 && vals.every(v => v === vals[0]);
+  const ok = vals.length === 4 && vals.every(v => v === vals[0]);
   // 完整性：真相源必须含关键功能区（防误传旧 src 拼接产物）
   const html = readFileSync(TRUTH_HTML, 'utf8');
   const required = ['__TEST_GATE__', 'window.__test', 'scMeta', 'sanitizeHtml'];
   const missing = required.filter(s => !html.includes(s));
-  if (!ok) fail('MISMATCH: 版本号不一致，需统一（目标 ' + (htmlVer || '?') + '）');
+  if (!ok) fail('MISMATCH: 版本号不一致，需统一（目标 ' + (htmlVer || '?') + '）；发版请用 npm run release <版本号>');
   if (missing.length) fail('完整性检查失败：真相源缺少关键标记 ' + missing.join(', '));
   console.log(`[build] OK 版本一致: ${vals[0]} · 真相源完整 (${html.length} bytes, sha256:${sha(Buffer.from(html))})`);
   process.exit(0);

@@ -77,8 +77,10 @@ describe("R3 · 主进程日志结构化", () => {
   it("chat 请求写出的日志每行均为合法 JSON（ts/scope/msg）", async () => {
     const fetchMock = vi.fn(async () => ({ ok: false, status: 401 }));
     global.fetch = fetchMock;
+    // v1.11.1 [M4]：chat IPC 已加 sender 信任校验，事件需带 file:// 的 senderFrame
+    const trustedEv = { sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } };
     // 触发一次 chat：内部走 logLine("chat", ...)
-    await expect(handlers.chat({}, { messages: [{ role: "user", content: "hi" }], temperature: 0.7, timeoutSec: 30 }))
+    await expect(handlers.chat(trustedEv, { messages: [{ role: "user", content: "hi" }], temperature: 0.7, timeoutSec: 30 }))
       .rejects.toThrow("API Key 无效");
     const logFile = path.join(userDataDir, "logs", "app.log");
     expect(fs.existsSync(logFile)).toBe(true);
