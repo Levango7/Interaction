@@ -2,6 +2,30 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.9.9] - 2026-08-15
+
+### 信息架构大重排（顶栏 / 侧栏四组 / 仓库三态 / 文档改名 / Agent 入口）
+
+- **顶栏顺序**：logo + spacer + 搜索·命令·消息·主题·下载·更多（6 个系统级按钮居右，原"消息"按钮已双入口：顶栏 `#btnMessagesTop` + 正文 `#msgBar` 铃铛，事件互相 click 触发；搜索/更多从功能组侧栏迁出）；"安装"按钮默认隐藏（仅 deferredPrompt 触发时显）
+- **折叠按钮回归侧栏顶部**：用户确认放回原位——`#sideToggle` 重新位于 `#side` 子树（"全局"组上方），setupSideToggle 事件委托回 `#side`；CSS 恢复 `width:100%` 满宽
+- **侧栏四组大重排（按用户最新决策）**：
+  - **全局**：概览 / 统计 / 仓库（仓库为单一入口，页内三 tab 切换）
+  - **场景**：4 个场景项不变
+  - **功能**：图表 / 组件 / 应用 三大类（父按钮 + 子菜单 popover 模式）
+    - 图表：日历视图 / 统计 / 热力图
+    - 组件：番茄钟 / 时间追踪 / 自动化
+    - 应用：笔记 / 仪表盘 / 协作 / 分享
+  - **系统**：AI / Agent / 设置 / 文档 / 市场（指南改名为"文档"；新增 Agent 占位入口；市场从功能组迁回系统组）
+- **仓库页面三 tab**：热（最近活跃任务，前 20 项） / 温（存档任务，7-90 天） / 冷（已删除任务，含批量恢复/删除）——复用现有 recycle 列表/复选/批量能力，UI 走 page-head + 横向 pill tabs
+- **Agent 入口**：v1.9.9 占位，提示词/上下文/harness/loop/记忆五维配置中心，v2.0 上线；当前实现暂复用 AI 配置二级页
+- **市场迁回系统组**：从功能组迁回系统组末尾（保留 v1.9.6 独立菜单页设计）
+- **文档改名**：原"指南"改名为"文档"，data-help 仍指向 renderHelp
+- **CSS 新增**：`.side-pop`（侧栏 popover 容器）+ `.side-caret`（父按钮右侧箭头）+ `.warehouse-tabs/.warehouse-tab`（仓库 tab 切换）
+- **事件新增**：`toggleSidePop / _closeAllSidePops / setupSidePopItems / openWarehouse / openAgentPage`
+- **版本统一 1.9.8→1.9.9**：六处版本号 + SW CACHE_VERSION → v1.9.9-20260815d（页脚显示 `v1.9.9 · b20260815d`）
+
+---
+
 ## [v1.9.8] - 2026-08-15
 
 ### 信息架构重排（按设计图对齐）+ 正文顶部第二行重构

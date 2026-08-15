@@ -191,6 +191,18 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .more-menu .tbtn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--line)}
 .more-menu .tbtn svg{width:16px;height:16px;flex-shrink:0}
 .more-menu .tbtn .lbl{font-size:var(--fs-sm)}
+/* v1.9.9：侧栏功能组三大类（图表/组件/应用）popover——竖排子菜单，JS 锚定按钮右侧 */
+.side-pop{position:fixed;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-3);z-index:var(--z-popover);
+  padding:var(--space-2);display:flex;flex-direction:column;gap:var(--space-1);min-width:160px;max-width:240px}
+.side-pop .tbtn{justify-content:flex-start;width:100%;min-height:32px;
+  padding:var(--space-1) var(--space-3);font-size:var(--fs-sm);color:var(--text-dim);
+  border:1px solid transparent;background:transparent;border-radius:var(--radius-md)}
+.side-pop .tbtn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--line)}
+.side-pop .tbtn svg{width:16px;height:16px;flex-shrink:0}
+.side-pop .tbtn .lbl{font-size:var(--fs-sm)}
+.side-caret{margin-left:auto;font-size:10px;color:var(--text-faint);transition:transform .2s}
+.nav-item[aria-expanded="true"] .side-caret{transform:rotate(90deg);color:var(--accent)}
 /* logo 与右侧系统按钮对齐：行高统一为 36px（同 .tbtn min-height），消除基线不齐 */
 .logo{display:flex;align-items:center;gap:var(--space-2);font-weight:600;font-size:var(--fs-lg);
   letter-spacing:-.01em;min-height:36px;flex-shrink:0}
@@ -1066,6 +1078,19 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   border-bottom:1px solid var(--line);flex-shrink:0}
 .recycle-header.page-head{margin-bottom:0} /* v1.9.5：头部复用统一页面头视觉（page-head 自带下边距在此不需要） */
 .recycle-header h2{margin:0;font-size:var(--fs-xl);font-weight:600;letter-spacing:-.01em}
+/* v1.9.9：仓库页面 tab 切换（热/温/冷）——横向 pill tabs，跟随 page-head 下方 */
+.warehouse-tabs{display:flex;gap:var(--space-1);padding:var(--space-3) var(--space-6) 0;
+  border-bottom:1px solid var(--line);background:var(--panel2);flex-shrink:0}
+.warehouse-tab{padding:var(--space-2) var(--space-4);font-size:var(--fs-sm);color:var(--text-dim);
+  border:1px solid transparent;border-bottom:none;border-radius:var(--radius-md) var(--radius-md) 0 0;
+  background:transparent;cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast);
+  display:flex;align-items:center;gap:var(--space-1)}
+.warehouse-tab:hover{background:var(--surface-hover);color:var(--text)}
+.warehouse-tab.active{background:var(--panel);color:var(--accent);font-weight:600;border-color:var(--line);border-bottom-color:var(--panel);
+  margin-bottom:-1px}
+.warehouse-tab .wh-cnt{font-size:11px;color:var(--muted);background:var(--surface-muted);
+  border-radius:10px;padding:1px var(--space-1);min-width:18px;text-align:center}
+.warehouse-tab.active .wh-cnt{background:var(--accent-soft);color:var(--accent)}
 .recycle-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
   border-radius:var(--radius-md);border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
   font-size:var(--fs-sm);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
@@ -1098,10 +1123,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .recycle-clear:hover{background:var(--danger-soft)}
 
 /* ===== 侧边栏折叠按钮（默认隐藏，>=1024px 显示；移动端不需要） ===== */
-/* v1.9.7b：折叠按钮迁至正文顶部第二行，width:100% → auto，margin-bottom:0 适应工具行布局 */
-.side-toggle{display:none;align-items:center;justify-content:center;gap:var(--space-2);width:auto;
-  padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);background:var(--panel2);border:1px solid var(--line);
-  color:var(--text-dim);font-size:var(--fs-sm);margin-bottom:0;min-height:30px;flex-shrink:0;
+/* v1.9.9：折叠按钮回归侧栏顶部（#sideToggle 重新位于 #side 子树），恢复 width:100% 满宽 */
+.side-toggle{display:none;align-items:center;justify-content:center;gap:var(--space-2);width:100%;
+  padding:var(--space-2);border-radius:var(--radius-md);background:var(--panel2);border:1px solid var(--line);
+  color:var(--text-dim);font-size:var(--fs-sm);margin-bottom:var(--space-2);min-height:36px;
   transition:background var(--transition-fast),color var(--transition-fast)}
 .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
 .side-toggle svg{width:18px;height:18px;flex-shrink:0;transition:transform .2s}
@@ -2047,23 +2072,30 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <a href="#main" class="skip-link" aria-label="跳转到主内容">跳转到主内容</a>
 <div class="app">
   <div class="topbar">
-    <!-- 单行：品牌 + spacer + 系统级按钮居右（命令/主题/消息/安装）；指南已迁移至侧栏底部 -->
-    <!-- v1.9.7：品牌图形「引力环」——开口圆环（主循环）+ 核心圆点（用户中枢）+ 环口外节点（环绕的 Agent）。
-         定制几何（非图标库字形），与 icon.svg 同构，不易与他牌重复 -->
+    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> Agent 工作台</div>
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
     <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南" style="display:none">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl">指南</span></button>
+    <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
+    <button class="tbtn" id="btnSearchTop" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl">搜索</span></button>
+    <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
     <button class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></button>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl">命令</span></button>
+    <!-- v1.9.9：消息按钮双入口——顶栏按钮（点击=消息中心展开/折叠）与正文顶部 #msgBar 铃铛（a11y 契约保持：aria-label + svg aria-hidden） -->
+    <button class="tbtn" id="btnMessagesTop" type="button" title="消息" aria-label="消息">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="badge" id="msgBadgeTop" style="display:none"></span><span class="lbl">消息</span></button>
     <button class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
-    <!-- v1.9.7：消息按钮迁至正文顶部「消息提示栏」（#msgBar 内 #btnMessages，a11y 契约保持：aria-label + svg aria-hidden） -->
-    <!-- 设置已迁移至侧栏底部（id="btnGear" 保留，data-gear 事件委托 × openDrawer） -->
     <button class="tbtn" id="btnDownload" title="导出数据" aria-label="导出数据">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl">下载</span></button>
-    <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面">
+    <!-- v1.9.9：更多按钮上移顶栏（从功能组侧栏迁出）——点击展开次常用工具下拉（甘特/导图/仪表盘/笔记等） -->
+    <button class="tbtn" id="btnMoreTop" title="更多工具（甘特/导图/仪表盘/笔记等）" aria-label="更多工具" aria-haspopup="true" aria-expanded="false">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span class="lbl">更多</span></button>
+    <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面" style="display:none">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl">安装</span></button>
     <input type="file" id="fileInput" accept="application/json" style="display:none">
   </div>
@@ -2079,13 +2111,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="body">
     <nav class="side" id="side"></nav>
     <div class="main-wrap">
-      <!-- v1.9.7b 正文顶部第二行：折叠 + 消息提示栏 + 大模型选择器（与设计图对齐）
-           - 折叠按钮：>=1024px 显示（CSS .side-toggle 媒体查询），点击切 .side.collapsed
-           - 消息栏：铃铛 + 未读角标 + 预览（flex:1 占中间），点击展开下方消息列表
-           - 大模型选择器：从右侧 AI 聊天面板迁出，文本+下拉，点击切换 active profile -->
+      <!-- v1.9.9b 正文顶部第二行：消息提示栏 + 大模型选择器（折叠按钮已迁回侧栏顶部 #side 内） -->
       <div class="toolbar-row" id="topbarRow2" role="region" aria-label="正文顶部工具行">
-        <button class="side-toggle" id="sideToggle" aria-label="折叠或展开侧边栏" title="折叠/展开">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl">折叠</span></button>
         <div class="msg-bar" id="msgBar" role="region" aria-label="消息通知栏">
           <button class="tbtn msg-bell" id="btnMessages" type="button" title="消息" aria-label="消息">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -2186,6 +2213,34 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" id="btnTrackerStop" class="danger" disabled aria-label="停止时间追踪">停止</button>
     </span>
   </div>
+</div>
+
+<!-- v1.9.9：侧栏功能组三大类 popover（图表 / 组件 / 应用）——点击父按钮展开，JS 锚定按钮右侧 -->
+<div class="side-pop" id="chartPop" style="display:none" role="menu" aria-label="图表">
+  <button class="tbtn" data-pop="calview" role="menuitem" title="日历视图（按月/周）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="lbl">日历视图</span></button>
+  <button class="tbtn" data-pop="stats" role="menuitem" title="统计页（关键指标/趋势/饼图/时段）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="lbl">统计</span></button>
+  <button class="tbtn" data-pop="heatmap" role="menuitem" title="热力图（场景完成度 12 周）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="lbl">热力图</span></button>
+</div>
+<div class="side-pop" id="compPop" style="display:none" role="menu" aria-label="组件">
+  <button class="tbtn" data-pop="pomo" role="menuitem" title="番茄钟（专注计时）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg><span class="lbl">番茄钟</span><span class="side-badge" id="sidePomoBadge2" style="display:none"></span></button>
+  <button class="tbtn" data-pop="tracker" role="menuitem" title="时间追踪（任务计时）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg><span class="lbl">时间追踪</span><span class="side-badge" id="sideTrackerBadge2" style="display:none"></span></button>
+  <button class="tbtn" data-pop="automation" role="menuitem" title="自动化工作流（规则+定时+多步）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg><span class="lbl">自动化</span></button>
+</div>
+<div class="side-pop" id="appPop" style="display:none" role="menu" aria-label="应用">
+  <button class="tbtn" data-pop="notes" role="menuitem" title="笔记（自由记录）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg><span class="lbl">笔记</span></button>
+  <button class="tbtn" data-pop="dashboard" role="menuitem" title="仪表盘（自定义面板）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="lbl">仪表盘</span></button>
+  <button class="tbtn" data-pop="collab" role="menuitem" title="协作（实时多人）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="lbl">协作</span></button>
+  <button class="tbtn" data-pop="share" role="menuitem" title="分享（看板分享链接）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="11" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="12.51" x2="15.42" y2="17.49"/></svg><span class="lbl">分享</span></button>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -2829,10 +2884,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.9.8";
+const VERSION = "1.9.9";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260815c";
+const BUILD_TAG = "20260815d";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -6316,9 +6371,9 @@ function thisWeekDone(sc){
 }
 
 /* ---------- 渲染：侧边导航 ---------- */
-// v1.9.7b：折叠按钮已迁至正文顶部第二行（#topbarRow2 内 #sideToggle），由 .toolbar-row 内的 .side-toggle 媒体查询控制显隐。
-// SIDE_TOGGLE_HTML 留作占位避免历史代码误引用，renderSide 不再追加。
-const SIDE_TOGGLE_HTML = "";
+// v1.9.9：折叠按钮回归侧栏顶部（"全局"组上方），用户确认放回原位
+const SIDE_TOGGLE_HTML = `<button class="side-toggle" id="sideToggle" aria-label="折叠或展开侧边栏" title="折叠/展开">
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl">折叠</span></button>`;
 /**
  * 渲染侧边导航栏（总览 + 4 场景按钮，含未完成计数）
  * @returns {void}
@@ -6338,9 +6393,9 @@ function renderSide(){
     ${UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">概览</span><span class="cnt">${totalOpen}</span></button>`;
   const statsBtn = `<button class="nav-item ${_effActive==="stats"?"active":""}" data-sc="stats" style="--sc:#038387">
     ${UI_ICONS.stats.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">统计</span><span class="cnt">${tasks.length}</span></button>`;
-  // v1.9.7b：仓库（从「回收站」改名）——保留全部软删除任务能力，标题/侧栏角标/回收站态高亮等不变
+  // v1.9.9：仓库入口（点击进入仓库页，页内 hot/warm/cold 三 tab：常用/存档/回收站）
   const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
-  const recycleBtn = `<button class="nav-item ${_effActive==="recycle"?"active":""}" data-recycle="1" style="--sc:var(--danger)" title="仓库（已删除任务）">
+  const warehouseBtn = `<button class="nav-item ${_effActive==="recycle"||_effActive==="warehouse"?"active":""}" data-warehouse="1" style="--sc:var(--danger)" title="仓库（热/温/冷数据三态）" aria-label="仓库">
     ${UI_ICONS.trash.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">仓库</span>${recycleCount?`<span class="cnt">${recycleCount}</span>`:""}</button>`;
   const items = ORDER.map(sc=>{
     const s = SCENARIOS[sc];
@@ -6348,54 +6403,49 @@ function renderSide(){
     return `<button class="nav-item ${sc===_effActive?"active":""}" data-sc="${sc}" style="--sc:${s.color}">
       ${(SCENARIOS[sc].icon || "").replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">${s.name}</span><span class="cnt">${open}</span></button>`;
   }).join("");
-  // 设置入口迁移至侧栏底部（与总体/统计/回收站同组）；保留 id="btnGear"（a11y 测试断言它存在）
+  // v1.9.9：文档入口（v1.9.6 原"指南"改名为"文档"，data-help 仍指向 renderHelp）
+  const docBtn = `<button class="nav-item${_helpActive}" data-help="1" id="sideBtnHelp" style="--sc:var(--muted)" title="使用文档" aria-label="使用文档">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><span class="nm">文档</span></button>`;
+  // v1.9.6：AI 配置从设置页抽离为系统组独立菜单页
+  const aiBtn = `<button class="nav-item${_aiActive}" data-aipage="1" id="sideBtnAi" style="--sc:var(--accent)" title="AI" aria-label="AI">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg><span class="nm">AI</span></button>`;
+  // v1.9.9：Agent 入口（提示词/上下文/harness/loop/记忆）——v1.9.9 占位，复用 AI 配置二级页
+  const agentBtn = `<button class="nav-item" data-agentpage="1" id="sideBtnAgent" style="--sc:#d97706" title="Agent" aria-label="Agent">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H7a3 3 0 0 0-3 3v3a3 3 0 0 0 1 2.2V18a3 3 0 0 0 3 3h2v-7H8v-3h2V8a2 2 0 0 1 4 0v1h2v3h-2v7h2a3 3 0 0 0 3-3v-3.8a3 3 0 0 0 1-2.2V9a3 3 0 0 0-3-3h-2V5a3 3 0 0 0-3-3z"/></svg><span class="nm">Agent</span></button>`;
+  // v1.9.9：设置入口
   const gearBtn = `<button class="nav-item${_gearActive}" data-gear="1" id="btnGear" style="--sc:var(--muted)" title="设置" aria-label="设置">
     ${UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">设置</span></button>`;
-  // 指南入口迁移至侧栏底部（v1.9 顶栏精简：从顶栏移除 btnHelp，改由侧栏 data-help 委托调用 renderHelp）
-  const helpBtn = `<button class="nav-item${_helpActive}" data-help="1" id="sideBtnHelp" style="--sc:var(--muted)" title="使用指南" aria-label="使用指南">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nm">指南</span></button>`;
-  // v1.9.6：AI 配置从设置页抽离为系统组独立菜单页
-  const aiBtn = `<button class="nav-item${_aiActive}" data-aipage="1" id="sideBtnAi" style="--sc:var(--accent)" title="AI 配置" aria-label="AI 配置">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg><span class="nm">AI 配置</span></button>`;
-  // v1.9.7b：插件市场迁至「功能」组并改名「市场」（与设计图一致；AI 配置仍保留在系统组）
+  // v1.9.9：市场入口（从功能组迁回系统组末尾，兼容 v1.9.6 独立菜单页设计）
   const pluginBtn = `<button class="nav-item${_pluginActive}" data-pluginpage="1" id="sideBtnPlugin" style="--sc:#8b5cf6" title="市场" aria-label="市场">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg><span class="nm">市场</span></button>`;
-  // v1.9.7b：功能组（从「工具」改名 + 新增「视图」项）——视图=日历视图入口；番茄钟/时间追踪切换浮层；搜索/更多打开对应弹窗
-  const viewSideBtn = `<button class="nav-item" data-cal="1" style="--sc:#5b21b6" title="视图（日历/后续扩展）" aria-label="视图">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M5 5v14h14V5"/><rect x="3" y="9" width="18" height="10" rx="1"/><line x1="3" y1="13" x2="21" y2="13"/></svg><span class="nm">视图</span></button>`;
-  const pomoSideBtn = `<button class="nav-item" data-pomo="1" style="--sc:#e0592a" title="番茄钟" aria-label="番茄钟">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg><span class="nm">番茄钟</span><span class="side-badge" id="sidePomoBadge" style="display:none"></span></button>`;
-  const trackerSideBtn = `<button class="nav-item" data-tracker="1" style="--sc:#0e7c66" title="时间追踪" aria-label="时间追踪">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg><span class="nm">时间追踪</span><span class="side-badge" id="sideTrackerBadge" style="display:none"></span></button>`;
-  const searchSideBtn = `<button class="nav-item" data-searchtop="1" style="--sc:#0a6cbd" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="nm">搜索</span></button>`;
-  const moreSideBtn = `<button class="nav-item" data-moretool="1" style="--sc:var(--muted)" title="更多工具（甘特/导图/仪表盘/笔记等）" aria-label="更多工具" aria-haspopup="true" aria-expanded="false">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span class="nm">更多</span></button>`;
-  // v1.9.7b：四组对齐设计图——全局(概览/统计/仓库) → 场景(场景项) → 功能(视图/番茄钟/时间追踪/搜索/更多/市场) → 系统(AI 配置/设置/指南)
+  // v1.9.9：图表（父按钮，点击展开 popover：日历/统计/热力图）
+  const chartBtn = `<button class="nav-item" data-chartmenu="1" style="--sc:#5b21b6" title="图表" aria-label="图表" aria-haspopup="true" aria-expanded="false">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nm">图表</span><span class="side-caret" aria-hidden="true">▸</span></button>`;
+  // v1.9.9：组件（父按钮，点击展开 popover：番茄钟/时间追踪/自动化）
+  const compBtn = `<button class="nav-item" data-compmenu="1" style="--sc:#0e7c66" title="组件" aria-label="组件" aria-haspopup="true" aria-expanded="false">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nm">组件</span><span class="side-caret" aria-hidden="true">▸</span></button>`;
+  // v1.9.9：应用（父按钮，点击展开 popover：笔记/协作/分享/仪表盘）
+  const appBtn = `<button class="nav-item" data-appmenu="1" style="--sc:#0a6cbd" title="应用" aria-label="应用" aria-haspopup="true" aria-expanded="false">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nm">应用</span><span class="side-caret" aria-hidden="true">▸</span></button>`;
+  // v1.9.9b：四组按用户最新决策——全局(概览/统计/仓库) → 场景(场景项) → 功能(图表/组件/应用) → 系统(AI/Agent/设置/文档/市场)
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML +
-    '<div class="nav-group">全局</div>' + overview + statsBtn + recycleBtn +
+    '<div class="nav-group">全局</div>' + overview + statsBtn + warehouseBtn +
     '<div class="nav-group">场景</div>' + items +
-    '<div class="nav-group">功能</div>' + viewSideBtn + pomoSideBtn + trackerSideBtn + searchSideBtn + moreSideBtn + pluginBtn +
-    '<div class="nav-group">系统</div>' + aiBtn + gearBtn + helpBtn);
+    '<div class="nav-group">功能</div>' + chartBtn + compBtn + appBtn +
+    '<div class="nav-group">系统</div>' + aiBtn + agentBtn + gearBtn + docBtn + pluginBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
     const _m = $("#main"); if(_m) _m.scrollTop = 0;
-    if(b.dataset.recycle){ setActive("recycle"); render(); return; }
+    if(b.dataset.warehouse){ if(typeof openWarehouse === "function") openWarehouse(); return; }
     if(b.dataset.gear){ openDrawer(); return; }
     if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
     if(b.dataset.aipage){ if(typeof openAiPage === "function") openAiPage(); return; }
+    if(b.dataset.agentpage){ if(typeof openAgentPage === "function") openAgentPage(); else if(typeof openAiPage === "function") openAiPage(); return; }
     if(b.dataset.pluginpage){ if(typeof openPluginPage === "function") openPluginPage(); return; }
-    // v1.9.7b：功能组——视图打开日历视图弹窗；番茄钟/时间追踪切换浮层；搜索/更多复用顶栏处理器
-    if(b.dataset.pomo){ if(typeof toggleToolPop === "function") toggleToolPop("pomoPop", b); return; }
-    if(b.dataset.tracker){ if(typeof toggleToolPop === "function") toggleToolPop("trackerPop", b); return; }
-    if(b.dataset.cal){
-      // v1.9.7b：「视图」项复用日历视图弹窗入口（data-cal），未来可扩展为看板/列表/日历切换菜单
-      var _cm = $("#calendarModal");
-      if(_cm){ var _cb = $("#calendarModalBody"); if(_cb) _cb.innerHTML = sanitizeHtml(renderCalendarView(0)); _cm.classList.add("show"); }
-      return;
-    }
-    if(b.dataset.searchtop){ if(typeof openSearchModal === "function") openSearchModal(); return; }
-    if(b.dataset.moretool){ if(typeof openMoreMenuFrom === "function") openMoreMenuFrom(b); return; }
+    // v1.9.9：功能组三大类——图表/组件/应用均为父按钮，点击切换子菜单 popover
+    if(b.dataset.chartmenu){ if(typeof toggleSidePop === "function") toggleSidePop("chartPop", b); return; }
+    if(b.dataset.compmenu){ if(typeof toggleSidePop === "function") toggleSidePop("compPop", b); return; }
+    if(b.dataset.appmenu){ if(typeof toggleSidePop === "function") toggleSidePop("appPop", b); return; }
     setActive(b.dataset.sc); render();
   });
 }
@@ -6463,6 +6513,134 @@ function openRecycle(){
     if(!ids.length){ toast("请先勾选要删除的任务","warn"); return; }
     if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); }
   };
+}
+/* v1.9.9：仓库页面（热/温/冷三 tab）
+   - 热：高频活跃任务（按 doneAt 或 updatedAt 最近 7 天排序，前 20 项）
+   - 温：已完成但未删除任务（按 doneAt 倒序，7-90 天前）
+   - 冷：已删除任务（deletedAt > 0）
+   设计：复用现有 recycle 列表/复选/批量操作能力；UI 走 page-head + tab pills。
+*/
+function openWarehouse(tab){
+  // 状态机：tab ∈ "hot" | "warm" | "cold"（默认 cold 兼容旧行为）
+  var _t = (tab === "hot" || tab === "warm") ? tab : "cold";
+  var all = load(PREFIX+"tasks", []);
+  var now = Date.now();
+  var hot = [], warm = [], cold = [];
+  all.forEach(function(t){
+    if(t.deletedAt){ cold.push(t); return; }
+    var last = t.doneAt || t.updatedAt || t.createdAt || 0;
+    var ageDays = (now - last) / 86400000;
+    if(t.status === "done"){
+      if(ageDays <= 90) warm.push(t);
+      else hot.push(t); // 90 天以上已完成任务归"热"——长期沉淀的成果
+    } else {
+      if(ageDays <= 7) hot.push(t);
+      else warm.push(t);
+    }
+  });
+  // 排序
+  hot.sort(function(a,b){ return (b.doneAt || b.updatedAt || b.createdAt || 0) - (a.doneAt || a.updatedAt || a.createdAt || 0); });
+  warm.sort(function(a,b){ return (b.doneAt || b.updatedAt || b.createdAt || 0) - (a.doneAt || a.updatedAt || a.createdAt || 0); });
+  cold.sort(function(a,b){ return (b.deletedAt || 0) - (a.deletedAt || 0); });
+  hot = hot.slice(0, 20); // 热数据只展示前 20
+  // 当前 tab 渲染
+  function renderItems(list, mode){
+    if(!list.length) return `<div class="recycle-empty">${mode==="hot"?"暂无热数据（最近活跃任务）":mode==="warm"?"暂无温数据（存档任务）":"回收站为空"}</div>`;
+    return list.map(function(t){
+      var sm = scMeta(t.sc);
+      var w = new Date(t.doneAt || t.updatedAt || t.createdAt || t.deletedAt);
+      var whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
+      var ops = mode === "cold"
+        ? `<button type="button" class="recycle-restore" data-restore="${esc(t.id)}">恢复</button><button type="button" class="recycle-purge" data-purge="${esc(t.id)}">彻底删除</button>`
+        : `<button type="button" class="recycle-restore" data-jump="${esc(t.id)}" title="定位到该任务">定位</button>`;
+      return `<div class="recycle-item" data-id="${esc(t.id)}">
+        <input type="checkbox" class="recycle-chk" data-chk="${esc(t.id)}" aria-label="选择 ${esc(t.title)}">
+        <span class="recycle-dot" style="background:${sm.color}"></span>
+        <span class="recycle-title">${esc(t.title)}</span>
+        <span class="recycle-sc">${sm.name}</span>
+        <span class="recycle-when">${whenStr}</span>
+        ${ops}
+      </div>`;
+    }).join("");
+  }
+  var tabsHtml = `
+    <div class="warehouse-tabs" role="tablist">
+      <button class="warehouse-tab${_t==='hot'?' active':''}" data-wh-tab="hot" role="tab" aria-selected="${_t==='hot'}">热 <span class="wh-cnt">${hot.length}</span></button>
+      <button class="warehouse-tab${_t==='warm'?' active':''}" data-wh-tab="warm" role="tab" aria-selected="${_t==='warm'}">温 <span class="wh-cnt">${warm.length}</span></button>
+      <button class="warehouse-tab${_t==='cold'?' active':''}" data-wh-tab="cold" role="tab" aria-selected="${_t==='cold'}">冷 <span class="wh-cnt">${cold.length}</span></button>
+    </div>`;
+  var list = _t==="hot" ? hot : _t==="warm" ? warm : cold;
+  var itemsHtml = renderItems(list, _t);
+  var policy = getRecyclePolicy();
+  var policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
+  var countLabel = list.length ? list.length+" 条" : "";
+  var html = `<div class="recycle-modal" id="recycleModal">
+    <div class="recycle-card">
+      <div class="recycle-header page-head">
+        <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
+        <div class="ph-tx"><h2>仓库</h2><p class="sub">${_t==="hot"?"热数据 · 最近活跃任务":_t==="warm"?"温数据 · 存档任务（7-90 天）":"冷数据 · 回收站（已删除）"}</p></div>
+        <span class="recycle-count">${countLabel}</span>
+        <button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button>
+      </div>
+      ${tabsHtml}
+      <div class="recycle-list">${itemsHtml}</div>
+      ${list.length && _t==="cold" ? `<div class="recycle-footer">
+        <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
+        <button type="button" class="recycle-batch" id="recycleBatchRestore">批量恢复</button>
+        <button type="button" class="recycle-batch" id="recycleBatchPurge">批量删除</button>
+        <span class="recycle-policy">${policyLabel}</span>
+        <button type="button" class="recycle-clear" id="recycleClear">清空回收站</button>
+      </div>` : ""}
+    </div>
+  </div>`;
+  $("#main").innerHTML = sanitizeHtml(html);
+  $("#main").classList.add("page-recycle");
+  var modal=$("#recycleModal");
+  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
+  // tab 切换
+  $$("#recycleModal [data-wh-tab]").forEach(function(tb){
+    tb.onclick = function(){
+      var next = tb.dataset.whTab;
+      try{ if(modal._releaseTrap) modal._releaseTrap(); }catch(_){}
+      openWarehouse(next);
+    };
+  });
+  // 返回按钮
+  const backBtn = $("#recycleBack"); if(backBtn) backBtn.onclick = ()=> closeRecycleModal();
+  // 冷 tab 才显示批量操作
+  if(_t === "cold"){
+    $$("#recycleModal [data-restore]").forEach(b=> b.onclick=()=>{ restoreRecycle(b.dataset.restore); });
+    $$("#recycleModal [data-purge]").forEach(b=> b.onclick=()=>{ purgeRecycle(b.dataset.purge); });
+    var clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的任务将永久删除，不可恢复。")){ clearRecycle(); } };
+    var selAll=$("#recycleSelAll"); if(selAll) selAll.onchange=()=> $$("#recycleModal .recycle-chk").forEach(c=>{ c.checked=selAll.checked; });
+    var bRestore=$("#recycleBatchRestore"); if(bRestore) bRestore.onclick=()=>{
+      var ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
+      if(!ids.length){ toast("请先勾选要恢复的任务","warn"); return; }
+      restoreRecycleBatch(ids);
+    };
+    var bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=()=>{
+      var ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
+      if(!ids.length){ toast("请先勾选要删除的任务","warn"); return; }
+      if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); }
+    };
+  } else {
+    // 热/温：定位到任务（切到对应场景高亮该卡）
+    $$("#recycleModal [data-jump]").forEach(b=> b.onclick=()=>{
+      var id = b.dataset.jump;
+      var all = load(PREFIX+"tasks", []);
+      var t = all.find(function(x){ return x.id === id; });
+      if(t){ setActive(t.sc); render(); try{ var card=document.querySelector('[data-task-id="'+id+'"]'); if(card) card.scrollIntoView({behavior:"smooth", block:"center"}); }catch(_){} }
+    });
+  }
+}
+/* v1.9.9：Agent 入口（提示词/上下文/harness/loop/记忆）——v1.9.9 占位，暂复用 AI 配置二级页 */
+function openAgentPage(){
+  if(typeof openAiPage === "function"){ openAiPage(); return; }
+  // 兜底：渲染一个简单占位页
+  $("#main").innerHTML = sanitizeHtml(`<div class="card"><header class="page-head">
+    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H7a3 3 0 0 0-3 3v3a3 3 0 0 0 1 2.2V18a3 3 0 0 0 3 3h2v-7H8v-3h2V8a2 2 0 0 1 4 0v1h2v3h-2v7h2a3 3 0 0 0 3-3v-3.8a3 3 0 0 0 1-2.2V9a3 3 0 0 0-3-3h-2V5a3 3 0 0 0-3-3z"/></svg></span>
+    <div class="ph-tx"><h2>Agent</h2><p class="sub">提示词 / 上下文 / harness / loop / 记忆（v2.0 上线）</p></div>
+  </header><p>Agent 配置中心正在建设中。临时入口可使用「AI 配置」中的 sysprompt 字段。</p></div>`);
 }
 function restoreRecycle(id){
   const all = load(PREFIX+"tasks", []);
@@ -6558,18 +6736,72 @@ function closeRecycleModal(){
   render(); // 返回之前的视图（与"返回按钮"语义一致）
   return true;
 }
-/* 侧边栏折叠：事件委托绑定在 document 上（#sideToggle 已迁至正文顶部 #topbarRow2 内，不再位于 #side 子树）。
+/* 侧边栏折叠：事件委托绑定在 #side 上（v1.9.9 折叠按钮回归侧栏顶部 #sideToggle 重新位于 #side 子树）。
    启动时恢复持久化状态。 */
 function setupSideToggle(){
   const side = $("#side");
   if(!side) return;
-  document.addEventListener("click", (e)=>{
+  side.addEventListener("click", (e)=>{
     if(!e.target || !e.target.closest || !e.target.closest("#sideToggle")) return;
-    // v1.9.7b：折叠按钮在 #topbarRow2 内，但折叠动作是切 .side.collapsed，故事件仍作用在 #side 上
     side.classList.toggle("collapsed");
     try{ localStorage.setItem(PREFIX+"sideCollapsed", side.classList.contains("collapsed")?"1":"0"); }catch(_){}
   });
   try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") side.classList.add("collapsed"); }catch(_){}
+}
+/* v1.9.9：侧栏功能组三大类 popover 切换（图表 / 组件 / 应用）——锚定按钮右侧，溢出改左侧；再点同按钮=关闭 */
+function _closeAllSidePops(){
+  $$(".side-pop").forEach(function(p){ p.style.display = "none"; });
+  // 重置所有父按钮的 aria-expanded
+  $$("#side .nav-item[aria-haspopup='true']").forEach(function(b){ try{ b.setAttribute("aria-expanded","false"); }catch(_){ } });
+}
+function toggleSidePop(popId, btn){
+  var pop = document.getElementById(popId);
+  if(!pop || !btn) return;
+  var wasOpen = pop.style.display !== "none";
+  _closeAllSidePops();
+  if(wasOpen) return;
+  pop.style.display = "";
+  var r = btn.getBoundingClientRect();
+  var w = pop.offsetWidth || 180;
+  var left = r.right + 8;
+  if(left + w > window.innerWidth - 8) left = Math.max(8, r.left - w - 8);
+  pop.style.left = left + "px";
+  var top = Math.min(Math.max(8, r.top), Math.max(8, window.innerHeight - pop.offsetHeight - 8));
+  pop.style.top = top + "px";
+  try{ btn.setAttribute("aria-expanded","true"); }catch(_){}
+}
+/* v1.9.9：侧栏 popover 子按钮事件委托——data-pop=xxx 路由到对应处理器 */
+function setupSidePopItems(){
+  // 点击空白处关闭所有 popover
+  document.addEventListener("click", function(e){
+    if(!e.target || !e.target.closest) return;
+    if(e.target.closest(".side-pop") || e.target.closest("#side .nav-item[aria-haspopup='true']")) return;
+    _closeAllSidePops();
+  });
+  // 内部按钮事件委托（三个 popover 共享）
+  ["chartPop","compPop","appPop"].forEach(function(popId){
+    var pop = document.getElementById(popId);
+    if(!pop) return;
+    pop.addEventListener("click", function(e){
+      var btn = e.target && e.target.closest ? e.target.closest("[data-pop]") : null;
+      if(!btn) return;
+      var action = btn.dataset.pop;
+      _closeAllSidePops();
+      // 路由到具体能力
+      if(action === "calview"){
+        var _cm = $("#calendarModal");
+        if(_cm){ var _cb = $("#calendarModalBody"); if(_cb) _cb.innerHTML = sanitizeHtml(renderCalendarView(0)); _cm.classList.add("show"); }
+      } else if(action === "stats"){ setActive("stats"); render(); }
+      else if(action === "heatmap"){ setActive("overview"); render(); try{ var h = $("#main .heat"); if(h) h.scrollIntoView({behavior:"smooth"}); }catch(_){} }
+      else if(action === "pomo"){ if(typeof toggleToolPop === "function") toggleToolPop("pomoPop", document.querySelector("#side [data-pomo]") || btn); }
+      else if(action === "tracker"){ if(typeof toggleToolPop === "function") toggleToolPop("trackerPop", document.querySelector("#side [data-tracker]") || btn); }
+      else if(action === "automation"){ if(typeof openSearchModal === "function"){ try{ toast("自动化工作流：见设置 → 数据管理", "info"); }catch(_){ } } }
+      else if(action === "notes"){ if(typeof openNotesModal === "function") openNotesModal(); }
+      else if(action === "dashboard"){ try{ toast("仪表盘：v2.0+ 上线", "info"); }catch(_){ } }
+      else if(action === "collab"){ try{ toast("协作：v2.0+ 上线", "info"); }catch(_){ } }
+      else if(action === "share"){ try{ toast("分享：见场景页卡片操作", "info"); }catch(_){ } }
+    });
+  });
 }
 
 /* ---------- P0② 模态框统一 a11y 基座（延迟绑定，不依赖各弹窗的调用点） ----------
@@ -11138,15 +11370,17 @@ function renderMsgBarPreview(){
 }
 function updateMsgBadge(){
   var n = getUnreadCount();
-  var badge = $("#msgBadge");
-  if(badge){
+  // v1.9.9：双入口角标同步——正文 #msgBadge 与顶栏 #msgBadgeTop 同步显隐与数字
+  var badges = [$("#msgBadge"), $("#msgBadgeTop")];
+  badges.forEach(function(badge){
+    if(!badge) return;
     if(n > 0){
       badge.textContent = n > 99 ? "99+" : String(n);
       badge.style.display = "";
     } else {
       badge.style.display = "none";
     }
-  }
+  });
   renderMsgBarPreview(); // 汇聚点：addMessage/markRead/clear 均经此刷新预览
 }
 function renderMsgPanel(){
@@ -12715,6 +12949,10 @@ const _btnKnowledgeBase = $("#btnKnowledgeBase"); if(_btnKnowledgeBase) _btnKnow
 const _btnSearch = $("#btnSearch"); if(_btnSearch) _btnSearch.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
 const _btnNotesTop = $("#btnNotesTop"); if(_btnNotesTop) _btnNotesTop.onclick = function(){ if(typeof openNotesModal === "function") openNotesModal(); };
 const _btnSearchTop = $("#btnSearchTop"); if(_btnSearchTop) _btnSearchTop.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
+// v1.9.9：顶栏右侧更多按钮（从侧栏功能组迁出）——点击展开次常用工具下拉
+const _btnMoreTop = $("#btnMoreTop"); if(_btnMoreTop) _btnMoreTop.onclick = function(e){ if(typeof openMoreMenuFrom === "function") openMoreMenuFrom(_btnMoreTop); };
+// v1.9.9：顶栏右侧消息按钮（双入口之一）——点击展开/折叠消息中心，与正文 #msgBar 内 #btnMessages 行为一致
+const _btnMessagesTop = $("#btnMessagesTop"); if(_btnMessagesTop) _btnMessagesTop.onclick = function(){ var b = $("#btnMessages"); if(b) b.click(); };
 /* 弹窗关闭按钮 */
 const _btnNotesClose = $("#btnNotesClose"); if(_btnNotesClose) _btnNotesClose.onclick = function(){ if(typeof closeNotesModal === "function") closeNotesModal(); };
 const _btnNoteEditorClose = $("#btnNoteEditorClose"); if(_btnNoteEditorClose) _btnNoteEditorClose.onclick = function(){ if(typeof closeNoteEditorModal === "function") closeNoteEditorModal(); };
@@ -13865,6 +14103,7 @@ seed();
     applyTheme();
   }
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
+  try{ setupSidePopItems(); }catch(_){ } // v1.9.9：图表/组件/应用 popover 事件
   try{ bindChatPanel(); }catch(e){ pushDiag("error","bindChatPanel init: "+(e&&e.message||e),{where:"bindChatPanel"}); } // 右侧 AI 聊天面板事件绑定（三栏布局第三栏，静态 HTML 一次性绑定）
   try{ setupModalA11yBase(); }catch(e){ pushDiag("error","modalA11y init: "+(e&&e.message||e),{where:"modalA11y"}); } // P0② 模态框统一 Esc/遮罩/焦点陷阱基座
   setupRipple(); // T4.3 底部导航点击涟漪效果（事件委托）
