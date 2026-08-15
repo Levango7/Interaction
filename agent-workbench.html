@@ -410,7 +410,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    - 折叠态：宽度归零 + overflow:hidden，配 transition 平滑过渡
    - 响应式：中屏收窄到 300px，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
 .chat-panel{width:360px;flex-shrink:0;display:flex;flex-direction:column;
-  border-left:1px solid var(--line);background:var(--panel2);
+  border-left:1px solid var(--line);background:var(--panel);
   transition:width var(--transition-fast) ease,transform var(--transition-fast) ease}
 .chat-panel.collapsed{width:0;overflow:hidden;border-left-color:transparent}
 .chat-panel-header{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);
@@ -433,8 +433,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-model-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .chat-model-select:hover{border-color:var(--accent)}
 /* 面板内消息区：覆盖 .chat 原有边框/高度，让其填满面板 */
+/* 消息槽用 --bg（与主区同款浅灰）：右栏白底 + 浅灰消息槽 + 白色头/输入区，层次分明 */
 .chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
-  padding:var(--space-3);background:var(--panel2);margin-bottom:0;display:flex;flex-direction:column;gap:var(--space-2)}
+  padding:var(--space-3);background:var(--bg);margin-bottom:0;display:flex;flex-direction:column;gap:var(--space-2)}
 .chat-panel .chat-toolbar{margin:0;padding:var(--space-2) var(--space-3);border-top:1px solid var(--line);
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 发送按钮 */
@@ -757,8 +758,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   border-left:none !important;
   box-shadow:none !important;
   z-index:auto !important;
-  /* v1.9.1：padding 与 #main 一致（上下 --space-6，左右 --space-7） */
-  padding:var(--space-6) var(--space-7) !important;
+  /* v1.9.6：上下 padding 移交给首尾子元素（.drawer-ph margin-top / .foot 自带 padding）——
+     sticky（set-nav 吸顶 / set-savebar 吸底）会被包含块 content-box 钳制，
+     若 drawer 自身有 padding-top/bottom，停靠时会留出 padding 宽的缝隙 */
+  padding:0 var(--space-7) !important;
   overflow:auto !important;
   flex:1 1 0 !important;
   display:block !important;
@@ -772,36 +775,40 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 }
 /* 响应式：与 #main 的 padding 全档位对齐（768-1023→--space-4；1024-1439→--space-7；≥1440→--space-8） */
 @media(min-width:768px) and (max-width:1023px){
-  .drawer-page{padding:var(--space-4) var(--space-4) !important}
+  .drawer-page{padding:0 var(--space-4) !important}
 }
 @media(min-width:1440px){
-  .drawer-page{padding:var(--space-6) var(--space-8) !important}
+  .drawer-page{padding:0 var(--space-8) !important}
 }
-/* 设置页面标题行：标题左 + 返回右（与 help-header 风格一致） */
-.settings-card{overflow:hidden}
-.settings-head{display:flex;align-items:center;gap:var(--space-3);
-  padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--line);flex-shrink:0}
-.settings-head.page-head{margin-bottom:0} /* v1.9.5：与统计/回收站页头统一视觉 */
-.settings-head h2{margin:0;font-size:var(--fs-xl);font-weight:600;letter-spacing:-.01em}
-.settings-head .close{
+/* v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片直接浮于浅灰底（与统计/回收站页一致）；
+   margin-top 承接 drawer-page 移除的 padding-top（三断点同步） */
+.drawer-ph{margin:var(--space-6) 0 var(--space-5)}
+.drawer-ph .close{
   font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);
-  border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
-  border-radius:var(--radius-md);line-height:1.4;
-}
-.settings-head .close:hover{background:var(--surface-hover);color:var(--text)}
-.settings-body{padding:var(--space-5) var(--space-6)}
+  border:1px solid var(--line);background:var(--panel);color:var(--text-dim);
+  border-radius:var(--radius-md);line-height:1.4;cursor:pointer;
+  transition:background var(--transition-fast),color var(--transition-fast)}
+.drawer-ph .close:hover{background:var(--surface-hover);color:var(--text)}
+/* 三页视图控制（settings / ai / plugin）：页头、分区卡、导航与保存栏按 data-page 显示 */
+#drawer[data-page="ai"] .drawer-ph:not([data-ph="ai"]),
+#drawer[data-page="plugin"] .drawer-ph:not([data-ph="plugin"]),
+#drawer:not([data-page]) .drawer-ph:not([data-ph="settings"]),
+#drawer[data-page="settings"] .drawer-ph:not([data-ph="settings"]),
+#drawer[data-page="ai"] .set-card:not(#set-ai),
+#drawer[data-page="ai"] .set-nav,
+#drawer[data-page="plugin"] .set-card:not(#set-plugin),
+#drawer[data-page="plugin"] .set-nav,
+#drawer[data-page="plugin"] .set-savebar,
+#drawer:not([data-page]) #set-ai,
+#drawer:not([data-page]) #set-plugin,
+#drawer[data-page="settings"] #set-ai,
+#drawer[data-page="settings"] #set-plugin{display:none}
 
 /* ===== 设置页面（v1.9.x 改版：分组卡片 + 吸顶导航 + 吸底保存栏） ===== */
-/* 外层铺满 main-wrap（左右间距与 #main 一致：--space-7），内部按上下分组卡片排列 */
-.drawer-page > .card.settings-card{
-  width:100%;
-  overflow:hidden;overflow:clip;border-radius:var(--radius-xl)
-}
-.settings-card .settings-body{padding:var(--space-5) var(--space-6)}
-/* 吸顶快捷导航（标签 chip + 保存按钮） */
+/* 吸顶快捷导航（标签 chip + 保存按钮）：横向负 margin 通栏（与 drawer-page 各断点 padding 同步） */
 .set-nav{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;gap:var(--space-2);
-  flex-wrap:wrap;margin:calc(var(--space-5) * -1) calc(var(--space-6) * -1) var(--space-5);
-  padding:var(--space-3) var(--space-6);background:var(--panel);
+  flex-wrap:wrap;margin:0 calc(var(--space-7) * -1) var(--space-5);
+  padding:var(--space-3) var(--space-7);background:var(--panel);
   border-bottom:1px solid var(--line);box-shadow:var(--shadow-2)}
 .set-nav-grow{flex:1}
 .set-nav-btn{border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
@@ -841,14 +848,24 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .set-tip{font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin:var(--space-1) 0 var(--space-2)}
 .set-actions{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
 .set-actions .addbtn{flex:1;min-width:90px}
-/* 吸底保存栏 */
+/* 吸底保存栏：横向负 margin 通栏（drawer-page 已无 padding-bottom，无需再吃） */
 .set-savebar{position:sticky;bottom:0;z-index:var(--z-sticky);display:flex;gap:var(--space-3);align-items:center;
-  margin:var(--space-5) calc(var(--space-6) * -1) calc(var(--space-5) * -1);
-  padding:var(--space-4) var(--space-6);background:var(--panel);
+  margin:var(--space-5) calc(var(--space-7) * -1) 0;
+  padding:var(--space-4) var(--space-7);background:var(--panel);
   border-top:1px solid var(--line);box-shadow:var(--shadow-2)}
 .set-savebar .addbtn{flex:1}
 /* 设置页尾栏（与其他页面 foot 一致，宽度铺满、文本居中） */
 .drawer-page > .foot{margin:0}
+/* 通栏与页头上边距断点同步：768-1023 → --space-4；≥1440 → --space-8（与 .drawer-page padding 对齐） */
+@media(min-width:768px) and (max-width:1023px){
+  .drawer-ph{margin-top:var(--space-4)}
+  .set-nav{margin-left:calc(var(--space-4) * -1);margin-right:calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4)}
+  .set-savebar{margin-left:calc(var(--space-4) * -1);margin-right:calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4)}
+}
+@media(min-width:1440px){
+  .set-nav{margin-left:calc(var(--space-8) * -1);margin-right:calc(var(--space-8) * -1);padding-left:var(--space-8);padding-right:var(--space-8)}
+  .set-savebar{margin-left:calc(var(--space-8) * -1);margin-right:calc(var(--space-8) * -1);padding-left:var(--space-8);padding-right:var(--space-8)}
+}
 /* 窄屏：表单标签上置 */
 @media (max-width:720px){
   .set-field{grid-template-columns:1fr;gap:var(--space-1)}
@@ -2130,22 +2147,30 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 <div class="overlay" id="overlay"></div>
 <div class="drawer" id="drawer">
-  <div class="card settings-card" style="padding:0;overflow:hidden">
-    <div class="settings-head page-head">
-      <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
-      <div class="ph-tx"><h2>设置</h2><p class="sub">应用偏好与系统配置</p></div>
-      <button class="close" id="drawerClose" aria-label="返回上一视图">← 返回</button>
-    </div>
-    <div class="settings-body">
-  <!-- 分区快捷导航（吸顶） -->
+  <!-- v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片浮于浅灰底（与统计/回收站页一致）；
+       AI 配置 / 插件市场抽离为独立菜单页，三个页头由 #drawer[data-page] 控制显示 -->
+  <header class="page-head drawer-ph" data-ph="settings">
+    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+    <div class="ph-tx"><h2>设置</h2><p class="sub">应用偏好与系统配置</p></div>
+    <button class="close drawer-close" id="drawerClose" type="button" aria-label="返回上一视图">← 返回</button>
+  </header>
+  <header class="page-head drawer-ph" data-ph="ai">
+    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></span>
+    <div class="ph-tx"><h2>AI 配置</h2><p class="sub">大模型 Profile、接口地址与请求参数</p></div>
+    <button class="close drawer-close" type="button" aria-label="返回上一视图">← 返回</button>
+  </header>
+  <header class="page-head drawer-ph" data-ph="plugin">
+    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
+    <div class="ph-tx"><h2>插件市场</h2><p class="sub">浏览、安装与管理扩展插件</p></div>
+    <button class="close drawer-close" type="button" aria-label="返回上一视图">← 返回</button>
+  </header>
+  <!-- 分区快捷导航（吸顶；仅设置页显示，AI/插件已抽离为独立菜单） -->
   <nav class="set-nav" aria-label="设置分区导航">
-    <button type="button" class="set-nav-btn" data-scroll-to="set-ai">AI 配置</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-scene">场景</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-chain">习惯链</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-look">外观</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-notify">通知</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-content">内容</button>
-    <button type="button" class="set-nav-btn" data-scroll-to="set-plugin">插件</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-data">数据</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-about">关于</button>
     <span class="set-nav-grow" aria-hidden="true"></span>
@@ -2494,11 +2519,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <p class="set-tip">启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
   </section>
 
-  <!-- 吸底保存栏 -->
+  <!-- 吸底保存栏（settings/ai 页显示；plugin 页安装即生效、无表单保存语义，由 CSS 隐藏） -->
   <div class="set-savebar">
     <button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button>
-  </div>
-    </div>
   </div>
 </div>
 
@@ -6264,6 +6287,8 @@ function renderSide(){
   // 不再依赖 #drawer 是否含 drawer-page、#helpPage 是否存在等时序性 DOM 状态
   const _gearActive = (uiView==="settings") ? " active" : "";
   const _helpActive = (uiView==="help") ? " active" : "";
+  const _aiActive = (uiView==="ai") ? " active" : "";       // v1.9.6：AI 配置独立菜单页
+  const _pluginActive = (uiView==="plugin") ? " active" : ""; // v1.9.6：插件市场独立菜单页
   const _effActive = (uiView==="main") ? active : "";
   const overview = `<button class="nav-item ${_effActive==="overview"?"active":""}" data-sc="overview" style="--sc:#4a3c8e">
     ${UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">总览</span><span class="cnt">${totalOpen}</span></button>`;
@@ -6285,17 +6310,24 @@ function renderSide(){
   // 指南入口迁移至侧栏底部（v1.9 顶栏精简：从顶栏移除 btnHelp，改由侧栏 data-help 委托调用 renderHelp）
   const helpBtn = `<button class="nav-item${_helpActive}" data-help="1" id="sideBtnHelp" style="--sc:var(--muted)" title="使用指南" aria-label="使用指南">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nm">指南</span></button>`;
-  // 三组分割：监控组(总览/统计/回收站) → 场景组(场景项) → 系统组(设置/指南)，组间用分组小标题 .nav-group（v1.9.5）
+  // v1.9.6：AI 配置 / 插件市场从设置页抽离为系统组独立菜单页
+  const aiBtn = `<button class="nav-item${_aiActive}" data-aipage="1" id="sideBtnAi" style="--sc:var(--accent)" title="AI 配置" aria-label="AI 配置">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg><span class="nm">AI 配置</span></button>`;
+  const pluginBtn = `<button class="nav-item${_pluginActive}" data-pluginpage="1" id="sideBtnPlugin" style="--sc:#8b5cf6" title="插件市场" aria-label="插件市场">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg><span class="nm">插件市场</span></button>`;
+  // 三组分割：监控组(总览/统计/回收站) → 场景组(场景项) → 系统组(AI 配置/插件市场/设置/指南)，组间用分组小标题 .nav-group（v1.9.5）
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML +
     '<div class="nav-group">监控</div>' + overview + statsBtn + recycleBtn +
     '<div class="nav-group">场景</div>' + items +
-    '<div class="nav-group">系统</div>' + gearBtn + helpBtn);
+    '<div class="nav-group">系统</div>' + aiBtn + pluginBtn + gearBtn + helpBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
     const _m = $("#main"); if(_m) _m.scrollTop = 0;
     if(b.dataset.recycle){ setActive("recycle"); render(); return; }
     if(b.dataset.gear){ openDrawer(); return; }
     if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
+    if(b.dataset.aipage){ if(typeof openAiPage === "function") openAiPage(); return; }
+    if(b.dataset.pluginpage){ if(typeof openPluginPage === "function") openPluginPage(); return; }
     setActive(b.dataset.sc); render();
   });
 }
@@ -6326,10 +6358,10 @@ function openRecycle(){
   const html = `<div class="recycle-modal" id="recycleModal">
     <div class="recycle-card">
       <div class="recycle-header page-head">
-        <button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button>
         <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
         <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务可在此恢复或彻底删除</p></div>
         <span class="recycle-count">${countLabel}</span>
+        <button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button>
       </div>
       <div class="recycle-list">${items}</div>
       ${del.length ? `<div class="recycle-footer">
@@ -7029,6 +7061,7 @@ function renderHelp(){
   if(_drawer && _drawer.classList.contains("drawer-page")){
     _moveDrawerHome();
     _drawer.classList.remove("open");
+    delete _drawer.dataset.page; // v1.9.6：清掉子页标记（settings/ai/plugin）
   }
   const html = `<div class="help-page" id="helpPage">
     <div class="help-header">
@@ -10726,6 +10759,7 @@ function render(){
     if(_drawer && _drawer.classList.contains("drawer-page")){
       _moveDrawerHome();
       _drawer.classList.remove("open");
+      delete _drawer.dataset.page; // v1.9.6：清掉子页标记（settings/ai/plugin）
     }
     const _help = $("#helpPage"); if(_help) _help.remove();
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
@@ -11642,14 +11676,35 @@ function openDrawer(){ const cfg=getCfg();
      覆盖原 fixed 抽屉样式，铺满 main-wrap；隐藏 #main（避免并排显示）。
      保留 #drawer.classList.add("open") 以兼容现有测试（round4-batch1 断言 .open 类）。 */
   uiView = "settings"; // v1.9.3g：显式视图状态，侧栏高亮据此渲染（弃 DOM 嗅探）
+  _showDrawerPage("settings");
+}
+/* v1.9.6：drawer 三页共用视图切换（settings / ai / plugin）——
+   移入 main-wrap + data-page 控制页头与分区卡显示 + 重置滚动 + 尾栏 + 侧栏高亮 */
+function _showDrawerPage(page){
   _moveDrawerToMainWrap();
-  $("#drawer").classList.add("open");
+  const d = $("#drawer");
+  if(!d) return;
+  d.dataset.page = page;
+  d.classList.add("open");
+  d.scrollTop = 0; // 滚动容器是 .drawer-page 自身，切页重置避免残留
   /* v1.9.1：设置页面底部追加尾栏（与 #main 各页面保持一致）。
      appendFoot() 默认往 #main 追加，但设置页面 #main 已隐藏，需往 #drawer 追加。
      幂等：先移除已有 .foot 再追加。 */
   _appendDrawerFoot();
   const _help = $("#helpPage"); if(_help) _help.remove();
-  renderSide(); // v1.9.3：更新侧边栏高亮（设置按钮 active）
+  renderSide(); // 更新侧边栏高亮（uiView 状态驱动）
+}
+/* v1.9.6：AI 配置独立菜单页——表单回填与设置页共用（saveCfg 按 ID 读值，display 不影响） */
+function openAiPage(){
+  openDrawer();      // 复用表单回填（profile 表单 / Key hint / Electron 状态）
+  uiView = "ai";
+  _showDrawerPage("ai");
+}
+/* v1.9.6：插件市场独立菜单页——renderPluginBox 重渲染插件列表后切页 */
+function openPluginPage(){
+  try{ renderPluginBox(); }catch(e){ /* noop */ }
+  uiView = "plugin";
+  _showDrawerPage("plugin");
 }
 /* 往 #drawer 末尾追加尾栏（设置页面专用，与 appendFoot 结构一致） */
 function _appendDrawerFoot(){
@@ -11687,6 +11742,7 @@ function _moveDrawerHome(){
 }
 function closeDrawer(){
   $("#drawer").classList.remove("open");
+  delete $("#drawer").dataset.page; // v1.9.6：清掉子页标记，下次打开回到默认 settings 页头
   $("#overlay").classList.remove("show");
   _moveDrawerHome();
   render();
@@ -12724,6 +12780,8 @@ $("#csvImportOverlay").onclick = cancelImportCSV;
 $("#btnExportRecsCSV").onclick = doExportRecsCSV;
 // 设置按钮 id="btnGear" 已迁移到侧栏尾部，点击由 renderSide 的 data-gear 事件委托接管
 $("#drawerClose").onclick = closeDrawer;
+// v1.9.6：AI 配置 / 插件市场子页页头的返回按钮（与 #drawerClose 同语义）
+$$("#drawer .drawer-close").forEach(b=>{ b.onclick = closeDrawer; });
 $("#overlay").onclick = closeDrawer;
 $("#cfgSave").onclick = saveCfg;
 $("#cfgProfileSelect").onchange = e => switchProfile(e.target.value);
@@ -13737,6 +13795,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     genProfileId, getActiveProfile, migrateProfiles,
     switchProfile, newProfile, dupProfile, delProfile,
     renderProfileSelect, fillProfileForm, openDrawer, closeDrawer,
+    openAiPage, openPluginPage,
     // T2.4 错误边界访问器（供测试驱动与断言）
     _backupBroken, _validateAndMigrateTasks, _validateCfg, _validateLinks,
     chatOnce, doExport,
