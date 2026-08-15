@@ -19,7 +19,8 @@ describe("UI 一致性 · 令牌体系", () => {
 
   it("topbar 单行布局 + 正文工具行存在（toolbar-row / main-wrap）", () => {
     expect(html).toContain('class="topbar"');
-    expect(html).toContain('class="toolbar-row"');
+    // v1.9.7：工具行演化为正文顶部消息提示栏（class="toolbar-row msg-bar"），断言改为前缀匹配
+    expect(html).toMatch(/class="toolbar-row[^"]*"/);
     expect(html).toContain('class="main-wrap"');
     expect(html).toContain("--brand-grad");
   });
@@ -197,17 +198,17 @@ describe("UI 一致性 · 页脚 build 标记", () => {
     __test = win.__test;
   });
 
-  it("#main > .foot 文本含 b20260815a", () => {
+  it("#main > .foot 文本含 b20260815b", () => {
     __test.render();
     const foot = win.document.querySelector("#main > .foot");
     expect(foot).toBeTruthy();
-    expect(foot.textContent).toMatch(/v1\.9\.5 · b20260815a/);
+    expect(foot.textContent).toMatch(/v1\.9\.7 · b20260815b/);
   });
 
-  it("openDrawer() 后 #drawer > .foot 文本含 b20260815a", () => {
+  it("openDrawer() 后 #drawer > .foot 文本含 b20260815b", () => {
     __test.openDrawer();
     const foot = win.document.querySelector("#drawer > .foot");
     expect(foot).toBeTruthy();
-    expect(foot.textContent).toMatch(/b20260815a/);
+    expect(foot.textContent).toMatch(/b20260815b/);
   });
 });

@@ -121,11 +121,12 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 100dvh 渐进增强：移动端地址栏收起/展开时视口高度变化，dvh 跟随实际动态视口，消除整页跳动；
    不支持 dvh 的旧内核自动回退到前一行的 100vh */
 .app{display:flex;flex-direction:column;height:100vh;height:100dvh}
-/* 单行顶栏：品牌 + spacer + 系统级按钮居右（padding 统一 space-3，各断点高度一致=61px，见 --topbar-h 令牌） */
+/* 单行顶栏：品牌 + spacer + 系统级按钮居右（padding 统一 space-3，各断点高度一致=61px，见 --topbar-h 令牌）
+   v1.9.7：背景改 --side-bg（与侧栏同灰）——原 --panel 白与右栏/白卡同色，顶栏/正文/右栏三区不辨界限；
+   现为「顶+侧灰框 → 正文浅灰 → 右栏白」三层结构，暗色/高对比度/护眼主题经同名令牌自动同步 */
 .topbar{display:flex;flex-direction:row;align-items:center;gap:var(--space-3);
   padding:var(--space-3) var(--space-6);
-  background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0;
-  backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px)}
+  background:var(--side-bg);border-bottom:1px solid var(--line);flex-shrink:0}
 /* 正文工具行（原顶栏第二行，移至主区上方，小而鲜明） */
 .toolbar-row{display:flex;align-items:center;gap:var(--space-2);
   padding:var(--space-2) var(--space-5);
@@ -154,6 +155,23 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   transform:translateY(-50%);width:1px;height:14px;background:var(--line);pointer-events:none}
 /* “更多”按钮：跟随搜索按钮居右，与搜索按钮保持小间距（无竖线分隔，避免视觉过密） */
 .toolbar-row > #btnMore{flex-shrink:0}
+/* ===== v1.9.7 正文顶部消息提示栏（toolbar-row 基础 + msg-bar 覆盖为「铃铛+预览」形态） ===== */
+.msg-bar > :first-child{margin-left:0} /* 覆盖工具行居右规则：铃铛居左 */
+.msg-bar .msg-bell{flex-shrink:0}
+.msg-bar .msg-preview{flex:1;min-width:0;text-align:left;background:transparent;
+  border:none;color:var(--text-dim);font-size:var(--fs-xs);padding:4px var(--space-2);
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  border-radius:var(--radius-md)}
+.msg-bar .msg-preview:hover{background:var(--surface-hover);color:var(--text)}
+/* 消息中心面板内联形态（正文流内展开，替代原 fixed 下拉） */
+.msg-panel-inline{position:static;width:100%;max-width:none;max-height:320px;
+  border-radius:0;border-left:none;border-right:none;box-shadow:none}
+/* ===== v1.9.7 专注工具浮层（侧栏「工具」组弹出，fixed 定位由 JS 锚定按钮右侧） ===== */
+.tool-pop{position:fixed;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-3);z-index:var(--z-popover);
+  padding:var(--space-3);min-width:250px}
+.tool-pop .tool-pop-title{font-size:var(--fs-xs);font-weight:600;color:var(--muted);
+  margin-bottom:var(--space-2)}
 /* 更多工具下拉菜单：次常用工具收起于此（fixed 定位，JS 计算坐标） */
 .more-menu{position:fixed;background:var(--panel);border:1px solid var(--line);
   border-radius:var(--radius-lg);box-shadow:var(--shadow-3);z-index:var(--z-popover);
@@ -256,6 +274,8 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .page-head h2{margin:0;font-size:var(--fs-xl);font-weight:600;letter-spacing:-.01em}
 .page-head .sub{margin:2px 0 0;font-size:var(--fs-sm);color:var(--muted)}
 .page-head .ph-act{flex-shrink:0;display:flex;align-items:center;gap:var(--space-2)}
+/* v1.9.7：场景页标题独立成卡（renderSceneHead）——page-head 装进 .card 后取消自带下边距，标题与下方内容块彻底分离 */
+.sc-page-head{margin-bottom:0}
 
 /* ===== 主内容区 ===== */
 .main{flex:1;overflow:auto;padding:var(--space-6) var(--space-7);min-width:0;
@@ -2018,8 +2038,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <div class="app">
   <div class="topbar">
     <!-- 单行：品牌 + spacer + 系统级按钮居右（命令/主题/消息/安装）；指南已迁移至侧栏底部 -->
-    <!-- v1.9.5：品牌图标=习惯链+对勾（与 icon.svg 一致），替换字母 A -->
-    <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="15" cy="24" rx="6" ry="9.5"/><ellipse cx="24" cy="24" rx="6" ry="9.5"/><ellipse cx="33" cy="24" rx="6" ry="9.5"/><path d="M30.5 25.5 32.7 27.8 35.8 22"/></svg></span> Agent 工作台</div>
+    <!-- v1.9.7：品牌图形「引力环」——开口圆环（主循环）+ 核心圆点（用户中枢）+ 环口外节点（环绕的 Agent）。
+         定制几何（非图标库字形），与 icon.svg 同构，不易与他牌重复 -->
+    <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> Agent 工作台</div>
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
     <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南" style="display:none">
@@ -2028,9 +2049,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></button>
     <button class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
-    <!-- 系统级消息中心：未读角标 + 下拉面板（替代 v1.4 横幅 banner） -->
-    <button class="tbtn" id="btnMessages" title="消息" aria-label="消息">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="lbl">消息</span><span class="badge" id="msgBadge" style="display:none"></span></button>
+    <!-- v1.9.7：消息按钮迁至正文顶部「消息提示栏」（#msgBar 内 #btnMessages，a11y 契约保持：aria-label + svg aria-hidden） -->
     <!-- 设置已迁移至侧栏底部（id="btnGear" 保留，data-gear 事件委托 × openDrawer） -->
     <button class="tbtn" id="btnDownload" title="导出数据" aria-label="导出数据">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl">下载</span></button>
@@ -2050,35 +2069,25 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="body">
     <nav class="side" id="side"></nav>
     <div class="main-wrap">
-      <!-- 正文第一行：应用级工具（原顶栏第二行，小而鲜明） -->
-      <div class="toolbar-row">
-      <!-- v1.6-B 生产力工具：番茄钟 / 时间追踪 / 日历视图入口 -->
-      <div class="pomo-widget" id="pomoWidget" role="group" aria-label="番茄钟" title="番茄钟">
-        <span class="pomo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
-        <span class="pomo-display" id="pomoDisplay" aria-live="polite">空闲 25:00</span>
-        <span class="pomo-count" id="pomoCount" aria-label="今日番茄完成数">0</span>
-        <span class="pomo-actions">
-          <button type="button" id="btnPomoStart" class="primary" aria-label="开始番茄钟">开始</button>
-          <button type="button" id="btnPomoStop" class="danger" aria-label="停止番茄钟">停止</button>
-        </span>
+      <!-- v1.9.7 消息提示栏（原工具行位置）：铃铛 + 未读角标 + 最新消息预览，点击展开下方消息列表。
+           工具（番茄钟/时间追踪/日历/搜索/更多）迁至侧栏「工具」组，浮层容器见 .tool-pop -->
+      <div class="toolbar-row msg-bar" id="msgBar" role="region" aria-label="消息通知栏">
+        <button class="tbtn msg-bell" id="btnMessages" type="button" title="消息" aria-label="消息">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="badge" id="msgBadge" style="display:none"></span></button>
+        <button class="msg-preview" id="msgPreview" type="button" aria-live="polite">暂无消息</button>
       </div>
-      <div class="tracker-widget" id="trackerWidget" role="group" aria-label="时间追踪" title="时间追踪">
-        <span class="tracker-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg></span>
-        <span class="tracker-display" id="trackerDisplay" aria-live="polite">00:00:00</span>
-        <span class="tracker-actions">
-          <button type="button" id="btnTrackerPause" class="warn" disabled aria-label="暂停时间追踪">暂停</button>
-          <button type="button" id="btnTrackerStop" class="danger" disabled aria-label="停止时间追踪">停止</button>
-        </span>
+      <!-- 消息中心列表：内联展开（原 fixed 下拉迁移，ID/结构不变，事件绑定沿用） -->
+      <div class="msg-panel msg-panel-inline" id="msgPanel" style="display:none" role="dialog" aria-label="消息中心" aria-live="polite">
+        <div class="msg-panel-header">
+          <span class="msg-panel-title">消息</span>
+          <div class="msg-panel-actions">
+            <button id="msgMarkAllRead" class="msg-mini-btn" aria-label="全部标记为已读">全部已读</button>
+            <button id="msgClearAll" class="msg-mini-btn" aria-label="清空所有消息">清空</button>
+          </div>
+        </div>
+        <div class="msg-list" id="msgList"></div>
       </div>
-      <button class="tbtn cal-btn" id="btnCalendar" title="日历视图" aria-label="日历视图">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="lbl">日历</span></button>
-      <!-- v1.6-D 知识管理入口：全文搜索（常用） -->
-      <button class="tbtn search-btn" id="btnSearchTop" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl">搜索</span></button>
-      <!-- 更多工具：收起次常用工具（甘特/导图/仪表盘/笔记/自动化/协作/分享），点击弹出下拉菜单 -->
-      <button class="tbtn more-btn" id="btnMore" title="更多工具" aria-label="更多工具" aria-haspopup="true" aria-expanded="false">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span class="lbl">更多</span></button>
-      </div><!-- /toolbar-row -->
       <!-- 更多工具下拉菜单：次常用工具收起于此（按钮 id/class 与原 toolbar-row 中保持一致，JS 事件绑定无需改动） -->
       <div class="more-menu" id="moreMenu" role="menu" aria-label="更多工具" style="display:none">
         <button class="tbtn gantt-btn" id="btnGantt" role="menuitem" title="甘特图" aria-label="甘特图">
@@ -2133,16 +2142,32 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </div>
 </div>
 
-<!-- 系统级消息中心：下拉面板（替代 v1.4 banner 横幅） -->
-<div class="msg-panel" id="msgPanel" style="display:none" role="dialog" aria-label="消息中心" aria-live="polite">
-  <div class="msg-panel-header">
-    <span class="msg-panel-title">消息</span>
-    <div class="msg-panel-actions">
-      <button id="msgMarkAllRead" class="msg-mini-btn" aria-label="全部标记为已读">全部已读</button>
-      <button id="msgClearAll" class="msg-mini-btn" aria-label="清空所有消息">清空</button>
-    </div>
+<!-- v1.9.7：消息中心面板已迁至正文顶部（#msgBar 下方内联展开），此处原 fixed 下拉已移除 -->
+
+<!-- v1.9.7 专注工具浮层：番茄钟/时间追踪从工具行迁至侧栏「工具」组，点侧栏项弹出（fixed 定位由 JS 计算）。
+     小件 DOM 保持原 id/class，init 阶段的绑定（btnPomoStart 等）不受位置影响 -->
+<div class="tool-pop" id="pomoPop" style="display:none" role="dialog" aria-label="番茄钟">
+  <div class="tool-pop-title">番茄钟</div>
+  <div class="pomo-widget" id="pomoWidget" role="group" aria-label="番茄钟">
+    <span class="pomo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+    <span class="pomo-display" id="pomoDisplay" aria-live="polite">空闲 25:00</span>
+    <span class="pomo-count" id="pomoCount" aria-label="今日番茄完成数">0</span>
+    <span class="pomo-actions">
+      <button type="button" id="btnPomoStart" class="primary" aria-label="开始番茄钟">开始</button>
+      <button type="button" id="btnPomoStop" class="danger" aria-label="停止番茄钟">停止</button>
+    </span>
   </div>
-  <div class="msg-list" id="msgList"></div>
+</div>
+<div class="tool-pop" id="trackerPop" style="display:none" role="dialog" aria-label="时间追踪">
+  <div class="tool-pop-title">时间追踪</div>
+  <div class="tracker-widget" id="trackerWidget" role="group" aria-label="时间追踪">
+    <span class="tracker-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+    <span class="tracker-display" id="trackerDisplay" aria-live="polite">00:00:00</span>
+    <span class="tracker-actions">
+      <button type="button" id="btnTrackerPause" class="warn" disabled aria-label="暂停时间追踪">暂停</button>
+      <button type="button" id="btnTrackerStop" class="danger" disabled aria-label="停止时间追踪">停止</button>
+    </span>
+  </div>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -2786,10 +2811,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.9.5";
+const VERSION = "1.9.7";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260815a";
+const BUILD_TAG = "20260815b";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -6315,10 +6340,22 @@ function renderSide(){
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg><span class="nm">AI 配置</span></button>`;
   const pluginBtn = `<button class="nav-item${_pluginActive}" data-pluginpage="1" id="sideBtnPlugin" style="--sc:#8b5cf6" title="插件市场" aria-label="插件市场">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg><span class="nm">插件市场</span></button>`;
-  // 三组分割：监控组(总览/统计/回收站) → 场景组(场景项) → 系统组(AI 配置/插件市场/设置/指南)，组间用分组小标题 .nav-group（v1.9.5）
+  // v1.9.7：工具组（原正文工具行迁入）——番茄钟/时间追踪弹出浮层，日历/搜索/更多打开对应弹窗
+  const pomoSideBtn = `<button class="nav-item" data-pomo="1" style="--sc:#e0592a" title="番茄钟" aria-label="番茄钟">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg><span class="nm">番茄钟</span><span class="side-badge" id="sidePomoBadge" style="display:none"></span></button>`;
+  const trackerSideBtn = `<button class="nav-item" data-tracker="1" style="--sc:#0e7c66" title="时间追踪" aria-label="时间追踪">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg><span class="nm">时间追踪</span><span class="side-badge" id="sideTrackerBadge" style="display:none"></span></button>`;
+  const calSideBtn = `<button class="nav-item" data-cal="1" style="--sc:#5b21b6" title="日历视图" aria-label="日历视图">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nm">日历</span></button>`;
+  const searchSideBtn = `<button class="nav-item" data-searchtop="1" style="--sc:#0a6cbd" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="nm">搜索</span></button>`;
+  const moreSideBtn = `<button class="nav-item" data-moretool="1" style="--sc:var(--muted)" title="更多工具（甘特/导图/仪表盘/笔记等）" aria-label="更多工具" aria-haspopup="true" aria-expanded="false">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span class="nm">更多</span></button>`;
+  // 四组分割：监控组(总览/统计/回收站) → 场景组(场景项) → 工具组(番茄钟/时间追踪/日历/搜索/更多) → 系统组(AI 配置/插件市场/设置/指南)
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML +
     '<div class="nav-group">监控</div>' + overview + statsBtn + recycleBtn +
     '<div class="nav-group">场景</div>' + items +
+    '<div class="nav-group">工具</div>' + pomoSideBtn + trackerSideBtn + calSideBtn + searchSideBtn + moreSideBtn +
     '<div class="nav-group">系统</div>' + aiBtn + pluginBtn + gearBtn + helpBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
@@ -6328,6 +6365,16 @@ function renderSide(){
     if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
     if(b.dataset.aipage){ if(typeof openAiPage === "function") openAiPage(); return; }
     if(b.dataset.pluginpage){ if(typeof openPluginPage === "function") openPluginPage(); return; }
+    // v1.9.7：工具组——番茄钟/时间追踪切换浮层；日历/搜索/更多复用原顶栏处理器
+    if(b.dataset.pomo){ if(typeof toggleToolPop === "function") toggleToolPop("pomoPop", b); return; }
+    if(b.dataset.tracker){ if(typeof toggleToolPop === "function") toggleToolPop("trackerPop", b); return; }
+    if(b.dataset.cal){
+      var _cm = $("#calendarModal");
+      if(_cm){ var _cb = $("#calendarModalBody"); if(_cb) _cb.innerHTML = sanitizeHtml(renderCalendarView(0)); _cm.classList.add("show"); }
+      return;
+    }
+    if(b.dataset.searchtop){ if(typeof openSearchModal === "function") openSearchModal(); return; }
+    if(b.dataset.moretool){ if(typeof openMoreMenuFrom === "function") openMoreMenuFrom(b); return; }
     setActive(b.dataset.sc); render();
   });
 }
@@ -7809,7 +7856,7 @@ function renderStats(){
   // 当前连续：所有已完成任务按天聚合，从今天（今天没完成则从昨天）往前数连续天数
   const daySet = new Set();
   getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt).forEach(t => daySet.add(_ymd(new Date(t.doneAt))));
-  let curD = new Date(today0);
+  const curD = new Date(today0);
   if(!daySet.has(_ymd(curD))) curD.setDate(curD.getDate() - 1);
   let currentStreak = 0;
   while(daySet.has(_ymd(curD))){ currentStreak++; curD.setDate(curD.getDate() - 1); }
@@ -8374,9 +8421,20 @@ function _updateKanbanVScroll(viewport, sc, st){
   items.style.top = range.offsetY + "px";
 }
 /**
- * 渲染场景主区 HTML（任务看板 + 资料库 + 场景专属卡片 + AI 对话）
+ * v1.9.7 场景页标题块：独立内容卡（消息提示栏正下方），不再与任务看板内容粘连。
+ * 复用统一页面头 page-head 视觉语言（与设置/统计/回收站一致），图标徽章取场景语义色。
  * @returns {string} HTML 字符串
  */
+function renderSceneHead(){
+  const s = SCENARIOS[active];
+  if(!s) return "";
+  const open = getActiveTasks().filter(x=>x.sc===active && x.status!=="done");
+  return `<div class="card"><header class="page-head sc-page-head">
+    <span class="ph-ic" style="background:${s.color}1f;color:${s.color}" aria-hidden="true">${s.icon || ""}</span>
+    <div class="ph-tx"><h2>${esc(s.name)} · 任务看板</h2>
+      <p class="sub">${open.length} 项待办 · 带截止日期的任务会汇总到下方「今天要处理」</p></div>
+  </header></div>`;
+}
 function renderMainHTML(){
   const s = SCENARIOS[active];
   const tasksAll = getActiveTasks().filter(x=>x.sc===active);
@@ -8439,9 +8497,8 @@ function renderMainHTML(){
   // 主内容区不再渲染 chatCard（避免重复 DOM id）；renderChat() 直接渲染到右侧面板的 #chat
   const chatCard = "";
 
-  return `<div class="card"><h2>${SCENARIOS[active].icon || ""} ${s.name} · 任务看板</h2>
-      <p class="sub">${open.length} 项待办 · 带截止日期的任务会汇总到顶部「今天要处理」</p>
-      ${taskForm}${filterHtml}${kanban}</div>
+  // v1.9.7：场景标题已抽为独立内容卡 renderSceneHead()（render() 中置于 renderToday 之前），看板卡不再带头部
+  return `<div class="card">${taskForm}${filterHtml}${kanban}</div>
      <div class="card"><h2>${s.name} · ${rec.label}</h2>
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
       ${renderSceneSections(active)}
@@ -10768,7 +10825,8 @@ function render(){
     if(active==="stats"){ renderStats(); appendFoot(); return; }
     if(active==="recycle"){ openRecycle(); appendFoot(); return; }
     const cfg=getCfg();
-    $("#main").innerHTML = sanitizeHtml(renderToday() + renderMainHTML());
+    // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
+    $("#main").innerHTML = sanitizeHtml(renderSceneHead() + renderToday() + renderMainHTML());
     appendFoot();
     bindScenario();
     setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
@@ -11043,16 +11101,30 @@ function clearMessages(){
 function getUnreadCount(){
   return getMessages().filter(function(m){ return !m.read; }).length;
 }
+/* v1.9.7：正文消息提示栏预览文本（最新一条 + 未读数前缀；超长由 CSS ellipsis 截断，title 供悬停看全文） */
+function renderMsgBarPreview(){
+  var el = $("#msgPreview");
+  if(!el) return;
+  var msgs = getMessages();
+  if(!msgs.length){ el.textContent = "暂无消息"; el.removeAttribute("title"); return; }
+  var unread = getUnreadCount();
+  var m = msgs[0];
+  var text = (m.title || "新消息") + (m.body ? "：" + m.body : "");
+  el.textContent = (unread > 0 ? "[" + (unread > 99 ? "99+" : unread) + " 未读] " : "") + text;
+  el.title = text;
+}
 function updateMsgBadge(){
   var n = getUnreadCount();
   var badge = $("#msgBadge");
-  if(!badge) return;
-  if(n > 0){
-    badge.textContent = n > 99 ? "99+" : String(n);
-    badge.style.display = "";
-  } else {
-    badge.style.display = "none";
+  if(badge){
+    if(n > 0){
+      badge.textContent = n > 99 ? "99+" : String(n);
+      badge.style.display = "";
+    } else {
+      badge.style.display = "none";
+    }
   }
+  renderMsgBarPreview(); // 汇聚点：addMessage/markRead/clear 均经此刷新预览
 }
 function renderMsgPanel(){
   var list = getMessages();
@@ -11824,8 +11896,11 @@ async function saveCfg(){
       profiles,
       activeId
     });
-    // T4：主题三态持久化（light/dark/system）
-    const thSel=$("#cfgTheme"); if(thSel) cfg.theme = thSel.value;
+    // T4：主题三态持久化（light/dark/system）。
+    // v1.9.7：特殊主题（contrast/sepia/自定义）不写入 cfg.theme——它们由 setTheme 持久化到
+    // localStorage.theme（boot 按此复原）；写入 cfg 会被 applyTheme 误读导致重启后被冲掉
+    const thSel=$("#cfgTheme");
+    if(thSel && (thSel.value==="light"||thSel.value==="dark"||thSel.value==="system")) cfg.theme = thSel.value;
     // B8：AI 请求参数（超时秒数 / 温度）持久化；留空 = 用默认值（30s / 0.7），范围校验在 getAiParams 与主进程
     const toInp=$("#cfgAiTimeout"); if(toInp){ const v=toInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTimeoutSec=Number(v); else delete cfg.aiTimeoutSec; }
     const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
@@ -12722,10 +12797,7 @@ $("#btnMessages").onclick = function(e){
   if(!panel) return;
   if(panel.style.display === "none"){
     renderMsgPanel();
-    // 布局修复：面板顶部锚定到消息按钮下缘（原 CSS 固定 top:52px，
-    // 在 69px 顶栏下会向上盖住顶栏按钮约 17px；CSS 值仅作无 JS 时的兜底）
-    var btnR = this.getBoundingClientRect();
-    panel.style.top = Math.round(btnR.bottom + 6) + "px";
+    // v1.9.7：面板已内联于正文流（.msg-panel-inline 静态定位），无需 JS 计算 top
     panel.style.display = "";
     // 打开 1s 后标记所有已读（让用户先看到未读高亮）
     setTimeout(function(){
@@ -12850,6 +12922,84 @@ $("#btnRecover").onclick = recoverAutoBackup;
       moreBtn.setAttribute("aria-expanded", "false");
     }
   });
+})();
+/* ---------- v1.9.7 侧栏「工具」组：专注工具浮层 + 更多菜单（原顶栏 #btnMore 已随工具行移除，
+   setupMoreMenu 因 moreBtn 缺失自动 no-op；此处提供侧栏入口的打开/关闭全链路） ---------- */
+function _closeAllToolPops(){
+  $$(".tool-pop").forEach(function(p){ p.style.display = "none"; });
+  $$("#side [data-pomo], #side [data-tracker]").forEach(function(b){
+    try{ b.setAttribute("aria-expanded", "false"); }catch(e){ /* noop */ }
+  });
+}
+/* 切换番茄钟/时间追踪浮层：锚定侧栏按钮右侧（右缘溢出改左侧），再点同按钮=关闭 */
+function toggleToolPop(popId, btn){
+  var pop = document.getElementById(popId);
+  if(!pop || !btn) return;
+  var wasOpen = pop.style.display !== "none";
+  _closeAllToolPops();
+  if(wasOpen) return;
+  pop.style.display = "";
+  var r = btn.getBoundingClientRect();
+  var w = pop.offsetWidth || 250;
+  var left = r.right + 8;
+  if(left + w > window.innerWidth - 8) left = Math.max(8, r.left - w - 8);
+  pop.style.left = left + "px";
+  var top = Math.min(Math.max(8, r.top), Math.max(8, window.innerHeight - pop.offsetHeight - 8));
+  pop.style.top = top + "px";
+  try{ btn.setAttribute("aria-expanded", "true"); }catch(e){ /* noop */ }
+}
+/* 打开更多工具菜单（#moreMenu 复用，锚定侧栏按钮右侧；菜单内按钮事件绑定见上文） */
+function openMoreMenuFrom(btn){
+  var menu = $("#moreMenu");
+  if(!menu || !btn) return;
+  var wasOpen = menu.style.display !== "none";
+  menu.style.display = "none";
+  $$("#side [data-moretool]").forEach(function(b){
+    try{ b.setAttribute("aria-expanded", "false"); }catch(e){ /* noop */ }
+  });
+  if(wasOpen) return;
+  menu.style.display = "";
+  var r = btn.getBoundingClientRect();
+  var menuW = menu.offsetWidth || 140;
+  var left = r.right + 8;
+  if(left + menuW > window.innerWidth - 8) left = Math.max(8, r.left - menuW - 8);
+  menu.style.left = left + "px";
+  menu.style.top = Math.min(r.top, Math.max(8, window.innerHeight - menu.offsetHeight - 8)) + "px";
+  try{ btn.setAttribute("aria-expanded", "true"); }catch(e){ /* noop */ }
+}
+// 点击浮层/菜单外关闭（点侧栏对应按钮本身不视为"外部"，交由 toggle 逻辑处理）
+document.addEventListener("click", function(e){
+  var t = e.target;
+  var inToolBtn = !!(t && t.closest && t.closest("#side [data-pomo], #side [data-tracker], #side [data-moretool]"));
+  $$(".tool-pop").forEach(function(p){
+    if(p.style.display !== "none" && !p.contains(t) && !inToolBtn) p.style.display = "none";
+  });
+  var menu = $("#moreMenu");
+  if(menu && menu.style.display !== "none" && !menu.contains(t) && !inToolBtn){
+    menu.style.display = "none";
+    $$("#side [data-moretool]").forEach(function(b){
+      try{ b.setAttribute("aria-expanded", "false"); }catch(e2){ /* noop */ }
+    });
+  }
+});
+// Esc 一键收起浮层与菜单
+document.addEventListener("keydown", function(e){
+  if(e.key !== "Escape") return;
+  _closeAllToolPops();
+  var menu = $("#moreMenu");
+  if(menu) menu.style.display = "none";
+});
+// 菜单项点击后收起（委托：任一 .tbtn 被点即关闭）
+(function(){
+  var menu = $("#moreMenu");
+  if(menu) menu.addEventListener("click", function(e){
+    if(e.target && e.target.closest && e.target.closest(".tbtn")) menu.style.display = "none";
+  });
+})();
+// 消息预览文本也可点开消息中心（与铃铛同效）
+(function(){
+  var mp = $("#msgPreview");
+  if(mp) mp.onclick = function(){ var b = $("#btnMessages"); if(b) b.click(); };
 })();
 /* ---------- v1.5-A 语言切换绑定 ---------- */
 const _cfgLangSel = $("#cfgLang");
@@ -13033,19 +13183,26 @@ const _btnThemeImportConfirm = $("#btnThemeImportConfirm"); if(_btnThemeImportCo
 const _btnThemeImportCancel = $("#btnThemeImportCancel"); if(_btnThemeImportCancel) _btnThemeImportCancel.onclick = ()=>{
   const area = $("#themeImportArea"); if(area) area.style.display = "none";
 };
-/* 主题选择下拉即时切换（contrast/sepia/自定义即时生效，light/dark/system 走原 saveCfg 流程） */
+/* 主题选择下拉即时切换（v1.9.7 修复：所有主题统一即时生效。
+   原 bug：仅 contrast/sepia/custom 即时生效，light/dark/system 需点「保存设置」才有反应，
+   表现为「点暗色未生效」「高对比度后再点亮/暗未生效」。
+   统一路由：system → cfg+applyTheme（保留跟随系统语义）；其余 → setTheme（内部持久化+同步双状态源） */
 const _cfgThemeSel = $("#cfgTheme");
 if(_cfgThemeSel){
   _cfgThemeSel.onchange = ()=>{
     const v = _cfgThemeSel.value;
-    if(v === "contrast" || v === "sepia"){
-      if(typeof setTheme === "function") setTheme(v);
-      try{ toast("已切换为"+(v==="contrast"?"高对比度":"护眼")+"主题", "ok"); }catch(e){}
-    }else if(v !== "light" && v !== "dark" && v !== "system"){
-      // 自定义主题
-      if(typeof setTheme === "function") setTheme(v);
-      try{ toast("已应用自定义主题", "ok"); }catch(e){}
+    if(!v) return;
+    if(v === "system"){
+      const cfg = getCfg(); cfg.theme = "system";
+      try{ save(PREFIX+"cfg", cfg); }catch(e){}
+      try{ localStorage.setItem(PREFIX + "theme", "system"); }catch(e2){ /* 静默降级 */ }
+      applyTheme();
+      try{ toast("已切换为跟随系统主题", "ok"); }catch(e){}
+    }else{
+      if(typeof setTheme === "function") setTheme(v); // light/dark/contrast/sepia/自定义统一
+      try{ toast("已切换主题：" + (_cfgThemeSel.selectedOptions[0] && _cfgThemeSel.selectedOptions[0].textContent || v), "ok"); }catch(e){}
     }
+    try{ renderMsgBarPreview(); }catch(e3){ /* 消息栏预览非关键路径 */ }
   };
 }
 
@@ -13675,7 +13832,15 @@ seed();
   // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
   initIdb().catch(() => {});
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
-  applyTheme();
+  // v1.9.7 修复：恢复上次主题。setTheme 路径（contrast/sepia/自定义）持久化于 localStorage.theme，
+  // 原 boot 只调 applyTheme()（读 cfg.theme）会把特殊主题冲回亮/暗——重启后高对比度/护眼丢失。
+  // 统一路由：特殊主题走 setTheme 复原；light/dark/system 走 applyTheme（system 保留跟随系统）。
+  const _savedTheme = (typeof getCurrentTheme === "function") ? getCurrentTheme() : null;
+  if(_savedTheme && _savedTheme !== "light" && _savedTheme !== "dark" && _savedTheme !== "system"){
+    try{ setTheme(_savedTheme); }catch(e){ applyTheme(); }
+  }else{
+    applyTheme();
+  }
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
   try{ bindChatPanel(); }catch(e){ pushDiag("error","bindChatPanel init: "+(e&&e.message||e),{where:"bindChatPanel"}); } // 右侧 AI 聊天面板事件绑定（三栏布局第三栏，静态 HTML 一次性绑定）
   try{ setupModalA11yBase(); }catch(e){ pushDiag("error","modalA11y init: "+(e&&e.message||e),{where:"modalA11y"}); } // P0② 模态框统一 Esc/遮罩/焦点陷阱基座
@@ -16452,6 +16617,16 @@ function _pomoRender(){
   // 更新今日计数显示
   var cntEl = $("#pomoCount");
   if(cntEl) cntEl.textContent = String(getPomoCount());
+  // v1.9.7：同步侧栏「工具」组番茄钟入口的运行态徽标（运行中显示倒计时，空闲隐藏）
+  var sideBadge = $("#sidePomoBadge");
+  if(sideBadge){
+    if(_pomoState.mode === "focus" || _pomoState.mode === "break"){
+      sideBadge.textContent = text;
+      sideBadge.style.display = "";
+    }else{
+      sideBadge.style.display = "none";
+    }
+  }
 }
 /**
  * 内部：通知（复用 toast；toast 不可用时 no-op）
@@ -16558,6 +16733,17 @@ function _renderTrackerDisplay(ms){
   var h = Math.floor(s / 3600); s %= 3600;
   var m = Math.floor(s / 60); s %= 60;
   el.textContent = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  // v1.9.7：同步侧栏「工具」组时间追踪入口的运行态徽标（计时中显示 MM:SS，停止隐藏）
+  var sideBadge = $("#sideTrackerBadge");
+  if(sideBadge){
+    if(ms > 0){
+      var mm = h * 60 + m;
+      sideBadge.textContent = (mm > 0 ? String(mm) : "<1") + "分";
+      sideBadge.style.display = "";
+    }else{
+      sideBadge.style.display = "none";
+    }
+  }
 }
 /**
  * 内部：从 localStorage 读取某任务历史累计耗时

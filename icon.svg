@@ -6,11 +6,8 @@
     </linearGradient>
   </defs>
   <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#grad)"/>
-  <!-- 习惯链：三环相扣 + 完成对勾（v1.9.5 品牌图形） -->
-  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
-    <ellipse cx="152" cy="256" rx="62" ry="100"/>
-    <ellipse cx="256" cy="256" rx="62" ry="100"/>
-    <ellipse cx="360" cy="256" rx="62" ry="100"/>
-    <path d="M 330 264 L 356 292 L 396 228"/>
-  </g>
+  <!-- v1.9.7 品牌图形「引力环」：开口圆环=工作台主循环，核心圆点=用户中枢，环口外节点=环绕的 Agent（与顶栏 logo 同构） -->
+  <path d="M426.4 194A181.3 181.3 0 1 1 318 85.6" fill="none" stroke="#ffffff" stroke-width="30" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="48" fill="#ffffff"/>
+  <circle cx="414.4" cy="97.6" r="37.3" fill="#ffffff"/>
 </svg>
