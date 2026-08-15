@@ -2,6 +2,18 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.9.8] - 2026-08-15
+
+### 信息架构重排（按设计图对齐）+ 正文顶部第二行重构
+
+- **侧栏四组对齐设计图**：监控/场景/工具/系统 → 全局(概览/统计/仓库)/场景(场景项)/功能(视图/番茄钟/时间追踪/搜索/更多/市场)/系统(AI 配置/设置/指南)；总览→概览、回收站→仓库，插件市场从系统组迁至功能组并改名「市场」，工具组更名功能组并新增「视图」项（=日历视图入口，未来可扩展为看板/列表/日历切换）
+- **折叠按钮迁至正文顶部第二行最左**：与设计图对齐；`#sideToggle` 从侧栏 `.side` 内迁出至 `.toolbar-row > #sideToggle`，`setupSideToggle` 事件委托从 `#side` 改为 `document` 监听 closest（#sideToggle），CSS 同步调整 width:100%→auto、margin-bottom:0 适应工具行
+- **大模型选择器从右侧 AI 聊天面板迁出至正文顶部第二行右侧**：与设计图对齐；新增 `.toolbar-model`（标签"模型" + select 容器），`#chatModelSelect` 仍为唯一 id，事件绑定（`bindChatPanel` 内 `refreshModelSelect` + onchange）不变；聊天面板头部清爽
+- **正文顶部第二行重布局**：`.toolbar-row` 不再是消息栏独占，拆为三段独立子元素——左侧折叠按钮（flex 0）+ 中部消息栏（flex 1 占满）+ 右侧大模型选择器（flex 0）；CSS 调整 `.toolbar-row > :first-child{margin-left:0}` 覆盖原居右规则，三段按 flex 自然排列
+- **版本统一 1.9.7→1.9.8**：六处版本号（package.json / package-lock.json / electron 两件 / src VERSION / agent-workbench.html VERSION）+ CACHE_VERSION → v1.9.8-20260815c（页脚显示 `v1.9.8 · b20260815c`）
+
+---
+
 ## [v1.9.7] - 2026-08-15
 
 ### 主题切换修复 + 信息架构重排 + 品牌图形更新
