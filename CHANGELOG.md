@@ -2,6 +2,33 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.11.2] - 2026-08-16
+
+### 认证校验补码 + 半成品功能激活（依据 docs/半成品功能完善路线图.md）
+
+**L4 Webhook SSRF 校验补码（遗留 L 项清零）**
+- 发现比审查报告更深一层：WHATWG URL 会把数值形主机自动规范化（`https://2130706433/` → hostname `127.0.0.1`），真实逃逸通道是撞 dev 白名单而非绕过正则
+- 新策略：回环目标（localhost/127/8/[::1]，含一切数值形伪装与 `::ffff:` 映射）仅允许 http；新增 inet_aton 兼容解析器 + IPv6 展开 + 统一黑名单（含 CGNAT 100.64/10、组播 ≥224）
+- 新增 `tests/l4-webhook-ssrf.test.js`（36 用例：28 拦截 + 8 放行）
+
+**任务事件源接线（激活自动化规则引擎 + Webhook 订阅总线）**
+- 勘察证实：规则引擎/cron/webhook 出站/HMAC 签名/DLQ 重试引擎全部真实，但任务写路径从不发事件——规则引擎"聋"、`webhookEmit` 全文件零调用
+- 新增 `_emitTaskEvent` 统一分发器：任务完成后并行喂规则引擎与订阅总线，带防重入护栏（规则动作的连锁写不再二次分发，防循环）
+- 新增 `tests/automation-emit.test.js`（规则触发/关键词过滤/防重入/总线投递 4 用例）
+
+**生物识别 WebAuthn 实现（块 11 转正）**
+- 此前 `biometricSetAuthImpl` 无人注入、`biometricAuthenticate` 恒 not_available——状态机空转
+- 新增 `_webauthnBioImpl`（navigator.credentials 标准能力，零依赖，Windows Hello/Touch ID 可用）；不支持环境语义不变
+- 新增 `tests/biometric-webauthn.test.js`（可用性/成功/取消/注册持久化 5 用例）
+
+**OAuth2 回调闭环（块 5 断头接通）**
+- 此前 PKCE/exchange/state 防伪全真但两头断：不跳转、不解析 `?code=`
+- 新增 `_oauth2HandleCallback`（startup 挂接）：`?code+state` → 一次性 state 校验 → 换 token 落盘 → 清 URL；正常启动零开销
+- 新增 `tests/oauth2-callback.test.js`（完整闭环/state 防伪/error 处理 4 用例）
+
+**半成品功能完善路线图（设计文档存档）**
+- `docs/半成品功能完善路线图.md`：11 个功能块逐块接线事实表（修正审查报告"全模拟"的过粗结论——块 1/6/8 大部分真实，共同短板是事件源与 UI 入口）+ 三档处置（转正接线/补面板/按需立项）+ 四期计划
+
 ## [v1.11.1] - 2026-08-16
 
 ### 安全与可靠性修复轮（对照《项目全景审查报告》20 项风险清单）

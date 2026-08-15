@@ -3186,10 +3186,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.11.1";
+const VERSION = "1.11.2";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260815e";
+const BUILD_TAG = "20260815f";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -6141,6 +6141,32 @@ async function e2eeDecryptWithDevice(ciphertext, iv){
  * @param {string} id - 任务 id
  * @returns {boolean} 是否成功标记完成（任务不存在或已完成返回 false）
  */
+/* ---------- v1.11.2 半成品激活（一）：任务事件源接线 ----------
+ * 勘察结论：自动化规则引擎（evaluateTriggers）与 Webhook 订阅总线（webhookEmit）
+ * 引擎层全真，但任务写路径从不发事件——规则引擎"聋"、总线空转。
+ * 本分发器在任务关键动作后同时喂两者；防重入护栏阻止规则动作/联动再次触发的循环。 */
+var _automationEvaluating = false; // 防重入：规则/联动动作产生的写不再次分发
+function _emitTaskEvent(type, task){
+  if(_automationEvaluating) return;
+  var hasRules = (typeof evaluateTriggers === "function");
+  var hasBus = (typeof webhookEmit === "function");
+  if(!hasRules && !hasBus) return;
+  var ev;
+  try{
+    ev = { type: type, scenario: (task && task.sc) || "", task: (task ? JSON.parse(JSON.stringify(task)) : null), ts: Date.now() };
+  }catch(e){ return; }
+  _automationEvaluating = true;
+  try{
+    if(hasRules){
+      try{ evaluateTriggers(ev); }
+      catch(e1){ try{ pushDiag("error", "emitTaskEvent rules: " + (e1 && e1.message || e1), { where: "automation" }); }catch(e2){} }
+    }
+    if(hasBus){
+      try{ webhookEmit(type, { scenario: ev.scenario, task: ev.task }); }
+      catch(e3){ try{ pushDiag("error", "emitTaskEvent bus: " + (e3 && e3.message || e3), { where: "webhook-bus" }); }catch(e4){} }
+    }
+  }finally{ _automationEvaluating = false; }
+}
 function completeTask(id){
   const tasks = getTasks(); const i = tasks.findIndex(t=>t.id===id);
   if(i < 0) return false;
@@ -6149,6 +6175,7 @@ function completeTask(id){
   t.status = "done"; t.doneAt = Date.now();
   setTasks(tasks);
   runLinks(t);
+  _emitTaskEvent("task_complete", t); // v1.11.2：任务完成事件 → 自动化规则 + Webhook 总线
   return true;
 }
 /**
@@ -15235,6 +15262,8 @@ seed();
 
 (async function startup(){
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
+  // v1.11.2 认证补码：OAuth2 回调闭环——URL 带 ?code&state 时换 token（正常启动零开销，fire-and-forget）
+  try{ _oauth2HandleCallback().catch(function(e9){ try{ pushDiag("error", "oauth2 callback: "+(e9&&e9.message||e9), {where:"oauth2"}); }catch(e10){} }); }catch(_){ }
   // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
   initIdb().catch(() => {});
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
@@ -15583,7 +15612,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     parseCron, cronNextRun, addCronJob, removeCronJob, getCronJobs,
     startCronScheduler, stopCronScheduler,
     addWorkflow, runWorkflow, removeWorkflow, getWorkflows,
-    addWebhook, removeWebhook, getWebhooks, triggerWebhook, handleWebhookEvent,
+    addWebhook, removeWebhook, getWebhooks, triggerWebhook, handleWebhookEvent, _validateWebhookUrl,
     renderAutomationPanel, openAutomationModal, closeAutomationModal,
     _matchTrigger, _evalCondition, _cronTick,
     get _automationRules(){ return _automationRules; },
@@ -15846,7 +15875,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     oauth2GeneratePKCE, oauth2GeneratePKCEAsync,
     oauth2BuildAuthUrl, oauth2ValidateState, oauth2ExchangeCode, oauth2RefreshToken, oauth2RevokeToken,
     oauth2StoreToken, oauth2GetToken, oauth2RemoveToken, oauth2IsTokenExpired, oauth2EnsureFreshToken,
-    oauth2SetHttpClient,
+    oauth2SetHttpClient, _oauth2HandleCallback,
     _resetOAuth2, _resetOAuth2Providers, _resetOAuth2Tokens, _resetOAuth2States,
     get OAUTH2_PROVIDERS_KEY(){ return OAUTH2_PROVIDERS_KEY; },
     get OAUTH2_TOKENS_KEY(){ return OAUTH2_TOKENS_KEY; },
@@ -20346,16 +20375,125 @@ function getWebhooks(){
  */
 // [H1] Webhook URL 安全校验：仅允许 http/https 协议，过滤内网/链路本地/0.0.0.0 段，
 //     开发环境允许 localhost。防止 SSRF 攻击内网服务。
+// v1.11.2 [L4] 补码：原实现可被非标准 IP 字面量绕过——十进制整数（https://2130706433 → 127.0.0.1）、
+//     十六进制（0x7f000001 / 0x7f.0.0.1）、八进制（0177.0.0.1）、压缩点分（127.1）、
+//     IPv6 形态（[::ffff:127.0.0.1] 映射私网 / [fe80::1] 链路本地）。现按 inet_aton 兼容
+//     语义把一切数值形主机统一解析为 IPv4 字节再过黑名单；含字母的普通域名不受影响。
+//     已知残留：DNS rebinding（域名解析到内网 IP）需解析后校验，浏览器 fetch 无注入点，接受并文档化。
+
+/** inet_aton 兼容：数值形主机名 → IPv4 四字节数组；非数值形返回 null（普通域名走原路径） */
+function _whHostToIpv4(h){
+  if(!h || typeof h !== "string") return null;
+  h = h.toLowerCase();
+  // 纯十进制整数：整个 32 位（https://2130706433/ → 127.0.0.1）
+  if(/^[0-9]{1,10}$/.test(h)){
+    var n = parseInt(h, 10);
+    if(n > 0xFFFFFFFF) return null;
+    return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+  }
+  // 点分 2~4 段：每段允许十进制 / 0x 十六进制 / 前导 0 八进制；末段可压缩（127.1 → 127.0.0.1）
+  var parts = h.split(".");
+  if(parts.length < 2 || parts.length > 4) return null;
+  var vals = [];
+  for(var i = 0; i < parts.length; i++){
+    var p = parts[i], v = null;
+    if(/^0x[0-9a-f]{1,8}$/.test(p)) v = parseInt(p.slice(2), 16);
+    else if(/^0[0-7]{1,10}$/.test(p)) v = parseInt(p.slice(1), 8);
+    else if(/^[0-9]{1,10}$/.test(p)) v = parseInt(p, 10);
+    else return null; // 含字母/非法字符 → 不是数值形主机
+    if(!isFinite(v)) return null;
+    vals.push(v);
+  }
+  var need = 4 - vals.length; // 末段需展开成的字节数
+  var last = vals.pop();
+  if(need > 0){
+    if(last >= (1 << (8 * need))) return null; // 末段值装不进剩余字节 → 非法
+    for(var j = need - 1; j >= 0; j--) vals.push((last >>> (8 * j)) & 255);
+  }else{
+    vals.push(last);
+  }
+  return vals.length === 4 ? vals : null;
+}
+
+/** IPv6 主机（URL.hostname 带方括号）展开为 8 组数值数组；::ffff:x.x.x.d 映射返回 {mapped:[a,b,c,d]} */
+function _whExpandIpv6(h){
+  if(!h || h.charAt(0) !== "[") return null;
+  var s = h.slice(1, h.length - 1).toLowerCase();
+  if(s.indexOf(":") === -1) return null;
+  // 映射地址 ::ffff:a.b.c.d
+  var m = s.match(/^::ffff:([0-9]{1,3}(?:\.[0-9]{1,3}){3})$/);
+  if(m){
+    var q = m[1].split(".").map(Number);
+    if(q.length === 4 && q.every(function(x){ return x >= 0 && x <= 255; })) return { mapped: q };
+    return null;
+  }
+  // 展开 "::"
+  var head = [], tail = [];
+  var halves = s.split("::");
+  if(halves.length > 2) return null; // 多于一个 ::
+  if(halves.length === 2){
+    head = halves[0] ? halves[0].split(":") : [];
+    tail = halves[1] ? halves[1].split(":") : [];
+    if(head.length + tail.length > 7) return null;
+    while(head.length + tail.length < 8) head.push("0");
+  }else{
+    head = s.split(":");
+    if(head.length !== 8) return null;
+  }
+  var groups = head.concat(tail);
+  var out = [];
+  for(var i = 0; i < 8; i++){
+    if(!/^[0-9a-f]{1,4}$/.test(groups[i])) return null;
+    out.push(parseInt(groups[i], 16));
+  }
+  return { groups: out };
+}
+
+/** IPv4 字节是否落在禁用段（回环/私网/链路本地/CGNAT/组播保留） */
+function _whIpv4Blocked(b){
+  if(b[0] === 0) return true;                                   // 0.0.0.0/8
+  if(b[0] === 10) return true;                                  // 10/8
+  if(b[0] === 100 && b[1] >= 64 && b[1] <= 127) return true;    // 100.64/10 CGNAT
+  if(b[0] === 127) return true;                                 // 127/8（dev 白名单 127.0.0.1 在此之前放行）
+  if(b[0] === 169 && b[1] === 254) return true;                 // 169.254/16
+  if(b[0] === 172 && b[1] >= 16 && b[1] <= 31) return true;     // 172.16/12
+  if(b[0] === 192 && b[1] === 168) return true;                 // 192.168/16
+  if(b[0] >= 224) return true;                                  // 组播/保留
+  return false;
+}
+
 function _validateWebhookUrl(urlStr){
   try{
     var u = new URL(urlStr);
     if (u.protocol !== "https:" && u.protocol !== "http:") return false;
     var h = u.hostname;
-    // 开发环境允许 localhost
-    if (h === "localhost" || h === "127.0.0.1" || h === "::1") return true;
+    // v1.11.2 [L4]：回环目标仅允许 http（本地开发）。注意 WHATWG URL 会把数值形主机
+    // 自动规范化（https://2130706433 → hostname "127.0.0.1"，含 0x 十六/0 八进制/127.1 压缩），
+    // 故回环判定必须覆盖 127/8 段与 [::1]，否则数值形伪装会经 dev 白名单放行 https 回环。
+    var v4 = _whHostToIpv4(h);
+    var v6 = _whExpandIpv6(h);
+    var isLoopback = (h === "localhost")
+      || (v4 && v4[0] === 127)
+      || (v6 && v6.groups && v6.groups[0]===0 && v6.groups[1]===0 && v6.groups[2]===0 && v6.groups[3]===0
+          && v6.groups[4]===0 && v6.groups[5]===0 && v6.groups[6]===0 && v6.groups[7]===1);
+    if(isLoopback) return u.protocol === "http:";
     // F6：http:// 仅限本机——公网 http 在浏览器/Electron 下都会被 CSP connect-src 'self' https: 静默拦截，直接拒绝避免「校验通过却发不出去」
     if (u.protocol === "http:") return false;
-    // 过滤内网地址段（RFC1918）与链路本地（169.254/16）及 0.0.0.0/8
+    // v1.11.2 [L4]：数值形/IPv6 主机统一过黑名单（双保险——多数引擎已在 URL 层规范化为点分十进制）
+    if(v4) return !_whIpv4Blocked(v4);
+    if(v6){
+      if(v6.mapped) return !_whIpv4Blocked(v6.mapped);
+      var g = v6.groups;
+      // 序列化后的映射地址形如 ::ffff:c0a8:1（URL 层会把点分形式规整为十六进制组）
+      if(g[0]===0 && g[1]===0 && g[2]===0 && g[3]===0 && g[4]===0 && g[5]===0xffff){
+        return !_whIpv4Blocked([(g[6] >>> 8) & 255, g[6] & 255, (g[7] >>> 8) & 255, g[7] & 255]);
+      }
+      if(g[0] === 0xfe80) return false;                        // fe80::/10 链路本地（近似首组判断）
+      if((g[0] & 0xfe00) === 0xfc00) return false;             // fc00::/7 ULA
+      if((g[0] & 0xff00) === 0xff00) return false;             // ff00::/8 组播
+      return true;
+    }
+    // 过滤内网地址段（RFC1918）与链路本地（169.254/16）及 0.0.0.0/8（域名含字母的兜底正则）
     if (/^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)/.test(h)) return false;
     if (/^0\./.test(h)) return false;
     return true;
@@ -30014,6 +30152,37 @@ function oauth2ValidateState(state){
   };
 }
 
+/* ---------- v1.11.2 认证补码：OAuth2 回调闭环 ----------
+ * 此前流程两头断：oauth2BuildAuthUrl 只返回 URL 不跳转，页面加载也不解析 ?code=。
+ * 本函数在启动时调用：仅当 URL 带 code+state（或 error）才激活，正常启动零开销；
+ * state 经 oauth2ValidateState 一次性校验（防 CSRF/重放），非本应用发起的回调忽略。 */
+async function _oauth2HandleCallback(){
+  try{
+    if(typeof location === "undefined") return false;
+    var search = location.search || "";
+    if(search.indexOf("code=") === -1 && search.indexOf("error=") === -1) return false;
+    var q = new URLSearchParams(search);
+    var code = q.get("code"), state = q.get("state"), err = q.get("error");
+    var cleanUrl = function(){ try{ history.replaceState(null, "", location.pathname); }catch(e5){} };
+    if(err){
+      cleanUrl();
+      try{ toast("授权失败：" + (q.get("error_description") || err), "error"); }catch(e){}
+      return false;
+    }
+    if(!code || !state) return false;
+    var st = oauth2ValidateState(state);
+    if(!st){ cleanUrl(); return false; } // 非本应用发起（或已用过）的回调：忽略
+    var redirectUri = location.origin + location.pathname;
+    var token = null;
+    try{
+      token = await oauth2ExchangeCode(st.provider, code, { codeVerifier: st.pkceVerifier, redirectUri: redirectUri });
+    }catch(e2){ token = null; }
+    cleanUrl(); // 清 query 防刷新重复处理
+    try{ toast(token ? ("已连接 " + st.provider) : ("授权码交换失败：" + st.provider), token ? "ok" : "error"); }catch(e3){ /* noop */ }
+    return !!token;
+  }catch(e){ return false; }
+}
+
 /**
  * 用授权码交换 token
  * @param {string} providerName - provider 名称
@@ -35695,6 +35864,59 @@ function biometricSetAuthImpl(impl){
 function biometricGetAuthImpl(){
   return _bioAuthImpl;
 }
+
+/* ---------- v1.11.2 认证补码：WebAuthn 真实实现（标准浏览器能力，零依赖） ----------
+ * 此前 _bioAuthImpl 无人注入，biometricAuthenticate 恒 not_available——状态机空转。
+ * 本实现按 impl 契约（(opts) => Promise<{result, type, availability?, error?}>）接
+ * navigator.credentials（Windows Hello / Touch ID / 指纹），在支持的浏览器自动生效；
+ * 不支持的环境语义不变（not_supported / not_available）。v1 简化见路线图 0.3。 */
+function _webauthnBioImpl(opts){
+  var o = opts || {};
+  var hasAPI = (typeof navigator !== "undefined" && navigator.credentials && typeof window !== "undefined" && window.PublicKeyCredential);
+  if(o.action === "check"){
+    if(!hasAPI) return Promise.resolve({ availability: BIOMETRIC_AVAILABILITY.NOT_SUPPORTED });
+    try{
+      return window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(ok){
+        return { availability: ok ? BIOMETRIC_AVAILABILITY.AVAILABLE : BIOMETRIC_AVAILABILITY.HARDWARE_MISSING };
+      }).catch(function(){ return { availability: BIOMETRIC_AVAILABILITY.UNKNOWN }; });
+    }catch(e){ return Promise.resolve({ availability: BIOMETRIC_AVAILABILITY.UNKNOWN }); }
+  }
+  if(!hasAPI) return Promise.resolve({ result: BIOMETRIC_AUTH_RESULT.NOT_AVAILABLE, type: BIOMETRIC_TYPES.NONE, error: "webauthn_unsupported" });
+  var challenge = new Uint8Array(32);
+  try{ crypto.getRandomValues(challenge); }catch(e7){ /* challenge 全 0 也能跑（服务端不应信任 attestation） */ }
+  var rpId = "localhost";
+  try{ rpId = location.hostname || "localhost"; }catch(e){ }
+  if(o.action === "register"){
+    return navigator.credentials.create({ publicKey: {
+      challenge: challenge,
+      rp: { name: "Agent 工作台", id: rpId },
+      user: { id: new Uint8Array([119,98,45,97,103,101,110,116]), name: "agent-workbench", displayName: "Agent 工作台用户" }, // "wb-agent" 字节
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+      timeout: 60000,
+      attestation: "none"
+    }}).then(function(){
+      return { result: BIOMETRIC_AUTH_RESULT.SUCCESS, type: BIOMETRIC_TYPES.FINGERPRINT };
+    }).catch(function(e2){
+      var n2 = (e2 && e2.name) || "";
+      if(n2 === "NotAllowedError") return { result: BIOMETRIC_AUTH_RESULT.CANCELLED, type: BIOMETRIC_TYPES.NONE, error: "user_cancel" };
+      return { result: BIOMETRIC_AUTH_RESULT.ERROR, type: BIOMETRIC_TYPES.NONE, error: n2 || "register_error" };
+    });
+  }
+  if(o.action === "authenticate"){
+    return navigator.credentials.get({ publicKey: {
+      challenge: challenge, rpId: rpId, userVerification: "required", timeout: 60000
+    }}).then(function(){
+      return { result: BIOMETRIC_AUTH_RESULT.SUCCESS, type: BIOMETRIC_TYPES.FINGERPRINT };
+    }).catch(function(e3){
+      var n3 = (e3 && e3.name) || "";
+      if(n3 === "NotAllowedError") return { result: BIOMETRIC_AUTH_RESULT.CANCELLED, type: BIOMETRIC_TYPES.NONE, error: "user_cancel" };
+      return { result: BIOMETRIC_AUTH_RESULT.FAILED, type: BIOMETRIC_TYPES.NONE, error: n3 || "auth_error" };
+    });
+  }
+  return Promise.resolve({ result: BIOMETRIC_AUTH_RESULT.ERROR, type: BIOMETRIC_TYPES.NONE, error: "unknown_action" });
+}
+biometricSetAuthImpl(_webauthnBioImpl); // 加载即注入：支持的浏览器立即可用，不支持维持原语义
 
 /**
  * 初始化生物识别
