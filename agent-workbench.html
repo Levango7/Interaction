@@ -22,6 +22,8 @@
 :root{
   /* ===== Apple Minimalist 配色（柔和、干净、有呼吸感） ===== */
   --bg:#f5f5f7; --panel:#ffffff; --panel2:#fafafc; --line:#e5e5ea;
+  /* v1.9.5：侧栏专属背景（比主区浅灰略深一档的冷灰，让四区域层次分明：侧栏→主区→白卡） */
+  --side-bg:#ececf1;
   /* 顶栏第二行表面渐变（亮色层次；暗色/暖色主题各自覆盖） */
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
   --text:#1d1d1f; --muted:#5e5e63; --accent:#0a6cbd;
@@ -68,6 +70,9 @@
   --shadow-3:0 4px 16px rgba(0,0,0,.12);
   /* 过渡体系 */
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
+  /* 顶栏高度令牌（布局修复：统一各断点顶栏高度=61px，消除 1440 断点处 8px 跳变；
+     供 msg-panel 等下拉面板兜底定位引用；<768px 触摸态按钮 44px 时在媒体查询内覆写为 69px） */
+  --topbar-h:61px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
@@ -113,10 +118,12 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 ::-webkit-scrollbar-thumb:hover{background:var(--text-faint)}
 
 /* ===== 整体布局：顶栏 / 侧栏 / 主区 ===== */
-.app{display:flex;flex-direction:column;height:100vh}
-/* 单行顶栏：品牌 + spacer + 系统级按钮居右 */
+/* 100dvh 渐进增强：移动端地址栏收起/展开时视口高度变化，dvh 跟随实际动态视口，消除整页跳动；
+   不支持 dvh 的旧内核自动回退到前一行的 100vh */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+/* 单行顶栏：品牌 + spacer + 系统级按钮居右（padding 统一 space-3，各断点高度一致=61px，见 --topbar-h 令牌） */
 .topbar{display:flex;flex-direction:row;align-items:center;gap:var(--space-3);
-  padding:var(--space-4) var(--space-6);
+  padding:var(--space-3) var(--space-6);
   background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0;
   backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px)}
 /* 正文工具行（原顶栏第二行，移至主区上方，小而鲜明） */
@@ -161,6 +168,9 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .logo{display:flex;align-items:center;gap:var(--space-2);font-weight:600;font-size:var(--fs-lg);
   letter-spacing:-.01em;min-height:36px;flex-shrink:0}
 .logo .mark{width:28px;height:28px;border-radius:var(--radius-md);background:var(--brand-grad);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--on-accent)}
+.logo .mark svg{width:17px;height:17px;display:block;stroke:var(--on-accent)}
+.logo .mark{width:28px;height:28px;border-radius:var(--radius-md);background:var(--brand-grad);
   display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-size:var(--fs-base);
   box-shadow:var(--shadow-1),inset 0 1px 0 var(--on-accent-soft)}
 .topbar .spacer{flex:1}
@@ -179,7 +189,8 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   font-size:10px;font-weight:600;line-height:16px;text-align:center;pointer-events:none}
 
 /* ===== 系统级消息中心：下拉面板 ===== */
-.msg-panel{position:fixed;top:52px;right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
+/* top 兜底值走 --topbar-h 令牌（JS 打开时会锚定到按钮实际下缘，此值仅在 JS 失效时兜底） */
+.msg-panel{position:fixed;top:var(--topbar-h);right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
   max-height:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-3);z-index:var(--z-popover);display:flex;flex-direction:column;overflow:hidden}
 .msg-panel-header{display:flex;align-items:center;justify-content:space-between;
@@ -208,16 +219,18 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* ===== 主体：侧栏 + 主区 ===== */
 .body{flex:1;display:flex;min-height:0}
 .main-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
-.side{width:220px;background:var(--panel);border-right:1px solid var(--line);
+.side{width:220px;background:var(--side-bg);border-right:1px solid var(--line);
   padding:var(--space-3) var(--space-2);overflow:auto;flex-shrink:0;transition:width .2s ease}
-.nav-item{display:flex;align-items:center;gap:var(--space-3);width:100%;padding:10px var(--space-3);
-  border-radius:var(--radius-md);font-size:var(--fs-base);color:var(--text);margin-bottom:var(--space-1);
+.nav-item{display:flex;align-items:center;gap:var(--space-3);width:100%;padding:9px var(--space-3);
+  border-radius:var(--radius-md);font-size:var(--fs-base);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative}
 .nav-item svg{width:18px;height:18px;flex-shrink:0}
 .nav-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item .cnt{font-size:var(--fs-xs);background:var(--surface-muted);border-radius:10px;
   padding:1px 8px;color:var(--text-dim-2);min-width:20px;text-align:center}
 .nav-item:hover{background:var(--surface-hover)}
+/* v1.9.5：侧栏为专属浅灰背景时，hover 提亮为白，保证在灰底上可辨（暗色主题 panel 亦深于 side-bg） */
+.side .nav-item:hover{background:var(--panel)}
 .nav-item.active{background:var(--sc,var(--accent));color:var(--on-accent);font-weight:500}
 .nav-item.active .cnt{background:var(--on-accent-soft);color:var(--on-accent)}
 .nav-item.active svg{color:var(--on-accent)}
@@ -227,8 +240,26 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 @keyframes nav-indicator{from{transform:translateY(-50%) scaleY(0);opacity:0}
   to{transform:translateY(-50%) scaleY(1);opacity:1}}
 
+/* v1.9.4：设置=浅灰选中态（浅灰底+深色文字+细边框）；回收站=专属彩色选中态（风格一致但颜色与其他导航不同） */
+#btnGear.nav-item.active{background:color-mix(in srgb,var(--text) 8%,var(--panel));
+  color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+#btnGear.nav-item.active svg{color:var(--text-dim)}
+#btnGear.nav-item.active .cnt{background:var(--surface-muted);color:var(--text-dim)}
+#btnGear.nav-item.active::before{background:var(--text-faint)}
+
+/* 统一页面头（v1.9.5：统计/回收站/设置等独立页面共用，保证布局风格一致） */
+.page-head{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-5)}
+.page-head .ph-ic{width:38px;height:38px;border-radius:var(--radius-lg);flex-shrink:0;
+  background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
+.page-head .ph-ic svg{width:19px;height:19px}
+.page-head .ph-tx{flex:1;min-width:0}
+.page-head h2{margin:0;font-size:var(--fs-xl);font-weight:600;letter-spacing:-.01em}
+.page-head .sub{margin:2px 0 0;font-size:var(--fs-sm);color:var(--muted)}
+.page-head .ph-act{flex-shrink:0;display:flex;align-items:center;gap:var(--space-2)}
+
 /* ===== 主内容区 ===== */
-.main{flex:1;overflow:auto;padding:var(--space-6) var(--space-7);min-width:0}
+.main{flex:1;overflow:auto;padding:var(--space-6) var(--space-7);min-width:0;
+  background:var(--bg)} /* v1.9.5：显式声明主区背景=body 浅灰，白色卡片浮于其上，区域层次分明 */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-5);margin-bottom:var(--space-5);
   transition:box-shadow var(--transition-fast)}
@@ -318,7 +349,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .overview-grid > .foot{margin-top:0}
 
 /* ===== 看板视图 ===== */
-.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4)}
+/* minmax(0,1fr)：列宽允许压缩到内容最小宽以下，防止窄主区（如平板未展开聊天面板时）卡片按钮把网格撑溢出 */
+.kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4)}
 .kcol{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-lg);
   padding:var(--space-3);min-height:120px}
 .kcol h4{margin:0 0 var(--space-3);font-size:var(--fs-sm);font-weight:600;
@@ -347,6 +379,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .msg.user{background:var(--sc,var(--accent));color:var(--on-accent);margin-left:auto;font-weight:400}
 .msg.assistant{background:var(--panel);border:1px solid var(--line)}
 .chat-form{display:flex;gap:var(--space-2);align-items:stretch;margin:0}
+/* 快捷指令 chips（v1.9.5：空对话时展示，点击填入输入框，填充面板空白并引导使用） */
+.chat-suggest{display:flex;flex-wrap:wrap;gap:var(--space-1);margin-top:var(--space-2);padding-bottom:2px}
+.chat-suggest .chip{border:1px solid var(--line);background:var(--panel);border-radius:14px;
+  padding:3px 10px;font-size:var(--fs-xs);color:var(--text-dim);cursor:pointer;line-height:1.6;
+  transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
+.chat-suggest .chip:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
 .chat-form input{flex:1;min-width:0}
 .chat-form .addbtn{flex-shrink:0}
 .msg.tool{background:var(--banner-bg);border:1px dashed var(--banner-border-2);font-size:var(--fs-xs);color:var(--banner-ink)}
@@ -372,13 +410,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    - 折叠态：宽度归零 + overflow:hidden，配 transition 平滑过渡
    - 响应式：中屏收窄到 300px，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
 .chat-panel{width:360px;flex-shrink:0;display:flex;flex-direction:column;
-  border-left:1px solid var(--line);background:var(--panel);
+  border-left:1px solid var(--line);background:var(--panel2);
   transition:width var(--transition-fast) ease,transform var(--transition-fast) ease}
 .chat-panel.collapsed{width:0;overflow:hidden;border-left-color:transparent}
 .chat-panel-header{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:var(--space-2)}
-.chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2)}
-.chat-panel-title svg{width:16px;height:16px;color:var(--accent)}
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:var(--space-2);
+  background:var(--panel)} /* v1.9.5：头部白底与浅灰消息区区分 */
+.chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2);min-width:0}
+/* v1.9.5：标题图标徽章化（与全局 page-head 视觉一致） */
+.chat-panel-title .ph-ic{width:26px;height:26px;border-radius:var(--radius-md);flex-shrink:0;
+  background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
+.chat-panel-title .ph-ic svg{width:15px;height:15px;color:var(--accent)}
 .chat-panel-collapse{padding:2px var(--space-2);font-size:var(--fs-xs);color:var(--text-dim);
   background:transparent;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;
   min-height:auto;line-height:1.4;transition:background var(--transition-fast),color var(--transition-fast)}
@@ -392,12 +434,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-model-select:hover{border-color:var(--accent)}
 /* 面板内消息区：覆盖 .chat 原有边框/高度，让其填满面板 */
 .chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
-  padding:var(--space-3);background:transparent;margin-bottom:0;display:flex;flex-direction:column;gap:var(--space-2)}
+  padding:var(--space-3);background:var(--panel2);margin-bottom:0;display:flex;flex-direction:column;gap:var(--space-2)}
 .chat-panel .chat-toolbar{margin:0;padding:var(--space-2) var(--space-3);border-top:1px solid var(--line);
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 发送按钮 */
 .chat-input-area{padding:var(--space-2);border-top:1px solid var(--line);
-  display:flex;gap:var(--space-2);align-items:flex-end;margin:0}
+  display:flex;gap:var(--space-2);align-items:flex-end;margin:0;background:var(--panel)} /* v1.9.5：输入区白底卡片化 */
 .chat-attach-btn{flex-shrink:0;padding:var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);color:var(--text-dim);cursor:pointer;
   min-height:36px;min-width:36px;font-size:var(--fs-base);line-height:1;
@@ -543,12 +585,21 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   background:none;border:none;cursor:pointer;padding:0}
 
 /* ===== T3.3 数据统计视图 ===== */
-.stats-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-3);margin-bottom:var(--space-5)}
+.stats-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-3);margin-bottom:var(--space-5)}
+/* 5×2 指标卡响应式：中屏降 3 列，窄屏降 2 列 */
+@media(max-width:1023px){.stats-cards{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:767px){.stats-cards{grid-template-columns:repeat(2,1fr)}}
 .stats-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-5) var(--space-4);text-align:center;transition:box-shadow var(--transition-fast)}
 .stats-card:hover{box-shadow:var(--shadow-2)}
 .stats-card-val{font-size:28px;font-weight:700;color:var(--text);line-height:1.1;letter-spacing:-.02em}
 .stats-card-lbl{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);text-transform:uppercase;letter-spacing:.05em}
+/* 周环比角标：胶囊样式，与主数字区分开 */
+.stats-wow{display:inline-flex;align-items:center;margin-left:6px;font-size:11px;font-weight:600;
+  padding:1px 6px;border-radius:var(--radius-full,999px);vertical-align:2px;line-height:1.4;white-space:nowrap}
+.stats-wow.up{background:var(--accent-soft);color:var(--accent)}
+.stats-wow.down{background:var(--danger-soft);color:var(--danger)}
+.stats-wow.muted{background:var(--surface-muted);color:var(--muted)}
 .stats-trend-tabs{display:flex;gap:var(--space-1);margin-bottom:var(--space-3)}
 .stats-tab{padding:var(--space-1) var(--space-4);border-radius:var(--radius-md);font-size:var(--fs-sm);
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);cursor:pointer;
@@ -621,21 +672,31 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .report-entry-btn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .report-entry-btn:active{filter:brightness(.92)}
 
-/* ===== 今日仪表盘（A：问候语 + Top3 + 习惯链状态条） ===== */
-.dashboard-hero{display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-5)}
-.hero-greeting{font-size:var(--fs-2xl);font-weight:700;color:var(--text);letter-spacing:-.02em}
-.hero-sub{font-size:var(--fs-base);color:var(--muted);margin-top:var(--space-1)}
+/* ===== 今日仪表盘（A：问候语 + Top3 + 习惯链状态条）
+   v1.9.4b：整体压紧纵向间距——顶部「今天要处理」是次要的提示栏，
+   收缩问候语字号与各段 margin，让下方任务看板成为视觉焦点（防喧宾夺主）
+   v1.9.5：Top3 与习惯链改单行横向滚动，进一步压缩首屏高度，看板首屏可见 ===== */
+.dashboard-hero{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)}
+.hero-greeting{font-size:var(--fs-xl);font-weight:700;color:var(--text);letter-spacing:-.02em}
+.hero-sub{font-size:var(--fs-sm);color:var(--muted);margin-top:2px}
 .hero-right{margin-left:auto}
-.top3-list{list-style:none;padding:0;margin:0 0 var(--space-5)}
-.top3-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);
-  border:1px solid var(--line);border-radius:var(--radius-md);margin-bottom:var(--space-2);background:var(--panel);
+/* Top3：横向单行滚动卡片（不换行，挤压时横向滚动） */
+.top3-list{list-style:none;padding:0;margin:0 0 var(--space-3);
+  display:flex;gap:var(--space-2);overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+.top3-list::-webkit-scrollbar{display:none}
+.top3-item{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);
+  border:1px solid var(--line);border-radius:var(--radius-md);margin-bottom:0;background:var(--panel);
+  min-width:230px;max-width:280px;flex-shrink:0;flex:1;
   transition:background var(--transition-fast)}
 .top3-item:hover{background:var(--panel2)}
 .top3-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.top3-item .title{flex:1;font-size:var(--fs-base)}
+.top3-item .title{flex:1;font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .top3-item .sc-name{font-size:var(--fs-xs);color:var(--muted)}
-.chain-bar{display:flex;gap:var(--space-2);margin-bottom:var(--space-5);flex-wrap:wrap}
-.chain-pill{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);
+/* 习惯链：单行横向滚动（不再换行，压缩首屏高度） */
+.chain-bar{display:flex;gap:var(--space-2);margin-bottom:var(--space-3);
+  overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;scrollbar-width:none}
+.chain-bar::-webkit-scrollbar{display:none}
+.chain-pill{display:flex;align-items:center;gap:var(--space-1);padding:4px 10px;flex-shrink:0;
   border-radius:18px;background:var(--panel2);border:1px solid var(--line);font-size:var(--fs-sm);cursor:pointer;
   transition:background var(--transition-fast),border-color var(--transition-fast)}
 .chain-pill:hover{background:var(--surface-hover);border-color:var(--accent)}
@@ -709,11 +770,19 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   min-width:0;
   min-height:0;
 }
+/* 响应式：与 #main 的 padding 全档位对齐（768-1023→--space-4；1024-1439→--space-7；≥1440→--space-8） */
+@media(min-width:768px) and (max-width:1023px){
+  .drawer-page{padding:var(--space-4) var(--space-4) !important}
+}
+@media(min-width:1440px){
+  .drawer-page{padding:var(--space-6) var(--space-8) !important}
+}
 /* 设置页面标题行：标题左 + 返回右（与 help-header 风格一致） */
 .settings-card{overflow:hidden}
-.settings-head{display:flex;align-items:center;justify-content:space-between;
+.settings-head{display:flex;align-items:center;gap:var(--space-3);
   padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--line);flex-shrink:0}
-.settings-head h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em}
+.settings-head.page-head{margin-bottom:0} /* v1.9.5：与统计/回收站页头统一视觉 */
+.settings-head h2{margin:0;font-size:var(--fs-xl);font-weight:600;letter-spacing:-.01em}
 .settings-head .close{
   font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);
   border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
@@ -721,6 +790,70 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 }
 .settings-head .close:hover{background:var(--surface-hover);color:var(--text)}
 .settings-body{padding:var(--space-5) var(--space-6)}
+
+/* ===== 设置页面（v1.9.x 改版：分组卡片 + 吸顶导航 + 吸底保存栏） ===== */
+/* 外层铺满 main-wrap（左右间距与 #main 一致：--space-7），内部按上下分组卡片排列 */
+.drawer-page > .card.settings-card{
+  width:100%;
+  overflow:hidden;overflow:clip;border-radius:var(--radius-xl)
+}
+.settings-card .settings-body{padding:var(--space-5) var(--space-6)}
+/* 吸顶快捷导航（标签 chip + 保存按钮） */
+.set-nav{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;gap:var(--space-2);
+  flex-wrap:wrap;margin:calc(var(--space-5) * -1) calc(var(--space-6) * -1) var(--space-5);
+  padding:var(--space-3) var(--space-6);background:var(--panel);
+  border-bottom:1px solid var(--line);box-shadow:var(--shadow-2)}
+.set-nav-grow{flex:1}
+.set-nav-btn{border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
+  font-size:var(--fs-xs);padding:4px 12px;border-radius:var(--radius-full);cursor:pointer;
+  white-space:nowrap;transition:background var(--transition-fast),color var(--transition-fast),
+  border-color var(--transition-fast),transform var(--transition-fast)}
+.set-nav-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent)}
+.set-nav-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.set-nav-btn.primary:hover{background:var(--accent);color:var(--on-accent);filter:brightness(1.08)}
+/* 分组卡片 */
+.set-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:var(--space-5);margin-bottom:var(--space-5);scroll-margin-top:56px}
+.set-head{display:flex;align-items:flex-start;gap:var(--space-3);margin-bottom:var(--space-4);
+  padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
+.set-ic{width:36px;height:36px;border-radius:var(--radius-md);background:var(--surface-muted);
+  display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
+.set-ic svg{width:18px;height:18px}
+.set-head h3{margin:0;font-size:var(--fs-md);font-weight:600;letter-spacing:-.01em}
+.set-desc{margin:2px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.55}
+.set-divider{height:1px;background:var(--line);margin:var(--space-4) 0 var(--space-3)}
+.set-subhead{font-size:var(--fs-sm);font-weight:600;color:var(--text);margin:var(--space-3) 0 var(--space-2)}
+/* 表单行：标签左（定宽）/ 控件右（自适应） */
+.set-field{display:grid;grid-template-columns:minmax(150px,230px) minmax(0,1fr);
+  gap:var(--space-3);align-items:center;padding:var(--space-2) 0}
+.set-field > label{display:block;font-size:var(--fs-sm);color:var(--text-dim);
+  font-weight:500;margin:0;line-height:1.4}
+.set-field .ctl{min-width:0}
+.set-field .ctl > input[type="text"],.set-field .ctl > input[type="password"],
+.set-field .ctl > input[type="number"],.set-field .ctl > select{width:100%}
+.btn-row{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center}
+.btn-row select{flex:1;min-width:140px}
+/* 开关行（标题 + 说明） */
+.set-switch{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) 0}
+.set-switch > input[type="checkbox"]{width:auto;flex-shrink:0}
+.set-switch .sw-label{font-size:var(--fs-sm);font-weight:500;color:var(--text-dim);line-height:1.4}
+.set-switch .sw-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;line-height:1.5}
+.set-tip{font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin:var(--space-1) 0 var(--space-2)}
+.set-actions{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.set-actions .addbtn{flex:1;min-width:90px}
+/* 吸底保存栏 */
+.set-savebar{position:sticky;bottom:0;z-index:var(--z-sticky);display:flex;gap:var(--space-3);align-items:center;
+  margin:var(--space-5) calc(var(--space-6) * -1) calc(var(--space-5) * -1);
+  padding:var(--space-4) var(--space-6);background:var(--panel);
+  border-top:1px solid var(--line);box-shadow:var(--shadow-2)}
+.set-savebar .addbtn{flex:1}
+/* 设置页尾栏（与其他页面 foot 一致，宽度铺满、文本居中） */
+.drawer-page > .foot{margin:0}
+/* 窄屏：表单标签上置 */
+@media (max-width:720px){
+  .set-field{grid-template-columns:1fr;gap:var(--space-1)}
+  .set-nav-btn{padding:4px 10px}
+}
 
 /* ===== 习惯链管理（T3.2） ===== */
 .chain-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-1);border-radius:var(--radius-sm)}
@@ -751,6 +884,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== 暗色主题（Apple Dark 风格：深灰而非纯黑，文字偏暖白） ===== */
 :root[data-theme="dark"]{
   --bg:#1c1c1e; --panel:#2c2c2e; --panel2:#323334; --line:#3a3a3c;
+  /* v1.9.5：侧栏专属背景（介于 body 与 panel 之间，暗色下层次克制） */
+  --side-bg:#262628;
   --text:#f2f2f4; --muted:#a0a0a5; --accent:#5b9bf5;
   --shadow:0 1px 3px rgba(0,0,0,.5);
   --surface-hover:#3a3a3c; --surface-muted:#3a3a3c;
@@ -875,20 +1010,22 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== 回收站页面（D3：软删除任务的恢复 / 永久删除入口；v1.3.4-B 全屏页面视图） ===== */
 /* v1.9：回收站宽高铺满 main-wrap——移除 max-width 限制，让列表/表格宽度撑满内容区 */
-/* v1.9.3：.recycle-modal 加 margin-bottom:var(--space-5) 与 .card 一致；
-   .recycle-card 不设 min-height（高度由内容决定），避免空/少数据时拉伸卡片导致页脚被顶到视口底部 */
-.recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5)}
+/* v1.9.4：卡片铺满主区剩余高度（上下留白更大），统一尾栏 .foot 被顶到主区底部；
+   空态文案上下居中；有列表时底部操作栏吸附卡片底部（.recycle-footer margin-top:auto） */
+#main.page-recycle{display:flex;flex-direction:column}
+.recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5);flex:1}
 .recycle-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden}
+  display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden;flex:1}
 .recycle-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-5) var(--space-6);
   border-bottom:1px solid var(--line);flex-shrink:0}
-.recycle-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;flex:1}
+.recycle-header.page-head{margin-bottom:0} /* v1.9.5：头部复用统一页面头视觉（page-head 自带下边距在此不需要） */
+.recycle-header h2{margin:0;font-size:var(--fs-xl);font-weight:600;letter-spacing:-.01em}
 .recycle-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
   border-radius:var(--radius-md);border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
   font-size:var(--fs-sm);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
 .recycle-back:hover{background:var(--surface-hover);color:var(--text)}
 .recycle-count{font-size:var(--fs-xs);color:var(--muted);flex-shrink:0;font-variant-numeric:tabular-nums}
-.recycle-list{padding:var(--space-5) var(--space-6);display:flex;flex-direction:column;gap:var(--space-2)}
+.recycle-list{padding:var(--space-6) var(--space-6);display:flex;flex-direction:column;gap:var(--space-2);flex:1}
 .recycle-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2)}
 .recycle-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -899,8 +1036,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
 .recycle-restore:hover{background:var(--surface-hover);color:var(--text)}
 .recycle-purge:hover{background:var(--danger-soft);color:var(--danger)}
-.recycle-empty{padding:var(--space-6);text-align:center;color:var(--muted);font-size:var(--fs-base)}
-.recycle-footer{padding:var(--space-4) var(--space-6);border-top:1px solid var(--line);display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.recycle-empty{padding:var(--space-8) var(--space-6);min-height:140px;text-align:center;color:var(--muted);
+  font-size:var(--fs-base);margin:auto}
+.recycle-footer{padding:var(--space-4) var(--space-6);border-top:1px solid var(--line);display:flex;align-items:center;
+  gap:var(--space-2);flex-wrap:wrap;margin-top:auto;flex-shrink:0}
 .recycle-selall{display:flex;align-items:center;gap:var(--space-1);font-size:var(--fs-sm);color:var(--text-dim);cursor:pointer;margin:0}
 .recycle-selall input{width:auto}
 .recycle-batch{padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);font-size:var(--fs-sm);
@@ -922,7 +1061,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .side.collapsed .side-toggle svg{transform:rotate(180deg)}
 .side.collapsed .side-toggle .lbl{display:none}
 .side.collapsed .side-toggle{justify-content:center;padding:11px 0}
-.nav-sep{height:1px;background:var(--line);margin:var(--space-2) var(--space-3)}
+/* 侧栏分组标题（v1.9.5：监控/场景/系统三组，替代裸分割线，层级清晰） */
+.nav-group{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;
+  padding:var(--space-4) var(--space-3) var(--space-1);text-transform:uppercase;user-select:none}
+.nav-group:first-of-type{padding-top:var(--space-1)}
 
 /* ===== 响应式断点（4 断点 + 顶栏窄屏 + 横屏） ===== */
 /* >=768px 通用：侧边栏折叠效果（所有显示折叠按钮的断点共享，确保 768-1023 / 1024-1439 / >=1440 三段均有视觉变化） */
@@ -966,7 +1108,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .card{padding:var(--space-6);margin-bottom:var(--space-5)}
   .kanban{gap:var(--space-5)}
   .side{width:230px}
-  .topbar{padding:var(--space-3) var(--space-6)}
+  /* 顶栏 padding 已统一为基础规则 var(--space-3)，此断点不再单独覆写（消除高度跳变） */
   /* 工具行在固定宽度(1200px)内居中，统一左右 padding */
   .toolbar-row{padding:var(--space-1) var(--space-8) var(--space-2)}
   .side-toggle{display:flex}
@@ -1025,9 +1167,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .chain-bar{overflow-x:auto;flex-wrap:nowrap}
   .drawer{width:100%;max-width:100%}
   .onboard-modal{padding:0}
-  .onboard-card{max-width:100%;width:100%;max-height:100vh;border-radius:0;height:100vh;padding:var(--space-5)}
+  .onboard-card{max-width:100%;width:100%;max-height:100vh;max-height:100dvh;border-radius:0;height:100vh;height:100dvh;padding:var(--space-5)}
   .help-modal{padding:0}
-  .help-card{max-width:100%;width:100%;max-height:100vh;border-radius:0;height:100vh}
+  .help-card{max-width:100%;width:100%;max-height:100vh;max-height:100dvh;border-radius:0;height:100vh;height:100dvh}
   .side-toggle{display:none}
 }
 
@@ -1044,6 +1186,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .side, .main, .cmd, .help-body, .drawer, .kanban, .chain-bar, .md-body pre{
     -webkit-overflow-scrolling:touch
   }
+  /* 触摸态按钮 44px → 顶栏实际高度 69px，覆写令牌保持 msg-panel 等兜底定位准确 */
+  :root{--topbar-h:69px}
   /* 触摸目标尺寸：所有可点击元素 min-height/min-width 44px（WCAG 2.5.5） */
   .tbtn{min-height:44px;min-width:44px;padding:var(--space-3)}
   .addbtn{min-height:44px;padding:var(--space-3) var(--space-4)}
@@ -1378,6 +1522,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== v1.5-C 主题系统：高对比度主题令牌覆盖（无障碍） ===== */
 :root[data-theme="contrast"]{
   --bg:#000000; --panel:#0a0a0a; --panel2:#111111; --line:#ffffff;
+  --side-bg:#141414;
   /* 高对比：第二行用更清晰的分层（panel2 更深一档，分界更有对比) */
   --tb-row2-bg:var(--panel2);
   --text:#ffffff; --muted:#e0e0e0; --accent:#ffff00;
@@ -1412,6 +1557,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* ===== v1.5-C 主题系统：护眼模式（Sepia 暖色调）令牌覆盖 ===== */
 :root[data-theme="sepia"]{
   --bg:#f4ecd8; --panel:#ede0c8; --panel2:#e8d9b8; --line:#d4c4a8;
+  --side-bg:#e9dbc0;
   /* 护眼：第二行与亮色一致的向下渐隐，维持柔和层次 */
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
   --text:#5b4636; --muted:#8a7050; --accent:#8b6914;
@@ -1855,7 +2001,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <div class="app">
   <div class="topbar">
     <!-- 单行：品牌 + spacer + 系统级按钮居右（命令/主题/消息/安装）；指南已迁移至侧栏底部 -->
-    <div class="logo"><span class="mark">A</span> Agent 工作台</div>
+    <!-- v1.9.5：品牌图标=习惯链+对勾（与 icon.svg 一致），替换字母 A -->
+    <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="15" cy="24" rx="6" ry="9.5"/><ellipse cx="24" cy="24" rx="6" ry="9.5"/><ellipse cx="33" cy="24" rx="6" ry="9.5"/><path d="M30.5 25.5 32.7 27.8 35.8 22"/></svg></span> Agent 工作台</div>
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
     <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南" style="display:none">
@@ -1940,7 +2087,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <aside class="chat-panel" id="chatPanel" aria-label="AI 助手面板">
       <div class="chat-panel-header">
         <span class="chat-panel-title">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
           AI 助手
         </span>
         <select id="chatModelSelect" class="chat-model-select" aria-label="选择 AI 模型" title="切换大模型 Profile">
@@ -1984,50 +2131,135 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <div class="overlay" id="overlay"></div>
 <div class="drawer" id="drawer">
   <div class="card settings-card" style="padding:0;overflow:hidden">
-    <div class="settings-head">
-      <h2>设置</h2>
+    <div class="settings-head page-head">
+      <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+      <div class="ph-tx"><h2>设置</h2><p class="sub">应用偏好与系统配置</p></div>
       <button class="close" id="drawerClose" aria-label="返回上一视图">← 返回</button>
     </div>
     <div class="settings-body">
-  <div class="row switch"><input type="checkbox" id="cfgEnabled" style="width:auto"> <label for="cfgEnabled" style="margin:0">启用 AI 对话（subagent 可调用工具）</label></div>
-  <div class="row"><label>AI Profile</label>
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-      <select id="cfgProfileSelect" style="flex:1;min-width:120px"></select>
-      <button type="button" class="addbtn" id="cfgProfileNew" style="--sc:var(--accent);padding:4px 10px;white-space:nowrap">新建</button>
-      <button type="button" class="addbtn" id="cfgProfileDup" style="--sc:var(--accent);padding:4px 10px;white-space:nowrap">复制</button>
-      <button type="button" class="addbtn" id="cfgProfileDel" style="--sc:var(--danger,var(--muted));padding:4px 10px;white-space:nowrap">删除</button>
-    </div>
-  </div>
-  <div class="row"><label for="cfgName">Profile 名称</label><input id="cfgName" placeholder="如 OpenAI / Anthropic / 本地 Ollama" maxlength="100" autocomplete="off"></div>
-  <div class="row"><label for="cfgBase">API Base URL</label><input id="cfgBase" placeholder="https://api.openai.com/v1" maxlength="500" autocomplete="off"></div>
-  <div class="row"><label for="cfgKey">API Key</label><input id="cfgKey" type="password" placeholder="sk-..." maxlength="500" autocomplete="new-password"></div>
-  <div class="hint" id="cfgKeyHint" style="display:none;font-size:11px;color:var(--muted);margin:-6px 0 8px">已保存在本机（Electron 主进程保管，不写入网页存储）</div>
-  <p class="hint" style="font-size:11px;color:var(--muted);margin:-4px 0 8px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
-  <div class="row"><label for="cfgModel">模型</label><input id="cfgModel" placeholder="gpt-4o-mini" maxlength="100" autocomplete="off"></div>
-  <div class="row"><label for="cfgAiTimeout">请求超时（秒，5~120）</label><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
-  <div class="row"><label for="cfgAiTemperature">温度 Temperature（0~2）</label><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
-  <div class="row"><label for="cfgMemMax">工作记忆容量（条，20~500）</label><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
-  <div class="row"><button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button></div>
+  <!-- 分区快捷导航（吸顶） -->
+  <nav class="set-nav" aria-label="设置分区导航">
+    <button type="button" class="set-nav-btn" data-scroll-to="set-ai">AI 配置</button>
+    <button type="button" class="set-nav-btn" data-scroll-to="set-scene">场景</button>
+    <button type="button" class="set-nav-btn" data-scroll-to="set-chain">习惯链</button>
+    <button type="button" class="set-nav-btn" data-scroll-to="set-look">外观</button>
+    <button type="button" class="set-nav-btn" data-scroll-to="set-notify">通知</button>
+    <button type="button" class="set-nav-btn" data-scroll-to="set-content">内容</button>
+    <button type="button" class="set-nav-btn" data-scroll-to="set-plugin">插件</button>
+    <button type="button" class="set-nav-btn" data-scroll-to="set-data">数据</button>
+    <button type="button" class="set-nav-btn" data-scroll-to="set-about">关于</button>
+    <span class="set-nav-grow" aria-hidden="true"></span>
+    <button type="button" class="set-nav-btn primary" id="setNavSave">保存设置</button>
+  </nav>
 
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">场景管理</label>
-    <p class="hint" style="margin:4px 0 8px">可新增自定义场景，或为内置场景改名 / 换色。场景下有任务时不可删除（防止数据丢失）。改动保存后，侧栏、命令面板、统计与习惯链自动生效。</p>
+  <!-- ===== AI 配置 ===== -->
+  <section class="set-card" id="set-ai" aria-label="AI 配置">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></span>
+      <div>
+        <h3>AI 配置</h3>
+        <p class="set-desc">兼容 OpenAI 接口格式（OpenAI / DeepSeek / 通义 / 豆包 等均可），Key 仅存本机浏览器。</p>
+      </div>
+    </header>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgEnabled" style="width:auto" aria-label="启用 AI 对话">
+      <div>
+        <div class="sw-label">启用 AI 对话</div>
+        <div class="sw-sub">subagent 可调用工具</div>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgProfileSelect">AI Profile</label>
+      <div class="ctl">
+        <div class="btn-row">
+          <select id="cfgProfileSelect"></select>
+          <button type="button" class="addbtn" id="cfgProfileNew" style="--sc:var(--accent);padding:4px 10px;white-space:nowrap">新建</button>
+          <button type="button" class="addbtn" id="cfgProfileDup" style="--sc:var(--accent);padding:4px 10px;white-space:nowrap">复制</button>
+          <button type="button" class="addbtn" id="cfgProfileDel" style="--sc:var(--danger,var(--muted));padding:4px 10px;white-space:nowrap">删除</button>
+        </div>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgName">Profile 名称</label>
+      <div class="ctl"><input id="cfgName" placeholder="如 OpenAI / Anthropic / 本地 Ollama" maxlength="100" autocomplete="off"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgBase">API Base URL</label>
+      <div class="ctl"><input id="cfgBase" placeholder="https://api.openai.com/v1" maxlength="500" autocomplete="off"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgKey">API Key</label>
+      <div class="ctl">
+        <input id="cfgKey" type="password" placeholder="sk-..." maxlength="500" autocomplete="new-password">
+        <p class="hint" id="cfgKeyHint" style="display:none;margin-top:6px">已保存在本机（Electron 主进程保管，不写入网页存储）</p>
+        <p class="set-tip" style="margin-top:6px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> 安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</p>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgModel">模型</label>
+      <div class="ctl"><input id="cfgModel" placeholder="gpt-4o-mini" maxlength="100" autocomplete="off"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgAiTimeout">请求超时（秒，5~120）</label>
+      <div class="ctl"><input id="cfgAiTimeout" type="number" min="5" max="120" placeholder="30（默认）"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgAiTemperature">温度 Temperature（0~2）</label>
+      <div class="ctl"><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
+    </div>
+    <div class="set-divider" role="separator"></div>
+    <div class="set-subhead">Agent 能力</div>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgAgent" style="width:auto" aria-label="Agent 模式">
+      <div>
+        <div class="sw-label">Agent 模式（工作记忆 + 多步目标编排）</div>
+        <div class="sw-sub">开启后具备中短期记忆与多步目标规划能力（plan→逐步执行→complete_goal），对话循环上限放宽至 12 轮。可对我说「记住：xxx」直接写入记忆。</div>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgMemMax">工作记忆容量（条，20~500）</label>
+      <div class="ctl"><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
+    </div>
+    <div class="hint" id="agentStatus" style="font-size:12px;margin:4px 0 8px"></div>
+    <div class="set-actions">
+      <button type="button" class="addbtn" id="btnClearMem" style="--sc:var(--muted);padding:4px 10px;white-space:nowrap">清空记忆</button>
+      <button type="button" class="addbtn" id="btnCancelGoal" style="--sc:var(--danger,var(--muted));padding:4px 10px;white-space:nowrap">取消当前目标</button>
+    </div>
+  </section>
+
+  <!-- ===== 场景管理 ===== -->
+  <section class="set-card" id="set-scene" aria-label="场景管理">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span>
+      <div>
+        <h3>场景管理</h3>
+        <p class="set-desc">可新增自定义场景，或为内置场景改名 / 换色。场景下有任务时不可删除（防止数据丢失）。改动保存后，侧栏、命令面板、统计与习惯链自动生效。</p>
+      </div>
+    </header>
     <div id="scBox"></div>
     <div class="chain-add-form">
-      <label style="font-size:13px">添加自定义场景</label>
-      <input id="scAddName" placeholder="场景名（如 健身）" maxlength="12">
-      <input id="scAddColor" type="color" aria-label="场景颜色" style="width:44px;padding:2px">
-      <select id="scAddIcon" aria-label="场景图标"></select>
-      <button type="button" class="addbtn" id="scAddBtn" style="--sc:var(--accent);padding:4px 10px">添加</button>
+      <div class="set-subhead">添加自定义场景</div>
+      <div class="btn-row">
+        <input id="scAddName" placeholder="场景名（如 健身）" maxlength="12" style="flex:1;min-width:120px">
+        <input id="scAddColor" type="color" aria-label="场景颜色" style="width:44px;padding:2px">
+        <select id="scAddIcon" aria-label="场景图标" style="flex:1;min-width:110px;max-width:150px"></select>
+        <button type="button" class="addbtn" id="scAddBtn" style="--sc:var(--accent);padding:4px 10px">添加</button>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">习惯链管理</label>
-    <p class="hint" style="margin:4px 0 8px">源场景任务完成时，按规则跨场景自动生成奖励/后续任务（生成的任务带「联动」标签）。点击关键词或目标场景可 inline 编辑。</p>
+  <!-- ===== 习惯链管理 ===== -->
+  <section class="set-card" id="set-chain" aria-label="习惯链管理">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+      <div>
+        <h3>习惯链管理</h3>
+        <p class="set-desc">源场景任务完成时，按规则跨场景自动生成奖励/后续任务（生成的任务带「联动」标签）。点击关键词或目标场景可 inline 编辑。</p>
+      </div>
+    </header>
     <div id="linksBox"></div>
     <div class="chain-add-form">
-      <label style="font-size:13px">添加新链</label>
+      <div class="set-subhead">添加新链</div>
       <div class="chain-add-row">
         <select id="chainAddSrc" style="flex:1;min-width:80px"></select>
         <input id="chainAddKw" placeholder="输入关键词，如：交付、上线" style="flex:2;min-width:120px">
@@ -2035,95 +2267,127 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <button type="button" class="addbtn" id="chainAddBtn" style="--sc:var(--accent);padding:8px 12px;white-space:nowrap">添加</button>
       </div>
     </div>
-    <div class="chain-reset-row">
-      <button type="button" class="addbtn" id="chainResetBtn" style="--sc:var(--muted);padding:6px 10px;font-size:12px">重置为默认</button>
-    </div>
-    <div class="chain-reset-row" style="display:flex;gap:6px;flex-wrap:wrap">
+    <div class="set-actions" style="margin-top:var(--space-3)">
+      <button type="button" class="addbtn" id="chainResetBtn" style="--sc:var(--muted);padding:6px 10px;font-size:12px;flex:0 0 auto">重置为默认</button>
       <button type="button" class="addbtn" id="btnChainShare" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的链</button>
       <button type="button" class="addbtn" id="btnChainImport" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入链</button>
     </div>
-  </div>
+  </section>
 
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">场景模板</label>
-    <p class="hint" style="margin:4px 0 8px">一键导入预置任务集（考研复习 / 健身计划 / 编程学习 / 项目管理 / 习惯养成），到期日按今天 + 偏移自动计算。</p>
+  <!-- ===== 内容与自动化 ===== -->
+  <section class="set-card" id="set-content" aria-label="内容与自动化">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
+      <div>
+        <h3>内容与自动化</h3>
+        <p class="set-desc">场景模板、知识管理与自动化工作流入口。</p>
+      </div>
+    </header>
+    <div class="set-subhead">场景模板</div>
+    <p class="set-tip">一键导入预置任务集（考研复习 / 健身计划 / 编程学习 / 项目管理 / 习惯养成），到期日按今天 + 偏移自动计算。</p>
     <button type="button" class="addbtn" id="btnSceneTemplate" style="--sc:var(--accent);width:100%;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>选择场景模板一键导入</button>
-  </div>
-
-  <!-- v1.6-D 知识管理入口：笔记管理 / 知识库 / 全文搜索 -->
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">知识管理</label>
-    <p class="hint" style="margin:4px 0 8px">Markdown 笔记系统（标签分类 + 任务关联）+ 知识库（按主题分类）+ 全文搜索（任务/记录/笔记，关键词高亮）。</p>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button type="button" class="addbtn" id="btnNotes" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>笔记管理</button>
-      <button type="button" class="addbtn" id="btnKnowledgeBase" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>知识库</button>
-      <button type="button" class="addbtn" id="btnSearch" style="--sc:var(--accent);flex:1;min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>全文搜索</button>
+    <div class="set-divider" role="separator"></div>
+    <!-- v1.6-D 知识管理入口：笔记管理 / 知识库 / 全文搜索 -->
+    <div class="set-subhead">知识管理</div>
+    <p class="set-tip">Markdown 笔记系统（标签分类 + 任务关联）+ 知识库（按主题分类）+ 全文搜索（任务/记录/笔记，关键词高亮）。</p>
+    <div class="set-actions">
+      <button type="button" class="addbtn" id="btnNotes" style="--sc:var(--accent);min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>笔记管理</button>
+      <button type="button" class="addbtn" id="btnKnowledgeBase" style="--sc:var(--accent);min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>知识库</button>
+      <button type="button" class="addbtn" id="btnSearch" style="--sc:var(--accent);min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>全文搜索</button>
     </div>
-  </div>
-
-  <!-- v1.6-E 自动化工作流入口：规则引擎 / 定时任务 / 工作流 / webhook -->
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">自动化工作流</label>
-    <p class="hint" style="margin:4px 0 8px">规则引擎（条件触发动作）+ cron 定时任务 + 多步骤工作流（条件分支）+ Webhook 集成（外部事件触发）。</p>
+    <div class="set-divider" role="separator"></div>
+    <!-- v1.6-E 自动化工作流入口：规则引擎 / 定时任务 / 工作流 / webhook -->
+    <div class="set-subhead">自动化工作流</div>
+    <p class="set-tip">规则引擎（条件触发动作）+ cron 定时任务 + 多步骤工作流（条件分支）+ Webhook 集成（外部事件触发）。</p>
     <button type="button" class="addbtn" id="btnAutomationSettings" style="--sc:var(--accent);width:100%;padding:8px 12px">⚙ 打开自动化面板</button>
-  </div>
+  </section>
 
-  <!-- v1.5-B 插件/扩展体系：插件市场入口 -->
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">插件市场</label>
-    <p class="hint" style="margin:4px 0 8px">启用插件可扩展自定义场景、卡片与习惯链规则。插件状态持久化到本地，启用/禁用即时生效。</p>
+  <!-- ===== 插件市场 ===== -->
+  <section class="set-card" id="set-plugin" aria-label="插件市场">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
+      <div>
+        <h3>插件市场</h3>
+        <p class="set-desc">启用插件可扩展自定义场景、卡片与习惯链规则。插件状态持久化到本地，启用/禁用即时生效。</p>
+      </div>
+    </header>
     <div id="pluginBox"></div>
     <div class="chain-add-form">
-      <label style="font-size:13px">注册新插件（粘贴插件 JSON 定义）</label>
+      <div class="set-subhead">注册新插件</div>
+      <p class="set-tip">粘贴插件 JSON 定义。</p>
       <textarea id="pluginAddJson" rows="3" placeholder='{"id":"myplugin","name":"我的插件","version":"1.0.0","description":"自定义插件"}' style="width:100%;font-family:monospace;font-size:12px;resize:vertical"></textarea>
       <button type="button" class="addbtn" id="pluginAddBtn" style="--sc:var(--accent);padding:4px 10px;margin-top:4px">注册插件</button>
     </div>
-  </div>
+  </section>
 
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <button class="addbtn" id="btnRecover" style="--sc:var(--accent);width:100%">从自动备份恢复</button>
-    <p class="hint" style="margin:6px 0 0">每次数据变动后自动快照到本地（独立于「导出 JSON 备份」）。如手动导出前数据损坏，可从此处还原最近一次快照。</p>
-  </div>
-
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">数据管理</label>
-    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-      <button type="button" class="addbtn" id="btnExport" aria-label="导出 JSON" style="--sc:var(--accent);flex:1;min-width:90px">导出 JSON</button>
-      <button type="button" class="addbtn" id="btnExportCSV" aria-label="导出 CSV" style="--sc:var(--accent);flex:1;min-width:70px">导出 CSV</button>
-      <button type="button" class="addbtn" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent);flex:1;min-width:70px">导出 MD</button>
-      <button type="button" class="addbtn" id="btnImport" aria-label="导入恢复" style="--sc:var(--accent);flex:1;min-width:90px">导入恢复</button>
-      <button type="button" class="addbtn" id="btnIdbRestore" aria-label="从本地库恢复" style="--sc:var(--accent);flex:1;min-width:90px">本地库恢复</button>
-      <button type="button" class="addbtn danger" id="btnClear" aria-label="清空数据" style="--sc:var(--danger,var(--muted));flex:1;min-width:90px">清空数据</button>
+  <!-- ===== 数据管理 ===== -->
+  <section class="set-card" id="set-data" aria-label="数据管理">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>
+      <div>
+        <h3>数据管理</h3>
+        <p class="set-desc">自动备份恢复与数据导入导出。</p>
+      </div>
+    </header>
+    <div class="set-subhead">自动备份</div>
+    <button type="button" class="addbtn" id="btnRecover" style="--sc:var(--accent);width:100%">从自动备份恢复</button>
+    <p class="set-tip">每次数据变动后自动快照到本地（独立于「导出 JSON 备份」）。如手动导出前数据损坏，可从此处还原最近一次快照。</p>
+    <div class="set-divider" role="separator"></div>
+    <div class="set-subhead">导出 / 导入</div>
+    <div class="set-actions">
+      <button type="button" class="addbtn" id="btnExport" aria-label="导出 JSON" style="--sc:var(--accent);min-width:90px">导出 JSON</button>
+      <button type="button" class="addbtn" id="btnExportCSV" aria-label="导出 CSV" style="--sc:var(--accent);min-width:70px">导出 CSV</button>
+      <button type="button" class="addbtn" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent);min-width:70px">导出 MD</button>
+      <button type="button" class="addbtn" id="btnImport" aria-label="导入恢复" style="--sc:var(--accent);min-width:90px">导入恢复</button>
+      <button type="button" class="addbtn" id="btnIdbRestore" aria-label="从本地库恢复" style="--sc:var(--accent);min-width:90px">本地库恢复</button>
+      <button type="button" class="addbtn danger" id="btnClear" aria-label="清空数据" style="--sc:var(--danger,var(--muted));min-width:90px">清空数据</button>
     </div>
-    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-      <button type="button" class="addbtn" id="btnExportPreview" aria-label="导出预览" style="--sc:var(--accent);flex:1;min-width:90px">导出预览</button>
-      <button type="button" class="addbtn" id="btnImportCSV" aria-label="导入 CSV" style="--sc:var(--accent);flex:1;min-width:90px">导入 CSV</button>
-      <button type="button" class="addbtn" id="btnExportRecsCSV" aria-label="导出记录 CSV" style="--sc:var(--accent);flex:1;min-width:90px">导出记录 CSV</button>
+    <div class="set-actions">
+      <button type="button" class="addbtn" id="btnExportPreview" aria-label="导出预览" style="--sc:var(--accent);min-width:90px">导出预览</button>
+      <button type="button" class="addbtn" id="btnImportCSV" aria-label="导入 CSV" style="--sc:var(--accent);min-width:90px">导入 CSV</button>
+      <button type="button" class="addbtn" id="btnExportRecsCSV" aria-label="导出记录 CSV" style="--sc:var(--accent);min-width:90px">导出记录 CSV</button>
     </div>
     <input type="file" id="csvFileInput" accept=".csv" style="display:none">
     <label class="expkey" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);margin:8px 0 0">
       <input type="checkbox" id="exportKeyOpt">
       <span>导出时包含 AI Key（明文，请自行妥善保管）</span>
     </label>
-  </div>
+  </section>
 
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">外观与回收站</label>
-    <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
-      <label for="cfgTheme" style="margin:0;flex-shrink:0">主题</label>
-      <select id="cfgTheme" style="flex:1;min-width:120px">
-        <option value="light">亮色</option>
-        <option value="dark">暗色</option>
-        <option value="system">跟随系统</option>
-        <option value="contrast">高对比度</option>
-        <option value="sepia">护眼模式</option>
-      </select>
+  <!-- ===== 外观与语言 ===== -->
+  <section class="set-card" id="set-look" aria-label="外观与语言">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>
+      <div>
+        <h3>外观与语言</h3>
+        <p class="set-desc">主题、自定义配色与语言偏好。「跟随系统」随操作系统明暗自动切换，语言切换即时生效并记忆偏好。</p>
+      </div>
+    </header>
+    <div class="set-field">
+      <label for="cfgTheme">主题</label>
+      <div class="ctl">
+        <select id="cfgTheme">
+          <option value="light">亮色</option>
+          <option value="dark">暗色</option>
+          <option value="system">跟随系统</option>
+          <option value="contrast">高对比度</option>
+          <option value="sepia">护眼模式</option>
+        </select>
+      </div>
     </div>
-
+    <div class="set-field">
+      <label for="cfgLang">语言 / Language</label>
+      <div class="ctl">
+        <select id="cfgLang">
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
     <!-- v1.5-C 主题编辑器：自定义主题 + 场景配色 + 导入导出 -->
     <div class="theme-editor-section">
-      <label style="font-size:13px;font-weight:600;color:var(--text)">自定义主题编辑器</label>
-      <p class="hint" style="margin:4px 0 8px;font-size:11px">创建自定义主题（调整令牌色值），或为每个场景独立配色。主题可导出为 JSON 分享给其他用户。</p>
+      <div class="set-subhead">自定义主题编辑器</div>
+      <p class="set-tip">创建自定义主题（调整令牌色值），或为每个场景独立配色。主题可导出为 JSON 分享给其他用户。</p>
       <div id="themeCustomList" class="theme-custom-list"></div>
       <div class="theme-actions">
         <button type="button" class="addbtn" id="btnThemeNew" style="--sc:var(--accent);padding:4px 10px">新建自定义主题</button>
@@ -2131,9 +2395,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <button type="button" class="addbtn" id="btnThemeImport" style="--sc:var(--accent);padding:4px 10px">导入主题</button>
       </div>
       <div id="themeEditorArea" style="display:none;margin-top:8px">
-        <div class="row" style="padding:4px 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
-          <label for="themeCustomName" style="margin:0;flex-shrink:0;font-size:12px">名称</label>
-          <input id="themeCustomName" placeholder="如 我的主题" style="flex:1;min-width:80px;font-size:12px">
+        <div class="set-field" style="grid-template-columns:minmax(80px,120px) minmax(0,1fr)">
+          <label for="themeCustomName">名称</label>
+          <div class="ctl"><input id="themeCustomName" placeholder="如 我的主题" style="font-size:12px"></div>
         </div>
         <div style="margin-top:6px;font-size:11px;color:var(--muted);font-weight:600">令牌色值</div>
         <div id="themeTokenEditor"></div>
@@ -2153,79 +2417,87 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <div style="margin-top:10px;font-size:11px;color:var(--muted);font-weight:600">场景配色个性化</div>
       <div id="themeScColorEditor"></div>
     </div>
+    <div class="set-field">
+      <label for="cfgRecyclePolicy">回收站自动清理</label>
+      <div class="ctl">
+        <select id="cfgRecyclePolicy">
+          <option value="off">关闭</option>
+          <option value="7">7 天后</option>
+          <option value="30">30 天后</option>
+          <option value="90">90 天后</option>
+        </select>
+      </div>
+    </div>
+    <p class="set-tip">回收站自动清理在每次启动时生效，超期软删任务将被永久删除。</p>
+    <div class="row switch set-switch" id="autoLaunchRow" style="display:none;border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+      <input type="checkbox" id="cfgAutoLaunch" style="width:auto" aria-label="开机自动启动">
+      <div>
+        <div class="sw-label">开机自动启动</div>
+        <div class="sw-sub">仅桌面端 exe 生效</div>
+      </div>
+    </div>
+  </section>
 
-    <!-- v1.5-A 语言切换：中英文 i18n -->
-    <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
-      <label for="cfgLang" style="margin:0;flex-shrink:0">语言 / Language</label>
-      <select id="cfgLang" style="flex:1;min-width:120px">
-        <option value="zh">中文</option>
-        <option value="en">English</option>
-      </select>
+  <!-- ===== 通知提醒 ===== -->
+  <section class="set-card" id="set-notify" aria-label="通知提醒">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg></span>
+      <div>
+        <h3>通知提醒</h3>
+        <p class="set-desc">到期任务、习惯链断链与每日汇总的提醒方式，以及浏览器推送订阅。</p>
+      </div>
+    </header>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgNotify" style="width:auto" aria-label="开启任务到期提醒">
+      <div>
+        <div class="sw-label">开启任务到期 / 习惯链断链 / 每日汇总提醒</div>
+        <div class="sw-sub">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</div>
+      </div>
     </div>
-    <div class="row" style="padding:4px 0 0;border:0;margin:0;display:flex;gap:8px;align-items:center">
-      <label for="cfgRecyclePolicy" style="margin:0;flex-shrink:0">回收站自动清理</label>
-      <select id="cfgRecyclePolicy" style="flex:1;min-width:120px">
-        <option value="off">关闭</option>
-        <option value="7">7 天后</option>
-        <option value="30">30 天后</option>
-        <option value="90">90 天后</option>
-      </select>
+    <div class="set-field">
+      <label for="cfgQuiet">免打扰时段</label>
+      <div class="ctl">
+        <div class="btn-row">
+          <input type="checkbox" id="cfgQuiet" style="width:auto" aria-label="免打扰时段">
+          <select id="cfgQuietStart" aria-label="免打扰开始时间" style="flex:0 1 120px"></select>
+          <span style="font-size:12px;color:var(--muted)">至</span>
+          <select id="cfgQuietEnd" aria-label="免打扰结束时间" style="flex:0 1 120px"></select>
+        </div>
+        <p class="set-tip" style="margin-top:4px">免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。</p>
+      </div>
     </div>
-    <p class="hint" style="margin:4px 0 0">「跟随系统」随操作系统明暗自动切换。回收站自动清理在每次启动时生效，超期软删任务将被永久删除。语言切换即时生效并记忆偏好。</p>
+    <!-- v1.4-F Web Push 订阅框架：订阅/取消订阅 + 状态显示 -->
+    <div class="push-row" id="pushRow">
+      <div class="push-head">
+        <label for="cfgPush">推送通知（Web Push）</label>
+        <input type="checkbox" id="cfgPush" style="width:auto">
+      </div>
+      <p class="push-status" id="pushStatus">未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。</p>
+      <div class="push-actions">
+        <button type="button" id="btnPushSubscribe">订阅推送</button>
+        <button type="button" id="btnPushUnsubscribe" disabled>取消订阅</button>
+        <button type="button" id="btnPushTest" disabled>发送测试通知</button>
+      </div>
+      <p class="hint" style="margin:6px 0 0;font-size:11px">⚠ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。</p>
+    </div>
+  </section>
+
+  <!-- ===== 关于与兼容说明 ===== -->
+  <section class="set-card" id="set-about" aria-label="关于与兼容说明">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>
+      <div>
+        <h3>关于与兼容说明</h3>
+        <p class="set-desc">使用 AI 功能前，请先了解以下说明。</p>
+      </div>
+    </header>
+    <p class="set-tip">启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
+  </section>
+
+  <!-- 吸底保存栏 -->
+  <div class="set-savebar">
+    <button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button>
   </div>
-
-  <div class="row switch" id="autoLaunchRow" style="display:none;border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <input type="checkbox" id="cfgAutoLaunch" style="width:auto">
-    <label for="cfgAutoLaunch" style="margin:0">开机自动启动（仅桌面端 exe 生效）</label>
-  </div>
-
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">通知提醒</label>
-    <div class="row switch" style="padding:4px 0 0;border:0;margin:0">
-      <input type="checkbox" id="cfgNotify" style="width:auto">
-      <label for="cfgNotify" style="margin:0">开启任务到期 / 习惯链断链 / 每日汇总提醒</label>
-    </div>
-    <p class="hint" style="margin:4px 0 8px">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</p>
-    <div class="row switch" style="padding:4px 0 0;border:0;margin:0;align-items:center;gap:6px">
-      <input type="checkbox" id="cfgQuiet" style="width:auto">
-      <label for="cfgQuiet" style="margin:0">免打扰时段</label>
-      <select id="cfgQuietStart" aria-label="免打扰开始时间"></select>
-      <span style="font-size:12px;color:var(--muted)">至</span>
-      <select id="cfgQuietEnd" aria-label="免打扰结束时间"></select>
-    </div>
-    <p class="hint" style="margin:4px 0 8px">免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。</p>
-  </div>
-
-  <!-- v1.4-F Web Push 订阅框架：订阅/取消订阅 + 状态显示 -->
-  <div class="row push-row" id="pushRow">
-    <div class="push-head">
-      <label for="cfgPush">推送通知（Web Push）</label>
-      <input type="checkbox" id="cfgPush" style="width:auto">
-    </div>
-    <p class="push-status" id="pushStatus">未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。</p>
-    <div class="push-actions">
-      <button type="button" id="btnPushSubscribe">订阅推送</button>
-      <button type="button" id="btnPushUnsubscribe" disabled>取消订阅</button>
-      <button type="button" id="btnPushTest" disabled>发送测试通知</button>
-    </div>
-    <p class="hint" style="margin:6px 0 0;font-size:11px">⚠ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。</p>
-  </div>
-
-  <div class="row" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-    <label style="font-size:14px;font-weight:600">Agent 能力</label>
-    <div class="row switch" style="padding:4px 0 0;border:0;margin:0">
-      <input type="checkbox" id="cfgAgent" style="width:auto">
-      <label for="cfgAgent" style="margin:0">Agent 模式（工作记忆 + 多步目标编排）</label>
-    </div>
-    <p class="hint" style="margin:4px 0 8px">开启后，助手具备中短期记忆（自动注入对话上下文）与多步目标规划能力（plan→逐步执行→complete_goal），对话循环上限由 6 轮放宽至 12 轮以支撑自主多步任务。可对我说「记住：xxx」直接写入记忆。</p>
-    <div class="hint" id="agentStatus" style="font-size:12px;margin:4px 0 8px"></div>
-    <div style="display:flex;gap:6px">
-      <button type="button" class="addbtn" id="btnClearMem" style="--sc:var(--muted);padding:4px 10px;white-space:nowrap">清空记忆</button>
-      <button type="button" class="addbtn" id="btnCancelGoal" style="--sc:var(--danger,var(--muted));padding:4px 10px;white-space:nowrap">取消当前目标</button>
-    </div>
-  </div>
-
-  <p class="hint">兼容 OpenAI 接口格式（OpenAI / DeepSeek / 通义 / 豆包 等均可）。Key 仅存本机浏览器。启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
     </div>
   </div>
 </div>
@@ -5999,7 +6271,7 @@ function renderSide(){
     ${UI_ICONS.stats.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">统计</span><span class="cnt">${tasks.length}</span></button>`;
   const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
   // 回收站进回收站态时高亮（active==="recycle"）；修复点击回收站后其他场景仍亮的问题
-  const recycleBtn = `<button class="nav-item ${_effActive==="recycle"?"active":""}" data-recycle="1" style="--sc:var(--muted)" title="回收站（已删除任务）">
+  const recycleBtn = `<button class="nav-item ${_effActive==="recycle"?"active":""}" data-recycle="1" style="--sc:var(--danger)" title="回收站（已删除任务）">
     ${UI_ICONS.trash.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">回收站</span>${recycleCount?`<span class="cnt">${recycleCount}</span>`:""}</button>`;
   const items = ORDER.map(sc=>{
     const s = SCENARIOS[sc];
@@ -6013,8 +6285,11 @@ function renderSide(){
   // 指南入口迁移至侧栏底部（v1.9 顶栏精简：从顶栏移除 btnHelp，改由侧栏 data-help 委托调用 renderHelp）
   const helpBtn = `<button class="nav-item${_helpActive}" data-help="1" id="sideBtnHelp" style="--sc:var(--muted)" title="使用指南" aria-label="使用指南">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="nm">指南</span></button>`;
-  // 三组分割：监控组(总览/统计/回收站) → 功能组(场景项) → 系统组(设置/指南)，组间细分割线 .nav-sep
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + overview + statsBtn + recycleBtn + '<div class="nav-sep"></div>' + items + '<div class="nav-sep"></div>' + gearBtn + helpBtn);
+  // 三组分割：监控组(总览/统计/回收站) → 场景组(场景项) → 系统组(设置/指南)，组间用分组小标题 .nav-group（v1.9.5）
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML +
+    '<div class="nav-group">监控</div>' + overview + statsBtn + recycleBtn +
+    '<div class="nav-group">场景</div>' + items +
+    '<div class="nav-group">系统</div>' + gearBtn + helpBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
     const _m = $("#main"); if(_m) _m.scrollTop = 0;
@@ -6050,9 +6325,10 @@ function openRecycle(){
   // 页面视图：渲染到 #main（与 renderStats 一致），保留 id=recycleModal / .recycle-card 以兼容关闭逻辑与焦点陷阱
   const html = `<div class="recycle-modal" id="recycleModal">
     <div class="recycle-card">
-      <div class="recycle-header">
+      <div class="recycle-header page-head">
         <button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button>
-        <h2>回收站</h2>
+        <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
+        <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务可在此恢复或彻底删除</p></div>
         <span class="recycle-count">${countLabel}</span>
       </div>
       <div class="recycle-list">${items}</div>
@@ -6067,6 +6343,7 @@ function openRecycle(){
 
   </div>`;
   $("#main").innerHTML = sanitizeHtml(html);
+  $("#main").classList.add("page-recycle"); // v1.9.4：回收站页面铺满主区高度（尾栏被顶到主区底部）
   const modal=$("#recycleModal");
   modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card")); // T5：焦点锁在页面内
   const close = ()=> closeRecycleModal();
@@ -6848,6 +7125,7 @@ function renderHelp(){
       </div>
   </div>`;
   $("#main").innerHTML = sanitizeHtml(html);
+  $("#main").classList.remove("page-recycle"); // v1.9.4：指南页不沿用回收站铺满类
   appendFoot();
   const backBtn = $("#helpBack");
   if(backBtn) backBtn.onclick = ()=>{ const _m = $("#main"); if(_m) _m.scrollTop = 0; render(); };
@@ -7487,23 +7765,44 @@ function renderStats(){
     $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>`);
     return;
   }
-  // 关键指标卡片（P3：新增平均周期；本周完成带周环比角标）
+  // 关键指标卡片（10 个全中文：总任务/已完成/进行中/完成率/平均周期/本周完成/今日完成/当前连续/最长连续/逾期任务）
   const avg = calcAvgCycle();
   const wow = calcWeekOverWeek();
   const wowBadge = wow.delta === null ? `<span class="stats-wow muted">环比 -</span>`
     : `<span class="stats-wow ${wow.delta >= 0 ? "up" : "down"}">${wow.delta >= 0 ? "↑" : "↓"} ${Math.abs(wow.delta)}%</span>`;
+  // 今日完成：doneAt 在今天 0 点之后
+  const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+  const todayDone = getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt && t.doneAt >= today0.getTime()).length;
+  // 当前连续：所有已完成任务按天聚合，从今天（今天没完成则从昨天）往前数连续天数
+  const daySet = new Set();
+  getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt).forEach(t => daySet.add(_ymd(new Date(t.doneAt))));
+  let curD = new Date(today0);
+  if(!daySet.has(_ymd(curD))) curD.setDate(curD.getDate() - 1);
+  let currentStreak = 0;
+  while(daySet.has(_ymd(curD))){ currentStreak++; curD.setDate(curD.getDate() - 1); }
+  // 逾期任务：未完成且截止日期早于今天
+  const todayYmd = todayStr();
+  const overdue = getTasks().filter(t => !t.deletedAt && t.status !== "done" && t.due && t.due < todayYmd).length;
   const cards = [
     { label: "总任务数", value: stats.total },
     { label: "已完成", value: stats.done },
+    { label: "进行中", value: stats.total - stats.done },
     { label: "完成率", value: stats.rate + "%" },
     { label: "平均周期", value: avg.days === null ? "-" : avg.days + " 天" },
-    { label: "最长 streak", value: stats.bestStreak + " 天" },
-    { label: "本周完成", value: stats.weekDone, badge: wowBadge }
+    { label: "本周完成", value: stats.weekDone, badge: wowBadge },
+    { label: "今日完成", value: todayDone },
+    { label: "当前连续", value: currentStreak + " 天" },
+    { label: "最长连续", value: stats.bestStreak + " 天" },
+    { label: "逾期任务", value: overdue }
   ];
-  const cardsHtml = `<div class="stats-cards">` + cards.map(c =>
+  const cardsHtml = `<div class="page-head">` +
+    `<span class="ph-ic" aria-hidden="true">${UI_ICONS.stats}</span>` +
+    `<div class="ph-tx"><h2>任务统计</h2><p class="sub">关键指标、完成趋势与习惯链分析</p></div>` +
+    `<span class="ph-act"><button type="button" class="report-entry-btn" id="btnStatsOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表</button></span>` +
+    `</div>` +
+    `<div class="stats-cards">` + cards.map(c =>
     `<div class="stats-card"><div class="stats-card-val">${c.value}${c.badge || ""}</div><div class="stats-card-lbl">${c.label}</div></div>`
-  ).join("") + `</div>` +
-    `<div style="margin-bottom:var(--space-4)"><button type="button" class="report-entry-btn" id="btnStatsOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报 · 对比 · 导出PDF）</button></div>`;
+  ).join("") + `</div>`;
   // 趋势图（周/双周/月切换）
   const trendData = calcTrend(_statsTrendDays);
   const trendChart = renderTrendChart(trendData, "var(--accent)");
@@ -9727,6 +10026,17 @@ async function runChatLoop(messages, hist){
   save(PREFIX+"chat_"+active, hist);
   renderChat(); scrollChat();
 }
+/* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·渲染 ---------- */
+// 快捷指令（v1.9.5：空对话时展示，点击填入输入框）
+const CHAT_SUGGEST = [
+  "建个任务：写周报，明天截止",
+  "查总览",
+  "统计本周完成了什么",
+  "搜索 周报"
+];
+const CHAT_SUGGEST_HTML = `<div class="chat-suggest" aria-label="快捷指令">` +
+  CHAT_SUGGEST.map(p => `<button type="button" class="chip" data-prompt="${esc(p)}">${esc(p)}</button>`).join("") +
+  `</div>`;
 function renderChat(){
   const el=$("#chat"); if(!el) return;
   const hist=getChat(active);
@@ -9743,7 +10053,7 @@ function renderChat(){
     if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">重试</button></div>`;
     if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
     return `<div class="msg ${m.role}">${esc(m.content||"")}</div>`;
-  }).join("") : `<div class="msg assistant">你好，我是${SCENARIOS[active].name}助手，可以直接让我「建个任务」「查总览」「搜索」。</div>`);
+  }).join("") : `<div class="msg assistant">你好，我是${SCENARIOS[active].name}助手，可以直接让我「建个任务」「查总览」「搜索」。</div>` + CHAT_SUGGEST_HTML);
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
   scrollChat();
@@ -9775,6 +10085,13 @@ function renderChatDisabled(){
 function bindChatPanel(){
   const panel=$("#chatPanel"); if(!panel || panel._bound) return false;
   panel._bound=true;
+  // v1.9.5：快捷指令 chips——点击填入输入框并聚焦（事件委托，chips 随 renderChat 重建）
+  document.addEventListener("click", function(e){
+    const chip = e.target && e.target.closest ? e.target.closest(".chat-suggest .chip") : null;
+    if(!chip) return;
+    const t = $("#chatTextInput");
+    if(t){ t.value = chip.getAttribute("data-prompt") || ""; t.focus(); t.dispatchEvent(new Event("input")); }
+  });
   // 模型选择器：复用 cfg.profiles / getActiveProfile()，切换后即时生效（落盘 + 提示）
   const modelSelect=$("#chatModelSelect");
   if(modelSelect){
@@ -9894,9 +10211,14 @@ function bindChatPanel(){
       if(e.key==="Enter" || e.key===" "){ e.preventDefault(); toggleCollapse(); }
     });
   }
-  // 恢复持久化折叠状态
+  // 恢复持久化折叠状态 + 中屏默认折叠（布局修复：平板/小笔记本三栏挤压）
+  // 策略：用户点过折叠/展开（存储键存在）→ 恢复其显式选择；
+  //       从未表达偏好且视口 <1280px → 默认折叠为侧边条，把空间还给主内容区
+  //       （768px 下不折叠时主区仅 288px，看板会被挤溢出）
   try{
-    if(load(PREFIX+"chat_panel_collapsed","0")==="1"){
+    const hasPref = localStorage.getItem(PREFIX+"chat_panel_collapsed") !== null;
+    const collapseByDefault = !hasPref && (window.innerWidth||1024) < 1280;
+    if(load(PREFIX+"chat_panel_collapsed","0")==="1" || collapseByDefault){
       panel.classList.add("collapsed");
       if(collapseBtn) collapseBtn.textContent="▶";
       if(rail) rail.classList.add("show");
@@ -10396,6 +10718,8 @@ function appendFoot(){
 
 function render(){
   try{
+    // v1.9.4：切出回收站页面时移除铺满类（openRecycle 会重新添加）
+    const _rc = $("#main"); if(_rc) _rc.classList.remove("page-recycle");
     // v1.9：设置改为正常页面后，若 #drawer 在 .main-wrap 里（设置页面正在显示），
     // 切换场景/其他视图时需先把 #drawer 移回原位置并恢复 #main 显示
     const _drawer = $("#drawer");
@@ -12342,6 +12666,10 @@ $("#btnMessages").onclick = function(e){
   if(!panel) return;
   if(panel.style.display === "none"){
     renderMsgPanel();
+    // 布局修复：面板顶部锚定到消息按钮下缘（原 CSS 固定 top:52px，
+    // 在 69px 顶栏下会向上盖住顶栏按钮约 17px；CSS 值仅作无 JS 时的兜底）
+    var btnR = this.getBoundingClientRect();
+    panel.style.top = Math.round(btnR.bottom + 6) + "px";
     panel.style.display = "";
     // 打开 1s 后标记所有已读（让用户先看到未读高亮）
     setTimeout(function(){
@@ -12399,6 +12727,14 @@ $("#drawerClose").onclick = closeDrawer;
 $("#overlay").onclick = closeDrawer;
 $("#cfgSave").onclick = saveCfg;
 $("#cfgProfileSelect").onchange = e => switchProfile(e.target.value);
+/* v1.9.x：设置页分区快捷导航（点击平滑滚动到分区）+ 导航栏保存按钮 */
+document.querySelectorAll(".set-nav-btn[data-scroll-to]").forEach(b=>{
+  b.onclick = ()=>{
+    const el = document.getElementById(b.getAttribute("data-scroll-to"));
+    if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
+  };
+});
+const _setNavSave = $("#setNavSave"); if(_setNavSave) _setNavSave.onclick = saveCfg;
 $("#cfgProfileNew").onclick = newProfile;
 $("#cfgProfileDup").onclick = dupProfile;
 $("#cfgProfileDel").onclick = delProfile;

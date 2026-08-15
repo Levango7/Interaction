@@ -181,8 +181,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
         })
       );
 
-      // 输入消息并发送
-      await page.fill('#chatForm input[name="msg"]', "你好");
+      // 输入消息并发送（输入框为 textarea，兼容选择器）
+      await page.fill('#chatForm [name="msg"]', "你好");
       await page.click('#chatForm button[type="submit"]');
       // 等待回复渲染（#chat 里出现 .msg.assistant 含 mockReply）
       await page.waitForSelector(`#chat .msg.assistant`, { timeout: 10_000 });
