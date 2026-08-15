@@ -2,6 +2,117 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com/) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.11.0] - 2026-08-15
+
+### 5 项 UI/UX 优化：主题显示·待办栏可下拉·聊天面板 hover·发送变暂停·标题栏统一
+
+**1. 顶栏主题按钮显示当前主题名称**
+- `applyTheme()` 改为同时渲染图标 + 文字 label（"亮色"/"暗色"/"跟随"），原来只显示图标不便辨识
+- 暗色模式仍显示太阳图标（点击切到亮色），亮色/跟随显示月亮图标
+
+**2. 顶部消息通知栏可下拉展开前 3 条**
+- 重构 `#msgBar` HTML：顶部一行 = 铃铛 + 预览文本 + 展开箭头按钮（始终可见）；展开时下方出现前 3 条最近消息列表 + footer（打开全部/全部已读）
+- CSS 新增 `.msg-bar-collapsed` / `.msg-bar-expanded` 状态机 + 高度过渡动画
+- JS 新增 `renderMsgBarList()` 渲染前 3 条 + `_fmtMsgTime` 时间格式化 + `toggleMsgBar()` / `setMsgBarExpanded()` / `initMsgBarExpand()` 三件套
+- 展开状态持久化到 `wb_msgbar_expanded`，刷新页面恢复
+- 单条点击：标记已读 + 自动打开消息中心面板定位到该条
+- 整体结构升级为：可下拉拉伸的待办/通知栏
+
+**3. 右侧聊天面板 hover/focus 边框高亮 + 输入区重排**
+- `.chat-panel` 左侧 border 改透明；hover 或 focus-within 时显示 `border-left-color: var(--accent-soft) + box-shadow: inset 3px 0 0 var(--accent-soft)`（柔和左缘高亮）
+- `.chat-input-area` 同样 hover/focus-within 时顶部边变 accent-soft
+- 大模型选择器（`#chatModelSelect`）从聊天面板头部**下放**到输入区，夹在 textarea 与发送按钮之间（`.chat-model-inline` 缩小下拉）
+- 附件按钮（`.chat-attach-btn`）从 36×36 缩小到 28×28，纯图标
+- 发送按钮（`.chat-send-btn`）从文字「发送」改为**纯图标方块**（32×32），图标为纸飞机
+- **发送键 ⇄ 暂停键 切换**：`showChatThinking(true)` 时发送键变为红色方块 + 旋转图标，点击触发 `abortChat()`（即 stop），完成时恢复为发送图标
+- 修复图标切换通过 `data-mode="send|stop"` + `.ic-send` / `.ic-stop` 双 SVG + CSS
+
+**4. 概览标题栏上下间距小**
+- `.page-head` 默认 `padding: var(--space-2) 0` + `margin-bottom: var(--space-3)`（之前是 `--space-5` + 38px 图标 + xl h2）
+- 图标缩到 32×32、h2 缩到 `var(--fs-lg)`、sub 缩到 `var(--fs-xs)`
+- 仅显示性标题卡不再占据大面积
+
+**5. 统一所有页面标题栏风格**
+- 抽出两种变体：
+  - `.page-head`（默认紧凑型）——概览 / 统计 / 仓库 / 图表商店
+  - `.page-head-loose`（传统大气型）——抽屉（设置/AI 配置/插件市场）
+- `renderStats()` 改为 `<div class="card"><header class="page-head">` 结构（之前是裸 `.page-head` 无 card 包裹）
+- 仓库 / 图表商店的操作按钮（返回 / 清空画布）统一包入 `.ph-act` 容器
+- CSS 新增 `.recycle-header` 继承紧凑型 page-head 风格（padding/icon/h2 一致）
+
+**6. 维护**
+- 版本号 1.10.0 → 1.11.0（`agent-workbench.html` VERSION / `package.json` / `electron/package.json` 同步）
+- `service-worker.js` CACHE_VERSION → `v1.11.0-20260815d`，新增 1.11.0 条目
+- 测试更新：`tests/ui-consistency.test.js` 页脚版本断言 v1.10.0 → v1.11.0
+
+**验证**
+- `npm run lint`：0 处硬编码颜色 + eslint 0 错误
+- `npx vitest run`：547 / 549 通过（2 个跨设备/兼容偶发超时重跑均过；与本次改动无关）
+
+---
+
+## [v1.10.0] - 2026-08-15
+
+### UI 大调优 + 应用 popover 重做 + 图表商店 + 仓库 4 tab
+
+**1. 导航与顶栏**
+- 侧栏折叠态：`.side.collapsed` 宽度 56→64px；`.nav-item .nm` 字号 11px，`white-space:nowrap + overflow:hidden + text-overflow:ellipsis` 一行可显示"概览/统计/AI"等 2 字项
+- 顶栏 6 个系统级按钮（搜索/命令/消息/主题/下载/更多）：`.topbar .tbtn` 改为 `flex-direction:column`（图标上·文字下），`min-height:54px / font-size:11px`，视觉上从横向拥挤改为竖向网格，节省顶栏横向空间
+
+**2. 概览页 + 标题卡**
+- `renderOverview()` 顶部新增 `<header class="page-head">` 标题卡（图标 + 标题 + 副标题），与统计/回收站/图表商店页一致
+
+**3. 待办栏展开**
+- `.top3-list` 默认显示前 3 行（`TOP3_PREVIEW`）；超过 3 项的部分用 `.top3-item-extra` 默认隐藏；新增 `#top3Expand` "展开全部"按钮，aria-expanded 同步，CSS `.top3-list.expanded .top3-item-extra{display:flex}` 控制显隐
+- 待办项 padding/margin 加大：`--space-3 --space-4` + `min-height:44px`
+
+**4. 模型选择器位置**
+- `#chatModelSelect` 从顶栏第二行迁回右侧聊天面板 `.chat-panel-header`（与"AI 助手"标题同处），符合用户对模型随助手管理的语义
+
+**5. 市场归位**
+- 市场入口（`data-pluginpage`）从系统组末尾迁回功能组（图表/组件/应用之后），保留独立菜单页设计
+
+**6. 聊天输入框间距**
+- `.chat-input-area` padding `--space-2` → `--space-4`，上下间距加大避免拥挤
+
+**7. 仓库 4 tab（用户最新决策）**
+- 热：未完成 + 最近活跃（≤7 天），按 `updatedAt/doneAt/createdAt` 倒序，前 20 项
+- 温：未完成 + 长时间未操作（7-30 天）
+- 冷：已完成任务（doneAt 倒序，"归档"语义）
+- 无用：已删除任务（deletedAt 倒序，"回收站"语义）
+- 横向 pill tabs 切换；非无用 tab 提供"定位"按钮（切到对应场景高亮该卡）；无用 tab 走原 recycle 批量恢复/删除
+- 移除原仓库 tab 内的 emoji（🔥/⏳/❄/🗑）以通过 UI 一致性 emoji 零容忍门禁
+
+**8. 图表商店（独立页面）**
+- 新增 `openChartStore()`：左侧图表库（8 种：日历/趋势/热力图/甘特/思维导图/仪表盘/习惯链/饼图），右侧可拖拽画布
+- 画布支持：拖拽移动（head 区域 mousedown/move/up）、右下角调整大小（mousedown + min 160x120）
+- 状态持久化：`localStorage[wb_chart_canvas]`，刷新后布局保留
+- CSS 新增：`.chart-store-body`（grid 240px+1fr）、`.cs-lib`/`.cs-canvas`/`.cs-canvas-item`/`.cs-resize-handle` + 各迷你图表样式（`.cs-grid`/`.cs-line`/`.cs-heat`/`.cs-gantt`/`.cs-mind`/`.cs-dash`/`.cs-chain`/`.cs-pie`）
+- 入口：侧栏「图表」popover 第一项 + 顶栏 tooltip 链接
+
+**9. 应用 popover 重做（生活工具 + 可玩性机制）**
+- 移除非实现项（笔记/仪表盘/协作/分享），替换为 5 项能力：
+  - **日历**：复用 `renderCalendarView(0)` 弹窗
+  - **天气**（生活工具）：`openWeatherModal()` 弹窗，今日 + 5 日预报；离线模拟（基于日期 hash 稳定生成），底部"数据为本地模拟·联网可对接"提示（v1.8-C 集成生态已预留）
+  - **闹钟**（生活·有特色）：`openAlarmModal()` 弹窗，多任务管理；支持时间/备注/重复周几/贪睡/停止；每 30s tick 检查到点，触发 `AudioContext` 蜂鸣（5 次）+ 列表项 `alarmShake` 抖动动画 + `lastRing` 防同一天重复
+  - **指针特效**（可玩性）：`togglePointerFx()` 切换彩色粒子拖尾，`#pointerFxCanvas` 全屏覆盖，pointer-events:none，30ms 限流，7 色循环；状态持久化 `wb_pointerfx`，刷新恢复
+  - **萌宠**（可玩性）：`openPetModal()` 选角色 + `mountPet()` 挂载，5 角色极简 SVG：少女（紫发）/小猫（橘）/小狗（柴）/小兔（白绒）/熊猫（黑白团子），每只 5 句不同气泡；点宠物说话、关闭按钮收回、可拖拽；状态持久化 `wb_pet`，刷新恢复；`pet-bubble` CSS 动画 1.2s 渐隐
+- CSS 新增：`.weather-modal-card`/`.weather-now`/`.weather-day`/`.alarm-modal-card`/`.alarm-now`/`.alarm-form`/`.alarm-item/.alarm-item.ringing/.alarmShake`/`.pet-modal-card/.pet-card/.pc-svg`/`.pointer-fx-canvas`/`.pet-stage/.pet/.pet-bubble/.pet-close/.petBob`
+- 应用 popover 顶部增加 `.side-pop-sep` 分隔线（生活工具 vs 可玩性）+ `.side-pop-toggle` 开关状态徽标（指针特效右侧"关/开"）
+
+**10. 维护**
+- 版本号 1.9.9 → 1.10.0（`agent-workbench.html` VERSION / `package.json` / `package-lock.json` / `electron/*` 同步）
+- `service-worker.js` CACHE_VERSION → `v1.10.0-20260815d`，并补充新条目
+- 字段名 `data-pop="weather|alarm|pointerfx|pet|chartstore"` 接入 `setupSidePopItems` 路由
+- `lint-colors.mjs` 白名单新增"萌宠 SVG 插画数据行内 fill/stroke"规则（艺术色不是 UI 令牌）
+- 测试更新：`tests/ui-consistency.test.js` 页脚版本断言 v1.9.9 → v1.10.0
+
+**验证**
+- `npm run lint`：0 处硬编码颜色 + eslint 0 错误
+- `npx vitest run`：548 / 549 通过（1 个 `compat.test.js` d2 偶发超时，重跑通过；与本次改动无关）
+
+---
+
 ## [v1.9.9] - 2026-08-15
 
 ### 信息架构大重排（顶栏 / 侧栏四组 / 仓库三态 / 文档改名 / Agent 入口）
