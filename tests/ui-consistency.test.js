@@ -186,8 +186,9 @@ describe("UI 一致性 · 侧栏高亮状态机（uiView）", () => {
 });
 
 /**
- * 页脚 build 标记（v1.9.3g）
+ * 页脚 build 标记（v1.9.5）
  * 页脚文本含 b{BUILD_TAG}，用于用户自证是否已加载最新版（PWA 缓存排查）。
+ * 注意：BUILD_TAG 随发布 bump，此处断言需同步更新（与 agent-workbench.html / service-worker.js CACHE_VERSION 保持一致）。
  */
 describe("UI 一致性 · 页脚 build 标记", () => {
   let win, __test;
@@ -196,17 +197,17 @@ describe("UI 一致性 · 页脚 build 标记", () => {
     __test = win.__test;
   });
 
-  it("#main > .foot 文本含 b20260814g", () => {
+  it("#main > .foot 文本含 b20260815a", () => {
     __test.render();
     const foot = win.document.querySelector("#main > .foot");
     expect(foot).toBeTruthy();
-    expect(foot.textContent).toMatch(/v1\.9\.3 · b20260814g/);
+    expect(foot.textContent).toMatch(/v1\.9\.5 · b20260815a/);
   });
 
-  it("openDrawer() 后 #drawer > .foot 文本含 b20260814g", () => {
+  it("openDrawer() 后 #drawer > .foot 文本含 b20260815a", () => {
     __test.openDrawer();
     const foot = win.document.querySelector("#drawer > .foot");
     expect(foot).toBeTruthy();
-    expect(foot.textContent).toMatch(/b20260814g/);
+    expect(foot.textContent).toMatch(/b20260815a/);
   });
 });
