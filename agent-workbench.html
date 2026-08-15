@@ -3186,10 +3186,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.11.2";
+const VERSION = "1.12.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260815f";
+const BUILD_TAG = "20260815g";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -5237,10 +5237,12 @@ function execTool(name, args, force){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
       const tags = Array.isArray(args.tags)? args.tags.map(String).filter(Boolean) : [];
       const tasks = getTasks();
-      tasks.push({id:uid(), sc, title:String(args.title||"未命名"), due:args.due||"",
-        priority:["","P0","P1","P2"].includes(args.priority)?args.priority:"", status:"todo", doneAt:null, note:"", tags, created:Date.now()});
+      const nt = {id:uid(), sc, title:String(args.title||"未命名"), due:args.due||"",
+        priority:["","P0","P1","P2"].includes(args.priority)?args.priority:"", status:"todo", doneAt:null, note:"", tags, created:Date.now()};
+      tasks.push(nt);
       setTasks(tasks);
-      return JSON.stringify({ok:true, id:tasks[tasks.length-1].id, msg:"已在"+SCENARIOS[sc].name+"创建任务："+args.title});
+      _emitTaskEvent("task_create", nt); // v1.12 [1a]：AI/Agent 创建任务也发事件
+      return JSON.stringify({ok:true, id:nt.id, msg:"已在"+SCENARIOS[sc].name+"创建任务："+args.title});
     }
     if(name==="list_tasks"){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
@@ -5280,6 +5282,7 @@ function execTool(name, args, force){
         return JSON.stringify({ok:false, confirm:"将删除：「"+ft.task.title+"」（id "+ft.task.id+"）。发送「确认」以继续，其他内容取消。", op:"delete_task", task_id:ft.task.id, title:ft.task.title});
       }
       ft.task.deletedAt=Date.now(); setTasks(ft.tasks); // ③ 软删除：进回收站，可恢复
+      _emitTaskEvent("task_delete", ft.task); // v1.12 [1a]：AI 删除任务发事件
       return JSON.stringify({ok:true, msg:"已删除（进入左侧「回收站」，可恢复）："+ft.task.title});
     }
     if(name==="add_record"){
@@ -9879,9 +9882,11 @@ function bindScenario(){
   $("#taskForm").onsubmit = e=>{
     e.preventDefault(); const f=e.target; const tasks=getTasks();
     const tags = f.tags.value.trim()? f.tags.value.split(/[,，]/).map(x=>x.trim()).filter(Boolean) : [];
-    tasks.push({id:uid(), sc:active, title:f.title.value.trim(), due:f.due.value,
-      priority:f.priority.value, status:"todo", doneAt:null, note:"", tags, created:Date.now()});
+    const nt = {id:uid(), sc:active, title:f.title.value.trim(), due:f.due.value,
+      priority:f.priority.value, status:"todo", doneAt:null, note:"", tags, created:Date.now()};
+    tasks.push(nt);
     setTasks(tasks); checkCount(); render();
+    _emitTaskEvent("task_create", nt); // v1.12 [1a]：表单创建任务发事件（自动化规则 + Webhook 总线）
   };
   $("#recForm").onsubmit = e=>{
     e.preventDefault(); const f=e.target; const obj={id:uid(), created:Date.now()};
@@ -9904,7 +9909,7 @@ function bindScenario(){
     if(!confirm("删除这条任务？（将进入回收站，可恢复）")) return;
     const tasks=getTasks();
     const t=tasks.find(x=>x.id===b.dataset.del);
-    if(t && !t.deletedAt){ t.deletedAt=Date.now(); setTasks(tasks); } // T1：软删除，与 AI delete_task 行为统一
+    if(t && !t.deletedAt){ t.deletedAt=Date.now(); setTasks(tasks); _emitTaskEvent("task_delete", t); } // T1：软删除，与 AI delete_task 行为统一；v1.12 [1a] 发事件
     render();
   });
   $$("[data-edit]").forEach(b=> b.onclick=()=> openTaskEdit(b.dataset.edit)); // A1：任务编辑弹窗
@@ -20715,12 +20720,14 @@ function renderAutomationPanel(){
   html += '<select class="auto-select" id="autoRuleTrigger">';
   html += '<option value="task_complete">任务完成</option>';
   html += '<option value="task_create">任务创建</option>';
+  html += '<option value="task_delete">任务删除（v1.12 新增）</option>';
   html += '<option value="scenario_complete">场景完成</option>';
   html += '<option value="webhook">Webhook</option>';
   html += '</select>';
   html += '<input class="auto-input" id="autoRuleScenario" placeholder="场景（可选，如 office）">';
   html += '<input class="auto-input" id="autoRuleActionTitle" placeholder="动作：创建任务标题">';
   html += '<button type="button" class="addbtn" id="btnAutoAddRule" style="--sc:var(--accent)">添加规则</button>';
+  html += '<button type="button" class="addbtn" id="btnAutoTestRule" title="按上方触发器构造样例事件，手动验证规则链路">测试规则</button>';
   html += '</div>';
   html += _renderCronList();
   // 添加定时任务表单
@@ -20741,7 +20748,59 @@ function renderAutomationPanel(){
   html += '<input class="auto-input" id="hookSecret" placeholder="密钥（可选）">';
   html += '<button type="button" class="addbtn" id="btnAutoAddHook" style="--sc:var(--accent)">添加 Webhook</button>';
   html += '</div>';
+  /* ---------- v1.12 [1c] Webhook 订阅总线管理（引擎已活，补 UI 入口） ---------- */
+  html += '<div class="auto-form" style="margin-top:16px">';
+  html += '<h4 class="auto-form-title">Webhook 订阅（事件总线）</h4>';
+  html += '<p class="automation-desc" style="font-size:12px">任务完成/创建/删除事件将签名投递到订阅的回调 URL；失败自动重试 3 次，超限进死信队列。</p>';
+  var _whSubs = [];
+  try{ _whSubs = webhookListSubscriptions() || []; }catch(e8){ }
+  var _whDlq = [];
+  try{ _whDlq = webhookGetDLQ() || []; }catch(e9){ }
+  var _whHist = [];
+  try{ _whHist = webhookGetHistory() || []; }catch(e10){ }
+  html += '<div class="auto-tag" style="margin-bottom:6px">订阅 ' + _whSubs.length + ' · 死信 ' + _whDlq.length + ' · 历史 ' + _whHist.length + '</div>';
+  _whSubs.forEach(function(s){
+    html += '<div style="display:flex;gap:8px;align-items:center;margin:4px 0;flex-wrap:wrap">';
+    html += '<span class="auto-tag">' + esc(s.eventType) + '</span>';
+    html += '<span style="flex:1;min-width:180px;font-size:12px;overflow:hidden;text-overflow:ellipsis">' + esc(s.callbackUrl) + '</span>';
+    html += '<span class="auto-tag">' + (s.enabled ? ('投递 ' + (s.deliveryCount || 0) + ' / 失败 ' + (s.failureCount || 0)) : '已停用') + '</span>';
+    html += '<button type="button" class="addbtn" data-whbus-toggle="' + esc(s.id) + '" style="padding:2px 8px">' + (s.enabled ? '停用' : '启用') + '</button>';
+    html += '<button type="button" class="addbtn" data-whbus-del="' + esc(s.id) + '" style="padding:2px 8px">删除</button>';
+    html += '</div>';
+  });
+  html += '<select class="auto-select" id="whBusEventType"><option value="task_complete">任务完成</option><option value="task_create">任务创建</option><option value="task_delete">任务删除</option></select>';
+  html += '<input class="auto-input" id="whBusUrl" placeholder="回调 URL（https://；本机开发 http://localhost）">';
+  html += '<input class="auto-input" id="whBusSecret" placeholder="HMAC-SHA256 签名密钥（可选）">';
+  html += '<button type="button" class="addbtn" id="btnWhBusAdd">订阅</button>';
+  if(_whDlq.length) html += '<button type="button" class="addbtn" id="btnWhBusReplayDLQ">重放死信队列（' + _whDlq.length + '）</button>';
   html += '</div>';
+
+  /* ---------- v1.12 [1d] OAuth 连接（回调闭环已通，补注册+跳转入口） ---------- */
+  html += '<div class="auto-form" style="margin-top:16px">';
+  html += '<h4 class="auto-form-title">OAuth 连接</h4>';
+  html += '<p class="automation-desc" style="font-size:12px">PKCE 授权流程；授权回调自动换取 token。token 存于本机 localStorage。</p>';
+  var _o2raw = {};
+  try{ _o2raw = JSON.parse(localStorage.getItem("wb_oauth2_providers") || "{}"); }catch(e11){ }
+  var _o2names = Object.keys(_o2raw);
+  if(!_o2names.length) html += '<div class="auto-tag">尚未注册 provider（用下方表单添加）</div>';
+  _o2names.forEach(function(nm){
+    var _tk = null;
+    try{ _tk = oauth2GetToken(nm); }catch(e12){ }
+    html += '<div style="display:flex;gap:8px;align-items:center;margin:4px 0">';
+    html += '<span class="auto-tag">' + esc(nm) + '</span>';
+    html += '<span class="auto-tag">' + (_tk ? '已连接' : '未连接') + '</span>';
+    if(!_tk) html += '<button type="button" class="addbtn" data-o2-connect="' + esc(nm) + '" style="padding:2px 8px">连接</button>';
+    else html += '<button type="button" class="addbtn" data-o2-revoke="' + esc(nm) + '" style="padding:2px 8px">断开</button>';
+    html += '</div>';
+  });
+  html += '<input class="auto-input" id="o2Name" placeholder="provider 名称（如 notion）">';
+  html += '<input class="auto-input" id="o2ClientId" placeholder="client_id">';
+  html += '<input class="auto-input" id="o2AuthEp" placeholder="授权端点 https://…/authorize">';
+  html += '<input class="auto-input" id="o2TokenEp" placeholder="token 端点 https://…/token">';
+  html += '<button type="button" class="addbtn" id="btnO2Add">注册并连接</button>';
+  html += '</div>';
+
+  html += '</div>'; // 关闭 .automation-panel
   return html;
 }
 
@@ -20797,6 +20856,64 @@ function _bindAutomationEvents(){
       }else{
         try{ toast("添加规则失败", "error"); }catch(e2){}
       }
+      return;
+    }
+    // v1.12 [1b]：测试规则——按表单触发器构造样例事件手动喂规则引擎，验证链路
+    if(target.id === "btnAutoTestRule"){
+      var tSel = $("#autoRuleTrigger"), scIn = $("#autoRuleScenario");
+      var sample = { type: (tSel && tSel.value) || "task_complete", scenario: (scIn && scIn.value) || "",
+        task: { id: "sample", sc: (scIn && scIn.value) || "office", title: "测试任务", status: "todo" }, ts: Date.now() };
+      var fired = evaluateTriggers(sample);
+      try{ toast(fired.length ? ("测试事件已触发 " + fired.length + " 条规则") : "测试事件已分发（无规则命中）", fired.length ? "ok" : "warn"); }catch(e5){}
+      return;
+    }
+    // v1.12 [1c]：Webhook 订阅总线 CRUD + DLQ 重放
+    if(target.id === "btnWhBusAdd"){
+      var et = $("#whBusEventType"), u = $("#whBusUrl"), sec = $("#whBusSecret");
+      var sub = webhookRegister((et && et.value) || "task_complete", (u && u.value || "").trim(), { secret: (sec && sec.value) || null });
+      try{ toast(sub ? "订阅已添加" : "订阅失败（检查 URL 是否 https:// 开头）", sub ? "ok" : "error"); }catch(e6){}
+      if(sub) openAutomationModal();
+      return;
+    }
+    var whT = target.getAttribute("data-whbus-toggle");
+    if(whT){
+      var sub2 = webhookGetSubscription(whT);
+      if(sub2) webhookSetEnabled(whT, !sub2.enabled);
+      openAutomationModal();
+      return;
+    }
+    var whD = target.getAttribute("data-whbus-del");
+    if(whD){ webhookUnregister(whD); openAutomationModal(); return; }
+    if(target.id === "btnWhBusReplayDLQ"){
+      Promise.resolve(webhookReplayDLQ()).then(function(n){
+        try{ toast("死信重放完成：" + (n && n.replayed != null ? n.replayed : n), "ok"); }catch(e7){}
+      }).catch(function(){ try{ toast("重放失败", "error"); }catch(e7b){} });
+      return;
+    }
+    // v1.12 [1d]：OAuth 连接（显式用户点击才跳转授权端点）
+    var o2c = target.getAttribute("data-o2-connect");
+    if(o2c){
+      var r2 = oauth2BuildAuthUrl(o2c);
+      if(r2 && r2.url){ try{ location.href = r2.url; }catch(e13){ try{ toast("无法跳转授权页", "error"); }catch(e14){} } }
+      else { try{ toast("构造授权 URL 失败（provider 未启用？）", "error"); }catch(e15){} }
+      return;
+    }
+    var o2r = target.getAttribute("data-o2-revoke");
+    if(o2r){
+      Promise.resolve(oauth2RevokeToken(o2r)).catch(function(){}).then(function(){ openAutomationModal(); });
+      return;
+    }
+    if(target.id === "btnO2Add"){
+      var n2 = ($("#o2Name").value || "").trim(), cid = ($("#o2ClientId").value || "").trim();
+      var ae = ($("#o2AuthEp").value || "").trim(), te = ($("#o2TokenEp").value || "").trim();
+      var okReg = oauth2RegisterProvider(n2, {
+        clientId: cid, authEndpoint: ae, tokenEndpoint: te,
+        redirectUri: (location.origin + location.pathname), usePKCE: true
+      });
+      if(!okReg){ try{ toast("注册失败：名称/clientId/两个端点均必填", "error"); }catch(e16){} return; }
+      var r3 = oauth2BuildAuthUrl(n2);
+      if(r3 && r3.url){ try{ location.href = r3.url; }catch(e17){} }
+      else { try{ toast("已注册，但构造授权 URL 失败", "error"); }catch(e18){} }
       return;
     }
     // 添加定时任务
@@ -33631,6 +33748,44 @@ function voiceUnregisterCommandHandler(intent){
   delete _voiceCommandHandlers[intent];
   return true;
 }
+
+/* ---------- v1.12 [1e] 默认意图处理器注册（新语音模块转正最小闭环） ----------
+ * 勘察结论：v1.8-E 语音模块封装真实但 voiceRegisterCommandHandler 无注册者——意图
+ * 解析后无处可去。此处注册四个核心意图接到既有真实动作（execTool/setActive/completeTask），
+ * 与聊天工具栏的 v1.6-A 听写按钮互不冲突（那是自由文本转写，这是结构化意图命令）。 */
+(function _registerDefaultVoiceHandlers(){
+  function _say(msg){ try{ toast(msg, "ok"); }catch(e){ /* noop */ } }
+  function _fail(msg){ try{ toast(msg, "warn"); }catch(e){ /* noop */ } }
+  try{
+    voiceRegisterCommandHandler(VOICE_INTENTS.CREATE_TASK, function(args, parsed){
+      var title = (args && args.title) || (parsed && parsed.raw) || "";
+      if(!title) return { ok: false, error: "no_title" };
+      var r = JSON.parse(execTool("create_task", { scenario: (args && args.scenario) || active, title: String(title) }));
+      _say(r.msg || "已创建任务");
+      return r;
+    });
+    voiceRegisterCommandHandler(VOICE_INTENTS.SWITCH_SCENE, function(args){
+      var sc = (args && (args.scene || args.scenario)) || "";
+      var hit = ORDER.includes(sc) ? sc : ORDER.find(function(s){ return (SCENARIOS[s].name || "").indexOf(String(sc)) >= 0; });
+      if(!hit) return { ok: false, error: "unknown_scene" };
+      setActive(hit); render();
+      _say("已切换到 " + SCENARIOS[hit].name);
+      return { ok: true, scene: hit };
+    });
+    voiceRegisterCommandHandler(VOICE_INTENTS.COMPLETE_TASK, function(args, parsed){
+      var ft = findTask((args && args.task_id) || (parsed && parsed.raw) || "");
+      if(!ft){ _fail("没有匹配到要完成的任务"); return { ok: false, error: "no_match" }; }
+      completeTask(ft.task.id);
+      _say("已完成：" + ft.task.title);
+      return { ok: true };
+    });
+    voiceRegisterCommandHandler(VOICE_INTENTS.VIEW_STATS, function(){
+      setActive("stats"); render();
+      _say("已打开统计");
+      return { ok: true };
+    });
+  }catch(e19){ try{ pushDiag("error", "voice handlers register: " + (e19 && e19.message || e19), { where: "voice" }); }catch(e20){} }
+})();
 
 /**
  * 根据解析的意图执行对应命令

@@ -2,6 +2,29 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.12.0] - 2026-08-16
+
+### 路线图第 1 期：转正收尾（依据 docs/半成品功能完善路线图.md）
+
+**事件源扩展**
+- task_create（看板表单 + execTool create_task）与 task_delete（UI 软删 + execTool delete_task）挂接 `_emitTaskEvent`；回收站永久清除按契约不发事件（无单任务对象）
+- 自动化弹窗触发器下拉补「任务删除」；新增「测试规则」按钮（按表单触发器构造样例事件手动验证规则链路）
+
+**Webhook 订阅管理面板（块 6 补 UI 入口）**
+- 自动化弹窗新增「Webhook 订阅（事件总线）」区：订阅 CRUD/启停、投递与失败计数展示、死信队列查看 + 一键重放——全部接既有真实引擎（HMAC 签名/重试/DLQ）
+
+**OAuth 连接（块 5 补注册与跳转入口）**
+- 弹窗新增「OAuth 连接」区：provider 注册表单（clientId + 授权/token 端点，redirectUri 自动取当前页）→ 注册即跳转授权；已连接可断开（revoke）
+- 与 v1.11.2 的回调闭环组成完整 PKCE 流程
+
+**语音模块转正（块 8 最小闭环）**
+- 注册 4 个默认意图处理器：CREATE_TASK / SWITCH_SCENE / COMPLETE_TASK / VIEW_STATS，接到既有真实动作（execTool/setActive/completeTask）；未注册意图保持 not_implemented 语义
+
+**延后项（路线图已标注）**
+- token 存储走主进程 safeStorage（需新 IPC + 迁移，独立一轮）；九大集成完整面板 + pull 写回顺延至第 2 期
+
+**测试**：新增 `tests/phase1-features.test.js`（8 用例：事件触发/防误触/语音意图/UI 入口/订阅 CRUD）；全量 639/639（53 文件）
+
 ## [v1.11.2] - 2026-08-16
 
 ### 认证校验补码 + 半成品功能激活（依据 docs/半成品功能完善路线图.md）
