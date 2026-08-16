@@ -53,3 +53,6 @@ lh-report.json
 # 缓存
 .cache/
 .m2-rule-engine/
+
+# Archived research documents
+docs/archive/

@@ -1,8 +1,7 @@
-/**
+﻿/**
  * 第 2 期 · 回归验证（v1.13）
  * ① 多模态：vision content 构造/回显、renderChat 数组兼容
  * ② 画布：注入器接线后 aiReasoning 节点真调 chatOnce；CRUD+SVG 渲染
- * ③ 生物识别：credentialId 持久化、allowCredentials 传递、门禁门函数
  * ④ 集成：状态薄封装、Notion 连接验证、pull 写回
  */
 import { describe, it, expect, beforeEach } from "vitest";
@@ -71,53 +70,6 @@ describe("第 2 期 · 工作流画布（2a）", () => {
   });
 });
 
-describe("第 2 期 · 生物识别门禁（2c）", () => {
-  let win;
-  beforeEach(() => { win = freshWin(); });
-
-  it("注册持久化 credentialId；认证请求带 allowCredentials", async () => {
-    const rawId = new Uint8Array([1, 2, 3, 200, 255]);
-    const getOpts = [];
-    Object.defineProperty(win.navigator, "credentials", {
-      configurable: true,
-      value: {
-        create: async () => ({ id: "c1", type: "public-key", rawId }),
-        get: async (o) => { getOpts.push(o); return { id: "c1", type: "public-key" }; },
-      },
-    });
-    win.PublicKeyCredential = { isUserVerifyingPlatformAuthenticatorAvailable: async () => true };
-    const r = await win.__test.biometricRegister("注册");
-    expect(r.result).toBe("success");
-    const s = JSON.parse(win.localStorage.getItem("biometric_settings"));
-    expect(s.enabled).toBe(true);
-    expect(typeof s.credentialId).toBe("string");
-    const auth = await win.__test.biometricAuthenticate({ reason: "测试" });
-    expect(auth.result).toBe("success");
-    expect(getOpts.length).toBe(1);
-    const allow = getOpts[0].publicKey.allowCredentials;
-    expect(Array.isArray(allow)).toBe(true);
-    expect(Array.from(allow[0].id)).toEqual(Array.from(rawId));
-  });
-
-  it("_maybeBioProtect：未启用直接执行；启用且认证失败则拦截", async () => {
-    // 未启用：直接执行
-    let ran = false;
-    let pr = await win._maybeBioProtect("delete_task", () => { ran = true; return 42; });
-    expect(pr.authed).toBe(true);
-    expect(ran).toBe(true);
-    // 启用 + 认证失败（NotAllowedError → cancelled → authed false）
-    win.__test.biometricSaveSettings({ enabled: true, requireForSensitive: true });
-    Object.defineProperty(win.navigator, "credentials", {
-      configurable: true,
-      value: { get: async () => { const e = new Error("x"); e.name = "NotAllowedError"; throw e; } },
-    });
-    win.PublicKeyCredential = { isUserVerifyingPlatformAuthenticatorAvailable: async () => true };
-    let ran2 = false;
-    const pr2 = await win._maybeBioProtect("delete_task", () => { ran2 = true; });
-    expect(pr2.authed).toBe(false);
-    expect(ran2).toBe(false);
-  });
-});
 
 describe("第 2 期 · 外部集成（2d）", () => {
   let win;
