@@ -2,6 +2,32 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v1.13.0] - 2026-08-16
+
+### 路线图第 2 期：补面板与引擎（依据 docs/半成品功能完善路线图.md）
+
+**多模态 AI 管道（块 9 转正）**
+- 聊天附件按钮升级：图片（≤4 张、单张 ≤4MB）经 multimodal 模块落档，随下一条消息以 OpenAI vision content 数组格式发送（chatOnce 确认原样透传）；文本文件行为不变
+- renderChat 兼容数组 content（文本 + [图×N] 标记），历史持久化不受影响
+
+**工作流画布（块 7 转正）**
+- 自动化弹窗新增「工作流画布（DAG）」区：工作流列表/新建（自带 start+end）/节点增删/点选连线/执行与结果 toast/SVG 画布（节点拖拽移动，`renderWorkflowCanvas` 首次接入 DOM）
+- 注入器生产接线：`wfSetAiClient`→chatOnce（含单对象→messages 契约适配）、`wfSetNotifySender`→站内通知；延迟到 startup 执行（规避脚本期 var 置空覆盖——审查报告警示过的加载顺序坑）；toolExec 本就回退全局 execTool，无需重复注入；schedule 仍为 mock（无真实调度端点，路线图已记）
+
+**生物识别门禁（块 11 深化）**
+- WebAuthn credential rawId 持久化（base64url，settings 新字段 credentialId）；认证请求带 allowCredentials 精确命中注册凭据
+- 设置页（数据管理）新增「生物识别」卡：可用性检测/注册/敏感操作门禁开关
+- 敏感操作接线：删除任务（看板按钮）与导出 JSON 走 `_maybeBioProtect`——仅在用户启用后生效（含 5 分钟会话免重认证），未启用零行为变化
+
+**外部集成（块 4 首批转正）**
+- 新增 `integrationGetStatus` 状态薄封装；自动化弹窗新增「外部集成」区：provider 状态列表+移除
+- Notion 完整卡：token+databaseId 连接（真实验证 token）、推送当前场景任务、**Pull 写回本地**（`_intNotionPullWriteback`——勘察确认 pull 结果此前不落本地，本次接通）；其余 7 家 provider 表单第 3 期补
+
+**门禁与测试**
+- 新增 `tests/phase2-features.test.js`（8 用例：vision 构造/渲染兼容/注入器执行链/credentialId 持久化+allowCredentials/门禁双态/集成状态+pull 写回）
+- 修复两处自身引入的门禁违规（hex fallback 字面量、emoji 图标）；compat d2 超时上限 5s→15s（并行负载偶发超时，隔离正常）
+- 全量 647/647（54 文件）；lint 绿；build:check 绿
+
 ## [v1.12.0] - 2026-08-16
 
 ### 路线图第 1 期：转正收尾（依据 docs/半成品功能完善路线图.md）

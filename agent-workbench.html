@@ -2741,6 +2741,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </section>
 
   <!-- ===== 外观与语言 ===== -->
+  <section class="set-card" id="set-bio" aria-label="生物识别（数据管理页）">
+    <h3>生物识别</h3>
+    <p class="set-desc">Windows Hello / Touch ID（WebAuthn）。注册后可对删除任务、导出数据等敏感操作启用认证门禁（5 分钟会话内免重复认证）。</p>
+    <div class="form-row" style="flex-direction:column;gap:8px">
+      <button type="button" class="addbtn" id="btnBioCheck" style="--sc:var(--accent);min-width:120px">检测可用性</button>
+      <button type="button" class="addbtn" id="btnBioRegister" style="--sc:var(--accent);min-width:120px">注册（首次）</button>
+      <label style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="cfgBioRequire"> 敏感操作（删除任务/导出数据）需要生物识别确认
+      </label>
+    </div>
+  </section>
   <section class="set-card" id="set-look" aria-label="外观与语言">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>
@@ -3186,10 +3197,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.12.0";
+const VERSION = "1.13.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260815g";
+const BUILD_TAG = "20260816a";
 
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
@@ -9909,7 +9920,15 @@ function bindScenario(){
     if(!confirm("删除这条任务？（将进入回收站，可恢复）")) return;
     const tasks=getTasks();
     const t=tasks.find(x=>x.id===b.dataset.del);
-    if(t && !t.deletedAt){ t.deletedAt=Date.now(); setTasks(tasks); _emitTaskEvent("task_delete", t); } // T1：软删除，与 AI delete_task 行为统一；v1.12 [1a] 发事件
+    if(t && !t.deletedAt){
+      // v1.13 [2c]：delete_task 属受保护动作——启用生物识别时先认证（含会话免重）再执行
+      _maybeBioProtect("delete_task", function(){
+        t.deletedAt = Date.now(); setTasks(tasks); _emitTaskEvent("task_delete", t); render();
+      }).then(function(pr){
+        if(pr && pr.authed === false){ try{ toast("已取消：未通过生物识别", "warn"); }catch(eB1){} }
+      });
+      return;
+    }
     render();
   });
   $$("[data-edit]").forEach(b=> b.onclick=()=> openTaskEdit(b.dataset.edit)); // A1：任务编辑弹窗
@@ -11303,6 +11322,25 @@ function chatSysPrompt(userText){
     +"用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。"
     +agentContextPrompt(userText);
 }
+/* ---------- v1.13 [2b] 多模态：图片待发队列 + vision 消息构造 ----------
+ * 图片附件经 multimodal 模块落档后暂存 id，随下一条用户消息以 OpenAI vision
+ * content 数组格式发出（chatOnce 已确认原样透传，:10794 无内容改写）。 */
+var chatPendingImages = [];
+function _visionContent(text, imageUrls){
+  var parts = [{ type: "text", text: String(text || "") }];
+  (imageUrls || []).forEach(function(u){
+    if(u) parts.push({ type: "image_url", image_url: { url: u } });
+  });
+  return parts;
+}
+function _chatContentToText(c){
+  if(Array.isArray(c)){
+    var txt = c.filter(function(p){ return p && p.type === "text"; }).map(function(p){ return p.text; }).join("\n");
+    var imgs = c.filter(function(p){ return p && p.type === "image_url"; }).length;
+    return txt + (imgs ? " [图×" + imgs + "]" : "");
+  }
+  return c;
+}
 async function onChatSubmit(e){
  try{
   e.preventDefault();
@@ -11369,8 +11407,16 @@ async function onChatSubmit(e){
     await handleAiCodeGen(codeGenHit, hist);
     return;
   }
-  // 正常路径
-  hist.push({role:"user",content:text});
+  // 正常路径（v1.13 [2b]：有待发图片时 user 消息用 vision content 数组，OpenAI 兼容端点直接识别）
+  if(chatPendingImages.length){
+    const urls = chatPendingImages.map(function(id){
+      try{ const a = multimodalGetAttachment(id); return a && (a.url || a.data); }catch(err){ return null; }
+    }).filter(Boolean);
+    hist.push({ role:"user", content:_visionContent(text, urls) });
+    chatPendingImages = [];
+  }else{
+    hist.push({role:"user",content:text});
+  }
   renderChat(); scrollChat();
   const messages=[{role:"system", content:chatSysPrompt(text)}]
     // B1 修复：保留完整结构（含 tool_calls / tool_call_id），否则含工具调用的会话第二轮会缺 id 触发 400
@@ -11450,7 +11496,7 @@ function renderChat(){
   const el=$("#chat"); if(!el) return;
   const hist=getChat(active);
   el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
-    if(m.role==="tool") return `<div class="msg tool">${esc(m._disp || m.content)}</div>`;
+    if(m.role==="tool") return `<div class="msg tool">${esc(m._disp || _chatContentToText(m.content))}</div>`;
     if(m.role==="assistant" && m.tool_calls && m.tool_calls.length){
       const s=m.tool_calls.map(tc=>"调用工具 "+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
       return `<div class="msg assistant toolcall">${s}</div>`;
@@ -11461,7 +11507,8 @@ function renderChat(){
     // T3.1 失败消息 + 重试按钮
     if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">重试</button></div>`;
     if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
-    return `<div class="msg ${m.role}">${esc(m.content||"")}</div>`;
+    // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
+    return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
   }).join("") : `<div class="msg assistant">你好，我是${SCENARIOS[active].name}助手，可以直接让我「建个任务」「查总览」「搜索」。</div>` + CHAT_SUGGEST_HTML);
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
@@ -11549,18 +11596,43 @@ function bindChatPanel(){
   const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
   // 取消按钮：复用 abortChat
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
-  // 附件按钮：点击触发隐藏文件选择器，选中文本文件后内容追加到输入框
+  // 附件按钮：文本文件追加到输入框；图片走 v1.13 多模态管道（multimodal 模块 + vision 消息）
   const attachBtn=$("#chatAttachBtn");
   if(attachBtn){
     const fileInput=document.createElement("input");
     fileInput.type="file";
-    fileInput.accept="text/*,.txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log";
+    fileInput.accept="image/*,text/*,.txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log";
     fileInput.style.display="none";
     document.body.appendChild(fileInput);
     attachBtn.onclick=()=> fileInput.click();
+    attachBtn.title="添加附件（文本追加进输入框；图片随下一条消息发送给 AI）";
     fileInput.onchange=()=>{
       const f=fileInput.files && fileInput.files[0];
       if(!f) return;
+      // v1.13 [2b]：图片 → multimodal 模块 + 待发送 vision 队列（≤4 张、单张 ≤4MB dataURL）
+      if(f.type && f.type.indexOf("image/") === 0){
+        if(f.size > 4*1024*1024){
+          try{ toast("图片过大（>4MB），请压缩后重试","warn"); }catch(e){ /* noop */ }
+          return;
+        }
+        if(chatPendingImages.length >= 4){
+          try{ toast("最多同时附 4 张图片","warn"); }catch(e){ /* noop */ }
+          return;
+        }
+        const ir=new FileReader();
+        ir.onload=()=>{
+          const dataUrl=String(ir.result || "");
+          try{
+            const att=multimodalAddAttachment(f, "image", { name: f.name, mimeType: f.type, data: dataUrl, url: dataUrl });
+            chatPendingImages.push(att.id);
+            try{ toast("已附加图片（"+chatPendingImages.length+"/4），随下一条消息发送","ok"); }catch(e2){ /* noop */ }
+          }catch(e3){ try{ toast("图片附加失败","error"); }catch(e4){} }
+        };
+        ir.onerror=()=>{ try{ toast("读取图片失败","error"); }catch(e){ /* noop */ } };
+        ir.readAsDataURL(f);
+        fileInput.value="";
+        return;
+      }
       // 限制 1MB 以内（避免大文件撑爆输入框）
       if(f.size > 1024*1024){
         try{ toast("文件过大（>1MB），请选择更小的文本文件","warn"); }catch(e){ /* noop */ }
@@ -14211,7 +14283,23 @@ function showMemories(){
   if(hist.length>50) hist.splice(0, hist.length-50);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
 }
-$("#btnExport").onclick = doExport;
+$("#btnExport").onclick = ()=> _maybeBioProtect("export_data", doExport).then(function(pr){ // v1.13 [2c]：导出走门禁
+  if(pr && pr.authed === false){ try{ toast("已取消：未通过生物识别", "warn"); }catch(eB2){} }
+});
+$("#btnBioCheck").onclick = ()=> biometricRecheckAvailability().then(a=>{
+  const m = { available:"本机支持生物识别", not_supported:"当前环境不支持（需 HTTPS/localhost + 平台认证器）",
+    hardware_missing:"未检测到平台认证器", not_enrolled:"支持但未录入系统指纹/面容", unknown:"状态未知" };
+  try{ toast(m[a] || a, a === "available" ? "ok" : "warn"); }catch(e){}
+});
+$("#btnBioRegister").onclick = ()=> biometricRegister("注册 Agent 工作台生物识别").then(r=>{
+  try{ toast(r.result === "success" ? "注册成功，门禁已可用" : ("注册未完成：" + r.result), r.result === "success" ? "ok" : "warn"); }catch(e){}
+  const cb = $("#cfgBioRequire"); if(cb) cb.checked = true; // 注册成功默认开启门禁
+  try{ biometricSaveSettings({ requireForSensitive: true }); }catch(e2){}
+});
+$("#cfgBioRequire") && ($("#cfgBioRequire").onchange = e=>{
+  biometricSaveSettings({ requireForSensitive: e.target.checked });
+  try{ toast(e.target.checked ? "敏感操作门禁已开启" : "敏感操作门禁已关闭", "ok"); }catch(err){}
+});
 $("#btnExportCSV").onclick = doExportCSV;
 $("#btnExportMD").onclick = doExportMD;
 $("#btnImport").onclick = ()=> $("#fileInput").click();
@@ -15269,6 +15357,8 @@ seed();
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
   // v1.11.2 认证补码：OAuth2 回调闭环——URL 带 ?code&state 时换 token（正常启动零开销，fire-and-forget）
   try{ _oauth2HandleCallback().catch(function(e9){ try{ pushDiag("error", "oauth2 callback: "+(e9&&e9.message||e9), {where:"oauth2"}); }catch(e10){} }); }catch(_){ }
+  // v1.13 [2a]：工作流注入器接线（延迟到 startup——脚本早期执行会被引擎区的 var 置空覆盖）
+  try{ _wfWireInjectors(); }catch(_wfE){ }
   // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
   initIdb().catch(() => {});
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
@@ -20706,6 +20796,104 @@ function _renderWebhooksList(){
  * 渲染自动化管理面板（规则+定时任务+工作流+webhook）
  * @returns {string} 面板 HTML
  */
+/* ---------- v1.13 [2a] 工作流引擎生产接线 + 画布弹窗状态 ----------
+ * 三个 mock 注入器转正：aiReasoning→chatOnce（契约适配：注入器收 {prompt,model,temperature}
+ * 单对象，chatOnce 要 messages 数组）；notify→站内通知。toolExec 未注入时引擎本就回退全局
+ * execTool（:32786），无需重复注入。schedule 注入器维持 mock（无真实调度端点，路线图已记）。 */
+function _wfWireInjectors(){
+  try{
+    wfSetAiClient(function(o){
+      o = o || {};
+      return chatOnce([{ role:"user", content:String(o.prompt || "") }], {}).then(function(j){
+        var c = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+        return (typeof c === "string") ? c : JSON.stringify(c);
+      });
+    });
+    wfSetNotifySender(function(n){
+      var msg = (n && (n.message || n.content)) || (typeof n === "string" ? n : JSON.stringify(n));
+      try{ notifySystem(msg, ""); }catch(e1){ try{ toast(msg, "ok"); }catch(e2){} }
+      return Promise.resolve(true);
+    });
+  }catch(e){ try{ pushDiag("error", "wf injectors: " + (e && e.message || e), { where: "wf" }); }catch(e2){} }
+}
+
+/* ---------- v1.13 [2d] 集成状态薄封装 + Notion pull 写回 ---------- */
+function integrationGetStatus(name){
+  var p = integrationGetProvider(name);
+  if(!p) return { connected:false, reason:"not_registered" };
+  if(!p.enabled) return { connected:false, reason:"disabled" };
+  if(p.config && p.config._verified === false) return { connected:false, reason:"verify_failed" };
+  return { connected:true, verified:!!(p.config && p.config._verified) };
+}
+async function _intNotionPullWriteback(){
+  var synced = [];
+  try{ synced = notionListSynced() || []; }catch(e0){ return 0; }
+  var tasks = getTasks(); var n = 0;
+  for(var i = 0; i < synced.length; i++){
+    var it = synced[i];
+    if(it.type && it.type !== "task") continue;
+    var idx = -1;
+    for(var j = 0; j < tasks.length; j++){ if(tasks[j].id === it.localId){ idx = j; break; } }
+    if(idx < 0) continue;
+    var r = null;
+    try{ r = await notionSyncTask(tasks[idx], "pull"); }catch(e1){ r = null; }
+    if(r && r.success && r.updatedTask){
+      tasks[idx] = Object.assign({}, tasks[idx], r.updatedTask);
+      n++;
+    }
+  }
+  if(n > 0) setTasks(tasks);
+  return n;
+}
+
+/* ---------- v1.13 [2a] 画布弹窗交互（拖拽/选点连线由 _bindWfCanvas 挂载） ---------- */
+var _wfModalState = { sel: null, connectFrom: null, selected: null };
+function _wfCanvasRender(){
+  var box = $("#wfCanvasBox");
+  if(!box || !_wfModalState.sel) return;
+  try{ box.innerHTML = renderWorkflowCanvas(_wfModalState.sel, { width: 860, height: 420 }); }catch(e){ /* 重渲染失败保持旧图 */ }
+}
+function _bindWfCanvas(){
+  var sel = $("#wfSel");
+  if(sel) sel.onchange = function(){ _wfModalState.sel = this.value || null; _wfModalState.selected = null; _wfModalState.connectFrom = null; openAutomationModal(); };
+  var box = $("#wfCanvasBox");
+  if(!box) return;
+  box.onmousedown = function(ev){
+    var g = ev.target && ev.target.closest ? ev.target.closest("[data-node-id]") : null;
+    if(!g){ _wfModalState.selected = null; return; }
+    var nodeId = g.getAttribute("data-node-id");
+    if(_wfModalState.connectFrom){
+      if(_wfModalState.connectFrom !== nodeId){
+        var okc = wfConnectNodes(_wfModalState.sel, _wfModalState.connectFrom, nodeId);
+        if(!okc) { try{ toast("连线被拒绝（校验不通过）", "warn"); }catch(eC){} }
+      }
+      _wfModalState.connectFrom = null;
+      openAutomationModal();
+      return;
+    }
+    _wfModalState.selected = nodeId;
+    var wf = wfGetWorkflow(_wfModalState.sel);
+    if(!wf) return;
+    var node = null;
+    wf.nodes.forEach(function(n2){ if(n2.id === nodeId) node = n2; });
+    if(!node || !node.position) return;
+    var startX = ev.clientX, startY = ev.clientY;
+    var origX = node.position.x, origY = node.position.y, moved = false;
+    function onMove(e2){
+      moved = true;
+      wfMoveNode(_wfModalState.sel, nodeId, { x: origX + (e2.clientX - startX), y: origY + (e2.clientY - startY) });
+      _wfCanvasRender();
+    }
+    function onUp(){
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      if(moved) openAutomationModal(); // 拖拽结束重渲染（顺带刷新选中态/面板）
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+}
+
 function renderAutomationPanel(){
   var html = '<div class="automation-panel">';
   html += '<div class="automation-header">';
@@ -20800,6 +20988,55 @@ function renderAutomationPanel(){
   html += '<button type="button" class="addbtn" id="btnO2Add">注册并连接</button>';
   html += '</div>';
 
+  /* ---------- v1.13 [2a] 工作流画布（DAG 引擎真实现 + SVG 渲染器，本次补入口） ---------- */
+  html += '<div class="auto-form" style="margin-top:16px">';
+  html += '<h4 class="auto-form-title">工作流画布（DAG）</h4>';
+  var _wfList = [];
+  try{ _wfList = wfListWorkflows() || []; }catch(eW1){ }
+  if(!_wfModalState.sel && _wfList.length) _wfModalState.sel = _wfList[0].id;
+  html += '<select class="auto-select" id="wfSel">' + (_wfList.length
+    ? _wfList.map(function(w){ return '<option value="' + esc(w.id) + '"' + (_wfModalState.sel === w.id ? ' selected' : '') + '>' + esc(w.name) + '</option>'; }).join('')
+    : '<option value="">（无工作流，点「新建」）</option>') + '</select>';
+  html += '<button type="button" class="addbtn" id="btnWfNew" style="padding:2px 8px">新建</button>';
+  html += '<button type="button" class="addbtn" id="btnWfExec" style="padding:2px 8px">执行</button>';
+  if(_wfModalState.sel && _wfList.length){
+    html += '<div style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+    ["end","condition","toolExec","aiReasoning","notify"].forEach(function(t){
+      var lbl = (typeof NODE_TYPES !== "undefined" && NODE_TYPES[t] && NODE_TYPES[t].label) || t;
+      html += '<button type="button" class="addbtn" data-wf-addnode="' + t + '" style="padding:2px 8px">+' + esc(lbl) + '</button>';
+    });
+    html += '<button type="button" class="addbtn" id="btnWfDelNode" style="padding:2px 8px">删除选中</button>';
+    html += '<button type="button" class="addbtn" id="btnWfConnect" style="padding:2px 8px">' + (_wfModalState.connectFrom ? '连线：点目标' : '连线：选起点') + '</button>';
+    html += '<span class="auto-tag">' + (_wfModalState.selected ? '已选 ' + esc(_wfModalState.selected) : '点节点选中；按住拖动移动') + '</span>';
+    html += '</div>';
+    var _wfSvg = "";
+    try{ _wfSvg = renderWorkflowCanvas(_wfModalState.sel, { width: 860, height: 420 }); }catch(eW2){ _wfSvg = '<div class="auto-tag">画布渲染失败</div>'; }
+    html += '<div id="wfCanvasBox" style="border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:360px">' + _wfSvg + '</div>';
+  }
+  html += '</div>';
+
+  /* ---------- v1.13 [2d] 外部集成（Notion 完整卡；其余类型显示状态，表单第 3 期补） ---------- */
+  html += '<div class="auto-form" style="margin-top:16px">';
+  html += '<h4 class="auto-form-title">外部集成</h4>';
+  var _intAll = [];
+  try{ _intAll = integrationListProviders() || []; }catch(eI1){ }
+  html += '<div class="auto-tag" style="margin-bottom:6px">已注册 ' + _intAll.length + ' 个 provider</div>';
+  _intAll.forEach(function(p){
+    var st = integrationGetStatus(p.name);
+    html += '<div style="display:flex;gap:8px;align-items:center;margin:4px 0">';
+    html += '<span class="auto-tag">' + esc(p.name) + '</span><span class="auto-tag">' + esc(p.type) + '</span>';
+    html += '<span class="auto-tag">' + (st.connected ? '已连接' : '未连接（' + st.reason + '）') + '</span>';
+    html += '<button type="button" class="addbtn" data-int-remove="' + esc(p.name) + '" style="padding:2px 8px">移除</button>';
+    html += '</div>';
+  });
+  html += '<h4 class="auto-form-title" style="font-size:12px;margin-top:10px">Notion 连接</h4>';
+  html += '<input class="auto-input" id="intNotionToken" placeholder="Integration Token（secret-…）">';
+  html += '<input class="auto-input" id="intNotionDb" placeholder="任务 Database ID">';
+  html += '<button type="button" class="addbtn" id="btnIntNotionConnect">连接（会验证 token）</button>';
+  html += '<button type="button" class="addbtn" id="btnIntNotionPush">推送当前场景任务</button>';
+  html += '<button type="button" class="addbtn" id="btnIntNotionPull">Pull 写回本地</button>';
+  html += '</div>';
+
   html += '</div>'; // 关闭 .automation-panel
   return html;
 }
@@ -20815,6 +21052,7 @@ function openAutomationModal(){
   if(body){
     body.innerHTML = sanitizeHtml(renderAutomationPanel());
     _bindAutomationEvents();
+    _bindWfCanvas(); // v1.13 [2a]：画布拖拽/连线/选择交互
   }
   modal.classList.add("show");
 }
@@ -20914,6 +21152,80 @@ function _bindAutomationEvents(){
       var r3 = oauth2BuildAuthUrl(n2);
       if(r3 && r3.url){ try{ location.href = r3.url; }catch(e17){} }
       else { try{ toast("已注册，但构造授权 URL 失败", "error"); }catch(e18){} }
+      return;
+    }
+    // v1.13 [2a] 工作流画布操作
+    var wfAddT = target.getAttribute("data-wf-addnode");
+    if(wfAddT && _wfModalState.sel){
+      var wfObj = wfGetWorkflow(_wfModalState.sel);
+      var cnt = wfObj ? wfObj.nodes.length : 0;
+      var cfgD = (typeof WF_DEFAULT_NODE_CONFIG !== "undefined" && WF_DEFAULT_NODE_CONFIG[wfAddT])
+        ? JSON.parse(JSON.stringify(WF_DEFAULT_NODE_CONFIG[wfAddT])) : {};
+      wfAddNode(_wfModalState.sel, wfAddT, { x: 120 + (cnt % 5) * 150, y: 60 + Math.floor(cnt / 5) * 90 }, cfgD);
+      openAutomationModal();
+      return;
+    }
+    if(target.id === "btnWfNew"){
+      var wfName = "";
+      try{ wfName = prompt("工作流名称：") || ""; }catch(eP){ }
+      if(!wfName) return;
+      var nw = wfCreateWorkflow(wfName, {});
+      if(!nw){ try{ toast("创建失败", "error"); }catch(eN){} return; }
+      wfAddNode(nw.id, "start", { x: 40, y: 80 }, { input: {} });
+      wfAddNode(nw.id, "end", { x: 720, y: 80 }, { outputKey: "result" });
+      _wfModalState.sel = nw.id;
+      openAutomationModal();
+      return;
+    }
+    if(target.id === "btnWfExec" && _wfModalState.sel){
+      try{ toast("工作流执行中…", "ok"); }catch(eE1){}
+      Promise.resolve(wfExecuteWorkflow(_wfModalState.sel, {})).then(function(r){
+        var okW = r && r.status === "completed";
+        try{ toast(okW ? "工作流完成" : ("工作流结束：" + (r && r.status) + (r && r.error ? " " + r.error : "")), okW ? "ok" : "warn"); }catch(eE2){}
+      }).catch(function(er){
+        try{ toast("工作流执行失败：" + (er && er.message || er), "error"); }catch(eE3){}
+      });
+      return;
+    }
+    if(target.id === "btnWfDelNode" && _wfModalState.sel && _wfModalState.selected){
+      wfRemoveNode(_wfModalState.sel, _wfModalState.selected);
+      _wfModalState.selected = null;
+      openAutomationModal();
+      return;
+    }
+    if(target.id === "btnWfConnect"){
+      if(!_wfModalState.selected){ try{ toast("先在画布上点选一个节点作为起点", "warn"); }catch(eC1){} return; }
+      _wfModalState.connectFrom = _wfModalState.selected;
+      try{ toast("已记起点，点目标节点完成连线", "ok"); }catch(eC2){}
+      return;
+    }
+    // v1.13 [2d] 外部集成操作
+    var intRm = target.getAttribute("data-int-remove");
+    if(intRm){ integrationRemoveProvider(intRm); openAutomationModal(); return; }
+    if(target.id === "btnIntNotionConnect"){
+      var tk = ($("#intNotionToken").value || "").trim(), db = ($("#intNotionDb").value || "").trim();
+      if(!tk || !db){ try{ toast("Token 与 Database ID 均必填", "warn"); }catch(eI2){} return; }
+      Promise.resolve(notionConnect({ token: tk, databaseId: db })).then(function(p){
+        try{ toast(p ? "Notion 已连接（token 验证通过）" : "连接失败（token 验证未通过）", p ? "ok" : "error"); }catch(eI3){}
+        openAutomationModal();
+      }).catch(function(){ try{ toast("连接请求失败", "error"); }catch(eI4){} });
+      return;
+    }
+    if(target.id === "btnIntNotionPush"){
+      var pushTasks = getTasks().filter(function(t){ return !t.deletedAt; });
+      var doneN = 0;
+      Promise.all(pushTasks.map(function(t){
+        return Promise.resolve(notionSyncTask(t, "push")).then(function(r){ if(r && r.success) doneN++; }).catch(function(){});
+      })).then(function(){
+        try{ toast("推送完成：" + doneN + "/" + pushTasks.length, doneN ? "ok" : "warn"); }catch(eI5){}
+      });
+      return;
+    }
+    if(target.id === "btnIntNotionPull"){
+      Promise.resolve(_intNotionPullWriteback()).then(function(n){
+        try{ toast(n ? ("已写回 " + n + " 条任务") : "无可写回的变更", n ? "ok" : "warn"); }catch(eI6){}
+        if(n) render();
+      }).catch(function(){ try{ toast("Pull 失败", "error"); }catch(eI7){} });
       return;
     }
     // 添加定时任务
@@ -33749,6 +34061,17 @@ function voiceUnregisterCommandHandler(intent){
   return true;
 }
 
+/* ---------- v1.13 [2c] 敏感操作生物识别门禁 ----------
+ * 仅当用户已在设置里启用（enabled+requireForSensitive，且环境有认证实现）时走
+ * biometricProtectAction（内部含 5 分钟会话免重认证）；否则直接执行，零行为变化。 */
+function _maybeBioProtect(actionName, fn){
+  try{
+    var s = _bioLoadSettings();
+    if(!(s && s.enabled && s.requireForSensitive && _bioAuthImpl)) return Promise.resolve({ authed:true, result:fn() });
+    return biometricProtectAction(actionName, fn);
+  }catch(e){ return Promise.resolve({ authed:true, result:fn() }); }
+}
+
 /* ---------- v1.12 [1e] 默认意图处理器注册（新语音模块转正最小闭环） ----------
  * 勘察结论：v1.8-E 语音模块封装真实但 voiceRegisterCommandHandler 无注册者——意图
  * 解析后无处可去。此处注册四个核心意图接到既有真实动作（execTool/setActive/completeTask），
@@ -35960,6 +36283,7 @@ var BIOMETRIC_AVAILABILITY = {
 var BIOMETRIC_DEFAULT_SETTINGS = {
   enabled: false,
   primaryType: BIOMETRIC_TYPES.NONE,
+  credentialId: null,                 // v1.13 [2c]：WebAuthn credential rawId（base64url），authenticate 时作 allowCredentials
   sessionTimeoutMs: 5 * 60 * 1000,    // 5 分钟
   requireForSensitive: true,
   maxRetries: 3,
@@ -36025,6 +36349,21 @@ function biometricGetAuthImpl(){
  * 本实现按 impl 契约（(opts) => Promise<{result, type, availability?, error?}>）接
  * navigator.credentials（Windows Hello / Touch ID / 指纹），在支持的浏览器自动生效；
  * 不支持的环境语义不变（not_supported / not_available）。v1 简化见路线图 0.3。 */
+/** v1.13 [2c]：rawId ↔ base64url 互转（WebAuthn credential id 持久化用） */
+function _b64urlFromBytes(buf){
+  var b = new Uint8Array(buf), s = "";
+  for(var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+  try{ return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }catch(e){ return null; }
+}
+function _bytesFromB64url(str){
+  var b = String(str).replace(/-/g, "+").replace(/_/g, "/");
+  while(b.length % 4) b += "=";
+  var bin;
+  try{ bin = atob(b); }catch(e){ return null; }
+  var out = new Uint8Array(bin.length);
+  for(var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
 function _webauthnBioImpl(opts){
   var o = opts || {};
   var hasAPI = (typeof navigator !== "undefined" && navigator.credentials && typeof window !== "undefined" && window.PublicKeyCredential);
@@ -36050,8 +36389,10 @@ function _webauthnBioImpl(opts){
       authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
       timeout: 60000,
       attestation: "none"
-    }}).then(function(){
-      return { result: BIOMETRIC_AUTH_RESULT.SUCCESS, type: BIOMETRIC_TYPES.FINGERPRINT };
+    }}).then(function(cred){
+      // v1.13 [2c]：捕获 credential rawId（base64url）供 authenticate 作 allowCredentials
+      return { result: BIOMETRIC_AUTH_RESULT.SUCCESS, type: BIOMETRIC_TYPES.FINGERPRINT,
+        credentialId: (cred && cred.rawId) ? _b64urlFromBytes(cred.rawId) : null };
     }).catch(function(e2){
       var n2 = (e2 && e2.name) || "";
       if(n2 === "NotAllowedError") return { result: BIOMETRIC_AUTH_RESULT.CANCELLED, type: BIOMETRIC_TYPES.NONE, error: "user_cancel" };
@@ -36059,9 +36400,15 @@ function _webauthnBioImpl(opts){
     });
   }
   if(o.action === "authenticate"){
-    return navigator.credentials.get({ publicKey: {
+    var getCredOpts = { publicKey: {
       challenge: challenge, rpId: rpId, userVerification: "required", timeout: 60000
-    }}).then(function(){
+    }};
+    // v1.13 [2c]：带 allowCredentials 精确命中注册过的凭据（非 discoverable 凭据必需）
+    if(o.credentialId){
+      var cid = _bytesFromB64url(o.credentialId);
+      if(cid) getCredOpts.publicKey.allowCredentials = [{ type: "public-key", id: cid }];
+    }
+    return navigator.credentials.get(getCredOpts).then(function(){
       return { result: BIOMETRIC_AUTH_RESULT.SUCCESS, type: BIOMETRIC_TYPES.FINGERPRINT };
     }).catch(function(e3){
       var n3 = (e3 && e3.name) || "";
@@ -36131,7 +36478,7 @@ function biometricAuthenticate(opts){
   var at = _bioNowISO();
   if(_bioAuthImpl && typeof _bioAuthImpl === "function"){
     try{
-      return Promise.resolve(_bioAuthImpl({ action: "authenticate", reason: reason, type: o.type })).then(function(r){
+      return Promise.resolve(_bioAuthImpl({ action: "authenticate", reason: reason, type: o.type, credentialId: _bioLoadSettings().credentialId || null })).then(function(r){
         var result = (r && r.result) || BIOMETRIC_AUTH_RESULT.ERROR;
         var type = (r && r.type) || BIOMETRIC_TYPES.NONE;
         var error = r && r.error ? r.error : null;
@@ -36166,6 +36513,7 @@ function biometricRegister(reason){
           var s = _bioLoadSettings();
           s.enabled = true;
           s.primaryType = type;
+          if(r && r.credentialId) s.credentialId = r.credentialId; // v1.13 [2c]：持久化 credential id
           _bioSaveSettings();
         }
         return { result: result, type: type, at: at };
@@ -36249,6 +36597,7 @@ function biometricSaveSettings(patch){
     }
     if(patch.enabled !== undefined) s.enabled = !!patch.enabled;
     if(patch.primaryType !== undefined) s.primaryType = patch.primaryType;
+    if(patch.credentialId !== undefined) s.credentialId = patch.credentialId || null; // v1.13 [2c]
     if(patch.requireForSensitive !== undefined) s.requireForSensitive = !!patch.requireForSensitive;
     if(patch.maxRetries !== undefined){
       var mr = Number(patch.maxRetries);

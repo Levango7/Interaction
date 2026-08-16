@@ -281,7 +281,7 @@ describe("T5.3 浏览器兼容 · crypto.subtle 不存在降级明文", () => {
       Object.defineProperty(win.crypto, "subtle", { value: subtle, configurable: true });
       warnSpy.mockRestore();
     }
-  });
+  }, 15000); // v1.13：并行负载下 5s 默认超时偶发超时（boot 双次 + initCrypto），隔离运行正常
 
   it("d3: persistCfg 在 crypto 不可用时剥离明文 Key（仅存非敏感配置，不落明文）", async () => {
     const win = await boot();
