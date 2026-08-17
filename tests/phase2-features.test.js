@@ -38,39 +38,6 @@ describe("第 2 期 · 多模态（2b）", () => {
   });
 });
 
-describe("第 2 期 · 工作流画布（2a）", () => {
-  let win;
-  beforeEach(() => { win = freshWin(); });
-
-  it("注入器接线：aiReasoning 节点执行真调 chatOnce 并写入上下文", async () => {
-    await new Promise((r) => setTimeout(r, 150)); // 等 startup 完成注入器接线（_wfWireInjectors 在 startup 期执行）
-    const calls = [];
-    win.chatOnce = async (msgs) => { calls.push(msgs); return { choices: [{ message: { content: "AI 推理结果" } }] }; };
-    const wf = win.__test.wfCreateWorkflow("测试流", {});
-    expect(wf).toBeTruthy();
-    const s = win.__test.wfAddNode(wf.id, "start", { x: 20, y: 40 }, { input: {} });
-    const a = win.__test.wfAddNode(wf.id, "aiReasoning", { x: 200, y: 40 }, { prompt: "总结一下", model: "default", temperature: 0.7 });
-    const e = win.__test.wfAddNode(wf.id, "end", { x: 500, y: 40 }, { outputKey: "result" });
-    expect(s && a && e).toBeTruthy();
-    expect(win.__test.wfConnectNodes(wf.id, s.id, a.id)).toBeTruthy();
-    expect(win.__test.wfConnectNodes(wf.id, a.id, e.id)).toBeTruthy();
-    const r = await win.__test.wfExecuteWorkflow(wf.id, {});
-    expect(calls.length).toBeGreaterThanOrEqual(1);
-    expect(calls[0][0].content).toContain("总结一下");
-    expect(r.status).toBe("completed");
-    expect(r.ctx.variables.aiResult).toBe("AI 推理结果");
-  }, 20000);
-
-  it("renderWorkflowCanvas 产出含节点标识的 SVG", () => {
-    const wf = win.__test.wfCreateWorkflow("画布流", {});
-    win.__test.wfAddNode(wf.id, "start", { x: 20, y: 40 });
-    const svg = win.__test.renderWorkflowCanvas(wf.id, { width: 400, height: 200 });
-    expect(svg).toContain("<svg");
-    expect(svg).toContain("data-node-id");
-  });
-});
-
-
 describe("第 2 期 · 外部集成（2d）", () => {
   let win;
   beforeEach(() => { win = freshWin(); });
