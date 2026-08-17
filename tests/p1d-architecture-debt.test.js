@@ -7,7 +7,7 @@
  *      complete_task / update_task / delete_task 在 TOOLS 中曾声明 keyword 参数，
  *      但 execTool 实际读取 args.task_id（findTask 支持 id 或标题回退）。
  *      该漂移导致 AI 发出的 keyword 入参被忽略 → "未找到匹配任务：undefined"，
- *      AI 永远无法 complete/update/delete。修复后 schema 改 task_id（force 保持内部确认参数，不入 schema）。
+ *      AI 永远无法 complete/update/delete。修复后 schema 改 task_id（v1.14.1 起 force 已作为可选参数入 schema）。
  *
  * 设计原则（遵循 test-discipline / anti-gaming）：
  *  - 黑盒优先：经 jsdom 全局访问 window.__test.execTool / TOOLS / setTasks。

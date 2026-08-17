@@ -3204,6 +3204,29 @@ const VERSION = "1.14.0";
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
 const BUILD_TAG = "20260816b";
 
+/* ===== v1.14.1 功能冻结（DEPRECATED：仅禁用 UI 入口，代码保留待归档） =====
+ * 定位决策 2026-08-17：核心定位 = 跨端统一任务工作台 + AI 动手改数据。
+ * 「工作流画布 + 自动化工作流」与「语音助手」暂退出核心，入口冻结（不删代码）。
+ * 恢复方式：把对应 flag 置 false 并重启。
+ */
+const FEATURE_FROZEN = { automation: true, voice: true };
+
+/* 禁用被冻结功能的 UI 入口（隐藏按钮/面板，代码保留）。 */
+function applyFeatureFreeze(){
+  try{
+    if(FEATURE_FROZEN.automation){
+      var hide = function(id){ var el = document.getElementById(id); if(el){ el.style.display = "none"; } };
+      hide("btnAutomation");            // 顶栏「自动化」按钮
+      hide("btnAutomationSettings");    // 设置抽屉「打开自动化面板」按钮
+      var pop = document.querySelector('[data-pop="automation"]'); // 组件 popover「自动化」项
+      if(pop) pop.style.display = "none";
+      var m = document.getElementById("automationModal");
+      if(m && m.classList.contains("show")) m.classList.remove("show");
+    }
+    // voice：语音入口在 renderChat 内按 FEATURE_FROZEN.voice 守卫（见 enhanceChatVoiceUI 调用处）
+  }catch(e){ /* 冻结失败不影响启动 */ }
+}
+
 /* ---------- P1-a MVP 范围边界（收敛声明，防范围蔓延） ----------
  * 本常量不是运行时配置，而是「契约护栏」：任何新增能力若落入 OUT_OF_SCOPE，
  * 必须先回到需求侧确认并升级版本，而非直接塞进 MVP。请勿删除 pendingConfirm 等
@@ -3233,7 +3256,7 @@ const MVP_SCOPE = {
   ],
   KNOWN_CONTRACT_EXCEPTIONS: [
     "overview 为瞬态视图，不持久化（按 g 切换，不写入存储）",
-    "execTool 的 force 为内部确认触发参数，不进入 TOOLS schema（AI 只发 task_id）",
+    "execTool 的 force 已入 schema（v1.14.1 起 AI 可传 force=true 跳过二次确认；默认 false 仍走确认）",
     "Electron 下 AI Key 由主进程保管，渲染进程 cfg 中 key 为空占位（P0-3）",
   ],
 };
@@ -5278,11 +5301,13 @@ function findTask(key){
  * AI 工具调用分发：create_task/list_tasks/complete_task/update_task/delete_task/add_record/search/query_overview/export_data
  * @param {string} name - 工具名
  * @param {Object} args - 工具参数
- * @param {boolean} [force] - 内部确认触发参数（true 时跳过危险操作二次确认）
+ * @param {boolean} [force] - 确认触发参数（true 跳过二次确认）；v1.14.1 起 AI 可经 args.force 传入
  * @returns {string} JSON 字符串形式的结果
  */
 function execTool(name, args, force){
   try{
+    // v1.14.1：force 支持经 schema 由 AI 传入（args.force），与第三参等价；默认 false 仍走二次确认
+    force = !!(force || (args && args.force === true));
     if(name==="create_task"){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
       const tags = Array.isArray(args.tags)? args.tags.map(String).filter(Boolean) : [];
@@ -5370,6 +5395,20 @@ function execTool(name, args, force){
     return JSON.stringify({ok:false, error:String(e)});
   }
 }
+
+/* v1.14.1：从 SCENARIOS 派生 add_record.fields 的场景子 schema（单一真相源，避免 fields 契约漂移） */
+function _recordFieldsSchema(){
+  var anyOf = ORDER.map(function(sc){
+    var entry = SCENARIOS[sc];
+    var props = {};
+    (entry && entry.record && entry.record.fields || []).forEach(function(f){
+      props[f.k] = { type:"string", description:(f.label || f.k) + (f.placeholder ? "，如 " + f.placeholder : "") };
+    });
+    return { type:"object", description:(entry ? entry.name : sc) + "场景资料库字段", properties: props };
+  });
+  return { type:"object", description:"资料库字段，键随 scenario 而定（不同场景字段不同，见 anyOf）", anyOf: anyOf };
+}
+
 const TOOLS = [
   {type:"function", function:{name:"create_task", description:"在指定场景创建一条任务（标题必填），可带标签", parameters:{type:"object", properties:{
     scenario:{type:"string", enum:ORDER, description:"场景键，如 office/code/study"},
@@ -5382,11 +5421,13 @@ const TOOLS = [
   {type:"function", function:{name:"update_task", description:"修改任务的状态/优先级/截止日期/标签（按 id 或标题关键词定位）", parameters:{type:"object", properties:{
     task_id:{type:"string", description:"任务 id，或任务标题中的关键词"}, status:{type:"string", enum:["todo","doing","done"]},
     priority:{type:"string", enum:["","P0","P1","P2"]}, due:{type:"string", description:"新截止日期 YYYY-MM-DD"},
-    tags:{type:"array", items:{type:"string"}, description:"覆盖该任务的标签"}}, required:["task_id"]}}},
+    tags:{type:"array", items:{type:"string"}, description:"覆盖该任务的标签"},
+    force:{type:"boolean", description:"设为 true 直接执行修改；默认 false 会先返回确认提示（需二次确认）"}}, required:["task_id"]}}},
   {type:"function", function:{name:"delete_task", description:"按 id 或标题关键词删除一条任务（进入回收站，可恢复）", parameters:{type:"object", properties:{
-    task_id:{type:"string", description:"任务 id，或任务标题中的关键词"}}, required:["task_id"]}}},
+    task_id:{type:"string", description:"任务 id，或任务标题中的关键词"},
+    force:{type:"boolean", description:"设为 true 直接软删除（进回收站）；默认 false 会先返回确认提示（需二次确认）"}}, required:["task_id"]}}},
   {type:"function", function:{name:"add_record", description:"向某场景的资料库添加一条记录", parameters:{type:"object", properties:{
-    scenario:{type:"string", enum:ORDER}, fields:{type:"object", description:"该场景资料库的字段键值对，例如 {title:'xxx', hours:'10'}"}}, required:["scenario","fields"]}}},
+    scenario:{type:"string", enum:ORDER}, fields:_recordFieldsSchema()}, required:["scenario","fields"]}}},
   {type:"function", function:{name:"search", description:"全局搜索任务与资料库中的条目", parameters:{type:"object", properties:{
     query:{type:"string", description:"搜索关键词"}}, required:["query"]}}},
   {type:"function", function:{name:"query_overview", description:"返回各场景任务统计与今日/逾期待处理数量", parameters:{type:"object", properties:{}}}},
@@ -11552,8 +11593,8 @@ function renderChat(){
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
   scrollChat();
-  // v1.6-A：语音 UI 增强（语音输入按钮 + 朗读按钮 + 拆解结果按钮）
-  try{ enhanceChatVoiceUI(); }catch(e){ /* 语音 UI 增强失败不影响聊天 */ }
+  // v1.6-A：语音 UI 增强（语音输入按钮 + 朗读按钮 + 拆解结果按钮）——v1.14.1 冻结（FEATURE_FROZEN.voice）
+  if(!(typeof FEATURE_FROZEN !== "undefined" && FEATURE_FROZEN.voice)){ try{ enhanceChatVoiceUI(); }catch(e){ /* 语音 UI 增强失败不影响聊天 */ } }
 }
 function scrollChat(){ const el=$("#chat"); if(el) el.scrollTop=el.scrollHeight; }
 
@@ -15424,6 +15465,7 @@ seed();
   }catch(_){ }
   try{ bindChatPanel(); }catch(e){ pushDiag("error","bindChatPanel init: "+(e&&e.message||e),{where:"bindChatPanel"}); } // 右侧 AI 聊天面板事件绑定（三栏布局第三栏，静态 HTML 一次性绑定）
   try{ setupModalA11yBase(); }catch(e){ pushDiag("error","modalA11y init: "+(e&&e.message||e),{where:"modalA11y"}); } // P0② 模态框统一 Esc/遮罩/焦点陷阱基座
+  applyFeatureFreeze(); // v1.14.1：禁用冻结功能（自动化工作流/语音）的 UI 入口
   setupRipple(); // T4.3 底部导航点击涟漪效果（事件委托）
   setupMobileGestures(); // T4.3 移动端手势：左滑下一个/右滑上一个/右滑左边缘打开侧边栏（仅移动端启用）
   applyLandscapeFold(); // T4.3 移动端横屏自动折叠侧边栏
@@ -19296,7 +19338,7 @@ function executeSearch(query){
     body.innerHTML = sanitizeHtml(renderSearchResults(results, query));
   }
   return results;
-}// ===== Automation Workflow (v1.6-E 自动化工作流) =====
+}// ===== Automation Workflow (v1.6-E 自动化工作流) [DEPRECATED v1.14.1：入口已冻结] =====
 /* ============================================================
  * 自动化工作流：规则引擎 + cron 定时任务 + 多步骤工作流 + webhook 集成
  * ------------------------------------------------------------
@@ -20835,6 +20877,7 @@ function renderAutomationPanel(){
  * @returns {void}
  */
 function openAutomationModal(){
+  if(typeof FEATURE_FROZEN !== "undefined" && FEATURE_FROZEN.automation){ try{ toast("自动化工作流已停用（v1.14.1 冻结）", "info"); }catch(e){ /* noop */ } return; }
   var modal = $("#automationModal");
   if(!modal) return;
   var body = $("#automationModalBody");
@@ -26327,7 +26370,7 @@ function _resetIntegrationRateLimits(){
 }// ===== v1.8-C OAuth2 Framework (OAuth2 授权框架) =====
 
 // ----------------------------------------------------------------------------
-// 可视化工作流设计器：节点 / 连线 / 画布操作 / SVG 渲染 / CRUD / 验证 / 导入导出。
+// 可视化工作流设计器：节点 / 连线 / 画布操作 / SVG 渲染 / CRUD / 验证 / 导入导出。 [DEPRECATED v1.14.1：入口已冻结]
 //
 // 命名说明（避免与现有模块冲突）：
 //   - 所有公开函数以 wf 前缀命名
@@ -27304,7 +27347,7 @@ function _resetWorkflowCanvas(){
     selectedEdgeId: null
   };
   _wfSafeLSRemove(WF_CANVAS_KEY);
-}// ===== v1.8-D Workflow Engine (工作流执行引擎) =====
+}// ===== v1.8-D Workflow Engine (工作流执行引擎) [DEPRECATED v1.14.1：入口已冻结] =====
 
 // ----------------------------------------------------------------------------
 // DAG 解析 / 拓扑排序 / 执行调度 / 节点执行器 / 条件求值 / 状态管理 /
@@ -28356,6 +28399,6 @@ function _resetWorkflowApprovals(){
   }
   _wfApprovalResolvers = {};
 }
-// ===== v1.8-E Voice Assistant (语音助手) =====</script>
+// ===== v1.8-E Voice Assistant (语音助手) [DEPRECATED v1.14.1：入口已冻结] =====</script>
 </body>
 </html>

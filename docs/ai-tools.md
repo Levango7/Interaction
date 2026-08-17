@@ -1,10 +1,10 @@
 # AI 工具接口文档（TOOLS Schema）
 
-> 本文档由 `agent-workbench.html` 中的 `const TOOLS = [...]`（行 1581–1616）及工具分发逻辑（`execTool` 行 1495–1580 / `agentExec` 行 1689–1725）抽取而成，作为 AI 层函数调用契约的独立接口说明。
+> 本文档由 `agent-workbench.html` 中的 `const TOOLS = [...]` 及工具分发逻辑（`execTool` / `agentExec`）抽取而成，作为 AI 层函数调用契约的独立接口说明。
 >
-> **适用版本**：`VERSION = "1.1.0"`（见 `agent-workbench.html` 约行 1001）。
+> **适用版本**：`VERSION = "1.14.0"`。
 > **维护约定**：本文件为源码契约的镜像，**以源码为唯一权威**。任何 TOOLS 字段、参数或枚举变更后，须同步更新此处；并提交时一并纳入（见任务 T1）。
-> **最后核对**：2026-08-06（与 `main` 分支 `agent-workbench.html` 字节级比对一致）。
+> **最后核对**：2026-08-17（定位代码请按函数名/常量名搜索，本文件不再维护行号）。
 
 ---
 
@@ -34,15 +34,15 @@ AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `T
 | 16 | `list_records` | agentExec | — | 查某场景资料库最近记录 |
 
 **分发边界**：
-- `execTool`（行 1495）处理任务 / 资料库 / 搜索 / 概览 / 导出类。
-- ` remember`/`recall`/`forget`/`plan`/`complete_step`/`complete_goal`/`list_records` 由 `agentExec`（行 1689）处理；`execTool` 末尾 `return agentExec(name, args)` 兜底（行 1573）。
-- 未识别的工具名返回 `{ok:false, msg:"未知工具：<name>"}`（行 1724）。
+- `execTool` 处理任务 / 资料库 / 搜索 / 概览 / 导出类。
+- ` remember`/`recall`/`forget`/`plan`/`complete_step`/`complete_goal`/`list_records` 由 `agentExec` 处理；`execTool` 末尾 `return agentExec(name, args)` 兜底。
+- 未识别的工具名返回 `{ok:false, msg:"未知工具：<name>"}`。
 
 ---
 
 ## 2. 公共枚举与场景
 
-`scenario` 类参数的取值来自 `ORDER`（行 1311）与 `SCENARIOS`（行 1282–1310）：
+`scenario` 类参数的取值来自 `ORDER` 与 `SCENARIOS`：
 
 ```js
 const ORDER = ["office","code","study","life"];
@@ -61,7 +61,7 @@ const ORDER = ["office","code","study","life"];
 - `list_tasks` 过滤：`["", "todo", "doing", "done"]`（空串 = 全部）。
 - `update_task` 设置：`["todo", "doing", "done"]`（无空串）。
 
-> 注：`remember` 的 `scope` 枚举为 `["global"].concat(ORDER)` = `["global","office","code","study","life"]`（行 1603）。`global` 表示全场景通用；其余按场景键隔离。
+> 注：`remember` 的 `scope` 枚举为 `["global"].concat(ORDER)` = `["global","office","code","study","life"]`。`global` 表示全场景通用；其余按场景键隔离。
 
 ---
 
@@ -79,7 +79,7 @@ const ORDER = ["office","code","study","life"];
   - `priority` `{string, enum: ["","P0","P1","P2"]}`。
   - `tags` `{array<string>}` — 标签列表。
 - **必填**：`["title"]`
-- **执行**：`ORDER.includes(scenario)` 校验，否则回退 `active`；`tags` 转为字符串数组去空（`execTool` 行 1498–1504）。
+- **执行**：`ORDER.includes(scenario)` 校验，否则回退 `active`；`tags` 转为字符串数组去空。
 - **返回**：`{ok:true, id:"<uid>", msg:"已在<场景名>创建任务：<title>"}`
 
 ### 3.2 `list_tasks`
@@ -89,14 +89,14 @@ const ORDER = ["office","code","study","life"];
   - `scenario` `{string, enum: ORDER}`
   - `status` `{string, enum: ["","todo","doing","done"]}`
 - **必填**：`[]`
-- **执行**：按场景过滤，可选状态过滤；**最多返回前 20 条**（行 1510）。
+- **执行**：按场景过滤，可选状态过滤；**最多返回前 20 条**。
 - **返回**：`{count:N, items:[{title, status, due}]}`
 
 ### 3.3 `complete_task`
 
 - **描述**：按任务 id 或标题关键词标记任务完成。
 - **参数**：
-  - `task_id` `{string}` — 任务 id，或任务标题中的关键词（用于定位，经 `findTask`，行 1513）。
+  - `task_id` `{string}` — 任务 id，或任务标题中的关键词（用于定位，经 `findTask`）。
 - **必填**：`["task_id"]`
 - **返回**：
   - 命中：`{ok:true, msg:"已完成：<title>"}`
@@ -111,12 +111,13 @@ const ORDER = ["office","code","study","life"];
   - `priority` `{string, enum: ["","P0","P1","P2"]}`
   - `due` `{string}` — 新截止日期 `YYYY-MM-DD`
   - `tags` `{array<string>}` — 覆盖该任务的标签
+  - `force` `{boolean}` — 设为 `true` 直接执行修改；默认 `false` 会先返回确认提示（需二次确认）
 - **必填**：`["task_id"]`
-- **⚠️ 实现细节（不在 schema 体现）**：首次调用且 `force` 未置位时，不真正修改，而是返回确认提示并挂起 `pendingConfirm`：
+- **⚠️ 实现细节（两步确认）**：首次调用且 `force` 未置 `true` 时，不真正修改，而是返回确认提示并挂起 `pendingConfirm`：
   ```json
   {"ok":false, "confirm":"将修改：「<title>」（id <id>）。发送「确认」以继续，其他内容取消。", "op":"update_task", "task_id":"<id>", "title":"<title>"}
   ```
-  用户回复「确认」后由 UI 以 `force=true` 再次调用才落地（行 1521–1534）。
+  用户回复「确认」后由 UI 以 `force=true` 再次调用才落地。
 - **返回（force 后）**：`{ok:true, msg:"已更新「<title>」：<变更JSON>"}`
   - `status==="done"` 会复用 `completeTask` 路径并设 `doneAt`；其余状态清空 `doneAt`。
 
@@ -125,8 +126,9 @@ const ORDER = ["office","code","study","life"];
 - **描述**：按 id 或标题关键词删除一条任务（进入回收站，可恢复）。
 - **参数**：
   - `task_id` `{string}`（必填）
+  - `force` `{boolean}` — 设为 `true` 直接软删除（进回收站）；默认 `false` 会先返回确认提示（需二次确认）
 - **必填**：`["task_id"]`
-- **⚠️ 实现细节**：同 `update_task`，首次调用返回确认提示（行 1539–1542）。`force=true` 后才执行软删除：
+- **⚠️ 实现细节**：同 `update_task`，`force` 未置 `true` 时返回确认提示。`force=true` 后才执行软删除：
   ```js
   ft.task.deletedAt = Date.now(); setTasks(ft.tasks); // ③ 软删除：进回收站，可恢复
   ```
@@ -137,9 +139,9 @@ const ORDER = ["office","code","study","life"];
 - **描述**：向某场景的资料库添加一条记录。
 - **参数**：
   - `scenario` `{string, enum: ORDER}`（必填）
-  - `fields` `{object}` — 该场景资料库的字段键值对，例如 `{title:'xxx', hours:'10'}`（必填）。
+  - `fields` `{object}` — 该场景资料库的字段（必填）。schema 已按场景生成子结构（`anyOf`），键随 `scenario` 而定（见第 2 节表）。
 - **必填**：`["scenario","fields"]`
-- **⚠️ 字段键由场景决定**：实际落库字段以 `SCENARIOS[sc].record.fields` 为准（第 2 节表）。`fields` 中非场景字段会被忽略，缺字段置空字符串（`execTool` 行 1549–1552）。schema 中 `fields` 为开放 object，**无独立 JSON Schema 子结构**。
+- **⚠️ 字段键由场景决定**：实际落库字段以 `SCENARIOS[sc].record.fields` 为准（第 2 节表）。`fields` 中非场景字段会被忽略，缺字段置空字符串。v1.14.1 起 schema 已从 `SCENARIOS` 派生场景子 schema（`_recordFieldsSchema`）。
 - **返回**：`{ok:true, msg:"已向<场景名>资料库添加记录"}`
 
 ### 3.7 `search`
@@ -148,7 +150,7 @@ const ORDER = ["office","code","study","life"];
 - **参数**：
   - `query` `{string}`（必填）
 - **必填**：`["query"]`
-- **执行**：任务标题 + 各场景资料库 `title` 做 `includes` 子串匹配（大小写不敏感）；各最多 10 条（行 1554–1560）。
+- **执行**：任务标题 + 各场景资料库 `title` 做 `includes` 子串匹配（大小写不敏感）；各最多 10 条。
 - **返回**：`{tasks:[{sc,name,title,status,due}], records:[{sc,name,title}], count:N}`
 
 ### 3.8 `query_overview`
@@ -169,7 +171,7 @@ const ORDER = ["office","code","study","life"];
 - **描述**：导出当前全部数据为 JSON 备份。
 - **参数**：无。
 - **必填**：`[]`
-- **执行**：调用 `doExport()` 触发浏览器下载（行 1570）。
+- **执行**：调用 `doExport()` 触发浏览器下载。
 - **返回**：`{ok:true, msg:"已触发 JSON 备份导出"}`
 
 ### 3.10 `remember`
@@ -179,7 +181,7 @@ const ORDER = ["office","code","study","life"];
   - `scope` `{string, enum: ["global","office","code","study","life"]}` — `global`=全场景通用，否则按场景键隔离。
   - `text` `{string}` — 要记住的内容，一句话（必填）。
 - **必填**：`["text"]`
-- **执行**：`scope` 不合法时回退 `active`（行 1692）；空文本不写入（行 1694–1695）。
+- **执行**：`scope` 不合法时回退 `active`；空文本不写入。
 - **返回**：`{ok:true, id:"<uid>", msg:"已记住[<全局/场景名>]：<text>"}` 或 `{ok:false, msg:"记忆内容为空"}`
 
 ### 3.11 `recall`
@@ -188,7 +190,7 @@ const ORDER = ["office","code","study","life"];
 - **参数**：
   - `query` `{string}`
 - **必填**：`[]`
-- **执行**：场景匹配 + 关键词命中 + 近期加权 + 命中次数，返回 **top 8**（行 1637–1653）。
+- **执行**：场景匹配 + 关键词命中 + 近期加权 + 命中次数，返回 **top 8**。
 - **返回**：`{count:N, items:[{id, scope, text}]}`
 
 ### 3.12 `forget`
@@ -207,7 +209,7 @@ const ORDER = ["office","code","study","life"];
   - `scenario` `{string, enum: ORDER}` — 主场景。
   - `steps` `{array<string>}` — 步骤清单，按执行顺序（必填）。
 - **必填**：`["goal","steps"]`
-- **执行**：新目标顶替旧进行中目标（行 1665–1672）。
+- **执行**：新目标顶替旧进行中目标。
 - **返回**：`{ok:true, id:"<uid>", msg:"已建立目标「<goal>」，共<N>步。请按步骤调用工具执行，每完成一步用 complete_step 标记，全部完成后用 complete_goal 收尾。"}`
 
 ### 3.14 `complete_step`
@@ -235,7 +237,7 @@ const ORDER = ["office","code","study","life"];
 - **参数**：
   - `scenario` `{string, enum: ORDER}`
 - **必填**：`[]`
-- **执行**：返回该场景最近记录 **最多 10 条**，并剥离 `id`/`created` 字段（行 1719–1723）。
+- **执行**：返回该场景最近记录 **最多 10 条**，并剥离 `id`/`created` 字段。
 - **返回**：`{count:N, items:[{<场景字段>}]}`
 
 ---
@@ -243,8 +245,8 @@ const ORDER = ["office","code","study","life"];
 ## 4. 调用契约与错误模型
 
 - **统一返回**：工具结果以 `JSON.stringify(...)` 字符串回传，外层由 `runChatLoop` 写入 `tool` 角色消息。结构通常为 `{ok:bool, ...}`，错误带 `msg` 或 `error` 字段。
-- **异常兜底**：`execTool` 整体 `try/catch`，异常时 `pushDiag` 记录并返回 `{ok:false, error:"<message>"}`（行 1574–1579）。
-- **两步确认（破坏性操作）**：`update_task` / `delete_task` 首次返回 `confirm` 提示而非执行（见 3.4 / 3.5）。**⚠️ 该机制依赖 UI 二次确认流程**；若调用方是纯 function-calling 而非内置 UI，需自行处理 `confirm` 分支（未在 TOOLS schema 暴露 `force` 参数）。
+- **异常兜底**：`execTool` 整体 `try/catch`，异常时 `pushDiag` 记录并返回 `{ok:false, error:"<message>"}`。
+- **两步确认（破坏性操作）**：`update_task` / `delete_task` 首次返回 `confirm` 提示而非执行（见 3.4 / 3.5）。**⚠️ `force` 未置 `true` 时依赖二次确认**；纯 function-calling 调用方应显式传 `force:true` 跳过确认，或自行处理 `confirm` 分支。
 - **未识别工具**：`{ok:false, msg:"未知工具：<name>"}`。
 
 ---
@@ -253,22 +255,22 @@ const ORDER = ["office","code","study","life"];
 
 > 以下为抽取阶段发现的、源码与 schema 存在出入或需产品侧确认的点，已逐条标注，待后续严格核对。
 
-1. **`force` 参数未入 schema**：`update_task`/`delete_task` 的二次确认由 `execTool(name, args, force)` 第三参控制，但 `TOOLS` schema 未声明 `force`。当前依赖 UI 流程注入，纯 API 调用方无标准入口。→ 建议：要么在 schema 中显式加 `force:boolean`，要么文档明确"AI 不应直接传 force"。
-2. **`add_record.fields` 无子 Schema**：schema 仅声明 `{type:"object"}`，实际键受场景约束。→ 建议：为每个场景生成 `fields` 的 `properties`，提升模型调用准确率。
-3. **`recall` 返回上限硬编码 8**：与 `agentContextPrompt` 注入的 `limit=6` 不一致（行 1732）。→ 确认是否为预期（检索 vs 注入取不同 topN）。
-4. **`list_tasks` 返回上限 20**：schema 无 `limit` 参数，超量静默截断（行 1510）。→ 确认是否需分页/limit 参数。
-5. **`due` 字符串无格式校验**：仅作字符串存储，`query_overview` 用字符串比较 `due < todayStr()`（行 1566），依赖 `YYYY-MM-DD` 字典序正确性。→ 非该格式会静默失效。
+1. **~~`force` 参数未入 schema~~（v1.14.1 已解决）**：`force` 已作为可选 `boolean` 加入 `update_task`/`delete_task` schema，AI 可传 `force:true` 跳过二次确认（默认 `false` 仍走确认）。
+2. **~~`add_record.fields` 无子 Schema~~（v1.14.1 已解决）**：schema 已按场景生成 `anyOf` 子结构（`_recordFieldsSchema` 从 `SCENARIOS` 派生）。
+3. **`recall` 返回上限硬编码 8**：与 `agentContextPrompt` 注入的 `limit=6` 不一致。→ 确认是否为预期（检索 vs 注入取不同 topN）。
+4. **`list_tasks` 返回上限 20**：schema 无 `limit` 参数，超量静默截断。→ 确认是否需分页/limit 参数。
+5. **`due` 字符串无格式校验**：仅作字符串存储，`query_overview` 用字符串比较 `due < todayStr()`，依赖 `YYYY-MM-DD` 字典序正确性。→ 非该格式会静默失效。
 
 ---
 
 ## 6. 源码定位速查
 
-| 内容 | 位置 |
+| 内容 | 定位（按标识符搜索，不依赖行号） |
 |------|------|
-| `TOOLS` 数组 | `agent-workbench.html` 行 1581–1616 |
-| `SCENARIOS` 定义 | 行 1282–1310 |
-| `ORDER` 定义 | 行 1311 |
-| `execTool` 分发 | 行 1495–1580 |
-| `agentExec` 分发（记忆/目标） | 行 1689–1725 |
-| `findTask` 定位 | 在 `execTool` 之前定义（约行 1495 前），用于 `complete/update/delete_task` 的 id/关键词解析 |
-| 重试语义（chatOnce） | 见 `chatOnce` 与 Electron `main.js` 的 429/5xx 退避（已在 v1.1.0 对齐） |
+| `TOOLS` 数组 | `const TOOLS = [...]` |
+| `SCENARIOS` 定义 | `const SCENARIOS = {...}` |
+| `ORDER` 定义 | `const ORDER = [...]` |
+| `execTool` 分发 | `function execTool(name, args, force)` |
+| `agentExec` 分发（记忆/目标） | `function agentExec(name, args)` |
+| `findTask` 定位 | `function findTask(...)`，用于 `complete/update/delete_task` 的 id/关键词解析 |
+| 重试语义（chatOnce） | `async function chatOnce(...)` 与 Electron `main.js` 的 429/5xx 退避（跨进程双实现，修改需两侧同步） |
