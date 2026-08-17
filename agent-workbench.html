@@ -303,7 +303,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .side{width:220px;background:var(--side-bg);border-right:1px solid var(--line);
   padding:var(--space-3) var(--space-2);overflow:auto;flex-shrink:0;transition:width .2s ease}
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:8px var(--space-2);
-  border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
+  border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:var(--space-1);
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
   min-height:32px}
 .nav-item svg{width:16px;height:16px;flex-shrink:0}
@@ -354,7 +354,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   box-shadow:var(--shadow-1);padding:var(--space-4);margin-bottom:var(--space-4);
   transition:box-shadow var(--transition-fast)}
 .card:hover{box-shadow:var(--shadow-2)}
-.card h2{margin:0 0 var(--space-1);font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;
+.card h2{margin:0 0 var(--space-3);font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;
   display:flex;align-items:center;gap:var(--space-2)}
 .card .sub{color:var(--muted);font-size:var(--fs-sm);margin:0 0 var(--space-4);line-height:1.5}
 .card h3{font-size:var(--fs-base);font-weight:600;margin:var(--space-5) 0 var(--space-3);
@@ -446,14 +446,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== 看板视图 ===== */
 /* minmax(0,1fr)：列宽允许压缩到内容最小宽以下，防止窄主区（如平板未展开聊天面板时）卡片按钮把网格撑溢出 */
-.kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4)}
+.kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-5)}
 .kcol{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-lg);
-  padding:var(--space-3);min-height:120px}
+  padding:var(--space-4);min-height:160px}
 .kcol h4{margin:0 0 var(--space-3);font-size:var(--fs-sm);font-weight:600;
   display:flex;justify-content:space-between;align-items:center;color:var(--text-dim);letter-spacing:.01em}
 .kcol h4 .n{background:var(--surface-muted);border-radius:10px;padding:1px 8px;font-size:var(--fs-xs);color:var(--text-dim-2)}
 .kcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
-  padding:var(--space-3);margin-bottom:var(--space-2);transition:box-shadow var(--transition-fast),transform var(--transition-fast);cursor:grab}
+  padding:var(--space-3);margin-bottom:var(--space-3);transition:box-shadow var(--transition-fast),transform var(--transition-fast);cursor:grab}
 .kcard:hover{box-shadow:var(--shadow-2);transform:translateY(-1px)}
 .kcard:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .kcard.dragging{opacity:.45;transform:scale(.98);box-shadow:none}
@@ -1217,8 +1217,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .side.collapsed .side-toggle .lbl{display:none}
 .side.collapsed .side-toggle{justify-content:center;padding:11px 0}
 /* 侧栏分组标题（v1.9.5：监控/场景/系统三组，替代裸分割线，层级清晰） */
-.nav-group{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;
-  padding:var(--space-4) var(--space-3) var(--space-1);text-transform:uppercase;user-select:none}
+.nav-group{font-size:var(--fs-xs);font-weight:600;color:var(--muted);letter-spacing:.08em;
+  padding:var(--space-5) var(--space-3) var(--space-1);margin-bottom:var(--space-2);text-transform:uppercase;user-select:none}
 .nav-group:first-of-type{padding-top:var(--space-1)}
 
 /* ===== 响应式断点（4 断点 + 顶栏窄屏 + 横屏） ===== */
