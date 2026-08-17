@@ -4884,7 +4884,7 @@ const SCENARIOS = {
   life:{ name:"生活", color:"#7b61ff",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
     sysprompt:"你是一个生活与健康管家，帮用户管理日常事务、运动记录、体重追踪、睡眠记录和喝水提醒。回答实用、贴心、有条理。",
-    extraCard:"health",
+    extraCard:"none",
     record:{ label:"生活记录",
       fields:[
         {k:"type",label:"类型",type:"select",options:["日常事务","运动记录","体重追踪","睡眠记录","喝水记录"]},
@@ -16102,6 +16102,21 @@ var BUILTIN_PLUGINS = [
       name: "预算概览",
       render: function(data){ return "<div class='plugin-card'>预算: ¥" + ((data && data.amount) || 0) + "</div>"; }
     }]
+  },
+  {
+    id: "health",
+    name: "健康助手",
+    version: "1.0.0",
+    description: "运动/体重/睡眠/喝水记录与健康概览，挂载到「生活」场景",
+    enabled: false,
+    onActivate: function(){
+      SCENARIOS.life.extraCard = "health";
+      if(typeof render === "function"){ try{ render(); }catch(e){ /* noop */ } }
+    },
+    onDeactivate: function(){
+      SCENARIOS.life.extraCard = "none";
+      if(typeof render === "function"){ try{ render(); }catch(e){ /* noop */ } }
+    }
   }
 ];
 
@@ -16315,6 +16330,13 @@ function _resetPlugins(){
 function _initPlugins(){
   BUILTIN_PLUGINS.forEach(function(p){ registerPlugin(p); });
   _loadPluginsState();
+  // v1.14.1：重新应用已启用插件的 onActivate（如「健康助手」挂载场景卡片）
+  Object.keys(_plugins).forEach(function(id){
+    var p = _plugins[id];
+    if(p.enabled && typeof p.onActivate === "function"){
+      try{ p.onActivate(); }catch(e){ /* 插件异常不影响主流程 */ }
+    }
+  });
 }
 
 // 模块加载时自动初始化
