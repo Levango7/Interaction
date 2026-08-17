@@ -4954,6 +4954,21 @@ function toScenarioEntry(s){
     _iconKey: s.iconKey || "overview"
   };
 }
+/* 插件场景 → SCENARIOS 条目（icon 为 SVG 字符串或空；desc 作为 sysprompt） */
+function pluginScenarioToEntry(key, s){
+  return {
+    name: s.name || key,
+    color: (/^#[0-9a-fA-F]{6}$/.test(s.color||"")) ? s.color : scenarioDefaultColor(),
+    icon: (typeof s.icon === "string" && s.icon) ? s.icon : resolveScIcon("overview"),
+    sysprompt: s.desc || ("你是「"+(s.name||key)+"」场景助手，帮用户梳理该场景的任务与资料。"),
+    extraCard: "none",
+    record: { label: (s.name||key)+"资料",
+      fields: [ {k:"title",label:"标题",type:"text"}, {k:"note",label:"备注",type:"textarea"} ] },
+    custom: true,
+    plugin: true,
+    _iconKey: "overview"
+  };
+}
 /**
  * 把自定义场景与内置覆盖注册进 SCENARIOS/ORDER（幂等，可重复调用）。
  * 启动时在 07-store 初始化 chats 前执行一次；CRUD 后再执行以热更新。
@@ -4977,6 +4992,13 @@ function registerCustomScenarios(){
     if(SCENARIOS[s.key]) return; // 键冲突防御
     SCENARIOS[s.key] = toScenarioEntry(s);
     ORDER.push(s.key);
+  });
+  // ④ 注册插件场景（随启用插件动态，非持久化）
+  const ps = (typeof getPluginScenarios === "function") ? getPluginScenarios() : {};
+  Object.keys(ps).forEach(key => {
+    if(SCENARIOS[key]) return; // 键冲突防御
+    SCENARIOS[key] = pluginScenarioToEntry(key, ps[key]);
+    ORDER.push(key);
   });
 }
 registerCustomScenarios(); // 模块顶层：先于 07-store 的 chats/active 初始化
@@ -8926,6 +8948,7 @@ function renderOverview(){
        ${renderCoachCard()}
        ${renderDailyReportCard()}
        ${renderAiRecommendCard()}
+       ${renderPluginCards()}
      </div>`);
 
   // 全局搜索 oninput 同步响应（保证空状态即时渲染；搜索范围小，无需防抖）
@@ -15500,7 +15523,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     getPlugin, getPluginScenarios, getPluginCards, getPluginChainRules,
     _savePluginsState, _loadPluginsState, _resetPlugins,
     renderPluginBox, openPluginDetailModal, openPluginPanel,
-    registerPluginFromJson,
+    registerPluginFromJson, renderPluginCards,
     get _plugins(){ return _plugins; },
     get BUILTIN_PLUGINS(){ return BUILTIN_PLUGINS; },
     // v1.5-C 主题系统（多主题切换 / 自定义主题编辑 / 场景配色个性化 / 主题导入导出）
@@ -16146,6 +16169,9 @@ function unloadPlugin(id){
   }
   delete _plugins[id];
   _savePluginsState();
+  // v1.14.1：插件场景/卡片随卸载热更新
+  if(typeof registerCustomScenarios === "function"){ try{ registerCustomScenarios(); }catch(e){ /* noop */ } }
+  if(typeof renderSide === "function"){ try{ renderSide(); }catch(e){ /* noop */ } }
   return true;
 }
 
@@ -16178,6 +16204,9 @@ function setPluginEnabled(id, enabled){
   }
 
   _savePluginsState();
+  // v1.14.1：插件场景/卡片随启用状态热更新
+  if(typeof registerCustomScenarios === "function"){ try{ registerCustomScenarios(); }catch(e){ /* noop */ } }
+  if(typeof renderSide === "function"){ try{ renderSide(); }catch(e){ /* noop */ } }
   return true;
 }
 
@@ -16209,6 +16238,7 @@ function setPluginConfig(id, config){
  * @returns {Plugin[]} 插件数组
  */
 function getAllPlugins(){
+  if(typeof _plugins !== "object" || !_plugins) return [];
   return Object.keys(_plugins).map(function(id){ return _plugins[id]; });
 }
 
@@ -16217,6 +16247,7 @@ function getAllPlugins(){
  * @returns {Plugin[]} 已启用插件数组
  */
 function getEnabledPlugins(){
+  if(typeof _plugins !== "object" || !_plugins) return [];
   return Object.keys(_plugins).filter(function(id){ return _plugins[id].enabled; }).map(function(id){ return _plugins[id]; });
 }
 
@@ -16274,6 +16305,24 @@ function getPluginChainRules(){
     }
   });
   return rules;
+}
+
+/**
+ * 渲染插件卡片：聚合所有已启用插件的 cards（render(data) 返回 HTML，data 为插件 config）
+ * @returns {string} 卡片 HTML（无卡片时返回空串）
+ */
+function renderPluginCards(){
+  var html = "";
+  getEnabledPlugins().forEach(function(p){
+    if(!Array.isArray(p.cards)) return;
+    p.cards.forEach(function(c){
+      if(!c || typeof c.render !== "function") return;
+      var body = "";
+      try{ body = String(c.render(p.config || {})); }catch(e){ body = ""; }
+      html += '<div class="card"><h2>'+esc(c.name || p.name || "插件")+'</h2>'+sanitizeHtml(body)+'</div>';
+    });
+  });
+  return html;
 }
 
 /**
@@ -16337,6 +16386,8 @@ function _initPlugins(){
       try{ p.onActivate(); }catch(e){ /* 插件异常不影响主流程 */ }
     }
   });
+  // v1.14.1：插件场景并入 SCENARIOS/ORDER
+  try{ registerCustomScenarios(); }catch(e){ /* 插件场景注册失败不阻塞 */ }
 }
 
 // 模块加载时自动初始化
