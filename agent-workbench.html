@@ -2682,8 +2682,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
       <div>
-        <h3>内容与自动化</h3>
-        <p class="set-desc">场景模板、知识管理与自动化工作流入口。</p>
+        <h3>内容与知识</h3>
+        <p class="set-desc">场景模板与知识管理（笔记 / 知识库 / 全文搜索）入口。</p>
       </div>
     </header>
     <div class="set-subhead">场景模板</div>
@@ -3193,10 +3193,10 @@ var _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "1.14.0";
+const VERSION = "1.15.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260816b";
+const BUILD_TAG = "20260818a";
 
 
 
@@ -6170,11 +6170,10 @@ function isElectron(){ return typeof window.electronAPI !== "undefined"; }
  * @param {string} id - 任务 id
  * @returns {boolean} 是否成功标记完成（任务不存在或已完成返回 false）
  */
-/* ---------- v1.11.2 半成品激活（一）：任务事件源接线 ----------
- * 勘察结论：自动化规则引擎（evaluateTriggers）与 Webhook 订阅总线（webhookEmit）
- * 引擎层全真，但任务写路径从不发事件——规则引擎"聋"、总线空转。
- * 本分发器在任务关键动作后同时喂两者；防重入护栏阻止规则动作/联动再次触发的循环。 */
-var _automationEvaluating = false; // 防重入：规则/联动动作产生的写不再次分发
+/* ---------- 任务事件分发（v1.14.1 归档后为 noop 占位） ----------
+ * 自动化规则引擎 + Webhook 订阅总线已于 v1.14.1 归档移除。
+ * 本函数保留空实现仅避免改动既有调用点；习惯链联动由 runLinks 直接驱动，
+ * 不依赖本分发器。 */
 function _emitTaskEvent(type, task){
   /* noop: 自动化规则引擎 + Webhook 总线已归档（v1.14.1）。保留函数体避免调用方改动。 */
 }
@@ -7321,7 +7320,6 @@ function setupSidePopItems(){
       else if(action === "heatmap"){ setActive("overview"); render(); try{ var h = $("#main .heat"); if(h) h.scrollIntoView({behavior:"smooth"}); }catch(_){} }
       else if(action === "pomo"){ if(typeof toggleToolPop === "function") toggleToolPop("pomoPop", document.querySelector("#side [data-pomo]") || btn); }
       else if(action === "tracker"){ if(typeof toggleToolPop === "function") toggleToolPop("trackerPop", document.querySelector("#side [data-tracker]") || btn); }
-      else if(action === "automation"){ if(typeof openSearchModal === "function"){ try{ toast("自动化工作流：见设置 → 数据管理", "info"); }catch(_){ } } }
       // v1.10.0：应用 popover 路由（生活工具 + 可玩性机制）
       else if(action === "weather"){ if(typeof openWeatherModal === "function") openWeatherModal(); }
       else if(action === "alarm"){ if(typeof openAlarmModal === "function") openAlarmModal(); }
@@ -8459,29 +8457,11 @@ function renderHelp(){
           <p>本工作台在渲染与存储层做了多项优化，保证大量任务下依然流畅：</p>
           <ul>
             <li><b>RAF 批量更新</b>：高频操作（拖拽、连续勾选、滚动统计）自动合并到同一帧执行，避免布局抖动。</li>
-            <li><b>懒初始化</b>：重模块（图表 / 知识库 / 自动化引擎）在浏览器空闲时初始化，不阻塞首屏渲染。</li>
+            <li><b>懒初始化</b>：重模块（图表 / 知识库）在浏览器空闲时初始化，不阻塞首屏渲染。</li>
             <li><b>localStorage 批量写入</b>：多次写入合并为一次 flush，降低 I/O 抖动，延长存储寿命。</li>
             <li><b>生产构建压缩</b>：<code>npm run build:prod</code> 生成压缩版（剥离注释 + 合并空行），体积节省约 32.8%。</li>
           </ul>
           <p>这些优化对用户透明，仅在「设置 → 自动备份恢复」可看到快照频率可调。</p>
-        `)}
-        ${helpSection("企业级功能", "企业级功能", `
-          <p>面向团队 / 企业场景的安全与协作能力：</p>
-          <ul>
-            <li><b>RBAC 权限控制</b>：在设置抽屉「团队与权限」中配置角色（管理员 / 编辑者 / 只读）与场景级权限，粒度到单场景读写。</li>
-            <li><b>审计日志</b>：记录关键操作（任务创建/删除/导出/权限变更）供审计追踪，日志可导出为 JSON 供合规审查。</li>
-            <li><b>第三方集成</b>：OAuth2 授权（GitHub / Google）、Webhook 事件订阅、Linear / Jira 双向同步任务。</li>
-          </ul>
-          <p>企业级功能默认关闭，需在设置中显式启用并配置对应凭证。</p>
-        `)}
-        ${helpSection("AI 工作流", "AI 工作流", `
-          <p>可视化编排与多模态 AI 能力，让 AI 不只是聊天：</p>
-          <ul>
-            <li><b>工作流设计器</b>：拖拽节点编排 AI 任务流（触发器 → AI 推理 → 工具调用 → 输出），支持条件分支与循环。</li>
-            <li><b>语音助手</b>：点击聊天框麦克风图标或说「嘿 工作台」唤醒，支持语音输入指令与语音播报回复。</li>
-            <li><b>多模态输入</b>：在聊天框粘贴或拖入图片 / 文件，AI 可识别图片内容（OCR / 视觉理解）并解析 PDF / Word / 代码文件。</li>
-          </ul>
-          <p>工作流可保存为模板分享，语音与多模态需浏览器授权相应权限后启用。</p>
         `)}
         ${helpSection("数据安全", "数据安全", `
           <p><b>AI Key 加密</b>：API Key 用 AES-GCM 加密存储，设备密钥首次随机生成。明文仅在内存中。</p>

@@ -1,4 +1,4 @@
-# Agent 工作台（v1.14.0）
+# Agent 工作台（v1.15.0）
 
 一个跑在 Windows 上的**套壳 Agent 工作台**：把办公 / 编程 / 学习 / 生活四类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -36,7 +36,7 @@
 ## 二、核心特性
 
 - **4 个场景 subagent**：办公 / 编程 / 学习 / 生活，左侧导航一键切换——覆盖知识工作主线 + 日常事务兜底，无娱乐等无关干扰项。
-- **顶部「今天要处理」**：所有场景带截止日期的任务自动汇总、逾期标红 + 一键完成；昨天没做完的自动顺延。
+- **顶部「今天要处理」**：所有场景带截止日期的任务自动汇总——今日到期与逾期任务（截止日 ≤ 今天）都计入今日待办，逾期标红 + 一键完成。
 - **每场景两个基础模块**：任务看板（待办 / 进行中 / 已完成，按钮移动）+ 场景专属资料库（办公→会议纪要、编程→代码片段、学习→学习资料、生活→生活备忘）。
 - **场景细分工具**：周报生成器（办公/编程，自动汇总本周已完成任务）、SM-2 间隔复习（学习，遗忘曲线驱动的复习计划）。
 - **可选插件（插件市场）**：健康助手（运动/体重/睡眠/喝水记录 + 健康概览，挂载到生活场景）默认关闭，需要时在「设置 → 插件市场」启用/禁用/移除。
@@ -52,7 +52,7 @@
   - 编程(上线) → 生活(犒劳自己)
   - 可自定义开关，链路完成情况在习惯链面板可视化（streak 计算 + GitHub 风格热力图 + 链条动画）。
 - **机制**：暗色模式、命令面板（Ctrl/Cmd+K）、每日播报、任务标签、Toast 通知、快捷键。
-- **数据安全**：导出 / 导入 / 清空（清空二次确认）统一收进设置抽屉「数据管理」；累计 30 条顶部提示备份；顶栏只保留指南/命令/主题/设置四枚主按钮。
+- **数据安全**：导出 / 导入 / 清空（清空二次确认）统一收进设置抽屉「数据管理」；累计 30 条顶部提示备份；顶栏保留搜索 / 命令 / 消息 / 主题 / 下载 / 更多六枚快捷按钮（指南入口在侧栏底部，设置 / AI / 文档在侧栏系统组）。
 - **响应式布局**：4 断点全分辨率适配——
   - 移动端 `<768px`：底部 Tab 导航，按钮 ≥44px、输入框 ≥16px，适配 iPhone 安全区；
   - 平板 `768–1024px`：侧边栏可折叠为图标态；
@@ -83,17 +83,21 @@
 └─────────────────────────────────────────────┘
 ```
 
-**前后端交互契约（已核对一致）**
+**前后端交互契约（v1.15 修订：按实际调用核对）**
 
-| 页面调用 | preload 暴露 | 主进程句柄 |
-|---|---|---|
-| `electronAPI.getAutoLaunch()` | `ipcRenderer.invoke` | `ipcMain.handle("get-auto-launch")` |
-| `electronAPI.setAutoLaunch(on)` | `ipcRenderer.send` | `ipcMain.on("set-auto-launch")` |
-| `electronAPI.version()` | `ipcRenderer.invoke` | `ipcMain.handle("get-version")` |
-| `electronAPI.isPackaged()` | `ipcRenderer.invoke` | `ipcMain.handle("get-packaged")` |
-| `electronAPI.platform` | `contextBridge` 静态值 | — |
+| 能力 | preload 暴露 | 主进程句柄 | 页面调用 |
+|---|---|---|---|
+| AI 聊天（含工具） | `electronAPI.chat(arg)` | `ipcMain.handle("chat")` | ✅ 实际使用 |
+| 取消进行中的 AI 请求 | `electronAPI.abortChat()` | `ipcMain.on("abort-chat")` | ✅ 实际使用 |
+| 读 AI 配置 | `electronAPI.getAiConfig()` | `ipcMain.handle("get-ai-config")` | ✅ 实际使用 |
+| 写 AI 配置 | `electronAPI.setAiConfig(cfg)` | `ipcMain.handle("set-ai-config")` | ✅ 实际使用 |
+| 读开机自启状态 | `electronAPI.getAutoLaunch()` | `ipcMain.handle("get-auto-launch")` | ✅ 实际使用 |
+| 设置开机自启 | `electronAPI.setAutoLaunch(on)` | `ipcMain.on("set-auto-launch")` | ✅ 实际使用 |
+| 应用版本号 | `electronAPI.version()` | `ipcMain.handle("get-version")` | ⚪ 暴露未用 |
+| 是否打包态 | `electronAPI.isPackaged()` | `ipcMain.handle("get-packaged")` | ⚪ 暴露未用 |
+| 平台标识 | `electronAPI.platform`（静态） | — | ⚪ 暴露未用 |
 
-`contextIsolation: true` + `nodeIntegration: false` + `sandbox: true`，预加载脚本仅暴露最小且明确的 API，符合 Electron 安全基线。
+`contextIsolation: true` + `nodeIntegration: false` + `sandbox: true`，预加载脚本仅暴露最小且明确的 API，符合 Electron 安全基线。⚠️ 标记的 3 项为 preload 暴露但页面尚未调用的预留能力（版本/打包态/平台检测）。
 
 ---
 
@@ -144,9 +148,9 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v1.14.0**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v1.15.0**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v1.14.0 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v1.15.0 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 相关文件
 

@@ -24,3 +24,20 @@ jobs:
       - run: npm test
       - run: npm run build:check
       - run: npm run lint
+
+  # D6: E2E 完整用户流程（Playwright，file:// 直接加载单文件，无需服务器）
+  # 仅在 main/master push 时运行（PR 已由上面的单测矩阵覆盖），避免拖慢每次提交
+  e2e:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run E2E (full user flow)
+        run: npm run e2e
+        timeout-minutes: 10
