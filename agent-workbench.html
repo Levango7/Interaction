@@ -359,6 +359,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .page-head-sm .sub{margin:1px 0 0;font-size:var(--fs-xs)}
 /* v1.9.7：场景页标题独立成卡（renderSceneHead）——page-head 装进 .card 后取消自带下边距，标题与下方内容块彻底分离 */
 .sc-page-head{margin-bottom:0}
+/* v1.15 P2：标题栏高度统一——主页面标题卡与抽屉(drawer-ph)高度一致(64px)
+   实现：外层 .card 去掉默认 padding(16px)，由内部 header 承担与 drawer-ph 相同的 16px padding */
+.page-head-card{padding:0}
+.page-head-card > .page-head{padding:var(--space-4)}
 
 /* ===== 主内容区 ===== */
 .main{flex:1;overflow:auto;padding:var(--space-5) var(--space-6);min-width:0;
@@ -6888,7 +6892,7 @@ function openRecycle(){
   // 页面视图：渲染到 #main（与 renderStats 一致），保留 id=recycleModal / .recycle-card 以兼容关闭逻辑与焦点陷阱
   // v1.15：标题栏独立成卡（与统计/概览/仓库页统一），recycle-card 仅承载列表
   const html = `<div class="recycle-modal" id="recycleModal">
-    <div class="card"><header class="page-head sc-page-head">
+    <div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
       <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务可在此恢复或彻底删除</p></div>
       <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="page-back recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
@@ -7011,7 +7015,7 @@ function openWarehouse(tab){
   var policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
   var countLabel = list.length ? list.length+" 条" : "";
   var html = `<div class="recycle-modal" id="recycleModal">
-    <div class="card"><header class="page-head sc-page-head">
+    <div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
       <div class="ph-tx"><h2>仓库</h2><p class="sub">${meta.title}</p></div>
       <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="page-back recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
@@ -7110,7 +7114,7 @@ function openChartStore(){
           </div>`;
         }).join("")
       : `<div class="cs-canvas-empty">点击左侧图表库的 + 按钮，把图表添加到画布<br><small>在画布上可拖拽位置 · 拖右下角调整大小</small></div>`;
-    var html = `<div class="card"><header class="page-head sc-page-head">
+    var html = `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
       <div class="ph-tx"><h2>图表</h2><p class="sub">从左侧图表库挑选，放到画布自由布局（可拖拽位置 / 调整大小）</p></div>
       <span class="ph-act"><button type="button" class="cs-clear" id="csClear" title="清空画布">清空画布</button></span>
@@ -7343,7 +7347,7 @@ function openAppPage(){
       + '</div>';
   }).join("");
   $("#main").innerHTML = sanitizeHtml(
-    '<div class="card"><header class="page-head sc-page-head">'
+    '<div class="card page-head-card"><header class="page-head sc-page-head">'
     + '<span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>'
     + '<div class="ph-tx"><h2>应用</h2><p class="sub">日历 · 天气 · 闹钟 · 萌宠 · 指针特效</p></div>'
     + '</header></div>'
@@ -8492,7 +8496,7 @@ function renderHelp(){
     delete _drawer.dataset.page; // v1.9.6：清掉子页标记（settings/ai/plugin）
   }
   const html = `<div class="help-page-wrap" id="helpPageWrap">
-    <div class="card"><header class="page-head sc-page-head">
+    <div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.book}</span>
       <div class="ph-tx">
         <h2 id="helpPageTitle">文档</h2>
@@ -8960,7 +8964,7 @@ function renderOverview(){
   }).join("");
 
   $("#main").innerHTML = sanitizeHtml(
-    `<div class="card"><header class="page-head sc-page-head">
+    `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
       <div class="ph-tx"><h2>概览</h2><p class="sub">跨场景任务总览 · 全局搜索 · 趋势与习惯</p></div>
     </header></div>
@@ -9251,7 +9255,7 @@ function renderStats(){
   ];
   // v1.10.0b：统一 page-head 风格——与概览/仓库/图表商店一致（card 包裹 + .page-head + .ph-ic）
   // v1.15：标题栏独立成卡（"单独摘出来"），指标卡与其分离，视觉与其他页面统一；标题与侧栏菜单名一致
-  const headHtml = `<div class="card"><header class="page-head sc-page-head">
+  const headHtml = `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${UI_ICONS.stats}</span>
     <div class="ph-tx"><h2>统计</h2><p class="sub">关键指标、完成趋势与习惯链分析</p></div>
   </header></div>`;
@@ -9806,7 +9810,7 @@ function renderSceneHead(){
   const s = SCENARIOS[active];
   if(!s) return "";
   const open = getActiveTasks().filter(x=>x.sc===active && x.status!=="done");
-  return `<div class="card"><header class="page-head sc-page-head">
+  return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" style="background:${s.color}1f;color:${s.color}" aria-hidden="true">${s.icon || ""}</span>
     <div class="ph-tx"><h2>${esc(s.name)} · 任务看板</h2>
       <p class="sub">${open.length} 项待办 · 带截止日期的任务会汇总到下方「今天要处理」</p></div>
