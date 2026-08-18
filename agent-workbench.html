@@ -5385,7 +5385,7 @@ const TOOLS = [
   {type:"function", function:{name:"remember", description:"把用户的事实/偏好/决定写入工作记忆，供后续对话自动召回（如“我喜欢简洁回复”“本周重点是 v2 上线”）", parameters:{type:"object", properties:{
     scope:{type:"string", enum:["global"].concat(ORDER), description:"global=全场景通用，否则按场景键隔离"}, text:{type:"string", description:"要记住的内容，一句话"}}, required:["text"]}}},
   {type:"function", function:{name:"recall", description:"按关键词检索工作记忆，回答涉及用户偏好/历史决定前先查", parameters:{type:"object", properties:{
-    query:{type:"string", description:"检索关键词"}}, required:[]}}},
+    query:{type:"string", description:"检索关键词"}}, required:["query"]}}},
   {type:"function", function:{name:"forget", description:"按 id 或内容关键词删除一条工作记忆", parameters:{type:"object", properties:{
     id:{type:"string", description:"记忆 id 或内容关键词"}}, required:["id"]}}},
   {type:"function", function:{name:"plan", description:"为多步任务建立目标与步骤清单（跨场景可拆步）。建立后按步骤调用工具执行，每步完成用 complete_step 标记，全部完成用 complete_goal 收尾", parameters:{type:"object", properties:{
@@ -5395,8 +5395,27 @@ const TOOLS = [
   {type:"function", function:{name:"complete_goal", description:"目标全部步骤完成后调用，收尾并总结", parameters:{type:"object", properties:{
     summary:{type:"string", description:"完成总结"}}, required:[]}}},
   {type:"function", function:{name:"list_records", description:"查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等）", parameters:{type:"object", properties:{
-    scenario:{type:"string", enum:ORDER}}, required:[]}}}
+    scenario:{type:"string", enum:ORDER}}, required:["scenario"]}}}
 ];
+
+/* ---------- AI 层降级重定位（v1.15）：cfg.agent=false 时关闭 Agent 工具与话术 ----------
+ * 背景：此前 cfg.agent=false 仅关闭记忆/目标上下文注入（agentContextPrompt 返回空），
+ * 但 TOOLS 仍无条件暴露 remember/plan 等 7 个 agent 工具，chatSysPrompt 也无条件引导使用——
+ * 话术与能力不一致（AI 会被引导调用已"关闭"的能力）。
+ * 修复：effectiveTools() 按 cfg.agent 过滤；chatSysPrompt 同步降级话术。
+ */
+var AGENT_TOOL_NAMES = ["remember","recall","forget","plan","complete_step","complete_goal","list_records"];
+/** 计算实际暴露给模型的工具集（cfg.agent=false 时剔除 Agent 工具） */
+function effectiveTools(){
+  const cfg = getCfg();
+  if(cfg && cfg.agent === false){
+    return TOOLS.filter(function(t){
+      const n = t && t.function && t.function.name;
+      return n && AGENT_TOOL_NAMES.indexOf(n) === -1;
+    });
+  }
+  return TOOLS;
+}
 
 /* ---------- Agent 引擎：记忆 / 目标 / 多步编排（A-P3：在既有 chatOnce + TOOLS 契约上扩展，不另起链路） ---------- */
 const AGENT_MEM_MAX = 60;        // 工作记忆容量默认值（R5：可在设置页配置，见 getMemMax）
@@ -10703,7 +10722,7 @@ async function chatOnce(messages, opts){
     const model=(ap && ap.model) || "gpt-4o-mini";
     const aiParams=getAiParams(); // B8：超时/温度可配置（默认 30s / 0.7）
     const body={ model, messages, temperature:aiParams.temperature };
-    if(cfg.enabled){ body.tools=TOOLS; body.tool_choice="auto"; }
+    if(cfg.enabled){ body.tools=effectiveTools(); body.tool_choice="auto"; }
 
     // Electron 模式：经主进程代理（Key 不进渲染进程/localStorage），一并规避 CORS（P0-3）
     // B8：超时参数随请求传给主进程（主进程读取后应用，非法值回退默认）
@@ -11102,6 +11121,13 @@ function openConfirmModal(){
   modal.onclick = e=>{ if(e.target===modal) cancelPendingDanger("取消"); };
 }
 function chatSysPrompt(userText){
+  const cfg = getCfg();
+  // v1.15：话术与能力对齐——cfg.agent=false 时不引导记忆/编排（对应工具也已被 effectiveTools 剔除）
+  if(cfg && cfg.agent === false){
+    return (SCENARIOS[active]?.sysprompt || "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。")
+      +"\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。"
+      +agentContextPrompt(userText);
+  }
   return (SCENARIOS[active]?.sysprompt || "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。")
     +"\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。"
     +"用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。"
@@ -15199,6 +15225,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     execTool, migrate, runLinks, completeTask,
     getTasks, setTasks, getRec, setRec, getLinks,
     SCENARIOS, ORDER, TOOLS, DEFAULT_LINKS, PREFIX, MVP_SCOPE,
+    effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
