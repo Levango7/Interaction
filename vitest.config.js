@@ -12,12 +12,8 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "text-summary", "lcov"],
       include: ["agent-workbench.html"],
-      thresholds: {
-        lines: 50,
-        functions: 50,
-        branches: 40,
-        statements: 50,
-      },
+      // 注：v8 无法对 .html 单文件做注入，当前覆盖率始终为 0%。
+      // thresholds 在此架构下无效，保留空配置为未来拆模块（步骤②~⑤，见 docs/architecture-layers.md）后启用做准备。
     },
   },
 });

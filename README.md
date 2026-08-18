@@ -93,11 +93,8 @@
 | 写 AI 配置 | `electronAPI.setAiConfig(cfg)` | `ipcMain.handle("set-ai-config")` | ✅ 实际使用 |
 | 读开机自启状态 | `electronAPI.getAutoLaunch()` | `ipcMain.handle("get-auto-launch")` | ✅ 实际使用 |
 | 设置开机自启 | `electronAPI.setAutoLaunch(on)` | `ipcMain.on("set-auto-launch")` | ✅ 实际使用 |
-| 应用版本号 | `electronAPI.version()` | `ipcMain.handle("get-version")` | ⚪ 暴露未用 |
-| 是否打包态 | `electronAPI.isPackaged()` | `ipcMain.handle("get-packaged")` | ⚪ 暴露未用 |
-| 平台标识 | `electronAPI.platform`（静态） | — | ⚪ 暴露未用 |
 
-`contextIsolation: true` + `nodeIntegration: false` + `sandbox: true`，预加载脚本仅暴露最小且明确的 API，符合 Electron 安全基线。⚠️ 标记的 3 项为 preload 暴露但页面尚未调用的预留能力（版本/打包态/平台检测）。
+`contextIsolation: true` + `nodeIntegration: false` + `sandbox: true`，预加载脚本仅暴露最小且明确的 API，符合 Electron 安全基线。
 
 ---
 

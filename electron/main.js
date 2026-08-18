@@ -343,10 +343,6 @@ ipcMain.on("set-auto-launch", (e, on) => {
   } catch (e) { /* 忽略权限错误 */ }
 });
 
-// 供 preload 在 sandbox 下取元信息（sandbox:true 时 preload 无法访问 app）
-ipcMain.handle("get-version", (e) => { assertTrustedSender(e); return app.getVersion(); });
-ipcMain.handle("get-packaged", (e) => { assertTrustedSender(e); return app.isPackaged; });
-
 // Windows 下确保任务栏分组 / 通知正确归属
 app.setAppUserModelId("com.agent.workbench");
 
