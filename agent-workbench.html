@@ -556,14 +556,18 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
 /* v1.15：聊天输入区=带边框的输入框（textarea 融入内部，底部工具栏三键嵌在框内）
-   左下附件键 / 右下模型选择+发送暂停——三者都在输入框内，不是悬浮在下方 */
-.chat-input-area{margin:0 var(--space-3) var(--space-3);
-  border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);
-  display:flex;flex-direction:column;
+   左下附件键 / 右下模型选择+发送暂停——三者都在输入框内，不是悬浮在下方。
+   背景用 --panel2 略深于面板，使输入框轮廓在面板上清晰可见 */
+.chat-input-area{margin:var(--space-2) var(--space-3) var(--space-3);
+  border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel2);
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:var(--shadow-1);
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+/* 底部工具栏：三键嵌在框内，顶部分隔线与 textarea 区分 */
 .chat-input-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);
-  padding:var(--space-1) var(--space-2) var(--space-2)}
+  padding:var(--space-1) var(--space-2) var(--space-2);border-top:1px solid var(--line)}
+.chat-model-empty{border-style:dashed;color:var(--accent);cursor:pointer}
 .chat-input-right{display:flex;align-items:center;gap:var(--space-2)}
 .chat-attach-btn{flex-shrink:0;width:28px;height:28px;padding:0;border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);color:var(--text-dim);cursor:pointer;
@@ -11356,12 +11360,14 @@ function bindChatPanel(){
       const c=getCfg();
       const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
       if(profiles.length === 0){
-        modelSelect.innerHTML = sanitizeHtml(`<option value="">未配置模型</option>`);
-        modelSelect.disabled = true;
+        // v1.15 修复：未配置时不 disabled（disabled 的 select 不触发 onclick，
+        // 导致"未配置模型→点击跳设置"永远无效），改为保持可点击 + 显式样式提示
+        modelSelect.innerHTML = sanitizeHtml(`<option value="">未配置模型，点击配置</option>`);
+        modelSelect.classList.add("chat-model-empty");
         modelSelect.title = "未配置 AI Profile，点击打开设置";
         return;
       }
-      modelSelect.disabled = false;
+      modelSelect.classList.remove("chat-model-empty");
       modelSelect.title = "切换大模型 Profile";
       const cur = c.activeId || profiles[0].id;
       modelSelect.innerHTML = sanitizeHtml(profiles.map(p =>
@@ -11382,12 +11388,12 @@ function bindChatPanel(){
       // 切换后立即重新渲染聊天（让后续请求使用新 profile）
       try{ if(typeof renderChat === "function") renderChat(); }catch(e){ /* noop */ }
     };
-    // 点击「未配置模型」时跳转到设置抽屉
+    // 点击「未配置模型」时跳转到 AI 配置页（v1.15：改走 openAiPage，直达 AI 配置而非设置首页）
     modelSelect.onclick=()=>{
       const c = getCfg();
       const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
-      if(profiles.length === 0 && typeof openDrawer === "function"){
-        openDrawer();
+      if(profiles.length === 0 && typeof openAiPage === "function"){
+        openAiPage();
       }
     };
     // 暴露刷新方法供外部（如设置保存后）调用
