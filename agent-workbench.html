@@ -70,9 +70,9 @@
   --shadow-3:0 4px 16px rgba(0,0,0,.12);
   /* 过渡体系 */
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
-  /* 顶栏高度令牌（布局修复：统一各断点顶栏高度=61px，消除 1440 断点处 8px 跳变；
-     供 msg-panel 等下拉面板兜底定位引用；<768px 触摸态按钮 44px 时在媒体查询内覆写为 69px） */
-  --topbar-h:75px; /* v1.10.0：61→75，顶栏按钮改竖排（图标上·文字下）后整体高度增加 */
+  /* 顶栏高度令牌（布局修复：统一各断点顶栏高度=54px，消除 1440 断点处跳变；
+     供 msg-panel 等下拉面板兜底定位引用；<768px 触摸态按钮 44px 时保持 54px 不变） */
+  --topbar-h:54px; /* v1.15：75→54，顶栏按钮改横排（图标左·文字右）回收垂直空间 */
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
@@ -121,7 +121,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 100dvh 渐进增强：移动端地址栏收起/展开时视口高度变化，dvh 跟随实际动态视口，消除整页跳动；
    不支持 dvh 的旧内核自动回退到前一行的 100vh */
 .app{display:flex;flex-direction:column;height:100vh;height:100dvh}
-/* 单行顶栏：品牌 + spacer + 系统级按钮居右（padding 统一 space-3，各断点高度一致=61px，见 --topbar-h 令牌）
+/* 单行顶栏：品牌 + spacer + 系统级按钮居右（padding 统一 space-3，各断点高度一致=54px，见 --topbar-h 令牌）
    v1.9.7：背景改 --side-bg（与侧栏同灰）——原 --panel 白与右栏/白卡同色，顶栏/正文/右栏三区不辨界限；
    现为「顶+侧灰框 → 正文浅灰 → 右栏白」三层结构，暗色/高对比度/护眼主题经同名令牌自动同步 */
 .topbar{display:flex;flex-direction:row;align-items:center;gap:var(--space-3);
@@ -259,11 +259,11 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .tbtn svg{width:18px;height:18px}
 /* 系统级消息按钮角标（红色小圆点 / 未读数） */
 .tbtn{position:relative}
-/* v1.10.0：顶栏系统级按钮竖排布局（图标上·文字下）——节省顶栏横向空间 */
-.topbar .tbtn{flex-direction:column;gap:2px;padding:var(--space-1) var(--space-2);min-height:54px;
-  min-width:48px;font-size:11px;line-height:1.1}
-.topbar .tbtn .lbl{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.topbar .tbtn svg{width:18px;height:18px}
+/* v1.15：顶栏系统级按钮横排布局（图标左·文字右）——回收垂直空间（75→54px） */
+.topbar .tbtn{flex-direction:row;gap:var(--space-1);padding:var(--space-1) var(--space-2);min-height:36px;
+  min-width:0;font-size:11px;line-height:1.1;white-space:nowrap}
+.topbar .tbtn .lbl{display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.topbar .tbtn svg{width:16px;height:16px;flex-shrink:0}
 .topbar .tbtn .badge{position:absolute;top:2px;right:6px}
 .tbtn .badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;
   padding:0 4px;border-radius:8px;background:var(--danger);color:var(--on-accent);
@@ -344,14 +344,20 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .page-head.page-head-loose .ph-ic svg{width:19px;height:19px}
 .page-head.page-head-loose h2{font-size:var(--fs-xl)}
 .page-head.page-head-loose .sub{font-size:var(--fs-sm);margin-top:2px}
+/* 概览标题栏紧凑版：两行标题 + 中等图标 + 半 padding（上下高度适度收窄） */
+.page-head-sm{padding:var(--space-1) 0;margin-bottom:var(--space-2);gap:var(--space-2)}
+.page-head-sm .ph-ic{width:28px;height:28px;border-radius:var(--radius-md)}
+.page-head-sm .ph-ic svg{width:15px;height:15px}
+.page-head-sm h2{font-size:var(--fs-md)}
+.page-head-sm .sub{margin:1px 0 0;font-size:var(--fs-xs)}
 /* v1.9.7：场景页标题独立成卡（renderSceneHead）——page-head 装进 .card 后取消自带下边距，标题与下方内容块彻底分离 */
 .sc-page-head{margin-bottom:0}
 
 /* ===== 主内容区 ===== */
-.main{flex:1;overflow:auto;padding:var(--space-6) var(--space-7);min-width:0;
+.main{flex:1;overflow:auto;padding:var(--space-5) var(--space-6);min-width:0;
   background:var(--bg)} /* v1.9.5：显式声明主区背景=body 浅灰，白色卡片浮于其上，区域层次分明 */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  box-shadow:var(--shadow-1);padding:var(--space-4);margin-bottom:var(--space-4);
+  box-shadow:var(--shadow-1);padding:var(--space-4);margin-bottom:var(--space-3);
   transition:box-shadow var(--transition-fast),border-color var(--transition-fast)}
 .card:hover{box-shadow:var(--shadow-2);border-color:var(--accent-soft)}
 .card h2{margin:0 0 var(--space-3);font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;
@@ -907,8 +913,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .drawer-page{padding:0 var(--space-8) !important}
 }
 /* v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片直接浮于浅灰底（与统计/回收站页一致）；
-   margin-top 承接 drawer-page 移除的 padding-top（三断点同步） */
-.drawer-ph{margin:var(--space-6) 0 var(--space-5)}
+   margin-top 承接 drawer-page 移除的 padding-top（三断点同步）
+   v1.15：页头统一"框起来"——图标+大标题+小标题装入带边框的标题栏卡片，与统计/仓库页视觉一致 */
+.drawer-ph{margin:var(--space-6) 0 var(--space-5);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-1);padding:var(--space-4) var(--space-5)}
 .drawer-ph .close{
   font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);
@@ -1347,8 +1356,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .side, .main, .cmd, .help-body, .drawer, .kanban, .chain-bar, .md-body pre{
     -webkit-overflow-scrolling:touch
   }
-  /* 触摸态按钮 44px → 顶栏实际高度 69px，覆写令牌保持 msg-panel 等兜底定位准确 */
-  :root{--topbar-h:69px}
+  /* 触摸态按钮 44px → 顶栏实际高度 54px，覆写令牌保持 msg-panel 等兜底定位准确 */
+  :root{--topbar-h:54px}
   /* 触摸目标尺寸：所有可点击元素 min-height/min-width 44px（WCAG 2.5.5） */
   .tbtn{min-height:44px;min-width:44px;padding:var(--space-3)}
   .addbtn{min-height:44px;padding:var(--space-3) var(--space-4)}
@@ -2744,17 +2753,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </section>
 
   <!-- ===== 外观与语言 ===== -->
-  <section class="set-card" id="set-bio" aria-label="生物识别（数据管理页）">
-    <h3>生物识别</h3>
-    <p class="set-desc">Windows Hello / Touch ID（WebAuthn）。注册后可对删除任务、导出数据等敏感操作启用认证门禁（5 分钟会话内免重复认证）。</p>
-    <div class="form-row" style="flex-direction:column;gap:8px">
-      <button type="button" class="addbtn" id="btnBioCheck" style="--sc:var(--accent);min-width:120px">检测可用性</button>
-      <button type="button" class="addbtn" id="btnBioRegister" style="--sc:var(--accent);min-width:120px">注册（首次）</button>
-      <label style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="cfgBioRequire"> 敏感操作（删除任务/导出数据）需要生物识别确认
-      </label>
-    </div>
-  </section>
   <section class="set-card" id="set-look" aria-label="外观与语言">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>
@@ -3563,8 +3561,7 @@ function createStore(initial){
     subscribe(fn){ subs.push(fn); return () => { const i = subs.indexOf(fn); if(i>=0) subs.splice(i,1); }; }
   };
 }
-// v1.14 生物识别模块已移除，保留此 stub 以避免旧引用崩溃
-function _maybeBioProtect(actionName, fn){ return Promise.resolve(fn ? fn() : undefined); }
+// v1.14 生物识别模块已移除，删除 stub（删除任务/导出直接执行，不再走门禁）
 /**
  * 生成唯一 id（时间戳 36 进制 + 5 位随机）
  * @returns {string}
@@ -3596,27 +3593,8 @@ function idbShouldMirror(k){
   return IDB_MIRROR_PREFIXES.some(p => k === p || k.startsWith(p));
 }
 
-// v1.14 stub: e2ee core (E2EE module was removed, wrappers e2eeEncryptWithDevice/e2eeDecryptWithDevice remain)
-async function e2eeEncrypt(plaintext, key) { return plaintext; }
-async function e2eeDecrypt(ciphertext, key, iv) { return ciphertext; }
-
-// v1.14 stub: oauth2 admin functions (referenced in workflow integration UI)
-function oauth2GetToken(providerId) { return null; }
-function oauth2BuildAuthUrl(providerId, opts) { return ''; }
-function oauth2RevokeToken(providerId, token) { /* noop */ }
-function oauth2RegisterProvider(cfg) { return { ok: true }; }
-
-// v1.14 stub: biometric functions (biometric module removed, button handlers remain)
-function biometricRecheckAvailability() { return Promise.resolve('not_available'); }
-function biometricRegister(actionName) { return Promise.resolve({ result: 'cancelled' }); }
-function biometricSaveSettings(_settings) { /* noop */ }
-
 // v1.14 stub: OAuth2 callback handler (oauth2 module removed, startup wiring remains)
 function _oauth2HandleCallback() { return Promise.resolve(); }
-
-// v1.14 stub: multimodal attachment functions (multimodal module removed, chat insertion remains)
-function multimodalGetAttachment(id) { return null; }
-function multimodalAddAttachment(file, kind, meta) { return null; }
 
 let _idbDbPromise = null;
 /**
@@ -6184,33 +6162,6 @@ async function initCrypto(){
 }
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
 
-/* ---------- v1.8-A E2EE 集成便捷调用 ---------- */
-// 桥接 59-security.js 中的 E2EE 能力，提供基于设备密钥的便捷加密/解密
-// 59-security.js 在 13 之后加载，函数声明会被提升，可安全引用
-/**
- * 用设备密钥 E2EE 加密任意明文（便捷封装）
- * @param {string} plaintext - 明文
- * @returns {Promise<{iv:string,ciphertext:string}|string>} 加密结果；Web Crypto 不可用返回原值
- */
-async function e2eeEncryptWithDevice(plaintext){
-  if(!_cryptoReady) return String(plaintext);
-  const key = await ensureDeviceKey();
-  if(!key) return String(plaintext);
-  return await e2eeEncrypt(plaintext, key);
-}
-/**
- * 用设备密钥 E2EE 解密（便捷封装）
- * @param {string} ciphertext - base64 密文
- * @param {string} iv - base64 IV
- * @returns {Promise<string|null>} 明文；失败返回 null
- */
-async function e2eeDecryptWithDevice(ciphertext, iv){
-  if(!_cryptoReady) return ciphertext;
-  const key = await ensureDeviceKey();
-  if(!key) return null;
-  return await e2eeDecrypt(ciphertext, key, iv);
-}
-
 // ===== Chain Layer (习惯链层·任务完成与联动) =====
 /**
  * 统一的"完成任务"入口：集中设置完成态并触发场景联动
@@ -6821,9 +6772,6 @@ function renderSide(){
   // v1.9.6：AI 配置从设置页抽离为系统组独立菜单页
   const aiBtn = `<button class="nav-item${_aiActive}" data-aipage="1" id="sideBtnAi" style="--sc:var(--accent)" title="AI" aria-label="AI">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg><span class="nm">AI</span></button>`;
-  // v1.9.9：Agent 入口（提示词/上下文/harness/loop/记忆）——v1.9.9 占位，复用 AI 配置二级页
-  const agentBtn = `<button class="nav-item" data-agentpage="1" id="sideBtnAgent" style="--sc:#d97706" title="Agent" aria-label="Agent">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H7a3 3 0 0 0-3 3v3a3 3 0 0 0 1 2.2V18a3 3 0 0 0 3 3h2v-7H8v-3h2V8a2 2 0 0 1 4 0v1h2v3h-2v7h2a3 3 0 0 0 3-3v-3.8a3 3 0 0 0 1-2.2V9a3 3 0 0 0-3-3h-2V5a3 3 0 0 0-3-3z"/></svg><span class="nm">Agent</span></button>`;
   // v1.9.9：设置入口
   const gearBtn = `<button class="nav-item${_gearActive}" data-gear="1" id="btnGear" style="--sc:var(--muted)" title="设置" aria-label="设置">
     ${UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">设置</span></button>`;
@@ -6839,12 +6787,12 @@ function renderSide(){
   // v1.9.9：应用（父按钮，点击展开 popover：笔记/协作/分享/仪表盘）
   const appBtn = `<button class="nav-item" data-appmenu="1" style="--sc:#0a6cbd" title="应用" aria-label="应用" aria-haspopup="true" aria-expanded="false">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nm">应用</span><span class="side-caret" aria-hidden="true">▸</span></button>`;
-  // v1.10.0：四组按用户最新决策——全局(概览/统计/仓库) → 场景(场景项) → 功能(图表/组件/应用/市场) → 系统(AI/Agent/设置/文档)
+  // v1.10.0：四组按用户最新决策——全局(概览/统计/仓库) → 场景(场景项) → 功能(图表/组件/应用/市场) → 系统(AI/设置/文档)
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML +
     '<div class="nav-group">全局</div>' + overview + statsBtn + warehouseBtn +
     '<div class="nav-group">场景</div>' + items +
     '<div class="nav-group">功能</div>' + chartBtn + compBtn + appBtn + pluginBtn +
-    '<div class="nav-group">系统</div>' + aiBtn + agentBtn + gearBtn + docBtn);
+    '<div class="nav-group">系统</div>' + aiBtn + gearBtn + docBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
     const _m = $("#main"); if(_m) _m.scrollTop = 0;
@@ -6852,7 +6800,6 @@ function renderSide(){
     if(b.dataset.gear){ openDrawer(); return; }
     if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
     if(b.dataset.aipage){ if(typeof openAiPage === "function") openAiPage(); return; }
-    if(b.dataset.agentpage){ if(typeof openAgentPage === "function") openAgentPage(); else if(typeof openAiPage === "function") openAiPage(); return; }
     if(b.dataset.pluginpage){ if(typeof openPluginPage === "function") openPluginPage(); return; }
     // v1.9.9：功能组三大类——图表/组件/应用均为父按钮，点击切换子菜单 popover
     if(b.dataset.chartmenu){ if(typeof toggleSidePop === "function") toggleSidePop("chartPop", b); return; }
@@ -7064,16 +7011,6 @@ function openWarehouse(tab){
     });
   }
 }
-/* v1.10.0：Agent 入口（提示词/上下文/harness/loop/记忆）——v1.9.9 占位，暂复用 AI 配置二级页 */
-function openAgentPage(){
-  if(typeof openAiPage === "function"){ openAiPage(); return; }
-  // 兜底：渲染一个简单占位页
-  $("#main").innerHTML = sanitizeHtml(`<div class="card"><header class="page-head">
-    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H7a3 3 0 0 0-3 3v3a3 3 0 0 0 1 2.2V18a3 3 0 0 0 3 3h2v-7H8v-3h2V8a2 2 0 0 1 4 0v1h2v3h-2v7h2a3 3 0 0 0 3-3v-3.8a3 3 0 0 0 1-2.2V9a3 3 0 0 0-3-3h-2V5a3 3 0 0 0-3-3z"/></svg></span>
-    <div class="ph-tx"><h2>Agent</h2><p class="sub">提示词 / 上下文 / harness / loop / 记忆（v2.0 上线）</p></div>
-  </header><p>Agent 配置中心正在建设中。临时入口可使用「AI 配置」中的 sysprompt 字段。</p></div>`);
-}
-
 /* v1.10.0：图表商店（独立页面：图表库 + 画布 + 拖拽）
    - 左侧：图表库（卡片：日历/统计/热力图/趋势/甘特/导图/仪表盘/习惯链），点击=添加到画布
    - 右侧：画布（可拖拽位置 + 调整大小；数据存 localStorage.wb_chart_canvas）
@@ -8451,10 +8388,14 @@ function renderHelp(){
     delete _drawer.dataset.page; // v1.9.6：清掉子页标记（settings/ai/plugin）
   }
   const html = `<div class="help-page" id="helpPage">
-    <div class="help-header">
-      <h2 id="helpPageTitle">${ic("book")}使用指南</h2>
+    <header class="help-header page-head">
+      <span class="ph-ic" aria-hidden="true">${UI_ICONS.book}</span>
+      <div class="ph-tx">
+        <h2 id="helpPageTitle">使用指南</h2>
+        <p class="sub">快速上手 · 场景说明 · AI 技巧 · 数据安全</p>
+      </div>
       <button class="help-back" id="helpBack" aria-label="返回上一视图" type="button">← 返回</button>
-    </div>
+    </header>
     <div class="help-body">
         ${helpSection("快速上手", "快速上手", `
           <p>3 步开始使用：</p>
@@ -8931,7 +8872,7 @@ function renderOverview(){
   }).join("");
 
   $("#main").innerHTML = sanitizeHtml(
-    `<div class="card"><header class="page-head">
+    `<div class="card"><header class="page-head page-head-sm">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
       <div class="ph-tx"><h2>概览</h2><p class="sub">跨场景任务总览 · 全局搜索 · 趋势与习惯</p></div>
     </header></div>
@@ -9966,12 +9907,8 @@ function bindScenario(){
     const tasks=getTasks();
     const t=tasks.find(x=>x.id===b.dataset.del);
     if(t && !t.deletedAt){
-      // v1.13 [2c]：delete_task 属受保护动作——启用生物识别时先认证（含会话免重）再执行
-      _maybeBioProtect("delete_task", function(){
-        t.deletedAt = Date.now(); setTasks(tasks); _emitTaskEvent("task_delete", t); render();
-      }).then(function(pr){
-        if(pr && pr.authed === false){ try{ toast("已取消：未通过生物识别", "warn"); }catch(eB1){} }
-      });
+      // v1.14 生物识别门禁移除，删除任务直接执行（进入回收站可恢复）
+      t.deletedAt = Date.now(); setTasks(tasks); _emitTaskEvent("task_delete", t); render();
       return;
     }
     render();
@@ -11260,17 +11197,7 @@ function chatSysPrompt(userText){
     +"用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。"
     +agentContextPrompt(userText);
 }
-/* ---------- v1.13 [2b] 多模态：图片待发队列 + vision 消息构造 ----------
- * 图片附件经 multimodal 模块落档后暂存 id，随下一条用户消息以 OpenAI vision
- * content 数组格式发出（chatOnce 已确认原样透传，:10794 无内容改写）。 */
-var chatPendingImages = [];
-function _visionContent(text, imageUrls){
-  var parts = [{ type: "text", text: String(text || "") }];
-  (imageUrls || []).forEach(function(u){
-    if(u) parts.push({ type: "image_url", image_url: { url: u } });
-  });
-  return parts;
-}
+/* ---------- 历史消息 content 兼容（v1.14 前多模态可能遗留数组格式，渲染时兜底转文本） ---------- */
 function _chatContentToText(c){
   if(Array.isArray(c)){
     var txt = c.filter(function(p){ return p && p.type === "text"; }).map(function(p){ return p.text; }).join("\n");
@@ -11345,16 +11272,8 @@ async function onChatSubmit(e){
     await handleAiCodeGen(codeGenHit, hist);
     return;
   }
-  // 正常路径（v1.13 [2b]：有待发图片时 user 消息用 vision content 数组，OpenAI 兼容端点直接识别）
-  if(chatPendingImages.length){
-    const urls = chatPendingImages.map(function(id){
-      try{ const a = multimodalGetAttachment(id); return a && (a.url || a.data); }catch(err){ return null; }
-    }).filter(Boolean);
-    hist.push({ role:"user", content:_visionContent(text, urls) });
-    chatPendingImages = [];
-  }else{
-    hist.push({role:"user",content:text});
-  }
+  // 正常路径（v1.14 多模态已移除，user 消息始终为纯文本）
+  hist.push({role:"user",content:text});
   renderChat(); scrollChat();
   const messages=[{role:"system", content:chatSysPrompt(text)}]
     // B1 修复：保留完整结构（含 tool_calls / tool_call_id），否则含工具调用的会话第二轮会缺 id 触发 400
@@ -11533,40 +11452,22 @@ function bindChatPanel(){
   const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
   // 取消按钮：复用 abortChat
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
-  // 附件按钮：文本文件追加到输入框；图片走 v1.13 多模态管道（multimodal 模块 + vision 消息）
+  // 附件按钮：文本文件追加到输入框（v1.14 多模态已移除，不再支持图片附件）
   const attachBtn=$("#chatAttachBtn");
   if(attachBtn){
     const fileInput=document.createElement("input");
     fileInput.type="file";
-    fileInput.accept="image/*,text/*,.txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log";
+    fileInput.accept=".txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log,text/*";
     fileInput.style.display="none";
     document.body.appendChild(fileInput);
     attachBtn.onclick=()=> fileInput.click();
-    attachBtn.title="添加附件（文本追加进输入框；图片随下一条消息发送给 AI）";
+    attachBtn.title="添加文本附件（内容追加进输入框）";
     fileInput.onchange=()=>{
       const f=fileInput.files && fileInput.files[0];
       if(!f) return;
-      // v1.13 [2b]：图片 → multimodal 模块 + 待发送 vision 队列（≤4 张、单张 ≤4MB dataURL）
+      // 图片附件已随 v1.14 多模态模块移除，此处给出明确提示（防"点了没反应"）
       if(f.type && f.type.indexOf("image/") === 0){
-        if(f.size > 4*1024*1024){
-          try{ toast("图片过大（>4MB），请压缩后重试","warn"); }catch(e){ /* noop */ }
-          return;
-        }
-        if(chatPendingImages.length >= 4){
-          try{ toast("最多同时附 4 张图片","warn"); }catch(e){ /* noop */ }
-          return;
-        }
-        const ir=new FileReader();
-        ir.onload=()=>{
-          const dataUrl=String(ir.result || "");
-          try{
-            const att=multimodalAddAttachment(f, "image", { name: f.name, mimeType: f.type, data: dataUrl, url: dataUrl });
-            chatPendingImages.push(att.id);
-            try{ toast("已附加图片（"+chatPendingImages.length+"/4），随下一条消息发送","ok"); }catch(e2){ /* noop */ }
-          }catch(e3){ try{ toast("图片附加失败","error"); }catch(e4){} }
-        };
-        ir.onerror=()=>{ try{ toast("读取图片失败","error"); }catch(e){ /* noop */ } };
-        ir.readAsDataURL(f);
+        try{ toast("图片附件已停用（v1.14 移除多模态），仅支持文本文件","warn"); }catch(e){ /* noop */ }
         fileInput.value="";
         return;
       }
@@ -12089,27 +11990,14 @@ function startNotifyScheduler(){
   _notifyTimer = setInterval(function(){
     try{ runNotifyCheck(); }catch(e){ pushDiag("error", "notify tick: "+(e&&e.message||e), {where:"notify"}); }
   }, NOTIFY_INTERVAL_MS);
-  // v1.6-E：同步启动 cron 调度器（49-automation.js 中定义，函数声明提升可引用）
-  try{
-    if(typeof startCronScheduler === "function" && !_cronRunning){
-      startCronScheduler();
-    }
-  }catch(e){ /* cron 调度器启动失败不影响通知 */ }
   return _notifyTimer;
 }
 /**
  * 停止通知调度器
- * v1.6-E：同时停止 cron 调度器
  * @returns {void}
  */
 function stopNotifyScheduler(){
   if(_notifyTimer){ clearInterval(_notifyTimer); _notifyTimer = null; }
-  // v1.6-E：同步停止 cron 调度器
-  try{
-    if(typeof stopCronScheduler === "function"){
-      stopCronScheduler();
-    }
-  }catch(e){ /* cron 调度器停止失败不影响通知 */ }
 }
 
 // ===== Render Layer (渲染层·入口) =====
@@ -14220,23 +14108,7 @@ function showMemories(){
   if(hist.length>50) hist.splice(0, hist.length-50);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
 }
-$("#btnExport").onclick = ()=> _maybeBioProtect("export_data", doExport).then(function(pr){ // v1.13 [2c]：导出走门禁
-  if(pr && pr.authed === false){ try{ toast("已取消：未通过生物识别", "warn"); }catch(eB2){} }
-});
-$("#btnBioCheck").onclick = ()=> biometricRecheckAvailability().then(a=>{
-  const m = { available:"本机支持生物识别", not_supported:"当前环境不支持（需 HTTPS/localhost + 平台认证器）",
-    hardware_missing:"未检测到平台认证器", not_enrolled:"支持但未录入系统指纹/面容", unknown:"状态未知" };
-  try{ toast(m[a] || a, a === "available" ? "ok" : "warn"); }catch(e){}
-});
-$("#btnBioRegister").onclick = ()=> biometricRegister("注册 Agent 工作台生物识别").then(r=>{
-  try{ toast(r.result === "success" ? "注册成功，门禁已可用" : ("注册未完成：" + r.result), r.result === "success" ? "ok" : "warn"); }catch(e){}
-  const cb = $("#cfgBioRequire"); if(cb) cb.checked = true; // 注册成功默认开启门禁
-  try{ biometricSaveSettings({ requireForSensitive: true }); }catch(e2){}
-});
-$("#cfgBioRequire") && ($("#cfgBioRequire").onchange = e=>{
-  biometricSaveSettings({ requireForSensitive: e.target.checked });
-  try{ toast(e.target.checked ? "敏感操作门禁已开启" : "敏感操作门禁已关闭", "ok"); }catch(err){}
-});
+$("#btnExport").onclick = doExport; // v1.14 生物识别门禁移除，导出直接执行
 $("#btnExportCSV").onclick = doExportCSV;
 $("#btnExportMD").onclick = doExportMD;
 $("#btnImport").onclick = ()=> $("#fileInput").click();
@@ -14271,6 +14143,16 @@ document.addEventListener("click", function(e){
     if(!panel.contains(e.target) && !btn.contains(e.target)){
       panel.style.display = "none";
     }
+  }
+});
+// 空态引导按钮委托（data-empty-action）：与快捷键 N 同款行为——切场景 + 聚焦新建表单
+document.addEventListener("click", function(e){
+  var act = e.target && e.target.closest ? e.target.closest("[data-empty-action]") : null;
+  if(!act) return;
+  var action = act.getAttribute("data-empty-action");
+  if(action === "new-task"){
+    if(active==="overview"||active==="stats"||active==="recycle"){ setActive("office"); }
+    render(); const f=$("#taskForm"); if(f) f.title.focus();
   }
 });
 // 全部已读 / 清空
@@ -15291,8 +15173,6 @@ seed();
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
   // v1.11.2 认证补码：OAuth2 回调闭环——URL 带 ?code&state 时换 token（正常启动零开销，fire-and-forget）
   try{ _oauth2HandleCallback().catch(function(e9){ try{ pushDiag("error", "oauth2 callback: "+(e9&&e9.message||e9), {where:"oauth2"}); }catch(e10){} }); }catch(_){ }
-  // v1.13 [2a]：工作流注入器接线（延迟到 startup——脚本早期执行会被引擎区的 var 置空覆盖）
-  try{ _wfWireInjectors(); }catch(_wfE){ }
   // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
   initIdb().catch(() => {});
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）

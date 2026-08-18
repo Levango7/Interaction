@@ -1,6 +1,6 @@
 ﻿/**
- * 第 2 期 · 回归验证（v1.13）
- * ① 多模态：vision content 构造/回显、renderChat 数组兼容
+ * 第 2 期 · 回归验证（v1.13 → v1.15 裁剪）
+ * ① 多模态：v1.14 已移除（_visionContent 删除），保留 _chatContentToText 历史数组消息兼容
  * ② 画布：注入器接线后 aiReasoning 节点真调 chatOnce；CRUD+SVG 渲染
  * ④ 集成：状态薄封装、Notion 连接验证、pull 写回
  */
@@ -14,15 +14,13 @@ function freshWin() {
 }
 const BASE = { sc: "code", status: "todo", doneAt: null, priority: "P0", note: "", tags: [], created: Date.now(), due: "" };
 
-describe("第 2 期 · 多模态（2b）", () => {
+describe("第 2 期 · 多模态历史兼容（2b）", () => {
   let win;
   beforeEach(() => { win = freshWin(); });
 
-  it("_visionContent 构造 OpenAI vision content 数组；_chatContentToText 可回解", () => {
-    const c = win._visionContent("看这张图", ["data:image/png;base64,AAA"]);
-    expect(c[0]).toEqual({ type: "text", text: "看这张图" });
-    expect(c[1].type).toBe("image_url");
-    expect(c[1].image_url.url).toContain("data:image");
+  it("_chatContentToText 可回解历史数组 content（v1.14 前多模态遗留消息）", () => {
+    // v1.14 已移除多模态（_visionContent 等删除），但历史消息可能仍是数组格式，渲染层需兜底转文本
+    const c = [{ type: "text", text: "看这张图" }, { type: "image_url", image_url: { url: "data:image/png;base64,AAA" } }];
     const t = win._chatContentToText(c);
     expect(t).toContain("看这张图");
     expect(t).toContain("[图×1]");
