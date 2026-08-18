@@ -2147,7 +2147,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   transition:background var(--transition-fast),color var(--transition-fast);flex-shrink:0}
 .cs-clear:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger-border)}
 .chart-store-card{padding:0;overflow:hidden}
-.chart-store-card .page-head{padding:var(--space-2) var(--space-4);margin-bottom:0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:var(--space-3);background:var(--panel)}
+/* v1.15 P2：标题下无分割线（用户要求） */
+.chart-store-card .page-head{padding:var(--space-2) var(--space-4);margin-bottom:0;display:flex;align-items:center;gap:var(--space-3);background:var(--panel)}
 .chart-store-card .page-head .ph-tx{flex:1}
 .chart-store-card .chart-store-body{padding:var(--space-4)}
 
@@ -9259,7 +9260,8 @@ function renderStats(){
     <span class="ph-ic" aria-hidden="true">${UI_ICONS.stats}</span>
     <div class="ph-tx"><h2>统计</h2><p class="sub">关键指标、完成趋势与习惯链分析</p></div>
   </header></div>`;
-  const cardsHtml = `<div class="card"><div class="stats-cards">` + cards.map(c =>
+  // v1.15 P2：每个 card 左上角要有标题——指标卡补"关键指标"
+  const cardsHtml = `<div class="card"><h2>${UI_ICONS.stats}关键指标</h2><div class="stats-cards">` + cards.map(c =>
     `<div class="stats-card"><div class="stats-card-val">${c.value}${c.badge || ""}</div><div class="stats-card-lbl">${c.label}</div></div>`
   ).join("") + `</div></div>`;
   // 趋势图（周/双周/月切换）
@@ -9809,11 +9811,10 @@ function _updateKanbanVScroll(viewport, sc, st){
 function renderSceneHead(){
   const s = SCENARIOS[active];
   if(!s) return "";
-  const open = getActiveTasks().filter(x=>x.sc===active && x.status!=="done");
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" style="background:${s.color}1f;color:${s.color}" aria-hidden="true">${s.icon || ""}</span>
     <div class="ph-tx"><h2>${esc(s.name)} · 任务看板</h2>
-      <p class="sub">${open.length} 项待办 · 带截止日期的任务会汇总到下方「今天要处理」</p></div>
+      <p class="sub">带截止日期的任务会汇总到下方「今天要处理」</p></div>
   </header></div>`;
 }
 function renderMainHTML(){
@@ -9879,7 +9880,8 @@ function renderMainHTML(){
   const chatCard = "";
 
   // v1.9.7：场景标题已抽为独立内容卡 renderSceneHead()（render() 中置于 renderToday 之前），看板卡不再带头部
-  return `<div class="card">${taskForm}${filterHtml}${kanban}</div>
+  // v1.15 P2：每个 card 左上角要有标题——看板卡补"任务看板"
+  return `<div class="card"><h2>${UI_ICONS.check}任务看板</h2>${taskForm}${filterHtml}${kanban}</div>
      <div class="card"><h2>${s.name} · ${rec.label}</h2>
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
       ${renderSceneSections(active)}
