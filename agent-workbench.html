@@ -564,9 +564,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   box-shadow:var(--shadow-1);
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-/* 底部工具栏：三键嵌在框内，顶部分隔线与 textarea 区分 */
+/* 底部工具栏：三键嵌在框内（v1.15：无分隔线，textarea 与工具栏视觉一体） */
 .chat-input-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);
-  padding:var(--space-1) var(--space-2) var(--space-2);border-top:1px solid var(--line)}
+  padding:var(--space-1) var(--space-2) var(--space-2)}
 .chat-model-empty{border-style:dashed;color:var(--accent);cursor:pointer}
 .chat-input-right{display:flex;align-items:center;gap:var(--space-2)}
 .chat-attach-btn{flex-shrink:0;width:28px;height:28px;padding:0;border:1px solid var(--line);
@@ -940,20 +940,28 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   border-radius:var(--radius-md);line-height:1.4;cursor:pointer;
   transition:background var(--transition-fast),color var(--transition-fast)}
 .drawer-ph .close:hover{background:var(--surface-hover);color:var(--text)}
-/* 三页视图控制（settings / ai / plugin）：页头、分区卡、导航与保存栏按 data-page 显示 */
+/* 四页视图控制（settings / ai / plugin / knowledge）：页头、分区卡、导航与保存栏按 data-page 显示 */
 #drawer[data-page="ai"] .drawer-ph:not([data-ph="ai"]),
 #drawer[data-page="plugin"] .drawer-ph:not([data-ph="plugin"]),
+#drawer[data-page="knowledge"] .drawer-ph:not([data-ph="knowledge"]),
 #drawer:not([data-page]) .drawer-ph:not([data-ph="settings"]),
 #drawer[data-page="settings"] .drawer-ph:not([data-ph="settings"]),
-#drawer[data-page="ai"] .set-card:not(#set-ai),
+#drawer[data-page="ai"] .set-card:not(#set-ai):not(#set-agent),
 #drawer[data-page="ai"] .set-nav,
 #drawer[data-page="plugin"] .set-card:not(#set-plugin),
 #drawer[data-page="plugin"] .set-nav,
 #drawer[data-page="plugin"] .set-savebar,
+#drawer[data-page="knowledge"] .set-savebar,
+#drawer[data-page="knowledge"] .set-card:not(#set-content),
+#drawer[data-page="knowledge"] .set-nav,
 #drawer:not([data-page]) #set-ai,
+#drawer:not([data-page]) #set-agent,
 #drawer:not([data-page]) #set-plugin,
+#drawer:not([data-page]) #set-content,
 #drawer[data-page="settings"] #set-ai,
-#drawer[data-page="settings"] #set-plugin{display:none}
+#drawer[data-page="settings"] #set-agent,
+#drawer[data-page="settings"] #set-plugin,
+#drawer[data-page="settings"] #set-content{display:none}
 
 /* ===== 设置页面（v1.9.x 改版：分组卡片 + 吸顶导航 + 吸底保存栏） ===== */
 /* 吸顶快捷导航（标签 chip + 保存按钮）：横向负 margin 通栏（与 drawer-page 各断点 padding 同步） */
@@ -2528,12 +2536,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </header>
   <header class="page-head drawer-ph" data-ph="ai">
     <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></span>
-    <div class="ph-tx"><h2>AI 配置</h2><p class="sub">大模型 Profile、接口地址与请求参数</p></div>
+    <div class="ph-tx"><h2>AI</h2><p class="sub">大模型 Profile、接口地址与请求参数</p></div>
     <button class="page-back drawer-close" type="button" aria-label="返回上一视图">← 返回</button>
   </header>
   <header class="page-head drawer-ph" data-ph="plugin">
     <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
     <div class="ph-tx"><h2>插件</h2><p class="sub">浏览、安装与管理扩展插件</p></div>
+    <button class="page-back drawer-close" type="button" aria-label="返回上一视图">← 返回</button>
+  </header>
+  <header class="page-head drawer-ph" data-ph="knowledge">
+    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
+    <div class="ph-tx"><h2>知识</h2><p class="sub">场景模板与知识管理（笔记 / 知识库 / 全文搜索）</p></div>
     <button class="page-back drawer-close" type="button" aria-label="返回上一视图">← 返回</button>
   </header>
   <!-- 分区快捷导航（吸顶；仅设置页显示，AI/插件已抽离为独立菜单） -->
@@ -2542,7 +2555,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <button type="button" class="set-nav-btn" data-scroll-to="set-chain">习惯链</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-look">外观</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-notify">通知</button>
-    <button type="button" class="set-nav-btn" data-scroll-to="set-content">内容</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-data">数据</button>
     <button type="button" class="set-nav-btn" data-scroll-to="set-about">关于</button>
     <span class="set-nav-grow" aria-hidden="true"></span>
@@ -2604,8 +2616,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <label for="cfgAiTemperature">温度 Temperature（0~2）</label>
       <div class="ctl"><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" placeholder="0.7（默认）"></div>
     </div>
-    <div class="set-divider" role="separator"></div>
-    <div class="set-subhead">Agent 能力</div>
+  </section>
+  <!-- ===== Agent 能力（独立卡，v1.15 与 AI 配置分开） ===== -->
+  <section class="set-card" id="set-agent" aria-label="Agent 能力">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H7a3 3 0 0 0-3 3v3a3 3 0 0 0 1 2.2V18a3 3 0 0 0 3 3h2v-7H8v-3h2V8a2 2 0 0 1 4 0v1h2v3h-2v7h2a3 3 0 0 0 3-3v-3.8a3 3 0 0 0 1-2.2V9a3 3 0 0 0-3-3h-2V5a3 3 0 0 0-3-3z"/></svg></span>
+      <div>
+        <h3>Agent 能力</h3>
+        <p class="set-desc">工作记忆与多步目标编排（关闭后 AI 不再暴露记忆/规划工具，话术同步降级）。</p>
+      </div>
+    </header>
     <div class="set-switch">
       <input type="checkbox" id="cfgAgent" style="width:auto" aria-label="Agent 模式">
       <div>
@@ -2671,12 +2691,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
-  <!-- ===== 内容与自动化 ===== -->
-  <section class="set-card" id="set-content" aria-label="内容与自动化">
+  <!-- ===== 知识（独立菜单页，v1.15 从设置抽离） ===== -->
+  <section class="set-card" id="set-content" aria-label="知识">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
       <div>
-        <h3>内容与知识</h3>
+        <h3>知识</h3>
         <p class="set-desc">场景模板与知识管理（笔记 / 知识库 / 全文搜索）入口。</p>
       </div>
     </header>
@@ -6764,6 +6784,7 @@ function renderSide(){
   const _helpActive = (uiView==="help") ? " active" : "";
   const _aiActive = (uiView==="ai") ? " active" : "";       // v1.9.6：AI 配置独立菜单页
   const _pluginActive = (uiView==="plugin") ? " active" : ""; // v1.9.6：插件市场独立菜单页
+  const _knowledgeActive = (uiView==="knowledge") ? " active" : ""; // v1.15：知识独立菜单页
   const _warehouseActive = (uiView==="warehouse") ? " active" : ""; // v1.15：仓库页（热/温/冷）
   const _effActive = (uiView==="main") ? active : "";
   // v1.9.7b：「总览」改名为「概览」（与设计图「全局」组语义一致）
@@ -6793,12 +6814,15 @@ function renderSide(){
   // v1.9.9：市场入口（v1.10.0：从系统组迁回功能组末尾，保留 v1.9.6 独立菜单页设计）
   const pluginBtn = `<button class="nav-item${_pluginActive}" data-pluginpage="1" id="sideBtnPlugin" style="--sc:#8b5cf6" title="市场" aria-label="市场">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg><span class="nm">市场</span></button>`;
+  // v1.15：知识入口（内容与知识从设置页抽离为系统组独立菜单页）
+  const knowledgeBtn = `<button class="nav-item${_knowledgeActive}" data-knowledgepage="1" id="sideBtnKnowledge" style="--sc:#6b4e8e" title="知识" aria-label="知识">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg><span class="nm">知识</span></button>`;
   // v1.15：功能组图表/组件/应用三个父按钮及其子菜单已移除（用户决策），仅保留市场入口
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML +
     '<div class="nav-group">全局</div>' + overview + statsBtn + warehouseBtn +
     '<div class="nav-group">场景</div>' + items +
     '<div class="nav-group">功能</div>' + pluginBtn +
-    '<div class="nav-group">系统</div>' + aiBtn + gearBtn + docBtn);
+    '<div class="nav-group">系统</div>' + aiBtn + gearBtn + knowledgeBtn + docBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
     const _m = $("#main"); if(_m) _m.scrollTop = 0;
@@ -6806,6 +6830,7 @@ function renderSide(){
     if(b.dataset.gear){ openDrawer(); return; }
     if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
     if(b.dataset.aipage){ if(typeof openAiPage === "function") openAiPage(); return; }
+    if(b.dataset.knowledgepage){ if(typeof openKnowledgePage === "function") openKnowledgePage(); return; }
     if(b.dataset.pluginpage){ if(typeof openPluginPage === "function") openPluginPage(); return; }
     setActive(b.dataset.sc); render();
   });
@@ -13043,6 +13068,12 @@ function openPluginPage(){
   try{ renderPluginBox(); }catch(e){ /* noop */ }
   uiView = "plugin";
   _showDrawerPage("plugin");
+}
+/* v1.15：知识独立菜单页——内容与知识从设置页抽离（场景模板 + 笔记 + 知识库 + 全文搜索） */
+function openKnowledgePage(){
+  uiView = "knowledge";
+  _showDrawerPage("knowledge");
+  renderSide(); // 同步侧栏高亮（uiView 已更新）
 }
 /* 往 #drawer 末尾追加尾栏（设置页面专用，与 appendFoot 结构一致） */
 function _appendDrawerFoot(){
