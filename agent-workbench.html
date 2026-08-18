@@ -157,40 +157,40 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .toolbar-row > #btnMore{flex-shrink:0}
 /* ===== v1.9.7b 正文顶部工具行：折叠 + 消息栏 + 大模型选择器 =====
    旧版（v1.9.7）msg-bar 直接挂在 .toolbar-row 上，新版拆为三段独立子元素 */
-.toolbar-row > .msg-bar{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:0;
+/* ===== v1.15 正文顶部工具行 = 待办栏（原消息栏替换，消息收进顶栏按钮） ===== */
+.toolbar-row > .todo-bar{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:0;
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
   padding:0;overflow:hidden;min-height:30px;transition:min-height var(--transition-base),border-color var(--transition-fast)}
-.toolbar-row > .msg-bar:hover{border-color:var(--accent-soft)}
-/* v1.10.0b：消息栏顶部一行 = 铃铛 + 预览文本 + 展开按钮（始终可见）；展开时下方出现前 3 条列表 */
-.msg-bar-row{display:flex;align-items:center;gap:var(--space-2);padding:2px var(--space-2);min-height:30px;flex-shrink:0}
-.msg-bar .msg-bell{flex-shrink:0}
-.msg-bar-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:0;overflow:hidden}
-.msg-bar .msg-preview{flex:1;min-width:0;text-align:left;background:transparent;
+.toolbar-row > .todo-bar:hover{border-color:var(--accent-soft)}
+/* 待办栏顶部一行 = 图标 + 摘要文本 + 展开按钮（始终可见）；展开时下方出现 Top3 列表 */
+.todo-bar-row{display:flex;align-items:center;gap:var(--space-2);padding:2px var(--space-2);min-height:30px;flex-shrink:0}
+.todo-bar .todo-bar-ic{flex-shrink:0;display:inline-flex;align-items:center;color:var(--accent)}
+.todo-bar .todo-bar-ic svg{width:15px;height:15px}
+.todo-bar-preview{flex:1;min-width:0;text-align:left;background:transparent;
   border:none;color:var(--text-dim);font-size:var(--fs-xs);padding:4px var(--space-2);
   cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   border-radius:var(--radius-md)}
-.msg-bar .msg-preview:hover{background:var(--surface-hover);color:var(--text)}
-.msg-bar-toggle{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+.todo-bar-preview:hover{background:var(--surface-hover);color:var(--text)}
+.todo-bar-toggle{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
   width:24px;height:24px;border:0;background:transparent;color:var(--text-faint);
   border-radius:var(--radius-sm);cursor:pointer;transition:transform var(--transition-base),color var(--transition-fast),background var(--transition-fast)}
-.msg-bar-toggle:hover{color:var(--text);background:var(--surface-hover)}
-.msg-bar-toggle svg{width:14px;height:14px;transition:transform var(--transition-base)}
-/* 展开态：消息栏纵向增长，下方出现列表 */
-.msg-bar.msg-bar-collapsed .msg-bar-list{display:none}
-.msg-bar.msg-bar-collapsed .msg-bar-toggle svg{transform:rotate(0)}
-.msg-bar.msg-bar-expanded .msg-bar-list{display:flex}
-.msg-bar.msg-bar-expanded .msg-bar-toggle svg{transform:rotate(180deg)}
-.msg-bar-list{display:flex;flex-direction:column;gap:1px;padding:0 var(--space-2) var(--space-2);
+.todo-bar-toggle:hover{color:var(--text);background:var(--surface-hover)}
+.todo-bar-toggle svg{width:14px;height:14px;transition:transform var(--transition-base)}
+/* 展开态：待办栏纵向增长，下方出现 Top3 列表 */
+.todo-bar.todo-bar-collapsed .todo-bar-list{display:none}
+.todo-bar.todo-bar-collapsed .todo-bar-toggle svg{transform:rotate(0)}
+.todo-bar.todo-bar-expanded .todo-bar-list{display:flex}
+.todo-bar.todo-bar-expanded .todo-bar-toggle svg{transform:rotate(180deg)}
+.todo-bar-list{display:flex;flex-direction:column;gap:1px;padding:0 var(--space-2) var(--space-2);
   background:var(--panel2);border-top:1px solid var(--line);max-height:240px;overflow-y:auto}
-.msg-bar-item{display:flex;align-items:center;gap:var(--space-2);padding:6px var(--space-2);
-  border-radius:var(--radius-sm);font-size:var(--fs-xs);color:var(--text);
-  cursor:pointer;transition:background var(--transition-fast);text-align:left}
-.msg-bar-item:hover{background:var(--surface-hover)}
-.msg-bar-item.unread{font-weight:600;color:var(--text)}
-.msg-bar-item.unread::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
-  background:var(--accent);flex-shrink:0}
-.msg-bar-item .mi-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.msg-bar-item .mi-time{font-size:10px;color:var(--text-faint);flex-shrink:0;font-variant-numeric:tabular-nums}
+.todo-bar-item{display:flex;align-items:center;gap:var(--space-2);padding:6px var(--space-2);
+  border:none;background:transparent;border-radius:var(--radius-sm);cursor:pointer;width:100%;text-align:left;
+  color:var(--text);font-size:var(--fs-xs);transition:background var(--transition-fast)}
+.todo-bar-item:hover{background:var(--surface-hover)}
+.todo-bar-item .tb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.todo-bar-item .tb-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo-bar-item .tb-sc{font-size:var(--fs-xs);color:var(--muted);flex-shrink:0}
+.todo-bar-empty{padding:8px var(--space-2);color:var(--muted);font-size:var(--fs-xs);text-align:center}
 .msg-bar-foot{padding:6px var(--space-2);border-top:1px solid var(--line);background:var(--panel2);
   display:flex;justify-content:flex-end;gap:var(--space-2)}
 .msg-bar-foot button{padding:2px 8px;border:1px solid var(--line);background:var(--panel);
@@ -484,10 +484,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .kbtns button:hover{background:var(--surface-hover);color:var(--text)}
 
 /* ===== 聊天 ===== */
-/* v1.15：消息区=大 card，内部包裹消息气泡（问偏右 / 答偏左） */
-.chat{flex:1;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-lg);
+/* v1.15：消息区+输入区 = 一个完整卡片（消息区顶部圆角、输入区底部圆角，中间无分割线） */
+.chat{flex:1;overflow:auto;border:1px solid var(--line);border-bottom:none;
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
   padding:var(--space-3);background:var(--panel);box-shadow:var(--shadow-1);
-  margin:var(--space-2) var(--space-3) var(--space-1);min-height:0}
+  margin:var(--space-2) var(--space-3) 0;min-height:0}
 .msg{margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-lg);
   font-size:var(--fs-base);max-width:88%;white-space:pre-wrap;word-break:break-word;line-height:1.6;
   box-shadow:var(--shadow-1)}
@@ -560,11 +561,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
-/* v1.15：聊天输入区=单个完整 card——textarea 融入内部，底部一行内放 附件键+模型选择+发送/暂停
-   左下角附件键；右下角 模型选择框 紧挨 发送/暂停键；无分割线 */
-.chat-input-area{margin:var(--space-2) var(--space-3) var(--space-3);
-  border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel);
-  display:flex;flex-direction:column;overflow:hidden;
+/* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
+.chat-input-area{margin:0 var(--space-3) var(--space-3);
+  border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);
+  background:var(--panel);display:flex;flex-direction:column;overflow:hidden;
   box-shadow:var(--shadow-1);
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -2395,10 +2395,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
     <button class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl">命令</span></button>
-    <!-- v1.9.9：消息按钮双入口——顶栏按钮（点击=消息中心展开/折叠）与正文顶部 #msgBar 铃铛（a11y 契约保持：aria-label + svg aria-hidden） -->
-    <button class="tbtn" id="btnMessagesTop" type="button" title="消息" aria-label="消息">
+    <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
+    <button class="tbtn" id="btnMessages" type="button" title="消息" aria-label="消息">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span class="badge" id="msgBadgeTop" style="display:none"></span><span class="lbl">消息</span></button>
+      <span class="badge" id="msgBadge" style="display:none"></span><span class="lbl">消息</span></button>
     <button class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
     <button class="tbtn" id="btnDownload" title="导出数据" aria-label="导出数据">
@@ -2422,25 +2422,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div class="body">
     <nav class="side" id="side"></nav>
     <div class="main-wrap">
-      <!-- v1.10.0b 正文顶部第二行：消息提示栏（可下拉展示前 3 条未读，点击/拖拽展开看全部） -->
+      <!-- v1.15：正文顶部第二行 = 待办栏（原消息栏替换；消息内容收进顶栏消息按钮） -->
       <div class="toolbar-row" id="topbarRow2" role="region" aria-label="正文顶部工具行">
-        <div class="msg-bar msg-bar-collapsed" id="msgBar" role="region" aria-label="消息通知栏">
-          <div class="msg-bar-row">
-            <button class="tbtn msg-bell" id="btnMessages" type="button" title="消息" aria-label="消息">
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              <span class="badge" id="msgBadge" style="display:none"></span></button>
-            <div class="msg-bar-body" id="msgBarBody">
-              <button class="msg-preview" id="msgPreview" type="button" aria-live="polite" aria-label="展开消息列表">暂无消息</button>
-            </div>
-            <button class="msg-bar-toggle" id="msgBarToggle" type="button" title="展开/收起" aria-label="展开消息列表" aria-expanded="false">
+        <div class="todo-bar" id="todoBar" role="region" aria-label="今日待办">
+          <div class="todo-bar-row">
+            <span class="todo-bar-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            <button class="todo-bar-preview" id="todoPreview" type="button" aria-live="polite" aria-label="展开今日待办">今天 0 件待处理 · 已完成 0 件 · 习惯链 0 条进行中</button>
+            <button class="todo-bar-toggle" id="todoBarToggle" type="button" title="展开/收起" aria-label="展开今日待办" aria-expanded="false">
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
           </div>
-          <div class="msg-bar-list" id="msgBarList" role="list" aria-label="最近消息"></div>
-          <div class="msg-bar-foot" id="msgBarFoot" style="display:none">
-            <button type="button" id="msgBarOpenPanel">打开全部</button>
-            <button type="button" id="msgBarMarkAll">全部已读</button>
-          </div>
+          <div class="todo-bar-list" id="todoBarList" role="list" aria-label="今日待办列表"></div>
         </div>
       </div>
       <!-- 消息中心列表：内联展开（原 fixed 下拉迁移，ID/结构不变，事件绑定沿用） -->
@@ -2785,12 +2777,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </label>
   </section>
 
-  <!-- ===== 外观与语言 ===== -->
-  <section class="set-card" id="set-look" aria-label="外观与语言">
+  <!-- ===== 外观 ===== -->
+  <section class="set-card" id="set-look" aria-label="外观">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>
       <div>
-        <h3>外观与语言</h3>
+        <h3>外观</h3>
         <p class="set-desc">主题、自定义配色与语言偏好。「跟随系统」随操作系统明暗自动切换，语言切换即时生效并记忆偏好。</p>
       </div>
     </header>
@@ -2867,19 +2859,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <div class="sw-sub">仅桌面端 exe 生效</div>
       </div>
     </div>
-  </section>
-
-  <!-- ===== 指针特效（v1.15：从应用子菜单移入设置，支持多种效果） ===== -->
-  <section class="set-card" id="set-pointerfx" aria-label="指针特效">
-    <header class="set-head">
-      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7 19 3-9 9-3z"/></svg></span>
-      <div>
-        <h3>指针特效</h3>
-        <p class="set-desc">鼠标移动时的动态装饰效果，可关闭或选择风格。</p>
-      </div>
-    </header>
-    <div class="set-field">
-      <label for="cfgPointerFxType">效果类型</label>
+    <!-- 鼠标特效（v1.15：从独立卡片移入外观卡内） -->
+    <div class="set-field" style="margin-top:var(--space-2)">
+      <label for="cfgPointerFxType">鼠标特效</label>
       <div class="ctl">
         <select id="cfgPointerFxType">
           <option value="spark">粒子拖尾</option>
@@ -2889,15 +2871,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         </select>
       </div>
     </div>
-    <div class="set-switch">
-      <input type="checkbox" id="cfgPointerFx" style="width:auto" aria-label="指针特效开关">
+    <div class="row switch set-switch" id="pointerFxRow">
+      <input type="checkbox" id="cfgPointerFx" style="width:auto" aria-label="鼠标特效开关">
       <div>
-        <div class="sw-label">启用指针特效</div>
-        <div class="sw-sub">选择效果类型后，鼠标在页面移动即可看到装饰粒子。</div>
+        <div class="sw-label">启用鼠标特效</div>
+        <div class="sw-sub">鼠标在页面移动时显示装饰粒子，可关闭或选择风格。</div>
       </div>
     </div>
   </section>
 
+  
   <!-- ===== 通知提醒 ===== -->
   <section class="set-card" id="set-notify" aria-label="通知提醒">
     <header class="set-head">
@@ -12467,102 +12450,85 @@ function getUnreadCount(){
   return getMessages().filter(function(m){ return !m.read; }).length;
 }
 /* v1.9.7：正文消息提示栏预览文本（最新一条 + 未读数前缀；超长由 CSS ellipsis 截断，title 供悬停看全文） */
-function renderMsgBarPreview(){
-  var el = $("#msgPreview");
+/* v1.15：待办栏（原消息栏替换）——今日摘要 + Top3 待办展开；消息中心收进顶栏按钮 */
+function renderTodoBarPreview(){
+  var el = $("#todoPreview");
   if(!el) return;
-  var msgs = getMessages();
-  if(!msgs.length){ el.textContent = "暂无消息"; el.removeAttribute("title"); return; }
-  var unread = getUnreadCount();
-  var m = msgs[0];
-  var text = (m.title || "新消息") + (m.body ? "：" + m.body : "");
-  el.textContent = (unread > 0 ? "[" + (unread > 99 ? "99+" : unread) + " 未读] " : "") + text;
-  el.title = text;
+  var tasks = getActiveTasks();
+  var t = todayStr();
+  var done = tasks.filter(function(x){ return x.status === "done"; }).length;
+  var pendingToday = tasks.filter(function(x){ return x.status !== "done" && x.due && x.due <= t; });
+  var links = getLinks();
+  var chainsActive = links.filter(function(l){
+    if(l.enabled === false) return false;
+    return calcStreak(l.fromSc).current > 0;
+  }).length;
+  el.textContent = "今天 " + pendingToday.length + " 件待处理 · 已完成 " + done + " 件 · 习惯链 " + chainsActive + " 条进行中";
 }
-/* v1.10.0b：消息栏展开态时渲染前 3 条最近消息到 .msg-bar-list */
-function renderMsgBarList(){
-  var list = $("#msgBarList"); if(!list) return;
+/* 待办栏展开态：渲染 Top3 今日待办 */
+function renderTodoBarList(){
+  var list = $("#todoBarList"); if(!list) return;
   while(list.firstChild) list.removeChild(list.firstChild);
-  var msgs = getMessages();
-  if(!msgs.length){
+  var t = todayStr();
+  var pendingToday = getActiveTasks().filter(function(x){ return x.status !== "done" && x.due && x.due <= t; })
+    .sort(function(a,b){
+      var pa = _priWeight(a.priority), pb = _priWeight(b.priority);
+      if(pa !== pb) return pa - pb;
+      return a.due < b.due ? -1 : 1;
+    }).slice(0, 3);
+  if(!pendingToday.length){
     var e = document.createElement("div");
-    e.className = "msg-empty";
-    e.style.cssText = "padding:8px var(--space-2);color:var(--muted);font-size:var(--fs-xs);text-align:center";
-    e.textContent = "暂无消息";
+    e.className = "todo-bar-empty";
+    e.textContent = "今天没有待处理事项";
     list.appendChild(e);
     return;
   }
-  // 取前 3 条
-  msgs.slice(0, 3).forEach(function(m){
+  pendingToday.forEach(function(x){
     var item = document.createElement("button");
     item.type = "button";
-    item.className = "msg-bar-item" + (m.read ? "" : " unread");
-    item.setAttribute("data-msg-id", m.id);
+    item.className = "todo-bar-item";
+    var sm = scMeta(x.sc);
+    var dot = document.createElement("span");
+    dot.className = "tb-dot"; dot.style.background = sm.color;
     var titleEl = document.createElement("span");
-    titleEl.className = "mi-title";
-    titleEl.textContent = m.title || "新消息";
-    var timeEl = document.createElement("span");
-    timeEl.className = "mi-time";
-    timeEl.textContent = _fmtMsgTime(m.ts);
-    item.appendChild(titleEl);
-    item.appendChild(timeEl);
-    item.title = (m.body || m.title || "");
+    titleEl.className = "tb-title"; titleEl.textContent = x.title;
+    var scEl = document.createElement("span");
+    scEl.className = "tb-sc"; scEl.textContent = sm.name;
+    item.appendChild(dot); item.appendChild(titleEl); item.appendChild(scEl);
+    item.title = "前往场景查看";
     item.onclick = function(){
-      // 点击单条 → 标记已读 + 打开消息中心面板定位到该条
-      if(!m.read){ m.read = true; saveMessages(getMessages().map(function(x){ return x.id === m.id ? Object.assign({}, x, {read:true}) : x; })); updateMsgBadge(); }
-      var p = $("#msgPanel"); if(p) p.classList.add("show");
-      if(typeof renderMsgPanel === "function") renderMsgPanel();
+      setActive(x.sc); render();
+      try{ var card = document.querySelector('[data-task-id="'+x.id+'"]'); if(card) card.scrollIntoView({behavior:"smooth", block:"center"}); }catch(_){}
     };
     list.appendChild(item);
   });
-  // 显示 footer（始终显示，便于打开全部/全部已读）
-  var foot = $("#msgBarFoot"); if(foot) foot.style.display = "flex";
 }
-function _fmtMsgTime(ts){
-  if(!ts) return "";
-  var d = new Date(ts);
-  var now = new Date();
-  var sameDay = d.toDateString() === now.toDateString();
-  var pad = function(n){ return n<10 ? "0"+n : ""+n; };
-  if(sameDay) return pad(d.getHours()) + ":" + pad(d.getMinutes());
-  return (d.getMonth()+1) + "/" + d.getDate();
+function setTodoBarExpanded(expanded){
+  var bar = $("#todoBar"); if(!bar) return;
+  bar.classList.toggle("todo-bar-collapsed", !expanded);
+  bar.classList.toggle("todo-bar-expanded", expanded);
+  var t = $("#todoBarToggle"); if(t) t.setAttribute("aria-expanded", expanded ? "true" : "false");
+  if(expanded) renderTodoBarList();
+  try{ localStorage.setItem(PREFIX+"todobar_expanded", expanded ? "1" : "0"); }catch(_){}
 }
-/* v1.10.0b：消息栏展开/收起切换（按钮 + 点击预览文本 + 点击空白） */
-function setMsgBarExpanded(expanded){
-  var bar = $("#msgBar"); if(!bar) return;
-  bar.classList.toggle("msg-bar-collapsed", !expanded);
-  bar.classList.toggle("msg-bar-expanded", expanded);
-  var t = $("#msgBarToggle"); if(t) t.setAttribute("aria-expanded", expanded ? "true" : "false");
-  if(expanded) renderMsgBarList();
-  try{ localStorage.setItem(PREFIX+"msgbar_expanded", expanded ? "1" : "0"); }catch(_){}
+function toggleTodoBar(){
+  var bar = $("#todoBar"); if(!bar) return;
+  setTodoBarExpanded(bar.classList.contains("todo-bar-collapsed"));
 }
-function toggleMsgBar(){
-  var bar = $("#msgBar"); if(!bar) return;
-  setMsgBarExpanded(bar.classList.contains("msg-bar-collapsed"));
-}
-function initMsgBarExpand(){
-  var bar = $("#msgBar"); if(!bar) return;
-  // 恢复展开状态
+function initTodoBar(){
+  var bar = $("#todoBar"); if(!bar) return;
   var exp = false;
-  try{ exp = localStorage.getItem(PREFIX+"msgbar_expanded") === "1"; }catch(_){}
-  setMsgBarExpanded(exp);
-  // 事件：展开按钮 + 预览文本 + 铃铛
-  var t = $("#msgBarToggle"); if(t) t.onclick = function(e){ e.stopPropagation(); toggleMsgBar(); };
-  var p = $("#msgPreview"); if(p) p.onclick = function(e){ e.stopPropagation(); toggleMsgBar(); };
-  var b = $("#btnMessages"); if(b) b.onclick = function(e){ e.stopPropagation(); /* 委托给原 handler */ };
-  // footer 按钮
-  var openBtn = $("#msgBarOpenPanel"); if(openBtn) openBtn.onclick = function(e){ e.stopPropagation(); var p=$("#msgPanel"); if(p){ p.classList.add("show"); if(typeof renderMsgPanel==="function") renderMsgPanel(); } };
-  var markBtn = $("#msgBarMarkAll"); if(markBtn) markBtn.onclick = function(e){
-    e.stopPropagation();
-    saveMessages(getMessages().map(function(m){ return Object.assign({}, m, {read:true}); }));
-    updateMsgBadge();
-    renderMsgBarList();
-    try{ toast("已全部标记为已读", "ok"); }catch(_){}
-  };
+  try{ exp = localStorage.getItem(PREFIX+"todobar_expanded") === "1"; }catch(_){}
+  setTodoBarExpanded(exp);
+  var t = $("#todoBarToggle"); if(t) t.onclick = function(e){ e.stopPropagation(); toggleTodoBar(); };
+  var p = $("#todoPreview"); if(p) p.onclick = function(e){ e.stopPropagation(); toggleTodoBar(); };
+  renderTodoBarPreview();
 }
+function updateTodoBar(){ renderTodoBarPreview(); }
 function updateMsgBadge(){
   var n = getUnreadCount();
-  // v1.9.9：双入口角标同步——正文 #msgBadge 与顶栏 #msgBadgeTop 同步显隐与数字
-  var badges = [$("#msgBadge"), $("#msgBadgeTop")];
+  // v1.15：消息入口收敛为顶栏 #btnMessages 单角标
+  var badges = [$("#msgBadge")];
   badges.forEach(function(badge){
     if(!badge) return;
     if(n > 0){
@@ -12572,9 +12538,9 @@ function updateMsgBadge(){
       badge.style.display = "none";
     }
   });
-  renderMsgBarPreview(); // 汇聚点：addMessage/markRead/clear 均经此刷新预览
-  // v1.10.0b：消息栏展开时同步刷新列表
-  var bar = $("#msgBar"); if(bar && bar.classList.contains("msg-bar-expanded")) renderMsgBarList();
+  updateTodoBar();
+  // v1.15：待办栏展开时同步刷新列表
+  var bar = $("#todoBar"); if(bar && bar.classList.contains("todo-bar-expanded")) renderTodoBarList();
 }
 function renderMsgPanel(){
   var list = getMessages();
@@ -14156,8 +14122,7 @@ const _btnNotesTop = $("#btnNotesTop"); if(_btnNotesTop) _btnNotesTop.onclick = 
 const _btnSearchTop = $("#btnSearchTop"); if(_btnSearchTop) _btnSearchTop.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
 // v1.9.9：顶栏右侧更多按钮（从侧栏功能组迁出）——点击展开次常用工具下拉
 const _btnMoreTop = $("#btnMoreTop"); if(_btnMoreTop) _btnMoreTop.onclick = function(e){ if(typeof openMoreMenuFrom === "function") openMoreMenuFrom(_btnMoreTop); };
-// v1.9.9：顶栏右侧消息按钮（双入口之一）——点击展开/折叠消息中心，与正文 #msgBar 内 #btnMessages 行为一致
-const _btnMessagesTop = $("#btnMessagesTop"); if(_btnMessagesTop) _btnMessagesTop.onclick = function(){ var b = $("#btnMessages"); if(b) b.click(); };
+/* v1.15：顶栏消息按钮已收敛为唯一入口（#btnMessages），绑定见系统级消息中心区 */
 /* 弹窗关闭按钮 */
 const _btnNotesClose = $("#btnNotesClose"); if(_btnNotesClose) _btnNotesClose.onclick = function(){ if(typeof closeNotesModal === "function") closeNotesModal(); };
 const _btnNoteEditorClose = $("#btnNoteEditorClose"); if(_btnNoteEditorClose) _btnNoteEditorClose.onclick = function(){ if(typeof closeNoteEditorModal === "function") closeNoteEditorModal(); };
@@ -14446,7 +14411,7 @@ function openMoreMenuFrom(btn){
 // 点击浮层/菜单外关闭（点侧栏对应按钮本身不视为"外部"，交由 toggle 逻辑处理）
 document.addEventListener("click", function(e){
   var t = e.target;
-  var inToolBtn = !!(t && t.closest && t.closest("#side [data-pomo], #side [data-tracker], #side [data-moretool]"));
+  var inToolBtn = !!(t && t.closest && t.closest("#side [data-pomo], #side [data-tracker], #side [data-moretool], #btnMoreTop"));
   $$(".tool-pop").forEach(function(p){
     if(p.style.display !== "none" && !p.contains(t) && !inToolBtn) p.style.display = "none";
   });
@@ -14675,7 +14640,7 @@ if(_cfgThemeSel){
       if(typeof setTheme === "function") setTheme(v); // light/dark/contrast/sepia/自定义统一
       try{ toast("已切换主题：" + (_cfgThemeSel.selectedOptions[0] && _cfgThemeSel.selectedOptions[0].textContent || v), "ok"); }catch(e){}
     }
-    try{ renderMsgBarPreview(); }catch(e3){ /* 消息栏预览非关键路径 */ }
+    try{ updateTodoBar(); }catch(e3){ /* 消息栏预览非关键路径 */ }
   };
 }
 
@@ -15328,7 +15293,7 @@ seed();
   }
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
   // v1.10.0b：正文顶部消息通知栏展开/收起（默认收起，点击预览/下拉按钮可展开前 3 条 + footer）
-  try{ if(typeof initMsgBarExpand === "function") initMsgBarExpand(); }catch(_){ }
+  try{ if(typeof initTodoBar === "function") initTodoBar(); }catch(_){ }
   // v1.10.0：应用 popover 三模态的关闭按钮 + 初始恢复用户偏好（指针特效/萌宠）
   try{
     var _bw1 = $("#btnWeatherClose"); if(_bw1) _bw1.onclick = function(){ if(typeof closeWeatherModal === "function") closeWeatherModal(); };
