@@ -422,6 +422,11 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   transition:filter var(--transition-fast),box-shadow var(--transition-fast);letter-spacing:-.01em}
 .addbtn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .addbtn:active{filter:brightness(.92)}
+/* v1.15 P2：addbtn 常用变体工具类（替代重复内联样式） */
+.addbtn.sm{padding:4px 10px;min-height:32px;font-size:var(--fs-sm);font-weight:500}
+.addbtn.min{min-width:90px;padding:8px 12px;font-size:var(--fs-sm)}
+/* v1.15 P2：代码/JSON 输入框工具类（monospace + 12px，替代重复内联） */
+.code-input{width:100%;font-family:"SF Mono","SFMono-Regular",Consolas,monospace;font-size:12px;line-height:1.5}
 
 /* ===== 记录列表 ===== */
 .list{list-style:none;margin:var(--space-3) 0 0;padding:0}
@@ -2722,7 +2727,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="chain-add-form">
       <div class="set-subhead">注册新插件</div>
       <p class="set-tip">粘贴插件 JSON 定义。</p>
-      <textarea id="pluginAddJson" rows="3" placeholder='{"id":"myplugin","name":"我的插件","version":"1.0.0","description":"自定义插件"}' style="width:100%;font-family:monospace;font-size:12px;resize:vertical"></textarea>
+      <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"myplugin","name":"我的插件","version":"1.0.0","description":"自定义插件"}' style="resize:vertical"></textarea>
       <button type="button" class="addbtn" id="pluginAddBtn" style="--sc:var(--accent);padding:4px 10px;margin-top:4px">注册插件</button>
     </div>
   </section>
@@ -13455,7 +13460,7 @@ function openChainShareModal(){
       </div>
       <div class="chain-share-body">
         <p class="hint">将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ${links.length} 条习惯链。</p>
-        <textarea id="chainShareCode" readonly rows="6" style="width:100%;font-family:monospace;font-size:12px;word-break:break-all">${esc(code)}</textarea>
+        <textarea id="chainShareCode" readonly rows="6" class="code-input" style="word-break:break-all">${esc(code)}</textarea>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button type="button" class="addbtn" id="chainShareCopy" style="--sc:var(--accent);flex:1">复制分享码</button>
         </div>
@@ -13487,7 +13492,7 @@ function openChainImportModal(){
       </div>
       <div class="chain-share-body">
         <p class="hint">粘贴他人分享的习惯链分享码，点「预览」查看将导入的链，确认后点「导入」。</p>
-        <textarea id="chainImportCode" rows="6" placeholder="粘贴分享码..." style="width:100%;font-family:monospace;font-size:12px;word-break:break-all"></textarea>
+        <textarea id="chainImportCode" rows="6" class="code-input" placeholder="粘贴分享码..." style="word-break:break-all"></textarea>
         <div id="chainImportPreview" style="margin-top:8px"></div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button type="button" class="addbtn" id="chainImportPreviewBtn" style="--sc:var(--muted);flex:1">预览</button>
@@ -13791,7 +13796,7 @@ function openPluginDetailModal(id){
         + '<div class="plugin-section"><b>提供的卡片：</b><ul>'+cardList+'</ul></div>'
         + '<div class="plugin-section"><b>提供的链规则：</b><ul>'+ruleList+'</ul></div>'
         + '<div class="plugin-section"><b>配置（JSON）：</b>'
-          + '<textarea id="pluginConfigEditor" rows="5" style="width:100%;font-family:monospace;font-size:12px;resize:vertical">'+esc(configJson)+'</textarea>'
+          + '<textarea id="pluginConfigEditor" rows="5" class="code-input" style="resize:vertical">'+esc(configJson)+'</textarea>'
           + '<button type="button" class="addbtn" id="pluginConfigSave" style="--sc:var(--accent);padding:4px 12px;margin-top:4px">保存配置</button>'
         + '</div>'
       + '</div>'
