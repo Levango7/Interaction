@@ -6832,14 +6832,14 @@ function openRecycle(){
   const policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
   const countLabel = del.length ? del.length+" 条任务" : "";
   // 页面视图：渲染到 #main（与 renderStats 一致），保留 id=recycleModal / .recycle-card 以兼容关闭逻辑与焦点陷阱
+  // v1.15：标题栏独立成卡（与统计/概览/仓库页统一），recycle-card 仅承载列表
   const html = `<div class="recycle-modal" id="recycleModal">
+    <div class="card"><header class="page-head">
+      <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
+      <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务可在此恢复或彻底删除</p></div>
+      <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
+    </header></div>
     <div class="recycle-card">
-      <div class="recycle-header page-head">
-        <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
-        <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务可在此恢复或彻底删除</p></div>
-        <span class="recycle-count">${countLabel}</span>
-        <button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button>
-      </div>
       <div class="recycle-list">${items}</div>
       ${del.length ? `<div class="recycle-footer">
         <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
@@ -6954,12 +6954,12 @@ function openWarehouse(tab){
   var policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
   var countLabel = list.length ? list.length+" 条" : "";
   var html = `<div class="recycle-modal" id="recycleModal">
+    <div class="card"><header class="page-head">
+      <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
+      <div class="ph-tx"><h2>仓库</h2><p class="sub">${meta.title}</p></div>
+      <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
+    </header></div>
     <div class="recycle-card">
-      <div class="recycle-header page-head">
-        <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
-        <div class="ph-tx"><h2>仓库</h2><p class="sub">${meta.title}</p></div>
-        <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
-      </div>
       ${tabsHtml}
       <div class="recycle-list">${itemsHtml}</div>
       ${list.length && _t==="useless" ? `<div class="recycle-footer">
@@ -9162,11 +9162,13 @@ function renderStats(){
     { label: "逾期任务", value: overdue }
   ];
   // v1.10.0b：统一 page-head 风格——与概览/仓库/图表商店一致（card 包裹 + .page-head + .ph-ic）
-  const cardsHtml = `<div class="card"><header class="page-head">
+  // v1.15：标题栏独立成卡（"单独摘出来"），指标卡与其分离，视觉与其他页面统一
+  const headHtml = `<div class="card"><header class="page-head">
     <span class="ph-ic" aria-hidden="true">${UI_ICONS.stats}</span>
     <div class="ph-tx"><h2>任务统计</h2><p class="sub">关键指标、完成趋势与习惯链分析</p></div>
     <span class="ph-act"><button type="button" class="report-entry-btn" id="btnStatsOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表</button></span>
-  </header><div class="stats-cards">` + cards.map(c =>
+  </header></div>`;
+  const cardsHtml = `<div class="card"><div class="stats-cards">` + cards.map(c =>
     `<div class="stats-card"><div class="stats-card-val">${c.value}${c.badge || ""}</div><div class="stats-card-lbl">${c.label}</div></div>`
   ).join("") + `</div></div>`;
   // 趋势图（周/双周/月切换）
@@ -9213,7 +9215,7 @@ function renderStats(){
   const chainCard = `<div class="card"><h2>${UI_ICONS.stats} 习惯链成功率</h2>` +
     `<p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>${chainsHtml}</div>`;
 
-  $("#main").innerHTML = sanitizeHtml(cardsHtml + trendHtml + pieHtml + hourHtml + chainCard);
+  $("#main").innerHTML = sanitizeHtml(headHtml + cardsHtml + trendHtml + pieHtml + hourHtml + chainCard);
 
   // 绑定周/双周/月切换
   $$(".stats-tab").forEach(b => b.onclick = () => {
