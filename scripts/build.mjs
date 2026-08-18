@@ -60,6 +60,14 @@ if (CHECK) {
   const missing = required.filter(s => !html.includes(s));
   if (!ok) fail('MISMATCH: 版本号不一致，需统一（目标 ' + (htmlVer || '?') + '）；发版请用 npm run release <版本号>');
   if (missing.length) fail('完整性检查失败：真相源缺少关键标记 ' + missing.join(', '));
+  // 架构拆分第一步：分层契约校验（结构配对 + 顺序连续 + 关键层齐全）——lint-layers.mjs 退出码非 0 则 fail
+  try {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [join(root, 'scripts', 'lint-layers.mjs')], { encoding: 'utf8' });
+    if (r.status !== 0) fail('分层契约校验失败：\n' + (r.stderr || r.stdout || '').slice(-1200));
+  } catch (e) {
+    fail('无法执行分层校验：' + (e && e.message));
+  }
   console.log(`[build] OK 版本一致: ${vals[0]} · 真相源完整 (${html.length} bytes, sha256:${sha(Buffer.from(html))})`);
   process.exit(0);
 }
