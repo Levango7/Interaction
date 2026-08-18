@@ -42,7 +42,7 @@
 ## 四、交互动效
 
 - 所有可点击元素默认享受全局基架（`:active` 缩 3%、`:disabled` 透明度 .55 + 手型取消）。
-- 组件无需重复写 `:active`/`:disabled`——只在需要**差异化**时才覆盖（如 `.tb-row2 .tbtn:active` 的 3% 缩放）。
+- 组件无需重复写 `:active`/`:disabled`——只在需要**差异化**时才覆盖（如 `.toolbar-row .tbtn:active` 的 3% 缩放）。
 - 过渡统一走 `--transition-fast`（颜色类）/ `--transition-base`（布局类）令牌。
 
 ---

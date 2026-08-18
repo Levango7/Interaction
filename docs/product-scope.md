@@ -42,6 +42,8 @@
 | **多模态图片附件**（vision / OCR / 图片随消息发送） | v1.14 | 附件按钮图片分支 + `multimodalGetAttachment`/`multimodalAddAttachment` stub + `chatPendingImages` 发送队列 | ✅ 已删（v1.15，附件仅支持文本） |
 | **E2EE 便捷封装**（e2eeEncrypt/Decrypt + WithDevice 包装） | v1.14 | stub 死链（无调用者） | ✅ 已删（v1.15） |
 | **OAuth2 管理函数**（oauth2GetToken/BuildAuthUrl/RevokeToken/RegisterProvider） | v1.14 | stub 死链（无调用者） | ✅ 已删（v1.15，保留 `_oauth2HandleCallback` 启动占位） |
+| **协作 / 分享按钮**（btnCollab / btnShare） | v1.15 | 死按钮（仅 HTML 定义、无 JS 绑定）；CRDT 协作模块 v1.14 已归档，纯本地无后端无法真正协作/分享 | ✅ 已删（v1.15，随更多菜单一并移除） |
+| **"更多"工具菜单**（btnMoreTop / moreMenu） | v1.15 | 甘特/导图/仪表盘在图表页已有入口、笔记在知识页已有入口，菜单冗余 | ✅ 已删（v1.15，功能无丢失） |
 
 ### 🟡 代码仅留占位，入口已关（观察期后清理）
 
