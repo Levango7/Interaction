@@ -555,14 +555,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
-/* v1.15：聊天输入区融入面板底部（不另做卡片外观）——聊天面板本身即卡片，
-   点击消息区任意位置直接聚焦输入；边框/圆角/阴影不再包裹输入区 */
-.chat-input-area{padding:var(--space-2) var(--space-3) var(--space-3);
-  border-top:1px solid var(--line);background:var(--panel);
-  display:flex;flex-direction:column;gap:var(--space-2);
-  transition:border-color var(--transition-fast)}
-.chat-input-area:focus-within{border-top-color:var(--accent-soft)}
-.chat-input-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
+/* v1.15：聊天输入区=带边框的输入框（textarea 融入内部，底部工具栏三键嵌在框内）
+   左下附件键 / 右下模型选择+发送暂停——三者都在输入框内，不是悬浮在下方 */
+.chat-input-area{margin:0 var(--space-3) var(--space-3);
+  border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);
+  display:flex;flex-direction:column;
+  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.chat-input-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);
+  padding:var(--space-1) var(--space-2) var(--space-2)}
 .chat-input-right{display:flex;align-items:center;gap:var(--space-2)}
 .chat-attach-btn{flex-shrink:0;width:28px;height:28px;padding:0;border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);color:var(--text-dim);cursor:pointer;
@@ -570,14 +571,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
 .chat-attach-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent-soft)}
 .chat-attach-btn svg{width:14px;height:14px}
-.chat-text-input{resize:none;min-height:44px;max-height:120px;padding:8px var(--space-2);
-  border:1px solid var(--line);border-radius:var(--radius-md);font-size:var(--fs-sm);
-  background:var(--panel2);color:var(--text);font-family:inherit;line-height:1.5;width:100%;
-  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
-.chat-text-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+/* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹） */
+.chat-text-input{resize:none;min-height:44px;max-height:120px;padding:var(--space-2);
+  border:none;border-radius:0;font-size:var(--fs-sm);background:transparent;
+  color:var(--text);font-family:inherit;line-height:1.5;width:100%;
+  outline:none}
 .chat-model-inline{font-size:var(--fs-xs);padding:2px 6px;border:1px solid var(--line);
   border-radius:var(--radius-sm);background:var(--panel2);color:var(--text);
-  width:100%;cursor:pointer;min-height:20px;line-height:1.3;
+  flex:1;min-width:0;max-width:160px;cursor:pointer;min-height:20px;line-height:1.3;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-model-inline:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .chat-model-inline:hover{border-color:var(--accent-soft)}
