@@ -555,12 +555,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
-/* v1.15：聊天输入区做成完整卡片——textarea 占上方，底栏（附件左 / 模型+发送右）两端对齐 */
-.chat-input-area{margin:var(--space-2) var(--space-3) var(--space-3);
-  border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel);
-  box-shadow:var(--shadow-1);padding:var(--space-2);display:flex;flex-direction:column;gap:var(--space-2);
-  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
-.chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:var(--shadow-2)}
+/* v1.15：聊天输入区融入面板底部（不另做卡片外观）——聊天面板本身即卡片，
+   点击消息区任意位置直接聚焦输入；边框/圆角/阴影不再包裹输入区 */
+.chat-input-area{padding:var(--space-2) var(--space-3) var(--space-3);
+  border-top:1px solid var(--line);background:var(--panel);
+  display:flex;flex-direction:column;gap:var(--space-2);
+  transition:border-color var(--transition-fast)}
+.chat-input-area:focus-within{border-top-color:var(--accent-soft)}
 .chat-input-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
 .chat-input-right{display:flex;align-items:center;gap:var(--space-2)}
 .chat-attach-btn{flex-shrink:0;width:28px;height:28px;padding:0;border:1px solid var(--line);
@@ -11305,6 +11306,13 @@ function renderChat(){
   }).join("") : `<div class="msg assistant">你好，我是${SCENARIOS[active].name}助手，可以直接让我「建个任务」「查总览」「搜索」。</div>` + CHAT_SUGGEST_HTML);
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
+  // v1.15：点击消息区任意位置 → 聚焦输入框（聊天面板本身即卡片，不另设输入框卡片）
+  if(!el._chatFocusBound){
+    el._chatFocusBound = true;
+    el.addEventListener("click", function(){
+      const ta = $("#chatTextInput"); if(ta) ta.focus();
+    });
+  }
   scrollChat();
 
 }
