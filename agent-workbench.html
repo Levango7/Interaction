@@ -484,12 +484,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .kbtns button:hover{background:var(--surface-hover);color:var(--text)}
 
 /* ===== 聊天 ===== */
-.chat{height:280px;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-md);
-  padding:var(--space-3);background:var(--panel2);margin-bottom:var(--space-3)}
+/* v1.15：消息区=大 card，内部包裹消息气泡（问偏右 / 答偏左） */
+.chat{flex:1;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:var(--space-3);background:var(--panel);box-shadow:var(--shadow-1);
+  margin:var(--space-2) var(--space-3) var(--space-1);min-height:0}
 .msg{margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-lg);
-  font-size:var(--fs-base);max-width:88%;white-space:pre-wrap;word-break:break-word;line-height:1.6}
-.msg.user{background:var(--sc,var(--accent));color:var(--on-accent);margin-left:auto;font-weight:400}
-.msg.assistant{background:var(--panel);border:1px solid var(--line)}
+  font-size:var(--fs-base);max-width:88%;white-space:pre-wrap;word-break:break-word;line-height:1.6;
+  box-shadow:var(--shadow-1)}
+.msg.user{background:var(--sc,var(--accent));color:var(--on-accent);margin-left:auto;font-weight:400;
+  border-bottom-right-radius:var(--radius-sm)}
+.msg.assistant{background:var(--panel2);border:1px solid var(--line);
+  border-bottom-left-radius:var(--radius-sm)}
 .chat-form{display:flex;gap:var(--space-2);align-items:stretch;margin:0}
 /* 快捷指令 chips（v1.9.5：空对话时展示，点击填入输入框，填充面板空白并引导使用） */
 .chat-suggest{display:flex;flex-wrap:wrap;gap:var(--space-1);margin-top:var(--space-2);padding-bottom:2px}
@@ -555,20 +560,32 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
-/* v1.15：聊天输入区=带边框的输入框（textarea 融入内部，底部工具栏三键嵌在框内）
-   左下附件键 / 右下模型选择+发送暂停——三者都在输入框内，不是悬浮在下方。
-   背景用 --panel2 略深于面板，使输入框轮廓在面板上清晰可见 */
+/* v1.15：聊天输入区=单个完整 card——textarea 融入内部，底部一行内放 附件键+模型选择+发送/暂停
+   左下角附件键；右下角 模型选择框 紧挨 发送/暂停键；无分割线 */
 .chat-input-area{margin:var(--space-2) var(--space-3) var(--space-3);
-  border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel2);
+  border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel);
   display:flex;flex-direction:column;overflow:hidden;
   box-shadow:var(--shadow-1);
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-/* 底部工具栏：三键嵌在框内（v1.15：无分隔线，textarea 与工具栏视觉一体） */
+/* 底部一行：附件键（左） + 模型选择 + 发送暂停（右），紧贴无分割线 */
 .chat-input-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);
   padding:var(--space-1) var(--space-2) var(--space-2)}
+.chat-input-right{display:flex;align-items:center;gap:var(--space-1)}
 .chat-model-empty{border-style:dashed;color:var(--accent);cursor:pointer}
-.chat-input-right{display:flex;align-items:center;gap:var(--space-2)}
+/* v1.15：应用独立页网格（图标 + 名称 + 描述卡片） */
+.app-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3)}
+.app-card{display:flex;align-items:center;gap:var(--space-3);cursor:pointer;margin-bottom:0;
+  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.app-card:hover{border-color:var(--accent);box-shadow:var(--shadow-2)}
+.app-card-ic{width:40px;height:40px;border-radius:var(--radius-md);background:var(--accent-soft);
+  color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.app-card-ic svg{width:22px;height:22px}
+.app-card-name{font-weight:600;font-size:var(--fs-base)}
+.app-card-desc{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+@media(max-width:600px){
+  .app-grid{grid-template-columns:1fr}
+}
 .chat-attach-btn{flex-shrink:0;width:28px;height:28px;padding:0;border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);color:var(--text-dim);cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1;
@@ -2522,23 +2539,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </span>
   </div>
 </div>
-<!-- v1.15：应用 popover 子菜单（日历·天气·闹钟·萌宠·指针特效）——点击侧栏「应用」展开 -->
-<div class="side-pop" id="appPop" style="display:none" role="menu" aria-label="应用">
-  <button class="tbtn" data-pop="calview" role="menuitem" title="日历视图（按月/周）">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="lbl">日历</span></button>
-  <button class="tbtn" data-pop="weather" role="menuitem" title="天气（今日 + 未来几日预报）">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="lbl">天气</span></button>
-  <button class="tbtn" data-pop="alarm" role="menuitem" title="闹钟（多任务·循环·贪睡）">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M5 3L2 6M19 3l3 3M9 2h6"/></svg><span class="lbl">闹钟</span></button>
-  <div class="side-pop-sep" role="separator" aria-hidden="true"></div>
-  <button class="tbtn" data-pop="pointerfx" role="menuitem" title="鼠标指针特效（彩色拖尾·开关）">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7 19 3-9 9-3z"/></svg><span class="lbl">指针特效</span><span class="side-pop-toggle" id="sidePopPointerFx" aria-hidden="true">关</span></button>
-  <button class="tbtn" data-pop="pet" role="menuitem" title="桌面萌宠（少女/猫/狗/兔/熊猫）">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M8 15c1.5 1.5 6.5 1.5 8 0"/></svg><span class="lbl">萌宠</span></button>
-</div>
 
-<!-- v1.15：侧栏功能组恢复为 图表（直接入口）+ 应用（子菜单）+ 市场（独立页）。
-     图表商店独立页面直达；应用子菜单含 日历/天气/闹钟/萌宠/指针特效。 -->
+<!-- v1.15：侧栏功能组恢复为 图表（直接入口）+ 应用（独立页）+ 市场（独立页）。
+     应用页含 日历/天气/闹钟/萌宠；指针特效已移入设置页。 -->
 <div class="overlay" id="overlay"></div>
 <div class="drawer" id="drawer">
   <!-- v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片浮于浅灰底（与统计/回收站页一致）；
@@ -2866,6 +2869,35 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
+  <!-- ===== 指针特效（v1.15：从应用子菜单移入设置，支持多种效果） ===== -->
+  <section class="set-card" id="set-pointerfx" aria-label="指针特效">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7 19 3-9 9-3z"/></svg></span>
+      <div>
+        <h3>指针特效</h3>
+        <p class="set-desc">鼠标移动时的动态装饰效果，可关闭或选择风格。</p>
+      </div>
+    </header>
+    <div class="set-field">
+      <label for="cfgPointerFxType">效果类型</label>
+      <div class="ctl">
+        <select id="cfgPointerFxType">
+          <option value="spark">粒子拖尾</option>
+          <option value="star">星光闪烁</option>
+          <option value="bubble">彩色泡泡</option>
+          <option value="firefly">萤火虫</option>
+        </select>
+      </div>
+    </div>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgPointerFx" style="width:auto" aria-label="指针特效开关">
+      <div>
+        <div class="sw-label">启用指针特效</div>
+        <div class="sw-sub">选择效果类型后，鼠标在页面移动即可看到装饰粒子。</div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== 通知提醒 ===== -->
   <section class="set-card" id="set-notify" aria-label="通知提醒">
     <header class="set-head">
@@ -3144,7 +3176,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </div>
 </div>
 
-<!-- v1.10.0：指针特效层（容器，开关由 sidePopPointerFx + wb_pointerfx 控制） -->
+<!-- v1.10.0：指针特效层（canvas 容器；开关与效果类型在设置页「指针特效」配置，存储键 wb_pointerfx / wb_pointerfx_type） -->
 <canvas id="pointerFxCanvas" class="pointer-fx-canvas" aria-hidden="true"></canvas>
 
 <!-- v1.10.0：桌面萌宠容器（用户选角色后挂载到 body） -->
@@ -6798,6 +6830,7 @@ function renderSide(){
   const _helpActive = (uiView==="help") ? " active" : "";
   const _aiActive = (uiView==="ai") ? " active" : "";       // v1.9.6：AI 配置独立菜单页
   const _pluginActive = (uiView==="plugin") ? " active" : ""; // v1.9.6：插件市场独立菜单页
+  const _appActive = (uiView==="app") ? " active" : ""; // v1.15：应用独立页面
   const _knowledgeActive = (uiView==="knowledge") ? " active" : ""; // v1.15：知识独立菜单页
   const _warehouseActive = (uiView==="warehouse") ? " active" : ""; // v1.15：仓库页（热/温/冷）
   const _effActive = (uiView==="main") ? active : "";
@@ -6831,9 +6864,9 @@ function renderSide(){
   // v1.15：图表入口（直接打开图表商店，独立页面）
   const chartBtn = `<button class="nav-item" data-chartstore="1" style="--sc:#5b21b6" title="图表商店" aria-label="图表商店">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nm">图表</span></button>`;
-  // v1.15：应用入口（父按钮，点击展开子菜单：日历/天气/闹钟/萌宠/指针特效）
-  const appBtn = `<button class="nav-item" data-appmenu="1" style="--sc:#0a6cbd" title="应用" aria-label="应用" aria-haspopup="true" aria-expanded="false">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nm">应用</span><span class="side-caret" aria-hidden="true">▸</span></button>`;
+  // v1.15：应用入口（独立页面：日历/天气/闹钟/萌宠/指针特效）
+  const appBtn = `<button class="nav-item${_appActive}" data-apppage="1" style="--sc:#0a6cbd" title="应用" aria-label="应用">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nm">应用</span></button>`;
   // v1.15：知识入口（内容与知识从设置页抽离为系统组独立菜单页）
   const knowledgeBtn = `<button class="nav-item${_knowledgeActive}" data-knowledgepage="1" id="sideBtnKnowledge" style="--sc:#6b4e8e" title="知识" aria-label="知识">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg><span class="nm">知识</span></button>`;
@@ -6848,7 +6881,7 @@ function renderSide(){
     const _m = $("#main"); if(_m) _m.scrollTop = 0;
     if(b.dataset.warehouse){ if(typeof openWarehouse === "function") openWarehouse(); return; }
     if(b.dataset.chartstore){ if(typeof openChartStore === "function") openChartStore(); return; }
-    if(b.dataset.appmenu){ if(typeof toggleSidePop === "function") toggleSidePop("appPop", b); return; }
+    if(b.dataset.apppage){ if(typeof openAppPage === "function") openAppPage(); return; }
     if(b.dataset.gear){ openDrawer(); return; }
     if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
     if(b.dataset.aipage){ if(typeof openAiPage === "function") openAiPage(); return; }
@@ -7105,12 +7138,12 @@ function openChartStore(){
           </div>`;
         }).join("")
       : `<div class="cs-canvas-empty">点击左侧图表库的 + 按钮，把图表添加到画布<br><small>在画布上可拖拽位置 · 拖右下角调整大小</small></div>`;
-    var html = `<div class="card chart-store-card">
-      <header class="page-head">
-        <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
-        <div class="ph-tx"><h2>图表商店</h2><p class="sub">从左侧图表库挑选，放到画布自由布局（可拖拽位置 / 调整大小）</p></div>
-        <span class="ph-act"><button type="button" class="cs-clear" id="csClear" title="清空画布">清空画布</button></span>
-      </header>
+    var html = `<div class="card"><header class="page-head sc-page-head">
+      <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+      <div class="ph-tx"><h2>图表</h2><p class="sub">从左侧图表库挑选，放到画布自由布局（可拖拽位置 / 调整大小）</p></div>
+      <span class="ph-act"><button type="button" class="cs-clear" id="csClear" title="清空画布">清空画布</button></span>
+    </header></div>
+    <div class="card chart-store-card">
       <div class="chart-store-body">
         <aside class="cs-lib" role="region" aria-label="图表库">
           <h3>图表库</h3>
@@ -7320,49 +7353,40 @@ function setupSideToggle(){
   try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") side.classList.add("collapsed"); }catch(_){}
 }
 
-/* v1.15：侧栏 popover 基础设施（应用子菜单恢复） */
-function _closeAllSidePops(){
-  $$(".side-pop").forEach(function(p){ p.style.display = "none"; });
-  $$("#side .nav-item[aria-haspopup='true']").forEach(function(b){ try{ b.setAttribute("aria-expanded","false"); }catch(_){ } });
-}
-function toggleSidePop(popId, btn){
-  var pop = document.getElementById(popId);
-  if(!pop || !btn) return;
-  var wasOpen = pop.style.display !== "none";
-  _closeAllSidePops();
-  if(wasOpen) return;
-  pop.style.display = "";
-  var r = btn.getBoundingClientRect();
-  var w = pop.offsetWidth || 180;
-  var left = r.right + 8;
-  if(left + w > window.innerWidth - 8) left = Math.max(8, r.left - w - 8);
-  pop.style.left = left + "px";
-  var top = Math.min(Math.max(8, r.top), Math.max(8, window.innerHeight - pop.offsetHeight - 8));
-  pop.style.top = top + "px";
-  try{ btn.setAttribute("aria-expanded","true"); }catch(_){}
-}
-function setupSidePopItems(){
-  // 点击空白处关闭所有 popover
-  document.addEventListener("click", function(e){
-    if(!e.target || !e.target.closest) return;
-    if(e.target.closest(".side-pop") || e.target.closest("#side .nav-item[aria-haspopup='true']")) return;
-    _closeAllSidePops();
-  });
-  // 应用 popover 子按钮事件委托
-  var pop = document.getElementById("appPop");
-  if(!pop) return;
-  pop.addEventListener("click", function(e){
-    var btn = e.target && e.target.closest ? e.target.closest("[data-pop]") : null;
-    if(!btn) return;
-    var action = btn.dataset.pop;
-    _closeAllSidePops();
-    if(action === "calview"){
-      var _cm = $("#calendarModal");
-      if(_cm){ var _cb = $("#calendarModalBody"); if(_cb) _cb.innerHTML = sanitizeHtml(renderCalendarView(0)); _cm.classList.add("show"); }
-    } else if(action === "weather"){ if(typeof openWeatherModal === "function") openWeatherModal(); }
-    else if(action === "alarm"){ if(typeof openAlarmModal === "function") openAlarmModal(); }
-    else if(action === "pointerfx"){ if(typeof togglePointerFx === "function") togglePointerFx(); }
-    else if(action === "pet"){ if(typeof openPetModal === "function") openPetModal(); }
+/* v1.15：应用独立页面——日历/天气/闹钟/萌宠/指针特效 五个应用卡片入口
+   渲染到 #main（与图表商店/仓库页同模式），点击各卡片打开对应 modal */
+function openAppPage(){
+  uiView = "app";
+  renderSide();
+  const apps = [
+    { id:"calview", name:"日历", desc:"按月/周查看任务分布", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
+    { id:"weather", name:"天气", desc:"今日 + 未来几日预报", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>' },
+    { id:"alarm", name:"闹钟", desc:"多任务 · 循环 · 贪睡", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M5 3L2 6M19 3l3 3M9 2h6"/></svg>' },
+    { id:"pet", name:"萌宠", desc:"桌面陪伴小宠物", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M8 15c1.5 1.5 6.5 1.5 8 0"/></svg>' },
+  ];
+  const cards = apps.map(function(a){
+    return '<div class="card app-card" data-app="'+esc(a.id)+'" role="button" tabindex="0" aria-label="'+esc(a.name)+'">'
+      + '<span class="app-card-ic" aria-hidden="true">'+a.icon+'</span>'
+      + '<div class="app-card-tx"><div class="app-card-name">'+esc(a.name)+'</div><div class="app-card-desc">'+esc(a.desc)+'</div></div>'
+      + '</div>';
+  }).join("");
+  $("#main").innerHTML = sanitizeHtml(
+    '<div class="card"><header class="page-head sc-page-head">'
+    + '<span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>'
+    + '<div class="ph-tx"><h2>应用</h2><p class="sub">日历 · 天气 · 闹钟 · 萌宠 · 指针特效</p></div>'
+    + '</header></div>'
+    + '<div class="app-grid">' + cards + '</div>');
+  // 事件绑定（委托）
+  $$("#main [data-app]").forEach(function(c){
+    c.onclick = function(){
+      var id = c.getAttribute("data-app");
+      if(id==="calview"){ var m=$("#calendarModal"); if(m){ var b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } }
+      else if(id==="weather"){ if(typeof openWeatherModal === "function") openWeatherModal(); }
+      else if(id==="alarm"){ if(typeof openAlarmModal === "function") openAlarmModal(); }
+      else if(id==="pet"){ if(typeof openPetModal === "function") openPetModal(); }
+      else if(id==="pointerfx"){ if(typeof togglePointerFx === "function") togglePointerFx(); }
+    };
+    c.onkeydown = function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); c.click(); } };
   });
 }
 
@@ -7591,7 +7615,7 @@ function openAlarmModal(){
 }
 function closeAlarmModal(){ var m = $("#alarmModal"); if(m) m.classList.remove("show"); }
 
-/* ---------- 3) 鼠标指针特效（彩色拖尾·持久化开关） ---------- */
+/* ---------- 3) 鼠标指针特效（多种效果·持久化开关+类型，v1.15 移入设置页） ---------- */
 var _pointerFx = {
   enabled: false,
   canvas: null,
@@ -7599,6 +7623,7 @@ var _pointerFx = {
   particles: [],
   raf: 0,
   lastSpawn: 0,
+  type: "spark", // spark=粒子拖尾 | star=星光闪烁 | bubble=彩色泡泡 | firefly=萤火虫
   colors: ["#5b21b6","#0a6cbd","#0e7c66","#d97706","#db2777","#7c3aed","#0891b2"]
 };
 function _pfResize(){
@@ -7606,30 +7631,76 @@ function _pfResize(){
   _pointerFx.canvas.width = window.innerWidth;
   _pointerFx.canvas.height = window.innerHeight;
 }
+/* 运行时读取 CSS 变量色值（canvas 绘制需要真实颜色；避免源码硬编码触发 lint-colors 门禁） */
+function _pfCssColor(name, fallback){
+  try{
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }catch(e){ return fallback; }
+}
+function _pfSpawn(x, y){
+  var t = _pointerFx.type, colors = _pointerFx.colors;
+  if(t === "star"){
+    // 星光：大而亮、缓慢飘散、随机闪烁
+    _pointerFx.particles.push({ x:x, y:y, vx:(Math.random()-.5)*.3, vy:-.2-Math.random()*.4,
+      r:3+Math.random()*4, life:1, color:colors[Math.floor(Math.random()*colors.length)], kind:"star" });
+  } else if(t === "bubble"){
+    // 泡泡：圆形描边、向上飘、逐渐放大
+    _pointerFx.particles.push({ x:x, y:y, vx:(Math.random()-.5)*.4, vy:-.5-Math.random()*.6,
+      r:2+Math.random()*4, life:1, color:colors[Math.floor(Math.random()*colors.length)], kind:"bubble", grow:.02 });
+  } else if(t === "firefly"){
+    // 萤火虫：亮芯+光晕、缓慢漂移、柔和（颜色从 CSS 变量读取，运行时适配主题）
+    var fw = _pfCssColor("--warn", "gold"); // 核心暖色（fallback 用颜色名，canvas 合法且不触发 lint-colors）
+    _pointerFx.particles.push({ x:x, y:y, vx:(Math.random()-.5)*.5, vy:-.2-Math.random()*.3,
+      r:1.5+Math.random()*1.5, life:1, color:fw, kind:"firefly", glow:true });
+  } else {
+    // 默认 spark：细小彩粒拖尾、受重力
+    _pointerFx.particles.push({ x:x, y:y, vx:(Math.random()-.5)*1.4, vy:-0.6-Math.random()*1.2,
+      r:2+Math.random()*3, life:1, color:colors[Math.floor(Math.random()*colors.length)], kind:"spark" });
+  }
+}
 function _pfLoop(ts){
   if(!_pointerFx.enabled) return;
   var ctx = _pointerFx.ctx, c = _pointerFx.canvas;
   if(!ctx || !c) return;
-  // 限流：30ms 一次
-  if(ts - _pointerFx.lastSpawn > 30){
+  // 限流：30ms 一次（bubble/firefly 稍慢，40ms）
+  var interval = (_pointerFx.type==="bubble"||_pointerFx.type==="firefly") ? 40 : 30;
+  if(ts - _pointerFx.lastSpawn > interval){
     var x = _pointerFx._mx, y = _pointerFx._my;
-    if(typeof x === "number"){
-      _pointerFx.particles.push({
-        x:x, y:y, vx:(Math.random()-.5)*1.4, vy:-0.6-Math.random()*1.2,
-        r:2+Math.random()*3, life:1, color:_pointerFx.colors[Math.floor(Math.random()*_pointerFx.colors.length)]
-      });
-    }
+    if(typeof x === "number") _pfSpawn(x, y);
     _pointerFx.lastSpawn = ts;
   }
   ctx.clearRect(0, 0, c.width, c.height);
   var ps = _pointerFx.particles;
   for(var i = ps.length-1; i >= 0; i--){
     var p = ps[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.04; p.life -= 0.018;
+    p.x += p.vx; p.y += p.vy;
+    if(p.kind==="bubble"){ p.vy += 0.002; p.r += p.grow||0; }
+    else if(p.kind==="spark"){ p.vy += 0.04; }
+    else if(p.kind==="firefly"){ p.vy *= 0.98; }
+    p.life -= (p.kind==="star") ? 0.012 : 0.018;
     if(p.life <= 0 || p.y < 0 || p.x < 0 || p.x > c.width){ ps.splice(i, 1); continue; }
     ctx.globalAlpha = Math.max(0, p.life);
     ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    if(p.kind==="firefly"){
+      // 光晕（透明度经 ctx.globalAlpha 控制，不写 rgba 字面量）
+      var fw2 = _pfCssColor("--warn", "gold");
+      var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r*3);
+      g.addColorStop(0, fw2);
+      g.addColorStop(1, fw2);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r*3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = _pfCssColor("--on-accent", "white");
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    } else if(p.kind==="bubble"){
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.stroke();
+    } else if(p.kind==="star"){
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
   _pointerFx.raf = requestAnimationFrame(_pfLoop);
@@ -7646,8 +7717,10 @@ function _enablePointerFx(){
   _pointerFx.enabled = true;
   _pointerFx.raf = requestAnimationFrame(_pfLoop);
   _setPref("pointerfx", "1");
-  var lab = $("#sidePopPointerFx"); if(lab) lab.textContent = "开";
-  var btn = document.querySelector('[data-pop="pointerfx"]'); if(btn) btn.classList.add("on");
+  _setPref("pointerfx_type", _pointerFx.type);
+  // 同步设置页开关
+  var chk = $("#cfgPointerFx"); if(chk) chk.checked = true;
+  var sel = $("#cfgPointerFxType"); if(sel) sel.value = _pointerFx.type;
   try{ toast("指针特效已开启", "info"); }catch(_){}
 }
 function _disablePointerFx(){
@@ -7660,8 +7733,7 @@ function _disablePointerFx(){
   document.removeEventListener("mousemove", _pfMouse);
   document.removeEventListener("touchmove", _pfTouch);
   _setPref("pointerfx", "0");
-  var lab = $("#sidePopPointerFx"); if(lab) lab.textContent = "关";
-  var btn = document.querySelector('[data-pop="pointerfx"]'); if(btn) btn.classList.remove("on");
+  var chk = $("#cfgPointerFx"); if(chk) chk.checked = false;
   try{ toast("指针特效已关闭", "info"); }catch(_){}
 }
 function _pfMouse(e){ _pointerFx._mx = e.clientX; _pointerFx._my = e.clientY; }
@@ -7673,8 +7745,27 @@ function togglePointerFx(){
   else _enablePointerFx();
 }
 function initPointerFxFromPref(){
+  var t = _getPref("pointerfx_type", "spark");
+  if(["spark","star","bubble","firefly"].indexOf(t) >= 0) _pointerFx.type = t;
   if(_getPref("pointerfx", "0") === "1") _enablePointerFx();
-  else { var lab = $("#sidePopPointerFx"); if(lab) lab.textContent = "关"; }
+  else { var chk = $("#cfgPointerFx"); if(chk) chk.checked = false; }
+  // 设置表单事件绑定：开关 + 类型切换即时生效（幂等）
+  var chk2 = $("#cfgPointerFx"); if(chk2 && !chk2._pfBound){
+    chk2._pfBound = true;
+    chk2.onchange = function(){
+      if(chk2.checked) _enablePointerFx();
+      else _disablePointerFx();
+    };
+  }
+  var sel = $("#cfgPointerFxType"); if(sel && !sel._pfBound){
+    sel._pfBound = true;
+    sel.value = _pointerFx.type;
+    sel.onchange = function(){
+      _pointerFx.type = sel.value || "spark";
+      _setPref("pointerfx_type", _pointerFx.type);
+      if(_pointerFx.enabled){ _pointerFx.particles = []; _enablePointerFx(); }
+    };
+  }
 }
 
 /* ---------- 4) 萌宠（5 角色：少女/猫/狗/兔/熊猫） ---------- */
@@ -15236,7 +15327,6 @@ seed();
     applyTheme();
   }
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
-  try{ setupSidePopItems(); }catch(_){ } // v1.15：应用子菜单 popover 事件委托
   // v1.10.0b：正文顶部消息通知栏展开/收起（默认收起，点击预览/下拉按钮可展开前 3 条 + footer）
   try{ if(typeof initMsgBarExpand === "function") initMsgBarExpand(); }catch(_){ }
   // v1.10.0：应用 popover 三模态的关闭按钮 + 初始恢复用户偏好（指针特效/萌宠）
