@@ -2522,9 +2522,23 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </span>
   </div>
 </div>
+<!-- v1.15：应用 popover 子菜单（日历·天气·闹钟·萌宠·指针特效）——点击侧栏「应用」展开 -->
+<div class="side-pop" id="appPop" style="display:none" role="menu" aria-label="应用">
+  <button class="tbtn" data-pop="calview" role="menuitem" title="日历视图（按月/周）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="lbl">日历</span></button>
+  <button class="tbtn" data-pop="weather" role="menuitem" title="天气（今日 + 未来几日预报）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="lbl">天气</span></button>
+  <button class="tbtn" data-pop="alarm" role="menuitem" title="闹钟（多任务·循环·贪睡）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M5 3L2 6M19 3l3 3M9 2h6"/></svg><span class="lbl">闹钟</span></button>
+  <div class="side-pop-sep" role="separator" aria-hidden="true"></div>
+  <button class="tbtn" data-pop="pointerfx" role="menuitem" title="鼠标指针特效（彩色拖尾·开关）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7 19 3-9 9-3z"/></svg><span class="lbl">指针特效</span><span class="side-pop-toggle" id="sidePopPointerFx" aria-hidden="true">关</span></button>
+  <button class="tbtn" data-pop="pet" role="menuitem" title="桌面萌宠（少女/猫/狗/兔/熊猫）">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M8 15c1.5 1.5 6.5 1.5 8 0"/></svg><span class="lbl">萌宠</span></button>
+</div>
 
-<!-- v1.15：侧栏功能组 图表/组件/应用 三个父按钮及其子菜单已移除（用户决策）。
-     番茄钟/时间追踪保留：工具栏（toolbar-row）已有 widget 入口。日历等子菜单内功能入口随之移除。 -->
+<!-- v1.15：侧栏功能组恢复为 图表（直接入口）+ 应用（子菜单）+ 市场（独立页）。
+     图表商店独立页面直达；应用子菜单含 日历/天气/闹钟/萌宠/指针特效。 -->
 <div class="overlay" id="overlay"></div>
 <div class="drawer" id="drawer">
   <!-- v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片浮于浅灰底（与统计/回收站页一致）；
@@ -6814,19 +6828,27 @@ function renderSide(){
   // v1.9.9：市场入口（v1.10.0：从系统组迁回功能组末尾，保留 v1.9.6 独立菜单页设计）
   const pluginBtn = `<button class="nav-item${_pluginActive}" data-pluginpage="1" id="sideBtnPlugin" style="--sc:#8b5cf6" title="市场" aria-label="市场">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg><span class="nm">市场</span></button>`;
+  // v1.15：图表入口（直接打开图表商店，独立页面）
+  const chartBtn = `<button class="nav-item" data-chartstore="1" style="--sc:#5b21b6" title="图表商店" aria-label="图表商店">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nm">图表</span></button>`;
+  // v1.15：应用入口（父按钮，点击展开子菜单：日历/天气/闹钟/萌宠/指针特效）
+  const appBtn = `<button class="nav-item" data-appmenu="1" style="--sc:#0a6cbd" title="应用" aria-label="应用" aria-haspopup="true" aria-expanded="false">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nm">应用</span><span class="side-caret" aria-hidden="true">▸</span></button>`;
   // v1.15：知识入口（内容与知识从设置页抽离为系统组独立菜单页）
   const knowledgeBtn = `<button class="nav-item${_knowledgeActive}" data-knowledgepage="1" id="sideBtnKnowledge" style="--sc:#6b4e8e" title="知识" aria-label="知识">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg><span class="nm">知识</span></button>`;
-  // v1.15：功能组图表/组件/应用三个父按钮及其子菜单已移除（用户决策），仅保留市场入口
+  // v1.15：功能组：图表（直接入口）+ 应用（子菜单）+ 市场（独立页）
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML +
     '<div class="nav-group">全局</div>' + overview + statsBtn + warehouseBtn +
     '<div class="nav-group">场景</div>' + items +
-    '<div class="nav-group">功能</div>' + pluginBtn +
+    '<div class="nav-group">功能</div>' + chartBtn + appBtn + pluginBtn +
     '<div class="nav-group">系统</div>' + aiBtn + gearBtn + knowledgeBtn + docBtn);
   $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
     // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
     const _m = $("#main"); if(_m) _m.scrollTop = 0;
     if(b.dataset.warehouse){ if(typeof openWarehouse === "function") openWarehouse(); return; }
+    if(b.dataset.chartstore){ if(typeof openChartStore === "function") openChartStore(); return; }
+    if(b.dataset.appmenu){ if(typeof toggleSidePop === "function") toggleSidePop("appPop", b); return; }
     if(b.dataset.gear){ openDrawer(); return; }
     if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
     if(b.dataset.aipage){ if(typeof openAiPage === "function") openAiPage(); return; }
@@ -7296,6 +7318,52 @@ function setupSideToggle(){
     try{ localStorage.setItem(PREFIX+"sideCollapsed", side.classList.contains("collapsed")?"1":"0"); }catch(_){}
   });
   try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") side.classList.add("collapsed"); }catch(_){}
+}
+
+/* v1.15：侧栏 popover 基础设施（应用子菜单恢复） */
+function _closeAllSidePops(){
+  $$(".side-pop").forEach(function(p){ p.style.display = "none"; });
+  $$("#side .nav-item[aria-haspopup='true']").forEach(function(b){ try{ b.setAttribute("aria-expanded","false"); }catch(_){ } });
+}
+function toggleSidePop(popId, btn){
+  var pop = document.getElementById(popId);
+  if(!pop || !btn) return;
+  var wasOpen = pop.style.display !== "none";
+  _closeAllSidePops();
+  if(wasOpen) return;
+  pop.style.display = "";
+  var r = btn.getBoundingClientRect();
+  var w = pop.offsetWidth || 180;
+  var left = r.right + 8;
+  if(left + w > window.innerWidth - 8) left = Math.max(8, r.left - w - 8);
+  pop.style.left = left + "px";
+  var top = Math.min(Math.max(8, r.top), Math.max(8, window.innerHeight - pop.offsetHeight - 8));
+  pop.style.top = top + "px";
+  try{ btn.setAttribute("aria-expanded","true"); }catch(_){}
+}
+function setupSidePopItems(){
+  // 点击空白处关闭所有 popover
+  document.addEventListener("click", function(e){
+    if(!e.target || !e.target.closest) return;
+    if(e.target.closest(".side-pop") || e.target.closest("#side .nav-item[aria-haspopup='true']")) return;
+    _closeAllSidePops();
+  });
+  // 应用 popover 子按钮事件委托
+  var pop = document.getElementById("appPop");
+  if(!pop) return;
+  pop.addEventListener("click", function(e){
+    var btn = e.target && e.target.closest ? e.target.closest("[data-pop]") : null;
+    if(!btn) return;
+    var action = btn.dataset.pop;
+    _closeAllSidePops();
+    if(action === "calview"){
+      var _cm = $("#calendarModal");
+      if(_cm){ var _cb = $("#calendarModalBody"); if(_cb) _cb.innerHTML = sanitizeHtml(renderCalendarView(0)); _cm.classList.add("show"); }
+    } else if(action === "weather"){ if(typeof openWeatherModal === "function") openWeatherModal(); }
+    else if(action === "alarm"){ if(typeof openAlarmModal === "function") openAlarmModal(); }
+    else if(action === "pointerfx"){ if(typeof togglePointerFx === "function") togglePointerFx(); }
+    else if(action === "pet"){ if(typeof openPetModal === "function") openPetModal(); }
+  });
 }
 
 /* ===== v1.10.0：应用 popover 5 项能力实现 ===== */
@@ -15168,6 +15236,7 @@ seed();
     applyTheme();
   }
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
+  try{ setupSidePopItems(); }catch(_){ } // v1.15：应用子菜单 popover 事件委托
   // v1.10.0b：正文顶部消息通知栏展开/收起（默认收起，点击预览/下拉按钮可展开前 3 条 + footer）
   try{ if(typeof initMsgBarExpand === "function") initMsgBarExpand(); }catch(_){ }
   // v1.10.0：应用 popover 三模态的关闭按钮 + 初始恢复用户偏好（指针特效/萌宠）
