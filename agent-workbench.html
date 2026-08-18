@@ -2653,7 +2653,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <input id="scAddName" placeholder="场景名（如 健身）" maxlength="12" style="flex:1;min-width:120px">
         <input id="scAddColor" type="color" aria-label="场景颜色" style="width:44px;padding:2px">
         <select id="scAddIcon" aria-label="场景图标" style="flex:1;min-width:110px;max-width:150px"></select>
-        <button type="button" class="addbtn" id="scAddBtn" style="--sc:var(--accent);padding:4px 10px">添加</button>
+        <button type="button" class="addbtn sm" id="scAddBtn" >添加</button>
       </div>
     </div>
   </section>
@@ -2701,9 +2701,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="set-subhead">知识管理</div>
     <p class="set-tip">Markdown 笔记系统（标签分类 + 任务关联）+ 知识库（按主题分类）+ 全文搜索（任务/记录/笔记，关键词高亮）。</p>
     <div class="set-actions">
-      <button type="button" class="addbtn" id="btnNotes" style="--sc:var(--accent);min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>笔记管理</button>
-      <button type="button" class="addbtn" id="btnKnowledgeBase" style="--sc:var(--accent);min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>知识库</button>
-      <button type="button" class="addbtn" id="btnSearch" style="--sc:var(--accent);min-width:90px;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>全文搜索</button>
+      <button type="button" class="addbtn min" id="btnNotes" ><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>笔记管理</button>
+      <button type="button" class="addbtn min" id="btnKnowledgeBase" ><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>知识库</button>
+      <button type="button" class="addbtn min" id="btnSearch" ><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>全文搜索</button>
     </div>
     <div class="set-divider" role="separator"></div>
 
@@ -2742,17 +2742,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="set-divider" role="separator"></div>
     <div class="set-subhead">导出 / 导入</div>
     <div class="set-actions">
-      <button type="button" class="addbtn" id="btnExport" aria-label="导出 JSON" style="--sc:var(--accent);min-width:90px">导出 JSON</button>
+      <button type="button" class="addbtn min" id="btnExport" aria-label="导出 JSON" >导出 JSON</button>
       <button type="button" class="addbtn" id="btnExportCSV" aria-label="导出 CSV" style="--sc:var(--accent);min-width:70px">导出 CSV</button>
       <button type="button" class="addbtn" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent);min-width:70px">导出 MD</button>
-      <button type="button" class="addbtn" id="btnImport" aria-label="导入恢复" style="--sc:var(--accent);min-width:90px">导入恢复</button>
-      <button type="button" class="addbtn" id="btnIdbRestore" aria-label="从本地库恢复" style="--sc:var(--accent);min-width:90px">本地库恢复</button>
+      <button type="button" class="addbtn min" id="btnImport" aria-label="导入恢复" >导入恢复</button>
+      <button type="button" class="addbtn min" id="btnIdbRestore" aria-label="从本地库恢复" >本地库恢复</button>
       <button type="button" class="addbtn danger" id="btnClear" aria-label="清空数据" style="--sc:var(--danger,var(--muted));min-width:90px">清空数据</button>
     </div>
     <div class="set-actions">
-      <button type="button" class="addbtn" id="btnExportPreview" aria-label="导出预览" style="--sc:var(--accent);min-width:90px">导出预览</button>
-      <button type="button" class="addbtn" id="btnImportCSV" aria-label="导入 CSV" style="--sc:var(--accent);min-width:90px">导入 CSV</button>
-      <button type="button" class="addbtn" id="btnExportRecsCSV" aria-label="导出记录 CSV" style="--sc:var(--accent);min-width:90px">导出记录 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportPreview" aria-label="导出预览" >导出预览</button>
+      <button type="button" class="addbtn min" id="btnImportCSV" aria-label="导入 CSV" >导入 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportRecsCSV" aria-label="导出记录 CSV" >导出记录 CSV</button>
     </div>
     <input type="file" id="csvFileInput" accept=".csv" style="display:none">
     <label class="expkey" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);margin:8px 0 0">
@@ -2797,9 +2797,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <p class="set-tip">创建自定义主题（调整令牌色值），或为每个场景独立配色。主题可导出为 JSON 分享给其他用户。</p>
       <div id="themeCustomList" class="theme-custom-list"></div>
       <div class="theme-actions">
-        <button type="button" class="addbtn" id="btnThemeNew" style="--sc:var(--accent);padding:4px 10px">新建自定义主题</button>
-        <button type="button" class="addbtn" id="btnThemeExport" style="--sc:var(--accent);padding:4px 10px">导出当前主题</button>
-        <button type="button" class="addbtn" id="btnThemeImport" style="--sc:var(--accent);padding:4px 10px">导入主题</button>
+        <button type="button" class="addbtn sm" id="btnThemeNew" >新建自定义主题</button>
+        <button type="button" class="addbtn sm" id="btnThemeExport" >导出当前主题</button>
+        <button type="button" class="addbtn sm" id="btnThemeImport" >导入主题</button>
       </div>
       <div id="themeEditorArea" style="display:none;margin-top:8px">
         <div class="set-field" style="grid-template-columns:minmax(80px,120px) minmax(0,1fr)">
@@ -2809,7 +2809,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <div style="margin-top:6px;font-size:11px;color:var(--muted);font-weight:600">令牌色值</div>
         <div id="themeTokenEditor"></div>
         <div class="theme-actions">
-          <button type="button" class="addbtn" id="btnThemeSave" style="--sc:var(--accent);padding:4px 10px">保存主题</button>
+          <button type="button" class="addbtn sm" id="btnThemeSave" >保存主题</button>
           <button type="button" class="addbtn" id="btnThemeCancel" style="--sc:var(--muted);padding:4px 10px">取消</button>
         </div>
       </div>
@@ -2817,7 +2817,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <div style="margin-bottom:4px;font-size:11px;color:var(--muted);font-weight:600">粘贴主题 JSON</div>
         <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"mytheme","name":"我的主题","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}'></textarea>
         <div class="theme-actions">
-          <button type="button" class="addbtn" id="btnThemeImportConfirm" style="--sc:var(--accent);padding:4px 10px">确认导入</button>
+          <button type="button" class="addbtn sm" id="btnThemeImportConfirm" >确认导入</button>
           <button type="button" class="addbtn" id="btnThemeImportCancel" style="--sc:var(--muted);padding:4px 10px">取消</button>
         </div>
       </div>
@@ -2937,8 +2937,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text)">选择导出字段</div>
   <div id="csvExportFields" style="margin-bottom:12px;border:1px solid var(--line);padding:8px;border-radius:4px"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end">
-    <button type="button" class="addbtn" id="btnExportPreviewConfirm" style="--sc:var(--accent);padding:6px 16px">导出 CSV</button>
-    <button type="button" class="addbtn" id="btnExportPreviewCancel" style="--sc:var(--muted);padding:6px 16px">取消</button>
+    <button type="button" class="addbtn sm" id="btnExportPreviewConfirm" >导出 CSV</button>
+    <button type="button" class="addbtn sm" id="btnExportPreviewCancel"  style="--sc:var(--muted)">取消</button>
   </div>
 </div>
 
@@ -2950,8 +2950,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text)">前 5 条预览</div>
   <div id="csvImportPreviewList" style="margin-bottom:12px;max-height:200px;overflow-y:auto;border:1px solid var(--line);padding:8px;border-radius:4px"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end">
-    <button type="button" class="addbtn" id="btnCsvImportConfirm" style="--sc:var(--accent);padding:6px 16px">确认导入</button>
-    <button type="button" class="addbtn" id="btnCsvImportCancel" style="--sc:var(--muted);padding:6px 16px">取消</button>
+    <button type="button" class="addbtn sm" id="btnCsvImportConfirm" >确认导入</button>
+    <button type="button" class="addbtn sm" id="btnCsvImportCancel"  style="--sc:var(--muted)">取消</button>
   </div>
 </div>
 
@@ -18497,8 +18497,8 @@ function openNoteEditorModal(note){
     var n = note || null;
     var html = renderNoteEditor(n);
     html += '<div class="note-editor-actions">';
-    html += '<button type="button" class="addbtn" id="btnNoteSave" style="--sc:var(--accent);padding:6px 16px">保存</button>';
-    html += '<button type="button" class="addbtn" id="btnNoteCancel" style="--sc:var(--muted);padding:6px 16px">取消</button>';
+    html += '<button type="button" class="addbtn sm" id="btnNoteSave" >保存</button>';
+    html += '<button type="button" class="addbtn sm" id="btnNoteCancel"  style="--sc:var(--muted)">取消</button>';
     if(n && n.id){
       html += '<button type="button" class="addbtn" id="btnNoteDelete" style="--sc:var(--danger,var(--muted));padding:6px 16px">删除</button>';
     }
