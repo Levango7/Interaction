@@ -2403,9 +2403,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
     <button class="tbtn" id="btnDownload" title="导出数据" aria-label="导出数据">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl">下载</span></button>
-    <!-- v1.9.9：更多按钮上移顶栏（从功能组侧栏迁出）——点击展开次常用工具下拉（甘特/导图/仪表盘/笔记等） -->
-    <button class="tbtn" id="btnMoreTop" title="更多工具（甘特/导图/仪表盘/笔记等）" aria-label="更多工具" aria-haspopup="true" aria-expanded="false">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><span class="lbl">更多</span></button>
+    <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
     <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面" style="display:none">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl">安装</span></button>
     <input type="file" id="fileInput" accept="application/json" style="display:none">
@@ -2446,21 +2444,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         </div>
         <div class="msg-list" id="msgList"></div>
       </div>
-      <!-- 更多工具下拉菜单：次常用工具收起于此（按钮 id/class 与原 toolbar-row 中保持一致，JS 事件绑定无需改动） -->
-      <div class="more-menu" id="moreMenu" role="menu" aria-label="更多工具" style="display:none">
-        <button class="tbtn gantt-btn" id="btnGantt" role="menuitem" title="甘特图" aria-label="甘特图">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/><rect x="9" y="10" width="10" height="4" rx="1"/><rect x="7" y="16" width="6" height="4" rx="1"/></svg><span class="lbl">甘特</span></button>
-        <button class="tbtn mindmap-btn" id="btnMindmap" role="menuitem" title="思维导图" aria-label="思维导图">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="9.5" y1="9.5" x2="6.5" y2="6.5"/><line x1="14.5" y1="9.5" x2="17.5" y2="6.5"/><line x1="9.5" y1="14.5" x2="6.5" y2="17.5"/><line x1="14.5" y1="14.5" x2="17.5" y2="17.5"/></svg><span class="lbl">导图</span></button>
-        <button class="tbtn dashboard-btn" id="btnDashboard" role="menuitem" title="自定义仪表盘" aria-label="自定义仪表盘">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="lbl">仪表盘</span></button>
-        <button class="tbtn notes-btn" id="btnNotesTop" role="menuitem" title="笔记管理" aria-label="笔记管理">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><span class="lbl">笔记</span></button>
-        <button class="tbtn collab-btn" id="btnCollab" role="menuitem" title="实时协作" aria-label="实时协作面板">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="lbl">协作</span></button>
-        <button class="tbtn share-btn" id="btnShare" role="menuitem" title="看板分享" aria-label="生成看板分享链接">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="11" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="12.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="11.49"/></svg><span class="lbl">分享</span></button>
-      </div>
+      <!-- v1.15：更多工具菜单已移除（功能迁移：甘特/导图/仪表盘→图表页，笔记→知识页，协作/分享删除） -->
       <main class="main" id="main"></main>
     </div>
     <!-- 右侧 AI 聊天面板（三栏布局第三栏）：常驻显示，复用 #chat/#chatForm/#chatThinking/#chatCancel
@@ -7086,8 +7070,8 @@ function openWarehouse(tab){
 */
 function openChartStore(){
   // 图表库（静态）——不用 emoji，用纯文字 + 矢量图标
+  // v1.15：移除"日历"（用户要求；日历功能在应用页）
   var chartLibs = [
-    { id: "calendar", name: "日历", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">日历视图</div><div class="cs-sub">本月任务分布</div><div class="cs-grid">'+Array.from({length:35},function(_,i){return '<span class="cs-cell"></span>'}).join("")+'</div></div>'; } },
     { id: "trend", name: "趋势", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">完成趋势</div><div class="cs-sub">近 14 天</div><svg viewBox="0 0 100 40" class="cs-line"><polyline points="0,30 10,28 20,32 30,20 40,22 50,18 60,15 70,12 80,8 90,5 100,3" fill="none" stroke="var(--accent)" stroke-width="2"/></svg></div>'; } },
     { id: "heatmap", name: "热力图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">完成热力图</div><div class="cs-sub">最近 12 周</div><div class="cs-heat">'+Array.from({length:84},function(){return '<span class="cs-hcell"></span>'}).join("")+'</div></div>'; } },
     { id: "gantt", name: "甘特图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">甘特图</div><div class="cs-sub">任务时间线</div><div class="cs-gantt">'+[1,2,3,4].map(function(i){return '<div class="cs-gantt-bar" style="width:'+(20+i*15)+'%"></div>'}).join("")+'</div></div>'; } },
@@ -14121,7 +14105,6 @@ const _btnSearch = $("#btnSearch"); if(_btnSearch) _btnSearch.onclick = function
 const _btnNotesTop = $("#btnNotesTop"); if(_btnNotesTop) _btnNotesTop.onclick = function(){ if(typeof openNotesModal === "function") openNotesModal(); };
 const _btnSearchTop = $("#btnSearchTop"); if(_btnSearchTop) _btnSearchTop.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
 // v1.9.9：顶栏右侧更多按钮（从侧栏功能组迁出）——点击展开次常用工具下拉
-const _btnMoreTop = $("#btnMoreTop"); if(_btnMoreTop) _btnMoreTop.onclick = function(e){ if(typeof openMoreMenuFrom === "function") openMoreMenuFrom(_btnMoreTop); };
 /* v1.15：顶栏消息按钮已收敛为唯一入口（#btnMessages），绑定见系统级消息中心区 */
 /* 弹窗关闭按钮 */
 const _btnNotesClose = $("#btnNotesClose"); if(_btnNotesClose) _btnNotesClose.onclick = function(){ if(typeof closeNotesModal === "function") closeNotesModal(); };
@@ -14315,57 +14298,8 @@ $("#btnHelp").onclick = renderHelp;
 /* 顶栏下载按钮：复用 doExport（导出 JSON 备份） */
 const _btnDownload = $("#btnDownload"); if(_btnDownload) _btnDownload.onclick = doExport;
 $("#btnRecover").onclick = recoverAutoBackup;
-/* ---------- 更多工具下拉菜单（v1.9 UI 精简：次常用工具收起） ----------
-   点击 #btnMore 切换菜单显示并定位到按钮下方；点击菜单外或选中某项后关闭。
-   菜单内按钮 id/class 与原 toolbar-row 中保持一致，事件绑定在上文已统一处理。 */
-(function setupMoreMenu(){
-  const moreBtn = $("#btnMore");
-  const menu = $("#moreMenu");
-  if(!moreBtn || !menu) return;
-  moreBtn.onclick = function(e){
-    e.stopPropagation();
-    const isOpen = menu.style.display !== "none";
-    if(isOpen){
-      menu.style.display = "none";
-      moreBtn.setAttribute("aria-expanded", "false");
-    } else {
-      const rect = moreBtn.getBoundingClientRect();
-      menu.style.display = "";
-      // 定位到按钮下方左对齐；若右侧溢出视口则右对齐
-      const menuW = menu.offsetWidth || 140;
-      let left = rect.left;
-      if(left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
-      if(left < 8) left = 8;
-      menu.style.top = (rect.bottom + 4) + "px";
-      menu.style.left = left + "px";
-      moreBtn.setAttribute("aria-expanded", "true");
-    }
-  };
-  // 点击菜单外关闭
-  document.addEventListener("click", function(e){
-    if(menu.style.display === "none") return;
-    if(!menu.contains(e.target) && e.target !== moreBtn && !moreBtn.contains(e.target)){
-      menu.style.display = "none";
-      moreBtn.setAttribute("aria-expanded", "false");
-    }
-  });
-  // 菜单项点击后关闭（委托：任一 .tbtn 被点即关闭）
-  menu.addEventListener("click", function(e){
-    if(e.target.closest(".tbtn")){
-      menu.style.display = "none";
-      moreBtn.setAttribute("aria-expanded", "false");
-    }
-  });
-  // Esc 关闭
-  document.addEventListener("keydown", function(e){
-    if(e.key === "Escape" && menu.style.display !== "none"){
-      menu.style.display = "none";
-      moreBtn.setAttribute("aria-expanded", "false");
-    }
-  });
-})();
-/* ---------- v1.9.7 侧栏「工具」组：专注工具浮层 + 更多菜单（原顶栏 #btnMore 已随工具行移除，
-   setupMoreMenu 因 moreBtn 缺失自动 no-op；此处提供侧栏入口的打开/关闭全链路） ---------- */
+
+/* ---------- v1.9.7 侧栏「工具」组：专注工具浮层（v1.15 更多菜单已移除，此处仅剩 pomo/tracker 浮层） ---------- */
 function _closeAllToolPops(){
   $$(".tool-pop").forEach(function(p){ p.style.display = "none"; });
   $$("#side [data-pomo], #side [data-tracker]").forEach(function(b){
@@ -14389,54 +14323,20 @@ function toggleToolPop(popId, btn){
   pop.style.top = top + "px";
   try{ btn.setAttribute("aria-expanded", "true"); }catch(e){ /* noop */ }
 }
-/* 打开更多工具菜单（#moreMenu 复用，锚定侧栏按钮右侧；菜单内按钮事件绑定见上文） */
-function openMoreMenuFrom(btn){
-  var menu = $("#moreMenu");
-  if(!menu || !btn) return;
-  var wasOpen = menu.style.display !== "none";
-  menu.style.display = "none";
-  $$("#side [data-moretool]").forEach(function(b){
-    try{ b.setAttribute("aria-expanded", "false"); }catch(e){ /* noop */ }
-  });
-  if(wasOpen) return;
-  menu.style.display = "";
-  var r = btn.getBoundingClientRect();
-  var menuW = menu.offsetWidth || 140;
-  var left = r.right + 8;
-  if(left + menuW > window.innerWidth - 8) left = Math.max(8, r.left - menuW - 8);
-  menu.style.left = left + "px";
-  menu.style.top = Math.min(r.top, Math.max(8, window.innerHeight - menu.offsetHeight - 8)) + "px";
-  try{ btn.setAttribute("aria-expanded", "true"); }catch(e){ /* noop */ }
-}
+
 // 点击浮层/菜单外关闭（点侧栏对应按钮本身不视为"外部"，交由 toggle 逻辑处理）
 document.addEventListener("click", function(e){
   var t = e.target;
-  var inToolBtn = !!(t && t.closest && t.closest("#side [data-pomo], #side [data-tracker], #side [data-moretool], #btnMoreTop"));
+  var inToolBtn = !!(t && t.closest && t.closest("#side [data-pomo], #side [data-tracker]"));
   $$(".tool-pop").forEach(function(p){
     if(p.style.display !== "none" && !p.contains(t) && !inToolBtn) p.style.display = "none";
   });
-  var menu = $("#moreMenu");
-  if(menu && menu.style.display !== "none" && !menu.contains(t) && !inToolBtn){
-    menu.style.display = "none";
-    $$("#side [data-moretool]").forEach(function(b){
-      try{ b.setAttribute("aria-expanded", "false"); }catch(e2){ /* noop */ }
-    });
-  }
 });
 // Esc 一键收起浮层与菜单
 document.addEventListener("keydown", function(e){
   if(e.key !== "Escape") return;
   _closeAllToolPops();
-  var menu = $("#moreMenu");
-  if(menu) menu.style.display = "none";
 });
-// 菜单项点击后收起（委托：任一 .tbtn 被点即关闭）
-(function(){
-  var menu = $("#moreMenu");
-  if(menu) menu.addEventListener("click", function(e){
-    if(e.target && e.target.closest && e.target.closest(".tbtn")) menu.style.display = "none";
-  });
-})();
 // 消息预览文本也可点开消息中心（与铃铛同效）
 (function(){
   var mp = $("#msgPreview");
