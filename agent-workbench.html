@@ -363,6 +363,18 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    实现：外层 .card 去掉默认 padding(16px)，由内部 header 承担与 drawer-ph 相同的 16px padding */
 .page-head-card{padding:0}
 .page-head-card > .page-head{padding:var(--space-4)}
+/* 与抽屉(drawer-ph 带 1px 边框)视觉高度对齐：页面级 header 补 1px 透明边框 */
+.page-head-card > .page-head{border-top:1px solid transparent;border-bottom:1px solid transparent}
+/* 关键修复：.card .sub(0,2,0) 会覆盖 .page-head .sub(0,2,0)（后者定义在前被覆盖），
+   导致页面级标题卡 sub 被 .card 样式撑大(13px+底部16px margin)。
+   此处用更高特异性 (0,3,0) 显式恢复标题栏 sub 规格，与抽屉标题栏一致 */
+.page-head-card > .page-head .sub{margin:1px 0 0;font-size:var(--fs-xs);line-height:1.4}
+/* h2 同理：.card h2{margin:0 0 12px}(定义在后) 会覆盖 .page-head h2{margin:0}，
+   页面级标题卡 h2 被加 12px 底部 margin → 与抽屉不一致。此处强制归零 */
+.page-head-card > .page-head h2{margin:0}
+/* 抽屉侧对称修复：.drawer h2{margin:0 0 16px}(922行) 使抽屉标题栏 h2 底部多 16px →
+   与页面级(0)不一致。此处用 (0,3,0) 覆盖归零，两侧标题栏 h2 完全一致 */
+.page-head.drawer-ph h2{margin:0}
 
 /* ===== 主内容区 ===== */
 .main{flex:1;overflow:auto;padding:var(--space-5) var(--space-6);min-width:0;
