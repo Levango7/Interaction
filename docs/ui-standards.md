@@ -6,20 +6,43 @@
 
 ## 〇、页面标题栏（所有页面统一）
 
-**标准**：每个页面顶部 = `图标(ph-ic) + 大标题(h2) + 小标题(sub)`，装入带边框的标题栏卡片（"框起来"）。
+**标准**：每个页面顶部 = `图标(ph-ic) + 大标题(h2) + 小标题(sub)`，装入带边框的标题栏卡片（"框起来"），标题与内容**不在同一卡片**。
 
-| 页面 | 实现 | 状态 |
+### 统一规格（所有页面一致，禁止再用 page-head-sm / page-head-loose 变体）
+
+| 维度 | 值 |
+|---|---|
+| 容器 | `<div class="card"><header class="page-head sc-page-head">…</header></div>`（标题卡独立） |
+| 上下内边距 | `var(--space-2)`（8px） |
+| 左右内边距 | `var(--space-4)`（16px，与 .card 一致；图标距左边框线 16px） |
+| 图标尺寸 | 32×32，圆角 `--radius-md`，SVG 17px |
+| 图标背景/前景 | `--accent-soft` 背景 / `--accent` 前景（场景页允许用场景色 `--sc-*`） |
+| 图标与标题间距 | `gap: var(--space-3)`（12px） |
+| 垂直对齐 | `align-items: center`（上下居中） |
+| 大标题 | `font-size: var(--fs-lg)`（16px）、字重 600、`letter-spacing:-.01em` |
+| 小标题 | `font-size: var(--fs-xs)`（12px）、`color: var(--muted)` |
+| 大/小标题间距 | 小标题 `margin-top: 1px` |
+| 与内容卡间距 | `sc-page-head{margin-bottom:0}` + 卡片间 `gap/margin space-3` |
+
+### 逐页状态
+
+| 页面 | 标题 | 实现 |
 |---|---|---|
-| 统计 | `.card > header.page-head`（ph-ic + h2 + sub + 操作按钮） | ✅ v1.15 前已统一 |
-| 仓库 | `.recycle-header.page-head`（ph-ic + h2 + sub） | ✅ v1.15 前已统一 |
-| 设置 / AI / 插件（抽屉页） | `header.page-head.page-head-loose.drawer-ph`——v1.15 加"框"：panel 背景 + 边框 + 圆角 + 阴影 + 内边距 | ✅ v1.15 统一 |
-| 文档（使用指南） | `header.help-header.page-head`——v1.15 改为 ph-ic + h2 + sub + 返回按钮，复用 help-page 卡片框 | ✅ v1.15 统一 |
-| Agent | ❌ 已删除（v1.15 移除冗余侧栏菜单，原指向 AI 配置） | ✅ 删除 |
+| 概览 | 概览 | `.card > header.page-head.sc-page-head` ✅ |
+| 统计 | 统计（与侧栏一致） | ✅ 标题独立卡，高级报表按钮在内容区操作卡 |
+| 仓库 | 仓库 | ✅ 标题独立卡 |
+| 回收站 | 回收站 | ✅ 标题独立卡 |
+| 场景（办公/编程/…） | 场景名 · 任务看板 | ✅ 独立卡（图标用场景色） |
+| 设置 / AI / 插件（抽屉） | 设置 / AI 配置 / 插件市场 | ✅ drawer-ph 独立框卡（内边距统一 space-4） |
+| 文档 | 文档（与侧栏一致） | ✅ help-page-wrap 标题卡 + 正文卡分离 |
+| Agent | — | ❌ 已删除菜单 |
 
 **规则**：
-- 新增页面一律用 `header.page-head`（图标 `span.ph-ic` + `div.ph-tx > h2 + p.sub`），需要"框"时加卡片类（`card` / `drawer-ph` 同款边框）。
-- 禁止再手写 `<h2>标题</h2>` 裸标题（无图标、无副标题、无框）。
-- 侧栏导航项与页面标题一一对应；占位/冗余菜单（点击只转发到另一页）不允许存在，应删除入口。
+- 新增页面一律用 `header.page-head`（图标 `span.ph-ic` + `div.ph-tx > h2 + p.sub`），标题卡独立成 `<div class="card">`。
+- 标题文字 = 侧栏菜单名（三处一致：侧栏 / 标题栏 / 页面 h2）。
+- 操作按钮（如"高级报表"）不放标题栏，放内容区。
+- 禁止再手写裸 `<h2>标题</h2>`；`page-head-sm` / `page-head-loose` 变体已废弃。
+- 侧栏导航项与页面标题一一对应；占位/冗余菜单不允许存在。
 
 ---
 
