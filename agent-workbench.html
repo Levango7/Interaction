@@ -518,7 +518,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat{flex:1;overflow:auto;border:1px solid var(--line);
   border-radius:var(--radius-lg);
   padding:var(--space-3);background:var(--panel);box-shadow:var(--shadow-1);
-  margin:var(--space-2) var(--space-3) var(--space-1);min-height:0}
+  margin:var(--space-2) var(--space-3) var(--space-3);min-height:0}
 .msg{margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-lg);
   font-size:var(--fs-base);max-width:88%;white-space:pre-wrap;word-break:break-word;line-height:1.6;
   box-shadow:var(--shadow-1)}
@@ -585,8 +585,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-model-select:hover{border-color:var(--accent)}
 /* 面板内消息区：覆盖 .chat 原有边框/高度，让其填满面板 */
 /* 消息槽用 --bg（与主区同款浅灰）：右栏白底 + 浅灰消息槽 + 白色头/输入区，层次分明 */
+/* v1.15：margin-bottom 沿用通用 .chat 的 space-3（12px），使消息卡下框线与工具栏
+   分割线(border-top)之间留出空隙，不再重叠 */
 .chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
-  padding:var(--space-3);background:var(--bg);margin-bottom:0;display:flex;flex-direction:column;gap:var(--space-2)}
+  padding:var(--space-3);background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
 .chat-panel .chat-toolbar{margin:0;padding:var(--space-2) var(--space-3);border-top:1px solid var(--line);
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
