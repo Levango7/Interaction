@@ -22,9 +22,10 @@
 :root{
   /* ===== Apple Minimalist 配色（柔和、干净、有呼吸感） =====
      v1.15：亮色底布加深，白色 card 浮于其上层次更分明 */
-  --bg:#ececf1; --panel:#ffffff; --panel2:#f4f4f8; --line:#e2e2e8;
+  --bg:#dfe1e8; --panel:#ffffff; --panel2:#f3f4f8; --line:#d3d6df;
+  /* v1.15 P3：主区底布加深一档（240→223），白色卡片浮于其上更突出，背景占比由 91% 降至 70% 附近 */
   /* v1.9.5：侧栏专属背景（比主区底布略深一档的冷灰，让四区域层次分明：侧栏→主区→白卡） */
-  --side-bg:#e6e6ec;
+  --side-bg:#c9ccd6;
   /* 顶栏第二行表面渐变（亮色层次；暗色/暖色主题各自覆盖） */
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
   --text:#1d1d1f; --muted:#5e5e63; --accent:#0a6cbd;
@@ -87,8 +88,8 @@ button{transition:transform var(--transition-fast),opacity var(--transition-fast
 button:active:not([disabled]){transform:scale(.97)}
 button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 button[disabled]:active{transform:none}
-input,select,textarea{font-family:inherit;font-size:var(--fs-lg);border:1px solid var(--line);
-  border-radius:var(--radius-md);padding:10px 12px;background:var(--panel);color:var(--text);width:100%;
+input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
+  border-radius:var(--radius-md);padding:6px 10px;background:var(--panel);color:var(--text);width:100%;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-sm)}
@@ -130,7 +131,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   background:var(--side-bg);border-bottom:1px solid var(--line);flex-shrink:0}
 /* 正文工具行（原顶栏第二行，移至主区上方，小而鲜明） */
 .toolbar-row{display:flex;align-items:center;gap:var(--space-2);
-  padding:var(--space-2) var(--space-5);
+  padding:var(--space-2) var(--space-4);
   border-bottom:1px solid var(--line);
   background:var(--tb-row2-bg);
   flex-wrap:nowrap;overflow-x:auto;flex-shrink:0}
@@ -301,12 +302,12 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* ===== 主体：侧栏 + 主区 ===== */
 .body{flex:1;display:flex;min-height:0}
 .main-wrap{flex:1;display:flex;flex-direction:column;min-width:0}
-.side{width:220px;background:var(--side-bg);border-right:1px solid var(--line);
+.side{width:200px;background:var(--side-bg);border-right:1px solid var(--line);
   padding:var(--space-3) var(--space-2);overflow:auto;flex-shrink:0;transition:width .2s ease}
-.nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:8px var(--space-2);
-  border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:var(--space-1);
+.nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
+  border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
-  min-height:32px}
+  min-height:30px}
 .nav-item svg{width:16px;height:16px;flex-shrink:0}
 .nav-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item .cnt{font-size:var(--fs-xs);background:var(--surface-muted);border-radius:10px;
@@ -385,16 +386,16 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .page-head.drawer-ph h2{margin:0}
 
 /* ===== 主内容区 ===== */
-.main{flex:1;overflow:auto;padding:var(--space-5) var(--space-6);min-width:0;
-  background:var(--bg)} /* v1.9.5：显式声明主区背景=body 浅灰，白色卡片浮于其上，区域层次分明 */
+.main{flex:1;overflow:auto;padding:var(--space-3) var(--space-4);min-width:0;
+  background:var(--bg)} /* v1.15 P3：主区内边距 20/24→12/16，提升信息密度；背景由 240 加深到 223 让白卡更跳 */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  box-shadow:var(--shadow-1);padding:var(--space-4);margin-bottom:var(--space-3);
+  box-shadow:var(--shadow-1);padding:var(--space-3);margin-bottom:var(--space-2);
   transition:box-shadow var(--transition-fast),border-color var(--transition-fast)}
 .card:hover{box-shadow:var(--shadow-2);border-color:var(--accent-soft)}
-.card h2{margin:0 0 var(--space-3);font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;
+.card h2{margin:0 0 var(--space-2);font-size:var(--fs-base);font-weight:600;letter-spacing:-.01em;
   display:flex;align-items:center;gap:var(--space-2)}
-.card .sub{color:var(--muted);font-size:var(--fs-sm);margin:0 0 var(--space-4);line-height:1.5}
-.card h3{font-size:var(--fs-base);font-weight:600;margin:var(--space-5) 0 var(--space-3);
+.card .sub{color:var(--muted);font-size:var(--fs-xs);margin:0 0 var(--space-2);line-height:1.4}
+.card h3{font-size:var(--fs-sm);font-weight:600;margin:var(--space-3) 0 var(--space-2);
   display:flex;align-items:center;gap:var(--space-2)}
 .card h2 svg,.card h3 svg{width:20px;height:20px;flex-shrink:0}
 
@@ -437,12 +438,12 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .empty button{margin-top:var(--space-2)}
 
 /* ===== 表单 ===== */
-.form-row{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-3)}
-.form-row .fld{flex:1;min-width:140px}
+.form-row{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
+.form-row .fld{flex:1;min-width:120px}
 .form-row label{display:block;font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-1);
   font-weight:500;letter-spacing:.01em}
-.addbtn{padding:10px var(--space-5);border-radius:var(--radius-md);background:var(--sc,var(--accent));
-  color:var(--on-accent);font-size:var(--fs-base);min-height:44px;font-weight:600;
+.addbtn{padding:6px var(--space-3);border-radius:var(--radius-md);background:var(--sc,var(--accent));
+  color:var(--on-accent);font-size:var(--fs-sm);min-height:32px;font-weight:600;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast);letter-spacing:-.01em}
 .addbtn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .addbtn:active{filter:brightness(.92)}
@@ -488,14 +489,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== 看板视图 ===== */
 /* minmax(0,1fr)：列宽允许压缩到内容最小宽以下，防止窄主区（如平板未展开聊天面板时）卡片按钮把网格撑溢出 */
-.kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-5)}
+.kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2)}
 .kcol{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-lg);
-  padding:var(--space-4);min-height:160px}
-.kcol h4{margin:0 0 var(--space-3);font-size:var(--fs-sm);font-weight:600;
+  padding:var(--space-2);min-height:140px}
+.kcol h4{margin:0 0 var(--space-2);font-size:var(--fs-xs);font-weight:600;
   display:flex;justify-content:space-between;align-items:center;color:var(--text-dim);letter-spacing:.01em}
 .kcol h4 .n{background:var(--surface-muted);border-radius:10px;padding:1px 8px;font-size:var(--fs-xs);color:var(--text-dim-2)}
 .kcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
-  padding:var(--space-3);margin-bottom:var(--space-3);transition:box-shadow var(--transition-fast),transform var(--transition-fast),border-color var(--transition-fast);cursor:grab}
+  padding:var(--space-2);margin-bottom:var(--space-2);transition:box-shadow var(--transition-fast),transform var(--transition-fast),border-color var(--transition-fast);cursor:grab}
 .kcard:hover{box-shadow:var(--shadow-2);transform:translateY(-1px);border-color:var(--accent-soft)}
 .kcard:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .kcard.dragging{opacity:.45;transform:scale(.98);box-shadow:none}
@@ -556,10 +557,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    - 复用现有 #chat / #chatForm / #chatThinking / #chatCancel 元素（移出主内容区，挂到面板）
    - 折叠态：宽度归零 + overflow:hidden，配 transition 平滑过渡
    - 响应式：中屏收窄到 300px，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
-.chat-panel{width:360px;flex-shrink:0;display:flex;flex-direction:column;
+.chat-panel{width:300px;flex-shrink:0;display:flex;flex-direction:column;
   border-left:1px solid transparent;background:var(--panel);
   transition:width var(--transition-fast) ease,transform var(--transition-fast) ease,
-    border-color var(--transition-fast),box-shadow var(--transition-fast)} /* v1.10.0b：左侧无 border，hover/focus 时浮起高亮 */
+    border-color var(--transition-fast),box-shadow var(--transition-fast)} /* v1.15 P3：常驻 360→300，主区在 1280 屏多抢 60px；hover 仍弹回 360 */
 .chat-panel.collapsed{width:0;overflow:hidden;border-left-color:transparent}
 .chat-panel:hover,.chat-panel:focus-within{border-left-color:var(--accent-soft);
   box-shadow:inset 3px 0 0 var(--accent-soft)} /* v1.10.0b：hover/focus 边框高亮（左缘 3px accent 边 + 柔和 inset 阴影） */
@@ -775,10 +776,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 @media(max-width:1023px){.stats-cards{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:767px){.stats-cards{grid-template-columns:repeat(2,1fr)}}
 .stats-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  box-shadow:var(--shadow-1);padding:var(--space-5) var(--space-4);text-align:center;transition:box-shadow var(--transition-fast)}
+  box-shadow:var(--shadow-1);padding:var(--space-3) var(--space-3);text-align:center;transition:box-shadow var(--transition-fast)}
 .stats-card:hover{box-shadow:var(--shadow-2)}
-.stats-card-val{font-size:28px;font-weight:700;color:var(--text);line-height:1.1;letter-spacing:-.02em}
-.stats-card-lbl{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1);text-transform:uppercase;letter-spacing:.05em}
+.stats-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1.15;letter-spacing:-.02em}
+.stats-card-lbl{font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
 /* 周环比角标：胶囊样式，与主数字区分开 */
 .stats-wow{display:inline-flex;align-items:center;margin-left:6px;font-size:11px;font-weight:600;
   padding:1px 6px;border-radius:var(--radius-full,999px);vertical-align:2px;line-height:1.4;white-space:nowrap}
@@ -1028,6 +1029,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   padding:var(--space-4);margin-bottom:var(--space-4);scroll-margin-top:56px}
 .set-head{display:flex;align-items:flex-start;gap:var(--space-3);margin-bottom:var(--space-4);
   padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
+/* v1.15：AI / Agent 两个配置卡标题下无分割线（用户要求） */
+#set-ai .set-head, #set-agent .set-head{border-bottom:none;padding-bottom:0}
 .set-ic{width:36px;height:36px;border-radius:var(--radius-md);background:var(--surface-muted);
   display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
 .set-ic svg{width:18px;height:18px}
@@ -1552,18 +1555,18 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* 空状态容器：图标 + 文字 + 操作按钮引导 */
 .empty-state{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:var(--space-7) var(--space-5);text-align:center;
+  padding:var(--space-5) var(--space-4);text-align:center;
   background:var(--panel2);border:1px dashed var(--line);border-radius:var(--radius-lg);
-  color:var(--muted);font-size:var(--fs-base);gap:var(--space-2)
+  color:var(--muted);font-size:var(--fs-sm);gap:var(--space-2);min-height:140px
 }
 .empty-icon{
-  width:56px;height:56px;display:flex;align-items:center;justify-content:center;
-  color:var(--text-faint);margin-bottom:var(--space-2)
+  width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+  color:var(--text-faint);margin-bottom:var(--space-1);opacity:.7
 }
-.empty-icon svg{width:44px;height:44px}
-.empty-text{font-size:var(--fs-base);color:var(--muted);line-height:1.7;margin:0}
+.empty-icon svg{width:32px;height:32px}
+.empty-text{font-size:var(--fs-sm);color:var(--muted);line-height:1.5;margin:0;max-width:420px}
 .empty-text strong{color:var(--text-dim);font-weight:600}
-.empty-action{margin-top:var(--space-3)}
+.empty-action{margin-top:var(--space-2);display:flex;gap:var(--space-2);flex-wrap:wrap;justify-content:center}
 .empty-action .kbd{margin:0 2px}
 
 /* ===== v1.3.4-C 生活场景·健康概览卡片 ===== */
@@ -2659,6 +2662,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="set-field">
       <label for="cfgMemMax">工作记忆容量（条，20~500）</label>
       <div class="ctl"><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgSyspromptScene">场景提示词（每场景可自定义）</label>
+      <div class="ctl" style="display:flex;gap:var(--space-2);flex-wrap:wrap">
+        <select id="cfgSyspromptScene" style="flex:1;min-width:120px"></select>
+        <button type="button" class="addbtn sm" id="btnSyspromptReset" title="恢复该场景默认提示词" style="--sc:var(--muted)">恢复默认</button>
+      </div>
+      <textarea id="cfgSysprompt" rows="4" class="code-input" style="margin-top:6px;resize:vertical"
+        placeholder="自定义该场景 AI 的角色与行为提示词（留空=使用内置默认）"></textarea>
+      <div class="hint" style="font-size:12px;margin-top:4px">提示词会注入该场景每轮对话开头，定义 AI 的角色定位与回复风格。</div>
     </div>
     <div class="hint" id="agentStatus" style="font-size:12px;margin:4px 0 8px"></div>
     <div class="set-actions">
@@ -11091,7 +11104,7 @@ async function handleAiDecompose(parsed, hist){
   const scenario = parsed.scenario || active;
   hist.push({role:"user", content:parsed.raw});
   hist.push({role:"assistant", content:"正在拆解任务「"+taskTitle+"」为子任务…"});
-  if(hist.length>50) hist.splice(0, hist.length-50);
+  trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
   // 移除"正在拆解"占位
   hist.pop();
@@ -11109,7 +11122,7 @@ async function handleAiDecompose(parsed, hist){
     content += "\n发送「添加子任务」可将它们加入任务列表。";
     hist.push({role:"assistant", content, _decompose:subtasks});
   }
-  if(hist.length>50) hist.splice(0, hist.length-50);
+  trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
   return true;
 }
@@ -11123,7 +11136,7 @@ async function handleAiDecompose(parsed, hist){
 async function handleAiCodeGen(parsed, hist){
   hist.push({role:"user", content:parsed.raw});
   hist.push({role:"assistant", content:"正在生成代码（"+parsed.language+"）…"});
-  if(hist.length>50) hist.splice(0, hist.length-50);
+  trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
   hist.pop();
   const code = await aiGenerateCode(parsed.description, parsed.language);
@@ -11132,7 +11145,7 @@ async function handleAiCodeGen(parsed, hist){
   }else{
     hist.push({role:"assistant", content:code});
   }
-  if(hist.length>50) hist.splice(0, hist.length-50);
+  trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
   return true;
 }
@@ -11259,6 +11272,46 @@ async function confirmPendingDanger(){
   closeConfirmModal();
   await runChatLoop(messages, hist);
 }
+/* ---------- 上下文 token 预算管理（v1.15：从"条数截断"升级为"token 估算裁剪"） ----------
+ * 粗估算：中文≈1 token/字，英文≈4 字符/token（足够保守，不调用模型即可控制长度）。
+ * 策略：保留最近的对话，超预算时从最旧开始裁剪；至少保留 12 条（避免完全失去上下文）。
+ */
+function _estTokens(text){
+  const s = String(text || "");
+  let zh = 0, other = 0;
+  for(let i=0;i<s.length;i++){
+    const c = s.charCodeAt(i);
+    if(c >= 0x2E80 && c <= 0x9FFF) zh++;
+    else other++;
+  }
+  return zh + Math.ceil(other / 4);
+}
+function _msgTokens(m){
+  if(typeof m.content === "string") return _estTokens(m.content);
+  if(Array.isArray(m.content)) return m.content.reduce((n,p)=> n + _estTokens(p && p.text), 0);
+  return _estTokens(m.title || "");
+}
+/** 裁剪历史到 token 预算内（默认 ~6k）。预算约束下至少保留 2 条（保住最近对话）；
+ *  条数上限 50 时至少保留 12 条（避免上下文过碎）。 */
+function trimChatHist(hist, budget){
+  budget = budget || 6000;
+  if(!Array.isArray(hist)) return;
+  let total = 0;
+  for(let i=hist.length-1;i>=0;i--) total += _msgTokens(hist[i]);
+  if(total <= budget && hist.length <= 50) return;
+  let cut = 0;
+  // ① 预算约束：从最旧开始丢，至少留 2 条
+  while(cut < hist.length - 2 && total > budget){
+    total -= _msgTokens(hist[cut]);
+    cut++;
+  }
+  // ② 条数约束：超 50 条时裁到 ≤50，至少留 12 条
+  while(cut < hist.length - 12 && hist.length - cut > 50){
+    total -= _msgTokens(hist[cut]);
+    cut++;
+  }
+  if(cut > 0) hist.splice(0, cut);
+}
 /**
  * A2：取消待确认的危险操作（Modal 取消与打字取消共用入口）
  * @param {string} userText - 用户输入文本（打字取消路径）
@@ -11271,7 +11324,7 @@ function cancelPendingDanger(userText){
   hist.push({role:"assistant", content:"已取消操作：「"+title+"」。"});
   pendingConfirm=null;
   closeConfirmModal();
-  if(hist.length>50) hist.splice(0, hist.length-50);
+  trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
 }
 /**
@@ -11312,15 +11365,36 @@ function openConfirmModal(){
   $("#aiConfirmNo").onclick = ()=> cancelPendingDanger("取消");
   modal.onclick = e=>{ if(e.target===modal) cancelPendingDanger("取消"); };
 }
+/* ---------- 场景 sysprompt 可编辑（v1.15：默认取 SCENARIOS 常量，可被用户覆盖） ----------
+ * 存储：localStorage 键 wb_agent_sysprompts = { sc: "自定义提示词" }，空值回退 SCENARIOS 默认。
+ */
+function getCustomSysprompts(){
+  const v = load("wb_agent_sysprompts", null);
+  return (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+}
+function setCustomSysprompt(sc, text){
+  const map = getCustomSysprompts();
+  const t = String(text || "").trim();
+  if(t) map[sc] = t;
+  else delete map[sc];
+  save("wb_agent_sysprompts", map);
+}
+/** 取某场景生效的 sysprompt（用户覆盖优先，空则回退 SCENARIOS 默认） */
+function effectiveSysprompt(sc){
+  const c = getCustomSysprompts();
+  if(c[sc] && c[sc].trim()) return c[sc].trim();
+  return SCENARIOS[sc]?.sysprompt || "";
+}
 function chatSysPrompt(userText){
   const cfg = getCfg();
   // v1.15：话术与能力对齐——cfg.agent=false 时不引导记忆/编排（对应工具也已被 effectiveTools 剔除）
+  const base = effectiveSysprompt(active) || "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。";
   if(cfg && cfg.agent === false){
-    return (SCENARIOS[active]?.sysprompt || "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。")
+    return base
       +"\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。"
       +agentContextPrompt(userText);
   }
-  return (SCENARIOS[active]?.sysprompt || "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。")
+  return base
     +"\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。"
     +"用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。"
     +agentContextPrompt(userText);
@@ -11355,7 +11429,7 @@ async function onChatSubmit(e){
     const r=addMemory(active, memHit[2].trim());
     hist.push({role:"user", content:text});
     hist.push({role:"assistant", content: r? "好的，已记住：「"+r.text+"」（场景："+SCENARIOS[active].name+"，后续对话会自动带上）" : "没有可记住的内容"});
-    if(hist.length>50) hist.splice(0, hist.length-50);
+    trimChatHist(hist);
     save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
     return;
   }
@@ -11374,7 +11448,7 @@ async function onChatSubmit(e){
         +(taskHit.due?"，截止："+taskHit.due:"")+(taskHit.priority?"，优先级 "+taskHit.priority:"")+"）"
       : "创建任务失败："+(rj && rj.msg ? rj.msg : "未知错误");
     hist.push({role:"assistant", content:reply});
-    if(hist.length>50) hist.splice(0, hist.length-50);
+    trimChatHist(hist);
     save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
     return;
   }
@@ -11384,7 +11458,7 @@ async function onChatSubmit(e){
     const r = executeNaturalLanguageAction(actionHit);
     hist.push({role:"user", content:text});
     hist.push({role:"assistant", content: r.ok ? r.msg : "操作失败："+r.msg});
-    if(hist.length>50) hist.splice(0, hist.length-50);
+    trimChatHist(hist);
     save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
     return;
   }
@@ -11462,7 +11536,7 @@ async function runChatLoop(messages, hist){
     chatController=null;
     showChatThinking(false);
   }
-  if(hist.length>50) hist.splice(0, hist.length-50);
+  trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist);
   renderChat(); scrollChat();
 }
@@ -13155,6 +13229,26 @@ function openDrawer(){ const cfg=getCfg();
   const teInp=$("#cfgAiTemperature"); if(teInp) teInp.value = (cfg.aiTemperature!==undefined && isFinite(Number(cfg.aiTemperature))) ? String(cfg.aiTemperature) : "";
   // R5：工作记忆容量回填（空 = 默认 60）
   const mmInp=$("#cfgMemMax"); if(mmInp) mmInp.value = (cfg.memMax!==undefined && isFinite(Number(cfg.memMax))) ? String(cfg.memMax) : "";
+  // v1.15：场景 sysprompt 编辑器回填（选择器填充 + 当前场景文本加载）
+  const spSel=$("#cfgSyspromptScene");
+  if(spSel){
+    spSel.innerHTML = sanitizeHtml(ORDER.map(sc=>
+      `<option value="${esc(sc)}">${esc(SCENARIOS[sc]?.name || sc)}</option>`
+    ).join(""));
+    spSel.value = active;
+    const spTa=$("#cfgSysprompt"); if(spTa) spTa.value = getCustomSysprompts()[active] || "";
+    spSel.onchange = function(){
+      const sc = spSel.value;
+      const ta=$("#cfgSysprompt"); if(ta) ta.value = getCustomSysprompts()[sc] || "";
+    };
+  }
+  const spReset=$("#btnSyspromptReset");
+  if(spReset) spReset.onclick = function(){
+    const sc = (spSel && spSel.value) || active;
+    setCustomSysprompt(sc, "");
+    const ta=$("#cfgSysprompt"); if(ta) ta.value = "";
+    try{ toast("已恢复「"+(SCENARIOS[sc]?.name||sc)+"」默认提示词", "ok"); }catch(e){}
+  };
   renderScBox();
   renderProfileSelect();
   fillProfileForm(getActiveProfile());
@@ -13347,6 +13441,9 @@ async function saveCfg(){
     const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
     // R5：工作记忆容量持久化；留空 = 默认 60，范围校验在 getMemMax（20~500）
     const mmInp=$("#cfgMemMax"); if(mmInp){ const v=mmInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.memMax=Number(v); else delete cfg.memMax; }
+    // v1.15：保存当前场景自定义 sysprompt（空则恢复默认）
+    const spTa=$("#cfgSysprompt");
+    if(spTa){ setCustomSysprompt(active, spTa.value); }
     // 清掉可能残留的旧单 cfg 字段（已迁入 profiles）
     delete cfg.base; delete cfg.key; delete cfg.model;
     _cfgCache = cfg;
@@ -14229,7 +14326,7 @@ function showMemories(){
   const mems=getMemories();
   const lines = mems.length ? mems.map(m=>"- ["+(m.scope==="global"?"全局":(SCENARIOS[m.scope]?SCENARIOS[m.scope].name:m.scope))+"] "+m.text+"（id:"+m.id+"）").join("\n") : "（暂无记忆。对我说「记住：xxx」或在对话中让我用 remember 工具记住即可）";
   hist.push({role:"assistant", content:"工作记忆（"+mems.length+" 条）：\n"+lines});
-  if(hist.length>50) hist.splice(0, hist.length-50);
+  trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
 }
 $("#btnExport").onclick = doExport; // v1.14 生物识别门禁移除，导出直接执行
@@ -15337,6 +15434,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     getTasks, setTasks, getRec, setRec, getLinks,
     SCENARIOS, ORDER, TOOLS, DEFAULT_LINKS, PREFIX, MVP_SCOPE,
     effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
+    effectiveSysprompt, setCustomSysprompt, trimChatHist, // v1.15：sysprompt 可编辑 + 上下文 token 预算
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
