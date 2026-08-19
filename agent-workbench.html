@@ -20,10 +20,11 @@
 <title>Agent 工作台</title>
 <style>
 :root{
-  /* ===== Apple Minimalist 配色（柔和、干净、有呼吸感） ===== */
-  --bg:#f5f5f7; --panel:#ffffff; --panel2:#fafafc; --line:#e5e5ea;
-  /* v1.9.5：侧栏专属背景（比主区浅灰略深一档的冷灰，让四区域层次分明：侧栏→主区→白卡） */
-  --side-bg:#ececf1;
+  /* ===== Apple Minimalist 配色（柔和、干净、有呼吸感） =====
+     v1.15：亮色底布加深，白色 card 浮于其上层次更分明 */
+  --bg:#ececf1; --panel:#ffffff; --panel2:#f4f4f8; --line:#e2e2e8;
+  /* v1.9.5：侧栏专属背景（比主区底布略深一档的冷灰，让四区域层次分明：侧栏→主区→白卡） */
+  --side-bg:#e6e6ec;
   /* 顶栏第二行表面渐变（亮色层次；暗色/暖色主题各自覆盖） */
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
   --text:#1d1d1f; --muted:#5e5e63; --accent:#0a6cbd;
@@ -513,10 +514,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== 聊天 ===== */
 /* v1.15：消息区+输入区 = 一个完整卡片（消息区顶部圆角、输入区底部圆角，中间无分割线） */
-.chat{flex:1;overflow:auto;border:1px solid var(--line);border-bottom:none;
-  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+.chat{flex:1;overflow:auto;border:1px solid var(--line);
+  border-radius:var(--radius-lg);
   padding:var(--space-3);background:var(--panel);box-shadow:var(--shadow-1);
-  margin:var(--space-2) var(--space-3) 0;min-height:0}
+  margin:var(--space-2) var(--space-3) var(--space-1);min-height:0}
 .msg{margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-lg);
   font-size:var(--fs-base);max-width:88%;white-space:pre-wrap;word-break:break-word;line-height:1.6;
   box-shadow:var(--shadow-1)}
@@ -591,7 +592,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
 .chat-input-area{margin:0 var(--space-3) var(--space-3);
-  border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);
+  border:1px solid var(--line);border-radius:var(--radius-lg);
   background:var(--panel);display:flex;flex-direction:column;overflow:hidden;
   box-shadow:var(--shadow-1);
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
@@ -6855,8 +6856,8 @@ function renderSide(){
   const gearBtn = `<button class="nav-item${_gearActive}" data-gear="1" id="btnGear" style="--sc:var(--muted)" title="设置" aria-label="设置">
     ${UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">设置</span></button>`;
   // v1.9.9：市场入口（v1.10.0：从系统组迁回功能组末尾，保留 v1.9.6 独立菜单页设计）
-  const pluginBtn = `<button class="nav-item${_pluginActive}" data-pluginpage="1" id="sideBtnPlugin" style="--sc:#8b5cf6" title="市场" aria-label="市场">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg><span class="nm">市场</span></button>`;
+  const pluginBtn = `<button class="nav-item${_pluginActive}" data-pluginpage="1" id="sideBtnPlugin" style="--sc:#8b5cf6" title="插件" aria-label="插件">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg><span class="nm">插件</span></button>`;
   // v1.15：图表入口（直接打开图表商店，独立页面）
   const chartBtn = `<button class="nav-item" data-chartstore="1" style="--sc:#5b21b6" title="图表商店" aria-label="图表商店">
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nm">图表</span></button>`;
@@ -7098,6 +7099,8 @@ function openWarehouse(tab){
    - 简化实现：拖动用 mousedown/move/up；大小用 8 个控制点
 */
 function openChartStore(){
+  // v1.15 修复：从市场(抽屉)切到图表页时先关闭抽屉，避免新页面被覆盖层挡住
+  if(typeof closeDrawer === "function") closeDrawer();
   // 图表库（静态）——不用 emoji，用纯文字 + 矢量图标
   // v1.15：移除"日历"（用户要求；日历功能在应用页）
   var chartLibs = [
@@ -7352,6 +7355,8 @@ function setupSideToggle(){
 /* v1.15：应用独立页面——日历/天气/闹钟/萌宠/指针特效 五个应用卡片入口
    渲染到 #main（与图表商店/仓库页同模式），点击各卡片打开对应 modal */
 function openAppPage(){
+  // v1.15 修复：从市场(抽屉)切到应用页时先关闭抽屉，避免新页面被覆盖层挡住
+  if(typeof closeDrawer === "function") closeDrawer();
   uiView = "app";
   renderSide();
   const apps = [
