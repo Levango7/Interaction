@@ -362,6 +362,13 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* v1.15 P2：标题栏高度统一——主页面标题卡与抽屉(drawer-ph)高度一致(64px)
    实现：外层 .card 去掉默认 padding(16px)，由内部 header 承担与 drawer-ph 相同的 16px padding */
 .page-head-card{padding:0}
+/* 特异性修复：.page-head-card(0,1,0) 会被 .card(0,1,0) 覆盖（card 定义在后），
+   导致标题卡仍带 16px×2 padding → 卡高 116px 而非 82px。
+   提升为 .card.page-head-card(0,2,0) 确保 padding 归零 */
+.card.page-head-card{padding:0}
+/* 卡高精确一致(82px)：页面级标题卡去掉自身 card 边框(1px×2)，
+   边框由 header 承担——与抽屉 drawer-ph(header 自带边框)完全同构 */
+.card.page-head-card{border:none}
 .page-head-card > .page-head{padding:var(--space-4)}
 /* 与抽屉(drawer-ph 带 1px 边框)视觉高度对齐：页面级 header 补 1px 透明边框 */
 .page-head-card > .page-head{border-top:1px solid transparent;border-bottom:1px solid transparent}
