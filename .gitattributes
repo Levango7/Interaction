@@ -1,9 +1,0 @@
-# 强制源码与构建产物使用 LF 行尾，保证 scripts/build.mjs 字节级构建可复现
-# （本仓库开启 autocrlf，若不锁定，checkout 后源码变 CRLF 会导致 build --check 失真）
-* text=auto
-*.js text eol=lf
-*.mjs text eol=lf
-*.html text eol=lf
-*.json text eol=lf
-*.css text eol=lf
-*.md text eol=lf
