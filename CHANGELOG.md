@@ -2,6 +2,26 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v2.0.1] - 2026-08-21
+
+### Patch：导入数据一致性修复 + 项目目录整理
+
+**🐛 Fixed**
+- **导入后内存缓存不复位**（v2.0.0 会话层引入的回归）：`doImport` 不 reload 页面，导入新数据后内存中的 `_sessions`（会话层）与 `chats`（场景聊天）仍是旧值，导致会话管理弹窗与聊天面板显示导入前的数据，须手动刷新才一致。
+  - 新增 `_reloadChatsFromStorage()`：从 localStorage 重载场景聊天缓存
+  - `doImport` 覆盖写入后调用 `_resetSessions()` + `_reloadChatsFromStorage()`，内存态与存储即时一致
+  - 回归测试：`tests/v2-sessions.test.js` 新增 2 例（导入后会话层复位 / 场景聊天复位）
+
+**🗑️ Removed**
+- 清理确定无用的本地残留：`screenshots/`（v1.15 视觉检查临时工作区，含一次性脚本与旧截图）、`.cowork-temp/`、`coverage/`、`test-results/`（均可再生产物）
+
+**📁 Changed**
+- 项目目录整理（commit `6fcb3a7`）：版本备份归档至 `backups/`；`MERGE_DESIGN_PROPOSAL.md` 移入 `docs/`；README 新增目录结构说明与 v2.0 特性描述；`.gitignore` 补全 `.cowork-temp/`、`shots/`、`tmp-shots/`
+
+**📋 Technical**
+- 版本号 v2.0.0 → **v2.0.1**（html / manifest / package / electron / service-worker 缓存版本同步 bump）
+- 测试：全量 **600/600**（53 文件）通过；颜色令牌门禁与分层 lint 均 PASS
+
 ## [v2.0.0] - 2026-08-21
 
 ### Major Merge Refactor：基底 v1.15.0 + 靶向回填 + 清理收尾

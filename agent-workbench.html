@@ -3335,7 +3335,7 @@ var _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.0.0";
+const VERSION = "2.0.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
 const BUILD_TAG = "20260821";
@@ -5542,6 +5542,16 @@ function _mirrorChatToSession(k, v){
 }
 /** 测试间复位会话层内存态（供 __test 使用，避免跨用例污染） */
 function _resetSessions(){ _sessions = null; _activeSid = null; }
+/**
+ * v2.0.1：从 localStorage 重载场景聊天内存缓存（chats）。
+ * doImport 不 reload 页面，导入新数据后内存 chats 仍是旧值，聊天面板会显示导入前的消息；
+ * 导入/恢复后调用本函数 + _resetSessions() 使内存态与存储一致。
+ */
+function _reloadChatsFromStorage(){
+  try{
+    ORDER.forEach(function(sc){ chats[sc] = load(PREFIX+"chat_"+sc, []).slice(-50); });
+  }catch(_){ /* noop */ }
+}
 
 /* ---------- v2.0 会话管理 UI（sessionModal：左列表 + 右预览） ---------- */
 /** 打开会话管理弹窗并渲染列表 */
@@ -12724,6 +12734,8 @@ function doImport(file){
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
       _cfgCache = null; _deviceKey = null;
+      // v2.0.1：导入不 reload 页面，须复位会话层与场景聊天内存缓存，否则 UI 显示导入前旧数据
+      try{ _resetSessions(); _reloadChatsFromStorage(); }catch(_){ /* noop */ }
       clearUndoStack(); // B6：导入后清空撤销栈，避免跨数据状态误撤销
       try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 */ }
 
@@ -15820,7 +15832,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     createSession, renameSession, deleteSession,
     appendSessionMsg, getSessionMsgs, clearSessionMsgs,
     openSessionModal, closeSessionModal, renderSessionList, renderSessionPreview, bindSessionModal,
-    _resetSessions,
+    _resetSessions, _reloadChatsFromStorage,
     restoreRecycleBatch, purgeRecycleBatch, getRecyclePolicy, setRecyclePolicy, cleanupRecycle,
     buildTasksCSV, buildTasksMD, doExportCSV, doExportMD, trapFocus, closeRecycleModal,
     // v1.4-C 数据导入导出增强：CSV 字段选择 / 记录导出 / CSV 导入 / 导出预览 / 多设备同步 / 迁移日志

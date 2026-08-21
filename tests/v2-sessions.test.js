@@ -1,8 +1,9 @@
 /**
  * v2.0 多 Session 聊天存储层测试
  * 覆盖：懒加载迁移 / CRUD / 激活切换 / save() 写穿镜像 / 弹窗 UI 渲染
+ * v2.0.1：doImport 后内存缓存复位回归（导入不 reload，须复位 _sessions + chats）
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
 
 function freshWin() {
@@ -136,5 +137,87 @@ describe("v2.0 多 Session 聊天存储层", () => {
     const list = win.document.querySelector("#sessList");
     expect(list.innerHTML).toContain("健身计划");
     expect(list.innerHTML).not.toContain("工作周报");
+  });
+});
+
+describe("v2.0.1 doImport 内存缓存复位回归", () => {
+  const PREFIX = "wb_agent_";
+
+  // stub FileReader：readAsText 后用给定内容触发 onload（模拟浏览器异步读取）
+  function makeFakeReader(content) {
+    return class FakeFileReader {
+      constructor() { this.result = ""; }
+      readAsText() {
+        this.result = content;
+        setTimeout(() => { if (typeof this.onload === "function") this.onload({ target: this }); }, 0);
+      }
+    };
+  }
+
+  it("导入后会话层复位：getSessions 反映导入数据而非旧内存缓存", async () => {
+    const win = freshWin();
+    const __test = win.__test;
+    const toastSpy = vi.spyOn(win, "toast");
+
+    // 本地先建一个会话并写入消息（填充内存缓存 _sessions）
+    const local = __test.createSession("office", "本地旧会话");
+    __test.appendSessionMsg(local.id, { role: "user", content: "本地消息" });
+    expect(__test.getSessions().some((s) => s.title === "本地旧会话")).toBe(true);
+
+    // 构造导入数据：一份不同的会话列表
+    const imported = [{ id: "s_imported", title: "导入的新会话", sc: "code", createdAt: "2026-08-21T00:00:00.000Z", updatedAt: "2026-08-21T00:00:00.000Z", msgs: [{ role: "user", content: "导入消息" }] }];
+    const payload = {};
+    payload[PREFIX + "ai_sessions"] = JSON.stringify(imported);
+    payload[PREFIX + "ai_active_session"] = JSON.stringify("s_imported");
+    const CONTENT = JSON.stringify(payload);
+
+    const origFR = win.FileReader;
+    win.FileReader = makeFakeReader(CONTENT);
+    try {
+      win.doImport({ name: "backup.json" });
+      await vi.waitFor(() => {
+        expect(toastSpy).toHaveBeenCalledWith("导入成功，数据已恢复", "ok");
+      }, { timeout: 2000, interval: 20 });
+    } finally {
+      win.FileReader = origFR;
+      toastSpy.mockRestore();
+    }
+
+    // 导入后内存缓存已复位：getSessions 重新从存储读取，反映导入数据
+    const list = __test.getSessions();
+    expect(list.some((s) => s.id === "s_imported" && s.title === "导入的新会话")).toBe(true);
+    expect(list.some((s) => s.title === "本地旧会话")).toBe(false);
+  });
+
+  it("导入后场景聊天复位：getChat 反映导入数据而非旧内存缓存", async () => {
+    const win = freshWin();
+    const __test = win.__test;
+    const toastSpy = vi.spyOn(win, "toast");
+
+    // 本地先写场景聊天（填充内存 chats）
+    __test.appendChat("office", { role: "user", content: "本地聊天" });
+    expect(__test.getChat("office").some((m) => m.content === "本地聊天")).toBe(true);
+
+    // 导入一份不同的 office 聊天
+    const payload = {};
+    payload[PREFIX + "chat_office"] = JSON.stringify([{ role: "user", content: "导入的聊天" }]);
+    const CONTENT = JSON.stringify(payload);
+
+    const origFR = win.FileReader;
+    win.FileReader = makeFakeReader(CONTENT);
+    try {
+      win.doImport({ name: "backup.json" });
+      await vi.waitFor(() => {
+        expect(toastSpy).toHaveBeenCalledWith("导入成功，数据已恢复", "ok");
+      }, { timeout: 2000, interval: 20 });
+    } finally {
+      win.FileReader = origFR;
+      toastSpy.mockRestore();
+    }
+
+    // 导入后 chats 已从存储重载：反映导入数据
+    const chat = __test.getChat("office");
+    expect(chat.some((m) => m.content === "导入的聊天")).toBe(true);
+    expect(chat.some((m) => m.content === "本地聊天")).toBe(false);
   });
 });
