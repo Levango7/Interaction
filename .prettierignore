@@ -1,0 +1,17 @@
+node_modules/
+electron/node_modules/
+electron/dist/
+.codeartsdoer/
+2026-*/
+Claw/
+Projects/
+deliverables/
+deploy/
+docs/
+document-generate-pipeline/
+.workbuddy/
+tmp.js
+tmp.css
+数擎*.html
+service-worker.js
+manifest.json

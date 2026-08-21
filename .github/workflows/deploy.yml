@@ -1,0 +1,34 @@
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare deploy files
+        run: |
+          mkdir -p _deploy
+          npm ci
+          npm run build:prod
+          cp agent-workbench.prod.html _deploy/agent-workbench.html
+          cp manifest.json _deploy/
+          cp icon.svg _deploy/
+          # SW 用 prod 产物（CACHE_VERSION 已自动 bump，确保客户端吃到新 HTML 而非旧缓存）
+          cp service-worker.prod.js _deploy/service-worker.js
+          # 创建 index.html 跳转
+          echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=agent-workbench.html"></head></html>' > _deploy/index.html
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _deploy
+          publish_branch: gh-pages

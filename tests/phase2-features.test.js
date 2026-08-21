@@ -1,0 +1,64 @@
+﻿/**
+ * 第 2 期 · 回归验证（v1.13 → v1.15 裁剪）
+ * ① 多模态：v1.14 已移除（_visionContent 删除），保留 _chatContentToText 历史数组消息兼容
+ * ② 画布：注入器接线后 aiReasoning 节点真调 chatOnce；CRUD+SVG 渲染
+ * ④ 集成：状态薄封装、Notion 连接验证、pull 写回
+ */
+import { describe, it, expect, beforeEach } from "vitest";
+import { loadApp } from "./helpers/loadApp.js";
+
+function freshWin() {
+  const win = loadApp();
+  win.localStorage.clear();
+  return win;
+}
+const BASE = { sc: "code", status: "todo", doneAt: null, priority: "P0", note: "", tags: [], created: Date.now(), due: "" };
+
+describe("第 2 期 · 多模态历史兼容（2b）", () => {
+  let win;
+  beforeEach(() => { win = freshWin(); });
+
+  it("_chatContentToText 可回解历史数组 content（v1.14 前多模态遗留消息）", () => {
+    // v1.14 已移除多模态（_visionContent 等删除），但历史消息可能仍是数组格式，渲染层需兜底转文本
+    const c = [{ type: "text", text: "看这张图" }, { type: "image_url", image_url: { url: "data:image/png;base64,AAA" } }];
+    const t = win._chatContentToText(c);
+    expect(t).toContain("看这张图");
+    expect(t).toContain("[图×1]");
+  });
+
+  it("renderChat 兼容数组 content（文本 + 图片计数标记，不崩溃）", () => {
+    // chats 为脚本内 let 绑定（非 window 属性），经 eval 注入确保 getChat(active) 命中
+    win.eval('chats.office = [{ role: "user", content: [{ type: "text", text: "看这张架构图" }, { type: "image_url", image_url: { url: "data:image/png;base64,AA" } }] }];');
+    win.renderChat();
+    const html = win.document.querySelector("#chat").innerHTML;
+    expect(html).toContain("看这张架构图");
+    expect(html).toContain("[图×1]");
+  });
+});
+
+describe("第 2 期 · 外部集成（2d）", () => {
+  let win;
+  beforeEach(() => { win = freshWin(); });
+
+  it("integrationGetStatus 三态：未注册/已连接", () => {
+    expect(win.integrationGetStatus("notion")).toEqual({ connected: false, reason: "not_registered" });
+    win.integrationSetHttpClient(async () => ({ ok: true, status: 200, body: { object: "user", id: "u1", name: "Bot" } }));
+    return Promise.resolve(win.notionConnect({ token: "secret-x", databaseId: "db1" })).then((p) => {
+      expect(p).toBeTruthy();
+      const st = win.integrationGetStatus("notion");
+      expect(st.connected).toBe(true);
+      expect(st.verified).toBe(true);
+    });
+  });
+
+  it("_intNotionPullWriteback：按 synced 映射 pull 并合并写回任务", async () => {
+    win.__test.setTasks([{ id: "t1", ...BASE, title: "本地旧标题" }]);
+    win.localStorage.setItem("wb_integration_sync_state", JSON.stringify({
+      notion: { lastSyncAt: 1, syncedItems: { t1: { remoteId: "r1", type: "task", syncedAt: 1 } } },
+    }));
+    win.notionSyncTask = async (t, dir) => (dir === "pull" ? { success: true, action: "pulled", updatedTask: { title: "远程新标题" } } : { success: false });
+    const n = await win._intNotionPullWriteback();
+    expect(n).toBe(1);
+    expect(win.__test.getTasks().find((t) => t.id === "t1").title).toBe("远程新标题");
+  });
+});
