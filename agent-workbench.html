@@ -127,7 +127,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    v1.9.7：背景改 --side-bg（与侧栏同灰）——原 --panel 白与右栏/白卡同色，顶栏/正文/右栏三区不辨界限；
    现为「顶+侧灰框 → 正文浅灰 → 右栏白」三层结构，暗色/高对比度/护眼主题经同名令牌自动同步 */
 .topbar{display:flex;flex-direction:row;align-items:center;gap:var(--space-3);
-  padding:var(--space-3) var(--space-6);
+  padding:var(--space-2) var(--space-6);
   background:var(--side-bg);border-bottom:1px solid var(--line);flex-shrink:0}
 /* 正文工具行（原顶栏第二行，移至主区上方，小而鲜明） */
 .toolbar-row{display:flex;align-items:center;gap:var(--space-2);
@@ -1391,7 +1391,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* 移动端 <768px：底部导航触摸友好，表单全宽，看板单列 */
 @media(max-width:767px){
-  .topbar{padding:var(--space-3) var(--space-3)}
+  .topbar{padding:var(--space-2) var(--space-3)}
   /* 工具行与内容块边距对齐（.main padding 16px，侧栏已变底栏不占左侧） */
   .toolbar-row{padding:var(--space-1) var(--space-4) var(--space-2);gap:var(--space-1)}
   .tbtn{padding:var(--space-2);flex-shrink:0}
@@ -1400,6 +1400,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .side{width:100%;position:fixed;bottom:0;left:0;right:0;display:flex;gap:var(--space-1);overflow-x:auto;
     padding:var(--space-1) var(--space-2);padding-bottom:calc(var(--space-1) + var(--safe));z-index:var(--z-sidebar);border-right:none;
     border-top:1px solid var(--line);background:var(--panel)}
+  /* 移动端侧栏：分组标签独立成行，强制 block 纵向排列，增加对比度 */
+  .side{display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:0}
+  .nav-group{font-size:var(--fs-xs);font-weight:700;color:var(--text-dim);letter-spacing:.06em;
+    padding:var(--space-3) var(--space-3) var(--space-1);text-transform:uppercase;user-select:none;
+    border-bottom:1px solid var(--line);flex-shrink:0}
   .nav-item{flex-direction:column;gap:2px;width:auto;margin:0;padding:var(--space-2) var(--space-3);font-size:var(--fs-xs);
     flex-shrink:0;min-height:44px;min-width:56px;justify-content:center}
   .nav-item .nm{font-size:var(--fs-xs)}
