@@ -1,4 +1,4 @@
-# Agent 工作台（v1.15.0）
+# Agent 工作台（v2.0.0）
 
 一个跑在 Windows 上的**套壳 Agent 工作台**：把办公 / 编程 / 学习 / 生活四类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -42,6 +42,8 @@
 - **可选插件（插件市场）**：健康助手（运动/体重/睡眠/喝水记录 + 健康概览，挂载到生活场景）默认关闭，需要时在「设置 → 插件市场」启用/禁用/移除。
 - **数据总览**：近 14 天完成趋势折线图 + 本月日历热力图 + 各场景进度条；顶部全局搜索跨场景检索。
 - **AI 接入（可选）**：设置里填 API Key（兼容 OpenAI 格式，DeepSeek / 通义 / 豆包 等均可），每个场景的 AI 助手可**调用工具**真正创建/修改/删除任务、查询/搜索/添加资料/导出。
+- **多会话管理（v2.0 新增）**：AI 聊天支持多 Session——会话集中存储（`ai_sessions`），可新建/重命名/删除/搜索，首条用户消息自动命名；首次启动自动从旧场景聊天迁移历史。聊天面板头部「☰」打开会话管理弹窗（左列表 + 右消息预览）。
+- **侧栏「工具」分区（v2.0 新增）**：萌宠 / 闹钟 / 天气一键直达弹窗，番茄钟 / 时间追踪弹出浮层——专注工具不再藏在应用页深处。
 - **Agent 能力（默认开启，设置可关）**：在 AI 工具之上扩展三层自主能力——
   - **工作记忆**：助手可用 `remember`/`recall`/`forget` 工具沉淀用户偏好与决定，按场景隔离、近期+命中加权召回、自动注入对话上下文（也可对我说「记住：xxx」直接写入）；最多 60 条环形截断。
   - **多步目标编排**：`plan` 工具把一句话目标拆成有序步骤，激活后对话循环上限由 6 轮放宽至 12 轮，助手逐步执行并用 `complete_step`/`complete_goal` 推进与收尾（单目标聚焦，新目标自动顶替旧的）。
@@ -145,9 +147,9 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v1.15.0**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v2.0.0**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v1.15.0 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v2.0.0 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 相关文件
 
@@ -155,3 +157,22 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - `启动Agent工作台.bat` — Edge 应用模式启动器
 - `启动本地服务.bat` — 本地服务模式启动器（解决 AI 跨域）
 - `electron/` — 桌面封装（见 [electron/README.md](electron/README.md)）
+
+## 目录结构
+
+```
+Interaction/
+├─ agent-workbench.html        # 工作台本体（单一交付物，UI+逻辑+数据全内联）
+├─ index.html                  # 入口跳转页（重定向到 agent-workbench.html）
+├─ manifest.json               # PWA 清单
+├─ service-worker.js           # PWA Service Worker（离线缓存 + 后台同步 + 推送）
+├─ icon.svg                    # 应用图标
+├─ 启动Agent工作台.bat          # Edge 应用模式启动器
+├─ 启动本地服务.bat             # 本地服务模式启动器
+├─ backups/                    # 版本备份归档（v1.15.0-final / bak2-v1-pre-merge）
+├─ docs/                       # 设计文档（架构/UI 规范/产品范围/合并方案等）
+├─ electron/                   # Electron 桌面封装（main/preload/打包配置）
+├─ scripts/                    # 构建与门禁脚本（build/lint-colors/lint-layers/release）
+├─ tests/                      # vitest 单元测试 + tests/e2e Playwright 端到端
+└─ .github/workflows/          # CI（测试）+ CD（部署 GitHub Pages）
+```

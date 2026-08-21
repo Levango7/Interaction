@@ -36,6 +36,11 @@ test-p0.txt
 .workbuddy/
 .wb-preview-profile/
 .inscode/
+.cowork-temp/
+
+# 临时截图目录（历史遗留，已清空）
+shots/
+tmp-shots/
 
 # 系统文件
 Thumbs.db
