@@ -156,7 +156,7 @@ describe("v1.1.2 Quick Wins", () => {
         mkTask("t1", "office", "任务A", { status: "done", doneAt: Date.now() }),
         mkTask("t2", "office", "任务B"),
       ]);
-      expect(md).toContain("# Agent 工作台 · 任务清单");
+      expect(md).toContain("# Agent 工坊 · 任务清单");
       expect(md).toContain("完成率 50%");
       expect(md).toContain("## 办公");
       expect(md).toContain("| 任务A | 已完成 |");

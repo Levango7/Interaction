@@ -1,6 +1,30 @@
 # Changelog
 
-本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
+本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
+
+## [v2.2.0] - 2026-08-22
+
+### Minor：主页重构 + 仪表盘 Grafana 化 + 更名「Agent 工坊 / Agent Workshop」+ i18n 名称接线
+
+**🆕 New**
+- **主页 KPI 指标条**：页头下一行 5 张数字卡（今日待办含逾期角标 / 总任务 / 完成率 / 本周完成 / 当前连续），点击跳转对应视图；数据抽 `_calcTodayKpi()` 与统计页共用
+- **AI 助手 Hub 卡**：习惯教练 / 每日报告 / 智能推荐三卡合一（tab 切换，会话级状态保留），主页从 7 卡减至 5 区
+- **仪表盘 Grafana 化**：统计页主体改为可自定义组件网格（5 列 × 120px 行高），激活 v1.6-C 沉睡的自定义仪表盘系统（原为无入口死代码）：
+  - 展示 / 编辑两态：页头「编辑布局」按钮切换；编辑态显示拖拽手柄 + 组件移除钮 + 工具条（添加组件下拉 / 重置布局 / 完成编辑）
+  - 默认布局 7 组件（关键指标 / 任务完成趋势 / 场景分布 / 热力图 / 习惯链 / 完成时段分布 / 高级报表），甘特图 / 思维导图 / 雷达图 / 桑基图为「可添加」
+  - 布局持久化 `wb_agent_dashboard_layout`（沿用），拖拽换位即时保存；趋势 tab（周/双周/月）移入 trend 组件
+- **i18n 名称类接线**：`t()` 首批真实调用——页脚 ×2 / document.title / logo / onboarding 欢迎语 / 安装弹窗 / MD 导出 / 打印报表 / 测试通知；新增 `applyI18n()`（data-i18n 静态节点扫描）；`setLang()` 切换后即时生效；`t()` 加 TDZ 防御
+
+**🔧 Changed**
+- **更名 Agent 工作台 → Agent 工坊（英文 Agent Workshop）**，全局同步：html 17 处 / manifest（name+short_name）/ electron（窗口标题/菜单/托盘/artifactName/description）/ service-worker push 标题 / README / CONTRIBUTING / 设计规范文档 / `启动Agent工作台.bat` → `启动Agent工坊.bat` / 测试断言 2 处
+- **主页全局搜索简化**：主行 3 控件（关键词主宽 + 场景 + 状态）+「筛选 ▸」折叠钮；日期 / 标签收进高级折叠区（默认收起，含清除筛选按钮）
+
+**📋 Technical**
+- `_renderDashboardWidget` 新增 hourdist / report 分发；`renderCustomDashboard(editMode)` 参数化；`bindDashboardDnD(container)` 容器参数化（弹窗与统计页共用）；新增 `addDashboardWidget` / `removeDashboardWidget`
+- renderCoachCard / renderDailyReportCard / renderAiRecommendCard 改返回正文片段（并入 Hub 卡）；新增 `renderAiHubCard` / `_renderOvKpi`
+- i18n 字典补 `onboard.welcome`（zh/en）；`applyI18n` 导出至 `__test`
+- 新增测试 `tests/i18n-brand.test.js`（6 例：字典对齐 / t() 兜底 / 页脚双语切换 / document.title / data-i18n 节点 / 持久化）
+- 版本号 v2.1.2 → **v2.2.0**（六处同步，build tag 20260822 → 20260822b）
 
 ## [v2.1.2] - 2026-08-22
 

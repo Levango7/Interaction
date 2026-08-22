@@ -1,6 +1,6 @@
-# Agent 工作台（v2.1.1）
+# Agent 工坊（v2.2.0）
 
-一个跑在 Windows 上的**套壳 Agent 工作台**：把办公 / 编程 / 学习 / 生活四类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
+一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 编程 / 学习 / 生活四类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
 零安装、单文件、纯本地；数据存本机浏览器，不依赖任何后端服务器。
 
@@ -25,7 +25,7 @@
 
 | 形态 | 启动方式 | 适用 | 桌面能力 |
 |---|---|---|---|
-| **Edge 应用模式** | 双击 `启动Agent工作台.bat` | 零安装、最常用 | 无托盘/自启 |
+| **Edge 应用模式** | 双击 `启动Agent工坊.bat` | 零安装、最常用 | 无托盘/自启 |
 | **本地服务模式** | 双击 `启动本地服务.bat` | 需启用 AI 且避开 CORS | 无托盘/自启 |
 | **Electron exe** | `electron/` 目录打包 | 真·独立应用 | 托盘 + 开机自启 |
 
@@ -147,14 +147,14 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v2.1.1**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v2.2.0**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v2.1.1 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v2.2.0 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 相关文件
 
 - `agent-workbench.html` — 工作台本体（核心交付物）
-- `启动Agent工作台.bat` — Edge 应用模式启动器
+- `启动Agent工坊.bat` — Edge 应用模式启动器
 - `启动本地服务.bat` — 本地服务模式启动器（解决 AI 跨域）
 - `electron/` — 桌面封装（见 [electron/README.md](electron/README.md)）
 
@@ -167,7 +167,7 @@ Interaction/
 ├─ manifest.json               # PWA 清单
 ├─ service-worker.js           # PWA Service Worker（离线缓存 + 后台同步 + 推送）
 ├─ icon.svg                    # 应用图标
-├─ 启动Agent工作台.bat          # Edge 应用模式启动器
+├─ 启动Agent工坊.bat          # Edge 应用模式启动器
 ├─ 启动本地服务.bat             # 本地服务模式启动器
 ├─ backups/                    # 版本备份归档（v1.15.0-final / bak2-v1-pre-merge）
 ├─ docs/                       # 设计文档（架构/UI 规范/产品范围/合并方案等）
