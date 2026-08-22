@@ -198,14 +198,14 @@ describe("UI 一致性 · 页脚 build 标记", () => {
     __test = win.__test;
   });
 
-  it("#main > .foot 文本含 b20260822（v2.1.1）", () => {
+  it("#main > .foot 文本含 b20260822（v2.1.2）", () => {
     __test.render();
     const foot = win.document.querySelector("#main > .foot");
     expect(foot).toBeTruthy();
-    expect(foot.textContent).toMatch(/v2\.1\.1 · b20260822/);
+    expect(foot.textContent).toMatch(/v2\.1\.2 · b20260822/);
   });
 
-  it("openDrawer() 后 #drawer > .foot 文本含 b20260822（v2.1.1）", () => {
+  it("openDrawer() 后 #drawer > .foot 文本含 b20260822（v2.1.2）", () => {
     __test.openDrawer();
     const foot = win.document.querySelector("#drawer > .foot");
     expect(foot).toBeTruthy();

@@ -2,6 +2,20 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v2.1.2] - 2026-08-22
+
+### Patch：吸收 design 稿两处布局改进（折叠态纯图标 + 聊天输入区加高）
+
+> 来源：`agent-workbench.design.html` 设计稿 22 处差异中甄别出的 2 处可取改动；其余（改名「工坊」/删仪表盘「总览图」子项/「图表制作」改名）经评估拒绝——品牌名半成品（manifest 等 6 处未同步）、入口删减致功能不可达、字数节奏不符。
+
+**🔧 Changed**
+- **侧栏折叠态改纯图标模式**：宽度 64→52px；折叠时文字标签与分组标题隐藏（名称由 nav-item `title` 悬停展示，父项/子项均有兜底）；主区多出 12px 内容宽度。原 64px 折叠态的 11px 小字可读性差，属半吊子折叠。
+- **聊天输入区舒展**：`.chat-text-input` min-height 64→96px、max-height 120→200px（可预览 3-4 行长输入）；消息区底部 padding 与输入区底部 margin 由 12px 收紧至 4px，输入卡与消息列表更贴合。
+
+**📋 Technical**
+- 实测验证：折叠侧栏宽 52px / 输入框 96px / 底 margin 4px，与设计稿数值一致；品牌保持「Agent 工作台」
+- 测试：全量 **600/600** 通过；lint-colors PASS；build --check 版本一致
+
 ## [v2.1.1] - 2026-08-22
 
 ### Minor：图标系统去重合理化 + 输入框/按钮布局规范化

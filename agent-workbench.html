@@ -717,13 +717,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.15：margin-bottom 沿用通用 .chat 的 space-3（12px），使消息卡下框线与工具栏
    分割线(border-top)之间留出空隙，不再重叠 */
 .chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
-  padding:var(--space-3);background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
+  padding:var(--space-3) var(--space-3) var(--space-1);background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
 .chat-panel .chat-toolbar{margin:0;padding:var(--space-2) var(--space-3);border-top:1px solid var(--line);
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
-.chat-input-area{margin:0 var(--space-3) var(--space-3);
+.chat-input-area{margin:0 var(--space-3) var(--space-1);
   border:1px solid var(--line);border-radius:var(--radius-lg);
   background:var(--panel);display:flex;flex-direction:column;overflow:hidden;
   box-shadow:var(--shadow-1);
@@ -765,8 +765,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-attach-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent-soft)}
 .chat-attach-btn svg{width:15px;height:15px}
 /* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹）
-   v2.0.3：min-height 44→64px，输入卡上框线上移，输入区上下更舒展 */
-.chat-text-input{resize:none;min-height:64px;max-height:120px;padding:var(--space-2);
+   v2.1.2：min-height 64→96px / max 120→200px（AI 对话工具能预览 3-4 行长输入） */
+.chat-text-input{resize:none;min-height:96px;max-height:200px;padding:var(--space-2);
   border:none;border-radius:0;font-size:var(--fs-sm);background:transparent;
   color:var(--text);font-family:inherit;line-height:1.5;width:100%;
   outline:none}
@@ -1456,13 +1456,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   /* v2.0.3：三行下框线同一水平线——对话区首栏补齐到待办栏自然高（实测 45px），
      内容由 align-items:center 保持垂直居中 */
   .chat-panel-header{min-height:45px}
-  .side.collapsed{width:64px} /* v1.10.0：56→64，让"概览/统计/AI"等 2 字项在折叠态一行可显示 */
+  .side.collapsed{width:52px} /* v2.1.2：折叠态改纯图标模式（原 64px 图标+小字可读性差），
+     名称由 nav-item 的 title 属性悬停展示 */
   .side.collapsed .nav-item .cnt{display:none}
   .side.collapsed .nav-item{justify-content:center;padding:8px 4px;gap:0}
-  .side.collapsed .nav-item .nm{font-size:11px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;
-    -webkit-line-clamp:1;display:-webkit-box;-webkit-box-orient:vertical;word-break:break-all}
+  .side.collapsed .nav-item .nm{display:none}
   .side.collapsed .nav-item .side-caret{display:none}
-  .side.collapsed .nav-group{padding:var(--space-2) var(--space-1);font-size:9px;text-align:center;letter-spacing:0}
+  .side.collapsed .nav-group{display:none}
 }
 
 /* 顶栏窄屏 <600px：隐藏按钮文字只留图标 */
@@ -3480,7 +3480,7 @@ var _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.1.1";
+const VERSION = "2.1.2";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
 const BUILD_TAG = "20260822";
