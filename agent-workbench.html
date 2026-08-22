@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0067c0">
-<meta name="description" content="Agent 工作台 — 习惯链驱动的智能任务管理 PWA">
-<meta name="author" content="Agent Workbench">
+<meta name="description" content="Agent 工坊 — 习惯链驱动的智能任务管理 PWA">
+<meta name="author" content="Agent Workshop">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="./manifest.json">
@@ -17,7 +17,7 @@
 <!-- SECURITY TODO [C3]: 当前 CSP 保留 script-src 'unsafe-inline' 是因为本应用为单文件内联 JS 架构，
      移除 unsafe-inline 会导致应用完全无法运行。真正的修复依赖于 H4（模块化拆分为外部 JS/CSS 文件），
      拆分完成后可改用 nonce 或 hash 策略并移除 unsafe-inline。当前阶段仅做标记，不做破坏性变更。 -->
-<title>Agent 工作台</title>
+<title>Agent 工坊</title>
 <style>
 :root{
   /* ===== Apple Minimalist 配色（柔和、干净、有呼吸感） =====
@@ -717,13 +717,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.15：margin-bottom 沿用通用 .chat 的 space-3（12px），使消息卡下框线与工具栏
    分割线(border-top)之间留出空隙，不再重叠 */
 .chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
-  padding:var(--space-3);background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
+  padding:var(--space-3) var(--space-3) var(--space-1);background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
 .chat-panel .chat-toolbar{margin:0;padding:var(--space-2) var(--space-3);border-top:1px solid var(--line);
   justify-content:flex-start;min-height:24px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
-.chat-input-area{margin:0 var(--space-3) var(--space-3);
+.chat-input-area{margin:0 var(--space-3) var(--space-1);
   border:1px solid var(--line);border-radius:var(--radius-lg);
   background:var(--panel);display:flex;flex-direction:column;overflow:hidden;
   box-shadow:var(--shadow-1);
@@ -765,8 +765,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-attach-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent-soft)}
 .chat-attach-btn svg{width:15px;height:15px}
 /* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹）
-   v2.0.3：min-height 44→64px，输入卡上框线上移，输入区上下更舒展 */
-.chat-text-input{resize:none;min-height:64px;max-height:120px;padding:var(--space-2);
+   v2.1.2：min-height 64→96px / max 120→200px（AI 对话工具能预览 3-4 行长输入） */
+.chat-text-input{resize:none;min-height:96px;max-height:200px;padding:var(--space-2);
   border:none;border-radius:0;font-size:var(--fs-sm);background:transparent;
   color:var(--text);font-family:inherit;line-height:1.5;width:100%;
   outline:none}
@@ -839,9 +839,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chain-graph-wrap{margin-top:var(--space-2);overflow-x:auto;position:relative}
 .chain-graph{display:block;width:100%;max-width:800px;height:auto;margin:0 auto}
 .chain-graph:hover circle{transition:r .2s}
-/* P8：全局筛选控件 + 保存视图 */
+/* P8：全局筛选控件 + 保存视图（v2.2.0：主行 3 控件 + 筛选钮，日期/标签收进高级折叠区） */
 .glob-filters{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
 .glob-filters input,.glob-filters select{min-width:100px;flex:1}
+.glob-filters .glob-search-main{flex:2;min-width:160px}
+.glob-filters .glob-adv-toggle{flex:0 0 auto}
+.glob-filters-adv{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.glob-filters-adv[hidden]{display:none}
+.glob-filters-adv input,.glob-filters-adv select{min-width:100px;flex:1}
 .glob-views{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
 .glob-view-chip{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
   background:var(--surface-muted);border-radius:var(--radius-full,var(--radius));font-size:var(--fs-xs);cursor:pointer;color:var(--text-dim)}
@@ -921,6 +926,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .stats-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-3) var(--space-3);text-align:center;transition:box-shadow var(--transition-fast)}
 .stats-card:hover{box-shadow:var(--shadow-2)}
+/* v2.2.0：主页 KPI 卡（button 化 stats-card：reset 原生样式 + 可点击态） */
+.ov-kpi-card{margin-bottom:var(--space-4)}
+.ov-kpi-card .stats-cards{margin-bottom:0}
+.stats-card.ov-kpi-item{font:inherit;cursor:default}
+.stats-card.ov-kpi-item.clickable{cursor:pointer}
+.stats-card.ov-kpi-item.clickable:hover{border-color:var(--accent)}
+.stats-card.ov-kpi-item.clickable:active{transform:translateY(1px)}
+/* v2.2.0：AI 助手 Hub（三卡合一 tab；复用 .set-nav-btn 但取消吸顶） */
+.ai-hub-card .ai-hub-tabs{position:static;margin:0 0 var(--space-3);flex-wrap:wrap}
+.ai-hub-card .ai-hub-body{min-height:80px}
 .stats-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1.15;letter-spacing:-.02em}
 .stats-card-lbl{font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
 /* 周环比角标：胶囊样式，与主数字区分开 */
@@ -1456,13 +1471,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   /* v2.0.3：三行下框线同一水平线——对话区首栏补齐到待办栏自然高（实测 45px），
      内容由 align-items:center 保持垂直居中 */
   .chat-panel-header{min-height:45px}
-  .side.collapsed{width:64px} /* v1.10.0：56→64，让"概览/统计/AI"等 2 字项在折叠态一行可显示 */
+  .side.collapsed{width:52px} /* v2.1.2：折叠态改纯图标模式（原 64px 图标+小字可读性差），
+     名称由 nav-item 的 title 属性悬停展示 */
   .side.collapsed .nav-item .cnt{display:none}
   .side.collapsed .nav-item{justify-content:center;padding:8px 4px;gap:0}
-  .side.collapsed .nav-item .nm{font-size:11px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;
-    -webkit-line-clamp:1;display:-webkit-box;-webkit-box-orient:vertical;word-break:break-all}
+  .side.collapsed .nav-item .nm{display:none}
   .side.collapsed .nav-item .side-caret{display:none}
-  .side.collapsed .nav-group{padding:var(--space-2) var(--space-1);font-size:9px;text-align:center;letter-spacing:0}
+  .side.collapsed .nav-group{display:none}
 }
 
 /* 顶栏窄屏 <600px：隐藏按钮文字只留图标 */
@@ -2466,6 +2481,20 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .widget-drag{background:none;border:0;cursor:grab;color:var(--text-dim);font-size:var(--fs-base);
   padding:0 4px;line-height:1}
 .widget-drag:hover{color:var(--text)}
+/* v2.2.0：编辑态组件操作组（手柄 + 移除）与工具条 */
+.widget-ops{display:inline-flex;align-items:center;gap:2px}
+.widget-del{background:none;border:0;cursor:pointer;color:var(--muted);font-size:var(--fs-xs);
+  padding:0 4px;line-height:1;min-height:24px}
+.widget-del:hover{color:var(--danger)}
+.dashboard-widget.editing{outline:1px dashed var(--line);outline-offset:-4px}
+.dashboard-widget:not(.editing) .widget-header{cursor:default}
+.dash-toolbar{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;
+  margin-bottom:var(--space-3);padding:var(--space-3)}
+.dash-toolbar select{min-height:32px;padding:4px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--panel);color:var(--text);font-size:var(--fs-sm)}
+.dash-toolbar-hint{font-size:var(--fs-xs);color:var(--muted)}
+/* v2.2.0：统计页头操作区（编辑布局按钮宿主） */
+.ph-actions{margin-left:auto;display:flex;align-items:center;gap:var(--space-2)}
 .widget-body{padding:var(--space-3);flex:1;overflow:auto;font-size:var(--fs-sm);color:var(--text)}
 .widget-empty{color:var(--muted);text-align:center;padding:var(--space-4) 0;font-size:var(--fs-xs)}
 .dashboard-actions{display:flex;justify-content:flex-end;gap:var(--space-2);padding:var(--space-2) 0}
@@ -2604,7 +2633,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <div class="app">
   <div class="topbar">
     <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
-    <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> Agent 工作台</div>
+    <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
     <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南" style="display:none">
@@ -3203,7 +3232,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <div class="install-modal" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitle">
   <div class="install-card">
     <div class="ic" aria-hidden="true">A</div>
-    <h3 id="installTitle">安装 Agent 工作台到桌面</h3>
+    <h3 id="installTitle" data-i18n="pwa.installTitle">安装 Agent 工坊到桌面</h3>
     <p class="desc">像原生应用一样使用，离线可用、桌面快捷启动、独立窗口。</p>
     <ul class="features">
       <li><span class="check" aria-hidden="true">✓</span> 离线优先：数据本地存储，无网络也能用</li>
@@ -3480,10 +3509,10 @@ var _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.1.1";
+const VERSION = "2.2.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260822";
+const BUILD_TAG = "20260822b";
 
 
 
@@ -6716,7 +6745,7 @@ async function initCrypto(){
   // T5.3 浏览器兼容：Web Crypto 不可用（file:// 降级 / 旧浏览器 / 不安全上下文）时 warn 一次，Key 将明文存储
   if(!_cryptoReady && typeof console !== "undefined" && console.warn && !_cryptoWarned){
     _cryptoWarned = true;
-    try{ console.warn("[Agent Workbench] Web Crypto API 不可用，AI Key 将明文存储于 localStorage"); }catch(e){ /* noop */ }
+    try{ console.warn("[Agent Workshop] Web Crypto API 不可用，AI Key 将明文存储于 localStorage"); }catch(e){ /* noop */ }
   }
   const raw = load(PREFIX+"cfg", {});
 
@@ -7183,12 +7212,11 @@ async function fetchCoachAdvice(){
     return { ok: false, reason: (err && err.message) || "error", advice: [] };
   }
 }
-/* A4 渲染：AI 教练建议卡片（同步渲染缓存/loading，异步填充） */
+/* A4 渲染：AI 教练建议正文片段（v2.2.0：并入 AI 助手 Hub 卡，同步渲染缓存/loading，异步填充） */
 function renderCoachCard(){
   const cfg = getCfg();
   if(!cfg.enabled){
-    return `<div class="card coach-card"><h2>${ic("target")}AI 习惯教练</h2><p class="sub">基于最近 2 周行为数据给出 3 条个性化建议</p>` +
-      `<div class="coach-hint">尚未启用 AI。点击右上角「设置」配置 API Key 后，AI 教练将分析你的习惯模式并给出建议。</div></div>`;
+    return `<div class="coach-hint">尚未启用 AI。点击右上角「设置」配置 API Key 后，AI 教练将分析你的习惯模式并给出建议。</div>`;
   }
   const cache = load(COACH_CACHE_KEY, null);
   let adviceHtml;
@@ -7197,8 +7225,7 @@ function renderCoachCard(){
   } else {
     adviceHtml = `<div class="coach-hint" id="coachLoading">正在分析你的行为数据…</div>`;
   }
-  return `<div class="card coach-card"><h2>${ic("target")}AI 习惯教练</h2>` +
-    `<p class="sub">基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）<button class="coach-refresh" id="coachRefresh" type="button">刷新</button></p>${adviceHtml}</div>`;
+  return `<p class="sub">基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）<button class="coach-refresh" id="coachRefresh" type="button">刷新</button></p>${adviceHtml}`;
 }
 
 /* ---------- A5 习惯链状态区域（总览页用） ---------- */
@@ -9169,7 +9196,7 @@ function _onboardRenderStep(step){
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
-        <div class="onboard-title">欢迎使用 Agent 工作台</div>
+        <div class="onboard-title">${t("onboard.welcome")}</div>
         <div class="onboard-desc">这是一个帮你管理任务、养成习惯的工具。先创建你的第一个任务吧！</div>
         <div class="onboard-scenarios" id="onboardSc">
           ${ORDER.map(sc=>`<button type="button" class="onboard-sc-btn${sc===_onboardSelectedSc?" selected":""}" data-sc="${sc}">${SCENARIOS[sc].name}</button>`).join("")}
@@ -9764,16 +9791,21 @@ function renderOverview(){
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
-      <div class="ph-tx"><h2>概览</h2><p class="sub">跨场景任务总览 · 全局搜索 · 趋势与习惯</p></div>
+      <div class="ph-tx"><h2>概览</h2><p class="sub">核心指标 · 全局搜索 · 趋势与习惯</p></div>
     </header></div>
+    ${_renderOvKpi()}
     <div class="overview-grid">
-      <div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选，支持场景 / 状态 / 日期 / 标签组合）</p>
+      <div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选）</p>
         <div class="glob-filters">
-          <input id="globSearch" placeholder="关键词，如 周报 / 跑步…">
+          <input id="globSearch" class="glob-search-main" placeholder="关键词，如 周报 / 跑步…">
           <select id="globFSc" aria-label="按场景筛选"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
           <select id="globFStatus" aria-label="按状态筛选"><option value="">全部状态</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select>
+          <button type="button" id="globAdvToggle" class="addbtn sm glob-adv-toggle" aria-expanded="false">筛选 ▸</button>
+        </div>
+        <div class="glob-filters-adv" id="globAdv" hidden>
           <select id="globFDate" aria-label="按日期筛选"><option value="">不限日期</option><option value="today">今天到期</option><option value="overdue">已逾期</option><option value="week">本周到期</option></select>
           <input id="globFTag" placeholder="标签，如 urgent">
+          <button type="button" id="globAdvClear" class="addbtn sm" style="--sc:var(--muted);flex:0 0 auto">清除筛选</button>
         </div>
         <div class="glob-views" id="globViews"></div>
         <div id="globRes" style="margin-top:10px"></div></div>
@@ -9785,9 +9817,7 @@ function renderOverview(){
        <h3>各场景进度</h3><div class="bars">${bars}</div>
      </div>
       ${renderHabitChainCard()}
-       ${renderCoachCard()}
-       ${renderDailyReportCard()}
-       ${renderAiRecommendCard()}
+       ${renderAiHubCard()}
        ${renderPluginCards()}
      </div>`);
 
@@ -9802,6 +9832,22 @@ function renderOverview(){
     if(id==="globFTag"){ el.oninput=_globSearchDebounced; } // 标签输入同样防抖
     else { el.onchange=()=> renderGlob(($("#globSearch").value||"").trim().toLowerCase()); }
   });
+  // v2.2.0：高级筛选折叠区（日期/标签默认收起）
+  const advT=$("#globAdvToggle");
+  if(advT) advT.onclick=()=>{
+    const adv=$("#globAdv"); if(!adv) return;
+    const willShow=adv.hasAttribute("hidden");
+    if(willShow) adv.removeAttribute("hidden"); else adv.setAttribute("hidden","");
+    advT.setAttribute("aria-expanded", willShow?"true":"false");
+    advT.textContent=willShow?"筛选 ▾":"筛选 ▸";
+    if(!willShow){ /* 收起时若有残留筛选值则清空，避免不可见的过滤条件 */ }
+  };
+  const advC=$("#globAdvClear");
+  if(advC) advC.onclick=()=>{
+    const d=$("#globFDate"), g=$("#globFTag");
+    if(d) d.value=""; if(g) g.value="";
+    renderGlob(($("#globSearch").value||"").trim().toLowerCase());
+  };
   renderGlobViews();
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
   const cr=$("#coachRefresh");
@@ -9816,6 +9862,22 @@ function renderOverview(){
       }
     }).catch(()=>{ /* 静默失败，保留 loading 文案 */ });
   }
+  // v2.2.0：AI Hub tab 切换（会话级状态，重渲染保留）
+  $$(".ai-hub-tab").forEach(b=>{
+    b.onclick=()=>{
+      _aiHubTab = b.getAttribute("data-ai-tab") || "coach";
+      renderOverview();
+    };
+  });
+  // v2.2.0：KPI 卡点击跳转
+  $$(".ov-kpi-item[data-kpi-act]").forEach(b=>{
+    b.onclick=()=>{
+      const act = b.getAttribute("data-kpi-act");
+      if(act==="office"){ setActive("office"); render(); }
+      else if(act==="stats"){ setActive("stats"); render(); }
+      else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
+    };
+  });
   // v1.4-D AI 每日报告：绑定按钮
   const drBtn=$("#dailyReportBtn");
   if(drBtn) drBtn.onclick=()=> handleDailyReport();
@@ -9835,13 +9897,11 @@ function renderOverview(){
 function renderDailyReportCard(){
   const cfg = getCfg();
   if(!cfg.enabled){
-    return `<div class="card daily-report-card"><h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>AI 每日报告</h2><p class="sub">昨日总结 + 今日待办 + 习惯链状态 + 今日建议</p>` +
-      `<div class="coach-hint">尚未启用 AI。配置 API Key 后可生成每日报告。</div></div>`;
+    return `<div class="coach-hint">尚未启用 AI。配置 API Key 后可生成每日报告。</div>`;
   }
-  return `<div class="card daily-report-card"><h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>AI 每日报告</h2>` +
-    `<p class="sub">基于昨日完成任务、今日待办与习惯链状态，AI 生成每日报告</p>` +
+  return `<p class="sub">基于昨日完成任务、今日待办与习惯链状态，AI 生成每日报告</p>` +
     `<button type="button" class="daily-report-btn" id="dailyReportBtn">生成今日报告</button>` +
-    `<div id="dailyReportResult"></div></div>`;
+    `<div id="dailyReportResult"></div>`;
 }
 /**
  * 处理 AI 日报按钮点击：调用 generateDailyReport 并渲染结果
@@ -9875,13 +9935,11 @@ async function handleDailyReport(){
 function renderAiRecommendCard(){
   const cfg = getCfg();
   if(!cfg.enabled){
-    return `<div class="card ai-recommend-card"><h2>${ic("robot")}AI 智能推荐</h2><p class="sub">基于待办/已完成/逾期任务，推荐下一步行动</p>` +
-      `<div class="coach-hint">尚未启用 AI。配置 API Key 后可获得个性化行动建议。</div></div>`;
+    return `<div class="coach-hint">尚未启用 AI。配置 API Key 后可获得个性化行动建议。</div>`;
   }
-  return `<div class="card ai-recommend-card"><h2>${ic("robot")}AI 智能推荐</h2>` +
-    `<p class="sub">基于你的任务数据，AI 推荐 3 条下一步行动</p>` +
+  return `<p class="sub">基于你的任务数据，AI 推荐 3 条下一步行动</p>` +
     `<button type="button" class="ai-recommend-btn" id="aiRecommendBtn">获取智能推荐</button>` +
-    `<div id="aiRecommendResult"></div></div>`;
+    `<div id="aiRecommendResult"></div>`;
 }
 /**
  * v1.6-A：处理 AI 智能推荐按钮点击：调用 aiSmartRecommend 并渲染 3 条建议
@@ -9907,6 +9965,59 @@ async function handleAiRecommend(){
   }finally{
     if(btn) btn.disabled=false;
   }
+}
+
+/* ---------- v2.2.0 AI 助手 Hub 卡（教练/日报/推荐三卡合一，tab 切换） ---------- */
+let _aiHubTab = "coach"; // 会话级 tab 状态（coach / daily / recommend），跨 renderOverview 保留
+function renderAiHubCard(){
+  const cfg = getCfg();
+  const tabs = [
+    { id: "coach",     label: "习惯教练" },
+    { id: "daily",     label: "每日报告" },
+    { id: "recommend", label: "智能推荐" }
+  ];
+  const cur = tabs.some(x=>x.id===_aiHubTab) ? _aiHubTab : "coach";
+  const tabBtns = tabs.map(x=>`<button type="button" class="set-nav-btn ai-hub-tab${x.id===cur?" active":""}" data-ai-tab="${x.id}">${x.label}</button>`).join("");
+  let body;
+  if(cur === "coach") body = renderCoachCard();
+  else if(cur === "daily") body = renderDailyReportCard();
+  else body = renderAiRecommendCard();
+  return `<div class="card ai-hub-card"><h2>${ic("robot")}AI 助手</h2>` +
+    `<nav class="set-nav ai-hub-tabs" aria-label="AI 助手分区">${tabBtns}</nav>` +
+    `<div class="ai-hub-body" data-ai-panel="${cur}">${body}</div>` +
+    (cfg.enabled ? "" : `<p class="sub" style="margin-top:var(--space-2)">三个能力共用一份 AI 配置（设置 → AI）</p>`) +
+    `</div>`;
+}
+/* ---------- v2.2.0 主页 KPI：今日待办 / 总任务 / 完成率 / 本周完成 / 当前连续 ---------- */
+function _calcTodayKpi(){
+  const tasks = getTasks().filter(t=>!t.deletedAt);
+  const stats = calcStats();
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  const todayDone = tasks.filter(t => t.status==="done" && t.doneAt && t.doneAt >= today0.getTime()).length;
+  const daySet = new Set();
+  tasks.filter(t=>t.status==="done" && t.doneAt).forEach(t=>daySet.add(_ymd(new Date(t.doneAt))));
+  const curD = new Date(today0);
+  if(!daySet.has(_ymd(curD))) curD.setDate(curD.getDate()-1);
+  let currentStreak = 0;
+  while(daySet.has(_ymd(curD))){ currentStreak++; curD.setDate(curD.getDate()-1); }
+  const todayYmd = todayStr();
+  const todayTodo = tasks.filter(t => t.status!=="done" && t.due && t.due <= todayYmd).length;
+  const overdue = tasks.filter(t => t.status!=="done" && t.due && t.due < todayYmd).length;
+  return { todayTodo, overdue, total: stats.total, rate: stats.rate, weekDone: stats.weekDone, todayDone, currentStreak };
+}
+function _renderOvKpi(){
+  const k = _calcTodayKpi();
+  const items = [
+    { label: "今日待办", value: k.todayTodo, extra: k.overdue ? `<span class="stats-wow down">${k.overdue} 逾期</span>` : "", act: "office" },
+    { label: "总任务", value: k.total, act: "stats" },
+    { label: "完成率", value: k.rate + "%", act: "stats" },
+    { label: "本周完成", value: k.weekDone, act: "stats" },
+    { label: "当前连续", value: k.currentStreak + " 天", act: "chain" }
+  ];
+  return `<div class="card ov-kpi-card"><div class="stats-cards">` + items.map(c =>
+    `<button type="button" class="stats-card ov-kpi-item${c.act?" clickable":""}" data-kpi-act="${c.act||""}" title="${c.act==="office"?"查看今天要处理":c.act==="stats"?"打开统计":c.act==="chain"?"打开习惯链":""}">` +
+    `<div class="stats-card-val">${c.value}${c.extra||""}</div><div class="stats-card-lbl">${c.label}</div></button>`
+  ).join("") + `</div></div>`;
 }
 
 /* ---------- T3.3 数据统计（渲染层·内联 SVG） ---------- */
@@ -10014,109 +10125,41 @@ function renderHourDistGrid(grid){
  * 渲染统计视图（关键指标卡片 + 趋势图 + 饼图 + 时段分布 + 习惯链成功率）
  * @returns {void}
  */
+/* v2.2.0：统计页仪表盘编辑态（会话级；Grafana 式展示/配置两态） */
+let _dashEditMode = false;
 function renderStats(){
   const stats = calcStats();
   // T4.2：无任何任务数据时显示 no-stats 空状态（替代空图表/空饼图）
   if(stats.total === 0){
+    _dashEditMode = false;
     $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>`);
     return;
   }
-  // 关键指标卡片（10 个全中文：总任务/已完成/进行中/完成率/平均周期/本周完成/今日完成/当前连续/最长连续/逾期任务）
-  const avg = calcAvgCycle();
-  const wow = calcWeekOverWeek();
-  const wowBadge = wow.delta === null ? `<span class="stats-wow muted">环比 -</span>`
-    : `<span class="stats-wow ${wow.delta >= 0 ? "up" : "down"}">${wow.delta >= 0 ? "↑" : "↓"} ${Math.abs(wow.delta)}%</span>`;
-  // 今日完成：doneAt 在今天 0 点之后
-  const today0 = new Date(); today0.setHours(0, 0, 0, 0);
-  const todayDone = getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt && t.doneAt >= today0.getTime()).length;
-  // 当前连续：所有已完成任务按天聚合，从今天（今天没完成则从昨天）往前数连续天数
-  const daySet = new Set();
-  getTasks().filter(t => !t.deletedAt && t.status === "done" && t.doneAt).forEach(t => daySet.add(_ymd(new Date(t.doneAt))));
-  const curD = new Date(today0);
-  if(!daySet.has(_ymd(curD))) curD.setDate(curD.getDate() - 1);
-  let currentStreak = 0;
-  while(daySet.has(_ymd(curD))){ currentStreak++; curD.setDate(curD.getDate() - 1); }
-  // 逾期任务：未完成且截止日期早于今天
-  const todayYmd = todayStr();
-  const overdue = getTasks().filter(t => !t.deletedAt && t.status !== "done" && t.due && t.due < todayYmd).length;
-  const cards = [
-    { label: "总任务数", value: stats.total },
-    { label: "已完成", value: stats.done },
-    { label: "进行中", value: stats.total - stats.done },
-    { label: "完成率", value: stats.rate + "%" },
-    { label: "平均周期", value: avg.days === null ? "-" : avg.days + " 天" },
-    { label: "本周完成", value: stats.weekDone, badge: wowBadge },
-    { label: "今日完成", value: todayDone },
-    { label: "当前连续", value: currentStreak + " 天" },
-    { label: "最长连续", value: stats.bestStreak + " 天" },
-    { label: "逾期任务", value: overdue }
-  ];
-  // v1.10.0b：统一 page-head 风格——与概览/回收站/图表商店一致（card 包裹 + .page-head + .ph-ic）
-  // v1.15：标题栏独立成卡（"单独摘出来"），指标卡与其分离，视觉与其他页面统一；标题与侧栏菜单名一致
   const headHtml = `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${UI_ICONS.stats}</span>
-    <div class="ph-tx"><h2>统计</h2><p class="sub">关键指标、完成趋势与习惯链分析</p></div>
-  </header></div>`;
-  // v1.15 P2：每个 card 左上角要有标题——指标卡补"关键指标"
-  const cardsHtml = `<div class="card"><h2>${UI_ICONS.stats}关键指标</h2><div class="stats-cards">` + cards.map(c =>
-    `<div class="stats-card"><div class="stats-card-val">${c.value}${c.badge || ""}</div><div class="stats-card-lbl">${c.label}</div></div>`
-  ).join("") + `</div></div>`;
-  // 趋势图（周/双周/月切换）
-  const trendData = calcTrend(_statsTrendDays);
-  const trendChart = renderTrendChart(trendData, "var(--accent)");
-  const trendHtml = `<div class="card"><h2>${UI_ICONS.stats} 任务完成趋势</h2>` +
-    `<p class="sub">最近 ${_statsTrendDays} 天每天完成任务数</p>` +
-    `<div class="stats-trend-tabs">` +
-      `<button type="button" class="stats-tab${_statsTrendDays === 7 ? " active" : ""}" data-trend-days="7">周（7 天）</button>` +
-      `<button type="button" class="stats-tab${_statsTrendDays === 14 ? " active" : ""}" data-trend-days="14">双周（14 天）</button>` +
-      `<button type="button" class="stats-tab${_statsTrendDays === 30 ? " active" : ""}" data-trend-days="30">月（30 天）</button>` +
-    `</div>` +
-    `<div class="stats-trend-chart">${trendChart}</div></div>`;
-  // 场景分布饼图
-  const dist = calcSceneDist();
-  const pieHtml = `<div class="card"><h2>${UI_ICONS.stats} 场景分布</h2>` +
-    `<p class="sub">各场景任务总数占比</p>${renderPieChart(dist)}</div>`;
-  // 完成时段分布（最近 30 天）
-  const hourHtml = `<div class="card"><h2>${UI_ICONS.stats} 完成时段分布</h2>` +
-    `<p class="sub">最近 30 天：周几 × 时段完成任务数（颜色越深越多）</p>${renderHourDistGrid(calcHourDist(30))}</div>`;
-  // 习惯链成功率（SVG 环形进度图）
-  const chains = calcChainSuccess();
-  const _ringR = 20, _ringC = 2 * Math.PI * _ringR;
-  const chainsHtml = chains.length ? chains.map(c => {
-    const fromColor = SCENARIOS[c.fromSc] ? SCENARIOS[c.fromSc].color : "var(--muted)";
-    const toColor = SCENARIOS[c.toSc] ? SCENARIOS[c.toSc].color : "var(--muted)";
-    const enabledCls = c.enabled ? "" : " disabled";
-    const dashOffset = _ringC * (1 - c.rate / 100);
-    const ringSvg = `<svg class="stats-chain-ring-svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="成功率 ${c.rate}%">` +
-      `<circle cx="24" cy="24" r="${_ringR}" fill="none" stroke="var(--surface-muted)" stroke-width="4"/>` +
-      `<circle cx="24" cy="24" r="${_ringR}" fill="none" stroke="${fromColor}" stroke-width="4" stroke-dasharray="${_ringC.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" transform="rotate(-90 24 24)" stroke-linecap="round"/>` +
-      `<text x="24" y="28" text-anchor="middle" font-size="11" fill="var(--text)">${c.rate}%</text>` +
-    `</svg>`;
-    return `<div class="stats-chain${enabledCls}">` +
-      `<div class="stats-chain-head">` +
-        `<span style="color:${fromColor}">${esc(SCENARIOS[c.fromSc] ? SCENARIOS[c.fromSc].name : c.fromSc)}</span>` +
-        `<span class="arr">→</span>` +
-        `<span style="color:${toColor}">${esc(SCENARIOS[c.toSc] ? SCENARIOS[c.toSc].name : c.toSc)}</span>` +
-        `<span class="stats-chain-meta">触发 ${c.triggered} / 源完成 ${c.sourceDone}</span>` +
-      `</div>` +
-      `<div class="stats-chain-ring">${ringSvg}</div>` +
-    `</div>`;
-  }).join("") : `<div class="empty">暂无习惯链</div>`;
-  const chainCard = `<div class="card"><h2>${UI_ICONS.stats} 习惯链成功率</h2>` +
-    `<p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>${chainsHtml}</div>`;
-  // v1.15：高级报表入口从标题栏移出，置于内容区末尾独立操作卡
-  const reportCardHtml = `<div class="card report-entry-wrap"><button type="button" class="btn-primary" id="btnStatsOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报 · 对比 · 导出PDF）</button></div>`;
+    <div class="ph-tx"><h2>统计</h2><p class="sub">可自定义仪表盘——拖拽排列组件，布局自动保存</p></div>
+    <div class="ph-actions">
+      <button type="button" class="${_dashEditMode ? "btn-primary" : "addbtn sm"}" id="btnDashToggleEdit" style="--sc:var(--accent)">
+        ${_dashEditMode ? "✓ 完成编辑" : "⚙ 编辑布局"}
+      </button>
+    </div>
+  </header></div>
+  <div id="dashHost">${renderCustomDashboard(_dashEditMode)}</div>`;
 
-  $("#main").innerHTML = sanitizeHtml(headHtml + cardsHtml + trendHtml + pieHtml + hourHtml + chainCard + reportCardHtml);
+  $("#main").innerHTML = sanitizeHtml(headHtml);
 
-  // 绑定周/双周/月切换
-  $$(".stats-tab").forEach(b => b.onclick = () => {
-    const d = parseInt(b.dataset.trendDays, 10);
-    if(d === 7 || d === 14 || d === 30){ _statsTrendDays = d; renderStats(); }
-  });
-  // v1.5-D 高级报表：统计页入口
-  const srBtn=$("#btnStatsOpenReport");
-  if(srBtn) srBtn.onclick=()=>{ openReportModal("week", 0); bindReportModal(); };
+  const host = $("#dashHost");
+  if(host){
+    /* 编辑/完成切换（Grafana 式两态） */
+    const tg = $("#btnDashToggleEdit");
+    if(tg) tg.onclick = ()=>{
+      _dashEditMode = !_dashEditMode;
+      renderStats();
+    };
+    /* 工具条 + tab + 报表入口（容器级委托）；DnD 仅编辑态有意义但绑定无副作用 */
+    _bindDashToolbar(host, _dashEditMode);
+    if(typeof bindDashboardDnD === "function") bindDashboardDnD(host, _dashEditMode);
+  }
 }
 /* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
 const GLOB_VIEWS_KEY = PREFIX+"glob_views";
@@ -13055,7 +13098,7 @@ function appendFoot(){
   if(existing) existing.remove();
   const footEl = document.createElement("div");
   footEl.className = "foot";
-  footEl.textContent = "Agent 工作台 · v" + VERSION + " · b" + BUILD_TAG;
+  footEl.textContent = t("app.name") + " · v" + VERSION + " · b" + BUILD_TAG;
   main.appendChild(footEl);
 }
 
@@ -13611,7 +13654,7 @@ function buildRecsCSV(){
  */
 function buildTasksMD(tasks){
   const list = Array.isArray(tasks) ? tasks : getActiveTasks();
-  const lines = ["# Agent 工作台 · 任务清单（"+todayStr()+"）", ""];
+  const lines = ["# " + t("app.name") + " · 任务清单（"+todayStr()+"）", ""];
   if(!list.length){ lines.push("> 暂无任务。"); return lines.join("\n"); }
   const total = list.length, done = list.filter(t=>t.status==="done").length;
   lines.push("共 "+total+" 条，已完成 "+done+" 条，完成率 "+(total?Math.round(done/total*100):0)+"%。", "");
@@ -14158,7 +14201,7 @@ function _appendDrawerFoot(){
   if(existing) existing.remove();
   const footEl = document.createElement("div");
   footEl.className = "foot";
-  footEl.textContent = "Agent 工作台 · v" + VERSION + " · b" + BUILD_TAG;
+  footEl.textContent = t("app.name") + " · v" + VERSION + " · b" + BUILD_TAG;
   drawer.appendChild(footEl);
 }
 /* 把 #drawer 移到 .main-wrap 里（设置页面铺满 main-wrap），隐藏 #main */
@@ -15946,7 +15989,7 @@ async function sendTestPushNotification(){
       try {
         const reg = await navigator.serviceWorker.ready;
         if (reg && typeof reg.showNotification === "function") {
-          await reg.showNotification("Agent 工作台 · 测试通知", {
+          await reg.showNotification(t("app.name") + " · 测试通知", {
             body: "如果你看到这条通知，说明 Web Push 框架工作正常。",
             icon: "./icon.svg",
             tag: "wb-push-test"
@@ -15955,7 +15998,7 @@ async function sendTestPushNotification(){
         }
       } catch(e){ /* 降级 */ }
     }
-    new Notification("Agent 工作台 · 测试通知", {
+    new Notification(t("app.name") + " · 测试通知", {
       body: "如果你看到这条通知，说明 Web Push 框架工作正常。",
       icon: "./icon.svg",
       tag: "wb-push-test"
@@ -16396,7 +16439,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     onChatSubmit,
     bindChatPanel, renderChatDisabled,
     // 函数声明会被提升，可直接引用；MESSAGES / SUPPORTED_LANGS 是 const，
-    t, getLang, setLang, initI18n,
+    t, getLang, setLang, initI18n, applyI18n,
     get MESSAGES(){ return MESSAGES; },
     get SUPPORTED_LANGS(){ return SUPPORTED_LANGS; },
     // v1.5-B 插件/扩展体系（注册框架 + 自定义场景/卡片/链规则 + 插件市场 UI）
@@ -16493,8 +16536,9 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
 const MESSAGES = {
   zh: {
     // 通用
-    "app.name": "Agent 工作台",
+    "app.name": "Agent 工坊",
     "app.tagline": "纯本地 · 单文件",
+    "onboard.welcome": "欢迎使用 Agent 工坊",
     "common.save": "保存",
     "common.cancel": "取消",
     "common.delete": "删除",
@@ -16654,7 +16698,7 @@ const MESSAGES = {
     "pwa.install": "安装到桌面",
     "pwa.installLater": "稍后",
     "pwa.installed": "已安装",
-    "pwa.installTitle": "安装 Agent 工作台到桌面",
+    "pwa.installTitle": "安装 Agent 工坊到桌面",
     "pwa.installDesc": "像原生应用一样使用，离线可用、桌面快捷启动、独立窗口。",
 
     // 数据管理
@@ -16683,8 +16727,9 @@ const MESSAGES = {
   },
   en: {
     // Common
-    "app.name": "Agent Workbench",
+    "app.name": "Agent Workshop",
     "app.tagline": "Local-only · Single file",
+    "onboard.welcome": "Welcome to Agent Workshop",
     "common.save": "Save",
     "common.cancel": "Cancel",
     "common.delete": "Delete",
@@ -16844,7 +16889,7 @@ const MESSAGES = {
     "pwa.install": "Install to Desktop",
     "pwa.installLater": "Later",
     "pwa.installed": "Installed",
-    "pwa.installTitle": "Install Agent Workbench to Desktop",
+    "pwa.installTitle": "Install Agent Workshop to Desktop",
     "pwa.installDesc": "Use like a native app: offline-ready, desktop shortcut, standalone window.",
 
     // Data management
@@ -16910,6 +16955,11 @@ function setLang(lang){
   try{
     if(typeof localStorage !== "undefined") localStorage.setItem(PREFIX + "lang", lang);
   }catch(e){ /* 持久化失败不影响内存切换 */ }
+  // v2.2.0：名称类文案即时生效（document.title + data-i18n 静态节点）
+  try{
+    document.title = t("app.name");
+    applyI18n(document);
+  }catch(e){ /* 静态节点替换失败不影响语言切换 */ }
   // 触发重新渲染（若 render 可用）
   try{
     if(typeof render === "function") render();
@@ -16925,18 +16975,38 @@ function setLang(lang){
  * @returns {string} 翻译后的文案
  */
 function t(key, fallback){
-  const msgs = MESSAGES[_currentLang] || MESSAGES.zh;
-  const val = msgs[key];
-  if(val !== undefined) return val;
-  // fallback 到中文（确保即使 en 缺 key 也有合理输出）
-  const zhVal = MESSAGES.zh[key];
-  if(zhVal !== undefined) return zhVal;
+  /* v2.2.0：MESSAGES 为 const，模块加载早期（TDZ）或字典缺失时回退兜底，不抛错 */
+  let msgs = null;
+  try{ msgs = MESSAGES[_currentLang] || MESSAGES.zh; }catch(e){ msgs = null; }
+  if(msgs){
+    const val = msgs[key];
+    if(val !== undefined) return val;
+    // fallback 到中文（确保即使 en 缺 key 也有合理输出）
+    const zhVal = MESSAGES.zh[key];
+    if(zhVal !== undefined) return zhVal;
+  }
   // fallback 到传入的 fallback 或 key 本身
   return fallback !== undefined ? fallback : key;
 }
 
 // 模块加载时自动初始化（从 localStorage 恢复语言偏好）
-initI18n();// ===== Plugin System (v1.5-B 插件/扩展体系) =====
+initI18n();
+/**
+ * v2.2.0：扫描 [data-i18n] 节点替换 textContent（静态 HTML 名称类文案接线）
+ * @param {ParentNode} [root] - 扫描根节点，默认 document
+ * @returns {void}
+ */
+function applyI18n(root){
+  try{
+    const scope = root || document;
+    scope.querySelectorAll("[data-i18n]").forEach(function(el){
+      const key = el.getAttribute("data-i18n");
+      if(key) el.textContent = t(key);
+    });
+  }catch(e){ /* DOM 未就绪时静默跳过 */ }
+}
+// 启动时同步标题与静态节点（initI18n 已恢复语言偏好）
+try{ document.title = t("app.name"); applyI18n(document); }catch(e){ /* noop */ }// ===== Plugin System (v1.5-B 插件/扩展体系) =====
 /* ============================================================
  * 插件系统核心：注册框架 + 自定义场景 + 自定义卡片 + 自定义习惯链规则
  * ------------------------------------------------------------
@@ -17946,7 +18016,7 @@ function exportReportPDF(report){
   var w = null;
   try{ w = window.open("", "_blank"); }catch(e){ /* noop */ }
   if(!w){ toast("无法打开新窗口，请检查弹窗拦截", "warn"); return; }
-  w.document.write("<html><head><title>Agent 工作台报表</title>");
+  w.document.write("<html><head><title>" + esc(t("app.name")) + " 报表</title>");
   // 注入 CSS 变量定义（从主文档读取 :root 令牌，保证打印页颜色一致）
   w.document.write("<style>");
   w.document.write(":root{");
@@ -18936,22 +19006,25 @@ var DASHBOARD_LAYOUT_KEY = "dashboard_layout";
  * @type {Array<{id:string,name:string,defaultPos:{x:number,y:number,w:number,h:number}}>}
  */
 var DASHBOARD_WIDGETS = [
-  { id: "stats",    name: "关键指标", defaultPos: { x: 1, y: 1, w: 2, h: 1 } },
-  { id: "trend",    name: "完成趋势", defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
-  { id: "pie",      name: "场景分布", defaultPos: { x: 3, y: 1, w: 1, h: 2 } },
-  { id: "heatmap",  name: "热力图",   defaultPos: { x: 1, y: 3, w: 3, h: 1 } },
-  { id: "chain",    name: "习惯链",   defaultPos: { x: 4, y: 1, w: 1, h: 3 } },
-  { id: "gantt",    name: "甘特图",   defaultPos: { x: 1, y: 4, w: 4, h: 1 } },
-  { id: "mindmap",  name: "思维导图", defaultPos: { x: 5, y: 1, w: 1, h: 3 } },
-  { id: "radar",    name: "雷达图",   defaultPos: { x: 5, y: 4, w: 1, h: 1 } },
-  { id: "sankey",   name: "桑基图",   defaultPos: { x: 1, y: 5, w: 4, h: 1 } }
+  /* default:true 的 7 个构成默认布局；其余为「可添加」组件（v2.2.0 Grafana 化） */
+  { id: "stats",    name: "关键指标",   default: true,  defaultPos: { x: 1, y: 1, w: 2, h: 1 } },
+  { id: "trend",    name: "任务完成趋势", default: true,  defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
+  { id: "pie",      name: "场景分布",   default: true,  defaultPos: { x: 3, y: 1, w: 1, h: 2 } },
+  { id: "heatmap",  name: "热力图",     default: true,  defaultPos: { x: 4, y: 1, w: 1, h: 2 } },
+  { id: "chain",    name: "习惯链",     default: true,  defaultPos: { x: 5, y: 1, w: 1, h: 3 } },
+  { id: "hourdist", name: "完成时段分布", default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
+  { id: "report",   name: "高级报表",   default: true,  defaultPos: { x: 3, y: 3, w: 2, h: 1 } },
+  { id: "gantt",    name: "甘特图",     default: false, defaultPos: { x: 1, y: 4, w: 4, h: 1 } },
+  { id: "mindmap",  name: "思维导图",   default: false, defaultPos: { x: 5, y: 4, w: 1, h: 1 } },
+  { id: "radar",    name: "雷达图",     default: false, defaultPos: { x: 5, y: 5, w: 1, h: 1 } },
+  { id: "sankey",   name: "桑基图",     default: false, defaultPos: { x: 1, y: 5, w: 4, h: 1 } }
 ];
 /**
- * 生成默认布局
+ * 生成默认布局（v2.2.0：仅含 default:true 的核心组件）
  * @returns {Array<{id:string,pos:{x:number,y:number,w:number,h:number}}>}
  */
 function _defaultDashboardLayout(){
-  return DASHBOARD_WIDGETS.map(function(w){
+  return DASHBOARD_WIDGETS.filter(function(w){ return w.default !== false; }).map(function(w){
     return { id: w.id, pos: { x: w.defaultPos.x, y: w.defaultPos.y, w: w.defaultPos.w, h: w.defaultPos.h } };
   });
 }
@@ -19019,8 +19092,13 @@ function _renderDashboardWidget(id){
     return _renderDashboardStatsWidget();
   }
   if(id === "trend"){
-    var trendData = typeof calcTrend === "function" ? calcTrend(7) : [];
-    return typeof renderTrendChart === "function" ? renderTrendChart(trendData, "var(--accent)") : "<p class='widget-empty'>趋势图</p>";
+    var days = (typeof _statsTrendDays === "number" && _statsTrendDays) ? _statsTrendDays : 7;
+    var trendData = typeof calcTrend === "function" ? calcTrend(days) : [];
+    var chart = typeof renderTrendChart === "function" ? renderTrendChart(trendData, "var(--accent)") : "";
+    var tabs = [7,14,30].map(function(d){
+      return '<button type="button" class="stats-tab' + (days === d ? " active" : "") + '" data-trend-days="' + d + '">' + (d === 7 ? "周（7 天）" : d === 14 ? "双周（14 天）" : "月（30 天）") + '</button>';
+    }).join("");
+    return '<div class="stats-trend-tabs">' + tabs + '</div><p class="sub">最近 ' + days + ' 天每天完成任务数</p>' + chart;
   }
   if(id === "pie"){
     var dist = typeof calcSceneDist === "function" ? calcSceneDist() : [];
@@ -19030,7 +19108,35 @@ function _renderDashboardWidget(id){
     return typeof renderHeatmap === "function" ? renderHeatmap("office") : "<p class='widget-empty'>热力图</p>";
   }
   if(id === "chain"){
-    return typeof renderHabitChainStatus === "function" ? renderHabitChainStatus() : "<p class='widget-empty'>习惯链</p>";
+    /* v2.2.0：每条链的环形成功率（沿用原统计页视觉），无链时显示习惯链状态 */
+    var chains = typeof calcChainSuccess === "function" ? (calcChainSuccess() || []) : [];
+    var ringR = 20, ringC = 2 * Math.PI * ringR;
+    var chainsHtml = chains.length ? chains.map(function(c){
+      var fromColor = (typeof SCENARIOS !== "undefined" && SCENARIOS[c.fromSc]) ? SCENARIOS[c.fromSc].color : "var(--muted)";
+      var toColor = (typeof SCENARIOS !== "undefined" && SCENARIOS[c.toSc]) ? SCENARIOS[c.toSc].color : "var(--muted)";
+      var dashOffset = ringC * (1 - c.rate / 100);
+      var ringSvg = '<svg class="stats-chain-ring-svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="成功率 ' + c.rate + '%">' +
+        '<circle cx="24" cy="24" r="' + ringR + '" fill="none" stroke="var(--surface-muted)" stroke-width="4"></circle>' +
+        '<circle cx="24" cy="24" r="' + ringR + '" fill="none" stroke="' + fromColor + '" stroke-width="4" stroke-dasharray="' + ringC.toFixed(2) + '" stroke-dashoffset="' + dashOffset.toFixed(2) + '" transform="rotate(-90 24 24)" stroke-linecap="round"></circle>' +
+        '<text x="24" y="28" text-anchor="middle" font-size="11" fill="var(--text)">' + c.rate + '%</text></svg>';
+      return '<div class="stats-chain' + (c.enabled ? "" : " disabled") + '">' +
+        '<div class="stats-chain-head">' +
+        '<span style="color:' + fromColor + '">' + esc((SCENARIOS[c.fromSc] ? SCENARIOS[c.fromSc].name : c.fromSc)) + '</span>' +
+        '<span class="arr">→</span>' +
+        '<span style="color:' + toColor + '">' + esc((SCENARIOS[c.toSc] ? SCENARIOS[c.toSc].name : c.toSc)) + '</span>' +
+        '<span class="stats-chain-meta">触发 ' + c.triggered + ' / 源完成 ' + c.sourceDone + '</span></div>' +
+        '<div class="stats-chain-ring">' + ringSvg + '</div></div>';
+    }).join("") : '<div class="empty">暂无习惯链</div>';
+    return '<h3>习惯链成功率</h3><p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>' + chainsHtml;
+  }
+  if(id === "hourdist"){
+    var hd = typeof calcHourDist === "function" ? calcHourDist(30) : null;
+    if(!hd || !hd.length){ return "<p class='widget-empty'>完成时段分布</p>"; }
+    return typeof renderHourDistGrid === "function" ? renderHourDistGrid(hd) : "<p class='widget-empty'>完成时段分布</p>";
+  }
+  if(id === "report"){
+    return '<p class="sub">周 / 月 / 年报，自动汇总任务完成情况</p>' +
+      '<button type="button" class="btn-primary" id="btnStatsOpenReport"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.stats + '</span>打开高级报表</button>';
   }
   if(id === "gantt"){
     return typeof renderGanttChart === "function" ? renderGanttChart() : "<p class='widget-empty'>甘特图</p>";
@@ -19049,39 +19155,96 @@ function _renderDashboardWidget(id){
   return "";
 }
 /**
- * 渲染关键指标组件
+ * 渲染关键指标组件（v2.2.0：完整 10 指标卡，复用 .stats-cards 响应式栅格）
  * @returns {string} 关键指标 HTML
  */
 function _renderDashboardStatsWidget(){
-  var stats = typeof calcStats === "function" ? calcStats() : { total: 0, done: 0, doing: 0, todo: 0 };
-  var pct = stats.total > 0 ? Math.round(stats.done / stats.total * 100) : 0;
-  var html = '<div class="dash-stats-grid">';
-  html += '<div class="dash-stat-item"><span class="v">' + stats.total + '</span><span class="l">总任务</span></div>';
-  html += '<div class="dash-stat-item"><span class="v">' + stats.done + '</span><span class="l">已完成</span></div>';
-  html += '<div class="dash-stat-item"><span class="v">' + stats.doing + '</span><span class="l">进行中</span></div>';
-  html += '<div class="dash-stat-item"><span class="v">' + pct + '%</span><span class="l">完成率</span></div>';
+  var stats = typeof calcStats === "function" ? calcStats() : { total: 0, done: 0, rate: 0, weekDone: 0, bestStreak: 0 };
+  var kpi = typeof _calcTodayKpi === "function" ? _calcTodayKpi() : { todayDone: 0, currentStreak: 0, overdue: 0 };
+  var avg = typeof calcAvgCycle === "function" ? calcAvgCycle() : { days: null };
+  var cards = [
+    { label: "总任务数", value: stats.total },
+    { label: "已完成", value: stats.done },
+    { label: "进行中", value: stats.total - stats.done },
+    { label: "完成率", value: stats.rate + "%" },
+    { label: "平均周期", value: avg.days === null || avg.days === undefined ? "-" : avg.days + " 天" },
+    { label: "本周完成", value: stats.weekDone },
+    { label: "今日完成", value: kpi.todayDone },
+    { label: "当前连续", value: kpi.currentStreak + " 天" },
+    { label: "最长连续", value: stats.bestStreak + " 天" },
+    { label: "逾期任务", value: kpi.overdue }
+  ];
+  var html = '<div class="stats-cards dash-stats-cards">';
+  html += cards.map(function(c){
+    return '<div class="stats-card"><div class="stats-card-val">' + c.value + '</div><div class="stats-card-lbl">' + c.label + '</div></div>';
+  }).join("");
   html += '</div>';
   return html;
 }
 /**
- * 渲染自定义仪表盘
+ * 渲染自定义仪表盘（v2.2.0：editMode 区分展示/编辑两态——Grafana 式）
+ * @param {boolean} [editMode] - true 显示拖拽手柄/删除钮/配置工具条；默认 false 纯展示
  * @returns {string} 仪表盘 HTML
  */
-function renderCustomDashboard(){
+function renderCustomDashboard(editMode){
+  var edit = editMode === true;
   var layout = getDashboardLayout();
-  var html = '<div class="dashboard-grid">';
+  var html = '';
+  if(edit){
+    /* 配置态工具条：添加组件（未在布局中的）+ 重置 + 完成编辑 */
+    var notIn = DASHBOARD_WIDGETS.filter(function(w){
+      return !layout.some(function(it){ return it.id === w.id; });
+    });
+    var addOpts = notIn.length
+      ? '<select id="dashAddSel" aria-label="添加组件"><option value="">添加组件…</option>' + notIn.map(function(w){
+          return '<option value="' + esc(w.id) + '">' + esc(w.name) + '</option>'; }).join('') + '</select>'
+      : '<span class="dash-toolbar-hint">所有组件均已添加</span>';
+    html += '<div class="dash-toolbar card">' + addOpts +
+      '<button type="button" class="addbtn sm" id="btnDashboardReset" style="--sc:var(--muted)">重置布局</button>' +
+      '<button type="button" class="btn-primary" id="btnDashDone"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.check + '</span>完成编辑</button>' +
+      '<span class="dash-toolbar-hint">拖拽 ⋮⋮ 手柄交换组件位置；右上 ✕ 移除组件</span></div>';
+  }
+  html += '<div class="dashboard-grid">';
   layout.forEach(function(item){
     var widget = DASHBOARD_WIDGETS.find(function(w){ return w.id === item.id; });
     if(!widget) return;
     var p = item.pos;
-    html += '<div class="dashboard-widget" draggable="true" data-widget="' + esc(item.id) + '" style="grid-column:' + p.x + ' / span ' + p.w + ';grid-row:' + p.y + ' / span ' + p.h + '">';
-    html += '<div class="widget-header"><span class="widget-name">' + esc(widget.name) + '</span><button type="button" class="widget-drag" title="拖拽移动" aria-label="拖拽移动 ' + esc(widget.name) + '">⋮⋮</button></div>';
+    html += '<div class="dashboard-widget' + (edit ? ' editing' : '') + '" draggable="' + (edit ? 'true' : 'false') + '" data-widget="' + esc(item.id) + '" style="grid-column:' + p.x + ' / span ' + p.w + ';grid-row:' + p.y + ' / span ' + p.h + '">';
+    html += '<div class="widget-header"><span class="widget-name">' + esc(widget.name) + '</span>' +
+      (edit ? '<span class="widget-ops"><button type="button" class="widget-drag" title="拖拽移动" aria-label="拖拽移动 ' + esc(widget.name) + '">⋮⋮</button>' +
+       '<button type="button" class="widget-del" title="移除组件" aria-label="移除 ' + esc(widget.name) + '">✕</button></span>' : '') + '</div>';
     html += '<div class="widget-body">' + _renderDashboardWidget(item.id) + '</div>';
     html += '</div>';
   });
   html += '</div>';
-  html += '<div class="dashboard-actions"><button type="button" id="btnDashboardReset" class="dashboard-reset">重置布局</button></div>';
   return html;
+}
+/**
+ * v2.2.0：添加组件到布局（自动放到网格尾部空行）
+ * @param {string} id - 组件 id
+ * @returns {boolean} 是否添加成功
+ */
+function addDashboardWidget(id){
+  var widget = DASHBOARD_WIDGETS.find(function(w){ return w.id === id; });
+  if(!widget) return false;
+  var layout = getDashboardLayout();
+  if(layout.some(function(it){ return it.id === id; })) return false;
+  var maxY = 0;
+  layout.forEach(function(it){ maxY = Math.max(maxY, it.pos.y + it.pos.h - 1); });
+  layout.push({ id: id, pos: { x: widget.defaultPos.x, y: maxY + 1, w: widget.defaultPos.w, h: widget.defaultPos.h } });
+  return saveDashboardLayout(layout);
+}
+/**
+ * v2.2.0：从布局移除组件
+ * @param {string} id - 组件 id
+ * @returns {boolean} 是否移除成功
+ */
+function removeDashboardWidget(id){
+  var layout = getDashboardLayout();
+  var idx = layout.findIndex(function(it){ return it.id === id; });
+  if(idx < 0) return false;
+  layout.splice(idx, 1);
+  return saveDashboardLayout(layout);
 }
 /**
  * 打开仪表盘弹窗（渲染到 #dashboardModal）
@@ -19091,18 +19254,13 @@ function openDashboardModal(){
   var modal = $("#dashboardModal");
   if(!modal) return;
   var body = $("#dashboardModalBody");
-  if(body) body.innerHTML = sanitizeHtml(renderCustomDashboard());
-  modal.classList.add("show");
-  bindDashboardDnD();
-  var resetBtn = $("#btnDashboardReset");
-  if(resetBtn && !resetBtn._dashBound){
-    resetBtn._dashBound = true;
-    resetBtn.onclick = function(){
-      resetDashboard();
-      if(body) body.innerHTML = sanitizeHtml(renderCustomDashboard());
-      bindDashboardDnD();
-    };
+  if(body){
+    body.innerHTML = sanitizeHtml(renderCustomDashboard(true));
+    /* v2.2.0：编辑语义（手柄/移除/工具条）；listener 挂 body 幂等 */
+    bindDashboardDnD(body, true);
+    _bindDashToolbar(body, true);
   }
+  modal.classList.add("show");
 }
 /**
  * 关闭仪表盘弹窗
@@ -19116,10 +19274,17 @@ function closeDashboardModal(){
  * 绑定仪表盘拖拽事件（HTML5 DnD，事件委托）
  * @returns {void}
  */
-function bindDashboardDnD(){
-  var body = $("#dashboardModalBody");
+function bindDashboardDnD(container, editMode){
+  /* v2.2.0：container 参数化——弹窗（#dashboardModalBody）与统计页（#dashHost）共用；
+     drop 后重渲染回 container 自身并重绑（编辑态语义） */
+  var body = container || $("#dashboardModalBody");
   if(!body || body._dashDndBound) return;
   body._dashDndBound = true;
+  var isEdit = editMode === true;
+  var refresh = function(){
+    body.innerHTML = sanitizeHtml(renderCustomDashboard(isEdit));
+    _bindDashToolbar(body, isEdit);
+  };
   var dragId = null;
   body.addEventListener("dragstart", function(e){
     var w = e.target.closest(".dashboard-widget");
@@ -19162,11 +19327,71 @@ function bindDashboardDnD(){
       a.pos = b.pos;
       b.pos = tmp;
       saveDashboardLayout(layout);
-      var bodyEl = $("#dashboardModalBody");
-      if(bodyEl) bodyEl.innerHTML = sanitizeHtml(renderCustomDashboard());
+      refresh();
     }
     dragId = null;
   });
+}
+/**
+ * v2.2.0：绑定编辑态工具条（添加组件 / 重置 / 完成编辑 / widget 移除 / 趋势 tab）
+ * 弹窗与统计页共用；容器级事件委托，重渲染后幂等
+ */
+function _bindDashToolbar(container, editMode){
+  if(!container) return;
+  /* 添加组件下拉 */
+  var addSel = container.querySelector("#dashAddSel");
+  if(addSel){
+    addSel.onchange = function(){
+      var id = addSel.value;
+      if(!id) return;
+      if(addDashboardWidget(id)){
+        container.innerHTML = sanitizeHtml(renderCustomDashboard(editMode === true));
+        _bindDashToolbar(container, editMode === true);
+      }
+    };
+  }
+  /* 重置布局 */
+  var resetBtn = container.querySelector("#btnDashboardReset");
+  if(resetBtn){
+    resetBtn.onclick = function(){
+      resetDashboard();
+      container.innerHTML = sanitizeHtml(renderCustomDashboard(editMode === true));
+      _bindDashToolbar(container, editMode === true);
+    };
+  }
+  /* 完成编辑（仅统计页容器有） */
+  var doneBtn = container.querySelector("#btnDashDone");
+  if(doneBtn){
+    doneBtn.onclick = function(){
+      _dashEditMode = false;
+      if(typeof render === "function"){ try{ render(); }catch(e){ /* noop */ } }
+    };
+  }
+  /* widget 移除钮（事件委托） */
+  container.querySelectorAll(".widget-del").forEach(function(btn){
+    btn.onclick = function(){
+      var w = btn.closest(".dashboard-widget");
+      if(!w) return;
+      removeDashboardWidget(w.getAttribute("data-widget"));
+      container.innerHTML = sanitizeHtml(renderCustomDashboard(editMode === true));
+      _bindDashToolbar(container, editMode === true);
+    };
+  });
+  /* 趋势 tab（展示/编辑态均可切） */
+  container.querySelectorAll(".stats-tab[data-trend-days]").forEach(function(btn){
+    btn.onclick = function(){
+      _statsTrendDays = parseInt(btn.getAttribute("data-trend-days"), 10) || 7;
+      container.innerHTML = sanitizeHtml(renderCustomDashboard(editMode === true));
+      _bindDashToolbar(container, editMode === true);
+    };
+  });
+  /* 高级报表入口 */
+  var repBtn = container.querySelector("#btnStatsOpenReport");
+  if(repBtn){
+    repBtn.onclick = function(){
+      if(typeof openReportModal === "function"){ openReportModal("week", 0); if(typeof bindReportModal === "function") bindReportModal(); }
+    };
+  }
 }// ===== Notes & Knowledge Base (v1.6-D 知识管理) =====
 /* ---------- 笔记系统 + 知识库：Markdown 笔记 CRUD + 标签分类 + 任务关联 ----------
  * 能力：

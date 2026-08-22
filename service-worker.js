@@ -1,6 +1,6 @@
 /* eslint-env serviceworker */
 /**
- * Service Worker for Agent 工作台
+ * Service Worker for Agent 工坊
  * 分层缓存策略：
  *   - 同源静态资源（.html/.json/.svg/.js/.css）：cache-first
  *   - 跨域 API 请求（http/https 且非同源）：stale-while-revalidate
@@ -14,7 +14,7 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
-var CACHE_VERSION = "v2.1.1-20260822074433"; /* [prod build] auto-bumped */
+var CACHE_VERSION = "v2.2.0-20260822095536"; /* [prod build] auto-bumped */
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -448,7 +448,7 @@ function _showNotification(title, opts) {
  * @returns {{title:string, body:string, tag?:string}}
  */
 function _parsePushPayload(event) {
-  var title = "Agent 工作台";
+  var title = "Agent 工坊";
   var body = "你有一条新通知";
   var tag = "wb-push";
   try {
