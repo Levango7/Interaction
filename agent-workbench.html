@@ -936,6 +936,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v2.2.0：AI 助手 Hub（三卡合一 tab；复用 .set-nav-btn 但取消吸顶） */
 .ai-hub-card .ai-hub-tabs{position:static;margin:0 0 var(--space-3);flex-wrap:wrap}
 .ai-hub-card .ai-hub-body{min-height:80px}
+/* v2.2.1：主页今日待办可点击项 + 逾期标记 */
+.ov-today-item{cursor:pointer;border-radius:var(--radius-sm);padding:2px 4px;transition:background var(--transition-fast)}
+.ov-today-item:hover{background:var(--surface-hover)}
+.ov-overdue-tag{display:inline-block;margin-left:6px;padding:0 6px;font-size:10px;line-height:16px;
+  color:var(--danger);background:var(--danger-soft);border-radius:var(--radius-full)}
+#ovTodayMore{background:none;border:none;color:var(--accent);font-size:var(--fs-xs);cursor:pointer;
+  padding:var(--space-1) 0;margin-top:var(--space-1)}
+#ovTodayMore:hover{text-decoration:underline}
 .stats-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1.15;letter-spacing:-.02em}
 .stats-card-lbl{font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
 /* 周环比角标：胶囊样式，与主数字区分开 */
@@ -1540,6 +1548,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 @media(min-width:1024px){
   .overview-grid{grid-template-columns:1fr 1fr}
   .overview-grid > .card:first-child{grid-column:1/-1}
+  .overview-grid > .ov-span2{grid-column:1/-1}
   .overview-grid > .coach-card{grid-column:1/-1}
   .overview-grid > .foot{grid-column:1/-1}
   /* 2 列布局下热力图放宽，避免偏小 */
@@ -2465,8 +2474,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* 桑基图 SVG */
 .sankey-chart{width:100%;height:auto;display:block}
 
-/* 自定义仪表盘 */
-.dashboard-grid{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:120px;
+/* 自定义仪表盘（v2.2.1：行高自适应——minmax 保底 + auto 撑开，组件内容完整可见无内部滚动条） */
+.dashboard-grid{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:minmax(150px,auto);
   gap:var(--space-3);margin-bottom:var(--space-4)}
 .dashboard-widget{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);display:flex;flex-direction:column;overflow:hidden;
@@ -2495,8 +2504,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .dash-toolbar-hint{font-size:var(--fs-xs);color:var(--muted)}
 /* v2.2.0：统计页头操作区（编辑布局按钮宿主） */
 .ph-actions{margin-left:auto;display:flex;align-items:center;gap:var(--space-2)}
-.widget-body{padding:var(--space-3);flex:1;overflow:auto;font-size:var(--fs-sm);color:var(--text)}
+.widget-body{padding:var(--space-3);flex:1;overflow:visible;font-size:var(--fs-sm);color:var(--text)}
+/* v2.2.1：快捷操作组件按钮组 */
+.dash-actions-grid{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.dash-actions-grid .addbtn{flex:1;min-width:110px;justify-content:center}
 .widget-empty{color:var(--muted);text-align:center;padding:var(--space-4) 0;font-size:var(--fs-xs)}
+/* v2.2.1：仪表盘窄屏单列（5 列在移动端不可用） */
+@media(max-width:767px){
+  .dashboard-grid{grid-template-columns:1fr}
+  .dashboard-widget{grid-column:1 !important;grid-row:auto !important}
+}
 .dashboard-actions{display:flex;justify-content:flex-end;gap:var(--space-2);padding:var(--space-2) 0}
 .dashboard-reset{padding:var(--space-1) var(--space-3);border-radius:var(--radius-sm);
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);font-size:var(--fs-sm);
@@ -3509,10 +3526,10 @@ var _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.2.0";
+const VERSION = "2.2.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260822b";
+const BUILD_TAG = "20260822c";
 
 
 
@@ -9791,11 +9808,12 @@ function renderOverview(){
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
-      <div class="ph-tx"><h2>概览</h2><p class="sub">核心指标 · 全局搜索 · 趋势与习惯</p></div>
+      <div class="ph-tx"><h2>概览</h2><p class="sub">核心业务 · 数据速览 · 全局搜索</p></div>
+      <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" style="--sc:var(--accent)">高级报表</button></div>
     </header></div>
     ${_renderOvKpi()}
     <div class="overview-grid">
-      <div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选）</p>
+      <div class="card ov-span2"><h2>全局搜索</h2>
         <div class="glob-filters">
           <input id="globSearch" class="glob-search-main" placeholder="关键词，如 周报 / 跑步…">
           <select id="globFSc" aria-label="按场景筛选"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
@@ -9809,16 +9827,18 @@ function renderOverview(){
         </div>
         <div class="glob-views" id="globViews"></div>
         <div id="globRes" style="margin-top:10px"></div></div>
-     <div class="card"><h2>${UI_ICONS.overview} 数据总览</h2>
-       <p class="sub">跨场景的任务完成趋势与密度</p>
-       <div style="margin-bottom:var(--space-3)"><button type="button" class="btn-primary" id="btnOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报）</button></div>
-       <h3>${UI_ICONS.overview} 完成趋势（近 14 天）</h3>${lineChart}
-       <h3>日历热力图（本月）</h3>${heat}
+     <div class="card"><h2>${ic("check")} 今日待办</h2>
+       <p class="sub">今天到期与逾期的任务（按优先级排序，点击跳转场景）</p>
+       ${_renderTodayTopHtml()}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
      </div>
+     <div class="card"><h2>${UI_ICONS.overview} 数据速览</h2>
+       <p class="sub">完成趋势与本月密度</p>
+       <h3>完成趋势（近 14 天）</h3>${lineChart}
+       <h3>日历热力图（本月）</h3>${heat}
+     </div>
+      ${renderAiHubCard()}
       ${renderHabitChainCard()}
-       ${renderAiHubCard()}
-       ${renderPluginCards()}
      </div>`);
 
   // 全局搜索 oninput 同步响应（保证空状态即时渲染；搜索范围小，无需防抖）
@@ -9878,6 +9898,15 @@ function renderOverview(){
       else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
     };
   });
+  // v2.2.1：主页今日待办点击跳场景 / 「还有 N 项」跳办公场景看板
+  $$("#ovTodayList .ov-today-item").forEach(li=>{
+    li.onclick=()=>{
+      const sc = li.getAttribute("data-goto-sc");
+      if(sc){ setActive(sc); render(); }
+    };
+  });
+  const moreBtn=$("#ovTodayMore");
+  if(moreBtn) moreBtn.onclick=()=>{ setActive("office"); render(); };
   // v1.4-D AI 每日报告：绑定按钮
   const drBtn=$("#dailyReportBtn");
   if(drBtn) drBtn.onclick=()=> handleDailyReport();
@@ -10018,6 +10047,32 @@ function _renderOvKpi(){
     `<button type="button" class="stats-card ov-kpi-item${c.act?" clickable":""}" data-kpi-act="${c.act||""}" title="${c.act==="office"?"查看今天要处理":c.act==="stats"?"打开统计":c.act==="chain"?"打开习惯链":""}">` +
     `<div class="stats-card-val">${c.value}${c.extra||""}</div><div class="stats-card-lbl">${c.label}</div></button>`
   ).join("") + `</div></div>`;
+}
+
+/* ---------- v2.2.1 主页今日待办列表（复用 renderToday 的排序逻辑，点击跳场景） ---------- */
+function _renderTodayTopHtml(){
+  const tasks = getActiveTasks();
+  const t = todayStr();
+  const pendingToday = tasks.filter(x=>x.status!=="done" && x.due && x.due<=t);
+  const top5 = pendingToday.slice().sort((a,b)=>{
+    const pa = _priWeight(a.priority), pb = _priWeight(b.priority);
+    if(pa !== pb) return pa - pb;
+    return a.due < b.due ? -1 : 1;
+  }).slice(0, 5);
+  if(top5.length === 0){
+    return `<div class="empty today-empty">今天没有待处理的事项，去各场景添加任务吧</div>`;
+  }
+  const items = top5.map(x=>{
+    const s = scMeta(x.sc);
+    const overdue = x.due < t;
+    return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="点击进入「${esc(s.name)}」场景">
+      <span class="dot" style="background:${s.color}"></span>
+      <span class="title">${esc(x.title)}${overdue ? `<span class="ov-overdue-tag">逾期</span>` : ""}</span>
+      <span class="sc-name">${s.name}</span>
+    </li>`;
+  }).join("");
+  const more = pendingToday.length > 5 ? `<button type="button" class="top3-expand" id="ovTodayMore">还有 ${pendingToday.length - 5} 项待处理 ▸</button>` : "";
+  return `<ul class="top3-list" id="ovTodayList">${items}</ul>${more}`;
 }
 
 /* ---------- T3.3 数据统计（渲染层·内联 SVG） ---------- */
@@ -19012,18 +19067,22 @@ var DASHBOARD_LAYOUT_KEY = "dashboard_layout";
  * @type {Array<{id:string,name:string,defaultPos:{x:number,y:number,w:number,h:number}}>}
  */
 var DASHBOARD_WIDGETS = [
-  /* default:true 的 7 个构成默认布局；其余为「可添加」组件（v2.2.0 Grafana 化） */
+  /* v2.2.1：组件多元化——列表/表格/操作类与图表类并列；default:true 构成默认布局 */
   { id: "stats",    name: "关键指标",   default: true,  defaultPos: { x: 1, y: 1, w: 2, h: 1 } },
-  { id: "trend",    name: "任务完成趋势", default: true,  defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
-  { id: "pie",      name: "场景分布",   default: true,  defaultPos: { x: 3, y: 1, w: 1, h: 2 } },
-  { id: "heatmap",  name: "热力图",     default: true,  defaultPos: { x: 4, y: 1, w: 1, h: 2 } },
-  { id: "chain",    name: "习惯链",     default: true,  defaultPos: { x: 5, y: 1, w: 1, h: 3 } },
-  { id: "hourdist", name: "完成时段分布", default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
-  { id: "report",   name: "高级报表",   default: true,  defaultPos: { x: 3, y: 3, w: 2, h: 1 } },
-  { id: "gantt",    name: "甘特图",     default: false, defaultPos: { x: 1, y: 4, w: 4, h: 1 } },
-  { id: "mindmap",  name: "思维导图",   default: false, defaultPos: { x: 5, y: 4, w: 1, h: 1 } },
-  { id: "radar",    name: "雷达图",     default: false, defaultPos: { x: 5, y: 5, w: 1, h: 1 } },
-  { id: "sankey",   name: "桑基图",     default: false, defaultPos: { x: 1, y: 5, w: 4, h: 1 } }
+  { id: "today",    name: "今日待办",   default: true,  defaultPos: { x: 3, y: 1, w: 2, h: 1 } },
+  { id: "trend",    name: "任务完成趋势", default: true,  defaultPos: { x: 5, y: 1, w: 1, h: 2 } },
+  { id: "scenes",   name: "场景概况",   default: true,  defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
+  { id: "pie",      name: "场景分布",   default: true,  defaultPos: { x: 3, y: 2, w: 1, h: 1 } },
+  { id: "heatmap",  name: "热力图",     default: true,  defaultPos: { x: 4, y: 2, w: 1, h: 1 } },
+  { id: "chain",    name: "习惯链成功率", default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
+  { id: "recent",   name: "最近完成",   default: true,  defaultPos: { x: 3, y: 3, w: 3, h: 1 } },
+  { id: "actions",  name: "快捷操作",   default: false, defaultPos: { x: 1, y: 4, w: 5, h: 1 } },
+  { id: "hourdist", name: "完成时段分布", default: false, defaultPos: { x: 1, y: 5, w: 2, h: 1 } },
+  { id: "report",   name: "高级报表",   default: false, defaultPos: { x: 3, y: 5, w: 3, h: 1 } },
+  { id: "gantt",    name: "甘特图",     default: false, defaultPos: { x: 1, y: 6, w: 3, h: 1 } },
+  { id: "mindmap",  name: "思维导图",   default: false, defaultPos: { x: 4, y: 6, w: 2, h: 1 } },
+  { id: "radar",    name: "雷达图",     default: false, defaultPos: { x: 1, y: 7, w: 2, h: 1 } },
+  { id: "sankey",   name: "桑基图",     default: false, defaultPos: { x: 3, y: 7, w: 3, h: 1 } }
 ];
 /**
  * 生成默认布局（v2.2.0：仅含 default:true 的核心组件）
@@ -19096,6 +19155,45 @@ function moveDashboardWidget(id, pos){
 function _renderDashboardWidget(id){
   if(id === "stats"){
     return _renderDashboardStatsWidget();
+  }
+  /* v2.2.1：非图表组件——列表 / 进度 / 操作，让仪表盘不止有图表 */
+  if(id === "today"){
+    return typeof _renderTodayTopHtml === "function" ? _renderTodayTopHtml() : "<p class='widget-empty'>今日待办</p>";
+  }
+  if(id === "scenes"){
+    var bars = ORDER.map(function(sc){
+      var s = SCENARIOS[sc] || {};
+      var all = getActiveTasks().filter(function(t){ return t.sc === sc; });
+      var dn = all.filter(function(t){ return t.status === "done"; }).length;
+      var tot = all.length;
+      var pct = tot ? Math.round(dn / tot * 100) : 0;
+      return '<div class="bar"><span class="nm">' + esc(s.name || sc) + '</span>' +
+        '<span class="track"><span class="fill" style="width:' + pct + '%;background:' + (s.color || "var(--accent)") + '"></span></span>' +
+        '<span class="v">' + dn + '/' + tot + '</span></div>';
+    }).join("");
+    return '<div class="bars">' + bars + '</div>';
+  }
+  if(id === "recent"){
+    var doneList = getActiveTasks().filter(function(t){ return t.status === "done" && t.doneAt; })
+      .sort(function(a, b){ return b.doneAt - a.doneAt; }).slice(0, 5);
+    if(!doneList.length) return "<p class='widget-empty'>还没有已完成的任务</p>";
+    var now = Date.now();
+    var items = doneList.map(function(t){
+      var s = SCENARIOS[t.sc] || {};
+      var mins = Math.floor((now - t.doneAt) / 60000);
+      var ago = mins < 60 ? mins + " 分钟前" : mins < 1440 ? Math.floor(mins / 60) + " 小时前" : Math.floor(mins / 1440) + " 天前";
+      return '<li class="top3-item"><span class="dot" style="background:' + (s.color || "var(--muted)") + '"></span>' +
+        '<span class="title">' + esc(t.title) + '</span><span class="sc-name">' + esc(s.name || t.sc) + ' · ' + ago + '</span></li>';
+    }).join("");
+    return '<ul class="top3-list">' + items + '</ul>';
+  }
+  if(id === "actions"){
+    return '<div class="dash-actions-grid">' +
+      '<button type="button" class="addbtn" id="dashActNew" style="--sc:var(--accent)"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.plus + '</span>新建任务</button>' +
+      '<button type="button" class="addbtn" id="dashActSearch" style="--sc:var(--accent)"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.search + '</span>全局搜索</button>' +
+      '<button type="button" class="addbtn" id="dashActReport" style="--sc:var(--accent)"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.stats + '</span>高级报表</button>' +
+      '<button type="button" class="addbtn" id="dashActExport" style="--sc:var(--muted)"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.download + '</span>导出 JSON</button>' +
+      '</div>';
   }
   if(id === "trend"){
     var days = (typeof _statsTrendDays === "number" && _statsTrendDays) ? _statsTrendDays : 7;
@@ -19398,6 +19496,29 @@ function _bindDashToolbar(container, editMode){
       if(typeof openReportModal === "function"){ openReportModal("week", 0); if(typeof bindReportModal === "function") bindReportModal(); }
     };
   }
+  /* v2.2.1：快捷操作组件 */
+  var actNew = container.querySelector("#dashActNew");
+  if(actNew) actNew.onclick = function(){
+    if(typeof setActive === "function"){ setActive("office"); }
+    if(typeof render === "function"){ try{ render(); }catch(e){} }
+    var f = document.querySelector("#taskForm");
+    if(f && f.title){ try{ f.title.focus(); }catch(e){} }
+  };
+  var actSearch = container.querySelector("#dashActSearch");
+  if(actSearch) actSearch.onclick = function(){
+    if(typeof setActive === "function"){ setActive("overview"); }
+    if(typeof render === "function"){ try{ render(); }catch(e){} }
+    var gs = document.querySelector("#globSearch");
+    if(gs){ try{ gs.focus(); }catch(e){} }
+  };
+  var actReport = container.querySelector("#dashActReport");
+  if(actReport) actReport.onclick = function(){
+    if(typeof openReportModal === "function"){ openReportModal("week", 0); if(typeof bindReportModal === "function") bindReportModal(); }
+  };
+  var actExport = container.querySelector("#dashActExport");
+  if(actExport) actExport.onclick = function(){
+    if(typeof doExport === "function"){ try{ doExport(); }catch(e){} }
+  };
 }// ===== Notes & Knowledge Base (v1.6-D 知识管理) =====
 /* ---------- 笔记系统 + 知识库：Markdown 笔记 CRUD + 标签分类 + 任务关联 ----------
  * 能力：
