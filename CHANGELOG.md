@@ -2,6 +2,59 @@
 
 本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v2.1.1] - 2026-08-22
+
+### Minor：图标系统去重合理化 + 输入框/按钮布局规范化
+
+**🆕 New**
+- **UI_ICONS 单一真相源强化**：`TOAST_ICONS` / `SIDE_MENU_ICONS` / `EMPTY_ICONS` / `_WEATHER_ICONS` 改为引用 `UI_ICONS`，消除约 15 处重复 SVG 定义
+- **新增独立 `tag` 图标**：接管自定义场景/插件场景兜底（原与 `overview` 共用，语义过载）；`resolveScIcon` fallback 从 `overview` 改 `tag`
+- **按钮高度阶梯 CSS 化**（`.addbtn.sm/xs/min` 族）：32/28/24px 三档；`.btn-primary` 支持 `--sc` 场景色变量
+- **输入框布局工具类**：`.fld-sm/md/lg/xl` 替代散落内联 `max-width`；`.color-input` 替代内联颜色选择器样式；checkbox/radio `width:auto` 改 CSS 统一
+- **`--radius-full:999px`** 补全到 4 个主题块（亮/暗/高对比/护眼）
+
+**🔧 Changed**
+- **字形统一**：关闭钮 `×` → `✕`（U+2715）5 处；警告 `⚠` → `⚠️`（带 FE0F）3 处；展开箭头 `▶▼▴` → `▸▾` 三套合并一套；习惯链状态 ⏸/~/✓/○ → ‖/●/✓/○；残留 `❌`/`☕` 改文本/SVG
+- **死键清理**：`UI_ICONS` 删 lock/chartBar/clipboard/wave/book2（保留 brain 由测试强断言）
+- **模板插值修复**：行 14728 `'...${ic("puzzle")}...'`（单引号不插值）→ `'+ic("puzzle")+'`，插件详情弹窗标题现在正确渲染图标
+- **布局修复**：`chat-attach-btn` 28→32px 与 `chat-send` 同档；`todo-ops` 28→32px 与 `kbtns` 同档；编辑弹窗取消/保存高度对齐；闹钟 `tbtn` 改 `.addbtn`；报表头 `report-entry-btn` 改 `.btn-primary`
+- **移动端**：`alarm-form` 补 `flex-wrap` + ≤767px 降级规则；`form-row` 移动端内联 max-width 冲突解除；断点 720px 统一为 767px
+- **令牌卫生**：合并 `.pomo-actions` / `.tracker-actions` 重复 CSS；`.input` 死类保留（测试规范锚点）；硬编码 px 收敛（lint-tokens 报告降至 0）
+
+**📋 Technical**
+- 版本号 v2.1.0 → **v2.1.1**（html VERSION/BUILD_TAG / manifest / package / electron / service-worker CACHE_VERSION / ui-consistency 页脚断言 六处同步，build tag 20260821 → 20260822）
+- 设计规范更新：`docs/design-ui-guidelines.md` 增 §7.1 单一真相源 + §7.2 字形规范 + §十一 按钮阶梯 + §十二 输入框布局；`docs/ui-standards.md` §五/§六/§八 交叉引用
+- 测试：全量 **600/600** 通过；lint-colors/lint-layers/lint-tokens 三门 PASS；Playwright 桌面+移动端截图验收全绿
+
+## [v2.1.0] - 2026-08-21
+
+### Minor：侧边栏两级菜单改版 + 6 场景 + 任务三视图 + 移动端底部导航
+
+**🆕 New**
+- **侧边栏信息架构重构为四组两级菜单**（数据驱动 `SIDE_MENU` 树 + 动作注册表，事件委托跨重渲染有效）：
+  - 总览：主页（任务计数）｜仪表盘▸（统计/总览图）｜任务▸（看板/日历/待办视图）
+  - 场景：办公▸6 工具｜设计▸4 工具｜学习▸（思维导图/知识库/在线检索/笔记/场景模板）｜数据▸（数据分析/图表/报告）｜编程▸3 工具｜生活▸（运动/健康/缴费/采购/外卖/交通）
+  - 功能：插件▸（日历/天气/闹钟/番茄钟/时间追踪）｜AI 助理｜习惯链▸（规则配置/今日活跃/成功率）
+  - 系统：回收站｜外观▸（主题/特效/萌宠）｜设置｜说明
+  - 展开状态持久化（`wb_agent_sideExpanded`）；激活子项所在分支自动展开；高亮不变量保持「任一时刻仅 1 个 active」，父项含激活子项时用 `.has-active` 弱高亮
+  - 尚未实现的工具统一「即将上线」占位页（`openToolStub`：图标+名称+说明+返回，带「新」角标）
+- **新增 2 个内置场景**（4 → 6）：设计（粉 `#d6409f`，作品记录）与 数据（青 `#0d9488`，数据记录）；`ORDER` 更新为 office→design→study→data→code→life；新增 `--sc-design`/`--sc-data` 令牌（亮/高对比/护眼三主题）；数字快捷键 1-4 扩展为 1-6；滑动手势邻接序同步
+- **任务三视图**（`sceneViewMode` 持久化，侧栏「任务▸」切换）：
+  - 看板视图（原默认）｜日历视图（月历内联渲染到任务卡，支持翻月、点日期预填截止日期）｜待办视图（新增：平铺清单，勾选完成/开始/编辑/删除 + 状态筛选）
+  - 当前在概览/统计/回收站时切视图自动回到办公场景
+- **移动端底部导航重构**（≤767px）：桌面侧栏隐藏，改为底部 4 组按钮（总览/场景/功能/系统）+ 底部抽屉（点组弹出该组完整列表，父项为分组标题、子项平铺，执行动作后自动收起）；遮罩点击/✕ 关闭
+
+**🔧 Changed**
+- 「仓库」回退为「回收站」（只存放删除的各类数据）
+- 设置页：导航栏与标题栏同宽、按钮均匀分布；场景卡补齐插件场景行；聊天输入框加高（min-height 64px）
+- 统计入口由顶级 `data-sc="stats"` 迁至「仪表盘▸统计」子项（`data-menu="dash-stats"`）
+
+**📋 Technical**
+- `renderSide()` 重写为节点树渲染；节点构建抽出 `_buildSideMenu()` 供桌面/移动端共用；`setupSideMenu`/`setupMobNav` 随渲染同步绑定（幂等），不依赖异步 startup 时序
+- 测试更新 8 文件：场景数 4→6 断言（smoke/custom-scenarios/plugin-render/ai-force-fields-schema/execTool/stats）、滑动邻接序（mobile-enhance）、统计入口选择器与页脚版本（ui-consistency）
+- 版本号 v2.0.1 → **v2.1.0**（html VERSION / manifest / package / electron / service-worker CACHE_VERSION / ui-consistency 页脚断言 六处同步）
+- 测试：全量 **600/600**（53 文件）通过
+
 ## [v2.0.1] - 2026-08-21
 
 ### Patch：导入数据一致性修复 + 项目目录整理

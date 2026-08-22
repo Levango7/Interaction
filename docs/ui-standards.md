@@ -92,11 +92,13 @@
 
 - 全局基架（最低特异性兜底）：`:active` 缩 3%、`[disabled]` 透明度 .55 + `cursor:not-allowed`。
 - 组件无需重复写 active/disabled，只在需要差异化时覆盖。
+- **高度阶梯（v2.1.1）**：图标钮 32×32 / 小操作钮 32px（`.addbtn`、`.kbtns`、`.todo-ops`）/ 次小 28px（`.addbtn.sm`）/ 迷你 24px（`.addbtn.xs`）/ 主按钮 `.btn-primary` 系 / 移动触摸 44px。并排按钮必须同档；禁止内联 padding 改高。详见 design-ui-guidelines.md §十一。
 
 ## 六、表单
 
 - 每个 `<input>/<select>/<textarea>` 必须配 `<label for="...">` 或 `aria-label`。
 - 新增字段：`.row > label + input`，label 的 `for` 与 input 的 `id` 同名。
+- **布局规则（v2.1.1）**：checkbox/radio 全局 `width:auto`（禁内联）；颜色选择器走全局 `input[type="color"]` 规格；`.form-row` 字段宽度用 `.fld-sm/md/lg/xl` 工具类（禁内联 max-width）；纵向间距用容器 gap。详见 design-ui-guidelines.md §十二。
 
 ## 七、模态框
 
@@ -107,6 +109,8 @@
 
 - 彩色 emoji 清零。统一 `UI_ICONS`（2px 线性 SVG），模板内 `${ic("name")}` 注入（自动 `.ic-inline` 基线对齐）。
 - 尺寸：文字旁 13px、按钮旁 15px、空态 24-44px。
+- **单一真相源（v2.1.1）**：`UI_ICONS` 是唯一图标定义处，其他字典同形图标按 key 引用，禁止复制 SVG；一个 key 只承载一个语义。
+- **文字符号字形**：关闭 `✕`（禁 `×`）、警告 `⚠️`（带 FE0F）、展开箭头小三角族 `▸▾▴◂`（禁大播放三角 `▶▼◀`）。详见 design-ui-guidelines.md §7.1/7.2。
 
 ## 九、层级（z-index 令牌）
 

@@ -127,16 +127,18 @@ describe("T4.3 移动端增强 - 手势支持 + 触摸优化 + 横屏适配", ()
       expect(typeof __test.swipeToScene).toBe("function");
     });
 
-    it("左滑切换到下一个场景（office → code）", () => {
-      expect(__test.swipeToScene("left", "office")).toBe("code");
-      expect(__test.swipeToScene("left", "code")).toBe("study");
-      expect(__test.swipeToScene("left", "study")).toBe("life");
+    it("左滑切换到下一个场景（office → design）", () => {
+      expect(__test.swipeToScene("left", "office")).toBe("design");
+      expect(__test.swipeToScene("left", "design")).toBe("study");
+      expect(__test.swipeToScene("left", "study")).toBe("data");
+      expect(__test.swipeToScene("left", "data")).toBe("code");
+      expect(__test.swipeToScene("left", "code")).toBe("life");
     });
 
-    it("右滑切换到上一个场景（code → office）", () => {
-      expect(__test.swipeToScene("right", "code")).toBe("office");
-      expect(__test.swipeToScene("right", "study")).toBe("code");
-      expect(__test.swipeToScene("right", "life")).toBe("study");
+    it("右滑切换到上一个场景（code → data）", () => {
+      expect(__test.swipeToScene("right", "code")).toBe("data");
+      expect(__test.swipeToScene("right", "study")).toBe("design");
+      expect(__test.swipeToScene("right", "life")).toBe("code");
     });
 
     it("最后一个场景左滑不越界（life → life）", () => {

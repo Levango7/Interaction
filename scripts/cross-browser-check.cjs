@@ -118,8 +118,10 @@ async function runBrowser(browserType, browserName) {
     const doneVisible = await doneCol.isVisible().catch(() => false);
     check("完成任务（todo→doing→done）", doneVisible);
 
-    // 9. 查看统计
-    await page.click('#side .nav-item[data-sc="stats"]');
+    // 9. 查看统计（v2.1.0：stats 入口迁至「仪表盘▸统计」子项，先展开父项再点子项）
+    await page.click('#side .nav-parent[data-menu="dash"]');
+    await page.waitForSelector('#side .nav-item[data-menu="dash-stats"]', { timeout: 5000 });
+    await page.click('#side .nav-item[data-menu="dash-stats"]');
     await page.waitForSelector(".stats-cards, .no-stats", { timeout: 5000 });
     const statsVisible = await page.locator(".stats-cards").first().isVisible().catch(() => false);
     check("查看统计视图", statsVisible);

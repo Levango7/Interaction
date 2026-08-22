@@ -292,7 +292,7 @@ describe("execTool - search", () => {
  * 8. query_overview
  * ============================================================ */
 describe("execTool - query_overview", () => {
-  it("返回 4 场景的 open/done 计数与 today/overdue", () => {
+  it("返回 6 场景的 open/done 计数与 today/overdue", () => {
     const win = freshWin();
     const today = win.__test.todayStr();
     tool(win, "create_task", { scenario: "office", title: "今日任务", due: today });
@@ -301,8 +301,8 @@ describe("execTool - query_overview", () => {
 
     const res = tool(win, "query_overview", {});
     expect(res.byScenario).toBeDefined();
-    expect(Object.keys(res.byScenario).length).toBe(4);
-    // 4 个场景键齐全
+    expect(Object.keys(res.byScenario).length).toBe(6);
+    // 6 个场景键齐全
     win.__test.ORDER.forEach((sc) => {
       expect(res.byScenario[sc]).toBeDefined();
       expect(res.byScenario[sc]).toHaveProperty("open");

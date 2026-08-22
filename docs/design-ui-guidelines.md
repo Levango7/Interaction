@@ -69,6 +69,25 @@
 - 在模板字符串/innerHTML 里用 `${ic("name")}` 辅助函数注入，它自动包 `.ic-inline` span 处理基线对齐。
 - 尺寸约定：文字旁 13px、按钮旁 15px、空态/hero 区 24px。
 
+### 7.1 单一真相源（v2.1.1 去重规则）
+
+- `UI_ICONS` 是**唯一**图标定义处。其他字典（`TOAST_ICONS` / `SIDE_MENU_ICONS` / `EMPTY_ICONS` / `_WEATHER_ICONS` / chartLibs / apps）同形图标一律 `key: UI_ICONS.xxx` 引用，**禁止**复制 SVG 字符串。
+- 新增图标前先查 `UI_ICONS` 是否已有同形；有则引用，无则补进 `UI_ICONS` 再引用。
+- 一个 key 只承载一个语义。禁止让一个图标身兼多职（v2.1.1 已把自定义/插件场景兜底从 `overview` 拆出独立 `tag` 图标）。
+- 删除无引用 key 前先全局 grep 确认（含 `ic("key")`、`UI_ICONS.key`、`resolveScIcon("key")` 三种访问形态）。
+
+### 7.2 文字符号字形规范
+
+UI 中允许的文字符号（非 SVG）图标，每个语义**只用一种字形**：
+
+| 语义 | 唯一字形 | 禁用 |
+|---|---|---|
+| 关闭/删除 | `✕`（U+2715） | `×`（乘号 U+00D7，仅数学/维度文案可用） |
+| 警告 | `⚠️`（带 FE0F） | `⚠`（无变体选择符） |
+| 展开/收起箭头 | `▸` `▾` `▴` `◂`（小三角族） | `▶` `▼` `◀`（大播放三角） |
+| 保存/完成 | `✓` | — |
+| 链状态 | `‖` 暂停 / `●` 进行中 / `✓` 已触发 / `○` 未开始 | emoji（⏸ 等） |
+
 ---
 
 ## 八、滚动条
@@ -94,3 +113,35 @@
 - `h4` 列表项/小组件内部
 
 同一层级的面板不要用不同的 heading 级。
+
+---
+
+## 十一、按钮高度阶梯（v2.1.1）
+
+同类按钮必须同高。全局只允许四档小操作钮高度 + 主按钮：
+
+| 档位 | 类 | min-height | 用途 |
+|---|---|---|---|
+| 图标钮 | `.chat-send-btn` / `.chat-attach-btn` / `.cal-nav` | 32×32 固定 | 纯图标方块 |
+| 小操作钮 | `.kbtns button` / `.todo-ops button` / `.addbtn` / `.report-toolbar button` | 32px | 卡片/行内操作 |
+| 次小钮 | `.addbtn.sm` | 28px | 紧凑工具行 |
+| 迷你钮 | `.addbtn.xs` | 24px | 列表行尾微型操作 |
+| 主按钮 | `.btn-primary` / `.btn-ghost` / `.btn-danger` | 内容撑（约 38px） | 弹窗/页面主操作 |
+| 移动触摸 | 媒体查询内 | 44px | WCAG 触控目标 |
+
+**规则**：
+- 并排的两个按钮必须同档（如弹窗「取消 + 保存」都用 `.btn-ghost`/`.btn-primary`，禁止 `.btn-ghost` + `.addbtn` 混排）。
+- 「添加/提交」一族统一用 `.addbtn`（32px），禁止借用 `.tbtn` 或内联 padding 改高。
+- 禁止用内联 `style="padding:..."` 覆写按钮高度——需要更小就用 `.sm`/`.xs` 变体。
+- `.addbtn.danger` 已定义（红底），危险按钮用它，不要内联 `--sc:var(--danger)`。
+
+---
+
+## 十二、输入框布局（v2.1.1）
+
+- checkbox/radio 由全局 `input[type="checkbox"],input[type="radio"]{width:auto}` 统一，**禁止**再写内联 `style="width:auto"`。
+- 颜色选择器用全局 `input[type="color"]` 规格（44×32），禁止内联 `width:44px;padding:2px`。
+- `.form-row` 内字段宽度用工具类，不用内联 max-width：`.fld-sm`(120) / `.fld-md`(160) / `.fld-lg`(200) / `.fld-xl`(480)。这样移动端 `max-width:none` 媒体查询才能生效（内联样式打不过）。
+- 纵向表单间距用容器 `gap`，不用子元素 `margin-bottom`（对齐 `.note-editor` 模式）。
+- 主移动断点统一 **767px**，禁止新增 720px 等孤立断点。
+- 胶囊圆角用 `--radius-full`（已定义 999px），不要再写 `var(--radius-full,回退)` 兜底。

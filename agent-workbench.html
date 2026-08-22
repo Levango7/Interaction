@@ -42,7 +42,7 @@
   --warn:#c0761f; --warn-soft:#fdf3e3;
   --ok:#34a853; --accent-soft:#e8f1fb;
   /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/习惯链图标引用） */
-  --sc-office:#0a6cbd; --sc-code:#34a853; --sc-study:#d97706; --sc-life:#7c5cbf;
+  --sc-office:#0a6cbd; --sc-design:#d6409f; --sc-study:#d97706; --sc-data:#0d9488; --sc-code:#34a853; --sc-life:#7c5cbf;
   /* 自定义场景默认色（P1：color input 默认值 / 非法色值回退） */
   --scenario-default:#7c5cbf;
   /* 横幅 / 工具消息 */
@@ -64,8 +64,8 @@
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   /* 字号体系 */
   --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
-  /* 圆角体系 */
-  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px;
+  /* 圆角体系（v2.1.1：补 --radius-full 胶囊圆角，此前 9 处引用靠回退兜底） */
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:999px;
   /* 阴影体系（分层高度 1/2/3）— 测试要求精确保留 --shadow-1 字符串 */
   --shadow-1:0 1px 2px rgba(0,0,0,.06);
   --shadow-2:0 2px 8px rgba(0,0,0,.08);
@@ -91,6 +91,10 @@ button[disabled]:active{transform:none}
 input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
   border-radius:var(--radius-md);padding:6px 10px;background:var(--panel);color:var(--text);width:100%;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+/* v2.1.1：checkbox/radio 天然小尺寸，不继承 width:100%（替代散落各处的内联 width:auto） */
+input[type="checkbox"],input[type="radio"]{width:auto}
+/* v2.1.1：颜色选择器统一规格（替代内联 width:44px;padding:2px） */
+input[type="color"],.color-input{width:44px;height:32px;padding:2px;flex-shrink:0;cursor:pointer}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-sm)}
 /* 关闭鼠标点击态的默认 outline，但保留键盘 :focus-visible 可视焦点环（a11y） */
@@ -241,6 +245,89 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .side-pop-sep{height:1px;background:var(--line);margin:var(--space-1) var(--space-2)}
 .side-caret{margin-left:auto;font-size:10px;color:var(--text-faint);transition:transform .2s}
 .nav-item[aria-expanded="true"] .side-caret{transform:rotate(90deg);color:var(--accent)}
+/* v2.1.0：两级菜单——父项节点 + 可展开子菜单 */
+.nav-node{display:block}
+.nav-sub{display:flex;flex-direction:column;gap:1px;padding:1px 0 var(--space-1)}
+.nav-sub[hidden]{display:none}
+/* 子项：缩进 + 圆点标记，字号略小 */
+.nav-subitem{padding-left:calc(var(--space-2) + 22px);min-height:28px;font-size:var(--fs-xs)}
+.nav-subitem .nm{color:var(--text-dim)}
+.nav-subitem:hover .nm{color:var(--text)}
+.nav-subitem.active .nm{color:var(--on-accent)}
+.sub-dot{width:5px;height:5px;border-radius:50%;background:var(--text-faint);flex-shrink:0;
+  margin-right:var(--space-2);transition:background var(--transition-fast)}
+.nav-subitem:hover .sub-dot{background:var(--accent)}
+.nav-subitem.active .sub-dot{background:var(--on-accent)}
+/* 子项「新」角标（即将上线的占位工具） */
+.sub-soon{font-size:9px;line-height:1;padding:2px 4px;border-radius:var(--radius-sm);
+  background:var(--accent-soft);color:var(--accent);font-weight:600;flex-shrink:0;margin-left:var(--space-1)}
+/* 父项含激活子项时的弱高亮（不算 active，保证全局唯一 active 不变量） */
+.nav-parent.has-active{background:var(--surface-hover)}
+.nav-parent.has-active .nm{color:var(--text);font-weight:500}
+/* 折叠态：隐藏子菜单（64px 窄栏只留顶级图标） */
+.side.collapsed .nav-sub{display:none}
+
+/* ===== v2.1.0 移动端导航：底部 4 组按钮 + 底部抽屉（桌面 display:none，≤767px 启用） ===== */
+.mob-bar{display:none}
+.side-sheet-backdrop{display:none}
+.side-sheet{display:none}
+@media(max-width:767px){
+  /* 桌面侧栏隐藏，改用底部导航 */
+  .side{display:none}
+  .mob-bar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:var(--z-sidebar);
+    background:var(--panel);border-top:1px solid var(--line);
+    padding:var(--space-1) var(--space-2);padding-bottom:calc(var(--space-1) + var(--safe));
+    gap:var(--space-1)}
+  .mob-bar-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;min-height:48px;padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);
+    background:transparent;border:none;color:var(--text-dim);font-size:var(--fs-xs);cursor:pointer;
+    transition:background var(--transition-fast),color var(--transition-fast)}
+  .mob-bar-btn svg{width:20px;height:20px}
+  .mob-bar-btn .nm{font-size:var(--fs-xs)}
+  .mob-bar-btn.active{color:var(--accent);background:var(--accent-soft)}
+  /* 底部抽屉：纯 display 开关（不依赖 transform/opacity 入场动画——
+     部分渲染器/无头环境不推进离屏图层的动画帧，会把抽屉卡在屏外点不到；
+     display 切换保证打开即可见可点，可靠性优先于入场微动效） */
+  .side-sheet-backdrop{display:none;position:fixed;inset:0;background:var(--overlay);
+    z-index:var(--z-drawer)}
+  .side-sheet-backdrop.open{display:block}
+  .side-sheet{display:none;flex-direction:column;position:fixed;left:0;right:0;bottom:0;
+    z-index:calc(var(--z-drawer) + 1);max-height:70vh;max-height:70dvh;
+    background:var(--panel);border-top:1px solid var(--line);
+    border-radius:var(--radius-xl) var(--radius-xl) 0 0;box-shadow:var(--shadow-3)}
+  .side-sheet.open{display:flex}
+  .side-sheet-head{display:flex;align-items:center;justify-content:space-between;
+    padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);flex-shrink:0}
+  .side-sheet-title{font-size:var(--fs-base);font-weight:600;color:var(--text)}
+  .side-sheet-close{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--panel);color:var(--text-dim);font-size:var(--fs-base);cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center}
+  .side-sheet-close:hover{background:var(--surface-hover);color:var(--text)}
+  .side-sheet-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-2) var(--space-3) calc(var(--space-3) + var(--safe));
+    display:flex;flex-direction:column;gap:2px}
+  .sheet-parent{display:flex;align-items:center;gap:var(--space-2);width:100%;
+    padding:var(--space-2) var(--space-3);min-height:44px;border-radius:var(--radius-md);
+    background:transparent;border:none;color:var(--text);font-size:var(--fs-sm);font-weight:500;
+    cursor:pointer;text-align:left;transition:background var(--transition-fast)}
+  .sheet-parent svg{width:18px;height:18px;color:var(--sc,var(--muted));flex-shrink:0}
+  .sheet-parent .cnt{margin-left:auto;font-size:var(--fs-xs);background:var(--surface-muted);
+    border-radius:10px;padding:1px 8px;color:var(--text-dim)}
+  .sheet-parent:hover{background:var(--surface-hover)}
+  .sheet-parent.active{background:var(--sc,var(--accent));color:var(--on-accent)}
+  .sheet-parent.active svg{color:var(--on-accent)}
+  .sheet-parent.active .cnt{background:var(--on-accent-soft);color:var(--on-accent)}
+  .sheet-parent.has-active{background:var(--surface-hover)}
+  .sheet-sub{display:flex;align-items:center;gap:var(--space-2);width:100%;
+    padding:var(--space-2) var(--space-3);padding-left:calc(var(--space-3) + 26px);min-height:40px;
+    border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-dim);
+    font-size:var(--fs-sm);cursor:pointer;text-align:left;transition:background var(--transition-fast)}
+  .sheet-sub .sub-dot{width:5px;height:5px;border-radius:50%;background:var(--text-faint);flex-shrink:0}
+  .sheet-sub:hover{background:var(--surface-hover);color:var(--text)}
+  .sheet-sub.active{background:var(--accent-soft);color:var(--accent)}
+  .sheet-sub.active .sub-dot{background:var(--accent)}
+  /* 主内容底部留出底栏高度 */
+  .main{padding-bottom:calc(72px + var(--safe))}
+}
 /* logo 与右侧系统按钮对齐：行高统一为 36px（同 .tbtn min-height），消除基线不齐 */
 .logo{display:flex;align-items:center;gap:var(--space-2);font-weight:600;font-size:var(--fs-lg);
   letter-spacing:-.01em;min-height:36px;flex-shrink:0}
@@ -340,7 +427,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .page-head h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em}
 .page-head .sub{margin:1px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
 .page-head .ph-act{flex-shrink:0;display:flex;align-items:center;gap:var(--space-2)}
-/* v1.15：统一"返回"键（标题栏右侧）。适用：抽屉子页（设置/AI/插件）、独立页面（文档/仓库）。
+/* v1.15：统一"返回"键（标题栏右侧）。适用：抽屉子页（设置/AI/插件）、独立页面（文档/回收站）。
    主导航落地页（概览/统计/场景）不显示返回键——侧栏切换即可。 */
 .page-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
   border-radius:var(--radius-md);border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
@@ -386,7 +473,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .page-head.drawer-ph h2{margin:0}
 
 /* ===== 主内容区 ===== */
+/* v2.0.3：flex 纵向布局 + 尾栏 margin-top:auto——所有页面尾栏永远在最下
+   （内容不足一屏时贴底；超出时尾栏随内容排在最后，滚动到底才可见） */
 .main{flex:1;overflow:auto;padding:var(--space-3) var(--space-4);min-width:0;
+  display:flex;flex-direction:column;
   background:var(--bg)} /* v1.15 P3：主区内边距 20/24→12/16，提升信息密度；背景由 240 加深到 223 让白卡更跳 */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-3);margin-bottom:var(--space-2);
@@ -440,16 +530,24 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* ===== 表单 ===== */
 .form-row{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
 .form-row .fld{flex:1;min-width:120px}
+/* v2.1.1：字段宽度工具类（替代 form-row 内散落的内联 max-width） */
+.fld-sm{max-width:120px}
+.fld-md{max-width:160px}
+.fld-lg{max-width:200px}
+.fld-xl{max-width:480px}
 .form-row label{display:block;font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-1);
   font-weight:500;letter-spacing:.01em}
+/* v2.1.1 按钮高度阶梯（小操作钮族）：base=32px / sm=28px / xs=24px；min 仅加 min-width 不改高 */
 .addbtn{padding:6px var(--space-3);border-radius:var(--radius-md);background:var(--sc,var(--accent));
   color:var(--on-accent);font-size:var(--fs-sm);min-height:32px;font-weight:600;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast);letter-spacing:-.01em}
 .addbtn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .addbtn:active{filter:brightness(.92)}
 /* v1.15 P2：addbtn 常用变体工具类（替代重复内联样式） */
-.addbtn.sm{padding:4px 10px;min-height:32px;font-size:var(--fs-sm);font-weight:500}
-.addbtn.min{min-width:90px;padding:8px 12px;font-size:var(--fs-sm)}
+.addbtn.sm{padding:4px 10px;min-height:28px;font-size:var(--fs-sm);font-weight:500}
+.addbtn.xs{padding:2px 8px;min-height:24px;font-size:var(--fs-xs);font-weight:500}
+.addbtn.min{min-width:90px;padding:6px var(--space-3);min-height:32px;font-size:var(--fs-sm)}
+.addbtn.danger{background:var(--danger,var(--muted))}
 /* v1.15 P2：代码/JSON 输入框工具类（monospace + 12px，替代重复内联） */
 .code-input{width:100%;font-family:"SF Mono","SFMono-Regular",Consolas,monospace;font-size:12px;line-height:1.5}
 
@@ -481,6 +579,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .card code.snip{margin-top:var(--space-3)} /* 卡片内代码块与标题/正文留出间距，避免紧贴 */
 
 .foot{text-align:center;color:var(--text-faint);font-size:var(--fs-xs);padding:var(--space-3) 0 var(--space-6);line-height:1.7}
+/* v2.0.3：尾栏永远在最下（配合 .main / .drawer-page 的 flex 纵向布局） */
+.main > .foot{margin-top:auto}
 
 /* ===== 概览页栅格布局（PC 宽屏 2 列） ===== */
 .overview-grid{display:grid;gap:var(--space-5)}
@@ -512,6 +612,35 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   background:var(--panel2);border:1px solid var(--line);min-height:32px;color:var(--text-dim);
   transition:background var(--transition-fast),color var(--transition-fast)}
 .kbtns button:hover{background:var(--surface-hover);color:var(--text)}
+
+/* ===== v2.1.0 待办视图（todo 模式） ===== */
+.todo-list{display:flex;flex-direction:column;gap:var(--space-1)}
+.todo-row{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel);
+  transition:background var(--transition-fast),border-color var(--transition-fast)}
+.todo-row:hover{background:var(--surface-hover);border-color:var(--accent-soft)}
+.todo-chk{width:18px;height:18px;flex-shrink:0;accent-color:var(--accent);cursor:pointer}
+.todo-title{flex:1;min-width:0;font-size:var(--fs-sm);color:var(--text);font-weight:500;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo-row.done .todo-title{color:var(--muted);text-decoration:line-through}
+.todo-meta{display:flex;align-items:center;gap:var(--space-1);flex-shrink:0}
+.todo-meta .pri{font-size:var(--fs-xs);padding:1px 6px;border-radius:8px;font-weight:600}
+.todo-meta .pri.P0{background:var(--danger-soft);color:var(--danger)}
+.todo-meta .pri.P1{background:var(--warn-soft);color:var(--warn)}
+.todo-meta .pri.P2{background:var(--surface-muted);color:var(--text-dim-2)}
+.todo-meta .due{font-size:var(--fs-xs);background:var(--surface-muted);padding:1px 6px;border-radius:8px;color:var(--text-dim-2)}
+.todo-meta .due.od{background:var(--danger-soft);color:var(--danger);font-weight:600}
+.todo-st{font-size:var(--fs-xs);color:var(--muted);padding:1px 6px;border-radius:8px;background:var(--surface-muted)}
+.todo-ops{display:flex;gap:var(--space-1);flex-shrink:0}
+/* v2.1.1：与 .kbtns 同档小操作钮，统一 min-height 32px（高度阶梯） */
+.todo-ops button{font-size:var(--fs-xs);padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);
+  background:var(--panel2);border:1px solid var(--line);min-height:32px;color:var(--text-dim);
+  transition:background var(--transition-fast),color var(--transition-fast)}
+.todo-ops button:hover{background:var(--surface-hover);color:var(--text)}
+
+/* ===== v2.1.0 日历内联视图（calendar 模式，渲染在 #main 任务卡内） ===== */
+.cal-inline{max-width:720px;margin:0 auto}
+.cal-inline .cal-day{aspect-ratio:auto;min-height:56px}
 
 /* ===== 聊天 ===== */
 /* v1.15：消息区+输入区 = 一个完整卡片（消息区顶部圆角、输入区底部圆角，中间无分割线） */
@@ -564,7 +693,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-panel.collapsed{width:0;overflow:hidden;border-left-color:transparent}
 .chat-panel:hover,.chat-panel:focus-within{border-left-color:var(--accent-soft);
   box-shadow:inset 3px 0 0 var(--accent-soft)} /* v1.10.0b：hover/focus 边框高亮（左缘 3px accent 边 + 柔和 inset 阴影） */
-.chat-panel-header{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);
+.chat-panel-header{padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:var(--space-2);
   background:var(--panel)} /* v1.9.5：头部白底与浅灰消息区区分 */
 .chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2);min-width:0}
@@ -618,14 +747,26 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 @media(max-width:600px){
   .app-grid{grid-template-columns:1fr}
 }
-.chat-attach-btn{flex-shrink:0;width:28px;height:28px;padding:0;border:1px solid var(--line);
+/* v2.1.0：工具占位页（即将上线） */
+.tool-stub-card{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-3);
+  padding:var(--space-6);max-width:560px}
+.tool-stub-badge{display:inline-flex;align-items:center;gap:var(--space-1);
+  font-size:var(--fs-xs);font-weight:600;color:var(--accent);
+  background:var(--accent-soft);border:1px solid var(--accent-soft);
+  border-radius:var(--radius-full);padding:var(--space-1) var(--space-3)}
+.tool-stub-desc{font-size:var(--fs-sm);color:var(--text-dim);line-height:1.7;margin:0}
+.tool-stub-tip{font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin:0;
+  padding-top:var(--space-3);border-top:1px solid var(--line)}
+/* v2.1.1：附件按钮与发送按钮同档 32×32（图标钮统一高度阶梯） */
+.chat-attach-btn{flex-shrink:0;width:32px;height:32px;padding:0;border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);color:var(--text-dim);cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1;
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
 .chat-attach-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent-soft)}
-.chat-attach-btn svg{width:14px;height:14px}
-/* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹） */
-.chat-text-input{resize:none;min-height:44px;max-height:120px;padding:var(--space-2);
+.chat-attach-btn svg{width:15px;height:15px}
+/* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹）
+   v2.0.3：min-height 44→64px，输入卡上框线上移，输入区上下更舒展 */
+.chat-text-input{resize:none;min-height:64px;max-height:120px;padding:var(--space-2);
   border:none;border-radius:0;font-size:var(--fs-sm);background:transparent;
   color:var(--text);font-family:inherit;line-height:1.5;width:100%;
   outline:none}
@@ -833,6 +974,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--line);flex-shrink:0}
 .report-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;color:var(--text)}
 .report-actions{display:flex;gap:var(--space-2)}
+/* v2.1.1：报表头按钮与 .report-toolbar button 同档（32px 小操作钮），不再借用 .tbtn */
+.report-actions button{padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);
+  border:1px solid var(--line);background:var(--panel);color:var(--text-dim);
+  font-size:var(--fs-sm);min-height:32px;transition:background var(--transition-fast),color var(--transition-fast)}
+.report-actions button:hover{background:var(--surface-hover);color:var(--text)}
 .report-toolbar{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;
   padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--line);flex-shrink:0}
 .report-toolbar select{flex:0 0 auto;min-width:90px}
@@ -851,14 +997,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   text-align:left}
 .report-content th{background:var(--surface-muted);font-weight:600;color:var(--text)}
 .report-content td{color:var(--text-dim)}
-/* 高级报表入口按钮 */
-.report-entry-btn{display:inline-flex;align-items:center;gap:var(--space-2);
-  padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);
-  background:var(--accent);color:var(--on-accent);font-size:var(--fs-sm);
-  font-weight:500;min-height:36px;border:none;cursor:pointer;
-  transition:filter var(--transition-fast),box-shadow var(--transition-fast)}
-.report-entry-btn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
-.report-entry-btn:active{filter:brightness(.92)}
+/* v2.1.1：高级报表入口改用 .btn-primary（原 .report-entry-btn 与之重复，已移除） */
 
 /* ===== 今日仪表盘（A：问候语 + Top3 + 习惯链状态条）
    v1.9.4b：整体压紧纵向间距——顶部「今天要处理」是次要的提示栏，
@@ -961,7 +1100,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   padding:0 var(--space-7) !important;
   overflow:auto !important;
   flex:1 1 0 !important;
-  display:block !important;
+  /* v2.0.3：flex 纵向布局——尾栏 .foot 用 margin-top:auto 永远贴最底（内容短时贴底、长时滚到底才出现） */
+  display:flex !important;
+  flex-direction:column !important;
   background:transparent;
   /* v1.9.3：background 改为 transparent 与 #main 一致（#main 无背景色，显示 body 的 var(--bg)） */
   border:none;
@@ -979,7 +1120,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 }
 /* v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片直接浮于浅灰底（与统计/回收站页一致）；
    margin-top 承接 drawer-page 移除的 padding-top（三断点同步）
-   v1.15：页头统一"框起来"——图标+大标题+小标题装入带边框的标题栏卡片，与统计/仓库页视觉一致 */
+   v1.15：页头统一"框起来"——图标+大标题+小标题装入带边框的标题栏卡片，与统计/回收站页视觉一致 */
 .drawer-ph{margin:var(--space-6) 0 var(--space-5);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-4)}
@@ -989,6 +1130,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   border-radius:var(--radius-md);line-height:1.4;cursor:pointer;
   transition:background var(--transition-fast),color var(--transition-fast)}
 .drawer-ph .close:hover{background:var(--surface-hover);color:var(--text)}
+/* v2.0.3：设置页分区导航回归独立导航栏（.set-nav），点击切换下方 card——
+   默认只显示当前分区对应 card，切换带轻微淡入 */
+#drawer[data-page="settings"] .set-card{display:none}
+#drawer[data-page="settings"] .set-card.set-tab-active{display:block;
+  animation:set-fade-in var(--transition-base) ease}
+@keyframes set-fade-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 /* 四页视图控制（settings / ai / plugin / knowledge）：页头、分区卡、导航与保存栏按 data-page 显示 */
 #drawer[data-page="ai"] .drawer-ph:not([data-ph="ai"]),
 #drawer[data-page="plugin"] .drawer-ph:not([data-ph="plugin"]),
@@ -1013,19 +1160,18 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 #drawer[data-page="settings"] #set-content{display:none}
 
 /* ===== 设置页面（v1.9.x 改版：分组卡片 + 吸顶导航 + 吸底保存栏） ===== */
-/* 吸顶快捷导航（标签 chip + 保存按钮）：横向负 margin 通栏（与 drawer-page 各断点 padding 同步） */
+/* v2.0.3：分区导航改为与标题栏（.drawer-ph）同宽的卡片式吸顶导航——
+   不再负边距通栏，左右边界与标题栏卡片完全对齐 */
 .set-nav{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;gap:var(--space-2);
-  flex-wrap:wrap;margin:0 calc(var(--space-7) * -1) var(--space-5);
-  padding:var(--space-3) var(--space-7);background:var(--panel);
-  border-bottom:1px solid var(--line);box-shadow:var(--shadow-2)}
-.set-nav-grow{flex:1}
-.set-nav-btn{border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
+  flex-wrap:wrap;margin:0 0 var(--space-5);
+  padding:var(--space-3);background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+.set-nav-btn{flex:1;text-align:center;border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
   font-size:var(--fs-xs);padding:4px 12px;border-radius:var(--radius-full);cursor:pointer;
   white-space:nowrap;transition:background var(--transition-fast),color var(--transition-fast),
   border-color var(--transition-fast),transform var(--transition-fast)}
 .set-nav-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent)}
-.set-nav-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
-.set-nav-btn.primary:hover{background:var(--accent);color:var(--on-accent);filter:brightness(1.08)}
+.set-nav-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
 /* 分组卡片 */
 .set-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   padding:var(--space-4);margin-bottom:var(--space-4);scroll-margin-top:56px}
@@ -1064,20 +1210,20 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   padding:var(--space-4) var(--space-7);background:var(--panel);
   border-top:1px solid var(--line);box-shadow:var(--shadow-2)}
 .set-savebar .addbtn{flex:1}
-/* 设置页尾栏（与其他页面 foot 一致，宽度铺满、文本居中） */
-.drawer-page > .foot{margin:0}
-/* 通栏与页头上边距断点同步：768-1023 → --space-4；≥1440 → --space-8（与 .drawer-page padding 对齐） */
+/* 设置页尾栏（与其他页面 foot 一致，宽度铺满、文本居中）；
+   v2.0.3：margin-top:auto 让尾栏永远在最下——内容不足一屏时贴底，超出时滚到底才出现 */
+.drawer-page > .foot{margin:auto 0 0}
+/* 通栏与页头上边距断点同步：768-1023 → --space-4；≥1440 → --space-8（与 .drawer-page padding 对齐）
+   v2.0.3：set-nav 已改为与标题栏同宽的卡片，不再需要通栏负边距断点覆盖 */
 @media(min-width:768px) and (max-width:1023px){
   .drawer-ph{margin-top:var(--space-4)}
-  .set-nav{margin-left:calc(var(--space-4) * -1);margin-right:calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4)}
   .set-savebar{margin-left:calc(var(--space-4) * -1);margin-right:calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4)}
 }
 @media(min-width:1440px){
-  .set-nav{margin-left:calc(var(--space-8) * -1);margin-right:calc(var(--space-8) * -1);padding-left:var(--space-8);padding-right:var(--space-8)}
   .set-savebar{margin-left:calc(var(--space-8) * -1);margin-right:calc(var(--space-8) * -1);padding-left:var(--space-8);padding-right:var(--space-8)}
 }
-/* 窄屏：表单标签上置 */
-@media (max-width:720px){
+/* 窄屏：表单标签上置（v2.1.1：断点统一为主移动断点 767px，消除 721~767px 双列挤压） */
+@media (max-width:767px){
   .set-field{grid-template-columns:1fr;gap:var(--space-1)}
   .set-nav-btn{padding:4px 10px}
 }
@@ -1135,7 +1281,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
-  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(0,0,0,.4);
   --shadow-2:0 2px 8px rgba(0,0,0,.5);
   --shadow-3:0 4px 16px rgba(0,0,0,.6);
@@ -1143,10 +1289,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 }
 /* 暗色主题的语义色已由令牌双值（:root[data-theme="dark"]）统一提供，无需逐条覆盖 */
 
-/* ===== T4.1 组件设计规范（按钮变体 / 统一输入框；.card 已存在不重复定义） ===== */
+/* ===== T4.1 组件设计规范（按钮变体 / 统一输入框；.card 已存在不重复定义） =====
+   v2.1.1：btn-primary 支持场景色（--sc 未设时回退 --accent），与 btn-ghost 同尺寸可并排 */
 .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);
   padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);border:none;
-  background:var(--accent);color:var(--on-accent);font-size:var(--fs-base);font-weight:600;
+  background:var(--sc,var(--accent));color:var(--on-accent);font-size:var(--fs-base);font-weight:600;
   cursor:pointer;transition:filter var(--transition-fast),box-shadow var(--transition-fast)}
 .btn-primary:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .btn-primary:active{filter:brightness(.92)}
@@ -1222,8 +1369,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .help-section summary{padding:var(--space-3) var(--space-4);cursor:pointer;font-weight:600;font-size:var(--fs-base);
   background:var(--panel2);list-style:none;transition:background var(--transition-fast)}
 .help-section summary::-webkit-details-marker{display:none}
-.help-section summary::before{content:"▶ ";color:var(--muted);font-size:var(--fs-xs);transition:transform .2s}
-.help-section[open] summary::before{content:"▼ "}
+.help-section summary::before{content:"▸ ";color:var(--muted);font-size:var(--fs-xs);transition:transform .2s}
+.help-section[open] summary::before{content:"▾ "}
 .help-section summary:hover{background:var(--surface-hover)}
 .help-content{padding:var(--space-3) var(--space-4);font-size:var(--fs-base);line-height:1.7;color:var(--text-dim)}
 .help-content p{margin:0 0 var(--space-2)}
@@ -1245,24 +1392,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5);flex:1}
 .recycle-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden;flex:1}
-/* v1.10.0b：仓库头继承 page-head 紧凑型风格（padding/icon/h2 与概览/统计/图表商店一致） */
+/* v1.10.0b：回收站头继承 page-head 紧凑型风格（padding/icon/h2 与概览/统计/图表商店一致） */
 .recycle-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);
   border-bottom:1px solid var(--line);flex-shrink:0;background:var(--panel)}
 .recycle-header h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em}
 .recycle-header .sub{margin:1px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
-/* v1.9.9：仓库页面 tab 切换（热/温/冷）——横向 pill tabs，跟随 page-head 下方 */
-.warehouse-tabs{display:flex;gap:var(--space-1);padding:var(--space-3) var(--space-6) 0;
-  border-bottom:1px solid var(--line);background:var(--panel2);flex-shrink:0}
-.warehouse-tab{padding:var(--space-2) var(--space-4);font-size:var(--fs-sm);color:var(--text-dim);
-  border:1px solid transparent;border-bottom:none;border-radius:var(--radius-md) var(--radius-md) 0 0;
-  background:transparent;cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast);
-  display:flex;align-items:center;gap:var(--space-1)}
-.warehouse-tab:hover{background:var(--surface-hover);color:var(--text)}
-.warehouse-tab.active{background:var(--panel);color:var(--accent);font-weight:600;border-color:var(--line);border-bottom-color:var(--panel);
-  margin-bottom:-1px}
-.warehouse-tab .wh-cnt{font-size:11px;color:var(--muted);background:var(--surface-muted);
-  border-radius:10px;padding:1px var(--space-1);min-width:18px;text-align:center}
-.warehouse-tab.active .wh-cnt{background:var(--accent-soft);color:var(--accent)}
 .recycle-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-3);
   border-radius:var(--radius-md);border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
   font-size:var(--fs-sm);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
@@ -1295,16 +1429,21 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .recycle-clear:hover{background:var(--danger-soft)}
 
 /* ===== 侧边栏折叠按钮（默认隐藏，>=1024px 显示；移动端不需要） ===== */
-/* v1.9.9：折叠按钮回归侧栏顶部（#sideToggle 重新位于 #side 子树），恢复 width:100% 满宽 */
+/* v1.9.9：折叠按钮回归侧栏顶部（#sideToggle 重新位于 #side 子树），恢复 width:100% 满宽
+   v2.0.3：上下高度收窄（min-height 36→28），与顶栏间距收紧，并在"顶栏下沿 ↔ 待办栏对齐线"
+   这段竖直区间内上下居中（margin-top 按该区间高度实测校准） */
 .side-toggle{display:none;align-items:center;justify-content:center;gap:var(--space-2);width:100%;
-  padding:var(--space-2);border-radius:var(--radius-md);background:var(--panel2);border:1px solid var(--line);
-  color:var(--text-dim);font-size:var(--fs-sm);margin-bottom:var(--space-2);min-height:36px;
+  padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);background:var(--panel2);border:1px solid var(--line);
+  color:var(--text-dim);font-size:var(--fs-sm);margin-bottom:var(--space-2);min-height:28px;
+  /* 实测校准：顶栏下沿(53px)↔待办栏对齐线(98px)区间高 45px，按钮高 29px，
+     居中需上移 4px 抵消 .side 的 padding-top（12px），使按钮与顶栏间距收至 8px */
+  margin-top:calc(var(--space-1) * -1);
   transition:background var(--transition-fast),color var(--transition-fast)}
 .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
-.side-toggle svg{width:18px;height:18px;flex-shrink:0;transition:transform .2s}
+.side-toggle svg{width:16px;height:16px;flex-shrink:0;transition:transform .2s}
 .side.collapsed .side-toggle svg{transform:rotate(180deg)}
 .side.collapsed .side-toggle .lbl{display:none}
-.side.collapsed .side-toggle{justify-content:center;padding:11px 0}
+.side.collapsed .side-toggle{justify-content:center;padding:var(--space-1) 0}
 /* 侧栏分组标题（v1.9.5：监控/场景/系统三组，替代裸分割线，层级清晰） */
 .nav-group{font-size:var(--fs-xs);font-weight:600;color:var(--muted);letter-spacing:.08em;
   padding:var(--space-5) var(--space-3) var(--space-1);margin-bottom:var(--space-2);text-transform:uppercase;user-select:none}
@@ -1314,6 +1453,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* >=768px 通用：侧边栏折叠效果（所有显示折叠按钮的断点共享，确保 768-1023 / 1024-1439 / >=1440 三段均有视觉变化） */
 @media(min-width:768px){
   .side{transition:width var(--transition-base)}
+  /* v2.0.3：三行下框线同一水平线——对话区首栏补齐到待办栏自然高（实测 45px），
+     内容由 align-items:center 保持垂直居中 */
+  .chat-panel-header{min-height:45px}
   .side.collapsed{width:64px} /* v1.10.0：56→64，让"概览/统计/AI"等 2 字项在折叠态一行可显示 */
   .side.collapsed .nav-item .cnt{display:none}
   .side.collapsed .nav-item{justify-content:center;padding:8px 4px;gap:0}
@@ -1397,19 +1539,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .tbtn{padding:var(--space-2);flex-shrink:0}
   .tbtn .lbl{display:none}
   .body{flex-direction:column}
-  .side{width:100%;position:fixed;bottom:0;left:0;right:0;display:flex;gap:var(--space-1);overflow-x:auto;
-    padding:var(--space-1) var(--space-2);padding-bottom:calc(var(--space-1) + var(--safe));z-index:var(--z-sidebar);border-right:none;
-    border-top:1px solid var(--line);background:var(--panel)}
-  /* 移动端侧栏：分组标签独立成行，强制 block 纵向排列，增加对比度 */
-  .side{display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:0}
-  .nav-group{font-size:var(--fs-xs);font-weight:700;color:var(--text-dim);letter-spacing:.06em;
-    padding:var(--space-3) var(--space-3) var(--space-1);text-transform:uppercase;user-select:none;
-    border-bottom:1px solid var(--line);flex-shrink:0}
-  .nav-item{flex-direction:column;gap:2px;width:auto;margin:0;padding:var(--space-2) var(--space-3);font-size:var(--fs-xs);
-    flex-shrink:0;min-height:44px;min-width:56px;justify-content:center}
-  .nav-item .nm{font-size:var(--fs-xs)}
-  .nav-item .cnt{display:none}
-  .main{padding:var(--space-3) var(--space-4) calc(80px + var(--safe));font-size:var(--fs-md)}
+  /* v2.1.0：桌面侧栏（#side）在移动端隐藏，导航改由 .mob-bar 底栏 + .side-sheet 抽屉承载（规则见文件头部移动端导航块） */
+  .main{padding:var(--space-3) var(--space-4) calc(72px + var(--safe));font-size:var(--fs-md)}
   .form-row{flex-direction:column}
   .form-row .fld{min-width:100%;max-width:none}
   .kanban{grid-template-columns:1fr}
@@ -1427,8 +1558,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* 横屏适配：底部导航栏高度减小，主内容底部 padding 减小 */
 @media(max-width:767px) and (orientation:landscape){
-  .side{height:auto}
-  .nav-item{min-height:36px}
+  .mob-bar-btn{min-height:40px}
   .main{padding-bottom:60px}
 }
 
@@ -1478,12 +1608,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   100%{transform:translate(-50%,-50%) scale(4);opacity:0}
 }
 
-/* 横屏适配增强：侧边栏自动折叠，主内容全宽，底部导航更紧凑 */
+/* 横屏适配增强：底部导航更紧凑，主内容区域增高 */
 @media(max-width:767px) and (orientation:landscape){
-  /* 横屏时侧边栏高度更小，导航项更紧凑 */
-  .side{padding:var(--space-1) var(--space-2)}
-  .nav-item{min-height:44px;min-width:48px;padding:var(--space-1) var(--space-2)}
-  .nav-item .nm{font-size:var(--fs-xs)}
+  /* 横屏时底部导航按钮更紧凑 */
+  .mob-bar-btn{min-height:40px;padding:var(--space-1) var(--space-2)}
   /* 主内容区域增高：减小底部 padding */
   .main{padding:var(--space-2) var(--space-3) 52px}
   /* 横屏时看板恢复 2 列（空间足够） */
@@ -1794,7 +1922,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --danger-overdue-bg:#2a0000; --danger-overdue-border:#ff0000;
   --warn:#ff6600; --warn-soft:#2a1500;
   --ok:#00ff00; --accent-soft:#2a2a00;
-  --sc-office:#ffff00; --sc-code:#00ff00; --sc-study:#ff6600; --sc-life:#00ffff;
+  --sc-office:#ffff00; --sc-design:#ff66cc; --sc-study:#ff6600; --sc-data:#00ffcc; --sc-code:#00ff00; --sc-life:#00ffff;
   --scenario-default:#ffff00;
   --banner-bg:#1a1a00; --banner-border:#ffff00; --banner-ink:#ffff00; --banner-border-2:#ffff00;
   --kbd-border:#ffffff; --snip-bg:#000000; --snip-fg:#ffffff; --toast-bg:#ffffff;
@@ -1804,7 +1932,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
-  --radius-sm:2px; --radius-md:4px; --radius-lg:6px; --radius-xl:8px;
+  --radius-sm:2px; --radius-md:4px; --radius-lg:6px; --radius-xl:8px; --radius-full:999px;
   --shadow-1:0 0 0 1px #ffffff;
   --shadow-2:0 0 0 2px #ffffff;
   --shadow-3:0 0 0 3px #ffffff;
@@ -1829,7 +1957,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --danger-overdue-bg:#f4e8e0; --danger-overdue-border:#d8a89a;
   --warn:#b8722c; --warn-soft:#f0e0c8;
   --ok:#5a8c3a; --accent-soft:#e8d8b0;
-  --sc-office:#8b6914; --sc-code:#5a8c3a; --sc-study:#b8722c; --sc-life:#7a5a9a;
+  --sc-office:#8b6914; --sc-design:#a84a7a; --sc-study:#b8722c; --sc-data:#3a7a6a; --sc-code:#5a8c3a; --sc-life:#7a5a9a;
   --scenario-default:#8b6914;
   --banner-bg:#ede0c8; --banner-border:#c8b890; --banner-ink:#6b5640; --banner-border-2:#d4c4a8;
   --kbd-border:#c8b890; --snip-bg:#3a2a1a; --snip-fg:#f4ecd8; --toast-bg:#5b4636;
@@ -1839,7 +1967,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
-  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(91,70,54,.1);
   --shadow-2:0 2px 8px rgba(91,70,54,.12);
   --shadow-3:0 4px 16px rgba(91,70,54,.16);
@@ -1874,10 +2002,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .pomo-widget .pomo-count{font-size:var(--fs-xs);color:var(--muted);padding:1px 6px;
   background:var(--surface-muted);border-radius:var(--radius-sm)}
 .pomo-actions{display:inline-flex;gap:var(--space-1)}
-.pomo-actions button{padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);
+/* v2.1.1：番茄钟/时间追踪操作钮共用基础样式（原两套完全重复），仅 .primary 底色不同 */
+.pomo-actions button,.tracker-actions button{padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);font-size:var(--fs-xs);
   min-height:32px;cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
-.pomo-actions button:hover{background:var(--surface-hover);color:var(--text)}
+.pomo-actions button:hover,.tracker-actions button:hover{background:var(--surface-hover);color:var(--text)}
 .pomo-actions button.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .pomo-actions button.primary:hover{filter:brightness(.96)}
 .pomo-actions button.danger{color:var(--danger);border-color:var(--danger-border)}
@@ -1891,10 +2020,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tracker-widget .tracker-display{font-weight:600;color:var(--text);min-width:72px}
 .tracker-widget.paused .tracker-display{color:var(--muted)}
 .tracker-actions{display:inline-flex;gap:var(--space-1)}
-.tracker-actions button{padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);
-  border:1px solid var(--line);background:var(--panel);color:var(--text-dim);font-size:var(--fs-xs);
-  min-height:32px;cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
-.tracker-actions button:hover{background:var(--surface-hover);color:var(--text)}
 .tracker-actions button.primary{background:var(--ok);color:var(--on-accent);border-color:var(--ok)}
 .tracker-actions button.primary:hover{filter:brightness(.96)}
 .tracker-actions button.warn{color:var(--warn);border-color:var(--warn)}
@@ -2092,7 +2217,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .alarm-now{text-align:center;padding:var(--space-4) 0 var(--space-3);font-variant-numeric:tabular-nums}
 .alarm-now .time{font-size:48px;font-weight:700;color:var(--text);letter-spacing:.02em;line-height:1}
 .alarm-now .date{font-size:var(--fs-sm);color:var(--text-dim);margin-top:var(--space-2)}
-.alarm-form{display:flex;gap:var(--space-2);align-items:center;padding:var(--space-3);
+/* v2.1.1：加 flex-wrap 防窄屏溢出（time+备注+7 循环钮+添加钮挤一行） */
+.alarm-form{display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;padding:var(--space-3);
   background:var(--panel2);border-radius:var(--radius-md);margin-bottom:var(--space-3)}
 .alarm-form input[type="time"]{padding:var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel);color:var(--text);font-size:var(--fs-md);
@@ -2105,6 +2231,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   background:var(--panel);color:var(--text-dim);font-size:var(--fs-xs);border-radius:var(--radius-sm);
   cursor:pointer;min-width:22px}
 .alarm-form .loop-pick button.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+/* v2.1.1：移动端闹钟表单降级——时间/备注各占一行，循环钮与添加钮一行 */
+@media(max-width:767px){
+  .alarm-form input[type="time"]{flex:1 1 40%}
+  .alarm-form input[type="text"]{flex:1 1 40%}
+  .alarm-form .loop-pick{flex:1 1 100%;justify-content:flex-start}
+  .alarm-form .addbtn{flex:1 1 100%}
+}
 .alarm-list{display:flex;flex-direction:column;gap:var(--space-2);max-height:240px;overflow-y:auto}
 .alarm-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);
   border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel2)}
@@ -2369,7 +2502,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .auto-tag{font-size:var(--fs-xs);color:var(--muted);background:var(--panel2);
   padding:2px 6px;border-radius:var(--radius-sm);border:1px solid var(--line)}
 .auto-item-actions{display:flex;gap:var(--space-1)}
-.auto-item-actions .addbtn{padding:4px 10px;font-size:var(--fs-xs);flex:1}
+/* v2.1.1：对齐 .addbtn.xs 档（24px 高），flex:1 为组件特有 */
+.auto-item-actions .addbtn{padding:2px 8px;min-height:24px;font-size:var(--fs-xs);flex:1}
 .auto-form{padding:var(--space-3);background:var(--panel2);border-radius:var(--radius-md);
   border:1px solid var(--line);margin-bottom:var(--space-4)}
 .auto-form-title{font-size:var(--fs-sm);font-weight:600;color:var(--text);margin:0 0 var(--space-2)}
@@ -2505,6 +2639,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
   <div class="body">
     <nav class="side" id="side"></nav>
+    <!-- v2.1.0 移动端：底部 4 组导航栏 + 底部抽屉（≤767px 显示，桌面 display:none） -->
+    <nav class="mob-bar" id="mobBar" aria-label="底部导航"></nav>
+    <div class="side-sheet-backdrop" id="sideSheetBackdrop"></div>
+    <div class="side-sheet" id="sideSheet" role="dialog" aria-modal="true" aria-label="导航菜单">
+      <div class="side-sheet-head"><span class="side-sheet-title" id="sideSheetTitle"></span>
+        <button type="button" class="side-sheet-close" id="sideSheetClose" aria-label="关闭菜单">✕</button></div>
+      <div class="side-sheet-body" id="sideSheetBody"></div>
+    </div>
     <div class="main-wrap">
       <!-- v1.15：正文顶部第二行 = 待办栏（原消息栏替换；消息内容收进顶栏消息按钮） -->
       <div class="toolbar-row" id="topbarRow2" role="region" aria-label="正文顶部工具行">
@@ -2610,11 +2752,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <div class="drawer" id="drawer">
   <!-- v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片浮于浅灰底（与统计/回收站页一致）；
        AI 配置 / 插件市场抽离为独立菜单页，三个页头由 #drawer[data-page] 控制显示 -->
-  <header class="page-head drawer-ph" data-ph="settings">
-    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
-    <div class="ph-tx"><h2>设置</h2><p class="sub">应用偏好与系统配置</p></div>
-    <button class="page-back drawer-close" id="drawerClose" type="button" aria-label="返回上一视图">← 返回</button>
-  </header>
+	  <header class="page-head drawer-ph" data-ph="settings">
+	    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+	    <div class="ph-tx"><h2>设置</h2></div>
+	    <button class="page-back drawer-close" id="drawerClose" type="button" aria-label="返回上一视图">← 返回</button>
+	  </header>
   <header class="page-head drawer-ph" data-ph="ai">
     <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></span>
     <div class="ph-tx"><h2>AI</h2><p class="sub">大模型 Profile、接口地址与请求参数</p></div>
@@ -2630,17 +2772,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="ph-tx"><h2>知识</h2><p class="sub">场景模板与知识管理（笔记 / 知识库 / 全文搜索）</p></div>
     <button class="page-back drawer-close" type="button" aria-label="返回上一视图">← 返回</button>
   </header>
-  <!-- 分区快捷导航（吸顶；仅设置页显示，AI/插件已抽离为独立菜单） -->
-  <nav class="set-nav" aria-label="设置分区导航">
-    <button type="button" class="set-nav-btn" data-scroll-to="set-scene">场景</button>
-    <button type="button" class="set-nav-btn" data-scroll-to="set-chain">习惯链</button>
-    <button type="button" class="set-nav-btn" data-scroll-to="set-look">外观</button>
-    <button type="button" class="set-nav-btn" data-scroll-to="set-notify">通知</button>
-    <button type="button" class="set-nav-btn" data-scroll-to="set-data">数据</button>
-    <button type="button" class="set-nav-btn" data-scroll-to="set-about">关于</button>
-    <span class="set-nav-grow" aria-hidden="true"></span>
-    <button type="button" class="set-nav-btn primary" id="setNavSave">保存设置</button>
-  </nav>
+	  <!-- 设置分区导航栏（独立于标题栏，点击切换下方 card 内容；保存按钮只在底部保存栏） -->
+	  <nav class="set-nav" aria-label="设置分区导航">
+	    <button type="button" class="set-nav-btn active" data-set-tab="set-scene">场景</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-chain">习惯链</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-look">外观</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-notify">通知</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-data">数据</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-about">关于</button>
+	  </nav>
 
   <!-- ===== AI 配置 ===== -->
   <section class="set-card" id="set-ai" aria-label="AI 配置">
@@ -2652,7 +2792,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       </div>
     </header>
     <div class="set-switch">
-      <input type="checkbox" id="cfgEnabled" style="width:auto" aria-label="启用 AI 对话">
+      <input type="checkbox" id="cfgEnabled" aria-label="启用 AI 对话">
       <div>
         <div class="sw-label">启用 AI 对话</div>
         <div class="sw-sub">subagent 可调用工具</div>
@@ -2663,9 +2803,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <div class="ctl">
         <div class="btn-row">
           <select id="cfgProfileSelect"></select>
-          <button type="button" class="addbtn" id="cfgProfileNew" style="--sc:var(--accent);padding:4px 10px;white-space:nowrap">新建</button>
-          <button type="button" class="addbtn" id="cfgProfileDup" style="--sc:var(--accent);padding:4px 10px;white-space:nowrap">复制</button>
-          <button type="button" class="addbtn" id="cfgProfileDel" style="--sc:var(--danger,var(--muted));padding:4px 10px;white-space:nowrap">删除</button>
+          <button type="button" class="addbtn sm" id="cfgProfileNew" style="--sc:var(--accent);white-space:nowrap">新建</button>
+          <button type="button" class="addbtn sm" id="cfgProfileDup" style="--sc:var(--accent);white-space:nowrap">复制</button>
+          <button type="button" class="addbtn sm" id="cfgProfileDel" style="--sc:var(--danger,var(--muted));white-space:nowrap">删除</button>
         </div>
       </div>
     </div>
@@ -2708,7 +2848,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       </div>
     </header>
     <div class="set-switch">
-      <input type="checkbox" id="cfgAgent" style="width:auto" aria-label="Agent 模式">
+      <input type="checkbox" id="cfgAgent" aria-label="Agent 模式">
       <div>
         <div class="sw-label">Agent 模式（工作记忆 + 多步目标编排）</div>
         <div class="sw-sub">开启后具备中短期记忆与多步目标规划能力（plan→逐步执行→complete_goal），对话循环上限放宽至 12 轮。可对我说「记住：xxx」直接写入记忆。</div>
@@ -2730,8 +2870,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
     <div class="hint" id="agentStatus" style="font-size:12px;margin:4px 0 8px"></div>
     <div class="set-actions">
-      <button type="button" class="addbtn" id="btnClearMem" style="--sc:var(--muted);padding:4px 10px;white-space:nowrap">清空记忆</button>
-      <button type="button" class="addbtn" id="btnCancelGoal" style="--sc:var(--danger,var(--muted));padding:4px 10px;white-space:nowrap">取消当前目标</button>
+      <button type="button" class="addbtn sm" id="btnClearMem" style="--sc:var(--muted);white-space:nowrap">清空记忆</button>
+      <button type="button" class="addbtn sm" id="btnCancelGoal" style="--sc:var(--danger,var(--muted));white-space:nowrap">取消当前目标</button>
     </div>
   </section>
 
@@ -2749,7 +2889,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <div class="set-subhead">添加自定义场景</div>
       <div class="btn-row">
         <input id="scAddName" placeholder="场景名（如 健身）" maxlength="12" style="flex:1;min-width:120px">
-        <input id="scAddColor" type="color" aria-label="场景颜色" style="width:44px;padding:2px">
+        <input id="scAddColor" type="color" aria-label="场景颜色">
         <select id="scAddIcon" aria-label="场景图标" style="flex:1;min-width:110px;max-width:150px"></select>
         <button type="button" class="addbtn sm" id="scAddBtn" >添加</button>
       </div>
@@ -2772,13 +2912,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <select id="chainAddSrc" style="flex:1;min-width:80px"></select>
         <input id="chainAddKw" placeholder="输入关键词，如：交付、上线" style="flex:2;min-width:120px">
         <select id="chainAddDst" style="flex:1;min-width:80px"></select>
-        <button type="button" class="addbtn" id="chainAddBtn" style="--sc:var(--accent);padding:8px 12px;white-space:nowrap">添加</button>
+        <button type="button" class="addbtn" id="chainAddBtn" style="--sc:var(--accent);white-space:nowrap">添加</button>
       </div>
     </div>
     <div class="set-actions" style="margin-top:var(--space-3)">
-      <button type="button" class="addbtn" id="chainResetBtn" style="--sc:var(--muted);padding:6px 10px;font-size:12px;flex:0 0 auto">重置为默认</button>
-      <button type="button" class="addbtn" id="btnChainShare" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的链</button>
-      <button type="button" class="addbtn" id="btnChainImport" style="--sc:var(--accent);padding:6px 10px;font-size:12px;flex:1;min-width:90px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入链</button>
+      <button type="button" class="addbtn sm" id="chainResetBtn" style="--sc:var(--muted);flex:0 0 auto">重置为默认</button>
+      <button type="button" class="addbtn sm" id="btnChainShare" style="--sc:var(--accent);flex:1;min-width:90px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的链</button>
+      <button type="button" class="addbtn sm" id="btnChainImport" style="--sc:var(--accent);flex:1;min-width:90px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入链</button>
     </div>
   </section>
 
@@ -2793,7 +2933,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </header>
     <div class="set-subhead">场景模板</div>
     <p class="set-tip">一键导入预置任务集（考研复习 / 健身计划 / 编程学习 / 项目管理 / 习惯养成），到期日按今天 + 偏移自动计算。</p>
-    <button type="button" class="addbtn" id="btnSceneTemplate" style="--sc:var(--accent);width:100%;padding:8px 12px"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>选择场景模板一键导入</button>
+    <button type="button" class="addbtn" id="btnSceneTemplate" style="--sc:var(--accent);width:100%"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>选择场景模板一键导入</button>
     <div class="set-divider" role="separator"></div>
     <!-- v1.6-D 知识管理入口：笔记管理 / 知识库 / 全文搜索 -->
     <div class="set-subhead">知识管理</div>
@@ -2821,7 +2961,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <div class="set-subhead">注册新插件</div>
       <p class="set-tip">粘贴插件 JSON 定义。</p>
       <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"myplugin","name":"我的插件","version":"1.0.0","description":"自定义插件"}' style="resize:vertical"></textarea>
-      <button type="button" class="addbtn" id="pluginAddBtn" style="--sc:var(--accent);padding:4px 10px;margin-top:4px">注册插件</button>
+      <button type="button" class="addbtn sm" id="pluginAddBtn" style="--sc:var(--accent);margin-top:4px">注册插件</button>
     </div>
   </section>
 
@@ -2841,11 +2981,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="set-subhead">导出 / 导入</div>
     <div class="set-actions">
       <button type="button" class="addbtn min" id="btnExport" aria-label="导出 JSON" >导出 JSON</button>
-      <button type="button" class="addbtn" id="btnExportCSV" aria-label="导出 CSV" style="--sc:var(--accent);min-width:70px">导出 CSV</button>
-      <button type="button" class="addbtn" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent);min-width:70px">导出 MD</button>
+      <button type="button" class="addbtn min" id="btnExportCSV" aria-label="导出 CSV" style="--sc:var(--accent)">导出 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent)">导出 MD</button>
       <button type="button" class="addbtn min" id="btnImport" aria-label="导入恢复" >导入恢复</button>
       <button type="button" class="addbtn min" id="btnIdbRestore" aria-label="从本地库恢复" >本地库恢复</button>
-      <button type="button" class="addbtn danger" id="btnClear" aria-label="清空数据" style="--sc:var(--danger,var(--muted));min-width:90px">清空数据</button>
+      <button type="button" class="addbtn min danger" id="btnClear" aria-label="清空数据">清空数据</button>
     </div>
     <div class="set-actions">
       <button type="button" class="addbtn min" id="btnExportPreview" aria-label="导出预览" >导出预览</button>
@@ -2908,7 +3048,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <div id="themeTokenEditor"></div>
         <div class="theme-actions">
           <button type="button" class="addbtn sm" id="btnThemeSave" >保存主题</button>
-          <button type="button" class="addbtn" id="btnThemeCancel" style="--sc:var(--muted);padding:4px 10px">取消</button>
+          <button type="button" class="addbtn sm" id="btnThemeCancel" style="--sc:var(--muted)">取消</button>
         </div>
       </div>
       <div id="themeImportArea" style="display:none;margin-top:8px">
@@ -2916,7 +3056,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"mytheme","name":"我的主题","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}'></textarea>
         <div class="theme-actions">
           <button type="button" class="addbtn sm" id="btnThemeImportConfirm" >确认导入</button>
-          <button type="button" class="addbtn" id="btnThemeImportCancel" style="--sc:var(--muted);padding:4px 10px">取消</button>
+          <button type="button" class="addbtn sm" id="btnThemeImportCancel"  style="--sc:var(--muted)">取消</button>
         </div>
       </div>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);font-weight:600">场景配色个性化</div>
@@ -2935,7 +3075,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
     <p class="set-tip">回收站自动清理在每次启动时生效，超期软删任务将被永久删除。</p>
     <div class="row switch set-switch" id="autoLaunchRow" style="display:none;border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-      <input type="checkbox" id="cfgAutoLaunch" style="width:auto" aria-label="开机自动启动">
+      <input type="checkbox" id="cfgAutoLaunch" aria-label="开机自动启动">
       <div>
         <div class="sw-label">开机自动启动</div>
         <div class="sw-sub">仅桌面端 exe 生效</div>
@@ -2954,7 +3094,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       </div>
     </div>
     <div class="row switch set-switch" id="pointerFxRow">
-      <input type="checkbox" id="cfgPointerFx" style="width:auto" aria-label="鼠标特效开关">
+      <input type="checkbox" id="cfgPointerFx" aria-label="鼠标特效开关">
       <div>
         <div class="sw-label">启用鼠标特效</div>
         <div class="sw-sub">鼠标在页面移动时显示装饰粒子，可关闭或选择风格。</div>
@@ -2973,7 +3113,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       </div>
     </header>
     <div class="set-switch">
-      <input type="checkbox" id="cfgNotify" style="width:auto" aria-label="开启任务到期提醒">
+      <input type="checkbox" id="cfgNotify" aria-label="开启任务到期提醒">
       <div>
         <div class="sw-label">开启任务到期 / 习惯链断链 / 每日汇总提醒</div>
         <div class="sw-sub">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</div>
@@ -2983,7 +3123,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <label for="cfgQuiet">免打扰时段</label>
       <div class="ctl">
         <div class="btn-row">
-          <input type="checkbox" id="cfgQuiet" style="width:auto" aria-label="免打扰时段">
+          <input type="checkbox" id="cfgQuiet" aria-label="免打扰时段">
           <select id="cfgQuietStart" aria-label="免打扰开始时间" style="flex:0 1 120px"></select>
           <span style="font-size:12px;color:var(--muted)">至</span>
           <select id="cfgQuietEnd" aria-label="免打扰结束时间" style="flex:0 1 120px"></select>
@@ -2995,7 +3135,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="push-row" id="pushRow">
       <div class="push-head">
         <label for="cfgPush">推送通知（Web Push）</label>
-        <input type="checkbox" id="cfgPush" style="width:auto">
+        <input type="checkbox" id="cfgPush">
       </div>
       <p class="push-status" id="pushStatus">未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。</p>
       <div class="push-actions">
@@ -3003,7 +3143,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <button type="button" id="btnPushUnsubscribe" disabled>取消订阅</button>
         <button type="button" id="btnPushTest" disabled>发送测试通知</button>
       </div>
-      <p class="hint" style="margin:6px 0 0;font-size:11px">⚠ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。</p>
+      <p class="hint" style="margin:6px 0 0;font-size:11px">⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。</p>
     </div>
   </section>
 
@@ -3084,8 +3224,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="report-header">
       <h2 id="reportModalTitle">高级报表</h2>
       <div class="report-actions">
-        <button type="button" class="tbtn" id="btnReportPDF">导出PDF</button>
-        <button type="button" class="tbtn" id="btnReportClose">关闭</button>
+        <button type="button" id="btnReportPDF">导出PDF</button>
+        <button type="button" id="btnReportClose">关闭</button>
       </div>
     </div>
     <div class="report-toolbar">
@@ -3340,10 +3480,10 @@ var _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.0.1";
+const VERSION = "2.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260821";
+const BUILD_TAG = "20260822";
 
 
 
@@ -4937,12 +5077,44 @@ async function toggleTheme(){
  * @param {("ok"|"warn"|"error"|"danger"|string)} [type] - 通知类型
  * @returns {void}
  */
-// toast 类型图标映射（toast 可访问的最小公共感知）
+// UI_ICONS：全局图标单一真相源（A-P2-7，FB-1；v2.1.1 去重——所有字典引用此处）。
+// 场景图标收编进 SCENARIOS[sc].icon；chrome/状态/空态图标一律在此定义，其他字典按 key 引用。
+const UI_ICONS = {
+  overview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4m0 16h16M8 16l3-4 3 3 4-6"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12M9 7V5h6v2m-7 0 1 12h6l1-12"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg>',
+  download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V11m0 0 4 4m-4-4-4 4M5 5h14"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  theme:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>',
+  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10m6 10V4m6 16v-7m6 7V8"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  /* emoji 矢量化补齐（单引号包裹，供模板字符串 / innerHTML 用） */
+  flame:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.5 3 5 5 5 9a5 5 0 0 1-10 0c0-1.5.6-2.6 1.2-3.6.7 1 1.3 1.6 2.3 1.6C10 8 11 5.5 12 3z"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>',
+  target:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
+  brain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 3 3 3 0 0 0 1 4 3 3 0 0 0 3 3 3 3 0 0 0 4 2V4z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 3 3 3 0 0 1-1 4 3 3 0 0 1-3 3 3 3 0 0 1-4 2V4z"/></svg>',
+  chain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  robot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg>',
+  puzzle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg>',
+  error:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  /* v2.1.1：自定义/插件场景未选图标时的兜底（与 overview 主页区分，避免语义过载） */
+  tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
+};
+
+// toast 类型图标映射（toast 可访问的最小公共感知）——值引用 UI_ICONS 单一真相源
 const TOAST_ICONS = {
-  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
-  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg>',
-  error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
-  danger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>'
+  ok: UI_ICONS.check,
+  warn: UI_ICONS.alert,
+  error: UI_ICONS.error,
+  danger: UI_ICONS.error
 };
 function toast(msg, type){
   let c=$("#toasts"); if(!c){ c=document.createElement("div"); c.id="toasts"; c.setAttribute("role","status"); c.setAttribute("aria-live","polite"); document.body.appendChild(c); }
@@ -4963,37 +5135,7 @@ function toast(msg, type){
   return d; // v1.9.3g：返回元素，供调用方挂点击（如 SW 更新提示「点击刷新」）
 }
 
-// UI_ICONS：仅承载 chrome 图标（A-P2-7，FB-1）。场景图标已收编进 SCENARIOS[sc].icon。
-const UI_ICONS = {
-  overview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4m0 16h16M8 16l3-4 3 3 4-6"/></svg>',
-  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
-  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
-  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12M9 7V5h6v2m-7 0 1 12h6l1-12"/></svg>',
-  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>',
-  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg>',
-  download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg>',
-  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V11m0 0 4 4m-4-4-4 4M5 5h14"/></svg>',
-  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
-  theme:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>',
-  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>',
-  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10m6 10V4m6 16v-7m6 7V8"/></svg>',
-  /* emoji 矢量化补齐（单引号包裹，供模板字符串 / innerHTML 用） */
-  flame:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.5 3 5 5 5 9a5 5 0 0 1-10 0c0-1.5.6-2.6 1.2-3.6.7 1 1.3 1.6 2.3 1.6C10 8 11 5.5 12 3z"/></svg>',
-  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
-  chartBar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>',
-  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>',
-  target:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
-  brain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 3 3 3 0 0 0 1 4 3 3 0 0 0 3 3 3 3 0 0 0 4 2V4z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 3 3 3 0 0 1-1 4 3 3 0 0 1-3 3 3 3 0 0 1-4 2V4z"/></svg>',
-  chain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
-  robot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg>',
-  puzzle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg>',
-  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg>',
-  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>',
-  clipboard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg>',
-  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
-  wave:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 6c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>',
-  book2:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M6 9v6M18 9a9 9 0 0 0-9 9"/></svg>'
-};
+// UI_ICONS 已上移至 TOAST_ICONS 之前（v2.1.1 去重：单一真相源，供 toast/侧栏/空态字典引用）
 
 // ===== Bootstrap (配置常量) =====
 /* ---------- 场景配置（单一真相源：A-P2-7 收编 icon / sysprompt / extraCard） ---------- */
@@ -5005,12 +5147,16 @@ const SCENARIOS = {
     record:{ label:"会议纪要",
       fields:[{k:"title",label:"会议主题",type:"text"},{k:"who",label:"参会人",type:"text"},{k:"note",label:"结论 / 跟进",type:"textarea"}] } },
 
-  code:{ name:"编程", color:"#107c10",
-    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>',
-    sysprompt:"你是一个资深全栈工程师，擅长代码实现、调试与架构建议。给出可直接运行的代码并解释关键点。",
-    extraCard:"report",
-    record:{ label:"代码片段",
-      fields:[{k:"lang",label:"语言",type:"text"},{k:"title",label:"标题",type:"text"},{k:"code",label:"代码",type:"textarea"}] } },
+  design:{ name:"设计", color:"#d6409f",
+    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>',
+    sysprompt:"你是一个设计创意助手，擅长视觉设计建议、配色方案、版式构图与创意灵感激发。回答有画面感、可落地。",
+    extraCard:"none",
+    record:{ label:"作品记录",
+      fields:[
+        {k:"type",label:"类型",type:"select",options:["海报","Logo","插画","UI 界面","摄影","其他"]},
+        {k:"title",label:"作品名",type:"text"},
+        {k:"note",label:"灵感 / 备注",type:"textarea"}
+      ] } },
 
   study:{ name:"学习", color:"#ca5010",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h6v16H6a2 2 0 0 0-2 2V5zm16 0a2 2 0 0 0-2-2h-6v16h6a2 2 0 0 1 2 2V5z"/></svg>',
@@ -5018,6 +5164,24 @@ const SCENARIOS = {
     extraCard:"review",
     record:{ label:"学习资料",
       fields:[{k:"title",label:"主题",type:"text"},{k:"type",label:"类型",type:"text"},{k:"status",label:"状态",type:"text"},{k:"note",label:"笔记",type:"textarea"}] } },
+
+  data:{ name:"数据", color:"#0d9488",
+    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>',
+    sysprompt:"你是一个数据分析助手，擅长数据清洗、指标拆解、图表选型与洞察提炼。回答用数据说话、结论明确。",
+    extraCard:"none",
+    record:{ label:"数据记录",
+      fields:[
+        {k:"type",label:"类型",type:"select",options:["指标快照","分析结论","数据源","报表"]},
+        {k:"title",label:"标题",type:"text"},
+        {k:"note",label:"备注",type:"textarea"}
+      ] } },
+
+  code:{ name:"编程", color:"#107c10",
+    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>',
+    sysprompt:"你是一个资深全栈工程师，擅长代码实现、调试与架构建议。给出可直接运行的代码并解释关键点。",
+    extraCard:"report",
+    record:{ label:"代码片段",
+      fields:[{k:"lang",label:"语言",type:"text"},{k:"title",label:"标题",type:"text"},{k:"code",label:"代码",type:"textarea"}] } },
 
   life:{ name:"生活", color:"#7b61ff",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
@@ -5031,7 +5195,8 @@ const SCENARIOS = {
         {k:"note",label:"备注",type:"textarea"}
       ] } }
 };
-const ORDER = ["office","code","study","life"];
+/* v2.1.0：6 内置场景——新增 设计(design)/数据(data)；顺序即侧栏场景组显示序与滑动手势序 */
+const ORDER = ["office","design","study","data","code","life"];
 
 // ===== Data Layer (数据层·联动规则与全局状态) =====
 /* ---------- 场景联动规则（任务完成时触发，跨场景生成任务） ---------- */
@@ -5047,8 +5212,8 @@ const DEFAULT_LINKS = [
  * 存储键均以 PREFIX 开头 → 自动纳入导出备份（allKeys）。 */
 const CUSTOM_SC_KEY = PREFIX + "scenarios_custom";      // 自定义场景列表
 const SC_OVERRIDE_KEY = PREFIX + "scenarios_overrides"; // 内置场景改名/换色覆盖
-const BUILTIN_SC_KEYS = ["office","code","study","life"];
-const CUSTOM_ICON_KEYS = ["overview","plus","check","chat","download","upload","gear","theme","stats","copy","trash"];
+const BUILTIN_SC_KEYS = ["office","design","study","data","code","life"];
+const CUSTOM_ICON_KEYS = ["tag","overview","plus","check","chat","download","upload","gear","theme","stats","copy","trash"];
 /* 内置场景原始 name/color 快照（覆盖前保存，供重置与幂等重注册） */
 const SC_ORIGINALS = {};
 BUILTIN_SC_KEYS.forEach(k => { SC_ORIGINALS[k] = { name: SCENARIOS[k].name, color: SCENARIOS[k].color }; });
@@ -5073,10 +5238,10 @@ function loadScOverrides(){
   return (o && typeof o === "object" && !Array.isArray(o)) ? o : {};
 }
 function saveScOverrides(o){ save(SC_OVERRIDE_KEY, o); }
-/* 自定义场景图标解析：UI_ICONS[key]，未知键回退总览图标 */
+/* 自定义场景图标解析：UI_ICONS[key]，未知键回退「标签」图标（v2.1.1：不再与主页 overview 混用） */
 function resolveScIcon(iconKey){
   const i = UI_ICONS[iconKey];
-  return (typeof i === "string" && i) ? i : UI_ICONS.overview;
+  return (typeof i === "string" && i) ? i : UI_ICONS.tag;
 }
 /* 自定义场景存储对象 → SCENARIOS 注册条目（通用资料库字段 + none 专属卡片） */
 function toScenarioEntry(s){
@@ -5089,7 +5254,7 @@ function toScenarioEntry(s){
     record: { label: (s.name||"")+"资料",
       fields: [ {k:"title",label:"标题",type:"text"}, {k:"note",label:"备注",type:"textarea"} ] },
     custom: true,
-    _iconKey: s.iconKey || "overview"
+    _iconKey: s.iconKey || "tag"
   };
 }
 /* 插件场景 → SCENARIOS 条目（icon 为 SVG 字符串或空；desc 作为 sysprompt） */
@@ -5097,14 +5262,14 @@ function pluginScenarioToEntry(key, s){
   return {
     name: s.name || key,
     color: (/^#[0-9a-fA-F]{6}$/.test(s.color||"")) ? s.color : scenarioDefaultColor(),
-    icon: (typeof s.icon === "string" && s.icon) ? s.icon : resolveScIcon("overview"),
+    icon: (typeof s.icon === "string" && s.icon) ? s.icon : resolveScIcon("tag"),
     sysprompt: s.desc || ("你是「"+(s.name||key)+"」场景助手，帮用户梳理该场景的任务与资料。"),
     extraCard: "none",
     record: { label: (s.name||key)+"资料",
       fields: [ {k:"title",label:"标题",type:"text"}, {k:"note",label:"备注",type:"textarea"} ] },
     custom: true,
     plugin: true,
-    _iconKey: "overview"
+    _iconKey: "tag"
   };
 }
 /**
@@ -5145,7 +5310,7 @@ registerCustomScenarios(); // 模块顶层：先于 07-store 的 chats/active �
  * 添加自定义场景
  * @param {string} name - 场景名（≤12 字，不与现有场景重名）
  * @param {string} color - 十六进制色值（非法时回退默认紫）
- * @param {string} iconKey - CUSTOM_ICON_KEYS 之一（非法时回退 overview）
+ * @param {string} iconKey - CUSTOM_ICON_KEYS 之一（非法时回退 tag）
  * @returns {{ok:boolean, err?:string, key?:string}}
  */
 function addCustomScenario(name, color, iconKey){
@@ -5158,7 +5323,7 @@ function addCustomScenario(name, color, iconKey){
   const arr = loadCustomScenarios();
   arr.push({ key, name,
     color: (/^#[0-9a-fA-F]{6}$/.test(color||"")) ? color : scenarioDefaultColor(),
-    iconKey: CUSTOM_ICON_KEYS.includes(iconKey) ? iconKey : "overview",
+    iconKey: CUSTOM_ICON_KEYS.includes(iconKey) ? iconKey : "tag",
     created: Date.now() });
   saveCustomScenarios(arr);
   registerCustomScenarios();
@@ -5369,6 +5534,23 @@ let active = load(PREFIX+"active","office");
 // v1.9.3g：当前视图状态机——"main"（场景/总览/统计/回收站）| "settings"（设置页）| "help"（指南页）。
 // 侧栏高亮据此渲染（renderSide 弃 DOM 嗅探），由 openDrawer / renderHelp / render 显式赋值。
 let uiView = "main";
+/* v2.1.0：场景任务视图模式——kanban（看板，默认）/ calendar（日历）/ todo（待办列表）。
+   侧栏「总览 ▸ 任务」三项切换；持久化到 localStorage。 */
+let sceneViewMode = load(PREFIX+"sceneViewMode","kanban");
+/**
+ * 切换场景任务视图模式并跳转：当前在概览/统计/回收站等非场景视图时回办公场景。
+ * @param {string} mode - "kanban" | "calendar" | "todo"
+ * @returns {void}
+ */
+function setSceneViewMode(mode){
+  if(mode!=="kanban" && mode!=="calendar" && mode!=="todo") mode = "kanban";
+  sceneViewMode = mode;
+  save(PREFIX+"sceneViewMode", mode);
+  _sideActive = "view-"+mode;
+  const nonScene = ["overview","stats","recycle"];
+  if(nonScene.indexOf(active)>=0){ setActive("office"); }
+  render();
+}
 const chats = {};
 ORDER.forEach(sc=> chats[sc] = load(PREFIX+"chat_"+sc, []).slice(-50) );
 
@@ -6497,7 +6679,7 @@ async function persistCfg(cfg){
     }
     if(typeof safe.key === "string"){ delete safe.key; }
     save(PREFIX+"cfg", safe);
-    try{ if(typeof toast === "function") toast("⚠ 当前环境不支持加密存储，AI Key 出于安全未保存（已丢弃）。请在 https:// 或本机应用中重新录入。", "warn"); }catch(e){ /* noop */ }
+    try{ if(typeof toast === "function") toast("⚠️ 当前环境不支持加密存储，AI Key 出于安全未保存（已丢弃）。请在 https:// 或本机应用中重新录入。", "warn"); }catch(e){ /* noop */ }
     return;
   }
   const mem = Object.assign({}, cfg);
@@ -7166,100 +7348,436 @@ function thisWeekDone(sc){
   return getActiveTasks().filter(t=>t.sc===sc&&t.status==="done"&&t.doneAt&&t.doneAt>=mon.getTime());
 }
 
-/* ---------- 渲染：侧边导航 ---------- */
+/* ---------- 渲染：侧边导航（v2.1.0 两级菜单） ---------- */
 // v1.9.9：折叠按钮回归侧栏顶部（"全局"组上方），用户确认放回原位
 const SIDE_TOGGLE_HTML = `<button class="side-toggle" id="sideToggle" aria-label="折叠或展开侧边栏" title="折叠/展开">
   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl">折叠</span></button>`;
+
+/* v2.1.0：两级菜单图标集（顶级项用；子项用 CSS 圆点标记，不配图标） */
+/* v2.1.1 去重：与 UI_ICONS 同形的图标按 key 引用单一真相源；dash 改仪表盘（gauge）与统计柱状图区分 */
+const SIDE_MENU_ICONS = {
+  dash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
+  tasks:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  plugin: UI_ICONS.puzzle,
+  ai: UI_ICONS.robot,
+  chain: UI_ICONS.chain,
+  look: UI_ICONS.theme,
+  doc: UI_ICONS.file
+};
+
+/* v2.1.0：场景二级工具菜单——stub 项打开「即将上线」占位页，action 项接现有功能。
+   自定义/插件场景不在此表内，渲染为无子项的叶子节点。 */
+const SC_SUBMENU = {
+  office:[
+    {id:"off-word", label:"Word 文档", stub:true},
+    {id:"off-sheet", label:"表格", stub:true},
+    {id:"off-ppt", label:"PPT", stub:true},
+    {id:"off-pdf", label:"PDF", stub:true},
+    {id:"off-md", label:"Markdown", stub:true},
+    {id:"off-ocr", label:"截图 OCR", stub:true}
+  ],
+  design:[
+    {id:"des-cad", label:"CAD", stub:true},
+    {id:"des-imggen", label:"图片生成", stub:true},
+    {id:"des-vidgen", label:"视频生成", stub:true},
+    {id:"des-ps", label:"PS lite", stub:true}
+  ],
+  study:[
+    {id:"stu-mindmap", label:"思维导图", run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); }},
+    {id:"stu-kb", label:"知识库", run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); }},
+    {id:"stu-web", label:"在线检索", stub:true},
+    {id:"stu-notes", label:"笔记", run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); }},
+    {id:"stu-tpl", label:"场景模板", run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); }}
+  ],
+  data:[
+    {id:"dat-stats", label:"数据分析", run:()=>{ setActive("stats"); render(); }},
+    {id:"dat-chart", label:"图表", run:()=>{ if(typeof openChartStore==="function") openChartStore(); }},
+    {id:"dat-report", label:"报告", run:()=>{ if(typeof openReportModal==="function") openReportModal(); }}
+  ],
+  code:[
+    {id:"cod-compile", label:"脚本编译", stub:true},
+    {id:"cod-regex", label:"正则工具", stub:true},
+    {id:"cod-md2code", label:"Markdown 转代码", stub:true}
+  ],
+  life:[
+    {id:"lif-sport", label:"运动", stub:true},
+    {id:"lif-health", label:"健康", run:()=>{ setActive("life"); render(); }},
+    {id:"lif-bill", label:"缴费", stub:true},
+    {id:"lif-shop", label:"采购", stub:true},
+    {id:"lif-takeout", label:"外卖", stub:true},
+    {id:"lif-transit", label:"交通", stub:true}
+  ]
+};
+
+/* v2.1.0：菜单展开状态（持久化）+ 当前激活子项（会话内）。
+   高亮不变量：任一时刻至多 1 个 .nav-item.active——
+   _sideActive 非空时仅该子项 active；为空时按 uiView/active 命中唯一顶级项。 */
+let _sideActive = null;
+function _loadSideExpanded(){
+  try{ const v = JSON.parse(localStorage.getItem(PREFIX+"sideExpanded") || "{}"); return (v && typeof v==="object") ? v : {}; }catch(e){ return {}; }
+}
+function _saveSideExpanded(map){ try{ localStorage.setItem(PREFIX+"sideExpanded", JSON.stringify(map)); }catch(e){ /* noop */ } }
+function _toggleSideNode(nodeId){
+  const map = _loadSideExpanded();
+  map[nodeId] = !map[nodeId];
+  _saveSideExpanded(map);
+  renderSide();
+}
+
 /**
- * 渲染侧边导航栏（总览 + 4 场景按钮，含未完成计数）
+ * 构建侧边菜单节点树（v2.1.0：桌面两级菜单与移动端底部抽屉共用同一份数据）。
+ * 返回 [{name, nodes:[{id,label,icon,color,cnt,sc,active,hasActive,children,extraAttrs}]}] 四组。
+ * @returns {Array<{name:string, nodes:Array}>}
+ */
+function _buildSideMenu(){
+  const tasks = getActiveTasks();
+  const totalOpen = tasks.filter(t=>t.status!=="done").length;
+  const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
+  const _effActive = (uiView==="main") ? active : "";
+
+  /* ---- 总览组 ---- */
+  const overviewNode = {
+    id:"home", label:"主页", icon:UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\""),
+    color:"#4a3c8e", cnt:totalOpen, sc:"overview",
+    active: !_sideActive && _effActive==="overview"
+  };
+  const dashNode = {
+    id:"dash", label:"仪表盘", icon:(SIDE_MENU_ICONS.dash||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#038387",
+    hasActive: _sideActive==="dash-stats" || _sideActive==="dash-chart",
+    children:[
+      {id:"dash-stats", label:"统计", run:()=>{ _sideActive=null; setActive("stats"); render(); }},
+      {id:"dash-chart", label:"总览图", run:()=>{ if(typeof openChartStore==="function") openChartStore(); }}
+    ]
+  };
+  const tasksNode = {
+    id:"tasks", label:"任务", icon:(SIDE_MENU_ICONS.tasks||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#4a3c8e",
+    hasActive: !!_sideActive && _sideActive.indexOf("view-")===0,
+    children:[
+      {id:"view-kanban", label:"看板视图", run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("kanban"); }},
+      {id:"view-calendar", label:"日历视图", run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("calendar"); }},
+      {id:"view-todo", label:"待办视图", run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("todo"); }}
+    ]
+  };
+
+  /* ---- 场景组（ORDER 驱动；自定义/插件场景为叶子节点） ---- */
+  const sceneNodes = ORDER.map(sc=>{
+    const s = SCENARIOS[sc];
+    const open = tasks.filter(t=>t.sc===sc && t.status!=="done").length;
+    const subs = SC_SUBMENU[sc];
+    return {
+      id:"sc-"+sc, sc:sc, label:s.name, icon:(s.icon||"").replace("<svg","<svg aria-hidden=\"true\""),
+      color:s.color, cnt:open,
+      active: !_sideActive && sc===_effActive,
+      hasActive: !!subs && !!subs.find(c=>c.id===_sideActive),
+      children: subs || null
+    };
+  });
+
+  /* ---- 功能组 ---- */
+  const pluginNode = {
+    id:"feat-plugin", label:"插件", icon:(SIDE_MENU_ICONS.plugin||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#8b5cf6",
+    active: !_sideActive && uiView==="plugin",
+    hasActive: !!_sideActive && ["plug-cal","plug-weather","plug-alarm","plug-pomo","plug-tracker"].indexOf(_sideActive)>=0,
+    children:[
+      {id:"plug-cal", label:"日历", run:()=>{ var m=$("#calendarModal"); if(m){ var b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } }},
+      {id:"plug-weather", label:"天气", run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); }},
+      {id:"plug-alarm", label:"闹钟", run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); }},
+      {id:"plug-pomo", label:"番茄钟", run:()=>{ if(typeof toggleToolPop==="function"){ var t=document.querySelector('[data-menu="plug-pomo"]'); toggleToolPop("pomoPop", t); } }},
+      {id:"plug-tracker", label:"时间追踪", run:()=>{ if(typeof toggleToolPop==="function"){ var t=document.querySelector('[data-menu="plug-tracker"]'); toggleToolPop("trackerPop", t); } }}
+    ]
+  };
+  const aiNode = {
+    id:"feat-ai", label:"AI 助理", icon:(SIDE_MENU_ICONS.ai||"").replace("<svg","<svg aria-hidden=\"true\""), color:"var(--accent)", extraAttrs:' id="sideBtnAi" data-aipage="1"',
+    active: !_sideActive && uiView==="ai"
+  };
+  const chainNode = {
+    id:"feat-chain", label:"习惯链", icon:(SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#0d9488",
+    hasActive: !!_sideActive && _sideActive.indexOf("chain-")===0,
+    children:[
+      {id:"chain-cfg", label:"规则配置", run:()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }},
+      {id:"chain-today", label:"今日活跃", run:()=>{ _sideActive=null; setActive("overview"); render(); }},
+      {id:"chain-rate", label:"成功率", run:()=>{ _sideActive=null; setActive("stats"); render(); }}
+    ]
+  };
+
+  /* ---- 系统组 ---- */
+  const recycleNode = {
+    id:"sys-recycle", label:"回收站", icon:UI_ICONS.trash.replace("<svg","<svg aria-hidden=\"true\""),
+    color:"var(--danger)", cnt:recycleCount||"", sc:"recycle",
+    active: !_sideActive && _effActive==="recycle"
+  };
+  const lookNode = {
+    id:"sys-look", label:"外观", icon:(SIDE_MENU_ICONS.look||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#7c5cbf",
+    hasActive: !!_sideActive && ["look-theme","look-fx"].indexOf(_sideActive)>=0,
+    children:[
+      {id:"look-theme", label:"主题", run:()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-look"); } }},
+      {id:"look-fx", label:"特效", run:()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-look"); } }},
+      {id:"look-pet", label:"萌宠", run:()=>{ if(typeof openPetModal==="function") openPetModal(); }}
+    ]
+  };
+  const gearNode = {
+    id:"sys-gear", label:"设置", icon:UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\""),
+    color:"var(--muted)", extraAttrs:' id="btnGear" data-gear="1"',
+    active: !_sideActive && uiView==="settings"
+  };
+  const helpNode = {
+    id:"sys-help", label:"说明", icon:(SIDE_MENU_ICONS.doc||"").replace("<svg","<svg aria-hidden=\"true\""), color:"var(--muted)", extraAttrs:' id="sideBtnHelp" data-help="1"',
+    active: !_sideActive && uiView==="help"
+  };
+
+  return [
+    {name:"总览", nodes:[overviewNode, dashNode, tasksNode]},
+    {name:"场景", nodes:sceneNodes},
+    {name:"功能", nodes:[pluginNode, aiNode, chainNode]},
+    {name:"系统", nodes:[recycleNode, lookNode, gearNode, helpNode]}
+  ];
+}
+/**
+ * 渲染侧边导航栏（v2.1.0：总览/场景/功能/系统 四组两级菜单）
+ * 顶级项：纯父项点击=展开收起；场景父项点击=切场景（caret 点击=展开收起）。
+ * 子项：点击执行 run 或打开占位页；激活态由 _sideActive 驱动。
+ * 移动端（≤767px）：同一份 innerHTML 经 CSS 重组为底部 4 组按钮 + 抽屉数据源。
  * @returns {void}
  */
 function renderSide(){
-  const tasks = getActiveTasks();
-  const totalOpen = tasks.filter(t=>t.status!=="done").length;
-  // v1.9.3g：显式视图状态机（uiView），弃 DOM 嗅探——高亮由 openDrawer/renderHelp/render 显式设置，
-  // 不再依赖 #drawer 是否含 drawer-page、#helpPage 是否存在等时序性 DOM 状态
-  const _gearActive = (uiView==="settings") ? " active" : "";
-  const _helpActive = (uiView==="help") ? " active" : "";
-  const _aiActive = (uiView==="ai") ? " active" : "";       // v1.9.6：AI 配置独立菜单页
-  const _pluginActive = (uiView==="plugin") ? " active" : ""; // v1.9.6：插件市场独立菜单页
-  const _appActive = (uiView==="app") ? " active" : ""; // v1.15：应用独立页面
-  const _knowledgeActive = (uiView==="knowledge") ? " active" : ""; // v1.15：知识独立菜单页
-  const _warehouseActive = (uiView==="warehouse") ? " active" : ""; // v1.15：仓库页（热/温/冷）
-  const _effActive = (uiView==="main") ? active : "";
-  // v1.9.7b：「总览」改名为「概览」（与设计图「全局」组语义一致）
-  const overview = `<button class="nav-item ${_effActive==="overview"?"active":""}" data-sc="overview" style="--sc:#4a3c8e">
-    ${UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">概览</span><span class="cnt">${totalOpen}</span></button>`;
-  const statsBtn = `<button class="nav-item ${_effActive==="stats"?"active":""}" data-sc="stats" style="--sc:#038387">
-    ${UI_ICONS.stats.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">统计</span><span class="cnt">${tasks.length}</span></button>`;
-  // v1.9.9：仓库入口（点击进入仓库页，页内 hot/warm/cold 三 tab：常用/存档/回收站）
-  const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
-  const warehouseBtn = `<button class="nav-item${_warehouseActive}" data-warehouse="1" style="--sc:var(--danger)" title="仓库（热/温/冷数据三态）" aria-label="仓库">
-    ${UI_ICONS.trash.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">仓库</span>${recycleCount?`<span class="cnt">${recycleCount}</span>`:""}</button>`;
-  const items = ORDER.map(sc=>{
-    const s = SCENARIOS[sc];
-    const open = tasks.filter(t=>t.sc===sc && t.status!=="done").length;
-    return `<button class="nav-item ${sc===_effActive?"active":""}" data-sc="${sc}" style="--sc:${s.color}">
-      ${(SCENARIOS[sc].icon || "").replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">${s.name}</span><span class="cnt">${open}</span></button>`;
-  }).join("");
-  // v1.9.9：文档入口（v1.9.6 原"指南"改名为"文档"，data-help 仍指向 renderHelp）
-  const docBtn = `<button class="nav-item${_helpActive}" data-help="1" id="sideBtnHelp" style="--sc:var(--muted)" title="使用文档" aria-label="使用文档">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><span class="nm">文档</span></button>`;
-  // v1.9.6：AI 配置从设置页抽离为系统组独立菜单页
-  const aiBtn = `<button class="nav-item${_aiActive}" data-aipage="1" id="sideBtnAi" style="--sc:var(--accent)" title="AI" aria-label="AI">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg><span class="nm">AI</span></button>`;
-  // v1.9.9：设置入口
-  const gearBtn = `<button class="nav-item${_gearActive}" data-gear="1" id="btnGear" style="--sc:var(--muted)" title="设置" aria-label="设置">
-    ${UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\"")}<span class="nm">设置</span></button>`;
-  // v1.9.9：市场入口（v1.10.0：从系统组迁回功能组末尾，保留 v1.9.6 独立菜单页设计）
-  const pluginBtn = `<button class="nav-item${_pluginActive}" data-pluginpage="1" id="sideBtnPlugin" style="--sc:#8b5cf6" title="插件" aria-label="插件">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg><span class="nm">插件</span></button>`;
-  // v1.15：图表入口（直接打开图表商店，独立页面）
-  const chartBtn = `<button class="nav-item" data-chartstore="1" style="--sc:#5b21b6" title="图表商店" aria-label="图表商店">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="nm">图表</span></button>`;
-  // v1.15：应用入口（独立页面：日历/天气/闹钟/萌宠/指针特效）
-  const appBtn = `<button class="nav-item${_appActive}" data-apppage="1" style="--sc:#0a6cbd" title="应用" aria-label="应用">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nm">应用</span></button>`;
-  // v1.15：知识入口（内容与知识从设置页抽离为系统组独立菜单页）
-  const knowledgeBtn = `<button class="nav-item${_knowledgeActive}" data-knowledgepage="1" id="sideBtnKnowledge" style="--sc:#6b4e8e" title="知识" aria-label="知识">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg><span class="nm">知识</span></button>`;
-  // v2.0（N1/N2）：侧栏「工具」分区——萌宠/闹钟/天气直达弹窗，番茄钟/时间追踪弹出浮层（复用 toggleToolPop 基础设施）
-  const petToolBtn = `<button class="nav-item" data-tool-pet="1" style="--sc:#e0739e" title="萌宠" aria-label="萌宠">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M8 15c1.5 1.5 6.5 1.5 8 0"/></svg><span class="nm">萌宠</span></button>`;
-  const alarmToolBtn = `<button class="nav-item" data-tool-alarm="1" style="--sc:#d97b29" title="闹钟" aria-label="闹钟">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M5 3L2 6M19 3l3 3M9 2h6"/></svg><span class="nm">闹钟</span></button>`;
-  const weatherToolBtn = `<button class="nav-item" data-tool-weather="1" style="--sc:#2a9d8f" title="天气" aria-label="天气">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="nm">天气</span></button>`;
-  const pomoToolBtn = `<button class="nav-item" data-pomo="1" aria-expanded="false" style="--sc:#c94f4f" title="番茄钟" aria-label="番茄钟">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span class="nm">番茄钟</span></button>`;
-  const trackerToolBtn = `<button class="nav-item" data-tracker="1" aria-expanded="false" style="--sc:#3a7ca5" title="时间追踪" aria-label="时间追踪">
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg><span class="nm">追踪</span></button>`;
-  // v1.15：功能组：图表（直接入口）+ 应用（子菜单）+ 市场（独立页）
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML +
-    '<div class="nav-group">全局</div>' + overview + statsBtn + warehouseBtn +
-    '<div class="nav-group">场景</div>' + items +
-    '<div class="nav-group">功能</div>' + chartBtn + appBtn + pluginBtn +
-    '<div class="nav-group">工具</div>' + petToolBtn + alarmToolBtn + weatherToolBtn + pomoToolBtn + trackerToolBtn +
-    '<div class="nav-group">系统</div>' + aiBtn + gearBtn + knowledgeBtn + docBtn);
-  $$("#side .nav-item").forEach(b=> b.onclick = ()=>{
-    // v1.9.3：导航切换时重置主区滚动位置，避免从长页面（指南）切换后滚动位置残留
+  const expanded = _loadSideExpanded();
+
+  /* 子项渲染：圆点标记 + 标签；stub 项带「新」角标提示即将上线 */
+  const subBtn = (nodeId, it)=>{
+    const act = (_sideActive===it.id) ? " active" : "";
+    const stubMark = it.stub ? `<span class="sub-soon" aria-label="即将上线">新</span>` : "";
+    return `<button type="button" class="nav-item nav-subitem${act}" data-menu="${it.id}" data-node="${nodeId}" title="${esc(it.label)}">
+      <span class="sub-dot" aria-hidden="true"></span><span class="nm">${esc(it.label)}</span>${stubMark}</button>`;
+  };
+  /* 父项渲染：icon + 名称 + 计数 + caret（有子项时） */
+  const parentBtn = (o)=>{
+    const isExp = !!expanded[o.id];
+    const act = o.active ? " active" : "";
+    const hasAct = o.hasActive ? " has-active" : "";
+    const caret = o.children ? `<span class="side-caret" data-caret="1" aria-hidden="true">▸</span>` : "";
+    const cnt = (o.cnt!=null && o.cnt!=="") ? `<span class="cnt">${o.cnt}</span>` : "";
+    const dataAttr = o.sc ? ` data-sc="${o.sc}"` : ` data-menu="${o.id}"`;
+    const extra = o.extraAttrs || "";
+    return `<button type="button" class="nav-item nav-parent${act}${hasAct}"${dataAttr}${o.children?` aria-expanded="${isExp}"`:""}${extra} style="--sc:${o.color||"var(--muted)"}" title="${esc(o.label)}" aria-label="${esc(o.label)}">
+      ${o.icon}<span class="nm">${esc(o.label)}</span>${cnt}${caret}</button>`;
+  };
+  const nodeHtml = (o)=>{
+    const kids = o.children ? `<div class="nav-sub"${expanded[o.id]?"":" hidden"}>${o.children.map(c=>subBtn(o.id,c)).join("")}</div>` : "";
+    return `<div class="nav-node">${parentBtn(o)}${kids}</div>`;
+  };
+
+  const groups = _buildSideMenu();
+  const groupHtml = (g)=> '<div class="nav-group">'+g.name+'</div>' + g.nodes.map(nodeHtml).join("");
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + groups.map(groupHtml).join(""));
+
+  /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
+  if(_sideActive){
+    const actEl = document.querySelector('#side [data-menu="'+_sideActive+'"]');
+    if(actEl){
+      const nodeId = actEl.getAttribute("data-node");
+      const sub = actEl.closest(".nav-sub");
+      if(sub && sub.hasAttribute("hidden") && nodeId){
+        sub.removeAttribute("hidden");
+        const p = sub.previousElementSibling;
+        if(p) p.setAttribute("aria-expanded","true");
+        const map = _loadSideExpanded(); map[nodeId] = true; _saveSideExpanded(map);
+      }
+    }
+  }
+  /* v2.1.0：同步移动端底栏高亮（桌面端 #mobBar 为 display:none，渲染开销可忽略） */
+  if(typeof renderMobBar==="function") renderMobBar();
+  /* v2.1.0：点击委托随渲染同步绑定（幂等）——保证 jsdom 同步测试与首屏点击均可用，
+     不依赖异步 startup() 时序 */
+  setupSideMenu();
+  setupMobNav();
+}
+/* v2.1.0：侧栏两级菜单点击分发（事件委托，renderSide 重渲染后依然有效）。
+   caret → 展开/收起；场景父项 → 切场景；纯父项 → 展开/收起；子项 → 执行动作。 */
+function setupSideMenu(){
+  const side = $("#side");
+  if(!side || side._menuBound) return;
+  side._menuBound = true;
+  side.addEventListener("click", (e)=>{
+    const btn = e.target && e.target.closest ? e.target.closest(".nav-item") : null;
+    if(!btn) return;
     const _m = $("#main"); if(_m) _m.scrollTop = 0;
-    if(b.dataset.warehouse){ if(typeof openWarehouse === "function") openWarehouse(); return; }
-    if(b.dataset.chartstore){ if(typeof openChartStore === "function") openChartStore(); return; }
-    if(b.dataset.apppage){ if(typeof openAppPage === "function") openAppPage(); return; }
-    // v2.0：工具分区——萌宠/闹钟/天气直达弹窗；番茄钟/追踪弹出浮层（再点同按钮=关闭）
-    if(b.dataset.toolPet){ if(typeof openPetModal === "function") openPetModal(); return; }
-    if(b.dataset.toolAlarm){ if(typeof openAlarmModal === "function") openAlarmModal(); return; }
-    if(b.dataset.toolWeather){ if(typeof openWeatherModal === "function") openWeatherModal(); return; }
-    if(b.dataset.pomo){ if(typeof toggleToolPop === "function") toggleToolPop("pomoPop", b); return; }
-    if(b.dataset.tracker){ if(typeof toggleToolPop === "function") toggleToolPop("trackerPop", b); return; }
-    if(b.dataset.gear){ openDrawer(); return; }
-    if(b.dataset.help){ if(typeof renderHelp === "function") renderHelp(); return; }
-    if(b.dataset.aipage){ if(typeof openAiPage === "function") openAiPage(); return; }
-    if(b.dataset.knowledgepage){ if(typeof openKnowledgePage === "function") openKnowledgePage(); return; }
-    if(b.dataset.pluginpage){ if(typeof openPluginPage === "function") openPluginPage(); return; }
-    setActive(b.dataset.sc); render();
+    /* caret 点击：只切换展开态 */
+    if(e.target && e.target.closest && e.target.closest("[data-caret]")){
+      const nodeId = btn.getAttribute("data-menu") || (btn.getAttribute("data-sc") ? "sc-"+btn.getAttribute("data-sc") : null);
+      if(nodeId) _toggleSideNode(nodeId);
+      return;
+    }
+    /* 场景父项：切场景（子菜单是工具，与场景切换解耦） */
+    if(btn.hasAttribute("data-sc")){
+      _sideActive = null;
+      setActive(btn.getAttribute("data-sc")); render();
+      return;
+    }
+    /* 顶级固定入口（保留旧 data 属性语义） */
+    if(btn.dataset.gear){ _sideActive = null; openDrawer(); return; }
+    if(btn.dataset.help){ _sideActive = null; if(typeof renderHelp==="function") renderHelp(); return; }
+    if(btn.dataset.aipage){ _sideActive = null; if(typeof openAiPage==="function") openAiPage(); return; }
+    /* 子项：执行注册动作 */
+    const menuId = btn.getAttribute("data-menu");
+    if(menuId){
+      const item = _findSideMenuItem(menuId);
+      if(item){
+        if(item.stub){ _sideActive = menuId; if(typeof openToolStub==="function") openToolStub(menuId, item.label); return; }
+        if(item.run){
+          /* 默认点亮该子项（弹窗类动作保持高亮）；页面跳转型 run 会自行清空 _sideActive */
+          _sideActive = menuId;
+          item.run();
+          if(typeof renderSide==="function") renderSide();
+          return;
+        }
+        return;
+      }
+      /* 纯父项（无注册动作）：切换展开 */
+      _toggleSideNode(menuId);
+    }
   });
+}
+/* 在 SIDE_MENU 各来源中查找子项定义（场景子菜单 + 功能组固定子菜单） */
+function _findSideMenuItem(menuId){
+  for(const sc of ORDER){
+    const subs = SC_SUBMENU[sc];
+    if(subs){ const hit = subs.find(c=>c.id===menuId); if(hit) return hit; }
+  }
+  const fixed = {
+    "dash-stats":{run:()=>{ _sideActive=null; setActive("stats"); render(); }},
+    "dash-chart":{run:()=>{ if(typeof openChartStore==="function") openChartStore(); }},
+    "view-kanban":{run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("kanban"); }},
+    "view-calendar":{run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("calendar"); }},
+    "view-todo":{run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("todo"); }},
+    "plug-cal":{run:()=>{ var m=$("#calendarModal"); if(m){ var b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } }},
+    "plug-weather":{run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); }},
+    "plug-alarm":{run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); }},
+    "plug-pomo":{run:()=>{ if(typeof toggleToolPop==="function"){ var t=document.querySelector('[data-menu="plug-pomo"]'); toggleToolPop("pomoPop", t); } }},
+    "plug-tracker":{run:()=>{ if(typeof toggleToolPop==="function"){ var t=document.querySelector('[data-menu="plug-tracker"]'); toggleToolPop("trackerPop", t); } }},
+    "chain-cfg":{run:()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }},
+    "chain-today":{run:()=>{ _sideActive=null; setActive("overview"); render(); }},
+    "chain-rate":{run:()=>{ _sideActive=null; setActive("stats"); render(); }},
+    "look-theme":{run:()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-look"); } }},
+    "look-fx":{run:()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-look"); } }},
+    "look-pet":{run:()=>{ if(typeof openPetModal==="function") openPetModal(); }}
+  };
+  return fixed[menuId] || null;
+}
+/* ---------- v2.1.0 移动端导航：底部 4 组按钮（#mobBar）+ 底部抽屉（#sideSheet） ----------
+   桌面端两者 display:none；≤767px 时 #side 隐藏、#mobBar 显示。
+   抽屉内容复用 _buildSideMenu() 节点树；子项点击复用 _findSideMenuItem 动作注册表。 */
+const MOB_GROUP_ICONS = {
+  "总览": UI_ICONS.overview,
+  "场景": UI_ICONS.grid,
+  "功能": SIDE_MENU_ICONS.plugin,
+  "系统": UI_ICONS.gear
+};
+/**
+ * 渲染移动端底部 4 组按钮（总览/场景/功能/系统）。
+ * 当前组高亮：抽屉打开时按 _mobSheetGroup；否则按当前视图归属组。
+ * @returns {void}
+ */
+function renderMobBar(){
+  const bar = $("#mobBar");
+  if(!bar) return;
+  const groups = _buildSideMenu();
+  const cur = _mobCurrentGroup(groups);
+  bar.innerHTML = sanitizeHtml(groups.map(g=>{
+    const act = (g.name===cur) ? " active" : "";
+    const icon = (MOB_GROUP_ICONS[g.name]||"").replace("<svg","<svg aria-hidden=\"true\"");
+    return `<button type="button" class="mob-bar-btn${act}" data-mob-group="${esc(g.name)}" aria-label="${esc(g.name)}">${icon}<span class="nm">${esc(g.name)}</span></button>`;
+  }).join(""));
+}
+/* 当前视图归属组名（用于底栏高亮兜底） */
+function _mobCurrentGroup(groups){
+  if(_mobSheetGroup) return _mobSheetGroup;
+  for(const g of groups){
+    for(const n of g.nodes){
+      const hit = (n.sc && n.active) || (!n.sc && n.active) || n.hasActive;
+      if(hit) return g.name;
+    }
+  }
+  return "总览";
+}
+let _mobSheetGroup = null;
+/**
+ * 打开移动端底部抽屉，展示指定组的完整节点列表（父项为分组标题，子项平铺）。
+ * @param {string} groupName - 组名（总览/场景/功能/系统）
+ * @returns {void}
+ */
+function openSideSheet(groupName){
+  const sheet = $("#sideSheet"), body = $("#sideSheetBody"), title = $("#sideSheetTitle"), mask = $("#sideSheetBackdrop");
+  if(!sheet || !body) return;
+  const groups = _buildSideMenu();
+  const g = groups.find(x=>x.name===groupName);
+  if(!g) return;
+  _mobSheetGroup = groupName;
+  if(title) title.textContent = groupName;
+  const rows = [];
+  g.nodes.forEach(n=>{
+    const pAct = n.active ? " active" : "";
+    const pHas = n.hasActive ? " has-active" : "";
+    const dataAttr = n.sc ? ` data-sc="${n.sc}"` : ` data-menu="${n.id}"`;
+    const extra = n.extraAttrs || "";
+    const cnt = (n.cnt!=null && n.cnt!=="") ? `<span class="cnt">${n.cnt}</span>` : "";
+    rows.push(`<button type="button" class="sheet-parent${pAct}${pHas}"${dataAttr}${extra} style="--sc:${n.color||"var(--muted)"}">${n.icon}<span class="nm">${esc(n.label)}</span>${cnt}</button>`);
+    (n.children||[]).forEach(c=>{
+      const cAct = (_sideActive===c.id) ? " active" : "";
+      const stubMark = c.stub ? `<span class="sub-soon" aria-label="即将上线">新</span>` : "";
+      rows.push(`<button type="button" class="sheet-sub${cAct}" data-menu="${c.id}" data-node="${n.id}"><span class="sub-dot" aria-hidden="true"></span><span class="nm">${esc(c.label)}</span>${stubMark}</button>`);
+    });
+  });
+  body.innerHTML = sanitizeHtml(rows.join(""));
+  sheet.classList.add("open");
+  if(mask) mask.classList.add("open");
+  renderMobBar();
+}
+/** 关闭移动端底部抽屉 @returns {void} */
+function closeSideSheet(){
+  const sheet = $("#sideSheet"), mask = $("#sideSheetBackdrop");
+  if(sheet) sheet.classList.remove("open");
+  if(mask) mask.classList.remove("open");
+  _mobSheetGroup = null;
+  renderMobBar();
+}
+/* 移动端导航事件：一次性绑定（委托），跨 renderSide/renderMobBar 重渲染有效 */
+function setupMobNav(){
+  const bar = $("#mobBar");
+  if(bar && !bar._mobBound){
+    bar._mobBound = true;
+    bar.addEventListener("click", e=>{
+      const btn = e.target && e.target.closest ? e.target.closest("[data-mob-group]") : null;
+      if(btn) openSideSheet(btn.getAttribute("data-mob-group"));
+    });
+  }
+  const mask = $("#sideSheetBackdrop");
+  if(mask && !mask._mobBound){ mask._mobBound = true; mask.addEventListener("click", closeSideSheet); }
+  const close = $("#sideSheetClose");
+  if(close && !close._mobBound){ close._mobBound = true; close.addEventListener("click", closeSideSheet); }
+  const sheet = $("#sideSheet");
+  if(sheet && !sheet._mobBound){
+    sheet._mobBound = true;
+    sheet.addEventListener("click", e=>{
+      const btn = e.target && e.target.closest ? e.target.closest("button") : null;
+      if(!btn) return;
+      /* 场景父项：切场景并收起抽屉 */
+      if(btn.hasAttribute("data-sc")){
+        _sideActive = null;
+        setActive(btn.getAttribute("data-sc")); render();
+        closeSideSheet();
+        return;
+      }
+      if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); openDrawer(); return; }
+      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); if(typeof renderHelp==="function") renderHelp(); return; }
+      if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof openAiPage==="function") openAiPage(); return; }
+      const menuId = btn.getAttribute("data-menu");
+      if(!menuId) return;
+      const item = _findSideMenuItem(menuId);
+      if(!item) return;
+      if(item.stub){ _sideActive = menuId; closeSideSheet(); if(typeof openToolStub==="function") openToolStub(menuId, item.label); return; }
+      if(item.run){ _sideActive = menuId; closeSideSheet(); item.run(); }
+    });
+  }
 }
 /* ---------- 回收站（D3：软删除任务的恢复 / 永久删除入口；T2：批量操作 + 自动清理策略） ----------
    v1.3.4-B：改为全屏页面视图（渲染到 #main，与 renderStats 一致），不再创建 modal overlay。
@@ -7285,7 +7803,7 @@ function openRecycle(){
   const policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
   const countLabel = del.length ? del.length+" 条任务" : "";
   // 页面视图：渲染到 #main（与 renderStats 一致），保留 id=recycleModal / .recycle-card 以兼容关闭逻辑与焦点陷阱
-  // v1.15：标题栏独立成卡（与统计/概览/仓库页统一），recycle-card 仅承载列表
+  // v1.15：标题栏独立成卡（与统计/概览/回收站页统一），recycle-card 仅承载列表
   const html = `<div class="recycle-modal" id="recycleModal">
     <div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
@@ -7326,147 +7844,6 @@ function openRecycle(){
     if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); }
   };
 }
-/* v1.10.0：仓库页面（热/温/冷/无用 四 tab）
-   - 热：未完成 + 最近活跃（≤7 天有动作），按最近时间倒序，前 20 项
-   - 温：未完成 + 长时间未操作（7-30 天无动作）
-   - 冷：已完成任务（归档，doneAt 倒序）——用户的"归档"语义
-   - 无用：已删除任务（deletedAt > 0）——用户的"回收站"语义
-   设计：复用现有 recycle 列表/复选/批量操作能力；UI 走 page-head + tab pills。
-*/
-function openWarehouse(tab){
-  // v1.15：显式设置视图状态，驱动侧栏"仓库"高亮（此前未设 uiView，点击后高亮不显示）
-  uiView = "warehouse";
-  renderSide();
-  // 状态机：tab ∈ "hot" | "warm" | "cold" | "useless"（默认 useless 兼容旧行为）
-  var _t = (tab === "hot" || tab === "warm" || tab === "cold") ? tab : "useless";
-  var all = load(PREFIX+"tasks", []);
-  var now = Date.now();
-  var hot = [], warm = [], cold = [], useless = [];
-  all.forEach(function(t){
-    if(t.deletedAt){ useless.push(t); return; }
-    var last = t.doneAt || t.updatedAt || t.createdAt || 0;
-    var ageDays = (now - last) / 86400000;
-    if(t.status === "done"){
-      cold.push(t); // 已完成归"冷"（归档）
-    } else {
-      if(ageDays <= 7) hot.push(t);
-      else warm.push(t);
-    }
-  });
-  // 排序
-  function byLastDesc(a, b){
-    var la = a.doneAt || a.updatedAt || a.createdAt || 0;
-    var lb = b.doneAt || b.updatedAt || b.createdAt || 0;
-    return lb - la;
-  }
-  hot.sort(byLastDesc);
-  warm.sort(byLastDesc);
-  cold.sort(function(a,b){ return (b.doneAt || 0) - (a.doneAt || 0); });
-  useless.sort(function(a,b){ return (b.deletedAt || 0) - (a.deletedAt || 0); });
-  hot = hot.slice(0, 20); // 热数据只展示前 20
-  // 当前 tab 渲染
-  function renderItems(list, mode){
-    if(!list.length){
-      var emptyText = mode==="hot"?"暂无热数据（最近活跃任务）"
-        : mode==="warm"?"暂无温数据（长时间未操作任务）"
-        : mode==="cold"?"暂无冷数据（已完成归档）"
-        :"回收站为空";
-      return `<div class="recycle-empty">${emptyText}</div>`;
-    }
-    return list.map(function(t){
-      var sm = scMeta(t.sc);
-      var w = new Date(t.doneAt || t.updatedAt || t.createdAt || t.deletedAt);
-      var whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
-      var ops = mode === "useless"
-        ? `<button type="button" class="recycle-restore" data-restore="${esc(t.id)}">恢复</button><button type="button" class="recycle-purge" data-purge="${esc(t.id)}">彻底删除</button>`
-        : `<button type="button" class="recycle-restore" data-jump="${esc(t.id)}" title="定位到该任务">定位</button>`;
-      return `<div class="recycle-item" data-id="${esc(t.id)}">
-        <input type="checkbox" class="recycle-chk" data-chk="${esc(t.id)}" aria-label="选择 ${esc(t.title)}">
-        <span class="recycle-dot" style="background:${sm.color}"></span>
-        <span class="recycle-title">${esc(t.title)}</span>
-        <span class="recycle-sc">${sm.name}</span>
-        <span class="recycle-when">${whenStr}</span>
-        ${ops}
-      </div>`;
-    }).join("");
-  }
-  var tabMeta = {
-    hot:     { label: "热",   title: "热数据 · 最近活跃任务（前 20 项）",           icon: "热" },
-    warm:    { label: "温",   title: "温数据 · 长时间未操作任务（7-30 天）",         icon: "温" },
-    cold:    { label: "冷",   title: "冷数据 · 已完成归档（按完成时间倒序）",         icon: "冷" },
-    useless: { label: "无用", title: "无用数据 · 回收站（已删除任务，可彻底清除）",   icon: "回收" }
-  };
-  var meta = tabMeta[_t];
-  var tabsHtml = `
-    <div class="warehouse-tabs" role="tablist">
-      <button class="warehouse-tab${_t==='hot'?' active':''}" data-wh-tab="hot" role="tab" aria-selected="${_t==='hot'}">热 <span class="wh-cnt">${hot.length}</span></button>
-      <button class="warehouse-tab${_t==='warm'?' active':''}" data-wh-tab="warm" role="tab" aria-selected="${_t==='warm'}">温 <span class="wh-cnt">${warm.length}</span></button>
-      <button class="warehouse-tab${_t==='cold'?' active':''}" data-wh-tab="cold" role="tab" aria-selected="${_t==='cold'}">冷 <span class="wh-cnt">${cold.length}</span></button>
-      <button class="warehouse-tab${_t==='useless'?' active':''}" data-wh-tab="useless" role="tab" aria-selected="${_t==='useless'}">无用 <span class="wh-cnt">${useless.length}</span></button>
-    </div>`;
-  var list = _t==="hot" ? hot : _t==="warm" ? warm : _t==="cold" ? cold : useless;
-  var itemsHtml = renderItems(list, _t);
-  var policy = getRecyclePolicy();
-  var policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
-  var countLabel = list.length ? list.length+" 条" : "";
-  var html = `<div class="recycle-modal" id="recycleModal">
-    <div class="card page-head-card"><header class="page-head sc-page-head">
-      <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
-      <div class="ph-tx"><h2>仓库</h2><p class="sub">${meta.title}</p></div>
-      <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="page-back recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
-    </header></div>
-    <div class="recycle-card">
-      ${tabsHtml}
-      <div class="recycle-list">${itemsHtml}</div>
-      ${list.length && _t==="useless" ? `<div class="recycle-footer">
-        <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
-        <button type="button" class="recycle-batch" id="recycleBatchRestore">批量恢复</button>
-        <button type="button" class="recycle-batch" id="recycleBatchPurge">批量删除</button>
-        <span class="recycle-policy">${policyLabel}</span>
-        <button type="button" class="recycle-clear" id="recycleClear">清空回收站</button>
-      </div>` : ""}
-    </div>
-  </div>`;
-  $("#main").innerHTML = sanitizeHtml(html);
-  $("#main").classList.add("page-recycle");
-  var modal=$("#recycleModal");
-  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
-  // tab 切换
-  $$("#recycleModal [data-wh-tab]").forEach(function(tb){
-    tb.onclick = function(){
-      var next = tb.dataset.whTab;
-      try{ if(modal._releaseTrap) modal._releaseTrap(); }catch(_){}
-      openWarehouse(next);
-    };
-  });
-  // 返回按钮
-  const backBtn = $("#recycleBack"); if(backBtn) backBtn.onclick = ()=> closeRecycleModal();
-  // 无用 tab 才显示批量操作
-  if(_t === "useless"){
-    $$("#recycleModal [data-restore]").forEach(b=> b.onclick=()=>{ restoreRecycle(b.dataset.restore); });
-    $$("#recycleModal [data-purge]").forEach(b=> b.onclick=()=>{ purgeRecycle(b.dataset.purge); });
-    var clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的任务将永久删除，不可恢复。")){ clearRecycle(); } };
-    var selAll=$("#recycleSelAll"); if(selAll) selAll.onchange=()=> $$("#recycleModal .recycle-chk").forEach(c=>{ c.checked=selAll.checked; });
-    var bRestore=$("#recycleBatchRestore"); if(bRestore) bRestore.onclick=()=>{
-      var ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
-      if(!ids.length){ toast("请先勾选要恢复的任务","warn"); return; }
-      restoreRecycleBatch(ids);
-    };
-    var bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=()=>{
-      var ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
-      if(!ids.length){ toast("请先勾选要删除的任务","warn"); return; }
-      if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); }
-    };
-  } else {
-    // 热/温/冷：定位到任务（切到对应场景高亮该卡）
-    $$("#recycleModal [data-jump]").forEach(b=> b.onclick=()=>{
-      var id = b.dataset.jump;
-      var all = load(PREFIX+"tasks", []);
-      var t = all.find(function(x){ return x.id === id; });
-      if(t){ setActive(t.sc); render(); try{ var card=document.querySelector('[data-task-id="'+id+'"]'); if(card) card.scrollIntoView({behavior:"smooth", block:"center"}); }catch(_){} }
-    });
-  }
-}
 /* v1.10.0：图表商店（独立页面：图表库 + 画布 + 拖拽）
    - 左侧：图表库（卡片：日历/统计/热力图/趋势/甘特/导图/仪表盘/习惯链），点击=添加到画布
    - 右侧：画布（可拖拽位置 + 调整大小；数据存 localStorage.wb_chart_canvas）
@@ -7479,11 +7856,11 @@ function openChartStore(){
   // v1.15：移除"日历"（用户要求；日历功能在应用页）
   var chartLibs = [
     { id: "trend", name: "趋势", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">完成趋势</div><div class="cs-sub">近 14 天</div><svg viewBox="0 0 100 40" class="cs-line"><polyline points="0,30 10,28 20,32 30,20 40,22 50,18 60,15 70,12 80,8 90,5 100,3" fill="none" stroke="var(--accent)" stroke-width="2"/></svg></div>'; } },
-    { id: "heatmap", name: "热力图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">完成热力图</div><div class="cs-sub">最近 12 周</div><div class="cs-heat">'+Array.from({length:84},function(){return '<span class="cs-hcell"></span>'}).join("")+'</div></div>'; } },
+    { id: "heatmap", name: "热力图", icon: UI_ICONS.grid, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">完成热力图</div><div class="cs-sub">最近 12 周</div><div class="cs-heat">'+Array.from({length:84},function(){return '<span class="cs-hcell"></span>'}).join("")+'</div></div>'; } },
     { id: "gantt", name: "甘特图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">甘特图</div><div class="cs-sub">任务时间线</div><div class="cs-gantt">'+[1,2,3,4].map(function(i){return '<div class="cs-gantt-bar" style="width:'+(20+i*15)+'%"></div>'}).join("")+'</div></div>'; } },
     { id: "mindmap", name: "思维导图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">思维导图</div><div class="cs-sub">中心 + 4 节点</div><svg viewBox="0 0 100 100" class="cs-mind"><line x1="50" y1="50" x2="20" y2="20" stroke="var(--line)"/><line x1="50" y1="50" x2="80" y2="20" stroke="var(--line)"/><line x1="50" y1="50" x2="20" y2="80" stroke="var(--line)"/><line x1="50" y1="50" x2="80" y2="80" stroke="var(--line)"/><circle cx="50" cy="50" r="10" fill="var(--accent)"/><circle cx="20" cy="20" r="6" fill="var(--surface-muted)"/><circle cx="80" cy="20" r="6" fill="var(--surface-muted)"/><circle cx="20" cy="80" r="6" fill="var(--surface-muted)"/><circle cx="80" cy="80" r="6" fill="var(--surface-muted)"/></svg></div>'; } },
-    { id: "dashboard", name: "仪表盘", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">仪表盘</div><div class="cs-sub">4 卡片布局</div><div class="cs-dash">'+Array.from({length:4},function(){return '<div class="cs-dash-cell"></div>'}).join("")+'</div></div>'; } },
-    { id: "chain", name: "习惯链", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">习惯链</div><div class="cs-sub">场景连环</div><div class="cs-chain"><span class="cs-cnode">办公</span><span class="cs-carr">→</span><span class="cs-cnode">编程</span><span class="cs-carr">→</span><span class="cs-cnode">学习</span></div></div>'; } },
+    { id: "dashboard", name: "仪表盘", icon: UI_ICONS.grid, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">仪表盘</div><div class="cs-sub">4 卡片布局</div><div class="cs-dash">'+Array.from({length:4},function(){return '<div class="cs-dash-cell"></div>'}).join("")+'</div></div>'; } },
+    { id: "chain", name: "习惯链", icon: UI_ICONS.chain, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">习惯链</div><div class="cs-sub">场景连环</div><div class="cs-chain"><span class="cs-cnode">办公</span><span class="cs-carr">→</span><span class="cs-cnode">编程</span><span class="cs-carr">→</span><span class="cs-cnode">学习</span></div></div>'; } },
     { id: "pie", name: "饼图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">饼图</div><div class="cs-sub">分布占比</div><svg viewBox="0 0 100 100" class="cs-pie"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--accent)" stroke-width="20" stroke-dasharray="80 251" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--success)" stroke-width="20" stroke-dasharray="60 251" stroke-dashoffset="-80" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--warning)" stroke-width="20" stroke-dasharray="40 251" stroke-dashoffset="-140" transform="rotate(-90 50 50)"/></svg></div>'; } }
   ];
   // 从 localStorage 恢复画布状态
@@ -7505,7 +7882,7 @@ function openChartStore(){
       ? canvasItems.map(function(it){
           var lib = chartLibs.find(function(x){ return x.id === it.lib; }) || chartLibs[0];
           return `<div class="cs-canvas-item" data-cs-item="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px">
-            <div class="cs-canvas-head"><span>${esc(lib.name)}</span><button type="button" class="cs-canvas-del" data-cs-del="${it.id}" title="删除" aria-label="删除图表">×</button></div>
+            <div class="cs-canvas-head"><span>${esc(lib.name)}</span><button type="button" class="cs-canvas-del" data-cs-del="${it.id}" title="删除" aria-label="删除图表">✕</button></div>
             <div class="cs-canvas-body">${lib.render()}</div>
             <div class="cs-resize-handle" data-cs-resize="${it.id}"></div>
           </div>`;
@@ -7727,7 +8104,7 @@ function setupSideToggle(){
 }
 
 /* v1.15：应用独立页面——日历/天气/闹钟/萌宠/指针特效 五个应用卡片入口
-   渲染到 #main（与图表商店/仓库页同模式），点击各卡片打开对应 modal */
+   渲染到 #main（与图表商店/回收站页同模式），点击各卡片打开对应 modal */
 function openAppPage(){
   // v1.15 修复：从市场(抽屉)切到应用页时先关闭抽屉，避免新页面被覆盖层挡住
   if(typeof closeDrawer === "function") closeDrawer();
@@ -7735,7 +8112,7 @@ function openAppPage(){
   renderSide();
   const apps = [
     { id:"calview", name:"日历", desc:"按月/周查看任务分布", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
-    { id:"weather", name:"天气", desc:"今日 + 未来几日预报", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>' },
+    { id:"weather", name:"天气", desc:"今日 + 未来几日预报", icon: UI_ICONS.sun },
     { id:"alarm", name:"闹钟", desc:"多任务 · 循环 · 贪睡", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M5 3L2 6M19 3l3 3M9 2h6"/></svg>' },
     { id:"pet", name:"萌宠", desc:"桌面陪伴小宠物", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M8 15c1.5 1.5 6.5 1.5 8 0"/></svg>' },
   ];
@@ -7765,6 +8142,27 @@ function openAppPage(){
   });
 }
 
+/* v2.1.0：工具占位页（「即将上线」）——侧栏两级菜单中尚未实现的子工具统一落到这里。
+   结构与其他独立页一致：page-head 卡 + 说明卡 + 返回按钮；uiView="tool" 驱动侧栏子项高亮。 */
+function openToolStub(toolId, label){
+  if(typeof closeDrawer === "function") closeDrawer();
+  uiView = "tool";
+  renderSide();
+  $("#main").innerHTML = sanitizeHtml(
+    '<div class="card page-head-card"><header class="page-head sc-page-head">'
+    + '<span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>'
+    + '<div class="ph-tx"><h2>' + esc(label || "工具") + '</h2><p class="sub">该工具正在规划中</p></div>'
+    + '<span class="ph-act"><button type="button" class="page-back" id="toolStubBack" aria-label="返回上一视图">← 返回</button></span>'
+    + '</header></div>'
+    + '<div class="card tool-stub-card">'
+    + '<div class="tool-stub-badge">即将上线</div>'
+    + '<p class="tool-stub-desc">「' + esc(label || "该工具") + '」已列入开发路线图，功能落地后会在这里开放。你可以先用现有能力：在对话里直接让 AI 助手帮你完成相关任务，或在对应场景的看板 / 资料库里记录。</p>'
+    + '<p class="tool-stub-tip">想优先开发这个工具？在 AI 助理里说一句「优先做 XX 工具」，我会记到需求清单。</p>'
+    + '</div>');
+  const back = $("#toolStubBack");
+  if(back) back.onclick = function(){ _sideActive = null; render(); };
+}
+
 /* ===== v1.10.0：应用 popover 5 项能力实现 ===== */
 /* 工具：读取/写入 wb_ 前缀偏好（与 settings 走 PREFIX 保持一致） */
 function _getPref(key, def){
@@ -7778,7 +8176,7 @@ function _setPref(key, val){
  * 数据：基于当前 Date.now() 哈希生成稳定的"模拟天气"，每天刷新一次；
  * 真实环境可对接和风/OpenWeather 等（已在 v1.8-C 第三方集成生态中预留）。 */
 var _WEATHER_ICONS = {
-  sunny:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
+  sunny:    UI_ICONS.sun,
   cloudy:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 19h11.5z"/></svg>',
   rain:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 13a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.7 1.5A4 4 0 0 0 6 13"/><line x1="8" y1="18" x2="7" y2="21"/><line x1="12" y1="17" x2="11" y2="22"/><line x1="16" y1="18" x2="15" y2="21"/></svg>',
   snow:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.6A4.5 4.5 0 0 0 17.5 9a6 6 0 0 0-11.7-1.5A4 4 0 0 0 6 17.6"/><line x1="8" y1="18" x2="8" y2="22"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="16" y1="18" x2="16" y2="22"/></svg>',
@@ -7946,7 +8344,7 @@ function openAlarmModal(){
       '<div class="loop-pick" role="group" aria-label="重复">' +
         loopPicks.map(function(i){return '<button type="button" data-loop="'+i+'" title="周'+wk[i]+'">'+wk[i]+'</button>';}).join("") +
       '</div>' +
-      '<button type="submit" class="tbtn" style="min-height:32px;padding:4px 12px">添加</button>' +
+      '<button type="submit" class="addbtn" style="--sc:var(--accent);white-space:nowrap">添加</button>' +
     '</form>' +
     '<div class="alarm-list" id="alarmList" aria-live="polite"></div>'
   );
@@ -8280,7 +8678,7 @@ function mountPet(kind){
   el.style.top  = y + "px";
   el.innerHTML = sanitizeHtml(
     '<div class="pc-svg" style="width:64px;height:64px">'+def.svg+'</div>' +
-    '<button type="button" class="pet-close" aria-label="收回萌宠">×</button>'
+    '<button type="button" class="pet-close" aria-label="收回萌宠">✕</button>'
   );
   el.querySelector(".pet-close").onclick = function(e){
     e.stopPropagation();
@@ -8542,11 +8940,12 @@ function setupRipple(){
 
 /* ---------- T4.2 骨架屏 + 空状态（纯 HTML 生成函数，不依赖 DOM，方便测试） ---------- */
 // 空状态图标（内联 SVG，currentColor，无硬编码颜色；颜色由 .empty-icon 的 color 令牌控制）
+// v2.1.1 去重：与 UI_ICONS 同形的按 key 引用单一真相源
 const EMPTY_ICONS = {
   "no-tasks":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11h6M9 15h4M5 4h14a2 2 0 0 1 2 2v14l-3-2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>',
   "no-records":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4zM4 12h16v8H4z"/><path d="M8 16h8"/></svg>',
-  "no-search":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>',
-  "no-stats":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10m6 10V4m6 16v-7m6 7V8"/></svg>'
+  "no-search": UI_ICONS.search,
+  "no-stats": UI_ICONS.stats
 };
 /**
  * 渲染骨架屏（灰块占位 + 闪烁动画 wb-shimmer）
@@ -8722,8 +9121,8 @@ function renderToday(){
       String(t.title||"").toLowerCase().includes(String(l.kw||"").toLowerCase())
     );
     let icon, label;
-    if(!enabled){ icon = "⏸"; label = "已暂停"; }
-    else if(s.current > 0){ icon = "~"; label = s.current + "天"; }
+    if(!enabled){ icon = "‖"; label = "已暂停"; }
+    else if(s.current > 0){ icon = "●"; label = s.current + "天"; }
     else if(triggered){ icon = "✓"; label = "已触发"; }
     else { icon = "○"; label = "未开始"; }
     const fs = scMeta(l.fromSc), ts = scMeta(l.toSc);
@@ -9380,7 +9779,7 @@ function renderOverview(){
         <div id="globRes" style="margin-top:10px"></div></div>
      <div class="card"><h2>${UI_ICONS.overview} 数据总览</h2>
        <p class="sub">跨场景的任务完成趋势与密度</p>
-       <div style="margin-bottom:var(--space-3)"><button type="button" class="report-entry-btn" id="btnOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报）</button></div>
+       <div style="margin-bottom:var(--space-3)"><button type="button" class="btn-primary" id="btnOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报）</button></div>
        <h3>${UI_ICONS.overview} 完成趋势（近 14 天）</h3>${lineChart}
        <h3>日历热力图（本月）</h3>${heat}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
@@ -9652,7 +10051,7 @@ function renderStats(){
     { label: "最长连续", value: stats.bestStreak + " 天" },
     { label: "逾期任务", value: overdue }
   ];
-  // v1.10.0b：统一 page-head 风格——与概览/仓库/图表商店一致（card 包裹 + .page-head + .ph-ic）
+  // v1.10.0b：统一 page-head 风格——与概览/回收站/图表商店一致（card 包裹 + .page-head + .ph-ic）
   // v1.15：标题栏独立成卡（"单独摘出来"），指标卡与其分离，视觉与其他页面统一；标题与侧栏菜单名一致
   const headHtml = `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${UI_ICONS.stats}</span>
@@ -9706,7 +10105,7 @@ function renderStats(){
   const chainCard = `<div class="card"><h2>${UI_ICONS.stats} 习惯链成功率</h2>` +
     `<p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>${chainsHtml}</div>`;
   // v1.15：高级报表入口从标题栏移出，置于内容区末尾独立操作卡
-  const reportCardHtml = `<div class="card report-entry-wrap"><button type="button" class="report-entry-btn" id="btnStatsOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报 · 对比 · 导出PDF）</button></div>`;
+  const reportCardHtml = `<div class="card report-entry-wrap"><button type="button" class="btn-primary" id="btnStatsOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报 · 对比 · 导出PDF）</button></div>`;
 
   $("#main").innerHTML = sanitizeHtml(headHtml + cardsHtml + trendHtml + pieHtml + hourHtml + chainCard + reportCardHtml);
 
@@ -9771,7 +10170,7 @@ function renderGlobViews(){
   const box=$("#globViews"); if(!box) return;
   const views=getGlobViews();
   box.innerHTML = sanitizeHtml((views.length
-    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="应用视图">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="删除视图">×</button></span>`).join("")
+    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="应用视图">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="删除视图">✕</button></span>`).join("")
     : "") + `<button type="button" class="glob-view-save" id="globViewSave" title="保存当前筛选为视图">＋ 保存视图</button>`);
   $$("#globViews [data-view]").forEach(ch=>{
     ch.onclick = e=>{
@@ -10209,11 +10608,50 @@ function _updateKanbanVScroll(viewport, sc, st){
 function renderSceneHead(){
   const s = SCENARIOS[active];
   if(!s) return "";
+  // v2.1.0：标题随任务视图模式变化（任务看板 / 任务日历 / 待办清单）
+  const headTitle = sceneViewMode==="calendar" ? "任务日历" : sceneViewMode==="todo" ? "待办清单" : "任务看板";
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" style="background:${s.color}1f;color:${s.color}" aria-hidden="true">${s.icon || ""}</span>
-    <div class="ph-tx"><h2>${esc(s.name)} · 任务看板</h2>
+    <div class="ph-tx"><h2>${esc(s.name)} · ${headTitle}</h2>
       <p class="sub">带截止日期的任务会汇总到下方「今天要处理」</p></div>
   </header></div>`;
+}
+/**
+ * v2.1.0：待办视图（todo 模式）——当前场景任务平铺清单，勾选完成 / 状态流转 / 编辑删除。
+ * 复用看板卡的 data-move / data-edit / data-share / data-del 属性，绑定走全局选择器。
+ * @param {Object[]} tasks - 当前场景任务数组
+ * @param {Object} s - 场景配置
+ * @returns {string} 待办清单 HTML
+ */
+function renderTodoListView(tasks, s){
+  if(!tasks.length) return renderEmpty("no-tasks");
+  const order = {todo:0, doing:1, done:2};
+  const sorted = tasks.slice().sort((a,b)=>{
+    if(order[a.status]!==order[b.status]) return order[a.status]-order[b.status];
+    const pa = a.priority||"P9", pb = b.priority||"P9";
+    if(pa!==pb) return pa<pb?-1:1;
+    return (a.due||"9999")<(b.due||"9999")?-1:1;
+  });
+  const stName = {todo:"待办", doing:"进行中", done:"已完成"};
+  const rows = sorted.map(x=>{
+    const od = x.due && x.due < todayStr() && x.status!=="done";
+    const pri = x.priority? `<span class="pri ${x.priority}">${x.priority}</span>`:"";
+    const due = x.due? `<span class="due ${od?"od":""}">${od?"逾期 ":""}${x.due}</span>`:"";
+    const checked = x.status==="done" ? " checked" : "";
+    const doneCls = x.status==="done" ? " done" : "";
+    const nextSt = x.status==="done" ? "doing" : "done";
+    return `<div class="todo-row${doneCls}" data-id="${x.id}" data-status="${x.status}">
+      <input type="checkbox" class="todo-chk" data-move="${x.id}:${nextSt}" aria-label="切换完成状态"${checked}>
+      <span class="todo-title">${esc(x.title)}</span>
+      <span class="todo-meta">${pri}${due}<span class="todo-st">${stName[x.status]||""}</span></span>
+      <span class="todo-ops">
+        ${x.status==="todo"?`<button data-move="${x.id}:doing">开始</button>`:""}
+        <button data-edit="${x.id}">编辑</button>
+        <button data-del="${x.id}" style="color:var(--danger)">删除</button>
+      </span>
+    </div>`;
+  }).join("");
+  return `<div class="todo-list">${rows}</div>`;
 }
 function renderMainHTML(){
   const s = SCENARIOS[active];
@@ -10226,30 +10664,40 @@ function renderMainHTML(){
 
   const taskForm = `<form class="form-row" id="taskForm">
     <div class="fld"><label>任务标题</label><input name="title" placeholder="要做什么？" maxlength="200" required></div>
-    <div class="fld" style="max-width:160px"><label>截止日期</label><input name="due" type="date"></div>
-    <div class="fld" style="max-width:120px"><label>优先级</label>
+    <div class="fld fld-md"><label>截止日期</label><input name="due" type="date"></div>
+    <div class="fld fld-sm"><label>优先级</label>
       <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
-    <div class="fld" style="max-width:140px"><label>标签</label><input name="tags" placeholder="逗号分隔" maxlength="200"></div>
+    <div class="fld fld-md"><label>标签</label><input name="tags" placeholder="逗号分隔" maxlength="200"></div>
     <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button>
   </form>`;
 
-  const tagFilterHTML = `<div class="form-row" style="margin-bottom:10px">
-    <div class="fld" style="max-width:480px"><label for="boardSearch">搜索任务（A3）</label><input id="boardSearch" placeholder="输入标题关键词" maxlength="200"></div>
-    <div class="fld" style="max-width:140px"><label>状态</label>
+  const tagFilterHTML = `<div class="form-row">
+    <div class="fld fld-xl"><label for="boardSearch">搜索任务（A3）</label><input id="boardSearch" placeholder="输入标题关键词" maxlength="200"></div>
+    <div class="fld fld-md"><label>状态</label>
       <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
-    <div class="fld" style="max-width:200px"><label for="tagFilter">标签（留空=全部）</label><input id="tagFilter" placeholder="如 周报 / urgent" maxlength="200"></div>
+    <div class="fld fld-lg"><label for="tagFilter">标签（留空=全部）</label><input id="tagFilter" placeholder="如 周报 / urgent" maxlength="200"></div>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
-  let kanban, filterHtml;
-  if(tasksAll.length === 0){
-    kanban = renderEmpty("no-tasks");
+  // v2.1.0：任务区按 sceneViewMode 分支——kanban（看板）/ calendar（日历）/ todo（待办列表）
+  let taskArea, filterHtml;
+  if(sceneViewMode === "calendar"){
+    taskArea = `<div class="cal-inline" id="calInlineView" data-offset="0">${renderCalendarView(0)}</div>`;
+    filterHtml = "";
+  } else if(sceneViewMode === "todo"){
+    taskArea = renderTodoListView(tasks, s);
+    filterHtml = tasks.length ? `<div class="form-row">
+      <div class="fld fld-md"><label>状态</label>
+        <select id="todoStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
+    </div>` : "";
+  } else if(tasksAll.length === 0){
+    taskArea = renderEmpty("no-tasks");
     filterHtml = "";
   }else{
     const cols=["todo","doing","done"];
     const colName={todo:"待办",doing:"进行中",done:"已完成"};
     // v1.4-B：超阈值时每列启用虚拟滚动，否则全量渲染
-    kanban = `<div class="kanban">` + cols.map(st => {
+    taskArea = `<div class="kanban">` + cols.map(st => {
       const list = tasks.filter(x => x.status === st);
       return _renderKanbanCol(st, list, colName);
     }).join("") + `</div>`;
@@ -10279,7 +10727,9 @@ function renderMainHTML(){
 
   // v1.9.7：场景标题已抽为独立内容卡 renderSceneHead()（render() 中置于 renderToday 之前），看板卡不再带头部
   // v1.15 P2：每个 card 左上角要有标题——看板卡补"任务看板"
-  return `<div class="card"><h2>${UI_ICONS.check}任务看板</h2>${taskForm}${filterHtml}${kanban}</div>
+  // v2.1.0：任务卡标题随视图模式变化（任务看板 / 任务日历 / 待办清单）
+  const taskCardTitle = sceneViewMode==="calendar" ? "任务日历" : sceneViewMode==="todo" ? "待办清单" : "任务看板";
+  return `<div class="card"><h2>${UI_ICONS.check}${taskCardTitle}</h2>${taskForm}${filterHtml}${taskArea}</div>
      <div class="card"><h2>${s.name} · ${rec.label}</h2>
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
       ${renderSceneSections(active)}
@@ -10427,6 +10877,21 @@ function bindScenario(){
   const tf=$("#tagFilter"); if(tf) tf.oninput=applyBoardFilter;
   const bs=$("#boardSearch"); if(bs) bs.oninput=applyBoardFilter;   // B2：标题搜索接线
   const sf=$("#boardStatusFilter"); if(sf) sf.onchange=applyBoardFilter; // B2：状态筛选接线
+  // v2.1.0：日历内联视图——月份切换 + 点日期预填任务表单截止日期
+  const calInline = $("#calInlineView");
+  if(calInline){
+    bindCalendarEvents(calInline);
+    calInline.addEventListener("cal:date-select", function(e){
+      const f = $("#taskForm");
+      if(f && f.due){ f.due.value = e.detail.date; f.title.focus(); }
+    });
+  }
+  // v2.1.0：待办视图状态筛选（按 data-status 显隐行）
+  const tsf = $("#todoStatusFilter");
+  if(tsf) tsf.onchange = function(){
+    const v = tsf.value;
+    $$("#main .todo-row").forEach(r=>{ r.style.display = (!v || r.dataset.status===v) ? "" : "none"; });
+  };
   // v1.4-B 虚拟滚动：绑定看板列与记录列表的 scroll 事件（rAF 节流，只更新可见项 DOM 子树）
   _bindVirtualScrolls(active);
   bindExtra(active);
@@ -10598,7 +11063,7 @@ function openTaskEdit(id){
         <div class="fld"><label>备注</label><textarea name="note" rows="3" maxlength="2000">${esc(t.note||"")}</textarea></div>
         <div style="display:flex;gap:var(--space-2);justify-content:flex-end">
           <button type="button" class="btn-ghost" id="taskEditCancel">取消</button>
-          <button type="submit" class="addbtn" style="--sc:${s.color}">保存</button>
+          <button type="submit" class="btn-primary" style="--sc:${s.color}">保存</button>
         </div>
       </form>
     </div></div>`;
@@ -12090,7 +12555,7 @@ function bindChatPanel(){
   const toggleCollapse=()=>{
     panel.classList.toggle("collapsed");
     const collapsed=panel.classList.contains("collapsed");
-    if(collapseBtn) collapseBtn.textContent=collapsed ? "▶" : "◀";
+    if(collapseBtn) collapseBtn.textContent=collapsed ? "▸" : "◂";
     if(rail) rail.classList.toggle("show", collapsed);
     // 持久化折叠状态
     try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }catch(e){ /* noop */ }
@@ -12111,7 +12576,7 @@ function bindChatPanel(){
     const collapseByDefault = !hasPref && (window.innerWidth||1024) < 1280;
     if(load(PREFIX+"chat_panel_collapsed","0")==="1" || collapseByDefault){
       panel.classList.add("collapsed");
-      if(collapseBtn) collapseBtn.textContent="▶";
+      if(collapseBtn) collapseBtn.textContent="▸";
       if(rail) rail.classList.add("show");
     }
   }catch(e){ /* noop */ }
@@ -13430,13 +13895,13 @@ function _renderChainRow(l){
   const dc = SCENARIOS[l.toSc] || {name:"?", icon:""};
   const disabled = l.enabled === false;
   return `<div class="chain-row${disabled?" disabled":""}" data-id="${esc(l.id)}">
-    <input type="checkbox" class="chain-toggle" data-id="${esc(l.id)}" style="width:auto" ${disabled?"":"checked"} aria-label="启用/禁用">
+    <input type="checkbox" class="chain-toggle" data-id="${esc(l.id)}" ${disabled?"":"checked"} aria-label="启用/禁用">
     <span class="chain-ic" style="color:var(--sc-${esc(l.fromSc)},var(--accent))">${sc.icon||""}</span>
     <span class="chain-kw" data-edit-kw="${esc(l.id)}" title="点击编辑关键词">${esc(l.kw||"")}</span>
     <span class="chain-arr">→</span>
     <span class="chain-ic" style="color:var(--sc-${esc(l.toSc)},var(--accent))" data-edit-dst="${esc(l.id)}" title="点击编辑目标场景">${dc.icon||""}</span>
     <span class="chain-dst">${esc(dc.name)}</span>
-    <button type="button" class="chain-del" data-del="${esc(l.id)}" aria-label="删除链">×</button>
+    <button type="button" class="chain-del" data-del="${esc(l.id)}" aria-label="删除链">✕</button>
   </div>`;
 }
 /* 渲染链编辑行（inline edit：关键词 input + 目标场景 select + 保存/取消） */
@@ -13472,7 +13937,7 @@ function refreshChainScSelects(){
   if(selDst) selDst.innerHTML = sanitizeHtml(opts);
 }
 /* ---------- P1：场景管理面板（设置抽屉） ---------- */
-const ICON_LABELS = { overview:"总览", plus:"加号", check:"对勾", chat:"对话", download:"下载", upload:"上传", gear:"齿轮", theme:"月亮", stats:"柱状图", copy:"复制", trash:"垃圾桶" };
+const ICON_LABELS = { tag:"标签", overview:"总览", plus:"加号", check:"对勾", chat:"对话", download:"下载", upload:"上传", gear:"齿轮", theme:"月亮", stats:"柱状图", copy:"复制", trash:"垃圾桶" };
 function renderScBox(){
   const box=$("#scBox"); if(!box) return;
   const ov = loadScOverrides();
@@ -13482,7 +13947,7 @@ function renderScBox(){
     return `<div class="chain-row" data-sc="${esc(k)}">
       <span class="chain-ic" style="color:${s.color}">${s.icon||""}</span>
       <input class="sc-edit-name" value="${esc(s.name)}" maxlength="12" aria-label="场景名称" style="max-width:90px">
-      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label="场景颜色" style="width:40px;padding:2px">
+      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label="场景颜色">
       <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label="保存改名换色">✓</button>
       ${overridden?`<button type="button" class="chain-cancel sc-reset" data-screset="${esc(k)}" aria-label="恢复默认">恢复</button>`:""}
     </div>`;
@@ -13492,13 +13957,23 @@ function renderScBox(){
     return `<div class="chain-row" data-sc="${esc(cs.key)}">
       <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
       <input class="sc-edit-name" value="${esc(cs.name)}" maxlength="12" aria-label="场景名称" style="max-width:90px">
-      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="场景颜色" style="width:40px;padding:2px">
+      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="场景颜色">
       <span class="chain-arr" style="font-size:11px;color:var(--muted)">自定义</span>
       <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="保存">✓</button>
-      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="删除场景">×</button>
+      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="删除场景">✕</button>
     </div>`;
   }).join("");
-  box.innerHTML = sanitizeHtml(builtinRows + customRows);
+  /* v2.0.3：插件场景行——与侧栏 ORDER 对齐（此前只渲染内置+自定义，启用番茄/阅读等
+     插件场景后侧栏 6 个、设置卡仍 4 个）。插件场景随插件启停，不提供改名/换色/删除 */
+  const pluginRows = Object.keys(getPluginScenarios()).map(key=>{
+    const s = SCENARIOS[key]||{};
+    return `<div class="chain-row" data-sc="${esc(key)}">
+      <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
+      <input class="sc-edit-name" value="${esc(s.name||key)}" maxlength="12" aria-label="场景名称" disabled style="max-width:90px">
+      <span class="chain-arr" style="font-size:11px;color:var(--muted)">插件</span>
+    </div>`;
+  }).join("");
+  box.innerHTML = sanitizeHtml(builtinRows + customRows + pluginRows);
   // 图标下拉填充（仅首次）
   const iconSel = $("#scAddIcon");
   if(iconSel && !iconSel.options.length) iconSel.innerHTML = sanitizeHtml(CUSTOM_ICON_KEYS.map(k=>`<option value="${k}">${esc(ICON_LABELS[k]||k)}</option>`).join(""));
@@ -13819,7 +14294,7 @@ async function saveCfg(){
         if(Array.isArray(safe.profiles)) safe.profiles = safe.profiles.map(p=>Object.assign({},p,{key:""}));
         if(typeof safe.key === "string") delete safe.key;
         save(PREFIX+"cfg", safe);
-        try{ toast("⚠ 加密持久化失败，AI Key 未保存（安全起见已丢弃）。", "warn"); }catch(e2){ /* noop */ }
+        try{ toast("⚠️ 加密持久化失败，AI Key 未保存（安全起见已丢弃）。", "warn"); }catch(e2){ /* noop */ }
       }
     }
     // T3.2：同步链启用状态（chain-toggle 实时已保存，此处兜底处理旧 lk_ id 与新 chain-toggle）
@@ -14002,7 +14477,7 @@ function openChainImportModal(){
     const r = importChainShareCode(code);
     const previewEl = $("#chainImportPreview");
     if(!r.ok){
-      previewEl.innerHTML = sanitizeHtml(`<div style="color:var(--danger);padding:6px">❌ ${esc(r.err||"解析失败")}</div>`);
+      previewEl.innerHTML = sanitizeHtml(`<div style="color:var(--danger);padding:6px">✕ ${esc(r.err||"解析失败")}</div>`);
       $("#chainImportConfirmBtn").disabled = true;
       pendingLinks = null;
       return;
@@ -14206,11 +14681,11 @@ function renderPluginBox(){
     const badgeHtml = badges.length ? '<div class="plugin-badges">'+badges.join("")+'</div>' : "";
     return '<div class="plugin-row" data-plugin-id="'+esc(p.id)+'">'
       + '<div class="plugin-row-head">'
-        + '<input type="checkbox" class="plugin-toggle" data-plugin-toggle="'+esc(p.id)+'" style="width:auto" '+(enabled?"checked":"")+' aria-label="启用/禁用插件">'
+        + '<input type="checkbox" class="plugin-toggle" data-plugin-toggle="'+esc(p.id)+'" '+(enabled?"checked":"")+' aria-label="启用/禁用插件">'
         + '<span class="plugin-name">'+esc(p.name)+'</span>'
         + '<span class="plugin-version">v'+esc(p.version||"0.0.0")+'</span>'
-        + '<button type="button" class="addbtn plugin-detail-btn" data-plugin-detail="'+esc(p.id)+'" style="--sc:var(--muted);padding:2px 8px;font-size:11px">详情</button>'
-        + '<button type="button" class="addbtn plugin-unload-btn" data-plugin-unload="'+esc(p.id)+'" style="--sc:var(--danger,var(--muted));padding:2px 8px;font-size:11px">卸载</button>'
+        + '<button type="button" class="addbtn xs plugin-detail-btn" data-plugin-detail="'+esc(p.id)+'" style="--sc:var(--muted)">详情</button>'
+        + '<button type="button" class="addbtn xs plugin-unload-btn" data-plugin-unload="'+esc(p.id)+'" style="--sc:var(--danger,var(--muted))">卸载</button>'
       + '</div>'
       + '<div class="plugin-desc">'+esc(p.description||"")+'</div>'
       + badgeHtml
@@ -14272,7 +14747,7 @@ function openPluginDetailModal(id){
   const html = '<div class="plugin-detail-modal" id="pluginDetailModal">'
     + '<div class="chain-share-dialog" style="max-width:520px">'
       + '<div class="chain-share-header">'
-        + '<h2>${ic("puzzle")}'+esc(p.name)+'</h2>'
+        + '<h2>'+ic("puzzle")+esc(p.name)+'</h2>'
         + '<button class="chain-share-close" id="pluginDetailClose" aria-label="关闭">✕</button>'
       + '</div>'
       + '<div class="chain-share-body">'
@@ -14287,7 +14762,7 @@ function openPluginDetailModal(id){
         + '<div class="plugin-section"><b>提供的链规则：</b><ul>'+ruleList+'</ul></div>'
         + '<div class="plugin-section"><b>配置（JSON）：</b>'
           + '<textarea id="pluginConfigEditor" rows="5" class="code-input" style="resize:vertical">'+esc(configJson)+'</textarea>'
-          + '<button type="button" class="addbtn" id="pluginConfigSave" style="--sc:var(--accent);padding:4px 12px;margin-top:4px">保存配置</button>'
+          + '<button type="button" class="addbtn sm" id="pluginConfigSave" style="--sc:var(--accent);margin-top:4px">保存配置</button>'
         + '</div>'
       + '</div>'
     + '</div>'
@@ -14377,9 +14852,9 @@ function renderThemeEditor(){
         const isCurrent = id === curTheme;
         return '<div class="theme-custom-row">'
           + '<span class="theme-custom-name">'+esc(t.name||id)+(isCurrent?' <span style="color:var(--accent);font-size:10px">●当前</span>':'')+'</span>'
-          + '<button type="button" class="addbtn" data-theme-apply="'+esc(id)+'" style="--sc:var(--accent);padding:2px 8px;font-size:11px">应用</button>'
-          + '<button type="button" class="addbtn" data-theme-edit="'+esc(id)+'" style="--sc:var(--muted);padding:2px 8px;font-size:11px">编辑</button>'
-          + '<button type="button" class="addbtn" data-theme-delete="'+esc(id)+'" style="--sc:var(--danger,var(--muted));padding:2px 8px;font-size:11px">删除</button>'
+          + '<button type="button" class="addbtn xs" data-theme-apply="'+esc(id)+'" style="--sc:var(--accent)">应用</button>'
+          + '<button type="button" class="addbtn xs" data-theme-edit="'+esc(id)+'" style="--sc:var(--muted)">编辑</button>'
+          + '<button type="button" class="addbtn xs" data-theme-delete="'+esc(id)+'" style="--sc:var(--danger,var(--muted))">删除</button>'
         + '</div>';
       }).join("");
       listEl.innerHTML = sanitizeHtml(rows);
@@ -14424,7 +14899,7 @@ function renderThemeEditor(){
       return '<div class="theme-sc-color-row">'
         + '<span class="sc-name">'+esc(meta.name||sc)+'</span>'
         + '<input type="color" data-sc-color="'+esc(sc)+'" value="'+esc(cur||("#"+"7c5cbf"))+'" aria-label="'+esc(meta.name||sc)+'配色">'
-        + '<button type="button" class="addbtn" data-sc-reset="'+esc(sc)+'" style="--sc:var(--muted);padding:2px 6px;font-size:10px">重置</button>'
+        + '<button type="button" class="addbtn xs" data-sc-reset="'+esc(sc)+'" style="--sc:var(--muted)">重置</button>'
       + '</div>';
     }).join("");
     scEl.innerHTML = sanitizeHtml(rows);
@@ -14664,7 +15139,7 @@ document.addEventListener("keydown", e=>{
   }
   const t=/** @type {HTMLElement} */(e.target);
   if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT")) return;
-  if(e.key>="1" && e.key<="4"){ const sc=ORDER[+e.key-1]; if(sc){ setActive(sc); render(); } }
+  if(e.key>="1" && e.key<="6"){ const sc=ORDER[+e.key-1]; if(sc){ setActive(sc); render(); } }
   else if(e.key==="g"||e.key==="G"){ active="overview"; render(); } // 总览为瞬态视图，不持久化（契约已知例外）
   // M6：N 在总览/统计等无表单视图也能跳到场景并聚焦新建任务
   else if(e.key==="n"||e.key==="N"){
@@ -14776,14 +15251,24 @@ $$("#drawer .drawer-close").forEach(b=>{ b.onclick = closeDrawer; });
 $("#overlay").onclick = closeDrawer;
 $("#cfgSave").onclick = saveCfg;
 $("#cfgProfileSelect").onchange = e => switchProfile(e.target.value);
-/* v1.9.x：设置页分区快捷导航（点击平滑滚动到分区）+ 导航栏保存按钮 */
-document.querySelectorAll(".set-nav-btn[data-scroll-to]").forEach(b=>{
-  b.onclick = ()=>{
-    const el = document.getElementById(b.getAttribute("data-scroll-to"));
-    if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
-  };
+/* v2.0.3：设置页分区导航切换（独立导航栏 .set-nav-btn，点击切换下方 card 显示） */
+function _switchSetTab(tabId){
+  $$("#drawer .set-nav-btn[data-set-tab]").forEach(function(b){
+    b.classList.toggle("active", b.getAttribute("data-set-tab") === tabId);
+  });
+  /* 标记 card 不限定 data-page：初始加载时 #drawer 尚无 data-page，
+     若限定 [data-page=settings] 会漏标，导致首次打开设置页所有 card 全隐藏 */
+  $$("#drawer .set-card").forEach(function(c){ c.classList.toggle("set-tab-active", c.id === tabId); });
+  var d = $("#drawer"); if(d) d.scrollTop = 0;
+}
+$$("#drawer .set-nav-btn[data-set-tab]").forEach(function(b){
+  b.onclick = function(){ _switchSetTab(b.getAttribute("data-set-tab")); };
 });
-const _setNavSave = $("#setNavSave"); if(_setNavSave) _setNavSave.onclick = saveCfg;
+/* 默认激活第一个分区（场景） */
+(function(){
+  var first = document.querySelector("#drawer .set-nav-btn[data-set-tab]");
+  if(first) _switchSetTab(first.getAttribute("data-set-tab"));
+})();
 $("#cfgProfileNew").onclick = newProfile;
 $("#cfgProfileDup").onclick = dupProfile;
 $("#cfgProfileDel").onclick = delProfile;
@@ -15687,6 +16172,8 @@ seed();
     applyTheme();
   }
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
+  setupSideMenu();   // v2.1.0：侧栏两级菜单点击分发（事件委托，跨 renderSide 重渲染有效）
+  setupMobNav();     // v2.1.0：移动端底栏 + 底部抽屉事件（委托绑定，幂等）
   // v1.10.0b：正文顶部消息通知栏展开/收起（默认收起，点击预览/下拉按钮可展开前 3 条 + footer）
   try{ if(typeof initTodoBar === "function") initTodoBar(); }catch(_){ }
   // v1.10.0：应用 popover 三模态的关闭按钮 + 初始恢复用户偏好（指针特效/萌宠）
@@ -18974,7 +19461,7 @@ function openNotesModal(){
   var body = $("#notesModalBody");
   if(body){
     var html = '<div class="notes-toolbar">';
-    html += '<button type="button" class="addbtn note-new-btn" id="btnNoteNew" style="--sc:var(--accent);padding:6px 14px">+ 新建笔记</button>';
+    html += '<button type="button" class="addbtn note-new-btn" id="btnNoteNew" style="--sc:var(--accent)">+ 新建笔记</button>';
     html += '<input class="note-filter-input" id="noteFilterInput" placeholder="按标题/标签筛选..." maxlength="200">';
     html += '</div>';
     html += renderNoteList();
@@ -19007,7 +19494,7 @@ function openNoteEditorModal(note){
     html += '<button type="button" class="addbtn sm" id="btnNoteSave" >保存</button>';
     html += '<button type="button" class="addbtn sm" id="btnNoteCancel"  style="--sc:var(--muted)">取消</button>';
     if(n && n.id){
-      html += '<button type="button" class="addbtn" id="btnNoteDelete" style="--sc:var(--danger,var(--muted));padding:6px 16px">删除</button>';
+      html += '<button type="button" class="addbtn" id="btnNoteDelete" style="--sc:var(--danger,var(--muted))">删除</button>';
     }
     html += '</div>';
     body.innerHTML = sanitizeHtml(html);
@@ -22858,7 +23345,7 @@ function renderScheduleView(schedule){
       rows.push(
         '<div class="schedule-row break">' +
           '<span class="time">' + esc(item.startTime) + '-' + esc(item.endTime) + '</span>' +
-          '<span class="label">☕ 休息</span>' +
+          '<span class="label">· 休息</span>' +
         '</div>'
       );
     } else {

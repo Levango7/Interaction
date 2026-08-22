@@ -106,7 +106,9 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 6. 查看统计 ----------
     await test.step("查看统计视图", async () => {
-      await page.click('#side .nav-item[data-sc="stats"]');
+      await page.click('#side .nav-parent[data-menu="dash"]');
+      await page.waitForSelector('#side .nav-item[data-menu="dash-stats"]', { timeout: 5_000 });
+      await page.click('#side .nav-item[data-menu="dash-stats"]');
       // 统计视图：有任务时显示 .stats-cards，无任务时显示 .no-stats 空状态
       // 我们已建并完成任务，应有 .stats-cards
       await page.waitForSelector(".stats-cards, .no-stats", { timeout: 5_000 });
@@ -129,7 +131,9 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 8. 编辑习惯链 ----------
     await test.step("在设置抽屉添加一条新习惯链", async () => {
-      // 习惯链管理面板在抽屉内
+      // 习惯链管理面板在抽屉内；切换到「习惯链」tab（v2.0.3：设置页多分区，默认激活「场景」）
+      await page.click('[data-set-tab="set-chain"]');
+      await page.waitForSelector('#set-chain.set-tab-active', { timeout: 5_000 });
       await page.waitForSelector("#chainAddBtn", { timeout: 5_000 });
       // 选源场景（office）、输入关键词、选目标场景（life）
       await page.selectOption("#chainAddSrc", "office");
@@ -153,7 +157,10 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 9. AI 对话（mock） ----------
     await test.step("启用 AI 并进行 mock 对话", async () => {
-      // 仍在设置抽屉。勾选启用 AI
+      // 切换到 AI 配置页（v2.0.3：AI 配置不在设置分区，需走独立 page）
+      await page.click('#side .nav-item[data-aipage="1"]');
+      await page.waitForSelector('#drawer[data-page="ai"]', { timeout: 5_000 });
+      // 勾选启用 AI
       await page.check("#cfgEnabled");
       // 填写 profile 表单
       await page.fill("#cfgName", "E2E-Mock");
@@ -196,6 +203,9 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       // 重新打开设置抽屉（上一步保存后已关闭）
       await page.click("#btnGear");
       await page.waitForSelector("#drawer.open", { timeout: 5_000 });
+      // 切换到「数据」分区（v2.0.3：导出入口在 set-data 卡内）
+      await page.click('[data-set-tab="set-data"]');
+      await page.waitForSelector('#set-data.set-tab-active', { timeout: 5_000 });
       await page.waitForSelector("#btnExport", { timeout: 5_000 });
 
       // 监听 download 事件
@@ -208,7 +218,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     });
   });
 
-  test("smoke：应用可启动且渲染侧边栏四个场景", async ({ page }) => {
+  test("smoke：应用可启动且渲染侧边栏四组菜单", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#side .nav-item", { timeout: 15_000 });
     // 处理 onboarding（若存在）以便主区渲染
@@ -220,10 +230,10 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
         await page.waitForTimeout(200);
       }
     }
-    // 侧边栏应含 overview / stats / office / code / study / life 六个 nav-item
-    const navCount = await page.locator("#side .nav-item").count();
+    // 侧边栏应含 >=6 个顶层 nav-item（overview/tasks/plugin/ai/chain/look/doc 合计）
+    const navCount = await page.locator("#side .nav-item.nav-parent").count();
     expect(navCount).toBeGreaterThanOrEqual(6);
-    // 验证四个场景按钮存在
+    // 验证四个内置场景按钮存在
     for (const sc of ["office", "code", "study", "life"]) {
       await expect(page.locator(`#side .nav-item[data-sc="${sc}"]`)).toBeVisible();
     }

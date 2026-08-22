@@ -93,11 +93,11 @@ describe("calcTrend() 任务完成趋势", () => {
 });
 
 describe("calcSceneDist() 场景分布", () => {
-  it("S1: 4 场景分布——返回 4 项，count/pct 正确，pct 之和约等于 100", () => {
+  it("S1: 6 场景分布——返回 6 项，count/pct 正确，pct 之和约等于 100", () => {
     const win = loadApp();
     const { setTasks, calcSceneDist, ORDER } = win.__test;
     win.localStorage.clear();
-    // office:3, code:2, study:1, life:0 → 总 6
+    // office:3, code:2, study:1, design/data/life:0 → 总 6
     setTasks([
       mkTask("a1", "office", "x", 0, { status: "todo" }),
       mkTask("a2", "office", "x", 0, { status: "todo" }),
@@ -107,13 +107,15 @@ describe("calcSceneDist() 场景分布", () => {
       mkTask("c1", "study", "x", 0)
     ]);
     const dist = calcSceneDist();
-    expect(dist).toHaveLength(4);
+    expect(dist).toHaveLength(6);
     // 顺序与 ORDER 一致
     expect(dist.map(d => d.sc)).toEqual(ORDER);
     const bySc = Object.fromEntries(dist.map(d => [d.sc, d]));
     expect(bySc.office.count).toBe(3);
     expect(bySc.code.count).toBe(2);
     expect(bySc.study.count).toBe(1);
+    expect(bySc.design.count).toBe(0);
+    expect(bySc.data.count).toBe(0);
     expect(bySc.life.count).toBe(0);
     // pct = round(count/total*100)
     expect(bySc.office.pct).toBe(50);  // 3/6=50%
@@ -130,7 +132,7 @@ describe("calcSceneDist() 场景分布", () => {
     const { calcSceneDist } = win.__test;
     win.localStorage.clear();
     const dist = calcSceneDist();
-    expect(dist).toHaveLength(4);
+    expect(dist).toHaveLength(6);
     dist.forEach(d => {
       expect(d.count).toBe(0);
       expect(d.pct).toBe(0);
@@ -332,7 +334,8 @@ describe("renderTrendChart / renderPieChart / renderStats 渲染", () => {
     setTasks([{ id:"t1", sc:"office", title:"测试任务", status:"todo", due:"", priority:"", tags:[], doneAt:null, created:Date.now() }]);
     render();
     const side = win.document.getElementById("side");
-    const statsBtn = side.querySelector('[data-sc="stats"]');
+    // v2.1.0：统计入口改为「仪表盘 ▸ 统计」二级子项（data-menu="dash-stats"）
+    const statsBtn = side.querySelector('[data-menu="dash-stats"]');
     expect(statsBtn).toBeTruthy();
     expect(statsBtn.textContent).toContain("统计");
     // 点击切换

@@ -39,12 +39,12 @@ describe("AI 层对齐（v1.14.1）：force 入 schema + add_record.fields 场�
     }
   });
 
-  it("add_record.fields 含 4 个内置场景的 anyOf 子 schema（键随场景）", () => {
+  it("add_record.fields 含 6 个内置场景的 anyOf 子 schema（键随场景）", () => {
     const win = freshWin();
     const add = win.__test.TOOLS.find((t) => t.function.name === "add_record").function;
     const fields = add.parameters.properties.fields;
     expect(fields.anyOf, "fields 应有 anyOf 场景子 schema").toBeTruthy();
-    expect(fields.anyOf.length, "内置场景应为 4 个").toBe(4);
+    expect(fields.anyOf.length, "内置场景应为 6 个").toBe(6);
 
     const office = fields.anyOf.find((o) => (o.description || "").includes("办公"));
     expect(office.properties, "办公字段应含 title/who/note").toMatchObject({

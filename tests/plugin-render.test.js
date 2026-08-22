@@ -19,8 +19,8 @@ describe("插件场景/卡片渲染接线（v1.14.1）", () => {
   let win;
   beforeEach(() => { win = freshWin(); });
 
-  it("默认无插件场景：ORDER 仅内置四场景", () => {
-    expect(win.__test.ORDER).toEqual(["office", "code", "study", "life"]);
+  it("默认无插件场景：ORDER 仅内置六场景", () => {
+    expect(win.__test.ORDER).toEqual(["office", "design", "study", "data", "code", "life"]);
   });
 
   it("启用场景插件 → 场景并入 SCENARIOS/ORDER；禁用 → 移除", () => {
