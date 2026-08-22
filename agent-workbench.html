@@ -587,6 +587,50 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .overview-grid > .card{margin-bottom:0}
 .overview-grid > .foot{margin-top:0}
 
+/* ===== v2.3.0 系统概况卡 ===== */
+.sys-overview-card{overflow:hidden}
+.sys-overview-card .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3)}
+.sys-overview-card .card-head h2{margin:0;font-size:var(--fs-base);font-weight:600;display:flex;align-items:center;gap:var(--space-2)}
+.sys-overview-card .card-head .sub{margin:2px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
+.sys-ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:var(--space-2)}
+.sys-ov-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);transition:background var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast);cursor:pointer}
+.sys-ov-item:hover{background:var(--surface-hover);border-color:var(--accent-soft);transform:translateY(-1px)}
+.sys-ov-item:active{transform:scale(.98)}
+.sys-ov-ic{color:var(--accent);display:flex;align-items:center}
+.sys-ov-ic svg{width:18px;height:18px}
+.sys-ov-val{font-size:var(--fs-lg);font-weight:700;color:var(--text);line-height:1.2}
+.sys-ov-lbl{font-size:var(--fs-xs);color:var(--muted);text-align:center}
+.sys-ov-ai{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);margin-top:var(--space-3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);font-size:var(--fs-sm)}
+.sys-ov-ai-ok{color:var(--success);display:flex;align-items:center}
+.sys-ov-ai-ok svg{width:16px;height:16px}
+.sys-ov-ai-warn{color:var(--warn);display:flex;align-items:center}
+.sys-ov-ai-warn svg{width:16px;height:16px}
+.sys-ov-ai a{color:var(--accent);text-decoration:underline;font-size:var(--fs-xs)}
+.sys-ov-ai a:hover{color:var(--on-accent)}
+.sys-ov-tip{margin-top:var(--space-2);font-size:var(--fs-xs);color:var(--muted);text-align:center}
+
+/* ===== v2.3.0 工具应用卡（TOOL_APPS 落地页） ===== */
+.tool-app-card{padding:var(--space-3)}
+.tool-app-card textarea,.tool-app-card input[type="text"],.tool-app-card input[type="number"],.tool-app-card input[type="date"]{width:100%;padding:var(--space-2) var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);font-size:var(--fs-sm);box-sizing:border-box}
+.tool-app-card textarea{min-height:120px;resize:vertical;font-family:inherit}
+.tool-app-card label{display:block;font-size:var(--fs-xs);color:var(--muted);margin:var(--space-2) 0 var(--space-1);font-weight:500}
+.tool-app-card .tool-actions{display:flex;gap:var(--space-2);margin-top:var(--space-3);flex-wrap:wrap}
+.tool-app-card .tool-table{width:100%;border-collapse:collapse;margin-top:var(--space-2);font-size:var(--fs-sm)}
+.tool-app-card .tool-table th,.tool-app-card .tool-table td{border:1px solid var(--line);padding:var(--space-1) var(--space-2);text-align:left}
+.tool-app-card .tool-table th{background:var(--panel2);font-weight:600;font-size:var(--fs-xs);color:var(--text-dim)}
+.tool-app-card .tool-table tr:hover td{background:var(--surface-hover)}
+.tool-app-card .tool-empty{color:var(--muted);text-align:center;padding:var(--space-5);font-size:var(--fs-sm)}
+.tool-app-card .tool-summary{display:flex;gap:var(--space-4);margin-bottom:var(--space-3);flex-wrap:wrap}
+.tool-app-card .tool-summary-item{display:flex;flex-direction:column;align-items:center;padding:var(--space-2) var(--space-3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md)}
+.tool-app-card .tool-summary-item .v{font-size:var(--fs-lg);font-weight:700;color:var(--text)}
+.tool-app-card .tool-summary-item .l{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+.tool-app-card canvas{max-width:100%;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
+.tool-app-card .tool-filter-bar{display:flex;gap:var(--space-2);align-items:center;margin-bottom:var(--space-3);flex-wrap:wrap}
+.tool-app-card .tool-filter-bar input,.tool-app-card .tool-filter-bar select{padding:var(--space-1) var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);font-size:var(--fs-sm)}
+.tool-app-card .tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-2);margin-top:var(--space-2)}
+.tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column}
+.tool-app-card .tool-form-grid .tool-field label{margin:0 0 4px}
+
 /* ===== 看板视图 ===== */
 /* minmax(0,1fr)：列宽允许压缩到内容最小宽以下，防止窄主区（如平板未展开聊天面板时）卡片按钮把网格撑溢出 */
 .kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2)}
@@ -936,6 +980,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v2.2.0：AI 助手 Hub（三卡合一 tab；复用 .set-nav-btn 但取消吸顶） */
 .ai-hub-card .ai-hub-tabs{position:static;margin:0 0 var(--space-3);flex-wrap:wrap}
 .ai-hub-card .ai-hub-body{min-height:80px}
+/* v2.2.1：主页今日待办可点击项 + 逾期标记 */
+.ov-today-item{cursor:pointer;border-radius:var(--radius-sm);padding:2px 4px;transition:background var(--transition-fast)}
+.ov-today-item:hover{background:var(--surface-hover)}
+.ov-overdue-tag{display:inline-block;margin-left:6px;padding:0 6px;font-size:10px;line-height:16px;
+  color:var(--danger);background:var(--danger-soft);border-radius:var(--radius-full)}
+#ovTodayMore{background:none;border:none;color:var(--accent);font-size:var(--fs-xs);cursor:pointer;
+  padding:var(--space-1) 0;margin-top:var(--space-1)}
+#ovTodayMore:hover{text-decoration:underline}
 .stats-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1.15;letter-spacing:-.02em}
 .stats-card-lbl{font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
 /* 周环比角标：胶囊样式，与主数字区分开 */
@@ -1540,6 +1592,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 @media(min-width:1024px){
   .overview-grid{grid-template-columns:1fr 1fr}
   .overview-grid > .card:first-child{grid-column:1/-1}
+  .overview-grid > .ov-span2{grid-column:1/-1}
   .overview-grid > .coach-card{grid-column:1/-1}
   .overview-grid > .foot{grid-column:1/-1}
   /* 2 列布局下热力图放宽，避免偏小 */
@@ -2465,8 +2518,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* 桑基图 SVG */
 .sankey-chart{width:100%;height:auto;display:block}
 
-/* 自定义仪表盘 */
-.dashboard-grid{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:120px;
+/* 自定义仪表盘（v2.2.1：行高自适应——minmax 保底 + auto 撑开，组件内容完整可见无内部滚动条） */
+.dashboard-grid{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:minmax(150px,auto);
   gap:var(--space-3);margin-bottom:var(--space-4)}
 .dashboard-widget{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);display:flex;flex-direction:column;overflow:hidden;
@@ -2495,8 +2548,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .dash-toolbar-hint{font-size:var(--fs-xs);color:var(--muted)}
 /* v2.2.0：统计页头操作区（编辑布局按钮宿主） */
 .ph-actions{margin-left:auto;display:flex;align-items:center;gap:var(--space-2)}
-.widget-body{padding:var(--space-3);flex:1;overflow:auto;font-size:var(--fs-sm);color:var(--text)}
+.widget-body{padding:var(--space-3);flex:1;overflow:visible;font-size:var(--fs-sm);color:var(--text)}
+/* v2.2.1：快捷操作组件按钮组 */
+.dash-actions-grid{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.dash-actions-grid .addbtn{flex:1;min-width:110px;justify-content:center}
 .widget-empty{color:var(--muted);text-align:center;padding:var(--space-4) 0;font-size:var(--fs-xs)}
+/* v2.2.1：仪表盘窄屏单列（5 列在移动端不可用） */
+@media(max-width:767px){
+  .dashboard-grid{grid-template-columns:1fr}
+  .dashboard-widget{grid-column:1 !important;grid-row:auto !important}
+}
 .dashboard-actions{display:flex;justify-content:flex-end;gap:var(--space-2);padding:var(--space-2) 0}
 .dashboard-reset{padding:var(--space-1) var(--space-3);border-radius:var(--radius-sm);
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);font-size:var(--fs-sm);
@@ -3509,10 +3570,10 @@ var _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.2.0";
+const VERSION = "2.3.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260822b";
+const BUILD_TAG = "20260823a";
 
 
 
@@ -7418,7 +7479,7 @@ const SC_SUBMENU = {
   ],
   data:[
     {id:"dat-stats", label:"数据分析", run:()=>{ setActive("stats"); render(); }},
-    {id:"dat-chart", label:"图表", run:()=>{ if(typeof openChartStore==="function") openChartStore(); }},
+    {id:"dat-chart", label:"编辑", run:()=>{ _sideActive=null; setActive("stats"); _dashEditMode=true; render(); }},
     {id:"dat-report", label:"报告", run:()=>{ if(typeof openReportModal==="function") openReportModal(); }}
   ],
   code:[
@@ -7473,7 +7534,7 @@ function _buildSideMenu(){
     hasActive: _sideActive==="dash-stats" || _sideActive==="dash-chart",
     children:[
       {id:"dash-stats", label:"统计", run:()=>{ _sideActive=null; setActive("stats"); render(); }},
-      {id:"dash-chart", label:"总览图", run:()=>{ if(typeof openChartStore==="function") openChartStore(); }}
+      {id:"dash-chart", label:"编辑", run:()=>{ _sideActive=null; setActive("stats"); _dashEditMode=true; render(); }}
     ]
   };
   const tasksNode = {
@@ -7672,7 +7733,7 @@ function _findSideMenuItem(menuId){
   }
   const fixed = {
     "dash-stats":{run:()=>{ _sideActive=null; setActive("stats"); render(); }},
-    "dash-chart":{run:()=>{ if(typeof openChartStore==="function") openChartStore(); }},
+    "dash-chart":{run:()=>{ _sideActive=null; setActive("stats"); _dashEditMode=true; render(); }},
     "view-kanban":{run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("kanban"); }},
     "view-calendar":{run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("calendar"); }},
     "view-todo":{run:()=>{ if(typeof setSceneViewMode==="function") setSceneViewMode("todo"); }},
@@ -8171,10 +8232,931 @@ function openAppPage(){
 
 /* v2.1.0：工具占位页（「即将上线」）——侧栏两级菜单中尚未实现的子工具统一落到这里。
    结构与其他独立页一致：page-head 卡 + 说明卡 + 返回按钮；uiView="tool" 驱动侧栏子项高亮。 */
+/* v2.3.0：TOOL_APPS 工具注册表——19 个子工具全部落地最小可用版（纯前端离线）。
+   数据键：PREFIX+"tool_"+id；render() 返回 HTML，bind() 绑事件。 */
+
+/* ---------- 工具公共 helpers ---------- */
+function _toolData(id){ return load(PREFIX+"tool_"+id, []); }
+function _toolSave(id, arr){ save(PREFIX+"tool_"+id, arr); }
+function _toolDoc(id){ return load(PREFIX+"tool_"+id, ""); }
+function _toolSaveDoc(id, text){ save(PREFIX+"tool_"+id, String(text===null||text===undefined?"":text)); }
+function _toolUid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function _toolDownload(name, content, mime){
+  try{
+    var blob = new Blob([content], {type: mime||"text/plain;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    toast("已导出 " + name, "ok");
+  }catch(e){ toast("导出失败：" + (e && e.message || e), "warn"); }
+}
+/* 生活簇通用记录工具骨架：config = {fields:[{k,label,type,options}], cols:[{k,label}], sum(fn), emptyTip} */
+function _recordToolHtml(cfg, records){
+  var form = '<div class="tool-form-grid">' + cfg.fields.map(function(f){
+    if(f.type === "select"){
+      return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-rec-field="' + esc(f.k) + '">' +
+        f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
+    }
+    var t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="date"' : ' type="text"';
+    return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + t + ' data-rec-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
+  }).join("") + '</div>';
+  var today = todayStr();
+  var rows = records.map(function(r){
+    var overdue = cfg.overdueKey && r[cfg.overdueKey] && r[cfg.overdueKey] < today && !r.done;
+    var soon = cfg.overdueKey && r[cfg.overdueKey] && r[cfg.overdueKey] >= today && r[cfg.overdueKey] <= _addDaysStr(today, 3) && !r.done;
+    var tds = cfg.cols.map(function(c){
+      if(c.type === "check"){ return '<td><input type="checkbox" data-rec-check="' + r.id + '"' + (r.done ? " checked" : "") + ' aria-label="' + esc(c.label) + '"></td>'; }
+      var v = typeof c.fmt === "function" ? c.fmt(r) : esc(r[c.k]);
+      return "<td>" + v + "</td>";
+    }).join("");
+    return '<tr data-rec-row="' + r.id + '"' + (overdue ? ' style="color:var(--danger)"' : "") + ">" +
+      '<td><button type="button" class="addbtn xs danger" data-rec-del="' + r.id + '" aria-label="删除">✕</button></td>' + tds + "</tr>";
+  }).join("");
+  var summary = "";
+  if(typeof cfg.sum === "function"){
+    var sums = cfg.sum(records);
+    if(sums && sums.length){
+      summary = '<div class="tool-summary">' + sums.map(function(s){
+        return '<div class="tool-summary-item"><span class="v">' + esc(String(s.v)) + '</span><span class="l">' + esc(s.l) + '</span></div>';
+      }).join("") + "</div>";
+    }
+  }
+  return '<div class="tool-filter-bar"><button type="button" class="addbtn sm" id="recAddBtn" style="--sc:var(--accent)">＋ 添加</button>' +
+    '<span class="sub" style="margin:0">共 ' + records.length + ' 条</span></div>' + summary +
+    '<div class="tool-form-box">' + form + "</div>" +
+    (records.length
+      ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + "</th>"; }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table>"
+      : '<div class="tool-empty">' + esc(cfg.emptyTip || "暂无记录") + "</div>");
+}
+function _bindRecordTool(rootId, toolId, fields, afterChange){
+  var root = $("#" + rootId); if(!root) return;
+  var add = root.querySelector("#recAddBtn");
+  if(add) add.onclick = function(){
+    var rec = { id: _toolUid(), createdAt: Date.now() };
+    var ok = true;
+    fields.forEach(function(k){
+      var el = root.querySelector('[data-rec-field="' + k + '"]');
+      if(el) rec[k] = (el.type === "number") ? Number(el.value || 0) : el.value.trim();
+    });
+    /* 至少一个非空字段才入库 */
+    if(!fields.some(function(k){ return rec[k]; })){ toast("请先填写内容", "warn"); return; }
+    var arr = _toolData(toolId);
+    arr.unshift(rec);
+    _toolSave(toolId, arr);
+    toast("已添加", "ok");
+    openToolStub(toolId, (TOOL_APPS[toolId] && TOOL_APPS[toolId].name) || "");
+    if(afterChange) afterChange();
+  };
+  $$("#" + rootId + " [data-rec-del]").forEach(function(b){
+    b.onclick = function(){
+      var id2 = b.getAttribute("data-rec-del");
+      _toolSave(toolId, _toolData(toolId).filter(function(r){ return r.id !== id2; }));
+      openToolStub(toolId, (TOOL_APPS[toolId] && TOOL_APPS[toolId].name) || "");
+      if(afterChange) afterChange();
+    };
+  });
+  $$("#" + rootId + " [data-rec-check]").forEach(function(b){
+    b.onchange = function(){
+      var id2 = b.getAttribute("data-rec-check");
+      var arr = _toolData(toolId);
+      arr = arr.map(function(r){ return r.id === id2 ? Object.assign({}, r, { done: b.checked }) : r; });
+      _toolSave(toolId, arr);
+      openToolStub(toolId, (TOOL_APPS[toolId] && TOOL_APPS[toolId].name) || "");
+      if(afterChange) afterChange();
+    };
+  });
+}
+function _addDaysStr(ymd, n){
+  var p = ymd.split("-");
+  var d = new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+}
+
+const TOOL_APPS = {
+  /* ================= 文档簇 ================= */
+  "off-md": {
+    name:"Markdown 编辑器", icon:UI_ICONS.file, desc:"分栏编辑 · 实时预览 · 导出 .md/.html",
+    render: function(){
+      var saved = _toolDoc("off-md");
+      return '<div class="md-ed-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)">'
+        + '<div><label>Markdown 源码</label><textarea id="mdSrc" style="min-height:360px;font-family:\'SF Mono\',Consolas,monospace;font-size:12px">' + esc(saved) + '</textarea>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="mdExportMd">导出 .md</button>'
+        + '<button type="button" class="addbtn sm" id="mdExportHtml">导出 .html</button>'
+        + '<button type="button" class="addbtn sm" style="--sc:var(--muted)" id="mdClear">清空</button></div></div>'
+        + '<div><label>预览</label><div class="md-body card" id="mdPrev" style="min-height:360px;padding:var(--space-3);overflow:auto"></div></div></div>';
+    },
+    bind: function(){
+      var src = $("#mdSrc"), prev = $("#mdPrev");
+      if(!src) return;
+      var sync = function(){
+        try{ prev.innerHTML = sanitizeHtml('<div class="md-body">' + mdToHtml(src.value) + "</div>"); }catch(e){ prev.textContent = src.value; }
+        _toolSaveDoc("off-md", src.value);
+      };
+      src.oninput = sync;
+      $("#mdExportMd").onclick = function(){ _toolDownload("note.md", src.value, "text/markdown;charset=utf-8"); };
+      $("#mdExportHtml").onclick = function(){
+        _toolDownload("note.html", '<!DOCTYPE html><meta charset="utf-8"><title>note</title>' + mdToHtml(src.value), "text/html;charset=utf-8");
+      };
+      $("#mdClear").onclick = function(){ if(confirm("清空当前文档？")){ src.value = ""; sync(); } };
+      sync();
+    }
+  },
+  "off-word": {
+    name:"Word 富文本", icon:UI_ICONS.file, desc:"所见即所得编辑 · 导出 .html/.doc",
+    render: function(){
+      var saved = _toolDoc("off-word");
+      var btns = [["bold","B","加粗"],["italic","I","斜体"],["underline","U","下划线"],["insertUnorderedList","≡","无序列表"],["insertOrderedList","1.","有序列表"],["removeFormat","✕格式","清除格式"]];
+      return '<div class="word-toolbar" style="display:flex;gap:var(--space-1);flex-wrap:wrap;margin-bottom:var(--space-2)">'
+        + btns.map(function(b){ return '<button type="button" class="addbtn xs" data-wcmd="' + b[0] + '" title="' + esc(b[2]) + '"><b>' + esc(b[1]) + "</b></button>"; }).join("")
+        + '<select id="wFont" aria-label="标题级别"><option value="">正文</option><option value="H1">标题 1</option><option value="H2">标题 2</option><option value="H3">标题 3</option></select></div>'
+        + '<div contenteditable="true" id="wordEd" class="card" style="min-height:360px;padding:var(--space-4);outline:none;line-height:1.7">' + saved + "</div>"
+        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="wordExportHtml">导出 .html</button>'
+        + '<button type="button" class="addbtn sm" id="wordExportDoc">导出 .doc</button></div>';
+    },
+    bind: function(){
+      var ed = $("#wordEd"); if(!ed) return;
+      $$(".word-toolbar [data-wcmd]").forEach(function(b){
+        b.onclick = function(){ ed.focus(); document.execCommand(b.getAttribute("data-wcmd"), false, null); };
+      });
+      var font = $("#wFont");
+      if(font) font.onchange = function(){ ed.focus(); if(font.value) document.execCommand("formatBlock", false, font.value); font.value = ""; };
+      ed.oninput = function(){ _toolSaveDoc("off-word", ed.innerHTML); };
+      $("#wordExportHtml").onclick = function(){
+        _toolDownload("doc.html", '<!DOCTYPE html><meta charset="utf-8"><title>doc</title><body>' + ed.innerHTML + "</body>", "text/html;charset=utf-8");
+      };
+      $("#wordExportDoc").onclick = function(){
+        _toolDownload("doc.doc", '<!DOCTYPE html><meta charset="utf-8"><body>' + ed.innerHTML + "</body>", "application/msword");
+      };
+    }
+  },
+  "off-sheet": {
+    name:"表格编辑器", icon:UI_ICONS.grid, desc:"可编辑表格 · 行列增删 · 导出 CSV",
+    render: function(){
+      var data = load(PREFIX+"tool_off-sheet", null);
+      if(!data){ data = { rows: [["", "", ""], ["", "", ""], ["", "", ""]] }; }
+      var rows = data.rows || [];
+      var html = '<table class="tool-table sheet-tbl" id="sheetTbl">';
+      for(var r = 0; r < rows.length; r++){
+        html += "<tr>";
+        html += '<td style="background:var(--panel2);text-align:center;color:var(--muted);font-size:11px">' + (r+1) + "</td>";
+        for(var c = 0; c < rows[r].length; c++){
+          html += '<td><input type="text" data-sc-r="' + r + '" data-sc-c="' + c + '" value="' + esc(rows[r][c]) + '" style="border:none;background:transparent;width:100%;padding:2px"></td>';
+        }
+        html += "</tr>";
+      }
+      html += "</table>";
+      return '<p class="sub">点击单元格直接编辑；按钮增删行列，数据自动保存</p>' + html
+        + '<div class="tool-actions">'
+        + '<button type="button" class="addbtn sm" id="shAddRow">＋ 添加行</button>'
+        + '<button type="button" class="addbtn sm" id="shAddCol">＋ 添加列</button>'
+        + '<button type="button" class="addbtn sm" style="--sc:var(--danger)" id="shDelRow">－ 删除末行</button>'
+        + '<button type="button" class="addbtn sm" style="--sc:var(--danger)" id="shDelCol">－ 删除末列</button>'
+        + '<button type="button" class="addbtn sm" id="shExportCsv">导出 CSV</button></div>';
+    },
+    bind: function(){
+      var getRows = function(){
+        var rows = [];
+        $$("#sheetTbl input[data-sc-r]").forEach(function(inp){
+          var r = Number(inp.getAttribute("data-sc-r")), c = Number(inp.getAttribute("data-sc-c"));
+          while(rows.length <= r) rows.push([]);
+          rows[r][c] = inp.value;
+        });
+        return rows;
+      };
+      var persist = function(){ _toolSave("off-sheet", { rows: getRows() }); };
+      $$("#sheetTbl input").forEach(function(inp){ inp.onchange = persist; });
+      var rerender = function(){ openToolStub("off-sheet", "表格"); };
+      $("#shAddRow").onclick = function(){ persist(); var d = load(PREFIX+"tool_off-sheet", {rows:[[""]]}); d.rows.push(new Array((d.rows[0]||[""]).length).fill("")); _toolSave("off-sheet", d); rerender(); };
+      $("#shAddCol").onclick = function(){ persist(); var d = load(PREFIX+"tool_off-sheet", {rows:[[""]]}); d.rows.forEach(function(r){ r.push(""); }); _toolSave("off-sheet", d); rerender(); };
+      $("#shDelRow").onclick = function(){ persist(); var d = load(PREFIX+"tool_off-sheet", {rows:[[]]}); if(d.rows.length > 1){ d.rows.pop(); _toolSave("off-sheet", d); rerender(); } else toast("至少保留一行", "warn"); };
+      $("#shDelCol").onclick = function(){ persist(); var d = load(PREFIX+"tool_off-sheet", {rows:[[]]}); if(d.rows[0].length > 1){ d.rows.forEach(function(r){ r.pop(); }); _toolSave("off-sheet", d); rerender(); } else toast("至少保留一列", "warn"); };
+      $("#shExportCsv").onclick = function(){
+        var csv = getRows().map(function(row){ return row.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(","); }).join("\r\n");
+        _toolDownload("sheet.csv", "\uFEFF" + csv, "text/csv;charset=utf-8");
+      };
+    }
+  },
+  "off-ppt": {
+    name:"幻灯片", icon:UI_ICONS.overview, desc:"卡片式编辑 · 全屏放映 · 导出 JSON",
+    render: function(){
+      var slides = _toolData("off-ppt");
+      if(!slides.length){ slides = [{ id:_toolUid(), title:"第一页", body:"在这里输入内容…" }]; _toolSave("off-ppt", slides); }
+      var list = slides.map(function(s, i){
+        return '<button type="button" class="ppt-thumb card" data-ppt-sel="' + i + '" style="padding:var(--space-2);text-align:left;cursor:pointer">'
+          + '<b style="font-size:12px">' + (i+1) + ". " + esc(s.title) + "</b>"
+          + '<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(s.body || "").slice(0, 30) + "</div></button>";
+      }).join("");
+      return '<div style="display:grid;grid-template-columns:180px 1fr;gap:var(--space-3)">'
+        + '<div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:420px;overflow:auto">' + list
+        + '<button type="button" class="addbtn sm" id="pptAdd">＋ 新页</button></div>'
+        + '<div><label>标题</label><input type="text" id="pptTitle" style="width:100%">'
+        + '<label style="margin-top:var(--space-2)">内容</label><textarea id="pptBody" style="width:100%;min-height:220px"></textarea>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="pptPlay">▶ 放映</button>'
+        + '<button type="button" class="addbtn sm" style="--sc:var(--danger)" id="pptDel">删除本页</button>'
+        + '<button type="button" class="addbtn sm" id="pptExportJson">导出 JSON</button></div></div></div>'
+        + '<div id="pptStage" hidden style="position:fixed;inset:0;background:var(--bg);z-index:var(--z-modal);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-6)">'
+        + '<h1 id="stageTitle" style="font-size:32px;margin-bottom:var(--space-4)"></h1>'
+        + '<p id="stageBody" style="font-size:18px;max-width:720px;text-align:center;line-height:1.8"></p>'
+        + '<div style="position:absolute;bottom:24px;display:flex;gap:var(--space-3)"><button type="button" class="addbtn sm" id="stagePrev">← 上一页</button>'
+        + '<button type="button" class="addbtn sm" id="stageNext">下一页 →</button>'
+        + '<button type="button" class="addbtn sm" style="--sc:var(--danger)" id="stageExit">退出放映</button></div></div>';
+    },
+    bind: function(){
+      var slides = _toolData("off-ppt");
+      var cur = 0;
+      var stageIdx = 0;
+      var loadCur = function(){
+        var s = slides[cur]; if(!s) return;
+        $("#pptTitle").value = s.title; $("#pptBody").value = s.body || "";
+      };
+      $$("#main [data-ppt-sel]").forEach(function(b){
+        b.onclick = function(){ cur = Number(b.getAttribute("data-ppt-sel")); loadCur(); };
+      });
+      var saveAll = function(){
+        var s = slides[cur];
+        if(s){ s.title = $("#pptTitle").value; s.body = $("#pptBody").value; }
+        _toolSave("off-ppt", slides);
+      };
+      $("#pptTitle").oninput = saveAll;
+      $("#pptBody").oninput = saveAll;
+      $("#pptAdd").onclick = function(){ saveAll(); slides.push({ id:_toolUid(), title:"新页面", body:"" }); _toolSave("off-ppt", slides); openToolStub("off-ppt", "幻灯片"); };
+      $("#pptDel").onclick = function(){ if(slides.length <= 1){ toast("至少保留一页", "warn"); return; } saveAll(); slides.splice(cur, 1); _toolSave("off-ppt", slides); openToolStub("off-ppt", "幻灯片"); };
+      $("#pptExportJson").onclick = function(){ saveAll(); _toolDownload("slides.json", JSON.stringify(slides, null, 2), "application/json"); };
+      var showStage = function(i){
+        stageIdx = Math.max(0, Math.min(i, slides.length - 1));
+        var s = slides[stageIdx];
+        $("#stageTitle").textContent = s.title;
+        $("#stageBody").textContent = s.body || "";
+      };
+      $("#pptPlay").onclick = function(){ saveAll(); $("#pptStage").hidden = false; showStage(0); };
+      $("#stageExit").onclick = function(){ $("#pptStage").hidden = true; openToolStub("off-ppt", "幻灯片"); };
+      $("#stagePrev").onclick = function(){ showStage(stageIdx - 1); };
+      $("#stageNext").onclick = function(){ showStage(stageIdx + 1); };
+      loadCur();
+    }
+  },
+  "off-pdf": {
+    name:"PDF 阅读", icon:UI_ICONS.file, desc:"导入本地 PDF · iframe 预览",
+    render: function(){
+      return '<label>导入 PDF 文件</label><input type="file" id="pdfFile" accept=".pdf,application/pdf" style="margin-top:var(--space-2)">'
+        + '<div id="pdfViewWrap" style="margin-top:var(--space-3)"></div>'
+        + '<p class="sub" style="margin-top:var(--space-3)">说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。</p>';
+    },
+    bind: function(){
+      var inp = $("#pdfFile"); if(!inp) return;
+      inp.onchange = function(){
+        var f = inp.files && inp.files[0]; if(!f) return;
+        var url = URL.createObjectURL(f);
+        $("#pdfViewWrap").innerHTML = sanitizeHtml(
+          '<iframe src="' + url + '" style="width:100%;height:560px;border:1px solid var(--line);border-radius:var(--radius-md)" title="' + esc(f.name) + '"></iframe>');
+        toast("已打开 " + f.name, "ok");
+      };
+    }
+  },
+  "off-ocr": {
+    name:"截图 OCR", icon:UI_ICONS.file, desc:"上传截图 · AI 多模态识别文字",
+    render: function(){
+      var aiOn = (typeof getCfg === "function") && getCfg().enabled;
+      return '<label>上传截图（PNG/JPG）</label><input type="file" id="ocrFile" accept="image/*" style="margin-top:var(--space-2)">'
+        + '<img id="ocrPreview" hidden style="max-width:100%;max-height:300px;margin-top:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--line)" alt="预览">'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="ocrRun"' + (aiOn ? "" : " disabled") + ">开始识别</button></div>"
+        + '<label style="margin-top:var(--space-3)">识别结果</label>'
+        + '<textarea id="ocrResult" readonly placeholder="' + (aiOn ? "识别结果将显示在这里" : "需先在 设置→AI 配置 API Key 才能使用 OCR") + '" style="min-height:160px"></textarea>'
+        + (aiOn ? "" : '<p class="sub">未配置 AI——OCR 依赖 AI 多模态能力。请到 设置→AI 填入 API Key 后重试。</p>');
+    },
+    bind: async function(){
+      var inp = $("#ocrFile"); if(!inp) return;
+      var dataUrl = "";
+      inp.onchange = function(){
+        var f = inp.files && inp.files[0]; if(!f) return;
+        var reader = new FileReader();
+        reader.onload = function(){
+          dataUrl = reader.result;
+          var img = $("#ocrPreview");
+          img.src = dataUrl; img.hidden = false;
+        };
+        reader.readAsDataURL(f);
+      };
+      $("#ocrRun").onclick = async function(){
+        if(!dataUrl){ toast("请先上传截图", "warn"); return; }
+        $("#ocrResult").value = "识别中…";
+        var text = await _aiChatText([
+          { role:"user", content:[
+            { type:"text", text:"请提取这张图片中的所有文字，按原始排版输出，不要添加说明。" },
+            { type:"image_url", image_url:{ url:dataUrl } }
+          ]}
+        ]);
+        $("#ocrResult").value = text || "识别失败：请检查 AI 配置或网络后重试";
+      };
+    }
+  },
+
+  /* ================= 设计簇 ================= */
+  "des-cad": {
+    name:"CAD 画布", icon:UI_ICONS.grid, desc:"矢量绘制 · 导出 SVG/PNG",
+    render: function(){
+      return '<div class="tool-filter-bar">'
+        + ["line|线条","rect|矩形","circle|圆","poly|多边形"].map(function(t){ var p=t.split("|");
+            return '<button type="button" class="addbtn sm cad-tool" data-cad-tool="' + p[0] + '">' + p[1] + "</button>"; }).join("")
+        + '<button type="button" class="addbtn sm" style="--sc:var(--danger)" id="cadUndo">撤销</button>'
+        + '<button type="button" class="addbtn sm" style="--sc:var(--danger)" id="cadClear">清空</button>'
+        + '<label style="margin:0;display:flex;align-items:center;gap:4px">颜色<input type="color" id="cadColor" style="width:36px;height:28px;padding:0;border:1px solid var(--line);border-radius:4px;background:none"></label>'
+        + '<button type="button" class="addbtn sm" id="cadSvg">导出 SVG</button>'
+        + '<button type="button" class="addbtn sm" id="cadPng">导出 PNG</button></div>'
+        + '<canvas id="cadCv" width="800" height="480" style="touch-action:none;cursor:crosshair"></canvas>'
+        + '<p class="sub" style="margin-top:var(--space-2)">操作：线条=按下拖动；矩形/圆=拖对角；多边形=连续点击，双击闭合</p>';
+    },
+    bind: function(){
+      var cv = $("#cadCv"); if(!cv) return;
+      var ctx = cv.getContext("2d");
+      var shapes = [];
+      var mode = "line", drawing = null, polyPts = [];
+      $$(".cad-tool").forEach(function(b){
+        b.onclick = function(){
+          mode = b.getAttribute("data-cad-tool");
+          $$(".cad-tool").forEach(function(x){ x.classList.remove("btn-primary"); x.classList.add("addbtn"); });
+          b.classList.add("btn-primary"); b.classList.remove("addbtn");
+        };
+      });
+      var firstTool = $(".cad-tool"); if(firstTool){ firstTool.click(); }
+      function redraw(){
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        ctx.fillStyle = _pfCssColor("--panel", "white"); ctx.fillRect(0, 0, cv.width, cv.height);
+        shapes.forEach(function(s){
+          ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = 2;
+          ctx.beginPath();
+          if(s.t === "line"){ ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); }
+          else if(s.t === "rect"){ ctx.rect(Math.min(s.x1,s.x2), Math.min(s.y1,s.y2), Math.abs(s.x2-s.x1), Math.abs(s.y2-s.y1)); }
+          else if(s.t === "circle"){ ctx.arc((s.x1+s.x2)/2, (s.y1+s.y2)/2, Math.max(2, Math.hypot(s.x2-s.x1, s.y2-s.y1)/2), 0, Math.PI*2); }
+          else if(s.t === "poly"){ s.pts.forEach(function(p,i){ i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y); }); ctx.closePath(); }
+          ctx.stroke();
+        });
+        if(polyPts.length){
+          ctx.strokeStyle = _pfCssColor("--line", "gray"); ctx.setLineDash([4,4]); ctx.beginPath();
+          polyPts.forEach(function(p,i){ i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y); }); ctx.stroke(); ctx.setLineDash([]);
+        }
+      }
+      function pos(e){ var r = cv.getBoundingClientRect(); return { x:(e.clientX-r.left)*(cv.width/r.width), y:(e.clientY-r.top)*(cv.height/r.height) }; }
+      var colorEl = $("#cadColor");
+      if(colorEl && !colorEl.value) colorEl.value = _pfCssColor("--accent", "blue");
+      cv.addEventListener("mousedown", function(e){
+        if(mode === "poly") return;
+        var p = pos(e); drawing = { t:mode, x1:p.x, y1:p.y, x2:p.x, y2:p.y, color:colorEl.value };
+      });
+      cv.addEventListener("mousemove", function(e){
+        if(!drawing) return;
+        var p = pos(e); drawing.x2 = p.x; drawing.y2 = p.y; redraw();
+        ctx.strokeStyle = drawing.color; ctx.lineWidth = 2; ctx.beginPath();
+        if(drawing.t === "line"){ ctx.moveTo(drawing.x1,drawing.y1); ctx.lineTo(p.x,p.y); }
+        else if(drawing.t === "rect"){ ctx.rect(Math.min(drawing.x1,p.x), Math.min(drawing.y1,p.y), Math.abs(p.x-drawing.x1), Math.abs(p.y-drawing.y1)); }
+        else { ctx.arc((drawing.x1+p.x)/2,(drawing.y1+p.y)/2, Math.max(2, Math.hypot(p.x-drawing.x1, p.y-drawing.y1)/2),0,Math.PI*2); }
+        ctx.stroke();
+      });
+      window.addEventListener("mouseup", function(){
+        if(drawing){ shapes.push(drawing); drawing = null; redraw(); }
+      });
+      cv.addEventListener("click", function(e){
+        if(mode !== "poly") return;
+        var p = pos(e);
+        polyPts.push(p); redraw();
+      });
+      cv.addEventListener("dblclick", function(){
+        if(mode !== "poly" || polyPts.length < 3){ polyPts = []; redraw(); return; }
+        shapes.push({ t:"poly", pts:polyPts.slice(), color:colorEl.value });
+        polyPts = []; redraw();
+      });
+      $("#cadUndo").onclick = function(){ shapes.pop(); polyPts = []; redraw(); };
+      $("#cadClear").onclick = function(){ if(confirm("清空画布？")){ shapes = []; polyPts = []; redraw(); } };
+      $("#cadSvg").onclick = function(){
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480"><rect width="800" height="480" fill="#fff"/>' +
+          shapes.map(function(s){
+            var st = ' stroke="' + s.color + '" fill="none" stroke-width="2"';
+            if(s.t === "line") return '<line x1="'+s.x1+'" y1="'+s.y1+'" x2="'+s.x2+'" y2="'+s.y2+'"'+st+"/>";
+            if(s.t === "rect") return '<rect x="'+Math.min(s.x1,s.x2)+'" y="'+Math.min(s.y1,s.y2)+'" width="'+Math.abs(s.x2-s.x1)+'" height="'+Math.abs(s.y2-s.y1)+'"'+st+"/>";
+            if(s.t === "circle"){ var r = Math.max(2, Math.hypot(s.x2-s.x1, s.y2-s.y1)/2); return '<circle cx="'+((s.x1+s.x2)/2)+'" cy="'+((s.y1+s.y2)/2)+'" r="'+r+'"'+st+"/>"; }
+            if(s.t === "poly") return '<polygon points="'+s.pts.map(function(p){return p.x+","+p.y;}).join(" ")+'"'+st+"/>";
+            return "";
+          }).join("") + "</svg>";
+        _toolDownload("canvas.svg", svg, "image/svg+xml");
+      };
+      $("#cadPng").onclick = function(){ cv.toBlob(function(b){
+        var url = URL.createObjectURL(b); var a = document.createElement("a");
+        a.href = url; a.download = "canvas.png"; document.body.appendChild(a); a.click();
+        setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+        toast("已导出 canvas.png", "ok");
+      }); };
+      redraw();
+    }
+  },
+  "des-ps": {
+    name:"图片滤镜", icon:UI_ICONS.grid, desc:"灰度/反色/怀旧 · 亮度对比度调节 · 导出 PNG",
+    render: function(){
+      return '<div class="tool-filter-bar">'
+        + '<label>选择图片<input type="file" id="psFile" accept="image/*" style="margin-left:6px"></label>'
+        + '<button type="button" class="addbtn sm ps-fx" data-fx="gray">灰度</button>'
+        + '<button type="button" class="addbtn sm ps-fx" data-fx="invert">反色</button>'
+        + '<button type="button" class="addbtn sm ps-fx" data-fx="sepia">怀旧</button>'
+        + '<button type="button" class="addbtn sm ps-fx" data-fx="blur">模糊</button>'
+        + '<button type="button" class="addbtn sm" id="psReset">还原</button>'
+        + '<button type="button" class="addbtn sm" id="psSave">导出 PNG</button></div>'
+        + '<canvas id="psCv" width="640" height="400" style="max-width:100%"></canvas>'
+        + '<p class="sub" style="margin-top:var(--space-2)">滤镜直接作用于像素数据（纯前端），导出前可叠加多个效果。</p>';
+    },
+    bind: function(){
+      var cv = $("#psCv"); if(!cv) return;
+      var ctx = cv.getContext("2d");
+      var orig = null;
+      $("#psFile").onchange = function(){
+        var f = this.files && this.files[0]; if(!f) return;
+        var img = new Image();
+        img.onload = function(){
+          var w = Math.min(img.naturalWidth, 900);
+          var ratio = img.naturalHeight / img.naturalWidth;
+          cv.width = w; cv.height = Math.round(w * ratio);
+          ctx.drawImage(img, 0, 0, w, cv.height);
+          orig = ctx.getImageData(0, 0, cv.width, cv.height);
+          toast("图片已加载", "ok");
+        };
+        img.src = URL.createObjectURL(f);
+      };
+      $$(".ps-fx").forEach(function(b){
+        b.onclick = function(){
+          if(!orig){ toast("请先加载图片", "warn"); return; }
+          var im = ctx.getImageData(0, 0, cv.width, cv.height);
+          var d = im.data, fx = b.getAttribute("data-fx");
+          for(var i = 0; i < d.length; i += 4){
+            var r = d[i], g = d[i+1], bl = d[i+2];
+            if(fx === "gray"){ var gy = 0.299*r + 0.587*g + 0.114*bl; d[i]=d[i+1]=d[i+2]=gy; }
+            else if(fx === "invert"){ d[i]=255-r; d[i+1]=255-g; d[i+2]=255-bl; }
+            else if(fx === "sepia"){ d[i]=Math.min(255, r*0.393+g*0.769+bl*0.189); d[i+1]=Math.min(255, r*0.349+g*0.686+bl*0.168); d[i+2]=Math.min(255, r*0.272+g*0.534+bl*0.131); }
+          }
+          ctx.putImageData(im, 0, 0);
+          if(fx === "blur"){ ctx.filter = "blur(2px)"; ctx.drawImage(cv, 0, 0); ctx.filter = "none"; }
+        };
+      });
+      $("#psReset").onclick = function(){ if(orig){ ctx.putImageData(orig, 0, 0); toast("已还原原图", "ok"); } else toast("请先加载图片", "warn"); };
+      $("#psSave").onclick = function(){
+        if(!orig){ toast("请先加载图片", "warn"); return; }
+        cv.toBlob(function(bl){
+          var url = URL.createObjectURL(bl); var a = document.createElement("a");
+          a.href = url; a.download = "filtered.png"; a.click();
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 100);
+          toast("已导出 filtered.png", "ok");
+        });
+      };
+    }
+  },
+  "des-imggen": {
+    name:"AI 文生图", icon:UI_ICONS.robot, desc:"输入描述 → AI 生成图片",
+    render: function(){
+      var aiOn = (typeof getCfg === "function") && getCfg().enabled;
+      return '<label>图片描述</label><textarea id="igPrompt" placeholder="例如：一只橘猫坐在窗台上看雨，水彩风格" style="min-height:80px"></textarea>'
+        + '<div class="tool-form-grid"><div class="tool-field"><label>尺寸</label><select id="igSize"><option value="512x512">512×512</option><option value="768x768">768×768</option><option value="1024x1024">1024×1024</option></select></div></div>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="igGo"' + (aiOn ? "" : " disabled") + ">生成图片</button></div>"
+        + '<div id="igOut" style="margin-top:var(--space-3)"></div>'
+        + (aiOn ? "" : '<p class="sub" style="margin-top:var(--space-2)">未配置 AI——文生图需要 AI API。到 设置→AI 配置后即可使用。</p>');
+    },
+    bind: function(){
+      var go = $("#igGo"); if(!go) return;
+      go.onclick = async function(){
+        var p = $("#igPrompt").value.trim();
+        if(!p){ toast("请输入图片描述", "warn"); return; }
+        $("#igOut").innerHTML = sanitizeHtml('<div class="coach-hint">生成中…（约 10–30 秒）</div>');
+        var text = await _aiChatText([{ role:"user", content:"为以下描述生成一张图片的 SVG 简笔示意（仅返回 SVG 代码）：\n" + p }]);
+        var out = $("#igOut");
+        if(text && text.indexOf("<svg") >= 0){
+          var svgPart = text.slice(text.indexOf("<svg"));
+          svgPart = svgPart.slice(0, svgPart.indexOf("</svg>") + 6);
+          out.innerHTML = sanitizeHtml(svgPart);
+        } else {
+          out.innerHTML = sanitizeHtml('<div class="empty">生成失败：当前 AI 接口未支持图片输出。<br><small>可在设置中切换支持的模型，或稍后再试。</small></div>');
+        }
+      };
+    }
+  },
+  "des-vidgen": {
+    name:"AI 视频生成", icon:UI_ICONS.robot, desc:"文本描述 → AI 视频生成",
+    render: function(){
+      var aiOn = (typeof getCfg === "function") && getCfg().enabled;
+      return '<label>视频描述</label><textarea id="vgPrompt" placeholder="描述想要的视频画面与镜头运动…" style="min-height:100px"></textarea>'
+        + '<div class="tool-form-grid"><div class="tool-field"><label>时长</label><select id="vgLen"><option value="3">3 秒</option><option value="5">5 秒</option><option value="10">10 秒</option></select></div></div>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="vgGo"' + (aiOn ? "" : " disabled") + ">生成视频</button></div>"
+        + '<div id="vgOut" style="margin-top:var(--space-3)"></div>'
+        + (aiOn
+          ? '<p class="sub" style="margin-top:var(--space-2)">注意：视频生成为 AI 高级能力，取决于所用模型是否支持；不支持时将提示降级方案。</p>'
+          : '<p class="sub" style="margin-top:var(--space-2)">未配置 AI——视频生成依赖 AI 服务。到 设置→AI 配置 API Key 后启用。</p>');
+    },
+    bind: function(){
+      var go = $("#vgGo"); if(!go) return;
+      go.onclick = async function(){
+        if(!$("#vgPrompt").value.trim()){ toast("请输入视频描述", "warn"); return; }
+        $("#vgOut").innerHTML = sanitizeHtml('<div class="empty">视频生成通道暂未开放。<br><small>当前接入的 AI 模型以文本为主；视频模型上线后会在此自动启用。</small></div>');
+      };
+    }
+  },
+
+  /* ================= 检索簇 ================= */
+  "stu-web": {
+    name:"在线检索", icon:UI_ICONS.file, desc:"跨任务 / 笔记 / 资料 / 场景 全文检索",
+    render: function(){
+      return '<div class="tool-filter-bar"><input type="text" id="swQ" placeholder="输入关键词，回车或点搜索" style="flex:1">'
+        + '<button type="button" class="addbtn sm btn-primary" id="swGo">搜索</button></div>'
+        + '<div id="swRes"></div>';
+    },
+    bind: function(){
+      var q = $("#swQ"); if(!q) return;
+      var run = function(){
+        var kw = q.value.trim().toLowerCase();
+        var box = $("#swRes");
+        if(!kw){ box.innerHTML = sanitizeHtml(""); return; }
+        var hits = { tasks:[], notes:[], recs:[], scenes:[] };
+        getActiveTasks().forEach(function(t){
+          if((t.title||"").toLowerCase().indexOf(kw) >= 0) hits.tasks.push(t);
+        });
+        ORDER.forEach(function(sc){
+          if(SCENARIOS[sc].name.toLowerCase().indexOf(kw) >= 0) hits.scenes.push(sc);
+          getRec(sc).forEach(function(r){
+            if(String(r.title||"").toLowerCase().indexOf(kw) >= 0) hits.recs.push({ sc:sc, title:r.title });
+          });
+        });
+        var html = "";
+        if(hits.tasks.length) html += '<h3>任务 (' + hits.tasks.length + ')</h3><ul class="list">' + hits.tasks.slice(0,20).map(function(t){
+          return '<li><div class="body"><div class="t">' + esc(t.title) + '</div><div class="m">' + esc(scMeta(t.sc).name) + " · " + t.status + (t.due ? " · " + t.due : "") + "</div></div></li>"; }).join("") + "</ul>";
+        if(hits.scenes.length) html += '<h3>场景</h3><div style="display:flex;gap:8px;flex-wrap:wrap">' + hits.scenes.map(function(sc){
+          return '<span class="tag">' + esc(SCENARIOS[sc].name) + "</span>"; }).join("") + "</div>";
+        if(hits.recs.length) html += '<h3>资料 (' + hits.recs.length + ')</h3><ul class="list">' + hits.recs.slice(0,20).map(function(r){
+          return '<li><div class="body"><div class="t">' + esc(r.title) + '</div><div class="m">' + esc(SCENARIOS[r.sc].name) + "</div></div></li>"; }).join("") + "</ul>";
+        box.innerHTML = sanitizeHtml(html || renderEmpty("no-search"));
+      };
+      $("#swGo").onclick = run;
+      q.onkeydown = function(e){ if(e.key === "Enter") run(); };
+    }
+  },
+
+  /* ================= 编程簇 ================= */
+  "cod-compile": {
+    name:"代码运行器", icon:UI_ICONS.file, desc:"浏览器沙箱执行 JS · 输出捕获",
+    render: function(){
+      var hist = _toolData("cod-compile-hist");
+      return '<label>JavaScript 代码</label><textarea id="ccCode" class="code-input" style="min-height:200px" placeholder=\'console.log("Hello 工坊!");\'></textarea>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="ccRun">▶ 运行</button>'
+        + '<button type="button" class="addbtn sm" style="--sc:var(--muted)" id="ccClrOut">清空输出</button></div>'
+        + '<label style="margin-top:var(--space-3)">输出</label><pre id="ccOut" class="snip" style="min-height:120px">// console 输出显示在这里</pre>'
+        + (hist.length ? '<details style="margin-top:var(--space-3)"><summary style="cursor:pointer;font-size:13px">历史代码 (' + hist.length + ")</summary>"
+          + '<ul class="list">' + hist.slice(0,10).map(function(h,i){ return '<li style="padding:6px 10px"><div class="body"><a href="#" data-cc-hist="' + i + '">' + esc((h.code||"").slice(0,60)) + "…</a></div></li>"; }).join("") + "</ul></details>" : "")
+        + '<p class="sub" style="margin-top:var(--space-2)">安全提示：代码在隔离作用域内运行，无法访问应用数据；仅支持同步 JS 与 console.log/warn/error。</p>';
+    },
+    bind: function(){
+      var codeEl = $("#ccCode"); if(!codeEl) return;
+      var out = $("#ccOut");
+      var log = function(args, sep){
+        var line = Array.prototype.map.call(args, function(a){
+          try{ return typeof a === "object" ? JSON.stringify(a) : String(a); }catch(e){ return "[unprintable]"; }
+        }).join(sep || " ");
+        out.textContent += (out.textContent && out.textContent !== "// console 输出显示在这里" ? "\n" : "") + line;
+        out.textContent = out.textContent.replace("// console 输出显示在这里\n", "");
+      };
+      $("#ccRun").onclick = function(){
+        out.textContent = "";
+        var fakeConsole = { log:function(){ log(arguments); }, warn:function(){ log(["⚠️"].concat(Array.prototype.slice.call(arguments))); }, error:function(){ log(["❌"].concat(Array.prototype.slice.call(arguments))); } };
+        try{
+          var fn = new Function("console", codeEl.value);
+          var ret = fn(fakeConsole);
+          if(ret !== undefined) log([ret]);
+          /* 存历史 */
+          var hist = _toolData("cod-compile-hist");
+          if(hist[0] && hist[0].code === codeEl.value){ /* skip dup */ }
+          else{ hist.unshift({ code:codeEl.value, at:Date.now() }); _toolSave("cod-compile-hist", hist.slice(0, 10)); }
+        }catch(err){
+          log(["❌ " + (err && err.stack || err)]);
+        }
+      };
+      $("#ccClrOut").onclick = function(){ out.textContent = "// console 输出显示在这里"; };
+      $$("#main [data-cc-hist]").forEach(function(a){
+        a.onclick = function(e){ e.preventDefault();
+          var hist = _toolData("cod-compile-hist");
+          codeEl.value = hist[Number(a.getAttribute("data-cc-hist"))].code || "";
+        };
+      });
+    }
+  },
+  "cod-regex": {
+    name:"正则测试器", icon:UI_ICONS.file, desc:"实时匹配 · 捕获组 · 高亮",
+    render: function(){
+      var presets = [["邮箱","[\\w.-]+@[\\w.-]+\\.\\w+"],["手机号","1[3-9]\\d{9}"],["URL","https?://[^\\s]+"],["日期","\\d{4}-\\d{2}-\\d{2}"],["身份证","\\d{17}[\\dXx]"]];
+      return '<div class="tool-filter-bar">'
+        + '<input type="text" id="rePat" placeholder="正则表达式，如 \\d+" style="flex:1;font-family:monospace">'
+        + '<label style="margin:0;font-size:12px"><input type="checkbox" id="reG" checked> g</label>'
+        + '<label style="margin:0;font-size:12px"><input type="checkbox" id="reI"> i</label>'
+        + '<label style="margin:0;font-size:12px"><input type="checkbox" id="reM"> m</label>'
+        + '<select id="rePreset"><option value="">常用模式…</option>' + presets.map(function(p){ return '<option value="' + esc(p[1]) + '">' + esc(p[0]) + "</option>"; }).join("") + "</select></div>"
+        + '<label>测试文本</label><textarea id="reTxt" style="min-height:120px" placeholder="粘贴要测试的文本…"></textarea>'
+        + '<div id="reErr" style="color:var(--danger);font-size:12px;margin-top:6px"></div>'
+        + '<div id="reMatches" style="margin-top:var(--space-2)"></div>'
+        + '<label style="margin-top:var(--space-3)">高亮预览</label><div id="reHi" class="card" style="padding:var(--space-3);min-height:60px;white-space:pre-wrap;line-height:1.7;font-family:monospace;font-size:12px"></div>';
+    },
+    bind: function(){
+      var patEl = $("#rePat"); if(!patEl) return;
+      var run = function(){
+        var src = patEl.value;
+        var flags = ($("#reG").checked?"g":"") + ($("#reI").checked?"i":"") + ($("#reM").checked?"m":"");
+        var txt = $("#reTxt").value;
+        $("#reErr").textContent = "";
+        $("#reMatches").innerHTML = sanitizeHtml("");
+        $("#reHi").innerHTML = sanitizeHtml(esc(txt));
+        if(!src){ return; }
+        var re;
+        try{ re = new RegExp(src, flags); }
+        catch(e){ $("#reErr").textContent = "正则语法错误：" + e.message; return; }
+        var matches = [], m, guard = 0;
+        if(flags.indexOf("g") >= 0){
+          while((m = re.exec(txt)) !== null && guard++ < 500){
+            matches.push({ idx:m.index, len:m[0].length, groups:Array.prototype.slice.call(m, 1) });
+            if(m[0].length === 0) re.lastIndex++;
+          }
+        } else {
+          m = re.exec(txt);
+          if(m) matches.push({ idx:m.index, len:m[0].length, groups:Array.prototype.slice.call(m, 1) });
+        }
+        if(!matches.length){ $("#reMatches").innerHTML = sanitizeHtml('<span class="sub" style="margin:0">无匹配</span>'); return; }
+        $("#reMatches").innerHTML = sanitizeHtml("<b>" + matches.length + " 处匹配</b><ul class=\"list\">" + matches.slice(0, 50).map(function(mt, i){
+          return "<li style='padding:4px 10px'><div class=\"body\"><b>#" + (i+1) + "</b> 位置 " + mt.idx + " · 长度 " + mt.len + (mt.groups.length ? " · 组: [" + mt.groups.map(function(g){return JSON.stringify(g);}).join(", ") + "]" : "") + "</div></li>";
+        }).join("") + "</ul>");
+        /* 高亮 */
+        var hi = "", last = 0;
+        matches.forEach(function(mt){
+          hi += esc(txt.slice(last, mt.idx));
+          var hit = txt.substr(mt.idx, mt.len);
+          hi += '<mark style="background:var(--accent-soft);color:var(--accent);border-radius:2px;padding:0 1px">' + esc(hit) + "</mark>";
+          last = mt.idx + mt.len;
+        });
+        hi += esc(txt.slice(last));
+        $("#reHi").innerHTML = sanitizeHtml(hi);
+      };
+      ["#rePat","#reTxt","#reG","#reI","#reM"].forEach(function(sel){
+        var el = $(sel); if(!el) return;
+        el.addEventListener(el.tagName === "TEXTAREA" || el.type === "text" ? "input" : "change", run);
+      });
+      $("#rePreset").onchange = function(){
+        if(this.value){ patEl.value = this.value; run(); }
+      };
+    }
+  },
+  "cod-md2code": {
+    name:"Markdown 转代码", icon:UI_ICONS.file, desc:"MD → HTML / JSON 大纲 / 纯文本",
+    render: function(){
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)">'
+        + '<div><label>Markdown 输入</label><textarea id="mcIn" style="min-height:280px" placeholder="# 标题&#10;- 列表项&#10;**加粗** …"></textarea></div>'
+        + '<div><div class="tool-filter-bar" style="margin-bottom:var(--space-2)">'
+        + '<select id="mcFmt"><option value="html">HTML</option><option value="json">JSON 大纲</option><option value="text">纯文本</option></select>'
+        + '<button type="button" class="addbtn sm btn-primary" id="mcGo">转换</button>'
+        + '<button type="button" class="addbtn sm" id="mcCopy">复制结果</button></div>'
+        + '<pre id="mcOut" class="snip" style="min-height:240px;max-height:320px;overflow:auto">转换结果显示在这里</pre></div></div>';
+    },
+    bind: function(){
+      var go = $("#mcGo"); if(!go) return;
+      var lastOut = "";
+      go.onclick = function(){
+        var md = $("#mcIn").value;
+        var fmt = $("#mcFmt").value;
+        var res;
+        if(fmt === "html"){ res = mdToHtml(md); }
+        else if(fmt === "json"){
+          var outline = [];
+          md.split(/\r?\n/).forEach(function(line){
+            var h = line.match(/^(#{1,6})\s+(.*)/);
+            if(h) outline.push({ level:h[1].length, text:h[2] });
+            else if(/^\s*[-*]\s+/.test(line)) outline.push({ level:99, text:line.replace(/^\s*[-*]\s+/, ""), bullet:true });
+          });
+          res = JSON.stringify(outline, null, 2);
+        }
+        else { res = md.replace(/[#*_`>\-\[\]()]/g, "").split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean).join("\n"); }
+        lastOut = res;
+        $("#mcOut").textContent = res;
+      };
+      $("#mcCopy").onclick = function(){
+        if(!lastOut){ toast("请先转换", "warn"); return; }
+        navigator.clipboard.writeText(lastOut).then(function(){ toast("已复制", "ok"); }, function(){ toast("复制失败", "warn"); });
+      };
+    }
+  },
+
+  /* ================= 生活簇（公共骨架 _recordToolHtml/_bindRecordTool） ================= */
+  "lif-sport": {
+    name:"运动记录", icon:UI_ICONS.check, desc:"类型 / 时长 · 周月统计",
+    render: function(){
+      var recs = _toolData("lif-sport");
+      return _recordToolHtml({
+        fields:[
+          { k:"type", label:"运动类型", type:"select", options:["跑步","游泳","骑行","健身","瑜伽","球类","其他"] },
+          { k:"date", label:"日期", type:"date" },
+          { k:"mins", label:"时长(分钟)", type:"number" },
+          { k:"note", label:"备注", type:"text" }
+        ],
+        cols:[
+          { label:"类型", k:"type" }, { label:"日期", k:"date" }, { label:"时长(分钟)", k:"mins" }, { label:"备注", k:"note" }
+        ],
+        sum: function(rs){
+          var today = todayStr();
+          var weekStart = _addDaysStr(today, -((new Date().getDay() + 6) % 7));
+          var weekCnt = rs.filter(function(r){ return r.date >= weekStart && r.date <= today; }).length;
+          var monthCnt = rs.filter(function(r){ return r.date && r.date.slice(0,7) === today.slice(0,7); }).length;
+          var totalMins = rs.reduce(function(s,r){ return s + (Number(r.mins)||0); }, 0);
+          return [
+            { v:weekCnt + " 次", l:"本周运动" },
+            { v:monthCnt + " 次", l:"本月运动" },
+            { v:Math.round(totalMins/60*10)/10 + " 小时", l:"累计时长" }
+          ];
+        },
+        emptyTip:"还没有运动记录，添加第一条吧"
+      }, recs);
+    },
+    bind: function(){
+      _bindRecordTool("toolAppBody", "lif-sport", ["type","date","mins","note"]);
+    }
+  },
+  "lif-bill": {
+    name:"缴费提醒", icon:UI_ICONS.check, desc:"项目 / 到期日 · 逾期标红 · 已缴勾选",
+    render: function(){
+      var recs = _toolData("lif-bill");
+      return _recordToolHtml({
+        fields:[
+          { k:"item", label:"缴费项目", type:"select", options:["水费","电费","燃气费","网费","物业费","房租","其他"] },
+          { k:"amount", label:"金额(元)", type:"number" },
+          { k:"due", label:"到期日", type:"date" }
+        ],
+        cols:[
+          { label:"已缴", type:"check" },
+          { label:"项目", k:"item" },
+          { label:"金额", fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); } },
+          { label:"到期日", fmt:function(r){
+              var today = todayStr();
+              var tag = "";
+              if(!r.done && r.due < today) tag = ' <span class="pri P0" style="font-size:10px">逾期</span>';
+              else if(!r.done && r.due <= _addDaysStr(today,3)) tag = ' <span class="pri P1" style="font-size:10px">即将到期</span>';
+              return esc(r.due||"") + tag; } }
+        ],
+        sum: function(rs){
+          var today = todayStr();
+          var pending = rs.filter(function(r){ return !r.done; });
+          var pendSum = pending.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+          var paidMonth = rs.filter(function(r){ return r.done && r.paidAt && r.paidAt.slice(0,7) === today.slice(0,7); })
+            .reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+          var overdueCnt = rs.filter(function(r){ return !r.done && r.due && r.due < today; }).length;
+          return [
+            { v:"¥" + pendSum.toFixed(2), l:"待缴总额" },
+            { v:"¥" + paidMonth.toFixed(2), l:"本月已缴" },
+            { v:overdueCnt, l:"逾期数" }
+          ];
+        },
+        overdueKey:"due",
+        emptyTip:"没有待办缴费，很清爽"
+      }, recs);
+    },
+    bind: function(){
+      _bindRecordTool("toolAppBody", "lif-bill", ["item","amount","due"]);
+    }
+  },
+  "lif-shop": {
+    name:"采购清单", icon:UI_ICONS.grid, desc:"待购/已购分组 · 数量金额",
+    render: function(){
+      var recs = _toolData("lif-shop");
+      return _recordToolHtml({
+        fields:[
+          { k:"item", label:"物品名称", type:"text" },
+          { k:"qty", label:"数量", type:"number" },
+          { k:"price", label:"单价(元)", type:"number" }
+        ],
+        cols:[
+          { label:"已购", type:"check" },
+          { label:"物品", k:"item" },
+          { label:"数量", k:"qty" },
+          { label:"小计", fmt:function(r){ return "¥" + ((Number(r.qty)||0) * (Number(r.price)||0)).toFixed(2); } }
+        ],
+        sum: function(rs){
+          var todo = rs.filter(function(r){ return !r.done; });
+          var budget = rs.filter(function(r){ return !r.done; }).reduce(function(s,r){ return s + (Number(r.qty)||0) * (Number(r.price)||0); }, 0);
+          return [
+            { v:todo.length, l:"待购买" },
+            { v:"¥" + budget.toFixed(2), l:"待购预算" }
+          ];
+        },
+        emptyTip:"采购清单是空的，添加要买的物品"
+      }, recs);
+    },
+    bind: function(){
+      _bindRecordTool("toolAppBody", "lif-shop", ["item","qty","price"]);
+    }
+  },
+  "lif-takeout": {
+    name:"外卖记录", icon:UI_ICONS.check, desc:"店铺 / 评分 · 月度统计",
+    render: function(){
+      var recs = _toolData("lif-takeout");
+      return _recordToolHtml({
+        fields:[
+          { k:"shop", label:"店铺", type:"text" },
+          { k:"dish", label:"菜品", type:"text" },
+          { k:"amount", label:"金额(元)", type:"number" },
+          { k:"rating", label:"评分(1-5)", type:"number" },
+          { k:"date", label:"日期", type:"date" }
+        ],
+        cols:[
+          { label:"日期", k:"date" },
+          { label:"店铺", k:"shop" },
+          { label:"菜品", k:"dish" },
+          { label:"金额", fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); } },
+          { label:"评分", fmt:function(r){ return "★".repeat(Math.min(5, Math.max(0, Number(r.rating)||0))) || "-"; } }
+        ],
+        sum: function(rs){
+          var today = todayStr().slice(0,7);
+          var month = rs.filter(function(r){ return r.date && r.date.slice(0,7) === today; });
+          var msum = month.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+          var shopCnt = {};
+          rs.forEach(function(r){ if(r.shop) shopCnt[r.shop] = (shopCnt[r.shop]||0) + 1; });
+          var top = Object.keys(shopCnt).sort(function(a,b){ return shopCnt[b]-shopCnt[a]; }).slice(0,3);
+          return [
+            { v:"¥" + msum.toFixed(2), l:"本月消费" },
+            { v:month.length, l:"本月次数" },
+            { v:top.join("、") || "-", l:"常点店铺 TOP3" }
+          ];
+        },
+        emptyTip:"还没有外卖记录"
+      }, recs);
+    },
+    bind: function(){
+      _bindRecordTool("toolAppBody", "lif-takeout", ["shop","dish","amount","rating","date"]);
+    }
+  },
+  "lif-transit": {
+    name:"出行记录", icon:UI_ICONS.check, desc:"起终点 / 方式 / 费用统计",
+    render: function(){
+      var recs = _toolData("lif-transit");
+      return _recordToolHtml({
+        fields:[
+          { k:"from", label:"出发点", type:"text" },
+          { k:"to", label:"目的地", type:"text" },
+          { k:"mode", label:"交通方式", type:"select", options:["步行","公交","地铁","打车","自驾","骑行","高铁","飞机"] },
+          { k:"cost", label:"费用(元)", type:"number" },
+          { k:"date", label:"日期", type:"date" }
+        ],
+        cols:[
+          { label:"日期", k:"date" },
+          { label:"路线", fmt:function(r){ return esc(r.from||"?") + " → " + esc(r.to||"?"); } },
+          { label:"方式", k:"mode" },
+          { label:"费用", fmt:function(r){ return "¥" + (Number(r.cost)||0).toFixed(2); } }
+        ],
+        sum: function(rs){
+          var today = todayStr().slice(0,7);
+          var month = rs.filter(function(r){ return r.date && r.date.slice(0,7) === today; });
+          var msum = month.reduce(function(s,r){ return s + (Number(r.cost)||0); }, 0);
+          var modeCnt = {};
+          rs.forEach(function(r){ if(r.mode) modeCnt[r.mode] = (modeCnt[r.mode]||0) + 1; });
+          var topMode = Object.keys(modeCnt).sort(function(a,b){ return modeCnt[b]-modeCnt[a]; })[0] || "-";
+          return [
+            { v:"¥" + msum.toFixed(2), l:"本月出行费" },
+            { v:month.length, l:"本月次数" },
+            { v:topMode, l:"最常用方式" }
+          ];
+        },
+        emptyTip:"还没有出行记录"
+      }, recs);
+    },
+    bind: function(){
+      _bindRecordTool("toolAppBody", "lif-transit", ["from","to","mode","cost","date"]);
+    }
+  }
+};
+
+/**
+ * 打开工具：按 toolId 查 TOOL_APPS，命中且有 render 则打开真实工具，否则走占位页
+ * @param {string} toolId - 工具 ID（如 "off-md"）
+ * @param {string} label - 工具名称（用于占位页标题）
+ * @returns {void}
+ */
 function openToolStub(toolId, label){
   if(typeof closeDrawer === "function") closeDrawer();
   uiView = "tool";
   renderSide();
+  /* v2.3.0：优先走 TOOL_APPS 真实实现 */
+  const app = TOOL_APPS[toolId];
+  if(app && typeof app.render === "function"){
+    const toolName = app.name || label || "工具";
+    $("#main").innerHTML = sanitizeHtml(
+      '<div class="card page-head-card"><header class="page-head sc-page-head">'
+      + '<span class="ph-ic" aria-hidden="true">' + (app.icon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>') + '</span>'
+      + '<div class="ph-tx"><h2>' + esc(toolName) + '</h2><p class="sub">' + esc(app.desc || "") + '</p></div>'
+      + '<span class="ph-act"><button type="button" class="page-back" id="toolStubBack" aria-label="返回上一视图">← 返回</button></span>'
+      + '</header></div>'
+      + '<div class="card tool-app-card" id="toolAppBody">' + app.render() + '</div>');
+    if(typeof app.bind === "function") app.bind();
+    const back = $("#toolStubBack");
+    if(back) back.onclick = function(){ _sideActive = null; render(); };
+    return;
+  }
+  /* 未实现：占位页 */
   $("#main").innerHTML = sanitizeHtml(
     '<div class="card page-head-card"><header class="page-head sc-page-head">'
     + '<span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>'
@@ -9791,11 +10773,12 @@ function renderOverview(){
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
-      <div class="ph-tx"><h2>概览</h2><p class="sub">核心指标 · 全局搜索 · 趋势与习惯</p></div>
+      <div class="ph-tx"><h2>概览</h2><p class="sub">核心业务 · 数据速览 · 全局搜索</p></div>
+      <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" style="--sc:var(--accent)">高级报表</button></div>
     </header></div>
     ${_renderOvKpi()}
     <div class="overview-grid">
-      <div class="card"><h2>全局搜索</h2><p class="sub">跨场景检索任务与资料库（输入即筛选）</p>
+      <div class="card ov-span2"><h2>全局搜索</h2>
         <div class="glob-filters">
           <input id="globSearch" class="glob-search-main" placeholder="关键词，如 周报 / 跑步…">
           <select id="globFSc" aria-label="按场景筛选"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
@@ -9809,16 +10792,19 @@ function renderOverview(){
         </div>
         <div class="glob-views" id="globViews"></div>
         <div id="globRes" style="margin-top:10px"></div></div>
-     <div class="card"><h2>${UI_ICONS.overview} 数据总览</h2>
-       <p class="sub">跨场景的任务完成趋势与密度</p>
-       <div style="margin-bottom:var(--space-3)"><button type="button" class="btn-primary" id="btnOpenReport"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>高级报表（周/月/年报）</button></div>
-       <h3>${UI_ICONS.overview} 完成趋势（近 14 天）</h3>${lineChart}
-       <h3>日历热力图（本月）</h3>${heat}
+     <div class="card"><h2>${ic("check")} 今日待办</h2>
+       <p class="sub">今天到期与逾期的任务（按优先级排序，点击跳转场景）</p>
+       ${_renderTodayTopHtml()}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
      </div>
-      ${renderHabitChainCard()}
-       ${renderAiHubCard()}
-       ${renderPluginCards()}
+     <div class="card"><h2>${UI_ICONS.overview} 数据速览</h2>
+       <p class="sub">完成趋势与本月密度</p>
+       <h3>完成趋势（近 14 天）</h3>${lineChart}
+       <h3>日历热力图（本月）</h3>${heat}
+     </div>
+     ${renderSystemOverviewCard()}
+     ${renderHabitChainCard()}
+     <div class="ov-span2">${renderAiHubCard()}</div>
      </div>`);
 
   // 全局搜索 oninput 同步响应（保证空状态即时渲染；搜索范围小，无需防抖）
@@ -9878,6 +10864,29 @@ function renderOverview(){
       else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
     };
   });
+  // v2.3.0：系统概况卡数字项点击跳转
+  $$(".sys-ov-item[data-act]").forEach(b=>{
+    b.onclick=()=>{
+      const act = b.getAttribute("data-act");
+      if(act==="overview"){ setActive("overview"); render(); }
+      else if(act==="office"){ setActive("office"); render(); }
+      else if(act==="stats"){ setActive("stats"); render(); }
+      else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
+    };
+  });
+  // v2.3.0：系统概况卡 AI 设置链接
+  $$(".sys-ov-ai a[data-act='ai-setup']").forEach(a=>{
+    a.onclick=(e)=>{ e.preventDefault(); openDrawer(); _switchSetTab("set-ai"); };
+  });
+  // v2.2.1：主页今日待办点击跳场景 / 「还有 N 项」跳办公场景看板
+  $$("#ovTodayList .ov-today-item").forEach(li=>{
+    li.onclick=()=>{
+      const sc = li.getAttribute("data-goto-sc");
+      if(sc){ setActive(sc); render(); }
+    };
+  });
+  const moreBtn=$("#ovTodayMore");
+  if(moreBtn) moreBtn.onclick=()=>{ setActive("office"); render(); };
   // v1.4-D AI 每日报告：绑定按钮
   const drBtn=$("#dailyReportBtn");
   if(drBtn) drBtn.onclick=()=> handleDailyReport();
@@ -9967,6 +10976,57 @@ async function handleAiRecommend(){
   }
 }
 
+/* ---------- v2.3.0 系统概况卡（新手可读的业务/系统全貌，放主页习惯链左侧） ---------- */
+/**
+ * 渲染系统概况卡：简洁数字清单（icon + 数字 + 标签，可点击跳转）+ AI 助手状态行 + 新手提示
+ * @returns {string} HTML 字符串
+ */
+function renderSystemOverviewCard(){
+  const tasks = getTasks().filter(t => !t.deletedAt);
+  const notes = getNotes().filter(n => !n.deletedAt);
+  const links = getLinks();
+  const plugins = getEnabledPlugins();
+  const chains = links.filter(l => l.enabled !== false);
+  let recCount = 0;
+  ORDER.forEach(sc => { recCount += getRec(sc).length; });
+  const scenarios = ORDER.length;
+  const done = tasks.filter(t => t.status === "done").length;
+  const cfg = getCfg();
+  const aiEnabled = cfg && cfg.enabled;
+
+  const items = [
+    { label: "场景", value: scenarios, act: "overview", ic: UI_ICONS.grid },
+    { label: "任务", value: tasks.length, act: "office", ic: UI_ICONS.check },
+    { label: "已完成", value: done, act: "stats", ic: UI_ICONS.stats },
+    { label: "资料", value: recCount, act: "overview", ic: UI_ICONS.file },
+    { label: "笔记", value: notes.length, act: "overview", ic: UI_ICONS.file },
+    { label: "习惯链", value: chains.length, act: "chain", ic: UI_ICONS.chain },
+    { label: "插件", value: plugins.length, act: "overview", ic: UI_ICONS.puzzle }
+  ];
+
+  const listHtml = items.map(it => `
+    <button type="button" class="sys-ov-item clickable" data-act="${it.act}" title="点击进入 ${it.label}">
+      <span class="sys-ov-ic" aria-hidden="true">${it.ic}</span>
+      <span class="sys-ov-val">${it.value}</span>
+      <span class="sys-ov-lbl">${it.label}</span>
+    </button>`).join("");
+
+  const aiStatusHtml = aiEnabled
+    ? `<span class="sys-ov-ai-ok" aria-hidden="true">${ic("check")}</span><span>AI 助手：已启用</span>`
+    : `<span class="sys-ov-ai-warn" aria-hidden="true">${ic("alert")}</span><span>AI 助手：未启用 · <a href="#" data-act="ai-setup">去设置</a></span>`;
+
+  return `
+    <div class="card sys-overview-card">
+      <header class="card-head">
+        <h2>${ic("grid")}系统概况</h2>
+        <p class="sub">新手快速了解：点击数字直达对应功能 · 侧栏「说明」查看使用指南</p>
+      </header>
+      <div class="sys-ov-grid">${listHtml}</div>
+      <div class="sys-ov-ai">${aiStatusHtml}</div>
+      <div class="sys-ov-tip">提示：点击任意数字跳转对应页面 · 侧栏「说明」查看使用指南</div>
+    </div>`;
+}
+
 /* ---------- v2.2.0 AI 助手 Hub 卡（教练/日报/推荐三卡合一，tab 切换） ---------- */
 let _aiHubTab = "coach"; // 会话级 tab 状态（coach / daily / recommend），跨 renderOverview 保留
 function renderAiHubCard(){
@@ -10018,6 +11078,32 @@ function _renderOvKpi(){
     `<button type="button" class="stats-card ov-kpi-item${c.act?" clickable":""}" data-kpi-act="${c.act||""}" title="${c.act==="office"?"查看今天要处理":c.act==="stats"?"打开统计":c.act==="chain"?"打开习惯链":""}">` +
     `<div class="stats-card-val">${c.value}${c.extra||""}</div><div class="stats-card-lbl">${c.label}</div></button>`
   ).join("") + `</div></div>`;
+}
+
+/* ---------- v2.2.1 主页今日待办列表（复用 renderToday 的排序逻辑，点击跳场景） ---------- */
+function _renderTodayTopHtml(){
+  const tasks = getActiveTasks();
+  const t = todayStr();
+  const pendingToday = tasks.filter(x=>x.status!=="done" && x.due && x.due<=t);
+  const top5 = pendingToday.slice().sort((a,b)=>{
+    const pa = _priWeight(a.priority), pb = _priWeight(b.priority);
+    if(pa !== pb) return pa - pb;
+    return a.due < b.due ? -1 : 1;
+  }).slice(0, 5);
+  if(top5.length === 0){
+    return `<div class="empty today-empty">今天没有待处理的事项，去各场景添加任务吧</div>`;
+  }
+  const items = top5.map(x=>{
+    const s = scMeta(x.sc);
+    const overdue = x.due < t;
+    return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="点击进入「${esc(s.name)}」场景">
+      <span class="dot" style="background:${s.color}"></span>
+      <span class="title">${esc(x.title)}${overdue ? `<span class="ov-overdue-tag">逾期</span>` : ""}</span>
+      <span class="sc-name">${s.name}</span>
+    </li>`;
+  }).join("");
+  const more = pendingToday.length > 5 ? `<button type="button" class="top3-expand" id="ovTodayMore">还有 ${pendingToday.length - 5} 项待处理 ▸</button>` : "";
+  return `<ul class="top3-list" id="ovTodayList">${items}</ul>${more}`;
 }
 
 /* ---------- T3.3 数据统计（渲染层·内联 SVG） ---------- */
@@ -10137,7 +11223,7 @@ function renderStats(){
   }
   const headHtml = `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${UI_ICONS.stats}</span>
-    <div class="ph-tx"><h2>统计</h2><p class="sub">可自定义仪表盘——拖拽排列组件，布局自动保存</p></div>
+    <div class="ph-tx"><h2>${_dashEditMode ? "编辑仪表盘" : "仪表盘"}</h2><p class="sub">${_dashEditMode ? "拖拽排列组件、增删调整，完成后点击「完成编辑」" : "可自定义仪表盘——拖拽排列组件，布局自动保存"}</p></div>
     <div class="ph-actions">
       <button type="button" class="${_dashEditMode ? "btn-primary" : "addbtn sm"}" id="btnDashToggleEdit" style="--sc:var(--accent)">
         ${_dashEditMode ? "✓ 完成编辑" : "⚙ 编辑布局"}
@@ -16516,7 +17602,11 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // 系统级消息中心访问器（供测试驱动与断言）
     getMessages, addMessage, markMessageRead, markAllMessagesRead,
     clearMessages, getUnreadCount, updateMsgBadge, renderMsgPanel,
-    get MSG_KEY(){ return MSG_KEY; }
+    get MSG_KEY(){ return MSG_KEY; },
+    // v2.3.0 工具应用注册表 + 系统概况卡（供测试驱动与断言）
+    TOOL_APPS, openToolStub, renderSystemOverviewCard, renderOverview,
+    get _dashEditMode(){ return _dashEditMode; },
+    set _dashEditMode(v){ _dashEditMode = !!v; }
   };
 }
 // ===== i18n Module (v1.5-A 多语言支持) =====
@@ -19006,18 +20096,22 @@ var DASHBOARD_LAYOUT_KEY = "dashboard_layout";
  * @type {Array<{id:string,name:string,defaultPos:{x:number,y:number,w:number,h:number}}>}
  */
 var DASHBOARD_WIDGETS = [
-  /* default:true 的 7 个构成默认布局；其余为「可添加」组件（v2.2.0 Grafana 化） */
+  /* v2.2.1：组件多元化——列表/表格/操作类与图表类并列；default:true 构成默认布局 */
   { id: "stats",    name: "关键指标",   default: true,  defaultPos: { x: 1, y: 1, w: 2, h: 1 } },
-  { id: "trend",    name: "任务完成趋势", default: true,  defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
-  { id: "pie",      name: "场景分布",   default: true,  defaultPos: { x: 3, y: 1, w: 1, h: 2 } },
-  { id: "heatmap",  name: "热力图",     default: true,  defaultPos: { x: 4, y: 1, w: 1, h: 2 } },
-  { id: "chain",    name: "习惯链",     default: true,  defaultPos: { x: 5, y: 1, w: 1, h: 3 } },
-  { id: "hourdist", name: "完成时段分布", default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
-  { id: "report",   name: "高级报表",   default: true,  defaultPos: { x: 3, y: 3, w: 2, h: 1 } },
-  { id: "gantt",    name: "甘特图",     default: false, defaultPos: { x: 1, y: 4, w: 4, h: 1 } },
-  { id: "mindmap",  name: "思维导图",   default: false, defaultPos: { x: 5, y: 4, w: 1, h: 1 } },
-  { id: "radar",    name: "雷达图",     default: false, defaultPos: { x: 5, y: 5, w: 1, h: 1 } },
-  { id: "sankey",   name: "桑基图",     default: false, defaultPos: { x: 1, y: 5, w: 4, h: 1 } }
+  { id: "today",    name: "今日待办",   default: true,  defaultPos: { x: 3, y: 1, w: 2, h: 1 } },
+  { id: "trend",    name: "任务完成趋势", default: true,  defaultPos: { x: 5, y: 1, w: 1, h: 2 } },
+  { id: "scenes",   name: "场景概况",   default: true,  defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
+  { id: "pie",      name: "场景分布",   default: true,  defaultPos: { x: 3, y: 2, w: 1, h: 1 } },
+  { id: "heatmap",  name: "热力图",     default: true,  defaultPos: { x: 4, y: 2, w: 1, h: 1 } },
+  { id: "chain",    name: "习惯链成功率", default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
+  { id: "recent",   name: "最近完成",   default: true,  defaultPos: { x: 3, y: 3, w: 3, h: 1 } },
+  { id: "actions",  name: "快捷操作",   default: false, defaultPos: { x: 1, y: 4, w: 5, h: 1 } },
+  { id: "hourdist", name: "完成时段分布", default: false, defaultPos: { x: 1, y: 5, w: 2, h: 1 } },
+  { id: "report",   name: "高级报表",   default: false, defaultPos: { x: 3, y: 5, w: 3, h: 1 } },
+  { id: "gantt",    name: "甘特图",     default: false, defaultPos: { x: 1, y: 6, w: 3, h: 1 } },
+  { id: "mindmap",  name: "思维导图",   default: false, defaultPos: { x: 4, y: 6, w: 2, h: 1 } },
+  { id: "radar",    name: "雷达图",     default: false, defaultPos: { x: 1, y: 7, w: 2, h: 1 } },
+  { id: "sankey",   name: "桑基图",     default: false, defaultPos: { x: 3, y: 7, w: 3, h: 1 } }
 ];
 /**
  * 生成默认布局（v2.2.0：仅含 default:true 的核心组件）
@@ -19090,6 +20184,45 @@ function moveDashboardWidget(id, pos){
 function _renderDashboardWidget(id){
   if(id === "stats"){
     return _renderDashboardStatsWidget();
+  }
+  /* v2.2.1：非图表组件——列表 / 进度 / 操作，让仪表盘不止有图表 */
+  if(id === "today"){
+    return typeof _renderTodayTopHtml === "function" ? _renderTodayTopHtml() : "<p class='widget-empty'>今日待办</p>";
+  }
+  if(id === "scenes"){
+    var bars = ORDER.map(function(sc){
+      var s = SCENARIOS[sc] || {};
+      var all = getActiveTasks().filter(function(t){ return t.sc === sc; });
+      var dn = all.filter(function(t){ return t.status === "done"; }).length;
+      var tot = all.length;
+      var pct = tot ? Math.round(dn / tot * 100) : 0;
+      return '<div class="bar"><span class="nm">' + esc(s.name || sc) + '</span>' +
+        '<span class="track"><span class="fill" style="width:' + pct + '%;background:' + (s.color || "var(--accent)") + '"></span></span>' +
+        '<span class="v">' + dn + '/' + tot + '</span></div>';
+    }).join("");
+    return '<div class="bars">' + bars + '</div>';
+  }
+  if(id === "recent"){
+    var doneList = getActiveTasks().filter(function(t){ return t.status === "done" && t.doneAt; })
+      .sort(function(a, b){ return b.doneAt - a.doneAt; }).slice(0, 5);
+    if(!doneList.length) return "<p class='widget-empty'>还没有已完成的任务</p>";
+    var now = Date.now();
+    var items = doneList.map(function(t){
+      var s = SCENARIOS[t.sc] || {};
+      var mins = Math.floor((now - t.doneAt) / 60000);
+      var ago = mins < 60 ? mins + " 分钟前" : mins < 1440 ? Math.floor(mins / 60) + " 小时前" : Math.floor(mins / 1440) + " 天前";
+      return '<li class="top3-item"><span class="dot" style="background:' + (s.color || "var(--muted)") + '"></span>' +
+        '<span class="title">' + esc(t.title) + '</span><span class="sc-name">' + esc(s.name || t.sc) + ' · ' + ago + '</span></li>';
+    }).join("");
+    return '<ul class="top3-list">' + items + '</ul>';
+  }
+  if(id === "actions"){
+    return '<div class="dash-actions-grid">' +
+      '<button type="button" class="addbtn" id="dashActNew" style="--sc:var(--accent)"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.plus + '</span>新建任务</button>' +
+      '<button type="button" class="addbtn" id="dashActSearch" style="--sc:var(--accent)"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.search + '</span>全局搜索</button>' +
+      '<button type="button" class="addbtn" id="dashActReport" style="--sc:var(--accent)"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.stats + '</span>高级报表</button>' +
+      '<button type="button" class="addbtn" id="dashActExport" style="--sc:var(--muted)"><span class="ic-inline" aria-hidden="true">' + UI_ICONS.download + '</span>导出 JSON</button>' +
+      '</div>';
   }
   if(id === "trend"){
     var days = (typeof _statsTrendDays === "number" && _statsTrendDays) ? _statsTrendDays : 7;
@@ -19392,6 +20525,29 @@ function _bindDashToolbar(container, editMode){
       if(typeof openReportModal === "function"){ openReportModal("week", 0); if(typeof bindReportModal === "function") bindReportModal(); }
     };
   }
+  /* v2.2.1：快捷操作组件 */
+  var actNew = container.querySelector("#dashActNew");
+  if(actNew) actNew.onclick = function(){
+    if(typeof setActive === "function"){ setActive("office"); }
+    if(typeof render === "function"){ try{ render(); }catch(e){} }
+    var f = document.querySelector("#taskForm");
+    if(f && f.title){ try{ f.title.focus(); }catch(e){} }
+  };
+  var actSearch = container.querySelector("#dashActSearch");
+  if(actSearch) actSearch.onclick = function(){
+    if(typeof setActive === "function"){ setActive("overview"); }
+    if(typeof render === "function"){ try{ render(); }catch(e){} }
+    var gs = document.querySelector("#globSearch");
+    if(gs){ try{ gs.focus(); }catch(e){} }
+  };
+  var actReport = container.querySelector("#dashActReport");
+  if(actReport) actReport.onclick = function(){
+    if(typeof openReportModal === "function"){ openReportModal("week", 0); if(typeof bindReportModal === "function") bindReportModal(); }
+  };
+  var actExport = container.querySelector("#dashActExport");
+  if(actExport) actExport.onclick = function(){
+    if(typeof doExport === "function"){ try{ doExport(); }catch(e){} }
+  };
 }// ===== Notes & Knowledge Base (v1.6-D 知识管理) =====
 /* ---------- 笔记系统 + 知识库：Markdown 笔记 CRUD + 标签分类 + 任务关联 ----------
  * 能力：

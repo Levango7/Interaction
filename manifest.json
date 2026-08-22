@@ -3,7 +3,7 @@
   "name": "Agent 工坊",
   "short_name": "工坊",
   "description": "习惯链驱动的智能任务管理 PWA",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
