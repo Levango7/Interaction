@@ -2,6 +2,29 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v2.4.1] - 2026-08-23
+
+### Minor：Agent 机制增强 + 工具箱图标重做 + 新主题 + 商店插件扩容
+
+**🆕 New**
+- **设置页 Agent 机制全面增强**：新增「对话循环上限」（普通/目标模式分开配置）、「工具调用白名单」（逗号分隔，留空=全部）、「自动确认非危险操作」开关；危险操作（delete_task/update_task）始终弹窗，白名单外工具直接跳过并提示
+- **工具箱图标去重重做**：19 个工具的 icon 全部按语义重新设计 SVG（Markdown/Word/表格/CAD/滤镜/文生图/正则/运动/缴费/外卖等），消除原来多处共用 UI_ICONS.file/grid 导致的视觉混淆
+- **新增两个主题**：「淡雅」（柔和马卡龙色系，低饱和度米白底）、「黑客帝国」（Matrix 绿黑风，#00ff41 主色调）
+- **商店新增 5 个插件**：习惯追踪器 / 天气预报 / 每日一言 / 专注时钟 / 思维导图（均默认 enabled=false）
+- **主页今日待办移至概览页**（原 scene 标题栏下统一移除，避免 6 个场景各重复一遍）
+- **系统概况卡片左侧位置保留**，习惯链可视化不变
+- **工具箱分类 chips 激活态**：`.glob-view-chip.active` 使用 accent 背景色 + 反色文字
+
+**🔧 Changed**
+- `runChatLoop()` 改为读 `cfg.agentLoops` / `cfg.agentGoalLoops` / `cfg.toolWhitelist` / `cfg.agentAutoConfirm`，支持运行时个性化配置
+- `updateAgentStatus()` 状态条现在显示完整配置摘要（记忆数 + 循环上限 + 白名单数 + 目标进度）
+- `tests/onboarding.test.js` 中 renderToday 三个用例改用直接调用 `renderToday()` 函数（不再依赖 scene 渲染路径）
+
+**📋 Technical**
+- 新增 UI_ICONS.md/word/sheet/ppt/pdf/ocr/cad/filter/imggen/vidgen/searchWeb/regex/compile/md2code/sport/bill/shop/takeout/transit/mindmap/kb 共 22 个专用 SVG 图标
+- `getMemMax()` / `getAgentLoops()` / `getToolWhitelist()` 等辅助函数已内联到 runChatLoop 内
+- vitest 基线保持 **632**；lint-colors / lint-layers / build --check 全部 PASS
+
 ## [v2.4.0] - 2026-08-23
 
 ### Minor：侧栏信息架构四组化 + 任务中心 / 工具箱 / 商店 / 习惯链四大新页 + 聊天面板扁平化

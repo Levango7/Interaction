@@ -59,7 +59,7 @@ describe("今日仪表盘 + Onboarding", () => {
   it("renderToday: 仪表盘头部包含问候语 + Top3 + 习惯链状态条", () => {
     const win = loadApp();
     win.localStorage.clear();
-    const { setTasks, setActive, render, greeting } = win.__test;
+    const { setTasks, greeting, renderToday } = win.__test;
     // 造一个今日到期的任务
     const today = (function () {
       const d = new Date();
@@ -69,34 +69,32 @@ describe("今日仪表盘 + Onboarding", () => {
     setTasks([
       { id: "t1", sc: "office", title: "写周报", status: "todo", due: today, priority: "P1", created: Date.now() }
     ]);
-    setActive("office");
-    render();
-    const main = win.document.querySelector("#main");
-    expect(main.querySelector(".dashboard-hero")).toBeTruthy();
-    expect(main.querySelector(".hero-greeting")).toBeTruthy();
-    expect(main.querySelector(".top3-list")).toBeTruthy();
-    expect(main.querySelector(".chain-bar")).toBeTruthy();
-    // 问候语应出现在头部
+    const html = renderToday();
+    const div = win.document.createElement("div");
+    div.innerHTML = html;
+    expect(div.querySelector(".dashboard-hero")).toBeTruthy();
+    expect(div.querySelector(".hero-greeting")).toBeTruthy();
+    expect(div.querySelector(".top3-list")).toBeTruthy();
+    expect(div.querySelector(".chain-bar")).toBeTruthy();
     const g = greeting();
-    expect(main.querySelector(".hero-greeting").textContent).toContain(g);
-    // Top3 应包含任务标题
-    expect(main.querySelector(".top3-list").textContent).toContain("写周报");
+    expect(div.querySelector(".hero-greeting").textContent).toContain(g);
+    expect(div.querySelector(".top3-list").textContent).toContain("写周报");
   });
 
   it("renderToday: 无任务时显示空态提示", () => {
     const win = loadApp();
     win.localStorage.clear();
-    const { setActive, render } = win.__test;
-    setActive("office");
-    render();
-    const main = win.document.querySelector("#main");
-    expect(main.querySelector(".empty").textContent).toContain("今天没有待处理的事项");
+    const { renderToday } = win.__test;
+    const html = renderToday();
+    const div = win.document.createElement("div");
+    div.innerHTML = html;
+    expect(div.querySelector(".empty").textContent).toContain("今天没有待处理的事项");
   });
 
   it("renderToday: 习惯链状态条点击跳转场景", () => {
     const win = loadApp();
     win.localStorage.clear();
-    const { setTasks, setActive, render, getActive } = win.__test;
+    const { setTasks, renderToday, setActive, getActive } = win.__test;
     const today = (function () {
       const d = new Date();
       const p = (n) => String(n).padStart(2, "0");
@@ -105,11 +103,12 @@ describe("今日仪表盘 + Onboarding", () => {
     setTasks([
       { id: "t1", sc: "office", title: "交付功能", status: "todo", due: today, priority: "P1", created: Date.now() }
     ]);
-    setActive("office");
-    render();
-    const pill = win.document.querySelector("[data-chain-sc]");
+    const html = renderToday();
+    const div = win.document.createElement("div");
+    div.innerHTML = html;
+    win.document.body.appendChild(div);
+    const pill = div.querySelector("[data-chain-sc]");
     expect(pill).toBeTruthy();
-    // 点击第一个 chain-pill（from 场景）
     const fromSc = pill.dataset.chainSc;
     pill.click();
     expect(getActive()).toBe(fromSc);
