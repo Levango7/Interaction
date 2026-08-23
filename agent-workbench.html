@@ -589,26 +589,26 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .overview-grid > .foot{margin-top:0}
 
 /* ===== v2.3.0 系统概况卡 ===== */
-.sys-overview-card{overflow:hidden}
-.sys-overview-card .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3)}
+.sys-overview-card{overflow:hidden;padding:var(--space-2) var(--space-3)}
+.sys-overview-card .card-head{margin-bottom:var(--space-1)}
 .sys-overview-card .card-head h2{margin:0;font-size:var(--fs-base);font-weight:600;display:flex;align-items:center;gap:var(--space-2)}
-.sys-overview-card .card-head .sub{margin:2px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
-.sys-ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:var(--space-2)}
-.sys-ov-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);transition:background var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast);cursor:pointer}
+.sys-overview-card .card-head .sub{margin:1px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
+.sys-ov-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--space-2)}
+.sys-ov-item{display:flex;flex-direction:column;align-items:center;gap:1px;padding:var(--space-1) var(--space-1);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-sm);transition:background var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast);cursor:pointer}
 .sys-ov-item:hover{background:var(--surface-hover);border-color:var(--accent-soft);transform:translateY(-1px)}
 .sys-ov-item:active{transform:scale(.98)}
 .sys-ov-ic{color:var(--accent);display:flex;align-items:center}
-.sys-ov-ic svg{width:18px;height:18px}
-.sys-ov-val{font-size:var(--fs-lg);font-weight:700;color:var(--text);line-height:1.2}
-.sys-ov-lbl{font-size:var(--fs-xs);color:var(--muted);text-align:center}
-.sys-ov-ai{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);margin-top:var(--space-3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);font-size:var(--fs-sm)}
+.sys-ov-ic svg{width:16px;height:16px}
+.sys-ov-val{font-size:var(--fs-base);font-weight:700;color:var(--text);line-height:1.2}
+.sys-ov-lbl{font-size:10px;color:var(--muted);text-align:center}
+.sys-ov-ai{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1) var(--space-2);margin-top:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);font-size:var(--fs-xs)}
 .sys-ov-ai-ok{color:var(--success);display:flex;align-items:center}
-.sys-ov-ai-ok svg{width:16px;height:16px}
+.sys-ov-ai-ok svg{width:14px;height:14px}
 .sys-ov-ai-warn{color:var(--warn);display:flex;align-items:center}
-.sys-ov-ai-warn svg{width:16px;height:16px}
+.sys-ov-ai-warn svg{width:14px;height:14px}
 .sys-ov-ai a{color:var(--accent);text-decoration:underline;font-size:var(--fs-xs)}
 .sys-ov-ai a:hover{color:var(--on-accent)}
-.sys-ov-tip{margin-top:var(--space-2);font-size:var(--fs-xs);color:var(--muted);text-align:center}
+.sys-ov-tip{margin-top:var(--space-1);font-size:var(--fs-xs);color:var(--muted);text-align:center}
 
 /* ===== v2.3.0 工具应用卡（TOOL_APPS 落地页） ===== */
 .tool-app-card{padding:var(--space-3)}
@@ -798,6 +798,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .app-card-name{font-weight:600;font-size:var(--fs-base);text-align:center}
 .app-card-desc{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;text-align:center}
 .app-card-tx{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
+/* v2.4.2：商店双列网格 */
+.store-list{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-top:var(--space-4)}
+.store-card{flex-direction:column;align-items:stretch;padding:var(--space-3)}
+.store-card .app-card-tx{flex-direction:column;align-items:center}
+.store-card .store-ops{display:flex;gap:var(--space-2);justify-content:center;margin-top:var(--space-2)}
 .toolbox-cat-tag{position:absolute;top:var(--space-2);right:var(--space-2);font-size:var(--fs-xs);
   padding:1px var(--space-1);border-radius:var(--radius-full);background:var(--accent-soft);color:var(--accent);
   font-weight:600;pointer-events:none}
@@ -974,24 +979,24 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .link-status .lk .last{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap}
 .link-status .lk.disabled{opacity:.5}
 /* ===== v2.4.2：习惯链增强可视化 ===== */
-.hc-top-row{display:grid;grid-template-columns:160px 1fr;gap:var(--space-4);align-items:start;margin-top:var(--space-3)}
-@media(max-width:640px){.hc-top-row{grid-template-columns:1fr}}
-/* 全局完成进度环 */
-.hc-ring-wrap{display:flex;flex-direction:column;align-items:center;gap:var(--space-1)}
-.hc-ring-svg{width:120px;height:120px;transform:rotate(-90deg)}
-.hc-ring-bg{fill:none;stroke:var(--line);stroke-width:8}
-.hc-ring-fg{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
-.hc-ring-center{transform-origin:center;transform:none}
-.hc-ring-pct{font-size:var(--fs-xl);font-weight:700;fill:var(--text)}
-.hc-ring-label{font-size:var(--fs-xs);fill:var(--muted)}
-.hc-ring-meta{font-size:var(--fs-xs);color:var(--muted);text-align:center}
-/* 场景完成率条 */
-.hc-bars{display:flex;flex-direction:column;gap:var(--space-2)}
-.hc-bar-row{display:grid;grid-template-columns:56px 1fr 36px;align-items:center;gap:var(--space-2)}
-.hc-bar-sc{font-size:var(--fs-xs);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hc-bar-track{height:10px;background:var(--surface-muted);border-radius:5px;overflow:hidden}
-.hc-bar-fill{height:100%;border-radius:5px;transition:width .5s ease}
-.hc-bar-val{font-size:var(--fs-xs);color:var(--muted);text-align:right}
+	.hc-top-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);align-items:center;margin-top:var(--space-3)}
+	@media(max-width:640px){.hc-top-row{grid-template-columns:1fr;gap:var(--space-3)}}
+	/* 全局完成进度环 */
+	.hc-ring-wrap{display:flex;flex-direction:column;align-items:center;gap:var(--space-1);justify-content:center;width:100%}
+	.hc-ring-svg{width:140px;height:140px;transform:rotate(90deg)}
+	.hc-ring-bg{fill:none;stroke:var(--line);stroke-width:8}
+	.hc-ring-fg{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+	.hc-ring-center{transform-origin:center;transform:none}
+	.hc-ring-pct{font-size:var(--fs-xl);font-weight:700;fill:var(--text)}
+	.hc-ring-label{font-size:var(--fs-xs);fill:var(--muted)}
+	.hc-ring-meta{font-size:var(--fs-xs);color:var(--muted);text-align:center}
+	/* 场景完成率条 */
+	.hc-bars{display:flex;flex-direction:column;gap:var(--space-2);width:100%}
+	.hc-bar-row{display:grid;grid-template-columns:56px 1fr 32px;align-items:center;gap:var(--space-2)}
+	.hc-bar-sc{font-size:var(--fs-xs);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+	.hc-bar-track{height:8px;background:var(--surface-muted);border-radius:4px;overflow:hidden}
+	.hc-bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+	.hc-bar-val{font-size:var(--fs-xs);color:var(--muted);text-align:right}
 /* 近7天迷你日历 */
 .hc-cal-wrap{margin-top:var(--space-3)}
 .hc-cal-title{font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-1)}
@@ -2814,24 +2819,24 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
     <button class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南" style="display:none">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl">指南</span></button>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl" data-i18n="top.help">指南</span></button>
     <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
     <button class="tbtn" id="btnSearchTop" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl">搜索</span></button>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
     <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
     <button class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl">命令</span></button>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
     <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
     <button class="tbtn" id="btnMessages" type="button" title="消息" aria-label="消息">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span class="badge" id="msgBadge" style="display:none"></span><span class="lbl">消息</span></button>
+      <span class="badge" id="msgBadge" style="display:none"></span><span class="lbl" data-i18n="top.messages">消息</span></button>
     <button class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl">主题</span></button>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl" data-i18n="top.theme">主题</span></button>
     <button class="tbtn" id="btnDownload" title="导出数据" aria-label="导出数据">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl">下载</span></button>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
     <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
     <button class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面" style="display:none">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl">安装</span></button>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
     <input type="file" id="fileInput" accept="application/json" style="display:none">
   </div>
 
@@ -10577,9 +10582,9 @@ function renderHelp(){
   }
   const html = `<div class="help-page-wrap" id="helpPageWrap">
     <div class="card page-head-card"><header class="page-head sc-page-head">
-      <span class="ph-ic" aria-hidden="true">${UI_ICONS.book}</span>
+      <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.doc}</span>
       <div class="ph-tx">
-        <h2 id="helpPageTitle">文档</h2>
+        <h2 data-i18n="nav.help">说明</h2>
         <p class="sub">快速上手 · 场景说明 · AI 技巧 · 数据安全</p>
       </div>
       <button class="page-back help-back" id="helpBack" aria-label="返回上一视图" type="button">← 返回</button>
@@ -11046,7 +11051,7 @@ function renderOverview(){
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
-      <div class="ph-tx"><h2>概览</h2><p class="sub">系统概况 · 全局搜索 · 数据速览</p></div>
+      <div class="ph-tx"><h2>主页</h2><p class="sub">系统概况 · 全局搜索 · 数据速览</p></div>
       <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" style="--sc:var(--accent)">高级报表</button></div>
     </header></div>
     ${renderSystemOverviewCard()}
@@ -11070,13 +11075,13 @@ function renderOverview(){
        ${_renderTodayTopHtml()}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
      </div>
-     <div class="card"><h2>${UI_ICONS.stats} 数据速览</h2>
-       <p class="sub">完成趋势与本月密度</p>
-       <h3>完成趋势（近 14 天）</h3>${lineChart}
-       <h3>日历热力图（本月）</h3>${heat}
-     </div>
-     ${renderHabitChainCard()}
-     <div class="ov-span2">${renderAiHubCard()}</div>
+	     <div class="card"><h2>${UI_ICONS.stats} 数据速览</h2>
+	       <p class="sub">完成趋势与本月密度</p>
+	       <h3>完成趋势（近 14 天）</h3>${lineChart}
+	       <h3>日历热力图（本月）</h3>${heat}
+	     </div>
+	     <div class="ov-span2">${renderHabitChainCard()}</div>
+	     <div class="ov-span2">${renderAiHubCard()}</div>
      </div>`);
 
   // 全局搜索 oninput 同步响应（保证空状态即时渲染；搜索范围小，无需防抖）
@@ -11485,7 +11490,7 @@ function renderStats(){
     return;
   }
   const headHtml = `<div class="card page-head-card"><header class="page-head sc-page-head">
-    <span class="ph-ic" aria-hidden="true">${UI_ICONS.stats}</span>
+    <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.dash}</span>
     <div class="ph-tx"><h2>${_dashEditMode ? "编辑仪表盘" : "仪表盘"}</h2><p class="sub">${_dashEditMode ? "拖拽排列组件、增删调整，完成后点击「完成编辑」" : "可自定义仪表盘——拖拽排列组件，布局自动保存"}</p></div>
     <div class="ph-actions">
       <button type="button" class="${_dashEditMode ? "btn-primary" : "addbtn sm"}" id="btnDashToggleEdit" style="--sc:var(--accent)">
@@ -11714,7 +11719,7 @@ function renderStorePage(){
   };
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
-      <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>
+      <span class="ph-ic" aria-hidden="true">${UI_ICONS.puzzle}</span>
       <div class="ph-tx"><h2>商店</h2><p class="sub">插件与应用市场——安装后按类型自动挂载到对应位置</p></div>
       <button type="button" class="addbtn sm" id="storeImportBtn" style="--sc:var(--accent)">导入插件 JSON</button>
     </header></div>
@@ -12327,11 +12332,11 @@ function renderMainHTML(){
   const cfg = getCfg();
 
   const taskForm = `<form class="form-row" id="taskForm">
-    <div class="fld"><label>任务标题</label><input name="title" placeholder="要做什么？" maxlength="200" required></div>
+    <div class="fld fld-lg"><label>任务标题</label><input name="title" placeholder="要做什么？" maxlength="200" required></div>
     <div class="fld fld-md"><label>截止日期</label><input name="due" type="date"></div>
     <div class="fld fld-sm"><label>优先级</label>
       <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
-    <div class="fld fld-md"><label>标签</label><input name="tags" placeholder="逗号分隔" maxlength="200"></div>
+    <div class="fld fld-lg"><label>标签</label><input name="tags" placeholder="逗号分隔" maxlength="200"></div>
     <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button>
   </form>`;
 
@@ -12379,7 +12384,11 @@ function renderMainHTML(){
       const ph = f.placeholder || f.label;
       inp = `<input name="${f.k}" type="${f.type==="number"?"number":"text"}" placeholder="${esc(ph)}" maxlength="500">`;
     }
-    return `<div class="fld"><label>${f.label}</label>${inp}</div>`;
+    // 字段宽度分级：title/note/code 等关键字段占宽，type/lang/value 等短字段占窄
+    const wideFields = {title:1, note:1, code:1, desc:1, who:1};
+    const narrowFields = {type:1, lang:1, status:1, value:1};
+    const wdCls = wideFields[f.k] ? "fld-lg" : narrowFields[f.k] ? "fld-sm" : "";
+    return `<div class="fld${wdCls?" "+wdCls:""}"><label>${f.label}</label>${inp}</div>`;
   }).join("");
   const recForm = `<form class="form-row" id="recForm">${recFields}
     <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button></form>`;
@@ -18618,6 +18627,9 @@ function initI18n(){
     if(typeof localStorage === "undefined") return;
     const saved = localStorage.getItem(PREFIX + "lang");
     if(saved === "zh" || saved === "en") _currentLang = saved;
+    // HTML lang 属性需 BCP 47 格式（zh-CN / en）
+    document.documentElement.lang = _currentLang === "zh" ? "zh-CN" : _currentLang;
+    applyI18n(document);
   }catch(e){ /* localStorage 不可用：保持默认 zh */ }
 }
 
@@ -18642,6 +18654,7 @@ function setLang(lang){
   // v2.2.0：名称类文案即时生效（document.title + data-i18n 静态节点）
   try{
     document.title = t("app.name");
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : lang;
     applyI18n(document);
   }catch(e){ /* 静态节点替换失败不影响语言切换 */ }
   // 触发重新渲染（若 render 可用）
@@ -21117,11 +21130,11 @@ function bindDashboardDnD(container, editMode){
     dragId = null;
   });
   body.addEventListener("dragover", function(e){
-    var w = e.target.closest(".dashboard-widget");
-    if(!w || !dragId || w.getAttribute("data-widget") === dragId) return;
-    e.preventDefault();
+    e.preventDefault(); // 必须始终调用，浏览器才知道允许 drop
     if(e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    var w = e.target.closest(".dashboard-widget");
     $$(".dashboard-widget.drag-over", body).forEach(function(el){ el.classList.remove("drag-over"); });
+    if(!w || !dragId || w.getAttribute("data-widget") === dragId) return;
     w.classList.add("drag-over");
   });
   body.addEventListener("dragleave", function(e){
@@ -21129,20 +21142,17 @@ function bindDashboardDnD(container, editMode){
     if(w && !w.contains(e.relatedTarget)) w.classList.remove("drag-over");
   });
   body.addEventListener("drop", function(e){
-    var w = e.target.closest(".dashboard-widget");
-    if(!w || !dragId) return;
     e.preventDefault();
-    w.classList.remove("drag-over");
+    var w = e.target.closest(".dashboard-widget");
+    $$(".dashboard-widget.drag-over", body).forEach(function(el){ el.classList.remove("drag-over"); });
+    if(!w || !dragId) return;
     var targetId = w.getAttribute("data-widget");
-    if(targetId === dragId) return;
-    // 交换两个组件的位置
+    if(targetId === dragId){ dragId = null; return; }
     var layout = getDashboardLayout();
     var a = layout.find(function(it){ return it.id === dragId; });
     var b = layout.find(function(it){ return it.id === targetId; });
     if(a && b){
-      var tmp = a.pos;
-      a.pos = b.pos;
-      b.pos = tmp;
+      var tmp = a.pos; a.pos = b.pos; b.pos = tmp;
       saveDashboardLayout(layout);
       refresh();
     }
