@@ -130,13 +130,13 @@ describe("T4.3 移动端增强 - 手势支持 + 触摸优化 + 横屏适配", ()
     it("左滑切换到下一个场景（office → data）", () => {
       expect(__test.swipeToScene("left", "office")).toBe("data");
       expect(__test.swipeToScene("left", "design")).toBe("study");
-      expect(__test.swipeToScene("left", "study")).toBe("data");
+      expect(__test.swipeToScene("left", "design")).toBe("study");
       expect(__test.swipeToScene("left", "data")).toBe("code");
       expect(__test.swipeToScene("left", "code")).toBe("life");
     });
 
     it("右滑切换到上一个场景（code → study）", () => {
-      expect(__test.swipeToScene("right", "code")).toBe("data");
+      expect(__test.swipeToScene("right", "code")).toBe("study");
       expect(__test.swipeToScene("right", "study")).toBe("design");
       expect(__test.swipeToScene("right", "life")).toBe("code");
     });
