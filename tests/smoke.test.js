@@ -27,7 +27,7 @@ describe("测试基建自检", () => {
     const { SCENARIOS } = __test;
     expect(SCENARIOS).toBeDefined();
     expect(Object.keys(SCENARIOS).sort()).toEqual(["code", "data", "design", "life", "office", "study"]);
-    for (const k of ["office", "design", "study", "data", "code", "life"]) {
+    for (const k of ["office", "data", "design", "study", "code", "life"]) {
       expect(SCENARIOS[k]).toBeDefined();
       expect(typeof SCENARIOS[k].name).toBe("string");
       expect(typeof SCENARIOS[k].sysprompt).toBe("string");
@@ -37,7 +37,7 @@ describe("测试基建自检", () => {
   it("ORDER 长度为 6 且与 SCENARIOS 键一致", () => {
     const { __test } = loadApp();
     expect(__test.ORDER).toHaveLength(6);
-    expect(__test.ORDER).toEqual(["office", "design", "study", "data", "code", "life"]);
+    expect(__test.ORDER).toEqual(["office", "data", "design", "study", "code", "life"]);
     __test.ORDER.forEach(k => {
       expect(__test.SCENARIOS[k]).toBeDefined();
     });

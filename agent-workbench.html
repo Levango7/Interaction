@@ -5297,7 +5297,7 @@ const SCENARIOS = {
       ] } }
 };
 /* v2.1.0：6 内置场景——新增 设计(design)/数据(data)；顺序即侧栏场景组显示序与滑动手势序 */
-const ORDER = ["office","design","study","data","code","life"];
+const ORDER = ["office","data","design","study","code","life"];
 
 // ===== Data Layer (数据层·联动规则与全局状态) =====
 /* ---------- 场景联动规则（任务完成时触发，跨场景生成任务） ---------- */
@@ -7556,8 +7556,8 @@ function _buildSideMenu(){
     active: !_sideActive && _effActive==="chainpage"
   };
 
-  /* ---- 场景组（ORDER 驱动，全部叶子节点；v2.4.0「数据」场景移出侧栏——SCENARIOS key 保留兼容存量数据） ---- */
-  const sceneNodes = ORDER.filter(sc=>sc!=="data").map(sc=>{
+  /* ---- 场景组（ORDER 驱动，全部叶子节点；v2.4.0「数据」归位办公之后——数据分析入口） ---- */
+  const sceneNodes = ORDER.map(sc=>{
     const s = SCENARIOS[sc];
     if(!s) return null;
     const open = tasks.filter(t=>t.sc===sc && t.status!=="done").length;

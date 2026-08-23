@@ -25,7 +25,7 @@ describe("P1 自定义场景", () => {
 
   describe("干净基线", () => {
     it("默认仅 6 个内置场景，ORDER 顺序稳定", () => {
-      expect(__test.ORDER).toEqual(["office", "design", "study", "data", "code", "life"]);
+      expect(__test.ORDER).toEqual(["office", "data", "design", "study", "code", "life"]);
     });
   });
 

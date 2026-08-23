@@ -246,11 +246,14 @@ describe("v2.4.0 侧栏新信息架构", () => {
     expect(document.querySelector('#side [data-aipage="1"]')).toBeTruthy();
   });
 
-  it("「数据」场景移出侧栏，但 SCENARIOS key 保留兼容存量数据", () => {
+  it("「数据」场景归位办公之后，ORDER 与 SCENARIOS 保留", () => {
     __test.render();
-    expect(document.querySelector('#side [data-sc="data"]')).toBeNull();
+    expect(document.querySelector('#side [data-sc="data"]')).toBeTruthy();
     expect(__test.SCENARIOS.data).toBeTruthy();
     expect(__test.ORDER).toContain("data");
+    // ORDER 顺序：办公 → 数据 → 设计 → 学习 → 编程 → 生活
+    const idx = __test.ORDER.indexOf("data");
+    expect(idx).toBe(1); // office 在 0，data 紧随其后
   });
 
   it("场景项无子菜单（19 工具迁往工具箱），计数为 0 不显示徽章", () => {
