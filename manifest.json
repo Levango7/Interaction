@@ -2,7 +2,7 @@
   "id": "agent-workbench",
   "name": "Agent 工坊",
   "short_name": "工坊",
-  "description": "习惯链驱动的2.4.0理 PWA",
+  "description": "习惯链驱动的智能任务管理 PWA",
   "version": "2.4.0",
   "start_url": "./",
   "scope": "./",
