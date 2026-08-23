@@ -2,6 +2,35 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v2.4.0] - 2026-08-23
+
+### Minor：侧栏信息架构四组化 + 任务中心 / 工具箱 / 商店 / 习惯链四大新页 + 聊天面板扁平化
+
+**🆕 New**
+- **侧栏信息架构重构为四组**（用户定案）：
+  - **总览**：主页 / 仪表盘 / 任务 / 习惯链
+  - **场景**：办公 / 设计 / 编程 / 学习 / 生活（"数据"移出侧栏——SCENARIOS key 保留兼容存量数据）
+  - **应用**：AI（大模型/agent） / 工具箱 / 商店
+  - **系统**：回收站 / 外观 / 设置 / 说明
+  - 顶部折叠按钮保留；父项展开态改 SVG 箭头图标（替代字符 ▸，部分字体渲染成小点）；纯叶子项无子菜单；零计数徽章隐藏
+- **新增「任务中心」页**（`active="tasks"`）：看板 / 日历 / 待办三视图切换（`_tasksView` 持久化），复用现有任务 CRUD
+- **新增「工具箱」页**（`active="toolbox"`）：按分类 chips 过滤 + 关键词搜索，展示全部内置工具（含工具 ID / 名称 / 簇 / 状态）
+- **新增「商店」页**（`active="store"`）：三态卡片——未注册（安装）、已装未启用（启用）、启用中（禁用+卸载）；内置插件随启动自动以 `enabled=false` 注册
+- **新增「习惯链」页**（`active="chainpage"`）：渲染热力图 + 状态统计 + 成功率摘要，复用现有 `renderChainGraph` / `calcChainSuccess`
+- **聊天面板扁平化重构**：消息区去双层卡片套娃，直接铺面板底色；气泡收窄（user 65% / assistant 78%）增强对话感；头部按钮改 SVG 图标；输入区单行起步（44px）聚焦增高到 96px，上限 200px
+
+**🔧 Changed**
+- `_buildSideMenu()` 重写为返回固定 4 组结构；场景节点全部叶子化（无子菜单）；"数据"场景仅保留 SCENARIOS key 兼容
+- `renderStorePage()` 支持内置插件三态渲染（未注册 / 已装未启用 / 启用中）
+- 移动端底部导航 `MOB_GROUP_ICONS` 同步更新：`"功能"` → `"应用"`（puzzle icon）
+- E2E 与 stats 测试同步：`[data-menu="dash-stats"]` → `[data-sc="stats"]`
+
+**📋 Technical**
+- 新增四个页面渲染器：`renderTasksPage()` / `renderToolboxPage()` / `renderStorePage()` / `renderChainPage()`，全部导出至 `__test`
+- `tests/tools.test.js` 补「v2.4.0 侧栏新信息架构」用例：四组结构 / 场景去 data / 零计数隐藏 / 任务三视图 / 工具箱 chips + 搜索 / 商店三态流转 / 习惯链页
+- `tests/tool-pop.test.js` 改用 `openToolbox()` 驱动选择器，消除对旧 DOM 锚点的依赖
+- 版本号 v2.3.1 → **v2.4.0**（六处同步，build tag 20260823b → 20260823）；vitest 基线 626 → **632**
+
 ## [v2.3.1] - 2026-08-23
 
 ### Patch：番茄钟更名「笃行」+ CAD 画布监听器泄漏修复 + lif-bill 已缴统计修复

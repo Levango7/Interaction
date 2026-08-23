@@ -106,9 +106,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 6. 查看统计 ----------
     await test.step("查看统计视图", async () => {
-      await page.click('#side .nav-parent[data-menu="dash"]');
-      await page.waitForSelector('#side .nav-item[data-menu="dash-stats"]', { timeout: 5_000 });
-      await page.click('#side .nav-item[data-menu="dash-stats"]');
+      // v2.4.0：侧栏叶子化——「仪表盘」为总览组叶子项（data-sc="stats"），点击直达统计
+      await page.click('#side .nav-item[data-sc="stats"]');
       // 统计视图：有任务时显示 .stats-cards，无任务时显示 .no-stats 空状态
       // 我们已建并完成任务，应有 .stats-cards
       await page.waitForSelector(".stats-cards, .no-stats", { timeout: 5_000 });

@@ -192,23 +192,24 @@ describe("v2.3.0 仪表盘改名与编辑态入口", () => {
     ]);
   });
 
-  it("侧栏 dash-chart 子项 label 为「编辑」", () => {
+  it("侧栏「仪表盘」为叶子项，点击进入统计页（展示态标题「仪表盘」）", () => {
     __test.render();
-    const btn = document.querySelector('#side [data-menu="dash-chart"]');
-    expect(btn).toBeTruthy();
-    expect(btn.textContent).toContain("编辑");
-    expect(btn.textContent).not.toContain("总览图");
-  });
-
-  it("点击 dash-chart 进入统计页且 _dashEditMode=true、标题为「编辑仪表盘」", () => {
-    __test.render();
-    const btn = document.querySelector('#side [data-menu="dash-chart"]');
+    const btn = document.querySelector('#side [data-sc="stats"]');
+    expect(btn, "侧栏应有仪表盘叶子项").toBeTruthy();
+    expect(btn.textContent).toContain("仪表盘");
     btn.click();
     expect(__test.getActive()).toBe("stats");
-    expect(__test._dashEditMode).toBe(true);
+    expect(__test._dashEditMode).toBe(false);
+    const h2b = document.querySelector(".page-head h2");
+    expect(h2b && h2b.textContent).toBe("仪表盘");
+  });
+
+  it("编辑态经页头按钮切换：标题「编辑仪表盘」↔「仪表盘」", () => {
+    __test.setActive("stats");
+    __test._dashEditMode = true;
+    __test.renderStats();
     const h2 = document.querySelector(".page-head h2");
     expect(h2 && h2.textContent).toBe("编辑仪表盘");
-    // 「完成编辑」退出后标题回到「仪表盘」
     const doneBtn = document.querySelector("#btnDashToggleEdit");
     expect(doneBtn.textContent).toContain("完成编辑");
     doneBtn.click();
@@ -216,13 +217,106 @@ describe("v2.3.0 仪表盘改名与编辑态入口", () => {
     expect(h2b && h2b.textContent).toBe("仪表盘");
     expect(__test._dashEditMode).toBe(false);
   });
+});
 
-  it("展示态标题栏为「仪表盘」而非「统计」", () => {
-    __test.setActive("stats");
-    __test._dashEditMode = false;
-    __test.renderStats();
-    const h2 = document.querySelector(".page-head h2");
-    expect(h2 && h2.textContent).toBe("仪表盘");
+describe("v2.4.0 侧栏新信息架构", () => {
+  let win;
+  let __test;
+  let document;
+
+  beforeEach(() => {
+    win = loadApp();
+    __test = win.__test;
+    document = win.document;
+    win.localStorage.clear();
+    __test.setTasks([
+      { id: "d1", title: "任务A", sc: "office", status: "done", doneAt: Date.now(), due: __test.todayStr(), createdAt: Date.now() },
+      { id: "d2", title: "任务B", sc: "office", status: "todo", due: __test.todayStr(), createdAt: Date.now() }
+    ]);
+  });
+
+  it("四组结构：总览(主页/仪表盘/任务/习惯链) + 场景 + 应用(AI/工具箱/商店) + 系统", () => {
+    __test.render();
+    const groupNames = [...document.querySelectorAll("#side .nav-group")].map(g => g.textContent);
+    expect(groupNames).toEqual(["总览", "场景", "应用", "系统"]);
+    expect(document.querySelector('#side [data-sc="tasks"]')).toBeTruthy();
+    expect(document.querySelector('#side [data-sc="chainpage"]')).toBeTruthy();
+    expect(document.querySelector('#side [data-sc="toolbox"]')).toBeTruthy();
+    expect(document.querySelector('#side [data-sc="store"]')).toBeTruthy();
+    expect(document.querySelector('#side [data-aipage="1"]')).toBeTruthy();
+  });
+
+  it("「数据」场景移出侧栏，但 SCENARIOS key 保留兼容存量数据", () => {
+    __test.render();
+    expect(document.querySelector('#side [data-sc="data"]')).toBeNull();
+    expect(__test.SCENARIOS.data).toBeTruthy();
+    expect(__test.ORDER).toContain("data");
+  });
+
+  it("场景项无子菜单（19 工具迁往工具箱），计数为 0 不显示徽章", () => {
+    __test.render();
+    // 生活场景无未办任务时不应有计数徽章
+    const lifeBtn = document.querySelector('#side [data-sc="life"]');
+    expect(lifeBtn).toBeTruthy();
+    expect(lifeBtn.querySelector(".cnt")).toBeNull();
+    // 场景父项不应再有展开箭头
+    expect(document.querySelectorAll('#side .nav-sub').length, "桌面侧栏不应再渲染子菜单").toBe(0);
+  });
+
+  it("任务中心：三视图 tab 渲染 + 看板含跨场景卡片", () => {
+    __test.setActive("tasks");
+    __test.render();
+    expect(document.querySelector(".tasks-view-tabs")).toBeTruthy();
+    expect(document.querySelectorAll("#main .kcard").length).toBeGreaterThanOrEqual(1);
+    // 切日历视图
+    document.querySelector('[data-tasks-view="calendar"]').click();
+    expect(document.querySelector(".cal-grid")).toBeTruthy();
+    // 切待办视图
+    document.querySelector('[data-tasks-view="todo"]').click();
+    expect(document.querySelector(".todo-list") || document.body.textContent.includes("待办清单")).toBeTruthy();
+  });
+
+  it("工具箱：分类 chips + 搜索过滤 + 卡片点击分发", () => {
+    __test.setActive("toolbox");
+    __test.render();
+    expect(document.querySelectorAll("#main .toolbox-card").length).toBeGreaterThanOrEqual(24); // 19 工具 + 小件/功能
+    // 搜索过滤
+    const q = document.querySelector("#toolboxQ");
+    q.value = "正则";
+    q.dispatchEvent(new win.Event("input", { bubbles: true }));
+    const cards = [...document.querySelectorAll("#main .toolbox-card .app-card-name")].map(el => el.textContent);
+    expect(cards.length).toBeLessThan(5);
+    expect(cards.join()).toContain("正则");
+  });
+
+  it("商店：内置插件三态流转 启用→禁用→卸载→再安装", () => {
+    __test.setActive("store");
+    __test.render();
+    // 内置插件启动即注册（未启用）→ 应有「启用」按钮
+    const tog = document.querySelector('[data-store-toggle="pomodoro"]');
+    expect(tog, "已注册未启用的插件应有启用按钮").toBeTruthy();
+    tog.click();
+    expect(__test.getPlugin("pomodoro").enabled).toBe(true);
+    // 禁用
+    document.querySelector('[data-store-toggle="pomodoro"]').click();
+    expect(__test.getPlugin("pomodoro").enabled).toBe(false);
+    // 卸载（confirm 已在 loadApp 注入为 true）
+    document.querySelector('[data-store-uninstall="pomodoro"]').click();
+    expect(__test.getPlugin("pomodoro")).toBeNull();
+    // 卸载后变为「安装」态
+    __test.renderStorePage();
+    const installBtn = document.querySelector('[data-store-install="pomodoro"]');
+    expect(installBtn, "卸载后应出现安装按钮").toBeTruthy();
+    installBtn.click();
+    expect(__test.getPlugin("pomodoro")).toBeTruthy();
+  });
+
+  it("习惯链页：streak 徽章 + 链路图 + 成功率区块渲染", () => {
+    __test.setActive("chainpage");
+    __test.render();
+    expect(document.body.textContent).toContain("当前 Streak");
+    expect(document.body.textContent).toContain("场景链路图");
+    expect(document.body.textContent).toContain("触发成功率");
   });
 });
 

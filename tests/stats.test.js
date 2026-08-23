@@ -334,10 +334,10 @@ describe("renderTrendChart / renderPieChart / renderStats 渲染", () => {
     setTasks([{ id:"t1", sc:"office", title:"测试任务", status:"todo", due:"", priority:"", tags:[], doneAt:null, created:Date.now() }]);
     render();
     const side = win.document.getElementById("side");
-    // v2.1.0：统计入口改为「仪表盘 ▸ 统计」二级子项（data-menu="dash-stats"）
-    const statsBtn = side.querySelector('[data-menu="dash-stats"]');
+    // v2.4.0：侧栏叶子化——「仪表盘」为总览组叶子项（data-sc="stats"），点击直达统计视图
+    const statsBtn = side.querySelector('[data-sc="stats"]');
     expect(statsBtn).toBeTruthy();
-    expect(statsBtn.textContent).toContain("统计");
+    expect(statsBtn.textContent).toContain("仪表盘");
     // 点击切换
     statsBtn.click();
     expect(getActive()).toBe("stats");
