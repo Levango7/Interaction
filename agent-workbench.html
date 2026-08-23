@@ -2058,8 +2058,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .theme-custom-row .theme-custom-name{flex:1;font-size:var(--fs-sm);color:var(--text)}
 .theme-import-textarea{width:100%;font-family:monospace;font-size:var(--fs-xs);resize:vertical;border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px;background:var(--panel);color:var(--text)}
 
-/* ===== v1.6-B 生产力工具：番茄钟 / 时间追踪 / 日历视图 / 批量操作 ===== */
-/* 番茄钟顶栏小组件：显示当前模式 + 倒计时 + 今日计数 */
+/* ===== v1.6-B 生产力工具：笃行 / 时间追踪 / 日历视图 / 批量操作 ===== */
+/* 笃行顶栏小组件：显示当前模式 + 倒计时 + 今日计数 */
 .pomo-widget{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-1) var(--space-3);
   border-radius:var(--radius-md);background:var(--panel2);border:1px solid var(--line);
   font-size:var(--fs-sm);color:var(--text-dim);min-height:36px;font-variant-numeric:tabular-nums;
@@ -2070,7 +2070,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .pomo-widget .pomo-count{font-size:var(--fs-xs);color:var(--muted);padding:1px 6px;
   background:var(--surface-muted);border-radius:var(--radius-sm)}
 .pomo-actions{display:inline-flex;gap:var(--space-1)}
-/* v2.1.1：番茄钟/时间追踪操作钮共用基础样式（原两套完全重复），仅 .primary 底色不同 */
+/* v2.1.1：笃行/时间追踪操作钮共用基础样式（原两套完全重复），仅 .primary 底色不同 */
 .pomo-actions button,.tracker-actions button{padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);font-size:var(--fs-xs);
   min-height:32px;cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
@@ -2810,17 +2810,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 <!-- v1.9.7：消息中心面板已迁至正文顶部（#msgBar 下方内联展开），此处原 fixed 下拉已移除 -->
 
-<!-- v1.9.7 专注工具浮层：番茄钟/时间追踪从工具行迁至侧栏「工具」组，点侧栏项弹出（fixed 定位由 JS 计算）。
+<!-- v1.9.7 专注工具浮层：笃行/时间追踪从工具行迁至侧栏「工具」组，点侧栏项弹出（fixed 定位由 JS 计算）。
      小件 DOM 保持原 id/class，init 阶段的绑定（btnPomoStart 等）不受位置影响 -->
-<div class="tool-pop" id="pomoPop" style="display:none" role="dialog" aria-label="番茄钟">
-  <div class="tool-pop-title">番茄钟</div>
-  <div class="pomo-widget" id="pomoWidget" role="group" aria-label="番茄钟">
+<div class="tool-pop" id="pomoPop" style="display:none" role="dialog" aria-label="笃行">
+  <div class="tool-pop-title">笃行</div>
+  <div class="pomo-widget" id="pomoWidget" role="group" aria-label="笃行">
     <span class="pomo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
     <span class="pomo-display" id="pomoDisplay" aria-live="polite">空闲 25:00</span>
-    <span class="pomo-count" id="pomoCount" aria-label="今日番茄完成数">0</span>
+    <span class="pomo-count" id="pomoCount" aria-label="今日笃行完成数">0</span>
     <span class="pomo-actions">
-      <button type="button" id="btnPomoStart" class="primary" aria-label="开始番茄钟">开始</button>
-      <button type="button" id="btnPomoStop" class="danger" aria-label="停止番茄钟">停止</button>
+      <button type="button" id="btnPomoStart" class="primary" aria-label="开始笃行">开始</button>
+      <button type="button" id="btnPomoStop" class="danger" aria-label="停止笃行">停止</button>
     </span>
   </div>
 </div>
@@ -3570,10 +3570,10 @@ var _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.3.0";
+const VERSION = "2.3.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260823a";
+const BUILD_TAG = "20260823b";
 
 
 
@@ -7570,7 +7570,7 @@ function _buildSideMenu(){
       {id:"plug-cal", label:"日历", run:()=>{ var m=$("#calendarModal"); if(m){ var b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } }},
       {id:"plug-weather", label:"天气", run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); }},
       {id:"plug-alarm", label:"闹钟", run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); }},
-      {id:"plug-pomo", label:"番茄钟", run:()=>{ if(typeof toggleToolPop==="function"){ var t=document.querySelector('[data-menu="plug-pomo"]'); toggleToolPop("pomoPop", t); } }},
+      {id:"plug-pomo", label:"笃行", run:()=>{ if(typeof toggleToolPop==="function"){ var t=document.querySelector('[data-menu="plug-pomo"]'); toggleToolPop("pomoPop", t); } }},
       {id:"plug-tracker", label:"时间追踪", run:()=>{ if(typeof toggleToolPop==="function"){ var t=document.querySelector('[data-menu="plug-tracker"]'); toggleToolPop("trackerPop", t); } }}
     ]
   };
@@ -8335,6 +8335,8 @@ function _addDaysStr(ymd, n){
   d.setDate(d.getDate() + n);
   return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
 }
+/* v2.3.1：CAD 画布当前会话（des-cad bind 时替换；window mouseup 单例监听器读取） */
+var _cadSession = null;
 
 const TOOL_APPS = {
   /* ================= 文档簇 ================= */
@@ -8616,9 +8618,15 @@ const TOOL_APPS = {
         else { ctx.arc((drawing.x1+p.x)/2,(drawing.y1+p.y)/2, Math.max(2, Math.hypot(p.x-drawing.x1, p.y-drawing.y1)/2),0,Math.PI*2); }
         ctx.stroke();
       });
-      window.addEventListener("mouseup", function(){
-        if(drawing){ shapes.push(drawing); drawing = null; redraw(); }
-      });
+      /* v2.3.1：window mouseup 全局只挂一次（此前每次打开工具页新增一个监听器，
+         长会话反复开关会累积）；当前画布会话存 _cadSession，bind 时整体替换 */
+      _cadSession = {
+        commit: function(){ if(drawing){ shapes.push(drawing); drawing = null; redraw(); } }
+      };
+      if(!window._cadMouseUpBound){
+        window._cadMouseUpBound = true;
+        window.addEventListener("mouseup", function(){ if(_cadSession) _cadSession.commit(); });
+      }
       cv.addEventListener("click", function(e){
         if(mode !== "poly") return;
         var p = pos(e);
@@ -15093,7 +15101,7 @@ function renderScBox(){
       <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="删除场景">✕</button>
     </div>`;
   }).join("");
-  /* v2.0.3：插件场景行——与侧栏 ORDER 对齐（此前只渲染内置+自定义，启用番茄/阅读等
+  /* v2.0.3：插件场景行——与侧栏 ORDER 对齐（此前只渲染内置+自定义，启用笃行/阅读等
      插件场景后侧栏 6 个、设置卡仍 4 个）。插件场景随插件启停，不提供改名/换色/删除 */
   const pluginRows = Object.keys(getPluginScenarios()).map(key=>{
     const s = SCENARIOS[key]||{};
@@ -16410,13 +16418,18 @@ const _btnDownload = $("#btnDownload"); if(_btnDownload) _btnDownload.onclick = 
 $("#btnRecover").onclick = recoverAutoBackup;
 
 /* ---------- v1.9.7 侧栏「工具」组：专注工具浮层（v1.15 更多菜单已移除，此处仅剩 pomo/tracker 浮层） ---------- */
+/* v2.3.1：浮层锚定按钮选择器——v2.1.0 两级菜单后按钮为 data-menu="plug-pomo/plug-tracker"，
+   旧 data-pomo/data-tracker 属性已不存在于 DOM；两个都保留（历史兼容 + 现行入口）。
+   注意不能带 "#side " 前缀：点击后 renderSide() 会重建侧栏，事件 target 已游离于文档外，
+   其祖先链无 #side，closest("#side …") 永远 null → inToolBtn 守卫失效（浮层秒开秒关 bug）。 */
+const TOOL_POP_ANCHOR_SEL = '[data-pomo], [data-tracker], [data-menu="plug-pomo"], [data-menu="plug-tracker"]';
 function _closeAllToolPops(){
   $$(".tool-pop").forEach(function(p){ p.style.display = "none"; });
-  $$("#side [data-pomo], #side [data-tracker]").forEach(function(b){
+  $$(TOOL_POP_ANCHOR_SEL).forEach(function(b){
     try{ b.setAttribute("aria-expanded", "false"); }catch(e){ /* noop */ }
   });
 }
-/* 切换番茄钟/时间追踪浮层：锚定侧栏按钮右侧（右缘溢出改左侧），再点同按钮=关闭 */
+/* 切换笃行/时间追踪浮层：锚定侧栏按钮右侧（右缘溢出改左侧），再点同按钮=关闭 */
 function toggleToolPop(popId, btn){
   var pop = document.getElementById(popId);
   if(!pop || !btn) return;
@@ -16437,7 +16450,7 @@ function toggleToolPop(popId, btn){
 // 点击浮层/菜单外关闭（点侧栏对应按钮本身不视为"外部"，交由 toggle 逻辑处理）
 document.addEventListener("click", function(e){
   var t = e.target;
-  var inToolBtn = !!(t && t.closest && t.closest("#side [data-pomo], #side [data-tracker]"));
+  var inToolBtn = !!(t && t.closest && t.closest(TOOL_POP_ANCHOR_SEL));
   $$(".tool-pop").forEach(function(p){
     if(p.style.display !== "none" && !p.contains(t) && !inToolBtn) p.style.display = "none";
   });
@@ -16587,7 +16600,7 @@ if(_btnCalendar) _btnCalendar.onclick = function(){
 const _btnCalendarClose = $("#btnCalendarClose");
 if(_btnCalendarClose) _btnCalendarClose.onclick = function(){ var m=$("#calendarModal"); if(m) m.classList.remove("show"); };
 
-// 番茄钟 / 时间追踪 组件按钮（此前纯装饰，未绑定）
+// 笃行 / 时间追踪 组件按钮（此前纯装饰，未绑定）
 const _btnPomoStart = $("#btnPomoStart");
 if(_btnPomoStart) _btnPomoStart.onclick = function(){ if(typeof startPomodoro === "function") startPomodoro(); };
 const _btnPomoStop = $("#btnPomoStop");
@@ -17560,7 +17573,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     handleAiDecompose, handleAiCodeGen,
     _aiChatText,
     renderAiRecommendCard, handleAiRecommend,
-    // v1.6-B 生产力工具增强：番茄钟 / 时间追踪 / 日历视图 / 批量操作
+    // v1.6-B 生产力工具增强：笃行 / 时间追踪 / 日历视图 / 批量操作
     // 函数声明会被提升，可直接引用；_pomoState / _tracker / _batchState 用 var 声明
     // 在 41/42/43/19 中定义（加载顺序 31 < 41/42/43，19 已在 31 之前加载）
     // 使用 getter 延迟求值避免 TDZ；函数引用安全（函数声明提升）
@@ -18132,16 +18145,16 @@ var _plugins = {};
 var BUILTIN_PLUGINS = [
   {
     id: "pomodoro",
-    name: "番茄工作法",
+    name: "笃行专注法",
     version: "1.0.0",
-    description: "25分钟专注+5分钟休息的番茄工作法场景",
+    description: "25分钟专注+5分钟休息的深度工作法场景",
     enabled: false,
     scenarios: [{
       key: "pomodoro",
-      name: "番茄",
+      name: "笃行",
       icon: '',
       color:"#e74c3c",
-      desc: "番茄工作法"
+      desc: "笃行专注法"
     }]
   },
   {
@@ -19373,16 +19386,16 @@ async function aiGenerateCode(description, language){
 }
 
 // ===== Pomodoro Timer (v1.6-B) =====
-/* ---------- v1.6-B 番茄钟：25 分钟专注 + 5 分钟休息 ----------
+/* ---------- v1.6-B 笃行：25 分钟专注 + 5 分钟休息 ----------
  * 能力：
  *   1) startPomodoro(taskId)  — 启动一轮专注（可选关联任务）
  *   2) stopPomodoro()         — 中止当前轮次（不计入完成数）
  *   3) getPomoState()         — 当前状态快照 {mode,remaining,taskId,count}
- *   4) getPomoCount()         — 今日已完成番茄数（按 YYYY-MM-DD 持久化）
+ *   4) getPomoCount()         — 今日已完成笃行数（按 YYYY-MM-DD 持久化）
  *
  * 设计约定：
  *   - 状态机：idle → focus → break → idle（专注结束自动进入休息，休息结束回 idle）
- *   - 持久化：每日番茄数按 _ymd(new Date()) 为键存 localStorage（PREFIX+"pomo_count"）
+ *   - 持久化：每日笃行数按 _ymd(new Date()) 为键存 localStorage（PREFIX+"pomo_count"）
  *   - 通知：复用既有 toast()；专注/休息结束触发提醒
  *   - 计时：setInterval 1s 推进；jsdom 测试用 fake timers 推进
  *   - 所有颜色用 var(--token) CSS 令牌（lint-colors 门禁）
@@ -19393,7 +19406,7 @@ var POMO_BREAK_MIN = 5;
 var _pomoState = { mode: "idle", remaining: 0, taskId: null, count: 0, timer: null };
 
 /**
- * 启动一轮番茄钟专注（25 分钟）。仅在 idle 状态可启动；其他状态返回 false。
+ * 启动一轮笃行专注（25 分钟）。仅在 idle 状态可启动；其他状态返回 false。
  * @param {string} [taskId] - 关联任务 id（可选，用于「为某任务专注」）
  * @returns {boolean} 是否成功启动
  */
@@ -19409,7 +19422,7 @@ function startPomodoro(taskId){
   return true;
 }
 /**
- * 内部：每秒推进番茄钟。专注结束 → 自动进入休息（count++ 并持久化）；
+ * 内部：每秒推进笃行。专注结束 → 自动进入休息（count++ 并持久化）；
  * 休息结束 → 回到 idle 并提示开始新一轮。
  * @returns {void}
  */
@@ -19432,7 +19445,7 @@ function _pomoTick(){
   _pomoRender();
 }
 /**
- * 中止当前番茄钟轮次。不计入完成数；清除计时器并回到 idle。
+ * 中止当前笃行轮次。不计入完成数；清除计时器并回到 idle。
  * @returns {void}
  */
 function stopPomodoro(){
@@ -19443,14 +19456,14 @@ function stopPomodoro(){
   _pomoRender();
 }
 /**
- * 获取番茄钟当前状态快照（不暴露 timer 内部句柄）
+ * 获取笃行当前状态快照（不暴露 timer 内部句柄）
  * @returns {{mode:string,remaining:number,taskId:(string|null),count:number}}
  */
 function getPomoState(){
   return { mode: _pomoState.mode, remaining: _pomoState.remaining, taskId: _pomoState.taskId, count: _pomoState.count };
 }
 /**
- * 获取今日已完成番茄数（按 YYYY-MM-DD 分桶持久化）
+ * 获取今日已完成笃行数（按 YYYY-MM-DD 分桶持久化）
  * @returns {number}
  */
 function getPomoCount(){
@@ -19461,7 +19474,7 @@ function getPomoCount(){
   }catch(e){ return 0; }
 }
 /**
- * 内部：持久化今日番茄数到 localStorage
+ * 内部：持久化今日笃行数到 localStorage
  * @returns {void}
  */
 function _savePomoCount(){
@@ -19473,7 +19486,7 @@ function _savePomoCount(){
   }catch(e){ /* localStorage 不可用时静默降级 */ }
 }
 /**
- * 内部：渲染番茄钟显示区（#pomoDisplay）。无 DOM 时 no-op（测试环境）
+ * 内部：渲染笃行显示区（#pomoDisplay）。无 DOM 时 no-op（测试环境）
  * @returns {void}
  */
 function _pomoRender(){
@@ -19487,7 +19500,7 @@ function _pomoRender(){
   // 更新今日计数显示
   var cntEl = $("#pomoCount");
   if(cntEl) cntEl.textContent = String(getPomoCount());
-  // v1.9.7：同步侧栏「工具」组番茄钟入口的运行态徽标（运行中显示倒计时，空闲隐藏）
+  // v1.9.7：同步侧栏「工具」组笃行入口的运行态徽标（运行中显示倒计时，空闲隐藏）
   var sideBadge = $("#sidePomoBadge");
   if(sideBadge){
     if(_pomoState.mode === "focus" || _pomoState.mode === "break"){
@@ -23800,7 +23813,7 @@ function _resetOfflineAI(){
  *      - computeStats(data)                           均值/标准差/最小/最大
  *   2) 生产力评分：综合评分体系
  *      - calcProductivityScore(tasks, records, habits) 综合评分 0-100
- *      - focusScore(records)        专注度评分（基于番茄钟/时间追踪）
+ *      - focusScore(records)        专注度评分（基于笃行/时间追踪）
  *      - habitScore(habits)         习惯连续性评分（基于 streak 长度）
  *      - efficiencyScore(tasks, records) 效率评分（实际 vs 预估耗时）
  *   3) 习惯养成模型：21 天/66 天曲线拟合
@@ -24061,7 +24074,7 @@ function predictFocusTrend(historicalData, days){
 /* ---------- 生产力评分 ---------- */
 
 /**
- * 专注度评分（0-100）：基于番茄钟/时间追踪数据
+ * 专注度评分（0-100）：基于笃行/时间追踪数据
  * @param {Array} records - [{type, duration, focusCount}]
  * @returns {number} 0-100
  */
