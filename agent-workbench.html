@@ -770,9 +770,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.15：margin-bottom 沿用通用 .chat 的 space-3（12px），使消息卡下框线与工具栏
    分割线(border-top)之间留出空隙，不再重叠 */
 .chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
-  padding:var(--space-3) var(--space-3) var(--space-1);background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
-.chat-panel .chat-toolbar{margin:0;padding:var(--space-1) var(--space-3);border-top:1px solid var(--line);
-  justify-content:flex-start;min-height:20px}
+  padding:var(--space-3) var(--space-3) 0;background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
+.chat-panel .chat-toolbar{margin:0;padding:0 var(--space-3);border-top:1px solid var(--line);
+  justify-content:flex-start;min-height:18px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
@@ -989,13 +989,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .stats-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-3) var(--space-3);text-align:center;transition:box-shadow var(--transition-fast)}
 .stats-card:hover{box-shadow:var(--shadow-2)}
-/* v2.2.0：主页 KPI 卡（button 化 stats-card：reset 原生样式 + 可点击态） */
-.ov-kpi-card{margin-bottom:var(--space-4)}
-.ov-kpi-card .stats-cards{margin-bottom:0}
-.stats-card.ov-kpi-item{font:inherit;cursor:default}
-.stats-card.ov-kpi-item.clickable{cursor:pointer}
-.stats-card.ov-kpi-item.clickable:hover{border-color:var(--accent)}
-.stats-card.ov-kpi-item.clickable:active{transform:translateY(1px)}
 /* v2.2.0：AI 助手 Hub（三卡合一 tab；复用 .set-nav-btn 但取消吸顶） */
 .ai-hub-card .ai-hub-tabs{position:static;margin:0 0 var(--space-3);flex-wrap:wrap}
 .ai-hub-card .ai-hub-body{min-height:80px}
@@ -10868,10 +10861,10 @@ function renderOverview(){
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
-      <div class="ph-tx"><h2>概览</h2><p class="sub">核心业务 · 数据速览 · 全局搜索</p></div>
+      <div class="ph-tx"><h2>概览</h2><p class="sub">系统概况 · 全局搜索 · 数据速览</p></div>
       <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" style="--sc:var(--accent)">高级报表</button></div>
     </header></div>
-    ${_renderOvKpi()}
+    ${renderSystemOverviewCard()}
     <div class="overview-grid">
       <div class="card ov-span2"><h2>全局搜索</h2>
         <div class="glob-filters">
@@ -10892,12 +10885,11 @@ function renderOverview(){
        ${_renderTodayTopHtml()}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
      </div>
-     <div class="card ov-span2"><h2>${UI_ICONS.overview} 数据速览</h2>
+     <div class="card"><h2>${UI_ICONS.stats} 数据速览</h2>
        <p class="sub">完成趋势与本月密度</p>
        <h3>完成趋势（近 14 天）</h3>${lineChart}
        <h3>日历热力图（本月）</h3>${heat}
      </div>
-     ${renderSystemOverviewCard()}
      ${renderHabitChainCard()}
      <div class="ov-span2">${renderAiHubCard()}</div>
      </div>`);
@@ -10948,15 +10940,6 @@ function renderOverview(){
     b.onclick=()=>{
       _aiHubTab = b.getAttribute("data-ai-tab") || "coach";
       renderOverview();
-    };
-  });
-  // v2.2.0：KPI 卡点击跳转
-  $$(".ov-kpi-item[data-kpi-act]").forEach(b=>{
-    b.onclick=()=>{
-      const act = b.getAttribute("data-kpi-act");
-      if(act==="office"){ setActive("office"); render(); }
-      else if(act==="stats"){ setActive("stats"); render(); }
-      else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
     };
   });
   // v2.3.0：系统概况卡数字项点击跳转
@@ -11449,17 +11432,17 @@ function _bindTasksTabs(){
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
-  { id:"x-cal",     name:"日历",     desc:"按月查看任务分布", cat:"小件", run:()=>{ var m=$("#calendarModal"); if(m){ var b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
-  { id:"x-weather", name:"天气",     desc:"今日 + 未来几日预报", cat:"小件", run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
-  { id:"x-alarm",   name:"闹钟",     desc:"多任务 · 循环 · 贪睡", cat:"小件", run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
-  { id:"x-pomo",    name:"笃行",     desc:"25 分钟专注 + 5 分钟休息", cat:"小件", pop:"pomoPop", menuAttr:"plug-pomo" },
-  { id:"x-tracker", name:"时间追踪", desc:"任务计时秒表", cat:"小件", pop:"trackerPop", menuAttr:"plug-tracker" },
-  { id:"x-pet",     name:"萌宠",     desc:"桌面陪伴小伙伴", cat:"小件", run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
-  { id:"x-mindmap", name:"思维导图", desc:"任务关系树状图", cat:"功能", run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
-  { id:"x-kb",      name:"知识库",   desc:"资料卡片与全文检索", cat:"功能", run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
-  { id:"x-notes",   name:"笔记",     desc:"标签 / 分类 / 任务关联", cat:"功能", run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
-  { id:"x-report",  name:"高级报表", desc:"周 / 月 / 年报与对比", cat:"功能", run:()=>{ if(typeof openReportModal==="function") openReportModal(); } },
-  { id:"x-tpl",     name:"场景模板", desc:"一键导入预设任务集", cat:"功能", run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); } }
+  { id:"x-cal",     name:"日历",     desc:"按月查看任务分布", cat:"小件", icon:UI_ICONS.grid, run:()=>{ var m=$("#calendarModal"); if(m){ var b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
+  { id:"x-weather", name:"天气",     desc:"今日 + 未来几日预报", cat:"小件", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
+  { id:"x-alarm",   name:"闹钟",     desc:"多任务 · 循环 · 贪睡", cat:"小件", icon:UI_ICONS.sport, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
+  { id:"x-pomo",    name:"笃行",     desc:"25 分钟专注 + 5 分钟休息", cat:"小件", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
+  { id:"x-tracker", name:"时间追踪", desc:"任务计时秒表", cat:"小件", icon:UI_ICONS.stats, pop:"trackerPop", menuAttr:"plug-tracker" },
+  { id:"x-pet",     name:"萌宠",     desc:"桌面陪伴小伙伴", cat:"小件", icon:UI_ICONS.flame, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
+  { id:"x-mindmap", name:"思维导图", desc:"任务关系树状图", cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
+  { id:"x-kb",      name:"知识库",   desc:"资料卡片与全文检索", cat:"功能", icon:UI_ICONS.kb, run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
+  { id:"x-notes",   name:"笔记",     desc:"标签 / 分类 / 任务关联", cat:"功能", icon:UI_ICONS.book, run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
+  { id:"x-report",  name:"高级报表", desc:"周 / 月 / 年报与对比", cat:"功能", icon:UI_ICONS.stats, run:()=>{ if(typeof openReportModal==="function") openReportModal(); } },
+  { id:"x-tpl",     name:"场景模板", desc:"一键导入预设任务集", cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); } }
 ];
 let _toolboxCat = "全部";
 let _toolboxQ = "";
