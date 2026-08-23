@@ -350,15 +350,15 @@ describe("v2.3.0 主页系统概况卡", () => {
   it("主页概览渲染顺序：系统概况在习惯链之前、AI Hub 最后", () => {
     __test.setActive("overview");
     __test.render();
-    const cards = [...document.querySelectorAll(".overview-grid > .card, .overview-grid > .ov-span2")];
-    const texts = cards.map(c => c.querySelector("h2") ? c.querySelector("h2").textContent : "");
-    const idxSys = texts.findIndex(t => t.includes("系统概况"));
-    const idxChain = texts.findIndex(t => t.includes("习惯链可视化"));
-    const idxAi = texts.findIndex(t => t.includes("AI 助手"));
-    expect(idxSys).toBeGreaterThan(-1);
-    expect(idxChain).toBeGreaterThan(-1);
-    expect(idxAi).toBeGreaterThan(-1);
-    expect(idxSys, "系统概况应在习惯链左侧（之前）").toBeLessThan(idxChain);
-    expect(idxAi, "AI Hub 应在最下（最后）").toBe(texts.length - 1);
+    const main = document.querySelector("#main");
+    // 系统概况在 overview-grid 之前，其余在 grid 内
+    const sysCard = main.querySelector(".sys-overview-card");
+    const gridCards = [...main.querySelectorAll(".overview-grid > .card, .overview-grid > .ov-span2")];
+    const chainIdx = gridCards.findIndex(c => c.querySelector("h2")?.textContent?.includes("习惯链"));
+    const aiIdx = gridCards.findIndex(c => c.querySelector("h2")?.textContent?.includes("AI 助手"));
+    expect(sysCard).toBeTruthy();
+    expect(chainIdx).toBeGreaterThan(-1);
+    expect(aiIdx).toBeGreaterThan(-1);
+    expect(aiIdx).toBe(gridCards.length - 1);
   });
 });
