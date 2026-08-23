@@ -1282,23 +1282,19 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .set-tip{font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin:var(--space-1) 0 var(--space-2)}
 .set-actions{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
 .set-actions .addbtn{flex:1;min-width:90px}
-/* 吸底保存栏：横向负 margin 通栏（drawer-page 已无 padding-bottom，无需再吃） */
-.set-savebar{position:sticky;bottom:0;z-index:var(--z-sticky);display:flex;gap:var(--space-3);align-items:center;
-  margin:var(--space-5) calc(var(--space-7) * -1) 0;
-  padding:var(--space-4) var(--space-7);background:var(--panel);
-  border-top:1px solid var(--line);box-shadow:var(--shadow-2)}
+/* 保存按钮卡片：与上方 .set-card 同宽同风格（v2.4.1：去通栏负 margin，改为卡片对齐） */
+.set-savebar{display:flex;gap:var(--space-3);align-items:center;
+  margin:var(--space-5) 0 0;
+  padding:var(--space-4);background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-1)}
 .set-savebar .addbtn{flex:1}
 /* 设置页尾栏（与其他页面 foot 一致，宽度铺满、文本居中）；
    v2.0.3：margin-top:auto 让尾栏永远在最下——内容不足一屏时贴底，超出时滚到底才出现 */
 .drawer-page > .foot{margin:auto 0 0}
-/* 通栏与页头上边距断点同步：768-1023 → --space-4；≥1440 → --space-8（与 .drawer-page padding 对齐）
-   v2.0.3：set-nav 已改为与标题栏同宽的卡片，不再需要通栏负边距断点覆盖 */
+/* v2.4.1：savebar 现在是普通卡片，随文档流自然排列，无需负 margin 断点覆盖 */
 @media(min-width:768px) and (max-width:1023px){
   .drawer-ph{margin-top:var(--space-4)}
-  .set-savebar{margin-left:calc(var(--space-4) * -1);margin-right:calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4)}
-}
-@media(min-width:1440px){
-  .set-savebar{margin-left:calc(var(--space-8) * -1);margin-right:calc(var(--space-8) * -1);padding-left:var(--space-8);padding-right:var(--space-8)}
 }
 /* 窄屏：表单标签上置（v2.1.1：断点统一为主移动断点 767px，消除 721~767px 双列挤压） */
 @media (max-width:767px){
@@ -3260,9 +3256,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <p class="set-tip">启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
   </section>
 
-  <!-- 吸底保存栏（settings/ai 页显示；plugin 页安装即生效、无表单保存语义，由 CSS 隐藏） -->
+  <!-- 保存按钮卡片（settings/ai 页显示；plugin 页安装即生效、无表单保存语义，由 CSS 隐藏） -->
   <div class="set-savebar">
-    <button class="addbtn" id="cfgSave" style="--sc:var(--accent);width:100%">保存设置</button>
+    <button class="addbtn" id="cfgSave" style="--sc:var(--accent);flex:1">保存设置</button>
   </div>
 </div>
 
