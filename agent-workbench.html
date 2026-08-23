@@ -973,7 +973,53 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .link-status .lk .cnt{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)}
 .link-status .lk .last{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap}
 .link-status .lk.disabled{opacity:.5}
-.coach-card .coach-item{display:flex;gap:var(--space-2);padding:var(--space-2) var(--space-3);
+/* ===== v2.4.2：习惯链增强可视化 ===== */
+.hc-top-row{display:grid;grid-template-columns:160px 1fr;gap:var(--space-4);align-items:start;margin-top:var(--space-3)}
+@media(max-width:640px){.hc-top-row{grid-template-columns:1fr}}
+/* 全局完成进度环 */
+.hc-ring-wrap{display:flex;flex-direction:column;align-items:center;gap:var(--space-1)}
+.hc-ring-svg{width:120px;height:120px;transform:rotate(-90deg)}
+.hc-ring-bg{fill:none;stroke:var(--line);stroke-width:8}
+.hc-ring-fg{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.hc-ring-center{transform-origin:center;transform:none}
+.hc-ring-pct{font-size:var(--fs-xl);font-weight:700;fill:var(--text)}
+.hc-ring-label{font-size:var(--fs-xs);fill:var(--muted)}
+.hc-ring-meta{font-size:var(--fs-xs);color:var(--muted);text-align:center}
+/* 场景完成率条 */
+.hc-bars{display:flex;flex-direction:column;gap:var(--space-2)}
+.hc-bar-row{display:grid;grid-template-columns:56px 1fr 36px;align-items:center;gap:var(--space-2)}
+.hc-bar-sc{font-size:var(--fs-xs);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc-bar-track{height:10px;background:var(--surface-muted);border-radius:5px;overflow:hidden}
+.hc-bar-fill{height:100%;border-radius:5px;transition:width .5s ease}
+.hc-bar-val{font-size:var(--fs-xs);color:var(--muted);text-align:right}
+/* 近7天迷你日历 */
+.hc-cal-wrap{margin-top:var(--space-3)}
+.hc-cal-title{font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-1)}
+.hc-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.hc-cal-hd{font-size:9px;color:var(--muted);text-align:center;padding:2px 0}
+.hc-cal-cell{aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-dim);cursor:default}
+.hc-cal-cell.hd-l0{background:var(--heat-0);color:var(--muted)}
+.hc-cal-cell.hd-l1{background:var(--heat-1)}
+.hc-cal-cell.hd-l2{background:var(--heat-2)}
+.hc-cal-cell.hd-l3{background:var(--heat-3)}
+.hc-cal-cell.hd-l4{background:var(--heat-4)}
+.hc-cal-cell.today{outline:2px solid var(--accent);outline-offset:-2px}
+/* 本周任务进度柱状图 */
+.hc-bars-wrap{margin-top:var(--space-3)}
+.hc-bars-title{font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-1)}
+.hc-bars-svg{width:100%;height:auto;display:block}
+/* 全局 streak 行（横向滚动，适配卡宽） */
+.hc-streak-scroll{overflow-x:auto;margin-top:var(--space-2);padding-bottom:var(--space-1)}
+.hc-streak-inner{display:inline-flex;gap:var(--space-2);padding-right:var(--space-2)}
+/* 热力图（移除折叠，直接展示） */
+.hc-heat-all{margin-top:var(--space-3);display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3)}
+.hc-heat-item{display:flex;flex-direction:column;gap:var(--space-1)}
+.hc-heat-label{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
+/* 链路图自适应 */
+.chain-graph-wrap{margin-top:var(--space-3);overflow-x:auto}
+.chain-graph{display:block;width:100%;min-width:320px;max-width:100%;height:auto}
+.hc-section-title{font-size:var(--fs-sm);color:var(--text);font-weight:600;margin:var(--space-3) 0 var(--space-1);padding-bottom:var(--space-1);border-bottom:1px solid var(--line)}
+/* ===== 完成时段分布网格 ===== */
   border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--radius-md) var(--radius-md) 0;
   margin-bottom:var(--space-2);font-size:var(--fs-sm);line-height:1.6}
 .coach-card .coach-item .idx{flex-shrink:0;font-weight:700;color:var(--accent)}
@@ -7433,7 +7479,127 @@ function renderHabitChainStatus(){
   }).join("");
   return `<div class="link-status">${items}</div>`;
 }
-/* A5 渲染：习惯链可视化卡片（streak + 热力图折叠 + 链状态） */
+
+/* ---------- v2.4.2：习惯链增强可视化辅助函数 ---------- */
+/** 最近 N 天各场景完成数（用于迷你日历） */
+function recentDoneByDay(sc, days){
+  const tasks = getTasks().filter(t => t.sc === sc && t.status === "done" && t.doneAt);
+  const cnt = {};
+  tasks.forEach(t => { const d = new Date(t.doneAt); cnt[_ymd(d)] = (cnt[_ymd(d)]||0)+1; });
+  const today = new Date(); today.setHours(0,0,0,0);
+  const out = [];
+  for(let i = days-1; i >= 0; i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const ds = _ymd(d);
+    const c = cnt[ds]||0;
+    out.push({date:ds, count:c, level:c===0?0:c<=1?1:c<=2?2:c<=3?3:4});
+  }
+  return out;
+}
+/** 最近 N 天总完成数 */
+function recentTotalByDay(days){
+  const tasks = getTasks().filter(t => t.status === "done" && t.doneAt);
+  const cnt = {};
+  tasks.forEach(t => { const ds = _ymd(new Date(t.doneAt)); cnt[ds]=(cnt[ds]||0)+1; });
+  const today = new Date(); today.setHours(0,0,0,0);
+  const out = [];
+  for(let i = days-1; i >= 0; i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const ds = _ymd(d);
+    out.push(cnt[ds]||0);
+  }
+  return out;
+}
+/** 渲染全局完成进度环（圆环 SVG，周长基于 total/done） */
+function renderProgressRing(){
+  const tasks = getTasks();
+  const total = tasks.length;
+  const done = tasks.filter(t => t.status === "done").length;
+  const pct = total === 0 ? 0 : Math.round(done/total*100);
+  const R = 48, C = 2*Math.PI*R;
+  const offset = C * (1 - pct/100);
+  return `<div class="hc-ring-wrap">
+    <svg class="hc-ring-svg" viewBox="0 0 120 120">
+      <circle class="hc-ring-bg" cx="60" cy="60" r="${R}"/>
+      <circle class="hc-ring-fg" cx="60" cy="60" r="${R}"
+        stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"/>
+      <g class="hc-ring-center">
+        <text class="hc-ring-pct" x="60" y="56" text-anchor="middle" font-size="20" font-weight="700">${pct}%</text>
+        <text class="hc-ring-label" x="60" y="72" text-anchor="middle" font-size="9">已完成</text>
+      </g>
+    </svg>
+    <div class="hc-ring-meta">${done} / ${total} 任务</div>
+  </div>`;
+}
+/** 渲染各场景完成率条 */
+function renderScCompletionBars(){
+  const tasks = getTasks();
+  const rows = ORDER.map(sc => {
+    const all = tasks.filter(t => t.sc === sc);
+    const d = all.filter(t => t.status === "done").length;
+    const pct = all.length === 0 ? 0 : Math.round(d/all.length*100);
+    const color = SCENARIOS[sc] ? SCENARIOS[sc].color : "var(--muted)";
+    return `<div class="hc-bar-row">
+      <span class="hc-bar-sc" title="${SCENARIOS[sc]?.name||sc}">${SCENARIOS[sc]?.name||sc}</span>
+      <div class="hc-bar-track"><div class="hc-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <span class="hc-bar-val">${pct}%</span>
+    </div>`;
+  }).join("");
+  return `<div class="hc-bars">${rows}</div>`;
+}
+/** 渲染近7天迷你日历（聚合所有场景） */
+function renderWeekCalendar(){
+  const data = recentDoneByDay("*", 7);
+  const today = new Date(); const wd = (today.getDay()+6)%7;
+  const mon = new Date(today); mon.setDate(today.getDate()-wd);
+  const days = ["一","二","三","四","五","六","日"];
+  const hd = days.map(d=>`<div class="hc-cal-hd">${d}</div>`).join("");
+  const cells = data.map((d,i)=>{
+    const dayOfWeek = (wd+i)%7;
+    const isToday = i === 6;
+    return `<div class="hc-cal-cell hd-l${d.level}${isToday?' today':''}" title="${d.date}：${d.count}个完成">${d.count||''}</div>`;
+  }).join("");
+  return `<div class="hc-cal-wrap">
+    <div class="hc-cal-title">近 7 天完成密度（所有场景）</div>
+    <div class="hc-cal-grid">${hd}${cells}</div>
+  </div>`;
+}
+/** 渲染本周各场景任务进度柱状图（SVG） */
+function renderWeekBars(){
+  const tasks = getTasks();
+  const now = new Date(); const wd = (now.getDay()+6)%7;
+  const mon = new Date(now); mon.setDate(now.getDate()-wd); mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const W = 480, H = 140, padL = 56, padB = 24, padT = 10;
+  const barW = (W-padL-20)/ORDER.length;
+  const maxVal = Math.max(1, ...ORDER.map(sc =>
+    tasks.filter(t=>t.sc===sc && t.doneAt>=mon.getTime() && t.doneAt<=sun.getTime()).length
+  ));
+  const bars = ORDER.map((sc,i)=>{
+    const done = tasks.filter(t=>t.sc===sc&&t.status==="done"&&t.doneAt>=mon.getTime()&&t.doneAt<=sun.getTime()).length;
+    const total = tasks.filter(t=>t.sc===sc&&t.doneAt>=mon.getTime()&&t.doneAt<=sun.getTime()).length;
+    const h = Math.max(0, (done/maxVal)*(H-padT-padB));
+    const x = padL + i*barW + barW*0.15;
+    const bw = barW*0.7;
+    const y = H-padB-h;
+    const color = SCENARIOS[sc]?SCENARIOS[sc].color:"var(--muted)";
+    const name = SCENARIOS[sc]?SCENARIOS[sc].name:sc;
+    return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="3" fill="${color}" fill-opacity="0.8"/>
+      <text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="9" fill="var(--muted)">${done}</text>
+      <text x="${x+bw/2}" y="${H-4}" text-anchor="middle" font-size="9" fill="var(--muted)">${name}</text>`;
+  }).join("");
+  // 零线
+  const zeroY = H-padB;
+  return `<div class="hc-bars-wrap">
+    <div class="hc-bars-title">本周已完成任务（按场景）</div>
+    <svg class="hc-bars-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+      <line x1="${padL}" y1="${zeroY}" x2="${W-10}" y2="${zeroY}" stroke="var(--line)" stroke-width="1"/>
+      ${bars}
+    </svg>
+  </div>`;
+}
+
+/* A5 渲染：习惯链可视化卡片（v2.4.2：全模块自适应布局） */
 function renderHabitChainCard(){
   // streak 行（streak ≥ 3 火焰动画；断链警告）
   const streakBadges = ORDER.map(sc => {
@@ -7449,17 +7615,36 @@ function renderHabitChainCard(){
     }
     return `<span class="streak-badge ${cls}"><span class="sc-name">${SCENARIOS[sc].name}</span><span class="fire">${fire}</span></span>`;
   }).join("");
-  // 每个场景的热力图（折叠）
+  // 热力图（全部展开，grid 自适应）
   const heatmaps = ORDER.map(sc =>
-    `<details class="heat-fold"><summary>${SCENARIOS[sc].name} 完成热力图（最近 12 周）</summary>${renderHeatmap(sc)}</details>`
+    `<div class="hc-heat-item">${SCENARIOS[sc].name}（最近 12 周）${renderHeatmap(sc)}</div>`
   ).join("");
-  return `<div class="card"><h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>习惯链可视化</h2>` +
-    `<p class="sub">每个场景的连续天数与完成密度</p>` +
-    `<h3>当前 Streak</h3><div class="streak-row">${streakBadges}</div>` +
-    `<h3>热力图</h3>${heatmaps}` +
-    `<h3>场景链路图</h3>${renderChainGraph()}` +
-    `<h3>习惯链状态</h3>${renderHabitChainStatus()}` +
-    `</div>`;
+  return `<div class="card">
+    <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>习惯链可视化</h2>
+    <p class="sub">连续天数 · 完成密度 · 跨场景链路 · AI 教练</p>
+    <!-- 上部：进度环 + 场景完成率条 -->
+    <div class="hc-top-row">
+      ${renderProgressRing()}
+      ${renderScCompletionBars()}
+    </div>
+    <!-- 中部：本周柱状图 + 近7天日历 -->
+    <div class="hc-top-row">
+      ${renderWeekBars()}
+      ${renderWeekCalendar()}
+    </div>
+    <!-- Streak 行 -->
+    <div class="hc-section-title">当前 Streak</div>
+    <div class="hc-streak-scroll"><div class="hc-streak-inner">${streakBadges}</div></div>
+    <!-- 热力图 -->
+    <div class="hc-section-title">完成热力图（最近 12 周）</div>
+    <div class="hc-heat-all">${heatmaps}</div>
+    <!-- 链路图 -->
+    <div class="hc-section-title">场景链路图</div>
+    ${renderChainGraph()}
+    <!-- 链状态 -->
+    <div class="hc-section-title">习惯链状态</div>
+    ${renderHabitChainStatus()}
+  </div>`;
 }
 
 /* ---------- P2'：跨场景习惯链有向图（内联 SVG，纯渲染函数） ----------
