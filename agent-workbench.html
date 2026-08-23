@@ -8321,7 +8321,8 @@ function _bindRecordTool(rootId, toolId, fields, afterChange){
     b.onchange = function(){
       var id2 = b.getAttribute("data-rec-check");
       var arr = _toolData(toolId);
-      arr = arr.map(function(r){ return r.id === id2 ? Object.assign({}, r, { done: b.checked }) : r; });
+      /* 勾选时记录完成时间 paidAt（lif-bill「本月已缴」统计依赖）；取消勾选清除 */
+      arr = arr.map(function(r){ return r.id === id2 ? Object.assign({}, r, { done: b.checked, paidAt: b.checked ? todayStr() : undefined }) : r; });
       _toolSave(toolId, arr);
       openToolStub(toolId, (TOOL_APPS[toolId] && TOOL_APPS[toolId].name) || "");
       if(afterChange) afterChange();

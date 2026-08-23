@@ -121,6 +121,25 @@ describe("v2.3.0 TOOL_APPS 工具注册表", () => {
     expect(stored[0].done).toBe(true);
   });
 
+  it("lif-bill：勾选已缴写入 paidAt，「本月已缴」统计可计入", () => {
+    const today = __test.todayStr();
+    win.localStorage.setItem(PREFIX + "tool_lif-bill",
+      JSON.stringify([{ id: "p1", item: "水费", amount: 30, due: today }]));
+    __test.openToolStub("lif-bill", "缴费");
+    const chk = document.querySelector('[data-rec-check="p1"]');
+    chk.checked = true;
+    chk.dispatchEvent(new win.Event("change", { bubbles: true }));
+    const stored = JSON.parse(win.localStorage.getItem(PREFIX + "tool_lif-bill"));
+    expect(stored[0].done).toBe(true);
+    expect(stored[0].paidAt, "勾选已缴必须写 paidAt，否则本月已缴统计恒为 0").toBe(today);
+    // 重渲染后统计摘要：本月已缴计入 ¥30.00（而非恒 0）
+    __test.openToolStub("lif-bill", "缴费");
+    const items = [...document.querySelectorAll(".tool-summary-item")];
+    const paidItem = items.find(el => el.textContent.includes("本月已缴"));
+    expect(paidItem).toBeTruthy();
+    expect(paidItem.textContent).toContain("¥30.00");
+  });
+
   it("生活簇统计摘要渲染（lif-sport 周期统计）", () => {
     const today = __test.todayStr();
     win.localStorage.setItem(PREFIX + "tool_lif-sport",
