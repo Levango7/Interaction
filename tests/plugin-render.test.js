@@ -27,7 +27,7 @@ describe("插件场景/卡片渲染接线（v1.14.1）", () => {
     win.__test.setPluginEnabled("pomodoro", true);
     expect(win.__test.ORDER).toContain("pomodoro");
     expect(win.__test.SCENARIOS.pomodoro).toBeTruthy();
-    expect(win.__test.SCENARIOS.pomodoro.name).toBe("番茄");
+    expect(win.__test.SCENARIOS.pomodoro.name).toBe("笃行");
 
     win.__test.setPluginEnabled("pomodoro", false);
     expect(win.__test.ORDER).not.toContain("pomodoro");

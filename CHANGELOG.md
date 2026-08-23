@@ -2,6 +2,21 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v2.3.1] - 2026-08-23
+
+### Patch：番茄钟更名「笃行」+ CAD 画布监听器泄漏修复 + lif-bill 已缴统计修复
+
+**🔧 Changed**
+- **番茄钟 → 「笃行」**（用户拍板）：全部用户可见文案更名——顶栏/浮层组件标题与 aria 标签（开始笃行 / 停止笃行 / 今日笃行完成数）、侧栏子菜单 label、内置插件「笃行专注法」（原「番茄工作法」）及其场景名「番茄」→「笃行」；内部标识符（pomoPop / plug-pomo / POMO_* / startPomodoro 等）不变；README 与 UI 规范文档同步
+- **修复笃行/时间追踪浮层「秒开秒关」存量 bug**（v2.1.0 起）：document 点击外关监听器的 inToolBtn 守卫用 `#side [data-pomo]` 选择器——该属性在两级菜单重构后已不存在于 DOM，且点击后 renderSide() 重建侧栏使事件 target 游离（祖先链无 #side），closest 恒 null → toggle 刚打开的浮层被同一 click 冒泡立即关闭。改为纯属性选择器 `[data-menu="plug-pomo"]` 等（TOOL_POP_ANCHOR_SEL 单一真相源）；新增 tests/tool-pop.test.js 3 用例防回归
+- **修复 lif-bill「本月已缴」恒为 ¥0.00**：勾选已缴时写入 `paidAt`（取消勾选清除），此前该字段只被读取从未写入
+- **修复 des-cad window mouseup 监听器累积**：全局只挂一次单例监听（`_cadSession` 会话引用随 bind 替换），此前每次打开工具页新增一个监听器，长会话反复开关会累积
+
+**📋 Technical**
+- `tests/tools.test.js` 补 paidAt 精确断言（本月已缴计入 ¥30.00）；`tests/plugin-render.test.js` 场景名断言同步「笃行」
+- 复核 v2.1.2 已吸收的 design 变体两项仍在位：折叠态纯图标 52px、聊天输入区 min-height 96px（Playwright 实测 52px / 96px）
+- 版本号 v2.3.0 → **v2.3.1**（六处同步，build tag 20260823a → 20260823b）
+
 ## [v2.3.0] - 2026-08-23
 
 ### Minor：主页系统概况卡 + 仪表盘改名「编辑」并废弃图表商店 + 19 个占位工具全量落地
