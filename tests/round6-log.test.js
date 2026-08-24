@@ -42,6 +42,7 @@ function createStub(){
     Tray: vi.fn(() => ({ setToolTip: vi.fn(), setContextMenu: vi.fn(), on: vi.fn() })),
     Menu: { buildFromTemplate: vi.fn(), setApplicationMenu: vi.fn() },
     nativeImage: { createFromBuffer: vi.fn(() => ({})) },
+    session: { defaultSession: { webRequest: { onHeadersReceived: vi.fn() } } },
     ipcMain: {
       handle: (key, fn) => { handlers[key] = fn; },
       on: (key, fn) => { handlers[key] = fn; },

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, safeStorage, shell } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, safeStorage, shell, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const zlib = require("zlib");
@@ -378,6 +378,20 @@ if (!gotLock){
 } else {
   app.on("second-instance", () => { if (win){ win.show(); win.focus(); } });
   app.whenReady().then(() => {
+    // SECURITY [C3+]: CSP 深度防御——HTML meta CSP（agent-workbench.html Line 16）已存在，
+    // 此处再于主进程注入 HTTP 响应头形成双层防护：即便未来有子窗口/远程页面绕过 meta，
+    // 主进程层 CSP 仍生效。内容与 HTML meta CSP 完全一致，避免策略漂移。
+    // 注意：script-src 'unsafe-inline' 因单文件内联 JS 架构暂需保留（详见 HTML 中 [C3] TODO）。
+    const cspValue = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [cspValue]
+        }
+      });
+    });
+
     createWindow();
     createTray();
     applyAppMenu();

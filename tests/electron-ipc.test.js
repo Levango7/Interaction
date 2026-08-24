@@ -61,6 +61,7 @@ const { ipcHandlers, mockAppRef, createElectronStub, originalLoadRef, cachedStub
       })),
       Menu: { buildFromTemplate: vi.fn() },
       nativeImage: { createFromBuffer: vi.fn() },
+      session: { defaultSession: { webRequest: { onHeadersReceived: vi.fn() } } },
       safeStorage: {
         isEncryptionAvailable: () => true,
         encryptString: (s) => Buffer.from(s, "utf8"),

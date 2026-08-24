@@ -2,6 +2,58 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v2.4.2] - 2026-08-25
+
+### Patch：全面审计修复 — 含安全加固、代码质量、PWA优化与文档修正
+
+**🔒 Security / 安全**
+- CSP 增强：HTML `<meta>` CSP 移除浏览器忽略的 `frame-ancestors`（Electron HTTP 头保留），安全注释补全
+- 部署安全：`.github/workflows/deploy.yml` 移除不需要的 `id-token:write` 权限
+- Electron 签名占位文档补全
+
+**🐛 Fixed / 修复**
+- UI 按钮 `onclick` 回归：回退→`id` + `addEventListener` 事件绑定
+- `gearNode`/`helpNode` 缺失 `cnt:""` 字段补全
+- `_plugins` TDZ 错误：`let _plugins` → `var _plugins`（顶层调用 `registerCustomScenarios` 导致的时序问题）
+- `isQuietTime` 中 `end:24` 边界修复（等价于 `end=0`，跨天到午夜）
+- 3 个 Electron 测试文件补充缺失的 `session` stub
+- `color-tokens.test.js` 颜色期望值更新 `#0067c0` → `#0a6cbd`
+- `theme-color` HTML `<meta>` 与 `manifest.json` 统一为 `#0a6cbd`
+
+**♻️ Refactored / 代码质量**
+- 1786 个 `var` 声明转为 `let`/`const`（ESLint `no-var:warn`），保留 1 处 _plugins 的 `var` 声明加 `eslint-disable` 注释
+- `service-worker.js` 的 `var` 回退（SW 环境特殊，ESLint override 禁用 `no-var`）
+- `.env` 加入 `.gitignore`
+- 旧备份文件清理（`backups/agent-workbench.html.*`）
+
+**📋 Documentation / 文档**
+- README.md：版本号 v2.4.1、快捷键描述修正、4→6 场景、"功能"→"应用"、"更多"→"安装"按钮
+- CONTRIBUTING.md：测试规模 634/56、Electron 描述、`lint:fix`→`lint:layers`
+- `docs/ai-tools.md`：版本号 2.4.1、ORDER 4→6 场景
+- `docs/product-scope.md` / `docs/ui-standards.md` / `docs/design-ui-guidelines.md` / `docs/architecture-layers.md` / `docs/MERGE_DESIGN_PROPOSAL.md`：版本号与内容修正
+- `docs/项目诊断报告-2026-08-17.md`：添加历史快照声明
+- `electron/README.md`："Agent 工作台"→"Agent 工坊"
+- `electron/package.json`：productName 更新
+
+**📦 PWA / 部署**
+- `manifest.json`：PNG 图标补充（`icon-192.png` / `icon-512.png`）、`theme_color` 统一 `#0a6cbd`、`shortcuts`/`screenshots`/`categories`/`lang` 完善
+- `service-worker.js`：分层缓存策略升级、opaque 响应缓存移除、容量限制优化
+- `.github/workflows/deploy.yml`：`workflow_run` + `concurrency` 优化
+- `.github/workflows/ci.yml`：覆盖率配置停用、Windows runner
+- `.github/dependabot.yml`：npm 依赖自动更新配置
+
+**🧪 Testing / 测试**
+- E2E 测试在真实 Chromium 浏览器中全部通过（2 个测试）
+- 浏览器控制台错误从 3 个减少到 2 个（剩余 2 个为 `file://` 协议固有限制）
+- 重复 ID 全部确认为假阳性（模板分支 / 动态生成 / 防御性创建）
+- Vitest 基线：**634 tests passed, 0 failed**
+
+**📋 Technical**
+- 版本号 v2.4.1 → **v2.4.2**；build tag 保持 **20260823c**
+- `npm run lint`：**0 errors, 0 warnings**
+- 颜色门禁：**PASS**（0 处硬编码颜色）
+- lint-colors / lint-layers / build --check 全部 PASS
+
 ## [v2.4.1] - 2026-08-23
 
 ### Minor：Agent 机制增强 + 工具箱图标重做 + 新主题 + 商店插件扩容
@@ -23,7 +75,7 @@
 **📋 Technical**
 - 新增 UI_ICONS.md/word/sheet/ppt/pdf/ocr/cad/filter/imggen/vidgen/searchWeb/regex/compile/md2code/sport/bill/shop/takeout/transit/mindmap/kb 共 22 个专用 SVG 图标
 - `getMemMax()` / `getAgentLoops()` / `getToolWhitelist()` 等辅助函数已内联到 runChatLoop 内
-- vitest 基线保持 **632**；lint-colors / lint-layers / build --check 全部 PASS
+- 版本号 v2.4.0 → **v2.4.1**（六处同步，build tag 20260823 → **20260823c**）；vitest 基线保持 **632**；lint-colors / lint-layers / build --check 全部 PASS
 
 ## [v2.4.0] - 2026-08-23
 

@@ -1,4 +1,4 @@
-# Agent 工作台 · Electron 封装
+# Agent 工坊 · Electron 封装
 
 把单文件 `agent-workbench.html` 套壳成真正的 Windows 独立 `.exe`。
 
@@ -31,19 +31,19 @@ npm run dist         # 打包成 Windows 便携版 exe（dist/*.exe，portable�
   沙箱环境无法代跑，请在本地 Windows 上执行。
 - 打包产物在 `electron/dist/`，绿色便携版双击即用，数据与浏览器版一样存于本机。
 - 如需自定义图标，放一个 `icon.ico` 并在 `package.json` 的 `win.icon` 指过去。
-- 仍想零安装？回到根目录双击 `启动Agent工作台.bat`（Edge `--app` 模式）即可，
+- 仍想零安装？回到根目录双击 `启动Agent工坊.bat`（Edge `--app` 模式）即可，
   体验几乎一致，只是窗口由 Edge 托管而非独立 exe。
 
 ## 系统托盘 + 开机自启
 打包后的 exe 具备完整的桌面端能力：
 
-- **系统托盘**：启动后 Windows 右下角出现「Agent 工作台」托盘图标（图标由 `main.js` 内联生成，零外部文件）。
+- **系统托盘**：启动后 Windows 右下角出现「Agent 工坊」托盘图标（图标由 `main.js` 内联生成，零外部文件）。
   - 左键点击托盘图标：窗口隐藏时显示并聚焦，已显示时隐藏。
   - 右键菜单：显示窗口 / 隐藏窗口 / 退出。
   - 关闭窗口默认**最小化到托盘**（不退出），只有托盘菜单的「退出」才真正退出。
 - **开机自启**：在 HTML 设置抽屉（齿轮图标）中出现「开机自动启动」开关（仅检测到桌面端时显示）。
   - 开关通过 `preload.js` 暴露的 `window.electronAPI` 经 IPC 调用 `app.setLoginItemSettings`，
-    真实写入系统开机启动项，勾选后下次登录自动拉起工作台。
+    真实写入系统开机启动项，勾选后下次登录自动拉起工坊。
   - 浏览器版 / Edge 启动器版没有该 API，开关自动隐藏，互不影响。
 
 > 桌面端进阶能力（托盘、自启、本地文件读写）依赖 Electron 主进程，沙箱环境无法代跑，

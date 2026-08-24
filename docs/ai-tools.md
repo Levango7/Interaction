@@ -2,7 +2,7 @@
 
 > 本文档由 `agent-workbench.html` 中的 `const TOOLS = [...]` 及工具分发逻辑（`execTool` / `agentExec`）抽取而成，作为 AI 层函数调用契约的独立接口说明。
 >
-> **适用版本**：`VERSION = "1.14.0"`。
+> **适用版本**：`VERSION = "2.4.1"`。
 > **维护约定**：本文件为源码契约的镜像，**以源码为唯一权威**。任何 TOOLS 字段、参数或枚举变更后，须同步更新此处；并提交时一并纳入（见任务 T1）。
 > **最后核对**：2026-08-17（定位代码请按函数名/常量名搜索，本文件不再维护行号）。
 
@@ -45,15 +45,19 @@ AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `T
 `scenario` 类参数的取值来自 `ORDER` 与 `SCENARIOS`：
 
 ```js
-const ORDER = ["office","code","study","life"];
+const ORDER = ["office","data","design","study","code","life"];
 ```
+
+> v2.1.0 起扩展为 6 场景（新增 `data` 数据 / `design` 设计）；侧栏场景组显示序与 `ORDER` 一致。
 
 | 场景键 | 中文名 | 资料库记录字段（k → label） |
 |--------|--------|------------------------------|
 | `office` | 办公 | `title` 会议主题 · `who` 参会人 · `note` 结论/跟进 |
-| `code` | 编程 | `lang` 语言 · `title` 标题 · `code` 代码 |
+| `data` | 数据 | `type` 类型 · `title` 标题 · `note` 备注 |
+| `design` | 设计 | `type` 类型 · `title` 作品名 · `note` 灵感/备注 |
 | `study` | 学习 | `title` 主题 · `type` 类型 · `status` 状态 · `note` 笔记 |
-| `life` | 生活 | `title` 事项 · `cat` 分类 · `note` 备注 |
+| `code` | 编程 | `lang` 语言 · `title` 标题 · `code` 代码 |
+| `life` | 生活 | `type` 类型 · `title` 标题 · `value` 数值 · `note` 备注 |
 
 **优先级枚举**：`["", "P0", "P1", "P2"]`（空串 = 未设置）。
 
@@ -61,7 +65,7 @@ const ORDER = ["office","code","study","life"];
 - `list_tasks` 过滤：`["", "todo", "doing", "done"]`（空串 = 全部）。
 - `update_task` 设置：`["todo", "doing", "done"]`（无空串）。
 
-> 注：`remember` 的 `scope` 枚举为 `["global"].concat(ORDER)` = `["global","office","code","study","life"]`。`global` 表示全场景通用；其余按场景键隔离。
+> 注：`remember` 的 `scope` 枚举为 `["global"].concat(ORDER)` = `["global","office","data","design","study","code","life"]`。`global` 表示全场景通用；其余按场景键隔离。
 
 ---
 
@@ -73,7 +77,7 @@ const ORDER = ["office","code","study","life"];
 
 - **描述**：在指定场景创建一条任务（标题必填），可带标签。
 - **参数**：
-  - `scenario` `{string, enum: ORDER}` — 场景键，如 office/code/study；缺省时取当前激活场景 `active`。
+  - `scenario` `{string, enum: ORDER}` — 场景键，如 office/data/design/study/code/life；缺省时取当前激活场景 `active`。
   - `title` `{string}` — 任务标题（必填）。
   - `due` `{string}` — 截止日期 `YYYY-MM-DD`，可空。
   - `priority` `{string, enum: ["","P0","P1","P2"]}`。
@@ -178,7 +182,7 @@ const ORDER = ["office","code","study","life"];
 
 - **描述**：把用户的事实/偏好/决定写入工作记忆，供后续对话自动召回（如"我喜欢简洁回复""本周重点是 v2 上线"）。
 - **参数**：
-  - `scope` `{string, enum: ["global","office","code","study","life"]}` — `global`=全场景通用，否则按场景键隔离。
+  - `scope` `{string, enum: ["global","office","data","design","study","code","life"]}` — `global`=全场景通用，否则按场景键隔离。
   - `text` `{string}` — 要记住的内容，一句话（必填）。
 - **必填**：`["text"]`
 - **执行**：`scope` 不合法时回退 `active`；空文本不写入。
@@ -233,7 +237,7 @@ const ORDER = ["office","code","study","life"];
 
 ### 3.16 `list_records`
 
-- **描述**：查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等）。
+- **描述**：查询某场景资料库的最近记录（会议纪要/数据记录/作品记录/学习资料/代码片段/生活记录等）。
 - **参数**：
   - `scenario` `{string, enum: ORDER}`
 - **必填**：`[]`

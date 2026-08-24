@@ -22,7 +22,7 @@ npm install
 | `npm test` | 运行全部测试（vitest） |
 | `npm run test:watch` | 监听模式，文件改动自动重跑 |
 | `npm run lint` | ESLint + 颜色令牌检查 |
-| `npm run lint:fix` | 自动修复 ESLint 可修问题 |
+| `npm run lint:layers` | 分层契约检查（单文件架构边界） |
 | `npm run serve` | 本地预览（<http://localhost:8123>） |
 
 ### Electron 桌面端（可选）
@@ -31,8 +31,10 @@ npm install
 cd electron
 npm install      # 下载 Electron + electron-builder（~100MB+）
 npm start        # 开发预览
-npm run dist     # 打包 Windows NSIS 安装包
+npm run dist     # 打包 Windows portable exe（免安装单文件，含自动拷贝最新 agent-workbench.html）
 ```
+
+> 打包目标为 `portable`（见 `electron/package.json` 的 `build.win.target`），产物名 `Agent工坊-${version}-portable.exe`，输出到 `electron/dist/`。如需改为 NSIS 安装包，将 `target` 改为 `["nsis"]` 即可。
 
 ---
 
@@ -78,7 +80,7 @@ npm test              # 全量
 npm run test:watch    # 监听
 ```
 
-当前测试规模：**167 个测试 / 19 个测试文件**（v1.1.0）。新增功能不应使既有测试回归。
+当前测试规模：**634 个测试 / 56 个测试文件**（v2.4.1）。新增功能不应使既有测试回归。
 
 ---
 

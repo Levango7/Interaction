@@ -22,7 +22,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm test
-      - run: npm run test:coverage
+      # 覆盖率步骤已停用：v8 无法对 agent-workbench.html 单文件注入，覆盖率始终 0%（见 vitest.config.js 注释）。
+      # 待拆模块（docs/architecture-layers.md 步骤②~⑤）后再启用。
+      # - run: npm run test:coverage
       - run: npm run build:check
       - run: npm run lint
 

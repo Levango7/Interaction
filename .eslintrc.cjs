@@ -11,6 +11,7 @@ module.exports = {
     "no-console": "off",
     "no-empty": ["error", { allowEmptyCatch: true }],
     "prefer-const": "warn",
+    "no-var": "warn",
     "no-irregular-whitespace": "off",
     "no-misleading-character-class": "off"
   },
@@ -52,8 +53,11 @@ module.exports = {
       parserOptions: { sourceType: "module" }
     },
     {
+      // Service Worker 环境：var 声明在 SW 生命周期作用域内是安全的，
+      // 且 var→let/const 转换会引入块作用域错误（SW 事件回调跨作用域引用）。
       files: ["service-worker.js"],
-      env: { serviceworker: true, browser: false, node: false }
+      env: { serviceworker: true, browser: false, node: false },
+      rules: { "no-var": "off" }
     }
   ]
 };

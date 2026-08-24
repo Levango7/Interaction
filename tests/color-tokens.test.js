@@ -50,7 +50,7 @@ describe("P0-9 硬编码颜色门禁", () => {
   it("白名单内的场景色 / 品牌渐变仍允许硬编码（不被误杀）", () => {
     const src = fs.readFileSync(HTML, "utf8");
     // SCENARIOS 场景语义色
-    expect(src).toMatch(/office:\{\s*name:"办公",\s*color:"#0067c0"/);
+    expect(src).toMatch(/office:\{\s*name:"办公",\s*color:"#0a6cbd"/);
     // 品牌渐变
     expect(src).toMatch(/linear-gradient\(135deg,#0067c0,#9b4dca\)/);
   });

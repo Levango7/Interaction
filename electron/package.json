@@ -1,6 +1,6 @@
 {
   "name": "agent-workbench",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "description": "Windows 套壳 Agent 工坊（Electron 封装，含系统托盘与开机自启）",
   "main": "main.js",
   "scripts": {
@@ -16,7 +16,7 @@
   },
   "build": {
     "appId": "com.agent.workbench",
-    "productName": "Agent 工作台",
+    "productName": "Agent 工坊",
     "artifactName": "Agent工坊-${version}-portable.exe",
     "files": [
       "main.js",
@@ -32,7 +32,12 @@
         "portable"
       ],
       "icon": "icon.ico",
-      "signingHashAlgorithms": []
+      "signingHashAlgorithms": [],
+      "signAndEditExecutable": true,
+      "//signing": "P1 占位：exe 当前未代码签名，Windows SmartScreen 会拦截首次启动。启用签名步骤：(1) 获取代码签名证书(.pfx)；(2) 设置环境变量 CSC_LINK=<证书路径或base64> 与 CSC_KEY_PASSWORD=<证书密码>；(3) 将 signingHashAlgorithms 改为 [\"sha256\"]；(4) 重新 npm run dist。",
+      "signing": {
+        "identity": null
+      }
     }
   }
 }
