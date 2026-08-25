@@ -2826,6 +2826,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
     <button type="button" class="tbtn" id="btnSearchTop" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
+    <!-- v2.5：全局搜索入口（跳转主页搜索框，Ctrl+K） -->
+    <button type="button" class="tbtn" id="btnGlobalSearch" title="全局搜索 (Ctrl+K)" aria-label="全局搜索">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.globSearch">全局</span></button>
     <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
     <button type="button" class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
@@ -3218,6 +3221,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" class="addbtn min" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent)">导出 MD</button>
       <button type="button" class="addbtn min" id="btnImport" aria-label="导入恢复" >导入恢复</button>
       <button type="button" class="addbtn min" id="btnIdbRestore" aria-label="从本地库恢复" >本地库恢复</button>
+      <button type="button" class="addbtn min" id="btnIdbExport" aria-label="导出 IDB 备份" style="--sc:var(--accent)">IDB 全量备份</button>
+      <button type="button" class="addbtn min" id="btnIdbImport" aria-label="导入 IDB 备份" style="--sc:var(--accent)">IDB 全量恢复</button>
+      <input type="file" id="idbFileInput" accept=".idbbackup,.json" style="display:none">
       <button type="button" class="addbtn min danger" id="btnClear" aria-label="清空数据">清空数据</button>
     </div>
     <div class="set-actions">
@@ -3229,6 +3235,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <label class="expkey" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);margin:8px 0 0">
       <input type="checkbox" id="exportKeyOpt">
       <span>导出时包含 AI Key（明文，请自行妥善保管）</span>
+    </label>
+    <label class="expkey" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);margin:8px 0 0">
+      <input type="checkbox" id="exportEncryptOpt">
+      <span>加密导出（需密码）</span>
     </label>
   </section>
 
@@ -3715,10 +3725,10 @@ let _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.4.1";
+const VERSION = "2.5.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260823c";
+const BUILD_TAG = "20260825a";
 
 
 
@@ -5409,7 +5419,7 @@ const SCENARIOS = {
   design:{ name:"设计", color:"#d6409f",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>',
     sysprompt:"你是一个设计创意助手，擅长视觉设计建议、配色方案、版式构图与创意灵感激发。回答有画面感、可落地。",
-    extraCard:"none",
+    extraCard:"design",
     record:{ label:"作品记录",
       fields:[
         {k:"type",label:"类型",type:"select",options:["海报","Logo","插画","UI 界面","摄影","其他"]},
@@ -5427,7 +5437,7 @@ const SCENARIOS = {
   data:{ name:"数据", color:"#0d9488",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>',
     sysprompt:"你是一个数据分析助手，擅长数据清洗、指标拆解、图表选型与洞察提炼。回答用数据说话、结论明确。",
-    extraCard:"none",
+    extraCard:"data",
     record:{ label:"数据记录",
       fields:[
         {k:"type",label:"类型",type:"select",options:["指标快照","分析结论","数据源","报表"]},
@@ -5445,10 +5455,10 @@ const SCENARIOS = {
   life:{ name:"生活", color:"#7c5cbf",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
     sysprompt:"你是一个生活与健康管家，帮用户管理日常事务、运动记录、体重追踪、睡眠记录和喝水提醒。回答实用、贴心、有条理。",
-    extraCard:"none",
+    extraCard:"life",
     record:{ label:"生活记录",
       fields:[
-        {k:"type",label:"类型",type:"select",options:["日常事务","运动记录","体重追踪","睡眠记录","喝水记录"]},
+        {k:"type",label:"类型",type:"select",options:["日常事务","运动记录","体重追踪","身高记录","睡眠记录","喝水记录"]},
         {k:"title",label:"标题",type:"text"},
         {k:"value",label:"数值",type:"text",placeholder:"如：5km / 65.2kg / 7.5h / 8杯"},
         {k:"note",label:"备注",type:"textarea"}
@@ -7831,16 +7841,11 @@ function _buildSideMenu(){
   const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
   const _effActive = (uiView==="main") ? active : "";
 
-  /* ---- 总览组：主页 / 仪表盘 / 任务 / 习惯链（v2.4.0 用户定案 IA） ---- */
+  /* ---- 总览组：主页 / 任务 / 习惯链（v2.5 仪表盘合并至主页） ---- */
   const overviewNode = {
     id:"home", label:"主页", icon:UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\""),
     color:"#4a3c8e", cnt:totalOpen>0?totalOpen:"", sc:"overview",
     active: !_sideActive && _effActive==="overview"
-  };
-  const dashNode = {
-    id:"dash", label:"仪表盘", icon:(SIDE_MENU_ICONS.dash||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#038387",
-    cnt:"", sc:"stats",
-    active: !_sideActive && _effActive==="stats"
   };
   const tasksNode = {
     id:"tasks", label:"任务", icon:(SIDE_MENU_ICONS.tasks||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#4a3c8e",
@@ -7884,16 +7889,11 @@ function _buildSideMenu(){
     active: !_sideActive && (_effActive==="store" || uiView==="plugin")
   };
 
-  /* ---- 系统组 ---- */
+  /* ---- 系统组（v2.5：外观合并至设置，不再独立一级菜单） ---- */
   const recycleNode = {
     id:"sys-recycle", label:"回收站", icon:UI_ICONS.trash.replace("<svg","<svg aria-hidden=\"true\""),
     color:"var(--danger)", cnt:recycleCount>0?recycleCount:"", sc:"recycle",
     active: !_sideActive && _effActive==="recycle"
-  };
-  const lookNode = {
-    id:"sys-look", label:"外观", icon:(SIDE_MENU_ICONS.look||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#7c5cbf", // M7 NOTE: 与 --sc-life 场景色一致
-    cnt:"", menuId:"sys-look",
-    active: !_sideActive && ["look-theme","look-fx"].indexOf(_sideActive)>=0
   };
   const gearNode = {
     id:"sys-gear", label:"设置", icon:UI_ICONS.gear.replace("<svg","<svg aria-hidden=\"true\""),
@@ -7906,10 +7906,10 @@ function _buildSideMenu(){
   };
 
   return [
-    {name:"总览", nodes:[overviewNode, dashNode, tasksNode, chainPageNode]},
+    {name:"总览", nodes:[overviewNode, tasksNode, chainPageNode]},
     {name:"场景", nodes:sceneNodes},
     {name:"应用", nodes:[aiNode, toolboxNode, storeNode]},
-    {name:"系统", nodes:[recycleNode, lookNode, gearNode, helpNode]}
+    {name:"系统", nodes:[recycleNode, gearNode, helpNode]}
   ];
 }
 /**
@@ -8017,10 +8017,9 @@ function setupSideMenu(){
     }
   });
 }
-/* 在侧栏菜单中查找子项/叶子项动作（v2.4.0：菜单全叶子化，仅保留无 sc 路由的固定项） */
+/* 在侧栏菜单中查找子项/叶子项动作（v2.4.0：菜单全叶子化，仅保留无 sc 路由的固定项；v2.5：外观合并至设置，移除 sys-look） */
 function _findSideMenuItem(menuId){
   const fixed = {
-    "sys-look":{run:()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-look"); } }},
     "feat-ai":{run:()=>{ if(typeof openAiPage==="function") openAiPage(); }}
   };
   return fixed[menuId] || null;
@@ -10607,17 +10606,20 @@ function renderHelp(){
           </ol>
         `)}
         ${helpSection("场景说明", "场景说明", `
+          <p><b>6 场景</b>：办公 / 数据 / 设计 / 学习 / 编程 / 生活</p>
           <p><b>办公</b>（蓝色）：会议纪要、工作任务、周报。AI 帮你梳理任务、润色邮件。</p>
-          <p><b>编程</b>（绿色）：代码片段、工程任务。AI 给可运行代码和架构建议。</p>
+          <p><b>数据</b>（青色）：数据记录、指标快照、分析结论。AI 帮数据清洗与洞察提炼。</p>
+          <p><b>设计</b>（粉色）：作品记录、灵感板、视觉设计。AI 帮配色构图与创意激发。</p>
           <p><b>学习</b>（橙色）：学习资料 + SM-2 间隔复习。AI 帮制定学习计划。</p>
-          <p><b>生活</b>（紫色）：日常待办、购物清单、缴费提醒与生活备忘。AI 帮打理琐事、有条理。</p>
+          <p><b>编程</b>（绿色）：代码片段、工程任务。AI 给可运行代码和架构建议。</p>
+          <p><b>生活</b>（紫色）：日常事务、运动/体重/睡眠/喝水记录。AI 帮打理健康与琐事。</p>
         `)}
         ${helpSection("习惯链", "习惯链", `
           <p>完成任务可以自动触发跨场景的奖励/后续任务，形成正反馈闭环：</p>
           <div class="help-chain-demo">
-            <span style="color:var(--accent)">办公</span> 交付 → <span style="color:var(--warn)">学习</span> 看技术视频<br>
-            <span style="color:var(--warn)">学习</span> 复习 → <span style="color:var(--accent)">编程</span> 写小项目<br>
-            <span style="color:var(--accent)">编程</span> 上线 → <span style="color:var(--sc-life)">生活</span> 犒劳自己
+            <span style="color:var(--accent)">办公</span> 交付 → <span style="color:var(--warn)">学习</span> 充电<br>
+            <span style="color:var(--warn)">学习</span> 复习 → <span style="color:var(--accent)">编程</span> 实践<br>
+            <span style="color:var(--accent)">编程</span> 上线 → <span style="color:var(--sc-life)">生活</span> 犒劳
           </div>
           <p>在设置抽屉可以编辑习惯链规则（关键词、奖励任务、启用/禁用）。</p>
         `)}
@@ -10644,7 +10646,7 @@ function renderHelp(){
         `)}
         ${helpSection("快捷键", "快捷键", `
           <table class="help-keys">
-            <tr><td><kbd>1</kbd>-<kbd>4</kbd></td><td>切换场景（办公/编程/学习/生活）</td></tr>
+            <tr><td><kbd>1</kbd>-<kbd>6</kbd></td><td>切换场景（办公/数据/设计/学习/编程/生活）</td></tr>
             <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>命令面板（搜索任务、切换场景）</td></tr>
             <tr><td><kbd>Esc</kbd></td><td>关闭弹窗/抽屉</td></tr>
           </table>
@@ -11619,6 +11621,7 @@ function _tasksHeadHtml(){
     <div class="ph-tx"><h2>任务</h2><p class="sub">跨场景任务中心——所有场景的任务在这里统一管理</p></div>
     <nav class="set-nav tasks-view-tabs" aria-label="任务视图切换">${tabs.map(([k,l])=>
       `<button type="button" class="set-nav-btn tasks-tab${_tasksView===k?" active":""}" data-tasks-view="${k}">${l}</button>`).join("")}</nav>
+    <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
   </header></div>`;
 }
 function _bindTasksTabs(){
@@ -11629,12 +11632,12 @@ function _bindTasksTabs(){
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
-  { id:"x-cal",     name:"日历",     desc:"按月查看任务分布", cat:"小件", icon:UI_ICONS.grid, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
-  { id:"x-weather", name:"天气",     desc:"今日 + 未来几日预报", cat:"小件", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
-  { id:"x-alarm",   name:"闹钟",     desc:"多任务 · 循环 · 贪睡", cat:"小件", icon:UI_ICONS.sport, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
-  { id:"x-pomo",    name:"笃行",     desc:"25 分钟专注 + 5 分钟休息", cat:"小件", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
-  { id:"x-tracker", name:"时间追踪", desc:"任务计时秒表", cat:"小件", icon:UI_ICONS.stats, pop:"trackerPop", menuAttr:"plug-tracker" },
-  { id:"x-pet",     name:"萌宠",     desc:"桌面陪伴小伙伴", cat:"小件", icon:UI_ICONS.flame, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
+  { id:"x-cal",     name:"日历",     desc:"按月查看任务分布", cat:"效率工具", icon:UI_ICONS.grid, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
+  { id:"x-weather", name:"天气",     desc:"今日 + 未来几日预报", cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
+  { id:"x-alarm",   name:"闹钟",     desc:"多任务 · 循环 · 贪睡", cat:"效率工具", icon:UI_ICONS.sport, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
+  { id:"x-pomo",    name:"笃行",     desc:"25 分钟专注 + 5 分钟休息", cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
+  { id:"x-tracker", name:"时间追踪", desc:"任务计时秒表", cat:"效率工具", icon:UI_ICONS.stats, pop:"trackerPop", menuAttr:"plug-tracker" },
+  { id:"x-pet",     name:"萌宠",     desc:"桌面陪伴小伙伴", cat:"效率工具", icon:UI_ICONS.flame, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
   { id:"x-mindmap", name:"思维导图", desc:"任务关系树状图", cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
   { id:"x-kb",      name:"知识库",   desc:"资料卡片与全文检索", cat:"功能", icon:UI_ICONS.kb, run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
   { id:"x-notes",   name:"笔记",     desc:"标签 / 分类 / 任务关联", cat:"功能", icon:UI_ICONS.book, run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
@@ -11644,7 +11647,7 @@ const TOOLBOX_EXTRAS = [
 let _toolboxCat = "全部";
 let _toolboxQ = "";
 function renderToolboxPage(){
-  const cats = ["全部","文档","设计","编程","生活","检索","功能","小件"];
+  const cats = ["全部","文档","设计","编程","生活","检索","功能","效率工具"];
   const apps = [];
   Object.keys(TOOL_APPS).forEach(id=>{
     const a = TOOL_APPS[id];
@@ -11667,8 +11670,9 @@ function renderToolboxPage(){
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.puzzle}</span>
-      <div class="ph-tx"><h2>工具箱</h2><p class="sub">文档 · 设计 · 编程 · 生活 · 检索 · 小件——所有工具与应用的统一入口（Ctrl+K 可直达）</p></div>
+      <div class="ph-tx"><h2>工具箱</h2><p class="sub">文档 · 设计 · 编程 · 生活 · 检索 · 效率工具——所有工具与应用的统一入口（Ctrl+K 可直达）</p></div>
       <input type="text" id="toolboxQ" placeholder="搜索工具…" value="${esc(_toolboxQ)}" style="max-width:200px" aria-label="搜索工具">
+      <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
     </header></div>
     <div class="glob-views" style="margin-bottom:var(--space-2)">${chips}</div>
     <div class="app-grid">${cards || ""}</div>`);
@@ -11729,6 +11733,7 @@ function renderStorePage(){
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.puzzle}</span>
       <div class="ph-tx"><h2>商店</h2><p class="sub">插件与应用市场——安装后按类型自动挂载到对应位置</p></div>
       <button type="button" class="addbtn sm" id="storeImportBtn" style="--sc:var(--accent)">导入插件 JSON</button>
+      <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
     </header></div>
     <div class="store-list">${rows.map(pCard).join("") || '<div class="empty">暂无可用的插件</div>'}</div>`);
   $$("#main [data-store-install]").forEach(b=>{
@@ -11784,7 +11789,7 @@ function renderChainPage(){
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.chain||""}</span>
       <div class="ph-tx"><h2>习惯链</h2><p class="sub">跨场景行为联动——完成 A 场景任务自动触发 B 场景待办</p></div>
-      <div class="ph-actions"><button type="button" class="addbtn sm" id="chainCfgBtn" style="--sc:var(--sc-data)">规则配置</button></div>
+      <div class="ph-actions"><button type="button" class="addbtn sm" id="chainCfgBtn" style="--sc:var(--accent);font-weight:600">规则配置</button><button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button></div>
     </header></div>
     <div class="card"><h2>当前 Streak</h2><p class="sub">各场景连续完成天数（≥3 天点燃火焰）</p><div class="streak-row">${streakBadges}</div></div>
     <div class="card"><h2>场景链路图</h2>${renderChainGraph()}</div>
@@ -11897,7 +11902,9 @@ const CARD_REGISTRY = {
   report:  { render: reportCard,  bind: bindReportCard },
   review:  { render: reviewCard,  bind: bindReviewCard },
   health:  { render: healthCard,  bind: bindHealthCard },
-
+  design:  { render: designCard,  bind: bindDesignCard },
+  data:    { render: dataCard,    bind: bindDataCard },
+  life:    { render: lifeCard,    bind: bindLifeCard },
   none:    { render: () => "",    bind: () => {} },
 };
 /** 内置卡片键（禁止被 registerCard 覆盖） */
@@ -12066,7 +12073,7 @@ function _updateReviewVScroll(viewport){
  * 渲染：内联 SVG 折线图 / 条形图 / 进度条，零外部依赖，颜色全部走 var(--token)
  */
 /** 健康记录类型枚举（与 05-bootstrap-config.js life.record.fields.type.options 对齐） */
-const HEALTH_TYPES = { EXERCISE:"运动记录", WEIGHT:"体重追踪", SLEEP:"睡眠记录", WATER:"喝水记录" };
+const HEALTH_TYPES = { EXERCISE:"运动记录", WEIGHT:"体重追踪", HEIGHT:"身高记录", SLEEP:"睡眠记录", WATER:"喝水记录" };
 /**
  * 取生活场景全部记录，补齐旧记录的 type 字段（兼容 v1.3.3 之前的生活备忘）
  * @returns {Object[]}
@@ -12166,6 +12173,7 @@ function healthCard(){
   const all = getHealthRecs();
   const exerciseRecs = all.filter(r=>r.type===HEALTH_TYPES.EXERCISE);
   const weightRecs   = all.filter(r=>r.type===HEALTH_TYPES.WEIGHT).sort((a,b)=>(a.created||0)-(b.created||0));
+  const heightRecs   = all.filter(r=>r.type===HEALTH_TYPES.HEIGHT).sort((a,b)=>(a.created||0)-(b.created||0));
   const sleepRecs    = all.filter(r=>r.type===HEALTH_TYPES.SLEEP).sort((a,b)=>(a.created||0)-(b.created||0));
   const waterRecs    = all.filter(r=>r.type===HEALTH_TYPES.WATER);
 
@@ -12173,7 +12181,22 @@ function healthCard(){
   const ws = weekStartTs();
   const weekExercise = exerciseRecs.filter(r=>(r.created||0) >= ws);
   const weekDistance = weekExercise.reduce((s,r)=>s + parseNum((r.value||"").match(/[\d.]+/)?.[0] || 0), 0);
-  // 今日喝水
+  // BMI calculation
+  let bmiHTML = "";
+  if(weightRecs.length && heightRecs.length){
+    const latestWeight = parseNum(weightRecs[weightRecs.length-1].value);
+    const latestHeight = parseNum(heightRecs[heightRecs.length-1].value);
+    if(latestWeight>0 && latestHeight>0){
+      const hM = latestHeight/100;
+      const bmi = latestWeight/(hM*hM);
+      let category=""; let color="";
+      if(bmi<18.5){category="偏瘦";color="var(--ok)";}
+      else if(bmi<24){category="正常";color="var(--accent)";}
+      else if(bmi<28){category="超重";color="var(--warn)";}
+      else {category="肥胖";color="var(--danger)";}
+      bmiHTML = `<div class="health-item"><div class="health-val" style="color:${color}">${bmi.toFixed(1)}</div><div class="health-lbl">BMI (${category})</div></div>`;
+    }
+  }
   const todayWater = waterRecs.filter(r=>isToday(r.created));
 
   return `<div class="card"><h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></span>健康概览</h2>
@@ -12183,6 +12206,7 @@ function healthCard(){
       <div class="health-item"><div class="health-val">${weekDistance.toFixed(1)}</div><div class="health-lbl">本周距离（km）</div></div>
       <div class="health-item"><div class="health-val">${todayWater.reduce((s,r)=>{const n=parseNum(r.value);return s+(n>0?n:1);},0)}/8</div><div class="health-lbl">今日喝水（杯）</div></div>
       <div class="health-item"><div class="health-val">${sleepRecs.length? (sleepRecs.slice(-7).map(r=>parseNum(r.value)).filter(v=>v>0).reduce((a,b)=>a+b,0)/Math.max(1,sleepRecs.slice(-7).map(r=>parseNum(r.value)).filter(v=>v>0).length)).toFixed(1):"—"}</div><div class="health-lbl">近 7 天均睡（h）</div></div>
+        ${bmiHTML}
     </div>
     <div class="health-section"><h3>体重趋势</h3>${weightTrendSVG(weightRecs.slice(-5))}</div>
     <div class="health-section"><h3>睡眠概览</h3>${sleepBarsHTML(sleepRecs)}</div>
@@ -12196,6 +12220,54 @@ function healthCard(){
 function bindHealthCard(){
   // 当前版本为纯展示卡片，无交互绑定；预留 hook 供后续扩展
 }
+
+/** 设计场景专属卡片：灵感板（最近作品速览） */
+function designCard(sc){
+  const recs = getRec(sc);
+  const recent = recs.slice(0, 4);
+  if(!recent.length) return "";
+  const items = recent.map(r=>{
+    const type = r.type || "作品";
+    const title = r.title || "未命名";
+    return '<div class="extra-item"><span class="extra-tag">'+esc(type)+'</span><span class="extra-title">'+esc(title)+'</span></div>';
+  }).join("");
+  return '<div class="card extra-card"><h3>灵感板</h3><p class="sub">最近作品速览</p><div class="extra-list">'+items+'</div></div>';
+}
+function bindDesignCard(sc){ /* 设计卡片无需额外绑定 */ }
+
+/** 数据场景专属卡片：指标快照（最近数据记录摘要） */
+function dataCard(sc){
+  const recs = getRec(sc);
+  const recent = recs.slice(0, 5);
+  if(!recent.length) return "";
+  const items = recent.map(r=>{
+    const type = r.type || "数据";
+    const title = r.title || "";
+    const note = r.note ? " · "+esc(r.note).slice(0,30) : "";
+    return '<div class="extra-item"><span class="extra-tag">'+esc(type)+'</span><span class="extra-title">'+esc(title)+'</span>'+note+'</div>';
+  }).join("");
+  return '<div class="card extra-card"><h3>指标快照</h3><p class="sub">最近数据记录</p><div class="extra-list">'+items+'</div></div>';
+}
+function bindDataCard(sc){ /* 数据卡片无需额外绑定 */ }
+
+/** 生活场景专属卡片：健康摘要（运动/体重/睡眠/喝水最近记录） */
+function lifeCard(sc){
+  const recs = getRec(sc);
+  if(!recs.length) return "";
+  const byType = {};
+  recs.forEach(r=>{ const t = r.type || "日常事务"; if(!byType[t]) byType[t] = []; byType[t].push(r); });
+  const types = ["运动记录","体重追踪","睡眠记录","喝水记录"];
+  const rows = types.map(t=>{
+    const list = byType[t] || [];
+    if(!list.length) return "";
+    const latest = list[0];
+    const val = latest.value || "";
+    return '<div class="extra-item"><span class="extra-tag">'+esc(t)+'</span><span class="extra-title">'+esc(latest.title||"")+'</span>'+(val?' <span class="extra-val">'+esc(val)+'</span>':"")+'</div>';
+  }).filter(Boolean).join("");
+  if(!rows) return "";
+  return '<div class="card extra-card"><h3>健康摘要</h3><p class="sub">最近运动/体重/睡眠/喝水记录</p><div class="extra-list">'+rows+'</div></div>';
+}
+function bindLifeCard(sc){ /* 生活卡片无需额外绑定 */ }
 
 
 // ===== Render Layer (渲染层·场景主区) =====
@@ -14783,7 +14855,7 @@ function render(){
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     renderSide();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
-    if(active==="stats"){ renderStats(); appendFoot(); return; }
+    if(active==="stats"){ setActive("overview"); renderOverview(); appendFoot(); return; }
     if(active==="recycle"){ openRecycle(); appendFoot(); return; }
     /* v2.4.0 四大新页面路由 */
     if(active==="tasks"){ renderTasksPage(); appendFoot(); return; }
@@ -14843,7 +14915,27 @@ function render(){
 // ===== UI Layer (交互层·备份与统计) =====
 /* ---------- 备份 / 统计 ---------- */
 function allKeys(){ try{ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }catch(e){ return []; } }
-function doExport(){
+async function doExport(){
+  // Helper: base64 encode Uint8Array
+  const toBase64 = (buf)=>{
+    let binary = '';
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  };
+
+  // Helper: encrypt data with password using PBKDF2 + AES-GCM
+  const encryptData = async (plainObj, password)=>{
+    const enc = new TextEncoder();
+    const dataStr = JSON.stringify(plainObj);
+    const pwKey = await crypto.subtle.importKey('raw', enc.encode(password), {name:'PBKDF2'}, false, ['deriveKey']);
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const aesKey = await crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:210000, hash:'SHA-256'}, pwKey, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const cipherBuf = await crypto.subtle.encrypt({name:'AES-GCM', iv}, aesKey, enc.encode(dataStr));
+    return {encrypted:true, iv:toBase64(iv), ciphertext:toBase64(cipherBuf), salt:toBase64(salt)};
+  };
+
   const data = {}; allKeys().forEach(k=>{ try{ data[k]=localStorage.getItem(k); }catch(e){ /* 静默降级 */ } });
   // v1.4-C 多设备同步：写入设备标识 + 导出时间戳 + 版本
   data["_deviceMeta"] = {
@@ -14873,11 +14965,26 @@ function doExport(){
       }
     }
   }
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "agent-workbench-backup-"+todayStr()+".json";
-  a.click(); URL.revokeObjectURL(a.href);
+  // Export handling: optional encryption
+  if (document.getElementById("exportEncryptOpt")?.checked) {
+    const pwd = prompt("请输入导出密码（用于加密）");
+    if (!pwd) {
+      toast("加密导出需要密码，已取消导出。", "error");
+      return;
+    }
+    const encryptedObj = await encryptData(data, pwd);
+    const encBlob = new Blob([JSON.stringify(encryptedObj,null,2)], {type:"application/json"});
+    const aEnc = document.createElement("a");
+    aEnc.href = URL.createObjectURL(encBlob);
+    aEnc.download = "agent-workbench-backup-" + todayStr() + ".json";
+    aEnc.click(); URL.revokeObjectURL(aEnc.href);
+  } else {
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "agent-workbench-backup-" + todayStr() + ".json";
+    a.click(); URL.revokeObjectURL(a.href);
+  }
 }
 function doImport(file){
   const reader = new FileReader();
@@ -14919,6 +15026,8 @@ function doImport(file){
           save(PREFIX + "migrationLog", log);
         } catch(e){ /* 静默 */ }
       }
+
+
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
       _cfgCache = null; _deviceKey = null;
@@ -15029,6 +15138,133 @@ function doIdbRestore(){
     setTimeout(()=> location.reload(), 900);
   }).catch(()=> toast("本地库不可用", "error"));
 }
+
+/**
+ * IDB 全量导出：把 localStorage 镜像键 + IDB v2 存储全部打包为 JSON 文件
+ * 格式：{ _type: "idb-backup", _version: "1.0", _exportedAt, localStorage, idbV2 }
+ */
+function doIdbExport(){
+  return Promise.all([
+    // localStorage 镜像数据
+    new Promise(resolve => {
+      const ls = {};
+      try {
+        for(let i = 0; i < localStorage.length; i++){
+          const k = localStorage.key(i);
+          if(k && idbShouldMirror(k)) ls[k] = localStorage.getItem(k);
+        }
+      } catch(e){}
+      resolve(ls);
+    }),
+    // IDB v2 全量读取
+    new Promise(resolve => {
+      if(!_idbV2Available){ resolve({}); return; }
+      idbV2Open().then(db => {
+        if(!db){ resolve({}); return; }
+        const result = {};
+        try {
+          const tx = db.transaction(IDB_V2_STORE, "readonly");
+          const st = tx.objectStore(IDB_V2_STORE);
+          const req = st.getAll();
+          req.onsuccess = () => {
+            const all = req.result || [];
+            for(const v of all){
+              if(v && v.__store){
+                const key = v.__store + ":" + (_idbV2Key(v.__store, String(v.id || "default")).replace(/[^a-zA-Z0-9_:]/g,'_'));
+                result[key] = Object.assign({}, v);
+                delete result[key].__store;
+              }
+            }
+            resolve(result);
+          };
+          req.onerror = () => resolve(result);
+        } catch(e){ resolve(result); }
+      }).catch(() => resolve({}));
+    })
+  ]).then(([lsData, idbV2Data]) => {
+    const backup = {
+      _type: "idb-backup",
+      _version: "1.0",
+      _exportedAt: Date.now(),
+      _versionApp: VERSION,
+      localStorage: lsData,
+      idbV2: idbV2Data
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type: "application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "agent-workbench-idb-backup-"+todayStr()+".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("IDB 全量备份已导出", "ok");
+    return backup;
+  }).catch(err => {
+    toast("备份失败："+(err&&err.message||"未知错误"), "error");
+    throw err;
+  });
+}
+
+/**
+ * IDB 全量导入：从备份文件恢复 localStorage 镜像 + IDB v2 存储
+ * 需要用户通过文件选择器选择导出的 .json 文件
+ */
+function doIdbImport(file){
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try{
+      const backup = JSON.parse(/** @type {string} */(reader.result));
+      if(!backup || backup._type !== "idb-backup"){
+        toast("文件格式不正确，不是有效的 IDB 备份", "error");
+        return;
+      }
+      // 恢复 localStorage 镜像键
+      let restoredCount = 0;
+      if(backup.localStorage && typeof backup.localStorage === "object"){
+        for(const [k, v] of Object.entries(backup.localStorage)){
+          if(idbShouldMirror(k) && v !== undefined){
+            try{ localStorage.setItem(k, v); restoredCount++; }catch(e){}
+          }
+        }
+      }
+      // 恢复 IDB v2 存储
+      if(backup.idbV2 && typeof backup.idbV2 === "object" && _idbV2Available){
+        for(const [key, value] of Object.entries(backup.idbV2)){
+          try {
+            // 解析复合键 "store:id" → 恢复原始结构
+            const parts = key.split(":");
+            const store = parts[0];
+            const val = Object.assign({}, value, { __store: store });
+            await idbPut(store, val);
+            restoredCount++;
+          } catch(e){}
+        }
+      }
+      if(!restoredCount){
+        toast("备份中没有可恢复的数据", "warn");
+        return;
+      }
+      toast("已恢复 "+restoredCount+" 项数据，请刷新页面", "ok");
+      setTimeout(()=> location.reload(), 900);
+    }catch(e){
+      toast("导入失败："+(e&&e.message||"JSON 解析错误"), "error");
+    }
+  };
+  reader.readAsText(file);
+}
+
+// IDB 备份/恢复按钮事件绑定
+(function bindIdbBackupButtons(){
+  const btnExport = $("#btnIdbExport");
+  const btnImport = $("#btnIdbImport");
+  const fileInput = $("#idbFileInput");
+  if(btnExport) btnExport.onclick = doIdbExport;
+  if(btnImport){
+    btnImport.onclick = () => { if(fileInput) fileInput.click(); };
+    if(fileInput) fileInput.onchange = e => {
+      if(e.target.files[0]){ doIdbImport(e.target.files[0]); e.target.value = ""; }
+    };
+  }
+})();
 
 /* ---------- 系统级消息中心 ----------
  * 替代 v1.4 banner 横幅：消息存储于 localStorage（key = PREFIX + "messages"）
@@ -15701,8 +15937,10 @@ function renderScBox(){
   // 事件绑定
   box.querySelectorAll(".sc-save").forEach(b=> b.onclick=()=>{
     const row = b.closest(".chain-row"), key = row.getAttribute("data-sc");
-    const name = row.querySelector(".sc-edit-name").value;
-    const color = row.querySelector(".sc-edit-color").value;
+    const nameEl = row.querySelector(".sc-edit-name"), colorEl = row.querySelector(".sc-edit-color");
+    if(!nameEl || !colorEl) return; // 防御：DOM 结构与模板不一致时静默跳过
+    const name = nameEl.value;
+    const color = colorEl.value;
     const r = BUILTIN_SC_KEYS.includes(key)
       ? setBuiltinOverride(key, {name, color})
       : updateCustomScenario(key, {name, color});
@@ -16801,6 +17039,8 @@ const _btnKnowledgeBase = $("#btnKnowledgeBase"); if(_btnKnowledgeBase) _btnKnow
 const _btnSearch = $("#btnSearch"); if(_btnSearch) _btnSearch.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
 const _btnNotesTop = $("#btnNotesTop"); if(_btnNotesTop) _btnNotesTop.onclick = function(){ if(typeof openNotesModal === "function") openNotesModal(); };
 const _btnSearchTop = $("#btnSearchTop"); if(_btnSearchTop) _btnSearchTop.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
+// v2.5：全局搜索入口——跳转主页并聚焦主页搜索框
+const _btnGlobalSearch = $("#btnGlobalSearch"); if(_btnGlobalSearch) _btnGlobalSearch.onclick = function(){ setActive("overview"); render(); setTimeout(function(){ const gs=$("#globSearch"); if(gs) gs.focus(); }, 50); };
 // v1.9.9：顶栏右侧更多按钮（从侧栏功能组迁出）——点击展开次常用工具下拉
 /* v1.15：顶栏消息按钮已收敛为唯一入口（#btnMessages），绑定见系统级消息中心区 */
 /* 弹窗关闭按钮 */
@@ -18843,7 +19083,7 @@ const BUILTIN_PLUGINS = [
       if(typeof render === "function"){ try{ render(); }catch(e){ /* noop */ } }
     },
     onDeactivate: function(){
-      SCENARIOS.life.extraCard = "none";
+      SCENARIOS.life.extraCard = "life";
       if(typeof render === "function"){ try{ render(); }catch(e){ /* noop */ } }
     }
   },
