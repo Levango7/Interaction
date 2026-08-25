@@ -326,23 +326,19 @@ describe("renderTrendChart / renderPieChart / renderStats 渲染", () => {
     expect(html).toContain("data-trend-days=\"30\"");
   });
 
-  it("R5: 侧边栏含「统计」入口，点击切换到 stats 视图", () => {
+  it("R5: v2.5 仪表盘已合并至主页——侧栏无独立 stats 入口，stats 视图重定向到 overview", () => {
     const win = loadApp();
     const { render, setActive, getActive, setTasks } = win.__test;
     win.localStorage.clear();
-    // T4.2：有任务数据时统计视图渲染指标卡片；先添加一条任务避免 no-stats 空状态
     setTasks([{ id:"t1", sc:"office", title:"测试任务", status:"todo", due:"", priority:"", tags:[], doneAt:null, created:Date.now() }]);
     render();
     const side = win.document.getElementById("side");
-    // v2.4.0：侧栏叶子化——「仪表盘」为总览组叶子项（data-sc="stats"），点击直达统计视图
+    // v2.5：仪表盘合并至主页，侧栏不再有独立 stats 入口
     const statsBtn = side.querySelector('[data-sc="stats"]');
-    expect(statsBtn).toBeTruthy();
-    expect(statsBtn.textContent).toContain("仪表盘");
-    // 点击切换
-    statsBtn.click();
-    expect(getActive()).toBe("stats");
-    // 主内容区应渲染统计视图
-    const main = win.document.getElementById("main");
-    expect(main.innerHTML).toContain("stats-cards");
+    expect(statsBtn).toBeNull();
+    // setActive("stats") 后 render() 应重定向到 overview
+    setActive("stats");
+    render();
+    expect(getActive()).toBe("overview");
   });
 });

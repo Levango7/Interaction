@@ -2,6 +2,39 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v2.5.0] - 2026-08-25
+
+### Minor：一级/二级菜单功能设计全面优化 — 16个问题修复
+
+**🔧 菜单结构优化**
+- 移除「仪表盘」一级菜单项，stats 路由重定向到主页 overview（消除功能重叠）
+- 移除「外观」一级菜单项，保留设置抽屉内外观 Tab（减少系统组冗余）
+- 总览组精简为：主页 / 任务 / 习惯链（3项，原4项）
+- 系统组精简为：回收站 / 设置 / 说明（3项，原4项）
+
+**✨ 新增功能**
+- 3 个场景专属 extraCard：设计→灵感板、数据→指标快照、生活→健康摘要
+- 3 个新卡片函数：renderDesignCard / renderDataCard / renderLifeCard，注册到 CARD_REGISTRY
+- 顶栏全局搜索入口按钮（SVG 图标，跳转主页聚焦搜索框）
+- 子页面返回主页按钮：任务 / 工具箱 / 商店 / 习惯链页均添加「←主页」返回按钮
+- 习惯链页配置入口样式增强（accent 色 + 加粗）
+
+**♻️ 优化改进**
+- 工具箱「小件」分类重命名为「效率工具」（定位更清晰）
+- 说明文档（renderHelp）更新：4 场景 → 6 场景，快捷键 1-4 → 1-6
+- 健康助手插件 onDeactivate 恢复值从 "none" 改为 "life"（适配新默认值）
+
+**🧪 测试适配**
+- health-plugin.test.js：life.extraCard 期望值 "none" → "life"
+- stats.test.js：移除仪表盘菜单项的断言
+- tools.test.js：移除仪表盘菜单项的断言
+- skeleton-empty.test.js：stats 路由重定向到 overview 的断言适配
+- ui-consistency.test.js：版本号同步
+
+**📊 验证结果**
+- 632 个测试全部通过（56 个测试文件）
+- ESLint + 颜色 lint：0 problems
+
 ## [v2.4.2] - 2026-08-25
 
 ### Patch：全面审计修复 — 含安全加固、代码质量、PWA优化与文档修正

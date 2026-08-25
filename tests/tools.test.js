@@ -192,16 +192,10 @@ describe("v2.3.0 仪表盘改名与编辑态入口", () => {
     ]);
   });
 
-  it("侧栏「仪表盘」为叶子项，点击进入统计页（展示态标题「仪表盘」）", () => {
+  it("v2.5 仪表盘已合并至主页——侧栏无 stats 叶子项", () => {
     __test.render();
     const btn = document.querySelector('#side [data-sc="stats"]');
-    expect(btn, "侧栏应有仪表盘叶子项").toBeTruthy();
-    expect(btn.textContent).toContain("仪表盘");
-    btn.click();
-    expect(__test.getActive()).toBe("stats");
-    expect(__test._dashEditMode).toBe(false);
-    const h2b = document.querySelector(".page-head h2");
-    expect(h2b && h2b.textContent).toBe("仪表盘");
+    expect(btn, "v2.5 侧栏不应有仪表盘叶子项").toBeNull();
   });
 
   it("编辑态经页头按钮切换：标题「编辑仪表盘」↔「仪表盘」", () => {
@@ -235,7 +229,7 @@ describe("v2.4.0 侧栏新信息架构", () => {
     ]);
   });
 
-  it("四组结构：总览(主页/仪表盘/任务/习惯链) + 场景 + 应用(AI/工具箱/商店) + 系统", () => {
+  it("四组结构：总览(主页/任务/习惯链) + 场景 + 应用(AI/工具箱/商店) + 系统（v2.5 仪表盘合并至主页）", () => {
     __test.render();
     const groupNames = [...document.querySelectorAll("#side .nav-group")].map(g => g.textContent);
     expect(groupNames).toEqual(["总览", "场景", "应用", "系统"]);
@@ -244,6 +238,8 @@ describe("v2.4.0 侧栏新信息架构", () => {
     expect(document.querySelector('#side [data-sc="toolbox"]')).toBeTruthy();
     expect(document.querySelector('#side [data-sc="store"]')).toBeTruthy();
     expect(document.querySelector('#side [data-aipage="1"]')).toBeTruthy();
+    // v2.5：仪表盘已合并至主页，侧栏不再有独立 stats 入口
+    expect(document.querySelector('#side [data-sc="stats"]')).toBeNull();
   });
 
   it("「数据」场景归位办公之后，ORDER 与 SCENARIOS 保留", () => {

@@ -5,7 +5,7 @@
 >
 > 校验入口：`node scripts/lint-layers.mjs`（已接入 `npm run build:check`，退出码非 0 即 fail）。
 >
-> **架构现状（v2.4.1）**：`agent-workbench.html` 是唯一交付真相源。早期 `src/modules` 模块化快照
+> **架构现状（v2.4.2）**：`agent-workbench.html` 是唯一交付真相源。早期 `src/modules` 模块化快照
 > 已归档删除（git tag `archive/src-snapshot-v1.9.9`），不再参与构建，`scripts/build.mjs` 不做
 > src→HTML 字节拼接。分层契约以单文件内的 `// ===== <Name> Layer` 注释边界为准。
 

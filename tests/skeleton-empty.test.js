@@ -215,14 +215,13 @@ describe("T4.2 骨架屏 + 空状态", () => {
       expect(globRes.innerHTML).toContain("未找到");
     });
 
-    it("统计无数据时 renderStats 使用 no-stats 空状态", () => {
+    it("v2.5 仪表盘合并至主页——stats 视图重定向到 overview（不再渲染 no-stats 空状态）", () => {
       const doc = win.document;
       __test.setTasks([]);
       __test.setActive("stats");
       __test.render();
-      const main = doc.getElementById("main");
-      expect(main.innerHTML).toContain("empty-state");
-      expect(main.innerHTML).toContain("暂无数据");
+      // v2.5：stats 重定向到 overview，active 变为 overview
+      expect(__test.getActive()).toBe("overview");
     });
 
     it("场景无任务时 renderMainHTML 使用 no-tasks 空状态", () => {
