@@ -4,6 +4,7 @@ const fs = require("fs");
 const zlib = require("zlib");
 const crypto = require("crypto");
 const os = require("os");
+const http = require("http");
 
 
 /* ---------- 内联生成托盘图标（零外部文件依赖） ---------- */
@@ -395,6 +396,7 @@ if (!gotLock){
     createWindow();
     createTray();
     applyAppMenu();
+    startSyncServer();  // P0-8：局域网同步 server
 
     // AI 配置与代理（P0-3）：Key 由主进程保管，渲染进程经 IPC 委托请求
     // P1-1 取消链路：按 sender 维护活跃 chat 请求的 AbortController，供 abort-chat IPC 中止
@@ -563,6 +565,33 @@ if (!gotLock){
       });
     });
 
+    // P0-8：局域网同步 IPC——渲染进程主动请求下载/上传数据
+    ipcMain.handle("sync-get", (e) => {
+      assertTrustedSender(e);
+      try {
+        const keys = Object.keys(localStorage || {});
+        const data = {};
+        for (const k of keys) {
+          if (k.startsWith("wb_agent_") || k === "wb_custom_links") {
+            try { data[k] = localStorage.getItem(k); } catch(e2){}
+          }
+        }
+        return data;
+      } catch(e2) { return { error: e2.message }; }
+    });
+    ipcMain.handle("sync-upload", (e, data) => {
+      assertTrustedSender(e);
+      if (!data || typeof data !== "object") return { ok: false, error: "invalid data" };
+      try {
+        for (const [k, v] of Object.entries(data)) {
+          if ((k.startsWith("wb_agent_") || k === "wb_custom_links") && typeof v === "string") {
+            try { localStorage.setItem(k, v); } catch(e2){}
+          }
+        }
+        return { ok: true };
+      } catch(e2) { return { ok: false, error: e2.message }; }
+    });
+
     /* v1.11.1 [M5]：electron-updater 更新链路已整体移除——三处断点（portable 目标不支持
      * 自动更新 / 无 publish 配置 / 渲染端 preload 无 update-available 监听）使其从未可用。
      * 分发形态维持 portable + 手动下载：更新 = 从 GitHub Releases 重新下载。 */
@@ -572,9 +601,81 @@ if (!gotLock){
 // 保留托盘存活：关掉所有窗口不退出
 app.on("window-all-closed", () => { /* 不退出，托盘常驻 */ });
 
+/* ---------- P0-8：局域网同步 HTTP server（仅 Electron 环境） ----------
+ * 监听 localhost:8124，提供两个端点：
+ *   GET  /sync/download → 返回本机完整数据 JSON（localStorage 快照）
+ *   POST /sync/upload   → 接收另一设备的数据并覆盖写入（需确认弹窗）
+ * 仅限 localhost 访问（bind 到 127.0.0.1），避免外网暴露。
+ * 服务器在 app.ready 时启动，before-quit 时关闭。
+ */
+let syncServer = null;
+function startSyncServer(){
+  const PORT = 8124;
+  // 读取本机所有用户数据键
+  function getLocalData(){
+    try {
+      const keys = Object.keys(localStorage || {});
+      const data = {};
+      for (const k of keys) {
+        if (k.startsWith("wb_agent_") || k === "wb_custom_links") {
+          try { data[k] = localStorage.getItem(k); } catch(e){}
+        }
+      }
+      return data;
+    } catch(e) { return {}; }
+  }
+  syncServer = http.createServer((req, res) => {
+    // 仅允许 localhost 请求（防跨网络滥用）
+    const clientIp = req.socket && req.socket.remoteAddress;
+    if (clientIp && clientIp !== "::1" && clientIp !== "127.0.0.1") {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "forbidden" }));
+      return;
+    }
+    if (req.method === "GET" && req.url === "/sync/download") {
+      const data = getLocalData();
+      data._deviceMeta = { deviceId: require("crypto").randomUUID(), syncedAt: Date.now() };
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(data));
+    } else if (req.method === "POST" && req.url === "/sync/upload") {
+      let body = "";
+      req.on("data", chunk => { body += chunk; });
+      req.on("end", () => {
+        try {
+          const incoming = JSON.parse(body);
+          if (!incoming || typeof incoming !== "object") throw new Error("invalid");
+          // 广播给渲染进程：有同步数据待确认
+          if (win && !win.isDestroyed()) {
+            win.webContents.send("sync-upload-request", incoming);
+          }
+          res.writeHead(202, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ accepted: true }));
+        } catch(e) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "bad request" }));
+        }
+      });
+    } else {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "not found" }));
+    }
+  });
+  syncServer.listen(PORT, "127.0.0.1", () => {
+    console.log(`[sync] LAN sync server listening on http://127.0.0.1:${PORT}`);
+  });
+  syncServer.on("error", err => {
+    console.error(`[sync] server error: ${err.message}`);
+  });
+}
+function stopSyncServer(){
+  if (syncServer) {
+    syncServer.close(() => { syncServer = null; });
+  }
+}
+
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
   else if (win){ win.show(); win.focus(); }
 });
 
-app.on("before-quit", () => { willQuit = true; });
+app.on("before-quit", () => { willQuit = true; stopSyncServer(); });

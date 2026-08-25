@@ -13,5 +13,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // chat 参数原样透传；F3：新增 profileId 字段（当前激活 profile 的 id，主进程据此取 base/model/key）
   chat: (arg) => ipcRenderer.invoke("chat", arg),
   // P1-1：取消进行中的 AI 请求（主进程 fetch 对应 AbortController）
-  abortChat: () => ipcRenderer.send("abort-chat")
+  abortChat: () => ipcRenderer.send("abort-chat"),
+  // P0-8：局域网同步（Electron 专属）
+  syncGet: () => ipcRenderer.invoke("sync-get"),
+  syncUpload: (data) => ipcRenderer.invoke("sync-upload", data),
+  onSyncUploadRequest: (cb) => {
+    ipcRenderer.on("sync-upload-request", (_, data) => cb(data));
+  },
+  offSyncUploadRequest: (cb) => {
+    ipcRenderer.removeListener("sync-upload-request", cb);
+  }
 });

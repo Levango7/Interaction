@@ -592,7 +592,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .overview-grid > .foot{margin-top:0}
 
 /* ===== v2.3.0 系统概况卡 ===== */
-.sys-overview-card{overflow:hidden;padding:var(--space-2) var(--space-3)}
+/* flex-shrink:0：.main 是 flex column 滚动容器，卡片作为 flex item 默认
+ * flex-shrink:1，内容总高超可视区时会被压缩到 50px，配合 overflow:hidden
+ * 导致卡片只显示一点点。禁止收缩，让 .main 正常滚动。 */
+.sys-overview-card{overflow:hidden;flex-shrink:0;padding:var(--space-2) var(--space-3)}
 .sys-overview-card .card-head{margin-bottom:var(--space-1)}
 .sys-overview-card .card-head h2{margin:0;font-size:var(--fs-base);font-weight:600;display:flex;align-items:center;gap:var(--space-2)}
 .sys-overview-card .card-head .sub{margin:1px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
@@ -1020,7 +1023,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .hc-streak-scroll{overflow-x:auto;margin-top:var(--space-2);padding-bottom:var(--space-1)}
 .hc-streak-inner{display:inline-flex;gap:var(--space-2);padding-right:var(--space-2)}
 /* 热力图（移除折叠，直接展示） */
-.hc-heat-all{margin-top:var(--space-3);display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3)}
+.hc-heat-all{margin-top:var(--space-3);display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3);max-height:340px;overflow-y:auto;padding-right:var(--space-1)}
 .hc-heat-item{display:flex;flex-direction:column;gap:var(--space-1)}
 .hc-heat-label{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
 /* 链路图自适应 */
@@ -2826,9 +2829,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
     <button type="button" class="tbtn" id="btnSearchTop" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
-    <!-- v2.5：全局搜索入口（跳转主页搜索框，Ctrl+K） -->
-    <button type="button" class="tbtn" id="btnGlobalSearch" title="全局搜索 (Ctrl+K)" aria-label="全局搜索">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.globSearch">全局</span></button>
     <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
     <button type="button" class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
@@ -3224,6 +3224,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <button type="button" class="addbtn min" id="btnIdbExport" aria-label="导出 IDB 备份" style="--sc:var(--accent)">IDB 全量备份</button>
       <button type="button" class="addbtn min" id="btnIdbImport" aria-label="导入 IDB 备份" style="--sc:var(--accent)">IDB 全量恢复</button>
       <input type="file" id="idbFileInput" accept=".idbbackup,.json" style="display:none">
+      <!-- P0-8：局域网同步按钮（仅 Electron 环境显示） -->
+      <button type="button" class="addbtn min" id="btnSyncLocal" aria-label="局域网同步" style="--sc:var(--accent);display:none">局域网同步</button>
       <button type="button" class="addbtn min danger" id="btnClear" aria-label="清空数据">清空数据</button>
     </div>
     <div class="set-actions">
@@ -5448,7 +5450,7 @@ const SCENARIOS = {
   code:{ name:"编程", color:"#34a853",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>',
     sysprompt:"你是一个资深全栈工程师，擅长代码实现、调试与架构建议。给出可直接运行的代码并解释关键点。",
-    extraCard:"report",
+    extraCard:"code",
     record:{ label:"代码片段",
       fields:[{k:"lang",label:"语言",type:"text"},{k:"title",label:"标题",type:"text"},{k:"code",label:"代码",type:"textarea"}] } },
 
@@ -7764,6 +7766,8 @@ const SIDE_TOGGLE_HTML = `<button type="button" class="side-toggle" id="sideTogg
 const SIDE_MENU_ICONS = {
   dash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
   tasks:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  /* v2.5.1：工具箱用扳手图标，与商店拼图图标差异化（原 plugin=puzzle 与商店雷同） */
+  toolbox:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
   plugin: UI_ICONS.puzzle,
   ai: UI_ICONS.robot,
   chain: UI_ICONS.chain,
@@ -7879,7 +7883,7 @@ function _buildSideMenu(){
     active: !_sideActive && uiView==="ai"
   };
   const toolboxNode = {
-    id:"feat-toolbox", label:"工具箱", icon:(SIDE_MENU_ICONS.plugin||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#8b5cf6",
+    id:"feat-toolbox", label:"工具箱", icon:(SIDE_MENU_ICONS.toolbox||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#8b5cf6",
     cnt:"", sc:"toolbox",
     active: !_sideActive && _effActive==="toolbox"
   };
@@ -11065,7 +11069,7 @@ function renderOverview(){
     </header></div>
     ${renderSystemOverviewCard()}
     <div class="overview-grid">
-      <div class="card ov-span2"><h2>全局搜索</h2>
+      <div class="card ov-span2"><h2>${ic("search")} 全局搜索</h2>
         <div class="glob-filters">
           <input id="globSearch" class="glob-search-main" placeholder="关键词，如 周报 / 跑步…">
           <select id="globFSc" aria-label="按场景筛选"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
@@ -11084,7 +11088,7 @@ function renderOverview(){
        ${_renderTodayTopHtml()}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
      </div>
-	     <div class="card"><h2>${UI_ICONS.stats} 数据速览</h2>
+	     <div class="card"><h2>${ic("grid")} 数据速览</h2>
 	       <p class="sub">完成趋势与本月密度</p>
 	       <h3>完成趋势（近 14 天）</h3>${lineChart}
 	       <h3>日历热力图（本月）</h3>${heat}
@@ -11565,7 +11569,7 @@ function renderTasksPage(){
         </span>
       </li>`;
     }).join("");
-    body = `<div class="card"><h2>${ic("check")}待办清单 <span class="cnt-pill">${pending.length}</span></h2>` +
+    body = `<div class="card"><h2>${ic("target")}待办清单 <span class="cnt-pill">${pending.length}</span></h2>` +
       (pending.length ? `<ul class="todo-list">${rows}</ul>` : renderEmpty("no-today")) + `</div>`;
     $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
     $$("#main [data-tasks-done]").forEach(chk=>{
@@ -11791,10 +11795,10 @@ function renderChainPage(){
       <div class="ph-tx"><h2>习惯链</h2><p class="sub">跨场景行为联动——完成 A 场景任务自动触发 B 场景待办</p></div>
       <div class="ph-actions"><button type="button" class="addbtn sm" id="chainCfgBtn" style="--sc:var(--accent);font-weight:600">规则配置</button><button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button></div>
     </header></div>
-    <div class="card"><h2>当前 Streak</h2><p class="sub">各场景连续完成天数（≥3 天点燃火焰）</p><div class="streak-row">${streakBadges}</div></div>
-    <div class="card"><h2>场景链路图</h2>${renderChainGraph()}</div>
-    <div class="card"><h2>习惯链状态</h2>${renderHabitChainStatus()}</div>
-    <div class="card"><h2>触发成功率</h2>${rateRows || '<div class="empty">暂无链路触发记录</div>'}</div>`);
+    <div class="card"><h2>${ic("flame")} 当前 Streak</h2><p class="sub">各场景连续完成天数（≥3 天点燃火焰）</p><div class="streak-row">${streakBadges}</div></div>
+    <div class="card"><h2>${ic("mindmap")} 场景链路图</h2>${renderChainGraph()}</div>
+    <div class="card"><h2>${ic("chain")} 习惯链状态</h2>${renderHabitChainStatus()}</div>
+    <div class="card"><h2>${ic("target")} 触发成功率</h2>${rateRows || '<div class="empty">暂无链路触发记录</div>'}</div>`);
   const cfg = $("#chainCfgBtn");
   if(cfg) cfg.onclick = ()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } };
 }
@@ -11905,6 +11909,7 @@ const CARD_REGISTRY = {
   design:  { render: designCard,  bind: bindDesignCard },
   data:    { render: dataCard,    bind: bindDataCard },
   life:    { render: lifeCard,    bind: bindLifeCard },
+  code:    { render: codeCard,    bind: bindCodeCard },
   none:    { render: () => "",    bind: () => {} },
 };
 /** 内置卡片键（禁止被 registerCard 覆盖） */
@@ -11956,7 +11961,7 @@ function renderExtra(sc){
 function reportCard(sc){
   const done=thisWeekDone(sc);
   const txt = done.length? done.map(t=>"- "+t.title+(t.due?"（"+t.due+"）":"")).join("\n") : "本周暂无已完成任务。";
-  return `<div class="card"><h2>周报生成器</h2><p class="sub">自动汇总本周（${weekRange()}）已完成任务</p>
+  return `<div class="card"><h2>${ic("sheet")} 周报生成器</h2><p class="sub">自动汇总本周（${weekRange()}）已完成任务</p>
     <textarea readonly id="repTxt">${esc(txt)}</textarea>
     <button type="button" class="addbtn" id="copyRep" style="--sc:${SCENARIOS[sc].color};margin-top:8px">复制周报</button></div>`;
 }
@@ -12221,42 +12226,58 @@ function bindHealthCard(){
   // 当前版本为纯展示卡片，无交互绑定；预留 hook 供后续扩展
 }
 
-/** 设计场景专属卡片：灵感板（最近作品速览） */
+/** 设计场景专属卡片：灵感板（按类型统计 + 最近作品速览） */
 function designCard(sc){
   const recs = getRec(sc);
+  if(!recs.length) return '<div class="card extra-card"><h3>灵感板</h3><p class="sub">记录作品后这里会按类型汇总</p><div class="extra-empty">暂无作品记录 · 在上方资料库添加第一条</div></div>';
+  // 按类型统计数量
+  const byType = {};
+  recs.forEach(r=>{ const t = r.type || "作品"; byType[t] = (byType[t]||0)+1; });
+  const statHtml = Object.entries(byType).map(([t,n])=>
+    '<span class="extra-tag">'+esc(t)+' <b>'+n+'</b></span>').join("");
   const recent = recs.slice(0, 4);
-  if(!recent.length) return "";
   const items = recent.map(r=>{
     const type = r.type || "作品";
     const title = r.title || "未命名";
     return '<div class="extra-item"><span class="extra-tag">'+esc(type)+'</span><span class="extra-title">'+esc(title)+'</span></div>';
   }).join("");
-  return '<div class="card extra-card"><h3>灵感板</h3><p class="sub">最近作品速览</p><div class="extra-list">'+items+'</div></div>';
+  return '<div class="card extra-card"><h3>灵感板</h3><p class="sub">各类型作品数 · 最近速览</p><div class="extra-stats">'+statHtml+'</div><div class="extra-list">'+items+'</div></div>';
 }
 function bindDesignCard(sc){ /* 设计卡片无需额外绑定 */ }
 
-/** 数据场景专属卡片：指标快照（最近数据记录摘要） */
+/** 数据场景专属卡片：指标快照（按类型统计 + 最近数据记录摘要） */
 function dataCard(sc){
   const recs = getRec(sc);
+  if(!recs.length) return '<div class="card extra-card"><h3>指标快照</h3><p class="sub">记录数据后这里会汇总各类型指标</p><div class="extra-empty">暂无数据记录 · 在上方资料库添加第一条</div></div>';
+  // 按类型统计数量
+  const byType = {};
+  recs.forEach(r=>{ const t = r.type || "数据"; byType[t] = (byType[t]||0)+1; });
+  const statHtml = Object.entries(byType).map(([t,n])=>
+    '<span class="extra-tag">'+esc(t)+' <b>'+n+'</b></span>').join("");
   const recent = recs.slice(0, 5);
-  if(!recent.length) return "";
   const items = recent.map(r=>{
     const type = r.type || "数据";
     const title = r.title || "";
     const note = r.note ? " · "+esc(r.note).slice(0,30) : "";
     return '<div class="extra-item"><span class="extra-tag">'+esc(type)+'</span><span class="extra-title">'+esc(title)+'</span>'+note+'</div>';
   }).join("");
-  return '<div class="card extra-card"><h3>指标快照</h3><p class="sub">最近数据记录</p><div class="extra-list">'+items+'</div></div>';
+  return '<div class="card extra-card"><h3>指标快照</h3><p class="sub">各类型记录数 · 最近数据</p><div class="extra-stats">'+statHtml+'</div><div class="extra-list">'+items+'</div></div>';
 }
 function bindDataCard(sc){ /* 数据卡片无需额外绑定 */ }
 
-/** 生活场景专属卡片：健康摘要（运动/体重/睡眠/喝水最近记录） */
+/** 生活场景专属卡片：健康摘要（按类型统计 + 运动/体重/睡眠/喝水最近记录） */
 function lifeCard(sc){
   const recs = getRec(sc);
-  if(!recs.length) return "";
+  if(!recs.length) return '<div class="card extra-card"><h3>健康摘要</h3><p class="sub">记录生活数据后这里会汇总健康指标</p><div class="extra-empty">暂无生活记录 · 在上方资料库添加第一条</div></div>';
   const byType = {};
   recs.forEach(r=>{ const t = r.type || "日常事务"; if(!byType[t]) byType[t] = []; byType[t].push(r); });
   const types = ["运动记录","体重追踪","睡眠记录","喝水记录"];
+  // 类型统计（有记录的类型）
+  const statHtml = types.map(t=>{
+    const list = byType[t] || [];
+    if(!list.length) return "";
+    return '<span class="extra-tag">'+esc(t)+' <b>'+list.length+'</b></span>';
+  }).filter(Boolean).join("");
   const rows = types.map(t=>{
     const list = byType[t] || [];
     if(!list.length) return "";
@@ -12264,10 +12285,38 @@ function lifeCard(sc){
     const val = latest.value || "";
     return '<div class="extra-item"><span class="extra-tag">'+esc(t)+'</span><span class="extra-title">'+esc(latest.title||"")+'</span>'+(val?' <span class="extra-val">'+esc(val)+'</span>':"")+'</div>';
   }).filter(Boolean).join("");
-  if(!rows) return "";
-  return '<div class="card extra-card"><h3>健康摘要</h3><p class="sub">最近运动/体重/睡眠/喝水记录</p><div class="extra-list">'+rows+'</div></div>';
+  // 类型不在四大健康项内的记录也展示（如"日常事务"），避免有数据却无卡片
+  const otherRows = Object.keys(byType).filter(t => !types.includes(t)).map(t=>{
+    const list = byType[t] || [];
+    const latest = list[0];
+    const val = latest.value || "";
+    return '<div class="extra-item"><span class="extra-tag">'+esc(t)+'</span><span class="extra-title">'+esc(latest.title||"")+'</span>'+(val?' <span class="extra-val">'+esc(val)+'</span>':"")+'</div>';
+  }).join("");
+  const allRows = rows + otherRows;
+  if(!allRows) return "";
+  return '<div class="card extra-card"><h3>健康摘要</h3><p class="sub">各类型记录数 · 最近记录</p><div class="extra-stats">'+statHtml+'</div><div class="extra-list">'+allRows+'</div></div>';
 }
 function bindLifeCard(sc){ /* 生活卡片无需额外绑定 */ }
+
+/** 编程场景专属卡片：代码片段速览（按语言统计 + 最近代码片段） */
+function codeCard(sc){
+  const recs = getRec(sc);
+  if(!recs.length) return '<div class="card extra-card"><h3>代码片段</h3><p class="sub">记录代码后这里会按语言汇总</p><div class="extra-empty">暂无代码片段 · 在上方资料库添加第一条</div></div>';
+  // 按语言统计数量
+  const byLang = {};
+  recs.forEach(r=>{ const l = r.lang || "其他"; byLang[l] = (byLang[l]||0)+1; });
+  const statHtml = Object.entries(byLang).map(([l,n])=>
+    '<span class="extra-tag">'+esc(l)+' <b>'+n+'</b></span>').join("");
+  const recent = recs.slice(0, 4);
+  const items = recent.map(r=>{
+    const lang = r.lang || "其他";
+    const title = r.title || "未命名";
+    const code = r.code ? " · "+esc(r.code).replace(/\s+/g," ").slice(0,40) : "";
+    return '<div class="extra-item"><span class="extra-tag">'+esc(lang)+'</span><span class="extra-title">'+esc(title)+'</span>'+code+'</div>';
+  }).join("");
+  return '<div class="card extra-card"><h3>代码片段</h3><p class="sub">各语言片段数 · 最近速览</p><div class="extra-stats">'+statHtml+'</div><div class="extra-list">'+items+'</div></div>';
+}
+function bindCodeCard(sc){ /* 编程卡片无需额外绑定 */ }
 
 
 // ===== Render Layer (渲染层·场景主区) =====
@@ -12482,7 +12531,7 @@ function renderMainHTML(){
   // v2.1.0：任务卡标题随视图模式变化（任务看板 / 任务日历 / 待办清单）
   const taskCardTitle = sceneViewMode==="calendar" ? "任务日历" : sceneViewMode==="todo" ? "待办清单" : "任务看板";
   return `<div class="card"><h2>${UI_ICONS.check}${taskCardTitle}</h2>${taskForm}${filterHtml}${taskArea}</div>
-     <div class="card"><h2>${s.name} · ${rec.label}</h2>
+     <div class="card"><h2>${ic("book")} ${s.name} · ${rec.label}</h2>
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
       ${renderSceneSections(active)}
       ${renderExtra(active)}
@@ -15027,6 +15076,18 @@ function doImport(file){
         } catch(e){ /* 静默 */ }
       }
 
+      // 导入校验：必需字段 + 数据类型（兼容旧格式无 _deviceMeta 的数据）
+      const meta = data && data._deviceMeta;
+      if (meta) {
+        if (typeof meta.version !== "string" || typeof meta.exportedAt !== "number") {
+          toast("导入文件缺少必要字段 version 或 exportedAt", "error");
+          return;
+        }
+      }
+      let hasValidData = false;
+      const checkArr = (v) => { if(v===undefined) return false; try{ return Array.isArray(typeof v==="string"?JSON.parse(v):v); }catch(_){return false;} };
+      if (checkArr(data[PREFIX+"tasks"]) || checkArr(data[PREFIX+"records"])) hasValidData = true;
+      if (meta && !hasValidData) { toast("导入文件缺少 tasks 或 records 数据", "error"); return; }
 
       if(!confirm("导入将覆盖当前同名数据（含自定义习惯链）。确定继续？")) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
@@ -15264,6 +15325,35 @@ function doIdbImport(file){
       if(e.target.files[0]){ doIdbImport(e.target.files[0]); e.target.value = ""; }
     };
   }
+})();
+
+/* ---------- P0-8：局域网同步（仅 Electron 环境） ---------- */
+(function bindSyncButtons(){
+  if(!isElectron()) return;
+  const btnSync = $("#btnSyncLocal");
+  if(!btnSync) return;
+  btnSync.style.display = ""; // 显示按钮
+  btnSync.onclick = async () => {
+    // 1. 获取本机数据
+    const localData = await window.electronAPI.syncGet();
+    if(localData.error) { toast("获取本机数据失败："+localData.error, "error"); return; }
+    // 2. 通过 HTTP 发送到局域网
+    const myIp = "http://127.0.0.1:8124";
+    toast("本机同步服务运行中：在另一台设备上访问 http://<本机IP>:8124/sync/download", "ok");
+    // 3. 同时提供上传入口：打开下载链接（本机可访问）
+    try {
+      const resp = await fetch("/sync/download");
+      if(resp.ok){
+        const blob = await resp.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "agent-workbench-sync-"+todayStr()+".json";
+        a.click(); URL.revokeObjectURL(a.href);
+      }
+    } catch(e) {
+      toast("同步请求失败，请确认两台设备在同一局域网", "warn");
+    }
+  };
 })();
 
 /* ---------- 系统级消息中心 ----------
@@ -17039,8 +17129,6 @@ const _btnKnowledgeBase = $("#btnKnowledgeBase"); if(_btnKnowledgeBase) _btnKnow
 const _btnSearch = $("#btnSearch"); if(_btnSearch) _btnSearch.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
 const _btnNotesTop = $("#btnNotesTop"); if(_btnNotesTop) _btnNotesTop.onclick = function(){ if(typeof openNotesModal === "function") openNotesModal(); };
 const _btnSearchTop = $("#btnSearchTop"); if(_btnSearchTop) _btnSearchTop.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
-// v2.5：全局搜索入口——跳转主页并聚焦主页搜索框
-const _btnGlobalSearch = $("#btnGlobalSearch"); if(_btnGlobalSearch) _btnGlobalSearch.onclick = function(){ setActive("overview"); render(); setTimeout(function(){ const gs=$("#globSearch"); if(gs) gs.focus(); }, 50); };
 // v1.9.9：顶栏右侧更多按钮（从侧栏功能组迁出）——点击展开次常用工具下拉
 /* v1.15：顶栏消息按钮已收敛为唯一入口（#btnMessages），绑定见系统级消息中心区 */
 /* 弹窗关闭按钮 */
@@ -19351,7 +19439,7 @@ function renderPluginCards(){
       if(!c || typeof c.render !== "function") return;
       let body = "";
       try{ body = String(c.render(p.config || {})); }catch(e){ body = ""; }
-      html += '<div class="card"><h2>'+esc(c.name || p.name || "插件")+'</h2>'+sanitizeHtml(body)+'</div>';
+      html += '<div class="card"><h2>'+ic("puzzle")+esc(c.name || p.name || "插件")+'</h2>'+sanitizeHtml(body)+'</div>';
     });
   });
   return html;
