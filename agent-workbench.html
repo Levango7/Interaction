@@ -8008,7 +8008,7 @@ function _buildSideMenu(){
     active: !_sideActive && _effActive==="toolbox"
   };
   const storeNode = {
-    id:"feat-store", label:"商店", icon:UI_ICONS.puzzle.replace("<svg","<svg aria-hidden=\"true\""), color:"#f59e0b",
+    id:"feat-store", label:"商店", icon:UI_ICONS.shop.replace("<svg","<svg aria-hidden=\"true\""), color:"#f59e0b",
     cnt:"", sc:"store",
     active: !_sideActive && (_effActive==="store" || uiView==="plugin")
   };
@@ -12038,7 +12038,7 @@ function renderStorePage(){
   };
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
-      <span class="ph-ic" aria-hidden="true">${UI_ICONS.puzzle}</span>
+      <span class="ph-ic" aria-hidden="true">${UI_ICONS.shop}</span>
       <div class="ph-tx"><h2>商店</h2><p class="sub">插件与应用市场——安装后按类型自动挂载到对应位置</p></div>
       <button type="button" class="addbtn sm" id="storeImportBtn" style="--sc:var(--accent)">导入插件 JSON</button>
       <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
