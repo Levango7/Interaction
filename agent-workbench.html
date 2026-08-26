@@ -670,6 +670,18 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tool-app-card .tool-form-grid .tool-field label{margin:0 0 4px}
 /* v3.0：表单与列表之间加虚线分隔，视觉层次更清晰 */
 .tool-app-card .tool-form-box{padding-bottom:var(--space-3);border-bottom:1px dashed var(--line);margin-bottom:var(--space-2)}
+/* v3.0.1 B-5：功能卡通用提示行 / 数据可视化迷你图表 */
+.tool-hint{margin:var(--space-2) 0 0;font-size:var(--fs-xs);color:var(--muted)}
+.tool-app-card .tool-table .f-row-extra td{border-top:none;padding-top:var(--space-1)}
+.mini-chart-wrap{padding:var(--space-1) var(--space-2);background:var(--panel2);border-radius:var(--radius-sm);overflow:hidden}
+.mini-chart-wrap svg{display:block;width:100%;height:120px}
+.mini-chart-empty{color:var(--muted);font-size:var(--fs-xs);text-align:center;padding:var(--space-3)}
+.mini-chart-legend{font-size:var(--fs-xs);fill:var(--text-dim)}
+.mini-chart-val{font-size:10px;fill:var(--muted)}
+.mini-chart-lbl{font-size:11px;fill:var(--text-dim)}
+/* v3.0.1 B-3：代码运行器输出区（等宽字体 + panel2 背景） */
+.run-output{margin-top:var(--space-1);padding:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-sm);font-family:"SF Mono","SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all;max-height:180px;overflow:auto}
+.run-output-title{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
 
 /* ===== 看板视图 ===== */
 /* minmax(0,1fr)：列宽允许压缩到内容最小宽以下，防止窄主区（如平板未展开聊天面板时）卡片按钮把网格撑溢出 */
@@ -3115,7 +3127,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
     <div class="set-field">
       <label for="cfgMemMax">工作记忆容量（条，20~500）</label>
-      <div class="ctl"><input id="cfgMemMax" type="number" min=20" max="500" placeholder="60（默认）"></div>
+      <div class="ctl"><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
     </div>
     <div class="set-field">
       <label for="cfgAgentLoops">对话循环上限（无目标时，6~30 轮）</label>
@@ -8786,11 +8798,13 @@ const TOOL_APPS = {
       const font = $("#wFont");
       if(font) font.onchange = function(){ ed.focus(); if(font.value) document.execCommand("formatBlock", false, font.value); font.value = ""; };
       ed.oninput = function(){ _toolSaveDoc("off-word", ed.innerHTML); };
+      // A-4 纵深防御：contenteditable 可能含用户从网页粘贴的富文本，导出文件会被再次打开/分发，
+      // 拼接前必须过 sanitizeHtml（渲染路径 openToolStub 已统一消毒，此处堵住「导出物再分发」缺口）
       $("#wordExportHtml").onclick = function(){
-        _toolDownload("doc.html", '<!DOCTYPE html><meta charset="utf-8"><title>doc</title><body>' + ed.innerHTML + "</body>", "text/html;charset=utf-8");
+        _toolDownload("doc.html", '<!DOCTYPE html><meta charset="utf-8"><title>doc</title><body>' + sanitizeHtml(ed.innerHTML) + "</body>", "text/html;charset=utf-8");
       };
       $("#wordExportDoc").onclick = function(){
-        _toolDownload("doc.doc", '<!DOCTYPE html><meta charset="utf-8"><body>' + ed.innerHTML + "</body>", "application/msword");
+        _toolDownload("doc.doc", '<!DOCTYPE html><meta charset="utf-8"><body>' + sanitizeHtml(ed.innerHTML) + "</body>", "application/msword");
       };
     }
   },
@@ -9951,6 +9965,13 @@ function openAlarmModal(){
   );
   const nowT = $("#alarmNowTime"), nowD = $("#alarmNowDate");
   function refreshNow(){
+    // A-2 修复：弹窗已关闭时自愈——清掉泄漏的秒级定时器并退出，
+    // 避免持续写入已游离的 DOM 节点（内存泄漏 + 无谓 CPU 唤醒）
+    const m = $("#alarmModal");
+    if(!m || !m.classList.contains("show")){
+      if(openAlarmModal._h){ clearInterval(openAlarmModal._h); openAlarmModal._h = null; }
+      return;
+    }
     const d = new Date();
     nowT.textContent = _pad2(d.getHours()) + ":" + _pad2(d.getMinutes()) + ":" + _pad2(d.getSeconds());
     const wk2 = ["周日","周一","周二","周三","周四","周五","周六"];
@@ -9987,7 +10008,12 @@ function openAlarmModal(){
   _startAlarmTick();
   modal.classList.add("show");
 }
-function closeAlarmModal(){ const m = $("#alarmModal"); if(m) m.classList.remove("show"); }
+// A-2 修复：集中关闭点显式清理秒级定时器（关闭按钮 #btnAlarmClose 走此处；
+// Esc/遮罩兜底路径由 refreshNow 的自愈守卫补齐）
+function closeAlarmModal(){
+  const m = $("#alarmModal"); if(m) m.classList.remove("show");
+  if(openAlarmModal._h){ clearInterval(openAlarmModal._h); openAlarmModal._h = null; }
+}
 
 /* ---------- 3) 鼠标指针特效（多种效果·持久化开关+类型，v1.15 移入设置页） ---------- */
 const _pointerFx = {
@@ -10287,7 +10313,9 @@ function mountPet(kind){
     unmountPet();
     try{ toast("萌宠已收回", "info"); }catch(_){}
   };
-  // 拖拽
+  // 拖拽（A-3 修复：document 级 mousemove/mouseup 挂在 AbortController signal 上，
+  // unmountPet 时 abort 一次性解绑，杜绝反复切换萌宠导致的监听器累积泄漏；
+  // 项目内同模式先例：L11103/L17761）
   let drag = null;
   el.addEventListener("mousedown", function(e){
     if(e.target.closest(".pet-close")) return;
@@ -10295,14 +10323,18 @@ function mountPet(kind){
     el.style.animation = "none";
     e.preventDefault();
   });
-  document.addEventListener("mousemove", function(e){
+  const onPetMove = function(e){
     if(!drag) return;
     const nx = Math.max(0, Math.min(window.innerWidth - 80, e.clientX - drag.dx));
     const ny = Math.max(0, Math.min(window.innerHeight - 80, e.clientY - drag.dy));
     el.style.left = nx + "px";
     el.style.top  = ny + "px";
-  });
-  document.addEventListener("mouseup", function(){ if(drag){ drag = null; el.style.animation = ""; } });
+  };
+  const onPetUp = function(){ if(drag){ drag = null; el.style.animation = ""; } };
+  if(el._petAC){ try{ el._petAC.abort(); }catch(_){ } } // 防重复挂载兜底
+  el._petAC = new AbortController();
+  document.addEventListener("mousemove", onPetMove, { signal: el._petAC.signal });
+  document.addEventListener("mouseup", onPetUp, { signal: el._petAC.signal });
   // 点击说话
   el.addEventListener("click", function(e){
     if(e.target.closest(".pet-close")) return;
@@ -10316,6 +10348,10 @@ function mountPet(kind){
 }
 function unmountPet(){
   const stage = $("#petStage"); if(!stage) return;
+  // A-3 修复：清 DOM 前先 abort 各萌宠节点的 AbortController，成对解绑 document 级监听器
+  Array.prototype.forEach.call(stage.children, function(child){
+    if(child && child._petAC){ try{ child._petAC.abort(); }catch(_){ } child._petAC = null; }
+  });
   stage.classList.remove("on");
   while(stage.firstChild) stage.removeChild(stage.firstChild);
 }
@@ -12891,6 +12927,216 @@ function renderSceneFeature(fid){
  * 各功能仅需配置 fields/cols/sum/emptyTip，骨架与交互完全一致（求同），字段与统计对症下药（存异）。 */
 
 /** 通用功能卡 HTML：cfg = {key, title, icon, fields, cols, sum, emptyTip} */
+/* ---------- v3.0.1 B-5：数据可视化真图表 ----------
+ * parseChartData(str)：把记录里的 data 字段（JSON 数组字符串）解析为 [{label,value}]；
+ *   容错：非 JSON / 非数组 / 空数组 / 全部条目非法 → 返回 null（由调用方渲染占位）。
+ * renderMiniChart(chartType, dataArr)：返回 SVG 字符串（bar 横向条形图 / pie 扇形图 / line 折线图）。
+ *   颜色一律 var(--token)；label 为用户输入，进 SVG <text> 前必须 esc() 转义。
+ */
+function parseChartData(str){
+  if(str === null || str === undefined) return null;
+  let raw;
+  try{ raw = JSON.parse(String(str)); }catch(_){ return null; }
+  if(!Array.isArray(raw)) return null;
+  const out = [];
+  for(let i = 0; i < raw.length; i++){
+    const it = raw[i];
+    if(!it || typeof it !== "object" || Array.isArray(it)) continue;
+    if(it.label === undefined || it.label === null || String(it.label).trim() === "") continue;
+    // 注意：Number(null)/Number("") 均为 0，必须先显式剔除 null/undefined/空白串，再走数值转换
+    const rawV = it.value;
+    if(rawV === null || rawV === undefined) continue;
+    if(typeof rawV === "string" && rawV.trim() === "") continue;
+    const v = Number(rawV);
+    // 非有限数值或负值剔除（负值对占比类图表无意义）
+    if(!isFinite(v) || v < 0) continue;
+    out.push({ label: String(it.label), value: v });
+  }
+  return out.length ? out : null;
+}
+
+/* 迷你图表配色令牌轮换（pie 多色；全部为 CSS 变量，满足 lint-colors 门禁） */
+const MINI_CHART_COLORS = ["var(--accent)", "var(--ok)", "var(--warn)", "var(--danger)", "var(--muted)"];
+
+/* 横向条形图：label 左侧 · 条形按 value 占比 · 数值右侧 */
+function _miniBarSVG(data){
+  const W = 300, LBL_W = 78, VAL_W = 40, BAR_X = LBL_W + 4;
+  const BAR_MAXW = W - BAR_X - VAL_W - 6;
+  const rowH = 20, H = Math.max(60, data.length * rowH + 8);
+  const maxV = Math.max.apply(null, data.map(function(d){ return d.value; }).concat([1e-9]));
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="横向条形图">';
+  data.forEach(function(d, i){
+    const y = i * rowH + 4;
+    const w = Math.max(1, Math.round(d.value / maxV * BAR_MAXW));
+    svg += '<text class="mini-chart-lbl" x="' + LBL_W + '" y="' + (y + 12) + '" text-anchor="end">' +
+      esc(d.label.length > 8 ? d.label.slice(0, 7) + "…" : d.label) + '</text>';
+    // 条形轨道（--line）+ 数据条（--accent），行间交替微调透明度增强可读性
+    svg += '<rect x="' + BAR_X + '" y="' + (y + 2) + '" width="' + BAR_MAXW + '" height="12" rx="3" style="fill:var(--line)" fill-opacity="0.45"/>';
+    svg += '<rect x="' + BAR_X + '" y="' + (y + 2) + '" width="' + w + '" height="12" rx="3" style="fill:var(--accent)" fill-opacity="' + (i % 2 ? 0.75 : 1) + '"/>';
+    svg += '<text class="mini-chart-val" x="' + (W - 2) + '" y="' + (y + 12) + '" text-anchor="end">' + esc(String(d.value)) + '</text>';
+  });
+  return svg + "</svg>";
+}
+
+/* 饼图：SVG 扇形（极坐标→path 弧线），多色令牌轮换 + 右侧图例 */
+function _miniPieSlicePath(cx, cy, r, a0, a1){
+  const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+  const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+  const large = (a1 - a0) > Math.PI ? 1 : 0;
+  return "M" + cx + "," + cy + " L" + x0.toFixed(2) + "," + y0.toFixed(2) +
+    " A" + r + "," + r + " 0 " + large + ",1 " + x1.toFixed(2) + "," + y1.toFixed(2) + " Z";
+}
+function _miniPieSVG(data){
+  const W = 300, H = 130, cx = 62, cy = H / 2, r = 52;
+  const total = data.reduce(function(s, d){ return s + d.value; }, 0);
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="饼图">';
+  if(total <= 0){
+    // 全部 value 为 0：画灰色整圆占位
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" style="fill:var(--panel2)" stroke="var(--line)"/>';
+  }else{
+    let angle = -Math.PI / 2; // 从正上方开始顺时针
+    data.forEach(function(d, i){
+      const sweep = d.value / total * Math.PI * 2;
+      const a0 = angle, a1 = angle + sweep;
+      angle = a1;
+      const color = MINI_CHART_COLORS[i % MINI_CHART_COLORS.length];
+      // 单项占满（或仅剩浮点误差）：直接画整圆，避免弧线路径退化
+      if(sweep >= Math.PI * 2 - 1e-9){
+        svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" style="fill:' + color + '"/>';
+      }else{
+        svg += '<path d="' + _miniPieSlicePath(cx, cy, r, a0, a1) + '" style="fill:' + color + '" stroke="var(--panel)" stroke-width="1"/>';
+      }
+    });
+  }
+  // 右侧图例：色块 + label + 百分比
+  let ly = 18;
+  data.slice(0, 6).forEach(function(d, i){
+    const color = MINI_CHART_COLORS[i % MINI_CHART_COLORS.length];
+    const pct = total > 0 ? Math.round(d.value / total * 100) : 0;
+    svg += '<rect x="132" y="' + (ly - 8) + '" width="10" height="10" rx="2" style="fill:' + color + '"/>';
+    svg += '<text class="mini-chart-legend" x="148" y="' + ly + '">' +
+      esc((d.label.length > 10 ? d.label.slice(0, 9) + "…" : d.label) + " " + pct + "%") + '</text>';
+    ly += 19;
+  });
+  return svg + "</svg>";
+}
+
+/* 折线图：复用统计页 lineChartSVG（接收数值数组 + 颜色），外包一层容器说明维度标签 */
+function _miniLineSVG(data){
+  const vals = data.map(function(d){ return d.value; });
+  const labels = data.slice(0, 6).map(function(d){ return esc(d.label); }).join(" · ");
+  return '<div style="height:100%;display:flex;flex-direction:column">' +
+    '<div style="flex:1;min-height:0">' + lineChartSVG(vals, "var(--accent)") + "</div>" +
+    '<div class="mini-chart-legend" style="text-align:center;padding-bottom:4px">' + labels + "</div></div>";
+}
+
+/**
+ * 渲染迷你图表入口。
+ * @param {string} chartType - bar / pie / line（未知类型回退 bar）
+ * @param {Array<{label:string,value:number}>} dataArr - 已校验的数据点数组
+ * @returns {string} SVG 字符串；空数据/非法输入返回友好占位文案
+ */
+function renderMiniChart(chartType, dataArr){
+  if(!Array.isArray(dataArr) || !dataArr.length){
+    return '<div class="mini-chart-empty">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{"label":"Q1","value":30}]</div>';
+  }
+  const t = String(chartType || "bar").toLowerCase();
+  let inner;
+  if(t === "pie") inner = _miniPieSVG(dataArr);
+  else if(t === "line") inner = _miniLineSVG(dataArr);
+  else inner = _miniBarSVG(dataArr);
+  // line 类型自带布局容器，不再包 .mini-chart-wrap 的固定高度（避免双重滚动裁切）
+  if(t === "line") return '<div class="mini-chart-line-box" style="height:120px;background:var(--panel2);border-radius:var(--radius-sm);overflow:hidden">' + inner + "</div>";
+  return '<div class="mini-chart-wrap">' + inner + "</div>";
+}
+
+/* ---------- v3.0.1 B-3：真·JS 运行器 ----------
+ * runJsSnippet(code, opts)：在沙箱 Web Worker 中执行 JS 片段。
+ *   - Worker 源码 = console 重写胶水（收集 log/error 经 postMessage 回传）+ 用户代码 + done 信号
+ *   - 默认 5 秒超时 terminate；worker.onerror / 运行时异常统一捕获
+ *   - opts.timeout：注入毫秒数（测试用）；opts.workerFactory：注入假 Worker（jsdom 测试环境无真实 Worker）
+ * @returns {Promise<{ok:boolean, output:string, ms:number}>}
+ */
+function runJsSnippet(code, opts){
+  const o = opts || {};
+  const timeoutMs = (typeof o.timeout === "number" && o.timeout >= 0) ? o.timeout : 5000;
+  return new Promise(function(resolve){
+    const t0 = Date.now();
+    // 默认工厂：Blob URL 创建 Worker；url 挂到 worker._blobUrl 供结束后 revoke 清理
+    const makeWorker = o.workerFactory || function(src){
+      if(typeof Worker === "undefined") throw new Error("当前环境不支持 Web Worker");
+      const url = URL.createObjectURL(new Blob([src], { type: "application/javascript" }));
+      const w = new Worker(url);
+      w._blobUrl = url;
+      return w;
+    };
+    // 胶水代码：重写 console 收集输出；捕获运行时错误；同步代码结束后发 done 信号
+    const glue =
+      "self.console={log:function(){self.postMessage({type:'log',text:[].slice.call(arguments).map(function(x){try{return (x&&typeof x==='object')?JSON.stringify(x):String(x)}catch(_){return String(x)}}).join(' ')})}," +
+      "warn:function(){self.console.log.apply(null,arguments)},error:function(){self.postMessage({type:'error',text:[].slice.call(arguments).map(String).join(' ')})},info:function(){self.console.log.apply(null,arguments)}};" +
+      "self.onerror=function(m){self.postMessage({type:'error',text:String(m)});return true};";
+    let worker;
+    try{
+      worker = makeWorker(glue + "\n" + String(code === null || code === undefined ? "" : code) + "\nself.postMessage({type:'done'});");
+    }catch(err){
+      resolve({ ok:false, output:"Worker 创建失败：" + err.message, ms: Date.now() - t0 });
+      return;
+    }
+    const logs = [];
+    let errText = "";
+    let settled = false;
+    function finish(ok, output){
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try{ worker.terminate(); }catch(_){ }
+      if(worker._blobUrl){ try{ URL.revokeObjectURL(worker._blobUrl); }catch(_){ } }
+      resolve({ ok: ok, output: output, ms: Date.now() - t0 });
+    }
+    const timer = setTimeout(function(){
+      finish(false, (logs.length ? logs.join("\n") + "\n" : "") + "执行超时(" + Math.round(timeoutMs / 1000) + "s)");
+    }, timeoutMs);
+    worker.onmessage = function(e){
+      const d = e && e.data;
+      if(!d || !d.type) return;
+      if(d.type === "log"){ logs.push(d.text); return; }
+      if(d.type === "error"){ if(!errText) errText = d.text; return; }
+      if(d.type === "done"){
+        if(errText) finish(false, errText);
+        else finish(true, logs.length ? logs.join("\n") : "(无输出)");
+      }
+    };
+    worker.onerror = function(e){
+      // 语法错误等在脚本解析期触发主线程 error 事件（此时胶水未执行，收不到内部 postMessage）
+      const msg = (e && (e.message || (e.error && e.error.message))) || "未知执行错误";
+      finish(false, msg);
+    };
+  });
+}
+
+/**
+ * 绑定代码运行器功能卡的「▶ 运行」按钮（render 后调用，幂等）。
+ * 点击 → 按钮进入「运行中…」→ runJsSnippet 执行 → output 写回记录 result 字段 → toast → render 刷新。
+ */
+function bindCodeRunnerCard(){
+  $$("[data-f-run]").forEach(function(b){
+    b.onclick = async function(){
+      const id = b.getAttribute("data-f-run");
+      const rec = load(PREFIX + "code_runner", []).find(function(r){ return r.id === id; });
+      if(!rec){ toast("记录不存在", "warn"); return; }
+      if(b.disabled) return; // 防重复点击
+      b.disabled = true;
+      b.textContent = "运行中…";
+      const res = await runJsSnippet(rec.code || "");
+      save(PREFIX + "code_runner", load(PREFIX + "code_runner", []).map(function(r){
+        return r.id === id ? Object.assign({}, r, { result: res.output }) : r;
+      }));
+      toast(res.ok ? "运行完成（" + res.ms + "ms）" : "运行失败：" + String(res.output).slice(0, 60), res.ok ? "ok" : "error");
+      render();
+    };
+  });
+}
+
 function _featureCardHtml(cfg){
   const records = load(PREFIX + cfg.key, []);
   const form = '<div class="tool-form-grid">' + cfg.fields.map(function(f){
@@ -12898,8 +13144,12 @@ function _featureCardHtml(cfg){
       return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-f-field="' + esc(f.k) + '">' +
         f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
     }
+    // v3.0.1 B-5：支持 textarea（多行 JSON 数据输入）
+    if(f.type === "textarea"){
+      return '<div class="tool-field" style="grid-column:1/-1"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" style="min-height:0;font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace;font-size:12px"></textarea></div>';
+    }
     const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="date"' : ' type="text"';
-    return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + t + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
+    return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + t + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
   }).join("") + '</div>';
   const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
   const summary = sums.length
@@ -12907,13 +13157,23 @@ function _featureCardHtml(cfg){
         return '<div class="tool-summary-item"><span class="v">' + esc(String(s.v)) + '</span><span class="l">' + esc(s.l) + '</span></div>';
       }).join("") + '</div>'
     : '';
+  // v3.0.1 B-3/B-5：可选 hint 说明行（如「JS 片段在沙箱 Worker 中执行」）
+  const hint = cfg.hint ? '<div class="tool-hint">' + esc(cfg.hint) + '</div>' : "";
+  // v3.0.1 B-5：可选行后附加钩子 rowAfter(r)——返回 HTML 追加在该数据行下方（colspan 全宽），
+  // 用于渲染迷你图表 / 运行输出等富内容；返回空串则不追加（旧记录兼容）
+  const colSpan = cfg.cols.length + 1;
   const rows = records.map(function(r){
     const tds = cfg.cols.map(function(c){
       if(c.type === "check"){ return '<td><input type="checkbox" data-f-check="' + r.id + '"' + (r.done ? " checked" : "") + ' aria-label="' + esc(c.label) + '"></td>'; }
       const v = (typeof c.fmt === "function") ? c.fmt(r) : esc(r[c.k] || "");
       return '<td>' + v + '</td>';
     }).join("");
-    return '<tr data-f-row="' + r.id + '"><td><button type="button" class="addbtn xs danger" data-f-del="' + r.id + '" aria-label="删除">✕</button></td>' + tds + '</tr>';
+    let extra = "";
+    if(typeof cfg.rowAfter === "function"){
+      const extraInner = cfg.rowAfter(r);
+      if(extraInner) extra = '<tr class="f-row-extra"><td colspan="' + colSpan + '">' + extraInner + '</td></tr>';
+    }
+    return '<tr data-f-row="' + r.id + '"><td><button type="button" class="addbtn xs danger" data-f-del="' + r.id + '" aria-label="删除">✕</button></td>' + tds + '</tr>' + extra;
   }).join("");
   const list = records.length
     ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + '</th>'; }).join("") + '</tr></thead><tbody>' + rows + '</tbody></table>'
@@ -12923,7 +13183,7 @@ function _featureCardHtml(cfg){
   return '<div class="card tool-app-card"><h2>' + cfg.icon + ' ' + esc(cfg.title) + '</h2>' +
     '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">添加</span><button type="button" class="addbtn sm add-round" data-f-add style="--sc:var(--accent)" aria-label="添加">＋</button></span>' +
     '<span class="sub" style="margin:0">共 ' + records.length + ' 条</span></div>' +
-    summary + '<div class="tool-form-box">' + form + '</div>' + list + '</div>';
+    summary + '<div class="tool-form-box">' + form + '</div>' + hint + list + '</div>';
 }
 
 /** 通用功能卡事件绑定（委托到 #main，幂等）
@@ -12985,7 +13245,8 @@ const SCENE_FEATURE_BIND = {
   },
   data: {
     report: { key:"data_reports", fieldKeys:["title","source","dims","metrics","note"] },
-    chart:  { key:"data_charts",  fieldKeys:["title","type","source","note"] }
+    /* v3.0.1 B-5：chart 卡扩展 data（JSON 数据点）+ chartType（图表类型），旧记录无新字段仍按台账行显示 */
+    chart:  { key:"data_charts",  fieldKeys:["title","type","source","data","chartType","note"] }
   },
   design: {
     ui:      { key:"design_ui", fieldKeys:["title","type","tool","palette","note"] },
@@ -13379,24 +13640,35 @@ SCENE_FEATURE_RENDER.data = {
     });
   },
   chart: function(){
+    /* v3.0.1 B-5：数据可视化真图表——记录可携带 data（JSON 数据点）+ chartType，
+     * 有合法 data 的记录在行下方渲染真实 SVG 图表；无 data 的旧记录仍显示为普通台账行 */
     return _featureCardHtml({
       key:"data_charts", title:"数据可视化", icon:ic("filter"),
+      hint:"提示：填写「数据点」JSON 后，记录行下方将渲染真实图表（bar 柱状 / pie 饼图 / line 折线）",
       fields:[
         {k:"title", label:"图表名", type:"text"},
         {k:"type", label:"类型", type:"select", options:["折线图","柱状图","饼图","仪表盘"]},
         {k:"source", label:"数据源", type:"text"},
+        {k:"chartType", label:"图表类型", type:"select", options:["bar","pie","line"]},
+        {k:"data", label:"数据点(JSON数组)", type:"textarea", placeholder:'[{"label":"Q1","value":30},{"label":"Q2","value":52}]'},
         {k:"note", label:"说明", type:"text"}
       ],
       cols:[
         {label:"图表名", k:"title"},
         {label:"类型", k:"type"},
-        {label:"数据源", k:"source"},
+        {label:"图表类型", fmt:function(r){ return r.data && parseChartData(r.data) ? esc(r.chartType || "bar") : '<span style="color:var(--muted)">—</span>'; }},
         {label:"说明", fmt:function(r){ return (r.note||"").slice(0,20); }}
       ],
+      rowAfter:function(r){
+        const arr = parseChartData(r.data);
+        if(!arr) return ""; // 无 data 或非法 JSON：保持普通台账行（旧记录兼容）
+        return renderMiniChart(String(r.chartType || "bar"), arr);
+      },
       sum:function(recs){
+        const charted = recs.filter(function(r){ return r.data && parseChartData(r.data); }).length;
         return [
           { v:recs.length, l:"图表" },
-          { v:new Set(recs.map(function(r){ return r.type; }).filter(Boolean)).size, l:"类型" }
+          { v:charted, l:"已出图" }
         ];
       },
       emptyTip:"暂无图表 · 点击「添加」创建第一个可视化"
@@ -13451,24 +13723,38 @@ SCENE_FEATURE_RENDER.code = {
     });
   },
   runner: function(){
+    /* v3.0.1 B-3：真·JS 运行器——JavaScript 片段可在沙箱 Worker 中一键执行，
+     * output 回填记录 result 字段并在行下方以等宽字体展示；其他语言仍为普通台账 */
     return _featureCardHtml({
       key:"code_runner", title:"代码运行记录", icon:ic("compile"),
+      hint:"JS 片段在沙箱 Worker 中执行：点击「▶ 运行」立即运行 JavaScript 代码，输出回填至结果列；其他语言仅作记录",
       fields:[
         {k:"title", label:"标题", type:"text"},
         {k:"language", label:"语言", type:"select", options:["JavaScript","Python","Java","Go","其他"]},
-        {k:"code", label:"代码", type:"text"},
+        {k:"code", label:"代码", type:"textarea", placeholder:'console.log("Hello");'},
         {k:"result", label:"运行结果", type:"text"}
       ],
       cols:[
         {label:"标题", k:"title"},
         {label:"语言", k:"language"},
         {label:"代码", fmt:function(r){ return (r.code||"").slice(0,20) + ((r.code||"").length>20?"…":""); }},
+        {label:"操作", fmt:function(r){
+          // 仅 JS/JavaScript 记录提供沙箱运行入口
+          if(!/^\s*(javascript|js)\s*$/i.test(String(r.language || ""))) return "";
+          return '<button type="button" class="addbtn xs" data-f-run="' + r.id + '" title="在沙箱 Worker 中运行此 JS 片段" style="--sc:var(--accent)">▶ 运行</button>';
+        }},
         {label:"结果", fmt:function(r){ return (r.result||"").slice(0,16); }}
       ],
+      rowAfter:function(r){
+        // 行下方展示最近一次运行输出（等宽字体 · --panel2 背景）
+        if(!/^\s*(javascript|js)\s*$/i.test(String(r.language || ""))) return "";
+        if(!r.result) return "";
+        return '<div class="run-output-title">最近一次运行输出</div><div class="run-output">' + esc(String(r.result)) + "</div>";
+      },
       sum:function(recs){
         return [{ v:recs.length, l:"运行记录" }];
       },
-      emptyTip:"暂无运行记录 · 点击「添加」记录第一次运行"
+      emptyTip:'暂无运行记录 · 点击「添加」记录第一次运行（语言选 JavaScript 即可沙箱执行）'
     });
   },
   regex: function(){
@@ -15978,6 +16264,8 @@ function render(){
     if(sceneFeatureMode !== "overview"){
       const bcfg = (SCENE_FEATURE_BIND[active] || {})[sceneFeatureMode];
       if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys);
+      // v3.0.1 B-3：代码运行器「▶ 运行」按钮绑定（通用 CRUD 绑定之外的特化扩展）
+      if(active === "code" && sceneFeatureMode === "runner") bindCodeRunnerCard();
     }
     setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
     setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
@@ -16397,24 +16685,34 @@ function doIdbImport(file){
   if(!btnSync) return;
   btnSync.style.display = ""; // 显示按钮
   btnSync.onclick = async () => {
-    // 1. 获取本机数据
-    const localData = await window.electronAPI.syncGet();
-    if(localData.error) { toast("获取本机数据失败："+localData.error, "error"); return; }
-    // 2. 通过 HTTP 发送到局域网
+    // 1. 获取本机数据（A-1 修复：syncGet IPC 包裹 try-catch，异常时给出针对性提示并终止，
+    //    避免 unhandled rejection + 后续「运行中」成功语气提示自相矛盾）
+    let localData;
+    try{
+      localData = await window.electronAPI.syncGet();
+    }catch(err){
+      toast("本机同步服务启动失败：" + (err && err.message ? err.message : err), "error");
+      return;
+    }
+    if(localData && localData.error){ toast("获取本机数据失败：" + localData.error, "error"); return; }
+    // 2. 通过 HTTP 提供下载入口（A-1 修复：Electron 以 file:// 加载页面，相对路径 fetch("/sync/download")
+    //    会解析为 file:///sync/download 必然失败，必须拼接 main.js 同步端点的绝对地址；复用 myIp）
     const myIp = "http://127.0.0.1:8124";
     toast("本机同步服务运行中：在另一台设备上访问 http://<本机IP>:8124/sync/download", "ok");
-    // 3. 同时提供上传入口：打开下载链接（本机可访问）
+    // 3. 同时提供上传入口：打开下载链接（本机可访问）；失败提示与第 2 步语义分离（本机下载 ≠ 跨设备同步）
     try {
-      const resp = await fetch("/sync/download");
+      const resp = await fetch(myIp + "/sync/download");
       if(resp.ok){
         const blob = await resp.blob();
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = "agent-workbench-sync-"+todayStr()+".json";
         a.click(); URL.revokeObjectURL(a.href);
+      } else {
+        toast("本机快照下载失败（HTTP " + resp.status + "），不影响其他设备经局域网访问", "warn");
       }
     } catch(e) {
-      toast("同步请求失败，请确认两台设备在同一局域网", "warn");
+      toast("本机快照请求失败，请确认本机同步服务已启动", "warn");
     }
   };
 })();
@@ -19617,6 +19915,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     TOOL_APPS, openToolStub, renderSystemOverviewCard, renderOverview,
     // v2.4.0 四大新页面（供测试驱动与断言）
     renderTasksPage, renderToolboxPage, renderStorePage, renderChainPage,
+    // v3.0.1 B-3/B-5：JS 沙箱运行器 + 数据可视化迷你图表（供测试驱动与断言）
+    runJsSnippet, parseChartData, renderMiniChart,
     get _dashEditMode(){ return _dashEditMode; },
     set _dashEditMode(v){ _dashEditMode = !!v; }
   };
