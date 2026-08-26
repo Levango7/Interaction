@@ -32,6 +32,8 @@
   /* 顶栏第二行表面渐变（亮色层次；暗色/暖色主题各自覆盖） */
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
   --text:#1d1d1f; --muted:#5e5e63; --accent:#0a6cbd;
+  /* PS lite 图片编辑器：canvas 绘制用运行时令牌（_pfCssColor 读取，避免硬编码触发 lint-colors 门禁） */
+  --ps-wm-fill:rgba(255,255,255,0.92); --ps-wm-shadow:rgba(0,0,0,0.6);
   --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.04);
   --safe:env(safe-area-inset-bottom);
   /* 表面层次 */
@@ -935,7 +937,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .heat{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--space-1);max-width:360px;margin:0 auto}
 .hcell{aspect-ratio:1;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;
   font-size:10px;color:var(--text-dim-3);transition:transform var(--transition-fast),box-shadow var(--transition-fast),filter var(--transition-fast)}
-.hcell:hover{transform:scale(1.18);box-shadow:0 1px 4px rgba(0,0,0,.15);filter:brightness(1.1);z-index:var(--z-under)}
+.hcell:hover{transform:scale(1.18);box-shadow:var(--shadow-2);filter:brightness(1.1);z-index:var(--z-under)}
 .hcell.l0{background:var(--heat-0)}.hcell.l1{background:var(--heat-1)}.hcell.l2{background:var(--heat-2)}.hcell.l3{background:var(--heat-3)}.hcell.l4{background:var(--heat-4)}
 .dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px}
 .bars{display:flex;flex-direction:column;gap:var(--space-2)}
@@ -7777,7 +7779,7 @@ function renderHabitChainCard(){
     <!-- 核心指标：跨场景联动价值一眼可见 -->
     <div class="hc-kpi-row">${kpis}</div>
     <!-- 跨场景联动（核心，提到最前） -->
-    <div class="hc-section-title">跨场景习惯链</div>
+    <div class="hc-section-title">跨场景链路图</div>
     ${renderChainGraph()}
     ${renderHabitChainStatus()}
     <!-- 坚持天数 -->
@@ -9231,7 +9233,7 @@ const TOOL_APPS = {
         if(cropMode && sel){
           sel.w = mx - sel.x; sel.h = my - sel.y;
           ctx.putImageData(orig, 0, 0);
-          ctx.strokeStyle = "#0a6cbd"; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+          ctx.strokeStyle = _pfCssColor("--accent", ""); ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
           ctx.strokeRect(sel.x, sel.y, sel.w, sel.h);
           ctx.setLineDash([]);
         } else if(brushMode){
@@ -9264,8 +9266,8 @@ const TOOL_APPS = {
         const txt = $("#psText").value.trim();
         if(!txt){ toast("请输入水印文字", "warn"); return; }
         ctx.font = "bold 32px sans-serif";
-        ctx.fillStyle = "rgba(255,255,255,0.92)";
-        ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 4;
+        ctx.fillStyle = _pfCssColor("--ps-wm-fill", "");
+        ctx.shadowColor = _pfCssColor("--ps-wm-shadow", ""); ctx.shadowBlur = 4;
         ctx.fillText(txt, 20, cv.height - 30);
         ctx.shadowBlur = 0;
         saveState();
@@ -9278,7 +9280,7 @@ const TOOL_APPS = {
         brushMode = !brushMode; cropMode = false;
         $("#psBrush").classList.toggle("active", brushMode);
         cv.style.cursor = brushMode ? "crosshair" : "default";
-        if(brushMode){ ctx.strokeStyle = "#0a6cbd"; ctx.lineWidth = 4; ctx.lineCap = "round"; }
+        if(brushMode){ ctx.strokeStyle = _pfCssColor("--accent", ""); ctx.lineWidth = 4; ctx.lineCap = "round"; }
         toast(brushMode ? "画笔模式：在画布上拖拽绘制" : "已退出画笔模式", brushMode ? "ok" : "warn");
       };
 
@@ -13080,7 +13082,7 @@ SCENE_FEATURE_RENDER.office = {
         {label:"下班", k:"checkOut"},
         {label:"工时", fmt:function(r){
           if(!r.checkIn || !r.checkOut) return "-";
-          const p = function(s){ var m = /^(\d{1,2}):(\d{2})$/.exec(String(s)); return m ? Number(m[1])*60+Number(m[2]) : NaN; };
+          const p = function(s){ const m = /^(\d{1,2}):(\d{2})$/.exec(String(s)); return m ? Number(m[1])*60+Number(m[2]) : NaN; };
           const a = p(r.checkIn), b = p(r.checkOut);
           if(isNaN(a)||isNaN(b)||b<a) return "-";
           return ((b-a)/60).toFixed(1) + "h";
