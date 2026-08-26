@@ -1102,6 +1102,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .stats-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-3) var(--space-3);text-align:center;transition:box-shadow var(--transition-fast)}
 .stats-card:hover{box-shadow:var(--shadow-2)}
+/* v2.2.0：主页 KPI 卡（button 化 stats-card：reset 原生样式 + 可点击态） */
+.ov-kpi-card{margin-bottom:var(--space-4)}
+.ov-kpi-card .stats-cards{margin-bottom:0}
+.stats-card.ov-kpi-item{font:inherit;cursor:default}
+.stats-card.ov-kpi-item.clickable{cursor:pointer}
+.stats-card.ov-kpi-item.clickable:hover{border-color:var(--accent)}
+.stats-card.ov-kpi-item.clickable:active{transform:translateY(1px)}
 /* v2.2.0：AI 助手 Hub（三卡合一 tab；复用 .set-nav-btn 但取消吸顶） */
 .ai-hub-card .ai-hub-tabs{position:static;margin:0 0 var(--space-3);flex-wrap:wrap}
 .ai-hub-card .ai-hub-body{min-height:80px}
@@ -11275,6 +11282,15 @@ function renderOverview(){
     renderGlob(($("#globSearch").value||"").trim().toLowerCase());
   };
   renderGlobViews();
+  // v2.2.0：KPI 卡点击跳转
+  $$(".ov-kpi-item[data-kpi-act]").forEach(b=>{
+    b.onclick=()=>{
+      const act = b.getAttribute("data-kpi-act");
+      if(act==="office"){ setActive("office"); render(); }
+      else if(act==="stats"){ setActive("stats"); render(); }
+      else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
+    };
+  });
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
   const cr=$("#coachRefresh");
   if(cr) cr.onclick=()=>{ try{ localStorage.removeItem(COACH_CACHE_KEY); }catch(e){ /* noop */ } renderOverview(); };
