@@ -12858,9 +12858,10 @@ function renderSceneFeature(fid){
   const label = f ? f.label : fid;
   const fn = (SCENE_FEATURE_RENDER[active] || {})[fid];
   if(typeof fn === "function"){
-    try{ return fn(); }catch(e){ return `<div class="card"><h2>${ic("alert")} ${esc(label)}</h2><div class="extra-empty">功能渲染出错：${esc(e && e.message || e)}</div></div>`; }
+    try{ return fn(); }catch(e){ return `<div class="card"><h2>${ic("alert")} ${esc(label)}</h2><div class="empty">功能渲染出错：${esc(e && e.message || e)}</div></div>`; }
   }
-  return `<div class="card"><h2>${ic("puzzle")} ${esc(label)}</h2><div class="extra-empty">该功能正在建设中…</div></div>`;
+  // v3.0：占位 tab（CAD/图片/运行器/正则/健康/缴费/采购）统一空状态引导，风格与其他空状态一致
+  return `<div class="card"><h2>${ic("puzzle")} ${esc(label)}</h2><div class="empty">${ic("tool")} 该功能正在建设中，即将上线 · 敬请期待</div></div>`;
 }
 
 /* ================= v3.0 场景功能卡（求同存异：统一骨架 + 各功能配置） =================
@@ -15748,8 +15749,8 @@ function render(){
     $("#main").innerHTML = sanitizeHtml(renderSceneHead() + renderSceneFeatNav() + renderMainHTML());
     appendFoot();
     bindScenario();
-    // v3.0：场景内功能 tab 点击切换（SCENE_FEATURES）
-    $$("#main .scene-feat-tab").forEach(function(b){
+    // v3.0：场景内功能 tab 点击切换（SCENE_FEATURES；按钮复用 .set-nav-btn，限定在 .scene-feat-nav 内）
+    $$("#main .scene-feat-nav .set-nav-btn").forEach(function(b){
       b.onclick = function(){ setSceneFeature(b.getAttribute("data-feat")); };
     });
     // v3.0：办公文档中心工具入口点击（打开对应 TOOL_APPS 工具）
