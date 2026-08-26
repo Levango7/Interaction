@@ -59,11 +59,14 @@ describe("v2.3.0 TOOL_APPS 工具注册表", () => {
     expect(document.body.textContent).toContain("即将上线");
   });
 
-  it("off-md：输入 Markdown 实时预览 + 持久化", () => {
+  it("off-md：输入 Markdown 实时预览 + 持久化", async () => {
     __test.openToolStub("off-md", "Markdown");
     const src = document.querySelector("#mdSrc");
     src.value = "# 标题一\n\n**加粗**";
     src.dispatchEvent(new win.Event("input", { bubbles: true }));
+    /* v3.0.2 批次1（审计 A-11）：预览渲染改为 150ms 防抖（持久化仍即时），
+       故等待一个防抖窗口后再断言预览内容 */
+    await new Promise((r) => setTimeout(r, 250));
     const prev = document.querySelector("#mdPrev");
     expect(prev.innerHTML).toContain("<h1>");
     expect(prev.innerHTML).toContain("<strong>加粗</strong>");

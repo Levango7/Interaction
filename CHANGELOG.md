@@ -2,6 +2,51 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.1.0] - 2026-08-27
+
+### Major：审计增强批次1+2 — 死代码清理 + 3项新功能
+
+**🧹 批次1：审计报告增强（v3.0.2）**
+- 清理 19 个死函数（Worker 池全套 + virtualScrollEnhanced + registerLazyModule 等），删除 577 行死代码
+- 清理 19 个 stub:true 标记 +「新」角标 CSS
+- 移动端触摸目标 44px 批量达标（5 条 CSS 规则）
+- Markdown 编辑防抖 150ms + diffRender 复活（预览渲染用 diffRender 增量更新）
+
+**✨ 批次2：三项新功能（v3.1.0）**
+- **快捷键帮助面板**：`?` 键唤起 modal，总览全部快捷键（1-6/G/N/Ctrl+K/Ctrl+Z/Esc/?），复用统一模态框 a11y 基座
+- **集成中心 UI 唤醒**：设置抽屉新增「集成」Tab，列出 7 个 provider（Notion/Linear/Jira/Slack/飞书/钉钉/日历）+ OpenAPI Key 管理，接线 60+ 沉睡函数
+- **SQL Playground**：code 场景 SQL 卡升级，sql.js WASM 从 cdnjs CDN 动态加载，本地 SQLite 沙箱执行 SQL，结果表格回显
+
+**🔒 安全**
+- CSP 加 `https://cdnjs.cloudflare.com` + `'wasm-unsafe-eval'`（SQL Playground WASM 加载需要）
+
+**🧪 测试**
+- 新增 tests/sql-playground.test.js（8 个用例）
+- 全量 62 文件 679 用例通过，lint 0 problems
+
+## [v3.0.1] - 2026-08-26
+
+### Patch：5个必修bug + 2个新功能
+
+**🐛 Bug 修复**
+- 局域网同步定时器泄漏修复
+- 闹钟定时器清理修复
+- 萌宠监听器重复绑定修复
+- Word 导出消毒修复
+- HTML 引号转义修复
+
+**✨ 新功能**
+- JS 运行器（B-3）：Blob Worker 沙箱执行 JS 片段
+- 数据可视化真图表（B-5）：内联 SVG 折线/柱状/饼图
+
+## [v3.0.0] - 2026-08-25
+
+### Major：综合审计 + 31个问题修复
+
+- 三维度深度审查（A/B/C），产出 264 行审计报告
+- 颜色令牌化 + 链路图标题恢复
+- 16 个菜单功能设计问题修复
+
 ## [v2.5.0] - 2026-08-25
 
 ### Minor：一级/二级菜单功能设计全面优化 — 16个问题修复

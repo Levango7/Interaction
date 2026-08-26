@@ -13,7 +13,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="preload" href="./icon.svg" as="image" type="image/svg+xml">
 <link rel="preload" href="./manifest.json" as="fetch" crossorigin>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- SECURITY TODO [C3]: 当前 CSP 保留 script-src 'unsafe-inline' 是因为本应用为单文件内联 JS 架构，
      移除 unsafe-inline 会导致应用完全无法运行。真正的修复依赖于 H4（模块化拆分为外部 JS/CSS 文件），
      拆分完成后可改用 nonce 或 hash 策略并移除 unsafe-inline。当前阶段仅做标记，不做破坏性变更。 -->
@@ -264,9 +264,6 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   margin-right:var(--space-2);transition:background var(--transition-fast)}
 .nav-subitem:hover .sub-dot{background:var(--accent)}
 .nav-subitem.active .sub-dot{background:var(--on-accent)}
-/* 子项「新」角标（即将上线的占位工具） */
-.sub-soon{font-size:9px;line-height:1;padding:2px 4px;border-radius:var(--radius-sm);
-  background:var(--accent-soft);color:var(--accent);font-weight:600;flex-shrink:0;margin-left:var(--space-1)}
 /* 父项含激活子项时的弱高亮（不算 active，保证全局唯一 active 不变量） */
 .nav-parent.has-active{background:var(--surface-hover)}
 .nav-parent.has-active .nm{color:var(--text);font-weight:500}
@@ -1032,6 +1029,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .link-status .lk .cnt{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)}
 .link-status .lk .last{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap}
 .link-status .lk.disabled{opacity:.5}
+/* v3.1：快捷键帮助面板 */
+.shortcut-help-card{max-width:480px}
+.shortcut-help-card .help-keys{width:100%}
+.shortcut-help-card .help-keys td{padding:var(--space-2,8px) var(--space-3,12px)}
+.shortcut-help-card .help-keys td:first-child{white-space:nowrap;color:var(--muted);width:140px}
 /* ===== v2.4.2：习惯链增强可视化 ===== */
 	.hc-top-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);align-items:center;margin-top:var(--space-3)}
 	@media(max-width:640px){.hc-top-row{grid-template-columns:1fr;gap:var(--space-3)}}
@@ -1356,6 +1358,30 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   flex-wrap:wrap;margin:0 0 var(--space-5);
   padding:var(--space-3);background:var(--panel);
   border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+/* v3.1：SQL Playground */
+.sql-run-bar{display:flex;align-items:center;gap:var(--space-2,8px);margin:var(--space-2,8px) 0}
+.sql-run-status{font-size:var(--fs-xs,12px);color:var(--text-dim)}
+.sql-result{margin-top:var(--space-2,8px);overflow-x:auto}
+.sql-result-table{width:100%;border-collapse:collapse;font-size:var(--fs-xs,12px)}
+.sql-result-table th,.sql-result-table td{padding:4px 8px;border:1px solid var(--line);text-align:left}
+.sql-result-table th{background:var(--panel2);font-weight:600;color:var(--text)}
+.sql-result-table tbody tr:nth-child(even){background:var(--panel2)}
+.sql-error{color:var(--danger)}
+/* v3.1：集成中心面板 */
+.int-row{display:flex;align-items:center;gap:var(--space-3,12px);padding:var(--space-2,8px) 0;border-bottom:1px solid var(--line)}
+.int-row:last-child{border-bottom:none}
+.int-info{flex:1;min-width:0}
+.int-label{font-weight:600;color:var(--text)}
+.int-desc{font-size:var(--fs-xs,12px);color:var(--text-dim);margin-top:2px}
+.int-status{font-size:var(--fs-xs,12px);white-space:nowrap}
+.int-on .int-status{color:var(--ok)}
+.int-off .int-status{color:var(--muted)}
+.int-action{flex-shrink:0}
+.int-apikey-section{margin-top:var(--space-4,16px);padding-top:var(--space-3,12px);border-top:1px solid var(--line)}
+.int-apikey-section h4{margin:0 0 var(--space-2,8px);font-size:var(--fs-sm,14px)}
+.int-key-row{display:flex;align-items:center;gap:var(--space-2,8px);padding:4px 0}
+.int-key-name{flex:1;font-family:var(--font-mono,monospace);font-size:var(--fs-xs,12px)}
+.int-key-status{font-size:var(--fs-xs,12px)}
 .set-nav-btn{flex:1;text-align:center;border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
   font-size:var(--fs-xs);padding:4px 12px;border-radius:var(--radius-full);cursor:pointer;
   white-space:nowrap;transition:background var(--transition-fast),color var(--transition-fast),
@@ -1771,6 +1797,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   input, select, textarea{min-height:44px;font-size:var(--fs-lg)}
   /* 看板卡片触摸友好 */
   .kcard{min-height:44px}
+  /* v3.0.2 批次1：高频小控件触摸目标补齐至 44px（原 24~32px，仅移动端生效，桌面样式不变）；
+     均为 <button> 元素，浏览器原生内容居中，chips 类再显式 inline-flex 保证垂直居中不破版 */
+  .scene-feat-tab{min-height:44px;display:inline-flex;align-items:center}
+  .set-nav-btn{min-height:44px}
+  .kbtns button{min-height:44px;display:inline-flex;align-items:center}
+  .addbtn.xs{min-height:44px;display:inline-flex;align-items:center}
+  /* #btnPetRemove 由 JS 写入内联 style min-height:32px，须 !important 覆盖（.tbtn 基类自带 inline-flex 居中） */
+  #btnPetRemove{min-height:44px !important}
 }
 
 
@@ -3050,6 +3084,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 	    <button type="button" class="set-nav-btn" data-set-tab="set-look">外观</button>
 	    <button type="button" class="set-nav-btn" data-set-tab="set-notify">通知</button>
 	    <button type="button" class="set-nav-btn" data-set-tab="set-data">数据</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-integration">集成</button>
 	    <button type="button" class="set-nav-btn" data-set-tab="set-about">关于</button>
 	  </nav>
 
@@ -3448,6 +3483,18 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
+  <!-- ===== v3.1：集成中心 ===== -->
+  <section class="set-card" id="set-integration" aria-label="集成中心">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+      <div>
+        <h3>集成中心</h3>
+        <p class="set-desc">连接外部服务，同步任务、笔记和日程。Key 仅存本机浏览器。</p>
+      </div>
+    </header>
+    <div id="integrationPanel"></div>
+  </section>
+
   <!-- ===== 关于与兼容说明 ===== -->
   <section class="set-card" id="set-about" aria-label="关于与兼容说明">
     <header class="set-head">
@@ -3671,6 +3718,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   </div>
 </div>
 
+<!-- v3.1：快捷键帮助弹窗 -->
+<div class="viz-modal" id="shortcutHelpModal" role="dialog" aria-modal="true" aria-labelledby="shortcutHelpTitle">
+  <div class="viz-modal-card shortcut-help-card">
+    <div class="viz-modal-header">
+      <h2 id="shortcutHelpTitle">快捷键</h2>
+      <button type="button" class="viz-modal-close" id="btnShortcutHelpClose" aria-label="关闭快捷键帮助">&times;</button>
+    </div>
+    <div class="viz-modal-body" id="shortcutHelpBody"></div>
+  </div>
+</div>
+
 <!-- v1.10.0：萌宠选择弹窗（5 角色：少女/猫/狗/兔/熊猫） -->
 <div class="viz-modal" id="petModal" role="dialog" aria-modal="true" aria-labelledby="petModalTitle">
   <div class="viz-modal-card pet-modal-card">
@@ -3712,9 +3770,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 <script>
 "use strict";
-// v1.14: stub let declarations for removed modules (worker pool, e2ee, biometric, oauth2, webhook, voice, multimodal, capacitor, enterprise, crdt, security)
-let _workerPool, _workerAvailable, _WORKER_SOURCE;
-
 /* ============================================================
  * JSDoc 类型定义（仅用于类型标注/IDE 提示，不影响运行时）
  * 用 `/** *\/` 格式；tsc --noEmit 在 checkJs:false 下不强制检查
@@ -3781,10 +3836,10 @@ let _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.0.0";
+const VERSION = "3.1.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260825a";
+const BUILD_TAG = "20260827a";
 
 
 
@@ -4493,40 +4548,6 @@ function idbDelete(store, key){
   return idbV2Txn("readwrite", st => st.delete(_idbV2Key(store, key)));
 }
 
-/** 清空 store（只删该 store 的记录） */
-function idbClear(store){
-  return idbV2Open().then(db => new Promise(resolve => {
-    if(!db){ resolve(0); return; }
-    try{
-      const tx = db.transaction(IDB_V2_STORE, "readwrite");
-      const st = tx.objectStore(IDB_V2_STORE);
-      const req = st.getAllKeys();
-      req.onsuccess = () => {
-        const keys = req.result || [];
-        let n = 0;
-        /* 解析复合键，找出属于该 store 的键并删除 */
-        keys.forEach(k => {
-          try{
-            const parsed = JSON.parse(k);
-            if(Array.isArray(parsed) && parsed[0] === store){
-              st.delete(k);
-              n++;
-            }
-          }catch(e){ try{ pushDiag("error", "idb clear keys parse error: "+(e&&e.message||e), {where:"idbClearKeys"}); }catch(_){} }
-        });
-        tx.oncomplete = () => resolve(n);
-        tx.onerror = () => resolve(n);
-      };
-      req.onerror = () => resolve(0);
-    }catch(e){ resolve(0); }
-  }));
-}
-
-/** 计数 */
-function idbCount(store){
-  return idbGetAll(store).then(arr => arr.length);
-}
-
 /* ---------- 混合存储策略 ---------- */
 /* 混合存储键前缀 */
 const HYBRID_PREFIX = "wb_hybrid_";
@@ -4546,48 +4567,6 @@ function getHybridData(type){
   return idbGet("hybrid", type).then(v => {
     if(v !== undefined && v !== null && v.data !== undefined) return v.data;
     return null;
-  });
-}
-
-/**
- * 保存到混合存储：根据大小自动选择
- * @param {string} type - 数据类型
- * @param {*} data - 数据
- * @returns {Promise<{storage:'local'|'idb', size:number}>}
- */
-function saveHybridData(type, data){
-  const size = getDataSize(data);
-  /* 小数据 → localStorage */ 
-  if(size < HYBRID_LS_LIMIT){
-    try{
-      localStorage.setItem(HYBRID_PREFIX + type, JSON.stringify(data));
-      return Promise.resolve({ storage: "local", size: size });
-    }catch(e){
-      /* localStorage 满或不可用 → 降级 IDB */ 
-    }
-  }
-  /* 大数据 → IDB */ 
-  return idbPut("hybrid", { id: type, data: data }).then(function(ret){
-    /* idbPut 在 IDB 不可用时返回 undefined → 降级 localStorage */ 
-    if(ret === undefined){
-      try{
-        localStorage.setItem(HYBRID_PREFIX + type, JSON.stringify(data));
-        return { storage: "local", size: size };
-      }catch(e){
-        return { storage: "local", size: size, error: true };
-      }
-    }
-    /* 同步删除 localStorage 中的旧值，避免数据不一致 */ 
-    try{ localStorage.removeItem(HYBRID_PREFIX + type); }catch(e){}
-    return { storage: "idb", size: size };
-  }).catch(function(){
-    /* IDB 抛错 → 强制 localStorage */ 
-    try{
-      localStorage.setItem(HYBRID_PREFIX + type, JSON.stringify(data));
-      return { storage: "local", size: size };
-    }catch(e){
-      return { storage: "local", size: size, error: true };
-    }
   });
 }
 
@@ -4645,41 +4624,6 @@ function idbListModels(){
   return idbGetAll(IDB_MODELS_STORE);
 }
 
-/**
- * 检查任务/记录数量，超过阈值时自动迁移到 IDB
- * @returns {Promise<{migrated:boolean, reason:string, count:number}>}
- */
-function migrateToIDBIfNeeded(){
-  let taskCount = 0, recCount = 0;
-  try{
-    const tasks = JSON.parse(localStorage.getItem(PREFIX + "tasks") || "[]");
-    taskCount = Array.isArray(tasks) ? tasks.length : 0;
-  }catch(e){ try{ pushDiag("error", "migrate tasks count error: "+(e&&e.message||e), {where:"migrateTasksCount"}); }catch(_){} }
-  try{
-    const recs = JSON.parse(localStorage.getItem(PREFIX + "recs") || "[]");
-    recCount = Array.isArray(recs) ? recs.length : 0;
-  }catch(e){ try{ pushDiag("error", "migrate recs count error: "+(e&&e.message||e), {where:"migrateRecsCount"}); }catch(_){} }
-  const total = taskCount + recCount;
-  if(total < IDB_THRESHOLD){
-    return Promise.resolve({ migrated: false, reason: "below threshold", count: total });
-  }
-  /* 超过阈值：尝试迁移到 IDB */ 
-  return idbV2Open().then(db => {
-    if(!db){
-      return { migrated: false, reason: "idb unavailable", count: total };
-    }
-    /* 迁移任务和记录到 IDB */ 
-    let tasks = [], recs = [];
-    try{ tasks = JSON.parse(localStorage.getItem(PREFIX + "tasks") || "[]"); }catch(e){ try{ pushDiag("error", "migrate tasks data error: "+(e&&e.message||e), {where:"migrateTasksData"}); }catch(_){} }
-    try{ recs = JSON.parse(localStorage.getItem(PREFIX + "recs") || "[]"); }catch(e){ try{ pushDiag("error", "migrate recs data error: "+(e&&e.message||e), {where:"migrateRecsData"}); }catch(_){} }
-    return Promise.all([
-      idbPut("tasks", { id: "all", items: tasks }),
-      idbPut("records", { id: "all", items: recs })
-    ]).then(() => {
-      return { migrated: true, reason: "migrated to idb", count: total, tasks: tasks.length, records: recs.length };
-    });
-  });
-}
 // ===== Util Layer (Markdown 解析·T3.5) =====
 /**
  * 安全 URL 协议过滤：仅允许 http/https/mailto 与无协议（相对路径/锚点），
@@ -5050,87 +4994,8 @@ function diffRender(container, newHTML, options){
   return { changed: true, reason: "updated" };
 }
 
-/* ---------- 虚拟滚动增强：支持动态高度 ---------- */
-
-/**
- * 测量项目高度（如果元素在 DOM 中）
- * @param {HTMLElement} item - 待测量元素
- * @returns {number} 高度（px），不在 DOM 时返回估算值
- */
-function measureItemHeight(item){
-  if(!item) return VIRTUAL_ITEM_HEIGHT_RECORD;
-  try{
-    if(item.offsetHeight) return item.offsetHeight;
-    if(item.getBoundingClientRect){
-      const r = item.getBoundingClientRect();
-      if(r.height) return r.height;
-    }
-  }catch(e){}
-  return VIRTUAL_ITEM_HEIGHT_RECORD;
-}
-
-/**
- * 增强版虚拟滚动：支持动态高度
- * @param {Array} items - 所有项目
- * @param {number} containerHeight - 容器高度
- * @param {number} itemHeight - 默认每项高度
- * @param {number} scrollTop - 当前滚动位置
- * @param {Object} [heightMap] - {index: height} 动态高度映射
- * @returns {{start:number, end:number, offsetY:number, totalHeight:number, visibleItems:Array}}
- */
-function virtualScrollEnhanced(items, containerHeight, itemHeight, scrollTop, heightMap){
-  const arr = Array.isArray(items) ? items : [];
-  const cHeight = Math.max(0, containerHeight | 0);
-  const defHeight = Math.max(1, itemHeight);
-  const sTop = Math.max(0, scrollTop | 0);
-  const hMap = heightMap || {};
-  if(arr.length === 0) return { start: 0, end: 0, offsetY: 0, totalHeight: 0, visibleItems: [] };
-  /* 计算每项累计偏移和总高度 */ 
-  const offsets = [0];
-  let total = 0;
-  for(let i = 0; i < arr.length; i++){
-    const h = hMap[i] || defHeight;
-    total += h;
-    offsets.push(total);
-  }
-  /* 二分查找起始索引 */ 
-  let start = 0;
-  for(let i = 0; i < arr.length; i++){
-    if(offsets[i + 1] > sTop){ start = i; break; }
-    start = i + 1;
-  }
-  start = Math.max(0, start - VIRTUAL_SCROLL_BUFFER);
-  /* 找结束索引：累计高度超过 sTop + cHeight */ 
-  const endLimit = sTop + cHeight;
-  let end = start;
-  for(let i = start; i < arr.length; i++){
-    end = i + 1;
-    if(offsets[i + 1] >= endLimit) break;
-  }
-  end = Math.min(arr.length, end + VIRTUAL_SCROLL_BUFFER);
-  return {
-    start: start,
-    end: end,
-    offsetY: offsets[start] || 0,
-    totalHeight: total,
-    visibleItems: arr.slice(start, end)
-  };
-}
-
 /* ---------- 代码分割 / 懒加载 ---------- */
 
-
-/**
- * 注册懒加载模块
- * @param {string} name - 模块名
- * @param {function:Promise} loader - 加载函数（返回 Promise）
- * @returns {boolean} 是否注册成功
- */
-function registerLazyModule(name, loader){
-  if(!name || typeof loader !== "function") return false;
-  _lazyModuleRegistry[name] = { loader: loader, module: null, loading: null };
-  return true;
-}
 
 /**
  * 懒加载模块（返回 Promise）
@@ -5161,54 +5026,7 @@ function lazyLoad(name){
   }
 }
 
-/**
- * 预加载模块（后台加载，不等待）
- * @param {string} name - 模块名
- * @returns {Promise<*>} 模块对象（异步完成）
- */
-function preloadModule(name){
-  return lazyLoad(name);
-}
-
 /* ---------- 性能监控 ---------- */
-
-/**
- * 性能标记（performance.mark 封装）
- * @param {string} name - 标记名
- */
-function perfMark(name){
-  try{
-    if(typeof performance !== "undefined" && performance.mark){
-      performance.mark(name);
-    }
-  }catch(e){}
-  /* 同时记录到内部表，供 getPerfMetrics 汇总 */ 
-  _perfMarks[name] = perfNow();
-}
-
-/**
- * 性能测量（performance.measure 封装）
- * @param {string} name - 测量名
- * @param {string} startMark - 起始标记
- * @param {string} endMark - 结束标记
- * @returns {number} 耗时（ms），无法测量时返回 -1
- */
-function perfMeasure(name, startMark, endMark){
-  let duration = -1;
-  try{
-    if(typeof performance !== "undefined" && performance.measure){
-      performance.measure(name, startMark, endMark);
-      const entries = performance.getEntriesByName(name);
-      if(entries && entries.length) duration = entries[entries.length - 1].duration;
-    }
-  }catch(e){}
-  /* 内部表回退 */ 
-  if(duration < 0 && _perfMarks[startMark] !== undefined && _perfMarks[endMark] !== undefined){
-    duration = _perfMarks[endMark] - _perfMarks[startMark];
-  }
-  if(duration >= 0) _perfMeasures[name] = duration;
-  return duration;
-}
 
 /**
  * 获取当前高精度时间戳
@@ -5953,7 +5771,6 @@ function getActive(){ return active; }
 function setActive(sc){ active = sc; save(PREFIX+"active", sc); } // 内含持久化；render 由调用方触发
 function getChat(sc){ return chats[sc] || []; }
 function appendChat(sc, msg){ chats[sc] = (chats[sc]||[]).concat(msg); save(PREFIX+"chat_"+sc, chats[sc]); }
-function clearChat(sc){ chats[sc] = []; save(PREFIX+"chat_"+sc, []); }
 
 /* ---------- v2.0 多 Session 聊天存储层（自 .bak2 回填，适配当前版 load/save 封装） ----------
  * 会话模型 Session：{ id, title, sc, createdAt, updatedAt, msgs: [...] }
@@ -6223,11 +6040,6 @@ function bindSessionModal(){
  * @returns {Cfg}
  */
 function getCfg(){ return _cfgCache || load(PREFIX+"cfg", {}); }
-/**
- * 浅合并 patch 到 _cfgCache（不落盘，待 persistCfg/saveCfg 持久化）
- * @param {Partial<Cfg>} patch
- */
-function setCfg(patch){ _cfgCache = Object.assign({}, _cfgCache, patch); }
 
 // ===== AI Layer (AI 层·工具调用) =====
 /* ---------- 工具（AI 可调用） ---------- */
@@ -7664,27 +7476,6 @@ function recentTotalByDay(days){
   }
   return out;
 }
-/** 渲染全局完成进度环（圆环 SVG，周长基于 total/done） */
-function renderProgressRing(){
-  const tasks = getTasks();
-  const total = tasks.length;
-  const done = tasks.filter(t => t.status === "done").length;
-  const pct = total === 0 ? 0 : Math.round(done/total*100);
-  const R = 48, C = 2*Math.PI*R;
-  const offset = C * (1 - pct/100);
-  return `<div class="hc-ring-wrap">
-    <svg class="hc-ring-svg" viewBox="0 0 120 120">
-      <circle class="hc-ring-bg" cx="60" cy="60" r="${R}"/>
-      <circle class="hc-ring-fg" cx="60" cy="60" r="${R}"
-        stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"/>
-      <g class="hc-ring-center">
-        <text class="hc-ring-pct" x="60" y="56" text-anchor="middle" font-size="20" font-weight="700">${pct}%</text>
-        <text class="hc-ring-label" x="60" y="72" text-anchor="middle" font-size="9">已完成</text>
-      </g>
-    </svg>
-    <div class="hc-ring-meta">${done} / ${total} 任务</div>
-  </div>`;
-}
 /** 渲染各场景完成率条 */
 function renderScCompletionBars(){
   const tasks = getTasks();
@@ -7700,23 +7491,6 @@ function renderScCompletionBars(){
     </div>`;
   }).join("");
   return `<div class="hc-bars">${rows}</div>`;
-}
-/** 渲染近7天迷你日历（聚合所有场景） */
-function renderWeekCalendar(){
-  const data = recentDoneByDay("*", 7);
-  const today = new Date(); const wd = (today.getDay()+6)%7;
-  const mon = new Date(today); mon.setDate(today.getDate()-wd);
-  const days = ["一","二","三","四","五","六","日"];
-  const hd = days.map(d=>`<div class="hc-cal-hd">${d}</div>`).join("");
-  const cells = data.map((d,i)=>{
-    const dayOfWeek = (wd+i)%7;
-    const isToday = i === 6;
-    return `<div class="hc-cal-cell hd-l${d.level}${isToday?' today':''}" title="${d.date}：${d.count}个完成">${d.count||''}</div>`;
-  }).join("");
-  return `<div class="hc-cal-wrap">
-    <div class="hc-cal-title">近 7 天完成密度（所有场景）</div>
-    <div class="hc-cal-grid">${hd}${cells}</div>
-  </div>`;
 }
 /** 渲染本周各场景任务进度柱状图（SVG） */
 function renderWeekBars(){
@@ -7909,27 +7683,27 @@ const SIDE_MENU_ICONS = {
   doc: UI_ICONS.file
 };
 
-/* v2.1.0：场景二级工具菜单——stub 项打开「即将上线」占位页，action 项接现有功能。
+/* v2.1.0：场景二级工具菜单（历史遗留：当前菜单树由 _buildSideMenu 构建，本表暂未被消费）。
    自定义/插件场景不在此表内，渲染为无子项的叶子节点。 */
 const SC_SUBMENU = {
   office:[
-    {id:"off-word", label:"Word 文档", stub:true},
-    {id:"off-sheet", label:"表格", stub:true},
-    {id:"off-ppt", label:"PPT", stub:true},
-    {id:"off-pdf", label:"PDF", stub:true},
-    {id:"off-md", label:"Markdown", stub:true},
-    {id:"off-ocr", label:"截图 OCR", stub:true}
+    {id:"off-word", label:"Word 文档"},
+    {id:"off-sheet", label:"表格"},
+    {id:"off-ppt", label:"PPT"},
+    {id:"off-pdf", label:"PDF"},
+    {id:"off-md", label:"Markdown"},
+    {id:"off-ocr", label:"截图 OCR"}
   ],
   design:[
-    {id:"des-cad", label:"CAD", stub:true},
-    {id:"des-imggen", label:"图片生成", stub:true},
-    {id:"des-vidgen", label:"视频生成", stub:true},
-    {id:"des-ps", label:"PS lite", stub:true}
+    {id:"des-cad", label:"CAD"},
+    {id:"des-imggen", label:"图片生成"},
+    {id:"des-vidgen", label:"视频生成"},
+    {id:"des-ps", label:"PS lite"}
   ],
   study:[
     {id:"stu-mindmap", label:"思维导图", run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); }},
     {id:"stu-kb", label:"知识库", run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); }},
-    {id:"stu-web", label:"在线检索", stub:true},
+    {id:"stu-web", label:"在线检索"},
     {id:"stu-notes", label:"笔记", run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); }},
     {id:"stu-tpl", label:"场景模板", run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); }}
   ],
@@ -7939,17 +7713,17 @@ const SC_SUBMENU = {
     {id:"dat-report", label:"报告", run:()=>{ if(typeof openReportModal==="function") openReportModal(); }}
   ],
   code:[
-    {id:"cod-compile", label:"脚本编译", stub:true},
-    {id:"cod-regex", label:"正则工具", stub:true},
-    {id:"cod-md2code", label:"Markdown 转代码", stub:true}
+    {id:"cod-compile", label:"脚本编译"},
+    {id:"cod-regex", label:"正则工具"},
+    {id:"cod-md2code", label:"Markdown 转代码"}
   ],
   life:[
-    {id:"lif-sport", label:"运动", stub:true},
+    {id:"lif-sport", label:"运动"},
     {id:"lif-health", label:"健康", run:()=>{ setActive("life"); render(); }},
-    {id:"lif-bill", label:"缴费", stub:true},
-    {id:"lif-shop", label:"采购", stub:true},
-    {id:"lif-takeout", label:"外卖", stub:true},
-    {id:"lif-transit", label:"交通", stub:true}
+    {id:"lif-bill", label:"缴费"},
+    {id:"lif-shop", label:"采购"},
+    {id:"lif-takeout", label:"外卖"},
+    {id:"lif-transit", label:"交通"}
   ]
 };
 
@@ -8060,12 +7834,11 @@ function _buildSideMenu(){
 function renderSide(){
   const expanded = _loadSideExpanded();
 
-  /* 子项渲染：圆点标记 + 标签；stub 项带「新」角标提示即将上线 */
+  /* 子项渲染：圆点标记 + 标签（v3.0.2：stub:「新」角标机制已随 stub:true 清理移除） */
   const subBtn = (nodeId, it)=>{
     const act = (_sideActive===it.id) ? " active" : "";
-    const stubMark = it.stub ? `<span class="sub-soon" aria-label="即将上线">新</span>` : "";
     return `<button type="button" class="nav-item nav-subitem${act}" data-menu="${it.id}" data-node="${nodeId}" title="${esc(it.label)}">
-      <span class="sub-dot" aria-hidden="true"></span><span class="nm">${esc(it.label)}</span>${stubMark}</button>`;
+      <span class="sub-dot" aria-hidden="true"></span><span class="nm">${esc(it.label)}</span></button>`;
   };
   /* 父项渲染：icon + 名称 + 计数 + caret（有子项时；v2.4.0 caret 改 SVG——字符 ▸ 在部分字体渲染成小点） */
   const parentBtn = (o)=>{
@@ -8140,7 +7913,6 @@ function setupSideMenu(){
     if(menuId){
       const item = _findSideMenuItem(menuId);
       if(item){
-        if(item.stub){ _sideActive = menuId; if(typeof openToolStub==="function") openToolStub(menuId, item.label); return; }
         if(item.run){
           /* 默认点亮该子项（弹窗类动作保持高亮）；页面跳转型 run 会自行清空 _sideActive */
           _sideActive = menuId;
@@ -8222,8 +7994,7 @@ function openSideSheet(groupName){
     rows.push(`<button type="button" class="sheet-parent${pAct}${pHas}"${dataAttr}${extra} style="--sc:${n.color||"var(--muted)"}">${n.icon}<span class="nm">${esc(n.label)}</span>${cnt}</button>`);
     (n.children||[]).forEach(c=>{
       const cAct = (_sideActive===c.id) ? " active" : "";
-      const stubMark = c.stub ? `<span class="sub-soon" aria-label="即将上线">新</span>` : "";
-      rows.push(`<button type="button" class="sheet-sub${cAct}" data-menu="${c.id}" data-node="${n.id}"><span class="sub-dot" aria-hidden="true"></span><span class="nm">${esc(c.label)}</span>${stubMark}</button>`);
+      rows.push(`<button type="button" class="sheet-sub${cAct}" data-menu="${c.id}" data-node="${n.id}"><span class="sub-dot" aria-hidden="true"></span><span class="nm">${esc(c.label)}</span></button>`);
     });
   });
   body.innerHTML = sanitizeHtml(rows.join(""));
@@ -8273,7 +8044,6 @@ function setupMobNav(){
       if(!menuId) return;
       const item = _findSideMenuItem(menuId);
       if(!item) return;
-      if(item.stub){ _sideActive = menuId; closeSideSheet(); if(typeof openToolStub==="function") openToolStub(menuId, item.label); return; }
       if(item.run){ _sideActive = menuId; closeSideSheet(); item.run(); }
     });
   }
@@ -8765,16 +8535,29 @@ const TOOL_APPS = {
     bind: function(){
       const src = $("#mdSrc"), prev = $("#mdPrev");
       if(!src) return;
-      const sync = function(){
-        try{ prev.innerHTML = sanitizeHtml('<div class="md-body">' + mdToHtml(src.value) + "</div>"); }catch(e){ prev.textContent = src.value; }
-        _toolSaveDoc("off-md", src.value);
+      /* v3.0.2 批次1（审计 A-11：Markdown 输入无防抖）改造说明：
+         1) 输入即时保存：_toolSaveDoc 仅做一次 localStorage 字符串写入（轻量、无解析/重绘），
+            与 Word 工具 ed.oninput 即时保存同模式——先保住稿子不丢；
+         2) 预览渲染走 150ms 防抖：合并连续击键后再做 mdToHtml 全量解析，
+            大文档（万字符级）不再逐字符卡顿；
+         3) 预览区更新改用现成 diffRender（增量渲染来源，原 v1.6-G 闲置基建）：
+            内部默认 sanitizeHtml 消毒 + 新旧 innerHTML 相同时跳过重绘。 */
+      const renderPrev = function(){
+        try{ diffRender(prev, '<div class="md-body">' + mdToHtml(src.value) + "</div>"); }
+        catch(e){ prev.textContent = src.value; }
       };
-      src.oninput = sync;
+      const sync = function(){ renderPrev(); _toolSaveDoc("off-md", src.value); };
+      let _mdDebT = null; /* 防抖句柄：150ms 内连续输入只保留最后一次渲染 */
+      src.oninput = function(){
+        _toolSaveDoc("off-md", src.value); /* 即时保存（轻量），不走解析/重绘 */
+        clearTimeout(_mdDebT);
+        _mdDebT = setTimeout(renderPrev, 150); /* 预览 150ms 防抖 */
+      };
       $("#mdExportMd").onclick = function(){ _toolDownload("note.md", src.value, "text/markdown;charset=utf-8"); };
       $("#mdExportHtml").onclick = function(){
         _toolDownload("note.html", '<!DOCTYPE html><meta charset="utf-8"><title>note</title>' + mdToHtml(src.value), "text/html;charset=utf-8");
       };
-      $("#mdClear").onclick = function(){ if(confirm("清空当前文档？")){ src.value = ""; sync(); } };
+      $("#mdClear").onclick = function(){ if(confirm("清空当前文档？")){ src.value = ""; clearTimeout(_mdDebT); sync(); } };
       sync();
     }
   },
@@ -10428,6 +10211,31 @@ function setupModalA11yBase(){
   setupModalFocusAutoTrap();
 }
 
+/* ---------- v3.1：快捷键帮助面板 ---------- */
+function openShortcutHelp(){
+  const body = $("#shortcutHelpBody");
+  if(!body) return;
+  const rows = [
+    ["1-6", "切换场景（办公/数据/设计/学习/编程/生活）"],
+    ["G", "跳转总览"],
+    ["N", "新建任务并聚焦标题输入"],
+    ["Ctrl+K", "命令面板（搜索任务、切换场景）"],
+    ["Ctrl+Z", "撤销任务操作"],
+    ["Ctrl+Y / Ctrl+Shift+Z", "重做任务操作"],
+    ["?", "打开本快捷键帮助面板"],
+    ["Esc", "关闭弹窗/抽屉"]
+  ];
+  const html = '<table class="help-keys">' + rows.map(function(r){
+    return '<tr><td><kbd>' + esc(r[0]) + '</kbd></td><td>' + esc(r[1]) + '</td></tr>';
+  }).join("") + '</table>';
+  body.innerHTML = sanitizeHtml(html);
+  const m = $("#shortcutHelpModal");
+  if(!m) return;
+  m.classList.add("show");
+  const closeBtn = $("#btnShortcutHelpClose");
+  if(closeBtn) closeBtn.onclick = function(){ m.classList.remove("show"); };
+}
+
 /* ---------- T4.3 移动端增强：手势支持 + 触摸优化 + 横屏适配 ---------- */
 /**
  * 计算滑动方向和距离（纯函数，方便测试）
@@ -10992,6 +10800,8 @@ function renderHelp(){
           <table class="help-keys">
             <tr><td><kbd>1</kbd>-<kbd>6</kbd></td><td>切换场景（办公/数据/设计/学习/编程/生活）</td></tr>
             <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>命令面板（搜索任务、切换场景）</td></tr>
+            <tr><td><kbd>N</kbd></td><td>新建任务并聚焦标题输入</td></tr>
+            <tr><td><kbd>?</kbd></td><td>打开本快捷键帮助面板</td></tr>
             <tr><td><kbd>Esc</kbd></td><td>关闭弹窗/抽屉</td></tr>
           </table>
         `)}
@@ -13114,6 +12924,110 @@ function runJsSnippet(code, opts){
   });
 }
 
+/* ---------- v3.1：SQL Playground（sql.js WASM 沙箱） ---------- */
+let _sqlJsPromise = null;
+function loadSqlJs(){
+  if(_sqlJsPromise) return _sqlJsPromise;
+  _sqlJsPromise = new Promise(function(resolve, reject){
+    if(typeof window !== "undefined" && window.initSqlJs){
+      resolve(window.initSqlJs({ locateFile: function(f){ return "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/" + f; } }));
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js";
+    s.onload = function(){
+      if(window.initSqlJs){
+        resolve(window.initSqlJs({ locateFile: function(f){ return "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/" + f; } }));
+      }else{
+        reject(new Error("sql.js 加载失败：initSqlJs 未找到"));
+      }
+    };
+    s.onerror = function(){ reject(new Error("sql.js CDN 加载失败（需联网）")); };
+    document.head.appendChild(s);
+  }).catch(function(e){ _sqlJsPromise = null; throw e; });
+  return _sqlJsPromise;
+}
+
+/**
+ * 执行 SQL 语句（在 sql.js WASM 沙箱中）。
+ * @param {string} sqlText - SQL 语句
+ * @param {string} [schemaDdl] - 建表 DDL（可选，执行前先运行）
+ * @returns {Promise<{ok:boolean, cols:string[], rows:array[], ms:number, error?:string}>}
+ */
+function runSql(sqlText, schemaDdl){
+  const t0 = Date.now();
+  return loadSqlJs().then(function(SQL){
+    const db = new SQL.Database();
+    try{
+      if(schemaDdl){
+        try{ db.exec(schemaDdl); }catch(_){ /* DDL 容错 */ }
+      }
+      const res = db.exec(sqlText);
+      if(!res || !res.length){
+        return { ok:true, cols:[], rows:[], ms: Date.now() - t0 };
+      }
+      const first = res[0];
+      return { ok:true, cols: first.columns || [], rows: first.values || [], ms: Date.now() - t0 };
+    }catch(e){
+      return { ok:false, cols:[], rows:[], ms: Date.now() - t0, error: e && e.message ? e.message : String(e) };
+    }finally{
+      db.close();
+    }
+  }).catch(function(e){
+    return { ok:false, cols:[], rows:[], ms: Date.now() - t0, error: e && e.message ? e.message : String(e) };
+  });
+}
+
+/**
+ * 绑定 SQL 卡的「▶ 运行」按钮（render 后调用，幂等）。
+ */
+function bindCodeSqlCard(){
+  $$("[data-f-sqlrun]").forEach(function(b){
+    b.onclick = async function(){
+      const id = b.getAttribute("data-f-sqlrun");
+      const rec = load(PREFIX + "code_sql", []).find(function(r){ return r.id === id; });
+      if(!rec){ toast("记录不存在", "warn"); return; }
+      if(b.disabled) return;
+      b.disabled = true;
+      const origText = b.textContent;
+      b.textContent = "运行中…";
+      const statusEl = $('[data-f-sqlstatus="' + id + '"]');
+      const resultEl = $('[data-f-sqlresult="' + id + '"]');
+      if(statusEl) statusEl.textContent = "正在加载 WASM 沙箱…";
+      try{
+        const result = await runSql(rec.sql || "", rec.schema || "");
+        if(statusEl) statusEl.textContent = result.ok ? "✓ " + result.rows.length + " 行 (" + result.ms + "ms)" : "✗ 失败";
+        if(resultEl){
+          if(result.ok && result.cols.length){
+            let html = '<table class="sql-result-table"><thead><tr>';
+            result.cols.forEach(function(c){ html += '<th>' + esc(c) + '</th>'; });
+            html += '</tr></thead><tbody>';
+            result.rows.forEach(function(row){
+              html += '<tr>';
+              row.forEach(function(cell){ html += '<td>' + esc(String(cell === null ? 'NULL' : cell)) + '</td>'; });
+              html += '</tr>';
+            });
+            html += '</tbody></table>';
+            resultEl.innerHTML = sanitizeHtml(html);
+          }else if(result.ok){
+            resultEl.innerHTML = sanitizeHtml('<p class="hint">执行成功（无返回行）</p>');
+          }else{
+            resultEl.innerHTML = sanitizeHtml('<p class="hint sql-error">' + esc(result.error || '未知错误') + '</p>');
+          }
+        }
+        toast(result.ok ? "SQL 执行完成" : "SQL 执行失败", result.ok ? "ok" : "warn");
+      }catch(e){
+        if(statusEl) statusEl.textContent = "✗ 异常";
+        if(resultEl) resultEl.innerHTML = sanitizeHtml('<p class="hint sql-error">' + esc(e.message || String(e)) + '</p>');
+        toast("SQL 执行异常", "warn");
+      }finally{
+        b.disabled = false;
+        b.textContent = origText;
+      }
+    };
+  });
+}
+
 /**
  * 绑定代码运行器功能卡的「▶ 运行」按钮（render 后调用，幂等）。
  * 点击 → 按钮进入「运行中…」→ runJsSnippet 执行 → output 写回记录 result 字段 → toast → render 刷新。
@@ -13707,7 +13621,7 @@ SCENE_FEATURE_RENDER.code = {
         {k:"title", label:"标题", type:"text"},
         {k:"db", label:"数据库", type:"select", options:["MySQL","PostgreSQL","SQLite","SQL Server","其他"]},
         {k:"schema", label:"表结构", type:"text"},
-        {k:"sql", label:"SQL", type:"text"},
+        {k:"sql", label:"SQL", type:"textarea", hint:"输入 SQL 语句，点击「▶ 运行」在本地 SQLite WASM 沙箱中执行（首次需联网加载 WASM）"},
         {k:"note", label:"备注", type:"text"}
       ],
       cols:[
@@ -13719,7 +13633,14 @@ SCENE_FEATURE_RENDER.code = {
       sum:function(recs){
         return [{ v:recs.length, l:"SQL" }];
       },
-      emptyTip:"暂无 SQL · 点击「添加」生成第一条 SQL"
+      emptyTip:"暂无 SQL · 点击「添加」生成第一条 SQL",
+      rowAfter:function(r){
+        return '<div class="sql-run-bar">' +
+          '<button type="button" class="addbtn sm" data-f-sqlrun="' + r.id + '">▶ 运行</button>' +
+          '<span class="sql-run-status" data-f-sqlstatus="' + r.id + '"></span>' +
+          '</div>' +
+          '<div class="sql-result" data-f-sqlresult="' + r.id + '"></div>';
+      }
     });
   },
   runner: function(){
@@ -16266,6 +16187,8 @@ function render(){
       if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys);
       // v3.0.1 B-3：代码运行器「▶ 运行」按钮绑定（通用 CRUD 绑定之外的特化扩展）
       if(active === "code" && sceneFeatureMode === "runner") bindCodeRunnerCard();
+      // v3.1：SQL Playground「▶ 运行」按钮绑定（sql.js WASM 沙箱）
+      if(active === "code" && sceneFeatureMode === "sql") bindCodeSqlCard();
     }
     setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
     setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
@@ -18555,6 +18478,8 @@ document.addEventListener("keydown", e=>{
   }
   const t=/** @type {HTMLElement} */(e.target);
   if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT")) return;
+  if(t && t.isContentEditable) return;
+  if(e.key==="?" || (e.shiftKey && e.key==="/")){ e.preventDefault(); openShortcutHelp(); return; }
   if(e.key>="1" && e.key<="6"){ const sc=ORDER[+e.key-1]; if(sc){ setActive(sc); render(); } }
   else if(e.key==="g"||e.key==="G"){ active="overview"; render(); } // 总览为瞬态视图，不持久化（契约已知例外）
   // M6：N 在总览/统计等无表单视图也能跳到场景并聚焦新建任务
@@ -18684,7 +18609,103 @@ function _switchSetTab(tabId){
   /* 标记 card 不限定 data-page：初始加载时 #drawer 尚无 data-page，
      若限定 [data-page=settings] 会漏标，导致首次打开设置页所有 card 全隐藏 */
   $$("#drawer .set-card").forEach(function(c){ c.classList.toggle("set-tab-active", c.id === tabId); });
+  if(tabId === "set-integration") renderIntegrationPanel();
   const d = $("#drawer"); if(d) d.scrollTop = 0;
+}
+
+/* ---------- v3.1：集成中心面板渲染 ---------- */
+function renderIntegrationPanel(){
+  const panel = $("#integrationPanel");
+  if(!panel) return;
+  const providers = [
+    {name:"notion", label:"Notion", desc:"同步笔记和任务到 Notion", connectFn:"notionConnect", disconnectFn:"notionDisconnect"},
+    {name:"linear", label:"Linear", desc:"同步任务到 Linear", connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
+    {name:"jira", label:"Jira", desc:"同步任务到 Jira", connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
+    {name:"slack", label:"Slack", desc:"接收 Slack 消息通知", connectFn:"slackConnect", disconnectFn:"slackDisconnect"},
+    {name:"feishu", label:"飞书", desc:"接收飞书消息通知", connectFn:"feishuConnect", disconnectFn:"feishuDisconnect"},
+    {name:"dingtalk", label:"钉钉", desc:"接收钉钉消息通知", connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect"},
+    {name:"calendar", label:"日历", desc:"同步日程到 Google/Outlook 日历", connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
+  ];
+  const rows = providers.map(function(p){
+    const prov = (typeof window.getProvider === "function") ? window.getProvider(p.name) : null;
+    const enabled = prov && prov.enabled;
+    const statusCls = enabled ? "int-on" : "int-off";
+    const statusText = enabled ? "已连接" : "未连接";
+    const actionBtn = enabled
+      ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + '">断开</button>'
+      : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + '">连接</button>';
+    return '<div class="int-row ' + statusCls + '">' +
+      '<div class="int-info"><div class="int-label">' + esc(p.label) + '</div><div class="int-desc">' + esc(p.desc) + '</div></div>' +
+      '<div class="int-status">' + esc(statusText) + '</div>' +
+      '<div class="int-action">' + actionBtn + '</div>' +
+      '</div>';
+  });
+  const apiKeySection = '<div class="int-apikey-section"><h4>OpenAPI Key 管理</h4><div class="int-apikey-list" id="intApiKeyList"></div><button type="button" class="addbtn sm" id="btnIntNewKey">+ 新建 Key</button></div>';
+  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + apiKeySection);
+  // 绑定连接/断开按钮
+  panel.querySelectorAll("[data-int-conn]").forEach(function(btn){
+    btn.onclick = function(){
+      const name = btn.getAttribute("data-int-conn");
+      toast("正在连接 " + name + "…", "info");
+      // 调用对应connect函数（config从_integrationProviders读取或空对象）
+      try{
+        const fn = window[name + "Connect"];
+        if(typeof fn === "function"){
+          Promise.resolve(fn({})).then(function(){
+            if(typeof window.enableProvider === "function") window.enableProvider(name);
+            renderIntegrationPanel();
+            toast(name + " 已连接", "ok");
+          }).catch(function(e){ toast("连接失败：" + (e.message || e), "warn"); });
+        }else{
+          toast(name + " 连接函数未找到", "warn");
+        }
+      }catch(e){ toast("连接异常：" + (e.message || e), "warn"); }
+    };
+  });
+  panel.querySelectorAll("[data-int-disc]").forEach(function(btn){
+    btn.onclick = function(){
+      const name = btn.getAttribute("data-int-disc");
+      try{
+        const fn = window[name + "Disconnect"];
+        if(typeof fn === "function") fn();
+        if(typeof window.disableProvider === "function") window.disableProvider(name);
+        renderIntegrationPanel();
+        toast(name + " 已断开", "ok");
+      }catch(e){ toast("断开异常：" + (e.message || e), "warn"); }
+    };
+  });
+  // 渲染API Key列表
+  const keyList = panel.querySelector("#intApiKeyList");
+  if(keyList){
+    let keys = [];
+    try{ if(typeof openApiListApiKeys === "function") keys = openApiListApiKeys() || []; }catch(e){}
+    keyList.innerHTML = sanitizeHtml(keys.length ? keys.map(function(k){
+      return '<div class="int-key-row"><span class="int-key-name">' + esc(k.name || k.id) + '</span><span class="int-key-status ' + (k.revokedAt ? "int-off" : "int-on") + '">' + (k.revokedAt ? "已吊销" : "有效") + '</span><button type="button" class="addbtn xs int-revoke" data-revoke="' + esc(k.id) + '">吊销</button></div>';
+    }).join("") : '<p class="hint">暂无 API Key</p>');
+    keyList.querySelectorAll("[data-revoke]").forEach(function(btn){
+      btn.onclick = function(){
+        const kid = btn.getAttribute("data-revoke");
+        if(!confirm("确定吊销此 API Key？")) return;
+        try{ if(typeof openApiRevokeApiKey === "function") openApiRevokeApiKey(kid); }catch(e){}
+        renderIntegrationPanel();
+        toast("Key 已吊销", "ok");
+      };
+    });
+  }
+  const newKeyBtn = panel.querySelector("#btnIntNewKey");
+  if(newKeyBtn){
+    newKeyBtn.onclick = function(){
+      const name = prompt("输入 Key 名称：");
+      if(!name) return;
+      try{
+        if(typeof openApiCreateApiKey === "function"){
+          const k = openApiCreateApiKey(name, ["read","write"]);
+          renderIntegrationPanel();
+          toast("Key 已创建：" + (k && k.id ? k.id.slice(0,8) + "…" : ""), "ok");
+        }
+      }catch(e){ toast("创建失败：" + (e.message || e), "warn"); }
+    };
+  }
 }
 $$("#drawer .set-nav-btn[data-set-tab]").forEach(function(b){
   b.onclick = function(){ _switchSetTab(b.getAttribute("data-set-tab")); };
@@ -19917,6 +19938,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     renderTasksPage, renderToolboxPage, renderStorePage, renderChainPage,
     // v3.0.1 B-3/B-5：JS 沙箱运行器 + 数据可视化迷你图表（供测试驱动与断言）
     runJsSnippet, parseChartData, renderMiniChart,
+    // v3.1：SQL Playground（sql.js WASM 沙箱，供测试驱动与断言）
+    runSql, loadSqlJs, bindCodeSqlCard,
     get _dashEditMode(){ return _dashEditMode; },
     set _dashEditMode(v){ _dashEditMode = !!v; }
   };
@@ -23810,265 +23833,9 @@ async function _intNotionPullWriteback(){
   return n;
 }
 
-// ===== Realtime Collaboration (v1.6-F 实时协作) =====
 
-/* ---------- Worker 可用性检测 ---------- */
-function isWorkerAvailable(){
-  return _workerAvailable;
-}
 
-/* ---------- 创建 Worker 池 ---------- */
-function createWorkerPool(size){
-  if(!_workerAvailable){
-    _workerPool = { workers: [], queue: [], nextId: 1, size: 0, unavailable: true };
-    return _workerPool;
-  }
-  const n = Math.max(1, Math.min(8, (size|0) || 2));
-  const workers = [];
-  let blob, url;
-  try{
-    blob = new Blob([_WORKER_SOURCE], { type: "application/javascript" });
-    url = URL.createObjectURL(blob);
-  }catch(e){
-    _workerAvailable = false;
-    _workerPool = { workers: [], queue: [], nextId: 1, size: 0, unavailable: true };
-    return _workerPool;
-  }
-  for(let i=0;i<n;i++){
-    let w;
-    try{ w = new Worker(url); }catch(e){ w = null; }
-    if(w){
-      w._busy = false;
-      w._currentId = null;
-      w._resolvers = {};
-      w.onmessage = (function(worker){
-        return function(ev){
-          const m = ev && ev.data;
-          if(!m || !m.id) return;
-          const resolve = worker._resolvers[m.id];
-          if(!resolve) return;
-          delete worker._resolvers[m.id];
-          worker._busy = false;
-          worker._currentId = null;
-          if(m.error){ resolve.reject(new Error(m.error)); }
-          else { resolve.resolve(m.result); }
-          /* 派发下一个排队任务 */ 
-          _dispatchNext();
-        };
-      })(w);
-      w.onerror = (function(worker){
-        return function(err){
-          /* 当前任务失败 */ 
-          if(worker._currentId && worker._resolvers[worker._currentId]){
-            const r = worker._resolvers[worker._currentId];
-            delete worker._resolvers[worker._currentId];
-            worker._busy = false;
-            worker._currentId = null;
-            r.reject(new Error(String(err && err.message || err || "worker error")));
-            _dispatchNext();
-          }
-        };
-      })(w);
-      workers.push(w);
-    }
-  }
-  if(!workers.length){
-    _workerAvailable = false;
-    _workerPool = { workers: [], queue: [], nextId: 1, size: 0, unavailable: true };
-    return _workerPool;
-  }
-  _workerPool = { workers: workers, queue: [], nextId: 1, size: workers.length, _blobUrl: url };
-  return _workerPool;
-}
-
-/* ---------- 内部：派发下一个排队任务 ---------- */
-function _dispatchNext(){
-  if(!_workerPool || !_workerPool.workers) return;
-  if(!_workerPool.queue.length) return;
-  /* 找一个空闲 Worker */ 
-  let idle = null;
-  for(let i=0;i<_workerPool.workers.length;i++){
-    if(!_workerPool.workers[i]._busy){ idle = _workerPool.workers[i]; break; }
-  }
-  if(!idle) return;
-  const job = _workerPool.queue.shift();
-  idle._busy = true;
-  idle._currentId = job.id;
-  idle._resolvers[job.id] = { resolve: job.resolve, reject: job.reject };
-  try{
-    idle.postMessage({ id: job.id, type: job.type, data: job.data });
-  }catch(e){
-    delete idle._resolvers[job.id];
-    idle._busy = false;
-    idle._currentId = null;
-    job.reject(e);
-  }
-}
-
-/* ---------- 主线程同步降级执行 ---------- */
-function _syncExecute(type, data){
-  return new Promise(function(resolve, reject){
-    try{
-      const result = _syncDispatch(type, data);
-      resolve(result);
-    }catch(e){ reject(e); }
-  });
-}
-function _syncDispatch(type, data){
-  data = data || {};
-  if(type === 'stats') return _syncStats(data);
-  if(type === 'report') return _syncReport(data);
-  if(type === 'search') return _syncSearch(data);
-  if(type === 'custom') return { ok: true, echo: data };
-  return { ok: false, reason: 'unknown type: ' + type };
-}
-function _syncStats(data){
-  const tasks = data.tasks || [];
-  const records = data.records || [];
-  const mode = data.mode || 'overview';
-  const total = tasks.length; let done = 0;
-  if(mode === 'trend'){
-    const byDay = {};
-    tasks.forEach(function(t){ const k = _dayKey(t.createdAt||0); byDay[k] = (byDay[k]||0)+1; });
-    return { trend: Object.keys(byDay).sort().map(function(k){ return { date: k, count: byDay[k] }; }) };
-  }
-  if(mode === 'sceneDist'){
-    const dist = {};
-    tasks.forEach(function(t){ const s = t.scenario || 'unknown'; dist[s] = (dist[s]||0)+1; });
-    return { sceneDist: Object.keys(dist).map(function(k){ return { scenario: k, count: dist[k] }; }) };
-  }
-  if(mode === 'chainSuccess'){
-    tasks.forEach(function(t){ if(t.status === 'done' || t.completed) done++; });
-    return { total: total, done: done, rate: total ? done/total : 0 };
-  }
-  tasks.forEach(function(t){ if(t.status === 'done' || t.completed) done++; });
-  return { total: total, done: done, records: records.length, rate: total ? done/total : 0 };
-}
-function _dayKey(ts){
-  const d = new Date(ts);
-  if(isNaN(d.getTime())) return 'unknown';
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return d.getFullYear()+'-'+m+'-'+day;
-}
-function _syncReport(data){
-  const tasks = data.tasks || [];
-  const range = data.range || 'week';
-  const end = data.endTs || Date.now();
-  const span = (range === 'month') ? 30*24*3600*1000 : 7*24*3600*1000;
-  const start = end - span;
-  const inRange = tasks.filter(function(t){ const ts = t.createdAt||0; return ts >= start && ts <= end; });
-  const done = inRange.filter(function(t){ return t.status === 'done' || t.completed; });
-  const byScenario = {};
-  inRange.forEach(function(t){ const s = t.scenario || 'unknown'; byScenario[s] = (byScenario[s]||0)+1; });
-  return { range: range, start: start, end: end, total: inRange.length, done: done.length, byScenario: byScenario };
-}
-function _syncSearch(data){
-  const items = data.items || [];
-  const query = String(data.query || '').toLowerCase();
-  const fields = data.fields || ['title','content'];
-  const limit = data.limit || 50;
-  if(!query) return { results: [], total: 0 };
-  const scored = [];
-  for(let i=0;i<items.length;i++){
-    const item = items[i];
-    let score = 0;
-    for(let f=0;f<fields.length;f++){
-      const field = fields[f];
-      const val = String(item[field] === null || item[field] === undefined ? '' : item[field]).toLowerCase();
-      if(val.indexOf(query) >= 0){ score += (val.indexOf(query) === 0 ? 3 : 1); }
-    }
-    if(score > 0) scored.push({ item: item, score: score });
-  }
-  scored.sort(function(a,b){ return b.score - a.score; });
-  const top = scored.slice(0, limit).map(function(s){ return s.item; });
-  return { results: top, total: scored.length };
-}
-
-/* ---------- 提交任务到 Worker 池 ---------- */
-function workerExecute(task){
-  const t = task || {};
-  const type = t.type || 'custom';
-  const data = t.data || {};
-  /* Worker 不可用 → 主线程同步执行 */ 
-  if(!_workerAvailable || !_workerPool || !_workerPool.workers || !_workerPool.workers.length){
-    return _syncExecute(type, data);
-  }
-  return new Promise(function(resolve, reject){
-    const id = _workerPool.nextId++;
-    /* 找空闲 Worker */ 
-    let idle = null;
-    for(let i=0;i<_workerPool.workers.length;i++){
-      if(!_workerPool.workers[i]._busy){ idle = _workerPool.workers[i]; break; }
-    }
-    if(idle){
-      idle._busy = true;
-      idle._currentId = id;
-      idle._resolvers[id] = { resolve: resolve, reject: reject };
-      try{
-        idle.postMessage({ id: id, type: type, data: data });
-      }catch(e){
-        delete idle._resolvers[id];
-        idle._busy = false;
-        idle._currentId = null;
-        reject(e);
-      }
-    }else{
-      /* 全忙：入队等待 */ 
-      _workerPool.queue.push({ id: id, type: type, data: data, resolve: resolve, reject: reject });
-    }
-  });
-}
-
-/* ---------- 终止所有 Worker ---------- */
-function workerTerminate(){
-  if(!_workerPool) return;
-  if(_workerPool.workers && _workerPool.workers.length){
-    for(let i=0;i<_workerPool.workers.length;i++){
-      const w = _workerPool.workers[i];
-      try{
-        /* 拒绝所有未完成的任务 */ 
-        if(w._resolvers){
-          Object.keys(w._resolvers).forEach(function(id){
-            try{ w._resolvers[id].reject(new Error("worker terminated")); }catch(e){}
-          });
-          w._resolvers = {};
-        }
-        w.terminate();
-      }catch(e){ try{ pushDiag("error", "worker pool terminate error: "+(e&&e.message||e), {where:"workerPoolTerminate"}); }catch(_){} }
-    }
-  }
-  /* 拒绝所有排队任务 */ 
-  if(_workerPool.queue && _workerPool.queue.length){
-    _workerPool.queue.forEach(function(job){
-      try{ job.reject(new Error("worker terminated")); }catch(e){}
-    });
-  }
-  /* 释放 Blob URL */ 
-  if(_workerPool._blobUrl){
-    try{ URL.revokeObjectURL(_workerPool._blobUrl); }catch(e){}
-  }
-  _workerPool = null;
-}
-
-/* ---------- 获取 Worker 池状态 ---------- */
-function getWorkerStatus(){
-  if(!_workerPool){
-    return { available: _workerAvailable, size: 0, active: 0, queueLength: 0 };
-  }
-  let active = 0;
-  if(_workerPool.workers){
-    for(let i=0;i<_workerPool.workers.length;i++){
-      if(_workerPool.workers[i]._busy) active++;
-    }
-  }
-  return {
-    available: _workerAvailable,
-    size: _workerPool.size || 0,
-    active: active,
-    queueLength: (_workerPool.queue && _workerPool.queue.length) || 0
-  };
-}// ===== AI Deep Enhancement (v1.7-A AI 深度增强) =====
+// ===== AI Deep Enhancement (v1.7-A AI 深度增强) =====
 /* ============================================================
  * v1.7-A AI 深度增强
  * ------------------------------------------------------------
