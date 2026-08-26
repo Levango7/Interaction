@@ -623,7 +623,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .sys-overview-card .card-head h2{margin:0;font-size:var(--fs-base);font-weight:600;display:flex;align-items:center;gap:var(--space-2)}
 .sys-overview-card .card-head .sub{margin:1px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
 .sys-ov-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--space-2)}
-.sys-ov-item{display:flex;flex-direction:column;align-items:center;gap:1px;padding:var(--space-1) var(--space-1);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-sm);transition:background var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast);cursor:pointer}
+.sys-ov-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:var(--space-2) var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);transition:background var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast);cursor:pointer}
 .sys-ov-item:hover{background:var(--surface-hover);border-color:var(--accent-soft);transform:translateY(-1px)}
 .sys-ov-item:active{transform:scale(.98)}
 .sys-ov-ic{color:var(--accent);display:flex;align-items:center}
@@ -641,7 +641,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== v2.3.0 工具应用卡（TOOL_APPS 落地页） ===== */
 .tool-app-card{padding:var(--space-3)}
-.tool-app-card textarea,.tool-app-card input[type="text"],.tool-app-card input[type="number"],.tool-app-card input[type="date"]{width:100%;padding:var(--space-2) var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);font-size:var(--fs-sm);box-sizing:border-box}
+.tool-app-card textarea,.tool-app-card input[type="text"],.tool-app-card input[type="number"],.tool-app-card input[type="date"],.tool-app-card select{width:100%;padding:var(--space-2) var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);font-size:var(--fs-sm);box-sizing:border-box;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.tool-app-card textarea:focus,.tool-app-card input:focus,.tool-app-card select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
 .tool-app-card textarea{min-height:120px;resize:vertical;font-family:inherit}
 .tool-app-card label{display:block;font-size:var(--fs-xs);color:var(--muted);margin:var(--space-2) 0 var(--space-1);font-weight:500}
 .tool-app-card .tool-actions{display:flex;gap:var(--space-2);margin-top:var(--space-3);flex-wrap:wrap}
@@ -651,15 +652,22 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tool-app-card .tool-table tr:hover td{background:var(--surface-hover)}
 .tool-app-card .tool-empty{color:var(--muted);text-align:center;padding:var(--space-5);font-size:var(--fs-sm)}
 .tool-app-card .tool-summary{display:flex;gap:var(--space-4);margin-bottom:var(--space-3);flex-wrap:wrap}
-.tool-app-card .tool-summary-item{display:flex;flex-direction:column;align-items:center;padding:var(--space-2) var(--space-3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md)}
+.tool-app-card .tool-summary-item{display:flex;flex-direction:column;align-items:center;padding:var(--space-2) var(--space-3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);transition:transform var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.tool-app-card .tool-summary-item:hover{transform:translateY(-1px);border-color:var(--accent-soft);box-shadow:var(--shadow-1)}
 .tool-app-card .tool-summary-item .v{font-size:var(--fs-lg);font-weight:700;color:var(--text)}
 .tool-app-card .tool-summary-item .l{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .tool-app-card canvas{max-width:100%;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
 .tool-app-card .tool-filter-bar{display:flex;gap:var(--space-2);align-items:center;margin-bottom:var(--space-3);flex-wrap:wrap}
 .tool-app-card .tool-filter-bar input,.tool-app-card .tool-filter-bar select{padding:var(--space-1) var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);font-size:var(--fs-sm)}
-.tool-app-card .tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-2);margin-top:var(--space-2)}
+/* v3.0：场景添加按钮——上方「添加」标签 + 圆形加号居中 */
+.add-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+.add-label{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
+.add-round{width:30px;height:30px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1}
+.tool-app-card .tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-2);margin-top:var(--space-2)}
 .tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column}
 .tool-app-card .tool-form-grid .tool-field label{margin:0 0 4px}
+/* v3.0：表单与列表之间加虚线分隔，视觉层次更清晰 */
+.tool-app-card .tool-form-box{padding-bottom:var(--space-3);border-bottom:1px dashed var(--line);margin-bottom:var(--space-2)}
 
 /* ===== 看板视图 ===== */
 /* minmax(0,1fr)：列宽允许压缩到内容最小宽以下，防止窄主区（如平板未展开聊天面板时）卡片按钮把网格撑溢出 */
@@ -926,7 +934,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .line-chart-svg{display:block;width:100%;max-width:560px;height:90px;margin:0 auto}
 .heat{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--space-1);max-width:360px;margin:0 auto}
 .hcell{aspect-ratio:1;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;
-  font-size:10px;color:var(--text-dim-3)}
+  font-size:10px;color:var(--text-dim-3);transition:transform var(--transition-fast),box-shadow var(--transition-fast),filter var(--transition-fast)}
+.hcell:hover{transform:scale(1.18);box-shadow:0 1px 4px rgba(0,0,0,.15);filter:brightness(1.1);z-index:var(--z-under)}
 .hcell.l0{background:var(--heat-0)}.hcell.l1{background:var(--heat-1)}.hcell.l2{background:var(--heat-2)}.hcell.l3{background:var(--heat-3)}.hcell.l4{background:var(--heat-4)}
 .dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px}
 .bars{display:flex;flex-direction:column;gap:var(--space-2)}
@@ -955,8 +964,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .glob-view-save:hover{color:var(--accent);border-color:var(--accent)}
 .bar{display:flex;align-items:center;gap:var(--space-3);font-size:var(--fs-sm)}
 .bar .nm{width:48px;flex-shrink:0}
-.bar .track{flex:1;height:14px;background:var(--surface-muted);border-radius:7px;overflow:hidden}
-.bar .fill{height:100%;border-radius:7px}
+.bar .track{flex:1;height:14px;background:var(--surface-muted);border-radius:7px;overflow:hidden;transition:box-shadow var(--transition-fast)}
+.bar:hover .track{box-shadow:0 0 0 1px var(--accent-soft)}
+.bar .fill{height:100%;border-radius:7px;transition:filter var(--transition-fast)}
+.bar:hover .fill{filter:brightness(1.12)}
 .bar .v{width:64px;text-align:right;color:var(--muted);font-size:var(--fs-xs)}
 
 /* 习惯链可视化（A：streak / 热力图 / 链状态 / AI 教练 / 链条动画） */
@@ -1053,6 +1064,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chain-graph-wrap{margin-top:var(--space-3);overflow-x:auto}
 .chain-graph{display:block;width:100%;min-width:320px;max-width:100%;height:auto}
 .hc-section-title{font-size:var(--fs-sm);color:var(--text);font-weight:600;margin:var(--space-3) 0 var(--space-1);padding-bottom:var(--space-1);border-bottom:1px solid var(--line)}
+/* v3.0：习惯链核心指标（最长坚持 / 启用链路 / 本周联动） */
+.hc-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-top:var(--space-2)}
+.hc-kpi{display:flex;flex-direction:column;align-items:center;padding:var(--space-3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);transition:transform var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.hc-kpi:hover{transform:translateY(-1px);border-color:var(--accent-soft);box-shadow:var(--shadow-1)}
+.hc-kpi .v{font-size:var(--fs-xl);font-weight:700;color:var(--accent)}
+.hc-kpi .l{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;text-align:center}
 /* ===== 完成时段分布网格 ===== */
   border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--radius-md) var(--radius-md) 0;
   margin-bottom:var(--space-2);font-size:var(--fs-sm);line-height:1.6}
@@ -1280,7 +1297,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片直接浮于浅灰底（与统计/回收站页一致）；
    margin-top 承接 drawer-page 移除的 padding-top（三断点同步）
    v1.15：页头统一"框起来"——图标+大标题+小标题装入带边框的标题栏卡片，与统计/回收站页视觉一致 */
-.drawer-ph{margin:var(--space-6) 0 var(--space-5);
+.drawer-ph{margin:0 0 var(--space-5);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-4)}
 .drawer-ph .close{
@@ -1375,7 +1392,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .drawer-page > .foot{margin:auto 0 0}
 /* v2.4.1：savebar 现在是普通卡片，随文档流自然排列，无需负 margin 断点覆盖 */
 @media(min-width:768px) and (max-width:1023px){
-  .drawer-ph{margin-top:var(--space-4)}
+  .drawer-ph{margin-top:0}
 }
 /* 窄屏：表单标签上置（v2.1.1：断点统一为主移动断点 767px，消除 721~767px 双列挤压） */
 @media (max-width:767px){
@@ -7742,31 +7759,33 @@ function renderHabitChainCard(){
   const heatmaps = ORDER.map(sc =>
     `<div class="hc-heat-item">${SCENARIOS[sc].name}（最近 12 周）${renderHeatmap(sc)}</div>`
   ).join("");
+  // v3.0：核心指标——突出「跨场景联动」价值（最长坚持 / 启用链路 / 本周联动触发）
+  const streaks = ORDER.map(sc => calcStreak(sc));
+  const maxStreak = Math.max(0, ...streaks.map(s => s.current));
+  const enabledLinks = getLinks().filter(l => l.enabled !== false);
+  const allTasks = getTasks();
+  const weekStart = new Date(); const _wd = (weekStart.getDay()+6)%7;
+  weekStart.setDate(weekStart.getDate()-_wd); weekStart.setHours(0,0,0,0);
+  const weekTriggers = allTasks.filter(t => t.status==="done" && t.linked && t.doneAt >= weekStart.getTime()).length;
+  const kpis = `
+    <div class="hc-kpi"><span class="v">${maxStreak}</span><span class="l">最长坚持（天）</span></div>
+    <div class="hc-kpi"><span class="v">${enabledLinks.length}</span><span class="l">启用习惯链</span></div>
+    <div class="hc-kpi"><span class="v">${weekTriggers}</span><span class="l">本周联动触发</span></div>`;
   return `<div class="card">
     <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>习惯链可视化</h2>
-    <p class="sub">连续天数 · 完成密度 · 跨场景链路 · AI 教练</p>
-    <!-- 上部：进度环 + 场景完成率条 -->
-    <div class="hc-top-row">
-      ${renderProgressRing()}
-      ${renderScCompletionBars()}
-    </div>
-    <!-- 中部：本周柱状图 + 近7天日历 -->
-    <div class="hc-top-row">
-      ${renderWeekBars()}
-      ${renderWeekCalendar()}
-    </div>
-    <!-- Streak 行 -->
+    <p class="sub">跨场景联动 · 坚持天数 · 完成密度</p>
+    <!-- 核心指标：跨场景联动价值一眼可见 -->
+    <div class="hc-kpi-row">${kpis}</div>
+    <!-- 跨场景联动（核心，提到最前） -->
+    <div class="hc-section-title">跨场景习惯链</div>
+    ${renderChainGraph()}
+    ${renderHabitChainStatus()}
+    <!-- 坚持天数 -->
     <div class="hc-section-title">当前 Streak</div>
     <div class="hc-streak-scroll"><div class="hc-streak-inner">${streakBadges}</div></div>
-    <!-- 热力图 -->
+    <!-- 完成密度 -->
     <div class="hc-section-title">完成热力图（最近 12 周）</div>
     <div class="hc-heat-all">${heatmaps}</div>
-    <!-- 链路图 -->
-    <div class="hc-section-title">场景链路图</div>
-    ${renderChainGraph()}
-    <!-- 链状态 -->
-    <div class="hc-section-title">习惯链状态</div>
-    ${renderHabitChainStatus()}
   </div>`;
 }
 
@@ -11563,7 +11582,7 @@ function renderSystemOverviewCard(){
     { label: "任务", value: tasks.length, act: "office", ic: UI_ICONS.check },
     { label: "已完成", value: done, act: "stats", ic: UI_ICONS.stats },
     { label: "资料", value: recCount, act: "overview", ic: UI_ICONS.file },
-    { label: "笔记", value: notes.length, act: "overview", ic: UI_ICONS.file },
+    { label: "笔记", value: notes.length, act: "overview", ic: UI_ICONS.book },
     { label: "习惯链", value: chains.length, act: "chain", ic: UI_ICONS.chain },
     { label: "插件", value: plugins.length, act: "overview", ic: UI_ICONS.puzzle }
   ];
@@ -11946,7 +11965,8 @@ function renderToolboxPage(){
   const q = _toolboxQ.trim().toLowerCase();
   const list = apps.filter(a=>(_toolboxCat==="全部"||a.cat===_toolboxCat) &&
     (!q || (a.name+" "+a.desc).toLowerCase().includes(q)));
-  const chips = cats.map(c=>`<button type="button" class="glob-view-chip${_toolboxCat===c?" active":""}" data-toolbox-cat="${c}">${c}</button>`).join("");
+  // v3.0：工具箱分类菜单复用设置页菜单栏样式（.set-nav + .set-nav-btn），求同：与设置页一致
+  const chips = `<nav class="set-nav" aria-label="工具箱分类">` + cats.map(c=>`<button type="button" class="set-nav-btn${_toolboxCat===c?" active":""}" data-toolbox-cat="${c}">${c}</button>`).join("") + `</nav>`;
   const cards = list.map(a=>{
     const attrs = a.pop ? ` data-menu="${a.menuAttr}"` : "";
     return `<button type="button" class="card app-card toolbox-card"${attrs} data-toolbox="${esc(a.toolId||a.id)}" role="button" tabindex="0" aria-label="${esc(a.name)}">
@@ -11961,8 +11981,8 @@ function renderToolboxPage(){
       <div class="ph-tx"><h2>工具箱</h2><p class="sub">文档 · 设计 · 编程 · 生活 · 检索 · 效率工具——所有工具与应用的统一入口（Ctrl+K 可直达）</p></div>
       <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
     </header></div>
+    ${chips}
     <div class="tool-filter-bar" style="margin-bottom:var(--space-2)"><input type="text" id="toolboxQ" placeholder="搜索工具…" value="${esc(_toolboxQ)}" style="flex:1" aria-label="搜索工具"></div>
-    <div class="glob-views" style="margin-bottom:var(--space-2)">${chips}</div>
     <div class="app-grid">${cards || ""}</div>`);
   const qi = $("#toolboxQ");
   if(qi){
@@ -12896,8 +12916,10 @@ function _featureCardHtml(cfg){
   const list = records.length
     ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + '</th>'; }).join("") + '</tr></thead><tbody>' + rows + '</tbody></table>'
     : '<div class="tool-empty">' + esc(cfg.emptyTip || "暂无记录") + '</div>';
-  return '<div class="card"><h2>' + cfg.icon + ' ' + esc(cfg.title) + '</h2>' +
-    '<div class="tool-filter-bar"><button type="button" class="addbtn sm" data-f-add style="--sc:var(--accent)">＋ 添加</button>' +
+  // v3.0：card 复用 .tool-app-card 类——表单网格/统计/表格/工具栏样式均限定在 .tool-app-card 内，
+  // 若不挂该类，场景功能卡在 PC 上会退化为垂直堆叠（排版差劲）
+  return '<div class="card tool-app-card"><h2>' + cfg.icon + ' ' + esc(cfg.title) + '</h2>' +
+    '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">添加</span><button type="button" class="addbtn sm add-round" data-f-add style="--sc:var(--accent)" aria-label="添加">＋</button></span>' +
     '<span class="sub" style="margin:0">共 ' + records.length + ' 条</span></div>' +
     summary + '<div class="tool-form-box">' + form + '</div>' + list + '</div>';
 }
@@ -12948,31 +12970,38 @@ function _featureCardBind(key, fieldKeys){
 /* v3.0：功能卡绑定配置（key + 表单字段名；与 SCENE_FEATURE_RENDER 的渲染配置一一对应） */
 const SCENE_FEATURE_BIND = {
   office: {
-    meeting:    { key:"meetings",    fieldKeys:["title","date","who","note"] },
-    project:    { key:"projects",    fieldKeys:["name","milestone","status","progress"] },
-    attendance: { key:"attendance",  fieldKeys:["date","checkIn","checkOut","note"] },
-    expense:    { key:"expenses",    fieldKeys:["title","amount","category","date","status"] }
+    meeting:    { key:"meetings",    fieldKeys:["title","type","date","host","duration","note"] },
+    project:    { key:"projects",    fieldKeys:["name","owner","milestone","status","progress","due"] },
+    attendance: { key:"attendance",  fieldKeys:["date","type","checkIn","checkOut","note"] },
+    expense:    { key:"expenses",    fieldKeys:["title","who","amount","category","date","status"] }
   },
   study: {
-    knowledge: { key:"knowledge", fieldKeys:["title","category","tags","content"] },
-    reading:   { key:"reading",   fieldKeys:["book","excerpt","note","progress"] },
-    exercise:  { key:"exercises", fieldKeys:["subject","question","answer","explain"] },
-    exam:      { key:"exams",     fieldKeys:["title","date","score","total"] }
+    knowledge: { key:"knowledge", fieldKeys:["title","category","source","importance","tags","content"] },
+    reading:   { key:"reading",   fieldKeys:["book","author","excerpt","note","progress"] },
+    exercise:  { key:"exercises", fieldKeys:["subject","question","answer","correct","explain"] },
+    exam:      { key:"exams",     fieldKeys:["title","subject","date","score","total"] }
   },
   data: {
-    report: { key:"data_reports", fieldKeys:["title","dims","metrics","note"] },
-    chart:  { key:"data_charts",  fieldKeys:["title","type","note"] }
+    report: { key:"data_reports", fieldKeys:["title","source","dims","metrics","note"] },
+    chart:  { key:"data_charts",  fieldKeys:["title","type","source","note"] }
   },
   design: {
-    ui:      { key:"design_ui", fieldKeys:["title","type","palette","note"] },
-    model3d: { key:"design_3d", fieldKeys:["title","format","note"] }
+    ui:      { key:"design_ui", fieldKeys:["title","type","tool","palette","note"] },
+    model3d: { key:"design_3d", fieldKeys:["title","format","usage","note"] },
+    cad:     { key:"design_cad", fieldKeys:["title","type","version","note"] },
+    image:   { key:"design_image", fieldKeys:["title","type","size","note"] }
   },
   code: {
-    frontend: { key:"code_frontend", fieldKeys:["title","html","css","js"] },
-    sql:      { key:"code_sql",      fieldKeys:["title","schema","sql","note"] }
+    frontend: { key:"code_frontend", fieldKeys:["title","framework","html","css","js"] },
+    sql:      { key:"code_sql",      fieldKeys:["title","db","schema","sql","note"] },
+    runner:   { key:"code_runner",   fieldKeys:["title","language","code","result"] },
+    regex:    { key:"code_regex",    fieldKeys:["title","pattern","text","result"] }
   },
   life: {
-    plan: { key:"life_plans", fieldKeys:["title","type","date","note"] }
+    plan:   { key:"life_plans",    fieldKeys:["title","type","priority","date","note"] },
+    health: { key:"life_health",   fieldKeys:["date","weight","exercise","sleep","note"] },
+    bill:   { key:"life_bills",    fieldKeys:["name","amount","cycle","due","status"] },
+    shop:   { key:"life_shopping", fieldKeys:["name","qty","amount","status"] }
   }
 };
 
@@ -12983,19 +13012,24 @@ SCENE_FEATURE_RENDER.office = {
       key:"meetings", title:"会议管理", icon:ic("chat"),
       fields:[
         {k:"title", label:"会议主题", type:"text"},
+        {k:"type", label:"会议类型", type:"select", options:["周会","评审","客户","团队","其他"]},
         {k:"date", label:"日期", type:"date"},
-        {k:"who", label:"参会人", type:"text"},
+        {k:"host", label:"主持人", type:"text"},
+        {k:"duration", label:"时长(小时)", type:"number"},
         {k:"note", label:"结论 / 跟进", type:"text"}
       ],
       cols:[
         {label:"会议主题", k:"title"},
+        {label:"类型", k:"type"},
         {label:"日期", k:"date"},
-        {label:"参会人", k:"who"},
         {label:"状态", fmt:function(r){ return r.done ? '<span style="color:var(--success)">已开</span>' : '<span style="color:var(--warn)">待开</span>'; }}
       ],
       sum:function(recs){
         const open = recs.filter(function(r){ return !r.done; }).length;
-        return [{ v:open, l:"待开" }, { v:recs.length - open, l:"已开" }];
+        const now = new Date(); const _wd = (now.getDay()+6)%7;
+        const mon = new Date(now); mon.setDate(now.getDate()-_wd); mon.setHours(0,0,0,0);
+        const week = recs.filter(function(r){ return r.date && new Date(r.date) >= mon; }).length;
+        return [{ v:open, l:"待开" }, { v:recs.length - open, l:"已开" }, { v:week, l:"本周" }];
       },
       emptyTip:"暂无会议 · 点击「添加」记录第一场会议"
     });
@@ -13005,20 +13039,25 @@ SCENE_FEATURE_RENDER.office = {
       key:"projects", title:"项目管理", icon:ic("target"),
       fields:[
         {k:"name", label:"项目名", type:"text"},
+        {k:"owner", label:"负责人", type:"text"},
         {k:"milestone", label:"里程碑", type:"text"},
         {k:"status", label:"状态", type:"select", options:["规划中","进行中","已完成","已暂停"]},
-        {k:"progress", label:"进度 %", type:"number"}
+        {k:"progress", label:"进度 %", type:"number"},
+        {k:"due", label:"截止日期", type:"date"}
       ],
       cols:[
         {label:"项目名", k:"name"},
-        {label:"里程碑", k:"milestone"},
+        {label:"负责人", k:"owner"},
         {label:"状态", k:"status"},
         {label:"进度", fmt:function(r){ return '<div class="bar" style="min-width:80px"><span class="track"><span class="fill" style="width:' + Math.min(Number(r.progress)||0,100) + '%"></span></span></div>' + (r.progress||0) + '%'; }}
       ],
       sum:function(recs){
+        const today = todayStr();
+        const overdue = recs.filter(function(r){ return r.due && r.due < today && r.status!=="已完成"; }).length;
         return [
           { v:recs.filter(function(r){ return r.status==="进行中"; }).length, l:"进行中" },
-          { v:recs.filter(function(r){ return r.status==="已完成"; }).length, l:"已完成" }
+          { v:recs.filter(function(r){ return r.status==="已完成"; }).length, l:"已完成" },
+          { v:overdue, l:"逾期" }
         ];
       },
       emptyTip:"暂无项目 · 点击「添加」记录第一个项目"
@@ -13029,12 +13068,14 @@ SCENE_FEATURE_RENDER.office = {
       key:"attendance", title:"考勤打卡", icon:ic("check"),
       fields:[
         {k:"date", label:"日期", type:"date"},
+        {k:"type", label:"考勤类型", type:"select", options:["正常","迟到","早退","请假","加班"]},
         {k:"checkIn", label:"上班时间", type:"text", placeholder:"如 09:00"},
         {k:"checkOut", label:"下班时间", type:"text", placeholder:"如 18:30"},
         {k:"note", label:"备注", type:"text"}
       ],
       cols:[
         {label:"日期", k:"date"},
+        {label:"类型", k:"type"},
         {label:"上班", k:"checkIn"},
         {label:"下班", k:"checkOut"},
         {label:"工时", fmt:function(r){
@@ -13046,9 +13087,9 @@ SCENE_FEATURE_RENDER.office = {
         }}
       ],
       sum:function(recs){
-        const today = todayStr();
-        const week = recs.filter(function(r){ return r.date && r.date <= today; }).length;
-        return [{ v:week, l:"已打卡" }, { v:recs.length, l:"累计" }];
+        const late = recs.filter(function(r){ return r.type==="迟到"; }).length;
+        const leave = recs.filter(function(r){ return r.type==="请假"; }).length;
+        return [{ v:recs.length, l:"累计" }, { v:late, l:"迟到" }, { v:leave, l:"请假" }];
       },
       emptyTip:"暂无打卡记录 · 点击「添加」记录上下班"
     });
@@ -13058,6 +13099,7 @@ SCENE_FEATURE_RENDER.office = {
       key:"expenses", title:"报销管理", icon:ic("bill"),
       fields:[
         {k:"title", label:"报销事由", type:"text"},
+        {k:"who", label:"报销人", type:"text"},
         {k:"amount", label:"金额", type:"number"},
         {k:"category", label:"类别", type:"select", options:["差旅","餐饮","办公","交通","其他"]},
         {k:"date", label:"日期", type:"date"},
@@ -13065,15 +13107,18 @@ SCENE_FEATURE_RENDER.office = {
       ],
       cols:[
         {label:"事由", k:"title"},
+        {label:"报销人", k:"who"},
         {label:"金额", fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); }},
         {label:"类别", k:"category"},
-        {label:"日期", k:"date"},
         {label:"状态", k:"status"}
       ],
       sum:function(recs){
         const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+        const now = new Date(); const ym = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
+        const monthTotal = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym; }).reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
         return [
           { v:"¥" + total.toFixed(0), l:"累计" },
+          { v:"¥" + monthTotal.toFixed(0), l:"本月" },
           { v:recs.filter(function(r){ return r.status==="待审"; }).length, l:"待审" }
         ];
       },
@@ -13106,10 +13151,11 @@ SCENE_FEATURE_RENDER.office = {
 SCENE_FEATURE_RENDER.life = {
   plan: function(){
     return _featureCardHtml({
-      key:"life_plans", title:"计划管理", icon:ic("target"),
+      key:"life_plans", title:"计划管理", icon:ic("mindmap"),
       fields:[
         {k:"title", label:"计划内容", type:"text"},
         {k:"type", label:"类型", type:"select", options:["日程","习惯","目标","备忘"]},
+        {k:"priority", label:"优先级", type:"select", options:["高","中","低"]},
         {k:"date", label:"日期", type:"date"},
         {k:"note", label:"备注", type:"text"}
       ],
@@ -13120,12 +13166,83 @@ SCENE_FEATURE_RENDER.life = {
         {label:"状态", type:"check", fmt:function(r){ return r.done ? "已完成" : "进行中"; }}
       ],
       sum:function(recs){
+        const high = recs.filter(function(r){ return r.priority==="高" && !r.done; }).length;
         return [
           { v:recs.filter(function(r){ return !r.done; }).length, l:"进行中" },
-          { v:recs.filter(function(r){ return r.done; }).length, l:"已完成" }
+          { v:recs.filter(function(r){ return r.done; }).length, l:"已完成" },
+          { v:high, l:"高优待办" }
         ];
       },
       emptyTip:"暂无计划 · 点击「添加」制定第一个计划"
+    });
+  },
+  health: function(){
+    return _featureCardHtml({
+      key:"life_health", title:"健康记录", icon:ic("sport"),
+      fields:[
+        {k:"date", label:"日期", type:"date"},
+        {k:"weight", label:"体重(kg)", type:"number"},
+        {k:"exercise", label:"运动(分钟)", type:"number"},
+        {k:"sleep", label:"睡眠(小时)", type:"number"},
+        {k:"note", label:"备注", type:"text"}
+      ],
+      cols:[
+        {label:"日期", k:"date"},
+        {label:"体重", fmt:function(r){ return r.weight ? r.weight + "kg" : "-"; }},
+        {label:"运动", fmt:function(r){ return r.exercise ? r.exercise + "分" : "-"; }},
+        {label:"睡眠", fmt:function(r){ return r.sleep ? r.sleep + "h" : "-"; }}
+      ],
+      sum:function(recs){
+        return [{ v:recs.length, l:"记录" }];
+      },
+      emptyTip:"暂无健康记录 · 点击「添加」记录第一条"
+    });
+  },
+  bill: function(){
+    return _featureCardHtml({
+      key:"life_bills", title:"缴费提醒", icon:ic("bill"),
+      fields:[
+        {k:"name", label:"缴费项目", type:"text"},
+        {k:"amount", label:"金额", type:"number"},
+        {k:"cycle", label:"周期", type:"select", options:["月缴","季缴","年缴","一次性"]},
+        {k:"due", label:"到期日", type:"date"},
+        {k:"status", label:"状态", type:"select", options:["未缴","已缴"]}
+      ],
+      cols:[
+        {label:"项目", k:"name"},
+        {label:"金额", fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); }},
+        {label:"周期", k:"cycle"},
+        {label:"状态", k:"status"}
+      ],
+      sum:function(recs){
+        const unpaid = recs.filter(function(r){ return r.status!=="已缴"; }).length;
+        const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+        return [{ v:unpaid, l:"待缴" }, { v:"¥" + total.toFixed(0), l:"总额" }];
+      },
+      emptyTip:"暂无缴费项目 · 点击「添加」记录第一笔缴费"
+    });
+  },
+  shop: function(){
+    return _featureCardHtml({
+      key:"life_shopping", title:"采购清单", icon:ic("shop"),
+      fields:[
+        {k:"name", label:"物品", type:"text"},
+        {k:"qty", label:"数量", type:"number"},
+        {k:"amount", label:"金额", type:"number"},
+        {k:"status", label:"状态", type:"select", options:["待买","已买"]}
+      ],
+      cols:[
+        {label:"物品", k:"name"},
+        {label:"数量", fmt:function(r){ return (Number(r.qty)||0); }},
+        {label:"金额", fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); }},
+        {label:"状态", k:"status"}
+      ],
+      sum:function(recs){
+        const todo = recs.filter(function(r){ return r.status!=="已买"; }).length;
+        const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+        return [{ v:todo, l:"待买" }, { v:"¥" + total.toFixed(0), l:"预算" }];
+      },
+      emptyTip:"暂无采购物品 · 点击「添加」记录要买的东西"
     });
   }
 };
@@ -13138,18 +13255,21 @@ SCENE_FEATURE_RENDER.study = {
       fields:[
         {k:"title", label:"标题", type:"text"},
         {k:"category", label:"分类", type:"text"},
+        {k:"source", label:"来源", type:"text"},
+        {k:"importance", label:"重要度", type:"select", options:["高","中","低"]},
         {k:"tags", label:"标签", type:"text"},
         {k:"content", label:"内容", type:"text"}
       ],
       cols:[
         {label:"标题", k:"title"},
         {label:"分类", k:"category"},
-        {label:"标签", k:"tags"},
+        {label:"来源", k:"source"},
         {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
       ],
       sum:function(recs){
         const cats = new Set(recs.map(function(r){ return r.category; }).filter(Boolean));
-        return [{ v:recs.length, l:"条目" }, { v:cats.size, l:"分类" }];
+        const high = recs.filter(function(r){ return r.importance==="高"; }).length;
+        return [{ v:recs.length, l:"条目" }, { v:cats.size, l:"分类" }, { v:high, l:"重要" }];
       },
       emptyTip:"暂无知识条目 · 点击「添加」沉淀第一条知识"
     });
@@ -13159,13 +13279,14 @@ SCENE_FEATURE_RENDER.study = {
       key:"reading", title:"阅读笔记", icon:ic("book"),
       fields:[
         {k:"book", label:"书名", type:"text"},
+        {k:"author", label:"作者", type:"text"},
         {k:"excerpt", label:"摘录", type:"text"},
         {k:"note", label:"笔记", type:"text"},
         {k:"progress", label:"进度 %", type:"number"}
       ],
       cols:[
         {label:"书名", k:"book"},
-        {label:"摘录", fmt:function(r){ return (r.excerpt||"").slice(0,20) + ((r.excerpt||"").length>20?"…":""); }},
+        {label:"作者", k:"author"},
         {label:"进度", fmt:function(r){ return (Number(r.progress)||0) + "%"; }},
         {label:"状态", type:"check", fmt:function(r){ return r.done ? "读完" : "在读"; }}
       ],
@@ -13180,21 +13301,24 @@ SCENE_FEATURE_RENDER.study = {
   },
   exercise: function(){
     return _featureCardHtml({
-      key:"exercises", title:"练习题库", icon:ic("target"),
+      key:"exercises", title:"练习题库", icon:ic("brain"),
       fields:[
         {k:"subject", label:"科目", type:"text"},
         {k:"question", label:"题目", type:"text"},
         {k:"answer", label:"答案", type:"text"},
+        {k:"correct", label:"正确率 %", type:"number"},
         {k:"explain", label:"解析", type:"text"}
       ],
       cols:[
         {label:"科目", k:"subject"},
         {label:"题目", fmt:function(r){ return (r.question||"").slice(0,24) + ((r.question||"").length>24?"…":""); }},
-        {label:"答案", fmt:function(r){ return (r.answer||"").slice(0,16); }}
+        {label:"正确率", fmt:function(r){ return (Number(r.correct)||0) + "%"; }}
       ],
       sum:function(recs){
         const subs = new Set(recs.map(function(r){ return r.subject; }).filter(Boolean));
-        return [{ v:recs.length, l:"题目" }, { v:subs.size, l:"科目" }];
+        const n = recs.length;
+        const avg = n ? Math.round(recs.reduce(function(s,r){ return s + (Number(r.correct)||0); }, 0) / n) : 0;
+        return [{ v:recs.length, l:"题目" }, { v:subs.size, l:"科目" }, { v:avg, l:"平均正确率" }];
       },
       emptyTip:"暂无题目 · 点击「添加」录入第一道题"
     });
@@ -13204,15 +13328,16 @@ SCENE_FEATURE_RENDER.study = {
       key:"exams", title:"模拟考试", icon:ic("grid"),
       fields:[
         {k:"title", label:"考试名", type:"text"},
+        {k:"subject", label:"科目", type:"text"},
         {k:"date", label:"日期", type:"date"},
         {k:"score", label:"得分", type:"number"},
         {k:"total", label:"总分", type:"number"}
       ],
       cols:[
         {label:"考试名", k:"title"},
+        {label:"科目", k:"subject"},
         {label:"日期", k:"date"},
-        {label:"成绩", fmt:function(r){ return (r.score||0) + " / " + (r.total||0); }},
-        {label:"完成", type:"check", fmt:function(r){ return r.done ? "已考" : "待考"; }}
+        {label:"成绩", fmt:function(r){ return (r.score||0) + " / " + (r.total||0); }}
       ],
       sum:function(recs){
         const total = recs.reduce(function(s,r){ return s + (Number(r.score)||0); }, 0);
@@ -13231,15 +13356,16 @@ SCENE_FEATURE_RENDER.data = {
       key:"data_reports", title:"数据分析报表", icon:ic("stats"),
       fields:[
         {k:"title", label:"报表名", type:"text"},
+        {k:"source", label:"数据源", type:"text"},
         {k:"dims", label:"分析维度", type:"text"},
         {k:"metrics", label:"指标", type:"text"},
         {k:"note", label:"结论", type:"text"}
       ],
       cols:[
         {label:"报表名", k:"title"},
+        {label:"数据源", k:"source"},
         {label:"维度", k:"dims"},
-        {label:"指标", k:"metrics"},
-        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+        {label:"指标", k:"metrics"}
       ],
       sum:function(recs){
         return [
@@ -13252,17 +13378,18 @@ SCENE_FEATURE_RENDER.data = {
   },
   chart: function(){
     return _featureCardHtml({
-      key:"data_charts", title:"数据可视化", icon:ic("grid"),
+      key:"data_charts", title:"数据可视化", icon:ic("filter"),
       fields:[
         {k:"title", label:"图表名", type:"text"},
         {k:"type", label:"类型", type:"select", options:["折线图","柱状图","饼图","仪表盘"]},
+        {k:"source", label:"数据源", type:"text"},
         {k:"note", label:"说明", type:"text"}
       ],
       cols:[
         {label:"图表名", k:"title"},
         {label:"类型", k:"type"},
-        {label:"说明", fmt:function(r){ return (r.note||"").slice(0,20); }},
-        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+        {label:"数据源", k:"source"},
+        {label:"说明", fmt:function(r){ return (r.note||"").slice(0,20); }}
       ],
       sum:function(recs){
         return [
@@ -13282,15 +13409,16 @@ SCENE_FEATURE_RENDER.code = {
       key:"code_frontend", title:"前端页面设计", icon:ic("compile"),
       fields:[
         {k:"title", label:"页面名", type:"text"},
+        {k:"framework", label:"框架", type:"select", options:["原生","React","Vue","Angular","其他"]},
         {k:"html", label:"HTML", type:"text"},
         {k:"css", label:"CSS", type:"text"},
         {k:"js", label:"JS", type:"text"}
       ],
       cols:[
         {label:"页面名", k:"title"},
+        {label:"框架", k:"framework"},
         {label:"HTML", fmt:function(r){ return (r.html||"").slice(0,16) + ((r.html||"").length>16?"…":""); }},
-        {label:"CSS", fmt:function(r){ return (r.css||"").slice(0,16) + ((r.css||"").length>16?"…":""); }},
-        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+        {label:"CSS", fmt:function(r){ return (r.css||"").slice(0,16) + ((r.css||"").length>16?"…":""); }}
       ],
       sum:function(recs){
         return [{ v:recs.length, l:"页面" }];
@@ -13303,20 +13431,63 @@ SCENE_FEATURE_RENDER.code = {
       key:"code_sql", title:"SQL 生成", icon:ic("sheet"),
       fields:[
         {k:"title", label:"标题", type:"text"},
+        {k:"db", label:"数据库", type:"select", options:["MySQL","PostgreSQL","SQLite","SQL Server","其他"]},
         {k:"schema", label:"表结构", type:"text"},
         {k:"sql", label:"SQL", type:"text"},
         {k:"note", label:"备注", type:"text"}
       ],
       cols:[
         {label:"标题", k:"title"},
+        {label:"数据库", k:"db"},
         {label:"表结构", fmt:function(r){ return (r.schema||"").slice(0,16) + ((r.schema||"").length>16?"…":""); }},
-        {label:"SQL", fmt:function(r){ return (r.sql||"").slice(0,20) + ((r.sql||"").length>20?"…":""); }},
-        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+        {label:"SQL", fmt:function(r){ return (r.sql||"").slice(0,20) + ((r.sql||"").length>20?"…":""); }}
       ],
       sum:function(recs){
         return [{ v:recs.length, l:"SQL" }];
       },
       emptyTip:"暂无 SQL · 点击「添加」生成第一条 SQL"
+    });
+  },
+  runner: function(){
+    return _featureCardHtml({
+      key:"code_runner", title:"代码运行记录", icon:ic("compile"),
+      fields:[
+        {k:"title", label:"标题", type:"text"},
+        {k:"language", label:"语言", type:"select", options:["JavaScript","Python","Java","Go","其他"]},
+        {k:"code", label:"代码", type:"text"},
+        {k:"result", label:"运行结果", type:"text"}
+      ],
+      cols:[
+        {label:"标题", k:"title"},
+        {label:"语言", k:"language"},
+        {label:"代码", fmt:function(r){ return (r.code||"").slice(0,20) + ((r.code||"").length>20?"…":""); }},
+        {label:"结果", fmt:function(r){ return (r.result||"").slice(0,16); }}
+      ],
+      sum:function(recs){
+        return [{ v:recs.length, l:"运行记录" }];
+      },
+      emptyTip:"暂无运行记录 · 点击「添加」记录第一次运行"
+    });
+  },
+  regex: function(){
+    return _featureCardHtml({
+      key:"code_regex", title:"正则测试", icon:ic("regex"),
+      fields:[
+        {k:"title", label:"标题", type:"text"},
+        {k:"pattern", label:"表达式", type:"text"},
+        {k:"text", label:"测试文本", type:"text"},
+        {k:"result", label:"匹配结果", type:"text"}
+      ],
+      cols:[
+        {label:"标题", k:"title"},
+        {label:"表达式", fmt:function(r){ return (r.pattern||"").slice(0,20) + ((r.pattern||"").length>20?"…":""); }},
+        {label:"测试文本", fmt:function(r){ return (r.text||"").slice(0,16); }},
+        {label:"结果", fmt:function(r){ return (r.result||"").slice(0,16); }}
+      ],
+      sum:function(recs){
+        return [{ v:recs.length, l:"正则" }];
+      },
+      emptyTip:"暂无正则测试 · 点击「添加」记录第一条正则"
     });
   }
 };
@@ -13329,14 +13500,15 @@ SCENE_FEATURE_RENDER.design = {
       fields:[
         {k:"title", label:"设计名", type:"text"},
         {k:"type", label:"类型", type:"select", options:["界面原型","配色方案","组件库","动效"]},
+        {k:"tool", label:"工具", type:"text"},
         {k:"palette", label:"配色", type:"text"},
         {k:"note", label:"备注", type:"text"}
       ],
       cols:[
         {label:"设计名", k:"title"},
         {label:"类型", k:"type"},
-        {label:"配色", fmt:function(r){ return (r.palette||"").slice(0,16) + ((r.palette||"").length>16?"…":""); }},
-        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+        {label:"工具", k:"tool"},
+        {label:"配色", fmt:function(r){ return (r.palette||"").slice(0,16) + ((r.palette||"").length>16?"…":""); }}
       ],
       sum:function(recs){
         return [
@@ -13353,18 +13525,61 @@ SCENE_FEATURE_RENDER.design = {
       fields:[
         {k:"title", label:"模型名", type:"text"},
         {k:"format", label:"格式", type:"select", options:["OBJ","STL","GLTF","FBX","其他"]},
+        {k:"usage", label:"用途", type:"text"},
         {k:"note", label:"备注", type:"text"}
       ],
       cols:[
         {label:"模型名", k:"title"},
         {label:"格式", k:"format"},
-        {label:"备注", fmt:function(r){ return (r.note||"").slice(0,20) + ((r.note||"").length>20?"…":""); }},
+        {label:"用途", k:"usage"},
         {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
       ],
       sum:function(recs){
         return [{ v:recs.length, l:"模型" }];
       },
       emptyTip:"暂无 3D 模型 · 点击「添加」记录第一个模型"
+    });
+  },
+  cad: function(){
+    return _featureCardHtml({
+      key:"design_cad", title:"CAD 图纸", icon:ic("cad"),
+      fields:[
+        {k:"title", label:"图纸名", type:"text"},
+        {k:"type", label:"类型", type:"select", options:["机械","建筑","电气","其他"]},
+        {k:"version", label:"版本", type:"text"},
+        {k:"note", label:"备注", type:"text"}
+      ],
+      cols:[
+        {label:"图纸名", k:"title"},
+        {label:"类型", k:"type"},
+        {label:"版本", k:"version"},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        return [{ v:recs.length, l:"图纸" }];
+      },
+      emptyTip:"暂无 CAD 图纸 · 点击「添加」记录第一张图纸"
+    });
+  },
+  image: function(){
+    return _featureCardHtml({
+      key:"design_image", title:"图片素材", icon:ic("imggen"),
+      fields:[
+        {k:"title", label:"图片名", type:"text"},
+        {k:"type", label:"类型", type:"select", options:["插画","摄影","图标","海报","其他"]},
+        {k:"size", label:"尺寸", type:"text"},
+        {k:"note", label:"备注", type:"text"}
+      ],
+      cols:[
+        {label:"图片名", k:"title"},
+        {label:"类型", k:"type"},
+        {label:"尺寸", k:"size"},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        return [{ v:recs.length, l:"素材" }];
+      },
+      emptyTip:"暂无图片素材 · 点击「添加」记录第一张图片"
     });
   }
 };
