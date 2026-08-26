@@ -472,6 +472,25 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* h2 同理：.card h2{margin:0 0 12px}(定义在后) 会覆盖 .page-head h2{margin:0}，
    页面级标题卡 h2 被加 12px 底部 margin → 与抽屉不一致。此处强制归零 */
 .page-head-card > .page-head h2{margin:0}
+/* v3.0：场景功能菜单（复用设置页 .set-nav 样式；此处仅补充防压缩与横向滚动） */
+.scene-feat-nav{flex-shrink:0;overflow-x:auto}
+.scene-feat-tab{flex:0 0 auto;min-height:32px;padding:4px var(--space-3);border-radius:var(--radius-md);
+  background:transparent;border:1px solid transparent;color:var(--text-dim);font-size:var(--fs-sm);cursor:pointer;
+  transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
+.scene-feat-tab:hover{background:var(--surface-hover);color:var(--text)}
+.scene-feat-tab.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-soft);font-weight:600}
+/* v3.0：办公文档中心（表格/PPT/PDF/Word/Markdown/OCR 工具入口） */
+.doc-tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--space-2);margin-top:var(--space-2)}
+.doc-tool-item{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);
+  background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);cursor:pointer;text-align:left;
+  transition:background var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast)}
+.doc-tool-item:hover{background:var(--surface-hover);border-color:var(--accent-soft);transform:translateY(-1px)}
+.doc-tool-ic{color:var(--accent);display:flex;align-items:center;flex-shrink:0}
+.doc-tool-ic svg{width:22px;height:22px}
+.doc-tool-tx{flex:1;min-width:0}
+.doc-tool-tx b{display:block;font-size:var(--fs-sm);color:var(--text)}
+.doc-tool-tx small{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+.doc-tool-go{font-size:var(--fs-xs);color:var(--accent);flex-shrink:0}
 /* 抽屉侧对称修复：.drawer h2{margin:0 0 16px}(922行) 使抽屉标题栏 h2 底部多 16px →
    与页面级(0)不一致。此处用 (0,3,0) 覆盖归零，两侧标题栏 h2 完全一致 */
 .page-head.drawer-ph h2{margin:0}
@@ -534,6 +553,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* ===== 表单 ===== */
 .form-row{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
 .form-row .fld{flex:1;min-width:120px}
+/* v3.0：任务表单等高——按钮底部与输入框底部对齐，且与输入框同高（不被 flex 拉伸） */
+.form-row .addbtn{align-self:flex-end;height:33px;min-height:33px;line-height:1}
+/* v3.0：任务表单铺满卡片——大字段（标题/标签）取消 max-width 限制，flex 铺满剩余空间 */
+.form-row .fld-lg{max-width:none}
 /* v2.1.1：字段宽度工具类（替代 form-row 内散落的内联 max-width） */
 .fld-sm{max-width:120px}
 .fld-md{max-width:160px}
@@ -3727,7 +3750,7 @@ let _workerPool, _workerAvailable, _WORKER_SOURCE;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "2.5.0";
+const VERSION = "3.0.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
 const BUILD_TAG = "20260825a";
@@ -5469,6 +5492,52 @@ const SCENARIOS = {
 /* v2.1.0：6 内置场景——新增 设计(design)/数据(data)；顺序即侧栏场景组显示序与滑动手势序 */
 const ORDER = ["office","data","design","study","code","life"];
 
+/* v3.0：场景内功能 tab 注册表——标题栏导航条 + 场景内视图切换。
+   每场景「求同存异」：骨架统一（概览=任务+资料库+专属卡），功能 tab 对症下药。 */
+const SCENE_FEATURES = {
+  office: [
+    { id:"overview",   label:"概览" },
+    { id:"meeting",    label:"会议" },
+    { id:"project",    label:"项目" },
+    { id:"attendance", label:"考勤" },
+    { id:"expense",    label:"报销" },
+    { id:"doc",        label:"文档" }
+  ],
+  study: [
+    { id:"overview",  label:"概览" },
+    { id:"knowledge", label:"知识库" },
+    { id:"reading",   label:"阅读" },
+    { id:"exercise",  label:"练习" },
+    { id:"exam",      label:"考试" }
+  ],
+  data: [
+    { id:"overview", label:"概览" },
+    { id:"report",   label:"报表" },
+    { id:"chart",    label:"可视化" }
+  ],
+  design: [
+    { id:"overview", label:"概览" },
+    { id:"cad",      label:"CAD" },
+    { id:"image",    label:"图片" },
+    { id:"ui",       label:"UI" },
+    { id:"model3d",  label:"3D" }
+  ],
+  code: [
+    { id:"overview", label:"概览" },
+    { id:"runner",   label:"运行器" },
+    { id:"regex",    label:"正则" },
+    { id:"frontend", label:"前端" },
+    { id:"sql",      label:"SQL" }
+  ],
+  life: [
+    { id:"overview", label:"概览" },
+    { id:"plan",     label:"计划" },
+    { id:"health",   label:"健康" },
+    { id:"bill",     label:"缴费" },
+    { id:"shop",     label:"采购" }
+  ]
+};
+
 // ===== Data Layer (数据层·联动规则与全局状态) =====
 /* ---------- 场景联动规则（任务完成时触发，跨场景生成任务） ---------- */
 const DEFAULT_LINKS = [
@@ -5820,6 +5889,20 @@ function setSceneViewMode(mode){
   _sideActive = "view-"+mode;
   const nonScene = ["overview","stats","recycle"];
   if(nonScene.indexOf(active)>=0){ setActive("office"); }
+  render();
+}
+/* v3.0：场景内功能 tab 状态（SCENE_FEATURES 中某场景的 tab id，默认 overview）。
+   切换后重渲染主区；切场景时由 render() 复位为 overview。 */
+let sceneFeatureMode = "overview";
+/**
+ * 切换场景内功能 tab 并重渲染
+ * @param {string} mode - SCENE_FEATURES[sc] 中的 tab id
+ * @returns {void}
+ */
+function setSceneFeature(mode){
+  const feats = SCENE_FEATURES[active] || [];
+  if(!feats.some(function(f){ return f.id === mode; })) mode = "overview";
+  sceneFeatureMode = mode;
   render();
 }
 const chats = {};
@@ -6215,6 +6298,21 @@ function execTool(name, args, force){
       doExport();
       return JSON.stringify({ok:true,msg:"已触发 JSON 备份导出"});
     }
+    if(name==="add_feature_record"){
+      const fid = String(args.feature || "");
+      const bcfg = (SCENE_FEATURE_BIND[active] || {})[fid];
+      if(!bcfg) return JSON.stringify({ok:false, msg:"未知功能："+fid+"（可用：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan）"});
+      const rec = { id: uid(), createdAt: Date.now() };
+      const fields = (args && args.fields) || {};
+      bcfg.fieldKeys.forEach(function(k){
+        if(fields[k] !== undefined && fields[k] !== null) rec[k] = String(fields[k]);
+      });
+      if(!bcfg.fieldKeys.some(function(k){ return rec[k]; })) return JSON.stringify({ok:false, msg:"请提供至少一个字段值"});
+      const arr = load(PREFIX + bcfg.key, []);
+      arr.unshift(rec);
+      save(PREFIX + bcfg.key, arr);
+      return JSON.stringify({ok:true, msg:"已添加到"+fid+"功能"});
+    }
     return agentExec(name, args); // A-P3：记忆/目标等 Agent 工具由此分发
   }catch(e){
     // 工具执行异常：诊断 + 提示，仍返回结构化错误（保持 execTool 调用方契约）
@@ -6273,7 +6371,10 @@ const TOOLS = [
   {type:"function", function:{name:"complete_goal", description:"目标全部步骤完成后调用，收尾并总结", parameters:{type:"object", properties:{
     summary:{type:"string", description:"完成总结"}}, required:[]}}},
   {type:"function", function:{name:"list_records", description:"查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等）", parameters:{type:"object", properties:{
-    scenario:{type:"string", enum:ORDER}}, required:["scenario"]}}}
+    scenario:{type:"string", enum:ORDER}}, required:["scenario"]}}},
+  {type:"function", function:{name:"add_feature_record", description:"向当前场景的功能卡添加一条记录（如会议/项目/考勤/报销/知识库/阅读/练习/考试/报表/图表/前端/SQL/UI/3D/计划）", parameters:{type:"object", properties:{
+    feature:{type:"string", description:"功能 id：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan"},
+    fields:{type:"object", description:"字段键值对（各功能表单字段，如会议 title/date/who/note）"}}, required:["feature","fields"]}}}
 ];
 
 /* ---------- AI 层降级重定位（v1.15）：cfg.agent=false 时关闭 Agent 工具与话术 ----------
@@ -8938,23 +9039,45 @@ const TOOL_APPS = {
     }
   },
   "des-ps": {
-    name:"图片滤镜", icon:UI_ICONS.filter, desc:"灰度/反色/怀旧 · 亮度对比度调节 · 导出 PNG",
+    name:"PS lite", icon:UI_ICONS.filter, desc:"裁剪/旋转/翻转/滤镜/颜色调整/文字/画笔 · 导出 PNG",
     render: function(){
       return '<div class="tool-filter-bar">'
         + '<label>选择图片<input type="file" id="psFile" accept="image/*" style="margin-left:6px"></label>'
+        + '<button type="button" class="addbtn sm" id="psRotate">旋转 90°</button>'
+        + '<button type="button" class="addbtn sm" id="psFlipH">水平翻转</button>'
+        + '<button type="button" class="addbtn sm" id="psFlipV">垂直翻转</button>'
+        + '<button type="button" class="addbtn sm" id="psCrop">裁剪</button>'
+        + '<button type="button" class="addbtn sm" id="psReset">还原</button>'
+        + '<button type="button" class="addbtn sm" id="psSave">导出 PNG</button></div>'
+        + '<div class="tool-filter-bar">'
         + '<button type="button" class="addbtn sm ps-fx" data-fx="gray">灰度</button>'
         + '<button type="button" class="addbtn sm ps-fx" data-fx="invert">反色</button>'
         + '<button type="button" class="addbtn sm ps-fx" data-fx="sepia">怀旧</button>'
         + '<button type="button" class="addbtn sm ps-fx" data-fx="blur">模糊</button>'
-        + '<button type="button" class="addbtn sm" id="psReset">还原</button>'
-        + '<button type="button" class="addbtn sm" id="psSave">导出 PNG</button></div>'
-        + '<canvas id="psCv" width="640" height="400" style="max-width:100%"></canvas>'
-        + '<p class="sub" style="margin-top:var(--space-2)">滤镜直接作用于像素数据（纯前端），导出前可叠加多个效果。</p>';
+        + '<button type="button" class="addbtn sm ps-fx" data-fx="sharpen">锐化</button>'
+        + '<button type="button" class="addbtn sm ps-fx" data-fx="saturate">饱和度</button></div>'
+        + '<div class="tool-filter-bar">'
+        + '<label>亮度 <input type="range" id="psBright" min="-100" max="100" value="0" style="vertical-align:middle"></label>'
+        + '<label>对比度 <input type="range" id="psContrast" min="-100" max="100" value="0" style="vertical-align:middle"></label>'
+        + '<label>饱和度 <input type="range" id="psSat" min="-100" max="100" value="0" style="vertical-align:middle"></label></div>'
+        + '<div class="tool-filter-bar">'
+        + '<input type="text" id="psText" placeholder="水印文字" style="flex:1" maxlength="40">'
+        + '<button type="button" class="addbtn sm" id="psAddText">添加文字</button>'
+        + '<button type="button" class="addbtn sm" id="psBrush">画笔</button></div>'
+        + '<canvas id="psCv" width="640" height="400" style="max-width:100%;cursor:crosshair"></canvas>'
+        + '<p class="sub" style="margin-top:var(--space-2)">PS lite：裁剪 / 旋转 / 翻转 / 滤镜 / 颜色调整 / 文字 / 画笔（纯前端 canvas，导出前可叠加多个效果）</p>';
     },
     bind: function(){
       const cv = $("#psCv"); if(!cv) return;
       const ctx = cv.getContext("2d");
-      let orig = null;
+      let orig = null;                 // 原始图像（还原用）
+      let cropMode = false, brushMode = false, drawing = false;
+      let sel = null;                  // 裁剪选区 {x,y,w,h}
+
+      function needImg(){ if(!orig){ toast("请先加载图片", "warn"); return false; } return true; }
+      function saveState(){ orig = ctx.getImageData(0, 0, cv.width, cv.height); }
+
+      // 加载图片
       $("#psFile").onchange = function(){
         const f = this.files && this.files[0]; if(!f) return;
         const img = new Image();
@@ -8968,29 +9091,189 @@ const TOOL_APPS = {
         };
         img.src = URL.createObjectURL(f);
       };
+
+      // 滤镜（灰度/反色/怀旧/模糊/锐化/饱和度）
       $$(".ps-fx").forEach(function(b){
         b.onclick = function(){
-          if(!orig){ toast("请先加载图片", "warn"); return; }
+          if(!needImg()) return;
           const im = ctx.getImageData(0, 0, cv.width, cv.height);
           const d = im.data, fx = b.getAttribute("data-fx");
-          for(let i = 0; i < d.length; i += 4){
-            const r = d[i], g = d[i+1], bl = d[i+2];
-            if(fx === "gray"){ const gy = 0.299*r + 0.587*g + 0.114*bl; d[i]=d[i+1]=d[i+2]=gy; }
-            else if(fx === "invert"){ d[i]=255-r; d[i+1]=255-g; d[i+2]=255-bl; }
-            else if(fx === "sepia"){ d[i]=Math.min(255, r*0.393+g*0.769+bl*0.189); d[i+1]=Math.min(255, r*0.349+g*0.686+bl*0.168); d[i+2]=Math.min(255, r*0.272+g*0.534+bl*0.131); }
+          const w = cv.width, h = cv.height;
+          if(fx === "sharpen"){
+            // 简单锐化：中心像素 + (中心 - 邻域均值) * 强度
+            const src = ctx.getImageData(0, 0, w, h).data;
+            for(let y = 1; y < h-1; y++) for(let x = 1; x < w-1; x++){
+              const i = (y*w+x)*4;
+              for(let c = 0; c < 3; c++){
+                const avg = (src[((y-1)*w+x)*4+c] + src[((y+1)*w+x)*4+c] + src[(y*w+x-1)*4+c] + src[(y*w+x+1)*4+c]) / 4;
+                d[i+c] = Math.max(0, Math.min(255, src[i+c] + (src[i+c]-avg)*1.2));
+              }
+            }
+          } else {
+            for(let i = 0; i < d.length; i += 4){
+              const r = d[i], g = d[i+1], bl = d[i+2];
+              if(fx === "gray"){ const gy = 0.299*r + 0.587*g + 0.114*bl; d[i]=d[i+1]=d[i+2]=gy; }
+              else if(fx === "invert"){ d[i]=255-r; d[i+1]=255-g; d[i+2]=255-bl; }
+              else if(fx === "sepia"){ d[i]=Math.min(255, r*0.393+g*0.769+bl*0.189); d[i+1]=Math.min(255, r*0.349+g*0.686+bl*0.168); d[i+2]=Math.min(255, r*0.272+g*0.534+bl*0.131); }
+              else if(fx === "saturate"){
+                const gy = 0.299*r + 0.587*g + 0.114*bl, s = 1.5;
+                d[i]=Math.max(0,Math.min(255, gy+(r-gy)*s)); d[i+1]=Math.max(0,Math.min(255, gy+(g-gy)*s)); d[i+2]=Math.max(0,Math.min(255, gy+(bl-gy)*s));
+              }
+            }
           }
           ctx.putImageData(im, 0, 0);
           if(fx === "blur"){ ctx.filter = "blur(2px)"; ctx.drawImage(cv, 0, 0); ctx.filter = "none"; }
         };
       });
+
+      // 颜色调整（亮度/对比度/饱和度滑块）
+      function adjustColors(){
+        if(!needImg()) return;
+        const bright = Number($("#psBright").value || 0);
+        const contrast = Number($("#psContrast").value || 0);
+        const sat = Number($("#psSat").value || 0);
+        const im = ctx.getImageData(0, 0, cv.width, cv.height);
+        const d = im.data;
+        const cf = (259*(contrast+255)) / (255*(259-contrast)); // 对比度因子
+        for(let i = 0; i < d.length; i += 4){
+          for(let c = 0; c < 3; c++){
+            let v = d[i+c];
+            v = cf*(v-128)+128 + bright; // 对比度 + 亮度
+            d[i+c] = Math.max(0, Math.min(255, v));
+          }
+          if(sat !== 0){
+            const r=d[i], g=d[i+1], bl=d[i+2];
+            const gy = 0.299*r + 0.587*g + 0.114*bl, s = 1 + sat/100;
+            d[i]=Math.max(0,Math.min(255, gy+(r-gy)*s)); d[i+1]=Math.max(0,Math.min(255, gy+(g-gy)*s)); d[i+2]=Math.max(0,Math.min(255, gy+(bl-gy)*s));
+          }
+        }
+        ctx.putImageData(im, 0, 0);
+      }
+      ["psBright","psContrast","psSat"].forEach(function(id){
+        const el = $("#"+id); if(el) el.oninput = adjustColors;
+      });
+
+      // 旋转 90°
+      $("#psRotate").onclick = function(){
+        if(!needImg()) return;
+        const tmp = document.createElement("canvas");
+        tmp.width = cv.height; tmp.height = cv.width;
+        const tctx = tmp.getContext("2d");
+        tctx.translate(tmp.width, 0); tctx.rotate(Math.PI/2);
+        tctx.drawImage(cv, 0, 0);
+        cv.width = tmp.width; cv.height = tmp.height;
+        ctx.drawImage(tmp, 0, 0);
+        saveState();
+        toast("已旋转 90°", "ok");
+      };
+
+      // 水平/垂直翻转
+      function flip(horiz){
+        if(!needImg()) return;
+        const tmp = document.createElement("canvas");
+        tmp.width = cv.width; tmp.height = cv.height;
+        const tctx = tmp.getContext("2d");
+        tctx.translate(horiz ? cv.width : 0, horiz ? 0 : cv.height);
+        tctx.scale(horiz ? -1 : 1, horiz ? 1 : -1);
+        tctx.drawImage(cv, 0, 0);
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(tmp, 0, 0);
+        saveState();
+        toast(horiz ? "已水平翻转" : "已垂直翻转", "ok");
+      }
+      $("#psFlipH").onclick = function(){ flip(true); };
+      $("#psFlipV").onclick = function(){ flip(false); };
+
+      // 裁剪（选区拖拽）
+      $("#psCrop").onclick = function(){
+        if(!needImg()) return;
+        cropMode = !cropMode; brushMode = false;
+        $("#psCrop").classList.toggle("active", cropMode);
+        cv.style.cursor = cropMode ? "crosshair" : "default";
+        toast(cropMode ? "裁剪模式：在画布上拖拽选区，松手即应用" : "已退出裁剪模式", cropMode ? "ok" : "warn");
+      };
+      let startX = 0, startY = 0;
+      cv.onmousedown = function(e){
+        const r = cv.getBoundingClientRect();
+        if(cropMode){
+          startX = e.clientX - r.left; startY = e.clientY - r.top;
+          sel = {x:startX, y:startY, w:0, h:0};
+          drawing = true;
+        } else if(brushMode){
+          drawing = true;
+          ctx.beginPath();
+          ctx.moveTo(e.clientX - r.left, e.clientY - r.top);
+        }
+      };
+      cv.onmousemove = function(e){
+        if(!drawing) return;
+        const r = cv.getBoundingClientRect();
+        const mx = e.clientX - r.left, my = e.clientY - r.top;
+        if(cropMode && sel){
+          sel.w = mx - sel.x; sel.h = my - sel.y;
+          ctx.putImageData(orig, 0, 0);
+          ctx.strokeStyle = "#0a6cbd"; ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+          ctx.strokeRect(sel.x, sel.y, sel.w, sel.h);
+          ctx.setLineDash([]);
+        } else if(brushMode){
+          ctx.lineTo(mx, my); ctx.stroke();
+        }
+      };
+      cv.onmouseup = function(){
+        if(cropMode && sel && Math.abs(sel.w) > 4 && Math.abs(sel.h) > 4){
+          const sx = Math.max(0, sel.x), sy = Math.max(0, sel.y);
+          const sw = Math.min(Math.abs(sel.w), cv.width - sx), sh = Math.min(Math.abs(sel.h), cv.height - sy);
+          if(sw > 4 && sh > 4){
+            const tmp = document.createElement("canvas");
+            tmp.width = Math.round(sw); tmp.height = Math.round(sh);
+            const tctx = tmp.getContext("2d");
+            tctx.drawImage(cv, sx, sy, sw, sh, 0, 0, sw, sh);
+            cv.width = Math.round(sw); cv.height = Math.round(sh);
+            ctx.drawImage(tmp, 0, 0);
+            saveState();
+            toast("已裁剪", "ok");
+          }
+        }
+        cropMode = false; $("#psCrop").classList.remove("active");
+        cv.style.cursor = brushMode ? "crosshair" : "default";
+        drawing = false; sel = null;
+      };
+
+      // 文字水印
+      $("#psAddText").onclick = function(){
+        if(!needImg()) return;
+        const txt = $("#psText").value.trim();
+        if(!txt){ toast("请输入水印文字", "warn"); return; }
+        ctx.font = "bold 32px sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 4;
+        ctx.fillText(txt, 20, cv.height - 30);
+        ctx.shadowBlur = 0;
+        saveState();
+        toast("已添加文字", "ok");
+      };
+
+      // 画笔
+      $("#psBrush").onclick = function(){
+        if(!needImg()) return;
+        brushMode = !brushMode; cropMode = false;
+        $("#psBrush").classList.toggle("active", brushMode);
+        cv.style.cursor = brushMode ? "crosshair" : "default";
+        if(brushMode){ ctx.strokeStyle = "#0a6cbd"; ctx.lineWidth = 4; ctx.lineCap = "round"; }
+        toast(brushMode ? "画笔模式：在画布上拖拽绘制" : "已退出画笔模式", brushMode ? "ok" : "warn");
+      };
+
+      // 还原
       $("#psReset").onclick = function(){ if(orig){ ctx.putImageData(orig, 0, 0); toast("已还原原图", "ok"); } else toast("请先加载图片", "warn"); };
+
+      // 导出
       $("#psSave").onclick = function(){
-        if(!orig){ toast("请先加载图片", "warn"); return; }
+        if(!needImg()) return;
         cv.toBlob(function(bl){
           const url = URL.createObjectURL(bl); const a = document.createElement("a");
-          a.href = url; a.download = "filtered.png"; a.click();
+          a.href = url; a.download = "pslite.png"; a.click();
           setTimeout(function(){ URL.revokeObjectURL(url); }, 100);
-          toast("已导出 filtered.png", "ok");
+          toast("已导出 pslite.png", "ok");
         });
       };
     }
@@ -11620,13 +11903,14 @@ function renderTasksPage(){
 }
 function _tasksHeadHtml(){
   const tabs = [["kanban","看板"],["calendar","日历"],["todo","待办"]];
+  // v3.0：视图切换移出标题栏（标题栏高度与其他页面统一），置于标题卡下方独立菜单栏
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.tasks||""}</span>
     <div class="ph-tx"><h2>任务</h2><p class="sub">跨场景任务中心——所有场景的任务在这里统一管理</p></div>
-    <nav class="set-nav tasks-view-tabs" aria-label="任务视图切换">${tabs.map(([k,l])=>
-      `<button type="button" class="set-nav-btn tasks-tab${_tasksView===k?" active":""}" data-tasks-view="${k}">${l}</button>`).join("")}</nav>
     <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
-  </header></div>`;
+  </header></div>
+  <nav class="set-nav tasks-view-tabs" aria-label="任务视图切换">${tabs.map(([k,l])=>
+    `<button type="button" class="set-nav-btn tasks-tab${_tasksView===k?" active":""}" data-tasks-view="${k}">${l}</button>`).join("")}</nav>`;
 }
 function _bindTasksTabs(){
   $$("#main .tasks-tab").forEach(b=>{
@@ -11673,11 +11957,11 @@ function renderToolboxPage(){
   }).join("");
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
-      <span class="ph-ic" aria-hidden="true">${UI_ICONS.puzzle}</span>
+      <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.toolbox||""}</span>
       <div class="ph-tx"><h2>工具箱</h2><p class="sub">文档 · 设计 · 编程 · 生活 · 检索 · 效率工具——所有工具与应用的统一入口（Ctrl+K 可直达）</p></div>
-      <input type="text" id="toolboxQ" placeholder="搜索工具…" value="${esc(_toolboxQ)}" style="max-width:200px" aria-label="搜索工具">
       <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
     </header></div>
+    <div class="tool-filter-bar" style="margin-bottom:var(--space-2)"><input type="text" id="toolboxQ" placeholder="搜索工具…" value="${esc(_toolboxQ)}" style="flex:1" aria-label="搜索工具"></div>
     <div class="glob-views" style="margin-bottom:var(--space-2)">${chips}</div>
     <div class="app-grid">${cards || ""}</div>`);
   const qi = $("#toolboxQ");
@@ -12405,13 +12689,24 @@ function _updateKanbanVScroll(viewport, sc, st){
 function renderSceneHead(){
   const s = SCENARIOS[active];
   if(!s) return "";
-  // v2.1.0：标题随任务视图模式变化（任务看板 / 任务日历 / 待办清单）
-  const headTitle = sceneViewMode==="calendar" ? "任务日历" : sceneViewMode==="todo" ? "待办清单" : "任务看板";
+  // v3.0：标题栏只显示场景名（不再带「任务看板/任务日历/待办清单」字样）
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" style="background:${s.color}1f;color:${s.color}" aria-hidden="true">${s.icon || ""}</span>
-    <div class="ph-tx"><h2>${esc(s.name)} · ${headTitle}</h2>
+    <div class="ph-tx"><h2>${esc(s.name)}</h2>
       <p class="sub">带截止日期的任务会汇总到下方「今天要处理」</p></div>
   </header></div>`;
+}
+/**
+ * v3.0：场景功能菜单（独立于标题栏，置于标题卡下方）
+ * @returns {string} HTML
+ */
+function renderSceneFeatNav(){
+  const feats = SCENE_FEATURES[active] || [];
+  if(!feats.length) return "";
+  // v3.0：场景功能菜单复用设置页菜单栏样式（.set-nav + .set-nav-btn），求同：与设置页完全一致
+  return `<nav class="set-nav scene-feat-nav" aria-label="场景功能">
+    ${feats.map(f=>`<button type="button" class="set-nav-btn${f.id===sceneFeatureMode?" active":""}" data-feat="${f.id}">${esc(f.label)}</button>`).join("")}
+  </nav>`;
 }
 /**
  * v2.1.0：待办视图（todo 模式）——当前场景任务平铺清单，勾选完成 / 状态流转 / 编辑删除。
@@ -12530,6 +12825,10 @@ function renderMainHTML(){
   // v1.15 P2：每个 card 左上角要有标题——看板卡补"任务看板"
   // v2.1.0：任务卡标题随视图模式变化（任务看板 / 任务日历 / 待办清单）
   const taskCardTitle = sceneViewMode==="calendar" ? "任务日历" : sceneViewMode==="todo" ? "待办清单" : "任务看板";
+  // v3.0：场景内功能 tab 分支——overview 显示现有内容（任务+资料库+专属卡），其他 tab 显示功能卡
+  if(sceneFeatureMode !== "overview"){
+    return renderSceneFeature(sceneFeatureMode);
+  }
   return `<div class="card"><h2>${UI_ICONS.check}${taskCardTitle}</h2>${taskForm}${filterHtml}${taskArea}</div>
      <div class="card"><h2>${ic("book")} ${s.name} · ${rec.label}</h2>
       <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
@@ -12537,6 +12836,537 @@ function renderMainHTML(){
       ${renderExtra(active)}
        ${chatCard}`;
 }
+
+/* v3.0：场景内功能渲染注册表（active → { featureId: renderFn }）。
+   P2-P5 逐个填充各场景功能实现；未实现时走占位卡。 */
+const SCENE_FEATURE_RENDER = {
+  office: {},
+  study: {},
+  data: {},
+  design: {},
+  code: {},
+  life: {}
+};
+/**
+ * v3.0：渲染场景内功能卡（按 SCENE_FEATURE_RENDER 查表）
+ * @param {string} fid - SCENE_FEATURES[active] 中的 tab id
+ * @returns {string} HTML
+ */
+function renderSceneFeature(fid){
+  const feats = SCENE_FEATURES[active] || [];
+  const f = feats.find(function(x){ return x.id === fid; });
+  const label = f ? f.label : fid;
+  const fn = (SCENE_FEATURE_RENDER[active] || {})[fid];
+  if(typeof fn === "function"){
+    try{ return fn(); }catch(e){ return `<div class="card"><h2>${ic("alert")} ${esc(label)}</h2><div class="extra-empty">功能渲染出错：${esc(e && e.message || e)}</div></div>`; }
+  }
+  return `<div class="card"><h2>${ic("puzzle")} ${esc(label)}</h2><div class="extra-empty">该功能正在建设中…</div></div>`;
+}
+
+/* ================= v3.0 场景功能卡（求同存异：统一骨架 + 各功能配置） =================
+ * 通用「记录型功能卡」：表单（tool-form-grid）+ 统计（tool-summary）+ 列表（tool-table）。
+ * 各功能仅需配置 fields/cols/sum/emptyTip，骨架与交互完全一致（求同），字段与统计对症下药（存异）。 */
+
+/** 通用功能卡 HTML：cfg = {key, title, icon, fields, cols, sum, emptyTip} */
+function _featureCardHtml(cfg){
+  const records = load(PREFIX + cfg.key, []);
+  const form = '<div class="tool-form-grid">' + cfg.fields.map(function(f){
+    if(f.type === "select"){
+      return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-f-field="' + esc(f.k) + '">' +
+        f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
+    }
+    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="date"' : ' type="text"';
+    return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + t + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
+  }).join("") + '</div>';
+  const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
+  const summary = sums.length
+    ? '<div class="tool-summary">' + sums.map(function(s){
+        return '<div class="tool-summary-item"><span class="v">' + esc(String(s.v)) + '</span><span class="l">' + esc(s.l) + '</span></div>';
+      }).join("") + '</div>'
+    : '';
+  const rows = records.map(function(r){
+    const tds = cfg.cols.map(function(c){
+      if(c.type === "check"){ return '<td><input type="checkbox" data-f-check="' + r.id + '"' + (r.done ? " checked" : "") + ' aria-label="' + esc(c.label) + '"></td>'; }
+      const v = (typeof c.fmt === "function") ? c.fmt(r) : esc(r[c.k] || "");
+      return '<td>' + v + '</td>';
+    }).join("");
+    return '<tr data-f-row="' + r.id + '"><td><button type="button" class="addbtn xs danger" data-f-del="' + r.id + '" aria-label="删除">✕</button></td>' + tds + '</tr>';
+  }).join("");
+  const list = records.length
+    ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + '</th>'; }).join("") + '</tr></thead><tbody>' + rows + '</tbody></table>'
+    : '<div class="tool-empty">' + esc(cfg.emptyTip || "暂无记录") + '</div>';
+  return '<div class="card"><h2>' + cfg.icon + ' ' + esc(cfg.title) + '</h2>' +
+    '<div class="tool-filter-bar"><button type="button" class="addbtn sm" data-f-add style="--sc:var(--accent)">＋ 添加</button>' +
+    '<span class="sub" style="margin:0">共 ' + records.length + ' 条</span></div>' +
+    summary + '<div class="tool-form-box">' + form + '</div>' + list + '</div>';
+}
+
+/** 通用功能卡事件绑定（委托到 #main，幂等）
+ * @param {string} key - 存储键（PREFIX + key）
+ * @param {string[]} fieldKeys - 表单字段名数组（用于读取输入值）
+ */
+function _featureCardBind(key, fieldKeys){
+  const root = $("#main"); if(!root) return;
+  // 添加
+  $$("[data-f-add]").forEach(function(b){
+    b.onclick = function(){
+      const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), createdAt: Date.now() };
+      fieldKeys.forEach(function(k){
+        const el = root.querySelector('[data-f-field="' + k + '"]');
+        if(el) rec[k] = (el.type === "number") ? Number(el.value || 0) : el.value.trim();
+      });
+      if(!fieldKeys.some(function(k){ return rec[k]; })){ toast("请先填写内容", "warn"); return; }
+      const arr = load(PREFIX + key, []);
+      arr.unshift(rec);
+      save(PREFIX + key, arr);
+      toast("已添加", "ok");
+      render();
+    };
+  });
+  // 删除
+  $$("[data-f-del]").forEach(function(b){
+    b.onclick = function(){
+      const id = b.getAttribute("data-f-del");
+      save(PREFIX + key, load(PREFIX + key, []).filter(function(r){ return r.id !== id; }));
+      toast("已删除", "ok");
+      render();
+    };
+  });
+  // 完成勾选
+  $$("[data-f-check]").forEach(function(b){
+    b.onchange = function(){
+      const id = b.getAttribute("data-f-check");
+      save(PREFIX + key, load(PREFIX + key, []).map(function(r){
+        return r.id === id ? Object.assign({}, r, { done: b.checked }) : r;
+      }));
+      render();
+    };
+  });
+}
+
+/* v3.0：功能卡绑定配置（key + 表单字段名；与 SCENE_FEATURE_RENDER 的渲染配置一一对应） */
+const SCENE_FEATURE_BIND = {
+  office: {
+    meeting:    { key:"meetings",    fieldKeys:["title","date","who","note"] },
+    project:    { key:"projects",    fieldKeys:["name","milestone","status","progress"] },
+    attendance: { key:"attendance",  fieldKeys:["date","checkIn","checkOut","note"] },
+    expense:    { key:"expenses",    fieldKeys:["title","amount","category","date","status"] }
+  },
+  study: {
+    knowledge: { key:"knowledge", fieldKeys:["title","category","tags","content"] },
+    reading:   { key:"reading",   fieldKeys:["book","excerpt","note","progress"] },
+    exercise:  { key:"exercises", fieldKeys:["subject","question","answer","explain"] },
+    exam:      { key:"exams",     fieldKeys:["title","date","score","total"] }
+  },
+  data: {
+    report: { key:"data_reports", fieldKeys:["title","dims","metrics","note"] },
+    chart:  { key:"data_charts",  fieldKeys:["title","type","note"] }
+  },
+  design: {
+    ui:      { key:"design_ui", fieldKeys:["title","type","palette","note"] },
+    model3d: { key:"design_3d", fieldKeys:["title","format","note"] }
+  },
+  code: {
+    frontend: { key:"code_frontend", fieldKeys:["title","html","css","js"] },
+    sql:      { key:"code_sql",      fieldKeys:["title","schema","sql","note"] }
+  },
+  life: {
+    plan: { key:"life_plans", fieldKeys:["title","type","date","note"] }
+  }
+};
+
+/* ---------- 办公场景功能卡（P2） ---------- */
+SCENE_FEATURE_RENDER.office = {
+  meeting: function(){
+    return _featureCardHtml({
+      key:"meetings", title:"会议管理", icon:ic("chat"),
+      fields:[
+        {k:"title", label:"会议主题", type:"text"},
+        {k:"date", label:"日期", type:"date"},
+        {k:"who", label:"参会人", type:"text"},
+        {k:"note", label:"结论 / 跟进", type:"text"}
+      ],
+      cols:[
+        {label:"会议主题", k:"title"},
+        {label:"日期", k:"date"},
+        {label:"参会人", k:"who"},
+        {label:"状态", fmt:function(r){ return r.done ? '<span style="color:var(--success)">已开</span>' : '<span style="color:var(--warn)">待开</span>'; }}
+      ],
+      sum:function(recs){
+        const open = recs.filter(function(r){ return !r.done; }).length;
+        return [{ v:open, l:"待开" }, { v:recs.length - open, l:"已开" }];
+      },
+      emptyTip:"暂无会议 · 点击「添加」记录第一场会议"
+    });
+  },
+  project: function(){
+    return _featureCardHtml({
+      key:"projects", title:"项目管理", icon:ic("target"),
+      fields:[
+        {k:"name", label:"项目名", type:"text"},
+        {k:"milestone", label:"里程碑", type:"text"},
+        {k:"status", label:"状态", type:"select", options:["规划中","进行中","已完成","已暂停"]},
+        {k:"progress", label:"进度 %", type:"number"}
+      ],
+      cols:[
+        {label:"项目名", k:"name"},
+        {label:"里程碑", k:"milestone"},
+        {label:"状态", k:"status"},
+        {label:"进度", fmt:function(r){ return '<div class="bar" style="min-width:80px"><span class="track"><span class="fill" style="width:' + Math.min(Number(r.progress)||0,100) + '%"></span></span></div>' + (r.progress||0) + '%'; }}
+      ],
+      sum:function(recs){
+        return [
+          { v:recs.filter(function(r){ return r.status==="进行中"; }).length, l:"进行中" },
+          { v:recs.filter(function(r){ return r.status==="已完成"; }).length, l:"已完成" }
+        ];
+      },
+      emptyTip:"暂无项目 · 点击「添加」记录第一个项目"
+    });
+  },
+  attendance: function(){
+    return _featureCardHtml({
+      key:"attendance", title:"考勤打卡", icon:ic("check"),
+      fields:[
+        {k:"date", label:"日期", type:"date"},
+        {k:"checkIn", label:"上班时间", type:"text", placeholder:"如 09:00"},
+        {k:"checkOut", label:"下班时间", type:"text", placeholder:"如 18:30"},
+        {k:"note", label:"备注", type:"text"}
+      ],
+      cols:[
+        {label:"日期", k:"date"},
+        {label:"上班", k:"checkIn"},
+        {label:"下班", k:"checkOut"},
+        {label:"工时", fmt:function(r){
+          if(!r.checkIn || !r.checkOut) return "-";
+          const p = function(s){ var m = /^(\d{1,2}):(\d{2})$/.exec(String(s)); return m ? Number(m[1])*60+Number(m[2]) : NaN; };
+          const a = p(r.checkIn), b = p(r.checkOut);
+          if(isNaN(a)||isNaN(b)||b<a) return "-";
+          return ((b-a)/60).toFixed(1) + "h";
+        }}
+      ],
+      sum:function(recs){
+        const today = todayStr();
+        const week = recs.filter(function(r){ return r.date && r.date <= today; }).length;
+        return [{ v:week, l:"已打卡" }, { v:recs.length, l:"累计" }];
+      },
+      emptyTip:"暂无打卡记录 · 点击「添加」记录上下班"
+    });
+  },
+  expense: function(){
+    return _featureCardHtml({
+      key:"expenses", title:"报销管理", icon:ic("bill"),
+      fields:[
+        {k:"title", label:"报销事由", type:"text"},
+        {k:"amount", label:"金额", type:"number"},
+        {k:"category", label:"类别", type:"select", options:["差旅","餐饮","办公","交通","其他"]},
+        {k:"date", label:"日期", type:"date"},
+        {k:"status", label:"状态", type:"select", options:["待审","已批","已报"]}
+      ],
+      cols:[
+        {label:"事由", k:"title"},
+        {label:"金额", fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); }},
+        {label:"类别", k:"category"},
+        {label:"日期", k:"date"},
+        {label:"状态", k:"status"}
+      ],
+      sum:function(recs){
+        const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+        return [
+          { v:"¥" + total.toFixed(0), l:"累计" },
+          { v:recs.filter(function(r){ return r.status==="待审"; }).length, l:"待审" }
+        ];
+      },
+      emptyTip:"暂无报销单 · 点击「添加」录入第一笔"
+    });
+  },
+  doc: function(){
+    const tools = [
+      { id:"off-md",    name:"Markdown 编辑器", desc:"分栏编辑 · 实时预览 · 导出" },
+      { id:"off-word",  name:"Word 富文本",     desc:"所见即所得 · 导出 .doc" },
+      { id:"off-sheet", name:"表格编辑器",      desc:"可编辑表格 · 导出 CSV" },
+      { id:"off-ppt",   name:"幻灯片",          desc:"卡片式编辑 · 全屏放映" },
+      { id:"off-pdf",   name:"PDF 阅读",        desc:"导入本地 PDF · 预览" },
+      { id:"off-ocr",   name:"截图 OCR",        desc:"上传截图 · AI 识别文字" }
+    ];
+    const items = tools.map(function(t){
+      const app = TOOL_APPS[t.id];
+      return '<button type="button" class="doc-tool-item" data-tool="' + t.id + '">' +
+        '<span class="doc-tool-ic">' + (app && app.icon ? app.icon : "") + '</span>' +
+        '<span class="doc-tool-tx"><b>' + esc(t.name) + '</b><small>' + esc(t.desc) + '</small></span>' +
+        '<span class="doc-tool-go">打开 →</span></button>';
+    }).join("");
+    return '<div class="card"><h2>' + ic("file") + ' 文档中心</h2>' +
+      '<p class="sub">办公文档工具集：表格 / PPT / PDF / Word / Markdown / OCR</p>' +
+      '<div class="doc-tool-grid">' + items + '</div></div>';
+  }
+};
+
+/* ---------- 生活场景功能卡（P2） ---------- */
+SCENE_FEATURE_RENDER.life = {
+  plan: function(){
+    return _featureCardHtml({
+      key:"life_plans", title:"计划管理", icon:ic("target"),
+      fields:[
+        {k:"title", label:"计划内容", type:"text"},
+        {k:"type", label:"类型", type:"select", options:["日程","习惯","目标","备忘"]},
+        {k:"date", label:"日期", type:"date"},
+        {k:"note", label:"备注", type:"text"}
+      ],
+      cols:[
+        {label:"计划内容", k:"title"},
+        {label:"类型", k:"type"},
+        {label:"日期", k:"date"},
+        {label:"状态", type:"check", fmt:function(r){ return r.done ? "已完成" : "进行中"; }}
+      ],
+      sum:function(recs){
+        return [
+          { v:recs.filter(function(r){ return !r.done; }).length, l:"进行中" },
+          { v:recs.filter(function(r){ return r.done; }).length, l:"已完成" }
+        ];
+      },
+      emptyTip:"暂无计划 · 点击「添加」制定第一个计划"
+    });
+  }
+};
+
+/* ---------- 学习场景功能卡（P3） ---------- */
+SCENE_FEATURE_RENDER.study = {
+  knowledge: function(){
+    return _featureCardHtml({
+      key:"knowledge", title:"知识库", icon:ic("kb"),
+      fields:[
+        {k:"title", label:"标题", type:"text"},
+        {k:"category", label:"分类", type:"text"},
+        {k:"tags", label:"标签", type:"text"},
+        {k:"content", label:"内容", type:"text"}
+      ],
+      cols:[
+        {label:"标题", k:"title"},
+        {label:"分类", k:"category"},
+        {label:"标签", k:"tags"},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        const cats = new Set(recs.map(function(r){ return r.category; }).filter(Boolean));
+        return [{ v:recs.length, l:"条目" }, { v:cats.size, l:"分类" }];
+      },
+      emptyTip:"暂无知识条目 · 点击「添加」沉淀第一条知识"
+    });
+  },
+  reading: function(){
+    return _featureCardHtml({
+      key:"reading", title:"阅读笔记", icon:ic("book"),
+      fields:[
+        {k:"book", label:"书名", type:"text"},
+        {k:"excerpt", label:"摘录", type:"text"},
+        {k:"note", label:"笔记", type:"text"},
+        {k:"progress", label:"进度 %", type:"number"}
+      ],
+      cols:[
+        {label:"书名", k:"book"},
+        {label:"摘录", fmt:function(r){ return (r.excerpt||"").slice(0,20) + ((r.excerpt||"").length>20?"…":""); }},
+        {label:"进度", fmt:function(r){ return (Number(r.progress)||0) + "%"; }},
+        {label:"状态", type:"check", fmt:function(r){ return r.done ? "读完" : "在读"; }}
+      ],
+      sum:function(recs){
+        return [
+          { v:recs.filter(function(r){ return !r.done; }).length, l:"在读" },
+          { v:recs.filter(function(r){ return r.done; }).length, l:"读完" }
+        ];
+      },
+      emptyTip:"暂无阅读记录 · 点击「添加」记录第一本书"
+    });
+  },
+  exercise: function(){
+    return _featureCardHtml({
+      key:"exercises", title:"练习题库", icon:ic("target"),
+      fields:[
+        {k:"subject", label:"科目", type:"text"},
+        {k:"question", label:"题目", type:"text"},
+        {k:"answer", label:"答案", type:"text"},
+        {k:"explain", label:"解析", type:"text"}
+      ],
+      cols:[
+        {label:"科目", k:"subject"},
+        {label:"题目", fmt:function(r){ return (r.question||"").slice(0,24) + ((r.question||"").length>24?"…":""); }},
+        {label:"答案", fmt:function(r){ return (r.answer||"").slice(0,16); }}
+      ],
+      sum:function(recs){
+        const subs = new Set(recs.map(function(r){ return r.subject; }).filter(Boolean));
+        return [{ v:recs.length, l:"题目" }, { v:subs.size, l:"科目" }];
+      },
+      emptyTip:"暂无题目 · 点击「添加」录入第一道题"
+    });
+  },
+  exam: function(){
+    return _featureCardHtml({
+      key:"exams", title:"模拟考试", icon:ic("grid"),
+      fields:[
+        {k:"title", label:"考试名", type:"text"},
+        {k:"date", label:"日期", type:"date"},
+        {k:"score", label:"得分", type:"number"},
+        {k:"total", label:"总分", type:"number"}
+      ],
+      cols:[
+        {label:"考试名", k:"title"},
+        {label:"日期", k:"date"},
+        {label:"成绩", fmt:function(r){ return (r.score||0) + " / " + (r.total||0); }},
+        {label:"完成", type:"check", fmt:function(r){ return r.done ? "已考" : "待考"; }}
+      ],
+      sum:function(recs){
+        const total = recs.reduce(function(s,r){ return s + (Number(r.score)||0); }, 0);
+        const n = recs.length;
+        return [{ v:n, l:"考试" }, { v:n ? Math.round(total/n) : 0, l:"平均分" }];
+      },
+      emptyTip:"暂无考试记录 · 点击「添加」记录第一次考试"
+    });
+  }
+};
+
+/* ---------- 数据场景功能卡（P4） ---------- */
+SCENE_FEATURE_RENDER.data = {
+  report: function(){
+    return _featureCardHtml({
+      key:"data_reports", title:"数据分析报表", icon:ic("stats"),
+      fields:[
+        {k:"title", label:"报表名", type:"text"},
+        {k:"dims", label:"分析维度", type:"text"},
+        {k:"metrics", label:"指标", type:"text"},
+        {k:"note", label:"结论", type:"text"}
+      ],
+      cols:[
+        {label:"报表名", k:"title"},
+        {label:"维度", k:"dims"},
+        {label:"指标", k:"metrics"},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        return [
+          { v:recs.length, l:"报表" },
+          { v:new Set(recs.map(function(r){ return r.metrics; }).filter(Boolean)).size, l:"指标" }
+        ];
+      },
+      emptyTip:"暂无报表 · 点击「添加」生成第一份分析报表"
+    });
+  },
+  chart: function(){
+    return _featureCardHtml({
+      key:"data_charts", title:"数据可视化", icon:ic("grid"),
+      fields:[
+        {k:"title", label:"图表名", type:"text"},
+        {k:"type", label:"类型", type:"select", options:["折线图","柱状图","饼图","仪表盘"]},
+        {k:"note", label:"说明", type:"text"}
+      ],
+      cols:[
+        {label:"图表名", k:"title"},
+        {label:"类型", k:"type"},
+        {label:"说明", fmt:function(r){ return (r.note||"").slice(0,20); }},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        return [
+          { v:recs.length, l:"图表" },
+          { v:new Set(recs.map(function(r){ return r.type; }).filter(Boolean)).size, l:"类型" }
+        ];
+      },
+      emptyTip:"暂无图表 · 点击「添加」创建第一个可视化"
+    });
+  }
+};
+
+/* ---------- 编程场景功能卡（P4） ---------- */
+SCENE_FEATURE_RENDER.code = {
+  frontend: function(){
+    return _featureCardHtml({
+      key:"code_frontend", title:"前端页面设计", icon:ic("compile"),
+      fields:[
+        {k:"title", label:"页面名", type:"text"},
+        {k:"html", label:"HTML", type:"text"},
+        {k:"css", label:"CSS", type:"text"},
+        {k:"js", label:"JS", type:"text"}
+      ],
+      cols:[
+        {label:"页面名", k:"title"},
+        {label:"HTML", fmt:function(r){ return (r.html||"").slice(0,16) + ((r.html||"").length>16?"…":""); }},
+        {label:"CSS", fmt:function(r){ return (r.css||"").slice(0,16) + ((r.css||"").length>16?"…":""); }},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        return [{ v:recs.length, l:"页面" }];
+      },
+      emptyTip:"暂无页面 · 点击「添加」记录第一个前端页面"
+    });
+  },
+  sql: function(){
+    return _featureCardHtml({
+      key:"code_sql", title:"SQL 生成", icon:ic("sheet"),
+      fields:[
+        {k:"title", label:"标题", type:"text"},
+        {k:"schema", label:"表结构", type:"text"},
+        {k:"sql", label:"SQL", type:"text"},
+        {k:"note", label:"备注", type:"text"}
+      ],
+      cols:[
+        {label:"标题", k:"title"},
+        {label:"表结构", fmt:function(r){ return (r.schema||"").slice(0,16) + ((r.schema||"").length>16?"…":""); }},
+        {label:"SQL", fmt:function(r){ return (r.sql||"").slice(0,20) + ((r.sql||"").length>20?"…":""); }},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        return [{ v:recs.length, l:"SQL" }];
+      },
+      emptyTip:"暂无 SQL · 点击「添加」生成第一条 SQL"
+    });
+  }
+};
+
+/* ---------- 设计场景功能卡（P4） ---------- */
+SCENE_FEATURE_RENDER.design = {
+  ui: function(){
+    return _featureCardHtml({
+      key:"design_ui", title:"UI 设计", icon:ic("puzzle"),
+      fields:[
+        {k:"title", label:"设计名", type:"text"},
+        {k:"type", label:"类型", type:"select", options:["界面原型","配色方案","组件库","动效"]},
+        {k:"palette", label:"配色", type:"text"},
+        {k:"note", label:"备注", type:"text"}
+      ],
+      cols:[
+        {label:"设计名", k:"title"},
+        {label:"类型", k:"type"},
+        {label:"配色", fmt:function(r){ return (r.palette||"").slice(0,16) + ((r.palette||"").length>16?"…":""); }},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        return [
+          { v:recs.length, l:"设计" },
+          { v:new Set(recs.map(function(r){ return r.type; }).filter(Boolean)).size, l:"类型" }
+        ];
+      },
+      emptyTip:"暂无 UI 设计 · 点击「添加」记录第一个设计"
+    });
+  },
+  model3d: function(){
+    return _featureCardHtml({
+      key:"design_3d", title:"3D 渲染", icon:ic("cad"),
+      fields:[
+        {k:"title", label:"模型名", type:"text"},
+        {k:"format", label:"格式", type:"select", options:["OBJ","STL","GLTF","FBX","其他"]},
+        {k:"note", label:"备注", type:"text"}
+      ],
+      cols:[
+        {label:"模型名", k:"title"},
+        {label:"格式", k:"format"},
+        {label:"备注", fmt:function(r){ return (r.note||"").slice(0,20) + ((r.note||"").length>20?"…":""); }},
+        {label:"创建", fmt:function(r){ return r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"; }}
+      ],
+      sum:function(recs){
+        return [{ v:recs.length, l:"模型" }];
+      },
+      emptyTip:"暂无 3D 模型 · 点击「添加」记录第一个模型"
+    });
+  }
+};
 
 /**
  * v1.4-B 渲染单条记录项 HTML（抽出供虚拟滚动复用）
@@ -12622,7 +13452,8 @@ function _updateRecVScroll(viewport, sc){
  * @returns {void}
  */
 function bindScenario(){
-  $("#taskForm").onsubmit = e=>{
+  // v3.0：功能卡视图（非 overview）无任务表单/资料库表单，判空绑定避免抛错
+  const _tf = $("#taskForm"); if(_tf) _tf.onsubmit = e=>{
     e.preventDefault(); const f=e.target; const tasks=getTasks();
     const tags = f.tags.value.trim()? f.tags.value.split(/[,，]/).map(x=>x.trim()).filter(Boolean) : [];
     const nt = {id:uid(), sc:active, title:f.title.value.trim(), due:f.due.value,
@@ -12631,7 +13462,7 @@ function bindScenario(){
     setTasks(tasks); checkCount(); render();
     _emitTaskEvent("task_create", nt); // v1.12 [1a]：表单创建任务发事件（自动化规则 + Webhook 总线）
   };
-  $("#recForm").onsubmit = e=>{
+  const _rf = $("#recForm"); if(_rf) _rf.onsubmit = e=>{
     e.preventDefault(); const f=e.target; const obj={id:uid(), created:Date.now()};
     SCENARIOS[active].record.fields.forEach(fl=> obj[fl.k]=f.elements[fl.k].value.trim());
     const arr=getRec(active); arr.unshift(obj); setRec(active, arr); render();
@@ -14913,9 +15744,23 @@ function render(){
     if(active==="chainpage"){ renderChainPage(); appendFoot(); return; }
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
-    $("#main").innerHTML = sanitizeHtml(renderSceneHead() + renderMainHTML());
+    // v3.0：功能菜单（renderSceneFeatNav）独立于标题栏，置于标题卡与主内容之间
+    $("#main").innerHTML = sanitizeHtml(renderSceneHead() + renderSceneFeatNav() + renderMainHTML());
     appendFoot();
     bindScenario();
+    // v3.0：场景内功能 tab 点击切换（SCENE_FEATURES）
+    $$("#main .scene-feat-tab").forEach(function(b){
+      b.onclick = function(){ setSceneFeature(b.getAttribute("data-feat")); };
+    });
+    // v3.0：办公文档中心工具入口点击（打开对应 TOOL_APPS 工具）
+    $$("#main [data-tool]").forEach(function(b){
+      b.onclick = function(){ openToolStub(b.getAttribute("data-tool"), ""); };
+    });
+    // v3.0：场景功能卡事件绑定（非 overview tab 时绑定添加/删除/完成）
+    if(sceneFeatureMode !== "overview"){
+      const bcfg = (SCENE_FEATURE_BIND[active] || {})[sceneFeatureMode];
+      if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys);
+    }
     setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
     setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
     // P9：「稍后提醒」按钮绑定（Top3 待处理任务）
@@ -22233,7 +23078,7 @@ function searchAll(query, options){
   }
   const q = query.toLowerCase().trim();
   const opt = options || {};
-  const results = { tasks: [], records: [], notes: [], total: 0 };
+  const results = { tasks: [], records: [], notes: [], features: [], total: 0 };
 
   // 搜索任务
   if(opt.tasks !== false){
@@ -22277,7 +23122,26 @@ function searchAll(query, options){
     });
   }
 
-  results.total = results.tasks.length + results.records.length + results.notes.length;
+  // 搜索场景功能卡数据（v3.0：会议/项目/考勤/报销/知识库/阅读/练习/考试/报表/图表/前端/SQL/UI/3D/计划）
+  if(opt.features !== false){
+    try{
+      Object.keys(SCENE_FEATURE_BIND).forEach(function(sc){
+        const feats = SCENE_FEATURE_BIND[sc] || {};
+        Object.keys(feats).forEach(function(fid){
+          const cfg = feats[fid];
+          const arr = load(PREFIX + cfg.key, []);
+          arr.forEach(function(item){
+            const haystack = Object.keys(item).map(function(k){ return String(item[k] || ""); }).join(" ");
+            if(_matchText(haystack, q)){
+              results.features.push({ item: item, type: "feature", sc: sc, fid: fid });
+            }
+          });
+        });
+      });
+    }catch(e){ /* 搜索异常不阻断 */ }
+  }
+
+  results.total = results.tasks.length + results.records.length + results.notes.length + results.features.length;
   return results;
 }
 /**
@@ -22317,6 +23181,7 @@ function renderSearchResults(results, query){
     if(results.tasks.length) parts.push("任务 " + results.tasks.length);
     if(results.records.length) parts.push("记录 " + results.records.length);
     if(results.notes.length) parts.push("笔记 " + results.notes.length);
+    if(results.features && results.features.length) parts.push("功能 " + results.features.length);
     if(parts.length) html += "（" + parts.join(" / ") + "）";
     html += '</p>';
     results.tasks.forEach(function(r){
@@ -22344,6 +23209,16 @@ function renderSearchResults(results, query){
       if(r.item.content){
         html += '<span class="search-item-desc">' + highlightSearchResult((r.item.content || "").substring(0, 80), query) + '</span>';
       }
+      html += '</div>';
+    });
+    // v3.0：场景功能卡搜索结果（会议/项目/知识库/报表/SQL 等）
+    (results.features || []).forEach(function(r){
+      const fname = (SCENE_FEATURES[r.sc] || []).find(function(f){ return f.id === r.fid; });
+      const label = fname ? fname.label : r.fid;
+      const title = r.item.title || r.item.book || r.item.name || r.item.question || r.item.sql || Object.values(r.item).join(" ");
+      html += '<div class="search-item search-item-note" data-type="feature">';
+      html += '<span class="type-badge type-badge-note">' + esc(label) + '</span>';
+      html += '<span class="search-item-title">' + highlightSearchResult(String(title).substring(0, 60), query) + '</span>';
       html += '</div>';
     });
   }
