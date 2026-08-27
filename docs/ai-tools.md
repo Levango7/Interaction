@@ -12,7 +12,7 @@
 
 AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `TOOLS` 作为 `tools` 参数下发，模型返回 `tool_calls`，由前端 `execTool(name, args)` 分发执行，结果回灌下一轮对话。
 
-**工具总数**：16。
+**工具总数**：17。
 
 | # | 工具名 | 所属分发器 | 必填参数 | 说明 |
 |---|--------|-----------|----------|------|
@@ -32,6 +32,7 @@ AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `T
 | 14 | `complete_step` | agentExec | `index` | 标记目标某步完成 |
 | 15 | `complete_goal` | agentExec | — | 收尾并总结目标 |
 | 16 | `list_records` | agentExec | — | 查某场景资料库最近记录 |
+| 17 | `add_feature_record` | agentExec | `feature`,`fields` | 向场景功能卡添加一条记录 |
 
 **分发边界**：
 - `execTool` 处理任务 / 资料库 / 搜索 / 概览 / 导出类。
@@ -243,6 +244,16 @@ const ORDER = ["office","data","design","study","code","life"];
 - **必填**：`[]`
 - **执行**：返回该场景最近记录 **最多 10 条**，并剥离 `id`/`created` 字段。
 - **返回**：`{count:N, items:[{<场景字段>}]}`
+
+### 3.17 `add_feature_record`
+
+- **描述**：向当前场景的功能卡添加一条记录（如会议/项目/考勤/报销/知识库/阅读/练习/考试/报表/图表/前端/SQL/UI/3D/计划）。
+- **参数**：
+  - `feature` `{string}` — 功能 id（meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan）
+  - `fields` `{object}` — 字段键值对（各功能表单字段，如会议 title/date/who/note）
+- **必填**：`["feature","fields"]`
+- **执行**：校验功能 id 是否绑定于当前场景（`SCENE_FEATURE_BIND`）；未提供任何有效字段值则拒绝；记录插入该功能列表头部。
+- **返回**：`{ok:true, msg:"已添加到<feature>功能"}` 或 `{ok:false, msg:"未知功能：<fid>..."}` / `{ok:false, msg:"请提供至少一个字段值"}`
 
 ---
 

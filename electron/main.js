@@ -565,30 +565,22 @@ if (!gotLock){
       });
     });
 
-    // P0-8：局域网同步 IPC——渲染进程主动请求下载/上传数据
+    // P0-8 局域网同步 IPC——v3.1.1 重写：主进程无 localStorage，数据真相源在渲染进程。
+    // sync-get 返回最近一次渲染进程推送的快照（启动/每60s/点同步按钮时经 sync-push 更新）；
+    // sync-upload 不再伪装落盘，改为同 HTTP /sync/upload 一致的中转语义（渲染进程确认后走 doImport）。
     ipcMain.handle("sync-get", (e) => {
       assertTrustedSender(e);
       try {
-        const keys = Object.keys(localStorage || {});
-        const data = {};
-        for (const k of keys) {
-          if (k.startsWith("wb_agent_") || k === "wb_custom_links") {
-            try { data[k] = localStorage.getItem(k); } catch(e2){}
-          }
-        }
-        return data;
-      } catch(e2) { return { error: e2.message }; }
+        return JSON.parse(JSON.stringify(syncSnapshot || {}));
+      } catch(e2) { return { error: e2 && e2.message ? e2.message : String(e2) }; }
     });
     ipcMain.handle("sync-upload", (e, data) => {
       assertTrustedSender(e);
       if (!data || typeof data !== "object") return { ok: false, error: "invalid data" };
       try {
-        for (const [k, v] of Object.entries(data)) {
-          if ((k.startsWith("wb_agent_") || k === "wb_custom_links") && typeof v === "string") {
-            try { localStorage.setItem(k, v); } catch(e2){}
-          }
-        }
-        return { ok: true };
+        // 中转给渲染进程弹确认框；实际合并落库由渲染进程 doImport 完成
+        win.webContents.send("sync-upload-request", data);
+        return { ok: true, relayed: true };
       } catch(e2) { return { ok: false, error: e2.message }; }
     });
 
@@ -602,28 +594,35 @@ if (!gotLock){
 app.on("window-all-closed", () => { /* 不退出，托盘常驻 */ });
 
 /* ---------- P0-8：局域网同步 HTTP server（仅 Electron 环境） ----------
- * 监听 localhost:8124，提供两个端点：
- *   GET  /sync/download → 返回本机完整数据 JSON（localStorage 快照）
- *   POST /sync/upload   → 接收另一设备的数据并覆盖写入（需确认弹窗）
- * 仅限 localhost 访问（bind 到 127.0.0.1），避免外网暴露。
+ * v3.1.1 重写（修复三处链路断裂）：
+ *   原实现直接读主进程 localStorage（Electron 主进程无此全局对象，恒得空对象），
+ *   导致 /sync/download 与 sync-get 永远返回 {}；sync-upload 写主进程 localStorage 同样无效。
+ * 现架构：数据快照由渲染进程经 IPC「sync-push」推送给主进程（渲染进程才是 localStorage 真相源）：
+ *   - 渲染进程启动时、每 60s、点击同步按钮时各推送一次最新快照
+ *   - GET /sync/download → 返回最近一次推送的快照（含稳定 deviceId）
+ *   - POST /sync/upload → 仅中转给渲染进程弹确认框（复用 doImport 的合并逻辑），主进程不落盘
+ * 安全边界不变：仅绑定 127.0.0.1 且拒绝非本机来源——跨设备同步走设置抽屉的导出/导入 JSON。
  * 服务器在 app.ready 时启动，before-quit 时关闭。
  */
 let syncServer = null;
+let syncSnapshot = {};          // 最近一次渲染进程推送的数据快照
+let syncDeviceId = null;        // 本次会话稳定的设备 id
 function startSyncServer(){
   const PORT = 8124;
-  // 读取本机所有用户数据键
-  function getLocalData(){
-    try {
-      const keys = Object.keys(localStorage || {});
-      const data = {};
-      for (const k of keys) {
-        if (k.startsWith("wb_agent_") || k === "wb_custom_links") {
-          try { data[k] = localStorage.getItem(k); } catch(e){}
-        }
-      }
-      return data;
-    } catch(e) { return {}; }
-  }
+  const MAX_BODY_BYTES = 8 * 1024 * 1024; // 上传体上限 8MB，防异常大包拖垮进程
+
+  // 渲染进程推送快照（IPC：sync-push）。key 白名单与旧逻辑一致。
+  ipcMain.handle("sync-push", (e, data) => {
+    assertTrustedSender(e);
+    if (!data || typeof data !== "object" || Array.isArray(data)) return { ok:false, error:"invalid data" };
+    const out = {};
+    for (const [k, v] of Object.entries(data)) {
+      if ((k.startsWith("wb_agent_") || k === "wb_custom_links") && typeof v === "string") out[k] = v;
+    }
+    syncSnapshot = out;
+    return { ok:true, keys:Object.keys(out).length };
+  });
+
   syncServer = http.createServer((req, res) => {
     // 仅允许 localhost 请求（防跨网络滥用）
     const clientIp = req.socket && req.socket.remoteAddress;
@@ -633,23 +632,32 @@ function startSyncServer(){
       return;
     }
     if (req.method === "GET" && req.url === "/sync/download") {
-      const data = getLocalData();
-      data._deviceMeta = { deviceId: require("crypto").randomUUID(), syncedAt: Date.now() };
+      if (!syncDeviceId) syncDeviceId = require("crypto").randomUUID();
+      const data = { ...syncSnapshot };
+      data._deviceMeta = { deviceId: syncDeviceId, syncedAt: Date.now(), empty: !syncSnapshot || Object.keys(syncSnapshot).length === 0 };
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(data));
     } else if (req.method === "POST" && req.url === "/sync/upload") {
       let body = "";
-      req.on("data", chunk => { body += chunk; });
+      let oversize = false;
+      req.on("data", chunk => {
+        body += chunk;
+        if (body.length > MAX_BODY_BYTES) { oversize = true; req.destroy(); }
+      });
       req.on("end", () => {
+        if (oversize) return; // 连接已被销毁
         try {
           const incoming = JSON.parse(body);
           if (!incoming || typeof incoming !== "object") throw new Error("invalid");
-          // 广播给渲染进程：有同步数据待确认
+          // 广播给渲染进程：有同步数据待确认（确认后由渲染进程走 doImport 合并落库）
           if (win && !win.isDestroyed()) {
             win.webContents.send("sync-upload-request", incoming);
+            res.writeHead(202, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ accepted: true }));
+          } else {
+            res.writeHead(503, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "window unavailable" }));
           }
-          res.writeHead(202, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ accepted: true }));
         } catch(e) {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "bad request" }));
