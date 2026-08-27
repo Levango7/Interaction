@@ -71,6 +71,10 @@
   --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
   /* 圆角体系（v2.1.1：补 --radius-full 胶囊圆角，此前 9 处引用靠回退兜底） */
   --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:999px;
+  /* ===== B2 布局宽度体系（统一内容宽度，宽屏防卡片无限拉伸） ===== */
+  --content-max:1240px;  /* 主内容区最大宽度：≥1440 视口抬升到 --content-max-wide */
+  --content-max-wide:1440px;
+
   /* 阴影体系（分层高度 1/2/3）— 测试要求精确保留 --shadow-1 字符串 */
   --shadow-1:0 1px 2px rgba(0,0,0,.06);
   --shadow-2:0 2px 8px rgba(0,0,0,.08);
@@ -499,7 +503,17 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    （内容不足一屏时贴底；超出时尾栏随内容排在最后，滚动到底才可见） */
 .main{flex:1;overflow:auto;padding:var(--space-3) var(--space-4);min-width:0;
   display:flex;flex-direction:column;
-  background:var(--bg)} /* v1.15 P3：主区内边距 20/24→12/16，提升信息密度；背景由 240 加深到 223 让白卡更跳 */
+  background:var(--bg)}
+
+/* ===== B2 统一布局基线：主内容宽度约束 =====
+   规则：#main 的直接子级（各功能卡片/网格）统一受 --content-max 约束并水平居中。
+   窄屏视口 < max-width 时数学上无效果（宽度本就 100%），故全断点安全；
+   宽屏（≥1440）抬升至 --content-max-wide，消除卡片横跨整屏的阅读过宽问题。 */
+.main > *{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
+@media(min-width:1440px){
+  :root{--content-max:var(--content-max-wide)}
+}
+ /* v1.15 P3：主区内边距 20/24→12/16，提升信息密度；背景由 240 加深到 223 让白卡更跳 */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-3);margin-bottom:var(--space-2);
   transition:box-shadow var(--transition-fast),border-color var(--transition-fast)}
