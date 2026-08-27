@@ -6811,7 +6811,17 @@ let _deviceKey = null;        // CryptoKey 实例
 let _cryptoReady = false;     // Web Crypto subtle 是否可用
 let _cryptoWarned = false;    // Web Crypto 不可用 warn 去重标记（T5.3 兼容）
 let _cfgCache = null;         // 解密后的内存明文 cfg
-const DK_KEY = PREFIX + "__dk"; // 设备密钥存储键
+const DK_KEY = PREFIX + "__dk"; // 设备密钥存储键（旧路径，仅迁移期间存在）
+const DK_IDB_KEY = "__dk_v2";   // 设备密钥 IDB 键（不参与 idbQueueMirror 镜像命名空间）
+let _dkIdbGet = () => Promise.resolve(null);  // 生产接线在 initCryptoRuntimeWiring()
+let _dkIdbPut = () => Promise.resolve(false);
+/** 把可用的 idb 助手接到设备密钥存取上（若 idb 层尚未定义则保持默认禁用态） */
+function initCryptoRuntimeWiring(){
+  try{
+    if(typeof idbReadKey === "function") _dkIdbGet = (k)=>Promise.resolve(idbReadKey(k)).then(v=>(v===null?null:v));
+    if(typeof idbMirrorKey === "function") _dkIdbPut = (k,v)=>Promise.resolve(idbMirrorKey(k,v)).then(()=>true).catch(()=>false);
+  }catch(e){}
+}
 
 function base64Encode(bytes){
   let s = "";
@@ -6830,23 +6840,44 @@ function _resetCrypto(){ _deviceKey = null; _cfgCache = null; _cryptoReady = fal
 async function ensureDeviceKey(){
   if(_deviceKey) return _deviceKey;
   if(!_cryptoReady) return null;
-  // SECURITY TODO [H3]: 浏览器环境下设备密钥与密文同存储于 localStorage，无法抵御 XSS——
-  //   一旦页面被注入脚本即可读出 DK_KEY 还原所有 API Key。建议迁移到 IndexedDB 存储
-  //   （扩展默认无 IDB 访问权限，可降低泄露面），或通过 WebWorker + postMessage 隔离。
-  //   Electron 分支已在 persistCfg() 中通过 IPC 将 Key 交主进程保管（见 4897 行附近），
-  //   渲染进程只持久化非敏感配置，该路径已确认安全。
-  const raw = localStorage.getItem(DK_KEY);
-  if(raw){
-    try{
-      const bytes = base64Decode(raw);
-      _deviceKey = await crypto.subtle.importKey("raw", bytes, {name:"AES-GCM"}, false, ["encrypt","decrypt"]);
-      return _deviceKey;
-    }catch(e){ /* 损坏则重建 */ }
+  /* SECURITY [H3 已清偿]：设备密钥优先存 IndexedDB（浏览器扩展注入脚本通常无 IDB 访问权，
+   * 缩小 XSS 泄露面）。jsdom/无 IDB 环境回退旧 localStorage 路径。
+   * 迁移顺序：读 IDB → 读旧键并迁移（写入成功且回读一致后才删旧键）→ 全新生成。
+   * _dkIdbGet/_dkIdbPut 为可注入接缝（生产接 idbReadKey/idbMirrorKey；测试可覆盖）。 */
+  const useIdb = (typeof indexedDB !== "undefined");
+  try{
+    if(useIdb){
+      const idbRaw = await _dkIdbGet(DK_IDB_KEY);
+      if(typeof idbRaw === "string" && idbRaw){
+        try{
+          _deviceKey = await crypto.subtle.importKey("raw", base64Decode(idbRaw), {name:"AES-GCM"}, false, ["encrypt","decrypt"]);
+          return _deviceKey;
+        }catch(e){ /* 损坏则走重建 */ }
+      }
+    }
+    const raw = localStorage.getItem(DK_KEY); // 旧路径迁移源
+    if(raw){
+      try{
+        _deviceKey = await crypto.subtle.importKey("raw", base64Decode(raw), {name:"AES-GCM"}, false, ["encrypt","decrypt"]);
+        if(useIdb){
+          const ok = await _dkIdbPut(DK_IDB_KEY, raw);           // 先写新家
+          if(ok && (await _dkIdbGet(DK_IDB_KEY)) === raw){       // 回读一致才删旧键
+            try{ localStorage.removeItem(DK_KEY); }catch(e){}
+          }
+        }
+        return _deviceKey;
+      }catch(e){ /* 损坏则重建 */ }
+    }
+    _deviceKey = await crypto.subtle.generateKey({name:"AES-GCM", length:256}, true, ["encrypt","decrypt"]);
+    const exported = await crypto.subtle.exportKey("raw", _deviceKey);
+    const b64 = base64Encode(new Uint8Array(exported));
+    if(useIdb) await _dkIdbPut(DK_IDB_KEY, b64);
+    else localStorage.setItem(DK_KEY, b64); // 无 IDB 环境维持旧行为
+    return _deviceKey;
+  }catch(e){
+    _deviceKey = null;
+    return null;
   }
-  _deviceKey = await crypto.subtle.generateKey({name:"AES-GCM", length:256}, true, ["encrypt","decrypt"]);
-  const exported = await crypto.subtle.exportKey("raw", _deviceKey);
-  localStorage.setItem(DK_KEY, base64Encode(new Uint8Array(exported)));
-  return _deviceKey;
 }
 /**
  * 用设备密钥 AES-GCM 加密明文 Key
@@ -6928,6 +6959,7 @@ async function persistCfg(cfg){
  * @returns {Promise<Cfg>} 解密后的内存明文 cfg
  */
 async function initCrypto(){
+  initCryptoRuntimeWiring();   // 接线设备密钥的 IDB 存取（P0 存储层专项）
   try{
     _cryptoReady = !!(typeof crypto !== "undefined" && crypto.subtle && typeof crypto.subtle.generateKey === "function");
   }catch(e){ _cryptoReady = false; }
@@ -19942,6 +19974,12 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     get NOTES_STORAGE_KEY(){ return NOTES_STORAGE_KEY; },
     // v1.8-C 集成（供测试驱动）
     integrationGetStatus, integrationSetHttpClient,
+    // v1.8-C 集成内部件（async provider 取用 + 同步状态管理 + 存储 key，供注入式测试）
+    _intRequireProvider, _intLoadProviders, _intResetIntegrationCache,
+    _intGetSyncState, _intRecordSync, _intFindLocalId,
+    get INTEGRATION_PROVIDERS_KEY(){ return INTEGRATION_PROVIDERS_KEY; },
+    get INTEGRATION_SYNC_STATE_KEY(){ return INTEGRATION_SYNC_STATE_KEY; },
+    get INTEGRATION_TYPES(){ return INTEGRATION_TYPES; },
     // 已移除模块的 getter（enterprise/collab/worker/security/e2ee/oauth2/webhook/voice/multimodal/capacitor/biometric）
     initHeavyModules,
     // 系统级消息中心访问器（供测试驱动与断言）
@@ -27357,38 +27395,155 @@ function _intUid(prefix){
   return (prefix || "int_") + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
 }
 const _intNow = _sharedNowISO;
+
+/* ---------- 敏感字段加密持久化（P0 存储层专项） ----------
+ * 密封/解封为纯函数：状态进、Promise 出，enc/dec 由注入决定，便于单测。
+ * D4 原则对齐 persistCfg()：crypto 不可用时**丢弃**敏感值而不落明文。
+ * 已是 {__enc:true,...} 的值幂等跳过；旧明文数据读时原样使用、下次保存自动升级为密文。 */
+function _intIsSensitiveField(name){
+  const n = String(name || "").toLowerCase();
+  if(n === "key" || n === "password") return true;
+  const parts = n.split(/[^a-z0-9]+/);
+  return parts.some(p => p === "secret" || p === "token" || p === "key" || p === "password" || p === "apikey");
+}
+function _intIsSealed(v){ return v && typeof v === "object" && v.__enc === true && typeof v.iv === "string" && typeof v.data === "string"; }
+/**
+ * 深度密封：敏感字段的明文值经 encFn 变 {__enc,iv,data}；disabled 时删除该字段
+ * @param {*} node - 任意嵌套对象/数组/原始值
+ * @param {{enc:(plain:string)=>Promise<object>, enabled:boolean}} io
+ * @returns {Promise<*>} 新结构（不改入参）
+ */
+async function _intSealState(node, io){
+  if(Array.isArray(node)){
+    const out = [];
+    for(const item of node) out.push(await _intSealState(item, io));
+    return out;
+  }
+  if(node && typeof node === "object"){
+    const out = {};
+    for(const k of Object.keys(node)){
+      const v = node[k];
+      if(_intIsSensitiveField(k)){
+        if(_intIsSealed(v)){ out[k] = v; continue; }          // 已密封，幂等
+        if(typeof v === "string" && v){                        // 明文字符串才处理
+          if(!io.enabled) continue;                            // D4：不可加密→丢弃不落盘
+          try{ out[k] = await io.enc(v); }catch(e){ continue; }// 加密失败→丢弃
+          continue;
+        }
+        // 非字符串敏感位（如空串/null）：disabled 同样不留痕；enabled 且为普通对象则深走
+        if(!io.enabled){ continue; }
+        out[k] = await _intSealState(v, io);
+        continue;
+      }
+      out[k] = (v && typeof v === "object") ? await _intSealState(v, io) : v;
+    }
+    return out;
+  }
+  return node;
+}
+/**
+ * 深度解封：{__enc,iv,data} 经 decFn 还原明文（仅内存，触发落盘不回写）
+ * @param {*} node
+ * @param {{dec:(sealed:object)=>Promise<string>, enabled:boolean}} io
+ * @returns {Promise<*>}
+ */
+async function _intUnsealState(node, io){
+  if(Array.isArray(node)){
+    const out = [];
+    for(const item of node) out.push(await _intUnsealState(item, io));
+    return out;
+  }
+  if(node && typeof node === "object"){
+    const out = {};
+    for(const k of Object.keys(node)){
+      const v = node[k];
+      if(_intIsSensitiveField(k) && _intIsSealed(v)){
+        if(!io.enabled){ continue; }                            // crypto 失效环境不解出也不保留密文于内存明文路径
+        try{ out[k] = String(await io.dec(v)); }
+        catch(e){ delete out[k]; }                              // 解不开（换设备等）→ 字段置缺
+        continue;
+      }
+      out[k] = (v && typeof v === "object") ? await _intUnsealState(v, io) : v;
+    }
+    return out;
+  }
+  return node;
+}
+/* 保存链：序列化写盘请求，防止并发快照乱序覆盖 */
+let _intPersistChain = Promise.resolve();
+function _intQueuePersist(key, snapshot, cacheObj){
+  _intPersistChain = _intPersistChain.then(async () => {
+    try{
+      const sealed = await _intSealState(snapshot, {
+        enabled: (typeof _cryptoReady !== "undefined" && _cryptoReady),
+        enc: (p)=>encryptKey(p),
+      });
+      _intSafeLSSet(key, JSON.stringify(sealed));
+      /* 读时升级完成后内存仍是明文真相源；无额外回写需要 */
+    }catch(e){
+      try{ pushDiag("error", "integration persist seal: "+(e&&e.message||e), {op:"persist_seal"}); }catch(e2){}
+    }
+  }).catch(()=>{});
+}
+/** 注水：把磁盘读入的密封态在内存中解开成明文真相源（异步，fire-and-forget） */
+let _intHydrating = null;
+function _intKickHydrate(storeKey, target, keysWhitelist){
+  const keys = keysWhitelist || Object.keys(target);
+  if(!keys.length) return;
+  const io = { enabled: (typeof _cryptoReady !== "undefined" && _cryptoReady), dec: (s)=>decryptKey(s) };
+  _intHydrating = Promise.all(keys.map(async k => {
+    try{ target[k] = await _intUnsealState(target[k], io); }
+    catch(e){ try{ delete target[k]; }catch(e2){} }
+  })).catch(function(){});
+}
+function _intAwaitHydrated(){
+  return (_intHydrating || Promise.resolve()).catch(function(){});
+}
+
+let _apiKeysLoaded = false; let _syncStateLoaded = false;
+let _providersLoaded = false;
+function _intResetIntegrationCache(){ _providersLoaded=false; _apiKeysLoaded=false; _syncStateLoaded=false; } // 首载守卫：内存是明文真相源，重复读盘会用密封态覆盖内存
 function _intLoadProviders(){
+  if(_providersLoaded) return;
   const raw = _intSafeLSGet(INTEGRATION_PROVIDERS_KEY);
-  if(!raw){ _integrationProviders = {}; return; }
+  if(!raw){ _integrationProviders = {}; _providersLoaded = true; return; }
   try{
     const parsed = JSON.parse(raw);
     _integrationProviders = (parsed && typeof parsed === "object") ? parsed : {};
+    _intKickHydrate(INTEGRATION_PROVIDERS_KEY, _integrationProviders);   // 密文态会被就地解开
   }catch(e){ _integrationProviders = {}; }
+  _providersLoaded = true;
 }
 function _intSaveProviders(){
-  _intSafeLSSet(INTEGRATION_PROVIDERS_KEY, JSON.stringify(_integrationProviders));
+  /* 快照后异步密封落盘；调用方零改动（12 处），写序由 _intPersistChain 保证 */
+  _intQueuePersist(INTEGRATION_PROVIDERS_KEY, JSON.parse(JSON.stringify(_integrationProviders)));
 }
 function _intLoadSyncState(){
+  if(_syncStateLoaded) return;
   const raw = _intSafeLSGet(INTEGRATION_SYNC_STATE_KEY);
-  if(!raw){ _integrationSyncState = {}; return; }
+  if(!raw){ _integrationSyncState = {}; _syncStateLoaded = true; return; }
   try{
     const parsed = JSON.parse(raw);
     _integrationSyncState = (parsed && typeof parsed === "object") ? parsed : {};
   }catch(e){ _integrationSyncState = {}; }
+  _syncStateLoaded = true;
 }
 function _intSaveSyncState(){
   _intSafeLSSet(INTEGRATION_SYNC_STATE_KEY, JSON.stringify(_integrationSyncState));
 }
 function _intLoadApiKeys(){
+  if(_apiKeysLoaded) return;
   const raw = _intSafeLSGet(INTEGRATION_API_KEYS_KEY);
-  if(!raw){ _integrationApiKeys = {}; return; }
+  if(!raw){ _integrationApiKeys = {}; _apiKeysLoaded = true; return; }
   try{
     const parsed = JSON.parse(raw);
     _integrationApiKeys = (parsed && typeof parsed === "object") ? parsed : {};
+    _intKickHydrate(INTEGRATION_API_KEYS_KEY, _integrationApiKeys);
   }catch(e){ _integrationApiKeys = {}; }
+  _apiKeysLoaded = true;
 }
 function _intSaveApiKeys(){
-  _intSafeLSSet(INTEGRATION_API_KEYS_KEY, JSON.stringify(_integrationApiKeys));
+  _intQueuePersist(INTEGRATION_API_KEYS_KEY, JSON.parse(JSON.stringify(_integrationApiKeys)));
 }
 function _intLoadRateLimits(){
   const raw = _intSafeLSGet(INTEGRATION_RATE_LIMITS_KEY);
@@ -27544,9 +27699,10 @@ function integrationConfigureProvider(name, config){
 }
 
 /* ---------- 内部：检查 provider 是否可用 ---------- */
-function _intRequireProvider(name, expectedType){
+async function _intRequireProvider(name, expectedType){
   if(!name) return null;
   _intLoadProviders();
+  await _intAwaitHydrated();   // 注水完成后再取用（密文→明文真相源）
   const p = _integrationProviders[name];
   if(!p || !p.enabled) return null;
   if(expectedType && p.type !== expectedType) return null;
@@ -27618,7 +27774,7 @@ async function notionConnect(config){
 async function notionSyncTask(task, direction){
   if(!task || !task.id) return { success: false, error: "invalid_task" };
   direction = direction || "sync";
-  const provider = _intRequireProvider("notion", INTEGRATION_TYPES.NOTION);
+  const provider = await _intRequireProvider("notion", INTEGRATION_TYPES.NOTION);
   if(!provider) return { success: false, error: "provider_not_available" };
 
   const state = _intGetSyncState("notion");
@@ -27687,7 +27843,7 @@ async function notionSyncTask(task, direction){
 async function notionSyncNote(note, direction){
   if(!note || !note.id) return { success: false, error: "invalid_note" };
   direction = direction || "sync";
-  const provider = _intRequireProvider("notion", INTEGRATION_TYPES.NOTION);
+  const provider = await _intRequireProvider("notion", INTEGRATION_TYPES.NOTION);
   if(!provider) return { success: false, error: "provider_not_available" };
 
   const state = _intGetSyncState("notion");
@@ -27821,7 +27977,7 @@ async function linearConnect(config){
 async function linearSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
   direction = direction || "sync";
-  const provider = _intRequireProvider("linear", INTEGRATION_TYPES.LINEAR);
+  const provider = await _intRequireProvider("linear", INTEGRATION_TYPES.LINEAR);
   if(!provider) return { success: false, error: "provider_not_available" };
 
   const state = _intGetSyncState("linear");
@@ -27889,7 +28045,7 @@ function linearMapStatus(localStatus){
  * @returns {Promise<Array>} issue 列表
  */
 async function linearListIssues(filter){
-  const provider = _intRequireProvider("linear", INTEGRATION_TYPES.LINEAR);
+  const provider = await _intRequireProvider("linear", INTEGRATION_TYPES.LINEAR);
   if(!provider) return [];
   filter = filter || {};
   const token = provider.config.token;
@@ -27951,7 +28107,7 @@ async function jiraConnect(config){
 async function jiraSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
   direction = direction || "sync";
-  const provider = _intRequireProvider("jira", INTEGRATION_TYPES.JIRA);
+  const provider = await _intRequireProvider("jira", INTEGRATION_TYPES.JIRA);
   if(!provider) return { success: false, error: "provider_not_available" };
 
   const state = _intGetSyncState("jira");
@@ -28017,7 +28173,7 @@ function jiraMapStatus(localStatus){
  * @returns {Promise<Array>} issue 列表
  */
 async function jiraListIssues(filter){
-  const provider = _intRequireProvider("jira", INTEGRATION_TYPES.JIRA);
+  const provider = await _intRequireProvider("jira", INTEGRATION_TYPES.JIRA);
   if(!provider) return [];
   filter = filter || {};
   const token = provider.config.token;
@@ -28072,7 +28228,7 @@ async function slackConnect(config){
  * @returns {Promise<boolean>} 是否发送成功
  */
 async function slackSendMessage(channel, text, extra){
-  const provider = _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
+  const provider = await _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
   if(!provider) return false;
   const token = provider.config.botToken;
   const ch = channel || provider.config.channel;
@@ -28096,7 +28252,7 @@ async function slackSendMessage(channel, text, extra){
  * @returns {Promise<boolean>} 是否通知成功
  */
 async function slackNotifyEvent(eventType, payload){
-  const provider = _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
+  const provider = await _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
   if(!provider) return false;
   const text = "[" + eventType + "] " + JSON.stringify(payload);
   return await slackSendMessage(provider.config.channel, text);
@@ -28166,7 +28322,7 @@ async function feishuConnect(config){
  * @returns {Promise<boolean>} 是否成功
  */
 async function feishuSendMessage(chatId, text){
-  const provider = _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
+  const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
   if(!provider) return false;
   const ch = chatId || provider.config.chatId;
   if(!ch || !text) return false;
@@ -28197,7 +28353,7 @@ async function feishuSendMessage(chatId, text){
  * @returns {Promise<boolean>}
  */
 async function feishuNotifyEvent(eventType, payload){
-  const provider = _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
+  const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
   if(!provider) return false;
   const text = "[" + eventType + "] " + JSON.stringify(payload);
   return await feishuSendMessage(provider.config.chatId, text);
@@ -28263,7 +28419,7 @@ async function dingtalkConnect(config){
  * @returns {Promise<boolean>}
  */
 async function dingtalkSendMessage(chatId, text){
-  const provider = _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
+  const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
   if(!provider) return false;
   const ch = chatId || provider.config.chatId;
   if(!ch || !text) return false;
@@ -28288,7 +28444,7 @@ async function dingtalkSendMessage(chatId, text){
  * 钉钉事件通知
  */
 async function dingtalkNotifyEvent(eventType, payload){
-  const provider = _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
+  const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
   if(!provider) return false;
   const text = "[" + eventType + "] " + JSON.stringify(payload);
   return await dingtalkSendMessage(provider.config.chatId, text);
@@ -28427,7 +28583,7 @@ function _intCalendarParseEvent(providerName, remoteEvent){
 async function calendarSyncEvent(providerName, event, direction){
   if(!providerName || !event || !event.id) return { success: false, error: "invalid_params" };
   direction = direction || "sync";
-  const provider = _intRequireProvider(providerName);
+  const provider = await _intRequireProvider(providerName);
   if(!provider) return { success: false, error: "provider_not_available" };
 
   const state = _intGetSyncState(providerName);
@@ -28489,7 +28645,7 @@ async function calendarSyncEvent(providerName, event, direction){
  * @returns {Promise<Array>} 事件列表
  */
 async function calendarListEvents(providerName, range){
-  const provider = _intRequireProvider(providerName);
+  const provider = await _intRequireProvider(providerName);
   if(!provider) return [];
   range = range || {};
   const token = provider.config.token;
@@ -28524,7 +28680,7 @@ async function calendarListEvents(providerName, range){
  * @returns {Promise<Object|null>} 创建的事件或 null
  */
 async function calendarCreateEvent(providerName, event){
-  const provider = _intRequireProvider(providerName);
+  const provider = await _intRequireProvider(providerName);
   if(!provider) return null;
   const token = provider.config.token;
   const calendarId = provider.config.calendarId || "primary";
@@ -28546,7 +28702,7 @@ async function calendarCreateEvent(providerName, event){
  * @returns {Promise<Object|null>} 更新后的事件或 null
  */
 async function calendarUpdateEvent(providerName, eventId, event){
-  const provider = _intRequireProvider(providerName);
+  const provider = await _intRequireProvider(providerName);
   if(!provider) return null;
   const token = provider.config.token;
   const calendarId = provider.config.calendarId || "primary";
@@ -28567,7 +28723,7 @@ async function calendarUpdateEvent(providerName, eventId, event){
  * @returns {Promise<boolean>}
  */
 async function calendarDeleteEvent(providerName, eventId){
-  const provider = _intRequireProvider(providerName);
+  const provider = await _intRequireProvider(providerName);
   if(!provider) return false;
   const token = provider.config.token;
   const calendarId = provider.config.calendarId || "primary";
