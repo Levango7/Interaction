@@ -608,7 +608,9 @@ let syncServer = null;
 let syncSnapshot = {};          // 最近一次渲染进程推送的数据快照
 let syncDeviceId = null;        // 本次会话稳定的设备 id
 function startSyncServer(){
-  const PORT = 8124;
+  // 端口默认 8124（生产）；测试环境经 INTERACTION_SYNC_PORT 覆写为空闲端口，
+  // 避免多 vitest worker 并发加载 main.js 时对同一回环端口的双重绑定（Windows 下表现为 ECONNRESET）。
+  const PORT = Number(process.env.INTERACTION_SYNC_PORT) || 8124;
   const MAX_BODY_BYTES = 8 * 1024 * 1024; // 上传体上限 8MB，防异常大包拖垮进程
 
   // 渲染进程推送快照（IPC：sync-push）。key 白名单与旧逻辑一致。
