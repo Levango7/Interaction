@@ -6818,7 +6818,7 @@ let _dkIdbPut = () => Promise.resolve(false);
 /** 把可用的 idb 助手接到设备密钥存取上（若 idb 层尚未定义则保持默认禁用态） */
 function initCryptoRuntimeWiring(){
   try{
-    if(typeof idbReadKey === "function") _dkIdbGet = (k)=>Promise.resolve(idbReadKey(k)).then(v=>(v==null?null:v));
+    if(typeof idbReadKey === "function") _dkIdbGet = (k)=>Promise.resolve(idbReadKey(k)).then(v=>(v===null?null:v));
     if(typeof idbMirrorKey === "function") _dkIdbPut = (k,v)=>Promise.resolve(idbMirrorKey(k,v)).then(()=>true).catch(()=>false);
   }catch(e){}
 }
