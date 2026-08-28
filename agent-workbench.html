@@ -464,7 +464,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .card.page-head-card{padding:0}
 /* 卡高精确一致(82px)：页面级标题卡去掉自身 card 边框(1px×2)，
    边框由 header 承担——与抽屉 drawer-ph(header 自带边框)完全同构 */
-.card.page-head-card{border:none}
+.card.page-head-card{border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
 .page-head-card > .page-head{padding:var(--space-4)}
 /* 与抽屉(drawer-ph 带 1px 边框)视觉高度对齐：页面级 header 补 1px 透明边框 */
 .page-head-card > .page-head{border-top:1px solid transparent;border-bottom:1px solid transparent}
@@ -501,7 +501,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* ===== 主内容区 ===== */
 /* v2.0.3：flex 纵向布局 + 尾栏 margin-top:auto——所有页面尾栏永远在最下
    （内容不足一屏时贴底；超出时尾栏随内容排在最后，滚动到底才可见） */
-.main{flex:1;overflow:auto;padding:var(--space-3) var(--space-4);min-width:0;
+.main{flex:1;overflow:auto;scrollbar-gutter:stable;padding:var(--space-3) var(--space-4);min-width:0;
   display:flex;flex-direction:column;
   background:var(--bg)}
 
@@ -1299,7 +1299,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .drawer{position:fixed;top:0;right:0;height:100%;width:380px;max-width:92vw;background:var(--panel);
   border-left:1px solid var(--line);box-shadow:-4px 0 24px var(--shadow-drawer);
   transform:translateX(100%);transition:transform var(--transition-base);z-index:var(--z-drawer);
-  padding:var(--space-6);overflow:auto}
+  padding:var(--space-6);overflow:auto;scrollbar-gutter:stable}
 .drawer.open{transform:none}
 .drawer h2{font-size:var(--fs-lg);font-weight:600;margin:0 0 var(--space-4);
   display:flex;align-items:center;justify-content:space-between;letter-spacing:-.01em}
