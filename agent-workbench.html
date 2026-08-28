@@ -1322,10 +1322,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   border-left:none !important;
   box-shadow:none !important;
   z-index:auto !important;
-  /* v1.9.6：上下 padding 移交给首尾子元素（.drawer-ph margin-top / .foot 自带 padding）——
-     sticky（set-nav 吸顶 / set-savebar 吸底）会被包含块 content-box 钳制，
-     若 drawer 自身有 padding-top/bottom，停靠时会留出 padding 宽的缝隙 */
-  padding:0 var(--space-7) !important;
+  /* v3.1.1：padding 与 #main 全断点对齐——上下左右完全一致，
+     标题栏 card 的上方间距、下方间距、宽度三指标跨页面统一 */
+  padding:var(--space-3) var(--space-4) !important;
   overflow:auto !important;
   flex:1 1 0 !important;
   /* v2.0.3：flex 纵向布局——尾栏 .foot 用 margin-top:auto 永远贴最底（内容短时贴底、长时滚到底才出现） */
@@ -1339,17 +1338,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   min-width:0;
   min-height:0;
 }
-/* 响应式：与 #main 的 padding 全档位对齐（768-1023→--space-4；1024-1439→--space-7；≥1440→--space-8） */
+/* 响应式：与 #main 的 padding 全档位对齐 */
 @media(min-width:768px) and (max-width:1023px){
-  .drawer-page{padding:0 var(--space-4) !important}
+  .drawer-page{padding:var(--space-4) var(--space-4) !important}
 }
 @media(min-width:1440px){
-  .drawer-page{padding:0 var(--space-8) !important}
+  .drawer-page{padding:var(--space-6) var(--space-8) !important}
 }
-/* v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片直接浮于浅灰底（与统计/回收站页一致）；
-   margin-top 承接 drawer-page 移除的 padding-top（三断点同步）
-   v1.15：页头统一"框起来"——图标+大标题+小标题装入带边框的标题栏卡片，与统计/回收站页视觉一致 */
-.drawer-ph{margin:var(--space-3) 0 var(--space-5);
+/* v3.1.1：drawer-page padding 已与 #main 对齐，drawer-ph margin 归零（与 page-head-card 一致） */
+.drawer-ph{margin:0 0 var(--space-2);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-4)}
 /* 抽屉宽度有限(316px)，长 sub 文本会换行导致标题栏高度不一致。
@@ -1469,13 +1466,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* 设置页尾栏（与其他页面 foot 一致，宽度铺满、文本居中）；
    v2.0.3：margin-top:auto 让尾栏永远在最下——内容不足一屏时贴底，超出时滚到底才出现 */
 .drawer-page > .foot{margin:auto 0 0}
-/* v2.4.1：savebar 现在是普通卡片，随文档流自然排列，无需负 margin 断点覆盖 */
-@media(min-width:768px) and (max-width:1023px){
-  .drawer-ph{margin-top:var(--space-4)}
-}
-@media(min-width:1024px){
-  .drawer-ph{margin-top:var(--space-6)}
-}
+/* v3.1.1：drawer-ph margin-top 响应式覆盖已删除——padding-top 由 drawer-page 绝断点提供 */
 /* 窄屏：表单标签上置（v2.1.1：断点统一为主移动断点 767px，消除 721~767px 双列挤压） */
 @media (max-width:767px){
   .set-field{grid-template-columns:1fr;gap:var(--space-1)}
@@ -3881,7 +3872,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260829b";
+const BUILD_TAG = "20260829c";
 
 
 
