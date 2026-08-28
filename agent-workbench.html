@@ -1395,7 +1395,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    不再负边距通栏，左右边界与标题栏卡片完全对齐 */
 .set-nav{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;gap:var(--space-2);
   flex-wrap:wrap;margin:0 0 var(--space-5);
-  padding:var(--space-3);background:var(--panel);
+  padding:var(--space-4) var(--space-3);background:var(--panel);
   border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
 /* v3.1：SQL Playground */
 .sql-run-bar{display:flex;align-items:center;gap:var(--space-2,8px);margin:var(--space-2,8px) 0}
@@ -1643,7 +1643,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.9.4：卡片铺满主区剩余高度（上下留白更大），统一尾栏 .foot 被顶到主区底部；
    空态文案上下居中；有列表时底部操作栏吸附卡片底部（.recycle-footer margin-top:auto） */
 #main.page-recycle{display:flex;flex-direction:column}
-.recycle-modal{display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-5);flex:1}
+.recycle-modal{display:flex;flex-direction:column;gap:0;margin-bottom:var(--space-5);flex:1}
 .recycle-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   display:flex;flex-direction:column;box-shadow:var(--shadow-1);overflow:hidden;flex:1}
 /* v1.10.0b：回收站头继承 page-head 紧凑型风格（padding/icon/h2 与概览/统计/图表商店一致） */
@@ -3881,7 +3881,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260829a";
+const BUILD_TAG = "20260829b";
 
 
 
