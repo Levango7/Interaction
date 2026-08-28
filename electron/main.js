@@ -316,6 +316,13 @@ function logLine(scope, msg){
   }catch(e){ /* 日志失败绝不阻塞业务 */ }
 }
 
+/* ---------- HTML 转义（仅用于本机回调页等极少量动态 HTML 拼接） ---------- */
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
 /* ---------- 开机自启（由设置抽屉开关控制） ---------- */
 /* v1.11.1 [M4]：IPC sender 信任校验——仅接受来自本应用 file:// 页面的调用，
  * 远程/未知来源（如被导航守卫拦下之前曾可能创建的远程窗口）一律拒绝。
@@ -668,7 +675,10 @@ function startSyncServer(){
         }
       });
     } else if (req.method === "GET" && req.url && req.url.startsWith("/oauth/callback")) {
-      /* B3：OAuth 授权回调（仅 127.0.0.1 可达；state 一次性 + TTL 10min，防 CSRF/重放） */
+      /* B3：OAuth 授权回调（仅 127.0.0.1 可达；state 一次性 + TTL 10min，防 CSRF/重放）
+       * 安全：① 回调页所有动态内容经 escapeHtml 转义（error 参数来自 URL，为不可信输入，
+       *   直接拼接构成反射型 XSS，且本源（127.0.0.1:PORT）可 fetch 无鉴权的 /sync/download）；
+       *   ② state 校验先于 error 分支——伪造回调（未知 state）不反射任何 URL 参数，只给通用文案。 */
       const q = new URL(req.url, "http://127.0.0.1").searchParams;
       const state = q.get("state") || "";
       const code = q.get("code") || "";
@@ -679,15 +689,15 @@ function startSyncServer(){
         res.writeHead(ok ? 200 : 400, { "Content-Type": "text/html; charset=utf-8" });
         res.end("<!doctype html><meta charset='utf-8'><title>授权回调</title>"
           + "<body style='font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'>"
-          + "<div style='text-align:center'><div style='font-size:40px;font-weight:600;color:' + (ok ? '#34a853' : '#d83b3b') + '>' + (ok ? '\u2713' : '\u2715') + '</div>"
-          + "<p>" + msg + "</p><p style='color:#888'>授权完成，可关闭此窗口并回到应用</p></div>");
+          + "<div style='text-align:center'><div style='font-size:40px;font-weight:600;color:" + (ok ? "#34a853" : "#d83b3b") + "'>" + (ok ? "\u2713" : "\u2715") + "</div>"
+          + "<p>" + escapeHtml(msg) + "</p><p style='color:#888'>授权完成，可关闭此窗口并回到应用</p></div>");
       };
+      if (!rec){ finishHtml(false, "state 无效或已过期，请回到应用重新发起授权"); return; }
       if (errParam){
         oauthNotify({ ok:false, error: errParam });
         finishHtml(false, "授权被拒绝或失败：" + errParam);
         return;
       }
-      if (!rec){ finishHtml(false, "state 无效或已过期，请回到应用重新发起授权"); return; }
       oauthExchangeCode(rec, code).then((token) => {
         oauthUpsertToken(rec.provider, token);
         oauthNotify({ provider: rec.provider, ok:true });
@@ -728,7 +738,7 @@ function stopSyncServer(){
 const OAUTH_STATE_TTL = 10 * 60 * 1000;
 const OAUTH_REFRESH_MARGIN = 10 * 60 * 1000;   // 过期前 10min 触发刷新
 const OAUTH_REFRESH_INTERVAL = 5 * 60 * 1000;  // 巡检周期
-let oauthStates = new Map();          // state -> { provider, tokenUrl, clientId, clientSecret, codeVerifier, scope, createdAt }
+const oauthStates = new Map();          // state -> { provider, tokenUrl, clientId, clientSecret, codeVerifier, scope, createdAt }
 let oauthRefreshTimer = null;
 let oauthTokenCache = null;           // 内存明文真相源（读多写少，避免每次解密）
 function oauthStorePath(){

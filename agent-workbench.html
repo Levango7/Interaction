@@ -3803,7 +3803,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 <!-- v1.10.0：桌面萌宠容器（用户选角色后挂载到 body） -->
 <div id="petStage" class="pet-stage" aria-live="polite" aria-label="桌面萌宠"></div>
 
-<script src="./core-boot.mjs"></script>
+<script>
 "use strict";
 /* ============================================================
  * JSDoc 类型定义（仅用于类型标注/IDE 提示，不影响运行时）
@@ -4785,7 +4785,27 @@ function mdToHtml(str){
 /* emoji→矢量统一入口：模板字符串/innerHTML 用 ${ic("name")} 注入 */
 function ic(name){ const v=(UI_ICONS&&UI_ICONS[name])||""; return v?'<span class="ic-inline">'+v+"</span>":""; }
 // SECURITY NOTE [M2]: 自实现 sanitizeHtml，零依赖轻量消毒。已知限制：
-// 不做HTML实体编码后的二次解析，可能遗漏嵌套注入。生产环境如需更强保障可引 DOMPurify。
+// 仅 URL 属性（href/src/xlink:href）做实体解码后判协议，其余上下文不做实体二次解析，
+// 可能遗漏嵌套注入。生产环境如需更强保障可引 DOMPurify。
+// v3.1.1 [S1]：href/src 协议判断前增加实体解码（_isDangerousUrlValue）——修复
+// 协议名被 HTML 实体编码（十进制/十六进制/命名字符引用）的绕过，浏览器渲染时会解码执行。
+function _decodeUrlEntities(v){
+  // 解码 URL 属性值中的 HTML 实体：十六进制字符引用 / 十进制字符引用 / 与协议判断相关的命名实体
+  return String(v)
+    .replace(/&#x([0-9a-f]+);?/gi, function(_, h){ try{ return String.fromCodePoint(parseInt(h, 16)); }catch(e){ return ""; } })
+    .replace(/&#(\d+);?/g, function(_, d){ try{ return String.fromCodePoint(parseInt(d, 10)); }catch(e){ return ""; } })
+    .replace(/&(tab|newline|colon|semi|sol|bsol|num|percnt|quest|excl|amp|lt|gt|quot|apos|lpar|rpar);?/gi, function(_, n){
+      const map = { tab:"\t", newline:"\n", colon:":", semi:";", sol:"/", bsol:"\\", num:"#", percnt:"%", quest:"?", excl:"!", amp:"&", lt:"<", gt:">", quot:'"', apos:"'", lpar:"(", rpar:")" };
+      const k = map[n.toLowerCase()];
+      return k === undefined ? "" : k;
+    });
+}
+function _isDangerousUrlValue(raw){
+  // 浏览器解析 URL 时会忽略 ASCII 控制字符/空白（\t \r \n \0 等），故解码后先剥离再判协议
+  // eslint-disable-next-line no-control-regex -- 有意匹配 ASCII 控制字符区间：URL 消毒必须显式剥离它们
+  const v = _decodeUrlEntities(raw).replace(/[\u0000-\u0020]+/g, "");
+  return /^(javascript|vbscript|data):/i.test(v);
+}
 function sanitizeHtml(html){
   if (!html || typeof html !== "string") return "";
   let s = html;
@@ -4804,10 +4824,16 @@ function sanitizeHtml(html){
     s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*\/?\s*>/gi, "");
     // 3. 移除所有 on* 事件属性
     s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-    // 4. 移除 javascript:/vbscript:/data: 协议的 href 和 src（有引号）
-    s = s.replace(/(href|src)\s*=\s*(["'])\s*(javascript|vbscript|data)\s*:[^"']*\2/gi, "$1=\"\"");
+    // 4. 移除 href/src 的危险协议（javascript:/vbscript:/data:）——属性值先经实体解码+控制字符剥离
+    //    再判协议（_isDangerousUrlValue），封堵以实体编码或控制字符插值隐藏协议名的绕过
+    s = s.replace(/(href|src)\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, attr, _q, dq, sq){
+      const val = dq !== undefined ? dq : (sq !== undefined ? sq : "");
+      return _isDangerousUrlValue(val) ? attr + '=""' : m;
+    });
     // 4b. 无引号情况
-    s = s.replace(/(href|src)\s*=\s*(javascript|vbscript|data)\s*:[^\s>]*/gi, "$1=\"\"");
+    s = s.replace(/(href|src)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
+      return _isDangerousUrlValue(val) ? attr + '=""' : m;
+    });
     // 5. 移除 CSS expression() 及其编码变体（\28 / \x28 等编码括号）
     s = s.replace(/expression\s*\(/gi, "");
     s = s.replace(/expression\s*\\28/gi, "");
@@ -4818,8 +4844,14 @@ function sanitizeHtml(html){
     s = s.replace(/<\s*math\b[^>]*>[\s\S]*?<\s*\/\s*math\s*>/gi, "");
     s = s.replace(/<\s*math\b[^>]*\/?\s*>/gi, "");
     // 6b. 移除 SVG 中 xlink:href 的危险协议（javascript:/vbscript:/data:），防御 <use xlink:href="javascript:..."> 载荷
-    s = s.replace(/(xlink:href)\s*=\s*(["'])\s*(javascript|vbscript|data)\s*:[^"']*\2/gi, "xlink:href=\"\"");
-    s = s.replace(/(xlink:href)\s*=\s*(javascript|vbscript|data)\s*:[^\s>]*/gi, "xlink:href=\"\"");
+    //     与步骤 4 同口径：实体解码+控制字符剥离后判协议
+    s = s.replace(/(xlink:href)\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, attr, _q, dq, sq){
+      const val = dq !== undefined ? dq : (sq !== undefined ? sq : "");
+      return _isDangerousUrlValue(val) ? attr + '=""' : m;
+    });
+    s = s.replace(/(xlink:href)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
+      return _isDangerousUrlValue(val) ? attr + '=""' : m;
+    });
     // 7. 移除其他危险标签：template/noscript/noembed/noframes
     s = s.replace(/<\s*\/?\s*(template|noscript|noembed|noframes)\b[^>]*>/gi, "");
     // 8. 防御 HTML 实体编码绕过（&#x...; / &#...; 形式的 < > " '）
@@ -9261,34 +9293,22 @@ const TOOL_APPS = {
         + '<label style="margin-top:var(--space-3)">输出</label><pre id="ccOut" class="snip" style="min-height:120px">// console 输出显示在这里</pre>'
         + (hist.length ? '<details style="margin-top:var(--space-3)"><summary style="cursor:pointer;font-size:13px">历史代码 (' + hist.length + ")</summary>"
           + '<ul class="list">' + hist.slice(0,10).map(function(h,i){ return '<li style="padding:6px 10px"><div class="body"><a href="#" data-cc-hist="' + i + '">' + esc((h.code||"").slice(0,60)) + "…</a></div></li>"; }).join("") + "</ul></details>" : "")
-        + '<p class="sub" style="margin-top:var(--space-2)">安全提示：代码在隔离作用域内运行，无法访问应用数据；仅支持同步 JS 与 console.log/warn/error。</p>';
+        + '<p class="sub" style="margin-top:var(--space-2)">安全提示：代码在 Web Worker 沙箱中运行，无法访问应用数据、DOM 或 localStorage；最长 10 秒，用 console.log/warn/error 输出。</p>';
     },
     bind: function(){
       const codeEl = $("#ccCode"); if(!codeEl) return;
       const out = $("#ccOut");
-      const log = function(args, sep){
-        const line = Array.prototype.map.call(args, function(a){
-          try{ return typeof a === "object" ? JSON.stringify(a) : String(a); }catch(e){ return "[unprintable]"; }
-        }).join(sep || " ");
-        out.textContent += (out.textContent && out.textContent !== "// console 输出显示在这里" ? "\n" : "") + line;
-        out.textContent = out.textContent.replace("// console 输出显示在这里\n", "");
-      };
       $("#ccRun").onclick = function(){
         out.textContent = "";
-        const fakeConsole = { log:function(){ log(arguments); }, warn:function(){ log(["⚠️"].concat(Array.prototype.slice.call(arguments))); }, error:function(){ log(["❌"].concat(Array.prototype.slice.call(arguments))); } };
-        try{
-          // SECURITY NOTE [M1]: new Function 用于用户自定义代码片段执行预览，等同于 eval。
-          // 当前仅传入 console 参数，未暴露 DOM/window。如需完全隔离，可迁移到 WebWorker。
-          const fn = new Function("console", codeEl.value);
-          const ret = fn(fakeConsole);
-          if(ret !== undefined) log([ret]);
-          /* 存历史 */
-          const hist = _toolData("cod-compile-hist");
-          if(hist[0] && hist[0].code === codeEl.value){ /* skip dup */ }
-          else{ hist.unshift({ code:codeEl.value, at:Date.now() }); _toolSave("cod-compile-hist", hist.slice(0, 10)); }
-        }catch(err){
-          log(["❌ " + (err && err.stack || err)]);
-        }
+        const code = codeEl.value;
+        /* 存历史（v3.1.1：去重逻辑与原实现一致） */
+        const hist = _toolData("cod-compile-hist");
+        if(!(hist[0] && hist[0].code === code)){ hist.unshift({ code:code, at:Date.now() }); _toolSave("cod-compile-hist", hist.slice(0, 10)); }
+        /* v3.1.1 [S2]：原用 new Function（全局作用域，可读写 localStorage/window，
+         * 与「无法访问应用数据」的 UI 声明矛盾）；现复用 runJsSnippet 的 Worker 沙箱，声明变为事实。 */
+        runJsSnippet(code, { timeout: 10000 }).then(function(r){
+          out.textContent = (r.ok ? "" : "❌ ") + r.output + "\n(" + r.ms + "ms)";
+        });
       };
       $("#ccClrOut").onclick = function(){ out.textContent = "// console 输出显示在这里"; };
       $$("#main [data-cc-hist]").forEach(function(a){
@@ -16722,12 +16742,14 @@ function doIdbImport(file){
     }
     if(localData && localData.error){ toast("获取本机数据失败：" + localData.error, "error"); return; }
     // 2. 通过 HTTP 提供下载入口（A-1 修复：Electron 以 file:// 加载页面，相对路径 fetch("/sync/download")
-    //    会解析为 file:///sync/download 必然失败，必须拼接 main.js 同步端点的绝对地址；复用 myIp）
-    const myIp = "http://127.0.0.1:8124";
-    toast("本机同步服务运行中：在另一台设备上访问 http://<本机IP>:8124/sync/download", "ok");
-    // 3. 同时提供上传入口：打开下载链接（本机可访问）；失败提示与第 2 步语义分离（本机下载 ≠ 跨设备同步）
+    //    会解析为 file:///sync/download 必然失败，必须拼接 main.js 同步端点的绝对地址）。
+    //    安全边界（与 electron/main.js startSyncServer 注释一致）：同步服务仅绑定 127.0.0.1 回环且
+    //    拒绝非本机来源，不做跨设备局域网访问；跨设备数据迁移走「设置 → 数据管理」的导出/导入 JSON。
+    const syncBase = "http://127.0.0.1:8124";
+    toast("本机同步服务运行中（仅本机回环 127.0.0.1:8124）；跨设备迁移请用「设置 → 数据管理 → 导出/导入」", "ok");
+    // 3. 打开本机快照下载（本机可访问）
     try {
-      const resp = await fetch(myIp + "/sync/download");
+      const resp = await fetch(syncBase + "/sync/download");
       if(resp.ok){
         const blob = await resp.blob();
         const a = document.createElement("a");
@@ -16735,7 +16757,7 @@ function doIdbImport(file){
         a.download = "agent-workbench-sync-"+todayStr()+".json";
         a.click(); URL.revokeObjectURL(a.href);
       } else {
-        toast("本机快照下载失败（HTTP " + resp.status + "），不影响其他设备经局域网访问", "warn");
+        toast("本机快照下载失败（HTTP " + resp.status + "）", "warn");
       }
     } catch(e) {
       toast("本机快照请求失败，请确认本机同步服务已启动", "warn");
@@ -18730,10 +18752,17 @@ function renderIntegrationPanel(){
     {name:"calendar", label:"日历", desc:"同步日程到 Google/Outlook 日历", connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
   ];
   const rows = providers.map(function(p){
-    const prov = (typeof window.getProvider === "function") ? window.getProvider(p.name) : null;
-    const enabled = prov && prov.enabled;
+    // v3.1.1 修复：原用一个不存在的 getProvider 全局函数，状态恒为「未连接」；真实函数为 integrationGetProvider。
+    // calendar 的注册名是具体日历类型（google_calendar / outlook_calendar），需按两个名字兜底查询。
+    let prov = null;
+    try{ prov = integrationGetProvider(p.name); }catch(e){ prov = null; }
+    if(!prov && p.name === "calendar"){
+      try{ prov = integrationGetProvider(INTEGRATION_TYPES.GOOGLE_CALENDAR) || integrationGetProvider(INTEGRATION_TYPES.OUTLOOK_CALENDAR); }catch(e){ prov = null; }
+    }
+    const enabled = !!(prov && prov.enabled);
     const statusCls = enabled ? "int-on" : "int-off";
-    const statusText = enabled ? "已连接" : "未连接";
+    const verified = !!(prov && prov.config && prov.config._verified);
+    const statusText = enabled ? ("已连接" + (verified ? " · 已验证" : " · 未验证")) : "未连接";
     const actionBtn = enabled
       ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + '">断开</button>'
       : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + '">连接</button>';
@@ -18746,32 +18775,27 @@ function renderIntegrationPanel(){
   const apiKeySection = '<div class="int-apikey-section"><h4>OpenAPI Key 管理</h4><div class="int-apikey-list" id="intApiKeyList"></div><button type="button" class="addbtn sm" id="btnIntNewKey">+ 新建 Key</button></div>';
   panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + apiKeySection);
   // 绑定连接/断开按钮
+  // v3.1.1 修复：原实现直接以空 config 调 connectFn → 所有 connect 函数因缺凭据返回 null，
+  // 却仍弹「已连接」假成功 toast；现改为先弹配置弹窗收集凭据（openIntegrationConfig），
+  // connectFn 返回 provider 对象才视为成功。
   panel.querySelectorAll("[data-int-conn]").forEach(function(btn){
     btn.onclick = function(){
       const name = btn.getAttribute("data-int-conn");
-      toast("正在连接 " + name + "…", "info");
-      // 调用对应connect函数（config从_integrationProviders读取或空对象）
-      try{
-        const fn = window[name + "Connect"];
-        if(typeof fn === "function"){
-          Promise.resolve(fn({})).then(function(){
-            if(typeof window.enableProvider === "function") window.enableProvider(name);
-            renderIntegrationPanel();
-            toast(name + " 已连接", "ok");
-          }).catch(function(e){ toast("连接失败：" + (e.message || e), "warn"); });
-        }else{
-          toast(name + " 连接函数未找到", "warn");
-        }
-      }catch(e){ toast("连接异常：" + (e.message || e), "warn"); }
+      openIntegrationConfig(name);
     };
   });
   panel.querySelectorAll("[data-int-disc]").forEach(function(btn){
     btn.onclick = function(){
       const name = btn.getAttribute("data-int-disc");
       try{
-        const fn = window[name + "Disconnect"];
-        if(typeof fn === "function") fn();
-        if(typeof window.disableProvider === "function") window.disableProvider(name);
+        if(name === "calendar"){
+          // calendarDisconnect(providerName) 需要具体日历类型；两个都断开（未注册的调用内部返回 false，无副作用）
+          try{ calendarDisconnect(INTEGRATION_TYPES.GOOGLE_CALENDAR); calendarDisconnect(INTEGRATION_TYPES.OUTLOOK_CALENDAR); }catch(e){}
+        }else{
+          const fn = window[name + "Disconnect"];
+          if(typeof fn === "function") fn();
+          else{ try{ integrationRemoveProvider(name); }catch(e){} }
+        }
         renderIntegrationPanel();
         toast(name + " 已断开", "ok");
       }catch(e){ toast("断开异常：" + (e.message || e), "warn"); }
@@ -18809,6 +18833,95 @@ function renderIntegrationPanel(){
       }catch(e){ toast("创建失败：" + (e.message || e), "warn"); }
     };
   }
+}
+
+/* ---------- v3.1.1：集成连接配置弹窗 ----------
+ * 修复：连接按钮原以空 config 直调 connectFn，所有 connect 函数因缺凭据返回 null 却弹假成功。
+ * 现按 provider 收集凭据字段（字段需求逐一对照各 connect 函数源码），凭据齐备才调用 connectFn；
+ * connectFn 返回 provider 对象才视为连接成功，_verified 标记如实反馈验证结果。
+ * 注意：calendarConnect/calendarDisconnect 签名为 (providerName, config)，注册名是
+ * google_calendar/outlook_calendar 而非面板的 "calendar"，此处单独适配。 */
+const INTEGRATION_LABELS = { notion:"Notion", linear:"Linear", jira:"Jira", slack:"Slack", feishu:"飞书", dingtalk:"钉钉", calendar:"日历" };
+const INTEGRATION_CONFIG_FIELDS = {
+  notion:   [{ k:"token", label:"Internal Integration Token", ph:"secret_…", required:true, secret:true },
+             { k:"databaseId", label:"任务数据库 ID", ph:"可选，用于任务同步" },
+             { k:"notesDatabaseId", label:"笔记数据库 ID", ph:"可选，用于笔记同步" }],
+  linear:   [{ k:"token", label:"API Key", ph:"lin_api_…", required:true, secret:true },
+             { k:"teamId", label:"Team ID", ph:"可选，用于 issue 同步" }],
+  jira:     [{ k:"domain", label:"站点域名", ph:"your-domain.atlassian.net", required:true },
+             { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true }],
+  slack:    [{ k:"botToken", label:"Bot User OAuth Token", ph:"xoxb-…", required:true, secret:true }],
+  feishu:   [{ k:"appId", label:"App ID", ph:"cli_…", required:true },
+             { k:"appSecret", label:"App Secret", required:true, secret:true }],
+  dingtalk: [{ k:"accessKey", label:"AppKey", required:true },
+             { k:"accessSecret", label:"AppSecret", required:true, secret:true }],
+  calendar: [{ k:"_calType", label:"日历服务", type:"select", required:true,
+               options:[["google_calendar","Google 日历"],["outlook_calendar","Outlook 日历"]] },
+             { k:"token", label:"OAuth Access Token", required:true, secret:true }]
+};
+function openIntegrationConfig(name){
+  const fields = INTEGRATION_CONFIG_FIELDS[name];
+  const label = INTEGRATION_LABELS[name] || name;
+  if(!fields){ toast("该集成暂无可用配置", "warn"); return; }
+  const old = $("#intCfgOverlay"); if(old) old.remove(); // 防重复挂载
+  const inputsHtml = fields.map(function(f){
+    if(f.type === "select"){
+      return '<label style="display:block;margin:10px 0 4px;font-size:13px">' + esc(f.label) + '</label>'
+        + '<select id="intcfg_' + f.k + '" style="width:100%">'
+        + f.options.map(function(o){ return '<option value="' + esc(o[0]) + '">' + esc(o[1]) + '</option>'; }).join("") + '</select>';
+    }
+    return '<label style="display:block;margin:10px 0 4px;font-size:13px">' + esc(f.label) + (f.required ? " *" : "") + '</label>'
+      + '<input id="intcfg_' + f.k + '" type="' + (f.secret ? "password" : "text") + '" placeholder="' + esc(f.ph || "") + '" style="width:100%">';
+  }).join("");
+  const ov = document.createElement("div");
+  ov.className = "overlay";
+  ov.id = "intCfgOverlay";
+  ov.innerHTML = sanitizeHtml('<div class="cmd" role="dialog" aria-modal="true" aria-label="连接 ' + esc(label) + '" style="max-width:480px;padding:20px">'
+    + '<h3 style="margin:0 0 4px;font-size:16px">连接 ' + esc(label) + '</h3>'
+    + '<p class="sub" style="margin:0 0 8px">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>'
+    + inputsHtml
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">'
+    + '<button type="button" class="addbtn sm btn-primary" id="btnIntCfgGo">连接</button>'
+    + '<button type="button" class="addbtn sm" id="btnIntCfgCancel" style="--sc:var(--muted)">取消</button></div></div>');
+  document.body.appendChild(ov);
+  requestAnimationFrame(function(){ ov.classList.add("show"); });
+  const close = function(){ ov.classList.remove("show"); setTimeout(function(){ ov.remove(); }, 160); };
+  ov.onclick = function(e){ if(e.target === ov) close(); };
+  const cancelBtn = $("#btnIntCfgCancel"); if(cancelBtn) cancelBtn.onclick = close;
+  const goBtn = $("#btnIntCfgGo");
+  if(goBtn) goBtn.onclick = async function(){
+    const cfg = {};
+    for(const f of fields){
+      const el = $("#intcfg_" + f.k);
+      const v = el ? String(el.value || "").trim() : "";
+      if(f.required && !v){ toast("请填写 " + f.label, "warn"); if(el) el.focus(); return; }
+      if(v) cfg[f.k] = v;
+    }
+    goBtn.disabled = true; goBtn.textContent = "连接中…";
+    const restore = function(){ goBtn.disabled = false; goBtn.textContent = "连接"; };
+    try{
+      let prov = null;
+      if(name === "calendar"){
+        const t = cfg._calType; delete cfg._calType;
+        prov = await calendarConnect(t, cfg);
+      }else{
+        const fn = window[name + "Connect"];
+        prov = (typeof fn === "function") ? await fn(cfg) : null;
+      }
+      if(prov){
+        close();
+        renderIntegrationPanel();
+        const verified = !!(prov.config && prov.config._verified);
+        toast(label + " 已连接" + (verified ? "（凭据验证通过）" : "（未能验证凭据，请检查配置）"), verified ? "ok" : "warn");
+      }else{
+        toast("连接失败：凭据缺失或不符合要求", "warn");
+        restore();
+      }
+    }catch(e){
+      toast("连接异常：" + (e && e.message ? e.message : e), "warn");
+      restore();
+    }
+  };
 }
 $$("#drawer .set-nav-btn[data-set-tab]").forEach(function(b){
   b.onclick = function(){ _switchSetTab(b.getAttribute("data-set-tab")); };
@@ -27802,31 +27915,6 @@ function _intFindLocalId(providerName, remoteId){
  * @param {Object} config - { token, databaseId, notesDatabaseId }
  * @returns {Object|null} provider 对象或 null
  */
-/**
- * B4: NotionPicker 卡片渲染
- * 集成面板中显示 Notion 连接状态 + 同步按钮
- */
-function renderNotionCard(){
-  const panel = document.getElementById("integrationPanel");
-  if(!panel) return;
-  const prov = (typeof window.getProvider === "function") ? window.getProvider("notion") : null;
-  const enabled = prov && prov.enabled;
-  const card = document.createElement("div");
-  card.className = "int-card";
-  card.innerHTML =
-    '<div class="int-card-head">' +
-      '<span class="int-card-title">Notion</span>' +
-      '<span class="int-badge ' + (enabled ? "int-on" : "int-off") + '">' + (enabled ? "已连接" : "未连接") + '</span>' +
-    '</div>' +
-    '<div class="int-card-desc">同步笔记和任务到 Notion</div>' +
-    '<div class="int-card-actions">' +
-      (enabled
-        ? '<button class="addbtn sm int-disc" data-int-disc="notion">断开</button>'
-        : '<button class="addbtn sm int-conn" data-int-conn="notion">连接</button>') +
-    '</div>';
-  panel.appendChild(card);
-}
-
 async function notionConnect(config){
   if(!config || !config.token) return null;
   const provider = integrationRegisterProvider("notion", INTEGRATION_TYPES.NOTION, config);

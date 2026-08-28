@@ -204,6 +204,11 @@ describe("B3 OAuth 轻后端：回调闭环（GET /oauth/callback）", () => {
     const res = await get("/oauth/callback?code=AUTHCODE&state=" + encodeURIComponent(state));
     expect(res.status).toBe(200);
     expect(res.body).toContain("\u2713");
+    // v3.1.1 强化：成功页必须是真实渲染的样式与符号，而不是未求值的拼接源码文本
+    // （此前 finishHtml 把 `+ (ok ? ...)` 写进了字符串字面量，弱断言 \u2713 仍会放行）
+    expect(res.body).toContain("color:#34a853");
+    expect(res.body).not.toContain("(ok ?");
+    expect(res.body).not.toContain("' + ");
     // mock 端点确实收到 code + code_verifier（PKCE 闭环）
     expect(tokenHits.length).toBeGreaterThan(0);
     const hit = tokenHits[tokenHits.length - 1];
@@ -232,6 +237,31 @@ describe("B3 OAuth 轻后端：回调闭环（GET /oauth/callback）", () => {
   it("未知 state / error 参数 → 400", async () => {
     expect((await get("/oauth/callback?code=x&state=unknown")).status).toBe(400);
     expect((await get("/oauth/callback?error=access_denied&state=whatever")).status).toBe(400);
+  });
+
+  it("v3.1.1 XSS 回归：error 参数经 HTML 转义，不反射原始标签", async () => {
+    // 用一次新的 oauth-begin 取合法 state（error 分支现要求 state 有效才反射错误详情）
+    const r = ipcHandlers["oauth-begin"](trustedEv(), {
+      provider: "notion",
+      authorizeUrl: "https://auth.example.com/authorize",
+      tokenUrl: mockTokenUrl,
+      clientId: "cid-1",
+      usePkce: true,
+    });
+    expect(r.ok).toBe(true);
+    const payload = "<script>alert(1)</script><img src=x onerror=fetch('/sync/download')>";
+    const res = await get("/oauth/callback?error=" + encodeURIComponent(payload) + "&state=" + encodeURIComponent(r.state));
+    expect(res.status).toBe(400);
+    expect(res.body).not.toContain("<script>alert(1)");
+    expect(res.body).not.toContain("<img");
+    expect(res.body).toContain("&lt;script&gt;");
+  });
+
+  it("v3.1.1 伪造回调：未知 state 的 error 不反射 URL 参数（只给通用文案）", async () => {
+    const res = await get("/oauth/callback?error=" + encodeURIComponent("FAKE_MARKER_XYZ") + "&state=forged-state");
+    expect(res.status).toBe(400);
+    expect(res.body).not.toContain("FAKE_MARKER_XYZ");
+    expect(res.body).toContain("state 无效或已过期");
   });
 });
 
