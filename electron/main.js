@@ -607,10 +607,12 @@ app.on("window-all-closed", () => { /* 不退出，托盘常驻 */ });
 let syncServer = null;
 let syncSnapshot = {};          // 最近一次渲染进程推送的数据快照
 let syncDeviceId = null;        // 本次会话稳定的设备 id
+let syncPort = 8124;            // B3：OAuth redirect_uri 端口（随 INTERACTION_SYNC_PORT 覆写）
 function startSyncServer(){
   // 端口默认 8124（生产）；测试环境经 INTERACTION_SYNC_PORT 覆写为空闲端口，
   // 避免多 vitest worker 并发加载 main.js 时对同一回环端口的双重绑定（Windows 下表现为 ECONNRESET）。
   const PORT = Number(process.env.INTERACTION_SYNC_PORT) || 8124;
+  syncPort = PORT; // B3：OAuth 回调 redirect_uri 与此端口一致
   const MAX_BODY_BYTES = 8 * 1024 * 1024; // 上传体上限 8MB，防异常大包拖垮进程
 
   // 渲染进程推送快照（IPC：sync-push）。key 白名单与旧逻辑一致。
@@ -665,6 +667,36 @@ function startSyncServer(){
           res.end(JSON.stringify({ error: "bad request" }));
         }
       });
+    } else if (req.method === "GET" && req.url && req.url.startsWith("/oauth/callback")) {
+      /* B3：OAuth 授权回调（仅 127.0.0.1 可达；state 一次性 + TTL 10min，防 CSRF/重放） */
+      const q = new URL(req.url, "http://127.0.0.1").searchParams;
+      const state = q.get("state") || "";
+      const code = q.get("code") || "";
+      const errParam = q.get("error");
+      const rec = oauthStates.get(state);
+      oauthStates.delete(state); // 一次性：无论成败都不允许重放
+      const finishHtml = (ok, msg) => {
+        res.writeHead(ok ? 200 : 400, { "Content-Type": "text/html; charset=utf-8" });
+        res.end("<!doctype html><meta charset='utf-8'><title>授权回调</title>"
+          + "<body style='font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'>"
+          + "<div style='text-align:center'><div style='font-size:40px;font-weight:600;color:' + (ok ? '#34a853' : '#d83b3b') + '>' + (ok ? '\u2713' : '\u2715') + '</div>"
+          + "<p>" + msg + "</p><p style='color:#888'>授权完成，可关闭此窗口并回到应用</p></div>");
+      };
+      if (errParam){
+        oauthNotify({ ok:false, error: errParam });
+        finishHtml(false, "授权被拒绝或失败：" + errParam);
+        return;
+      }
+      if (!rec){ finishHtml(false, "state 无效或已过期，请回到应用重新发起授权"); return; }
+      oauthExchangeCode(rec, code).then((token) => {
+        oauthUpsertToken(rec.provider, token);
+        oauthNotify({ provider: rec.provider, ok:true });
+        finishHtml(true, "已授权 " + rec.provider);
+      }).catch((err) => {
+        logLine("oauth", "callback exchange: " + ((err && err.message) || err));
+        oauthNotify({ provider: rec.provider, ok:false, error:((err && err.message) || String(err)) });
+        finishHtml(false, "令牌交换失败：" + ((err && err.message) || err));
+      });
     } else {
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "not found" }));
@@ -676,13 +708,235 @@ function startSyncServer(){
   syncServer.on("error", err => {
     console.error(`[sync] server error: ${err.message}`);
   });
+  startOAuthRefresher(); // B3：token 过期前自动刷新巡检
 }
 function stopSyncServer(){
+  if (oauthRefreshTimer){ clearInterval(oauthRefreshTimer); oauthRefreshTimer = null; }
   if (syncServer) {
     syncServer.close(() => { syncServer = null; });
   }
 }
 
+/* ---------- B3：OAuth 轻后端（token 加密落盘 + 回调端点 + 自动刷新） ----------
+ * 目标：为九大集成提供真双向所需的 OAuth2 令牌生命周期管理，全部在主进程本地完成：
+ *   - 授权发起：oauth-begin（PKCE S256 + 一次性 state，TTL 10min，防 CSRF/重放）
+ *   - 回调闭环：GET /oauth/callback（挂在局域网同步 server 上，仍仅 127.0.0.1 可达）
+ *   - 令牌落盘：userData/oauth-tokens.json.enc，safeStorage 加密（不可用则派生密钥 AES-256-GCM 兜底）
+ *   - 自动刷新：每 5min 巡检，过期前 10min 内自动 refresh；失败仅记日志并通知渲染层，不阻塞
+ * 安全：token 明文只存在于主进程内存与加密落盘；渲染层经 IPC 按需取单个 provider 的 access_token。
+ */
+const OAUTH_STATE_TTL = 10 * 60 * 1000;
+const OAUTH_REFRESH_MARGIN = 10 * 60 * 1000;   // 过期前 10min 触发刷新
+const OAUTH_REFRESH_INTERVAL = 5 * 60 * 1000;  // 巡检周期
+let oauthStates = new Map();          // state -> { provider, tokenUrl, clientId, clientSecret, codeVerifier, scope, createdAt }
+let oauthRefreshTimer = null;
+let oauthTokenCache = null;           // 内存明文真相源（读多写少，避免每次解密）
+function oauthStorePath(){
+  return path.join(app.getPath("userData"), "oauth-tokens.json.enc");
+}
+function oauthCipherKey(){
+  // safeStorage 不可用时的兜底密钥（机器内派生；与 AI 配置旧方案同思路，防御性保留）
+  return crypto.createHash("sha256")
+    .update("agent-workbench:oauth:" + (app.getPath("userData") || ""))
+    .digest();
+}
+function oauthLoadStore(){
+  if (oauthTokenCache) return oauthTokenCache;
+  try{
+    const p = oauthStorePath();
+    if(!fs.existsSync(p)){ oauthTokenCache = {}; return oauthTokenCache; }
+    const buf = fs.readFileSync(p);
+    if(safeStorage && safeStorage.isEncryptionAvailable()){
+      try{ oauthTokenCache = JSON.parse(safeStorage.decryptString(buf)) || {}; return oauthTokenCache; }
+      catch(e){ /* 损坏/旧格式 → 兜底解密 */ }
+    }
+    try{
+      const iv = buf.subarray(0, 12), tag = buf.subarray(12, 28), data = buf.subarray(28);
+      const d = crypto.createDecipheriv("aes-256-gcm", oauthCipherKey(), iv);
+      d.setAuthTag(tag);
+      oauthTokenCache = JSON.parse(Buffer.concat([d.update(data), d.final()]).toString("utf8")) || {};
+    }catch(e){ oauthTokenCache = {}; }
+  }catch(e){ oauthTokenCache = {}; }
+  return oauthTokenCache;
+}
+function oauthSaveStore(){
+  try{
+    const payload = JSON.stringify(oauthTokenCache || {});
+    if(safeStorage && safeStorage.isEncryptionAvailable()){
+      fs.writeFileSync(oauthStorePath(), safeStorage.encryptString(payload));
+      return;
+    }
+    const iv = crypto.randomBytes(12);
+    const cip = crypto.createCipheriv("aes-256-gcm", oauthCipherKey(), iv);
+    const enc = Buffer.concat([cip.update(payload, "utf8"), cip.final()]);
+    fs.writeFileSync(oauthStorePath(), Buffer.concat([iv, cip.getAuthTag(), enc]));
+  }catch(e){ logLine("oauth", "save store failed: " + (e && e.message)); }
+}
+function b64url(buf){
+  return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function oauthPruneStates(){
+  const now = Date.now();
+  for (const [k, v] of oauthStates){ if (now - v.createdAt > OAUTH_STATE_TTL) oauthStates.delete(k); }
+}
+function oauthNotify(payload){
+  // 渲染层通知：win/webContents 缺失（测试/窗口关闭）时静默跳过，绝不阻塞授权主流程
+  try{
+    if (win && typeof win.isDestroyed === "function" && !win.isDestroyed() && win.webContents && typeof win.webContents.send === "function"){
+      win.webContents.send("oauth-status", payload);
+    }
+  }catch(e){ /* ignore */ }
+}
+function oauthUpsertToken(provider, rec){
+  const store = oauthLoadStore();
+  store[provider] = Object.assign({}, store[provider] || {}, rec, { updatedAt: Date.now() });
+  oauthTokenCache = store;
+  oauthSaveStore();
+}
+async function oauthExchangeCode(rec, code){
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: "http://127.0.0.1:" + syncPort + "/oauth/callback",
+    client_id: rec.clientId,
+  });
+  if (rec.codeVerifier) body.set("code_verifier", rec.codeVerifier);
+  if (rec.clientSecret) body.set("client_secret", rec.clientSecret);
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), 15000);
+  try{
+    const r = await fetch(rec.tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+      body: body.toString(),
+      signal: ac.signal,
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.access_token) throw new Error("token exchange failed: HTTP " + r.status);
+    return {
+      accessToken: j.access_token,
+      refreshToken: j.refresh_token || null,
+      expiresAt: j.expires_in ? Date.now() + j.expires_in * 1000 : null,
+      scope: j.scope || rec.scope || null,
+      tokenUrl: rec.tokenUrl,
+      clientId: rec.clientId,
+      clientSecret: rec.clientSecret || null,
+      usePkce: !!rec.codeVerifier,
+    };
+  } finally { clearTimeout(t); }
+}
+async function oauthRefreshProvider(provider){
+  const store = oauthLoadStore();
+  const rec = store[provider];
+  if (!rec || !rec.refreshToken) return { ok:false, error:"no refresh token" };
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: rec.refreshToken,
+    client_id: rec.clientId,
+  });
+  if (rec.clientSecret) body.set("client_secret", rec.clientSecret);
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), 15000);
+  try{
+    const r = await fetch(rec.tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+      body: body.toString(),
+      signal: ac.signal,
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.access_token) throw new Error("refresh failed: HTTP " + r.status);
+    oauthUpsertToken(provider, {
+      accessToken: j.access_token,
+      refreshToken: j.refresh_token || rec.refreshToken,
+      expiresAt: j.expires_in ? Date.now() + j.expires_in * 1000 : null,
+    });
+    return { ok:true };
+  } catch(e){
+    logLine("oauth", "refresh " + provider + ": " + ((e && e.message) || e));
+    oauthNotify({ provider, ok:false, error:((e && e.message) || String(e)) });
+    return { ok:false, error:((e && e.message) || String(e)) };
+  } finally { clearTimeout(t); }
+}
+async function oauthSweepRefresh(){
+  try{
+    const store = oauthLoadStore();
+    const now = Date.now();
+    for (const [provider, rec] of Object.entries(store)){
+      if (rec.expiresAt && rec.refreshToken && (rec.expiresAt - now) < OAUTH_REFRESH_MARGIN){
+        await oauthRefreshProvider(provider);
+      }
+    }
+  }catch(e){ logLine("oauth", "sweep: " + ((e && e.message) || e)); }
+}
+function startOAuthRefresher(){
+  if (oauthRefreshTimer) return;
+  oauthRefreshTimer = setInterval(oauthSweepRefresh, OAUTH_REFRESH_INTERVAL);
+  if (oauthRefreshTimer && typeof oauthRefreshTimer.unref === "function") oauthRefreshTimer.unref();
+  const first = setTimeout(oauthSweepRefresh, 30 * 1000);
+  if (first && typeof first.unref === "function") first.unref();
+}
+ipcMain.handle("oauth-begin", (e, cfg) => {
+  assertTrustedSender(e);
+  try{
+    if(!cfg || typeof cfg !== "object") return { ok:false, error:"invalid cfg" };
+    const { provider, authorizeUrl, tokenUrl, clientId, clientSecret, scope, usePkce } = cfg;
+    if(!provider || !authorizeUrl || !tokenUrl || !clientId) return { ok:false, error:"missing fields" };
+    oauthPruneStates();
+    const state = crypto.randomUUID();
+    const rec = { provider, tokenUrl, clientId, clientSecret: clientSecret || null, scope: scope || null, createdAt: Date.now(), codeVerifier: null };
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: "http://127.0.0.1:" + syncPort + "/oauth/callback",
+      state,
+    });
+    if (scope) params.set("scope", scope);
+    if (usePkce){
+      const verifier = b64url(crypto.randomBytes(48));
+      const challenge = b64url(crypto.createHash("sha256").update(verifier).digest());
+      rec.codeVerifier = verifier;
+      params.set("code_challenge", challenge);
+      params.set("code_challenge_method", "S256");
+    }
+    oauthStates.set(state, rec);
+    const url = authorizeUrl + (authorizeUrl.includes("?") ? "&" : "?") + params.toString();
+    // 系统浏览器打开授权页；shell 缺失（测试 stub）时返回 url 由渲染层自行 window.open
+    let opened = false;
+    try{ if (shell && typeof shell.openExternal === "function"){ shell.openExternal(url); opened = true; } }catch(e2){}
+    return { ok:true, state, url, opened };
+  }catch(err){ return { ok:false, error:((err && err.message) || String(err)) }; }
+});
+ipcMain.handle("oauth-tokens", (e, provider) => {
+  assertTrustedSender(e);
+  const store = oauthLoadStore();
+  const rec = store[provider];
+  if (!rec || !rec.accessToken) return { ok:false, error:"not connected" };
+  return { ok:true, token:{ accessToken: rec.accessToken, expiresAt: rec.expiresAt || null, scope: rec.scope || null, updatedAt: rec.updatedAt || null } };
+});
+ipcMain.handle("oauth-list", (e) => {
+  assertTrustedSender(e);
+  const store = oauthLoadStore();
+  const out = {};
+  for (const [k, v] of Object.entries(store)){
+    out[k] = { connected: !!v.accessToken, expiresAt: v.expiresAt || null, updatedAt: v.updatedAt || null };
+  }
+  return { ok:true, providers: out };
+});
+ipcMain.handle("oauth-refresh", (e, provider) => {
+  assertTrustedSender(e);
+  return oauthRefreshProvider(provider);
+});
+ipcMain.handle("oauth-revoke", (e, provider) => {
+  assertTrustedSender(e);
+  const store = oauthLoadStore();
+  if (store[provider]){
+    delete store[provider];
+    oauthTokenCache = store;
+    oauthSaveStore();
+  }
+  return { ok:true };
+});
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
   else if (win){ win.show(); win.focus(); }

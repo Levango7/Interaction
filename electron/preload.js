@@ -22,5 +22,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   offSyncUploadRequest: (cb) => {
     ipcRenderer.removeListener("sync-upload-request", cb);
-  }
+  },
+  // B3：OAuth 轻后端（九大集成授权；token 仅存主进程加密落盘，渲染层按需取用）
+  oauthBegin: (cfg) => ipcRenderer.invoke("oauth-begin", cfg),
+  oauthTokens: (provider) => ipcRenderer.invoke("oauth-tokens", provider),
+  oauthList: () => ipcRenderer.invoke("oauth-list"),
+  oauthRefresh: (provider) => ipcRenderer.invoke("oauth-refresh", provider),
+  oauthRevoke: (provider) => ipcRenderer.invoke("oauth-revoke", provider),
+  onOauthStatus: (cb) => { ipcRenderer.on("oauth-status", (_, data) => cb(data)); },
+  offOauthStatus: (cb) => { ipcRenderer.removeListener("oauth-status", cb); }
 });
