@@ -41,15 +41,19 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     // Switch back to light theme and verify persistence in localStorage
     await test.step("Switch back to light and verify localStorage", async () => {
       await page.selectOption('#cfgTheme', 'light');
+      // 亮色是默认态：applyTheme 移除 data-theme 属性（而非设为 "light"），见 agent-workbench.html applyTheme
       const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
-      expect(theme).toBe('light');
-      const stored = await page.evaluate(() => localStorage.getItem('wb_agent_theme'));
+      expect(theme).toBeNull();
+      // 主题持久化在 wb_agent_cfg JSON 的 theme 字段（仅 AI Key 加密，theme 为明文）
+      const stored = await page.evaluate(() => {
+        try { return JSON.parse(localStorage.getItem('wb_agent_cfg') || '{}').theme; } catch (e) { return null; }
+      });
       expect(stored).toBe('light');
     });
 
-    // Close settings drawer
+    // Close settings drawer（btnGear 只开不关——关闭走 #drawerClose，见 setupSideMenu data-gear 分支）
     await test.step("Close drawer", async () => {
-      await page.click('#btnGear');
+      await page.click('#drawerClose');
       await expect(page.locator('#drawer')).not.toHaveClass(/open/);
     });
   });

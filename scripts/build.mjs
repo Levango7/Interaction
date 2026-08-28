@@ -77,9 +77,10 @@ if (PROD) {
   const html = readFileSync(TRUTH_HTML, 'utf8');
   // 1) 把 __TEST_GATE__ 的计算结果硬置为 false：测试钩子块不执行，生产永不暴露内部 API。
   //    仅替换 IIFE 头，保留块体（死代码），不做有风险的物理剥离。
-  const RE = /var __TEST_GATE__ = \(function\(\)\{[\s\S]*?\}\)\(\);/;
+  //    声明关键字兼容 var/let/const（v2.0.0 起真相源用 const，旧正则只认 var 导致 --prod 长期失败）。
+  const RE = /(?:var|let|const) __TEST_GATE__ = \(function\(\)\{[\s\S]*?\}\)\(\);/;
   if (!RE.test(html)) fail('未找到 __TEST_GATE__ 定义，无法安全生成生产构建');
-  const prodHtml = html.replace(RE, 'var __TEST_GATE__ = false; /* [prod build] test hooks disabled */');
+  const prodHtml = html.replace(RE, 'const __TEST_GATE__ = false; /* [prod build] test hooks disabled */');
   writeFileSync(PROD_HTML, prodHtml);
   console.log(`[build] wrote ${PROD_HTML} (${prodHtml.length} bytes, sha256:${sha(Buffer.from(prodHtml))}) · __TEST_GATE__=false`);
 

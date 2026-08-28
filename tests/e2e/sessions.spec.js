@@ -44,8 +44,9 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       const items = await page.locator("#sessList .sess-item").all();
       const last = items[items.length - 1];
       await last.click();
-      // after activation preview should show messages area
-      await page.waitForSelector("#sessPreview .sess-msg", { timeout: 3000 });
+      // 新建会话没有消息：renderSessionPreview 对空会话渲染 .sess-preview-empty（「该会话暂无消息」），
+      // 有消息后才出现 .sess-msg（见 agent-workbench.html renderSessionPreview）
+      await page.waitForSelector("#sessPreview .sess-preview-empty", { timeout: 3000 });
     });
 
     await test.step("Delete a non‑last session", async () => {

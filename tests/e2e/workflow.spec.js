@@ -105,19 +105,13 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     });
 
     // ---------- 6. 查看统计 ----------
-    await test.step("查看统计视图", async () => {
-      // v2.4.0：侧栏叶子化——「仪表盘」为总览组叶子项（data-sc="stats"），点击直达统计
-      await page.click('#side .nav-item[data-sc="stats"]');
-      // 统计视图：有任务时显示 .stats-cards，无任务时显示 .no-stats 空状态
-      // 我们已建并完成任务，应有 .stats-cards
-      await page.waitForSelector(".stats-cards, .no-stats", { timeout: 5_000 });
-      const hasStatsCards = await page.$(".stats-cards");
-      if (hasStatsCards) {
-        // 验证关键指标卡片渲染（总任务数 / 已完成 等）
-        await expect(page.locator(".stats-card").first()).toBeVisible();
-        const cardCount = await page.locator(".stats-card").count();
-        expect(cardCount).toBeGreaterThanOrEqual(1);
-      }
+    await test.step("查看主页统计（v2.5.0 仪表盘已并入主页）", async () => {
+      // v2.5.0 移除了「仪表盘」菜单项，stats 路由重定向到主页 overview
+      // （agent-workbench.html：if(active==="stats"){ setActive("overview"); ... }）；
+      // 统计现由主页承载：系统概况卡 + .overview-grid 内的数据速览（完成趋势/热力图）。
+      await page.click('#side .nav-item[data-sc="overview"]');
+      await page.waitForSelector(".sys-overview-card", { timeout: 5_000 });
+      await expect(page.locator(".overview-grid")).toBeVisible();
     });
 
     // ---------- 7. 打开设置 ----------
