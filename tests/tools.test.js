@@ -346,18 +346,25 @@ describe("v2.3.0 主页系统概况卡", () => {
     expect(html).toContain("未启用"); // 干净 localStorage 下 AI 未配置
   });
 
-  it("主页概览渲染顺序：系统概况在习惯链之前、AI Hub 最后", () => {
+  it("主页概览渲染顺序：系统概况在网格前、习惯链在 AI 助手前、可视化制作最后", () => {
     __test.setActive("overview");
     __test.render();
     const main = document.querySelector("#main");
     // 系统概况在 overview-grid 之前，其余在 grid 内
     const sysCard = main.querySelector(".sys-overview-card");
+    const grid = main.querySelector(".overview-grid");
     const gridCards = [...main.querySelectorAll(".overview-grid > .card, .overview-grid > .ov-span2")];
     const chainIdx = gridCards.findIndex(c => c.querySelector("h2")?.textContent?.includes("习惯链"));
     const aiIdx = gridCards.findIndex(c => c.querySelector("h2")?.textContent?.includes("AI 助手"));
+    const vizIdx = gridCards.findIndex(c => c.querySelector(".ov-viz-card"));
     expect(sysCard).toBeTruthy();
+    expect(grid).toBeTruthy();
+    // 文档顺序：系统概况卡在前，网格在后（4 = DOCUMENT_POSITION_FOLLOWING）
+    expect(sysCard.compareDocumentPosition(grid) & 4).toBe(4);
     expect(chainIdx).toBeGreaterThan(-1);
     expect(aiIdx).toBeGreaterThan(-1);
-    expect(aiIdx).toBe(gridCards.length - 1);
+    expect(chainIdx).toBeLessThan(aiIdx);
+    // 1ee3803 起「数据可视化制作」作为独立分区排在网格末尾（原「AI 助手最后」断言已过时）
+    expect(vizIdx).toBe(gridCards.length - 1);
   });
 });
