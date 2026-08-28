@@ -12,10 +12,19 @@
 ## 1. 一个必须钉死的架构约束（速度与正确性的来源）
 
 ### 现状（已实测）
-- `agent-workbench.html` = 29,961 行单文件，**无后端、无账号**，三种形态共用同一 HTML。
+- `agent-workbench.html` = 29,153 行单文件（2026-08-28 复核；行随版本漂移，写本文时的 29,961 已过期），**无后端、无账号**，三种形态共用同一 HTML。
 - `electron/main.js` 已有真 http server 段（行 256~314 附近），8124 端口做局域网同步。
 - 前端 9 集成：只有 **Notion 真双向**（58 引用/5 同步函数）；Jira/Linear/Slack/飞书/钉钉有 `connect` 无真同步；Google/Outlook/GitHub 未建。
 - 纯前端无 OAuth（OAuth2 已在 v1.14 归档）。
+
+> **勘误（2026-08-28 审计复核）**：上条集成现状与代码不符——实测 `agent-workbench.html` 的 8 个 provider
+> （Notion/Linear/Jira/Slack/飞书/钉钉/Google 日历/Outlook 日历，见 `INTEGRATION_TYPES`）**均有真实
+> connect + sync/notify 实现**（notionSyncTask / linearSyncIssue / jiraSyncIssue / slackNotifyEvent /
+> feishuNotifyEvent / dingtalkNotifyEvent / calendarSyncEvent）；GitHub 不在集成清单内。真实缺陷是集成中心
+> UI 的四处接线断裂（状态查询用不存在的 window.getProvider、启停函数不存在、连接按钮传空 config 谎报成功、
+> 无凭据配置入口），已于 v3.1.1 修复批次修好（见 tests/integration/integration-center.test.js）。
+> 「需要后端寄存 token / OAuth 回调 / refresh」的约束结论不受影响——B3 OAuth 轻量后端已在
+> electron/main.js 落地（PKCE + 一次性 state + 加密令牌 + 定时刷新），UI 入口待真实 client_id 后接通。
 
 ### 约束结论
 **"9 个全真 + OAuth"需要一个后端来寄存 token、处理 OAuth 回调与 refresh。** 纯前端办不到——这是数学上绕不开的硬条件，不是偷懒。

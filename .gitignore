@@ -73,4 +73,10 @@ lh-report.json
 
 # Archived research documents
 docs/archive/
-".zcode/"  
+.zcode/
+
+# IDE / 工具产物
+.codeartsdoer/
+
+# 预览工具生成的实时副本（非交付物，勿提交）
+_live.html
