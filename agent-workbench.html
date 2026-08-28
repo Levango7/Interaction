@@ -466,15 +466,16 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    边框由 header 承担——与抽屉 drawer-ph(header 自带边框)完全同构 */
 .card.page-head-card{border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
 .page-head-card > .page-head{padding:var(--space-4)}
-/* 与抽屉(drawer-ph 带 1px 边框)视觉高度对齐：页面级 header 补 1px 透明边框 */
-.page-head-card > .page-head{border-top:1px solid transparent;border-bottom:1px solid transparent}
+
 /* 关键修复：.card .sub(0,2,0) 会覆盖 .page-head .sub(0,2,0)（后者定义在前被覆盖），
    导致页面级标题卡 sub 被 .card 样式撑大(13px+底部16px margin)。
    此处用更高特异性 (0,3,0) 显式恢复标题栏 sub 规格，与抽屉标题栏一致 */
 .page-head-card > .page-head .sub{margin:1px 0 0;font-size:var(--fs-xs);line-height:1.4}
-/* h2 同理：.card h2{margin:0 0 12px}(定义在后) 会覆盖 .page-head h2{margin:0}，
-   页面级标题卡 h2 被加 12px 底部 margin → 与抽屉不一致。此处强制归零 */
-.page-head-card > .page-head h2{margin:0}
+/* h2 同理：.card h2{margin:0 0 12px; font-size:var(--fs-base); display:flex}(定义在后)
+   会覆盖 .page-head h2{margin:0; font-size:var(--fs-lg)}(定义在前)，
+   页面级标题卡 h2 被缩小为 15px 且变 flex 布局 → 与抽屉 18px 不一致。
+   此处用 (0,3,1) 强制恢复标题栏 h2 规格，与抽屉完全一致 */
+.page-head-card > .page-head h2{margin:0;font-size:var(--fs-lg);line-height:1.6;display:block}
 /* v3.0：场景功能菜单（复用设置页 .set-nav 样式；此处仅补充防压缩与横向滚动） */
 .scene-feat-nav{flex-shrink:0;overflow-x:auto}
 .scene-feat-tab{flex:0 0 auto;min-height:32px;padding:4px var(--space-3);border-radius:var(--radius-md);
@@ -1351,6 +1352,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .drawer-ph{margin:var(--space-3) 0 var(--space-5);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-4)}
+/* 抽屉宽度有限(316px)，长 sub 文本会换行导致标题栏高度不一致。
+   单行截断确保所有抽屉页面标题栏高度统一 */
+.drawer-ph .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .drawer-ph .close{
   font-size:var(--fs-sm);padding:var(--space-1) var(--space-3);
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);
@@ -3097,7 +3101,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
        AI 配置 / 插件市场抽离为独立菜单页，三个页头由 #drawer[data-page] 控制显示 -->
 	  <header class="page-head drawer-ph" data-ph="settings">
 	    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
-	    <div class="ph-tx"><h2>设置</h2></div>
+	    <div class="ph-tx"><h2>设置</h2><p class="sub">场景 · 习惯链 · 外观 · 通知 · 数据 · 集成 · 关于</p></div>
 	    <button class="page-back drawer-close" id="drawerClose" type="button" aria-label="返回上一视图">← 返回</button>
 	  </header>
   <header class="page-head drawer-ph" data-ph="ai">
@@ -3877,7 +3881,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.0";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260827a";
+const BUILD_TAG = "20260829a";
 
 
 
