@@ -1,4 +1,4 @@
-# Agent 工坊（v3.1.0）
+# Agent 工坊（v3.1.1）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活六类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -70,7 +70,7 @@
 │  ├─ 数据层   (localStorage + IDB 镜像)          │
 │  ├─ AI 层    (chatOnce + function-calling 工具) │
 │  ├─ Agent 引擎 (记忆/目标/跨场景，注入上下文+放宽循环) │
-│  ├─ 集成中心 (8 provider 注册表 + 凭据配置弹窗)   │
+│  ├─ 集成中心 (7 provider 注册表 + 凭据配置弹窗)   │
 │  └─ 交互层   (命令面板 / 快捷键 / Toast / 联动)  │
 └───────────────────┬─────────────────────────┘
                     │ window.electronAPI（仅桌面端存在）
@@ -83,7 +83,7 @@
 └─────────────────────────────────────────────┘
 ```
 
-**前后端交互契约（v3.1.0 实况：14 个 IPC 通道，逐一对照 `electron/main.js` 与 `electron/preload.js`）**
+**前后端交互契约（v3.1.1 实况：14 个 IPC 通道，逐一对照 `electron/main.js` 与 `electron/preload.js`）**
 
 | 能力 | preload 暴露 | 主进程句柄 | 方向 |
 |---|---|---|---|
@@ -157,9 +157,9 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v3.1.0**（`package.json`、`electron/package.json`、`manifest.json`、代码内 `VERSION` 常量四处一致，由 `scripts/build.mjs --check` 门禁守护）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.1.1**（`package.json`、`electron/package.json`、`manifest.json`、代码内 `VERSION` 常量四处一致，由 `scripts/build.mjs --check` 门禁守护）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.1.0 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.1.1 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 相关文件
 
@@ -182,6 +182,6 @@ Interaction/
 ├─ docs/                       # 设计文档（架构/UI 规范/产品范围/执行架构等）
 ├─ electron/                   # Electron 桌面封装（main/preload/打包配置）
 ├─ scripts/                    # 构建与门禁脚本（build/lint-colors/lint-layers/lint-tokens/release/make-icon）
-├─ tests/                      # vitest 单元测试（66 文件 700+ 用例）+ tests/integration/ + tests/e2e Playwright
+├─ tests/                      # vitest 单元测试（66 文件 719 用例）+ tests/integration/ + tests/e2e Playwright
 └─ .github/workflows/          # CI（ci.yml：测试+门禁）+ CD（deploy.yml：部署 GitHub Pages）
 ```

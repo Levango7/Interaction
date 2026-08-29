@@ -2,6 +2,21 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.1.1] - 2026-08-29
+
+### 工程批次：文档漂移修复 + 工程卫生 + CI 升级（无功能变更）
+
+**📄 文档漂移修复**
+- README：集成中心 provider 数量 8→7 与代码实际一致（`INTEGRATION_LABELS` 共 7 个）；测试规模勘误为实测 66 文件/719 用例
+- docs/ai-tools.md：适用版本 2.4.1 → 3.1.1，核对日期更新
+- manifest.json + HTML meta description：定位文案从「习惯链驱动的智能任务管理 PWA」更新为「多场景任务 / 记录 / AI 助手的本地优先工作台」
+
+**🧹 工程卫生**
+- 清理根目录 486MB 调试残留（b3full/b3full2/ft/ftr 各 115-120MB CI 日志 + 小日志 + tmp 脚本 + 截图目录），全部为 .gitignore 内产物，无源码影响
+
+**⚙️ CI**
+- deploy.yml：peaceiris/actions-gh-pages v3 → v4
+
 ## [v3.1.0] - 2026-08-27
 
 ### Major：审计增强批次1+2 — 死代码清理 + 3项新功能
