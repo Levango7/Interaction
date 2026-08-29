@@ -3885,7 +3885,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260829e";
+const BUILD_TAG = "20260829f";
 
 
 
@@ -8161,10 +8161,14 @@ function setupMobNav(){
 /* ---------- 回收站（D3：软删除任务的恢复 / 永久删除入口；T2：批量操作 + 自动清理策略） ----------
    v1.3.4-B：改为全屏页面视图（渲染到 #main，与 renderStats 一致），不再创建 modal overlay。
    保留 id=recycleModal 与 .recycle-card 以兼容 closeRecycleModal 与焦点陷阱。 */
+let _recycleCat = "全部"; // v3.1：回收站分类筛选：全部/任务/配置/文件/插件
 function openRecycle(){
   const all = load(PREFIX+"tasks", []);
   const del = all.filter(t=>t.deletedAt).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
-  const items = del.length ? del.map(t=>{
+  // v3.1：按分类筛选（目前回收站只有任务类型）
+  const recycleCatOf = function(t){ return "任务"; }; // 所有回收站项均为"任务"类型
+  const filteredDel = _recycleCat==="全部" ? del : del.filter(t=> recycleCatOf(t)===_recycleCat);
+  const items = filteredDel.length ? filteredDel.map(t=>{
     const sm = scMeta(t.sc);
     const w = new Date(t.deletedAt);
     const whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
@@ -8177,10 +8181,14 @@ function openRecycle(){
       <button type="button" class="recycle-restore" data-restore="${esc(t.id)}">恢复</button>
       <button type="button" class="recycle-purge" data-purge="${esc(t.id)}">彻底删除</button>
     </div>`;
-  }).join("") : `<div class="recycle-empty">回收站为空</div>`;
+  }).join("") : `<div class="recycle-empty">${_recycleCat==="全部" ? "回收站为空" : "该分类下无内容"}</div>`;
   const policy = getRecyclePolicy();
   const policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
-  const countLabel = del.length ? del.length+" 条任务" : "";
+  const countLabel = filteredDel.length ? filteredDel.length+" 条任务" : "";
+  // v3.1：回收站分类菜单
+  const recycleCats = ["全部","任务","配置","文件","插件"];
+  const recycleNav = `<nav class="set-nav recycle-cat-nav" aria-label="回收站分类筛选">` +
+    recycleCats.map(c=>`<button type="button" class="set-nav-btn${_recycleCat===c?" active":""}" data-recycle-cat="${c}">${c}</button>`).join("") + `</nav>`;
   // 页面视图：渲染到 #main（与 renderStats 一致），保留 id=recycleModal / .recycle-card 以兼容关闭逻辑与焦点陷阱
   // v1.15：标题栏独立成卡（与统计/概览/回收站页统一），recycle-card 仅承载列表
   const html = `<div class="recycle-modal" id="recycleModal">
@@ -8189,9 +8197,10 @@ function openRecycle(){
       <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务可在此恢复或彻底删除</p></div>
       <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="page-back recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
     </header></div>
+    ${recycleNav}
     <div class="recycle-card">
       <div class="recycle-list">${items}</div>
-      ${del.length ? `<div class="recycle-footer">
+      ${filteredDel.length ? `<div class="recycle-footer">
         <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
         <button type="button" class="recycle-batch" id="recycleBatchRestore">批量恢复</button>
         <button type="button" class="recycle-batch" id="recycleBatchPurge">批量删除</button>
@@ -8222,6 +8231,11 @@ function openRecycle(){
     if(!ids.length){ toast("请先勾选要删除的任务","warn"); return; }
     if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); }
   };
+  // v3.1：回收站分类菜单切换
+  $$("#recycleModal .recycle-cat-nav .set-nav-btn").forEach(b=>{
+    b.onclick = ()=>{ _recycleCat = b.getAttribute("data-recycle-cat")||"全部"; openRecycle(); };
+  });
+  appendFoot();
 }
 /* v1.10.0：图表商店（独立页面：图表库 + 画布 + 拖拽）
    - 左侧：图表库（卡片：日历/统计/热力图/趋势/甘特/导图/仪表盘/习惯链），点击=添加到画布
@@ -11280,6 +11294,7 @@ const renderBatched = (function(){
  * 渲染概览页：全局搜索 + 完成趋势 + 日历热力图 + 各场景进度 + 习惯链 + AI 教练
  * @returns {void}
  */
+let _overviewView = "today"; // 概览页视图切换：today（今日待办）| all（全部待办）
 function renderOverview(){
   const tasks = getActiveTasks();
   const days=[], counts=[];
@@ -11309,12 +11324,21 @@ function renderOverview(){
       <span class="v">${dn}/${tot}</span></div>`;
   }).join("");
 
+  const todayTitle = _overviewView === "all" ? "全部待办" : "今日待办";
+  const todaySub = _overviewView === "all" ? "所有未完成的任务（按优先级排序，点击跳转场景）" : "今天到期与逾期的任务（按优先级排序，点击跳转场景）";
+  const todayHtml = _overviewView === "all" ? _renderAllTopHtml() : _renderTodayTopHtml();
+  const overviewNav = `<nav class="set-nav overview-view-nav" aria-label="概览视图切换">
+    <button type="button" class="set-nav-btn${_overviewView==="today"?" active":""}" data-overview-view="today">今日</button>
+    <button type="button" class="set-nav-btn${_overviewView==="all"?" active":""}" data-overview-view="all">全部</button>
+  </nav>`;
+
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
       <div class="ph-tx"><h2>主页</h2><p class="sub">系统概况 · 全局搜索 · 数据速览</p></div>
       <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" style="--sc:var(--accent)">高级报表</button></div>
     </header></div>
+    ${overviewNav}
     ${renderSystemOverviewCard()}
     <div class="overview-grid">
       <div class="ov-sec-h">系统数据</div>
@@ -11333,9 +11357,9 @@ function renderOverview(){
         <div class="glob-views" id="globViews"></div>
         <div id="globRes" style="margin-top:10px"></div></div>
      <div class="ov-sec-h">业务数据</div>
-     <div class="card"><h2>${ic("check")} 今日待办</h2>
-       <p class="sub">今天到期与逾期的任务（按优先级排序，点击跳转场景）</p>
-       ${_renderTodayTopHtml()}
+     <div class="card"><h2>${ic("check")} ${todayTitle}</h2>
+       <p class="sub">${todaySub}</p>
+       ${todayHtml}
        <h3>各场景进度</h3><div class="bars">${bars}</div>
      </div>
 	     <div class="card"><h2>${ic("grid")} 数据速览</h2>
@@ -11377,6 +11401,10 @@ function renderOverview(){
     renderGlob(($("#globSearch").value||"").trim().toLowerCase());
   };
   renderGlobViews();
+  // v3.1：概览页视图切换（今日/全部）
+  $$("#main .overview-view-nav .set-nav-btn").forEach(b=>{
+    b.onclick = ()=>{ _overviewView = b.getAttribute("data-overview-view")||"today"; renderOverview(); };
+  });
   // P7：数据可视化制作入口（修复 openChartStore 死入口）
   const csv=$("#btnOpenChartStore"); if(csv) csv.onclick = (typeof openChartStore==="function") ? openChartStore : function(){};
   // v2.2.0：KPI 卡点击跳转
@@ -11650,6 +11678,35 @@ function _renderTodayTopHtml(){
   return `<ul class="top3-list" id="ovTodayList">${items}</ul>${more}`;
 }
 
+/* ---------- v3.1 概览页「全部待办」列表（所有未完成任务，按优先级排序） ---------- */
+function _renderAllTopHtml(){
+  const tasks = getActiveTasks();
+  const t = todayStr();
+  const pending = tasks.filter(x=>x.status!=="done").slice().sort((a,b)=>{
+    const pa = _priWeight(a.priority), pb = _priWeight(b.priority);
+    if(pa !== pb) return pa - pb;
+    if(a.due && b.due && a.due!==b.due) return a.due < b.due ? -1 : 1;
+    if(a.due && !b.due) return -1;
+    if(!a.due && b.due) return 1;
+    return 0;
+  });
+  const top5 = pending.slice(0, 5);
+  if(top5.length === 0){
+    return `<div class="empty today-empty">没有待处理的事项，去各场景添加任务吧</div>`;
+  }
+  const items = top5.map(x=>{
+    const s = scMeta(x.sc);
+    const overdue = x.due && x.due < t;
+    return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="点击进入「${esc(s.name)}」场景">
+      <span class="dot" style="background:${s.color}"></span>
+      <span class="title">${esc(x.title)}${overdue ? `<span class="ov-overdue-tag">逾期</span>` : ""}</span>
+      <span class="sc-name">${s.name}</span>
+    </li>`;
+  }).join("");
+  const more = pending.length > 5 ? `<button type="button" class="top3-expand" id="ovTodayMore">还有 ${pending.length - 5} 项待处理 ▸</button>` : "";
+  return `<ul class="top3-list" id="ovTodayList">${items}</ul>${more}`;
+}
+
 /* ---------- T3.3 数据统计（渲染层·内联 SVG） ---------- */
 // 统计视图当前趋势图范围（7 或 30 天），默认 7
 let _statsTrendDays = 7;
@@ -11757,7 +11814,12 @@ function renderHourDistGrid(grid){
  */
 /* v2.2.0：统计页仪表盘编辑态（会话级；Grafana 式展示/配置两态） */
 let _dashEditMode = false;
+let _statsRange = "week"; // v3.1：统计页时间筛选：week | month | year
 function renderStats(){
+  // v3.1：根据时间筛选设置趋势图天数
+  if(_statsRange === "month"){ _statsTrendDays = 30; }
+  else if(_statsRange === "year"){ _statsTrendDays = 365; }
+  else { _statsTrendDays = 7; }
   const stats = calcStats();
   // T4.2：无任何任务数据时显示 no-stats 空状态（替代空图表/空饼图）
   if(stats.total === 0){
@@ -11765,6 +11827,11 @@ function renderStats(){
     $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>`);
     return;
   }
+  const statsNav = `<nav class="set-nav stats-range-nav" aria-label="统计时间筛选">
+    <button type="button" class="set-nav-btn${_statsRange==="week"?" active":""}" data-stats-range="week">周</button>
+    <button type="button" class="set-nav-btn${_statsRange==="month"?" active":""}" data-stats-range="month">月</button>
+    <button type="button" class="set-nav-btn${_statsRange==="year"?" active":""}" data-stats-range="year">年</button>
+  </nav>`;
   const headHtml = `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.dash}</span>
     <div class="ph-tx"><h2>${_dashEditMode ? "编辑仪表盘" : "仪表盘"}</h2><p class="sub">${_dashEditMode ? "拖拽排列组件、增删调整，完成后点击「完成编辑」" : "可自定义仪表盘——拖拽排列组件，布局自动保存"}</p></div>
@@ -11774,6 +11841,7 @@ function renderStats(){
       </button>
     </div>
   </header></div>
+  ${statsNav}
   <div id="dashHost">${renderCustomDashboard(_dashEditMode)}</div>`;
 
   $("#main").innerHTML = sanitizeHtml(headHtml);
@@ -11790,6 +11858,10 @@ function renderStats(){
     _bindDashToolbar(host, _dashEditMode);
     if(typeof bindDashboardDnD === "function") bindDashboardDnD(host, _dashEditMode);
   }
+  // v3.1：统计页时间筛选切换
+  $$("#main .stats-range-nav .set-nav-btn").forEach(b=>{
+    b.onclick = ()=>{ _statsRange = b.getAttribute("data-stats-range")||"week"; renderStats(); };
+  });
 }
 /* ============================================================
  * v2.4.0 四大新页面：任务中心 / 工具箱 / 商店 / 习惯链
@@ -11962,16 +12034,31 @@ function renderToolboxPage(){
       if(extra.run){ extra.run(); }
     };
   });
+  appendFoot();
 }
 
 /* ---------- 商店（插件市场） ----------
    v2.4.0：内置插件随启动自动注册（enabled=false），商店按「未注册/已装未启用/启用中」
    三态渲染统一卡片列表；自定义导入插件走同一列表。 */
+let _storeCat = "全部"; // v3.1：商店页分类筛选：全部/效率/功能/场景/其他
+const PLUGIN_CATEGORIES = { // v3.1：内置插件分类映射
+  "pomodoro":"效率", "habit-tracker":"效率", "focus-timer":"效率",
+  "reading":"场景",
+  "budget":"功能", "health":"功能", "weather":"功能", "quote":"功能", "mindmap":"功能"
+};
+function _pluginCategory(p){
+  if(p && p.category) return p.category;
+  if(p && p.id && PLUGIN_CATEGORIES[p.id]) return PLUGIN_CATEGORIES[p.id];
+  if(p && Array.isArray(p.scenarios) && p.scenarios.length) return "场景";
+  return "其他";
+}
 function renderStorePage(){
   const seen = {};
   const rows = [];
   BUILTIN_PLUGINS.forEach(b=>{ rows.push({ def:b, inst:getPlugin(b.id) }); seen[b.id]=1; });
   getAllPlugins().forEach(p=>{ if(!seen[p.id]) rows.push({ def:p, inst:p }); });
+  // v3.1：按分类筛选
+  const filteredRows = _storeCat==="全部" ? rows : rows.filter(row=> _pluginCategory(row.inst||row.def)===_storeCat);
   const pCard = (row)=>{
     const p = row.inst || row.def;
     const installed = !!row.inst;
@@ -11997,6 +12084,9 @@ function renderStorePage(){
       <div class="store-ops">${ops}</div>
     </div>`;
   };
+  const storeCats = ["全部","效率","功能","场景","其他"];
+  const storeNav = `<nav class="set-nav store-cat-nav" aria-label="商店分类筛选">` +
+    storeCats.map(c=>`<button type="button" class="set-nav-btn${_storeCat===c?" active":""}" data-store-cat="${c}">${c}</button>`).join("") + `</nav>`;
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.shop}</span>
@@ -12004,7 +12094,8 @@ function renderStorePage(){
       <button type="button" class="addbtn sm" id="storeImportBtn" style="--sc:var(--accent)">导入插件 JSON</button>
       <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
     </header></div>
-    <div class="store-list">${rows.map(pCard).join("") || '<div class="empty">暂无可用的插件</div>'}</div>`);
+    ${storeNav}
+    <div class="store-list">${filteredRows.map(pCard).join("") || '<div class="empty">暂无可用的插件</div>'}</div>`);
   $$("#main [data-store-install]").forEach(b=>{
     b.onclick = ()=>{
       const def = BUILTIN_PLUGINS.find(x=>x.id===b.getAttribute("data-store-install"));
@@ -12032,6 +12123,11 @@ function renderStorePage(){
     if(r && r.ok){ toast("插件导入成功","ok"); renderStorePage(); }
     else toast((r&&r.err)||"导入失败","warn");
   };
+  // v3.1：商店分类菜单切换
+  $$("#main .store-cat-nav .set-nav-btn").forEach(b=>{
+    b.onclick = ()=>{ _storeCat = b.getAttribute("data-store-cat")||"全部"; renderStorePage(); };
+  });
+  appendFoot();
 }
 
 /* ---------- 习惯链页（streak 总览 + 链路图 + 状态 + 成功率 + 配置入口） ---------- */
@@ -16299,11 +16395,11 @@ function render(){
     renderSide();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
     if(active==="stats"){ setActive("overview"); renderOverview(); appendFoot(); return; }
-    if(active==="recycle"){ openRecycle(); appendFoot(); return; }
+    if(active==="recycle"){ openRecycle(); return; }
     /* v2.4.0 四大新页面路由 */
     if(active==="tasks"){ renderTasksPage(); appendFoot(); return; }
-    if(active==="toolbox"){ renderToolboxPage(); appendFoot(); return; }
-    if(active==="store"){ renderStorePage(); appendFoot(); return; }
+    if(active==="toolbox"){ renderToolboxPage(); return; }
+    if(active==="store"){ renderStorePage(); return; }
     if(active==="chainpage"){ renderChainPage(); appendFoot(); return; }
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
@@ -17625,14 +17721,26 @@ function openKnowledgePage(){
   _showDrawerPage("knowledge");
   renderSide(); // 同步侧栏高亮（uiView 已更新）
 }
-/* 往 #drawer 末尾追加尾栏（设置页面专用，与 appendFoot 结构一致） */
+/* 往 #drawer 末尾追加尾栏（设置页面专用，与 appendFoot 结构一致——3列：应用信息+待办统计+AI状态） */
 function _appendDrawerFoot(){
   const drawer = $("#drawer"); if(!drawer) return;
   const existing = drawer.querySelector(":scope > .foot");
   if(existing) existing.remove();
   const footEl = document.createElement("div");
   footEl.className = "foot";
-  footEl.textContent = t("app.name") + " · v" + VERSION + " · b" + BUILD_TAG;
+  const cfg = getCfg();
+  const ap = getActiveProfile();
+  const model = (ap && ap.model) ? ap.model : "";
+  const tasks = getTasks().filter(function(t){ return !t.deletedAt; });
+  const openN = tasks.filter(function(t){ return t.status!=="done"; }).length;
+  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){}
+  const aiOn = !!(cfg && cfg.enabled);
+  const aiTxt = aiOn ? (model ? ("AI 已连接 · " + model) : "AI 已连接") : "AI 未启用";
+  footEl.innerHTML = '<div class="foot-bar">' +
+    '<span class="foot-id">' + esc(t("app.name")) + ' · v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
+    '<span class="foot-stat">待办 ' + openN + ' · 资料 ' + recN + ' 条</span>' +
+    '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>' +
+    '</div>';
   drawer.appendChild(footEl);
 }
 /* 把 #drawer 移到 .main-wrap 里（设置页面铺满 main-wrap），隐藏 #main */
