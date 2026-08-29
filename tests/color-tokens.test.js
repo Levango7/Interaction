@@ -52,6 +52,6 @@ describe("P0-9 硬编码颜色门禁", () => {
     // SCENARIOS 场景语义色
     expect(src).toMatch(/office:\{\s*name:"办公",\s*color:"#0a6cbd"/);
     // 品牌渐变
-    expect(src).toMatch(/linear-gradient\(135deg,#0067c0,#9b4dca\)/);
+    expect(src).toMatch(/linear-gradient\(135deg,#0070f3,#0050d0\)/);
   });
 });
