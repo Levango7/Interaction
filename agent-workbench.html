@@ -1339,8 +1339,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   /* v2.0.3：flex 纵向布局——尾栏 .foot 用 margin-top:auto 永远贴最底（内容短时贴底、长时滚到底才出现） */
   display:flex !important;
   flex-direction:column !important;
-  background:transparent;
-  /* v1.9.3：background 改为 transparent 与 #main 一致（#main 无背景色，显示 body 的 var(--bg)） */
+  background:var(--bg);
+  /* v3.1.1：background 改为 var(--bg) 与 #main 一致——#main 有 opaque var(--bg) 遮住 .app 的 canvas-glow 渐变，
+     使 toolbar-row（显示渐变）与内容区（纯色）之间有清晰的分割线；drawer-page 之前用 transparent 导致
+     渐变透过，toolbar-row 与内容区背景一致，分割线不可见。现统一为 var(--bg) 恢复分割效果。 */
   border:none;
   border-radius:0;
   margin:0 !important;
@@ -4006,7 +4008,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260829g";
+const BUILD_TAG = "20260830a";
 
 
 
@@ -20764,7 +20766,13 @@ if (typeof window !== "undefined") {
  *   · localhost / 127.0.0.1（vitest/jsdom 与本地服务模式）
  *   · 任意环境显式追加 ?__test=1（开发者自查）
  */
-const __TEST_GATE__ = false; /* [prod build] test hooks disabled */
+const __TEST_GATE__ = (function(){
+  try{
+    if(typeof location === "undefined") return false;
+    if(location.hostname === "localhost" || location.hostname === "127.0.0.1") return true;
+    return /[?&]__test=1/.test(location.search || "");
+  }catch(e){ return false; }
+})();
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
