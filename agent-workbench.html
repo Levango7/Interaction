@@ -1668,6 +1668,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .recycle-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .recycle-title{flex:1;font-size:var(--fs-base);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .recycle-sc{font-size:var(--fs-xs);color:var(--muted);flex-shrink:0}
+.recycle-desc{font-size:var(--fs-xs);color:var(--text-faint);flex-shrink:0;max-width:30%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .recycle-when{font-size:var(--fs-xs);color:var(--text-faint);flex-shrink:0;font-variant-numeric:tabular-nums}
 .recycle-restore,.recycle-purge{padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);font-size:var(--fs-sm);
   border:1px solid var(--line);background:var(--panel);color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
@@ -4007,7 +4008,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260829f";
+const BUILD_TAG = "20260829g";
 
 
 
@@ -5874,6 +5875,15 @@ function removeCustomLink(id){
   const links = getLinks().slice();
   const i = links.findIndex(l => l.id === id);
   if(i < 0) return false;
+  // v3.1：接入回收站——保存被删除的习惯链快照
+  const removed = links[i];
+  try{
+    addToRecycleBin("config",
+      "习惯链：「"+(removed.name||removed.id||"未命名")+"」",
+      (removed.fromSc||"?")+" → "+(removed.toSc||"?")+"，关键词：「"+(removed.kw||"")+"」",
+      { kind: "link", link: removed },
+      "习惯链管理");
+  }catch(_){ /* 回收站写入失败不影响删除 */ }
   links.splice(i, 1);
   saveCustomLinks(links);
   return true;
@@ -8287,26 +8297,43 @@ let _recycleCat = "全部"; // v3.1：回收站分类筛选：全部/任务/配�
 function openRecycle(){
   const all = load(PREFIX+"tasks", []);
   const del = all.filter(t=>t.deletedAt).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
-  // v3.1：按分类筛选（目前回收站只有任务类型）
-  const recycleCatOf = function(t){ return "任务"; }; // 所有回收站项均为"任务"类型
-  const filteredDel = _recycleCat==="全部" ? del : del.filter(t=> recycleCatOf(t)===_recycleCat);
-  const items = filteredDel.length ? filteredDel.map(t=>{
+  // v3.1：多类型回收站——任务走软删除，配置/文件/插件走 wb_recycle_bin
+  const binItems = getRecycleBin();
+  // 统一构造回收项视图模型：{id, type, title, desc, when, whenStr, source, color, scName, isTask}
+  const taskVms = del.map(t=>{
     const sm = scMeta(t.sc);
     const w = new Date(t.deletedAt);
     const whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
-    return `<div class="recycle-item" data-id="${esc(t.id)}">
-      <input type="checkbox" class="recycle-chk" data-chk="${esc(t.id)}" aria-label="选择 ${esc(t.title)}">
-      <span class="recycle-dot" style="background:${sm.color}"></span>
-      <span class="recycle-title">${esc(t.title)}</span>
-      <span class="recycle-sc">${sm.name}</span>
-      <span class="recycle-when">${whenStr}</span>
-      <button type="button" class="recycle-restore" data-restore="${esc(t.id)}">恢复</button>
-      <button type="button" class="recycle-purge" data-purge="${esc(t.id)}">彻底删除</button>
+    return { id: t.id, type: "任务", title: t.title||"", desc: "", when: t.deletedAt, whenStr: whenStr, source: sm.name, color: sm.color, scName: sm.name, isTask: true };
+  });
+  const binVms = binItems.map(it=>{
+    const w = new Date(it.deletedAt||0);
+    const whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
+    const typeLabel = it.type==="config" ? "配置" : (it.type==="file" ? "文件" : (it.type==="plugin" ? "插件" : it.type));
+    return { id: it.id, type: typeLabel, title: it.title||"", desc: it.desc||"", when: it.deletedAt||0, whenStr: whenStr, source: it.source||"", color: "var(--muted)", scName: typeLabel, isTask: false };
+  });
+  // 合并后按删除时间倒序
+  const allVms = taskVms.concat(binVms).sort((a,b)=>(b.when||0)-(a.when||0));
+  // 按分类筛选
+  const filteredVms = _recycleCat==="全部" ? allVms : allVms.filter(v => v.type===_recycleCat);
+  const items = filteredVms.length ? filteredVms.map(v=>{
+    const restoreAttr = v.isTask ? `data-restore="${esc(v.id)}"` : `data-restore-bin="${esc(v.id)}"`;
+    const purgeAttr = v.isTask ? `data-purge="${esc(v.id)}"` : `data-purge-bin="${esc(v.id)}"`;
+    const descHtml = v.desc ? `<span class="recycle-desc">${esc(v.desc)}</span>` : "";
+    return `<div class="recycle-item" data-id="${esc(v.id)}">
+      <input type="checkbox" class="recycle-chk" data-chk="${esc(v.id)}" data-is-task="${v.isTask?1:0}" aria-label="选择 ${esc(v.title)}">
+      <span class="recycle-dot" style="background:${v.color}"></span>
+      <span class="recycle-title">${esc(v.title)}</span>
+      ${descHtml}
+      <span class="recycle-sc">${esc(v.scName)}</span>
+      <span class="recycle-when">${v.whenStr}</span>
+      <button type="button" class="recycle-restore" ${restoreAttr}>恢复</button>
+      <button type="button" class="recycle-purge" ${purgeAttr}>彻底删除</button>
     </div>`;
   }).join("") : `<div class="recycle-empty">${_recycleCat==="全部" ? "回收站为空" : "该分类下无内容"}</div>`;
   const policy = getRecyclePolicy();
   const policyLabel = policy==="off" ? "自动清理：关闭" : "自动清理："+policy+" 天后";
-  const countLabel = filteredDel.length ? filteredDel.length+" 条任务" : "";
+  const countLabel = filteredVms.length ? filteredVms.length+" 条" : "";
   // v3.1：回收站分类菜单
   const recycleCats = ["全部","任务","配置","文件","插件"];
   const recycleNav = `<nav class="set-nav recycle-cat-nav" aria-label="回收站分类筛选">` +
@@ -8316,13 +8343,13 @@ function openRecycle(){
   const html = `<div class="recycle-modal" id="recycleModal">
     <div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
-      <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务可在此恢复或彻底删除</p></div>
+      <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务/配置/文件/插件可在此恢复或彻底删除</p></div>
       <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="page-back recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
     </header></div>
     ${recycleNav}
     <div class="recycle-card">
       <div class="recycle-list">${items}</div>
-      ${filteredDel.length ? `<div class="recycle-footer">
+      ${filteredVms.length ? `<div class="recycle-footer">
         <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
         <button type="button" class="recycle-batch" id="recycleBatchRestore">批量恢复</button>
         <button type="button" class="recycle-batch" id="recycleBatchPurge">批量删除</button>
@@ -8341,17 +8368,20 @@ function openRecycle(){
   // restore/purge/clear 内部已调用 render()，会自动覆盖 #main 返回原视图，无需手动 close
   $$("#recycleModal [data-restore]").forEach(b=> b.onclick=()=>{ restoreRecycle(b.dataset.restore); });
   $$("#recycleModal [data-purge]").forEach(b=> b.onclick=()=>{ purgeRecycle(b.dataset.purge); });
-  const clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的任务将永久删除，不可恢复。")){ clearRecycle(); } };
+  // v3.1：回收站数据项（配置/文件/插件）的恢复与彻底删除
+  $$("#recycleModal [data-restore-bin]").forEach(b=> b.onclick=()=>{ restoreRecycleBin(b.dataset.restoreBin); });
+  $$("#recycleModal [data-purge-bin]").forEach(b=> b.onclick=()=>{ purgeRecycleBin(b.dataset.purgeBin); });
+  const clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm("确定清空回收站？其中的内容将永久删除，不可恢复。")){ clearRecycle(); } };
   const selAll=$("#recycleSelAll"); if(selAll) selAll.onchange=()=> $$("#recycleModal .recycle-chk").forEach(c=>{ c.checked=selAll.checked; });
   const bRestore=$("#recycleBatchRestore"); if(bRestore) bRestore.onclick=()=>{
-    const ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
-    if(!ids.length){ toast("请先勾选要恢复的任务","warn"); return; }
-    restoreRecycleBatch(ids);
+    const checked=$$("#recycleModal .recycle-chk:checked");
+    if(!checked.length){ toast("请先勾选要恢复的项","warn"); return; }
+    restoreRecycleBatchMixed(checked);
   };
   const bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=()=>{
-    const ids=$$("#recycleModal .recycle-chk:checked").map(c=>c.dataset.chk);
-    if(!ids.length){ toast("请先勾选要删除的任务","warn"); return; }
-    if(confirm("确定彻底删除选中的 "+ids.length+" 条任务？不可恢复。")){ purgeRecycleBatch(ids); }
+    const checked=$$("#recycleModal .recycle-chk:checked");
+    if(!checked.length){ toast("请先勾选要删除的项","warn"); return; }
+    if(confirm("确定彻底删除选中的 "+checked.length+" 项？不可恢复。")){ purgeRecycleBatchMixed(checked); }
   };
   // v3.1：回收站分类菜单切换
   $$("#recycleModal .recycle-cat-nav .set-nav-btn").forEach(b=>{
@@ -8541,7 +8571,184 @@ function clearRecycle(){
   const all = load(PREFIX+"tasks", []);
   const next = all.filter(t=>!t.deletedAt);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
+  // v3.1：同时清空回收站数据项（配置/文件/插件）
+  saveRecycleBin([]);
   toast("回收站已清空", "ok"); render();
+}
+/* v3.1：回收站数据项（配置/文件/插件）的恢复与彻底删除 */
+/** 恢复回收站数据项 */
+function restoreRecycleBin(id){
+  const r = restoreFromRecycleBin(id);
+  if(!r.ok){ toast(r.err || "恢复失败", "warn"); return; }
+  toast("已恢复", "ok"); render();
+}
+/** 彻底删除回收站数据项（仅移除记录，不恢复） */
+function purgeRecycleBin(id){
+  const ok = removeFromRecycleBin(id);
+  if(!ok){ toast("删除失败", "warn"); return; }
+  toast("已永久删除", "ok"); render();
+}
+/** 批量恢复（混合任务 + 回收站数据项）
+ *  @param {Array<HTMLElement>} checked - 勾选的 checkbox 元素数组 */
+function restoreRecycleBatchMixed(checked){
+  let taskCount = 0, binCount = 0, failCount = 0;
+  const taskIds = [];
+  checked.forEach(c=>{
+    const isTask = c.getAttribute("data-is-task")==="1";
+    const id = c.dataset.chk;
+    if(isTask){ taskIds.push(id); taskCount++; }
+    else{
+      const r = restoreFromRecycleBin(id);
+      if(r.ok){ binCount++; }else{ failCount++; }
+    }
+  });
+  if(taskIds.length){
+    const set = new Set(taskIds);
+    const all = load(PREFIX+"tasks", []);
+    const next = all.map(t=> set.has(t.id) ? Object.assign({}, t, { deletedAt: undefined }) : t);
+    save(PREFIX+"tasks", next); scheduleAutoBackup();
+  }
+  const total = taskCount + binCount;
+  if(failCount){ toast("已恢复 "+total+" 项，"+failCount+" 项失败", "warn"); }
+  else{ toast("已恢复 "+total+" 项", "ok"); }
+  render();
+}
+/** 批量彻底删除（混合任务 + 回收站数据项）
+ *  @param {Array<HTMLElement>} checked - 勾选的 checkbox 元素数组 */
+function purgeRecycleBatchMixed(checked){
+  let taskCount = 0, binCount = 0;
+  const taskIds = [];
+  checked.forEach(c=>{
+    const isTask = c.getAttribute("data-is-task")==="1";
+    const id = c.dataset.chk;
+    if(isTask){ taskIds.push(id); taskCount++; }
+    else{
+      if(removeFromRecycleBin(id)){ binCount++; }
+    }
+  });
+  if(taskIds.length){
+    const set = new Set(taskIds);
+    const all = load(PREFIX+"tasks", []);
+    const next = all.filter(t=>!set.has(t.id));
+    save(PREFIX+"tasks", next); scheduleAutoBackup();
+  }
+  const total = taskCount + binCount;
+  toast("已永久删除 "+total+" 项", "ok"); render();
+}
+/* ---------- v3.1 回收站扩展：多类型（任务/配置/文件/插件）统一回收站 ----------
+   任务类型沿用软删除（tasks[].deletedAt），不进入 wb_recycle_bin；
+   配置/文件/插件类型存入 wb_recycle_bin，按 type 字段区分。
+   数据结构：{id,type,title,desc,data,deletedAt,source} */
+const RECYCLE_BIN_KEY = PREFIX+"recycle_bin";
+/** 读取回收站所有项（仅含 config/file/plugin，任务走 tasks 软删除）
+ *  @returns {Array<Object>} 回收站项数组（按 deletedAt 倒序） */
+function getRecycleBin(){
+  const items = load(RECYCLE_BIN_KEY, []);
+  return Array.isArray(items) ? items.slice().sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0)) : [];
+}
+/** 保存回收站（全量覆盖）
+ *  @param {Array<Object>} items - 回收站项数组
+ *  @returns {void} */
+function saveRecycleBin(items){
+  save(RECYCLE_BIN_KEY, Array.isArray(items) ? items : []);
+}
+/** 添加项到回收站
+ *  @param {"config"|"file"|"plugin"} type - 类型（task 不走此通道）
+ *  @param {string} title - 标题
+ *  @param {string} desc - 描述
+ *  @param {Object} data - 原始数据快照（用于恢复）
+ *  @param {string} source - 来源标识
+ *  @returns {string|null} 新增项 id（失败返回 null） */
+function addToRecycleBin(type, title, desc, data, source){
+  if(type!=="config" && type!=="file" && type!=="plugin") return null;
+  const items = load(RECYCLE_BIN_KEY, []);
+  const arr = Array.isArray(items) ? items : [];
+  const id = "recycle_" + uid();
+  arr.push({
+    id: id,
+    type: type,
+    title: String(title||"").slice(0, 200),
+    desc: String(desc||"").slice(0, 500),
+    data: data || {},
+    deletedAt: Date.now(),
+    source: String(source||"").slice(0, 100)
+  });
+  saveRecycleBin(arr);
+  return id;
+}
+/** 从回收站彻底删除指定 id 的项（不恢复，仅移除记录）
+ *  @param {string} id - 回收站项 id
+ *  @returns {boolean} 是否删除成功 */
+function removeFromRecycleBin(id){
+  if(!id) return false;
+  const items = load(RECYCLE_BIN_KEY, []);
+  const arr = Array.isArray(items) ? items : [];
+  const next = arr.filter(it => it.id !== id);
+  if(next.length === arr.length) return false;
+  saveRecycleBin(next);
+  return true;
+}
+/** 从回收站恢复指定 id 的项：根据 type 把 data 写回对应存储，并从回收站移除
+ *  @param {string} id - 回收站项 id
+ *  @returns {{ok:boolean, err?:string}} 恢复结果 */
+function restoreFromRecycleBin(id){
+  if(!id) return {ok:false, err:"无效 id"};
+  const items = load(RECYCLE_BIN_KEY, []);
+  const arr = Array.isArray(items) ? items : [];
+  const item = arr.find(it => it.id === id);
+  if(!item) return {ok:false, err:"回收站项不存在"};
+  try{
+    if(item.type === "config"){
+      // 配置回收：根据 data.kind 区分 profile / link
+      const d = item.data || {};
+      if(d.kind === "profile"){
+        // 恢复 AI Profile：追加到 cfg.profiles
+        const cfg = getCfg() || {};
+        const profiles = Array.isArray(cfg.profiles) ? cfg.profiles.slice() : [];
+        if(profiles.some(p => p.id === (d.profile && d.profile.id))){
+          return {ok:false, err:"同名 Profile 已存在"};
+        }
+        if(d.profile){ profiles.push(d.profile); }
+        cfg.profiles = profiles;
+        if(!cfg.activeId && profiles.length) cfg.activeId = profiles[0].id;
+        _cfgCache = cfg;
+        // 异步落盘（不阻塞恢复流程）
+        if(typeof persistCfg === "function"){ persistCfg(cfg).catch(()=>{}); }
+      }else if(d.kind === "link"){
+        // 恢复习惯链：追加到自定义链
+        const links = getLinks().slice();
+        if(d.link && !links.some(l => l.id === d.link.id)){
+          links.push(d.link);
+          saveCustomLinks(links);
+        }
+      }
+    }else if(item.type === "file"){
+      // 文件回收：恢复到 notes
+      const notes = getNotes();
+      if(d_noteMissing(notes, item.data)){
+        if(item.data && item.data.note){ notes.push(item.data.note); saveNotes(notes); _notifyNotesChanged(); }
+      }
+    }else if(item.type === "plugin"){
+      // 插件回收：仅恢复 enabled/config 状态（无法恢复代码，需用户重新安装）
+      // 这里只把状态写回，若插件已重新注册则恢复其 enabled/config
+      const d = item.data || {};
+      if(d.plugin && typeof setPluginEnabled === "function" && _plugins[d.plugin.id]){
+        setPluginEnabled(d.plugin.id, !!d.plugin.enabled);
+        if(d.plugin.config){ setPluginConfig(d.plugin.id, d.plugin.config); }
+      }
+    }
+  }catch(e){
+    return {ok:false, err:"恢复失败："+(e&&e.message||e)};
+  }
+  // 从回收站移除
+  const next = arr.filter(it => it.id !== id);
+  saveRecycleBin(next);
+  return {ok:true};
+}
+/** 内部辅助：判断 notes 中是否缺少指定 note（避免重复恢复） */
+function d_noteMissing(notes, data){
+  if(!data || !data.note || !data.note.id) return false;
+  return !notes.some(n => n.id === data.note.id);
 }
 /* ---------- 回收站自动清理策略（T2） ---------- */
 const RECYCLE_POLICY_KEY = PREFIX+"recycle_policy"; // "off" | "7" | "30" | "90"，默认 "30"
@@ -17941,6 +18148,14 @@ function delProfile(){
   const ap = getActiveProfile();
   if(!ap) return;
   if(!confirm("确定删除 Profile「"+(ap.name||"未命名")+"」？此操作点「保存设置」后生效。")) return;
+  // v3.1：接入回收站——保存被删除的 profile 快照
+  try{
+    addToRecycleBin("config",
+      "AI Profile：「"+(ap.name||"未命名")+"」",
+      "模型 "+(ap.model||"未知")+"，base "+(ap.base||"未设置"),
+      { kind: "profile", profile: { id: ap.id, name: ap.name||"未命名", base: ap.base||"", model: ap.model||"", key: "" } },
+      "AI Profile 管理");
+  }catch(_){ /* 回收站写入失败不影响删除 */ }
   cfg.profiles = cfg.profiles.filter(p => p.id !== ap.id);
   cfg.activeId = cfg.profiles[0].id;
   _cfgCache = cfg;
@@ -19102,8 +19317,77 @@ const INTEGRATION_CONFIG_FIELDS = {
              { k:"accessSecret", label:"AppSecret", required:true, secret:true }],
   calendar: [{ k:"_calType", label:"日历服务", type:"select", required:true,
                options:[["google_calendar","Google 日历"],["outlook_calendar","Outlook 日历"]] },
-             { k:"token", label:"OAuth Access Token", required:true, secret:true }]
+             { k:"clientId", label:"OAuth Client ID", ph:"服务商控制台注册应用的 Client ID", required:false },
+             { k:"token", label:"OAuth Access Token", ph:"或点下方「OAuth 授权」自动获取", required:true, secret:true }]
 };
+/* ---------- v3.1.1：OAuth 授权接线（Electron 形态） ----------
+ * 后端（electron/main.js B3）：oauth-begin 接收 {provider, authorizeUrl, tokenUrl, clientId,
+ * clientSecret?, scope?, usePkce?}，PKCE S256 + 一次性 state（TTL 10min）；回调后经
+ * "oauth-status" 事件通知渲染层。浏览器形态无后端，明确提示不可用（不静默失败）。
+ * 日历 OAuth 端点为服务商公共标准端点：
+ *   Google  authorize https://accounts.google.com/o/oauth2/v2/auth
+ *           token    https://oauth2.googleapis.com/token（支持 PKCE，公共客户端无需 secret）
+ *   Outlook authorize https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+ *           token    https://login.microsoftonline.com/common/oauth2/v2.0/token（支持 PKCE）
+ * redirect_uri 固定为 http://127.0.0.1:8124/oauth/callback（主进程），注册应用时需填此项。 */
+const CALENDAR_OAUTH_ENDPOINTS = {
+  google_calendar: {
+    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    scope: "https://www.googleapis.com/auth/calendar",
+    usePkce: true
+  },
+  outlook_calendar: {
+    authorizeUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+    tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    scope: "https://graph.microsoft.com/Calendars.ReadWrite",
+    usePkce: true
+  }
+};
+async function integrationOAuthBegin(providerKey, cfg, opts){
+  /* @returns {Promise<{ok:boolean, error?:string, provider?:string, token?:string}>}
+   * 发起 OAuth → 等待 oauth-status 事件（成功含 access_token）→ 返回供 connect 使用。
+   * 事件超时按 opts.timeout 覆写（测试注入用）；默认 60s（用户可能迟迟未在浏览器完成授权）。 */
+  const timeoutMs = (opts && typeof opts.timeout === "number" && opts.timeout >= 0) ? opts.timeout : 60000;
+  const ep = CALENDAR_OAUTH_ENDPOINTS[providerKey];
+  const clientId = cfg && cfg.clientId;
+  if(!ep) return { ok:false, error:"不支持的 OAuth provider：" + providerKey };
+  if(!clientId) return { ok:false, error:"缺少 OAuth Client ID（需先在服务商控制台注册应用）" };
+  const api = window.electronAPI;
+  if(!api || typeof api.oauthBegin !== "function"){
+    return { ok:false, error:"OAuth 授权仅 Electron 桌面版支持（浏览器形态无本地授权回调服务），请改用手动粘贴 Access Token" };
+  }
+  let begin;
+  try{
+    begin = await api.oauthBegin({
+      provider: providerKey,
+      authorizeUrl: ep.authorizeUrl,
+      tokenUrl: ep.tokenUrl,
+      clientId: clientId,
+      scope: ep.scope,
+      usePkce: !!ep.usePkce
+    });
+  }catch(e){
+    return { ok:false, error:"发起授权失败：" + ((e && e.message) || e) };
+  }
+  if(!begin || !begin.ok) return { ok:false, error:(begin && begin.error) || "发起授权失败" };
+  // shell 不可用（或用户需手动）时的兜底：自己开窗口
+  if(!begin.opened && begin.url){ try{ window.open(begin.url, "_blank", "noopener"); }catch(_e){} }
+  if(!begin.opened && !begin.url) return { ok:false, error:"无法打开授权页（既无系统浏览器也无 window.open）" };
+  return new Promise(function(resolve){
+    let settled = false;
+    const finish = function(r){ if(settled) return; settled = true;
+      try{ api.offOauthStatus(onStatus); }catch(_e){}
+      clearTimeout(timer); resolve(r); };
+    const onStatus = function(d){
+      if(!d || d.provider !== providerKey) return;
+      if(d.ok && d.token && d.token.accessToken) finish({ ok:true, provider:providerKey, token:d.token.accessToken });
+      else finish({ ok:false, error:(d.error || "授权未完成") , provider:providerKey });
+    };
+    const timer = setTimeout(function(){ finish({ ok:false, error:"授权超时（" + Math.round(timeoutMs/1000) + " 秒内未完成），请重试" }); }, timeoutMs);
+    try{ api.onOauthStatus(onStatus); }catch(e){ finish({ ok:false, error:"监听授权状态失败：" + ((e && e.message) || e) }); }
+  });
+}
 function openIntegrationConfig(name){
   const fields = INTEGRATION_CONFIG_FIELDS[name];
   const label = INTEGRATION_LABELS[name] || name;
@@ -19125,6 +19409,10 @@ function openIntegrationConfig(name){
     + '<h3 style="margin:0 0 4px;font-size:16px">连接 ' + esc(label) + '</h3>'
     + '<p class="sub" style="margin:0 0 8px">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>'
     + inputsHtml
+    + (name === "calendar"
+      ? '<p class="sub" style="margin:8px 0 0;font-size:12px">填好 Client ID 后点「OAuth 授权」可自动获取 Token（仅 Electron 版，回调地址 <code>http://127.0.0.1:8124/oauth/callback</code> 需在服务商控制台登记）</p>'
+        + '<button type="button" class="addbtn sm" id="btnIntCfgOAuth" style="margin-top:8px;--sc:var(--accent)">OAuth 授权</button>'
+      : "")
     + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">'
     + '<button type="button" class="addbtn sm btn-primary" id="btnIntCfgGo">连接</button>'
     + '<button type="button" class="addbtn sm" id="btnIntCfgCancel" style="--sc:var(--muted)">取消</button></div></div>');
@@ -19133,6 +19421,27 @@ function openIntegrationConfig(name){
   const close = function(){ ov.classList.remove("show"); setTimeout(function(){ ov.remove(); }, 160); };
   ov.onclick = function(e){ if(e.target === ov) close(); };
   const cancelBtn = $("#btnIntCfgCancel"); if(cancelBtn) cancelBtn.onclick = close;
+  // v3.1.1：日历 OAuth 授权路径——经主进程轻后端拿 access_token，回填 token 输入框后走统一 connect 验证
+  const oauthBtn = $("#btnIntCfgOAuth");
+  if(oauthBtn) oauthBtn.onclick = async function(){
+    const calTypeEl = $("#intcfg__calType");
+    const clientIdEl = $("#intcfg_clientId");
+    const tokenEl = $("#intcfg_token");
+    const calType = calTypeEl ? String(calTypeEl.value || "") : "";
+    const clientId = clientIdEl ? String(clientIdEl.value || "").trim() : "";
+    if(!calType){ toast("请先选择日历服务", "warn"); return; }
+    if(!clientId){ toast("请先填写 OAuth Client ID", "warn"); if(clientIdEl) clientIdEl.focus(); return; }
+    oauthBtn.disabled = true; oauthBtn.textContent = "授权中…（浏览器完成授权后自动回填）";
+    const restoreO = function(){ oauthBtn.disabled = false; oauthBtn.textContent = "OAuth 授权"; };
+    const r = await integrationOAuthBegin(calType, { clientId: clientId });
+    if(!r.ok){ toast("OAuth：" + r.error, "warn"); restoreO(); return; }
+    if(tokenEl) tokenEl.value = r.token;
+    toast("授权成功，Token 已回填（有效期内免重复授权）", "ok");
+    restoreO();
+    // 自动触发统一连接流程（token 已就位，connect 内部会向服务商验证）
+    const go = $("#btnIntCfgGo");
+    if(go && !go.disabled) go.onclick();
+  };
   const goBtn = $("#btnIntCfgGo");
   if(goBtn) goBtn.onclick = async function(){
     const cfg = {};
@@ -21406,6 +21715,14 @@ function registerPlugin(plugin){
 function unloadPlugin(id){
   if(!id || !_plugins[id]) return false;
   const p = _plugins[id];
+  // v3.1：接入回收站——保存被卸载的插件元信息（不含函数体，仅存可恢复的 enabled/config）
+  try{
+    addToRecycleBin("plugin",
+      "插件：「"+(p.name||id)+"」",
+      (p.version?("v"+p.version+"，"):"")+(p.desc||""),
+      { plugin: { id: id, name: p.name||id, version: p.version||"", desc: p.desc||"", enabled: !!p.enabled, config: p.config||{} } },
+      "插件管理");
+  }catch(_){ /* 回收站写入失败不影响卸载 */ }
   if(p.enabled && typeof p.onDeactivate === "function"){
     try{ p.onDeactivate(); }catch(e){ /* 插件异常不影响主流程 */ }
   }
@@ -23861,6 +24178,17 @@ function deleteNote(id){
   const notes = getNotes();
   const filtered = notes.filter(function(n){ return n.id !== id; });
   if(filtered.length === notes.length) return false;
+  // v3.1：接入回收站——保存被删除的笔记快照
+  const removed = notes.find(function(n){ return n.id === id; });
+  if(removed){
+    try{
+      addToRecycleBin("file",
+        "记录：「"+(removed.title||removed.id||"未命名")+"」",
+        (removed.sc||"")+(removed.tags?(" · 标签："+removed.tags):""),
+        { note: removed },
+        "学习资料/记录");
+    }catch(_){ /* 回收站写入失败不影响删除 */ }
+  }
   saveNotes(filtered);
   _notifyNotesChanged();
   return true;
