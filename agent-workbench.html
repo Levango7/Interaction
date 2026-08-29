@@ -3286,7 +3286,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </header>
     <div id="aiMcpList"></div>
     <div class="set-actions">
-      <button type="button" class="addbtn sm" id="aiMcpAdd" style="--sc:var(--accent);white-space:nowrap">添加服务器</button>
+      <span class="add-wrap"><span class="add-label">添加服务器</span><button type="button" class="addbtn sm add-round" id="aiMcpAdd" style="--sc:var(--accent)" aria-label="添加服务器">＋</button></span>
       <button type="button" class="addbtn sm" id="aiMcpSave" style="--sc:var(--accent);flex:1">保存 MCP 配置</button>
     </div>
   </section>
@@ -3383,7 +3383,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <input id="scAddName" placeholder="场景名（如 健身）" maxlength="12" style="flex:1;min-width:120px">
         <input id="scAddColor" type="color" aria-label="场景颜色">
         <select id="scAddIcon" aria-label="场景图标" style="flex:1;min-width:110px;max-width:150px"></select>
-        <button type="button" class="addbtn sm" id="scAddBtn" >添加</button>
+        <span class="add-wrap"><span class="add-label">添加</span><button type="button" class="addbtn sm add-round" id="scAddBtn" aria-label="添加场景">＋</button></span>
       </div>
     </div>
   </section>
@@ -3404,7 +3404,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <select id="chainAddSrc" style="flex:1;min-width:80px"></select>
         <input id="chainAddKw" placeholder="输入关键词，如：交付、上线" style="flex:2;min-width:120px">
         <select id="chainAddDst" style="flex:1;min-width:80px"></select>
-        <button type="button" class="addbtn" id="chainAddBtn" style="--sc:var(--accent);white-space:nowrap">添加</button>
+        <span class="add-wrap"><span class="add-label">添加</span><button type="button" class="addbtn add-round" id="chainAddBtn" style="--sc:var(--accent)" aria-label="添加习惯链">＋</button></span>
       </div>
     </div>
     <div class="set-actions" style="margin-top:var(--space-3)">
@@ -8915,7 +8915,7 @@ function _recordToolHtml(cfg, records){
       }).join("") + "</div>";
     }
   }
-  return '<div class="tool-filter-bar"><button type="button" class="addbtn sm" id="recAddBtn" style="--sc:var(--accent)">＋ 添加</button>' +
+  return '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">添加</span><button type="button" class="addbtn sm add-round" id="recAddBtn" style="--sc:var(--accent)" aria-label="添加">＋</button></span>' +
     '<span class="sub" style="margin:0">共 ' + records.length + ' 条</span></div>' + summary +
     '<div class="tool-form-box">' + form + "</div>" +
     (records.length
@@ -9060,8 +9060,8 @@ const TOOL_APPS = {
       html += "</table>";
       return '<p class="sub">点击单元格直接编辑；按钮增删行列，数据自动保存</p>' + html
         + '<div class="tool-actions">'
-        + '<button type="button" class="addbtn sm" id="shAddRow">＋ 添加行</button>'
-        + '<button type="button" class="addbtn sm" id="shAddCol">＋ 添加列</button>'
+        + '<span class="add-wrap"><span class="add-label">添加行</span><button type="button" class="addbtn sm add-round" id="shAddRow" aria-label="添加行">＋</button></span>'
+        + '<span class="add-wrap"><span class="add-label">添加列</span><button type="button" class="addbtn sm add-round" id="shAddCol" aria-label="添加列">＋</button></span>'
         + '<button type="button" class="addbtn sm" style="--sc:var(--danger)" id="shDelRow">－ 删除末行</button>'
         + '<button type="button" class="addbtn sm" style="--sc:var(--danger)" id="shDelCol">－ 删除末列</button>'
         + '<button type="button" class="addbtn sm" id="shExportCsv">导出 CSV</button></div>';
@@ -9331,7 +9331,7 @@ const TOOL_APPS = {
         + '<label>饱和度 <input type="range" id="psSat" min="-100" max="100" value="0" style="vertical-align:middle"></label></div>'
         + '<div class="tool-filter-bar">'
         + '<input type="text" id="psText" placeholder="水印文字" style="flex:1" maxlength="40">'
-        + '<button type="button" class="addbtn sm" id="psAddText">添加文字</button>'
+        + '<span class="add-wrap"><span class="add-label">添加文字</span><button type="button" class="addbtn sm add-round" id="psAddText" aria-label="添加文字">＋</button></span>'
         + '<button type="button" class="addbtn sm" id="psBrush">画笔</button></div>'
         + '<canvas id="psCv" width="640" height="400" style="max-width:100%;cursor:crosshair"></canvas>'
         + '<p class="sub" style="margin-top:var(--space-2)">PS lite：裁剪 / 旋转 / 翻转 / 滤镜 / 颜色调整 / 文字 / 画笔（纯前端 canvas，导出前可叠加多个效果）</p>';
@@ -10181,7 +10181,7 @@ function openAlarmModal(){
       '<div class="loop-pick" role="group" aria-label="重复">' +
         loopPicks.map(function(i){return '<button type="button" data-loop="'+i+'" title="周'+wk[i]+'">'+wk[i]+'</button>';}).join("") +
       '</div>' +
-      '<button type="submit" class="addbtn" style="--sc:var(--accent);white-space:nowrap">添加</button>' +
+      '<span class="add-wrap"><span class="add-label">添加</span><button type="submit" class="addbtn add-round" style="--sc:var(--accent)" aria-label="添加">＋</button></span>' +
     '</form>' +
     '<div class="alarm-list" id="alarmList" aria-live="polite"></div>'
   );
@@ -20764,7 +20764,13 @@ if (typeof window !== "undefined") {
  *   · localhost / 127.0.0.1（vitest/jsdom 与本地服务模式）
  *   · 任意环境显式追加 ?__test=1（开发者自查）
  */
-const __TEST_GATE__ = false; /* [prod build] test hooks disabled */
+const __TEST_GATE__ = (function(){
+  try{
+    if(typeof location === "undefined") return false;
+    if(location.hostname === "localhost" || location.hostname === "127.0.0.1") return true;
+    return /[?&]__test=1/.test(location.search || "");
+  }catch(e){ return false; }
+})();
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
