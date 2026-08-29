@@ -108,7 +108,7 @@
 
 **本机同步服务（`startSyncServer`，仅 Electron 运行时启动）**：HTTP 服务绑定 `127.0.0.1:8124`（可经 `INTERACTION_SYNC_PORT` 覆写，测试用），拒绝一切非回环来源；提供 `/sync/download`（快照下载）、`/sync/upload`（上传后经渲染进程确认导入）、`/oauth/callback`（OAuth 回调，state 一次性 + TTL 10 分钟，回调页动态内容全部 HTML 转义）。
 
-**OAuth 轻量后端（B3）**：主进程实现 PKCE（S256）授权流程——一次性 state（10 分钟 TTL）防 CSRF/重放，令牌以加密形式持久化（`oauth-tokens.json.enc`），5 分钟巡检自动刷新临期令牌。**诚实说明**：该后端已完整可用，但集成中心 UI 目前走「手动填写凭据」路径，尚无 UI 入口调用 OAuth 流程——启用需要各服务商真实注册的 client_id/redirect_uri。
+**OAuth 轻量后端（B3）**：主进程实现 PKCE（S256）授权流程——一次性 state（10 分钟 TTL）防 CSRF/重放，令牌以加密形式持久化（`oauth-tokens.json.enc`），5 分钟巡检自动刷新临期令牌。**UI 已接通（v3.1.1）**：集成中心 → 日历 → 「OAuth 授权」——填入服务商控制台注册应用的 Client ID 即可走授权码流程（Google/Outlook 公共端点，token 自动回填并验证）；其余 6 个 provider 走手动凭据。前提：在服务商控制台注册应用并把回调地址 `http://127.0.0.1:8124/oauth/callback` 登记为 redirect_uri；浏览器（非 Electron）形态无本地回调服务，该按钮会明确提示改用手动粘贴 Token。
 
 ---
 
@@ -148,7 +148,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **数据归属**：全部存于浏览器 `localStorage`（键前缀 `wb_agent_`，启动时镜像进 IndexedDB），刷新 / 关闭不丢；但**换浏览器、清缓存、移动 HTML 文件**（尤其是 `file://` 形态）可能导致数据不跟随。需要稳定数据请用本地服务模式或 Electron exe（同源持久）。
 - **隐私边界**：部署/分享只涉及文件本身；数据在用户本机，不在服务器。不要在工作台里预填真实敏感信息后再把文件发给他人。
 - **本机同步服务仅回环**：`127.0.0.1:8124` 绑定 + 非本机来源 403——**不支持**跨设备局域网访问（这是有意的安全边界，不是待修缺陷）。跨设备迁移走「设置 → 数据管理 → 导出/导入」JSON。
-- **集成中心走手动凭据**：Notion/Linear/Jira/Slack/飞书/钉钉/日历的连接均需在配置弹窗手动填写 token/密钥（各服务商的 API 凭据）；Electron 侧的 OAuth 后端虽已实现，但尚无 UI 入口（需真实注册的 client_id 才能接通）。
+- **集成中心凭据双路径**：Notion/Linear/Jira/Slack/飞书/钉钉在配置弹窗手动填写 token/密钥；日历支持 OAuth 授权（Electron 版，需自备 Client ID 并登记回调地址 `http://127.0.0.1:8124/oauth/callback`）或手动粘贴 Access Token。
 - **SQL Playground 首次需联网**：sql.js WASM 从 cdnjs CDN 动态加载；加载失败会给出提示，不影响其他功能。
 - **AI 工具**：调用真实改写同一份 localStorage，AI 操作与手动操作等价；工具定位任务靠标题关键词，重名时取第一条。
 - **无账号体系**：靠导出 / 导入迁移数据（单人使用场景）。
