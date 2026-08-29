@@ -584,6 +584,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .form-row .fld{flex:1;min-width:120px}
 /* v3.0：任务表单等高——按钮底部与输入框底部对齐，且与输入框同高（不被 flex 拉伸） */
 .form-row .addbtn{align-self:flex-end;height:33px;min-height:33px;line-height:1}
+.form-row .add-wrap{align-self:flex-end}
 /* v3.0：任务表单铺满卡片——大字段（标题/标签）取消 max-width 限制，flex 铺满剩余空间 */
 .form-row .fld-lg{max-width:none}
 /* v2.1.1：字段宽度工具类（替代 form-row 内散落的内联 max-width） */
@@ -3979,7 +3980,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260830c";
+const BUILD_TAG = "20260830d";
 
 
 
@@ -13137,7 +13138,7 @@ function renderMainHTML(){
     <div class="fld fld-sm"><label>优先级</label>
       <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
     <div class="fld fld-lg"><label>标签</label><input name="tags" placeholder="逗号分隔" maxlength="200"></div>
-    <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button>
+    <span class="add-wrap"><span class="add-label">添加</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="添加">＋</button></span>
   </form>`;
 
   const tagFilterHTML = `<div class="form-row">
@@ -13191,7 +13192,7 @@ function renderMainHTML(){
     return `<div class="fld${wdCls?" "+wdCls:""}"><label>${f.label}</label>${inp}</div>`;
   }).join("");
   const recForm = `<form class="form-row" id="recForm">${recFields}
-    <button class="addbtn" type="submit" style="--sc:${s.color}">${UI_ICONS.plus} 添加</button></form>`;
+    <span class="add-wrap"><span class="add-label">添加</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="添加">＋</button></span></form>`;
   const recList = recs.length? _renderRecList(recs, rec) : renderEmpty("no-records");
 
   // 右侧 AI 聊天面板已把 #chat/#chatForm/#chatThinking/#chatCancel 移出主内容区（静态 HTML，三栏布局第三栏）
@@ -20737,7 +20738,13 @@ if (typeof window !== "undefined") {
  *   · localhost / 127.0.0.1（vitest/jsdom 与本地服务模式）
  *   · 任意环境显式追加 ?__test=1（开发者自查）
  */
-const __TEST_GATE__ = false; /* [prod build] test hooks disabled */
+const __TEST_GATE__ = (function(){
+  try{
+    if(typeof location === "undefined") return false;
+    if(location.hostname === "localhost" || location.hostname === "127.0.0.1") return true;
+    return /[?&]__test=1/.test(location.search || "");
+  }catch(e){ return false; }
+})();
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
