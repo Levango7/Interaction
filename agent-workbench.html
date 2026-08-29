@@ -1377,22 +1377,26 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 #drawer[data-page="knowledge"] .drawer-ph:not([data-ph="knowledge"]),
 #drawer:not([data-page]) .drawer-ph:not([data-ph="settings"]),
 #drawer[data-page="settings"] .drawer-ph:not([data-ph="settings"]),
-#drawer[data-page="ai"] .set-card:not(#set-ai):not(#set-agent),
-#drawer[data-page="ai"] .set-nav,
+#drawer[data-page="ai"] .set-card:not(.ai-section),
+#drawer[data-page="ai"] .set-nav:not(.ai-nav),
 #drawer[data-page="plugin"] .set-card:not(#set-plugin),
 #drawer[data-page="plugin"] .set-nav,
 #drawer[data-page="plugin"] .set-savebar,
 #drawer[data-page="knowledge"] .set-savebar,
 #drawer[data-page="knowledge"] .set-card:not(#set-content),
 #drawer[data-page="knowledge"] .set-nav,
-#drawer:not([data-page]) #set-ai,
-#drawer:not([data-page]) #set-agent,
+#drawer:not([data-page]) #ai-llm,
+#drawer:not([data-page]) #ai-agent,
 #drawer:not([data-page]) #set-plugin,
 #drawer:not([data-page]) #set-content,
-#drawer[data-page="settings"] #set-ai,
-#drawer[data-page="settings"] #set-agent,
+#drawer[data-page="settings"] #ai-llm,
+#drawer[data-page="settings"] #ai-agent,
 #drawer[data-page="settings"] #set-plugin,
 #drawer[data-page="settings"] #set-content{display:none}
+/* AI 页面子模块切换：.ai-section 默认隐藏，.ai-tab-active 显示（复用 set-fade-in 动画） */
+#drawer[data-page="ai"] .ai-section{display:none}
+#drawer[data-page="ai"] .ai-section.ai-tab-active{display:block;
+  animation:set-fade-in var(--transition-base) ease}
 
 /* ===== 设置页面（v1.9.x 改版：分组卡片 + 吸顶导航 + 吸底保存栏） ===== */
 /* v2.0.3：分区导航改为与标题栏（.drawer-ph）同宽的卡片式吸顶导航——
@@ -1437,7 +1441,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .set-head{display:flex;align-items:flex-start;gap:var(--space-3);margin-bottom:var(--space-4);
   padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
 /* v1.15：AI / Agent 两个配置卡标题下无分割线（用户要求） */
-#set-ai .set-head, #set-agent .set-head{border-bottom:none;padding-bottom:0}
+#ai-llm .set-head, #ai-agent .set-head{border-bottom:none;padding-bottom:0}
 .set-ic{width:36px;height:36px;border-radius:var(--radius-md);background:var(--surface-muted);
   display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
 .set-ic svg{width:18px;height:18px}
@@ -3113,6 +3117,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="ph-tx"><h2>AI</h2><p class="sub">大模型 Profile、接口地址与请求参数</p></div>
     <button class="page-back drawer-close" type="button" aria-label="返回上一视图">← 返回</button>
   </header>
+  <nav class="set-nav ai-nav" aria-label="AI模块导航">
+    <button type="button" class="set-nav-btn active" data-ai-tab="ai-llm">LLM</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-agent">Agent</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-skills">Skills</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-mcp">MCP</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-workflow">Workflow</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-memory">Memory</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-plugin">Plugin</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-session">Session</button>
+  </nav>
   <header class="page-head drawer-ph" data-ph="plugin">
     <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
     <div class="ph-tx"><h2>插件</h2><p class="sub">浏览、安装与管理扩展插件</p></div>
@@ -3135,7 +3149,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 	  </nav>
 
   <!-- ===== AI 配置 ===== -->
-  <section class="set-card" id="set-ai" aria-label="AI 配置">
+  <section class="set-card ai-section ai-tab-active" id="ai-llm" data-ai-tab="ai-llm" aria-label="LLM 大模型配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></span>
       <div>
@@ -3191,7 +3205,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
   <!-- ===== Agent 能力（独立卡，v1.15 与 AI 配置分开） ===== -->
-  <section class="set-card" id="set-agent" aria-label="Agent 能力">
+  <section class="set-card ai-section" id="ai-agent" data-ai-tab="ai-agent" aria-label="Agent 能力">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H7a3 3 0 0 0-3 3v3a3 3 0 0 0 1 2.2V18a3 3 0 0 0 3 3h2v-7H8v-3h2V8a2 2 0 0 1 4 0v1h2v3h-2v7h2a3 3 0 0 0 3-3v-3.8a3 3 0 0 0 1-2.2V9a3 3 0 0 0-3-3h-2V5a3 3 0 0 0-3-3z"/></svg></span>
       <div>
@@ -3243,6 +3257,114 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="set-actions">
       <button type="button" class="addbtn sm" id="btnClearMem" style="--sc:var(--muted);white-space:nowrap">清空记忆</button>
       <button type="button" class="addbtn sm" id="btnCancelGoal" style="--sc:var(--danger,var(--muted));white-space:nowrap">取消当前目标</button>
+    </div>
+  </section>
+
+  <section class="set-card ai-section" id="ai-skills" data-ai-tab="ai-skills" aria-label="技能配置">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
+      <div><h3>技能配置</h3><p class="set-desc">管理 AI 可调用的内置与自定义技能。禁用的技能不会被 Agent 调用。</p></div>
+    </header>
+    <div class="set-subhead">内置技能</div>
+    <div id="aiSkillsBuiltin"></div>
+    <div class="set-subhead">自定义技能定义（JSON）</div>
+    <div class="set-field">
+      <label for="aiSkillsCustom">自定义技能 JSON</label>
+      <div class="ctl">
+        <textarea id="aiSkillsCustom" rows="6" class="code-input" style="resize:vertical" placeholder='[{"name":"my_skill","desc":"自定义技能","enabled":true}]'></textarea>
+        <p class="hint" style="font-size:12px;margin-top:4px">JSON 数组格式，每项含 name / desc / enabled 字段。</p>
+      </div>
+    </div>
+    <div class="set-actions">
+      <button type="button" class="addbtn sm" id="aiSkillsSave" style="--sc:var(--accent);flex:1">保存技能配置</button>
+    </div>
+  </section>
+
+  <section class="set-card ai-section" id="ai-mcp" data-ai-tab="ai-mcp" aria-label="MCP 服务器配置">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="6" rx="2"/><rect x="2" y="15" width="20" height="6" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg></span>
+      <div><h3>MCP 服务器</h3><p class="set-desc">配置 Model Context Protocol 服务器，扩展 AI 的工具与资源访问能力。</p></div>
+    </header>
+    <div id="aiMcpList"></div>
+    <div class="set-actions">
+      <button type="button" class="addbtn sm" id="aiMcpAdd" style="--sc:var(--accent);white-space:nowrap">添加服务器</button>
+      <button type="button" class="addbtn sm" id="aiMcpSave" style="--sc:var(--accent);flex:1">保存 MCP 配置</button>
+    </div>
+  </section>
+
+  <section class="set-card ai-section" id="ai-workflow" data-ai-tab="ai-workflow" aria-label="工作流配置">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></span>
+      <div><h3>工作流</h3><p class="set-desc">定义 AI 自动化工作流：触发条件 → 执行步骤。支持手动与自动触发。</p></div>
+    </header>
+    <div id="aiWorkflowList"></div>
+    <div class="set-actions">
+      <button type="button" class="addbtn sm" id="aiWorkflowAdd" style="--sc:var(--accent);white-space:nowrap">新建工作流</button>
+      <button type="button" class="addbtn sm" id="aiWorkflowSave" style="--sc:var(--accent);flex:1">保存工作流配置</button>
+    </div>
+  </section>
+
+  <section class="set-card ai-section" id="ai-memory" data-ai-tab="ai-memory" aria-label="记忆配置">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/><path d="M12 7v5l3 3"/></svg></span>
+      <div><h3>记忆配置</h3><p class="set-desc">控制 AI 的上下文窗口、长期记忆与检索策略。</p></div>
+    </header>
+    <div class="set-field">
+      <label for="aiMemWindow">上下文窗口大小（条，1~50）</label>
+      <div class="ctl"><input id="aiMemWindow" type="number" min="1" max="50" placeholder="10（默认）"></div>
+    </div>
+    <div class="set-switch">
+      <input type="checkbox" id="aiMemLongTerm" aria-label="长期记忆">
+      <div><div class="sw-label">长期记忆</div><div class="sw-sub">开启后 AI 可跨会话检索历史记忆</div></div>
+    </div>
+    <div class="set-field">
+      <label for="aiMemThreshold">记忆检索阈值（0~1）</label>
+      <div class="ctl"><input id="aiMemThreshold" type="range" min="0" max="1" step="0.05" value="0.7" style="width:100%"></div>
+    </div>
+    <div class="set-field">
+      <label for="aiMemStrategy">记忆策略</label>
+      <div class="ctl">
+        <select id="aiMemStrategy">
+          <option value="recent">最近</option>
+          <option value="relevant">相关</option>
+          <option value="mixed">混合</option>
+        </select>
+      </div>
+    </div>
+    <div class="set-actions">
+      <button type="button" class="addbtn sm" id="aiMemSave" style="--sc:var(--accent);flex:1">保存记忆配置</button>
+    </div>
+  </section>
+
+  <section class="set-card ai-section" id="ai-plugin" data-ai-tab="ai-plugin" aria-label="AI 插件配置">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
+      <div><h3>AI 插件</h3><p class="set-desc">管理 AI 扩展插件：启用/禁用、配置插件参数。</p></div>
+    </header>
+    <div id="aiPluginList"></div>
+    <div class="set-actions">
+      <button type="button" class="addbtn sm" id="aiPluginSave" style="--sc:var(--accent);flex:1">保存插件配置</button>
+    </div>
+  </section>
+
+  <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-session" aria-label="会话管理">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+      <div><h3>会话管理</h3><p class="set-desc">管理 AI 对话会话：超时设置、自动保存、历史记录。</p></div>
+    </header>
+    <div class="set-field">
+      <label for="aiSessTimeout">会话超时（分钟，5~1440）</label>
+      <div class="ctl"><input id="aiSessTimeout" type="number" min="5" max="1440" placeholder="30（默认）"></div>
+    </div>
+    <div class="set-switch">
+      <input type="checkbox" id="aiSessAutosave" checked aria-label="自动保存会话">
+      <div><div class="sw-label">自动保存会话</div><div class="sw-sub">开启后每轮对话自动保存到本地</div></div>
+    </div>
+    <div class="set-subhead">会话历史</div>
+    <div id="aiSessHistory"></div>
+    <div class="set-actions">
+      <button type="button" class="addbtn sm" id="aiSessClear" style="--sc:var(--danger,var(--muted));white-space:nowrap">清除所有会话</button>
+      <button type="button" class="addbtn sm" id="aiSessSave" style="--sc:var(--accent);flex:1">保存会话配置</button>
     </div>
   </section>
 
@@ -19054,6 +19176,275 @@ $$("#drawer .set-nav-btn[data-set-tab]").forEach(function(b){
   const first = document.querySelector("#drawer .set-nav-btn[data-set-tab]");
   if(first) _switchSetTab(first.getAttribute("data-set-tab"));
 })();
+
+/* ===== v3.2：AI 页面 8 子模块导航切换 + 独立配置保存 ===== */
+function getAiConfig(module){
+  try{
+    const raw = localStorage.getItem(PREFIX + "ai_config_" + module);
+    return raw ? JSON.parse(raw) : null;
+  }catch(_e){ return null; }
+}
+function saveAiConfig(module, data){
+  try{
+    localStorage.setItem(PREFIX + "ai_config_" + module, JSON.stringify(data));
+    return true;
+  }catch(_e){ return false; }
+}
+function _switchAiTab(tabId){
+  $$("#drawer .set-nav-btn[data-ai-tab]").forEach(function(b){
+    b.classList.toggle("active", b.getAttribute("data-ai-tab") === tabId);
+  });
+  $$("#drawer .ai-section").forEach(function(s){
+    s.classList.toggle("ai-tab-active", s.getAttribute("data-ai-tab") === tabId);
+  });
+  const d = $("#drawer"); if(d) d.scrollTop = 0;
+}
+$$("#drawer .set-nav-btn[data-ai-tab]").forEach(function(b){
+  b.onclick = function(){ _switchAiTab(b.getAttribute("data-ai-tab")); };
+});
+const AI_BUILTIN_SKILLS = [
+  {name:"create_task", desc:"创建任务", enabled:true},
+  {name:"complete_task", desc:"完成任务", enabled:true},
+  {name:"search", desc:"搜索", enabled:true},
+  {name:"export", desc:"导出", enabled:true},
+  {name:"review", desc:"复习", enabled:true},
+  {name:"stats", desc:"统计", enabled:true}
+];
+function renderAiSkillsBuiltin(){
+  const box = $("#aiSkillsBuiltin"); if(!box) return;
+  const saved = getAiConfig("skills");
+  const skills = saved && Array.isArray(saved.builtin) ? saved.builtin : AI_BUILTIN_SKILLS;
+  box.innerHTML = "";
+  skills.forEach(function(s, i){
+    const row = document.createElement("div");
+    row.className = "set-switch";
+    row.innerHTML = '<input type="checkbox" id="aiSkill_'+i+'"'+(s.enabled?" checked":"")+" aria-label=\""+s.name+'">'+
+      "<div><div class=\"sw-label\">"+s.name+"</div><div class=\"sw-sub\">"+s.desc+"</div></div>";
+    box.appendChild(row);
+  });
+}
+function renderAiMcpList(){
+  const box = $("#aiMcpList"); if(!box) return;
+  const saved = getAiConfig("mcp");
+  const servers = saved && Array.isArray(saved.servers) ? saved.servers : [];
+  box.innerHTML = "";
+  if(servers.length === 0){
+    const empty = document.createElement("p");
+    empty.className = "set-tip";
+    empty.textContent = "暂无 MCP 服务器，点击「添加服务器」新建。";
+    box.appendChild(empty);
+    return;
+  }
+  servers.forEach(function(srv, i){
+    const row = document.createElement("div");
+    row.className = "set-field";
+    row.innerHTML = "<label for=\"aiMcpName_"+i+"\">服务器 "+(i+1)+"</label>"+
+      "<div class=\"ctl\"><div class=\"btn-row\">"+
+      "<input id=\"aiMcpName_"+i+'" placeholder="名称" value="'+(srv.name||"")+'" style="flex:1;min-width:80px">'+
+      "<input id=\"aiMcpUrl_"+i+'" placeholder="https://..." value="'+(srv.url||"")+'" style="flex:2;min-width:120px">'+
+      '<input type="checkbox" id="aiMcpEn_'+i+'"'+(srv.enabled?" checked":"")+' aria-label="启用">'+
+      '<button type="button" class="addbtn sm" data-mcp-del="'+i+'" style="--sc:var(--danger,var(--muted));white-space:nowrap">删除</button>'+
+      "</div></div>";
+    box.appendChild(row);
+  });
+  $$("[data-mcp-del]").forEach(function(btn){
+    btn.onclick = function(){
+      const idx = parseInt(btn.getAttribute("data-mcp-del"), 10);
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      list.splice(idx, 1);
+      saved2.servers = list;
+      saveAiConfig("mcp", saved2);
+      renderAiMcpList();
+    };
+  });
+}
+function renderAiWorkflowList(){
+  const box = $("#aiWorkflowList"); if(!box) return;
+  const saved = getAiConfig("workflow");
+  const flows = saved && Array.isArray(saved.flows) ? saved.flows : [];
+  box.innerHTML = "";
+  if(flows.length === 0){
+    const empty = document.createElement("p");
+    empty.className = "set-tip";
+    empty.textContent = "暂无工作流，点击「新建工作流」创建。";
+    box.appendChild(empty);
+    return;
+  }
+  flows.forEach(function(f, i){
+    const row = document.createElement("div");
+    row.className = "set-field";
+    row.innerHTML = "<label for=\"aiWfName_"+i+"\">工作流 "+(i+1)+"</label>"+
+      "<div class=\"ctl\"><div class=\"btn-row\">"+
+      "<input id=\"aiWfName_"+i+'" placeholder="名称" value="'+(f.name||"")+'" style="flex:1;min-width:80px">'+
+      "<input id=\"aiWfTrigger_"+i+'" placeholder="触发条件" value="'+(f.trigger||"")+'" style="flex:2;min-width:120px">'+
+      '<button type="button" class="addbtn sm" data-wf-del="'+i+'" style="--sc:var(--danger,var(--muted));white-space:nowrap">删除</button>'+
+      "</div></div>";
+    box.appendChild(row);
+  });
+  $$("[data-wf-del]").forEach(function(btn){
+    btn.onclick = function(){
+      const idx = parseInt(btn.getAttribute("data-wf-del"), 10);
+      const saved2 = getAiConfig("workflow") || {};
+      const list = Array.isArray(saved2.flows) ? saved2.flows : [];
+      list.splice(idx, 1);
+      saved2.flows = list;
+      saveAiConfig("workflow", saved2);
+      renderAiWorkflowList();
+    };
+  });
+}
+const AI_BUILTIN_PLUGINS = [
+  {name:"code_runner", desc:"代码执行", enabled:false},
+  {name:"web_search", desc:"网页搜索", enabled:false},
+  {name:"file_reader", desc:"文件读取", enabled:false}
+];
+function renderAiPluginList(){
+  const box = $("#aiPluginList"); if(!box) return;
+  const saved = getAiConfig("plugin");
+  const plugins = saved && Array.isArray(saved.plugins) ? saved.plugins : AI_BUILTIN_PLUGINS;
+  box.innerHTML = "";
+  plugins.forEach(function(p, i){
+    const row = document.createElement("div");
+    row.className = "set-switch";
+    row.innerHTML = '<input type="checkbox" id="aiPlugin_'+i+'"'+(p.enabled?" checked":"")+" aria-label=\""+p.name+'">'+
+      "<div><div class=\"sw-label\">"+p.name+"</div><div class=\"sw-sub\">"+p.desc+"</div></div>";
+    box.appendChild(row);
+  });
+}
+function renderAiSessHistory(){
+  const box = $("#aiSessHistory"); if(!box) return;
+  const saved = getAiConfig("session");
+  const history = saved && Array.isArray(saved.history) ? saved.history : [];
+  box.innerHTML = "";
+  if(history.length === 0){
+    const empty = document.createElement("p");
+    empty.className = "set-tip";
+    empty.textContent = "暂无会话历史。";
+    box.appendChild(empty);
+    return;
+  }
+  history.slice(0, 20).forEach(function(h, i){
+    const row = document.createElement("div");
+    row.className = "set-switch";
+    row.innerHTML = "<div><div class=\"sw-label\">"+(h.title||("会话 "+(i+1)))+"</div><div class=\"sw-sub\">"+(h.time||"")+"</div></div>";
+    box.appendChild(row);
+  });
+}
+function restoreAiMemory(){
+  const saved = getAiConfig("memory"); if(!saved) return;
+  const w = $("#aiMemWindow"); if(w && saved.windowSize) w.value = saved.windowSize;
+  const lt = $("#aiMemLongTerm"); if(lt) lt.checked = !!saved.longTerm;
+  const th = $("#aiMemThreshold"); if(th && saved.threshold !== null && saved.threshold !== undefined) th.value = saved.threshold;
+  const st = $("#aiMemStrategy"); if(st && saved.strategy) st.value = saved.strategy;
+}
+function restoreAiSession(){
+  const saved = getAiConfig("session"); if(!saved) return;
+  const t = $("#aiSessTimeout"); if(t && saved.timeout) t.value = saved.timeout;
+  const as = $("#aiSessAutosave"); if(as) as.checked = !!saved.autosave;
+}
+function restoreAiSkillsCustom(){
+  const saved = getAiConfig("skills"); if(!saved || !saved.custom) return;
+  const ta = $("#aiSkillsCustom"); if(ta) ta.value = saved.custom;
+}
+renderAiSkillsBuiltin();
+restoreAiSkillsCustom();
+renderAiMcpList();
+renderAiWorkflowList();
+restoreAiMemory();
+renderAiPluginList();
+restoreAiSession();
+renderAiSessHistory();
+$("#aiSkillsSave").onclick = function(){
+  const builtin = [];
+  $$("#aiSkillsBuiltin input[type=checkbox]").forEach(function(cb, i){
+    builtin.push({name: AI_BUILTIN_SKILLS[i].name, desc: AI_BUILTIN_SKILLS[i].desc, enabled: cb.checked});
+  });
+  const customTa = $("#aiSkillsCustom");
+  saveAiConfig("skills", {builtin: builtin, custom: customTa ? customTa.value : ""});
+  toast("技能配置已保存");
+};
+$("#aiMcpAdd").onclick = function(){
+  const saved = getAiConfig("mcp") || {};
+  const servers = Array.isArray(saved.servers) ? saved.servers : [];
+  servers.push({name: "", url: "", enabled: false});
+  saved.servers = servers;
+  saveAiConfig("mcp", saved);
+  renderAiMcpList();
+};
+$("#aiMcpSave").onclick = function(){
+  const servers = [];
+  const box = $("#aiMcpList");
+  const rows = box.querySelectorAll(".set-field");
+  rows.forEach(function(row, i){
+    const nameInp = row.querySelector("#aiMcpName_"+i);
+    const urlInp = row.querySelector("#aiMcpUrl_"+i);
+    const enInp = row.querySelector("#aiMcpEn_"+i);
+    servers.push({name: nameInp?nameInp.value:"", url: urlInp?urlInp.value:"", enabled: enInp?enInp.checked:false});
+  });
+  saveAiConfig("mcp", {servers: servers});
+  toast("MCP 配置已保存");
+};
+$("#aiWorkflowAdd").onclick = function(){
+  const saved = getAiConfig("workflow") || {};
+  const flows = Array.isArray(saved.flows) ? saved.flows : [];
+  flows.push({name: "", trigger: ""});
+  saved.flows = flows;
+  saveAiConfig("workflow", saved);
+  renderAiWorkflowList();
+};
+$("#aiWorkflowSave").onclick = function(){
+  const flows = [];
+  const box = $("#aiWorkflowList");
+  const rows = box.querySelectorAll(".set-field");
+  rows.forEach(function(row, i){
+    const nameInp = row.querySelector("#aiWfName_"+i);
+    const triggerInp = row.querySelector("#aiWfTrigger_"+i);
+    flows.push({name: nameInp?nameInp.value:"", trigger: triggerInp?triggerInp.value:""});
+  });
+  saveAiConfig("workflow", {flows: flows});
+  toast("工作流配置已保存");
+};
+$("#aiMemSave").onclick = function(){
+  const w = $("#aiMemWindow");
+  const lt = $("#aiMemLongTerm");
+  const th = $("#aiMemThreshold");
+  const st = $("#aiMemStrategy");
+  saveAiConfig("memory", {
+    windowSize: w ? Number(w.value) : 10,
+    longTerm: lt ? lt.checked : false,
+    threshold: th ? Number(th.value) : 0.7,
+    strategy: st ? st.value : "recent"
+  });
+  toast("记忆配置已保存");
+};
+$("#aiPluginSave").onclick = function(){
+  const plugins = [];
+  $$("#aiPluginList input[type=checkbox]").forEach(function(cb, i){
+    plugins.push({name: AI_BUILTIN_PLUGINS[i].name, desc: AI_BUILTIN_PLUGINS[i].desc, enabled: cb.checked});
+  });
+  saveAiConfig("plugin", {plugins: plugins});
+  toast("插件配置已保存");
+};
+$("#aiSessSave").onclick = function(){
+  const t = $("#aiSessTimeout");
+  const as = $("#aiSessAutosave");
+  const saved = getAiConfig("session") || {};
+  saveAiConfig("session", {
+    timeout: t ? Number(t.value) : 30,
+    autosave: as ? as.checked : true,
+    history: saved.history || []
+  });
+  toast("会话配置已保存");
+};
+$("#aiSessClear").onclick = function(){
+  if(!confirm("确定清除所有 AI 会话历史？此操作不可撤销。")) return;
+  const saved = getAiConfig("session") || {};
+  saved.history = [];
+  saveAiConfig("session", saved);
+  renderAiSessHistory();
+  toast("已清除所有会话历史");
+};
 $("#cfgProfileNew").onclick = newProfile;
 $("#cfgProfileDup").onclick = dupProfile;
 $("#cfgProfileDel").onclick = delProfile;
