@@ -20764,13 +20764,7 @@ if (typeof window !== "undefined") {
  *   · localhost / 127.0.0.1（vitest/jsdom 与本地服务模式）
  *   · 任意环境显式追加 ?__test=1（开发者自查）
  */
-const __TEST_GATE__ = (function(){
-  try{
-    if(typeof location === "undefined") return false;
-    if(location.hostname === "localhost" || location.hostname === "127.0.0.1") return true;
-    return /[?&]__test=1/.test(location.search || "");
-  }catch(e){ return false; }
-})();
+const __TEST_GATE__ = false; /* [prod build] test hooks disabled */
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
