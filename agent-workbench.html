@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111118">
-<meta name="description" content="Agent 工坊 — 习惯链驱动的智能任务管理 PWA">
+<meta name="description" content="Agent 工坊 — 多场景任务 / 记录 / AI 助手的本地优先工作台（PWA，离线可用）">
 <meta name="author" content="Agent Workshop">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -359,11 +359,12 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .tbtn svg{width:18px;height:18px}
 /* 系统级消息按钮角标（红色小圆点 / 未读数） */
 .tbtn{position:relative}
-/* v1.15：顶栏系统级按钮横排布局（图标左·文字右）——回收垂直空间（75→54px） */
-.topbar .tbtn{flex-direction:row;gap:var(--space-1);padding:var(--space-1) var(--space-2);min-height:36px;
-  min-width:0;font-size:11px;line-height:1.1;white-space:nowrap}
-.topbar .tbtn .lbl{display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
-.topbar .tbtn svg{width:16px;height:16px;flex-shrink:0}
+/* v3.1.1：顶栏系统级按钮纵排布局（图标在上·文字在下）——同等宽高方形按钮 */
+.topbar .tbtn{flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  padding:var(--space-1) var(--space-2);min-height:48px;min-width:48px;
+  font-size:11px;line-height:1.1;white-space:nowrap}
+.topbar .tbtn .lbl{display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px;font-size:11px}
+.topbar .tbtn svg{width:20px;height:20px;flex-shrink:0}
 .topbar .tbtn .badge{position:absolute;top:2px;right:6px}
 .tbtn .badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;
   padding:0 4px;border-radius:var(--radius-md);background:var(--danger);color:var(--on-accent);
@@ -1352,7 +1353,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .drawer-page{padding:var(--space-6) var(--space-8) !important}
 }
 /* v3.1.1：drawer-page padding 已与 #main 对齐，drawer-ph margin 归零（与 page-head-card 一致） */
-.drawer-ph{margin:0 0 var(--space-2);
+.drawer-ph{margin:0 0 var(--space-3);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-1);padding:var(--space-4)}
 /* 抽屉宽度有限(316px)，长 sub 文本会换行导致标题栏高度不一致。
@@ -2960,18 +2961,18 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <button type="button" class="tbtn" id="btnHelp" title="使用指南" aria-label="使用指南" style="display:none">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl" data-i18n="top.help">指南</span></button>
     <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
-    <button type="button" class="tbtn" id="btnSearchTop" title="全文搜索 (Ctrl+Shift+F)" aria-label="全文搜索">
+    <button type="button" class="tbtn" id="btnSearchTop" aria-label="全文搜索">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
     <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
-    <button type="button" class="tbtn" id="btnCmd" title="命令面板 (Ctrl+K)" aria-label="命令面板">
+    <button type="button" class="tbtn" id="btnCmd" aria-label="命令面板">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
     <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
-    <button class="tbtn" id="btnMessages" type="button" title="消息" aria-label="消息">
+    <button class="tbtn" id="btnMessages" type="button" aria-label="消息">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="badge" id="msgBadge" style="display:none"></span><span class="lbl" data-i18n="top.messages">消息</span></button>
-    <button type="button" class="tbtn" id="btnTheme" title="切换明暗主题" aria-label="切换明暗主题">
+    <button type="button" class="tbtn" id="btnTheme" aria-label="切换明暗主题">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl" data-i18n="top.theme">主题</span></button>
-    <button type="button" class="tbtn" id="btnDownload" title="导出数据" aria-label="导出数据">
+    <button type="button" class="tbtn" id="btnDownload" aria-label="导出数据">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
     <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
     <button type="button" class="tbtn install-btn" id="btnInstall" title="安装到桌面" aria-label="安装应用到桌面" style="display:none">
@@ -3881,10 +3882,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.1.0";
+const VERSION = "3.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260829d";
+const BUILD_TAG = "20260829e";
 
 
 
