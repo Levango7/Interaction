@@ -31,8 +31,8 @@
   --bg:#f4f5fb; --panel:#ffffff; --panel2:#f7f8fc; --line:#eceef4;
   --side-bg:#ffffff;
   --tb-row2-bg:transparent;
-  --text:#0c0c12; --muted:#5c5c66; --accent:#111118;
-  --canvas-glow:radial-gradient(ellipse 70% 45% at 50% -8%,rgba(168,139,250,.42),transparent 58%),radial-gradient(ellipse 45% 40% at 92% 8%,rgba(125,211,252,.32),transparent 52%),radial-gradient(ellipse 42% 36% at 8% 18%,rgba(251,191,214,.28),transparent 50%);
+  --text:#0c0c12; --muted:#5c5c66; --accent:#1e4d8c;
+  --canvas-glow:none;
   /* PS lite 图片编辑器：canvas 绘制用运行时令牌（_pfCssColor 读取，避免硬编码触发 lint-colors 门禁） */
   --ps-wm-fill:rgba(255,255,255,0.92); --ps-wm-shadow:rgba(0,0,0,0.6);
   --radius:16px; --shadow:0 8px 28px rgba(15,23,42,.06);
@@ -46,7 +46,7 @@
   --danger:#d83b3b; --danger-soft:#fdeeee; --danger-border:#f3c4c4;
   --danger-overdue-bg:#fef6f6; --danger-overdue-border:#f0c8c8;
   --warn:#c0761f; --warn-soft:#fdf3e3;
-  --ok:#34a853; --accent-soft:#eceef3;
+  --ok:#34a853; --accent-soft:#dde6f3;
   /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/习惯链图标引用） */
   --sc-office:#0a6cbd; --sc-design:#d6409f; --sc-study:#d97706; --sc-data:#0d9488; --sc-code:#34a853; --sc-life:#7c5cbf;
   /* 自定义场景默认色（P1：color input 默认值 / 非法色值回退） */
@@ -86,6 +86,12 @@
      供 msg-panel 等下拉面板兜底定位引用；<768px 触摸态按钮 44px 时保持 54px 不变） */
   --topbar-h:54px; /* v1.15：75→54，顶栏按钮改横排（图标左·文字右）回收垂直空间 */
 }
+/* 极光主题（aurora）：保留极光渐变 + 近黑主色 */
+:root[data-theme="aurora"]{
+  --accent:#111118; --accent-soft:#eceef3;
+  --canvas-glow:radial-gradient(ellipse 70% 45% at 50% -8%,rgba(168,139,250,.42),transparent 58%),radial-gradient(ellipse 45% 40% at 92% 8%,rgba(125,211,252,.32),transparent 52%),radial-gradient(ellipse 42% 36% at 8% 18%,rgba(251,191,214,.28),transparent 50%);
+}
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
@@ -4008,7 +4014,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260830a";
+const BUILD_TAG = "20260830b";
 
 
 
@@ -12341,7 +12347,7 @@ function renderToolboxPage(){
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.toolbox||""}</span>
       <div class="ph-tx"><h2>工具箱</h2><p class="sub">文档 · 设计 · 编程 · 生活 · 检索 · 效率工具——所有工具与应用的统一入口（Ctrl+K 可直达）</p></div>
-      <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
+      <span class="ph-act"><button type="button" class="page-back" onclick="setActive('overview');render();" aria-label="返回主页">← 主页</button></span>
     </header></div>
     ${chips}
     <div class="tool-filter-bar" style="margin-bottom:var(--space-2)"><input type="text" id="toolboxQ" placeholder="搜索工具…" value="${esc(_toolboxQ)}" style="flex:1" aria-label="搜索工具"></div>
@@ -21119,7 +21125,8 @@ const MESSAGES = {
     "settings.language.zh": "中文",
     "settings.language.en": "English",
     "settings.theme": "主题",
-    "settings.theme.light": "亮色",
+    "settings.theme.light": "浅色",
+    "settings.theme.aurora": "极光",
     "settings.theme.dark": "暗色",
     "settings.theme.system": "跟随系统",
     "settings.recyclePolicy": "回收站自动清理",
@@ -21328,6 +21335,7 @@ const MESSAGES = {
     "settings.language.en": "English",
     "settings.theme": "Theme",
     "settings.theme.light": "Light",
+    "settings.theme.aurora": "Aurora",
     "settings.theme.dark": "Dark",
     "settings.theme.system": "Follow System",
     "settings.recyclePolicy": "Recycle Auto Cleanup",
@@ -21991,7 +21999,8 @@ _initPlugins();// ===== Theme System (v1.5-C 多主题 / 自定义编辑 / 场�
 
 // 预置主题定义（4 个：浅色 / 深色 / 高对比度 / 护眼模式）
 const PRESET_THEMES = {
-  light:    { name: "浅色",     desc: "默认浅色主题" },
+  light:    { name: "浅色",     desc: "稳重自然默认主题" },
+  aurora:   { name: "极光",     desc: "极光渐变亮色主题" },
   dark:     { name: "深色",     desc: "暗色护眼主题" },
   contrast: { name: "高对比度", desc: "无障碍高对比度主题" },
   sepia:    { name: "护眼模式", desc: "暖色调护眼阅读模式" }
@@ -22142,6 +22151,8 @@ function setTheme(themeId){
 
   if(themeId === "light"){
     // 默认浅色，无需额外属性
+  }else if(themeId === "aurora"){
+    el.setAttribute("data-theme", "aurora");
   }else if(themeId === "dark"){
     el.setAttribute("data-theme", "dark");
   }else if(themeId === "contrast"){
