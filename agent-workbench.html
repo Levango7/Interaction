@@ -586,8 +586,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .form-row label{display:block;font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-1);
   font-weight:500;letter-spacing:.01em}
 /* v2.1.1 按钮高度阶梯（小操作钮族）：base=32px / sm=28px / xs=24px；min 仅加 min-width 不改高 */
-.addbtn{padding:6px var(--space-3);border-radius:var(--radius-md);background:var(--sc,var(--accent));
-  color:var(--on-accent);font-size:var(--fs-sm);min-height:32px;font-weight:600;
+/* v3.2 修复：加 display:inline-flex+align-items/justify-content center 确保加号/图标/文字垂直水平居中 */
+.addbtn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1);
+  padding:6px var(--space-3);border-radius:var(--radius-md);background:var(--sc,var(--accent));
+  color:var(--on-accent);font-size:var(--fs-sm);min-height:32px;font-weight:600;line-height:1;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast);letter-spacing:-.01em}
 .addbtn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .addbtn:active{filter:brightness(.92)}
@@ -1377,6 +1379,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 #drawer[data-page="knowledge"] .drawer-ph:not([data-ph="knowledge"]),
 #drawer:not([data-page]) .drawer-ph:not([data-ph="settings"]),
 #drawer[data-page="settings"] .drawer-ph:not([data-ph="settings"]),
+#drawer:not([data-page="ai"]) .ai-nav,
 #drawer[data-page="ai"] .set-card:not(.ai-section),
 #drawer[data-page="ai"] .set-nav:not(.ai-nav),
 #drawer[data-page="plugin"] .set-card:not(#set-plugin),
@@ -3119,14 +3122,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <button class="page-back drawer-close" type="button" aria-label="返回上一视图">← 返回</button>
   </header>
   <nav class="set-nav ai-nav" aria-label="AI模块导航">
-    <button type="button" class="set-nav-btn active" data-ai-tab="ai-llm">LLM</button>
+    <button type="button" class="set-nav-btn active" data-ai-tab="ai-llm">大模型</button>
     <button type="button" class="set-nav-btn" data-ai-tab="ai-agent">Agent</button>
-    <button type="button" class="set-nav-btn" data-ai-tab="ai-skills">Skills</button>
-    <button type="button" class="set-nav-btn" data-ai-tab="ai-mcp">MCP</button>
-    <button type="button" class="set-nav-btn" data-ai-tab="ai-workflow">Workflow</button>
-    <button type="button" class="set-nav-btn" data-ai-tab="ai-memory">Memory</button>
-    <button type="button" class="set-nav-btn" data-ai-tab="ai-plugin">Plugin</button>
-    <button type="button" class="set-nav-btn" data-ai-tab="ai-session">Session</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-ext">扩展</button>
   </nav>
   <header class="page-head drawer-ph" data-ph="plugin">
     <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
@@ -3261,7 +3259,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
-  <section class="set-card ai-section" id="ai-skills" data-ai-tab="ai-skills" aria-label="技能配置">
+  <section class="set-card ai-section" id="ai-skills" data-ai-tab="ai-ext" aria-label="技能配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
       <div><h3>技能配置</h3><p class="set-desc">管理 AI 可调用的内置与自定义技能。禁用的技能不会被 Agent 调用。</p></div>
@@ -3281,7 +3279,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
-  <section class="set-card ai-section" id="ai-mcp" data-ai-tab="ai-mcp" aria-label="MCP 服务器配置">
+  <section class="set-card ai-section" id="ai-mcp" data-ai-tab="ai-ext" aria-label="MCP 服务器配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="6" rx="2"/><rect x="2" y="15" width="20" height="6" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg></span>
       <div><h3>MCP 服务器</h3><p class="set-desc">配置 Model Context Protocol 服务器，扩展 AI 的工具与资源访问能力。</p></div>
@@ -3293,7 +3291,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
-  <section class="set-card ai-section" id="ai-workflow" data-ai-tab="ai-workflow" aria-label="工作流配置">
+  <section class="set-card ai-section" id="ai-workflow" data-ai-tab="ai-ext" aria-label="工作流配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></span>
       <div><h3>工作流</h3><p class="set-desc">定义 AI 自动化工作流：触发条件 → 执行步骤。支持手动与自动触发。</p></div>
@@ -3305,7 +3303,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
-  <section class="set-card ai-section" id="ai-memory" data-ai-tab="ai-memory" aria-label="记忆配置">
+  <section class="set-card ai-section" id="ai-memory" data-ai-tab="ai-ext" aria-label="记忆配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/><path d="M12 7v5l3 3"/></svg></span>
       <div><h3>记忆配置</h3><p class="set-desc">控制 AI 的上下文窗口、长期记忆与检索策略。</p></div>
@@ -3337,7 +3335,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
-  <section class="set-card ai-section" id="ai-plugin" data-ai-tab="ai-plugin" aria-label="AI 插件配置">
+  <section class="set-card ai-section" id="ai-plugin" data-ai-tab="ai-ext" aria-label="AI 插件配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
       <div><h3>AI 插件</h3><p class="set-desc">管理 AI 扩展插件：启用/禁用、配置插件参数。</p></div>
@@ -3348,7 +3346,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
-  <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-session" aria-label="会话管理">
+  <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-ext" aria-label="会话管理">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
       <div><h3>会话管理</h3><p class="set-desc">管理 AI 对话会话：超时设置、自动保存、历史记录。</p></div>
