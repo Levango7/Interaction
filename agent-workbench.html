@@ -91,7 +91,7 @@
   --bg:#f4f5fb; --panel:#ffffff; --panel2:#f7f8fc; --line:#eceef4;
   --text:#0c0c12; --muted:#5c5c66; --accent:#111118; --accent-soft:#eceef3;
   --surface-hover:#f0f0f4; --surface-muted:#f2f2f5;
-  --canvas-glow:radial-gradient(ellipse 70% 45% at 50% -8%,rgba(168,139,250,.42),transparent 58%),radial-gradient(ellipse 45% 40% at 92% 8%,rgba(125,211,252,.32),transparent 52%),radial-gradient(ellipse 42% 36% at 8% 18%,rgba(251,191,214,.28),transparent 50%);
+  --canvas-glow:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(168,139,250,.55),transparent 60%),radial-gradient(ellipse 50% 45% at 92% 5%,rgba(56,189,248,.42),transparent 55%),radial-gradient(ellipse 45% 40% at 8% 15%,rgba(244,114,182,.38),transparent 52%),radial-gradient(ellipse 40% 35% at 85% 85%,rgba(52,211,153,.30),transparent 50%),radial-gradient(ellipse 35% 30% at 15% 90%,rgba(251,191,36,.28),transparent 48%);
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -480,6 +480,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 卡高精确一致(82px)：页面级标题卡去掉自身 card 边框(1px×2)，
    边框由 header 承担——与抽屉 drawer-ph(header 自带边框)完全同构 */
 .card.page-head-card{border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+.card.page-head-card{padding:0;margin-bottom:var(--space-2)}
 .page-head-card > .page-head{padding:var(--space-4)}
 
 /* 关键修复：.card .sub(0,2,0) 会覆盖 .page-head .sub(0,2,0)（后者定义在前被覆盖），
@@ -534,6 +535,8 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   box-shadow:var(--shadow);padding:var(--space-4);margin-bottom:var(--space-3);
   transition:box-shadow var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast)}
 .card:hover{box-shadow:var(--shadow-2);border-color:color-mix(in srgb,var(--accent) 50%,var(--line));transform:translateY(-2px)}
+/* 子card悬停：更粗边框 + 背景色区分 + 轻微上浮 */
+.card .card:hover{border-width:2px;border-color:color-mix(in srgb,var(--accent) 60%,var(--line));background:var(--surface-hover);box-shadow:var(--shadow-1);transform:translateY(-1px)}
 .card h2{margin:0 0 var(--space-2);font-size:var(--fs-base);font-weight:600;letter-spacing:-.01em;
   display:flex;align-items:center;gap:var(--space-2)}
 .card .sub{color:var(--muted);font-size:var(--fs-xs);margin:0 0 var(--space-2);line-height:1.4}
@@ -3980,7 +3983,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260830g";
+const BUILD_TAG = "20260830h";
 
 
 
@@ -8424,6 +8427,7 @@ function openChartStore(){
     $("#main").innerHTML = sanitizeHtml(html);
     $("#main").classList.add("page-chart-store");
     bindEvents();
+    appendFoot();
   }
 
   function persistCanvas(){
@@ -9956,6 +9960,7 @@ function openToolStub(toolId, label){
     if(typeof app.bind === "function") app.bind();
     const back = $("#toolStubBack");
     if(back) back.onclick = function(){ _sideActive = null; render(); };
+    appendFoot();
     return;
   }
   /* 未实现：占位页 */
@@ -9972,6 +9977,7 @@ function openToolStub(toolId, label){
     + '</div>');
   const back = $("#toolStubBack");
   if(back) back.onclick = function(){ _sideActive = null; render(); };
+  appendFoot();
 }
 
 /* ===== v1.10.0：应用 popover 5 项能力实现 ===== */
@@ -12260,7 +12266,7 @@ function _tasksHeadHtml(){
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.tasks||""}</span>
     <div class="ph-tx"><h2>任务</h2><p class="sub">跨场景任务中心——所有场景的任务在这里统一管理</p></div>
-    <div class="ph-actions"><button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button></div>
+    <div class="ph-actions"><button type="button" class="addbtn sm" id="btnBackHome" style="--sc:var(--muted)">← 主页</button></div>
   </header></div>
   <nav class="set-nav tasks-view-tabs" aria-label="任务视图切换">${tabs.map(([k,l])=>
     `<button type="button" class="set-nav-btn tasks-tab${_tasksView===k?" active":""}" data-tasks-view="${k}">${l}</button>`).join("")}</nav>`;
@@ -12313,7 +12319,7 @@ function renderToolboxPage(){
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.toolbox||""}</span>
       <div class="ph-tx"><h2>工具箱</h2><p class="sub">文档 · 设计 · 编程 · 生活 · 检索 · 效率工具——所有工具与应用的统一入口（Ctrl+K 可直达）</p></div>
-      <span class="ph-act"><button type="button" class="page-back" onclick="setActive('overview');render();" aria-label="返回主页">← 主页</button></span>
+      <span class="ph-act"><button type="button" class="page-back" id="btnBackHome" aria-label="返回主页">← 主页</button></span>
     </header></div>
     ${chips}
     <div class="tool-filter-bar" style="margin-bottom:var(--space-2)"><input type="text" id="toolboxQ" placeholder="搜索工具…" value="${esc(_toolboxQ)}" style="flex:1" aria-label="搜索工具"></div>
@@ -17154,8 +17160,32 @@ function doIdbImport(file){
   if(!isElectron()) return;
   const btnSync = $("#btnSyncLocal");
   if(!btnSync) return;
+  // v3.1.2：syncPush 渲染侧接线（修复断链——此前主进程 syncSnapshot 恒为 {}，
+  // 「本机同步下载」导出空数据）。启动时 + 每次点击同步按钮时推送一次本机快照；
+  // 快照键集合与 doExport 一致（allKeys 的 wb_agent_ 前缀 + wb_custom_links）。
+  const pushSnapshot = async () => {
+    try{
+      const snap = {};
+      const keys = (typeof allKeys === "function" ? allKeys() : Object.keys(localStorage).filter(function(k){ return k.indexOf(PREFIX) === 0 || k === "wb_custom_links"; }));
+      keys.forEach(function(k){
+        const v = localStorage.getItem(k);
+        if(typeof v === "string") snap[k] = v;
+      });
+      const r = await window.electronAPI.syncPush(snap);
+      if(r && r.ok === false) toast("本机快照推送失败：" + (r.error || ""), "warn");
+      return !!(r && r.ok);
+    }catch(e){
+      toast("本机快照推送失败：" + ((e && e.message) || e), "warn");
+      return false;
+    }
+  };
+  pushSnapshot(); // 启动即推送一次（后续点击时再推，保证下载到的总是最新数据）
+  const _pushTimer = setInterval(pushSnapshot, 60000); // 周期推送（与 main.js 注释承诺一致：60s 一次）
+  if(_pushTimer && _pushTimer.unref){ try{ _pushTimer.unref(); }catch(_e){} } // jsdom 环境无 unref，静默容错
   btnSync.style.display = ""; // 显示按钮
   btnSync.onclick = async () => {
+    // 0. 先推送最新快照（下载入口读的是主进程内存快照，必须先推再下载）
+    await pushSnapshot();
     // 1. 获取本机数据（A-1 修复：syncGet IPC 包裹 try-catch，异常时给出针对性提示并终止，
     //    避免 unhandled rejection + 后续「运行中」成功语气提示自相矛盾）
     let localData;
