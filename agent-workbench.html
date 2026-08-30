@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -870,7 +870,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
   padding:var(--space-3) var(--space-3) 0;background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
 .chat-panel .chat-toolbar{margin:0;padding:0 var(--space-3);border-top:1px solid var(--line);
-  justify-content:flex-start;min-height:18px}
+  justify-content:flex-start;min-height:6px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
@@ -2193,98 +2193,102 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .plugin-card{padding:8px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-muted)}
 
 
-/* ===== v1.5-C 主题系统：护眼模式（Sepia 暖色调）令牌覆盖 ===== */
+/* ===== 护眼主题（sepia）：暖纸色底 + 琥珀金主色，如旧书页 ===== */
 :root[data-theme="sepia"]{
-  --bg:#f4ecd8; --panel:#ede0c8; --panel2:#e8d9b8; --line:#d4c4a8;
-  --side-bg:#e9dbc0;
-  /* 护眼：第二行与亮色一致的向下渐隐，维持柔和层次 */
+  --bg:#f5ecd7; --panel:#faf2e0; --panel2:#ede0c8; --line:#d4c4a8;
+  --side-bg:#f0e4cc;
+  --canvas-glow:radial-gradient(ellipse 60% 40% at 50% -8%,rgba(212,150,72,.15),transparent 55%),radial-gradient(ellipse 40% 35% at 90% 5%,rgba(180,120,60,.10),transparent 50%);
+  --brand-grad:linear-gradient(135deg,#d49648,#b8722c);
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
-  --text:#5b4636; --muted:#8a7050; --accent:#8b6914;
+  --text:#5b4636; --muted:#8a7050; --accent:#d49648;
   --shadow:0 1px 3px rgba(91,70,54,.12);
-  --surface-hover:#e0d0b0; --surface-muted:#e8d9b8;
-  --on-accent:#f4ecd8; --on-accent-soft:rgba(244,236,216,.22);
+  --surface-hover:#e8d8b8; --surface-muted:#ede0c8;
+  --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.22);
   --text-dim:#6b5640; --text-dim-2:#8a7050; --text-dim-3:#7a6248; --text-faint:#9a8060;
   --danger:#c0392b; --danger-soft:#f4e0d8; --danger-border:#d8a89a;
   --danger-overdue-bg:#f4e8e0; --danger-overdue-border:#d8a89a;
   --warn:#b8722c; --warn-soft:#f0e0c8;
-  --ok:#5a8c3a; --accent-soft:#e8d8b0;
-  --sc-office:#8b6914; --sc-design:#a84a7a; --sc-study:#b8722c; --sc-data:#3a7a6a; --sc-code:#5a8c3a; --sc-life:#7a5a9a;
-  --scenario-default:#8b6914;
-  --banner-bg:#ede0c8; --banner-border:#c8b890; --banner-ink:#6b5640; --banner-border-2:#d4c4a8;
-  --kbd-border:#c8b890; --snip-bg:#3a2a1a; --snip-fg:#f4ecd8; --toast-bg:#5b4636;
+  --ok:#6a9c4a; --accent-soft:#f0e0c8;
+  --sc-office:#8b6914; --sc-design:#a84a7a; --sc-study:#b8722c; --sc-data:#3a7a6a; --sc-code:#6a9c4a; --sc-life:#7a5a9a;
+  --scenario-default:#d49648;
+  --banner-bg:#ede0c8; --banner-border:#c8b890; --banner-ink:#5b4636; --banner-border-2:#d4c4a8;
+  --kbd-border:#c8b890; --snip-bg:#3a2a1a; --snip-fg:#f5ecd7; --toast-bg:#5b4636;
   --overlay:rgba(91,70,54,.32); --shadow-drawer:rgba(91,70,54,.16);
   --shadow-overlay:rgba(91,70,54,.28); --shadow-toast:rgba(91,70,54,.32);
   --heat-0:#e0d4b8; --heat-1:#d4d8a8; --heat-2:#b8c890; --heat-3:#9ab870; --heat-4:#7aa850;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
-  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:999px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(91,70,54,.1);
   --shadow-2:0 2px 8px rgba(91,70,54,.12);
   --shadow-3:0 4px 16px rgba(91,70,54,.16);
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
 }
 
-/* ===== v2.4.0：淡雅主题（柔和马卡龙色系）===== */
+/* ===== 初雪主题（elegant）：清冷灰绿底 + 蓝绿松柏主色，如雪后松枝 ===== */
 :root[data-theme="elegant"]{
-  --bg:#f8f6f3; --panel:#ffffff; --panel2:#f0ece6; --line:#e4dfd6;
-  --side-bg:#f2eee8;
+  --bg:#f5f7f4; --panel:#ffffff; --panel2:#eef2ee; --line:#d8ded8;
+  --side-bg:#f0f4f0;
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
-  --text:#4a4540; --muted:#8a8078; --accent:#7a9e9f;
-  --shadow:0 1px 3px rgba(74,69,64,.08);
-  --surface-hover:#ebe6df; --surface-muted:#f0ece6;
+  --canvas-glow:radial-gradient(ellipse 60% 40% at 50% -8%,rgba(91,154,142,.15),transparent 55%),radial-gradient(ellipse 40% 35% at 90% 5%,rgba(180,200,220,.12),transparent 50%);
+  --brand-grad:linear-gradient(135deg,#5b9a8e,#7ab8a8);
+  --text:#3a3f3a; --muted:#6a706a; --accent:#5b9a8e;
+  --shadow:0 1px 3px rgba(58,63,58,.08);
+  --surface-hover:#e8eeea; --surface-muted:#eef2ee;
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.5);
-  --text-dim:#6b6560; --text-dim-2:#8a8078; --text-dim-3:#7a7470; --text-faint:#a09890;
+  --text-dim:#5a5f5a; --text-dim-2:#7a807a; --text-dim-3:#6a6f6a; --text-faint:#8a908a;
   --danger:#c0605a; --danger-soft:#f5eceb; --danger-border:#e0c4c0;
   --danger-overdue-bg:#f8eceb; --danger-overdue-border:#e0c4c0;
   --warn:#c89040; --warn-soft:#f5efe5;
-  --ok:#5a9e6e; --accent-soft:#e8f0f0;
+  --ok:#5a9e6e; --accent-soft:#e0eeea;
   --sc-office:#5a8aaa; --sc-design:#a06888; --sc-study:#b87840; --sc-data:#5a8e8e; --sc-code:#5a9e6e; --sc-life:#8a6aaa;
-  --scenario-default:#7a9e9f;
-  --banner-bg:#f0ece6; --banner-border:#d8d0c4; --banner-ink:#4a4540; --banner-border-2:#e4dfd6;
-  --kbd-border:#d4cec4; --snip-bg:#2a2520; --snip-fg:#f8f6f3; --toast-bg:#4a4540;
-  --overlay:rgba(74,69,64,.2); --shadow-drawer:rgba(74,69,64,.1);
-  --shadow-overlay:rgba(74,69,64,.18); --shadow-toast:rgba(74,69,64,.22);
-  --heat-0:#e8e4de; --heat-1:#d0e0d8; --heat-2:#b0ccc0; --heat-3:#90b8a8; --heat-4:#70a490;
+  --scenario-default:#5b9a8e;
+  --banner-bg:#eef2ee; --banner-border:#c8d4c8; --banner-ink:#3a3f3a; --banner-border-2:#d8ded8;
+  --kbd-border:#c8d4c8; --snip-bg:#2a302a; --snip-fg:#f5f7f4; --toast-bg:#3a3f3a;
+  --overlay:rgba(58,63,58,.2); --shadow-drawer:rgba(58,63,58,.1);
+  --shadow-overlay:rgba(58,63,58,.18); --shadow-toast:rgba(58,63,58,.22);
+  --heat-0:#e0e6e0; --heat-1:#c8e0d4; --heat-2:#a0ccb8; --heat-3:#78b89c; --heat-4:#50a480;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
-  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:999px;
-  --shadow-1:0 1px 2px rgba(74,69,64,.06);
-  --shadow-2:0 2px 8px rgba(74,69,64,.08);
-  --shadow-3:0 4px 16px rgba(74,69,64,.1);
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
+  --shadow-1:0 1px 2px rgba(58,63,58,.06);
+  --shadow-2:0 2px 8px rgba(58,63,58,.08);
+  --shadow-3:0 4px 16px rgba(58,63,58,.1);
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
 }
 
-/* ===== v2.4.0：黑客帝国主题（Matrix 绿黑风）===== */
+/* ===== 黑客帝国主题（matrix）：深绿黑底 + 柔和绿光晕，降低刺眼度 ===== */
 :root[data-theme="matrix"]{
-  --bg:#0a0a0a; --panel:#111111; --panel2:#1a1a1a; --line:#2a2a2a;
-  --side-bg:#0e0e0e;
-  --canvas-glow:none;
+  --bg:#0d0f0d; --panel:#141814; --panel2:#1c221c; --line:#2a3a2a;
+  --side-bg:#101410;
+  --canvas-glow:radial-gradient(ellipse 70% 45% at 50% -10%,rgba(74,222,128,.12),transparent 55%),radial-gradient(ellipse 40% 35% at 90% 10%,rgba(34,197,94,.08),transparent 50%);
+  --brand-grad:linear-gradient(135deg,#4ade80,#22c55e);
   --tb-row2-bg:var(--panel);
-  --text:#00ff41; --muted:#00aa2a; --accent:#00ff41;
-  --shadow:0 1px 3px rgba(0,255,65,.15);
-  --surface-hover:#1a2a1a; --surface-muted:#151515;
-  --on-accent:#0a0a0a; --on-accent-soft:rgba(0,255,65,.15);
-  --text-dim:#00cc33; --text-dim-2:#008822; --text-dim-3:#00b82e; --text-faint:#006618;
-  --danger:#ff0040; --danger-soft:#1a0a0a; --danger-border:#3a1010;
-  --danger-overdue-bg:#1a0a0a; --danger-overdue-border:#3a1010;
-  --warn:#ffaa00; --warn-soft:#1a1200;
-  --ok:#00ff41; --accent-soft:#0a1a0a;
-  --sc-office:#00ccff; --sc-design:#ff00aa; --sc-study:#ffaa00; --sc-data:#00ffaa; --sc-code:#00ff41; --sc-life:#aa66ff;
-  --scenario-default:#00ff41;
-  --banner-bg:#0a1a0a; --banner-border:#00ff41; --banner-ink:#00ff41; --banner-border-2:#00aa2a;
-  --kbd-border:#2a3a2a; --snip-bg:#0a1a0a; --snip-fg:#00ff41; --toast-bg:#00ff41;
-  --overlay:rgba(0,255,65,.08); --shadow-drawer:rgba(0,255,65,.2);
-  --shadow-overlay:rgba(0,255,65,.12); --shadow-toast:rgba(0,255,65,.3);
-  --heat-0:#0a1a0a; --heat-1:#0a2a1a; --heat-2:#0a3a2a; --heat-3:#0a4a3a; --heat-4:#00ff41;
+  --text:#c8e6c8; --muted:#6a8a6a; --accent:#4ade80;
+  --shadow:0 1px 3px rgba(0,0,0,.5);
+  --surface-hover:#1a2a1a; --surface-muted:#1c221c;
+  --on-accent:#0d0f0d; --on-accent-soft:rgba(74,222,128,.15);
+  --text-dim:#9aca9a; --text-dim-2:#5a7a5a; --text-dim-3:#8aba8a; --text-faint:#4a6a4a;
+  --danger:#ef4444; --danger-soft:#2a1010; --danger-border:#4a2020;
+  --danger-overdue-bg:#2a1010; --danger-overdue-border:#4a2020;
+  --warn:#f59e0b; --warn-soft:#2a2000;
+  --ok:#4ade80; --accent-soft:#0a1a0a;
+  --sc-office:#38bdf8; --sc-design:#f472b6; --sc-study:#fbbf24; --sc-data:#34d399; --sc-code:#4ade80; --sc-life:#a78bfa;
+  --scenario-default:#4ade80;
+  --banner-bg:#0a1a0a; --banner-border:#2a5a2a; --banner-ink:#4ade80; --banner-border-2:#1a4a1a;
+  --kbd-border:#2a3a2a; --snip-bg:#0a1a0a; --snip-fg:#c8e6c8; --toast-bg:#c8e6c8;
+  --overlay:rgba(0,0,0,.6); --shadow-drawer:rgba(0,0,0,.4);
+  --shadow-overlay:rgba(0,0,0,.55); --shadow-toast:rgba(0,0,0,.5);
+  --heat-0:#1a2a1a; --heat-1:#1a3a1a; --heat-2:#1a4a1a; --heat-3:#1a5a1a; --heat-4:#4ade80;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
-  --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:999px;
-  --shadow-1:0 1px 2px rgba(0,255,65,.1);
-  --shadow-2:0 2px 8px rgba(0,255,65,.12);
-  --shadow-3:0 4px 16px rgba(0,255,65,.15);
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
+  --shadow-1:0 1px 2px rgba(0,0,0,.4);
+  --shadow-2:0 2px 8px rgba(0,0,0,.5);
+  --shadow-3:0 4px 16px rgba(0,0,0,.6);
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
 }
 
@@ -3239,7 +3243,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <section class="set-card ai-section" id="ai-skills" data-ai-tab="ai-ext" aria-label="技能配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
-      <div><h3>技能配置</h3><p class="set-desc">管理 AI 可调用的内置与自定义技能。禁用的技能不会被 Agent 调用。</p></div>
+      <div><h3>技能配置</h3><p class="set-desc">管理 AI 可调用的内置与自定义技能（实验性——当前开关仅保存配置，Agent 实际按下方「允许调用的工具」白名单执行；接线在路线图中）。</p></div>
     </header>
     <div class="set-subhead">内置技能</div>
     <div id="aiSkillsBuiltin"></div>
@@ -3259,7 +3263,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <section class="set-card ai-section" id="ai-mcp" data-ai-tab="ai-ext" aria-label="MCP 服务器配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="6" rx="2"/><rect x="2" y="15" width="20" height="6" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg></span>
-      <div><h3>MCP 服务器</h3><p class="set-desc">配置 Model Context Protocol 服务器，扩展 AI 的工具与资源访问能力。</p></div>
+      <div><h3>MCP 服务器</h3><p class="set-desc">配置 Model Context Protocol 服务器（实验性——配置仅本机存储，AI 引擎的消费接线在路线图中，当前不会改变 AI 能力）。</p></div>
     </header>
     <div id="aiMcpList"></div>
     <div class="set-actions">
@@ -3271,7 +3275,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <section class="set-card ai-section" id="ai-workflow" data-ai-tab="ai-ext" aria-label="工作流配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></span>
-      <div><h3>工作流</h3><p class="set-desc">定义 AI 自动化工作流：触发条件 → 执行步骤。支持手动与自动触发。</p></div>
+      <div><h3>工作流</h3><p class="set-desc">定义 AI 自动化工作流草案（实验性——仅保存配置，执行引擎自 v1.14.1 起冻结未复活，接线在路线图中）。</p></div>
     </header>
     <div id="aiWorkflowList"></div>
     <div class="set-actions">
@@ -3283,7 +3287,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <section class="set-card ai-section" id="ai-memory" data-ai-tab="ai-ext" aria-label="记忆配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/><path d="M12 7v5l3 3"/></svg></span>
-      <div><h3>记忆配置</h3><p class="set-desc">控制 AI 的上下文窗口、长期记忆与检索策略。</p></div>
+      <div><h3>记忆配置</h3><p class="set-desc">控制 AI 的上下文窗口与检索策略（实验性——当前对话裁剪用引擎内置参数，本配置的消费接线在路线图中）。</p></div>
     </header>
     <div class="set-field">
       <label for="aiMemWindow">上下文窗口大小（条，1~50）</label>
@@ -3315,7 +3319,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <section class="set-card ai-section" id="ai-plugin" data-ai-tab="ai-ext" aria-label="AI 插件配置">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
-      <div><h3>AI 插件</h3><p class="set-desc">管理 AI 扩展插件：启用/禁用、配置插件参数。</p></div>
+      <div><h3>AI 插件</h3><p class="set-desc">AI 扩展插件清单（实验性——暂无执行代码，勾选状态仅保存配置）。</p></div>
     </header>
     <div id="aiPluginList"></div>
     <div class="set-actions">
@@ -3326,7 +3330,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-ext" aria-label="会话管理">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-      <div><h3>会话管理</h3><p class="set-desc">管理 AI 对话会话：超时设置、自动保存、历史记录。</p></div>
+      <div><h3>会话管理</h3><p class="set-desc">会话超时与自动保存设置（实验性——对话会话的实际管理在聊天面板「☰」，此处配置的消费接线在路线图中）。</p></div>
     </header>
     <div class="set-field">
       <label for="aiSessTimeout">会话超时（分钟，5~1440）</label>
@@ -3495,7 +3499,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
           <option value="dark">暗色</option>
           <option value="system">跟随系统</option>
           <option value="sepia">护眼模式</option>
-          <option value="elegant">淡雅</option>
+          <option value="elegant">初雪</option>
           <option value="matrix">黑客帝国</option>
         </select>
       </div>
@@ -3983,7 +3987,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.1.1";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260830h";
+const BUILD_TAG = "20260830i";
 
 
 
@@ -8706,11 +8710,13 @@ function restoreFromRecycleBin(id){
       }
     }else if(item.type === "plugin"){
       // 插件回收：仅恢复 enabled/config 状态（无法恢复代码，需用户重新安装）
-      // 这里只把状态写回，若插件已重新注册则恢复其 enabled/config
+      // v3.1.2：插件本体未重新注册时诚实提示，不再静默成功误导用户
       const d = item.data || {};
       if(d.plugin && typeof setPluginEnabled === "function" && _plugins[d.plugin.id]){
         setPluginEnabled(d.plugin.id, !!d.plugin.enabled);
         if(d.plugin.config){ setPluginConfig(d.plugin.id, d.plugin.config); }
+      }else if(d.plugin && d.plugin.name){
+        toast("插件「"+d.plugin.name+"」本体需重新安装（当前仅保留其启用状态记录）","warn");
       }
     }
   }catch(e){
@@ -8741,13 +8747,25 @@ function cleanupRecycle(){
   if(policy==="off") return 0;
   const days = parseInt(policy,10);
   const cutoff = Date.now() - days*86400000;
+  let count = 0;
+  // v3.1.2：任务软删项与 wb_recycle_bin（配置/文件/插件）两路都清理——
+  // 修复前只清任务，bin 类型永不自动清理，与 UI「自动清理：N 天后」承诺不符
   const all = load(PREFIX+"tasks", []);
   const expired = all.filter(t=>t.deletedAt && t.deletedAt < cutoff);
-  if(!expired.length) return 0;
-  const next = all.filter(t=>!(t.deletedAt && t.deletedAt < cutoff));
-  save(PREFIX+"tasks", next); scheduleAutoBackup();
-  toast("回收站已自动清理 "+expired.length+" 条超过 "+days+" 天的任务","ok");
-  return expired.length;
+  if(expired.length){
+    const next = all.filter(t=>!(t.deletedAt && t.deletedAt < cutoff));
+    save(PREFIX+"tasks", next); count += expired.length;
+  }
+  const bin = load(RECYCLE_BIN_KEY, []);
+  if(Array.isArray(bin) && bin.length){
+    const kept = bin.filter(it=>!(it.deletedAt && it.deletedAt < cutoff));
+    if(kept.length !== bin.length){ count += (bin.length - kept.length); saveRecycleBin(kept); }
+  }
+  if(count){
+    scheduleAutoBackup();
+    toast("回收站已自动清理 "+count+" 条超过 "+days+" 天的内容","ok");
+  }
+  return count;
 }
 /* ---------- 焦点陷阱（T5 无障碍：Tab 循环锁在容器内，关闭后焦点归还触发元素） ---------- */
 /**
@@ -12463,7 +12481,7 @@ function renderChainPage(){
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.chain||""}</span>
       <div class="ph-tx"><h2>习惯链</h2><p class="sub">跨场景行为联动——完成 A 场景任务自动触发 B 场景待办</p></div>
-      <div class="ph-actions"><button type="button" class="addbtn sm" id="chainCfgBtn" style="--sc:var(--accent);font-weight:600">规则配置</button><button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button></div>
+      <div class="ph-actions"><button type="button" class="addbtn sm" id="chainCfgBtn" style="--sc:var(--accent);font-weight:600">规则配置</button><button type="button" class="addbtn sm" id="btnBackHome" style="--sc:var(--muted)">← 主页</button></div>
     </header></div>
     <nav class="set-nav chain-anchor-nav" aria-label="习惯链快速导航">
       <button type="button" class="set-nav-btn" data-chain-anchor="chain-streak">Streak</button>
@@ -12475,6 +12493,8 @@ function renderChainPage(){
     <div class="card" id="chain-graph"><h2>${ic("mindmap")} 场景链路图</h2>${renderChainGraph()}</div>
     <div class="card" id="chain-status"><h2>${ic("chain")} 习惯链状态</h2>${renderHabitChainStatus()}</div>
     <div class="card" id="chain-rate"><h2>${ic("target")} 触发成功率</h2>${rateRows || '<div class="empty">暂无链路触发记录</div>'}</div>`);
+  const backHome = $("#btnBackHome");
+  if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
   const cfg = $("#chainCfgBtn");
   if(cfg) cfg.onclick = ()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } };
   $$("#main .chain-anchor-nav .set-nav-btn").forEach(btn=>{
@@ -16681,7 +16701,7 @@ function appendFoot(){
   const openN = tasks.filter(function(t){ return t.status!=="done"; }).length;
   let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){}
   const aiOn = !!(cfg && cfg.enabled);
-  const aiTxt = aiOn ? (model ? ("AI 已连接 · " + model) : "AI 已连接") : "AI 未启用";
+  const aiTxt = aiOn ? (model ? ("AI 已连接 · " + esc(model)) : "AI 已连接") : "AI 未启用"; // v3.1.2：model 为用户输入，esc 防注入（appendFoot 与 _appendDrawerFoot 两处同步）
   footEl.innerHTML = '<div class="foot-bar">' +
     '<span class="foot-id">' + esc(t("app.name")) + ' · v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
     '<span class="foot-stat">待办 ' + openN + ' · 资料 ' + recN + ' 条</span>' +
@@ -17967,7 +17987,7 @@ function openDrawer(){ const cfg=getCfg();
   if(qStart) qStart.value=String(q.start);
   if(qEnd) qEnd.value=String(q.end);
   const thSel=$("#cfgTheme"); if(thSel){
-    // v1.5-C：主题选择支持 light/dark/system/contrast/sepia + 自定义主题
+    // v1.5-C：主题选择支持 light/dark/system/aurora/sepia/elegant/matrix + 自定义主题（contrast 已于 v3.1.1 移除）
     const curTheme = (typeof getCurrentTheme === "function") ? getCurrentTheme() : (cfg.theme || "system");
     thSel.value = curTheme;
   }
@@ -18081,7 +18101,7 @@ function _appendDrawerFoot(){
   const openN = tasks.filter(function(t){ return t.status!=="done"; }).length;
   let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){}
   const aiOn = !!(cfg && cfg.enabled);
-  const aiTxt = aiOn ? (model ? ("AI 已连接 · " + model) : "AI 已连接") : "AI 未启用";
+  const aiTxt = aiOn ? (model ? ("AI 已连接 · " + esc(model)) : "AI 已连接") : "AI 未启用"; // v3.1.2：model 为用户输入，esc 防注入（与 appendFoot 同步）
   footEl.innerHTML = '<div class="foot-bar">' +
     '<span class="foot-id">' + esc(t("app.name")) + ' · v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
     '<span class="foot-stat">待办 ' + openN + ' · 资料 ' + recN + ' 条</span>' +
@@ -18206,7 +18226,7 @@ async function saveCfg(){
       activeId
     });
     // T4：主题三态持久化（light/dark/system）。
-    // v1.9.7：特殊主题（contrast/sepia/自定义）不写入 cfg.theme——它们由 setTheme 持久化到
+    // v1.9.7：特殊主题（aurora/sepia/elegant/matrix/自定义）不写入 cfg.theme——它们由 setTheme 持久化到
     // localStorage.theme（boot 按此复原）；写入 cfg 会被 applyTheme 误读导致重启后被冲掉
     const thSel=$("#cfgTheme");
     if(thSel && (thSel.value==="light"||thSel.value==="dark"||thSel.value==="system")) cfg.theme = thSel.value;
@@ -18272,7 +18292,7 @@ async function saveCfg(){
     }
     toast("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"), "ok"); // B3：alert 改 toast，不阻塞交互
     applyTheme(); // T4：主题变更（含跟随系统）立即生效
-    // v1.5-C：新主题系统（contrast/sepia/自定义）即时生效
+    // v1.5-C：新主题系统（特殊主题/自定义）即时生效（contrast 主题已于 v3.1.1 移除）
     try{
       const thSel2 = $("#cfgTheme");
       if(thSel2 && typeof setTheme === "function"){
@@ -19566,8 +19586,8 @@ function renderAiMcpList(){
     row.className = "set-field";
     row.innerHTML = "<label for=\"aiMcpName_"+i+"\">服务器 "+(i+1)+"</label>"+
       "<div class=\"ctl\"><div class=\"btn-row\">"+
-      "<input id=\"aiMcpName_"+i+'" placeholder="名称" value="'+(srv.name||"")+'" style="flex:1;min-width:80px">'+
-      "<input id=\"aiMcpUrl_"+i+'" placeholder="https://..." value="'+(srv.url||"")+'" style="flex:2;min-width:120px">'+
+      "<input id=\"aiMcpName_"+i+'" placeholder="名称" value="'+esc(srv.name||"")+'" style="flex:1;min-width:80px">'+ // v3.1.2：esc 防属性截断注入
+      "<input id=\"aiMcpUrl_"+i+'" placeholder="https://..." value="'+esc(srv.url||"")+'" style="flex:2;min-width:120px">'+
       '<input type="checkbox" id="aiMcpEn_'+i+'"'+(srv.enabled?" checked":"")+' aria-label="启用">'+
       '<button type="button" class="addbtn sm" data-mcp-del="'+i+'" style="--sc:var(--danger,var(--muted));white-space:nowrap">删除</button>'+
       "</div></div>";
@@ -19602,8 +19622,8 @@ function renderAiWorkflowList(){
     row.className = "set-field";
     row.innerHTML = "<label for=\"aiWfName_"+i+"\">工作流 "+(i+1)+"</label>"+
       "<div class=\"ctl\"><div class=\"btn-row\">"+
-      "<input id=\"aiWfName_"+i+'" placeholder="名称" value="'+(f.name||"")+'" style="flex:1;min-width:80px">'+
-      "<input id=\"aiWfTrigger_"+i+'" placeholder="触发条件" value="'+(f.trigger||"")+'" style="flex:2;min-width:120px">'+
+      "<input id=\"aiWfName_"+i+'" placeholder="名称" value="'+esc(f.name||"")+'" style="flex:1;min-width:80px">'+ // v3.1.2：esc 防属性截断注入
+      "<input id=\"aiWfTrigger_"+i+'" placeholder="触发条件" value="'+esc(f.trigger||"")+'" style="flex:2;min-width:120px">'+
       '<button type="button" class="addbtn sm" data-wf-del="'+i+'" style="--sc:var(--danger,var(--muted));white-space:nowrap">删除</button>'+
       "</div></div>";
     box.appendChild(row);
@@ -19682,9 +19702,15 @@ renderAiPluginList();
 restoreAiSession();
 renderAiSessHistory();
 $("#aiSkillsSave").onclick = function(){
-  const builtin = [];
-  $$("#aiSkillsBuiltin input[type=checkbox]").forEach(function(cb, i){
-    builtin.push({name: AI_BUILTIN_SKILLS[i].name, desc: AI_BUILTIN_SKILLS[i].desc, enabled: cb.checked});
+  // v3.1.2：按 name 匹配而非索引——修复 checkbox 顺序与 AI_BUILTIN_SKILLS 错配（旧数据顺序不一致时勾选态张冠李戴）
+  const boxes = $$("#aiSkillsBuiltin input[type=checkbox]");
+  const boxByName = new Map();
+  boxes.forEach(function(cb){
+    const nm = cb.getAttribute("aria-label") || cb.id.replace(/^aiSkill_\d+_/, "");
+    boxByName.set(nm, cb.checked);
+  });
+  const builtin = AI_BUILTIN_SKILLS.map(function(s){
+    return {name: s.name, desc: s.desc, enabled: boxByName.has(s.name) ? boxByName.get(s.name) : s.enabled};
   });
   const customTa = $("#aiSkillsCustom");
   saveAiConfig("skills", {builtin: builtin, custom: customTa ? customTa.value : ""});
@@ -19745,9 +19771,15 @@ $("#aiMemSave").onclick = function(){
   toast("记忆配置已保存");
 };
 $("#aiPluginSave").onclick = function(){
-  const plugins = [];
-  $$("#aiPluginList input[type=checkbox]").forEach(function(cb, i){
-    plugins.push({name: AI_BUILTIN_PLUGINS[i].name, desc: AI_BUILTIN_PLUGINS[i].desc, enabled: cb.checked});
+  // v3.1.2：按 name 匹配而非索引——同 aiSkillsSave 修复
+  const boxes = $$("#aiPluginList input[type=checkbox]");
+  const boxByName = new Map();
+  boxes.forEach(function(cb){
+    const nm = cb.getAttribute("aria-label") || cb.id.replace(/^aiPlugin_\d+_/, "");
+    boxByName.set(nm, cb.checked);
+  });
+  const plugins = AI_BUILTIN_PLUGINS.map(function(p){
+    return {name: p.name, desc: p.desc, enabled: boxByName.has(p.name) ? boxByName.get(p.name) : p.enabled};
   });
   saveAiConfig("plugin", {plugins: plugins});
   toast("插件配置已保存");
@@ -20009,7 +20041,7 @@ const _btnThemeImportCancel = $("#btnThemeImportCancel"); if(_btnThemeImportCanc
   const area = $("#themeImportArea"); if(area) area.style.display = "none";
 };
 /* 主题选择下拉即时切换（v1.9.7 修复：所有主题统一即时生效。
-   原 bug：仅 contrast/sepia/custom 即时生效，light/dark/system 需点「保存设置」才有反应，
+   原 bug：仅特殊主题即时生效、light/dark/system 需点「保存设置」才有反应（历史记录，contrast 主题已于 v3.1.1 移除），
    表现为「点暗色未生效」「高对比度后再点亮/暗未生效」。
    统一路由：system → cfg+applyTheme（保留跟随系统语义）；其余 → setTheme（内部持久化+同步双状态源） */
 const _cfgThemeSel = $("#cfgTheme");
@@ -20024,7 +20056,7 @@ if(_cfgThemeSel){
       applyTheme();
       try{ toast("已切换为跟随系统主题", "ok"); }catch(e){}
     }else{
-      if(typeof setTheme === "function") setTheme(v); // light/dark/contrast/sepia/自定义统一
+      if(typeof setTheme === "function") setTheme(v); // 全部预置主题与自定义统一走 setTheme（v3.1.1 起预置主题含 aurora；contrast 已移除）
       try{ toast("已切换主题：" + (_cfgThemeSel.selectedOptions[0] && _cfgThemeSel.selectedOptions[0].textContent || v), "ok"); }catch(e){}
     }
     try{ updateTodoBar(); }catch(e3){ /* 消息栏预览非关键路径 */ }
@@ -20669,7 +20701,7 @@ seed();
   // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
   initIdb().catch(() => {});
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
-  // v1.9.7 修复：恢复上次主题。setTheme 路径（contrast/sepia/自定义）持久化于 localStorage.theme，
+  // v1.9.7 修复：恢复上次主题。setTheme 路径（aurora/sepia/elegant/matrix/自定义）持久化于 localStorage.theme，
   // 原 boot 只调 applyTheme()（读 cfg.theme）会把特殊主题冲回亮/暗——重启后高对比度/护眼丢失。
   // 统一路由：特殊主题走 setTheme 复原；light/dark/system 走 applyTheme（system 保留跟随系统）。
   const _savedTheme = (typeof getCurrentTheme === "function") ? getCurrentTheme() : null;
@@ -21002,6 +21034,10 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     runJsSnippet, parseChartData, renderMiniChart,
     // v3.1：SQL Playground（sql.js WASM 沙箱，供测试驱动与断言）
     runSql, loadSqlJs, bindCodeSqlCard,
+    // v3.1.2：AI 页 8 子模块配置存取 + 回收站多类型 bin 通道（供测试驱动与断言；此前结构性不可测）
+    getAiConfig, saveAiConfig, renderAiSkillsBuiltin, renderAiMcpList, renderAiWorkflowList,
+    renderAiPluginList, renderAiSessHistory, AI_BUILTIN_SKILLS, AI_BUILTIN_PLUGINS,
+    getRecycleBin, addToRecycleBin, restoreFromRecycleBin, cleanupRecycle,
     get _dashEditMode(){ return _dashEditMode; },
     set _dashEditMode(v){ _dashEditMode = !!v; }
   };
@@ -22013,7 +22049,11 @@ const PRESET_THEMES = {
   light:    { name: "浅色",     desc: "Vercel 风格默认主题" },
   aurora:   { name: "极光",     desc: "极光渐变亮色主题" },
   dark:     { name: "深色",     desc: "暗色护眼主题" },
-  sepia:    { name: "护眼模式", desc: "暖色调护眼阅读模式" }
+  sepia:    { name: "护眼模式", desc: "暖色调护眼阅读模式" },
+  // v3.1.2：elegant/matrix 在主题下拉可选且 CSS 有定义（[data-theme="elegant"/"matrix"]），
+  // 修复前不在注册表——主题管理列表不可见、不可管理。补齐使三处清单一致。
+  elegant:  { name: "淡雅",     desc: "淡雅柔色主题" },
+  matrix:   { name: "黑客帝国", desc: "绿色终端风格主题" }
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
@@ -22132,7 +22172,7 @@ function _applyTokenOverride(tokens){
 
 /**
  * 设置当前主题（v1.5-C 主题系统入口）
- * 主题 id：light / dark / contrast / sepia / 自定义主题 id
+ * 主题 id：light / dark / aurora / sepia / elegant / matrix / 自定义主题 id（contrast 已于 v3.1.1 移除）
  * @param {string} themeId - 主题 id
  * @returns {boolean} 是否设置成功
  */
@@ -22195,12 +22235,14 @@ function setTheme(themeId){
 function _syncCfgTheme(themeId){
   try{
     if(typeof getCfg !== "function" || typeof save !== "function") return;
-    const cfg = getCfg() || {};
-    if(themeId === "light" || themeId === "dark"){
+    // v3.1.2：全部预置主题都写入 cfg.theme——修复前只认 light/dark，
+    // 选 aurora/sepia/elegant/matrix 后 cfg.theme 停留旧值，换设备迁移时主题回退。
+    // 自定义主题 id 仍不写入（由 setTheme 的 localStorage.theme 持久化）。
+    if(themeId && PRESET_THEMES[themeId]){
+      const cfg = getCfg() || {};
       cfg.theme = themeId;
       save(PREFIX + "cfg", cfg);
     }
-    // contrast/sepia/custom 不写入 cfg.theme，避免 04-ui-theme.js 的 applyTheme 覆盖
   }catch(e){ /* 静默降级 */ }
 }
 
