@@ -12293,6 +12293,8 @@ function _bindTasksTabs(){
   $$("#main .tasks-tab").forEach(b=>{
     b.onclick = ()=>{ _tasksView = b.getAttribute("data-tasks-view")||"kanban"; renderTasksPage(); };
   });
+  const backHome = $("#btnBackHome");
+  if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
 }
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
@@ -12342,6 +12344,8 @@ function renderToolboxPage(){
     ${chips}
     <div class="tool-filter-bar" style="margin-bottom:var(--space-2)"><input type="text" id="toolboxQ" placeholder="搜索工具…" value="${esc(_toolboxQ)}" style="flex:1" aria-label="搜索工具"></div>
     <div class="app-grid">${cards || ""}</div>`);
+  const backHome = $("#btnBackHome");
+  if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
   const qi = $("#toolboxQ");
   if(qi){
     qi.oninput = ()=>{ _toolboxQ = qi.value; renderToolboxPage(); const nq=$("#toolboxQ"); if(nq){ nq.focus(); nq.setSelectionRange(nq.value.length,nq.value.length); } };
@@ -21037,7 +21041,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // v3.1.2：AI 页 8 子模块配置存取 + 回收站多类型 bin 通道（供测试驱动与断言；此前结构性不可测）
     getAiConfig, saveAiConfig, renderAiSkillsBuiltin, renderAiMcpList, renderAiWorkflowList,
     renderAiPluginList, renderAiSessHistory, AI_BUILTIN_SKILLS, AI_BUILTIN_PLUGINS,
-    getRecycleBin, addToRecycleBin, restoreFromRecycleBin, cleanupRecycle,
+    getRecycleBin, addToRecycleBin, restoreFromRecycleBin,
     get _dashEditMode(){ return _dashEditMode; },
     set _dashEditMode(v){ _dashEditMode = !!v; }
   };
