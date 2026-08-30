@@ -25,9 +25,16 @@ _fix_deploy.py
 _scratch/
 baseline*
 test-*.txt
+test_*.txt
 test-safe.js
 test-onb.txt
 test-p0.txt
+
+# 开发板实验流（agent-workbench.dev.html 与主文件独立演进，避免误提交 1.4MB 副本）
+dev/
+
+# 字体源文件残留（Inter 已 base64 内联进 HTML，无需独立文件）
+fonts/
 
 # vitest 时间戳文件
 *.timestamp-*

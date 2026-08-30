@@ -2,6 +2,36 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.1.2] - 2026-08-30
+
+### 审计修复批次：3×P0 + 10×P1（本轮全量审计后的修复）
+
+**🐛 P0 修复**
+- **4 页面「← 主页」死按钮**：任务/工具箱/商店/习惯链页头按钮原用内联 `onclick`，但渲染路径全部经 sanitizeHtml（规则 3 剥离所有 on* 事件属性），按钮渲染后点击无响应——改统一 `id=btnBackHome` + 渲染尾部绑定
+- **syncPush IPC 断链**：main.js 的 `sync-push` handler 存在、README 有记载，但 preload 无暴露且渲染侧零调用——主进程 `syncSnapshot` 恒为 `{}`，「本机同步下载」永远导出空数据。preload 补 `syncPush`；渲染侧启动即推 + 60s 周期推 + 下载前先推
+- **AI 页 8 子模块中 6 个配置空壳诚实化**：Skills/MCP/Workflow/Memory/Plugin/Session 的配置保存后无任何消费者（MCP 无客户端、Workflow 引擎自 v1.14.1 冻结未复活、Memory 不被 trimChatHist 读取、Skills 开关与真实 toolWhitelist 互不相通、Plugin 纯静态清单、Session history 无写入路径）——各 section 增加实验性声明，不再虚假承诺「禁用的技能不会被 Agent 调用」
+
+**🔧 P1 修复**
+- 回收站自动清理漏 `wb_recycle_bin`：`cleanupRecycle` 只清任务软删项，配置/文件/插件三类永不自动清理——改为双路都清
+- 插件假恢复诚实化：插件本体未重新注册时不再静默 ok，toast 明示「需重新安装」
+- `PRESET_THEMES` 补齐 elegant/matrix：两主题在下拉可选且 CSS 有定义，但主题管理列表不可见、`_syncCfgTheme` 不为其写 cfg.theme（迁移时主题回退浅色）——注册表补齐 + 全部预置主题写 cfg.theme
+- contrast 主题死残留清理：6 处注释仍指向已删除的主题分支（含 setTheme JSDoc）
+- manifest `background_color` `#f4f5fb`（极光底色）→ `#e5e5e5`（当前默认 Geist 底色），修复 PWA 启动画面闪变
+- MCP/Workflow 列表输入未转义：name/url/trigger 直接拼 value 属性，含 `"` 即可截断注入——补 esc()
+- `aiSkillsSave`/`aiPluginSave` 按索引映射 checkbox：旧数据顺序不一致时勾选态张冠李戴——改按 name 匹配
+- 尾栏 AI 状态 model 未转义（appendFoot/_appendDrawerFoot 两处）——补 esc()
+- `.gitignore`：`test-*.txt` 连字符 pattern 漏 `test_output.txt` 下划线——补 `test_*.txt`；dev/ 与 fonts/ 入 ignore（开发板 1.4MB 副本与零引用字体残留）
+- 删除孤儿检查器 `tests/preload-static-check.cjs`（要求 preload 解构 `app` 与现实矛盾，接入 CI 必红）
+
+**🧪 测试**
+- `__test` 导出块补 v3.1/v3.2 新函数（getAiConfig/saveAiConfig/回收站 bin 系列），消除结构性不可测
+- 新增 tests/integration/v312-fixes.test.js：死按钮回归、AI 配置存取、回收站 bin 自动清理、PRESET_THEMES 完整性
+
+**📦 同时纳入（2026-08-29/30 期间提交）**
+- OAuth UI 接线落地（a30600b）：日历 OAuth 授权路径（PKCE）+ integrationOAuthBegin 胶水 + 12 用例回归测试
+- Phase1 布局统一（22b2fc0）/ Phase2 AI 页 8 子模块（c587577）/ Phase3 回收站多类型（12563f7）
+- UI 改版系列：Geist 风格默认主题 + 极光拆分 + Inter 字体内联（81ac8cb/8c3a718/22f616b）、顶栏调深、添加按钮圆改版、尾栏统一、卡片悬停动效（b911825..69215cc/ae429eb）
+
 ## [v3.1.1] - 2026-08-29
 
 ### 工程批次：文档漂移修复 + 工程卫生 + CI 升级（无功能变更）
