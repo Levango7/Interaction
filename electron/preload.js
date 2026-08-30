@@ -17,6 +17,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // P0-8：局域网同步（Electron 专属）
   syncGet: () => ipcRenderer.invoke("sync-get"),
   syncUpload: (data) => ipcRenderer.invoke("sync-upload", data),
+  // v3.1.2：推送本机数据快照到主进程同步服务（/sync/download 的数据源）。
+  // 修复前断链：main.js 的 "sync-push" handler 存在、README 有记载，但 preload 无暴露且渲染侧零调用，
+  // 导致「本机同步下载」永远导出空快照。
+  syncPush: (data) => ipcRenderer.invoke("sync-push", data),
   onSyncUploadRequest: (cb) => {
     ipcRenderer.on("sync-upload-request", (_, data) => cb(data));
   },

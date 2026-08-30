@@ -12399,10 +12399,12 @@ function renderStorePage(){
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.shop}</span>
       <div class="ph-tx"><h2>商店</h2><p class="sub">插件与应用市场——安装后按类型自动挂载到对应位置</p></div>
       <button type="button" class="addbtn sm" id="storeImportBtn" style="--sc:var(--accent)">导入插件 JSON</button>
-      <button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button>
+      <button type="button" class="addbtn sm" id="btnBackHome" style="--sc:var(--muted)">← 主页</button>
     </header></div>
     ${storeNav}
     <div class="store-list">${filteredRows.map(pCard).join("") || '<div class="empty">暂无可用的插件</div>'}</div>`);
+  const backHome = $("#btnBackHome");
+  if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
   $$("#main [data-store-install]").forEach(b=>{
     b.onclick = ()=>{
       const def = BUILTIN_PLUGINS.find(x=>x.id===b.getAttribute("data-store-install"));
@@ -12461,7 +12463,7 @@ function renderChainPage(){
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.chain||""}</span>
       <div class="ph-tx"><h2>习惯链</h2><p class="sub">跨场景行为联动——完成 A 场景任务自动触发 B 场景待办</p></div>
-      <div class="ph-actions"><button type="button" class="addbtn sm" id="chainCfgBtn" style="--sc:var(--accent);font-weight:600">规则配置</button><button type="button" class="addbtn sm" onclick="setActive('overview');render();" style="--sc:var(--muted)">← 主页</button></div>
+      <div class="ph-actions"><button type="button" class="addbtn sm" id="chainCfgBtn" style="--sc:var(--accent);font-weight:600">规则配置</button><button type="button" class="addbtn sm" id="btnBackHome" style="--sc:var(--muted)">← 主页</button></div>
     </header></div>
     <nav class="set-nav chain-anchor-nav" aria-label="习惯链快速导航">
       <button type="button" class="set-nav-btn" data-chain-anchor="chain-streak">Streak</button>
@@ -12473,6 +12475,8 @@ function renderChainPage(){
     <div class="card" id="chain-graph"><h2>${ic("mindmap")} 场景链路图</h2>${renderChainGraph()}</div>
     <div class="card" id="chain-status"><h2>${ic("chain")} 习惯链状态</h2>${renderHabitChainStatus()}</div>
     <div class="card" id="chain-rate"><h2>${ic("target")} 触发成功率</h2>${rateRows || '<div class="empty">暂无链路触发记录</div>'}</div>`);
+  const backHome = $("#btnBackHome");
+  if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
   const cfg = $("#chainCfgBtn");
   if(cfg) cfg.onclick = ()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } };
   $$("#main .chain-anchor-nav .set-nav-btn").forEach(btn=>{
