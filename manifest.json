@@ -1,4 +1,4 @@
-{
+﻿{
   "id": "agent-workbench",
   "name": "Agent 工坊",
   "short_name": "工坊",
@@ -9,7 +9,7 @@
   "display": "standalone",
   "orientation": "any",
   "theme_color": "#111118",
-  "background_color": "#f4f5fb",
+  "background_color": "#e5e5e5",
   "lang": "zh-CN",
   "dir": "ltr",
   "categories": [
