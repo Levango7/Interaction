@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -47,7 +47,7 @@
   --danger-overdue-bg:#fef6f6; --danger-overdue-border:#f0c8c8;
   --warn:#c0761f; --warn-soft:#fdf3e3;
   --ok:#34a853; --accent-soft:#e8f2fe;
-  /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/习惯链图标引用） */
+  /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/联动图标引用） */
   --sc-office:#0a6cbd; --sc-design:#d6409f; --sc-study:#d97706; --sc-data:#0d9488; --sc-code:#34a853; --sc-life:#7c5cbf;
   /* 自定义场景默认色（P1：color input 默认值 / 非法色值回退） */
   --scenario-default:#7c5cbf;
@@ -1004,7 +1004,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .hcell.l0{background:var(--heat-0)}.hcell.l1{background:var(--heat-1)}.hcell.l2{background:var(--heat-2)}.hcell.l3{background:var(--heat-3)}.hcell.l4{background:var(--heat-4)}
 .dow{font-size:var(--fs-3xs);color:var(--muted);text-align:center;padding-bottom:2px}
 .bars{display:flex;flex-direction:column;gap:var(--space-2)}
-/* P2'：跨场景习惯链有向图 */
+/* P2'：跨场景联动关系图 */
 .chain-graph-wrap{margin-top:var(--space-2);overflow-x:auto;position:relative}
 .chain-graph{display:block;width:100%;max-width:800px;height:auto;margin:0 auto}
 .chain-graph:hover circle{transition:r .2s}
@@ -1035,7 +1035,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .bar:hover .fill{filter:brightness(1.12)}
 .bar .v{width:64px;text-align:right;color:var(--muted);font-size:var(--fs-xs)}
 
-/* 习惯链可视化（A：streak / 热力图 / 链状态 / AI 教练 / 链条动画） */
+/* 场景联动可视化（打卡记录 / 联动图 / 触发统计 / 动画） */
 @keyframes chainFlow{0%{transform:translateX(-18px) scale(.7);opacity:0}55%{transform:translateX(2px) scale(1.12);opacity:1}100%{transform:translateX(0) scale(1);opacity:1}}
 .toast.chain{background:linear-gradient(90deg,var(--ok),var(--accent));font-weight:600}
 .toast.chain::before{content:"";display:inline-block;width:14px;height:14px;margin-right:var(--space-1);
@@ -1088,7 +1088,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .shortcut-help-card .help-keys{width:100%}
 .shortcut-help-card .help-keys td{padding:var(--space-2,8px) var(--space-3,12px)}
 .shortcut-help-card .help-keys td:first-child{white-space:nowrap;color:var(--muted);width:140px}
-/* ===== v2.4.2：习惯链增强可视化 ===== */
+/* ===== v2.4.2：联动视图增强 ===== */
 	.hc-top-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);align-items:center;margin-top:var(--space-3)}
 	@media(max-width:640px){.hc-top-row{grid-template-columns:1fr;gap:var(--space-3)}}
 	/* 全局完成进度环 */
@@ -1134,7 +1134,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chain-graph-wrap{margin-top:var(--space-3);overflow-x:auto}
 .chain-graph{display:block;width:100%;min-width:320px;max-width:100%;height:auto}
 .hc-section-title{font-size:var(--fs-sm);color:var(--text);font-weight:600;margin:var(--space-3) 0 var(--space-1);padding-bottom:var(--space-1);border-bottom:1px solid var(--line)}
-/* v3.0：习惯链核心指标（最长坚持 / 启用链路 / 本周联动） */
+/* v3.0：联动核心指标（最长打卡 / 启用链路 / 本周联动） */
 .hc-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-top:var(--space-2)}
 .hc-kpi{display:flex;flex-direction:column;align-items:center;padding:var(--space-3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);transition:transform var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .hc-kpi:hover{transform:translateY(-1px);border-color:var(--accent-soft);box-shadow:var(--shadow-1)}
@@ -1211,7 +1211,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   font-weight:600;color:var(--text);line-height:20px}
 .stats-chain-ring{display:flex;justify-content:center;align-items:center;padding:var(--space-2) 0}
 .stats-chain-ring-svg{display:block}
-/* 火焰动画（习惯链 streak ≥ 3） */
+/* 火焰动画（打卡连续 ≥ 3 天） */
 @keyframes flame{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 .streak-fire{display:inline-block;animation:flame 1.5s ease-in-out infinite}
 
@@ -1252,10 +1252,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .report-content td{color:var(--text-dim)}
 /* v2.1.1：高级报表入口改用 .btn-primary（原 .report-entry-btn 与之重复，已移除） */
 
-/* ===== 今日仪表盘（A：问候语 + Top3 + 习惯链状态条）
+/* ===== 今日仪表盘（A：问候语 + Top3 + 联动状态条）
    v1.9.4b：整体压紧纵向间距——顶部「今天要处理」是次要的提示栏，
    收缩问候语字号与各段 margin，让下方任务看板成为视觉焦点（防喧宾夺主）
-   v1.9.5：Top3 与习惯链改单行横向滚动，进一步压缩首屏高度，看板首屏可见 ===== */
+   v1.9.5：Top3 与联动状态条改单行横向滚动，进一步压缩首屏高度，看板首屏可见 ===== */
 .dashboard-hero{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)}
 .hero-greeting{font-size:var(--fs-xl);font-weight:700;color:var(--text);letter-spacing:-.02em}
 .hero-sub{font-size:var(--fs-sm);color:var(--muted);margin-top:2px}
@@ -1282,7 +1282,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .top3-expand .ex-icon{transition:transform .2s}
 .today-empty{padding:var(--space-5);text-align:center;color:var(--muted);background:var(--panel2);
   border-radius:var(--radius-md);font-size:var(--fs-sm)}
-/* 习惯链：单行横向滚动（不再换行，压缩首屏高度） */
+/* 联动状态条：单行横向滚动（不再换行，压缩首屏高度） */
 .chain-bar{display:flex;gap:var(--space-2);margin-bottom:var(--space-3);
   overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;scrollbar-width:none}
 .chain-bar::-webkit-scrollbar{display:none}
@@ -1545,7 +1545,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   .set-nav-btn{padding:var(--space-1) var(--space-2h)}
 }
 
-/* ===== 习惯链管理（T3.2） ===== */
+/* ===== 联动规则管理（T3.2） ===== */
 .chain-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-1);border-radius:var(--radius-sm)}
 .chain-row.disabled{opacity:.45}
 .chain-row .chain-ic{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -2158,7 +2158,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 }
 .push-row .push-actions button:disabled{opacity:.5;cursor:not-allowed}
 
-/* ===== v1.4-E 协作/分享：分享任务卡片 + 习惯链分享弹窗 + 场景模板弹窗 ===== */
+/* ===== v1.4-E 协作/分享：分享任务卡片 + 联动规则分享弹窗 + 场景模板弹窗 ===== */
 /* 只读分享任务卡片 */
 .share-task-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
 .share-task-dialog{background:var(--panel);border-radius:var(--radius-lg);max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
@@ -2185,7 +2185,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .share-note{background:var(--surface-muted);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);font-size:var(--fs-sm);color:var(--text);white-space:pre-wrap;word-break:break-word}
 .share-readonly-hint{color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-2);border-top:1px dashed var(--line);margin-top:var(--space-1)}
 
-/* 习惯链分享/导入弹窗（复用 .chain-share-* 类） */
+/* 联动规则分享/导入弹窗（复用 .chain-share-* 类） */
 .chain-share-modal,.chain-import-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;padding:var(--space-3)}
 .chain-share-dialog{background:var(--panel);border-radius:var(--radius-lg);max-width:520px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px var(--shadow-overlay)}
 .chain-share-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
@@ -3039,7 +3039,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <div class="todo-bar" id="todoBar" role="region" data-i18n-aria="a11y.todayTodo" aria-label="今日待办">
           <div class="todo-bar-row">
             <span class="todo-bar-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
-            <button class="todo-bar-preview" id="todoPreview" type="button" aria-live="polite" data-i18n-aria="a11y.expandTodayTodo" aria-label="展开今日待办" data-i18n="todo.previewEmpty">今天 0 件待处理 · 已完成 0 件 · 习惯链 0 条进行中</button>
+            <button class="todo-bar-preview" id="todoPreview" type="button" aria-live="polite" data-i18n-aria="a11y.expandTodayTodo" aria-label="展开今日待办" data-i18n="todo.previewEmpty">今天 0 件待处理 · 已完成 0 件 · 联动 0 条进行中</button>
             <button class="todo-bar-toggle" id="todoBarToggle" type="button" data-i18n-title="todo.toggle" title="展开/收起" data-i18n-aria="a11y.expandTodayTodo" aria-label="展开今日待办" aria-expanded="false">
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
@@ -3140,7 +3140,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
        AI 配置 / 插件市场抽离为独立菜单页，三个页头由 #drawer[data-page] 控制显示 -->
 	  <header class="page-head drawer-ph" data-ph="settings">
 	    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
-	    <div class="ph-tx"><h2 data-i18n="page.settings.title">设置</h2><p class="sub" data-i18n="page.settings.sub">场景 · 习惯链 · 外观 · 通知 · 数据 · 集成 · 关于</p></div>
+	    <div class="ph-tx"><h2 data-i18n="page.settings.title">设置</h2><p class="sub" data-i18n="page.settings.sub">场景 · 联动 · 外观 · 通知 · 数据 · 集成 · 关于</p></div>
 	    <button class="page-back drawer-close" id="drawerClose" type="button" data-i18n-aria="a11y.returnPrev" aria-label="返回上一视图" data-i18n="page.back">← 返回</button>
 	  </header>
   <header class="page-head drawer-ph" data-ph="ai">
@@ -3166,7 +3166,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 	  <!-- 设置分区导航栏（独立于标题栏，点击切换下方 card 内容；保存按钮只在底部保存栏） -->
 	  <nav class="set-nav" aria-label="设置分区导航">
 	    <button type="button" class="set-nav-btn active" data-set-tab="set-scene" data-i18n="settings.nav.scene">场景</button>
-	    <button type="button" class="set-nav-btn" data-set-tab="set-chain" data-i18n="settings.nav.chain">习惯链</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-chain" data-i18n="settings.nav.chain">场景联动</button>
 	    <button type="button" class="set-nav-btn" data-set-tab="set-look" data-i18n="settings.nav.look">外观</button>
 	    <button type="button" class="set-nav-btn" data-set-tab="set-notify" data-i18n="settings.nav.notify">通知</button>
 	    <button type="button" class="set-nav-btn" data-set-tab="set-data" data-i18n="settings.nav.data">数据</button>
@@ -3260,7 +3260,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
     <div class="set-field">
       <label for="cfgToolWhitelist" data-i18n="agent.whitelistLabel">允许调用的工具（逗号分隔，留空=全部）</label>
-      <div class="ctl"><input id="cfgToolWhitelist" type="text" data-i18n-placeholder="agent.whitelistPlaceholder" placeholder="create_task,complete_task,search（留空=允许全部工具）"></div>
+      <div class="ctl"><input id="cfgToolWhitelist" type="text" data-i18n-placeholder="agent.whitelistPlaceholder" placeholder="如 创建任务,完成搜索,查阅资料（留空=允许全部工具）"></div>
       <!-- v3.1.2 A-档：白名单与「扩展 → 技能配置」勾选框共享同一处存储（aiSkillsSave 写入此处） -->
       <p class="hint" style="font-size:var(--fs-2xs);margin-top:var(--space-1)">与「扩展 → 技能配置」勾选框同步：在技能配置勾选会自动写到这里；在文本框手填保存后技能配置会重渲染为新值</p>
     </div>
@@ -3309,7 +3309,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <div class="set-field">
           <label for="aiSkillsCustom" data-i18n="skills.customJson">自定义技能 JSON</label>
           <div class="ctl">
-            <textarea id="aiSkillsCustom" rows="6" class="code-input" style="resize:vertical" placeholder='[{"name":"my_skill","desc":"自定义技能","enabled":true}]'></textarea>
+            <textarea id="aiSkillsCustom" rows="6" class="code-input" style="resize:vertical" placeholder='[{"name":"技能名称","desc":"技能描述","enabled":true}]'></textarea>
             <p class="hint" style="font-size:12px;margin-top:var(--space-1)" data-i18n="skills.jsonHint">JSON 数组格式，每项含 name / desc / enabled 字段。</p>
           </div>
         </div>
@@ -3414,7 +3414,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span>
       <div>
         <h3 data-i18n="sceneMgmt.title">场景管理</h3>
-        <p class="set-desc" data-i18n="sceneMgmt.desc">可新增自定义场景，或为内置场景改名 / 换色。场景下有任务时不可删除（防止数据丢失）。改动保存后，侧栏、命令面板、统计与习惯链自动生效。</p>
+        <p class="set-desc" data-i18n="sceneMgmt.desc">可新增自定义场景，或为内置场景改名 / 换色。场景下有任务时不可删除（防止数据丢失）。改动保存后，侧栏、命令面板、统计与联动自动生效。</p>
       </div>
     </header>
     <div id="scBox"></div>
@@ -3429,12 +3429,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </div>
   </section>
 
-  <!-- ===== 习惯链管理 ===== -->
-  <section class="set-card" id="set-chain" aria-label="习惯链管理">
+  <!-- ===== 联动规则 ===== -->
+  <section class="set-card" id="set-chain" aria-label="联动规则">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
       <div>
-        <h3 data-i18n="chainMgmt.title">习惯链管理</h3>
+        <h3 data-i18n="chainMgmt.title">联动规则</h3>
         <p class="set-desc" data-i18n="chainMgmt.desc">源场景任务完成时，按规则跨场景自动生成奖励/后续任务（生成的任务带「联动」标签）。点击关键词或目标场景可 inline 编辑。</p>
       </div>
     </header>
@@ -3445,7 +3445,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <select id="chainAddSrc" style="flex:1;min-width:80px"></select>
         <input id="chainAddKw" data-i18n-placeholder="chainMgmt.kwPlaceholder" placeholder="输入关键词，如：交付、上线" style="flex:2;min-width:120px">
         <select id="chainAddDst" style="flex:1;min-width:80px"></select>
-        <span class="add-wrap"><span class="add-label" data-i18n="common.add">添加</span><button type="button" class="addbtn add-round" id="chainAddBtn" style="--sc:var(--accent)" data-i18n-aria="chainMgmt.addBtn" aria-label="添加习惯链">＋</button></span>
+        <span class="add-wrap"><span class="add-label" data-i18n="common.add">添加</span><button type="button" class="addbtn add-round" id="chainAddBtn" style="--sc:var(--accent)" data-i18n-aria="chainMgmt.addBtn" aria-label="添加联动规则">＋</button></span>
       </div>
     </div>
     <div class="set-actions" style="margin-top:var(--space-3)">
@@ -3486,14 +3486,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
       <div>
         <h3 data-i18n="store.title">商店</h3>
-        <p class="set-desc" data-i18n="store.desc">启用插件可扩展自定义场景、卡片与习惯链规则。插件状态持久化到本地，启用/禁用即时生效。</p>
+        <p class="set-desc" data-i18n="store.desc">启用插件可扩展自定义场景、卡片与联动规则。插件状态持久化到本地，启用/禁用即时生效。</p>
       </div>
     </header>
     <div id="pluginBox"></div>
     <div class="chain-add-form">
       <div class="set-subhead" data-i18n="store.registerNew">注册新插件</div>
       <p class="set-tip" data-i18n="store.pasteJson">粘贴插件 JSON 定义。</p>
-      <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"myplugin","name":"我的插件","version":"1.0.0","description":"自定义插件"}' style="resize:vertical"></textarea>
+      <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"插件ID","name":"插件名称","version":"1.0.0","description":"插件描述"}' style="resize:vertical"></textarea>
       <button type="button" class="addbtn sm" id="pluginAddBtn" style="--sc:var(--accent);margin-top:var(--space-1)" data-i18n="store.registerBtn">注册插件</button>
     </div>
   </section>
@@ -3597,7 +3597,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       </div>
       <div id="themeImportArea" style="display:none;margin-top:var(--space-2)">
         <div style="margin-bottom:var(--space-1)font-size:var(--fs-2xs);color:var(--muted);font-weight:600" data-i18n="look.pasteThemeJson">粘贴主题 JSON</div>
-        <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"mytheme","name":"我的主题","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}'></textarea>
+        <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"主题ID","name":"主题名称","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}'></textarea>
         <div class="theme-actions">
           <button type="button" class="addbtn sm" id="btnThemeImportConfirm" data-i18n="common.confirmImport">确认导入</button>
           <button type="button" class="addbtn sm" id="btnThemeImportCancel"  style="--sc:var(--muted)" data-i18n="common.cancel">取消</button>
@@ -3653,13 +3653,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg></span>
       <div>
         <h3 data-i18n="notify.title">通知提醒</h3>
-        <p class="set-desc" data-i18n="notify.desc">到期任务、习惯链断链与每日汇总的提醒方式，以及浏览器推送订阅。</p>
+        <p class="set-desc" data-i18n="notify.desc">到期任务、联动断链与每日汇总的提醒方式，以及浏览器推送订阅。</p>
       </div>
     </header>
     <div class="set-switch">
       <input type="checkbox" id="cfgNotify" aria-label="开启任务到期提醒">
       <div>
-        <div class="sw-label" data-i18n="notify.enableLabel">开启任务到期 / 习惯链断链 / 每日汇总提醒</div>
+        <div class="sw-label" data-i18n="notify.enableLabel">开启任务到期 / 联动断链 / 每日汇总提醒</div>
         <div class="sw-sub" data-i18n="notify.enableSub">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</div>
       </div>
     </div>
@@ -5866,18 +5866,18 @@ function getLinks(){
   return l;
 }
 
-/* ---------- T3.2 习惯链 UI 编辑（自定义链 CRUD） ---------- */
+/* ---------- T3.2 联动规则 UI 编辑（自定义链 CRUD） ---------- */
 /** 自定义链 localStorage key（任务契约：固定为 wb_custom_links） */
 const CUSTOM_LINKS_KEY = "wb_custom_links";
 /**
- * 读取自定义习惯链
+ * 读取自定义联动规则
  * @returns {Link[]|null} 自定义链数组，无则 null
  */
 function getCustomLinks(){
   return load(CUSTOM_LINKS_KEY, null);
 }
 /**
- * 保存自定义习惯链到 localStorage（JSON.stringify）
+ * 保存自定义联动规则到 localStorage（JSON.stringify）
  * @param {Link[]} links
  * @returns {void}
  */
@@ -5885,7 +5885,7 @@ function saveCustomLinks(links){
   save(CUSTOM_LINKS_KEY, links);
 }
 /**
- * 添加自定义习惯链（验证 fromSc≠toSc，kw 非空，场景合法）
+ * 添加自定义联动规则（验证 fromSc≠toSc，kw 非空，场景合法）
  * @param {string} fromSc - 源场景 key
  * @param {string} kw - 关键词
  * @param {string} toSc - 目标场景 key
@@ -5912,7 +5912,7 @@ function addCustomLink(fromSc, kw, toSc, extra){
   return {ok:true, link};
 }
 /**
- * 删除指定 id 的自定义习惯链
+ * 删除指定 id 的自定义联动规则
  * @param {string} id
  * @returns {boolean} 是否删除成功
  */
@@ -5920,21 +5920,21 @@ function removeCustomLink(id){
   const links = getLinks().slice();
   const i = links.findIndex(l => l.id === id);
   if(i < 0) return false;
-  // v3.1：接入回收站——保存被删除的习惯链快照
+  // v3.1：接入回收站——保存被删除的联动规则快照
   const removed = links[i];
   try{
     addToRecycleBin("config",
-      "习惯链：「"+(removed.name||removed.id||t("tool.unnamed", "未命名"))+"」",
+      "联动规则：「"+(removed.name||removed.id||t("tool.unnamed", "未命名"))+"」",
       (removed.fromSc||"?")+" → "+(removed.toSc||"?")+"，关键词：「"+(removed.kw||"")+"」",
       { kind: "link", link: removed },
-      "习惯链管理");
+      "联动规则");
   }catch(_){ /* 回收站写入失败不影响删除 */ }
   links.splice(i, 1);
   saveCustomLinks(links);
   return true;
 }
 /**
- * 修改指定 id 的自定义习惯链（关键词、目标场景、启用状态等）
+ * 修改指定 id 的自定义联动规则（关键词、目标场景、启用状态等）
  * @param {string} id
  * @param {Partial<Link>} patch
  * @returns {{ok:boolean, err?:string, link?:Link}} 结果
@@ -7280,7 +7280,7 @@ async function initCrypto(){
 }
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
 
-// ===== Chain Layer (习惯链层·任务完成与联动) =====
+// ===== Chain Layer (联动层·任务完成与跨场景触发) =====
 /**
  * 统一的"完成任务"入口：集中设置完成态并触发场景联动
  * @param {string} id - 任务 id
@@ -7288,7 +7288,7 @@ function isElectron(){ return typeof window.electronAPI !== "undefined"; }
  */
 /* ---------- 任务事件分发（v1.14.1 归档后为 noop 占位） ----------
  * 自动化规则引擎 + Webhook 订阅总线已于 v1.14.1 归档移除。
- * 本函数保留空实现仅避免改动既有调用点；习惯链联动由 runLinks 直接驱动，
+ * 本函数保留空实现仅避免改动既有调用点；联动由 runLinks 直接驱动，
  * 不依赖本分发器。 */
 function _emitTaskEvent(type, task){
   /* noop: 自动化规则引擎 + Webhook 总线已归档（v1.14.1）。保留函数体避免调用方改动。 */
@@ -7405,7 +7405,7 @@ function calcSceneDist(){
   });
 }
 /**
- * 习惯链成功率：每条链近 30 天触发次数 / 源场景已完成任务数 × 100%
+ * 联动触发率：每条规则近 30 天触发次数 / 源场景已完成任务数 × 100%
  *   - triggered：近 30 天内，fromSc 场景中标题含 kw 且 linked=true 的任务数
  *   - sourceDone：近 30 天内，fromSc 场景已完成任务数
  *   - rate：sourceDone>0 时 round(triggered/sourceDone*100)，否则 0
@@ -7554,7 +7554,7 @@ function renderHeatmap(sc){
 
 /* ---------- A3 行为分析（最近 14 天） ---------- */
 /**
- * 行为分析：最近 14 天完成统计 + 各场景 streak + 习惯链触发次数 + 模式洞察
+ * 行为分析：最近 14 天完成统计 + 各场景 streak + 联动触发次数 + 模式洞察
  * @returns {{totalDone:number,byScenario:Object<string,number>,streaks:Object<string,{current:number,best:number}>,links:Array<{id:string,name:string,fromSc:string,toSc:string,enabled:boolean,triggered:number}>,patterns:string[]}}
  */
 function analyzeBehavior(){
@@ -7569,7 +7569,7 @@ function analyzeBehavior(){
   /** @type {{ [sc:string]: { current:number, best:number } }} */
   const streaks = {};
   ORDER.forEach(sc => { const s = calcStreak(sc); streaks[sc] = { current: s.current, best: s.best }; });
-  // links：最近 14 天内每条习惯链的触发次数
+  // links：最近 14 天内每条联动规则的触发次数
   const links = getLinks().map(l => {
     const triggered = recentDone.filter(t =>
       t.sc === l.fromSc && t.linked &&
@@ -7591,7 +7591,7 @@ function analyzeBehavior(){
   });
   links.forEach(l => {
     if(l.triggered >= 2){
-      patterns.push("习惯链「" + l.name + "」最近触发 " + l.triggered + " 次，效果不错");
+      patterns.push("联动规则「" + l.name + "」最近触发 " + l.triggered + " 次，效果不错");
     }
   });
   return { totalDone, byScenario, streaks, links, patterns };
@@ -7661,10 +7661,10 @@ async function fetchCoachAdvice(){
       "要求：\n" +
       "1. 建议必须基于具体数据，不要泛泛而谈。例如：若某场景断链 N 天，明确指出「你已 N 天没做 XX，建议…」\n" +
       "2. 若某场景 streak 较长，给予鼓励；若断链，给出恢复建议\n" +
-      "3. 若习惯链触发次数低，建议如何提高触发率\n" +
+      "3. 若联动触发次数低，建议如何提高触发率\n" +
       "只返回 JSON 字符串数组，如 [\"建议1\",\"建议2\",\"建议3\"]。\n\n" +
       "行为分析：\n" + JSON.stringify(analysis) + "\n\n" +
-      "具体数据（每场景近 7 天完成数 / 当前 streak / 最长 streak / 断链天数 / 习惯链触发次数）：\n" + JSON.stringify(specificData, null, 2);
+      "具体数据（每场景近 7 天完成数 / 当前 streak / 最长 streak / 断链天数 / 联动触发次数）：\n" + JSON.stringify(specificData, null, 2);
     const messages = [
       { role: "system", content: t("coach.systemRole", "你是习惯教练，给出简洁、可执行、基于具体数据的建议。只返回 JSON 字符串数组，不要任何其他内容。") },
       { role: "user", content: prompt }
@@ -7705,7 +7705,7 @@ function renderCoachCard(){
   return `<p class="sub">基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）<button class="coach-refresh" id="coachRefresh" type="button">刷新</button></p>${adviceHtml}${discussBtn}`;
 }
 
-/* ---------- A5 习惯链状态区域（总览页用） ---------- */
+/* ---------- A5 联动状态区域（总览页用） ---------- */
 function renderHabitChainStatus(){
   const links = getLinks();
   const tasks = getTasks();
@@ -7737,7 +7737,7 @@ function renderHabitChainStatus(){
   return `<div class="link-status">${items}</div>`;
 }
 
-/* ---------- v2.4.2：习惯链增强可视化辅助函数 ---------- */
+/* ---------- v2.4.2：联动视图增强辅助函数 ---------- */
 /** 最近 N 天各场景完成数（用于迷你日历） */
 function recentDoneByDay(sc, days){
   const tasks = getTasks().filter(t => t.sc === sc && t.status === "done" && t.doneAt);
@@ -7818,7 +7818,7 @@ function renderWeekBars(){
   </div>`;
 }
 
-/* A5 渲染：习惯链可视化卡片（v2.4.2：全模块自适应布局） */
+/* A5 渲染：联动状态卡片（v2.4.2：全模块自适应布局） */
 function renderHabitChainCard(){
   // streak 行（streak ≥ 3 火焰动画；断链警告）
   const streakBadges = ORDER.map(sc => {
@@ -7848,10 +7848,10 @@ function renderHabitChainCard(){
   const weekTriggers = allTasks.filter(t => t.status==="done" && t.linked && t.doneAt >= weekStart.getTime()).length;
   const kpis = `
     <div class="hc-kpi"><span class="v">${maxStreak}</span><span class="l">最长坚持（天）</span></div>
-    <div class="hc-kpi"><span class="v">${enabledLinks.length}</span><span class="l">启用习惯链</span></div>
+    <div class="hc-kpi"><span class="v">${enabledLinks.length}</span><span class="l">启用联动</span></div>
     <div class="hc-kpi"><span class="v">${weekTriggers}</span><span class="l">本周联动触发</span></div>`;
   return `<div class="card">
-    <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>习惯链可视化</h2>
+    <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>联动关系图</h2>
     <p class="sub">跨场景联动 · 坚持天数 · 完成密度</p>
     <!-- 核心指标：跨场景联动价值一眼可见 -->
     <div class="hc-kpi-row">${kpis}</div>
@@ -7868,7 +7868,7 @@ function renderHabitChainCard(){
   </div>`;
 }
 
-/* ---------- P2'：跨场景习惯链有向图（内联 SVG，纯渲染函数） ----------
+/* ---------- P2'：跨场景联动关系图（内联 SVG，纯渲染函数） ----------
  * 节点 = 参与链路的场景（按 ORDER 顺序环形布局），边 = 启用的链（曲线 + 箭头 + 关键词标签）；
  * 禁用的链以虚线显示。自定义场景自动纳入。 */
 /**
@@ -7883,15 +7883,15 @@ function _graphNameLines(nm){
   return [nm.slice(0, mid), nm.slice(mid)];
 }
 /**
- * 渲染跨场景习惯链有向图
+ * 渲染跨场景联动关系图
  * @returns {string} HTML 字符串（.chain-graph-wrap > svg）
  */
 function renderChainGraph(){
   const links = getLinks().filter(l => l && l.fromSc && l.toSc);
-  if(!links.length) return `<div class="empty">暂无习惯链</div>`;
+  if(!links.length) return `<div class="empty">暂无联动规则</div>`;
   // 节点：参与链路的场景，按 ORDER 顺序环形排布
   const scs = ORDER.filter(sc => links.some(l => l.fromSc===sc || l.toSc===sc));
-  if(!scs.length) return `<div class="empty">暂无习惯链</div>`;
+  if(!scs.length) return `<div class="empty">暂无联动规则</div>`;
   const W=480, H=360, CX=W/2, CY=H/2, NR=26;
   const R = Math.min(W, H)/2 - NR - 30;
   const pos = {};
@@ -7925,7 +7925,7 @@ function renderChainGraph(){
         `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${esc(lines[1])}</text>`;
     return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${NR}" style="fill:var(--panel);stroke:${s.color}" stroke-width="2"/>${txt}`;
   }).join("");
-  return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("hc.graphAriaLabel", "跨场景习惯链有向图")}">${defs}${edges}${nodes}</svg></div>`;
+  return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("hc.graphAriaLabel", "跨场景联动关系图")}">${defs}${edges}${nodes}</svg></div>`;
 }
 
 // ===== Render Layer (渲染层·小工具) =====
@@ -8044,7 +8044,7 @@ function _buildSideMenu(){
   const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
   const _effActive = (uiView==="main") ? active : "";
 
-  /* ---- 总览组：主页 / 任务 / 习惯链（v2.5 仪表盘合并至主页） ---- */
+  /* ---- 总览组：主页 / 任务 / 联动（v2.5 仪表盘合并至主页） ---- */
   const overviewNode = {
     id:"home", label:t("side.menu.home", "主页"), icon:UI_ICONS.overview.replace("<svg","<svg aria-hidden=\"true\""),
     color:"#4a3c8e", cnt:totalOpen>0?totalOpen:"", sc:"overview",
@@ -8056,7 +8056,7 @@ function _buildSideMenu(){
     active: !_sideActive && _effActive==="tasks"
   };
   const chainPageNode = {
-    id:"feat-chain", label:t("side.menu.chain", "习惯链"), icon:(SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#0d9488", // M7 NOTE: 与 --sc-data 场景色一致
+    id:"feat-chain", label:t("side.menu.chain", "场景联动"), icon:(SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#0d9488", // M7 NOTE: 与 --sc-data 场景色一致
     cnt:"", sc:"chainpage",
     active: !_sideActive && _effActive==="chainpage"
   };
@@ -8442,7 +8442,7 @@ function openRecycle(){
   appendFoot();
 }
 /* v1.10.0：图表商店（独立页面：图表库 + 画布 + 拖拽）
-   - 左侧：图表库（卡片：日历/统计/热力图/趋势/甘特/导图/仪表盘/习惯链），点击=添加到画布
+   - 左侧：图表库（卡片：日历/统计/热力图/趋势/甘特/导图/仪表盘/联动），点击=添加到画布
    - 右侧：画布（可拖拽位置 + 调整大小；数据存 localStorage.wb_chart_canvas）
    - 简化实现：拖动用 mousedown/move/up；大小用 8 个控制点
 */
@@ -8457,7 +8457,7 @@ function openChartStore(){
     { id: "gantt", name: "甘特图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">甘特图</div><div class="cs-sub">任务时间线</div><div class="cs-gantt">'+[1,2,3,4].map(function(i){return '<div class="cs-gantt-bar" style="width:'+(20+i*15)+'%"></div>'}).join("")+'</div></div>'; } },
     { id: "mindmap", name: "思维导图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">思维导图</div><div class="cs-sub">中心 + 4 节点</div><svg viewBox="0 0 100 100" class="cs-mind"><line x1="50" y1="50" x2="20" y2="20" stroke="var(--line)"/><line x1="50" y1="50" x2="80" y2="20" stroke="var(--line)"/><line x1="50" y1="50" x2="20" y2="80" stroke="var(--line)"/><line x1="50" y1="50" x2="80" y2="80" stroke="var(--line)"/><circle cx="50" cy="50" r="10" fill="var(--accent)"/><circle cx="20" cy="20" r="6" fill="var(--surface-muted)"/><circle cx="80" cy="20" r="6" fill="var(--surface-muted)"/><circle cx="20" cy="80" r="6" fill="var(--surface-muted)"/><circle cx="80" cy="80" r="6" fill="var(--surface-muted)"/></svg></div>'; } },
     { id: "dashboard", name: "仪表盘", icon: UI_ICONS.grid, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">仪表盘</div><div class="cs-sub">4 卡片布局</div><div class="cs-dash">'+Array.from({length:4},function(){return '<div class="cs-dash-cell"></div>'}).join("")+'</div></div>'; } },
-    { id: "chain", name: "习惯链", icon: UI_ICONS.chain, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">习惯链</div><div class="cs-sub">场景连环</div><div class="cs-chain"><span class="cs-cnode">办公</span><span class="cs-carr">→</span><span class="cs-cnode">编程</span><span class="cs-carr">→</span><span class="cs-cnode">学习</span></div></div>'; } },
+    { id: "chain", name: "联动", icon: UI_ICONS.chain, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">联动</div><div class="cs-sub">场景连环</div><div class="cs-chain"><span class="cs-cnode">办公</span><span class="cs-carr">→</span><span class="cs-cnode">编程</span><span class="cs-carr">→</span><span class="cs-cnode">学习</span></div></div>'; } },
     { id: "pie", name: "饼图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">饼图</div><div class="cs-sub">分布占比</div><svg viewBox="0 0 100 100" class="cs-pie"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--accent)" stroke-width="20" stroke-dasharray="80 251" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--ok)" stroke-width="20" stroke-dasharray="60 251" stroke-dashoffset="-80" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--warn)" stroke-width="20" stroke-dasharray="40 251" stroke-dashoffset="-140" transform="rotate(-90 50 50)"/></svg></div>'; } }
   ];
   // 从 localStorage 恢复画布状态
@@ -8768,7 +8768,7 @@ function restoreFromRecycleBin(id){
         // 异步落盘（不阻塞恢复流程）
         if(typeof persistCfg === "function"){ persistCfg(cfg).catch(()=>{}); }
       }else if(d.kind === "link"){
-        // 恢复习惯链：追加到自定义链
+        // 恢复联动规则：追加到自定义链
         const links = getLinks().slice();
         if(d.link && !links.some(l => l.id === d.link.id)){
           links.push(d.link);
@@ -8929,6 +8929,7 @@ function openAppPage(){
     };
     c.onkeydown = function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); c.click(); } };
   });
+  appendFoot();
 }
 
 /* v2.1.0：工具占位页（「即将上线」）——侧栏两级菜单中尚未实现的子工具统一落到这里。
@@ -11031,7 +11032,7 @@ function renderToday(){
       stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}" transform="rotate(-90 30 30)"/>
     <text x="30" y="34" text-anchor="middle" class="pct" style="fill:var(--text)">${pct}%</text></svg>`;
 
-  // 习惯链进行中数量（from 场景 streak > 0 且链启用）
+  // 联动进行中数量（from 场景 streak > 0 且链启用）
   const links = getLinks();
   const chainsActive = links.filter(l => {
     if(l.enabled === false) return false;
@@ -11067,7 +11068,7 @@ function renderToday(){
     top3Html = `<ul class="top3-list" id="top3List">${itemsHtml}</ul>${expandBtn}`;
   }
 
-  // A3：习惯链状态条（每条链：from → to + streak + 状态图标，点击跳 from 场景）
+  // A3：联动状态条（每条链：from → to + streak + 状态图标，点击跳 from 场景）
   const chainBar = `<div class="chain-bar">` + links.map(l=>{
     const s = calcStreak(l.fromSc);
     const enabled = l.enabled !== false;
@@ -11094,7 +11095,7 @@ function renderToday(){
     <div class="dashboard-hero">
       <div>
         <div class="hero-greeting">${greeting()}</div>
-        <div class="hero-sub">今天有 ${pendingToday.length} 件事待处理 · 已完成 ${done} 件 · 习惯链 ${chainsActive} 条进行中</div>
+        <div class="hero-sub">今天有 ${pendingToday.length} 件事待处理 · 已完成 ${done} 件 · 联动 ${chainsActive} 条进行中</div>
       </div>
       <div class="hero-right">${ring}</div>
     </div>
@@ -11140,8 +11141,8 @@ function _onboardRenderStep(step){
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
-        <div class="onboard-title">习惯链 — 让正反馈转起来</div>
-        <div class="onboard-desc">完成任务可以触发习惯链。比如交付任务完成后自动提醒你学习充电。</div>
+        <div class="onboard-title">场景联动 — 让正反馈转起来</div>
+        <div class="onboard-desc">完成任务可以触发跨场景联动。比如交付任务完成后自动提醒你学习充电。</div>
         <div class="onboard-chain-demo">
           <span style="color:${SCENARIOS.office.color};font-size:18px;font-weight:600">${SCENARIOS.office.name}</span>
           <span class="arr">→</span>
@@ -11263,7 +11264,7 @@ function renderHelp(){
           <p>3 步开始使用：</p>
           <ol>
             <li><b>建任务</b>：点左侧场景（办公/编程/学习），在任务看板点「+」添加任务</li>
-            <li><b>完成任务</b>：点任务卡片的「完成」按钮，可能触发习惯链自动生成奖励任务</li>
+            <li><b>完成任务</b>：点任务卡片的「完成」按钮，可能触发联动自动生成后续任务</li>
             <li><b>用 AI</b>：在场景底部的聊天框输入「建个任务：明天写周报」「查总览」「搜索 跑步」</li>
           </ol>
         `)}
@@ -11276,14 +11277,14 @@ function renderHelp(){
           <p><b>编程</b>（绿色）：代码片段、工程任务。AI 给可运行代码和架构建议。</p>
           <p><b>生活</b>（紫色）：日常事务、运动/体重/睡眠/喝水记录。AI 帮打理健康与琐事。</p>
         `)}
-        ${helpSection("习惯链", "习惯链", `
+        ${helpSection("联动", "场景联动", `
           <p>完成任务可以自动触发跨场景的奖励/后续任务，形成正反馈闭环：</p>
           <div class="help-chain-demo">
             <span style="color:var(--accent)">办公</span> 交付 → <span style="color:var(--warn)">学习</span> 充电<br>
             <span style="color:var(--warn)">学习</span> 复习 → <span style="color:var(--accent)">编程</span> 实践<br>
             <span style="color:var(--accent)">编程</span> 上线 → <span style="color:var(--sc-life)">生活</span> 犒劳
           </div>
-          <p>在设置抽屉可以编辑习惯链规则（关键词、奖励任务、启用/禁用）。</p>
+          <p>在设置 → 联动规则中可编辑跨场景自动规则（关键词、目标场景、启用/禁用）。</p>
         `)}
         ${helpSection("AI 使用技巧", "AI 使用技巧", `
           <p>每个场景有专属 AI 助手（不同 system prompt）。在聊天框输入：</p>
@@ -11445,7 +11446,7 @@ function renderSharedTaskCard(task){
     <div class="share-sc-badge" style="background:${sm.color};color:var(--on-accent)">${esc(sm.name)}</div>
     <h3 class="share-title">${esc(task.title)}</h3>
     <div class="share-meta">
-      <div class="share-meta-row"><span class="share-meta-label">状态</span><span class="share-meta-val">${esc(statusLabel)}</span></div>
+      <div class="share-meta-row"><span class="share-meta-label">联动记录</span><span class="share-meta-val">${esc(statusLabel)}</span></div>
       <div class="share-meta-row"><span class="share-meta-label">优先级</span><span class="share-meta-val">${pri}</span></div>
       <div class="share-meta-row"><span class="share-meta-label">到期日</span><span class="share-meta-val">${due}</span></div>
     </div>
@@ -11714,7 +11715,7 @@ const renderBatched = (function(){
 // ===== Render Layer (渲染层·概览) =====
 /* ---------- 渲染：概览 ---------- */
 /**
- * 渲染概览页：全局搜索 + 完成趋势 + 日历热力图 + 各场景进度 + 习惯链 + AI 教练
+ * 渲染概览页：全局搜索 + 完成趋势 + 日历热力图 + 各场景进度 + 联动 + AI 教练
  * @returns {void}
  */
 let _overviewView = "today"; // 概览页视图切换：today（今日待办）| all（全部待办）
@@ -11913,7 +11914,7 @@ function renderDailyReportCard(){
   if(!cfg.enabled){
     return `<div class="coach-hint">${t("dailyReport.noAi", "尚未启用 AI。配置 API Key 后可生成每日报告。")}</div>`;
   }
-  return `<p class="sub">${t("dailyReport.sub", "基于昨日完成任务、今日待办与习惯链状态，AI 生成每日报告")}</p>` +
+  return `<p class="sub">${t("dailyReport.sub", "基于昨日完成任务、今日待办与联动状态，AI 生成每日报告")}</p>` +
     `<button type="button" class="daily-report-btn" id="dailyReportBtn">${t("dailyReport.btn", "生成今日报告")}</button>` +
     `<div id="dailyReportResult"></div>`;
 }
@@ -11984,7 +11985,7 @@ async function handleAiRecommend(){
   }
 }
 
-/* ---------- v2.3.0 系统概况卡（新手可读的业务/系统全貌，放主页习惯链左侧） ---------- */
+/* ---------- v2.3.0 系统概况卡（新手可读的业务/系统全貌） ---------- */
 /**
  * 渲染系统概况卡：简洁数字清单（icon + 数字 + 标签，可点击跳转）+ AI 助手状态行 + 新手提示
  * @returns {string} HTML 字符串
@@ -12008,7 +12009,7 @@ function renderSystemOverviewCard(){
     { label: "已完成", value: done, act: "stats", ic: UI_ICONS.stats },
     { label: "资料", value: recCount, act: "overview", ic: UI_ICONS.file },
     { label: "笔记", value: notes.length, act: "overview", ic: UI_ICONS.book },
-    { label: t("nav.chain", "习惯链"), value: chains.length, act: "chain", ic: UI_ICONS.chain },
+    { label: t("nav.chain", "场景联动"), value: chains.length, act: "chain", ic: UI_ICONS.chain },
     { label: t("nav.apps", "插件"), value: plugins.length, act: "overview", ic: UI_ICONS.puzzle }
   ];
 
@@ -12083,7 +12084,7 @@ function _renderOvKpi(){
     { label: t("ovKpi.currentStreak", "当前连续"), value: k.currentStreak + t("ovKpi.streakUnit", " 天"), act: "chain" }
   ];
   return `<div class="card ov-kpi-card"><div class="stats-cards">` + items.map(c =>
-    `<button type="button" class="stats-card ov-kpi-item${c.act?" clickable":""}" data-kpi-act="${c.act||""}" title="${c.act==="office"?t("ovKpi.todayTodo.title", "查看今天要处理"):c.act==="stats"?t("ovKpi.stats.title", "打开统计"):c.act==="chain"?t("ovKpi.chain.title", "打开习惯链"):""}">` +
+    `<button type="button" class="stats-card ov-kpi-item${c.act?" clickable":""}" data-kpi-act="${c.act||""}" title="${c.act==="office"?t("ovKpi.todayTodo.title", "查看今天要处理"):c.act==="stats"?t("ovKpi.stats.title", "打开统计"):c.act==="chain"?t("ovKpi.chain.title", "打开场景联动"):""}">` +
     `<div class="stats-card-val">${c.value}${c.extra||""}</div><div class="stats-card-lbl">${c.label}</div></button>`
   ).join("") + `</div></div>`;
 }
@@ -12245,7 +12246,7 @@ function renderHourDistGrid(grid){
   return html + `</div>`;
 }
 /**
- * 渲染统计视图（关键指标卡片 + 趋势图 + 饼图 + 时段分布 + 习惯链成功率）
+ * 渲染统计视图（关键指标卡片 + 趋势图 + 饼图 + 时段分布 + 联动触发率）
  * @returns {void}
  */
 /* v2.2.0：统计页仪表盘编辑态（会话级；Grafana 式展示/配置两态） */
@@ -12300,7 +12301,7 @@ function renderStats(){
   });
 }
 /* ============================================================
- * v2.4.0 四大新页面：任务中心 / 工具箱 / 商店 / 习惯链
+ * v2.4.0 四大新页面：任务中心 / 工具箱 / 商店 / 场景联动
  * 路由键：active = "tasks" / "toolbox" / "store" / "chainpage"
  * ============================================================ */
 
@@ -12315,6 +12316,7 @@ function renderTasksPage(){
     $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
     bindCalendarEvents();
     _bindTasksTabs();
+    appendFoot();
     return;
   }
   if(_tasksView === "todo"){
@@ -12353,6 +12355,7 @@ function renderTasksPage(){
       el.onclick = ()=>{ const id = el.closest(".todo-row").getAttribute("data-task-id"); if(typeof openTaskEdit==="function") openTaskEdit(id); };
     });
     _bindTasksTabs();
+    appendFoot();
     return;
   }
   /* kanban（默认）：跨场景三状态列 */
@@ -12388,6 +12391,7 @@ function renderTasksPage(){
     card.onclick = ()=>{ const id = card.getAttribute("data-tasks-card"); if(typeof openTaskEdit==="function") openTaskEdit(id); };
   });
   _bindTasksTabs();
+  appendFoot();
 }
 function _tasksHeadHtml(){
   const tabs = [["kanban",t("tasksPage.tab.kanban", "看板")],["calendar",t("appPage.calview", "日历")],["todo",t("kanban.todo", "待办")]];
@@ -12572,7 +12576,7 @@ function renderStorePage(){
   appendFoot();
 }
 
-/* ---------- 习惯链页（streak 总览 + 链路图 + 状态 + 成功率 + 配置入口） ---------- */
+/* ---------- 场景联动页（打卡记录 + 联动关系图 + 联动记录 + 触发统计 + 配置入口） ---------- */
 function renderChainPage(){
   const streakBadges = ORDER.filter(sc=>SCENARIOS[sc]).map(sc => {
     const s = calcStreak(sc);
@@ -12595,10 +12599,10 @@ function renderChainPage(){
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.chain||""}</span>
-      <div class="ph-tx"><h2>${t("chainPage.title", "习惯链")}</h2><p class="sub">${t("chainPage.sub", "跨场景行为联动——完成 A 场景任务自动触发 B 场景待办")}</p></div>
+      <div class="ph-tx"><h2>${t("chainPage.title", "场景联动")}</h2><p class="sub">${t("chainPage.sub", "打卡记录与跨场景自动化规则")}</p></div>
       <div class="ph-actions"><button type="button" class="addbtn sm" id="chainCfgBtn" style="--sc:var(--accent);font-weight:600">${t("chainPage.cfgBtn", "规则配置")}</button><button type="button" class="addbtn sm" id="btnBackHome" style="--sc:var(--muted)">${t("chainPage.backHome", "← 主页")}</button></div>
     </header></div>
-    <nav class="set-nav chain-anchor-nav" aria-label="${t("chainPage.aria", "习惯链快速导航")}">
+    <nav class="set-nav chain-anchor-nav" aria-label="${t("chainPage.aria", "场景联动快速导航")}">
       <button type="button" class="set-nav-btn" data-chain-anchor="chain-streak">${t("chainPage.streak", "Streak")}</button>
       <button type="button" class="set-nav-btn" data-chain-anchor="chain-graph">${t("chainPage.graph", "链路图")}</button>
       <button type="button" class="set-nav-btn" data-chain-anchor="chain-status">${t("chainPage.status", "状态")}</button>
@@ -12606,7 +12610,7 @@ function renderChainPage(){
     </nav>
     <div class="card" id="chain-streak"><h2>${ic("flame")} ${t("hc.section.streak", "当前 Streak")}</h2><p class="sub">${t("chainPage.streak.sub", "各场景连续完成天数（≥3 天点燃火焰）")}</p><div class="streak-row">${streakBadges}</div></div>
     <div class="card" id="chain-graph"><h2>${ic("mindmap")} ${t("chainPage.graph.title", "场景链路图")}</h2>${renderChainGraph()}</div>
-    <div class="card" id="chain-status"><h2>${ic("chain")} ${t("chainPage.status.title", "习惯链状态")}</h2>${renderHabitChainStatus()}</div>
+    <div class="card" id="chain-status"><h2>${ic("chain")} ${t("chainPage.status.title", "联动状态")}</h2>${renderHabitChainStatus()}</div>
     <div class="card" id="chain-rate"><h2>${ic("target")} ${t("chainPage.rate.title", "触发成功率")}</h2>${rateRows || '<div class="empty">' + t("chainPage.rate.empty", "暂无链路触发记录") + '</div>'}</div>`);
   const backHome = $("#btnBackHome");
   if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
@@ -13373,7 +13377,7 @@ function renderMainHTML(){
 
   const tagFilterHTML = `<div class="form-row">
     <div class="fld fld-xl"><label for="boardSearch">搜索任务（A3）</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
-    <div class="fld fld-md"><label>状态</label>
+    <div class="fld fld-md"><label>联动记录</label>
       <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
     <div class="fld fld-lg"><label for="tagFilter">标签（留空=全部）</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / urgent")}" maxlength="200"></div>
   </div>`;
@@ -13387,7 +13391,7 @@ function renderMainHTML(){
   } else if(sceneViewMode === "todo"){
     taskArea = renderTodoListView(tasks, s);
     filterHtml = tasks.length ? `<div class="form-row">
-      <div class="fld fld-md"><label>状态</label>
+      <div class="fld fld-md"><label>联动记录</label>
         <select id="todoStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
     </div>` : "";
   } else if(tasksAll.length === 0){
@@ -14752,7 +14756,7 @@ function bindScenario(){
     if(!confirm(t("confirm.deleteRecord","删除这条记录？"))) return;
     setRec(active, getRec(active).filter(r=>r.id!==b.dataset.rdel)); render();
   });
-  // A3：习惯链状态条点击 → 跳转到对应场景
+  // A3：联动状态条点击 → 跳转到对应场景
   $$("[data-chain-sc]").forEach(b=> b.onclick=()=>{
     const sc = b.dataset.chainSc;
     if(SCENARIOS[sc]){ setActive(sc); render(); }
@@ -14946,7 +14950,7 @@ function openTaskEdit(id){
         <div class="form-row" style="margin-bottom:0">
           <div class="fld"><label>截止日期</label><input name="due" type="date" value="${esc(task.due||"")}"></div>
           <div class="fld"><label>优先级</label><select name="priority">${priSel}</select></div>
-          <div class="fld"><label>状态</label><select name="status">${statusSel}</select></div>
+          <div class="fld"><label>联动记录</label><select name="status">${statusSel}</select></div>
         </div>
         <div class="fld"><label>标签（逗号分隔）</label><input name="tags" value="${esc((task.tags||[]).join(", "))}" maxlength="200"></div>
         <div class="fld"><label>备注</label><textarea name="note" rows="3" maxlength="2000">${esc(task.note||"")}</textarea></div>
@@ -15554,7 +15558,7 @@ function collectDailyReportData(){
   // 逾期未完成
   const todayOverdue = tasks.filter(t => t.status !== "done" && t.due && t.due < today)
     .map(t => ({ title: t.title, sc: SCENARIOS[t.sc] ? SCENARIOS[t.sc].name : t.sc, due: t.due }));
-  // 习惯链 streak
+  // 联动打卡记录
   const streaks = {};
   ORDER.forEach(sc => {
     const s = calcStreak(sc);
@@ -15564,7 +15568,7 @@ function collectDailyReportData(){
 }
 /**
  * v1.4-D：AI 每日报告
- * 收集昨日完成任务、今日待办任务、习惯链 streak，构造 prompt 发送给 AI
+ * 收集昨日完成任务、今日待办任务、联动打卡记录，构造 prompt 发送给 AI
  * @returns {Promise<{ok:boolean, report?:string, reason?:string, data?:Object}>}
  */
 async function generateDailyReport(){
@@ -15578,11 +15582,11 @@ async function generateDailyReport(){
     const prompt = t("ai.reportPrompt1","你是工作台助手。根据以下用户数据，生成「每日报告」：\\n") +
       t("ai.reportPrompt2","1. 昨日总结：完成了哪些任务（列出标题，无则说明「昨日无完成任务」）\\n") +
       t("ai.reportPrompt3","2. 今日待办：今日到期的任务 + 逾期未完成的任务（按优先级排序）\\n") +
-      t("ai.reportPrompt4","3. 习惯链状态：各场景的当前 streak，给出保持/打破建议\\n") +
+      t("ai.reportPrompt4","3. 打卡状态：各场景的连续打卡天数，给出保持/打破建议\\n") +
       t("ai.reportPrompt5","4. 今日建议：基于数据给出 2-3 条具体可执行的建议\\n\\n") +
       t("ai.reportPrompt6","用 Markdown 格式返回，使用 ##/### 标题分节。数据：\\n") + JSON.stringify(data, null, 2);
     const messages = [
-      { role: "system", content: t("ai.reportShortPrompt","你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、习惯链状态、今日建议四个部分。") },
+      { role: "system", content: t("ai.reportShortPrompt","你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。") },
       { role: "user", content: prompt }
     ];
     const j = await chatOnce(messages);
@@ -16574,7 +16578,7 @@ function discussInAi(type){
   } else if(type === "daily"){
     const rep = _aiHubContent.daily || "";
     prompt = rep ? "刚才 AI 生成的今日报告：\n\n" + rep + "\n\n请基于这份报告帮我…"
-            : "请基于我的任务和习惯链状态，帮我梳理今天最该做的 3 件事。";
+            : "请基于我的任务和打卡记录，帮我梳理今天最该做的 3 件事。";
   } else if(type === "recommend"){
     const rec = _aiHubContent.recommend || "";
     prompt = rec ? "刚才 AI 推荐的 3 条行动：\n" + rec + "\n请基于这些推荐帮我…"
@@ -16930,7 +16934,7 @@ function markNotifiedIds(ids){
   return cur;
 }
 /**
- * 检查习惯链断链：源场景最近 3 天（含今天）无完成任务则视为断裂
+ * 检查联动断链：源场景最近 3 天（含今天）无完成任务则视为断裂
  * 纯函数：只读 wb_chain_break_notified 去重，不写存储、不调 Notification
  * @param {number} [now] - 当前时间戳（默认 Date.now()）
  * @returns {Array<{id:string,fromSc:string,toSc:string,msg:string}>}
@@ -16959,7 +16963,7 @@ function checkChainBreak(now){
       id: l.id,
       fromSc: l.fromSc,
       toSc: l.toSc,
-      msg: t("notify.chainBreak","习惯链可能断裂：") + fromName + "→" + toName + t("notify.chainBreakSuffix"," 已 3 天未触发")
+      msg: t("notify.chainBreak","联动可能断裂：") + fromName + "→" + toName + t("notify.chainBreakSuffix"," 已 3 天未触发")
     };
   }).filter(Boolean);
 }
@@ -17345,7 +17349,7 @@ function doImport(file){
       if (checkArr(data[PREFIX+"tasks"]) || checkArr(data[PREFIX+"records"])) hasValidData = true;
       if (meta && !hasValidData) { toast(t("msg.importMissingData","导入文件缺少 tasks 或 records 数据"), "error"); return; }
 
-      if(!confirm(t("confirm.importOverwrite","导入将覆盖当前同名数据（含自定义习惯链）。确定继续？"))) return;
+      if(!confirm(t("confirm.importOverwrite","导入将覆盖当前同名数据（含自定义联动规则）。确定继续？"))) return;
       Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
       _cfgCache = null; _deviceKey = null;
       // v2.0.1：导入不 reload 页面，须复位会话层与场景聊天内存缓存，否则 UI 显示导入前旧数据
@@ -17720,7 +17724,7 @@ function renderTodoBarPreview(){
     if(l.enabled === false) return false;
     return calcStreak(l.fromSc).current > 0;
   }).length;
-  el.textContent = t("weather.today","今天 ") + pendingToday.length + t("msg.dashPending"," 件待处理 · 已完成 ") + done + t("msg.dashChain"," 件 · 习惯链 ") + chainsActive + t("msg.dashChainActive"," 条进行中");
+  el.textContent = t("weather.today","今天 ") + pendingToday.length + t("msg.dashPending"," 件待处理 · 已完成 ") + done + t("msg.dashChain"," 件 · 联动 ") + chainsActive + t("msg.dashChainActive"," 条进行中");
 }
 /* 待办栏展开态：渲染 Top3 今日待办 */
 function renderTodoBarList(){
@@ -18253,7 +18257,7 @@ function _renderChainEditRow(l){
   </div>`;
 }
 /**
- * 渲染习惯链管理面板：链列表 + 添加表单下拉填充
+ * 渲染联动规则面板：规则列表 + 添加表单下拉填充
  * @returns {void}
  */
 function renderLinksBox(){
@@ -18265,7 +18269,7 @@ function renderLinksBox(){
   if(selSrc && !selSrc.options.length) selSrc.innerHTML = sanitizeHtml(ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join(""));
   if(selDst && !selDst.options.length) selDst.innerHTML = sanitizeHtml(ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join(""));
 }
-/* P1：场景变更后强制刷新习惯链表单的场景下拉（含自定义场景） */
+/* P1：场景变更后强制刷新联动规则表单的场景下拉（含自定义场景） */
 function refreshChainScSelects(){
   const opts = ORDER.map(sc=>`<option value="${sc}">${esc(SCENARIOS[sc].name)}</option>`).join("");
   const selSrc = $("#chainAddSrc"), selDst = $("#chainAddDst");
@@ -18746,11 +18750,11 @@ async function saveCfg(){
   }
 }
 
-// ===== v1.4-E 协作/分享：习惯链分享导入 + 场景模板一键导入 =====
-/* ---------- 习惯链分享码生成与导入 ---------- */
+// ===== v1.4-E 协作/分享：联动规则分享导入 + 场景模板一键导入 =====
+/* ---------- 联动规则分享码生成与导入 ---------- */
 /**
- * 生成习惯链分享码：将链数组 JSON 编码为 base64 字符串
- * @param {Link[]} links - 习惯链数组
+ * 生成联动规则分享码：将链数组 JSON 编码为 base64 字符串
+ * @param {Link[]} links - 联动规则数组
  * @returns {string} 分享码字符串（base64 编码的 JSON）
  */
 function generateChainShareCode(links){
@@ -18767,7 +18771,7 @@ function generateChainShareCode(links){
   return _strToB64(JSON.stringify(clean));
 }
 /**
- * 解析习惯链分享码并导入（验证格式后保存到自定义链）
+ * 解析联动规则分享码并导入（验证格式后保存到自定义链）
  * @param {string} code - 分享码字符串
  * @returns {{ok:boolean, err?:string, count?:number, links?:Link[]}} 导入结果
  */
@@ -18800,28 +18804,28 @@ function importChainShareCode(code){
       enabled: l.enabled !== false
     });
   }
-  if(validLinks.length === 0) return {ok:false, err:t("chainShare.errNoValid","分享码中没有有效的习惯链")};
+  if(validLinks.length === 0) return {ok:false, err:t("chainShare.errNoValid","分享码中没有有效的联动规则")};
   saveCustomLinks(validLinks);
   return {ok:true, count: validLinks.length, links: validLinks};
 }
 /**
- * 打开习惯链分享弹窗（显示分享码文本框，可复制）
+ * 打开联动规则分享弹窗（显示分享码文本框，可复制）
  * @returns {void}
  */
 function openChainShareModal(){
   const links = getLinks();
-  if(!links.length){ toast("暂无习惯链可分享", "warn"); return; }
+  if(!links.length){ toast("暂无联动规则可分享", "warn"); return; }
   const code = generateChainShareCode(links);
   const old = document.querySelector(".chain-share-modal");
   if(old) old.remove();
   const html = `<div class="chain-share-modal" id="chainShareModal">
     <div class="chain-share-dialog">
       <div class="chain-share-header">
-        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的习惯链</h2>
+        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的联动规则</h2>
         <button type="button" class="chain-share-close" id="chainShareClose" aria-label="${t("common.close","关闭")}">✕</button>
       </div>
       <div class="chain-share-body">
-        <p class="hint">将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ${links.length} 条习惯链。</p>
+        <p class="hint">将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ${links.length} 条联动规则。</p>
         <textarea id="chainShareCode" readonly rows="6" class="code-input" style="word-break:break-all">${esc(code)}</textarea>
         <div style="display:flex;gap:var(--space-2)margin-top:var(--space-2)">
           <button type="button" class="addbtn" id="chainShareCopy" style="--sc:var(--accent);flex:1">复制分享码</button>
@@ -18840,7 +18844,7 @@ function openChainShareModal(){
   };
 }
 /**
- * 打开习惯链导入弹窗（输入分享码，预览后确认导入）
+ * 打开联动规则导入弹窗（输入分享码，预览后确认导入）
  * @returns {void}
  */
 function openChainImportModal(){
@@ -18849,11 +18853,11 @@ function openChainImportModal(){
   const html = `<div class="chain-import-modal" id="chainImportModal">
     <div class="chain-share-dialog">
       <div class="chain-share-header">
-        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入习惯链</h2>
+        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入联动规则</h2>
         <button type="button" class="chain-share-close" id="chainImportClose" aria-label="${t("common.close","关闭")}">✕</button>
       </div>
       <div class="chain-share-body">
-        <p class="hint">粘贴他人分享的习惯链分享码，点「预览」查看将导入的链，确认后点「导入」。</p>
+        <p class="hint">粘贴他人分享的联动规则分享码，点「预览」查看将导入的链，确认后点「导入」。</p>
         <textarea id="chainImportCode" rows="6" class="code-input" placeholder="${t("chainShare.pasteHint","粘贴分享码...")}" style="word-break:break-all"></textarea>
         <div id="chainImportPreview" style="margin-top:var(--space-2)"></div>
         <div style="display:flex;gap:var(--space-2)margin-top:var(--space-2)">
@@ -18892,7 +18896,7 @@ function openChainImportModal(){
     saveCustomLinks(pendingLinks);
     renderLinksBox();
     close();
-    toast("已导入 "+pendingLinks.length+" 条习惯链", "ok");
+    toast("已导入 "+pendingLinks.length+" 条联动规则", "ok");
   };
 }
 
@@ -20409,7 +20413,7 @@ $("#cfgNotify").onchange = ()=>{
   }
 };
 
-/* ---------- T3.2 习惯链管理事件绑定 ---------- */
+/* ---------- T3.2 联动规则管理事件绑定 ---------- */
 /* 把指定 id 的链行替换为编辑行 */
 function _enterChainEdit(id){
   const box = $("#linksBox"); if(!box) return;
@@ -20445,16 +20449,16 @@ $("#chainAddBtn").onclick = ()=>{
 };
 /* 重置为默认按钮 */
 $("#chainResetBtn").onclick = ()=>{
-  if(!confirm(t("chain.confirmReset","确定重置为默认习惯链？自定义链将被清除。"))) return;
+  if(!confirm(t("chain.confirmReset","确定重置为默认联动规则？自定义规则将被清除。"))) return;
   resetCustomLinks();
   renderLinksBox();
-  toast("已重置为默认习惯链", "ok");
+  toast("已重置为默认联动规则", "ok");
 };
 /* linksBox 事件委托：删除 / 编辑关键词 / 编辑目标场景 / 启用切换 */
 $("#linksBox").addEventListener("click", e=>{
   const target = e.target;
   const delBtn = target.closest("[data-del]");
-  if(delBtn){ const id = delBtn.getAttribute("data-del"); if(!confirm(t("chain.confirmDelete", "确定删除这条习惯链？"))) return; removeCustomLink(id); renderLinksBox(); return; }
+  if(delBtn){ const id = delBtn.getAttribute("data-del"); if(!confirm(t("chain.confirmDelete", "确定删除这条联动规则？"))) return; removeCustomLink(id); renderLinksBox(); return; }
   const saveBtn = target.closest("[data-save]");
   if(saveBtn){
     const id = saveBtn.getAttribute("data-save");
@@ -20493,7 +20497,7 @@ $("#cmdInput").onkeydown = e=>{
 $("#cmdInput").oninput = e=> renderCmd(e.target.value);
 
 /* ---------- v1.4-E 协作/分享：设置抽屉新按钮事件绑定 ---------- */
-/* 习惯链分享 / 导入 / 场景模板入口（按钮在 top.html 设置抽屉中声明）
+/* 联动规则分享 / 导入 / 场景模板入口（按钮在 top.html 设置抽屉中声明）
  * 使用 nullish 守卫防御：测试环境若 DOM 尚未挂载对应按钮时不报错 */
 const _btnChainShare = $("#btnChainShare"); if(_btnChainShare) _btnChainShare.onclick = openChainShareModal;
 const _btnChainImport = $("#btnChainImport"); if(_btnChainImport) _btnChainImport.onclick = openChainImportModal;
@@ -21399,7 +21403,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // P1 自定义场景访问器（供测试驱动与断言）
     addCustomScenario, updateCustomScenario, removeCustomScenario,
     setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,
-    // 第三轮：P8 多维筛选+保存视图 / P2' 习惯链有向图 / P9 稍后提醒+免打扰 访问器
+    // 第三轮：P8 多维筛选+保存视图 / P2' 联动关系图 / P9 稍后提醒+免打扰 访问器
     renderChainGraph, getGlobViews, saveGlobView, removeGlobView, _applyGlobFilters,
     snoozeTask, getQuietHours, setQuietHours, isQuietTime,
     updateTask, openTaskEdit, closeTaskEditModal,
@@ -21446,7 +21450,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     _renderRecItem, _renderRecList, _updateRecVScroll,
     _renderReviewItem, _updateReviewVScroll,
     _tryMoveKanbanCardLocal, _bindVirtualScrolls,
-    // v1.4-E 协作/分享：任务分享链接 + 习惯链分享导入 + 场景模板一键导入
+    // v1.4-E 协作/分享：任务分享链接 + 联动规则分享导入 + 场景模板一键导入
     generateShareLink, parseShareLink, renderSharedTaskCard, openSharedTaskModal, checkSharedTaskOnLoad,
     generateChainShareCode, importChainShareCode, openChainShareModal, openChainImportModal,
     // v1.4-D AI 能力增强：自然语言建任务/操作解析 + AI 每日报告
@@ -21622,7 +21626,7 @@ const MESSAGES = {
     "nav.home": "主页",
     "nav.dash": "仪表盘",
     "nav.tasks": "任务",
-    "nav.chain": "习惯链",
+    "nav.chain": "场景联动",
     "nav.apps": "应用",
     "nav.system": "系统",
     "nav.ai": "AI",
@@ -21704,7 +21708,7 @@ const MESSAGES = {
     "settings.recycle.30": "30 天后",
     "settings.recycle.90": "90 天后",
     "settings.scenarioMgmt": "场景管理",
-    "settings.chainMgmt": "习惯链管理",
+    "settings.chainMgmt": "联动规则",
     "settings.templateMgmt": "场景模板",
     "settings.agent": "Agent 能力",
     "settings.agentMode": "Agent 模式（工作记忆 + 多步目标编排）",
@@ -21728,14 +21732,14 @@ const MESSAGES = {
     "ai.noKey": "未配置 AI Key",
     "ai.clearMem.confirm": "确定清空全部工作记忆？此操作不可恢复。",
 
-    // 习惯链
-    "chain.title": "习惯链",
-    "chain.add": "添加链",
-    "chain.addNew": "添加新链",
-    "chain.delete": "删除链",
+    // 场景联动
+    "chain.title": "场景联动",
+    "chain.add": "添加规则",
+    "chain.addNew": "添加新规则",
+    "chain.delete": "删除规则",
     "chain.reset": "重置为默认",
-    "chain.share": "分享我的链",
-    "chain.import": "导入链",
+    "chain.share": "分享规则",
+    "chain.import": "导入规则",
     "chain.kw.placeholder": "输入关键词，如：交付、上线",
 
     // 统计
@@ -21750,7 +21754,7 @@ const MESSAGES = {
 
     // 通知
     "notify.due": "任务到期",
-    "notify.chainBreak": "习惯链可能断裂",
+    "notify.chainBreak": "联动可能断裂",
     "notify.daily": "今日待办",
     "notify.offline": "当前离线",
     "notify.online": "已恢复在线",
@@ -21855,7 +21859,7 @@ const MESSAGES = {
     "a11y.add": "添加",
     "offline.banner": "当前离线，数据已保存到本地，恢复网络后将自动同步",
     "offline.syncing": "同步中…",
-    "todo.previewEmpty": "今天 0 件待处理 · 已完成 0 件 · 习惯链 0 条进行中",
+    "todo.previewEmpty": "今天 0 件待处理 · 已完成 0 件 · 联动 0 条进行中",
     "todo.toggle": "展开/收起",
     "msg.title": "消息",
     "msg.markAllRead": "全部已读",
@@ -21872,7 +21876,7 @@ const MESSAGES = {
     "tracker.pause": "暂停",
     "tracker.stop": "停止",
     "page.settings.title": "设置",
-    "page.settings.sub": "场景 · 习惯链 · 外观 · 通知 · 数据 · 集成 · 关于",
+    "page.settings.sub": "场景 · 联动 · 外观 · 通知 · 数据 · 集成 · 关于",
     "page.ai.title": "AI",
     "page.ai.sub": "大模型 Profile、接口地址与请求参数",
     "page.plugin.title": "插件",
@@ -21884,7 +21888,7 @@ const MESSAGES = {
     "ai.nav.agent": "Agent",
     "ai.nav.ext": "扩展",
     "settings.nav.scene": "场景",
-    "settings.nav.chain": "习惯链",
+    "settings.nav.chain": "场景联动",
     "settings.nav.look": "外观",
     "settings.nav.notify": "通知",
     "settings.nav.data": "数据",
@@ -21957,17 +21961,17 @@ const MESSAGES = {
     "sess.clearAll": "清除所有会话",
     "sess.save": "保存会话配置",
     "sceneMgmt.title": "场景管理",
-    "sceneMgmt.desc": "可新增自定义场景，或为内置场景改名 / 换色。场景下有任务时不可删除（防止数据丢失）。改动保存后，侧栏、命令面板、统计与习惯链自动生效。",
+    "sceneMgmt.desc": "可新增自定义场景，或为内置场景改名 / 换色。场景下有任务时不可删除（防止数据丢失）。改动保存后，侧栏、命令面板、统计与联动自动生效。",
     "sceneMgmt.addCustom": "添加自定义场景",
     "sceneMgmt.namePlaceholder": "场景名（如 健身）",
     "sceneMgmt.colorLabel": "场景颜色",
     "sceneMgmt.iconLabel": "场景图标",
     "sceneMgmt.addBtn": "添加场景",
-    "chainMgmt.title": "习惯链管理",
+    "chainMgmt.title": "联动规则",
     "chainMgmt.desc": "源场景任务完成时，按规则跨场景自动生成奖励/后续任务（生成的任务带「联动」标签）。点击关键词或目标场景可 inline 编辑。",
     "chainMgmt.addNew": "添加新链",
     "chainMgmt.kwPlaceholder": "输入关键词，如：交付、上线",
-    "chainMgmt.addBtn": "添加习惯链",
+    "chainMgmt.addBtn": "添加联动规则",
     "knowledge.title": "知识",
     "knowledge.desc": "场景模板与知识管理（笔记 / 知识库 / 全文搜索）入口。",
     "knowledge.template": "场景模板",
@@ -21979,7 +21983,7 @@ const MESSAGES = {
     "knowledge.base": "知识库",
     "knowledge.search": "全文搜索",
     "store.title": "商店",
-    "store.desc": "启用插件可扩展自定义场景、卡片与习惯链规则。插件状态持久化到本地，启用/禁用即时生效。",
+    "store.desc": "启用插件可扩展自定义场景、卡片与联动规则。插件状态持久化到本地，启用/禁用即时生效。",
     "store.registerNew": "注册新插件",
     "store.pasteJson": "粘贴插件 JSON 定义。",
     "store.registerBtn": "注册插件",
@@ -22021,8 +22025,8 @@ const MESSAGES = {
     "look.pointerFxEnable": "启用鼠标特效",
     "look.pointerFxSub": "鼠标在页面移动时显示装饰粒子，可关闭或选择风格。",
     "notify.title": "通知提醒",
-    "notify.desc": "到期任务、习惯链断链与每日汇总的提醒方式，以及浏览器推送订阅。",
-    "notify.enableLabel": "开启任务到期 / 习惯链断链 / 每日汇总提醒",
+    "notify.desc": "到期任务、联动断链与每日汇总的提醒方式，以及浏览器推送订阅。",
+    "notify.enableLabel": "开启任务到期 / 联动断链 / 每日汇总提醒",
     "notify.enableSub": "开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。",
     "notify.quietTip": "免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。",
     "notify.pushStatus": "未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。",
@@ -22163,9 +22167,9 @@ const MESSAGES = {
     "err.sameSc": "源场景与目标场景不能相同",
     "err.kwEmpty": "关键词不能为空",
     "err.linkNotFound": "链不存在",
-    "recycle.chain.name": "习惯链：「{name}」",
+    "recycle.chain.name": "联动规则：「{name}」",
     "recycle.chain.desc": "{from} → {to}，关键词：「{kw}」",
-    "recycle.chain.source": "习惯链管理",
+    "recycle.chain.source": "联动规则",
     "sess.defaultTitle": "{name} 默认会话",
     "sess.new": "新会话",
     "sess.renamePrompt": "重命名会话",
@@ -22257,8 +22261,8 @@ const MESSAGES = {
     "heatmap.ariaLabel": "{name} 热力图",
     "coach.streakGood": "你已连续 {days} 天完成{name}任务，保持得很好",
     "coach.streakBad": "最近 14 天没有完成{name}任务，是否需要降低门槛？",
-    "chain.triggerGood": "习惯链「{name}」最近触发 {count} 次，效果不错",
-    "coach.systemPrompt": "你是习惯教练。根据以下用户最近 2 周的行为数据，给出 3 条具体、可执行的个性化建议（每条不超过 30 字）。\n要求：\n1. 建议必须基于具体数据，不要泛泛而谈。例如：若某场景断链 N 天，明确指出「你已 N 天没做 XX，建议…」\n2. 若某场景 streak 较长，给予鼓励；若断链，给出恢复建议\n3. 若习惯链触发次数低，建议如何提高触发率\n只返回 JSON 字符串数组，如 [\"建议1\",\"建议2\",\"建议3\"]。\n\n行为分析：\n{analysis}\n\n具体数据（每场景近 7 天完成数 / 当前 streak / 最长 streak / 断链天数 / 习惯链触发次数）：\n{specificData}",
+    "chain.triggerGood": "联动规则「{name}」最近触发 {count} 次，效果不错",
+    "coach.systemPrompt": "你是习惯教练。根据以下用户最近 2 周的行为数据，给出 3 条具体、可执行的个性化建议（每条不超过 30 字）。\n要求：\n1. 建议必须基于具体数据，不要泛泛而谈。例如：若某场景断链 N 天，明确指出「你已 N 天没做 XX，建议…」\n2. 若某场景 streak 较长，给予鼓励；若断链，给出恢复建议\n3. 若联动触发次数低，建议如何提高触发率\n只返回 JSON 字符串数组，如 [\"建议1\",\"建议2\",\"建议3\"]。\n\n行为分析：\n{analysis}\n\n具体数据（每场景近 7 天完成数 / 当前 streak / 最长 streak / 断链天数 / 联动触发次数）：\n{specificData}",
     "coach.systemRole": "你是习惯教练，给出简洁、可执行、基于具体数据的建议。只返回 JSON 字符串数组，不要任何其他内容。",
     "coach.noAiHint": "尚未启用 AI。点击右上角「设置」配置 API Key 后，AI 教练将分析你的习惯模式并给出建议。",
     "coach.loadingHint": "正在分析你的行为数据…",
@@ -22274,21 +22278,21 @@ const MESSAGES = {
     "hc.notStarted": "⚠️ 未开始",
     "hc.heatItem": "{name}（最近 12 周）",
     "hc.kpi.bestStreak": "最长坚持（天）",
-    "hc.kpi.enabledChains": "启用习惯链",
+    "hc.kpi.enabledChains": "启用联动",
     "hc.kpi.weekTriggers": "本周联动触发",
-    "hc.title": "习惯链可视化",
+    "hc.title": "联动视图",
     "hc.sub": "跨场景联动 · 坚持天数 · 完成密度",
     "hc.section.crossChain": "跨场景链路图",
     "hc.section.streak": "当前 Streak",
     "hc.section.heatmap": "完成热力图（最近 12 周）",
-    "hc.empty": "暂无习惯链",
-    "hc.graphAriaLabel": "跨场景习惯链有向图",
+    "hc.empty": "暂无联动规则",
+    "hc.graphAriaLabel": "跨场景联动关系图",
     "side.toggleAria": "折叠或展开侧边栏",
     "side.toggleTitle": "折叠/展开",
     "side.toggleLabel": "折叠",
     "side.menu.home": "主页",
     "side.menu.tasks": "任务",
-    "side.menu.chain": "习惯链",
+    "side.menu.chain": "场景联动",
     "side.menu.toolbox": "工具箱",
     "side.menu.store": "商店",
     "side.menu.recycle": "回收站",
@@ -22375,9 +22379,9 @@ const MESSAGES = {
     "chartStore.dashboard": "仪表盘",
     "chartStore.dashboardTitle": "仪表盘",
     "chartStore.dashboardSub": "4 卡片布局",
-    "chartStore.chain": "习惯链",
-    "chartStore.chainTitle": "习惯链",
-    "chartStore.chainSub": "场景连环",
+    "chartStore.chain": "联动",
+    "chartStore.chainTitle": "联动",
+    "chartStore.chainSub": "跨场景联动",
     "chartStore.pie": "饼图",
     "chartStore.pieTitle": "饼图",
     "chartStore.pieSub": "分布占比",
@@ -22761,7 +22765,7 @@ const MESSAGES = {
     "overview.today.more": "还有 {n} 项待处理 ▸",
     "overview.today.itemTitle": "点击进入「{name}」场景",
     "dailyReport.noAi": "尚未启用 AI。配置 API Key 后可生成每日报告。",
-    "dailyReport.sub": "基于昨日完成任务、今日待办与习惯链状态，AI 生成每日报告",
+    "dailyReport.sub": "基于昨日完成任务、今日待办与联动状态，AI 生成每日报告",
     "dailyReport.btn": "生成今日报告",
     "dailyReport.loading": "正在生成每日报告…",
     "dailyReport.fail": "生成失败：",
@@ -22791,7 +22795,7 @@ const MESSAGES = {
     "ovKpi.currentStreak": "当前连续",
     "ovKpi.todayTodo.title": "查看今天要处理",
     "ovKpi.stats.title": "打开统计",
-    "ovKpi.chain.title": "打开习惯链",
+    "ovKpi.chain.title": "打开场景联动",
     "ovKpi.overdue": "逾期",
     "ovKpi.streakUnit": " 天",
     "statsChart.trend.aria": "任务完成趋势图",
@@ -22837,21 +22841,21 @@ const MESSAGES = {
     "storePage.importPrompt": "粘贴插件 JSON 定义：",
     "storePage.importOkToast": "插件导入成功",
     "storePage.importFailToast": "导入失败",
-    "chainPage.title": "习惯链",
-    "chainPage.sub": "跨场景行为联动——完成 A 场景任务自动触发 B 场景待办",
+    "chainPage.title": "场景联动",
+    "chainPage.sub": "打卡记录与跨场景自动化规则"—完成 A 场景任务自动触发 B 场景待办",
     "chainPage.cfgBtn": "规则配置",
     "chainPage.backHome": "← 主页",
-    "chainPage.aria": "习惯链快速导航",
-    "chainPage.streak": "Streak",
-    "chainPage.graph": "链路图",
-    "chainPage.status": "状态",
-    "chainPage.rate": "成功率",
-    "chainPage.streak.sub": "各场景连续完成天数（≥3 天点燃火焰）",
-    "chainPage.graph.title": "场景链路图",
-    "chainPage.status.title": "习惯链状态",
-    "chainPage.rate.title": "触发成功率",
-    "chainPage.rate.empty": "暂无链路触发记录",
-    "chainPage.notStarted": "○ 未开始",
+    "chainPage.aria": "场景联动快速导航",
+    "chainPage.streak": "打卡记录",
+    "chainPage.graph": "联动关系",
+    "chainPage.status": "联动记录",
+    "chainPage.rate": "触发统计",
+    "chainPage.streak.sub": "各场景连续打卡天数（≥3 天点燃火焰）",
+    "chainPage.graph.title": "联动关系图",
+    "chainPage.status.title": "联动状态",
+    "chainPage.rate.title": "触发统计",
+    "chainPage.rate.empty": "暂无联动触发记录",
+    "chainPage.notStarted": "○ 未打卡",
     "globView.apply": "应用视图",
     "globView.del": "删除视图",
     "globView.save": "保存当前筛选为视图",
@@ -22957,10 +22961,10 @@ const MESSAGES = {
     "ai.reportPrompt1": "你是工作台助手。根据以下用户数据，生成「每日报告」：\\n",
     "ai.reportPrompt2": "1. 昨日总结：完成了哪些任务（列出标题，无则说明「昨日无完成任务」）\\n",
     "ai.reportPrompt3": "2. 今日待办：今日到期的任务 + 逾期未完成的任务（按优先级排序）\\n",
-    "ai.reportPrompt4": "3. 习惯链状态：各场景的当前 streak，给出保持/打破建议\\n",
+    "ai.reportPrompt4": "3. 打卡状态：各场景的连续打卡天数，给出保持/打破建议\\n",
     "ai.reportPrompt5": "4. 今日建议：基于数据给出 2-3 条具体可执行的建议\\n\\n",
     "ai.reportPrompt6": "用 Markdown 格式返回，使用 ##/### 标题分节。数据：\\n",
-    "ai.reportShortPrompt": "你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、习惯链状态、今日建议四个部分。",
+    "ai.reportShortPrompt": "你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。",
     "ai.splitAddHint": "\\n发送「添加子任务」可将它们加入任务列表。",
     "ai.splitDone": "已将「",
     "ai.splitDoneMid": "」拆解为 ",
@@ -23016,7 +23020,7 @@ const MESSAGES = {
     "confirm.deleteRecord": "删除这条记录？",
     "confirm.deleteScenario": "确定删除该场景？（场景下有任务时不可删除）",
     "confirm.deleteTask": "删除这条任务？（将进入回收站，可恢复）",
-    "confirm.importOverwrite": "导入将覆盖当前同名数据（含自定义习惯链）。确定继续？",
+    "confirm.importOverwrite": "导入将覆盖当前同名数据（含自定义联动规则）。确定继续？",
     "cycle.monthly": "月缴",
     "cycle.oneTime": "一次性",
     "cycle.quarterly": "季缴",
@@ -23177,7 +23181,7 @@ const MESSAGES = {
     "msg.csvParseFailed": "CSV 解析失败：",
     "msg.csvReadFailed": "CSV 文件读取失败",
     "msg.dailyDigest": "每日播报：今日待处理 ",
-    "msg.dashChain": " 件 · 习惯链 ",
+    "msg.dashChain": " 件 · 联动 ",
     "msg.dashChainActive": " 条进行中",
     "msg.dashPending": " 件待处理 · 已完成 ",
     "msg.dataAccumulated": "数据已积累 ",
@@ -23407,7 +23411,7 @@ const MESSAGES = {
     "ai.skillReview": "复习",
     "ai.skillStats": "统计",
     "cfg.keySavedInMain": "已保存（主进程保管）",
-    "chain.confirmReset": "确定重置为默认习惯链？自定义链将被清除。",
+    "chain.confirmReset": "确定重置为默认联动规则？自定义规则将被清除。",
     "chain.defaultTaskTitle": "奖励：",
     "chainShare.errEmpty": "分享码不能为空",
     "chainShare.errEmptyArray": "分享码内容为空或非数组",
@@ -23415,7 +23419,7 @@ const MESSAGES = {
     "chainShare.errFormat": "分享码格式错误，无法解码",
     "chainShare.errInvalidFromSc": "条链：无效的源场景「",
     "chainShare.errInvalidToSc": "条链：无效的目标场景「",
-    "chainShare.errNoValid": "分享码中没有有效的习惯链",
+    "chainShare.errNoValid": "分享码中没有有效的联动规则",
     "chainShare.errSameSc": "条链：源场景与目标场景不能相同",
     "chainShare.parseFailed": "解析失败",
     "chainShare.pasteHint": "粘贴分享码...",
@@ -23567,7 +23571,7 @@ const MESSAGES = {
     "p5.catSuffix": " 个分类</span>",
     "p5.category": "类别：",
     "p5.categoryPlaceholder": "分类（如：知识库/工作笔记/学习笔记）",
-    "p5.chainHeader": "<h2>习惯链表现</h2><table><tr><th>链</th><th>触发次数</th></tr>",
+    "p5.chainHeader": "<h2>联动表现</h2><table><tr><th>规则</th><th>触发次数</th></tr>",
     "p5.chatOnceError": "chatOnce 调用异常：",
     "p5.chatOnceUnavailable": "chatOnce 不可用",
     "p5.codeEmpty": "代码为空",
@@ -23658,7 +23662,7 @@ const MESSAGES = {
     "p5.newTask": "新建任务",
     "p5.nextMonth": "下一月",
     "p5.nextWeek": "下一周",
-    "p5.noChainData": "<tr><td colspan=\"2\">暂无习惯链</td></tr>",
+    "p5.noChainData": "<tr><td colspan=\"2\">暂无联动规则</td></tr>",
     "p5.noIssues": "未发现问题。",
     "p5.noLoadedModel": "无已加载模型",
     "p5.noTrendData": "<tr><td colspan=\"2\">暂无完成数据</td></tr>",
@@ -25012,7 +25016,7 @@ const MESSAGES = {
     "chainPage.cfgBtn": "Configure Rules",
     "chainPage.backHome": "← Home",
     "chainPage.aria": "Habit Chain Quick Nav",
-    "chainPage.streak": "Streak",
+    "chainPage.streak": "打卡记录",
     "chainPage.graph": "Graph",
     "chainPage.status": "Status",
     "chainPage.rate": "Success Rate",
@@ -25127,10 +25131,10 @@ const MESSAGES = {
     "ai.reportPrompt1": "你是工作台助手。根据以下用户数据，生成「每日报告」：\\n",
     "ai.reportPrompt2": "1. 昨日总结：完成了哪些任务（列出标题，无则说明「昨日无完成任务」）\\n",
     "ai.reportPrompt3": "2. 今日待办：今日到期的任务 + 逾期未完成的任务（按优先级排序）\\n",
-    "ai.reportPrompt4": "3. 习惯链状态：各场景的当前 streak，给出保持/打破建议\\n",
+    "ai.reportPrompt4": "3. 打卡状态：各场景的连续打卡天数，给出保持/打破建议\\n",
     "ai.reportPrompt5": "4. 今日建议：基于数据给出 2-3 条具体可执行的建议\\n\\n",
     "ai.reportPrompt6": "用 Markdown 格式返回，使用 ##/### 标题分节。数据：\\n",
-    "ai.reportShortPrompt": "你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、习惯链状态、今日建议四个部分。",
+    "ai.reportShortPrompt": "你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。",
     "ai.splitAddHint": "\\n发送「添加子任务」可将它们加入任务列表。",
     "ai.splitDone": "已将「",
     "ai.splitDoneMid": "」拆解为 ",
@@ -25186,7 +25190,7 @@ const MESSAGES = {
     "confirm.deleteRecord": "Delete this record?",
     "confirm.deleteScenario": "Confirm delete this scenario? (Cannot delete if has tasks)",
     "confirm.deleteTask": "Delete this task? (Will be moved to recycle bin, recoverable)",
-    "confirm.importOverwrite": "导入将覆盖当前同名数据（含自定义习惯链）。确定继续？",
+    "confirm.importOverwrite": "导入将覆盖当前同名数据（含自定义联动规则）。确定继续？",
     "cycle.monthly": "Monthly",
     "cycle.oneTime": "One-time",
     "cycle.quarterly": "Quarterly",
@@ -25347,7 +25351,7 @@ const MESSAGES = {
     "msg.csvParseFailed": "CSV parse failed: ",
     "msg.csvReadFailed": "CSV file read failed",
     "msg.dailyDigest": "每日播报：今日待处理 ",
-    "msg.dashChain": " 件 · 习惯链 ",
+    "msg.dashChain": " 件 · 联动 ",
     "msg.dashChainActive": " 条进行中",
     "msg.dashPending": " 件待处理 · 已完成 ",
     "msg.dataAccumulated": "数据已积累 ",
@@ -26028,7 +26032,7 @@ function applyI18n(root){
 // 启动时同步标题与静态节点（initI18n 已恢复语言偏好）
 try{ document.title = t("app.name"); applyI18n(document); }catch(e){ /* noop */ }// ===== Plugin System (v1.5-B 插件/扩展体系) =====
 /* ============================================================
- * 插件系统核心：注册框架 + 自定义场景 + 自定义卡片 + 自定义习惯链规则
+ * 插件系统核心：注册框架 + 自定义场景 + 自定义卡片 + 自定义联动规则
  * ------------------------------------------------------------
  * 设计要点：
  *  - 使用 var 声明模块级私有状态（_plugins / BUILTIN_PLUGINS），
@@ -26048,7 +26052,7 @@ try{ document.title = t("app.name"); applyI18n(document); }catch(e){ /* noop */ 
  * @property {boolean} enabled - 是否启用
  * @property {Array} [scenarios] - 自定义场景定义
  * @property {Array} [cards] - 自定义卡片注册
- * @property {Array} [chainRules] - 自定义习惯链规则
+ * @property {Array} [chainRules] - 自定义联动规则
  * @property {Function} [onActivate] - 激活回调
  * @property {Function} [onDeactivate] - 停用回调
  * @property {Object} [config] - 插件配置
@@ -26388,7 +26392,7 @@ function getPluginCards(){
 }
 
 /**
- * 获取插件提供的自定义习惯链规则（聚合所有已启用插件的 chainRules）
+ * 获取插件提供的自定义联动规则（聚合所有已启用插件的 chainRules）
  * @returns {Array} 链规则数组
  */
 function getPluginChainRules(){
@@ -26894,7 +26898,7 @@ _initThemeSystem();// ===== Advanced Stats & Reports (v1.5-D) =====
  *
  * 数据契约：
  *  - 任务 doneAt / created 为时间戳（Date.now()），通过 _ymd(new Date(ts)) 转 YYYY-MM-DD
- *  - 习惯链字段为 { fromSc, kw, toSc }（见 06-data-links.js / 07-store.js）
+ *  - 联动规则字段为 { fromSc, kw, toSc }（见 06-data-links.js / 07-store.js）
  *  - _ymd / pad / ORDER / SCENARIOS / getActiveTasks / getLinks / sanitizeHtml / $ / toast 均来自前置模块
  */
 
@@ -26959,7 +26963,7 @@ function _taskDateStr(t){
 
 /* ---------- 报表数据生成 ---------- */
 /**
- * 生成报表数据：任务完成趋势 + 场景分布 + 习惯链表现 + 关键指标
+ * 生成报表数据：任务完成趋势 + 场景分布 + 联动表现 + 关键指标
  * @param {("week"|"month"|"year"|"custom")} type - 报表类型
  * @param {number} [offset=0] - 时间偏移
  * @param {{start:string,end:string}} [customRange] - 自定义范围（type="custom" 时必填）
@@ -26997,7 +27001,7 @@ function generateReport(type, offset, customRange){
     if(scDist[t.sc] !== undefined) scDist[t.sc]++;
   });
 
-  // 习惯链表现：统计每条链在范围内的触发次数
+  // 联动表现：统计每条链在范围内的触发次数
   // 触发定义：fromSc 场景中标题包含 kw 的已完成任务数
   const chainPerf = {};
   const links = getLinks();
@@ -27083,11 +27087,11 @@ function renderReportHTML(report){
   });
   html += "</table>";
 
-  // 习惯链表现
-  html += t("p5.chainHeader", "<h2>习惯链表现</h2><table><tr><th>链</th><th>触发次数</th></tr>");
+  // 联动表现
+  html += t("p5.chainHeader", "<h2>联动表现</h2><table><tr><th>规则</th><th>触发次数</th></tr>");
   const chainKeys = Object.keys(report.chainPerformance);
   if(chainKeys.length === 0){
-    html += t("p5.noChainData", "<tr><td colspan=\"2\">暂无习惯链</td></tr>");
+    html += t("p5.noChainData", "<tr><td colspan=\"2\">暂无联动规则</td></tr>");
   } else {
     chainKeys.forEach(function(key){
       const c = report.chainPerformance[key];
@@ -28149,7 +28153,7 @@ const DASHBOARD_WIDGETS = [
   { id: "scenes",   name: "场景概况",   default: true,  defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
   { id: "pie",      name: "场景分布",   default: true,  defaultPos: { x: 3, y: 2, w: 1, h: 1 } },
   { id: "heatmap",  name: "热力图",     default: true,  defaultPos: { x: 4, y: 2, w: 1, h: 1 } },
-  { id: "chain",    name: "习惯链成功率", default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
+  { id: "chain",    name: "联动触发率", default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
   { id: "recent",   name: "最近完成",   default: true,  defaultPos: { x: 3, y: 3, w: 3, h: 1 } },
   { id: "actions",  name: "快捷操作",   default: false, defaultPos: { x: 1, y: 4, w: 5, h: 1 } },
   { id: "hourdist", name: "完成时段分布", default: false, defaultPos: { x: 1, y: 5, w: 2, h: 1 } },
@@ -28287,7 +28291,7 @@ function _renderDashboardWidget(id){
     return typeof renderHeatmap === "function" ? renderHeatmap("office") : t("p5.heatmap", "<p class='widget-empty'>热力图</p>");
   }
   if(id === "chain"){
-    /* v2.2.0：每条链的环形成功率（沿用原统计页视觉），无链时显示习惯链状态 */
+    /* v2.2.0：每条链的环形成功率（沿用原统计页视觉），无链时显示联动状态 */
     const chains = typeof calcChainSuccess === "function" ? (calcChainSuccess() || []) : [];
     const ringR = 20, ringC = 2 * Math.PI * ringR;
     const chainsHtml = chains.length ? chains.map(function(c){
@@ -28305,8 +28309,8 @@ function _renderDashboardWidget(id){
         '<span style="color:' + toColor + '">' + esc((SCENARIOS[c.toSc] ? SCENARIOS[c.toSc].name : c.toSc)) + '</span>' +
         '<span class="stats-chain-meta">' + t('p5.trigger', '触发 ') + c.triggered + t('p5.sourceDone', ' / 源完成 ') + c.sourceDone + '</span></div>' +
         '<div class="stats-chain-ring">' + ringSvg + '</div></div>';
-    }).join("") : t('p5.noChain', '<div class="empty">暂无习惯链</div>');
-    return t('p5.chainRateHeader', '<h3>习惯链成功率</h3><p class="sub">每条链近 30 天触发次数 / 源场景完成数</p>') + chainsHtml;
+    }).join("") : t('p5.noChain', '<div class="empty">暂无联动规则</div>');
+    return t('p5.chainRateHeader', '<h3>联动触发率</h3><p class="sub">每条规则近 30 天触发次数 / 源场景完成数</p>') + chainsHtml;
   }
   if(id === "hourdist"){
     const hd = typeof calcHourDist === "function" ? calcHourDist(30) : null;

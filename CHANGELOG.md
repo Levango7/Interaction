@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
@@ -16,7 +16,7 @@
 - 子导航 `大模型/Agent/扩展` 保留；ai-skills/ai-mcp/ai-workflow/ai-memory/ai-plugin 五个 section id 保留（无破坏性变更，JS 绑定不破）
 
 **📐 侧栏结构 4→5 组**
-- 总览（主页 / 任务 / 习惯链）→ 场景 → **AI**（从"应用"中拆出）→ 工具（工具箱 + 商店）→ 系统
+- 总览（主页 / 任务 / 场景联动）→ 场景 → **AI**（从"应用"中拆出）→ 工具（工具箱 + 商店）→ 系统
 - 移动端底部 4 → 5 个 tab 按钮；`MOB_GROUP_ICONS` 同步更新
 
 **🗂 场景功能 tab 减负**
@@ -88,7 +88,7 @@ v3.2.0 引入的"问 AI 助手"按钮在窄屏（视口 < 1280px）下点了不�
 ### 审计修复批次：3×P0 + 10×P1（本轮全量审计后的修复）
 
 **🐛 P0 修复**
-- **4 页面「← 主页」死按钮**：任务/工具箱/商店/习惯链页头按钮原用内联 `onclick`，但渲染路径全部经 sanitizeHtml（规则 3 剥离所有 on* 事件属性），按钮渲染后点击无响应——改统一 `id=btnBackHome` + 渲染尾部绑定
+- **4 页面「← 主页」死按钮**：任务/工具箱/商店/场景联动页头按钮原用内联 `onclick`，但渲染路径全部经 sanitizeHtml（规则 3 剥离所有 on* 事件属性），按钮渲染后点击无响应——改统一 `id=btnBackHome` + 渲染尾部绑定
 - **syncPush IPC 断链**：main.js 的 `sync-push` handler 存在、README 有记载，但 preload 无暴露且渲染侧零调用——主进程 `syncSnapshot` 恒为 `{}`，「本机同步下载」永远导出空数据。preload 补 `syncPush`；渲染侧启动即推 + 60s 周期推 + 下载前先推
 - **AI 页 8 子模块中 6 个配置空壳诚实化**：Skills/MCP/Workflow/Memory/Plugin/Session 的配置保存后无任何消费者（MCP 无客户端、Workflow 引擎自 v1.14.1 冻结未复活、Memory 不被 trimChatHist 读取、Skills 开关与真实 toolWhitelist 互不相通、Plugin 纯静态清单、Session history 无写入路径）——各 section 增加实验性声明，不再虚假承诺「禁用的技能不会被 Agent 调用」
 
