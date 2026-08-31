@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -9709,7 +9709,7 @@ const TOOL_APPS = {
     name:t("tool.runner.name", "代码运行器"), icon:UI_ICONS.compile, desc:t("tool.runner.desc", "浏览器沙箱执行 JS · 输出捕获"),
     render: function(){
       const hist = _toolData("cod-compile-hist");
-      return '<label>JavaScript 代码</label><textarea id="ccCode" class="code-input" style="min-height:200px" placeholder=\'console.log("Hello 工坊!");\'></textarea>'
+      return '<label>JavaScript 代码</label><textarea id="ccCode" class="code-input" style="min-height:200px" placeholder=\'// 在这里编写 JavaScript 代码...\'></textarea>'
         + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="ccRun">▶ 运行</button>'
         + '<button type="button" class="addbtn sm" style="--sc:var(--muted)" id="ccClrOut">清空输出</button></div>'
         + '<label style="margin-top:var(--space-3)">输出</label><pre id="ccOut" class="snip" style="min-height:120px">// console 输出显示在这里</pre>'
@@ -11775,7 +11775,7 @@ function renderOverview(){
         </div>
         <div class="glob-filters-adv" id="globAdv" hidden>
           <select id="globFDate" aria-label="按日期筛选"><option value="">不限日期</option><option value="today">今天到期</option><option value="overdue">已逾期</option><option value="week">本周到期</option></select>
-          <input id="globFTag" placeholder="标签，如 urgent">
+          <input id="globFTag" placeholder="标签，如 紧急">
           <button type="button" id="globAdvClear" class="addbtn sm" style="--sc:var(--muted);flex:0 0 auto">清除筛选</button>
         </div>
         <div class="glob-views" id="globViews"></div>
@@ -13379,7 +13379,7 @@ function renderMainHTML(){
     <div class="fld fld-xl"><label for="boardSearch">搜索任务（A3）</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
     <div class="fld fld-md"><label>联动记录</label>
       <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
-    <div class="fld fld-lg"><label for="tagFilter">标签（留空=全部）</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / urgent")}" maxlength="200"></div>
+    <div class="fld fld-lg"><label for="tagFilter">标签（留空=全部）</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
@@ -14488,7 +14488,7 @@ SCENE_FEATURE_RENDER.code = {
       fields:[
         {k:"title", label:t("field.title", t("field.title","标题")), type:"text"},
         {k:"language", label:t("field.lang", t("settings.language","语言")), type:"select", options:["JavaScript","Python","Java","Go",t("option.other","其他")]},
-        {k:"code", label:"代码", type:"textarea", placeholder:'console.log("Hello");'},
+        {k:"code", label:"代码", type:"textarea", placeholder:'// 在此编写 JavaScript 代码...'},
         {k:"result", label:t("field.runResult","运行结果"), type:"text"}
       ],
       cols:[
@@ -21913,7 +21913,7 @@ const MESSAGES = {
     "agent.goalLoopsLabel": "目标激活时循环上限（12~50 轮）",
     "agent.goalLoopsPlaceholder": "12（默认）",
     "agent.whitelistLabel": "允许调用的工具（逗号分隔，留空=全部）",
-    "agent.whitelistPlaceholder": "create_task,complete_task,search（留空=允许全部工具）",
+    "agent.whitelistPlaceholder": "如 创建任务,完成搜索,查阅资料（留空=允许全部工具）",
     "agent.autoConfirmLabel": "自动确认非危险操作",
     "agent.autoConfirmSub": "delete_task / update_task 等危险操作仍弹窗确认；其他工具（搜索、创建任务等）自动执行无需确认。",
     "agent.syspromptLabel": "场景提示词（每场景可自定义）",
@@ -24083,7 +24083,7 @@ const MESSAGES = {
     "agent.goalLoopsLabel": "Goal-Active Loop Limit (12~50 rounds)",
     "agent.goalLoopsPlaceholder": "12 (default)",
     "agent.whitelistLabel": "Allowed Tools (comma-separated, empty=all)",
-    "agent.whitelistPlaceholder": "create_task,complete_task,search (empty=all tools)",
+    "agent.whitelistPlaceholder": "e.g. Create Task, Search, Research (empty=all tools)",
     "agent.autoConfirmLabel": "Auto-Confirm Non-Dangerous Operations",
     "agent.autoConfirmSub": "Dangerous operations (delete_task / update_task) still require confirmation; other tools (search, create_task, etc.) execute automatically.",
     "agent.syspromptLabel": "Scenario System Prompt (per scenario)",
@@ -34542,3 +34542,6 @@ function _resetIntegrationRateLimits(){
 </script>
 </body>
 </html>
+
+
+
