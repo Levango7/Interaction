@@ -1,6 +1,87 @@
-# Changelog
+﻿# Changelog
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
+
+## [v3.2.0] - 2026-09-01
+
+### IA 重构：让 AI 真正服务于整套平台 + 信息架构减法
+
+**🎯 核心改变**
+- **AI 提级为侧栏独立组**（与场景并列），不再埋在"应用"分组里——AI 不再是空架子，它是一等公民
+- **每个场景页标题栏加"问 AI 助手"入口**：点击聚焦右侧聊天面板并预填场景上下文（"在【{场景}】中，帮我…"），AI 不再是被遗忘的聊天面板里的机器人
+- **每个记录型 tab 加"让 AI 帮记"按钮**：把 30 个 form+table 的通用 CRUD 桥接到 AI 工具调用（AI 会调工具真正写入数据，无需手填）
+
+**🧹 设置抽屉 IA 减法**
+- 5 个实验性 AI 扩展（技能 / MCP / 工作流 / 记忆 / AI 插件）合并为 1 张可折叠卡（`<details>`），加"实验性"徽章
+- 子导航 `大模型/Agent/扩展` 保留；ai-skills/ai-mcp/ai-workflow/ai-memory/ai-plugin 五个 section id 保留（无破坏性变更，JS 绑定不破）
+
+**📐 侧栏结构 4→5 组**
+- 总览（主页 / 任务 / 习惯链）→ 场景 → **AI**（从"应用"中拆出）→ 工具（工具箱 + 商店）→ 系统
+- 移动端底部 4 → 5 个 tab 按钮；`MOB_GROUP_ICONS` 同步更新
+
+**🗂 场景功能 tab 减负**
+- 删 `office.doc` 占位 tab（无实现，落到"敬请期待"空态）
+- 给每个 SCENE_FEATURES tab 加 `type` 元数据：`core`（概览，强调）/ `tool`（真实工具，徽章"工具"）/ `record`（记录型，弱化+徽章"记录"）
+- CSS：`.scene-feat-core` 强调 / `.scene-feat-record` 透明度 .7 弱化 / `.feat-tag-tool` `.feat-tag-record` 小徽章
+- 净效果：30 → 29 tab；用户能一眼看出"哪些是核心，哪些是辅助"
+
+**🛠 内部接口**
+- `askAiAboutScene(sc, hintKey?)`：聚焦 `#chatTextInput` + 预填场景上下文；未启用 AI 时引导去设置页
+- 全局 `click` 委托：点击 `#phAiAskBtn` / `[data-ai-hint-for]` 都路由到此函数
+- `SCENE_FEATURES[*].type` 字段新增，向后兼容（renderSceneFeatNav 默认值 `"record"`）
+
+**⚠ 兼容性**
+- 所有原 input/button id 保留：`aiSkillsBuiltin` `aiSkillsCustom` `aiSkillsSave` `aiMcpList` `aiMcpAdd` `aiMcpSave` `aiWorkflowList` `aiWorkflowAdd` `aiWorkflowSave` `aiMemWindow` `aiMemLongTerm` `aiMemThreshold` `aiMemStrategy` `aiMemSave` `aiPluginList` `aiPluginSave` 全部未删；既有 JS 绑定零破坏
+- 侧栏 5 组命名走 i18n key `side.group.{overview,scenario,ai,tools,system}`，默认中文
+- 5 组切换走 `#side` 的 innerHTML 重渲染（`renderSide` 路径不变）
+
+**🧪 待测试项**
+- 移动端底部 5 tab 切换（767px 断点）
+- AI 聊天面板折叠态时点击"问 AI"是否自动展开
+- 实验性 5 折叠卡展开/收起
+- `npm run build:check` 验证 4 处版本号一致
+- 跑 719 用例回归（特别是 ai-* / set-* / sidebar 相关）
+
+## [v3.2.1] - 2026-09-01
+
+### 修复：AI 入口在窄屏（聊天面板默认折叠态）下不展开 + 配置 AI 后自动续上未完成的「问 AI」意图 + 系统概况「去设置」接入闭环 + AI Hub 三卡片加"在 AI 助手中讨论"出口
+
+**🐛 Bug 1**
+v3.2.0 引入的"问 AI 助手"按钮在窄屏（视口 < 1280px）下点了不展开聊天面板——`askAiAboutScene` 错误地检查 `document.body.classList.contains("chat-collapsed")`，但实际折叠态是 `panel.classList.contains("collapsed")`（`#chatPanel` 元素），类名也不同。
+
+**🔧 修复 1**
+- `bindChatPanel` 暴露 `window.__aiPanelExpand()`：当 `panel.classList.contains("collapsed")` 时调 `toggleCollapse()`（和用户手点折叠按钮行为完全一致——class 切换、按钮文案 ◂/▸ 同步、`#chatPanelRail` 可见性切换、`wb_agent_chat_panel_collapsed` 持久化）
+- `askAiAboutScene` 改调 `window.__aiPanelExpand()`，与 bindChatPanel 单一真相源
+- 对 `data-ai-hint-for`（让 AI 帮记）按钮同样受益
+
+**🐛 Bug 2（UX 闭环断）**
+点「问 AI」但 AI 未启用时：弹 toast + 跳设置页 → 用户配 Key → 保存 → 聊天面板仍折叠 + 没有自动续上「问 AI」意图 → 用户必须再点一次「问 AI」按钮。
+
+**🔧 修复 2**
+- `askAiAboutScene` 未启用分支：把 `{ sc, hintKey, ts }` 写入 `wb_agent___pendingAiAsk`
+- `saveCfg` 保存成功后：检查该标志，**5 分钟内**且配置完整（enabled + base + key）→ 清理标志 → `setTimeout(50ms)` 调 `__aiPanelExpand()` 展开面板 + 调 `askAiAboutScene(sc, hintKey)` 续上原意图（不自动发送，预填 + 焦点）
+- 配置不完整 / 超时 / JSON 损坏 → 静默清理标志，不影响主保存流程
+- 整体逻辑对保存主路径零侵入，全部 try/catch 包裹
+
+**🐛 Bug 3（系统概况「去设置」未走闭环）**
+主页"系统概况"卡显示 "AI 助手：未启用 · 去设置"，点击直接跳设置页。配置完成后用户得自己手动找 AI 入口。
+
+**🔧 修复 3**
+- 系统概况"去设置"链接的 click 处理器：先写 pending 标志（`sc: ""`, `hintKey: "overview-setup"`）→ 调 `openAiPage()` → 走修复 2 的同一条路径
+- 配套修改 `askAiAboutScene` 让 `sc` 可空：之前 `if(!sc) return;` 直接吞掉无场景入口的请求；改为 `const s = sc ? SCENARIOS[sc] : null;` + 预填逻辑外加 `if(s){...}` 守卫
+- 行为：sc 为空时只展开聊天面板 + 聚焦 textarea，不预填场景提示（避免"在【undefined】场景中"这种废文案）——让用户自己决定问什么
+
+**✨ 功能新增：AI Hub 三卡片加"在 AI 助手中讨论"出口**
+- `renderCoachCard` / `handleDailyReport` / `handleAiRecommend` 成功生成内容后，在卡片底部追加"在 AI 助手中讨论"按钮
+- 引入 `discussInAi(type)` 函数 + `_aiHubContent` 内存缓存（type ∈ coach/daily/recommend）
+- 点击行为：
+  - AI 已启用 → 展开聊天面板 + 预填"刚才 AI 教练建议：{内容}，请基于这些建议帮我…"等模板
+  - AI 未启用 → 写 pending 标志（含完整 prompt）→ 跳设置页 → 配置完自动展开 + 预填同样的 prompt
+- pending 标志结构升级：新增可选字段 `prompt`（直接预填的文本）—— 优先级高于 `askAiAboutScene` 的场景预填
+- 配套 CSS：`.ai-hub-actions` / `.ai-discuss-btn`（强调色边框胶囊按钮 + robot 图标 + 13px 圆角）
+
+**⚠ 兼容性**
+零破坏：`window.__aiPanelExpand` 是新增全局；`__pendingAiAsk` 是新增存储键（带 `__` 前缀避免和已有命名空间冲突）；`askAiAboutScene` 的参数从「sc 必填」放宽为「sc 可空」，但原调用点（#phAiAskBtn / data-ai-hint-for）都传有效 sc，行为不变。`pending.prompt` 是可选字段，旧消费逻辑（无 prompt 字段时）走 `askAiAboutScene` 兜底，行为完全不变。
 
 ## [v3.1.2] - 2026-08-30
 

@@ -1506,6 +1506,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .ext-collapse>summary .hint-inline{font-size:var(--fs-xs);color:var(--muted);font-weight:400;margin-left:auto}
 .ext-body{padding:0 var(--space-3) var(--space-3);border-top:1px solid var(--line)}
 .ext-body>.set-subhead:first-child{margin-top:var(--space-2)}
+/* v3.2.1：AI Hub 卡片底部操作区域——放"在 AI 助手中讨论"按钮 */
+.ai-hub-actions{margin-top:var(--space-2);display:flex;justify-content:flex-end;gap:var(--space-1)}
+.ai-discuss-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-md);border:1px solid var(--accent);background:var(--accent-soft,rgba(10,108,189,.08));color:var(--accent);font-size:var(--fs-sm);font-weight:500;cursor:pointer;transition:background .15s,transform .1s}
+.ai-discuss-btn:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.ai-discuss-btn:active{transform:scale(.97)}
+.ai-discuss-btn .ic-inline{display:inline-flex;width:13px;height:13px;vertical-align:-2px}
+.ai-discuss-btn .ic-inline svg{width:13px;height:13px}
 
 /* v3.2 IA：每个记录型 feature card 的「让 AI 帮记」按钮——把"form+table"的通用 CRUD 桥接到 AI */
 .tool-ai-hint{font-size:var(--fs-sm);gap:4px}
@@ -3254,6 +3261,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="set-field">
       <label for="cfgToolWhitelist" data-i18n="agent.whitelistLabel">允许调用的工具（逗号分隔，留空=全部）</label>
       <div class="ctl"><input id="cfgToolWhitelist" type="text" data-i18n-placeholder="agent.whitelistPlaceholder" placeholder="create_task,complete_task,search（留空=允许全部工具）"></div>
+      <!-- v3.1.2 A-档：白名单与「扩展 → 技能配置」勾选框共享同一处存储（aiSkillsSave 写入此处） -->
+      <p class="hint" style="font-size:var(--fs-2xs);margin-top:var(--space-1)">与「扩展 → 技能配置」勾选框同步：在技能配置勾选会自动写到这里；在文本框手填保存后技能配置会重渲染为新值</p>
     </div>
     <div class="set-switch">
       <input type="checkbox" id="cfgAgentAutoConfirm" checked data-i18n-aria="agent.autoConfirmLabel" aria-label="自动确认非危险操作">
@@ -3709,6 +3718,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   <!-- 保存按钮卡片（settings/ai 页显示；plugin 页安装即生效、无表单保存语义，由 CSS 隐藏） -->
   <div class="set-savebar">
     <button type="button" class="addbtn" id="cfgSave" style="--sc:var(--accent);flex:1" data-i18n="settings.saveBtn">保存设置</button>
+    <!-- v3.1.2 A-档：测试连接按钮——新用户首配 Key 后不需等撞 401 才能发现错（端点连通+Key 有效+模型可访问三要素一次验） -->
+    <button type="button" class="addbtn" id="cfgTestConn" style="--sc:var(--accent);flex:1" data-i18n="settings.testConn">测试连接</button>
   </div>
 </div>
 
@@ -7687,7 +7698,11 @@ function renderCoachCard(){
   } else {
     adviceHtml = `<div class="coach-hint" id="coachLoading">正在分析你的行为数据…</div>`;
   }
-  return `<p class="sub">基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）<button class="coach-refresh" id="coachRefresh" type="button">刷新</button></p>${adviceHtml}`;
+  /* v3.2.1：有建议时附加讨论按钮——把 3 条建议作为上下文预填到聊天面板 */
+  const discussBtn = (cache && cache.advice && cache.advice.length)
+    ? `<div class="ai-hub-actions"><button type="button" class="ai-discuss-btn" data-discuss-type="coach"><span class="ic-inline" aria-hidden="true">${UI_ICONS.robot}</span><span>在 AI 助手中讨论</span></button></div>`
+    : "";
+  return `<p class="sub">基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）<button class="coach-refresh" id="coachRefresh" type="button">刷新</button></p>${adviceHtml}${discussBtn}`;
 }
 
 /* ---------- A5 习惯链状态区域（总览页用） ---------- */
@@ -11308,7 +11323,32 @@ function renderHelp(){
             <li><b>localStorage 批量写入</b>：多次写入合并为一次 flush，降低 I/O 抖动，延长存储寿命。</li>
             <li><b>生产构建压缩</b>：<code>npm run build:prod</code> 生成压缩版（剥离注释 + 合并空行），体积节省约 32.8%。</li>
           </ul>
-          <p>这些优化对用户透明，仅在「设置 → 自动备份恢复」可看到快照频率可调。</p>
+          <p>上述优化对用户透明（自动备份为防抖快照；频率固定、不可调）。</p>
+        `)}
+        ${helpSection("故障排查", "故障排查", `
+          <p><b>遇到问题先看这里</b>，覆盖最常见的「数据丢了」「功能没反应」「版本没生效」：</p>
+          <ul>
+            <li><b>数据意外丢失/异常</b>：① 打开设置抽屉「数据管理」→ 点「从自动备份恢复」还原最近一次操作前的快照（每次写操作前自动拍的，最近一次成功快照）；② 仍异常时「本地库恢复」（从 IDB 全量镜像回滚）；③ 仍异常时用「导入恢复」上传此前导出的 JSON 备份文件</li>
+            <li><b>AI 报 CORS/网络错误</b>：浏览器直接调第三方 API 受 CORS 限制时——用 <code>启动本地服务.bat</code>（<code>http://localhost:8123</code>）打开工作台而非 <code>file://</code>；Electron 版无此限制</li>
+            <li><b>新版 PWA 没生效/看到旧版</b>：清浏览器缓存 + 强制刷新（<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> / Mac: <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>）；页脚形如 <code>v3.1.x · b{BUILD_TAG}</code> 即当前生效版本</li>
+            <li><b>换浏览器/换设备/移动 HTML 文件数据没跟过来</b>：数据存于浏览器 localStorage 不跨浏览器/设备迁移——需在原设备「数据管理 → 导出 JSON」拿到备份，再到新环境「导入恢复」</li>
+            <li><b>SQL Playground 报错「WASM 加载失败」</b>：首次使用需联网从 CDN 加载 sql.js（~1MB），断网时无法使用，其他功能不受影响</li>
+            <li><b>通知/桌面提醒不弹出</b>：检查浏览器「站点权限」是否授予通知；PWA 安装版系统级通知需在系统设置开启</li>
+            <li><b>恢复误删任务</b>：设置抽屉「数据管理」下方「清空回收站」上方有回收站页入口（v3.1 起多类型：任务/配置/文件/插件，软删/卸载均入回收站）</li>
+          </ul>
+        `)}
+        ${helpSection("集成与扩展", "集成与扩展", `
+          <p><b>集成中心</b>：设置抽屉「集成」Tab 列出 7 个外部集成（Notion/Linear/Jira/Slack/飞书/钉钉/日历）+ OpenAPI Key 管理。每个集成可配置凭据后连接。</p>
+          <p><b>OAuth 授权</b>（日历）：v3.1.2 起日历集成支持 OAuth 授权——在凭据弹窗填入服务商控制台注册的 Client ID，<code>点击 OAuth 授权</code> 自动获取 Access Token。redirect_uri 需登记 <code>http://127.0.0.1:8124/oauth/callback</code>（仅 Electron 版支持）。</p>
+          <p><b>SQL Playground</b>：编程场景 SQL 标签，sql.js WASM 本地 SQLite 沙箱执行（无服务端）。</p>
+          <p><b>插件市场</b>：侧栏「商店」9 个内置插件（pomodoro/reading/budget/health/habit-tracker/weather/quote/focus-timer/mindmap），当前仅 health 真正接线，其余多为占位——见插件卡片描述。</p>
+          <p><b>回收站多类型</b>（v3.1 起）：软删任务与卸载/重置的配置/文件/插件均入「回收站」页（侧栏系统组），可恢复或彻底删除；自动清理策略在设置抽屉「外观」或回收站页可调（off/7/30/90 天）。</p>
+        `)}
+        ${helpSection("AI 进阶", "AI 进阶", `
+          <p><b>多 Profile 供应商</b>：AI 抽屉「API Key」支持多个 Profile（OpenAI/Anthropic/DeepSeek/通义/豆包 等 OpenAI 兼容接口），一键切换不丢历史。</p>
+          <p><b>Agent 三层</b>：工作记忆（场景隔离的 remember/recall/forget）、多步目标（plan + complete_step + complete_goal）、跨场景协调（list_records 查任意场景资料）。</p>
+          <p><b>多会话</b>：聊天面板「☰」按钮管理多个对话——新建/重命名/删除/搜索。</p>
+          <p><b>工具白名单</b>：Agent 卡「允许调用的工具」控制 AI 能用的工具（逗号分隔，留空=全部）；扩展 Tab「技能配置」勾选同步写同一处（v3.1.2 A-档统一真相源）。</p>
         `)}
         ${helpSection("数据安全", "数据安全", `
           <p><b>AI Key 加密</b>：API Key 用 AES-GCM 加密存储，设备密钥首次随机生成。明文仅在内存中。</p>
@@ -11806,7 +11846,9 @@ function renderOverview(){
   if(cl){
     fetchCoachAdvice().then(r => {
       if(r.ok && r.advice.length){
-        cl.outerHTML = r.advice.map((a, i) => `<div class="coach-item"><span class="idx">${i+1}</span><span>${esc(a)}</span></div>`).join("");
+        _aiHubContent.coach = r.advice.join("\n"); // v3.2.1：缓存供"在 AI 助手中讨论"使用
+    cl.outerHTML = r.advice.map((a, i) => `<div class="coach-item"><span class="idx">${i+1}</span><span>${esc(a)}</span></div>`).join("") +
+      `<div class="ai-hub-actions"><button type="button" class="ai-discuss-btn" data-discuss-type="coach"><span class="ic-inline" aria-hidden="true">${UI_ICONS.robot}</span><span>在 AI 助手中讨论</span></button></div>`;
       } else if(!r.ok && r.reason !== "no-ai"){
         cl.textContent = "暂无法获取建议（" + r.reason + "），请稍后重试";
       }
@@ -11831,8 +11873,15 @@ function renderOverview(){
   });
   // v2.3.0：系统概况卡 AI 设置链接（v3.1.2 修复：原 _switchSetTab("set-ai") 指向不存在的分区，
   // 点击后设置页所有 nav 失活+所有 card 隐藏 → 整页空白；AI 配置自 v1.15 起是独立页，改走 openAiPage）
+  // v3.2.1 修复：写 pending 标志，配置完成后 saveCfg 会自动展开聊天面板 + 聚焦（无场景模式：sc 留空）
   $$(".sys-ov-ai a[data-act='ai-setup']").forEach(a=>{
-    a.onclick=(e)=>{ e.preventDefault(); if(typeof openAiPage==="function"){ openAiPage(); } };
+    a.onclick=(e)=>{
+      e.preventDefault();
+      try{
+        save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: "", hintKey: "overview-setup", ts: Date.now() }));
+      }catch(_){ /* noop */ }
+      if(typeof openAiPage==="function"){ openAiPage(); }
+    };
   });
   // v2.2.1：主页今日待办点击跳场景 / 「还有 N 项」跳办公场景看板
   $$("#ovTodayList .ov-today-item").forEach(li=>{
@@ -11880,7 +11929,8 @@ async function handleDailyReport(){
   try{
     const r = await generateDailyReport();
     if(r.ok && r.report){
-      if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="md-body">${mdToHtml(r.report)}</div>`);
+      _aiHubContent.daily = r.report; // v3.2.1：缓存供讨论按钮使用
+      if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="md-body">${mdToHtml(r.report)}</div><div class="ai-hub-actions"><button type="button" class="ai-discuss-btn" data-discuss-type="daily"><span class="ic-inline" aria-hidden="true">${UI_ICONS.robot}</span><span>在 AI 助手中讨论</span></button></div>`);
     } else {
       const hint = r.reason==="no-ai" ? t("dailyReport.noAiHint", "尚未启用 AI，请先配置 API Key") : (t("dailyReport.fail", "生成失败：") + (r.reason || t("tool.unknownErrorMsg", "未知错误")));
       if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="coach-hint">${esc(hint)}</div>`);
@@ -11918,9 +11968,11 @@ async function handleAiRecommend(){
   try{
     const advice = await aiSmartRecommend();
     if(advice && advice.length){
+      _aiHubContent.recommend = advice.join("\n"); // v3.2.1：缓存供讨论按钮使用
       const html = `<div class="ai-recommend-list">` +
         advice.map((a, i) => `<div class="ai-recommend-item"><span class="idx">${i+1}</span><span>${esc(a)}</span></div>`).join("") +
-        `</div>`;
+        `</div>` +
+        `<div class="ai-hub-actions"><button type="button" class="ai-discuss-btn" data-discuss-type="recommend"><span class="ic-inline" aria-hidden="true">${UI_ICONS.robot}</span><span>在 AI 助手中讨论</span></button></div>`;
       if(resultEl) resultEl.innerHTML=sanitizeHtml(html);
     }else{
       if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="coach-hint">${t("aiRecommend.empty", "暂无推荐建议，请先配置 AI API Key 或添加一些任务。")}</div>`);
@@ -16472,8 +16524,9 @@ function bindChatPanel(){
  * 点击 #phAiAskBtn → 聚焦右侧聊天面板 + 预填场景上下文提示。
  * AI 不再只是聊天面板里的机器人，而是与每个场景并列的一等入口。 */
 function askAiAboutScene(sc, hintKey){
-  if(!sc) return;
-  const s = SCENARIOS[sc]; if(!s) return;
+  /* v3.2.1 修复：sc 可空（系统概况卡 / 命令面板等入口）——"无场景"模式只展开面板 + 焦点，不预填场景提示
+     v3.2.1 兼容：sc 传非法 key（不在 SCENARIOS 中）也走"无场景"模式，不直接 return，避免静默无响应 */
+  const s = sc ? SCENARIOS[sc] : null;
   const cfg = (typeof getCfg === "function") ? getCfg() : null;
   if(!cfg || !cfg.enabled || !cfg.base || !cfg.key){
     /* v3.2.1 修复 UX 闭环：未启用 AI 时记下意图，配置完成保存后自动续上 */
@@ -16487,23 +16540,75 @@ function askAiAboutScene(sc, hintKey){
   /* v3.2.1 修复：展开 AI 聊天面板（折叠态时）。bindChatPanel 暴露了 window.__aiPanelExpand()
      统一处理 class 切换 + 按钮文案 + 侧边条可见性 + 持久化——和用户手点折叠按钮完全一致。 */
   if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); }
-  /* 预填场景上下文提示：场景级 vs 记录型 tab 级（带 hintKey 时更具体） */
+  /* 预填场景上下文提示：场景级 vs 记录型 tab 级（带 hintKey 时更具体）
+     v3.2.1 修复：s 为空时（无场景入口）跳过预填，只聚焦让用户自填 */
   const ta = document.getElementById("chatTextInput");
   if(!ta) return;
-  let promptTpl = "ai.sceneAskPrompt";
-  let promptFallback = "在【{sc}】场景中，帮我…";
-  if(hintKey){
-    /* 根据 key 反查 tab 标题：key → SCENARIOS[*].record.label 或 featureCard title；这里用 key 名给 AI 一个具体线索 */
-    promptTpl = "ai.recordAskPrompt";
-    promptFallback = "在【{sc}】场景记一笔【{kind}】…（AI 会调工具写入，无需手填）";
-    ta.value = promptFallback.replace("{sc}", s.name).replace("{kind}", hintKey);
-  } else {
-    ta.value = t(promptTpl, promptFallback).replace("{sc}", s.name);
+  if(s){
+    let promptTpl = "ai.sceneAskPrompt";
+    let promptFallback = "在【{sc}】场景中，帮我…";
+    if(hintKey){
+      /* 根据 key 反查 tab 标题：key → SCENARIOS[*].record.label 或 featureCard title；这里用 key 名给 AI 一个具体线索 */
+      promptTpl = "ai.recordAskPrompt";
+      promptFallback = "在【{sc}】场景记一笔【{kind}】…（AI 会调工具写入，无需手填）";
+      ta.value = promptFallback.replace("{sc}", s.name).replace("{kind}", hintKey);
+    } else {
+      ta.value = t(promptTpl, promptFallback).replace("{sc}", s.name);
+    }
+    if(typeof ta.setSelectionRange==="function"){ ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
   ta.focus();
-  if(typeof ta.setSelectionRange==="function"){ ta.setSelectionRange(ta.value.length, ta.value.length); }
 }
 /* 全局委托：点击 phAiAskBtn 触发（renderSceneHead 重渲染后依然有效，幂等） */
+/* v3.2.1：AI Hub 三卡片（教练/每日报告/智能推荐）的"在 AI 助手中讨论"出口
+ * 内容存 _aiHubContent（按 type 索引：coach/daily/recommend）。
+ * 走 askAiAboutScene 同一条路径——AI 启用时直接展开 + 预填；未启用时写 __pendingAiAsk + 跳设置，配置完自动续上。 */
+const _aiHubContent = { coach: "", daily: "", recommend: "" };
+function discussInAi(type){
+  /* 构建给 AI 的提示（带上下文引用） */
+  let prompt = "";
+  if(type === "coach"){
+    const adv = _aiHubContent.coach || "";
+    prompt = adv ? "刚才 AI 教练根据我的行为数据给了 3 条建议：\n" + adv + "\n请基于这些建议帮我…"
+            : "请根据我最近 2 周的行为数据，给我一些具体可执行的建议。";
+  } else if(type === "daily"){
+    const rep = _aiHubContent.daily || "";
+    prompt = rep ? "刚才 AI 生成的今日报告：\n\n" + rep + "\n\n请基于这份报告帮我…"
+            : "请基于我的任务和习惯链状态，帮我梳理今天最该做的 3 件事。";
+  } else if(type === "recommend"){
+    const rec = _aiHubContent.recommend || "";
+    prompt = rec ? "刚才 AI 推荐的 3 条行动：\n" + rec + "\n请基于这些推荐帮我…"
+            : "请基于我的任务数据，推荐 3 条下一步行动建议。";
+  } else {
+    return;
+  }
+  /* AI 启用状态检查 + pending 闭环 */
+  const cfg = (typeof getCfg === "function") ? getCfg() : null;
+  if(!cfg || !cfg.enabled || !cfg.base || !cfg.key){
+    try{
+      save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: "", hintKey: "discuss." + type, prompt: prompt, ts: Date.now() }));
+    }catch(e){ /* noop */ }
+    toast(t("ai.notEnabled","请先在设置 → AI 中启用并填写 API Key"), "warn");
+    if(typeof openAiPage==="function") openAiPage();
+    return;
+  }
+  if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); }
+  const ta = document.getElementById("chatTextInput");
+  if(ta){
+    ta.value = prompt;
+    ta.focus();
+    if(typeof ta.setSelectionRange==="function"){ ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }
+}
+/* 全局委托：AI Hub 讨论按钮（renderOverview 重新渲染后依然有效） */
+document.addEventListener("click", function(e){
+  const btn = e.target && e.target.closest ? e.target.closest(".ai-discuss-btn") : null;
+  if(!btn) return;
+  e.preventDefault();
+  const type = btn.getAttribute("data-discuss-type");
+  if(type) discussInAi(type);
+});
+
 document.addEventListener("click", function(e){
   const btn = e.target && e.target.closest ? e.target.closest("#phAiAskBtn") : null;
   if(btn){
@@ -18604,7 +18709,15 @@ async function saveCfg(){
             /* 延后执行——让 closeDrawer 先跑完（面板可见性更新需要帧） */
             setTimeout(function(){
               try{ if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); } }catch(e){ /* noop */ }
-              try{ askAiAboutScene(pending.sc, pending.hintKey); }catch(e){ /* noop */ }
+              /* v3.2.1：pending.prompt 优先（AI Hub 卡片"在 AI 助手中讨论"会预填完整提示） */
+              const ta = document.getElementById("chatTextInput");
+              if(pending.prompt && ta){
+                ta.value = pending.prompt;
+                ta.focus();
+                if(typeof ta.setSelectionRange==="function"){ ta.setSelectionRange(ta.value.length, ta.value.length); }
+              } else {
+                try{ askAiAboutScene(pending.sc, pending.hintKey); }catch(e){ /* noop */ }
+              }
             }, 50);
           } else {
             try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* noop */ }
@@ -19545,6 +19658,77 @@ $("#drawerClose").onclick = closeDrawer;
 $$("#drawer .drawer-close").forEach(b=>{ b.onclick = closeDrawer; });
 $("#overlay").onclick = closeDrawer;
 $("#cfgSave").onclick = saveCfg;
+// v3.1.2 A-档：测试连接按钮——发 1-token 探测请求同时验证 base+key+model 三要素
+$("#cfgTestConn").onclick = async function(){
+  const btn = this;
+  if(btn.disabled) return;
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = t("settings.testing", "测试中…");
+  const ap = (typeof getActiveProfile === "function") ? getActiveProfile() : null;
+  if(!ap || !ap.base){ btn.disabled = false; btn.textContent = orig; toast(t("settings.testConn.noBase", "未配置 Base URL"), "warn"); return; }
+  if(!ap.key){ btn.disabled = false; btn.textContent = orig; toast(t("settings.testConn.noKey", "未配置 API Key"), "warn"); return; }
+  if(!ap.model){ btn.disabled = false; btn.textContent = orig; toast(t("settings.testConn.noModel", "未配置 Model"), "warn"); return; }
+  // 先尝试 GET {base}/v1/models（最轻量：仅鉴权）；失败时降级用 chat/completions 探测
+  const base = String(ap.base).replace(/\/+$/, "");
+  const headers = { "Authorization": "Bearer " + ap.key };
+  let r;
+  try{
+    r = await fetch(base + "/v1/models", { method: "GET", headers: headers });
+  }catch(e){
+    r = { ok: false, status: 0, error: e && e.message || "网络错误" };
+  }
+  let ok = r && r.ok;
+  let msg = "";
+  let status = r ? r.status : 0;
+  let modelOk = true;
+  if(!ok){
+    // 降级用 chat/completions max_tokens:1 探（验证 key 真能落到模型）
+    try{
+      const r2 = await fetch(base + "/chat/completions", {
+        method: "POST", headers: Object.assign({}, headers, { "Content-Type": "application/json" }),
+        body: JSON.stringify({ model: ap.model, messages: [{ role: "user", content: "hi" }], max_tokens: 1, stream: false })
+      });
+      ok = r2.ok; status = r2.status;
+      if(ok){
+        const j = await r2.json().catch(function(){ return {}; });
+        modelOk = !!(j && (j.choices || j.model));
+        msg = t("settings.testConn.okViaChat", "✓ 连接成功（模型响应：{model}）").replace("{model}", (j && j.model) || ap.model);
+      }
+    }catch(e2){
+      // 两个都失败
+      btn.disabled = false; btn.textContent = orig;
+      toast(t("settings.testConn.fail", "连接失败：") + (status ? " HTTP " + status : "") + " " + (e2 && e2.message || r && r.error || ""), "error", 6000);
+      return;
+    }
+  } else {
+    // /v1/models 成功：再确认模型名在模型列表里（若返回了 data 数组）
+    try{
+      const j = await r.json().catch(function(){ return {}; });
+      const list = (j && Array.isArray(j.data)) ? j.data.map(function(x){ return x && x.id; }).filter(Boolean) : [];
+      if(list.length && list.indexOf(ap.model) === -1){
+        // 降级试一次 chat 探测（某些代理 /models 不全）
+        try{
+          const r2 = await fetch(base + "/chat/completions", {
+            method: "POST", headers: Object.assign({}, headers, { "Content-Type": "application/json" }),
+            body: JSON.stringify({ model: ap.model, messages: [{ role: "user", content: "hi" }], max_tokens: 1, stream: false })
+          });
+          if(r2.ok){ ok = true; modelOk = true; }
+          else { ok = false; status = r2.status; }
+        }catch(_e){ ok = false; }
+      } else if(list.indexOf(ap.model) >= 0){
+        modelOk = true;
+      }
+      msg = ok ? t("settings.testConn.ok", "✓ 连接成功：base 可达、Key 有效、模型 {model} 可访问").replace("{model}", ap.model)
+                : t("settings.testConn.modelMissing", "Base + Key 通过，但模型 {model} 不在 /v1/models 列表中（HTTP {status}）").replace("{model}", ap.model).replace("{status}", String(status));
+    }catch(_e){
+      msg = t("settings.testConn.ok", "✓ 连接成功").replace(": ", "：");
+    }
+  }
+  btn.disabled = false; btn.textContent = orig;
+  if(ok && modelOk){ toast(msg, "ok", 4000); }
+  else if(!ok){ toast(t("settings.testConn.fail", "连接失败：") + " HTTP " + status, "error", 6000); }
+  else { toast(msg, "warn", 5000); }
+};
 $("#cfgProfileSelect").onchange = e => switchProfile(e.target.value);
 /* v2.0.3：设置页分区导航切换（独立导航栏 .set-nav-btn，点击切换下方 card 显示） */
 function _switchSetTab(tabId){
@@ -20025,19 +20209,31 @@ renderAiPluginList();
 restoreAiSession();
 renderAiSessHistory();
 $("#aiSkillsSave").onclick = function(){
-  // v3.1.2：按 name 匹配而非索引——修复 checkbox 顺序与 AI_BUILTIN_SKILLS 错配（旧数据顺序不一致时勾选态张冠李戴）
+  // v3.1.2 A-档：技能勾选直接读写 cfg.toolWhitelist（Agent 卡的同一处存储）——消除与「工具白名单」文本框双轨误导
+  // 按 name 匹配（防顺序错配），勾选=true 写入白名单（白名单为空=全部）
   const boxes = $$("#aiSkillsBuiltin input[type=checkbox]");
   const boxByName = new Map();
   boxes.forEach(function(cb){
     const nm = cb.getAttribute("aria-label") || cb.id.replace(/^aiSkill_\d+_/, "");
     boxByName.set(nm, cb.checked);
   });
-  const builtin = AI_BUILTIN_SKILLS.map(function(s){
-    return {name: s.name, desc: s.desc, enabled: boxByName.has(s.name) ? boxByName.get(s.name) : s.enabled};
-  });
+  const enabled = AI_BUILTIN_SKILLS.filter(function(s){ return boxByName.get(s.name) === true; }).map(function(s){ return s.name; });
+  const cfg = getCfg() || {};
+  if(enabled.length && enabled.length < AI_BUILTIN_SKILLS.length){
+    cfg.toolWhitelist = enabled.join(",");
+  } else {
+    // 全选=清空白名单（语义=允许全部）
+    delete cfg.toolWhitelist;
+  }
+  // cfg 通过 cfgSave 路径保存（确保回写一致）；此处直接 save 即可
+  if(typeof saveCfg === "function"){ /* 走正常保存路径 */ }
+  try{ save(PREFIX+"cfg", cfg); }catch(_e){}
+  // 同步自定义技能 JSON 的保存
   const customTa = $("#aiSkillsCustom");
-  saveAiConfig("skills", {builtin: builtin, custom: customTa ? customTa.value : ""});
-  toast("技能配置已保存");
+  saveAiConfig("skills", {builtin: AI_BUILTIN_SKILLS.map(function(s){ return {name:s.name,desc:s.desc,enabled: boxByName.get(s.name)===true}; }), custom: customTa ? customTa.value : ""});
+  // 同步 Agent 卡白名单文本框显示
+  const twInp = $("#cfgToolWhitelist"); if(twInp) twInp.value = cfg.toolWhitelist || "";
+  toast("技能配置已保存（白名单已同步到「允许调用的工具」）");
 };
 $("#aiMcpAdd").onclick = function(){
   const saved = getAiConfig("mcp") || {};
@@ -20094,18 +20290,21 @@ $("#aiMemSave").onclick = function(){
   toast("记忆配置已保存");
 };
 $("#aiPluginSave").onclick = function(){
-  // v3.1.2：按 name 匹配而非索引——同 aiSkillsSave 修复
+  // v3.1.2 A-档：插件勾选按 name 匹配（防顺序错配）+ 同步清空提示（这 3 项是占位假插件）
   const boxes = $$("#aiPluginList input[type=checkbox]");
   const boxByName = new Map();
   boxes.forEach(function(cb){
     const nm = cb.getAttribute("aria-label") || cb.id.replace(/^aiPlugin_\d+_/, "");
     boxByName.set(nm, cb.checked);
   });
-  const plugins = AI_BUILTIN_PLUGINS.map(function(p){
-    return {name: p.name, desc: p.desc, enabled: boxByName.has(p.name) ? boxByName.get(p.name) : p.enabled};
-  });
-  saveAiConfig("plugin", {plugins: plugins});
-  toast("插件配置已保存");
+  const enabled = AI_BUILTIN_PLUGINS.filter(function(p){ return boxByName.get(p.name) === true; }).map(function(p){ return p.name; });
+  saveAiConfig("plugin", {plugins: AI_BUILTIN_PLUGINS.map(function(p){ return {name:p.name,desc:p.desc,enabled: boxByName.get(p.name)===true}; })});
+  // 已知占位插件诚实提示（不假装勾选后会有能力变化）
+  if(enabled.length > 0){
+    toast("插件配置已保存（注意：code_runner/web_search/file_reader 暂未接线执行代码，勾选状态仅保存配置）");
+  } else {
+    toast("插件配置已保存");
+  }
 };
 $("#aiSessSave").onclick = function(){
   const sessTimeoutEl = $("#aiSessTimeout");
@@ -25901,7 +26100,30 @@ const BUILTIN_PLUGINS = [
     cards: [{
       type: "budget-summary",
       name: "预算概览",
-      render: function(data){ return "<div class='plugin-card'>预算: ¥" + ((data && data.amount) || 0) + "</div>"; }
+      // v3.1.2 A-档：接真数据——聚合 life_bills（缴费台账 amount）+ life_shopping（采购台账 amount）+ lif-bill/lif-takeout（工具箱 amount）本月的支出
+      // 此前永远 ¥0：用户记的账不进插件卡
+      render: function(data){
+        const m = new Date().getMonth();
+        let bills = 0, shop = 0, toolBill = 0, toolTake = 0;
+        try{
+          const a = (load(PREFIX+"life_bills", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
+          const b = (load(PREFIX+"life_shopping", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
+          const tb = (load(PREFIX+"tool_lif-bill", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
+          const tt = (load(PREFIX+"tool_lif-takeout", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
+          // 注：上述合计为全量；如需严格按"本月"过滤，账单类需带 due 字段归入月份；当前先取累计以确保卡片始终有数据
+          bills = a; shop = b; toolBill = tb; toolTake = tt;
+        }catch(_e){}
+        const total = bills + shop + toolBill + toolTake;
+        return "<div class='plugin-card budget-card'>" +
+          "<div class='budget-total'>本月总支出 ¥" + total.toFixed(2) + "</div>" +
+          "<div class='budget-breakdown'>" +
+            "<span>缴费 ¥" + bills.toFixed(2) + "</span>" +
+            "<span>采购 ¥" + shop.toFixed(2) + "</span>" +
+            "<span>工具 ¥" + (toolBill + toolTake).toFixed(2) + "</span>" +
+          "</div>" +
+          "<p class='hint' style='font-size:var(--fs-2xs);margin-top:var(--space-1)'>来源：生活场景的缴费/采购台账 + 工具箱记录（v3.1.2 A-档：插件卡接真数据）</p>" +
+        "</div>";
+      }
     }]
   },
   {
