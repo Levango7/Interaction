@@ -232,10 +232,10 @@ describe("v2.4.0 侧栏新信息架构", () => {
     ]);
   });
 
-  it("四组结构：总览(主页/任务/习惯链) + 场景 + 应用(AI/工具箱/商店) + 系统（v2.5 仪表盘合并至主页）", () => {
+  it("五组结构：总览(主页/任务/习惯链) + 场景 + AI + 工具(工具箱/商店) + 系统（v3.2 IA 重构：应用组拆分为 AI/工具两组）", () => {
     __test.render();
     const groupNames = [...document.querySelectorAll("#side .nav-group")].map(g => g.textContent);
-    expect(groupNames).toEqual(["总览", "场景", "应用", "系统"]);
+    expect(groupNames).toEqual(["总览", "场景", "AI", "工具", "系统"]);
     expect(document.querySelector('#side [data-sc="tasks"]')).toBeTruthy();
     expect(document.querySelector('#side [data-sc="chainpage"]')).toBeTruthy();
     expect(document.querySelector('#side [data-sc="toolbox"]')).toBeTruthy();
