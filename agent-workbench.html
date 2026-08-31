@@ -3458,7 +3458,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     <div class="set-subhead" data-i18n="dataMgmt.exportImport">导出 / 导入</div>
     <div class="set-actions">
       <button type="button" class="addbtn min" id="btnExport" data-i18n-aria="tool.ppt.exportJson" aria-label="导出 JSON" >导出 JSON</button>
-      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n-aria="tool.sheet.exportCsv" aria-label=t("export.preview.confirm", "导出 CSV") style="--sc:var(--accent)">导出 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n-aria="tool.sheet.exportCsv" aria-label="${t("export.preview.confirm", "导出 CSV")}" style="--sc:var(--accent)">导出 CSV</button>
       <button type="button" class="addbtn min" id="btnExportMD" aria-label="导出 Markdown" style="--sc:var(--accent)">导出 MD</button>
       <button type="button" class="addbtn min" id="btnImport" aria-label="导入恢复" >导入恢复</button>
       <button type="button" class="addbtn min" id="btnIdbRestore" aria-label="从本地库恢复" >本地库恢复</button>
@@ -7891,7 +7891,7 @@ function thisWeekDone(sc){
 
 /* ---------- 渲染：侧边导航（v2.1.0 两级菜单） ---------- */
 // v1.9.9：折叠按钮回归侧栏顶部（"全局"组上方），用户确认放回原位
-const SIDE_TOGGLE_HTML = `<button type="button" class="side-toggle" id="sideToggle" aria-label=t("side.toggleAria", "折叠或展开侧边栏") title=t("side.toggleTitle", "折叠/展开")>
+const SIDE_TOGGLE_HTML = `<button type="button" class="side-toggle" id="sideToggle" aria-label="${t("side.toggleAria", "折叠或展开侧边栏")}" title="${t("side.toggleTitle", "折叠/展开")}">
   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl">折叠</span></button>`;
 
 /* v2.1.0：两级菜单图标集（顶级项用；子项用 CSS 圆点标记，不配图标） */
@@ -11775,9 +11775,10 @@ function renderOverview(){
       else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
     };
   });
-  // v2.3.0：系统概况卡 AI 设置链接
+  // v2.3.0：系统概况卡 AI 设置链接（v3.1.2 修复：原 _switchSetTab("set-ai") 指向不存在的分区，
+  // 点击后设置页所有 nav 失活+所有 card 隐藏 → 整页空白；AI 配置自 v1.15 起是独立页，改走 openAiPage）
   $$(".sys-ov-ai a[data-act='ai-setup']").forEach(a=>{
-    a.onclick=(e)=>{ e.preventDefault(); openDrawer(); _switchSetTab("set-ai"); };
+    a.onclick=(e)=>{ e.preventDefault(); if(typeof openAiPage==="function"){ openAiPage(); } };
   });
   // v2.2.1：主页今日待办点击跳场景 / 「还有 N 项」跳办公场景看板
   $$("#ovTodayList .ov-today-item").forEach(li=>{
@@ -11906,7 +11907,7 @@ function renderSystemOverviewCard(){
   ];
 
   const listHtml = items.map(it => `
-    <button type="button" class="sys-ov-item clickable" data-act="${it.act}" title="${t("sysOv.item.title", "点击进入 {label}").replace("{label}", it.label)}">
+    <button type="button" class="sys-ov-item clickable" data-act="${it.act}" title="${t("sysOv.item.title", "点击进入 {label}")}".replace("{label}", it.label)}">
       <span class="sys-ov-ic" aria-hidden="true">${it.ic}</span>
       <span class="sys-ov-val">${it.value}</span>
       <span class="sys-ov-lbl">${it.label}</span>
@@ -11997,7 +11998,7 @@ function _renderTodayTopHtml(){
   const items = top5.map(x=>{
     const s = scMeta(x.sc);
     const overdue = x.due < today;
-    return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="${t("overview.today.itemTitle", "点击进入「{name}」场景").replace("{name}", esc(s.name))}">
+    return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="${t("overview.today.itemTitle", "点击进入「{name}」场景")}".replace("{name}", esc(s.name))}">
       <span class="dot" style="background:${s.color}"></span>
       <span class="title">${esc(x.title)}${overdue ? `<span class="ov-overdue-tag">${t("overview.overdue.tag", "逾期")}</span>` : ""}</span>
       <span class="sc-name">${s.name}</span>
@@ -12026,7 +12027,7 @@ function _renderAllTopHtml(){
   const items = top5.map(x=>{
     const s = scMeta(x.sc);
     const overdue = x.due && x.due < today;
-    return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="${t("overview.today.itemTitle", "点击进入「{name}」场景").replace("{name}", esc(s.name))}">
+    return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="${t("overview.today.itemTitle", "点击进入「{name}」场景")}".replace("{name}", esc(s.name))}">
       <span class="dot" style="background:${s.color}"></span>
       <span class="title">${esc(x.title)}${overdue ? `<span class="ov-overdue-tag">${t("overview.overdue.tag", "逾期")}</span>` : ""}</span>
       <span class="sc-name">${s.name}</span>
@@ -12132,7 +12133,7 @@ function renderHourDistGrid(grid){
   grid.forEach((row, dow) => {
     html += `<div class="hourdist-dow">${t("hourDist.dowPrefix", "周")}${dows[dow]}</div>`;
     row.forEach(cell => {
-      html += `<div class="hourdist-cell hd-l${lvl(cell.count)}" title="${t("hourDist.cell.title", "周{dow} · {period}：{count} 个完成").replace("{dow}", dows[dow]).replace("{period}", periods[cell.period]).replace("{count}", cell.count)}"></div>`;
+      html += `<div class="hourdist-cell hd-l${lvl(cell.count)}" title="${t("hourDist.cell.title", "周{dow} · {period}：{count} 个完成")}".replace("{dow}", dows[dow]).replace("{period}", periods[cell.period]).replace("{count}", cell.count)}"></div>`;
     });
   });
   return html + `</div>`;
@@ -13051,7 +13052,7 @@ function _renderKanbanCard(x, st, colName){
   return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="t">${esc(x.title)}</div>
     <div class="m">${pri} ${due}${tags}</div><div class="kbtns">${btns}
     <button type="button" data-edit="${x.id}">编辑</button>
-    <button type="button" data-share="${x.id}" title=t("action.shareLink","生成分享链接")>分享</button>
+    <button type="button" data-share="${x.id}" title="${t("action.shareLink", "生成分享链接")}">分享</button>
     <button type="button" data-del="${x.id}" style="color:var(--danger)">删除</button></div></div>`;
 }
 /**
@@ -13063,7 +13064,7 @@ function _renderKanbanCard(x, st, colName){
  */
 function _renderKanbanCol(st, list, colName){
   const head = `<div class="kcol" data-drop="${st}"><h4>${colName[st]} <span class="n">${list.length}</span></h4>`;
-  if(list.length === 0) return head + `<div class="empty">空</div></div>`;
+  if(list.length === 0) return head + `<div class="empty">${t("kanban.emptyCol", "暂无任务")}</div></div>`;
   // 超阈值启用虚拟滚动
   if(list.length > VIRTUAL_SCROLL_THRESHOLD){
     const range = virtualScrollRange({
@@ -13131,7 +13132,7 @@ function renderSceneFeatNav(){
   const feats = SCENE_FEATURES[active] || [];
   if(!feats.length) return "";
   // v3.0：场景功能菜单复用设置页菜单栏样式（.set-nav + .set-nav-btn），求同：与设置页完全一致
-  return `<nav class="set-nav scene-feat-nav" aria-label=t("aria.sceneFeature","场景功能")>
+  return `<nav class="set-nav scene-feat-nav" aria-label="${t("aria.sceneFeature","场景功能")}">
     ${feats.map(f=>`<button type="button" class="set-nav-btn${f.id===sceneFeatureMode?" active":""}" data-feat="${f.id}">${esc(f.label)}</button>`).join("")}
   </nav>`;
 }
@@ -13160,7 +13161,7 @@ function renderTodoListView(tasks, s){
     const doneCls = x.status==="done" ? " done" : "";
     const nextSt = x.status==="done" ? "doing" : "done";
     return `<div class="todo-row${doneCls}" data-id="${x.id}" data-status="${x.status}">
-      <input type="checkbox" class="todo-chk" data-move="${x.id}:${nextSt}" aria-label=t("aria.toggleComplete","切换完成状态")${checked}>
+      <input type="checkbox" class="todo-chk" data-move="${x.id}:${nextSt}" aria-label="${t("aria.toggleComplete","切换完成状态")}"${checked}>
       <span class="todo-title">${esc(x.title)}</span>
       <span class="todo-meta">${pri}${due}<span class="todo-st">${stName[x.status]||""}</span></span>
       <span class="todo-ops">
@@ -13182,19 +13183,19 @@ function renderMainHTML(){
   const cfg = getCfg();
 
   const taskForm = `<form class="form-row" id="taskForm">
-    <div class="fld fld-lg"><label>任务标题</label><input name="title" placeholder=t("placeholder.taskTitle","要做什么？") maxlength="200" required></div>
+    <div class="fld fld-lg"><label>任务标题</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
     <div class="fld fld-md"><label>截止日期</label><input name="due" type="date"></div>
     <div class="fld fld-sm"><label>优先级</label>
       <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
-    <div class="fld fld-lg"><label>标签</label><input name="tags" placeholder=t("placeholder.commaSep","逗号分隔") maxlength="200"></div>
+    <div class="fld fld-lg"><label>标签</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
   const tagFilterHTML = `<div class="form-row">
-    <div class="fld fld-xl"><label for="boardSearch">搜索任务（A3）</label><input id="boardSearch" placeholder=t("placeholder.searchTitle","输入标题关键词") maxlength="200"></div>
+    <div class="fld fld-xl"><label for="boardSearch">搜索任务（A3）</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
     <div class="fld fld-md"><label>状态</label>
       <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
-    <div class="fld fld-lg"><label for="tagFilter">标签（留空=全部）</label><input id="tagFilter" placeholder=t("placeholder.tagExample","如 周报 / urgent") maxlength="200"></div>
+    <div class="fld fld-lg"><label for="tagFilter">标签（留空=全部）</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / urgent")}" maxlength="200"></div>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
@@ -16018,7 +16019,7 @@ const CHAT_SUGGEST = [
   t("cmd.quick3","统计本周完成了什么"),
   t("cmd.quick4","搜索 周报")
 ];
-const CHAT_SUGGEST_HTML = `<div class="chat-suggest" aria-label=t("cmd.shortcuts","快捷指令")>` +
+const CHAT_SUGGEST_HTML = `<div class="chat-suggest" aria-label="${t("cmd.shortcuts","快捷指令")}">` +
   CHAT_SUGGEST.map(p => `<button type="button" class="chip" data-prompt="${esc(p)}">${esc(p)}</button>`).join("") +
   `</div>`;
 function renderChat(){
@@ -17833,13 +17834,13 @@ function _renderChainRow(l){
   const dc = SCENARIOS[l.toSc] || {name:"?", icon:""};
   const disabled = l.enabled === false;
   return `<div class="chain-row${disabled?" disabled":""}" data-id="${esc(l.id)}">
-    <input type="checkbox" class="chain-toggle" data-id="${esc(l.id)}" ${disabled?"":"checked"} aria-label=t("op.toggleEnable","启用/禁用")>
+    <input type="checkbox" class="chain-toggle" data-id="${esc(l.id)}" ${disabled?"":"checked"} aria-label="${t("op.toggleEnable","启用/禁用")}">
     <span class="chain-ic" style="color:var(--sc-${esc(l.fromSc)},var(--accent))">${sc.icon||""}</span>
-    <span class="chain-kw" data-edit-kw="${esc(l.id)}" title=t("aria.editKeyword","点击编辑关键词")>${esc(l.kw||"")}</span>
+    <span class="chain-kw" data-edit-kw="${esc(l.id)}" title="${t("aria.editKeyword","点击编辑关键词")}">${esc(l.kw||"")}</span>
     <span class="chain-arr">→</span>
-    <span class="chain-ic" style="color:var(--sc-${esc(l.toSc)},var(--accent))" data-edit-dst="${esc(l.id)}" title=t("aria.editTargetScene","点击编辑目标场景")>${dc.icon||""}</span>
+    <span class="chain-ic" style="color:var(--sc-${esc(l.toSc)},var(--accent))" data-edit-dst="${esc(l.id)}" title="${t("aria.editTargetScene","点击编辑目标场景")}">${dc.icon||""}</span>
     <span class="chain-dst">${esc(dc.name)}</span>
-    <button type="button" class="chain-del" data-del="${esc(l.id)}" aria-label=t("action.deleteChain","删除链")>✕</button>
+    <button type="button" class="chain-del" data-del="${esc(l.id)}" aria-label="${t("action.deleteChain","删除链")}">✕</button>
   </div>`;
 }
 /* 渲染链编辑行（inline edit：关键词 input + 目标场景 select + 保存/取消） */
@@ -17847,11 +17848,11 @@ function _renderChainEditRow(l){
   const opts = ORDER.map(sc=>`<option value="${sc}"${sc===l.toSc?" selected":""}>${esc(SCENARIOS[sc].name)}</option>`).join("");
   return `<div class="chain-edit-row" data-edit-id="${esc(l.id)}">
     <span class="chain-ic" style="color:var(--sc-${esc(l.fromSc)},var(--accent))">${(SCENARIOS[l.fromSc]||{}).icon||""}</span>
-    <input class="chain-edit-kw" value="${esc(l.kw||"")}" placeholder=t("field.keyword","关键词")>
+    <input class="chain-edit-kw" value="${esc(l.kw||"")}" placeholder="${t("field.keyword","关键词")}">
     <span class="chain-arr">→</span>
     <select class="chain-edit-dst">${opts}</select>
-    <button type="button" class="chain-save" data-save="${esc(l.id)}" aria-label=t("common.save","保存")>✓</button>
-    <button type="button" class="chain-cancel" data-cancel="${esc(l.id)}" aria-label=t("common.cancel","取消")>✕</button>
+    <button type="button" class="chain-save" data-save="${esc(l.id)}" aria-label="${t("common.save","保存")}">✓</button>
+    <button type="button" class="chain-cancel" data-cancel="${esc(l.id)}" aria-label="${t("common.cancel","取消")}">✕</button>
   </div>`;
 }
 /**
@@ -17884,21 +17885,21 @@ function renderScBox(){
     const overridden = o.name || o.color;
     return `<div class="chain-row" data-sc="${esc(k)}">
       <span class="chain-ic" style="color:${s.color}">${s.icon||""}</span>
-      <input class="sc-edit-name" value="${esc(s.name)}" maxlength="12" aria-label=t("field.scenarioName","场景名称") style="max-width:90px">
-      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label=t("field.scenarioColor","场景颜色")>
-      <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label=t("action.saveRenameColor","保存改名换色")>✓</button>
-      ${overridden?`<button type="button" class="chain-cancel sc-reset" data-screset="${esc(k)}" aria-label=t("action.restoreDefault","恢复默认")>恢复</button>`:""}
+      <input class="sc-edit-name" value="${esc(s.name)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" style="max-width:90px">
+      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
+      <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label="${t("action.saveRenameColor","保存改名换色")}">✓</button>
+      ${overridden?`<button type="button" class="chain-cancel sc-reset" data-screset="${esc(k)}" aria-label="${t("action.restoreDefault","恢复默认")}">恢复</button>`:""}
     </div>`;
   }).join("");
   const customRows = loadCustomScenarios().map(cs=>{
     const s = SCENARIOS[cs.key]||{};
     return `<div class="chain-row" data-sc="${esc(cs.key)}">
       <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
-      <input class="sc-edit-name" value="${esc(cs.name)}" maxlength="12" aria-label=t("field.scenarioName","场景名称") style="max-width:90px">
-      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label=t("field.scenarioColor","场景颜色")>
+      <input class="sc-edit-name" value="${esc(cs.name)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" style="max-width:90px">
+      <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
       <span class="chain-arr" style="font-size:var(--fs-2xs);color:var(--muted)">自定义</span>
-      <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label=t("common.save","保存")>✓</button>
-      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label=t("action.deleteScenario","删除场景")>✕</button>
+      <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="${t("common.save","保存")}">✓</button>
+      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="${t("action.deleteScenario","删除场景")}">✕</button>
     </div>`;
   }).join("");
   /* v2.0.3：插件场景行——与侧栏 ORDER 对齐（此前只渲染内置+自定义，启用笃行/阅读等
@@ -17907,7 +17908,7 @@ function renderScBox(){
     const s = SCENARIOS[key]||{};
     return `<div class="chain-row" data-sc="${esc(key)}">
       <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
-      <input class="sc-edit-name" value="${esc(s.name||key)}" maxlength="12" aria-label=t("field.scenarioName","场景名称") disabled style="max-width:90px">
+      <input class="sc-edit-name" value="${esc(s.name||key)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" disabled style="max-width:90px">
       <span class="chain-arr" style="font-size:var(--fs-2xs);color:var(--muted)">插件</span>
     </div>`;
   }).join("");
@@ -18390,7 +18391,7 @@ function openChainShareModal(){
     <div class="chain-share-dialog">
       <div class="chain-share-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的习惯链</h2>
-        <button type="button" class="chain-share-close" id="chainShareClose" aria-label=t("common.close","关闭")>✕</button>
+        <button type="button" class="chain-share-close" id="chainShareClose" aria-label="${t("common.close","关闭")}">✕</button>
       </div>
       <div class="chain-share-body">
         <p class="hint">将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ${links.length} 条习惯链。</p>
@@ -18422,11 +18423,11 @@ function openChainImportModal(){
     <div class="chain-share-dialog">
       <div class="chain-share-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入习惯链</h2>
-        <button type="button" class="chain-share-close" id="chainImportClose" aria-label=t("common.close","关闭")>✕</button>
+        <button type="button" class="chain-share-close" id="chainImportClose" aria-label="${t("common.close","关闭")}">✕</button>
       </div>
       <div class="chain-share-body">
         <p class="hint">粘贴他人分享的习惯链分享码，点「预览」查看将导入的链，确认后点「导入」。</p>
-        <textarea id="chainImportCode" rows="6" class="code-input" placeholder=t("chainShare.pasteHint","粘贴分享码...") style="word-break:break-all"></textarea>
+        <textarea id="chainImportCode" rows="6" class="code-input" placeholder="${t("chainShare.pasteHint","粘贴分享码...")}" style="word-break:break-all"></textarea>
         <div id="chainImportPreview" style="margin-top:var(--space-2)"></div>
         <div style="display:flex;gap:var(--space-2)margin-top:var(--space-2)">
           <button type="button" class="addbtn" id="chainImportPreviewBtn" style="--sc:var(--muted);flex:1">预览</button>
