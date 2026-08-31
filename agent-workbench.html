@@ -5556,7 +5556,10 @@ const SCENARIOS = {
     sysprompt:t("sysprompt.code", "你是一个资深全栈工程师，擅长代码实现、调试与架构建议。给出可直接运行的代码并解释关键点。"),
     extraCard:"code",
     record:{ label:t("record.code.label", "代码片段"),
-      fields:[{k:"lang",label:t("field.lang", "语言"),type:"text"},{k:"title",label:t("field.title", "标题"),type:"text"},{k:"code",label:t("field.code", "代码"),type:"textarea"}] } },
+      // v3.1.2 A-档：lang 由自由文本改 select（"js/JS/JavaScript"被统计成 3 种语言的分裂源）+ 补 project 归属字段
+      fields:[{k:"lang",label:t("field.lang", "语言"),type:"select",options:["JavaScript","TypeScript","Python","Java","Go","Rust","C/C++","SQL","HTML/CSS","Shell",t("option.other","其他")]},
+        {k:"project",label:t("field.project", "项目"),type:"text",placeholder:"如 工作台重构 / 个人的小站"},
+        {k:"title",label:t("field.title", "标题"),type:"text"},{k:"code",label:t("field.code", "代码"),type:"textarea"}] } },
 
   life:{ name:"生活", color:"#7c5cbf",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
@@ -12984,17 +12987,51 @@ function healthCard(){
       <div class="health-item"><div class="health-val">${sleepRecs.length? (sleepRecs.slice(-7).map(r=>parseNum(r.value)).filter(v=>v>0).reduce((a,b)=>a+b,0)/Math.max(1,sleepRecs.slice(-7).map(r=>parseNum(r.value)).filter(v=>v>0).length)).toFixed(1):"—"}</div><div class="health-lbl">${t("health.weekSleep", "近 7 天均睡（h）")}</div></div>
         ${bmiHTML}
     </div>
-    <div class="health-section"><h3>${t("health.weight.title", "体重趋势")}</h3>${weightTrendSVG(weightRecs.slice(-5))}</div>
+    <div class="health-section"><h3>${t("health.weight.title", "体重趋势")}</h3>${weightTrendSVG(weightRecs.slice(-5))}
+      <div class="health-quick" style="display:flex;gap:var(--space-2);align-items:center;margin-top:var(--space-2)">
+        <input id="healthWeightInput" placeholder="${t("health.weight.ph", "快捷录入：65.2 或 65.2kg")}" style="flex:1;min-width:100px" aria-label="${t("health.weight.aria", "体重快速录入")}">
+        <button type="button" class="addbtn sm" id="healthWeightQuick" style="--sc:var(--accent)">${t("health.weight.quickBtn", "记录")}</button>
+      </div>
+    </div>
     <div class="health-section"><h3>${t("health.sleep.title", "睡眠概览")}</h3>${sleepBarsHTML(sleepRecs)}</div>
-    <div class="health-section"><h3>${t("health.water.title", "今日喝水")}</h3>${waterProgressHTML(todayWater, 8)}</div>
+    <div class="health-section"><h3>${t("health.water.title", "今日喝水")}</h3>${waterProgressHTML(todayWater, 8)}
+      <button type="button" class="addbtn sm" id="healthWaterPlus" style="--sc:var(--accent);margin-top:var(--space-2)">${t("health.water.plusBtn", "＋ 喝一杯（记 1 杯）")}</button>
+    </div>
   </div>`;
 }
 /**
- * 绑定健康概览卡片交互（预留：未来可加水喝 +1 按钮、体重快速录入等）
+ * 绑定健康概览卡片交互（v3.1.2 A-档：预留 hook 兑现——喝水 +1 / 体重快捷录入）
  * @returns {void}
  */
 function bindHealthCard(){
-  // 当前版本为纯展示卡片，无交互绑定；预留 hook 供后续扩展
+  const waterBtn = document.getElementById("healthWaterPlus");
+  if(waterBtn){
+    waterBtn.onclick = function(){
+      try{
+        const recs = getRec("life");
+        recs.unshift({ id: uid(), type: "喝水记录", title: "喝水", value: "1 杯", note: "", created: Date.now() });
+        saveRec("life", recs);
+        toast(t("health.water.plusToast", "已记录 1 杯水"), "ok");
+        if(typeof render === "function") render();
+      }catch(e){ toast("记录失败：" + (e && e.message || e), "warn"); }
+    };
+  }
+  const weightBtn = document.getElementById("healthWeightQuick");
+  if(weightBtn){
+    weightBtn.onclick = function(){
+      const inp = document.getElementById("healthWeightInput");
+      const v = inp ? String(inp.value || "").trim() : "";
+      if(!v || !/^[\d.]+\s*(kg)?$/i.test(v)){ toast(t("health.weight.invalid", "请输入体重，如 65.2 或 65.2kg"), "warn"); if(inp) inp.focus(); return; }
+      try{
+        const recs = getRec("life");
+        recs.unshift({ id: uid(), type: "体重追踪", title: "体重", value: v, note: "", created: Date.now() });
+        saveRec("life", recs);
+        toast(t("health.weight.savedToast", "已记录体重 " + v), "ok");
+        if(inp) inp.value = "";
+        if(typeof render === "function") render();
+      }catch(e){ toast("记录失败：" + (e && e.message || e), "warn"); }
+    };
+  }
 }
 
 /** 设计场景专属卡片：灵感板（按类型统计 + 最近作品速览） */
@@ -13631,12 +13668,14 @@ function runSql(sqlText, schemaDdl){
 
 /**
  * 绑定 SQL 卡的「▶ 运行」按钮（render 后调用，幂等）。
+ * @param {string} [storeKey] - 存储键（v3.1.2 A-档：data 场景 data_sql 与 code 场景 code_sql 双键支持）
  */
-function bindCodeSqlCard(){
+function bindCodeSqlCard(storeKey){
+  const KEY = storeKey || "code_sql";
   $$("[data-f-sqlrun]").forEach(function(b){
     b.onclick = async function(){
       const id = b.getAttribute("data-f-sqlrun");
-      const rec = load(PREFIX + "code_sql", []).find(function(r){ return r.id === id; });
+      const rec = load(PREFIX + KEY, []).find(function(r){ return r.id === id; });
       if(!rec){ toast(t("msg.recordNotFound","记录不存在"), "warn"); return; }
       if(b.disabled) return;
       b.disabled = true;
@@ -13698,6 +13737,43 @@ function bindCodeRunnerCard(){
       }));
       toast(res.ok ? t("sql.runComplete","运行完成（") + res.ms + "ms）" : t("sql.runFail","运行失败：") + String(res.output).slice(0, 60), res.ok ? "ok" : "error");
       render();
+    };
+  });
+}
+
+/**
+ * v3.1.2 A-档：绑定 frontend 功能卡的「▶ 预览」按钮（render 后调用，幂等）。
+ * 点击 → 把记录的 html/css/js 拼成完整文档 → sandbox iframe 实时渲染（jsdom 无 iframe 执行环境时降级提示）。
+ */
+function bindCodeFrontendCard(){
+  $$("[data-f-preview]").forEach(function(b){
+    b.onclick = function(){
+      const id = b.getAttribute("data-f-preview");
+      const rec = load(PREFIX + "code_frontend", []).find(function(r){ return r.id === id; });
+      if(!rec){ toast(t("msg.recordNotFound","记录不存在"), "warn"); return; }
+      const box = $('[data-f-previewbox="' + id + '"]');
+      const statusEl = $('[data-f-previewstatus="' + id + '"]');
+      if(!box) return;
+      const showing = box.style.display !== "none";
+      if(showing){ box.style.display = "none"; if(statusEl) statusEl.textContent = ""; return; } // 再点一次收起
+      const doc = '<!doctype html><html><head><meta charset="utf-8"><style>' +
+        String(rec.css || "") + '</style></head><body>' + String(rec.html || "") +
+        '<script>try{' + String(rec.js || "") + '}catch(e){document.body.insertAdjacentHTML("beforeend","<pre style=\\"color:#d83b3b;padding:8px;font:12px monospace\\">JS Error: "+(e&&e.message||e)+"</pre>")}<\/script></body></html>';
+      box.innerHTML = "";
+      const frame = document.createElement("iframe");
+      frame.setAttribute("sandbox", "allow-scripts");
+      frame.setAttribute("title", t("frontend.previewTitle","页面预览"));
+      frame.style.cssText = "width:100%;height:260px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff";
+      box.appendChild(frame);
+      box.style.display = "";
+      if(statusEl) statusEl.textContent = t("frontend.previewLive","✓ 实时预览中（再点一次收起）");
+      try{
+        frame.srcdoc = doc;
+      }catch(e){
+        // 环境不支持 srcdoc（旧浏览器/jsdom）：显示源码降级
+        box.innerHTML = sanitizeHtml('<pre class="code-input" style="white-space:pre-wrap;font-size:var(--fs-2xs)">' + esc(doc) + '</pre>');
+        if(statusEl) statusEl.textContent = t("frontend.previewSrcOnly","当前环境不支持 iframe 预览，已显示拼接后的源码");
+      }
     };
   });
 }
@@ -14307,7 +14383,15 @@ SCENE_FEATURE_RENDER.code = {
       sum:function(recs){
         return [{ v:recs.length, l:t("field.page","页面") }];
       },
-      emptyTip:t("empty.noPage","暂无页面 · 点击「添加」记录第一个前端页面")
+      emptyTip:t("empty.noPage","暂无页面 · 点击「添加」记录第一个前端页面"),
+      // v3.1.2 A-档：frontend 补「▶ 预览」——html/css/js 三字段此前只能看台账无运行入口（对比 sql/runner 都有）
+      rowAfter:function(r){
+        return '<div class="sql-run-bar">' +
+          '<button type="button" class="addbtn sm" data-f-preview="' + r.id + '">' + t("frontend.previewBtn","▶ 预览") + '</button>' +
+          '<span class="sql-run-status" data-f-previewstatus="' + r.id + '"></span>' +
+          '</div>' +
+          '<div class="frontend-preview-box" data-f-previewbox="' + r.id + '" style="display:none"></div>';
+      }
     });
   },
   sql: function(){
@@ -16978,7 +17062,10 @@ function render(){
       // v3.0.1 B-3：代码运行器「▶ 运行」按钮绑定（通用 CRUD 绑定之外的特化扩展）
       if(active === "code" && sceneFeatureMode === "runner") bindCodeRunnerCard();
       // v3.1：SQL Playground「▶ 运行」按钮绑定（sql.js WASM 沙箱）
-      if(active === "code" && sceneFeatureMode === "sql") bindCodeSqlCard();
+      // v3.1.2 A-档：data 场景的 SQL 查数 tab 复用同一绑定（存储键经 bcfg.key 查找）
+      if((active === "code" || active === "data") && sceneFeatureMode === "sql") bindCodeSqlCard(bcfg ? bcfg.key : "code_sql");
+      // v3.1.2 A-档：frontend「▶ 预览」按钮绑定（sandbox iframe 实时渲染 html/css/js）
+      if(active === "code" && sceneFeatureMode === "frontend") bindCodeFrontendCard();
     }
     setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
     setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
