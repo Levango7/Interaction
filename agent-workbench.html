@@ -68,8 +68,9 @@
   /* 间距体系（4px 基线网格） */
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  /* 字号体系 */
-  --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
+  /* 字号体系（v3.1.2：补 --fs-3xs/--fs-2xs 收编历史 10/11px 幽灵值——
+     顶栏徽标/时间戳/迷你图表标签等密集场景元素，25+25 处硬编码正式纳入阶梯，不再游离） */
+  --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
   /* 圆角体系（v2.1.1：补 --radius-full 胶囊圆角，此前 9 处引用靠回退兜底） */
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   /* ===== B2 布局宽度体系（统一内容宽度，宽屏防卡片无限拉伸） ===== */
@@ -367,16 +368,18 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .tbtn svg{width:18px;height:18px}
 /* 系统级消息按钮角标（红色小圆点 / 未读数） */
 .tbtn{position:relative}
-/* v3.1.1：顶栏系统级按钮纵排布局（图标在上·文字在下）——同等宽高方形按钮 */
+/* v3.1.1：顶栏系统级按钮纵排布局（图标在上·文字在下）——同等宽高方形按钮
+   v3.1.2 UI 协调性：标签 11px→13px（--fs-xs）——48px 方钮配 11px 文字头重脚轻，
+   且与 .more-menu/.side-pop 的 tbtn 标签（--fs-sm）不同字号；统一抬升至 xs（图标20+gap3+文字13≈36<48 仍留呼吸感） */
 .topbar .tbtn{flex-direction:column;align-items:center;justify-content:center;gap:3px;
   padding:var(--space-1) var(--space-2);min-height:48px;min-width:48px;
-  font-size:11px;line-height:1.1;white-space:nowrap}
-.topbar .tbtn .lbl{display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px;font-size:11px}
+  font-size:var(--fs-xs);line-height:1.1;white-space:nowrap}
+.topbar .tbtn .lbl{display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64px;font-size:var(--fs-xs)}
 .topbar .tbtn svg{width:20px;height:20px;flex-shrink:0}
 .topbar .tbtn .badge{position:absolute;top:2px;right:6px}
 .tbtn .badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;
   padding:0 4px;border-radius:var(--radius-md);background:var(--danger);color:var(--on-accent);
-  font-size:10px;font-weight:600;line-height:16px;text-align:center;pointer-events:none}
+  font-size:var(--fs-3xs);font-weight:600;line-height:16px;text-align:center;pointer-events:none}
 
 /* ===== 系统级消息中心：下拉面板 ===== */
 /* top 兜底值走 --topbar-h 令牌（JS 打开时会锚定到按钮实际下缘，此值仅在 JS 失效时兜底） */
@@ -400,7 +403,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .msg-item-body{flex:1;min-width:0}
 .msg-item-title{font-weight:600;font-size:var(--fs-sm);margin-bottom:2px}
 .msg-item-text{font-size:var(--fs-xs);color:var(--muted);line-height:1.4;word-break:break-word}
-.msg-item-time{font-size:10px;color:var(--text-faint);margin-top:4px}
+.msg-item-time{font-size:var(--fs-3xs);color:var(--text-faint);margin-top:4px}
 .msg-item-action{flex-shrink:0;font-size:var(--fs-xs);color:var(--accent);
   text-decoration:underline;cursor:pointer;background:transparent;border:none;padding:0}
 .msg-item-action:hover{color:var(--on-accent);background:var(--accent)}
@@ -678,7 +681,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .sys-ov-ic{color:var(--accent);display:flex;align-items:center}
 .sys-ov-ic svg{width:16px;height:16px}
 .sys-ov-val{font-size:var(--fs-base);font-weight:700;color:var(--text);line-height:1.2}
-.sys-ov-lbl{font-size:10px;color:var(--muted);text-align:center}
+.sys-ov-lbl{font-size:var(--fs-3xs);color:var(--muted);text-align:center}
 .sys-ov-ai{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1) var(--space-2);margin-top:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);font-size:var(--fs-xs)}
 .sys-ov-ai-ok{color:var(--ok);display:flex;align-items:center}
 .sys-ov-ai-ok svg{width:14px;height:14px}
@@ -724,8 +727,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .mini-chart-wrap svg{display:block;width:100%;height:120px}
 .mini-chart-empty{color:var(--muted);font-size:var(--fs-xs);text-align:center;padding:var(--space-3)}
 .mini-chart-legend{font-size:var(--fs-xs);fill:var(--text-dim)}
-.mini-chart-val{font-size:10px;fill:var(--muted)}
-.mini-chart-lbl{font-size:11px;fill:var(--text-dim)}
+.mini-chart-val{font-size:var(--fs-3xs);fill:var(--muted)}
+.mini-chart-lbl{font-size:var(--fs-2xs);fill:var(--text-dim)}
 /* v3.0.1 B-3：代码运行器输出区（等宽字体 + panel2 背景） */
 .run-output{margin-top:var(--space-1);padding:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-sm);font-family:"SF Mono","SFMono-Regular",Consolas,monospace;font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all;max-height:180px;overflow:auto}
 .run-output-title{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
@@ -995,10 +998,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .line-chart-svg{display:block;width:100%;max-width:560px;height:90px;margin:0 auto}
 .heat{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--space-1);max-width:360px;margin:0 auto}
 .hcell{aspect-ratio:1;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;
-  font-size:10px;color:var(--text-dim-3);transition:transform var(--transition-fast),box-shadow var(--transition-fast),filter var(--transition-fast)}
+  font-size:var(--fs-3xs);color:var(--text-dim-3);transition:transform var(--transition-fast),box-shadow var(--transition-fast),filter var(--transition-fast)}
 .hcell:hover{transform:scale(1.18);box-shadow:var(--shadow-2);filter:brightness(1.1);z-index:var(--z-under)}
 .hcell.l0{background:var(--heat-0)}.hcell.l1{background:var(--heat-1)}.hcell.l2{background:var(--heat-2)}.hcell.l3{background:var(--heat-3)}.hcell.l4{background:var(--heat-4)}
-.dow{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px}
+.dow{font-size:var(--fs-3xs);color:var(--muted);text-align:center;padding-bottom:2px}
 .bars{display:flex;flex-direction:column;gap:var(--space-2)}
 /* P2'：跨场景习惯链有向图 */
 .chain-graph-wrap{margin-top:var(--space-2);overflow-x:auto;position:relative}
@@ -1165,15 +1168,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v2.2.1：主页今日待办可点击项 + 逾期标记 */
 .ov-today-item{cursor:pointer;border-radius:var(--radius-sm);padding:2px 4px;transition:background var(--transition-fast)}
 .ov-today-item:hover{background:var(--surface-hover)}
-.ov-overdue-tag{display:inline-block;margin-left:6px;padding:0 6px;font-size:10px;line-height:16px;
+.ov-overdue-tag{display:inline-block;margin-left:6px;padding:0 6px;font-size:var(--fs-3xs);line-height:16px;
   color:var(--danger);background:var(--danger-soft);border-radius:var(--radius-full)}
 #ovTodayMore{background:none;border:none;color:var(--accent);font-size:var(--fs-xs);cursor:pointer;
   padding:var(--space-1) 0;margin-top:var(--space-1)}
 #ovTodayMore:hover{text-decoration:underline}
 .stats-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1.15;letter-spacing:-.02em}
-.stats-card-lbl{font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.stats-card-lbl{font-size:var(--fs-2xs);color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
 /* 周环比角标：胶囊样式，与主数字区分开 */
-.stats-wow{display:inline-flex;align-items:center;margin-left:6px;font-size:11px;font-weight:600;
+.stats-wow{display:inline-flex;align-items:center;margin-left:6px;font-size:var(--fs-2xs);font-weight:600;
   padding:1px 6px;border-radius:var(--radius-full,999px);vertical-align:2px;line-height:1.4;white-space:nowrap}
 .stats-wow.up{background:var(--accent-soft);color:var(--accent)}
 .stats-wow.down{background:var(--danger-soft);color:var(--danger)}
@@ -1552,7 +1555,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   /* ===== T4.1 设计令牌体系（暗色覆盖：间距/字号/圆角/过渡与亮色一致，阴影加深以保持可见性） ===== */
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
+  --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(0,0,0,.4);
   --shadow-2:0 2px 8px rgba(0,0,0,.5);
@@ -2069,7 +2072,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 }
 .install-card .features li .check{
   width:18px;height:18px;border-radius:50%;background:var(--ok);color:var(--on-accent);
-  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:var(--fs-2xs)
 }
 .install-card .actions{
   display:flex;gap:var(--space-3);justify-content:center;margin-top:var(--space-3)
@@ -2129,13 +2132,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .share-meta-row+.share-meta-row{border-top:1px solid var(--line)}
 .share-meta-label{color:var(--text-dim);font-weight:500}
 .share-meta-val{color:var(--text);display:flex;align-items:center;gap:4px}
-.share-meta-val .pri{padding:1px 6px;border-radius:var(--radius-sm);font-size:11px;font-weight:700}
+.share-meta-val .pri{padding:1px 6px;border-radius:var(--radius-sm);font-size:var(--fs-2xs);font-weight:700}
 .share-meta-val .pri.P0{background:var(--danger);color:var(--on-accent)}
 .share-meta-val .pri.P1{background:var(--warn);color:var(--on-accent)}
 .share-meta-val .pri.P2{background:var(--accent);color:var(--on-accent)}
 .share-meta-val .due{color:var(--text)}
 .share-tags{display:flex;flex-wrap:wrap;gap:4px}
-.share-tags .tag{background:var(--surface-muted);color:var(--text-dim);padding:2px 8px;border-radius:var(--radius-sm);font-size:11px}
+.share-tags .tag{background:var(--surface-muted);color:var(--text-dim);padding:2px 8px;border-radius:var(--radius-sm);font-size:var(--fs-2xs)}
 .share-note{background:var(--surface-muted);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);font-size:var(--fs-sm);color:var(--text);white-space:pre-wrap;word-break:break-word}
 .share-readonly-hint{color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-2);border-top:1px dashed var(--line);margin-top:var(--space-1)}
 
@@ -2164,7 +2167,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tpl-task-count{font-size:var(--fs-sm);color:var(--text-dim);white-space:nowrap}
 .tpl-desc{margin:0;font-size:var(--fs-sm);color:var(--text-dim);line-height:1.5}
 .tpl-sc-row{display:flex;flex-wrap:wrap;gap:4px}
-.tpl-sc-badge{padding:2px 8px;border-radius:var(--radius-sm);font-size:11px;font-weight:600}
+.tpl-sc-badge{padding:2px 8px;border-radius:var(--radius-sm);font-size:var(--fs-2xs);font-weight:600}
 .tpl-import-btn{margin-top:auto}
 
 /* v1.5-B 插件市场面板 */
@@ -2179,7 +2182,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .plugin-version{font-size:var(--fs-xs);color:var(--text-dim);padding:1px 6px;background:var(--surface);border-radius:var(--radius-sm)}
 .plugin-desc{font-size:var(--fs-sm);color:var(--text-dim);margin:6px 0 0;line-height:1.5;flex:1}
 .plugin-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.plugin-badge{padding:1px 6px;border-radius:var(--radius-sm);font-size:11px;background:var(--surface);color:var(--accent);border:1px solid var(--line)}
+.plugin-badge{padding:1px 6px;border-radius:var(--radius-sm);font-size:var(--fs-2xs);background:var(--surface);color:var(--accent);border:1px solid var(--line)}
 /* 窄屏（抽屉内宽度不足时）退化为单列，避免挤压 */
 @media(max-width:600px){
   .plugin-list{grid-template-columns:1fr}
@@ -2218,7 +2221,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --heat-0:#e0d4b8; --heat-1:#d4d8a8; --heat-2:#b8c890; --heat-3:#9ab870; --heat-4:#7aa850;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
+  --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(91,70,54,.1);
   --shadow-2:0 2px 8px rgba(91,70,54,.12);
@@ -2251,7 +2254,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --heat-0:#e0e6e0; --heat-1:#c8e0d4; --heat-2:#a0ccb8; --heat-3:#78b89c; --heat-4:#50a480;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
+  --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(58,63,58,.06);
   --shadow-2:0 2px 8px rgba(58,63,58,.08);
@@ -2284,7 +2287,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   --heat-0:#1a2a1a; --heat-1:#1a3a1a; --heat-2:#1a4a1a; --heat-3:#1a5a1a; --heat-4:#4ade80;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
+  --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(0,0,0,.4);
   --shadow-2:0 2px 8px rgba(0,0,0,.5);
@@ -2370,7 +2373,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .cal-num{font-size:var(--fs-sm);color:var(--text);font-weight:500}
 .cal-day.today .cal-num{color:var(--accent);font-weight:700}
 .cal-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;border-radius:var(--radius-md);
-  background:var(--accent);color:var(--on-accent);font-size:10px;font-weight:600;
+  background:var(--accent);color:var(--on-accent);font-size:var(--fs-3xs);font-weight:600;
   display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
 
 /* 周历视图 */
@@ -2601,7 +2604,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   padding:4px 10px;font-size:var(--fs-xs);color:var(--text);box-shadow:var(--shadow-1);
   white-space:nowrap;animation:petBubble 1.2s ease-out forwards;pointer-events:none}
 .pet .pet-close{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;
-  background:var(--danger);color:var(--on-accent);font-size:11px;line-height:18px;
+  background:var(--danger);color:var(--on-accent);font-size:var(--fs-2xs);line-height:18px;
   text-align:center;cursor:pointer;opacity:0;transition:opacity .2s;pointer-events:auto;
   border:0;padding:0}
 .pet:hover .pet-close{opacity:1}
@@ -2647,7 +2650,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* 画布上的迷你图表块（静态示例） */
 .cs-card-mini{height:100%;display:flex;flex-direction:column;gap:4px}
 .cs-card-mini .cs-title{font-size:var(--fs-xs);font-weight:600;color:var(--text)}
-.cs-card-mini .cs-sub{font-size:10px;color:var(--muted)}
+.cs-card-mini .cs-sub{font-size:var(--fs-3xs);color:var(--muted)}
 .cs-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;flex:1;margin-top:2px}
 .cs-cell{aspect-ratio:1/1;background:var(--surface-muted);border-radius:2px}
 .cs-cell.hi{background:var(--accent)}
@@ -2667,8 +2670,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .cs-dash{display:grid;grid-template-columns:1fr 1fr;gap:3px;height:60px;margin-top:4px}
 .cs-dash-cell{background:var(--surface-muted);border-radius:2px}
 .cs-chain{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:4px}
-.cs-cnode{padding:2px 6px;background:var(--accent-soft);color:var(--accent);font-size:10px;border-radius:var(--radius-md)}
-.cs-carr{color:var(--muted);font-size:10px}
+.cs-cnode{padding:2px 6px;background:var(--accent-soft);color:var(--accent);font-size:var(--fs-3xs);border-radius:var(--radius-md)}
+.cs-carr{color:var(--muted);font-size:var(--fs-3xs)}
 .cs-clear{padding:6px 12px;border:1px solid var(--line);border-radius:var(--radius-md);
   background:var(--panel2);color:var(--text-dim);font-size:var(--fs-sm);cursor:pointer;
   transition:background var(--transition-fast),color var(--transition-fast);flex-shrink:0}
@@ -2757,7 +2760,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* 甘特图 SVG */
 .gantt-chart{width:100%;height:auto;display:block}
-.gantt-chart .gantt-label{font-size:11px;fill:var(--text)}
+.gantt-chart .gantt-label{font-size:var(--fs-2xs);fill:var(--text)}
 
 /* 思维导图 SVG */
 .mindmap{width:100%;height:auto;display:block;max-height:70vh}
@@ -3528,7 +3531,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
           <label for="themeCustomName" data-i18n="look.themeName">名称</label>
           <div class="ctl"><input id="themeCustomName" data-i18n-placeholder="look.themeNamePlaceholder" placeholder="如 我的主题" style="font-size:12px"></div>
         </div>
-        <div style="margin-top:6px;font-size:11px;color:var(--muted);font-weight:600" data-i18n="look.tokenColors">令牌色值</div>
+        <div style="margin-top:6px;font-size:var(--fs-2xs);color:var(--muted);font-weight:600" data-i18n="look.tokenColors">令牌色值</div>
         <div id="themeTokenEditor"></div>
         <div class="theme-actions">
           <button type="button" class="addbtn sm" id="btnThemeSave" data-i18n="look.themeSave">保存主题</button>
@@ -3536,14 +3539,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         </div>
       </div>
       <div id="themeImportArea" style="display:none;margin-top:8px">
-        <div style="margin-bottom:4px;font-size:11px;color:var(--muted);font-weight:600" data-i18n="look.pasteThemeJson">粘贴主题 JSON</div>
+        <div style="margin-bottom:4px;font-size:var(--fs-2xs);color:var(--muted);font-weight:600" data-i18n="look.pasteThemeJson">粘贴主题 JSON</div>
         <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"mytheme","name":"我的主题","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}'></textarea>
         <div class="theme-actions">
           <button type="button" class="addbtn sm" id="btnThemeImportConfirm" data-i18n="common.confirmImport">确认导入</button>
           <button type="button" class="addbtn sm" id="btnThemeImportCancel"  style="--sc:var(--muted)" data-i18n="common.cancel">取消</button>
         </div>
       </div>
-      <div style="margin-top:10px;font-size:11px;color:var(--muted);font-weight:600" data-i18n="look.scColorPersonalize">场景配色个性化</div>
+      <div style="margin-top:10px;font-size:var(--fs-2xs);color:var(--muted);font-weight:600" data-i18n="look.scColorPersonalize">场景配色个性化</div>
       <div id="themeScColorEditor"></div>
     </div>
     <div class="set-field">
@@ -3627,7 +3630,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <button type="button" id="btnPushUnsubscribe" disabled data-i18n="settings.push.unsubscribe">取消订阅</button>
         <button type="button" id="btnPushTest" disabled data-i18n="settings.push.test">发送测试通知</button>
       </div>
-      <p class="hint" style="margin:6px 0 0;font-size:11px" data-i18n="notify.pushHint">⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。</p>
+      <p class="hint" style="margin:6px 0 0;font-size:var(--fs-2xs)" data-i18n="notify.pushHint">⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。</p>
     </div>
   </section>
 
@@ -3984,10 +3987,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.1.1";
+const VERSION = "3.1.2";
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260830i";
+const BUILD_TAG = "20260831a";
 
 
 
@@ -9047,7 +9050,7 @@ const TOOL_APPS = {
       let html = '<table class="tool-table sheet-tbl" id="sheetTbl">';
       for(let r = 0; r < rows.length; r++){
         html += "<tr>";
-        html += '<td style="background:var(--panel2);text-align:center;color:var(--muted);font-size:11px">' + (r+1) + "</td>";
+        html += '<td style="background:var(--panel2);text-align:center;color:var(--muted);font-size:var(--fs-2xs)">' + (r+1) + "</td>";
         for(let c = 0; c < rows[r].length; c++){
           html += '<td><input type="text" data-sc-r="' + r + '" data-sc-c="' + c + '" value="' + esc(rows[r][c]) + '" style="border:none;background:transparent;width:100%;padding:2px"></td>';
         }
@@ -9093,7 +9096,7 @@ const TOOL_APPS = {
       const list = slides.map(function(s, i){
         return '<button type="button" class="ppt-thumb card" data-ppt-sel="' + i + '" style="padding:var(--space-2);text-align:left;cursor:pointer">'
           + '<b style="font-size:12px">' + (i+1) + ". " + esc(s.title) + "</b>"
-          + '<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(s.body || "").slice(0, 30) + "</div></button>";
+          + '<div style="font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(s.body || "").slice(0, 30) + "</div></button>";
       }).join("");
       return '<div style="display:grid;grid-template-columns:180px 1fr;gap:var(--space-3)">'
         + '<div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:420px;overflow:auto">' + list
@@ -9819,8 +9822,8 @@ const TOOL_APPS = {
           { label:t("tool.bill.due", "到期日"), fmt:function(r){
               const today = todayStr();
               let tag = "";
-              if(!r.done && r.due < today) tag = ' <span class="pri P0" style="font-size:10px">逾期</span>';
-              else if(!r.done && r.due <= _addDaysStr(today,3)) tag = ' <span class="pri P1" style="font-size:10px">即将到期</span>';
+              if(!r.done && r.due < today) tag = ' <span class="pri P0" style="font-size:var(--fs-3xs)">逾期</span>';
+              else if(!r.done && r.due <= _addDaysStr(today,3)) tag = ' <span class="pri P1" style="font-size:var(--fs-3xs)">即将到期</span>';
               return esc(r.due||"") + tag; } }
         ],
         sum: function(rs){
@@ -11627,7 +11630,7 @@ function renderOverview(){
     days.push(pad(d.getMonth()+1)+"/"+pad(d.getDate()));
     counts.push(tasks.filter(t=>t.status==="done"&&t.doneAt&&sameDay(t.doneAt,d.getFullYear(),d.getMonth(),d.getDate())).length); }
   const lineChart = lineChartSVG(counts, "var(--accent)") +
-    `<div style="font-size:11px;color:var(--muted);margin-top:4px">${days[0]} — ${days[days.length-1]} · ${t("overview.trend.axisLabel", "每日完成任务数")}</div>`;
+    `<div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:4px">${days[0]} — ${days[days.length-1]} · ${t("overview.trend.axisLabel", "每日完成任务数")}</div>`;
 
   const now=new Date(), y=now.getFullYear(), m=now.getMonth();
   const first=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate();
@@ -11638,7 +11641,7 @@ function renderOverview(){
     ["日","一","二","三","四","五","六"].map(w=>`<div class="dow">${w}</div>`).join("")+
     cells.map(d=> d? `<div class="hcell ${lvl(tasks.filter(t=>t.status==="done"&&t.doneAt&&sameDay(t.doneAt,y,m,d)).length)}">${d}</div>`
                    : `<div class="hcell" style="background:transparent"></div>`).join("")+
-    `</div><div style="font-size:11px;color:var(--muted);margin-top:6px">${t("overview.heatmap.legend", "本月每日完成密度（颜色越深越多）")}</div>`;
+    `</div><div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:6px">${t("overview.heatmap.legend", "本月每日完成密度（颜色越深越多）")}</div>`;
 
   const bars = ORDER.map(sc=>{
     const s=SCENARIOS[sc]; const all=tasks.filter(t=>t.sc===sc);
@@ -17892,7 +17895,7 @@ function renderScBox(){
       <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
       <input class="sc-edit-name" value="${esc(cs.name)}" maxlength="12" aria-label=t("field.scenarioName","场景名称") style="max-width:90px">
       <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label=t("field.scenarioColor","场景颜色")>
-      <span class="chain-arr" style="font-size:11px;color:var(--muted)">自定义</span>
+      <span class="chain-arr" style="font-size:var(--fs-2xs);color:var(--muted)">自定义</span>
       <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label=t("common.save","保存")>✓</button>
       <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label=t("action.deleteScenario","删除场景")>✕</button>
     </div>`;
@@ -17904,7 +17907,7 @@ function renderScBox(){
     return `<div class="chain-row" data-sc="${esc(key)}">
       <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
       <input class="sc-edit-name" value="${esc(s.name||key)}" maxlength="12" aria-label=t("field.scenarioName","场景名称") disabled style="max-width:90px">
-      <span class="chain-arr" style="font-size:11px;color:var(--muted)">插件</span>
+      <span class="chain-arr" style="font-size:var(--fs-2xs);color:var(--muted)">插件</span>
     </div>`;
   }).join("");
   box.innerHTML = sanitizeHtml(builtinRows + customRows + pluginRows);
@@ -18809,14 +18812,14 @@ function renderThemeEditor(){
     const customs = (typeof getCustomThemes === "function") ? getCustomThemes() : {};
     const ids = Object.keys(customs);
     if(ids.length === 0){
-      listEl.innerHTML = sanitizeHtml(t("p4.html.themeNoneCustom","<div class=\"hint\" style=\"padding:4px;color:var(--muted);font-size:11px\">暂无自定义主题</div>"));
+      listEl.innerHTML = sanitizeHtml(t("p4.html.themeNoneCustom","<div class=\"hint\" style=\"padding:4px;color:var(--muted);font-size:var(--fs-2xs)\">暂无自定义主题</div>"));
     }else{
       const curTheme = (typeof getCurrentTheme === "function") ? getCurrentTheme() : "light";
       const rows = ids.map(id => {
         const theme = customs[id];
         const isCurrent = id === curTheme;
         return '<div class="theme-custom-row">'
-          + '<span class="theme-custom-name">'+esc(theme.name||id)+(isCurrent?' <span style="color:var(--accent);font-size:10px">'+t("theme.current", "●当前")+'</span>':'')+'</span>'
+          + '<span class="theme-custom-name">'+esc(theme.name||id)+(isCurrent?' <span style="color:var(--accent);font-size:var(--fs-3xs)">'+t("theme.current", "●当前")+'</span>':'')+'</span>'
           + '<button type="button" class="addbtn xs" data-theme-apply="'+esc(id)+'" style="--sc:var(--accent)">'+t("common.apply", "应用")+'</button>'
           + '<button type="button" class="addbtn xs" data-theme-edit="'+esc(id)+'" style="--sc:var(--muted)">'+t("common.edit", "编辑")+'</button>'
           + '<button type="button" class="addbtn xs" data-theme-delete="'+esc(id)+'" style="--sc:var(--danger,var(--muted))">'+t("common.delete", "删除")+'</button>'
@@ -22991,7 +22994,7 @@ const MESSAGES = {
     "p4.html.pluginVersionRow": "<div><b>版本：</b>v",
     "p4.html.scColorAria": "'+esc(meta.name||sc)+'配色",
     "p4.html.scResetBtn": "\" style=\"--sc:var(--muted)\">重置</button>",
-    "p4.html.themeNoneCustom": "<div class=\"hint\" style=\"padding:4px;color:var(--muted);font-size:11px\">暂无自定义主题</div>",
+    "p4.html.themeNoneCustom": "<div class=\"hint\" style=\"padding:4px;color:var(--muted);font-size:var(--fs-2xs)\">暂无自定义主题</div>",
     "plugin.confirmUnload": "确定卸载插件「",
     "plugin.errEmptyDef": "插件定义不能为空",
     "plugin.errIdExists": "插件 id「",
@@ -25161,7 +25164,7 @@ const MESSAGES = {
     "p4.html.pluginVersionRow": "<div><b>版本：</b>v",
     "p4.html.scColorAria": "'+esc(meta.name||sc)+'配色",
     "p4.html.scResetBtn": "\" style=\"--sc:var(--muted)\">重置</button>",
-    "p4.html.themeNoneCustom": "<div class=\"hint\" style=\"padding:4px;color:var(--muted);font-size:11px\">暂无自定义主题</div>",
+    "p4.html.themeNoneCustom": "<div class=\"hint\" style=\"padding:4px;color:var(--muted);font-size:var(--fs-2xs)\">暂无自定义主题</div>",
     "plugin.confirmUnload": "Confirm unload plugin \"",
     "plugin.errEmptyDef": "Plugin definition cannot be empty",
     "plugin.errIdExists": "Plugin id \"",
