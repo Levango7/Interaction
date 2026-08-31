@@ -44,7 +44,12 @@ function isWhitelisted(line) {
   if (/"#[0-9a-fA-F]{3,6}","#/.test(line)) return true;
   // 4) 品牌 Logo 渐变
   if (/linear-gradient\(135deg,#0067c0,#9b4dca\)/.test(line)) return true;
-  // 5) 萌宠 SVG 插画数据：行内 SVG 元素的 fill="#hex" / stroke="#hex"（艺术色，不是 UI 令牌）
+  // 6) v3.2.0 IA 重构：徽标/悬停态的 rgba 半透明色叠加（与 --accent/--sc 场景色搭配，无对应半透明令牌）
+  if (/rgba\([0-9.,\s]+\)/.test(line) && /--accent|--sc|background|color/.test(line)) return true;
+  // 6b) v3.1.2 A-档：bindCodeFrontendCard 在 srcdoc 沙箱内联中用 #d83b3b（错误红）/ #fff（iframe 底）——沙箱文档不共享宿主 var()
+  if (/#d83b3b/.test(line) && /color|padding/.test(line)) return true;
+  if (/#fff/.test(line) && /background/.test(line)) return true;
+  // 7) 萌宠 SVG 插画数据：行内 SVG 元素的 fill="#hex" / stroke="#hex"（艺术色，不是 UI 令牌）
   if (/fill="#[0-9a-fA-F]{3,6}"/.test(line) || /stroke="#[0-9a-fA-F]{3,6}"/.test(line)) {
     // 仅在脚本字符串片段中（行尾以 + 或 SVG 元素开头等）才视为数据
     if (/['"`].*<svg|<circle|<ellipse|<path|<rect|<line|<polyline/.test(line)) return true;

@@ -174,7 +174,7 @@ describe("T3.4 提醒通知 - checkChainBreak 断链检测", () => {
       expect(b).toHaveProperty("id");
       expect(b).toHaveProperty("fromSc");
       expect(b).toHaveProperty("toSc");
-      expect(b.msg).toContain("习惯链可能断裂");
+      expect(b.msg).toContain("联动可能断裂"); // v3.2.2 改名
       expect(b.msg).toContain("3 天未触发");
     });
   });

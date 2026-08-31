@@ -13066,7 +13066,7 @@ function bindHealthCard(){
       try{
         const recs = getRec("life");
         recs.unshift({ id: uid(), type: "喝水记录", title: "喝水", value: "1 杯", note: "", created: Date.now() });
-        saveRec("life", recs);
+        save(PREFIX + "rec_life", recs); // v3.1.2 A-档修复：saveRec 不存在（getRec 的写入等价物是 save(PREFIX+"rec_"+sc)）
         toast(t("health.water.plusToast", "已记录 1 杯水"), "ok");
         if(typeof render === "function") render();
       }catch(e){ toast("记录失败：" + (e && e.message || e), "warn"); }
@@ -13081,7 +13081,7 @@ function bindHealthCard(){
       try{
         const recs = getRec("life");
         recs.unshift({ id: uid(), type: "体重追踪", title: "体重", value: v, note: "", created: Date.now() });
-        saveRec("life", recs);
+        save(PREFIX + "rec_life", recs); // v3.1.2 A-档修复：saveRec 不存在（getRec 的写入等价物是 save(PREFIX+"rec_"+sc)）
         toast(t("health.weight.savedToast", "已记录体重 " + v), "ok");
         if(inp) inp.value = "";
         if(typeof render === "function") render();
@@ -13814,6 +13814,7 @@ function bindCodeFrontendCard(){
       if(showing){ box.style.display = "none"; if(statusEl) statusEl.textContent = ""; return; } // 再点一次收起
       const doc = '<!doctype html><html><head><meta charset="utf-8"><style>' +
         String(rec.css || "") + '</style></head><body>' + String(rec.html || "") +
+        // eslint-disable-next-line no-useless-escape -- <\/script> 的反斜杠是必需的：防止宿主 <script> 标签被内嵌文本提前闭合
         '<script>try{' + String(rec.js || "") + '}catch(e){document.body.insertAdjacentHTML("beforeend","<pre style=\\"color:#d83b3b;padding:8px;font:12px monospace\\">JS Error: "+(e&&e.message||e)+"</pre>")}<\/script></body></html>';
       box.innerHTML = "";
       const frame = document.createElement("iframe");
@@ -22842,7 +22843,8 @@ const MESSAGES = {
     "storePage.importOkToast": "插件导入成功",
     "storePage.importFailToast": "导入失败",
     "chainPage.title": "场景联动",
-    "chainPage.sub": "打卡记录与跨场景自动化规则"—完成 A 场景任务自动触发 B 场景待办",
+    "chainPage.sub": "打卡记录与跨场景自动化规则",
+    "chainPage.subExtra": "",
     "chainPage.cfgBtn": "规则配置",
     "chainPage.backHome": "← 主页",
     "chainPage.aria": "场景联动快速导航",

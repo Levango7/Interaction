@@ -89,8 +89,15 @@ describe("v3.1.2 A 档：运行时行为", () => {
   });
 
   it("data 场景可见 sql tab（与 code 同一控件）", () => {
-    // SCENE_FEATURES 顶层 const 不挂 window；用源码契约兜底
-    // 锚定 const SCENE_FEATURES={ 起点，data 属性下的 id:"sql" 间距约 966 字符
-    expect(S).toMatch(/const SCENE_FEATURES\s*=\s*\{[\s\S]{0,2000}\bdata:\s*\[[\s\S]{0,200}id:"sql"/);
+    // SCENE_FEATURES 顶层 const 不挂 window；字面量断言最可靠（正则跨 1000+ 字符曾被 BOM/边界坑）
+    expect(S).toContain('id:"sql"');
+    // 且在 data 场景数组内（office/study 之后、design 之前出现即可确认归属）
+    const sfStart = S.indexOf("const SCENE_FEATURES");
+    const dataStart = S.indexOf("data: [", sfStart);
+    const sqlPos = S.indexOf('id:"sql"', sfStart);
+    expect(sfStart).toBeGreaterThan(-1);
+    expect(dataStart).toBeGreaterThan(sfStart);
+    expect(sqlPos).toBeGreaterThan(dataStart);
+    expect(sqlPos - dataStart).toBeLessThan(1000); // data:[ 到 id:"sql" 应很近
   });
 });

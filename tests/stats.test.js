@@ -319,7 +319,7 @@ describe("renderTrendChart / renderPieChart / renderStats 渲染", () => {
     expect(html).toContain("stats-card");
     expect(html).toContain("任务完成趋势");
     expect(html).toContain("场景分布");
-    expect(html).toContain("习惯链成功率");
+    expect(html).toContain("联动触发率"); // v3.2.2+ 改名链：习惯链→联动，成功率→触发率（p5.chainRateHeader）
     // 周/月切换按钮
     expect(html).toContain("stats-tab");
     expect(html).toContain("data-trend-days=\"7\"");

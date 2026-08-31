@@ -346,7 +346,7 @@ describe("v2.3.0 主页系统概况卡", () => {
     expect(html).toContain("未启用"); // 干净 localStorage 下 AI 未配置
   });
 
-  it("主页概览渲染顺序：系统概况在网格前、习惯链在 AI 助手前、可视化制作最后", () => {
+  it("主页概览渲染顺序：系统概况在网格前、场景联动在 AI 助手前、可视化制作最后", () => {
     __test.setActive("overview");
     __test.render();
     const main = document.querySelector("#main");
@@ -354,7 +354,11 @@ describe("v2.3.0 主页系统概况卡", () => {
     const sysCard = main.querySelector(".sys-overview-card");
     const grid = main.querySelector(".overview-grid");
     const gridCards = [...main.querySelectorAll(".overview-grid > .card, .overview-grid > .ov-span2")];
-    const chainIdx = gridCards.findIndex(c => c.querySelector("h2")?.textContent?.includes("习惯链"));
+    // v3.2.2 IA 重构：习惯链卡标题先后经历「习惯链」→「场景联动」→「联动关系图」——断言兼容三态
+    const chainIdx = gridCards.findIndex(c => {
+      const txt = c.querySelector("h2")?.textContent || "";
+      return txt.includes("联动关系图") || txt.includes("场景联动") || txt.includes("习惯链");
+    });
     const aiIdx = gridCards.findIndex(c => c.querySelector("h2")?.textContent?.includes("AI 助手"));
     const vizIdx = gridCards.findIndex(c => c.querySelector(".ov-viz-card"));
     expect(sysCard).toBeTruthy();

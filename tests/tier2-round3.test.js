@@ -157,7 +157,7 @@ describe("第三轮 Tier 2（P8 / P2' / P9）", () => {
     it("无链时返回空提示，不崩溃", () => {
       win.localStorage.setItem("wb_custom_links", JSON.stringify([]));
       const html = __test.renderChainGraph();
-      expect(html).toContain("暂无习惯链");
+      expect(html).toContain("暂无联动规则"); // v3.2.2 改名
       expect(html).not.toContain("<svg");
     });
 
