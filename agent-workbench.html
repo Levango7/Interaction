@@ -3717,6 +3717,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       </div>
     </header>
     <p class="set-tip" data-i18n="about.tip">启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
+    <!-- v3.1.2 B-档：关于卡补版本号 + 快捷键帮助入口（此前版本只在抽屉尾栏、快捷键只能按 ? 唤起，用户找不到） -->
+    <p class="set-tip" style="font-size:var(--fs-2xs);margin-top:var(--space-3)" id="aboutVersion"></p>
+    <button type="button" class="addbtn sm" id="btnOpenShortcutHelp" style="--sc:var(--accent);width:100%;margin-top:var(--space-2)" data-i18n="about.shortcutBtn">快捷键帮助</button>
   </section>
 
   <!-- 保存按钮卡片（settings/ai 页显示；plugin 页安装即生效、无表单保存语义，由 CSS 隐藏） -->
@@ -17701,6 +17704,14 @@ function doIdbImport(file){
       if(e.target.files[0]){ doIdbImport(e.target.files[0]); e.target.value = ""; }
     };
   }
+})();
+
+// v3.1.2 B-档：关于卡渲染版本号 + 快捷键帮助按钮绑定（此前版本只在抽屉尾栏、快捷键只能按 ? 唤起，用户找不到）
+(function bindAboutCard(){
+  const ver = $("#aboutVersion");
+  if(ver){ ver.textContent = (t ? t("app.name","Agent 工坊") : "Agent 工坊") + " · v" + VERSION + " · b" + BUILD_TAG; }
+  const btn = $("#btnOpenShortcutHelp");
+  if(btn && typeof openShortcutHelp === "function"){ btn.onclick = function(){ openShortcutHelp(); }; }
 })();
 
 /* ---------- P0-8：局域网同步（仅 Electron 环境） ---------- */
