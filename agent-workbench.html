@@ -5576,6 +5576,7 @@ const SCENARIOS = {
       fields:[
         {k:"type",label:t("field.type", "类型"),type:"select",options:[t("option.poster", "海报"),t("option.logo", "Logo"),t("option.illustration", "插画"),t("option.ui", "UI 界面"),t("option.photo", "摄影"),t("option.other", "其他")]},
         {k:"title",label:t("field.workName", "作品名"),type:"text"},
+        {k:"img",label:t("field.image", "图片"),type:"image"}, // v3.2 C-档：作品图（IDB blob 存储，不占 localStorage 配额）
         {k:"note",label:t("field.inspiration", "灵感 / 备注"),type:"textarea"}
       ] } },
 
@@ -13533,6 +13534,9 @@ function renderMainHTML(){
     } else if(f.type==="select"){
       const opts = (f.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
       inp = `<select name="${f.k}">${opts}</select>`;
+    } else if(f.type==="image"){
+      // v3.2 C-档：图片字段——file input（accept 图片，multiple 不开），提交时读为 Blob 存 IDB
+      inp = `<input name="${f.k}" type="file" accept="image/*" data-rec-img="1">`;
     } else {
       const ph = f.placeholder || f.label;
       inp = `<input name="${f.k}" type="${f.type==="number"?"number":"text"}" placeholder="${esc(ph)}" maxlength="500">`;
@@ -14807,7 +14811,7 @@ function _renderRecItem(r, rec){
   const metaParts = [];
   const mdParts = [];
   rec.fields.forEach(f=>{
-    if(f.k==="title"||f.k==="code") return;
+    if(f.k==="title"||f.k==="code"||f.k==="img") return;
     const v=r[f.k]; if(v===null||v===undefined||v==="") return;
     if(f.type==="textarea"){
       mdParts.push('<div class="md md-body">'+mdToHtml(v)+'</div>');
@@ -14820,10 +14824,39 @@ function _renderRecItem(r, rec){
   const codeF = rec.fields.find(f=>f.k==="code");
   const codeBlock = (codeF && r.code)? `<code class="snip">${esc(r.code)}</code>
     <button type="button" class="copy" data-val="${esc(r.code)}">${UI_ICONS.copy} 复制</button>` : "";
+  // v3.2 C-档：图片引用渲染——img 字段存 IDB 键（img_<recId>），占位 span 由 _hydrateRecImgs 异步填 objectURL
+  const imgF = rec.fields.find(f=>f.k==="img");
+  const _imgPhIcon = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  const imgPh = (imgF && r.img && String(r.img).indexOf("img_") === 0)
+    ? `<span class="rec-img-thumb" data-recimg="${esc(r.img)}" role="img" aria-label="${t("field.image","作品图")}">${_imgPhIcon}</span>` : "";
   const titleF = rec.fields.find(f=>f.k==="title") || {k:"title"};
-  return `<li><div class="body"><div class="t">${esc(r[titleF.k])}</div>
+  return `<li><div class="body"><div class="t">${esc(r[titleF.k])}${imgPh}</div>
     <div class="m">${meta}</div>${mdContent}${codeBlock}</div>
     <button type="button" class="del" data-rdel="${r.id}" title="${t("a11y.del", "删除")}" aria-label="${t("a11y.del", "删除")}">${UI_ICONS.trash}</button></li>`;
+}
+/**
+ * v3.2 C-档：异步填充记录缩略图——查 [data-recimg] 占位 → IDB 取 blob → objectURL 替换为 <img>
+ * 逐个填（互不阻塞）；IDB 不可用/键丢失时占位保持图标态（不破版）
+ * @returns {void}
+ */
+function _hydrateRecImgs(){
+  $$("[data-recimg]").forEach(function(ph){
+    const key = ph.getAttribute("data-recimg");
+    if(!key || ph._imgHydrated) return;
+    ph._imgHydrated = true;
+    idbTxn("readonly", st => st.get(key)).then(function(blob){
+      if(!blob){ return; } // 键丢失：保持占位图标
+      try{
+        const url = URL.createObjectURL(blob);
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = t("field.image","作品图");
+        img.className = "rec-img-thumb";
+        img.style.cssText = "max-width:72px;max-height:54px;object-fit:cover;border-radius:var(--radius-sm);margin-left:var(--space-2);vertical-align:middle;border:1px solid var(--line)";
+        ph.replaceWith(img);
+      }catch(_e){ /* 替换失败保持占位 */ }
+    });
+  });
 }
 /**
  * v1.4-B 虚拟滚动：渲染记录列表（超阈值时只渲染可见区域 + 缓冲区）
@@ -14894,7 +14927,19 @@ function bindScenario(){
   const _rf = $("#recForm"); if(_rf) _rf.onsubmit = e=>{
     e.preventDefault(); const f=e.target; const obj={id:uid(), created:Date.now()};
     SCENARIOS[active].record.fields.forEach(fl=> obj[fl.k]=f.elements[fl.k].value.trim());
-    const arr=getRec(active); arr.unshift(obj); setRec(active, arr); render();
+    // v3.2 C-档：图片字段——文件读为 Blob 存 IDB（键 img_<recId>），记录只存引用（不撑爆 localStorage 配额）
+    const imgInp = f.querySelector('[data-rec-img="1"]');
+    const saveRec = function(imgKey){
+      if(imgKey) obj.img = imgKey;
+      const arr=getRec(active); arr.unshift(obj); setRec(active, arr); render();
+    };
+    if(imgInp && imgInp.files && imgInp.files[0]){
+      const file = imgInp.files[0];
+      if(file.size > 4*1024*1024){ toast(t("field.imgTooLarge", "图片过大（上限 4MB）"), "warn"); return; }
+      const key = "img_" + obj.id;
+      // idbTxn 不可用时 resolve undefined——仍保存引用（渲染时回退文字占位，不丢记录）
+      idbTxn("readwrite", st => st.put(file, key)).then(() => saveRec(key), () => saveRec(key));
+    } else { saveRec(); }
   };
   $$("[data-move]").forEach(b=> b.onclick=()=>{
     const [id,st]=b.dataset.move.split(":"); const tasks=getTasks();
@@ -17412,6 +17457,7 @@ function render(){
     $("#main").innerHTML = sanitizeHtml(renderSceneHead() + renderSceneFeatNav() + renderMetricsStrip() + renderMainHTML());
     appendFoot();
     bindScenario();
+    _hydrateRecImgs(); // v3.2 C-档：记录缩略图异步填充（IDB blob → objectURL）
     // v3.0：场景内功能 tab 点击切换（SCENE_FEATURES；按钮复用 .set-nav-btn，限定在 .scene-feat-nav 内）
     $$("#main .scene-feat-nav .set-nav-btn").forEach(function(b){
       b.onclick = function(){ setSceneFeature(b.getAttribute("data-feat")); };
