@@ -5534,7 +5534,17 @@ const SCENARIOS = {
     sysprompt:t("sysprompt.office", "你是一个专业的办公效率助手，帮用户梳理任务、写会议纪要、润色邮件与文档。回答简洁、可执行。"),
     extraCard:"report",
     record:{ label:t("record.office.label", "会议纪要"),
-      fields:[{k:"title",label:t("field.meetingTitle", "会议主题"),type:"text"},{k:"who",label:t("field.attendees", "参会人"),type:"text"},{k:"note",label:t("field.conclusion", "结论 / 跟进"),type:"textarea"}] } },
+      // v3.1.2 B-档：资料库会议纪要此前只有主题/参会人/结论 3 字段，会议管理有 6 字段（含日期/主持人/时长）——同一场会议要录两遍且互不引用。
+      // 补齐 date/host/duration 三字段对齐会议管理，数据可互通。
+      fields:[
+        {k:"title",label:t("field.meetingTitle", "会议主题"),type:"text"},
+        {k:"type",label:t("field.meetingType","会议类型"),type:"select",options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
+        {k:"date",label:t("field.date","日期"),type:"date"},
+        {k:"host",label:t("field.host","主持人"),type:"text"},
+        {k:"who",label:t("field.attendees", "参会人"),type:"text"},
+        {k:"duration",label:t("field.durationHours","时长(小时)"),type:"number"},
+        {k:"note",label:t("field.conclusion", "结论 / 跟进"),type:"textarea"}
+      ] } },
 
   design:{ name:t("scenario.design", "设计"), color:"#d6409f",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>',
@@ -5552,7 +5562,14 @@ const SCENARIOS = {
     sysprompt:t("sysprompt.study", "你是一个学习方法教练，擅长制定学习计划、拆解知识点、记忆与复习策略。"),
     extraCard:"review",
     record:{ label:t("record.study.label", "学习资料"),
-      fields:[{k:"title",label:t("field.topic", "主题"),type:"text"},{k:"type",label:t("field.type", "类型"),type:"text"},{k:"status",label:t("field.status", "状态"),type:"text"},{k:"note",label:t("side.sub.notes", "笔记"),type:"textarea"}] } },
+      // v3.1.2 B-档：学习资料此前无来源字段——SM-2 到期复习时看到主题却点不开任何原始材料。补 source/url + 关联任务。
+      fields:[
+        {k:"title",label:t("field.topic", "主题"),type:"text"},
+        {k:"type",label:t("field.type", "类型"),type:"text"},
+        {k:"source",label:t("field.source","来源链接"),type:"text",placeholder:"https://... / 书名 / 课程名"},
+        {k:"status",label:t("field.status", "状态"),type:"text"},
+        {k:"note",label:t("side.sub.notes", "笔记"),type:"textarea"}
+      ] } },
 
   data:{ name:t("scenario.data", "数据"), color:"#0d9488",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>',
