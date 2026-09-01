@@ -3665,6 +3665,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <div class="sw-sub" data-i18n="notify.enableSub">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</div>
       </div>
     </div>
+    <!-- v3.1.2 B-档：浏览器通知权限状态行（此前权限被拒后静默降级 toast，用户不知原因也无引导） -->
+    <p class="set-tip" id="notifyPermissionMeta" style="font-size:var(--fs-2xs);margin-top:var(--space-1)">检测中…</p>
     <div class="set-field">
       <label for="cfgQuiet" data-i18n="settings.quiet">免打扰时段</label>
       <div class="ctl">
@@ -19838,7 +19840,24 @@ function _switchSetTab(tabId){
   $$("#drawer .set-card").forEach(function(c){ c.classList.toggle("set-tab-active", c.id === tabId); });
   if(tabId === "set-integration") renderIntegrationPanel();
   if(tabId === "set-data") renderAutoBackupMeta(); // v3.1.2 B-档：刷新自动备份元信息（上次时间 + 大小）
+  if(tabId === "set-notify") renderNotifyPermissionMeta(); // v3.1.2 B-档：刷新浏览器通知权限状态
   const d = $("#drawer"); if(d) d.scrollTop = 0;
+}
+
+// v3.1.2 B-档：渲染浏览器通知权限状态（granted / default / denied / unsupported）+ 拒绝时给引导
+function renderNotifyPermissionMeta(){
+  const el = $("#notifyPermissionMeta"); if(!el) return;
+  let perm = "unsupported";
+  try{ perm = (typeof Notification !== "undefined") ? Notification.permission : "unsupported"; }catch(_e){}
+  if(perm === "granted"){
+    el.innerHTML = '<span style="color:var(--ok)">●</span> ' + t("notify.perm.granted","浏览器通知已授权——到期任务将弹出系统通知");
+  }else if(perm === "denied"){
+    el.innerHTML = '<span style="color:var(--danger)">●</span> ' + t("notify.perm.denied","浏览器通知被拒绝——提醒将降级为页面内 toast。如需系统通知，请在浏览器地址栏左侧的站点权限中「允许通知」后刷新");
+  }else if(perm === "default"){
+    el.innerHTML = '<span style="color:var(--warn)">●</span> ' + t("notify.perm.default","浏览器通知未授权——首次提醒时会弹出授权请求；授权后系统通知可用");
+  }else{
+    el.innerHTML = '<span style="color:var(--muted)">●</span> ' + t("notify.perm.unsupported","当前环境不支持浏览器通知——提醒将降级为页面内 toast");
+  }
 }
 
 // v3.1.2 B-档：渲染自动备份元信息（上次快照时间 + 快照大小）
