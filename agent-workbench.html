@@ -13894,6 +13894,7 @@ function bindMeetingActionCard(){
       if(!rec){ toast(t("msg.recordNotFound","记录不存在"), "warn"); return; }
       const statusEl = $('[data-meeting-action-status="' + id + '"]');
       const items = String(rec.note || "").split(/[\n\r]+/).filter(function(line){
+        // eslint-disable-next-line no-useless-escape -- 字符类 [\-\*] 内 \* 与 * 等价，但保留转义可读性（星号=列表项）
         return /^\s*[\d一二三四五六七八九十]+[.、)\uff09]/.test(line) || /^\s*[\u2192@\uff0b+\-\*]/.test(line) || /(行动|跟进|待办|Action|TODO|FIXME)/i.test(line);
       });
       if(!items.length){ toast(t("meeting.noActionItems","未识别到行动项"), "warn"); return; }
@@ -13901,6 +13902,7 @@ function bindMeetingActionCard(){
       const tasks = getTasks();
       const created = [];
       items.forEach(function(line, i){
+        // eslint-disable-next-line no-useless-escape -- 字符类 [\-\*] 内保留 \* 转义（可读性）
         const title = line.replace(/^\s*[\d一二三四五六七八九十]+[.、)\uff09\s]*/, "").replace(/^\s*[\u2192@\uff0b+\-\*\s]*/, "").trim();
         if(!title) return;
         const t = { id: uid(), sc: "office", title: (rec.title ? rec.title + " · " : "") + title, due: rec.date || todayStr(), priority: "", status: "todo", doneAt: null, note: "", tags: ["meeting-action"], created: Date.now() };
@@ -14092,6 +14094,7 @@ SCENE_FEATURE_RENDER.office = {
         if(!r.note) return "";
         // 识别行动项：行首含「行动/跟进/待办/Action/→/@」或数字序号 1./(1) 等
         const items = String(r.note).split(/[\n\r]+/).filter(function(line){
+          // eslint-disable-next-line no-useless-escape -- 字符类 [\-\*] 内保留 \* 转义（可读性）
           return /^\s*[\d一二三四五六七八九十]+[.、)\uff09]/.test(line) || /^\s*[\u2192@\uff0b+\-\*]/.test(line) || /(行动|跟进|待办|Action|TODO|FIXME)/i.test(line);
         });
         if(!items.length) return "";
