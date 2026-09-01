@@ -90,10 +90,24 @@
 }
 /* 极光主题（aurora）：原亮色画布完整视觉——极光渐变 + 蓝调浅底 + 近黑主色 */
 :root[data-theme="aurora"]{
-  --bg:#f4f5fb; --panel:#ffffff; --panel2:#f7f8fc; --line:#eceef4;
-  --text:#0c0c12; --muted:#5c5c66; --accent:#111118; --accent-soft:#eceef3;
-  --surface-hover:#f0f0f4; --surface-muted:#f2f2f5;
-  --canvas-glow:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(168,139,250,.55),transparent 60%),radial-gradient(ellipse 50% 45% at 92% 5%,rgba(56,189,248,.42),transparent 55%),radial-gradient(ellipse 45% 40% at 8% 15%,rgba(244,114,182,.38),transparent 52%),radial-gradient(ellipse 40% 35% at 85% 85%,rgba(52,211,153,.30),transparent 50%),radial-gradient(ellipse 35% 30% at 15% 90%,rgba(251,191,36,.28),transparent 48%);
+--bg:#f4f5fb; --panel:#ffffff; --panel2:#f7f8fc; --line:#eceef4;
+--text:#0c0c12; --muted:#5c5c66; --accent:#111118; --accent-soft:#eceef3;
+--surface-hover:#f0f0f4; --surface-muted:#f2f2f5;
+--canvas-glow:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(168,139,250,.55),transparent 60%),radial-gradient(ellipse 50% 45% at 92% 5%,rgba(56,189,248,.42),transparent 55%),radial-gradient(ellipse 45% 40% at 8% 15%,rgba(244,114,182,.38),transparent 52%),radial-gradient(ellipse 40% 35% at 85% 85%,rgba(52,211,153,.30),transparent 50%),radial-gradient(ellipse 35% 30% at 15% 90%,rgba(251,191,36,.28),transparent 48%);
+}
+/* v3.2 极光主题侧栏/聊天栏玻璃化：透出 canvas-glow 极光底色（其他主题不受影响）。
+   透明度阶梯：侧栏 42%（最透，贴左边）< 聊天栏 55% < 消息区 62%——保持文字可读性的下限。
+   color-mix 是现有 .side 同款写法；backdrop-filter 兜底旧浏览器（不支持时退化为实色面板，无破坏） */
+:root[data-theme="aurora"] .side{
+  background:color-mix(in srgb,var(--panel) 42%,transparent);
+  backdrop-filter:blur(22px) saturate(1.15);-webkit-backdrop-filter:blur(22px) saturate(1.15);
+}
+:root[data-theme="aurora"] .chat-panel{
+  background:color-mix(in srgb,var(--panel) 55%,transparent);
+  backdrop-filter:blur(20px) saturate(1.1);-webkit-backdrop-filter:blur(20px) saturate(1.1);
+}
+:root[data-theme="aurora"] .chat-panel-header{
+  background:color-mix(in srgb,var(--panel) 62%,transparent);
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
