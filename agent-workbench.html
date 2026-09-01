@@ -90,24 +90,44 @@
 }
 /* 极光主题（aurora）：原亮色画布完整视觉——极光渐变 + 蓝调浅底 + 近黑主色 */
 :root[data-theme="aurora"]{
---bg:#f4f5fb; --panel:#ffffff; --panel2:#f7f8fc; --line:#eceef4;
---text:#0c0c12; --muted:#5c5c66; --accent:#111118; --accent-soft:#eceef3;
---surface-hover:#f0f0f4; --surface-muted:#f2f2f5;
---canvas-glow:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(168,139,250,.55),transparent 60%),radial-gradient(ellipse 50% 45% at 92% 5%,rgba(56,189,248,.42),transparent 55%),radial-gradient(ellipse 45% 40% at 8% 15%,rgba(244,114,182,.38),transparent 52%),radial-gradient(ellipse 40% 35% at 85% 85%,rgba(52,211,153,.30),transparent 50%),radial-gradient(ellipse 35% 30% at 15% 90%,rgba(251,191,36,.28),transparent 48%);
+--bg:#f0eef9; --panel:#ffffff; --panel2:#f5f3ff; --line:#e1dcf3;
+--text:#1a1430; --muted:#5d5680; --accent:#7b3fec; --accent-soft:#ede4ff; --accent-2:#19b4e6;
+--surface-hover:#e9e4f5; --surface-muted:#ece7f7;
+--brand-grad:linear-gradient(135deg,#7b3fec 0%,#19b4e6 50%,#e8408c 100%);
+--side-accent:linear-gradient(180deg,rgba(123,63,236,.14),rgba(25,180,230,.10) 60%,rgba(232,64,140,.08));
+--canvas-glow:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(168,139,250,.65),transparent 60%),radial-gradient(ellipse 50% 45% at 92% 5%,rgba(56,189,248,.55),transparent 55%),radial-gradient(ellipse 45% 40% at 8% 15%,rgba(244,114,182,.50),transparent 52%),radial-gradient(ellipse 40% 35% at 85% 85%,rgba(52,211,153,.42),transparent 50%),radial-gradient(ellipse 35% 30% at 15% 90%,rgba(251,191,36,.40),transparent 48%);
+--sidebar-glow:linear-gradient(180deg,rgba(123,63,236,.10) 0%,rgba(25,180,230,.06) 50%,rgba(232,64,140,.04) 100%);
 }
-/* v3.2 极光主题侧栏/聊天栏玻璃化：透出 canvas-glow 极光底色（其他主题不受影响）。
-   透明度阶梯：侧栏 42%（最透，贴左边）< 聊天栏 55% < 消息区 62%——保持文字可读性的下限。
-   color-mix 是现有 .side 同款写法；backdrop-filter 兜底旧浏览器（不支持时退化为实色面板，无破坏） */
+/* v3.2 极光主题：与浅色/初雪彻底差异化——accent 用品牌紫、侧栏带品牌渐变 + 顶部 accent 彩条 */
 :root[data-theme="aurora"] .side{
-  background:color-mix(in srgb,var(--panel) 42%,transparent);
-  backdrop-filter:blur(22px) saturate(1.15);-webkit-backdrop-filter:blur(22px) saturate(1.15);
+  background:color-mix(in srgb,var(--panel) 38%,transparent);
+  background-image:var(--sidebar-glow);
+  backdrop-filter:blur(22px) saturate(1.25);-webkit-backdrop-filter:blur(22px) saturate(1.25);
+  border-right:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
+  box-shadow:inset -2px 0 12px -2px rgba(123,63,236,.12);
 }
+:root[data-theme="aurora"] .topbar{
+  background-image:linear-gradient(180deg,rgba(123,63,236,.08),transparent 80%),var(--brand-grad);
+  background-size:100% 100%,3px 100%;
+  background-repeat:no-repeat,no-repeat;
+  background-position:0 0,0 100%;
+  border-bottom:1px solid transparent;
+  border-image:linear-gradient(90deg,transparent 0%,var(--accent) 50%,transparent 100%) 0 0 0 1px / 0 0 0 1px;
+}
+:root[data-theme="aurora"] .topbar .tbtn{color:var(--text);font-weight:600}
+:root[data-theme="aurora"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
+:root[data-theme="aurora"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(123,63,236,.25)}
 :root[data-theme="aurora"] .chat-panel{
-  background:color-mix(in srgb,var(--panel) 55%,transparent);
-  backdrop-filter:blur(20px) saturate(1.1);-webkit-backdrop-filter:blur(20px) saturate(1.1);
+  background:color-mix(in srgb,var(--panel) 50%,transparent);
+  background-image:linear-gradient(180deg,rgba(25,180,230,.08),transparent 40%);
+  backdrop-filter:blur(20px) saturate(1.15);-webkit-backdrop-filter:blur(20px) saturate(1.15);
+  border-left:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
+  box-shadow:inset 2px 0 12px -2px rgba(25,180,230,.12);
 }
 :root[data-theme="aurora"] .chat-panel-header{
-  background:color-mix(in srgb,var(--panel) 62%,transparent);
+  background:color-mix(in srgb,var(--panel) 58%,transparent);
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -730,9 +750,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .add-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
 .add-label{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
 .add-round{width:30px;height:30px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1}
+/* v3.2 对齐修复：form-row 内的 add-wrap 改为单行（label 隐藏，加号高度拉满对齐 input 框 33px）——此前 add-wrap 是 column 布局（标签+加号堆叠），总高度超出 input 导致加号高出框底 */
+.form-row .add-wrap{flex-direction:row;align-items:center;align-self:flex-end;gap:0}
+.form-row .add-wrap .add-label{display:none}
+.form-row .add-wrap .add-round{width:33px;height:33px}
 .tool-app-card .tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-2);margin-top:var(--space-2)}
-.tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column}
-.tool-app-card .tool-form-grid .tool-field label{margin:0 0 var(--space-1)}
+.tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column;gap:2px}
+.tool-app-card .tool-form-grid .tool-field label{margin:0;font-size:var(--fs-xs);color:var(--muted);font-weight:500}
 /* v3.0：表单与列表之间加虚线分隔，视觉层次更清晰 */
 .tool-app-card .tool-form-box{padding-bottom:var(--space-3);border-bottom:1px dashed var(--line);margin-bottom:var(--space-2)}
 /* v3.0.1 B-5：功能卡通用提示行 / 数据可视化迷你图表 */
@@ -3526,6 +3550,19 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
         <p class="set-desc" data-i18n="dataMgmt.desc">自动备份恢复与数据导入导出。</p>
       </div>
     </header>
+    <div class="set-subhead" data-i18n="dataMgmt.maintenance">维护</div>
+    <div class="set-field">
+      <label for="cfgRecyclePolicy" data-i18n="settings.recyclePolicy">回收站自动清理</label>
+      <div class="ctl">
+        <select id="cfgRecyclePolicy">
+          <option value="off" data-i18n="dataMgmt.recycleOff">关闭</option>
+          <option value="7">7 天后</option>
+          <option value="30">30 天后</option>
+          <option value="90">90 天后</option>
+        </select>
+      </div>
+    </div>
+    <p class="set-tip" data-i18n="dataMgmt.recycleTip">每次启动生效，超期软删任务将被永久删除（含多类型回收：配置/文件/插件同样适用）。</p>
     <div class="set-subhead" data-i18n="dataMgmt.autoBackup">自动备份</div>
     <button type="button" class="addbtn" id="btnRecover" style="--sc:var(--accent);width:100%" data-i18n="dataMgmt.recoverBtn">从自动备份恢复</button>
     <!-- v3.1.2 B-档：显示上次快照时间 + 快照大小（此前用户不知道备份是否生效、何时生效） -->
@@ -3576,11 +3613,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <div class="ctl">
         <select id="cfgTheme">
           <option value="light">浅色</option>
+          <option value="elegant" data-i18n="look.theme.elegant">初雪</option>
           <option value="aurora">极光</option>
           <option value="dark">暗色</option>
           <option value="system">跟随系统</option>
           <option value="sepia" data-i18n="look.theme.sepia">护眼模式</option>
-          <option value="elegant" data-i18n="look.theme.elegant">初雪</option>
           <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
         </select>
       </div>
@@ -3628,17 +3665,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
       <div id="themeScColorEditor"></div>
     </div>
     <div class="set-field">
-      <label for="cfgRecyclePolicy" data-i18n="settings.recyclePolicy">回收站自动清理</label>
-      <div class="ctl">
-        <select id="cfgRecyclePolicy">
-          <option value="off">关闭</option>
-          <option value="7">7 天后</option>
-          <option value="30">30 天后</option>
-          <option value="90">90 天后</option>
-        </select>
-      </div>
+      <label for="cfgRecyclePolicy"></label>
     </div>
-    <p class="set-tip" data-i18n="look.recycleTip">回收站自动清理在每次启动时生效，超期软删任务将被永久删除。</p>
+    <p class="set-tip" data-i18n=""></p>
     <div class="row switch set-switch" id="autoLaunchRow" style="display:none;border-top:1px solid var(--line);padding-top:var(--space-3)margin-top:var(--space-1)">
       <input type="checkbox" id="cfgAutoLaunch" data-i18n-aria="look.autoLaunchLabel" aria-label="开机自动启动">
       <div>
@@ -13912,11 +13941,29 @@ function bindCodeRunnerCard(){
       b.disabled = true;
       b.textContent = t("msg.running","运行中…");
       const res = await runJsSnippet(rec.code || "");
-      save(PREFIX + "code_runner", load(PREFIX + "code_runner", []).map(function(r){
-        return r.id === id ? Object.assign({}, r, { result: res.output }) : r;
+      // v3.2 任务四：维护最近 5 次运行历史（result + resultHistory 双字段——老 result 兼容，新历史限制 5 条）
+      const arr = load(PREFIX + "code_runner", []);
+      save(PREFIX + "code_runner", arr.map(function(r){
+        if(r.id !== id) return r;
+        const history = Array.isArray(r.resultHistory) ? r.resultHistory.slice(0, 4) : [];
+        history.unshift({ output: res.output, ok: res.ok, ms: res.ms, at: Date.now() });
+        return Object.assign({}, r, { result: res.output, resultHistory: history });
       }));
       toast(res.ok ? t("sql.runComplete","运行完成（") + res.ms + "ms）" : t("sql.runFail","运行失败：") + String(res.output).slice(0, 60), res.ok ? "ok" : "error");
       render();
+    };
+  });
+  // v3.2 任务四：运行历史折叠/展开
+  $$("[data-f-runhist]").forEach(function(btn){
+    btn.onclick = function(){
+      const id = btn.getAttribute("data-f-runhist");
+      const body = $('[data-f-runhist-body="' + id + '"]');
+      if(!body) return;
+      const showing = body.style.display !== "none";
+      body.style.display = showing ? "none" : "";
+      const rec = load(PREFIX + "code_runner", []).find(function(r){ return r.id === id; });
+      const n = rec && Array.isArray(rec.resultHistory) ? rec.resultHistory.length : 0;
+      btn.textContent = showing ? t("tool.codeRun.showHistory", "查看历史（{n} 次）").replace("{n}", String(n)) : t("tool.codeRun.hideHistory", "收起历史（{n} 次）").replace("{n}", String(n));
     };
   });
 }
@@ -14050,24 +14097,26 @@ function _featureCardHtml(cfg){
  * @param {string} key - 存储键（PREFIX + key）
  * @param {string[]} fieldKeys - 表单字段名数组（用于读取输入值）
  */
-function _featureCardBind(key, fieldKeys){
-  const root = $("#main"); if(!root) return;
-  // 添加
-  $$("[data-f-add]").forEach(function(b){
-    b.onclick = function(){
-      const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), createdAt: Date.now() };
-      fieldKeys.forEach(function(k){
-        const el = root.querySelector('[data-f-field="' + k + '"]');
-        if(el) rec[k] = (el.type === "number") ? Number(el.value || 0) : el.value.trim();
-      });
-      if(!fieldKeys.some(function(k){ return rec[k]; })){ toast(t("msg.fillContentFirst","请先填写内容"), "warn"); return; }
-      const arr = load(PREFIX + key, []);
-      arr.unshift(rec);
-      save(PREFIX + key, arr);
-      toast(t("msg.added","已添加"), "ok");
-      render();
-    };
-  });
+function _featureCardBind(key, fieldKeys, onSave){
+const root = $("#main"); if(!root) return;
+// 添加
+$$("[data-f-add]").forEach(function(b){
+b.onclick = function(){
+const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), createdAt: Date.now() };
+fieldKeys.forEach(function(k){
+const el = root.querySelector('[data-f-field="' + k + '"]');
+if(el) rec[k] = (el.type === "number") ? Number(el.value || 0) : el.value.trim();
+});
+if(!fieldKeys.some(function(k){ return rec[k]; })){ toast(t("msg.fillContentFirst","请先填写内容"), "warn"); return; }
+const arr = load(PREFIX + key, []);
+arr.unshift(rec);
+save(PREFIX + key, arr);
+// v3.2 任务四：保存后钩子（onSave 形式 — 错题自动入 SM-2 等场景级联动）
+try{ if(typeof onSave === "function"){ onSave(rec); } }catch(_e){ /* 钩子异常不阻断保存 */ }
+toast(t("msg.added","已添加"), "ok");
+render();
+};
+});
   // 删除
   $$("[data-f-del]").forEach(function(b){
     b.onclick = function(){
@@ -14109,7 +14158,25 @@ const SCENE_FEATURE_BIND = {
   study: {
     knowledge: { key:"knowledge", fieldKeys:["title","category","source","importance","tags","content"] },
     reading:   { key:"reading",   fieldKeys:["book","author","excerpt","note","progress"] },
-    exercise:  { key:"exercises", fieldKeys:["subject","question","answer","correct","explain"] },
+exercise:  { key:"exercises", fieldKeys:["subject","question","answer","correct","explain"],
+  // v3.2 任务四阶段二：错题自动入 SM-2 复习（正确率 < 70 视为错题 → 写入 rec_study 复习队列）
+  onSave:function(rec){
+    if(Number(rec.correct) < 70 && rec.question){
+      const tomorrow = (function(){ const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+      const study = (typeof getRec === "function" ? getRec("study") : []) || [];
+      study.unshift({
+        id: "sm2_" + (rec.id || uid()),
+        title: "错题复习：" + ((rec.subject ? rec.subject + " · " : "") + (rec.question || "")).slice(0, 40),
+        type: "学习资料",
+        status: "未复习",
+        nextReview: tomorrow,
+        note: "来源练习题（正确率 " + rec.correct + "%）：" + ((rec.explain || rec.answer || "")).slice(0, 200),
+        created: Date.now()
+      });
+      saveRec("study", study);
+    }
+  }
+},
     exam:      { key:"exams",     fieldKeys:["title","subject","date","score","total"] }
   },
   data: {
@@ -14458,6 +14525,20 @@ SCENE_FEATURE_RENDER.study = {
         {k:"correct", label:t("field.accuracyPercent","正确率 %"), type:"number"},
         {k:"explain", label:t("field.analysis","解析"), type:"text"}
       ],
+      // v3.2 任务四阶段二：错题自动入 SM-2 复习——正确率 < 70 视作错题，提交时入 rec_study 标 nextReview=明天
+      onSave:function(rec){
+        if(Number(rec.correct) < 70 && rec.question){
+          const study = (typeof getRec === "function" ? getRec("study") : []) || [];
+          study.unshift({
+            id: "sm2_" + (rec.id || uid()),
+            title: "错题复习：" + (rec.title || (rec.subject||"") + " " + (rec.question||"").slice(0,12)),
+            type: "学习资料", status: "未复习", nextReview: todayStr() + "+1d" ? (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })() : todayStr(),
+            note: "来源练习题（正确率 " + rec.correct + "%）：" + (rec.explain || rec.answer || ""),
+            created: Date.now()
+          });
+          saveRec("study", study);
+        }
+      },
       cols:[
         {label:t("field.subject","科目"), k:"subject"},
         {label:t("field.question","题目"), fmt:function(r){ return (r.question||"").slice(0,24) + ((r.question||"").length>24?"…":""); }},
@@ -14680,7 +14761,23 @@ SCENE_FEATURE_RENDER.code = {
         // 行下方展示最近一次运行输出（等宽字体 · --panel2 背景）
         if(!/^\s*(javascript|js)\s*$/i.test(String(r.language || ""))) return "";
         if(!r.result) return "";
-        return t("p3.html.runOutputTitle","<div class=\"run-output-title\">最近一次运行输出</div><div class=\"run-output\">") + esc(String(r.result)) + "</div>";
+        // v3.2 任务四：运行历史——resultHistory 数组（非空时显示切换按钮，点开折叠所有历史）
+        const hist = Array.isArray(r.resultHistory) ? r.resultHistory : [];
+        const histHtml = hist.length > 1 ? `<div class="run-history-toggle" style="margin-top:var(--space-1)">
+          <button type="button" class="chat-retry" data-f-runhist="${r.id}">${t("tool.codeRun.showHistory", "查看历史（{n} 次）").replace("{n}", hist.length)}</button>
+        </div>
+        <div class="run-history-body" data-f-runhist-body="${r.id}" style="display:none;margin-top:var(--space-1)">
+          ${hist.map((h, i) => {
+            const d = h.at ? new Date(h.at) : null;
+            const when = d ? (d.toLocaleString ? d.toLocaleString() : "") : "";
+            const okTag = h.ok ? '<span style="color:var(--ok)">✓</span>' : '<span style="color:var(--danger)">✗</span>';
+            return `<div style="border-top:1px dashed var(--line);padding-top:var(--space-1);margin-top:var(--space-1)">
+              <div style="font-size:var(--fs-2xs);color:var(--muted)">${when} ${okTag} (${h.ms||0}ms)</div>
+              <pre style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-2xs);white-space:pre-wrap;word-break:break-all;margin:2px 0 0">${esc(String(h.output||"").slice(0, 800))}${String(h.output||"").length>800 ? "…" : ""}</pre>
+            </div>`;
+          }).join("")}
+        </div>` : "";
+        return t("p3.html.runOutputTitle","<div class=\"run-output-title\">最近一次运行输出</div><div class=\"run-output\">") + esc(String(r.result)) + "</div>" + histHtml;
       },
       sum:function(recs){
         return [{ v:recs.length, l:t("field.runLog","运行记录") }];
@@ -17447,11 +17544,11 @@ function render(){
     renderSide();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
     if(active==="stats"){ setActive("overview"); renderOverview(); appendFoot(); return; }
-    if(active==="recycle"){ openRecycle(); return; }
-    /* v2.4.0 四大新页面路由 */
+    if(active==="recycle"){ openRecycle(); appendFoot(); return; }
+    /* v2.4.0 四大新页面路由（v3.2 补全：除 tasks/chainpage 外 toolbox/store/recycle 之前漏掉 appendFoot，导致切到这些页看不到版本号+待办统计+AI 状态三列底栏） */
     if(active==="tasks"){ renderTasksPage(); appendFoot(); return; }
-    if(active==="toolbox"){ renderToolboxPage(); return; }
-    if(active==="store"){ renderStorePage(); return; }
+    if(active==="toolbox"){ renderToolboxPage(); appendFoot(); return; }
+    if(active==="store"){ renderStorePage(); appendFoot(); return; }
     if(active==="chainpage"){ renderChainPage(); appendFoot(); return; }
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
@@ -17471,7 +17568,8 @@ function render(){
     // v3.0：场景功能卡事件绑定（非 overview tab 时绑定添加/删除/完成）
     if(sceneFeatureMode !== "overview"){
       const bcfg = (SCENE_FEATURE_BIND[active] || {})[sceneFeatureMode];
-      if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys);
+      // v3.2 任务四：第三参数 onSave 钩子（如练习错题自动入 SM-2）——查找 bcfg.onSave 透传
+      if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys, bcfg.onSave);
       // v3.0.1 B-3：代码运行器「▶ 运行」按钮绑定（通用 CRUD 绑定之外的特化扩展）
       if(active === "code" && sceneFeatureMode === "runner") bindCodeRunnerCard();
       // v3.1：SQL Playground「▶ 运行」按钮绑定（sql.js WASM 沙箱）

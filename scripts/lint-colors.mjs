@@ -46,6 +46,8 @@ function isWhitelisted(line) {
   if (/linear-gradient\(135deg,#0067c0,#9b4dca\)/.test(line)) return true;
   // 6) v3.2.0 IA 重构：徽标/悬停态的 rgba 半透明色叠加（与 --accent/--sc 场景色搭配，无对应半透明令牌）
   if (/rgba\([0-9.,\s]+\)/.test(line) && /--accent|--sc|background|color/.test(line)) return true;
+  // 6c) v3.2 极光主题：侧栏/顶栏品牌色光晕（box-shadow 用 rgba 表达光晕——半透明色无对应令牌，渐变 token 已含主色）
+  if (/rgba\([0-9.,\s]+\)/.test(line) && /box-shadow|background-image.*linear-gradient|background:.*linear/.test(line)) return true;
   // 6b) v3.1.2 A-档：bindCodeFrontendCard 在 srcdoc 沙箱内联中用 #d83b3b（错误红）/ #fff（iframe 底）——沙箱文档不共享宿主 var()
   if (/#d83b3b/.test(line) && /color|padding/.test(line)) return true;
   if (/#fff/.test(line) && /background/.test(line)) return true;
