@@ -3509,6 +3509,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
     </header>
     <div class="set-subhead" data-i18n="dataMgmt.autoBackup">自动备份</div>
     <button type="button" class="addbtn" id="btnRecover" style="--sc:var(--accent);width:100%" data-i18n="dataMgmt.recoverBtn">从自动备份恢复</button>
+    <!-- v3.1.2 B-档：显示上次快照时间 + 快照大小（此前用户不知道备份是否生效、何时生效） -->
+    <p class="set-tip" id="autoBackupMeta" style="font-size:var(--fs-2xs);margin-top:var(--space-1h)">尚未生成自动备份</p>
     <p class="set-tip" data-i18n="dataMgmt.recoverTip">每次数据变动后自动快照到本地（独立于「导出 JSON 备份」）。如手动导出前数据损坏，可从此处还原最近一次快照。</p>
     <div class="set-divider" role="separator"></div>
     <div class="set-subhead" data-i18n="dataMgmt.exportImport">导出 / 导入</div>
@@ -12789,8 +12791,25 @@ function renderExtra(sc){
   return r ? r.render(sc) : "";
 }
 function reportCard(sc){
-  const done=thisWeekDone(sc);
-  const txt = done.length? done.map(t=>"- "+t.title+(t.due?"（"+t.due+"）":"")).join("\n") : t("report.empty", "本周暂无已完成任务。");
+  const done = thisWeekDone(sc);
+  const lines = [];
+  // v3.1.2 B-档：周报纳入会议/报销/考勤统计——此前周报只汇总任务，本周开了几场会/报销多少/考勤异常都不进周报
+  if(sc === "office"){
+    let meetings = 0, expenses = 0, attendance = 0;
+    try{
+      const d = new Date(); const day = (d.getDay() + 6) % 7;
+      const mon = new Date(d); mon.setDate(d.getDate() - day); mon.setHours(0, 0, 0, 0);
+      meetings = (load(PREFIX + "meetings", []) || []).filter(function(r){ return r.date && new Date(r.date) >= mon.getTime(); }).length;
+      expenses = (load(PREFIX + "expenses", []) || []).filter(function(r){ return r.date && new Date(r.date) >= mon.getTime(); }).length;
+      attendance = (load(PREFIX + "attendance", []) || []).filter(function(r){ return r.date && new Date(r.date) >= mon.getTime(); }).length;
+    }catch(_e){}
+    if(meetings) lines.push(t("report.meetingStat", "本周会议 {n} 场").replace("{n}", meetings));
+    if(expenses) lines.push(t("report.expenseStat", "本周报销 {n} 笔").replace("{n}", expenses));
+    if(attendance) lines.push(t("report.attendanceStat", "本周考勤 {n} 条").replace("{n}", attendance));
+  }
+  if(done.length){ done.forEach(function(t){ lines.push("- " + t.title + (t.due ? "（" + t.due + "）" : "")); }); }
+  else if(!lines.length){ lines.push(t("report.empty", "本周暂无已完成任务。")); }
+  const txt = lines.join("\n");
   return `<div class="card"><h2>${ic("sheet")} ${t("report.generator.title", "周报生成器")}</h2><p class="sub">${t("report.sub", "自动汇总本周（{range}）已完成任务").replace("{range}", weekRange())}</p>
     <textarea readonly id="repTxt">${esc(txt)}</textarea>
     <button type="button" class="addbtn" id="copyRep" style="--sc:${SCENARIOS[sc].color};margin-top:var(--space-2)">${t("report.copy", "复制周报")}</button></div>`;
@@ -12914,7 +12933,33 @@ const HEALTH_TYPES = { EXERCISE:t("option.exercise", "运动记录"), WEIGHT:t("
  * @returns {Object[]}
  */
 function getHealthRecs(){
-  return getRec("life").map(r=> Object.assign({}, r, { type: r.type || "日常事务" }));
+  // v3.1.2 B-档：健康数据双源统一——此前同名业务三个存储（rec_life / life_health / 工具台账），
+  // 在运动工具里记的数据不会出现在健康摘要卡上（用户视角"记了但没反应"）。
+  // 以 rec_life 为主、life_health 结构化记录归一化为同 type 标签合并（同天同 type rec_life 优先）。
+  const life = (getRec("life") || []).map(function(r){ return Object.assign({}, r, { type: r.type || "日常事务", _src:"life" }); });
+  const hh = (load(PREFIX + "life_health", []) || []).map(function(r){
+    // life_health 结构化字段 → 多条 rec_life 风格记录（每条一个 type）
+    const out = [];
+    const base = { date: r.date || "", note: r.note || "", created: r.created || (r.date ? new Date(r.date).getTime() : Date.now()) };
+    if(r.weight){ out.push({ id: (r.id || "hh") + "_w", type: "体重追踪", title: "体重", value: String(r.weight) + "kg", _src:"hh", _date: r.date, created: base.created }); }
+    if(r.exercise){ out.push({ id: (r.id || "hh") + "_e", type: "运动记录", title: "运动", value: String(r.exercise) + "分钟", _src:"hh", _date: r.date, created: base.created }); }
+    if(r.sleep){ out.push({ id: (r.id || "hh") + "_s", type: "睡眠记录", title: "睡眠", value: String(r.sleep) + "h", _src:"hh", _date: r.date, created: base.created }); }
+    return out;
+  }).reduce(function(a,b){ return a.concat(b); }, []);
+  // 合并：rec_life 优先（同 date+type 去重）
+  const seen = new Set();
+  const merged = [];
+  life.concat(hh).forEach(function(r){
+    const d = r._date || r.date || (r.created ? new Date(r.created).toISOString().slice(0,10) : "");
+    const k = d + "|" + r.type;
+    if(r._src === "life"){ seen.add(k); merged.push(r); }
+  });
+  hh.forEach(function(r){
+    const d = r._date || (r.created ? new Date(r.created).toISOString().slice(0,10) : "");
+    const k = d + "|" + r.type;
+    if(!seen.has(k)) merged.push(r);
+  });
+  return merged;
 }
 /**
  * 解析记录 value 字段中的首个数值（如 "5km"→5、"65.2kg"→65.2、"7.5h"→7.5、"8杯"→8）
@@ -13835,6 +13880,39 @@ function bindCodeFrontendCard(){
   });
 }
 
+/**
+ * v3.1.2 B-档：绑定会议管理卡的「→ 生成任务」按钮。
+ * 识别 note 中的行动项（行首含数字序号 / →/@/+/-/* / 行动/跟进/待办/Action 关键词），逐条创建 office 场景任务。
+ */
+function bindMeetingActionCard(){
+  $$("[data-meeting-action]").forEach(function(b){
+    b.onclick = function(){
+      const id = b.getAttribute("data-meeting-action");
+      const rec = load(PREFIX + "meetings", []).find(function(r){ return r.id === id; });
+      if(!rec){ toast(t("msg.recordNotFound","记录不存在"), "warn"); return; }
+      const statusEl = $('[data-meeting-action-status="' + id + '"]');
+      const items = String(rec.note || "").split(/[\n\r]+/).filter(function(line){
+        return /^\s*[\d一二三四五六七八九十]+[.、)\uff09]/.test(line) || /^\s*[\u2192@\uff0b+\-\*]/.test(line) || /(行动|跟进|待办|Action|TODO|FIXME)/i.test(line);
+      });
+      if(!items.length){ toast(t("meeting.noActionItems","未识别到行动项"), "warn"); return; }
+      // 写入 office 任务（关联会议标题 + 会议日期作为 due）
+      const tasks = getTasks();
+      const created = [];
+      items.forEach(function(line, i){
+        const title = line.replace(/^\s*[\d一二三四五六七八九十]+[.、)\uff09\s]*/, "").replace(/^\s*[\u2192@\uff0b+\-\*\s]*/, "").trim();
+        if(!title) return;
+        const t = { id: uid(), sc: "office", title: (rec.title ? rec.title + " · " : "") + title, due: rec.date || todayStr(), priority: "", status: "todo", doneAt: null, note: "", tags: ["meeting-action"], created: Date.now() };
+        tasks.push(t);
+        created.push(title);
+      });
+      if(!created.length){ toast(t("meeting.noActionItems","未识别到行动项"), "warn"); return; }
+      setTasks(tasks);
+      if(statusEl) statusEl.textContent = t("meeting.tasksGenerated","已生成 N 项任务").replace("N", created.length);
+      toast(t("meeting.tasksGeneratedToast","已生成 N 项任务到「办公」场景").replace("N", created.length), "ok");
+    };
+  });
+}
+
 function _featureCardHtml(cfg){
   const records = load(PREFIX + cfg.key, []);
   const form = '<div class="tool-form-grid">' + cfg.fields.map(function(f){
@@ -14006,6 +14084,19 @@ SCENE_FEATURE_RENDER.office = {
         const mon = new Date(now); mon.setDate(now.getDate()-_wd); mon.setHours(0,0,0,0);
         const week = recs.filter(function(r){ return r.date && new Date(r.date) >= mon; }).length;
         return [{ v:open, l:t("status.pending","待开") }, { v:recs.length - open, l:t("status.opened","已开") }, { v:week, l:t("time.thisWeek","本周") }];
+      },
+      // v3.1.2 B-档：会议结论识别行动项 → 一键生成 office 任务（此前会议结论无法一键落地为任务）
+      rowAfter:function(r){
+        if(!r.note) return "";
+        // 识别行动项：行首含「行动/跟进/待办/Action/→/@」或数字序号 1./(1) 等
+        const items = String(r.note).split(/[\n\r]+/).filter(function(line){
+          return /^\s*[\d一二三四五六七八九十]+[.、)\uff09]/.test(line) || /^\s*[\u2192@\uff0b+\-\*]/.test(line) || /(行动|跟进|待办|Action|TODO|FIXME)/i.test(line);
+        });
+        if(!items.length) return "";
+        return '<div class="meeting-action-bar">' +
+          '<span class="sub" style="margin-right:var(--space-2)">' + t("meeting.actionItemsFound","发现 N 项行动项").replace("N", items.length) + '</span>' +
+          '<button type="button" class="addbtn xs" data-meeting-action="' + r.id + '">' + t("meeting.genTasks","→ 生成任务") + '</button>' +
+          '<span class="meeting-action-status" data-meeting-action-status="' + r.id + '"></span></div>';
       },
       emptyTip:t("empty.noMeeting","暂无会议 · 点击「添加」记录第一场会议")
     });
@@ -17176,6 +17267,8 @@ function render(){
       if((active === "code" || active === "data") && sceneFeatureMode === "sql") bindCodeSqlCard(bcfg ? bcfg.key : "code_sql");
       // v3.1.2 A-档：frontend「▶ 预览」按钮绑定（sandbox iframe 实时渲染 html/css/js）
       if(active === "code" && sceneFeatureMode === "frontend") bindCodeFrontendCard();
+      // v3.1.2 B-档：会议管理「→ 生成任务」按钮绑定（行动项识别 → office 任务）
+      if(active === "office" && sceneFeatureMode === "meeting") bindMeetingActionCard();
     }
     setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
     setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
@@ -19744,7 +19837,25 @@ function _switchSetTab(tabId){
      若限定 [data-page=settings] 会漏标，导致首次打开设置页所有 card 全隐藏 */
   $$("#drawer .set-card").forEach(function(c){ c.classList.toggle("set-tab-active", c.id === tabId); });
   if(tabId === "set-integration") renderIntegrationPanel();
+  if(tabId === "set-data") renderAutoBackupMeta(); // v3.1.2 B-档：刷新自动备份元信息（上次时间 + 大小）
   const d = $("#drawer"); if(d) d.scrollTop = 0;
+}
+
+// v3.1.2 B-档：渲染自动备份元信息（上次快照时间 + 快照大小）
+function renderAutoBackupMeta(){
+  const el = $("#autoBackupMeta"); if(!el) return;
+  try{
+    const raw = localStorage.getItem(PREFIX + "autobackup");
+    if(!raw){ el.textContent = t("dataMgmt.autoBackupMeta.none","尚未生成自动备份"); return; }
+    const j = JSON.parse(raw);
+    const ts = j._ts || 0;
+    const d = ts ? new Date(ts) : null;
+    const when = d ? (d.getFullYear()+"-"+(d.getMonth()+1).toString().padStart(2,"0")+"-"+d.getDate().toString().padStart(2,"0")+" "+d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0")) : "";
+    // 快照大小：去掉 _ts 键后估算业务数据体积
+    const bizBytes = raw.length - (JSON.stringify({_ts:ts}).length);
+    const size = bizBytes > 1024*1024 ? (bizBytes/(1024*1024)).toFixed(1)+" MB" : (bizBytes > 1024 ? (bizBytes/1024).toFixed(0)+" KB" : bizBytes+" B");
+    el.textContent = t("dataMgmt.autoBackupMeta.text","上次备份：{time} · 体积 {size}").replace("{time}", when).replace("{size}", size);
+  }catch(_e){ el.textContent = t("dataMgmt.autoBackupMeta.err","自动备份元信息读取失败"); }
 }
 
 /* ---------- v3.1：集成中心面板渲染 ---------- */
