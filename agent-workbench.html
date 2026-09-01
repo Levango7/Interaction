@@ -839,6 +839,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   margin-left:var(--space-2);min-height:auto;background:transparent;border-radius:var(--radius-sm)}
 .chat-retry:hover{color:var(--on-accent);background:var(--accent)}
 .msg.assistant.md-body.streaming{opacity:.7}
+/* v3.2 C-档：流式打字机态——半透明呼吸 + 末尾光标 */
+.msg.assistant.streaming{opacity:.88}
+.msg.assistant.streaming::after{content:"▋";margin-left:2px;color:var(--accent);
+  animation:streamCursor .9s steps(1) infinite}
+@keyframes streamCursor{0%,49%{opacity:1}50%,100%{opacity:0}}
 
 /* ===== 右侧 AI 聊天面板（三栏布局：左导航 | 中内容 | 右 AI 聊天） =====
    设计要点：
@@ -15810,6 +15815,8 @@ async function chatOnce(messages, opts){
     const aiParams=getAiParams(); // B8：超时/温度可配置（默认 30s / 0.7）
     const body={ model, messages, temperature:aiParams.temperature };
     if(cfg.enabled){ body.tools=effectiveTools(); body.tool_choice="auto"; }
+    // v3.2 C-档：流式请求标记（仅浏览器直连 + 调用方传 onChunk 时开启；Electron 主进程代理不支持透传，保持整包）
+    if(opts.onChunk && !isElectron()) body.stream = true;
 
     // Electron 模式：经主进程代理（Key 不进渲染进程/localStorage），一并规避 CORS（P0-3）
     // B8：超时参数随请求传给主进程（主进程读取后应用，非法值回退默认）
@@ -15881,6 +15888,62 @@ async function chatOnce(messages, opts){
             throw new Error(t("err.serverError","服务异常，请稍后重试"));
           }
           throw new Error(t("err.apiError","API 返回错误：")+r.status);
+        }
+        // v3.2 C-档：流式输出优先（stream:true + SSE 逐行解析）——此前整包返回，长回复 10-30s 干等。
+        // 通过 opts.onChunk 增量回吐（每收到一段 delta 调一次）；服务端不支持 SSE（返回 JSON content-type）
+        // 时自动回退整包路径（兼容性兜底，与历史行为一致）。Electron 主进程代理不支持流式透传，仍走整包。
+        if(opts.onChunk && opts.stream !== false){
+          try{
+            const ct = r.headers.get("content-type") || "";
+            if(ct.indexOf("text/event-stream") >= 0){
+              const reader = r.body.getReader();
+              const decoder = new TextDecoder();
+              let buf = "";
+              let final = null; let toolCalls = []; let finishReason = "stop"; let usage = null;
+              while(true){
+                const { done, value } = await reader.read();
+                if(done) break;
+                buf += decoder.decode(value, { stream: true });
+                const lines = buf.split("\n"); buf = lines.pop() || "";
+                for(const line of lines){
+                  const s = line.trim();
+                  if(!s || !s.startsWith("data:")) continue;
+                  const payload = s.slice(5).trim();
+                  if(payload === "[DONE]") continue;
+                  let d = null;
+                  try{ d = JSON.parse(payload); }catch(_e){ continue; }
+                  if(!d || !d.choices || !d.choices[0]) continue;
+                  const c = d.choices[0];
+                  if(c.delta && typeof c.delta.content === "string" && c.delta.content){
+                    try{ opts.onChunk(c.delta.content); }catch(_e2){ /* 回调异常不阻断流 */ }
+                  }
+                  if(c.delta && c.delta.tool_calls){
+                    for(const tc of c.delta.tool_calls){
+                      const idx = tc.index || 0;
+                      toolCalls[idx] = toolCalls[idx] || { id:"", function:{ name:"", arguments:"" } };
+                      if(tc.id) toolCalls[idx].id = tc.id;
+                      if(tc.function && tc.function.name) toolCalls[idx].function.name += tc.function.name;
+                      if(tc.function && tc.function.arguments) toolCalls[idx].function.arguments += tc.function.arguments;
+                    }
+                  }
+                  if(c.finish_reason) finishReason = c.finish_reason;
+                  if(d.usage) usage = d.usage;
+                }
+              }
+              final = { choices: [{ message: { role: "assistant", content: "" }, finish_reason: finishReason }], usage: usage || undefined };
+              if(toolCalls.length) final.choices[0].message.tool_calls = toolCalls.filter(Boolean);
+              // 流式无文字内容时回吐空串占位（上游空响应检查兜底）
+              return final;
+            }
+          }catch(_streamErr){
+            // 流式解析中途异常：回退整包重发一次（stream:false）
+            const r2 = await fetch(base+"/chat/completions", {
+              method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+(ap?ap.key:"")},
+              body: JSON.stringify(Object.assign({}, body, { stream: false }))
+            });
+            if(r2.ok) return await r2.json();
+            throw _streamErr;
+          }
         }
         // fallback：一次性 JSON（chatOnce 未请求 stream，服务端按非流式返回；
         // 历史 SSE 流式分支因服务端未返回 text/event-stream 而不可达，按 L2/L3 清理移除）
@@ -16382,7 +16445,28 @@ async function runChatLoop(messages, hist){
     while(guard++<maxLoops){
       // T5.3 浏览器兼容：chatController.ac 可为 null（AbortController 不可用），此时不传 signal
       const chatSignal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
-      const j=await chatOnce(messages, { signal: chatSignal });
+      // v3.2 C-档：流式打字机——纯文本轮（无工具调用压力）边收边渲染：流式中先挂一条 _streaming 消息增量更新，
+      // 完成后用真实结果替换。工具调用轮不启用（避免半截 tool_calls 状态污染 hist）。
+      let streamMsg = null;
+      const canStream = !acfg.enabled; // 工具模式（tools 数组在）下走流式需拼 tool_calls delta，先保守关（v3.2 C-档）
+      const j = await chatOnce(messages, {
+        signal: chatSignal,
+        onChunk: canStream ? function(chunkText){
+          try{
+            if(!streamMsg){
+              streamMsg = { role: "assistant", content: "", _streaming: true };
+              hist.push(streamMsg);
+            }
+            streamMsg.content += chunkText;
+            render();
+          }catch(_e){ /* 渲染异常不阻断流 */ }
+        } : undefined
+      });
+      if(streamMsg){
+        // 流式占位消息移除，由下方真实 hist.push 接管
+        const idx = hist.indexOf(streamMsg);
+        if(idx >= 0) hist.splice(idx, 1);
+      }
       const msg = j.choices && j.choices[0] && j.choices[0].message;
       if(!msg) throw new Error(t("ai.emptyResponse","空响应"));
       if(msg.tool_calls && msg.tool_calls.length){
@@ -16441,6 +16525,13 @@ async function runChatLoop(messages, hist){
       pushDiag("error", m, {where:"runChatLoop"});
     }
   } finally {
+    // v3.2 C-档：流式占位消息兜底清理——取消/失败路径也走这里，防 _streaming 残留
+    const si = hist.findIndex(function(x){ return x && x._streaming; });
+    if(si >= 0){
+      // 已有取消/失败标记消息则只删占位；否则保留其已收到的部分内容（转普通消息）
+      if(hist[si].content) hist[si]._streaming = false;
+      else hist.splice(si, 1);
+    }
     // T3.1 清理控制器 + 隐藏思考中指示
     if(chatController && chatController.timer){ clearTimeout(chatController.timer); }
     chatController=null;
@@ -16475,6 +16566,8 @@ function renderChat(){
     if(m.role==="assistant" && m._canceled) return `<div class="msg assistant canceled">已取消</div>`;
     // T3.1 失败消息 + 重试按钮
     if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">重试</button></div>`;
+    // v3.2 C-档：流式打字机态（_streaming 标记的消息加 streaming class——半透明+光标动画）
+    if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming">${mdToHtml(m.content||"")}</div>`;
     if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
     // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
