@@ -5621,8 +5621,10 @@ const SCENARIOS = {
     sysprompt:t("sysprompt.life", "你是一个生活与健康管家，帮用户管理日常事务、运动记录、体重追踪、睡眠记录和喝水提醒。回答实用、贴心、有条理。"),
     extraCard:"life",
     record:{ label:t("record.life.label", "生活记录"),
+      // v3.2 C-档拆分：type 健康五类（运动/体重/身高/睡眠/喝水）收敛到「健康」功能 tab（结构化真相源），
+      // 资料库只留日常事务——旧健康类记录仍被 getHealthRecs 双源聚合读取（B-档），数据不丢。
       fields:[
-        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("option.daily", "日常事务"),"运动记录","体重追踪","身高记录","睡眠记录","喝水记录"]},
+        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("option.daily", "日常事务")]},
         {k:"title",label:t("field.title", "标题"),type:"text"},
         {k:"value",label:t("field.value", "数值"),type:"text",placeholder:t("field.valuePlaceholder", "如：5km / 65.2kg / 7.5h / 8杯")},
         {k:"note",label:t("field.note", "备注"),type:"textarea"}
@@ -13565,7 +13567,7 @@ function renderMainHTML(){
   }
   return `<div class="card"><h2>${UI_ICONS.check}${taskCardTitle}</h2>${taskForm}${filterHtml}${taskArea}</div>
      <div class="card"><h2>${ic("book")} ${s.name} · ${rec.label}</h2>
-      <p class="sub">场景专属资料库，本地保存、随时检索</p>${recForm}${recList}</div>
+      <p class="sub">${active === "life" ? "日常事务速记 · 运动/体重/睡眠/喝水请用上方「健康」功能卡（结构化记录，健康摘要自动汇总）" : "场景专属资料库，本地保存、随时检索"}</p>${recForm}${recList}</div>
       ${renderSceneSections(active)}
       ${renderExtra(active)}
        ${chatCard}`;
