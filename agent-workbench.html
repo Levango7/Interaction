@@ -9030,6 +9030,21 @@ function _recordToolHtml(cfg, records){
       ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + "</th>"; }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table>"
       : '<div class="tool-empty">' + esc(cfg.emptyTip || t("tool.emptyDefault", "暂无记录")) + "</div>");
 }
+/* v3.2 C-档双轨收敛：双轨工具的写入入口改为引导跳转功能卡（数据以功能卡为真相源）。
+ * 提示条替代表单提交——点「去功能卡添加」切到对应场景功能 tab。 */
+function _bindRecordToolRedirect(toolId, targetName, sceneKey, featId){
+  const root = $("#toolAppBody"); if(!root) return;
+  const add = root.querySelector("#recAddBtn");
+  if(add){
+    add.onclick = function(){
+      toast(toolId + " 已收敛到" + targetName + "——即将跳转", "info");
+      setActive(sceneKey);
+      sceneFeatureMode = featId;
+      render();
+    };
+  }
+  // 已有的表单/表格交互（勾选已缴等）不再绑定独立写入——数据变更请去功能卡
+}
 function _bindRecordTool(rootId, toolId, fields, afterChange){
   const root = $("#" + rootId); if(!root) return;
   const add = root.querySelector("#recAddBtn");
@@ -9882,9 +9897,13 @@ const TOOL_APPS = {
 
   /* ================= 生活簇（公共骨架 _recordToolHtml/_bindRecordTool） ================= */
   "lif-sport": {
-    name:t("tool.sport.name", "运动记录"), icon:UI_ICONS.sport, desc:t("tool.sport.desc", "类型 / 时长 · 周月统计"),
+    name:t("tool.sport.name", "运动记录"), icon:UI_ICONS.sport, desc:t("tool.sport.desc", "类型 / 时长 · 周月统计 · 数据源：生活场景「健康」功能卡"),
     render: function(){
-      const recs = _toolData("lif-sport");
+      /* v3.2 C-档双轨收敛：运动三套存储（tool_lif-sport / life_health / rec_life 运动记录）收敛——
+       * 以 getHealthRecs() 双源聚合为准（B-档已做 rec_life+life_health 统一），工具箱改只读代理 */
+      const recs = (getHealthRecs() || []).filter(function(r){ return r.type === "运动记录"; }).map(function(r){
+        return { id:r.id, type:(r.title||"运动"), date:(r._date || (r.created ? new Date(r.created).toISOString().slice(0,10) : "")), mins:parseNum(r.value), note:r.note||"", done:true };
+      }).concat(_toolData("lif-sport").filter(function(r){ return r && r.type; }));
       return _recordToolHtml({
         fields:[
           { k:"type", label:t("tool.sport.type", "运动类型"), type:"select", options:[t("tool.sport.type.run", "跑步"),t("tool.sport.type.swim", "游泳"),t("tool.sport.type.bike", "骑行"),t("tool.sport.type.gym", "健身"),t("tool.sport.type.yoga", "瑜伽"),t("tool.sport.type.ball", "球类"),"其他"] },
@@ -9911,13 +9930,20 @@ const TOOL_APPS = {
       }, recs);
     },
     bind: function(){
-      _bindRecordTool("toolAppBody", "lif-sport", ["type","date","mins","note"]);
+      /* v3.2 C-档双轨收敛：写入引导跳转生活场景健康功能卡（getHealthRecs 双源已统一） */
+      _bindRecordToolRedirect("lif-sport", "生活场景 · 健康功能卡", "life", "health");
     }
   },
   "lif-bill": {
-    name:t("tool.bill.name", "缴费提醒"), icon:UI_ICONS.bill, desc:t("tool.bill.desc", "项目 / 到期日 · 逾期标红 · 已缴勾选"),
+    name:t("tool.bill.name", "缴费提醒"), icon:UI_ICONS.bill, desc:t("tool.bill.desc", "项目 / 到期日 · 逾期标红 · 已缴勾选 · 数据源：生活场景「缴费」功能卡"),
     render: function(){
-      const recs = _toolData("lif-bill");
+      /* v3.2 C-档双轨收敛：缴费此前两套存储（tool_lif-bill 工具箱 / life_bills 功能卡）互不相通。
+       * 收敛决策：功能卡为真相源（字段更全，含周期/状态），工具箱改为只读代理 + 引导跳转。
+       * 旧 tool_lif-bill 数据保留读取（兼容老用户），新数据一律走功能卡。 */
+      const feats = load(PREFIX+"life_bills", []) || [];
+      const recs = feats.map(function(r){
+        return { id:r.id||_toolUid(), item:r.name||r.title||"", amount:r.amount, due:r.due||"", done:(r.status==="已缴"||r.done), paidAt:r.paidAt||"", note:r.note||"" };
+      }).concat(_toolData("lif-bill").filter(function(r){ return r && r.item; })); // 旧工具数据兼容追加
       return _recordToolHtml({
         fields:[
           { k:"item", label:t("tool.bill.item", "缴费项目"), type:"select", options:[t("tool.bill.item.water", "水费"),t("tool.bill.item.electric", "电费"),t("tool.bill.item.gas", "燃气费"),t("tool.bill.item.net", "网费"),t("tool.bill.item.property", "物业费"),t("tool.bill.item.rent", "房租"),"其他"] },
@@ -9953,13 +9979,18 @@ const TOOL_APPS = {
       }, recs);
     },
     bind: function(){
-      _bindRecordTool("toolAppBody", "lif-bill", ["item","amount","due"]);
+      /* v3.2 C-档双轨收敛：写入改跳转功能卡（生活场景 → 缴费 tab），工具箱不再独立存数据 */
+      _bindRecordToolRedirect("lif-bill", "生活场景 · 缴费功能卡", "life", "bill");
     }
   },
   "lif-shop": {
-    name:t("tool.shop.name", "采购清单"), icon:UI_ICONS.shop, desc:t("tool.shop.desc", "待购/已购分组 · 数量金额"),
+    name:t("tool.shop.name", "采购清单"), icon:UI_ICONS.shop, desc:t("tool.shop.desc", "待购/已购分组 · 数量金额 · 数据源：生活场景「采购」功能卡"),
     render: function(){
-      const recs = _toolData("lif-shop");
+      /* v3.2 C-档双轨收敛：采购两套存储（tool_lif-shop / life_shopping）收敛到功能卡为真相源 */
+      const feats = load(PREFIX+"life_shopping", []) || [];
+      const recs = feats.map(function(r){
+        return { id:r.id||_toolUid(), item:r.name||"", qty:r.qty, price:(Number(r.amount)||0)/(Number(r.qty)||1), done:(r.status==="已购"||r.done), note:r.note||"" };
+      }).concat(_toolData("lif-shop").filter(function(r){ return r && r.item; }));
       return _recordToolHtml({
         fields:[
           { k:"item", label:t("tool.shop.item", "物品名称"), type:"text" },
@@ -9984,7 +10015,8 @@ const TOOL_APPS = {
       }, recs);
     },
     bind: function(){
-      _bindRecordTool("toolAppBody", "lif-shop", ["item","qty","price"]);
+      /* v3.2 C-档双轨收敛：写入引导跳转功能卡 */
+      _bindRecordToolRedirect("lif-shop", "生活场景 · 采购功能卡", "life", "shop");
     }
   },
   "lif-takeout": {

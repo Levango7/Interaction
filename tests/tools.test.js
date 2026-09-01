@@ -92,55 +92,50 @@ describe("v2.3.0 TOOL_APPS 工具注册表", () => {
     expect(document.querySelector("#reErr").textContent).toContain("语法错误");
   });
 
-  it("lif-bill：添加记录入库 + 逾期行标红", () => {
-    // 先造一条逾期数据
+  it("lif-bill：v3.2 双轨收敛——功能卡数据聚合展示 + 逾期标红 + 旧 tool 数据兼容只读", () => {
+    // 旧 tool_lif-bill 数据（兼容保留，只读展示）
     win.localStorage.setItem(PREFIX + "tool_lif-bill",
       JSON.stringify([{ id: "t1", item: "电费", amount: 100, due: "2020-01-01" }]));
+    // 新真相源：life_bills 功能卡数据（含周期/状态字段）
+    win.localStorage.setItem(PREFIX + "life_bills",
+      JSON.stringify([{ id: "f1", name: "水费", amount: 50, cycle: "月缴", due: "2099-01-01", status: "未缴" }]));
     __test.openToolStub("lif-bill", "缴费");
-    const row = document.querySelector('[data-rec-row="t1"]');
-    expect(row).toBeTruthy();
-    expect(row.getAttribute("style")).toContain("danger");
+    // 两源数据都可见（旧只读 + 新功能卡聚合）
+    const row1 = document.querySelector('[data-rec-row="t1"]');
+    const row2 = document.querySelector('[data-rec-row="f1"]');
+    expect(row1, "旧 tool_lif-bill 数据仍展示（兼容）").toBeTruthy();
+    expect(row2, "life_bills 功能卡数据聚合进工具视图").toBeTruthy();
+    expect(row1.getAttribute("style")).toContain("danger");
     expect(document.body.textContent).toContain("逾期");
-    // 通过表单添加一条
+    // 表单添加改为跳转引导（不再独立写 tool_ 键）
     const fieldEl = document.querySelector('[data-rec-field="item"]');
-    expect(fieldEl).toBeTruthy();
-    const amountEl = document.querySelector('[data-rec-field="amount"]');
-    const dueEl = document.querySelector('[data-rec-field="due"]');
-    fieldEl.value = "水费"; amountEl.value = "50"; dueEl.value = "2099-01-01";
-    document.querySelector("#recAddBtn").click();
-    const stored = JSON.parse(win.localStorage.getItem(PREFIX + "tool_lif-bill"));
-    expect(stored.length).toBe(2);
-    expect(stored[0].item).toBe("水费");
+    expect(fieldEl, "表单仍渲染（引导跳转用）").toBeTruthy();
   });
 
-  it("lif-shop：勾选「已购」更新 done 状态", () => {
-    win.localStorage.setItem(PREFIX + "tool_lif-shop",
-      JSON.stringify([{ id: "s1", item: "牛奶", qty: 2, price: 10 }]));
+  it("lif-shop：v3.2 双轨收敛——life_shopping 功能卡数据聚合展示", () => {
+    win.localStorage.setItem(PREFIX + "life_shopping",
+      JSON.stringify([{ id: "s1", name: "牛奶", qty: 2, amount: 20, status: "待购" }]));
     __test.openToolStub("lif-shop", "采购");
-    const chk = document.querySelector('[data-rec-check="s1"]');
-    chk.checked = true;
-    chk.dispatchEvent(new win.Event("change", { bubbles: true }));
-    const stored = JSON.parse(win.localStorage.getItem(PREFIX + "tool_lif-shop"));
-    expect(stored[0].done).toBe(true);
+    const row = document.querySelector('[data-rec-row="s1"]');
+    expect(row, "life_shopping 数据映射进工具视图").toBeTruthy();
+    expect(document.body.textContent).toContain("牛奶");
   });
 
-  it("lif-bill：勾选已缴写入 paidAt，「本月已缴」统计可计入", () => {
+  it("lif-bill：v3.2 双轨收敛——已缴状态从功能卡 status 聚合", () => {
     const today = __test.todayStr();
-    win.localStorage.setItem(PREFIX + "tool_lif-bill",
-      JSON.stringify([{ id: "p1", item: "水费", amount: 30, due: today }]));
+    win.localStorage.setItem(PREFIX + "life_bills",
+      JSON.stringify([
+        { id: "p1", name: "水费", amount: 30, cycle: "月缴", due: today, status: "未缴" },
+        { id: "p2", name: "电费", amount: 60, cycle: "月缴", due: today, status: "已缴" }
+      ]));
     __test.openToolStub("lif-bill", "缴费");
-    const chk = document.querySelector('[data-rec-check="p1"]');
-    chk.checked = true;
-    chk.dispatchEvent(new win.Event("change", { bubbles: true }));
-    const stored = JSON.parse(win.localStorage.getItem(PREFIX + "tool_lif-bill"));
-    expect(stored[0].done).toBe(true);
-    expect(stored[0].paidAt, "勾选已缴必须写 paidAt，否则本月已缴统计恒为 0").toBe(today);
-    // 重渲染后统计摘要：本月已缴计入 ¥30.00（而非恒 0）
-    __test.openToolStub("lif-bill", "缴费");
+    const rows = [...document.querySelectorAll("[data-rec-row]")];
+    expect(rows.length).toBe(2);
+    // 待缴总额 ¥30（p1 未缴）+ 已缴项 done 状态来自功能卡 status 字段
     const items = [...document.querySelectorAll(".tool-summary-item")];
-    const paidItem = items.find(el => el.textContent.includes("本月已缴"));
-    expect(paidItem).toBeTruthy();
-    expect(paidItem.textContent).toContain("¥30.00");
+    const pendItem = items.find(el => el.textContent.includes("待缴总额"));
+    expect(pendItem).toBeTruthy();
+    expect(pendItem.textContent).toContain("¥30.00");
   });
 
   it("生活簇统计摘要渲染（lif-sport 周期统计）", () => {
