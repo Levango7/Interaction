@@ -1089,6 +1089,15 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tool-app-card .tool-form-box{padding-bottom:var(--space-3);border-bottom:1px dashed var(--line);margin-bottom:var(--space-2)}
 /* v3.0.1 B-5：功能卡通用提示行 / 数据可视化迷你图表 */
 .tool-hint{margin:var(--space-2) 0 0;font-size:var(--fs-xs);color:var(--muted)}
+/* v3.2 A 3/3：缴费近 7 天到期列表（白领下午杂事场景） */
+.upcoming-bills{margin-top:var(--space-2);padding:var(--space-2h) var(--space-3);background:var(--accent-soft);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line))}
+.upcoming-bills-head{font-size:var(--fs-xs);font-weight:600;color:var(--accent);margin-bottom:var(--space-1)}
+.upcoming-bill-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1h) 0;font-size:var(--fs-sm);border-top:1px dashed color-mix(in srgb,var(--line) 50%,transparent)}
+.upcoming-bill-row:first-of-type{border-top:none}
+.upcoming-bill-name{flex:1;color:var(--text)}
+.upcoming-bill-amount{color:var(--text-dim);font-variant-numeric:tabular-nums;min-width:64px;text-align:right}
+.upcoming-bill-when{font-size:var(--fs-2xs);color:var(--muted);min-width:80px;text-align:right}
+.upcoming-bill-row.is-close .upcoming-bill-when{color:var(--danger);font-weight:600}
 .tool-app-card .tool-table .f-row-extra td{border-top:none;padding-top:var(--space-1)}
 .mini-chart-wrap{padding:var(--space-1) var(--space-2);background:var(--panel2);border-radius:var(--radius-sm);overflow:hidden}
 .mini-chart-wrap svg{display:block;width:100%;height:120px}
@@ -15812,7 +15821,22 @@ SCENE_FEATURE_RENDER.office = {
       sum:function(recs){
         const late = recs.filter(function(r){ return r.type==="迟到"; }).length;
         const leave = recs.filter(function(r){ return r.type==="请假"; }).length;
-        return [{ v:recs.length, l:t("stat.total","累计") }, { v:late, l:t("status.late","迟到") }, { v:leave, l:t("status.leave","请假") }];
+        // v3.2 A 2/3：当月出勤天数（type==正常 + 当月有日期）+ 总工时（按 checkIn/checkOut 解析）
+        const now = new Date(); const ym = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
+        const monthDays = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym && r.type==="正常"; }).length;
+        const monthHours = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym && r.checkIn && r.checkOut; }).reduce(function(s,r){
+          const m1 = /^(\d{1,2}):(\d{2})$/.exec(String(r.checkIn||"")); const m2 = /^(\d{1,2}):(\d{2})$/.exec(String(r.checkOut||""));
+          if(!m1 || !m2) return s;
+          const a = Number(m1[1])*60+Number(m1[2]); const b = Number(m2[1])*60+Number(m2[2]);
+          return b>a ? s + (b-a)/60 : s;
+        }, 0);
+        return [
+          { v:recs.length, l:t("stat.total","累计") },
+          { v:monthDays, l:t("time.thisMonthWork","本月出勤") },
+          { v:late, l:t("status.late","迟到") },
+          { v:leave, l:t("status.leave","请假") },
+          { v:monthHours.toFixed(1) + "h", l:t("time.thisMonthHours","本月工时") }
+        ];
       },
       emptyTip:t("empty.noAttendance","暂无打卡记录 · 点击「添加」记录上下班")
     });
@@ -15839,11 +15863,14 @@ SCENE_FEATURE_RENDER.office = {
         const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
         const now = new Date(); const ym = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
         const monthTotal = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym; }).reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+        // v3.2 A 1/3：按分类聚合本月（白领最常问"本月餐饮花了多少"——按类别分账）
+        const byCat = {}; recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym; }).forEach(function(r){ const c = r.category || t("category.other","其他"); byCat[c] = (Number(byCat[c])||0) + (Number(r.amount)||0); });
+        const catEntries = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; }).slice(0, 2).map(function(c){ return { v: "¥" + byCat[c].toFixed(0), l: c }; });
         return [
           { v:"¥" + total.toFixed(0), l:t("stat.total","累计") },
           { v:"¥" + monthTotal.toFixed(0), l:t("time.thisMonth","本月") },
           { v:recs.filter(function(r){ return r.status===t("status.pendingReview","待审"); }).length, l:"待审" }
-        ];
+        ].concat(catEntries);
       },
       emptyTip:t("empty.noReimburse","暂无报销单 · 点击「添加」录入第一笔")
     });
@@ -15941,6 +15968,31 @@ SCENE_FEATURE_RENDER.life = {
         const unpaid = recs.filter(function(r){ return r.status!=="已缴"; }).length;
         const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
         return [{ v:unpaid, l:t("status.toPay","待缴") }, { v:"¥" + total.toFixed(0), l:t("stat.totalAmount","总额") }];
+      },
+      // v3.2 A 3/3：近 7 天到期列表（白领下午杂事场景——一眼看到"这周要交什么"，按 due 升序，已缴折叠）
+      rowAfter:function(recs){
+        if(!recs || !recs.length) return "";
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+        const items = recs.filter(function(r){
+          if(!r.due || r.status === "已缴") return false;
+          const d = new Date(r.due);
+          return d >= start && d <= end;
+        }).sort(function(a, b){ return String(a.due).localeCompare(String(b.due)); });
+        if(!items.length) return "";
+        const rows = items.map(function(r){
+          const dueDate = new Date(r.due);
+          const days = Math.round((dueDate - now) / 86400000);
+          const dayLabel = days === 0 ? t("life.bills.today","今天") : (days < 0 ? t("life.bills.overdueDays","已过 {n} 天").replace("{n}", Math.abs(days)) : t("life.bills.inDays","还有 {n} 天").replace("{n}", days));
+          const isClose = days >= 0 && days <= 3;
+          return '<div class="upcoming-bill-row' + (isClose ? ' is-close' : '') + '">' +
+            '<span class="upcoming-bill-name">' + (r.name || r.title || "—") + '</span>' +
+            '<span class="upcoming-bill-amount">¥' + (Number(r.amount)||0).toFixed(0) + '</span>' +
+            '<span class="upcoming-bill-when">' + dayLabel + '</span>' +
+            '</div>';
+        }).join("");
+        return '<div class="upcoming-bills"><div class="upcoming-bills-head">' + t("life.bills.upcomingHead","近 7 天到期") + '</div>' + rows + '</div>';
       },
       emptyTip:t("empty.noBill","暂无缴费项目 · 点击「添加」记录第一笔缴费")
     });

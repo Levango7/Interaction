@@ -71,6 +71,29 @@ describe("v3.1.2 A 档：源码契约（防回归）", () => {
   });
 });
 
+describe("v3.2 A 1/2/3：白领工作日 0 风险小修（v2 报告）", () => {
+  it("A 1/3：报销 sum 按分类聚合本月（白领最常问本月餐饮花了多少）", () => {
+    // 找 office_expenses 的 sum 函数块，验证包含 byCat 聚合 + 本月过滤 + 取前 2
+    const sumMatch = S.match(/office\s*=\s*\{[\s\S]*?expense:\s*function\(\)\{[\s\S]*?sum:function\(recs\)\{[\s\S]*?\}\s*,[\s\S]*?\}\s*\}/);
+    expect(sumMatch, "office.expense.sum 函数应存在").toBeTruthy();
+    expect(sumMatch[0]).toContain("byCat");
+    expect(sumMatch[0]).toContain("slice(0, 2)"); // v3.2 A 1/3：取前 2 分类不挤
+  });
+  it("A 2/3：考勤 sum 含当月出勤天数 + 当月工时", () => {
+    const sumMatch = S.match(/attendance:\s*function\(\)\{[\s\S]*?sum:function\(recs\)\{[\s\S]*?\}\s*,[\s\S]*?\}\s*\}/);
+    expect(sumMatch, "attendance.sum 函数应存在").toBeTruthy();
+    expect(sumMatch[0]).toContain("monthDays");
+    expect(sumMatch[0]).toContain("monthHours");
+  });
+  it("A 3/3：缴费卡 rowAfter 渲染近 7 天到期列表（不推送）", () => {
+    const billMatch = S.match(/bill:\s*function\(\)\{[\s\S]*?rowAfter:function[\s\S]*?\}\s*,[\s\S]*?\}\s*\}/);
+    expect(billMatch, "bill.rowAfter 函数应存在").toBeTruthy();
+    expect(billMatch[0]).toContain("upcoming-bills");
+    expect(billMatch[0]).toContain("已缴"); // 已缴折叠
+    expect(billMatch[0]).not.toMatch(/Notification|notifySystem/); // 不推送通知
+  });
+});
+
 describe("v3.1.2 A 档：运行时行为", () => {
   let win, __test;
   beforeAll(() => { win = loadApp(); __test = win.__test; });
