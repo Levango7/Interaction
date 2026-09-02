@@ -137,6 +137,90 @@
   background:color-mix(in srgb,var(--panel) 68%,transparent);
 }
 
+/* v3.2 主题库扩展：森林（forest）+ 海洋（ocean）
+ * 设计原则：
+ *  1) 必须与已有 7 主题（light/dark/system/sepia/elegant/aurora/matrix）色调明确区分——避免一打开以为没换
+ *  2) 调色取自真实意象（森林=晨雾林地+松针+暖木，海洋=晨曦海面+深海青+珊瑚），不全饱和/不媚俗
+ *  3) 沿用极光"侧栏品牌渐变 + 顶栏彩条 + 选中态渐变"三件套——与亮色/初雪/暗色的"中性面板"形成系列感
+ *  4) canvas-glow 极光光斑 + 主题专属光层（森林=树冠光斑，海洋=海底光柱），透出环境氛围
+ *  5) 文字对比度全部 ≥ 4.5:1（WCAG AA 文本），panel 纯白底保证长文本不疲劳
+ *  6) 与浅色/初雪/极光共享浅色基调（白 panel），但 bg 颜色 + accent 完全不同——切换有"换了世界"感
+ *  7) 极光的"半透明"玻璃化在森林/海洋同样启用——主色变化但玻璃质感一致，UI 形态不变
+ */
+:root[data-theme="forest"]{
+  --bg:#eef3ea; --panel:#fbfcf9; --panel2:#f3f6ef; --line:#d9e3d3;
+  --text:#0f1f15; --muted:#56625a; --accent:#2d6a4f; --accent-soft:#dde8df; --accent-2:#c47a3a;
+  --surface-hover:#e6ede0; --surface-muted:#e9eee4;
+  --brand-grad:linear-gradient(135deg,#2d6a4f 0%,#588157 50%,#c47a3a 100%);
+  --side-accent:linear-gradient(180deg,rgba(45,106,79,.16),rgba(88,129,87,.12) 60%,rgba(196,122,58,.10));
+  --canvas-glow:radial-gradient(ellipse 70% 45% at 20% -5%,rgba(86,140,86,.30),transparent 60%),radial-gradient(ellipse 50% 40% at 95% 10%,rgba(196,122,58,.22),transparent 55%),radial-gradient(ellipse 40% 35% at 50% 95%,rgba(45,106,79,.18),transparent 50%),radial-gradient(ellipse 35% 30% at 10% 70%,rgba(168,193,140,.20),transparent 50%);
+  --sidebar-glow:linear-gradient(180deg,rgba(45,106,79,.12) 0%,rgba(88,129,87,.06) 50%,rgba(196,122,58,.04) 100%);
+}
+:root[data-theme="forest"] .side{
+  background:color-mix(in srgb,var(--panel) 50%,transparent);
+  background-image:var(--sidebar-glow);
+  backdrop-filter:blur(22px) saturate(1.20);-webkit-backdrop-filter:blur(22px) saturate(1.20);
+  border-right:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
+  box-shadow:inset -2px 0 12px -2px rgba(45,106,79,.14);
+}
+:root[data-theme="forest"] .topbar{
+  background-image:linear-gradient(180deg,rgba(45,106,79,.10),transparent 80%),var(--brand-grad);
+  background-size:100% 100%,3px 100%;
+  background-repeat:no-repeat,no-repeat;
+  background-position:0 0,0 100%;
+  border-bottom:1px solid var(--line);
+}
+:root[data-theme="forest"] .topbar .tbtn{color:var(--text);font-weight:600}
+:root[data-theme="forest"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
+:root[data-theme="forest"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(45,106,79,.28)}
+:root[data-theme="forest"] .chat-panel{
+  background:color-mix(in srgb,var(--panel) 58%,transparent);
+  background-image:linear-gradient(180deg,rgba(196,122,58,.06),transparent 40%);
+  backdrop-filter:blur(20px) saturate(1.15);-webkit-backdrop-filter:blur(20px) saturate(1.15);
+  border-left:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
+  box-shadow:inset 2px 0 12px -2px rgba(88,129,87,.14);
+}
+:root[data-theme="forest"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
+
+:root[data-theme="ocean"]{
+  --bg:#e8f1f4; --panel:#fafdfe; --panel2:#eff5f8; --line:#d3e3e9;
+  --text:#0b2a35; --muted:#4f6c75; --accent:#0f6b7e; --accent-soft:#d9ebf1; --accent-2:#d97862;
+  --surface-hover:#dee9ed; --surface-muted:#e6eef1;
+  --brand-grad:linear-gradient(135deg,#0f6b7e 0%,#3aa0b3 50%,#d97862 100%);
+  --side-accent:linear-gradient(180deg,rgba(15,107,126,.16),rgba(58,160,179,.12) 60%,rgba(217,120,98,.10));
+  --canvas-glow:radial-gradient(ellipse 70% 45% at 80% -5%,rgba(15,107,126,.28),transparent 60%),radial-gradient(ellipse 55% 40% at 5% 15%,rgba(217,120,98,.18),transparent 55%),radial-gradient(ellipse 40% 35% at 50% 100%,rgba(58,160,179,.16),transparent 50%),radial-gradient(ellipse 30% 28% at 92% 60%,rgba(173,216,230,.30),transparent 55%);
+  --sidebar-glow:linear-gradient(180deg,rgba(15,107,126,.12) 0%,rgba(58,160,179,.06) 50%,rgba(217,120,98,.04) 100%);
+}
+:root[data-theme="ocean"] .side{
+  background:color-mix(in srgb,var(--panel) 52%,transparent);
+  background-image:var(--sidebar-glow);
+  backdrop-filter:blur(22px) saturate(1.18);-webkit-backdrop-filter:blur(22px) saturate(1.18);
+  border-right:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
+  box-shadow:inset -2px 0 12px -2px rgba(15,107,126,.14);
+}
+:root[data-theme="ocean"] .topbar{
+  background-image:linear-gradient(180deg,rgba(15,107,126,.10),transparent 80%),var(--brand-grad);
+  background-size:100% 100%,3px 100%;
+  background-repeat:no-repeat,no-repeat;
+  background-position:0 0,0 100%;
+  border-bottom:1px solid var(--line);
+}
+:root[data-theme="ocean"] .topbar .tbtn{color:var(--text);font-weight:600}
+:root[data-theme="ocean"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
+:root[data-theme="ocean"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(15,107,126,.28)}
+:root[data-theme="ocean"] .chat-panel{
+  background:color-mix(in srgb,var(--panel) 58%,transparent);
+  background-image:linear-gradient(180deg,rgba(58,160,179,.06),transparent 40%);
+  backdrop-filter:blur(20px) saturate(1.12);-webkit-backdrop-filter:blur(20px) saturate(1.12);
+  border-left:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
+  box-shadow:inset 2px 0 12px -2px rgba(58,160,179,.14);
+}
+:root[data-theme="ocean"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
@@ -4018,12 +4102,14 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       <div class="ctl">
         <select id="cfgTheme">
           <option value="light">浅色</option>
-          <option value="elegant" data-i18n="look.theme.elegant">初雪</option>
-          <option value="aurora">极光</option>
           <option value="dark">暗色</option>
           <option value="system">跟随系统</option>
           <option value="sepia" data-i18n="look.theme.sepia">护眼模式</option>
+          <option value="elegant" data-i18n="look.theme.elegant">初雪</option>
+          <option value="aurora">极光</option>
           <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
+          <option value="forest">森林</option>
+          <option value="ocean">海洋</option>
         </select>
       </div>
     </div>
@@ -20465,7 +20551,7 @@ async function saveCfg(){
     // v1.9.7：特殊主题（aurora/sepia/elegant/matrix/自定义）不写入 cfg.theme——它们由 setTheme 持久化到
     // localStorage.theme（boot 按此复原）；写入 cfg 会被 applyTheme 误读导致重启后被冲掉
     const thSel=$("#cfgTheme");
-    if(thSel && (thSel.value==="light"||thSel.value==="dark"||thSel.value==="system")) cfg.theme = thSel.value;
+    if(thSel && /^(light|dark|system|sepia|elegant|aurora|matrix|forest|ocean)$/.test(thSel.value)) cfg.theme = thSel.value;
     // B8：AI 请求参数（超时秒数 / 温度）持久化；留空 = 用默认值（30s / 0.7），范围校验在 getAiParams 与主进程
     const toInp=$("#cfgAiTimeout"); if(toInp){ const v=toInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTimeoutSec=Number(v); else delete cfg.aiTimeoutSec; }
     const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
