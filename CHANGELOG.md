@@ -2,6 +2,37 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.3.0] - 2026-09-03
+
+### 后端服务全量实现 + 前端对接 + AI能力增强
+
+**🖥 后端服务（server/ 目录，Node.js + Express + node:sqlite）**
+- **用户账号系统**：注册/登录/JWT认证/设备管理/个人资料，25个测试
+- **通知服务**：邮件通知(nodemailer) + Web Push(VAPID) + 定时提醒(cron-style) + 通知偏好，40个测试
+- **第三方集成**：Notion + Todoist + Google Calendar + 通用OAuth管理器，47个测试
+- 共112个后端测试全通过
+
+**🤖 AI能力增强**
+- **AI Agent自动化**：多步骤任务规划 + 自动执行 + 结果汇总（chatOnceAgent/parseAgentPlan/executeAgentPlan）
+- **6个新工具**：web_search / web_fetch / code_run / sql_query / note_add / note_search
+- **RAG**：SQLite FTS5全文索引 + 语义检索 + 上下文自动注入（ragInit/ragIndex/ragSearch/ragReindex）
+- **流式输出增强**：多模型切换 / 重试改参数 / 进度指示（switchModel/listModels/retryChatWithParams）
+- 58个新测试
+
+**🔗 前端对接后端API**
+- **API客户端**：fetch封装 + JWT token管理 + 401自动刷新 + 离线降级
+- **登录/注册UI**：模态弹窗 + 表单校验 + loading状态 + 错误提示
+- **设置UI增强**：账号设置 / 通知偏好 / 第三方集成 / 多设备管理面板
+- **通知服务前端**：Web Push订阅 + 邮件通知设置 + 定时提醒UI
+- **第三方集成前端**：Notion/Todoist/Google Calendar OAuth授权 + 同步设置
+- **数据同步**：debounce 2秒 + 增量同步 + 冲突处理(last-write-wins) + 同步状态指示
+- **离线支持**：后端不可用时降级到localStorage，上线后自动同步
+- 60个新测试
+
+**✅ 验证**
+- 881前端测试 + 112后端测试全通过
+- ESLint 0 problems，颜色硬编码 0 处
+
 ## [v3.2.0] - 2026-09-01
 
 ### IA 重构：让 AI 真正服务于整套平台 + 信息架构减法
