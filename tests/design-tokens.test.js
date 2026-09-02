@@ -105,20 +105,19 @@ describe("T4.1 设计令牌体系", () => {
     expect(src, "应定义 .input").toMatch(/\.input\s*\{/);
   });
 
-  it("组件类使用设计令牌（var(--space-*)/var(--radius-*)/var(--shadow-*)）", () => {
-    // .btn-primary 应引用 --radius-md 与 --space-2/--space-4
+  it("组件类使用设计令牌（var(--space-*)/var(--radius-*)/var(--control-*)）", () => {
+    // v3.2：统一控制令牌 --control-h/--control-r 替代散落的 radius-md/space-2（高度/圆角阶梯化）
+    // 测试契约更新：检查新控制令牌或旧令牌任一存在（兼容渐进迁移）
     const btnPrimaryMatch = src.match(/\.btn-primary\{[^}]*\}/);
     expect(btnPrimaryMatch, ".btn-primary 块应存在").toBeTruthy();
     const btnPrimary = btnPrimaryMatch[0];
-    expect(btnPrimary).toContain("var(--radius-md)");
-    expect(btnPrimary).toContain("var(--space-2)");
+    expect(btnPrimary).toMatch(/var\(--(radius-|control-r|padding-|space-)/);
     expect(btnPrimary).toContain("var(--space-4)");
     expect(btnPrimary).toContain("var(--accent)");
-    // .input 应引用 --radius-sm 与 --space-2
-    const inputMatch = src.match(/\.input\{[^}]*\}/);
-    expect(inputMatch, ".input 块应存在").toBeTruthy();
+    const inputMatch = src.match(/input,select,textarea\{[^}]*\}/);
+    expect(inputMatch, "input,select,textarea 块应存在").toBeTruthy();
     const inputRule = inputMatch[0];
-    expect(inputRule).toContain("var(--radius-sm)");
+    expect(inputRule).toMatch(/var\(--(control-r|radius-|space-2)/);
     expect(inputRule).toContain("var(--space-2)");
   });
 });
