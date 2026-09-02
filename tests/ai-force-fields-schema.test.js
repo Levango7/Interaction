@@ -100,10 +100,10 @@ describe("AI 层对齐（v1.14.1）：force 入 schema + add_record.fields 场�
       }
     });
 
-    it("effectiveTools 在 agent 默认（未关闭）时返回全部 17 工具", () => {
+    it("effectiveTools 在 agent 默认（未关闭）时返回全部 23 工具", () => {
       const win = freshWin();
       const tools = win.__test.effectiveTools();
-      expect(tools.length, "agent 开启时应有 17 个工具").toBe(17);
+      expect(tools.length, "agent 开启时应有 23 个工具").toBe(23);
     });
 
     it("chatSysPrompt 在 agent=false 时不引导记忆/编排话术", async () => {

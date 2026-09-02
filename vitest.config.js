@@ -8,6 +8,7 @@ export default defineConfig({
     exclude: ["tests/e2e/**", "node_modules/**", "dist/**"],
     globals: true,
     restoreMocks: true,
+    testTimeout: 30000,
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "lcov"],
