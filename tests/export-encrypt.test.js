@@ -8,6 +8,16 @@ function base64ToUint8Array(b64) {
   return arr;
 }
 
+// v3.4.1 修 CI flaky：固定 sleep 50ms 在慢 runner（windows CI）上不够——FileReader 异步
+// 读 blob 未完成导致 __lastExportData 仍为 null，JSON.parse(null)._deviceMeta 抛 TypeError。
+// 改为轮询等待导出数据就绪（最多 3s，每 10ms 检查），与 sync-server 测试的 waitForServer 同模式。
+async function waitForExportData(win, timeout = 3000) {
+  const deadline = Date.now() + timeout;
+  while (win.__lastExportData === null && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 10));
+  }
+}
+
 describe('Export encryption option', () => {
   let win;
   beforeEach(() => {
@@ -40,8 +50,8 @@ describe('Export encryption option', () => {
     const chk = win.document.getElementById('exportEncryptOpt');
     if (chk) chk.checked = false;
     await win.doExport();
-    // Wait for FileReader to finish
-    await new Promise(r => setTimeout(r, 50));
+    // Wait for async FileReader to finish (poll, not fixed sleep — CI runners are slow)
+    await waitForExportData(win);
     const data = JSON.parse(win.__lastExportData);
     expect(data._deviceMeta).toBeDefined();
     expect(typeof data._deviceMeta.version).toBe('string');
@@ -51,7 +61,7 @@ describe('Export encryption option', () => {
     const chk = win.document.getElementById('exportEncryptOpt');
     if (chk) chk.checked = true;
     await win.doExport();
-    await new Promise(r => setTimeout(r, 50));
+    await waitForExportData(win);
     const enc = JSON.parse(win.__lastExportData);
     expect(enc.encrypted).toBe(true);
     expect(enc.iv).toBeDefined();
@@ -73,7 +83,7 @@ describe('Export encryption option', () => {
     if (chk) chk.checked = true;
     win.prompt = () => 'correctpwd';
     await win.doExport();
-    await new Promise(r => setTimeout(r, 50));
+    await waitForExportData(win);
     const enc = JSON.parse(win.__lastExportData);
     const encBuf = base64ToUint8Array(enc.ciphertext);
     const iv = base64ToUint8Array(enc.iv);
