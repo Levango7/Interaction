@@ -130,4 +130,21 @@ describe("v3.3.0 B 档：源码契约（防回归）", () => {
     expect(S).toContain("cfg.afterList(records)");
     expect(S).toContain("hint + list + afterListHtml");
   });
+  it("B1：项目卡 afterList 聚合 project: 标签任务进度", () => {
+    const projMatch = S.match(/project:\s*function\(\)\{[\s\S]{0,2600}?afterList:function/);
+    expect(projMatch, "project.afterList 应存在").toBeTruthy();
+    expect(S).toContain("proj-view-head");
+    expect(S).toContain('t("proj.view.head"');
+  });
+  it("B2：会议行动项沿用 v3.1.2 既有实现（蓝图 B2 不重复落地）", () => {
+    expect(S).toContain("data-meeting-action");
+    expect(S).toContain('t("meeting.genTasks"');
+  });
+  it("B4：主页速览 4 卡（今日待办/本周会议/本月缴费/本周运动）", () => {
+    expect(S).toContain("overview-4cards");
+    expect(S).toContain('t("ov4.today"');
+    expect(S).toContain('load(PREFIX + "meetings"');
+    expect(S).toContain('load(PREFIX + "life_bills"');
+    expect(S).toContain('r.type !== "运动记录"');
+  });
 });
