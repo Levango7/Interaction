@@ -16042,8 +16042,9 @@ SCENE_FEATURE_RENDER.life = {
       afterList:function(recs){
         if(!recs || !recs.length) return "";
         const now = new Date();
+        const _dayMs = 86400000;
         const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59); // 含第 7 天全天（type=date 值按 UTC 零点解析，原实现会漏掉恰好 +7 天的账单）
         const items = recs.filter(function(r){
           if(!r.due || r.status === "已缴") return false;
           const d = new Date(r.due);
@@ -16052,7 +16053,8 @@ SCENE_FEATURE_RENDER.life = {
         if(!items.length) return "";
         const rows = items.map(function(r){
           const dueDate = new Date(r.due);
-          const days = Math.round((dueDate - now) / 86400000);
+          // 按自然日差计算（原实现用时刻差四舍五入，晚间看今天到期的账单会显示"已过 1 天"）
+          const days = Math.round((new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / _dayMs);
           const dayLabel = days === 0 ? t("life.bills.today","今天") : (days < 0 ? t("life.bills.overdueDays","已过 {n} 天").replace("{n}", Math.abs(days)) : t("life.bills.inDays","还有 {n} 天").replace("{n}", days));
           const isClose = days >= 0 && days <= 3;
           return '<div class="upcoming-bill-row' + (isClose ? ' is-close' : '') + '">' +

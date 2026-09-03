@@ -85,10 +85,9 @@ describe("v3.2 A 1/2/3：白领工作日 0 风险小修（v2 报告）", () => {
     expect(sumMatch[0]).toContain("monthDays");
     expect(sumMatch[0]).toContain("monthHours");
   });
-  it("A 3/3：缴费卡 rowAfter 渲染近 7 天到期列表（不推送）", () => {
-    const billMatch = S.match(/bill:\s*function\(\)\{[\s\S]*?rowAfter:function[\s\S]*?\}\s*,[\s\S]*?\}\s*\}/);
-    expect(billMatch, "bill.rowAfter 函数应存在").toBeTruthy();
-    expect(billMatch[0]).toContain("upcoming-bills");
+  it("A 3/3：缴费卡 afterList 渲染近 7 天到期列表（v3.3.0 起由 rowAfter 改挂每卡钩子 afterList）", () => {
+    const billMatch = S.match(/bill:\s*function\(\)\{[\s\S]*?afterList:function\(recs\)\{[\s\S]*?upcoming-bills/);
+    expect(billMatch, "bill.afterList 应渲染 upcoming-bills").toBeTruthy();
     expect(billMatch[0]).toContain("已缴"); // 已缴折叠
     expect(billMatch[0]).not.toMatch(/Notification|notifySystem/); // 不推送通知
   });
@@ -122,5 +121,13 @@ describe("v3.1.2 A 档：运行时行为", () => {
     expect(dataStart).toBeGreaterThan(sfStart);
     expect(sqlPos).toBeGreaterThan(dataStart);
     expect(sqlPos - dataStart).toBeLessThan(1000); // data:[ 到 id:"sql" 应很近
+  });
+});
+
+describe("v3.3.0 B 档：源码契约（防回归）", () => {
+  it("_featureCardHtml 双钩子契约：rowAfter(r) 每行单记录、afterList(recs) 每卡全量", () => {
+    expect(S).toContain("cfg.rowAfter(r)");
+    expect(S).toContain("cfg.afterList(records)");
+    expect(S).toContain("hint + list + afterListHtml");
   });
 });
