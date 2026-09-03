@@ -3,7 +3,7 @@
   "name": "Agent 工坊",
   "short_name": "工坊",
   "description": "Agent 工坊 — 多场景任务 / 记录 / AI 助手的本地优先工作台（PWA，离线可用）",
-  "version": "3.4.4",
+  "version": "3.4.5",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
