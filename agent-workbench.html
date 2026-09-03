@@ -67,10 +67,14 @@
      base→sticky→sidebar(移动底栏) →overlay→drawer→popover(命令面板) →modal(全屏弹窗) →toast(最顶) →max(skip-link 跳链) */
   --z-under:2; --z-sticky:20; --z-sidebar:40; --z-overlay:50; --z-drawer:60; --z-popover:70; --z-modal:80; --z-toast:90; --z-max:100;
   /* ===== T4.1 设计令牌体系（系统化间距/字号/圆角/阴影/过渡） ===== */
-  /* 间距体系（4px 基线网格；v3.1.2 补半档 --space-1h:6px / --space-2h:10px——
-     6px 是徽标/标签条微间隙、10px 是按钮与输入框横向留白的高频设计值，正式收编避免散落） */
-  --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
-  --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+/* 间距体系（4px 基线网格；v3.1.2 补半档 --space-1h:6px / --space-2h:10px——
+6px 是徽标/标签条微间隙、10px 是按钮与输入框横向留白的高频设计值，正式收编避免散落） */
+--space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
+--space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+/* v3.2 控制高度令牌（统一 input/select/button 高度——避免水平对齐场景下不同元素错位） */
+--control-h:38px;       /* 主控件高（input/select/主按钮/导航胶囊） */
+--control-h-sm:28px;    /* 小控件高（行内小按钮、紧凑操作） */
+--control-r:12px;       /* v3.2 控制元素统一圆角（替代原 radius-md 散落） */
   /* 字号体系（v3.1.2：补 --fs-3xs/--fs-2xs 收编历史 10/11px 幽灵值——
      顶栏徽标/时间戳/迷你图表标签等密集场景元素，25+25 处硬编码正式纳入阶梯，不再游离） */
   --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
@@ -137,6 +141,90 @@
   background:color-mix(in srgb,var(--panel) 68%,transparent);
 }
 
+/* v3.2 主题库扩展：秘境森林（forest）+ 幽蓝海洋（ocean）；v3.4.0 更名 */
+ * 设计原则：
+ *  1) 必须与已有 7 主题（light/dark/system/sepia/elegant/aurora/matrix）色调明确区分——避免一打开以为没换
+ *  2) 调色取自真实意象（森林=晨雾林地+松针+暖木，海洋=晨曦海面+深海青+珊瑚），不全饱和/不媚俗
+ *  3) 沿用极光"侧栏品牌渐变 + 顶栏彩条 + 选中态渐变"三件套——与亮色/初雪/暗色的"中性面板"形成系列感
+ *  4) canvas-glow 极光光斑 + 主题专属光层（森林=树冠光斑，海洋=海底光柱），透出环境氛围
+ *  5) 文字对比度全部 ≥ 4.5:1（WCAG AA 文本），panel 纯白底保证长文本不疲劳
+ *  6) 与浅色/初雪/极光共享浅色基调（白 panel），但 bg 颜色 + accent 完全不同——切换有"换了世界"感
+ *  7) 极光的"半透明"玻璃化在森林/海洋同样启用——主色变化但玻璃质感一致，UI 形态不变
+ */
+:root[data-theme="forest"]{
+  --bg:#eef3ea; --panel:#fbfcf9; --panel2:#f3f6ef; --line:#d9e3d3;
+  --text:#0f1f15; --muted:#56625a; --accent:#2d6a4f; --accent-soft:#dde8df; --accent-2:#c47a3a;
+  --surface-hover:#e6ede0; --surface-muted:#e9eee4;
+  --brand-grad:linear-gradient(135deg,#2d6a4f 0%,#588157 50%,#c47a3a 100%);
+  --side-accent:linear-gradient(180deg,rgba(45,106,79,.16),rgba(88,129,87,.12) 60%,rgba(196,122,58,.10));
+  --canvas-glow:radial-gradient(ellipse 70% 45% at 20% -5%,rgba(86,140,86,.30),transparent 60%),radial-gradient(ellipse 50% 40% at 95% 10%,rgba(196,122,58,.22),transparent 55%),radial-gradient(ellipse 40% 35% at 50% 95%,rgba(45,106,79,.18),transparent 50%),radial-gradient(ellipse 35% 30% at 10% 70%,rgba(168,193,140,.20),transparent 50%);
+  --sidebar-glow:linear-gradient(180deg,rgba(45,106,79,.12) 0%,rgba(88,129,87,.06) 50%,rgba(196,122,58,.04) 100%);
+}
+:root[data-theme="forest"] .side{
+  background:color-mix(in srgb,var(--panel) 50%,transparent);
+  background-image:var(--sidebar-glow);
+  backdrop-filter:blur(22px) saturate(1.20);-webkit-backdrop-filter:blur(22px) saturate(1.20);
+  border-right:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
+  box-shadow:inset -2px 0 12px -2px rgba(45,106,79,.14);
+}
+:root[data-theme="forest"] .topbar{
+  background-image:linear-gradient(180deg,rgba(45,106,79,.10),transparent 80%),var(--brand-grad);
+  background-size:100% 100%,3px 100%;
+  background-repeat:no-repeat,no-repeat;
+  background-position:0 0,0 100%;
+  border-bottom:1px solid var(--line);
+}
+:root[data-theme="forest"] .topbar .tbtn{color:var(--text);font-weight:600}
+:root[data-theme="forest"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
+:root[data-theme="forest"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(45,106,79,.28)}
+:root[data-theme="forest"] .chat-panel{
+  background:color-mix(in srgb,var(--panel) 58%,transparent);
+  background-image:linear-gradient(180deg,rgba(196,122,58,.06),transparent 40%);
+  backdrop-filter:blur(20px) saturate(1.15);-webkit-backdrop-filter:blur(20px) saturate(1.15);
+  border-left:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
+  box-shadow:inset 2px 0 12px -2px rgba(88,129,87,.14);
+}
+:root[data-theme="forest"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
+
+:root[data-theme="ocean"]{
+  --bg:#e8f1f4; --panel:#fafdfe; --panel2:#eff5f8; --line:#d3e3e9;
+  --text:#0b2a35; --muted:#4f6c75; --accent:#0f6b7e; --accent-soft:#d9ebf1; --accent-2:#d97862;
+  --surface-hover:#dee9ed; --surface-muted:#e6eef1;
+  --brand-grad:linear-gradient(135deg,#0f6b7e 0%,#3aa0b3 50%,#d97862 100%);
+  --side-accent:linear-gradient(180deg,rgba(15,107,126,.16),rgba(58,160,179,.12) 60%,rgba(217,120,98,.10));
+  --canvas-glow:radial-gradient(ellipse 70% 45% at 80% -5%,rgba(15,107,126,.28),transparent 60%),radial-gradient(ellipse 55% 40% at 5% 15%,rgba(217,120,98,.18),transparent 55%),radial-gradient(ellipse 40% 35% at 50% 100%,rgba(58,160,179,.16),transparent 50%),radial-gradient(ellipse 30% 28% at 92% 60%,rgba(173,216,230,.30),transparent 55%);
+  --sidebar-glow:linear-gradient(180deg,rgba(15,107,126,.12) 0%,rgba(58,160,179,.06) 50%,rgba(217,120,98,.04) 100%);
+}
+:root[data-theme="ocean"] .side{
+  background:color-mix(in srgb,var(--panel) 52%,transparent);
+  background-image:var(--sidebar-glow);
+  backdrop-filter:blur(22px) saturate(1.18);-webkit-backdrop-filter:blur(22px) saturate(1.18);
+  border-right:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
+  box-shadow:inset -2px 0 12px -2px rgba(15,107,126,.14);
+}
+:root[data-theme="ocean"] .topbar{
+  background-image:linear-gradient(180deg,rgba(15,107,126,.10),transparent 80%),var(--brand-grad);
+  background-size:100% 100%,3px 100%;
+  background-repeat:no-repeat,no-repeat;
+  background-position:0 0,0 100%;
+  border-bottom:1px solid var(--line);
+}
+:root[data-theme="ocean"] .topbar .tbtn{color:var(--text);font-weight:600}
+:root[data-theme="ocean"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
+:root[data-theme="ocean"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(15,107,126,.28)}
+:root[data-theme="ocean"] .chat-panel{
+  background:color-mix(in srgb,var(--panel) 58%,transparent);
+  background-image:linear-gradient(180deg,rgba(58,160,179,.06),transparent 40%);
+  backdrop-filter:blur(20px) saturate(1.12);-webkit-backdrop-filter:blur(20px) saturate(1.12);
+  border-left:2px solid transparent;
+  border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
+  box-shadow:inset 2px 0 12px -2px rgba(58,160,179,.14);
+}
+:root[data-theme="ocean"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
@@ -150,10 +238,12 @@ button:active:not([disabled]){transform:scale(.97)}
 button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 button[disabled]:active{transform:none}
 input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
-  border-radius:var(--radius-md);padding:var(--space-1h) var(--space-2h);background:var(--panel);color:var(--text);width:100%;
-  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+  border-radius:var(--control-r);padding:0 var(--space-2) var(--space-2h);background:var(--panel);color:var(--text);width:100%;
+  height:var(--control-h);line-height:1.4;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+/* v3.2：textarea 允许多行（高度由 min-height 兜底，不由 --control-h 限制） */
+textarea{height:auto;min-height:64px;padding:var(--space-2) var(--space-2h);line-height:1.5}
 /* v2.1.1：checkbox/radio 天然小尺寸，不继承 width:100%（替代散落各处的内联 width:auto） */
-input[type="checkbox"],input[type="radio"]{width:auto}
+input[type="checkbox"],input[type="radio"]{width:auto;height:auto}
 /* v2.1.1：颜色选择器统一规格（替代内联 width:44px;padding:2px） */
 input[type="color"],.color-input{width:44px;height:32px;padding:2px;flex-shrink:0;cursor:pointer}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
@@ -578,7 +668,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
  /* v1.15 P3：主区内边距 20/24→12/16，提升信息密度；背景由 240 加深到 223 让白卡更跳
     v3.2 阶段三：卡片 hover 阴影 --shadow-2→--shadow-3，收敛不浮夸 */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  box-shadow:var(--shadow);padding:var(--space-4);margin-bottom:var(--space-3);
+  box-shadow:var(--shadow);padding:var(--space-4);margin-bottom:var(--space-4);
   transition:box-shadow var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast)}
 .card:hover{box-shadow:var(--shadow-3);border-color:color-mix(in srgb,var(--accent) 50%,var(--line));transform:translateY(-2px)}
 /* 子card悬停：更粗边框 + 背景色区分 + 轻微上浮
@@ -668,14 +758,15 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* v2.1.1 按钮高度阶梯（小操作钮族）：base=32px / sm=28px / xs=24px；min 仅加 min-width 不改高 */
 /* v3.2 修复：加 display:inline-flex+align-items/justify-content center 确保加号/图标/文字垂直水平居中 */
 .addbtn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1);
-  padding:6px var(--space-3);border-radius:var(--radius-md);background:var(--sc,var(--accent));
-  color:var(--on-accent);font-size:var(--fs-sm);min-height:32px;font-weight:600;line-height:1;
+  padding:0 var(--space-3);border-radius:var(--control-r);background:var(--sc,var(--accent));
+  color:var(--on-accent);font-size:var(--fs-sm);height:var(--control-h);font-weight:600;line-height:1;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast);letter-spacing:-.01em}
 .addbtn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .addbtn:active{filter:brightness(.92)}
 /* v1.15 P2：addbtn 常用变体工具类（替代重复内联样式） */
-.addbtn.sm{padding:var(--space-1) var(--space-2h);min-height:28px;font-size:var(--fs-sm);font-weight:500}
-.addbtn.xs{padding:2px 8px;min-height:24px;font-size:var(--fs-xs);font-weight:500}
+/* v3.2：按钮尺寸阶梯统一（v2.1.1 高度阶梯：sm=28/xs=24——v3.2 改用 --control-h 令牌对齐，xs 改为 24 圆角矩形而非胶囊） */
+.addbtn.sm{height:var(--control-h-sm);padding:0 var(--space-2h);font-size:var(--fs-sm);font-weight:500;border-radius:var(--control-r)}
+.addbtn.xs{height:24px;padding:0 var(--space-2);font-size:var(--fs-xs);font-weight:500;border-radius:var(--control-r)}
 .addbtn.min{min-width:90px;padding:6px var(--space-3);min-height:32px;font-size:var(--fs-sm)}
 .addbtn.danger{background:var(--danger,var(--muted));color:var(--on-accent)}
 /* ===== v3.2 阶段四：data-sc 属性选择器映射（替代内联 style="--sc:..."，规避 lint-colors 硬编码门禁）
@@ -983,14 +1074,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tool-app-card canvas{max-width:100%;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
 .tool-app-card .tool-filter-bar{display:flex;gap:var(--space-2);align-items:center;margin-bottom:var(--space-3);flex-wrap:wrap}
 .tool-app-card .tool-filter-bar input,.tool-app-card .tool-filter-bar select{padding:var(--space-1) var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);font-size:var(--fs-sm)}
-/* v3.0：场景添加按钮——上方「添加」标签 + 圆形加号居中 */
+/* v3.0：场景添加按钮——上方「添加」标签 + 圆角矩形加号居中（v3.2 改为圆角矩形，不再圆形——与页面整体风格统一） */
 .add-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
 .add-label{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
-.add-round{width:30px;height:30px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1}
-/* v3.2 对齐修复：form-row 内的 add-wrap 改为单行（label 隐藏，加号高度拉满对齐 input 框 33px）——此前 add-wrap 是 column 布局（标签+加号堆叠），总高度超出 input 导致加号高出框底 */
+.add-round{width:var(--control-h);height:var(--control-h);padding:0;border-radius:var(--control-r);display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1}
+/* v3.2 对齐修复：form-row 内的 add-wrap 改为单行（label 隐藏，加号高度拉满对齐 input 框 38px）——此前 add-wrap 是 column 布局（标签+加号堆叠），总高度超出 input 导致加号高出框底 */
 .form-row .add-wrap{flex-direction:row;align-items:center;align-self:flex-end;gap:0}
 .form-row .add-wrap .add-label{display:none}
-.form-row .add-wrap .add-round{width:33px;height:33px}
+.form-row .add-wrap .add-round{width:var(--control-h);height:var(--control-h)}
 .tool-app-card .tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-2);margin-top:var(--space-2)}
 .tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column;gap:2px}
 .tool-app-card .tool-form-grid .tool-field label{margin:0;font-size:var(--fs-xs);color:var(--muted);font-weight:500}
@@ -998,6 +1089,30 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tool-app-card .tool-form-box{padding-bottom:var(--space-3);border-bottom:1px dashed var(--line);margin-bottom:var(--space-2)}
 /* v3.0.1 B-5：功能卡通用提示行 / 数据可视化迷你图表 */
 .tool-hint{margin:var(--space-2) 0 0;font-size:var(--fs-xs);color:var(--muted)}
+/* v3.2 A 3/3：缴费近 7 天到期列表（白领下午杂事场景） */
+.upcoming-bills{margin-top:var(--space-2);padding:var(--space-2h) var(--space-3);background:var(--accent-soft);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line))}
+.upcoming-bills-head{font-size:var(--fs-xs);font-weight:600;color:var(--accent);margin-bottom:var(--space-1)}
+.upcoming-bill-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1h) 0;font-size:var(--fs-sm);border-top:1px dashed color-mix(in srgb,var(--line) 50%,transparent)}
+.upcoming-bill-row:first-of-type{border-top:none}
+.upcoming-bill-name{flex:1;color:var(--text)}
+.upcoming-bill-amount{color:var(--text-dim);font-variant-numeric:tabular-nums;min-width:64px;text-align:right}
+.upcoming-bill-when{font-size:var(--fs-2xs);color:var(--muted);min-width:80px;text-align:right}
+.upcoming-bill-row.is-close .upcoming-bill-when{color:var(--danger);font-weight:600}
+/* v3.3.0 B 1/8：项目视图（project: 标签聚合进度，与缴费到期列表同族样式） */
+.proj-view{margin-top:var(--space-2);padding:var(--space-2h) var(--space-3);background:var(--accent-soft);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line))}
+.proj-view-head{font-size:var(--fs-xs);font-weight:600;color:var(--accent);margin-bottom:var(--space-1)}
+.proj-view-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1h) 0;font-size:var(--fs-sm);border-top:1px dashed color-mix(in srgb,var(--line) 50%,transparent)}
+.proj-view-row:first-of-type{border-top:none}
+.proj-view-name{flex:0 1 auto;max-width:36%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-weight:600}
+.proj-view-pct{flex:0 0 auto;min-width:3.2em;text-align:right;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.proj-view-bar{flex:1 1 auto;min-width:60px}
+.proj-view-remain{flex:0 0 auto;font-size:var(--fs-2xs);color:var(--muted);min-width:72px;text-align:right}
+/* v3.3.0 B 4/8：主页速览 4 卡 */
+.overview-4cards{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-2)}
+.overview-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);text-align:center}
+.overview-card .v{font-size:var(--fs-2xl);font-weight:600;color:var(--accent);line-height:1.2}
+.overview-card .l{font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--space-1)}
+@media (max-width:768px){.overview-4cards{grid-template-columns:repeat(2,1fr)}}
 .tool-app-card .tool-table .f-row-extra td{border-top:none;padding-top:var(--space-1)}
 .mini-chart-wrap{padding:var(--space-1) var(--space-2);background:var(--panel2);border-radius:var(--radius-sm);overflow:hidden}
 .mini-chart-wrap svg{display:block;width:100%;height:120px}
@@ -1729,7 +1844,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .int-key-name{flex:1;font-family:var(--font-mono,monospace);font-size:var(--fs-xs,12px)}
 .int-key-status{font-size:var(--fs-xs,12px)}
 .set-nav-btn{flex:1;text-align:center;border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
-  font-size:var(--fs-xs);padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);cursor:pointer;
+  font-size:var(--fs-sm);padding:var(--space-2) var(--space-4);border-radius:var(--radius-lg);
+  min-height:38px;font-weight:500;letter-spacing:.01em;cursor:pointer;
   white-space:nowrap;transition:background var(--transition-fast),color var(--transition-fast),
   border-color var(--transition-fast),transform var(--transition-fast)}
 .set-nav-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent)}
@@ -1896,26 +2012,25 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    - btn-primary 主定义块须保留 var(--radius-md)/var(--space-2)/var(--space-4)/var(--accent)（design-tokens 测试锚点）
    - 视觉收敛：胶囊圆角（--radius-full）+ 36px 默认高，与现有 .addbtn 视觉对齐避免破版 */
 .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1h);
-  padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);border:none;
+  padding:0 var(--space-4);border-radius:var(--control-r);border:none;
   background:var(--sc,var(--accent));color:var(--on-accent);font-size:var(--fs-sm);font-weight:600;
-  min-height:36px;line-height:1;white-space:nowrap;cursor:pointer;
+  height:var(--control-h);line-height:1;white-space:nowrap;cursor:pointer;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}
 .btn-primary:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .btn-primary:active{filter:brightness(.92);transform:scale(.97)}
-/* 胶囊圆角覆写（与历史视觉一致；放在主定义后利用源序优先级） */
-.btn-primary{border-radius:var(--radius-full);padding:var(--space-2) var(--space-5)}
+/* v3.2：胶囊圆角覆写移除——统一圆角矩形 --control-r 12px，移除历史 radius-full 胶囊以保持视觉一致 */
 .btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1h);
-  padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);border:1px solid var(--line);
-  background:transparent;color:var(--text);font-size:var(--fs-sm);min-height:36px;line-height:1;
+  padding:0 var(--space-4);border-radius:var(--control-r);border:1px solid var(--line);
+  background:transparent;color:var(--text);font-size:var(--fs-sm);height:var(--control-h);line-height:1;
   white-space:nowrap;cursor:pointer;
   transition:background var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast)}
-.btn-ghost{border-radius:var(--radius-full);background:var(--panel);border-color:var(--text)}
+.btn-ghost{border-radius:var(--control-r);background:var(--panel);border-color:var(--text)}
 .btn-ghost:hover{background:var(--surface-hover);border-color:var(--accent);color:var(--accent)}
 .btn-ghost:active{transform:scale(.97)}
 .btn-danger{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1h);
-  padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);border:none;
+  padding:0 var(--space-4);border-radius:var(--control-r);border:none;
   background:var(--danger);color:var(--on-accent);font-size:var(--fs-sm);font-weight:600;
-  min-height:36px;line-height:1;white-space:nowrap;cursor:pointer;
+  height:var(--control-h);line-height:1;white-space:nowrap;cursor:pointer;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}
 .btn-danger:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .btn-danger:active{filter:brightness(.92);transform:scale(.97)}
@@ -4018,12 +4133,14 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       <div class="ctl">
         <select id="cfgTheme">
           <option value="light">浅色</option>
-          <option value="elegant" data-i18n="look.theme.elegant">初雪</option>
-          <option value="aurora">极光</option>
           <option value="dark">暗色</option>
           <option value="system">跟随系统</option>
           <option value="sepia" data-i18n="look.theme.sepia">护眼模式</option>
+          <option value="elegant" data-i18n="look.theme.elegant">初雪</option>
+          <option value="aurora">极光</option>
           <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
+          <option value="forest">秘境森林</option>
+          <option value="ocean">幽蓝海洋</option>
         </select>
       </div>
     </div>
@@ -4644,10 +4761,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.2.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260831a";
+const BUILD_TAG = "20260903b";
 
 
 
@@ -13242,6 +13359,25 @@ const renderBatched = (function(){
 let _overviewView = "today"; // 概览页视图切换：today（今日待办）| all（全部待办）
 function renderOverview(){
   const tasks = getActiveTasks();
+  // v3.3.0 B 4/8：主页速览 4 卡——今日待办(含逾期) / 本周会议 / 本月缴费 / 本周运动
+  // 注意：会议/缴费记录存于功能卡存储（PREFIX+key），与场景记录（rec_ 前缀）不同键
+  const _t4Today = todayStr();
+  const _t4WeekAgo = (function(){ const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0,10); })();
+  const _t4Month = _t4Today.slice(0, 7);
+  const todayOpen = tasks.filter(function(tk){ return tk.status !== "done" && tk.due && tk.due <= _t4Today; }).length;
+  const weekMeetings = (load(PREFIX + "meetings", []) || []).filter(function(r){ return r.date && r.date >= _t4WeekAgo; }).length;
+  const monthBills = (load(PREFIX + "life_bills", []) || []).filter(function(r){ return r.due && r.due.slice(0, 7) === _t4Month; }).length;
+  const weekSport = getHealthRecs().filter(function(r){
+    if(r.type !== "运动记录") return false;
+    const d = r._date || r.date || (r.created ? new Date(r.created).toISOString().slice(0,10) : "");
+    return d && d >= _t4WeekAgo;
+  }).length;
+  const overview4 = '<div class="overview-4cards">' +
+    '<div class="overview-card"><div class="v">' + todayOpen + '</div><div class="l">' + t("ov4.today","今日待办") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + weekMeetings + '</div><div class="l">' + t("ov4.meetings","本周会议") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + monthBills + '</div><div class="l">' + t("ov4.bills","本月缴费") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + weekSport + '</div><div class="l">' + t("ov4.sport","本周运动") + '</div></div>' +
+    '</div>';
   const days=[], counts=[];
   for(let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i);
     days.push(pad(d.getMonth()+1)+"/"+pad(d.getDate()));
@@ -13284,6 +13420,7 @@ function renderOverview(){
       <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent">高级报表</button></div>
     </header></div>
     ${overviewNav}
+    ${overview4}
     ${renderSystemOverviewCard()}
     <div class="overview-grid">
       <div class="ov-sec-h">系统数据</div>
@@ -15496,6 +15633,9 @@ function _featureCardHtml(cfg){
   const list = records.length
     ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + '</th>'; }).join("") + '</tr></thead><tbody>' + rows + '</tbody></table>'
     : '<div class="tool-empty">' + esc(cfg.emptyTip || t("empty.noRecords","暂无记录")) + '</div>';
+  // v3.3.0 B-档：每卡一次钩子 afterList(recs)——rowAfter(r) 是每行钩子（入参为单条记录），
+  // 卡片级聚合视图（项目进度速览 / 近 7 天到期）需要全量记录，渲染在列表/空态之后
+  const afterListHtml = (typeof cfg.afterList === "function") ? cfg.afterList(records) : "";
   // v3.0：card 复用 .tool-app-card 类——表单网格/统计/表格/工具栏样式均限定在 .tool-app-card 内，
   // 若不挂该类，场景功能卡在 PC 上会退化为垂直堆叠（排版差劲）
   return '<div class="card tool-app-card"><h2>' + cfg.icon + ' ' + esc(cfg.title) + '</h2>' +
@@ -15504,7 +15644,7 @@ function _featureCardHtml(cfg){
     '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">'+t("tool.addLabel", t("common.add","添加"))+'</span><button type="button" class="addbtn sm add-round" data-f-add data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
     '<button type="button" class="addbtn sm tool-ai-hint" data-ai-hint-for="'+esc(cfg.key)+'" data-sc="accent" aria-label="'+t("tool.aiHint.aria","让 AI 帮记")+'"><span class="ic-inline" aria-hidden="true">'+UI_ICONS.robot+'</span><span>'+t("tool.aiHint.btn","让 AI 帮记")+'</span></button>' +
     t("p3.html.countPrefix","<span class=\"sub\" class=\"u-m-0\">共 ") + records.length + t("p3.html.countSuffix"," 条</span></div>") +
-    summary + '<div class="tool-form-box">' + form + '</div>' + hint + list + '</div>';
+    summary + '<div class="tool-form-box">' + form + '</div>' + hint + list + afterListHtml + '</div>';
 }
 
 /** 通用功能卡事件绑定（委托到 #main，幂等）
@@ -15690,6 +15830,36 @@ SCENE_FEATURE_RENDER.office = {
           { v:overdue, l:t("tool.bill.overdue", t("tool.bill.overdue","逾期")) }
         ];
       },
+      // v3.3.0 B 1/8：项目视图——按任务 project: 标签聚合各项目任务进度（只读速览，最多 6 行）
+      afterList:function(recs){
+        const tasks = (typeof getTasks === "function") ? getTasks() : [];
+        const byProject = {};
+        (tasks || []).forEach(function(task){
+          if(task.deletedAt) return;
+          const tag = (task.tags || []).find(function(x){ return String(x).indexOf("project:") === 0; });
+          if(!tag) return;
+          const name = tag.slice(8) || "—";
+          if(!byProject[name]) byProject[name] = { done:0, total:0 };
+          byProject[name].total++;
+          if(task.status === "done") byProject[name].done++;
+        });
+        (recs || []).forEach(function(r){
+          if(r.name && !byProject[r.name]) byProject[r.name] = { done:0, total:0 };
+        });
+        const names = Object.keys(byProject);
+        if(!names.length) return "";
+        names.sort(function(a,b){ return (byProject[b].total - byProject[b].done) - (byProject[a].total - byProject[a].done); });
+        const rows = names.slice(0, 6).map(function(n){
+          const p = byProject[n];
+          const pct = p.total ? Math.round(p.done * 100 / p.total) : 0;
+          const remain = p.total - p.done;
+          return '<div class="proj-view-row"><span class="proj-view-name">' + esc(n) + '</span>' +
+            '<span class="proj-view-pct">' + (p.total ? pct + "%" : "·") + '</span>' +
+            '<span class="bar proj-view-bar"><span class="track"><span class="fill" style="width:' + (p.total ? pct : 0) + '%"></span></span></span>' +
+            '<span class="proj-view-remain">' + (p.total ? (remain > 0 ? t("proj.view.open","{n} 项未完成").replace("{n}", remain) : t("proj.view.done","已完成")) : t("proj.view.noTasks","暂无关联任务")) + '</span></div>';
+        }).join("");
+        return '<div class="proj-view"><div class="proj-view-head">' + t("proj.view.head","任务进度（按 project: 标签聚合）") + '</div>' + rows + '</div>';
+      },
       emptyTip:t("empty.noProject","暂无项目 · 点击「添加」记录第一个项目")
     });
   },
@@ -15719,7 +15889,22 @@ SCENE_FEATURE_RENDER.office = {
       sum:function(recs){
         const late = recs.filter(function(r){ return r.type==="迟到"; }).length;
         const leave = recs.filter(function(r){ return r.type==="请假"; }).length;
-        return [{ v:recs.length, l:t("stat.total","累计") }, { v:late, l:t("status.late","迟到") }, { v:leave, l:t("status.leave","请假") }];
+        // v3.2 A 2/3：当月出勤天数（type==正常 + 当月有日期）+ 总工时（按 checkIn/checkOut 解析）
+        const now = new Date(); const ym = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
+        const monthDays = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym && r.type==="正常"; }).length;
+        const monthHours = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym && r.checkIn && r.checkOut; }).reduce(function(s,r){
+          const m1 = /^(\d{1,2}):(\d{2})$/.exec(String(r.checkIn||"")); const m2 = /^(\d{1,2}):(\d{2})$/.exec(String(r.checkOut||""));
+          if(!m1 || !m2) return s;
+          const a = Number(m1[1])*60+Number(m1[2]); const b = Number(m2[1])*60+Number(m2[2]);
+          return b>a ? s + (b-a)/60 : s;
+        }, 0);
+        return [
+          { v:recs.length, l:t("stat.total","累计") },
+          { v:monthDays, l:t("time.thisMonthWork","本月出勤") },
+          { v:late, l:t("status.late","迟到") },
+          { v:leave, l:t("status.leave","请假") },
+          { v:monthHours.toFixed(1) + "h", l:t("time.thisMonthHours","本月工时") }
+        ];
       },
       emptyTip:t("empty.noAttendance","暂无打卡记录 · 点击「添加」记录上下班")
     });
@@ -15746,11 +15931,14 @@ SCENE_FEATURE_RENDER.office = {
         const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
         const now = new Date(); const ym = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
         const monthTotal = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym; }).reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+        // v3.2 A 1/3：按分类聚合本月（白领最常问"本月餐饮花了多少"——按类别分账）
+        const byCat = {}; recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym; }).forEach(function(r){ const c = r.category || t("category.other","其他"); byCat[c] = (Number(byCat[c])||0) + (Number(r.amount)||0); });
+        const catEntries = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; }).slice(0, 2).map(function(c){ return { v: "¥" + byCat[c].toFixed(0), l: c }; });
         return [
           { v:"¥" + total.toFixed(0), l:t("stat.total","累计") },
           { v:"¥" + monthTotal.toFixed(0), l:t("time.thisMonth","本月") },
           { v:recs.filter(function(r){ return r.status===t("status.pendingReview","待审"); }).length, l:"待审" }
-        ];
+        ].concat(catEntries);
       },
       emptyTip:t("empty.noReimburse","暂无报销单 · 点击「添加」录入第一笔")
     });
@@ -15848,6 +16036,32 @@ SCENE_FEATURE_RENDER.life = {
         const unpaid = recs.filter(function(r){ return r.status!=="已缴"; }).length;
         const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
         return [{ v:unpaid, l:t("status.toPay","待缴") }, { v:"¥" + total.toFixed(0), l:t("stat.totalAmount","总额") }];
+      },
+      // v3.2 A 3/3：近 7 天到期列表（白领下午杂事场景——一眼看到"这周要交什么"，按 due 升序，已缴折叠）
+      // v3.3.0 修复：原挂在 rowAfter（每行钩子，入参为单条记录、无 .length，守卫直接空返回）导致该功能从未渲染——改挂每卡钩子 afterList
+      afterList:function(recs){
+        if(!recs || !recs.length) return "";
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+        const items = recs.filter(function(r){
+          if(!r.due || r.status === "已缴") return false;
+          const d = new Date(r.due);
+          return d >= start && d <= end;
+        }).sort(function(a, b){ return String(a.due).localeCompare(String(b.due)); });
+        if(!items.length) return "";
+        const rows = items.map(function(r){
+          const dueDate = new Date(r.due);
+          const days = Math.round((dueDate - now) / 86400000);
+          const dayLabel = days === 0 ? t("life.bills.today","今天") : (days < 0 ? t("life.bills.overdueDays","已过 {n} 天").replace("{n}", Math.abs(days)) : t("life.bills.inDays","还有 {n} 天").replace("{n}", days));
+          const isClose = days >= 0 && days <= 3;
+          return '<div class="upcoming-bill-row' + (isClose ? ' is-close' : '') + '">' +
+            '<span class="upcoming-bill-name">' + (r.name || r.title || "—") + '</span>' +
+            '<span class="upcoming-bill-amount">¥' + (Number(r.amount)||0).toFixed(0) + '</span>' +
+            '<span class="upcoming-bill-when">' + dayLabel + '</span>' +
+            '</div>';
+        }).join("");
+        return '<div class="upcoming-bills"><div class="upcoming-bills-head">' + t("life.bills.upcomingHead","近 7 天到期") + '</div>' + rows + '</div>';
       },
       emptyTip:t("empty.noBill","暂无缴费项目 · 点击「添加」记录第一笔缴费")
     });
@@ -20465,7 +20679,7 @@ async function saveCfg(){
     // v1.9.7：特殊主题（aurora/sepia/elegant/matrix/自定义）不写入 cfg.theme——它们由 setTheme 持久化到
     // localStorage.theme（boot 按此复原）；写入 cfg 会被 applyTheme 误读导致重启后被冲掉
     const thSel=$("#cfgTheme");
-    if(thSel && (thSel.value==="light"||thSel.value==="dark"||thSel.value==="system")) cfg.theme = thSel.value;
+    if(thSel && /^(light|dark|system|sepia|elegant|aurora|matrix|forest|ocean)$/.test(thSel.value)) cfg.theme = thSel.value;
     // B8：AI 请求参数（超时秒数 / 温度）持久化；留空 = 用默认值（30s / 0.7），范围校验在 getAiParams 与主进程
     const toInp=$("#cfgAiTimeout"); if(toInp){ const v=toInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTimeoutSec=Number(v); else delete cfg.aiTimeoutSec; }
     const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
@@ -27942,7 +28156,7 @@ const MESSAGES = {
  * ------------------------------------------------------------
  * fetch 封装 + JWT token 管理 + 自动刷新 + 错误处理 + 离线降级
  * 设计要点：
- *  - API_BASE 从 cfg.apiBase 或默认 http://localhost:3000
+ *  - API_BASE 从 cfg.apiBase 或默认 http://localhost:3001（与 server/src/index.js 默认端口一致）
  *  - accessToken/refreshToken 存 localStorage（wb_access_token 等）
  *  - apiFetch 自动加 Authorization header；401 时自动刷新重试一次
  *  - 网络错误 throw {offline:true}，调用方降级到 localStorage
@@ -27953,7 +28167,7 @@ const MESSAGES = {
   "use strict";
 
   // API 基址：优先 cfg.apiBase，回退默认
-  let _apiBase = "http://localhost:3000";
+  let _apiBase = "http://localhost:3001";
   try { if (typeof getCfg === "function") { const _c = getCfg(); if (_c && _c.apiBase) _apiBase = _c.apiBase; } } catch(e) { /* getCfg 不可用时用默认 */ }
   const API_BASE = _apiBase;
 
@@ -29439,7 +29653,11 @@ const PRESET_THEMES = {
   // v3.1.2：elegant/matrix 在主题下拉可选且 CSS 有定义（[data-theme="elegant"/"matrix"]），
   // 修复前不在注册表——主题管理列表不可见、不可管理。补齐使三处清单一致。
   elegant:  { name: "初雪",     desc: "清冷灰绿底色主题" }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」
-  matrix:   { name: "黑客帝国", desc: "绿色终端风格主题" }
+  matrix:   { name: "黑客帝国", desc: "绿色终端风格主题" },
+  // v3.4.0：forest/ocean 补入注册表——5b227f4 引入主题时漏注册（v3.1.2 elegant/matrix 同款问题重演），
+  // 导致主题管理列表不可见、不可管理。补齐使 CSS/下拉/注册表三处清单一致。
+  forest:   { name: "秘境森林", desc: "晨雾林地 · 松针深绿主题" },
+  ocean:    { name: "幽蓝海洋", desc: "晨曦海面 · 深海青主题" }
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
