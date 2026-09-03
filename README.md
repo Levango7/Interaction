@@ -1,4 +1,4 @@
-# Agent 工坊（v3.1.1）
+# Agent 工坊（v3.4.0）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活六类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -53,7 +53,7 @@
 - **SQL Playground（v3.1.0）**：编程场景 SQL 卡——sql.js WASM 从 cdnjs CDN 动态加载，在本地 SQLite 沙箱中执行 SQL，结果表格回显（首次使用需联网加载 WASM）。
 - **JS 运行器（v3.0.1）**：在 Web Worker 沙箱中执行 JS 片段——无法访问应用数据、DOM 或 localStorage，最长 10 秒超时自动终止，console 输出回显。
 - **本机同步服务（仅 Electron）**：主进程内置 HTTP 同步服务，**仅绑定 127.0.0.1:8124 回环**且拒绝非本机来源——用于本机快照下载（`/sync/download`）与数据上传合并（`/sync/upload`，经渲染进程确认后导入）。**不做跨设备局域网访问**；跨设备数据迁移请用「设置 → 数据管理 → 导出/导入」JSON。
-- **机制**：主题系统（浅色 Vercel Geist 默认 / 极光 / 暗色 / 跟随系统 / 护眼 / 初雪 / 黑客帝国，v3.1.1 起高对比度主题已移除）、命令面板（Ctrl/Cmd+K）、快捷键帮助面板（`?` 唤起）、每日播报、任务标签、Toast 通知。
+- **机制**：主题系统（浅色 Vercel Geist 默认 / 极光 / 暗色 / 跟随系统 / 护眼 / 初雪 / 黑客帝国 / 秘境森林 / 幽蓝海洋，v3.1.1 起高对比度主题已移除）、命令面板（Ctrl/Cmd+K）、快捷键帮助面板（`?` 唤起）、每日播报、任务标签、Toast 通知。
 - **数据安全**：导出 / 导入 / 清空（清空二次确认）统一收进设置抽屉「数据管理」；累计 30 条顶部提示备份。敏感配置（AI Key、集成凭据）在 Electron 形态下由主进程 `safeStorage` 加密持久化（Windows DPAPI），浏览器形态为 AES-GCM 混淆级防护（见下）。
 - **响应式布局**：4 断点全分辨率适配——移动端 `<768px` 底部 Tab 导航（按钮 ≥44px、适配 iPhone 安全区）；平板 `768–1024px` 侧边栏可折叠；小屏 PC `1024–1440px` 默认展开侧边栏；大屏 PC `>1440px` 内容区限宽居中（B2 统一布局基线：主内容宽度约束 + 布局宽度令牌体系）。
 - **PWA**：通过 `manifest.json` + `service-worker.js` 提供可安装、离线可用能力——可"安装"到桌面/手机主屏，离线时核心功能仍可用（数据本地化）。
@@ -157,9 +157,9 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v3.1.1**（`package.json`、`electron/package.json`、`manifest.json`、代码内 `VERSION` 常量四处一致，由 `scripts/build.mjs --check` 门禁守护）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.4.0**（`package.json`、`electron/package.json`、`manifest.json`、代码内 `VERSION` 常量四处一致，由 `scripts/build.mjs --check` 门禁守护）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.1.1 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.4.0 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 相关文件
 
@@ -182,6 +182,7 @@ Interaction/
 ├─ docs/                       # 设计文档（架构/UI 规范/产品范围/执行架构等）
 ├─ electron/                   # Electron 桌面封装（main/preload/打包配置）
 ├─ scripts/                    # 构建与门禁脚本（build/lint-colors/lint-layers/lint-tokens/release/make-icon）
-├─ tests/                      # vitest 单元测试（66 文件 719 用例）+ tests/integration/ + tests/e2e Playwright
+├─ server/                     # 后端服务（Express，v3.3.0：auth / notifications / integrations API，默认端口 3001）
+├─ tests/                      # vitest 单元测试（71 文件 884 用例）+ tests/integration/ + tests/e2e Playwright
 └─ .github/workflows/          # CI（ci.yml：测试+门禁）+ CD（deploy.yml：部署 GitHub Pages）
 ```

@@ -2,6 +2,31 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.4.0] - 2026-09-03
+
+### 主题库扩展发布：秘境森林 + 幽蓝海洋 + 注册表修复
+
+**🎨 主题库扩展（5b227f4 引入，首次随版发布）**
+- **秘境森林（forest）**：晨雾林地米黄绿底（#eef3ea）+ 松针深绿 accent（#2d6a4f）+ 暖木橙 accent-2（#c47a3a）+ 苔藓浅绿 line + 深苔色文字。canvas-glow=树冠光斑（2 处绿）+ 地面光带（暖橙）。侧栏/顶栏品牌渐变沿用极光三件套。
+- **幽蓝海洋（ocean）**：晨曦海面蓝底（#e8f1f4）+ 深海青 accent（#0f6b7e）+ 珊瑚粉 accent-2（#d97862）+ 海雾蓝 line + 深青墨文字。canvas-glow=海底光柱（深海青）+ 月光波纹（浅蓝）+ 珊瑚光晕。玻璃质感同极光。
+- 主题下拉排序：亮色/暗色/跟随系统（固定项）→ 护眼/初雪/极光/黑客帝国/秘境森林/幽蓝海洋（灵活项）。
+- 设计自审：两主题与既有 7 主题色调全异（不重复 bg/accent）；文字对比度 ≥ 4.5:1（森林 17:1、海洋 16:1，WCAG AA）；全部令牌化（无硬编码颜色）。
+
+**🏷️ 主题更名（本次发版定名）**
+- 「森林」→「秘境森林」；「海洋」→「幽蓝海洋」——下拉选项、CSS 注释同步更新。
+
+**🐛 修复：PRESET_THEMES 注册表补齐 forest/ocean**
+- 5b227f4 引入两主题时漏注册 JS 主题注册表（v3.1.2 elegant/matrix 同款问题重演）——CSS 有定义、下拉可选，但主题管理列表不可见、不可管理。
+- 补齐后 CSS / 下拉选项 / 注册表三处清单一致（9 主题 + system）。
+
+**🔧 收尾：v3.3.0 发版遗漏项补齐**
+- 版本号多源同步：electron/package.json、manifest.json、service-worker CACHE_VERSION、HTML VERSION/BUILD_TAG、README（此前停在各旧版本，build:check 门禁未覆盖到发版 commit）。
+- API 客户端默认端口 3000 → 3001（与 server/src/index.js 默认端口一致）。
+- 清理误生成的空文件 `0`。
+
+**✅ 验证**
+- 881 前端测试全通过；ESLint 0 problems；颜色硬编码 0 处；build:check 版本一致性门禁通过。
+
 ## [v3.3.0] - 2026-09-03
 
 ### 后端服务全量实现 + 前端对接 + AI能力增强

@@ -141,7 +141,7 @@
   background:color-mix(in srgb,var(--panel) 68%,transparent);
 }
 
-/* v3.2 主题库扩展：森林（forest）+ 海洋（ocean）
+/* v3.2 主题库扩展：秘境森林（forest）+ 幽蓝海洋（ocean）；v3.4.0 更名 */
  * 设计原则：
  *  1) 必须与已有 7 主题（light/dark/system/sepia/elegant/aurora/matrix）色调明确区分——避免一打开以为没换
  *  2) 调色取自真实意象（森林=晨雾林地+松针+暖木，海洋=晨曦海面+深海青+珊瑚），不全饱和/不媚俗
@@ -1098,6 +1098,21 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .upcoming-bill-amount{color:var(--text-dim);font-variant-numeric:tabular-nums;min-width:64px;text-align:right}
 .upcoming-bill-when{font-size:var(--fs-2xs);color:var(--muted);min-width:80px;text-align:right}
 .upcoming-bill-row.is-close .upcoming-bill-when{color:var(--danger);font-weight:600}
+/* v3.3.0 B 1/8：项目视图（project: 标签聚合进度，与缴费到期列表同族样式） */
+.proj-view{margin-top:var(--space-2);padding:var(--space-2h) var(--space-3);background:var(--accent-soft);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line))}
+.proj-view-head{font-size:var(--fs-xs);font-weight:600;color:var(--accent);margin-bottom:var(--space-1)}
+.proj-view-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1h) 0;font-size:var(--fs-sm);border-top:1px dashed color-mix(in srgb,var(--line) 50%,transparent)}
+.proj-view-row:first-of-type{border-top:none}
+.proj-view-name{flex:0 1 auto;max-width:36%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-weight:600}
+.proj-view-pct{flex:0 0 auto;min-width:3.2em;text-align:right;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.proj-view-bar{flex:1 1 auto;min-width:60px}
+.proj-view-remain{flex:0 0 auto;font-size:var(--fs-2xs);color:var(--muted);min-width:72px;text-align:right}
+/* v3.3.0 B 4/8：主页速览 4 卡 */
+.overview-4cards{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-2)}
+.overview-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);text-align:center}
+.overview-card .v{font-size:var(--fs-2xl);font-weight:600;color:var(--accent);line-height:1.2}
+.overview-card .l{font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--space-1)}
+@media (max-width:768px){.overview-4cards{grid-template-columns:repeat(2,1fr)}}
 .tool-app-card .tool-table .f-row-extra td{border-top:none;padding-top:var(--space-1)}
 .mini-chart-wrap{padding:var(--space-1) var(--space-2);background:var(--panel2);border-radius:var(--radius-sm);overflow:hidden}
 .mini-chart-wrap svg{display:block;width:100%;height:120px}
@@ -4124,8 +4139,8 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
           <option value="elegant" data-i18n="look.theme.elegant">初雪</option>
           <option value="aurora">极光</option>
           <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
-          <option value="forest">森林</option>
-          <option value="ocean">海洋</option>
+          <option value="forest">秘境森林</option>
+          <option value="ocean">幽蓝海洋</option>
         </select>
       </div>
     </div>
@@ -4746,10 +4761,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.2.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260831a";
+const BUILD_TAG = "20260903b";
 
 
 
@@ -13344,6 +13359,25 @@ const renderBatched = (function(){
 let _overviewView = "today"; // 概览页视图切换：today（今日待办）| all（全部待办）
 function renderOverview(){
   const tasks = getActiveTasks();
+  // v3.3.0 B 4/8：主页速览 4 卡——今日待办(含逾期) / 本周会议 / 本月缴费 / 本周运动
+  // 注意：会议/缴费记录存于功能卡存储（PREFIX+key），与场景记录（rec_ 前缀）不同键
+  const _t4Today = todayStr();
+  const _t4WeekAgo = (function(){ const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0,10); })();
+  const _t4Month = _t4Today.slice(0, 7);
+  const todayOpen = tasks.filter(function(tk){ return tk.status !== "done" && tk.due && tk.due <= _t4Today; }).length;
+  const weekMeetings = (load(PREFIX + "meetings", []) || []).filter(function(r){ return r.date && r.date >= _t4WeekAgo; }).length;
+  const monthBills = (load(PREFIX + "life_bills", []) || []).filter(function(r){ return r.due && r.due.slice(0, 7) === _t4Month; }).length;
+  const weekSport = getHealthRecs().filter(function(r){
+    if(r.type !== "运动记录") return false;
+    const d = r._date || r.date || (r.created ? new Date(r.created).toISOString().slice(0,10) : "");
+    return d && d >= _t4WeekAgo;
+  }).length;
+  const overview4 = '<div class="overview-4cards">' +
+    '<div class="overview-card"><div class="v">' + todayOpen + '</div><div class="l">' + t("ov4.today","今日待办") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + weekMeetings + '</div><div class="l">' + t("ov4.meetings","本周会议") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + monthBills + '</div><div class="l">' + t("ov4.bills","本月缴费") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + weekSport + '</div><div class="l">' + t("ov4.sport","本周运动") + '</div></div>' +
+    '</div>';
   const days=[], counts=[];
   for(let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i);
     days.push(pad(d.getMonth()+1)+"/"+pad(d.getDate()));
@@ -13386,6 +13420,7 @@ function renderOverview(){
       <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent">高级报表</button></div>
     </header></div>
     ${overviewNav}
+    ${overview4}
     ${renderSystemOverviewCard()}
     <div class="overview-grid">
       <div class="ov-sec-h">系统数据</div>
@@ -15598,6 +15633,9 @@ function _featureCardHtml(cfg){
   const list = records.length
     ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + '</th>'; }).join("") + '</tr></thead><tbody>' + rows + '</tbody></table>'
     : '<div class="tool-empty">' + esc(cfg.emptyTip || t("empty.noRecords","暂无记录")) + '</div>';
+  // v3.3.0 B-档：每卡一次钩子 afterList(recs)——rowAfter(r) 是每行钩子（入参为单条记录），
+  // 卡片级聚合视图（项目进度速览 / 近 7 天到期）需要全量记录，渲染在列表/空态之后
+  const afterListHtml = (typeof cfg.afterList === "function") ? cfg.afterList(records) : "";
   // v3.0：card 复用 .tool-app-card 类——表单网格/统计/表格/工具栏样式均限定在 .tool-app-card 内，
   // 若不挂该类，场景功能卡在 PC 上会退化为垂直堆叠（排版差劲）
   return '<div class="card tool-app-card"><h2>' + cfg.icon + ' ' + esc(cfg.title) + '</h2>' +
@@ -15606,7 +15644,7 @@ function _featureCardHtml(cfg){
     '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">'+t("tool.addLabel", t("common.add","添加"))+'</span><button type="button" class="addbtn sm add-round" data-f-add data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
     '<button type="button" class="addbtn sm tool-ai-hint" data-ai-hint-for="'+esc(cfg.key)+'" data-sc="accent" aria-label="'+t("tool.aiHint.aria","让 AI 帮记")+'"><span class="ic-inline" aria-hidden="true">'+UI_ICONS.robot+'</span><span>'+t("tool.aiHint.btn","让 AI 帮记")+'</span></button>' +
     t("p3.html.countPrefix","<span class=\"sub\" class=\"u-m-0\">共 ") + records.length + t("p3.html.countSuffix"," 条</span></div>") +
-    summary + '<div class="tool-form-box">' + form + '</div>' + hint + list + '</div>';
+    summary + '<div class="tool-form-box">' + form + '</div>' + hint + list + afterListHtml + '</div>';
 }
 
 /** 通用功能卡事件绑定（委托到 #main，幂等）
@@ -15792,6 +15830,36 @@ SCENE_FEATURE_RENDER.office = {
           { v:overdue, l:t("tool.bill.overdue", t("tool.bill.overdue","逾期")) }
         ];
       },
+      // v3.3.0 B 1/8：项目视图——按任务 project: 标签聚合各项目任务进度（只读速览，最多 6 行）
+      afterList:function(recs){
+        const tasks = (typeof getTasks === "function") ? getTasks() : [];
+        const byProject = {};
+        (tasks || []).forEach(function(task){
+          if(task.deletedAt) return;
+          const tag = (task.tags || []).find(function(x){ return String(x).indexOf("project:") === 0; });
+          if(!tag) return;
+          const name = tag.slice(8) || "—";
+          if(!byProject[name]) byProject[name] = { done:0, total:0 };
+          byProject[name].total++;
+          if(task.status === "done") byProject[name].done++;
+        });
+        (recs || []).forEach(function(r){
+          if(r.name && !byProject[r.name]) byProject[r.name] = { done:0, total:0 };
+        });
+        const names = Object.keys(byProject);
+        if(!names.length) return "";
+        names.sort(function(a,b){ return (byProject[b].total - byProject[b].done) - (byProject[a].total - byProject[a].done); });
+        const rows = names.slice(0, 6).map(function(n){
+          const p = byProject[n];
+          const pct = p.total ? Math.round(p.done * 100 / p.total) : 0;
+          const remain = p.total - p.done;
+          return '<div class="proj-view-row"><span class="proj-view-name">' + esc(n) + '</span>' +
+            '<span class="proj-view-pct">' + (p.total ? pct + "%" : "·") + '</span>' +
+            '<span class="bar proj-view-bar"><span class="track"><span class="fill" style="width:' + (p.total ? pct : 0) + '%"></span></span></span>' +
+            '<span class="proj-view-remain">' + (p.total ? (remain > 0 ? t("proj.view.open","{n} 项未完成").replace("{n}", remain) : t("proj.view.done","已完成")) : t("proj.view.noTasks","暂无关联任务")) + '</span></div>';
+        }).join("");
+        return '<div class="proj-view"><div class="proj-view-head">' + t("proj.view.head","任务进度（按 project: 标签聚合）") + '</div>' + rows + '</div>';
+      },
       emptyTip:t("empty.noProject","暂无项目 · 点击「添加」记录第一个项目")
     });
   },
@@ -15970,7 +16038,8 @@ SCENE_FEATURE_RENDER.life = {
         return [{ v:unpaid, l:t("status.toPay","待缴") }, { v:"¥" + total.toFixed(0), l:t("stat.totalAmount","总额") }];
       },
       // v3.2 A 3/3：近 7 天到期列表（白领下午杂事场景——一眼看到"这周要交什么"，按 due 升序，已缴折叠）
-      rowAfter:function(recs){
+      // v3.3.0 修复：原挂在 rowAfter（每行钩子，入参为单条记录、无 .length，守卫直接空返回）导致该功能从未渲染——改挂每卡钩子 afterList
+      afterList:function(recs){
         if(!recs || !recs.length) return "";
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
@@ -28093,7 +28162,7 @@ const MESSAGES = {
  * ------------------------------------------------------------
  * fetch 封装 + JWT token 管理 + 自动刷新 + 错误处理 + 离线降级
  * 设计要点：
- *  - API_BASE 从 cfg.apiBase 或默认 http://localhost:3000
+ *  - API_BASE 从 cfg.apiBase 或默认 http://localhost:3001（与 server/src/index.js 默认端口一致）
  *  - accessToken/refreshToken 存 localStorage（wb_access_token 等）
  *  - apiFetch 自动加 Authorization header；401 时自动刷新重试一次
  *  - 网络错误 throw {offline:true}，调用方降级到 localStorage
@@ -28104,7 +28173,7 @@ const MESSAGES = {
   "use strict";
 
   // API 基址：优先 cfg.apiBase，回退默认
-  let _apiBase = "http://localhost:3000";
+  let _apiBase = "http://localhost:3001";
   try { if (typeof getCfg === "function") { const _c = getCfg(); if (_c && _c.apiBase) _apiBase = _c.apiBase; } } catch(e) { /* getCfg 不可用时用默认 */ }
   const API_BASE = _apiBase;
 
@@ -29590,7 +29659,11 @@ const PRESET_THEMES = {
   // v3.1.2：elegant/matrix 在主题下拉可选且 CSS 有定义（[data-theme="elegant"/"matrix"]），
   // 修复前不在注册表——主题管理列表不可见、不可管理。补齐使三处清单一致。
   elegant:  { name: "初雪",     desc: "清冷灰绿底色主题" }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」
-  matrix:   { name: "黑客帝国", desc: "绿色终端风格主题" }
+  matrix:   { name: "黑客帝国", desc: "绿色终端风格主题" },
+  // v3.4.0：forest/ocean 补入注册表——5b227f4 引入主题时漏注册（v3.1.2 elegant/matrix 同款问题重演），
+  // 导致主题管理列表不可见、不可管理。补齐使 CSS/下拉/注册表三处清单一致。
+  forest:   { name: "秘境森林", desc: "晨雾林地 · 松针深绿主题" },
+  ocean:    { name: "幽蓝海洋", desc: "晨曦海面 · 深海青主题" }
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
