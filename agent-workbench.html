@@ -152,24 +152,24 @@
  *  7) 极光的"半透明"玻璃化在森林/海洋同样启用——主色变化但玻璃质感一致，UI 形态不变
  */
 :root[data-theme="forest"]{
-  --bg:#e8f3e0; --panel:#f9fcf6; --panel2:#eef5e4; --line:#cfe0c4;
-  --text:#0f1f15; --muted:#4d5e54; --accent:#1e8448; --accent-soft:#d0e8d6; --accent-2:#d68910;
-  --surface-hover:#dfe9d8; --surface-muted:#e2ede0;
-  --brand-grad:linear-gradient(135deg,#1e8448 0%,#52a05e 50%,#d68910 100%);
-  --side-accent:linear-gradient(180deg,rgba(30,132,72,.18),rgba(82,160,94,.14) 60%,rgba(214,137,16,.12));
-  --canvas-glow:radial-gradient(ellipse 72% 48% at 18% -6%,rgba(52,196,84,.58),transparent 62%),radial-gradient(ellipse 55% 42% at 50% -12%,rgba(240,180,80,.45),transparent 58%),radial-gradient(ellipse 52% 42% at 96% 10%,rgba(232,150,40,.50),transparent 56%),radial-gradient(ellipse 42% 38% at 50% 96%,rgba(30,160,80,.40),transparent 52%),radial-gradient(ellipse 38% 32% at 8% 70%,rgba(160,210,90,.42),transparent 52%);
-  --sidebar-glow:linear-gradient(180deg,rgba(30,132,72,.22) 0%,rgba(82,160,94,.12) 50%,rgba(214,137,16,.08) 100%);
+  --bg:#1b2d20; --panel:#243528; --panel2:#1f2e24; --line:#3a5240;
+  --text:#e8f3e0; --muted:#8fa898; --accent:#4ade80; --accent-soft:#2a4a35; --accent-2:#f0a030;
+  --surface-hover:#2a4030; --surface-muted:#243528;
+  --brand-grad:linear-gradient(135deg,#4ade80 0%,#52a05e 50%,#f0a030 100%);
+  --side-accent:linear-gradient(180deg,rgba(74,222,128,.15),rgba(82,160,94,.10) 60%,rgba(240,160,48,.08));
+  --canvas-glow:radial-gradient(ellipse 72% 48% at 18% -6%,rgba(74,222,128,.40),transparent 62%),radial-gradient(ellipse 55% 42% at 50% -12%,rgba(240,180,80,.30),transparent 58%),radial-gradient(ellipse 52% 42% at 96% 10%,rgba(232,150,40,.35),transparent 56%),radial-gradient(ellipse 42% 38% at 50% 96%,rgba(52,196,84,.25),transparent 52%),radial-gradient(ellipse 38% 32% at 8% 70%,rgba(160,210,90,.25),transparent 52%);
+  --sidebar-glow:linear-gradient(180deg,rgba(74,222,128,.12) 0%,rgba(82,160,94,.06) 50%,rgba(240,160,48,.04) 100%);
 }
 :root[data-theme="forest"] .side{
-  background:color-mix(in srgb,var(--panel) 50%,transparent);
+  background:color-mix(in srgb,var(--panel) 78%,transparent);
   background-image:var(--sidebar-glow);
   backdrop-filter:blur(22px) saturate(1.20);-webkit-backdrop-filter:blur(22px) saturate(1.20);
   border-right:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
-  box-shadow:inset -2px 0 12px -2px rgba(30,132,72,.14);
+  box-shadow:inset -2px 0 12px -2px rgba(74,222,128,.10);
 }
 :root[data-theme="forest"] .topbar{
-  background-image:linear-gradient(180deg,rgba(30,132,72,.10),transparent 80%),var(--brand-grad);
+  background-image:linear-gradient(180deg,rgba(74,222,128,.08),transparent 80%),var(--brand-grad);
   background-size:100% 100%,3px 100%;
   background-repeat:no-repeat,no-repeat;
   background-position:0 0,0 100%;
@@ -177,14 +177,14 @@
 }
 :root[data-theme="forest"] .topbar .tbtn{color:var(--text);font-weight:600}
 :root[data-theme="forest"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
-:root[data-theme="forest"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(30,132,72,.28)}
+:root[data-theme="forest"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(74,222,128,.28)}
 :root[data-theme="forest"] .chat-panel{
-  background:color-mix(in srgb,var(--panel) 58%,transparent);
-  background-image:linear-gradient(180deg,rgba(214,137,16,.06),transparent 40%);
+  background:color-mix(in srgb,var(--panel) 75%,transparent);
+  background-image:linear-gradient(180deg,rgba(240,160,48,.05),transparent 40%);
   backdrop-filter:blur(20px) saturate(1.15);-webkit-backdrop-filter:blur(20px) saturate(1.15);
   border-left:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
-  box-shadow:inset 2px 0 12px -2px rgba(82,160,94,.14);
+  box-shadow:inset 2px 0 12px -2px rgba(82,160,94,.10);
 }
 :root[data-theme="forest"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
 
@@ -4150,11 +4150,11 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
           <option value="dark">暗色</option>
           <option value="system">跟随系统</option>
           <option value="sepia" data-i18n="look.theme.sepia">温和护眼</option>
-          <option value="elegant" data-i18n="look.theme.elegant">初雪</option>
-          <option value="aurora">极光</option>
+          <option value="elegant" data-i18n="look.theme.elegant">见静初雪</option>
+          <option value="aurora" data-i18n="look.theme.aurora">幻夜极光</option>
           <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
-          <option value="forest">秘境森林</option>
-          <option value="ocean">幽蓝海洋</option>
+          <option value="forest" data-i18n="look.theme.forest">秘境森林</option>
+          <option value="ocean" data-i18n="look.theme.ocean">微蓝浅海</option>
         </select>
       </div>
     </div>
@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.3"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260903e";
+const BUILD_TAG = "20260903f";
 
 
 
@@ -24130,8 +24130,11 @@ const MESSAGES = {
     "look.title": "外观",
     "look.desc": "主题、自定义配色与语言偏好。「跟随系统」随操作系统明暗自动切换，语言切换即时生效并记忆偏好。",
     "look.theme.sepia": "温和护眼",
-    "look.theme.elegant": "初雪",
+    "look.theme.elegant": "见静初雪",
+    "look.theme.aurora": "幻夜极光",
     "look.theme.matrix": "黑客帝国",
+    "look.theme.forest": "秘境森林",
+    "look.theme.ocean": "微蓝浅海",
     "look.themeEditor": "自定义主题编辑器",
     "look.themeEditorTip": "创建自定义主题（调整令牌色值），或为每个场景独立配色。主题可导出为 JSON 分享给其他用户。",
     "look.themeNew": "新建自定义主题",
@@ -26376,8 +26379,11 @@ const MESSAGES = {
     "look.title": "Appearance",
     "look.desc": "Themes, custom colors and language. 'Follow System' auto-switches with OS; language switch is instant and persisted.",
     "look.theme.sepia": "Sepia",
-    "look.theme.elegant": "First Snow",
+    "look.theme.elegant": "Silent First Snow",
+    "look.theme.aurora": "Aurora Night",
     "look.theme.matrix": "Matrix",
+    "look.theme.forest": "Mystic Forest",
+    "look.theme.ocean": "Pale Blue Sea",
     "look.themeEditor": "Custom Theme Editor",
     "look.themeEditorTip": "Create custom themes (adjust token colors) or set per-scenario colors. Export themes as JSON to share.",
     "look.themeNew": "New Custom Theme",
@@ -29702,17 +29708,17 @@ _initPlugins();// ===== Theme System (v1.5-C 多主题 / 自定义编辑 / 场�
 // 预置主题定义（5 个：浅色 / 极光 / 深色 / 护眼模式 + system 跟随系统）
 const PRESET_THEMES = {
   light:    { name: "浅色",     desc: "Vercel 风格默认主题" },
-  aurora:   { name: "极光",     desc: "极光渐变亮色主题" },
+  aurora:   { name: "幻夜极光",   desc: "极光渐变亮色主题" },
   dark:     { name: "深色",     desc: "暗色护眼主题" },
   sepia:    { name: "温和护眼", desc: "暖色调护眼阅读模式" },
   // v3.1.2：elegant/matrix 在主题下拉可选且 CSS 有定义（[data-theme="elegant"/"matrix"]），
   // 修复前不在注册表——主题管理列表不可见、不可管理。补齐使三处清单一致。
-  elegant:  { name: "初雪",     desc: "清冷灰绿底色主题" }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」
+  elegant:  { name: "见静初雪",   desc: "清冷灰绿底色主题" }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」→ v3.4.4 更名「见静初雪」
   matrix:   { name: "黑客帝国", desc: "绿色终端风格主题" },
   // v3.4.0：forest/ocean 补入注册表——5b227f4 引入主题时漏注册（v3.1.2 elegant/matrix 同款问题重演），
   // 导致主题管理列表不可见、不可管理。补齐使 CSS/下拉/注册表三处清单一致。
   forest:   { name: "秘境森林", desc: "晨雾林地 · 松针深绿主题" },
-  ocean:    { name: "幽蓝海洋", desc: "晨曦海面 · 深海青主题" }
+  ocean:    { name: "微蓝浅海",   desc: "晨曦海面 · 深海青主题" }
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
