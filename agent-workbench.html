@@ -3839,7 +3839,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       <label for="cfgToolWhitelist" data-i18n="agent.whitelistLabel">允许调用的工具（逗号分隔，留空=全部）</label>
       <div class="ctl"><input id="cfgToolWhitelist" type="text" data-i18n-placeholder="agent.whitelistPlaceholder" placeholder="如 创建任务,完成搜索,查阅资料（留空=允许全部工具）"></div>
       <!-- v3.1.2 A-档：白名单与「扩展 → 技能配置」勾选框共享同一处存储（aiSkillsSave 写入此处） -->
-      <p class="hint u-fs-2xs u-mt-1">与「扩展 → 技能配置」勾选框同步：在技能配置勾选会自动写到这里；在文本框手填保存后技能配置会重渲染为新值</p>
+      <p class="hint u-fs-2xs u-mt-1" data-i18n="agent.whitelistHint">与「扩展 → 技能配置」勾选框同步：在技能配置勾选会自动写到这里；在文本框手填保存后技能配置会重渲染为新值</p>
     </div>
     <div class="set-switch">
       <input type="checkbox" id="cfgAgentAutoConfirm" checked data-i18n-aria="agent.autoConfirmLabel" aria-label="自动确认非危险操作">
@@ -3872,13 +3872,13 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
       <div>
-        <h3>AI 扩展 <span class="badge-experimental" aria-label="实验性">实验性</span></h3>
-        <p class="set-desc">5 个扩展维度的统一管理：技能 / MCP / 工作流 / 记忆 / AI 插件。当前仅保存配置，AI 引擎的消费接线在路线图中。普通用户无需修改此处。</p>
+        <h3><span data-i18n="aiExt.title">AI 扩展</span> <span class="badge-experimental" data-i18n-aria="aiExt.badge" aria-label="实验性" data-i18n="aiExt.badge">实验性</span></h3>
+        <p class="set-desc" data-i18n="aiExt.desc">5 个扩展维度的统一管理：技能 / MCP / 工作流 / 记忆 / AI 插件。当前仅保存配置，AI 引擎的消费接线在路线图中。普通用户无需修改此处。</p>
       </div>
     </header>
 
     <details class="ext-collapse">
-      <summary><span class="nm">技能</span><span class="hint-inline">内置 + 自定义 JSON</span></summary>
+      <summary><span class="nm" data-i18n="skills.summaryNm">技能</span><span class="hint-inline" data-i18n="skills.summaryHint">内置 + 自定义 JSON</span></summary>
       <div class="ext-body">
         <div class="set-subhead" data-i18n="skills.builtin">内置技能</div>
         <div id="aiSkillsBuiltin"></div>
@@ -3897,7 +3897,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     </details>
 
     <details class="ext-collapse">
-      <summary><span class="nm">MCP 服务器</span><span class="hint-inline">Model Context Protocol</span></summary>
+      <summary><span class="nm" data-i18n="mcp.summaryNm">MCP 服务器</span><span class="hint-inline">Model Context Protocol</span></summary>
       <div class="ext-body">
         <p class="set-tip" data-i18n="mcp.desc">配置 Model Context Protocol 服务器（实验性——配置仅本机存储，AI 引擎的消费接线在路线图中）。</p>
         <div id="aiMcpList"></div>
@@ -3909,7 +3909,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     </details>
 
     <details class="ext-collapse">
-      <summary><span class="nm">工作流</span><span class="hint-inline">AI 自动化草案</span></summary>
+      <summary><span class="nm" data-i18n="workflow.summaryNm">工作流</span><span class="hint-inline" data-i18n="workflow.summaryHint">AI 自动化草案</span></summary>
       <div class="ext-body">
         <p class="set-tip" data-i18n="workflow.desc">定义 AI 自动化工作流草案（实验性——仅保存配置，执行引擎自 v1.14.1 起冻结未复活）。</p>
         <div id="aiWorkflowList"></div>
@@ -3921,7 +3921,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     </details>
 
     <details class="ext-collapse">
-      <summary><span class="nm">记忆</span><span class="hint-inline">上下文窗口与检索策略</span></summary>
+      <summary><span class="nm" data-i18n="mem.summaryNm">记忆</span><span class="hint-inline" data-i18n="mem.summaryHint">上下文窗口与检索策略</span></summary>
       <div class="ext-body">
         <p class="set-tip" data-i18n="mem.desc">控制 AI 的上下文窗口与检索策略（实验性——当前对话裁剪用引擎内置参数）。</p>
         <div class="set-field">
@@ -3953,7 +3953,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     </details>
 
     <details class="ext-collapse">
-      <summary><span class="nm">AI 插件</span><span class="hint-inline">扩展插件清单</span></summary>
+      <summary><span class="nm" data-i18n="aiPlugin.summaryNm">AI 插件</span><span class="hint-inline" data-i18n="aiPlugin.summaryHint">扩展插件清单</span></summary>
       <div class="ext-body">
         <p class="set-tip" data-i18n="aiPlugin.desc">AI 扩展插件清单（实验性——暂无执行代码，勾选状态仅保存配置）。</p>
         <div id="aiPluginList"></div>
@@ -4090,9 +4090,9 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       <div class="ctl">
         <select id="cfgRecyclePolicy">
           <option value="off" data-i18n="dataMgmt.recycleOff">关闭</option>
-          <option value="7">7 天后</option>
-          <option value="30">30 天后</option>
-          <option value="90">90 天后</option>
+          <option value="7" data-i18n="dataMgmt.recycle7">7 天后</option>
+          <option value="30" data-i18n="dataMgmt.recycle30">30 天后</option>
+          <option value="90" data-i18n="dataMgmt.recycle90">90 天后</option>
         </select>
       </div>
     </div>
@@ -4100,27 +4100,27 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     <div class="set-subhead" data-i18n="dataMgmt.autoBackup">自动备份</div>
     <button type="button" class="addbtn u-w-full" id="btnRecover" data-sc="accent" data-i18n="dataMgmt.recoverBtn">从自动备份恢复</button>
     <!-- v3.1.2 B-档：显示上次快照时间 + 快照大小（此前用户不知道备份是否生效、何时生效） -->
-    <p class="set-tip u-fs-2xs u-mt-1h" id="autoBackupMeta">尚未生成自动备份</p>
+    <p class="set-tip u-fs-2xs u-mt-1h" id="autoBackupMeta" data-i18n="dataMgmt.noAutoBackup">尚未生成自动备份</p>
     <p class="set-tip" data-i18n="dataMgmt.recoverTip">每次数据变动后自动快照到本地（独立于「导出 JSON 备份」）。如手动导出前数据损坏，可从此处还原最近一次快照。</p>
     <div class="set-divider" role="separator"></div>
     <div class="set-subhead" data-i18n="dataMgmt.exportImport">导出 / 导入</div>
     <div class="set-actions">
-      <button type="button" class="addbtn min" id="btnExport" data-i18n-aria="tool.ppt.exportJson" aria-label="导出 JSON" >导出 JSON</button>
-      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n-aria="tool.sheet.exportCsv" aria-label="${t("export.preview.confirm", "导出 CSV")}" data-sc="accent">导出 CSV</button>
-      <button type="button" class="addbtn min" id="btnExportMD" aria-label="导出 Markdown" data-sc="accent">导出 MD</button>
-      <button type="button" class="addbtn min" id="btnImport" aria-label="导入恢复" >导入恢复</button>
-      <button type="button" class="addbtn min" id="btnIdbRestore" aria-label="从本地库恢复" >本地库恢复</button>
-      <button type="button" class="addbtn min" id="btnIdbExport" aria-label="导出 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullBackup">IDB 全量备份</button>
-      <button type="button" class="addbtn min" id="btnIdbImport" aria-label="导入 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullRestore">IDB 全量恢复</button>
+      <button type="button" class="addbtn min" id="btnExport" data-i18n-aria="dataMgmt.exportJsonAria" aria-label="导出 JSON" data-i18n="dataMgmt.exportJson">导出 JSON</button>
+      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n-aria="dataMgmt.exportCsvAria" aria-label="${t("export.preview.confirm", "导出 CSV")}" data-sc="accent">导出 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportMD" data-i18n-aria="dataMgmt.exportMdAria" aria-label="导出 Markdown" data-sc="accent" data-i18n="dataMgmt.exportMD">导出 MD</button>
+      <button type="button" class="addbtn min" id="btnImport" data-i18n-aria="dataMgmt.importRecoverAria" aria-label="导入恢复" data-i18n="dataMgmt.importRecover">导入恢复</button>
+      <button type="button" class="addbtn min" id="btnIdbRestore" data-i18n-aria="dataMgmt.idbRestoreAria" aria-label="从本地库恢复" data-i18n="dataMgmt.idbRestoreBtn">本地库恢复</button>
+      <button type="button" class="addbtn min" id="btnIdbExport" data-i18n-aria="dataMgmt.idbExportAria" aria-label="导出 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullBackup">IDB 全量备份</button>
+      <button type="button" class="addbtn min" id="btnIdbImport" data-i18n-aria="dataMgmt.idbImportAria" aria-label="导入 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullRestore">IDB 全量恢复</button>
       <input type="file" id="idbFileInput" accept=".idbbackup,.json" class="u-hidden">
       <!-- P0-8：局域网同步按钮（仅 Electron 环境显示） -->
       <button type="button" class="addbtn min u-hidden" id="btnSyncLocal" aria-label="局域网同步" data-sc="accent" data-i18n="dataMgmt.lanSync">局域网同步</button>
-      <button type="button" class="addbtn min danger" id="btnClear" aria-label="清空数据">清空数据</button>
+      <button type="button" class="addbtn min danger" id="btnClear" data-i18n-aria="dataMgmt.clearDataAria" aria-label="清空数据" data-i18n="dataMgmt.clearData">清空数据</button>
     </div>
     <div class="set-actions">
-      <button type="button" class="addbtn min" id="btnExportPreview" aria-label="导出预览" >导出预览</button>
-      <button type="button" class="addbtn min" id="btnImportCSV" aria-label="导入 CSV" >导入 CSV</button>
-      <button type="button" class="addbtn min" id="btnExportRecsCSV" aria-label="导出记录 CSV" >导出记录 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportPreview" data-i18n-aria="dataMgmt.exportPreviewAria" aria-label="导出预览" data-i18n="dataMgmt.exportPreview">导出预览</button>
+      <button type="button" class="addbtn min" id="btnImportCSV" data-i18n-aria="dataMgmt.importCsvAria" aria-label="导入 CSV" data-i18n="dataMgmt.importCSV">导入 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportRecsCSV" data-i18n-aria="dataMgmt.exportRecsCsvAria" aria-label="导出记录 CSV" data-i18n="dataMgmt.exportRecsCSV">导出记录 CSV</button>
     </div>
     <input type="file" id="csvFileInput" accept=".csv" class="u-hidden">
     <label class="expkey u-flex u-fs-2xs u-text-muted u-ai-center u-gap-1 u-m-2-0-0">
@@ -4146,9 +4146,9 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       <label for="cfgTheme" data-i18n="settings.theme">主题</label>
       <div class="ctl">
         <select id="cfgTheme">
-          <option value="light">浅色</option>
-          <option value="dark">暗色</option>
-          <option value="system">跟随系统</option>
+          <option value="light" data-i18n="look.theme.light">浅色</option>
+          <option value="dark" data-i18n="look.theme.dark">暗色</option>
+          <option value="system" data-i18n="look.theme.system">跟随系统</option>
           <option value="sepia" data-i18n="look.theme.sepia">温和护眼</option>
           <option value="elegant" data-i18n="look.theme.elegant">见静初雪</option>
           <option value="aurora" data-i18n="look.theme.aurora">幻夜极光</option>
@@ -4159,11 +4159,11 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </div>
     </div>
     <div class="set-field">
-      <label for="cfgLang">语言 / Language</label>
+      <label for="cfgLang" data-i18n="look.lang.label">语言 / Language</label>
       <div class="ctl">
         <select id="cfgLang">
-          <option value="zh">中文</option>
-          <option value="en">English</option>
+          <option value="zh" data-i18n="look.lang.zh">中文</option>
+          <option value="en" data-i18n="look.lang.en">English</option>
         </select>
       </div>
     </div>
@@ -4250,7 +4250,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </div>
     </div>
     <!-- v3.1.2 B-档：浏览器通知权限状态行（此前权限被拒后静默降级 toast，用户不知原因也无引导） -->
-    <p class="set-tip u-fs-2xs u-mt-1" id="notifyPermissionMeta">检测中…</p>
+    <p class="set-tip u-fs-2xs u-mt-1" id="notifyPermissionMeta" data-i18n="notify.permissionChecking">检测中…</p>
     <div class="set-field">
       <label for="cfgQuiet" data-i18n="settings.quiet">免打扰时段</label>
       <div class="ctl">
@@ -4336,7 +4336,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       <div id="apiScheduleList"></div>
       <div class="set-field u-mt-2">
         <label for="apiSchedType" data-i18n="api.schedType">提醒类型</label>
-        <div class="ctl"><select id="apiSchedType"><option value="taskDue">任务到期</option><option value="dailyDigest">每日汇总</option><option value="habitBroken">断链提醒</option></select></div>
+        <div class="ctl"><select id="apiSchedType"><option value="taskDue" data-i18n="api.schedTaskDue">任务到期</option><option value="dailyDigest" data-i18n="api.schedDailyDigest">每日汇总</option><option value="habitBroken" data-i18n="api.schedHabitBroken">断链提醒</option></select></div>
       </div>
       <div class="set-field">
         <label for="apiSchedCron" data-i18n="api.schedCron">Cron 表达式</label>
@@ -9227,7 +9227,7 @@ function renderWeekBars(){
   // 零线
   const zeroY = H-padB;
   return `<div class="hc-bars-wrap">
-    <div class="hc-bars-title">本周已完成任务（按场景）</div>
+    <div class="hc-bars-title">${t("stats.barsTitle","本周已完成任务（按场景）")}</div>
     <svg class="hc-bars-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
       <line x1="${padL}" y1="${zeroY}" x2="${W-10}" y2="${zeroY}" stroke="var(--line)" stroke-width="1"/>
       ${bars}
@@ -9243,11 +9243,11 @@ function renderHabitChainCard(){
     const cls = s.current >= 3 ? "hot" : (s.current === 0 ? "cold" : "");
     let fire;
     if(s.current >= 3){
-      fire = `<span class="streak-fire">${ic("flame")}</span><b>${s.current}</b>天`;
+      fire = `<span class="streak-fire">${ic("flame")}</span><b>${s.current}</b>${t("stats.streakDays","天")}`;
     } else if(s.current === 0){
-      fire = `<span class="u-text-danger">⚠️ 未开始</span>`;
+      fire = `<span class="u-text-danger">${t("stats.notStarted","⚠️ 未开始")}</span>`;
     } else {
-      fire = `${ic("flame")}<b>${s.current}</b>天`;
+      fire = `${ic("flame")}<b>${s.current}</b>${t("stats.streakDays","天")}`;
     }
     return `<span class="streak-badge ${cls}"><span class="sc-name">${SCENARIOS[sc].name}</span><span class="fire">${fire}</span></span>`;
   }).join("");
@@ -9802,28 +9802,29 @@ function openRecycle(){
   }).join("") : `<div class="recycle-empty">${_recycleCat==="全部" ? t("recycle.empty", "回收站为空") : t("recycle.catEmpty", "该分类下无内容")}</div>`;
   const policy = getRecyclePolicy();
   const policyLabel = policy==="off" ? t("recycle.policyOff", "自动清理：关闭") : t("recycle.policyLabel", "自动清理：")+policy+t("recycle.policySuffix", " 天后");
-  const countLabel = filteredVms.length ? filteredVms.length+" 条" : "";
+  const countLabel = filteredVms.length ? filteredVms.length+t("recycle.unit", " 条") : "";
   // v3.1：回收站分类菜单
   const recycleCats = ["全部","任务","配置","文件","插件"];
+  const recycleCatKey = {"全部":"recycle.cat.all","任务":"recycle.cat.task","配置":"recycle.cat.config","文件":"recycle.cat.file","插件":"recycle.cat.plugin"};
   const recycleNav = `<nav class="set-nav recycle-cat-nav" aria-label="${t("a11y.recycleFilter", "回收站分类筛选")}">` +
-    recycleCats.map(c=>`<button type="button" class="set-nav-btn${_recycleCat===c?" active":""}" data-recycle-cat="${c}">${c}</button>`).join("") + `</nav>`;
+    recycleCats.map(c=>`<button type="button" class="set-nav-btn${_recycleCat===c?" active":""}" data-recycle-cat="${c}">${t(recycleCatKey[c], c)}</button>`).join("") + `</nav>`;
   // 页面视图：渲染到 #main（与 renderStats 一致），保留 id=recycleModal / .recycle-card 以兼容关闭逻辑与焦点陷阱
   // v1.15：标题栏独立成卡（与统计/概览/回收站页统一），recycle-card 仅承载列表
   const html = `<div class="recycle-modal" id="recycleModal">
     <div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.trash}</span>
-      <div class="ph-tx"><h2>回收站</h2><p class="sub">已删除的任务/配置/文件/插件可在此恢复或彻底删除</p></div>
-      <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="page-back recycle-back" id="recycleBack" aria-label="返回上一视图">← 返回</button></span>
+      <div class="ph-tx"><h2>${t("recycle.title","回收站")}</h2><p class="sub">${t("recycle.sub","已删除的任务/配置/文件/插件可在此恢复或彻底删除")}</p></div>
+      <span class="ph-act"><span class="recycle-count">${countLabel}</span><button type="button" class="page-back recycle-back" id="recycleBack" aria-label="${t("a11y.returnPrev","返回上一视图")}">${t("recycle.back","← 返回")}</button></span>
     </header></div>
     ${recycleNav}
     <div class="recycle-card">
       <div class="recycle-list">${items}</div>
       ${filteredVms.length ? `<div class="recycle-footer">
-        <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> 全选</label>
-        <button type="button" class="recycle-batch" id="recycleBatchRestore">批量恢复</button>
-        <button type="button" class="recycle-batch" id="recycleBatchPurge">批量删除</button>
+        <label class="recycle-selall"><input type="checkbox" id="recycleSelAll"> ${t("recycle.selectAll","全选")}</label>
+        <button type="button" class="recycle-batch" id="recycleBatchRestore">${t("recycle.batchRestore","批量恢复")}</button>
+        <button type="button" class="recycle-batch" id="recycleBatchPurge">${t("recycle.batchPurge","批量删除")}</button>
         <span class="recycle-policy">${policyLabel}</span>
-        <button type="button" class="recycle-clear" id="recycleClear">清空回收站</button>
+        <button type="button" class="recycle-clear" id="recycleClear">${t("recycle.clear","清空回收站")}</button>
       </div>` : ""}
     </div>
 
@@ -23856,6 +23857,7 @@ const MESSAGES = {
     "settings.push.subscribe": "订阅推送",
     "settings.push.unsubscribe": "取消订阅",
     "settings.push.test": "发送测试通知",
+    "settings.testConn": "测试连接",
     "settings.quiet": "免打扰时段",
     "settings.quiet.to": "至",
 
@@ -23887,6 +23889,19 @@ const MESSAGES = {
     "stats.week": "本周完成",
     "stats.trend": "趋势",
     "stats.dist": "场景分布",
+    "stats.barsTitle": "本周已完成任务（按场景）",
+    "stats.streakDays": "天",
+    "stats.notStarted": "⚠️ 未开始",
+    "stats.heatItemSuffix": "（最近 12 周）",
+    "stats.kpiMaxStreak": "最长坚持（天）",
+    "stats.kpiEnabledLinks": "启用联动",
+    "stats.kpiWeekTriggers": "本周联动触发",
+    "stats.chainGraphTitle": "联动关系图",
+    "stats.chainGraphSub": "跨场景联动 · 坚持天数 · 完成密度",
+    "stats.chainGraphSection": "跨场景链路图",
+    "stats.currentStreak": "当前 Streak",
+    "stats.heatmapSection": "完成热力图（最近 12 周）",
+    "stats.noChainRules": "暂无联动规则",
 
     // 通知
     "notify.due": "任务到期",
@@ -23946,6 +23961,7 @@ const MESSAGES = {
     "a11y.expandTodayTodo": "展开今日待办",
     "a11y.todayTodoList": "今日待办列表",
     "a11y.msgCenter": "消息中心",
+    "a11y.messages": "消息",
     "a11y.markAllRead": "全部标记为已读",
     "a11y.clearAllMsg": "清空所有消息",
     "a11y.aiPanel": "AI 助手面板",
@@ -24050,6 +24066,7 @@ const MESSAGES = {
     "agent.goalLoopsPlaceholder": "12（默认）",
     "agent.whitelistLabel": "允许调用的工具（逗号分隔，留空=全部）",
     "agent.whitelistPlaceholder": "如 创建任务,完成搜索,查阅资料（留空=允许全部工具）",
+    "agent.whitelistHint": "与「扩展 → 技能配置」勾选框同步：在技能配置勾选会自动写到这里；在文本框手填保存后技能配置会重渲染为新值",
     "agent.autoConfirmLabel": "自动确认非危险操作",
     "agent.autoConfirmSub": "delete_task / update_task 等危险操作仍弹窗确认；其他工具（搜索、创建任务等）自动执行无需确认。",
     "agent.syspromptLabel": "场景提示词（每场景可自定义）",
@@ -24058,23 +24075,33 @@ const MESSAGES = {
     "agent.syspromptHint": "提示词会注入该场景每轮对话开头，定义 AI 的角色定位与回复风格。",
     "agent.clearMem": "清空记忆",
     "agent.cancelGoal": "取消当前目标",
+    "aiExt.title": "AI 扩展",
+    "aiExt.badge": "实验性",
+    "aiExt.desc": "5 个扩展维度的统一管理：技能 / MCP / 工作流 / 记忆 / AI 插件。当前仅保存配置，AI 引擎的消费接线在路线图中。普通用户无需修改此处。",
     "skills.title": "技能配置",
     "skills.desc": "管理 AI 可调用的内置与自定义技能（实验性——当前开关仅保存配置，Agent 实际按下方「允许调用的工具」白名单执行；接线在路线图中）。",
     "skills.builtin": "内置技能",
+    "skills.summaryNm": "技能",
+    "skills.summaryHint": "内置 + 自定义 JSON",
     "skills.customDef": "自定义技能定义（JSON）",
     "skills.customJson": "自定义技能 JSON",
     "skills.jsonHint": "JSON 数组格式，每项含 name / desc / enabled 字段。",
     "skills.save": "保存技能配置",
     "mcp.title": "MCP 服务器",
     "mcp.desc": "配置 Model Context Protocol 服务器（实验性——配置仅本机存储，AI 引擎的消费接线在路线图中，当前不会改变 AI 能力）。",
+    "mcp.summaryNm": "MCP 服务器",
     "mcp.add": "添加服务器",
     "mcp.save": "保存 MCP 配置",
     "workflow.title": "工作流",
     "workflow.desc": "定义 AI 自动化工作流草案（实验性——仅保存配置，执行引擎自 v1.14.1 起冻结未复活，接线在路线图中）。",
+    "workflow.summaryNm": "工作流",
+    "workflow.summaryHint": "AI 自动化草案",
     "workflow.add": "新建工作流",
     "workflow.save": "保存工作流配置",
     "mem.title": "记忆配置",
     "mem.desc": "控制 AI 的上下文窗口与检索策略（实验性——当前对话裁剪用引擎内置参数，本配置的消费接线在路线图中）。",
+    "mem.summaryNm": "记忆",
+    "mem.summaryHint": "上下文窗口与检索策略",
     "mem.windowLabel": "上下文窗口大小（条，1~50）",
     "mem.windowPlaceholder": "10（默认）",
     "mem.longTermLabel": "长期记忆",
@@ -24087,6 +24114,8 @@ const MESSAGES = {
     "mem.save": "保存记忆配置",
     "aiPlugin.title": "AI 插件",
     "aiPlugin.desc": "AI 扩展插件清单（实验性——暂无执行代码，勾选状态仅保存配置）。",
+    "aiPlugin.summaryNm": "AI 插件",
+    "aiPlugin.summaryHint": "扩展插件清单",
     "aiPlugin.save": "保存插件配置",
     "sess.title": "会话管理",
     "sess.desc": "会话超时与自动保存设置（实验性——对话会话的实际管理在聊天面板「☰」，此处配置的消费接线在路线图中）。",
@@ -24125,6 +24154,32 @@ const MESSAGES = {
     "store.registerBtn": "注册插件",
     "dataMgmt.title": "数据管理",
     "dataMgmt.desc": "自动备份恢复与数据导入导出。",
+    "dataMgmt.maintenance": "维护",
+    "dataMgmt.recycleOff": "关闭",
+    "dataMgmt.recycleTip": "每次启动生效，超期软删任务将被永久删除（含多类型回收：配置/文件/插件同样适用）。",
+    "dataMgmt.recycle7": "7 天后",
+    "dataMgmt.recycle30": "30 天后",
+    "dataMgmt.recycle90": "90 天后",
+    "dataMgmt.noAutoBackup": "尚未生成自动备份",
+    "dataMgmt.exportJson": "导出 JSON",
+    "dataMgmt.exportJsonAria": "导出 JSON",
+    "dataMgmt.exportCsvAria": "导出 CSV",
+    "dataMgmt.exportMD": "导出 MD",
+    "dataMgmt.exportMdAria": "导出 Markdown",
+    "dataMgmt.importRecover": "导入恢复",
+    "dataMgmt.importRecoverAria": "导入恢复",
+    "dataMgmt.idbRestoreBtn": "本地库恢复",
+    "dataMgmt.idbRestoreAria": "从本地库恢复",
+    "dataMgmt.idbExportAria": "导出 IDB 备份",
+    "dataMgmt.idbImportAria": "导入 IDB 备份",
+    "dataMgmt.clearData": "清空数据",
+    "dataMgmt.clearDataAria": "清空数据",
+    "dataMgmt.exportPreview": "导出预览",
+    "dataMgmt.exportPreviewAria": "导出预览",
+    "dataMgmt.importCSV": "导入 CSV",
+    "dataMgmt.importCsvAria": "导入 CSV",
+    "dataMgmt.exportRecsCSV": "导出记录 CSV",
+    "dataMgmt.exportRecsCsvAria": "导出记录 CSV",
     "dataMgmt.autoBackup": "自动备份",
     "dataMgmt.recoverBtn": "从自动备份恢复",
     "dataMgmt.recoverTip": "每次数据变动后自动快照到本地（独立于「导出 JSON 备份」）。如手动导出前数据损坏，可从此处还原最近一次快照。",
@@ -24135,12 +24190,18 @@ const MESSAGES = {
     "dataMgmt.encryptExport": "加密导出（需密码）",
     "look.title": "外观",
     "look.desc": "主题、自定义配色与语言偏好。「跟随系统」随操作系统明暗自动切换，语言切换即时生效并记忆偏好。",
+    "look.theme.light": "浅色",
+    "look.theme.dark": "暗色",
+    "look.theme.system": "跟随系统",
     "look.theme.sepia": "温和护眼",
     "look.theme.elegant": "见静初雪",
     "look.theme.aurora": "幻夜极光",
     "look.theme.matrix": "黑客帝国",
     "look.theme.forest": "秘境森林",
     "look.theme.ocean": "微蓝浅海",
+    "look.lang.label": "语言 / Language",
+    "look.lang.zh": "中文",
+    "look.lang.en": "English",
     "look.themeEditor": "自定义主题编辑器",
     "look.themeEditorTip": "创建自定义主题（调整令牌色值），或为每个场景独立配色。主题可导出为 JSON 分享给其他用户。",
     "look.themeNew": "新建自定义主题",
@@ -24167,6 +24228,7 @@ const MESSAGES = {
     "notify.desc": "到期任务、联动断链与每日汇总的提醒方式，以及浏览器推送订阅。",
     "notify.enableLabel": "开启任务到期 / 联动断链 / 每日汇总提醒",
     "notify.enableSub": "开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。",
+    "notify.permissionChecking": "检测中…",
     "notify.quietTip": "免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。",
     "notify.pushStatus": "未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。",
     "notify.pushHint": "⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。",
@@ -24175,6 +24237,7 @@ const MESSAGES = {
     "about.title": "关于与兼容说明",
     "about.desc": "使用 AI 功能前，请先了解以下说明。",
     "about.tip": "启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。",
+    "about.shortcutBtn": "快捷键帮助",
     "settings.saveBtn": "保存设置",
     "export.preview.title": "导出预览",
     "export.preview.selectFields": "选择导出字段",
@@ -24481,6 +24544,7 @@ const MESSAGES = {
     "recycle.batchRestore": "批量恢复",
     "recycle.batchPurge": "批量删除",
     "recycle.clear": "清空回收站",
+    "recycle.back": "← 返回",
     "recycle.clearConfirm": "确定清空回收站？其中的内容将永久删除，不可恢复。",
     "recycle.selectRestore": "请先勾选要恢复的项",
     "recycle.selectPurge": "请先勾选要删除的项",
@@ -25937,6 +26001,9 @@ const MESSAGES = {
     "api.digestPush": "每日汇总·推送",
     "api.schedules": "定时提醒",
     "api.schedType": "提醒类型",
+    "api.schedTaskDue": "任务到期",
+    "api.schedDailyDigest": "每日汇总",
+    "api.schedHabitBroken": "断链提醒",
     "api.schedCron": "Cron 表达式",
     "api.integrationsTitle": "第三方集成",
     "api.integrationsDesc": "连接 Notion / Todoist / Google Calendar，同步任务与日程。",
@@ -26105,6 +26172,7 @@ const MESSAGES = {
     "settings.push.subscribe": "Subscribe",
     "settings.push.unsubscribe": "Unsubscribe",
     "settings.push.test": "Send Test Notification",
+    "settings.testConn": "Test Connection",
     "settings.quiet": "Quiet Hours",
     "settings.quiet.to": "to",
 
@@ -26136,6 +26204,19 @@ const MESSAGES = {
     "stats.week": "This Week",
     "stats.trend": "Trend",
     "stats.dist": "Scenario Distribution",
+    "stats.barsTitle": "Tasks Completed This Week (by Scenario)",
+    "stats.streakDays": "days",
+    "stats.notStarted": "⚠️ Not Started",
+    "stats.heatItemSuffix": "(last 12 weeks)",
+    "stats.kpiMaxStreak": "Max Streak (days)",
+    "stats.kpiEnabledLinks": "Enabled Chains",
+    "stats.kpiWeekTriggers": "Chain Triggers This Week",
+    "stats.chainGraphTitle": "Chain Graph",
+    "stats.chainGraphSub": "Cross-scenario chains · Streak days · Completion density",
+    "stats.chainGraphSection": "Cross-scenario Chain Map",
+    "stats.currentStreak": "Current Streak",
+    "stats.heatmapSection": "Completion Heatmap (last 12 weeks)",
+    "stats.noChainRules": "No chain rules",
 
     // Notifications
     "notify.due": "Task Due",
@@ -26195,6 +26276,7 @@ const MESSAGES = {
     "a11y.expandTodayTodo": "Expand Today's Todos",
     "a11y.todayTodoList": "Today's Todo List",
     "a11y.msgCenter": "Message Center",
+    "a11y.messages": "Messages",
     "a11y.markAllRead": "Mark All as Read",
     "a11y.clearAllMsg": "Clear All Messages",
     "a11y.aiPanel": "AI Assistant Panel",
@@ -26299,6 +26381,7 @@ const MESSAGES = {
     "agent.goalLoopsPlaceholder": "12 (default)",
     "agent.whitelistLabel": "Allowed Tools (comma-separated, empty=all)",
     "agent.whitelistPlaceholder": "e.g. Create Task, Search, Research (empty=all tools)",
+    "agent.whitelistHint": "Synced with the checkboxes in Extensions → Skill Config: toggling there writes here; manually editing and saving re-renders the skill config with the new value.",
     "agent.autoConfirmLabel": "Auto-Confirm Non-Dangerous Operations",
     "agent.autoConfirmSub": "Dangerous operations (delete_task / update_task) still require confirmation; other tools (search, create_task, etc.) execute automatically.",
     "agent.syspromptLabel": "Scenario System Prompt (per scenario)",
@@ -26307,23 +26390,33 @@ const MESSAGES = {
     "agent.syspromptHint": "Prompt is injected at the start of each conversation in this scenario, defining AI's role and reply style.",
     "agent.clearMem": "Clear Memory",
     "agent.cancelGoal": "Cancel Current Goal",
+    "aiExt.title": "AI Extensions",
+    "aiExt.badge": "Experimental",
+    "aiExt.desc": "Unified management of 5 extension dimensions: Skills / MCP / Workflows / Memory / AI Plugins. Currently saves config only; AI engine wiring is in roadmap. Ordinary users do not need to modify this.",
     "skills.title": "Skills Config",
     "skills.desc": "Manage built-in and custom AI skills (experimental—switches only save config; Agent uses the tool whitelist above; wiring in roadmap).",
     "skills.builtin": "Built-in Skills",
+    "skills.summaryNm": "Skills",
+    "skills.summaryHint": "Built-in + Custom JSON",
     "skills.customDef": "Custom Skill Definition (JSON)",
     "skills.customJson": "Custom Skills JSON",
     "skills.jsonHint": "JSON array, each item has name / desc / enabled fields.",
     "skills.save": "Save Skills Config",
     "mcp.title": "MCP Servers",
     "mcp.desc": "Configure Model Context Protocol servers (experimental—config stored locally; AI engine wiring in roadmap; does not change AI capabilities yet).",
+    "mcp.summaryNm": "MCP Servers",
     "mcp.add": "Add Server",
     "mcp.save": "Save MCP Config",
     "workflow.title": "Workflows",
     "workflow.desc": "Define AI automation workflow drafts (experimental—config only; execution engine frozen since v1.14.1; wiring in roadmap).",
+    "workflow.summaryNm": "Workflows",
+    "workflow.summaryHint": "AI Automation Drafts",
     "workflow.add": "New Workflow",
     "workflow.save": "Save Workflow Config",
     "mem.title": "Memory Config",
     "mem.desc": "Control AI context window and retrieval strategy (experimental—conversation trimming uses engine defaults; wiring in roadmap).",
+    "mem.summaryNm": "Memory",
+    "mem.summaryHint": "Context Window & Retrieval Strategy",
     "mem.windowLabel": "Context Window Size (items, 1~50)",
     "mem.windowPlaceholder": "10 (default)",
     "mem.longTermLabel": "Long-term Memory",
@@ -26336,6 +26429,8 @@ const MESSAGES = {
     "mem.save": "Save Memory Config",
     "aiPlugin.title": "AI Plugins",
     "aiPlugin.desc": "AI extension plugin list (experimental—no execution code; checkbox state saved as config only).",
+    "aiPlugin.summaryNm": "AI Plugins",
+    "aiPlugin.summaryHint": "Extension Plugin List",
     "aiPlugin.save": "Save Plugin Config",
     "sess.title": "Session Management",
     "sess.desc": "Session timeout and auto-save settings (experimental—actual session management in chat panel '☰'; wiring in roadmap).",
@@ -26374,6 +26469,32 @@ const MESSAGES = {
     "store.registerBtn": "Register Plugin",
     "dataMgmt.title": "Data Management",
     "dataMgmt.desc": "Auto-backup restore and data import/export.",
+    "dataMgmt.maintenance": "Maintenance",
+    "dataMgmt.recycleOff": "Off",
+    "dataMgmt.recycleTip": "Takes effect on each launch; soft-deleted tasks past the retention window are permanently removed (applies to multi-type recycle: config/files/plugins too).",
+    "dataMgmt.recycle7": "After 7 days",
+    "dataMgmt.recycle30": "After 30 days",
+    "dataMgmt.recycle90": "After 90 days",
+    "dataMgmt.noAutoBackup": "No auto backup generated yet",
+    "dataMgmt.exportJson": "Export JSON",
+    "dataMgmt.exportJsonAria": "Export JSON",
+    "dataMgmt.exportCsvAria": "Export CSV",
+    "dataMgmt.exportMD": "Export MD",
+    "dataMgmt.exportMdAria": "Export Markdown",
+    "dataMgmt.importRecover": "Import Restore",
+    "dataMgmt.importRecoverAria": "Import Restore",
+    "dataMgmt.idbRestoreBtn": "Local DB Restore",
+    "dataMgmt.idbRestoreAria": "Restore from Local DB",
+    "dataMgmt.idbExportAria": "Export IDB Backup",
+    "dataMgmt.idbImportAria": "Import IDB Backup",
+    "dataMgmt.clearData": "Clear Data",
+    "dataMgmt.clearDataAria": "Clear Data",
+    "dataMgmt.exportPreview": "Export Preview",
+    "dataMgmt.exportPreviewAria": "Export Preview",
+    "dataMgmt.importCSV": "Import CSV",
+    "dataMgmt.importCsvAria": "Import CSV",
+    "dataMgmt.exportRecsCSV": "Export Records CSV",
+    "dataMgmt.exportRecsCsvAria": "Export Records CSV",
     "dataMgmt.autoBackup": "Auto Backup",
     "dataMgmt.recoverBtn": "Restore from Auto Backup",
     "dataMgmt.recoverTip": "Auto-snapshot to local on each data change (independent of 'Export JSON'). If data corrupts before manual export, restore the latest snapshot here.",
@@ -26384,12 +26505,18 @@ const MESSAGES = {
     "dataMgmt.encryptExport": "Encrypted Export (password required)",
     "look.title": "Appearance",
     "look.desc": "Themes, custom colors and language. 'Follow System' auto-switches with OS; language switch is instant and persisted.",
+    "look.theme.light": "Light",
+    "look.theme.dark": "Dark",
+    "look.theme.system": "Follow System",
     "look.theme.sepia": "Sepia",
     "look.theme.elegant": "Silent First Snow",
     "look.theme.aurora": "Aurora Night",
     "look.theme.matrix": "Matrix",
     "look.theme.forest": "Mystic Forest",
     "look.theme.ocean": "Pale Blue Sea",
+    "look.lang.label": "Language",
+    "look.lang.zh": "Chinese",
+    "look.lang.en": "English",
     "look.themeEditor": "Custom Theme Editor",
     "look.themeEditorTip": "Create custom themes (adjust token colors) or set per-scenario colors. Export themes as JSON to share.",
     "look.themeNew": "New Custom Theme",
@@ -26416,6 +26543,7 @@ const MESSAGES = {
     "notify.desc": "Reminder methods for due tasks, chain breaks and daily summaries, plus browser push subscription.",
     "notify.enableLabel": "Enable Task Due / Chain Break / Daily Summary Reminders",
     "notify.enableSub": "Checks due tasks and broken chains every minute via browser Notification (or toast fallback). Each task reminded once; chains once per day; daily summary once per day.",
+    "notify.permissionChecking": "Checking…",
     "notify.quietTip": "No reminders during quiet hours (due tasks reminded after period ends). Supports overnight, e.g. 22:00 → 08:00.",
     "notify.pushStatus": "Not subscribed. Enable to push task due and chain break reminders (requires Push API support).",
     "notify.pushHint": "⚠️ Framework mode: VAPID key is placeholder, not connected to push server. Subscribing calls PushManager.subscribe, but server-side push requires VAPID key and push service configuration.",
@@ -26424,6 +26552,7 @@ const MESSAGES = {
     "about.title": "About & Compatibility",
     "about.desc": "Please read the following before using AI features.",
     "about.tip": "When enabled, each scenario's AI assistant can call tools: create/modify/delete tasks, query/complete tasks, search, add records, view overview, export—your instructions actually modify workbench data.<br><br>With Agent Mode: remember/recall/forget working memory, plan/complete_step/complete_goal multi-step goals, list_records cross-scenario records.<br><br>CORS tip: calling from local files may be blocked by browser CORS. Best to open via 'start-local-service.bat' as http://localhost, then enable AI.",
+    "about.shortcutBtn": "Shortcut Help",
     "settings.saveBtn": "Save Settings",
     "export.preview.title": "Export Preview",
     "export.preview.selectFields": "Select Export Fields",
@@ -26730,6 +26859,7 @@ const MESSAGES = {
     "recycle.batchRestore": "Batch Restore",
     "recycle.batchPurge": "Batch Delete",
     "recycle.clear": "Clear Recycle Bin",
+    "recycle.back": "← Back",
     "recycle.clearConfirm": "Clear recycle bin? Contents will be permanently deleted, cannot be undone.",
     "recycle.selectRestore": "Please select items to restore",
     "recycle.selectPurge": "Please select items to delete",
@@ -27231,6 +27361,7 @@ const MESSAGES = {
     "storePage.importFailToast": "Import failed",
     "chainPage.title": "Habit Chains",
     "chainPage.sub": "Cross-scenario behavior linking — complete A triggers B todo",
+    "chainPage.subExtra": "",
     "chainPage.cfgBtn": "Configure Rules",
     "chainPage.backHome": "← Home",
     "chainPage.aria": "Habit Chain Quick Nav",
@@ -28185,6 +28316,9 @@ const MESSAGES = {
     "api.digestPush": "Daily digest·Push",
     "api.schedules": "Schedules",
     "api.schedType": "Schedule type",
+    "api.schedTaskDue": "Task Due",
+    "api.schedDailyDigest": "Daily Digest",
+    "api.schedHabitBroken": "Chain Break Reminder",
     "api.schedCron": "Cron expression",
     "api.integrationsTitle": "Integrations",
     "api.integrationsDesc": "Connect Notion / Todoist / Google Calendar to sync tasks and events.",
