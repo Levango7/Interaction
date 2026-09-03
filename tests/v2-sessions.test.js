@@ -144,12 +144,14 @@ describe("v2.0.1 doImport 内存缓存复位回归", () => {
   const PREFIX = "wb_agent_";
 
   // stub FileReader：readAsText 后用给定内容触发 onload（模拟浏览器异步读取）
+  // 用 queueMicrotask 而非 setTimeout(0)：全量跑时 worker 宏任务队列拥挤，
+  // setTimeout(0) 可能被延迟超过 waitFor 的 10s 超时；microtask 在当前宏任务末尾必执行。
   function makeFakeReader(content) {
     return class FakeFileReader {
       constructor() { this.result = ""; }
       readAsText() {
         this.result = content;
-        setTimeout(() => { if (typeof this.onload === "function") this.onload({ target: this }); }, 0);
+        queueMicrotask(() => { if (typeof this.onload === "function") this.onload({ target: this }); });
       }
     };
   }
