@@ -2,6 +2,21 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.4.5] - 2026-09-04
+
+### i18n JS 拼接中文 t() 替换（第一批）+ 注释残留清理
+
+**🌐 i18n JS 拼接中文 t() 替换**
+- AI 教练区域（Line 9109-9122）：5 处硬编码中文用 `t("key","中文")` 替换（coach.noAiHint / loadingHint / discuss / subLabel / refresh）。
+- 统计面板（Line 9253-9311）：10 处硬编码中文用 `t("key","中文")` 替换（stats.heatItemSuffix / kpiMaxStreak / kpiEnabledLinks / kpiWeekTriggers / chainGraphTitle / chainGraphSub / chainGraphSection / currentStreak / heatmapSection / noChainRules）。
+- 新增 i18n key `coach.discuss`（zh: "在 AI 助手中讨论" / en: "Discuss in AI Assistant"）。
+- 其余 key 均已存在于 MESSAGES.zh 和 MESSAGES.en 中，直接引用。
+
+**🧹 清理**
+- Line 144 CSS 注释中"幽蓝海洋"残留 → "微蓝浅海"。
+
+**✅ 验证**：lint 0 problems；build:check 门禁通过；quickwins 22/22 通过。
+
 ## [v3.4.4] - 2026-09-04
 
 ### 秘境森林大改（深墨绿底色）+ 三个主题改名 + i18n key 补全

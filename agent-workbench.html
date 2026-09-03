@@ -141,7 +141,7 @@
   background:color-mix(in srgb,var(--panel) 68%,transparent);
 }
 
-/* v3.2 主题库扩展：秘境森林（forest）+ 幽蓝海洋（ocean）；v3.4.0 更名 */
+/* v3.2 主题库扩展：秘境森林（forest）+ 微蓝浅海（ocean）；v3.4.0 更名 */
  * 设计原则：
  *  1) 必须与已有 7 主题（light/dark/system/sepia/elegant/aurora/matrix）色调明确区分——避免一打开以为没换
  *  2) 调色取自真实意象（森林=晨雾林地+松针+暖木，海洋=晨曦海面+深海青+珊瑚），不全饱和/不媚俗
@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.5"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260903f";
+const BUILD_TAG = "20260903g";
 
 
 
@@ -9106,20 +9106,20 @@ async function fetchCoachAdvice(){
 function renderCoachCard(){
   const cfg = getCfg();
   if(!cfg.enabled){
-    return `<div class="coach-hint">尚未启用 AI。点击右上角「设置」配置 API Key 后，AI 教练将分析你的习惯模式并给出建议。</div>`;
+    return `<div class="coach-hint">${t("coach.noAiHint","尚未启用 AI。点击右上角「设置」配置 API Key 后，AI 教练将分析你的习惯模式并给出建议。")}</div>`;
   }
   const cache = load(COACH_CACHE_KEY, null);
   let adviceHtml;
   if(cache && cache.ts && (Date.now() - cache.ts < COACH_CACHE_TTL) && Array.isArray(cache.advice) && cache.advice.length){
     adviceHtml = cache.advice.map((a, i) => `<div class="coach-item"><span class="idx">${i+1}</span><span>${esc(a)}</span></div>`).join("");
   } else {
-    adviceHtml = `<div class="coach-hint" id="coachLoading">正在分析你的行为数据…</div>`;
+    adviceHtml = `<div class="coach-hint" id="coachLoading">${t("coach.loadingHint","正在分析你的行为数据…")}</div>`;
   }
   /* v3.2.1：有建议时附加讨论按钮——把 3 条建议作为上下文预填到聊天面板 */
   const discussBtn = (cache && cache.advice && cache.advice.length)
-    ? `<div class="ai-hub-actions"><button type="button" class="ai-discuss-btn" data-discuss-type="coach"><span class="ic-inline" aria-hidden="true">${UI_ICONS.robot}</span><span>在 AI 助手中讨论</span></button></div>`
+    ? `<div class="ai-hub-actions"><button type="button" class="ai-discuss-btn" data-discuss-type="coach"><span class="ic-inline" aria-hidden="true">${UI_ICONS.robot}</span><span>${t("coach.discuss","在 AI 助手中讨论")}</span></button></div>`
     : "";
-  return `<p class="sub">基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）<button class="coach-refresh" id="coachRefresh" type="button">刷新</button></p>${adviceHtml}${discussBtn}`;
+  return `<p class="sub">${t("coach.subLabel","基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）")}<button class="coach-refresh" id="coachRefresh" type="button">${t("coach.refresh","刷新")}</button></p>${adviceHtml}${discussBtn}`;
 }
 
 /* ---------- A5 联动状态区域（总览页用） ---------- */
@@ -9253,7 +9253,7 @@ function renderHabitChainCard(){
   }).join("");
   // 热力图（全部展开，grid 自适应）
   const heatmaps = ORDER.map(sc =>
-    `<div class="hc-heat-item">${SCENARIOS[sc].name}（最近 12 周）${renderHeatmap(sc)}</div>`
+    `<div class="hc-heat-item">${SCENARIOS[sc].name}${t("stats.heatItemSuffix","（最近 12 周）")}${renderHeatmap(sc)}</div>`
   ).join("");
   // v3.0：核心指标——突出「跨场景联动」价值（最长坚持 / 启用链路 / 本周联动触发）
   const streaks = ORDER.map(sc => calcStreak(sc));
@@ -9264,23 +9264,23 @@ function renderHabitChainCard(){
   weekStart.setDate(weekStart.getDate()-_wd); weekStart.setHours(0,0,0,0);
   const weekTriggers = allTasks.filter(t => t.status==="done" && t.linked && t.doneAt >= weekStart.getTime()).length;
   const kpis = `
-    <div class="hc-kpi"><span class="v">${maxStreak}</span><span class="l">最长坚持（天）</span></div>
-    <div class="hc-kpi"><span class="v">${enabledLinks.length}</span><span class="l">启用联动</span></div>
-    <div class="hc-kpi"><span class="v">${weekTriggers}</span><span class="l">本周联动触发</span></div>`;
+    <div class="hc-kpi"><span class="v">${maxStreak}</span><span class="l">${t("stats.kpiMaxStreak","最长坚持（天）")}</span></div>
+    <div class="hc-kpi"><span class="v">${enabledLinks.length}</span><span class="l">${t("stats.kpiEnabledLinks","启用联动")}</span></div>
+    <div class="hc-kpi"><span class="v">${weekTriggers}</span><span class="l">${t("stats.kpiWeekTriggers","本周联动触发")}</span></div>`;
   return `<div class="card">
-    <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>联动关系图</h2>
-    <p class="sub">跨场景联动 · 坚持天数 · 完成密度</p>
+    <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>${t("stats.chainGraphTitle","联动关系图")}</h2>
+    <p class="sub">${t("stats.chainGraphSub","跨场景联动 · 坚持天数 · 完成密度")}</p>
     <!-- 核心指标：跨场景联动价值一眼可见 -->
     <div class="hc-kpi-row">${kpis}</div>
     <!-- 跨场景联动（核心，提到最前） -->
-    <div class="hc-section-title">跨场景链路图</div>
+    <div class="hc-section-title">${t("stats.chainGraphSection","跨场景链路图")}</div>
     ${renderChainGraph()}
     ${renderHabitChainStatus()}
     <!-- 坚持天数 -->
-    <div class="hc-section-title">当前 Streak</div>
+    <div class="hc-section-title">${t("stats.currentStreak","当前 Streak")}</div>
     <div class="hc-streak-scroll"><div class="hc-streak-inner">${streakBadges}</div></div>
     <!-- 完成密度 -->
-    <div class="hc-section-title">完成热力图（最近 12 周）</div>
+    <div class="hc-section-title">${t("stats.heatmapSection","完成热力图（最近 12 周）")}</div>
     <div class="hc-heat-all">${heatmaps}</div>
   </div>`;
 }
@@ -9305,10 +9305,10 @@ function _graphNameLines(nm){
  */
 function renderChainGraph(){
   const links = getLinks().filter(l => l && l.fromSc && l.toSc);
-  if(!links.length) return `<div class="empty">暂无联动规则</div>`;
+  if(!links.length) return `<div class="empty">${t("stats.noChainRules","暂无联动规则")}</div>`;
   // 节点：参与链路的场景，按 ORDER 顺序环形排布
   const scs = ORDER.filter(sc => links.some(l => l.fromSc===sc || l.toSc===sc));
-  if(!scs.length) return `<div class="empty">暂无联动规则</div>`;
+  if(!scs.length) return `<div class="empty">${t("stats.noChainRules","暂无联动规则")}</div>`;
   const W=480, H=360, CX=W/2, CY=H/2, NR=26;
   const R = Math.min(W, H)/2 - NR - 30;
   const pos = {};
@@ -24470,6 +24470,7 @@ const MESSAGES = {
     "coach.loadingHint": "正在分析你的行为数据…",
     "coach.subLabel": "基于最近 2 周行为数据给出 3 条个性化建议（4 小时缓存）",
     "coach.refresh": "刷新",
+    "coach.discuss": "在 AI 助手中讨论",
     "chainStatus.notTriggered": "尚未触发",
     "chainStatus.today": "上次触发：今天",
     "chainStatus.days1": "上次触发：1 天前",
@@ -26785,6 +26786,7 @@ const MESSAGES = {
     "coach.loadingHint": "Analyzing your behavior data…",
     "coach.subLabel": "3 personalized suggestions based on last 2 weeks (4-hour cache)",
     "coach.refresh": "Refresh",
+    "coach.discuss": "Discuss in AI Assistant",
     "chainStatus.notTriggered": "Not triggered yet",
     "chainStatus.today": "Last triggered: today",
     "chainStatus.days1": "Last triggered: 1 day ago",
