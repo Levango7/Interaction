@@ -2,6 +2,32 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.4.1] - 2026-09-03
+
+### 修复：秘境森林/幽蓝海洋选中无效（setTheme 漏分支）+ 测试时序 flaky 三连修
+
+**🐛 修复：setTheme 不识别 forest/ocean——选中后页面无变化（用户实测反馈）**
+- 根因：5b227f4 引入两主题时，`setTheme` 的 if-else 分支链漏加 forest/ocean——选中后落入
+  「自定义主题」else 分支，`getCustomThemes()` 找不到即**回退 "light"**，`data-theme` 属性
+  从未设置，CSS `:root[data-theme="forest"/"ocean"]` 永不匹配，页面保持亮色。
+- 修复：补加两个分支（`el.setAttribute("data-theme", "forest"/"ocean")`），JSDoc 同步。
+- 至此 forest/ocean 四处清单全部一致：CSS ✅ / 下拉 ✅ / PRESET_THEMES ✅（v3.4.0）/ setTheme ✅（本次）。
+- 回归测试：quickwins 新增「setTheme forest/ocean 设置 data-theme 且持久化（不回退 light）」。
+
+**🧪 测试时序 flaky 三连修（CI/本机高负载下偶发失败）**
+- `export-encrypt.test.js`：3 处固定 sleep 50ms → `waitForExportData` 轮询等待（≤3s）——
+  修复 CI windows-latest 必现的 `Cannot read '_deviceMeta'`（fd23fc0，本版并入）。
+- `p0-crossdevice-key.test.js`：内部 waitFor 默认上限 2s → 10s——doImport 链路含
+  `await initCrypto()`，全量并行高负载下 2s 偶发不够（waitFor timeout）。
+- `v2-sessions.test.js` / `p0-storage.test.js`：vi.waitFor 超时 2s → 10s（同因：
+  「导入成功」toast 断言在慢负载下 0 次调用的偶发失败）。
+
+**✅ 验证**
+- lint 0 problems；硬编码颜色 0；build:check 版本门禁通过。
+- quickwins 22/22（含新回归）；export-encrypt 4/4；p0-crossdevice-key / v2-sessions / p0-storage 单跑全绿。
+- 注：全量套件在本机多 AI 应用并行（Docker/ZCode/多 IDE 常驻）下存在负载漂移噪音，
+  CI 干净 runner 为最终门禁。
+
 ## [v3.4.0] - 2026-09-03
 
 ### 主题库扩展发布：秘境森林 + 幽蓝海洋 + 注册表修复

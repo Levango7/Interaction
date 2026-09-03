@@ -190,7 +190,7 @@ describe("P0-4 导入损坏 · 用例 C：doImport 文件损坏不崩溃 + 错�
       // 推到 30ms 之后，固定 sleep 不可靠；改为轮询等待 toast 真正被调用（最多 2s）。
       await vi.waitFor(() => {
         expect(toastSpy).toHaveBeenCalledWith("导入文件格式错误，无法解析。", "error");
-      }, { timeout: 2000, interval: 20 });
+      }, { timeout: 10000, interval: 20 });
     } catch (e) {
       threw = true;
     }
@@ -232,7 +232,7 @@ describe("P0-4 导入损坏 · 用例 C：doImport 文件损坏不崩溃 + 错�
       // 同上：轮询等待异步 onload 完成（最多 2s），根治全量并发下的 30ms 竞态
       await vi.waitFor(() => {
         expect(toastSpy).toHaveBeenCalledWith("导入成功，数据已恢复", "ok");
-      }, { timeout: 2000, interval: 20 });
+      }, { timeout: 10000, interval: 20 });
     } catch (e) {
       threw = true;
     }

@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.1"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260903b";
+const BUILD_TAG = "20260903c";
 
 
 
@@ -29837,7 +29837,7 @@ function _applyTokenOverride(tokens){
 
 /**
  * 设置当前主题（v1.5-C 主题系统入口）
- * 主题 id：light / dark / aurora / sepia / elegant / matrix / 自定义主题 id（contrast 已于 v3.1.1 移除）
+ * 主题 id：light / dark / aurora / sepia / elegant / matrix / forest / ocean / 自定义主题 id（contrast 已于 v3.1.1 移除）
  * @param {string} themeId - 主题 id
  * @returns {boolean} 是否设置成功
  */
@@ -29864,6 +29864,12 @@ function setTheme(themeId){
     el.setAttribute("data-theme", "elegant");
   }else if(themeId === "matrix"){
     el.setAttribute("data-theme", "matrix");
+  }else if(themeId === "forest"){
+    // v3.4.1：5b227f4 引入 forest/ocean 时漏加分支——落入下方自定义主题 else，
+    // getCustomThemes() 找不到即回退 "light"，选中后页面无变化（CSS :root[data-theme] 永不匹配）。
+    el.setAttribute("data-theme", "forest");
+  }else if(themeId === "ocean"){
+    el.setAttribute("data-theme", "ocean");
   }else{
     // 自定义主题：通过 inline style 应用 token 覆盖
     const custom = getCustomThemes()[themeId];

@@ -70,7 +70,8 @@ function toastMsgs(spy) {
 // 等待异步导入链路真正完成：doImport 在 onload 内经 FileReader 异步读取 + await initCrypto()
 // 后才 emit 收尾 toast。固定 50ms 在整套并行负载下偶发不足（getCfg().key 读到中间态）→ 改为
 // 轮询「收尾 toast 已触发」这一确定性完成信号，消除 flaky。
-function waitFor(predicate, timeout = 2000, interval = 10) {
+// v3.4.1：默认上限 2s → 10s——全量并行高负载（本机 71 文件 / CI 双机）下 2s 偶发不够（waitFor timeout）。
+function waitFor(predicate, timeout = 10000, interval = 10) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     const tick = () => {

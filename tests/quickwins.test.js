@@ -238,6 +238,23 @@ describe("v1.1.2 Quick Wins", () => {
         expect(win.document.documentElement.getAttribute("data-theme")).toBe(null);
       });
     });
+
+    // v3.4.1 回归：setTheme 需支持 forest/ocean——5b227f4 引入主题时漏加分支，
+    // 选中后落入自定义主题 else 分支回退 "light"，页面无变化
+    it("setTheme forest/ocean 设置 data-theme 且持久化（不回退 light）", () => {
+      return win.initCrypto().then(() => {
+        expect(win.setTheme("forest")).toBe(true);
+        expect(win.document.documentElement.getAttribute("data-theme")).toBe("forest");
+        expect(win.getCurrentTheme()).toBe("forest");
+        expect(win.setTheme("ocean")).toBe(true);
+        expect(win.document.documentElement.getAttribute("data-theme")).toBe("ocean");
+        expect(win.getCurrentTheme()).toBe("ocean");
+        // 回归：切回 light 应清除属性并持久化
+        win.setTheme("light");
+        expect(win.document.documentElement.getAttribute("data-theme")).toBe(null);
+        expect(win.getCurrentTheme()).toBe("light");
+      });
+    });
   });
 
   // ===== T5 · 焦点陷阱与回收站统一关闭 =====

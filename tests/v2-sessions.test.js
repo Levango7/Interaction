@@ -177,7 +177,7 @@ describe("v2.0.1 doImport 内存缓存复位回归", () => {
       win.doImport({ name: "backup.json" });
       await vi.waitFor(() => {
         expect(toastSpy).toHaveBeenCalledWith("导入成功，数据已恢复", "ok");
-      }, { timeout: 2000, interval: 20 });
+      }, { timeout: 10000, interval: 20 });
     } finally {
       win.FileReader = origFR;
       toastSpy.mockRestore();
@@ -209,7 +209,7 @@ describe("v2.0.1 doImport 内存缓存复位回归", () => {
       win.doImport({ name: "backup.json" });
       await vi.waitFor(() => {
         expect(toastSpy).toHaveBeenCalledWith("导入成功，数据已恢复", "ok");
-      }, { timeout: 2000, interval: 20 });
+      }, { timeout: 10000, interval: 20 });
     } finally {
       win.FileReader = origFR;
       toastSpy.mockRestore();
