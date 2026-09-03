@@ -1113,6 +1113,20 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .overview-card .v{font-size:var(--fs-2xl);font-weight:600;color:var(--accent);line-height:1.2}
 .overview-card .l{font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--space-1)}
 @media (max-width:768px){.overview-4cards{grid-template-columns:repeat(2,1fr)}}
+/* v3.3.0 B 3/8：知识库标签筛选 chips */
+.ktag-bar{margin-top:var(--space-2);padding:var(--space-2h) var(--space-3);background:var(--panel2);border-radius:var(--radius-sm);border:1px solid var(--line)}
+.ktag-head{font-size:var(--fs-xs);font-weight:600;color:var(--muted);margin-bottom:var(--space-1)}
+.ktag-chips{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.ktag-chip{border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-lg);padding:2px 10px;font-size:var(--fs-xs);color:var(--text-dim);cursor:pointer;line-height:1.6;transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
+.ktag-chip:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.ktag-chip.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.ktag-count{opacity:.7;font-size:var(--fs-2xs)}
+.ktag-list{margin-top:var(--space-1)}
+.ktag-hit{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2);padding:var(--space-1h) 0;border-top:1px dashed color-mix(in srgb,var(--line) 50%,transparent);font-size:var(--fs-sm)}
+.ktag-hit:first-child{border-top:none}
+.ktag-hit-title{color:var(--text);font-weight:600}
+.ktag-hit-meta{font-size:var(--fs-2xs);color:var(--muted)}
+.ktag-empty{font-size:var(--fs-xs);color:var(--muted);padding:var(--space-1) 0}
 .tool-app-card .tool-table .f-row-extra td{border-top:none;padding-top:var(--space-1)}
 .mini-chart-wrap{padding:var(--space-1) var(--space-2);background:var(--panel2);border-radius:var(--radius-sm);overflow:hidden}
 .mini-chart-wrap svg{display:block;width:100%;height:120px}
@@ -4761,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.1"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260903b";
+const BUILD_TAG = "20260903c";
 
 
 
@@ -15699,6 +15713,14 @@ render();
       }
     };
   });
+  /* v3.3.0 B 3/8：知识库标签 chips 点击过滤（toggle；render 重绑幂等） */
+  $$("[data-ktag]").forEach(function(b){
+    b.onclick = function(){
+      const tg = b.getAttribute("data-ktag") || "";
+      _kbTagFilter = (_kbTagFilter === tg) ? "" : tg;
+      render();
+    };
+  });
 }
 
 /* v3.0：功能卡绑定配置（key + 表单字段名；与 SCENE_FEATURE_RENDER 的渲染配置一一对应） */
@@ -16042,8 +16064,9 @@ SCENE_FEATURE_RENDER.life = {
       afterList:function(recs){
         if(!recs || !recs.length) return "";
         const now = new Date();
+        const _dayMs = 86400000;
         const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59); // 含第 7 天全天（type=date 值按 UTC 零点解析，原实现会漏掉恰好 +7 天的账单）
         const items = recs.filter(function(r){
           if(!r.due || r.status === "已缴") return false;
           const d = new Date(r.due);
@@ -16052,7 +16075,8 @@ SCENE_FEATURE_RENDER.life = {
         if(!items.length) return "";
         const rows = items.map(function(r){
           const dueDate = new Date(r.due);
-          const days = Math.round((dueDate - now) / 86400000);
+          // 按自然日差计算（原实现用时刻差四舍五入，晚间看今天到期的账单会显示"已过 1 天"）
+          const days = Math.round((new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / _dayMs);
           const dayLabel = days === 0 ? t("life.bills.today","今天") : (days < 0 ? t("life.bills.overdueDays","已过 {n} 天").replace("{n}", Math.abs(days)) : t("life.bills.inDays","还有 {n} 天").replace("{n}", days));
           const isClose = days >= 0 && days <= 3;
           return '<div class="upcoming-bill-row' + (isClose ? ' is-close' : '') + '">' +
@@ -16092,6 +16116,8 @@ SCENE_FEATURE_RENDER.life = {
 };
 
 /* ---------- 学习场景功能卡（P3） ---------- */
+/* v3.3.0 B 3/8：知识库标签筛选状态——"" 为不过滤；点击 chip 切换（再点取消），render 重绑幂等 */
+let _kbTagFilter = "";
 SCENE_FEATURE_RENDER.study = {
   knowledge: function(){
     return _featureCardHtml({
@@ -16114,6 +16140,35 @@ SCENE_FEATURE_RENDER.study = {
         const cats = new Set(recs.map(function(r){ return r.category; }).filter(Boolean));
         const high = recs.filter(function(r){ return r.importance==="高"; }).length;
         return [{ v:recs.length, l:t("field.entry","条目") }, { v:cats.size, l:t("field.category","分类") }, { v:high, l:t("field.important","重要") }];
+      },
+      // v3.3.0 B 3/8：知识库标签筛选——chips 显示全部标签（按出现次数降序，最多 12 个），点击过滤条目（再点取消）
+      afterList:function(recs){
+        const counts = {};
+        (recs || []).forEach(function(r){
+          String(r.tags || "").split(/[,\uFF0C\s\u3000]+/).forEach(function(tg){
+            tg = tg.trim(); if(!tg) return;
+            counts[tg] = (counts[tg] || 0) + 1;
+          });
+        });
+        const tags = Object.keys(counts).sort(function(a,b){ return counts[b] - counts[a]; });
+        if(!tags.length) return "";
+        const chips = tags.slice(0, 12).map(function(tg){
+          return '<button type="button" class="ktag-chip' + (_kbTagFilter === tg ? ' active' : '') + '" data-ktag="' + esc(tg) + '">' + esc(tg) + ' <span class="ktag-count">' + counts[tg] + '</span></button>';
+        }).join("");
+        let listHtml = "";
+        if(_kbTagFilter){
+          const hits = (recs || []).filter(function(r){ return String(r.tags || "").split(/[,\uFF0C\s\u3000]+/).indexOf(_kbTagFilter) > -1; }).slice(0, 8);
+          listHtml = '<div class="ktag-list">' +
+            (hits.length
+              ? hits.map(function(r){
+                  const meta = [r.category, r.source].filter(Boolean).join(" · ");
+                  return '<div class="ktag-hit"><span class="ktag-hit-title">' + esc(r.title || "—") + '</span>' +
+                    (meta ? '<span class="ktag-hit-meta">' + esc(meta) + '</span>' : '') + '</div>';
+                }).join("")
+              : '<div class="ktag-empty">' + t("kb.tagNoMatch","无匹配条目") + '</div>') +
+            '</div>';
+        }
+        return '<div class="ktag-bar"><div class="ktag-head">' + t("kb.tagHead","标签筛选") + '</div><div class="ktag-chips">' + chips + '</div>' + listHtml + '</div>';
       },
       emptyTip:t("empty.noKb","暂无知识条目 · 点击「添加」沉淀第一条知识")
     });
@@ -29776,7 +29831,7 @@ function _applyTokenOverride(tokens){
 
 /**
  * 设置当前主题（v1.5-C 主题系统入口）
- * 主题 id：light / dark / aurora / sepia / elegant / matrix / 自定义主题 id（contrast 已于 v3.1.1 移除）
+ * 主题 id：light / dark / aurora / sepia / elegant / matrix / forest / ocean / 自定义主题 id（contrast 已于 v3.1.1 移除）
  * @param {string} themeId - 主题 id
  * @returns {boolean} 是否设置成功
  */
@@ -29803,6 +29858,12 @@ function setTheme(themeId){
     el.setAttribute("data-theme", "elegant");
   }else if(themeId === "matrix"){
     el.setAttribute("data-theme", "matrix");
+  }else if(themeId === "forest"){
+    // v3.4.1：5b227f4 引入 forest/ocean 时漏加分支——落入下方自定义主题 else，
+    // getCustomThemes() 找不到即回退 "light"，选中后页面无变化（CSS :root[data-theme] 永不匹配）。
+    el.setAttribute("data-theme", "forest");
+  }else if(themeId === "ocean"){
+    el.setAttribute("data-theme", "ocean");
   }else{
     // 自定义主题：通过 inline style 应用 token 覆盖
     const custom = getCustomThemes()[themeId];
