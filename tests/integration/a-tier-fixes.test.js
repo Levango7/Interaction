@@ -147,4 +147,11 @@ describe("v3.3.0 B 档：源码契约（防回归）", () => {
     expect(S).toContain('load(PREFIX + "life_bills"');
     expect(S).toContain('r.type !== "运动记录"');
   });
+  it("B3：知识库标签筛选 chips + 点击过滤（toggle）", () => {
+    expect(S).toContain("data-ktag");
+    expect(S).toContain("ktag-chip");
+    expect(S).toContain("_kbTagFilter");
+    const kbMatch = S.match(/knowledge:\s*function\(\)\{[\s\S]{0,2000}?afterList:function/);
+    expect(kbMatch, "knowledge.afterList 应存在").toBeTruthy();
+  });
 });

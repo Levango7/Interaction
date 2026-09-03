@@ -183,6 +183,6 @@ Interaction/
 ├─ electron/                   # Electron 桌面封装（main/preload/打包配置）
 ├─ scripts/                    # 构建与门禁脚本（build/lint-colors/lint-layers/lint-tokens/release/make-icon）
 ├─ server/                     # 后端服务（Express，v3.3.0：auth / notifications / integrations API，默认端口 3001）
-├─ tests/                      # vitest 单元测试（71 文件 884 用例）+ tests/integration/ + tests/e2e Playwright
+├─ tests/                      # vitest 单元测试（71 文件 889 用例）+ tests/integration/ + tests/e2e Playwright
 └─ .github/workflows/          # CI（ci.yml：测试+门禁）+ CD（deploy.yml：部署 GitHub Pages）
 ```
