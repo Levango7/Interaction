@@ -157,8 +157,8 @@
   --surface-hover:#e6ede0; --surface-muted:#e9eee4;
   --brand-grad:linear-gradient(135deg,#2d6a4f 0%,#588157 50%,#c47a3a 100%);
   --side-accent:linear-gradient(180deg,rgba(45,106,79,.16),rgba(88,129,87,.12) 60%,rgba(196,122,58,.10));
-  --canvas-glow:radial-gradient(ellipse 70% 45% at 20% -5%,rgba(86,140,86,.30),transparent 60%),radial-gradient(ellipse 50% 40% at 95% 10%,rgba(196,122,58,.22),transparent 55%),radial-gradient(ellipse 40% 35% at 50% 95%,rgba(45,106,79,.18),transparent 50%),radial-gradient(ellipse 35% 30% at 10% 70%,rgba(168,193,140,.20),transparent 50%);
-  --sidebar-glow:linear-gradient(180deg,rgba(45,106,79,.12) 0%,rgba(88,129,87,.06) 50%,rgba(196,122,58,.04) 100%);
+  --canvas-glow:radial-gradient(ellipse 72% 48% at 18% -6%,rgba(88,178,98,.55),transparent 62%),radial-gradient(ellipse 55% 42% at 50% -12%,rgba(240,180,80,.42),transparent 58%),radial-gradient(ellipse 52% 42% at 96% 10%,rgba(226,138,66,.48),transparent 56%),radial-gradient(ellipse 42% 38% at 50% 96%,rgba(45,140,92,.38),transparent 52%),radial-gradient(ellipse 38% 32% at 8% 70%,rgba(168,205,120,.40),transparent 52%);
+  --sidebar-glow:linear-gradient(180deg,rgba(45,106,79,.20) 0%,rgba(88,129,87,.10) 50%,rgba(196,122,58,.07) 100%);
 }
 :root[data-theme="forest"] .side{
   background:color-mix(in srgb,var(--panel) 50%,transparent);
@@ -194,8 +194,8 @@
   --surface-hover:#dee9ed; --surface-muted:#e6eef1;
   --brand-grad:linear-gradient(135deg,#0f6b7e 0%,#3aa0b3 50%,#d97862 100%);
   --side-accent:linear-gradient(180deg,rgba(15,107,126,.16),rgba(58,160,179,.12) 60%,rgba(217,120,98,.10));
-  --canvas-glow:radial-gradient(ellipse 70% 45% at 80% -5%,rgba(15,107,126,.28),transparent 60%),radial-gradient(ellipse 55% 40% at 5% 15%,rgba(217,120,98,.18),transparent 55%),radial-gradient(ellipse 40% 35% at 50% 100%,rgba(58,160,179,.16),transparent 50%),radial-gradient(ellipse 30% 28% at 92% 60%,rgba(173,216,230,.30),transparent 55%);
-  --sidebar-glow:linear-gradient(180deg,rgba(15,107,126,.12) 0%,rgba(58,160,179,.06) 50%,rgba(217,120,98,.04) 100%);
+  --canvas-glow:radial-gradient(ellipse 72% 48% at 82% -6%,rgba(16,150,176,.55),transparent 62%),radial-gradient(ellipse 55% 42% at 8% -10%,rgba(245,185,110,.45),transparent 58%),radial-gradient(ellipse 52% 42% at 4% 16%,rgba(238,118,95,.45),transparent 56%),radial-gradient(ellipse 42% 38% at 50% 100%,rgba(64,190,215,.42),transparent 52%),radial-gradient(ellipse 32% 30% at 93% 62%,rgba(185,228,250,.52),transparent 55%);
+  --sidebar-glow:linear-gradient(180deg,rgba(15,107,126,.20) 0%,rgba(58,160,179,.10) 50%,rgba(217,120,98,.07) 100%);
 }
 :root[data-theme="ocean"] .side{
   background:color-mix(in srgb,var(--panel) 52%,transparent);
@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.1"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260903c";
+const BUILD_TAG = "20260903d";
 
 
 
