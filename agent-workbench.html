@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -743,8 +743,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   margin-bottom:var(--space-3)}
 .field-group label{margin-bottom:0}
 .field-group input,.field-group select,.field-group textarea{margin-bottom:0}
-/* v3.0：任务表单等高——按钮底部与输入框底部对齐，且与输入框同高（不被 flex 拉伸） */
-.form-row .addbtn{align-self:flex-end;height:33px;min-height:33px;line-height:1}
+/* v3.0：任务表单等高——按钮底部与输入框底部对齐，且与输入框同高（不被 flex 拉伸）
+   v3.4.5 布局规范化：33px 魔法数字不在控件阶梯（38/28/24）上，与 38px 输入框并排时
+   顶边参差 5px——改为 --control-h 令牌，与 input/select/add-round 等高对齐 */
+.form-row .addbtn{align-self:flex-end;height:var(--control-h);min-height:var(--control-h);line-height:1}
 .form-row .add-wrap{align-self:flex-end}
 /* v3.0：任务表单铺满卡片——大字段（标题/标签）取消 max-width 限制，flex 铺满剩余空间 */
 .form-row .fld-lg{max-width:none}
@@ -2842,36 +2844,39 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
 }
 
-/* ===== 初雪主题（elegant）：清冷灰绿底 + 蓝绿松柏主色，如雪后松枝 ===== */
+/* ===== 初雪主题（elegant）：雪后松枝——清透青瓷绿底 + 蓝绿松柏主色 =====
+   v3.4.5：底布加绿重设计（用户反馈与亮色差异太小）——底色从近白灰绿(f5f7f4)
+   加深为青瓷绿(e2eee6)，与亮色中性灰(e0e0e4)拉开明确色相差；面板/线条/侧栏
+   全链路同步加绿，白卡片对比保持 ~12% */
 :root[data-theme="elegant"]{
-  --bg:#f5f7f4; --panel:#ffffff; --panel2:#eef2ee; --line:#d8ded8;
-  --side-bg:#f0f4f0;
+  --bg:#e2eee6; --panel:#ffffff; --panel2:#e9f3ec; --line:#c6d9cc;
+  --side-bg:#dcebe1;
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
-  --canvas-glow:radial-gradient(ellipse 60% 40% at 50% -8%,rgba(91,154,142,.15),transparent 55%),radial-gradient(ellipse 40% 35% at 90% 5%,rgba(180,200,220,.12),transparent 50%);
+  --canvas-glow:radial-gradient(ellipse 60% 40% at 50% -8%,rgba(91,154,142,.26),transparent 55%),radial-gradient(ellipse 40% 35% at 90% 5%,rgba(180,200,220,.14),transparent 50%);
   --brand-grad:linear-gradient(135deg,#5b9a8e,#7ab8a8);
-  --text:#2f332f; --muted:#757b75; --accent:#5b9a8e;
+  --text:#2b332e; --muted:#6d7a72; --accent:#4a8a7e;
   --shadow:0 1px 3px rgba(58,63,58,.08);
-  --surface-hover:#e2e9e4; --surface-muted:#eef2ee;
+  --surface-hover:#d6e8dc; --surface-muted:#e6f0e9;
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.5);
-  --text-dim:#5a5f5a; --text-dim-2:#7a807a; --text-dim-3:#6a6f6a; --text-faint:#8a908a;
+  --text-dim:#53605a; --text-dim-2:#717e76; --text-dim-3:#616e66; --text-faint:#828f86;
   --danger:#c0605a; --danger-soft:#f5eceb; --danger-border:#e0c4c0;
   --danger-overdue-bg:#f8eceb; --danger-overdue-border:#e0c4c0;
   --warn:#c89040; --warn-soft:#f5efe5;
-  --ok:#5a9e6e; --accent-soft:#e0eeea;
+  --ok:#4a9662; --accent-soft:#d8ece6;
   --sc-office:#5a8aaa; --sc-design:#a06888; --sc-study:#b87840; --sc-data:#5a8e8e; --sc-code:#5a9e6e; --sc-life:#8a6aaa;
-  --scenario-default:#5b9a8e;
-  --banner-bg:#eef2ee; --banner-border:#c8d4c8; --banner-ink:#3a3f3a; --banner-border-2:#d8ded8;
-  --kbd-border:#c8d4c8; --snip-bg:#2a302a; --snip-fg:#f5f7f4; --toast-bg:#3a3f3a;
-  --overlay:rgba(58,63,58,.2); --shadow-drawer:rgba(58,63,58,.1);
-  --shadow-overlay:rgba(58,63,58,.18); --shadow-toast:rgba(58,63,58,.22);
-  --heat-0:#e0e6e0; --heat-1:#c8e0d4; --heat-2:#a0ccb8; --heat-3:#78b89c; --heat-4:#50a480;
+  --scenario-default:#4a8a7e;
+  --banner-bg:#e9f3ec; --banner-border:#bcd4c2; --banner-ink:#38443c; --banner-border-2:#ccded2;
+  --kbd-border:#bcd4c2; --snip-bg:#28322c; --snip-fg:#f2f7f3; --toast-bg:#38443c;
+  --overlay:rgba(52,64,56,.2); --shadow-drawer:rgba(52,64,56,.1);
+  --shadow-overlay:rgba(52,64,56,.18); --shadow-toast:rgba(52,64,56,.22);
+  --heat-0:#dce8df; --heat-1:#c2e0cc; --heat-2:#98ccac; --heat-3:#6eb88c; --heat-4:#48a06c;
   --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
-  --shadow-1:0 1px 2px rgba(58,63,58,.06);
-  --shadow-2:0 2px 8px rgba(58,63,58,.08);
-  --shadow-3:0 4px 16px rgba(58,63,58,.1);
+  --shadow-1:0 1px 2px rgba(52,64,56,.06);
+  --shadow-2:0 2px 8px rgba(52,64,56,.08);
+  --shadow-3:0 4px 16px rgba(52,64,56,.1);
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
 }
 
@@ -8966,8 +8971,8 @@ function renderHeatmap(sc){
   const labels = weekdays.map((wd, i) =>
     `<text x="2" y="${gap + i * colW + cell - 2}" font-size="9" fill="var(--muted)">${wd}</text>`
   ).join("");
-  const legend = `<div class="heatmap-legend">少 <span class="sw l0"></span><span class="sw l1"></span><span class="sw l2"></span><span class="sw l3"></span><span class="sw l4"></span> 多</div>`;
-  return `<div class="heatmap-wrap"><svg class="heatmap-svg" viewBox="0 0 ${W} ${H}" aria-label="${SCENARIOS[sc] ? SCENARIOS[sc].name : sc} 热力图">${labels}${cells}</svg></div>${legend}`;
+  const legend = `<div class="heatmap-legend">${t("stats.heatLess", "少")} <span class="sw l0"></span><span class="sw l1"></span><span class="sw l2"></span><span class="sw l3"></span><span class="sw l4"></span> ${t("stats.heatMore", "多")}</div>`;
+  return `<div class="heatmap-wrap"><svg class="heatmap-svg" viewBox="0 0 ${W} ${H}" aria-label="${SCENARIOS[sc] ? SCENARIOS[sc].name : sc} ${t("stats.heatmapAria", "热力图")}">${labels}${cells}</svg></div>${legend}`;
 }
 
 /* ---------- A3 行为分析（最近 14 天） ---------- */
@@ -9149,7 +9154,7 @@ function renderHabitChainStatus(){
       `<span style="color:${fm.color}">${fm.name}</span>` +
       `<span class="arr">→</span>` +
       `<span style="color:${tm.color}">${tm.name}</span>` +
-      `<span class="cnt">触发 ${triggered} 次</span>` +
+      `<span class="cnt">${t("chain.triggerCount", "触发 {n} 次").replace("{n}", triggered)}</span>` +
       `<span class="last">${lastText}</span></div>`;
   }).join("");
   return `<div class="link-status">${items}</div>`;
@@ -9527,11 +9532,11 @@ function _buildSideMenu(){
   };
 
   return [
-    {name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode]},
-    {name:t("side.group.scenario", "场景"), nodes:sceneNodes},
-    {name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
-    {name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
-    {name:t("side.group.system", "系统"), nodes:[recycleNode, gearNode, helpNode]}
+    {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode]},
+    {gid:"scenario", name:t("side.group.scenario", "场景"), nodes:sceneNodes},
+    {gid:"ai", name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
+    {gid:"tools", name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
+    {gid:"system", name:t("side.group.system", "系统"), nodes:[recycleNode, gearNode, helpNode]}
   ];
 }
 /**
@@ -9647,13 +9652,15 @@ function _findSideMenuItem(menuId){
 /* ---------- v2.1.0 移动端导航：底部 4 组按钮（#mobBar）+ 底部抽屉（#sideSheet） ----------
    桌面端两者 display:none；≤767px 时 #side 隐藏、#mobBar 显示。
    抽屉内容复用 _buildSideMenu() 节点树；子项点击复用 _findSideMenuItem 动作注册表。 */
-/* v3.2 IA 重构：4 → 5 组，"应用" → "AI" + "工具" */
+/* v3.2 IA 重构：4 → 5 组，"应用" → "AI" + "工具"
+   v3.4.5 i18n 修复：键从中文组名改为稳定 gid——中文组名经 t() 翻译后（英文模式）
+   MOB_GROUP_ICONS 查不到图标、_mobCurrentGroup 高亮兜底失配。gid 与语言无关。 */
 const MOB_GROUP_ICONS = {
-  "总览": UI_ICONS.overview,
-  "场景": UI_ICONS.grid,
-  "AI": UI_ICONS.robot,
-  "工具": UI_ICONS.puzzle,
-  "系统": UI_ICONS.gear
+  overview: UI_ICONS.overview,
+  scenario: UI_ICONS.grid,
+  ai: UI_ICONS.robot,
+  tools: UI_ICONS.puzzle,
+  system: UI_ICONS.gear
 };
 /**
  * 渲染移动端底部 5 组按钮（总览/场景/AI/工具/系统）。
@@ -9666,9 +9673,9 @@ function renderMobBar(){
   const groups = _buildSideMenu();
   const cur = _mobCurrentGroup(groups);
   bar.innerHTML = sanitizeHtml(groups.map(g=>{
-    const act = (g.name===cur) ? " active" : "";
-    const icon = (MOB_GROUP_ICONS[g.name]||"").replace("<svg","<svg aria-hidden=\"true\"");
-    return `<button type="button" class="mob-bar-btn${act}" data-mob-group="${esc(g.name)}" aria-label="${esc(g.name)}">${icon}<span class="nm">${esc(g.name)}</span></button>`;
+    const act = (g.gid===cur) ? " active" : ""; // v3.4.5：gid 比较（语言无关），此前 g.name===cur 在英文模式失配
+    const icon = (MOB_GROUP_ICONS[g.gid]||"").replace("<svg","<svg aria-hidden=\"true\"");
+    return `<button type="button" class="mob-bar-btn${act}" data-mob-group="${esc(g.gid)}" aria-label="${esc(g.name)}">${icon}<span class="nm">${esc(g.name)}</span></button>`;
   }).join(""));
 }
 /* 当前视图归属组名（用于底栏高亮兜底；v3.2 五组结构） */
@@ -9677,10 +9684,10 @@ function _mobCurrentGroup(groups){
   for(const g of groups){
     for(const n of g.nodes){
       const hit = (n.sc && n.active) || (!n.sc && n.active) || n.hasActive;
-      if(hit) return g.name;
+      if(hit) return g.gid; // v3.4.5：返回 gid（语言无关），此前返回中文组名英文模式失配
     }
   }
-  return "总览";
+  return "overview"; // v3.4.5：兜底 gid（与组 gid 对齐，语言无关）
 }
 let _mobSheetGroup = null;
 /**
@@ -9688,14 +9695,14 @@ let _mobSheetGroup = null;
  * @param {string} groupName - 组名（总览/场景/功能/系统）
  * @returns {void}
  */
-function openSideSheet(groupName){
+function openSideSheet(groupGid){
   const sheet = $("#sideSheet"), body = $("#sideSheetBody"), title = $("#sideSheetTitle"), mask = $("#sideSheetBackdrop");
   if(!sheet || !body) return;
   const groups = _buildSideMenu();
-  const g = groups.find(x=>x.name===groupName);
+  const g = groups.find(x=>x.gid===groupGid); // v3.4.5：按 gid 查找（语言无关）；调用方 data-mob-group 现传 gid
   if(!g) return;
-  _mobSheetGroup = groupName;
-  if(title) title.textContent = groupName;
+  _mobSheetGroup = g.gid; // v3.4.5：存 gid 与 _mobCurrentGroup 对齐
+  if(title) title.textContent = g.name;
   const rows = [];
   g.nodes.forEach(n=>{
     const pAct = n.active ? " active" : "";
@@ -10563,13 +10570,13 @@ const TOOL_APPS = {
         html += "</tr>";
       }
       html += "</table>";
-      return '<p class="sub">点击单元格直接编辑；按钮增删行列，数据自动保存</p>' + html
+      return '<p class="sub">' + t("tool.sheet.hint", "点击单元格直接编辑；按钮增删行列，数据自动保存") + '</p>' + html
         + '<div class="tool-actions">'
-        + '<span class="add-wrap"><span class="add-label">添加行</span><button type="button" class="addbtn sm add-round" id="shAddRow" aria-label="' + t("tool.sheet.addRow", "添加行") + '">＋</button></span>'
-        + '<span class="add-wrap"><span class="add-label">添加列</span><button type="button" class="addbtn sm add-round" id="shAddCol" aria-label="' + t("tool.sheet.addCol", "添加列") + '">＋</button></span>'
-        + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelRow">－ 删除末行</button>'
-        + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelCol">－ 删除末列</button>'
-        + '<button type="button" class="addbtn sm" id="shExportCsv">导出 CSV</button></div>';
+        + '<span class="add-wrap"><span class="add-label">' + t("tool.sheet.addRow", "添加行") + '</span><button type="button" class="addbtn sm add-round" id="shAddRow" aria-label="' + t("tool.sheet.addRow", "添加行") + '">＋</button></span>'
+        + '<span class="add-wrap"><span class="add-label">' + t("tool.sheet.addCol", "添加列") + '</span><button type="button" class="addbtn sm add-round" id="shAddCol" aria-label="' + t("tool.sheet.addCol", "添加列") + '">＋</button></span>'
+        + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelRow">' + t("tool.sheet.delLastRow", "－ 删除末行") + '</button>'
+        + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelCol">' + t("tool.sheet.delLastCol", "－ 删除末列") + '</button>'
+        + '<button type="button" class="addbtn sm" id="shExportCsv">' + t("tool.sheet.exportCsvBtn", "导出 CSV") + '</button></div>';
     },
     bind: function(){
       const getRows = function(){
@@ -10656,9 +10663,9 @@ const TOOL_APPS = {
   "off-pdf": {
     name:t("tool.pdf.name", "PDF 阅读"), icon:UI_ICONS.pdf, desc:t("tool.pdf.desc", "导入本地 PDF · iframe 预览"),
     render: function(){
-      return '<label>导入 PDF 文件</label><input type="file" id="pdfFile" accept=".pdf,application/pdf" class="u-mt-2">'
+      return '<label>' + t("tool.pdf.importLabel", "导入 PDF 文件") + '</label><input type="file" id="pdfFile" accept=".pdf,application/pdf" class="u-mt-2">'
         + '<div id="pdfViewWrap" class="u-mt-3"></div>'
-        + '<p class="sub u-mt-3">说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。</p>';
+        + '<p class="sub u-mt-3">' + t("tool.pdf.note", "说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。") + '</p>';
     },
     bind: function(){
       const inp = $("#pdfFile"); if(!inp) return;
@@ -10675,12 +10682,12 @@ const TOOL_APPS = {
     name:t("tool.ocr.name", "截图 OCR"), icon:UI_ICONS.ocr, desc:t("tool.ocr.desc", "上传截图 · AI 多模态识别文字"),
     render: function(){
       const aiOn = (typeof getCfg === "function") && getCfg().enabled;
-      return '<label>上传截图（PNG/JPG）</label><input type="file" id="ocrFile" accept="image/*" class="u-mt-2">'
+      return '<label>' + t("tool.ocr.uploadLabel", "上传截图（PNG/JPG）") + '</label><input type="file" id="ocrFile" accept="image/*" class="u-mt-2">'
         + '<img id="ocrPreview" hidden class="u-mt-3 u-max-w-100 u-max-h-300 u-radius-md u-border-line" alt="' + t("tool.ocr.preview", t("tool.md.preview", "预览")) + '">'
-        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="ocrRun"' + (aiOn ? "" : " disabled") + ">开始识别</button></div>"
-        + '<label class="u-mt-3">识别结果</label>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="ocrRun"' + (aiOn ? "" : " disabled") + ">" + t("tool.ocr.runBtn", "开始识别") + "</button></div>"
+        + '<label class="u-mt-3">' + t("tool.ocr.resultLabel", "识别结果") + '</label>'
         + '<textarea id="ocrResult" readonly placeholder="' + (aiOn ? t("tool.ocr.resultPlaceholder", "识别结果将显示在这里") : t("tool.ocr.noAiPlaceholder", "需先在 设置→AI 配置 API Key 才能使用 OCR")) + '" class="u-min-h-160"></textarea>'
-        + (aiOn ? "" : '<p class="sub">未配置 AI——OCR 依赖 AI 多模态能力。请到 设置→AI 填入 API Key 后重试。</p>');
+        + (aiOn ? "" : '<p class="sub">' + t("tool.ocr.noAiHint", "未配置 AI——OCR 依赖 AI 多模态能力。请到 设置→AI 填入 API Key 后重试。") + '</p>');
     },
     bind: async function(){
       const inp = $("#ocrFile"); if(!inp) return;
@@ -13935,6 +13942,7 @@ function renderStats(){
   if(stats.total === 0){
     _dashEditMode = false;
     $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>`);
+    appendFoot(); // v3.4.5：空数据分支补尾栏（此前直接 return 漏掉——与其他页面统一）
     return;
   }
   const statsNav = `<nav class="set-nav stats-range-nav" aria-label="${t("statsPage.aria", "统计时间筛选")}">
@@ -13972,6 +13980,7 @@ function renderStats(){
   $$("#main .stats-range-nav .set-nav-btn").forEach(b=>{
     b.onclick = ()=>{ _statsRange = b.getAttribute("data-stats-range")||"week"; renderStats(); };
   });
+  appendFoot(); // v3.4.5：renderStats 自含尾栏——编辑布局/时间筛选重渲染后不再依赖调用方补（此前 tab 点击后尾栏消失）
 }
 /* ============================================================
  * v2.4.0 四大新页面：任务中心 / 工具箱 / 商店 / 场景联动
@@ -14298,6 +14307,7 @@ function renderChainPage(){
       if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
     };
   });
+  appendFoot(); // v3.4.5：renderChainPage 自含尾栏（幂等）——不依赖调用方 render() 补
 }
 
 /* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
@@ -24269,7 +24279,7 @@ const MESSAGES = {
     "look.themeDesc.aurora": "极光渐变亮色主题",
     "look.themeDesc.dark": "暗色护眼主题",
     "look.themeDesc.sepia": "暖色调护眼阅读模式",
-    "look.themeDesc.elegant": "清冷灰绿底色主题",
+    "look.themeDesc.elegant": "青瓷绿底 · 雪后松枝",
     "look.themeDesc.matrix": "绿色终端风格主题",
     "look.themeDesc.forest": "晨雾林地 · 松针深绿主题",
     "look.themeDesc.ocean": "晨曦海面 · 深海青主题",
@@ -26343,9 +26353,26 @@ const MESSAGES = {
     "api.keyCreated": "Key 已创建：",
     "api.keyNamePrompt": "输入 Key 名称：",
     "api.unknownDevice": "未知设备",
+    "api.deviceDesktop": "桌面应用",
+    "api.deviceMobile": "移动浏览器",
+    "api.deviceWeb": "Web 浏览器",
     "api.reminder": "提醒",
     "filter.collapse": "筛选 ▾",
     "filter.expand": "筛选 ▸",
+    "stats.heatLess": "少",
+    "stats.heatMore": "多",
+    "stats.heatmapAria": "热力图",
+    "chain.triggerCount": "触发 {n} 次",
+    "tool.sheet.hint": "点击单元格直接编辑；按钮增删行列，数据自动保存",
+    "tool.sheet.delLastRow": "－ 删除末行",
+    "tool.sheet.delLastCol": "－ 删除末列",
+    "tool.sheet.exportCsvBtn": "导出 CSV",
+    "tool.pdf.importLabel": "导入 PDF 文件",
+    "tool.pdf.note": "说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。",
+    "tool.ocr.uploadLabel": "上传截图（PNG/JPG）",
+    "tool.ocr.runBtn": "开始识别",
+    "tool.ocr.resultLabel": "识别结果",
+    "tool.ocr.noAiHint": "未配置 AI——OCR 依赖 AI 多模态能力。请到 设置→AI 填入 API Key 后重试。",
     "greeting.lateNight": "夜深了",
     "greeting.morning": "早安",
     "greeting.noon": "午安",
@@ -27358,7 +27385,7 @@ const MESSAGES = {
     "look.themeDesc.aurora": "Aurora gradient light theme",
     "look.themeDesc.dark": "Dark eye-friendly theme",
     "look.themeDesc.sepia": "Warm tone reading mode",
-    "look.themeDesc.elegant": "Cool grey-green theme",
+    "look.themeDesc.elegant": "Celadon green, snow-kissed pines",
     "look.themeDesc.matrix": "Green terminal style theme",
     "look.themeDesc.forest": "Misty woodland · pine dark green",
     "look.themeDesc.ocean": "Dawn seascape · deep ocean blue",
@@ -29430,9 +29457,26 @@ const MESSAGES = {
     "api.keyCreated": "Key created: ",
     "api.keyNamePrompt": "Enter key name:",
     "api.unknownDevice": "Unknown device",
+    "api.deviceDesktop": "Desktop app",
+    "api.deviceMobile": "Mobile browser",
+    "api.deviceWeb": "Web browser",
     "api.reminder": "Reminder",
     "filter.collapse": "Filter ▾",
     "filter.expand": "Filter ▸",
+    "stats.heatLess": "Less",
+    "stats.heatMore": "More",
+    "stats.heatmapAria": "heatmap",
+    "chain.triggerCount": "Triggered {n} times",
+    "tool.sheet.hint": "Click a cell to edit directly; buttons add/remove rows and columns; data saves automatically",
+    "tool.sheet.delLastRow": "－ Delete last row",
+    "tool.sheet.delLastCol": "－ Delete last column",
+    "tool.sheet.exportCsvBtn": "Export CSV",
+    "tool.pdf.importLabel": "Import PDF file",
+    "tool.pdf.note": "Note: PDFs preview in the local browser; some environments (file:// protocol) may be restricted — use a system reader then.",
+    "tool.ocr.uploadLabel": "Upload screenshot (PNG/JPG)",
+    "tool.ocr.runBtn": "Start recognition",
+    "tool.ocr.resultLabel": "Recognition result",
+    "tool.ocr.noAiHint": "AI not configured — OCR relies on AI multimodal capability. Fill in an API Key in Settings → AI and retry.",
     "greeting.lateNight": "Late night",
     "greeting.morning": "Good morning",
     "greeting.noon": "Good noon",
@@ -30269,10 +30313,10 @@ const MESSAGES = {
   function _getDeviceLabel(){
     try{
       const ua = (typeof navigator !== "undefined" && navigator.userAgent) ? navigator.userAgent : "unknown";
-      if(/Electron/i.test(ua)) return "桌面应用";
-      if(/Mobile/i.test(ua)) return "移动浏览器";
-      return "Web 浏览器";
-    }catch(e){ return "未知设备"; }
+      if(/Electron/i.test(ua)) return t("api.deviceDesktop", "桌面应用");
+      if(/Mobile/i.test(ua)) return t("api.deviceMobile", "移动浏览器");
+      return t("api.deviceWeb", "Web 浏览器");
+    }catch(e){ return t("api.unknownDevice", "未知设备"); }
   }
 
   // 获取已缓存用户信息
@@ -31395,7 +31439,7 @@ const PRESET_THEMES = {
   sepia:    { name: t("look.theme.sepia","温和护眼"), desc: t("look.themeDesc.sepia","暖色调护眼阅读模式") },
   // v3.1.2：elegant/matrix 在主题下拉可选且 CSS 有定义（[data-theme="elegant"/"matrix"]），
   // 修复前不在注册表——主题管理列表不可见、不可管理。补齐使三处清单一致。
-  elegant:  { name: t("look.theme.elegant","见静初雪"),   desc: t("look.themeDesc.elegant","清冷灰绿底色主题") }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」→ v3.4.4 更名「见静初雪」
+  elegant:  { name: t("look.theme.elegant","见静初雪"),   desc: t("look.themeDesc.elegant","青瓷绿底 · 雪后松枝") }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」→ v3.4.4 更名「见静初雪」
   matrix:   { name: t("look.theme.matrix","黑客帝国"), desc: t("look.themeDesc.matrix","绿色终端风格主题") },
   // v3.4.0：forest/ocean 补入注册表——5b227f4 引入主题时漏注册（v3.1.2 elegant/matrix 同款问题重演），
   // 导致主题管理列表不可见、不可管理。补齐使 CSS/下拉/注册表三处清单一致。
