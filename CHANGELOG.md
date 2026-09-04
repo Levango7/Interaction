@@ -29,10 +29,11 @@
 - 新增 `server/.env.example`（全部环境变量含生成方式注释）与 `server/README.md`（快速开始/环境变量表/安全机制/API 概览）。
 
 **🧪 CI 与测试**
-- `.github/workflows/ci.yml` 新增 `server-test` job（ubuntu + node 20，`npm ci` + `npm test`）——此前 server 112 用例从未在 CI 运行。
+- `.github/workflows/ci.yml` 新增 `server-test` job（ubuntu + node 22，`npm ci` + `npm test`）——此前 server 112 用例从未在 CI 运行。
+- 修正：server-test job 的 node 版本升至 **22**，并同步 `server/package.json` engines 为 `>=22.5.0`——server 依赖 `node:sqlite`（22.5+ 内置），node 20 下 `npm test` 秒败（首次 CI 运行 #139 已验证此问题）。
 - 新增 `server/tests/security.test.js` 10 个用例：失败锁定（阈值前/后/跨邮箱隔离）、总节流 429、CORS 白名单（外部拒绝/localhost/127.0.0.1/白名单命中/预检请求）。
 
-**✅ 验证**：server 122/122 通过；主项目 lint 0 problems、build:check 门禁通过、四源版本一致（3.4.7）。
+**✅ 验证**：server 122/122 通过（node 22 本地实测）；主套件 CI ubuntu/windows 双平台通过；lint 0 problems、build:check 门禁通过、四源版本一致。
 
 ## [v3.4.7] - 2026-09-04
 

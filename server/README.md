@@ -4,6 +4,8 @@ Agent 工坊的配套后端服务：用户账号系统（注册/登录/JWT 刷�
 
 技术栈：Express + node:sqlite（`DatabaseSync`）+ jsonwebtoken + bcryptjs + web-push + nodemailer + node-cron。
 
+> **运行环境要求**：Node.js **>= 22.5.0**（`node:sqlite` 内置模块自 22.5 起可用，无需原生编译）。
+
 ## 快速开始
 
 ```bash
