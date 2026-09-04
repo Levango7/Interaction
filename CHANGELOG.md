@@ -2,6 +2,21 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.4.10] - 2026-09-05
+
+### BUILTIN_PLUGINS 剩余中文 i18n（description/scenarios[].desc/render 文案）
+
+**🌐 BUILTIN_PLUGINS 剩余中文 i18n（24 处）**
+- **pomodoro description**（1 处）：之前任务 245 漏掉的 `description` 字段用 `t()` 替换。
+- **scenarios[].desc**（4 处）：pomodoro/reading/habit-tracker/focus-timer 的场景描述用 `t()` 替换。
+- **budget render**（5 处）：`本月总支出`/`缴费`/`采购`/`工具`/来源说明用 `t()` 替换。
+- **weather render**（3 处）：`天气`/`获取中...`/`点击同步` 用 `t()` 替换。
+- **quote render**（9 处）：8 条中文名言 + `每日一言` 标题用 `t()` 替换。
+- **mindmap render**（2 处）：`思维导图` 标题 + `拖拽节点...` 提示用 `t()` 替换。
+- 新增 `plugin.*` key（zh + en 各 25 个），涵盖 desc/scenarioDesc/total/bills/shop/tool/hint/title/loading/sync/q1-q8 等。
+
+**✅ 验证**：lint 0 problems；build:check 门禁通过；quickwins 22/22 + error-boundary 22/22 + color-tokens 4/4 通过。
+
 ## [v3.4.9] - 2026-09-05
 
 ### 秘境森林主题色调整 + PRESET_THEMES/BUILTIN_PLUGINS i18n

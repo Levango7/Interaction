@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.9"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.10"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260904d";
+const BUILD_TAG = "20260904e";
 
 
 
@@ -26310,6 +26310,31 @@ const MESSAGES = {
     "plugin.mindmap.name": "思维导图",
     "plugin.mindmap.desc": "可视化思维梳理，支持节点增删、连线、导出",
     "plugin.mindmap.cardName": "思维导图",
+    // BUILTIN_PLUGINS 剩余中文 i18n（description/scenarios[].desc/render 文案）
+    "plugin.pomodoro.desc": "25分钟专注+5分钟休息的深度工作法场景",
+    "plugin.pomodoro.scenarioDesc": "笃行专注法",
+    "plugin.reading.scenarioDesc": "阅读管理",
+    "plugin.habit-tracker.scenarioDesc": "每日打卡 · 连续记录 · 趋势图表",
+    "plugin.focus-timer.scenarioDesc": "自定义专注时长与休息间隔",
+    "plugin.budget.total": "本月总支出",
+    "plugin.budget.bills": "缴费",
+    "plugin.budget.shop": "采购",
+    "plugin.budget.tool": "工具",
+    "plugin.budget.hint": "来源：生活场景的缴费/采购台账 + 工具箱记录（v3.1.2 A-档：插件卡接真数据）",
+    "plugin.weather.title": "天气",
+    "plugin.weather.loading": "获取中...",
+    "plugin.weather.sync": "点击同步",
+    "plugin.quote.title": "每日一言",
+    "plugin.quote.q1": "种一棵树最好的时间是十年前，其次是现在。",
+    "plugin.quote.q2": "千里之行，始于足下。",
+    "plugin.quote.q3": "不积跬步，无以至千里。",
+    "plugin.quote.q4": "学而不思则罔，思而不学则殆。",
+    "plugin.quote.q5": "知行合一。",
+    "plugin.quote.q6": "把每一天当作最后一天来过。",
+    "plugin.quote.q7": "简单是终极的复杂。",
+    "plugin.quote.q8": "保持饥饿，保持愚蠢。",
+    "plugin.mindmap.title": "思维导图",
+    "plugin.mindmap.hint": "拖拽节点、创建关系，梳理你的想法",
   },
   en: {
     // Common
@@ -28902,6 +28927,30 @@ const MESSAGES = {
     "plugin.mindmap.name": "Mind Map",
     "plugin.mindmap.desc": "Visual thinking organization, supports node add/delete, connection, export",
     "plugin.mindmap.cardName": "Mind Map",
+    "plugin.pomodoro.desc": "25min focus + 5min break deep work method scenario",
+    "plugin.pomodoro.scenarioDesc": "Dedicated Focus Method",
+    "plugin.reading.scenarioDesc": "Reading Management",
+    "plugin.habit-tracker.scenarioDesc": "Daily check-in · Streak tracking · Trend charts",
+    "plugin.focus-timer.scenarioDesc": "Custom focus duration and break intervals",
+    "plugin.budget.total": "Total spending this month",
+    "plugin.budget.bills": "Bills",
+    "plugin.budget.shop": "Shopping",
+    "plugin.budget.tool": "Tools",
+    "plugin.budget.hint": "Source: Life scenario bills/shopping ledger + toolbox records (v3.1.2: plugin card connects real data)",
+    "plugin.weather.title": "Weather",
+    "plugin.weather.loading": "Loading...",
+    "plugin.weather.sync": "Click to sync",
+    "plugin.quote.title": "Daily Quote",
+    "plugin.quote.q1": "The best time to plant a tree was ten years ago, the second best is now.",
+    "plugin.quote.q2": "A journey of a thousand miles begins with a single step.",
+    "plugin.quote.q3": "Without accumulating steps, one cannot reach a thousand miles.",
+    "plugin.quote.q4": "Learning without thinking is useless, thinking without learning is dangerous.",
+    "plugin.quote.q5": "Unity of knowledge and action.",
+    "plugin.quote.q6": "Live every day as if it were your last.",
+    "plugin.quote.q7": "Simplicity is the ultimate sophistication.",
+    "plugin.quote.q8": "Stay hungry, stay foolish.",
+    "plugin.mindmap.title": "Mind Map",
+    "plugin.mindmap.hint": "Drag nodes, create relationships, organize your thoughts",
   }
 };
 
@@ -29941,14 +29990,14 @@ const BUILTIN_PLUGINS = [
     id: "pomodoro",
     name: t("plugin.pomodoro.name", "笃行专注法"),
     version: "1.0.0",
-    description: "25分钟专注+5分钟休息的深度工作法场景",
+    description: t("plugin.pomodoro.desc", "25分钟专注+5分钟休息的深度工作法场景"),
     enabled: false,
     scenarios: [{
       key: "pomodoro",
       name: t("plugin.pomodoro.scenarioName", "笃行"),
       icon: '',
       color:"#e74c3c",
-      desc: "笃行专注法"
+      desc: t("plugin.pomodoro.scenarioDesc", "笃行专注法")
     }]
   },
   {
@@ -29962,7 +30011,7 @@ const BUILTIN_PLUGINS = [
       name: t("plugin.reading.scenarioName", "阅读"),
       icon: '',
       color:"#3498db",
-      desc: "阅读管理"
+      desc: t("plugin.reading.scenarioDesc", "阅读管理")
     }]
   },
   {
@@ -29989,13 +30038,13 @@ const BUILTIN_PLUGINS = [
         }catch(_e){}
         const total = bills + shop + toolBill + toolTake;
         return "<div class='plugin-card budget-card'>" +
-          "<div class='budget-total'>本月总支出 ¥" + total.toFixed(2) + "</div>" +
+          "<div class='budget-total'>" + t("plugin.budget.total", "本月总支出") + " ¥" + total.toFixed(2) + "</div>" +
           "<div class='budget-breakdown'>" +
-            "<span>缴费 ¥" + bills.toFixed(2) + "</span>" +
-            "<span>采购 ¥" + shop.toFixed(2) + "</span>" +
-            "<span>工具 ¥" + (toolBill + toolTake).toFixed(2) + "</span>" +
+            "<span>" + t("plugin.budget.bills", "缴费") + " ¥" + bills.toFixed(2) + "</span>" +
+            "<span>" + t("plugin.budget.shop", "采购") + " ¥" + shop.toFixed(2) + "</span>" +
+            "<span>" + t("plugin.budget.tool", "工具") + " ¥" + (toolBill + toolTake).toFixed(2) + "</span>" +
           "</div>" +
-          "<p class='hint' class='u-fs-2xs u-mt-1'>来源：生活场景的缴费/采购台账 + 工具箱记录（v3.1.2 A-档：插件卡接真数据）</p>" +
+          "<p class='hint' class='u-fs-2xs u-mt-1'>" + t("plugin.budget.hint", "来源：生活场景的缴费/采购台账 + 工具箱记录（v3.1.2 A-档：插件卡接真数据）") + "</p>" +
         "</div>";
       }
     }]
@@ -30026,7 +30075,7 @@ const BUILTIN_PLUGINS = [
       name: t("plugin.habit-tracker.scenarioName", "习惯追踪"),
       icon: '',
       color:"#27ae60",
-      desc: "每日打卡 · 连续记录 · 趋势图表"
+      desc: t("plugin.habit-tracker.scenarioDesc", "每日打卡 · 连续记录 · 趋势图表")
     }]
   },
   {
@@ -30039,9 +30088,9 @@ const BUILTIN_PLUGINS = [
       type: "weather-widget",
       name: t("plugin.weather.cardName", "天气卡片"),
       render: function(data){
-        return '<div class="plugin-card"><div class="plugin-title">天气</div>'
-          + '<div class="plugin-body">\u2600 FE ' + (data&&data.temp ? data.temp+'\u00B0C' : '获取中...')
-          + '<br><span class="u-fs-2xs u-text-muted">'+(data&&data.desc||'点击同步')+'</span></div></div>';
+        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.weather.title", "天气") + '</div>'
+          + '<div class="plugin-body">\u2600 FE ' + (data&&data.temp ? data.temp+'\u00B0C' : t("plugin.weather.loading", "获取中..."))
+          + '<br><span class="u-fs-2xs u-text-muted">'+(data&&data.desc||t("plugin.weather.sync", "点击同步"))+'</span></div></div>';
       }
     }]
   },
@@ -30056,17 +30105,17 @@ const BUILTIN_PLUGINS = [
       name: t("plugin.quote.cardName", "每日一言"),
       render: function(){
         const quotes = [
-          "种一棵树最好的时间是十年前，其次是现在。",
-          "千里之行，始于足下。",
-          "不积跬步，无以至千里。",
-          "学而不思则罔，思而不学则殆。",
-          "知行合一。",
-          "把每一天当作最后一天来过。",
-          "简单是终极的复杂。",
-          "保持饥饿，保持愚蠢。"
+          t("plugin.quote.q1", "种一棵树最好的时间是十年前，其次是现在。"),
+          t("plugin.quote.q2", "千里之行，始于足下。"),
+          t("plugin.quote.q3", "不积跬步，无以至千里。"),
+          t("plugin.quote.q4", "学而不思则罔，思而不学则殆。"),
+          t("plugin.quote.q5", "知行合一。"),
+          t("plugin.quote.q6", "把每一天当作最后一天来过。"),
+          t("plugin.quote.q7", "简单是终极的复杂。"),
+          t("plugin.quote.q8", "保持饥饿，保持愚蠢。")
         ];
         const q = quotes[Math.floor(Math.random()*quotes.length)];
-        return '<div class="plugin-card"><div class="plugin-title">每日一言</div>'
+        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.quote.title", "每日一言") + '</div>'
           + '<div class="plugin-body u-italic u-lh-18">'+q+'</div></div>';
       }
     }]
@@ -30082,7 +30131,7 @@ const BUILTIN_PLUGINS = [
       name: t("plugin.focus-timer.scenarioName", "专注时钟"),
       icon: '',
       color:"#e67e22",
-      desc: "自定义专注时长与休息间隔"
+      desc: t("plugin.focus-timer.scenarioDesc", "自定义专注时长与休息间隔")
     }]
   },
   {
@@ -30095,8 +30144,8 @@ const BUILTIN_PLUGINS = [
       type: "mindmap-widget",
       name: t("plugin.mindmap.cardName", "思维导图"),
       render: function(){
-        return '<div class="plugin-card"><div class="plugin-title">思维导图</div>'
-          + '<div class="plugin-body u-text-muted u-text-center u-p-5">拖拽节点、创建关系，梳理你的想法</div>'
+        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.mindmap.title", "思维导图") + '</div>'
+          + '<div class="plugin-body u-text-muted u-text-center u-p-5">' + t("plugin.mindmap.hint", "拖拽节点、创建关系，梳理你的想法") + '</div>'
           + '<canvas id="mindmapCanvas" width="400" height="200" class="u-radius-sm u-border-line u-max-w-100"></canvas></div>';
       }
     }]
