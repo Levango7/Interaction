@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.6"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.7"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260904a";
+const BUILD_TAG = "20260904b";
 
 
 
@@ -22411,7 +22411,7 @@ $("#aiMemSave").onclick = function(){
     threshold: th ? Number(th.value) : 0.7,
     strategy: st ? st.value : "recent"
   });
-  toast("记忆配置已保存");
+  toast(t("ai.memoryConfigSaved","记忆配置已保存"));
 };
 $("#aiPluginSave").onclick = function(){
   // v3.1.2 A-档：插件勾选按 name 匹配（防顺序错配）+ 同步清空提示（这 3 项是占位假插件）
@@ -22425,9 +22425,9 @@ $("#aiPluginSave").onclick = function(){
   saveAiConfig("plugin", {plugins: AI_BUILTIN_PLUGINS.map(function(p){ return {name:p.name,desc:p.desc,enabled: boxByName.get(p.name)===true}; })});
   // 已知占位插件诚实提示（不假装勾选后会有能力变化）
   if(enabled.length > 0){
-    toast("插件配置已保存（注意：code_runner/web_search/file_reader 暂未接线执行代码，勾选状态仅保存配置）");
+    toast(t("ai.pluginConfigSavedStub","插件配置已保存（注意：code_runner/web_search/file_reader 暂未接线执行代码，勾选状态仅保存配置）"));
   } else {
-    toast("插件配置已保存");
+    toast(t("plugin.configSaved","插件配置已保存"));
   }
 };
 $("#aiSessSave").onclick = function(){
@@ -22447,7 +22447,7 @@ $("#aiSessClear").onclick = function(){
   saved.history = [];
   saveAiConfig("session", saved);
   renderAiSessHistory();
-  toast("已清除所有会话历史");
+  toast(t("ai.sessHistoryCleared","已清除所有会话历史"));
 };
 $("#cfgProfileNew").onclick = newProfile;
 $("#cfgProfileDup").onclick = dupProfile;
@@ -22513,23 +22513,23 @@ if(_cfgLangSel){
   _cfgLangSel.onchange = ()=>{
     const ok = setLang(_cfgLangSel.value);
     if(ok){
-      try{ toast("已切换语言 / Language switched", "ok"); }catch(e){ /* noop */ }
+      try{ toast(t("msg.langSwitched","已切换语言"), "ok"); }catch(e){ /* noop */ }
     }
   };
 }
-$("#btnClearMem").onclick = ()=>{ if(!confirm(t("mem.confirmClear","确定清空全部工作记忆？此操作不可恢复。"))) return; save(PREFIX+"memory",[]); updateAgentStatus(); toast("已清空工作记忆","ok"); };
-$("#btnCancelGoal").onclick = ()=>{ const g=cancelGoal(); updateAgentStatus(); toast(g?("已取消目标「"+g.title+"」"):t("msg.noActiveGoal","当前无进行中目标"),"ok"); };
+$("#btnClearMem").onclick = ()=>{ if(!confirm(t("mem.confirmClear","确定清空全部工作记忆？此操作不可恢复。"))) return; save(PREFIX+"memory",[]); updateAgentStatus(); toast(t("msg.memoryCleared","已清空工作记忆"),"ok"); };
+$("#btnCancelGoal").onclick = ()=>{ const g=cancelGoal(); updateAgentStatus(); toast(g?(t("msg.goalCancelled","已取消目标「")+g.title+"」"):t("msg.noActiveGoal","当前无进行中目标"),"ok"); };
 
 /* ---------- T3.4 通知提醒开关绑定 ---------- */
 $("#cfgNotify").onchange = ()=>{
   const on = $("#cfgNotify").checked;
   setNotifyEnabled(on);
   if(on){
-    toast("已开启通知提醒", "ok");
+    toast(t("notify.enabled","已开启通知提醒"), "ok");
     startNotifyScheduler();
     try{ runNotifyCheck(); }catch(e){ /* noop */ }
   }else{
-    toast("已关闭通知提醒", "ok");
+    toast(t("notify.disabled","已关闭通知提醒"), "ok");
   }
 };
 
@@ -22562,17 +22562,17 @@ function _exitChainEdit(id){
 $("#chainAddBtn").onclick = ()=>{
   const src = $("#chainAddSrc").value, kw = $("#chainAddKw").value, dst = $("#chainAddDst").value;
   const r = addCustomLink(src, kw, dst);
-  if(!r.ok){ toast("添加失败："+r.err, "warn"); return; }
+  if(!r.ok){ toast(t("msg.addFailed","添加失败")+"："+r.err, "warn"); return; }
   $("#chainAddKw").value = "";
   renderLinksBox();
-  toast("已添加链："+(SCENARIOS[src]&&SCENARIOS[src].name||src)+"→"+(SCENARIOS[dst]&&SCENARIOS[dst].name||dst), "ok");
+  toast(t("chain.addedPrefix","已添加链：")+(SCENARIOS[src]&&SCENARIOS[src].name||src)+"→"+(SCENARIOS[dst]&&SCENARIOS[dst].name||dst), "ok");
 };
 /* 重置为默认按钮 */
 $("#chainResetBtn").onclick = ()=>{
   if(!confirm(t("chain.confirmReset","确定重置为默认联动规则？自定义规则将被清除。"))) return;
   resetCustomLinks();
   renderLinksBox();
-  toast("已重置为默认联动规则", "ok");
+  toast(t("chain.resetDone","已重置为默认联动规则"), "ok");
 };
 /* linksBox 事件委托：删除 / 编辑关键词 / 编辑目标场景 / 启用切换 */
 $("#linksBox").addEventListener("click", e=>{
@@ -22666,12 +22666,12 @@ if(_btnTrackerStop) _btnTrackerStop.onclick = function(){ if(typeof stopTracking
 /* ---------- v1.5-B 插件市场：注册插件按钮事件绑定 ---------- */
 const _btnPluginAdd = $("#pluginAddBtn"); if(_btnPluginAdd) _btnPluginAdd.onclick = ()=>{
   const txt = $("#pluginAddJson").value.trim();
-  if(!txt){ toast("请先粘贴插件 JSON 定义", "warn"); return; }
+  if(!txt){ toast(t("plugin.pasteFirst","请先粘贴插件 JSON 定义"), "warn"); return; }
   const r = registerPluginFromJson(txt);
-  if(!r.ok){ toast(r.err||"注册失败", "warn"); return; }
+  if(!r.ok){ toast(r.err||t("api.registerFailed","注册失败"), "warn"); return; }
   $("#pluginAddJson").value = "";
   renderPluginBox();
-  toast("已注册插件「"+r.id+"」", "ok");
+  toast(t("plugin.registeredPrefix","已注册插件「")+r.id+t("plugin.registeredSuffix","」"), "ok");
 };
 
 /* ---------- v1.5-C 主题系统：主题编辑器按钮事件绑定 ---------- */
@@ -22700,10 +22700,10 @@ if(_cfgThemeSel){
       try{ save(PREFIX+"cfg", cfg); }catch(e){}
       try{ localStorage.setItem(PREFIX + "theme", "system"); }catch(e2){ /* 静默降级 */ }
       applyTheme();
-      try{ toast("已切换为跟随系统主题", "ok"); }catch(e){}
+      try{ toast(t("theme.switchedSystem","已切换为跟随系统主题"), "ok"); }catch(e){}
     }else{
       if(typeof setTheme === "function") setTheme(v); // 全部预置主题与自定义统一走 setTheme（v3.1.1 起预置主题含 aurora；contrast 已移除）
-      try{ toast("已切换主题：" + (_cfgThemeSel.selectedOptions[0] && _cfgThemeSel.selectedOptions[0].textContent || v), "ok"); }catch(e){}
+      try{ toast(t("theme.switchedPrefix","已切换主题：") + (_cfgThemeSel.selectedOptions[0] && _cfgThemeSel.selectedOptions[0].textContent || v), "ok"); }catch(e){}
     }
     try{ updateTodoBar(); }catch(e3){ /* 消息栏预览非关键路径 */ }
   };
@@ -22894,21 +22894,21 @@ function initNetworkMonitor(){
         const r = await flushSyncQueue();
         setSyncRetryState(false);
         // v1.11.1 [M6]：未配置同步端点时如实提示，不谎报"已同步"
-        if (r.skipped) { try { toast("已恢复在线（未配置同步服务器，"+r.fail+" 条离线操作仅保存在本地）", "warn"); } catch(e){ /* noop */ } }
-        else { try { toast("已恢复在线，已同步 "+r.ok+" 条离线操作", "ok"); } catch(e){ /* noop */ } }
+        if (r.skipped) { try { toast(t("pwa.onlineSyncSkippedPrefix","已恢复在线（未配置同步服务器，")+r.fail+t("pwa.onlineSyncSkippedSuffix"," 条离线操作仅保存在本地）"), "warn"); } catch(e){ /* noop */ } }
+        else { try { toast(t("pwa.onlineSyncedPrefix","已恢复在线，已同步 ")+r.ok+t("pwa.onlineSyncedSuffix"," 条离线操作"), "ok"); } catch(e){ /* noop */ } }
       } else {
-        try { toast("已恢复在线", "ok"); } catch(e){ /* noop */ }
+        try { toast(t("notify.online","已恢复在线"), "ok"); } catch(e){ /* noop */ }
       }
     } catch(e) {
       setSyncRetryState(false);
-      try { toast("已恢复在线（同步失败，待下次重试）", "warn"); } catch(e2){ /* noop */ }
+      try { toast(t("pwa.onlineSyncFailed","已恢复在线（同步失败，待下次重试）"), "warn"); } catch(e2){ /* noop */ }
     }
   });
   // 离线：显示横幅
   window.addEventListener("offline", () => {
     showOfflineBanner();
     // v1.11.1 [M6]：不再承诺"自动同步"（当前未配置同步服务器）
-    try { toast("已离线，操作将保存在本地", "warn"); } catch(e){ /* noop */ }
+    try { toast(t("pwa.offlineLocal","已离线，操作将保存在本地"), "warn"); } catch(e){ /* noop */ }
   });
 }
 
@@ -22983,7 +22983,7 @@ async function promptInstall(){
     hideInstallButton();
     hideInstallModal();
     if (accepted) {
-      try { toast("安装中…请稍候", "ok"); } catch(e){ /* noop */ }
+      try { toast(t("pwa.installing","安装中…请稍候"), "ok"); } catch(e){ /* noop */ }
     }
     return accepted;
   } catch(e) {
@@ -23015,7 +23015,7 @@ function initInstallPrompt(){
     _deferredInstallPrompt = null;
     hideInstallButton();
     hideInstallModal();
-    try { toast("已安装到桌面，可从桌面快捷启动", "ok"); } catch(e){ /* noop */ }
+    try { toast(t("pwa.installedToDesktop","已安装到桌面，可从桌面快捷启动"), "ok"); } catch(e){ /* noop */ }
     // 记录已安装状态（持久化，下次启动不再提示）
     try { save(PREFIX + "pwa_installed", { ts: Date.now() }); } catch(e2){ /* noop */ }
   });
@@ -23194,25 +23194,25 @@ function initPushUI(){
   if (subBtn) subBtn.onclick = async () => {
     const r = await withLoading(subBtn, subscribePush());
     if (r.ok) {
-      try { toast("已订阅推送通知", "ok"); } catch(e){ /* noop */ }
+      try { toast(t("pwa.subscribed","已订阅推送通知"), "ok"); } catch(e){ /* noop */ }
     } else {
-      try { toast("订阅失败：" + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
+      try { toast(t("pwa.subscribeFailedPrefix","订阅失败：") + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
     }
     refreshPushUI();
   };
   if (unsubBtn) unsubBtn.onclick = async () => {
     const r = await unsubscribePush();
     if (r.ok) {
-      try { toast("已取消推送订阅", "ok"); } catch(e){ /* noop */ }
+      try { toast(t("pwa.unsubscribed","已取消推送订阅"), "ok"); } catch(e){ /* noop */ }
     } else {
-      try { toast("取消失败：" + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
+      try { toast(t("pwa.unsubscribeFailedPrefix","取消失败：") + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
     }
     refreshPushUI();
   };
   if (testBtn) testBtn.onclick = async () => {
     const r = await sendTestPushNotification();
     if (!r.ok) {
-      try { toast("测试通知失败：" + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
+      try { toast(t("pwa.testNotifyFailedPrefix","测试通知失败：") + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
     }
   };
   if (cb) cb.onchange = async () => {
@@ -23220,16 +23220,16 @@ function initPushUI(){
       const r = await subscribePush();
       if (!r.ok) {
         cb.checked = false;
-        try { toast("订阅失败：" + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
+        try { toast(t("pwa.subscribeFailedPrefix","订阅失败：") + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
       } else {
-        try { toast("已订阅推送通知", "ok"); } catch(e){ /* noop */ }
+        try { toast(t("pwa.subscribed","已订阅推送通知"), "ok"); } catch(e){ /* noop */ }
       }
     } else {
       const r = await unsubscribePush();
       if (!r.ok) {
-        try { toast("取消失败：" + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
+        try { toast(t("pwa.unsubscribeFailedPrefix","取消失败：") + (r.err || t("tool.unknownErrorMsg", "未知错误")), "warn"); } catch(e){ /* noop */ }
       } else {
-        try { toast("已取消推送订阅", "ok"); } catch(e){ /* noop */ }
+        try { toast(t("pwa.unsubscribed","已取消推送订阅"), "ok"); } catch(e){ /* noop */ }
       }
     }
     refreshPushUI();
@@ -23251,7 +23251,7 @@ function bindInstallUI(){
       showInstallModal();
     } else {
       // 没有 deferredPrompt（可能浏览器不支持或已安装）：提示用户
-      try { toast("当前浏览器未提供安装提示，可使用浏览器菜单「添加到主屏幕/安装应用」", "warn"); } catch(e){ /* noop */ }
+      try { toast(t("pwa.noInstallPrompt","当前浏览器未提供安装提示，可使用浏览器菜单「添加到主屏幕/安装应用」"), "warn"); } catch(e){ /* noop */ }
     }
   };
   // ESC 关闭安装弹窗
@@ -23274,10 +23274,10 @@ function bindOfflineBanner(){
     try {
       const r = await flushSyncQueue();
       // v1.11.1 [M6]：未配置同步端点时如实提示，不谎报"已同步"
-      if (r.skipped) { try { toast("未配置同步服务器，"+r.fail+" 条操作仅保存在本地", "warn"); } catch(e){ /* noop */ } }
-      else { try { toast("已同步 "+r.ok+" 条操作"+(r.fail>0?"，"+r.fail+" 条失败":""), r.fail>0?"warn":"ok"); } catch(e){ /* noop */ } }
+      if (r.skipped) { try { toast(t("pwa.syncSkippedPrefix","未配置同步服务器，")+r.fail+t("pwa.syncSkippedSuffix"," 条操作仅保存在本地"), "warn"); } catch(e){ /* noop */ } }
+      else { try { toast(t("pwa.syncedPrefix","已同步 ")+r.ok+t("pwa.syncedSuffix"," 条操作")+(r.fail>0?t("pwa.syncedFailMid","，")+r.fail+t("pwa.syncedFailSuffix"," 条失败"):""), r.fail>0?"warn":"ok"); } catch(e){ /* noop */ } }
     } catch(e) {
-      try { toast("同步失败，请稍后重试", "warn"); } catch(e2){ /* noop */ }
+      try { toast(t("pwa.syncFailedRetry","同步失败，请稍后重试"), "warn"); } catch(e2){ /* noop */ }
     }
     setSyncRetryState(false);
   };
@@ -23430,13 +23430,13 @@ if (typeof window !== "undefined") {
   window.addEventListener("error", function(ev){
     const m = (ev && ev.error && ev.error.message) || (ev && ev.message) || "unknown";
     pushDiag("error", m, { where: "global", src: ev && ev.filename });
-    try{ toast("发生错误："+m, "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
+    try{ toast(t("msg.error","发生错误：")+m, "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
     // 不阻止默认行为，让错误也出现在控制台
   });
   window.addEventListener("unhandledrejection", function(ev){
     const m = (ev && ev.reason && (ev.reason.message || ev.reason)) || "unknown";
     pushDiag("error", m, { where: "unhandledrejection" });
-    try{ toast("异步错误："+m, "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
+    try{ toast(t("msg.asyncError","异步错误：")+m, "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
   });
 }
 // 页面关闭/刷新前再补一份快照，覆盖启动后未触发写操作的场景
@@ -26035,6 +26035,33 @@ const MESSAGES = {
     "p5.missingId": "缺少 id 字段",
     "p5.modelIdEmpty": "modelId 为空",
     "p5.modelPathEmpty": "modelPath 为空",
+    "p5.blobEmpty": "blob 为空",
+    "p5.idbWriteFail": "idb 写入失败，降级内存",
+    "p5.idbException": "idb 异常，降级内存",
+    "p5.noDownloader": "未提供 downloader，无法下载模型",
+    "p5.downloaderNoPromise": "downloader 未返回 Promise",
+    "p5.downloaderEmptyBlob": "downloader 返回空 blob",
+    "p5.downloadFail": "下载失败：",
+    "p5.downloaderException": "downloader 异常：",
+    "p5.policyMustBeObject": "policy 必须是对象",
+    "p5.sensitiveFieldsMustBeArray": "sensitiveFields 必须是数组",
+    "p5.fieldLevelsMustBeObject": "fieldLevels 必须是对象",
+    "p5.persistFail": "持久化失败：",
+    "p5.dataFlowAudit": "数据流审计 → ",
+    "p5.colonZh": "：",
+    "p5.sensitiveFieldsPrefix": "含敏感字段 [",
+    "p5.rightBracket": "]",
+    "p5.noSensitiveFields": "无敏感字段",
+    "p5.sizeMid": "，大小 ",
+    "p5.bytesSuffix": " 字节",
+    "p5.habitFormation": "建立期",
+    "p5.habitConsolidation": "巩固期",
+    "p5.habitStabilization": "稳定期",
+    "p5.habitMaintenance": "维持期",
+    "p5.continuousWork": "连续工作 ",
+    "p5.minutesSuggestBreak": " 分钟，建议休息",
+    "p5.noScheduleData": "暂无排程数据",
+    "p5.breakLabel": "· 休息",
     "p5.mon": "周一",
     "p5.month30": "月（30 天）",
     "p5.monthReport": "月报",
@@ -26050,6 +26077,10 @@ const MESSAGES = {
     "p5.noTrendData": "<tr><td colspan=\"2\">暂无完成数据</td></tr>",
     "p5.notePrefix": "笔记 ",
     "p5.noteTitle": "笔记标题",
+    "p5.noteTitleRequired": "请输入笔记标题",
+    "p5.noteUpdated": "笔记已更新",
+    "p5.noteCreated": "笔记已创建",
+    "p5.noteDeleted": "笔记已删除",
     "p5.notesSuffix": " 条笔记</span>",
     "p5.onnxUnavailable": "ONNX Runtime 不可用（需要 WASM + window.ort），将降级到关键词规则",
     "p5.openAdvReport": "打开高级报表",
@@ -26127,6 +26158,7 @@ const MESSAGES = {
     "p5.userQuestionPrefix": "\n\n【用户问题】\n",
     "p5.webllmNoFallback": "WebLLM 不可用且 fallback 已禁用",
     "p5.webllmUnavailable": "WebLLM 不可用（需要 WebGPU + Worker + WASM），请使用 webllmChat 降级到云端",
+    "p5.noNewWindow": "无法打开新窗口，请检查弹窗拦截",
     "p5.wed": "周三",
     "p5.week7": "周（7 天）",
     "p5.weekDone": "本周完成",
@@ -26190,6 +26222,38 @@ const MESSAGES = {
     "api.integrationDisconnected": "集成已断开",
     "api.offlineMode": "离线模式，数据已保存到本地",
     "api.backOnline": "已恢复在线，正在同步…",
+    "ai.memoryConfigSaved": "记忆配置已保存",
+    "ai.pluginConfigSavedStub": "插件配置已保存（注意：code_runner/web_search/file_reader 暂未接线执行代码，勾选状态仅保存配置）",
+    "ai.sessHistoryCleared": "已清除所有会话历史",
+    "chain.addedPrefix": "已添加链：",
+    "chain.resetDone": "已重置为默认联动规则",
+    "plugin.pasteFirst": "请先粘贴插件 JSON 定义",
+    "plugin.registeredPrefix": "已注册插件「",
+    "plugin.registeredSuffix": "」",
+    "theme.switchedSystem": "已切换为跟随系统主题",
+    "theme.switchedPrefix": "已切换主题：",
+    "pwa.onlineSyncSkippedPrefix": "已恢复在线（未配置同步服务器，",
+    "pwa.onlineSyncSkippedSuffix": " 条离线操作仅保存在本地）",
+    "pwa.onlineSyncedPrefix": "已恢复在线，已同步 ",
+    "pwa.onlineSyncedSuffix": " 条离线操作",
+    "pwa.onlineSyncFailed": "已恢复在线（同步失败，待下次重试）",
+    "pwa.offlineLocal": "已离线，操作将保存在本地",
+    "pwa.installing": "安装中…请稍候",
+    "pwa.installedToDesktop": "已安装到桌面，可从桌面快捷启动",
+    "pwa.subscribed": "已订阅推送通知",
+    "pwa.subscribeFailedPrefix": "订阅失败：",
+    "pwa.unsubscribed": "已取消推送订阅",
+    "pwa.unsubscribeFailedPrefix": "取消失败：",
+    "pwa.testNotifyFailedPrefix": "测试通知失败：",
+    "pwa.noInstallPrompt": "当前浏览器未提供安装提示，可使用浏览器菜单「添加到主屏幕/安装应用」",
+    "pwa.syncSkippedPrefix": "未配置同步服务器，",
+    "pwa.syncSkippedSuffix": " 条操作仅保存在本地",
+    "pwa.syncedPrefix": "已同步 ",
+    "pwa.syncedSuffix": " 条操作",
+    "pwa.syncedFailMid": "，",
+    "pwa.syncedFailSuffix": " 条失败",
+    "pwa.syncFailedRetry": "同步失败，请稍后重试",
+    "msg.langSwitched": "已切换语言",
   },
   en: {
     // Common
@@ -28513,6 +28577,33 @@ const MESSAGES = {
     "p5.missingId": "Missing id field",
     "p5.modelIdEmpty": "modelId is empty",
     "p5.modelPathEmpty": "modelPath is empty",
+    "p5.blobEmpty": "blob is empty",
+    "p5.idbWriteFail": "idb write failed, fallback to memory",
+    "p5.idbException": "idb exception, fallback to memory",
+    "p5.noDownloader": "No downloader provided, cannot download model",
+    "p5.downloaderNoPromise": "downloader did not return a Promise",
+    "p5.downloaderEmptyBlob": "downloader returned empty blob",
+    "p5.downloadFail": "Download failed: ",
+    "p5.downloaderException": "downloader exception: ",
+    "p5.policyMustBeObject": "policy must be an object",
+    "p5.sensitiveFieldsMustBeArray": "sensitiveFields must be an array",
+    "p5.fieldLevelsMustBeObject": "fieldLevels must be an object",
+    "p5.persistFail": "Persistence failed: ",
+    "p5.dataFlowAudit": "Data flow audit → ",
+    "p5.colonZh": ": ",
+    "p5.sensitiveFieldsPrefix": "contains sensitive fields [",
+    "p5.rightBracket": "]",
+    "p5.noSensitiveFields": "no sensitive fields",
+    "p5.sizeMid": ", size ",
+    "p5.bytesSuffix": " bytes",
+    "p5.habitFormation": "Formation",
+    "p5.habitConsolidation": "Consolidation",
+    "p5.habitStabilization": "Stabilization",
+    "p5.habitMaintenance": "Maintenance",
+    "p5.continuousWork": "Continuous work ",
+    "p5.minutesSuggestBreak": " minutes, suggest break",
+    "p5.noScheduleData": "No schedule data",
+    "p5.breakLabel": "· Break",
     "p5.mon": "Mon",
     "p5.month30": "Month (30 days)",
     "p5.monthReport": "Monthly Report",
@@ -28528,6 +28619,10 @@ const MESSAGES = {
     "p5.noTrendData": "<tr><td colspan=\"2\">No completion data</td></tr>",
     "p5.notePrefix": "Notes ",
     "p5.noteTitle": "Note Title",
+    "p5.noteTitleRequired": "Please enter note title",
+    "p5.noteUpdated": "Note updated",
+    "p5.noteCreated": "Note created",
+    "p5.noteDeleted": "Note deleted",
     "p5.notesSuffix": " notes</span>",
     "p5.onnxUnavailable": "ONNX Runtime unavailable (requires WASM + window.ort), falling back to keyword rules",
     "p5.openAdvReport": "Open Advanced Report",
@@ -28605,6 +28700,7 @@ const MESSAGES = {
     "p5.userQuestionPrefix": "\n\n[User Question]\n",
     "p5.webllmNoFallback": "WebLLM unavailable and fallback disabled",
     "p5.webllmUnavailable": "WebLLM unavailable (requires WebGPU + Worker + WASM), use webllmChat to fallback to cloud",
+    "p5.noNewWindow": "Cannot open new window, please check popup blocker",
     "p5.wed": "Wed",
     "p5.week7": "Week (7 days)",
     "p5.weekDone": "Week Done",
@@ -28668,6 +28764,38 @@ const MESSAGES = {
     "api.integrationDisconnected": "Integration disconnected",
     "api.offlineMode": "Offline, data saved locally",
     "api.backOnline": "Back online, syncing…",
+    "ai.memoryConfigSaved": "Memory config saved",
+    "ai.pluginConfigSavedStub": "Plugin config saved (note: code_runner/web_search/file_reader are not wired to execute code, toggle state only saves config)",
+    "ai.sessHistoryCleared": "Cleared all session history",
+    "chain.addedPrefix": "Chain added: ",
+    "chain.resetDone": "Reset to default chain rules",
+    "plugin.pasteFirst": "Please paste plugin JSON definition first",
+    "plugin.registeredPrefix": "Plugin registered: \"",
+    "plugin.registeredSuffix": "\"",
+    "theme.switchedSystem": "Switched to system theme",
+    "theme.switchedPrefix": "Theme switched: ",
+    "pwa.onlineSyncSkippedPrefix": "Back online (no sync server configured, ",
+    "pwa.onlineSyncSkippedSuffix": " offline ops saved locally only)",
+    "pwa.onlineSyncedPrefix": "Back online, synced ",
+    "pwa.onlineSyncedSuffix": " offline ops",
+    "pwa.onlineSyncFailed": "Back online (sync failed, will retry later)",
+    "pwa.offlineLocal": "Offline, operations will be saved locally",
+    "pwa.installing": "Installing… please wait",
+    "pwa.installedToDesktop": "Installed to desktop, launch from desktop shortcut",
+    "pwa.subscribed": "Subscribed to push notifications",
+    "pwa.subscribeFailedPrefix": "Subscribe failed: ",
+    "pwa.unsubscribed": "Unsubscribed from push",
+    "pwa.unsubscribeFailedPrefix": "Unsubscribe failed: ",
+    "pwa.testNotifyFailedPrefix": "Test notification failed: ",
+    "pwa.noInstallPrompt": "Browser doesn't offer install prompt, use browser menu \"Add to Home Screen/Install App\"",
+    "pwa.syncSkippedPrefix": "No sync server configured, ",
+    "pwa.syncSkippedSuffix": " ops saved locally only",
+    "pwa.syncedPrefix": "Synced ",
+    "pwa.syncedSuffix": " ops",
+    "pwa.syncedFailMid": ", ",
+    "pwa.syncedFailSuffix": " failed",
+    "pwa.syncFailedRetry": "Sync failed, please retry later",
+    "msg.langSwitched": "Language switched",
   }
 };
 
@@ -30801,7 +30929,7 @@ function exportReportPDF(report){
   const html = renderReportHTML(report);
   let w = null;
   try{ w = window.open("", "_blank"); }catch(e){ /* noop */ }
-  if(!w){ toast("无法打开新窗口，请检查弹窗拦截", "warn"); return; }
+  if(!w){ toast(t("p5.noNewWindow", "无法打开新窗口，请检查弹窗拦截"), "warn"); return; }
   w.document.write("<html><head><title>" + esc(t("app.name")) + t("p5.reportSuffix", " 报表</title>"));
   // 注入 CSS 变量定义（从主文档读取 :root 令牌，保证打印页颜色一致）
   w.document.write("<style>");
@@ -32490,7 +32618,7 @@ function renderNoteEditor(note){
   let html = '<div class="note-editor" data-note-id="' + esc(n.id || "") + '">';
   html += '<input class="note-title" value="' + esc(n.title || "") + '" placeholder="' + t("p5.noteTitle", "笔记标题") + '" maxlength="200">';
   html += '<input class="note-tags" value="' + esc((n.tags || []).join(", ")) + '" placeholder="' + t("p5.tagsPlaceholder", "标签（逗号分隔）") + '" maxlength="200">';
-  html += '<input class="note-category" value="' + esc(n.category || "默认") + '" placeholder="' + t("p5.categoryPlaceholder", "分类（如：知识库/工作笔记/学习笔记）") + '" maxlength="100">';
+  html += '<input class="note-category" value="' + esc(n.category || t("p5.default", "默认")) + '" placeholder="' + t("p5.categoryPlaceholder", "分类（如：知识库/工作笔记/学习笔记）") + '" maxlength="100">';
   html += '<textarea class="note-content" placeholder="' + t("p5.markdownPlaceholder", "输入 Markdown 内容...") + '" maxlength="10000">' + esc(n.content || "") + '</textarea>';
   html += '<div class="note-preview">' + (typeof mdToHtml === "function" ? mdToHtml(n.content || "") : "") + '</div>';
   html += '</div>';
@@ -32602,14 +32730,14 @@ function saveNoteFromEditor(){
   const category = $(".note-category", editor).value || t("p5.default", "默认");
   const content = $(".note-content", editor).value || "";
   const tags = tagsStr.split(",").map(function(t){ return t.trim(); }).filter(function(t){ return t; });
-  if(!title.trim()){ try{ toast("请输入笔记标题", "warn"); }catch(e){} return null; }
+  if(!title.trim()){ try{ toast(t("p5.noteTitleRequired", "请输入笔记标题"), "warn"); }catch(e){} return null; }
   if(editId){
     updateNote(editId, {title: title, tags: tags, category: category, content: content});
-    try{ toast("笔记已更新", "ok"); }catch(e){}
+    try{ toast(t("p5.noteUpdated", "笔记已更新"), "ok"); }catch(e){}
     return getNoteById(editId);
   } else {
     const note = createNote(title, content, tags, category);
-    try{ toast("笔记已创建", "ok"); }catch(e){}
+    try{ toast(t("p5.noteCreated", "笔记已创建"), "ok"); }catch(e){}
     return note;
   }
 }
@@ -32672,7 +32800,7 @@ function _bindNoteEditorEvents(note){
     delBtn.onclick = function(){
       if(!confirm(t("p5.confirmDeleteNote", "确定删除此笔记？"))) return;
       deleteNote(note.id);
-      try{ toast("笔记已删除", "ok"); }catch(e){}
+      try{ toast(t("p5.noteDeleted", "笔记已删除"), "ok"); }catch(e){}
       closeNoteEditorModal();
       openNotesModal();
     };
@@ -34687,10 +34815,10 @@ function _onnxRuleNER(text){
 function cacheModel(modelId, blob, meta){
   const mid = String(modelId || "").trim();
   if(!mid){
-    return Promise.resolve({ ok: false, modelId: "", storage: "memory", reason: "modelId 为空" });
+    return Promise.resolve({ ok: false, modelId: "", storage: "memory", reason: t("p5.modelIdEmpty", "modelId 为空") });
   }
   if(blob === undefined || blob === null){
-    return Promise.resolve({ ok: false, modelId: mid, storage: "memory", reason: "blob 为空" });
+    return Promise.resolve({ ok: false, modelId: mid, storage: "memory", reason: t("p5.blobEmpty", "blob 为空") });
   }
   meta = meta || {};
   /* 估算大小 */
@@ -34710,12 +34838,12 @@ function cacheModel(modelId, blob, meta){
         if(ret === undefined){
           /* IDB 写入失败 → 降级内存 */
           _modelCacheFallback.set(mid, record);
-          return { ok: true, modelId: mid, storage: "memory", reason: "idb 写入失败，降级内存" };
+          return { ok: true, modelId: mid, storage: "memory", reason: t("p5.idbWriteFail", "idb 写入失败，降级内存") };
         }
         return { ok: true, modelId: mid, storage: "idb" };
       }).catch(function(){
         _modelCacheFallback.set(mid, record);
-        return { ok: true, modelId: mid, storage: "memory", reason: "idb 异常，降级内存" };
+        return { ok: true, modelId: mid, storage: "memory", reason: t("p5.idbException", "idb 异常，降级内存") };
       });
     }
   }catch(e){ /* fall through to memory */ }
@@ -34900,7 +35028,7 @@ function clearModelCache(){
 function ensureModelLoaded(modelId, options){
   const mid = String(modelId || "").trim();
   if(!mid){
-    return Promise.resolve({ ok: false, modelId: "", source: "cache", reason: "modelId 为空" });
+    return Promise.resolve({ ok: false, modelId: "", source: "cache", reason: t("p5.modelIdEmpty", "modelId 为空") });
   }
   options = options || {};
   /* 先查缓存 */
@@ -34910,25 +35038,25 @@ function ensureModelLoaded(modelId, options){
     }
     /* 缓存未命中：调用 downloader 下载 */
     if(typeof options.downloader !== "function"){
-      return { ok: false, modelId: mid, source: "download", reason: "未提供 downloader，无法下载模型" };
+      return { ok: false, modelId: mid, source: "download", reason: t("p5.noDownloader", "未提供 downloader，无法下载模型") };
     }
     try{
       const dlPromise = options.downloader(mid);
       if(!dlPromise || typeof dlPromise.then !== "function"){
-        return { ok: false, modelId: mid, source: "download", reason: "downloader 未返回 Promise" };
+        return { ok: false, modelId: mid, source: "download", reason: t("p5.downloaderNoPromise", "downloader 未返回 Promise") };
       }
       return dlPromise.then(function(blob){
         if(blob === undefined || blob === null){
-          return { ok: false, modelId: mid, source: "download", reason: "downloader 返回空 blob" };
+          return { ok: false, modelId: mid, source: "download", reason: t("p5.downloaderEmptyBlob", "downloader 返回空 blob") };
         }
         return cacheModel(mid, blob, { version: options.version }).then(function(){
           return { ok: true, modelId: mid, source: "download" };
         });
       }).catch(function(err){
-        return { ok: false, modelId: mid, source: "download", reason: "下载失败：" + String(err && err.message || err) };
+        return { ok: false, modelId: mid, source: "download", reason: t("p5.downloadFail", "下载失败：") + String(err && err.message || err) };
       });
     }catch(e){
-      return { ok: false, modelId: mid, source: "download", reason: "downloader 异常：" + String(e) };
+      return { ok: false, modelId: mid, source: "download", reason: t("p5.downloaderException", "downloader 异常：") + String(e) };
     }
   });
 }
@@ -35013,23 +35141,23 @@ function getPrivacyPolicy(){
  */
 function setPrivacyPolicy(policy){
   if(!policy || typeof policy !== "object"){
-    return { ok: false, reason: "policy 必须是对象" };
+    return { ok: false, reason: t("p5.policyMustBeObject", "policy 必须是对象") };
   }
   try{
     /* 校验：sensitiveFields 必须是数组（若提供） */
     if("sensitiveFields" in policy && !Array.isArray(policy.sensitiveFields)){
-      return { ok: false, reason: "sensitiveFields 必须是数组" };
+      return { ok: false, reason: t("p5.sensitiveFieldsMustBeArray", "sensitiveFields 必须是数组") };
     }
     /* 校验：fieldLevels 必须是对象（若提供） */
     if("fieldLevels" in policy && (!policy.fieldLevels || typeof policy.fieldLevels !== "object" || Array.isArray(policy.fieldLevels))){
-      return { ok: false, reason: "fieldLevels 必须是对象" };
+      return { ok: false, reason: t("p5.fieldLevelsMustBeObject", "fieldLevels 必须是对象") };
     }
     const merged = _mergePolicy(_DEFAULT_PRIVACY_POLICY, policy);
     _privacyPolicy = merged;
     localStorage.setItem(PRIVACY_POLICY_KEY, JSON.stringify(merged));
     return { ok: true };
   }catch(e){
-    return { ok: false, reason: "持久化失败：" + String(e && e.message || e) };
+    return { ok: false, reason: t("p5.persistFail", "持久化失败：") + String(e && e.message || e) };
   }
 }
 
@@ -35245,7 +35373,7 @@ function auditDataFlow(data, destination){
   if(_dataFlowAuditLog.length > _DATA_FLOW_AUDIT_MAX){
     _dataFlowAuditLog = _dataFlowAuditLog.slice(-_DATA_FLOW_AUDIT_MAX);
   }
-  const summary = "数据流审计 → " + dest + "：" + (hasSensitive ? "含敏感字段 [" + sensitiveFields.join(",") + "]" : "无敏感字段") + "，大小 " + entry.dataSize + " 字节";
+  const summary = t("p5.dataFlowAudit", "数据流审计 → ") + dest + t("p5.colonZh", "：") + (hasSensitive ? t("p5.sensitiveFieldsPrefix", "含敏感字段 [") + sensitiveFields.join(",") + t("p5.rightBracket", "]") : t("p5.noSensitiveFields", "无敏感字段")) + t("p5.sizeMid", "，大小 ") + entry.dataSize + t("p5.bytesSuffix", " 字节");
   return { ok: true, hasSensitive: hasSensitive, destination: dest, timestamp: entry.timestamp, summary: summary };
 }
 
@@ -35688,15 +35816,15 @@ function calcProductivityScore(tasks, records, habits){
 function habitStage(day){
   const d = Math.max(0, Math.floor(Number(day) || 0));
   if(d <= 7){
-    return { stage: HABIT_PHASES.FORMATION, label: "建立期", progress: d / 7 };
+    return { stage: HABIT_PHASES.FORMATION, label: t("p5.habitFormation", "建立期"), progress: d / 7 };
   }
   if(d <= 21){
-    return { stage: HABIT_PHASES.CONSOLIDATION, label: "巩固期", progress: (d - 7) / 14 };
+    return { stage: HABIT_PHASES.CONSOLIDATION, label: t("p5.habitConsolidation", "巩固期"), progress: (d - 7) / 14 };
   }
   if(d <= 66){
-    return { stage: HABIT_PHASES.STABILIZATION, label: "稳定期", progress: (d - 21) / 45 };
+    return { stage: HABIT_PHASES.STABILIZATION, label: t("p5.habitStabilization", "稳定期"), progress: (d - 21) / 45 };
   }
-  return { stage: HABIT_PHASES.MAINTENANCE, label: "维持期", progress: 1 };
+  return { stage: HABIT_PHASES.MAINTENANCE, label: t("p5.habitMaintenance", "维持期"), progress: 1 };
 }
 
 /**
@@ -36098,7 +36226,7 @@ function optimizeSchedule(scored, constraints){
         startMin: totalMin,
         endMin: totalMin + breakMin,
         isBreak: true,
-        label: "休息"
+        label: t("p5.break", "休息")
       });
       totalMin += breakMin;
     }
@@ -36137,7 +36265,7 @@ function suggestBreaks(schedule){
       breaks.push({
         after: item.endTime,
         duration: 15,
-        reason: "连续工作 " + workMin + " 分钟，建议休息"
+        reason: t("p5.continuousWork", "连续工作 ") + workMin + t("p5.minutesSuggestBreak", " 分钟，建议休息")
       });
       workMin = 0;
     }
@@ -36206,7 +36334,7 @@ function smartSchedule(tasks, userPrefs, date){
  */
 function renderScheduleView(schedule){
   if(!Array.isArray(schedule) || schedule.length === 0) {
-    return '<div class="schedule-empty">暂无排程数据</div>';
+    return '<div class="schedule-empty">' + t("p5.noScheduleData", "暂无排程数据") + '</div>';
   }
   const rows = [];
   for(let i = 0; i < schedule.length; i++){
@@ -36216,7 +36344,7 @@ function renderScheduleView(schedule){
       rows.push(
         '<div class="schedule-row break">' +
           '<span class="time">' + esc(item.startTime) + '-' + esc(item.endTime) + '</span>' +
-          '<span class="label">· 休息</span>' +
+          '<span class="label">' + t("p5.breakLabel", "· 休息") + '</span>' +
         '</div>'
       );
     } else {
