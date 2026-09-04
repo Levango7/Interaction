@@ -8108,11 +8108,12 @@ function _validateAndMigrateTasks(){
   let changed=false;
   let legacyCount=0;
   const legacyFieldsSeen = new Set();
+  const _t = t; // 保存 i18n t() 引用，避免被 forEach 参数遮蔽
   tasks.forEach(t=>{
     if(!t || typeof t !== "object") return; // 跳过非对象项，不强制重构（避免破坏未知结构）
     if(t.id===undefined){ t.id=uid(); changed=true; }
     if(t.sc===undefined || !ORDER.includes(t.sc)){ t.sc="office"; changed=true; }
-    if(t.title===undefined){ t.title=t("task.untitled", "(无标题)"); changed=true; }
+    if(t.title===undefined){ t.title=_t("task.untitled", "(无标题)"); changed=true; }
     if(t.status===undefined){ t.status = t.done?"done":"todo"; changed=true; }
     if(t.doneAt===undefined){ t.doneAt = t.status==="done"? (t.created||Date.now()) : null; changed=true; }
     if(t.tags===undefined){ t.tags = []; changed=true; }
