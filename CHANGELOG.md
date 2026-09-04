@@ -2,6 +2,30 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.4.9] - 2026-09-05
+
+### 秘境森林主题色调整 + PRESET_THEMES/BUILTIN_PLUGINS i18n
+
+**🎨 秘境森林主题色调整**
+- 底布 `#1b2d20` → `#1a3520`（更绿，增强森林氛围）
+- 面板 `#243528` → `#1e3a26`（更绿）
+- 面板2 `#1f2e24` → `#1a2e20`
+- 边框线 `#3a5240` → `#3a5e42`（更绿）
+- hover `#2a4030` → `#2a4530`（更绿）
+- 侧边栏 `.side` 用 `color-mix(in srgb,var(--panel) 78%,transparent)` 适配新面板色
+- 聊天面板 `.chat-panel` 用 `color-mix(in srgb,var(--panel) 75%,transparent)` 适配新面板色
+
+**🌐 PRESET_THEMES i18n（9 个主题 name/desc）**
+- 9 个预设主题的 name/desc 用 `t()` 替换硬编码中文。
+- 复用已有 `look.theme.*` key（name），新增 `look.themeDesc.*` key（desc，zh + en 各 9 个）。
+
+**🌐 BUILTIN_PLUGINS i18n（25 处 name/description）**
+- 9 个内置插件的 name/description 用 `t()` 替换硬编码中文（25 处）。
+- 新增 `plugin.*` key（zh + en 各 25 个），命名规范：`plugin.{id}.name` / `plugin.{id}.desc` / `plugin.{id}.scenarioName` / `plugin.{id}.cardName`。
+- 涵盖插件：pomodoro、reading、budget、health、habit-tracker、weather、quote、focus-timer、mindmap。
+
+**✅ 验证**：lint 0 problems；build:check 门禁通过；quickwins 22/22 + error-boundary 22/22 + color-tokens 4/4 通过。
+
 ## [v3.4.8] - 2026-09-04
 
 ### i18n 遗漏修补（toast/confirm/字符串拼接）

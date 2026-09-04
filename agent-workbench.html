@@ -152,9 +152,9 @@
  *  7) 极光的"半透明"玻璃化在森林/海洋同样启用——主色变化但玻璃质感一致，UI 形态不变
  */
 :root[data-theme="forest"]{
-  --bg:#1b2d20; --panel:#243528; --panel2:#1f2e24; --line:#3a5240;
+  --bg:#1a3520; --panel:#1e3a26; --panel2:#1a2e20; --line:#3a5e42;
   --text:#e8f3e0; --muted:#8fa898; --accent:#4ade80; --accent-soft:#2a4a35; --accent-2:#f0a030;
-  --surface-hover:#2a4030; --surface-muted:#243528;
+  --surface-hover:#2a4530; --surface-muted:#1e3a26;
   --brand-grad:linear-gradient(135deg,#4ade80 0%,#52a05e 50%,#f0a030 100%);
   --side-accent:linear-gradient(180deg,rgba(74,222,128,.15),rgba(82,160,94,.10) 60%,rgba(240,160,48,.08));
   --canvas-glow:radial-gradient(ellipse 72% 48% at 18% -6%,rgba(74,222,128,.40),transparent 62%),radial-gradient(ellipse 55% 42% at 50% -12%,rgba(240,180,80,.30),transparent 58%),radial-gradient(ellipse 52% 42% at 96% 10%,rgba(232,150,40,.35),transparent 56%),radial-gradient(ellipse 42% 38% at 50% 96%,rgba(52,196,84,.25),transparent 52%),radial-gradient(ellipse 38% 32% at 8% 70%,rgba(160,210,90,.25),transparent 52%);
@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.8"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.9"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260904c";
+const BUILD_TAG = "20260904d";
 
 
 
@@ -24267,6 +24267,14 @@ const MESSAGES = {
     "look.theme.matrix": "黑客帝国",
     "look.theme.forest": "秘境森林",
     "look.theme.ocean": "微蓝浅海",
+    "look.themeDesc.light": "Vercel 风格默认主题",
+    "look.themeDesc.aurora": "极光渐变亮色主题",
+    "look.themeDesc.dark": "暗色护眼主题",
+    "look.themeDesc.sepia": "暖色调护眼阅读模式",
+    "look.themeDesc.elegant": "清冷灰绿底色主题",
+    "look.themeDesc.matrix": "绿色终端风格主题",
+    "look.themeDesc.forest": "晨雾林地 · 松针深绿主题",
+    "look.themeDesc.ocean": "晨曦海面 · 深海青主题",
     "look.lang.label": "语言 / Language",
     "look.lang.zh": "中文",
     "look.lang.en": "English",
@@ -26276,6 +26284,32 @@ const MESSAGES = {
     "theme.imported": "已导入主题「{id}」",
     "integration.disconnectFail": "断开异常：{err}",
     "integration.createFail": "创建失败：{err}",
+    // 任务245：BUILTIN_PLUGINS name/description 硬编码中文 i18n
+    "plugin.pomodoro.name": "笃行专注法",
+    "plugin.pomodoro.scenarioName": "笃行",
+    "plugin.reading.name": "阅读管理",
+    "plugin.reading.desc": "书籍阅读进度跟踪与读书笔记",
+    "plugin.reading.scenarioName": "阅读",
+    "plugin.budget.name": "预算追踪",
+    "plugin.budget.desc": "日常开支记录与预算管理",
+    "plugin.budget.cardName": "预算概览",
+    "plugin.health.name": "健康助手",
+    "plugin.health.desc": "运动/体重/睡眠/喝水记录与健康概览，挂载到「生活」场景",
+    "plugin.habit-tracker.name": "习惯追踪器",
+    "plugin.habit-tracker.desc": "每日习惯打卡记录，支持连续天数统计与可视化图表",
+    "plugin.habit-tracker.scenarioName": "习惯追踪",
+    "plugin.weather.name": "天气预报",
+    "plugin.weather.desc": "查看今日及未来几天天气，出行穿衣参考",
+    "plugin.weather.cardName": "天气卡片",
+    "plugin.quote.name": "每日一言",
+    "plugin.quote.desc": "随机名言/鸡汤/诗句，给每天一点灵感",
+    "plugin.quote.cardName": "每日一言",
+    "plugin.focus-timer.name": "专注时钟",
+    "plugin.focus-timer.desc": "番茄钟升级版：自定义时长 + 多段间隔 + 进度圆环",
+    "plugin.focus-timer.scenarioName": "专注时钟",
+    "plugin.mindmap.name": "思维导图",
+    "plugin.mindmap.desc": "可视化思维梳理，支持节点增删、连线、导出",
+    "plugin.mindmap.cardName": "思维导图",
   },
   en: {
     // Common
@@ -26825,6 +26859,14 @@ const MESSAGES = {
     "look.theme.matrix": "Matrix",
     "look.theme.forest": "Mystic Forest",
     "look.theme.ocean": "Pale Blue Sea",
+    "look.themeDesc.light": "Vercel-style default theme",
+    "look.themeDesc.aurora": "Aurora gradient light theme",
+    "look.themeDesc.dark": "Dark eye-friendly theme",
+    "look.themeDesc.sepia": "Warm tone reading mode",
+    "look.themeDesc.elegant": "Cool grey-green theme",
+    "look.themeDesc.matrix": "Green terminal style theme",
+    "look.themeDesc.forest": "Misty woodland · pine dark green",
+    "look.themeDesc.ocean": "Dawn seascape · deep ocean blue",
     "look.lang.label": "Language",
     "look.lang.zh": "Chinese",
     "look.lang.en": "English",
@@ -28834,6 +28876,32 @@ const MESSAGES = {
     "theme.imported": "Imported theme \"{id}\"",
     "integration.disconnectFail": "Disconnect error: {err}",
     "integration.createFail": "Create failed: {err}",
+    // Task 245: BUILTIN_PLUGINS name/description hardcoded Chinese i18n
+    "plugin.pomodoro.name": "Dedicated Focus Method",
+    "plugin.pomodoro.scenarioName": "Focus",
+    "plugin.reading.name": "Reading Management",
+    "plugin.reading.desc": "Book reading progress tracking and reading notes",
+    "plugin.reading.scenarioName": "Reading",
+    "plugin.budget.name": "Budget Tracking",
+    "plugin.budget.desc": "Daily expense recording and budget management",
+    "plugin.budget.cardName": "Budget Overview",
+    "plugin.health.name": "Health Assistant",
+    "plugin.health.desc": "Exercise/weight/sleep/water intake records and health overview, mounted to \"Life\" scenario",
+    "plugin.habit-tracker.name": "Habit Tracker",
+    "plugin.habit-tracker.desc": "Daily habit check-in records, supports streak statistics and visualization charts",
+    "plugin.habit-tracker.scenarioName": "Habit Tracking",
+    "plugin.weather.name": "Weather Forecast",
+    "plugin.weather.desc": "View today and future weather, reference for outing and dressing",
+    "plugin.weather.cardName": "Weather Card",
+    "plugin.quote.name": "Daily Quote",
+    "plugin.quote.desc": "Random quotes/chicken soup/poems, a little inspiration every day",
+    "plugin.quote.cardName": "Daily Quote",
+    "plugin.focus-timer.name": "Focus Timer",
+    "plugin.focus-timer.desc": "Pomodoro upgrade: custom duration + multi-segment intervals + progress ring",
+    "plugin.focus-timer.scenarioName": "Focus Timer",
+    "plugin.mindmap.name": "Mind Map",
+    "plugin.mindmap.desc": "Visual thinking organization, supports node add/delete, connection, export",
+    "plugin.mindmap.cardName": "Mind Map",
   }
 };
 
@@ -29871,13 +29939,13 @@ var _plugins = {};
 const BUILTIN_PLUGINS = [
   {
     id: "pomodoro",
-    name: "笃行专注法",
+    name: t("plugin.pomodoro.name", "笃行专注法"),
     version: "1.0.0",
     description: "25分钟专注+5分钟休息的深度工作法场景",
     enabled: false,
     scenarios: [{
       key: "pomodoro",
-      name: "笃行",
+      name: t("plugin.pomodoro.scenarioName", "笃行"),
       icon: '',
       color:"#e74c3c",
       desc: "笃行专注法"
@@ -29885,13 +29953,13 @@ const BUILTIN_PLUGINS = [
   },
   {
     id: "reading",
-    name: "阅读管理",
+    name: t("plugin.reading.name", "阅读管理"),
     version: "1.0.0",
-    description: "书籍阅读进度跟踪与读书笔记",
+    description: t("plugin.reading.desc", "书籍阅读进度跟踪与读书笔记"),
     enabled: false,
     scenarios: [{
       key: "reading",
-      name: "阅读",
+      name: t("plugin.reading.scenarioName", "阅读"),
       icon: '',
       color:"#3498db",
       desc: "阅读管理"
@@ -29899,13 +29967,13 @@ const BUILTIN_PLUGINS = [
   },
   {
     id: "budget",
-    name: "预算追踪",
+    name: t("plugin.budget.name", "预算追踪"),
     version: "1.0.0",
-    description: "日常开支记录与预算管理",
+    description: t("plugin.budget.desc", "日常开支记录与预算管理"),
     enabled: false,
     cards: [{
       type: "budget-summary",
-      name: "预算概览",
+      name: t("plugin.budget.cardName", "预算概览"),
       // v3.1.2 A-档：接真数据——聚合 life_bills（缴费台账 amount）+ life_shopping（采购台账 amount）+ lif-bill/lif-takeout（工具箱 amount）本月的支出
       // 此前永远 ¥0：用户记的账不进插件卡
       render: function(data){
@@ -29934,9 +30002,9 @@ const BUILTIN_PLUGINS = [
   },
   {
     id: "health",
-    name: "健康助手",
+    name: t("plugin.health.name", "健康助手"),
     version: "1.0.0",
-    description: "运动/体重/睡眠/喝水记录与健康概览，挂载到「生活」场景",
+    description: t("plugin.health.desc", "运动/体重/睡眠/喝水记录与健康概览，挂载到「生活」场景"),
     enabled: false,
     onActivate: function(){
       SCENARIOS.life.extraCard = "health";
@@ -29949,13 +30017,13 @@ const BUILTIN_PLUGINS = [
   },
   {
     id: "habit-tracker",
-    name: "习惯追踪器",
+    name: t("plugin.habit-tracker.name", "习惯追踪器"),
     version: "1.0.0",
-    description: "每日习惯打卡记录，支持连续天数统计与可视化图表",
+    description: t("plugin.habit-tracker.desc", "每日习惯打卡记录，支持连续天数统计与可视化图表"),
     enabled: false,
     scenarios: [{
       key: "habit-tracker",
-      name: "习惯追踪",
+      name: t("plugin.habit-tracker.scenarioName", "习惯追踪"),
       icon: '',
       color:"#27ae60",
       desc: "每日打卡 · 连续记录 · 趋势图表"
@@ -29963,13 +30031,13 @@ const BUILTIN_PLUGINS = [
   },
   {
     id: "weather",
-    name: "天气预报",
+    name: t("plugin.weather.name", "天气预报"),
     version: "1.0.0",
-    description: "查看今日及未来几天天气，出行穿衣参考",
+    description: t("plugin.weather.desc", "查看今日及未来几天天气，出行穿衣参考"),
     enabled: false,
     cards: [{
       type: "weather-widget",
-      name: "天气卡片",
+      name: t("plugin.weather.cardName", "天气卡片"),
       render: function(data){
         return '<div class="plugin-card"><div class="plugin-title">天气</div>'
           + '<div class="plugin-body">\u2600 FE ' + (data&&data.temp ? data.temp+'\u00B0C' : '获取中...')
@@ -29979,13 +30047,13 @@ const BUILTIN_PLUGINS = [
   },
   {
     id: "quote",
-    name: "每日一言",
+    name: t("plugin.quote.name", "每日一言"),
     version: "1.0.0",
-    description: "随机名言/鸡汤/诗句，给每天一点灵感",
+    description: t("plugin.quote.desc", "随机名言/鸡汤/诗句，给每天一点灵感"),
     enabled: false,
     cards: [{
       type: "quote-widget",
-      name: "每日一言",
+      name: t("plugin.quote.cardName", "每日一言"),
       render: function(){
         const quotes = [
           "种一棵树最好的时间是十年前，其次是现在。",
@@ -30005,13 +30073,13 @@ const BUILTIN_PLUGINS = [
   },
   {
     id: "focus-timer",
-    name: "专注时钟",
+    name: t("plugin.focus-timer.name", "专注时钟"),
     version: "1.0.0",
-    description: "番茄钟升级版：自定义时长 + 多段间隔 + 进度圆环",
+    description: t("plugin.focus-timer.desc", "番茄钟升级版：自定义时长 + 多段间隔 + 进度圆环"),
     enabled: false,
     scenarios: [{
       key: "focus-timer",
-      name: "专注时钟",
+      name: t("plugin.focus-timer.scenarioName", "专注时钟"),
       icon: '',
       color:"#e67e22",
       desc: "自定义专注时长与休息间隔"
@@ -30019,13 +30087,13 @@ const BUILTIN_PLUGINS = [
   },
   {
     id: "mindmap",
-    name: "思维导图",
+    name: t("plugin.mindmap.name", "思维导图"),
     version: "1.0.0",
-    description: "可视化思维梳理，支持节点增删、连线、导出",
+    description: t("plugin.mindmap.desc", "可视化思维梳理，支持节点增删、连线、导出"),
     enabled: false,
     cards: [{
       type: "mindmap-widget",
-      name: "思维导图",
+      name: t("plugin.mindmap.cardName", "思维导图"),
       render: function(){
         return '<div class="plugin-card"><div class="plugin-title">思维导图</div>'
           + '<div class="plugin-body u-text-muted u-text-center u-p-5">拖拽节点、创建关系，梳理你的想法</div>'
@@ -30332,18 +30400,18 @@ _initPlugins();// ===== Theme System (v1.5-C 多主题 / 自定义编辑 / 场�
 
 // 预置主题定义（5 个：浅色 / 极光 / 深色 / 护眼模式 + system 跟随系统）
 const PRESET_THEMES = {
-  light:    { name: "浅色",     desc: "Vercel 风格默认主题" },
-  aurora:   { name: "幻夜极光",   desc: "极光渐变亮色主题" },
-  dark:     { name: "深色",     desc: "暗色护眼主题" },
-  sepia:    { name: "温和护眼", desc: "暖色调护眼阅读模式" },
+  light:    { name: t("look.theme.light","浅色"),     desc: t("look.themeDesc.light","Vercel 风格默认主题") },
+  aurora:   { name: t("look.theme.aurora","幻夜极光"),   desc: t("look.themeDesc.aurora","极光渐变亮色主题") },
+  dark:     { name: t("look.theme.dark","深色"),     desc: t("look.themeDesc.dark","暗色护眼主题") },
+  sepia:    { name: t("look.theme.sepia","温和护眼"), desc: t("look.themeDesc.sepia","暖色调护眼阅读模式") },
   // v3.1.2：elegant/matrix 在主题下拉可选且 CSS 有定义（[data-theme="elegant"/"matrix"]），
   // 修复前不在注册表——主题管理列表不可见、不可管理。补齐使三处清单一致。
-  elegant:  { name: "见静初雪",   desc: "清冷灰绿底色主题" }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」→ v3.4.4 更名「见静初雪」
-  matrix:   { name: "黑客帝国", desc: "绿色终端风格主题" },
+  elegant:  { name: t("look.theme.elegant","见静初雪"),   desc: t("look.themeDesc.elegant","清冷灰绿底色主题") }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」→ v3.4.4 更名「见静初雪」
+  matrix:   { name: t("look.theme.matrix","黑客帝国"), desc: t("look.themeDesc.matrix","绿色终端风格主题") },
   // v3.4.0：forest/ocean 补入注册表——5b227f4 引入主题时漏注册（v3.1.2 elegant/matrix 同款问题重演），
   // 导致主题管理列表不可见、不可管理。补齐使 CSS/下拉/注册表三处清单一致。
-  forest:   { name: "秘境森林", desc: "晨雾林地 · 松针深绿主题" },
-  ocean:    { name: "微蓝浅海",   desc: "晨曦海面 · 深海青主题" }
+  forest:   { name: t("look.theme.forest","秘境森林"), desc: t("look.themeDesc.forest","晨雾林地 · 松针深绿主题") },
+  ocean:    { name: t("look.theme.ocean","微蓝浅海"),   desc: t("look.themeDesc.ocean","晨曦海面 · 深海青主题") }
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
