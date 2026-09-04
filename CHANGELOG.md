@@ -2,6 +2,20 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.4.7] - 2026-09-04
+
+### i18n JS 拼接中文 t() 替换（剩余区域完成）
+
+**🌐 i18n JS 拼接中文 t() 替换（约 70 处）**
+- **区域 4 剩余**（Line 22000-23720）：配置保存 toast、语言切换、通知提醒、联动规则、主题切换、推送订阅、同步状态、全局错误捕获等。
+- **区域 5a**（Line 26000-30000）：MESSAGES.en 后代码——确认无遗漏的 UI 拼接中文（BUILTIN_PLUGINS 数据定义跳过）。
+- **区域 5b**（Line 30000-34000）：笔记管理 toast、分类默认值等。
+- **区域 5c**（Line 34000-37741）：reason 字段（模型加载/隐私策略/数据流审计）、habitStage label、排程渲染等。
+- 新增 65+ 个 MESSAGES key（zh + en），包括 `pwa.*`、`ai.*`、`chain.*`、`plugin.*`、`theme.*`、`p5.*` 等。
+- 跳过 1 处变量遮蔽（`const t = item.task` 遮蔽 i18n `t()`）。
+
+**✅ 验证**：lint 0 problems；build:check 门禁通过；quickwins 22/22 + error-boundary 22/22 + color-tokens 4/4 通过。
+
 ## [v3.4.6] - 2026-09-04
 
 ### i18n JS 拼接中文 t() 替换（大批量）
