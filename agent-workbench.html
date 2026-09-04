@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.5"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.6"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260903g";
+const BUILD_TAG = "20260904a";
 
 
 
@@ -6161,7 +6161,7 @@ async function toggleTheme(){
   const next = cur==="dark"?"light":"dark";
   cfg.theme=next; try{ await persistCfg(cfg); }catch(e){ save(PREFIX+"cfg", cfg); } applyTheme();
   const sel=$("#cfgTheme"); if(sel) sel.value=next;
-  toast("已切换为"+(next==="dark"?"暗色":"亮色")+"主题", "ok");
+  toast(next==="dark"?t("theme.switch.dark", "已切换为暗色主题"):t("theme.switch.light", "已切换为亮色主题"), "ok");
 }
 /**
  * 显示 toast 通知（自动消失）；error/danger 用 assertive alert 供读屏立即播报
@@ -6254,7 +6254,7 @@ function toast(msg, type){
 // ===== Bootstrap (配置常量) =====
 /* ---------- 场景配置（单一真相源：A-P2-7 收编 icon / sysprompt / extraCard） ---------- */
 const SCENARIOS = {
-  office:{ name:"办公", color:"#0a6cbd",
+  office:{ name:t("scenario.office", "办公"), color:"#0a6cbd",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4h4a2 2 0 0 1 2 2v1h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3V6a2 2 0 0 1 2-2zm0 2v1h4V6h-4z"/></svg>',
     sysprompt:t("sysprompt.office", "你是一个专业的办公效率助手，帮用户梳理任务、写会议纪要、润色邮件与文档。回答简洁、可执行。"),
     extraCard:"report",
@@ -6283,7 +6283,7 @@ const SCENARIOS = {
         {k:"note",label:t("field.inspiration", "灵感 / 备注"),type:"textarea"}
       ] } },
 
-  study:{ name:"学习", color:"#d97706",
+  study:{ name:t("scenario.study", "学习"), color:"#d97706",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h6v16H6a2 2 0 0 0-2 2V5zm16 0a2 2 0 0 0-2-2h-6v16h6a2 2 0 0 1 2 2V5z"/></svg>',
     sysprompt:t("sysprompt.study", "你是一个学习方法教练，擅长制定学习计划、拆解知识点、记忆与复习策略。"),
     extraCard:"review",
@@ -6303,13 +6303,13 @@ const SCENARIOS = {
     extraCard:"data",
     record:{ label:t("record.data.label", "数据记录"),
       fields:[
-        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("option.metricSnapshot", "指标快照"),t("option.analysisConclusion", "分析结论"),"数据源","报表"]},
+        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("option.metricSnapshot", "指标快照"),t("option.analysisConclusion", "分析结论"),t("option.dataSource", "数据源"),t("option.report", "报表")]},
         {k:"title",label:t("field.title", "标题"),type:"text"},
         {k:"value",label:t("field.metricValue", "指标数值"),type:"text",placeholder:"65.2 / 128 / 12.5%"}, // v3.1.2 A-档：指标快照此前无数值字段，「记了体重 65.2」无处填
         {k:"note",label:t("field.note", "备注"),type:"textarea"}
       ] } },
 
-  code:{ name:"编程", color:"#34a853",
+  code:{ name:t("scenario.code", "编程"), color:"#34a853",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>',
     sysprompt:t("sysprompt.code", "你是一个资深全栈工程师，擅长代码实现、调试与架构建议。给出可直接运行的代码并解释关键点。"),
     extraCard:"code",
@@ -6319,7 +6319,7 @@ const SCENARIOS = {
         {k:"project",label:t("field.project", "项目"),type:"text",placeholder:"如 工作台重构 / 个人的小站"},
         {k:"title",label:t("field.title", "标题"),type:"text"},{k:"code",label:t("field.code", "代码"),type:"textarea"}] } },
 
-  life:{ name:"生活", color:"#7c5cbf",
+  life:{ name:t("scenario.life", "生活"), color:"#7c5cbf",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
     sysprompt:t("sysprompt.life", "你是一个生活与健康管家，帮用户管理日常事务、运动记录、体重追踪、睡眠记录和喝水提醒。回答实用、贴心、有条理。"),
     extraCard:"life",
@@ -6386,7 +6386,7 @@ const SCENE_FEATURES = {
 /* ---------- 场景联动规则（任务完成时触发，跨场景生成任务） ---------- */
 const DEFAULT_LINKS = [
   {id:"l1", name:t("chain.default.l1.name", "交付完成 → 学习充电"), fromSc:"office", kw:t("chain.kw.deliver", "交付"), toSc:"study",  taskTitle:t("chain.default.l1.taskTitle", "奖励：看一集技术分享视频"), priority:"P2", enabled:true},
-  {id:"l2", name:t("chain.default.l2.name", "复习完成 → 编程实践"), fromSc:"study",  kw:"复习", toSc:"code",  taskTitle:t("chain.default.l2.taskTitle", "奖励：写个有趣的小项目 30 分钟"), priority:"P2", enabled:true},
+  {id:"l2", name:t("chain.default.l2.name", "复习完成 → 编程实践"), fromSc:"study",  kw:t("chain.kw.review", "复习"), toSc:"code",  taskTitle:t("chain.default.l2.taskTitle", "奖励：写个有趣的小项目 30 分钟"), priority:"P2", enabled:true},
   {id:"l3", name:t("chain.default.l3.name", "项目上线 → 生活犒劳"), fromSc:"code",   kw:t("chain.kw.launch", "上线"), toSc:"life",  taskTitle:t("chain.default.l3.taskTitle", "犒劳：吃顿好的 / 看部想看的片"),     priority:"P2", enabled:true}
 ];
 
@@ -6433,9 +6433,9 @@ function toScenarioEntry(s){
     name: s.name,
     color: (/^#[0-9a-fA-F]{6}$/.test(s.color||"")) ? s.color : scenarioDefaultColor(),
     icon: resolveScIcon(s.iconKey),
-    sysprompt: s.sysprompt || ("你是「"+s.name+"」场景助手，帮用户梳理该场景的任务与资料。回答简洁、可执行。"),
+    sysprompt: s.sysprompt || (t("scenario.customSysPromptPrefix", "你是「")+s.name+t("scenario.customSysPromptSuffix", "」场景助手，帮用户梳理该场景的任务与资料。回答简洁、可执行。")),
     extraCard: "none",
-    record: { label: (s.name||"")+"资料",
+    record: { label: (s.name||"")+t("scenario.customRecordSuffix", "资料"),
       fields: [ {k:"title",label:t("field.title", "标题"),type:"text"}, {k:"note",label:t("field.note", "备注"),type:"textarea"} ] },
     custom: true,
     _iconKey: s.iconKey || "tag"
@@ -6447,9 +6447,9 @@ function pluginScenarioToEntry(key, s){
     name: s.name || key,
     color: (/^#[0-9a-fA-F]{6}$/.test(s.color||"")) ? s.color : scenarioDefaultColor(),
     icon: (typeof s.icon === "string" && s.icon) ? s.icon : resolveScIcon("tag"),
-    sysprompt: s.desc || ("你是「"+(s.name||key)+"」场景助手，帮用户梳理该场景的任务与资料。"),
+    sysprompt: s.desc || (t("scenario.pluginSysPromptPrefix", "你是「")+(s.name||key)+t("scenario.pluginSysPromptSuffix", "」场景助手，帮用户梳理该场景的任务与资料。")),
     extraCard: "none",
-    record: { label: (s.name||key)+"资料",
+    record: { label: (s.name||key)+t("scenario.customRecordSuffix", "资料"),
       fields: [ {k:"title",label:t("field.title", "标题"),type:"text"}, {k:"note",label:t("field.note", "备注"),type:"textarea"} ] },
     custom: true,
     plugin: true,
@@ -6527,8 +6527,8 @@ function updateCustomScenario(key, patch){
   const s = arr[i];
   if(typeof patch.name === "string"){
     const nm = patch.name.trim();
-    if(!nm) return {ok:false, err:"场景名称不能为空"};
-    if(nm.length > 12) return {ok:false, err:"场景名称过长（最多 12 字）"};
+    if(!nm) return {ok:false, err:t("err.sceneNameEmpty", "场景名称不能为空")};
+    if(nm.length > 12) return {ok:false, err:t("err.sceneNameTooLong", "场景名称过长（最多 12 字）")};
     s.name = nm;
   }
   if(typeof patch.color === "string" && /^#[0-9a-fA-F]{6}$/.test(patch.color)) s.color = patch.color;
@@ -6544,7 +6544,7 @@ function updateCustomScenario(key, patch){
  */
 function removeCustomScenario(key){
   if(BUILTIN_SC_KEYS.includes(key)) return {ok:false, err:t("err.builtinNoDelete", "内置场景不可删除")};
-  if(!SCENARIOS[key]) return {ok:false, err:"场景不存在"};
+  if(!SCENARIOS[key]) return {ok:false, err:t("err.sceneNotFound", "场景不存在")};
   const hasTasks = getTasks().some(t => t.sc === key); // 含软删任务：数据契约从严
   if(hasTasks) return {ok:false, err:t("err.sceneHasTasks", "该场景下还有任务，请先处理后再删除")};
   saveCustomScenarios(loadCustomScenarios().filter(s => s.key !== key));
@@ -6567,8 +6567,8 @@ function setBuiltinOverride(key, patch){
   const cur = ov[key] || {};
   if(typeof patch.name === "string"){
     const nm = patch.name.trim();
-    if(!nm) return {ok:false, err:"场景名称不能为空"};
-    if(nm.length > 12) return {ok:false, err:"场景名称过长（最多 12 字）"};
+    if(!nm) return {ok:false, err:t("err.sceneNameEmpty", "场景名称不能为空")};
+    if(nm.length > 12) return {ok:false, err:t("err.sceneNameTooLong", "场景名称过长（最多 12 字）")};
     cur.name = nm;
   }
   if(typeof patch.color === "string" && /^#[0-9a-fA-F]{6}$/.test(patch.color)) cur.color = patch.color;
@@ -6651,7 +6651,7 @@ function addCustomLink(fromSc, kw, toSc, extra){
     id: uid(),
     name: (SCENARIOS[fromSc]&&SCENARIOS[fromSc].name||fromSc) + "→" + (SCENARIOS[toSc]&&SCENARIOS[toSc].name||toSc),
     fromSc, kw: _kw, toSc,
-    taskTitle: "奖励：" + _kw,
+    taskTitle: t("chain.taskTitlePrefix", "奖励：") + _kw,
     priority: "P2",
     enabled: true
   }, extra || {});
@@ -6673,10 +6673,10 @@ function removeCustomLink(id){
   const removed = links[i];
   try{
     addToRecycleBin("config",
-      "联动规则：「"+(removed.name||removed.id||t("tool.unnamed", "未命名"))+"」",
-      (removed.fromSc||"?")+" → "+(removed.toSc||"?")+"，关键词：「"+(removed.kw||"")+"」",
+      t("chain.linkRecycleTitlePrefix", "联动规则：「")+(removed.name||removed.id||t("tool.unnamed", "未命名"))+t("chain.linkRecycleTitleSuffix", "」"),
+      (removed.fromSc||"?")+" → "+(removed.toSc||"?")+t("chain.linkRecycleDescKwPrefix", "，关键词：「")+(removed.kw||"")+t("chain.linkRecycleDescKwSuffix", "」"),
       { kind: "link", link: removed },
-      "联动规则");
+      t("chain.linkRecycleCategory", "联动规则"));
   }catch(_){ /* 回收站写入失败不影响删除 */ }
   links.splice(i, 1);
   saveCustomLinks(links);
@@ -6693,10 +6693,10 @@ function updateCustomLink(id, patch){
   const i = links.findIndex(l => l.id === id);
   if(i < 0) return {ok:false, err:t("err.linkNotFound", "链不存在")};
   const merged = Object.assign({}, links[i], patch);
-  if(merged.fromSc && merged.toSc && merged.fromSc === merged.toSc) return {ok:false, err:"源场景与目标场景不能相同"};
-  if("kw" in patch && !String(merged.kw===null||merged.kw===undefined?"":merged.kw).trim()) return {ok:false, err:"关键词不能为空"};
-  if("fromSc" in patch && !ORDER.includes(merged.fromSc)) return {ok:false, err:"无效的源场景"};
-  if("toSc" in patch && !ORDER.includes(merged.toSc)) return {ok:false, err:"无效的目标场景"};
+  if(merged.fromSc && merged.toSc && merged.fromSc === merged.toSc) return {ok:false, err:t("err.sameSc", "源场景与目标场景不能相同")};
+  if("kw" in patch && !String(merged.kw===null||merged.kw===undefined?"":merged.kw).trim()) return {ok:false, err:t("err.kwEmpty", "关键词不能为空")};
+  if("fromSc" in patch && !ORDER.includes(merged.fromSc)) return {ok:false, err:t("err.invalidSrcSc", "无效的源场景")};
+  if("toSc" in patch && !ORDER.includes(merged.toSc)) return {ok:false, err:t("err.invalidDstSc", "无效的目标场景")};
   links[i] = merged;
   saveCustomLinks(links);
   return {ok:true, link: merged};
@@ -6809,7 +6809,7 @@ function getSessions(){
         const last  = (arr[arr.length-1] && arr[arr.length-1].createdAt) || first;
         _sessions.push({
           id: id, sc: sc,
-          title: (SCENARIOS[sc] ? (SCENARIOS[sc].name + " 默认会话") : (sc + " 默认会话")),
+          title: (SCENARIOS[sc] ? (SCENARIOS[sc].name + t("sess.defaultSuffix", " 默认会话")) : (sc + t("sess.defaultSuffix", " 默认会话"))),
           createdAt: first, updatedAt: last,
           msgs: arr.slice()
         });
@@ -6818,7 +6818,7 @@ function getSessions(){
     if(_sessions.length === 0){
       // 完全冷启动：建一个默认 office 会话
       const id = _genSid();
-      _sessions.push({ id: id, sc: "office", title: "新会话", createdAt: _nowIso(), updatedAt: _nowIso(), msgs: [] });
+      _sessions.push({ id: id, sc: "office", title: t("sess.new", "新会话"), createdAt: _nowIso(), updatedAt: _nowIso(), msgs: [] });
     }
     _activeSid = _sessions[0].id;
     _saveSessions();
@@ -6850,7 +6850,7 @@ function createSession(sc, title){
   getSessions();
   const target = sc || (typeof active !== "undefined" ? active : "office");
   const id = _genSid();
-  const item = { id: id, sc: target, title: title || "新会话", createdAt: _nowIso(), updatedAt: _nowIso(), msgs: [] };
+  const item = { id: id, sc: target, title: title || t("sess.new", "新会话"), createdAt: _nowIso(), updatedAt: _nowIso(), msgs: [] };
   _sessions.unshift(item);
   _activeSid = id;
   _saveSessions();
@@ -6870,7 +6870,7 @@ function deleteSession(sid){
   getSessions();
   if(_sessions.length <= 1){
     const it = _sessions[0];
-    it.msgs = []; it.title = "新会话"; it.updatedAt = _nowIso();
+    it.msgs = []; it.title = t("sess.new", "新会话"); it.updatedAt = _nowIso();
     _saveSessions();
     return;
   }
@@ -6889,7 +6889,7 @@ function appendSessionMsg(sid, msg){
   const m = Object.assign({ createdAt: _nowIso() }, msg);
   it.msgs = (it.msgs || []).concat(m);
   it.updatedAt = m.createdAt;
-  if(it.title === "新会话" && m.role === "user" && (m.content || "").trim()){
+  if(it.title === t("sess.new", "新会话") && m.role === "user" && (m.content || "").trim()){
     it.title = (m.content || "").trim().slice(0, 20);
   }
   _saveSessions();
@@ -6926,7 +6926,7 @@ function _mirrorChatToSession(k, v){
     sess.msgs = v.slice(-50);
     sess.updatedAt = _nowIso();
     // 以首条用户消息自动命名（仅当还是默认名）
-    if(sess.title === "新会话"){
+    if(sess.title === t("sess.new", "新会话")){
       const firstUser = sess.msgs.find(function(m){ return m.role === "user" && (m.content || "").trim(); });
       if(firstUser) sess.title = (firstUser.content || "").trim().slice(0, 20);
     }
@@ -6974,13 +6974,13 @@ function renderSessionList(filter){
     const isActive = s.id === activeSid;
     return '<div class="sess-item' + (isActive ? " active" : "") + '" data-sid="' + esc(s.id) + '" role="option" tabindex="0" aria-selected="' + (isActive ? "true" : "false") + '">'
       + '<span class="sess-title"><span class="sc-dot" style="background:' + sm.color + '"></span>'
-      + '<span class="tx" title="' + esc(s.title || "") + '">' + esc(s.title || "新会话") + '</span></span>'
-      + '<span class="sess-meta">' + esc(sm.name) + ' · ' + (s.msgs || []).length + ' 条 · ' + time + '</span>'
+      + '<span class="tx" title="' + esc(s.title || "") + '">' + esc(s.title || t("sess.new", "新会话")) + '</span></span>'
+      + '<span class="sess-meta">' + esc(sm.name) + ' · ' + (s.msgs || []).length + ' ' + t("common.unit", "条") + ' · ' + time + '</span>'
       + '<span class="sess-acts">'
-      + '<button type="button" data-act="rename" data-sid="' + esc(s.id) + '">重命名</button>'
-      + '<button type="button" class="danger" data-act="delete" data-sid="' + esc(s.id) + '">删除</button>'
+      + '<button type="button" data-act="rename" data-sid="' + esc(s.id) + '">' + t("sess.renameBtn", "重命名") + '</button>'
+      + '<button type="button" class="danger" data-act="delete" data-sid="' + esc(s.id) + '">' + t("common.delete", "删除") + '</button>'
       + '</span></div>';
-  }).join("") : '<div class="sess-preview-empty">没有匹配的会话</div>');
+  }).join("") : '<div class="sess-preview-empty">' + t("sess.noMatch", "没有匹配的会话") + '</div>');
   // 点击会话项 → 激活 + 预览（行内操作按钮除外）
   $$("#sessList .sess-item").forEach(function(el){
     el.onclick = function(e){
@@ -7010,9 +7010,9 @@ function renderSessionList(filter){
 /** 渲染指定会话的消息预览（复用聊天气泡语义：user 右 / assistant 左 / tool 弱化） */
 function renderSessionPreview(sid){
   const box = $("#sessPreview"); if(!box) return;
-  if(!sid){ box.innerHTML = sanitizeHtml('<div class="sess-preview-empty">选择左侧会话查看消息</div>'); return; }
+  if(!sid){ box.innerHTML = sanitizeHtml('<div class="sess-preview-empty">' + t("sess.previewEmpty", "选择左侧会话查看消息") + '</div>'); return; }
   const msgs = getSessionMsgs(sid);
-  if(!msgs.length){ box.innerHTML = sanitizeHtml('<div class="sess-preview-empty">该会话暂无消息</div>'); return; }
+  if(!msgs.length){ box.innerHTML = sanitizeHtml('<div class="sess-preview-empty">' + t("sess.noMessages", "该会话暂无消息") + '</div>'); return; }
   box.innerHTML = sanitizeHtml(msgs.map(function(m){
     const role = m.role === "user" ? "user" : (m.role === "tool" ? "tool" : "assistant");
     const text = _chatContentToText(m.content) || "";
@@ -7070,12 +7070,12 @@ function execTool(name, args, force){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
       const tags = Array.isArray(args.tags)? args.tags.map(String).filter(Boolean) : [];
       const tasks = getTasks();
-      const nt = {id:uid(), sc, title:String(args.title||"未命名"), due:args.due||"",
+      const nt = {id:uid(), sc, title:String(args.title||t("tool.unnamed", "未命名")), due:args.due||"",
         priority:["","P0","P1","P2"].includes(args.priority)?args.priority:"", status:"todo", doneAt:null, note:"", tags, created:Date.now()};
       tasks.push(nt);
       setTasks(tasks);
       _emitTaskEvent("task_create", nt); // v1.12 [1a]：AI/Agent 创建任务也发事件
-      return JSON.stringify({ok:true, id:nt.id, msg:"已在"+SCENARIOS[sc].name+"创建任务："+args.title});
+      return JSON.stringify({ok:true, id:nt.id, msg:t("tool.createdPrefix", "已在")+SCENARIOS[sc].name+t("tool.createdInfix", "创建任务：")+args.title});
     }
     if(name==="list_tasks"){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
@@ -7085,16 +7085,16 @@ function execTool(name, args, force){
     }
     if(name==="complete_task"){
       const ft = findTask(args.task_id);
-      if(!ft) return JSON.stringify({ok:false,msg:"未找到匹配任务："+args.task_id});
+      if(!ft) return JSON.stringify({ok:false,msg:t("tool.notFoundPrefix", "未找到匹配任务：")+args.task_id});
       completeTask(ft.task.id);
-      return JSON.stringify({ok:true, msg:"已完成："+ft.task.title});
+      return JSON.stringify({ok:true, msg:t("tool.completedPrefix", "已完成：")+ft.task.title});
     }
     if(name==="update_task"){
       const ft = findTask(args.task_id);
-      if(!ft) return JSON.stringify({ok:false,msg:"未找到匹配任务："+args.task_id});
+      if(!ft) return JSON.stringify({ok:false,msg:t("tool.notFoundPrefix", "未找到匹配任务：")+args.task_id});
       if(!force){
         pendingConfirm={op:"update_task", task_id:ft.task.id, title:ft.task.title};
-        return JSON.stringify({ok:false, confirm:"将修改：「"+ft.task.title+"」（id "+ft.task.id+"）。发送「确认」以继续，其他内容取消。", op:"update_task", task_id:ft.task.id, title:ft.task.title});
+        return JSON.stringify({ok:false, confirm:t("tool.updateConfirmPrefix", "将修改：「")+ft.task.title+t("tool.updateConfirmInfix", "」（id ")+ft.task.id+t("tool.updateConfirmSuffix", "）。发送「确认」以继续，其他内容取消。"), op:"update_task", task_id:ft.task.id, title:ft.task.title});
       }
       const ch={};
       if(args.status && ["todo","doing","done"].includes(args.status)){
@@ -7105,18 +7105,18 @@ function execTool(name, args, force){
       if(args.due!==undefined){ ft.task.due=args.due; ch.due=args.due; }
       if(Array.isArray(args.tags)){ ft.task.tags=args.tags.map(String).filter(Boolean); ch.tags=ft.task.tags; }
       setTasks(ft.tasks);
-      return JSON.stringify({ok:true, msg:"已更新「"+ft.task.title+"」："+JSON.stringify(ch)});
+      return JSON.stringify({ok:true, msg:t("tool.updatedPrefix", "已更新「")+ft.task.title+t("tool.updatedInfix", "」：")+JSON.stringify(ch)});
     }
     if(name==="delete_task"){
       const ft = findTask(args.task_id);
-      if(!ft) return JSON.stringify({ok:false,msg:"未找到匹配任务："+args.task_id});
+      if(!ft) return JSON.stringify({ok:false,msg:t("tool.notFoundPrefix", "未找到匹配任务：")+args.task_id});
       if(!force){
         pendingConfirm={op:"delete_task", task_id:ft.task.id, title:ft.task.title};
-        return JSON.stringify({ok:false, confirm:"将删除：「"+ft.task.title+"」（id "+ft.task.id+"）。发送「确认」以继续，其他内容取消。", op:"delete_task", task_id:ft.task.id, title:ft.task.title});
+        return JSON.stringify({ok:false, confirm:t("tool.deleteConfirmPrefix", "将删除：「")+ft.task.title+t("tool.deleteConfirmInfix", "」（id ")+ft.task.id+t("tool.deleteConfirmSuffix", "）。发送「确认」以继续，其他内容取消。"), op:"delete_task", task_id:ft.task.id, title:ft.task.title});
       }
       ft.task.deletedAt=Date.now(); setTasks(ft.tasks); // ③ 软删除：进回收站，可恢复
       _emitTaskEvent("task_delete", ft.task); // v1.12 [1a]：AI 删除任务发事件
-      return JSON.stringify({ok:true, msg:"已删除（进入左侧「回收站」，可恢复）："+ft.task.title});
+      return JSON.stringify({ok:true, msg:t("tool.deletedPrefix", "已删除（进入左侧「回收站」，可恢复）：")+ft.task.title});
     }
     if(name==="add_record"){
       const sc = ORDER.includes(args.scenario)? args.scenario : active;
@@ -7124,7 +7124,7 @@ function execTool(name, args, force){
       const flds = (SCENARIOS[sc]&&SCENARIOS[sc].record.fields)||[];
       flds.forEach(f=> obj[f.k] = (args.fields&&args.fields[f.k]!==null&&args.fields[f.k]!==undefined)? String(args.fields[f.k]) : "");
       const arr = getRec(sc); arr.unshift(obj); setRec(sc, arr);
-      return JSON.stringify({ok:true, msg:"已向"+SCENARIOS[sc].name+"资料库添加记录"});
+      return JSON.stringify({ok:true, msg:t("tool.recordAddedPrefix", "已向")+SCENARIOS[sc].name+t("tool.recordAddedInfix", "资料库添加记录")});
     }
     if(name==="search"){
       const q=String(args.query||"").toLowerCase(); const tasks=getTasks();
@@ -7148,7 +7148,7 @@ function execTool(name, args, force){
     if(name==="add_feature_record"){
       const fid = String(args.feature || "");
       const bcfg = (SCENE_FEATURE_BIND[active] || {})[fid];
-      if(!bcfg) return JSON.stringify({ok:false, msg:"未知功能："+fid+"（可用：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan）"});
+      if(!bcfg) return JSON.stringify({ok:false, msg:t("tool.unknownFeaturePrefix", "未知功能：")+fid+t("tool.unknownFeatureSuffix", "（可用：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan）")});
       const rec = { id: uid(), createdAt: Date.now() };
       const fields = (args && args.fields) || {};
       bcfg.fieldKeys.forEach(function(k){
@@ -7158,7 +7158,7 @@ function execTool(name, args, force){
       const arr = load(PREFIX + bcfg.key, []);
       arr.unshift(rec);
       save(PREFIX + bcfg.key, arr);
-      return JSON.stringify({ok:true, msg:"已添加到"+fid+"功能"});
+      return JSON.stringify({ok:true, msg:t("tool.featureAddedPrefix", "已添加到")+fid+t("tool.featureAddedInfix", "功能")});
     }
     // ===== AI 能力增强：新工具分发（同步工具直接执行；异步工具经 agentExecAsync 分发） =====
     if(name==="note_add"){
@@ -7176,7 +7176,7 @@ function execTool(name, args, force){
   }catch(e){
     // 工具执行异常：诊断 + 提示，仍返回结构化错误（保持 execTool 调用方契约）
     pushDiag("error", "execTool error: "+(e&&e.message||e), {where:"execTool", tool:name});
-    try{ toast("工具执行异常："+(e&&e.message||t("tool.unknownErrorMsg", "未知错误")), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
+    try{ toast(t("tool.execErrorPrefix", "工具执行异常：")+(e&&e.message||t("tool.unknownErrorMsg", "未知错误")), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
     return JSON.stringify({ok:false, error:String(e)});
   }
 }
@@ -7187,11 +7187,11 @@ function _recordFieldsSchema(){
     const entry = SCENARIOS[sc];
     const props = {};
     (entry && entry.record && entry.record.fields || []).forEach(function(f){
-      props[f.k] = { type:"string", description:(f.label || f.k) + (f.placeholder ? "，如 " + f.placeholder : "") };
+      props[f.k] = { type:"string", description:(f.label || f.k) + (f.placeholder ? t("tool.fieldDescInfix", "，如 ") + f.placeholder : "") };
     });
-    return { type:"object", description:(entry ? entry.name : sc) + "场景资料库字段", properties: props };
+    return { type:"object", description:(entry ? entry.name : sc) + t("tool.scenarioRecordSuffix", "场景资料库字段"), properties: props };
   });
-  return { type:"object", description:"资料库字段，键随 scenario 而定（不同场景字段不同，见 anyOf）", anyOf: anyOf };
+  return { type:"object", description:t("tool.recordFieldsDesc", "资料库字段，键随 scenario 而定（不同场景字段不同，见 anyOf）"), anyOf: anyOf };
 }
 
 const TOOLS = [
@@ -7356,7 +7356,7 @@ function agentExec(name, args){
   if(name==="remember"){
     const scope = (args.scope && (args.scope==="global" || ORDER.includes(args.scope)))? args.scope : active;
     const r=addMemory(scope, args.text);
-    return r? JSON.stringify({ok:true, id:r.id, msg:"已记住["+(scope==="global"?"全局":SCENARIOS[scope].name)+"]："+r.text})
+    return r? JSON.stringify({ok:true, id:r.id, msg:t("agent.rememberPrefix", "已记住[")+(scope==="global"?t("agent.scope.global", "全局"):SCENARIOS[scope].name)+t("agent.rememberInfix", "]：")+r.text})
             : JSON.stringify({ok:false,msg:t("agent.memEmptyMsg", "记忆内容为空")});
   }
   if(name==="recall"){
@@ -7365,28 +7365,28 @@ function agentExec(name, args){
   }
   if(name==="forget"){
     const r=forgetMemory(args.id);
-    return r? JSON.stringify({ok:true,msg:"已遗忘："+r.text}) : JSON.stringify({ok:false,msg:t("agent.memNotFoundMsg", "未找到该记忆")});
+    return r? JSON.stringify({ok:true,msg:t("agent.forgetPrefix", "已遗忘：")+r.text}) : JSON.stringify({ok:false,msg:t("agent.memNotFoundMsg", "未找到该记忆")});
   }
   if(name==="plan"){
     const g=createGoal(args.goal, args.steps, ORDER.includes(args.scenario)?args.scenario:active);
-    return JSON.stringify({ok:true,id:g.id,msg:"已建立目标「"+g.title+"」，共"+g.steps.length+"步。请按步骤调用工具执行，每完成一步用 complete_step 标记，全部完成后用 complete_goal 收尾。"});
+    return JSON.stringify({ok:true,id:g.id,msg:t("agent.planMsgPrefix", "已建立目标「")+g.title+t("agent.planMsgInfix", "」，共")+g.steps.length+t("agent.planMsgSuffix", "步。请按步骤调用工具执行，每完成一步用 complete_step 标记，全部完成后用 complete_goal 收尾。")});
   }
   if(name==="complete_step"){
     const g=markStep(args.index, args.note);
     if(!g) return JSON.stringify({ok:false,msg:t("agent.noActiveGoalMsg", "无进行中的目标或步骤序号无效")});
     const rest=g.steps.filter(s=>!s.done).length;
-    return JSON.stringify({ok:true,msg:"步骤"+(+args.index+1)+"已完成，剩余"+rest+"步", remaining:rest});
+    return JSON.stringify({ok:true,msg:t("agent.stepDonePrefix", "步骤")+(+args.index+1)+t("agent.stepDoneInfix", "已完成，剩余")+rest+t("agent.stepDoneSuffix", "步"), remaining:rest});
   }
   if(name==="complete_goal"){
     const g=completeGoal(args.summary);
-    return g? JSON.stringify({ok:true,msg:"目标完成："+g.title}) : JSON.stringify({ok:false,msg:t("agent.noGoalMsg", "当前无进行中的目标")});
+    return g? JSON.stringify({ok:true,msg:t("agent.goalDonePrefix", "目标完成：")+g.title}) : JSON.stringify({ok:false,msg:t("agent.noGoalMsg", "当前无进行中的目标")});
   }
   if(name==="list_records"){
     const sc=ORDER.includes(args.scenario)?args.scenario:active;
     const all=getRec(sc);
     return JSON.stringify({count:all.length, items:all.slice(-10).map(r=>{const c=Object.assign({},r);delete c.id;delete c.created;return c;})});
   }
-  return JSON.stringify({ok:false, msg:"未知工具："+name});
+  return JSON.stringify({ok:false, msg:t("agent.unknownToolPrefix", "未知工具：")+name});
 }
 
 /* Agent 上下文：工作记忆 + 进行中目标，注入系统提示（cfg.agent=false 时整体关闭） */
@@ -7398,14 +7398,14 @@ function agentContextPrompt(userText){
   if(mems.length){
     touchMemories(mems);
     parts.push(t("agent.ctx.memHeader", "【工作记忆】（你与用户此前沉淀的事实/偏好，回答与操作时请保持一致；过时内容可用 forget 清理）：\n")+
-      mems.map(m=>"- ["+(m.scope==="global"?"全局":(SCENARIOS[m.scope]?SCENARIOS[m.scope].name:m.scope))+"] "+m.text).join("\n"));
+      mems.map(m=>"- ["+(m.scope==="global"?t("agent.scope.global", "全局"):(SCENARIOS[m.scope]?SCENARIOS[m.scope].name:m.scope))+"] "+m.text).join("\n"));
   }
   const g=activeGoal();
   if(g){
     const lines=g.steps.map((s,i)=> (i+1)+". "+(s.done?"[x] ":"[ ] ")+s.text).join("\n");
     const nextIdx=g.steps.findIndex(s=>!s.done);
-    parts.push("【进行中目标】「"+g.title+"」（场景："+(SCENARIOS[g.sc]?SCENARIOS[g.sc].name:g.sc)+"）：\n"+lines+
-      (nextIdx>=0? "\n请继续执行第"+(nextIdx+1)+"步；完成后用 complete_step 标记，全部完成用 complete_goal 收尾。"
+    parts.push(t("agent.ctx.goalHeaderPrefix", "【进行中目标】「")+g.title+t("agent.ctx.goalHeaderInfix", "」（场景：")+(SCENARIOS[g.sc]?SCENARIOS[g.sc].name:g.sc)+t("agent.ctx.goalHeaderSuffix", "）：\n")+lines+
+      (nextIdx>=0? t("agent.ctx.goalContinuePrefix", "\n请继续执行第")+(nextIdx+1)+t("agent.ctx.goalContinueSuffix", "步；完成后用 complete_step 标记，全部完成用 complete_goal 收尾。")
                  : t("agent.ctx.goalAllDone", "\n所有步骤已完成，请调用 complete_goal 收尾并总结。")));
   }
   return parts.length? "\n\n"+parts.join("\n\n") : "";
@@ -8112,7 +8112,7 @@ function _validateAndMigrateTasks(){
     if(!t || typeof t !== "object") return; // 跳过非对象项，不强制重构（避免破坏未知结构）
     if(t.id===undefined){ t.id=uid(); changed=true; }
     if(t.sc===undefined || !ORDER.includes(t.sc)){ t.sc="office"; changed=true; }
-    if(t.title===undefined){ t.title="(无标题)"; changed=true; }
+    if(t.title===undefined){ t.title=t("task.untitled", "(无标题)"); changed=true; }
     if(t.status===undefined){ t.status = t.done?"done":"todo"; changed=true; }
     if(t.doneAt===undefined){ t.doneAt = t.status==="done"? (t.created||Date.now()) : null; changed=true; }
     if(t.tags===undefined){ t.tags = []; changed=true; }
@@ -8196,8 +8196,8 @@ function detectLegacyData(){
     } catch(e){ /* 跳过损坏键 */ }
   });
   result.totalKeys = allKeys().length;
-  if(result.legacyTasks > 0) result.details.push("tasks: " + result.legacyTasks + " 条缺少新字段");
-  if(result.legacyRecs > 0) result.details.push("recs: " + result.legacyRecs + " 条缺少 id/created");
+  if(result.legacyTasks > 0) result.details.push(t("migrate.tasksDetail", "tasks: {count} 条缺少新字段").replace("{count}", result.legacyTasks));
+  if(result.legacyRecs > 0) result.details.push(t("migrate.recsDetail", "recs: {count} 条缺少 id/created").replace("{count}", result.legacyRecs));
   return result;
 }
 /**
@@ -8221,7 +8221,7 @@ function migrate(){
     }
   }catch(e){
     pushDiag("error", "migrate error: "+(e&&e.message||e), {where:"migrate"});
-    try{ toast("数据迁移异常："+(e&&e.message||t("tool.unknownErrorMsg", "未知错误")), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
+    try{ toast(t("migrate.errorToast", "数据迁移异常：{err}").replace("{err}", (e&&e.message||t("tool.unknownErrorMsg", "未知错误"))), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
   }
 }
 /* 生成 profile id（独立于 uid，避免与任务 id 混淆，且符合任务要求格式） */
@@ -8235,7 +8235,7 @@ function migrateProfiles(){
   if(Array.isArray(raw.profiles)) return; // 已是新格式
   if(raw.base===undefined && raw.key===undefined && raw.model===undefined) return; // 无旧字段
   const id = genProfileId();
-  const profile = { id, name: "默认", base: raw.base || "", key: raw.key || "", model: raw.model || "" };
+  const profile = { id, name: t("profile.default", "默认"), base: raw.base || "", key: raw.key || "", model: raw.model || "" };
   const next = Object.assign({}, raw, { profiles: [profile], activeId: id });
   delete next.base; delete next.key; delete next.model;
   save(PREFIX+"cfg", next);
@@ -8251,7 +8251,7 @@ function getActiveProfile(){
   }
   // 旧格式兼容（迁移前 / 损坏存储）：用旧字段构造临时 profile，不持久化
   if(cfg && (cfg.base || cfg.key || cfg.model)){
-    return { id: "__legacy__", name: "默认", base: cfg.base || "", key: cfg.key || "", model: cfg.model || "" };
+    return { id: "__legacy__", name: t("profile.default", "默认"), base: cfg.base || "", key: cfg.key || "", model: cfg.model || "" };
   }
   return null;
 }
@@ -8437,7 +8437,7 @@ function snapshotAutoBackup(){
     if(serialized.length > AUTO_BACKUP_MAX_BYTES){
       if(!_autoBackupFailWarned){
         _autoBackupFailWarned = true;
-        if (typeof pushDiag === "function") pushDiag("error", "自动备份快照超体积上限已跳过（业务数据可能异常膨胀）", {where:"snapshotAutoBackup"});
+        if (typeof pushDiag === "function") pushDiag("error", t("backup.oversizeDiag", "自动备份快照超体积上限已跳过（业务数据可能异常膨胀）"), {where:"snapshotAutoBackup"});
         try{ toast(t("backup.pausedToast", "自动备份已暂停：数据体积异常增大，请检查或导出清理"), "warn"); }catch(e2){ /* toast 不可用时静默 */ }
       }
       return;
@@ -8448,8 +8448,8 @@ function snapshotAutoBackup(){
     // 避免"备份机制已失效但用户无感知"（原有静默降级注释即审查报告 C1 的直接病灶）。
     if(!_autoBackupFailWarned){
       _autoBackupFailWarned = true;
-      if (typeof pushDiag === "function") pushDiag("error", "自动备份写入失败: "+(e&&e.message||e), {where:"snapshotAutoBackup"});
-      try{ toast("自动备份写入失败："+(e&&e.message||t("backup.storageErr", "存储异常")), "error"); }catch(e2){ /* toast 不可用时静默 */ }
+      if (typeof pushDiag === "function") pushDiag("error", t("backup.failDiagPrefix", "自动备份写入失败: ")+(e&&e.message||e), {where:"snapshotAutoBackup"});
+      try{ toast(t("backup.failToast", "自动备份写入失败：{err}").replace("{err}", (e&&e.message||t("backup.storageErr", "存储异常"))), "error"); }catch(e2){ /* toast 不可用时静默 */ }
     }
   }
 }
@@ -8466,7 +8466,7 @@ function recoverAutoBackup(){
   clearUndoStack(); // B6：恢复备份后清空撤销栈，避免跨数据状态误撤销
   try{ initCrypto(); }catch(e){ /* 降级明文 */ }
 
-  toast("已从自动备份恢复（"+new Date(snap._ts||Date.now()).toLocaleString()+"）", "ok");
+  toast(t("backup.recoveredToast", "已从自动备份恢复（{time}）").replace("{time}", new Date(snap._ts||Date.now()).toLocaleString()), "ok");
   render();
   return true;
 }
@@ -11036,7 +11036,7 @@ const TOOL_APPS = {
       };
 
       // 还原
-      $("#psReset").onclick = function(){ if(orig){ ctx.putImageData(orig, 0, 0); toast(t("tool.ps.resetDone", "已还原原图"), "ok"); } else toast("请先加载图片", "warn"); };
+      $("#psReset").onclick = function(){ if(orig){ ctx.putImageData(orig, 0, 0); toast(t("tool.ps.resetDone", "已还原原图"), "ok"); } else toast(t("tool.ps.loadFirst", "请先加载图片"), "warn"); };
 
       // 导出
       $("#psSave").onclick = function(){
@@ -11054,26 +11054,25 @@ const TOOL_APPS = {
     name:t("tool.imgGen.name", "AI 文生图"), icon:UI_ICONS.imggen, desc:t("tool.imgGen.desc", "输入描述 → AI 生成图片"),
     render: function(){
       const aiOn = (typeof getCfg === "function") && getCfg().enabled;
-      return '<label>图片描述</label><textarea id="igPrompt" placeholder="' + t("tool.imgGen.descPlaceholder", "例如：一只橘猫坐在窗台上看雨，水彩风格") + '" class="u-min-h-80"></textarea>'
-        + '<div class="tool-form-grid"><div class="tool-field"><label>尺寸</label><select id="igSize"><option value="512x512">512×512</option><option value="768x768">768×768</option><option value="1024x1024">1024×1024</option></select></div></div>'
-        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="igGo"' + (aiOn ? "" : " disabled") + ">生成图片</button></div>"
-        + '<div id="igOut" class="u-mt-3"></div>'
-        + (aiOn ? "" : '<p class="sub u-mt-2">未配置 AI——文生图需要 AI API。到 设置→AI 配置后即可使用。</p>');
+      return '<label>' + t("tool.imgGen.descLabel", "图片描述") + '</label><textarea id="igPrompt" placeholder="' + t("tool.imgGen.descPlaceholder", "例如：一只橘猫坐在窗台上看雨，水彩风格") + '" class="u-min-h-80"></textarea>'
+        + '<div class="tool-form-grid"><div class="tool-field"><label>' + t("tool.imgGen.size", "尺寸") + '</label><select id="igSize"><option value="512x512">512×512</option><option value="768x768">768×768</option><option value="1024x1024">1024×1024</option></select></div></div>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="igGo"' + (aiOn ? "" : " disabled") + ">" + t("tool.imgGen.generate", "生成图片") + "</button></div>"
+        + (aiOn ? "" : '<p class="sub u-mt-2">' + t("tool.imgGen.noAiTip", "未配置 AI——文生图需要 AI API。到 设置→AI 配置后即可使用。") + '</p>');
     },
     bind: function(){
       const go = $("#igGo"); if(!go) return;
       go.onclick = async function(){
         const p = $("#igPrompt").value.trim();
         if(!p){ toast(t("tool.imgGen.enterDesc", "请输入图片描述"), "warn"); return; }
-        $("#igOut").innerHTML = sanitizeHtml('<div class="coach-hint">生成中…（约 10–30 秒）</div>');
-        const text = await _aiChatText([{ role:"user", content:"为以下描述生成一张图片的 SVG 简笔示意（仅返回 SVG 代码）：\n" + p }]);
+        $("#igOut").innerHTML = sanitizeHtml('<div class="coach-hint">' + t("tool.imgGen.generating", "生成中…（约 10–30 秒）") + '</div>');
+        const text = await _aiChatText([{ role:"user", content:t("tool.imgGen.svgPrompt", "为以下描述生成一张图片的 SVG 简笔示意（仅返回 SVG 代码）：\n{desc}").replace("{desc}", p) }]);
         const out = $("#igOut");
         if(text && text.indexOf("<svg") >= 0){
           let svgPart = text.slice(text.indexOf("<svg"));
           svgPart = svgPart.slice(0, svgPart.indexOf("</svg>") + 6);
           out.innerHTML = sanitizeHtml(svgPart);
         } else {
-          out.innerHTML = sanitizeHtml('<div class="empty">生成失败：当前 AI 接口未支持图片输出。<br><small>可在设置中切换支持的模型，或稍后再试。</small></div>');
+          out.innerHTML = sanitizeHtml('<div class="empty">' + t("tool.imgGen.failResult", "生成失败：当前 AI 接口未支持图片输出。<br><small>可在设置中切换支持的模型，或稍后再试。</small>") + '</div>');
         }
       };
     }
@@ -11082,19 +11081,18 @@ const TOOL_APPS = {
     name:t("tool.vidGen.name", "AI 视频生成"), icon:UI_ICONS.vidgen, desc:t("tool.vidGen.desc", "文本描述 → AI 视频生成"),
     render: function(){
       const aiOn = (typeof getCfg === "function") && getCfg().enabled;
-      return '<label>视频描述</label><textarea id="vgPrompt" placeholder="' + t("tool.vidGen.descPlaceholder", "描述想要的视频画面与镜头运动…") + '" class="u-min-h-100"></textarea>'
-        + '<div class="tool-form-grid"><div class="tool-field"><label>时长</label><select id="vgLen"><option value="3">3 秒</option><option value="5">5 秒</option><option value="10">10 秒</option></select></div></div>'
-        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="vgGo"' + (aiOn ? "" : " disabled") + ">生成视频</button></div>"
-        + '<div id="vgOut" class="u-mt-3"></div>'
+      return '<label>' + t("tool.vidGen.descLabel", "视频描述") + '</label><textarea id="vgPrompt" placeholder="' + t("tool.vidGen.descPlaceholder", "描述想要的视频画面与镜头运动…") + '" class="u-min-h-100"></textarea>'
+        + '<div class="tool-form-grid"><div class="tool-field"><label>' + t("tool.vidGen.duration", "时长") + '</label><select id="vgLen"><option value="3">' + t("tool.vidGen.duration.3", "3 秒") + '</option><option value="5">' + t("tool.vidGen.duration.5", "5 秒") + '</option><option value="10">' + t("tool.vidGen.duration.10", "10 秒") + '</option></select></div></div>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="vgGo"' + (aiOn ? "" : " disabled") + ">" + t("tool.vidGen.generate", "生成视频") + "</button></div>"
         + (aiOn
-          ? '<p class="sub u-mt-2">注意：视频生成为 AI 高级能力，取决于所用模型是否支持；不支持时将提示降级方案。</p>'
-          : '<p class="sub u-mt-2">未配置 AI——视频生成依赖 AI 服务。到 设置→AI 配置 API Key 后启用。</p>');
+          ? '<p class="sub u-mt-2">' + t("tool.vidGen.noteAi", "注意：视频生成为 AI 高级能力，取决于所用模型是否支持；不支持时将提示降级方案。") + '</p>'
+          : '<p class="sub u-mt-2">' + t("tool.vidGen.noAiTip", "未配置 AI——视频生成依赖 AI 服务。到 设置→AI 配置 API Key 后启用。") + '</p>');
     },
     bind: function(){
       const go = $("#vgGo"); if(!go) return;
       go.onclick = async function(){
         if(!$("#vgPrompt").value.trim()){ toast(t("tool.vidGen.enterDesc", "请输入视频描述"), "warn"); return; }
-        $("#vgOut").innerHTML = sanitizeHtml('<div class="empty">视频生成通道暂未开放。<br><small>当前接入的 AI 模型以文本为主；视频模型上线后会在此自动启用。</small></div>');
+        $("#vgOut").innerHTML = sanitizeHtml('<div class="empty">' + t("tool.vidGen.emptyResult", "视频生成通道暂未开放。<br><small>当前接入的 AI 模型以文本为主；视频模型上线后会在此自动启用。</small>") + '</div>');
       };
     }
   },
@@ -11104,7 +11102,7 @@ const TOOL_APPS = {
     name:t("tool.webSearch.name", "在线检索"), icon:UI_ICONS.searchWeb, desc:t("tool.webSearch.desc", "跨任务 / 笔记 / 资料 / 场景 全文检索"),
     render: function(){
       return '<div class="tool-filter-bar"><input type="text" id="swQ" placeholder="' + t("tool.webSearch.placeholder", "输入关键词，回车或点搜索") + '" class="u-flex-1">'
-        + '<button type="button" class="addbtn sm btn-primary" id="swGo">搜索</button></div>'
+        + '<button type="button" class="addbtn sm btn-primary" id="swGo">' + t("tool.webSearch.search", "搜索") + '</button></div>'
         + '<div id="swRes"></div>';
     },
     bind: function(){
@@ -11124,11 +11122,11 @@ const TOOL_APPS = {
           });
         });
         let html = "";
-        if(hits.tasks.length) html += '<h3>任务 (' + hits.tasks.length + ')</h3><ul class="list">' + hits.tasks.slice(0,20).map(function(t){
+        if(hits.tasks.length) html += '<h3>' + t("tool.webSearch.tasks", "任务") + ' (' + hits.tasks.length + ')</h3><ul class="list">' + hits.tasks.slice(0,20).map(function(t){
           return '<li><div class="body"><div class="t">' + esc(t.title) + '</div><div class="m">' + esc(scMeta(t.sc).name) + " · " + t.status + (t.due ? " · " + t.due : "") + "</div></div></li>"; }).join("") + "</ul>";
-        if(hits.scenes.length) html += '<h3>场景</h3><div class="u-flex u-gap-2 u-flex-wrap">' + hits.scenes.map(function(sc){
+        if(hits.scenes.length) html += '<h3>' + t("tool.webSearch.scenes", "场景") + '</h3><div class="u-flex u-gap-2 u-flex-wrap">' + hits.scenes.map(function(sc){
           return '<span class="tag">' + esc(SCENARIOS[sc].name) + "</span>"; }).join("") + "</div>";
-        if(hits.recs.length) html += '<h3>资料 (' + hits.recs.length + ')</h3><ul class="list">' + hits.recs.slice(0,20).map(function(r){
+        if(hits.recs.length) html += '<h3>' + t("tool.webSearch.records", "资料") + ' (' + hits.recs.length + ')</h3><ul class="list">' + hits.recs.slice(0,20).map(function(r){
           return '<li><div class="body"><div class="t">' + esc(r.title) + '</div><div class="m">' + esc(SCENARIOS[r.sc].name) + "</div></div></li>"; }).join("") + "</ul>";
         box.innerHTML = sanitizeHtml(html || renderEmpty("no-search"));
       };
@@ -11142,13 +11140,13 @@ const TOOL_APPS = {
     name:t("tool.runner.name", "代码运行器"), icon:UI_ICONS.compile, desc:t("tool.runner.desc", "浏览器沙箱执行 JS · 输出捕获"),
     render: function(){
       const hist = _toolData("cod-compile-hist");
-      return '<label>JavaScript 代码</label><textarea id="ccCode" class="code-input u-min-h-200" placeholder=\'// 在这里编写 JavaScript 代码...\'></textarea>'
-        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="ccRun">▶ 运行</button>'
-        + '<button type="button" class="addbtn sm" data-sc="muted" id="ccClrOut">清空输出</button></div>'
-        + '<label class="u-mt-3">输出</label><pre id="ccOut" class="snip u-min-h-120">// console 输出显示在这里</pre>'
-        + (hist.length ? '<details class="u-mt-3"><summary class="u-pointer u-fs-xs">历史代码 (' + hist.length + ")</summary>"
+      return '<label>' + t("tool.runner.codeLabel", "JavaScript 代码") + '</label><textarea id="ccCode" class="code-input u-min-h-200" placeholder="' + t("tool.runner.codePlaceholder", "// 在这里编写 JavaScript 代码...") + '"></textarea>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="ccRun">' + t("tool.runner.run", "▶ 运行") + '</button>'
+        + '<button type="button" class="addbtn sm" data-sc="muted" id="ccClrOut">' + t("tool.runner.clearOut", "清空输出") + '</button></div>'
+        + '<label class="u-mt-3">' + t("tool.runner.output", "输出") + '</label><pre id="ccOut" class="snip u-min-h-120">' + t("tool.runner.outputPlaceholder", "// console 输出显示在这里") + '</pre>'
+        + (hist.length ? '<details class="u-mt-3"><summary class="u-pointer u-fs-xs">' + t("tool.runner.history", "历史代码") + ' (' + hist.length + ")</summary>"
           + '<ul class="list">' + hist.slice(0,10).map(function(h,i){ return '<li class="u-pad-1h-2h"><div class="body"><a href="#" data-cc-hist="' + i + '">' + esc((h.code||"").slice(0,60)) + "…</a></div></li>" }).join("") + "</ul></details>" : "")
-        + '<p class="sub u-mt-2">安全提示：代码在 Web Worker 沙箱中运行，无法访问应用数据、DOM 或 localStorage；最长 10 秒，用 console.log/warn/error 输出。</p>';
+        + '<p class="sub u-mt-2">' + t("tool.runner.safetyTip", "安全提示：代码在 Web Worker 沙箱中运行，无法访问应用数据、DOM 或 localStorage；最长 10 秒，用 console.log/warn/error 输出。") + '</p>';
     },
     bind: function(){
       const codeEl = $("#ccCode"); if(!codeEl) return;
@@ -11177,17 +11175,17 @@ const TOOL_APPS = {
   "cod-regex": {
     name:t("tool.regex.name", "正则测试器"), icon:UI_ICONS.regex, desc:t("tool.regex.desc", "实时匹配 · 捕获组 · 高亮"),
     render: function(){
-      const presets = [[t("tool.regex.preset.email", "邮箱"),"[\\w.-]+@[\\w.-]+\\.\\w+"],[t("tool.regex.preset.phone", "手机号"),"1[3-9]\\d{9}"],[t("tool.regex.preset.url", "URL"),"https?://[^\\s]+"],["日期","\\d{4}-\\d{2}-\\d{2}"],[t("tool.regex.preset.idCard", "身份证"),"\\d{17}[\\dXx]"]];
+      const presets = [[t("tool.regex.preset.email", "邮箱"),"[\\w.-]+@[\\w.-]+\\.\\w+"],[t("tool.regex.preset.phone", "手机号"),"1[3-9]\\d{9}"],[t("tool.regex.preset.url", "URL"),"https?://[^\\s]+"],[t("tool.regex.preset.date", "日期"),"\\d{4}-\\d{2}-\\d{2}"],[t("tool.regex.preset.idCard", "身份证"),"\\d{17}[\\dXx]"]];
       return '<div class="tool-filter-bar">'
         + '<input type="text" id="rePat" placeholder="' + t("tool.regex.patternPlaceholder", "正则表达式，如 \\d+") + '" class="u-flex-1 u-font-mono">'
         + '<label class="u-m-0 u-fs-2xs"><input type="checkbox" id="reG" checked> g</label>'
         + '<label class="u-m-0 u-fs-2xs"><input type="checkbox" id="reI"> i</label>'
         + '<label class="u-m-0 u-fs-2xs"><input type="checkbox" id="reM"> m</label>'
-        + '<select id="rePreset"><option value="">常用模式…</option>' + presets.map(function(p){ return '<option value="' + esc(p[1]) + '">' + esc(p[0]) + "</option>"; }).join("") + "</select></div>"
-        + '<label>测试文本</label><textarea id="reTxt" class="u-min-h-120" placeholder="' + t("tool.regex.testPlaceholder", "粘贴要测试的文本…") + '"></textarea>'
+        + '<select id="rePreset"><option value="">' + t("tool.regex.presetsLabel", "常用模式…") + '</option>' + presets.map(function(p){ return '<option value="' + esc(p[1]) + '">' + esc(p[0]) + "</option>"; }).join("") + "</select></div>"
+        + '<label>' + t("tool.regex.testText", "测试文本") + '</label><textarea id="reTxt" class="u-min-h-120" placeholder="' + t("tool.regex.testPlaceholder", "粘贴要测试的文本…") + '"></textarea>'
         + '<div id="reErr" class="u-text-danger u-fs-2xs u-mt-1h"></div>'
         + '<div id="reMatches" class="u-mt-2"></div>'
-        + '<label class="u-mt-3">高亮预览</label><div id="reHi" class="card u-fs-2xs u-pre-wrap u-p-3 u-font-mono u-lh-17"class="u-min-h-60"></div>';
+        + '<label class="u-mt-3">' + t("tool.regex.highlight", "高亮预览") + '</label><div id="reHi" class="card u-fs-2xs u-pre-wrap u-p-3 u-font-mono u-lh-17"class="u-min-h-60"></div>';
     },
     bind: function(){
       const patEl = $("#rePat"); if(!patEl) return;
@@ -11201,7 +11199,7 @@ const TOOL_APPS = {
         if(!src){ return; }
         let re;
         try{ re = new RegExp(src, flags); }
-        catch(e){ $("#reErr").textContent = "正则语法错误：" + e.message; return; }
+        catch(e){ $("#reErr").textContent = t("tool.regex.syntaxErr", "正则语法错误：{err}").replace("{err}", e.message); return; }
         const matches = []; let m, guard = 0;
         if(flags.indexOf("g") >= 0){
           while((m = re.exec(txt)) !== null && guard++ < 500){
@@ -11212,9 +11210,9 @@ const TOOL_APPS = {
           m = re.exec(txt);
           if(m) matches.push({ idx:m.index, len:m[0].length, groups:Array.prototype.slice.call(m, 1) });
         }
-        if(!matches.length){ $("#reMatches").innerHTML = sanitizeHtml('<span class="sub u-m-0">无匹配</span>'); return; }
-        $("#reMatches").innerHTML = sanitizeHtml("<b>" + matches.length + " 处匹配</b><ul class=\"list\">" + matches.slice(0, 50).map(function(mt, i){
-          return "<li style='padding:var(--space-1) var(--space-2h)'><div class=\"body\"><b>#" + (i+1) + "</b> 位置 " + mt.idx + " · 长度 " + mt.len + (mt.groups.length ? " · 组: [" + mt.groups.map(function(g){return JSON.stringify(g);}).join(", ") + "]" : "") + "</div></li>";
+        if(!matches.length){ $("#reMatches").innerHTML = sanitizeHtml('<span class="sub u-m-0">' + t("tool.regex.noMatch", "无匹配") + '</span>'); return; }
+        $("#reMatches").innerHTML = sanitizeHtml("<b>" + t("tool.regex.matchCount", "{count} 处匹配").replace("{count}", matches.length) + "</b><ul class=\"list\">" + matches.slice(0, 50).map(function(mt, i){
+          return "<li style='padding:var(--space-1) var(--space-2h)'><div class=\"body\"><b>#" + (i+1) + "</b> " + t("tool.regex.matchInfo", "位置 {idx} · 长度 {len}").replace("{idx}", mt.idx).replace("{len}", mt.len) + (mt.groups.length ? " · " + t("tool.regex.groups", "组:") + " [" + mt.groups.map(function(g){return JSON.stringify(g);}).join(", ") + "]" : "") + "</div></li>";
         }).join("") + "</ul>");
         /* 高亮 */
         let hi = "", last = 0;
@@ -11240,12 +11238,12 @@ const TOOL_APPS = {
     name:t("tool.md2code.name", "Markdown 转代码"), icon:UI_ICONS.md2code, desc:t("tool.md2code.desc", "MD → HTML / JSON 大纲 / 纯文本"),
     render: function(){
       return '<div class="u-gap-3"class="u-grid-2col">'
-        + '<div><label>Markdown 输入</label><textarea id="mcIn" class="u-min-h-280" placeholder="# 标题&#10;- 列表项&#10;**加粗** …"></textarea></div>'
+        + '<div><label>' + t("tool.md2code.input", "Markdown 输入") + '</label><textarea id="mcIn" class="u-min-h-280" placeholder="' + t("tool.md2code.inputPlaceholder", "# 标题&#10;- 列表项&#10;**加粗** …") + '"></textarea></div>'
         + '<div><div class="tool-filter-bar u-mb-2">'
-        + '<select id="mcFmt"><option value="html">HTML</option><option value="json">JSON 大纲</option><option value="text">纯文本</option></select>'
-        + '<button type="button" class="addbtn sm btn-primary" id="mcGo">转换</button>'
-        + '<button type="button" class="addbtn sm" id="mcCopy">复制结果</button></div>'
-        + '<pre id="mcOut" class="snip u-min-h-240 u-max-h-320 u-overflow-auto">转换结果显示在这里</pre></div></div>';
+        + '<select id="mcFmt"><option value="html">' + t("tool.md2code.fmt.html", "HTML") + '</option><option value="json">' + t("tool.md2code.fmt.json", "JSON 大纲") + '</option><option value="text">' + t("tool.md2code.fmt.text", "纯文本") + '</option></select>'
+        + '<button type="button" class="addbtn sm btn-primary" id="mcGo">' + t("tool.md2code.convert", "转换") + '</button>'
+        + '<button type="button" class="addbtn sm" id="mcCopy">' + t("tool.md2code.copy", "复制结果") + '</button></div>'
+        + '<pre id="mcOut" class="snip u-min-h-240 u-max-h-320 u-overflow-auto">' + t("tool.md2code.outputPlaceholder", "转换结果显示在这里") + '</pre></div></div>';
     },
     bind: function(){
       const go = $("#mcGo"); if(!go) return;
@@ -11270,7 +11268,7 @@ const TOOL_APPS = {
       };
       $("#mcCopy").onclick = function(){
         if(!lastOut){ toast(t("tool.md2code.convertFirst", "请先转换"), "warn"); return; }
-        navigator.clipboard.writeText(lastOut).then(function(){ toast("已复制", "ok"); }, function(){ toast("复制失败", "warn"); });
+        navigator.clipboard.writeText(lastOut).then(function(){ toast(t("tool.md2code.copied", "已复制"), "ok"); }, function(){ toast(t("tool.md2code.copyFail", "复制失败"), "warn"); });
       };
     }
   },
@@ -11286,7 +11284,7 @@ const TOOL_APPS = {
       }).concat(_toolData("lif-sport").filter(function(r){ return r && r.type; }));
       return _recordToolHtml({
         fields:[
-          { k:"type", label:t("tool.sport.type", "运动类型"), type:"select", options:[t("tool.sport.type.run", "跑步"),t("tool.sport.type.swim", "游泳"),t("tool.sport.type.bike", "骑行"),t("tool.sport.type.gym", "健身"),t("tool.sport.type.yoga", "瑜伽"),t("tool.sport.type.ball", "球类"),"其他"] },
+          { k:"type", label:t("tool.sport.type", "运动类型"), type:"select", options:[t("tool.sport.type.run", "跑步"),t("tool.sport.type.swim", "游泳"),t("tool.sport.type.bike", "骑行"),t("tool.sport.type.gym", "健身"),t("tool.sport.type.yoga", "瑜伽"),t("tool.sport.type.ball", "球类"),t("option.other", "其他")] },
           { k:"date", label:t("tool.regex.preset.date", "日期"), type:"date" },
           { k:"mins", label:t("tool.sport.mins", "时长(分钟)"), type:"number" },
           { k:"note", label:t("field.note", "备注"), type:"text" }
@@ -11301,9 +11299,9 @@ const TOOL_APPS = {
           const monthCnt = rs.filter(function(r){ return r.date && r.date.slice(0,7) === today.slice(0,7); }).length;
           const totalMins = rs.reduce(function(s,r){ return s + (Number(r.mins)||0); }, 0);
           return [
-            { v:weekCnt + " 次", l:t("tool.sport.weekCnt", "本周运动") },
-            { v:monthCnt + " 次", l:t("tool.sport.monthCnt", "本月运动") },
-            { v:Math.round(totalMins/60*10)/10 + " 小时", l:t("tool.sport.totalHours", "累计时长") }
+            { v:weekCnt + t("common.unitTimes", " 次"), l:t("tool.sport.weekCnt", "本周运动") },
+            { v:monthCnt + t("common.unitTimes", " 次"), l:t("tool.sport.monthCnt", "本月运动") },
+            { v:Math.round(totalMins/60*10)/10 + t("common.unitHours", " 小时"), l:t("tool.sport.totalHours", "累计时长") }
           ];
         },
         emptyTip:t("tool.sport.emptyTip", "还没有运动记录，添加第一条吧")
@@ -11311,7 +11309,7 @@ const TOOL_APPS = {
     },
     bind: function(){
       /* v3.2 C-档双轨收敛：写入引导跳转生活场景健康功能卡（getHealthRecs 双源已统一） */
-      _bindRecordToolRedirect("lif-sport", "生活场景 · 健康功能卡", "life", "health");
+      _bindRecordToolRedirect("lif-sport", t("tool.redirectHealth", "生活场景 · 健康功能卡"), "life", "health");
     }
   },
   "lif-bill": {
@@ -11326,19 +11324,19 @@ const TOOL_APPS = {
       }).concat(_toolData("lif-bill").filter(function(r){ return r && r.item; })); // 旧工具数据兼容追加
       return _recordToolHtml({
         fields:[
-          { k:"item", label:t("tool.bill.item", "缴费项目"), type:"select", options:[t("tool.bill.item.water", "水费"),t("tool.bill.item.electric", "电费"),t("tool.bill.item.gas", "燃气费"),t("tool.bill.item.net", "网费"),t("tool.bill.item.property", "物业费"),t("tool.bill.item.rent", "房租"),"其他"] },
+          { k:"item", label:t("tool.bill.item", "缴费项目"), type:"select", options:[t("tool.bill.item.water", "水费"),t("tool.bill.item.electric", "电费"),t("tool.bill.item.gas", "燃气费"),t("tool.bill.item.net", "网费"),t("tool.bill.item.property", "物业费"),t("tool.bill.item.rent", "房租"),t("option.other", "其他")] },
           { k:"amount", label:t("tool.bill.amount", "金额(元)"), type:"number" },
           { k:"due", label:t("tool.bill.due", "到期日"), type:"date" }
         ],
         cols:[
           { label:t("tool.bill.paid", "已缴"), type:"check" },
           { label:t("tab.project", "项目"), k:"item" },
-          { label:"金额", fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); } },
+          { label:t("field.amount", "金额"), fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); } },
           { label:t("tool.bill.due", "到期日"), fmt:function(r){
               const today = todayStr();
               let tag = "";
-              if(!r.done && r.due < today) tag = ' <span class="pri P0 u-fs-3xs">逾期</span>';
-              else if(!r.done && r.due <= _addDaysStr(today,3)) tag = ' <span class="pri P1 u-fs-3xs">即将到期</span>';
+              if(!r.done && r.due < today) tag = ' <span class="pri P0 u-fs-3xs">' + t("tool.bill.overdue", "逾期") + '</span>';
+              else if(!r.done && r.due <= _addDaysStr(today,3)) tag = ' <span class="pri P1 u-fs-3xs">' + t("tool.bill.dueSoon", "即将到期") + '</span>';
               return esc(r.due||"") + tag; } }
         ],
         sum: function(rs){
@@ -11360,7 +11358,7 @@ const TOOL_APPS = {
     },
     bind: function(){
       /* v3.2 C-档双轨收敛：写入改跳转功能卡（生活场景 → 缴费 tab），工具箱不再独立存数据 */
-      _bindRecordToolRedirect("lif-bill", "生活场景 · 缴费功能卡", "life", "bill");
+      _bindRecordToolRedirect("lif-bill", t("tool.redirectBill", "生活场景 · 缴费功能卡"), "life", "bill");
     }
   },
   "lif-shop": {
@@ -11396,7 +11394,7 @@ const TOOL_APPS = {
     },
     bind: function(){
       /* v3.2 C-档双轨收敛：写入引导跳转功能卡 */
-      _bindRecordToolRedirect("lif-shop", "生活场景 · 采购功能卡", "life", "shop");
+      _bindRecordToolRedirect("lif-shop", t("tool.redirectShop", "生活场景 · 采购功能卡"), "life", "shop");
     }
   },
   "lif-takeout": {
@@ -11415,8 +11413,8 @@ const TOOL_APPS = {
           { label:t("tool.regex.preset.date", "日期"), k:"date" },
           { label:t("tool.takeout.shop", "店铺"), k:"shop" },
           { label:t("tool.takeout.dish", "菜品"), k:"dish" },
-          { label:"金额", fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); } },
-          { label:"评分", fmt:function(r){ return "★".repeat(Math.min(5, Math.max(0, Number(r.rating)||0))) || "-"; } }
+          { label:t("field.amount", "金额"), fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); } },
+          { label:t("field.rating", "评分"), fmt:function(r){ return "★".repeat(Math.min(5, Math.max(0, Number(r.rating)||0))) || "-"; } }
         ],
         sum: function(rs){
           const today = todayStr().slice(0,7);
@@ -11446,7 +11444,7 @@ const TOOL_APPS = {
         fields:[
           { k:"from", label:t("tool.transit.from", "出发点"), type:"text" },
           { k:"to", label:t("tool.transit.to", "目的地"), type:"text" },
-          { k:"mode", label:t("tool.transit.mode", "交通方式"), type:"select", options:[t("tool.transit.mode.walk", "步行"),t("tool.transit.mode.bus", "公交"),t("tool.transit.mode.subway", "地铁"),t("tool.transit.mode.taxi", "打车"),t("tool.transit.mode.drive", "自驾"),"骑行",t("tool.transit.mode.train", "高铁"),t("tool.transit.mode.flight", "飞机")] },
+          { k:"mode", label:t("tool.transit.mode", "交通方式"), type:"select", options:[t("tool.transit.mode.walk", "步行"),t("tool.transit.mode.bus", "公交"),t("tool.transit.mode.subway", "地铁"),t("tool.transit.mode.taxi", "打车"),t("tool.transit.mode.drive", "自驾"),t("tool.transit.mode.bike", "骑行"),t("tool.transit.mode.train", "高铁"),t("tool.transit.mode.flight", "飞机")] },
           { k:"cost", label:t("tool.transit.cost", "费用(元)"), type:"number" },
           { k:"date", label:t("tool.regex.preset.date", "日期"), type:"date" }
         ],
@@ -11465,7 +11463,7 @@ const TOOL_APPS = {
           const topMode = Object.keys(modeCnt).sort(function(a,b){ return modeCnt[b]-modeCnt[a]; })[0] || "-";
           return [
             { v:"¥" + msum.toFixed(2), l:t("tool.transit.monthSum", "本月出行费") },
-            { v:month.length, l:"本月次数" },
+            { v:month.length, l:t("tool.transit.monthCnt", "本月次数") },
             { v:topMode, l:t("tool.transit.topMode", "最常用方式") }
           ];
         },
@@ -11491,12 +11489,12 @@ function openToolStub(toolId, label){
   /* v2.3.0：优先走 TOOL_APPS 真实实现 */
   const app = TOOL_APPS[toolId];
   if(app && typeof app.render === "function"){
-    const toolName = app.name || label || "工具";
+    const toolName = app.name || label || t("tool.stub.name", "工具");
     $("#main").innerHTML = sanitizeHtml(
       '<div class="card page-head-card"><header class="page-head sc-page-head">'
       + '<span class="ph-ic" aria-hidden="true">' + (app.icon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>') + '</span>'
       + '<div class="ph-tx"><h2>' + esc(toolName) + '</h2><p class="sub">' + esc(app.desc || "") + '</p></div>'
-      + '<span class="ph-act"><button type="button" class="page-back" id="toolStubBack" aria-label="返回上一视图">← 返回</button></span>'
+      + '<span class="ph-act"><button type="button" class="page-back" id="toolStubBack" aria-label="' + t("tool.stub.backAria", "返回上一视图") + '">' + t("tool.stub.back", "← 返回") + '</button></span>'
       + '</header></div>'
       + '<div class="card tool-app-card" id="toolAppBody">' + app.render() + '</div>');
     if(typeof app.bind === "function") app.bind();
@@ -11509,13 +11507,13 @@ function openToolStub(toolId, label){
   $("#main").innerHTML = sanitizeHtml(
     '<div class="card page-head-card"><header class="page-head sc-page-head">'
     + '<span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>'
-    + '<div class="ph-tx"><h2>' + esc(label || "工具") + '</h2><p class="sub">该工具正在规划中</p></div>'
-    + '<span class="ph-act"><button type="button" class="page-back" id="toolStubBack" aria-label="返回上一视图">← 返回</button></span>'
+    + '<div class="ph-tx"><h2>' + esc(label || t("tool.stub.name", "工具")) + '</h2><p class="sub">' + t("tool.stub.planning", "该工具正在规划中") + '</p></div>'
+    + '<span class="ph-act"><button type="button" class="page-back" id="toolStubBack" aria-label="' + t("tool.stub.backAria", "返回上一视图") + '">' + t("tool.stub.back", "← 返回") + '</button></span>'
     + '</header></div>'
     + '<div class="card tool-stub-card">'
-    + '<div class="tool-stub-badge">即将上线</div>'
-    + '<p class="tool-stub-desc">「' + esc(label || "该工具") + '」已列入开发路线图，功能落地后会在这里开放。你可以先用现有能力：在对话里直接让 AI 助手帮你完成相关任务，或在对应场景的看板 / 资料库里记录。</p>'
-    + '<p class="tool-stub-tip">想优先开发这个工具？在 AI 助理里说一句「优先做 XX 工具」，我会记到需求清单。</p>'
+    + '<div class="tool-stub-badge">' + t("tool.stub.comingSoon", "即将上线") + '</div>'
+    + '<p class="tool-stub-desc">' + t("tool.stub.descPrefix", "「") + esc(label || t("tool.stub.thisTool", "该工具")) + t("tool.stub.descInfix", "」已列入开发路线图，功能落地后会在这里开放。你可以先用现有能力：在对话里直接让 AI 助手帮你完成相关任务，或在对应场景的看板 / 资料库里记录。") + '</p>'
+    + '<p class="tool-stub-tip">' + t("tool.stub.tip", "想优先开发这个工具？在 AI 助理里说一句「优先做 XX 工具」，我会记到需求清单。") + '</p>'
     + '</div>');
   const back = $("#toolStubBack");
   if(back) back.onclick = function(){ _sideActive = null; render(); };
@@ -11565,20 +11563,20 @@ function openWeatherModal(){
     days.push({ date: d, w: _mockWeather(d) });
   }
   const iconHtml = _WEATHER_ICONS[today.kind] || _WEATHER_ICONS.sunny;
-  const weekMap = ["周日","周一","周二","周三","周四","周五","周六"];
+  const weekMap = [t("weather.week.sun", "周日"),t("weather.week.mon", "周一"),t("weather.week.tue", "周二"),t("weather.week.wed", "周三"),t("weather.week.thu", "周四"),t("weather.week.fri", "周五"),t("weather.week.sat", "周六")];
   function fmtDay(d){
     const t = new Date(d);
     const isToday = t.toDateString() === now.toDateString();
-    return (isToday ? "今天 " : "") + (t.getMonth()+1) + "/" + t.getDate() + " " + weekMap[t.getDay()];
+    return (isToday ? t("weather.today", "今天 ") : "") + (t.getMonth()+1) + "/" + t.getDate() + " " + weekMap[t.getDay()];
   }
   body.innerHTML = sanitizeHtml(
     '<div class="weather-now">' +
       '<div class="icon">' + iconHtml + '</div>' +
       '<div class="info">' +
         '<div class="city">' + esc(city) + '</div>' +
-        '<div class="desc">今日 · ' + esc(today.desc) + '</div>' +
+        '<div class="desc">' + t("weather.todayDesc", "今日 · {desc}").replace("{desc}", esc(today.desc)) + '</div>' +
         '<div class="temp">' + today.hi + '°</div>' +
-        '<div class="range">最低 ' + today.lo + '° · 最高 ' + today.hi + '°</div>' +
+        '<div class="range">' + t("weather.range", "最低 {lo}° · 最高 {hi}°").replace("{lo}", today.lo).replace("{hi}", today.hi) + '</div>' +
       '</div>' +
     '</div>' +
     '<div class="weather-list">' +
@@ -11591,7 +11589,7 @@ function openWeatherModal(){
         '</div>';
       }).join("") +
     '</div>' +
-    '<div class="weather-foot">数据为本地模拟·联网可对接和风/OpenWeather（v1.8-C 集成已预留）</div>'
+    '<div class="weather-foot">' + t("weather.foot", "数据为本地模拟·联网可对接和风/OpenWeather（v1.8-C 集成已预留）") + '</div>'
   );
   modal.classList.add("show");
 }
@@ -11656,16 +11654,16 @@ function _renderAlarmList(){
   if(!listEl) return;
   const arr = _loadAlarms();
   if(!arr.length){
-    listEl.innerHTML = '<div class="alarm-empty">还没有闹钟 · 上方设置一个吧</div>';
+    listEl.innerHTML = '<div class="alarm-empty">' + t("alarm.empty", "还没有闹钟 · 上方设置一个吧") + '</div>';
     return;
   }
-  const wk = ["日","一","二","三","四","五","六"];
+  const wk = [t("alarm.weekShort.0", "日"),t("alarm.weekShort.1", "一"),t("alarm.weekShort.2", "二"),t("alarm.weekShort.3", "三"),t("alarm.weekShort.4", "四"),t("alarm.weekShort.5", "五"),t("alarm.weekShort.6", "六")];
   listEl.innerHTML = sanitizeHtml(arr.map(function(a){
-    const loopTxt = (!a.loop || !a.loop.length) ? t("alarm.everyDay", "每天") : a.loop.map(function(i){return "周"+wk[i];}).join("·");
+    const loopTxt = (!a.loop || !a.loop.length) ? t("alarm.everyDay", "每天") : a.loop.map(function(i){return t("alarm.weekPrefix", "周")+wk[i];}).join("·");
     const cls = a.ringing ? " ringing" : "";
     const actBtn = a.ringing
-      ? '<button type="button" class="stop" data-alarm-stop="'+esc(a.id)+'">停止</button>'
-      : '<button type="button" data-alarm-del="'+esc(a.id)+'">删除</button>';
+      ? '<button type="button" class="stop" data-alarm-stop="'+esc(a.id)+'">' + t("alarm.stop", "停止") + '</button>'
+      : '<button type="button" data-alarm-del="'+esc(a.id)+'">' + t("common.delete", "删除") + '</button>';
     return '<div class="alarm-item'+cls+'" data-id="'+esc(a.id)+'">' +
       '<div class="ai-time">'+esc(a.time)+'</div>' +
       '<div class="ai-label">'+esc(a.label || t("alarm.noLabel", "（无备注）"))+'</div>' +
@@ -11694,14 +11692,14 @@ function openAlarmModal(){
   const modal = $("#alarmModal"); if(!modal) return;
   const body = $("#alarmModalBody");
   const loopPicks = [0,1,2,3,4,5,6];
-  const wk = ["日","一","二","三","四","五","六"];
+  const wk = [t("alarm.weekShort.0", "日"),t("alarm.weekShort.1", "一"),t("alarm.weekShort.2", "二"),t("alarm.weekShort.3", "三"),t("alarm.weekShort.4", "四"),t("alarm.weekShort.5", "五"),t("alarm.weekShort.6", "六")];
   body.innerHTML = sanitizeHtml(
     '<div class="alarm-now"><div class="time" id="alarmNowTime">--:--</div><div class="date" id="alarmNowDate">--</div></div>' +
     '<form class="alarm-form" id="alarmForm" autocomplete="off">' +
-      '<input type="time" id="alarmTime" value="'+_nowHHMM()+'" required aria-label="闹钟时间">' +
+      '<input type="time" id="alarmTime" value="'+_nowHHMM()+'" required aria-label="' + t("alarm.timeAria", "闹钟时间") + '">' +
       '<input type="text" id="alarmLabel" placeholder="' + t("alarm.labelPlaceholder", "备注（可选）") + '" maxlength="20">' +
       '<div class="loop-pick" role="group" aria-label="' + t("alarm.repeatAria", "重复") + '">' +
-        loopPicks.map(function(i){return '<button type="button" data-loop="'+i+'" title="周'+wk[i]+'">'+wk[i]+'</button>';}).join("") +
+        loopPicks.map(function(i){return '<button type="button" data-loop="'+i+'" title="' + t("alarm.weekPrefix", "周") + wk[i] + '">'+wk[i]+'</button>';}).join("") +
       '</div>' +
       '<span class="add-wrap"><span class="add-label">'+t("tool.addLabel", "添加")+'</span><button type="submit" class="addbtn add-round" data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
     '</form>' +
@@ -11718,8 +11716,8 @@ function openAlarmModal(){
     }
     const d = new Date();
     nowT.textContent = _pad2(d.getHours()) + ":" + _pad2(d.getMinutes()) + ":" + _pad2(d.getSeconds());
-    const wk2 = ["周日","周一","周二","周三","周四","周五","周六"];
-    nowD.textContent = (d.getMonth()+1) + "月" + d.getDate() + "日 · " + wk2[d.getDay()];
+    const wk2 = [t("weather.week.sun", "周日"),t("weather.week.mon", "周一"),t("weather.week.tue", "周二"),t("weather.week.wed", "周三"),t("weather.week.thu", "周四"),t("weather.week.fri", "周五"),t("weather.week.sat", "周六")];
+    nowD.textContent = t("alarm.dateFmt", "{m}月{d}日 · {weekday}").replace("{m}", (d.getMonth()+1)).replace("{d}", d.getDate()).replace("{weekday}", wk2[d.getDay()]);
   }
   refreshNow();
   if(!openAlarmModal._h){ openAlarmModal._h = setInterval(refreshNow, 1000); }
@@ -11746,7 +11744,7 @@ function openAlarmModal(){
     picked.clear(); $$("#alarmForm [data-loop]").forEach(function(b){b.classList.remove("on");});
     $("#alarmLabel").value = "";
     _renderAlarmList();
-    try{ toast("已添加闹钟 " + t, "info"); }catch(_){}
+    try{ toast(t("alarm.addedToast", "已添加闹钟 {time}").replace("{time}", t), "info"); }catch(_){}
   };
   _renderAlarmList();
   _startAlarmTick();
@@ -12017,8 +12015,8 @@ function openPetModal(){
   body.innerHTML = sanitizeHtml(
     '<div class="pet-grid">'+cards+'</div>' +
     '<div class="pet-actions">' +
-      (current ? '<button type="button" class="tbtn u-pad-1-3 u-min-h-32" id="btnPetRemove">收回萌宠</button>' : '') +
-      '<button type="button" class="tbtn u-pad-1-3 u-min-h-32" id="btnPetClose2">关闭</button>' +
+      (current ? '<button type="button" class="tbtn u-pad-1-3 u-min-h-32" id="btnPetRemove">' + t("pet.remove", "收回萌宠") + '</button>' : '') +
+      '<button type="button" class="tbtn u-pad-1-3 u-min-h-32" id="btnPetClose2">' + t("common.close", "关闭") + '</button>' +
     '</div>'
   );
   $$(".pet-card", body).forEach(function(c){
@@ -12435,10 +12433,10 @@ function validateField(input, rules){
   let error = "";
   for(let i = 0; i < rules.length; i++){
     const rule = rules[i];
-    if(rule.required && !value){ error = rule.message || "此项必填"; break; }
-    if(rule.minLen && value.length < rule.minLen){ error = rule.message || "长度不足"; break; }
-    if(rule.maxLen && value.length > rule.maxLen){ error = rule.message || "长度超限"; break; }
-    if(rule.pattern && !rule.pattern.test(value)){ error = rule.message || "格式不正确"; break; }
+    if(rule.required && !value){ error = rule.message || t("validate.required", "此项必填"); break; }
+    if(rule.minLen && value.length < rule.minLen){ error = rule.message || t("validate.minLen", "长度不足"); break; }
+    if(rule.maxLen && value.length > rule.maxLen){ error = rule.message || t("validate.maxLen", "长度超限"); break; }
+    if(rule.pattern && !rule.pattern.test(value)){ error = rule.message || t("validate.pattern", "格式不正确"); break; }
     if(rule.custom && typeof rule.custom === "function"){
       const r = rule.custom(value);
       if(r){ error = r; break; }
@@ -12493,7 +12491,7 @@ const EMPTY_ICONS = {
  */
 function renderSkeleton(type){
   if(type === "board"){
-    const cols = [{name:"待办",n:3},{name:"进行中",n:2},{name:"已完成",n:3}];
+    const cols = [{name:t("kanban.todo", "待办"),n:3},{name:t("kanban.doing", "进行中"),n:2},{name:t("kanban.done", "已完成"),n:3}];
     const colsHtml = cols.map(function(c){
       return '<div class="skeleton-kcol"><h4>'+c.name+'</h4>' +
         Array.from({length:c.n}, function(){ return '<div class="skeleton-block"></div>'; }).join("") +
@@ -12543,30 +12541,30 @@ function renderEmpty(type){
   if(type === "no-tasks"){
     return '<div class="empty-state">' +
       '<div class="empty-icon">'+icon+'</div>' +
-      '<p class="empty-text"><strong>还没有任务</strong></p>' +
-      '<p class="empty-text">按 <span class="kbd">N</span> 或点 <span class="kbd">+</span> 创建第一个任务</p>' +
-      '<div class="empty-action"><button class="btn-primary" type="button" data-empty-action="new-task">+ 新建任务</button></div>' +
+      '<p class="empty-text"><strong>' + t("empty.noTasksTitle", "还没有任务") + '</strong></p>' +
+      '<p class="empty-text">' + t("empty.noTasksHint", "按 <span class=\"kbd\">N</span> 或点 <span class=\"kbd\">+</span> 创建第一个任务") + '</p>' +
+      '<div class="empty-action"><button class="btn-primary" type="button" data-empty-action="new-task">' + t("empty.noTasksAction", "+ 新建任务") + '</button></div>' +
       '</div>';
   }
   if(type === "no-records"){
     return '<div class="empty-state">' +
       '<div class="empty-icon">'+icon+'</div>' +
-      '<p class="empty-text"><strong>还没有记录</strong></p>' +
-      '<p class="empty-text">在上方表单填写后点「添加」开始第一个吧</p>' +
+      '<p class="empty-text"><strong>' + t("empty.noRecordsTitle", "还没有记录") + '</strong></p>' +
+      '<p class="empty-text">' + t("empty.noRecordsHint", "在上方表单填写后点「添加」开始第一个吧") + '</p>' +
       '</div>';
   }
   if(type === "no-search"){
     return '<div class="empty-state">' +
       '<div class="empty-icon">'+icon+'</div>' +
-      '<p class="empty-text"><strong>未找到匹配结果</strong></p>' +
-      '<p class="empty-text">换个关键词试试</p>' +
+      '<p class="empty-text"><strong>' + t("empty.noSearchTitle", "未找到匹配结果") + '</strong></p>' +
+      '<p class="empty-text">' + t("empty.noSearchHint", "换个关键词试试") + '</p>' +
       '</div>';
   }
   if(type === "no-stats"){
     return '<div class="empty-state">' +
       '<div class="empty-icon">'+icon+'</div>' +
-      '<p class="empty-text"><strong>暂无数据</strong></p>' +
-      '<p class="empty-text">完成任务后查看统计</p>' +
+      '<p class="empty-text"><strong>' + t("empty.noStatsTitle", "暂无数据") + '</strong></p>' +
+      '<p class="empty-text">' + t("empty.noStatsHint", "完成任务后查看统计") + '</p>' +
       '</div>';
   }
   // v3.2 阶段二：新增空态类型
@@ -15015,7 +15013,7 @@ function renderSceneHead(){
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" style="background:${s.color}1f;color:${s.color}" aria-hidden="true">${s.icon || ""}</span>
     <div class="ph-tx"><h2>${esc(s.name)}</h2>
-      <p class="sub">带截止日期的任务会汇总到下方「今天要处理」</p></div>
+      <p class="sub">${t("scene.headSub","带截止日期的任务会汇总到下方「今天要处理」")}</p></div>
     ${aiBtn}
   </header></div>`;
 }
@@ -15029,10 +15027,10 @@ function renderSceneFeatNav(){
   /* v3.2 IA：type 决定样式——core 概览（强调色）/ tool 真实工具（正常）/ record 记录型（弱化） */
   return `<nav class="set-nav scene-feat-nav" aria-label="${t("aria.sceneFeature","场景功能")}">` +
     feats.map(f=>{
-      const t = f.type || "record";
+      const ft = f.type || "record";
       const act = f.id===sceneFeatureMode?" active":"";
-      const typeBadge = t==="core" ? "" : (t==="tool" ? " <span class=\"feat-tag feat-tag-tool\" aria-hidden=\"true\">工具</span>" : " <span class=\"feat-tag feat-tag-record\" aria-hidden=\"true\">记录</span>");
-      return `<button type="button" class="set-nav-btn scene-feat-btn scene-feat-${t}${act}" data-feat="${f.id}">${esc(f.label)}${typeBadge}</button>`;
+      const typeBadge = ft==="core" ? "" : (ft==="tool" ? " <span class=\"feat-tag feat-tag-tool\" aria-hidden=\"true\">"+t("scene.featTag.tool","工具")+"</span>" : " <span class=\"feat-tag feat-tag-record\" aria-hidden=\"true\">"+t("scene.featTag.record","记录")+"</span>");
+      return `<button type="button" class="set-nav-btn scene-feat-btn scene-feat-${ft}${act}" data-feat="${f.id}">${esc(f.label)}${typeBadge}</button>`;
     }).join("") +
   `</nav>`;
 }
@@ -15065,9 +15063,9 @@ function renderTodoListView(tasks, s){
       <span class="todo-title">${esc(x.title)}</span>
       <span class="todo-meta">${pri}${due}<span class="todo-st">${stName[x.status]||""}</span></span>
       <span class="todo-ops">
-        ${x.status==="todo"?`<button type="button" data-move="${x.id}:doing">开始</button>`:""}
-        <button type="button" data-edit="${x.id}">编辑</button>
-        <button type="button" data-del="${x.id}" class="u-text-danger">删除</button>
+        ${x.status==="todo"?`<button type="button" data-move="${x.id}:doing">${t("common.start","开始")}</button>`:""}
+        <button type="button" data-edit="${x.id}">${t("common.edit","编辑")}</button>
+        <button type="button" data-del="${x.id}" class="u-text-danger">${t("common.delete","删除")}</button>
       </span>
     </div>`;
   }).join("");
@@ -15083,19 +15081,19 @@ function renderMainHTML(){
   const cfg = getCfg();
 
   const taskForm = `<form class="form-row" id="taskForm">
-    <div class="fld fld-lg"><label>任务标题</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
-    <div class="fld fld-md"><label>截止日期</label><input name="due" type="date"></div>
-    <div class="fld fld-sm"><label>优先级</label>
+    <div class="fld fld-lg"><label>${t("field.taskTitle","任务标题")}</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
+    <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="date"></div>
+    <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
       <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
-    <div class="fld fld-lg"><label>标签</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
+    <div class="fld fld-lg"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
   const tagFilterHTML = `<div class="form-row">
-    <div class="fld fld-xl"><label for="boardSearch">搜索任务（A3）</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
-    <div class="fld fld-md"><label>联动记录</label>
-      <select id="boardStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
-    <div class="fld fld-lg"><label for="tagFilter">标签（留空=全部）</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
+    <div class="fld fld-xl"><label for="boardSearch">${t("field.searchTaskA3","搜索任务（A3）")}</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
+    <div class="fld fld-md"><label>${t("field.linkedRecord","联动记录")}</label>
+      <select id="boardStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
+    <div class="fld fld-lg"><label for="tagFilter">${t("field.tagFilterAll","标签（留空=全部）")}</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
@@ -15107,8 +15105,8 @@ function renderMainHTML(){
   } else if(sceneViewMode === "todo"){
     taskArea = renderTodoListView(tasks, s);
     filterHtml = tasks.length ? `<div class="form-row">
-      <div class="fld fld-md"><label>联动记录</label>
-        <select id="todoStatusFilter"><option value="">全部</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
+      <div class="fld fld-md"><label>${t("field.linkedRecord","联动记录")}</label>
+        <select id="todoStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
     </div>` : "";
   } else if(tasksAll.length === 0){
     taskArea = renderEmpty("no-tasks");
@@ -15162,7 +15160,7 @@ function renderMainHTML(){
   }
   return `<div class="card"><h2>${UI_ICONS.check}${taskCardTitle}</h2>${taskForm}${filterHtml}${taskArea}</div>
      <div class="card"><h2>${ic("book")} ${s.name} · ${rec.label}</h2>
-      <p class="sub">${active === "life" ? "日常事务速记 · 运动/体重/睡眠/喝水请用上方「健康」功能卡（结构化记录，健康摘要自动汇总）" : "场景专属资料库，本地保存、随时检索"}</p>${recForm}${recList}</div>
+      <p class="sub">${active === "life" ? t("scene.lifeRecSub","日常事务速记 · 运动/体重/睡眠/喝水请用上方「健康」功能卡（结构化记录，健康摘要自动汇总）") : t("scene.recSub","场景专属资料库，本地保存、随时检索")}</p>${recForm}${recList}</div>
       ${renderSceneSections(active)}
       ${renderExtra(active)}
        ${chatCard}`;
@@ -15189,10 +15187,10 @@ function renderSceneFeature(fid){
   const label = f ? f.label : fid;
   const fn = (SCENE_FEATURE_RENDER[active] || {})[fid];
   if(typeof fn === "function"){
-    try{ return fn(); }catch(e){ return `<div class="card"><h2>${ic("alert")} ${esc(label)}</h2><div class="empty">功能渲染出错：${esc(e && e.message || e)}</div></div>`; }
+    try{ return fn(); }catch(e){ return `<div class="card"><h2>${ic("alert")} ${esc(label)}</h2><div class="empty">${t("scene.renderErrorPrefix","功能渲染出错：")}${esc(e && e.message || e)}</div></div>`; }
   }
   // v3.0：占位 tab（CAD/图片/运行器/正则/健康/缴费/采购）统一空状态引导，风格与其他空状态一致
-  return `<div class="card"><h2>${ic("puzzle")} ${esc(label)}</h2><div class="empty">${ic("tool")} 该功能正在建设中，即将上线 · 敬请期待</div></div>`;
+  return `<div class="card"><h2>${ic("puzzle")} ${esc(label)}</h2><div class="empty">${ic("tool")} ${t("scene.featureBuilding","该功能正在建设中，即将上线 · 敬请期待")}</div></div>`;
 }
 
 /* ================= v3.0 场景功能卡（求同存异：统一骨架 + 各功能配置） =================
@@ -15743,11 +15741,11 @@ exercise:  { key:"exercises", fieldKeys:["subject","question","answer","correct"
       const study = (typeof getRec === "function" ? getRec("study") : []) || [];
       study.unshift({
         id: "sm2_" + (rec.id || uid()),
-        title: "错题复习：" + ((rec.subject ? rec.subject + " · " : "") + (rec.question || "")).slice(0, 40),
-        type: "学习资料",
-        status: "未复习",
+        title: t("study.errorReviewPrefix","错题复习：") + ((rec.subject ? rec.subject + " · " : "") + (rec.question || "")).slice(0, 40),
+        type: t("study.materialType","学习资料"),
+        status: t("study.statusNotReviewed","未复习"),
         nextReview: tomorrow,
-        note: "来源练习题（正确率 " + rec.correct + "%）：" + ((rec.explain || rec.answer || "")).slice(0, 200),
+        note: t("study.sourceExercisePrefix","来源练习题（正确率 ") + rec.correct + "%）：" + ((rec.explain || rec.answer || "")).slice(0, 200),
         created: Date.now()
       });
       setRec("study", study);
@@ -15846,10 +15844,10 @@ SCENE_FEATURE_RENDER.office = {
       ],
       sum:function(recs){
         const today = todayStr();
-        const overdue = recs.filter(function(r){ return r.due && r.due < today && r.status!=="已完成"; }).length;
+        const overdue = recs.filter(function(r){ return r.due && r.due < today && r.status!==t("kanban.done","已完成"); }).length;
         return [
-          { v:recs.filter(function(r){ return r.status===t("kanban.doing","进行中"); }).length, l:"进行中" },
-          { v:recs.filter(function(r){ return r.status===t("kanban.done","已完成"); }).length, l:"已完成" },
+          { v:recs.filter(function(r){ return r.status===t("kanban.doing","进行中"); }).length, l:t("kanban.doing","进行中") },
+          { v:recs.filter(function(r){ return r.status===t("kanban.done","已完成"); }).length, l:t("kanban.done","已完成") },
           { v:overdue, l:t("tool.bill.overdue", t("tool.bill.overdue","逾期")) }
         ];
       },
@@ -15910,11 +15908,11 @@ SCENE_FEATURE_RENDER.office = {
         }}
       ],
       sum:function(recs){
-        const late = recs.filter(function(r){ return r.type==="迟到"; }).length;
-        const leave = recs.filter(function(r){ return r.type==="请假"; }).length;
+        const late = recs.filter(function(r){ return r.type===t("status.late","迟到"); }).length;
+        const leave = recs.filter(function(r){ return r.type===t("status.leave","请假"); }).length;
         // v3.2 A 2/3：当月出勤天数（type==正常 + 当月有日期）+ 总工时（按 checkIn/checkOut 解析）
         const now = new Date(); const ym = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
-        const monthDays = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym && r.type==="正常"; }).length;
+        const monthDays = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym && r.type===t("status.normal","正常"); }).length;
         const monthHours = recs.filter(function(r){ return r.date && String(r.date).slice(0,7)===ym && r.checkIn && r.checkOut; }).reduce(function(s,r){
           const m1 = /^(\d{1,2}):(\d{2})$/.exec(String(r.checkIn||"")); const m2 = /^(\d{1,2}):(\d{2})$/.exec(String(r.checkOut||""));
           if(!m1 || !m2) return s;
@@ -15960,7 +15958,7 @@ SCENE_FEATURE_RENDER.office = {
         return [
           { v:"¥" + total.toFixed(0), l:t("stat.total","累计") },
           { v:"¥" + monthTotal.toFixed(0), l:t("time.thisMonth","本月") },
-          { v:recs.filter(function(r){ return r.status===t("status.pendingReview","待审"); }).length, l:"待审" }
+          { v:recs.filter(function(r){ return r.status===t("status.pendingReview","待审"); }).length, l:t("status.pendingReview","待审") }
         ].concat(catEntries);
       },
       emptyTip:t("empty.noReimburse","暂无报销单 · 点击「添加」录入第一笔")
@@ -16007,7 +16005,7 @@ SCENE_FEATURE_RENDER.life = {
         {label:t("field.status", t("field.status","状态")), type:"check", fmt:function(r){ return r.done ? t("kanban.done","已完成") : t("kanban.doing","进行中"); }}
       ],
       sum:function(recs){
-        const high = recs.filter(function(r){ return r.priority==="高" && !r.done; }).length;
+        const high = recs.filter(function(r){ return r.priority===t("task.priority.high","高") && !r.done; }).length;
         return [
           { v:recs.filter(function(r){ return !r.done; }).length, l:t("kanban.doing","进行中") },
           { v:recs.filter(function(r){ return r.done; }).length, l:t("kanban.done","已完成") },
@@ -16056,7 +16054,7 @@ SCENE_FEATURE_RENDER.life = {
         {label:t("field.status", t("field.status","状态")), k:"status"}
       ],
       sum:function(recs){
-        const unpaid = recs.filter(function(r){ return r.status!=="已缴"; }).length;
+        const unpaid = recs.filter(function(r){ return r.status!==t("status.paid","已缴"); }).length;
         const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
         return [{ v:unpaid, l:t("status.toPay","待缴") }, { v:"¥" + total.toFixed(0), l:t("stat.totalAmount","总额") }];
       },
@@ -16069,7 +16067,7 @@ SCENE_FEATURE_RENDER.life = {
         const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
         const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59); // 含第 7 天全天（type=date 值按 UTC 零点解析，原实现会漏掉恰好 +7 天的账单）
         const items = recs.filter(function(r){
-          if(!r.due || r.status === "已缴") return false;
+          if(!r.due || r.status === t("status.paid","已缴")) return false;
           const d = new Date(r.due);
           return d >= start && d <= end;
         }).sort(function(a, b){ return String(a.due).localeCompare(String(b.due)); });
@@ -16107,7 +16105,7 @@ SCENE_FEATURE_RENDER.life = {
         {label:t("field.status", t("field.status","状态")), k:"status"}
       ],
       sum:function(recs){
-        const todo = recs.filter(function(r){ return r.status!=="已买"; }).length;
+        const todo = recs.filter(function(r){ return r.status!==t("status.bought","已买"); }).length;
         const total = recs.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
         return [{ v:todo, l:t("status.toBuy","待买") }, { v:"¥" + total.toFixed(0), l:t("field.budget","预算") }];
       },
@@ -16139,7 +16137,7 @@ SCENE_FEATURE_RENDER.study = {
       ],
       sum:function(recs){
         const cats = new Set(recs.map(function(r){ return r.category; }).filter(Boolean));
-        const high = recs.filter(function(r){ return r.importance==="高"; }).length;
+        const high = recs.filter(function(r){ return r.importance===t("task.priority.high","高"); }).length;
         return [{ v:recs.length, l:t("field.entry","条目") }, { v:cats.size, l:t("field.category","分类") }, { v:high, l:t("field.important","重要") }];
       },
       // v3.3.0 B 3/8：知识库标签筛选——chips 显示全部标签（按出现次数降序，最多 12 个），点击过滤条目（再点取消）
@@ -16215,9 +16213,9 @@ SCENE_FEATURE_RENDER.study = {
           const study = (typeof getRec === "function" ? getRec("study") : []) || [];
           study.unshift({
             id: "sm2_" + (rec.id || uid()),
-            title: "错题复习：" + (rec.title || (rec.subject||"") + " " + (rec.question||"").slice(0,12)),
-            type: "学习资料", status: "未复习", nextReview: todayStr() + "+1d" ? (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })() : todayStr(),
-            note: "来源练习题（正确率 " + rec.correct + "%）：" + (rec.explain || rec.answer || ""),
+            title: t("study.errorReviewPrefix","错题复习：") + (rec.title || (rec.subject||"") + " " + (rec.question||"").slice(0,12)),
+            type: t("study.materialType","学习资料"), status: t("study.statusNotReviewed","未复习"), nextReview: todayStr() + "+1d" ? (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })() : todayStr(),
+            note: t("study.sourceExercisePrefix","来源练习题（正确率 ") + rec.correct + "%）：" + (rec.explain || rec.answer || ""),
             created: Date.now()
           });
           setRec("study", study);
@@ -16606,7 +16604,7 @@ function _renderRecItem(r, rec){
   const mdContent = mdParts.join("");
   const codeF = rec.fields.find(f=>f.k==="code");
   const codeBlock = (codeF && r.code)? `<code class="snip">${esc(r.code)}</code>
-    <button type="button" class="copy" data-val="${esc(r.code)}">${UI_ICONS.copy} 复制</button>` : "";
+    <button type="button" class="copy" data-val="${esc(r.code)}">${UI_ICONS.copy} ${t("common.copy","复制")}</button>` : "";
   // v3.2 C-档：图片引用渲染——img 字段存 IDB 键（img_<recId>），占位 span 由 _hydrateRecImgs 异步填 objectURL
   const imgF = rec.fields.find(f=>f.k==="img");
   const _imgPhIcon = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
@@ -16940,19 +16938,19 @@ function openTaskEdit(id){
     `<option value="${v}" ${task.priority===v?"selected":""}>${v||"-"}</option>`).join("");
   const html = `<div class="recycle-modal" id="taskEditModal">
     <div class="recycle-card u-max-w-560">
-      <div class="recycle-header"><h2>编辑任务</h2><button type="button" class="recycle-close" id="taskEditClose">✕</button></div>
+      <div class="recycle-header"><h2>${t("task.editTitle","编辑任务")}</h2><button type="button" class="recycle-close" id="taskEditClose">✕</button></div>
       <form id="taskEditForm" class="u-flex u-flex-col u-pad-5-6 u-gap-4">
-        <div class="fld"><label>任务标题</label><input name="title" value="${esc(task.title)}" maxlength="200" required></div>
+        <div class="fld"><label>${t("field.taskTitle","任务标题")}</label><input name="title" value="${esc(task.title)}" maxlength="200" required></div>
         <div class="form-row u-mb-0">
-          <div class="fld"><label>截止日期</label><input name="due" type="date" value="${esc(task.due||"")}"></div>
-          <div class="fld"><label>优先级</label><select name="priority">${priSel}</select></div>
-          <div class="fld"><label>联动记录</label><select name="status">${statusSel}</select></div>
+          <div class="fld"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="date" value="${esc(task.due||"")}"></div>
+          <div class="fld"><label>${t("task.priority","优先级")}</label><select name="priority">${priSel}</select></div>
+          <div class="fld"><label>${t("field.linkedRecord","联动记录")}</label><select name="status">${statusSel}</select></div>
         </div>
-        <div class="fld"><label>标签（逗号分隔）</label><input name="tags" value="${esc((task.tags||[]).join(", "))}" maxlength="200"></div>
-        <div class="fld"><label>备注</label><textarea name="note" rows="3" maxlength="2000">${esc(task.note||"")}</textarea></div>
+        <div class="fld"><label>${t("field.tagsCommaSep","标签（逗号分隔）")}</label><input name="tags" value="${esc((task.tags||[]).join(", "))}" maxlength="200"></div>
+        <div class="fld"><label>${t("field.note","备注")}</label><textarea name="note" rows="3" maxlength="2000">${esc(task.note||"")}</textarea></div>
         <div class="u-flex u-gap-2 u-jc-end">
-          <button type="button" class="btn-ghost" id="taskEditCancel">取消</button>
-          <button type="submit" class="btn-primary" style="--sc:${s.color}">保存</button>
+          <button type="button" class="btn-ghost" id="taskEditCancel">${t("common.cancel","取消")}</button>
+          <button type="submit" class="btn-primary" style="--sc:${s.color}">${t("common.save","保存")}</button>
         </div>
       </form>
     </div></div>`;
@@ -17207,7 +17205,7 @@ function batchMoveScenario(targetSc){
   _batchState.selected.clear();
   _batchState.mode = false;
   _renderBatchUI();
-  if(n > 0) toast(t("msg.batchMoved","已批量移动 ") + n + t("msg.batchMovedMid"," 个任务到「") + SCENARIOS[targetSc].name + "」", "ok");
+  if(n > 0) toast(t("msg.batchMoved","已批量移动 ") + n + t("msg.batchMovedMid"," 个任务到「") + SCENARIOS[targetSc].name + t("msg.batchMovedSuffix","」"), "ok");
   return n;
 }
 /**
@@ -18094,7 +18092,7 @@ function cancelPendingDanger(userText){
   const hist=getChat(active);
   if(hist.length && hist[hist.length-1].role==="assistant" && !hist[hist.length-1].tool_calls) hist.pop(); // 移除待确认提示
   hist.push({role:"user", content:userText});
-  hist.push({role:"assistant", content:t("ai.cancelledOp","已取消操作：「")+title+"」。"});
+  hist.push({role:"assistant", content:t("ai.cancelledOp","已取消操作：「")+title+t("ai.cancelledOpSuffix","」。")});
   pendingConfirm=null;
   closeConfirmModal();
   trimChatHist(hist);
@@ -18120,14 +18118,14 @@ function openConfirmModal(){
   const uniq = [...new Set(ops)];
   const html = `<div class="recycle-modal" id="aiConfirmModal">
     <div class="recycle-card u-max-w-440">
-      <div class="recycle-header"><h2>危险操作确认</h2></div>
+      <div class="recycle-header"><h2>${t("ai.confirmDangerTitle","危险操作确认")}</h2></div>
       <div class="u-pad-5-6">
-        <p class="u-m-0-0-2">AI 助手请求执行<strong>${uniq.join("、")}</strong>：</p>
+        <p class="u-m-0-0-2">${t("ai.confirmDangerPrefix","AI 助手请求执行")}<strong>${uniq.join(t("ai.confirmJoinSep","、"))}</strong>${t("ai.confirmDangerColon","：")}</p>
         <p class="u-fw-600 u-m-0-0-4">${esc(pendingConfirm.title)}</p>
-        <p class="sub u-m-0-0-4">确认后不可撤销（删除会进入回收站）。也可以在聊天框发送「确认」继续。</p>
+        <p class="sub u-m-0-0-4">${t("ai.confirmDangerHint","确认后不可撤销（删除会进入回收站）。也可以在聊天框发送「确认」继续。")}</p>
         <div class="u-flex u-gap-2 u-jc-end">
-          <button type="button" class="btn-ghost" id="aiConfirmNo">取消</button>
-          <button type="button" class="btn-danger" id="aiConfirmYes">确认执行</button>
+          <button type="button" class="btn-ghost" id="aiConfirmNo">${t("common.cancel","取消")}</button>
+          <button type="button" class="btn-danger" id="aiConfirmYes">${t("ai.confirmExecute","确认执行")}</button>
         </div>
       </div>
     </div></div>`;
@@ -18218,7 +18216,7 @@ async function onChatSubmit(e){
     const okMsg = rj && rj.ok;
     const reply = okMsg
       ? t("ai.taskCreated","已为你创建任务：「")+taskHit.title+t("ai.rememberedScene","」（场景：")+(SCENARIOS[taskHit.scenario]?SCENARIOS[taskHit.scenario].name:taskHit.scenario)
-        +(taskHit.due?t("ai.taskCreatedDue","，截止：")+taskHit.due:"")+(taskHit.priority?t("ai.taskCreatedPri","，优先级 ")+taskHit.priority:"")+"）"
+        +(taskHit.due?t("ai.taskCreatedDue","，截止：")+taskHit.due:"")+(taskHit.priority?t("ai.taskCreatedPri","，优先级 ")+taskHit.priority:"")+t("ai.taskCreatedSuffix","）")
       : t("ai.taskCreateFail","创建任务失败：")+(rj && rj.msg ? rj.msg : t("common.unknownError","未知错误"));
     hist.push({role:"assistant", content:reply});
     trimChatHist(hist);
@@ -18304,8 +18302,8 @@ async function runChatLoop(messages, hist){
           // ② 危险操作：整体延后到用户确认后执行，避免半截工具回执引发下一轮 400
           const titles = calls.map(c=>{ const ft=findTask(c.args.task_id); return ft? ft.task.title : c.args.task_id; }).filter(Boolean);
           if(autoConfirm){
-            pendingConfirm={ toolCalls:calls, title:titles.join("、")||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:active };
-            hist.push({role:"assistant", content:t("ai.pendingConfirm","（待确认）将执行删除/修改操作：「")+(titles.join("、")||t("ai.unknown","未知"))+t("ai.pendingConfirmSuffix","」。发送「确认」以继续，其他内容取消。")});
+            pendingConfirm={ toolCalls:calls, title:titles.join(t("ai.confirmJoinSep","、"))||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:active };
+            hist.push({role:"assistant", content:t("ai.pendingConfirm","（待确认）将执行删除/修改操作：「")+(titles.join(t("ai.confirmJoinSep","、"))||t("ai.unknown","未知"))+t("ai.pendingConfirmSuffix","」。发送「确认」以继续，其他内容取消。")});
             render(); openConfirmModal(); break; // A2：同时弹出确认模态框
           }
         }
@@ -18316,7 +18314,7 @@ async function runChatLoop(messages, hist){
           if(denied.length>0){
             messages.push(msg); hist.push(msg);
             denied.forEach(c=>{
-              const tm={role:"assistant", content:`工具 ${c.name} 不在当前允许列表中，已跳过。`, _tool_denied:true};
+              const tm={role:"assistant", content:t("ai.toolDeniedPrefix","工具 ")+c.name+t("ai.toolDeniedSuffix"," 不在当前允许列表中，已跳过。"), _tool_denied:true};
               messages.push(tm); hist.push(tm);
             });
             render(); continue;
@@ -18389,17 +18387,17 @@ function renderChat(){
       const s=m.tool_calls.map(tc=>t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
       return `<div class="msg assistant toolcall">${s}</div>`;
     }
-    if(m.role==="assistant" && !m.content) return `<div class="msg assistant">（工具调用中…）</div>`;
+    if(m.role==="assistant" && !m.content) return `<div class="msg assistant">${t("ai.toolCalling","（工具调用中…）")}</div>`;
     // T3.1 已取消提示（灰色斜体）
-    if(m.role==="assistant" && m._canceled) return `<div class="msg assistant canceled">已取消</div>`;
+    if(m.role==="assistant" && m._canceled) return `<div class="msg assistant canceled">${t("ai.cancelled","已取消")}</div>`;
     // T3.1 失败消息 + 重试按钮
-    if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">重试</button></div>`;
+    if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">${t("ai.retry","重试")}</button></div>`;
     // v3.2 C-档：流式打字机态（_streaming 标记的消息加 streaming class——半透明+光标动画）
     if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming">${mdToHtml(m.content||"")}</div>`;
     if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
     // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
-  }).join("") : `<div class="msg assistant">你好，我是${SCENARIOS[active].name}助手，可以直接让我「建个任务」「查总览」「搜索」。</div>` + CHAT_SUGGEST_HTML);
+  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + CHAT_SUGGEST_HTML);
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
   // v1.15：点击消息区任意位置 → 聚焦输入框（聊天面板本身即卡片，不另设输入框卡片）
@@ -18453,7 +18451,7 @@ function bindChatPanel(){
       if(profiles.length === 0){
         // v1.15 修复：未配置时不 disabled（disabled 的 select 不触发 onclick，
         // 导致"未配置模型→点击跳设置"永远无效），改为保持可点击 + 显式样式提示
-        modelSelect.innerHTML = sanitizeHtml(`<option value="">未配置 ⚠</option>`);
+        modelSelect.innerHTML = sanitizeHtml(`<option value="">${t("msg.notConfigured","未配置")} ⚠</option>`);
         modelSelect.classList.add("chat-model-empty");
         modelSelect.title = t("msg.noAiProfile","未配置 AI Profile，点击打开设置");
         return;
@@ -18475,7 +18473,7 @@ function bindChatPanel(){
       if(!p) return;
       c.activeId = v;
       saveCfg(c);
-      try{ toast(t("ai.switchedProfile","已切换到「") + (p.name || t("common.notNamed","未命名")) + " · " + (p.model || "") + "」", "ok"); }catch(e){ /* noop */ }
+      try{ toast(t("ai.switchedProfile","已切换到「") + (p.name || t("common.notNamed","未命名")) + t("ai.switchedProfileMid"," · ") + (p.model || "") + t("ai.switchedProfileSuffix","」"), "ok"); }catch(e){ /* noop */ }
       // 切换后立即重新渲染聊天（让后续请求使用新 profile）
       try{ if(typeof renderChat === "function") renderChat(); }catch(e){ /* noop */ }
     };
@@ -18522,7 +18520,7 @@ function bindChatPanel(){
       reader.onload=()=>{
         const ta=$("#chatTextInput"); if(!ta) return;
         const content=String(reader.result || "");
-        const header=t("ai.attachmentStart","\\n\\n--- 附件：")+f.name+" ---\n";
+        const header=t("ai.attachmentStart","\\n\\n--- 附件：")+f.name+t("ai.attachmentMid"," ---\n");
         const tail=t("ai.attachmentEnd","\\n--- /附件 ---\\n");
         // 追加到输入框末尾（保留已有内容）
         ta.value=(ta.value? ta.value+"\n":"")+header+content+tail;
@@ -18634,11 +18632,11 @@ function askAiAboutScene(sc, hintKey){
   if(!ta) return;
   if(s){
     let promptTpl = "ai.sceneAskPrompt";
-    let promptFallback = "在【{sc}】场景中，帮我…";
+    let promptFallback = t("ai.sceneAskFallback","在【{sc}】场景中，帮我…");
     if(hintKey){
       /* 根据 key 反查 tab 标题：key → SCENARIOS[*].record.label 或 featureCard title；这里用 key 名给 AI 一个具体线索 */
       promptTpl = "ai.recordAskPrompt";
-      promptFallback = "在【{sc}】场景记一笔【{kind}】…（AI 会调工具写入，无需手填）";
+      promptFallback = t("ai.recordAskFallback","在【{sc}】场景记一笔【{kind}】…（AI 会调工具写入，无需手填）");
       ta.value = promptFallback.replace("{sc}", s.name).replace("{kind}", hintKey);
     } else {
       ta.value = t(promptTpl, promptFallback).replace("{sc}", s.name);
@@ -18657,16 +18655,16 @@ function discussInAi(type){
   let prompt = "";
   if(type === "coach"){
     const adv = _aiHubContent.coach || "";
-    prompt = adv ? "刚才 AI 教练根据我的行为数据给了 3 条建议：\n" + adv + "\n请基于这些建议帮我…"
-            : "请根据我最近 2 周的行为数据，给我一些具体可执行的建议。";
+    prompt = adv ? t("ai.hubCoachWithAdv","刚才 AI 教练根据我的行为数据给了 3 条建议：\n") + adv + t("ai.hubCoachSuffix","\n请基于这些建议帮我…")
+            : t("ai.hubCoachNoAdv","请根据我最近 2 周的行为数据，给我一些具体可执行的建议。");
   } else if(type === "daily"){
     const rep = _aiHubContent.daily || "";
-    prompt = rep ? "刚才 AI 生成的今日报告：\n\n" + rep + "\n\n请基于这份报告帮我…"
-            : "请基于我的任务和打卡记录，帮我梳理今天最该做的 3 件事。";
+    prompt = rep ? t("ai.hubDailyWithRep","刚才 AI 生成的今日报告：\n\n") + rep + t("ai.hubDailySuffix","\n\n请基于这份报告帮我…")
+            : t("ai.hubDailyNoRep","请基于我的任务和打卡记录，帮我梳理今天最该做的 3 件事。");
   } else if(type === "recommend"){
     const rec = _aiHubContent.recommend || "";
-    prompt = rec ? "刚才 AI 推荐的 3 条行动：\n" + rec + "\n请基于这些推荐帮我…"
-            : "请基于我的任务数据，推荐 3 条下一步行动建议。";
+    prompt = rec ? t("ai.hubRecWithRec","刚才 AI 推荐的 3 条行动：\n") + rec + t("ai.hubRecSuffix","\n请基于这些推荐帮我…")
+            : t("ai.hubRecNoRec","请基于我的任务数据，推荐 3 条下一步行动建议。");
   } else {
     return;
   }
@@ -18802,7 +18800,7 @@ function buildCmds(q){
 function renderCmd(q){
   cmdItems=buildCmds(q); cmdSel=0;
   const ul=$("#cmdList"); if(!ul) return;
-  if(!cmdItems.length){ ul.innerHTML=sanitizeHtml(`<li class="cmd-empty u-text-muted u-jc-center u-cursor-default">无匹配</li>`); return; }
+  if(!cmdItems.length){ ul.innerHTML=sanitizeHtml(`<li class="cmd-empty u-text-muted u-jc-center u-cursor-default">${t("cmd.noMatch","无匹配")}</li>`); return; }
   let html="", lastGroup=null;
   cmdItems.forEach((it,i)=>{
     const g = it.group || "";
@@ -20385,7 +20383,7 @@ function renderScBox(){
       <input class="sc-edit-name" value="${esc(s.name)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" class="u-max-w-90">
       <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
       <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label="${t("action.saveRenameColor","保存改名换色")}">✓</button>
-      ${overridden?`<button type="button" class="chain-cancel sc-reset" data-screset="${esc(k)}" aria-label="${t("action.restoreDefault","恢复默认")}">恢复</button>`:""}
+      ${overridden?`<button type="button" class="chain-cancel sc-reset" data-screset="${esc(k)}" aria-label="${t("action.restoreDefault","恢复默认")}">${t("common.restore","恢复")}</button>`:""}
     </div>`;
   }).join("");
   const customRows = loadCustomScenarios().map(cs=>{
@@ -20394,7 +20392,7 @@ function renderScBox(){
       <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
       <input class="sc-edit-name" value="${esc(cs.name)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" class="u-max-w-90">
       <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
-      <span class="chain-arr u-fs-2xs u-text-muted">自定义</span>
+      <span class="chain-arr u-fs-2xs u-text-muted">${t("scene.customLabel","自定义")}</span>
       <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="${t("common.save","保存")}">✓</button>
       <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="${t("action.deleteScenario","删除场景")}">✕</button>
     </div>`;
@@ -20406,7 +20404,7 @@ function renderScBox(){
     return `<div class="chain-row" data-sc="${esc(key)}">
       <span class="chain-ic" style="color:${s.color||"var(--muted)"}">${s.icon||""}</span>
       <input class="sc-edit-name" value="${esc(s.name||key)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" disabled class="u-max-w-90">
-      <span class="chain-arr u-fs-2xs u-text-muted">插件</span>
+      <span class="chain-arr u-fs-2xs u-text-muted">${t("scene.pluginLabel","插件")}</span>
     </div>`;
   }).join("");
   box.innerHTML = sanitizeHtml(builtinRows + customRows + pluginRows);
@@ -20527,7 +20525,7 @@ function openDrawer(){ const cfg=getCfg();
     const sc = (spSel && spSel.value) || active;
     setCustomSysprompt(sc, "");
     const ta=$("#cfgSysprompt"); if(ta) ta.value = "";
-    try{ toast("已恢复「"+(SCENARIOS[sc]?.name||sc)+t("sysprompt.restoredSuffix","」默认提示词"), "ok"); }catch(e){}
+    try{ toast(t("sysprompt.restoredPrefix","已恢复「")+(SCENARIOS[sc]?.name||sc)+t("sysprompt.restoredSuffix","」默认提示词"), "ok"); }catch(e){}
   };
   renderScBox();
   renderProfileSelect();
@@ -20694,8 +20692,8 @@ function delProfile(){
   // v3.1：接入回收站——保存被删除的 profile 快照
   try{
     addToRecycleBin("config",
-      "AI Profile：「"+(ap.name||t("common.unnamed","未命名"))+"」",
-      t("profile.modelPrefix","模型 ")+(ap.model||t("common.unknown","未知"))+"，base "+(ap.base||t("common.notSet","未设置")),
+      t("profile.recycleTitlePrefix","AI Profile：「")+(ap.name||t("common.unnamed","未命名"))+t("profile.recycleTitleSuffix","」"),
+      t("profile.modelPrefix","模型 ")+(ap.model||t("common.unknown","未知"))+t("profile.basePrefix","，base ")+(ap.base||t("common.notSet","未设置")),
       { kind: "profile", profile: { id: ap.id, name: ap.name||t("common.unnamed","未命名"), base: ap.base||"", model: ap.model||"", key: "" } },
       t("profile.management","AI Profile 管理"));
   }catch(_){ /* 回收站写入失败不影响删除 */ }
@@ -20761,7 +20759,7 @@ async function saveCfg(){
         if(Array.isArray(safe.profiles)) safe.profiles = safe.profiles.map(p=>Object.assign({},p,{key:""}));
         if(typeof safe.key === "string") delete safe.key;
         save(PREFIX+"cfg", safe);
-        try{ toast("⚠️ 加密持久化失败，AI Key 未保存（安全起见已丢弃）。", "warn"); }catch(e2){ /* noop */ }
+        try{ toast(t("msg.encryptFailed","⚠️ 加密持久化失败，AI Key 未保存（安全起见已丢弃）。"), "warn"); }catch(e2){ /* noop */ }
       }
     }
     // T3.2：同步链启用状态（chain-toggle 实时已保存，此处兜底处理旧 lk_ id 与新 chain-toggle）
@@ -20794,9 +20792,9 @@ async function saveCfg(){
     // 发送到用户配置的端点（默认 api.openai.com），此前无任何提示。
     if(cfg.enabled && !load(PREFIX+"ai_privacy_ack", null)){
       save(PREFIX+"ai_privacy_ack", Date.now());
-      try{ toast("提示：启用 AI 后，相关任务/资料上下文将发送到你配置的 AI 端点（默认 api.openai.com）", "warn"); }catch(e2){ /* noop */ }
+      try{ toast(t("msg.aiPrivacyNotice","提示：启用 AI 后，相关任务/资料上下文将发送到你配置的 AI 端点（默认 api.openai.com）"), "warn"); }catch(e2){ /* noop */ }
     }
-    toast("已保存"+(cfg.enabled?"，AI 助手已启用（可调用工具）":"（AI 未启用）"), "ok"); // B3：alert 改 toast，不阻塞交互
+    toast(t("msg.saved","已保存")+(cfg.enabled?t("msg.savedAiEnabled","，AI 助手已启用（可调用工具）"):t("msg.savedAiDisabled","（AI 未启用）")), "ok"); // B3：alert 改 toast，不阻塞交互
     /* v3.2.1 修复 UX 闭环：检查是否有待续的「问 AI」意图，配置成功后自动展开 + 重试 */
     if(cfg.enabled && cfg.base && cfg.key){
       try{
@@ -20842,7 +20840,7 @@ async function saveCfg(){
   }catch(e){
     // 保存异常：诊断 + 提示，不让设置面板卡死
     pushDiag("error", "saveCfg error: "+(e&&e.message||e), {where:"saveCfg"});
-    try{ toast("保存失败："+(e&&e.message||t("tool.unknownErrorMsg", "未知错误")), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
+    try{ toast(t("msg.saveFailedPrefix","保存失败：")+(e&&e.message||t("tool.unknownErrorMsg", "未知错误")), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
   }
 }
 
@@ -20884,8 +20882,8 @@ function importChainShareCode(code){
   for(let i = 0; i < arr.length; i++){
     const l = arr[i];
     if(!l || typeof l !== "object") continue;
-    if(!l.fromSc || !ORDER.includes(l.fromSc)) return {ok:false, err:t("common.ordinalPrefix","第")+(i+1)+t("chainShare.errInvalidFromSc","条链：无效的源场景「")+(l.fromSc||"")+"」"};
-    if(!l.toSc || !ORDER.includes(l.toSc)) return {ok:false, err:t("common.ordinalPrefix","第")+(i+1)+t("chainShare.errInvalidToSc","条链：无效的目标场景「")+(l.toSc||"")+"」"};
+    if(!l.fromSc || !ORDER.includes(l.fromSc)) return {ok:false, err:t("common.ordinalPrefix","第")+(i+1)+t("chainShare.errInvalidFromSc","条链：无效的源场景「")+(l.fromSc||"")+t("chainShare.errScSuffix","」")};
+    if(!l.toSc || !ORDER.includes(l.toSc)) return {ok:false, err:t("common.ordinalPrefix","第")+(i+1)+t("chainShare.errInvalidToSc","条链：无效的目标场景「")+(l.toSc||"")+t("chainShare.errScSuffix","」")};
     if(l.fromSc === l.toSc) return {ok:false, err:t("common.ordinalPrefix","第")+(i+1)+t("chainShare.errSameSc","条链：源场景与目标场景不能相同")};
     const kw = String(l.kw===null||l.kw===undefined?"":l.kw).trim();
     if(!kw) return {ok:false, err:t("common.ordinalPrefix","第")+(i+1)+t("chainShare.errEmptyKw","条链：关键词不能为空")};
@@ -20910,21 +20908,21 @@ function importChainShareCode(code){
  */
 function openChainShareModal(){
   const links = getLinks();
-  if(!links.length){ toast("暂无联动规则可分享", "warn"); return; }
+  if(!links.length){ toast(t("chainShare.noLinks","暂无联动规则可分享"), "warn"); return; }
   const code = generateChainShareCode(links);
   const old = document.querySelector(".chain-share-modal");
   if(old) old.remove();
   const html = `<div class="chain-share-modal" id="chainShareModal">
     <div class="chain-share-dialog">
       <div class="chain-share-header">
-        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享我的联动规则</h2>
+        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>${t("chainShare.title","分享我的联动规则")}</h2>
         <button type="button" class="chain-share-close" id="chainShareClose" aria-label="${t("common.close","关闭")}">✕</button>
       </div>
       <div class="chain-share-body">
-        <p class="hint">将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ${links.length} 条联动规则。</p>
+        <p class="hint">${t("chainShare.hintPrefix","将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ")}${links.length}${t("chainShare.hintSuffix"," 条联动规则。")}</p>
         <textarea id="chainShareCode" readonly rows="6" class="code-input u-break-all">${esc(code)}</textarea>
         <div class="u-flex u-mt-2 u-gap-2">
-          <button type="button" class="addbtn u-flex-1" id="chainShareCopy" data-sc="accent">复制分享码</button>
+          <button type="button" class="addbtn u-flex-1" id="chainShareCopy" data-sc="accent">${t("chainShare.copyBtn","复制分享码")}</button>
         </div>
       </div>
     </div>
@@ -20936,7 +20934,7 @@ function openChainShareModal(){
   $("#chainShareCopy").onclick = ()=>{
     const ta = $("#chainShareCode");
     ta.select();
-    navigator.clipboard.writeText(ta.value).then(()=> toast("分享码已复制到剪贴板", "ok")).catch(()=> toast("复制失败，请手动选择文本复制", "warn"));
+    navigator.clipboard.writeText(ta.value).then(()=> toast(t("chainShare.copied","分享码已复制到剪贴板"), "ok")).catch(()=> toast(t("chainShare.copyFailed","复制失败，请手动选择文本复制"), "warn"));
   };
 }
 /**
@@ -20949,16 +20947,16 @@ function openChainImportModal(){
   const html = `<div class="chain-import-modal" id="chainImportModal">
     <div class="chain-share-dialog">
       <div class="chain-share-header">
-        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>导入联动规则</h2>
+        <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>${t("chainShare.importTitle","导入联动规则")}</h2>
         <button type="button" class="chain-share-close" id="chainImportClose" aria-label="${t("common.close","关闭")}">✕</button>
       </div>
       <div class="chain-share-body">
-        <p class="hint">粘贴他人分享的联动规则分享码，点「预览」查看将导入的链，确认后点「导入」。</p>
+        <p class="hint">${t("chainShare.importHint","粘贴他人分享的联动规则分享码，点「预览」查看将导入的链，确认后点「导入」。")}</p>
         <textarea id="chainImportCode" rows="6" class="code-input" placeholder="${t("chainShare.pasteHint","粘贴分享码...")}" class="u-break-all"></textarea>
         <div id="chainImportPreview" class="u-mt-2"></div>
         <div class="u-flex u-mt-2 u-gap-2">
-          <button type="button" class="addbtn u-flex-1" id="chainImportPreviewBtn" data-sc="muted">预览</button>
-          <button type="button" class="addbtn u-flex-1" id="chainImportConfirmBtn" data-sc="accent" disabled>确认导入</button>
+          <button type="button" class="addbtn u-flex-1" id="chainImportPreviewBtn" data-sc="muted">${t("chainShare.previewBtn","预览")}</button>
+          <button type="button" class="addbtn u-flex-1" id="chainImportConfirmBtn" data-sc="accent" disabled>${t("chainShare.confirmImportBtn","确认导入")}</button>
         </div>
       </div>
     </div>
@@ -20970,7 +20968,7 @@ function openChainImportModal(){
   let pendingLinks = null;
   $("#chainImportPreviewBtn").onclick = ()=>{
     const code = $("#chainImportCode").value.trim();
-    if(!code){ toast("请先粘贴分享码", "warn"); return; }
+    if(!code){ toast(t("chainShare.pasteFirst","请先粘贴分享码"), "warn"); return; }
     const r = importChainShareCode(code);
     const previewEl = $("#chainImportPreview");
     if(!r.ok){
@@ -20984,15 +20982,15 @@ function openChainImportModal(){
       const fs = scMeta(l.fromSc), ts = scMeta(l.toSc);
       return `<div class="chain-preview-row"><span style="color:${fs.color}">${esc(fs.name)}</span> <b>${esc(l.kw)}</b> → <span style="color:${ts.color}">${esc(ts.name)}</span></div>`;
     }).join("");
-    previewEl.innerHTML = sanitizeHtml(`<div class="u-p-1h u-radius-sm u-border-line"><b>将导入 ${r.count} 条链：</b>${rows}</div>`);
+    previewEl.innerHTML = sanitizeHtml(`<div class="u-p-1h u-radius-sm u-border-line"><b>${t("chainShare.willImportPrefix","将导入 ")}${r.count}${t("chainShare.willImportSuffix"," 条链：")}</b>${rows}</div>`);
     $("#chainImportConfirmBtn").disabled = false;
   };
   $("#chainImportConfirmBtn").onclick = ()=>{
-    if(!pendingLinks){ toast("请先点「预览」确认", "warn"); return; }
+    if(!pendingLinks){ toast(t("chainShare.previewFirst","请先点「预览」确认"), "warn"); return; }
     saveCustomLinks(pendingLinks);
     renderLinksBox();
     close();
-    toast("已导入 "+pendingLinks.length+" 条联动规则", "ok");
+    toast(t("chainShare.importedPrefix","已导入 ")+pendingLinks.length+t("chainShare.importedSuffix"," 条联动规则"), "ok");
   };
 }
 
@@ -21194,8 +21192,8 @@ function renderPluginBox(){
     cb.onchange = () => {
       const id = cb.getAttribute("data-plugin-toggle");
       const ok = setPluginEnabled(id, cb.checked);
-      if(!ok){ toast("操作失败", "warn"); return; }
-      toast(cb.checked ? "插件已启用" : "插件已禁用", "ok");
+      if(!ok){ toast(t("plugin.opFailed","操作失败"), "warn"); return; }
+      toast(cb.checked ? t("plugin.enabled","插件已启用") : t("plugin.disabled","插件已禁用"), "ok");
       renderPluginBox();
     };
   });
@@ -21212,10 +21210,10 @@ function renderPluginBox(){
       const id = btn.getAttribute("data-plugin-unload");
       const p = getPlugin(id);
       if(!p) return;
-      if(!confirm(t("plugin.confirmUnload","确定卸载插件「")+p.name+"」？")) return;
+      if(!confirm(t("plugin.confirmUnload","确定卸载插件「")+p.name+t("plugin.confirmUnloadSuffix","」？"))) return;
       const ok = unloadPlugin(id);
-      if(!ok){ toast("卸载失败", "warn"); return; }
-      toast("已卸载插件「"+p.name+"」", "ok");
+      if(!ok){ toast(t("plugin.unloadFailed","卸载失败"), "warn"); return; }
+      toast(t("plugin.unloadedPrefix","已卸载插件「")+p.name+t("plugin.unloadedSuffix","」"), "ok");
       renderPluginBox();
     };
   });
@@ -21228,7 +21226,7 @@ function renderPluginBox(){
  */
 function openPluginDetailModal(id){
   const p = getPlugin(id);
-  if(!p){ toast("插件不存在", "warn"); return; }
+  if(!p){ toast(t("plugin.notFound","插件不存在"), "warn"); return; }
   const old = document.querySelector(".plugin-detail-modal");
   if(old) old.remove();
   const scList = (Array.isArray(p.scenarios) && p.scenarios.length)
@@ -21275,10 +21273,10 @@ function openPluginDetailModal(id){
     const txt = $("#pluginConfigEditor").value;
     let cfg;
     try{ cfg = JSON.parse(txt); }
-    catch(e){ toast("配置 JSON 格式错误", "warn"); return; }
+    catch(e){ toast(t("plugin.configJsonError","配置 JSON 格式错误"), "warn"); return; }
     const ok = setPluginConfig(id, cfg);
-    if(!ok){ toast("保存配置失败", "warn"); return; }
-    toast("插件配置已保存", "ok");
+    if(!ok){ toast(t("plugin.saveConfigFailed","保存配置失败"), "warn"); return; }
+    toast(t("plugin.configSaved","插件配置已保存"), "ok");
     close();
     renderPluginBox();
   };
@@ -22068,7 +22066,7 @@ async function integrationOAuthBegin(providerKey, cfg, opts){
 function openIntegrationConfig(name){
   const fields = INTEGRATION_CONFIG_FIELDS[name];
   const label = INTEGRATION_LABELS[name] || name;
-  if(!fields){ toast("该集成暂无可用配置", "warn"); return; }
+  if(!fields){ toast(t("int.noConfig","该集成暂无可用配置"), "warn"); return; }
   const old = $("#intCfgOverlay"); if(old) old.remove(); // 防重复挂载
   const inputsHtml = fields.map(function(f){
     if(f.type === "select"){
@@ -22106,12 +22104,12 @@ function openIntegrationConfig(name){
     const tokenEl = $("#intcfg_token");
     const calType = calTypeEl ? String(calTypeEl.value || "") : "";
     const clientId = clientIdEl ? String(clientIdEl.value || "").trim() : "";
-    if(!calType){ toast("请先选择日历服务", "warn"); return; }
-    if(!clientId){ toast("请先填写 OAuth Client ID", "warn"); if(clientIdEl) clientIdEl.focus(); return; }
+    if(!calType){ toast(t("int.selectCalendarFirst","请先选择日历服务"), "warn"); return; }
+    if(!clientId){ toast(t("int.fillClientIdFirst","请先填写 OAuth Client ID"), "warn"); if(clientIdEl) clientIdEl.focus(); return; }
     const r = await withLoading(oauthBtn, integrationOAuthBegin(calType, { clientId: clientId }));
     if(!r.ok){ toast("OAuth：" + r.error, "warn"); return; }
     if(tokenEl) tokenEl.value = r.token;
-    toast("授权成功，Token 已回填（有效期内免重复授权）", "ok");
+    toast(t("int.oauthSuccess","授权成功，Token 已回填（有效期内免重复授权）"), "ok");
     // 自动触发统一连接流程（token 已就位，connect 内部会向服务商验证）
     const go = $("#btnIntCfgGo");
     if(go && !go.disabled) go.onclick();
@@ -22122,7 +22120,7 @@ function openIntegrationConfig(name){
     for(const f of fields){
       const el = $("#intcfg_" + f.k);
       const v = el ? String(el.value || "").trim() : "";
-      if(f.required && !v){ toast("请填写 " + f.label, "warn"); if(el) el.focus(); return; }
+      if(f.required && !v){ toast(t("int.fillFieldPrefix","请填写 ")+f.label, "warn"); if(el) el.focus(); return; }
       if(v) cfg[f.k] = v;
     }
     let prov = null;
@@ -22132,16 +22130,16 @@ function openIntegrationConfig(name){
         : (function(){ const fn = window[name + "Connect"]; return (typeof fn === "function") ? fn(cfg) : Promise.resolve(null); })();
       prov = await withLoading(goBtn, connectPromise);
     }catch(e){
-      toast("连接异常：" + (e && e.message ? e.message : e), "warn");
+      toast(t("int.connectErrorPrefix","连接异常：") + (e && e.message ? e.message : e), "warn");
       return;
     }
     if(prov){
       close();
       renderIntegrationPanel();
       const verified = !!(prov.config && prov.config._verified);
-      toast(label + " 已连接" + (verified ? "（凭据验证通过）" : "（未能验证凭据，请检查配置）"), verified ? "ok" : "warn");
+      toast(label + t("int.connectedSuffix"," 已连接") + (verified ? t("int.verifiedOk","（凭据验证通过）") : t("int.verifiedFail","（未能验证凭据，请检查配置）")), verified ? "ok" : "warn");
     }else{
-      toast("连接失败：凭据缺失或不符合要求", "warn");
+      toast(t("int.connectFail","连接失败：凭据缺失或不符合要求"), "warn");
     }
   };
 
@@ -22358,7 +22356,7 @@ $("#aiSkillsSave").onclick = function(){
   saveAiConfig("skills", {builtin: AI_BUILTIN_SKILLS.map(function(s){ return {name:s.name,desc:s.desc,enabled: boxByName.get(s.name)===true}; }), custom: customTa ? customTa.value : ""});
   // 同步 Agent 卡白名单文本框显示
   const twInp = $("#cfgToolWhitelist"); if(twInp) twInp.value = cfg.toolWhitelist || "";
-  toast("技能配置已保存（白名单已同步到「允许调用的工具」）");
+  toast(t("ai.skillConfigSaved","技能配置已保存（白名单已同步到「允许调用的工具」）"));
 };
 $("#aiMcpAdd").onclick = function(){
   const saved = getAiConfig("mcp") || {};
@@ -22379,7 +22377,7 @@ $("#aiMcpSave").onclick = function(){
     servers.push({name: nameInp?nameInp.value:"", url: urlInp?urlInp.value:"", enabled: enInp?enInp.checked:false});
   });
   saveAiConfig("mcp", {servers: servers});
-  toast("MCP 配置已保存");
+  toast(t("ai.mcpConfigSaved","MCP 配置已保存"));
 };
 $("#aiWorkflowAdd").onclick = function(){
   const saved = getAiConfig("workflow") || {};
@@ -22399,7 +22397,7 @@ $("#aiWorkflowSave").onclick = function(){
     flows.push({name: nameInp?nameInp.value:"", trigger: triggerInp?triggerInp.value:""});
   });
   saveAiConfig("workflow", {flows: flows});
-  toast("工作流配置已保存");
+  toast(t("ai.workflowConfigSaved","工作流配置已保存"));
 };
 $("#aiMemSave").onclick = function(){
   const w = $("#aiMemWindow");
@@ -23746,6 +23744,74 @@ const MESSAGES = {
     "common.all": "全部",
     "common.none": "无",
     "common.unit": "条",
+    "common.unitTimes": " 次",
+    "common.unitHours": " 小时",
+    "common.start": "开始",
+    "common.copy": "复制",
+
+
+    // 场景标题/功能
+    "scene.headSub": "带截止日期的任务会汇总到下方「今天要处理」",
+    "scene.featTag.tool": "工具",
+    "scene.featTag.record": "记录",
+    "scene.lifeRecSub": "日常事务速记 · 运动/体重/睡眠/喝水请用上方「健康」功能卡（结构化记录，健康摘要自动汇总）",
+    "scene.recSub": "场景专属资料库，本地保存、随时检索",
+    "scene.renderErrorPrefix": "功能渲染出错：",
+    "scene.featureBuilding": "该功能正在建设中，即将上线 · 敬请期待",
+
+    // 字段标签
+    "field.taskTitle": "任务标题",
+    "field.linkedRecord": "联动记录",
+    "field.searchTaskA3": "搜索任务（A3）",
+    "field.tagFilterAll": "标签（留空=全部）",
+    "field.tagsCommaSep": "标签（逗号分隔）",
+
+    // 任务
+    "task.editTitle": "编辑任务",
+
+    // 学习相关
+    "study.errorReviewPrefix": "错题复习：",
+    "study.materialType": "学习资料",
+    "study.statusNotReviewed": "未复习",
+    "study.sourceExercisePrefix": "来源练习题（正确率 ",
+
+    // 命令面板
+    "cmd.noMatch": "无匹配",
+
+    // AI 相关补充
+    "ai.cancelled": "已取消",
+
+    "ai.toolCalling": "（工具调用中…）",
+    "ai.greetingPrefix": "你好，我是",
+    "ai.greetingSuffix": "助手，可以直接让我「建个任务」「查总览」「搜索」。",
+    "ai.toolDeniedPrefix": "工具 ",
+    "ai.toolDeniedSuffix": " 不在当前允许列表中，已跳过。",
+    "ai.taskCreatedSuffix": "）",
+    "ai.cancelledOpSuffix": "」。",
+    "ai.confirmDangerTitle": "危险操作确认",
+    "ai.confirmDangerPrefix": "AI 助手请求执行",
+    "ai.confirmJoinSep": "、",
+    "ai.confirmDangerColon": "：",
+    "ai.confirmDangerHint": "确认后不可撤销（删除会进入回收站）。也可以在聊天框发送「确认」继续。",
+    "ai.confirmExecute": "确认执行",
+    "ai.switchedProfileMid": " · ",
+    "ai.switchedProfileSuffix": "」",
+    "ai.attachmentMid": " ---\n",
+    "ai.sceneAskFallback": "在【{sc}】场景中，帮我…",
+    "ai.recordAskFallback": "在【{sc}】场景记一笔【{kind}】…（AI 会调工具写入，无需手填）",
+    "ai.hubCoachWithAdv": "刚才 AI 教练根据我的行为数据给了 3 条建议：\n",
+    "ai.hubCoachSuffix": "\n请基于这些建议帮我…",
+    "ai.hubCoachNoAdv": "请根据我最近 2 周的行为数据，给我一些具体可执行的建议。",
+    "ai.hubDailyWithRep": "刚才 AI 生成的今日报告：\n\n",
+    "ai.hubDailySuffix": "\n\n请基于这份报告帮我…",
+    "ai.hubDailyNoRep": "请基于我的任务和打卡记录，帮我梳理今天最该做的 3 件事。",
+    "ai.hubRecWithRec": "刚才 AI 推荐的 3 条行动：\n",
+    "ai.hubRecSuffix": "\n请基于这些推荐帮我…",
+    "ai.hubRecNoRec": "请基于我的任务数据，推荐 3 条下一步行动建议。",
+
+    // 消息补充
+    "msg.notConfigured": "未配置",
+    "msg.batchMovedSuffix": "」",
 
     // 场景名称
     "scenario.office": "办公",
@@ -23810,6 +23876,7 @@ const MESSAGES = {
     "task.linked": "联动",
     "task.note": "备注",
     "task.empty.title": "（空标题）",
+    "task.untitled": "(无标题)",
 
     // 设置
     "settings.title": "设置",
@@ -24283,6 +24350,11 @@ const MESSAGES = {
     "theme.label.system": "跟随",
     "scenario.design": "设计",
     "scenario.data": "数据",
+    "scenario.customSysPromptPrefix": "你是「",
+    "scenario.customSysPromptSuffix": "」场景助手，帮用户梳理该场景的任务与资料。回答简洁、可执行。",
+    "scenario.pluginSysPromptPrefix": "你是「",
+    "scenario.pluginSysPromptSuffix": "」场景助手，帮用户梳理该场景的任务与资料。",
+    "scenario.customRecordSuffix": "资料",
     "sysprompt.office": "你是一个专业的办公效率助手，帮用户梳理任务、写会议纪要、润色邮件与文档。回答简洁、可执行。",
     "sysprompt.design": "你是一个设计创意助手，擅长视觉设计建议、配色方案、版式构图与创意灵感激发。回答有画面感、可落地。",
     "sysprompt.study": "你是一个学习方法教练，擅长制定学习计划、拆解知识点、记忆与复习策略。",
@@ -24357,6 +24429,12 @@ const MESSAGES = {
     "chain.kw.deliver": "交付",
     "chain.kw.review": "复习",
     "chain.kw.launch": "上线",
+    "chain.taskTitlePrefix": "奖励：",
+    "chain.linkRecycleTitlePrefix": "联动规则：「",
+    "chain.linkRecycleTitleSuffix": "」",
+    "chain.linkRecycleDescKwPrefix": "，关键词：「",
+    "chain.linkRecycleDescKwSuffix": "」",
+    "chain.linkRecycleCategory": "联动规则",
     "err.sceneNameEmpty": "场景名称不能为空",
     "err.sceneNameTooLong": "场景名称过长（最多 12 字）",
     "err.sceneDup": "已存在同名场景",
@@ -24373,6 +24451,7 @@ const MESSAGES = {
     "recycle.chain.desc": "{from} → {to}，关键词：「{kw}」",
     "recycle.chain.source": "联动规则",
     "sess.defaultTitle": "{name} 默认会话",
+    "sess.defaultSuffix": " 默认会话",
     "sess.new": "新会话",
     "sess.renamePrompt": "重命名会话",
     "sess.deleteConfirm": "删除该会话及其全部消息？此操作不可撤销。",
@@ -24384,7 +24463,24 @@ const MESSAGES = {
     "sess.renameBtn": "重命名",
     "sess.deleteBtn": "删除",
     "tool.unnamed": "未命名",
+    "tool.createdPrefix": "已在",
+    "tool.createdInfix": "创建任务：",
+    "tool.recordAddedPrefix": "已向",
+    "tool.recordAddedInfix": "资料库添加记录",
+    "tool.featureAddedPrefix": "已添加到",
+    "tool.featureAddedInfix": "功能",
     "tool.createdMsg": "已在{sc}创建任务：{title}",
+    "tool.notFoundPrefix": "未找到匹配任务：",
+    "tool.completedPrefix": "已完成：",
+    "tool.updateConfirmPrefix": "将修改：「",
+    "tool.updateConfirmInfix": "」（id ",
+    "tool.updateConfirmSuffix": "）。发送「确认」以继续，其他内容取消。",
+    "tool.updatedPrefix": "已更新「",
+    "tool.updatedInfix": "」：",
+    "tool.deleteConfirmPrefix": "将删除：「",
+    "tool.deleteConfirmInfix": "」（id ",
+    "tool.deleteConfirmSuffix": "）。发送「确认」以继续，其他内容取消。",
+    "tool.deletedPrefix": "已删除（进入左侧「回收站」，可恢复）：",
     "tool.notFoundMsg": "未找到匹配任务：{id}",
     "tool.completedMsg": "已完成：{title}",
     "tool.updateConfirm": "将修改：「{title}」（id {id}）。发送「确认」以继续，其他内容取消。",
@@ -24394,9 +24490,15 @@ const MESSAGES = {
     "tool.recordAddedMsg": "已向{sc}资料库添加记录",
     "tool.exportTriggeredMsg": "已触发 JSON 备份导出",
     "tool.unknownFeatureMsg": "未知功能：{fid}（可用：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan）",
+    "tool.unknownFeaturePrefix": "未知功能：",
+    "tool.unknownFeatureSuffix": "（可用：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan）",
     "tool.fieldRequiredMsg": "请提供至少一个字段值",
     "tool.featureAddedMsg": "已添加到{fid}功能",
     "tool.execErrorMsg": "工具执行异常：{err}",
+    "tool.execErrorPrefix": "工具执行异常：",
+    "tool.fieldDescInfix": "，如 ",
+    "tool.scenarioRecordSuffix": "场景资料库字段",
+    "tool.recordFieldsDesc": "资料库字段，键随 scenario 而定（不同场景字段不同，见 anyOf）",
     "tool.unknownErrorMsg": "未知错误",
     "tool.unknownToolMsg": "未知工具：{name}",
     "tool.unknownFeatureShort": "未知功能：{fid}",
@@ -24411,7 +24513,23 @@ const MESSAGES = {
     "agent.goalCompletedMsg": "目标完成：{title}",
     "agent.noGoalMsg": "当前无进行中的目标",
     "agent.scope.global": "全局",
+    "agent.rememberPrefix": "已记住[",
+    "agent.rememberInfix": "]：",
+    "agent.forgetPrefix": "已遗忘：",
+    "agent.planMsgPrefix": "已建立目标「",
+    "agent.planMsgInfix": "」，共",
+    "agent.planMsgSuffix": "步。请按步骤调用工具执行，每完成一步用 complete_step 标记，全部完成后用 complete_goal 收尾。",
+    "agent.stepDonePrefix": "步骤",
+    "agent.stepDoneInfix": "已完成，剩余",
+    "agent.stepDoneSuffix": "步",
+    "agent.goalDonePrefix": "目标完成：",
+    "agent.unknownToolPrefix": "未知工具：",
     "agent.ctx.memHeader": "【工作记忆】（你与用户此前沉淀的事实/偏好，回答与操作时请保持一致；过时内容可用 forget 清理）：\n",
+    "agent.ctx.goalHeaderPrefix": "【进行中目标】「",
+    "agent.ctx.goalHeaderInfix": "」（场景：",
+    "agent.ctx.goalHeaderSuffix": "）：\n",
+    "agent.ctx.goalContinuePrefix": "\n请继续执行第",
+    "agent.ctx.goalContinueSuffix": "步；完成后用 complete_step 标记，全部完成用 complete_goal 收尾。",
     "agent.ctx.goalHeader": "【进行中目标】「{title}」（场景：{sc}）：\n",
     "agent.ctx.goalContinue": "\n请继续执行第{idx}步；完成后用 complete_step 标记，全部完成用 complete_goal 收尾。",
     "agent.ctx.goalAllDone": "\n所有步骤已完成，请调用 complete_goal 收尾并总结。",
@@ -24442,7 +24560,9 @@ const MESSAGES = {
     "seed.rec4.cat": "购物",
     "seed.rec4.note": "牛奶、鸡蛋、水果、洗衣液",
     "backup.pausedToast": "自动备份已暂停：数据体积异常增大，请检查或导出清理",
+    "backup.oversizeDiag": "自动备份快照超体积上限已跳过（业务数据可能异常膨胀）",
     "backup.failToast": "自动备份写入失败：{err}",
+    "backup.failDiagPrefix": "自动备份写入失败: ",
     "backup.storageErr": "存储异常",
     "backup.noneToast": "没有可用的自动备份",
     "backup.recoveredToast": "已从自动备份恢复（{time}）",
@@ -24636,6 +24756,30 @@ const MESSAGES = {
     "alarm.invalidTime": "请输入合法时间",
     "alarm.addedToast": "已添加闹钟 {time}",
     "alarm.dateFmt": "{m}月{d}日 · {weekday}",
+    "alarm.weekPrefix": "周",
+    "alarm.weekShort.0": "日",
+    "alarm.weekShort.1": "一",
+    "alarm.weekShort.2": "二",
+    "alarm.weekShort.3": "三",
+    "alarm.weekShort.4": "四",
+    "alarm.weekShort.5": "五",
+    "alarm.weekShort.6": "六",
+    "alarm.monthSuffix": "月",
+    "alarm.daySuffix": "日",
+    "alarm.timeAria": "闹钟时间",
+    "validate.required": "此项必填",
+    "validate.minLen": "长度不足",
+    "validate.maxLen": "长度超限",
+    "validate.pattern": "格式不正确",
+    "empty.noTasksTitle": "还没有任务",
+    "empty.noTasksHint": "按 <span class=\"kbd\">N</span> 或点 <span class=\"kbd\">+</span> 创建第一个任务",
+    "empty.noTasksAction": "+ 新建任务",
+    "empty.noRecordsTitle": "还没有记录",
+    "empty.noRecordsHint": "在上方表单填写后点「添加」开始第一个吧",
+    "empty.noSearchTitle": "未找到匹配结果",
+    "empty.noSearchHint": "换个关键词试试",
+    "empty.noStatsTitle": "暂无数据",
+    "empty.noStatsHint": "完成任务后查看统计",
     "pointerFx.enabled": "指针特效已开启",
     "pointerFx.disabled": "指针特效已关闭",
     "pet.girl.name": "少女 · 星见",
@@ -24817,6 +24961,9 @@ const MESSAGES = {
     "tool.runner.output": "输出",
     "tool.runner.outputPlaceholder": "// console 输出显示在这里",
     "tool.runner.history": "历史代码",
+    "tool.runner.codeLabel": "JavaScript 代码",
+    "tool.runner.codePlaceholder": "// 在这里编写 JavaScript 代码...",
+    "tool.runner.safetyTip": "安全提示：代码在 Web Worker 沙箱中运行，无法访问应用数据、DOM 或 localStorage；最长 10 秒，用 console.log/warn/error 输出。",
     "tool.regex.name": "正则测试器",
     "tool.regex.desc": "实时匹配 · 捕获组 · 高亮",
     "tool.regex.preset.email": "邮箱",
@@ -24847,6 +24994,9 @@ const MESSAGES = {
     "tool.md2code.convertFirst": "请先转换",
     "tool.md2code.copied": "已复制",
     "tool.md2code.copyFail": "复制失败",
+    "tool.redirectHealth": "生活场景 · 健康功能卡",
+    "tool.redirectBill": "生活场景 · 缴费功能卡",
+    "tool.redirectShop": "生活场景 · 采购功能卡",
     "tool.sport.name": "运动记录",
     "tool.sport.desc": "类型 / 时长 · 周月统计",
     "tool.sport.type": "运动类型",
@@ -24897,6 +25047,7 @@ const MESSAGES = {
     "tool.takeout.dish": "菜品",
     "tool.takeout.amount": "金额(元)",
     "tool.takeout.rating": "评分(1-5)",
+    "field.rating": "评分",
     "tool.takeout.monthSum": "本月消费",
     "tool.takeout.monthCnt": "本月次数",
     "tool.takeout.top3": "常点店铺 TOP3",
@@ -24920,6 +25071,15 @@ const MESSAGES = {
     "tool.transit.costShort": "费用",
     "tool.transit.monthSum": "本月出行费",
     "tool.transit.monthCnt": "本月次数",
+    "tool.stub.name": "工具",
+    "tool.stub.backAria": "返回上一视图",
+    "tool.stub.back": "← 返回",
+    "tool.stub.planning": "该工具正在规划中",
+    "tool.stub.comingSoon": "即将上线",
+    "tool.stub.descPrefix": "「",
+    "tool.stub.descInfix": "」已列入开发路线图，功能落地后会在这里开放。你可以先用现有能力：在对话里直接让 AI 助手帮你完成相关任务，或在对应场景的看板 / 资料库里记录。",
+    "tool.stub.tip": "想优先开发这个工具？在 AI 助理里说一句「优先做 XX 工具」，我会记到需求清单。",
+    "tool.stub.thisTool": "该工具",
     "tool.transit.topMode": "最常用方式",
     "tool.transit.emptyTip": "还没有出行记录",
     "tool.addLabel": "添加",
@@ -26062,6 +26222,74 @@ const MESSAGES = {
     "common.all": "All",
     "common.none": "None",
     "common.unit": "items",
+    "common.unitTimes": " ",
+    "common.unitHours": " h",
+    "common.start": "Start",
+    "common.copy": "Copy",
+
+
+    // Scene head/features
+    "scene.headSub": "Tasks with due dates are grouped under \"To process today\" below",
+    "scene.featTag.tool": "Tool",
+    "scene.featTag.record": "Record",
+    "scene.lifeRecSub": "Quick notes for daily errands · Use the \"Health\" card above for exercise/weight/sleep/water (structured records, auto-summary)",
+    "scene.recSub": "Scenario-specific library, saved locally, searchable anytime",
+    "scene.renderErrorPrefix": "Feature render error: ",
+    "scene.featureBuilding": "This feature is under construction, coming soon · Stay tuned",
+
+    // Field labels
+    "field.taskTitle": "Task title",
+    "field.linkedRecord": "Linked record",
+    "field.searchTaskA3": "Search tasks (A3)",
+    "field.tagFilterAll": "Tags (empty=all)",
+    "field.tagsCommaSep": "Tags (comma-separated)",
+
+    // Task
+    "task.editTitle": "Edit task",
+
+    // Study
+    "study.errorReviewPrefix": "Error review: ",
+    "study.materialType": "Study material",
+    "study.statusNotReviewed": "Not reviewed",
+    "study.sourceExercisePrefix": "From exercise (accuracy ",
+
+    // Command palette
+    "cmd.noMatch": "No match",
+
+    // AI supplemental
+    "ai.cancelled": "Cancelled",
+
+    "ai.toolCalling": "(tool calling…)",
+    "ai.greetingPrefix": "Hello, I'm the ",
+    "ai.greetingSuffix": " assistant. You can ask me to \"create a task\", \"show overview\", or \"search\".",
+    "ai.toolDeniedPrefix": "Tool ",
+    "ai.toolDeniedSuffix": " is not in the allowed list, skipped.",
+    "ai.taskCreatedSuffix": ")",
+    "ai.cancelledOpSuffix": "\".",
+    "ai.confirmDangerTitle": "Confirm dangerous action",
+    "ai.confirmDangerPrefix": "AI assistant requests to execute ",
+    "ai.confirmJoinSep": ", ",
+    "ai.confirmDangerColon": ":",
+    "ai.confirmDangerHint": "This cannot be undone (delete goes to recycle bin). You can also type \"confirm\" in the chat to proceed.",
+    "ai.confirmExecute": "Confirm execution",
+    "ai.switchedProfileMid": " · ",
+    "ai.switchedProfileSuffix": "\"",
+    "ai.attachmentMid": " ---\n",
+    "ai.sceneAskFallback": "In the [{sc}] scenario, help me…",
+    "ai.recordAskFallback": "In the [{sc}] scenario, record a [{kind}]… (AI will use tools to write, no manual input needed)",
+    "ai.hubCoachWithAdv": "The AI coach gave 3 suggestions based on my behavior data:\n",
+    "ai.hubCoachSuffix": "\nBased on these suggestions, help me…",
+    "ai.hubCoachNoAdv": "Based on my behavior data from the last 2 weeks, give me some specific actionable suggestions.",
+    "ai.hubDailyWithRep": "The AI-generated daily report:\n\n",
+    "ai.hubDailySuffix": "\n\nBased on this report, help me…",
+    "ai.hubDailyNoRep": "Based on my tasks and check-in records, help me identify the top 3 things to do today.",
+    "ai.hubRecWithRec": "The 3 recommended actions:\n",
+    "ai.hubRecSuffix": "\nBased on these recommendations, help me…",
+    "ai.hubRecNoRec": "Based on my task data, recommend 3 next-step action suggestions.",
+
+    // Messages supplemental
+    "msg.notConfigured": "Not configured",
+    "msg.batchMovedSuffix": "\"",
 
     // Scenarios
     "scenario.office": "Office",
@@ -26126,6 +26354,7 @@ const MESSAGES = {
     "task.linked": "Linked",
     "task.note": "Note",
     "task.empty.title": "(empty title)",
+    "task.untitled": "(untitled)",
 
     // Settings
     "settings.title": "Settings",
@@ -26599,6 +26828,11 @@ const MESSAGES = {
     "theme.label.system": "Follow",
     "scenario.design": "Design",
     "scenario.data": "Data",
+    "scenario.customSysPromptPrefix": "You are the \"",
+    "scenario.customSysPromptSuffix": "\" scenario assistant, helping users organize tasks and materials in this scenario. Answers should be concise and actionable.",
+    "scenario.pluginSysPromptPrefix": "You are the \"",
+    "scenario.pluginSysPromptSuffix": "\" scenario assistant, helping users organize tasks and materials in this scenario.",
+    "scenario.customRecordSuffix": " Materials",
     "sysprompt.office": "You are a professional office productivity assistant, helping users organize tasks, write meeting minutes, and polish emails and documents. Answers should be concise and actionable.",
     "sysprompt.design": "You are a design creative assistant, skilled in visual design suggestions, color schemes, layout and creative inspiration. Answers should be vivid and practical.",
     "sysprompt.study": "You are a learning method coach, skilled in study plans, knowledge decomposition, and memory/review strategies.",
@@ -26673,6 +26907,12 @@ const MESSAGES = {
     "chain.kw.deliver": "deliver",
     "chain.kw.review": "review",
     "chain.kw.launch": "launch",
+    "chain.taskTitlePrefix": "Reward: ",
+    "chain.linkRecycleTitlePrefix": "Link rule: \"",
+    "chain.linkRecycleTitleSuffix": "\"",
+    "chain.linkRecycleDescKwPrefix": ", keyword: \"",
+    "chain.linkRecycleDescKwSuffix": "\"",
+    "chain.linkRecycleCategory": "Link rule",
     "err.sceneNameEmpty": "Scenario name cannot be empty",
     "err.sceneNameTooLong": "Scenario name too long (max 12 chars)",
     "err.sceneDup": "Scenario name already exists",
@@ -26689,6 +26929,7 @@ const MESSAGES = {
     "recycle.chain.desc": "{from} → {to}, keyword: \"{kw}\"",
     "recycle.chain.source": "Habit Chain Management",
     "sess.defaultTitle": "{name} Default Session",
+    "sess.defaultSuffix": " Default Session",
     "sess.new": "New Session",
     "sess.renamePrompt": "Rename Session",
     "sess.deleteConfirm": "Delete this session and all its messages? This cannot be undone.",
@@ -26700,7 +26941,24 @@ const MESSAGES = {
     "sess.renameBtn": "Rename",
     "sess.deleteBtn": "Delete",
     "tool.unnamed": "Untitled",
+    "tool.createdPrefix": "Task created in ",
+    "tool.createdInfix": ": ",
+    "tool.recordAddedPrefix": "Record added to ",
+    "tool.recordAddedInfix": " library",
+    "tool.featureAddedPrefix": "Added to ",
+    "tool.featureAddedInfix": " feature",
     "tool.createdMsg": "Task created in {sc}: {title}",
+    "tool.notFoundPrefix": "No matching task found: ",
+    "tool.completedPrefix": "Completed: ",
+    "tool.updateConfirmPrefix": "Will modify: \"",
+    "tool.updateConfirmInfix": "\" (id ",
+    "tool.updateConfirmSuffix": "). Send \"confirm\" to continue, other input cancels.",
+    "tool.updatedPrefix": "Updated \"",
+    "tool.updatedInfix": "\": ",
+    "tool.deleteConfirmPrefix": "Will delete: \"",
+    "tool.deleteConfirmInfix": "\" (id ",
+    "tool.deleteConfirmSuffix": "). Send \"confirm\" to continue, other input cancels.",
+    "tool.deletedPrefix": "Deleted (moved to Recycle Bin, recoverable): ",
     "tool.notFoundMsg": "No matching task: {id}",
     "tool.completedMsg": "Completed: {title}",
     "tool.updateConfirm": "Will modify: \"{title}\" (id {id}). Send \"confirm\" to proceed, anything else cancels.",
@@ -26710,9 +26968,15 @@ const MESSAGES = {
     "tool.recordAddedMsg": "Record added to {sc} library",
     "tool.exportTriggeredMsg": "JSON backup export triggered",
     "tool.unknownFeatureMsg": "Unknown feature: {fid} (available: meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan)",
+    "tool.unknownFeaturePrefix": "Unknown feature: ",
+    "tool.unknownFeatureSuffix": " (available: meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan)",
     "tool.fieldRequiredMsg": "Please provide at least one field value",
     "tool.featureAddedMsg": "Added to {fid} feature",
     "tool.execErrorMsg": "Tool execution error: {err}",
+    "tool.execErrorPrefix": "Tool execution error: ",
+    "tool.fieldDescInfix": ", e.g. ",
+    "tool.scenarioRecordSuffix": " scenario record fields",
+    "tool.recordFieldsDesc": "Record fields, keys vary by scenario (different fields per scenario, see anyOf)",
     "tool.unknownErrorMsg": "Unknown error",
     "tool.unknownToolMsg": "Unknown tool: {name}",
     "tool.unknownFeatureShort": "Unknown feature: {fid}",
@@ -26727,7 +26991,23 @@ const MESSAGES = {
     "agent.goalCompletedMsg": "Goal completed: {title}",
     "agent.noGoalMsg": "No active goal",
     "agent.scope.global": "Global",
+    "agent.rememberPrefix": "Remembered [",
+    "agent.rememberInfix": "]: ",
+    "agent.forgetPrefix": "Forgot: ",
+    "agent.planMsgPrefix": "Goal created: \"",
+    "agent.planMsgInfix": "\", ",
+    "agent.planMsgSuffix": " steps. Please execute step by step using tools; use complete_step for each, and complete_goal when all done.",
+    "agent.stepDonePrefix": "Step ",
+    "agent.stepDoneInfix": " done, ",
+    "agent.stepDoneSuffix": " remaining",
+    "agent.goalDonePrefix": "Goal completed: ",
+    "agent.unknownToolPrefix": "Unknown tool: ",
     "agent.ctx.memHeader": "[Working Memory] (facts/preferences settled with user; keep consistent; use forget to clean stale):\n",
+    "agent.ctx.goalHeaderPrefix": "[Active Goal] \"",
+    "agent.ctx.goalHeaderInfix": "\" (scenario: ",
+    "agent.ctx.goalHeaderSuffix": "):\n",
+    "agent.ctx.goalContinuePrefix": "\nPlease continue with step ",
+    "agent.ctx.goalContinueSuffix": "; use complete_step when done, and complete_goal when all complete.",
     "agent.ctx.goalHeader": "[Active Goal] \"{title}\" (scenario: {sc}):\n",
     "agent.ctx.goalContinue": "\nPlease continue with step {idx}; use complete_step when done, and complete_goal when all complete.",
     "agent.ctx.goalAllDone": "\nAll steps completed; please call complete_goal to finish and summarize.",
@@ -26758,7 +27038,9 @@ const MESSAGES = {
     "seed.rec4.cat": "Shopping",
     "seed.rec4.note": "Milk, eggs, fruit, laundry detergent",
     "backup.pausedToast": "Auto-backup paused: data size abnormally increased; please check or export and clean up",
+    "backup.oversizeDiag": "Auto-backup snapshot exceeded size limit and was skipped (data may have abnormally grown)",
     "backup.failToast": "Auto-backup write failed: {err}",
+    "backup.failDiagPrefix": "Auto-backup write failed: ",
     "backup.storageErr": "Storage error",
     "backup.noneToast": "No auto-backup available",
     "backup.recoveredToast": "Restored from auto-backup ({time})",
@@ -26952,6 +27234,30 @@ const MESSAGES = {
     "alarm.invalidTime": "Please enter a valid time",
     "alarm.addedToast": "Alarm added: {time}",
     "alarm.dateFmt": "{m}/{d} · {weekday}",
+    "alarm.weekPrefix": "",
+    "alarm.weekShort.0": "Sun",
+    "alarm.weekShort.1": "Mon",
+    "alarm.weekShort.2": "Tue",
+    "alarm.weekShort.3": "Wed",
+    "alarm.weekShort.4": "Thu",
+    "alarm.weekShort.5": "Fri",
+    "alarm.weekShort.6": "Sat",
+    "alarm.monthSuffix": "/",
+    "alarm.daySuffix": "",
+    "alarm.timeAria": "Alarm time",
+    "validate.required": "This field is required",
+    "validate.minLen": "Length too short",
+    "validate.maxLen": "Length too long",
+    "validate.pattern": "Invalid format",
+    "empty.noTasksTitle": "No tasks yet",
+    "empty.noTasksHint": "Press <span class=\"kbd\">N</span> or click <span class=\"kbd\">+</span> to create your first task",
+    "empty.noTasksAction": "+ New Task",
+    "empty.noRecordsTitle": "No records yet",
+    "empty.noRecordsHint": "Fill the form above and click \"Add\" to start",
+    "empty.noSearchTitle": "No matching results",
+    "empty.noSearchHint": "Try a different keyword",
+    "empty.noStatsTitle": "No data yet",
+    "empty.noStatsHint": "Complete tasks to view statistics",
     "pointerFx.enabled": "Pointer effect enabled",
     "pointerFx.disabled": "Pointer effect disabled",
     "pet.girl.name": "Girl · Hoshimi",
@@ -27133,6 +27439,9 @@ const MESSAGES = {
     "tool.runner.output": "Output",
     "tool.runner.outputPlaceholder": "// console output appears here",
     "tool.runner.history": "Code History",
+    "tool.runner.codeLabel": "JavaScript Code",
+    "tool.runner.codePlaceholder": "// Write JavaScript code here...",
+    "tool.runner.safetyTip": "Security: code runs in a Web Worker sandbox, no access to app data, DOM, or localStorage; max 10 seconds, output via console.log/warn/error.",
     "tool.regex.name": "Regex Tester",
     "tool.regex.desc": "Real-time match · Capture groups · Highlight",
     "tool.regex.preset.email": "Email",
@@ -27163,6 +27472,9 @@ const MESSAGES = {
     "tool.md2code.convertFirst": "Please convert first",
     "tool.md2code.copied": "Copied",
     "tool.md2code.copyFail": "Copy failed",
+    "tool.redirectHealth": "Life scenario · Health feature card",
+    "tool.redirectBill": "Life scenario · Bill feature card",
+    "tool.redirectShop": "Life scenario · Shopping feature card",
     "tool.sport.name": "Exercise Log",
     "tool.sport.desc": "Type / Duration · Weekly & Monthly stats",
     "tool.sport.type": "Exercise Type",
@@ -27213,6 +27525,7 @@ const MESSAGES = {
     "tool.takeout.dish": "Dish",
     "tool.takeout.amount": "Amount (CNY)",
     "tool.takeout.rating": "Rating (1-5)",
+    "field.rating": "Rating",
     "tool.takeout.monthSum": "Monthly Spend",
     "tool.takeout.monthCnt": "Monthly Count",
     "tool.takeout.top3": "Top 3 Shops",
@@ -27236,6 +27549,15 @@ const MESSAGES = {
     "tool.transit.costShort": "Cost",
     "tool.transit.monthSum": "Monthly Transit Cost",
     "tool.transit.monthCnt": "Monthly Count",
+    "tool.stub.name": "Tool",
+    "tool.stub.backAria": "Back to previous view",
+    "tool.stub.back": "← Back",
+    "tool.stub.planning": "This tool is under planning",
+    "tool.stub.comingSoon": "Coming Soon",
+    "tool.stub.descPrefix": "\"",
+    "tool.stub.descInfix": "\" is on the development roadmap; features will be available here once implemented. You can use existing capabilities: ask AI assistant directly in chat, or record in the corresponding scenario board / library.",
+    "tool.stub.tip": "Want this tool prioritized? Tell the AI assistant \"prioritize XX tool\" and I'll add it to the requirements list.",
+    "tool.stub.thisTool": "this tool",
     "tool.transit.topMode": "Most Used Mode",
     "tool.transit.emptyTip": "No transit records yet",
     "tool.addLabel": "Add",
