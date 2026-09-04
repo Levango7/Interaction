@@ -743,8 +743,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   margin-bottom:var(--space-3)}
 .field-group label{margin-bottom:0}
 .field-group input,.field-group select,.field-group textarea{margin-bottom:0}
-/* v3.0：任务表单等高——按钮底部与输入框底部对齐，且与输入框同高（不被 flex 拉伸） */
-.form-row .addbtn{align-self:flex-end;height:33px;min-height:33px;line-height:1}
+/* v3.0：任务表单等高——按钮底部与输入框底部对齐，且与输入框同高（不被 flex 拉伸）
+   v3.4.5 布局规范化：33px 魔法数字不在控件阶梯（38/28/24）上，与 38px 输入框并排时
+   顶边参差 5px——改为 --control-h 令牌，与 input/select/add-round 等高对齐 */
+.form-row .addbtn{align-self:flex-end;height:var(--control-h);min-height:var(--control-h);line-height:1}
 .form-row .add-wrap{align-self:flex-end}
 /* v3.0：任务表单铺满卡片——大字段（标题/标签）取消 max-width 限制，flex 铺满剩余空间 */
 .form-row .fld-lg{max-width:none}
@@ -2843,8 +2845,8 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 }
 
 /* ===== 初雪主题（elegant）：雪后松枝——清透青瓷绿底 + 蓝绿松柏主色 =====
-   v3.4.5：底布加绿重设计（用户反馈与亮色差异太小）——底色从近白灰绿 #f5f7f4
-   加深为青瓷绿 #e2eee6，与亮色中性灰 #e0e0e4 拉开明确色相差；面板/线条/侧栏
+   v3.4.5：底布加绿重设计（用户反馈与亮色差异太小）——底色从近白灰绿(f5f7f4)
+   加深为青瓷绿(e2eee6)，与亮色中性灰(e0e0e4)拉开明确色相差；面板/线条/侧栏
    全链路同步加绿，白卡片对比保持 ~12% */
 :root[data-theme="elegant"]{
   --bg:#e2eee6; --panel:#ffffff; --panel2:#e9f3ec; --line:#c6d9cc;
