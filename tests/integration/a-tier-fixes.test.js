@@ -57,11 +57,11 @@ describe("v3.1.2 A 档：源码契约（防回归）", () => {
     expect(S).toMatch(/aiSkillsSave[\s\S]{0,4000}cfg\.toolWhitelist\s*=/);
   });
   it("帮助页含「故障排查」章节", () => {
-    expect(S).toMatch(/helpSection\("故障排查"/);
+    expect(S).toMatch(/helpSection\("trouble"/);
   });
   it("帮助页含「集成与扩展」+「AI 进阶」", () => {
-    expect(S).toMatch(/helpSection\("集成与扩展"/);
-    expect(S).toMatch(/helpSection\("AI 进阶"/);
+    expect(S).toMatch(/helpSection\("integration"/);
+    expect(S).toMatch(/helpSection\("aiAdvanced"/);
   });
   it("帮助页已删「快照频率可调」虚假声明", () => {
     expect(S).not.toContain("可看到快照频率可调");
