@@ -1,6 +1,6 @@
 {
   "name": "agent-workbench",
-  "version": "3.4.10",
+  "version": "3.4.11",
   "private": true,
   "description": "Agent 工作台 — 多场景任务 / 记录 / AI 助手单文件应用。单一交付物 agent-workbench.html 为真相源。",
   "scripts": {

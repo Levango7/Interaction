@@ -2,6 +2,36 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.4.11] - 2026-09-05
+
+### i18n 中文残留全量修补（4 批共 ~471 处）
+
+基于 `i18n_scan_report.md` 扫描报告，对约 330 处 UI 可见中文残留分 4 批串行处理，实际处理 ~471 处，新增 MESSAGES key（zh + en 各 ~470 个）。
+
+**🌐 第一批：最高优先级 17 处**
+- toast 调用 6 处 + textContent 赋值 4 处 + 问候语 6 处 + prompt 1 处。
+- 新增 key 前缀：`ui.toast.*`、`ui.greet.*`、`ui.prompt.*`。
+
+**🌐 第二批：HTML 属性 140 处**
+- `aria-label`/`placeholder`/`title`/文本内容 加 `data-i18n-*` 属性标记。
+- 涵盖设置抽屉、命令面板、模态框、表单、按钮等 HTML 元素。
+
+**🌐 第三批：数据定义 ~191 处**
+- 状态映射/仪表盘卡片/场景模板/helpSection/工具栏/周期数组/模型描述等。
+- 修复 3 个重复 key：`stats.done`（已存在）、`tool.report.name`（改用 `tool.report.toolboxName`）、`common.unnamed`（已存在）。
+- 内部比较值保持中文 key，显示时用 `t()` 包裹（与回收站 `recycleCatKey` 模式一致）。
+
+**🌐 第四批：低优先级 123 处**
+- AI 工具 description 61 处（23 个工具 desc + 38 个参数 desc）。
+- LINT 规则 msg/sug 42 处（21 个规则 × 2）。
+- MVP_SCOPE 常量 19 处（IN_SCOPE 11 + OUT_OF_SCOPE 5 + EXCEPTIONS 3）。
+- 调试输出 1 处（console.warn）。
+- key 命名规范：`aitool.{toolName}.desc`、`aitool.{toolName}.{param}.desc`、`lint.{ruleId}.msg/sug`、`mvp.scope.*`、`debug.*`。
+
+**ℹ️ 保留中文未处理**：正则表达式中的中文（~60 处，中文命令解析规则）、中文键映射（~10 处）、情感词典/停用词表（~40 处，NLP 数据）——英文模式下不触发。
+
+**✅ 验证**：eslint 0 problems；build:check 门禁通过；quickwins 26/26 + error-boundary 18/18 + color-tokens 4/4 通过。
+
 ## [v3.4.10] - 2026-09-05
 
 ### BUILTIN_PLUGINS 剩余中文 i18n（description/scenarios[].desc/render 文案）

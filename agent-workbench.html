@@ -3725,7 +3725,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     <div class="ph-tx"><h2>AI</h2><p class="sub" data-i18n="page.ai.sub">大模型 Profile、接口地址与请求参数</p></div>
     <button class="page-back drawer-close" type="button" data-i18n-aria="a11y.returnPrev" aria-label="返回上一视图" data-i18n="page.back">← 返回</button>
   </header>
-  <nav class="set-nav ai-nav" aria-label="AI模块导航">
+  <nav class="set-nav ai-nav" aria-label="AI模块导航" data-i18n-aria="a11y.aiModuleNav">
     <button type="button" class="set-nav-btn active" data-ai-tab="ai-llm" data-i18n="ai.nav.llm">大模型</button>
     <button type="button" class="set-nav-btn" data-ai-tab="ai-agent">Agent</button>
     <button type="button" class="set-nav-btn" data-ai-tab="ai-ext" data-i18n="ai.nav.ext">扩展</button>
@@ -3741,7 +3741,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     <button class="page-back drawer-close" type="button" data-i18n-aria="a11y.returnPrev" aria-label="返回上一视图" data-i18n="page.back">← 返回</button>
   </header>
 	  <!-- 设置分区导航栏（独立于标题栏，点击切换下方 card 内容；保存按钮只在底部保存栏） -->
-	  <nav class="set-nav" aria-label="设置分区导航">
+	  <nav class="set-nav" aria-label="设置分区导航" data-i18n-aria="a11y.settingsSectionNav">
 	    <button type="button" class="set-nav-btn active" data-set-tab="set-scene" data-i18n="settings.nav.scene">场景</button>
 	    <button type="button" class="set-nav-btn" data-set-tab="set-chain" data-i18n="settings.nav.chain">场景联动</button>
 	    <button type="button" class="set-nav-btn" data-set-tab="set-look" data-i18n="settings.nav.look">外观</button>
@@ -3752,7 +3752,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 	  </nav>
 
   <!-- ===== AI 配置 ===== -->
-  <section class="set-card ai-section ai-tab-active" id="ai-llm" data-ai-tab="ai-llm" aria-label="LLM 大模型配置">
+  <section class="set-card ai-section ai-tab-active" id="ai-llm" data-ai-tab="ai-llm" aria-label="LLM 大模型配置" data-i18n-aria="a11y.llmConfig">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></span>
       <div>
@@ -3808,7 +3808,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     </div>
   </section>
   <!-- ===== Agent 能力（独立卡，v1.15 与 AI 配置分开） ===== -->
-  <section class="set-card ai-section" id="ai-agent" data-ai-tab="ai-agent" aria-label="Agent 能力">
+  <section class="set-card ai-section" id="ai-agent" data-ai-tab="ai-agent" aria-label="Agent 能力" data-i18n-aria="a11y.agentAbility">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H7a3 3 0 0 0-3 3v3a3 3 0 0 0 1 2.2V18a3 3 0 0 0 3 3h2v-7H8v-3h2V8a2 2 0 0 1 4 0v1h2v3h-2v7h2a3 3 0 0 0 3-3v-3.8a3 3 0 0 0 1-2.2V9a3 3 0 0 0-3-3h-2V5a3 3 0 0 0-3-3z"/></svg></span>
       <div>
@@ -3817,7 +3817,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </div>
     </header>
     <div class="set-switch">
-      <input type="checkbox" id="cfgAgent" aria-label="Agent 模式">
+      <input type="checkbox" id="cfgAgent" aria-label="Agent 模式" data-i18n-aria="a11y.agentMode">
       <div>
         <div class="sw-label" data-i18n="agent.modeLabel">Agent 模式（工作记忆 + 多步目标编排）</div>
         <div class="sw-sub" data-i18n="agent.modeSub">开启后具备中短期记忆与多步目标规划能力（plan→逐步执行→complete_goal）。对话循环上限与工具调用受下方参数控制。</div>
@@ -3825,7 +3825,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     </div>
     <div class="set-field">
       <label for="cfgMemMax" data-i18n="settings.memMax">工作记忆容量（条，20~500）</label>
-      <div class="ctl"><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）"></div>
+      <div class="ctl"><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）" data-i18n-placeholder="field.memMaxPh"></div>
     </div>
     <div class="set-field">
       <label for="cfgAgentLoops" data-i18n="agent.loopsLabel">对话循环上限（无目标时，6~30 轮）</label>
@@ -3868,7 +3868,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     <!-- v3.2 IA 重构：5 个实验性扩展合并为 1 张可折叠卡。
        共性：均为实验性——配置可保存但 AI 引擎尚未消费；用 <details> 折叠避免视觉过载。
        所有 input/button 的 id 全部保留以兼容既有 JS 绑定。 -->
-  <section class="set-card ai-section" id="ai-ext" data-ai-tab="ai-ext" aria-label="AI 扩展（实验性）">
+  <section class="set-card ai-section" id="ai-ext" data-ai-tab="ai-ext" aria-label="AI 扩展（实验性）" data-i18n-aria="a11y.aiExtExperimental">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
       <div>
@@ -3886,7 +3886,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
         <div class="set-field">
           <label for="aiSkillsCustom" data-i18n="skills.customJson">自定义技能 JSON</label>
           <div class="ctl">
-            <textarea id="aiSkillsCustom" rows="6" class="code-input u-resize-v" placeholder='[{"name":"技能名称","desc":"技能描述","enabled":true}]'></textarea>
+            <textarea id="aiSkillsCustom" rows="6" class="code-input u-resize-v" placeholder='[{"name":"技能名称","desc":"技能描述","enabled":true}]' data-i18n-placeholder="field.aiSkillsCustomPh"></textarea>
             <p class="hint u-fs-2xs u-mt-1" data-i18n="skills.jsonHint">JSON 数组格式，每项含 name / desc / enabled 字段。</p>
           </div>
         </div>
@@ -3964,7 +3964,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     </details>
   </section>
 
-  <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-ext" aria-label="会话管理">
+  <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-ext" aria-label="会话管理" data-i18n-aria="a11y.sessionMgmt2">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
       <div><h3 data-i18n="sess.title">会话管理</h3><p class="set-desc" data-i18n="sess.desc">会话超时与自动保存设置（实验性——对话会话的实际管理在聊天面板「☰」，此处配置的消费接线在路线图中）。</p></div>
@@ -3986,7 +3986,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 场景管理 ===== -->
-  <section class="set-card" id="set-scene" aria-label="场景管理">
+  <section class="set-card" id="set-scene" aria-label="场景管理" data-i18n-aria="a11y.sceneMgmt">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span>
       <div>
@@ -4007,7 +4007,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 联动规则 ===== -->
-  <section class="set-card" id="set-chain" aria-label="联动规则">
+  <section class="set-card" id="set-chain" aria-label="联动规则" data-i18n-aria="a11y.chainRules">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
       <div>
@@ -4033,7 +4033,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 知识（独立菜单页，v1.15 从设置抽离） ===== -->
-  <section class="set-card" id="set-content" aria-label="知识">
+  <section class="set-card" id="set-content" aria-label="知识" data-i18n-aria="a11y.knowledge">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
       <div>
@@ -4058,7 +4058,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 插件商店（设置内卡片） ===== -->
-  <section class="set-card" id="set-plugin" aria-label="插件商店">
+  <section class="set-card" id="set-plugin" aria-label="插件商店" data-i18n-aria="a11y.pluginStore">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
       <div>
@@ -4070,13 +4070,13 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     <div class="chain-add-form">
       <div class="set-subhead" data-i18n="store.registerNew">注册新插件</div>
       <p class="set-tip" data-i18n="store.pasteJson">粘贴插件 JSON 定义。</p>
-      <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"插件ID","name":"插件名称","version":"1.0.0","description":"插件描述"}' class="u-resize-v"></textarea>
+      <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"插件ID","name":"插件名称","version":"1.0.0","description":"插件描述"}' data-i18n-placeholder="field.pluginAddJsonPh" class="u-resize-v"></textarea>
       <button type="button" class="addbtn sm u-mt-1" id="pluginAddBtn" data-sc="accent" data-i18n="store.registerBtn">注册插件</button>
     </div>
   </section>
 
   <!-- ===== 数据管理 ===== -->
-  <section class="set-card" id="set-data" aria-label="数据管理">
+  <section class="set-card" id="set-data" aria-label="数据管理" data-i18n-aria="a11y.dataMgmt">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>
       <div>
@@ -4114,7 +4114,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       <button type="button" class="addbtn min" id="btnIdbImport" data-i18n-aria="dataMgmt.idbImportAria" aria-label="导入 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullRestore">IDB 全量恢复</button>
       <input type="file" id="idbFileInput" accept=".idbbackup,.json" class="u-hidden">
       <!-- P0-8：局域网同步按钮（仅 Electron 环境显示） -->
-      <button type="button" class="addbtn min u-hidden" id="btnSyncLocal" aria-label="局域网同步" data-sc="accent" data-i18n="dataMgmt.lanSync">局域网同步</button>
+      <button type="button" class="addbtn min u-hidden" id="btnSyncLocal" aria-label="局域网同步" data-i18n-aria="a11y.lanSync" data-sc="accent" data-i18n="dataMgmt.lanSync">局域网同步</button>
       <button type="button" class="addbtn min danger" id="btnClear" data-i18n-aria="dataMgmt.clearDataAria" aria-label="清空数据" data-i18n="dataMgmt.clearData">清空数据</button>
     </div>
     <div class="set-actions">
@@ -4134,7 +4134,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 外观 ===== -->
-  <section class="set-card" id="set-look" aria-label="外观">
+  <section class="set-card" id="set-look" aria-label="外观" data-i18n-aria="a11y.appearance">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>
       <div>
@@ -4191,7 +4191,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </div>
       <div id="themeImportArea" class="u-hidden u-mt-2">
         <div class="u-fs-2xs u-text-muted u-fw-600 u-mb-1" data-i18n="look.pasteThemeJson">粘贴主题 JSON</div>
-        <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"主题ID","name":"主题名称","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}'></textarea>
+        <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"主题ID","name":"主题名称","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}' data-i18n-placeholder="field.themeImportJsonPh"></textarea>
         <div class="theme-actions">
           <button type="button" class="addbtn sm" id="btnThemeImportConfirm" data-i18n="common.confirmImport">确认导入</button>
           <button type="button" class="addbtn sm" id="btnThemeImportCancel"  data-sc="muted" data-i18n="common.cancel">取消</button>
@@ -4224,7 +4224,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </div>
     </div>
     <div class="row switch set-switch" id="pointerFxRow">
-      <input type="checkbox" id="cfgPointerFx" aria-label="鼠标特效开关">
+      <input type="checkbox" id="cfgPointerFx" aria-label="鼠标特效开关" data-i18n-aria="a11y.pointerFxToggle">
       <div>
         <div class="sw-label" data-i18n="look.pointerFxEnable">启用鼠标特效</div>
         <div class="sw-sub" data-i18n="look.pointerFxSub">鼠标在页面移动时显示装饰粒子，可关闭或选择风格。</div>
@@ -4234,7 +4234,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
   
   <!-- ===== 通知提醒 ===== -->
-  <section class="set-card" id="set-notify" aria-label="通知提醒">
+  <section class="set-card" id="set-notify" aria-label="通知提醒" data-i18n-aria="a11y.notifyReminder">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg></span>
       <div>
@@ -4243,7 +4243,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </div>
     </header>
     <div class="set-switch">
-      <input type="checkbox" id="cfgNotify" aria-label="开启任务到期提醒">
+      <input type="checkbox" id="cfgNotify" aria-label="开启任务到期提醒" data-i18n-aria="a11y.enableTaskReminder">
       <div>
         <div class="sw-label" data-i18n="notify.enableLabel">开启任务到期 / 联动断链 / 每日汇总提醒</div>
         <div class="sw-sub" data-i18n="notify.enableSub">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</div>
@@ -4255,10 +4255,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       <label for="cfgQuiet" data-i18n="settings.quiet">免打扰时段</label>
       <div class="ctl">
         <div class="btn-row">
-          <input type="checkbox" id="cfgQuiet" aria-label="免打扰时段">
-          <select id="cfgQuietStart" aria-label="免打扰开始时间" class="u-flex-0-1-120"></select>
+          <input type="checkbox" id="cfgQuiet" aria-label="免打扰时段" data-i18n-aria="a11y.quietHours">
+          <select id="cfgQuietStart" aria-label="免打扰开始时间" data-i18n-aria="a11y.quietStart" class="u-flex-0-1-120"></select>
           <span class="u-fs-2xs u-text-muted" data-i18n="settings.quiet.to">至</span>
-          <select id="cfgQuietEnd" aria-label="免打扰结束时间" class="u-flex-0-1-120"></select>
+          <select id="cfgQuietEnd" aria-label="免打扰结束时间" data-i18n-aria="a11y.quietEnd" class="u-flex-0-1-120"></select>
         </div>
         <p class="set-tip u-mt-1" data-i18n="notify.quietTip">免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。</p>
       </div>
@@ -4280,7 +4280,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== v3.1：集成中心 ===== -->
-  <section class="set-card" id="set-integration" aria-label="集成中心">
+  <section class="set-card" id="set-integration" aria-label="集成中心" data-i18n-aria="a11y.integrationCenter">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
       <div>
@@ -4292,7 +4292,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 任务235：API 账号设置（仅登录后显示） ===== -->
-  <section class="set-card" id="set-api-account" aria-label="账号设置">
+  <section class="set-card" id="set-api-account" aria-label="账号设置" data-i18n-aria="a11y.apiAccount">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
       <div>
@@ -4316,7 +4316,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 任务235：API 通知偏好（仅登录后显示） ===== -->
-  <section class="set-card" id="set-api-notify" aria-label="通知偏好">
+  <section class="set-card" id="set-api-notify" aria-label="通知偏好" data-i18n-aria="a11y.apiNotify">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
       <div>
@@ -4348,7 +4348,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 任务235：API 第三方集成（仅登录后显示） ===== -->
-  <section class="set-card" id="set-api-integrations" aria-label="第三方集成">
+  <section class="set-card" id="set-api-integrations" aria-label="第三方集成" data-i18n-aria="a11y.thirdPartyIntegrations">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
       <div>
@@ -4380,7 +4380,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </section>
 
   <!-- ===== 关于与兼容说明 ===== -->
-  <section class="set-card" id="set-about" aria-label="关于与兼容说明">
+  <section class="set-card" id="set-about" aria-label="关于与兼容说明" data-i18n-aria="a11y.aboutCompat">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>
       <div>
@@ -4516,7 +4516,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </div>
     </div>
     <div class="report-toolbar">
-      <select id="reportType" aria-label="报表类型">
+      <select id="reportType" aria-label="报表类型" data-i18n-aria="a11y.reportType">
         <option value="week" data-i18n="report.type.week">周报</option>
         <option value="month" data-i18n="report.type.month">月报</option>
         <option value="year" data-i18n="report.type.year">年报</option>
@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.10"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.11"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260904e";
+const BUILD_TAG = "20260904f";
 
 
 
@@ -4790,29 +4790,29 @@ const BUILD_TAG = "20260904e";
 const MVP_SCOPE = {
   version: VERSION,
   IN_SCOPE: [
-    "多场景任务看板（office/data/design/study/code/life/overview）",
-    "任务 CRUD + 完成/软删（pendingConfirm 二次确认闸门）",
-    "场景联动规则（源场景完成 → 跨场景生成奖励/后续任务）",
-    "AI 助手（工具调用：search/complete/update/delete + 场景记忆注入）",
-    "Agent 工作记忆（remember/recall/forget，按场景隔离 + 近期/命中加权召回，自动注入对话上下文）",
-    "Agent 多步目标编排（plan/complete_step/complete_goal，单目标聚焦，跨场景拆步，循环上限放宽）",
-    "AI Key 本地加密存储（AES-GCM + 设备密钥，不落明文/不传网络）",
-    "办公会议纪要/编程代码片段/学习资料/生活备忘等多类记录（rec_*）",
-    "本地自动备份快照（P1-b，独立于手动导出）",
-    "SM2 间隔重复记忆（study 场景）",
-    "桌面端 Electron 壳（开机自启/Key 交主进程保管）",
+    t("mvp.scope.in_scope.1","多场景任务看板（office/data/design/study/code/life/overview）"),
+    t("mvp.scope.in_scope.2","任务 CRUD + 完成/软删（pendingConfirm 二次确认闸门）"),
+    t("mvp.scope.in_scope.3","场景联动规则（源场景完成 → 跨场景生成奖励/后续任务）"),
+    t("mvp.scope.in_scope.4","AI 助手（工具调用：search/complete/update/delete + 场景记忆注入）"),
+    t("mvp.scope.in_scope.5","Agent 工作记忆（remember/recall/forget，按场景隔离 + 近期/命中加权召回，自动注入对话上下文）"),
+    t("mvp.scope.in_scope.6","Agent 多步目标编排（plan/complete_step/complete_goal，单目标聚焦，跨场景拆步，循环上限放宽）"),
+    t("mvp.scope.in_scope.7","AI Key 本地加密存储（AES-GCM + 设备密钥，不落明文/不传网络）"),
+    t("mvp.scope.in_scope.8","办公会议纪要/编程代码片段/学习资料/生活备忘等多类记录（rec_*）"),
+    t("mvp.scope.in_scope.9","本地自动备份快照（P1-b，独立于手动导出）"),
+    t("mvp.scope.in_scope.10","SM2 间隔重复记忆（study 场景）"),
+    t("mvp.scope.in_scope.11","桌面端 Electron 壳（开机自启/Key 交主进程保管）"),
   ],
   OUT_OF_SCOPE: [
-    "多端实时同步 / 云端账户体系（v2 评估）",
-    "团队协作 / 多人在线编辑（v2 评估）",
-    "后端服务 / 远程 API（当前为纯前端 + 本地存储）",
-    "细粒度权限 RBAC（单用户本地应用，不需要）",
-    "国际化 i18n（当前仅 zh-CN）",
+    t("mvp.scope.out_of_scope.1","多端实时同步 / 云端账户体系（v2 评估）"),
+    t("mvp.scope.out_of_scope.2","团队协作 / 多人在线编辑（v2 评估）"),
+    t("mvp.scope.out_of_scope.3","后端服务 / 远程 API（当前为纯前端 + 本地存储）"),
+    t("mvp.scope.out_of_scope.4","细粒度权限 RBAC（单用户本地应用，不需要）"),
+    t("mvp.scope.out_of_scope.5","国际化 i18n（当前仅 zh-CN）"),
   ],
   KNOWN_CONTRACT_EXCEPTIONS: [
-    "overview 为瞬态视图，不持久化（按 g 切换，不写入存储）",
-    "execTool 的 force 已入 schema（v1.14.1 起 AI 可传 force=true 跳过二次确认；默认 false 仍走确认）",
-    "Electron 下 AI Key 由主进程保管，渲染进程 cfg 中 key 为空占位（P0-3）",
+    t("mvp.scope.exceptions.1","overview 为瞬态视图，不持久化（按 g 切换，不写入存储）"),
+    t("mvp.scope.exceptions.2","execTool 的 force 已入 schema（v1.14.1 起 AI 可传 force=true 跳过二次确认；默认 false 仍走确认）"),
+    t("mvp.scope.exceptions.3","Electron 下 AI Key 由主进程保管，渲染进程 cfg 中 key 为空占位（P0-3）"),
   ],
 };
 /**
@@ -7195,59 +7195,59 @@ function _recordFieldsSchema(){
 }
 
 const TOOLS = [
-  {type:"function", function:{name:"create_task", description:"在指定场景创建一条任务（标题必填），可带标签", parameters:{type:"object", properties:{
-    scenario:{type:"string", enum:ORDER, description:"场景键，如 office/code/study"},
-    title:{type:"string", description:"任务标题"}, due:{type:"string", description:"截止日期 YYYY-MM-DD，可空"},
-    priority:{type:"string", enum:["","P0","P1","P2"]}, tags:{type:"array", items:{type:"string"}, description:"标签列表"}}, required:["title"]}}},
-  {type:"function", function:{name:"list_tasks", description:"查询某场景的任务，可按状态过滤", parameters:{type:"object", properties:{
+  {type:"function", function:{name:"create_task", description:t("aitool.create_task.desc","在指定场景创建一条任务（标题必填），可带标签"), parameters:{type:"object", properties:{
+    scenario:{type:"string", enum:ORDER, description:t("aitool.create_task.scenario.desc","场景键，如 office/code/study")},
+    title:{type:"string", description:t("aitool.create_task.title.desc","任务标题")}, due:{type:"string", description:t("aitool.create_task.due.desc","截止日期 YYYY-MM-DD，可空")},
+    priority:{type:"string", enum:["","P0","P1","P2"]}, tags:{type:"array", items:{type:"string"}, description:t("aitool.create_task.tags.desc","标签列表")}}, required:["title"]}}},
+  {type:"function", function:{name:"list_tasks", description:t("aitool.list_tasks.desc","查询某场景的任务，可按状态过滤"), parameters:{type:"object", properties:{
     scenario:{type:"string", enum:ORDER}, status:{type:"string", enum:["","todo","doing","done"]}}, required:[]}}},
-  {type:"function", function:{name:"complete_task", description:"按任务 id 或标题关键词标记任务完成", parameters:{type:"object", properties:{
-    task_id:{type:"string", description:"任务 id，或任务标题中的关键词（用于定位任务）"}}, required:["task_id"]}}},
-  {type:"function", function:{name:"update_task", description:"修改任务的状态/优先级/截止日期/标签（按 id 或标题关键词定位）", parameters:{type:"object", properties:{
-    task_id:{type:"string", description:"任务 id，或任务标题中的关键词"}, status:{type:"string", enum:["todo","doing","done"]},
-    priority:{type:"string", enum:["","P0","P1","P2"]}, due:{type:"string", description:"新截止日期 YYYY-MM-DD"},
-    tags:{type:"array", items:{type:"string"}, description:"覆盖该任务的标签"},
-    force:{type:"boolean", description:"设为 true 直接执行修改；默认 false 会先返回确认提示（需二次确认）"}}, required:["task_id"]}}},
-  {type:"function", function:{name:"delete_task", description:"按 id 或标题关键词删除一条任务（进入回收站，可恢复）", parameters:{type:"object", properties:{
-    task_id:{type:"string", description:"任务 id，或任务标题中的关键词"},
-    force:{type:"boolean", description:"设为 true 直接软删除（进回收站）；默认 false 会先返回确认提示（需二次确认）"}}, required:["task_id"]}}},
-  {type:"function", function:{name:"add_record", description:"向某场景的资料库添加一条记录", parameters:{type:"object", properties:{
+  {type:"function", function:{name:"complete_task", description:t("aitool.complete_task.desc","按任务 id 或标题关键词标记任务完成"), parameters:{type:"object", properties:{
+    task_id:{type:"string", description:t("aitool.complete_task.task_id.desc","任务 id，或任务标题中的关键词（用于定位任务）")}}, required:["task_id"]}}},
+  {type:"function", function:{name:"update_task", description:t("aitool.update_task.desc","修改任务的状态/优先级/截止日期/标签（按 id 或标题关键词定位）"), parameters:{type:"object", properties:{
+    task_id:{type:"string", description:t("aitool.update_task.task_id.desc","任务 id，或任务标题中的关键词")}, status:{type:"string", enum:["todo","doing","done"]},
+    priority:{type:"string", enum:["","P0","P1","P2"]}, due:{type:"string", description:t("aitool.update_task.due.desc","新截止日期 YYYY-MM-DD")},
+    tags:{type:"array", items:{type:"string"}, description:t("aitool.update_task.tags.desc","覆盖该任务的标签")},
+    force:{type:"boolean", description:t("aitool.update_task.force.desc","设为 true 直接执行修改；默认 false 会先返回确认提示（需二次确认）")}}, required:["task_id"]}}},
+  {type:"function", function:{name:"delete_task", description:t("aitool.delete_task.desc","按 id 或标题关键词删除一条任务（进入回收站，可恢复）"), parameters:{type:"object", properties:{
+    task_id:{type:"string", description:t("aitool.delete_task.task_id.desc","任务 id，或任务标题中的关键词")},
+    force:{type:"boolean", description:t("aitool.delete_task.force.desc","设为 true 直接软删除（进回收站）；默认 false 会先返回确认提示（需二次确认）")}}, required:["task_id"]}}},
+  {type:"function", function:{name:"add_record", description:t("aitool.add_record.desc","向某场景的资料库添加一条记录"), parameters:{type:"object", properties:{
     scenario:{type:"string", enum:ORDER}, fields:_recordFieldsSchema()}, required:["scenario","fields"]}}},
-  {type:"function", function:{name:"search", description:"全局搜索任务与资料库中的条目", parameters:{type:"object", properties:{
-    query:{type:"string", description:"搜索关键词"}}, required:["query"]}}},
-  {type:"function", function:{name:"query_overview", description:"返回各场景任务统计与今日/逾期待处理数量", parameters:{type:"object", properties:{}}}},
-  {type:"function", function:{name:"export_data", description:"导出当前全部数据为 JSON 备份", parameters:{type:"object", properties:{}}}},
-  {type:"function", function:{name:"remember", description:"把用户的事实/偏好/决定写入工作记忆，供后续对话自动召回（如“我喜欢简洁回复”“本周重点是 v2 上线”）", parameters:{type:"object", properties:{
-    scope:{type:"string", enum:["global"].concat(ORDER), description:"global=全场景通用，否则按场景键隔离"}, text:{type:"string", description:"要记住的内容，一句话"}}, required:["text"]}}},
-  {type:"function", function:{name:"recall", description:"按关键词检索工作记忆，回答涉及用户偏好/历史决定前先查", parameters:{type:"object", properties:{
-    query:{type:"string", description:"检索关键词"}}, required:["query"]}}},
-  {type:"function", function:{name:"forget", description:"按 id 或内容关键词删除一条工作记忆", parameters:{type:"object", properties:{
-    id:{type:"string", description:"记忆 id 或内容关键词"}}, required:["id"]}}},
-  {type:"function", function:{name:"plan", description:"为多步任务建立目标与步骤清单（跨场景可拆步）。建立后按步骤调用工具执行，每步完成用 complete_step 标记，全部完成用 complete_goal 收尾", parameters:{type:"object", properties:{
-    goal:{type:"string", description:"目标标题"}, scenario:{type:"string", enum:ORDER, description:"主场景"}, steps:{type:"array", items:{type:"string"}, description:"步骤清单，按执行顺序"}}, required:["goal","steps"]}}},
-  {type:"function", function:{name:"complete_step", description:"标记当前目标的某一步已完成", parameters:{type:"object", properties:{
-    index:{type:"integer", description:"步骤序号（从 0 开始）"}, note:{type:"string", description:"该步结果说明，可空"}}, required:["index"]}}},
-  {type:"function", function:{name:"complete_goal", description:"目标全部步骤完成后调用，收尾并总结", parameters:{type:"object", properties:{
-    summary:{type:"string", description:"完成总结"}}, required:[]}}},
-  {type:"function", function:{name:"list_records", description:"查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等）", parameters:{type:"object", properties:{
+  {type:"function", function:{name:"search", description:t("aitool.search.desc","全局搜索任务与资料库中的条目"), parameters:{type:"object", properties:{
+    query:{type:"string", description:t("aitool.search.query.desc","搜索关键词")}}, required:["query"]}}},
+  {type:"function", function:{name:"query_overview", description:t("aitool.query_overview.desc","返回各场景任务统计与今日/逾期待处理数量"), parameters:{type:"object", properties:{}}}},
+  {type:"function", function:{name:"export_data", description:t("aitool.export_data.desc","导出当前全部数据为 JSON 备份"), parameters:{type:"object", properties:{}}}},
+  {type:"function", function:{name:"remember", description:t("aitool.remember.desc","把用户的事实/偏好/决定写入工作记忆，供后续对话自动召回（如“我喜欢简洁回复”“本周重点是 v2 上线”）"), parameters:{type:"object", properties:{
+    scope:{type:"string", enum:["global"].concat(ORDER), description:t("aitool.remember.scope.desc","global=全场景通用，否则按场景键隔离")}, text:{type:"string", description:t("aitool.remember.text.desc","要记住的内容，一句话")}}, required:["text"]}}},
+  {type:"function", function:{name:"recall", description:t("aitool.recall.desc","按关键词检索工作记忆，回答涉及用户偏好/历史决定前先查"), parameters:{type:"object", properties:{
+    query:{type:"string", description:t("aitool.recall.query.desc","检索关键词")}}, required:["query"]}}},
+  {type:"function", function:{name:"forget", description:t("aitool.forget.desc","按 id 或内容关键词删除一条工作记忆"), parameters:{type:"object", properties:{
+    id:{type:"string", description:t("aitool.forget.id.desc","记忆 id 或内容关键词")}}, required:["id"]}}},
+  {type:"function", function:{name:"plan", description:t("aitool.plan.desc","为多步任务建立目标与步骤清单（跨场景可拆步）。建立后按步骤调用工具执行，每步完成用 complete_step 标记，全部完成用 complete_goal 收尾"), parameters:{type:"object", properties:{
+    goal:{type:"string", description:t("aitool.plan.goal.desc","目标标题")}, scenario:{type:"string", enum:ORDER, description:t("aitool.plan.scenario.desc","主场景")}, steps:{type:"array", items:{type:"string"}, description:t("aitool.plan.steps.desc","步骤清单，按执行顺序")}}, required:["goal","steps"]}}},
+  {type:"function", function:{name:"complete_step", description:t("aitool.complete_step.desc","标记当前目标的某一步已完成"), parameters:{type:"object", properties:{
+    index:{type:"integer", description:t("aitool.complete_step.index.desc","步骤序号（从 0 开始）")}, note:{type:"string", description:t("aitool.complete_step.note.desc","该步结果说明，可空")}}, required:["index"]}}},
+  {type:"function", function:{name:"complete_goal", description:t("aitool.complete_goal.desc","目标全部步骤完成后调用，收尾并总结"), parameters:{type:"object", properties:{
+    summary:{type:"string", description:t("aitool.complete_goal.summary.desc","完成总结")}}, required:[]}}},
+  {type:"function", function:{name:"list_records", description:t("aitool.list_records.desc","查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等）"), parameters:{type:"object", properties:{
     scenario:{type:"string", enum:ORDER}}, required:["scenario"]}}},
-  {type:"function", function:{name:"add_feature_record", description:"向当前场景的功能卡添加一条记录（如会议/项目/考勤/报销/知识库/阅读/练习/考试/报表/图表/前端/SQL/UI/3D/计划）", parameters:{type:"object", properties:{
-    feature:{type:"string", description:"功能 id：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan"},
-    fields:{type:"object", description:"字段键值对（各功能表单字段，如会议 title/date/who/note）"}}, required:["feature","fields"]}}},
+  {type:"function", function:{name:"add_feature_record", description:t("aitool.add_feature_record.desc","向当前场景的功能卡添加一条记录（如会议/项目/考勤/报销/知识库/阅读/练习/考试/报表/图表/前端/SQL/UI/3D/计划）"), parameters:{type:"object", properties:{
+    feature:{type:"string", description:t("aitool.add_feature_record.feature.desc","功能 id：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan")},
+    fields:{type:"object", description:t("aitool.add_feature_record.fields.desc","字段键值对（各功能表单字段，如会议 title/date/who/note）")}}, required:["feature","fields"]}}},
   // ===== AI 能力增强：新工具 schema（web_search/web_fetch/code_run/sql_query/note_add/note_search） =====
-  {type:"function", function:{name:"web_search", description:"联网搜索（可配置搜索引擎，返回标题/摘要/链接）", parameters:{type:"object", properties:{
-    query:{type:"string", description:"搜索关键词"}, engine:{type:"string", description:"搜索引擎 id（可空，默认用配置）"}, limit:{type:"integer", description:"返回条数（默认 5）"}}, required:["query"]}}},
-  {type:"function", function:{name:"web_fetch", description:"抓取指定 URL 的网页内容（纯文本，去标签）", parameters:{type:"object", properties:{
-    url:{type:"string", description:"要抓取的 URL（http/https）"}, selector:{type:"string", description:"可选 CSS 选择器（提取局部）"}}, required:["url"]}}},
-  {type:"function", function:{name:"code_run", description:"在 Web Worker 沙箱中运行 JS 代码（5s 超时，收集 console 输出）", parameters:{type:"object", properties:{
-    code:{type:"string", description:"要执行的 JS 代码片段"}, timeout:{type:"integer", description:"超时毫秒（默认 5000）"}}, required:["code"]}}},
-  {type:"function", function:{name:"sql_query", description:"在内存 SQLite（sql.js WASM）中运行 SQL，返回列名与行数据", parameters:{type:"object", properties:{
-    sql:{type:"string", description:"SQL 语句（支持多语句，以分号分隔）"}, schema:{type:"string", description:"建表 DDL（可选，执行前先运行）"}}, required:["sql"]}}},
-  {type:"function", function:{name:"note_add", description:"新增一条笔记（标题/内容/标签/分类），存 localStorage", parameters:{type:"object", properties:{
-    title:{type:"string", description:"笔记标题"}, content:{type:"string", description:"Markdown 内容"},
-    tags:{type:"array", items:{type:"string"}, description:"标签列表"}, category:{type:"string", description:"分类（如知识库/工作笔记）"}}, required:["title","content"]}}},
-  {type:"function", function:{name:"note_search", description:"按关键词搜索笔记（标题+内容匹配）", parameters:{type:"object", properties:{
-    query:{type:"string", description:"搜索关键词"}}, required:["query"]}}}
+  {type:"function", function:{name:"web_search", description:t("aitool.web_search.desc","联网搜索（可配置搜索引擎，返回标题/摘要/链接）"), parameters:{type:"object", properties:{
+    query:{type:"string", description:t("aitool.web_search.query.desc","搜索关键词")}, engine:{type:"string", description:t("aitool.web_search.engine.desc","搜索引擎 id（可空，默认用配置）")}, limit:{type:"integer", description:t("aitool.web_search.limit.desc","返回条数（默认 5）")}}, required:["query"]}}},
+  {type:"function", function:{name:"web_fetch", description:t("aitool.web_fetch.desc","抓取指定 URL 的网页内容（纯文本，去标签）"), parameters:{type:"object", properties:{
+    url:{type:"string", description:t("aitool.web_fetch.url.desc","要抓取的 URL（http/https）")}, selector:{type:"string", description:t("aitool.web_fetch.selector.desc","可选 CSS 选择器（提取局部）")}}, required:["url"]}}},
+  {type:"function", function:{name:"code_run", description:t("aitool.code_run.desc","在 Web Worker 沙箱中运行 JS 代码（5s 超时，收集 console 输出）"), parameters:{type:"object", properties:{
+    code:{type:"string", description:t("aitool.code_run.code.desc","要执行的 JS 代码片段")}, timeout:{type:"integer", description:t("aitool.code_run.timeout.desc","超时毫秒（默认 5000）")}}, required:["code"]}}},
+  {type:"function", function:{name:"sql_query", description:t("aitool.sql_query.desc","在内存 SQLite（sql.js WASM）中运行 SQL，返回列名与行数据"), parameters:{type:"object", properties:{
+    sql:{type:"string", description:t("aitool.sql_query.sql.desc","SQL 语句（支持多语句，以分号分隔）")}, schema:{type:"string", description:t("aitool.sql_query.schema.desc","建表 DDL（可选，执行前先运行）")}}, required:["sql"]}}},
+  {type:"function", function:{name:"note_add", description:t("aitool.note_add.desc","新增一条笔记（标题/内容/标签/分类），存 localStorage"), parameters:{type:"object", properties:{
+    title:{type:"string", description:t("aitool.note_add.title.desc","笔记标题")}, content:{type:"string", description:t("aitool.note_add.content.desc","Markdown 内容")},
+    tags:{type:"array", items:{type:"string"}, description:t("aitool.note_add.tags.desc","标签列表")}, category:{type:"string", description:t("aitool.note_add.category.desc","分类（如知识库/工作笔记）")}}, required:["title","content"]}}},
+  {type:"function", function:{name:"note_search", description:t("aitool.note_search.desc","按关键词搜索笔记（标题+内容匹配）"), parameters:{type:"object", properties:{
+    query:{type:"string", description:t("aitool.note_search.query.desc","搜索关键词")}}, required:["query"]}}}
 ];
 
 /* ---------- AI 层降级重定位（v1.15）：cfg.agent=false 时关闭 Agent 工具与话术 ----------
@@ -8636,7 +8636,7 @@ async function initCrypto(){
   // T5.3 浏览器兼容：Web Crypto 不可用（file:// 降级 / 旧浏览器 / 不安全上下文）时 warn 一次，Key 将明文存储
   if(!_cryptoReady && typeof console !== "undefined" && console.warn && !_cryptoWarned){
     _cryptoWarned = true;
-    try{ console.warn("[Agent Workshop] Web Crypto API 不可用，AI Key 将明文存储于 localStorage"); }catch(e){ /* noop */ }
+    try{ console.warn("[Agent Workshop] " + t("debug.cryptoUnavailable","Web Crypto API 不可用，AI Key 将明文存储于 localStorage")); }catch(e){ /* noop */ }
   }
   const raw = load(PREFIX+"cfg", {});
 
@@ -8951,7 +8951,7 @@ function renderHeatmap(sc){
   const colW = cell + gap;
   const W = labelW + weeks * colW + gap;
   const H = 7 * colW + gap;
-  const weekdays = ["一","二","三","四","五","六","日"];
+  const weekdays = [t("weekday.mon","一"),t("weekday.tue","二"),t("weekday.wed","三"),t("weekday.thu","四"),t("weekday.fri","五"),t("weekday.sat","六"),t("weekday.sun","日")];
   let cells = "";
   for(let w = 0; w < weeks; w++){
     for(let dow = 0; dow < 7; dow++){
@@ -9143,7 +9143,7 @@ function renderHabitChainStatus(){
       const daysAgo = Math.floor((now - lastDone) / 86400000);
       if(daysAgo <= 0) lastText = t("chainStatus.today", "上次触发：今天");
       else if(daysAgo === 1) lastText = t("chainStatus.days1", "上次触发：1 天前");
-      else lastText = `上次触发：${daysAgo} 天前`;
+      else lastText = t("chain.lastTrigger", "上次触发：{n} 天前").replace("{n}", daysAgo);
     }
     return `<div class="lk${enabled ? "" : " disabled"}">` +
       `<span style="color:${fm.color}">${fm.name}</span>` +
@@ -9376,7 +9376,7 @@ function thisWeekDone(sc){
 /* ---------- 渲染：侧边导航（v2.1.0 两级菜单） ---------- */
 // v1.9.9：折叠按钮回归侧栏顶部（"全局"组上方），用户确认放回原位
 const SIDE_TOGGLE_HTML = `<button type="button" class="side-toggle" id="sideToggle" aria-label="${t("side.toggleAria", "折叠或展开侧边栏")}" title="${t("side.toggleTitle", "折叠/展开")}">
-  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl">折叠</span></button>`;
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl" data-i18n="chat.collapseLbl">折叠</span></button>`;
 
 /* v2.1.0：两级菜单图标集（顶级项用；子项用 CSS 圆点标记，不配图标） */
 /* v2.1.1 去重：与 UI_ICONS 同形的图标按 key 引用单一真相源；dash 改仪表盘（gauge）与统计柱状图区分 */
@@ -9770,11 +9770,12 @@ function openRecycle(){
   // v3.1：多类型回收站——任务走软删除，配置/文件/插件走 wb_recycle_bin
   const binItems = getRecycleBin();
   // 统一构造回收项视图模型：{id, type, title, desc, when, whenStr, source, color, scName, isTask}
+  const _typeTaskLabel = t("rec.typeTask", "任务");
   const taskVms = del.map(t=>{
     const sm = scMeta(t.sc);
     const w = new Date(t.deletedAt);
     const whenStr = (w.getMonth()+1)+"/"+w.getDate()+" "+pad(w.getHours())+":"+pad(w.getMinutes());
-    return { id: t.id, type: "任务", title: t.title||"", desc: "", when: t.deletedAt, whenStr: whenStr, source: sm.name, color: sm.color, scName: sm.name, isTask: true };
+    return { id: t.id, type: _typeTaskLabel, title: t.title||"", desc: "", when: t.deletedAt, whenStr: whenStr, source: sm.name, color: sm.color, scName: sm.name, isTask: true };
   });
   const binVms = binItems.map(it=>{
     const w = new Date(it.deletedAt||0);
@@ -9912,7 +9913,7 @@ function openChartStore(){
     <div class="card chart-store-card">
       <div class="chart-store-body">
         <aside class="cs-lib" role="region" aria-label="${t("a11y.chartLib", "图表库")}">
-          <h3>图表库</h3>
+          <h3 data-i18n="chartStore.libTitle">图表库</h3>
           ${libHtml}
         </aside>
         <div class="cs-canvas" id="csCanvas" role="region" aria-label="${t("a11y.canvas", "画布")}" class="u-h-560 u-pos-relative">
@@ -10418,7 +10419,7 @@ function _bindRecordToolRedirect(toolId, targetName, sceneKey, featId){
   const add = root.querySelector("#recAddBtn");
   if(add){
     add.onclick = function(){
-      toast(toolId + " 已收敛到" + targetName + "——即将跳转", "info");
+      toast(toolId + t("tool.convergedTo", " 已收敛到") + targetName + t("tool.jumpingSoon", "——即将跳转"), "info");
       setActive(sceneKey);
       sceneFeatureMode = featId;
       render();
@@ -10523,7 +10524,7 @@ const TOOL_APPS = {
       const btns = [["bold","B",t("tool.word.bold", "加粗")],["italic","I",t("tool.word.italic", "斜体")],["underline","U",t("tool.word.underline", "下划线")],["insertUnorderedList","≡",t("tool.word.ul", "无序列表")],["insertOrderedList","1.",t("tool.word.ol", "有序列表")],["removeFormat","✕格式",t("tool.word.clearFmt", "清除格式")]];
       return '<div class="word-toolbar u-flex u-mb-2 u-flex-wrap u-gap-1">'
         + btns.map(function(b){ return '<button type="button" class="addbtn xs" data-wcmd="' + b[0] + '" title="' + esc(b[2]) + '"><b>' + esc(b[1]) + "</b></button>"; }).join("")
-        + '<select id="wFont" aria-label="标题级别"><option value="">正文</option><option value="H1">标题 1</option><option value="H2">标题 2</option><option value="H3">标题 3</option></select></div>'
+        + '<select id="wFont" aria-label="标题级别" data-i18n-aria="a11y.titleLevel"><option value="">正文</option><option value="H1">标题 1</option><option value="H2">标题 2</option><option value="H3">标题 3</option></select></div>'
         + '<div contenteditable="true" id="wordEd" class="card u-min-h-360 u-outline-none u-lh-17"class="u-p-4">' + saved + "</div>"
         + '<div class="tool-actions"><button type="button" class="addbtn sm" id="wordExportHtml">导出 .html</button>'
         + '<button type="button" class="addbtn sm" id="wordExportDoc">导出 .doc</button></div>';
@@ -10582,7 +10583,7 @@ const TOOL_APPS = {
       };
       const persist = function(){ _toolSave("off-sheet", { rows: getRows() }); };
       $$("#sheetTbl input").forEach(function(inp){ inp.onchange = persist; });
-      const rerender = function(){ openToolStub("off-sheet", "表格"); };
+      const rerender = function(){ openToolStub("off-sheet", t("tool.sheet.title","表格")); };
       $("#shAddRow").onclick = function(){ persist(); const d = load(PREFIX+"tool_off-sheet", {rows:[[""]]}); d.rows.push(new Array((d.rows[0]||[""]).length).fill("")); _toolSave("off-sheet", d); rerender(); };
       $("#shAddCol").onclick = function(){ persist(); const d = load(PREFIX+"tool_off-sheet", {rows:[[""]]}); d.rows.forEach(function(r){ r.push(""); }); _toolSave("off-sheet", d); rerender(); };
       $("#shDelRow").onclick = function(){ persist(); const d = load(PREFIX+"tool_off-sheet", {rows:[[]]}); if(d.rows.length > 1){ d.rows.pop(); _toolSave("off-sheet", d); rerender(); } else toast(t("tool.sheet.minRow", "至少保留一行"), "warn"); };
@@ -10637,7 +10638,7 @@ const TOOL_APPS = {
       $("#pptTitle").oninput = saveAll;
       $("#pptBody").oninput = saveAll;
       $("#pptAdd").onclick = function(){ saveAll(); slides.push({ id:_toolUid(), title:t("tool.ppt.newPageTitle", "新页面"), body:"" }); _toolSave("off-ppt", slides); openToolStub("off-ppt", "幻灯片"); };
-      $("#pptDel").onclick = function(){ if(slides.length <= 1){ toast(t("tool.ppt.minPage", "至少保留一页"), "warn"); return; } saveAll(); slides.splice(cur, 1); _toolSave("off-ppt", slides); openToolStub("off-ppt", "幻灯片"); };
+      $("#pptDel").onclick = function(){ if(slides.length <= 1){ toast(t("tool.ppt.minPage", "至少保留一页"), "warn"); return; } saveAll(); slides.splice(cur, 1); _toolSave("off-ppt", slides); openToolStub("off-ppt", t("tool.ppt.slidesName", "幻灯片")); };
       $("#pptExportJson").onclick = function(){ saveAll(); _toolDownload("slides.json", JSON.stringify(slides, null, 2), "application/json"); };
       const showStage = function(i){
         stageIdx = Math.max(0, Math.min(i, slides.length - 1));
@@ -10646,7 +10647,7 @@ const TOOL_APPS = {
         $("#stageBody").textContent = s.body || "";
       };
       $("#pptPlay").onclick = function(){ saveAll(); $("#pptStage").hidden = false; showStage(0); };
-      $("#stageExit").onclick = function(){ $("#pptStage").hidden = true; openToolStub("off-ppt", "幻灯片"); };
+      $("#stageExit").onclick = function(){ $("#pptStage").hidden = true; openToolStub("off-ppt", t("tool.ppt.slidesName","幻灯片")); };
       $("#stagePrev").onclick = function(){ showStage(stageIdx - 1); };
       $("#stageNext").onclick = function(){ showStage(stageIdx + 1); };
       loadCur();
@@ -10713,7 +10714,7 @@ const TOOL_APPS = {
     name:t("tool.cad.name", "CAD 画布"), icon:UI_ICONS.cad, desc:t("tool.cad.desc", "矢量绘制 · 导出 SVG/PNG"),
     render: function(){
       return '<div class="tool-filter-bar">'
-        + ["line|线条","rect|矩形","circle|圆","poly|多边形"].map(function(t){ const p=t.split("|");
+        + ["line|"+t("tool.line","线条"),"rect|"+t("tool.rect","矩形"),"circle|"+t("tool.circle","圆"),"poly|"+t("tool.poly","多边形")].map(function(t){ const p=t.split("|");
             return '<button type="button" class="addbtn sm cad-tool" data-cad-tool="' + p[0] + '">' + p[1] + "</button>"; }).join("")
         + '<button type="button" class="addbtn sm" data-sc="danger" id="cadUndo">撤销</button>'
         + '<button type="button" class="addbtn sm" data-sc="danger" id="cadClear">清空</button>'
@@ -11281,7 +11282,7 @@ const TOOL_APPS = {
       /* v3.2 C-档双轨收敛：运动三套存储（tool_lif-sport / life_health / rec_life 运动记录）收敛——
        * 以 getHealthRecs() 双源聚合为准（B-档已做 rec_life+life_health 统一），工具箱改只读代理 */
       const recs = (getHealthRecs() || []).filter(function(r){ return r.type === "运动记录"; }).map(function(r){
-        return { id:r.id, type:(r.title||"运动"), date:(r._date || (r.created ? new Date(r.created).toISOString().slice(0,10) : "")), mins:parseNum(r.value), note:r.note||"", done:true };
+        return { id:r.id, type:(r.title||t("rec.exercise","运动")), date:(r._date || (r.created ? new Date(r.created).toISOString().slice(0,10) : "")), mins:parseNum(r.value), note:r.note||"", done:true };
       }).concat(_toolData("lif-sport").filter(function(r){ return r && r.type; }));
       return _recordToolHtml({
         fields:[
@@ -12661,12 +12662,12 @@ function withSkeleton(fn, skeletonType){
 // 按时间段返回问候语（A1）
 function greeting(){
   const h = new Date().getHours();
-  if(h < 6) return "夜深了";
-  if(h < 12) return "早安";
-  if(h < 14) return "午安";
-  if(h < 18) return "下午好";
-  if(h < 22) return "晚上好";
-  return "夜深了";
+  if(h < 6) return t("greeting.lateNight", "夜深了");
+  if(h < 12) return t("greeting.morning", "早安");
+  if(h < 14) return t("greeting.noon", "午安");
+  if(h < 18) return t("greeting.afternoon", "下午好");
+  if(h < 22) return t("greeting.evening", "晚上好");
+  return t("greeting.lateNight", "夜深了");
 }
 // 优先级权重：P0 最优先，无优先级最后
 function _priWeight(p){ return p==="P0"?0 : p==="P1"?1 : p==="P2"?2 : 3; }
@@ -12710,7 +12711,7 @@ function renderToday(){
         <span class="dot" style="background:${s.color}"></span>
         <span class="title">${esc(x.title)}</span>
         <span class="sc-name">${s.name}</span>
-        <button type="button" class="mini snooze-btn" data-snooze="${esc(x.id)}" title="30 分钟后再提醒">稍后</button>
+        <button type="button" class="mini snooze-btn" data-snooze="${esc(x.id)}" title="30 分钟后再提醒" data-i18n-title="ui.snooze30MinTitle" data-i18n="task.snoozeBtnText">稍后</button>
       </li>`;
     }).join("");
     const needExpand = top5.length > TOP3_PREVIEW;
@@ -12778,14 +12779,14 @@ function _onboardRenderStep(step){
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
         <div class="onboard-title">${t("onboard.welcome")}</div>
-        <div class="onboard-desc">这是一个帮你管理任务、养成习惯的工具。先创建你的第一个任务吧！</div>
+        <div class="onboard-desc" data-i18n="onboard.step1Desc">这是一个帮你管理任务、养成习惯的工具。先创建你的第一个任务吧！</div>
         <div class="onboard-scenarios" id="onboardSc">
           ${ORDER.map(sc=>`<button type="button" class="onboard-sc-btn${sc===_onboardSelectedSc?" selected":""}" data-sc="${sc}">${SCENARIOS[sc].name}</button>`).join("")}
         </div>
-        <input class="onboard-input" id="onboardTaskInput" placeholder="任务标题，如 写周报 / 修复报错 / 缴水电费">
+        <input class="onboard-input" id="onboardTaskInput" placeholder="任务标题，如 写周报 / 修复报错 / 缴水电费" data-i18n-placeholder="field.onboardTaskInputPh">
         <div class="onboard-actions">
-          <button type="button" class="onboard-btn-secondary" id="onboardSkip">跳过</button>
-          <button type="button" class="onboard-btn-primary" id="onboardCreate">创建</button>
+          <button type="button" class="onboard-btn-secondary" id="onboardSkip" data-i18n="onboard.skip1">跳过</button>
+          <button type="button" class="onboard-btn-primary" id="onboardCreate" data-i18n="onboard.create">创建</button>
         </div>
       </div>
     </div>`;
@@ -12793,17 +12794,17 @@ function _onboardRenderStep(step){
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
-        <div class="onboard-title">场景联动 — 让正反馈转起来</div>
-        <div class="onboard-desc">完成任务可以触发跨场景联动。比如交付任务完成后自动提醒你学习充电。</div>
+        <div class="onboard-title" data-i18n="onboard.step2Title">场景联动 — 让正反馈转起来</div>
+        <div class="onboard-desc" data-i18n="onboard.step2Desc">完成任务可以触发跨场景联动。比如交付任务完成后自动提醒你学习充电。</div>
         <div class="onboard-chain-demo">
           <span class="u-fw-600" style="color:${SCENARIOS.office.color};font-size:18px">${SCENARIOS.office.name}</span>
           <span class="arr">→</span>
           <span class="u-fw-600" style="color:${SCENARIOS.study.color};font-size:18px">${SCENARIOS.study.name}</span>
         </div>
         <div class="onboard-actions">
-          <button type="button" class="onboard-btn-secondary" id="onboardSkip">跳过</button>
-          <button type="button" class="onboard-btn-secondary" id="onboardTrigger">模拟触发</button>
-          <button type="button" class="onboard-btn-primary" id="onboardNext">下一步</button>
+          <button type="button" class="onboard-btn-secondary" id="onboardSkip" data-i18n="onboard.skip2">跳过</button>
+          <button type="button" class="onboard-btn-secondary" id="onboardTrigger" data-i18n="onboard.simulate">模拟触发</button>
+          <button type="button" class="onboard-btn-primary" id="onboardNext" data-i18n="onboard.next">下一步</button>
         </div>
       </div>
     </div>`;
@@ -12811,11 +12812,11 @@ function _onboardRenderStep(step){
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
-        <div class="onboard-title">配置 AI 助手（可选）</div>
-        <div class="onboard-desc">配置 AI 后，每个场景都有专属 AI 助手帮你建任务、查总览、搜索。</div>
+        <div class="onboard-title" data-i18n="onboard.step3Title">配置 AI 助手（可选）</div>
+        <div class="onboard-desc" data-i18n="onboard.step3Desc">配置 AI 后，每个场景都有专属 AI 助手帮你建任务、查总览、搜索。</div>
         <div class="onboard-actions">
-          <button type="button" class="onboard-btn-secondary" id="onboardSkip">稍后再说</button>
-          <button type="button" class="onboard-btn-primary" id="onboardConfig">去设置</button>
+          <button type="button" class="onboard-btn-secondary" id="onboardSkip" data-i18n="onboard.later">稍后再说</button>
+          <button type="button" class="onboard-btn-primary" id="onboardConfig" data-i18n="onboard.goSettings">去设置</button>
         </div>
       </div>
     </div>`;
@@ -12855,7 +12856,7 @@ function _onboardBindStep(step){
     if(trigger) trigger.onclick = ()=>{
       // 创建一个 office 交付任务并完成，触发联动
       const tasks = getTasks();
-      const _task = {id:uid(), sc:"office", title:"交付上线 v2.3", due:todayStr(), priority:"P1", status:"todo", doneAt:null, note:"onboarding 模拟触发", tags:["onboarding"], created:Date.now()};
+      const _task = {id:uid(), sc:"office", title:t("onboard.deliveryTitle","交付上线 v2.3"), due:todayStr(), priority:"P1", status:"todo", doneAt:null, note:t("onboard.deliveryNote","onboarding 模拟触发"), tags:["onboarding"], created:Date.now()};
       tasks.push(_task);
       setTasks(tasks);
       completeTask(_task.id);
@@ -12906,109 +12907,109 @@ function renderHelp(){
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.doc}</span>
       <div class="ph-tx">
         <h2 data-i18n="nav.help">说明</h2>
-        <p class="sub">快速上手 · 场景说明 · AI 技巧 · 数据安全</p>
+        <p class="sub" data-i18n="help.subTitle">快速上手 · 场景说明 · AI 技巧 · 数据安全</p>
       </div>
-      <button class="page-back help-back" id="helpBack" aria-label="返回上一视图" type="button">← 返回</button>
+      <button class="page-back help-back" id="helpBack" aria-label="返回上一视图" data-i18n-aria="a11y.returnPrevView" type="button" data-i18n="help.backBtnText">← 返回</button>
     </header></div>
     <div class="help-page" id="helpPage">
       <div class="help-body">
-        ${helpSection("快速上手", "快速上手", `
-          <p>3 步开始使用：</p>
+        ${helpSection("quickStart", t("help.quickStart", "快速上手"), `
+          <p data-i18n="help.stepStart">3 步开始使用：</p>
           <ol>
-            <li><b>建任务</b>：点左侧场景（办公/编程/学习），在任务看板点「+」添加任务</li>
-            <li><b>完成任务</b>：点任务卡片的「完成」按钮，可能触发联动自动生成后续任务</li>
-            <li><b>用 AI</b>：在场景底部的聊天框输入「建个任务：明天写周报」「查总览」「搜索 跑步」</li>
+            <li><b data-i18n="help.step1Build">建任务</b>：点左侧场景（办公/编程/学习），在任务看板点「+」添加任务</li>
+            <li><b data-i18n="help.step1Complete">完成任务</b>：点任务卡片的「完成」按钮，可能触发联动自动生成后续任务</li>
+            <li><b data-i18n="help.step1Ai">用 AI</b>：在场景底部的聊天框输入「建个任务：明天写周报」「查总览」「搜索 跑步」</li>
           </ol>
         `)}
-        ${helpSection("场景说明", "场景说明", `
-          <p><b>6 场景</b>：办公 / 数据 / 设计 / 学习 / 编程 / 生活</p>
-          <p><b>办公</b>（蓝色）：会议纪要、工作任务、周报。AI 帮你梳理任务、润色邮件。</p>
-          <p><b>数据</b>（青色）：数据记录、指标快照、分析结论。AI 帮数据清洗与洞察提炼。</p>
-          <p><b>设计</b>（粉色）：作品记录、灵感板、视觉设计。AI 帮配色构图与创意激发。</p>
-          <p><b>学习</b>（橙色）：学习资料 + SM-2 间隔复习。AI 帮制定学习计划。</p>
-          <p><b>编程</b>（绿色）：代码片段、工程任务。AI 给可运行代码和架构建议。</p>
-          <p><b>生活</b>（紫色）：日常事务、运动/体重/睡眠/喝水记录。AI 帮打理健康与琐事。</p>
+        ${helpSection("scenes", t("help.scenes", "场景说明"), `
+          <p><b data-i18n="help.scenesTitle">6 场景</b>：办公 / 数据 / 设计 / 学习 / 编程 / 生活</p>
+          <p><b data-i18n="help.sceneOffice">办公</b>（蓝色）：会议纪要、工作任务、周报。AI 帮你梳理任务、润色邮件。</p>
+          <p><b data-i18n="help.sceneData">数据</b>（青色）：数据记录、指标快照、分析结论。AI 帮数据清洗与洞察提炼。</p>
+          <p><b data-i18n="help.sceneDesign">设计</b>（粉色）：作品记录、灵感板、视觉设计。AI 帮配色构图与创意激发。</p>
+          <p><b data-i18n="help.sceneLearning">学习</b>（橙色）：学习资料 + SM-2 间隔复习。AI 帮制定学习计划。</p>
+          <p><b data-i18n="help.sceneCoding">编程</b>（绿色）：代码片段、工程任务。AI 给可运行代码和架构建议。</p>
+          <p><b data-i18n="help.sceneLife">生活</b>（紫色）：日常事务、运动/体重/睡眠/喝水记录。AI 帮打理健康与琐事。</p>
         `)}
-        ${helpSection("联动", "场景联动", `
-          <p>完成任务可以自动触发跨场景的奖励/后续任务，形成正反馈闭环：</p>
+        ${helpSection("chain", t("help.chain", "场景联动"), `
+          <p data-i18n="help.chainIntro">完成任务可以自动触发跨场景的奖励/后续任务，形成正反馈闭环：</p>
           <div class="help-chain-demo">
-            <span class="u-text-accent">办公</span> 交付 → <span class="u-text-warn">学习</span> 充电<br>
-            <span class="u-text-warn">学习</span> 复习 → <span class="u-text-accent">编程</span> 实践<br>
-            <span class="u-text-accent">编程</span> 上线 → <span style="color:var(--sc-life)">生活</span> 犒劳
+            <span class="u-text-accent" data-i18n="help.chainOffice">办公</span> 交付 → <span class="u-text-warn">学习</span> 充电<br>
+            <span class="u-text-warn" data-i18n="help.chainStudy">学习</span> 复习 → <span class="u-text-accent">编程</span> 实践<br>
+            <span class="u-text-accent" data-i18n="help.chainCoding">编程</span> 上线 → <span style="color:var(--sc-life)">生活</span> 犒劳
           </div>
-          <p>在设置 → 联动规则中可编辑跨场景自动规则（关键词、目标场景、启用/禁用）。</p>
+          <p data-i18n="help.chainEdit">在设置 → 联动规则中可编辑跨场景自动规则（关键词、目标场景、启用/禁用）。</p>
         `)}
-        ${helpSection("AI 使用技巧", "AI 使用技巧", `
-          <p>每个场景有专属 AI 助手（不同 system prompt）。在聊天框输入：</p>
+        ${helpSection("aiTips", t("help.aiTips", "AI 使用技巧"), `
+          <p data-i18n="help.aiIntro">每个场景有专属 AI 助手（不同 system prompt）。在聊天框输入：</p>
           <ul>
-            <li>「建个任务：明天写周报」→ AI 调用 create_task 工具</li>
-            <li>「查总览」→ AI 调用 query_overview 工具</li>
-            <li>「搜索 跑步」→ AI 调用 search 工具</li>
-            <li>「完成任务 xxx」→ AI 调用 complete_task 工具</li>
-            <li>开启 Agent 模式后还可「记住：我喜欢简洁回复」「帮我规划：本周清理办公待办」等多步任务</li>
+            <li data-i18n="help.aiCmd1">「建个任务：明天写周报」→ AI 调用 create_task 工具</li>
+            <li data-i18n="help.aiCmd2">「查总览」→ AI 调用 query_overview 工具</li>
+            <li data-i18n="help.aiCmd3">「搜索 跑步」→ AI 调用 search 工具</li>
+            <li data-i18n="help.aiCmd4">「完成任务 xxx」→ AI 调用 complete_task 工具</li>
+            <li data-i18n="help.aiCmd5">开启 Agent 模式后还可「记住：我喜欢简洁回复」「帮我规划：本周清理办公待办」等多步任务</li>
           </ul>
-          <p>AI 可以调用多种工具管理你的工作台数据（含 Agent 记忆/目标工具）。在设置中配置 API Key 后启用。</p>
+          <p data-i18n="help.aiTools">AI 可以调用多种工具管理你的工作台数据（含 Agent 记忆/目标工具）。在设置中配置 API Key 后启用。</p>
         `)}
-        ${helpSection("SM-2 间隔复习", "SM-2 间隔复习", `
-          <p>学习场景的资料支持间隔复习（SM-2 算法）。复习时选 4 个评分：</p>
+        ${helpSection("sm2", t("help.sm2", "SM-2 间隔复习"), `
+          <p data-i18n="help.reviewIntro">学习场景的资料支持间隔复习（SM-2 算法）。复习时选 4 个评分：</p>
           <ul>
             <li><b>Again</b>（重试）：忘了，明天再复习</li>
             <li><b>Hard</b>（困难）：勉强记得，缩短间隔</li>
             <li><b>Good</b>（良好）：正常记住，按计划推进</li>
             <li><b>Easy</b>（简单）：轻松记住，拉长间隔</li>
           </ul>
-          <p>系统自动计算下次复习日期和 ease factor，今日待复习的会在学习场景高亮。</p>
+          <p data-i18n="help.reviewAuto">系统自动计算下次复习日期和 ease factor，今日待复习的会在学习场景高亮。</p>
         `)}
-        ${helpSection("快捷键", "快捷键", `
+        ${helpSection("shortcuts", t("help.shortcuts", "快捷键"), `
           <table class="help-keys">
-            <tr><td><kbd>1</kbd>-<kbd>6</kbd></td><td>切换场景（办公/数据/设计/学习/编程/生活）</td></tr>
-            <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>命令面板（搜索任务、切换场景）</td></tr>
-            <tr><td><kbd>N</kbd></td><td>新建任务并聚焦标题输入</td></tr>
-            <tr><td><kbd>?</kbd></td><td>打开本快捷键帮助面板</td></tr>
-            <tr><td><kbd>Esc</kbd></td><td>关闭弹窗/抽屉</td></tr>
+            <tr><td><kbd>1</kbd>-<kbd>6</kbd></td><td data-i18n="help.kbdScenes">切换场景（办公/数据/设计/学习/编程/生活）</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td data-i18n="help.kbdCmd">命令面板（搜索任务、切换场景）</td></tr>
+            <tr><td><kbd>N</kbd></td><td data-i18n="help.kbdNew">新建任务并聚焦标题输入</td></tr>
+            <tr><td><kbd>?</kbd></td><td data-i18n="help.kbdHelp">打开本快捷键帮助面板</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td data-i18n="help.kbdClose">关闭弹窗/抽屉</td></tr>
           </table>
         `)}
-        ${helpSection("性能优化", "性能优化", `
-          <p>本工作台在渲染与存储层做了多项优化，保证大量任务下依然流畅：</p>
+        ${helpSection("perf", t("help.perf", "性能优化"), `
+          <p data-i18n="help.perfIntro">本工作台在渲染与存储层做了多项优化，保证大量任务下依然流畅：</p>
           <ul>
-            <li><b>RAF 批量更新</b>：高频操作（拖拽、连续勾选、滚动统计）自动合并到同一帧执行，避免布局抖动。</li>
-            <li><b>懒初始化</b>：重模块（图表 / 知识库）在浏览器空闲时初始化，不阻塞首屏渲染。</li>
-            <li><b>localStorage 批量写入</b>：多次写入合并为一次 flush，降低 I/O 抖动，延长存储寿命。</li>
-            <li><b>生产构建压缩</b>：<code>npm run build:prod</code> 生成压缩版（剥离注释 + 合并空行），体积节省约 32.8%。</li>
+            <li><b data-i18n="help.perfRaf">RAF 批量更新</b>：高频操作（拖拽、连续勾选、滚动统计）自动合并到同一帧执行，避免布局抖动。</li>
+            <li><b data-i18n="help.perfLazy">懒初始化</b>：重模块（图表 / 知识库）在浏览器空闲时初始化，不阻塞首屏渲染。</li>
+            <li><b data-i18n="help.perfLs">localStorage 批量写入</b>：多次写入合并为一次 flush，降低 I/O 抖动，延长存储寿命。</li>
+            <li><b data-i18n="help.perfBuild">生产构建压缩</b>：<code>npm run build:prod</code> 生成压缩版（剥离注释 + 合并空行），体积节省约 32.8%。</li>
           </ul>
-          <p>上述优化对用户透明（自动备份为防抖快照；频率固定、不可调）。</p>
+          <p data-i18n="help.perfNote">上述优化对用户透明（自动备份为防抖快照；频率固定、不可调）。</p>
         `)}
-        ${helpSection("故障排查", "故障排查", `
-          <p><b>遇到问题先看这里</b>，覆盖最常见的「数据丢了」「功能没反应」「版本没生效」：</p>
+        ${helpSection("trouble", t("help.trouble", "故障排查"), `
+          <p><b data-i18n="help.troubleTitle">遇到问题先看这里</b>，覆盖最常见的「数据丢了」「功能没反应」「版本没生效」：</p>
           <ul>
-            <li><b>数据意外丢失/异常</b>：① 打开设置抽屉「数据管理」→ 点「从自动备份恢复」还原最近一次操作前的快照（每次写操作前自动拍的，最近一次成功快照）；② 仍异常时「本地库恢复」（从 IDB 全量镜像回滚）；③ 仍异常时用「导入恢复」上传此前导出的 JSON 备份文件</li>
-            <li><b>AI 报 CORS/网络错误</b>：浏览器直接调第三方 API 受 CORS 限制时——用 <code>启动本地服务.bat</code>（<code>http://localhost:8123</code>）打开工作台而非 <code>file://</code>；Electron 版无此限制</li>
-            <li><b>新版 PWA 没生效/看到旧版</b>：清浏览器缓存 + 强制刷新（<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> / Mac: <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>）；页脚形如 <code>v3.1.x · b{BUILD_TAG}</code> 即当前生效版本</li>
-            <li><b>换浏览器/换设备/移动 HTML 文件数据没跟过来</b>：数据存于浏览器 localStorage 不跨浏览器/设备迁移——需在原设备「数据管理 → 导出 JSON」拿到备份，再到新环境「导入恢复」</li>
-            <li><b>SQL Playground 报错「WASM 加载失败」</b>：首次使用需联网从 CDN 加载 sql.js（~1MB），断网时无法使用，其他功能不受影响</li>
-            <li><b>通知/桌面提醒不弹出</b>：检查浏览器「站点权限」是否授予通知；PWA 安装版系统级通知需在系统设置开启</li>
-            <li><b>恢复误删任务</b>：设置抽屉「数据管理」下方「清空回收站」上方有回收站页入口（v3.1 起多类型：任务/配置/文件/插件，软删/卸载均入回收站）</li>
+            <li><b data-i18n="help.troubleDataLoss">数据意外丢失/异常</b>：① 打开设置抽屉「数据管理」→ 点「从自动备份恢复」还原最近一次操作前的快照（每次写操作前自动拍的，最近一次成功快照）；② 仍异常时「本地库恢复」（从 IDB 全量镜像回滚）；③ 仍异常时用「导入恢复」上传此前导出的 JSON 备份文件</li>
+            <li><b data-i18n="help.troubleCors">AI 报 CORS/网络错误</b>：浏览器直接调第三方 API 受 CORS 限制时——用 <code>启动本地服务.bat</code>（<code>http://localhost:8123</code>）打开工作台而非 <code>file://</code>；Electron 版无此限制</li>
+            <li><b data-i18n="help.troublePwa">新版 PWA 没生效/看到旧版</b>：清浏览器缓存 + 强制刷新（<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> / Mac: <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>）；页脚形如 <code>v3.1.x · b{BUILD_TAG}</code> 即当前生效版本</li>
+            <li><b data-i18n="help.troubleMigrate">换浏览器/换设备/移动 HTML 文件数据没跟过来</b>：数据存于浏览器 localStorage 不跨浏览器/设备迁移——需在原设备「数据管理 → 导出 JSON」拿到备份，再到新环境「导入恢复」</li>
+            <li><b data-i18n="help.troubleWasm">SQL Playground 报错「WASM 加载失败」</b>：首次使用需联网从 CDN 加载 sql.js（~1MB），断网时无法使用，其他功能不受影响</li>
+            <li><b data-i18n="help.troubleNotify">通知/桌面提醒不弹出</b>：检查浏览器「站点权限」是否授予通知；PWA 安装版系统级通知需在系统设置开启</li>
+            <li><b data-i18n="help.troubleRestore">恢复误删任务</b>：设置抽屉「数据管理」下方「清空回收站」上方有回收站页入口（v3.1 起多类型：任务/配置/文件/插件，软删/卸载均入回收站）</li>
           </ul>
         `)}
-        ${helpSection("集成与扩展", "集成与扩展", `
-          <p><b>集成中心</b>：设置抽屉「集成」Tab 列出 7 个外部集成（Notion/Linear/Jira/Slack/飞书/钉钉/日历）+ OpenAPI Key 管理。每个集成可配置凭据后连接。</p>
-          <p><b>OAuth 授权</b>（日历）：v3.1.2 起日历集成支持 OAuth 授权——在凭据弹窗填入服务商控制台注册的 Client ID，<code>点击 OAuth 授权</code> 自动获取 Access Token。redirect_uri 需登记 <code>http://127.0.0.1:8124/oauth/callback</code>（仅 Electron 版支持）。</p>
+        ${helpSection("integration", t("help.integration", "集成与扩展"), `
+          <p><b data-i18n="help.featIntegrations">集成中心</b>：设置抽屉「集成」Tab 列出 7 个外部集成（Notion/Linear/Jira/Slack/飞书/钉钉/日历）+ OpenAPI Key 管理。每个集成可配置凭据后连接。</p>
+          <p><b data-i18n="help.featOauth">OAuth 授权</b>（日历）：v3.1.2 起日历集成支持 OAuth 授权——在凭据弹窗填入服务商控制台注册的 Client ID，<code>点击 OAuth 授权</code> 自动获取 Access Token。redirect_uri 需登记 <code>http://127.0.0.1:8124/oauth/callback</code>（仅 Electron 版支持）。</p>
           <p><b>SQL Playground</b>：编程场景 SQL 标签，sql.js WASM 本地 SQLite 沙箱执行（无服务端）。</p>
-          <p><b>插件市场</b>：侧栏「商店」9 个内置插件（pomodoro/reading/budget/health/habit-tracker/weather/quote/focus-timer/mindmap），当前仅 health 真正接线，其余多为占位——见插件卡片描述。</p>
-          <p><b>回收站多类型</b>（v3.1 起）：软删任务与卸载/重置的配置/文件/插件均入「回收站」页（侧栏系统组），可恢复或彻底删除；自动清理策略在设置抽屉「外观」或回收站页可调（off/7/30/90 天）。</p>
+          <p><b data-i18n="help.featPluginMarket">插件市场</b>：侧栏「商店」9 个内置插件（pomodoro/reading/budget/health/habit-tracker/weather/quote/focus-timer/mindmap），当前仅 health 真正接线，其余多为占位——见插件卡片描述。</p>
+          <p><b data-i18n="help.featRecycle">回收站多类型</b>（v3.1 起）：软删任务与卸载/重置的配置/文件/插件均入「回收站」页（侧栏系统组），可恢复或彻底删除；自动清理策略在设置抽屉「外观」或回收站页可调（off/7/30/90 天）。</p>
         `)}
-        ${helpSection("AI 进阶", "AI 进阶", `
-          <p><b>多 Profile 供应商</b>：AI 抽屉「API Key」支持多个 Profile（OpenAI/Anthropic/DeepSeek/通义/豆包 等 OpenAI 兼容接口），一键切换不丢历史。</p>
-          <p><b>Agent 三层</b>：工作记忆（场景隔离的 remember/recall/forget）、多步目标（plan + complete_step + complete_goal）、跨场景协调（list_records 查任意场景资料）。</p>
-          <p><b>多会话</b>：聊天面板「☰」按钮管理多个对话——新建/重命名/删除/搜索。</p>
-          <p><b>工具白名单</b>：Agent 卡「允许调用的工具」控制 AI 能用的工具（逗号分隔，留空=全部）；扩展 Tab「技能配置」勾选同步写同一处（v3.1.2 A-档统一真相源）。</p>
+        ${helpSection("aiAdvanced", t("help.aiAdvanced", "AI 进阶"), `
+          <p><b data-i18n="help.featProfile">多 Profile 供应商</b>：AI 抽屉「API Key」支持多个 Profile（OpenAI/Anthropic/DeepSeek/通义/豆包 等 OpenAI 兼容接口），一键切换不丢历史。</p>
+          <p><b data-i18n="help.featAgent">Agent 三层</b>：工作记忆（场景隔离的 remember/recall/forget）、多步目标（plan + complete_step + complete_goal）、跨场景协调（list_records 查任意场景资料）。</p>
+          <p><b data-i18n="help.featSession">多会话</b>：聊天面板「☰」按钮管理多个对话——新建/重命名/删除/搜索。</p>
+          <p><b data-i18n="help.featWhitelist">工具白名单</b>：Agent 卡「允许调用的工具」控制 AI 能用的工具（逗号分隔，留空=全部）；扩展 Tab「技能配置」勾选同步写同一处（v3.1.2 A-档统一真相源）。</p>
         `)}
-        ${helpSection("数据安全", "数据安全", `
-          <p><b>AI Key 加密</b>：API Key 用 AES-GCM 加密存储，设备密钥首次随机生成。明文仅在内存中。</p>
-          <p><b>导出备份</b>：在设置抽屉「数据管理」点「导出 JSON」下载备份。可选是否包含 AI Key 明文。</p>
-          <p><b>导入恢复</b>：在「数据管理」点「导入恢复」上传备份文件恢复数据。</p>
-          <p><b>自动备份</b>：每次修改数据后自动快照到 localStorage，数据损坏时可恢复。</p>
-          <p><b>注意</b>：数据存于浏览器 localStorage，清浏览器数据会丢失！请定期导出备份。</p>
+        ${helpSection("dataSecurity", t("help.dataSecurity", "数据安全"), `
+          <p><b data-i18n="help.secAiKey">AI Key 加密</b>：API Key 用 AES-GCM 加密存储，设备密钥首次随机生成。明文仅在内存中。</p>
+          <p><b data-i18n="help.secExport">导出备份</b>：在设置抽屉「数据管理」点「导出 JSON」下载备份。可选是否包含 AI Key 明文。</p>
+          <p><b data-i18n="help.secImport">导入恢复</b>：在「数据管理」点「导入恢复」上传备份文件恢复数据。</p>
+          <p><b data-i18n="help.secAutoBackup">自动备份</b>：每次修改数据后自动快照到 localStorage，数据损坏时可恢复。</p>
+          <p><b data-i18n="help.secNote">注意</b>：数据存于浏览器 localStorage，清浏览器数据会丢失！请定期导出备份。</p>
         `)}
       </div>
     </div>
@@ -13086,7 +13087,7 @@ function parseShareLink(hash){
 function renderSharedTaskCard(task){
   if(!task || typeof task !== "object") return "";
   const sm = scMeta(task.sc);
-  const statusMap = { todo:"待办", doing:"进行中", done:"已完成" };
+  const statusMap = { todo:t("status.todo","待办"), doing:t("status.doing","进行中"), done:t("status.done","已完成") };
   const statusLabel = statusMap[task.status] || task.status || "待办";
   const pri = task.priority ? `<span class="pri ${esc(task.priority)}">${esc(task.priority)}</span>` : '<span class="pri u-opacity-50">无</span>';
   const due = task.due ? `<span class="due">${esc(task.due)}</span>` : '<span class="due u-opacity-50">无</span>';
@@ -13098,9 +13099,9 @@ function renderSharedTaskCard(task){
     <div class="share-sc-badge" style="background:${sm.color};color:var(--on-accent)">${esc(sm.name)}</div>
     <h3 class="share-title">${esc(task.title)}</h3>
     <div class="share-meta">
-      <div class="share-meta-row"><span class="share-meta-label">联动记录</span><span class="share-meta-val">${esc(statusLabel)}</span></div>
-      <div class="share-meta-row"><span class="share-meta-label">优先级</span><span class="share-meta-val">${pri}</span></div>
-      <div class="share-meta-row"><span class="share-meta-label">到期日</span><span class="share-meta-val">${due}</span></div>
+      <div class="share-meta-row"><span class="share-meta-label" data-i18n="share.chainLog">联动记录</span><span class="share-meta-val">${esc(statusLabel)}</span></div>
+      <div class="share-meta-row"><span class="share-meta-label" data-i18n="share.priority">优先级</span><span class="share-meta-val">${pri}</span></div>
+      <div class="share-meta-row"><span class="share-meta-label" data-i18n="share.dueDate">到期日</span><span class="share-meta-val">${due}</span></div>
     </div>
     ${tags}
     ${note}
@@ -13120,7 +13121,7 @@ function openSharedTaskModal(task){
     <div class="share-task-dialog">
       <div class="share-task-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享的任务</h2>
-        <button type="button" class="share-task-close" id="shareTaskClose" aria-label="关闭">✕</button>
+        <button type="button" class="share-task-close" id="shareTaskClose" aria-label="关闭" data-i18n-aria="a11y.closeBtn">✕</button>
       </div>
       <div class="share-task-body">${cardHtml}</div>
     </div>
@@ -13175,7 +13176,7 @@ function radarChartSVG(data){
   if(!d || d.length === 0) return "<p class='empty-hint'>暂无场景数据</p>";
   const n = d.length;
   const W = 320, H = 320, CX = W / 2, CY = H / 2, R = 110;
-  let svg = '<svg class="radar-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="场景完成度雷达图">';
+  let svg = '<svg class="radar-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="场景完成度雷达图" data-i18n-aria="a11y.sceneRadar">';
   // 网格圈（5 层）
   for(let g = 1; g <= 5; g++){
     const r = R * g / 5;
@@ -13232,9 +13233,9 @@ function getSankeyData(){
   });
   // 右侧节点：各状态
   const statuses = [
-    { id: "todo",  name: "待办" },
-    { id: "doing", name: "进行中" },
-    { id: "done",  name: "已完成" }
+    { id: "todo",  name: t("status.todo","待办") },
+    { id: "doing", name: t("status.doing","进行中") },
+    { id: "done",  name: t("status.done","已完成") }
   ];
   statuses.forEach(function(st){
     nodeIdx[st.id] = nodes.length;
@@ -13303,7 +13304,7 @@ function sankeyChartSVG(data){
     accY += h + 4;
   });
   const leftX = 80, rightX = W - 80, barW = 10;
-  let svg = '<svg class="sankey-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="任务流向桑基图">';
+  let svg = '<svg class="sankey-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="任务流向桑基图" data-i18n-aria="a11y.taskFlowSankey">';
   // 节点矩形 + 标签
   nodes.forEach(function(n, i){
     const isLeft = i < leftCount;
@@ -13422,51 +13423,51 @@ function renderOverview(){
   const todayTitle = _overviewView === "all" ? "全部待办" : "今日待办";
   const todaySub = _overviewView === "all" ? "所有未完成的任务（按优先级排序，点击跳转场景）" : "今天到期与逾期的任务（按优先级排序，点击跳转场景）";
   const todayHtml = _overviewView === "all" ? _renderAllTopHtml() : _renderTodayTopHtml();
-  const overviewNav = `<nav class="set-nav overview-view-nav" aria-label="概览视图切换">
-    <button type="button" class="set-nav-btn${_overviewView==="today"?" active":""}" data-overview-view="today">今日</button>
-    <button type="button" class="set-nav-btn${_overviewView==="all"?" active":""}" data-overview-view="all">全部</button>
+  const overviewNav = `<nav class="set-nav overview-view-nav" aria-label="概览视图切换" data-i18n-aria="a11y.overviewViewSwitch">
+    <button type="button" class="set-nav-btn${_overviewView==="today"?" active":""}" data-overview-view="today" data-i18n="overview.today">今日</button>
+    <button type="button" class="set-nav-btn${_overviewView==="all"?" active":""}" data-overview-view="all" data-i18n="overview.all">全部</button>
   </nav>`;
 
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
-      <div class="ph-tx"><h2>主页</h2><p class="sub">系统概况 · 全局搜索 · 数据速览</p></div>
-      <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent">高级报表</button></div>
+      <div class="ph-tx"><h2 data-i18n="overview.homeTitle">主页</h2><p class="sub" data-i18n="overview.homeSub">系统概况 · 全局搜索 · 数据速览</p></div>
+      <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent" data-i18n="overview.advReport">高级报表</button></div>
     </header></div>
     ${overviewNav}
     ${overview4}
     ${renderSystemOverviewCard()}
     <div class="overview-grid">
-      <div class="ov-sec-h">系统数据</div>
+      <div class="ov-sec-h" data-i18n="overview.sysData">系统数据</div>
      <div class="card ov-span2"><h2>${ic("search")} 全局搜索</h2>
         <div class="glob-filters">
-          <input id="globSearch" class="glob-search-main" placeholder="关键词，如 周报 / 跑步…">
-          <select id="globFSc" aria-label="按场景筛选"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
-          <select id="globFStatus" aria-label="按状态筛选"><option value="">全部状态</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select>
-          <button type="button" id="globAdvToggle" class="addbtn sm glob-adv-toggle" aria-expanded="false">筛选 ▸</button>
+          <input id="globSearch" class="glob-search-main" placeholder="关键词，如 周报 / 跑步…" data-i18n-placeholder="field.globSearchPh">
+          <select id="globFSc" aria-label="按场景筛选" data-i18n-aria="a11y.filterByScene"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
+          <select id="globFStatus" aria-label="按状态筛选" data-i18n-aria="a11y.filterByStatus"><option value="">全部状态</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select>
+          <button type="button" id="globAdvToggle" class="addbtn sm glob-adv-toggle" aria-expanded="false" data-i18n="overview.filter">筛选 ▸</button>
         </div>
         <div class="glob-filters-adv" id="globAdv" hidden>
-          <select id="globFDate" aria-label="按日期筛选"><option value="">不限日期</option><option value="today">今天到期</option><option value="overdue">已逾期</option><option value="week">本周到期</option></select>
-          <input id="globFTag" placeholder="标签，如 紧急">
-          <button type="button" id="globAdvClear" class="addbtn sm u-flex-auto" data-sc="muted">清除筛选</button>
+          <select id="globFDate" aria-label="按日期筛选" data-i18n-aria="a11y.filterByDate"><option value="">不限日期</option><option value="today">今天到期</option><option value="overdue">已逾期</option><option value="week">本周到期</option></select>
+          <input id="globFTag" placeholder="标签，如 紧急" data-i18n-placeholder="field.globFTagPh">
+          <button type="button" id="globAdvClear" class="addbtn sm u-flex-auto" data-sc="muted" data-i18n="overview.clearFilter">清除筛选</button>
         </div>
         <div class="glob-views" id="globViews"></div>
         <div id="globRes" class="u-mt-2h"></div></div>
-     <div class="ov-sec-h">业务数据</div>
+     <div class="ov-sec-h" data-i18n="overview.bizData">业务数据</div>
      <div class="card"><h2>${ic("check")} ${todayTitle}</h2>
        <p class="sub">${todaySub}</p>
        ${todayHtml}
-       <h3>各场景进度</h3><div class="bars">${bars}</div>
+       <h3 data-i18n="overview.sceneProgress">各场景进度</h3><div class="bars">${bars}</div>
      </div>
 	     <div class="card"><h2>${ic("grid")} 数据速览</h2>
-	       <p class="sub">完成趋势与本月密度</p>
-	       <h3>完成趋势（近 14 天）</h3>${lineChart}
-	       <h3>日历热力图（本月）</h3>${heat}
+	       <p class="sub" data-i18n="overview.trendSub">完成趋势与本月密度</p>
+	       <h3 data-i18n="overview.trendTitle">完成趋势（近 14 天）</h3>${lineChart}
+	       <h3 data-i18n="overview.heatTitle">日历热力图（本月）</h3>${heat}
 	     </div>
 	     <div class="ov-span2">${renderHabitChainCard()}</div>
 	     <div class="ov-span2">${renderAiHubCard()}</div>
-     <div class="ov-sec-h">数据可视化制作</div>
-     <div class="ov-span2"><div class="card ov-viz-card"><h2>${ic("grid")} 数据可视化制作</h2><p class="sub">用画布自由编排图表，展示业务与系统数据</p><button type="button" class="addbtn" id="btnOpenChartStore" data-sc="accent">打开图表制作器</button></div></div>
+     <div class="ov-sec-h" data-i18n="overview.vizSection">数据可视化制作</div>
+     <div class="ov-span2"><div class="card ov-viz-card"><h2>${ic("grid")} 数据可视化制作</h2><p class="sub" data-i18n="overview.vizSub">用画布自由编排图表，展示业务与系统数据</p><button type="button" class="addbtn" id="btnOpenChartStore" data-sc="accent" data-i18n="overview.openViz">打开图表制作器</button></div></div>
      </div>`);
 
   // 全局搜索 oninput 同步响应（保证空状态即时渲染；搜索范围小，无需防抖）
@@ -13487,7 +13488,7 @@ function renderOverview(){
     const willShow=adv.hasAttribute("hidden");
     if(willShow) adv.removeAttribute("hidden"); else adv.setAttribute("hidden","");
     advT.setAttribute("aria-expanded", willShow?"true":"false");
-    advT.textContent=willShow?"筛选 ▾":"筛选 ▸";
+    advT.textContent=willShow?t("filter.collapse","筛选 ▾"):t("filter.expand","筛选 ▸");
     if(!willShow){ /* 收起时若有残留筛选值则清空，避免不可见的过滤条件 */ }
   };
   const advC=$("#globAdvClear");
@@ -13676,11 +13677,11 @@ function renderSystemOverviewCard(){
   const aiEnabled = cfg && cfg.enabled;
 
   const items = [
-    { label: "场景", value: scenarios, act: "overview", ic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9 2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9 2.83-2.83"/></svg>' },
-    { label: "任务", value: tasks.length, act: "office", ic: UI_ICONS.check },
-    { label: "已完成", value: done, act: "stats", ic: UI_ICONS.stats },
-    { label: "资料", value: recCount, act: "overview", ic: UI_ICONS.file },
-    { label: "笔记", value: notes.length, act: "overview", ic: UI_ICONS.book },
+    { label: t("stats.scene","场景"), value: scenarios, act: "overview", ic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9 2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9 2.83-2.83"/></svg>' },
+    { label: t("stats.tasks","任务"), value: tasks.length, act: "office", ic: UI_ICONS.check },
+    { label: t("stats.done","已完成"), value: done, act: "stats", ic: UI_ICONS.stats },
+    { label: t("stats.material","资料"), value: recCount, act: "overview", ic: UI_ICONS.file },
+    { label: t("stats.notes","笔记"), value: notes.length, act: "overview", ic: UI_ICONS.book },
     { label: t("nav.chain", "场景联动"), value: chains.length, act: "chain", ic: UI_ICONS.chain },
     { label: t("nav.apps", "插件"), value: plugins.length, act: "overview", ic: UI_ICONS.puzzle }
   ];
@@ -13905,8 +13906,8 @@ function renderPieChart(dist){
 function renderHourDistGrid(grid){
   const max = Math.max(1, ...grid.flat().map(c => c.count));
   const lvl = c => c === 0 ? 0 : c / max <= 0.25 ? 1 : c / max <= 0.5 ? 2 : c / max <= 0.75 ? 3 : 4;
-  const dows = ["一","二","三","四","五","六","日"];
-  const periods = ["早（5-12）","午（12-18）","晚（18-5）"];
+  const dows = [t("weekday.mon","一"),t("weekday.tue","二"),t("weekday.wed","三"),t("weekday.thu","四"),t("weekday.fri","五"),t("weekday.sat","六"),t("weekday.sun","日")];
+  const periods = [t("period.morning","早（5-12）"),t("period.afternoon","午（12-18）"),t("period.evening","晚（18-5）")];
   let html = `<div class="hourdist"><div class="hourdist-head"></div>` +
     periods.map(p => `<div class="hourdist-head">${p}</div>`).join("");
   grid.forEach((row, dow) => {
@@ -14004,7 +14005,7 @@ function renderTasksPage(){
       const s = scMeta(x.sc);
       const overdue = x.due && x.due < today;
       return `<li class="todo-row" data-task-id="${esc(x.id)}">
-        <input type="checkbox" class="todo-chk" data-tasks-done="${esc(x.id)}" aria-label="完成">
+        <input type="checkbox" class="todo-chk" data-tasks-done="${esc(x.id)}" aria-label="完成" data-i18n-aria="a11y.complete">
         <span class="dot" style="background:${s.color};width:8px;height:8px;border-radius:50%;flex-shrink:0" title="${esc(s.name)}"></span>
         <span class="todo-title">${esc(x.title)}</span>
         <span class="todo-meta">
@@ -14032,9 +14033,9 @@ function renderTasksPage(){
   }
   /* kanban（默认）：跨场景三状态列 */
   const cols = [
-    { key:"todo",  label:"待办" },
-    { key:"doing", label:"进行中" },
-    { key:"done",  label:"已完成" }
+    { key:"todo",  label:t("status.todo","待办") },
+    { key:"doing", label:t("status.doing","进行中") },
+    { key:"done",  label:t("status.done","已完成") }
   ];
   const colHtml = cols.map(c=>{
     const list = tasks.filter(x=>(x.status||"todo")===c.key).sort((a,b)=>{
@@ -14087,21 +14088,22 @@ function _bindTasksTabs(){
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
   { id:"x-cal",     name:"日历",     desc:"按月查看任务分布", cat:"效率工具", icon:UI_ICONS.grid, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
-  { id:"x-weather", name:"天气",     desc:"今日 + 未来几日预报", cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
-  { id:"x-alarm",   name:"闹钟",     desc:"多任务 · 循环 · 贪睡", cat:"效率工具", icon:UI_ICONS.sport, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
-  { id:"x-pomo",    name:"笃行",     desc:"25 分钟专注 + 5 分钟休息", cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
-  { id:"x-tracker", name:"时间追踪", desc:"任务计时秒表", cat:"效率工具", icon:UI_ICONS.stats, pop:"trackerPop", menuAttr:"plug-tracker" },
-  { id:"x-pet",     name:"萌宠",     desc:"桌面陪伴小伙伴", cat:"效率工具", icon:UI_ICONS.flame, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
-  { id:"x-mindmap", name:"思维导图", desc:"任务关系树状图", cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
-  { id:"x-kb",      name:"知识库",   desc:"资料卡片与全文检索", cat:"功能", icon:UI_ICONS.kb, run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
-  { id:"x-notes",   name:"笔记",     desc:"标签 / 分类 / 任务关联", cat:"功能", icon:UI_ICONS.book, run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
-  { id:"x-report",  name:"高级报表", desc:"周 / 月 / 年报与对比", cat:"功能", icon:UI_ICONS.stats, run:()=>{ if(typeof openReportModal==="function") openReportModal(); } },
-  { id:"x-tpl",     name:"场景模板", desc:"一键导入预设任务集", cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); } }
+  { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
+  { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.sport, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
+  { id:"x-pomo",    name:t("tool.pomo.name","笃行"),     desc:t("tool.pomo.desc","25 分钟专注 + 5 分钟休息"), cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
+  { id:"x-tracker", name:t("tool.tracker.name","时间追踪"), desc:t("tool.tracker.desc","任务计时秒表"), cat:"效率工具", icon:UI_ICONS.stats, pop:"trackerPop", menuAttr:"plug-tracker" },
+  { id:"x-pet",     name:t("tool.pet.name","萌宠"),     desc:t("tool.pet.desc","桌面陪伴小伙伴"), cat:"效率工具", icon:UI_ICONS.flame, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
+  { id:"x-mindmap", name:t("tool.mindmap.name","思维导图"), desc:t("tool.mindmap.desc","任务关系树状图"), cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
+  { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
+  { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
+  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ if(typeof openReportModal==="function") openReportModal(); } },
+  { id:"x-tpl",     name:t("tool.tpl.name","场景模板"), desc:t("tool.tpl.desc","一键导入预设任务集"), cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); } }
 ];
 let _toolboxCat = "全部";
 let _toolboxQ = "";
 function renderToolboxPage(){
   const cats = ["全部","文档","设计","编程","生活","检索","功能","效率工具"];
+  const catKeyMap = {"全部":"all","文档":"doc","设计":"design","编程":"coding","生活":"life","检索":"search","功能":"func","效率工具":"efficiency"};
   const apps = [];
   Object.keys(TOOL_APPS).forEach(id=>{
     const a = TOOL_APPS[id];
@@ -14113,12 +14115,12 @@ function renderToolboxPage(){
   const list = apps.filter(a=>(_toolboxCat==="全部"||a.cat===_toolboxCat) &&
     (!q || (a.name+" "+a.desc).toLowerCase().includes(q)));
   // v3.0：工具箱分类菜单复用设置页菜单栏样式（.set-nav + .set-nav-btn），求同：与设置页一致
-  const chips = `<nav class="set-nav" aria-label="${t("toolbox.aria", "工具箱分类")}">` + cats.map(c=>`<button type="button" class="set-nav-btn${_toolboxCat===c?" active":""}" data-toolbox-cat="${c}">${c}</button>`).join("") + `</nav>`;
+  const chips = `<nav class="set-nav" aria-label="${t("toolbox.aria", "工具箱分类")}">` + cats.map(c=>`<button type="button" class="set-nav-btn${_toolboxCat===c?" active":""}" data-toolbox-cat="${c}">${t("tool.cat."+catKeyMap[c], c)}</button>`).join("") + `</nav>`;
   const cards = list.map(a=>{
     const attrs = a.pop ? ` data-menu="${a.menuAttr}"` : "";
     return `<button type="button" class="card app-card toolbox-card"${attrs} data-toolbox="${esc(a.toolId||a.id)}" role="button" tabindex="0" aria-label="${esc(a.name)}">
       <span class="app-card-ic" aria-hidden="true">${a.icon||""}</span>
-      <span class="toolbox-cat-tag">${esc(a.cat)}</span>
+      <span class="toolbox-cat-tag">${esc(t("tool.cat."+catKeyMap[a.cat], a.cat))}</span>
       <div class="app-card-tx"><div class="app-card-name">${esc(a.name)}</div><div class="app-card-desc">${esc(a.desc)}</div></div>
     </button>`;
   }).join("");
@@ -14201,8 +14203,9 @@ function renderStorePage(){
     </div>`;
   };
   const storeCats = ["全部","效率","功能","场景","其他"];
+  const storeCatKeyMap = {"全部":"all","效率":"efficiency","功能":"func","场景":"scene","其他":"other"};
   const storeNav = `<nav class="set-nav store-cat-nav" aria-label="${t("storePage.aria", "商店分类筛选")}">` +
-    storeCats.map(c=>`<button type="button" class="set-nav-btn${_storeCat===c?" active":""}" data-store-cat="${c}">${c}</button>`).join("") + `</nav>`;
+    storeCats.map(c=>`<button type="button" class="set-nav-btn${_storeCat===c?" active":""}" data-store-cat="${c}">${t("store.cat."+storeCatKeyMap[c], c)}</button>`).join("") + `</nav>`;
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.shop}</span>
@@ -14305,8 +14308,8 @@ function getGlobViews(){
 }
 function saveGlobView(name){
   name = String(name===null||name===undefined?"":name).trim();
-  if(!name) return {ok:false, err:"请输入视图名称"};
-  if(name.length > 16) return {ok:false, err:"视图名称过长（最多 16 字）"};
+  if(!name) return {ok:false, err:t("view.nameRequired","请输入视图名称")};
+  if(name.length > 16) return {ok:false, err:t("view.nameTooLong","视图名称过长（最多 16 字）")};
   const views = getGlobViews();
   const f = _readGlobFilters();
   const exists = views.findIndex(v=>v.name===name);
@@ -14780,7 +14783,7 @@ function bindHealthCard(){
     waterBtn.onclick = function(){
       try{
         const recs = getRec("life");
-        recs.unshift({ id: uid(), type: "喝水记录", title: "喝水", value: "1 杯", note: "", created: Date.now() });
+        recs.unshift({ id: uid(), type: t("rec.waterRecord","喝水记录"), title: t("rec.water","喝水"), value: t("rec.waterValue","1 杯"), note: "", created: Date.now() });
         save(PREFIX + "rec_life", recs); // v3.1.2 A-档修复：saveRec 不存在（getRec 的写入等价物是 save(PREFIX+"rec_"+sc)）
         toast(t("health.water.plusToast", "已记录 1 杯水"), "ok");
         if(typeof render === "function") render();
@@ -14795,7 +14798,7 @@ function bindHealthCard(){
       if(!v || !/^[\d.]+\s*(kg)?$/i.test(v)){ toast(t("health.weight.invalid", "请输入体重，如 65.2 或 65.2kg"), "warn"); if(inp) inp.focus(); return; }
       try{
         const recs = getRec("life");
-        recs.unshift({ id: uid(), type: "体重追踪", title: "体重", value: v, note: "", created: Date.now() });
+        recs.unshift({ id: uid(), type: t("rec.weightTracking","体重追踪"), title: t("rec.weight","体重"), value: v, note: "", created: Date.now() });
         save(PREFIX + "rec_life", recs); // v3.1.2 A-档修复：saveRec 不存在（getRec 的写入等价物是 save(PREFIX+"rec_"+sc)）
         toast(t("health.weight.savedToast", "已记录体重 " + v), "ok");
         if(inp) inp.value = "";
@@ -14816,8 +14819,8 @@ function designCard(sc){
     '<span class="extra-tag">'+esc(t)+' <b>'+n+'</b></span>').join("");
   const recent = recs.slice(0, 4);
   const items = recent.map(r=>{
-    const type = r.type || "作品";
-    const title = r.title || "未命名";
+    const type = r.type || t("rec.work","作品");
+    const title = r.title || t("rec.unnamed","未命名");
     return '<div class="extra-item"><span class="extra-tag">'+esc(type)+'</span><span class="extra-title">'+esc(title)+'</span></div>';
   }).join("");
   return '<div class="card extra-card"><h3>'+t("sceneCard.design.title", "灵感板")+'</h3><p class="sub">'+t("sceneCard.design.sub", "各类型作品数 · 最近速览")+'</p><div class="extra-stats">'+statHtml+'</div><div class="extra-list">'+items+'</div></div>';
@@ -14835,7 +14838,7 @@ function dataCard(sc){
     '<span class="extra-tag">'+esc(t)+' <b>'+n+'</b></span>').join("");
   const recent = recs.slice(0, 5);
   const items = recent.map(r=>{
-    const type = r.type || "数据";
+    const type = r.type || t("rec.data","数据");
     const title = r.title || "";
     // v3.1.2 A-档：有 value 字段的记录在最近列表中显示数值（此前只有标题/备注，「记了 65.2」看不到数）
     const val = (r.value !== undefined && r.value !== null && String(r.value).trim() !== "")
@@ -14872,25 +14875,26 @@ function lifeCard(sc){
   const byType = {};
   recs.forEach(r=>{ const t = r.type || "日常事务"; if(!byType[t]) byType[t] = []; byType[t].push(r); });
   const types = ["运动记录","体重追踪","睡眠记录","喝水记录"];
+  const typeLabelMap = {"运动记录":t("rec.exerciseRecord","运动记录"),"体重追踪":t("rec.weightTracking","体重追踪"),"睡眠记录":t("rec.sleepRecord","睡眠记录"),"喝水记录":t("rec.waterRecord","喝水记录")};
   // 类型统计（有记录的类型）
   const statHtml = types.map(t=>{
     const list = byType[t] || [];
     if(!list.length) return "";
-    return '<span class="extra-tag">'+esc(t)+' <b>'+list.length+'</b></span>';
+    return '<span class="extra-tag">'+esc(typeLabelMap[t]||t)+' <b>'+list.length+'</b></span>';
   }).filter(Boolean).join("");
   const rows = types.map(t=>{
     const list = byType[t] || [];
     if(!list.length) return "";
     const latest = list[0];
     const val = latest.value || "";
-    return '<div class="extra-item"><span class="extra-tag">'+esc(t)+'</span><span class="extra-title">'+esc(latest.title||"")+'</span>'+(val?' <span class="extra-val">'+esc(val)+'</span>':"")+'</div>';
+    return '<div class="extra-item"><span class="extra-tag">'+esc(typeLabelMap[t]||t)+'</span><span class="extra-title">'+esc(latest.title||"")+'</span>'+(val?' <span class="extra-val">'+esc(val)+'</span>':"")+'</div>';
   }).filter(Boolean).join("");
   // 类型不在四大健康项内的记录也展示（如"日常事务"），避免有数据却无卡片
   const otherRows = Object.keys(byType).filter(t => !types.includes(t)).map(t=>{
     const list = byType[t] || [];
     const latest = list[0];
     const val = latest.value || "";
-    return '<div class="extra-item"><span class="extra-tag">'+esc(t)+'</span><span class="extra-title">'+esc(latest.title||"")+'</span>'+(val?' <span class="extra-val">'+esc(val)+'</span>':"")+'</div>';
+    return '<div class="extra-item"><span class="extra-tag">'+esc(typeLabelMap[t]||t)+'</span><span class="extra-title">'+esc(latest.title||"")+'</span>'+(val?' <span class="extra-val">'+esc(val)+'</span>':"")+'</div>';
   }).join("");
   const allRows = rows + otherRows;
   if(!allRows) return "";
@@ -14939,9 +14943,9 @@ function _renderKanbanCard(x, st, colName){
   if(st==="done") btns=`<button type="button" data-move="${x.id}:doing">← 进行中</button>`;
   return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="t">${esc(x.title)}</div>
     <div class="m">${pri} ${due}${tags}</div><div class="kbtns">${btns}
-    <button type="button" data-edit="${x.id}">编辑</button>
-    <button type="button" data-share="${x.id}" title="${t("action.shareLink", "生成分享链接")}">分享</button>
-    <button type="button" data-del="${x.id}" class="u-text-danger">删除</button></div></div>`;
+    <button type="button" data-edit="${x.id}" data-i18n="task.editBtn">编辑</button>
+    <button type="button" data-share="${x.id}" data-i18n="task.shareBtnText" title="${t("action.shareLink", "生成分享链接")}">分享</button>
+    <button type="button" data-del="${x.id}" class="u-text-danger" data-i18n="task.delBtn">删除</button></div></div>`;
 }
 /**
  * v1.4-B 虚拟滚动：渲染看板单列（超阈值时只渲染可见区域 + 缓冲区）
@@ -19677,7 +19681,7 @@ function doIdbImport(file){
 // v3.1.2 B-档：关于卡渲染版本号 + 快捷键帮助按钮绑定（此前版本只在抽屉尾栏、快捷键只能按 ? 唤起，用户找不到）
 (function bindAboutCard(){
   const ver = $("#aboutVersion");
-  if(ver){ ver.textContent = (t ? t("app.name","Agent 工坊") : "Agent 工坊") + " · v" + VERSION + " · b" + BUILD_TAG; }
+  if(ver){ ver.textContent = t("app.name","Agent 工坊") + " · v" + VERSION + " · b" + BUILD_TAG; }
   const btn = $("#btnOpenShortcutHelp");
   if(btn && typeof openShortcutHelp === "function"){ btn.onclick = function(){ openShortcutHelp(); }; }
 })();
@@ -21002,63 +21006,63 @@ function openChainImportModal(){
  */
 const SCENE_TEMPLATES = [
   {
-    name: "考研复习计划",
-    description: "政治/英语/数学/专业课 每日复习 + 周测，按周排期推进",
+    name: t("template.kaoyan","考研复习计划"),
+    description: t("template.kaoyan.desc","政治/英语/数学/专业课 每日复习 + 周测，按周排期推进"),
     tasks: [
-      { title: "政治：马原复习 + 选择题练习", scenario: "study", priority: "P1", dueOffset: 0, note: "重点：唯物史观 + 认识论" },
-      { title: "英语：阅读理解 2 篇 + 单词背诵", scenario: "study", priority: "P1", dueOffset: 0, note: "精读 + 长难句分析" },
-      { title: "数学：高数章节复习 + 习题", scenario: "study", priority: "P0", dueOffset: 1, note: "极限与连续" },
-      { title: "专业课：指定教材章节精读", scenario: "study", priority: "P1", dueOffset: 1, note: "整理笔记 + 思维导图" },
-      { title: "周测：全科模拟测试", scenario: "study", priority: "P0", dueOffset: 6, note: "计时完成 + 错题复盘" },
-      { title: "错题整理 + 薄弱环节强化", scenario: "study", priority: "P2", dueOffset: 7, note: "针对错题重做" }
+      { title: t("template.kaoyan.t1","政治：马原复习 + 选择题练习"), scenario: "study", priority: "P1", dueOffset: 0, note: t("template.kaoyan.n1","重点：唯物史观 + 认识论") },
+      { title: t("template.kaoyan.t2","英语：阅读理解 2 篇 + 单词背诵"), scenario: "study", priority: "P1", dueOffset: 0, note: t("template.kaoyan.n2","精读 + 长难句分析") },
+      { title: t("template.kaoyan.t3","数学：高数章节复习 + 习题"), scenario: "study", priority: "P0", dueOffset: 1, note: t("template.kaoyan.n3","极限与连续") },
+      { title: t("template.kaoyan.t4","专业课：指定教材章节精读"), scenario: "study", priority: "P1", dueOffset: 1, note: t("template.kaoyan.n4","整理笔记 + 思维导图") },
+      { title: t("template.kaoyan.t5","周测：全科模拟测试"), scenario: "study", priority: "P0", dueOffset: 6, note: t("template.kaoyan.n5","计时完成 + 错题复盘") },
+      { title: t("template.kaoyan.t6","错题整理 + 薄弱环节强化"), scenario: "study", priority: "P2", dueOffset: 7, note: t("template.kaoyan.n6","针对错题重做") }
     ]
   },
   {
-    name: "健身30天计划",
-    description: "跑步/力量/拉伸 隔天轮换，30 天渐进式训练",
+    name: t("template.fitness","健身30天计划"),
+    description: t("template.fitness.desc","跑步/力量/拉伸 隔天轮换，30 天渐进式训练"),
     tasks: [
-      { title: "跑步 3km + 热身", scenario: "life", priority: "P1", dueOffset: 0, note: "配速 6:00，注意呼吸节奏" },
-      { title: "力量训练：上肢（俯卧撑/哑铃）", scenario: "life", priority: "P1", dueOffset: 1, note: "3 组 × 12 次" },
-      { title: "拉伸恢复 + 泡沫轴放松", scenario: "life", priority: "P2", dueOffset: 2, note: "全身拉伸 20 分钟" },
-      { title: "跑步 5km 节奏跑", scenario: "life", priority: "P1", dueOffset: 3, note: "配速 5:30" },
-      { title: "力量训练：下肢（深蹲/硬拉）", scenario: "life", priority: "P1", dueOffset: 4, note: "3 组 × 10 次" },
-      { title: "休息日：散步 + 充足睡眠", scenario: "life", priority: "P2", dueOffset: 5, note: "主动恢复" },
-      { title: "周总结：记录体重/体感/进步", scenario: "life", priority: "P2", dueOffset: 6, note: "拍照对比" }
+      { title: t("template.fitness.t1","跑步 3km + 热身"), scenario: "life", priority: "P1", dueOffset: 0, note: t("template.fitness.n1","配速 6:00，注意呼吸节奏") },
+      { title: t("template.fitness.t2","力量训练：上肢（俯卧撑/哑铃）"), scenario: "life", priority: "P1", dueOffset: 1, note: t("template.fitness.n2","3 组 × 12 次") },
+      { title: t("template.fitness.t3","拉伸恢复 + 泡沫轴放松"), scenario: "life", priority: "P2", dueOffset: 2, note: t("template.fitness.n3","全身拉伸 20 分钟") },
+      { title: t("template.fitness.t4","跑步 5km 节奏跑"), scenario: "life", priority: "P1", dueOffset: 3, note: t("template.fitness.n4","配速 5:30") },
+      { title: t("template.fitness.t5","力量训练：下肢（深蹲/硬拉）"), scenario: "life", priority: "P1", dueOffset: 4, note: t("template.fitness.n5","3 组 × 10 次") },
+      { title: t("template.fitness.t6","休息日：散步 + 充足睡眠"), scenario: "life", priority: "P2", dueOffset: 5, note: t("template.fitness.n6","主动恢复") },
+      { title: t("template.fitness.t7","周总结：记录体重/体感/进步"), scenario: "life", priority: "P2", dueOffset: 6, note: t("template.fitness.n7","拍照对比") }
     ]
   },
   {
-    name: "编程学习路线",
-    description: "算法/项目/刷题 每日推进，理论与实战结合",
+    name: t("template.coding","编程学习路线"),
+    description: t("template.coding.desc","算法/项目/刷题 每日推进，理论与实战结合"),
     tasks: [
-      { title: "算法：数据结构复习（链表/栈/队列）", scenario: "code", priority: "P0", dueOffset: 0, note: "手写实现 + 复杂度分析" },
-      { title: "刷题：LeetCode 每日 2 题", scenario: "code", priority: "P1", dueOffset: 0, note: "先易后难，总结套路" },
-      { title: "项目：搭建项目骨架 + 核心模块", scenario: "code", priority: "P1", dueOffset: 1, note: "技术选型 + 目录结构" },
-      { title: "算法：动态规划专题", scenario: "code", priority: "P0", dueOffset: 2, note: "经典 DP 题目 5 道" },
-      { title: "项目：实现业务逻辑 + 单元测试", scenario: "code", priority: "P1", dueOffset: 3, note: "覆盖率 > 80%" },
-      { title: "复盘：本周学习总结 + 下周计划", scenario: "code", priority: "P2", dueOffset: 6, note: "整理博客素材" }
+      { title: t("template.coding.t1","算法：数据结构复习（链表/栈/队列）"), scenario: "code", priority: "P0", dueOffset: 0, note: t("template.coding.n1","手写实现 + 复杂度分析") },
+      { title: t("template.coding.t2","刷题：LeetCode 每日 2 题"), scenario: "code", priority: "P1", dueOffset: 0, note: t("template.coding.n2","先易后难，总结套路") },
+      { title: t("template.coding.t3","项目：搭建项目骨架 + 核心模块"), scenario: "code", priority: "P1", dueOffset: 1, note: t("template.coding.n3","技术选型 + 目录结构") },
+      { title: t("template.coding.t4","算法：动态规划专题"), scenario: "code", priority: "P0", dueOffset: 2, note: t("template.coding.n4","经典 DP 题目 5 道") },
+      { title: t("template.coding.t5","项目：实现业务逻辑 + 单元测试"), scenario: "code", priority: "P1", dueOffset: 3, note: t("template.coding.n5","覆盖率 > 80%") },
+      { title: t("template.coding.t6","复盘：本周学习总结 + 下周计划"), scenario: "code", priority: "P2", dueOffset: 6, note: t("template.coding.n6","整理博客素材") }
     ]
   },
   {
-    name: "项目管理模板",
-    description: "需求/设计/开发/测试 按周排期，完整项目生命周期",
+    name: t("template.project","项目管理模板"),
+    description: t("template.project.desc","需求/设计/开发/测试 按周排期，完整项目生命周期"),
     tasks: [
-      { title: "需求评审 + 范围确认", scenario: "office", priority: "P0", dueOffset: 0, note: "PRD 评审 + 验收标准" },
-      { title: "技术方案设计 + 评审", scenario: "code", priority: "P0", dueOffset: 2, note: "架构图 + 接口定义" },
-      { title: "开发：核心功能实现", scenario: "code", priority: "P1", dueOffset: 4, note: "每日站会同步进度" },
-      { title: "开发：联调 + Bug 修复", scenario: "code", priority: "P1", dueOffset: 8, note: "前后端联调" },
-      { title: "测试：用例编写 + 执行", scenario: "office", priority: "P1", dueOffset: 10, note: "回归 + 边界用例" },
-      { title: "上线：部署 + 验收 + 复盘", scenario: "office", priority: "P0", dueOffset: 13, note: "灰度发布 + 监控" }
+      { title: t("template.project.t1","需求评审 + 范围确认"), scenario: "office", priority: "P0", dueOffset: 0, note: t("template.project.n1","PRD 评审 + 验收标准") },
+      { title: t("template.project.t2","技术方案设计 + 评审"), scenario: "code", priority: "P0", dueOffset: 2, note: t("template.project.n2","架构图 + 接口定义") },
+      { title: t("template.project.t3","开发：核心功能实现"), scenario: "code", priority: "P1", dueOffset: 4, note: t("template.project.n3","每日站会同步进度") },
+      { title: t("template.project.t4","开发：联调 + Bug 修复"), scenario: "code", priority: "P1", dueOffset: 8, note: t("template.project.n4","前后端联调") },
+      { title: t("template.project.t5","测试：用例编写 + 执行"), scenario: "office", priority: "P1", dueOffset: 10, note: t("template.project.n5","回归 + 边界用例") },
+      { title: t("template.project.t6","上线：部署 + 验收 + 复盘"), scenario: "office", priority: "P0", dueOffset: 13, note: t("template.project.n6","灰度发布 + 监控") }
     ]
   },
   {
-    name: "每日习惯养成",
-    description: "早起/运动/阅读/冥想 每日重复，养成健康生活习惯",
+    name: t("template.habit","每日习惯养成"),
+    description: t("template.habit.desc","早起/运动/阅读/冥想 每日重复，养成健康生活习惯"),
     tasks: [
-      { title: "早起 6:30 + 晨间日记", scenario: "life", priority: "P1", dueOffset: 0, note: "记录三件感恩事" },
-      { title: "运动 30 分钟", scenario: "life", priority: "P1", dueOffset: 0, note: "跑步/瑜伽/力量任选" },
-      { title: "阅读 30 分钟", scenario: "study", priority: "P2", dueOffset: 0, note: "记录金句 + 思考" },
-      { title: "冥想 10 分钟", scenario: "life", priority: "P2", dueOffset: 0, note: "专注呼吸 + 放空" },
-      { title: "周复盘：习惯打卡统计", scenario: "life", priority: "P2", dueOffset: 6, note: "完成率 + 调整下周" }
+      { title: t("template.habit.t1","早起 6:30 + 晨间日记"), scenario: "life", priority: "P1", dueOffset: 0, note: t("template.habit.n1","记录三件感恩事") },
+      { title: t("template.habit.t2","运动 30 分钟"), scenario: "life", priority: "P1", dueOffset: 0, note: t("template.habit.n2","跑步/瑜伽/力量任选") },
+      { title: t("template.habit.t3","阅读 30 分钟"), scenario: "study", priority: "P2", dueOffset: 0, note: t("template.habit.n3","记录金句 + 思考") },
+      { title: t("template.habit.t4","冥想 10 分钟"), scenario: "life", priority: "P2", dueOffset: 0, note: t("template.habit.n4","专注呼吸 + 放空") },
+      { title: t("template.habit.t5","周复盘：习惯打卡统计"), scenario: "life", priority: "P2", dueOffset: 6, note: t("template.habit.n5","完成率 + 调整下周") }
     ]
   }
 ];
@@ -21554,7 +21558,7 @@ function _importThemeFromJson(){
   if(!txt){ try{ toast(t("theme.pasteJsonFirst", "请先粘贴主题 JSON"), "warn"); }catch(e){} return; }
   if(typeof importTheme !== "function") return;
   const r = importTheme(txt);
-  if(!r.ok){ try{ toast(r.err || "导入失败", "warn"); }catch(e){} return; }
+  if(!r.ok){ try{ toast(r.err || t("import.failed", "导入失败"), "warn"); }catch(e){} return; }
   const importArea = $("#themeImportArea");
   if(importArea) importArea.style.display = "none";
   if(jsonInp) jsonInp.value = "";
@@ -21773,7 +21777,7 @@ $("#cfgTestConn").onclick = async function(){
     try{
       r = await fetch(base + "/v1/models", { method: "GET", headers: headers });
     }catch(e){
-      r = { ok: false, status: 0, error: e && e.message || "网络错误" };
+      r = { ok: false, status: 0, error: e && e.message || t("api.networkError","网络错误") };
     }
     let ok = r && r.ok;
     let msg = "";
@@ -21933,7 +21937,7 @@ function renderIntegrationPanel(){
           else{ try{ integrationRemoveProvider(name); }catch(e){} }
         }
         renderIntegrationPanel();
-        toast(name + " 已断开", "ok");
+        toast(name + t("integration.disconnected", " 已断开"), "ok");
       }catch(e){ toast(t("integration.disconnectFail", "断开异常：{err}").replace("{err}", (e.message || e)), "warn"); }
     };
   });
@@ -21951,20 +21955,20 @@ function renderIntegrationPanel(){
         if(!confirm(t("int.confirmRevoke","确定吊销此 API Key？"))) return;
         try{ if(typeof openApiRevokeApiKey === "function") openApiRevokeApiKey(kid); }catch(e){}
         renderIntegrationPanel();
-        toast("Key 已吊销", "ok");
+        toast(t("api.keyRevoked", "Key 已吊销"), "ok");
       };
     });
   }
   const newKeyBtn = panel.querySelector("#btnIntNewKey");
   if(newKeyBtn){
     newKeyBtn.onclick = function(){
-      const name = prompt("输入 Key 名称：");
+      const name = prompt(t("api.keyNamePrompt", "输入 Key 名称："));
       if(!name) return;
       try{
         if(typeof openApiCreateApiKey === "function"){
           const k = openApiCreateApiKey(name, ["read","write"]);
           renderIntegrationPanel();
-          toast("Key 已创建：" + (k && k.id ? k.id.slice(0,8) + "…" : ""), "ok");
+          toast(t("api.keyCreated", "Key 已创建：") + (k && k.id ? k.id.slice(0,8) + "…" : ""), "ok");
         }
       }catch(e){ toast(t("integration.createFail", "创建失败：{err}").replace("{err}", (e.message || e)), "warn"); }
     };
@@ -26335,6 +26339,478 @@ const MESSAGES = {
     "plugin.quote.q8": "保持饥饿，保持愚蠢。",
     "plugin.mindmap.title": "思维导图",
     "plugin.mindmap.hint": "拖拽节点、创建关系，梳理你的想法",
+    // 第一批 i18n：toast/textContent/问候语/prompt 最高优先级
+    "tool.convergedTo": " 已收敛到",
+    "tool.jumpingSoon": "——即将跳转",
+    "tool.ppt.slidesName": "幻灯片",
+    "import.failed": "导入失败",
+    "integration.disconnected": " 已断开",
+    "api.keyRevoked": "Key 已吊销",
+    "api.keyCreated": "Key 已创建：",
+    "api.keyNamePrompt": "输入 Key 名称：",
+    "api.unknownDevice": "未知设备",
+    "api.reminder": "提醒",
+    "filter.collapse": "筛选 ▾",
+    "filter.expand": "筛选 ▸",
+    "greeting.lateNight": "夜深了",
+    "greeting.morning": "早安",
+    "greeting.noon": "午安",
+    "greeting.afternoon": "下午好",
+    "greeting.evening": "晚上好",
+    "a11y.aiModuleNav": "AI模块导航",
+    "a11y.settingsSectionNav": "设置分区导航",
+    "a11y.llmConfig": "LLM 大模型配置",
+    "a11y.agentAbility": "Agent 能力",
+    "a11y.agentMode": "Agent 模式",
+    "a11y.aiExtExperimental": "AI 扩展（实验性）",
+    "a11y.sessionMgmt2": "会话管理",
+    "a11y.sceneMgmt": "场景管理",
+    "a11y.chainRules": "联动规则",
+    "a11y.knowledge": "知识",
+    "a11y.pluginStore": "插件商店",
+    "a11y.dataMgmt": "数据管理",
+    "a11y.lanSync": "局域网同步",
+    "a11y.appearance": "外观",
+    "a11y.pointerFxToggle": "鼠标特效开关",
+    "a11y.notifyReminder": "通知提醒",
+    "a11y.enableTaskReminder": "开启任务到期提醒",
+    "a11y.quietHours": "免打扰时段",
+    "a11y.quietStart": "免打扰开始时间",
+    "a11y.quietEnd": "免打扰结束时间",
+    "a11y.integrationCenter": "集成中心",
+    "a11y.apiAccount": "账号设置",
+    "a11y.apiNotify": "通知偏好",
+    "a11y.thirdPartyIntegrations": "第三方集成",
+    "a11y.aboutCompat": "关于与兼容说明",
+    "a11y.reportType": "报表类型",
+    "a11y.returnPrevView": "返回上一视图",
+    "a11y.closeBtn": "关闭",
+    "a11y.overviewViewSwitch": "概览视图切换",
+    "a11y.filterByScene": "按场景筛选",
+    "a11y.filterByStatus": "按状态筛选",
+    "a11y.filterByDate": "按日期筛选",
+    "a11y.complete": "完成",
+    "a11y.titleLevel": "标题级别",
+    "a11y.sceneRadar": "场景完成度雷达图",
+    "a11y.taskFlowSankey": "任务流向桑基图",
+    "field.memMaxPh": "60（默认）",
+    "field.onboardTaskInputPh": "任务标题，如 写周报 / 修复报错 / 缴水电费",
+    "field.globSearchPh": "关键词，如 周报 / 跑步…",
+    "field.globFTagPh": "标签，如 紧急",
+    "ui.snooze30MinTitle": "30 分钟后再提醒",
+    "chat.collapseLbl": "折叠",
+    "chartStore.libTitle": "图表库",
+    "task.snoozeBtnText": "稍后",
+    "onboard.step1Desc": "这是一个帮你管理任务、养成习惯的工具。先创建你的第一个任务吧！",
+    "onboard.skip1": "跳过",
+    "onboard.create": "创建",
+    "onboard.step2Title": "场景联动 — 让正反馈转起来",
+    "onboard.step2Desc": "完成任务可以触发跨场景联动。比如交付任务完成后自动提醒你学习充电。",
+    "onboard.skip2": "跳过",
+    "onboard.simulate": "模拟触发",
+    "onboard.next": "下一步",
+    "onboard.step3Title": "配置 AI 助手（可选）",
+    "onboard.step3Desc": "配置 AI 后，每个场景都有专属 AI 助手帮你建任务、查总览、搜索。",
+    "onboard.later": "稍后再说",
+    "onboard.goSettings": "去设置",
+    "help.subTitle": "快速上手 · 场景说明 · AI 技巧 · 数据安全",
+    "help.backBtnText": "← 返回",
+    "help.stepStart": "3 步开始使用：",
+    "help.chainIntro": "完成任务可以自动触发跨场景的奖励/后续任务，形成正反馈闭环：",
+    "help.chainEdit": "在设置 → 联动规则中可编辑跨场景自动规则（关键词、目标场景、启用/禁用）。",
+    "help.aiIntro": "每个场景有专属 AI 助手（不同 system prompt）。在聊天框输入：",
+    "help.aiCmd1": "「建个任务：明天写周报」→ AI 调用 create_task 工具",
+    "help.aiCmd2": "「查总览」→ AI 调用 query_overview 工具",
+    "help.aiCmd3": "「搜索 跑步」→ AI 调用 search 工具",
+    "help.aiCmd4": "「完成任务 xxx」→ AI 调用 complete_task 工具",
+    "help.aiCmd5": "开启 Agent 模式后还可「记住：我喜欢简洁回复」「帮我规划：本周清理办公待办」等多步任务",
+    "help.aiTools": "AI 可以调用多种工具管理你的工作台数据（含 Agent 记忆/目标工具）。在设置中配置 API Key 后启用。",
+    "help.reviewIntro": "学习场景的资料支持间隔复习（SM-2 算法）。复习时选 4 个评分：",
+    "help.reviewAuto": "系统自动计算下次复习日期和 ease factor，今日待复习的会在学习场景高亮。",
+    "help.perfIntro": "本工作台在渲染与存储层做了多项优化，保证大量任务下依然流畅：",
+    "help.perfNote": "上述优化对用户透明（自动备份为防抖快照；频率固定、不可调）。",
+    "help.kbdScenes": "切换场景（办公/数据/设计/学习/编程/生活）",
+    "help.kbdCmd": "命令面板（搜索任务、切换场景）",
+    "help.kbdNew": "新建任务并聚焦标题输入",
+    "help.kbdHelp": "打开本快捷键帮助面板",
+    "help.kbdClose": "关闭弹窗/抽屉",
+    "help.step1Build": "建任务",
+    "help.step1Complete": "完成任务",
+    "help.step1Ai": "用 AI",
+    "help.scenesTitle": "6 场景",
+    "help.sceneOffice": "办公",
+    "help.sceneData": "数据",
+    "help.sceneDesign": "设计",
+    "help.sceneLearning": "学习",
+    "help.sceneCoding": "编程",
+    "help.sceneLife": "生活",
+    "help.chainOffice": "办公",
+    "help.chainStudy": "学习",
+    "help.chainCoding": "编程",
+    "help.perfRaf": "RAF 批量更新",
+    "help.perfLazy": "懒初始化",
+    "help.perfLs": "localStorage 批量写入",
+    "help.perfBuild": "生产构建压缩",
+    "help.troubleTitle": "遇到问题先看这里",
+    "help.troubleDataLoss": "数据意外丢失/异常",
+    "help.troubleCors": "AI 报 CORS/网络错误",
+    "help.troublePwa": "新版 PWA 没生效/看到旧版",
+    "help.troubleMigrate": "换浏览器/换设备/移动 HTML 文件数据没跟过来",
+    "help.troubleWasm": "SQL Playground 报错「WASM 加载失败」",
+    "help.troubleNotify": "通知/桌面提醒不弹出",
+    "help.troubleRestore": "恢复误删任务",
+    "help.featIntegrations": "集成中心",
+    "help.featOauth": "OAuth 授权",
+    "help.featPluginMarket": "插件市场",
+    "help.featRecycle": "回收站多类型",
+    "help.featProfile": "多 Profile 供应商",
+    "help.featAgent": "Agent 三层",
+    "help.featSession": "多会话",
+    "help.featWhitelist": "工具白名单",
+    "help.secAiKey": "AI Key 加密",
+    "help.secExport": "导出备份",
+    "help.secImport": "导入恢复",
+    "help.secAutoBackup": "自动备份",
+    "help.secNote": "注意",
+    "share.chainLog": "联动记录",
+    "share.priority": "优先级",
+    "share.dueDate": "到期日",
+    "overview.today": "今日",
+    "overview.all": "全部",
+    "overview.homeTitle": "主页",
+    "overview.homeSub": "系统概况 · 全局搜索 · 数据速览",
+    "overview.advReport": "高级报表",
+    "overview.sysData": "系统数据",
+    "overview.filter": "筛选 ▸",
+    "overview.clearFilter": "清除筛选",
+    "overview.bizData": "业务数据",
+    "overview.sceneProgress": "各场景进度",
+    "overview.trendSub": "完成趋势与本月密度",
+    "overview.trendTitle": "完成趋势（近 14 天）",
+    "overview.heatTitle": "日历热力图（本月）",
+    "overview.vizSection": "数据可视化制作",
+    "overview.vizSub": "用画布自由编排图表，展示业务与系统数据",
+    "overview.openViz": "打开图表制作器",
+    "task.editBtn": "编辑",
+    "task.shareBtnText": "分享",
+    "task.delBtn": "删除",
+    "field.aiSkillsCustomPh": "[{\"name\":\"技能名称\",\"desc\":\"技能描述\",\"enabled\":true}]",
+    "field.pluginAddJsonPh": "{\"id\":\"插件ID\",\"name\":\"插件名称\",\"version\":\"1.0.0\",\"description\":\"插件描述\"}",
+    "field.themeImportJsonPh": "{\"id\":\"主题ID\",\"name\":\"主题名称\",\"type\":\"custom\",\"tokens\":{\"--bg\":\"var(--panel)\",\"--accent\":\"var(--accent)\"}}",
+    // 第三批 i18n：中优先级数据定义
+    "status.todo": "待办",
+    "status.doing": "进行中",
+    "status.done": "已完成",
+    "stats.scene": "场景",
+    "stats.tasks": "任务",
+
+    "stats.material": "资料",
+    "stats.notes": "笔记",
+    "tool.weather.name": "天气",
+    "tool.weather.desc": "今日 + 未来几日预报",
+    "tool.alarm.name": "闹钟",
+    "tool.alarm.desc": "多任务 · 循环 · 贪睡",
+    "tool.pomo.name": "笃行",
+    "tool.pomo.desc": "25 分钟专注 + 5 分钟休息",
+    "tool.tracker.name": "时间追踪",
+    "tool.tracker.desc": "任务计时秒表",
+    "tool.pet.name": "萌宠",
+    "tool.pet.desc": "桌面陪伴小伙伴",
+    "tool.mindmap.name": "思维导图",
+    "tool.mindmap.desc": "任务关系树状图",
+    "tool.kb.name": "知识库",
+    "tool.kb.desc": "资料卡片与全文检索",
+    "tool.notes.name": "笔记",
+    "tool.notes.desc": "标签 / 分类 / 任务关联",
+    "tool.report.toolboxName": "高级报表",
+    "tool.report.desc": "周 / 月 / 年报与对比",
+    "tool.tpl.name": "场景模板",
+    "tool.tpl.desc": "一键导入预设任务集",
+    "tool.cat.all": "全部",
+    "tool.cat.doc": "文档",
+    "tool.cat.design": "设计",
+    "tool.cat.coding": "编程",
+    "tool.cat.life": "生活",
+    "tool.cat.search": "检索",
+    "tool.cat.func": "功能",
+    "tool.cat.efficiency": "效率工具",
+    "store.cat.all": "全部",
+    "store.cat.efficiency": "效率",
+    "store.cat.func": "功能",
+    "store.cat.scene": "场景",
+    "store.cat.other": "其他",
+    "dashboard.stats": "关键指标",
+    "dashboard.today": "今日待办",
+    "dashboard.trend": "任务完成趋势",
+    "dashboard.scenes": "场景概况",
+    "dashboard.pie": "场景分布",
+    "dashboard.heatmap": "热力图",
+    "dashboard.chain": "联动触发率",
+    "dashboard.recent": "最近完成",
+    "dashboard.actions": "快捷操作",
+    "dashboard.hourdist": "完成时段分布",
+    "dashboard.report": "高级报表",
+    "dashboard.gantt": "甘特图",
+    "dashboard.mindmap": "思维导图",
+    "dashboard.radar": "雷达图",
+    "dashboard.sankey": "桑基图",
+    "template.kaoyan": "考研复习计划",
+    "template.kaoyan.desc": "政治/英语/数学/专业课 每日复习 + 周测，按周排期推进",
+    "template.kaoyan.t1": "政治：马原复习 + 选择题练习",
+    "template.kaoyan.n1": "重点：唯物史观 + 认识论",
+    "template.kaoyan.t2": "英语：阅读理解 2 篇 + 单词背诵",
+    "template.kaoyan.n2": "精读 + 长难句分析",
+    "template.kaoyan.t3": "数学：高数章节复习 + 习题",
+    "template.kaoyan.n3": "极限与连续",
+    "template.kaoyan.t4": "专业课：指定教材章节精读",
+    "template.kaoyan.n4": "整理笔记 + 思维导图",
+    "template.kaoyan.t5": "周测：全科模拟测试",
+    "template.kaoyan.n5": "计时完成 + 错题复盘",
+    "template.kaoyan.t6": "错题整理 + 薄弱环节强化",
+    "template.kaoyan.n6": "针对错题重做",
+    "template.fitness": "健身30天计划",
+    "template.fitness.desc": "跑步/力量/拉伸 隔天轮换，30 天渐进式训练",
+    "template.fitness.t1": "跑步 3km + 热身",
+    "template.fitness.n1": "配速 6:00，注意呼吸节奏",
+    "template.fitness.t2": "力量训练：上肢（俯卧撑/哑铃）",
+    "template.fitness.n2": "3 组 × 12 次",
+    "template.fitness.t3": "拉伸恢复 + 泡沫轴放松",
+    "template.fitness.n3": "全身拉伸 20 分钟",
+    "template.fitness.t4": "跑步 5km 节奏跑",
+    "template.fitness.n4": "配速 5:30",
+    "template.fitness.t5": "力量训练：下肢（深蹲/硬拉）",
+    "template.fitness.n5": "3 组 × 10 次",
+    "template.fitness.t6": "休息日：散步 + 充足睡眠",
+    "template.fitness.n6": "主动恢复",
+    "template.fitness.t7": "周总结：记录体重/体感/进步",
+    "template.fitness.n7": "拍照对比",
+    "template.coding": "编程学习路线",
+    "template.coding.desc": "算法/项目/刷题 每日推进，理论与实战结合",
+    "template.coding.t1": "算法：数据结构复习（链表/栈/队列）",
+    "template.coding.n1": "手写实现 + 复杂度分析",
+    "template.coding.t2": "刷题：LeetCode 每日 2 题",
+    "template.coding.n2": "先易后难，总结套路",
+    "template.coding.t3": "项目：搭建项目骨架 + 核心模块",
+    "template.coding.n3": "技术选型 + 目录结构",
+    "template.coding.t4": "算法：动态规划专题",
+    "template.coding.n4": "经典 DP 题目 5 道",
+    "template.coding.t5": "项目：实现业务逻辑 + 单元测试",
+    "template.coding.n5": "覆盖率 > 80%",
+    "template.coding.t6": "复盘：本周学习总结 + 下周计划",
+    "template.coding.n6": "整理博客素材",
+    "template.project": "项目管理模板",
+    "template.project.desc": "需求/设计/开发/测试 按周排期，完整项目生命周期",
+    "template.project.t1": "需求评审 + 范围确认",
+    "template.project.n1": "PRD 评审 + 验收标准",
+    "template.project.t2": "技术方案设计 + 评审",
+    "template.project.n2": "架构图 + 接口定义",
+    "template.project.t3": "开发：核心功能实现",
+    "template.project.n3": "每日站会同步进度",
+    "template.project.t4": "开发：联调 + Bug 修复",
+    "template.project.n4": "前后端联调",
+    "template.project.t5": "测试：用例编写 + 执行",
+    "template.project.n5": "回归 + 边界用例",
+    "template.project.t6": "上线：部署 + 验收 + 复盘",
+    "template.project.n6": "灰度发布 + 监控",
+    "template.habit": "每日习惯养成",
+    "template.habit.desc": "早起/运动/阅读/冥想 每日重复，养成健康生活习惯",
+    "template.habit.t1": "早起 6:30 + 晨间日记",
+    "template.habit.n1": "记录三件感恩事",
+    "template.habit.t2": "运动 30 分钟",
+    "template.habit.n2": "跑步/瑜伽/力量任选",
+    "template.habit.t3": "阅读 30 分钟",
+    "template.habit.n3": "记录金句 + 思考",
+    "template.habit.t4": "冥想 10 分钟",
+    "template.habit.n4": "专注呼吸 + 放空",
+    "template.habit.t5": "周复盘：习惯打卡统计",
+    "template.habit.n5": "完成率 + 调整下周",
+    "help.quickStart": "快速上手",
+    "help.scenes": "场景说明",
+    "help.chain": "场景联动",
+    "help.aiTips": "AI 使用技巧",
+    "help.sm2": "SM-2 间隔复习",
+    "help.shortcuts": "快捷键",
+    "help.perf": "性能优化",
+    "help.trouble": "故障排查",
+    "help.integration": "集成与扩展",
+    "help.aiAdvanced": "AI 进阶",
+    "help.dataSecurity": "数据安全",
+    "rec.typeTask": "任务",
+    "onboard.deliveryTitle": "交付上线 v2.3",
+    "onboard.deliveryNote": "onboarding 模拟触发",
+    "rec.waterRecord": "喝水记录",
+    "rec.water": "喝水",
+    "rec.waterValue": "1 杯",
+    "rec.weightTracking": "体重追踪",
+    "rec.weight": "体重",
+    "rec.exerciseRecord": "运动记录",
+    "rec.sleepRecord": "睡眠记录",
+    "rec.dailyLife": "日常事务",
+    "rec.work": "作品",
+    "rec.unnamed": "未命名",
+    "rec.data": "数据",
+    "rec.exercise": "运动",
+    "view.nameRequired": "请输入视图名称",
+    "view.nameTooLong": "视图名称过长（最多 16 字）",
+    "api.networkError": "网络错误",
+    "chat.newConversation": "新对话",
+
+    "tool.sheet.title": "表格",
+    "tool.line": "线条",
+    "tool.rect": "矩形",
+    "tool.circle": "圆",
+    "tool.poly": "多边形",
+    "weekday.mon": "一",
+    "weekday.tue": "二",
+    "weekday.wed": "三",
+    "weekday.thu": "四",
+    "weekday.fri": "五",
+    "weekday.sat": "六",
+    "weekday.sun": "日",
+    "period.morning": "早（5-12）",
+    "period.afternoon": "午（12-18）",
+    "period.evening": "晚（18-5）",
+    "model.llama1b.desc": "Meta Llama 3.2 1B 参数量化模型，适合轻量对话",
+    "model.llama3b.desc": "Meta Llama 3.2 3B 参数量化模型，平衡质量与速度",
+    "model.phi35.desc": "Microsoft Phi-3.5 mini 量化模型，推理能力强",
+    "model.qwen25.desc": "阿里 Qwen2.5 1.5B 量化模型，中文友好",
+    "model.gemma2.desc": "Google Gemma 2 2B 量化模型",
+    "model.smollm2.desc": "HuggingFace SmolLM2 轻量模型",
+    "model.sentimentBert.desc": "BERT 情感分析（正/负）",
+    "model.topicRoberta.desc": "RoBERTa 主题分类（科技/财经/体育/娱乐）",
+    "model.spamDistilbert.desc": "DistilBERT 垃圾信息分类",
+    "model.nerBert.desc": "BERT 命名实体识别（人/地/组/时）",
+    "chain.lastTrigger": "上次触发：{n} 天前",
+    "agent.invalidStep": "步骤无效",
+    "agent.recorded": "已记录",
+    // ===== 第四批 i18n：低优先级残留（aitool / lint / mvp.scope / debug） =====
+    // A. AI 工具 description
+    "aitool.create_task.desc": "在指定场景创建一条任务（标题必填），可带标签",
+    "aitool.create_task.scenario.desc": "场景键，如 office/code/study",
+    "aitool.create_task.title.desc": "任务标题",
+    "aitool.create_task.due.desc": "截止日期 YYYY-MM-DD，可空",
+    "aitool.create_task.tags.desc": "标签列表",
+    "aitool.list_tasks.desc": "查询某场景的任务，可按状态过滤",
+    "aitool.complete_task.desc": "按任务 id 或标题关键词标记任务完成",
+    "aitool.complete_task.task_id.desc": "任务 id，或任务标题中的关键词（用于定位任务）",
+    "aitool.update_task.desc": "修改任务的状态/优先级/截止日期/标签（按 id 或标题关键词定位）",
+    "aitool.update_task.task_id.desc": "任务 id，或任务标题中的关键词",
+    "aitool.update_task.due.desc": "新截止日期 YYYY-MM-DD",
+    "aitool.update_task.tags.desc": "覆盖该任务的标签",
+    "aitool.update_task.force.desc": "设为 true 直接执行修改；默认 false 会先返回确认提示（需二次确认）",
+    "aitool.delete_task.desc": "按 id 或标题关键词删除一条任务（进入回收站，可恢复）",
+    "aitool.delete_task.task_id.desc": "任务 id，或任务标题中的关键词",
+    "aitool.delete_task.force.desc": "设为 true 直接软删除（进回收站）；默认 false 会先返回确认提示（需二次确认）",
+    "aitool.add_record.desc": "向某场景的资料库添加一条记录",
+    "aitool.search.desc": "全局搜索任务与资料库中的条目",
+    "aitool.search.query.desc": "搜索关键词",
+    "aitool.query_overview.desc": "返回各场景任务统计与今日/逾期待处理数量",
+    "aitool.export_data.desc": "导出当前全部数据为 JSON 备份",
+    "aitool.remember.desc": "把用户的事实/偏好/决定写入工作记忆，供后续对话自动召回（如“我喜欢简洁回复”“本周重点是 v2 上线”）",
+    "aitool.remember.scope.desc": "global=全场景通用，否则按场景键隔离",
+    "aitool.remember.text.desc": "要记住的内容，一句话",
+    "aitool.recall.desc": "按关键词检索工作记忆，回答涉及用户偏好/历史决定前先查",
+    "aitool.recall.query.desc": "检索关键词",
+    "aitool.forget.desc": "按 id 或内容关键词删除一条工作记忆",
+    "aitool.forget.id.desc": "记忆 id 或内容关键词",
+    "aitool.plan.desc": "为多步任务建立目标与步骤清单（跨场景可拆步）。建立后按步骤调用工具执行，每步完成用 complete_step 标记，全部完成用 complete_goal 收尾",
+    "aitool.plan.goal.desc": "目标标题",
+    "aitool.plan.scenario.desc": "主场景",
+    "aitool.plan.steps.desc": "步骤清单，按执行顺序",
+    "aitool.complete_step.desc": "标记当前目标的某一步已完成",
+    "aitool.complete_step.index.desc": "步骤序号（从 0 开始）",
+    "aitool.complete_step.note.desc": "该步结果说明，可空",
+    "aitool.complete_goal.desc": "目标全部步骤完成后调用，收尾并总结",
+    "aitool.complete_goal.summary.desc": "完成总结",
+    "aitool.list_records.desc": "查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等）",
+    "aitool.add_feature_record.desc": "向当前场景的功能卡添加一条记录（如会议/项目/考勤/报销/知识库/阅读/练习/考试/报表/图表/前端/SQL/UI/3D/计划）",
+    "aitool.add_feature_record.feature.desc": "功能 id：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan",
+    "aitool.add_feature_record.fields.desc": "字段键值对（各功能表单字段，如会议 title/date/who/note）",
+    "aitool.web_search.desc": "联网搜索（可配置搜索引擎，返回标题/摘要/链接）",
+    "aitool.web_search.query.desc": "搜索关键词",
+    "aitool.web_search.engine.desc": "搜索引擎 id（可空，默认用配置）",
+    "aitool.web_search.limit.desc": "返回条数（默认 5）",
+    "aitool.web_fetch.desc": "抓取指定 URL 的网页内容（纯文本，去标签）",
+    "aitool.web_fetch.url.desc": "要抓取的 URL（http/https）",
+    "aitool.web_fetch.selector.desc": "可选 CSS 选择器（提取局部）",
+    "aitool.code_run.desc": "在 Web Worker 沙箱中运行 JS 代码（5s 超时，收集 console 输出）",
+    "aitool.code_run.code.desc": "要执行的 JS 代码片段",
+    "aitool.code_run.timeout.desc": "超时毫秒（默认 5000）",
+    "aitool.sql_query.desc": "在内存 SQLite（sql.js WASM）中运行 SQL，返回列名与行数据",
+    "aitool.sql_query.sql.desc": "SQL 语句（支持多语句，以分号分隔）",
+    "aitool.sql_query.schema.desc": "建表 DDL（可选，执行前先运行）",
+    "aitool.note_add.desc": "新增一条笔记（标题/内容/标签/分类），存 localStorage",
+    "aitool.note_add.title.desc": "笔记标题",
+    "aitool.note_add.content.desc": "Markdown 内容",
+    "aitool.note_add.tags.desc": "标签列表",
+    "aitool.note_add.category.desc": "分类（如知识库/工作笔记）",
+    "aitool.note_search.desc": "按关键词搜索笔记（标题+内容匹配）",
+    "aitool.note_search.query.desc": "搜索关键词",
+    // B. LINT 规则 msg/sug
+    "lint.hardcoded_secret.msg": "疑似硬编码密钥/密码",
+    "lint.hardcoded_secret.sug": "使用环境变量或配置文件管理敏感信息",
+    "lint.sql_injection.msg": "疑似 SQL 注入（字符串拼接）",
+    "lint.sql_injection.sug": "使用参数化查询或预编译语句",
+    "lint.eval_usage.msg": "使用 eval() 可能导致代码注入",
+    "lint.eval_usage.sug": "避免使用 eval，改用 JSON.parse 或 Function 构造器",
+    "lint.xss_risk.msg": "直接赋值 innerHTML 可能存在 XSS 风险",
+    "lint.xss_risk.sug": "使用 sanitizeHtml 包裹或 textContent",
+    "lint.document_write.msg": "使用 document.write 可能导致 XSS",
+    "lint.document_write.sug": "使用 DOM API 或 innerHTML（已消毒）",
+    "lint.command_injection.msg": "疑似命令注入（字符串拼接）",
+    "lint.command_injection.sug": "使用 execFile 或传入参数数组",
+    "lint.redos_risk.msg": "疑似 ReDoS 风险的正则表达式",
+    "lint.redos_risk.sug": "简化正则或使用安全正则库",
+    "lint.insecure_http.msg": "使用明文 HTTP 传输",
+    "lint.insecure_http.sug": "使用 HTTPS 加密传输",
+    "lint.insecure_storage.msg": "在 localStorage 存储敏感数据",
+    "lint.insecure_storage.sug": "敏感数据应加密存储或使用 sessionStorage/IndexedDB",
+    "lint.prototype_pollution.msg": "疑似原型链污染",
+    "lint.prototype_pollution.sug": "避免直接操作 __proto__，使用 Object.create",
+    "lint.xss_user_input.msg": "innerHTML 赋值用户输入，XSS 风险高",
+    "lint.xss_user_input.sug": "必须对用户输入进行转义/消毒",
+    "lint.loop_length.msg": "循环条件中重复读取 length",
+    "lint.loop_length.sug": "缓存 length 到局部变量：for(let i=0, len=arr.length; i<len; i++)",
+    "lint.nested_loop.msg": "嵌套循环可能导致 O(n²) 复杂度",
+    "lint.nested_loop.sug": "考虑使用哈希表或优化算法降低复杂度",
+    "lint.sync_io.msg": "同步 IO 调用阻塞事件循环",
+    "lint.sync_io.sug": "使用异步版本 readFile/writeFile",
+    "lint.dom_loop.msg": "循环内 DOM 操作可能触发频繁重排",
+    "lint.dom_loop.sug": "使用 DocumentFragment 批量操作或 requestAnimationFrame",
+    "lint.no_debounce.msg": "高频事件未防抖",
+    "lint.no_debounce.sug": "使用 debounce/throttle 节流",
+    "lint.unsafe_parse.msg": "JSON.parse 建议包裹 try-catch",
+    "lint.unsafe_parse.sug": "包裹 try-catch 防止解析失败崩溃",
+    "lint.unhandled_promise.msg": "Promise 可能未处理 rejection",
+    "lint.unhandled_promise.sug": "添加 .catch() 或使用 async/await + try-catch",
+    "lint.regex_in_loop.msg": "循环内重复编译正则表达式",
+    "lint.regex_in_loop.sug": "将正则提到循环外编译一次",
+    "lint.console_log.msg": "残留 console.log 调试代码",
+    "lint.console_log.sug": "移除调试代码或使用条件日志",
+    "lint.var_decl.msg": "使用 var 声明（函数作用域，易出错）",
+    "lint.var_decl.sug": "使用 let/const 声明块作用域变量",
+    // C. MVP_SCOPE
+    "mvp.scope.in_scope.1": "多场景任务看板（office/data/design/study/code/life/overview）",
+    "mvp.scope.in_scope.2": "任务 CRUD + 完成/软删（pendingConfirm 二次确认闸门）",
+    "mvp.scope.in_scope.3": "场景联动规则（源场景完成 → 跨场景生成奖励/后续任务）",
+    "mvp.scope.in_scope.4": "AI 助手（工具调用：search/complete/update/delete + 场景记忆注入）",
+    "mvp.scope.in_scope.5": "Agent 工作记忆（remember/recall/forget，按场景隔离 + 近期/命中加权召回，自动注入对话上下文）",
+    "mvp.scope.in_scope.6": "Agent 多步目标编排（plan/complete_step/complete_goal，单目标聚焦，跨场景拆步，循环上限放宽）",
+    "mvp.scope.in_scope.7": "AI Key 本地加密存储（AES-GCM + 设备密钥，不落明文/不传网络）",
+    "mvp.scope.in_scope.8": "办公会议纪要/编程代码片段/学习资料/生活备忘等多类记录（rec_*）",
+    "mvp.scope.in_scope.9": "本地自动备份快照（P1-b，独立于手动导出）",
+    "mvp.scope.in_scope.10": "SM2 间隔重复记忆（study 场景）",
+    "mvp.scope.in_scope.11": "桌面端 Electron 壳（开机自启/Key 交主进程保管）",
+    "mvp.scope.out_of_scope.1": "多端实时同步 / 云端账户体系（v2 评估）",
+    "mvp.scope.out_of_scope.2": "团队协作 / 多人在线编辑（v2 评估）",
+    "mvp.scope.out_of_scope.3": "后端服务 / 远程 API（当前为纯前端 + 本地存储）",
+    "mvp.scope.out_of_scope.4": "细粒度权限 RBAC（单用户本地应用，不需要）",
+    "mvp.scope.out_of_scope.5": "国际化 i18n（当前仅 zh-CN）",
+    "mvp.scope.exceptions.1": "overview 为瞬态视图，不持久化（按 g 切换，不写入存储）",
+    "mvp.scope.exceptions.2": "execTool 的 force 已入 schema（v1.14.1 起 AI 可传 force=true 跳过二次确认；默认 false 仍走确认）",
+    "mvp.scope.exceptions.3": "Electron 下 AI Key 由主进程保管，渲染进程 cfg 中 key 为空占位（P0-3）",
+    // D. 调试输出
+    "debug.cryptoUnavailable": "Web Crypto API 不可用，AI Key 将明文存储于 localStorage",
   },
   en: {
     // Common
@@ -28951,6 +29427,476 @@ const MESSAGES = {
     "plugin.quote.q8": "Stay hungry, stay foolish.",
     "plugin.mindmap.title": "Mind Map",
     "plugin.mindmap.hint": "Drag nodes, create relationships, organize your thoughts",
+    "tool.convergedTo": " converged to",
+    "tool.jumpingSoon": " — jumping soon",
+    "tool.ppt.slidesName": "Slides",
+    "import.failed": "Import failed",
+    "integration.disconnected": " disconnected",
+    "api.keyRevoked": "Key revoked",
+    "api.keyCreated": "Key created: ",
+    "api.keyNamePrompt": "Enter key name:",
+    "api.unknownDevice": "Unknown device",
+    "api.reminder": "Reminder",
+    "filter.collapse": "Filter ▾",
+    "filter.expand": "Filter ▸",
+    "greeting.lateNight": "Late night",
+    "greeting.morning": "Good morning",
+    "greeting.noon": "Good noon",
+    "greeting.afternoon": "Good afternoon",
+    "greeting.evening": "Good evening",
+    "a11y.aiModuleNav": "AI module navigation",
+    "a11y.settingsSectionNav": "Settings section navigation",
+    "a11y.llmConfig": "LLM large model configuration",
+    "a11y.agentAbility": "Agent capabilities",
+    "a11y.agentMode": "Agent mode",
+    "a11y.aiExtExperimental": "AI extensions (experimental)",
+    "a11y.sessionMgmt2": "Session management",
+    "a11y.sceneMgmt": "Scenario management",
+    "a11y.chainRules": "Chain rules",
+    "a11y.knowledge": "Knowledge",
+    "a11y.pluginStore": "Plugin store",
+    "a11y.dataMgmt": "Data management",
+    "a11y.lanSync": "LAN sync",
+    "a11y.appearance": "Appearance",
+    "a11y.pointerFxToggle": "Pointer effect toggle",
+    "a11y.notifyReminder": "Notification reminder",
+    "a11y.enableTaskReminder": "Enable task due reminder",
+    "a11y.quietHours": "Do not disturb hours",
+    "a11y.quietStart": "Do not disturb start time",
+    "a11y.quietEnd": "Do not disturb end time",
+    "a11y.integrationCenter": "Integration center",
+    "a11y.apiAccount": "Account settings",
+    "a11y.apiNotify": "Notification preferences",
+    "a11y.thirdPartyIntegrations": "Third-party integrations",
+    "a11y.aboutCompat": "About and compatibility notes",
+    "a11y.reportType": "Report type",
+    "a11y.returnPrevView": "Return to previous view",
+    "a11y.closeBtn": "Close",
+    "a11y.overviewViewSwitch": "Overview view switch",
+    "a11y.filterByScene": "Filter by scenario",
+    "a11y.filterByStatus": "Filter by status",
+    "a11y.filterByDate": "Filter by date",
+    "a11y.complete": "Complete",
+    "a11y.titleLevel": "Title level",
+    "a11y.sceneRadar": "Scenario completion radar chart",
+    "a11y.taskFlowSankey": "Task flow Sankey diagram",
+    "field.memMaxPh": "60 (default)",
+    "field.onboardTaskInputPh": "Task title, e.g. write weekly report / fix bug / pay utility bill",
+    "field.globSearchPh": "Keyword, e.g. weekly report / running…",
+    "field.globFTagPh": "Tag, e.g. urgent",
+    "ui.snooze30MinTitle": "Remind again in 30 minutes",
+    "chat.collapseLbl": "Collapse",
+    "chartStore.libTitle": "Chart Library",
+    "task.snoozeBtnText": "Later",
+    "onboard.step1Desc": "This is a tool to help you manage tasks and build habits. Let's create your first task!",
+    "onboard.skip1": "Skip",
+    "onboard.create": "Create",
+    "onboard.step2Title": "Scenario chaining — keep the positive feedback going",
+    "onboard.step2Desc": "Completing tasks can trigger cross-scenario chaining. For example, after delivering a task, you can be automatically reminded to study and recharge.",
+    "onboard.skip2": "Skip",
+    "onboard.simulate": "Simulate",
+    "onboard.next": "Next",
+    "onboard.step3Title": "Configure AI Assistant (optional)",
+    "onboard.step3Desc": "After configuring AI, each scenario has a dedicated AI assistant to help you create tasks, check overviews, and search.",
+    "onboard.later": "Later",
+    "onboard.goSettings": "Go to Settings",
+    "help.subTitle": "Quick start · Scenario guide · AI tips · Data security",
+    "help.backBtnText": "← Back",
+    "help.stepStart": "Get started in 3 steps:",
+    "help.chainIntro": "Completing tasks can automatically trigger cross-scenario rewards/follow-up tasks, forming a positive feedback loop:",
+    "help.chainEdit": "In Settings → Chain Rules, you can edit cross-scenario automatic rules (keywords, target scenarios, enable/disable).",
+    "help.aiIntro": "Each scenario has a dedicated AI assistant (different system prompt). Enter in the chat box:",
+    "help.aiCmd1": "\"Create a task: write weekly report tomorrow\" → AI calls create_task tool",
+    "help.aiCmd2": "\"Check overview\" → AI calls query_overview tool",
+    "help.aiCmd3": "\"Search running\" → AI calls search tool",
+    "help.aiCmd4": "\"Complete task xxx\" → AI calls complete_task tool",
+    "help.aiCmd5": "After enabling Agent mode, you can also do multi-step tasks like \"Remember: I prefer concise replies\" or \"Help me plan: clear office to-dos this week\"",
+    "help.aiTools": "AI can call various tools to manage your workbench data (including Agent memory/goal tools). Enable by configuring API Key in settings.",
+    "help.reviewIntro": "Learning scenario materials support spaced repetition (SM-2 algorithm). Choose one of 4 ratings when reviewing:",
+    "help.reviewAuto": "The system automatically calculates the next review date and ease factor. Items due for review today are highlighted in the learning scenario.",
+    "help.perfIntro": "This workbench has multiple optimizations in rendering and storage layers to ensure smoothness with large numbers of tasks:",
+    "help.perfNote": "The above optimizations are transparent to users (auto backup is a debounced snapshot; frequency is fixed and non-adjustable).",
+    "help.kbdScenes": "Switch scenario (office/data/design/learning/coding/life)",
+    "help.kbdCmd": "Command palette (search tasks, switch scenarios)",
+    "help.kbdNew": "Create new task and focus title input",
+    "help.kbdHelp": "Open this shortcut help panel",
+    "help.kbdClose": "Close popup/drawer",
+    "help.step1Build": "Build task",
+    "help.step1Complete": "Complete task",
+    "help.step1Ai": "Use AI",
+    "help.scenesTitle": "6 Scenarios",
+    "help.sceneOffice": "Office",
+    "help.sceneData": "Data",
+    "help.sceneDesign": "Design",
+    "help.sceneLearning": "Learning",
+    "help.sceneCoding": "Coding",
+    "help.sceneLife": "Life",
+    "help.chainOffice": "Office",
+    "help.chainStudy": "Study",
+    "help.chainCoding": "Coding",
+    "help.perfRaf": "RAF batch updates",
+    "help.perfLazy": "Lazy initialization",
+    "help.perfLs": "localStorage batch writes",
+    "help.perfBuild": "Production build compression",
+    "help.troubleTitle": "Check here first for issues",
+    "help.troubleDataLoss": "Unexpected data loss/anomaly",
+    "help.troubleCors": "AI reports CORS/network error",
+    "help.troublePwa": "New PWA version not effective/seeing old version",
+    "help.troubleMigrate": "Switching browser/device/moving HTML file data not carried over",
+    "help.troubleWasm": "SQL Playground error \"WASM load failed\"",
+    "help.troubleNotify": "Notifications/desktop alerts not popping up",
+    "help.troubleRestore": "Restore accidentally deleted task",
+    "help.featIntegrations": "Integration center",
+    "help.featOauth": "OAuth authorization",
+    "help.featPluginMarket": "Plugin market",
+    "help.featRecycle": "Multi-type recycle bin",
+    "help.featProfile": "Multi-profile providers",
+    "help.featAgent": "Agent three layers",
+    "help.featSession": "Multi-session",
+    "help.featWhitelist": "Tool whitelist",
+    "help.secAiKey": "AI Key encryption",
+    "help.secExport": "Export backup",
+    "help.secImport": "Import restore",
+    "help.secAutoBackup": "Auto backup",
+    "help.secNote": "Note",
+    "share.chainLog": "Chain log",
+    "share.priority": "Priority",
+    "share.dueDate": "Due date",
+    "overview.today": "Today",
+    "overview.all": "All",
+    "overview.homeTitle": "Home",
+    "overview.homeSub": "System overview · Global search · Data at a glance",
+    "overview.advReport": "Advanced report",
+    "overview.sysData": "System data",
+    "overview.filter": "Filter ▸",
+    "overview.clearFilter": "Clear filter",
+    "overview.bizData": "Business data",
+    "overview.sceneProgress": "Scenario progress",
+    "overview.trendSub": "Completion trend and this month density",
+    "overview.trendTitle": "Completion trend (last 14 days)",
+    "overview.heatTitle": "Calendar heatmap (this month)",
+    "overview.vizSection": "Data visualization authoring",
+    "overview.vizSub": "Freely arrange charts on canvas to display business and system data",
+    "overview.openViz": "Open chart authoring tool",
+    "task.editBtn": "Edit",
+    "task.shareBtnText": "Share",
+    "task.delBtn": "Delete",
+    "field.aiSkillsCustomPh": "[{\"name\":\"skill name\",\"desc\":\"skill desc\",\"enabled\":true}]",
+    "field.pluginAddJsonPh": "{\"id\":\"plugin ID\",\"name\":\"plugin name\",\"version\":\"1.0.0\",\"description\":\"plugin desc\"}",
+    "field.themeImportJsonPh": "{\"id\":\"theme ID\",\"name\":\"theme name\",\"type\":\"custom\",\"tokens\":{\"--bg\":\"var(--panel)\",\"--accent\":\"var(--accent)\"}}",
+    "status.todo": "To Do",
+    "status.doing": "In Progress",
+    "status.done": "Done",
+    "stats.scene": "Scenarios",
+    "stats.tasks": "Tasks",
+
+    "stats.material": "Materials",
+    "stats.notes": "Notes",
+    "tool.weather.name": "Weather",
+    "tool.weather.desc": "Today + forecast for next few days",
+    "tool.alarm.name": "Alarm",
+    "tool.alarm.desc": "Multi-task · Repeat · Snooze",
+    "tool.pomo.name": "Focus",
+    "tool.pomo.desc": "25 min focus + 5 min break",
+    "tool.tracker.name": "Time Tracker",
+    "tool.tracker.desc": "Task timer stopwatch",
+    "tool.pet.name": "Pet",
+    "tool.pet.desc": "Desktop companion",
+    "tool.mindmap.name": "Mind Map",
+    "tool.mindmap.desc": "Task relationship tree",
+    "tool.kb.name": "Knowledge Base",
+    "tool.kb.desc": "Material cards and full-text search",
+    "tool.notes.name": "Notes",
+    "tool.notes.desc": "Tags / Categories / Task linking",
+    "tool.report.toolboxName": "Advanced Report",
+    "tool.report.desc": "Weekly / Monthly / Yearly reports and comparison",
+    "tool.tpl.name": "Scene Templates",
+    "tool.tpl.desc": "One-click import preset task sets",
+    "tool.cat.all": "All",
+    "tool.cat.doc": "Document",
+    "tool.cat.design": "Design",
+    "tool.cat.coding": "Coding",
+    "tool.cat.life": "Life",
+    "tool.cat.search": "Search",
+    "tool.cat.func": "Function",
+    "tool.cat.efficiency": "Efficiency Tools",
+    "store.cat.all": "All",
+    "store.cat.efficiency": "Efficiency",
+    "store.cat.func": "Function",
+    "store.cat.scene": "Scene",
+    "store.cat.other": "Other",
+    "dashboard.stats": "Key Metrics",
+    "dashboard.today": "Today's To-Do",
+    "dashboard.trend": "Task Completion Trend",
+    "dashboard.scenes": "Scenario Overview",
+    "dashboard.pie": "Scenario Distribution",
+    "dashboard.heatmap": "Heatmap",
+    "dashboard.chain": "Chain Trigger Rate",
+    "dashboard.recent": "Recently Completed",
+    "dashboard.actions": "Quick Actions",
+    "dashboard.hourdist": "Completion Time Distribution",
+    "dashboard.report": "Advanced Report",
+    "dashboard.gantt": "Gantt Chart",
+    "dashboard.mindmap": "Mind Map",
+    "dashboard.radar": "Radar Chart",
+    "dashboard.sankey": "Sankey Diagram",
+    "template.kaoyan": "Graduate Exam Review Plan",
+    "template.kaoyan.desc": "Politics/English/Math/Major daily review + weekly test, scheduled by week",
+    "template.kaoyan.t1": "Politics: Marxist review + multiple choice practice",
+    "template.kaoyan.n1": "Focus: Historical materialism + epistemology",
+    "template.kaoyan.t2": "English: 2 reading comprehension + vocabulary",
+    "template.kaoyan.n2": "Intensive reading + long sentence analysis",
+    "template.kaoyan.t3": "Math: Calculus chapter review + exercises",
+    "template.kaoyan.n3": "Limits and continuity",
+    "template.kaoyan.t4": "Major: designated textbook chapter intensive reading",
+    "template.kaoyan.n4": "Notes + mind map",
+    "template.kaoyan.t5": "Weekly test: full mock exam",
+    "template.kaoyan.n5": "Timed + error review",
+    "template.kaoyan.t6": "Error compilation + weak area reinforcement",
+    "template.kaoyan.n6": "Redo wrong questions",
+    "template.fitness": "30-Day Fitness Plan",
+    "template.fitness.desc": "Running/Strength/Stretching alternate days, 30-day progressive training",
+    "template.fitness.t1": "Run 3km + warm-up",
+    "template.fitness.n1": "Pace 6:00, mind breathing rhythm",
+    "template.fitness.t2": "Strength: upper body (push-ups/dumbbells)",
+    "template.fitness.n2": "3 sets × 12 reps",
+    "template.fitness.t3": "Stretch recovery + foam roller",
+    "template.fitness.n3": "Full body stretch 20 min",
+    "template.fitness.t4": "Run 5km tempo run",
+    "template.fitness.n4": "Pace 5:30",
+    "template.fitness.t5": "Strength: lower body (squat/deadlift)",
+    "template.fitness.n5": "3 sets × 10 reps",
+    "template.fitness.t6": "Rest day: walk + adequate sleep",
+    "template.fitness.n6": "Active recovery",
+    "template.fitness.t7": "Weekly summary: weight/feeling/progress",
+    "template.fitness.n7": "Photo comparison",
+    "template.coding": "Programming Learning Path",
+    "template.coding.desc": "Algorithm/Project/Problems daily, theory + practice",
+    "template.coding.t1": "Algorithm: data structure review (list/stack/queue)",
+    "template.coding.n1": "Hand-write implementation + complexity analysis",
+    "template.coding.t2": "Problems: LeetCode daily 2",
+    "template.coding.n2": "Easy to hard, summarize patterns",
+    "template.coding.t3": "Project: scaffold + core modules",
+    "template.coding.n3": "Tech selection + directory structure",
+    "template.coding.t4": "Algorithm: dynamic programming topic",
+    "template.coding.n4": "Classic DP problems × 5",
+    "template.coding.t5": "Project: business logic + unit tests",
+    "template.coding.n5": "Coverage > 80%",
+    "template.coding.t6": "Review: weekly summary + next week plan",
+    "template.coding.n6": "Blog material",
+    "template.project": "Project Management Template",
+    "template.project.desc": "Requirements/Design/Dev/Test weekly, full project lifecycle",
+    "template.project.t1": "Requirements review + scope confirmation",
+    "template.project.n1": "PRD review + acceptance criteria",
+    "template.project.t2": "Technical design + review",
+    "template.project.n2": "Architecture diagram + API definition",
+    "template.project.t3": "Dev: core feature implementation",
+    "template.project.n3": "Daily standup",
+    "template.project.t4": "Dev: integration + bug fix",
+    "template.project.n4": "Frontend-backend integration",
+    "template.project.t5": "Test: case writing + execution",
+    "template.project.n5": "Regression + boundary cases",
+    "template.project.t6": "Release: deploy + accept + review",
+    "template.project.n6": "Canary release + monitoring",
+    "template.habit": "Daily Habit Building",
+    "template.habit.desc": "Early rise/Exercise/Reading/Meditation daily, build healthy habits",
+    "template.habit.t1": "Early rise 6:30 + morning journal",
+    "template.habit.n1": "Record 3 gratitudes",
+    "template.habit.t2": "Exercise 30 min",
+    "template.habit.n2": "Running/yoga/strength",
+    "template.habit.t3": "Reading 30 min",
+    "template.habit.n3": "Record quotes + reflection",
+    "template.habit.t4": "Meditation 10 min",
+    "template.habit.n4": "Focus on breathing + empty mind",
+    "template.habit.t5": "Weekly review: habit stats",
+    "template.habit.n5": "Completion rate + adjust next week",
+    "help.quickStart": "Quick Start",
+    "help.scenes": "Scenarios",
+    "help.chain": "Scenario Chaining",
+    "help.aiTips": "AI Tips",
+    "help.sm2": "SM-2 Spaced Repetition",
+    "help.shortcuts": "Shortcuts",
+    "help.perf": "Performance",
+    "help.trouble": "Troubleshooting",
+    "help.integration": "Integration & Extension",
+    "help.aiAdvanced": "AI Advanced",
+    "help.dataSecurity": "Data Security",
+    "rec.typeTask": "Task",
+    "onboard.deliveryTitle": "Delivery v2.3",
+    "onboard.deliveryNote": "onboarding simulation trigger",
+    "rec.waterRecord": "Water Record",
+    "rec.water": "Water",
+    "rec.waterValue": "1 cup",
+    "rec.weightTracking": "Weight Tracking",
+    "rec.weight": "Weight",
+    "rec.exerciseRecord": "Exercise Record",
+    "rec.sleepRecord": "Sleep Record",
+    "rec.dailyLife": "Daily Life",
+    "rec.work": "Work",
+    "rec.unnamed": "Unnamed",
+    "rec.data": "Data",
+    "rec.exercise": "Exercise",
+    "view.nameRequired": "Please enter a view name",
+    "view.nameTooLong": "View name too long (max 16 chars)",
+    "api.networkError": "Network error",
+    "chat.newConversation": "New conversation",
+
+    "tool.sheet.title": "Spreadsheet",
+    "tool.line": "Line",
+    "tool.rect": "Rectangle",
+    "tool.circle": "Circle",
+    "tool.poly": "Polygon",
+    "weekday.mon": "Mon",
+    "weekday.tue": "Tue",
+    "weekday.wed": "Wed",
+    "weekday.thu": "Thu",
+    "weekday.fri": "Fri",
+    "weekday.sat": "Sat",
+    "weekday.sun": "Sun",
+    "period.morning": "Morning (5-12)",
+    "period.afternoon": "Afternoon (12-18)",
+    "period.evening": "Evening (18-5)",
+    "model.llama1b.desc": "Meta Llama 3.2 1B quantized model, suitable for lightweight conversation",
+    "model.llama3b.desc": "Meta Llama 3.2 3B quantized model, balanced quality and speed",
+    "model.phi35.desc": "Microsoft Phi-3.5 mini quantized model, strong reasoning",
+    "model.qwen25.desc": "Alibaba Qwen2.5 1.5B quantized model, Chinese-friendly",
+    "model.gemma2.desc": "Google Gemma 2 2B quantized model",
+    "model.smollm2.desc": "HuggingFace SmolLM2 lightweight model",
+    "model.sentimentBert.desc": "BERT sentiment analysis (positive/negative)",
+    "model.topicRoberta.desc": "RoBERTa topic classification (tech/finance/sports/entertainment)",
+    "model.spamDistilbert.desc": "DistilBERT spam classification",
+    "model.nerBert.desc": "BERT named entity recognition (person/location/organization/time)",
+    "chain.lastTrigger": "Last triggered: {n} days ago",
+    "agent.invalidStep": "Invalid step",
+    "agent.recorded": "Recorded",
+    // ===== Batch 4 i18n: low-priority residuals (aitool / lint / mvp.scope / debug) =====
+    // A. AI tool descriptions
+    "aitool.create_task.desc": "Create a task in a specified scenario (title required), tags optional",
+    "aitool.create_task.scenario.desc": "Scenario key, e.g. office/code/study",
+    "aitool.create_task.title.desc": "Task title",
+    "aitool.create_task.due.desc": "Due date YYYY-MM-DD, optional",
+    "aitool.create_task.tags.desc": "Tag list",
+    "aitool.list_tasks.desc": "Query tasks in a scenario, optionally filter by status",
+    "aitool.complete_task.desc": "Mark a task complete by task id or title keyword",
+    "aitool.complete_task.task_id.desc": "Task id, or a keyword in the task title (to locate the task)",
+    "aitool.update_task.desc": "Update task status/priority/due date/tags (located by id or title keyword)",
+    "aitool.update_task.task_id.desc": "Task id, or a keyword in the task title",
+    "aitool.update_task.due.desc": "New due date YYYY-MM-DD",
+    "aitool.update_task.tags.desc": "Tags to override for this task",
+    "aitool.update_task.force.desc": "Set true to execute directly; default false returns a confirmation prompt first (requires second confirmation)",
+    "aitool.delete_task.desc": "Delete a task by id or title keyword (moved to recycle bin, recoverable)",
+    "aitool.delete_task.task_id.desc": "Task id, or a keyword in the task title",
+    "aitool.delete_task.force.desc": "Set true to soft delete directly (to recycle bin); default false returns a confirmation prompt first (requires second confirmation)",
+    "aitool.add_record.desc": "Add a record to a scenario's data store",
+    "aitool.search.desc": "Globally search tasks and data store entries",
+    "aitool.search.query.desc": "Search keyword",
+    "aitool.query_overview.desc": "Return task statistics per scenario and today/overdue pending counts",
+    "aitool.export_data.desc": "Export all current data as a JSON backup",
+    "aitool.remember.desc": "Write user facts/preferences/decisions to working memory for automatic recall in later conversations (e.g. \"I prefer concise replies\" \"This week's focus is v2 launch\")",
+    "aitool.remember.scope.desc": "global=common across all scenarios, otherwise isolated by scenario key",
+    "aitool.remember.text.desc": "Content to remember, one sentence",
+    "aitool.recall.desc": "Search working memory by keyword; query before answering about user preferences/historical decisions",
+    "aitool.recall.query.desc": "Search keyword",
+    "aitool.forget.desc": "Delete a working memory entry by id or content keyword",
+    "aitool.forget.id.desc": "Memory id or content keyword",
+    "aitool.plan.desc": "Establish a goal and step list for a multi-step task (cross-scenario steps allowed). After creation, call tools step by step; mark each completed step with complete_step, and finish with complete_goal when all done",
+    "aitool.plan.goal.desc": "Goal title",
+    "aitool.plan.scenario.desc": "Main scenario",
+    "aitool.plan.steps.desc": "Step list, in execution order",
+    "aitool.complete_step.desc": "Mark a step of the current goal as completed",
+    "aitool.complete_step.index.desc": "Step index (starting from 0)",
+    "aitool.complete_step.note.desc": "Result note for this step, optional",
+    "aitool.complete_goal.desc": "Called when all steps of the goal are completed, to finish and summarize",
+    "aitool.complete_goal.summary.desc": "Completion summary",
+    "aitool.list_records.desc": "Query recent records in a scenario's data store (meeting notes/code snippets/study materials/life memos etc.)",
+    "aitool.add_feature_record.desc": "Add a record to a feature card in the current scenario (e.g. meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/3d/plan)",
+    "aitool.add_feature_record.feature.desc": "Feature id: meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan",
+    "aitool.add_feature_record.fields.desc": "Field key-value pairs (form fields per feature, e.g. meeting title/date/who/note)",
+    "aitool.web_search.desc": "Web search (configurable search engine, returns title/summary/link)",
+    "aitool.web_search.query.desc": "Search keyword",
+    "aitool.web_search.engine.desc": "Search engine id (optional, uses config by default)",
+    "aitool.web_search.limit.desc": "Number of results (default 5)",
+    "aitool.web_fetch.desc": "Fetch web content from a URL (plain text, tags removed)",
+    "aitool.web_fetch.url.desc": "URL to fetch (http/https)",
+    "aitool.web_fetch.selector.desc": "Optional CSS selector (extract a part)",
+    "aitool.code_run.desc": "Run JS code in a Web Worker sandbox (5s timeout, collects console output)",
+    "aitool.code_run.code.desc": "JS code snippet to execute",
+    "aitool.code_run.timeout.desc": "Timeout in ms (default 5000)",
+    "aitool.sql_query.desc": "Run SQL in in-memory SQLite (sql.js WASM), returns column names and row data",
+    "aitool.sql_query.sql.desc": "SQL statement (supports multiple statements, separated by semicolons)",
+    "aitool.sql_query.schema.desc": "Table creation DDL (optional, run before execution)",
+    "aitool.note_add.desc": "Add a note (title/content/tags/category), stored in localStorage",
+    "aitool.note_add.title.desc": "Note title",
+    "aitool.note_add.content.desc": "Markdown content",
+    "aitool.note_add.tags.desc": "Tag list",
+    "aitool.note_add.category.desc": "Category (e.g. knowledge base/work notes)",
+    "aitool.note_search.desc": "Search notes by keyword (title + content match)",
+    "aitool.note_search.query.desc": "Search keyword",
+    // B. LINT rule msg/sug
+    "lint.hardcoded_secret.msg": "Suspected hardcoded key/password",
+    "lint.hardcoded_secret.sug": "Use environment variables or config files to manage sensitive information",
+    "lint.sql_injection.msg": "Suspected SQL injection (string concatenation)",
+    "lint.sql_injection.sug": "Use parameterized queries or prepared statements",
+    "lint.eval_usage.msg": "Using eval() may cause code injection",
+    "lint.eval_usage.sug": "Avoid eval; use JSON.parse or Function constructor instead",
+    "lint.xss_risk.msg": "Direct innerHTML assignment may have XSS risk",
+    "lint.xss_risk.sug": "Wrap with sanitizeHtml or use textContent",
+    "lint.document_write.msg": "Using document.write may cause XSS",
+    "lint.document_write.sug": "Use DOM API or innerHTML (sanitized)",
+    "lint.command_injection.msg": "Suspected command injection (string concatenation)",
+    "lint.command_injection.sug": "Use execFile or pass an argument array",
+    "lint.redos_risk.msg": "Suspected ReDoS risk regex",
+    "lint.redos_risk.sug": "Simplify regex or use a safe regex library",
+    "lint.insecure_http.msg": "Using plaintext HTTP transport",
+    "lint.insecure_http.sug": "Use HTTPS encrypted transport",
+    "lint.insecure_storage.msg": "Storing sensitive data in localStorage",
+    "lint.insecure_storage.sug": "Sensitive data should be encrypted or use sessionStorage/IndexedDB",
+    "lint.prototype_pollution.msg": "Suspected prototype pollution",
+    "lint.prototype_pollution.sug": "Avoid direct __proto__ manipulation; use Object.create",
+    "lint.xss_user_input.msg": "innerHTML assigned with user input, high XSS risk",
+    "lint.xss_user_input.sug": "Must escape/sanitize user input",
+    "lint.loop_length.msg": "Repeated length read in loop condition",
+    "lint.loop_length.sug": "Cache length to a local variable: for(let i=0, len=arr.length; i<len; i++)",
+    "lint.nested_loop.msg": "Nested loops may cause O(n^2) complexity",
+    "lint.nested_loop.sug": "Consider hash tables or algorithm optimization to reduce complexity",
+    "lint.sync_io.msg": "Synchronous IO call blocks event loop",
+    "lint.sync_io.sug": "Use async versions readFile/writeFile",
+    "lint.dom_loop.msg": "DOM operations in loop may trigger frequent reflow",
+    "lint.dom_loop.sug": "Use DocumentFragment for batch operations or requestAnimationFrame",
+    "lint.no_debounce.msg": "High-frequency event not debounced",
+    "lint.no_debounce.sug": "Use debounce/throttle to limit rate",
+    "lint.unsafe_parse.msg": "JSON.parse should be wrapped in try-catch",
+    "lint.unsafe_parse.sug": "Wrap in try-catch to prevent crash on parse failure",
+    "lint.unhandled_promise.msg": "Promise may have unhandled rejection",
+    "lint.unhandled_promise.sug": "Add .catch() or use async/await + try-catch",
+    "lint.regex_in_loop.msg": "Repeated regex compilation in loop",
+    "lint.regex_in_loop.sug": "Move regex outside the loop and compile once",
+    "lint.console_log.msg": "Residual console.log debug code",
+    "lint.console_log.sug": "Remove debug code or use conditional logging",
+    "lint.var_decl.msg": "Using var declaration (function scope, error-prone)",
+    "lint.var_decl.sug": "Use let/const for block-scoped variables",
+    // C. MVP_SCOPE
+    "mvp.scope.in_scope.1": "Multi-scenario task board (office/data/design/study/code/life/overview)",
+    "mvp.scope.in_scope.2": "Task CRUD + complete/soft-delete (pendingConfirm two-step gate)",
+    "mvp.scope.in_scope.3": "Scenario linkage rules (source scenario complete -> cross-scenario reward/follow-up task generation)",
+    "mvp.scope.in_scope.4": "AI assistant (tool calls: search/complete/update/delete + scenario memory injection)",
+    "mvp.scope.in_scope.5": "Agent working memory (remember/recall/forget, scenario isolation + recency/hit-weighted recall, auto-injected into conversation context)",
+    "mvp.scope.in_scope.6": "Agent multi-step goal orchestration (plan/complete_step/complete_goal, single-goal focus, cross-scenario steps, relaxed loop cap)",
+    "mvp.scope.in_scope.7": "AI Key local encrypted storage (AES-GCM + device key, no plaintext/no network)",
+    "mvp.scope.in_scope.8": "Office meeting notes/coding snippets/study materials/life memos etc. (rec_*)",
+    "mvp.scope.in_scope.9": "Local auto-backup snapshots (P1-b, independent of manual export)",
+    "mvp.scope.in_scope.10": "SM2 spaced repetition memory (study scenario)",
+    "mvp.scope.in_scope.11": "Desktop Electron shell (auto-start on boot/Key managed by main process)",
+    "mvp.scope.out_of_scope.1": "Multi-device real-time sync / cloud account system (v2 evaluation)",
+    "mvp.scope.out_of_scope.2": "Team collaboration / multi-user online editing (v2 evaluation)",
+    "mvp.scope.out_of_scope.3": "Backend service / remote API (currently pure frontend + local storage)",
+    "mvp.scope.out_of_scope.4": "Fine-grained RBAC permissions (single-user local app, not needed)",
+    "mvp.scope.out_of_scope.5": "Internationalization i18n (currently zh-CN only)",
+    "mvp.scope.exceptions.1": "overview is a transient view, not persisted (switch by g, not written to storage)",
+    "mvp.scope.exceptions.2": "execTool force is in schema (since v1.14.1 AI can pass force=true to skip two-step confirmation; default false still confirms)",
+    "mvp.scope.exceptions.3": "Under Electron AI Key is kept by main process, renderer cfg has empty key placeholder (P0-3)",
+    // D. Debug output
+    "debug.cryptoUnavailable": "Web Crypto API unavailable, AI Key will be stored in plaintext in localStorage",
   }
 };
 
@@ -29605,7 +30551,7 @@ const MESSAGES = {
           const row = document.createElement("div");
           row.className = "api-device-row";
           row.innerHTML = '<span><span class="api-device-name"></span><br><span class="api-device-meta"></span></span>';
-          row.querySelector(".api-device-name").textContent = d.deviceName || "未知设备";
+          row.querySelector(".api-device-name").textContent = d.deviceName || t("api.unknownDevice", "未知设备");
           row.querySelector(".api-device-meta").textContent = (d.lastSeen || d.createdAt || "") + "";
           if(r.data.devices.length === 1) row.classList.add("current");
           const delBtn = document.createElement("button");
@@ -29652,7 +30598,7 @@ const MESSAGES = {
           const row = document.createElement("div");
           row.className = "api-schedule-row";
           row.innerHTML = '<span><span class="api-device-name"></span><br><span class="api-device-meta"></span></span>';
-          row.querySelector(".api-device-name").textContent = s.type || "提醒";
+          row.querySelector(".api-device-name").textContent = s.type || t("api.reminder", "提醒");
           row.querySelector(".api-device-meta").textContent = s.cron || "";
           const delBtn = document.createElement("button");
           delBtn.type = "button";
@@ -32076,21 +33022,21 @@ const DASHBOARD_LAYOUT_KEY = "dashboard_layout";
  */
 const DASHBOARD_WIDGETS = [
   /* v2.2.1：组件多元化——列表/表格/操作类与图表类并列；default:true 构成默认布局 */
-  { id: "stats",    name: "关键指标",   default: true,  defaultPos: { x: 1, y: 1, w: 2, h: 1 } },
-  { id: "today",    name: "今日待办",   default: true,  defaultPos: { x: 3, y: 1, w: 2, h: 1 } },
-  { id: "trend",    name: "任务完成趋势", default: true,  defaultPos: { x: 5, y: 1, w: 1, h: 2 } },
-  { id: "scenes",   name: "场景概况",   default: true,  defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
-  { id: "pie",      name: "场景分布",   default: true,  defaultPos: { x: 3, y: 2, w: 1, h: 1 } },
-  { id: "heatmap",  name: "热力图",     default: true,  defaultPos: { x: 4, y: 2, w: 1, h: 1 } },
-  { id: "chain",    name: "联动触发率", default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
-  { id: "recent",   name: "最近完成",   default: true,  defaultPos: { x: 3, y: 3, w: 3, h: 1 } },
-  { id: "actions",  name: "快捷操作",   default: false, defaultPos: { x: 1, y: 4, w: 5, h: 1 } },
-  { id: "hourdist", name: "完成时段分布", default: false, defaultPos: { x: 1, y: 5, w: 2, h: 1 } },
-  { id: "report",   name: "高级报表",   default: false, defaultPos: { x: 3, y: 5, w: 3, h: 1 } },
-  { id: "gantt",    name: "甘特图",     default: false, defaultPos: { x: 1, y: 6, w: 3, h: 1 } },
-  { id: "mindmap",  name: "思维导图",   default: false, defaultPos: { x: 4, y: 6, w: 2, h: 1 } },
-  { id: "radar",    name: "雷达图",     default: false, defaultPos: { x: 1, y: 7, w: 2, h: 1 } },
-  { id: "sankey",   name: "桑基图",     default: false, defaultPos: { x: 3, y: 7, w: 3, h: 1 } }
+  { id: "stats",    name: t("dashboard.stats","关键指标"),   default: true,  defaultPos: { x: 1, y: 1, w: 2, h: 1 } },
+  { id: "today",    name: t("dashboard.today","今日待办"),   default: true,  defaultPos: { x: 3, y: 1, w: 2, h: 1 } },
+  { id: "trend",    name: t("dashboard.trend","任务完成趋势"), default: true,  defaultPos: { x: 5, y: 1, w: 1, h: 2 } },
+  { id: "scenes",   name: t("dashboard.scenes","场景概况"),   default: true,  defaultPos: { x: 1, y: 2, w: 2, h: 1 } },
+  { id: "pie",      name: t("dashboard.pie","场景分布"),   default: true,  defaultPos: { x: 3, y: 2, w: 1, h: 1 } },
+  { id: "heatmap",  name: t("dashboard.heatmap","热力图"),     default: true,  defaultPos: { x: 4, y: 2, w: 1, h: 1 } },
+  { id: "chain",    name: t("dashboard.chain","联动触发率"), default: true,  defaultPos: { x: 1, y: 3, w: 2, h: 1 } },
+  { id: "recent",   name: t("dashboard.recent","最近完成"),   default: true,  defaultPos: { x: 3, y: 3, w: 3, h: 1 } },
+  { id: "actions",  name: t("dashboard.actions","快捷操作"),   default: false, defaultPos: { x: 1, y: 4, w: 5, h: 1 } },
+  { id: "hourdist", name: t("dashboard.hourdist","完成时段分布"), default: false, defaultPos: { x: 1, y: 5, w: 2, h: 1 } },
+  { id: "report",   name: t("dashboard.report","高级报表"),   default: false, defaultPos: { x: 3, y: 5, w: 3, h: 1 } },
+  { id: "gantt",    name: t("dashboard.gantt","甘特图"),     default: false, defaultPos: { x: 1, y: 6, w: 3, h: 1 } },
+  { id: "mindmap",  name: t("dashboard.mindmap","思维导图"),   default: false, defaultPos: { x: 4, y: 6, w: 2, h: 1 } },
+  { id: "radar",    name: t("dashboard.radar","雷达图"),     default: false, defaultPos: { x: 1, y: 7, w: 2, h: 1 } },
+  { id: "sankey",   name: t("dashboard.sankey","桑基图"),     default: false, defaultPos: { x: 3, y: 7, w: 3, h: 1 } }
 ];
 /**
  * 生成默认布局（v2.2.0：仅含 default:true 的核心组件）
@@ -33543,7 +34489,7 @@ function _planStepFromText(text, context){
 function agentExecuteStep(step, context){
   context = context || {};
   if(!step || !step.action){
-    return {ok: false, result: null, raw: JSON.stringify({ok: false, msg: "步骤无效"})};
+    return {ok: false, result: null, raw: JSON.stringify({ok: false, msg: t("agent.invalidStep","步骤无效")})};
   }
   /* noop：仅记录，不调用工具 */
   if(step.action === "noop"){
@@ -33635,7 +34581,7 @@ function agentReflect(failedStep, error, context){
     return {
       action: "noop",
       params: {text: JSON.stringify(step)},
-      expect: "已记录",
+      expect: t("agent.recorded","已记录"),
       reason: reason + t("p5.unknownTool", "；未知工具，降级为 noop")
     };
   }
@@ -33738,7 +34684,7 @@ function saveConversation(conv){
     const all = _loadAllConversations();
     const c = {
       id: conv.id || ("conv_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6)),
-      title: conv.title || (conv.messages && conv.messages.length ? String(conv.messages[0].content || "").slice(0, 30) : "新对话"),
+      title: conv.title || (conv.messages && conv.messages.length ? String(conv.messages[0].content || "").slice(0, 30) : t("chat.newConversation","新对话")),
       messages: Array.isArray(conv.messages) ? conv.messages : [],
       summary: conv.summary || "",
       createdAt: conv.createdAt || Date.now(),
@@ -34262,47 +35208,47 @@ function detectSecurityIssues(code){
     /* 硬编码密钥/密码 */
     {re: /(?:api[_-]?key|apikey|secret|password|passwd|pwd|token|access[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/i,
      type: "hardcoded_secret", severity: "high",
-     msg: "疑似硬编码密钥/密码", sug: "使用环境变量或配置文件管理敏感信息"},
+     msg: t("lint.hardcoded_secret.msg","疑似硬编码密钥/密码"), sug: t("lint.hardcoded_secret.sug","使用环境变量或配置文件管理敏感信息")},
     /* SQL 注入（字符串拼接：execute 调用参数中含 + 或 ${ 且含 SQL 关键词） */
     {re: /(?:execute|query|exec)\s*\(\s*[^)]*(?:select|insert|update|delete|drop|where)\b[^)]*(?:\+|\$\{)/i,
      type: "sql_injection", severity: "high",
-     msg: "疑似 SQL 注入（字符串拼接）", sug: "使用参数化查询或预编译语句"},
+     msg: t("lint.sql_injection.msg","疑似 SQL 注入（字符串拼接）"), sug: t("lint.sql_injection.sug","使用参数化查询或预编译语句")},
     /* eval 使用 */
     {re: /\beval\s*\(/,
      type: "eval_usage", severity: "high",
-     msg: "使用 eval() 可能导致代码注入", sug: "避免使用 eval，改用 JSON.parse 或 Function 构造器"},
+     msg: t("lint.eval_usage.msg","使用 eval() 可能导致代码注入"), sug: t("lint.eval_usage.sug","避免使用 eval，改用 JSON.parse 或 Function 构造器")},
     /* innerHTML 赋值（XSS 风险） */
     {re: /\.innerHTML\s*=\s*[^;]*[a-zA-Z_$]/,
      type: "xss_risk", severity: "medium",
-     msg: "直接赋值 innerHTML 可能存在 XSS 风险", sug: "使用 sanitizeHtml 包裹或 textContent"},
+     msg: t("lint.xss_risk.msg","直接赋值 innerHTML 可能存在 XSS 风险"), sug: t("lint.xss_risk.sug","使用 sanitizeHtml 包裹或 textContent")},
     /* document.write */
     {re: /document\.write\s*\(/,
      type: "document_write", severity: "medium",
-     msg: "使用 document.write 可能导致 XSS", sug: "使用 DOM API 或 innerHTML（已消毒）"},
+     msg: t("lint.document_write.msg","使用 document.write 可能导致 XSS"), sug: t("lint.document_write.sug","使用 DOM API 或 innerHTML（已消毒）")},
     /* 命令注入（child_process exec 字符串拼接） */
     {re: /(?:exec|execSync|spawn)\s*\(\s*["'`].*(?:\+|\$\{)/,
      type: "command_injection", severity: "high",
-     msg: "疑似命令注入（字符串拼接）", sug: "使用 execFile 或传入参数数组"},
+     msg: t("lint.command_injection.msg","疑似命令注入（字符串拼接）"), sug: t("lint.command_injection.sug","使用 execFile 或传入参数数组")},
     /* 危险的正则表达式（ReDoS） */
     {re: /new RegExp\s*\(\s*["'`].*(?:\([^)]*\+\)|\([^)]*\*\))/,
      type: "redos_risk", severity: "medium",
-     msg: "疑似 ReDoS 风险的正则表达式", sug: "简化正则或使用安全正则库"},
+     msg: t("lint.redos_risk.msg","疑似 ReDoS 风险的正则表达式"), sug: t("lint.redos_risk.sug","简化正则或使用安全正则库")},
     /* http 明文传输 */
     {re: /http:\/\/(?!localhost|127\.0\.0\.1)/,
      type: "insecure_http", severity: "low",
-     msg: "使用明文 HTTP 传输", sug: "使用 HTTPS 加密传输"},
+     msg: t("lint.insecure_http.msg","使用明文 HTTP 传输"), sug: t("lint.insecure_http.sug","使用 HTTPS 加密传输")},
     /* localStorage 存储敏感数据 */
     {re: /localStorage\.setItem\s*\(\s*["'].*(?:token|password|secret|key|auth)["']/i,
      type: "insecure_storage", severity: "medium",
-     msg: "在 localStorage 存储敏感数据", sug: "敏感数据应加密存储或使用 sessionStorage/IndexedDB"},
+     msg: t("lint.insecure_storage.msg","在 localStorage 存储敏感数据"), sug: t("lint.insecure_storage.sug","敏感数据应加密存储或使用 sessionStorage/IndexedDB")},
     /* prototype 污染 */
     {re: /__proto__|constructor\s*\[|prototype\s*\[/,
      type: "prototype_pollution", severity: "high",
-     msg: "疑似原型链污染", sug: "避免直接操作 __proto__，使用 Object.create"},
+     msg: t("lint.prototype_pollution.msg","疑似原型链污染"), sug: t("lint.prototype_pollution.sug","避免直接操作 __proto__，使用 Object.create")},
     /* innerHTML + 用户输入 */
     {re: /innerHTML\s*=\s*.*(?:prompt|confirm|location\.hash|document\.cookie)/,
      type: "xss_user_input", severity: "high",
-     msg: "innerHTML 赋值用户输入，XSS 风险高", sug: "必须对用户输入进行转义/消毒"}
+     msg: t("lint.xss_user_input.msg","innerHTML 赋值用户输入，XSS 风险高"), sug: t("lint.xss_user_input.sug","必须对用户输入进行转义/消毒")}
   ];
 
   for(let p = 0; p < patterns.length; p++){
@@ -34340,43 +35286,43 @@ function suggestOptimization(code){
     /* for 循环内重复读取 length */
     {re: /for\s*\(\s*(?:var|let|const)?\s*\w+\s*=\s*0\s*;\s*\w+\s*<\s*\w+\.length\s*;\s*\w+\+\+/,
      type: "loop_length", severity: "low",
-     msg: "循环条件中重复读取 length", sug: "缓存 length 到局部变量：for(let i=0, len=arr.length; i<len; i++)"},
+     msg: t("lint.loop_length.msg","循环条件中重复读取 length"), sug: t("lint.loop_length.sug","缓存 length 到局部变量：for(let i=0, len=arr.length; i<len; i++)")},
     /* 嵌套循环（O(n²)） */
     {re: /for\s*\([^)]*\)\s*\{[^}]*for\s*\(/,
      type: "nested_loop", severity: "medium",
-     msg: "嵌套循环可能导致 O(n²) 复杂度", sug: "考虑使用哈希表或优化算法降低复杂度"},
+     msg: t("lint.nested_loop.msg","嵌套循环可能导致 O(n²) 复杂度"), sug: t("lint.nested_loop.sug","考虑使用哈希表或优化算法降低复杂度")},
     /* 同步 IO（fs.readFileSync） */
     {re: /readFileSync|writeFileSync|execSync|existsSync/,
      type: "sync_io", severity: "medium",
-     msg: "同步 IO 调用阻塞事件循环", sug: "使用异步版本 readFile/writeFile"},
+     msg: t("lint.sync_io.msg","同步 IO 调用阻塞事件循环"), sug: t("lint.sync_io.sug","使用异步版本 readFile/writeFile")},
     /* 大量 DOM 操作未批量 */
     {re: /for\s*\([^)]*\)\s*\{[^}]*(?:appendChild|insertBefore|createElement)/,
      type: "dom_loop", severity: "medium",
-     msg: "循环内 DOM 操作可能触发频繁重排", sug: "使用 DocumentFragment 批量操作或 requestAnimationFrame"},
+     msg: t("lint.dom_loop.msg","循环内 DOM 操作可能触发频繁重排"), sug: t("lint.dom_loop.sug","使用 DocumentFragment 批量操作或 requestAnimationFrame")},
     /* 未使用 debounce 的事件监听 */
     {re: /addEventListener\s*\(\s*["'](?:scroll|resize|input|mousemove)["']\s*,/,
      type: "no_debounce", severity: "low",
-     msg: "高频事件未防抖", sug: "使用 debounce/throttle 节流"},
+     msg: t("lint.no_debounce.msg","高频事件未防抖"), sug: t("lint.no_debounce.sug","使用 debounce/throttle 节流")},
     /* JSON.parse 未 try-catch（简化检测：直接匹配 JSON.parse 调用） */
     {re: /JSON\.parse\s*\(/,
      type: "unsafe_parse", severity: "low",
-     msg: "JSON.parse 建议包裹 try-catch", sug: "包裹 try-catch 防止解析失败崩溃"},
+     msg: t("lint.unsafe_parse.msg","JSON.parse 建议包裹 try-catch"), sug: t("lint.unsafe_parse.sug","包裹 try-catch 防止解析失败崩溃")},
     /* Promise 未 await/catch */
     {re: /\w+\([^)]*\)\s*\.\s*then\s*\(\s*(?:[^)]*\)\s*)?(?![^;]*catch)/,
      type: "unhandled_promise", severity: "medium",
-     msg: "Promise 可能未处理 rejection", sug: "添加 .catch() 或使用 async/await + try-catch"},
+     msg: t("lint.unhandled_promise.msg","Promise 可能未处理 rejection"), sug: t("lint.unhandled_promise.sug","添加 .catch() 或使用 async/await + try-catch")},
     /* 重复正则编译 */
     {re: /for\s*\([^)]*\)\s*\{[^}]*new RegExp\s*\(/,
      type: "regex_in_loop", severity: "low",
-     msg: "循环内重复编译正则表达式", sug: "将正则提到循环外编译一次"},
+     msg: t("lint.regex_in_loop.msg","循环内重复编译正则表达式"), sug: t("lint.regex_in_loop.sug","将正则提到循环外编译一次")},
     /* console.log 残留 */
     {re: /console\.log\s*\(/,
      type: "console_log", severity: "low",
-     msg: "残留 console.log 调试代码", sug: "移除调试代码或使用条件日志"},
+     msg: t("lint.console_log.msg","残留 console.log 调试代码"), sug: t("lint.console_log.sug","移除调试代码或使用条件日志")},
     /* var 声明（应使用 let/const） */
     {re: /\bvar\s+\w+/,
      type: "var_decl", severity: "low",
-     msg: "使用 var 声明（函数作用域，易出错）", sug: "使用 let/const 声明块作用域变量"}
+     msg: t("lint.var_decl.msg","使用 var 声明（函数作用域，易出错）"), sug: t("lint.var_decl.sug","使用 let/const 声明块作用域变量")}
   ];
 
   for(let p = 0; p < patterns.length; p++){
@@ -34620,12 +35566,12 @@ const _DATA_FLOW_AUDIT_MAX = 200;
 
 /* 预定义 WebLLM 可用模型列表（不实际下载，仅元数据） */
 const WEBLLM_MODELS = [
-  { id: "Llama-3.2-1B-Instruct-q4f16_1-MLC",  name: "Llama-3.2-1B-Instruct",  size: "0.9GB",  description: "Meta Llama 3.2 1B 参数量化模型，适合轻量对话", quantization: "q4f16_1" },
-  { id: "Llama-3.2-3B-Instruct-q4f16_1-MLC",  name: "Llama-3.2-3B-Instruct",  size: "2.0GB",  description: "Meta Llama 3.2 3B 参数量化模型，平衡质量与速度", quantization: "q4f16_1" },
-  { id: "Phi-3.5-mini-instruct-q4f16_1-MLC",  name: "Phi-3.5-mini-instruct",  size: "2.4GB",  description: "Microsoft Phi-3.5 mini 量化模型，推理能力强", quantization: "q4f16_1" },
-  { id: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",  name: "Qwen2.5-1.5B-Instruct",  size: "1.5GB",  description: "阿里 Qwen2.5 1.5B 量化模型，中文友好", quantization: "q4f16_1" },
-  { id: "gemma-2-2b-it-q4f16_1-MLC",          name: "gemma-2-2b-it",          size: "1.6GB",  description: "Google Gemma 2 2B 量化模型", quantization: "q4f16_1" },
-  { id: "SmolLM2-1.7B-Instruct-q4f16_1-MLC",  name: "SmolLM2-1.7B-Instruct",  size: "1.0GB",  description: "HuggingFace SmolLM2 轻量模型", quantization: "q4f16_1" }
+  { id: "Llama-3.2-1B-Instruct-q4f16_1-MLC",  name: "Llama-3.2-1B-Instruct",  size: "0.9GB",  description: t("model.llama1b.desc","Meta Llama 3.2 1B 参数量化模型，适合轻量对话"), quantization: "q4f16_1" },
+  { id: "Llama-3.2-3B-Instruct-q4f16_1-MLC",  name: "Llama-3.2-3B-Instruct",  size: "2.0GB",  description: t("model.llama3b.desc","Meta Llama 3.2 3B 参数量化模型，平衡质量与速度"), quantization: "q4f16_1" },
+  { id: "Phi-3.5-mini-instruct-q4f16_1-MLC",  name: "Phi-3.5-mini-instruct",  size: "2.4GB",  description: t("model.phi35.desc","Microsoft Phi-3.5 mini 量化模型，推理能力强"), quantization: "q4f16_1" },
+  { id: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",  name: "Qwen2.5-1.5B-Instruct",  size: "1.5GB",  description: t("model.qwen25.desc","阿里 Qwen2.5 1.5B 量化模型，中文友好"), quantization: "q4f16_1" },
+  { id: "gemma-2-2b-it-q4f16_1-MLC",          name: "gemma-2-2b-it",          size: "1.6GB",  description: t("model.gemma2.desc","Google Gemma 2 2B 量化模型"), quantization: "q4f16_1" },
+  { id: "SmolLM2-1.7B-Instruct-q4f16_1-MLC",  name: "SmolLM2-1.7B-Instruct",  size: "1.0GB",  description: t("model.smollm2.desc","HuggingFace SmolLM2 轻量模型"), quantization: "q4f16_1" }
 ];
 
 /**
@@ -34778,10 +35724,10 @@ function webllmChat(prompt, options){
 
 /* 预定义 ONNX 可用模型列表 */
 const ONNX_MODELS = [
-  { id: "sentiment-bert",     path: "onnx/sentiment-bert.onnx",     type: "classification", description: "BERT 情感分析（正/负）",        size: "420MB" },
-  { id: "topic-roberta",      path: "onnx/topic-roberta.onnx",      type: "classification", description: "RoBERTa 主题分类（科技/财经/体育/娱乐）", size: "480MB" },
-  { id: "spam-distilbert",    path: "onnx/spam-distilbert.onnx",    type: "classification", description: "DistilBERT 垃圾信息分类",        size: "260MB" },
-  { id: "ner-bert",           path: "onnx/ner-bert.onnx",           type: "ner",            description: "BERT 命名实体识别（人/地/组/时）", size: "430MB" }
+  { id: "sentiment-bert",     path: "onnx/sentiment-bert.onnx",     type: "classification", description: t("model.sentimentBert.desc","BERT 情感分析（正/负）"),        size: "420MB" },
+  { id: "topic-roberta",      path: "onnx/topic-roberta.onnx",      type: "classification", description: t("model.topicRoberta.desc","RoBERTa 主题分类（科技/财经/体育/娱乐）"), size: "480MB" },
+  { id: "spam-distilbert",    path: "onnx/spam-distilbert.onnx",    type: "classification", description: t("model.spamDistilbert.desc","DistilBERT 垃圾信息分类"),        size: "260MB" },
+  { id: "ner-bert",           path: "onnx/ner-bert.onnx",           type: "ner",            description: t("model.nerBert.desc","BERT 命名实体识别（人/地/组/时）"), size: "430MB" }
 ];
 
 /**
@@ -36503,9 +37449,9 @@ function renderScheduleView(schedule){
         '</div>'
       );
     } else {
-      const t = item.task || {};
-      const title = esc(t.title || t.name || "未命名");
-      const pri = esc(t.priority || "M");
+      const task = item.task || {};
+      const title = esc(task.title || task.name || t("common.unnamed","未命名"));
+      const pri = esc(task.priority || "M");
       const score = item.score ? (item.score.total || 0).toFixed(2) : "0.00";
       rows.push(
         '<div class="schedule-row task">' +
