@@ -1,8 +1,8 @@
-# Agent 工坊（v3.4.4）
+# Agent 工坊（v3.4.8）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活六类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
-零安装、单文件、纯本地；数据存本机浏览器，不依赖任何后端服务器。
+零安装、单文件、**本地优先**：数据默认存本机浏览器（PWA 离线可用），核心功能不依赖后端；另提供**实验性可选云端服务**（账号 / 推送 / 集成代理，见 [server/README.md](server/README.md)，前后端对接排期中）。
 
 > **线上体验**：<https://levango7.github.io/Interaction/>（PWA，可安装到桌面/手机，离线可用）
 
@@ -151,15 +151,15 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **集成中心凭据双路径**：Notion/Linear/Jira/Slack/飞书/钉钉在配置弹窗手动填写 token/密钥；日历支持 OAuth 授权（Electron 版，需自备 Client ID 并登记回调地址 `http://127.0.0.1:8124/oauth/callback`）或手动粘贴 Access Token。
 - **SQL Playground 首次需联网**：sql.js WASM 从 cdnjs CDN 动态加载；加载失败会给出提示，不影响其他功能。
 - **AI 工具**：调用真实改写同一份 localStorage，AI 操作与手动操作等价；工具定位任务靠标题关键词，重名时取第一条。
-- **无账号体系**：靠导出 / 导入迁移数据（单人使用场景）。
+- **账号体系（实验性，云方向）**：默认单人使用，数据迁移靠导出 / 导入；`server/` 提供实验性云端账号（JWT 登录 / 设备管理 / Web Push / 集成 OAuth），**尚未与前端对接**，属可选能力、不启用即纯本地——详见 [server/README.md](server/README.md)。
 
 ---
 
 ## 八、版本
 
-当前版本 **v3.4.2**（`package.json`、`electron/package.json`、`manifest.json`、代码内 `VERSION` 常量四处一致，由 `scripts/build.mjs --check` 门禁守护）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.4.8**（`package.json`、`electron/package.json`、`manifest.json`、代码内 `VERSION` 常量四处一致，由 `scripts/build.mjs --check` 门禁守护）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.4.2 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.4.8 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 相关文件
 
