@@ -2,6 +2,38 @@
 
 本文件记录 Agent 工坊（v2.2.0 前称 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
+## [v3.4.8] - 2026-09-04
+
+### i18n 遗漏修补（toast/confirm/字符串拼接）
+
+**🌐 i18n 遗漏修补（35 处）**
+- 修补之前子代理遗漏的硬编码中文：toast 调用 30 处 + confirm 1 处 + 字符串拼接 4 处。
+- 复用 19 个已有 MESSAGES key（recycle.*、tool.*、link.* 等），用 `.replace("{placeholder}", value)` 模式替换变量。
+- 新增 15 个 MESSAGES key（zh + en）：onboard.*、coach.*、card.*、health.*、theme.*、integration.*。
+- 修复变量遮蔽：Line 12858 `const t` 改名为 `const _task`，避免遮蔽全局 i18n `t()` 函数。
+- 排除 AI prompt 中的中文（Line 7438-9085），这些是发给 AI 的指令，不是 UI 显示文本。
+
+**✅ 验证**：lint 0 problems；build:check 门禁通过；quickwins 22/22 + error-boundary 22/22 + color-tokens 4/4 通过。
+
+## [Unreleased] - 2026-09-04
+
+### server 安全加固 + CI 覆盖 server 测试（P0）
+
+**🔒 安全三件套**
+- **登录失败锁定**：新增 `server/src/middleware/rate-limit.js`（零依赖内存限流），同一 `IP + 邮箱` 在 15 分钟窗口内登录失败（401）达 5 次后锁定一个窗口，返回 `429 + Retry-After`，登录成功自动清零。
+- **auth 总节流**：auth 路由整体限流 60 次/窗口/IP，防注册滥用与撞库扫描。
+- **CORS 白名单**：替换 wide-open `cors()`——无 Origin（同源/服务间调用）与 `localhost` / `127.0.0.1` 放行，其余须命中 `CORS_ORIGINS` 环境变量白名单，未命中不返回 CORS 头。
+- **JWT 密钥 fail-fast**：`NODE_ENV=production` 时，`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` 缺失或仍为开发默认值将拒绝启动；开发环境打印警告。
+
+**📄 配套文档与配置**
+- 新增 `server/.env.example`（全部环境变量含生成方式注释）与 `server/README.md`（快速开始/环境变量表/安全机制/API 概览）。
+
+**🧪 CI 与测试**
+- `.github/workflows/ci.yml` 新增 `server-test` job（ubuntu + node 20，`npm ci` + `npm test`）——此前 server 112 用例从未在 CI 运行。
+- 新增 `server/tests/security.test.js` 10 个用例：失败锁定（阈值前/后/跨邮箱隔离）、总节流 429、CORS 白名单（外部拒绝/localhost/127.0.0.1/白名单命中/预检请求）。
+
+**✅ 验证**：server 122/122 通过；主项目 lint 0 problems、build:check 门禁通过、四源版本一致（3.4.7）。
+
 ## [v3.4.7] - 2026-09-04
 
 ### i18n JS 拼接中文 t() 替换（剩余区域完成）

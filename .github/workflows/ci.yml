@@ -28,6 +28,22 @@ jobs:
       - run: npm run build:check
       - run: npm run lint
 
+  # P0: server 后端测试（此前 112 用例从未在 CI 运行）
+  server-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm test
+
   # D6: E2E 完整用户流程（Playwright，file:// 直接加载单文件，无需服务器）
   # 仅在 main/master push 时运行（PR 已由上面的单测矩阵覆盖），避免拖慢每次提交
   e2e:

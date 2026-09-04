@@ -4775,10 +4775,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.7"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.4.8"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260904b";
+const BUILD_TAG = "20260904c";
 
 
 
@@ -8744,7 +8744,7 @@ function runLinks(src){
   if(added){
     const tasks = getTasks(); const i = tasks.findIndex(t=>t.id===src.id);
     if(i >= 0){ tasks[i].linked = true; setTasks(tasks); } // 标记防重复
-    toast("场景联动：自动生成 "+added+" 条任务 → "+names.join("/"), "ok");
+    toast(t("link.triggeredToast", "场景联动：自动生成 {count} 条任务 → {names}").replace("{count}", added).replace("{names}", names.join("/")), "ok");
     // A6 链条动画：给最近一条 toast 加 chain class 触发 chainFlow 动画
     try{ const ts = $$("#toasts .toast"); if(ts.length) ts[ts.length-1].classList.add("chain"); }catch(e){ /* noop */ }
   }
@@ -9852,7 +9852,7 @@ function openRecycle(){
   const bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=()=>{
     const checked=$$("#recycleModal .recycle-chk:checked");
     if(!checked.length){ toast(t("recycle.selectPurge", "请先勾选要删除的项"),"warn"); return; }
-    if(confirm("确定彻底删除选中的 "+checked.length+" 项？不可恢复。")){ purgeRecycleBatchMixed(checked); }
+    if(confirm(t("recycle.batchPurgeConfirm", "确定彻底删除选中的 {count} 项？不可恢复。").replace("{count}", checked.length))){ purgeRecycleBatchMixed(checked); }
   };
   // v3.1：回收站分类菜单切换
   $$("#recycleModal .recycle-cat-nav .set-nav-btn").forEach(b=>{
@@ -10024,20 +10024,20 @@ function restoreRecycleBatch(ids){
   const all = load(PREFIX+"tasks", []);
   const next = all.map(t=> set.has(t.id) ? Object.assign({}, t, { deletedAt: undefined }) : t);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
-  toast("已恢复 "+ids.length+" 条任务", "ok"); render();
+  toast(t("recycle.restoredTasks", "已恢复 {count} 条任务").replace("{count}", ids.length), "ok"); render();
 }
 function purgeRecycle(id){
   const all = load(PREFIX+"tasks", []);
   const next = all.filter(t=>t.id!==id);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
-  toast("已永久删除", "ok"); render();
+  toast(t("recycle.purged", "已永久删除"), "ok"); render();
 }
 function purgeRecycleBatch(ids){
   const set = new Set(ids);
   const all = load(PREFIX+"tasks", []);
   const next = all.filter(t=>!set.has(t.id));
   save(PREFIX+"tasks", next); scheduleAutoBackup();
-  toast("已永久删除 "+ids.length+" 条任务", "ok"); render();
+  toast(t("recycle.purgedTasks", "已永久删除 {count} 条任务").replace("{count}", ids.length), "ok"); render();
 }
 function clearRecycle(){
   const all = load(PREFIX+"tasks", []);
@@ -10057,8 +10057,8 @@ function restoreRecycleBin(id){
 /** 彻底删除回收站数据项（仅移除记录，不恢复） */
 function purgeRecycleBin(id){
   const ok = removeFromRecycleBin(id);
-  if(!ok){ toast("删除失败", "warn"); return; }
-  toast("已永久删除", "ok"); render();
+  if(!ok){ toast(t("recycle.purgeFail", "删除失败"), "warn"); return; }
+  toast(t("recycle.purged", "已永久删除"), "ok"); render();
 }
 /** 批量恢复（混合任务 + 回收站数据项）
  *  @param {Array<HTMLElement>} checked - 勾选的 checkbox 元素数组 */
@@ -10081,8 +10081,8 @@ function restoreRecycleBatchMixed(checked){
     save(PREFIX+"tasks", next); scheduleAutoBackup();
   }
   const total = taskCount + binCount;
-  if(failCount){ toast("已恢复 "+total+" 项，"+failCount+" 项失败", "warn"); }
-  else{ toast("已恢复 "+total+" 项", "ok"); }
+  if(failCount){ toast(t("recycle.batchRestoredSome", "已恢复 {total} 项，{fail} 项失败").replace("{total}", total).replace("{fail}", failCount), "warn"); }
+  else{ toast(t("recycle.batchRestoredAll", "已恢复 {total} 项").replace("{total}", total), "ok"); }
   render();
 }
 /** 批量彻底删除（混合任务 + 回收站数据项）
@@ -10105,7 +10105,7 @@ function purgeRecycleBatchMixed(checked){
     save(PREFIX+"tasks", next); scheduleAutoBackup();
   }
   const total = taskCount + binCount;
-  toast("已永久删除 "+total+" 项", "ok"); render();
+  toast(t("recycle.batchPurgedAll", "已永久删除 {total} 项").replace("{total}", total), "ok"); render();
 }
 /* ---------- v3.1 回收站扩展：多类型（任务/配置/文件/插件）统一回收站 ----------
    任务类型沿用软删除（tasks[].deletedAt），不进入 wb_recycle_bin；
@@ -10208,11 +10208,11 @@ function restoreFromRecycleBin(id){
         setPluginEnabled(d.plugin.id, !!d.plugin.enabled);
         if(d.plugin.config){ setPluginConfig(d.plugin.id, d.plugin.config); }
       }else if(d.plugin && d.plugin.name){
-        toast("插件「"+d.plugin.name+"」本体需重新安装（当前仅保留其启用状态记录）","warn");
+        toast(t("recycle.pluginReinstall", "插件「{name}」本体需重新安装（当前仅保留其启用状态记录）").replace("{name}", d.plugin.name), "warn");
       }
     }
   }catch(e){
-    return {ok:false, err:"恢复失败："+(e&&e.message||e)};
+    return {ok:false, err:t("recycle.restoreFailErr", "恢复失败：{err}").replace("{err}", (e&&e.message||e))};
   }
   // 从回收站移除
   const next = arr.filter(it => it.id !== id);
@@ -10255,7 +10255,7 @@ function cleanupRecycle(){
   }
   if(count){
     scheduleAutoBackup();
-    toast("回收站已自动清理 "+count+" 条超过 "+days+" 天的内容","ok");
+    toast(t("recycle.autoCleaned", "回收站已自动清理 {count} 条超过 {days} 天的内容").replace("{count}", count).replace("{days}", days), "ok");
   }
   return count;
 }
@@ -10370,8 +10370,8 @@ function _toolDownload(name, content, mime){
     a.href = url; a.download = name;
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-    toast("已导出 " + name, "ok");
-  }catch(e){ toast("导出失败：" + (e && e.message || e), "warn"); }
+    toast(t("tool.exportedToast", "已导出 {name}").replace("{name}", name), "ok");
+  }catch(e){ toast(t("tool.exportFailToast", "导出失败：{err}").replace("{err}", (e && e.message || e)), "warn"); }
 }
 /* 生活簇通用记录工具骨架：config = {fields:[{k,label,type,options}], cols:[{k,label}], sum(fn), emptyTip} */
 function _recordToolHtml(cfg, records){
@@ -10437,11 +10437,11 @@ function _bindRecordTool(rootId, toolId, fields, afterChange){
       if(el) rec[k] = (el.type === "number") ? Number(el.value || 0) : el.value.trim();
     });
     /* 至少一个非空字段才入库 */
-    if(!fields.some(function(k){ return rec[k]; })){ toast("请先填写内容", "warn"); return; }
+    if(!fields.some(function(k){ return rec[k]; })){ toast(t("tool.fillRequired", "请先填写内容"), "warn"); return; }
     const arr = _toolData(toolId);
     arr.unshift(rec);
     _toolSave(toolId, arr);
-    toast("已添加", "ok");
+    toast(t("tool.addedToast", "已添加"), "ok");
     openToolStub(toolId, (TOOL_APPS[toolId] && TOOL_APPS[toolId].name) || "");
     if(afterChange) afterChange();
   };
@@ -10666,7 +10666,7 @@ const TOOL_APPS = {
         const url = URL.createObjectURL(f);
         $("#pdfViewWrap").innerHTML = sanitizeHtml(
           '<iframe src="' + url + '" class="u-w-full u-h-560 u-border-line u-radius-md" title="' + esc(f.name) + '"></iframe>');
-        toast("已打开 " + f.name, "ok");
+        toast(t("tool.pdf.openedToast", "已打开 {name}").replace("{name}", f.name), "ok");
       };
     }
   },
@@ -10847,7 +10847,7 @@ const TOOL_APPS = {
       let cropMode = false, brushMode = false, drawing = false;
       let sel = null;                  // 裁剪选区 {x,y,w,h}
 
-      function needImg(){ if(!orig){ toast("请先加载图片", "warn"); return false; } return true; }
+      function needImg(){ if(!orig){ toast(t("tool.ps.loadFirst", "请先加载图片"), "warn"); return false; } return true; }
       function saveState(){ orig = ctx.getImageData(0, 0, cv.width, cv.height); }
 
       // 加载图片
@@ -12841,11 +12841,11 @@ function _onboardBindStep(step){
     if(create) create.onclick = ()=>{
       const input = /** @type {HTMLInputElement} */(document.getElementById("onboardTaskInput"));
       const title = input ? input.value.trim() : "";
-      if(!title){ toast("请输入任务标题", "warn"); return; }
+      if(!title){ toast(t("onboard.titleRequired", "请输入任务标题"), "warn"); return; }
       const tasks = getTasks();
       tasks.push({id:uid(), sc:_onboardSelectedSc, title, due:todayStr(), priority:"", status:"todo", doneAt:null, note:"", tags:[], created:Date.now()});
       setTasks(tasks);
-      toast("已创建第一个任务，去「" + SCENARIOS[_onboardSelectedSc].name + "」场景查看", "ok");
+      toast(t("onboard.firstTaskCreated", "已创建第一个任务，去「{name}」场景查看").replace("{name}", SCENARIOS[_onboardSelectedSc].name), "ok");
       close(); _onboardRenderStep(2);
     };
   }else if(step === 2){
@@ -12855,11 +12855,11 @@ function _onboardBindStep(step){
     if(trigger) trigger.onclick = ()=>{
       // 创建一个 office 交付任务并完成，触发联动
       const tasks = getTasks();
-      const t = {id:uid(), sc:"office", title:"交付上线 v2.3", due:todayStr(), priority:"P1", status:"todo", doneAt:null, note:"onboarding 模拟触发", tags:["onboarding"], created:Date.now()};
-      tasks.push(t);
+      const _task = {id:uid(), sc:"office", title:"交付上线 v2.3", due:todayStr(), priority:"P1", status:"todo", doneAt:null, note:"onboarding 模拟触发", tags:["onboarding"], created:Date.now()};
+      tasks.push(_task);
       setTasks(tasks);
-      completeTask(t.id);
-      toast("已模拟触发：交付完成 → 自动生成学习充电任务", "ok");
+      completeTask(_task.id);
+      toast(t("onboard.simTriggered", "已模拟触发：交付完成 → 自动生成学习充电任务"), "ok");
       /** @type {HTMLButtonElement} */(trigger).disabled = true; trigger.textContent = "已触发";
     };
     const next = document.getElementById("onboardNext");
@@ -13523,7 +13523,7 @@ function renderOverview(){
     cl.outerHTML = r.advice.map((a, i) => `<div class="coach-item"><span class="idx">${i+1}</span><span>${esc(a)}</span></div>`).join("") +
       `<div class="ai-hub-actions"><button type="button" class="ai-discuss-btn" data-discuss-type="coach"><span class="ic-inline" aria-hidden="true">${UI_ICONS.robot}</span><span>在 AI 助手中讨论</span></button></div>`;
       } else if(!r.ok && r.reason !== "no-ai"){
-        cl.textContent = "暂无法获取建议（" + r.reason + "），请稍后重试";
+        cl.textContent = t("coach.adviceUnavailable", "暂无法获取建议（{reason}），请稍后重试").replace("{reason}", r.reason);
       }
     }).catch(()=>{ /* 静默失败，保留 loading 文案 */ });
   }
@@ -14425,8 +14425,8 @@ const _CARD_BUILTIN = Object.keys(CARD_REGISTRY);
 function registerCard(key, def){
   if(!key || typeof key !== "string") return {ok:false, err:"无效的卡片键"};
   if(!def || typeof def.render !== "function") return {ok:false, err:"render 必须是函数"};
-  if(_CARD_BUILTIN.includes(key)) return {ok:false, err:"不能覆盖内置卡片："+key};
-  if(CARD_REGISTRY[key]) return {ok:false, err:"卡片已注册："+key};
+  if(_CARD_BUILTIN.includes(key)) return {ok:false, err:t("card.cannotOverrideBuiltin", "不能覆盖内置卡片：{key}").replace("{key}", key)};
+  if(CARD_REGISTRY[key]) return {ok:false, err:t("card.alreadyRegistered", "卡片已注册：{key}").replace("{key}", key)};
   CARD_REGISTRY[key] = { render: def.render, bind: typeof def.bind === "function" ? def.bind : () => {} };
   return {ok:true};
 }
@@ -14784,7 +14784,7 @@ function bindHealthCard(){
         save(PREFIX + "rec_life", recs); // v3.1.2 A-档修复：saveRec 不存在（getRec 的写入等价物是 save(PREFIX+"rec_"+sc)）
         toast(t("health.water.plusToast", "已记录 1 杯水"), "ok");
         if(typeof render === "function") render();
-      }catch(e){ toast("记录失败：" + (e && e.message || e), "warn"); }
+      }catch(e){ toast(t("health.recordFail", "记录失败：{err}").replace("{err}", (e && e.message || e)), "warn"); }
     };
   }
   const weightBtn = document.getElementById("healthWeightQuick");
@@ -14800,7 +14800,7 @@ function bindHealthCard(){
         toast(t("health.weight.savedToast", "已记录体重 " + v), "ok");
         if(inp) inp.value = "";
         if(typeof render === "function") render();
-      }catch(e){ toast("记录失败：" + (e && e.message || e), "warn"); }
+      }catch(e){ toast(t("health.recordFail", "记录失败：{err}").replace("{err}", (e && e.message || e)), "warn"); }
     };
   }
 }
@@ -21405,7 +21405,7 @@ function renderThemeEditor(){
         const colors = (typeof getScenarioColors === "function") ? getScenarioColors() : {};
         colors[sc] = inp.value;
         if(typeof saveScenarioColors === "function") saveScenarioColors(colors);
-        try{ toast("已更新场景配色", "ok"); }catch(e){}
+        try{ toast(t("theme.sceneColorUpdated", "已更新场景配色"), "ok"); }catch(e){}
       };
     });
     scEl.querySelectorAll("[data-sc-reset]").forEach(btn => {
@@ -21415,7 +21415,7 @@ function renderThemeEditor(){
         delete colors[sc];
         if(typeof saveScenarioColors === "function") saveScenarioColors(colors);
         renderThemeEditor();
-        try{ toast("已重置场景配色", "ok"); }catch(e){}
+        try{ toast(t("theme.sceneColorReset", "已重置场景配色"), "ok"); }catch(e){}
       };
     });
   }
@@ -21523,7 +21523,7 @@ function _saveThemeFromEditor(){
     createCustomTheme(id, name, tokens);
     _closeThemeEditor();
     renderThemeEditor();
-    try{ toast("已保存自定义主题「"+name+"」", "ok"); }catch(e){}
+    try{ toast(t("theme.customSaved", "已保存自定义主题「{name}」").replace("{name}", name), "ok"); }catch(e){}
   }
 }
 
@@ -21540,7 +21540,7 @@ function _exportCurrentTheme(){
   importArea.style.display = "block";
   const jsonInp = $("#themeImportJson");
   if(jsonInp) jsonInp.value = jsonStr;
-  try{ toast("当前主题 JSON 已生成，可复制分享", "ok"); }catch(e){}
+  try{ toast(t("theme.jsonGenerated", "当前主题 JSON 已生成，可复制分享"), "ok"); }catch(e){}
 }
 
 /**
@@ -21551,7 +21551,7 @@ function _importThemeFromJson(){
   const jsonInp = $("#themeImportJson");
   if(!jsonInp) return;
   const txt = jsonInp.value.trim();
-  if(!txt){ try{ toast("请先粘贴主题 JSON", "warn"); }catch(e){} return; }
+  if(!txt){ try{ toast(t("theme.pasteJsonFirst", "请先粘贴主题 JSON"), "warn"); }catch(e){} return; }
   if(typeof importTheme !== "function") return;
   const r = importTheme(txt);
   if(!r.ok){ try{ toast(r.err || "导入失败", "warn"); }catch(e){} return; }
@@ -21559,7 +21559,7 @@ function _importThemeFromJson(){
   if(importArea) importArea.style.display = "none";
   if(jsonInp) jsonInp.value = "";
   renderThemeEditor();
-  try{ toast("已导入主题「"+r.id+"」", "ok"); }catch(e){}
+  try{ toast(t("theme.imported", "已导入主题「{id}」").replace("{id}", r.id), "ok"); }catch(e){}
 }
 
 /* ---------- v1.6-D 知识管理：笔记 / 知识库 / 全文搜索按钮事件绑定 ---------- */
@@ -21934,7 +21934,7 @@ function renderIntegrationPanel(){
         }
         renderIntegrationPanel();
         toast(name + " 已断开", "ok");
-      }catch(e){ toast("断开异常：" + (e.message || e), "warn"); }
+      }catch(e){ toast(t("integration.disconnectFail", "断开异常：{err}").replace("{err}", (e.message || e)), "warn"); }
     };
   });
   // 渲染API Key列表
@@ -21966,7 +21966,7 @@ function renderIntegrationPanel(){
           renderIntegrationPanel();
           toast("Key 已创建：" + (k && k.id ? k.id.slice(0,8) + "…" : ""), "ok");
         }
-      }catch(e){ toast("创建失败：" + (e.message || e), "warn"); }
+      }catch(e){ toast(t("integration.createFail", "创建失败：{err}").replace("{err}", (e.message || e)), "warn"); }
     };
   }
 }
@@ -26260,6 +26260,22 @@ const MESSAGES = {
     "pwa.syncedFailSuffix": " 条失败",
     "pwa.syncFailedRetry": "同步失败，请稍后重试",
     "msg.langSwitched": "已切换语言",
+    // 任务243：遗漏的硬编码中文补全（toast/confirm/字符串拼接）
+    "onboard.titleRequired": "请输入任务标题",
+    "onboard.firstTaskCreated": "已创建第一个任务，去「{name}」场景查看",
+    "onboard.simTriggered": "已模拟触发：交付完成 → 自动生成学习充电任务",
+    "coach.adviceUnavailable": "暂无法获取建议（{reason}），请稍后重试",
+    "card.cannotOverrideBuiltin": "不能覆盖内置卡片：{key}",
+    "card.alreadyRegistered": "卡片已注册：{key}",
+    "health.recordFail": "记录失败：{err}",
+    "theme.sceneColorUpdated": "已更新场景配色",
+    "theme.sceneColorReset": "已重置场景配色",
+    "theme.customSaved": "已保存自定义主题「{name}」",
+    "theme.jsonGenerated": "当前主题 JSON 已生成，可复制分享",
+    "theme.pasteJsonFirst": "请先粘贴主题 JSON",
+    "theme.imported": "已导入主题「{id}」",
+    "integration.disconnectFail": "断开异常：{err}",
+    "integration.createFail": "创建失败：{err}",
   },
   en: {
     // Common
@@ -28802,6 +28818,22 @@ const MESSAGES = {
     "pwa.syncedFailSuffix": " failed",
     "pwa.syncFailedRetry": "Sync failed, please retry later",
     "msg.langSwitched": "Language switched",
+    // Task 243: missing hardcoded Chinese toast/confirm/string-concat i18n
+    "onboard.titleRequired": "Please enter a task title",
+    "onboard.firstTaskCreated": "First task created, go to \"{name}\" scenario to view",
+    "onboard.simTriggered": "Simulated trigger: delivery complete → auto-generated learning task",
+    "coach.adviceUnavailable": "Unable to get suggestions ({reason}), please retry later",
+    "card.cannotOverrideBuiltin": "Cannot override built-in card: {key}",
+    "card.alreadyRegistered": "Card already registered: {key}",
+    "health.recordFail": "Record failed: {err}",
+    "theme.sceneColorUpdated": "Scenario colors updated",
+    "theme.sceneColorReset": "Scenario colors reset",
+    "theme.customSaved": "Saved custom theme \"{name}\"",
+    "theme.jsonGenerated": "Current theme JSON generated, ready to copy/share",
+    "theme.pasteJsonFirst": "Please paste theme JSON first",
+    "theme.imported": "Imported theme \"{id}\"",
+    "integration.disconnectFail": "Disconnect error: {err}",
+    "integration.createFail": "Create failed: {err}",
   }
 };
 

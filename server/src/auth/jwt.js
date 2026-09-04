@@ -5,6 +5,9 @@ import jwt from 'jsonwebtoken';
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-me';
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-me';
 
+// 开发默认密钥哨兵值：生产环境若仍使用这些值应拒绝启动
+const DEV_DEFAULT_SECRETS = new Set(['dev-access-secret-change-me', 'dev-refresh-secret-change-me']);
+
 // 有效期常量
 const ACCESS_EXPIRES_IN = '15m'; // accessToken 15 分钟
 const REFRESH_EXPIRES_IN = '7d'; // refreshToken 7 天
@@ -63,3 +66,19 @@ export function refreshExpiresAt() {
 }
 
 export { ACCESS_EXPIRES_IN, REFRESH_EXPIRES_IN, REFRESH_TTL_MS };
+
+/**
+ * 校验 JWT 密钥配置，返回问题列表（空数组 = 配置安全）
+ * 基于模块加载时捕获的常量校验——须在进程启动、环境变量就绪后再 import 本模块
+ * @returns {string[]}
+ */
+export function getSecretIssues() {
+  const issues = [];
+  if (DEV_DEFAULT_SECRETS.has(ACCESS_SECRET)) {
+    issues.push('JWT_ACCESS_SECRET 未设置，仍为开发默认值');
+  }
+  if (DEV_DEFAULT_SECRETS.has(REFRESH_SECRET)) {
+    issues.push('JWT_REFRESH_SECRET 未设置，仍为开发默认值');
+  }
+  return issues;
+}
