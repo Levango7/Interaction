@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -2842,36 +2842,39 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
 }
 
-/* ===== 初雪主题（elegant）：清冷灰绿底 + 蓝绿松柏主色，如雪后松枝 ===== */
+/* ===== 初雪主题（elegant）：雪后松枝——清透青瓷绿底 + 蓝绿松柏主色 =====
+   v3.4.5：底布加绿重设计（用户反馈与亮色差异太小）——底色从近白灰绿 #f5f7f4
+   加深为青瓷绿 #e2eee6，与亮色中性灰 #e0e0e4 拉开明确色相差；面板/线条/侧栏
+   全链路同步加绿，白卡片对比保持 ~12% */
 :root[data-theme="elegant"]{
-  --bg:#f5f7f4; --panel:#ffffff; --panel2:#eef2ee; --line:#d8ded8;
-  --side-bg:#f0f4f0;
+  --bg:#e2eee6; --panel:#ffffff; --panel2:#e9f3ec; --line:#c6d9cc;
+  --side-bg:#dcebe1;
   --tb-row2-bg:linear-gradient(to bottom,var(--panel2) 0%,var(--panel) 100%);
-  --canvas-glow:radial-gradient(ellipse 60% 40% at 50% -8%,rgba(91,154,142,.15),transparent 55%),radial-gradient(ellipse 40% 35% at 90% 5%,rgba(180,200,220,.12),transparent 50%);
+  --canvas-glow:radial-gradient(ellipse 60% 40% at 50% -8%,rgba(91,154,142,.26),transparent 55%),radial-gradient(ellipse 40% 35% at 90% 5%,rgba(180,200,220,.14),transparent 50%);
   --brand-grad:linear-gradient(135deg,#5b9a8e,#7ab8a8);
-  --text:#2f332f; --muted:#757b75; --accent:#5b9a8e;
+  --text:#2b332e; --muted:#6d7a72; --accent:#4a8a7e;
   --shadow:0 1px 3px rgba(58,63,58,.08);
-  --surface-hover:#e2e9e4; --surface-muted:#eef2ee;
+  --surface-hover:#d6e8dc; --surface-muted:#e6f0e9;
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.5);
-  --text-dim:#5a5f5a; --text-dim-2:#7a807a; --text-dim-3:#6a6f6a; --text-faint:#8a908a;
+  --text-dim:#53605a; --text-dim-2:#717e76; --text-dim-3:#616e66; --text-faint:#828f86;
   --danger:#c0605a; --danger-soft:#f5eceb; --danger-border:#e0c4c0;
   --danger-overdue-bg:#f8eceb; --danger-overdue-border:#e0c4c0;
   --warn:#c89040; --warn-soft:#f5efe5;
-  --ok:#5a9e6e; --accent-soft:#e0eeea;
+  --ok:#4a9662; --accent-soft:#d8ece6;
   --sc-office:#5a8aaa; --sc-design:#a06888; --sc-study:#b87840; --sc-data:#5a8e8e; --sc-code:#5a9e6e; --sc-life:#8a6aaa;
-  --scenario-default:#5b9a8e;
-  --banner-bg:#eef2ee; --banner-border:#c8d4c8; --banner-ink:#3a3f3a; --banner-border-2:#d8ded8;
-  --kbd-border:#c8d4c8; --snip-bg:#2a302a; --snip-fg:#f5f7f4; --toast-bg:#3a3f3a;
-  --overlay:rgba(58,63,58,.2); --shadow-drawer:rgba(58,63,58,.1);
-  --shadow-overlay:rgba(58,63,58,.18); --shadow-toast:rgba(58,63,58,.22);
-  --heat-0:#e0e6e0; --heat-1:#c8e0d4; --heat-2:#a0ccb8; --heat-3:#78b89c; --heat-4:#50a480;
+  --scenario-default:#4a8a7e;
+  --banner-bg:#e9f3ec; --banner-border:#bcd4c2; --banner-ink:#38443c; --banner-border-2:#ccded2;
+  --kbd-border:#bcd4c2; --snip-bg:#28322c; --snip-fg:#f2f7f3; --toast-bg:#38443c;
+  --overlay:rgba(52,64,56,.2); --shadow-drawer:rgba(52,64,56,.1);
+  --shadow-overlay:rgba(52,64,56,.18); --shadow-toast:rgba(52,64,56,.22);
+  --heat-0:#dce8df; --heat-1:#c2e0cc; --heat-2:#98ccac; --heat-3:#6eb88c; --heat-4:#48a06c;
   --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
-  --shadow-1:0 1px 2px rgba(58,63,58,.06);
-  --shadow-2:0 2px 8px rgba(58,63,58,.08);
-  --shadow-3:0 4px 16px rgba(58,63,58,.1);
+  --shadow-1:0 1px 2px rgba(52,64,56,.06);
+  --shadow-2:0 2px 8px rgba(52,64,56,.08);
+  --shadow-3:0 4px 16px rgba(52,64,56,.1);
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
 }
 
@@ -13935,6 +13938,7 @@ function renderStats(){
   if(stats.total === 0){
     _dashEditMode = false;
     $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>`);
+    appendFoot(); // v3.4.5：空数据分支补尾栏（此前直接 return 漏掉——与其他页面统一）
     return;
   }
   const statsNav = `<nav class="set-nav stats-range-nav" aria-label="${t("statsPage.aria", "统计时间筛选")}">
@@ -13972,6 +13976,7 @@ function renderStats(){
   $$("#main .stats-range-nav .set-nav-btn").forEach(b=>{
     b.onclick = ()=>{ _statsRange = b.getAttribute("data-stats-range")||"week"; renderStats(); };
   });
+  appendFoot(); // v3.4.5：renderStats 自含尾栏——编辑布局/时间筛选重渲染后不再依赖调用方补（此前 tab 点击后尾栏消失）
 }
 /* ============================================================
  * v2.4.0 四大新页面：任务中心 / 工具箱 / 商店 / 场景联动
@@ -14298,6 +14303,7 @@ function renderChainPage(){
       if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
     };
   });
+  appendFoot(); // v3.4.5：renderChainPage 自含尾栏（幂等）——不依赖调用方 render() 补
 }
 
 /* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
@@ -24275,7 +24281,7 @@ const MESSAGES = {
     "look.themeDesc.aurora": "极光渐变亮色主题",
     "look.themeDesc.dark": "暗色护眼主题",
     "look.themeDesc.sepia": "暖色调护眼阅读模式",
-    "look.themeDesc.elegant": "清冷灰绿底色主题",
+    "look.themeDesc.elegant": "青瓷绿底 · 雪后松枝",
     "look.themeDesc.matrix": "绿色终端风格主题",
     "look.themeDesc.forest": "晨雾林地 · 松针深绿主题",
     "look.themeDesc.ocean": "晨曦海面 · 深海青主题",
@@ -27364,7 +27370,7 @@ const MESSAGES = {
     "look.themeDesc.aurora": "Aurora gradient light theme",
     "look.themeDesc.dark": "Dark eye-friendly theme",
     "look.themeDesc.sepia": "Warm tone reading mode",
-    "look.themeDesc.elegant": "Cool grey-green theme",
+    "look.themeDesc.elegant": "Celadon green, snow-kissed pines",
     "look.themeDesc.matrix": "Green terminal style theme",
     "look.themeDesc.forest": "Misty woodland · pine dark green",
     "look.themeDesc.ocean": "Dawn seascape · deep ocean blue",
@@ -31401,7 +31407,7 @@ const PRESET_THEMES = {
   sepia:    { name: t("look.theme.sepia","温和护眼"), desc: t("look.themeDesc.sepia","暖色调护眼阅读模式") },
   // v3.1.2：elegant/matrix 在主题下拉可选且 CSS 有定义（[data-theme="elegant"/"matrix"]），
   // 修复前不在注册表——主题管理列表不可见、不可管理。补齐使三处清单一致。
-  elegant:  { name: t("look.theme.elegant","见静初雪"),   desc: t("look.themeDesc.elegant","清冷灰绿底色主题") }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」→ v3.4.4 更名「见静初雪」
+  elegant:  { name: t("look.theme.elegant","见静初雪"),   desc: t("look.themeDesc.elegant","青瓷绿底 · 雪后松枝") }, // v3.1.2 补入注册表；名称随 1680ab3 改版从「淡雅」更名「初雪」→ v3.4.4 更名「见静初雪」
   matrix:   { name: t("look.theme.matrix","黑客帝国"), desc: t("look.themeDesc.matrix","绿色终端风格主题") },
   // v3.4.0：forest/ocean 补入注册表——5b227f4 引入主题时漏注册（v3.1.2 elegant/matrix 同款问题重演），
   // 导致主题管理列表不可见、不可管理。补齐使 CSS/下拉/注册表三处清单一致。
