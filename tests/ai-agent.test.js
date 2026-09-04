@@ -22,6 +22,16 @@ const PREFIX = "wb_agent_";
 /** 取全新 window 并等待启动 async 完成 */
 async function boot() {
   const win = loadApp();
+  /* sql.js 离线 stub：jsdom 无 WASM，真实路径会动态插 <script src="CDN">——
+   * 网络可用时 sql-wasm.js 加载后 initSqlJs() 读 .wasm 仍会失败/挂起；
+   * 网络不可用时 jsdom 的外链 script 可能既不 onload 也不 onerror（资源加载挂起），
+   * loadSqlJs 的 Promise 永远 pending → ragInit/ragSearch/toolSqlQuery 15s 超时
+   * （实测：同一测试在不同联网环境一挂一过）。预置拒绝型 initSqlJs 让 loadSqlJs
+   * 走 window.initSqlJs 快速路径同步 reject，全部 RAG 用例稳定走关键词降级——
+   * 与各用例断言的「降级语义」一致，且与网络环境解耦。 */
+  win.initSqlJs = function () {
+    return Promise.reject(new Error("sql.js unavailable in test env (stubbed)"));
+  };
   await new Promise((r) => setTimeout(r, 80));
   return win;
 }
