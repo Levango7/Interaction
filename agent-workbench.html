@@ -8969,8 +8969,8 @@ function renderHeatmap(sc){
   const labels = weekdays.map((wd, i) =>
     `<text x="2" y="${gap + i * colW + cell - 2}" font-size="9" fill="var(--muted)">${wd}</text>`
   ).join("");
-  const legend = `<div class="heatmap-legend">少 <span class="sw l0"></span><span class="sw l1"></span><span class="sw l2"></span><span class="sw l3"></span><span class="sw l4"></span> 多</div>`;
-  return `<div class="heatmap-wrap"><svg class="heatmap-svg" viewBox="0 0 ${W} ${H}" aria-label="${SCENARIOS[sc] ? SCENARIOS[sc].name : sc} 热力图">${labels}${cells}</svg></div>${legend}`;
+  const legend = `<div class="heatmap-legend">${t("stats.heatLess", "少")} <span class="sw l0"></span><span class="sw l1"></span><span class="sw l2"></span><span class="sw l3"></span><span class="sw l4"></span> ${t("stats.heatMore", "多")}</div>`;
+  return `<div class="heatmap-wrap"><svg class="heatmap-svg" viewBox="0 0 ${W} ${H}" aria-label="${SCENARIOS[sc] ? SCENARIOS[sc].name : sc} ${t("stats.heatmapAria", "热力图")}">${labels}${cells}</svg></div>${legend}`;
 }
 
 /* ---------- A3 行为分析（最近 14 天） ---------- */
@@ -9152,7 +9152,7 @@ function renderHabitChainStatus(){
       `<span style="color:${fm.color}">${fm.name}</span>` +
       `<span class="arr">→</span>` +
       `<span style="color:${tm.color}">${tm.name}</span>` +
-      `<span class="cnt">触发 ${triggered} 次</span>` +
+      `<span class="cnt">${t("chain.triggerCount", "触发 {n} 次").replace("{n}", triggered)}</span>` +
       `<span class="last">${lastText}</span></div>`;
   }).join("");
   return `<div class="link-status">${items}</div>`;
@@ -9530,11 +9530,11 @@ function _buildSideMenu(){
   };
 
   return [
-    {name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode]},
-    {name:t("side.group.scenario", "场景"), nodes:sceneNodes},
-    {name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
-    {name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
-    {name:t("side.group.system", "系统"), nodes:[recycleNode, gearNode, helpNode]}
+    {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode]},
+    {gid:"scenario", name:t("side.group.scenario", "场景"), nodes:sceneNodes},
+    {gid:"ai", name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
+    {gid:"tools", name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
+    {gid:"system", name:t("side.group.system", "系统"), nodes:[recycleNode, gearNode, helpNode]}
   ];
 }
 /**
@@ -9650,13 +9650,15 @@ function _findSideMenuItem(menuId){
 /* ---------- v2.1.0 移动端导航：底部 4 组按钮（#mobBar）+ 底部抽屉（#sideSheet） ----------
    桌面端两者 display:none；≤767px 时 #side 隐藏、#mobBar 显示。
    抽屉内容复用 _buildSideMenu() 节点树；子项点击复用 _findSideMenuItem 动作注册表。 */
-/* v3.2 IA 重构：4 → 5 组，"应用" → "AI" + "工具" */
+/* v3.2 IA 重构：4 → 5 组，"应用" → "AI" + "工具"
+   v3.4.5 i18n 修复：键从中文组名改为稳定 gid——中文组名经 t() 翻译后（英文模式）
+   MOB_GROUP_ICONS 查不到图标、_mobCurrentGroup 高亮兜底失配。gid 与语言无关。 */
 const MOB_GROUP_ICONS = {
-  "总览": UI_ICONS.overview,
-  "场景": UI_ICONS.grid,
-  "AI": UI_ICONS.robot,
-  "工具": UI_ICONS.puzzle,
-  "系统": UI_ICONS.gear
+  overview: UI_ICONS.overview,
+  scenario: UI_ICONS.grid,
+  ai: UI_ICONS.robot,
+  tools: UI_ICONS.puzzle,
+  system: UI_ICONS.gear
 };
 /**
  * 渲染移动端底部 5 组按钮（总览/场景/AI/工具/系统）。
@@ -9669,9 +9671,9 @@ function renderMobBar(){
   const groups = _buildSideMenu();
   const cur = _mobCurrentGroup(groups);
   bar.innerHTML = sanitizeHtml(groups.map(g=>{
-    const act = (g.name===cur) ? " active" : "";
-    const icon = (MOB_GROUP_ICONS[g.name]||"").replace("<svg","<svg aria-hidden=\"true\"");
-    return `<button type="button" class="mob-bar-btn${act}" data-mob-group="${esc(g.name)}" aria-label="${esc(g.name)}">${icon}<span class="nm">${esc(g.name)}</span></button>`;
+    const act = (g.gid===cur) ? " active" : ""; // v3.4.5：gid 比较（语言无关），此前 g.name===cur 在英文模式失配
+    const icon = (MOB_GROUP_ICONS[g.gid]||"").replace("<svg","<svg aria-hidden=\"true\"");
+    return `<button type="button" class="mob-bar-btn${act}" data-mob-group="${esc(g.gid)}" aria-label="${esc(g.name)}">${icon}<span class="nm">${esc(g.name)}</span></button>`;
   }).join(""));
 }
 /* 当前视图归属组名（用于底栏高亮兜底；v3.2 五组结构） */
@@ -9680,10 +9682,10 @@ function _mobCurrentGroup(groups){
   for(const g of groups){
     for(const n of g.nodes){
       const hit = (n.sc && n.active) || (!n.sc && n.active) || n.hasActive;
-      if(hit) return g.name;
+      if(hit) return g.gid; // v3.4.5：返回 gid（语言无关），此前返回中文组名英文模式失配
     }
   }
-  return "总览";
+  return "overview"; // v3.4.5：兜底 gid（与组 gid 对齐，语言无关）
 }
 let _mobSheetGroup = null;
 /**
@@ -9691,14 +9693,14 @@ let _mobSheetGroup = null;
  * @param {string} groupName - 组名（总览/场景/功能/系统）
  * @returns {void}
  */
-function openSideSheet(groupName){
+function openSideSheet(groupGid){
   const sheet = $("#sideSheet"), body = $("#sideSheetBody"), title = $("#sideSheetTitle"), mask = $("#sideSheetBackdrop");
   if(!sheet || !body) return;
   const groups = _buildSideMenu();
-  const g = groups.find(x=>x.name===groupName);
+  const g = groups.find(x=>x.gid===groupGid); // v3.4.5：按 gid 查找（语言无关）；调用方 data-mob-group 现传 gid
   if(!g) return;
-  _mobSheetGroup = groupName;
-  if(title) title.textContent = groupName;
+  _mobSheetGroup = g.gid; // v3.4.5：存 gid 与 _mobCurrentGroup 对齐
+  if(title) title.textContent = g.name;
   const rows = [];
   g.nodes.forEach(n=>{
     const pAct = n.active ? " active" : "";
@@ -10566,13 +10568,13 @@ const TOOL_APPS = {
         html += "</tr>";
       }
       html += "</table>";
-      return '<p class="sub">点击单元格直接编辑；按钮增删行列，数据自动保存</p>' + html
+      return '<p class="sub">' + t("tool.sheet.hint", "点击单元格直接编辑；按钮增删行列，数据自动保存") + '</p>' + html
         + '<div class="tool-actions">'
-        + '<span class="add-wrap"><span class="add-label">添加行</span><button type="button" class="addbtn sm add-round" id="shAddRow" aria-label="' + t("tool.sheet.addRow", "添加行") + '">＋</button></span>'
-        + '<span class="add-wrap"><span class="add-label">添加列</span><button type="button" class="addbtn sm add-round" id="shAddCol" aria-label="' + t("tool.sheet.addCol", "添加列") + '">＋</button></span>'
-        + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelRow">－ 删除末行</button>'
-        + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelCol">－ 删除末列</button>'
-        + '<button type="button" class="addbtn sm" id="shExportCsv">导出 CSV</button></div>';
+        + '<span class="add-wrap"><span class="add-label">' + t("tool.sheet.addRow", "添加行") + '</span><button type="button" class="addbtn sm add-round" id="shAddRow" aria-label="' + t("tool.sheet.addRow", "添加行") + '">＋</button></span>'
+        + '<span class="add-wrap"><span class="add-label">' + t("tool.sheet.addCol", "添加列") + '</span><button type="button" class="addbtn sm add-round" id="shAddCol" aria-label="' + t("tool.sheet.addCol", "添加列") + '">＋</button></span>'
+        + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelRow">' + t("tool.sheet.delLastRow", "－ 删除末行") + '</button>'
+        + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelCol">' + t("tool.sheet.delLastCol", "－ 删除末列") + '</button>'
+        + '<button type="button" class="addbtn sm" id="shExportCsv">' + t("tool.sheet.exportCsvBtn", "导出 CSV") + '</button></div>';
     },
     bind: function(){
       const getRows = function(){
@@ -10659,9 +10661,9 @@ const TOOL_APPS = {
   "off-pdf": {
     name:t("tool.pdf.name", "PDF 阅读"), icon:UI_ICONS.pdf, desc:t("tool.pdf.desc", "导入本地 PDF · iframe 预览"),
     render: function(){
-      return '<label>导入 PDF 文件</label><input type="file" id="pdfFile" accept=".pdf,application/pdf" class="u-mt-2">'
+      return '<label>' + t("tool.pdf.importLabel", "导入 PDF 文件") + '</label><input type="file" id="pdfFile" accept=".pdf,application/pdf" class="u-mt-2">'
         + '<div id="pdfViewWrap" class="u-mt-3"></div>'
-        + '<p class="sub u-mt-3">说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。</p>';
+        + '<p class="sub u-mt-3">' + t("tool.pdf.note", "说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。") + '</p>';
     },
     bind: function(){
       const inp = $("#pdfFile"); if(!inp) return;
@@ -10678,12 +10680,12 @@ const TOOL_APPS = {
     name:t("tool.ocr.name", "截图 OCR"), icon:UI_ICONS.ocr, desc:t("tool.ocr.desc", "上传截图 · AI 多模态识别文字"),
     render: function(){
       const aiOn = (typeof getCfg === "function") && getCfg().enabled;
-      return '<label>上传截图（PNG/JPG）</label><input type="file" id="ocrFile" accept="image/*" class="u-mt-2">'
+      return '<label>' + t("tool.ocr.uploadLabel", "上传截图（PNG/JPG）") + '</label><input type="file" id="ocrFile" accept="image/*" class="u-mt-2">'
         + '<img id="ocrPreview" hidden class="u-mt-3 u-max-w-100 u-max-h-300 u-radius-md u-border-line" alt="' + t("tool.ocr.preview", t("tool.md.preview", "预览")) + '">'
-        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="ocrRun"' + (aiOn ? "" : " disabled") + ">开始识别</button></div>"
-        + '<label class="u-mt-3">识别结果</label>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="ocrRun"' + (aiOn ? "" : " disabled") + ">" + t("tool.ocr.runBtn", "开始识别") + "</button></div>"
+        + '<label class="u-mt-3">' + t("tool.ocr.resultLabel", "识别结果") + '</label>'
         + '<textarea id="ocrResult" readonly placeholder="' + (aiOn ? t("tool.ocr.resultPlaceholder", "识别结果将显示在这里") : t("tool.ocr.noAiPlaceholder", "需先在 设置→AI 配置 API Key 才能使用 OCR")) + '" class="u-min-h-160"></textarea>'
-        + (aiOn ? "" : '<p class="sub">未配置 AI——OCR 依赖 AI 多模态能力。请到 设置→AI 填入 API Key 后重试。</p>');
+        + (aiOn ? "" : '<p class="sub">' + t("tool.ocr.noAiHint", "未配置 AI——OCR 依赖 AI 多模态能力。请到 设置→AI 填入 API Key 后重试。") + '</p>');
     },
     bind: async function(){
       const inp = $("#ocrFile"); if(!inp) return;
@@ -26355,9 +26357,26 @@ const MESSAGES = {
     "api.keyCreated": "Key 已创建：",
     "api.keyNamePrompt": "输入 Key 名称：",
     "api.unknownDevice": "未知设备",
+    "api.deviceDesktop": "桌面应用",
+    "api.deviceMobile": "移动浏览器",
+    "api.deviceWeb": "Web 浏览器",
     "api.reminder": "提醒",
     "filter.collapse": "筛选 ▾",
     "filter.expand": "筛选 ▸",
+    "stats.heatLess": "少",
+    "stats.heatMore": "多",
+    "stats.heatmapAria": "热力图",
+    "chain.triggerCount": "触发 {n} 次",
+    "tool.sheet.hint": "点击单元格直接编辑；按钮增删行列，数据自动保存",
+    "tool.sheet.delLastRow": "－ 删除末行",
+    "tool.sheet.delLastCol": "－ 删除末列",
+    "tool.sheet.exportCsvBtn": "导出 CSV",
+    "tool.pdf.importLabel": "导入 PDF 文件",
+    "tool.pdf.note": "说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。",
+    "tool.ocr.uploadLabel": "上传截图（PNG/JPG）",
+    "tool.ocr.runBtn": "开始识别",
+    "tool.ocr.resultLabel": "识别结果",
+    "tool.ocr.noAiHint": "未配置 AI——OCR 依赖 AI 多模态能力。请到 设置→AI 填入 API Key 后重试。",
     "greeting.lateNight": "夜深了",
     "greeting.morning": "早安",
     "greeting.noon": "午安",
@@ -29442,9 +29461,26 @@ const MESSAGES = {
     "api.keyCreated": "Key created: ",
     "api.keyNamePrompt": "Enter key name:",
     "api.unknownDevice": "Unknown device",
+    "api.deviceDesktop": "Desktop app",
+    "api.deviceMobile": "Mobile browser",
+    "api.deviceWeb": "Web browser",
     "api.reminder": "Reminder",
     "filter.collapse": "Filter ▾",
     "filter.expand": "Filter ▸",
+    "stats.heatLess": "Less",
+    "stats.heatMore": "More",
+    "stats.heatmapAria": "heatmap",
+    "chain.triggerCount": "Triggered {n} times",
+    "tool.sheet.hint": "Click a cell to edit directly; buttons add/remove rows and columns; data saves automatically",
+    "tool.sheet.delLastRow": "－ Delete last row",
+    "tool.sheet.delLastCol": "－ Delete last column",
+    "tool.sheet.exportCsvBtn": "Export CSV",
+    "tool.pdf.importLabel": "Import PDF file",
+    "tool.pdf.note": "Note: PDFs preview in the local browser; some environments (file:// protocol) may be restricted — use a system reader then.",
+    "tool.ocr.uploadLabel": "Upload screenshot (PNG/JPG)",
+    "tool.ocr.runBtn": "Start recognition",
+    "tool.ocr.resultLabel": "Recognition result",
+    "tool.ocr.noAiHint": "AI not configured — OCR relies on AI multimodal capability. Fill in an API Key in Settings → AI and retry.",
     "greeting.lateNight": "Late night",
     "greeting.morning": "Good morning",
     "greeting.noon": "Good noon",
@@ -30281,10 +30317,10 @@ const MESSAGES = {
   function _getDeviceLabel(){
     try{
       const ua = (typeof navigator !== "undefined" && navigator.userAgent) ? navigator.userAgent : "unknown";
-      if(/Electron/i.test(ua)) return "桌面应用";
-      if(/Mobile/i.test(ua)) return "移动浏览器";
-      return "Web 浏览器";
-    }catch(e){ return "未知设备"; }
+      if(/Electron/i.test(ua)) return t("api.deviceDesktop", "桌面应用");
+      if(/Mobile/i.test(ua)) return t("api.deviceMobile", "移动浏览器");
+      return t("api.deviceWeb", "Web 浏览器");
+    }catch(e){ return t("api.unknownDevice", "未知设备"); }
   }
 
   // 获取已缓存用户信息
