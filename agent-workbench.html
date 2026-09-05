@@ -1505,6 +1505,26 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .heatmap-svg .cell.l4{fill:var(--heat-4)}
 .heatmap-legend{display:flex;align-items:center;gap:var(--space-1);font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
 .heatmap-legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+/* v3.4.7 批次五：任务时间轴（14 天 × 场景泳道；点悬停 title 显示明细） */
+.tl-card{padding:var(--space-3);overflow-x:auto}
+.tl-grid{min-width:720px}
+.tl-row{display:flex;align-items:stretch;gap:2px;margin-bottom:2px}
+.tl-row.tl-head{margin-bottom:var(--space-2)}
+.tl-sc{flex:0 0 84px;display:flex;align-items:center;font-size:var(--fs-xs);font-weight:600;color:var(--text);
+  border-left:3px solid var(--sc,var(--muted));padding-left:var(--space-1h);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-hcell{flex:1 1 0;min-width:40px;text-align:center;font-size:var(--fs-2xs);color:var(--muted);padding:var(--space-1) 0}
+.tl-hcell.today{color:var(--accent);font-weight:700}
+.tl-cell{flex:1 1 0;min-width:40px;min-height:34px;background:var(--surface-muted);border-radius:var(--radius-sm);
+  display:flex;flex-wrap:wrap;align-content:flex-start;gap:3px;padding:4px}
+.tl-dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.tl-dot.tl-ev-create{background:var(--accent)}
+.tl-dot.tl-ev-done{background:var(--ok)}
+.tl-dot.tl-ev-del{background:var(--danger)}
+.tl-more{font-size:9px;color:var(--muted);align-self:center}
+.tl-legend{display:flex;align-items:center;gap:var(--space-1h);margin-top:var(--space-3);
+  font-size:var(--fs-2xs);color:var(--muted);flex-wrap:wrap}
+.tl-legend .tl-dot{flex:0 0 auto}
+.tl-legend-hint{margin-left:auto;color:var(--text-faint)}
 .heatmap-legend .sw.l0{background:var(--heat-0)}.heatmap-legend .sw.l1{background:var(--heat-1)}
 .heatmap-legend .sw.l2{background:var(--heat-2)}.heatmap-legend .sw.l3{background:var(--heat-3)}
 .heatmap-legend .sw.l4{background:var(--heat-4)}
@@ -8853,8 +8873,22 @@ function isElectron(){ return typeof window.electronAPI !== "undefined"; }
  * 自动化规则引擎 + Webhook 订阅总线已于 v1.14.1 归档移除。
  * 本函数保留空实现仅避免改动既有调用点；联动由 runLinks 直接驱动，
  * 不依赖本分发器。 */
+/* ---------- v3.4.7 批次五：任务时间机器（事件持久化） ----------
+ * _emitTaskEvent 原是自动化规则/Webhook 总线的空壳（v1.14.1 归档后 noop）。
+ * 现激活为追加型事件日志：wb_agent_task_events（上限 500 条滚动，与迁移日志同模式），
+ * 供「时间轴」页做 14 天 × 场景泳道回放。只记类型/场景/标题摘要/ts——不存任务全量。 */
+const TASK_EVENTS_KEY = PREFIX + "task_events";
+const TASK_EVENTS_MAX = 500;
+function getTaskEvents(){ try{ return load(TASK_EVENTS_KEY, []) || []; }catch(_e){ return []; } }
 function _emitTaskEvent(type, task){
-  /* noop: 自动化规则引擎 + Webhook 总线已归档（v1.14.1）。保留函数体避免调用方改动。 */
+  try{
+    if(!task || !task.id) return;
+    const ev = { type: type, sc: task.sc || "", title: String(task.title || "").slice(0, 40), ts: Date.now() };
+    const evs = getTaskEvents();
+    evs.push(ev);
+    if(evs.length > TASK_EVENTS_MAX) evs.splice(0, evs.length - TASK_EVENTS_MAX);
+    save(TASK_EVENTS_KEY, evs);
+  }catch(_e){ /* 事件日志写失败不阻塞业务 */ }
 }
 function completeTask(id){
   const tasks = getTasks(); const i = tasks.findIndex(t=>t.id===id);
@@ -9623,6 +9657,12 @@ function _buildSideMenu(){
     cnt:"", sc:"chainpage",
     active: !_sideActive && _effActive==="chainpage"
   };
+  // v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（读 wb_agent_task_events 事件流）
+  const timelineNode = {
+    id:"feat-timeline", label:t("side.menu.timeline", "时间轴"), icon:(SIDE_MENU_ICONS.dash||SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#b87840",
+    cnt:"", sc:"timeline",
+    active: !_sideActive && _effActive==="timeline"
+  };
 
   /* ---- 场景组（ORDER 驱动，全部叶子节点；v2.4.0「数据」归位办公之后——数据分析入口） ---- */
   const sceneNodes = ORDER.map(sc=>{
@@ -9672,7 +9712,7 @@ function _buildSideMenu(){
   };
 
   return [
-    {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode]},
+    {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode, timelineNode]},
     {gid:"scenario", name:t("side.group.scenario", "场景"), nodes:sceneNodes},
     {gid:"ai", name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
     {gid:"tools", name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
@@ -14448,6 +14488,57 @@ function renderChainPage(){
     };
   });
   appendFoot(); // v3.4.5：renderChainPage 自含尾栏（幂等）——不依赖调用方 render() 补
+}
+
+/* ---------- v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（只读） ----------
+ * 数据源：wb_agent_task_events（_emitTaskEvent 追加，500 上限滚动）。
+ * v1 设计决策：只读回放——不做「回到第 N 步」（跨数据状态恢复有 G4 级风险）。 */
+function renderTimelinePage(){
+  const evs = getTaskEvents();
+  const DAY_MS = 86400000;
+  const now = new Date();
+  const todayStr0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  // 14 天列（含今天，倒序显示：左=13 天前 右=今天）
+  const days = [];
+  for(let i = 13; i >= 0; i--) days.push(todayStr0 - i * DAY_MS);
+  const evTypeLabel = { task_create: t("timeline.create", "新建"), task_complete: t("timeline.complete", "完成"), task_delete: t("timeline.delete", "删除") };
+  const evTypeCls = { task_create: "tl-ev-create", task_complete: "tl-ev-done", task_delete: "tl-ev-del" };
+  // 行 = 场景（ORDER），列 = 天
+  const sceneRows = ORDER.map(function(sc){
+    const s = SCENARIOS[sc]; if(!s) return "";
+    const cells = days.map(function(dayStart){
+      const dayEnd = dayStart + DAY_MS;
+      const dayEvs = evs.filter(function(e){ return e.sc === sc && e.ts >= dayStart && e.ts < dayEnd; });
+      if(!dayEvs.length) return '<div class="tl-cell"></div>';
+      const dots = dayEvs.slice(0, 6).map(function(e){
+        return '<span class="tl-dot ' + (evTypeCls[e.type] || "") + '" title="' + esc((evTypeLabel[e.type] || e.type) + " · " + (e.title || "")) + '"></span>';
+      }).join("");
+      return '<div class="tl-cell">' + dots + (dayEvs.length > 6 ? '<span class="tl-more">+' + (dayEvs.length - 6) + '</span>' : "") + '</div>';
+    }).join("");
+    return '<div class="tl-row"><div class="tl-sc" style="--sc:' + s.color + '">' + esc(s.name) + '</div>' + cells + '</div>';
+  }).join("");
+  const headCells = days.map(function(dayStart){
+    const d = new Date(dayStart);
+    const isToday = dayStart === todayStr0;
+    return '<div class="tl-hcell' + (isToday ? " today" : "") + '">' + (d.getMonth()+1) + "/" + d.getDate() + '</div>';
+  }).join("");
+  const legend = '<div class="tl-legend">' +
+    '<span class="tl-dot tl-ev-create"></span>' + t("timeline.create", "新建") +
+    '<span class="tl-dot tl-ev-done"></span>' + t("timeline.complete", "完成") +
+    '<span class="tl-dot tl-ev-del"></span>' + t("timeline.delete", "删除") +
+    '<span class="tl-legend-hint">' + t("timeline.hint", "本次会话起记录（历史事件上限 500 条）") + '</span></div>';
+  const totalEvs = evs.length;
+  $("#main").innerHTML = sanitizeHtml(
+    '<div class="card page-head-card"><header class="page-head sc-page-head">' +
+    '<span class="ph-ic" aria-hidden="true">' + (SIDE_MENU_ICONS.dash || "") + '</span>' +
+    '<div class="ph-tx"><h2>' + t("timeline.title", "任务时间轴") + '</h2><p class="sub">' +
+    t("timeline.sub", "最近 14 天的任务活动回放 · 按场景分泳道") + ' · ' + totalEvs + t("timeline.eventCount", " 条事件") + '</p></div>' +
+    '<span class="ph-act"><button type="button" class="page-back" id="tlBack">' + t("timeline.back", "← 返回") + '</button></span>' +
+    '</header></div>' +
+    '<div class="card tl-card"><div class="tl-grid"><div class="tl-row tl-head"><div class="tl-sc"></div>' + headCells + '</div>' + sceneRows + '</div>' + legend + '</div>');
+  const back = $("#tlBack");
+  if(back) back.onclick = function(){ setActive("overview"); render(); };
+  appendFoot();
 }
 
 /* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
@@ -19400,6 +19491,7 @@ function render(){
     if(active==="toolbox"){ renderToolboxPage(); appendFoot(); return; }
     if(active==="store"){ renderStorePage(); appendFoot(); return; }
     if(active==="chainpage"){ renderChainPage(); appendFoot(); return; }
+    if(active==="timeline"){ renderTimelinePage(); appendFoot(); return; } // v3.4.7 批次五：任务时间轴页
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
     // v3.0：功能菜单（renderSceneFeatNav）独立于标题栏，置于标题卡与主内容之间
@@ -24854,6 +24946,15 @@ const MESSAGES = {
     "side.menu.home": "主页",
     "side.menu.tasks": "任务",
     "side.menu.chain": "场景联动",
+    "side.menu.timeline": "时间轴",
+    "timeline.title": "任务时间轴",
+    "timeline.sub": "最近 14 天的任务活动回放 · 按场景分泳道",
+    "timeline.back": "← 返回",
+    "timeline.create": "新建",
+    "timeline.complete": "完成",
+    "timeline.delete": "删除",
+    "timeline.hint": "本次会话起记录（历史事件上限 500 条）",
+    "timeline.eventCount": " 条事件",
     "side.menu.toolbox": "工具箱",
     "side.menu.store": "商店",
     "side.menu.recycle": "回收站",
@@ -28202,6 +28303,15 @@ const MESSAGES = {
     "side.menu.home": "Home",
     "side.menu.tasks": "Tasks",
     "side.menu.chain": "Habit Chains",
+    "side.menu.timeline": "Timeline",
+    "timeline.title": "Task Timeline",
+    "timeline.sub": "Task activity over the last 14 days · one lane per scenario",
+    "timeline.back": "← Back",
+    "timeline.create": "Created",
+    "timeline.complete": "Done",
+    "timeline.delete": "Deleted",
+    "timeline.hint": "Recorded from this session onward (event log capped at 500)",
+    "timeline.eventCount": " events",
     "side.menu.toolbox": "Toolbox",
     "side.menu.store": "Store",
     "side.menu.recycle": "Recycle",
