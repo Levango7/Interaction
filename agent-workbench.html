@@ -8249,15 +8249,49 @@ function detectLegacyData(){
   return result;
 }
 /**
- * 数据迁移入口：tasks/cfg/links schema 校验 + 多 Profile 迁移
+ * v3.4.7 批次一（存储评估 G4）：通用业务 key 损坏防护
+ * 此前 migrate() 只覆盖 tasks/cfg/links 三个 key；其余业务 key（rec_*、chat_*、
+ * ai_sessions、notes、rag_docs、wb_conversations、回收站等）在各自 load 处 catch
+ * 后直接返回空数组——一次 JSON 截断（配额边缘写半截）即静默丢整场景数据且不可恢复。
+ * 本守卫：逐 key 校验，语法错或非数组 → 备份原值到 wb_agent_broken_<key>_<ts>
+ * （与 _backupBroken 同模式）+ 诊断登记，然后重置为空数组（下游 load 兜底即安全）。
  * @returns {void}
  */
+function _guardGenericJsonKeys(){
+  const keys = [];
+  ORDER.forEach(function(sc){ keys.push(PREFIX+"rec_"+sc, PREFIX+"chat_"+sc); }); // 场景记录/聊天（动态生成）
+  [ "ai_sessions", "notes", "rag_docs", "wb_conversations", "wb_long_term_memory", "recycle_bin", "migrationLog" ]
+    .forEach(function(k){ keys.push(PREFIX + k); });
+  keys.forEach(function(k){
+    if(k.indexOf("_broken_") >= 0) return; // 备份键自身不二次守卫（残值已存档）
+    let raw;
+    try{ raw = localStorage.getItem(k); }catch(_e){ return; }
+    if(raw === null || raw === undefined) return; // 无数据不处理
+    let parsed;
+    try{ parsed = JSON.parse(raw); }
+    catch(_e){
+      _brokenBackup(k, raw, "syntax");
+      return;
+    }
+    if(!Array.isArray(parsed)) _brokenBackup(k, raw, "shape"); // 合法 JSON 但非数组（键值对型对象除外——排除非数组语义键）
+  });
+}
+/** 损坏原值备份 + 重置 + 诊断登记（_guardGenericJsonKeys 专用，与 _backupBroken 同模式） */
+function _brokenBackup(key, raw, kind){
+  const ts = Date.now();
+  try{
+    localStorage.setItem(key + "_broken_" + ts, raw);
+    localStorage.setItem(key, "[]");
+  }catch(_e){ /* 备份写失败时不重置（宁可保持损坏原值待人工恢复，也不无备份清除） */ return; }
+  try{ pushDiag("error", "corrupted key backed up: " + key + " (" + kind + ")", { where: "_guardGenericJsonKeys" }); }catch(_e2){}
+}
 function migrate(){
   try{
     const before = detectLegacyData();
     _validateAndMigrateTasks();
     _validateCfg();
     _validateLinks();
+    _guardGenericJsonKeys(); // v3.4.7 批次一（G4）：其余业务 key 损坏防护——语法错/非数组先备份原值再重置，防静默丢数据
     // 多 AI Profile 迁移：旧 cfg {base,key,model,...} → cfg {profiles:[{...}], activeId}
     migrateProfiles();
     // v1.4-C 迁移日志：整体迁移摘要（仅在确有旧数据时记录）
@@ -23538,6 +23572,7 @@ const __TEST_GATE__ = (function(){
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
+  _guardGenericJsonKeys, _brokenBackup,
     getTasks, setTasks, getRec, setRec, getLinks,
     SCENARIOS, ORDER, TOOLS, DEFAULT_LINKS, PREFIX, MVP_SCOPE,
     effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
