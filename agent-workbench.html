@@ -1505,26 +1505,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .heatmap-svg .cell.l4{fill:var(--heat-4)}
 .heatmap-legend{display:flex;align-items:center;gap:var(--space-1);font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
 .heatmap-legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
-/* v3.4.7 批次五：任务时间轴（14 天 × 场景泳道；点悬停 title 显示明细） */
-.tl-card{padding:var(--space-3);overflow-x:auto}
-.tl-grid{min-width:720px}
-.tl-row{display:flex;align-items:stretch;gap:2px;margin-bottom:2px}
-.tl-row.tl-head{margin-bottom:var(--space-2)}
-.tl-sc{flex:0 0 84px;display:flex;align-items:center;font-size:var(--fs-xs);font-weight:600;color:var(--text);
-  border-left:3px solid var(--sc,var(--muted));padding-left:var(--space-1h);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl-hcell{flex:1 1 0;min-width:40px;text-align:center;font-size:var(--fs-2xs);color:var(--muted);padding:var(--space-1) 0}
-.tl-hcell.today{color:var(--accent);font-weight:700}
-.tl-cell{flex:1 1 0;min-width:40px;min-height:34px;background:var(--surface-muted);border-radius:var(--radius-sm);
-  display:flex;flex-wrap:wrap;align-content:flex-start;gap:3px;padding:4px}
-.tl-dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
-.tl-dot.tl-ev-create{background:var(--accent)}
-.tl-dot.tl-ev-done{background:var(--ok)}
-.tl-dot.tl-ev-del{background:var(--danger)}
-.tl-more{font-size:9px;color:var(--muted);align-self:center}
-.tl-legend{display:flex;align-items:center;gap:var(--space-1h);margin-top:var(--space-3);
-  font-size:var(--fs-2xs);color:var(--muted);flex-wrap:wrap}
-.tl-legend .tl-dot{flex:0 0 auto}
-.tl-legend-hint{margin-left:auto;color:var(--text-faint)}
 .heatmap-legend .sw.l0{background:var(--heat-0)}.heatmap-legend .sw.l1{background:var(--heat-1)}
 .heatmap-legend .sw.l2{background:var(--heat-2)}.heatmap-legend .sw.l3{background:var(--heat-3)}
 .heatmap-legend .sw.l4{background:var(--heat-4)}
@@ -1957,26 +1937,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .set-tip{font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin:var(--space-1) 0 var(--space-2)}
 .set-actions{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
 .set-actions .addbtn{flex:1;min-width:90px}
-/* v3.4.7 批次四：存储用量仪表（容量横条 + Top5 大 key + 三档阈值变色） */
-.storage-usage-card{margin:var(--space-2) 0 var(--space-3);padding:var(--space-3);background:var(--panel2);
-  border:1px solid var(--line);border-radius:var(--radius-md)}
-.storage-usage-head{display:flex;justify-content:space-between;align-items:baseline;
-  font-size:var(--fs-sm);font-weight:600;color:var(--text)}
-.storage-usage-total{font-size:var(--fs-xs);font-weight:400;color:var(--muted)}
-.storage-usage-bar{height:8px;border-radius:var(--radius-full);background:var(--surface-muted);
-  margin:var(--space-2) 0;overflow:hidden}
-.storage-usage-fill{height:100%;width:0%;border-radius:var(--radius-full);background:var(--accent);
-  transition:width var(--transition-base)}
-.storage-usage-fill.warn{background:var(--warn)}   /* ≥70% */
-.storage-usage-fill.danger{background:var(--danger)} /* ≥85% */
-.storage-usage-top{display:flex;flex-direction:column;gap:var(--space-1)}
-.storage-usage-row{display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-2xs);color:var(--muted)}
-.storage-usage-row .k{flex:0 1 auto;max-width:56%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font-family:var(--font-mono,monospace)}
-.storage-usage-row .sz{flex:0 0 auto;min-width:6.5em;text-align:right}
-.storage-usage-row .pct-bar{flex:1 1 auto;height:5px;border-radius:var(--radius-full);
-  background:var(--surface-muted);overflow:hidden}
-.storage-usage-row .pct-fill{height:100%;background:var(--accent);opacity:.55}
 /* 保存按钮卡片：与上方 .set-card 同宽同风格（v2.4.1：去通栏负 margin，改为卡片对齐） */
 .set-savebar{display:flex;gap:var(--space-3);align-items:center;
   margin:var(--space-5) 0 0;
@@ -4016,11 +3976,6 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
           <input type="checkbox" id="aiMemLongTerm" data-i18n-aria="mem.longTermLabel" aria-label="长期记忆">
           <div><div class="sw-label" data-i18n="mem.longTermLabel">长期记忆</div><div class="sw-sub" data-i18n="mem.longTermSub">开启后 AI 可跨会话检索历史记忆</div></div>
         </div>
-        <!-- v3.4.7 批次六：RAG 上下文注入开关（默认关——发送消息前检索任务/记录/笔记相关片段拼进 system prompt） -->
-        <div class="set-switch">
-          <input type="checkbox" id="aiMemRag" data-i18n-aria="mem.ragLabel" aria-label="上下文注入（实验性）">
-          <div><div class="sw-label" data-i18n="mem.ragLabel">上下文注入（实验性）</div><div class="sw-sub" data-i18n="mem.ragSub">发送消息时自动检索任务/记录/笔记中的相关内容，拼进 AI 上下文——提问更精准，但会多消耗一些 token</div></div>
-        </div>
         <div class="set-field">
           <label for="aiMemThreshold" data-i18n="mem.thresholdLabel">记忆检索阈值（0~1）</label>
           <div class="ctl"><input id="aiMemThreshold" type="range" min="0" max="1" step="0.05" value="0.7" class="u-w-full"></div>
@@ -4173,15 +4128,6 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
         <p class="set-desc" data-i18n="dataMgmt.desc">自动备份恢复与数据导入导出。</p>
       </div>
     </header>
-    <!-- v3.4.7 批次四：存储用量仪表——容量横条 + Top5 大 key（此前用户对 5MB 配额完全盲） -->
-    <div class="storage-usage-card" id="storageUsageCard">
-      <div class="storage-usage-head">
-        <span data-i18n="dataMgmt.storageTitle">存储用量</span>
-        <span class="storage-usage-total" id="storageUsageTotal"></span>
-      </div>
-      <div class="storage-usage-bar"><div class="storage-usage-fill" id="storageUsageFill"></div></div>
-      <div class="storage-usage-top" id="storageUsageTop"></div>
-    </div>
     <div class="set-subhead" data-i18n="dataMgmt.maintenance">维护</div>
     <div class="set-field">
       <label for="cfgRecyclePolicy" data-i18n="settings.recyclePolicy">回收站自动清理</label>
@@ -4204,7 +4150,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     <div class="set-subhead" data-i18n="dataMgmt.exportImport">导出 / 导入</div>
     <div class="set-actions">
       <button type="button" class="addbtn min" id="btnExport" data-i18n-aria="dataMgmt.exportJsonAria" aria-label="导出 JSON" data-i18n="dataMgmt.exportJson">导出 JSON</button>
-      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n-aria="dataMgmt.exportCsvAria" aria-label="${t("export.preview.confirm", "导出 CSV")}" data-sc="accent">导出 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n-aria="dataMgmt.exportCsvAria" aria-label="导出 CSV" data-sc="accent" data-i18n="dataMgmt.exportCSV">导出 CSV</button>
       <button type="button" class="addbtn min" id="btnExportMD" data-i18n-aria="dataMgmt.exportMdAria" aria-label="导出 Markdown" data-sc="accent" data-i18n="dataMgmt.exportMD">导出 MD</button>
       <button type="button" class="addbtn min" id="btnImport" data-i18n-aria="dataMgmt.importRecoverAria" aria-label="导入恢复" data-i18n="dataMgmt.importRecover">导入恢复</button>
       <button type="button" class="addbtn min" id="btnIdbRestore" data-i18n-aria="dataMgmt.idbRestoreAria" aria-label="从本地库恢复" data-i18n="dataMgmt.idbRestoreBtn">本地库恢复</button>
@@ -5213,7 +5159,6 @@ function load(k, def){
  * 把值 v 序列化后写入 localStorage 键 k
  * @param {string} k - 存储键
  * @param {*} v - 要存储的值
- * @returns {boolean} v3.4.7 批次三：写入是否成功（此前无返回值；配额耗尽返回 false 供旁路写调用方降级）
  */
 function save(k, v){
   try{
@@ -5221,13 +5166,11 @@ function save(k, v){
     idbQueueMirror(k, v); // 架构项①：异步镜像到 IndexedDB（去抖批量，不阻塞；jsdom/无 IDB 环境 no-op）
     // v2.0：会话层写穿镜像——场景聊天落盘时同步到对应 Session（仅 chat_ 键触发，无递归）
     try{ _mirrorChatToSession(k, v); }catch(_){ /* 会话层不可用时静默降级，不影响主存储 */ }
-    return true;
   }
   catch(e){
     // M8：配额耗尽 / 隐私模式禁用存储时不再静默崩溃，给出可观测告警
     if(typeof pushDiag === "function") pushDiag("error", "save failed: "+(e&&e.message||e), {where:"save", key:k});
     try{ toast(t("data.saveFailToast", "本地存储写入失败（可能空间已满），部分数据未保存。"), "error"); }catch(e2){ /* toast 不可用静默降级 */ }
-    return false;
   }
 }
 /**
@@ -6363,13 +6306,13 @@ const SCENARIOS = {
       // v3.1.2 B-档：资料库会议纪要此前只有主题/参会人/结论 3 字段，会议管理有 6 字段（含日期/主持人/时长）——同一场会议要录两遍且互不引用。
       // 补齐 date/host/duration 三字段对齐会议管理，数据可互通。
       fields:[
-        {k:"title",label:t("field.meetingTitle", "会议主题"),type:"text"},
-        {k:"type",label:t("field.meetingType","会议类型"),type:"select",options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
-        {k:"date",label:t("field.date","日期"),type:"date"},
-        {k:"host",label:t("field.host","主持人"),type:"text"},
-        {k:"who",label:t("field.attendees", "参会人"),type:"text"},
-        {k:"duration",label:t("field.durationHours","时长(小时)"),type:"number"},
-        {k:"note",label:t("field.conclusion", "结论 / 跟进"),type:"textarea"}
+        {k:"title",_t:["field.meetingTitle","会议主题"],label:t("field.meetingTitle", "会议主题"),type:"text"},
+        {k:"type",_t:["field.meetingType","会议类型"],label:t("field.meetingType","会议类型"),type:"select",_to:[["type.weeklyMeeting","周会"],["type.review","评审"],["type.client","客户"],["type.team","团队"],["option.other","其他"]],options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
+        {k:"date",_t:["field.date","日期"],label:t("field.date","日期"),type:"date"},
+        {k:"host",_t:["field.host","主持人"],label:t("field.host","主持人"),type:"text"},
+        {k:"who",_t:["field.attendees","参会人"],label:t("field.attendees", "参会人"),type:"text"},
+        {k:"duration",_t:["field.durationHours","时长(小时)"],label:t("field.durationHours","时长(小时)"),type:"number"},
+        {k:"note",_t:["field.conclusion","结论 / 跟进"],label:t("field.conclusion", "结论 / 跟进"),type:"textarea"}
       ] } },
 
   design:{ name:t("scenario.design", "设计"), color:"#d6409f",
@@ -6378,10 +6321,10 @@ const SCENARIOS = {
     extraCard:"design",
     record:{ label:t("record.design.label", "作品记录"),
       fields:[
-        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("option.poster", "海报"),t("option.logo", "Logo"),t("option.illustration", "插画"),t("option.ui", "UI 界面"),t("option.photo", "摄影"),t("option.other", "其他")]},
-        {k:"title",label:t("field.workName", "作品名"),type:"text"},
-        {k:"img",label:t("field.image", "图片"),type:"image"}, // v3.2 C-档：作品图（IDB blob 存储，不占 localStorage 配额）
-        {k:"note",label:t("field.inspiration", "灵感 / 备注"),type:"textarea"}
+        {k:"type",_t:["field.type","类型"],label:t("field.type", "类型"),type:"select",_to:[["option.poster","海报"],["option.logo","Logo"],["option.illustration","插画"],["option.ui","UI 界面"],["option.photo","摄影"],["option.other","其他"]],options:[t("option.poster", "海报"),t("option.logo", "Logo"),t("option.illustration", "插画"),t("option.ui", "UI 界面"),t("option.photo", "摄影"),t("option.other", "其他")]},
+        {k:"title",_t:["field.workName","作品名"],label:t("field.workName", "作品名"),type:"text"},
+        {k:"img",_t:["field.image","图片"],label:t("field.image", "图片"),type:"image"}, // v3.2 C-档：作品图（IDB blob 存储，不占 localStorage 配额）
+        {k:"note",_t:["field.inspiration","灵感 / 备注"],label:t("field.inspiration", "灵感 / 备注"),type:"textarea"}
       ] } },
 
   study:{ name:t("scenario.study", "学习"), color:"#d97706",
@@ -6391,11 +6334,11 @@ const SCENARIOS = {
     record:{ label:t("record.study.label", "学习资料"),
       // v3.1.2 B-档：学习资料此前无来源字段——SM-2 到期复习时看到主题却点不开任何原始材料。补 source/url + 关联任务。
       fields:[
-        {k:"title",label:t("field.topic", "主题"),type:"text"},
-        {k:"type",label:t("field.type", "类型"),type:"text"},
-        {k:"source",label:t("field.source","来源链接"),type:"text",placeholder:"https://... / 书名 / 课程名"},
-        {k:"status",label:t("field.status", "状态"),type:"text"},
-        {k:"note",label:t("side.sub.notes", "笔记"),type:"textarea"}
+        {k:"title",_t:["field.topic","主题"],label:t("field.topic", "主题"),type:"text"},
+        {k:"type",_t:["field.type","类型"],label:t("field.type", "类型"),type:"text"},
+        {k:"source",_t:["field.source","来源链接"],label:t("field.source","来源链接"),type:"text",_tp:["field.sourcePh","https://... / 书名 / 课程名"],placeholder:t("field.sourcePh","https://... / 书名 / 课程名")},
+        {k:"status",_t:["field.status","状态"],label:t("field.status", "状态"),type:"text"},
+        {k:"note",_t:["side.sub.notes","笔记"],label:t("side.sub.notes", "笔记"),type:"textarea"}
       ] } },
 
   data:{ name:t("scenario.data", "数据"), color:"#0d9488",
@@ -6404,10 +6347,10 @@ const SCENARIOS = {
     extraCard:"data",
     record:{ label:t("record.data.label", "数据记录"),
       fields:[
-        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("option.metricSnapshot", "指标快照"),t("option.analysisConclusion", "分析结论"),t("option.dataSource", "数据源"),t("option.report", "报表")]},
-        {k:"title",label:t("field.title", "标题"),type:"text"},
-        {k:"value",label:t("field.metricValue", "指标数值"),type:"text",placeholder:"65.2 / 128 / 12.5%"}, // v3.1.2 A-档：指标快照此前无数值字段，「记了体重 65.2」无处填
-        {k:"note",label:t("field.note", "备注"),type:"textarea"}
+        {k:"type",_t:["field.type","类型"],label:t("field.type", "类型"),type:"select",_to:[["option.metricSnapshot","指标快照"],["option.analysisConclusion","分析结论"],["option.dataSource","数据源"],["option.report","报表"]],options:[t("option.metricSnapshot", "指标快照"),t("option.analysisConclusion", "分析结论"),t("option.dataSource", "数据源"),t("option.report", "报表")]},
+        {k:"title",_t:["field.title","标题"],label:t("field.title", "标题"),type:"text"},
+        {k:"value",_t:["field.metricValue","指标数值"],label:t("field.metricValue", "指标数值"),type:"text",_tp:["field.metricValuePh","65.2 / 128 / 12.5%"],placeholder:t("field.metricValuePh","65.2 / 128 / 12.5%")}, // v3.1.2 A-档：指标快照此前无数值字段，「记了体重 65.2」无处填
+        {k:"note",_t:["field.note","备注"],label:t("field.note", "备注"),type:"textarea"}
       ] } },
 
   code:{ name:t("scenario.code", "编程"), color:"#34a853",
@@ -6416,9 +6359,9 @@ const SCENARIOS = {
     extraCard:"code",
     record:{ label:t("record.code.label", "代码片段"),
       // v3.1.2 A-档：lang 由自由文本改 select（"js/JS/JavaScript"被统计成 3 种语言的分裂源）+ 补 project 归属字段
-      fields:[{k:"lang",label:t("field.lang", "语言"),type:"select",options:["JavaScript","TypeScript","Python","Java","Go","Rust","C/C++","SQL","HTML/CSS","Shell",t("option.other","其他")]},
-        {k:"project",label:t("field.project", "项目"),type:"text",placeholder:"如 工作台重构 / 个人的小站"},
-        {k:"title",label:t("field.title", "标题"),type:"text"},{k:"code",label:t("field.code", "代码"),type:"textarea"}] } },
+      fields:[{k:"lang",label:t("field.lang", "语言"),type:"select",_to:[["option.other","其他"]],options:["JavaScript","TypeScript","Python","Java","Go","Rust","C/C++","SQL","HTML/CSS","Shell",t("option.other","其他")]},
+        {k:"project",_t:["field.project","项目"],label:t("field.project", "项目"),type:"text",_tp:["field.projectPh","如 工作台重构 / 个人的小站"],placeholder:t("field.projectPh","如 工作台重构 / 个人的小站")},
+        {k:"title",_t:["field.title","标题"],label:t("field.title", "标题"),type:"text"},{k:"code",label:t("field.code", "代码"),type:"textarea"}] } },
 
   life:{ name:t("scenario.life", "生活"), color:"#7c5cbf",
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
@@ -6428,10 +6371,10 @@ const SCENARIOS = {
       // v3.2 C-档拆分：type 健康五类（运动/体重/身高/睡眠/喝水）收敛到「健康」功能 tab（结构化真相源），
       // 资料库只留日常事务——旧健康类记录仍被 getHealthRecs 双源聚合读取（B-档），数据不丢。
       fields:[
-        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("option.daily", "日常事务")]},
-        {k:"title",label:t("field.title", "标题"),type:"text"},
-        {k:"value",label:t("field.value", "数值"),type:"text",placeholder:t("field.valuePlaceholder", "如：5km / 65.2kg / 7.5h / 8杯")},
-        {k:"note",label:t("field.note", "备注"),type:"textarea"}
+        {k:"type",_t:["field.type","类型"],label:t("field.type", "类型"),type:"select",_to:[["option.daily","日常事务"]],options:[t("option.daily", "日常事务")]},
+        {k:"title",_t:["field.title","标题"],label:t("field.title", "标题"),type:"text"},
+        {k:"value",_t:["field.value","数值"],label:t("field.value", "数值"),type:"text",_tp:["field.valuePlaceholder","如：5km / 65.2kg / 7.5h / 8杯"],placeholder:t("field.valuePlaceholder", "如：5km / 65.2kg / 7.5h / 8杯")},
+        {k:"note",_t:["field.note","备注"],label:t("field.note", "备注"),type:"textarea"}
       ] } }
 };
 /* v2.1.0：6 内置场景——新增 设计(design)/数据(data)；顺序即侧栏场景组显示序与滑动手势序 */
@@ -7856,7 +7799,7 @@ function getRagDocs(){
  */
 function saveRagDocs(docs){
   _ragDocs = docs || [];
-  save(PREFIX + RAG_STORAGE_KEY, _ragDocs); // v3.4.7 批次三（G5）：收编进 save() 主入口（配额耗尽有告警，不再静默）
+  try{ localStorage.setItem(PREFIX + RAG_STORAGE_KEY, JSON.stringify(_ragDocs)); }catch(e){}
 }
 
 /**
@@ -7938,7 +7881,7 @@ async function ragSearch(query, limit){
   if(!q) return [];
   if(!_ragReady){
     const ok = await ragInit();
-    if(!ok) return ragSearchFallback(q, topK); // v3.4.7 批次六：sql.js/FTS5 不可用时降级关键词匹配（此前直接空——RAG 在无 WASM 环境完全失效）
+    if(!ok) return [];
   }
   try{
     // FTS5 match 查询：转义特殊字符，用 BM25 排序
@@ -7988,7 +7931,7 @@ function ragSearchFallback(query, limit){
  */
 async function ragInjectContext(userText){
   const cfg = getCfg() || {};
-  if(cfg.rag !== true) return ""; // v3.4.7 批次六：显式开启才注入（设置页 AI→记忆「上下文注入」开关，默认关——防 token 意外膨胀；此前 ===false 判定在无 UI 写入下等效永远开）
+  if(cfg.rag === false) return ""; // 用户关闭 RAG
   const hits = await ragSearch(userText, 5);
   if(!hits.length) return "";
   const lines = [t("rag.ctxHeader","【相关上下文】（来自任务/记录、笔记、对话历史的检索增强）：")];
@@ -8306,49 +8249,15 @@ function detectLegacyData(){
   return result;
 }
 /**
- * v3.4.7 批次一（存储评估 G4）：通用业务 key 损坏防护
- * 此前 migrate() 只覆盖 tasks/cfg/links 三个 key；其余业务 key（rec_*、chat_*、
- * ai_sessions、notes、rag_docs、wb_conversations、回收站等）在各自 load 处 catch
- * 后直接返回空数组——一次 JSON 截断（配额边缘写半截）即静默丢整场景数据且不可恢复。
- * 本守卫：逐 key 校验，语法错或非数组 → 备份原值到 wb_agent_broken_<key>_<ts>
- * （与 _backupBroken 同模式）+ 诊断登记，然后重置为空数组（下游 load 兜底即安全）。
+ * 数据迁移入口：tasks/cfg/links schema 校验 + 多 Profile 迁移
  * @returns {void}
  */
-function _guardGenericJsonKeys(){
-  const keys = [];
-  ORDER.forEach(function(sc){ keys.push(PREFIX+"rec_"+sc, PREFIX+"chat_"+sc); }); // 场景记录/聊天（动态生成）
-  [ "ai_sessions", "notes", "rag_docs", "wb_conversations", "wb_long_term_memory", "recycle_bin", "migrationLog" ]
-    .forEach(function(k){ keys.push(PREFIX + k); });
-  keys.forEach(function(k){
-    if(k.indexOf("_broken_") >= 0) return; // 备份键自身不二次守卫（残值已存档）
-    let raw;
-    try{ raw = localStorage.getItem(k); }catch(_e){ return; }
-    if(raw === null || raw === undefined) return; // 无数据不处理
-    let parsed;
-    try{ parsed = JSON.parse(raw); }
-    catch(_e){
-      _brokenBackup(k, raw, "syntax");
-      return;
-    }
-    if(!Array.isArray(parsed)) _brokenBackup(k, raw, "shape"); // 合法 JSON 但非数组（键值对型对象除外——排除非数组语义键）
-  });
-}
-/** 损坏原值备份 + 重置 + 诊断登记（_guardGenericJsonKeys 专用，与 _backupBroken 同模式） */
-function _brokenBackup(key, raw, kind){
-  const ts = Date.now();
-  try{
-    localStorage.setItem(key + "_broken_" + ts, raw);
-    localStorage.setItem(key, "[]");
-  }catch(_e){ /* 备份写失败时不重置（宁可保持损坏原值待人工恢复，也不无备份清除） */ return; }
-  try{ pushDiag("error", "corrupted key backed up: " + key + " (" + kind + ")", { where: "_guardGenericJsonKeys" }); }catch(_e2){}
-}
 function migrate(){
   try{
     const before = detectLegacyData();
     _validateAndMigrateTasks();
     _validateCfg();
     _validateLinks();
-    _guardGenericJsonKeys(); // v3.4.7 批次一（G4）：其余业务 key 损坏防护——语法错/非数组先备份原值再重置，防静默丢数据
     // 多 AI Profile 迁移：旧 cfg {base,key,model,...} → cfg {profiles:[{...}], activeId}
     migrateProfiles();
     // v1.4-C 迁移日志：整体迁移摘要（仅在确有旧数据时记录）
@@ -8561,9 +8470,7 @@ function setRec(sc, a){ save(PREFIX+"rec_"+sc, a); scheduleAutoBackup(); }
 
 /* ---------- P1-b 自动备份（防抖快照，独立于手动导出） ---------- */
 const AUTO_BACKUP_KEY = PREFIX + "autobackup";
-const AUTO_BACKUP_GENS = [PREFIX + "autobackup.1", PREFIX + "autobackup.2"]; // v3.4.7 批次二（G3）：三代滚动——上一代/上上代
 const AUTO_BACKUP_MAX_BYTES = 1.5 * 1024 * 1024; // 单条快照体积上限：业务数据异常膨胀时拒绝写入，防写爆配额
-const AUTO_BACKUP_TOTAL_CEIL = 4 * 1024 * 1024;  // v3.4.7：三代总占用护栏（>4MB 时只保留 2 代，防逼近 5MB 配额）
 let _autoBackupTimer = null;
 let _autoBackupFailWarned = false; // 失败告警去重：同会话只提醒一次
 function snapshotAutoBackup(){
@@ -8572,7 +8479,7 @@ function snapshotAutoBackup(){
     // 每次快照把上一份完整快照原样嵌入（JSON 转义使膨胀超线性），约二三十次写入
     // 即撞 5MB 配额，且 catch 静默吞错导致备份失效无感知、反噬主存储写入。
     const data = {};
-    allKeys().forEach(k=>{ if(k === AUTO_BACKUP_KEY || AUTO_BACKUP_GENS.indexOf(k) >= 0) return; data[k] = localStorage.getItem(k); });
+    allKeys().forEach(k=>{ if(k === AUTO_BACKUP_KEY) return; data[k] = localStorage.getItem(k); });
     data._ts = Date.now();
     const serialized = JSON.stringify(data);
     if(serialized.length > AUTO_BACKUP_MAX_BYTES){
@@ -8582,21 +8489,6 @@ function snapshotAutoBackup(){
         try{ toast(t("backup.pausedToast", "自动备份已暂停：数据体积异常增大，请检查或导出清理"), "warn"); }catch(e2){ /* toast 不可用时静默 */ }
       }
       return;
-    }
-    // v3.4.7 批次二（G3）：三代环形滚动——autobackup.2 ← autobackup.1 ← autobackup ← 新快照。
-    // 此前单代覆盖写：数据先损坏后，下一次任何写入都会把"最后一份好快照"覆盖成损坏数据的
-    // 快照，恢复入口只能回到最近一次（已损坏）。滚动后至少保留两代历史可回退。
-    // 滚动只在快照序列化成功后发生（单代超限/异常不动旧代）。
-    const prev = localStorage.getItem(AUTO_BACKUP_KEY);
-    const prev2 = localStorage.getItem(AUTO_BACKUP_GENS[0]);
-    // 4MB 护栏：三代合计逼近 5MB 配额时降级只保留 2 代（新 + 上一代），防备份反噬主存储
-    const totalIf3 = serialized.length + (prev ? prev.length : 0) + (prev2 ? prev2.length : 0);
-    if(totalIf3 <= AUTO_BACKUP_TOTAL_CEIL){
-      if(prev2 !== null) localStorage.setItem(AUTO_BACKUP_GENS[1], prev2);
-      if(prev !== null) localStorage.setItem(AUTO_BACKUP_GENS[0], prev);
-    }else{
-      if(prev !== null) localStorage.setItem(AUTO_BACKUP_GENS[0], prev);
-      localStorage.removeItem(AUTO_BACKUP_GENS[1]); // 腾代：丢弃最老一代
     }
     localStorage.setItem(AUTO_BACKUP_KEY, serialized);
   }catch(e){
@@ -8614,24 +8506,9 @@ function scheduleAutoBackup(){
   _autoBackupTimer = setTimeout(()=>{ _autoBackupTimer = null; snapshotAutoBackup(); }, 400);
 }
 function getAutoBackup(){ try{ return JSON.parse(localStorage.getItem(AUTO_BACKUP_KEY)||"null"); }catch(e){ return null; } }
-/** v3.4.7 批次二（G3）：按代际取快照——gen 0=最新 / 1=上一代 / 2=上上代；损坏或缺失返回 null */
-function getAutoBackupGen(gen){
-  if(gen === 0) return getAutoBackup();
-  try{ return JSON.parse(localStorage.getItem(AUTO_BACKUP_GENS[gen-1])||"null"); }catch(e){ return null; }
-}
 function recoverAutoBackup(){
-  // v3.4.7 批次二（G3）：最新代损坏时自动回退上一代（此前只能拿到"最近一次（可能已损坏）"）
-  let snap = getAutoBackupGen(0), usedGen = 0;
-  if(!snap || typeof snap !== "object" || !snap._ts){
-    snap = getAutoBackupGen(1);
-    usedGen = 1;
-    if(!snap || typeof snap !== "object" || !snap._ts){
-      snap = getAutoBackupGen(2);
-      usedGen = 2;
-    }
-  }
-  if(!snap || typeof snap !== "object" || !snap._ts){ toast(t("backup.noneToast", "没有可用的自动备份"), "warn"); return false; }
-  if(usedGen > 0){ try{ toast(t("backup.fallbackGenToast", "最新备份已损坏，已回退到第 {n} 上一代").replace("{n}", usedGen), "warn"); }catch(_e){ /* noop */ } }
+  const snap = getAutoBackup();
+  if(!snap){ toast(t("backup.noneToast", "没有可用的自动备份"), "warn"); return false; }
   Object.keys(snap).forEach(k=>{ if(k==="_ts") return; localStorage.setItem(k, snap[k]); });
   _cfgCache = null; _deviceKey = null;
   clearUndoStack(); // B6：恢复备份后清空撤销栈，避免跨数据状态误撤销
@@ -8878,22 +8755,8 @@ function isElectron(){ return typeof window.electronAPI !== "undefined"; }
  * 自动化规则引擎 + Webhook 订阅总线已于 v1.14.1 归档移除。
  * 本函数保留空实现仅避免改动既有调用点；联动由 runLinks 直接驱动，
  * 不依赖本分发器。 */
-/* ---------- v3.4.7 批次五：任务时间机器（事件持久化） ----------
- * _emitTaskEvent 原是自动化规则/Webhook 总线的空壳（v1.14.1 归档后 noop）。
- * 现激活为追加型事件日志：wb_agent_task_events（上限 500 条滚动，与迁移日志同模式），
- * 供「时间轴」页做 14 天 × 场景泳道回放。只记类型/场景/标题摘要/ts——不存任务全量。 */
-const TASK_EVENTS_KEY = PREFIX + "task_events";
-const TASK_EVENTS_MAX = 500;
-function getTaskEvents(){ try{ return load(TASK_EVENTS_KEY, []) || []; }catch(_e){ return []; } }
 function _emitTaskEvent(type, task){
-  try{
-    if(!task || !task.id) return;
-    const ev = { type: type, sc: task.sc || "", title: String(task.title || "").slice(0, 40), ts: Date.now() };
-    const evs = getTaskEvents();
-    evs.push(ev);
-    if(evs.length > TASK_EVENTS_MAX) evs.splice(0, evs.length - TASK_EVENTS_MAX);
-    save(TASK_EVENTS_KEY, evs);
-  }catch(_e){ /* 事件日志写失败不阻塞业务 */ }
+  /* noop: 自动化规则引擎 + Webhook 总线已归档（v1.14.1）。保留函数体避免调用方改动。 */
 }
 function completeTask(id){
   const tasks = getTasks(); const i = tasks.findIndex(t=>t.id===id);
@@ -9662,12 +9525,6 @@ function _buildSideMenu(){
     cnt:"", sc:"chainpage",
     active: !_sideActive && _effActive==="chainpage"
   };
-  // v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（读 wb_agent_task_events 事件流）
-  const timelineNode = {
-    id:"feat-timeline", label:t("side.menu.timeline", "时间轴"), icon:(SIDE_MENU_ICONS.dash||SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#b87840",
-    cnt:"", sc:"timeline",
-    active: !_sideActive && _effActive==="timeline"
-  };
 
   /* ---- 场景组（ORDER 驱动，全部叶子节点；v2.4.0「数据」归位办公之后——数据分析入口） ---- */
   const sceneNodes = ORDER.map(sc=>{
@@ -9717,7 +9574,7 @@ function _buildSideMenu(){
   };
 
   return [
-    {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode, timelineNode]},
+    {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode]},
     {gid:"scenario", name:t("side.group.scenario", "场景"), nodes:sceneNodes},
     {gid:"ai", name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
     {gid:"tools", name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
@@ -13634,8 +13491,8 @@ function renderOverview(){
      <div class="card ov-span2"><h2>${ic("search")} 全局搜索</h2>
         <div class="glob-filters">
           <input id="globSearch" class="glob-search-main" placeholder="关键词，如 周报 / 跑步…" data-i18n-placeholder="field.globSearchPh">
-          <select id="globFSc" aria-label="按场景筛选" data-i18n-aria="a11y.filterByScene"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
-          <select id="globFStatus" aria-label="按状态筛选" data-i18n-aria="a11y.filterByStatus"><option value="">全部状态</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">已完成</option></select>
+          <select id="globFSc" aria-label="${t("a11y.filterByScene", "按场景筛选")}" data-i18n-aria="a11y.filterByScene"><option value="">${t("common.all", "全部场景")}</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
+          <select id="globFStatus" aria-label="${t("a11y.filterByStatus", "按状态筛选")}" data-i18n-aria="a11y.filterByStatus"><option value="">${t("common.all", "全部状态")}</option><option value="todo">${t("kanban.todo", "待办")}</option><option value="doing">${t("kanban.doing", "进行中")}</option><option value="done">${t("kanban.done", "已完成")}</option></select>
           <button type="button" id="globAdvToggle" class="addbtn sm glob-adv-toggle" aria-expanded="false" data-i18n="overview.filter">筛选 ▸</button>
         </div>
         <div class="glob-filters-adv" id="globAdv" hidden>
@@ -14493,57 +14350,6 @@ function renderChainPage(){
     };
   });
   appendFoot(); // v3.4.5：renderChainPage 自含尾栏（幂等）——不依赖调用方 render() 补
-}
-
-/* ---------- v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（只读） ----------
- * 数据源：wb_agent_task_events（_emitTaskEvent 追加，500 上限滚动）。
- * v1 设计决策：只读回放——不做「回到第 N 步」（跨数据状态恢复有 G4 级风险）。 */
-function renderTimelinePage(){
-  const evs = getTaskEvents();
-  const DAY_MS = 86400000;
-  const now = new Date();
-  const todayStr0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  // 14 天列（含今天，倒序显示：左=13 天前 右=今天）
-  const days = [];
-  for(let i = 13; i >= 0; i--) days.push(todayStr0 - i * DAY_MS);
-  const evTypeLabel = { task_create: t("timeline.create", "新建"), task_complete: t("timeline.complete", "完成"), task_delete: t("timeline.delete", "删除") };
-  const evTypeCls = { task_create: "tl-ev-create", task_complete: "tl-ev-done", task_delete: "tl-ev-del" };
-  // 行 = 场景（ORDER），列 = 天
-  const sceneRows = ORDER.map(function(sc){
-    const s = SCENARIOS[sc]; if(!s) return "";
-    const cells = days.map(function(dayStart){
-      const dayEnd = dayStart + DAY_MS;
-      const dayEvs = evs.filter(function(e){ return e.sc === sc && e.ts >= dayStart && e.ts < dayEnd; });
-      if(!dayEvs.length) return '<div class="tl-cell"></div>';
-      const dots = dayEvs.slice(0, 6).map(function(e){
-        return '<span class="tl-dot ' + (evTypeCls[e.type] || "") + '" title="' + esc((evTypeLabel[e.type] || e.type) + " · " + (e.title || "")) + '"></span>';
-      }).join("");
-      return '<div class="tl-cell">' + dots + (dayEvs.length > 6 ? '<span class="tl-more">+' + (dayEvs.length - 6) + '</span>' : "") + '</div>';
-    }).join("");
-    return '<div class="tl-row"><div class="tl-sc" style="--sc:' + s.color + '">' + esc(s.name) + '</div>' + cells + '</div>';
-  }).join("");
-  const headCells = days.map(function(dayStart){
-    const d = new Date(dayStart);
-    const isToday = dayStart === todayStr0;
-    return '<div class="tl-hcell' + (isToday ? " today" : "") + '">' + (d.getMonth()+1) + "/" + d.getDate() + '</div>';
-  }).join("");
-  const legend = '<div class="tl-legend">' +
-    '<span class="tl-dot tl-ev-create"></span>' + t("timeline.create", "新建") +
-    '<span class="tl-dot tl-ev-done"></span>' + t("timeline.complete", "完成") +
-    '<span class="tl-dot tl-ev-del"></span>' + t("timeline.delete", "删除") +
-    '<span class="tl-legend-hint">' + t("timeline.hint", "本次会话起记录（历史事件上限 500 条）") + '</span></div>';
-  const totalEvs = evs.length;
-  $("#main").innerHTML = sanitizeHtml(
-    '<div class="card page-head-card"><header class="page-head sc-page-head">' +
-    '<span class="ph-ic" aria-hidden="true">' + (SIDE_MENU_ICONS.dash || "") + '</span>' +
-    '<div class="ph-tx"><h2>' + t("timeline.title", "任务时间轴") + '</h2><p class="sub">' +
-    t("timeline.sub", "最近 14 天的任务活动回放 · 按场景分泳道") + ' · ' + totalEvs + t("timeline.eventCount", " 条事件") + '</p></div>' +
-    '<span class="ph-act"><button type="button" class="page-back" id="tlBack">' + t("timeline.back", "← 返回") + '</button></span>' +
-    '</header></div>' +
-    '<div class="card tl-card"><div class="tl-grid"><div class="tl-row tl-head"><div class="tl-sc"></div>' + headCells + '</div>' + sceneRows + '</div>' + legend + '</div>');
-  const back = $("#tlBack");
-  if(back) back.onclick = function(){ setActive("overview"); render(); };
-  appendFoot();
 }
 
 /* ---------- P8：保存的筛选视图（localStorage，PREFIX 前缀自动随备份） ---------- */
@@ -18512,11 +18318,7 @@ async function onChatSubmit(e){
   // 正常路径（v1.14 多模态已移除，user 消息始终为纯文本）
   hist.push({role:"user",content:text});
   renderChat(); scrollChat();
-  // v3.4.7 批次六：RAG 上下文注入（激活闲置索引资产）——检索任务/记录/笔记/对话历史，
-  // 相关片段拼进 system prompt。开关：cfg.rag（设置页 AI→记忆），默认关（防 token 意外膨胀）；
-  // ragInjectContext 内部已判 cfg.rag === false 返回空串，检索失败/无索引同样安全降级为空。
-  const ragCtx = await ragInjectContext(text).catch(()=> "");
-  const messages=[{role:"system", content:chatSysPrompt(text) + ragCtx}]
+  const messages=[{role:"system", content:chatSysPrompt(text)}]
     // B1 修复：保留完整结构（含 tool_calls / tool_call_id），否则含工具调用的会话第二轮会缺 id 触发 400
     .concat(hist.map(m=>({...m})));
   await runChatLoop(messages, hist);
@@ -19500,7 +19302,6 @@ function render(){
     if(active==="toolbox"){ renderToolboxPage(); appendFoot(); return; }
     if(active==="store"){ renderStorePage(); appendFoot(); return; }
     if(active==="chainpage"){ renderChainPage(); appendFoot(); return; }
-    if(active==="timeline"){ renderTimelinePage(); appendFoot(); return; } // v3.4.7 批次五：任务时间轴页
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
     // v3.0：功能菜单（renderSceneFeatNav）独立于标题栏，置于标题卡与主内容之间
@@ -22104,7 +21905,7 @@ function _switchSetTab(tabId){
      若限定 [data-page=settings] 会漏标，导致首次打开设置页所有 card 全隐藏 */
   $$("#drawer .set-card").forEach(function(c){ c.classList.toggle("set-tab-active", c.id === tabId); });
   if(tabId === "set-integration") renderIntegrationPanel();
-  if(tabId === "set-data"){ renderAutoBackupMeta(); renderStorageUsage(); } // v3.1.2 B-档：刷新备份元信息；v3.4.7 批次四：存储用量仪表
+  if(tabId === "set-data") renderAutoBackupMeta(); // v3.1.2 B-档：刷新自动备份元信息（上次时间 + 大小）
   if(tabId === "set-notify") renderNotifyPermissionMeta(); // v3.1.2 B-档：刷新浏览器通知权限状态
   const d = $("#drawer"); if(d) d.scrollTop = 0;
 }
@@ -22140,66 +21941,6 @@ function renderAutoBackupMeta(){
     const size = bizBytes > 1024*1024 ? (bizBytes/(1024*1024)).toFixed(1)+" MB" : (bizBytes > 1024 ? (bizBytes/1024).toFixed(0)+" KB" : bizBytes+" B");
     el.textContent = t("dataMgmt.autoBackupMeta.text","上次备份：{time} · 体积 {size}").replace("{time}", when).replace("{size}", size);
   }catch(_e){ el.textContent = t("dataMgmt.autoBackupMeta.err","自动备份元信息读取失败"); }
-}
-
-/* ---------- v3.4.7 批次四：存储用量仪表（容量横条 + Top5 大 key + 三档阈值） ----------
- * 此前用户对 5MB 配额完全盲（无 navigator.storage.estimate 调用、无按 key 体积统计）。
- * 口径说明：localStorage 在浏览器实际限 ~5MB；navigator.storage.estimate 反映的是
- * IDB/Cache 的配额（通常 GB 级）——两者不是一回事。横条以 localStorage 字节为主口径
- * （同步逐 key 统计，200+ 键 <10ms），estimate 仅在可用时作参考行展示。 */
-function _fmtBytes(n){
-  if(n >= 1024*1024) return (n/(1024*1024)).toFixed(1) + " MB";
-  if(n >= 1024) return (n/1024).toFixed(0) + " KB";
-  return n + " B";
-}
-function renderStorageUsage(){
-  const card = $("#storageUsageCard"); if(!card) return;
-  const totalEl = $("#storageUsageTotal"), fillEl = $("#storageUsageFill"), topEl = $("#storageUsageTop");
-  if(!totalEl || !fillEl || !topEl) return;
-  const LS_LIMIT = 5 * 1024 * 1024; // localStorage 常用配额（保守口径）
-  // 逐 key 字节统计（getItem 返回的 UTF-16 字符串——中英混合下 2 字节/字符更准，与实际存储一致）
-  let totalBytes = 0;
-  const sizes = [];
-  try{
-    for(let i = 0; i < localStorage.length; i++){
-      const k = localStorage.key(i);
-      if(!k) continue;
-      const v = localStorage.getItem(k);
-      const bytes = v ? v.length * 2 : 0; // UTF-16 每字符 2 字节
-      totalBytes += bytes;
-      sizes.push({ k, bytes });
-    }
-  }catch(_e){ /* 遍历失败时显示空态 */ }
-  const pct = Math.min(100, Math.round(totalBytes / LS_LIMIT * 100));
-  // 阈值三档：<70% 正常 / ≥70% warn / ≥85% danger
-  fillEl.style.width = pct + "%";
-  fillEl.classList.toggle("warn", pct >= 70 && pct < 85);
-  fillEl.classList.toggle("danger", pct >= 85);
-  totalEl.textContent = _fmtBytes(totalBytes) + " / ~" + _fmtBytes(LS_LIMIT) + " · " + pct + "%";
-  // Top 5 大 key
-  sizes.sort(function(a, b){ return b.bytes - a.bytes; });
-  topEl.innerHTML = "";
-  sizes.slice(0, 5).forEach(function(s){
-    const share = totalBytes ? Math.round(s.bytes / totalBytes * 100) : 0;
-    const row = document.createElement("div");
-    row.className = "storage-usage-row";
-    row.innerHTML = '<span class="k">' + esc(s.k) + '</span><span class="sz">' + _fmtBytes(s.bytes) +
-      '</span><span class="pct-bar"><span class="pct-fill" style="width:' + share + '%"></span></span>';
-    topEl.appendChild(row);
-  });
-  // 参考行：estimate 可用时展示（IDB 配额，非 localStorage——两个口径，防误读）
-  try{
-    if(navigator.storage && typeof navigator.storage.estimate === "function"){
-      navigator.storage.estimate().then(function(est){
-        if(est && est.quota && est.usage !== undefined){
-          const ref = document.createElement("div");
-          ref.className = "storage-usage-row u-fs-3xs";
-          ref.innerHTML = '<span class="k">' + esc(t("dataMgmt.storageEstimateRef","参考：应用总存储（含 IndexedDB）")) + '</span><span class="sz">' + _fmtBytes(est.usage) + " / " + _fmtBytes(est.quota) + "</span>";
-          topEl.appendChild(ref);
-        }
-      }).catch(function(){ /* estimate 失败静默 */ });
-    }
-  }catch(_e2){ /* navigator.storage 不可用（老环境）静默 */ }
 }
 
 /* ---------- v3.1：集成中心面板渲染 ---------- */
@@ -22490,8 +22231,10 @@ function getAiConfig(module){
   }catch(_e){ return null; }
 }
 function saveAiConfig(module, data){
-  // v3.4.7 批次三（G5）：收编进 save() 主入口——此前裸 setItem 绕过 IDB 镜像/配额告警/损坏登记
-  return save(PREFIX + "ai_config_" + module, data);
+  try{
+    localStorage.setItem(PREFIX + "ai_config_" + module, JSON.stringify(data));
+    return true;
+  }catch(_e){ return false; }
 }
 function _switchAiTab(tabId){
   $$("#drawer .set-nav-btn[data-ai-tab]").forEach(function(b){
@@ -22638,7 +22381,6 @@ function restoreAiMemory(){
   const saved = getAiConfig("memory"); if(!saved) return;
   const w = $("#aiMemWindow"); if(w && saved.windowSize) w.value = saved.windowSize;
   const lt = $("#aiMemLongTerm"); if(lt) lt.checked = !!saved.longTerm;
-  const rg = $("#aiMemRag"); if(rg) rg.checked = !!saved.rag; // v3.4.7 批次六：RAG 注入开关回填
   const th = $("#aiMemThreshold"); if(th && saved.threshold !== null && saved.threshold !== undefined) th.value = saved.threshold;
   const st = $("#aiMemStrategy"); if(st && saved.strategy) st.value = saved.strategy;
 }
@@ -22730,23 +22472,14 @@ $("#aiWorkflowSave").onclick = function(){
 $("#aiMemSave").onclick = function(){
   const w = $("#aiMemWindow");
   const lt = $("#aiMemLongTerm");
-  const rg = $("#aiMemRag");
   const th = $("#aiMemThreshold");
   const st = $("#aiMemStrategy");
   saveAiConfig("memory", {
     windowSize: w ? Number(w.value) : 10,
     longTerm: lt ? lt.checked : false,
-    rag: rg ? rg.checked : false, // v3.4.7 批次六：RAG 上下文注入开关（ragInjectContext 读 cfg.rag）
     threshold: th ? Number(th.value) : 0.7,
     strategy: st ? st.value : "recent"
   });
-  // cfg.rag 同步（ragInjectContext 判定走主配置而非 ai_config_memory；只改这一个字段，不动 profiles）
-  try{
-    const cfg = getCfg() || {};
-    cfg.rag = rg ? !!rg.checked : false;
-    _cfgCache = cfg; // 与 saveCfg 同款缓存更新（save 内部不含此逻辑）
-    save(PREFIX + "cfg", cfg);
-  }catch(_e){ /* cfg 写失败不影响 ai_config_memory 已存——注入静默保持旧态 */ }
   toast(t("ai.memoryConfigSaved","记忆配置已保存"));
 };
 $("#aiPluginSave").onclick = function(){
@@ -23805,7 +23538,6 @@ const __TEST_GATE__ = (function(){
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
-  _guardGenericJsonKeys, _brokenBackup,
     getTasks, setTasks, getRec, setRec, getLinks,
     SCENARIOS, ORDER, TOOLS, DEFAULT_LINKS, PREFIX, MVP_SCOPE,
     effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
@@ -24510,8 +24242,6 @@ const MESSAGES = {
     "mem.windowLabel": "上下文窗口大小（条，1~50）",
     "mem.windowPlaceholder": "10（默认）",
     "mem.longTermLabel": "长期记忆",
-    "mem.ragLabel": "上下文注入（实验性）",
-    "mem.ragSub": "发送消息时自动检索任务/记录/笔记中的相关内容，拼进 AI 上下文——提问更精准，但会多消耗一些 token",
     "mem.longTermSub": "开启后 AI 可跨会话检索历史记忆",
     "mem.thresholdLabel": "记忆检索阈值（0~1）",
     "mem.strategyLabel": "记忆策略",
@@ -24562,8 +24292,6 @@ const MESSAGES = {
     "dataMgmt.title": "数据管理",
     "dataMgmt.desc": "自动备份恢复与数据导入导出。",
     "dataMgmt.maintenance": "维护",
-    "dataMgmt.storageTitle": "存储用量",
-    "dataMgmt.storageEstimateRef": "参考：应用总存储（含 IndexedDB）",
     "dataMgmt.recycleOff": "关闭",
     "dataMgmt.recycleTip": "每次启动生效，超期软删任务将被永久删除（含多类型回收：配置/文件/插件同样适用）。",
     "dataMgmt.recycle7": "7 天后",
@@ -24573,6 +24301,7 @@ const MESSAGES = {
     "dataMgmt.exportJson": "导出 JSON",
     "dataMgmt.exportJsonAria": "导出 JSON",
     "dataMgmt.exportCsvAria": "导出 CSV",
+    "dataMgmt.exportCSV": "导出 CSV",
     "dataMgmt.exportMD": "导出 MD",
     "dataMgmt.exportMdAria": "导出 Markdown",
     "dataMgmt.importRecover": "导入恢复",
@@ -24723,6 +24452,9 @@ const MESSAGES = {
     "field.title": "标题",
     "field.note": "备注",
     "field.meetingTitle": "会议主题",
+    "field.sourcePh": "https://... / 书名 / 课程名",
+    "field.metricValuePh": "65.2 / 128 / 12.5%",
+    "field.projectPh": "如 工作台重构 / 个人的小站",
     "field.attendees": "参会人",
     "field.conclusion": "结论 / 跟进",
     "field.type": "类型",
@@ -24915,7 +24647,6 @@ const MESSAGES = {
     "backup.failDiagPrefix": "自动备份写入失败: ",
     "backup.storageErr": "存储异常",
     "backup.noneToast": "没有可用的自动备份",
-    "backup.fallbackGenToast": "最新备份已损坏，已回退到第 {n} 上一代",
     "backup.recoveredToast": "已从自动备份恢复（{time}）",
     "crypto.unsupportedToast": "⚠️ 当前环境不支持加密存储，AI Key 出于安全未保存（已丢弃）。请在 https:// 或本机应用中重新录入。",
     "link.autoNote": "由场景联动自动生成",
@@ -24967,15 +24698,6 @@ const MESSAGES = {
     "side.menu.home": "主页",
     "side.menu.tasks": "任务",
     "side.menu.chain": "场景联动",
-    "side.menu.timeline": "时间轴",
-    "timeline.title": "任务时间轴",
-    "timeline.sub": "最近 14 天的任务活动回放 · 按场景分泳道",
-    "timeline.back": "← 返回",
-    "timeline.create": "新建",
-    "timeline.complete": "完成",
-    "timeline.delete": "删除",
-    "timeline.hint": "本次会话起记录（历史事件上限 500 条）",
-    "timeline.eventCount": " 条事件",
     "side.menu.toolbox": "工具箱",
     "side.menu.store": "商店",
     "side.menu.recycle": "回收站",
@@ -26816,6 +26538,7 @@ const MESSAGES = {
     "meeting.tasksGenerated": "已生成 N 项任务",
     "meeting.tasksGeneratedToast": "已生成 N 项任务到「办公」场景",
     "msg.added": "已添加",
+    "msg.notConfigured": "未配置",
     "msg.aiPrivacyNotice": "提示：启用 AI 后，相关任务/资料上下文将发送到你配置的 AI 端点（默认 api.openai.com）",
     "msg.copied": "已复制",
     "msg.copyFailed": "复制失败",
@@ -27869,8 +27592,6 @@ const MESSAGES = {
     "mem.windowLabel": "Context Window Size (items, 1~50)",
     "mem.windowPlaceholder": "10 (default)",
     "mem.longTermLabel": "Long-term Memory",
-    "mem.ragLabel": "Context injection (experimental)",
-    "mem.ragSub": "When sending a message, automatically retrieve related tasks/records/notes and inject them into the AI context — sharper answers, slightly more token usage",
     "mem.longTermSub": "Enables cross-session historical memory retrieval",
     "mem.thresholdLabel": "Memory Retrieval Threshold (0~1)",
     "mem.strategyLabel": "Memory Strategy",
@@ -27921,8 +27642,6 @@ const MESSAGES = {
     "dataMgmt.title": "Data Management",
     "dataMgmt.desc": "Auto-backup restore and data import/export.",
     "dataMgmt.maintenance": "Maintenance",
-    "dataMgmt.storageTitle": "Storage usage",
-    "dataMgmt.storageEstimateRef": "Ref: total app storage (incl. IndexedDB)",
     "dataMgmt.recycleOff": "Off",
     "dataMgmt.recycleTip": "Takes effect on each launch; soft-deleted tasks past the retention window are permanently removed (applies to multi-type recycle: config/files/plugins too).",
     "dataMgmt.recycle7": "After 7 days",
@@ -27932,6 +27651,7 @@ const MESSAGES = {
     "dataMgmt.exportJson": "Export JSON",
     "dataMgmt.exportJsonAria": "Export JSON",
     "dataMgmt.exportCsvAria": "Export CSV",
+    "dataMgmt.exportCSV": "Export CSV",
     "dataMgmt.exportMD": "Export MD",
     "dataMgmt.exportMdAria": "Export Markdown",
     "dataMgmt.importRecover": "Import Restore",
@@ -28082,6 +27802,9 @@ const MESSAGES = {
     "field.title": "Title",
     "field.note": "Note",
     "field.meetingTitle": "Meeting Topic",
+    "field.sourcePh": "https://... / book title / course name",
+    "field.metricValuePh": "65.2 / 128 / 12.5%",
+    "field.projectPh": "e.g. Workbench revamp / personal site",
     "field.attendees": "Attendees",
     "field.conclusion": "Conclusion / Follow-up",
     "field.type": "Type",
@@ -28274,7 +27997,6 @@ const MESSAGES = {
     "backup.failDiagPrefix": "Auto-backup write failed: ",
     "backup.storageErr": "Storage error",
     "backup.noneToast": "No auto-backup available",
-    "backup.fallbackGenToast": "Latest backup corrupted — fell back to generation -{n}",
     "backup.recoveredToast": "Restored from auto-backup ({time})",
     "crypto.unsupportedToast": "⚠️ Current environment doesn't support encrypted storage; AI Key not saved for security. Please re-enter in https:// or local app.",
     "link.autoNote": "Auto-generated by scenario chain",
@@ -28326,15 +28048,6 @@ const MESSAGES = {
     "side.menu.home": "Home",
     "side.menu.tasks": "Tasks",
     "side.menu.chain": "Habit Chains",
-    "side.menu.timeline": "Timeline",
-    "timeline.title": "Task Timeline",
-    "timeline.sub": "Task activity over the last 14 days · one lane per scenario",
-    "timeline.back": "← Back",
-    "timeline.create": "Created",
-    "timeline.complete": "Done",
-    "timeline.delete": "Deleted",
-    "timeline.hint": "Recorded from this session onward (event log capped at 500)",
-    "timeline.eventCount": " events",
     "side.menu.toolbox": "Toolbox",
     "side.menu.store": "Store",
     "side.menu.recycle": "Recycle",
@@ -30174,6 +29887,7 @@ const MESSAGES = {
     "meeting.tasksGenerated": "Generated N tasks",
     "meeting.tasksGeneratedToast": "Generated N tasks into the Office scenario",
     "msg.added": "Added",
+    "msg.notConfigured": "Not configured",
     "msg.aiPrivacyNotice": "Note: with AI enabled, related task/record context is sent to your configured AI endpoint (api.openai.com by default)",
     "msg.copied": "Copied",
     "msg.copyFailed": "Copy failed",
@@ -30774,6 +30488,64 @@ const MESSAGES = {
   }
 };
 
+/* ---------- v3.4.12 批次 2+：早期数据源 i18n 重绑（TDZ 修复） ----------
+ * 根因：SCENARIOS（L6300）/SCENE_FEATURES（L6385）在 MESSAGES（L23790）之前初始化，
+ * 顶层 t() 全吃 TDZ fallback（中文）并被 const 固化——切英文后场景名/字段 label/
+ * 选项仍是中文（英文模式渲染层 71 处残留的主要根源）。本函数在 MESSAGES 就绪后
+ * 用同款 t() 表达式重算写回。新增场景/字段时同步维护本表（i18n-render 门禁兜底）。 */
+function _rebindEarlyI18n(){
+  try{
+    // SCENARIOS：name / sysprompt / record.label
+    const SC_NAME = { office:["scenario.office","办公"], data:["scenario.data","数据"], design:["scenario.design","设计"], study:["scenario.study","学习"], code:["scenario.code","编程"], life:["scenario.life","生活"] };
+    Object.keys(SC_NAME).forEach(function(sc){
+      const e = SCENARIOS[sc]; if(!e) return;
+      e.name = t(SC_NAME[sc][0], SC_NAME[sc][1]);
+    });
+    const SC_SYS = { office:["sysprompt.office","你是一个专业的办公效率助手，帮用户梳理任务、写会议纪要、润色邮件与文档。回答简洁、可执行。"], design:["sysprompt.design","你是一个设计创意助手，擅长视觉设计建议、配色方案、版式构图与创意灵感激发。回答有画面感、可落地。"], study:["sysprompt.study","你是一个学习方法教练，擅长制定学习计划、拆解知识点、记忆与复习策略。"], data:["sysprompt.data","你是一个数据分析助手，擅长数据清洗、指标拆解、图表选型与洞察提炼。回答用数据说话、结论明确。"], code:["sysprompt.code","你是一个资深全栈工程师，擅长代码实现、调试与架构建议。给出可直接运行的代码并解释关键点。"], life:["sysprompt.life","你是一个生活与健康管家，帮用户管理日常事务、运动记录、体重追踪、睡眠记录和喝水提醒。回答实用、贴心、有条理。"] };
+    Object.keys(SC_SYS).forEach(function(sc){
+      const e = SCENARIOS[sc]; if(!e) return;
+      e.sysprompt = t(SC_SYS[sc][0], SC_SYS[sc][1]);
+    });
+    const SC_REC = { office:["record.office.label","会议纪要"], design:["record.design.label","作品记录"], study:["record.study.label","学习资料"], data:["record.data.label","数据记录"], code:["record.code.label","代码片段"], life:["record.life.label","生活记录"] };
+    Object.keys(SC_REC).forEach(function(sc){
+      const e = SCENARIOS[sc]; if(!e || !e.record) return;
+      e.record.label = t(SC_REC[sc][0], SC_REC[sc][1]);
+      if(Array.isArray(e.record.fields)) e.record.fields.forEach(function(f){
+        if(f && f._t) f.label = t(f._t[0], f._t[1]);
+        if(f && f._tp) f.placeholder = t(f._tp[0], f._tp[1]);
+        if(f && f._to && Array.isArray(f.options)) f.options = f._to.map(function(o){ return t(o[0], o[1]); });
+      });
+    });
+    // SCENE_FEATURES：各场景功能 tab label
+    const FEAT = {
+      office: { overview:["tab.overview","概览"], meeting:["tab.meeting","会议"], project:["tab.project","项目"], attendance:["tab.attendance","考勤"], expense:["tab.expense","报销"] },
+      study:  { overview:["tab.overview","概览"], knowledge:["tab.knowledge","知识库"], reading:["tab.reading","阅读"], exercise:["tab.exercise","练习"], exam:["tab.exam","考试"] },
+      data:   { overview:["tab.overview","概览"], report:["option.report","报表"], chart:["tab.chart","可视化"] },
+      design: { overview:["tab.overview","概览"], image:["tab.image","图片"] },
+      code:   { overview:["tab.overview","概览"] },
+      life:   { overview:["tab.overview","概览"] }
+    };
+    Object.keys(FEAT).forEach(function(sc){
+      const tabs = (SCENE_FEATURES && SCENE_FEATURES[sc]) || [];
+      tabs.forEach(function(tb){
+        const k = FEAT[sc][tb.id];
+        if(k) tb.label = t(k[0], k[1]);
+      });
+    });
+    // AI_BUILTIN_SKILLS：desc 同为 MESSAGES 前定义的 TDZ 固化
+    const SKILL = { create_task:["ai.skillCreateTask","创建任务"], complete_task:["ai.skillCompleteTask","完成任务"], search:["tool.webSearch.search","搜索"], export:["ai.skillExport","导出"], review:["ai.skillReview","复习"], stats:["ai.skillStats","统计"] };
+    if(Array.isArray(AI_BUILTIN_SKILLS)) AI_BUILTIN_SKILLS.forEach(function(s){
+      const k = SKILL[s.name];
+      if(k) s.desc = t(k[0], k[1]);
+    });
+    // v3.4.12：bindAboutCard 的 IIFE 在 initI18n 前执行（又一个早期固化）——rebind 时重填版本行
+    const verEl = (typeof document !== "undefined") ? document.getElementById("aboutVersion") : null;
+    if(verEl){ verEl.textContent = t("app.name","Agent 工坊") + " · v" + VERSION + " · b" + BUILD_TAG; }
+  }catch(_e){ /* 重绑失败不阻塞启动（保持 fallback 值） */ }
+}
+/* 注意：_rebindEarlyI18n 的自动调用在 initI18n() 之后（L31501 附近）——
+ * 此处调用会因 _currentLang 尚未恢复而把中文重绑回去。 */
+
 /* ============================================================
  * 任务235：后端 API 客户端模块
  * ------------------------------------------------------------
@@ -30819,18 +30591,13 @@ const MESSAGES = {
 
   // token 持久化到 localStorage
   function _persistTokens(){
-    // v3.4.7 批次三（G5）：token 三键（wb_ 前缀、非 wb_agent_ 命名空间）不进 save()——
-    // save 的 JSON 序列化会与读侧裸串读取不对称、且 wb_ 前缀不在 IDB 镜像范围。
-    // 此处保留裸写但补齐可观测性：失败经 pushDiag 登记（此前完全静默）。
     try{
       if(_accessToken) localStorage.setItem(API_TOKEN_KEY, _accessToken);
       else localStorage.removeItem(API_TOKEN_KEY);
       if(_refreshToken) localStorage.setItem(API_REFRESH_KEY, _refreshToken);
       else localStorage.removeItem(API_REFRESH_KEY);
       localStorage.setItem(API_EXPIRY_KEY, String(_tokenExpiry));
-    }catch(e){
-      try{ if(typeof pushDiag === "function") pushDiag("error", "token persist failed: "+(e&&e.message||e), {where:"_persistTokens"}); }catch(_e2){}
-    }
+    }catch(e){ /* 配额超限或禁用时静默 */ }
   }
 
   // 设置 token 三元组（access, refresh, expiry）
@@ -31715,6 +31482,8 @@ function setLang(lang){
     document.documentElement.lang = lang === "zh" ? "zh-CN" : lang;
     applyI18n(document);
   }catch(e){ /* 静态节点替换失败不影响语言切换 */ }
+  // v3.4.12：切换语言时重绑早期数据源（SCENARIOS/SCENE_FEATURES 固化的 name/label 按新语言重算）
+  try{ if(typeof _rebindEarlyI18n === "function") _rebindEarlyI18n(); }catch(_e3){ /* noop */ }
   // 触发重新渲染（若 render 可用）
   try{
     if(typeof render === "function") render();
@@ -31746,6 +31515,9 @@ function t(key, fallback){
 
 // 模块加载时自动初始化（从 localStorage 恢复语言偏好）
 initI18n();
+// v3.4.12：早期数据源重绑——必须在 initI18n 之后（_currentLang 已恢复），
+// 且 SCENARIOS/SCENE_FEATURES 的固化 fallback 才会被正确语言的重算覆盖
+try{ _rebindEarlyI18n(); }catch(_e2){ /* noop */ }
 /**
  * v2.2.0：扫描 [data-i18n] 节点替换 textContent（静态 HTML 名称类文案接线）
  * @param {ParentNode} [root] - 扫描根节点，默认 document
@@ -32318,8 +32090,10 @@ function getCustomThemes(){
  * @returns {void}
  */
 function saveCustomThemes(themes){
-  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 静默吞配额错误）
-  save(PREFIX + "custom_themes", themes || {});
+  try{
+    if(typeof localStorage === "undefined") return;
+    localStorage.setItem(PREFIX + "custom_themes", JSON.stringify(themes || {}));
+  }catch(e){ /* localStorage 不可用或配额耗尽：静默降级 */ }
 }
 
 /**
@@ -32339,8 +32113,11 @@ function getScenarioColors(){
  * @returns {void}
  */
 function saveScenarioColors(colors){
-  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 静默吞配额错误）
-  save(PREFIX + "sc_colors", colors || {});
+  try{
+    if(typeof localStorage !== "undefined"){
+      localStorage.setItem(PREFIX + "sc_colors", JSON.stringify(colors || {}));
+    }
+  }catch(e){ /* 静默降级 */ }
   _applyScenarioColors();
 }
 
@@ -34392,8 +34169,12 @@ function getNotes(){
  * @returns {boolean} 是否保存成功
  */
 function saveNotes(notes){
-  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
-  return save(PREFIX + NOTES_STORAGE_KEY, notes || []);
+  try{
+    localStorage.setItem(PREFIX + NOTES_STORAGE_KEY, JSON.stringify(notes || []));
+    return true;
+  }catch(e){
+    return false;
+  }
 }
 /**
  * 创建新笔记
@@ -35566,7 +35347,8 @@ function saveConversation(conv){
       if(all[i].id === c.id){ all[i] = c; found = true; break; }
     }
     if(!found) all.push(c);
-    return save(PREFIX + CONVERSATIONS_KEY, all); // v3.4.7 批次三（G5）：收编进 save() 主入口
+    localStorage.setItem(PREFIX + CONVERSATIONS_KEY, JSON.stringify(all));
+    return true;
   }catch(e){ return false; }
 }
 
