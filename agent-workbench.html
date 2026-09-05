@@ -4016,6 +4016,11 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
           <input type="checkbox" id="aiMemLongTerm" data-i18n-aria="mem.longTermLabel" aria-label="长期记忆">
           <div><div class="sw-label" data-i18n="mem.longTermLabel">长期记忆</div><div class="sw-sub" data-i18n="mem.longTermSub">开启后 AI 可跨会话检索历史记忆</div></div>
         </div>
+        <!-- v3.4.7 批次六：RAG 上下文注入开关（默认关——发送消息前检索任务/记录/笔记相关片段拼进 system prompt） -->
+        <div class="set-switch">
+          <input type="checkbox" id="aiMemRag" data-i18n-aria="mem.ragLabel" aria-label="上下文注入（实验性）">
+          <div><div class="sw-label" data-i18n="mem.ragLabel">上下文注入（实验性）</div><div class="sw-sub" data-i18n="mem.ragSub">发送消息时自动检索任务/记录/笔记中的相关内容，拼进 AI 上下文——提问更精准，但会多消耗一些 token</div></div>
+        </div>
         <div class="set-field">
           <label for="aiMemThreshold" data-i18n="mem.thresholdLabel">记忆检索阈值（0~1）</label>
           <div class="ctl"><input id="aiMemThreshold" type="range" min="0" max="1" step="0.05" value="0.7" class="u-w-full"></div>
@@ -7933,7 +7938,7 @@ async function ragSearch(query, limit){
   if(!q) return [];
   if(!_ragReady){
     const ok = await ragInit();
-    if(!ok) return [];
+    if(!ok) return ragSearchFallback(q, topK); // v3.4.7 批次六：sql.js/FTS5 不可用时降级关键词匹配（此前直接空——RAG 在无 WASM 环境完全失效）
   }
   try{
     // FTS5 match 查询：转义特殊字符，用 BM25 排序
@@ -7983,7 +7988,7 @@ function ragSearchFallback(query, limit){
  */
 async function ragInjectContext(userText){
   const cfg = getCfg() || {};
-  if(cfg.rag === false) return ""; // 用户关闭 RAG
+  if(cfg.rag !== true) return ""; // v3.4.7 批次六：显式开启才注入（设置页 AI→记忆「上下文注入」开关，默认关——防 token 意外膨胀；此前 ===false 判定在无 UI 写入下等效永远开）
   const hits = await ragSearch(userText, 5);
   if(!hits.length) return "";
   const lines = [t("rag.ctxHeader","【相关上下文】（来自任务/记录、笔记、对话历史的检索增强）：")];
@@ -18507,7 +18512,11 @@ async function onChatSubmit(e){
   // 正常路径（v1.14 多模态已移除，user 消息始终为纯文本）
   hist.push({role:"user",content:text});
   renderChat(); scrollChat();
-  const messages=[{role:"system", content:chatSysPrompt(text)}]
+  // v3.4.7 批次六：RAG 上下文注入（激活闲置索引资产）——检索任务/记录/笔记/对话历史，
+  // 相关片段拼进 system prompt。开关：cfg.rag（设置页 AI→记忆），默认关（防 token 意外膨胀）；
+  // ragInjectContext 内部已判 cfg.rag === false 返回空串，检索失败/无索引同样安全降级为空。
+  const ragCtx = await ragInjectContext(text).catch(()=> "");
+  const messages=[{role:"system", content:chatSysPrompt(text) + ragCtx}]
     // B1 修复：保留完整结构（含 tool_calls / tool_call_id），否则含工具调用的会话第二轮会缺 id 触发 400
     .concat(hist.map(m=>({...m})));
   await runChatLoop(messages, hist);
@@ -22629,6 +22638,7 @@ function restoreAiMemory(){
   const saved = getAiConfig("memory"); if(!saved) return;
   const w = $("#aiMemWindow"); if(w && saved.windowSize) w.value = saved.windowSize;
   const lt = $("#aiMemLongTerm"); if(lt) lt.checked = !!saved.longTerm;
+  const rg = $("#aiMemRag"); if(rg) rg.checked = !!saved.rag; // v3.4.7 批次六：RAG 注入开关回填
   const th = $("#aiMemThreshold"); if(th && saved.threshold !== null && saved.threshold !== undefined) th.value = saved.threshold;
   const st = $("#aiMemStrategy"); if(st && saved.strategy) st.value = saved.strategy;
 }
@@ -22720,14 +22730,23 @@ $("#aiWorkflowSave").onclick = function(){
 $("#aiMemSave").onclick = function(){
   const w = $("#aiMemWindow");
   const lt = $("#aiMemLongTerm");
+  const rg = $("#aiMemRag");
   const th = $("#aiMemThreshold");
   const st = $("#aiMemStrategy");
   saveAiConfig("memory", {
     windowSize: w ? Number(w.value) : 10,
     longTerm: lt ? lt.checked : false,
+    rag: rg ? rg.checked : false, // v3.4.7 批次六：RAG 上下文注入开关（ragInjectContext 读 cfg.rag）
     threshold: th ? Number(th.value) : 0.7,
     strategy: st ? st.value : "recent"
   });
+  // cfg.rag 同步（ragInjectContext 判定走主配置而非 ai_config_memory；只改这一个字段，不动 profiles）
+  try{
+    const cfg = getCfg() || {};
+    cfg.rag = rg ? !!rg.checked : false;
+    _cfgCache = cfg; // 与 saveCfg 同款缓存更新（save 内部不含此逻辑）
+    save(PREFIX + "cfg", cfg);
+  }catch(_e){ /* cfg 写失败不影响 ai_config_memory 已存——注入静默保持旧态 */ }
   toast(t("ai.memoryConfigSaved","记忆配置已保存"));
 };
 $("#aiPluginSave").onclick = function(){
@@ -24491,6 +24510,8 @@ const MESSAGES = {
     "mem.windowLabel": "上下文窗口大小（条，1~50）",
     "mem.windowPlaceholder": "10（默认）",
     "mem.longTermLabel": "长期记忆",
+    "mem.ragLabel": "上下文注入（实验性）",
+    "mem.ragSub": "发送消息时自动检索任务/记录/笔记中的相关内容，拼进 AI 上下文——提问更精准，但会多消耗一些 token",
     "mem.longTermSub": "开启后 AI 可跨会话检索历史记忆",
     "mem.thresholdLabel": "记忆检索阈值（0~1）",
     "mem.strategyLabel": "记忆策略",
@@ -27848,6 +27869,8 @@ const MESSAGES = {
     "mem.windowLabel": "Context Window Size (items, 1~50)",
     "mem.windowPlaceholder": "10 (default)",
     "mem.longTermLabel": "Long-term Memory",
+    "mem.ragLabel": "Context injection (experimental)",
+    "mem.ragSub": "When sending a message, automatically retrieve related tasks/records/notes and inject them into the AI context — sharper answers, slightly more token usage",
     "mem.longTermSub": "Enables cross-session historical memory retrieval",
     "mem.thresholdLabel": "Memory Retrieval Threshold (0~1)",
     "mem.strategyLabel": "Memory Strategy",
