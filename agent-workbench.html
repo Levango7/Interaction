@@ -5159,6 +5159,7 @@ function load(k, def){
  * 把值 v 序列化后写入 localStorage 键 k
  * @param {string} k - 存储键
  * @param {*} v - 要存储的值
+ * @returns {boolean} v3.4.7 批次三：写入是否成功（此前无返回值；配额耗尽返回 false 供旁路写调用方降级）
  */
 function save(k, v){
   try{
@@ -5166,11 +5167,13 @@ function save(k, v){
     idbQueueMirror(k, v); // 架构项①：异步镜像到 IndexedDB（去抖批量，不阻塞；jsdom/无 IDB 环境 no-op）
     // v2.0：会话层写穿镜像——场景聊天落盘时同步到对应 Session（仅 chat_ 键触发，无递归）
     try{ _mirrorChatToSession(k, v); }catch(_){ /* 会话层不可用时静默降级，不影响主存储 */ }
+    return true;
   }
   catch(e){
     // M8：配额耗尽 / 隐私模式禁用存储时不再静默崩溃，给出可观测告警
     if(typeof pushDiag === "function") pushDiag("error", "save failed: "+(e&&e.message||e), {where:"save", key:k});
     try{ toast(t("data.saveFailToast", "本地存储写入失败（可能空间已满），部分数据未保存。"), "error"); }catch(e2){ /* toast 不可用静默降级 */ }
+    return false;
   }
 }
 /**
@@ -7799,7 +7802,7 @@ function getRagDocs(){
  */
 function saveRagDocs(docs){
   _ragDocs = docs || [];
-  try{ localStorage.setItem(PREFIX + RAG_STORAGE_KEY, JSON.stringify(_ragDocs)); }catch(e){}
+  save(PREFIX + RAG_STORAGE_KEY, _ragDocs); // v3.4.7 批次三（G5）：收编进 save() 主入口（配额耗尽有告警，不再静默）
 }
 
 /**
@@ -22265,10 +22268,8 @@ function getAiConfig(module){
   }catch(_e){ return null; }
 }
 function saveAiConfig(module, data){
-  try{
-    localStorage.setItem(PREFIX + "ai_config_" + module, JSON.stringify(data));
-    return true;
-  }catch(_e){ return false; }
+  // v3.4.7 批次三（G5）：收编进 save() 主入口——此前裸 setItem 绕过 IDB 镜像/配额告警/损坏登记
+  return save(PREFIX + "ai_config_" + module, data);
 }
 function _switchAiTab(tabId){
   $$("#drawer .set-nav-btn[data-ai-tab]").forEach(function(b){
@@ -30558,13 +30559,18 @@ const MESSAGES = {
 
   // token 持久化到 localStorage
   function _persistTokens(){
+    // v3.4.7 批次三（G5）：token 三键（wb_ 前缀、非 wb_agent_ 命名空间）不进 save()——
+    // save 的 JSON 序列化会与读侧裸串读取不对称、且 wb_ 前缀不在 IDB 镜像范围。
+    // 此处保留裸写但补齐可观测性：失败经 pushDiag 登记（此前完全静默）。
     try{
       if(_accessToken) localStorage.setItem(API_TOKEN_KEY, _accessToken);
       else localStorage.removeItem(API_TOKEN_KEY);
       if(_refreshToken) localStorage.setItem(API_REFRESH_KEY, _refreshToken);
       else localStorage.removeItem(API_REFRESH_KEY);
       localStorage.setItem(API_EXPIRY_KEY, String(_tokenExpiry));
-    }catch(e){ /* 配额超限或禁用时静默 */ }
+    }catch(e){
+      try{ if(typeof pushDiag === "function") pushDiag("error", "token persist failed: "+(e&&e.message||e), {where:"_persistTokens"}); }catch(_e2){}
+    }
   }
 
   // 设置 token 三元组（access, refresh, expiry）
@@ -32052,10 +32058,8 @@ function getCustomThemes(){
  * @returns {void}
  */
 function saveCustomThemes(themes){
-  try{
-    if(typeof localStorage === "undefined") return;
-    localStorage.setItem(PREFIX + "custom_themes", JSON.stringify(themes || {}));
-  }catch(e){ /* localStorage 不可用或配额耗尽：静默降级 */ }
+  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 静默吞配额错误）
+  save(PREFIX + "custom_themes", themes || {});
 }
 
 /**
@@ -32075,11 +32079,8 @@ function getScenarioColors(){
  * @returns {void}
  */
 function saveScenarioColors(colors){
-  try{
-    if(typeof localStorage !== "undefined"){
-      localStorage.setItem(PREFIX + "sc_colors", JSON.stringify(colors || {}));
-    }
-  }catch(e){ /* 静默降级 */ }
+  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 静默吞配额错误）
+  save(PREFIX + "sc_colors", colors || {});
   _applyScenarioColors();
 }
 
@@ -34131,12 +34132,8 @@ function getNotes(){
  * @returns {boolean} 是否保存成功
  */
 function saveNotes(notes){
-  try{
-    localStorage.setItem(PREFIX + NOTES_STORAGE_KEY, JSON.stringify(notes || []));
-    return true;
-  }catch(e){
-    return false;
-  }
+  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
+  return save(PREFIX + NOTES_STORAGE_KEY, notes || []);
 }
 /**
  * 创建新笔记
@@ -35309,8 +35306,7 @@ function saveConversation(conv){
       if(all[i].id === c.id){ all[i] = c; found = true; break; }
     }
     if(!found) all.push(c);
-    localStorage.setItem(PREFIX + CONVERSATIONS_KEY, JSON.stringify(all));
-    return true;
+    return save(PREFIX + CONVERSATIONS_KEY, all); // v3.4.7 批次三（G5）：收编进 save() 主入口
   }catch(e){ return false; }
 }
 
