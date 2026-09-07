@@ -1514,6 +1514,23 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .bar:hover .fill{filter:brightness(1.12)}
 .bar .v{width:64px;text-align:right;color:var(--muted);font-size:var(--fs-xs)}
 
+
+.chain-tab-bar{display:flex;gap:var(--space-1);margin-bottom:var(--space-3);background:color-mix(in srgb,var(--panel) 50%,transparent);border-radius:var(--radius-full);padding:var(--space-1)}
+.chain-tab{flex:1;padding:6px 12px;border-radius:var(--radius-full);text-align:center;font-size:var(--fs-sm);font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-dim);transition:all var(--transition-fast)}
+.chain-tab.active{background:var(--accent);color:var(--on-accent);font-weight:600}
+.chain-tab:hover:not(.active){background:color-mix(in srgb,var(--panel) 30%,transparent);color:var(--text)}
+.chain-page{display:none;animation:chainFadeIn .25s ease}
+.chain-page.active{display:block}
+@keyframes chainFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.streak-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-2);margin-bottom:var(--space-3)}
+.streak-card{background:color-mix(in srgb,var(--panel) 40%,transparent);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-3);text-align:center}
+.streak-card .sc-days{font-size:var(--fs-xl);font-weight:700;color:var(--accent)}
+.streak-card .sc-label{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:var(--space-2);margin-bottom:var(--space-3)}
+.kpi{background:color-mix(in srgb,var(--panel) 40%,transparent);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-3);text-align:center}
+.kpi .v{font-size:var(--fs-2xl);font-weight:700;color:var(--accent)}
+.kpi .l{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
+.graph-wrap{background:color-mix(in srgb,var(--panel) 20%,transparent);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-3);min-height:300px}
 /* 场景联动可视化（打卡记录 / 联动图 / 触发统计 / 动画） */
 @keyframes chainFlow{0%{transform:translateX(-18px) scale(.7);opacity:0}55%{transform:translateX(2px) scale(1.12);opacity:1}100%{transform:translateX(0) scale(1);opacity:1}}
 .toast.chain{background:linear-gradient(90deg,var(--ok),var(--accent));font-weight:600}
@@ -14483,52 +14500,78 @@ function renderStorePage(){
 
 /* ---------- 场景联动页（打卡记录 + 联动关系图 + 联动记录 + 触发统计 + 配置入口） ---------- */
 function renderChainPage(){
-  const streakBadges = ORDER.filter(sc=>SCENARIOS[sc]).map(sc => {
-    const s = calcStreak(sc);
-    const cls = s.current >= 3 ? "hot" : (s.current === 0 ? "cold" : "");
-    let fire;
-    if(s.current >= 3){ fire = `<span class="streak-fire">${ic("flame")}</span><b>${s.current}</b>${t("common.day", "天")}`; }
-    else if(s.current === 0){ fire = `<span class="u-text-danger">${t("chainPage.notStarted", "○ 未开始")}</span>`; }
-    else { fire = `${ic("flame")}<b>${s.current}</b>${t("common.day", "天")}`; }
-    return `<span class="streak-badge ${cls}"><span class="sc-name">${SCENARIOS[sc].name}</span><span class="fire">${fire}</span></span>`;
-  }).join("");
-  const rates = calcChainSuccess();
-  const rateRows = (rates&&rates.length?rates:[]).map(r=>{
-    const from = SCENARIOS[r.fromSc] ? SCENARIOS[r.fromSc].name : r.fromSc;
-    const to = SCENARIOS[r.toSc] ? SCENARIOS[r.toSc].name : r.toSc;
-    const pct = Math.round(r.rate||0);
-    return `<div class="bar"><span class="nm">${esc(from+"→"+to)}${r.kw?` <small class="u-text-faint">[${esc(r.kw)}]</small>`:""}</span>
-      <span class="track"><span class="fill" style="width:${Math.min(100,pct)}%;background:var(--accent)"></span></span>
-      <span class="v">${pct}%</span></div>`;
-  }).join("");
+  if(typeof _chainTab === "undefined") _chainTab = "streak";
+  const tabs = [
+    {id:"streak",label:t("chainPage.tab.streak","打卡记录"),icon:"flame"},
+    {id:"graph",label:t("chainPage.tab.graph","联动关系"),icon:"mindmap"},
+    {id:"status",label:t("chainPage.tab.status","联动状态"),icon:"chain"},
+    {id:"rate",label:t("chainPage.tab.rate","触发统计"),icon:"target"}
+  ];
+  const tabBar = '<div class="chain-tab-bar">' + tabs.map(function(tb){
+    return '<button type="button" class="chain-tab' + (_chainTab===tb.id ? " active" : "") + '" data-chain-tab="' + tb.id + '">' + ic(tb.icon) + " " + tb.label + '</button>';
+  }).join("") + '</div>';
+
+  var page = "";
+  if(_chainTab === "streak"){
+    const badges = ORDER.filter(function(sc){return SCENARIOS[sc];}).map(function(sc){
+      const st = calcStreak(sc); const days = st.current || 0;
+      const ic = days >= 3 ? "&#128293;" : (days === 0 ? "&#128164;" : "&#9889;");
+      return '<div class="streak-card"><div style="font-size:28px">' + ic + '</div><div class="sc-days">' + days + '</div><div class="sc-label">' + SCENARIOS[sc].name + '</div></div>';
+    }).join("");
+    const activeCount = ORDER.filter(function(sc){return SCENARIOS[sc] && (calcStreak(sc).current||0) > 0;}).length;
+    const bestStreak = Math.max.apply(null, [0].concat(ORDER.filter(function(sc){return SCENARIOS[sc];}).map(function(sc){return calcStreak(s).current||0;})));
+    page = '<div class="chain-page active"><div class="card"><h2>' + ic("flame") + " Streak 总览</h2>" +
+      '<div class="kpi-grid"><div class="kpi"><div class="v">' + activeCount + '</div><div class="l">活跃场景</div></div>' +
+      '<div class="kpi"><div class="v">' + bestStreak + '</div><div class="l">最长连续(天)</div></div>' +
+      '<div class="kpi"><div class="v">' + ORDER.filter(function(sc){return SCENARIOS[sc];}).length + '</div><div class="l">场景总数</div></div></div></div>' +
+      '<div class="card"><h3>各场景连续打卡</h3><div class="streak-grid">' + badges + '</div></div></div>';
+  }
+  else if(_chainTab === "graph"){
+    page = '<div class="chain-page active"><div class="card"><h2>' + ic("mindmap") + " 场景联动关系图</h2>" +
+      '<p class="sub">可视化展示场景之间的触发链路</p></div>' +
+      '<div class="graph-wrap">' + renderChainGraph() + '</div></div>';
+  }
+  else if(_chainTab === "status"){
+    const chainStatus = (typeof getHabitChainStatus === "function") ? getHabitChainStatus() : [];
+    const active = chainStatus.filter(function(c){return c.enabled;}).length;
+    const total = chainStatus.length;
+    page = '<div class="chain-page active"><div class="card"><h2>' + ic("chain") + " 联动状态</h2>" +
+      '<div class="kpi-grid"><div class="kpi"><div class="v">' + active + '</div><div class="l">启用规则</div></div>' +
+      '<div class="kpi"><div class="v">' + total + '</div><div class="l">总规则</div></div>' +
+      '<div class="kpi"><div class="v">' + (total > 0 ? Math.round(active*100/total) : 0) + '%</div><div class="l">启用率</div></div></div></div>' +
+      '<div class="card"><h3>规则列表</h3>' + (chainStatus.length > 0 ? chainStatus.map(function(c){
+        return '<div class="bar-row"><span class="label" style="min-width:120px">' + esc(c.name||c.from+"→"+c.to) + '</span><span style="flex:1;font-size:var(--fs-sm);color:' + (c.enabled ? "var(--ok)" : "var(--muted)") + '">' + (c.enabled ? "启用" : "停用") + '</span></div>';
+      }).join("") : '<div class="empty">暂无联动规则</div>') + '</div></div>';
+  }
+  else if(_chainTab === "rate"){
+    const rates = calcChainSuccess();
+    const rows = (rates&&rates.length?rates:[]).map(function(r){
+      const from = SCENARIOS[r.fromSc] ? SCENARIOS[r.fromSc].name : r.fromSc;
+      const to = SCENARIOS[r.toSc] ? SCENARIOS[r.toSc].name : r.toSc;
+      const pct = Math.round(r.rate||0);
+      return '<div class="bar-row"><span class="label" style="min-width:140px">' + esc(from+" → " + to) + '</span><span class="track"><span class="fill" style="width:' + pct + '%;background:var(--brand-grad)"></span></span><span class="v">' + pct + '%</span></div>';
+    }).join("");
+    const avg = rates&&rates.length>0 ? Math.round(rates.reduce(function(a,b){return a+(b.rate||0);},0)/rates.length) : 0;
+    page = '<div class="chain-page active"><div class="card"><h2>' + ic("target") + " 触发统计</h2>" +
+      '<div class="kpi-grid"><div class="kpi"><div class="v">' + avg + '%</div><div class="l">平均成功率</div></div>' +
+      '<div class="kpi"><div class="v">' + (rates?rates.length:0) + '</div><div class="l">联动数</div></div></div></div>' +
+      '<div class="card"><h3>各链路成功率</h3>' + (rows||'<div class="empty">暂无触发记录</div>') + '</div></div>';
+  }
+
   $("#main").innerHTML = sanitizeHtml(
-    `<div class="card page-head-card"><header class="page-head sc-page-head">
-      <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.chain||""}</span>
-      <div class="ph-tx"><h2>${t("chainPage.title", "场景联动")}</h2><p class="sub">${t("chainPage.sub", "打卡记录与跨场景自动化规则")}</p></div>
-      <div class="ph-actions"><button type="button" class="addbtn sm u-fw-600" id="chainCfgBtn" data-sc="accent">${t("chainPage.cfgBtn", "规则配置")}</button><button type="button" class="addbtn sm" id="btnBackHome" data-sc="muted">${t("chainPage.backHome", "← 主页")}</button></div>
-    </header></div>
-    <nav class="set-nav chain-anchor-nav" aria-label="${t("chainPage.aria", "场景联动快速导航")}">
-      <button type="button" class="set-nav-btn" data-chain-anchor="chain-streak">${t("chainPage.streak", "Streak")}</button>
-      <button type="button" class="set-nav-btn" data-chain-anchor="chain-graph">${t("chainPage.graph", "链路图")}</button>
-      <button type="button" class="set-nav-btn" data-chain-anchor="chain-status">${t("chainPage.status", "状态")}</button>
-      <button type="button" class="set-nav-btn" data-chain-anchor="chain-rate">${t("chainPage.rate", "成功率")}</button>
-    </nav>
-    <div class="card" id="chain-streak"><h2>${ic("flame")} ${t("hc.section.streak", "当前 Streak")}</h2><p class="sub">${t("chainPage.streak.sub", "各场景连续完成天数（≥3 天点燃火焰）")}</p><div class="streak-row">${streakBadges}</div></div>
-    <div class="card" id="chain-graph"><h2>${ic("mindmap")} ${t("chainPage.graph.title", "场景链路图")}</h2>${renderChainGraph()}</div>
-    <div class="card" id="chain-status"><h2>${ic("chain")} ${t("chainPage.status.title", "联动状态")}</h2>${renderHabitChainStatus()}</div>
-    <div class="card" id="chain-rate"><h2>${ic("target")} ${t("chainPage.rate.title", "触发成功率")}</h2>${rateRows || '<div class="empty">' + t("chainPage.rate.empty", "暂无链路触发记录") + '</div>'}</div>`);
-  const backHome = $("#btnBackHome");
-  if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
-  const cfg = $("#chainCfgBtn");
-  if(cfg) cfg.onclick = ()=>{ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } };
-  $$("#main .chain-anchor-nav .set-nav-btn").forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.getAttribute("data-chain-anchor");
-      const el = $("#"+id);
-      if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
-    };
+    '<div class="card page-head-card"><header class="page-head sc-page-head">' +
+    '<span class="ph-ic" aria-hidden="true">' + (SIDE_MENU_ICONS.chain||"") + '</span>' +
+    '<div class="ph-tx"><h2>' + t("chainPage.title","场景联动") + '</h2><p class="sub">' + t("chainPage.sub","打卡记录与跨场景自动化规则") + '</p></div>' +
+    '<div class="ph-actions"><button type="button" class="addbtn sm" id="btnBackHome" data-sc="muted">' + t("chainPage.backHome","← 主页") + '</button></div>' +
+    '</header></div>' + tabBar + page
+  );
+
+  $$("#main .chain-tab").forEach(function(btn){
+    btn.onclick = function(){ _chainTab = btn.getAttribute("data-chain-tab"); renderChainPage(); };
   });
-  appendFoot(); // v3.4.5：renderChainPage 自含尾栏（幂等）——不依赖调用方 render() 补
+  var bh = $("#btnBackHome");
+  if(bh) bh.onclick = function(){ setActive("overview"); render(); };
+  appendFoot();
 }
 
 /* ---------- v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（只读） ----------
