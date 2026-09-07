@@ -14500,6 +14500,7 @@ function renderStorePage(){
 
 /* ---------- 场景联动页（打卡记录 + 联动关系图 + 联动记录 + 触发统计 + 配置入口） ---------- */
 function renderChainPage(){
+  console.log("renderChainPage called, _chainTab=", _chainTab);
   if(typeof _chainTab === "undefined") _chainTab = "streak";
   const tabs = [
     {id:"streak",label:t("chainPage.tab.streak","打卡记录"),icon:"flame"},
