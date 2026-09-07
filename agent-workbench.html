@@ -14519,7 +14519,7 @@ function renderChainPage(){
       return '<div class="streak-card"><div style="font-size:28px">' + ic + '</div><div class="sc-days">' + days + '</div><div class="sc-label">' + SCENARIOS[sc].name + '</div></div>';
     }).join("");
     const activeCount = ORDER.filter(function(sc){return SCENARIOS[sc] && (calcStreak(sc).current||0) > 0;}).length;
-    const bestStreak = Math.max.apply(null, [0].concat(ORDER.filter(function(sc){return SCENARIOS[sc];}).map(function(sc){return calcStreak(s).current||0;})));
+    const bestStreak = Math.max.apply(null, [0].concat(ORDER.filter(function(sc){return SCENARIOS[sc];}).map(function(sc){return calcStreak(sc).current||0;})));
     page = '<div class="chain-page active"><div class="card"><h2>' + ic("flame") + " Streak 总览</h2>" +
       '<div class="kpi-grid"><div class="kpi"><div class="v">' + activeCount + '</div><div class="l">活跃场景</div></div>' +
       '<div class="kpi"><div class="v">' + bestStreak + '</div><div class="l">最长连续(天)</div></div>' +
