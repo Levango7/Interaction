@@ -594,12 +594,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 @keyframes nav-indicator{from{transform:translateY(-50%) scaleY(0);opacity:0}
   to{transform:translateY(-50%) scaleY(1);opacity:1}}
 
-/* v1.9.4：设置=浅灰选中态（浅灰底+深色文字+细边框）；回收站=专属彩色选中态（风格一致但颜色与其他导航不同） */
-#btnGear.nav-item.active{background:color-mix(in srgb,var(--text) 8%,var(--panel));
-  color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
-#btnGear.nav-item.active svg{color:var(--text-dim)}
-#btnGear.nav-item.active .cnt{background:var(--surface-muted);color:var(--text-dim)}
-#btnGear.nav-item.active::before{background:var(--text-faint)}
+/* v3.4.16 移除 #btnGear.nav-item.active 覆盖：让全局 .nav-item.active{background:var(--brand-grad)} 生效，与其他菜单一致 */
 
 /* 统一页面头（v1.9.5：统计/回收站/设置等独立页面共用，保证布局风格一致） */
 .page-head{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);padding:var(--space-2) 0}
@@ -4240,7 +4235,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
           <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
           <option value="forest" data-i18n="look.theme.forest">秘境森林</option>
           <option value="ocean" data-i18n="look.theme.ocean">微蓝浅海</option>
-          <option value="mist" data-i18n="look.theme.mist">晨曦雾光</option>
+          <option value="mist" data-i18n="look.theme.mist">晓光晨雾</option>
         </select>
       </div>
     </div>
@@ -24598,6 +24593,7 @@ const MESSAGES = {
     "look.theme.matrix": "黑客帝国",
     "look.theme.forest": "秘境森林",
     "look.theme.ocean": "微蓝浅海",
+    "look.theme.mist": "晓光晨雾",
     "look.themeDesc.light": "Vercel 风格默认主题",
     "look.themeDesc.aurora": "极光渐变亮色主题",
     "look.themeDesc.dark": "暗色护眼主题",
@@ -27957,6 +27953,7 @@ const MESSAGES = {
     "look.theme.matrix": "Matrix",
     "look.theme.forest": "Mystic Forest",
     "look.theme.ocean": "Pale Blue Sea",
+    "look.theme.mist": "Dawn Mist",
     "look.themeDesc.light": "Vercel-style default theme",
     "look.themeDesc.aurora": "Aurora gradient light theme",
     "look.themeDesc.dark": "Dark eye-friendly theme",
