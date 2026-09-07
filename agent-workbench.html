@@ -160,12 +160,56 @@
   --brand-grad:linear-gradient(135deg,#50e080 0%,#40a860 50%,#2e7a48 100%);
 }
 :root[data-theme="mist"]{
-  /* v3.4.15 晨雾——偏暖浅绿/黄绿/蓝绿 + 强丁达尔光柱 */
-  --bg:#2a4a3a;
-  --panel:#3d6a4f; --panel2:#325540; --line:#5a8a68;
-  --side-bg:#325640;
-  --text:#f0f8e8; --muted:#a8c8a0; --accent:#90e8a0; --accent-soft:#1f4a2e; --accent-2:#ffd060;
-  --brand-grad:linear-gradient(135deg,#a8e890 0%,#90d070 35%,#e8c060 75%,#f0a050 100%);
+  /* v3.4.17 晓光晨雾——破晓时分，金光透过云层雾气（黄绿/金黄/暖橙） */
+  --bg:#4a5530;        /* 底布：偏暖黄绿（破晓林间地面） */
+  --panel:#6b7048;     /* 面板：更深黄绿（阴影中） */
+  --panel2:#5a6040;    /* 次面板：中间色 */
+  --line:#8a8d5a;      /* 边框：暖色调 */
+  --side-bg:#525a38;   /* 侧边背景 */
+  --text:#fef6d8;      /* 文字：暖白（阳光感） */
+  --muted:#c8c08a;     /* 次要文字：暖灰 */
+  --accent:#f0c060;    /* 强调色：金黄（晨光） */
+  --accent-soft:#5a4a1a; /* 强调色弱化：深金 */
+  --accent-2:#ff9040;  /* 次强调：暖橙 */
+  --surface-hover:#7a8058; /* hover 表面 */
+  --surface-muted:#6b7048; /* 静默表面 */
+  --on-accent:#3a2e0a; /* 强调色上的文字：深棕 */
+  --on-accent-soft:rgba(240,192,96,.22);
+  --text-dim:#e8d8a8;
+  --text-dim-2:#c8c08a;
+  --text-dim-3:#b8a878;
+  --text-faint:#8a8060;
+  --danger:#f08a60;
+  --warn:#ffd060;
+  --ok:#a8d870;
+  --sc-office:#7ad8f0; --sc-design:#f08ac8; --sc-study:#ffd060; --sc-data:#90d8a0; --sc-code:#f0c060; --sc-life:#c0a0f8;
+  --scenario-default:#f0c060;
+  --banner-bg:#5a4a2a; --banner-border:#a8904a; --banner-ink:#ffe8a0; --banner-border-2:#8a7a3a;
+  --kbd-border:#7a6a3a; --snip-bg:#2a2418; --snip-fg:#fef6d8; --toast-bg:#fef6d8;
+  --overlay:rgba(40,30,10,.55);
+  --shadow-drawer:rgba(0,0,0,.45);
+  --shadow-overlay:rgba(0,0,0,.5); --shadow-toast:rgba(0,0,0,.5);
+  --shadow-1:0 1px 2px rgba(0,0,0,.22);
+  --shadow-2:0 2px 8px rgba(0,0,0,.32);
+  --shadow-3:0 4px 16px rgba(0,0,0,.4);
+  --heat-0:#2a3018; --heat-1:#3a4020; --heat-2:#5a6028; --heat-3:#a8904a; --heat-4:#ffd060;
+  /* 品牌渐变：暖橙→金黄→浅黄绿（破晓天空色温） */
+  --brand-grad:linear-gradient(135deg,#ff9040 0%,#f0c060 40%,#e8d870 75%,#b8d870 100%);
+  --side-accent:linear-gradient(180deg,rgba(255,160,80,.30),rgba(240,192,96,.18) 50%,rgba(184,216,112,.12) 90%,transparent);
+  --td-ambient:linear-gradient(150deg,rgba(255,200,100,.30),rgba(255,160,80,.15) 50%,rgba(0,0,0,0));
+  /* 破晓强丁达尔光柱：暖金主调 */
+  --canvas-glow:
+    linear-gradient(118deg,transparent 0%,transparent 6%,rgba(255,220,120,.35) 12%,rgba(255,240,180,.45) 20%,rgba(255,220,120,.35) 30%,transparent 48%,transparent 100%),
+    linear-gradient(112deg,transparent 0%,transparent 20%,rgba(255,180,80,.30) 28%,rgba(255,200,100,.40) 38%,rgba(255,180,80,.30) 46%,transparent 62%,transparent 100%),
+    linear-gradient(122deg,transparent 0%,transparent 48%,rgba(240,200,120,.30) 55%,rgba(255,220,150,.40) 63%,rgba(240,200,120,.30) 70%,transparent 82%,transparent 100%);
+  --canvas-fog:
+    radial-gradient(ellipse 120% 40% at 50% 100%,rgba(255,200,120,.30),transparent 60%),
+    radial-gradient(ellipse 100% 30% at 50% 95%,rgba(240,180,100,.22),transparent 65%);
+  --canvas-spots:
+    radial-gradient(ellipse 72% 48% at 18% -6%,rgba(255,200,100,.60),transparent 62%),
+    radial-gradient(ellipse 55% 42% at 50% -12%,rgba(255,160,60,.55),transparent 58%),
+    radial-gradient(ellipse 52% 42% at 96% 10%,rgba(255,200,80,.58),transparent 56%);
+  --sidebar-glow:linear-gradient(180deg,rgba(255,180,80,.25) 0%,rgba(240,192,96,.15) 50%,rgba(184,216,112,.10) 100%);
 }
 :root[data-theme="forest"] .side{
   background:color-mix(in srgb,var(--panel) 78%,transparent);
