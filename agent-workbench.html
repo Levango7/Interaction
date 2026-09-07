@@ -131,11 +131,11 @@
 :root[data-theme="aurora"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(123,63,236,.25)}
 :root[data-theme="aurora"] .chat-panel{
   background:color-mix(in srgb,var(--panel) 60%,transparent);
-  background-image:linear-gradient(180deg,rgba(25,180,230,.10),transparent 40%);
-  backdrop-filter:blur(26px) saturate(1.25);-webkit-backdrop-filter:blur(26px) saturate(1.25);
+  background-image:var(--sidebar-glow),linear-gradient(180deg,rgba(25,180,230,.10),transparent 40%);
+  backdrop-filter:blur(28px) saturate(1.35);-webkit-backdrop-filter:blur(28px) saturate(1.35);
   border-left:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
-  box-shadow:inset 2px 0 12px -2px rgba(25,180,230,.12);
+  box-shadow:inset 2px 0 14px -2px rgba(25,180,230,.14);
 }
 :root[data-theme="aurora"] .chat-panel-header{
   background:color-mix(in srgb,var(--panel) 68%,transparent);
@@ -230,12 +230,12 @@
 :root[data-theme="forest"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
 :root[data-theme="forest"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(74,222,128,.28)}
 :root[data-theme="forest"] .chat-panel{
-  background:color-mix(in srgb,var(--panel) 75%,transparent);
-  background-image:linear-gradient(180deg,rgba(240,160,48,.05),transparent 40%);
-  backdrop-filter:blur(20px) saturate(1.15);-webkit-backdrop-filter:blur(20px) saturate(1.15);
+  background:color-mix(in srgb,var(--panel) 78%,transparent);
+  background-image:var(--sidebar-glow),linear-gradient(180deg,rgba(240,160,48,.05),transparent 40%);
+  backdrop-filter:blur(22px) saturate(1.20);-webkit-backdrop-filter:blur(22px) saturate(1.20);
   border-left:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
-  box-shadow:inset 2px 0 12px -2px rgba(82,160,94,.10);
+  box-shadow:inset 2px 0 14px -2px rgba(74,222,128,.12);
 }
 :root[data-theme="forest"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
 
@@ -286,12 +286,12 @@
 :root[data-theme="ocean"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
 :root[data-theme="ocean"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(10,82,99,.28)}
 :root[data-theme="ocean"] .chat-panel{
-  background:color-mix(in srgb,var(--panel) 58%,transparent);
-  background-image:linear-gradient(180deg,rgba(46,143,163,.06),transparent 40%);
-  backdrop-filter:blur(20px) saturate(1.12);-webkit-backdrop-filter:blur(20px) saturate(1.12);
+  background:color-mix(in srgb,var(--panel) 52%,transparent);
+  background-image:var(--sidebar-glow),linear-gradient(180deg,rgba(46,143,163,.06),transparent 40%);
+  backdrop-filter:blur(22px) saturate(1.20);-webkit-backdrop-filter:blur(22px) saturate(1.20);
   border-left:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
-  box-shadow:inset 2px 0 12px -2px rgba(46,143,163,.14);
+  box-shadow:inset 2px 0 14px -2px rgba(46,143,163,.16);
 }
 :root[data-theme="ocean"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
 
