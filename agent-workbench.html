@@ -152,33 +152,20 @@
  *  7) 极光的"半透明"玻璃化在森林/海洋同样启用——主色变化但玻璃质感一致，UI 形态不变
  */
 :root[data-theme="forest"]{
-  /* v3.4.6 令牌补全：此前仅 12 个令牌，--side-bg/--danger/--warn/--banner-*/--heat-* 等全部
-     回退到 :root 亮色中性灰——侧栏玻璃半透明底下透灰不透绿（用户反馈：左右侧边栏不太绿）。
-     按「晨雾林地+松针+暖木」意象补全 30+ 全量令牌，与亮色/初雪彻底差异化。 */
-  --bg:#17321d; --panel:#1e3a26; --panel2:#1a2e20; --line:#3a5e42;
-  --side-bg:#17351f;
-  --tb-row2-bg:var(--panel);
-  --text:#e8f3e0; --muted:#8fa898; --accent:#4ade80; --accent-soft:#2a4a35; --accent-2:#f0a030;
-  --surface-hover:#2a4530; --surface-muted:#1e3a26;
-  --on-accent:#0d1f12; --on-accent-soft:rgba(74,222,128,.15);
-  --text-dim:#c2dcc4; --text-dim-2:#93b096; --text-dim-3:#a8c4aa; --text-faint:#7a967c;
-  --danger:#ef6b5e; --danger-soft:#3a1f1a; --danger-border:#5a3028;
-  --danger-overdue-bg:#3a201a; --danger-overdue-border:#5a3028;
-  --warn:#f0b048; --warn-soft:#3a2e14;
-  --ok:#4ade80; --sc-office:#5ac8e8; --sc-design:#e88ac8; --sc-study:#f0c060; --sc-data:#50d0b0; --sc-code:#4ade80; --sc-life:#b090f0;
-  --scenario-default:#4ade80;
-  --banner-bg:#22402c; --banner-border:#4a7a52; --banner-ink:#b8e0a8; --banner-border-2:#3a6244;
-  --kbd-border:#3a5e42; --snip-bg:#0d1f12; --snip-fg:#e8f3e0; --toast-bg:#e8f3e0;
-  --overlay:rgba(8,20,12,.6); --shadow-drawer:rgba(0,0,0,.4);
-  --shadow-overlay:rgba(0,0,0,.55); --shadow-toast:rgba(0,0,0,.5);
-  --shadow-1:0 1px 2px rgba(0,0,0,.2);
-  --shadow-2:0 2px 8px rgba(0,0,0,.25);
-  --shadow-3:0 4px 16px rgba(0,0,0,.3);
-  --heat-0:#22402c; --heat-1:#2a5a34; --heat-2:#3a7a44; --heat-3:#4a9a54; --heat-4:#4ade80;
-  --brand-grad:linear-gradient(135deg,#4ade80 0%,#52a05e 50%,#f0a030 100%);
-  --side-accent:linear-gradient(180deg,rgba(74,222,128,.15),rgba(82,160,94,.10) 60%,rgba(240,160,48,.08));
-  --canvas-glow:radial-gradient(ellipse 72% 48% at 18% -6%,rgba(74,222,128,.40),transparent 62%),radial-gradient(ellipse 55% 42% at 50% -12%,rgba(240,180,80,.30),transparent 58%),radial-gradient(ellipse 52% 42% at 96% 10%,rgba(232,150,40,.35),transparent 56%),radial-gradient(ellipse 42% 38% at 50% 96%,rgba(52,196,84,.25),transparent 52%),radial-gradient(ellipse 38% 32% at 8% 70%,rgba(160,210,90,.25),transparent 52%);
-  --sidebar-glow:linear-gradient(180deg,rgba(74,222,128,.12) 0%,rgba(82,160,94,.06) 50%,rgba(240,160,48,.04) 100%);
+  /* v3.4.15 森林——明亮绿意主调，与初雪/暗色明显区分 */
+  --bg:#1e4a2c;
+  --panel:#2d6840; --panel2:#1f5232; --line:#4a8a5e;
+  --side-bg:#245e36;
+  --text:#e0f0e5; --muted:#8aaa95; --accent:#50e080; --accent-soft:#142e1e; --accent-2:#f0b040;
+  --brand-grad:linear-gradient(135deg,#50e080 0%,#40a860 50%,#2e7a48 100%);
+}
+:root[data-theme="mist"]{
+  /* v3.4.15 晨雾——偏暖浅绿/黄绿/蓝绿 + 强丁达尔光柱 */
+  --bg:#2a4a3a;
+  --panel:#3d6a4f; --panel2:#325540; --line:#5a8a68;
+  --side-bg:#325640;
+  --text:#f0f8e8; --muted:#a8c8a0; --accent:#90e8a0; --accent-soft:#1f4a2e; --accent-2:#ffd060;
+  --brand-grad:linear-gradient(135deg,#a8e890 0%,#90d070 35%,#e8c060 75%,#f0a050 100%);
 }
 :root[data-theme="forest"] .side{
   background:color-mix(in srgb,var(--panel) 78%,transparent);
@@ -4253,6 +4240,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
           <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
           <option value="forest" data-i18n="look.theme.forest">秘境森林</option>
           <option value="ocean" data-i18n="look.theme.ocean">微蓝浅海</option>
+          <option value="mist" data-i18n="look.theme.mist">晨曦雾光</option>
         </select>
       </div>
     </div>
@@ -6230,12 +6218,20 @@ function _systemPrefersDark(){
 function applyTheme(){
   const cfg=getCfg();
   const pref = cfg.theme || "system";
+  const el = document.documentElement;
+  el.removeAttribute("data-theme");
   let th;
   if(pref==="dark") th="dark";
   else if(pref==="light") th="light";
+  else if(pref==="sepia") th="sepia";
+  else if(pref==="elegant") th="elegant";
+  else if(pref==="aurora") th="aurora";
+  else if(pref==="matrix") th="matrix";
+  else if(pref==="forest") th="forest";
+  else if(pref==="ocean") th="ocean";
+  else if(pref==="mist") th="mist";
   else th = _systemPrefersDark() ? "dark" : "light";
-  if(th==="dark") document.documentElement.setAttribute("data-theme", "dark");
-  else document.documentElement.removeAttribute("data-theme");
+  if(th!=="light") el.setAttribute("data-theme", th);
   // 更新主题按钮：图标 + 当前主题名（亮色/暗色/跟随）；暗色显示太阳（提示可切到亮色），亮色/跟随显示月亮
   const btnTheme = document.getElementById("btnTheme");
   if(btnTheme){
@@ -32420,6 +32416,8 @@ function setTheme(themeId){
     el.setAttribute("data-theme", "elegant");
   }else if(themeId === "matrix"){
     el.setAttribute("data-theme", "matrix");
+  }else if(themeId === "mist"){
+    el.setAttribute("data-theme", "mist");
   }else if(themeId === "forest"){
     // v3.4.1：5b227f4 引入 forest/ocean 时漏加分支——落入下方自定义主题 else，
     // getCustomThemes() 找不到即回退 "light"，选中后页面无变化（CSS :root[data-theme] 永不匹配）。
