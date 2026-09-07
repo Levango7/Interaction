@@ -138,7 +138,7 @@
   box-shadow:inset 2px 0 14px -2px rgba(25,180,230,.14);
 }
 :root[data-theme="aurora"] .chat-panel-header{
-  background:color-mix(in srgb,var(--panel) 68%,transparent);
+  background:color-mix(in srgb,var(--panel) 60%,transparent);
 }
 
 /* v3.2 主题库扩展：秘境森林（forest）+ 微蓝浅海（ocean）；v3.4.0 更名
@@ -241,7 +241,7 @@
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
   box-shadow:inset 2px 0 14px -2px rgba(74,222,128,.12);
 }
-:root[data-theme="forest"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
+:root[data-theme="forest"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 60%,transparent)}
 
 :root[data-theme="ocean"]{
   /* v3.4.6 令牌补全（与 forest 同因）：补 --side-bg/--danger/--banner-*/--heat-* 等 20+
@@ -297,7 +297,7 @@
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
   box-shadow:inset 2px 0 14px -2px rgba(46,143,163,.16);
 }
-:root[data-theme="ocean"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 66%,transparent)}
+:root[data-theme="ocean"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 60%,transparent)}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
@@ -1268,7 +1268,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.15：消息区+输入区 = 一个完整卡片（消息区顶部圆角、输入区底部圆角，中间无分割线） */
 .chat{flex:1;overflow:auto;border:1px solid var(--line);
   border-radius:var(--radius-lg);
-  padding:var(--space-3);background:var(--panel);box-shadow:var(--shadow-1);
+  padding:var(--space-3);background:color-mix(in srgb,var(--panel) 60%,transparent);box-shadow:var(--shadow-1);
   margin:var(--space-2) var(--space-3) var(--space-3);min-height:0}
 .msg{margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-lg);
   font-size:var(--fs-base);max-width:88%;white-space:pre-wrap;word-break:break-word;line-height:1.6;
@@ -1360,7 +1360,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
 .chat-input-area{margin:0 var(--space-3) var(--space-1);
   border:1px solid var(--line);border-radius:var(--radius-lg);
-  background:var(--panel);display:flex;flex-direction:column;overflow:hidden;
+  background:color-mix(in srgb,var(--panel) 80%,transparent);display:flex;flex-direction:column;overflow:hidden;
   box-shadow:var(--shadow-1);
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
