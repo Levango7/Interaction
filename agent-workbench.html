@@ -152,63 +152,67 @@
  *  7) 极光的"半透明"玻璃化在森林/海洋同样启用——主色变化但玻璃质感一致，UI 形态不变
  */
 :root[data-theme="forest"]{
-  /* v3.4.15 森林——明亮绿意主调，与初雪/暗色明显区分 */
+  /* v3.4.20 森林——明亮绿意主调（补全视觉变量：canvas-glow/sidebar-glow/side-accent） */
   --bg:#1e4a2c;
   --panel:#2d6840; --panel2:#1f5232; --line:#4a8a5e;
   --side-bg:#245e36;
+  --tb-row2-bg:var(--panel);
   --text:#e0f0e5; --muted:#8aaa95; --accent:#50e080; --accent-soft:#142e1e; --accent-2:#f0b040;
+  --surface-hover:#1e4028; --surface-muted:#132e1f;
+  --on-accent:#0a1f10; --on-accent-soft:rgba(80,224,128,.25);
+  --text-dim:#b0d0b8; --text-dim-2:#8aaa98; --text-dim-3:#9abaa2; --text-faint:#6a8a75;
+  --danger:#ef6b5e; --danger-soft:#3a1f1a; --danger-border:#5a3028;
+  --danger-overdue-bg:#3a201a; --danger-overdue-border:#5a3028;
+  --warn:#f0b048; --warn-soft:#3a2e14;
+  --ok:#50e080; --sc-office:#5ac8e8; --sc-design:#e88ac8; --sc-study:#f0c060; --sc-data:#50d0b0; --sc-code:#50e080; --sc-life:#b090f0;
+  --scenario-default:#50e080;
+  --banner-bg:#12301e; --banner-border:#3a6848; --banner-ink:#c0e8b0; --banner-border-2:#2c5038;
+  --kbd-border:#2a5040; --snip-bg:#081a10; --snip-fg:#e0f0e5; --toast-bg:#e0f0e5;
+  --overlay:rgba(4,12,8,.7); --shadow-drawer:rgba(0,0,0,.5);
+  --shadow-overlay:rgba(0,0,0,.6); --shadow-toast:rgba(0,0,0,.55);
+  --shadow-1:0 1px 2px rgba(0,0,0,.2);
+  --shadow-2:0 2px 8px rgba(0,0,0,.4);
+  --shadow-3:0 4px 16px rgba(0,0,0,.45);
+  --heat-0:#0e2018; --heat-1:#183525; --heat-2:#285035; --heat-3:#408555; --heat-4:#60e090;
   --brand-grad:linear-gradient(135deg,#50e080 0%,#40a860 50%,#2e7a48 100%);
+  --side-accent:linear-gradient(180deg,rgba(80,224,128,.20),rgba(64,168,96,.12) 60%,rgba(240,176,64,.08));
+  --td-ambient:linear-gradient(150deg,rgba(80,220,130,.18),rgba(0,0,0,0));
+  /* 森林光斑：绿色丁达尔 + 暖光斑 */
+  --canvas-glow:radial-gradient(ellipse 80% 50% at 30% -10%,rgba(80,224,128,.45),transparent 60%),radial-gradient(ellipse 60% 40% at 80% 5%,rgba(240,176,64,.25),transparent 55%),radial-gradient(ellipse 50% 45% at 10% 80%,rgba(80,224,128,.35),transparent 55%),radial-gradient(ellipse 45% 40% at 90% 90%,rgba(240,176,64,.22),transparent 50%),radial-gradient(ellipse 40% 35% at 50% 50%,rgba(120,200,140,.30),transparent 48%);
+  --canvas-fog:radial-gradient(ellipse 100% 40% at 50% 100%,rgba(80,180,120,.25),transparent 60%),radial-gradient(ellipse 80% 30% at 50% 95%,rgba(60,140,90,.20),transparent 65%);
+  --canvas-spots:radial-gradient(ellipse 40% 30% at 18% -6%,rgba(80,224,128,.42),transparent 50%),radial-gradient(ellipse 30% 25% at 90% 8%,rgba(255,200,100,.38),transparent 45%),radial-gradient(ellipse 35% 30% at 50% 100%,rgba(120,210,150,.30),transparent 50%);
+  --sidebar-glow:linear-gradient(180deg,rgba(80,224,128,.18) 0%,rgba(64,168,96,.10) 50%,rgba(240,176,64,.06) 100%);
 }
 :root[data-theme="mist"]{
-  /* v3.4.17 晓光晨雾——破晓时分，金光透过云层雾气（黄绿/金黄/暖橙） */
-  --bg:#4a5530;        /* 底布：偏暖黄绿（破晓林间地面） */
-  --panel:#6b7048;     /* 面板：更深黄绿（阴影中） */
-  --panel2:#5a6040;    /* 次面板：中间色 */
-  --line:#8a8d5a;      /* 边框：暖色调 */
-  --side-bg:#525a38;   /* 侧边背景 */
-  --text:#fef6d8;      /* 文字：暖白（阳光感） */
-  --muted:#c8c08a;     /* 次要文字：暖灰 */
-  --accent:#f0c060;    /* 强调色：金黄（晨光） */
-  --accent-soft:#5a4a1a; /* 强调色弱化：深金 */
-  --accent-2:#ff9040;  /* 次强调：暖橙 */
-  --surface-hover:#7a8058; /* hover 表面 */
-  --surface-muted:#6b7048; /* 静默表面 */
-  --on-accent:#3a2e0a; /* 强调色上的文字：深棕 */
-  --on-accent-soft:rgba(240,192,96,.22);
-  --text-dim:#e8d8a8;
-  --text-dim-2:#c8c08a;
-  --text-dim-3:#b8a878;
-  --text-faint:#8a8060;
-  --danger:#f08a60;
-  --warn:#ffd060;
-  --ok:#a8d870;
-  --sc-office:#7ad8f0; --sc-design:#f08ac8; --sc-study:#ffd060; --sc-data:#90d8a0; --sc-code:#f0c060; --sc-life:#c0a0f8;
+  /* v3.4.20 晓光晨雾——破晓暖色（补全视觉变量：canvas-glow/sidebar-glow/side-accent） */
+  --bg:#4a5530;
+  --panel:#6b7048; --panel2:#5a6040; --line:#8a8d5a;
+  --side-bg:#525a38;
+  --tb-row2-bg:var(--panel);
+  --text:#fef6d8; --muted:#c8c08a; --accent:#f0c060; --accent-soft:#5a4a1a; --accent-2:#ff9040;
+  --surface-hover:#7a8058; --surface-muted:#6b7048;
+  --on-accent:#3a2e0a; --on-accent-soft:rgba(240,192,96,.22);
+  --text-dim:#e8d8a8; --text-dim-2:#c8c08a; --text-dim-3:#b8a878; --text-faint:#8a8060;
+  --danger:#f08a60; --danger-soft:#4a2820; --danger-border:#7a4a3a;
+  --danger-overdue-bg:#4a2820; --danger-overdue-border:#7a4a3a;
+  --warn:#ffc060; --warn-soft:#4a3a20;
+  --ok:#a8d870; --sc-office:#7ad8f0; --sc-design:#f08ac8; --sc-study:#ffd060; --sc-data:#90d8a0; --sc-code:#f0c060; --sc-life:#c0a0f8;
   --scenario-default:#f0c060;
   --banner-bg:#5a4a2a; --banner-border:#a8904a; --banner-ink:#ffe8a0; --banner-border-2:#8a7a3a;
   --kbd-border:#7a6a3a; --snip-bg:#2a2418; --snip-fg:#fef6d8; --toast-bg:#fef6d8;
-  --overlay:rgba(40,30,10,.55);
-  --shadow-drawer:rgba(0,0,0,.45);
+  --overlay:rgba(40,30,10,.55); --shadow-drawer:rgba(0,0,0,.45);
   --shadow-overlay:rgba(0,0,0,.5); --shadow-toast:rgba(0,0,0,.5);
   --shadow-1:0 1px 2px rgba(0,0,0,.22);
   --shadow-2:0 2px 8px rgba(0,0,0,.32);
   --shadow-3:0 4px 16px rgba(0,0,0,.4);
   --heat-0:#2a3018; --heat-1:#3a4020; --heat-2:#5a6028; --heat-3:#a8904a; --heat-4:#ffd060;
-  /* 品牌渐变：暖橙→金黄→浅黄绿（破晓天空色温） */
   --brand-grad:linear-gradient(135deg,#ff9040 0%,#f0c060 40%,#e8d870 75%,#b8d870 100%);
   --side-accent:linear-gradient(180deg,rgba(255,160,80,.30),rgba(240,192,96,.18) 50%,rgba(184,216,112,.12) 90%,transparent);
   --td-ambient:linear-gradient(150deg,rgba(255,200,100,.30),rgba(255,160,80,.15) 50%,rgba(0,0,0,0));
-  /* 破晓强丁达尔光柱：暖金主调 */
-  --canvas-glow:
-    linear-gradient(118deg,transparent 0%,transparent 6%,rgba(255,220,120,.35) 12%,rgba(255,240,180,.45) 20%,rgba(255,220,120,.35) 30%,transparent 48%,transparent 100%),
-    linear-gradient(112deg,transparent 0%,transparent 20%,rgba(255,180,80,.30) 28%,rgba(255,200,100,.40) 38%,rgba(255,180,80,.30) 46%,transparent 62%,transparent 100%),
-    linear-gradient(122deg,transparent 0%,transparent 48%,rgba(240,200,120,.30) 55%,rgba(255,220,150,.40) 63%,rgba(240,200,120,.30) 70%,transparent 82%,transparent 100%);
-  --canvas-fog:
-    radial-gradient(ellipse 120% 40% at 50% 100%,rgba(255,200,120,.30),transparent 60%),
-    radial-gradient(ellipse 100% 30% at 50% 95%,rgba(240,180,100,.22),transparent 65%);
-  --canvas-spots:
-    radial-gradient(ellipse 72% 48% at 18% -6%,rgba(255,200,100,.60),transparent 62%),
-    radial-gradient(ellipse 55% 42% at 50% -12%,rgba(255,160,60,.55),transparent 58%),
-    radial-gradient(ellipse 52% 42% at 96% 10%,rgba(255,200,80,.58),transparent 56%);
+  /* 破晓强丁达尔：暖金主调 */
+  --canvas-glow:radial-gradient(ellipse 80% 50% at 30% -10%,rgba(255,200,100,.50),transparent 60%),radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,160,60,.35),transparent 55%),radial-gradient(ellipse 50% 45% at 10% 80%,rgba(240,200,120,.30),transparent 55%),radial-gradient(ellipse 45% 40% at 90% 90%,rgba(255,160,60,.25),transparent 50%),radial-gradient(ellipse 40% 35% at 50% 50%,rgba(255,220,150,.30),transparent 48%);
+  --canvas-fog:radial-gradient(ellipse 100% 40% at 50% 100%,rgba(255,200,120,.30),transparent 60%),radial-gradient(ellipse 80% 30% at 50% 95%,rgba(240,180,100,.22),transparent 65%);
+  --canvas-spots:radial-gradient(ellipse 40% 30% at 18% -6%,rgba(255,200,100,.55),transparent 50%),radial-gradient(ellipse 30% 25% at 90% 8%,rgba(255,160,60,.48),transparent 45%),radial-gradient(ellipse 35% 30% at 50% 100%,rgba(255,220,150,.35),transparent 50%);
   --sidebar-glow:linear-gradient(180deg,rgba(255,180,80,.25) 0%,rgba(240,192,96,.15) 50%,rgba(184,216,112,.10) 100%);
 }
 :root[data-theme="forest"] .side{
