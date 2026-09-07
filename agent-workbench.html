@@ -1314,15 +1314,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    - 折叠态：宽度归零 + overflow:hidden，配 transition 平滑过渡
    - 响应式：中屏收窄到 300px，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
 .chat-panel{width:300px;flex-shrink:0;display:flex;flex-direction:column;
-  border-left:1px solid transparent;background:var(--panel);
+  border-left:1px solid transparent;background:color-mix(in srgb,var(--panel) 70%,transparent);
+  background-image:var(--sidebar-glow);
+  backdrop-filter:blur(22px) saturate(1.25);-webkit-backdrop-filter:blur(22px) saturate(1.25);
   transition:width var(--transition-fast) ease,transform var(--transition-fast) ease,
     border-color var(--transition-fast),box-shadow var(--transition-fast)} /* v1.15 P3：常驻 360→300，主区在 1280 屏多抢 60px；hover 仍弹回 360 */
 .chat-panel.collapsed{width:0;overflow:hidden;border-left-color:transparent}
 .chat-panel:hover,.chat-panel:focus-within{border-left-color:var(--accent-soft);
   box-shadow:inset 3px 0 0 var(--accent-soft)} /* v1.10.0b：hover/focus 边框高亮（左缘 3px accent 边 + 柔和 inset 阴影） */
 .chat-panel-header{padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:var(--space-2);
-  background:var(--panel)} /* v1.9.5：头部白底与浅灰消息区区分 */
+  background:color-mix(in srgb,var(--panel) 75%,transparent);} /* v1.9.5：头部白底与浅灰消息区区分 */
 .chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2);min-width:0}
 /* v1.9.5：标题图标徽章化（与全局 page-head 视觉一致） */
 .chat-panel-title .ph-ic{width:26px;height:26px;border-radius:var(--radius-md);flex-shrink:0;
@@ -1435,10 +1436,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-send-btn[data-mode="stop"]{background:var(--danger)}
 .chat-send-btn[data-mode="stop"]:hover{filter:brightness(.96);background:var(--danger)}
 /* 折叠后的侧边条（窄屏浮动按钮的替代：折叠时显示一条窄轨道，点击展开） */
-.chat-panel-rail{width:24px;flex-shrink:0;border-left:1px solid var(--line);background:var(--panel);
-  display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);
-  font-size:var(--fs-xs);writing-mode:vertical-rl;letter-spacing:.1em;padding:var(--space-3) 0;
-  transition:background var(--transition-fast),color var(--transition-fast)}
+.chat-panel-rail{width:24px;flex-shrink:0;border-left:1px solid var(--line);background:color-mix(in srgb,var(--panel) 70%,transparent);
+  display:none;align-items:center;justify-content:center;cursor:pointer}
 .chat-panel-rail:hover{background:var(--surface-hover);color:var(--text)}
 .chat-panel-rail.show{display:flex}
 /* 响应式：中屏收窄，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
