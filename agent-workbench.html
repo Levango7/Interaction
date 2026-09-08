@@ -1266,13 +1266,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== 聊天 ===== */
 /* v1.15：消息区+输入区 = 一个完整卡片（消息区顶部圆角、输入区底部圆角，中间无分割线） */
-.chat{flex:1;overflow:auto;border:1px solid var(--line);
-  border-radius:var(--radius-lg);
-  padding:var(--space-3);background:color-mix(in srgb,var(--panel) 60%,transparent);box-shadow:var(--shadow-1);
-  margin:var(--space-2) var(--space-3) var(--space-3);min-height:0}
-.msg{margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-lg);
-  font-size:var(--fs-base);max-width:88%;white-space:pre-wrap;word-break:break-word;line-height:1.6;
-  box-shadow:var(--shadow-1)}
+.chat{flex:1;overflow:auto;border:none;
+  border-radius:0;
+  padding:var(--space-1);background:transparent;box-shadow:none;
+  margin:0;min-height:0}
+.msg{margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);
+  font-size:var(--fs-base);max-width:92%;white-space:pre-wrap;word-break:break-word;line-height:1.6;
+  background:color-mix(in srgb,var(--panel) 25%,transparent)}
 .msg.user{background:var(--sc,var(--accent));color:var(--on-accent);margin-left:auto;font-weight:400;
   border-bottom-right-radius:var(--radius-sm)}
 .msg.assistant{background:var(--panel2);border:1px solid var(--line);
@@ -1322,8 +1322,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-panel.collapsed{width:0;overflow:hidden;border-left-color:transparent}
 .chat-panel:hover,.chat-panel:focus-within{border-left-color:var(--accent-soft);
   box-shadow:inset 3px 0 0 var(--accent-soft)} /* v1.10.0b：hover/focus 边框高亮（左缘 3px accent 边 + 柔和 inset 阴影） */
-.chat-panel-header{padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line);
-  background:color-mix(in srgb,var(--panel) 75%,transparent);} /* v1.9.5：头部白底与浅灰消息区区分 */
+.chat-panel-header{padding:var(--space-2) var(--space-4);border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent);
+  background:transparent;} /* v1.9.5：头部白底与浅灰消息区区分 */
 .chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2);min-width:0}
 /* v1.9.5：标题图标徽章化（与全局 page-head 视觉一致） */
 .chat-panel-title .ph-ic{width:26px;height:26px;border-radius:var(--radius-md);flex-shrink:0;
@@ -1359,11 +1359,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
-.chat-input-area{margin:0 var(--space-3) var(--space-1);
-  border:1px solid var(--line);border-radius:var(--radius-lg);
-  background:color-mix(in srgb,var(--panel) 80%,transparent);display:flex;flex-direction:column;overflow:hidden;
-  box-shadow:var(--shadow-1);
-  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.chat-input-area{margin:0 var(--space-3) var(--space-2);
+  border:1px solid color-mix(in srgb,var(--line) 45%,transparent);border-radius:var(--radius-lg);
+  background:color-mix(in srgb,var(--panel) 55%,transparent);display:flex;flex-direction:column;overflow:hidden;
+    transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 /* 底部一行：附件键（左） + 模型选择 + 发送暂停（右），紧贴无分割线 */
 .chat-input-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);
@@ -3037,7 +3036,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 }
 
 /* ===== v1.5-C 主题系统：自定义主题编辑器 UI ===== */
-.theme-editor-section{margin-top:var(--space-2);padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-muted)}
+.theme-editor-section{margin-top:var(--space-2);padding:var(--space-2);border:1px solid color-mix(in srgb,var(--line) 45%,transparent);border-radius:var(--radius-md);background:color-mix(in srgb,var(--panel) 40%,transparent)}
 .theme-token-row{display:flex;align-items:center;gap:var(--space-2);margin:var(--space-1) 0;font-size:var(--fs-sm)}
 .theme-token-row label{flex:1;color:var(--text-dim);font-family:monospace}
 .theme-token-row input[type="color"]{width:44px;height:28px;padding:2px;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;background:var(--panel)}
