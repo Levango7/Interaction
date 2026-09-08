@@ -14499,9 +14499,8 @@ function renderStorePage(){
 }
 
 /* ---------- 场景联动页（打卡记录 + 联动关系图 + 联动记录 + 触发统计 + 配置入口） ---------- */
+var _chainTab = "streak"; // 顶层声明：当前 tab（streak|graph|status|rate）
 function renderChainPage(){
-  
-  if(typeof _chainTab === "undefined") _chainTab = "streak";
   const tabs = [
     {id:"streak",label:t("chainPage.tab.streak","打卡记录"),icon:"flame"},
     {id:"graph",label:t("chainPage.tab.graph","联动关系"),icon:"mindmap"},
