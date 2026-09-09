@@ -2809,6 +2809,38 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   font-size:var(--fs-lg);color:var(--muted);cursor:pointer;padding:var(--space-1);line-height:1}
 .auth-close:hover{color:var(--text)}
 
+/* ===== v3.6.0 第三方登录（微信扫码 / GitHub）===== */
+.auth-sso-sep{display:flex;align-items:center;gap:var(--space-2);margin:var(--space-4) 0 var(--space-3);
+  color:var(--muted);font-size:var(--fs-2xs)}
+.auth-sso-sep::before,.auth-sso-sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.auth-sso-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
+.auth-sso-btn{display:flex;align-items:center;justify-content:center;gap:var(--space-2);
+  height:var(--control-h);padding:0 var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);
+  background:var(--panel);color:var(--text);font-size:var(--fs-sm);cursor:pointer;font-weight:500;
+  transition:border-color var(--transition-fast),background var(--transition-fast)}
+.auth-sso-btn:hover{border-color:var(--accent);background:var(--surface-hover)}
+.auth-sso-btn:active{transform:scale(.98)}
+.auth-sso-ic{display:inline-flex;align-items:center}
+.auth-sso-ic svg{width:18px;height:18px}
+.auth-sso-wechat .auth-sso-ic{color:#07c160}
+.auth-sso-github .auth-sso-ic{color:var(--text)}
+.auth-code-field .auth-code-row{display:flex;gap:var(--space-2)}
+.auth-code-field .auth-code-row input{flex:1;min-width:0}
+.auth-code-btn{flex-shrink:0;padding:0 var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);
+  background:var(--panel2);color:var(--accent);font-size:var(--fs-2xs);cursor:pointer;white-space:nowrap;
+  transition:border-color var(--transition-fast),background var(--transition-fast)}
+.auth-code-btn:hover{border-color:var(--accent)}
+.auth-code-btn:disabled{opacity:.6;cursor:not-allowed}
+.auth-sso-overlay{position:fixed;inset:0;z-index:var(--z-modal,2000);display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(4px)}
+.auth-sso-modal{width:min(320px,90vw);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-3);padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-3)}
+.auth-sso-modal-head{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:var(--fs-base)}
+.auth-sso-close{background:transparent;border:none;font-size:var(--fs-lg);color:var(--muted);cursor:pointer;line-height:1;padding:var(--space-1)}
+.auth-sso-close:hover{color:var(--text)}
+.auth-wechat-qr{display:flex;justify-content:center}
+.auth-wechat-qr img{width:220px;height:220px;border-radius:var(--radius-md);border:1px solid var(--line)}
+
 /* API 设置面板（账号 / 通知偏好 / 集成 / 设备管理 / 定时提醒）——仅登录后显示 */
 .api-panel{display:none;flex-direction:column;gap:var(--space-3)}
 .api-panel.show{display:flex}
@@ -4985,10 +5017,10 @@ select{appearance:none;-webkit-appearance:none;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.6.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.6.1"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910e";
+const BUILD_TAG = "20260910f";
 
 
 
@@ -14817,18 +14849,20 @@ async function _doAuthLogin(email, password) {
   }
 }
 
-async function _doAuthRegister(name, email, password, confirm) {
+async function _doAuthRegister(name, email, password, confirm, code) {
   if (_authBusy) return;
   _authErrTo("authPageRegisterError", "");
   if (!name) { _authErrTo("authPageRegisterError", t("api.nameRequired", "用户名不能为空")); return; }
   if (!_authValidEmail(email)) { _authErrTo("authPageRegisterError", t("api.emailInvalid", "邮箱格式不正确")); return; }
   if ((password || "").length < 8) { _authErrTo("authPageRegisterError", t("api.passwordTooShort", "密码长度至少 8 位")); return; }
   if (password !== confirm) { _authErrTo("authPageRegisterError", t("api.passwordMismatch", "两次密码不一致")); return; }
+  // v3.6.0：邮箱验证码——注册前先点「发送验证码」收码，非空校验
+  if (!code || !/^\d{6}$/.test(code)) { _authErrTo("authPageRegisterError", t("api.codeRequired", "请输入邮箱验证码")); return; }
   var btn = document.getElementById("authPageRegisterSubmit");
   if (btn) { btn.classList.add("loading"); btn.disabled = true; }
   _authBusy = true;
   try {
-    var r = await apiRegister(email, password, name);
+    var r = await apiRegister(email, password, name, code);
     if (r.ok) {
       var lr = await apiLogin(email, password);
       if (lr.ok) {
@@ -14850,6 +14884,154 @@ async function _doAuthRegister(name, email, password, confirm) {
     if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
   }
 }
+
+/* ---------- 第三方登录 / 邮箱验证码辅助（v3.6.0）----------
+ * 微信扫码 + GitHub 快捷登录：都是 OAuth 授权流程。
+ * 后端（Electron 版 / 自建服务）提供对应端点；浏览器纯静态形态后端不存在时降级为 toast 提示。
+ * 邮箱验证码：注册页「发送验证码」按钮，成功后 60s 倒计时。 */
+var _authCodeCountdown = null;
+function _authCodeCountdownStop(){
+  if(_authCodeCountdown){ clearInterval(_authCodeCountdown); _authCodeCountdown = null; }
+  var b = document.getElementById("authPageSendCode");
+  if(b){ b.disabled = false; b.textContent = t("api.sendCode", "发送验证码"); }
+}
+function _sendEmailCode(){
+  var email = $("#authPageRegEmail");
+  var err = $("#authPageRegisterError");
+  if(!email || !email.value){ if(err) err.textContent = t("api.emailRequired", "请先填写邮箱"); return; }
+  if(!_authValidEmail(email.value)){ if(err) err.textContent = t("api.emailInvalid", "邮箱格式不正确"); return; }
+  var b = document.getElementById("authPageSendCode");
+  if(b){ b.disabled = true; b.textContent = t("api.sendingCode", "发送中…"); }
+  var promise;
+  try{
+    if(typeof window.apiSendEmailCode === "function"){
+      promise = window.apiSendEmailCode(email.value).then(function(r){
+        if(r && r.ok){ if(err) err.textContent = ""; if(b){ b.textContent = t("api.codeSent", "已发送"); } _authCodeCountdownStart(60, b); }
+        else{ _authCodeCountdownStop(); if(err) err.textContent = (r && r.data && r.data.error) || t("api.sendCodeFail", "发送失败"); }
+      });
+    }else{
+      throw new Error("no-api");
+    }
+  }catch(_e){
+    _authCodeCountdownStop();
+    if(err) err.textContent = t("api.ssoNoBackend", "当前环境无后端，无法发送验证码");
+  }
+  return promise;
+}
+function _authCodeCountdownStart(sec, btn){
+  _authCodeCountdownStop();
+  var left = sec;
+  btn.disabled = true;
+  _authCodeCountdown = setInterval(function(){
+    left--;
+    if(left <= 0){ _authCodeCountdownStop(); return; }
+    btn.textContent = t("api.resendCode", "重新发送") + " (" + left + "s)";
+  }, 1000);
+}
+
+// 第三方登录按钮组（欢迎页 + 登录页复用）
+function _authSsoButtons(){
+  return '<div class="auth-sso-grid">' +
+    '<button type="button" class="auth-sso-btn auth-sso-wechat" id="authSsoWechat">' +
+      '<span class="auth-sso-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>' +
+      '<span>' + t("auth.wechatLogin", "微信扫码登录") + '</span>' +
+    '</button>' +
+    '<button type="button" class="auth-sso-btn auth-sso-github" id="authSsoGithub">' +
+      '<span class="auth-sso-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg></span>' +
+      '<span>' + t("auth.githubLogin", "GitHub 快捷登录") + '</span>' +
+    '</button>' +
+  '</div>';
+}
+// 弹窗打开微信二维码（OAuth 授权页），或后端轮询；纯静态环境无后端则提示
+function _openWechatModal(){
+  // 用顶部 modal 容器（沿用现有 closeAuthModal 之外的通用 modal 机制不可靠，
+  // 这里直接复用 drawer-close 无关的自建浮层，避免依赖具体 modal 结构）
+  try{
+    var wrap = document.createElement("div");
+    wrap.className = "auth-sso-overlay";
+    wrap.id = "authSsoOverlay";
+    wrap.innerHTML =
+      '<div class="auth-sso-modal">' +
+        '<div class="auth-sso-modal-head"><span>' + t("auth.wechatLogin", "微信扫码登录") + '</span><button type="button" class="auth-sso-close" data-close="1" aria-label="' + t("common.close", "关闭") + '">\u00D7</button></div>' +
+        '<div class="auth-sso-modal-body" id="authSsoWechatBody">' +
+          '<p class="sub u-text-center">' + t("auth.wechatLoading", "正在获取二维码…") + '</p>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    wrap.addEventListener("click", function(e){
+      if(e.target.closest("[data-close=\"1\"]") || e.target === wrap) { wrap.remove(); }
+    });
+    _wechatPollStart();
+  }catch(_e){ /* noop */ }
+}
+var _wechatTimer = null;
+function _wechatPollStop(){ if(_wechatTimer){ clearInterval(_wechatTimer); _wechatTimer = null; } }
+function _wechatPollStart(){
+  _wechatPollStop();
+  var body = document.getElementById("authSsoWechatBody");
+  if(typeof window.apiWechatQrcode !== "function"){ if(body) body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>'; return; }
+  window.apiWechatQrcode().then(function(r){
+    if(!r || !r.ok || !r.data){ if(body) body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>'; return; }
+    var d = r.data;
+    var qr = d.qr || "";
+    var scene = d.scene || "";
+    if(body){
+      if(qr){
+        body.innerHTML = '<div class="auth-wechat-qr"><img src="' + qr + '" alt="' + t("auth.wechatLogin", "微信扫码登录") + '"></div><p class="sub u-text-center">' + t("auth.wechatTip", "打开微信「扫一扫」完成登录") + '</p>';
+      }else{
+        body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>';
+      }
+    }
+    if(scene && typeof window.apiWechatStatus === "function"){
+      _wechatTimer = setInterval(function(){
+        window.apiWechatStatus(scene).then(function(sr){
+          if(!sr || !sr.ok || !sr.data) return;
+          if(sr.data.status === "confirmed" && sr.data.accessToken){
+            _wechatPollStop();
+            try{ apiSetTokens(sr.data.accessToken, sr.data.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
+            var ov = document.getElementById("authSsoOverlay"); if(ov) ov.remove();
+            try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
+            try{ _updateUserButton(); }catch(_e){}
+            setActive("overview"); render();
+          }
+        }).catch(function(){});
+      }, 2500);
+    }
+  }).catch(function(){ if(body) body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>'; });
+}
+function _doGithubLogin(){
+  if(typeof window.apiGithubOauthUrl !== "function"){
+    try{ toast(t("api.ssoNoBackend", "当前环境无后端，无法 GitHub 登录"), "warn"); }catch(_e){}
+    return;
+  }
+  window.apiGithubOauthUrl().then(function(r){
+    if(!r || !r.ok || !r.data || !r.data.authorizeUrl){
+      try{ toast(t("api.ssoNoBackend", "当前环境无后端，无法 GitHub 登录"), "warn"); }catch(_e){}
+      return;
+    }
+    var w = window.open(r.data.authorizeUrl, "_blank", "width=520,height=680");
+    if(!w){ location.href = r.data.authorizeUrl; }
+  }).catch(function(){ try{ toast(t("api.ssoNoBackend", "当前环境无后端，无法 GitHub 登录"), "warn"); }catch(_e){} });
+}
+// GitHub OAuth 回调：后端完成授权后向本窗口 postMessage「agent-github-oauth」回传 token
+function _bindAuthSso(){
+  var w = document.getElementById("authSsoWechat");
+  if(w) w.onclick = function(){ _openWechatModal(); };
+  var g = document.getElementById("authSsoGithub");
+  if(g) g.onclick = function(){ _doGithubLogin(); };
+}
+try{
+  window.addEventListener("message", function(e){
+    var d = e && e.data;
+    if(!d || d.type !== "agent-github-oauth") return;
+    if(d.accessToken){
+      try{ apiSetTokens(d.accessToken, d.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
+      try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
+      try{ _updateUserButton(); }catch(_e){}
+      setActive("overview"); render();
+    }
+  });
+}catch(_e){ /* noop */ }
 
 /* ---------- 云同步快照（来自 v3.5.0 包，含 async 修正 + 调用点接线）---------- */
 const SYNC_META_KEY = PREFIX + "sync_meta";
@@ -15394,12 +15576,15 @@ function renderAuthWelcome(){
           '<span class="auth-choice-sub">' + t("auth.registerSub","没有账号，立即注册") + '</span>' +
         '</button>' +
       '</div>' +
+      '<div class="auth-sso-sep"><span>' + t("auth.ssoOr","或") + '</span></div>' +
+      _authSsoButtons() +
     '</div>';
   $("#main").innerHTML = sanitizeHtml(html);
   const goLogin = $("#authPageGoLogin");
   const goRegister = $("#authPageGoRegister");
   if(goLogin) goLogin.onclick = function(){ setActive("authlogin"); render(); };
   if(goRegister) goRegister.onclick = function(){ setActive("authregister"); render(); };
+  _bindAuthSso();
 }
 
 function renderAuthLogin(){
@@ -15415,6 +15600,8 @@ function renderAuthLogin(){
           ' <a href="#" id="authPageToRegister">' + t("auth.goRegister","立即注册") + '</a>' +
         '</p>' +
       '</form>' +
+      '<div class="auth-sso-sep"><span>' + t("auth.ssoOr","或") + '</span></div>' +
+      _authSsoButtons() +
     '</div>';
   $("#main").innerHTML = sanitizeHtml(html);
   const back = $("#authPageBack");
@@ -15426,6 +15613,7 @@ function renderAuthLogin(){
     e.preventDefault();
     if(typeof _doAuthLogin === "function") _doAuthLogin($("#authPageLoginEmail").value, $("#authPageLoginPassword").value);
   };
+  _bindAuthSso();
 }
 
 function renderAuthRegister(){
@@ -15434,6 +15622,7 @@ function renderAuthRegister(){
       '<form id="authPageRegisterForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
         '<div class="auth-field"><label for="authPageRegName">' + t("api.name","用户名") + '</label><input type="text" id="authPageRegName" autocomplete="username" required></div>' +
         '<div class="auth-field"><label for="authPageRegEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageRegEmail" autocomplete="email" required></div>' +
+        '<div class="auth-field auth-code-field"><label for="authPageRegCode">' + t("api.code","邮箱验证码") + '</label><div class="auth-code-row"><input type="text" id="authPageRegCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6" placeholder="' + t("api.codePh","6 位数字") + '"><button type="button" class="auth-code-btn" id="authPageSendCode">' + t("api.sendCode","发送验证码") + '</button></div></div>' +
         '<div class="auth-field"><label for="authPageRegPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageRegPassword" autocomplete="new-password" required></div>' +
         '<div class="auth-field"><label for="authPageRegPassword2">' + t("api.passwordConfirm","确认密码") + '</label><input type="password" id="authPageRegPassword2" autocomplete="new-password" required></div>' +
         '<p class="auth-error" id="authPageRegisterError"></p>' +
@@ -15452,8 +15641,10 @@ function renderAuthRegister(){
   const form = $("#authPageRegisterForm");
   if(form) form.onsubmit = function(e){
     e.preventDefault();
-    if(typeof _doAuthRegister === "function") _doAuthRegister($("#authPageRegName").value, $("#authPageRegEmail").value, $("#authPageRegPassword").value, $("#authPageRegPassword2").value);
+    if(typeof _doAuthRegister === "function") _doAuthRegister($("#authPageRegName").value, $("#authPageRegEmail").value, $("#authPageRegPassword").value, $("#authPageRegPassword2").value, $("#authPageRegCode").value);
   };
+  const sendBtn = $("#authPageSendCode");
+  if(sendBtn) sendBtn.onclick = function(){ _sendEmailCode(); };
 }
 
 
@@ -27634,6 +27825,23 @@ const MESSAGES = {
     // ===== 任务235：后端 API 对接 i18n 键（api_ 前缀） =====
     "api.login": "登录",
     "api.register": "注册",
+    // ===== v3.6.0 邮箱验证码 + 第三方登录 =====
+    "api.code": "邮箱验证码",
+    "api.codePh": "6 位数字",
+    "api.sendCode": "发送验证码",
+    "api.sendingCode": "发送中…",
+    "api.resendCode": "重新发送",
+    "api.codeSent": "已发送",
+    "api.codeRequired": "请输入邮箱验证码",
+    "api.emailRequired": "请先填写邮箱",
+    "api.sendCodeFail": "发送失败",
+    "api.ssoNoBackend": "当前环境无后端，无法使用该登录方式",
+    "auth.ssoOr": "或",
+    "auth.wechatLogin": "微信扫码登录",
+    "auth.githubLogin": "GitHub 快捷登录",
+    "auth.wechatLoading": "正在获取二维码…",
+    "auth.wechatTip": "打开微信「扫一扫」完成登录",
+    "auth.wechatScan": "请用微信扫描二维码登录",
     "api.logout": "登出",
     "api.email": "邮箱",
     "api.password": "密码",
@@ -31001,6 +31209,23 @@ const MESSAGES = {
     // ===== Task 235: backend API i18n keys (api_ prefix) =====
     "api.login": "Login",
     "api.register": "Register",
+    // ===== v3.6.0 email verification code + third-party login =====
+    "api.code": "Email verification code",
+    "api.codePh": "6-digit code",
+    "api.sendCode": "Send code",
+    "api.sendingCode": "Sending…",
+    "api.resendCode": "Resend",
+    "api.codeSent": "Sent",
+    "api.codeRequired": "Please enter the email verification code",
+    "api.emailRequired": "Please enter your email first",
+    "api.sendCodeFail": "Failed to send",
+    "api.ssoNoBackend": "No backend in this environment, this login method is unavailable",
+    "auth.ssoOr": "or",
+    "auth.wechatLogin": "WeChat QR login",
+    "auth.githubLogin": "GitHub sign-in",
+    "auth.wechatLoading": "Fetching QR code…",
+    "auth.wechatTip": "Open WeChat and scan to log in",
+    "auth.wechatScan": "Scan the QR code with WeChat to log in",
     "api.logout": "Log out",
     "api.email": "Email",
     "api.password": "Password",
@@ -32075,12 +32300,41 @@ const MESSAGES = {
     return r;
   }
 
-  async function apiRegister(email, password, name){
+  async function apiRegister(email, password, name, code){
+    const payload = { email: email, password: password, name: name };
+    // v3.6.0：邮箱验证码——后端未启用该字段时忽略，保持向后兼容
+    if(code) payload.code = code;
     const r = await apiFetch("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify(payload),
     });
     return r;
+  }
+
+  // ===== 邮箱验证码 / 第三方登录 API（v3.6.0）=====
+
+  // 发送邮箱验证码（后端：校验邮箱 + 生成 6 位码 → 发邮件；返回 {ok}）
+  async function apiSendEmailCode(email){
+    return apiFetch("/api/auth/email-code", {
+      method: "POST",
+      body: JSON.stringify({ email: email }),
+    });
+  }
+
+  // GitHub OAuth：获取授权跳转 URL（后端拼接 client_id / redirect_uri / state，返回 {authorizeUrl, state}）。
+  // 回调由后端完成 code→token 后，通过 postMessage「agent-github-oauth」把 token 回传渲染层，或经 /api/auth/github/status 轮询。
+  async function apiGithubOauthUrl(){
+    return apiFetch("/api/auth/github", { method: "GET" });
+  }
+
+  // 微信扫码登录：获取二维码（qr 为图片 data-URI / URL，scene 为轮询票据，expireIn 秒）
+  async function apiWechatQrcode(){
+    return apiFetch("/api/auth/wechat/qrcode", { method: "POST" });
+  }
+
+  // 微信扫码登录：轮询状态（status: pending | confirmed | expired；confirmed 时带 accessToken/refreshToken）
+  async function apiWechatStatus(scene){
+    return apiFetch("/api/auth/wechat/status?scene=" + encodeURIComponent(scene || ""), { method: "GET" });
   }
 
   async function apiGetProfile(){
@@ -32323,6 +32577,10 @@ const MESSAGES = {
   window.apiFetch = apiFetch;
   window.apiLogin = apiLogin;
   window.apiRegister = apiRegister;
+  window.apiSendEmailCode = apiSendEmailCode;
+  window.apiGithubOauthUrl = apiGithubOauthUrl;
+  window.apiWechatQrcode = apiWechatQrcode;
+  window.apiWechatStatus = apiWechatStatus;
   window.apiGetProfile = apiGetProfile;
   window.apiUpdateProfile = apiUpdateProfile;
   window.apiGetDevices = apiGetDevices;
