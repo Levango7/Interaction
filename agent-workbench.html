@@ -3770,6 +3770,17 @@ select{appearance:none;-webkit-appearance:none;
   background:transparent;color:var(--text);font-size:var(--fs-sm);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sel-item:hover{background:var(--surface-hover);color:var(--accent)}
 .sel-item.is-sel{background:var(--accent-soft);color:var(--accent);font-weight:600}
+/* ===== v3.6.0 图片输入：按钮 + 文件名 + 缩略图预览 ===== */
+.img-pick{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;width:100%}
+.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.img-pick-btn{display:inline-flex;align-items:center;gap:6px;height:var(--control-h);padding:0 var(--space-3);
+  border:1px dashed color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--radius-md);
+  background:transparent;color:var(--text);font-size:var(--fs-sm);cursor:pointer;
+  transition:border-color var(--transition-fast),background var(--transition-fast)}
+.img-pick-btn:hover{border-color:var(--accent);background:var(--surface-hover)}
+.img-pick-btn svg{width:16px;height:16px;flex-shrink:0}
+.img-pick-name{font-size:var(--fs-xs);color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.img-preview{width:var(--control-h);height:var(--control-h);object-fit:cover;border-radius:var(--radius-sm);border:1px solid var(--line);flex-shrink:0}
 </style>
 </head>
 <body>
@@ -4968,10 +4979,10 @@ select{appearance:none;-webkit-appearance:none;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.9"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.6.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910c";
+const BUILD_TAG = "20260910d";
 
 
 
@@ -6638,6 +6649,9 @@ const DEFAULT_LINKS = [
 const CUSTOM_SC_KEY = PREFIX + "scenarios_custom";      // 自定义场景列表
 const SC_OVERRIDE_KEY = PREFIX + "scenarios_overrides"; // 内置场景改名/换色覆盖
 const BUILTIN_SC_KEYS = ["office","design","study","data","code","life","health"];
+/* v3.6.0：预置但默认隐藏的场景——定义保留在 SCENARIOS 里，由商店插件启用后进入 ORDER。
+   理财即此类：默认不出现在侧栏，用户到「商店 → 场景」安装并启用「理财助手」才出现。 */
+const PRESET_SC_KEYS = ["finance"];
 const CUSTOM_ICON_KEYS = ["tag","overview","plus","check","chat","download","upload","gear","theme","stats","copy","trash"];
 /* 内置场景原始 name/color 快照（覆盖前保存，供重置与幂等重注册） */
 const SC_ORIGINALS = {};
@@ -6712,8 +6726,8 @@ function registerCustomScenarios(){
     if(o && typeof o.name === "string" && o.name.trim()) base.name = o.name.trim();
     if(o && typeof o.color === "string" && /^#[0-9a-fA-F]{6}$/.test(o.color)) base.color = o.color;
   });
-  // ② 移除上一轮注册的自定义场景（幂等重注册）
-  Object.keys(SCENARIOS).forEach(k => { if(!BUILTIN_SC_KEYS.includes(k)) delete SCENARIOS[k]; });
+  // ② 移除上一轮注册的自定义场景（幂等重注册）；预置场景（PRESET_SC_KEYS）保留定义但退出 ORDER
+  Object.keys(SCENARIOS).forEach(k => { if(!BUILTIN_SC_KEYS.includes(k) && !PRESET_SC_KEYS.includes(k)) delete SCENARIOS[k]; });
   for(let i = ORDER.length - 1; i >= 0; i--){ if(!BUILTIN_SC_KEYS.includes(ORDER[i])) ORDER.splice(i, 1); }
   // ③ 注册当前自定义场景
   loadCustomScenarios().forEach(s => {
@@ -6724,10 +6738,46 @@ function registerCustomScenarios(){
   // ④ 注册插件场景（随启用插件动态，非持久化）
   const ps = (typeof getPluginScenarios === "function") ? getPluginScenarios() : {};
   Object.keys(ps).forEach(key => {
-    if(SCENARIOS[key]) return; // 键冲突防御
+    if(SCENARIOS[key]){ // 预置场景（如 finance）：定义已在，只补进 ORDER（不覆盖专属字段/卡片）
+      if(ORDER.indexOf(key) < 0) ORDER.push(key);
+      return;
+    }
     SCENARIOS[key] = pluginScenarioToEntry(key, ps[key]);
     ORDER.push(key);
   });
+  // ⑤ 插件场景专属增强：插件只给骨架（标题/备注），这里按场景补上专属 tab 与记录字段
+  _applyPluginScenarioPresets();
+}
+
+/**
+ * v3.6.0：给商店插件场景补专属能力（幂等，registerCustomScenarios 每次调用后重放）。
+ * 阅读插件启用后：侧栏出现「阅读」场景，并挂上阅读 tab（复用 study 里保留的渲染器/字段绑定），
+ * 记录字段从通用「标题/备注」升级为书籍字段。停用后 SCENE_FEATURES.reading 留着也无副作用。
+ * @returns {void}
+ */
+function _applyPluginScenarioPresets(){
+  try{
+    if(!SCENARIOS.reading) return;
+    const sc = SCENARIOS.reading;
+    // 插件骨架只给「标题/备注」资料库——概览记录沿用通用骨架（与 study 场景一致），
+    // 真正的书籍跟踪放在专属「阅读」tab 里（字段/统计/筛选都是现成的）
+    sc.color = "#3498db";
+    sc.sysprompt = t("sysprompt.reading", "你是一个阅读助手，帮用户管理书籍、跟踪阅读进度、整理读书笔记与摘录，并给出选书与精读建议。");
+    if(!SCENE_FEATURES.reading){
+      SCENE_FEATURES.reading = [
+        { id:"overview", type:"core",   label:t("tab.overview", "概览") },
+        { id:"reading",  type:"record", label:t("tab.reading", "阅读") }
+      ];
+    }
+    const rf = SCENE_FEATURE_RENDER.study && SCENE_FEATURE_RENDER.study.reading;
+    if(rf && !(SCENE_FEATURE_RENDER.reading && SCENE_FEATURE_RENDER.reading.reading)){
+      SCENE_FEATURE_RENDER.reading = { reading: rf };
+    }
+    const rb = SCENE_FEATURE_BIND.study && SCENE_FEATURE_BIND.study.reading;
+    if(rb && !(SCENE_FEATURE_BIND.reading && SCENE_FEATURE_BIND.reading.reading)){
+      SCENE_FEATURE_BIND.reading = { reading: rb };
+    }
+  }catch(_){ /* 插件增强失败不影响主流程 */ }
 }
 registerCustomScenarios(); // 模块顶层：先于 07-store 的 chats/active 初始化
 
@@ -13379,7 +13429,7 @@ function renderHelp(){
           <p><b data-i18n="help.featIntegrations">集成中心</b>：设置抽屉「集成」Tab 列出 7 个外部集成（Notion/Linear/Jira/Slack/飞书/钉钉/日历）+ OpenAPI Key 管理。每个集成可配置凭据后连接。</p>
           <p><b data-i18n="help.featOauth">OAuth 授权</b>（日历）：v3.1.2 起日历集成支持 OAuth 授权——在凭据弹窗填入服务商控制台注册的 Client ID，<code>点击 OAuth 授权</code> 自动获取 Access Token。redirect_uri 需登记 <code>http://127.0.0.1:8124/oauth/callback</code>（仅 Electron 版支持）。</p>
           <p><b>SQL Playground</b>：编程场景 SQL 标签，sql.js WASM 本地 SQLite 沙箱执行（无服务端）。</p>
-          <p><b data-i18n="help.featPluginMarket">插件市场</b>：侧栏「商店」9 个内置插件（pomodoro/reading/budget/health/habit-tracker/weather/quote/focus-timer/mindmap），当前仅 health 真正接线，其余多为占位——见插件卡片描述。</p>
+          <p><b data-i18n="help.featPluginMarket">插件市场</b>：侧栏「商店」内置插件（pomodoro/reading/finance/budget/health/habit-tracker/weather/quote/focus-timer/mindmap），其中 reading/finance 启用后会在侧栏新增「阅读」「理财」场景，health/budget 挂专属卡片——见插件卡片描述。</p>
           <p><b data-i18n="help.featRecycle">回收站多类型</b>（v3.1 起）：软删任务与卸载/重置的配置/文件/插件均入「回收站」页（侧栏系统组），可恢复或彻底删除；自动清理策略在设置抽屉「外观」或回收站页可调（off/7/30/90 天）。</p>
         `)}
         ${helpSection("aiAdvanced", t("help.aiAdvanced", "AI 进阶"), `
@@ -14548,7 +14598,7 @@ function renderToolboxPage(){
 let _storeCat = "全部"; // v3.1：商店页分类筛选：全部/效率/功能/场景/其他
 const PLUGIN_CATEGORIES = { // v3.1：内置插件分类映射
   "pomodoro":"效率", "habit-tracker":"效率", "focus-timer":"效率",
-  "reading":"场景",
+  "reading":"场景", "finance":"场景",
   "budget":"功能", "health":"功能", "weather":"功能", "quote":"功能", "mindmap":"功能"
 };
 function _pluginCategory(p){
@@ -16287,8 +16337,8 @@ function renderMainHTML(){
       const opts = (f.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
       inp = `<select name="${f.k}">${opts}</select>`;
     } else if(f.type==="image"){
-      // v3.2 C-档：图片字段——file input（accept 图片，multiple 不开），提交时读为 Blob 存 IDB
-      inp = `<input name="${f.k}" type="file" accept="image/*" data-rec-img="1">`;
+      // v3.6.0：图片字段——隐藏原生 input，用按钮触发 + 文件名 + 缩略图预览（对齐主流做法）
+      inp = `<div class="img-pick"><label class="img-pick-btn">${ic("upload")}<input name="${f.k}" type="file" accept="image/*" data-rec-img="1" class="img-pick-input"><span>${t("field.pickImage","选择图片")}</span></label><span class="img-pick-name" data-img-name="1">${t("field.noImage","未选择")}</span></div>`;
     } else {
       const ph = f.placeholder || f.label;
       inp = `<input name="${f.k}" type="${f.type==="number"?"number":"text"}" placeholder="${esc(ph)}" maxlength="500">`;
@@ -21850,6 +21900,37 @@ function _moveDrawerToMainWrap(){
  */
 /* v3.5.7：窗口尺寸变化时重算 drawer 宽度 */
 try{ window.addEventListener("resize", function(){ try{ _enforceDrawerWidth(); }catch(_){} }); }catch(_){}
+/* ---------- v3.6.0 图片输入：选图后显示文件名与缩略图 ---------- */
+document.addEventListener("change", function (e) {
+  var inp = e.target;
+  if (!inp || !inp.matches || !inp.matches("[data-rec-img]")) return;
+  var box = inp.closest ? inp.closest(".img-pick") : null;
+  if (!box) return;
+  var nameEl = box.querySelector("[data-img-name]");
+  var prev = box.querySelector(".img-preview");
+  if (prev) prev.remove();
+  var f = inp.files && inp.files[0];
+  if (!f) { if (nameEl) nameEl.textContent = t("field.noImage", "未选择"); return; }
+  if (nameEl) nameEl.textContent = f.name + " · " + Math.max(1, Math.round(f.size / 1024)) + " KB";
+  var img = document.createElement("img");
+  img.className = "img-preview";
+  img.alt = "";
+  var _put = function (url, revoke) {
+    img.onload = function () { if (revoke) setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 8000); };
+    img.src = url;
+    box.appendChild(img);
+  };
+  var url = null;
+  try { url = URL.createObjectURL(f); } catch (_) { url = null; }
+  if (url) { _put(url, true); return; }
+  // createObjectURL 不可用时退回 FileReader（老内核 / 受限环境）
+  try {
+    var fr = new FileReader();
+    fr.onload = function () { _put(String(fr.result), false); };
+    fr.readAsDataURL(f);
+  } catch (_) {}
+});
+
 /* ---------- v3.5.7 自建下拉：拦截 select 点击，渲染统一风格面板 ---------- */
 var _selPanel = null, _selTarget = null;
 function _closeSelPanel(){ if(_selPanel){ try{ _selPanel.remove(); }catch(_){} _selPanel = null; _selTarget = null; } }
@@ -25736,6 +25817,7 @@ const MESSAGES = {
     "sysprompt.office": "你是一个专业的办公效率助手，帮用户梳理任务、写会议纪要、润色邮件与文档。回答简洁、可执行。",
     "sysprompt.design": "你是一个设计创意助手，擅长视觉设计建议、配色方案、版式构图与创意灵感激发。回答有画面感、可落地。",
     "sysprompt.study": "你是一个学习方法教练，擅长制定学习计划、拆解知识点、记忆与复习策略。",
+    "sysprompt.reading": "你是一个阅读助手，帮用户管理书籍、跟踪阅读进度、整理读书笔记与摘录，并给出选书与精读建议。",
     "sysprompt.data": "你是一个数据分析助手，擅长数据清洗、指标拆解、图表选型与洞察提炼。回答用数据说话、结论明确。",
     "sysprompt.code": "你是一个资深全栈工程师，擅长代码实现、调试与架构建议。给出可直接运行的代码并解释关键点。",
     "sysprompt.life": "你是一个生活与健康管家，帮用户管理日常事务、运动记录、体重追踪、睡眠记录和喝水提醒。回答实用、贴心、有条理。",
@@ -27669,6 +27751,10 @@ const MESSAGES = {
     "plugin.reading.name": "阅读管理",
     "plugin.reading.desc": "书籍阅读进度跟踪与读书笔记",
     "plugin.reading.scenarioName": "阅读",
+    "plugin.finance.name": "理财助手",
+    "plugin.finance.desc": "收支记账、基金与股票持仓跟踪，启用后新增「理财」场景",
+    "plugin.finance.scenarioName": "理财",
+    "plugin.finance.scenarioDesc": "个人理财",
     "plugin.budget.name": "预算追踪",
     "plugin.budget.desc": "日常开支记录与预算管理",
     "plugin.budget.cardName": "预算概览",
@@ -27798,6 +27884,8 @@ const MESSAGES = {
     "field.exercise": "运动",
     "field.image": "图片",
     "field.imgTooLarge": "图片过大（上限 4MB）",
+    "field.pickImage": "选择图片",
+    "field.noImage": "未选择",
     "field.item": "物品",
     "field.metricValue": "指标数值",
     "field.model": "模型",
@@ -29096,6 +29184,7 @@ const MESSAGES = {
     "sysprompt.office": "You are a professional office productivity assistant, helping users organize tasks, write meeting minutes, and polish emails and documents. Answers should be concise and actionable.",
     "sysprompt.design": "You are a design creative assistant, skilled in visual design suggestions, color schemes, layout and creative inspiration. Answers should be vivid and practical.",
     "sysprompt.study": "You are a learning method coach, skilled in study plans, knowledge decomposition, and memory/review strategies.",
+    "sysprompt.reading": "You are a reading assistant, helping users manage books, track reading progress, organize notes and excerpts, and choose what to read next.",
     "sysprompt.data": "You are a data analysis assistant, skilled in data cleaning, metric decomposition, chart selection and insight extraction. Answers should be data-driven with clear conclusions.",
     "sysprompt.code": "You are a senior full-stack engineer, skilled in code implementation, debugging and architecture. Provide runnable code and explain key points.",
     "sysprompt.life": "You are a life and health butler, helping users manage daily affairs, exercise records, weight tracking, sleep records and hydration reminders. Answers should be practical, caring and organized.",
@@ -31053,6 +31142,10 @@ const MESSAGES = {
     "plugin.reading.name": "Reading Management",
     "plugin.reading.desc": "Book reading progress tracking and reading notes",
     "plugin.reading.scenarioName": "Reading",
+    "plugin.finance.name": "Finance Assistant",
+    "plugin.finance.desc": "Income/expense tracking, fund and stock holdings; adds a Finance scene when enabled",
+    "plugin.finance.scenarioName": "Finance",
+    "plugin.finance.scenarioDesc": "Personal finance",
     "plugin.budget.name": "Budget Tracking",
     "plugin.budget.desc": "Daily expense recording and budget management",
     "plugin.budget.cardName": "Budget Overview",
@@ -31181,6 +31274,8 @@ const MESSAGES = {
     "field.exercise": "Exercise",
     "field.image": "Image",
     "field.imgTooLarge": "Image too large (max 4MB)",
+    "field.pickImage": "Choose image",
+    "field.noImage": "No file selected",
     "field.item": "Item",
     "field.metricValue": "Metric value",
     "field.model": "Model",
@@ -32904,6 +32999,22 @@ const BUILTIN_PLUGINS = [
       icon: '',
       color:"#3498db",
       desc: t("plugin.reading.scenarioDesc", "阅读管理")
+    }]
+  },
+  {
+    /* v3.6.0：理财不再默认占场景位——改为商店可添加项，启用后「理财」场景进入侧栏。
+       场景定义（记录字段/专属卡/统计 tab）复用 SCENARIOS.finance 预置定义，见 PRESET_SC_KEYS。 */
+    id: "finance",
+    name: t("plugin.finance.name", "理财助手"),
+    version: "1.0.0",
+    description: t("plugin.finance.desc", "收支记账、基金与股票持仓跟踪，启用后新增「理财」场景"),
+    enabled: false,
+    scenarios: [{
+      key: "finance",
+      name: t("plugin.finance.scenarioName", "理财"),
+      icon: '',
+      color:"#c9a227",
+      desc: t("plugin.finance.scenarioDesc", "个人理财")
     }]
   },
   {
