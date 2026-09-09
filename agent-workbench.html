@@ -804,17 +804,21 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* v3.5.4：场景功能导航条与卡片同宽居中（此前 nav 与 card 左右边不一致） */
 .main > .set-nav,.main > .scene-feat-nav{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
 /* v3.5.8：drawer 页滚动交给 .main-wrap（滚动条贴窗口右侧）；子级强制拉伸 */
+/* v3.6.0 布局统一：drawer 页（AI/设置/插件/知识）与 #main 页共用同一套宽度规则——
+   宽度约束落在子级（同 .main > *），drawer 自身只负责铺满 .main-wrap。
+   此前约束在 drawer 自身：drawer 的 padding 吃掉 2×32px，宽屏下卡片比主页窄 64px；
+   且 CSS 的 width:auto !important + margin:0 auto !important 让 drawer 退化为 fit-content 居中，
+   设置页内容偏窄时整页缩到 990px 而 AI 页 1055px——同层级宽度不一致。 */
 #drawer.drawer-page{overflow:visible !important;display:flex !important;flex-direction:column !important;align-items:stretch !important}
-#drawer.drawer-page > *{width:100% !important;max-width:100% !important;align-self:stretch !important;box-sizing:border-box}
 /* ===== v3.5.3 全站布局统一标准 ===== */
 :root{--card-gap:var(--space-3)}
 .card,.drawer-ph,.set-card,.stats-card,.cal-widget,.help-page,.recycle-card,.overview-grid,.overview-4cards{margin-bottom:var(--card-gap) !important}
 .main > *{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
-/* v3.5.5：drawer 页（AI/设置/插件）由 .drawer-page 单层居中，子级一律填满——
-   此前子级各自 max-width+居中，导致不同 tab 的内层容器宽度不一致（扩展 tab 偏窄） */
-.drawer-page > *{width:100% !important;max-width:100% !important;margin-left:0 !important;margin-right:0 !important}
+/* v3.6.0：drawer 子级与 .main > * 同规则（同样 max-width + 居中），跨页卡片宽度逐像素一致 */
+#drawer.drawer-page > *,
+.drawer-page > *{width:100% !important;max-width:var(--content-max) !important;margin-left:auto !important;margin-right:auto !important;align-self:stretch !important;box-sizing:border-box}
 .drawer-page .ai-section,.drawer-page .ext-collapse,.drawer-page details,.drawer-page .set-card{width:100%;box-sizing:border-box}
-.drawer-page{width:100% !important;max-width:var(--content-max) !important;margin-left:auto !important;margin-right:auto !important;align-self:stretch !important;box-sizing:border-box}
+.drawer-page{width:100% !important;max-width:none !important;margin:0 !important;align-self:stretch !important;box-sizing:border-box}
 /* v3.5.1：表单控件等高统一 + 文件输入按钮化 + 备注自动延伸 */
 .form-row .fld > input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
 .form-row .fld > select,
@@ -1899,7 +1903,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .drawer-page{
   position:relative !important;
   top:auto !important; right:auto !important;
-  height:auto !important; width:auto !important; max-width:var(--content-max) !important;
+  height:auto !important; width:100% !important; max-width:none !important;
   transform:none !important;
   border-left:none !important;
   box-shadow:none !important;
@@ -1916,7 +1920,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    /* v3.1.1+：transparent 与 #main 一致——待办栏/标题栏/卡片浮在同一张 .app 底布上（canvas-glow 全局统一透出） */
   border:none;
   border-radius:0;
-  margin:0 auto !important;
+  /* v3.6.0：不再 auto 居中——width:100% + align-self:stretch 铺满 .main-wrap，
+     宽度约束交给子级规则（margin:auto 会让 flex 项退化为 fit-content，见上方注释） */
+  margin:0 !important;
   min-width:0;
   min-height:0;
 }
@@ -2115,7 +2121,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .feat-tag-record{background:var(--surface-muted,var(--line));color:var(--muted)}
 /* 设置页尾栏（与其他页面 foot 一致，宽度铺满、文本居中）；
    v2.0.3：margin-top:auto 让尾栏永远在最下——内容不足一屏时贴底，超出时滚到底才出现 */
-.drawer-page > .foot{margin:auto 0 0}
+.drawer-page > .foot{margin:auto auto 0}
 /* v3.1.1：drawer-ph margin-top 响应式覆盖已删除——padding-top 由 drawer-page 绝断点提供 */
 /* 窄屏：表单标签上置（v2.1.1：断点统一为主移动断点 767px，消除 721~767px 双列挤压） */
 @media (max-width:767px){
@@ -4982,7 +4988,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910d";
+const BUILD_TAG = "20260910e";
 
 
 
@@ -21893,13 +21899,11 @@ function _moveDrawerToMainWrap(){
 }
 /* 把 #drawer 移回原位置（#overlay 之后），恢复 #main 显示 */
 /**
- * v3.5.7：强制 drawer 页（AI/设置/插件/知识）内容宽度统一。
- * CSS 层被既有规则反复覆盖（不同 tab 内容宽度 605~1300px 不等），
- * 改为打开时写内联样式——优先级最高，一次生效。
+ * v3.6.0：清理 drawer 页（AI/设置/插件/知识）上的旧内联宽度/边距。
+ * 宽度统一已回归 CSS（.drawer-page 铺满 + 子级 max-width:var(--content-max)，与 .main > * 同规则）；
+ * 本函数只负责抹掉 v3.5.7~v3.5.8 期间写入的内联样式，避免与 CSS 打架。
  * @returns {void}
  */
-/* v3.5.7：窗口尺寸变化时重算 drawer 宽度 */
-try{ window.addEventListener("resize", function(){ try{ _enforceDrawerWidth(); }catch(_){} }); }catch(_){}
 /* ---------- v3.6.0 图片输入：选图后显示文件名与缩略图 ---------- */
 document.addEventListener("change", function (e) {
   var inp = e.target;
@@ -21976,25 +21980,11 @@ function _enforceDrawerWidth(){
   try{
     const dr = document.getElementById("drawer");
     if(!dr || !dr.classList.contains("drawer-page")) return;
-    /* 用百分比而非像素：侧栏折叠/展开后无需重算，避免宽度快照僵化 */
-    dr.style.width = "100%";
-    dr.style.maxWidth = "min(100%, 1440px)";
-    dr.style.marginLeft = "auto";
-    dr.style.marginRight = "auto";
-    dr.style.alignSelf = "stretch";
-    dr.style.boxSizing = "border-box";
-    /* 关键：flex 列 + stretch 强制所有子级同宽（逐元素 width 会被内层 !important 干扰） */
-    dr.style.display = "flex";
-    dr.style.flexDirection = "column";
-    dr.style.alignItems = "stretch";
-    /* 滚动交给 .main-wrap——drawer 自己滚会让滚动条停在内容右边缘而非窗口右侧 */
-    dr.style.overflow = "visible";
-    dr.style.overflowY = "visible";
+    /* v3.6.0：宽度统一改由 CSS 负责（.drawer-page 铺满 .main-wrap + 子级 max-width:var(--content-max)，
+       与 .main > * 同规则）。此处只清理旧版本写下的内联宽度/边距，避免残留内联样式与 CSS 打架。 */
+    ["width","maxWidth","marginLeft","marginRight","alignSelf","boxSizing","display","flexDirection","alignItems","overflow","overflowY"].forEach(function(p){ dr.style[p] = ""; });
     Array.prototype.forEach.call(dr.children, function(c){
-      c.style.width = "100%";
-      c.style.maxWidth = "none";
-      c.style.boxSizing = "border-box";
-      c.style.flexShrink = "0";
+      c.style.width = ""; c.style.maxWidth = ""; c.style.boxSizing = ""; c.style.flexShrink = "";
     });
   }catch(_){}
 }
