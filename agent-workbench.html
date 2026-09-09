@@ -3732,6 +3732,17 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .side.collapsed .nav-item .side-caret{display:none}
 .side.collapsed .nav-item svg,
 .side.collapsed .side-toggle svg{margin:0 auto;display:block}
+/* ===== v3.5.3 图表画布 ===== */
+.dgm-toolbar{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2)}
+.dgm-toolbar .dgm-sel{height:var(--control-h);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);color:var(--text);font-size:var(--fs-sm);padding:0 var(--space-2)}
+.dgm-wrap{border:1px solid var(--line);border-radius:var(--radius-lg);background:color-mix(in srgb,var(--panel) 40%,transparent);overflow:auto}
+.dgm-svg{display:block;width:100%;height:auto;max-height:70vh;color:var(--muted)}
+.dgm-node-shape{fill:color-mix(in srgb,var(--panel) 85%,transparent);stroke:var(--line);stroke-width:1.5;cursor:move;transition:stroke .15s}
+.dgm-node-shape:hover{stroke:var(--accent)}
+.dgm-node-shape.dgm-selected{stroke:var(--accent);stroke-width:2.5;filter:drop-shadow(0 0 6px var(--accent-soft))}
+.dgm-node-text{font-size:13px;text-anchor:middle;fill:var(--text);pointer-events:none;user-select:none}
+.dgm-edge{stroke:var(--muted);stroke-width:1.5}
+.dgm-edge-label{font-size:11px;text-anchor:middle;fill:var(--muted)}
 </style>
 </head>
 <body>
@@ -4926,10 +4937,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.3"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.5.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260909c";
+const BUILD_TAG = "20260909d";
 
 
 
@@ -6551,6 +6562,7 @@ const SCENE_FEATURES = {
   ],
   design: [
     { id:"overview", type:"core", label:t("tab.overview", "概览") },
+    { id:"canvas", type:"tool",     label:t("tab.canvas", "画布") },
     { id:"cad", type:"record",      label:"CAD" },
     { id:"image", type:"record",    label:t("tab.image", "图片") },
     { id:"ui", type:"record",       label:"UI" },
@@ -14911,6 +14923,274 @@ document.addEventListener("click", function (e) {
 /* ---------- 启动时初始化 ov4 委托 ---------- */
 try { _bindOv4Cards(); } catch (_) {}
 
+/* ---------- v3.5.3 图表画布（思维导图 / 流程图 / 架构图 / 拓扑图） ---------- */
+const DIAGRAM_KEY = PREFIX + "diagram";
+var _dgmSel = null;          // 当前选中节点 id
+var _dgmLinkFrom = null;     // 连线模式起点
+var _dgmLinkMode = false;
+
+function _dgmLoad() {
+  try { return JSON.parse(localStorage.getItem(DIAGRAM_KEY) || "null"); } catch (_) { return null; }
+}
+function _dgmSave(d) {
+  try { localStorage.setItem(DIAGRAM_KEY, JSON.stringify(d)); } catch (_) {}
+}
+function _dgmUid() { return "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+/** 预设模板：返回 {nodes, edges} */
+function _dgmPreset(kind) {
+  const nodes = [], edges = [];
+  const N = function (x, y, text, shape, color) {
+    const n = { id: _dgmUid(), x: x, y: y, w: 130, h: 46, text: text, shape: shape || "rect", color: color || "" };
+    nodes.push(n); return n;
+  };
+  const E = function (a, b, label) { edges.push({ from: a.id, to: b.id, label: label || "" }); };
+  if (kind === "mind") {
+    const root = N(360, 230, t("dgm.center","中心主题"), "ellipse", "var(--accent)");
+    const kids = [["分支 1", 90, 70], ["分支 2", 90, 230], ["分支 3", 90, 390], ["分支 4", 640, 70], ["分支 5", 640, 230], ["分支 6", 640, 390]];
+    kids.forEach(function (k) { const n = N(k[1], k[2], t("dgm.branch","分支") + " " + (nodes.length), "round"); E(root, n); });
+  } else if (kind === "flow") {
+    const a = N(360, 40, t("dgm.start","开始"), "round");
+    const b = N(360, 150, t("dgm.step","步骤一"));
+    const c = N(360, 260, t("dgm.step","步骤二"));
+    const d = N(360, 370, t("dgm.decision","判断"), "diamond");
+    const e = N(620, 370, t("dgm.end","结束"), "round");
+    E(a, b); E(b, c); E(c, d, t("dgm.yes","是")); E(d, e, t("dgm.no","否"));
+  } else if (kind === "arch") {
+    const ui = N(80, 60, t("dgm.layerUi","前端层"), "round", "var(--accent-2)");
+    const api = N(80, 190, t("dgm.layerApi","接口层"));
+    const svc = N(80, 320, t("dgm.layerSvc","服务层"));
+    const db = N(560, 190, t("dgm.layerDb","数据层"), "round");
+    E(ui, api); E(api, svc); E(api, db);
+  } else if (kind === "topo") {
+    const hub = N(360, 230, t("dgm.hub","核心节点"), "ellipse", "var(--accent)");
+    [[80, 80], [360, 60], [640, 80], [80, 380], [360, 400], [640, 380]].forEach(function (p) {
+      const n = N(p[0], p[1], t("dgm.node","节点") + " " + (nodes.length), "round"); E(hub, n);
+    });
+  } else {
+    N(360, 220, t("dgm.newNode","新节点"));
+  }
+  return { nodes: nodes, edges: edges };
+}
+
+function _dgmSvgHtml(d) {
+  const nodes = d.nodes || [], edges = d.edges || [];
+  const byId = {}; nodes.forEach(function (n) { byId[n.id] = n; });
+  let out = "";
+  // 连线
+  edges.forEach(function (e) {
+    const a = byId[e.from], b = byId[e.to];
+    if (!a || !b) return;
+    const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2;
+    const mx = (ax + bx) / 2, my = (ay + by) / 2;
+    out += '<line class="dgm-edge" x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '" marker-end="url(#dgmArrow)"></line>';
+    if (e.label) out += '<text class="dgm-edge-label" x="' + mx + '" y="' + (my - 6) + '">' + esc(e.label) + '</text>';
+  });
+  // 节点
+  nodes.forEach(function (n) {
+    const sel = (_dgmSel === n.id) ? " dgm-selected" : "";
+    const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+    const fill = n.color ? ' style="fill:' + n.color + ';fill-opacity:.18;stroke:' + n.color + '"' : '';
+    let shape;
+    if (n.shape === "ellipse") shape = '<ellipse class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" cx="' + cx + '" cy="' + cy + '" rx="' + (n.w / 2) + '" ry="' + (n.h / 2) + '"' + fill + '></ellipse>';
+    else if (n.shape === "round") shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" rx="' + (n.h / 2) + '"' + fill + '></rect>';
+    else if (n.shape === "diamond") shape = '<polygon class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" points="' + cx + ',' + n.y + ' ' + (n.x + n.w) + ',' + cy + ' ' + cx + ',' + (n.y + n.h) + ' ' + n.x + ',' + cy + '"' + fill + '></polygon>';
+    else shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" rx="6"' + fill + '></rect>';
+    out += shape + '<text class="dgm-node-text" data-dgm="' + n.id + '" x="' + cx + '" y="' + (cy + 4) + '">' + esc(n.text || "") + '</text>';
+  });
+  return out;
+}
+
+function _renderDiagramCanvas() {
+  var d = _dgmLoad() || _dgmPreset("free");
+  _dgmSave(d);
+  var html = '<div class="card"><h2>' + ic("stats") + ' ' + t("dgm.title","图表画布") + '</h2>'
+    + '<div class="dgm-toolbar">'
+    + '<select id="dgmPresetSel" class="dgm-sel">'
+    + '<option value="free">' + t("dgm.preset.free","自由布局") + '</option>'
+    + '<option value="mind">' + t("dgm.preset.mind","思维导图") + '</option>'
+    + '<option value="flow">' + t("dgm.preset.flow","流程图") + '</option>'
+    + '<option value="arch">' + t("dgm.preset.arch","架构图") + '</option>'
+    + '<option value="topo">' + t("dgm.preset.topo","拓扑图") + '</option>'
+    + '</select>'
+    + '<button type="button" class="addbtn sm" id="dgmAdd" data-sc="accent">' + t("dgm.addNode","+ 节点") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmLink" data-sc="muted">' + t("dgm.link","连线") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmDel" data-sc="danger-muted">' + t("dgm.del","删除选中") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmExportSvg" data-sc="muted">' + t("dgm.exportSvg","导出 SVG") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmExportPng" data-sc="muted">' + t("dgm.exportPng","导出 PNG") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmClearAll" data-sc="danger-muted">' + t("dgm.clear","清空") + '</button>'
+    + '</div>'
+    + '<p class="sub">' + t("dgm.hint","拖拽移动节点 · 双击改文字 · 点「连线」后依次点两个节点建立连线") + '</p>'
+    + '<div class="dgm-wrap"><svg id="dgmCanvas" class="dgm-svg" viewBox="0 0 860 520" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><marker id="dgmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path></marker></defs>'
+    + _dgmSvgHtml(d)
+    + '</svg></div></div>';
+  /* 功能卡渲染器必须「返回 HTML」（由场景渲染器插入），插入后再绑定交互 */
+  setTimeout(function () { try { _dgmBind(); } catch (_) {} }, 0);
+  return html;
+}
+
+function _renderDiagramCanvas() {
+  var d = _dgmLoad() || _dgmPreset("free");
+  _dgmSave(d);
+  var html = '<div class="card"><h2>' + ic("stats") + ' ' + t("dgm.title","图表画布") + '</h2>'
+    + '<div class="dgm-toolbar">'
+    + '<select id="dgmPresetSel" class="dgm-sel">'
+    + '<option value="free">' + t("dgm.preset.free","自由布局") + '</option>'
+    + '<option value="mind">' + t("dgm.preset.mind","思维导图") + '</option>'
+    + '<option value="flow">' + t("dgm.preset.flow","流程图") + '</option>'
+    + '<option value="arch">' + t("dgm.preset.arch","架构图") + '</option>'
+    + '<option value="topo">' + t("dgm.preset.topo","拓扑图") + '</option>'
+    + '</select>'
+    + '<button type="button" class="addbtn sm" id="dgmAdd" data-sc="accent">' + t("dgm.addNode","+ 节点") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmLink" data-sc="muted">' + t("dgm.link","连线") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmDel" data-sc="danger-muted">' + t("dgm.del","删除选中") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmExportSvg" data-sc="muted">' + t("dgm.exportSvg","导出 SVG") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmExportPng" data-sc="muted">' + t("dgm.exportPng","导出 PNG") + '</button>'
+    + '<button type="button" class="addbtn sm" id="dgmClearAll" data-sc="danger-muted">' + t("dgm.clear","清空") + '</button>'
+    + '</div>'
+    + '<p class="sub">' + t("dgm.hint","拖拽移动节点 · 双击改文字 · 点「连线」后依次点两个节点建立连线") + '</p>'
+    + '<div class="dgm-wrap"><svg id="dgmCanvas" class="dgm-svg" viewBox="0 0 860 520" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><marker id="dgmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path></marker></defs>'
+    + _dgmSvgHtml(d)
+    + '</svg></div></div>';
+  /* 功能卡渲染器必须「返回 HTML」（由场景渲染器插入），插入后再绑定交互 */
+  setTimeout(function () { try { _dgmBind(); } catch (_) {} }, 0);
+  return html;
+}
+
+function _dgmBind() {
+  var svg = $("#dgmCanvas"); if (!svg) return;
+  function redraw() {
+    var d = _dgmLoad() || { nodes: [], edges: [] };
+    var defs = svg.querySelector("defs");
+    svg.innerHTML = "";
+    if (defs) svg.appendChild(defs);
+    var tmp = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    tmp.innerHTML = _dgmSvgHtml(d);
+    while (tmp.firstChild) svg.appendChild(tmp.firstChild);
+    _dgmBind();
+  }
+  // 拖拽
+  var drag = null;
+  svg.addEventListener("mousedown", function (e) {
+    var t2 = e.target.closest ? e.target.closest("[data-dgm]") : null;
+    if (!t2) return;
+    var id = t2.getAttribute("data-dgm");
+    if (_dgmLinkMode) return; // 连线模式走 click
+    var d = _dgmLoad(); var n = (d.nodes || []).find(function (x) { return x.id === id; });
+    if (!n) return;
+    _dgmSel = id;
+    var pt = svg.getBoundingClientRect();
+    drag = { id: id, ox: e.clientX - pt.left * (860 / pt.width) - n.x, oy: e.clientY - pt.top * (520 / pt.height) - n.y };
+    e.preventDefault();
+  });
+  svg.addEventListener("mousemove", function (e) {
+    if (!drag) return;
+    var d = _dgmLoad(); var n = (d.nodes || []).find(function (x) { return x.id === drag.id; });
+    if (!n) return;
+    var pt = svg.getBoundingClientRect();
+    n.x = Math.max(0, Math.min(860 - n.w, e.clientX - pt.left * (860 / pt.width) - drag.ox));
+    n.y = Math.max(0, Math.min(520 - n.h, e.clientY - pt.top * (520 / pt.height) - drag.oy));
+    _dgmSave(d);
+    // 轻量重绘（拖拽中只更新该节点位置）
+    var shape = svg.querySelector('[data-dgm="' + n.id + '"]');
+    var txt = svg.querySelectorAll('[data-dgm="' + n.id + '"]');
+    redraw();
+  });
+  svg.addEventListener("mouseup", function () { if (drag) { drag = null; redraw(); } });
+  svg.addEventListener("mouseleave", function () { if (drag) { drag = null; redraw(); } });
+  // 选中 / 连线 / 改文字
+  svg.addEventListener("click", function (e) {
+    var t2 = e.target.closest ? e.target.closest("[data-dgm]") : null;
+    if (!t2) return;
+    var id = t2.getAttribute("data-dgm");
+    if (_dgmLinkMode) {
+      if (!_dgmLinkFrom) { _dgmLinkFrom = id; try { toast(t("dgm.pickSecond","已选起点，请点第二个节点"), "info"); } catch (_) {} }
+      else if (_dgmLinkFrom !== id) {
+        var d = _dgmLoad();
+        d.edges = d.edges || [];
+        d.edges.push({ from: _dgmLinkFrom, to: id, label: "" });
+        _dgmSave(d);
+        _dgmLinkFrom = null; _dgmLinkMode = false;
+        redraw();
+      }
+      return;
+    }
+    _dgmSel = id; redraw();
+  });
+  svg.addEventListener("dblclick", function (e) {
+    var t2 = e.target.closest ? e.target.closest("[data-dgm]") : null;
+    if (!t2) return;
+    var id = t2.getAttribute("data-dgm");
+    var d = _dgmLoad(); var n = (d.nodes || []).find(function (x) { return x.id === id; });
+    if (!n) return;
+    var v = prompt(t("dgm.editText","修改节点文字"), n.text || "");
+    if (v !== null) { n.text = v; _dgmSave(d); redraw(); }
+  });
+  // 工具栏
+  var sel = $("#dgmPresetSel");
+  if (sel) sel.onchange = function () {
+    if (!confirm(t("dgm.presetConfirm","切换模板会替换当前画布内容，确定？"))) { sel.value = ""; return; }
+    _dgmSave(_dgmPreset(sel.value));
+    _dgmSel = null; _dgmLinkFrom = null;
+    render();
+  };
+  var add = $("#dgmAdd");
+  if (add) add.onclick = function () {
+    var d = _dgmLoad(); d.nodes = d.nodes || [];
+    d.nodes.push({ id: _dgmUid(), x: 320 + Math.random() * 120, y: 200 + Math.random() * 100, w: 130, h: 46, text: t("dgm.newNode","新节点"), shape: "rect", color: "" });
+    _dgmSave(d); render();
+  };
+  var link = $("#dgmLink");
+  if (link) link.onclick = function () {
+    _dgmLinkMode = !_dgmLinkMode; _dgmLinkFrom = null;
+    try { toast(_dgmLinkMode ? t("dgm.linkOn","连线模式：依次点两个节点") : t("dgm.linkOff","已退出连线模式"), "info"); } catch (_) {}
+  };
+  var del = $("#dgmDel");
+  if (del) del.onclick = function () {
+    if (!_dgmSel) { try { toast(t("dgm.noneSel","请先点选一个节点"), "warn"); } catch (_) {} return; }
+    var d = _dgmLoad();
+    d.nodes = (d.nodes || []).filter(function (x) { return x.id !== _dgmSel; });
+    d.edges = (d.edges || []).filter(function (e) { return e.from !== _dgmSel && e.to !== _dgmSel; });
+    _dgmSel = null; _dgmSave(d); render();
+  };
+  var svgBtn = $("#dgmExportSvg");
+  if (svgBtn) svgBtn.onclick = function () {
+    var el = $("#dgmCanvas"); if (!el) return;
+    var src = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" width="860" height="520" style="background:#fff;color:#333">'
+      + '<style>.dgm-node-shape{fill:#fff;stroke:#333;stroke-width:1.5}.dgm-node-text{font:14px sans-serif;text-anchor:middle;fill:#222}.dgm-edge{stroke:#666;stroke-width:1.5}.dgm-edge-label{font:12px sans-serif;text-anchor:middle;fill:#666}</style>'
+      + el.innerHTML.replace(/<defs>[\s\S]*?<\/defs>/, '<defs><marker id="dgmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#666"></path></marker></defs>')
+      + '</svg>';
+    var blob = new Blob([src], { type: "image/svg+xml" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "diagram.svg"; a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+  };
+  var pngBtn = $("#dgmExportPng");
+  if (pngBtn) pngBtn.onclick = function () {
+    var el = $("#dgmCanvas"); if (!el) return;
+    var src = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" width="860" height="520" style="background:#fff;color:#333">'
+      + '<style>.dgm-node-shape{fill:#fff;stroke:#333;stroke-width:1.5}.dgm-node-text{font:14px sans-serif;text-anchor:middle;fill:#222}.dgm-edge{stroke:#666;stroke-width:1.5}.dgm-edge-label{font:12px sans-serif;text-anchor:middle;fill:#666}</style>'
+      + el.innerHTML
+      + '</svg>';
+    var img = new Image();
+    img.onload = function () {
+      var cv = document.createElement("canvas"); cv.width = 860; cv.height = 520;
+      var cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, 860, 520); cx.drawImage(img, 0, 0);
+      cv.toBlob(function (b) {
+        var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "diagram.png"; a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+      });
+    };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(src);
+  };
+  var clr = $("#dgmClearAll");
+  if (clr) clr.onclick = function () {
+    if (!confirm(t("dgm.clearConfirm","清空画布？"))) return;
+    _dgmSave({ nodes: [], edges: [] }); _dgmSel = null; _dgmLinkFrom = null; render();
+  };
+}
 /* ---------- v3.5.2 定时工作流调度器 ---------- */
 function _wfParseTime(v){ const m = /^(\d{1,2}):(\d{2})$/.exec(String(v||"")); return m ? {h:+m[1], m:+m[2]} : {h:9,m:0}; }
 function _wfDueAt(f, now){
@@ -16018,7 +16298,7 @@ const SCENE_FEATURE_RENDER = {
   office: {},
   study: {},
   data: {},
-  design: {},
+  design: { canvas: function(){ return _renderDiagramCanvas(); } },
   code: {},
   life: {},
   /* v3.5.2：新场景功能 tab 渲染器（函数声明提升，_renderHealthTrend/_renderFinanceStats 定义在下方） */
@@ -16587,7 +16867,7 @@ const SCENE_FEATURE_BIND = {
   },
   study: {
     knowledge: { key:"knowledge", fieldKeys:["title","category","source","importance","tags","content"] },
-    reading:   { key:"reading",   fieldKeys:["book","author","excerpt","note","progress"] },
+    reading:   { key:"reading",   fieldKeys:["book","author","status","progress","rating","startDate","finishDate","excerpt","note"] },
 exercise:  { key:"exercises", fieldKeys:["subject","question","answer","correct","explain"],
   // v3.2 任务四阶段二：错题自动入 SM-2 复习（正确率 < 70 视为错题 → 写入 rec_study 复习队列）
   onSave:function(rec){
@@ -17028,25 +17308,38 @@ SCENE_FEATURE_RENDER.study = {
     });
   },
   reading: function(){
+    /* v3.5.3 阅读场景完善：状态/评分/起止日期/摘录与笔记分离 + 四维统计 */
     return _featureCardHtml({
       key:"reading", title:t("tool.reading.name","阅读笔记"), icon:ic("book"),
       fields:[
         {k:"book", label:t("field.bookName","书名"), type:"text"},
         {k:"author", label:t("field.author","作者"), type:"text"},
-        {k:"excerpt", label:t("field.excerpt","摘录"), type:"text"},
-        {k:"note", label:t("side.sub.notes", t("field.note","笔记")), type:"text"},
-        {k:"progress", label:t("field.progressPercent","进度 %"), type:"number"}
+        {k:"status", label:t("field.status","状态"), type:"select", options:[t("read.want","想读"),t("read.doing","在读"),t("read.done","已读")]},
+        {k:"progress", label:t("field.progressPercent","进度 %"), type:"number"},
+        {k:"rating", label:t("field.rating","评分(1-5)"), type:"number"},
+        {k:"startDate", label:t("field.startDate","开始日期"), type:"date"},
+        {k:"finishDate", label:t("field.finishDate","完成日期"), type:"date"},
+        {k:"excerpt", label:t("field.excerpt","摘录"), type:"textarea"},
+        {k:"note", label:t("field.note","笔记"), type:"textarea"}
       ],
       cols:[
         {label:t("field.bookName","书名"), k:"book"},
         {label:t("field.author","作者"), k:"author"},
+        {label:t("field.status","状态"), fmt:function(r){ return r.status || (r.done ? t("read.done","已读") : t("read.doing","在读")); }},
         {label:t("field.progress","进度"), fmt:function(r){ return (Number(r.progress)||0) + "%"; }},
-        {label:t("field.status", t("field.status","状态")), type:"check", fmt:function(r){ return r.done ? t("status.finished","读完") : t("status.reading","在读"); }}
+        {label:t("field.rating","评分"), fmt:function(r){ var n = Number(r.rating)||0; return n > 0 ? ("★" + n) : "—"; }}
       ],
       sum:function(recs){
+        var want = recs.filter(function(r){ return r.status === t("read.want","想读"); }).length;
+        var doing = recs.filter(function(r){ return r.status ? r.status === t("read.doing","在读") : !r.done; }).length;
+        var done = recs.filter(function(r){ return r.status ? r.status === t("read.done","已读") : !!r.done; }).length;
+        var rated = recs.filter(function(r){ return Number(r.rating) > 0; });
+        var avg = rated.length ? (rated.reduce(function(a,r){ return a + Number(r.rating); }, 0) / rated.length).toFixed(1) : "—";
         return [
-          { v:recs.filter(function(r){ return !r.done; }).length, l:t("status.reading","在读") },
-          { v:recs.filter(function(r){ return r.done; }).length, l:t("status.finished","读完") }
+          { v: want, l: t("read.want","想读") },
+          { v: doing, l: t("read.doing","在读") },
+          { v: done, l: t("read.done","已读") },
+          { v: avg, l: t("read.avgRating","平均评分") }
         ];
       },
       emptyTip:t("empty.noReading","暂无阅读记录 · 点击「添加」记录第一本书")
@@ -17347,6 +17640,8 @@ SCENE_FEATURE_RENDER.code = {
 
 /* ---------- 设计场景功能卡（P4） ---------- */
 SCENE_FEATURE_RENDER.design = {
+  /* v3.5.3：图表画布（思维导图/流程图/架构图/拓扑图） */
+  canvas: function(){ return _renderDiagramCanvas(); },
   ui: function(){
     return _featureCardHtml({
       key:"design_ui", title:t("tool.uiDesign.name","UI 设计"), icon:ic("puzzle"),
