@@ -1179,6 +1179,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .proj-view-bar{flex:1 1 auto;min-width:60px}
 .proj-view-remain{flex:0 0 auto;font-size:var(--fs-2xs);color:var(--muted);min-width:72px;text-align:right}
 /* v3.3.0 B 4/8：主页速览 4 卡 */
+/* v3.5.1：速览卡可点击直达场景 + 逾期红点角标 */
+.overview-card.ov4-clickable{cursor:pointer;position:relative;transition:border-color var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}
+.overview-card.ov4-clickable:hover{border-color:var(--accent);box-shadow:var(--shadow-2);transform:translateY(-2px)}
+.overview-card.ov4-clickable:active{transform:translateY(0);box-shadow:none}
+.overview-card.ov4-clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.overview-card.ov4-alert{border-color:var(--danger-border)}
+.overview-card.ov4-alert .v{color:var(--danger)}
+.ov4-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:var(--space-1);padding:0 5px;border-radius:var(--radius-full);background:var(--danger);color:#fff;font-size:var(--fs-2xs);font-weight:600;vertical-align:middle}
 .overview-4cards{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-2)}
 .overview-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);text-align:center}
 .overview-card .v{font-size:var(--fs-2xl);font-weight:600;color:var(--accent);line-height:1.2}
@@ -4462,6 +4470,13 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
         <div class="ctl"><input id="apiEditName" maxlength="100" autocomplete="off"></div>
       </div>
       <button type="button" class="api-btn accent" id="btnApiSaveName" data-i18n="common.save">保存</button>
+      <div class="api-panel-title u-mt-3" data-i18n="api.cloudSync">云同步</div>
+      <div class="api-row"><span class="api-label" data-i18n="api.lastSync">上次同步</span><span class="api-value" id="apiLastSync">—</span></div>
+      <div class="api-row"><span class="api-label" data-i18n="api.cloudState">云端快照</span><span class="api-value" id="apiCloudState">—</span></div>
+      <div class="u-mt-2" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="api-btn accent" id="btnApiSyncNow" data-i18n="api.syncNow">立即上传</button>
+        <button type="button" class="api-btn" id="btnApiCloudRestore" data-i18n="api.cloudRestore">恢复云端</button>
+      </div>
       <div class="api-panel-title u-mt-3" data-i18n="api.devices">登录设备</div>
       <div id="apiDeviceList"></div>
       <button type="button" class="api-btn danger u-mt-3" id="btnApiLogout" data-i18n="api.logout">登出</button>
@@ -13586,6 +13601,7 @@ function renderOverview(){
   const _t4WeekAgo = (function(){ const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0,10); })();
   const _t4Month = _t4Today.slice(0, 7);
   const todayOpen = tasks.filter(function(tk){ return tk.status !== "done" && tk.due && tk.due <= _t4Today; }).length;
+  const todayOverdue = tasks.filter(function(tk){ return tk.status !== "done" && tk.due && tk.due < _t4Today; }).length;
   const weekMeetings = (load(PREFIX + "meetings", []) || []).filter(function(r){ return r.date && r.date >= _t4WeekAgo; }).length;
   const monthBills = (load(PREFIX + "life_bills", []) || []).filter(function(r){ return r.due && r.due.slice(0, 7) === _t4Month; }).length;
   const weekSport = getHealthRecs().filter(function(r){
@@ -13594,10 +13610,10 @@ function renderOverview(){
     return d && d >= _t4WeekAgo;
   }).length;
   const overview4 = '<div class="overview-4cards">' +
-    '<div class="overview-card"><div class="v">' + todayOpen + '</div><div class="l">' + t("ov4.today","今日待办") + '</div></div>' +
-    '<div class="overview-card"><div class="v">' + weekMeetings + '</div><div class="l">' + t("ov4.meetings","本周会议") + '</div></div>' +
-    '<div class="overview-card"><div class="v">' + monthBills + '</div><div class="l">' + t("ov4.bills","本月缴费") + '</div></div>' +
-    '<div class="overview-card"><div class="v">' + weekSport + '</div><div class="l">' + t("ov4.sport","本周运动") + '</div></div>' +
+    '<div class="overview-card ov4-clickable' + (todayOverdue > 0 ? ' ov4-alert' : '') + '" data-ov4-goto="office" role="button" tabindex="0" aria-label="' + t("ov4.today","今日待办") + (todayOverdue > 0 ? '，' + todayOverdue + ' ' + t("ov4.overdue","项已逾期") : '') + '"><div class="v">' + todayOpen + (todayOverdue > 0 ? '<span class="ov4-badge">' + todayOverdue + '</span>' : '') + '</div><div class="l">' + t("ov4.today","今日待办") + '</div></div>' +
+    '<div class="overview-card ov4-clickable" data-ov4-goto="office" role="button" tabindex="0" aria-label="' + t("ov4.meetings","本周会议") + '"><div class="v">' + weekMeetings + '</div><div class="l">' + t("ov4.meetings","本周会议") + '</div></div>' +
+    '<div class="overview-card ov4-clickable" data-ov4-goto="life" role="button" tabindex="0" aria-label="' + t("ov4.bills","本月缴费") + '"><div class="v">' + monthBills + '</div><div class="l">' + t("ov4.bills","本月缴费") + '</div></div>' +
+    '<div class="overview-card ov4-clickable" data-ov4-goto="life" role="button" tabindex="0" aria-label="' + t("ov4.sport","本周运动") + '"><div class="v">' + weekSport + '</div><div class="l">' + t("ov4.sport","本周运动") + '</div></div>' +
     '</div>';
   const days=[], counts=[];
   for(let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i);
@@ -14544,6 +14560,236 @@ function _authPageHeader(title, showBack){
   header += '<div class="ph-tx u-flex-1"><h2>' + esc(title) + '</h2></div></header></div>';
   return header;
 }
+
+/* ===== v3.5.1 整合：独立页面 auth 提交（模块级）+ 云同步核心 ===== */
+
+/* ---------- auth 提交（供 authlogin/authregister 独立页面调用）---------- */
+var _authBusy = false;
+function _authErrTo(elId, msg) {
+  var el = document.getElementById(elId);
+  if (el) el.textContent = msg || "";
+}
+function _authValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+async function _doAuthLogin(email, password) {
+  if (_authBusy) return;
+  _authErrTo("authPageLoginError", "");
+  if (!_authValidEmail(email)) { _authErrTo("authPageLoginError", t("api.emailInvalid", "邮箱格式不正确")); return; }
+  if ((password || "").length < 8) { _authErrTo("authPageLoginError", t("api.passwordTooShort", "密码长度至少 8 位")); return; }
+  var btn = document.getElementById("authPageLoginSubmit");
+  if (btn) { btn.classList.add("loading"); btn.disabled = true; }
+  _authBusy = true;
+  try {
+    var r = await apiLogin(email, password);
+    if (r.ok) {
+      try { toast(t("api.loginSuccess", "登录成功"), "ok"); } catch (_) {}
+      try { _updateUserButton(); } catch (_) {}
+      try { _loadApiPanels(); } catch (_) {}
+      try { if (typeof cloudCheckOnLogin === "function") cloudCheckOnLogin(); } catch (_) {}
+      setActive("overview"); render();
+    } else {
+      _authErrTo("authPageLoginError", (r.data && r.data.error) || t("api.loginFailed", "登录失败"));
+    }
+  } catch (err) {
+    _authErrTo("authPageLoginError", (err && err.offline) ? t("api.syncOffline", "离线模式") : t("api.loginFailed", "登录失败"));
+  } finally {
+    _authBusy = false;
+    if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
+  }
+}
+
+async function _doAuthRegister(name, email, password, confirm) {
+  if (_authBusy) return;
+  _authErrTo("authPageRegisterError", "");
+  if (!name) { _authErrTo("authPageRegisterError", t("api.nameRequired", "用户名不能为空")); return; }
+  if (!_authValidEmail(email)) { _authErrTo("authPageRegisterError", t("api.emailInvalid", "邮箱格式不正确")); return; }
+  if ((password || "").length < 8) { _authErrTo("authPageRegisterError", t("api.passwordTooShort", "密码长度至少 8 位")); return; }
+  if (password !== confirm) { _authErrTo("authPageRegisterError", t("api.passwordMismatch", "两次密码不一致")); return; }
+  var btn = document.getElementById("authPageRegisterSubmit");
+  if (btn) { btn.classList.add("loading"); btn.disabled = true; }
+  _authBusy = true;
+  try {
+    var r = await apiRegister(email, password, name);
+    if (r.ok) {
+      var lr = await apiLogin(email, password);
+      if (lr.ok) {
+        try { toast(t("api.registerSuccess", "注册成功"), "ok"); } catch (_) {}
+        try { _updateUserButton(); } catch (_) {}
+        try { _loadApiPanels(); } catch (_) {}
+        try { if (typeof cloudCheckOnLogin === "function") cloudCheckOnLogin(); } catch (_) {}
+        setActive("overview"); render();
+      } else {
+        _authErrTo("authPageRegisterError", (lr.data && lr.data.error) || t("api.loginFailed", "登录失败"));
+      }
+    } else {
+      _authErrTo("authPageRegisterError", (r.data && r.data.error) || t("api.registerFailed", "注册失败"));
+    }
+  } catch (err) {
+    _authErrTo("authPageRegisterError", (err && err.offline) ? t("api.syncOffline", "离线模式") : t("api.registerFailed", "注册失败"));
+  } finally {
+    _authBusy = false;
+    if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
+  }
+}
+
+/* ---------- 云同步快照（来自 v3.5.0 包，含 async 修正 + 调用点接线）---------- */
+const SYNC_META_KEY = PREFIX + "sync_meta";
+let _cloudConflictNotified = false;
+
+function _getSyncMeta() {
+  try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || "{}") || {}; } catch (e) { return {}; }
+}
+function _setSyncMeta(patch) {
+  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(_getSyncMeta(), patch))); } catch (e) { /* 配额等：静默 */ }
+  _renderLastSync();
+}
+function _buildCloudSnapshot() {
+  const data = {};
+  allKeys().forEach(k => {
+    if (k === SYNC_META_KEY) return;
+    try { const v = localStorage.getItem(k); if (v !== null) data[k] = v; } catch (e) { /* 静默降级 */ }
+  });
+  data["_deviceMeta"] = { deviceId: getDeviceId(), exportedAt: Date.now(), version: VERSION };
+  return data;
+}
+async function apiGetSnapshot() {
+  const r = await apiFetch("/api/sync/snapshot", { method: "GET" });
+  if (r.ok && r.data && r.data.snapshot) return r.data;
+  return null;
+}
+function _applyCloudSnapshot(data) {
+  try {
+    const remoteRaw = data[PREFIX + "tasks"];
+    let remoteTasks = [];
+    try { remoteTasks = typeof remoteRaw === "string" ? JSON.parse(remoteRaw) : (Array.isArray(remoteRaw) ? remoteRaw : []); } catch (e) { remoteTasks = []; }
+    if (remoteTasks.length) {
+      const localTasks = (typeof getTasks === "function") ? getTasks() : [];
+      const map = new Map(localTasks.filter(x => x && x.id).map(x => [x.id, x]));
+      remoteTasks.forEach(rt => {
+        if (!rt || !rt.id) return;
+        const lt = map.get(rt.id);
+        if (!lt || (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0)) map.set(rt.id, rt);
+      });
+      data[PREFIX + "tasks"] = JSON.stringify(Array.from(map.values()));
+    }
+  } catch (e) { /* 合并失败时按覆盖处理 */ }
+  Object.keys(data).forEach(k => {
+    if (k === SYNC_META_KEY || k === "_deviceMeta" || k === "_meta") return;
+    if (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY) {
+      try { localStorage.setItem(k, data[k]); } catch (e) { /* 静默降级 */ }
+    }
+  });
+  _setSyncMeta({ lastPullAt: Date.now() });
+}
+async function cloudCheckOnLogin() {
+  if (!isApiLoggedIn()) return;
+  try {
+    const rec = await apiGetSnapshot();
+    _renderCloudState(rec);
+    if (!rec) { doSync(); return; }
+    const meta = _getSyncMeta();
+    const remoteDevice = (rec.snapshot._deviceMeta && rec.snapshot._deviceMeta.deviceId) || "";
+    const fromOther = remoteDevice && remoteDevice !== getDeviceId();
+    let hasLocal = false;
+    try { hasLocal = !!((typeof getTasks === "function" && getTasks().length) || (load(PREFIX + "records", []) || []).length); } catch (e) { hasLocal = false; }
+    if (!hasLocal && fromOther) {
+      _applyCloudSnapshot(rec.snapshot);
+      try { toast(t("api.cloudRestored", "已从云端恢复数据，页面即将刷新"), "ok"); } catch (_) {}
+      setTimeout(() => location.reload(), 1200);
+      return;
+    }
+    if (fromOther && rec.updatedAt > (meta.lastPushAt || 0)) {
+      if (!_cloudConflictNotified) {
+        _cloudConflictNotified = true;
+        try { toast(t("api.cloudNewerToast", "云端有来自其他设备的更新数据，可到「设置 → 账号设置 → 云同步」查看并恢复"), "warn"); } catch (_) {}
+      }
+      return;
+    }
+    doSync();
+  } catch (e) { /* 离线时静默，等下次数据变动再同步 */ }
+}
+function _renderLastSync() {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById("apiLastSync");
+  if (!el) return;
+  const meta = _getSyncMeta();
+  const ts = meta.lastPushAt || meta.lastPullAt;
+  el.textContent = ts ? new Date(ts).toLocaleString() : t("api.neverSynced", "尚未同步");
+}
+function _renderCloudState(rec) {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById("apiCloudState");
+  if (!el) return;
+  if (rec && rec.updatedAt) {
+    const dev = (rec.snapshot && rec.snapshot._deviceMeta && rec.snapshot._deviceMeta.deviceId) || "";
+    const suffix = (dev && dev === getDeviceId()) ? t("api.cloudFromThis", "（本机）") : t("api.cloudFromOther", "（其他设备）");
+    el.textContent = new Date(rec.updatedAt).toLocaleString() + suffix;
+  } else {
+    el.textContent = t("api.cloudEmptyShort", "暂无快照");
+  }
+}
+
+/* ---------- AI Token 用量统计（来自 v3.5.0 包）---------- */
+function addTokensUsage(resp) {
+  try {
+    const u = resp && resp.usage;
+    if (!u) return;
+    const n = (u.total_tokens | 0) || ((u.prompt_tokens | 0) + (u.completion_tokens | 0));
+    if (!(n > 0)) return;
+    const d = JSON.parse(localStorage.getItem(PREFIX + "ai_tokens") || '{"total":0,"days":{}}');
+    d.total = (d.total | 0) + n;
+    const now = new Date();
+    const k = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+    d.days = d.days || {};
+    d.days[k] = (d.days[k] | 0) + n;
+    const ks = Object.keys(d.days).sort();
+    while (ks.length > 90) { delete d.days[ks.shift()]; }
+    localStorage.setItem(PREFIX + "ai_tokens", JSON.stringify(d));
+  } catch (e) { /* localStorage 不可用/解析失败：静默，不阻塞 AI 调用 */ }
+}
+
+/* ---------- ov4 速览卡点击直达场景（补接线，包内缺失）---------- */
+function _bindOv4Cards() {
+  if (typeof document === "undefined" || document._ov4Bound) return;
+  document._ov4Bound = true;
+  document.addEventListener("click", function (e) {
+    const card = e.target && e.target.closest ? e.target.closest("[data-ov4-goto]") : null;
+    if (!card) return;
+    const sc = card.getAttribute("data-ov4-goto");
+    if (sc && typeof SCENARIOS !== "undefined" && SCENARIOS[sc]) { setActive(sc); render(); }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const card = e.target && e.target.closest ? e.target.closest("[data-ov4-goto]") : null;
+    if (!card) return;
+    e.preventDefault();
+    const sc = card.getAttribute("data-ov4-goto");
+    if (sc && typeof SCENARIOS !== "undefined" && SCENARIOS[sc]) { setActive(sc); render(); }
+  });
+}
+
+/* ---------- 云端快照恢复（设置面板「恢复云端」按钮）---------- */
+async function _restoreFromCloud() {
+  try {
+    const rec = await apiGetSnapshot();
+    if (!rec || !rec.snapshot) { try { toast(t("api.cloudEmptyShort", "暂无快照"), "warn"); } catch (_) {} return; }
+    if (!confirm(t("api.cloudRestoreConfirm", "将用云端数据覆盖本机数据，确定继续？"))) return;
+    _applyCloudSnapshot(rec.snapshot);
+    try { toast(t("api.cloudRestored", "已从云端恢复数据，页面即将刷新"), "ok"); } catch (_) {}
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) { try { toast(t("api.syncError", "同步失败"), "warn"); } catch (_) {} }
+}
+
+/* ---------- 云同步按钮委托（面板动态渲染，用 document 级委托）---------- */
+document.addEventListener("click", function (e) {
+  const el = e.target;
+  if (!el || !el.id) return;
+  if (el.id === "btnApiSyncNow") { try { doSync(); } catch (_) {} }
+  if (el.id === "btnApiCloudRestore") { _restoreFromCloud(); }
+});
+
+/* ---------- 启动时初始化 ov4 委托 ---------- */
+try { _bindOv4Cards(); } catch (_) {}
 
 function renderAuthWelcome(){
   const html = _authPageHeader(t("auth.welcomeTitle","登录或注册以使用云端同步与 AI 集成"), false) +
@@ -18152,6 +18398,7 @@ async function chatOnce(messages, opts){
               final = { choices: [{ message: { role: "assistant", content: "" }, finish_reason: finishReason }], usage: usage || undefined };
               if(toolCalls.length) final.choices[0].message.tool_calls = toolCalls.filter(Boolean);
               // 流式无文字内容时回吐空串占位（上游空响应检查兜底）
+              addTokensUsage(final);
               return final;
             }
           }catch(_streamErr){
@@ -18160,13 +18407,13 @@ async function chatOnce(messages, opts){
               method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+(ap?ap.key:"")},
               body: JSON.stringify(Object.assign({}, body, { stream: false }))
             });
-            if(r2.ok) return await r2.json();
+            if(r2.ok){ const _j2 = await r2.json(); addTokensUsage(_j2); return _j2; }
             throw _streamErr;
           }
         }
         // fallback：一次性 JSON（chatOnce 未请求 stream，服务端按非流式返回；
         // 历史 SSE 流式分支因服务端未返回 text/event-stream 而不可达，按 L2/L3 清理移除）
-        return await r.json();
+        const _jr = await r.json(); addTokensUsage(_jr); return _jr;
       }catch(err){
         // 取消 / 超时：不重试，直接抛出
         if(err && (err.name==="AbortError" || err.name==="TimeoutError")){
@@ -30059,6 +30306,19 @@ const MESSAGES = {
     "api.registerSuccess": "Registration successful",
     "api.loginFailed": "Login failed",
     "auth.welcome": "Welcome",
+    "ov4.overdue": " overdue",
+    "api.cloudSync": "Cloud sync",
+    "api.lastSync": "Last sync",
+    "api.cloudState": "Cloud snapshot",
+    "api.syncNow": "Upload now",
+    "api.cloudRestore": "Restore from cloud",
+    "api.cloudRestoreConfirm": "This will overwrite local data with cloud data. Continue?",
+    "api.cloudRestored": "Restored from cloud, reloading…",
+    "api.cloudNewerToast": "Cloud has newer data from another device. Check Settings → Account → Cloud sync.",
+    "api.neverSynced": "Not synced yet",
+    "api.cloudFromThis": " (this device)",
+    "api.cloudFromOther": " (other device)",
+    "api.cloudEmptyShort": "No snapshot yet",
     "auth.loginSub": "Already have an account",
     "auth.registerSub": "Create an account",
     "auth.welcomeTitle": "Sign in or register to use cloud sync and AI integration",
@@ -31275,6 +31535,8 @@ const MESSAGES = {
       }
     }
   }
+
+
 
   // ===== 离线支持 =====
 
