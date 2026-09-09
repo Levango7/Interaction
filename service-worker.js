@@ -14,7 +14,7 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
-var CACHE_VERSION = "v3.5.0-20260909004"; /* [prod build] auto-bumped */
+var CACHE_VERSION = "v3.5.1-20260909001"; /* [prod build] auto-bumped */
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -36,9 +36,7 @@ var PRECACHE_URLS = [
 
 // 同源静态资源扩展名（cache-first 命中范围）
 // S7: .json 不在此列——manifest.json 等配置数据需及时更新，走 network-first 策略
-// v3.4.29: .html 也移出 cache-first——HTML 是应用真相源，任何请求形态都必须回源校验，
-// 否则旧缓存副本会让"加载不到新内容"复现（导航请求本就 network-first，此处兜住非导航形态）。
-var STATIC_EXT = [".svg", ".js", ".css"];
+var STATIC_EXT = [".html", ".svg", ".js", ".css"];
 
 /**
  * 判断给定 URL 是否为同源静态资源（按扩展名匹配）。
@@ -226,22 +224,13 @@ self.addEventListener("fetch", function (event) {
 
   var origin = self.location.origin;
 
-  // S4: 导航请求 network-first（v3.4.28 修复"加载不到新内容"）——
-  // 在线时始终取最新 HTML 并刷新缓存；仅离线时回退预缓存首页，避免白屏。
+  // S4: 导航请求专门处理——离线时回退到预缓存的首页，避免白屏
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req).then(function (resp) {
-        if (resp && resp.status === 200) {
-          var copy = resp.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(req, copy).catch(function () {});
-          }).catch(function () {});
-        }
-        return resp;
-      }).catch(function () {
-        // 离线时回退：先试原请求缓存，再退预缓存首页
-        return caches.match(req).then(function (cached) {
-          if (cached) return cached;
+      caches.match(req).then(function (cached) {
+        if (cached) return cached;
+        return fetch(req).catch(function () {
+          // 离线时回退到预缓存的首页
           return caches.match("./").then(function (fallback) {
             if (fallback) return fallback;
             return caches.match("./agent-workbench.html").then(function (fb2) {

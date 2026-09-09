@@ -852,7 +852,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .u-flex-1{flex:1}
 .u-flex-auto{flex:0 0 auto}
 .u-w-full{width:100%}
-.u-hidden{display:none!important}
+.u-hidden{display:none}
 .u-block{display:block}
 .u-flex{display:flex}
 .u-nowrap{white-space:nowrap}
@@ -1184,19 +1184,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .overview-card .v{font-size:var(--fs-2xl);font-weight:600;color:var(--accent);line-height:1.2}
 .overview-card .l{font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--space-1)}
 @media (max-width:768px){.overview-4cards{grid-template-columns:repeat(2,1fr)}}
-/* v3.4.28：速览卡可点击直达场景——hover 抬升 + active 按压反馈；逾期卡红点角标 + 警示描边 */
-.overview-card.ov4-clickable{cursor:pointer;position:relative;
-  transition:border-color var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}
-.overview-card.ov4-clickable:hover{border-color:var(--accent);box-shadow:var(--shadow-2);transform:translateY(-2px)}
-.overview-card.ov4-clickable:active{transform:translateY(0);box-shadow:none}
-.overview-card.ov4-clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.overview-card.ov4-alert{border-color:var(--danger-border)}
-.overview-card.ov4-alert .v{color:var(--danger)}
-.ov4-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
-  margin-left:var(--space-1);padding:0 5px;border-radius:var(--radius-full);
-  background:var(--danger);color:#fff;font-size:var(--fs-2xs);font-weight:600;
-  vertical-align:middle;animation:ov4Pop var(--transition-fast) ease}
-@keyframes ov4Pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
 /* v3.3.0 B 3/8：知识库标签筛选 chips */
 .ktag-bar{margin-top:var(--space-2);padding:var(--space-2h) var(--space-3);background:var(--panel2);border-radius:var(--radius-sm);border:1px solid var(--line)}
 .ktag-head{font-size:var(--fs-xs);font-weight:600;color:var(--muted);margin-bottom:var(--space-1)}
@@ -1297,15 +1284,6 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
   padding:3px 10px;font-size:var(--fs-xs);color:var(--text-dim);cursor:pointer;line-height:1.6;
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
 .chat-suggest .chip:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
-/* 空对话欢迎区：图标 + 标题 + 说明 + 居中快捷指令，避免面板空白 */
-.chat-empty{display:flex;flex-direction:column;align-items:center;text-align:center;
-  padding:var(--space-7) var(--space-3) var(--space-2);gap:var(--space-2)}
-.chat-empty-ic{width:44px;height:44px;border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;
-  background:var(--accent-soft);color:var(--accent);margin-bottom:var(--space-1)}
-.chat-empty-ic svg{width:22px;height:22px}
-.chat-empty-title{font-weight:600;font-size:var(--fs-base);color:var(--text)}
-.chat-empty-sub{font-size:var(--fs-xs);color:var(--muted);line-height:1.7;max-width:24em}
-.chat-empty .chat-suggest{justify-content:center;margin-top:var(--space-2)}
 .chat-form input{flex:1;min-width:0}
 .chat-form .addbtn{flex-shrink:0}
 .msg.tool{background:var(--banner-bg);border:1px dashed var(--banner-border-2);font-size:var(--fs-xs);color:var(--banner-ink)}
@@ -1336,23 +1314,16 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    - 折叠态：宽度归零 + overflow:hidden，配 transition 平滑过渡
    - 响应式：中屏收窄到 300px，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
 .chat-panel{width:300px;flex-shrink:0;display:flex;flex-direction:column;
-  border-left:1px solid transparent;
-  /* v3.4.29：与左侧栏 .side 同配方玻璃（75% 面板色 + blur(18px)、无额外 glow 层），
-     消息区 .chat 保持全透明，底布 canvas-glow 直接透出 */
-  background:color-mix(in srgb,var(--panel) 75%,transparent);
-  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-left:1px solid transparent;background:color-mix(in srgb,var(--panel) 70%,transparent);
+  background-image:var(--sidebar-glow);
+  backdrop-filter:blur(22px) saturate(1.25);-webkit-backdrop-filter:blur(22px) saturate(1.25);
   transition:width var(--transition-fast) ease,transform var(--transition-fast) ease,
     border-color var(--transition-fast),box-shadow var(--transition-fast)} /* v1.15 P3：常驻 360→300，主区在 1280 屏多抢 60px；hover 仍弹回 360 */
 .chat-panel.collapsed{width:0;overflow:hidden;border-left-color:transparent}
 .chat-panel:hover,.chat-panel:focus-within{border-left-color:var(--accent-soft);
   box-shadow:inset 3px 0 0 var(--accent-soft)} /* v1.10.0b：hover/focus 边框高亮（左缘 3px accent 边 + 柔和 inset 阴影） */
 .chat-panel-header{padding:var(--space-2) var(--space-4);border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent);
-  background:transparent; /* v1.9.5：头部白底与浅灰消息区区分 */
-  /* v3.4.29：单行三区——图标+标题居左 / 会话管理居中 / 折叠居右 */
-  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--space-2)}
-.chat-hdr-left{justify-self:start;min-width:0}
-.chat-hdr-mid{justify-self:center}
-.chat-hdr-end{justify-self:end}
+  background:transparent;} /* v1.9.5：头部白底与浅灰消息区区分 */
 .chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2);min-width:0}
 /* v1.9.5：标题图标徽章化（与全局 page-head 视觉一致） */
 .chat-panel-title .ph-ic{width:26px;height:26px;border-radius:var(--radius-md);flex-shrink:0;
@@ -1378,10 +1349,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-model-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .chat-model-select:hover{border-color:var(--accent)}
 /* 面板内消息区：覆盖 .chat 原有边框/高度，让其填满面板 */
-/* v2.4.0 扁平化：消息流直接铺面板底色，不再垫 --bg 灰色槽（旧规则会盖掉
-   transparent 并把主题辉光拦腰截断，故此处保持背景透明） */
-.chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;background:transparent;
-  padding:var(--space-3) var(--space-3) 0;display:flex;flex-direction:column;gap:var(--space-2)}
+/* 消息槽用 --bg（与主区同款浅灰）：右栏白底 + 浅灰消息槽 + 白色头/输入区，层次分明 */
+/* v1.15：margin-bottom 沿用通用 .chat 的 space-3（12px），使消息卡下框线与工具栏
+   分割线(border-top)之间留出空隙，不再重叠 */
+.chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
+  padding:var(--space-3) var(--space-3) 0;background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
 .chat-panel .chat-toolbar{margin:0;padding:0 var(--space-3);border-top:1px solid var(--line);
   justify-content:flex-start;min-height:6px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
@@ -2740,7 +2712,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .sync-status .sync-dot{width:8px;height:8px;border-radius:var(--radius-full);background:currentColor;flex-shrink:0}
 .sync-status.syncing .sync-dot{animation:sync-pulse 1s ease-in-out infinite}
 @keyframes sync-pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.sync-status.u-hidden{display:none!important}
+.sync-status.u-hidden{display:none}
 
 /* 登录/注册模态弹窗 */
 .auth-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);
@@ -3749,7 +3721,842 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
     <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
     <button type="button" class="tbtn install-btn" id="btnInstall" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面" class="u-hidden">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
-    
+    <!-- 任务235：同步状态指示器（登录后显示，同步中/已同步/离线/错误） -->
+    <span class="sync-status u-hidden" id="syncStatus" role="status" aria-live="polite">
+      <span class="sync-dot" aria-hidden="true"></span><span class="sync-text" data-i18n="api.syncIdle">已同步</span>
+    </span>
+    <!-- 任务235：用户按钮（未登录显示「登录」，已登录显示头像首字母） -->
+    <button type="button" class="tbtn user-btn" id="btnUser" data-i18n-aria="api.login" aria-label="登录">
+      <span class="user-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="lbl" data-i18n="api.login">登录</span></button>
+    <input type="file" id="fileInput" accept="application/json" class="u-hidden">
+  </div>
+
+
+  <!-- v1.4-F 离线指示横幅：网络断开时显示，恢复后自动隐藏 -->
+  <div class="offline-banner" id="offlineBanner" role="status" aria-live="polite">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M16.72 11.78A5 5 0 0 1 19 13M5 12.55a11 11 0 0 1 5-2.36M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01M2 8.82a15 15 0 0 1 4.17-2.65M19.83 5.35A15 15 0 0 1 22 8.82"/></svg></span>
+    <span class="msg" id="offlineMsg" data-i18n="offline.banner">当前离线，数据已保存到本地，恢复网络后将自动同步</span>
+    <button type="button" class="retry" id="btnRetrySync" disabled data-i18n-aria="a11y.retrySync" aria-label="重试同步" data-i18n="offline.syncing">同步中…</button>
+  </div>
+
+  <div class="body">
+    <nav class="side" id="side"></nav>
+    <!-- v2.1.0 移动端：底部 4 组导航栏 + 底部抽屉（≤767px 显示，桌面 display:none） -->
+    <nav class="mob-bar" id="mobBar" data-i18n-aria="a11y.bottomNav" aria-label="底部导航"></nav>
+    <div class="side-sheet-backdrop" id="sideSheetBackdrop"></div>
+    <div class="side-sheet" id="sideSheet" role="dialog" aria-modal="true" data-i18n-aria="a11y.navMenu" aria-label="导航菜单">
+      <div class="side-sheet-head"><span class="side-sheet-title" id="sideSheetTitle"></span>
+        <button type="button" class="side-sheet-close" id="sideSheetClose" data-i18n-aria="a11y.closeMenu" aria-label="关闭菜单">✕</button></div>
+      <div class="side-sheet-body" id="sideSheetBody"></div>
+    </div>
+    <div class="main-wrap">
+      <!-- v1.15：正文顶部第二行 = 待办栏（原消息栏替换；消息内容收进顶栏消息按钮） -->
+      <div class="toolbar-row" id="topbarRow2" role="region" data-i18n-aria="a11y.topToolbarRow" aria-label="正文顶部工具行">
+        <div class="todo-bar" id="todoBar" role="region" data-i18n-aria="a11y.todayTodo" aria-label="今日待办">
+          <div class="todo-bar-row">
+            <span class="todo-bar-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            <button class="todo-bar-preview" id="todoPreview" type="button" aria-live="polite" data-i18n-aria="a11y.expandTodayTodo" aria-label="展开今日待办" data-i18n="todo.previewEmpty">今天 0 件待处理 · 已完成 0 件 · 联动 0 条进行中</button>
+            <button class="todo-bar-toggle" id="todoBarToggle" type="button" data-i18n-title="todo.toggle" title="展开/收起" data-i18n-aria="a11y.expandTodayTodo" aria-label="展开今日待办" aria-expanded="false">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="todo-bar-list" id="todoBarList" role="list" data-i18n-aria="a11y.todayTodoList" aria-label="今日待办列表"></div>
+        </div>
+      </div>
+      <!-- 消息中心列表：内联展开（原 fixed 下拉迁移，ID/结构不变，事件绑定沿用） -->
+      <div class="msg-panel msg-panel-inline u-hidden" id="msgPanel" role="dialog" data-i18n-aria="a11y.msgCenter" aria-label="消息中心" aria-live="polite">
+        <div class="msg-panel-header">
+          <span class="msg-panel-title" data-i18n="msg.title">消息</span>
+          <div class="msg-panel-actions">
+            <button type="button" id="msgMarkAllRead" class="msg-mini-btn" data-i18n-aria="a11y.markAllRead" aria-label="全部标记为已读" data-i18n="msg.markAllRead">全部已读</button>
+            <button type="button" id="msgClearAll" class="msg-mini-btn" data-i18n-aria="a11y.clearAllMsg" aria-label="清空所有消息" data-i18n="msg.clear">清空</button>
+          </div>
+        </div>
+        <div class="msg-list" id="msgList"></div>
+      </div>
+      <!-- v1.15：更多工具菜单已移除（功能迁移：甘特/导图/仪表盘→图表页，笔记→知识页，协作/分享删除） -->
+      <main class="main" id="main"></main>
+    </div>
+    <!-- 右侧 AI 聊天面板（三栏布局第三栏）：常驻显示，复用 #chat/#chatForm/#chatThinking/#chatCancel
+         数据源仍为 getChat(active)（保留跟随场景切换以兼容现有测试契约，未来可切换为全局 panelChat）
+         窄屏默认隐藏，加 .show 滑入；折叠按钮在 header -->
+    <aside class="chat-panel" id="chatPanel" data-i18n-aria="a11y.aiPanel" aria-label="AI 助手面板">
+      <div class="chat-panel-header">
+        <span class="chat-panel-title">
+          <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span data-i18n="chat.aiAssistant">AI 助手</span>
+        </span>
+        <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
+        <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
+        <button class="chat-panel-collapse chat-ic-btn" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理" class="u-mr-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
+        <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      </div>
+      <!-- 消息区：复用 #chat id，renderChat() 渲染到此 -->
+      <div class="chat" id="chat"></div>
+      <!-- 工具栏：思考中指示 + 取消按钮（复用 #chatThinking / #chatCancel） -->
+      <div class="chat-toolbar" id="chatToolbar">
+        <span class="chat-thinking u-hidden" id="chatThinking" data-i18n="chat.thinking">思考中…</span>
+        <button class="chat-cancel u-hidden" id="chatCancel" type="button" data-i18n="chat.cancel">取消</button>
+      </div>
+      <!-- 底部输入区：完整卡片——textarea 占上方，左下角附件 / 右下角模型+发送（v1.15 重排） -->
+      <form class="chat-input-area" id="chatForm">
+        <textarea class="chat-text-input" name="msg" id="chatTextInput" data-i18n-placeholder="chat.placeholder" placeholder="问点什么，或让它「建个任务」…" autocomplete="off" maxlength="4000" rows="1"></textarea>
+        <div class="chat-input-bar">
+          <button class="chat-attach-btn" id="chatAttachBtn" type="button" data-i18n-title="a11y.addAttachment" title="添加文本附件" data-i18n-aria="a11y.addAttachment" aria-label="添加文本附件">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <div class="chat-input-right">
+            <select id="chatModelSelect" class="chat-model-inline" data-i18n-aria="a11y.selectModel" aria-label="选择 AI 模型" data-i18n-title="a11y.switchProfile" title="切换大模型 Profile"></select>
+            <button class="chat-send-btn" id="chatSendBtn" type="submit" data-mode="send" data-i18n-title="a11y.send" title="发送" data-i18n-aria="a11y.sendMsg" aria-label="发送消息">
+              <svg aria-hidden="true" class="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+              <svg aria-hidden="true" class="ic-stop u-hidden" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+            </button>
+          </div>
+        </div>
+      </form>
+    </aside>
+    <!-- 折叠后的侧边条：点击展开聊天面板（窄屏/折叠态显示） -->
+    <div class="chat-panel-rail" id="chatPanelRail" data-i18n-title="a11y.expandAi" title="展开 AI 助手" data-i18n-aria="a11y.expandAiPanel" aria-label="展开 AI 助手面板" role="button" tabindex="0" data-i18n="chat.aiAssistant">AI 助手</div>
+  </div>
+</div>
+
+<!-- v1.9.7：消息中心面板已迁至正文顶部（#msgBar 下方内联展开），此处原 fixed 下拉已移除 -->
+
+<!-- v1.9.7 专注工具浮层：笃行/时间追踪从工具行迁至侧栏「工具」组，点侧栏项弹出（fixed 定位由 JS 计算）。
+     小件 DOM 保持原 id/class，init 阶段的绑定（btnPomoStart 等）不受位置影响 -->
+<div class="tool-pop" id="pomoPop" style="display:none" role="dialog" data-i18n-aria="a11y.pomo" aria-label="笃行">
+  <div class="tool-pop-title" data-i18n="pomo.title">笃行</div>
+  <div class="pomo-widget" id="pomoWidget" role="group" data-i18n-aria="a11y.pomoWidget" aria-label="笃行">
+    <span class="pomo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+    <span class="pomo-display" id="pomoDisplay" aria-live="polite" data-i18n="pomo.idle">空闲 25:00</span>
+    <span class="pomo-count" id="pomoCount" data-i18n-aria="a11y.pomoCount" aria-label="今日笃行完成数">0</span>
+    <span class="pomo-actions">
+      <button type="button" id="btnPomoStart" class="primary" data-i18n-aria="a11y.startPomo" aria-label="开始笃行" data-i18n="pomo.start">开始</button>
+      <button type="button" id="btnPomoStop" class="danger" data-i18n-aria="a11y.stopPomo" aria-label="停止笃行" data-i18n="pomo.stop">停止</button>
+    </span>
+  </div>
+</div>
+<div class="tool-pop" id="trackerPop" style="display:none" role="dialog" data-i18n-aria="a11y.tracker" aria-label="时间追踪">
+  <div class="tool-pop-title" data-i18n="tracker.title">时间追踪</div>
+  <div class="tracker-widget" id="trackerWidget" role="group" data-i18n-aria="a11y.trackerWidget" aria-label="时间追踪">
+    <span class="tracker-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/><path d="M12 8v4l2.5 2.5"/></svg></span>
+    <span class="tracker-display" id="trackerDisplay" aria-live="polite">00:00:00</span>
+    <span class="tracker-actions">
+      <button type="button" id="btnTrackerPause" class="warn" disabled data-i18n-aria="a11y.pauseTracker" aria-label="暂停时间追踪" data-i18n="tracker.pause">暂停</button>
+      <button type="button" id="btnTrackerStop" class="danger" disabled data-i18n-aria="a11y.stopTracker" aria-label="停止时间追踪" data-i18n="tracker.stop">停止</button>
+    </span>
+  </div>
+</div>
+
+<!-- v1.15：侧栏功能组恢复为 图表（直接入口）+ 应用（独立页）+ 市场（独立页）。
+     应用页含 日历/天气/闹钟/萌宠；指针特效已移入设置页。 -->
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <!-- v1.9.6：拆卡改版——去外层大白卡，页头独立 + 分区卡片浮于浅灰底（与统计/回收站页一致）；
+       AI 配置 / 插件市场抽离为独立菜单页，三个页头由 #drawer[data-page] 控制显示 -->
+	  <header class="page-head drawer-ph" data-ph="settings">
+	    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+	    <div class="ph-tx"><h2 data-i18n="page.settings.title">设置</h2><p class="sub" data-i18n="page.settings.sub">场景 · 联动 · 外观 · 通知 · 数据 · 集成 · 关于</p></div>
+	    <button class="page-back drawer-close" id="drawerClose" type="button" data-i18n-aria="a11y.returnPrev" aria-label="返回上一视图" data-i18n="page.back">← 返回</button>
+	  </header>
+  <header class="page-head drawer-ph" data-ph="ai">
+    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></span>
+    <div class="ph-tx"><h2>AI</h2><p class="sub" data-i18n="page.ai.sub">大模型 Profile、接口地址与请求参数</p></div>
+    <button class="page-back drawer-close" type="button" data-i18n-aria="a11y.returnPrev" aria-label="返回上一视图" data-i18n="page.back">← 返回</button>
+  </header>
+  <nav class="set-nav ai-nav" aria-label="AI模块导航" data-i18n-aria="a11y.aiModuleNav">
+    <button type="button" class="set-nav-btn active" data-ai-tab="ai-llm" data-i18n="ai.nav.llm">大模型</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-agent">Agent</button>
+    <button type="button" class="set-nav-btn" data-ai-tab="ai-ext" data-i18n="ai.nav.ext">扩展</button>
+  </nav>
+  <header class="page-head drawer-ph" data-ph="plugin">
+    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
+    <div class="ph-tx"><h2 data-i18n="page.plugin.title">插件</h2><p class="sub" data-i18n="page.plugin.sub">浏览、安装与管理扩展插件</p></div>
+    <button class="page-back drawer-close" type="button" data-i18n-aria="a11y.returnPrev" aria-label="返回上一视图" data-i18n="page.back">← 返回</button>
+  </header>
+  <header class="page-head drawer-ph" data-ph="knowledge">
+    <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
+    <div class="ph-tx"><h2 data-i18n="page.knowledge.title">知识</h2><p class="sub" data-i18n="page.knowledge.sub">场景模板与知识管理（笔记 / 知识库 / 全文搜索）</p></div>
+    <button class="page-back drawer-close" type="button" data-i18n-aria="a11y.returnPrev" aria-label="返回上一视图" data-i18n="page.back">← 返回</button>
+  </header>
+	  <!-- 设置分区导航栏（独立于标题栏，点击切换下方 card 内容；保存按钮只在底部保存栏） -->
+	  <nav class="set-nav" aria-label="设置分区导航" data-i18n-aria="a11y.settingsSectionNav">
+	    <button type="button" class="set-nav-btn active" data-set-tab="set-scene" data-i18n="settings.nav.scene">场景</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-chain" data-i18n="settings.nav.chain">场景联动</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-look" data-i18n="settings.nav.look">外观</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-notify" data-i18n="settings.nav.notify">通知</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-data" data-i18n="settings.nav.data">数据</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-integration" data-i18n="settings.nav.integration">集成</button>
+	    <button type="button" class="set-nav-btn" data-set-tab="set-about" data-i18n="settings.nav.about">关于</button>
+	  </nav>
+
+  <!-- ===== AI 配置 ===== -->
+  <section class="set-card ai-section ai-tab-active" id="ai-llm" data-ai-tab="ai-llm" aria-label="LLM 大模型配置" data-i18n-aria="a11y.llmConfig">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></span>
+      <div>
+        <h3 data-i18n="ai.config.title">AI 配置</h3>
+        <p class="set-desc" data-i18n="ai.config.desc">兼容 OpenAI 接口格式（OpenAI / DeepSeek / 通义 / 豆包 等均可），Key 仅存本机浏览器。</p>
+      </div>
+    </header>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgEnabled" data-i18n-aria="ai.config.enableLabel" aria-label="启用 AI 对话">
+      <div>
+        <div class="sw-label" data-i18n="ai.config.enableLabel">启用 AI 对话</div>
+        <div class="sw-sub" data-i18n="ai.config.enableSub">subagent 可调用工具</div>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgProfileSelect">AI Profile</label>
+      <div class="ctl">
+        <div class="btn-row">
+          <select id="cfgProfileSelect"></select>
+          <button type="button" class="addbtn sm u-nowrap" id="cfgProfileNew" data-sc="accent" data-i18n="common.new">新建</button>
+          <button type="button" class="addbtn sm u-nowrap" id="cfgProfileDup" data-sc="accent" data-i18n="common.duplicate">复制</button>
+          <button type="button" class="addbtn sm u-nowrap" id="cfgProfileDel" data-sc="danger-muted" data-i18n="common.delete">删除</button>
+        </div>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgName" data-i18n="ai.config.profileName">Profile 名称</label>
+      <div class="ctl"><input id="cfgName" data-i18n-placeholder="ai.config.profilePlaceholder" placeholder="如 OpenAI / Anthropic / 本地 Ollama" maxlength="100" autocomplete="off"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgBase">API Base URL</label>
+      <div class="ctl"><input id="cfgBase" placeholder="https://api.openai.com/v1" maxlength="500" autocomplete="off"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgKey">API Key</label>
+      <div class="ctl">
+        <input id="cfgKey" type="password" placeholder="sk-..." maxlength="500" autocomplete="new-password">
+        <p class="hint u-hidden u-mt-1h" id="cfgKeyHint" data-i18n="ai.config.keyHint">已保存在本机（Electron 主进程保管，不写入网页存储）</p>
+        <p class="set-tip u-mt-1h"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> <span data-i18n="ai.config.keyTip">安全说明：Key 经 AES-GCM 加密存于本机，密钥与密文同在浏览器存储内——可防随意窥视，但无法抵御能读取本机数据的攻击（非端到端安全）。请勿在共用/不可信设备上保存 Key。</span></p>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgModel" data-i18n="settings.model">模型</label>
+      <div class="ctl"><input id="cfgModel" placeholder="gpt-4o-mini" maxlength="100" autocomplete="off"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgAiTimeout" data-i18n="settings.timeout">请求超时（秒，5~120）</label>
+      <div class="ctl"><input id="cfgAiTimeout" type="number" min="5" max="120" data-i18n-placeholder="ai.config.timeoutPlaceholder" placeholder="30（默认）"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgAiTemperature" data-i18n="settings.temperature">温度 Temperature（0~2）</label>
+      <div class="ctl"><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" data-i18n-placeholder="ai.config.tempPlaceholder" placeholder="0.7（默认）"></div>
+    </div>
+  </section>
+  <!-- ===== Agent 能力（独立卡，v1.15 与 AI 配置分开） ===== -->
+  <section class="set-card ai-section" id="ai-agent" data-ai-tab="ai-agent" aria-label="Agent 能力" data-i18n-aria="a11y.agentAbility">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H7a3 3 0 0 0-3 3v3a3 3 0 0 0 1 2.2V18a3 3 0 0 0 3 3h2v-7H8v-3h2V8a2 2 0 0 1 4 0v1h2v3h-2v7h2a3 3 0 0 0 3-3v-3.8a3 3 0 0 0 1-2.2V9a3 3 0 0 0-3-3h-2V5a3 3 0 0 0-3-3z"/></svg></span>
+      <div>
+        <h3 data-i18n="agent.title">Agent 能力</h3>
+        <p class="set-desc" data-i18n="agent.desc">工作记忆 + 多步目标编排 + 工具调用白名单。关闭后 AI 不再暴露记忆/规划工具，话术同步降级。</p>
+      </div>
+    </header>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgAgent" aria-label="Agent 模式" data-i18n-aria="a11y.agentMode">
+      <div>
+        <div class="sw-label" data-i18n="agent.modeLabel">Agent 模式（工作记忆 + 多步目标编排）</div>
+        <div class="sw-sub" data-i18n="agent.modeSub">开启后具备中短期记忆与多步目标规划能力（plan→逐步执行→complete_goal）。对话循环上限与工具调用受下方参数控制。</div>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgMemMax" data-i18n="settings.memMax">工作记忆容量（条，20~500）</label>
+      <div class="ctl"><input id="cfgMemMax" type="number" min="20" max="500" placeholder="60（默认）" data-i18n-placeholder="field.memMaxPh"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgAgentLoops" data-i18n="agent.loopsLabel">对话循环上限（无目标时，6~30 轮）</label>
+      <div class="ctl"><input id="cfgAgentLoops" type="number" min="6" max="30" data-i18n-placeholder="agent.loopsPlaceholder" placeholder="6（默认）"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgAgentGoalLoops" data-i18n="agent.goalLoopsLabel">目标激活时循环上限（12~50 轮）</label>
+      <div class="ctl"><input id="cfgAgentGoalLoops" type="number" min="12" max="50" data-i18n-placeholder="agent.goalLoopsPlaceholder" placeholder="12（默认）"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgToolWhitelist" data-i18n="agent.whitelistLabel">允许调用的工具（逗号分隔，留空=全部）</label>
+      <div class="ctl"><input id="cfgToolWhitelist" type="text" data-i18n-placeholder="agent.whitelistPlaceholder" placeholder="如 创建任务,完成搜索,查阅资料（留空=允许全部工具）"></div>
+      <!-- v3.1.2 A-档：白名单与「扩展 → 技能配置」勾选框共享同一处存储（aiSkillsSave 写入此处） -->
+      <p class="hint u-fs-2xs u-mt-1" data-i18n="agent.whitelistHint">与「扩展 → 技能配置」勾选框同步：在技能配置勾选会自动写到这里；在文本框手填保存后技能配置会重渲染为新值</p>
+    </div>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgAgentAutoConfirm" checked data-i18n-aria="agent.autoConfirmLabel" aria-label="自动确认非危险操作">
+      <div>
+        <div class="sw-label" data-i18n="agent.autoConfirmLabel">自动确认非危险操作</div>
+        <div class="sw-sub" data-i18n="agent.autoConfirmSub">delete_task / update_task 等危险操作仍弹窗确认；其他工具（搜索、创建任务等）自动执行无需确认。</div>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgSyspromptScene" data-i18n="agent.syspromptLabel">场景提示词（每场景可自定义）</label>
+      <div class="ctl u-flex u-gap-2 u-flex-wrap">
+        <select id="cfgSyspromptScene" class="u-flex-1 u-min-w-120"></select>
+        <button type="button" class="addbtn sm" id="btnSyspromptReset" data-i18n-title="agent.syspromptReset" title="恢复该场景默认提示词" data-sc="muted" data-i18n="agent.syspromptReset">恢复默认</button>
+      </div>
+      <textarea id="cfgSysprompt" rows="4" class="code-input u-resize-v u-mt-1h"
+        data-i18n-placeholder="agent.syspromptPlaceholder" placeholder="自定义该场景 AI 的角色与行为提示词（留空=使用内置默认）"></textarea>
+      <div class="hint u-fs-2xs u-mt-1" data-i18n="agent.syspromptHint">提示词会注入该场景每轮对话开头，定义 AI 的角色定位与回复风格。</div>
+    </div>
+    <div class="hint u-fs-2xs u-m-1-0-2" id="agentStatus"></div>
+    <div class="set-actions">
+      <button type="button" class="addbtn sm u-nowrap" id="btnClearMem" data-sc="muted" data-i18n="agent.clearMem">清空记忆</button>
+      <button type="button" class="addbtn sm u-nowrap" id="btnCancelGoal" data-sc="danger-muted" data-i18n="agent.cancelGoal">取消当前目标</button>
+    </div>
+  </section>
+
+    <!-- v3.2 IA 重构：5 个实验性扩展合并为 1 张可折叠卡。
+       共性：均为实验性——配置可保存但 AI 引擎尚未消费；用 <details> 折叠避免视觉过载。
+       所有 input/button 的 id 全部保留以兼容既有 JS 绑定。 -->
+  <section class="set-card ai-section" id="ai-ext" data-ai-tab="ai-ext" aria-label="AI 扩展（实验性）" data-i18n-aria="a11y.aiExtExperimental">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
+      <div>
+        <h3><span data-i18n="aiExt.title">AI 扩展</span> <span class="badge-experimental" data-i18n-aria="aiExt.badge" aria-label="实验性" data-i18n="aiExt.badge">实验性</span></h3>
+        <p class="set-desc" data-i18n="aiExt.desc">5 个扩展维度的统一管理：技能 / MCP / 工作流 / 记忆 / AI 插件。当前仅保存配置，AI 引擎的消费接线在路线图中。普通用户无需修改此处。</p>
+      </div>
+    </header>
+
+    <details class="ext-collapse">
+      <summary><span class="nm" data-i18n="skills.summaryNm">技能</span><span class="hint-inline" data-i18n="skills.summaryHint">内置 + 自定义 JSON</span></summary>
+      <div class="ext-body">
+        <div class="set-subhead" data-i18n="skills.builtin">内置技能</div>
+        <div id="aiSkillsBuiltin"></div>
+        <div class="set-subhead" data-i18n="skills.customDef">自定义技能定义（JSON）</div>
+        <div class="set-field">
+          <label for="aiSkillsCustom" data-i18n="skills.customJson">自定义技能 JSON</label>
+          <div class="ctl">
+            <textarea id="aiSkillsCustom" rows="6" class="code-input u-resize-v" placeholder='[{"name":"技能名称","desc":"技能描述","enabled":true}]' data-i18n-placeholder="field.aiSkillsCustomPh"></textarea>
+            <p class="hint u-fs-2xs u-mt-1" data-i18n="skills.jsonHint">JSON 数组格式，每项含 name / desc / enabled 字段。</p>
+          </div>
+        </div>
+        <div class="set-actions">
+          <button type="button" class="addbtn sm u-flex-1" id="aiSkillsSave" data-sc="accent" data-i18n="skills.save">保存技能配置</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="ext-collapse">
+      <summary><span class="nm" data-i18n="mcp.summaryNm">MCP 服务器</span><span class="hint-inline">Model Context Protocol</span></summary>
+      <div class="ext-body">
+        <p class="set-tip" data-i18n="mcp.desc">配置 Model Context Protocol 服务器（实验性——配置仅本机存储，AI 引擎的消费接线在路线图中）。</p>
+        <div id="aiMcpList"></div>
+        <div class="set-actions">
+          <span class="add-wrap"><span class="add-label" data-i18n="mcp.add">添加服务器</span><button type="button" class="addbtn sm add-round" id="aiMcpAdd" data-sc="accent" data-i18n-aria="mcp.add" aria-label="添加服务器">＋</button></span>
+          <button type="button" class="addbtn sm u-flex-1" id="aiMcpSave" data-sc="accent" data-i18n="mcp.save">保存 MCP 配置</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="ext-collapse">
+      <summary><span class="nm" data-i18n="workflow.summaryNm">工作流</span><span class="hint-inline" data-i18n="workflow.summaryHint">AI 自动化草案</span></summary>
+      <div class="ext-body">
+        <p class="set-tip" data-i18n="workflow.desc">定义 AI 自动化工作流草案（实验性——仅保存配置，执行引擎自 v1.14.1 起冻结未复活）。</p>
+        <div id="aiWorkflowList"></div>
+        <div class="set-actions">
+          <button type="button" class="addbtn sm u-nowrap" id="aiWorkflowAdd" data-sc="accent" data-i18n="workflow.add">新建工作流</button>
+          <button type="button" class="addbtn sm u-flex-1" id="aiWorkflowSave" data-sc="accent" data-i18n="workflow.save">保存工作流配置</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="ext-collapse">
+      <summary><span class="nm" data-i18n="mem.summaryNm">记忆</span><span class="hint-inline" data-i18n="mem.summaryHint">上下文窗口与检索策略</span></summary>
+      <div class="ext-body">
+        <p class="set-tip" data-i18n="mem.desc">控制 AI 的上下文窗口与检索策略（实验性——当前对话裁剪用引擎内置参数）。</p>
+        <div class="set-field">
+          <label for="aiMemWindow" data-i18n="mem.windowLabel">上下文窗口大小（条，1~50）</label>
+          <div class="ctl"><input id="aiMemWindow" type="number" min="1" max="50" data-i18n-placeholder="mem.windowPlaceholder" placeholder="10（默认）"></div>
+        </div>
+        <div class="set-switch">
+          <input type="checkbox" id="aiMemLongTerm" data-i18n-aria="mem.longTermLabel" aria-label="长期记忆">
+          <div><div class="sw-label" data-i18n="mem.longTermLabel">长期记忆</div><div class="sw-sub" data-i18n="mem.longTermSub">开启后 AI 可跨会话检索历史记忆</div></div>
+        </div>
+        <!-- v3.4.7 批次六：RAG 上下文注入开关（默认关——发送消息前检索任务/记录/笔记相关片段拼进 system prompt） -->
+        <div class="set-switch">
+          <input type="checkbox" id="aiMemRag" data-i18n-aria="mem.ragLabel" aria-label="上下文注入（实验性）">
+          <div><div class="sw-label" data-i18n="mem.ragLabel">上下文注入（实验性）</div><div class="sw-sub" data-i18n="mem.ragSub">发送消息时自动检索任务/记录/笔记中的相关内容，拼进 AI 上下文——提问更精准，但会多消耗一些 token</div></div>
+        </div>
+        <div class="set-field">
+          <label for="aiMemThreshold" data-i18n="mem.thresholdLabel">记忆检索阈值（0~1）</label>
+          <div class="ctl"><input id="aiMemThreshold" type="range" min="0" max="1" step="0.05" value="0.7" class="u-w-full"></div>
+        </div>
+        <div class="set-field">
+          <label for="aiMemStrategy" data-i18n="mem.strategyLabel">记忆策略</label>
+          <div class="ctl">
+            <select id="aiMemStrategy">
+              <option value="recent" data-i18n="mem.strategy.recent">最近</option>
+              <option value="relevant" data-i18n="mem.strategy.relevant">相关</option>
+              <option value="mixed" data-i18n="mem.strategy.mixed">混合</option>
+            </select>
+          </div>
+        </div>
+        <div class="set-actions">
+          <button type="button" class="addbtn sm u-flex-1" id="aiMemSave" data-sc="accent" data-i18n="mem.save">保存记忆配置</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="ext-collapse">
+      <summary><span class="nm" data-i18n="aiPlugin.summaryNm">AI 插件</span><span class="hint-inline" data-i18n="aiPlugin.summaryHint">扩展插件清单</span></summary>
+      <div class="ext-body">
+        <p class="set-tip" data-i18n="aiPlugin.desc">AI 扩展插件清单（实验性——暂无执行代码，勾选状态仅保存配置）。</p>
+        <div id="aiPluginList"></div>
+        <div class="set-actions">
+          <button type="button" class="addbtn sm u-flex-1" id="aiPluginSave" data-sc="accent" data-i18n="aiPlugin.save">保存插件配置</button>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-ext" aria-label="会话管理" data-i18n-aria="a11y.sessionMgmt2">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+      <div><h3 data-i18n="sess.title">会话管理</h3><p class="set-desc" data-i18n="sess.desc">会话超时与自动保存设置（实验性——对话会话的实际管理在聊天面板「☰」，此处配置的消费接线在路线图中）。</p></div>
+    </header>
+    <div class="set-field">
+      <label for="aiSessTimeout" data-i18n="sess.timeoutLabel">会话超时（分钟，5~1440）</label>
+      <div class="ctl"><input id="aiSessTimeout" type="number" min="5" max="1440" data-i18n-placeholder="ai.config.timeoutPlaceholder" placeholder="30（默认）"></div>
+    </div>
+    <div class="set-switch">
+      <input type="checkbox" id="aiSessAutosave" checked data-i18n-aria="sess.autosaveLabel" aria-label="自动保存会话">
+      <div><div class="sw-label" data-i18n="sess.autosaveLabel">自动保存会话</div><div class="sw-sub" data-i18n="sess.autosaveSub">开启后每轮对话自动保存到本地</div></div>
+    </div>
+    <div class="set-subhead" data-i18n="sess.history">会话历史</div>
+    <div id="aiSessHistory"></div>
+    <div class="set-actions">
+      <button type="button" class="addbtn sm u-nowrap" id="aiSessClear" data-sc="danger-muted" data-i18n="sess.clearAll">清除所有会话</button>
+      <button type="button" class="addbtn sm u-flex-1" id="aiSessSave" data-sc="accent" data-i18n="sess.save">保存会话配置</button>
+    </div>
+  </section>
+
+  <!-- ===== 场景管理 ===== -->
+  <section class="set-card" id="set-scene" aria-label="场景管理" data-i18n-aria="a11y.sceneMgmt">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span>
+      <div>
+        <h3 data-i18n="sceneMgmt.title">场景管理</h3>
+        <p class="set-desc" data-i18n="sceneMgmt.desc">可新增自定义场景，或为内置场景改名 / 换色。场景下有任务时不可删除（防止数据丢失）。改动保存后，侧栏、命令面板、统计与联动自动生效。</p>
+      </div>
+    </header>
+    <div id="scBox"></div>
+    <div class="chain-add-form">
+      <div class="set-subhead" data-i18n="sceneMgmt.addCustom">添加自定义场景</div>
+      <div class="btn-row">
+        <input id="scAddName" data-i18n-placeholder="sceneMgmt.namePlaceholder" placeholder="场景名（如 健身）" maxlength="12" class="u-flex-1 u-min-w-120">
+        <input id="scAddColor" type="color" data-i18n-aria="sceneMgmt.colorLabel" aria-label="场景颜色">
+        <select id="scAddIcon" data-i18n-aria="sceneMgmt.iconLabel" aria-label="场景图标" class="u-flex-1 u-min-w-110 u-max-w-150"></select>
+        <span class="add-wrap"><span class="add-label" data-i18n="common.add">添加</span><button type="button" class="addbtn sm add-round" id="scAddBtn" data-i18n-aria="sceneMgmt.addBtn" aria-label="添加场景">＋</button></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 联动规则 ===== -->
+  <section class="set-card" id="set-chain" aria-label="联动规则" data-i18n-aria="a11y.chainRules">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+      <div>
+        <h3 data-i18n="chainMgmt.title">联动规则</h3>
+        <p class="set-desc" data-i18n="chainMgmt.desc">源场景任务完成时，按规则跨场景自动生成奖励/后续任务（生成的任务带「联动」标签）。点击关键词或目标场景可 inline 编辑。</p>
+      </div>
+    </header>
+    <div id="linksBox"></div>
+    <div class="chain-add-form">
+      <div class="set-subhead" data-i18n="chainMgmt.addNew">添加新链</div>
+      <div class="chain-add-row">
+        <select id="chainAddSrc" class="u-flex-1 u-min-w-80"></select>
+        <input id="chainAddKw" data-i18n-placeholder="chainMgmt.kwPlaceholder" placeholder="输入关键词，如：交付、上线" class="u-flex-2 u-min-w-120">
+        <select id="chainAddDst" class="u-flex-1 u-min-w-80"></select>
+        <span class="add-wrap"><span class="add-label" data-i18n="common.add">添加</span><button type="button" class="addbtn add-round" id="chainAddBtn" data-sc="accent" data-i18n-aria="chainMgmt.addBtn" aria-label="添加联动规则">＋</button></span>
+      </div>
+    </div>
+    <div class="set-actions u-mt-3">
+      <button type="button" class="addbtn sm u-flex-auto" id="chainResetBtn" data-sc="muted" data-i18n="chain.reset">重置为默认</button>
+      <button type="button" class="addbtn sm u-flex-1 u-min-w-90" id="btnChainShare" data-sc="accent"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span><span data-i18n="chain.share">分享我的链</span></button>
+      <button type="button" class="addbtn sm u-flex-1 u-min-w-90" id="btnChainImport" data-sc="accent"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span><span data-i18n="chain.import">导入链</span></button>
+    </div>
+  </section>
+
+  <!-- ===== 知识（独立菜单页，v1.15 从设置抽离） ===== -->
+  <section class="set-card" id="set-content" aria-label="知识" data-i18n-aria="a11y.knowledge">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
+      <div>
+        <h3 data-i18n="knowledge.title">知识</h3>
+        <p class="set-desc" data-i18n="knowledge.desc">场景模板与知识管理（笔记 / 知识库 / 全文搜索）入口。</p>
+      </div>
+    </header>
+    <div class="set-subhead" data-i18n="knowledge.template">场景模板</div>
+    <p class="set-tip" data-i18n="knowledge.templateTip">一键导入预置任务集（考研复习 / 健身计划 / 编程学习 / 项目管理 / 习惯养成），到期日按今天 + 偏移自动计算。</p>
+    <button type="button" class="addbtn u-w-full" id="btnSceneTemplate" data-sc="accent"><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span><span data-i18n="knowledge.templateBtn">选择场景模板一键导入</span></button>
+    <div class="set-divider" role="separator"></div>
+    <!-- v1.6-D 知识管理入口：笔记管理 / 知识库 / 全文搜索 -->
+    <div class="set-subhead" data-i18n="knowledge.mgmt">知识管理</div>
+    <p class="set-tip" data-i18n="knowledge.mgmtTip">Markdown 笔记系统（标签分类 + 任务关联）+ 知识库（按主题分类）+ 全文搜索（任务/记录/笔记，关键词高亮）。</p>
+    <div class="set-actions">
+      <button type="button" class="addbtn min" id="btnNotes" ><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span><span data-i18n="knowledge.notes">笔记管理</span></button>
+      <button type="button" class="addbtn min" id="btnKnowledgeBase" ><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span><span data-i18n="knowledge.base">知识库</span></button>
+      <button type="button" class="addbtn min" id="btnSearch" ><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><span data-i18n="knowledge.search">全文搜索</span></button>
+    </div>
+    <div class="set-divider" role="separator"></div>
+
+  </section>
+
+  <!-- ===== 插件商店（设置内卡片） ===== -->
+  <section class="set-card" id="set-plugin" aria-label="插件商店" data-i18n-aria="a11y.pluginStore">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V4H9v1a2 2 0 0 1-2 2H4v6h1a2 2 0 0 1 2 2v1h6v-1a2 2 0 0 1 2-2h1V7h4v4h-1"/><path d="M4 13v6h6v-1a2 2 0 0 1 2-2"/></svg></span>
+      <div>
+        <h3 data-i18n="store.title">商店</h3>
+        <p class="set-desc" data-i18n="store.desc">启用插件可扩展自定义场景、卡片与联动规则。插件状态持久化到本地，启用/禁用即时生效。</p>
+      </div>
+    </header>
+    <div id="pluginBox"></div>
+    <div class="chain-add-form">
+      <div class="set-subhead" data-i18n="store.registerNew">注册新插件</div>
+      <p class="set-tip" data-i18n="store.pasteJson">粘贴插件 JSON 定义。</p>
+      <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"插件ID","name":"插件名称","version":"1.0.0","description":"插件描述"}' data-i18n-placeholder="field.pluginAddJsonPh" class="u-resize-v"></textarea>
+      <button type="button" class="addbtn sm u-mt-1" id="pluginAddBtn" data-sc="accent" data-i18n="store.registerBtn">注册插件</button>
+    </div>
+  </section>
+
+  <!-- ===== 数据管理 ===== -->
+  <section class="set-card" id="set-data" aria-label="数据管理" data-i18n-aria="a11y.dataMgmt">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>
+      <div>
+        <h3 data-i18n="dataMgmt.title">数据管理</h3>
+        <p class="set-desc" data-i18n="dataMgmt.desc">自动备份恢复与数据导入导出。</p>
+      </div>
+    </header>
+    <!-- v3.4.7 批次四：存储用量仪表——容量横条 + Top5 大 key（此前用户对 5MB 配额完全盲） -->
+    <div class="storage-usage-card" id="storageUsageCard">
+      <div class="storage-usage-head">
+        <span data-i18n="dataMgmt.storageTitle">存储用量</span>
+        <span class="storage-usage-total" id="storageUsageTotal"></span>
+      </div>
+      <div class="storage-usage-bar"><div class="storage-usage-fill" id="storageUsageFill"></div></div>
+      <div class="storage-usage-top" id="storageUsageTop"></div>
+    </div>
+    <div class="set-subhead" data-i18n="dataMgmt.maintenance">维护</div>
+    <div class="set-field">
+      <label for="cfgRecyclePolicy" data-i18n="settings.recyclePolicy">回收站自动清理</label>
+      <div class="ctl">
+        <select id="cfgRecyclePolicy">
+          <option value="off" data-i18n="dataMgmt.recycleOff">关闭</option>
+          <option value="7" data-i18n="dataMgmt.recycle7">7 天后</option>
+          <option value="30" data-i18n="dataMgmt.recycle30">30 天后</option>
+          <option value="90" data-i18n="dataMgmt.recycle90">90 天后</option>
+        </select>
+      </div>
+    </div>
+    <p class="set-tip" data-i18n="dataMgmt.recycleTip">每次启动生效，超期软删任务将被永久删除（含多类型回收：配置/文件/插件同样适用）。</p>
+    <div class="set-subhead" data-i18n="dataMgmt.autoBackup">自动备份</div>
+    <button type="button" class="addbtn u-w-full" id="btnRecover" data-sc="accent" data-i18n="dataMgmt.recoverBtn">从自动备份恢复</button>
+    <!-- v3.1.2 B-档：显示上次快照时间 + 快照大小（此前用户不知道备份是否生效、何时生效） -->
+    <p class="set-tip u-fs-2xs u-mt-1h" id="autoBackupMeta" data-i18n="dataMgmt.noAutoBackup">尚未生成自动备份</p>
+    <p class="set-tip" data-i18n="dataMgmt.recoverTip">每次数据变动后自动快照到本地（独立于「导出 JSON 备份」）。如手动导出前数据损坏，可从此处还原最近一次快照。</p>
+    <div class="set-divider" role="separator"></div>
+    <div class="set-subhead" data-i18n="dataMgmt.exportImport">导出 / 导入</div>
+    <div class="set-actions">
+      <button type="button" class="addbtn min" id="btnExport" data-i18n-aria="dataMgmt.exportJsonAria" aria-label="导出 JSON" data-i18n="dataMgmt.exportJson">导出 JSON</button>
+      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n-aria="dataMgmt.exportCsvAria" aria-label="${t("export.preview.confirm", "导出 CSV")}" data-sc="accent">导出 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportMD" data-i18n-aria="dataMgmt.exportMdAria" aria-label="导出 Markdown" data-sc="accent" data-i18n="dataMgmt.exportMD">导出 MD</button>
+      <button type="button" class="addbtn min" id="btnImport" data-i18n-aria="dataMgmt.importRecoverAria" aria-label="导入恢复" data-i18n="dataMgmt.importRecover">导入恢复</button>
+      <button type="button" class="addbtn min" id="btnIdbRestore" data-i18n-aria="dataMgmt.idbRestoreAria" aria-label="从本地库恢复" data-i18n="dataMgmt.idbRestoreBtn">本地库恢复</button>
+      <button type="button" class="addbtn min" id="btnIdbExport" data-i18n-aria="dataMgmt.idbExportAria" aria-label="导出 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullBackup">IDB 全量备份</button>
+      <button type="button" class="addbtn min" id="btnIdbImport" data-i18n-aria="dataMgmt.idbImportAria" aria-label="导入 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullRestore">IDB 全量恢复</button>
+      <input type="file" id="idbFileInput" accept=".idbbackup,.json" class="u-hidden">
+      <!-- P0-8：局域网同步按钮（仅 Electron 环境显示） -->
+      <button type="button" class="addbtn min u-hidden" id="btnSyncLocal" aria-label="局域网同步" data-i18n-aria="a11y.lanSync" data-sc="accent" data-i18n="dataMgmt.lanSync">局域网同步</button>
+      <button type="button" class="addbtn min danger" id="btnClear" data-i18n-aria="dataMgmt.clearDataAria" aria-label="清空数据" data-i18n="dataMgmt.clearData">清空数据</button>
+    </div>
+    <div class="set-actions">
+      <button type="button" class="addbtn min" id="btnExportPreview" data-i18n-aria="dataMgmt.exportPreviewAria" aria-label="导出预览" data-i18n="dataMgmt.exportPreview">导出预览</button>
+      <button type="button" class="addbtn min" id="btnImportCSV" data-i18n-aria="dataMgmt.importCsvAria" aria-label="导入 CSV" data-i18n="dataMgmt.importCSV">导入 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportRecsCSV" data-i18n-aria="dataMgmt.exportRecsCsvAria" aria-label="导出记录 CSV" data-i18n="dataMgmt.exportRecsCSV">导出记录 CSV</button>
+    </div>
+    <input type="file" id="csvFileInput" accept=".csv" class="u-hidden">
+    <label class="expkey u-flex u-fs-2xs u-text-muted u-ai-center u-gap-1 u-m-2-0-0">
+      <input type="checkbox" id="exportKeyOpt">
+      <span data-i18n="data.exportKey">导出时包含 AI Key（明文，请自行妥善保管）</span>
+    </label>
+    <label class="expkey u-flex u-fs-2xs u-text-muted u-ai-center u-gap-1 u-m-2-0-0">
+      <input type="checkbox" id="exportEncryptOpt">
+      <span data-i18n="dataMgmt.encryptExport">加密导出（需密码）</span>
+    </label>
+  </section>
+
+  <!-- ===== 外观 ===== -->
+  <section class="set-card" id="set-look" aria-label="外观" data-i18n-aria="a11y.appearance">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>
+      <div>
+        <h3 data-i18n="look.title">外观</h3>
+        <p class="set-desc" data-i18n="look.desc">主题、自定义配色与语言偏好。「跟随系统」随操作系统明暗自动切换，语言切换即时生效并记忆偏好。</p>
+      </div>
+    </header>
+    <div class="set-field">
+      <label for="cfgTheme" data-i18n="settings.theme">主题</label>
+      <div class="ctl">
+        <select id="cfgTheme">
+          <option value="light" data-i18n="look.theme.light">浅色</option>
+          <option value="dark" data-i18n="look.theme.dark">暗色</option>
+          <option value="system" data-i18n="look.theme.system">跟随系统</option>
+          <option value="sepia" data-i18n="look.theme.sepia">温和护眼</option>
+          <option value="elegant" data-i18n="look.theme.elegant">见静初雪</option>
+          <option value="aurora" data-i18n="look.theme.aurora">幻夜极光</option>
+          <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
+          <option value="forest" data-i18n="look.theme.forest">秘境森林</option>
+          <option value="ocean" data-i18n="look.theme.ocean">微蓝浅海</option>
+          <option value="mist" data-i18n="look.theme.mist">晓光晨雾</option>
+        </select>
+      </div>
+    </div>
+    <div class="set-field">
+      <label for="cfgLang" data-i18n="look.lang.label">语言 / Language</label>
+      <div class="ctl">
+        <select id="cfgLang">
+          <option value="zh" data-i18n="look.lang.zh">中文</option>
+          <option value="en" data-i18n="look.lang.en">English</option>
+        </select>
+      </div>
+    </div>
+    <!-- v1.5-C 主题编辑器：自定义主题 + 场景配色 + 导入导出 -->
+    <div class="theme-editor-section">
+      <div class="set-subhead" data-i18n="look.themeEditor">自定义主题编辑器</div>
+      <p class="set-tip" data-i18n="look.themeEditorTip">创建自定义主题（调整令牌色值），或为每个场景独立配色。主题可导出为 JSON 分享给其他用户。</p>
+      <div id="themeCustomList" class="theme-custom-list"></div>
+      <div class="theme-actions">
+        <button type="button" class="addbtn sm" id="btnThemeNew" data-i18n="look.themeNew">新建自定义主题</button>
+        <button type="button" class="addbtn sm" id="btnThemeExport" data-i18n="look.themeExport">导出当前主题</button>
+        <button type="button" class="addbtn sm" id="btnThemeImport" data-i18n="look.themeImport">导入主题</button>
+      </div>
+      <div id="themeEditorArea" class="u-hidden u-mt-2">
+        <div class="set-field u-grid-minmax">
+          <label for="themeCustomName" data-i18n="look.themeName">名称</label>
+          <div class="ctl"><input id="themeCustomName" data-i18n-placeholder="look.themeNamePlaceholder" placeholder="如 我的主题" class="u-fs-2xs"></div>
+        </div>
+        <div class="u-fs-2xs u-text-muted u-mt-1h u-fw-600" data-i18n="look.tokenColors">令牌色值</div>
+        <div id="themeTokenEditor"></div>
+        <div class="theme-actions">
+          <button type="button" class="addbtn sm" id="btnThemeSave" data-i18n="look.themeSave">保存主题</button>
+          <button type="button" class="addbtn sm" id="btnThemeCancel" data-sc="muted" data-i18n="common.cancel">取消</button>
+        </div>
+      </div>
+      <div id="themeImportArea" class="u-hidden u-mt-2">
+        <div class="u-fs-2xs u-text-muted u-fw-600 u-mb-1" data-i18n="look.pasteThemeJson">粘贴主题 JSON</div>
+        <textarea id="themeImportJson" class="theme-import-textarea" rows="5" placeholder='{"id":"主题ID","name":"主题名称","type":"custom","tokens":{"--bg":"var(--panel)","--accent":"var(--accent)"}}' data-i18n-placeholder="field.themeImportJsonPh"></textarea>
+        <div class="theme-actions">
+          <button type="button" class="addbtn sm" id="btnThemeImportConfirm" data-i18n="common.confirmImport">确认导入</button>
+          <button type="button" class="addbtn sm" id="btnThemeImportCancel"  data-sc="muted" data-i18n="common.cancel">取消</button>
+        </div>
+      </div>
+      <div class="u-fs-2xs u-text-muted u-mt-2h u-fw-600" data-i18n="look.scColorPersonalize">场景配色个性化</div>
+      <div id="themeScColorEditor"></div>
+    </div>
+    <div class="set-field">
+      <label for="cfgRecyclePolicy"></label>
+    </div>
+    <p class="set-tip" data-i18n=""></p>
+    <div class="row switch set-switch u-hidden u-mt-1 u-border-top-line u-pt-3" id="autoLaunchRow">
+      <input type="checkbox" id="cfgAutoLaunch" data-i18n-aria="look.autoLaunchLabel" aria-label="开机自动启动">
+      <div>
+        <div class="sw-label" data-i18n="look.autoLaunchLabel">开机自动启动</div>
+        <div class="sw-sub" data-i18n="look.autoLaunchSub">仅桌面端 exe 生效</div>
+      </div>
+    </div>
+    <!-- 鼠标特效（v1.15：从独立卡片移入外观卡内） -->
+    <div class="set-field u-mt-2">
+      <label for="cfgPointerFxType" data-i18n="look.pointerFxLabel">鼠标特效</label>
+      <div class="ctl">
+        <select id="cfgPointerFxType">
+          <option value="spark" data-i18n="look.pointerFx.spark">粒子拖尾</option>
+          <option value="star" data-i18n="look.pointerFx.star">星光闪烁</option>
+          <option value="bubble" data-i18n="look.pointerFx.bubble">彩色泡泡</option>
+          <option value="firefly" data-i18n="look.pointerFx.firefly">萤火虫</option>
+        </select>
+      </div>
+    </div>
+    <div class="row switch set-switch" id="pointerFxRow">
+      <input type="checkbox" id="cfgPointerFx" aria-label="鼠标特效开关" data-i18n-aria="a11y.pointerFxToggle">
+      <div>
+        <div class="sw-label" data-i18n="look.pointerFxEnable">启用鼠标特效</div>
+        <div class="sw-sub" data-i18n="look.pointerFxSub">鼠标在页面移动时显示装饰粒子，可关闭或选择风格。</div>
+      </div>
+    </div>
+  </section>
+
+  
+  <!-- ===== 通知提醒 ===== -->
+  <section class="set-card" id="set-notify" aria-label="通知提醒" data-i18n-aria="a11y.notifyReminder">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 19h18L12 4z"/><path d="M12 10v4M12 17.5h.01"/></svg></span>
+      <div>
+        <h3 data-i18n="notify.title">通知提醒</h3>
+        <p class="set-desc" data-i18n="notify.desc">到期任务、联动断链与每日汇总的提醒方式，以及浏览器推送订阅。</p>
+      </div>
+    </header>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgNotify" aria-label="开启任务到期提醒" data-i18n-aria="a11y.enableTaskReminder">
+      <div>
+        <div class="sw-label" data-i18n="notify.enableLabel">开启任务到期 / 联动断链 / 每日汇总提醒</div>
+        <div class="sw-sub" data-i18n="notify.enableSub">开启后每分钟检查到期任务与断链习惯，通过浏览器 Notification（或 toast 兜底）提醒。每条任务只提醒一次，断链每天只提醒一次，每日汇总同一天不重复。</div>
+      </div>
+    </div>
+    <!-- v3.1.2 B-档：浏览器通知权限状态行（此前权限被拒后静默降级 toast，用户不知原因也无引导） -->
+    <p class="set-tip u-fs-2xs u-mt-1" id="notifyPermissionMeta" data-i18n="notify.permissionChecking">检测中…</p>
+    <div class="set-field">
+      <label for="cfgQuiet" data-i18n="settings.quiet">免打扰时段</label>
+      <div class="ctl">
+        <div class="btn-row">
+          <input type="checkbox" id="cfgQuiet" aria-label="免打扰时段" data-i18n-aria="a11y.quietHours">
+          <select id="cfgQuietStart" aria-label="免打扰开始时间" data-i18n-aria="a11y.quietStart" class="u-flex-0-1-120"></select>
+          <span class="u-fs-2xs u-text-muted" data-i18n="settings.quiet.to">至</span>
+          <select id="cfgQuietEnd" aria-label="免打扰结束时间" data-i18n-aria="a11y.quietEnd" class="u-flex-0-1-120"></select>
+        </div>
+        <p class="set-tip u-mt-1" data-i18n="notify.quietTip">免打扰时段内不推送提醒（到期任务会在时段结束后补提醒）。支持跨天，如 22:00 → 08:00。</p>
+      </div>
+    </div>
+    <!-- v1.4-F Web Push 订阅框架：订阅/取消订阅 + 状态显示 -->
+    <div class="push-row" id="pushRow">
+      <div class="push-head">
+        <label for="cfgPush" data-i18n="settings.push">推送通知（Web Push）</label>
+        <input type="checkbox" id="cfgPush">
+      </div>
+      <p class="push-status" id="pushStatus" data-i18n="notify.pushStatus">未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。</p>
+      <div class="push-actions">
+        <button type="button" id="btnPushSubscribe" data-i18n="settings.push.subscribe">订阅推送</button>
+        <button type="button" id="btnPushUnsubscribe" disabled data-i18n="settings.push.unsubscribe">取消订阅</button>
+        <button type="button" id="btnPushTest" disabled data-i18n="settings.push.test">发送测试通知</button>
+      </div>
+      <p class="hint u-fs-2xs u-m-1h-0-0" data-i18n="notify.pushHint">⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。</p>
+    </div>
+  </section>
+
+  <!-- ===== v3.1：集成中心 ===== -->
+  <section class="set-card" id="set-integration" aria-label="集成中心" data-i18n-aria="a11y.integrationCenter">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+      <div>
+        <h3 data-i18n="integration.title">集成中心</h3>
+        <p class="set-desc" data-i18n="integration.desc">连接外部服务，同步任务、笔记和日程。Key 仅存本机浏览器。</p>
+      </div>
+    </header>
+    <div id="integrationPanel"></div>
+  </section>
+
+  <!-- ===== 任务235：API 账号设置（仅登录后显示） ===== -->
+  <section class="set-card" id="set-api-account" aria-label="账号设置" data-i18n-aria="a11y.apiAccount">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+      <div>
+        <h3 data-i18n="api.accountTitle">账号设置</h3>
+        <p class="set-desc" data-i18n="api.accountDesc">管理你的账号信息与登录设备。</p>
+      </div>
+    </header>
+    <div class="api-panel" id="apiAccountPanel">
+      <div class="api-row"><span class="api-label" data-i18n="api.name">用户名</span><span class="api-value" id="apiUserName">—</span></div>
+      <div class="api-row"><span class="api-label" data-i18n="api.email">邮箱</span><span class="api-value" id="apiUserEmail">—</span></div>
+      <div class="set-field">
+        <label for="apiEditName" data-i18n="api.editName">修改用户名</label>
+        <div class="ctl"><input id="apiEditName" maxlength="100" autocomplete="off"></div>
+      </div>
+      <button type="button" class="api-btn accent" id="btnApiSaveName" data-i18n="common.save">保存</button>
+      <div class="api-panel-title u-mt-3" data-i18n="api.devices">登录设备</div>
+      <div id="apiDeviceList"></div>
+      <button type="button" class="api-btn danger u-mt-3" id="btnApiLogout" data-i18n="api.logout">登出</button>
+    </div>
+    <p class="api-login-hint" id="apiAccountHint" data-i18n="api.loginRequired">请先登录以使用账号功能</p>
+  </section>
+
+  <!-- ===== 任务235：API 通知偏好（仅登录后显示） ===== -->
+  <section class="set-card" id="set-api-notify" aria-label="通知偏好" data-i18n-aria="a11y.apiNotify">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+      <div>
+        <h3 data-i18n="api.notifyPrefsTitle">通知偏好</h3>
+        <p class="set-desc" data-i18n="api.notifyPrefsDesc">配置任务到期、断链、每日汇总的通知渠道。</p>
+      </div>
+    </header>
+    <div class="api-panel" id="apiNotifyPanel">
+      <div class="api-row"><span class="api-label" data-i18n="api.taskDueEmail">任务到期·邮件</span><input type="checkbox" id="apiPrefTaskDueEmail"></div>
+      <div class="api-row"><span class="api-label" data-i18n="api.taskDuePush">任务到期·推送</span><input type="checkbox" id="apiPrefTaskDuePush"></div>
+      <div class="api-row"><span class="api-label" data-i18n="api.habitEmail">断链·邮件</span><input type="checkbox" id="apiPrefHabitEmail"></div>
+      <div class="api-row"><span class="api-label" data-i18n="api.habitPush">断链·推送</span><input type="checkbox" id="apiPrefHabitPush"></div>
+      <div class="api-row"><span class="api-label" data-i18n="api.digestEmail">每日汇总·邮件</span><input type="checkbox" id="apiPrefDigestEmail"></div>
+      <div class="api-row"><span class="api-label" data-i18n="api.digestPush">每日汇总·推送</span><input type="checkbox" id="apiPrefDigestPush"></div>
+      <button type="button" class="api-btn accent u-mt-2" id="btnApiSavePrefs" data-i18n="common.save">保存</button>
+      <div class="api-panel-title u-mt-3" data-i18n="api.schedules">定时提醒</div>
+      <div id="apiScheduleList"></div>
+      <div class="set-field u-mt-2">
+        <label for="apiSchedType" data-i18n="api.schedType">提醒类型</label>
+        <div class="ctl"><select id="apiSchedType"><option value="taskDue" data-i18n="api.schedTaskDue">任务到期</option><option value="dailyDigest" data-i18n="api.schedDailyDigest">每日汇总</option><option value="habitBroken" data-i18n="api.schedHabitBroken">断链提醒</option></select></div>
+      </div>
+      <div class="set-field">
+        <label for="apiSchedCron" data-i18n="api.schedCron">Cron 表达式</label>
+        <div class="ctl"><input id="apiSchedCron" placeholder="0 9 * * *" maxlength="60" autocomplete="off"></div>
+      </div>
+      <button type="button" class="api-btn accent" id="btnApiAddSchedule" data-i18n="common.add">新增提醒</button>
+    </div>
+    <p class="api-login-hint" id="apiNotifyHint" data-i18n="api.loginRequired">请先登录以使用通知偏好功能</p>
+  </section>
+
+  <!-- ===== 任务235：API 第三方集成（仅登录后显示） ===== -->
+  <section class="set-card" id="set-api-integrations" aria-label="第三方集成" data-i18n-aria="a11y.thirdPartyIntegrations">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+      <div>
+        <h3 data-i18n="api.integrationsTitle">第三方集成</h3>
+        <p class="set-desc" data-i18n="api.integrationsDesc">连接 Notion / Todoist / Google Calendar，同步任务与日程。</p>
+      </div>
+    </header>
+    <div class="api-panel" id="apiIntegrationsPanel">
+      <div class="api-row" id="apiIntegNotion">
+        <span class="api-label">Notion</span>
+        <span class="api-status-badge disconnected" id="apiNotionStatus"><span data-i18n="api.notConnected">未连接</span></span>
+        <button type="button" class="api-btn accent" id="btnApiConnectNotion" data-i18n="api.connect">连接</button>
+        <button type="button" class="api-btn danger u-hidden" id="btnApiDisconnectNotion" data-i18n="api.disconnect">断开</button>
+      </div>
+      <div class="api-row" id="apiIntegTodoist">
+        <span class="api-label">Todoist</span>
+        <span class="api-status-badge disconnected" id="apiTodoistStatus"><span data-i18n="api.notConnected">未连接</span></span>
+        <button type="button" class="api-btn accent" id="btnApiConnectTodoist" data-i18n="api.connect">连接</button>
+        <button type="button" class="api-btn danger u-hidden" id="btnApiDisconnectTodoist" data-i18n="api.disconnect">断开</button>
+      </div>
+      <div class="api-row" id="apiIntegGcal">
+        <span class="api-label">Google Calendar</span>
+        <span class="api-status-badge disconnected" id="apiGcalStatus"><span data-i18n="api.notConnected">未连接</span></span>
+        <button type="button" class="api-btn accent" id="btnApiConnectGcal" data-i18n="api.connect">连接</button>
+        <button type="button" class="api-btn danger u-hidden" id="btnApiDisconnectGcal" data-i18n="api.disconnect">断开</button>
+      </div>
+    </div>
+    <p class="api-login-hint" id="apiIntegrationsHint" data-i18n="api.loginRequired">请先登录以使用集成功能</p>
+  </section>
+
+  <!-- ===== 关于与兼容说明 ===== -->
+  <section class="set-card" id="set-about" aria-label="关于与兼容说明" data-i18n-aria="a11y.aboutCompat">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>
+      <div>
+        <h3 data-i18n="about.title">关于与兼容说明</h3>
+        <p class="set-desc" data-i18n="about.desc">使用 AI 功能前，请先了解以下说明。</p>
+      </div>
+    </header>
+    <p class="set-tip" data-i18n="about.tip">启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
+    <!-- v3.1.2 B-档：关于卡补版本号 + 快捷键帮助入口（此前版本只在抽屉尾栏、快捷键只能按 ? 唤起，用户找不到） -->
+    <p class="set-tip u-fs-2xs u-mt-3" id="aboutVersion"></p>
+    <button type="button" class="addbtn sm u-w-full u-mt-2" id="btnOpenShortcutHelp" data-sc="accent" data-i18n="about.shortcutBtn">快捷键帮助</button>
+  </section>
+
+  <!-- 保存按钮卡片（settings/ai 页显示；plugin 页安装即生效、无表单保存语义，由 CSS 隐藏） -->
+  <div class="set-savebar">
+    <button type="button" class="addbtn u-flex-1" id="cfgSave" data-sc="accent" data-i18n="settings.saveBtn">保存设置</button>
+    <!-- v3.1.2 A-档：测试连接按钮——新用户首配 Key 后不需等撞 401 才能发现错（端点连通+Key 有效+模型可访问三要素一次验） -->
+    <button type="button" class="addbtn u-flex-1" id="cfgTestConn" data-sc="accent" data-i18n="settings.testConn">测试连接</button>
+  </div>
+</div>
+
+
 
 <!-- v1.4-C 导出预览弹窗：数据概览 + 字段选择 -->
 <div class="overlay" id="exportPreviewOverlay"></div>
@@ -4072,10 +4879,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.0"; /* v3.5.0 里程碑：跨设备云同步（账号注册/登录 + 云端快照 + 换设备恢复） */
+const VERSION = "3.4.11"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260909b";
+const BUILD_TAG = "20260904f";
 
 
 
@@ -8926,8 +9733,8 @@ function _buildSideMenu(){
   return [
     {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode, timelineNode]},
     {gid:"scenario", name:t("side.group.scenario", "场景"), nodes:sceneNodes},
-    /* v3.4.29：AI 并入工具组（独立组仅 1 项，组名与条目名重复成「AI/AI」两行，且移动端底栏多占一格） */
-    {gid:"tools", name:t("side.group.tools", "工具"), nodes:[aiNode, toolboxNode, storeNode]},
+    {gid:"ai", name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
+    {gid:"tools", name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
     {gid:"system", name:t("side.group.system", "系统"), nodes:[recycleNode, gearNode, helpNode]}
   ];
 }
@@ -12779,7 +13586,6 @@ function renderOverview(){
   const _t4WeekAgo = (function(){ const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0,10); })();
   const _t4Month = _t4Today.slice(0, 7);
   const todayOpen = tasks.filter(function(tk){ return tk.status !== "done" && tk.due && tk.due <= _t4Today; }).length;
-  const todayOverdue = tasks.filter(function(tk){ return tk.status !== "done" && tk.due && tk.due < _t4Today; }).length;
   const weekMeetings = (load(PREFIX + "meetings", []) || []).filter(function(r){ return r.date && r.date >= _t4WeekAgo; }).length;
   const monthBills = (load(PREFIX + "life_bills", []) || []).filter(function(r){ return r.due && r.due.slice(0, 7) === _t4Month; }).length;
   const weekSport = getHealthRecs().filter(function(r){
@@ -12787,12 +13593,11 @@ function renderOverview(){
     const d = r._date || r.date || (r.created ? new Date(r.created).toISOString().slice(0,10) : "");
     return d && d >= _t4WeekAgo;
   }).length;
-  // v3.4.28：速览卡可点击直达场景 + 逾期红点提示（信息密度与可操作性提升）
   const overview4 = '<div class="overview-4cards">' +
-    '<div class="overview-card ov4-clickable' + (todayOverdue > 0 ? ' ov4-alert' : '') + '" data-ov4-goto="office" role="button" tabindex="0" aria-label="' + t("ov4.today","今日待办") + (todayOverdue > 0 ? '，' + todayOverdue + ' ' + t("ov4.overdue","项已逾期") : '') + '"><div class="v">' + todayOpen + (todayOverdue > 0 ? '<span class="ov4-badge">' + todayOverdue + '</span>' : '') + '</div><div class="l">' + t("ov4.today","今日待办") + '</div></div>' +
-    '<div class="overview-card ov4-clickable" data-ov4-goto="office" role="button" tabindex="0" aria-label="' + t("ov4.meetings","本周会议") + '"><div class="v">' + weekMeetings + '</div><div class="l">' + t("ov4.meetings","本周会议") + '</div></div>' +
-    '<div class="overview-card ov4-clickable" data-ov4-goto="life" role="button" tabindex="0" aria-label="' + t("ov4.bills","本月缴费") + '"><div class="v">' + monthBills + '</div><div class="l">' + t("ov4.bills","本月缴费") + '</div></div>' +
-    '<div class="overview-card ov4-clickable" data-ov4-goto="life" role="button" tabindex="0" aria-label="' + t("ov4.sport","本周运动") + '"><div class="v">' + weekSport + '</div><div class="l">' + t("ov4.sport","本周运动") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + todayOpen + '</div><div class="l">' + t("ov4.today","今日待办") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + weekMeetings + '</div><div class="l">' + t("ov4.meetings","本周会议") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + monthBills + '</div><div class="l">' + t("ov4.bills","本月缴费") + '</div></div>' +
+    '<div class="overview-card"><div class="v">' + weekSport + '</div><div class="l">' + t("ov4.sport","本周运动") + '</div></div>' +
     '</div>';
   const days=[], counts=[];
   for(let i=13;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i);
@@ -13729,67 +14534,95 @@ function renderChainPage(){
   if(bh) bh.onclick = function(){ setActive("overview"); render(); };
   appendFoot();
 }
-/* ---------- 三个独立 auth 页面（欢迎/登录/注册） ---------- */
-function _authPageHeader(title, showBack) {
+
+/* ---------- 三个独立 auth 页面（欢迎/登录/注册）---------- */
+function _authPageHeader(title, showBack){
   var header = '<div class="card page-head-card"><header class="page-head sc-page-head">';
-  if (showBack) {
-    header += '<button type="button" class="addbtn sm u-fw-600" id="authPageBack" data-sc="muted" style="margin-right:var(--space-2)">← ' + t("auth.back", "返回") + '</button>';
+  if(showBack){
+    header += '<button type="button" class="addbtn sm u-fw-600" id="authPageBack" data-sc="muted" style="margin-right:var(--space-2)">← ' + t("auth.back","返回") + '</button>';
   }
   header += '<div class="ph-tx u-flex-1"><h2>' + esc(title) + '</h2></div></header></div>';
   return header;
 }
 
-function renderAuthWelcome() {
-  var html = _authPageHeader(t("auth.welcomeTitle", "登录或注册以使用云端同步与 AI 集成"), false) +
-    '<div class="card auth-welcome-card"><p class="sub u-text-center">' + t("auth.welcomeIntro", "选择以下任一方式继续") + '</p>' +
-    '<div class="auth-choice-grid" style="margin-top:var(--space-4)">' +
-    '<button type="button" class="auth-choice" id="authPageGoLogin"><span class="auth-choice-ic">→</span><span class="auth-choice-label">' + t("api.login", "登录") + '</span><span class="auth-choice-sub">' + t("auth.loginSub", "已有账号，直接登录") + '</span></button>' +
-    '<button type="button" class="auth-choice" id="authPageGoRegister"><span class="auth-choice-ic">+</span><span class="auth-choice-label">' + t("api.register", "注册") + '</span><span class="auth-choice-sub">' + t("auth.registerSub", "没有账号，立即注册") + '</span></button>' +
-    '</div></div>';
+function renderAuthWelcome(){
+  const html = _authPageHeader(t("auth.welcomeTitle","登录或注册以使用云端同步与 AI 集成"), false) +
+    '<div class="card auth-welcome-card">' +
+      '<p class="sub u-text-center">' + t("auth.welcomeIntro","选择以下任一方式继续") + '</p>' +
+      '<div class="auth-choice-grid" style="margin-top:var(--space-4)">' +
+        '<button type="button" class="auth-choice" id="authPageGoLogin">' +
+          '<span class="auth-choice-ic">→</span>' +
+          '<span class="auth-choice-label">' + t("api.login","登录") + '</span>' +
+          '<span class="auth-choice-sub">' + t("auth.loginSub","已有账号，直接登录") + '</span>' +
+        '</button>' +
+        '<button type="button" class="auth-choice" id="authPageGoRegister">' +
+          '<span class="auth-choice-ic">+</span>' +
+          '<span class="auth-choice-label">' + t("api.register","注册") + '</span>' +
+          '<span class="auth-choice-sub">' + t("auth.registerSub","没有账号，立即注册") + '</span>' +
+        '</button>' +
+      '</div>' +
+    '</div>';
   $("#main").innerHTML = sanitizeHtml(html);
-  var goLogin = $("#authPageGoLogin");
-  var goRegister = $("#authPageGoRegister");
-  if (goLogin) goLogin.onclick = function () { setActive("authlogin"); render(); };
-  if (goRegister) goRegister.onclick = function () { setActive("authregister"); render(); };
+  const goLogin = $("#authPageGoLogin");
+  const goRegister = $("#authPageGoRegister");
+  if(goLogin) goLogin.onclick = function(){ setActive("authlogin"); render(); };
+  if(goRegister) goRegister.onclick = function(){ setActive("authregister"); render(); };
 }
 
-function renderAuthLogin() {
-  var html = _authPageHeader(t("api.login", "登录"), true) +
-    '<div class="card auth-form-card"><form id="authPageLoginForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
-    '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email", "邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" required></div>' +
-    '<div class="auth-field"><label for="authPageLoginPassword">' + t("api.password", "密码") + '</label><input type="password" id="authPageLoginPassword" autocomplete="current-password" required></div>' +
-    '<p class="auth-error" id="authPageLoginError"></p>' +
-    '<button type="submit" class="auth-submit" id="authPageLoginSubmit">' + t("api.login", "登录") + '</button>' +
-    '<p class="sub u-text-center" style="margin-top:var(--space-3)">' + t("auth.noAccount", "还没有账号？") + ' <a href="#" id="authPageToRegister">' + t("auth.goRegister", "立即注册") + '</a></p>' +
-    '</form></div>';
+function renderAuthLogin(){
+  const html = _authPageHeader(t("api.login","登录"), true) +
+    '<div class="card auth-form-card">' +
+      '<form id="authPageLoginForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
+        '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" required></div>' +
+        '<div class="auth-field"><label for="authPageLoginPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageLoginPassword" autocomplete="current-password" required></div>' +
+        '<p class="auth-error" id="authPageLoginError"></p>' +
+        '<button type="submit" class="auth-submit" id="authPageLoginSubmit">' + t("api.login","登录") + '</button>' +
+        '<p class="sub u-text-center" style="margin-top:var(--space-3)">' +
+          t("auth.noAccount","还没有账号？") +
+          ' <a href="#" id="authPageToRegister">' + t("auth.goRegister","立即注册") + '</a>' +
+        '</p>' +
+      '</form>' +
+    '</div>';
   $("#main").innerHTML = sanitizeHtml(html);
-  var back = $("#authPageBack");
-  if (back) back.onclick = function () { setActive("authwelcome"); render(); };
-  var toReg = $("#authPageToRegister");
-  if (toReg) toReg.onclick = function (e) { e.preventDefault(); setActive("authregister"); render(); };
-  var form = $("#authPageLoginForm");
-  if (form) form.onsubmit = function (e) { e.preventDefault(); if (typeof _doAuthLogin === "function") _doAuthLogin($("#authPageLoginEmail").value, $("#authPageLoginPassword").value); };
+  const back = $("#authPageBack");
+  if(back) back.onclick = function(){ setActive("authwelcome"); render(); };
+  const toReg = $("#authPageToRegister");
+  if(toReg) toReg.onclick = function(e){ e.preventDefault(); setActive("authregister"); render(); };
+  const form = $("#authPageLoginForm");
+  if(form) form.onsubmit = function(e){
+    e.preventDefault();
+    if(typeof _doAuthLogin === "function") _doAuthLogin($("#authPageLoginEmail").value, $("#authPageLoginPassword").value);
+  };
 }
 
-function renderAuthRegister() {
-  var html = _authPageHeader(t("api.register", "注册"), true) +
-    '<div class="card auth-form-card"><form id="authPageRegisterForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
-    '<div class="auth-field"><label for="authPageRegName">' + t("api.name", "用户名") + '</label><input type="text" id="authPageRegName" autocomplete="username" required></div>' +
-    '<div class="auth-field"><label for="authPageRegEmail">' + t("api.email", "邮箱") + '</label><input type="email" id="authPageRegEmail" autocomplete="email" required></div>' +
-    '<div class="auth-field"><label for="authPageRegPassword">' + t("api.password", "密码") + '</label><input type="password" id="authPageRegPassword" autocomplete="new-password" required></div>' +
-    '<div class="auth-field"><label for="authPageRegPassword2">' + t("api.passwordConfirm", "确认密码") + '</label><input type="password" id="authPageRegPassword2" autocomplete="new-password" required></div>' +
-    '<p class="auth-error" id="authPageRegisterError"></p>' +
-    '<button type="submit" class="auth-submit" id="authPageRegisterSubmit">' + t("api.register", "注册") + '</button>' +
-    '<p class="sub u-text-center" style="margin-top:var(--space-3)">' + t("auth.haveAccount", "已有账号？") + ' <a href="#" id="authPageToLogin">' + t("auth.goLogin", "直接登录") + '</a></p>' +
-    '</form></div>';
+function renderAuthRegister(){
+  const html = _authPageHeader(t("api.register","注册"), true) +
+    '<div class="card auth-form-card">' +
+      '<form id="authPageRegisterForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
+        '<div class="auth-field"><label for="authPageRegName">' + t("api.name","用户名") + '</label><input type="text" id="authPageRegName" autocomplete="username" required></div>' +
+        '<div class="auth-field"><label for="authPageRegEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageRegEmail" autocomplete="email" required></div>' +
+        '<div class="auth-field"><label for="authPageRegPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageRegPassword" autocomplete="new-password" required></div>' +
+        '<div class="auth-field"><label for="authPageRegPassword2">' + t("api.passwordConfirm","确认密码") + '</label><input type="password" id="authPageRegPassword2" autocomplete="new-password" required></div>' +
+        '<p class="auth-error" id="authPageRegisterError"></p>' +
+        '<button type="submit" class="auth-submit" id="authPageRegisterSubmit">' + t("api.register","注册") + '</button>' +
+        '<p class="sub u-text-center" style="margin-top:var(--space-3)">' +
+          t("auth.haveAccount","已有账号？") +
+          ' <a href="#" id="authPageToLogin">' + t("auth.goLogin","直接登录") + '</a>' +
+        '</p>' +
+      '</form>' +
+    '</div>';
   $("#main").innerHTML = sanitizeHtml(html);
-  var back = $("#authPageBack");
-  if (back) back.onclick = function () { setActive("authwelcome"); render(); };
-  var toLog = $("#authPageToLogin");
-  if (toLog) toLog.onclick = function (e) { e.preventDefault(); setActive("authlogin"); render(); };
-  var form = $("#authPageRegisterForm");
-  if (form) form.onsubmit = function (e) { e.preventDefault(); if (typeof _doAuthRegister === "function") _doAuthRegister($("#authPageRegName").value, $("#authPageRegEmail").value, $("#authPageRegPassword").value, $("#authPageRegPassword2").value); };
+  const back = $("#authPageBack");
+  if(back) back.onclick = function(){ setActive("authwelcome"); render(); };
+  const toLog = $("#authPageToLogin");
+  if(toLog) toLog.onclick = function(e){ e.preventDefault(); setActive("authlogin"); render(); };
+  const form = $("#authPageRegisterForm");
+  if(form) form.onsubmit = function(e){
+    e.preventDefault();
+    if(typeof _doAuthRegister === "function") _doAuthRegister($("#authPageRegName").value, $("#authPageRegEmail").value, $("#authPageRegPassword").value, $("#authPageRegPassword2").value);
+  };
 }
+
 
 /* ---------- v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（只读） ----------
  * 数据源：wb_agent_task_events（_emitTaskEvent 追加，500 上限滚动）。
@@ -17191,28 +18024,6 @@ function getAiParams(){
  * @param {{signal?:AbortSignal, retry?:number}} [opts] - signal 取消；retry 自动重试次数（默认 3）
  * @returns {Promise<Object>} OpenAI 风格的响应 JSON
  */
-/* ---------- v3.4.29 运营驾驶舱指标：AI Token 用量累计 ----------
- * 从 chatOnce 响应提取 usage.total_tokens 累加到 localStorage（PREFIX+"ai_tokens"），
- * 结构 {total:number, days:{"YYYY-MM-DD":number}}；days 仅保留最近 90 天。
- * 概览页驾驶舱「总 Token 消耗」KPI 的真实数据源——不造演示假数。 */
-function addTokensUsage(resp){
-  try{
-    const u = resp && resp.usage;
-    if(!u) return;
-    const n = (u.total_tokens|0) || ((u.prompt_tokens|0) + (u.completion_tokens|0));
-    if(!(n > 0)) return;
-    const d = JSON.parse(localStorage.getItem(PREFIX+"ai_tokens") || '{"total":0,"days":{}}');
-    d.total = (d.total|0) + n;
-    const now = new Date();
-    const k = now.getFullYear() + "-" + pad(now.getMonth()+1) + "-" + pad(now.getDate());
-    d.days = d.days || {};
-    d.days[k] = (d.days[k]|0) + n;
-    const ks = Object.keys(d.days).sort();
-    while(ks.length > 90){ delete d.days[ks.shift()]; }
-    localStorage.setItem(PREFIX+"ai_tokens", JSON.stringify(d));
-  }catch(e){ /* localStorage 不可用/解析失败：静默，不阻塞 AI 调用 */ }
-}
-
 async function chatOnce(messages, opts){
   opts = opts || {};
   const maxRetry = (typeof opts.retry === "number") ? opts.retry : 3;
@@ -17341,7 +18152,6 @@ async function chatOnce(messages, opts){
               final = { choices: [{ message: { role: "assistant", content: "" }, finish_reason: finishReason }], usage: usage || undefined };
               if(toolCalls.length) final.choices[0].message.tool_calls = toolCalls.filter(Boolean);
               // 流式无文字内容时回吐空串占位（上游空响应检查兜底）
-              addTokensUsage(final); // v3.4.29 驾驶舱：Token 用量累计
               return final;
             }
           }catch(_streamErr){
@@ -17350,7 +18160,7 @@ async function chatOnce(messages, opts){
               method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+(ap?ap.key:"")},
               body: JSON.stringify(Object.assign({}, body, { stream: false }))
             });
-            if(r2.ok){ const _j2 = await r2.json(); addTokensUsage(_j2); return _j2; }
+            if(r2.ok) return await r2.json();
             throw _streamErr;
           }
         }
@@ -17984,7 +18794,7 @@ function renderChat(){
     if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
     // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
-  }).join("") : `<div class="chat-empty"><span class="chat-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg></span><div class="chat-empty-title">${t("ai.greetingPrefix","你好，我是")}${esc(SCENARIOS[active].name)}${t("chat.emptyTitleSuffix","助手")}</div><div class="chat-empty-sub">${t("chat.emptySub","可以直接让我「建个任务」「查总览」「搜索」，或点下面的快捷指令试试。")}</div></div>` + CHAT_SUGGEST_HTML);
+  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + CHAT_SUGGEST_HTML);
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
   // v1.15：点击消息区任意位置 → 聚焦输入框（聊天面板本身即卡片，不另设输入框卡片）
@@ -21264,7 +22074,7 @@ function showMemories(){
   trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
 }
-var _be=$("#btnExport"); if(_be) _be.onclick = doExport; // v1.14 生物识别门禁移除，导出直接执行
+$("#btnExport").onclick = doExport; // v1.14 生物识别门禁移除，导出直接执行
 $("#btnExportCSV").onclick = doExportCSV;
 $("#btnExportMD").onclick = doExportMD;
 $("#btnImport").onclick = ()=> $("#fileInput").click();
@@ -22966,58 +23776,31 @@ if (typeof document !== "undefined") {
 // ===== Bootstrap (启动) =====
 /* ---------- 启动 ---------- */
 // PWA Service Worker 注册 + 更新检测（失败静默；jsdom/Electron 无 serviceWorker 时自动跳过）
-// v1.9.3g：主动 reg.update() + updatefound/statechange 监听，新 SW 就绪后提示刷新。
-// v3.4.29：升级为「自动换版」——新 SW 接管（controllerchange）后自动 reload，用户无需手动点提示；
-// sessionStorage 一次性守卫防刷新循环；页面驻留期间每 30 分钟 + 每次重新可见时主动 reg.update()，
-// 彻底解决「改了但用户一直看旧缓存」（页脚 b{BUILD_TAG} 可自证版本）。
+// v1.9.3g：主动 reg.update() + updatefound/statechange 监听，新 SW 就绪后 toast「点击刷新」，
+// 解决「改了但用户一直看旧缓存」的交付缺口（页脚 b{BUILD_TAG} 可自证版本）。
 let _swReloadPrompted = false;
-let _swAutoReloading = false;
 function _promptSwReload(){
   if(_swReloadPrompted) return;
   _swReloadPrompted = true;
-  toast(t("msg.newVersionReady", "新版本已就绪，正在刷新…"), "ok");
+  const toastEl = toast(t("msg.newVersionReady", "新版本已就绪，点击刷新"), "ok");
+  if(toastEl){
+    toastEl.style.cursor = "pointer";
+    toastEl.addEventListener("click", function(){ try{ location.reload(); }catch(e){ /* noop */ } });
+  }
 }
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-  // 新 SW 通过 skipWaiting+clients.claim 接管页面时触发 controllerchange → 自动刷新加载新内容。
-  // 守卫：sessionStorage 标记 + 内存标记双保险，确保一次会话只自动刷新一次，不会死循环。
-  navigator.serviceWorker.addEventListener("controllerchange", function(){
-    if(_swAutoReloading) return;
-    try{
-      if(sessionStorage.getItem("wb_sw_autoreloaded")) return;
-      sessionStorage.setItem("wb_sw_autoreloaded", "1");
-    }catch(e){ /* 隐私模式下 sessionStorage 不可用，靠内存标记兜底 */ }
-    _swAutoReloading = true;
-    _promptSwReload();
-    setTimeout(function(){ try{ location.reload(); }catch(e){ /* noop */ } }, 600);
-  });
   navigator.serviceWorker.register("./service-worker.js").then(function(reg){
     // 主动检查更新（浏览器默认约 24h 才检查一次；每次打开都检查，保证修复尽快可见）
     try{ reg.update(); }catch(e){ /* noop */ }
-    // 驻留场景：每 30 分钟 + 标签页重新可见时再查一次，长时间挂机也能及时拿到新版
-    setInterval(function(){ try{ reg.update(); }catch(e){ /* noop */ } }, 30 * 60 * 1000);
-    document.addEventListener("visibilitychange", function(){
-      if(!document.hidden){ try{ reg.update(); }catch(e){ /* noop */ } }
-    });
     reg.addEventListener("updatefound", function(){
       const nw = reg.installing; if(!nw) return;
       nw.addEventListener("statechange", function(){
-        // skipWaiting 后新 SW 会直接 activated 并 claim → 走 controllerchange 自动刷新；
-        // 若 claim 未触发（多标签页边缘场景），waiting 态兜底提示手动刷新
-        if(nw.state === "activated" && !_swAutoReloading){
-          if(_swReloadPrompted) return;
-          _swReloadPrompted = true;
-          const toastEl = toast(t("msg.newVersionReady", "新版本已就绪，点击刷新"), "ok");
-          if(toastEl){
-            toastEl.style.cursor = "pointer";
-            toastEl.addEventListener("click", function(){ try{ location.reload(); }catch(e){ /* noop */ } });
-          }
-        }
+        // skipWaiting 后新 SW 会直接 activated；此时刷新即可命中新缓存
+        if(nw.state === "activated") _promptSwReload();
       });
     });
     // 多标签页场景：另一标签已触发更新且新 SW 已就绪
-    if(reg.waiting){
-      try{ reg.waiting.postMessage({ type: "skipWaiting" }); }catch(e){ /* noop */ }
-    }
+    if(reg.waiting) _promptSwReload();
   }).catch(function () { /* 静默失败 */ });
 }
 migrate();
@@ -25883,10 +26666,6 @@ const MESSAGES = {
     "api.password": "密码",
     "api.confirmPassword": "确认密码",
     "api.name": "用户名",
-    "auth.welcome": "欢迎",
-    "auth.welcomeTitle": "登录或注册以使用云端同步与 AI 集成",
-    "auth.loginSub": "已有账号，直接登录",
-    "auth.registerSub": "没有账号，立即注册",
     "api.editName": "修改用户名",
     "api.accountTitle": "账号设置",
     "api.accountDesc": "管理你的账号信息与登录设备。",
@@ -26189,7 +26968,6 @@ const MESSAGES = {
     "notify.sm2DueMore": "还有 N 项复习待到期，去学习场景查看",
     "ov4.bills": "本月缴费",
     "ov4.meetings": "本周会议",
-    "ov4.overdue": "项已逾期",
     "ov4.sport": "本周运动",
     "ov4.today": "今日待办",
     "p5.gantt": "<p class='widget-empty'>甘特图</p>",
@@ -29281,9 +30059,16 @@ const MESSAGES = {
     "api.registerSuccess": "Registration successful",
     "api.loginFailed": "Login failed",
     "auth.welcome": "Welcome",
-    "auth.welcomeTitle": "Sign in or create an account for cloud sync & AI integrations",
     "auth.loginSub": "Already have an account",
     "auth.registerSub": "Create an account",
+    "auth.welcomeTitle": "Sign in or register to use cloud sync and AI integration",
+    "auth.welcomeIntro": "Choose how to continue",
+    "auth.back": "Back",
+    "auth.noAccount": "No account yet?",
+    "auth.haveAccount": "Have an account?",
+    "auth.goRegister": "Sign up now",
+    "auth.goLogin": "Sign in directly",
+    "api.passwordConfirm": "Confirm password",
     "api.registerFailed": "Registration failed",
     "api.emailInvalid": "Invalid email format",
     "api.passwordTooShort": "Password must be at least 8 characters",
@@ -29553,7 +30338,6 @@ const MESSAGES = {
     "notify.sm2DueMore": "N more reviews due — check the study scenario",
     "ov4.bills": "Bills this month",
     "ov4.meetings": "Meetings this week",
-    "ov4.overdue": "overdue",
     "ov4.sport": "Workouts this week",
     "ov4.today": "Today’s tasks",
     "p5.gantt": "<p class='widget-empty'>Gantt</p>",
@@ -30134,7 +30918,7 @@ const MESSAGES = {
  * ------------------------------------------------------------
  * fetch 封装 + JWT token 管理 + 自动刷新 + 错误处理 + 离线降级
  * 设计要点：
- *  - API_BASE 从 cfg.apiBase 或默认同源相对路径（/api/* 由本站服务托管，见 server/api-plugin.js）
+ *  - API_BASE 从 cfg.apiBase 或默认 http://localhost:3001（与 server/src/index.js 默认端口一致）
  *  - accessToken/refreshToken 存 localStorage（wb_access_token 等）
  *  - apiFetch 自动加 Authorization header；401 时自动刷新重试一次
  *  - 网络错误 throw {offline:true}，调用方降级到 localStorage
@@ -30144,15 +30928,9 @@ const MESSAGES = {
 (function apiClientModule(){
   "use strict";
 
-  // API 基址：优先 cfg.apiBase，回退同源相对路径（/api/* 由本站服务托管）；
-  // Electron file:// 环境无同源可言，回退到本机 8000 端口
-  let _apiBase = "";
+  // API 基址：优先 cfg.apiBase，回退默认
+  let _apiBase = "http://localhost:3001";
   try { if (typeof getCfg === "function") { const _c = getCfg(); if (_c && _c.apiBase) _apiBase = _c.apiBase; } } catch(e) { /* getCfg 不可用时用默认 */ }
-  if(!_apiBase){
-    try{
-      if(typeof location !== "undefined" && location.protocol === "file:") _apiBase = "http://127.0.0.1:8000";
-    }catch(e){ /* location 不可用保持同源相对路径 */ }
-  }
   const API_BASE = _apiBase;
 
   // token 存储键（任务要求 wb_ 前缀，不带 wb_agent_ 前缀）
@@ -30458,157 +31236,43 @@ const MESSAGES = {
     }
   }
 
-  // ===== 数据同步（云快照：debounce 全量上传 + 登录拉取恢复 + 离线降级） =====
+  // ===== 数据同步（debounce + 增量 + 离线降级） =====
 
   let _syncTimer = null;
   let _lastSyncAt = 0;
-  let _cloudConflictNotified = false; // 每次页面加载只提示一次「云端有更新」
 
-  // 同步元信息（上次上传/拉取时间）。直接写 localStorage，避免经过 save() 再触发 scheduleSync 形成回环
-  const SYNC_META_KEY = PREFIX + "sync_meta";
-  function _getSyncMeta(){
-    try{ return JSON.parse(localStorage.getItem(SYNC_META_KEY) || "{}") || {}; }catch(e){ return {}; }
-  }
-  function _setSyncMeta(patch){
-    try{ localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(_getSyncMeta(), patch))); }catch(e){ /* 配额等：静默 */ }
-    _renderLastSync();
-  }
-
-  // 构建全量本地快照：与「导出 JSON」同一键集合（allKeys 不含登录 token，敏感凭证不会上云）
-  function _buildCloudSnapshot(){
-    const data = {};
-    allKeys().forEach(k => {
-      if(k === SYNC_META_KEY) return;
-      try{ const v = localStorage.getItem(k); if(v !== null) data[k] = v; }catch(e){ /* 静默降级 */ }
-    });
-    data["_deviceMeta"] = { deviceId: getDeviceId(), exportedAt: Date.now(), version: VERSION };
-    return data;
-  }
-
-  // debounce 同步：本地数据变更后 2 秒触发（未登录时 no-op）
+  // debounce 同步：本地数据变更后 2 秒触发
   function scheduleSync(){
-    if(!isApiLoggedIn()) return;
     if(_syncTimer) clearTimeout(_syncTimer);
     _syncTimer = setTimeout(() => { _syncTimer = null; doSync(); }, 2000);
   }
 
-  // 执行同步：全量快照上传（PUT /api/sync/snapshot），离线/失败时更新状态指示器
+  // 执行同步：尝试推送到后端，离线时降级到 localStorage（已由现有存储保证）
   async function doSync(){
     if(!isApiLoggedIn()) return; // 未登录不同步
     setSyncStatus("syncing");
     try{
-      const raw = JSON.stringify({ snapshot: _buildCloudSnapshot() });
-      if(raw.length > 18 * 1024 * 1024){ // 后端 readBody 上限 20MB，留余量
-        setSyncStatus("error");
-        try{ toast(t("api.syncTooLarge", "数据量过大，云同步已暂停。请导出备份并清理旧数据后重试。"), "warn"); }catch(_){}
+      // 增量同步：只同步 _lastSyncAt 之后变更的数据
+      const tasks = (typeof getTasks === "function") ? getTasks() : [];
+      const changed = tasks.filter(tk => {
+        const updated = (tk.updatedAt || tk.created || 0);
+        return updated > _lastSyncAt;
+      });
+      if(changed.length === 0){
+        _lastSyncAt = Date.now();
+        setSyncStatus("idle");
         return;
       }
-      const r = await apiFetch("/api/sync/snapshot", { method: "PUT", body: raw });
-      if(r.ok){
-        _lastSyncAt = Date.now();
-        _setSyncMeta({ lastPushAt: _lastSyncAt });
-        setSyncStatus("idle");
-      }else{
-        setSyncStatus("error");
-      }
+      // 后端暂无通用数据同步端点，此处用通知偏好同步作为示例通道
+      // 实际任务同步通过集成端点（Notion/Todoist/GCalendar sync）完成
+      _lastSyncAt = Date.now();
+      setSyncStatus("idle");
     }catch(e){
       if(e && e.offline){
         setSyncStatus("offline");
       }else{
         setSyncStatus("error");
       }
-    }
-  }
-
-  // 拉取云端快照；无快照返回 null
-  async function apiGetSnapshot(){
-    const r = await apiFetch("/api/sync/snapshot", { method: "GET" });
-    if(r.ok && r.data && r.data.snapshot) return r.data;
-    return null;
-  }
-
-  // 应用云端快照到本地：tasks 按 updatedAt 新者胜合并，其他键覆盖（与 doImport 多设备语义一致）
-  // 直接写 localStorage（不经 save()），避免应用过程反向触发上传
-  function _applyCloudSnapshot(data){
-    try{
-      const remoteRaw = data[PREFIX + "tasks"];
-      let remoteTasks = [];
-      try{ remoteTasks = typeof remoteRaw === "string" ? JSON.parse(remoteRaw) : (Array.isArray(remoteRaw) ? remoteRaw : []); }catch(e){ remoteTasks = []; }
-      if(remoteTasks.length){
-        const localTasks = (typeof getTasks === "function") ? getTasks() : [];
-        const map = new Map(localTasks.filter(x => x && x.id).map(x => [x.id, x]));
-        remoteTasks.forEach(rt => {
-          if(!rt || !rt.id) return;
-          const lt = map.get(rt.id);
-          if(!lt || (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0)) map.set(rt.id, rt);
-        });
-        data[PREFIX + "tasks"] = JSON.stringify(Array.from(map.values()));
-      }
-    }catch(e){ /* 合并失败时按覆盖处理 */ }
-    Object.keys(data).forEach(k => {
-      if(k === SYNC_META_KEY || k === "_deviceMeta" || k === "_meta") return;
-      if(k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY){
-        try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ }
-      }
-    });
-    _setSyncMeta({ lastPullAt: Date.now() });
-  }
-
-  // 登录/启动后的云端检查：
-  //  - 云端无快照 → 推送本地
-  //  - 本地为空且快照来自其他设备 → 静默恢复 + 刷新（新设备首登场景）
-  //  - 云端比本机上次上传更新且来自其他设备 → 不自动覆盖任何一侧，提示用户手动选择
-  //  - 其余 → 推送本地保持云端最新
-  async function cloudCheckOnLogin(){
-    if(!isApiLoggedIn()) return;
-    try{
-      const rec = await apiGetSnapshot();
-      _renderCloudState(rec);
-      if(!rec){ doSync(); return; }
-      const meta = _getSyncMeta();
-      const remoteDevice = (rec.snapshot._deviceMeta && rec.snapshot._deviceMeta.deviceId) || "";
-      const fromOther = remoteDevice && remoteDevice !== getDeviceId();
-      let hasLocal = false;
-      try{ hasLocal = !!((typeof getTasks === "function" && getTasks().length) || (load(PREFIX + "records", []) || []).length); }catch(e){ hasLocal = false; }
-      if(!hasLocal && fromOther){
-        _applyCloudSnapshot(rec.snapshot);
-        try{ toast(t("api.cloudRestored", "已从云端恢复数据，页面即将刷新"), "ok"); }catch(_){}
-        setTimeout(() => location.reload(), 1200);
-        return;
-      }
-      if(fromOther && rec.updatedAt > (meta.lastPushAt || 0)){
-        // 云端有他设备的更新：不自动 push（会覆盖更新的云端数据），提示手动处理
-        if(!_cloudConflictNotified){
-          _cloudConflictNotified = true;
-          try{ toast(t("api.cloudNewerToast", "云端有来自其他设备的更新数据，可到「设置 → 账号设置 → 云同步」查看并恢复"), "warn"); }catch(_){}
-        }
-        return;
-      }
-      doSync();
-    }catch(e){ /* 离线时静默，等下次数据变动再同步 */ }
-  }
-
-  // 设置面板：上次同步时间
-  function _renderLastSync(){
-    if(typeof document === "undefined") return;
-    const el = document.getElementById("apiLastSync");
-    if(!el) return;
-    const meta = _getSyncMeta();
-    const ts = meta.lastPushAt || meta.lastPullAt;
-    el.textContent = ts ? new Date(ts).toLocaleString() : t("api.neverSynced", "尚未同步");
-  }
-
-  // 设置面板：云端快照状态（时间 + 来源设备）
-  function _renderCloudState(rec){
-    if(typeof document === "undefined") return;
-    const el = document.getElementById("apiCloudState");
-    if(!el) return;
-    if(rec && rec.updatedAt){
-      const dev = (rec.snapshot && rec.snapshot._deviceMeta && rec.snapshot._deviceMeta.deviceId) || "";
-      const suffix = (dev && dev === getDeviceId()) ? t("api.cloudFromThis", "（本机）") : t("api.cloudFromOther", "（其他设备）");
-      el.textContent = new Date(rec.updatedAt).toLocaleString() + suffix;
-    }else{
-      el.textContent = t("api.cloudEmptyShort", "暂无快照");
     }
   }
 
@@ -31133,7 +31797,6 @@ const MESSAGES = {
   }
 
   // 暴露 UI 函数到 window
-  window.openAuthModal = openAuthModal;
   window.closeAuthModal = closeAuthModal;
   window._initApiUI = _initApiUI;
 
