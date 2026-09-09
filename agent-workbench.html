@@ -4919,10 +4919,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.1"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.5.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260909a";
+const BUILD_TAG = "20260909b";
 
 
 
@@ -6486,10 +6486,38 @@ const SCENARIOS = {
         {k:"title",label:t("field.title", "标题"),type:"text"},
         {k:"value",label:t("field.value", "数值"),type:"text",placeholder:t("field.valuePlaceholder", "如：5km / 65.2kg / 7.5h / 8杯")},
         {k:"note",label:t("field.note", "备注"),type:"textarea"}
+      ] } },
+
+  /* v3.5.2 新增场景：健康（运动/体重/睡眠/饮水/饮食） */
+  health:{ name:t("scenario.health", "健康"), color:"#10b981",
+    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+    sysprompt:t("sysprompt.health", "你是一个健康管理助手，帮用户记录运动、体重、睡眠、饮水和饮食，分析趋势并给出科学建议。回答专业、温和、有数据支撑，不替代医疗诊断。"),
+    extraCard:"health",
+    record:{ label:t("record.health.label", "健康记录"),
+      fields:[
+        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("health.sport","运动"),t("health.weight","体重"),t("health.sleep","睡眠"),t("health.water","饮水"),t("health.diet","饮食")]},
+        {k:"date",label:t("field.date", "日期"),type:"date"},
+        {k:"value",label:t("field.value", "数值"),type:"text",placeholder:t("health.valuePh", "如：5km / 65.2kg / 7.5h / 8杯")},
+        {k:"duration",label:t("field.durationHours", "时长(小时)"),type:"number"},
+        {k:"note",label:t("field.note", "备注"),type:"textarea"}
+      ] } },
+
+  /* v3.5.2 新增场景：理财（收支 / 基金 / 股票） */
+  finance:{ name:t("scenario.finance", "理财"), color:"#c9a227",
+    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>',
+    sysprompt:t("sysprompt.finance", "你是一个个人理财助手，帮用户记录收支、跟踪基金与股票持仓、分析资产配置与风险。回答理性、合规，明确不构成投资建议。"),
+    extraCard:"finance",
+    record:{ label:t("record.finance.label", "理财记录"),
+      fields:[
+        {k:"type",label:t("field.type", "类型"),type:"select",options:[t("fin.expense","支出"),t("fin.income","收入"),t("fin.fund","基金"),t("fin.stock","股票"),t("fin.other","其他投资")]},
+        {k:"category",label:t("field.category", "类别"),type:"text",placeholder:t("fin.categoryPh", "如：餐饮 / 工资 / 沪深300")},
+        {k:"amount",label:t("field.amount", "金额"),type:"number"},
+        {k:"date",label:t("field.date", "日期"),type:"date"},
+        {k:"note",label:t("field.note", "备注"),type:"textarea"}
       ] } }
 };
 /* v2.1.0：6 内置场景——新增 设计(design)/数据(data)；顺序即侧栏场景组显示序与滑动手势序 */
-const ORDER = ["office","data","design","study","code","life"];
+const ORDER = ["office","data","design","study","code","life","health","finance"];
 
 /* v3.0：场景内功能 tab 注册表——标题栏导航条 + 场景内视图切换。
    每场景「求同存异」：骨架统一（概览=任务+资料库+专属卡），功能 tab 对症下药。 */
@@ -6534,6 +6562,14 @@ const SCENE_FEATURES = {
     { id:"health", type:"record",   label:t("tab.health", "健康") },
     { id:"bill", type:"record",     label:t("tab.bill", "缴费") },
     { id:"shop", type:"record",     label:t("tab.shop", "采购") }
+  ],
+  health: [
+    { id:"overview", type:"core",   label:t("tab.overview", "概览") },
+    { id:"trend", type:"record",    label:t("tab.trend", "趋势") }
+  ],
+  finance: [
+    { id:"overview", type:"core",   label:t("tab.overview", "概览") },
+    { id:"stats", type:"record",    label:t("tab.stats", "收支统计") }
   ]
 };
 
@@ -6551,7 +6587,7 @@ const DEFAULT_LINKS = [
  * 存储键均以 PREFIX 开头 → 自动纳入导出备份（allKeys）。 */
 const CUSTOM_SC_KEY = PREFIX + "scenarios_custom";      // 自定义场景列表
 const SC_OVERRIDE_KEY = PREFIX + "scenarios_overrides"; // 内置场景改名/换色覆盖
-const BUILTIN_SC_KEYS = ["office","design","study","data","code","life"];
+const BUILTIN_SC_KEYS = ["office","design","study","data","code","life","health","finance"];
 const CUSTOM_ICON_KEYS = ["tag","overview","plus","check","chat","download","upload","gear","theme","stats","copy","trash"];
 /* 内置场景原始 name/color 快照（覆盖前保存，供重置与幂等重注册） */
 const SC_ORIGINALS = {};
@@ -7330,6 +7366,46 @@ function execTool(name, args, force){
         .map(n=>({id:n.id,title:n.title,tags:n.tags,category:n.category}));
       return JSON.stringify({count:hits.length, items:hits});
     }
+    /* ---------- v3.5.2 新增工具 ---------- */
+    if(name==="generate_report"){
+      const period = ["day","week","month"].includes(args.period) ? args.period : "week";
+      const sc = (args.scope && SCENARIOS[args.scope]) ? args.scope : "";
+      const days = period==="day" ? 1 : (period==="week" ? 7 : 30);
+      const since = new Date(); since.setDate(since.getDate() - days + 1);
+      const sinceStr = since.toISOString().slice(0,10);
+      const allTasks = getActiveTasks().filter(function(x){ return !sc || x.sc===sc; });
+      const done = allTasks.filter(function(x){ return x.status==="done" && (x.doneAt||0) >= since.getTime(); });
+      const open = allTasks.filter(function(x){ return x.status!=="done"; });
+      const overdue = open.filter(function(x){ return x.due && x.due < todayStr(); });
+      const bySc = {}; allTasks.forEach(function(x){ bySc[x.sc]=(bySc[x.sc]||0)+1; });
+      const recLines = [];
+      (sc ? [sc] : ORDER).forEach(function(k){
+        const recs = getRec(k) || [];
+        const inP = recs.filter(function(r){ const d = r.date || (r.created ? new Date(r.created).toISOString().slice(0,10) : ""); return d >= sinceStr; });
+        if(inP.length) recLines.push("- " + ((SCENARIOS[k]&&SCENARIOS[k].name)||k) + "：" + inP.length + " " + t("report.unitRec","条记录"));
+      });
+      const md = "# " + (sc&&SCENARIOS[sc] ? SCENARIOS[sc].name+" " : "") + t("report.title","工作报表") + "（" + t("report.period."+period, period==="day"?"今日":(period==="week"?"本周":"本月")) + "）" + "\n" + "\n"
+        + "## " + t("report.summary","概览") + "\n"
+        + "- " + t("report.done","已完成") + "：" + done.length + "\n"
+        + "- " + t("report.open","待办/进行中") + "：" + open.length + "\n"
+        + "- " + t("report.overdue","逾期") + "：" + overdue.length + "\n" + "\n"
+        + "## " + t("report.byScenario","场景分布") + "\n"
+        + (Object.keys(bySc).map(function(k){ return "- " + ((SCENARIOS[k]&&SCENARIOS[k].name)||k) + "：" + bySc[k]; }).join("\n") || "- " + t("report.none","无")) + "\n" + "\n"
+        + "## " + t("report.records","周期内记录") + "\n"
+        + (recLines.join("\n") || "- " + t("report.none","无"));
+      return JSON.stringify({ok:true, markdown: md, msg: t("report.generated","报表已生成")});
+    }
+    if(name==="render_chart"){
+      const arr = Array.isArray(args.data) ? args.data.filter(function(d){ return d && d.label!==undefined && isFinite(Number(d.value)); }).map(function(d){ return {label:String(d.label), value:Number(d.value)}; }) : [];
+      if(!arr.length) return JSON.stringify({ok:false, msg:t("tool.chartNoData","无有效数据点")});
+      const ct = ["bar","line","pie"].includes(args.type) ? args.type : "bar";
+      return "__CHART__" + JSON.stringify({type:ct, title:String(args.title||""), data:arr});
+    }
+    if(name==="generate_doc"){
+      const ttl = String(args.title||t("tool.unnamed","未命名"));
+      const r = createNote(ttl, String(args.content||""), [], String(args.category||t("doc.categoryDefault","AI 文档")));
+      return JSON.stringify({ok:true, id:r.id, msg:t("tool.docSaved","文档已保存到笔记：")+ttl});
+    }
     return agentExec(name, args); // A-P3：记忆/目标等 Agent 工具由此分发
   }catch(e){
     // 工具执行异常：诊断 + 提示，仍返回结构化错误（保持 execTool 调用方契约）
@@ -7405,7 +7481,19 @@ const TOOLS = [
     title:{type:"string", description:t("aitool.note_add.title.desc","笔记标题")}, content:{type:"string", description:t("aitool.note_add.content.desc","Markdown 内容")},
     tags:{type:"array", items:{type:"string"}, description:t("aitool.note_add.tags.desc","标签列表")}, category:{type:"string", description:t("aitool.note_add.category.desc","分类（如知识库/工作笔记）")}}, required:["title","content"]}}},
   {type:"function", function:{name:"note_search", description:t("aitool.note_search.desc","按关键词搜索笔记（标题+内容匹配）"), parameters:{type:"object", properties:{
-    query:{type:"string", description:t("aitool.note_search.query.desc","搜索关键词")}}, required:["query"]}}}
+    query:{type:"string", description:t("aitool.note_search.query.desc","搜索关键词")}}, required:["query"]}}},
+  /* v3.5.2 新增：报表生成 / 数据可视化 / 文档生成 */
+  {type:"function", function:{name:"generate_report", description:t("aitool.generate_report.desc","生成指定周期的工作报表（Markdown 文本）：完成/逾期任务、各场景分布、周期内记录统计"), parameters:{type:"object", properties:{
+    period:{type:"string", enum:["day","week","month"], description:t("aitool.generate_report.period.desc","统计周期，默认 week")},
+    scope:{type:"string", description:t("aitool.generate_report.scope.desc","场景键（office/health/finance 等），留空为全部场景")}}, required:[]}}},
+  {type:"function", function:{name:"render_chart", description:t("aitool.render_chart.desc","在对话里渲染一张数据图表（bar/line/pie），数据由你根据已查到的数据整理"), parameters:{type:"object", properties:{
+    type:{type:"string", enum:["bar","line","pie"], description:t("aitool.render_chart.type.desc","图表类型，默认 bar")},
+    title:{type:"string", description:t("aitool.render_chart.title.desc","图表标题")},
+    data:{type:"array", items:{type:"object", properties:{label:{type:"string"},value:{type:"number"}}, required:["label","value"]}, description:t("aitool.render_chart.data.desc","数据点数组，如 [{label:'周一',value:3}]")}}, required:["data"]}}},
+  {type:"function", function:{name:"generate_doc", description:t("aitool.generate_doc.desc","生成一份文档（Markdown）并保存到笔记库"), parameters:{type:"object", properties:{
+    title:{type:"string", description:t("aitool.generate_doc.title.desc","文档标题")},
+    content:{type:"string", description:t("aitool.generate_doc.content.desc","Markdown 正文")},
+    category:{type:"string", description:t("aitool.generate_doc.category.desc","分类，如 方案/复盘/工作文档")}}, required:["title","content"]}}}
 ];
 
 /* ---------- AI 层降级重定位（v1.15）：cfg.agent=false 时关闭 Agent 工具与话术 ----------
@@ -14816,6 +14904,95 @@ document.addEventListener("click", function (e) {
 /* ---------- 启动时初始化 ov4 委托 ---------- */
 try { _bindOv4Cards(); } catch (_) {}
 
+/* ---------- v3.5.2 定时工作流调度器 ---------- */
+function _wfParseTime(v){ const m = /^(\d{1,2}):(\d{2})$/.exec(String(v||"")); return m ? {h:+m[1], m:+m[2]} : {h:9,m:0}; }
+function _wfDueAt(f, now){
+  const sch = f && f.schedule;
+  if(!sch || !sch.freq || sch.freq === "off") return 0;
+  const tt = _wfParseTime(sch.time);
+  const d = new Date(now); d.setHours(tt.h, tt.m, 0, 0);
+  if(now < d.getTime()) return 0;
+  if(sch.freq === "weekly" && new Date(now).getDay() !== Number(sch.weekday == null ? 1 : sch.weekday)) return 0;
+  return Number(f.lastRun || 0) < d.getTime() ? d.getTime() : 0;
+}
+async function _wfRunFlow(idx, f){
+  const prompt = ((f.trigger || "") + (f.name ? "\n\n" + f.name : "")) || t("wf.defaultPrompt","生成一份本周工作总结");
+  let savedAsNote = false;
+  try{
+    if(typeof chatOnce === "function"){
+      const resp = await chatOnce([
+        { role:"system", content: t("wf.sys","你是自动化工作流执行器：按用户指令产出简洁、可直接使用的结果。") },
+        { role:"user", content: prompt }
+      ], {});
+      const txt = (resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content) || "";
+      if(txt){ createNote(t("wf.notePrefix","[定时] ") + (f.name || t("wf.unnamed","工作流")), txt, ["定时工作流"], t("wf.noteCategory","自动化")); savedAsNote = true; }
+    }
+  }catch(e){ /* AI 未配置或失败 → 降级为待办提醒 */ }
+  if(!savedAsNote){
+    const tasks = getTasks();
+    tasks.push({ id: uid(), sc: active, title: t("wf.taskPrefix","⏰ 执行工作流：") + (f.name || ""), due: todayStr(),
+      priority: "", status: "todo", doneAt: null, note: prompt, tags: ["workflow"], created: Date.now() });
+    setTasks(tasks);
+  }
+  try{
+    const saved = getAiConfig("workflow") || {};
+    const flows = Array.isArray(saved.flows) ? saved.flows : [];
+    if(flows[idx]){ flows[idx].lastRun = Date.now(); saved.flows = flows; saveAiConfig("workflow", saved); }
+  }catch(_){}
+  try{ toast((savedAsNote ? t("wf.doneNote","定时工作流已完成并存入笔记：") : t("wf.doneTask","定时工作流已生成待办：")) + (f.name || ""), "ok"); }catch(_){}
+}
+function _wfCheckDue(){
+  try{
+    const saved = getAiConfig("workflow") || {};
+    const flows = Array.isArray(saved.flows) ? saved.flows : [];
+    const now = Date.now();
+    flows.forEach(function(f, i){ if(_wfDueAt(f, now)) _wfRunFlow(i, f); });
+  }catch(_){}
+}
+try{ setTimeout(_wfCheckDue, 3000); setInterval(_wfCheckDue, 60000); }catch(_){}
+
+/* ---------- v3.5.2 新场景功能渲染：健康趋势 / 理财收支统计 ---------- */
+function _renderHealthTrend(){
+  var recs = (typeof getRec === "function") ? getRec("health") : [];
+  var byType = {};
+  recs.forEach(function(r){
+    var k = r.type || t("health.other", "其他");
+    byType[k] = (byType[k] || 0) + 1;
+  });
+  var names = Object.keys(byType);
+  var data = names.map(function(n){ return { label: n, value: byType[n] }; });
+  var total = recs.length;
+  var latest = recs.slice().sort(function(a,b){ return (b.created||0) - (a.created||0); })[0];
+  return '<div class="card"><h2>' + ic("stats") + ' ' + t("health.trendTitle", "健康趋势") + '</h2>'
+    + '<div class="tool-summary"><span>' + t("health.total", "累计记录") + '：' + total + '</span>'
+    + (latest ? '<span>' + t("health.latest", "最近一条") + '：' + esc(latest.type || "") + ' ' + esc(latest.value || "") + '</span>' : '')
+    + '</div>'
+    + renderMiniChart("bar", data)
+    + '</div>';
+}
+
+function _renderFinanceStats(){
+  var recs = (typeof getRec === "function") ? getRec("finance") : [];
+  var income = 0, expense = 0, invest = 0;
+  var byCat = {};
+  recs.forEach(function(r){
+    var amt = parseFloat(r.amount) || 0;
+    var ty = r.type || "";
+    if(ty === t("fin.income", "收入")) income += amt;
+    else if(ty === t("fin.expense", "支出")) { expense += amt; var c = r.category || t("fin.uncategorized", "未分类"); byCat[c] = (byCat[c] || 0) + amt; }
+    else invest += amt;
+  });
+  var cats = Object.keys(byCat).sort(function(a,b){ return byCat[b] - byCat[a]; }).slice(0, 6);
+  var data = cats.map(function(c){ return { label: c, value: Math.round(byCat[c] * 100) / 100 }; });
+  return '<div class="card"><h2>' + ic("stats") + ' ' + t("fin.statsTitle", "收支统计") + '</h2>'
+    + '<div class="tool-summary"><span>' + t("fin.income", "收入") + '：' + income.toFixed(2) + '</span>'
+    + '<span>' + t("fin.expense", "支出") + '：' + expense.toFixed(2) + '</span>'
+    + '<span>' + t("fin.invest", "投资") + '：' + invest.toFixed(2) + '</span>'
+    + '<span>' + t("fin.net", "结余") + '：' + (income - expense).toFixed(2) + '</span></div>'
+    + (data.length ? '<p class="sub">' + t("fin.topCats", "支出分类 Top") + '</p>' + renderMiniChart("bar", data) : '<div class="empty">' + t("fin.noExpense", "暂无支出记录") + '</div>')
+    + '</div>';
+}
+
 /* ---------- 表单 textarea 自动向下延伸（备注等长文本）---------- */
 document.addEventListener("input", function (e) {
   var el = e.target;
@@ -15836,7 +16013,10 @@ const SCENE_FEATURE_RENDER = {
   data: {},
   design: {},
   code: {},
-  life: {}
+  life: {},
+  /* v3.5.2：新场景功能 tab 渲染器（函数声明提升，_renderHealthTrend/_renderFinanceStats 定义在下方） */
+  health: { trend: function(){ return _renderHealthTrend(); } },
+  finance: { stats: function(){ return _renderFinanceStats(); } }
 };
 /**
  * v3.0：渲染场景内功能卡（按 SCENE_FEATURE_RENDER 查表）
@@ -19062,7 +19242,16 @@ function renderChat(){
   const el=$("#chat"); if(!el) return;
   const hist=getChat(active);
   el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
-    if(m.role==="tool") return `<div class="msg tool">${esc(m._disp || _chatContentToText(m.content))}</div>`;
+    if(m.role==="tool"){
+      var _disp = m._disp || _chatContentToText(m.content);
+      if(typeof _disp === "string" && _disp.indexOf("__CHART__") === 0){
+        try{
+          var _spec = JSON.parse(_disp.slice(9));
+          return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + renderMiniChart(_spec.type, _spec.data) + '</div>';
+        }catch(_e){ /* 解析失败回退文本 */ }
+      }
+      return '<div class="msg tool">' + esc(_disp) + '</div>';
+    }
     if(m.role==="assistant" && m.tool_calls && m.tool_calls.length){
       const s=m.tool_calls.map(tc=>t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
       return `<div class="msg assistant toolcall">${s}</div>`;
@@ -22990,14 +23179,21 @@ function renderAiWorkflowList(){
     return;
   }
   flows.forEach(function(f, i){
+    const sch = f.schedule || {};
     const row = document.createElement("div");
     row.className = "set-field";
-    row.innerHTML = "<label for=\"aiWfName_"+i+t("p4.html.aiWorkflowLabel","\\\">工作流 ")+(i+1)+"</label>"+
-      "<div class=\"ctl\"><div class=\"btn-row\">"+
-      "<input id=\"aiWfName_"+i+t("p4.html.aiNamePh","\" placeholder=\"名称\" value=\"")+esc(f.name||"")+'" class="u-flex-1 u-min-w-80">'+ // v3.1.2：esc 防属性截断注入
-      "<input id=\"aiWfTrigger_"+i+t("p4.html.aiTriggerPh","\" placeholder=\"触发条件\" value=\"")+esc(f.trigger||"")+'" class="u-flex-2 u-min-w-120">'+
-      '<button type="button" class="addbtn sm" data-wf-del="'+i+t("p4.html.aiDeleteBtn","\" data-sc=\"danger-muted\" class=\"u-nowrap\">删除</button>")+
-      "</div></div>";
+    row.innerHTML = '<label for="aiWfName_'+i+'">' + t("p4.html.aiWorkflowLabel","工作流 ") + (i+1) + '</label>' +
+      '<div class="ctl"><div class="btn-row">' +
+      '<input id="aiWfName_'+i+'" placeholder="' + t("p4.html.aiNamePh","名称") + '" value="' + esc(f.name||"") + '" class="u-flex-1 u-min-w-80">' +
+      '<input id="aiWfTrigger_'+i+'" placeholder="' + t("p4.html.aiTriggerPh","触发条件") + '" value="' + esc(f.trigger||"") + '" class="u-flex-2 u-min-w-120">' +
+      '<select id="aiWfFreq_'+i+'" class="u-nowrap" title="' + t("wf.freqTitle","定时频率") + '">' +
+        '<option value="off"' + (!sch.freq || sch.freq === "off" ? ' selected' : '') + '>' + t("wf.freqOff","不定时") + '</option>' +
+        '<option value="daily"' + (sch.freq === "daily" ? ' selected' : '') + '>' + t("wf.freqDaily","每天") + '</option>' +
+        '<option value="weekly"' + (sch.freq === "weekly" ? ' selected' : '') + '>' + t("wf.freqWeekly","每周") + '</option>' +
+      '</select>' +
+      '<input type="time" id="aiWfTime_'+i+'" value="' + esc(sch.time || "09:00") + '" class="u-nowrap">' +
+      '<button type="button" class="addbtn sm" data-wf-del="'+i+'" data-sc="danger-muted" class="u-nowrap">' + t("p4.html.aiDeleteBtn","删除") + '</button>' +
+      '</div></div>';
     box.appendChild(row);
   });
   $$("[data-wf-del]").forEach(function(btn){
@@ -23137,7 +23333,11 @@ $("#aiWorkflowSave").onclick = function(){
   rows.forEach(function(row, i){
     const nameInp = row.querySelector("#aiWfName_"+i);
     const triggerInp = row.querySelector("#aiWfTrigger_"+i);
-    flows.push({name: nameInp?nameInp.value:"", trigger: triggerInp?triggerInp.value:""});
+    const freqInp = row.querySelector("#aiWfFreq_"+i);
+    const timeInp = row.querySelector("#aiWfTime_"+i);
+    flows.push({name: nameInp?nameInp.value:"", trigger: triggerInp?triggerInp.value:"",
+      schedule: {freq: freqInp?freqInp.value:"off", time: timeInp?timeInp.value:"09:00"},
+      lastRun: (getAiConfig("workflow") && getAiConfig("workflow").flows && getAiConfig("workflow").flows[i] && getAiConfig("workflow").flows[i].lastRun) || 0});
   });
   saveAiConfig("workflow", {flows: flows});
   toast(t("ai.workflowConfigSaved","工作流配置已保存"));
