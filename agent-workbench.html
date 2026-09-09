@@ -4556,72 +4556,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   </div>
 </div>
 
-<!-- 任务235：登录/注册模态弹窗 -->
-<div class="auth-modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-  <div class="auth-card" style="position:relative">
-    <button type="button" class="auth-close" id="authClose" data-i18n-aria="common.close" aria-label="关闭">✕</button>
-    <div class="u-flex u-ai-center u-gap-2 u-m-0">
-      <button type="button" class="auth-back u-hidden" id="authBack" data-i18n-aria="a11y.returnPrev" aria-label="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <h3 id="authModalTitle" class="u-m-0 u-flex-1" data-i18n="api.login">登录</h3>
-    </div>
-    <!-- 欢迎/选择界面 -->
-    <div class="auth-welcome" id="authWelcome">
-      <div class="auth-welcome-title" data-i18n="auth.welcomeTitle">登录或注册以使用云端同步与 AI 集成</div>
-      <div class="auth-choice-grid">
-        <button type="button" class="auth-choice" id="authChoiceLogin">
-          <span class="auth-choice-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></span>
-          <span class="auth-choice-label" data-i18n="api.login">登录</span>
-          <span class="auth-choice-sub" data-i18n="auth.loginSub">已有账号，直接登录</span>
-        </button>
-        <button type="button" class="auth-choice" id="authChoiceRegister">
-          <span class="auth-choice-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>
-          <span class="auth-choice-label" data-i18n="api.register">注册</span>
-          <span class="auth-choice-sub" data-i18n="auth.registerSub">没有账号，立即注册</span>
-        </button>
-      </div>
-    </div>
-    <!-- 登录表单 -->
-    <form id="authLoginForm" class="u-flex u-flex-col u-gap-3 u-hidden">
-      <div class="auth-field">
-        <label for="authLoginEmail" data-i18n="api.email">邮箱</label>
-        <input type="email" id="authLoginEmail" autocomplete="email" required>
-      </div>
-      <div class="auth-field">
-        <label for="authLoginPassword" data-i18n="api.password">密码</label>
-        <input type="password" id="authLoginPassword" autocomplete="current-password" required>
-      </div>
-      <p class="auth-error" id="authLoginError"></p>
-      <button type="submit" class="auth-submit" id="authLoginSubmit" data-i18n="api.login">登录
-        <span class="auth-spinner" aria-hidden="true"></span>
-      </button>
-    </form>
-    <!-- 注册表单 -->
-    <form id="authRegisterForm" class="u-flex u-flex-col u-gap-3 u-hidden">
-      <div class="auth-field">
-        <label for="authRegName" data-i18n="api.name">用户名</label>
-        <input type="text" id="authRegName" autocomplete="name" required>
-      </div>
-      <div class="auth-field">
-        <label for="authRegEmail" data-i18n="api.email">邮箱</label>
-        <input type="email" id="authRegEmail" autocomplete="email" required>
-      </div>
-      <div class="auth-field">
-        <label for="authRegPassword" data-i18n="api.password">密码</label>
-        <input type="password" id="authRegPassword" autocomplete="new-password" required>
-      </div>
-      <div class="auth-field">
-        <label for="authRegConfirm" data-i18n="api.confirmPassword">确认密码</label>
-        <input type="password" id="authRegConfirm" autocomplete="new-password" required>
-      </div>
-      <p class="auth-error" id="authRegError"></p>
-      <button type="submit" class="auth-submit" id="authRegSubmit" data-i18n="api.register">注册
-        <span class="auth-spinner" aria-hidden="true"></span>
-      </button>
-    </form>
-  </div>
-</div>
 
-<div id="toasts" role="status" aria-live="polite"></div>
 
 <!-- v1.4-C 导出预览弹窗：数据概览 + 字段选择 -->
 <div class="overlay" id="exportPreviewOverlay"></div>
@@ -14600,6 +14535,95 @@ function renderChainPage(){
   appendFoot();
 }
 
+/* ---------- 三个独立 auth 页面（欢迎/登录/注册）---------- */
+function _authPageHeader(title, showBack){
+  var header = '<div class="card page-head-card"><header class="page-head sc-page-head">';
+  if(showBack){
+    header += '<button type="button" class="addbtn sm u-fw-600" id="authPageBack" data-sc="muted" style="margin-right:var(--space-2)">← ' + t("auth.back","返回") + '</button>';
+  }
+  header += '<div class="ph-tx u-flex-1"><h2>' + esc(title) + '</h2></div></header></div>';
+  return header;
+}
+
+function renderAuthWelcome(){
+  const html = _authPageHeader(t("auth.welcomeTitle","登录或注册以使用云端同步与 AI 集成"), false) +
+    '<div class="card auth-welcome-card">' +
+      '<p class="sub u-text-center">' + t("auth.welcomeIntro","选择以下任一方式继续") + '</p>' +
+      '<div class="auth-choice-grid" style="margin-top:var(--space-4)">' +
+        '<button type="button" class="auth-choice" id="authPageGoLogin">' +
+          '<span class="auth-choice-ic">→</span>' +
+          '<span class="auth-choice-label">' + t("api.login","登录") + '</span>' +
+          '<span class="auth-choice-sub">' + t("auth.loginSub","已有账号，直接登录") + '</span>' +
+        '</button>' +
+        '<button type="button" class="auth-choice" id="authPageGoRegister">' +
+          '<span class="auth-choice-ic">+</span>' +
+          '<span class="auth-choice-label">' + t("api.register","注册") + '</span>' +
+          '<span class="auth-choice-sub">' + t("auth.registerSub","没有账号，立即注册") + '</span>' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  $("#main").innerHTML = sanitizeHtml(html);
+  const goLogin = $("#authPageGoLogin");
+  const goRegister = $("#authPageGoRegister");
+  if(goLogin) goLogin.onclick = function(){ setActive("authlogin"); render(); };
+  if(goRegister) goRegister.onclick = function(){ setActive("authregister"); render(); };
+}
+
+function renderAuthLogin(){
+  const html = _authPageHeader(t("api.login","登录"), true) +
+    '<div class="card auth-form-card">' +
+      '<form id="authPageLoginForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
+        '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" required></div>' +
+        '<div class="auth-field"><label for="authPageLoginPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageLoginPassword" autocomplete="current-password" required></div>' +
+        '<p class="auth-error" id="authPageLoginError"></p>' +
+        '<button type="submit" class="auth-submit" id="authPageLoginSubmit">' + t("api.login","登录") + '</button>' +
+        '<p class="sub u-text-center" style="margin-top:var(--space-3)">' +
+          t("auth.noAccount","还没有账号？") +
+          ' <a href="#" id="authPageToRegister">' + t("auth.goRegister","立即注册") + '</a>' +
+        '</p>' +
+      '</form>' +
+    '</div>';
+  $("#main").innerHTML = sanitizeHtml(html);
+  const back = $("#authPageBack");
+  if(back) back.onclick = function(){ setActive("authwelcome"); render(); };
+  const toReg = $("#authPageToRegister");
+  if(toReg) toReg.onclick = function(e){ e.preventDefault(); setActive("authregister"); render(); };
+  const form = $("#authPageLoginForm");
+  if(form) form.onsubmit = function(e){
+    e.preventDefault();
+    if(typeof _doAuthLogin === "function") _doAuthLogin($("#authPageLoginEmail").value, $("#authPageLoginPassword").value);
+  };
+}
+
+function renderAuthRegister(){
+  const html = _authPageHeader(t("api.register","注册"), true) +
+    '<div class="card auth-form-card">' +
+      '<form id="authPageRegisterForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
+        '<div class="auth-field"><label for="authPageRegName">' + t("api.name","用户名") + '</label><input type="text" id="authPageRegName" autocomplete="username" required></div>' +
+        '<div class="auth-field"><label for="authPageRegEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageRegEmail" autocomplete="email" required></div>' +
+        '<div class="auth-field"><label for="authPageRegPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageRegPassword" autocomplete="new-password" required></div>' +
+        '<div class="auth-field"><label for="authPageRegPassword2">' + t("api.passwordConfirm","确认密码") + '</label><input type="password" id="authPageRegPassword2" autocomplete="new-password" required></div>' +
+        '<p class="auth-error" id="authPageRegisterError"></p>' +
+        '<button type="submit" class="auth-submit" id="authPageRegisterSubmit">' + t("api.register","注册") + '</button>' +
+        '<p class="sub u-text-center" style="margin-top:var(--space-3)">' +
+          t("auth.haveAccount","已有账号？") +
+          ' <a href="#" id="authPageToLogin">' + t("auth.goLogin","直接登录") + '</a>' +
+        '</p>' +
+      '</form>' +
+    '</div>';
+  $("#main").innerHTML = sanitizeHtml(html);
+  const back = $("#authPageBack");
+  if(back) back.onclick = function(){ setActive("authwelcome"); render(); };
+  const toLog = $("#authPageToLogin");
+  if(toLog) toLog.onclick = function(e){ e.preventDefault(); setActive("authlogin"); render(); };
+  const form = $("#authPageRegisterForm");
+  if(form) form.onsubmit = function(e){
+    e.preventDefault();
+    if(typeof _doAuthRegister === "function") _doAuthRegister($("#authPageRegName").value, $("#authPageRegEmail").value, $("#authPageRegPassword").value, $("#authPageRegPassword2").value);
+  };
+}
+
+
 /* ---------- v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（只读） ----------
  * 数据源：wb_agent_task_events（_emitTaskEvent 追加，500 上限滚动）。
  * v1 设计决策：只读回放——不做「回到第 N 步」（跨数据状态恢复有 G4 级风险）。 */
@@ -19605,6 +19629,9 @@ function render(){
     if(active==="toolbox"){ renderToolboxPage(); appendFoot(); return; }
     if(active==="store"){ renderStorePage(); appendFoot(); return; }
     if(active==="chainpage"){ renderChainPage(); appendFoot(); return; }
+    if(active==="authwelcome"){ renderAuthWelcome(); appendFoot(); return; }
+    if(active==="authlogin"){ renderAuthLogin(); appendFoot(); return; }
+    if(active==="authregister"){ renderAuthRegister(); appendFoot(); return; }
     if(active==="timeline"){ renderTimelinePage(); appendFoot(); return; } // v3.4.7 批次五：任务时间轴页
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
@@ -30034,6 +30061,14 @@ const MESSAGES = {
     "auth.welcome": "Welcome",
     "auth.loginSub": "Already have an account",
     "auth.registerSub": "Create an account",
+    "auth.welcomeTitle": "Sign in or register to use cloud sync and AI integration",
+    "auth.welcomeIntro": "Choose how to continue",
+    "auth.back": "Back",
+    "auth.noAccount": "No account yet?",
+    "auth.haveAccount": "Have an account?",
+    "auth.goRegister": "Sign up now",
+    "auth.goLogin": "Sign in directly",
+    "api.passwordConfirm": "Confirm password",
     "api.registerFailed": "Registration failed",
     "api.emailInvalid": "Invalid email format",
     "api.passwordTooShort": "Password must be at least 8 characters",
@@ -31458,12 +31493,6 @@ const MESSAGES = {
     }
   }
 
-  // 打开登录模态
-  function openAuthModal(){
-    if(typeof document === "undefined") return;
-    const modal = document.getElementById("authModal");
-    if(modal){ modal.classList.add("show"); if(typeof showAuthWelcome === "function") showAuthWelcome(); }
-  }
   // 关闭登录模态
   function closeAuthModal(){
     if(typeof document === "undefined") return;
@@ -31750,7 +31779,7 @@ const MESSAGES = {
           // 已登录：跳转到设置页账号面板
           try{ if(typeof openDrawer === "function") openDrawer(); }catch(e){}
         }else{
-          openAuthModal();
+          setActive("authwelcome"); render();
         }
       };
     }
@@ -31768,14 +31797,13 @@ const MESSAGES = {
   }
 
   // 暴露 UI 函数到 window
-  window.openAuthModal = openAuthModal;
   window.closeAuthModal = closeAuthModal;
   window._initApiUI = _initApiUI;
 
   // 追加 UI 函数到 window.__test
   if(typeof window !== "undefined" && window.__test){
     Object.assign(window.__test, {
-      openAuthModal, closeAuthModal, _initApiUI,
+      closeAuthModal, _initApiUI,
       _updateUserButton: _updateUserButton,
       _loadApiPanels: _loadApiPanels,
       _showApiPanels: _showApiPanels,
