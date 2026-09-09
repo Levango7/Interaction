@@ -4968,10 +4968,10 @@ select{appearance:none;-webkit-appearance:none;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.8"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.5.9"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910b";
+const BUILD_TAG = "20260910c";
 
 
 
@@ -6581,7 +6581,7 @@ const SCENE_FEATURES = {
   study: [
     { id:"overview", type:"core",  label:t("tab.overview", "概览") },
     { id:"knowledge", type:"record", label:t("tab.knowledge", "知识库") },
-    { id:"reading", type:"record",   label:t("tab.reading", "阅读") },
+    /* v3.5.8：阅读改为商店可添加项（用户需求），渲染器与绑定保留，启用后自动出现 */
     { id:"exercise", type:"record",  label:t("tab.exercise", "练习") },
     { id:"exam", type:"record",      label:t("tab.exam", "考试") }
   ],
@@ -21895,11 +21895,9 @@ function _enforceDrawerWidth(){
   try{
     const dr = document.getElementById("drawer");
     if(!dr || !dr.classList.contains("drawer-page")) return;
-    const wrap = dr.parentNode && dr.parentNode.classList.contains("main-wrap") ? dr.parentNode : document.querySelector(".main-wrap");
-    const avail = wrap ? wrap.clientWidth : 0;
-    const maxW = Math.min(avail || 1440, 1440);
-    dr.style.width = maxW + "px";
-    dr.style.maxWidth = "100%";
+    /* 用百分比而非像素：侧栏折叠/展开后无需重算，避免宽度快照僵化 */
+    dr.style.width = "100%";
+    dr.style.maxWidth = "min(100%, 1440px)";
     dr.style.marginLeft = "auto";
     dr.style.marginRight = "auto";
     dr.style.alignSelf = "stretch";
