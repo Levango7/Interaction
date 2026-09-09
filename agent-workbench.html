@@ -137,9 +137,7 @@
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
   box-shadow:inset 2px 0 14px -2px rgba(25,180,230,.14);
 }
-:root[data-theme="aurora"] .chat-panel-header{
-  background:color-mix(in srgb,var(--panel) 60%,transparent);
-}
+:root[data-theme="aurora"] .chat-panel-header{background:transparent}
 
 /* v3.2 主题库扩展：秘境森林（forest）+ 微蓝浅海（ocean）；v3.4.0 更名
  * 设计原则：
@@ -241,7 +239,7 @@
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
   box-shadow:inset 2px 0 14px -2px rgba(74,222,128,.12);
 }
-:root[data-theme="forest"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 60%,transparent)}
+:root[data-theme="forest"] .chat-panel-header{background:transparent}
 
 :root[data-theme="ocean"]{
   /* v3.4.6 令牌补全（与 forest 同因）：补 --side-bg/--danger/--banner-*/--heat-* 等 20+
@@ -297,7 +295,7 @@
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
   box-shadow:inset 2px 0 14px -2px rgba(46,143,163,.16);
 }
-:root[data-theme="ocean"] .chat-panel-header{background:color-mix(in srgb,var(--panel) 60%,transparent)}
+:root[data-theme="ocean"] .chat-panel-header{background:transparent}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
@@ -1331,7 +1329,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-panel:hover,.chat-panel:focus-within{border-left-color:var(--accent-soft);
   box-shadow:inset 3px 0 0 var(--accent-soft)} /* v1.10.0b：hover/focus 边框高亮（左缘 3px accent 边 + 柔和 inset 阴影） */
 .chat-panel-header{padding:var(--space-2) var(--space-4);border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent);
-  background:transparent;} /* v1.9.5：头部白底与浅灰消息区区分 */
+  background:transparent;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--space-2);}
+.chat-panel-header .chat-panel-title{justify-self:start}
+#chatSessionBtn{justify-self:center}
+#chatPanelCollapse{justify-self:end} /* v1.9.5：头部白底与浅灰消息区区分 */
 .chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2);min-width:0}
 /* v1.9.5：标题图标徽章化（与全局 page-head 视觉一致） */
 .chat-panel-title .ph-ic{width:26px;height:26px;border-radius:var(--radius-md);flex-shrink:0;
@@ -1361,7 +1362,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.15：margin-bottom 沿用通用 .chat 的 space-3（12px），使消息卡下框线与工具栏
    分割线(border-top)之间留出空隙，不再重叠 */
 .chat-panel .chat{height:auto;flex:1;overflow-y:auto;border:none;border-radius:0;
-  padding:var(--space-3) var(--space-3) 0;background:var(--bg);display:flex;flex-direction:column;gap:var(--space-2)}
+  padding:var(--space-3) var(--space-3) 0;background:transparent;display:flex;flex-direction:column;gap:var(--space-2)}
 .chat-panel .chat-toolbar{margin:0;padding:0 var(--space-3);border-top:1px solid var(--line);
   justify-content:flex-start;min-height:6px}
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
@@ -1369,7 +1370,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
 .chat-input-area{margin:0 var(--space-3) var(--space-2);
   border:1px solid color-mix(in srgb,var(--line) 45%,transparent);border-radius:var(--radius-lg);
-  background:color-mix(in srgb,var(--panel) 55%,transparent);display:flex;flex-direction:column;overflow:hidden;
+  background:transparent;display:flex;flex-direction:column;overflow:hidden;
     transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-input-area:hover,.chat-input-area:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 /* 底部一行：附件键（左） + 模型选择 + 发送暂停（右），紧贴无分割线 */
@@ -3797,7 +3798,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
         <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
         <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
         <button class="chat-panel-collapse chat-ic-btn" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理" class="u-mr-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
-        <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
       </div>
       <!-- 消息区：复用 #chat id，renderChat() 渲染到此 -->
       <div class="chat" id="chat"></div>
