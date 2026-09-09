@@ -803,6 +803,9 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* ===== 表单 ===== */
 /* v3.5.4：场景功能导航条与卡片同宽居中（此前 nav 与 card 左右边不一致） */
 .main > .set-nav,.main > .scene-feat-nav{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
+/* v3.5.8：drawer 页滚动交给 .main-wrap（滚动条贴窗口右侧）；子级强制拉伸 */
+#drawer.drawer-page{overflow:visible !important;display:flex !important;flex-direction:column !important;align-items:stretch !important}
+#drawer.drawer-page > *{width:100% !important;max-width:100% !important;align-self:stretch !important;box-sizing:border-box}
 /* ===== v3.5.3 全站布局统一标准 ===== */
 :root{--card-gap:var(--space-3)}
 .card,.drawer-ph,.set-card,.stats-card,.cal-widget,.help-page,.recycle-card,.overview-grid,.overview-4cards{margin-bottom:var(--card-gap) !important}
@@ -4965,10 +4968,10 @@ select{appearance:none;-webkit-appearance:none;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.7"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.5.8"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910a";
+const BUILD_TAG = "20260910b";
 
 
 
@@ -21901,11 +21904,18 @@ function _enforceDrawerWidth(){
     dr.style.marginRight = "auto";
     dr.style.alignSelf = "stretch";
     dr.style.boxSizing = "border-box";
-    // 子级一律填满，杜绝内层二次收缩
+    /* 关键：flex 列 + stretch 强制所有子级同宽（逐元素 width 会被内层 !important 干扰） */
+    dr.style.display = "flex";
+    dr.style.flexDirection = "column";
+    dr.style.alignItems = "stretch";
+    /* 滚动交给 .main-wrap——drawer 自己滚会让滚动条停在内容右边缘而非窗口右侧 */
+    dr.style.overflow = "visible";
+    dr.style.overflowY = "visible";
     Array.prototype.forEach.call(dr.children, function(c){
       c.style.width = "100%";
       c.style.maxWidth = "none";
       c.style.boxSizing = "border-box";
+      c.style.flexShrink = "0";
     });
   }catch(_){}
 }
