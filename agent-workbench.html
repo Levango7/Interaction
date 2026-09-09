@@ -806,8 +806,12 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* ===== v3.5.3 全站布局统一标准 ===== */
 :root{--card-gap:var(--space-3)}
 .card,.drawer-ph,.set-card,.stats-card,.cal-widget,.help-page,.recycle-card,.overview-grid,.overview-4cards{margin-bottom:var(--card-gap) !important}
-.main > *,.drawer-page > *{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
-.drawer-page{width:100% !important;align-self:stretch}
+.main > *{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
+/* v3.5.5：drawer 页（AI/设置/插件）由 .drawer-page 单层居中，子级一律填满——
+   此前子级各自 max-width+居中，导致不同 tab 的内层容器宽度不一致（扩展 tab 偏窄） */
+.drawer-page > *{width:100% !important;max-width:100% !important;margin-left:0 !important;margin-right:0 !important}
+.drawer-page .ai-section,.drawer-page .ext-collapse,.drawer-page details,.drawer-page .set-card{width:100%;box-sizing:border-box}
+.drawer-page{width:100% !important;max-width:var(--content-max) !important;margin-left:auto !important;margin-right:auto !important;align-self:stretch !important;box-sizing:border-box}
 /* v3.5.1：表单控件等高统一 + 文件输入按钮化 + 备注自动延伸 */
 .form-row .fld > input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
 .form-row .fld > select,
@@ -4949,10 +4953,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.5"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.5.6"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260909e";
+const BUILD_TAG = "20260909f";
 
 
 
@@ -6547,7 +6551,7 @@ const SCENARIOS = {
       ] } }
 };
 /* v2.1.0：6 内置场景——新增 设计(design)/数据(data)；顺序即侧栏场景组显示序与滑动手势序 */
-const ORDER = ["office","data","design","study","code","life","health","finance"];
+const ORDER = ["office","data","design","study","code","life","health"];
 
 /* v3.0：场景内功能 tab 注册表——标题栏导航条 + 场景内视图切换。
    每场景「求同存异」：骨架统一（概览=任务+资料库+专属卡），功能 tab 对症下药。 */
@@ -6618,7 +6622,7 @@ const DEFAULT_LINKS = [
  * 存储键均以 PREFIX 开头 → 自动纳入导出备份（allKeys）。 */
 const CUSTOM_SC_KEY = PREFIX + "scenarios_custom";      // 自定义场景列表
 const SC_OVERRIDE_KEY = PREFIX + "scenarios_overrides"; // 内置场景改名/换色覆盖
-const BUILTIN_SC_KEYS = ["office","design","study","data","code","life","health","finance"];
+const BUILTIN_SC_KEYS = ["office","design","study","data","code","life","health"];
 const CUSTOM_ICON_KEYS = ["tag","overview","plus","check","chat","download","upload","gear","theme","stats","copy","trash"];
 /* 内置场景原始 name/color 快照（覆盖前保存，供重置与幂等重注册） */
 const SC_ORIGINALS = {};
