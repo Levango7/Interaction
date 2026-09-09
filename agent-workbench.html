@@ -801,6 +801,16 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .empty button{margin-top:var(--space-2)}
 
 /* ===== 表单 ===== */
+/* v3.5.1：表单控件等高统一 + 文件输入按钮化 + 备注自动延伸 */
+.form-row .fld > input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.form-row .fld > select,
+.set-field .ctl > input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.set-field .ctl > select{height:var(--control-h);box-sizing:border-box}
+.form-row .fld > textarea,.set-field .ctl > textarea{min-height:var(--control-h);box-sizing:border-box;resize:none;overflow-y:auto;transition:height var(--transition-fast)}
+input[type="file"]{height:var(--control-h);box-sizing:border-box;padding:0;border:1px dashed color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--radius-md);background:transparent;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;line-height:calc(var(--control-h) - 2px);transition:border-color var(--transition-fast)}
+input[type="file"]::file-selector-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
+input[type="file"]::-webkit-file-upload-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
+input[type="file"]:hover{border-color:var(--accent)}
 .form-row{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
 .form-row .fld{flex:1;min-width:120px}
 /* v3.2 阶段三：表单字段分组卡片（移动端分组节奏）——label+input 包在 .field-group 内，
@@ -1444,8 +1454,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-send-btn[data-mode="stop"]{background:var(--danger)}
 .chat-send-btn[data-mode="stop"]:hover{filter:brightness(.96);background:var(--danger)}
 /* 折叠后的侧边条（窄屏浮动按钮的替代：折叠时显示一条窄轨道，点击展开） */
-.chat-panel-rail{width:24px;flex-shrink:0;border-left:1px solid var(--line);background:color-mix(in srgb,var(--panel) 70%,transparent);
-  display:none;align-items:center;justify-content:center;cursor:pointer}
+.chat-panel-rail{width:28px;flex-shrink:0;border-left:1px solid color-mix(in srgb,var(--line) 45%,transparent);background:transparent;
+  display:none;flex-direction:column;align-items:center;justify-content:flex-start;gap:var(--space-2);padding:var(--space-2) 0;cursor:pointer;color:var(--text-dim)}
+.chat-panel-rail .rail-arrow{width:15px;height:15px;flex-shrink:0;color:var(--accent)}
+.chat-panel-rail .rail-ic{width:17px;height:17px;flex-shrink:0}
+.chat-panel-rail:hover{color:var(--text)}
 .chat-panel-rail:hover{background:var(--surface-hover);color:var(--text)}
 .chat-panel-rail.show{display:flex}
 /* 响应式：中屏收窄，窄屏滑出式覆盖（默认隐藏，加 .show 滑入） */
@@ -1864,7 +1877,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .drawer-page{
   position:relative !important;
   top:auto !important; right:auto !important;
-  height:auto !important; width:auto !important; max-width:none !important;
+  height:auto !important; width:auto !important; max-width:var(--content-max) !important;
   transform:none !important;
   border-left:none !important;
   box-shadow:none !important;
@@ -1881,7 +1894,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
    /* v3.1.1+：transparent 与 #main 一致——待办栏/标题栏/卡片浮在同一张 .app 底布上（canvas-glow 全局统一透出） */
   border:none;
   border-radius:0;
-  margin:0 !important;
+  margin:0 auto !important;
   min-width:0;
   min-height:0;
 }
@@ -2744,6 +2757,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   transition:border-color var(--transition-fast),background var(--transition-fast),transform var(--transition-fast)}
 .auth-choice:hover{border-color:var(--accent);background:var(--surface-hover);transform:translateY(-1px)}
 .auth-choice:active{transform:scale(.98)}
+.auth-choice-ic svg{width:20px;height:20px;display:block}
 .auth-choice-ic{display:flex;align-items:center;justify-content:center;width:40px;height:40px;
   border-radius:var(--radius-full);background:var(--accent-soft,rgba(0,0,0,.05));color:var(--accent)}
 .auth-choice-label{font-size:var(--fs-base);font-weight:600;color:var(--text)}
@@ -3701,6 +3715,16 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .role-badge.admin{background:var(--accent);color:var(--on-accent)}
 .role-badge.editor{background:var(--surface-hover);color:var(--text)}
 .role-badge.viewer{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+/* v3.5.1：侧栏折叠态——图标/开关严格水平居中 */
+.side.collapsed{padding-left:0;padding-right:0}
+.side.collapsed .side-toggle,
+.side.collapsed .nav-item,
+.side.collapsed .nav-parent{justify-content:center;padding-left:0;padding-right:0;gap:0;text-align:center}
+.side.collapsed .nav-item .nm,
+.side.collapsed .nav-item .cnt,
+.side.collapsed .nav-item .side-caret{display:none}
+.side.collapsed .nav-item svg,
+.side.collapsed .side-toggle svg{margin:0 auto;display:block}
 </style>
 </head>
 <body>
@@ -3825,7 +3849,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </form>
     </aside>
     <!-- 折叠后的侧边条：点击展开聊天面板（窄屏/折叠态显示） -->
-    <div class="chat-panel-rail" id="chatPanelRail" data-i18n-title="a11y.expandAi" title="展开 AI 助手" data-i18n-aria="a11y.expandAiPanel" aria-label="展开 AI 助手面板" role="button" tabindex="0" data-i18n="chat.aiAssistant">AI 助手</div>
+    <div class="chat-panel-rail" id="chatPanelRail" data-i18n-title="a11y.expandAi" title="展开 AI 助手" data-i18n-aria="a11y.expandAiPanel" aria-label="展开 AI 助手面板" role="button" tabindex="0"><svg class="rail-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><svg class="rail-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
   </div>
 </div>
 
@@ -4895,10 +4919,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.4.11"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.5.1"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260904f";
+const BUILD_TAG = "20260909a";
 
 
 
@@ -14792,18 +14816,29 @@ document.addEventListener("click", function (e) {
 /* ---------- 启动时初始化 ov4 委托 ---------- */
 try { _bindOv4Cards(); } catch (_) {}
 
+/* ---------- 表单 textarea 自动向下延伸（备注等长文本）---------- */
+document.addEventListener("input", function (e) {
+  var el = e.target;
+  if (!el || el.tagName !== "TEXTAREA") return;
+  if (!el.closest || !el.closest(".form-row,.set-field,.field-group")) return;
+  try {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight + 2, 320) + "px";
+  } catch (_) {}
+});
+
 function renderAuthWelcome(){
   const html = _authPageHeader(t("auth.welcomeTitle","登录或注册以使用云端同步与 AI 集成"), false) +
     '<div class="card auth-welcome-card">' +
       '<p class="sub u-text-center">' + t("auth.welcomeIntro","选择以下任一方式继续") + '</p>' +
       '<div class="auth-choice-grid" style="margin-top:var(--space-4)">' +
         '<button type="button" class="auth-choice" id="authPageGoLogin">' +
-          '<span class="auth-choice-ic">→</span>' +
+          '<span class="auth-choice-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>' +
           '<span class="auth-choice-label">' + t("api.login","登录") + '</span>' +
           '<span class="auth-choice-sub">' + t("auth.loginSub","已有账号，直接登录") + '</span>' +
         '</button>' +
         '<button type="button" class="auth-choice" id="authPageGoRegister">' +
-          '<span class="auth-choice-ic">+</span>' +
+          '<span class="auth-choice-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>' +
           '<span class="auth-choice-label">' + t("api.register","注册") + '</span>' +
           '<span class="auth-choice-sub">' + t("auth.registerSub","没有账号，立即注册") + '</span>' +
         '</button>' +
@@ -19203,7 +19238,7 @@ function bindChatPanel(){
   const toggleCollapse=()=>{
     panel.classList.toggle("collapsed");
     const collapsed=panel.classList.contains("collapsed");
-    if(collapseBtn) collapseBtn.textContent=collapsed ? "▸" : "◂";
+    /* v3.5.1：不再替换 textContent（会摧毁 SVG）；箭头方向由 CSS 固定为指右 */
     if(rail) rail.classList.toggle("show", collapsed);
     // 持久化折叠状态
     try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }catch(e){ /* noop */ }
