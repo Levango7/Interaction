@@ -3755,6 +3755,18 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .dgm-node-text{font-size:13px;text-anchor:middle;fill:var(--text);pointer-events:none;user-select:none}
 .dgm-edge{stroke:var(--muted);stroke-width:1.5}
 .dgm-edge-label{font-size:11px;text-anchor:middle;fill:var(--muted)}
+/* ===== v3.5.7 自建下拉（原生 popup 无法样式化，改为自定义面板） ===== */
+select{appearance:none;-webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+  padding-right:var(--space-6)}
+.sel-panel{position:fixed;z-index:var(--z-popover);max-height:280px;overflow-y:auto;padding:var(--space-1);
+  background:color-mix(in srgb,var(--panel) 96%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-3)}
+.sel-item{display:block;width:100%;text-align:left;padding:var(--space-2) var(--space-3);border:none;border-radius:var(--radius-sm);
+  background:transparent;color:var(--text);font-size:var(--fs-sm);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sel-item:hover{background:var(--surface-hover);color:var(--accent)}
+.sel-item.is-sel{background:var(--accent-soft);color:var(--accent);font-weight:600}
 </style>
 </head>
 <body>
@@ -4953,10 +4965,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.6"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.5.7"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260909f";
+const BUILD_TAG = "20260910a";
 
 
 
@@ -21824,8 +21836,79 @@ function _moveDrawerToMainWrap(){
   }
   drawer.classList.add("drawer-page");
   main.style.display = "none";
+  _enforceDrawerWidth();
 }
 /* 把 #drawer 移回原位置（#overlay 之后），恢复 #main 显示 */
+/**
+ * v3.5.7：强制 drawer 页（AI/设置/插件/知识）内容宽度统一。
+ * CSS 层被既有规则反复覆盖（不同 tab 内容宽度 605~1300px 不等），
+ * 改为打开时写内联样式——优先级最高，一次生效。
+ * @returns {void}
+ */
+/* v3.5.7：窗口尺寸变化时重算 drawer 宽度 */
+try{ window.addEventListener("resize", function(){ try{ _enforceDrawerWidth(); }catch(_){} }); }catch(_){}
+/* ---------- v3.5.7 自建下拉：拦截 select 点击，渲染统一风格面板 ---------- */
+var _selPanel = null, _selTarget = null;
+function _closeSelPanel(){ if(_selPanel){ try{ _selPanel.remove(); }catch(_){} _selPanel = null; _selTarget = null; } }
+function _openSelPanel(sel){
+  _closeSelPanel();
+  var rect = sel.getBoundingClientRect();
+  var panel = document.createElement("div");
+  panel.className = "sel-panel";
+  Array.prototype.forEach.call(sel.options, function(opt){
+    var it = document.createElement("button");
+    it.type = "button";
+    it.className = "sel-item" + (opt.selected ? " is-sel" : "");
+    it.textContent = opt.textContent;
+    it.onclick = function(){
+      sel.value = opt.value;
+      try{ sel.dispatchEvent(new Event("change", { bubbles: true })); }catch(_){}
+      _closeSelPanel();
+    };
+    panel.appendChild(it);
+  });
+  document.body.appendChild(panel);
+  var w = Math.max(rect.width, 140);
+  panel.style.minWidth = w + "px";
+  panel.style.maxWidth = "min(360px, 92vw)";
+  var left = Math.min(rect.left, Math.max(8, window.innerWidth - panel.offsetWidth - 8));
+  panel.style.left = left + "px";
+  var top = rect.bottom + 4;
+  if(top + panel.offsetHeight > window.innerHeight - 8){
+    top = Math.max(8, rect.top - panel.offsetHeight - 4);
+  }
+  panel.style.top = top + "px";
+  _selPanel = panel; _selTarget = sel;
+}
+document.addEventListener("mousedown", function(e){
+  var el = e.target;
+  if(el && el.tagName === "SELECT"){ e.preventDefault(); _openSelPanel(el); return; }
+  if(_selPanel && !_selPanel.contains(el)) _closeSelPanel();
+}, true);
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") _closeSelPanel(); });
+try{ window.addEventListener("resize", _closeSelPanel); window.addEventListener("scroll", _closeSelPanel, true); }catch(_){}
+
+function _enforceDrawerWidth(){
+  try{
+    const dr = document.getElementById("drawer");
+    if(!dr || !dr.classList.contains("drawer-page")) return;
+    const wrap = dr.parentNode && dr.parentNode.classList.contains("main-wrap") ? dr.parentNode : document.querySelector(".main-wrap");
+    const avail = wrap ? wrap.clientWidth : 0;
+    const maxW = Math.min(avail || 1440, 1440);
+    dr.style.width = maxW + "px";
+    dr.style.maxWidth = "100%";
+    dr.style.marginLeft = "auto";
+    dr.style.marginRight = "auto";
+    dr.style.alignSelf = "stretch";
+    dr.style.boxSizing = "border-box";
+    // 子级一律填满，杜绝内层二次收缩
+    Array.prototype.forEach.call(dr.children, function(c){
+      c.style.width = "100%";
+      c.style.maxWidth = "none";
+      c.style.boxSizing = "border-box";
+    });
+  }catch(_){}
+}
 function _moveDrawerHome(){
   const drawer = $("#drawer");
   const overlay = $("#overlay");
