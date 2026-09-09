@@ -801,6 +801,8 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .empty button{margin-top:var(--space-2)}
 
 /* ===== 表单 ===== */
+/* v3.5.4：场景功能导航条与卡片同宽居中（此前 nav 与 card 左右边不一致） */
+.main > .set-nav,.main > .scene-feat-nav{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
 /* ===== v3.5.3 全站布局统一标准 ===== */
 :root{--card-gap:var(--space-3)}
 .card,.drawer-ph,.set-card,.stats-card,.cal-widget,.help-page,.recycle-card,.overview-grid,.overview-4cards{margin-bottom:var(--card-gap) !important}
@@ -811,7 +813,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .form-row .fld > select,
 .set-field .ctl > input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
 .set-field .ctl > select{height:var(--control-h);box-sizing:border-box}
-.form-row .fld > textarea,.set-field .ctl > textarea{min-height:var(--control-h);box-sizing:border-box;resize:none;overflow-y:auto;transition:height var(--transition-fast)}
+.form-row .fld > textarea,.set-field .ctl > textarea,.tool-field > textarea{height:var(--control-h);min-height:var(--control-h);box-sizing:border-box;resize:none;overflow-y:auto;transition:height var(--transition-fast)}
 input[type="file"]{height:var(--control-h);box-sizing:border-box;padding:0;border:1px dashed color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--radius-md);background:transparent;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;line-height:calc(var(--control-h) - 2px);transition:border-color var(--transition-fast)}
 input[type="file"]::file-selector-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
 input[type="file"]::-webkit-file-upload-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
@@ -1459,6 +1461,12 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-send-btn[data-mode="stop"]{background:var(--danger)}
 .chat-send-btn[data-mode="stop"]:hover{filter:brightness(.96);background:var(--danger)}
 /* 折叠后的侧边条（窄屏浮动按钮的替代：折叠时显示一条窄轨道，点击展开） */
+/* v3.5.4：折叠 rail 的按钮态——与左侧导航一致的圆角背景 */
+.chat-panel-rail .rail-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.chat-panel-rail .rail-btn:hover{background:var(--surface-hover);color:var(--accent)}
+.chat-panel-rail .rail-btn:active{background:var(--accent-soft);color:var(--accent)}
+.chat-panel-rail .rail-btn svg{width:18px;height:18px;display:block}
+.chat-panel-rail .rail-spacer{flex:1 1 auto}
 .chat-panel-rail{width:52px;flex-shrink:0;border-left:1px solid var(--line);
   background:color-mix(in srgb,var(--panel) 75%,transparent);background-image:var(--sidebar-glow);
   backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
@@ -3867,7 +3875,11 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
       </form>
     </aside>
     <!-- 折叠后的侧边条：点击展开聊天面板（窄屏/折叠态显示） -->
-    <div class="chat-panel-rail" id="chatPanelRail" data-i18n-title="a11y.expandAi" title="展开 AI 助手" data-i18n-aria="a11y.expandAiPanel" aria-label="展开 AI 助手面板" role="button" tabindex="0"><svg class="rail-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><svg class="rail-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+    <div class="chat-panel-rail" id="chatPanelRail" data-i18n-title="a11y.expandAi" title="展开 AI 助手" data-i18n-aria="a11y.expandAiPanel" aria-label="展开 AI 助手面板" role="button" tabindex="0">
+  <button type="button" class="rail-btn rail-expand" id="chatRailExpand" data-i18n-title="a11y.expandAi" title="展开 AI 助手" aria-label="展开 AI 助手"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <span class="rail-spacer"></span>
+  <button type="button" class="rail-btn rail-ai" id="chatRailAi" data-i18n-title="page.ai.title" title="AI 页面" aria-label="打开 AI 页面"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+</div>
   </div>
 </div>
 
@@ -4937,10 +4949,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.5.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.5.5"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260909d";
+const BUILD_TAG = "20260909e";
 
 
 
@@ -15284,7 +15296,7 @@ function _renderFinanceStats(){
 document.addEventListener("input", function (e) {
   var el = e.target;
   if (!el || el.tagName !== "TEXTAREA") return;
-  if (!el.closest || !el.closest(".form-row,.set-field,.field-group")) return;
+  if (!el.closest || !el.closest(".form-row,.set-field,.field-group,.tool-field")) return;
   try {
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight + 2, 320) + "px";
@@ -19739,6 +19751,15 @@ function bindChatPanel(){
      AI 入口不应受聊天面板折叠态阻挡（用户在窄屏默认折叠时也要能用 AI）。 */
   window.__aiPanelExpand = function(){
     if(panel.classList.contains("collapsed")){ toggleCollapse(); }
+  };
+  /* v3.5.4：箭头=展开面板；AI 图标=展开并跳转 AI 页面 */
+  const railExpand = $("#chatRailExpand");
+  if(railExpand) railExpand.onclick = function(e){ e.stopPropagation(); if(panel.classList.contains("collapsed")) toggleCollapse(); };
+  const railAi = $("#chatRailAi");
+  if(railAi) railAi.onclick = function(e){
+    e.stopPropagation();
+    if(panel.classList.contains("collapsed")) toggleCollapse();
+    try{ setActive("feat-ai"); render(); }catch(_){}
   };
   if(rail){
     rail.onclick=toggleCollapse;
