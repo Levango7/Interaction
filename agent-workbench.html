@@ -1161,6 +1161,29 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tool-app-card .tool-table{width:100%;border-collapse:collapse;margin-top:var(--space-2);font-size:var(--fs-sm)}
 .tool-app-card .tool-table th,.tool-app-card .tool-table td{border:1px solid var(--line);padding:var(--space-1) var(--space-2);text-align:left}
 .tool-app-card .tool-table th{background:var(--panel2);font-weight:600;font-size:var(--fs-xs);color:var(--text-dim)}
+
+/* ===== v3.6.2 自定义日期选择器（圆角矩形 + 主题色，替代浏览器原生白底方角弹层） ===== */
+input[data-date-picker]{cursor:pointer;caret-color:transparent}
+input[data-date-picker]::placeholder{color:var(--text-faint)}
+.dp-overlay{position:fixed;inset:0;z-index:var(--z-modal,3000)}
+.dp-panel{position:fixed;z-index:var(--z-modal,3000)+1;min-width:250px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-3);padding:var(--space-3);font-size:var(--fs-sm);user-select:none}
+.dp-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2)}
+.dp-head .dp-title{font-weight:600;color:var(--text);font-size:var(--fs-base)}
+.dp-nav{display:flex;align-items:center;gap:var(--space-1)}
+.dp-nav-btn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel2);color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
+.dp-nav-btn:hover{background:var(--surface-hover);color:var(--accent);border-color:var(--accent)}
+.dp-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:var(--space-1)}
+.dp-week span{text-align:center;font-size:var(--fs-2xs);color:var(--muted);padding:2px 0;font-weight:600}
+.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-day{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text);font-size:var(--fs-sm);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.dp-day:hover{background:var(--surface-hover);color:var(--accent)}
+.dp-day.today{box-shadow:inset 0 0 0 1.5px var(--accent);color:var(--accent);font-weight:600}
+.dp-day.selected{background:var(--accent);color:var(--on-accent);font-weight:600}
+.dp-day.selected:hover{background:var(--accent);color:var(--on-accent)}
+.dp-day.other{color:var(--text-faint)}
+.dp-day.other:hover{background:var(--surface-muted);color:var(--text-faint)}
+.dp-foot{display:flex;gap:var(--space-2);margin-top:var(--space-3)}
+.dp-foot .btn-ghost{flex:1}
 .tool-app-card .tool-table tr:hover td{background:var(--surface-hover)}
 .tool-app-card .tool-empty{color:var(--muted);text-align:center;padding:var(--space-5);font-size:var(--fs-sm)}
 .tool-app-card .tool-summary{display:flex;gap:var(--space-4);margin-bottom:var(--space-3);flex-wrap:wrap}
@@ -1175,6 +1198,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .add-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
 .add-label{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
 .add-round{width:var(--control-h);height:var(--control-h);padding:0;border-radius:var(--control-r);display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1}
+/* v3.6.2：AI 图标按钮的机器人 SVG 尺寸，与「＋」加号视觉同高对齐；共 N 条推到行尾 */
+.add-round .ic-inline{display:inline-flex;align-items:center;justify-content:center}
+.ai-round .ic-inline svg{width:16px;height:16px;display:block}
+.ai-wrap{min-width:44px}
+.tool-app-card .tool-filter-bar > .sub{margin:0 0 0 auto}
 /* v3.2 对齐修复：form-row 内的 add-wrap 改为单行（label 隐藏，加号高度拉满对齐 input 框 38px）——此前 add-wrap 是 column 布局（标签+加号堆叠），总高度超出 input 导致加号高出框底 */
 .form-row .add-wrap{flex-direction:row;align-items:center;align-self:flex-end;gap:0}
 .form-row .add-wrap .add-label{display:none}
@@ -1477,6 +1505,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .chat-panel-rail .rail-btn:hover{background:var(--surface-hover);color:var(--accent)}
 .chat-panel-rail .rail-btn:active{background:var(--accent-soft);color:var(--accent)}
 .chat-panel-rail .rail-btn svg{width:18px;height:18px;display:block}
+/* v3.6.2：rail 的「展开 AI」按钮做成醒目圆角矩形芯片——半透明 accent 底 + accent 描边，与左侧 .side-toggle 形制一致 */
+.chat-panel-rail .rail-expand{background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));color:var(--accent);box-shadow:var(--shadow-1)}
+.chat-panel-rail .rail-expand:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.chat-panel-rail .rail-expand:active{background:var(--accent-soft);color:var(--on-accent)}
 .chat-panel-rail .rail-spacer{flex:1 1 auto}
 .chat-panel-rail{width:52px;flex-shrink:0;border-left:1px solid var(--line);
   background:color-mix(in srgb,var(--panel) 75%,transparent);background-image:var(--sidebar-glow);
@@ -1562,10 +1594,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .bar .v{width:64px;text-align:right;color:var(--muted);font-size:var(--fs-xs)}
 
 
-.chain-tab-bar{display:flex;gap:var(--space-1);margin-bottom:var(--space-3);background:color-mix(in srgb,var(--panel) 50%,transparent);border-radius:var(--radius-full);padding:var(--space-1)}
-.chain-tab{flex:1;padding:6px 12px;border-radius:var(--radius-full);text-align:center;font-size:var(--fs-sm);font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-dim);transition:all var(--transition-fast)}
+/* v3.6.2：场景联动 tabs 由药丸改为矩形芯片——与其他页面 .set-nav.scene-feat-nav 视觉一致 */
+.chain-tab-bar{display:flex;gap:var(--space-1);margin-bottom:var(--space-3);background:color-mix(in srgb,var(--panel) 50%,transparent);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-1)}
+.chain-tab{flex:1;padding:6px 12px;border-radius:var(--radius-md);text-align:center;font-size:var(--fs-sm);font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-dim);transition:all var(--transition-fast)}
 .chain-tab.active{background:var(--accent);color:var(--on-accent);font-weight:600}
-.chain-tab:hover:not(.active){background:color-mix(in srgb,var(--panel) 30%,transparent);color:var(--text)}
+.chain-tab:hover:not(.active){background:var(--surface-hover);color:var(--text)}
 .chain-page{display:none;animation:chainFadeIn .25s ease}
 .chain-page.active{display:block}
 @keyframes chainFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -2386,13 +2419,16 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
    v2.0.3：上下高度收窄（min-height 36→28），与顶栏间距收紧，并在"顶栏下沿 ↔ 待办栏对齐线"
    这段竖直区间内上下居中（margin-top 按该区间高度实测校准） */
 .side-toggle{display:none;align-items:center;justify-content:center;gap:var(--space-2);width:100%;
-  padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);background:var(--panel2);border:1px solid var(--line);
-  color:var(--text-dim);font-size:var(--fs-sm);margin-bottom:var(--space-2);min-height:28px;
+  padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);
+  /* v3.6.2：折叠/展开按钮加"醒目圆角矩形背景"——常驻半透明 accent 底 + accent 描边，与右侧 rail 展开按钮形制一致 */
+  background:color-mix(in srgb,var(--accent) 10%,var(--panel2));border:1px solid color-mix(in srgb,var(--accent) 32%,var(--line));
+  color:var(--accent);font-size:var(--fs-sm);font-weight:600;margin-bottom:var(--space-2);min-height:28px;
   /* 实测校准：顶栏下沿(53px)↔待办栏对齐线(98px)区间高 45px，按钮高 29px，
      居中需上移 4px 抵消 .side 的 padding-top（12px），使按钮与顶栏间距收至 8px */
   margin-top:calc(var(--space-1) * -1);
-  transition:background var(--transition-fast),color var(--transition-fast)}
-.side-toggle:hover{background:var(--surface-hover);color:var(--text)}
+  box-shadow:var(--shadow-1);
+  transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.side-toggle:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent);box-shadow:var(--shadow-2)}
 .side-toggle svg{width:16px;height:16px;flex-shrink:0;transition:transform .2s}
 .side.collapsed .side-toggle svg{transform:rotate(180deg)}
 .side.collapsed .side-toggle .lbl{display:none}
@@ -5017,10 +5053,10 @@ select{appearance:none;-webkit-appearance:none;
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.6.1"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910f";
+const BUILD_TAG = "20260910g";
 
 
 
@@ -10853,7 +10889,7 @@ function _recordToolHtml(cfg, records){
       return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-rec-field="' + esc(f.k) + '">' +
         f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
     }
-    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="date"' : ' type="text"';
+    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
     return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + t + ' data-rec-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
   }).join("") + '</div>';
   const today = todayStr();
@@ -16486,7 +16522,7 @@ function renderMainHTML(){
 
   const taskForm = `<form class="form-row" id="taskForm">
     <div class="fld fld-lg"><label>${t("field.taskTitle","任务标题")}</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
-    <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="date"></div>
+    <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" placeholder="${t("placeholder.dueDate","选日期")}"></div>
     <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
       <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
     <div class="fld fld-lg"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
@@ -17023,7 +17059,7 @@ function _featureCardHtml(cfg){
     if(f.type === "textarea"){
       return '<div class="tool-field u-col-span-all"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" class="u-fs-2xs u-min-h-0"style="font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace"></textarea></div>';
     }
-    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="date"' : ' type="text"';
+    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
     return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
   }).join("") + '</div>';
   const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
@@ -17062,10 +17098,115 @@ function _featureCardHtml(cfg){
     /* v3.2 IA：每个记录型 tab 加「让 AI 帮记」按钮——AI 不再是空架子，它能调工具真正写入数据。
        点击聚焦 AI 聊天面板并预填「在 {场景} 场景记一笔 {tab 名}」上下文。 */
     '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">'+t("tool.addLabel", t("common.add","添加"))+'</span><button type="button" class="addbtn sm add-round" data-f-add data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
-    '<button type="button" class="addbtn sm tool-ai-hint" data-ai-hint-for="'+esc(cfg.key)+'" data-sc="accent" aria-label="'+t("tool.aiHint.aria","让 AI 帮记")+'"><span class="ic-inline" aria-hidden="true">'+UI_ICONS.robot+'</span><span>'+t("tool.aiHint.btn","让 AI 帮记")+'</span></button>' +
+    /* v3.6.2：让AI帮记 改为「上方小标签 + 下方机器人图标按钮」，与左侧「添加」形制一致、图标同基线 */
+    '<span class="add-wrap ai-wrap"><span class="add-label">'+t("tool.aiHint.btn","让 AI 帮记")+'</span><button type="button" class="addbtn sm add-round ai-round" data-ai-hint-for="'+esc(cfg.key)+'" data-sc="accent" aria-label="'+t("tool.aiHint.aria","让 AI 帮记")+'"><span class="ic-inline" aria-hidden="true">'+UI_ICONS.robot+'</span></button></span>' +
     t("p3.html.countPrefix","<span class=\"sub\" class=\"u-m-0\">共 ") + records.length + t("p3.html.countSuffix"," 条</span></div>") +
     summary + '<div class="tool-form-box">' + form + '</div>' + hint + list + afterListHtml + '</div>';
 }
+
+/* ===== v3.6.2 自定义日期选择器（替代浏览器原生白底方角弹层） =====
+ * 用法：<input type="text" inputmode="none" data-date-picker="1">。
+ * 点击/聚焦该输入框时弹出主题化圆角面板；选定后把 YYYY-MM-DD 写入 input.value。
+ * 全局单例（_dpPanel/_dpOverlay），ESC / 点面板外 / 选完即关闭。 */
+var _dpPanel = null, _dpOverlay = null, _dpInput = null, _dpViewY = null, _dpViewM = null;
+function _dpClose(){
+  if(_dpOverlay){ try{ _dpOverlay.remove(); }catch(_e){} _dpOverlay = null; }
+  if(_dpPanel){ try{ _dpPanel.remove(); }catch(_e){} _dpPanel = null; }
+  _dpInput = null;
+}
+function _dpMonthDays(y, m){ return new Date(y, m + 1, 0).getDate(); }
+function _dpFirstWeekday(y, m){ return new Date(y, m, 1).getDay(); } // 0=Sun
+function _dpParseVal(v){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || "").trim()); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null; }
+function _dpFmt(y, m, d){ return y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0"); }
+function _dpRender(){
+  if(!_dpPanel) return;
+  const today = new Date();
+  const y = _dpViewY, m = _dpViewM;
+  const weekNames = ["日","一","二","三","四","五","六"];
+  const first = _dpFirstWeekday(y, m);
+  const dim = _dpMonthDays(y, m);
+  const prevDim = _dpMonthDays(y, m - 1);
+  const cur = _dpInput ? _dpParseVal(_dpInput.value) : null;
+  let html = '<div class="dp-head"><span class="dp-title">' + y + ' ' + t("datepicker.yearSuffix","年") + ' ' + (m + 1) + ' ' + t("datepicker.monthSuffix","月") + '</span>' +
+    '<span class="dp-nav">' +
+    '<button type="button" class="dp-nav-btn" data-dp-nav="-1" aria-label="' + t("datepicker.monthPrev","上一月") + '">‹</button>' +
+    '<button type="button" class="dp-nav-btn" data-dp-nav="1" aria-label="' + t("datepicker.monthNext","下一月") + '">›</button>' +
+    '</span></div>' +
+    '<div class="dp-week">' + weekNames.map(function(wd){ return '<span>' + wd + '</span>'; }).join("") + '</div>' +
+    '<div class="dp-grid">';
+  for(let i = 0; i < first; i++){
+    const dd = prevDim - first + 1 + i;
+    html += '<button type="button" class="dp-day other" data-dp-day="-1:' + dd + '">' + dd + '</button>';
+  }
+  for(let d = 1; d <= dim; d++){
+    const isToday = (d === today.getDate() && m === today.getMonth() && y === today.getFullYear());
+    const isSel = cur && cur.d === d && cur.m === m && cur.y === y;
+    html += '<button type="button" class="dp-day' + (isToday ? " today" : "") + (isSel ? " selected" : "") + '" data-dp-day="0:' + d + '">' + d + '</button>';
+  }
+  const totalCells = first + dim;
+  const tail = (7 - (totalCells % 7)) % 7;
+  for(let i = 1; i <= tail; i++){
+    html += '<button type="button" class="dp-day other" data-dp-day="1:' + i + '">' + i + '</button>';
+  }
+  html += '</div>' +
+    '<div class="dp-foot">' +
+    '<button type="button" class="btn-ghost btn-sm" data-dp-clear="1">' + t("datepicker.clear","清除") + '</button>' +
+    '<button type="button" class="btn-ghost btn-sm" data-dp-today="1">' + t("datepicker.today","今天") + '</button>' +
+    '</div>';
+  _dpPanel.innerHTML = html;
+}
+function _dpPick(y, m, d){
+  if(!_dpInput) return;
+  _dpInput.value = _dpFmt(y, m, d);
+  try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){}
+  _dpClose();
+}
+function _dpOpen(input){
+  _dpClose();
+  if(!input) return;
+  _dpInput = input;
+  const cur = _dpParseVal(input.value) || (function(){ const n = new Date(); return { y: n.getFullYear(), m: n.getMonth(), d: n.getDate() }; })();
+  _dpViewY = cur.y; _dpViewM = cur.m;
+  const overlay = document.createElement("div");
+  overlay.className = "dp-overlay";
+  overlay.addEventListener("mousedown", function(){ _dpClose(); });
+  const panel = document.createElement("div");
+  panel.className = "dp-panel";
+  panel.addEventListener("mousedown", function(e){ e.stopPropagation(); });
+  document.body.appendChild(overlay);
+  document.body.appendChild(panel);
+  _dpOverlay = overlay; _dpPanel = panel;
+  _dpRender();
+  const r = input.getBoundingClientRect();
+  const pw = panel.offsetWidth, ph = panel.offsetHeight;
+  let left = r.left; let top = r.bottom + 6;
+  if(left + pw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - pw - 8);
+  if(top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
+  panel.style.left = left + "px";
+  panel.style.top = top + "px";
+}
+// 事件委托：点击带 data-date-picker 的输入框弹出自定义面板
+document.addEventListener("focus", function(e){
+  const t2 = e && e.target;
+  if(t2 && t2.matches && t2.matches('input[data-date-picker="1"]')) _dpOpen(t2);
+}, true);
+document.addEventListener("click", function(e){
+  const t2 = e && e.target;
+  if(t2 && t2.matches && t2.matches('input[data-date-picker="1"]')){ if(!_dpPanel) _dpOpen(t2); return; }
+  if(!_dpPanel) return;
+  // 面板内按钮
+  const nav = t2 && t2.closest && t2.closest("[data-dp-nav]");
+  if(nav){ const step = Number(nav.getAttribute("data-dp-nav")) || 0; const d = new Date(_dpViewY, _dpViewM + step, 1); _dpViewY = d.getFullYear(); _dpViewM = d.getMonth(); _dpRender(); return; }
+  const day = t2 && t2.closest && t2.closest("[data-dp-day]");
+  if(day){ const seg = (day.getAttribute("data-dp-day") || "").split(":"); const monShift = Number(seg[0]) || 0; const dd = Number(seg[1]); const base = new Date(_dpViewY, _dpViewM + monShift, 1); _dpPick(base.getFullYear(), base.getMonth(), dd); return; }
+  const clear = t2 && t2.closest && t2.closest("[data-dp-clear]");
+  if(clear){ if(_dpInput){ _dpInput.value = ""; try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){} } _dpClose(); return; }
+  const todayBtn = t2 && t2.closest && t2.closest("[data-dp-today]");
+  if(todayBtn){ const n = new Date(); _dpPick(n.getFullYear(), n.getMonth(), n.getDate()); return; }
+}, true);
+document.addEventListener("keydown", function(e){ if(e.key === "Escape" && _dpPanel) _dpClose(); });
+window.addEventListener("resize", function(){ _dpClose(); });
+window.addEventListener("scroll", function(){ _dpClose(); }, true);
 
 /** 通用功能卡事件绑定（委托到 #main，幂等）
  * @param {string} key - 存储键（PREFIX + key）
@@ -18377,7 +18518,7 @@ function openTaskEdit(id){
       <form id="taskEditForm" class="u-flex u-flex-col u-pad-5-6 u-gap-4">
         <div class="fld"><label>${t("field.taskTitle","任务标题")}</label><input name="title" value="${esc(task.title)}" maxlength="200" required></div>
         <div class="form-row u-mb-0">
-          <div class="fld"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="date" value="${esc(task.due||"")}"></div>
+          <div class="fld"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" value="${esc(task.due||"")}" placeholder="${t("placeholder.dueDate","选日期")}"></div>
           <div class="fld"><label>${t("task.priority","优先级")}</label><select name="priority">${priSel}</select></div>
           <div class="fld"><label>${t("field.linkedRecord","联动记录")}</label><select name="status">${statusSel}</select></div>
         </div>
@@ -27114,6 +27255,13 @@ const MESSAGES = {
     "field.dimension": "维度",
     "field.doneAt": "完成日期",
     "field.dueDate": "截止日期",
+    "placeholder.dueDate": "选日期",
+    "datepicker.yearSuffix": "年",
+    "datepicker.monthSuffix": "月",
+    "datepicker.monthPrev": "上一月",
+    "datepicker.monthNext": "下一月",
+    "datepicker.clear": "清除",
+    "datepicker.today": "今天",
     "field.durationHours": "时长(小时)",
     "field.entry": "条目",
     "field.examName": "考试名",
@@ -30498,6 +30646,13 @@ const MESSAGES = {
     "field.dimension": "Dimension",
     "field.doneAt": "Done date",
     "field.dueDate": "Due date",
+    "placeholder.dueDate": "Pick a date",
+    "datepicker.yearSuffix": " ",
+    "datepicker.monthSuffix": "",
+    "datepicker.monthPrev": "Previous",
+    "datepicker.monthNext": "Next",
+    "datepicker.clear": "Clear",
+    "datepicker.today": "Today",
     "field.durationHours": "Duration (hours)",
     "field.entry": "Entry",
     "field.examName": "Exam Name",
