@@ -824,7 +824,11 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .form-row .fld > select,
 .set-field .ctl > input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
 .set-field .ctl > select{height:var(--control-h);box-sizing:border-box}
-.form-row .fld > textarea,.set-field .ctl > textarea,.tool-field > textarea{height:var(--control-h);min-height:var(--control-h);box-sizing:border-box;resize:none;overflow-y:auto;transition:height var(--transition-fast)}
+.form-row .fld > textarea,.set-field .ctl > textarea,.tool-field > textarea{height:var(--control-h);min-height:var(--control-h);box-sizing:border-box;resize:none;overflow-y:auto;transition:height var(--transition-fast);
+  /* v3.6.2：textarea 是 inline 元素，默认基线对齐会在其下方留 ~7px 下行空白，导致备注框比同排输入框整体上浮 7px——top 对齐消除 */
+  vertical-align:top}
+/* v3.6.2：记录卡 textarea（tool-form-grid 内，rows=3 全宽行）同理消除下行空白 */
+.tool-form-grid .tool-field > textarea{vertical-align:top}
 input[type="file"]{height:var(--control-h);box-sizing:border-box;padding:0;border:1px dashed color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--radius-md);background:transparent;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;line-height:calc(var(--control-h) - 2px);transition:border-color var(--transition-fast)}
 input[type="file"]::file-selector-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
 input[type="file"]::-webkit-file-upload-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
@@ -1594,11 +1598,17 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .bar .v{width:64px;text-align:right;color:var(--muted);font-size:var(--fs-xs)}
 
 
-/* v3.6.2：场景联动 tabs 由药丸改为矩形芯片——与其他页面 .set-nav.scene-feat-nav 视觉一致 */
-.chain-tab-bar{display:flex;gap:var(--space-1);margin-bottom:var(--space-3);background:color-mix(in srgb,var(--panel) 50%,transparent);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-1)}
-.chain-tab{flex:1;padding:6px 12px;border-radius:var(--radius-md);text-align:center;font-size:var(--fs-sm);font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-dim);transition:all var(--transition-fast)}
-.chain-tab.active{background:var(--accent);color:var(--on-accent);font-weight:600}
-.chain-tab:hover:not(.active){background:var(--surface-hover);color:var(--text)}
+/* v3.6.2：场景联动 tabs 与其他页面 .set-nav 完全同款——实心面板卡片、radius-lg、吸顶（sticky）、按钮同 padding/边框 */
+.chain-tab-bar{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;gap:var(--space-2);
+  flex-wrap:wrap;margin:0 0 var(--space-3);
+  padding:var(--space-4) var(--space-3);background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+.chain-tab{flex:1;text-align:center;border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
+  font-size:var(--fs-sm);padding:var(--space-2) var(--space-4);border-radius:var(--radius-lg);
+  min-height:38px;font-weight:500;letter-spacing:.01em;cursor:pointer;white-space:nowrap;
+  transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast)}
+.chain-tab:hover:not(.active){background:var(--surface-hover);color:var(--text);border-color:var(--accent)}
+.chain-tab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
 .chain-page{display:none;animation:chainFadeIn .25s ease}
 .chain-page.active{display:block}
 @keyframes chainFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -3846,6 +3856,9 @@ select{appearance:none;-webkit-appearance:none;
 .sel-item.is-sel{background:var(--accent-soft);color:var(--accent);font-weight:600}
 /* ===== v3.6.0 图片输入：按钮 + 文件名 + 缩略图预览 ===== */
 .img-pick{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;width:100%}
+/* v3.6.2：清零全局 label 的下边距（.form-row .fld label 的 margin-bottom 4px 特异性更高，
+   会把按钮容器撑到 42px，底部比同排输入框高 4px）——important 强制归零 */
+.img-pick .img-pick-btn{margin:0 !important}
 .img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .img-pick-btn{display:inline-flex;align-items:center;gap:6px;height:var(--control-h);padding:0 var(--space-3);
   border:1px dashed color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--radius-md);
@@ -5056,7 +5069,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910g";
+const BUILD_TAG = "20260910h";
 
 
 
