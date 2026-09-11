@@ -310,8 +310,16 @@ button:active:not([disabled]){transform:scale(.97)}
 button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 button[disabled]:active{transform:none}
 input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
-  border-radius:var(--control-r);padding:0 var(--space-2) var(--space-2h);background:var(--panel);color:var(--text);width:100%;
+  border-radius:var(--control-r);padding:0 var(--space-2);background:var(--panel);color:var(--text);width:100%;
   height:var(--control-h);line-height:1.4;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+/* v3.6.2：输入框文字垂直居中——旧规则 padding 上0下10px 不对称，placeholder 偏上；
+   固定高度 + display:inline-flex + align-items:center 让文字行盒在框内精确居中（select 仍走原生渲染） */
+/* v3.6.2：输入框文字垂直居中——旧规则 padding 上0下10px 不对称，placeholder 偏上；
+   固定高度 + display:inline-flex + align-items:center 让文字行盒在框内精确居中。
+   number/date 等带原生部件的类型排除在外（inline-flex 会让 spinner/日历图标消失），改用对称 padding 兜底 */
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="number"]):not([type="date"]):not([type="time"]):not([type="range"]){display:inline-flex;align-items:center}
+input[type="number"]{padding-top:0;padding-bottom:0;line-height:calc(var(--control-h) - 2px)}
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"])::placeholder{line-height:1}
 /* v3.2：textarea 允许多行（高度由 min-height 兜底，不由 --control-h 限制） */
 textarea{height:auto;min-height:64px;padding:var(--space-2) var(--space-2h);line-height:1.5}
 /* v2.1.1：checkbox/radio 天然小尺寸，不继承 width:100%（替代散落各处的内联 width:auto） */
@@ -1124,6 +1132,13 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* v2.0.3：尾栏永远在最下（配合 .main / .drawer-page 的 flex 纵向布局） */
 .main > .foot{margin-top:auto}
+/* v3.6.2 统一间距标准：溢出滚动时，最后 card 到页尾分割线 = var(--card-gap)（与全站卡片间距同令牌）。
+   margin-top:auto 只负责"内容不足时贴底"；L819 的 !important 规则已罩住 overview-grid/overview-4cards，
+   这里补齐其余页面的最后容器（商店列表/回收站卡/场景联动页/drawer 保存栏），全部对齐同一令牌 */
+.store-list{margin-bottom:var(--card-gap) !important}
+.recycle-modal{margin-bottom:var(--card-gap) !important}
+.chain-page.active{margin-bottom:var(--card-gap) !important}
+#drawer .set-savebar{margin-bottom:var(--card-gap) !important}
 
 /* ===== 概览页栅格布局（PC 宽屏 2 列） ===== */
 .overview-grid{display:grid;gap:var(--space-5)}
@@ -2078,6 +2093,9 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 /* 表单行：标签左（定宽）/ 控件右（自适应） */
 .set-field{display:grid;grid-template-columns:minmax(150px,230px) minmax(0,1fr);
   gap:var(--space-3);align-items:center;padding:var(--space-2) 0}
+/* v3.6.2：set-field 的直接子 textarea（场景提示词等）横跨两列——此前挤在标签列（230px 窄格），
+   左右上下都与同排输入框错位；横跨后与右列控件同一左右边界，上方留空行只占整行 */
+.set-field > textarea{grid-column:1 / -1;min-width:0}
 .set-field > label{display:block;font-size:var(--fs-sm);color:var(--text-dim);
   font-weight:500;margin:0;line-height:1.4}
 .set-field .ctl{min-width:0}
@@ -2085,6 +2103,10 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .set-field .ctl > input[type="number"],.set-field .ctl > select{width:100%}
 .btn-row{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center}
 .btn-row select{flex:1;min-width:140px}
+/* v3.6.2：btn-row 内的添加按钮与输入框等高（38px）水平对齐——按钮行改单行、标签隐藏（同 form-row 添加行的对齐标准） */
+.btn-row .add-wrap{flex-direction:row;align-items:center;gap:0}
+.btn-row .add-wrap .add-label{display:none}
+.btn-row .add-wrap .add-round{width:var(--control-h);height:var(--control-h)}
 /* 开关行（标题 + 说明） */
 .set-switch{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) 0}
 .set-switch > input[type="checkbox"]{width:auto;flex-shrink:0}
@@ -5069,7 +5091,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910h";
+const BUILD_TAG = "20260910i";
 
 
 
