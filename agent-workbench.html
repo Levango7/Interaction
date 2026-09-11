@@ -2554,6 +2554,16 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 /* 移动端 <768px：底部导航触摸友好，表单全宽，看板单列 */
 @media(max-width:767px){
   .topbar{padding:var(--space-2) var(--space-3)}
+  /* v3.6.2：移动端概览区防溢出——glob 筛选行最小宽收窄、网格子项允许收缩、
+     固定 420px 的热力图等限宽（375px 视口下此前整体溢出 ~176px） */
+  .overview-grid{grid-template-columns:1fr;min-width:0}
+  .overview-grid > *{min-width:0;max-width:100%}
+  .glob-filters input,.glob-filters select{min-width:0}
+  .glob-filters .glob-search-main{min-width:0;flex:1 1 100%}
+  .glob-views{flex-wrap:wrap}
+  .glob-view-chip{max-width:100%}
+  .ov-sec-h,.ov-span2,.overview-grid > .coach-card,.overview-grid > .foot{grid-column:auto}
+  .heat{max-width:100%}
   /* 工具行与内容块边距对齐（.main padding 16px，侧栏已变底栏不占左侧） */
   .toolbar-row{padding:var(--space-1) var(--space-4) var(--space-2);gap:var(--space-1)}
   .tbtn{padding:var(--space-2);flex-shrink:0}
@@ -5091,7 +5101,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910i";
+const BUILD_TAG = "20260910j";
 
 
 
