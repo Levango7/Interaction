@@ -109,6 +109,11 @@
 /* v3.2 极光主题：与浅色/初雪彻底差异化——accent 用品牌紫、侧栏带品牌渐变 + 顶部 accent 彩条
    v3.2 阶段三：侧栏/顶栏透明度提升（用户偏好），底布更鲜艳但组件收敛 */
 :root[data-theme="aurora"] .side{
+  /* v3.6.3 回退：此处曾加 overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable 试图修"多一条滚动条"，
+     但诊断错误——真因是 .img-pick-input 绝对定位逃逸（见 .img-pick 处的注释），且实测：
+       横向溢出=0（overflow-x:hidden 无必要）；纵向自滚由 .side 基础规则的 overflow:auto 已承担；
+       scrollbar-gutter:stable 反而让 aurora 侧栏内容区永久窄 16px（nav-item 197 vs 其他主题 212/213），
+       造成跨主题错位。故整块回退，不再对侧栏做主题级覆盖。 */
   background:color-mix(in srgb,var(--panel) 60%,transparent);
   background-image:var(--sidebar-glow);
   backdrop-filter:blur(28px) saturate(1.35);-webkit-backdrop-filter:blur(28px) saturate(1.35);
@@ -1433,7 +1438,10 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
   line-height:1.4;transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
 .chat-panel-collapse:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .chat-panel-collapse:active{background:var(--accent-soft);color:var(--on-accent)}
-.chat-panel-collapse svg{width:15px;height:15px;display:block}
+/* v3.6.3 修复：图标 15px → 18px，与左侧栏折叠态按钮（.side-toggle svg{18px}）及右侧 rail 展开按钮
+   （.rail-btn svg{18px}）统一为「展开按钮标准规格」。此前按钮盒子已统一（36×28/accent 芯片），
+   唯独图标漏改留在 15px，导致同一形制的按钮图标一大一小。方向维持朝右「>」不变。 */
+.chat-panel-collapse svg{width:18px;height:18px;display:block}
 /* ===== v2.4.0 聊天面板扁平化重构 =====
    去双层卡片：消息流直接铺面板底色（白），仅以 header/input 细分割线分区；
    气泡收窄（user 65% / assistant 72%）增强对话感；头部按钮统一 SVG 图标 */
@@ -1441,7 +1449,9 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
   margin:var(--space-2) 0 var(--space-1);padding:var(--space-2) var(--space-3)}
 .chat-panel .msg{max-width:78%}
 .chat-panel .msg.user{max-width:65%}
-.chat-ic-btn svg{width:15px;height:15px;display:block}
+/* v3.6.3 修复：本规则原为 15px，与 .chat-panel-collapse svg 同特异性但在其后（源码顺序取胜），
+   会把头部两个图标按回 15px。改为与「展开按钮标准规格」一致 —— 详见 .chat-panel-collapse svg 处注释 */
+.chat-ic-btn svg{width:18px;height:18px;display:block}
 /* 模型选择下拉框：复用 cfg.profiles，切换 active profile */
 .chat-model-select{font-size:var(--fs-xs);padding:2px var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel);color:var(--text);max-width:140px;cursor:pointer;
@@ -2482,7 +2492,11 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .side-toggle:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent);box-shadow:var(--shadow-2)}
 /* v3.6.2：左侧展开按钮图标 18px，与右侧 rail 展开按钮一致；箭头方向由 SVG path 本身决定
    （展开态朝右 >），不再用 rotate(180deg) 翻转——此前翻转导致折叠/展开两态箭头方向与语义相反 */
+/* v3.6.3 修复：箭头语义按"点击后侧栏的去向"定——
+   展开态：点击会收起侧栏（向左收）→ 箭头朝左「<」，SVG path 固化为 M15 18l-6-6 6-6；
+   折叠态：点击会展开侧栏（向右展开）→ 旋转 180° 变「>」。此前两态都是「>」，展开态方向与语义相反。 */
 .side-toggle svg{width:18px;height:18px;flex-shrink:0}
+.side.collapsed .side-toggle svg{transform:rotate(180deg)}
 .side.collapsed .side-toggle .lbl{display:none}
 /* v3.6.3：折叠态按钮=宽 36px、高与展开态一致（min-height:28px+边框→29px）——
    用户方案：折叠只收窄宽度、高度不变，两侧栏切换无高度跳动；
@@ -3910,11 +3924,18 @@ select{appearance:none;-webkit-appearance:none;
 .sel-item:hover{background:var(--surface-hover);color:var(--accent)}
 .sel-item.is-sel{background:var(--accent-soft);color:var(--accent);font-weight:600}
 /* ===== v3.6.0 图片输入：按钮 + 文件名 + 缩略图预览 ===== */
-.img-pick{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;width:100%}
+/* v3.6.3 修复：position:relative 必须有——此前 .img-pick/.fld/.form-row/.main-wrap/.body/.app 全为 static，
+   导致下方 .img-pick-input（position:absolute）的包含块逃逸到初始包含块（视口），
+   其静态位置落到文档底部（实测 bottom=938 > 视口 900），把 html 撑高 38px，
+   浏览器在窗口最右缘画出多余的文档级纵向滚动条（设计-概览等页面出现"多一条滚动条"）。
+   加 relative 后包含块回到 .img-pick（本身 38px 高），不再产生文档级溢出。 */
+.img-pick{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;width:100%;position:relative}
 /* v3.6.2：清零全局 label 的下边距（.form-row .fld label 的 margin-bottom 4px 特异性更高，
    会把按钮容器撑到 42px，底部比同排输入框高 4px）——important 强制归零 */
 .img-pick .img-pick-btn{margin:0 !important}
-.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+/* v3.6.3 修复：选择器加 input 前缀提高特异性——此前 (0,1,0) 低于全局 input[type="file"]{height:var(--control-h)}
+   的 (0,1,1)，height:1px 被 38px 覆盖，隐藏输入框实际占 1×38px，是上一条文档级溢出的另一半成因。 */
+input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .img-pick-btn{display:inline-flex;align-items:center;gap:6px;height:var(--control-h);padding:0 var(--space-3);
   border:1px dashed color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--radius-md);
   background:transparent;color:var(--text);font-size:var(--fs-sm);cursor:pointer;
@@ -4020,6 +4041,8 @@ select{appearance:none;-webkit-appearance:none;
         <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
         <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
         <button class="chat-panel-collapse chat-ic-btn" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理" class="u-mr-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
+        <!-- v3.6.3：折叠按钮箭头语义——右侧面板"展开态"点击后向右收起 → 箭头朝右「>」（与左侧栏折叠态一致）。
+             历史：曾为 M15 18l-6-6 6-6（朝左），与收起方向相反，已修正为 M9 18l6-6-6-6。勿再翻转。 -->
         <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
       </div>
       <!-- 消息区：复用 #chat id，renderChat() 渲染到此 -->
@@ -5124,7 +5147,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260912g";
+const BUILD_TAG = "20260912k";
 
 
 
@@ -9944,7 +9967,7 @@ function thisWeekDone(sc){
 /* ---------- 渲染：侧边导航（v2.1.0 两级菜单） ---------- */
 // v1.9.9：折叠按钮回归侧栏顶部（"全局"组上方），用户确认放回原位
 const SIDE_TOGGLE_HTML = `<button type="button" class="side-toggle" id="sideToggle" aria-label="${t("side.toggleAria", "折叠或展开侧边栏")}" title="${t("side.toggleTitle", "折叠/展开")}">
-  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg><span class="lbl" data-i18n="chat.collapseLbl">折叠</span></button>`;
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl" data-i18n="chat.collapseLbl">折叠</span></button>`;
 
 /* v2.1.0：两级菜单图标集（顶级项用；子项用 CSS 圆点标记，不配图标） */
 /* v2.1.1 去重：与 UI_ICONS 同形的图标按 key 引用单一真相源；dash 改仪表盘（gauge）与统计柱状图区分 */
@@ -22494,8 +22517,10 @@ async function saveCfg(){
     // T4：主题三态持久化（light/dark/system）。
     // v1.9.7：特殊主题（aurora/sepia/elegant/matrix/自定义）不写入 cfg.theme——它们由 setTheme 持久化到
     // localStorage.theme（boot 按此复原）；写入 cfg 会被 applyTheme 误读导致重启后被冲掉
+    // v3.6.3 修复：白名单补 mist——此前漏项，选中「晓光晨雾」时 cfg.theme 不被写入（静默丢弃），
+    // 表现为"选了又没了/重开复原"。
     const thSel=$("#cfgTheme");
-    if(thSel && /^(light|dark|system|sepia|elegant|aurora|matrix|forest|ocean)$/.test(thSel.value)) cfg.theme = thSel.value;
+    if(thSel && /^(light|dark|system|sepia|elegant|aurora|matrix|forest|ocean|mist)$/.test(thSel.value)) cfg.theme = thSel.value;
     // B8：AI 请求参数（超时秒数 / 温度）持久化；留空 = 用默认值（30s / 0.7），范围校验在 getAiParams 与主进程
     const toInp=$("#cfgAiTimeout"); if(toInp){ const v=toInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTimeoutSec=Number(v); else delete cfg.aiTimeoutSec; }
     const teInp=$("#cfgAiTemperature"); if(teInp){ const v=teInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.aiTemperature=Number(v); else delete cfg.aiTemperature; }
@@ -26147,6 +26172,7 @@ const MESSAGES = {
     "look.themeDesc.matrix": "绿色终端风格主题",
     "look.themeDesc.forest": "晨雾林地 · 松针深绿主题",
     "look.themeDesc.ocean": "晨曦海面 · 深海青主题",
+    "look.themeDesc.mist": "破晓暖色 · 橄榄绿底暖金主题",
     "look.lang.label": "语言 / Language",
     "look.lang.zh": "中文",
     "look.lang.en": "English",
@@ -29538,6 +29564,7 @@ const MESSAGES = {
     "look.themeDesc.matrix": "Green terminal style theme",
     "look.themeDesc.forest": "Misty woodland · pine dark green",
     "look.themeDesc.ocean": "Dawn seascape · deep ocean blue",
+    "look.themeDesc.mist": "Dawn warmth · olive green with warm gold",
     "look.lang.label": "Language",
     "look.lang.zh": "Chinese",
     "look.lang.en": "English",
@@ -33953,7 +33980,7 @@ _initPlugins();// ===== Theme System (v1.5-C 多主题 / 自定义编辑 / 场�
  * @property {number} createdAt - 创建时间戳
  */
 
-// 预置主题定义（5 个：浅色 / 极光 / 深色 / 护眼模式 + system 跟随系统）
+// 预置主题定义（9 个：浅色 / 极光 / 深色 / 温和护眼 / 见静初雪 / 黑客帝国 / 秘境森林 / 微蓝浅海 / 晓光晨雾；另 system = 跟随系统，下拉共 10 项）
 const PRESET_THEMES = {
   light:    { name: t("look.theme.light","浅色"),     desc: t("look.themeDesc.light","Vercel 风格默认主题") },
   aurora:   { name: t("look.theme.aurora","幻夜极光"),   desc: t("look.themeDesc.aurora","极光渐变亮色主题") },
@@ -33966,7 +33993,11 @@ const PRESET_THEMES = {
   // v3.4.0：forest/ocean 补入注册表——5b227f4 引入主题时漏注册（v3.1.2 elegant/matrix 同款问题重演），
   // 导致主题管理列表不可见、不可管理。补齐使 CSS/下拉/注册表三处清单一致。
   forest:   { name: t("look.theme.forest","秘境森林"), desc: t("look.themeDesc.forest","晨雾林地 · 松针深绿主题") },
-  ocean:    { name: t("look.theme.ocean","微蓝浅海"),   desc: t("look.themeDesc.ocean","晨曦海面 · 深海青主题") }
+  ocean:    { name: t("look.theme.ocean","微蓝浅海"),   desc: t("look.themeDesc.ocean","晨曦海面 · 深海青主题") },
+  // v3.6.3 修复：mist（晓光晨雾）此前只存在于 CSS :root[data-theme="mist"]、下拉 option、applyTheme 分支与 i18n，
+  // 但漏在注册表里——与 v3.1.2 的 elegant/matrix、v3.4.0 的 forest/ocean 是同一类漏注册，
+  // 后果：主题管理/列表类消费 getAllThemes() 的地方看不到「晓光晨雾」。
+  mist:     { name: t("look.theme.mist","晓光晨雾"),   desc: t("look.themeDesc.mist","破晓暖色 · 橄榄绿底暖金主题") }
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
@@ -34080,7 +34111,7 @@ function _applyTokenOverride(tokens){
 
 /**
  * 设置当前主题（v1.5-C 主题系统入口）
- * 主题 id：light / dark / aurora / sepia / elegant / matrix / forest / ocean / 自定义主题 id（contrast 已于 v3.1.1 移除）
+ * 主题 id：light / dark / aurora / sepia / elegant / matrix / forest / ocean / mist / 自定义主题 id（contrast 已于 v3.1.1 移除）
  * @param {string} themeId - 主题 id
  * @returns {boolean} 是否设置成功
  */

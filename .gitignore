@@ -1,0 +1,32 @@
+# ============================================================
+# Agent 工坊 · 根 .gitignore
+# 注意：本仓库是**公开仓库**（GitHub Pages 发布源），
+# 以下任何一项误提交都会把口令哈希/令牌/调试痕迹暴露到公网。
+# ============================================================
+
+# ---- 依赖 ----
+node_modules/
+
+# ---- 鉴权后端运行时数据（含用户口令哈希与 refresh token，绝不入库） ----
+server/data/
+server/_e2e.*
+server/_dbg_*
+
+# ---- 浏览器自动化 / 测试调试产物 ----
+.playwright-mcp/
+test-results/
+playwright-report/
+
+# ---- 日志 ----
+*.log
+
+# ---- 过时产物 ----
+# 停在 v3.1.2 的旧 Service Worker 快照：与线上同名文件易混淆，
+# 且历史上"改动被旧缓存吞掉"事故（见 CHANGELOG v3.4.27）与 SW 版本漂移直接相关。
+service-worker.prod.js
+
+# ---- 编辑器 / 系统 ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
