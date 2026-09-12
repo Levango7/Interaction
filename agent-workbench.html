@@ -1442,6 +1442,10 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
    （.rail-btn svg{18px}）统一为「展开按钮标准规格」。此前按钮盒子已统一（36×28/accent 芯片），
    唯独图标漏改留在 15px，导致同一形制的按钮图标一大一小。方向维持朝右「>」不变。 */
 .chat-panel-collapse svg{width:18px;height:18px;display:block}
+/* v3.6.3 方向：右侧栏「展开态折叠键」点击后面板向右收起 → 箭头朝右「>」。
+   path 与其余三个按钮同源（M15 18l-6-6 6-6，原生朝左），靠这一条 rotate 翻向。
+   注意必须用 ID 选择器：同 class 的 #chatSessionBtn（三条横线）若被旋转 180° 会上下翻转换形。 */
+#chatPanelCollapse svg{transform:rotate(180deg)}
 /* ===== v2.4.0 聊天面板扁平化重构 =====
    去双层卡片：消息流直接铺面板底色（白），仅以 header/input 细分割线分区；
    气泡收窄（user 65% / assistant 72%）增强对话感；头部按钮统一 SVG 图标 */
@@ -1554,9 +1558,9 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .chat-panel-rail .rail-btn:active{background:var(--accent-soft);color:var(--accent)}
 .chat-panel-rail .rail-btn svg{width:18px;height:18px;display:block}
 /* v3.6.2：rail 的「展开 AI」按钮做成醒目圆角矩形芯片——半透明 accent 底 + accent 描边，与左侧 .side-toggle 形制一致 */
-/* v3.6.3：折叠态 → rotate(180deg) 视觉朝右「>」，与左侧栏折叠态同一规律（展开朝左 / 折叠朝右）。
-   SVG path 与右侧展开态、左侧栏完全同源，方向只由这一条 transform 决定。 */
-.chat-panel-rail .rail-expand svg{transform:rotate(180deg)}
+/* v3.6.3 方向规则：右侧栏的箭头 = 「指向面板的移动方向」，与左侧栏（展开朝左 / 折叠朝右）**相反**，两侧互为镜像：
+     折叠态 rail「展开键」→ 点击后面板向左展开 → 箭头朝左「<」= path 原生方向，本规则不加旋转
+     展开态 header「折叠键」→ 点击后面板向右收起 → 箭头朝右「>」= 见 #chatPanelCollapse svg 的 rotate(180deg) */
 .chat-panel-rail .rail-expand{background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));color:var(--accent);box-shadow:var(--shadow-1)}
 .chat-panel-rail .rail-expand:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .chat-panel-rail .rail-expand:active{background:var(--accent-soft);color:var(--on-accent)}
@@ -4044,11 +4048,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
         <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
         <button class="chat-panel-collapse chat-ic-btn" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理" class="u-mr-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
-        <!-- v3.6.3：全站折叠/展开按钮统一用同一个箭头 path「M15 18l-6-6 6-6」（原生朝左），
-             方向一律由 CSS transform 控制，不再各写一套 path（此前右侧用 M9 18l6-6-6-6、左侧用 M15...，
-             两套 path 导致形状来源不一致）。统一后的方向规则：
-               展开态 → 不旋转，朝左「<」    折叠态 → rotate(180deg)，朝右「>」
-             左侧栏与右侧聊天面板两侧对称适用。 -->
+        <!-- v3.6.3：全站折叠/展开按钮共用同一个箭头 path「M15 18l-6-6 6-6」（原生朝左），形状来源单一；
+             方向由 CSS transform 决定，规则是「箭头指向面板的移动方向」，左右互为镜像：
+               左侧栏  展开 → 点击向左收起 → 朝左「<」（不旋转）    折叠 → 点击向右展开 → 朝右「>」（rotate 180）
+               右侧栏  展开 → 点击向右收起 → 朝右「>」（rotate 180） 折叠 → 点击向左展开 → 朝左「<」（不旋转）
+             勿再改回 M9 18l6-6-6-6 之类的另一套 path，否则形状会重新分叉。 -->
         <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       </div>
       <!-- 消息区：复用 #chat id，renderChat() 渲染到此 -->
@@ -5153,7 +5157,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.3"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260913a";
+const BUILD_TAG = "20260913b";
 
 
 
