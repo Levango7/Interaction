@@ -5154,10 +5154,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.6.3"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.6.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260913b";
+const BUILD_TAG = "20260913c";
 
 
 
@@ -25196,7 +25196,9 @@ function _promptSwReload(){
   }
 }
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./service-worker.js").then(function(reg){
+  // v3.6.4：updateViaCache:'none' —— SW 脚本自身也绕过 HTTP 缓存，让每次导航都真实比对字节，
+  // 避免 GitHub Pages 缓存头（约 10 分钟）叠加浏览器节流把 SW 更新检查推迟到 ~24h 之后。
+  navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" }).then(function(reg){
     // 主动检查更新（浏览器默认约 24h 才检查一次；每次打开都检查，保证修复尽快可见）
     try{ reg.update(); }catch(e){ /* noop */ }
     reg.addEventListener("updatefound", function(){
