@@ -1521,6 +1521,8 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 /* 折叠后的侧边条（窄屏浮动按钮的替代：折叠时显示一条窄轨道，点击展开） */
 /* v3.5.4：折叠 rail 的按钮态——与左侧导航一致的圆角背景 */
 .chat-panel-rail .rail-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+/* v3.6.2：rail 展开按钮与左侧栏折叠态展开按钮形制一致——18px 图标（与 side-toggle 统一）、accent 背景芯片 */
+.chat-panel-rail .rail-btn svg{width:18px;height:18px}
 .chat-panel-rail .rail-btn:hover{background:var(--surface-hover);color:var(--accent)}
 .chat-panel-rail .rail-btn:active{background:var(--accent-soft);color:var(--accent)}
 .chat-panel-rail .rail-btn svg{width:18px;height:18px;display:block}
@@ -2464,7 +2466,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .side-toggle svg{width:16px;height:16px;flex-shrink:0;transition:transform .2s}
 .side.collapsed .side-toggle svg{transform:rotate(180deg)}
 .side.collapsed .side-toggle .lbl{display:none}
-.side.collapsed .side-toggle{justify-content:center;padding:var(--space-1) 0}
+.side.collapsed .side-toggle{justify-content:center;padding:var(--space-1) 0;width:36px;height:36px;margin-left:auto;margin-right:auto;border-radius:var(--radius-md)}
 /* 侧栏分组标题（v1.9.5：监控/场景/系统三组，替代裸分割线，层级清晰） */
 .nav-group{font-size:var(--fs-xs);font-weight:600;color:var(--muted);letter-spacing:.08em;
   padding:var(--space-5) var(--space-3) var(--space-1);margin-bottom:var(--space-2);text-transform:uppercase;user-select:none}
