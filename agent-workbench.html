@@ -353,6 +353,14 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--surface-muted);border-radius:var(--radius-sm)}
 ::-webkit-scrollbar-thumb:hover{background:var(--text-faint)}
+/* v3.6.3：主内容区滚动条进一步隐形化——设计页等短内容页与长内容页切换时，
+   默认滚动条会时隐时现造成"页面多一条/少一条"的错位感（用户反馈设计页右侧多滚动条）。
+   main-wrap 用 6px 半透明细条：常驻近乎隐形（hover 才显色），保持滚动能力且不挤内容。 */
+.main-wrap{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 28%,transparent) transparent}
+.main-wrap::-webkit-scrollbar{width:6px;height:6px}
+.main-wrap::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--accent) 28%,transparent);border-radius:var(--radius-full)}
+.main-wrap::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--accent) 55%,transparent)}
+.main-wrap::-webkit-scrollbar-track{background:transparent}
 
 /* ===== 整体布局：顶栏 / 侧栏 / 主区 ===== */
 /* 100dvh 渐进增强：移动端地址栏收起/展开时视口高度变化，dvh 跟随实际动态视口，消除整页跳动；
@@ -5116,7 +5124,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260912f";
+const BUILD_TAG = "20260912g";
 
 
 
