@@ -2454,8 +2454,8 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
    这段竖直区间内上下居中（margin-top 按该区间高度实测校准） */
 .side-toggle{display:none;align-items:center;justify-content:center;gap:var(--space-2);width:100%;
   padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);
-  /* v3.6.2：折叠/展开按钮加"醒目圆角矩形背景"——常驻半透明 accent 底 + accent 描边，与右侧 rail 展开按钮形制一致 */
-  background:color-mix(in srgb,var(--accent) 10%,var(--panel2));border:1px solid color-mix(in srgb,var(--accent) 32%,var(--line));
+  /* v3.6.3：配方与右侧 .rail-expand 完全统一（此前左 10%/32% vs 右 12%/38%，肉眼看色差） */
+  background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));
   color:var(--accent);font-size:var(--fs-sm);font-weight:600;margin-bottom:var(--space-2);min-height:28px;
   /* 实测校准：顶栏下沿(53px)↔待办栏对齐线(98px)区间高 45px，按钮高 29px，
      居中需上移 4px 抵消 .side 的 padding-top（12px），使按钮与顶栏间距收至 8px */
@@ -4028,7 +4028,7 @@ select{appearance:none;-webkit-appearance:none;
     </aside>
     <!-- 折叠后的侧边条：点击展开聊天面板（窄屏/折叠态显示） -->
     <div class="chat-panel-rail" id="chatPanelRail" data-i18n-title="a11y.expandAi" title="展开 AI 助手" data-i18n-aria="a11y.expandAiPanel" aria-label="展开 AI 助手面板" role="button" tabindex="0">
-  <button type="button" class="rail-btn rail-expand" id="chatRailExpand" data-i18n-title="a11y.expandAi" title="展开 AI 助手" aria-label="展开 AI 助手"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <button type="button" class="rail-btn rail-expand" id="chatRailExpand" data-i18n-title="a11y.expandAi" title="展开 AI 助手" aria-label="展开 AI 助手"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
   <span class="rail-spacer"></span>
   <button type="button" class="rail-btn rail-ai" id="chatRailAi" data-i18n-title="page.ai.title" title="AI 页面" aria-label="打开 AI 页面"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
 </div>
@@ -5104,7 +5104,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260912b";
+const BUILD_TAG = "20260912c";
 
 
 
