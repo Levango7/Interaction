@@ -2463,8 +2463,9 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   box-shadow:var(--shadow-1);
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .side-toggle:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent);box-shadow:var(--shadow-2)}
-.side-toggle svg{width:16px;height:16px;flex-shrink:0;transition:transform .2s}
-.side.collapsed .side-toggle svg{transform:rotate(180deg)}
+/* v3.6.2：左侧展开按钮图标 18px，与右侧 rail 展开按钮一致；箭头方向由 SVG path 本身决定
+   （展开态朝右 >），不再用 rotate(180deg) 翻转——此前翻转导致折叠/展开两态箭头方向与语义相反 */
+.side-toggle svg{width:18px;height:18px;flex-shrink:0}
 .side.collapsed .side-toggle .lbl{display:none}
 .side.collapsed .side-toggle{justify-content:center;padding:var(--space-1) 0;width:36px;height:36px;margin-left:auto;margin-right:auto;border-radius:var(--radius-md)}
 /* 侧栏分组标题（v1.9.5：监控/场景/系统三组，替代裸分割线，层级清晰） */
@@ -5103,7 +5104,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260910j";
+const BUILD_TAG = "20260912a";
 
 
 
@@ -9923,7 +9924,7 @@ function thisWeekDone(sc){
 /* ---------- 渲染：侧边导航（v2.1.0 两级菜单） ---------- */
 // v1.9.9：折叠按钮回归侧栏顶部（"全局"组上方），用户确认放回原位
 const SIDE_TOGGLE_HTML = `<button type="button" class="side-toggle" id="sideToggle" aria-label="${t("side.toggleAria", "折叠或展开侧边栏")}" title="${t("side.toggleTitle", "折叠/展开")}">
-  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl" data-i18n="chat.collapseLbl">折叠</span></button>`;
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg><span class="lbl" data-i18n="chat.collapseLbl">折叠</span></button>`;
 
 /* v2.1.0：两级菜单图标集（顶级项用；子项用 CSS 圆点标记，不配图标） */
 /* v2.1.1 去重：与 UI_ICONS 同形的图标按 key 引用单一真相源；dash 改仪表盘（gauge）与统计柱状图区分 */
