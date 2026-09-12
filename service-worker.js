@@ -14,7 +14,7 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
-var CACHE_VERSION = "v3.6.4-20260913001"; /* [prod build] auto-bumped */
+var CACHE_VERSION = "v3.6.4-20260913002"; /* [prod build] auto-bumped */
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -244,17 +244,26 @@ self.addEventListener("fetch", function (event) {
       fetch(req).then(function (resp) {
         if (resp && resp.status === 200 && resp.type === "basic") {
           var copy = resp.clone();
+          // v3.6.4：以「去掉查询参数的规范 URL」作为缓存键。
+          // 入口 index.html 会以 ?t=时间戳 跳转来强制破缓存；若原样入缓存，每条时间戳都会
+          // 新增一个条目，把缓存挤爆（MAX_CACHE_ENTRIES=50）。规范化后主文档只占一个稳定条目。
+          var key;
+          try { var cu = new URL(req.url); cu.search = ""; key = cu.href; } catch (e) { key = req; }
           caches.open(CACHE_NAME).then(function (cache) {
-            _putWithTimestamp(cache, req, copy).then(function () {
+            _putWithTimestamp(cache, key, copy).then(function () {
               trimCacheEntries(cache).catch(function () {});
             }).catch(function () {});
           }).catch(function () {});
         }
         return resp;
       }).catch(function () {
-        // 离线：逐级回退
+        // 离线：逐级回退（请求本身 → 去参数规范 URL → 预缓存首页 → 主文档）
+        var key;
+        try { var cu2 = new URL(req.url); cu2.search = ""; key = cu2.href; } catch (e) { key = req; }
         return caches.match(req).then(function (c) {
-          return c || caches.match("./");
+          return c || caches.match(key);
+        }).then(function (r) {
+          return r || caches.match("./");
         }).then(function (r) {
           return r || caches.match("./agent-workbench.html");
         }).then(function (r) {
