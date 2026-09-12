@@ -1409,14 +1409,23 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 #chatSessionBtn{justify-self:center}
 #chatPanelCollapse{justify-self:end} /* v1.9.5：头部白底与浅灰消息区区分 */
 .chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2);min-width:0}
-/* v1.9.5：标题图标徽章化（与全局 page-head 视觉一致） */
-.chat-panel-title .ph-ic{width:26px;height:26px;border-radius:var(--radius-md);flex-shrink:0;
-  background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
+/* v1.9.5：标题图标徽章化；v3.6.3 规格并入"展开按钮"标准（36×28、radius-md、accent 12% 芯片） */
+.chat-panel-title .ph-ic{width:36px;min-height:28px;height:auto;border-radius:var(--radius-md);flex-shrink:0;
+  background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));
+  box-shadow:var(--shadow-1);
+  color:var(--accent);display:flex;align-items:center;justify-content:center}
 .chat-panel-title .ph-ic svg{width:15px;height:15px;color:var(--accent)}
-.chat-panel-collapse{padding:2px var(--space-2);font-size:var(--fs-xs);color:var(--text-dim);
-  background:transparent;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;
-  min-height:auto;line-height:1.4;transition:background var(--transition-fast),color var(--transition-fast)}
-.chat-panel-collapse:hover{background:var(--surface-hover);color:var(--text)}
+/* v3.6.3：右侧栏展开态头部图标（会话管理/折叠）统一为"展开按钮"标准规格——
+   36×28、radius-md、accent 12% 背景芯片（与两侧折叠态展开按钮同款），替代旧的透明 radius-sm 小按钮 */
+.chat-panel-collapse{display:inline-flex;align-items:center;justify-content:center;
+  width:36px;min-height:28px;height:auto;padding:0;
+  font-size:var(--fs-xs);color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));border-radius:var(--radius-md);cursor:pointer;
+  box-shadow:var(--shadow-1);
+  line-height:1.4;transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
+.chat-panel-collapse:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.chat-panel-collapse:active{background:var(--accent-soft);color:var(--on-accent)}
+.chat-panel-collapse svg{width:15px;height:15px;display:block}
 /* ===== v2.4.0 聊天面板扁平化重构 =====
    去双层卡片：消息流直接铺面板底色（白），仅以 header/input 细分割线分区；
    气泡收窄（user 65% / assistant 72%）增强对话感；头部按钮统一 SVG 图标 */
@@ -5107,7 +5116,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260912e";
+const BUILD_TAG = "20260912f";
 
 
 
