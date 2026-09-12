@@ -1554,6 +1554,9 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .chat-panel-rail .rail-btn:active{background:var(--accent-soft);color:var(--accent)}
 .chat-panel-rail .rail-btn svg{width:18px;height:18px;display:block}
 /* v3.6.2：rail 的「展开 AI」按钮做成醒目圆角矩形芯片——半透明 accent 底 + accent 描边，与左侧 .side-toggle 形制一致 */
+/* v3.6.3：折叠态 → rotate(180deg) 视觉朝右「>」，与左侧栏折叠态同一规律（展开朝左 / 折叠朝右）。
+   SVG path 与右侧展开态、左侧栏完全同源，方向只由这一条 transform 决定。 */
+.chat-panel-rail .rail-expand svg{transform:rotate(180deg)}
 .chat-panel-rail .rail-expand{background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));color:var(--accent);box-shadow:var(--shadow-1)}
 .chat-panel-rail .rail-expand:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .chat-panel-rail .rail-expand:active{background:var(--accent-soft);color:var(--on-accent)}
@@ -4041,9 +4044,12 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
         <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
         <button class="chat-panel-collapse chat-ic-btn" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理" class="u-mr-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
-        <!-- v3.6.3：折叠按钮箭头语义——右侧面板"展开态"点击后向右收起 → 箭头朝右「>」（与左侧栏折叠态一致）。
-             历史：曾为 M15 18l-6-6 6-6（朝左），与收起方向相反，已修正为 M9 18l6-6-6-6。勿再翻转。 -->
-        <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+        <!-- v3.6.3：全站折叠/展开按钮统一用同一个箭头 path「M15 18l-6-6 6-6」（原生朝左），
+             方向一律由 CSS transform 控制，不再各写一套 path（此前右侧用 M9 18l6-6-6-6、左侧用 M15...，
+             两套 path 导致形状来源不一致）。统一后的方向规则：
+               展开态 → 不旋转，朝左「<」    折叠态 → rotate(180deg)，朝右「>」
+             左侧栏与右侧聊天面板两侧对称适用。 -->
+        <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       </div>
       <!-- 消息区：复用 #chat id，renderChat() 渲染到此 -->
       <div class="chat" id="chat"></div>
@@ -5144,10 +5150,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.6.3"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260912k";
+const BUILD_TAG = "20260913a";
 
 
 

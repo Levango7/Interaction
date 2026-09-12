@@ -44,7 +44,7 @@ app.use(cors({ origin: cfg.corsOrigin === "*" ? true : cfg.corsOrigin }));
 app.use(express.json({ limit: "2mb" }));
 
 // 健康检查
-app.get("/api/health", (req, res) => res.json({ ok: true, name: "agent-workbench-auth", version: "3.6.1", time: Date.now() }));
+app.get("/api/health", (req, res) => res.json({ ok: true, name: "agent-workbench-auth", version: "3.6.3", time: Date.now() }));
 
 app.use("/api/auth", authRouter(cfg, store));
 app.use("/api/notifications", extrasRouter(cfg, store));
