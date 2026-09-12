@@ -1520,7 +1520,7 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .chat-send-btn[data-mode="stop"]:hover{filter:brightness(.96);background:var(--danger)}
 /* 折叠后的侧边条（窄屏浮动按钮的替代：折叠时显示一条窄轨道，点击展开） */
 /* v3.5.4：折叠 rail 的按钮态——与左侧导航一致的圆角背景 */
-.chat-panel-rail .rail-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.chat-panel-rail .rail-btn{display:flex;align-items:center;justify-content:center;width:36px;min-height:28px;height:auto;border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
 /* v3.6.2：rail 展开按钮与左侧栏折叠态展开按钮形制一致——18px 图标（与 side-toggle 统一）、accent 背景芯片 */
 .chat-panel-rail .rail-btn svg{width:18px;height:18px}
 .chat-panel-rail .rail-btn:hover{background:var(--surface-hover);color:var(--accent)}
@@ -2467,9 +2467,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
    （展开态朝右 >），不再用 rotate(180deg) 翻转——此前翻转导致折叠/展开两态箭头方向与语义相反 */
 .side-toggle svg{width:18px;height:18px;flex-shrink:0}
 .side.collapsed .side-toggle .lbl{display:none}
-/* v3.6.3：折叠态 36x36——与同侧 nav-item（36x36）及右侧 rail 展开按钮（36x36）三处同款；
-   29803b2 曾改为 28px 高（对齐展开态 min-height），实测使其在折叠侧栏内成异类（矮 8px），回滚统一 */
-.side.collapsed .side-toggle{justify-content:center;padding:var(--space-1) 0;width:36px;height:36px;margin-left:auto;margin-right:auto;border-radius:var(--radius-md)}
+/* v3.6.3：折叠态按钮=宽 36px、高与展开态一致（min-height:28px+边框→29px）——
+   用户方案：折叠只收窄宽度、高度不变，两侧栏切换无高度跳动；
+   右侧 rail 两个按钮同款（见 .rail-btn 高度规则）。历史上 36 高方案废弃（与 29px nav 视觉突兀） */
+.side.collapsed .side-toggle{justify-content:center;padding:var(--space-1) 0;width:36px;min-height:28px;height:auto;margin-left:auto;margin-right:auto;border-radius:var(--radius-md)}
 /* 侧栏分组标题（v1.9.5：监控/场景/系统三组，替代裸分割线，层级清晰） */
 .nav-group{font-size:var(--fs-xs);font-weight:600;color:var(--muted);letter-spacing:.08em;
   padding:var(--space-5) var(--space-3) var(--space-1);margin-bottom:var(--space-2);text-transform:uppercase;user-select:none}
@@ -2485,7 +2486,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   .side.collapsed{width:52px} /* v2.1.2：折叠态改纯图标模式（原 64px 图标+小字可读性差），
      名称由 nav-item 的 title 属性悬停展示 */
   .side.collapsed .nav-item .cnt{display:none}
-  .side.collapsed .nav-item{justify-content:center;padding:var(--space-1);gap:0;width:36px;height:36px;margin-left:auto;margin-right:auto;border-radius:var(--radius-md)}
+  .side.collapsed .nav-item{justify-content:center;padding:var(--space-1);gap:0;width:36px;min-height:28px;height:auto;margin-left:auto;margin-right:auto;border-radius:var(--radius-md)}
   .side.collapsed .nav-item .nm{display:none}
   .side.collapsed .nav-item .side-caret{display:none}
   .side.collapsed .nav-group{display:none}
@@ -5106,7 +5107,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260912d";
+const BUILD_TAG = "20260912e";
 
 
 
