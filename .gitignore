@@ -26,6 +26,8 @@ playwright-report/
 service-worker.prod.js
 
 # ---- 编辑器 / 系统 ----
+# .zcode/ = 其它代码编辑器的本地会话缓存（plans 等），属于工具私有状态，不入库
+.zcode/
 .DS_Store
 Thumbs.db
 .idea/

@@ -1,6 +1,6 @@
 {
   "name": "agent-workbench-auth",
-  "version": "3.6.1",
+  "version": "3.6.3",
   "private": true,
   "description": "Agent 工坊鉴权后端：邮箱验证码注册 / 微信扫码 / GitHub 登录（.exe 安装版内嵌 + 网页版共用）",
   "main": "src/index.js",
