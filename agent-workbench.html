@@ -1617,7 +1617,7 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 
 /* v3.6.2：场景联动 tabs 与其他页面 .set-nav 完全同款——实心面板卡片、radius-lg、吸顶（sticky）、按钮同 padding/边框 */
 .chain-tab-bar{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;gap:var(--space-2);
-  flex-wrap:wrap;margin:0 0 var(--space-3);
+  flex-wrap:wrap;margin:0 auto var(--space-3);max-width:var(--content-max);width:100%;
   padding:var(--space-4) var(--space-3);background:var(--panel);
   border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
 .chain-tab{flex:1;text-align:center;border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
@@ -2483,7 +2483,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   .side.collapsed{width:52px} /* v2.1.2：折叠态改纯图标模式（原 64px 图标+小字可读性差），
      名称由 nav-item 的 title 属性悬停展示 */
   .side.collapsed .nav-item .cnt{display:none}
-  .side.collapsed .nav-item{justify-content:center;padding:var(--space-2) var(--space-1);gap:0}
+  .side.collapsed .nav-item{justify-content:center;padding:var(--space-1);gap:0;width:36px;height:36px;margin-left:auto;margin-right:auto;border-radius:var(--radius-md)}
   .side.collapsed .nav-item .nm{display:none}
   .side.collapsed .nav-item .side-caret{display:none}
   .side.collapsed .nav-group{display:none}
