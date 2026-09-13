@@ -5157,7 +5157,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260913e";
+const BUILD_TAG = "20260913f";
 
 
 
@@ -6611,6 +6611,16 @@ const UI_ICONS = {
   transit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"/><path d="M19 17h2a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"/><rect x="5" y="5" width="14" height="12" rx="2"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>',
   mindmap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="2"/><circle cx="4" cy="14" r="2"/><circle cx="20" cy="14" r="2"/><circle cx="8" cy="20" r="2"/><circle cx="16" cy="20" r="2"/><path d="M12 6v4"/><path d="M12 10l-5 3"/><path d="M12 10l5 3"/><path d="M8 16v2"/><path d="M16 16v2"/></svg>',
   kb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="13" y2="14"/></svg>',
+  /* ===== v3.6.5 图标去重：为原先"多工具共用同一图标"的场景补语义化图标 =====
+     此前 flame 被「笃行」「萌宠」共用、sport 被「运动记录」「闹钟」共用、
+     stats 被「时间追踪」「高级报表」共用、grid 被「热力图」「仪表盘」「日历」三处共用，
+     导致工具箱里出现肉眼可见的重复图标（用户反馈"图标去重化"）。 */
+  paw:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="16.5" rx="4.2" ry="3.6"/><ellipse cx="5.6" cy="11" rx="2.1" ry="2.6"/><ellipse cx="9.6" cy="6.8" rx="2.1" ry="2.6"/><ellipse cx="14.4" cy="6.8" rx="2.1" ry="2.6"/><ellipse cx="18.4" cy="11" rx="2.1" ry="2.6"/></svg>',
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+  stopwatch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="7"/><path d="M12 14V10.5"/><path d="M9.5 2h5"/><path d="M12 2v3.2"/><path d="M18.4 7.6l1.6-1.6"/></svg>',
+  heat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="11" width="5" height="10" rx="1"/><rect x="16" y="6" width="5" height="15" rx="1"/></svg>',
+  gauge:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l3.5-3.5"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
+  calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
 };
 
 // toast 类型图标映射（toast 可访问的最小公共感知）——值引用 UI_ICONS 单一真相源
@@ -10482,10 +10492,10 @@ function openChartStore(){
   // v1.15：移除"日历"（用户要求；日历功能在应用页）
   const chartLibs = [
     { id: "trend", name: t("chartStore.trend", "趋势"), icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">完成趋势</div><div class="cs-sub">近 14 天</div><svg viewBox="0 0 100 40" class="cs-line"><polyline points="0,30 10,28 20,32 30,20 40,22 50,18 60,15 70,12 80,8 90,5 100,3" fill="none" stroke="var(--accent)" stroke-width="2"/></svg></div>'; } },
-    { id: "heatmap", name: "热力图", icon: UI_ICONS.grid, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">完成热力图</div><div class="cs-sub">最近 12 周</div><div class="cs-heat">'+Array.from({length:84},function(){return '<span class="cs-hcell"></span>'}).join("")+'</div></div>'; } },
+    { id: "heatmap", name: "热力图", icon: UI_ICONS.heat, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">完成热力图</div><div class="cs-sub">最近 12 周</div><div class="cs-heat">'+Array.from({length:84},function(){return '<span class="cs-hcell"></span>'}).join("")+'</div></div>'; } },
     { id: "gantt", name: "甘特图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">甘特图</div><div class="cs-sub">任务时间线</div><div class="cs-gantt">'+[1,2,3,4].map(function(i){return '<div class="cs-gantt-bar" style="width:'+(20+i*15)+'%"></div>'}).join("")+'</div></div>'; } },
     { id: "mindmap", name: "思维导图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">思维导图</div><div class="cs-sub">中心 + 4 节点</div><svg viewBox="0 0 100 100" class="cs-mind"><line x1="50" y1="50" x2="20" y2="20" stroke="var(--line)"/><line x1="50" y1="50" x2="80" y2="20" stroke="var(--line)"/><line x1="50" y1="50" x2="20" y2="80" stroke="var(--line)"/><line x1="50" y1="50" x2="80" y2="80" stroke="var(--line)"/><circle cx="50" cy="50" r="10" fill="var(--accent)"/><circle cx="20" cy="20" r="6" fill="var(--surface-muted)"/><circle cx="80" cy="20" r="6" fill="var(--surface-muted)"/><circle cx="20" cy="80" r="6" fill="var(--surface-muted)"/><circle cx="80" cy="80" r="6" fill="var(--surface-muted)"/></svg></div>'; } },
-    { id: "dashboard", name: "仪表盘", icon: UI_ICONS.grid, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">仪表盘</div><div class="cs-sub">4 卡片布局</div><div class="cs-dash">'+Array.from({length:4},function(){return '<div class="cs-dash-cell"></div>'}).join("")+'</div></div>'; } },
+    { id: "dashboard", name: "仪表盘", icon: UI_ICONS.gauge, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">仪表盘</div><div class="cs-sub">4 卡片布局</div><div class="cs-dash">'+Array.from({length:4},function(){return '<div class="cs-dash-cell"></div>'}).join("")+'</div></div>'; } },
     { id: "chain", name: "联动", icon: UI_ICONS.chain, render: function(){ return '<div class="cs-card-mini"><div class="cs-title">联动</div><div class="cs-sub">场景连环</div><div class="cs-chain"><span class="cs-cnode">办公</span><span class="cs-carr">→</span><span class="cs-cnode">编程</span><span class="cs-carr">→</span><span class="cs-cnode">学习</span></div></div>'; } },
     { id: "pie", name: "饼图", icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>', render: function(){ return '<div class="cs-card-mini"><div class="cs-title">饼图</div><div class="cs-sub">分布占比</div><svg viewBox="0 0 100 100" class="cs-pie"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--accent)" stroke-width="20" stroke-dasharray="80 251" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--ok)" stroke-width="20" stroke-dasharray="60 251" stroke-dashoffset="-80" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--warn)" stroke-width="20" stroke-dasharray="40 251" stroke-dashoffset="-140" transform="rotate(-90 50 50)"/></svg></div>'; } }
   ];
@@ -14699,12 +14709,12 @@ function _bindTasksTabs(){
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
-  { id:"x-cal",     name:"日历",     desc:"按月查看任务分布", cat:"效率工具", icon:UI_ICONS.grid, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
+  { id:"x-cal",     name:"日历",     desc:"按月查看任务分布", cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
   { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
-  { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.sport, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
+  { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.bell, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
   { id:"x-pomo",    name:t("tool.pomo.name","笃行"),     desc:t("tool.pomo.desc","25 分钟专注 + 5 分钟休息"), cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
-  { id:"x-tracker", name:t("tool.tracker.name","时间追踪"), desc:t("tool.tracker.desc","任务计时秒表"), cat:"效率工具", icon:UI_ICONS.stats, pop:"trackerPop", menuAttr:"plug-tracker" },
-  { id:"x-pet",     name:t("tool.pet.name","萌宠"),     desc:t("tool.pet.desc","桌面陪伴小伙伴"), cat:"效率工具", icon:UI_ICONS.flame, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
+  { id:"x-tracker", name:t("tool.tracker.name","时间追踪"), desc:t("tool.tracker.desc","任务计时秒表"), cat:"效率工具", icon:UI_ICONS.stopwatch, pop:"trackerPop", menuAttr:"plug-tracker" },
+  { id:"x-pet",     name:t("tool.pet.name","萌宠"),     desc:t("tool.pet.desc","桌面陪伴小伙伴"), cat:"效率工具", icon:UI_ICONS.paw, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
   { id:"x-mindmap", name:t("tool.mindmap.name","思维导图"), desc:t("tool.mindmap.desc","任务关系树状图"), cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
   { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
   { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
