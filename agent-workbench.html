@@ -5157,7 +5157,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260913d";
+const BUILD_TAG = "20260913e";
 
 
 
@@ -22389,6 +22389,13 @@ function _openSelPanel(sel){
     panel.appendChild(it);
   });
   document.body.appendChild(panel);
+  /* v3.6.4：面板自身不可滚动时吞掉滚轮。否则滚轮会穿透到页面并触发页面 scroll，
+     而下面的 scroll 监听会把面板关掉——用户感受同样是"一滚就收起"。
+     面板可滚动时不动它，让它正常滚动（面板自身的 scroll 已被上面的监听排除）。 */
+  panel.addEventListener("wheel", function(e){
+    var canScroll = panel.scrollHeight > panel.clientHeight + 1;
+    if(!canScroll){ e.preventDefault(); }
+  }, { passive: false });
   var w = Math.max(rect.width, 140);
   panel.style.minWidth = w + "px";
   panel.style.maxWidth = "min(360px, 92vw)";
@@ -22407,7 +22414,18 @@ document.addEventListener("mousedown", function(e){
   if(_selPanel && !_selPanel.contains(el)) _closeSelPanel();
 }, true);
 document.addEventListener("keydown", function(e){ if(e.key === "Escape") _closeSelPanel(); });
-try{ window.addEventListener("resize", _closeSelPanel); window.addEventListener("scroll", _closeSelPanel, true); }catch(_){}
+try{
+  window.addEventListener("resize", _closeSelPanel);
+  /* v3.6.4 修复：滚动时关闭面板，但必须排除「面板自身内部滚动」。
+     此前直接把 _closeSelPanel 挂成 scroll 的捕获监听（capture:true）——捕获阶段从 window 向下传播，
+     连 .sel-panel 自己 overflow-y:auto 的内部滚动也会经过 window，于是选项超过 max-height:280px、
+     面板一出现滚动条就会"一滚就把自己关掉"（用户表现为「鼠标滚轮滚动时下拉框会收起来」）。
+     这里改为：滚动源在面板内部（或就是面板本身）时直接放行，其余滚动才关闭。 */
+  window.addEventListener("scroll", function(e){
+    if(_selPanel && (e.target === _selPanel || (_selPanel.contains && _selPanel.contains(e.target)))) return;
+    _closeSelPanel();
+  }, true);
+}catch(_){}
 
 function _enforceDrawerWidth(){
   try{
