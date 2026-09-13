@@ -1218,11 +1218,15 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .dp-foot .btn-ghost{flex:1}
 .tool-app-card .tool-table tr:hover td{background:var(--surface-hover)}
 .tool-app-card .tool-empty{color:var(--muted);text-align:center;padding:var(--space-5);font-size:var(--fs-sm)}
-.tool-app-card .tool-summary{display:flex;gap:var(--space-4);margin-bottom:var(--space-3);flex-wrap:wrap}
-.tool-app-card .tool-summary-item{display:flex;flex-direction:column;align-items:center;padding:var(--space-2) var(--space-3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);transition:transform var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast)}
-.tool-app-card .tool-summary-item:hover{transform:translateY(-1px);border-color:var(--accent-soft);box-shadow:var(--shadow-1)}
-.tool-app-card .tool-summary-item .v{font-size:var(--fs-lg);font-weight:700;color:var(--text)}
-.tool-app-card .tool-summary-item .l{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+/* v3.6.5：统计改为「紧凑圆角徽章」并入工具栏右侧（margin-left:auto）——
+   原为独立一行的大块（v 上 l 下纵向居中、大 padding），与工具栏上下割裂、右侧空旷。
+   徽章形制与全站 pill 一致，hover 反馈保留；裸 <span> 形式（健康/财务）同步紧凑化。 */
+.tool-app-card .tool-summary{display:flex;gap:var(--space-2);margin:0 0 0 auto;align-items:center;flex-wrap:wrap}
+.tool-app-card .tool-summary-item{display:flex;flex-direction:row;align-items:baseline;gap:4px;padding:2px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.tool-app-card .tool-summary-item:hover{border-color:var(--accent-soft);box-shadow:var(--shadow-1)}
+.tool-app-card .tool-summary-item .v{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
+.tool-app-card .tool-summary-item .l{font-size:var(--fs-xs);color:var(--muted);margin:0}
+.tool-app-card .tool-summary > span{font-size:var(--fs-xs);color:var(--muted);padding:2px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:999px}
 .tool-app-card canvas{max-width:100%;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
 .tool-app-card .tool-filter-bar{display:flex;gap:var(--space-2);align-items:center;margin-bottom:var(--space-3);flex-wrap:wrap}
 .tool-app-card .tool-filter-bar input,.tool-app-card .tool-filter-bar select{padding:var(--space-1) var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);font-size:var(--fs-sm)}
@@ -1664,9 +1668,23 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .chain-page.active{display:block}
 @keyframes chainFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .streak-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-2);margin-bottom:var(--space-3)}
-.streak-card{background:color-mix(in srgb,var(--panel) 40%,transparent);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-3);text-align:center}
-.streak-card .sc-days{font-size:var(--fs-xl);font-weight:700;color:var(--accent)}
+/* v3.6.5：Streak 卡片美化 —— 顶部彩条按连续天数分级（灰/蓝/橙/金）、渐变底、
+   图标改全站矢量（moon/flame）替代 emoji，数字带"天"单位。 */
+.streak-card{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--panel2),color-mix(in srgb,var(--panel) 40%,transparent));border:1px solid var(--line);border-radius:var(--radius-lg);padding:calc(var(--space-3) + 2px) var(--space-3) var(--space-3);text-align:center;transition:transform var(--transition-fast),box-shadow var(--transition-fast),border-color var(--transition-fast)}
+.streak-card::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--line)}
+.streak-card.lv1::before{background:var(--accent-soft)}
+.streak-card.lv2::before{background:var(--warn)}
+.streak-card.lv3::before{background:var(--ok)}
+.streak-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-2);border-color:var(--accent-soft)}
+.streak-card .sc-ic{width:30px;height:30px;margin:0 auto var(--space-1);color:var(--text-faint)}
+.streak-card .sc-ic svg{width:100%;height:100%}
+.streak-card.lv1 .sc-ic,.streak-card.lv2 .sc-ic,.streak-card.lv3 .sc-ic{color:var(--accent)}
+.streak-card.lv3 .sc-ic{color:var(--ok)}
+.streak-card .sc-days{font-size:var(--fs-xl);font-weight:700;color:var(--accent);line-height:1.1}
+.streak-card .sc-days span{font-size:var(--fs-xs);font-weight:500;color:var(--muted);margin-left:2px}
 .streak-card .sc-label{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
+.streak-card.lv0 .sc-days{color:var(--text-faint)}
+.streak-card.lv0 .sc-label{color:var(--text-faint)}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:var(--space-2);margin-bottom:var(--space-3)}
 .kpi{background:color-mix(in srgb,var(--panel) 40%,transparent);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-3);text-align:center}
 .kpi .v{font-size:var(--fs-2xl);font-weight:700;color:var(--accent)}
@@ -5176,7 +5194,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260913g";
+const BUILD_TAG = "20260913h";
 
 
 
@@ -6581,10 +6599,10 @@ async function toggleTheme(){
 // UI_ICONS：全局图标单一真相源（A-P2-7，FB-1；v2.1.1 去重——所有字典引用此处）。
 // 场景图标收编进 SCENARIOS[sc].icon；chrome/状态/空态图标一律在此定义，其他字典按 key 引用。
 const UI_ICONS = {
-  overview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4m0 16h16M8 16l3-4 3 3 4-6"/></svg>',
+  overview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V3m0 18h18M7 17l4-5 3 3 5-7"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
-  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12M9 7V5h6v2m-7 0 1 12h6l1-12"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1.2 13.5h8.6L17.5 7M10 11v6M14 11v6"/></svg>',
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>',
   chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg>',
   download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg>',
@@ -6621,7 +6639,7 @@ const UI_ICONS = {
   vidgen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',
   searchWeb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M2 11h20"/><path d="M12 2v9"/></svg>',
   regex:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 8 4"/><polyline points="9 20 15 20"/><polyline points="12 4 15 12 18 4"/><line x1="6" y1="20" x2="6" y2="4"/></svg>',
-  compile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/></svg>',
+  compile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 19 22 12 16 5"/><polyline points="8 5 2 12 8 19"/><line x1="13.5" y1="4" x2="10.5" y2="20"/></svg>',
   md2code:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="8 10 6 12 8 14"/><polyline points="16 10 18 12 16 14"/><line x1="13" y1="8" x2="11" y2="16"/></svg>',
   sport:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   bill:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/><path d="M12 16h.01"/><path d="M7 16h.01"/><path d="M17 16h.01"/></svg>',
@@ -11044,7 +11062,7 @@ function _recordToolHtml(cfg, records){
     }
   }
   return '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">'+t("tool.addLabel", "添加")+'</span><button type="button" class="addbtn sm add-round" id="recAddBtn" data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
-    '<span class="sub u-m-0">共 ' + records.length + ' 条</span></div>' + summary +
+    '<span class="sub u-m-0">共 ' + records.length + ' 条</span>' + summary + '</div>' +
     '<div class="tool-form-box">' + form + "</div>" +
     (records.length
       ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + "</th>"; }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table>"
@@ -15278,8 +15296,13 @@ function renderChainPage(){
   if(_chainTab === "streak"){
     const badges = ORDER.filter(function(sc){return SCENARIOS[sc];}).map(function(sc){
       const st = calcStreak(sc); const days = st.current || 0;
-      const ic = days >= 3 ? "&#128293;" : (days === 0 ? "&#128164;" : "&#9889;");
-      return '<div class="streak-card"><div style="font-size:28px">' + ic + '</div><div class="sc-days">' + days + '</div><div class="sc-label">' + SCENARIOS[sc].name + '</div></div>';
+      /* v3.6.5：emoji（🔥⚡💤）→ 全站矢量图标；按连续天数分级（lv0 未开始 / lv1 起步 / lv2 坚持 / lv3 习惯养成），
+         卡片加顶部彩条 + 渐变底 + 数字带"天"单位，与全站徽章/KPI 形制统一。 */
+      const lvl = days >= 7 ? 3 : days >= 3 ? 2 : days >= 1 ? 1 : 0;
+      const ic = lvl === 0 ? UI_ICONS.theme : UI_ICONS.flame;
+      return '<div class="streak-card lv' + lvl + '"><div class="sc-ic">' + ic + '</div>' +
+        '<div class="sc-days">' + days + '<span>天</span></div>' +
+        '<div class="sc-label">' + SCENARIOS[sc].name + '</div></div>';
     }).join("");
     const activeCount = ORDER.filter(function(sc){return SCENARIOS[sc] && (calcStreak(sc).current||0) > 0;}).length;
     const bestStreak = Math.max.apply(null, [0].concat(ORDER.filter(function(sc){return SCENARIOS[sc];}).map(function(sc){return calcStreak(sc).current||0;})));
@@ -15290,9 +15313,11 @@ function renderChainPage(){
       '<div class="card"><h3>各场景连续打卡</h3><div class="streak-grid">' + badges + '</div></div></div>';
   }
   else if(_chainTab === "graph"){
+    /* v3.6.5：说明卡与图合并 —— 此前"场景联动关系图"单独一个 card 只有标题+一句话说明，
+       纯占位无信息量，图又画在 card 外面（无卡片容器、观感突兀）。合并后说明即图的引言。 */
     page = '<div class="chain-page active"><div class="card"><h2>' + ic("mindmap") + " 场景联动关系图</h2>" +
-      '<p class="sub">可视化展示场景之间的触发链路</p></div>' +
-      '<div class="graph-wrap">' + renderChainGraph() + '</div></div>';
+      '<p class="sub">可视化展示场景之间的触发链路</p>' +
+      '<div class="graph-wrap">' + renderChainGraph() + '</div></div></div>';
   }
   else if(_chainTab === "status"){
     const chainStatus = (typeof getHabitChainStatus === "function") ? getHabitChainStatus() : [];
@@ -17599,8 +17624,11 @@ function _featureCardHtml(cfg){
     '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">'+t("tool.addLabel", t("common.add","添加"))+'</span><button type="button" class="addbtn sm add-round" data-f-add data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
     /* v3.6.2：让AI帮记 改为「上方小标签 + 下方机器人图标按钮」，与左侧「添加」形制一致、图标同基线 */
     '<span class="add-wrap ai-wrap"><span class="add-label">'+t("tool.aiHint.btn","让 AI 帮记")+'</span><button type="button" class="addbtn sm add-round ai-round" data-ai-hint-for="'+esc(cfg.key)+'" data-sc="accent" aria-label="'+t("tool.aiHint.aria","让 AI 帮记")+'"><span class="ic-inline" aria-hidden="true">'+UI_ICONS.robot+'</span></button></span>' +
-    t("p3.html.countPrefix","<span class=\"sub\" class=\"u-m-0\">共 ") + records.length + t("p3.html.countSuffix"," 条</span></div>") +
-    summary + '<div class="tool-form-box">' + form + '</div>' + hint + list + afterListHtml + '</div>';
+    /* v3.6.5：统计徽章并入工具栏右侧（margin-left:auto），不再单独占一大行——
+       原排布「工具栏一行 + 统计三大块一行」上下割裂、右侧空旷，观感零散。
+       countSuffix 的 </div> 随之后移：filter-bar 保持打开直到 summary 并入后才闭合。 */
+    t("p3.html.countPrefix","<span class=\"sub\" class=\"u-m-0\">共 ") + records.length + t("p3.html.countSuffix"," 条</span>") +
+    summary + '</div><div class="tool-form-box">' + form + '</div>' + hint + list + afterListHtml + '</div>';
 }
 
 /* ===== v3.6.2 自定义日期选择器（替代浏览器原生白底方角弹层） =====
