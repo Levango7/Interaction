@@ -602,6 +602,18 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .topbar .tbtn .lbl{display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64px;font-size:var(--fs-xs)}
 .topbar .tbtn svg{width:20px;height:20px;flex-shrink:0}
 .topbar .tbtn .badge{position:absolute;top:2px;right:6px}
+/* ===== v3.6.5：窄屏顶栏收紧 —— 8 个系统按钮（48px/个）在 380px 视口装不下，横向溢出 ===== */
+@media(max-width:767px){
+  .topbar{gap:var(--space-1)}
+  .topbar .tbtn{min-width:38px;padding:var(--space-1) 2px}
+  .topbar .tbtn .lbl{font-size:10px;max-width:46px}
+  .topbar .tbtn svg{width:17px;height:17px}
+}
+@media(max-width:479px){
+  .topbar{gap:2px;padding-left:var(--space-2)}
+  .topbar .tbtn{min-width:30px;padding:var(--space-1) 1px}
+  .topbar .tbtn .lbl{display:none}   /* 极窄屏：纯图标 */
+}
 .tbtn .badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;
   padding:0 var(--space-1);border-radius:var(--radius-md);background:var(--danger);color:var(--on-accent);
   font-size:var(--fs-3xs);font-weight:600;line-height:16px;text-align:center;pointer-events:none}
@@ -1227,6 +1239,25 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .tool-app-card .tool-summary-item .v{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
 .tool-app-card .tool-summary-item .l{font-size:var(--fs-xs);color:var(--muted);margin:0}
 .tool-app-card .tool-summary > span{font-size:var(--fs-xs);color:var(--muted);padding:2px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:999px}
+/* ===== v3.6.5 PS lite 布局重构：分组卡片 + 响应式（PC 3列滑块 / 移动单列） ===== */
+.ps-group{border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-3) var(--space-2);margin-bottom:var(--space-3);background:color-mix(in srgb,var(--panel) 30%,transparent)}
+.ps-group-t{font-size:var(--fs-xs);font-weight:600;color:var(--muted);letter-spacing:.06em;margin-bottom:var(--space-2)}
+.ps-group-b{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}
+.ps-group-b.ps-sliders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3) var(--space-4)}
+.ps-slider{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ps-slider label{font-size:var(--fs-xs);color:var(--muted)}
+.ps-slider input[type="range"]{width:100%;margin:0}
+.ps-file-btn{cursor:pointer}
+.ps-file-btn input[type="file"]{display:none}
+.ps-primary{margin-left:auto;background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600}
+.ps-primary:hover{filter:brightness(1.06)}
+/* 文字组：输入框与「添加/画笔」按钮底部对齐（add-wrap 是上标签下按钮的堆叠结构，底对齐才整齐） */
+.ps-group-b.ps-flex-end{align-items:flex-end}
+.ps-group-b.ps-flex-end .ps-slider{align-self:center}
+@media(max-width:767px){
+  .ps-group-b.ps-sliders{grid-template-columns:1fr}
+  .ps-primary{margin-left:0;flex:1 1 100%}
+}
 .tool-app-card canvas{max-width:100%;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
 .tool-app-card .tool-filter-bar{display:flex;gap:var(--space-2);align-items:center;margin-bottom:var(--space-3);flex-wrap:wrap}
 .tool-app-card .tool-filter-bar input,.tool-app-card .tool-filter-bar select{padding:var(--space-1) var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);font-size:var(--fs-sm)}
@@ -5198,7 +5229,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260913k";
+const BUILD_TAG = "20260913l";
 
 
 
@@ -11479,31 +11510,36 @@ const TOOL_APPS = {
   "des-ps": {
     name:"PS lite", icon:UI_ICONS.filter, desc:t("tool.ps.desc", "裁剪/旋转/翻转/滤镜/颜色调整/文字/画笔 · 导出 PNG"),
     render: function(){
-      return '<div class="tool-filter-bar">'
-        + '<label>选择图片<input type="file" id="psFile" accept="image/*" class="u-ml-1h"></label>'
-        + '<button type="button" class="addbtn sm" id="psRotate">旋转 90°</button>'
-        + '<button type="button" class="addbtn sm" id="psFlipH">水平翻转</button>'
-        + '<button type="button" class="addbtn sm" id="psFlipV">垂直翻转</button>'
-        + '<button type="button" class="addbtn sm" id="psCrop">裁剪</button>'
-        + '<button type="button" class="addbtn sm" id="psReset">还原</button>'
-        + '<button type="button" class="addbtn sm" id="psSave">导出 PNG</button></div>'
-        + '<div class="tool-filter-bar">'
-        + '<button type="button" class="addbtn sm ps-fx" data-fx="gray">灰度</button>'
+      /* v3.6.5：布局重构 —— 分组卡片 + 响应式网格（PC 3列滑块/平板2列/移动单列），
+         替代原先 4 条 filter-bar 平铺（旋转按钮与文件选择混行、滑块宽度不齐、文字区垂直不居中）。 */
+      const G = function(title, inner, extra){
+        return '<div class="ps-group"><div class="ps-group-t">' + title + '</div><div class="ps-group-b' + (extra ? ' ' + extra : '') + '">' + inner + '</div></div>';
+      };
+      return G(t("tool.ps.gFile", "文件与变换"),
+        '<label class="addbtn sm ps-file-btn">'+t("tool.ps.pick", "选择图片")+'<input type="file" id="psFile" accept="image/*" class="u-hidden"></label>'
+        + '<button type="button" class="addbtn sm" id="psRotate">'+t("tool.ps.rotate", "旋转 90°")+'</button>'
+        + '<button type="button" class="addbtn sm" id="psFlipH">'+t("tool.ps.flipH", "水平翻转")+'</button>'
+        + '<button type="button" class="addbtn sm" id="psFlipV">'+t("tool.ps.flipV", "垂直翻转")+'</button>'
+        + '<button type="button" class="addbtn sm" id="psCrop">'+t("tool.ps.crop", "裁剪")+'</button>'
+        + '<button type="button" class="addbtn sm" id="psReset">'+t("tool.ps.reset", "还原")+'</button>'
+        + '<button type="button" class="addbtn sm ps-primary" id="psSave">'+t("tool.ps.export", "导出 PNG")+'</button>')
+      + G(t("tool.ps.gFilter", "滤镜"),
+        '<button type="button" class="addbtn sm ps-fx" data-fx="gray">灰度</button>'
         + '<button type="button" class="addbtn sm ps-fx" data-fx="invert">反色</button>'
         + '<button type="button" class="addbtn sm ps-fx" data-fx="sepia">怀旧</button>'
         + '<button type="button" class="addbtn sm ps-fx" data-fx="blur">模糊</button>'
         + '<button type="button" class="addbtn sm ps-fx" data-fx="sharpen">锐化</button>'
-        + '<button type="button" class="addbtn sm ps-fx" data-fx="saturate">饱和度</button></div>'
-        + '<div class="tool-filter-bar">'
-        + '<label>亮度 <input type="range" id="psBright" min="-100" max="100" value="0" class="u-valign-mid"></label>'
-        + '<label>对比度 <input type="range" id="psContrast" min="-100" max="100" value="0" class="u-valign-mid"></label>'
-        + '<label>饱和度 <input type="range" id="psSat" min="-100" max="100" value="0" class="u-valign-mid"></label></div>'
-        + '<div class="tool-filter-bar">'
-        + '<input type="text" id="psText" placeholder="' + t("tool.ps.watermark", "水印文字") + '" class="u-flex-1" maxlength="40">'
-        + '<span class="add-wrap"><span class="add-label">添加文字</span><button type="button" class="addbtn sm add-round" id="psAddText" aria-label="' + t("tool.ps.addText", "添加文字") + '">＋</button></span>'
-        + '<button type="button" class="addbtn sm" id="psBrush">画笔</button></div>'
-        + '<canvas id="psCv" width="640" height="400" class="u-max-w-100 u-cursor-crosshair"></canvas>'
-        + '<p class="sub u-mt-2">PS lite：裁剪 / 旋转 / 翻转 / 滤镜 / 颜色调整 / 文字 / 画笔（纯前端 canvas，导出前可叠加多个效果）</p>';
+        + '<button type="button" class="addbtn sm ps-fx" data-fx="saturate">饱和度</button>')
+      + G(t("tool.ps.gColor", "颜色调整"),
+        '<div class="ps-slider"><label>'+t("tool.ps.bright", "亮度")+'</label><input type="range" id="psBright" min="-100" max="100" value="0"></div>'
+        + '<div class="ps-slider"><label>'+t("tool.ps.contrast", "对比度")+'</label><input type="range" id="psContrast" min="-100" max="100" value="0"></div>'
+        + '<div class="ps-slider"><label>'+t("tool.ps.saturate", "饱和度")+'</label><input type="range" id="psSat" min="-100" max="100" value="0"></div>', 'ps-sliders')
+      + G(t("tool.ps.gText", "文字与画笔"),
+        '<input type="text" id="psText" placeholder="' + t("tool.ps.watermark", "水印文字") + '" class="u-flex-1 u-min-w-0" maxlength="40">'
+        + '<span class="add-wrap"><span class="add-label">'+t("tool.ps.addTextLabel","添加文字")+'</span><button type="button" class="addbtn sm add-round" id="psAddText" aria-label="' + t("tool.ps.addText", "添加文字") + '">＋</button></span>'
+        + '<button type="button" class="addbtn sm" id="psBrush">'+t("tool.ps.brush", "画笔")+'</button>', 'ps-flex-end')
+      + '<canvas id="psCv" width="640" height="400" class="u-max-w-100 u-cursor-crosshair"></canvas>'
+      + '<p class="sub u-mt-2">PS lite：裁剪 / 旋转 / 翻转 / 滤镜 / 颜色调整 / 文字 / 画笔（纯前端 canvas，导出前可叠加多个效果）</p>';
     },
     bind: function(){
       const cv = $("#psCv"); if(!cv) return;
