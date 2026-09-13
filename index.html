@@ -1,1 +1,38 @@
-<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=agent-workbench.html"></head></html>
+<!DOCTYPE html><html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent 工坊</title>
+<!--
+  v3.6.4 入口防缓存跳转
+  ------------------------------------------------------------------
+  背景：本应用是单文件 PWA，主文档 agent-workbench.html 会被三层缓存压住：
+        ① Service Worker 缓存   ② 浏览器 HTTP 缓存（GH Pages: max-age=600）   ③ CDN 边缘缓存
+  历史事故：用户被旧 SW（cache-first）永久卡在旧版页面，线上早已更新却始终看不到，
+            且旧版页面里没有版本哨兵、无法自救（"改了不生效"）。
+
+  本页职责：用一个**每次唯一**的 URL 跳转到主文档。
+    · 对 SW / HTTP / CDN 而言都是全新的缓存键 → 必然回源取到最新 HTML，绕不开的问题就此根除。
+    · 离线时仍可用：SW 的 navigate 分支在 fetch 失败后逐级回退
+      （去参数规范 URL → ./ → ./agent-workbench.html），主文档仍在预缓存里。
+    · SW 侧对 navigate 响应按「去查询参数的规范 URL」入缓存，因此不会因 ?t= 变化而撑爆缓存。
+
+  注意：若主文档改文件名，需同步更新下面的 TARGET。
+  ------------------------------------------------------------------
+-->
+<script>
+  (function () {
+    var TARGET = 'agent-workbench.html';
+    // 用时间戳构造唯一 URL：确保不被任何一层缓存命中
+    var url = TARGET + '?t=' + Date.now();
+    try {
+      // replace 不留历史记录，避免用户按返回键在"跳转页"之间来回
+      location.replace(url);
+    } catch (e) {
+      // 极端降级：JS 不可用时退回 meta refresh（至少还能进主文档）
+      location.href = TARGET;
+    }
+  })();
+</script>
+<noscript><meta http-equiv="refresh" content="0;url=agent-workbench.html"></noscript>
+</head>
+<body></body></html>
