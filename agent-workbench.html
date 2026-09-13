@@ -4204,6 +4204,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <p class="set-desc" data-i18n="ai.config.desc">兼容 OpenAI 接口格式（OpenAI / DeepSeek / 通义 / 豆包 等均可），Key 仅存本机浏览器。</p>
       </div>
     </header>
+    <!-- v3.6.5：OpenAPI Key 管理从集成中心迁入（Key 属 AI 机制的凭据，不该混在 IM/办公集成里） -->
+    <div class="int-apikey-section ai-key-section"><h4>OpenAPI Key 管理</h4><div class="int-apikey-list" id="aiApiKeyList"></div><button type="button" class="addbtn sm" id="btnAiNewKey">+ 新建 Key</button></div>
     <div class="set-switch">
       <input type="checkbox" id="cfgEnabled" data-i18n-aria="ai.config.enableLabel" aria-label="启用 AI 对话">
       <div>
@@ -5194,7 +5196,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260913h";
+const BUILD_TAG = "20260913i";
 
 
 
@@ -6836,6 +6838,10 @@ const SCENE_FEATURES = {
     { id:"overview", type:"core", label:t("tab.overview", "概览") },
     { id:"runner", type:"tool",   label:t("tab.runner", "运行器") },
     { id:"regex", type:"record",    label:t("tab.regex", "正则") },
+    { id:"json", type:"tool",     label:t("tool.json.name", "JSON") },
+    { id:"time", type:"tool",     label:t("tool.time.name", "时间戳") },
+    { id:"codec", type:"tool",    label:t("tool.codec.name", "编解码") },
+    { id:"uuid", type:"tool",     label:t("tool.uuid.name", "UUID") },
     { id:"frontend", type:"record", label:t("tab.frontend", "前端") },
     { id:"sql", type:"tool",      label:"SQL" }
   ],
@@ -11828,6 +11834,144 @@ const TOOL_APPS = {
           codeEl.value = hist[Number(a.getAttribute("data-cc-hist"))].code || "";
         };
       });
+    }
+  },
+  /* ================= v3.6.5 开发工具集（轻量 IDE 常用场景，用户反馈"编程能力要真能提效"） ================= */
+  "cod-json": {
+    name:t("tool.json.name","JSON 工具"), icon:UI_ICONS.sheet, desc:t("tool.json.desc","格式化 · 校验 · 压缩 · 复制"),
+    render: function(){
+      return '<div class="tool-filter-bar">'
+        + '<button type="button" class="addbtn sm" id="jwFmt">'+t("tool.json.fmt","格式化")+'</button>'
+        + '<button type="button" class="addbtn sm" id="jwCmp">'+t("tool.json.min","压缩")+'</button>'
+        + '<button type="button" class="addbtn sm" id="jwCopy">'+t("tool.json.copy","复制结果")+'</button>'
+        + '<select id="jwIndent" class="u-flex-0-1-120"><option value="2">2 空格</option><option value="4">4 空格</option></select>'
+        + '</div>'
+        + '<div class="u-grid-2col u-gap-3">'
+        + '<div><label>'+t("tool.json.in","输入 JSON")+'</label><textarea id="jwIn" class="u-min-h-260 u-font-mono u-fs-2xs" placeholder=\'{"name":"demo","ok":true}\'></textarea></div>'
+        + '<div><label>'+t("tool.json.outLabel","结果")+' <span id="jwStatus" class="u-fs-2xs"></span></label><textarea id="jwOut" class="u-min-h-260 u-font-mono u-fs-2xs" readonly></textarea></div>'
+        + '</div>';
+    },
+    bind: function(){
+      const $i=$("#jwIn"), $o=$("#jwOut"), $st=$("#jwStatus");
+      const run=function(minify){
+        if(!$i||!$o) return;
+        const raw=$i.value; if(!raw.trim()){ if($st)$st.textContent=""; $o.value=""; return; }
+        try{
+          const obj=JSON.parse(raw);
+          const n=parseInt(($("#jwIndent")||{}).value||"2",10)||2;
+          $o.value=minify?JSON.stringify(obj):JSON.stringify(obj,null,n);
+          if($st){ $st.textContent="✓ "+t("tool.json.valid","合法 JSON")+"（"+raw.length+" → "+$o.value.length+"）"; $st.style.color="var(--ok)"; }
+        }catch(e){
+          $o.value="";
+          if($st){ $st.textContent="✗ "+(e.message||""); $st.style.color="var(--danger)"; }
+        }
+      };
+      const b1=$("#jwFmt"); if(b1) b1.onclick=function(){ run(false); };
+      const b2=$("#jwCmp"); if(b2) b2.onclick=function(){ run(true); };
+      const b3=$("#jwCopy"); if(b3) b3.onclick=function(){ try{ if($o&&$o.value){ navigator.clipboard.writeText($o.value); toast(t("tool.copied","已复制"),"ok"); } }catch(_){} };
+      if($i) $i.oninput=function(){ run(false); };
+    }
+  },
+  "cod-time": {
+    name:t("tool.time.name","时间戳"), icon:UI_ICONS.stopwatch, desc:t("tool.time.desc","Unix ↔ 日期 双向转换"),
+    render: function(){
+      return '<div class="tool-filter-bar">'
+        + '<button type="button" class="addbtn sm" id="tsNow">'+t("tool.time.now","当前时间")+'</button>'
+        + '<span class="sub u-m-0">'+t("tool.time.tip","毫秒(13位)/秒(10位) 自动识别；右侧输入日期实时回写")+'</span>'
+        + '</div>'
+        + '<div class="u-grid-2col u-gap-3">'
+        + '<div><label>'+t("tool.time.unix","Unix 时间戳")+'</label><input type="text" id="tsUnix" class="u-font-mono" placeholder="1789250411553 或 1789250411"></div>'
+        + '<div><label>'+t("tool.time.local","本地日期时间")+'</label><input type="text" id="tsDate" class="u-font-mono" placeholder="2026-09-13 12:00:00"></div>'
+        + '</div>'
+        + '<div id="tsInfo" class="u-fs-2xs u-text-muted u-mt-1"></div>';
+    },
+    bind: function(){
+      const $u=$("#tsUnix"), $d=$("#tsDate"), $f=$("#tsInfo");
+      const pad=function(n){ return (n<10?"0":"")+n; };
+      const fmt=function(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds()); };
+      const fromUnix=function(){
+        if(!$u||!$d) return;
+        const raw=$u.value.trim(); if(!raw||isNaN(+raw)) return;
+        let n=+raw; if(String(Math.trunc(Math.abs(n))).length<=10) n*=1000;
+        const d=new Date(n); if(isNaN(d.getTime())) return;
+        $d.value=fmt(d);
+        if($f) $f.textContent="ISO: "+d.toISOString()+"   ·   UTC: "+d.toUTCString();
+      };
+      const fromDate=function(){
+        if(!$d||!$u) return;
+        const raw=$d.value.trim(); if(!raw) return;
+        const d=new Date(raw.replace(" ","T")); if(isNaN(d.getTime())) return;
+        $u.value=String(d.getTime());
+        if($f) $f.textContent="ISO: "+d.toISOString();
+      };
+      const b1=$("#tsNow"); if(b1) b1.onclick=function(){ const d=new Date(); if($u)$u.value=String(d.getTime()); if($d)$d.value=fmt(d); if($f)$f.textContent="ISO: "+d.toISOString(); };
+      if($u) $u.oninput=fromUnix;
+      if($d) $d.oninput=fromDate;
+    }
+  },
+  "cod-codec": {
+    name:t("tool.codec.name","编解码"), icon:UI_ICONS.md2code, desc:t("tool.codec.desc","Base64 · URL 编解码（UTF-8 安全）"),
+    render: function(){
+      return '<div class="tool-filter-bar">'
+        + '<select id="ccMode" class="u-flex-0-1-160"><option value="b64">Base64</option><option value="url">URL</option></select>'
+        + '<button type="button" class="addbtn sm" id="ccEnc">'+t("tool.codec.enc","编码 →")+'</button>'
+        + '<button type="button" class="addbtn sm" id="ccDec">'+t("tool.codec.dec","← 解码")+'</button>'
+        + '<button type="button" class="addbtn sm" id="ccSwap">⇅ 互换</button>'
+        + '</div>'
+        + '<div class="u-grid-2col u-gap-3">'
+        + '<div><label>'+t("tool.codec.in","输入")+'</label><textarea id="ccIn" class="u-min-h-200 u-font-mono u-fs-2xs"></textarea></div>'
+        + '<div><label>'+t("tool.codec.out","输出")+'</label><textarea id="ccOut" class="u-min-h-200 u-font-mono u-fs-2xs" readonly></textarea></div>'
+        + '</div>';
+    },
+    bind: function(){
+      const $i=$("#ccIn"), $o=$("#ccOut"), $m=$("#ccMode");
+      const b64enc=function(s){ try{ return btoa(unescape(encodeURIComponent(s))); }catch(_){ return ""; } };
+      const b64dec=function(s){ try{ return decodeURIComponent(escape(atob(s))); }catch(_){ return ""; } };
+      const run=function(enc){
+        if(!$i||!$o||!$m) return;
+        const mode=$m.value, v=$i.value;
+        try{
+          if(mode==="b64"){ $o.value=enc?b64enc(v):b64dec(v); }
+          else{ $o.value=enc?encodeURIComponent(v):decodeURIComponent(v); }
+        }catch(e){ $o.value="✗ "+e.message; }
+      };
+      const b1=$("#ccEnc"); if(b1) b1.onclick=function(){ run(true); };
+      const b2=$("#ccDec"); if(b2) b2.onclick=function(){ run(false); };
+      const b3=$("#ccSwap"); if(b3) b3.onclick=function(){ if($i&&$o){ const t=$i.value; $i.value=$o.value; $o.value=t; } };
+    }
+  },
+  "cod-uuid": {
+    name:t("tool.uuid.name","UUID / 随机串"), icon:UI_ICONS.plus, desc:t("tool.uuid.desc","v4 UUID · 批量生成 · 复制"),
+    render: function(){
+      return '<div class="tool-filter-bar">'
+        + '<select id="uuN" class="u-flex-0-1-120"><option value="1">1 个</option><option value="5">5 个</option><option value="10">10 个</option><option value="20">20 个</option></select>'
+        + '<select id="uuFmt" class="u-flex-0-1-160"><option value="std">'+t("tool.uuid.std","标准（含连字符）")+'</option><option value="raw">'+t("tool.uuid.raw","纯十六进制")+'</option></select>'
+        + '<button type="button" class="addbtn sm" id="uuGo">'+t("tool.uuid.gen","生成")+'</button>'
+        + '<button type="button" class="addbtn sm" id="uuCopy">'+t("tool.json.copy","复制")+'</button>'
+        + '</div>'
+        + '<textarea id="uuOut" class="u-min-h-200 u-font-mono u-fs-2xs" readonly placeholder="'+t("tool.uuid.ph","点击「生成」输出…")+'"></textarea>';
+    },
+    bind: function(){
+      const $o=$("#uuOut");
+      const gen=function(){
+        const n=parseInt(($("#uuN")||{}).value||"1",10)||1;
+        const f=($("#uuFmt")||{}).value||"std";
+        const lines=[];
+        for(let i=0;i<n;i++){
+          let s;
+          if(typeof crypto!=="undefined" && crypto.getRandomValues){
+            const b=crypto.getRandomValues(new Uint8Array(16));
+            b[6]=(b[6]&0x0f)|0x40; b[8]=(b[8]&0x3f)|0x80;
+            const hx=Array.from(b,function(x){ return (x<16?"0":"")+x.toString(16); }).join("");
+            s=(f==="raw")?hx:hx.slice(0,8)+"-"+hx.slice(8,12)+"-"+hx.slice(12,16)+"-"+hx.slice(16,20)+"-"+hx.slice(20);
+          } else { s=String(Math.random()).slice(2); }
+          lines.push(s);
+        }
+        if($o) $o.value=lines.join("\n");
+      };
+      const b1=$("#uuGo"); if(b1) b1.onclick=gen;
+      const b2=$("#uuCopy"); if(b2) b2.onclick=function(){ try{ if($o&&$o.value){ navigator.clipboard.writeText($o.value); toast(t("tool.copied","已复制"),"ok"); } }catch(_){} };
+      gen();
     }
   },
   "cod-regex": {
@@ -24208,8 +24352,9 @@ function renderIntegrationPanel(){
       '<div class="int-action">' + actionBtn + '</div>' +
       '</div>';
   });
-  const apiKeySection = t("p4.html.intApiKeySection","<div class=\"int-apikey-section\"><h4>OpenAPI Key 管理</h4><div class=\"int-apikey-list\" id=\"intApiKeyList\"></div><button type=\"button\" class=\"addbtn sm\" id=\"btnIntNewKey\">+ 新建 Key</button></div>");
-  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + apiKeySection);
+  /* v3.6.5：OpenAPI Key 管理迁至 AI 页·大模型 —— Key 是 AI 机制的凭据，不该混在 Notion/Jira/Slack
+     等 IM/办公集成列表里（用户反馈）。AI 侧渲染见 renderOpenApiKeyPanel()（_switchAiTab("ai-llm") 时触发）。 */
+  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>');
   // 绑定连接/断开按钮
   // v3.1.1 修复：原实现直接以空 config 调 connectFn → 所有 connect 函数因缺凭据返回 null，
   // 却仍弹「已连接」假成功 toast；现改为先弹配置弹窗收集凭据（openIntegrationConfig），
@@ -24264,6 +24409,44 @@ function renderIntegrationPanel(){
         if(typeof openApiCreateApiKey === "function"){
           const k = openApiCreateApiKey(name, ["read","write"]);
           renderIntegrationPanel();
+          toast(t("api.keyCreated", "Key 已创建：") + (k && k.id ? k.id.slice(0,8) + "…" : ""), "ok");
+        }
+      }catch(e){ toast(t("integration.createFail", "创建失败：{err}").replace("{err}", (e.message || e)), "warn"); }
+    };
+  }
+}
+
+/* v3.6.5：OpenAPI Key 面板渲染（AI 页·大模型）。
+   Key 管理从集成中心迁入 AI 页（Key 属 AI 机制凭据），由 _switchAiTab("ai-llm") 与
+   renderIntegrationPanel 双入口触发，保证两处数据始终同步。 */
+function renderOpenApiKeyPanel(){
+  const keyList = document.querySelector("#aiApiKeyList");
+  if(keyList){
+    let keys = [];
+    try{ if(typeof openApiListApiKeys === "function") keys = openApiListApiKeys() || []; }catch(e){}
+    keyList.innerHTML = sanitizeHtml(keys.length ? keys.map(function(k){
+      return '<div class="int-key-row"><span class="int-key-name">' + esc(k.name || k.id) + '</span><span class="int-key-status ' + (k.revokedAt ? "int-off" : "int-on") + '">' + (k.revokedAt ? t("int.revoked","已吊销") : t("int.valid","有效")) + '</span><button type="button" class="addbtn xs int-revoke" data-revoke="' + esc(k.id) + t("p4.html.intRevokeBtn","\">吊销</button></div>");
+    }).join("") : t("p4.html.intNoApiKey","<p class=\"hint\">暂无 API Key</p>"));
+    keyList.querySelectorAll("[data-revoke]").forEach(function(btn){
+      btn.onclick = function(){
+        const kid = btn.getAttribute("data-revoke");
+        if(!confirm(t("int.confirmRevoke","确定吊销此 API Key？"))) return;
+        try{ if(typeof openApiRevokeApiKey === "function") openApiRevokeApiKey(kid); }catch(e){}
+        renderOpenApiKeyPanel();
+        toast(t("api.keyRevoked", "Key 已吊销"), "ok");
+      };
+    });
+  }
+  const newKeyBtn = document.querySelector("#btnAiNewKey");
+  if(newKeyBtn && !newKeyBtn._bound){
+    newKeyBtn._bound = true;
+    newKeyBtn.onclick = function(){
+      const name = prompt(t("api.keyNamePrompt", "输入 Key 名称："));
+      if(!name) return;
+      try{
+        if(typeof openApiCreateApiKey === "function"){
+          const k = openApiCreateApiKey(name, ["read","write"]);
+          renderOpenApiKeyPanel();
           toast(t("api.keyCreated", "Key 已创建：") + (k && k.id ? k.id.slice(0,8) + "…" : ""), "ok");
         }
       }catch(e){ toast(t("integration.createFail", "创建失败：{err}").replace("{err}", (e.message || e)), "warn"); }
@@ -24473,10 +24656,33 @@ function _switchAiTab(tabId){
     s.classList.toggle("ai-tab-active", s.getAttribute("data-ai-tab") === tabId);
   });
   const d = $("#drawer"); if(d) d.scrollTop = 0;
+  /* v3.6.5：OpenAPI Key 管理已从集成中心迁入本页 —— 切到大模型 tab 时渲染 Key 列表 */
+  if(tabId === "ai-llm" && typeof renderOpenApiKeyPanel === "function") renderOpenApiKeyPanel();
 }
 $$("#drawer .set-nav-btn[data-ai-tab]").forEach(function(b){
   b.onclick = function(){ _switchAiTab(b.getAttribute("data-ai-tab")); };
 });
+
+/* ================= v3.6.5 编程场景 · 轻量 IDE 工具集 =================
+   四个高频开发场景工具（JSON/时间戳/编解码/UUID），复用 TOOL_APPS 的 render/bind
+   （单一实现，两处入口：工具箱「编程」分类 + 编程场景 tab），避免双份实现漂移。 */
+(function(){
+  const wrap = function(toolId){
+    const render = function(){
+      const a = TOOL_APPS[toolId]; if(!a) return '<div class="card"><div class="empty">'+t("tool.notFound","未找到工具")+'</div></div>';
+      return '<div class="card tool-app-card"><h2>' + a.icon + ' ' + esc(a.name) + '</h2>' + a.render() + '</div>';
+    };
+    const bind = function(){ const a = TOOL_APPS[toolId]; if(a && typeof a.bind === "function"){ try{ a.bind(); }catch(e){} } };
+    return { render: render, bind: bind };
+  };
+  [["json","cod-json"],["time","cod-time"],["codec","cod-codec"],["uuid","cod-uuid"]].forEach(function(p){
+    const w = wrap(p[1]);
+    SCENE_FEATURE_RENDER.code = SCENE_FEATURE_RENDER.code || {};
+    SCENE_FEATURE_RENDER.code[p[0]] = w.render;
+    SCENE_FEATURE_BIND.code = SCENE_FEATURE_BIND.code || {};
+    SCENE_FEATURE_BIND.code[p[0]] = w.bind;
+  });
+})();
 const AI_BUILTIN_SKILLS = [
   {name:"create_task", desc:t("ai.skillCreateTask","创建任务"), enabled:true},
   {name:"complete_task", desc:t("ai.skillCompleteTask","完成任务"), enabled:true},
