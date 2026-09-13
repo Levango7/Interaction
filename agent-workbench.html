@@ -2131,7 +2131,11 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
   gap:var(--space-3);align-items:center;padding:var(--space-2) 0}
 /* v3.6.2：set-field 的直接子 textarea（场景提示词等）横跨两列——此前挤在标签列（230px 窄格），
    左右上下都与同排输入框错位；横跨后与右列控件同一左右边界，上方留空行只占整行 */
+/* v3.6.2：set-field 的直接子 textarea（场景提示词等）横跨两列——此前挤在标签列（230px 窄格），
+   右侧大片空白。v3.6.5 同理修复 .hint：Agent 设置页的「与「扩展 → 技能配置」勾选框同步…」与
+   「提示词会注入…」两段说明文字此前也被挤进标签列，换行零碎、右侧浪费大量空间。 */
 .set-field > textarea{grid-column:1 / -1;min-width:0}
+.set-field > .hint{grid-column:1 / -1;min-width:0}
 .set-field > label{display:block;font-size:var(--fs-sm);color:var(--text-dim);
   font-weight:500;margin:0;line-height:1.4}
 .set-field .ctl{min-width:0}
@@ -3568,6 +3572,21 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 @keyframes petBubble{0%{opacity:0;transform:translate(-50%,8px)}20%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-12px)}}
 @keyframes petBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .pet.bobbing{animation:petBob 1.8s ease-in-out infinite}
+/* ===== v3.6.5 萌宠特效增强：眨眼 / 点击跳跃 / 爱心 / 星光 / 打盹 zZZ ===== */
+.pet-eye{transition:transform .09s ease;transform-origin:center;transform-box:fill-box}
+@keyframes petJumpK{0%{transform:translateY(0)}28%{transform:translateY(-20px) scale(1.05)}55%{transform:translateY(0)}72%{transform:translateY(-7px)}100%{transform:translateY(0)}}
+.pet.pet-jumping .pc-svg{animation:petJumpK .62s cubic-bezier(.3,.7,.4,1)}
+.pet-fx{position:absolute;pointer-events:none;font-size:15px;line-height:1;animation:petFloatUp 1.35s ease-out forwards;z-index:2;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.pet-fx-heart{color:#ff6b9d}
+.pet-fx-star{color:#ffd76b;text-shadow:0 0 6px rgba(255,215,107,.75)}
+.pet-fx-zzz{color:#9aa7ff;font-size:13px;animation:petZzzK 2.6s ease-out forwards}
+@keyframes petFloatUp{0%{opacity:0;transform:translateY(8px) scale(.5)}22%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-46px) scale(1.12)}}
+@keyframes petZzzK{0%{opacity:0;transform:translate(0,0) scale(.7)}25%{opacity:.95}100%{opacity:0;transform:translate(18px,-32px) scale(1.3)}}
+/* 萌宠风格切换条（精致二次元 / 3D 糖果拟物，可扩展） */
+.pet-style-bar{display:flex;gap:6px;margin-bottom:12px;justify-content:center;flex-wrap:wrap}
+.pet-style-tab{padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);font-size:var(--fs-xs);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
+.pet-style-tab:hover{color:var(--text);border-color:var(--accent-soft)}
+.pet-style-tab.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600}
 
 /* v1.10.0：图表商店（左侧图表库 + 右侧可拖拽画布） */
 .chart-store-body{display:grid;grid-template-columns:240px 1fr;gap:var(--space-4);min-height:580px}
@@ -5157,7 +5176,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260913f";
+const BUILD_TAG = "20260913g";
 
 
 
@@ -12621,19 +12640,339 @@ const _PETS = {
     bubbles: [t("pet.panda.bubble1", "吃竹子咯"), t("pet.panda.bubble2", "滚滚滚～"), t("pet.panda.bubble3", "别忘了喝水"), t("pet.panda.bubble4", "黑眼圈警告"), t("pet.panda.bubble5", "拍我一下试试")]
   }
 };
+
+/* ============================================================
+   萌宠 v2 —— 风格化绘制系统（v3.6.5）
+   ------------------------------------------------------------
+   背景：原实现每只宠物仅一个"极简 SVG"，观感粗糙（用户反馈"太粗糙了，
+         要巨大改良，还要能设置风格：二次元 / 3D …"）。
+   设计：
+     · PET_STYLES = 风格注册表（可扩展：后续加 pixel/lineart/clay 只需再挂一套 draw）。
+     · 每只宠物提供 draw[styleId]() 返回完整 SVG 字符串；风格负责"质感"（渐变/描边/高光），
+       宠物负责"结构"（耳/脸/五官位置），两轴正交，加新风格不必重画结构。
+     · 眼睛统一挂 class="pet-eye"，供全局眨眼动画驱动（mountPet 定时触发）。
+     · 渐变 id 必须带宠物前缀（同屏多只/多张预览时不冲突）。
+   ------------------------------------------------------------
+   参考竞品通行做法（Shimeji / 桌面宠物类）：待机呼吸浮动 + 随机眨眼 + 点击反馈（跳/爱心）
+   + 长时间无操作进入睡觉（zZZ）+ 可拖拽。
+   ============================================================ */
+const PET_STYLES = {
+  anime:  { id: "anime",  name: t("pet.style.anime",  "精致二次元") },
+  toon3d: { id: "toon3d", name: t("pet.style.toon3d", "3D 糖果拟物") }
+  /* 后续可扩：pixel（像素）/ lineart（线稿）/ clay（黏土）——在 _PETS_V2[kind].draw 上挂同风格键即可 */
+};
+function _petStyleId(){ try{ return _getPref("petStyle", "anime") || "anime"; }catch(_){ return "anime"; } }
+function _petSvgFor(kind, styleId){
+  const st = styleId || _petStyleId();
+  const def = _PETS_V2[kind];
+  if(!def) return (_PETS[kind] && _PETS[kind].svg) || "";
+  return (def.draw && def.draw[st]) ? def.draw[st]() : (def.draw && def.draw.anime ? def.draw.anime() : (_PETS[kind] && _PETS[kind].svg) || "");
+}
+const _PETS_V2 = {
+  /* ================= 少女 · 星见 ================= */
+  girl: {
+    name: t("pet.girl.name", "少女 · 星见"), desc: t("pet.girl.desc", "乖巧的看板娘"),
+    draw: {
+      anime: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs>' +
+            '<linearGradient id="paGirlSkin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF3E9"/><stop offset="1" stop-color="#FFDCC3"/></linearGradient>' +
+            '<linearGradient id="paGirlHair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient>' +
+          '</defs>' +
+          '<path d="M8 34 Q6 11 32 9 Q58 11 56 34 Q56 41 52 43 L50 33 Q50 16 32 14 Q14 16 14 33 L12 43 Q8 41 8 34 Z" fill="url(#paGirlHair)"/>' +
+          '<path d="M12 30 Q10 41 14 49 L18 47 Q15 38 16 30 Z" fill="#6D28D9"/>' +
+          '<path d="M52 30 Q54 41 50 49 L46 47 Q49 38 48 30 Z" fill="#6D28D9"/>' +
+          '<path d="M30 11 Q35 4 39 9 Q34 8 31 13 Z" fill="#8B5CF6"/>' +
+          '<ellipse cx="32" cy="34" rx="17" ry="16" fill="url(#paGirlSkin)"/>' +
+          '<path d="M21 26 Q25 23.5 28 26" stroke="#6D28D9" stroke-width="1.2" fill="none" stroke-linecap="round"/>' +
+          '<path d="M36 26 Q39 23.5 43 26" stroke="#6D28D9" stroke-width="1.2" fill="none" stroke-linecap="round"/>' +
+          '<g class="pet-eye">' +
+            '<ellipse cx="24.5" cy="32.5" rx="3.5" ry="4.2" fill="#2A2440"/>' +
+            '<ellipse cx="39.5" cy="32.5" rx="3.5" ry="4.2" fill="#2A2440"/>' +
+            '<ellipse cx="24.5" cy="33.6" rx="2.1" ry="2.3" fill="#4C3B8F" opacity=".85"/>' +
+            '<ellipse cx="39.5" cy="33.6" rx="2.1" ry="2.3" fill="#4C3B8F" opacity=".85"/>' +
+            '<circle cx="23.3" cy="31" r="1.2" fill="#fff"/>' +
+            '<circle cx="38.3" cy="31" r="1.2" fill="#fff"/>' +
+            '<circle cx="25.9" cy="34.2" r=".55" fill="#fff" opacity=".92"/>' +
+            '<circle cx="40.9" cy="34.2" r=".55" fill="#fff" opacity=".92"/>' +
+            '<path d="M21.8 35.6 q2.7 1.8 5.4 0" stroke="#7DD3FC" stroke-width=".8" fill="none" opacity=".7"/>' +
+            '<path d="M36.8 35.6 q2.7 1.8 5.4 0" stroke="#7DD3FC" stroke-width=".8" fill="none" opacity=".7"/>' +
+          '</g>' +
+          '<ellipse cx="19" cy="38.2" rx="2.7" ry="1.6" fill="#FF9DB5" opacity=".55"/>' +
+          '<ellipse cx="45" cy="38.2" rx="2.7" ry="1.6" fill="#FF9DB5" opacity=".55"/>' +
+          '<path d="M31.5 37.4 h1" stroke="#E8A87C" stroke-width="1.1" stroke-linecap="round"/>' +
+          '<path d="M29.8 40.6 Q32 42.8 34.2 40.6" fill="none" stroke="#C2607E" stroke-width="1.3" stroke-linecap="round"/>' +
+          '<path d="M16 52 Q24 58 32 58 Q40 58 48 52 L48 57 Q40 62.5 32 62.5 Q24 62.5 16 57 Z" fill="url(#paGirlHair)"/>' +
+          '<path d="M27.5 55 L32 60.5 L36.5 55" fill="#F5F3FF" opacity=".9"/>' +
+          '</svg>';
+      },
+      toon3d: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs>' +
+            '<radialGradient id="ptGirl" cx=".34" cy=".28" r=".95"><stop offset="0" stop-color="#FFF6EE"/><stop offset=".55" stop-color="#FFE0C6"/><stop offset="1" stop-color="#F3B98D"/></radialGradient>' +
+            '<radialGradient id="ptGirlHair" cx=".34" cy=".26" r=".95"><stop offset="0" stop-color="#A78BFA"/><stop offset=".6" stop-color="#7C3AED"/><stop offset="1" stop-color="#4C1D95"/></radialGradient>' +
+          '</defs>' +
+          '<ellipse cx="32" cy="59.5" rx="17" ry="3.4" fill="#000" opacity=".16"/>' +
+          '<path d="M8 34 Q6 11 32 9 Q58 11 56 34 Q56 41 52 43 L50 33 Q50 16 32 14 Q14 16 14 33 L12 43 Q8 41 8 34 Z" fill="url(#ptGirlHair)"/>' +
+          '<ellipse cx="18" cy="24" rx="4.5" ry="7" fill="#fff" opacity=".22" transform="rotate(-14 18 24)"/>' +
+          '<ellipse cx="32" cy="34" rx="17" ry="16" fill="url(#ptGirl)"/>' +
+          '<ellipse cx="25" cy="26" rx="6.5" ry="4" fill="#fff" opacity=".4"/>' +
+          '<path d="M21 26 Q25 23.5 28 26" stroke="#6D28D9" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".85"/>' +
+          '<path d="M36 26 Q39 23.5 43 26" stroke="#6D28D9" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".85"/>' +
+          '<g class="pet-eye">' +
+            '<ellipse cx="24.5" cy="32.5" rx="3.3" ry="3.9" fill="#221C3B"/>' +
+            '<ellipse cx="39.5" cy="32.5" rx="3.3" ry="3.9" fill="#221C3B"/>' +
+            '<circle cx="23.2" cy="31" r="1.25" fill="#fff"/>' +
+            '<circle cx="38.2" cy="31" r="1.25" fill="#fff"/>' +
+            '<circle cx="26" cy="34.3" r=".5" fill="#fff" opacity=".9"/>' +
+            '<circle cx="41" cy="34.3" r=".5" fill="#fff" opacity=".9"/>' +
+          '</g>' +
+          '<ellipse cx="19" cy="38.4" rx="2.8" ry="1.7" fill="#FF8FAE" opacity=".6"/>' +
+          '<ellipse cx="45" cy="38.4" rx="2.8" ry="1.7" fill="#FF8FAE" opacity=".6"/>' +
+          '<path d="M29.8 40.8 Q32 43 34.2 40.8" fill="none" stroke="#B45309" stroke-width="1.4" stroke-linecap="round"/>' +
+          '<ellipse cx="30.4" cy="38.6" rx=".9" ry=".6" fill="#E8A87C"/>' +
+          '<path d="M16 52 Q24 58 32 58 Q40 58 48 52 L48 57 Q40 62.5 32 62.5 Q24 62.5 16 57 Z" fill="url(#ptGirlHair)"/>' +
+          '<ellipse cx="26" cy="54.5" rx="4" ry="1.6" fill="#fff" opacity=".3"/>' +
+          '</svg>';
+      }
+    }
+  },
+  /* ================= 小猫 · 橘座 ================= */
+  cat: {
+    name: t("pet.cat.name", "小猫 · 橘座"), desc: t("pet.cat.desc", "傲娇小橘"),
+    draw: {
+      anime: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><linearGradient id="paCat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDBA74"/><stop offset="1" stop-color="#F97316"/></linearGradient></defs>' +
+          '<path d="M12 20 L8 6 L24 14 Z" fill="url(#paCat)" stroke="#C2410C" stroke-width="1.1" stroke-linejoin="round"/>' +
+          '<path d="M52 20 L56 6 L40 14 Z" fill="url(#paCat)" stroke="#C2410C" stroke-width="1.1" stroke-linejoin="round"/>' +
+          '<path d="M13 17 L11 9 L20 13.5 Z" fill="#FBCFE8"/><path d="M51 17 L53 9 L44 13.5 Z" fill="#FBCFE8"/>' +
+          '<ellipse cx="32" cy="36" rx="23" ry="20" fill="url(#paCat)" stroke="#C2410C" stroke-width="1.2"/>' +
+          '<path d="M26 20 q2 5 0 9" stroke="#C2410C" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>' +
+          '<path d="M32 19 q2 6 0 11" stroke="#C2410C" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>' +
+          '<path d="M38 20 q-2 5 0 9" stroke="#C2410C" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>' +
+          '<g class="pet-eye">' +
+            '<ellipse cx="23.5" cy="35" rx="3.6" ry="4.2" fill="#2A2440"/>' +
+            '<ellipse cx="40.5" cy="35" rx="3.6" ry="4.2" fill="#2A2440"/>' +
+            '<ellipse cx="23.5" cy="35" rx="2.1" ry="2.7" fill="#34D399" opacity=".85"/>' +
+            '<ellipse cx="40.5" cy="35" rx="2.1" ry="2.7" fill="#34D399" opacity=".85"/>' +
+            '<circle cx="22.5" cy="33.3" r="1.15" fill="#fff"/>' +
+            '<circle cx="39.5" cy="33.3" r="1.15" fill="#fff"/>' +
+            '<circle cx="24.7" cy="36.8" r=".55" fill="#fff" opacity=".88"/>' +
+            '<circle cx="41.7" cy="36.8" r=".55" fill="#fff" opacity=".88"/>' +
+          '</g>' +
+          '<ellipse cx="17.5" cy="41" rx="2.8" ry="1.7" fill="#FF9DB5" opacity=".5"/>' +
+          '<ellipse cx="46.5" cy="41" rx="2.8" ry="1.7" fill="#FF9DB5" opacity=".5"/>' +
+          '<path d="M30.4 41 h3.2 l-1.6 2 Z" fill="#FB7185"/>' +
+          '<path d="M32 43 Q29 46.5 26.5 44 M32 43 Q35 46.5 37.5 44" fill="none" stroke="#7C2D12" stroke-width="1.2" stroke-linecap="round"/>' +
+          '<path d="M6 36 L14 37.5 M6 41 L14 40.5 M58 36 L50 37.5 M58 41 L50 40.5" stroke="#7C2D12" stroke-width="1" stroke-linecap="round" opacity=".75"/>' +
+          '</svg>';
+      },
+      toon3d: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><radialGradient id="ptCat" cx=".34" cy=".28" r=".95"><stop offset="0" stop-color="#FED7AA"/><stop offset=".55" stop-color="#FB923C"/><stop offset="1" stop-color="#C2410C"/></radialGradient></defs>' +
+          '<ellipse cx="32" cy="59" rx="18" ry="3.2" fill="#000" opacity=".16"/>' +
+          '<path d="M12 20 L8 6 L24 14 Z" fill="url(#ptCat)"/><path d="M52 20 L56 6 L40 14 Z" fill="url(#ptCat)"/>' +
+          '<path d="M13 17 L11 9 L20 13.5 Z" fill="#FBCFE8" opacity=".9"/><path d="M51 17 L53 9 L44 13.5 Z" fill="#FBCFE8" opacity=".9"/>' +
+          '<ellipse cx="32" cy="36" rx="23" ry="20" fill="url(#ptCat)"/>' +
+          '<ellipse cx="24" cy="27" rx="8" ry="4.5" fill="#fff" opacity=".35"/>' +
+          '<path d="M26 20 q2 5 0 9" stroke="#C2410C" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".55"/>' +
+          '<path d="M32 19 q2 6 0 11" stroke="#C2410C" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".55"/>' +
+          '<path d="M38 20 q-2 5 0 9" stroke="#C2410C" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".55"/>' +
+          '<g class="pet-eye">' +
+            '<ellipse cx="23.5" cy="35" rx="3.5" ry="4" fill="#221C3B"/>' +
+            '<ellipse cx="40.5" cy="35" rx="3.5" ry="4" fill="#221C3B"/>' +
+            '<ellipse cx="23.5" cy="35" rx="2" ry="2.5" fill="#34D399" opacity=".8"/>' +
+            '<ellipse cx="40.5" cy="35" rx="2" ry="2.5" fill="#34D399" opacity=".8"/>' +
+            '<circle cx="22.4" cy="33.2" r="1.2" fill="#fff"/>' +
+            '<circle cx="39.4" cy="33.2" r="1.2" fill="#fff"/>' +
+          '</g>' +
+          '<ellipse cx="17.5" cy="41" rx="2.8" ry="1.7" fill="#FF8FAE" opacity=".55"/>' +
+          '<ellipse cx="46.5" cy="41" rx="2.8" ry="1.7" fill="#FF8FAE" opacity=".55"/>' +
+          '<path d="M30.4 41 h3.2 l-1.6 2 Z" fill="#FB7185"/>' +
+          '<path d="M32 43 Q29 46.5 26.5 44 M32 43 Q35 46.5 37.5 44" fill="none" stroke="#7C2D12" stroke-width="1.2" stroke-linecap="round"/>' +
+          '<path d="M6 36 L14 37.5 M6 41 L14 40.5 M58 36 L50 37.5 M58 41 L50 40.5" stroke="#7C2D12" stroke-width="1" stroke-linecap="round" opacity=".65"/>' +
+          '</svg>';
+      }
+    }
+  },
+  /* ================= 小狗 · 豆柴 ================= */
+  dog: {
+    name: t("pet.dog.name", "小狗 · 豆柴"), desc: t("pet.dog.desc", "忠厚小柴"),
+    draw: {
+      anime: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><linearGradient id="paDog" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBBF24"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs>' +
+          '<path d="M13 14 Q4 24 12 32 Q16 34 17 28 Q15 20 17 15 Z" fill="#92400E"/>' +
+          '<path d="M51 14 Q60 24 52 32 Q48 34 47 28 Q49 20 47 15 Z" fill="#92400E"/>' +
+          '<ellipse cx="32" cy="34" rx="23" ry="20" fill="url(#paDog)" stroke="#92400E" stroke-width="1.2"/>' +
+          '<ellipse cx="32" cy="41" rx="13" ry="9" fill="#FDE68A"/>' +
+          '<circle cx="22" cy="26" r="1.3" fill="#FDE68A" opacity=".9"/><circle cx="42" cy="26" r="1.3" fill="#FDE68A" opacity=".9"/>' +
+          '<g class="pet-eye">' +
+            '<ellipse cx="23.5" cy="31.5" rx="3.1" ry="3.6" fill="#2A2440"/>' +
+            '<ellipse cx="40.5" cy="31.5" rx="3.1" ry="3.6" fill="#2A2440"/>' +
+            '<circle cx="22.5" cy="30.2" r="1" fill="#fff"/>' +
+            '<circle cx="39.5" cy="30.2" r="1" fill="#fff"/>' +
+            '<circle cx="24.6" cy="32.8" r=".5" fill="#fff" opacity=".85"/>' +
+            '<circle cx="41.6" cy="32.8" r=".5" fill="#fff" opacity=".85"/>' +
+          '</g>' +
+          '<ellipse cx="32" cy="39" rx="2.6" ry="1.8" fill="#1F2937"/>' +
+          '<path d="M32 40.8 V43" stroke="#1F2937" stroke-width="1.1" stroke-linecap="round"/>' +
+          '<path d="M32 43 Q28.5 46.5 26 44.5 M32 43 Q35.5 46.5 38 44.5" fill="none" stroke="#7C2D12" stroke-width="1.1" stroke-linecap="round"/>' +
+          '<path d="M30 47 Q32 49.5 34 47 Q33 50.5 30 47 Z" fill="#FB7185"/>' +
+          '<ellipse cx="16.5" cy="39" rx="2.6" ry="1.6" fill="#FF9DB5" opacity=".45"/>' +
+          '<ellipse cx="47.5" cy="39" rx="2.6" ry="1.6" fill="#FF9DB5" opacity=".45"/>' +
+          '</svg>';
+      },
+      toon3d: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><radialGradient id="ptDog" cx=".34" cy=".28" r=".95"><stop offset="0" stop-color="#FCD34D"/><stop offset=".55" stop-color="#F59E0B"/><stop offset="1" stop-color="#92400E"/></radialGradient></defs>' +
+          '<ellipse cx="32" cy="59" rx="18" ry="3.2" fill="#000" opacity=".16"/>' +
+          '<path d="M13 14 Q4 24 12 32 Q16 34 17 28 Q15 20 17 15 Z" fill="#92400E"/>' +
+          '<path d="M51 14 Q60 24 52 32 Q48 34 47 28 Q49 20 47 15 Z" fill="#92400E"/>' +
+          '<ellipse cx="32" cy="34" rx="23" ry="20" fill="url(#ptDog)"/>' +
+          '<ellipse cx="24" cy="26" rx="8" ry="4.5" fill="#fff" opacity=".3"/>' +
+          '<ellipse cx="32" cy="41" rx="13" ry="9" fill="#FDE68A"/>' +
+          '<circle cx="22" cy="26" r="1.3" fill="#FDE68A" opacity=".9"/><circle cx="42" cy="26" r="1.3" fill="#FDE68A" opacity=".9"/>' +
+          '<g class="pet-eye">' +
+            '<ellipse cx="23.5" cy="31.5" rx="3" ry="3.5" fill="#221C3B"/>' +
+            '<ellipse cx="40.5" cy="31.5" rx="3" ry="3.5" fill="#221C3B"/>' +
+            '<circle cx="22.4" cy="30.1" r="1.05" fill="#fff"/>' +
+            '<circle cx="39.4" cy="30.1" r="1.05" fill="#fff"/>' +
+          '</g>' +
+          '<ellipse cx="32" cy="39" rx="2.6" ry="1.8" fill="#1F2937"/>' +
+          '<path d="M32 40.8 V43" stroke="#1F2937" stroke-width="1.1" stroke-linecap="round"/>' +
+          '<path d="M32 43 Q28.5 46.5 26 44.5 M32 43 Q35.5 46.5 38 44.5" fill="none" stroke="#7C2D12" stroke-width="1.1" stroke-linecap="round"/>' +
+          '<path d="M30 47 Q32 49.5 34 47 Q33 50.5 30 47 Z" fill="#FB7185"/>' +
+          '<ellipse cx="16.5" cy="39" rx="2.6" ry="1.6" fill="#FF8FAE" opacity=".5"/>' +
+          '<ellipse cx="47.5" cy="39" rx="2.6" ry="1.6" fill="#FF8FAE" opacity=".5"/>' +
+          '</svg>';
+      }
+    }
+  },
+  /* ================= 小兔 · 雪团 ================= */
+  rabbit: {
+    name: t("pet.rabbit.name", "小兔 · 雪团"), desc: t("pet.rabbit.desc", "白绒绒长耳"),
+    draw: {
+      anime: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><linearGradient id="paRab" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E5E7EB"/></linearGradient></defs>' +
+          '<g transform="rotate(-8 22 16)"><ellipse cx="22" cy="15" rx="5.5" ry="13" fill="url(#paRab)" stroke="#D1D5DB" stroke-width="1"/><ellipse cx="22" cy="16" rx="2.4" ry="9" fill="#FBCFE8"/></g>' +
+          '<g transform="rotate(8 42 16)"><ellipse cx="42" cy="15" rx="5.5" ry="13" fill="url(#paRab)" stroke="#D1D5DB" stroke-width="1"/><ellipse cx="42" cy="16" rx="2.4" ry="9" fill="#FBCFE8"/></g>' +
+          '<circle cx="32" cy="38" r="19" fill="url(#paRab)" stroke="#D1D5DB" stroke-width="1"/>' +
+          '<g class="pet-eye">' +
+            '<ellipse cx="24.5" cy="35.5" rx="3.2" ry="3.8" fill="#3B2417"/>' +
+            '<ellipse cx="39.5" cy="35.5" rx="3.2" ry="3.8" fill="#3B2417"/>' +
+            '<circle cx="23.4" cy="34.2" r="1.1" fill="#fff"/>' +
+            '<circle cx="38.4" cy="34.2" r="1.1" fill="#fff"/>' +
+            '<circle cx="25.7" cy="36.9" r=".55" fill="#fff" opacity=".9"/>' +
+            '<circle cx="40.7" cy="36.9" r=".55" fill="#fff" opacity=".9"/>' +
+          '</g>' +
+          '<path d="M30.6 41 h2.8 l-1.4 1.8 Z" fill="#FB7185"/>' +
+          '<path d="M32 42.8 V45 M32 45 Q29.5 47 28 45.5 M32 45 Q34.5 47 36 45.5" fill="none" stroke="#6B7280" stroke-width="1.1" stroke-linecap="round"/>' +
+          '<rect x="30.4" y="46.2" width="1.5" height="2.4" rx=".5" fill="#fff" stroke="#D1D5DB" stroke-width=".4"/>' +
+          '<rect x="32.1" y="46.2" width="1.5" height="2.4" rx=".5" fill="#fff" stroke="#D1D5DB" stroke-width=".4"/>' +
+          '<ellipse cx="18.5" cy="41" rx="2.7" ry="1.7" fill="#FF9DB5" opacity=".55"/>' +
+          '<ellipse cx="45.5" cy="41" rx="2.7" ry="1.7" fill="#FF9DB5" opacity=".55"/>' +
+          '</svg>';
+      },
+      toon3d: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><radialGradient id="ptRab" cx=".34" cy=".28" r=".95"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".65" stop-color="#F3F4F6"/><stop offset="1" stop-color="#CBD5E1"/></radialGradient></defs>' +
+          '<ellipse cx="32" cy="59.5" rx="16" ry="3" fill="#000" opacity=".14"/>' +
+          '<g transform="rotate(-8 22 16)"><ellipse cx="22" cy="15" rx="5.5" ry="13" fill="url(#ptRab)"/><ellipse cx="22" cy="16" rx="2.4" ry="9" fill="#FBCFE8" opacity=".85"/></g>' +
+          '<g transform="rotate(8 42 16)"><ellipse cx="42" cy="15" rx="5.5" ry="13" fill="url(#ptRab)"/><ellipse cx="42" cy="16" rx="2.4" ry="9" fill="#FBCFE8" opacity=".85"/></g>' +
+          '<circle cx="32" cy="38" r="19" fill="url(#ptRab)"/>' +
+          '<ellipse cx="25" cy="30" rx="7" ry="4" fill="#fff" opacity=".6"/>' +
+          '<g class="pet-eye">' +
+            '<ellipse cx="24.5" cy="35.5" rx="3.1" ry="3.6" fill="#3B2417"/>' +
+            '<ellipse cx="39.5" cy="35.5" rx="3.1" ry="3.6" fill="#3B2417"/>' +
+            '<circle cx="23.3" cy="34.1" r="1.15" fill="#fff"/>' +
+            '<circle cx="38.3" cy="34.1" r="1.15" fill="#fff"/>' +
+          '</g>' +
+          '<path d="M30.6 41 h2.8 l-1.4 1.8 Z" fill="#FB7185"/>' +
+          '<path d="M32 42.8 V45 M32 45 Q29.5 47 28 45.5 M32 45 Q34.5 47 36 45.5" fill="none" stroke="#6B7280" stroke-width="1.1" stroke-linecap="round"/>' +
+          '<rect x="30.4" y="46.2" width="1.5" height="2.4" rx=".5" fill="#fff" stroke="#D1D5DB" stroke-width=".4"/>' +
+          '<rect x="32.1" y="46.2" width="1.5" height="2.4" rx=".5" fill="#fff" stroke="#D1D5DB" stroke-width=".4"/>' +
+          '<ellipse cx="18.5" cy="41" rx="2.7" ry="1.7" fill="#FF8FAE" opacity=".6"/>' +
+          '<ellipse cx="45.5" cy="41" rx="2.7" ry="1.7" fill="#FF8FAE" opacity=".6"/>' +
+          '</svg>';
+      }
+    }
+  },
+  /* ================= 熊猫 · 团子 ================= */
+  panda: {
+    name: t("pet.panda.name", "熊猫 · 团子"), desc: t("pet.panda.desc", "黑白胖团子"),
+    draw: {
+      anime: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><linearGradient id="paPan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E5E7EB"/></linearGradient></defs>' +
+          '<circle cx="14" cy="18" r="6.5" fill="#1F2937"/><circle cx="50" cy="18" r="6.5" fill="#1F2937"/>' +
+          '<circle cx="13" cy="16.5" r="2" fill="#374151"/><circle cx="49" cy="16.5" r="2" fill="#374151"/>' +
+          '<circle cx="32" cy="36" r="21" fill="url(#paPan)" stroke="#D1D5DB" stroke-width="1"/>' +
+          '<ellipse cx="24" cy="33.5" rx="5.2" ry="6.6" fill="#1F2937" transform="rotate(-18 24 33.5)"/>' +
+          '<ellipse cx="40" cy="33.5" rx="5.2" ry="6.6" fill="#1F2937" transform="rotate(18 40 33.5)"/>' +
+          '<g class="pet-eye">' +
+            '<circle cx="24.5" cy="34" r="2" fill="#fff"/>' +
+            '<circle cx="39.5" cy="34" r="2" fill="#fff"/>' +
+            '<circle cx="24.8" cy="34.4" r="1.15" fill="#111827"/>' +
+            '<circle cx="39.2" cy="34.4" r="1.15" fill="#111827"/>' +
+            '<circle cx="24.2" cy="33.5" r=".45" fill="#fff"/>' +
+            '<circle cx="38.6" cy="33.5" r=".45" fill="#fff"/>' +
+          '</g>' +
+          '<ellipse cx="32" cy="42.5" rx="2.8" ry="2" fill="#1F2937"/>' +
+          '<path d="M32 44.5 V48" stroke="#1F2937" stroke-width="1.3" stroke-linecap="round"/>' +
+          '<path d="M32 48 Q29 50.5 27 49 M32 48 Q35 50.5 37 49" fill="none" stroke="#374151" stroke-width="1.2" stroke-linecap="round"/>' +
+          '<ellipse cx="17.5" cy="41" rx="2.6" ry="1.6" fill="#FF9DB5" opacity=".4"/>' +
+          '<ellipse cx="46.5" cy="41" rx="2.6" ry="1.6" fill="#FF9DB5" opacity=".4"/>' +
+          '</svg>';
+      },
+      toon3d: function(){
+        return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><radialGradient id="ptPan" cx=".34" cy=".28" r=".95"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".65" stop-color="#F3F4F6"/><stop offset="1" stop-color="#CBD5E1"/></radialGradient></defs>' +
+          '<ellipse cx="32" cy="60" rx="17" ry="3.2" fill="#000" opacity=".15"/>' +
+          '<circle cx="14" cy="18" r="6.5" fill="#1F2937"/><circle cx="50" cy="18" r="6.5" fill="#1F2937"/>' +
+          '<ellipse cx="12.5" cy="16" rx="2" ry="2.6" fill="#4B5563"/><ellipse cx="48.5" cy="16" rx="2" ry="2.6" fill="#4B5563"/>' +
+          '<circle cx="32" cy="36" r="21" fill="url(#ptPan)"/>' +
+          '<ellipse cx="25" cy="28" rx="7.5" ry="4" fill="#fff" opacity=".55"/>' +
+          '<ellipse cx="24" cy="33.5" rx="5.2" ry="6.6" fill="#1F2937" transform="rotate(-18 24 33.5)"/>' +
+          '<ellipse cx="40" cy="33.5" rx="5.2" ry="6.6" fill="#1F2937" transform="rotate(18 40 33.5)"/>' +
+          '<g class="pet-eye">' +
+            '<circle cx="24.5" cy="34" r="1.9" fill="#fff"/>' +
+            '<circle cx="39.5" cy="34" r="1.9" fill="#fff"/>' +
+            '<circle cx="24.8" cy="34.4" r="1.1" fill="#111827"/>' +
+            '<circle cx="39.2" cy="34.4" r="1.1" fill="#111827"/>' +
+          '</g>' +
+          '<ellipse cx="32" cy="42.5" rx="2.8" ry="2" fill="#1F2937"/>' +
+          '<path d="M32 44.5 V48" stroke="#1F2937" stroke-width="1.3" stroke-linecap="round"/>' +
+          '<path d="M32 48 Q29 50.5 27 49 M32 48 Q35 50.5 37 49" fill="none" stroke="#374151" stroke-width="1.2" stroke-linecap="round"/>' +
+          '<ellipse cx="17.5" cy="41" rx="2.6" ry="1.6" fill="#FF8FAE" opacity=".45"/>' +
+          '<ellipse cx="46.5" cy="41" rx="2.6" ry="1.6" fill="#FF8FAE" opacity=".45"/>' +
+          '</svg>';
+      }
+    }
+  }
+};
 function openPetModal(){
   const modal = $("#petModal"); if(!modal) return;
   const body = $("#petModalBody");
   const current = _getPref("pet", "");
-  const cards = Object.keys(_PETS).map(function(k){
-    const p = _PETS[k];
+  const styleId = _petStyleId();
+  const reg = Object.keys(_PETS_V2).length ? _PETS_V2 : _PETS;
+  const cards = Object.keys(reg).map(function(k){
+    const p = reg[k];
     return '<div class="pet-card'+(k===current?" active":"")+'" data-pet="'+k+'">' +
-      '<div class="pc-svg">'+p.svg+'</div>' +
+      '<div class="pc-svg">'+_petSvgFor(k)+'</div>' +
       '<div class="pc-name">'+esc(p.name)+'</div>' +
       '<div class="pc-desc">'+esc(p.desc)+'</div>' +
     '</div>';
   }).join("");
+  /* v3.6.5：风格切换条（精致二次元 / 3D 糖果拟物）——风格注册表可扩展 */
+  const styleTabs = Object.keys(PET_STYLES).map(function(sk){
+    return '<button type="button" class="pet-style-tab'+(sk===styleId?" active":"")+'" data-style="'+sk+'">'+esc(PET_STYLES[sk].name)+'</button>';
+  }).join("");
   body.innerHTML = sanitizeHtml(
+    '<div class="pet-style-bar">'+styleTabs+'</div>' +
     '<div class="pet-grid">'+cards+'</div>' +
     '<div class="pet-actions">' +
       (current ? '<button type="button" class="tbtn u-pad-1-3 u-min-h-32" id="btnPetRemove">' + t("pet.remove", "收回萌宠") + '</button>' : '') +
@@ -12648,13 +12987,23 @@ function openPetModal(){
       openPetModal();
     };
   });
+  $$(".pet-style-tab", body).forEach(function(t){
+    t.onclick = function(){
+      _setPref("petStyle", t.dataset.style);
+      if(current) mountPet(current);
+      openPetModal();
+    };
+  });
   const close2 = $("#btnPetClose2"); if(close2) close2.onclick = function(){ closePetModal(); };
   const rm = $("#btnPetRemove"); if(rm) rm.onclick = function(){ _setPref("pet", ""); unmountPet(); openPetModal(); };
   modal.classList.add("show");
 }
 function closePetModal(){ const m = $("#petModal"); if(m) m.classList.remove("show"); }
 function mountPet(kind){
-  const def = _PETS[kind]; if(!def) return;
+  /* v3.6.5：合并两代定义 —— 旧 _PETS 提供 name/desc/bubbles（点击说话的气泡文案），
+     新 _PETS_V2 提供 draw（风格化绘制）。此前只取 _PETS_V2 导致 def.bubbles 为 undefined，
+     点击萌宠说话时报 "Cannot read properties of undefined (reading 'length')"。 */
+  const def = Object.assign({}, _PETS[kind] || {}, _PETS_V2[kind] || {}); if(!def.name) return;
   const stage = $("#petStage"); if(!stage) return;
   unmountPet();
   stage.classList.add("on");
@@ -12667,9 +13016,48 @@ function mountPet(kind){
   el.style.left = x + "px";
   el.style.top  = y + "px";
   el.innerHTML = sanitizeHtml(
-    '<div class="pc-svg u-w-64 u-h-64">'+def.svg+'</div>' +
+    '<div class="pc-svg u-w-64 u-h-64">'+_petSvgFor(kind)+'</div>' +
     '<button type="button" class="pet-close" aria-label="' + t("pet.remove", "收回萌宠") + '">✕</button>'
   );
+  /* ---------- v3.6.5 特效增强 ----------
+     原 2 项：petBob 待机浮动、petBubble 气泡。新增 6 项：
+       眨眼（随机 scaleY 闭合）· 点击跳跃 · 点击爱心 · 随机星光 · 久置打盹(zZZ) · 拖拽（已有）
+     实现要点：眨眼作用于 .pet-eye（SVG 内 class，transform-box:fill-box）；
+     心跳 tick 检测元素是否仍在文档中，被收回即自清，杜绝定时器泄漏。 */
+  const eyes = el.querySelectorAll(".pet-eye");
+  const fx = function(cls, txt){
+    const f = document.createElement("div");
+    f.className = "pet-fx " + cls;
+    if(txt) f.textContent = txt;
+    f.style.left = (10 + Math.random() * 34) + "px";
+    el.appendChild(f);
+    setTimeout(function(){ try{ f.remove(); }catch(_){} }, 2400);
+  };
+  const blink = function(){
+    eyes.forEach(function(e){
+      e.style.transformOrigin = "center";
+      e.style.transform = "scaleY(.06)";
+      setTimeout(function(){ e.style.transform = "scaleY(1)"; }, 110);
+    });
+  };
+  let idleTicks = 0;
+  el.addEventListener("click", function(e){
+    if(e.target.closest(".pet-close")) return;
+    el.classList.remove("pet-jumping");
+    void el.offsetWidth; /* 重置动画 */
+    el.classList.add("pet-jumping");
+    fx("pet-fx-heart", "♥");
+    if(Math.random() < .55) fx("pet-fx-star");
+    idleTicks = 0;
+  });
+  const tick = setInterval(function(){
+    if(!document.body.contains(el)){ clearInterval(tick); return; }
+    if(Math.random() < .5) blink();
+    if(Math.random() < .35) fx("pet-fx-star");
+    idleTicks++;
+    if(idleTicks >= 3) fx("pet-fx-zzz", "z Z");
+  }, 3400);
+  el._petTimer = tick;
   el.querySelector(".pet-close").onclick = function(e){
     e.stopPropagation();
     _setPref("pet", "");
