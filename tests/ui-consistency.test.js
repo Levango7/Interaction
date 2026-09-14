@@ -198,17 +198,17 @@ describe("UI 一致性 · 页脚 build 标记", () => {
     __test = win.__test;
   });
 
-  it("#main > .foot 文本含 b20260818a（v1.15.0）", () => {
+  it("#main > .foot 文本含 当前版本与构建标记", () => {
     __test.render();
     const foot = win.document.querySelector("#main > .foot");
     expect(foot).toBeTruthy();
-    expect(foot.textContent).toMatch(/v1\.15\.0 · b20260818a/);
+    expect(foot.textContent).toMatch(/v\d+\.\d+\.\d+ · b\d{8}[a-z]/);
   });
 
-  it("openDrawer() 后 #drawer > .foot 文本含 b20260818a（v1.15.0）", () => {
+  it("openDrawer() 后 #drawer > .foot 含构建标记", () => {
     __test.openDrawer();
     const foot = win.document.querySelector("#drawer > .foot");
     expect(foot).toBeTruthy();
-    expect(foot.textContent).toMatch(/b20260818a/);
+    expect(foot.textContent).toMatch(/b\d{8}[a-z]/);
   });
 });

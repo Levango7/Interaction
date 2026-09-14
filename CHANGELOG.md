@@ -1,6 +1,26 @@
+## [v3.6.4] - 2026-09-15
+
+**分支归并**：将「萌宠改造」线（原 `pet-20260914`）并入主干工程 —— 以主干 99 文件工程化为底座，
+并入该线的 app 主文件，统一四处版本号到 3.6.4（package.json / electron/package.json / manifest.json / HTML VERSION）。
+
+萌宠改造内容：
+- 9 只角色：动物 5（橘座 / 棉花·萨摩耶 / 雪团 / 团子 / 泡泡·海豚）+ Q 版 2（小星 / 小辰）+ 青年 2（阿妍 / 阿岸）
+- 立绘密度：面积平均降采样 + 320px 长边 + 逐行自适应 PNG 滤波
+- 尺寸三档（小 72 / 中 96 / 大 128），默认 96
+- 3D 立体档改为「同一张清晰立绘 + 2.5D 渲染」（厚度挤出 / 方向光 / 镜面扫光 / 接地影 / 转台摇摆 / 指针倾斜），
+  弃用原先糊细节的 img2img 重渲染稿
+- 眨眼 / 张嘴 / 动作（摇头·点头·跳舞·倾斜·转圈）+ 立体档星光特效
+- 阴影提亮：修正浅色毛上不自然的块
+
+一致性修复（本次）：
+- manifest 图标改用仓库实际存在的 `icon.svg`（原 icon-192/512.png 仓库内不存在，PWA 图标 404）
+- README 版本陈述同步到 v3.6.4
+- `tests/ui-consistency.test.js` 去掉写死的版本断言，改为正则（发版不再误报）
+- package-lock / electron/package-lock 根版本字段同步到 3.6.4
+
 # Changelog
 
-本文件记录 Agent 工作台从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
+本文件记录 Agent 工坊（原 Agent 工作台）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
 
 ## [v1.15.0] - 2026-08-18
 
