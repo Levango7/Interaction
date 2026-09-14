@@ -1,6 +1,6 @@
 # 贡献指南
 
-欢迎参与 Agent 工作台的开发。本文件描述开发环境搭建、代码规范、提交规范与测试要求。
+欢迎参与 Agent 工坊的开发。本文件描述开发环境搭建、代码规范、提交规范与测试要求。
 
 ## 开发环境
 
@@ -24,6 +24,10 @@ npm install
 | `npm run lint` | ESLint + 颜色令牌检查 |
 | `npm run lint:fix` | 自动修复 ESLint 可修问题 |
 | `npm run serve` | 本地预览（<http://localhost:8123>） |
+| `npm run build:check` | **提交前必跑**：版本四处一致性 + 真相源完整性门禁 |
+| `npm run lint:layers` | 单文件分层契约校验（缺层 / 顺序错即失败） |
+| `npm run build:prod` | 生产构建（`agent-workbench.prod.html` + `service-worker.prod.js`） |
+| `npm run release <版本号>` | 发版：自动同步四处版本号 + 锁文件根字段 + CHANGELOG |
 
 ### Electron 桌面端（可选）
 
@@ -113,7 +117,8 @@ agent-workbench.html   # 核心单文件应用（UI + 逻辑 + 数据）
 tests/                 # 测试文件
   helpers/loadApp.js   # 应用加载辅助
 electron/              # Electron 桌面壳（main.js + preload.js）
-scripts/               # 工具脚本（lint-colors.mjs 等）
+scripts/               # 工具脚本（build.mjs / lint-colors.mjs / lint-layers.mjs / release.mjs）
+docs/                  # 设计文档（架构分层 / 萌宠系统 / UI 标准 / AI 工具 / 产品边界）
 dist/                  # 部署文件
 manifest.json          # PWA manifest
 service-worker.js      # PWA service worker
@@ -124,11 +129,45 @@ vitest.config.js       # 测试配置
 
 ---
 
+## 版本与发布
+
+**唯一真相源是 `agent-workbench.html`**：所有功能直接演进于这个 HTML，不再有 `src/` → HTML 的字节拼接。
+
+**版本号四处必须一致**（`npm run build:check` 会校验，不一致直接失败）：
+
+| 位置 | 字段 |
+|---|---|
+| `agent-workbench.html` | `const VERSION` |
+| `package.json` | `version` |
+| `electron/package.json` | `version` |
+| `manifest.json` | `version` |
+
+- 发版用 `npm run release <版本号>`，**不要手工改四处**（易漂移；锁文件根字段也会被同步）。
+- 构建标记 `BUILD_TAG` 与 SW 的 `CACHE_VERSION` 每次改主文件都要 bump，否则 PWA 吃旧缓存。
+- 部署：push 到 `main` 后 `.github/workflows/deploy.yml` 自动 `build:prod` 并发布 GitHub Pages；`ci.yml` 跑测试 / 门禁 / lint。
+
+### 改主文件的自检清单
+
+1. `npm run build:check` 通过；
+2. 页面无控制台报错；
+3. PWA 资源（manifest 图标等）无 404；
+4. 若动了萌宠：**两档风格都要看**（`精致二次元` / `3D 立体渲染`），见 [docs/pet-system.md](docs/pet-system.md)。
+
+### 两条硬性写法约定
+
+- **改 JSON 配置（manifest / package.json）一律"解析 → 修改 → 序列化"**，不要用正则替换 —— 曾因正则吃掉 `"screenshots":` 键导致 JSON 非法。
+- **`git add -A` 会把本地会话产物（如 `.playwright-mcp/`）带进提交**，提交前用精确 `git add <文件>`。
+
+---
+
 ## PR 检查清单
 
 提交 PR 前请确认：
 - [ ] `npm run lint` 通过（无硬编码颜色、无 ESLint 错误）
+- [ ] `npm run build:check` 通过（版本号四处一致）
 - [ ] `npm test` 全部通过
 - [ ] 新功能已附测试
 - [ ] 文档（README / CHANGELOG）已同步更新
+- [ ] 若改动 UI：响应式四个断点都看过
+- [ ] 若改动萌宠：两档风格 + 三档尺寸都看过（见 [docs/pet-system.md](docs/pet-system.md)）
 - [ ] 提交信息符合 Conventional Commits 规范

@@ -1,6 +1,6 @@
 # Agent 工坊（v3.6.4）
 
-一个跑在 Windows 上的**套壳 Agent 工作台**：把办公 / 编程 / 学习 / 生活四类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
+一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 编程 / 学习 / 生活四类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
 零安装、单文件、纯本地；数据存本机浏览器，不依赖任何后端服务器。
 
@@ -10,7 +10,7 @@
 
 ## 产品定位（一句话）
 
-> **面向个人用户（自己 / 开发者 / 知识工作者）的跨端统一任务工作台——核心卖点是「AI 不只是聊天，而是能真正动手创建 / 修改 / 完成任务与资料」。**
+> **面向个人用户（自己 / 开发者 / 知识工作者）的跨端统一任务工坊——核心卖点是「AI 不只是聊天，而是能真正动手创建 / 修改 / 完成任务与资料」。**
 
 **定位四要素**：
 
@@ -25,7 +25,7 @@
 
 | 形态 | 启动方式 | 适用 | 桌面能力 |
 |---|---|---|---|
-| **Edge 应用模式** | 双击 `启动Agent工作台.bat` | 零安装、最常用 | 无托盘/自启 |
+| **Edge 应用模式** | 双击 `启动Agent工坊.bat` | 零安装、最常用 | 无托盘/自启 |
 | **本地服务模式** | 双击 `启动本地服务.bat` | 需启用 AI 且避开 CORS | 无托盘/自启 |
 | **Electron exe** | `electron/` 目录打包 | 真·独立应用 | 托盘 + 开机自启 |
 
@@ -59,6 +59,23 @@
   - 小屏 PC `1024–1440px`：默认展开侧边栏；
   - 大屏 PC `>1440px`：内容区限宽居中，多列布局。
   - 侧边栏在 ≥1024px 时可手动折叠/展开，<1024px 自动收为底部 Tab。
+### 桌面萌宠（v3.6 起，9 只）
+
+右下角常驻一只会动的角色，点击说话、会眨眼、会做动作；两种风格、三档尺寸可切。
+
+| 分组 | 成员 | 说明 |
+|---|---|---|
+| 🐾 动物（5） | 橘座（橘猫）· 棉花（萨摩耶）· 雪团（兔）· 团子（熊猫）· 泡泡（海豚） | Q 版贴纸风，同一套 chibi 比例 |
+| 👦 Q 版（2） | 小星（少女）· 小辰（少男） | 与动物同风格，星星 / 月亮帽衫成对 |
+| 👩 青年（2） | 阿妍（靓女）· 阿岸（俊男） | 全身立绘，日常时尚向 |
+
+- **两套风格**：`精致二次元`（平涂原图）与 `3D 立体渲染`（同一张清晰立绘 + 2.5D 渲染：厚度挤出 / 方向光 / 镜面扫光 / 接地影 / 转台摇摆 / 指针倾斜）——后者**不重画、不降清晰度**。
+- **三档尺寸**：小 72 / 中 96（默认）/ 大 128 px。
+- **会动**：眨眼、张嘴、摇头 / 点头 / 跳舞 / 倾斜 / 转圈；立体档另有星光特效。
+- 详见 [docs/pet-system.md](docs/pet-system.md)。
+
+---
+
 - **PWA**：通过 `manifest.json` + `service-worker.js` 提供可安装、离线可用能力——可"安装"到桌面/手机主屏，离线时核心功能仍可用（数据本地化）。
 
 ---
@@ -73,6 +90,7 @@
 │  ├─ 数据层   (localStorage, 前缀 wb_agent_)     │
 │  ├─ AI 层    (chatOnce + function-calling 工具) │
 │  ├─ Agent 引擎 (记忆/目标/跨场景，注入上下文+放宽循环) │
+│  ├─ 萌宠层   (9 只角色·立绘·标定·双风格·动作特效) │
 │  └─ 交互层   (命令面板 / 快捷键 / Toast / 联动)  │
 └───────────────────┬─────────────────────────┘
                     │ window.electronAPI（仅桌面端存在）
@@ -137,7 +155,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 ## 七、数据安全与已知限制
 
 - **数据归属**：全部存于浏览器 `localStorage`（键前缀 `wb_agent_`），刷新 / 关闭不丢；但**换浏览器、清缓存、移动 HTML 文件**（尤其是 `file://` 形态）可能导致数据不跟随。需要稳定数据请用本地服务模式或 Electron exe（同源持久）。
-- **隐私边界**：部署/分享只涉及文件本身；数据在用户本机，不在服务器。不要在工作台里预填真实敏感信息后再把文件发给他人。
+- **隐私边界**：部署/分享只涉及文件本身；数据在用户本机，不在服务器。不要在工坊里预填真实敏感信息后再把文件发给他人。
 - **AI 工具**：调用真实改写同一份 localStorage，AI 操作与手动操作等价；工具定位任务靠标题关键词，重名时取第一条。
 - **无账号体系**：靠导出 / 导入迁移数据（单人使用场景）。
 
@@ -149,9 +167,53 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 > **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.6.4 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
-## 相关文件
+## 九、相关文件
 
-- `agent-workbench.html` — 工作台本体（核心交付物）
-- `启动Agent工作台.bat` — Edge 应用模式启动器
+- `agent-workbench.html` — 工坊本体（核心交付物）
+- `启动Agent工坊.bat` — Edge 应用模式启动器
 - `启动本地服务.bat` — 本地服务模式启动器（解决 AI 跨域）
 - `electron/` — 桌面封装（见 [electron/README.md](electron/README.md)）
+
+---
+
+## 十、文档索引
+
+| 文档 | 内容 |
+|---|---|
+| [docs/architecture-layers.md](docs/architecture-layers.md) | 单文件架构分层契约（改结构前必读） |
+| [docs/pet-system.md](docs/pet-system.md) | 萌宠系统：角色 / 立绘管线 / 五官标定 / 双风格 / 加新角色 |
+| [docs/ai-tools.md](docs/ai-tools.md) | AI 工具（function-calling）接口与 Schema |
+| [docs/ui-standards.md](docs/ui-standards.md) | UI 标准：标题栏 / 顶栏 / 卡片 / 断点 |
+| [docs/design-ui-guidelines.md](docs/design-ui-guidelines.md) | UI 设计规范：分层 / 模态 / 表单 / 动效 / 空态 |
+| [docs/product-scope.md](docs/product-scope.md) | 产品边界与已移除功能清单（防"死 UI 回潮"） |
+| [docs/半成品功能完善路线图.md](docs/半成品功能完善路线图.md) | 半成品处置与收尾计划 |
+| [docs/项目诊断报告-2026-08-17.md](docs/项目诊断报告-2026-08-17.md) | 历史诊断（病因与整改依据） |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 开发环境 / 命令 / 提交与测试规范 |
+| [CHANGELOG.md](CHANGELOG.md) | 变更记录 |
+
+---
+
+## 十一、开发与发布
+
+**唯一真相源是 `agent-workbench.html`**：所有功能直接演进于该 HTML，不再有 `src/` → HTML 的字节拼接。
+
+```bash
+npm ci
+npm run build:check     # 版本一致性 + 真相源完整性门禁（提交前必跑）
+npm test                # vitest 单测
+npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod.js
+```
+
+**版本号四处必须一致**（`build:check` 会校验，不一致直接失败）：
+
+| 位置 | 字段 |
+|---|---|
+| `agent-workbench.html` | `const VERSION` |
+| `package.json` | `version` |
+| `electron/package.json` | `version` |
+| `manifest.json` | `version` |
+
+发版请用 `npm run release <版本号>`（自动同步四处 + 锁文件根字段 + CHANGELOG）。
+部署：`.github/workflows/deploy.yml` 在 push 到 `main` 时自动执行 `build:prod` 并发布到 GitHub Pages；`.github/workflows/ci.yml` 跑测试 / 门禁 / lint。
+
+> **改完主文件的自检清单**：`npm run build:check` 通过 → 页面无控制台报错 → PWA 资源（manifest 图标等）无 404。

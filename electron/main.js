@@ -115,7 +115,7 @@ function createWindow(){
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    title: "Agent 工作台",
+    title: "Agent 工坊",
     backgroundColor: "#f3f3f3",
     titleBarStyle: isMac ? "hiddenInset" : "default",
     icon: makeTrayIcon(),
@@ -143,9 +143,9 @@ function buildAppMenu(){
 
   if (isMac){
     template.push({
-      label: app.name || "Agent 工作台",
+      label: app.name || "Agent 工坊",
       submenu: [
-        { role: "about", label: "关于 Agent 工作台" },
+        { role: "about", label: "关于 Agent 工坊" },
         { type: "separator" },
         { role: "services", label: "服务" },
         { type: "separator" },
@@ -203,7 +203,7 @@ function applyAppMenu(){
 
 function createTray(){
   tray = new Tray(makeTrayIcon());
-  tray.setToolTip("Agent 工作台");
+  tray.setToolTip("Agent 工坊");
   const menu = Menu.buildFromTemplate([
     { label: "显示窗口", click: () => { if (win){ win.show(); win.focus(); } } },
     { label: "隐藏窗口", click: () => { if (win) win.hide(); } },

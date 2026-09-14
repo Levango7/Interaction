@@ -1,7 +1,7 @@
 {
   "name": "agent-workbench",
   "version": "3.6.4",
-  "description": "Windows 套壳 Agent 工作台（Electron 封装，含系统托盘与开机自启）",
+  "description": "Windows 套壳 Agent 工坊（Electron 封装，含系统托盘与开机自启）",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -16,8 +16,8 @@
   },
   "build": {
     "appId": "com.agent.workbench",
-    "productName": "Agent 工作台",
-    "artifactName": "Agent工作台-${version}-portable.exe",
+    "productName": "Agent 工坊",
+    "artifactName": "Agent工坊-${version}-portable.exe",
     "files": [
       "main.js",
       "preload.js",

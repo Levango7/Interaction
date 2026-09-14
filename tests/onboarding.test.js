@@ -44,7 +44,7 @@ describe("今日仪表盘 + Onboarding", () => {
     const modal = win.document.querySelector(".onboard-modal");
     expect(modal).toBeTruthy();
     // 第 1 步应包含欢迎标题
-    expect(modal.textContent).toContain("欢迎使用 Agent 工作台");
+    expect(modal.textContent).toContain("欢迎使用 Agent 工坊");
   });
 
   it("onboarding 完成后标记 onboarded", () => {
