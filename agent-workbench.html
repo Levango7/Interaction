@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#111118">
-<meta name="description" content="Agent 工坊 — 多场景任务 / 记录 / AI 助手的本地优先工作台（PWA，离线可用）">
+<meta name="description" content="Agent 工坊 — 多场景任务 / 记录 / AI 助手的本地优先工坊（PWA，离线可用）">
 <meta name="author" content="Agent Workshop">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4996,7 +4996,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <p class="set-desc" data-i18n="about.desc">使用 AI 功能前，请先了解以下说明。</p>
       </div>
     </header>
-    <p class="set-tip" data-i18n="about.tip">启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
+    <p class="set-tip" data-i18n="about.tip">启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工坊数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
     <!-- v3.1.2 B-档：关于卡补版本号 + 快捷键帮助入口（此前版本只在抽屉尾栏、快捷键只能按 ? 唤起，用户找不到） -->
     <p class="set-tip u-fs-2xs u-mt-3" id="aboutVersion"></p>
     <button type="button" class="addbtn sm u-w-full u-mt-2" id="btnOpenShortcutHelp" data-sc="accent" data-i18n="about.shortcutBtn">快捷键帮助</button>
@@ -6895,7 +6895,7 @@ const SCENARIOS = {
     record:{ label:t("record.code.label", "代码片段"),
       // v3.1.2 A-档：lang 由自由文本改 select（"js/JS/JavaScript"被统计成 3 种语言的分裂源）+ 补 project 归属字段
       fields:[{k:"lang",label:t("field.lang", "语言"),type:"select",options:["JavaScript","TypeScript","Python","Java","Go","Rust","C/C++","SQL","HTML/CSS","Shell",t("option.other","其他")]},
-        {k:"project",label:t("field.project", "项目"),type:"text",placeholder:"如 工作台重构 / 个人的小站"},
+        {k:"project",label:t("field.project", "项目"),type:"text",placeholder:"如 工坊重构 / 个人的小站"},
         {k:"title",label:t("field.title", "标题"),type:"text"},{k:"code",label:t("field.code", "代码"),type:"textarea"}] } },
 
   life:{ name:t("scenario.life", "生活"), color:"#7c5cbf",
@@ -14515,7 +14515,7 @@ function renderHelp(){
             <li data-i18n="help.aiCmd4">「完成任务 xxx」→ AI 调用 complete_task 工具</li>
             <li data-i18n="help.aiCmd5">开启 Agent 模式后还可「记住：我喜欢简洁回复」「帮我规划：本周清理办公待办」等多步任务</li>
           </ul>
-          <p data-i18n="help.aiTools">AI 可以调用多种工具管理你的工作台数据（含 Agent 记忆/目标工具）。在设置中配置 API Key 后启用。</p>
+          <p data-i18n="help.aiTools">AI 可以调用多种工具管理你的工坊数据（含 Agent 记忆/目标工具）。在设置中配置 API Key 后启用。</p>
         `)}
         ${helpSection("sm2", t("help.sm2", "SM-2 间隔复习"), `
           <p data-i18n="help.reviewIntro">学习场景的资料支持间隔复习（SM-2 算法）。复习时选 4 个评分：</p>
@@ -14537,7 +14537,7 @@ function renderHelp(){
           </table>
         `)}
         ${helpSection("perf", t("help.perf", "性能优化"), `
-          <p data-i18n="help.perfIntro">本工作台在渲染与存储层做了多项优化，保证大量任务下依然流畅：</p>
+          <p data-i18n="help.perfIntro">本工坊在渲染与存储层做了多项优化，保证大量任务下依然流畅：</p>
           <ul>
             <li><b data-i18n="help.perfRaf">RAF 批量更新</b>：高频操作（拖拽、连续勾选、滚动统计）自动合并到同一帧执行，避免布局抖动。</li>
             <li><b data-i18n="help.perfLazy">懒初始化</b>：重模块（图表 / 知识库）在浏览器空闲时初始化，不阻塞首屏渲染。</li>
@@ -14550,7 +14550,7 @@ function renderHelp(){
           <p><b data-i18n="help.troubleTitle">遇到问题先看这里</b>，覆盖最常见的「数据丢了」「功能没反应」「版本没生效」：</p>
           <ul>
             <li><b data-i18n="help.troubleDataLoss">数据意外丢失/异常</b>：① 打开设置抽屉「数据管理」→ 点「从自动备份恢复」还原最近一次操作前的快照（每次写操作前自动拍的，最近一次成功快照）；② 仍异常时「本地库恢复」（从 IDB 全量镜像回滚）；③ 仍异常时用「导入恢复」上传此前导出的 JSON 备份文件</li>
-            <li><b data-i18n="help.troubleCors">AI 报 CORS/网络错误</b>：浏览器直接调第三方 API 受 CORS 限制时——用 <code>启动本地服务.bat</code>（<code>http://localhost:8123</code>）打开工作台而非 <code>file://</code>；Electron 版无此限制</li>
+            <li><b data-i18n="help.troubleCors">AI 报 CORS/网络错误</b>：浏览器直接调第三方 API 受 CORS 限制时——用 <code>启动本地服务.bat</code>（<code>http://localhost:8123</code>）打开工坊而非 <code>file://</code>；Electron 版无此限制</li>
             <li><b data-i18n="help.troublePwa">新版 PWA 没生效/看到旧版</b>：清浏览器缓存 + 强制刷新（<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> / Mac: <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>）；页脚形如 <code>v3.1.x · b{BUILD_TAG}</code> 即当前生效版本</li>
             <li><b data-i18n="help.troubleMigrate">换浏览器/换设备/移动 HTML 文件数据没跟过来</b>：数据存于浏览器 localStorage 不跨浏览器/设备迁移——需在原设备「数据管理 → 导出 JSON」拿到备份，再到新环境「导入恢复」</li>
             <li><b data-i18n="help.troubleWasm">SQL Playground 报错「WASM 加载失败」</b>：首次使用需联网从 CDN 加载 sql.js（~1MB），断网时无法使用，其他功能不受影响</li>
@@ -20218,14 +20218,14 @@ async function generateDailyReport(){
   }
   try{
     const data = collectDailyReportData();
-    const prompt = t("ai.reportPrompt1","你是工作台助手。根据以下用户数据，生成「每日报告」：\\n") +
+    const prompt = t("ai.reportPrompt1","你是工坊助手。根据以下用户数据，生成「每日报告」：\\n") +
       t("ai.reportPrompt2","1. 昨日总结：完成了哪些任务（列出标题，无则说明「昨日无完成任务」）\\n") +
       t("ai.reportPrompt3","2. 今日待办：今日到期的任务 + 逾期未完成的任务（按优先级排序）\\n") +
       t("ai.reportPrompt4","3. 打卡状态：各场景的连续打卡天数，给出保持/打破建议\\n") +
       t("ai.reportPrompt5","4. 今日建议：基于数据给出 2-3 条具体可执行的建议\\n\\n") +
       t("ai.reportPrompt6","用 Markdown 格式返回，使用 ##/### 标题分节。数据：\\n") + JSON.stringify(data, null, 2);
     const messages = [
-      { role: "system", content: t("ai.reportShortPrompt","你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。") },
+      { role: "system", content: t("ai.reportShortPrompt","你是工坊助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。") },
       { role: "user", content: prompt }
     ];
     const j = await chatOnce(messages);
@@ -20805,14 +20805,14 @@ function effectiveSysprompt(sc){
 function chatSysPrompt(userText){
   const cfg = getCfg();
   // v1.15：话术与能力对齐——cfg.agent=false 时不引导记忆/编排（对应工具也已被 effectiveTools 剔除）
-  const base = effectiveSysprompt(active) || t("ai.sysPrompt","你是一个全能 AI 助手，可调用工具管理任务与工作台数据。");
+  const base = effectiveSysprompt(active) || t("ai.sysPrompt","你是一个全能 AI 助手，可调用工具管理任务与工坊数据。");
   if(cfg && cfg.agent === false){
     return base
-      +t("ai.sysPromptTool","\\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。")
+      +t("ai.sysPromptTool","\\n你可以调用工具来创建、修改、删除任务，查询与搜索工坊数据，需要时直接调用。")
       +agentContextPrompt(userText);
   }
   return base
-    +t("ai.sysPromptTool","\\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。")
+    +t("ai.sysPromptTool","\\n你可以调用工具来创建、修改、删除任务，查询与搜索工坊数据，需要时直接调用。")
     +t("ai.sysPromptRemember","用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。")
     +agentContextPrompt(userText);
 }
@@ -27270,7 +27270,7 @@ const MESSAGES = {
     "integration.desc": "连接外部服务，同步任务、笔记和日程。Key 仅存本机浏览器。",
     "about.title": "关于与兼容说明",
     "about.desc": "使用 AI 功能前，请先了解以下说明。",
-    "about.tip": "启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工作台数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。",
+    "about.tip": "启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工坊数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。",
     "about.shortcutBtn": "快捷键帮助",
     "settings.saveBtn": "保存设置",
     "export.preview.title": "导出预览",
@@ -28301,13 +28301,13 @@ const MESSAGES = {
     "ai.remembered": "好的，已记住：「",
     "ai.rememberedScene": "」（场景：",
     "ai.rememberedSuffix": "，后续对话会自动带上）",
-    "ai.reportPrompt1": "你是工作台助手。根据以下用户数据，生成「每日报告」：\\n",
+    "ai.reportPrompt1": "你是工坊助手。根据以下用户数据，生成「每日报告」：\\n",
     "ai.reportPrompt2": "1. 昨日总结：完成了哪些任务（列出标题，无则说明「昨日无完成任务」）\\n",
     "ai.reportPrompt3": "2. 今日待办：今日到期的任务 + 逾期未完成的任务（按优先级排序）\\n",
     "ai.reportPrompt4": "3. 打卡状态：各场景的连续打卡天数，给出保持/打破建议\\n",
     "ai.reportPrompt5": "4. 今日建议：基于数据给出 2-3 条具体可执行的建议\\n\\n",
     "ai.reportPrompt6": "用 Markdown 格式返回，使用 ##/### 标题分节。数据：\\n",
-    "ai.reportShortPrompt": "你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。",
+    "ai.reportShortPrompt": "你是工坊助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。",
     "ai.splitAddHint": "\\n发送「添加子任务」可将它们加入任务列表。",
     "ai.splitDone": "已将「",
     "ai.splitDoneMid": "」拆解为 ",
@@ -28319,9 +28319,9 @@ const MESSAGES = {
     "ai.splittingTaskSuffix": "」为子任务…",
     "ai.stopGenerate": "停止生成",
     "ai.switchedProfile": "已切换到「",
-    "ai.sysPrompt": "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。",
+    "ai.sysPrompt": "你是一个全能 AI 助手，可调用工具管理任务与工坊数据。",
     "ai.sysPromptRemember": "用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。",
-    "ai.sysPromptTool": "\\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。",
+    "ai.sysPromptTool": "\\n你可以调用工具来创建、修改、删除任务，查询与搜索工坊数据，需要时直接调用。",
     "ai.taskCreateFail": "创建任务失败：",
     "ai.taskCreated": "已为你创建任务：「",
     "ai.taskCreatedDue": "，截止：",
@@ -29675,10 +29675,10 @@ const MESSAGES = {
     "help.aiCmd3": "「搜索 跑步」→ AI 调用 search 工具",
     "help.aiCmd4": "「完成任务 xxx」→ AI 调用 complete_task 工具",
     "help.aiCmd5": "开启 Agent 模式后还可「记住：我喜欢简洁回复」「帮我规划：本周清理办公待办」等多步任务",
-    "help.aiTools": "AI 可以调用多种工具管理你的工作台数据（含 Agent 记忆/目标工具）。在设置中配置 API Key 后启用。",
+    "help.aiTools": "AI 可以调用多种工具管理你的工坊数据（含 Agent 记忆/目标工具）。在设置中配置 API Key 后启用。",
     "help.reviewIntro": "学习场景的资料支持间隔复习（SM-2 算法）。复习时选 4 个评分：",
     "help.reviewAuto": "系统自动计算下次复习日期和 ease factor，今日待复习的会在学习场景高亮。",
-    "help.perfIntro": "本工作台在渲染与存储层做了多项优化，保证大量任务下依然流畅：",
+    "help.perfIntro": "本工坊在渲染与存储层做了多项优化，保证大量任务下依然流畅：",
     "help.perfNote": "上述优化对用户透明（自动备份为防抖快照；频率固定、不可调）。",
     "help.kbdScenes": "切换场景（办公/数据/设计/学习/编程/生活）",
     "help.kbdCmd": "命令面板（搜索任务、切换场景）",
@@ -31693,13 +31693,13 @@ const MESSAGES = {
     "ai.remembered": "好的，已记住：「",
     "ai.rememberedScene": "」（场景：",
     "ai.rememberedSuffix": "，后续对话会自动带上）",
-    "ai.reportPrompt1": "你是工作台助手。根据以下用户数据，生成「每日报告」：\\n",
+    "ai.reportPrompt1": "你是工坊助手。根据以下用户数据，生成「每日报告」：\\n",
     "ai.reportPrompt2": "1. 昨日总结：完成了哪些任务（列出标题，无则说明「昨日无完成任务」）\\n",
     "ai.reportPrompt3": "2. 今日待办：今日到期的任务 + 逾期未完成的任务（按优先级排序）\\n",
     "ai.reportPrompt4": "3. 打卡状态：各场景的连续打卡天数，给出保持/打破建议\\n",
     "ai.reportPrompt5": "4. 今日建议：基于数据给出 2-3 条具体可执行的建议\\n\\n",
     "ai.reportPrompt6": "用 Markdown 格式返回，使用 ##/### 标题分节。数据：\\n",
-    "ai.reportShortPrompt": "你是工作台助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。",
+    "ai.reportShortPrompt": "你是工坊助手，生成简洁实用的每日报告。用 Markdown 格式返回，包含昨日总结、今日待办、打卡记录、今日建议四个部分。",
     "ai.splitAddHint": "\\n发送「添加子任务」可将它们加入任务列表。",
     "ai.splitDone": "已将「",
     "ai.splitDoneMid": "」拆解为 ",
@@ -31711,9 +31711,9 @@ const MESSAGES = {
     "ai.splittingTaskSuffix": "」为子任务…",
     "ai.stopGenerate": "Stop generating",
     "ai.switchedProfile": "已切换到「",
-    "ai.sysPrompt": "你是一个全能 AI 助手，可调用工具管理任务与工作台数据。",
+    "ai.sysPrompt": "你是一个全能 AI 助手，可调用工具管理任务与工坊数据。",
     "ai.sysPromptRemember": "用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。",
-    "ai.sysPromptTool": "\\n你可以调用工具来创建、修改、删除任务，查询与搜索工作台数据，需要时直接调用。",
+    "ai.sysPromptTool": "\\n你可以调用工具来创建、修改、删除任务，查询与搜索工坊数据，需要时直接调用。",
     "ai.taskCreateFail": "创建任务失败：",
     "ai.taskCreated": "已为你创建任务：「",
     "ai.taskCreatedDue": "，截止：",
