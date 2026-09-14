@@ -26416,7 +26416,7 @@ if (typeof window !== "undefined") {
  *   · localhost / 127.0.0.1（vitest/jsdom 与本地服务模式）
  *   · 任意环境显式追加 ?__test=1（开发者自查）
  */
-const __TEST_GATE__ = false; /* [prod build] test hooks disabled */
+var __TEST_GATE__ = false; /* [prod build] test hooks disabled */
 if (typeof window !== "undefined" && __TEST_GATE__) {
   window.__test = {
     execTool, migrate, runLinks, completeTask,
