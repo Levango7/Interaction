@@ -1,6 +1,6 @@
 /* eslint-env serviceworker */
 /**
- * Service Worker for Agent 工作台
+ * Service Worker for Agent 工坊
  * 分层缓存策略：
  *   - 同源静态资源（.html/.json/.svg/.js/.css）：cache-first
  *   - 跨域 API 请求（http/https 且非同源）：stale-while-revalidate
@@ -14,7 +14,7 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
-var CACHE_VERSION = "v1.15.0-20260818a";
+var CACHE_VERSION = "v3.6.4-20260915001"; /* [prod build] auto-bumped */
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -36,7 +36,14 @@ var PRECACHE_URLS = [
 
 // 同源静态资源扩展名（cache-first 命中范围）
 // S7: .json 不在此列——manifest.json 等配置数据需及时更新，走 network-first 策略
-var STATIC_EXT = [".html", ".svg", ".js", ".css"];
+// v3.6.4: .html 也不在此列——HTML 是唯一会"改了不生效"的资产，两个原因：
+//   ① 版本哨兵（agent-workbench.html 内 versionSentinel）用
+//      fetch('./agent-workbench.html', {cache:'no-store'}) 探测线上版本，但 cache-first
+//      会让这个请求照样命中旧缓存 → 哨兵拿到的"线上 BUILD_TAG"恒等于本页 BUILD_TAG，
+//      于是**哨兵从未触发过**（no-store 只能绕 HTTP 缓存，绕不过 SW 拦截）。
+//   ② 一旦用户卡在早于 b20260912b 的旧版 HTML（那时还没有哨兵），就永久死锁、再也拿不到新版。
+//   移出后 .html 落入 (3) network-first 分支：在线必取最新，离线回退缓存。
+var STATIC_EXT = [".svg", ".js", ".css"];
 
 /**
  * 判断给定 URL 是否为同源静态资源（按扩展名匹配）。
@@ -173,7 +180,10 @@ self.addEventListener("install", function (event) {
         // 避免"空离线壳"静默上线（旧实现 addAll 失败仅 console.warn 后仍 skipWaiting 安装）。
         var CRITICAL_PRECACHE = { "./": true, "./agent-workbench.html": true };
         return Promise.all(PRECACHE_URLS.map(function (u) {
-          return cache.add(u).catch(function (e) {
+          // v3.6.4：用 Request{cache:'reload'} 强制绕过 HTTP 缓存。
+          // 否则 GitHub Pages 的缓存头可能让 precache 拿到**旧的** agent-workbench.html，
+          // 造成"SW 明明更新了、CACHE_NAME 也换了，但新缓存里装的还是旧页面"。
+          return cache.add(new Request(u, { cache: "reload" })).catch(function (e) {
             if (CRITICAL_PRECACHE[u]) throw e;
             console.warn("[SW] precache 非关键资源失败（跳过）:", u, e);
           });
@@ -224,19 +234,40 @@ self.addEventListener("fetch", function (event) {
 
   var origin = self.location.origin;
 
-  // S4: 导航请求专门处理——离线时回退到预缓存的首页，避免白屏
+  // S4 + v3.6.4 根治：导航请求改 **network-first**（离线回退预缓存首页）。
+  //   此前是 cache-first（`if (cached) return cached;`）——HTML 一旦入缓存就**永不联网**，
+  //   用户会长期停留在旧版页面。这正是"改了不生效"的根因：本次「主题下拉少两项」事故即由此产生
+  //   （线上 HTML 早已含 10 个主题，用户浏览器里仍是只有 8 项的旧页面）。
+  //   现在：在线必取最新并刷新缓存；离线回退到请求本身 → 预缓存首页 → 主文档，保住离线可用性。
   if (req.mode === "navigate") {
     event.respondWith(
-      caches.match(req).then(function (cached) {
-        if (cached) return cached;
-        return fetch(req).catch(function () {
-          // 离线时回退到预缓存的首页
-          return caches.match("./").then(function (fallback) {
-            if (fallback) return fallback;
-            return caches.match("./agent-workbench.html").then(function (fb2) {
-              return fb2 || new Response("", { status: 504, statusText: "Offline" });
-            });
-          });
+      fetch(req).then(function (resp) {
+        if (resp && resp.status === 200 && resp.type === "basic") {
+          var copy = resp.clone();
+          // v3.6.4：以「去掉查询参数的规范 URL」作为缓存键。
+          // 入口 index.html 会以 ?t=时间戳 跳转来强制破缓存；若原样入缓存，每条时间戳都会
+          // 新增一个条目，把缓存挤爆（MAX_CACHE_ENTRIES=50）。规范化后主文档只占一个稳定条目。
+          var key;
+          try { var cu = new URL(req.url); cu.search = ""; key = cu.href; } catch (e) { key = req; }
+          caches.open(CACHE_NAME).then(function (cache) {
+            _putWithTimestamp(cache, key, copy).then(function () {
+              trimCacheEntries(cache).catch(function () {});
+            }).catch(function () {});
+          }).catch(function () {});
+        }
+        return resp;
+      }).catch(function () {
+        // 离线：逐级回退（请求本身 → 去参数规范 URL → 预缓存首页 → 主文档）
+        var key;
+        try { var cu2 = new URL(req.url); cu2.search = ""; key = cu2.href; } catch (e) { key = req; }
+        return caches.match(req).then(function (c) {
+          return c || caches.match(key);
+        }).then(function (r) {
+          return r || caches.match("./");
+        }).then(function (r) {
+          return r || caches.match("./agent-workbench.html");
+        }).then(function (r) {
+          return r || new Response("", { status: 504, statusText: "Offline" });
         });
       })
     );
@@ -448,7 +479,7 @@ function _showNotification(title, opts) {
  * @returns {{title:string, body:string, tag?:string}}
  */
 function _parsePushPayload(event) {
-  var title = "Agent 工作台";
+  var title = "Agent 工坊";
   var body = "你有一条新通知";
   var tag = "wb-push";
   try {

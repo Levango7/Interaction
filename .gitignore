@@ -56,3 +56,6 @@ lh-report.json
 
 # Archived research documents
 docs/archive/
+
+# 本地会话产物
+.playwright-mcp/
