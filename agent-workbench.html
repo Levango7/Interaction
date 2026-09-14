@@ -3706,7 +3706,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   filter:
     drop-shadow(1.1px 1.4px 0 rgba(38,31,48,.95))
     drop-shadow(2.3px 3.0px 0 rgba(32,26,42,.95))
-    drop-shadow(3.6px 4.6px 0 rgba(26,21,35,.9))
+    drop-shadow(3.6px 4.6px 0 rgba(28,23,37,.82))
     drop-shadow(7px 10px 8px rgba(0,0,0,.30))
     saturate(1.06) contrast(1.03);
 }
@@ -3714,8 +3714,8 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .pet-3d-shade,.pet-3d-sheen{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .pet-3d-shade{
   mix-blend-mode:soft-light;
-  -webkit-mask-image:linear-gradient(133deg, rgba(255,255,255,1) 4%, rgba(255,255,255,.55) 32%, rgba(255,255,255,.06) 50%, rgba(0,0,0,.72) 76%, rgba(0,0,0,1) 100%);
-          mask-image:linear-gradient(133deg, rgba(255,255,255,1) 4%, rgba(255,255,255,.55) 32%, rgba(255,255,255,.06) 50%, rgba(0,0,0,.72) 76%, rgba(0,0,0,1) 100%);
+  -webkit-mask-image:linear-gradient(133deg, rgba(255,255,255,.92) 4%, rgba(255,255,255,.45) 34%, rgba(255,255,255,.05) 52%, rgba(0,0,0,.42) 78%, rgba(0,0,0,.78) 100%);
+          mask-image:linear-gradient(133deg, rgba(255,255,255,.92) 4%, rgba(255,255,255,.45) 34%, rgba(255,255,255,.05) 52%, rgba(0,0,0,.42) 78%, rgba(0,0,0,.78) 100%);
 }
 /* 镜面扫光：一条横掠的高光带（同样用立绘当遮罩，screen 叠加），像手办表面反光 */
 .pet-3d-sheen{
@@ -5336,7 +5336,7 @@ const PREFIX = "wb_agent_";
 const VERSION = "3.6.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260914h";
+const BUILD_TAG = "20260914i";
 
 
 
