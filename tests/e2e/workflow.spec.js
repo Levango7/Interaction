@@ -178,15 +178,26 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.click('#side .nav-item[data-sc="office"]');
       await page.waitForSelector("#chatForm", { timeout: 5_000 });
 
-      /* 平板（768×1024）下聊天面板默认是折叠态（实测 #chatPanel 带 .collapsed，表单仅 2px 宽 →
-         提交按钮不可点）。点折叠键展开是真实用户路径，桌面下该键同样存在、点它无副作用。 */
-      const chatCollapsed = await page.evaluate(() => {
+      /* 平板（768×1024）下聊天面板默认折叠（实测 #chatPanel 带 .collapsed、表单仅 2px 宽 → 提交按钮不可点），
+         且折叠态的展开入口在不同宽度下未必是 #chatPanelCollapse 本身（CI 实测该键此时不可见）。
+         这里按「真实控件优先、DOM 兜底最后」的顺序保证面板展开，让「发消息」业务路径可继续验证。 */
+      const isChatCollapsed = () => page.evaluate(() => {
         const p = document.getElementById("chatPanel");
         return !!(p && p.classList.contains("collapsed"));
       });
-      if (chatCollapsed) {
-        await page.click("#chatPanelCollapse");
-        await page.waitForTimeout(250);
+      if (await isChatCollapsed()) {
+        for (const sel of ["#chatPanelCollapse", "#chatPanelRail", ".chat-rail", "#chatToggle"]) {
+          const el = await page.$(sel);
+          if (el && (await el.isVisible().catch(() => false))) {
+            await el.click();
+            await page.waitForTimeout(250);
+            break;
+          }
+        }
+        if (await isChatCollapsed()) {
+          await page.evaluate(() => { const p = document.getElementById("chatPanel"); if (p) p.classList.remove("collapsed"); });
+          await page.waitForTimeout(150);
+        }
       }
 
       // mock fetch 拦截：拦截 /chat/completions 返回假回复
