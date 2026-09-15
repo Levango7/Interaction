@@ -98,8 +98,15 @@ if (EXTRACT) {
     const inHtml = Object.keys(readArt());
     const onDisk = files.map(f => f.replace(/\.png$/, ''));
     const missing = onDisk.filter(k => !inHtml.includes(k));
-    console.log(`[pet-art] check：assets ${onDisk.length} 张，HTML 已注入 ${inHtml.length} 张${missing.length ? '，缺：' + missing.join(',') : '，一致 ✓'}`);
-    if (missing.length) process.exit(1);
+    if (!inHtml.length) {
+      /* 源码态（未注入）是仓库里的正常状态：assets 齐全即可，不算不一致 */
+      console.log(`[pet-art] check：源码态 ✓（HTML 未注入，assets ${onDisk.length} 张齐全；构建/测试会自动回注）`);
+    } else if (missing.length) {
+      console.log(`[pet-art] check：✗ 部分注入 —— assets ${onDisk.length} 张，HTML 仅 ${inHtml.length} 张，缺：${missing.join(',')}`);
+      process.exit(1);
+    } else {
+      console.log(`[pet-art] check：已注入态 ✓（assets ${onDisk.length} 张 = HTML ${inHtml.length} 张，一致）`);
+    }
   } else {
     const injected = `const _PET_ART = {${BEGIN}${parts.join(',')}${END}};`;
     const before = Buffer.byteLength(html);
