@@ -9,7 +9,7 @@ describe("测试基建自检", () => {
     expect(typeof win.__test.execTool).toBe("function");
     expect(typeof win.__test.migrate).toBe("function");
     expect(Array.isArray(win.__test.ORDER)).toBe(true);
-    expect(win.__test.ORDER.length).toBe(4);
+    expect(win.__test.ORDER.length).toBe(7);
   });
 
   it("window.__test 暴露关键函数（execTool / migrate / getTasks / getCfg / seed）", () => {
@@ -22,22 +22,22 @@ describe("测试基建自检", () => {
     expect(typeof __test.sm2).toBe("function");
   });
 
-  it("SCENARIOS 包含 4 个场景：office / code / study / life", () => {
+  it("SCENARIOS 包含 8 个场景（7 内置 + 1 隐藏预置 finance）", () => {
     const { __test } = loadApp();
     const { SCENARIOS } = __test;
     expect(SCENARIOS).toBeDefined();
-    expect(Object.keys(SCENARIOS).sort()).toEqual(["code", "life", "office", "study"]);
-    for (const k of ["office", "code", "study", "life"]) {
+    expect(Object.keys(SCENARIOS).sort()).toEqual(["code", "data", "design", "finance", "health", "life", "office", "study"]);
+    for (const k of ["office", "design", "study", "data", "code", "life", "health"]) {
       expect(SCENARIOS[k]).toBeDefined();
       expect(typeof SCENARIOS[k].name).toBe("string");
       expect(typeof SCENARIOS[k].sysprompt).toBe("string");
     }
   });
 
-  it("ORDER 长度为 4 且与 SCENARIOS 键一致", () => {
+  it("ORDER 长度为 7（内置场景顺序）且键均在 SCENARIOS 中", () => {
     const { __test } = loadApp();
-    expect(__test.ORDER).toHaveLength(4);
-    expect(__test.ORDER).toEqual(["office", "code", "study", "life"]);
+    expect(__test.ORDER).toHaveLength(7);
+    expect(__test.ORDER).toEqual(["office", "data", "design", "study", "code", "life", "health"]);
     __test.ORDER.forEach(k => {
       expect(__test.SCENARIOS[k]).toBeDefined();
     });

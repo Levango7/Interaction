@@ -105,12 +105,12 @@ describe("T5.3 浏览器兼容 · Notification 不存在 fallback toast", () => 
   it("a2: notifySystem 无 Notification 时 toast 渲染到 #toasts", () => {
     const win = loadApp();
     const { notifySystem } = win.__test;
+    // #toasts 为惰性创建（首条 toast 时才由 toast() 挂到 body），故此处断言「创建前不存在 → 触发后存在且有内容」
+    expect(win.document.getElementById("toasts")).toBeNull();
+    notifySystem("兼容测试标题", "兼容测试内容");
     const toastsEl = win.document.getElementById("toasts");
     expect(toastsEl).toBeTruthy();
-    const beforeCount = toastsEl.children.length;
-    notifySystem("兼容测试标题", "兼容测试内容");
-    // toast 应被追加到 #toasts
-    expect(toastsEl.children.length).toBeGreaterThan(beforeCount);
+    expect(toastsEl.children.length).toBeGreaterThan(0);
     const lastToast = toastsEl.children[toastsEl.children.length - 1];
     expect(lastToast.textContent).toContain("兼容测试标题");
   });

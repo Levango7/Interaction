@@ -218,8 +218,9 @@ describe("T4.2 骨架屏 + 空状态", () => {
     it("统计无数据时 renderStats 使用 no-stats 空状态", () => {
       const doc = win.document;
       __test.setTasks([]);
-      __test.setActive("stats");
-      __test.render();
+      // 直接调用 renderStats() 验证其 no-stats 空状态分支（该函数渲染到 #main；
+      // 走路由的等价写法是 setActive("stats") + render()，见 stats.test.js R5）。
+      __test.renderStats();
       const main = doc.getElementById("main");
       expect(main.innerHTML).toContain("empty-state");
       expect(main.innerHTML).toContain("暂无数据");

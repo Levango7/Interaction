@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,9 +50,39 @@ describe("P0-9 硬编码颜色门禁", () => {
 
   it("白名单内的场景色 / 品牌渐变仍允许硬编码（不被误杀）", () => {
     const src = fs.readFileSync(HTML, "utf8");
-    // SCENARIOS 场景语义色
-    expect(src).toMatch(/office:\{\s*name:"办公",\s*color:"#0067c0"/);
-    // 品牌渐变
-    expect(src).toMatch(/linear-gradient\(135deg,#0067c0,#9b4dca\)/);
+    // SCENARIOS 场景语义色（办公主色在 v3.5.2 由 #0067c0 调整为 #0a6cbd）
+    expect(src).toMatch(/office:\{\s*name:t\("scenario\.office",\s*"办公"\),\s*color:"#0a6cbd"/);
+    // 亮色主题的品牌渐变令牌
+    expect(src).toMatch(/--brand-grad:linear-gradient\(135deg,#0070f3,#0050d0\)/);
+  });
+
+  it("门禁精度：DOM id 不误报；var() 回退值与纯黑/白 alpha 不算违规", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lint-colors-"));
+    const probe = path.join(dir, "probe.html");
+    const src = [
+      "<style>",
+      ".a{color:#ccDec}",                                        // 非法 hex 长度（5 位）→ 不是颜色，不应报
+      ".b{background:var(--accent-soft,rgba(10,108,189,.12))}",   // var() 回退值 → 允许
+      ".c{box-shadow:0 1px 2px rgba(0,0,0,.25)}",                 // 纯黑 alpha（阴影）→ 允许
+      ".d{color:#fff}",                                           // 纯白 → 允许
+      ".e{color:#3498db}",                                        // 真正的硬编码 UI 色 → 必须报
+      "</style>"
+    ].join("\n");
+    fs.writeFileSync(probe, src, "utf8");
+    try {
+      let code = 0, out = "";
+      try {
+        out = execFileSync("node", [LINT, probe], { encoding: "utf8" });
+      } catch (e) {
+        code = e.status ?? 1;
+        out = (e.stdout || "") + (e.stderr || "");
+      }
+      // 只应报 .e 一处
+      expect(code, `probe 输出:\n${out}`).toBe(1);
+      expect(out).toContain("发现 1 处");
+      expect(out).not.toContain("#ccDec");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

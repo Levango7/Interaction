@@ -8,13 +8,15 @@ import { TextEncoder, TextDecoder } from "node:util";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HTML_PATH = path.resolve(__dirname, "..", "..", "agent-workbench.html");
 
-export function loadApp() {
+export function loadApp({ storage = {} } = {}) {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const dom = new JSDOM(html, {
     runScripts: "dangerously",
     resources: "usable",
     url: "http://localhost/",
     beforeParse(window) {
+      // 模拟刷新前的持久化状态，必须在应用脚本执行前注入。
+      Object.entries(storage).forEach(([key, value]) => window.localStorage.setItem(key, value));
       // jsdom 不提供 requestAnimationFrame，注入最小 polyfill（生产无影响）
       window.requestAnimationFrame = function (cb) {
         return setTimeout(() => cb(Date.now()), 0);

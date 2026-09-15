@@ -24,11 +24,11 @@
 
 | 层 | 子块数 | 职责 |
 |---|---|---|
-| **Bootstrap** | 4 | 全局常量 / 诊断基础设施 / 配置常量 / 启动序列 / __test 导出 |
+| **Bootstrap** | 5 | 全局常量 / 诊断基础设施 / 配置常量 / 启动序列 / __test 导出 |
 | **Data Layer** | 4 | IDB 持久镜像 / 联动规则与全局状态 / 迁移与初始化 / 读写 |
 | **Crypto Layer** | 1 | AI Key AES-GCM 加密 + Electron 主进程托管路径 |
 | **Chain Layer** | 1 | 习惯链：任务完成联动 / streak / 热力图数据 |
-| **AI Layer** | 3 | 工具调用（execTool+16 工具）/ 对话循环（chatOnce）/ 取消重试控制器 |
+| **AI Layer** | 3 | 工具调用（execTool + 26 工具）/ 对话循环（chatOnce）/ 取消重试控制器 |
 | **Render Layer** | 5 | 小工具 / 概览 / 场景细分 / 场景主区 / 入口 |
 | **UI Layer** | 10 | 主题通知 / Onboarding / 指南 / 场景绑定 / 命令面板 / 每日播报 / 备份统计 / 设置抽屉 / 快捷键 / 全局事件 |
 | **Util Layer** | 2 | Markdown 解析 / 性能优化 |

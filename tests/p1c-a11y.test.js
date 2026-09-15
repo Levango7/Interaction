@@ -48,6 +48,9 @@ describe("P1-c 可访问性", () => {
   });
 
   it("#toasts 为 role=status 且 aria-live=polite（live region）", () => {
+    // #toasts 惰性创建：toast() 首次调用时才 document.createElement 并挂到 body
+    // （见 agent-workbench.html toast()），因此先触发一次 toast 再断言容器语义。
+    win.toast("可访问性测试", "ok");
     const t = doc.getElementById("toasts");
     expect(t, "#toasts 应存在").toBeTruthy();
     expect(t.getAttribute("role")).toBe("status");

@@ -39,12 +39,13 @@ describe("AI 层对齐（v1.14.1）：force 入 schema + add_record.fields 场�
     }
   });
 
-  it("add_record.fields 含 4 个内置场景的 anyOf 子 schema（键随场景）", () => {
+  it("add_record.fields 含内置场景的 anyOf 子 schema（键随场景）", () => {
     const win = freshWin();
     const add = win.__test.TOOLS.find((t) => t.function.name === "add_record").function;
     const fields = add.parameters.properties.fields;
     expect(fields.anyOf, "fields 应有 anyOf 场景子 schema").toBeTruthy();
-    expect(fields.anyOf.length, "内置场景应为 4 个").toBe(4);
+    // 子 schema 由场景表派生，数量随内置场景演进；改为对 ORDER 动态断言，避免每加一个场景就误报
+    expect(fields.anyOf.length, "anyOf 子 schema 数应等于 ORDER 场景数").toBe(win.__test.ORDER.length);
 
     const office = fields.anyOf.find((o) => (o.description || "").includes("办公"));
     expect(office.properties, "办公字段应含 title/who/note").toMatchObject({
@@ -100,10 +101,11 @@ describe("AI 层对齐（v1.14.1）：force 入 schema + add_record.fields 场�
       }
     });
 
-    it("effectiveTools 在 agent 默认（未关闭）时返回全部 16 工具", () => {
+    it("effectiveTools 在 agent 默认（未关闭）时返回全部工具", () => {
       const win = freshWin();
       const tools = win.__test.effectiveTools();
-      expect(tools.length, "agent 开启时应有 16 个工具").toBe(16);
+      // 工具集持续扩充（16 → 26）；断言与 TOOLS 全量对齐，避免写死数量后每次加工具都误报
+      expect(tools.length, "agent 开启时应返回 TOOLS 全量工具").toBe(win.__test.TOOLS.length);
     });
 
     it("chatSysPrompt 在 agent=false 时不引导记忆/编排话术", async () => {

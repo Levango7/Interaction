@@ -105,13 +105,14 @@ describe("T4.1 设计令牌体系", () => {
     expect(src, "应定义 .input").toMatch(/\.input\s*\{/);
   });
 
-  it("组件类使用设计令牌（var(--space-*)/var(--radius-*)/var(--shadow-*)）", () => {
-    // .btn-primary 应引用 --radius-md 与 --space-2/--space-4
+  it("组件类使用设计令牌（var(--space-*)/var(--radius-*)/var(--control-r)）", () => {
+    // .btn-primary 应引用 --control-r（v3.2 起控制元素统一圆角，替代原 --radius-md 散落）
+    // 与 --space-1h/--space-4
     const btnPrimaryMatch = src.match(/\.btn-primary\{[^}]*\}/);
     expect(btnPrimaryMatch, ".btn-primary 块应存在").toBeTruthy();
     const btnPrimary = btnPrimaryMatch[0];
-    expect(btnPrimary).toContain("var(--radius-md)");
-    expect(btnPrimary).toContain("var(--space-2)");
+    expect(btnPrimary).toContain("var(--control-r)");
+    expect(btnPrimary).toContain("var(--space-1h)");
     expect(btnPrimary).toContain("var(--space-4)");
     expect(btnPrimary).toContain("var(--accent)");
     // .input 应引用 --radius-sm 与 --space-2

@@ -127,20 +127,24 @@ describe("T4.3 移动端增强 - 手势支持 + 触摸优化 + 横屏适配", ()
       expect(typeof __test.swipeToScene).toBe("function");
     });
 
-    it("左滑切换到下一个场景（office → code）", () => {
-      expect(__test.swipeToScene("left", "office")).toBe("code");
-      expect(__test.swipeToScene("left", "code")).toBe("study");
-      expect(__test.swipeToScene("left", "study")).toBe("life");
+    it("左滑切换到下一个场景（按 ORDER 顺序）", () => {
+      // 断言改为从 ORDER 推导，避免每次增删场景都要手改期望值
+      const order = __test.ORDER;
+      for (let i = 0; i < order.length - 1; i++) {
+        expect(__test.swipeToScene("left", order[i])).toBe(order[i + 1]);
+      }
     });
 
-    it("右滑切换到上一个场景（code → office）", () => {
-      expect(__test.swipeToScene("right", "code")).toBe("office");
-      expect(__test.swipeToScene("right", "study")).toBe("code");
-      expect(__test.swipeToScene("right", "life")).toBe("study");
+    it("右滑切换到上一个场景（按 ORDER 顺序）", () => {
+      const order = __test.ORDER;
+      for (let i = 1; i < order.length; i++) {
+        expect(__test.swipeToScene("right", order[i])).toBe(order[i - 1]);
+      }
     });
 
-    it("最后一个场景左滑不越界（life → life）", () => {
-      expect(__test.swipeToScene("left", "life")).toBe("life");
+    it("最后一个场景左滑不越界（保持末位场景）", () => {
+      const last = __test.ORDER[__test.ORDER.length - 1];
+      expect(__test.swipeToScene("left", last)).toBe(last);
     });
 
     it("第一个场景右滑不越界（office → office）", () => {

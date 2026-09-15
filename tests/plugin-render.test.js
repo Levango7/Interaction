@@ -19,15 +19,15 @@ describe("插件场景/卡片渲染接线（v1.14.1）", () => {
   let win;
   beforeEach(() => { win = freshWin(); });
 
-  it("默认无插件场景：ORDER 仅内置四场景", () => {
-    expect(win.__test.ORDER).toEqual(["office", "code", "study", "life"]);
+  it("默认无插件场景：ORDER 仅内置场景", () => {
+    expect(win.__test.ORDER).toEqual(["office", "data", "design", "study", "code", "life", "health"]);
   });
 
   it("启用场景插件 → 场景并入 SCENARIOS/ORDER；禁用 → 移除", () => {
     win.__test.setPluginEnabled("pomodoro", true);
     expect(win.__test.ORDER).toContain("pomodoro");
     expect(win.__test.SCENARIOS.pomodoro).toBeTruthy();
-    expect(win.__test.SCENARIOS.pomodoro.name).toBe("番茄");
+    expect(win.__test.SCENARIOS.pomodoro.name).toBe("笃行");
 
     win.__test.setPluginEnabled("pomodoro", false);
     expect(win.__test.ORDER).not.toContain("pomodoro");

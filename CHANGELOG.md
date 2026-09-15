@@ -18,6 +18,62 @@
 - `tests/ui-consistency.test.js` 去掉写死的版本断言，改为正则（发版不再误报）
 - package-lock / electron/package-lock 根版本字段同步到 3.6.4
 
+### 交互与持久化修复（2026-09-15，同版本内补丁）
+
+- 插件启动时注册默认值会抢先覆盖 `wb_agent_plugins`：初始化阶段暂停保存，完成注册后恢复已有启用状态和配置；新增跨页面重启回归。
+- AI 折叠栏图标改为调用 `openAiPage()`，不再把菜单 ID `feat-ai` 持久化为场景；返回保留原场景。恢复折叠状态时不再用 `textContent` 销毁 SVG。
+- 邮箱验证码异步网络拒绝补 `.catch()`：恢复按钮和错误提示，可重试；HTTP 失败提示与成功倒计时路径保留。
+- 微信扫码关闭/重开时清理轮询并使在途响应失效；二维码过期停止轮询并提示重试。关闭弹窗后不再接收迟到的登录确认。
+- GitHub OAuth 消息校验本次登录窗口、API 来源、一次性 `state` 及会话有效期；拒绝无登录上下文、跨来源和重放消息。允许合法回调 postMessage 后立即关闭窗口，避免误拦已排队消息。回调契约见 README，实际后端联调未完成。
+- 第三方登录获取用户资料后再次刷新顶栏账号信息；工具箱回归改为点击真实卡片验证弹窗，而非仅检查函数存在。
+- README / 产品边界纠正“无账号”“所有数据不会离开本机”等绝对表述；明确可选后端依赖。
+
+### 代码审查修复（同版本内补丁）
+
+**产品代码真实缺陷（4 处）**
+- `_updateUserButton` / `_loadApiPanels` 只导出到 `window.__test`（仅测试门控下存在），而认证页
+  `_doAuthLogin` / `_doAuthRegister` 在 IIFE 外部调用它们 → 恒抛 `ReferenceError` 被 `try/catch` 静默吞掉，
+  **登录后用户按钮与账号面板不刷新**。补齐正式 `window.*` 导出。
+- `getHabitChainStatus()` 全文件无定义，被 `typeof` 守卫兜成空数组 → **「联动状态」页恒显示 0 条启用规则**。
+  改用真实数据源 `getLinks()`；同时修正该块内 Link 对象字段名错误（`from`/`to` → `fromSc`/`toSc`）。
+- `_renderDiagramCanvas` 存在两份**逐字节相同**的定义（29 行重复），删除其一。
+- 16 处跨 IIFE 调用（`apiLogin`/`apiRegister`/`apiSetTokens`/`apiFetch`/`isApiLoggedIn`/`doSync` 等）
+  改为显式 `window.` 前缀，ESLint `no-undef` 由 18 errors 清零。
+- `service-worker.js` 还原被生产产物就地覆盖的 `CACHE_VERSION` 基线（去掉 `[prod build] auto-bumped` 标记）。
+
+**死 UI / 死入口**
+- `openGanttModal` / `openDashboardModal` 仅绑在 `#btnGantt` / `#btnDashboard` 上，而这两个按钮自 v1.15
+  「更多菜单移除」后已不在 DOM → 甘特图与自定义仪表盘（15 组件 + 拖拽布局）**全无入口**。
+  已在「工具箱 → 功能」补 `x-gantt` / `x-dashboard` 两个入口。
+
+**质量门禁回绿**
+- `z-index` 裸值令牌化（`.pet-fx` → `var(--z-under)`）；清除注释中的字面 emoji。
+- **颜色门禁 `lint-colors.mjs` 重构**：hex 正则收紧为合法 CSS 长度（3/4/6/8 位），修掉 `$("#ccDec")`
+  这类 DOM id 被误判为颜色的假阳性；白名单按类别补全（变量回退值 / 纯黑白 alpha / 品牌色 /
+  萌宠插画 / 生成物模板 / 数据色），从 67 处违规收敛到 12 处。
+- 剩余 12 处（aurora / forest / ocean 三个主题块内的 rgba 字面量）按项目既有惯例**收敛为 4 个主题令牌**
+  （`--side-glow-inset` / `--chat-glow-inset` / `--topbar-tint` / `--nav-shadow`），色值逐字节保持不变，
+  门禁 PASS。
+- `vitest.config.js` 全局 `testTimeout` 提到 20s：单文件 HTML 架构下 `loadApp()` 需 JSDOM 解析 3.4 MB
+  全文（实测 ~0.8–1.3 s/次），默认 5 s 对重型用例偏紧。
+
+**测试断言同步（主干回绿：53 文件 / 590 用例全通过）**
+- 内置场景 4 → 7（ORDER 驱动动态推导）、AI 工具 16 → 26、`SCENARIOS` 8 键、仪表盘组件 15 个
+- 文案改名跟随：番茄 → 笃行、习惯链 → 场景联动（联动触发率 / 联动可能断裂 / 暂无联动规则）
+- `#toasts` 改为惰性创建语义；健康助手插件基线由「extraCard none」更正为「life ↔ health」
+- `renderToday()` 改为直接调用其纯函数（该页已不被 `render()` 路由，属待清理死代码）；
+  `renderStats()` 用例改写为「统计页可达——侧栏无独立入口，经系统概况卡『已完成』进入」，
+  断言 `entry.click()` 后 `getActive()==="stats"` 且 `#main` 含 `dashHost` / `stats-cards`
+- **新增 `tests/toolbox-entries.test.js`**：死入口回归守卫——断言甘特图 / 自定义仪表盘在工具箱可见，
+  且 `TOOLBOX_EXTRAS[].run` 内的 `typeof openXxxModal === "function"` 守卫可达（不是恒为 false 的死守卫）。
+
+**文档同步**
+- README：场景数 4 → 7、工具数 16 → 26、健康由插件 → 内置场景、补账号云同步 / SQL Playground /
+  自定义仪表盘 / 插件市场 10 项 / 联网例外说明；顶栏按钮清单更正（「更多」已移除，新增「账号」）
+- `docs/product-scope.md`：「无账号体系」→ 可选个人账号 + 云同步；场景/工具数同步；企业 SSO 与
+  个人第三方登录的区分；补录 v3.6.6 死入口案例
+- `docs/architecture-layers.md`：Bootstrap 块数 4 → 5、`execTool+16 工具` → `+26 工具`
+
 # Changelog
 
 本文件记录 Agent 工坊（原 Agent 工坊）从 v1.0.0 起的所有变更，按 [Keep a Changelog](https://keepachangelog.com) 风格组织，日期为 YYYY-MM-DD。
