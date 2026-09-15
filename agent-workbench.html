@@ -105,6 +105,12 @@
 --side-accent:linear-gradient(180deg,rgba(123,63,236,.14),rgba(25,180,230,.10) 60%,rgba(232,64,140,.08));
 --canvas-glow:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(168,139,250,.78),transparent 60%),radial-gradient(ellipse 50% 45% at 92% 5%,rgba(56,189,248,.68),transparent 55%),radial-gradient(ellipse 45% 40% at 8% 15%,rgba(244,114,182,.62),transparent 52%),radial-gradient(ellipse 40% 35% at 85% 85%,rgba(52,211,153,.55),transparent 50%),radial-gradient(ellipse 35% 30% at 15% 90%,rgba(251,191,36,.52),transparent 48%);
 --sidebar-glow:linear-gradient(180deg,rgba(123,63,236,.22) 0%,rgba(25,180,230,.14) 50%,rgba(232,64,140,.10) 100%);
+/* v3.6.6 令牌补全：主题内的 rgba 字面量收敛为令牌——lint-colors 门禁要求「规则行不得出现颜色字面量」，
+   字面量只能出现在令牌定义行。以下 4 个令牌专供本主题的 .side / .chat-panel / .topbar / .nav-item.active 使用。 */
+--side-glow-inset:rgba(123,63,236,.12);   /* .side 内侧辉光 */
+--chat-glow-inset:rgba(25,180,230,.14);   /* .chat-panel 内侧辉光 */
+--topbar-tint:rgba(123,63,236,.10);       /* .topbar 顶部着色 */
+--nav-shadow:0 2px 8px rgba(123,63,236,.25); /* 激活导航项投影 */
 }
 /* v3.2 极光主题：与浅色/初雪彻底差异化——accent 用品牌紫、侧栏带品牌渐变 + 顶部 accent 彩条
    v3.2 阶段三：侧栏/顶栏透明度提升（用户偏好），底布更鲜艳但组件收敛 */
@@ -119,11 +125,11 @@
   backdrop-filter:blur(28px) saturate(1.35);-webkit-backdrop-filter:blur(28px) saturate(1.35);
   border-right:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
-  box-shadow:inset -2px 0 12px -2px rgba(123,63,236,.12);
+  box-shadow:inset -2px 0 12px -2px var(--side-glow-inset);
 }
 :root[data-theme="aurora"] .topbar{
   background:color-mix(in srgb,var(--panel) 60%,transparent);
-  background-image:linear-gradient(180deg,rgba(123,63,236,.10),transparent 80%),var(--brand-grad);
+  background-image:linear-gradient(180deg,var(--topbar-tint),transparent 80%),var(--brand-grad);
   background-size:100% 100%,3px 100%;
   background-repeat:no-repeat,no-repeat;
   background-position:0 0,0 100%;
@@ -133,14 +139,14 @@
 }
 :root[data-theme="aurora"] .topbar .tbtn{color:var(--text);font-weight:600}
 :root[data-theme="aurora"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
-:root[data-theme="aurora"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(123,63,236,.25)}
+:root[data-theme="aurora"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:var(--nav-shadow)}
 :root[data-theme="aurora"] .chat-panel{
   background:color-mix(in srgb,var(--panel) 60%,transparent);
   background-image:var(--sidebar-glow);
   backdrop-filter:blur(28px) saturate(1.35);-webkit-backdrop-filter:blur(28px) saturate(1.35);
   border-left:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
-  box-shadow:inset 2px 0 14px -2px rgba(25,180,230,.14);
+  box-shadow:inset 2px 0 14px -2px var(--chat-glow-inset);
 }
 :root[data-theme="aurora"] .chat-panel-header{background:transparent}
 
@@ -185,6 +191,11 @@
   --canvas-fog:radial-gradient(ellipse 100% 40% at 50% 100%,rgba(80,180,120,.25),transparent 60%),radial-gradient(ellipse 80% 30% at 50% 95%,rgba(60,140,90,.20),transparent 65%);
   --canvas-spots:radial-gradient(ellipse 40% 30% at 18% -6%,rgba(80,224,128,.42),transparent 50%),radial-gradient(ellipse 30% 25% at 90% 8%,rgba(255,200,100,.38),transparent 45%),radial-gradient(ellipse 35% 30% at 50% 100%,rgba(120,210,150,.30),transparent 50%);
   --sidebar-glow:linear-gradient(180deg,rgba(80,224,128,.32) 0%,rgba(64,168,96,.20) 50%,rgba(240,176,64,.16) 100%);
+  /* v3.6.6 令牌补全：主题内 rgba 字面量收敛为令牌（见 aurora 块说明） */
+  --side-glow-inset:rgba(74,222,128,.10);
+  --chat-glow-inset:rgba(74,222,128,.12);
+  --topbar-tint:rgba(74,222,128,.08);
+  --nav-shadow:0 2px 8px rgba(74,222,128,.28);
 }
 :root[data-theme="mist"]{
   /* v3.4.20 晓光晨雾——破晓暖色（补全视觉变量：canvas-glow/sidebar-glow/side-accent） */
@@ -224,10 +235,10 @@
   backdrop-filter:blur(22px) saturate(1.20);-webkit-backdrop-filter:blur(22px) saturate(1.20);
   border-right:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
-  box-shadow:inset -2px 0 12px -2px rgba(74,222,128,.10);
+  box-shadow:inset -2px 0 12px -2px var(--side-glow-inset);
 }
 :root[data-theme="forest"] .topbar{
-  background-image:linear-gradient(180deg,rgba(74,222,128,.08),transparent 80%),var(--brand-grad);
+  background-image:linear-gradient(180deg,var(--topbar-tint),transparent 80%),var(--brand-grad);
   background-size:100% 100%,3px 100%;
   background-repeat:no-repeat,no-repeat;
   background-position:0 0,0 100%;
@@ -235,14 +246,14 @@
 }
 :root[data-theme="forest"] .topbar .tbtn{color:var(--text);font-weight:600}
 :root[data-theme="forest"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
-:root[data-theme="forest"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(74,222,128,.28)}
+:root[data-theme="forest"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:var(--nav-shadow)}
 :root[data-theme="forest"] .chat-panel{
   background:color-mix(in srgb,var(--panel) 78%,transparent);
   background-image:var(--sidebar-glow);
   backdrop-filter:blur(22px) saturate(1.20);-webkit-backdrop-filter:blur(22px) saturate(1.20);
   border-left:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
-  box-shadow:inset 2px 0 14px -2px rgba(74,222,128,.12);
+  box-shadow:inset 2px 0 14px -2px var(--chat-glow-inset);
 }
 :root[data-theme="forest"] .chat-panel-header{background:transparent}
 
@@ -273,6 +284,11 @@
   --side-accent:linear-gradient(180deg,rgba(10,82,99,.18),rgba(46,143,163,.14) 60%,rgba(201,104,79,.12));
   --canvas-glow:radial-gradient(ellipse 72% 48% at 82% -6%,rgba(12,130,155,.58),transparent 62%),radial-gradient(ellipse 55% 42% at 8% -10%,rgba(245,185,110,.45),transparent 58%),radial-gradient(ellipse 52% 42% at 4% 16%,rgba(220,100,80,.48),transparent 56%),radial-gradient(ellipse 42% 38% at 50% 100%,rgba(50,170,200,.45),transparent 52%),radial-gradient(ellipse 32% 30% at 93% 62%,rgba(170,215,245,.52),transparent 55%);
   --sidebar-glow:linear-gradient(180deg,rgba(10,82,99,.22) 0%,rgba(46,143,163,.12) 50%,rgba(201,104,79,.08) 100%);
+  /* v3.6.6 令牌补全：主题内 rgba 字面量收敛为令牌（见 aurora 块说明） */
+  --side-glow-inset:rgba(10,82,99,.14);
+  --chat-glow-inset:rgba(46,143,163,.16);
+  --topbar-tint:rgba(10,82,99,.10);
+  --nav-shadow:0 2px 8px rgba(10,82,99,.28);
 }
 :root[data-theme="ocean"] .side{
   background:color-mix(in srgb,var(--panel) 52%,transparent);
@@ -280,10 +296,10 @@
   backdrop-filter:blur(22px) saturate(1.18);-webkit-backdrop-filter:blur(22px) saturate(1.18);
   border-right:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 100% / 0 0 0 2px;
-  box-shadow:inset -2px 0 12px -2px rgba(10,82,99,.14);
+  box-shadow:inset -2px 0 12px -2px var(--side-glow-inset);
 }
 :root[data-theme="ocean"] .topbar{
-  background-image:linear-gradient(180deg,rgba(10,82,99,.10),transparent 80%),var(--brand-grad);
+  background-image:linear-gradient(180deg,var(--topbar-tint),transparent 80%),var(--brand-grad);
   background-size:100% 100%,3px 100%;
   background-repeat:no-repeat,no-repeat;
   background-position:0 0,0 100%;
@@ -291,14 +307,14 @@
 }
 :root[data-theme="ocean"] .topbar .tbtn{color:var(--text);font-weight:600}
 :root[data-theme="ocean"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
-:root[data-theme="ocean"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(10,82,99,.28)}
+:root[data-theme="ocean"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:var(--nav-shadow)}
 :root[data-theme="ocean"] .chat-panel{
   background:color-mix(in srgb,var(--panel) 52%,transparent);
   background-image:var(--sidebar-glow);
   backdrop-filter:blur(22px) saturate(1.20);-webkit-backdrop-filter:blur(22px) saturate(1.20);
   border-left:2px solid transparent;
   border-image:var(--brand-grad) 0 0 0 0/0 0 0 2px;
-  box-shadow:inset 2px 0 14px -2px rgba(46,143,163,.16);
+  box-shadow:inset 2px 0 14px -2px var(--chat-glow-inset);
 }
 :root[data-theme="ocean"] .chat-panel-header{background:transparent}
 
@@ -3625,7 +3641,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .pet-eye{transition:transform .09s ease;transform-origin:center;transform-box:fill-box}
 @keyframes petJumpK{0%{transform:translateY(0)}28%{transform:translateY(-20px) scale(1.05)}55%{transform:translateY(0)}72%{transform:translateY(-7px)}100%{transform:translateY(0)}}
 .pet.pet-jumping .pc-svg{animation:petJumpK .62s cubic-bezier(.3,.7,.4,1)}
-.pet-fx{position:absolute;pointer-events:none;font-size:15px;line-height:1;animation:petFloatUp 1.35s ease-out forwards;z-index:2;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.pet-fx{position:absolute;pointer-events:none;font-size:15px;line-height:1;animation:petFloatUp 1.35s ease-out forwards;z-index:var(--z-under);text-shadow:0 1px 2px rgba(0,0,0,.25)}
 .pet-fx-heart{color:#ff6b9d}
 .pet-fx-star{color:#ffd76b;text-shadow:0 0 6px rgba(255,215,107,.75)}
 .pet-fx-zzz{color:#9aa7ff;font-size:13px;animation:petZzzK 2.6s ease-out forwards}
@@ -15664,6 +15680,11 @@ const TOOLBOX_EXTRAS = [
   { id:"x-tracker", name:t("tool.tracker.name","时间追踪"), desc:t("tool.tracker.desc","任务计时秒表"), cat:"效率工具", icon:UI_ICONS.stopwatch, pop:"trackerPop", menuAttr:"plug-tracker" },
   { id:"x-pet",     name:t("tool.pet.name","萌宠"),     desc:t("tool.pet.desc","桌面陪伴小伙伴"), cat:"效率工具", icon:UI_ICONS.paw, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
   { id:"x-mindmap", name:t("tool.mindmap.name","思维导图"), desc:t("tool.mindmap.desc","任务关系树状图"), cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
+  /* v3.6.6 死入口修复：openGanttModal / openDashboardModal 此前只绑在 #btnGantt / #btnDashboard 上，
+     而这两个按钮自 v1.15「更多菜单移除」后已不存在于 DOM → 两个弹窗（甘特图 / 自定义仪表盘 15 组件）
+     全无 UI 入口。按既有惯例（思维导图 / 知识库 / 笔记 / 高级报表同在此处）补工具箱入口。 */
+  { id:"x-gantt",   name:t("tool.gantt.name","甘特图"),   desc:t("tool.gantt.desc","任务时间线视图"), cat:"功能", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', run:()=>{ if(typeof openGanttModal==="function") openGanttModal(); } },
+  { id:"x-dashboard", name:t("tool.dashboard.name","自定义仪表盘"), desc:t("tool.dashboard.desc","拖拽编排 15 个组件"), cat:"功能", icon:UI_ICONS.gauge, run:()=>{ if(typeof openDashboardModal==="function") openDashboardModal(); } },
   { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
   { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
   { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ if(typeof openReportModal==="function") openReportModal(); } },
@@ -15838,7 +15859,8 @@ function renderChainPage(){
   if(_chainTab === "streak"){
     const badges = ORDER.filter(function(sc){return SCENARIOS[sc];}).map(function(sc){
       const st = calcStreak(sc); const days = st.current || 0;
-      /* v3.6.5：emoji（🔥⚡💤）→ 全站矢量图标；按连续天数分级（lv0 未开始 / lv1 起步 / lv2 坚持 / lv3 习惯养成），
+      /* v3.6.5：原先用 emoji 表示连续打卡状态，已统一改为全站矢量图标（UI_ICONS.flame / UI_ICONS.theme）；
+         按连续天数分级（lv0 未开始 / lv1 起步 / lv2 坚持 / lv3 习惯养成），
          卡片加顶部彩条 + 渐变底 + 数字带"天"单位，与全站徽章/KPI 形制统一。 */
       const lvl = days >= 7 ? 3 : days >= 3 ? 2 : days >= 1 ? 1 : 0;
       const ic = lvl === 0 ? UI_ICONS.theme : UI_ICONS.flame;
@@ -15862,7 +15884,9 @@ function renderChainPage(){
       '<div class="graph-wrap">' + renderChainGraph() + '</div></div></div>';
   }
   else if(_chainTab === "status"){
-    const chainStatus = (typeof getHabitChainStatus === "function") ? getHabitChainStatus() : [];
+    /* 修复：此前调用不存在的 getHabitChainStatus()，被 typeof 守卫兜成空数组 →
+       「联动状态」页恒显示 0 启用规则 / 暂无联动规则（静默错渲染）。真实数据源是 getLinks()。 */
+    const chainStatus = getLinks() || [];
     const active = chainStatus.filter(function(c){return c.enabled;}).length;
     const total = chainStatus.length;
     page = '<div class="chain-page active"><div class="card"><h2>' + ic("chain") + " 联动状态</h2>" +
@@ -15870,7 +15894,7 @@ function renderChainPage(){
       '<div class="kpi"><div class="v">' + total + '</div><div class="l">总规则</div></div>' +
       '<div class="kpi"><div class="v">' + (total > 0 ? Math.round(active*100/total) : 0) + '%</div><div class="l">启用率</div></div></div></div>' +
       '<div class="card"><h3>规则列表</h3>' + (chainStatus.length > 0 ? chainStatus.map(function(c){
-        return '<div class="bar-row"><span class="label" style="min-width:120px">' + esc(c.name||c.from+"→"+c.to) + '</span><span style="flex:1;font-size:var(--fs-sm);color:' + (c.enabled ? "var(--ok)" : "var(--muted)") + '">' + (c.enabled ? "启用" : "停用") + '</span></div>';
+        return '<div class="bar-row"><span class="label" style="min-width:120px">' + esc(c.name || ((c.fromSc||"")+"→"+(c.toSc||""))) + '</span><span style="flex:1;font-size:var(--fs-sm);color:' + (c.enabled ? "var(--ok)" : "var(--muted)") + '">' + (c.enabled ? "启用" : "停用") + '</span></div>';
       }).join("") : '<div class="empty">暂无联动规则</div>') + '</div></div>';
   }
   else if(_chainTab === "rate"){
@@ -15933,11 +15957,11 @@ async function _doAuthLogin(email, password) {
   if (btn) { btn.classList.add("loading"); btn.disabled = true; }
   _authBusy = true;
   try {
-    var r = await apiLogin(email, password);
+    var r = await window.apiLogin(email, password);
     if (r.ok) {
       try { toast(t("api.loginSuccess", "登录成功"), "ok"); } catch (_) {}
-      try { _updateUserButton(); } catch (_) {}
-      try { _loadApiPanels(); } catch (_) {}
+      try { window._updateUserButton(); } catch (_) {}
+      try { window._loadApiPanels(); } catch (_) {}
       try { if (typeof cloudCheckOnLogin === "function") cloudCheckOnLogin(); } catch (_) {}
       setActive("overview"); render();
     } else {
@@ -15964,13 +15988,13 @@ async function _doAuthRegister(name, email, password, confirm, code) {
   if (btn) { btn.classList.add("loading"); btn.disabled = true; }
   _authBusy = true;
   try {
-    var r = await apiRegister(email, password, name, code);
+    var r = await window.apiRegister(email, password, name, code);
     if (r.ok) {
-      var lr = await apiLogin(email, password);
+      var lr = await window.apiLogin(email, password);
       if (lr.ok) {
         try { toast(t("api.registerSuccess", "注册成功"), "ok"); } catch (_) {}
-        try { _updateUserButton(); } catch (_) {}
-        try { _loadApiPanels(); } catch (_) {}
+        try { window._updateUserButton(); } catch (_) {}
+        try { window._loadApiPanels(); } catch (_) {}
         try { if (typeof cloudCheckOnLogin === "function") cloudCheckOnLogin(); } catch (_) {}
         setActive("overview"); render();
       } else {
@@ -16010,6 +16034,10 @@ function _sendEmailCode(){
       promise = window.apiSendEmailCode(email.value).then(function(r){
         if(r && r.ok){ if(err) err.textContent = ""; if(b){ b.textContent = t("api.codeSent", "已发送"); } _authCodeCountdownStart(60, b); }
         else{ _authCodeCountdownStop(); if(err) err.textContent = (r && r.data && r.data.error) || t("api.sendCodeFail", "发送失败"); }
+      }).catch(function(){
+        // try/catch 捕获不到异步拒绝；断网后必须恢复按钮，允许重试。
+        _authCodeCountdownStop();
+        if(err) err.textContent = t("api.sendCodeFail", "发送失败");
       });
     }else{
       throw new Error("no-api");
@@ -16049,6 +16077,9 @@ function _openWechatModal(){
   // 用顶部 modal 容器（沿用现有 closeAuthModal 之外的通用 modal 机制不可靠，
   // 这里直接复用 drawer-close 无关的自建浮层，避免依赖具体 modal 结构）
   try{
+    _wechatPollStop();
+    var previous = document.getElementById("authSsoOverlay");
+    if(previous) previous.remove();
     var wrap = document.createElement("div");
     wrap.className = "auth-sso-overlay";
     wrap.id = "authSsoOverlay";
@@ -16061,18 +16092,28 @@ function _openWechatModal(){
       '</div>';
     document.body.appendChild(wrap);
     wrap.addEventListener("click", function(e){
-      if(e.target.closest("[data-close=\"1\"]") || e.target === wrap) { wrap.remove(); }
+      if(e.target.closest("[data-close=\"1\"]") || e.target === wrap) {
+        _wechatPollStop();
+        wrap.remove();
+      }
     });
     _wechatPollStart();
   }catch(_e){ /* noop */ }
 }
 var _wechatTimer = null;
-function _wechatPollStop(){ if(_wechatTimer){ clearInterval(_wechatTimer); _wechatTimer = null; } }
+var _wechatGeneration = 0;
+function _wechatPollStop(){
+  _wechatGeneration++; // 关闭或重开时，使在途二维码/确认响应失效。
+  if(_wechatTimer){ clearInterval(_wechatTimer); _wechatTimer = null; }
+}
 function _wechatPollStart(){
   _wechatPollStop();
+  var generation = _wechatGeneration;
   var body = document.getElementById("authSsoWechatBody");
+  function current(){ return generation === _wechatGeneration && body && body.isConnected; }
   if(typeof window.apiWechatQrcode !== "function"){ if(body) body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>'; return; }
   window.apiWechatQrcode().then(function(r){
+    if(!current()) return;
     if(!r || !r.ok || !r.data){ if(body) body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>'; return; }
     var d = r.data;
     var qr = d.qr || "";
@@ -16086,14 +16127,20 @@ function _wechatPollStart(){
     }
     if(scene && typeof window.apiWechatStatus === "function"){
       _wechatTimer = setInterval(function(){
+        if(!current()) return;
         window.apiWechatStatus(scene).then(function(sr){
-          if(!sr || !sr.ok || !sr.data) return;
+          if(!current() || !sr || !sr.ok || !sr.data) return;
+          if(sr.data.status === "expired"){
+            _wechatPollStop();
+            body.textContent = t("api.wechatExpired", "二维码已过期，请关闭后重新扫码");
+            return;
+          }
           if(sr.data.status === "confirmed" && sr.data.accessToken){
             _wechatPollStop();
-            try{ apiSetTokens(sr.data.accessToken, sr.data.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
+            try{ window.apiSetTokens(sr.data.accessToken, sr.data.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
             var ov = document.getElementById("authSsoOverlay"); if(ov) ov.remove();
             try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
-            try{ _updateUserButton(); }catch(_e){}
+            try{ window._loadApiPanels(); }catch(_e){}
             setActive("overview"); render();
           }
         }).catch(function(){});
@@ -16101,18 +16148,29 @@ function _wechatPollStart(){
     }
   }).catch(function(){ if(body) body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>'; });
 }
+var _githubAuthRequest = 0;
+var _githubAuthSession = null;
 function _doGithubLogin(){
+  var request = ++_githubAuthRequest;
+  _githubAuthSession = null;
   if(typeof window.apiGithubOauthUrl !== "function"){
     try{ toast(t("api.ssoNoBackend", "当前环境无后端，无法 GitHub 登录"), "warn"); }catch(_e){}
     return;
   }
   window.apiGithubOauthUrl().then(function(r){
-    if(!r || !r.ok || !r.data || !r.data.authorizeUrl){
+    if(request !== _githubAuthRequest) return;
+    if(!r || !r.ok || !r.data || !r.data.authorizeUrl || typeof r.data.state !== "string" || !r.data.state){
       try{ toast(t("api.ssoNoBackend", "当前环境无后端，无法 GitHub 登录"), "warn"); }catch(_e){}
       return;
     }
-    var w = window.open(r.data.authorizeUrl, "_blank", "width=520,height=680");
-    if(!w){ location.href = r.data.authorizeUrl; }
+    var authorize = new URL(r.data.authorizeUrl, location.href);
+    var callback = new URL(window.API_BASE, location.href);
+    if(!/^https?:$/.test(authorize.protocol) || !/^https?:$/.test(callback.protocol)) throw new Error("invalid oauth URL");
+    var w = window.open(authorize.href, "_blank", "width=520,height=680");
+    if(w){
+      // 回调必须来自本次登录窗口及配置的 API 来源，不能仅凭消息 type 接收 token。
+      _githubAuthSession = { source: w, origin: callback.origin, state: r.data.state, expires: Date.now() + 10*60*1000 };
+    }else{ location.href = authorize.href; }
   }).catch(function(){ try{ toast(t("api.ssoNoBackend", "当前环境无后端，无法 GitHub 登录"), "warn"); }catch(_e){} });
 }
 // GitHub OAuth 回调：后端完成授权后向本窗口 postMessage「agent-github-oauth」回传 token
@@ -16126,12 +16184,16 @@ try{
   window.addEventListener("message", function(e){
     var d = e && e.data;
     if(!d || d.type !== "agent-github-oauth") return;
-    if(d.accessToken){
-      try{ apiSetTokens(d.accessToken, d.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
-      try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
-      try{ _updateUserButton(); }catch(_e){}
-      setActive("overview"); render();
-    }
+    var session = _githubAuthSession;
+    // 回调页可能在 postMessage 后立即关闭；已排队消息仍须按来源/窗口/state 验证。
+    if(!session || session.expires < Date.now()) return;
+    if(e.source !== session.source || e.origin !== session.origin || d.state !== session.state) return;
+    if(typeof d.accessToken !== "string" || !d.accessToken) return;
+    _githubAuthSession = null; // 一次性消费，重复消息不得再次切换账号。
+    try{ window.apiSetTokens(d.accessToken, d.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
+    try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
+    try{ window._loadApiPanels(); }catch(_e){}
+    setActive("overview"); render();
   });
 }catch(_e){ /* noop */ }
 
@@ -16156,7 +16218,7 @@ function _buildCloudSnapshot() {
   return data;
 }
 async function apiGetSnapshot() {
-  const r = await apiFetch("/api/sync/snapshot", { method: "GET" });
+  const r = await window.apiFetch("/api/sync/snapshot", { method: "GET" });
   if (r.ok && r.data && r.data.snapshot) return r.data;
   return null;
 }
@@ -16185,11 +16247,11 @@ function _applyCloudSnapshot(data) {
   _setSyncMeta({ lastPullAt: Date.now() });
 }
 async function cloudCheckOnLogin() {
-  if (!isApiLoggedIn()) return;
+  if (!window.isApiLoggedIn()) return;
   try {
     const rec = await apiGetSnapshot();
     _renderCloudState(rec);
-    if (!rec) { doSync(); return; }
+    if (!rec) { window.doSync(); return; }
     const meta = _getSyncMeta();
     const remoteDevice = (rec.snapshot._deviceMeta && rec.snapshot._deviceMeta.deviceId) || "";
     const fromOther = remoteDevice && remoteDevice !== getDeviceId();
@@ -16208,7 +16270,7 @@ async function cloudCheckOnLogin() {
       }
       return;
     }
-    doSync();
+    window.doSync();
   } catch (e) { /* 离线时静默，等下次数据变动再同步 */ }
 }
 function _renderLastSync() {
@@ -16287,7 +16349,7 @@ async function _restoreFromCloud() {
 document.addEventListener("click", function (e) {
   const el = e.target;
   if (!el || !el.id) return;
-  if (el.id === "btnApiSyncNow") { try { doSync(); } catch (_) {} }
+  if (el.id === "btnApiSyncNow") { try { window.doSync(); } catch (_) {} }
   if (el.id === "btnApiCloudRestore") { _restoreFromCloud(); }
 });
 
@@ -16370,35 +16432,6 @@ function _dgmSvgHtml(d) {
     out += shape + '<text class="dgm-node-text" data-dgm="' + n.id + '" x="' + cx + '" y="' + (cy + 4) + '">' + esc(n.text || "") + '</text>';
   });
   return out;
-}
-
-function _renderDiagramCanvas() {
-  var d = _dgmLoad() || _dgmPreset("free");
-  _dgmSave(d);
-  var html = '<div class="card"><h2>' + ic("stats") + ' ' + t("dgm.title","图表画布") + '</h2>'
-    + '<div class="dgm-toolbar">'
-    + '<select id="dgmPresetSel" class="dgm-sel">'
-    + '<option value="free">' + t("dgm.preset.free","自由布局") + '</option>'
-    + '<option value="mind">' + t("dgm.preset.mind","思维导图") + '</option>'
-    + '<option value="flow">' + t("dgm.preset.flow","流程图") + '</option>'
-    + '<option value="arch">' + t("dgm.preset.arch","架构图") + '</option>'
-    + '<option value="topo">' + t("dgm.preset.topo","拓扑图") + '</option>'
-    + '</select>'
-    + '<button type="button" class="addbtn sm" id="dgmAdd" data-sc="accent">' + t("dgm.addNode","+ 节点") + '</button>'
-    + '<button type="button" class="addbtn sm" id="dgmLink" data-sc="muted">' + t("dgm.link","连线") + '</button>'
-    + '<button type="button" class="addbtn sm" id="dgmDel" data-sc="danger-muted">' + t("dgm.del","删除选中") + '</button>'
-    + '<button type="button" class="addbtn sm" id="dgmExportSvg" data-sc="muted">' + t("dgm.exportSvg","导出 SVG") + '</button>'
-    + '<button type="button" class="addbtn sm" id="dgmExportPng" data-sc="muted">' + t("dgm.exportPng","导出 PNG") + '</button>'
-    + '<button type="button" class="addbtn sm" id="dgmClearAll" data-sc="danger-muted">' + t("dgm.clear","清空") + '</button>'
-    + '</div>'
-    + '<p class="sub">' + t("dgm.hint","拖拽移动节点 · 双击改文字 · 点「连线」后依次点两个节点建立连线") + '</p>'
-    + '<div class="dgm-wrap"><svg id="dgmCanvas" class="dgm-svg" viewBox="0 0 860 520" xmlns="http://www.w3.org/2000/svg">'
-    + '<defs><marker id="dgmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path></marker></defs>'
-    + _dgmSvgHtml(d)
-    + '</svg></div></div>';
-  /* 功能卡渲染器必须「返回 HTML」（由场景渲染器插入），插入后再绑定交互 */
-  setTimeout(function () { try { _dgmBind(); } catch (_) {} }, 0);
-  return html;
 }
 
 function _renderDiagramCanvas() {
@@ -16570,7 +16603,7 @@ function _wfDueAt(f, now){
   const tt = _wfParseTime(sch.time);
   const d = new Date(now); d.setHours(tt.h, tt.m, 0, 0);
   if(now < d.getTime()) return 0;
-  if(sch.freq === "weekly" && new Date(now).getDay() !== Number(sch.weekday == null ? 1 : sch.weekday)) return 0;
+  if(sch.freq === "weekly" && new Date(now).getDay() !== Number((sch.weekday ?? null) === null ? 1 : sch.weekday)) return 0;
   return Number(f.lastRun || 0) < d.getTime() ? d.getTime() : 0;
 }
 async function _wfRunFlow(idx, f){
@@ -21235,7 +21268,8 @@ function bindChatPanel(){
   if(railAi) railAi.onclick = function(e){
     e.stopPropagation();
     if(panel.classList.contains("collapsed")) toggleCollapse();
-    try{ setActive("feat-ai"); render(); }catch(_){}
+    // AI 配置使用独立 drawer 页面，不是场景 key；保留当前场景供返回时恢复。
+    openAiPage();
   };
   if(rail){
     rail.onclick=toggleCollapse;
@@ -21252,7 +21286,7 @@ function bindChatPanel(){
     const collapseByDefault = !hasPref && (window.innerWidth||1024) < 1280;
     if(load(PREFIX+"chat_panel_collapsed","0")==="1" || collapseByDefault){
       panel.classList.add("collapsed");
-      if(collapseBtn) collapseBtn.textContent="▸";
+      // 保留按钮 SVG；恢复折叠态不替换按钮内容。
       if(rail) rail.classList.add("show");
     }
   }catch(e){ /* noop */ }
@@ -21893,7 +21927,14 @@ function render(){
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     renderSide();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
-    if(active==="stats"){ setActive("overview"); renderOverview(); appendFoot(); return; }
+    /* v3.6.6 修复：此前这里写的是 `setActive("overview"); renderOverview();`——把 stats 重定向回主页，
+       导致统计页（15 个仪表盘组件 + 周/月/年筛选 + Grafana 式编辑态）**完全不可达**：
+       系统概况卡「已完成」项（data-act="stats"）与 KPI 卡（data-kpi-act="stats"）的处理器都是
+       `setActive("stats"); render();`，点击后被本行弹回主页 → 死点击。
+       （该重定向由分支归并提交 c93da3c 引入；「v2.5 仪表盘合并至主页」的本意是**撤掉侧栏独立入口**
+         ——见 _buildSideMenu 的总览组注释——而非废弃页面本身，主页模板里也从未出现 #dashHost。）
+       现改为进入统计页；renderStats() 自含尾栏（见其函数末尾 appendFoot），故此处不重复补。 */
+    if(active==="stats"){ renderStats(); return; }
     if(active==="recycle"){ openRecycle(); appendFoot(); return; }
     /* v2.4.0 四大新页面路由（v3.2 补全：除 tasks/chainpage 外 toolbox/store/recycle 之前漏掉 appendFoot，导致切到这些页看不到版本号+待办统计+AI 状态三列底栏） */
     if(active==="tasks"){ renderTasksPage(); appendFoot(); return; }
@@ -33949,6 +33990,11 @@ const MESSAGES = {
   window.getApiUser = getApiUser;
   window.initApiClient = initApiClient;
   window.API_BASE = API_BASE;
+  // 修复：认证页（IIFE 外部的 _doAuthLogin/_doAuthRegister）登录成功后需刷新用户按钮与账号面板，
+  // 这两个函数此前只导出到 window.__test（仅测试门控下存在），顶层调用恒抛 ReferenceError 且被
+  // try/catch 静默吞掉 → 登录后账号面板不刷新。补齐正式 window 导出。
+  window._updateUserButton = _updateUserButton;
+  window._loadApiPanels = _loadApiPanels;
 
   // 启动时自动初始化（恢复 token + 渲染同步状态）
   initApiClient();
@@ -34137,6 +34183,7 @@ const MESSAGES = {
       const r = await apiGetProfile();
       if(r.ok && r.data && r.data.user){
         _apiUser = r.data.user;
+        _updateUserButton(); // 第三方登录只有 token，获取资料后再刷新头像与账号名。
         const nameEl = document.getElementById("apiUserName");
         const emailEl = document.getElementById("apiUserEmail");
         if(nameEl) nameEl.textContent = r.data.user.name || "—";
@@ -34560,6 +34607,7 @@ try{ document.title = t("app.name"); applyI18n(document); }catch(e){ /* noop */ 
 // 早期访问返回 undefined（getEnabledPlugins 有 typeof 守卫），let/const 的 TDZ 会抛 ReferenceError。
 // eslint-disable-next-line no-var
 var _plugins = {};
+var _pluginsInitializing = false;
 
 // 内置示例插件（注册后默认 enabled=false，由用户在插件市场启用）
 const BUILTIN_PLUGINS = [
@@ -34940,6 +34988,8 @@ function renderPluginCards(){
  * @returns {void}
  */
 function _savePluginsState(){
+  // 注册内置插件期间禁止写默认状态，先恢复存档再允许用户操作落盘。
+  if(_pluginsInitializing) return;
   try{
     if(typeof localStorage === "undefined") return;
     const state = {};
@@ -34987,8 +35037,13 @@ function _resetPlugins(){
  * @returns {void}
  */
 function _initPlugins(){
-  BUILTIN_PLUGINS.forEach(function(p){ registerPlugin(p); });
-  _loadPluginsState();
+  _pluginsInitializing = true;
+  try{
+    BUILTIN_PLUGINS.forEach(function(p){ registerPlugin(p); });
+    _loadPluginsState();
+  }finally{
+    _pluginsInitializing = false;
+  }
   // v1.14.1：重新应用已启用插件的 onActivate（如「健康助手」挂载场景卡片）
   Object.keys(_plugins).forEach(function(id){
     const p = _plugins[id];
