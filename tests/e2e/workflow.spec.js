@@ -138,30 +138,23 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 8. 编辑习惯链 ----------
     await test.step("在设置抽屉添加一条新习惯链", async () => {
-      /* 习惯链「添加新链」表单实际位于设置抽屉内（#drawer #set-chain），
-         可达性受抽屉/分组状态与滚动位置影响：CI（fresh file://）下 #chainAddBtn 常为 hidden，
-         或落在抽屉视口之外（本机复现：按钮 top≈1615、抽屉高 900、抽屉 overflowY=auto）而点不到。
-         这里保留真实用户路径，整步用 try/catch 包住：确实不可达时记录原因并跳过该步断言，
-         避免把「UI 可达性」问题伪装成测试失败。
-         TODO：UI 侧收敛抽屉内分组的显隐/滚动后，去掉 try/catch 恢复强断言。 */
-      try {
-        await page.locator("#set-chain").scrollIntoViewIfNeeded();
-        await page.waitForSelector("#chainAddBtn", { state: "visible", timeout: 5_000 });
-        await page.selectOption("#chainAddSrc", "office");
-        await page.fill("#chainAddKw", "E2E关键词");
-        await page.selectOption("#chainAddDst", "life");
-        const beforeCount = await page.locator("#linksBox .chain-row").count();
-        await page.click("#chainAddBtn");
-        await page.waitForFunction(
-          (prev) => document.querySelectorAll("#linksBox .chain-row").length > prev,
-          beforeCount,
-          { timeout: 5_000 }
-        );
-        const afterCount = await page.locator("#linksBox .chain-row").count();
-        expect(afterCount).toBeGreaterThan(beforeCount);
-      } catch (e) {
-        console.log("[e2e] 习惯链步骤在 fresh file:// 下不可达，跳过：" + String(e).split("\n")[0]);
-      }
+      /* 设置抽屉是**标签式**（7 个 [data-set-tab] 分区）：打开后默认分区不含习惯链，
+         #set-chain 此时 display:none（按钮 rect=0），必须先切到 set-chain 分区 —— 这就是真实用户路径。
+         （本机 file:// 实测：切标签后按钮 h=38、top=614 在视口内、源场景 7 个选项，添加后链数 3→4 ✓） */
+      await page.click('[data-set-tab="set-chain"]');
+      await page.waitForSelector("#chainAddBtn", { state: "visible", timeout: 5_000 });
+      await page.selectOption("#chainAddSrc", "office");
+      await page.fill("#chainAddKw", "E2E关键词");
+      await page.selectOption("#chainAddDst", "life");
+      const beforeCount = await page.locator("#linksBox .chain-row").count();
+      await page.click("#chainAddBtn");
+      await page.waitForFunction(
+        (prev) => document.querySelectorAll("#linksBox .chain-row").length > prev,
+        beforeCount,
+        { timeout: 5_000 }
+      );
+      const afterCount = await page.locator("#linksBox .chain-row").count();
+      expect(afterCount).toBeGreaterThan(beforeCount);
     });
 
     // ---------- 9. AI 对话（mock） ----------
