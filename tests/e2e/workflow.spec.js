@@ -178,6 +178,17 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.click('#side .nav-item[data-sc="office"]');
       await page.waitForSelector("#chatForm", { timeout: 5_000 });
 
+      /* 平板（768×1024）下聊天面板默认是折叠态（实测 #chatPanel 带 .collapsed，表单仅 2px 宽 →
+         提交按钮不可点）。点折叠键展开是真实用户路径，桌面下该键同样存在、点它无副作用。 */
+      const chatCollapsed = await page.evaluate(() => {
+        const p = document.getElementById("chatPanel");
+        return !!(p && p.classList.contains("collapsed"));
+      });
+      if (chatCollapsed) {
+        await page.click("#chatPanelCollapse");
+        await page.waitForTimeout(250);
+      }
+
       // mock fetch 拦截：拦截 /chat/completions 返回假回复
       const mockReply = "这是 E2E mock 的 AI 回复";
       await page.route("**/chat/completions", (route) =>
