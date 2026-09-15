@@ -178,26 +178,50 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.click('#side .nav-item[data-sc="office"]');
       await page.waitForSelector("#chatForm", { timeout: 5_000 });
 
-      /* 平板（768×1024）下聊天面板默认折叠（实测 #chatPanel 带 .collapsed、表单仅 2px 宽 → 提交按钮不可点），
-         且折叠态的展开入口在不同宽度下未必是 #chatPanelCollapse 本身（CI 实测该键此时不可见）。
-         这里按「真实控件优先、DOM 兜底最后」的顺序保证面板展开，让「发消息」业务路径可继续验证。 */
+      /* 平板（768×1024）下聊天面板默认折叠：.chat-panel.collapsed{width:0;overflow:hidden}，
+         面板内控件被裁剪到视口外——本机实测 #chatPanelCollapse 矩形 L784 W36、中心 (802,109)，
+         而视口宽仅 768，document.elementFromPoint 返回 null（点不到）。
+         注意：不能用 isVisible() 判断"可点"——Playwright 的可见性只看「盒子非空 + 非 visibility:hidden」，
+         被裁剪到视口外的元素照样返回 true；据此选中再 click 会重试 10s 后抛 TimeoutError，
+         直接中断整个用例（这正是 CI 在 tablet 视口连续失败的根因，此前 4 次"修复"均未命中）。
+         改为显式命中测试：中心点在视口内 且 elementFromPoint 落在自身或后代，才算真实可点控件。 */
       const isChatCollapsed = () => page.evaluate(() => {
         const p = document.getElementById("chatPanel");
         return !!(p && p.classList.contains("collapsed"));
       });
-      if (await isChatCollapsed()) {
-        for (const sel of ["#chatPanelCollapse", "#chatPanelRail", ".chat-rail", "#chatToggle"]) {
-          const el = await page.$(sel);
-          if (el && (await el.isVisible().catch(() => false))) {
-            await el.click();
-            await page.waitForTimeout(250);
-            break;
-          }
+      /* 返回被点击的选择器；无可点控件返回 null */
+      const clickRealControl = (sels) => page.evaluate((list) => {
+        for (const sel of list) {
+          const el = document.querySelector(sel);
+          if (!el) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0) continue;
+          const cx = r.left + r.width / 2;
+          const cy = r.top + r.height / 2;
+          if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) continue;
+          const top = document.elementFromPoint(cx, cy);
+          if (!top || !(top === el || el.contains(top))) continue;
+          el.click();
+          return sel;
         }
+        return null;
+      }, sels);
+
+      if (await isChatCollapsed()) {
+        // 折叠态的正牌展开入口是右侧 rail；#chatPanelCollapse 只在展开态下可点。
+        const used = await clickRealControl(["#chatPanelRail", "#chatPanelCollapse", ".chat-rail", "#chatToggle"]);
+        if (used) await page.waitForTimeout(250);
         if (await isChatCollapsed()) {
-          await page.evaluate(() => { const p = document.getElementById("chatPanel"); if (p) p.classList.remove("collapsed"); });
+          // 兜底：走应用自暴露的展开入口（bindChatPanel 内 window.__aiPanelExpand），最后才直接改 class
+          await page.evaluate(() => {
+            if (typeof window.__aiPanelExpand === "function") window.__aiPanelExpand();
+            const p = document.getElementById("chatPanel");
+            if (p && p.classList.contains("collapsed")) p.classList.remove("collapsed");
+          });
           await page.waitForTimeout(150);
         }
+        // 显式断言：展开失败应在此处给出明确信息，而不是让后续点击超时 10s
+        expect(await isChatCollapsed(), "聊天面板应已展开（折叠态下表单不可达）").toBe(false);
       }
 
       // mock fetch 拦截：拦截 /chat/completions 返回假回复
