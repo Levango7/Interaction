@@ -137,9 +137,14 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     });
 
     // ---------- 8. 编辑习惯链 ----------
-    await test.step("在设置抽屉添加一条新习惯链", async () => {
-      // 习惯链管理面板在抽屉内
-      await page.waitForSelector("#chainAddBtn", { timeout: 5_000 });
+    await test.step("在习惯链页添加一条新习惯链", async () => {
+      /* v3.6.6 IA 变更：习惯链管理已从设置抽屉独立为侧栏「习惯链」页（#side [data-sc="chainpage"]）。
+         抽屉里保留的同 id 节点是隐藏模板（fresh file:// 下 rect 为 0 → waitForSelector 视作 hidden）。
+         故先关抽屉（Esc）再从侧栏进入该页；两处 id 相同，后续交互不变。 */
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(200);
+      await page.click('#side .nav-item[data-sc="chainpage"]');
+      await page.waitForSelector("#chainAddBtn", { state: "visible", timeout: 5_000 });
       // 选源场景（office）、输入关键词、选目标场景（life）
       await page.selectOption("#chainAddSrc", "office");
       await page.fill("#chainAddKw", "E2E关键词");
