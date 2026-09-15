@@ -174,7 +174,8 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 九、相关文件
 
-- `agent-workbench.html` — 工坊本体（核心交付物）
+- `agent-workbench.html` — 工坊本体（核心交付物；源码态不含立绘 base64，构建时回注）
+- `assets/pet/` — 萌宠立绘 PNG + 注入顺序 `order.json`（见 [docs/pet-system.md](docs/pet-system.md)）
 - `启动Agent工坊.bat` — Edge 应用模式启动器
 - `启动本地服务.bat` — 本地服务模式启动器（解决 AI 跨域）
 - `electron/` — 桌面封装（见 [electron/README.md](electron/README.md)）
@@ -186,7 +187,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 | 文档 | 内容 |
 |---|---|
 | [docs/architecture-layers.md](docs/architecture-layers.md) | 单文件架构分层契约（改结构前必读） |
-| [docs/pet-system.md](docs/pet-system.md) | 萌宠系统：角色 / 立绘管线 / 五官标定 / 双风格 / 加新角色 |
+| [docs/pet-system.md](docs/pet-system.md) | 萌宠系统：角色 / 立绘外置与回注 / 五官标定 / 双风格 / 加新角色 |
 | [docs/ai-tools.md](docs/ai-tools.md) | AI 工具（function-calling）接口与 Schema |
 | [docs/ui-standards.md](docs/ui-standards.md) | UI 标准：标题栏 / 顶栏 / 卡片 / 断点 |
 | [docs/design-ui-guidelines.md](docs/design-ui-guidelines.md) | UI 设计规范：分层 / 模态 / 表单 / 动效 / 空态 |
@@ -208,6 +209,20 @@ npm run build:check     # 版本一致性 + 真相源完整性门禁（提交前
 npm test                # vitest 单测
 npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod.js
 ```
+
+**立绘已外置（v3.7.5 起）**：9 张萌宠立绘移出 HTML，存在 `assets/pet/*.png`，由构建回注。
+
+| 命令 | 作用 |
+|---|---|
+| `npm run pet:inject` | 把 `assets/pet/*.png` 回注进 HTML（幂等） |
+| `npm run pet:extract` | 反向：从 HTML 抽出立绘到 `assets/pet/`，HTML 留标记占位 |
+| `npm run pet:check` | 校验 assets 与 HTML 注入是否一致 |
+
+- 源码态 HTML（2.34MB，无 base64）**不能直接当成品用**：立绘区会退化为 SVG 兜底 + 控制台告警。
+  本地预览前先 `npm run pet:inject`；`npm test` / `npm run build:check` / `npm run build:prod`
+  都挂了 `pre` 钩子会自动回注，CI 无需额外步骤。
+- 改立绘 = 替换 `assets/pet/<kind>.png` → `npm run pet:inject`（顺序由 `assets/pet/order.json` 保持）。
+- 收益：源码 HTML 3.50MB → **2.34MB（-33%）**，编辑器与 diff 恢复可用；交付产物仍是**单个 HTML**（3.17MB）。
 
 **版本号四处必须一致**（`build:check` 会校验，不一致直接失败）：
 

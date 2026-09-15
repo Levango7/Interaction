@@ -48,22 +48,42 @@
 
 ## 三、立绘素材管线（构建期，纯 Node，零 GPU）
 
-脚本在 `_diag/`（工作区目录，不入仓库主流程）：
+**立绘数据已外置（v3.7.5 起）**：9 张 PNG 放在 `assets/pet/`，源码态 `agent-workbench.html`
+**不含 base64**（占位为 `const _PET_ART = { /*PET_ART:BEGIN*/ /*PET_ART:END*/ };`），
+由 `scripts/pet-art.mjs` 在构建/测试前回注。**代码**仍以 HTML 为唯一真相源（与 build.mjs 的
+「不做 src→HTML 字节拼接」定稿不冲突：外置的只是**素材数据**，不是代码）。
 
 ```
 AI 生成 1024²（要求：中调纯色背景 #8FA3B8、无水印、全身）
-   ↓  pet-lib.js cutout()          洪水填充抠底 + 内容包围盒
-   ↓  areaResize()                 面积平均降采样（预乘 alpha，防白边）→ 长边 320
+   ↓  pet-lib.js cutout()          洪水填充抠底（自适应容差）+ 内容包围盒
+   ↓  areaResize()                 面积平均降采样（预乘 alpha，防白边）
    ↓  encodePNG()                  逐行自适应 PNG 滤波（5 种挑绝对值和最小，无损省 25~40%）
-   ↓  base64 → _PET_ART[kind]
+   ↓  assets/pet/<kind>.png        ← 仓库里的素材真相源（9 张合计 637KB）
+   ↓  scripts/pet-art.mjs         回注：base64 塞回 _PET_ART（顺序由 order.json 保持）
+   ↓  单文件交付 agent-workbench.html
 ```
 
-**为什么要求"中调纯色背景"**：抠图靠"从四角洪水填充"，浅色主体 + 浅灰渐变背景（如白色萨摩耶 vs `#c7c4c5`）会让主体一起被吃掉，输出全透明图。中调纯色（`#8FA3B8`）对比度足够，一次抠干净。
-（`cutout()` 也已加**自适应容差**兜底：62 → 43 → 31 → 22 依次尝试，用"中心 40% 区域存活率"判断是否吃掉了主体。）
+| 命令 | 作用 |
+|---|---|
+| `npm run pet:inject` | assets → HTML（幂等；默认行为） |
+| `npm run pet:extract` | HTML → assets（同时把 HTML 置回源码态） |
+| `npm run pet:check` | 校验两侧一致 |
 
-**降采样必须用面积平均**：双线性只取 2×2 邻域，缩小 ≥3× 会严重混叠、边缘发糊。
+`npm test` / `npm run build:check` / `npm run build:prod` 均挂了 `pre` 钩子自动回注，
+CI 与发版不需要额外步骤；**只有本地直接双击打开源码 HTML 时才需要手工 `pet:inject`**
+（否则立绘为空：控制台有告警、5 个原始角色退化为 SVG 兜底，属预期行为）。
 
----
+### 显示尺寸与素材分辨率的关系（降采样依据）
+
+档位 `s/m/l` = 72/96/128 px；`lady` / `boy` 另有 `_PET_ART_SCALE = 1.5`（全身立绘横向太窄，需放大）。
+按 DPR=2 推算最大设备像素需求 = 128×2 = **256**（有 1.5× 缩放的两个角色 = 384）：
+
+| 角色 | 素材长边 | 依据 |
+|---|---|---|
+| 其余 7 只 | **256** | 恰好覆盖 128px 档 @DPR2，再大是浪费（1180KB → 637KB） |
+| `lady` / `boy` | **320** | 有 1.5× 缩放，需要更多像素 |
+
+**要点：降采样必须用面积平均**（双线性只取 2×2 邻域，缩小 ≥3× 会严重混叠、边缘发糊）。
 
 ## 四、五官标定（`_PET_FACE`）
 

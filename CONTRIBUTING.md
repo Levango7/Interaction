@@ -28,6 +28,9 @@ npm install
 | `npm run lint:layers` | 单文件分层契约校验（缺层 / 顺序错即失败） |
 | `npm run build:prod` | 生产构建（`agent-workbench.prod.html` + `service-worker.prod.js`） |
 | `npm run release <版本号>` | 发版：自动同步四处版本号 + 锁文件根字段 + CHANGELOG |
+| `npm run pet:inject` | 把 `assets/pet/*.png` 回注进 HTML（改了立绘或抽出后必跑） |
+| `npm run pet:extract` | 从 HTML 抽出立绘到 `assets/pet/`（把仓库置回源码态） |
+| `npm run pet:check` | 校验立绘 assets 与 HTML 注入一致 |
 
 ### Electron 桌面端（可选）
 
@@ -119,6 +122,7 @@ tests/                 # 测试文件
 electron/              # Electron 桌面壳（main.js + preload.js）
 scripts/               # 工具脚本（build.mjs / lint-colors.mjs / lint-layers.mjs / release.mjs）
 docs/                  # 设计文档（架构分层 / 萌宠系统 / UI 标准 / AI 工具 / 产品边界）
+assets/pet/            # 萌宠立绘 PNG + order.json（源码态 HTML 不含 base64，构建回注）
 dist/                  # 部署文件
 manifest.json          # PWA manifest
 service-worker.js      # PWA service worker
@@ -152,6 +156,17 @@ vitest.config.js       # 测试配置
 2. 页面无控制台报错；
 3. PWA 资源（manifest 图标等）无 404；
 4. 若动了萌宠：**两档风格都要看**（`精致二次元` / `3D 立体渲染`），见 [docs/pet-system.md](docs/pet-system.md)。
+
+### 立绘（萌宠素材）的改动流程
+
+立绘**数据**已外置到 `assets/pet/*.png`，**代码**仍以 `agent-workbench.html` 为唯一真相源
+（构建期回注，交付物始终是单个 HTML）。约定：
+
+- 只改立绘：替换 `assets/pet/<kind>.png` → `npm run pet:inject`（幂等；顺序看 `order.json`）。
+- 只改代码：正常编辑 HTML；**提交前跑 `npm run pet:extract`**，让仓库保持源码态（不含 base64），
+  否则每次提交都带上 1MB 级 base64 diff。
+- `npm test` / `npm run build:check` / `npm run build:prod` 都有 `pre` 钩子自动回注，CI 不需要额外步骤。
+- 直接打开**未回注**的源码 HTML 时立绘为空（控制台有告警、5 个原始角色退化为 SVG 兜底），属预期行为。
 
 ### 两条硬性写法约定
 
