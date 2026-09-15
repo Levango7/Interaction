@@ -159,7 +159,10 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 9. AI 对话（mock） ----------
     await test.step("启用 AI 并进行 mock 对话", async () => {
-      // 仍在设置抽屉。勾选启用 AI
+      /* AI 配置自 v1.15 起是**独立页**（不在设置抽屉里）：入口是侧栏「AI」项 [data-menu="feat-ai"]。
+         本机 file:// 实测：点该入口后 #cfgEnabled/#cfgName/#cfgBase/#cfgKey/#cfgModel/#cfgSave 全部可见。 */
+      await page.click('#side .nav-item[data-menu="feat-ai"]');
+      await page.waitForSelector("#cfgEnabled", { state: "visible", timeout: 5_000 });
       await page.check("#cfgEnabled");
       // 填写 profile 表单
       await page.fill("#cfgName", "E2E-Mock");
@@ -168,8 +171,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.fill("#cfgModel", "gpt-4o-mini");
       // 保存（会 alert + closeDrawer + render）
       await page.click("#cfgSave");
-      // 等 alert 被自动 accept，抽屉关闭
-      await page.waitForSelector("#drawer:not(.open)", { timeout: 5_000 });
+      // 等 alert 被自动 accept，配置落盘（AI 配置页不是抽屉，故不再断言抽屉关闭）
+      await page.waitForTimeout(400);
 
       // 切到办公场景，应有聊天框
       await page.click('#side .nav-item[data-sc="office"]');
@@ -202,7 +205,9 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       // 重新打开设置抽屉（上一步保存后已关闭）
       await page.click("#btnGear");
       await page.waitForSelector("#drawer.open", { timeout: 5_000 });
-      await page.waitForSelector("#btnExport", { timeout: 5_000 });
+      // 抽屉是标签式：导出按钮在「数据」分区（set-data），需先切标签（本机实测映射）
+      await page.click('[data-set-tab="set-data"]');
+      await page.waitForSelector("#btnExport", { state: "visible", timeout: 5_000 });
 
       // 监听 download 事件
       const downloadPromise = page.waitForEvent("download", { timeout: 10_000 });
