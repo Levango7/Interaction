@@ -4144,6 +4144,16 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 .img-pick-btn svg{width:16px;height:16px;flex-shrink:0}
 .img-pick-name{font-size:var(--fs-xs);color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .img-preview{width:var(--control-h);height:var(--control-h);object-fit:cover;border-radius:var(--radius-sm);border:1px solid var(--line);flex-shrink:0}
+
+/* v3.7.6：窄屏顶栏溢出修复。375px 下实测：logo(125) + 7 按钮(182) + gap(56) + padding(24) = 387 > 375
+   → 文档横向溢出 8px（#btnUser 右边界 383）。收窄间距即可；≤359px 再隐藏「帮助」（入口在侧栏/底部抽屉里还有）。 */
+@media (max-width:767px){
+  .topbar{gap:4px}
+}
+@media (max-width:359px){
+  .topbar{gap:2px}
+  #btnHelp{display:none}
+}
 </style>
 </head>
 <body>

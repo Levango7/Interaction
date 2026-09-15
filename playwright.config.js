@@ -37,10 +37,24 @@ module.exports = defineConfig({
     baseURL: appFileUrl,
     launchOptions: { args: ["--no-sandbox", "--disable-setuid-sandbox"] },
   },
+  /* v3.7.6：多视口矩阵。桌面/平板跑完整用户流程（workflow.spec.js）；
+     手机竖屏用真实移动预设（Pixel 5：移动 UA + isMobile + 触摸）只跑移动专属断言（mobile.spec.js）——
+     因为 ≤767px 时侧栏 #side 不可见，改走「底部 5 组导航 #mobBar + 底部抽屉 #sideSheet」的 IA。 */
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"], channel: undefined },
+      name: "desktop-1280x800",
+      use: { ...devices["Desktop Chrome"], channel: undefined, viewport: { width: 1280, height: 800 } },
+      testIgnore: /mobile\.spec\.js/,
+    },
+    {
+      name: "tablet-768x1024",
+      use: { ...devices["Desktop Chrome"], channel: undefined, viewport: { width: 768, height: 1024 } },
+      testIgnore: /mobile\.spec\.js/,
+    },
+    {
+      name: "mobile-375x667",
+      use: { ...devices["Pixel 5"], viewport: { width: 375, height: 667 } },
+      testMatch: /mobile\.spec\.js/,
     },
   ],
 });

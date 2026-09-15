@@ -24,7 +24,8 @@
     "pretest:coverage": "node scripts/pet-art.mjs",
     "prebuild": "node scripts/pet-art.mjs",
     "prebuild:check": "node scripts/pet-art.mjs",
-    "prebuild:prod": "node scripts/pet-art.mjs"
+    "prebuild:prod": "node scripts/pet-art.mjs",
+    "pree2e": "node scripts/pet-art.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
