@@ -44,7 +44,15 @@ const sha = b => createHash('sha256').update(b).digest('hex').slice(0, 12);
 function fail(msg) { console.error('[pet-art] ' + msg); process.exit(1); }
 
 let html = readFileSync(HTML, 'utf8');
-if (!RE_ANY.test(html)) fail(`未在 ${HTML} 找到 const _PET_ART = {…}; 字面量`);
+if (!RE_ANY.test(html)) {
+  /* 分层外置后，萌宠段（含 _PET_ART 占位符）位于 src/render-widgets.js —— 此时源码态 HTML 里本就没有该字面量，
+     属正常情形：--extract 视为无操作成功；注入方向则由 pre 钩子先跑 src-split 拼回后再执行。 */
+  if (process.argv.includes('--extract')) {
+    console.log('[pet-art] HTML 内无 _PET_ART（占位符位于 src/）→ 已是源码态，无需抽取');
+    process.exit(0);
+  }
+  fail(`未在 ${HTML} 找到 const _PET_ART = {…}; 字面量（占位符已进 src/ 时，请先跑 node scripts/src-split.mjs 拼回）`);
+}
 if (!EXTRACT && !hasMarkers(html)) fail('HTML 里还没有标记，先跑一次 --extract');
 
 const readArt = () => {
