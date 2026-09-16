@@ -224,6 +224,20 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
 - 改立绘 = 替换 `assets/pet/<kind>.png` → `npm run pet:inject`（顺序由 `assets/pet/order.json` 保持）。
 - 收益：源码 HTML 3.50MB → **2.34MB（-33%）**，编辑器与 diff 恢复可用；交付产物仍是**单个 HTML**（3.17MB）。
 
+**分层源块已外置（v3.7.7 起 · 任务 4 第一步）**：`Util`（Markdown 解析、性能工具）与 `Crypto` 两个层块
+抽到 `src/*.js`（合计约 32KB），HTML 内留标记占位，构建/测试前由 `scripts/src-split.mjs` 拼回。
+
+| 命令 | 作用 |
+|---|---|
+| `npm run src:inject` | 把 `src/*.js` 拼回 HTML（幂等） |
+| `npm run src:extract` | 反向：再抽取（按层标记定位；抽取前自动备份到 `_srcbackup/`） |
+| `npm run src:check` | 校验 src 与 HTML 两侧标记齐全 |
+| `npm run src:verify` | 与 git HEAD 比对，证明拼接是**代码零改动**（空白不敏感） |
+
+- 与 `build.mjs`「不做 src→HTML 字节拼接」的定稿不冲突：那条讲的是**不做运行时多 `<script src>`**（file:// 会失败）；
+  这里是**构建期回填**，交付物仍是单个 HTML。
+- 空载态（只有占位、未拼回）**不能直接跑**：请先 `npm run src:inject`；所有 `pre*` 钩子都会自动拼回，CI 无需额外步骤。
+
 **版本号四处必须一致**（`build:check` 会校验，不一致直接失败）：
 
 | 位置 | 字段 |

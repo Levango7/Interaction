@@ -62,3 +62,6 @@ docs/archive/
 
 # 本地会话/工具目录
 .zcode/
+
+# 源块抽取的自动备份（本地用）
+_srcbackup/

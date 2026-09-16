@@ -6150,6 +6150,7 @@ function idbListModels(){
   return idbGetAll(IDB_MODELS_STORE);
 }
 
+/*SRC:util-markdown:BEGIN*/
 // ===== Util Layer (Markdown 解析·T3.5) =====
 /**
  * 安全 URL 协议过滤：仅允许 http/https/mailto 与无协议（相对路径/锚点），
@@ -6358,7 +6359,8 @@ function sanitizeHtml(html){
   }
   return s;
 }
-
+/*SRC:util-markdown:END*/
+/*SRC:util-perf:BEGIN*/
 // ===== Util Layer (性能优化工具·v1.4-B) =====
 /* ---------- 防抖（debounce） ----------
  * v1.4-B 性能优化：搜索输入 / 窗口 resize 等高频事件防抖
@@ -6704,6 +6706,15 @@ function batchWrite(store){
     }
   };
 }
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
 // ===== UI Layer (交互层·主题与通知) =====
 /* ---------- 主题 / 通知 ---------- */
 /* T4：主题三态（light / dark / system）。system 跟随 prefers-color-scheme 实时切换；
@@ -9277,6 +9288,7 @@ function recoverAutoBackup(){
   render();
   return true;
 }
+/*SRC:crypto:BEGIN*/
 // ===== Crypto Layer (加密层) =====
 /* ---------- AI Key 加密存储（AES-GCM + 设备密钥）---------- */
 let _deviceKey = null;        // CryptoKey 实例
@@ -9503,7 +9515,15 @@ async function initCrypto(){
   return _cfgCache;
 }
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
-
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
 // ===== Chain Layer (联动层·任务完成与跨场景触发) =====
 /**
  * 统一的"完成任务"入口：集中设置完成态并触发场景联动
