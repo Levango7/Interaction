@@ -21503,21 +21503,47 @@ function pushCmdRecent(label){
   save(CMD_RECENT_KEY, list.slice(0,5));
 }
 /**
- * 模糊匹配（带命中位置）：子串命中 > 子序列命中；连续匹配与首字符命中加分
- * @param {string} text - 候选文本
- * @param {string} q - 查询词（内部转小写）
- * @returns {{score:number, positions:number[]}} score>0 匹配（分值），-1 不匹配；positions 为 text 中命中的下标
+ * 拼音首字母表（v3.7.10）
+ * 只收录「命令标签里实际出现的汉字」——64 个，约 1KB，避免引入完整拼音库（那是几百 KB）。
+ * 新增命令后若标签出现新字，补进这张表即可（未收录的字不参与首字母匹配，不影响原有功能）。
  */
-function fuzzyMatch(text, q){
-  q = String(q||"").toLowerCase();
+const PY_INIT = {
+  "主":"z","习":"x","令":"l","任":"r","份":"f","作":"z","健":"j","入":"r","全":"q","公":"g",
+  "出":"c","切":"q","到":"d","前":"q","办":"b","务":"w","取":"q","命":"m","回":"h","场":"c",
+  "备":"b","复":"f","学":"x","导":"d","工":"g","康":"k","建":"j","开":"k","当":"d","忆":"y",
+  "总":"z","恢":"h","打":"d","换":"h","据":"j","收":"s","数":"s","新":"x","明":"m","景":"j",
+  "暗":"a","最":"z","查":"c","标":"b","活":"h","消":"x","清":"q","生":"s","目":"m","看":"k",
+  "程":"c","空":"k","站":"z","统":"t","编":"b","置":"z","览":"l","计":"j","记":"j","设":"s",
+  "近":"j","部":"b","配":"p","题":"t"
+};
+/**
+ * 取文本的「拼音首字母串」：汉字取首字母、ASCII 字母数字原样保留，其余字符忽略
+ * @param {string} text - 原文
+ * @returns {{text:string, idx:number[]}} text 为字母串，idx 为每个字母对应的**原文下标**（用于把命中的字母映射回高亮位置）
+ */
+function pinyinInitials(text){
   const s = String(text||"");
-  const ls = s.toLowerCase();
-  if(!q) return { score: 10, positions: [] };
+  let out = "";
+  const idx = [];
+  for(let i=0;i<s.length;i++){
+    const ch = s[i];
+    if(PY_INIT[ch]) { out += PY_INIT[ch]; idx.push(i); }
+    else if(/[A-Za-z0-9]/.test(ch)) { out += ch.toLowerCase(); idx.push(i); }
+  }
+  return { text: out, idx: idx };
+}
+/**
+ * 打分核心（输入需已小写）：子串命中 > 子序列命中；连续匹配与首字符命中加分
+ * @param {string} ls - 已小写的候选文本
+ * @param {string} q - 已小写的查询词（非空）
+ * @returns {{score:number, positions:number[]}}
+ */
+function fuzzyScoreCore(ls, q){
   const i0 = ls.indexOf(q);
   if(i0 >= 0){
     const positions = [];
     for(let i=0;i<q.length;i++) positions.push(i0+i);
-    return { score: 200 - Math.min(i0, 100) + (i0===0 ? 20 : 0), positions }; // 子串：基础高分，开头命中再加
+    return { score: 200 - Math.min(i0, 100) + (i0===0 ? 20 : 0), positions };
   }
   let pos = 0, score = 0, prev = -2;
   const positions = [];
@@ -21530,6 +21556,30 @@ function fuzzyMatch(text, q){
     positions.push(f); prev = f; pos = f + 1;
   }
   return { score, positions };
+}
+/**
+ * 模糊匹配（带命中位置）：先按原文匹配；纯 ASCII 查询再尝试**拼音首字母**（如 xjrw → 新建任务）
+ * @param {string} text - 候选文本
+ * @param {string} q - 查询词
+ * @returns {{score:number, positions:number[]}} score>0 匹配，-1 不匹配；positions 为 text 中命中的下标
+ */
+function fuzzyMatch(text, q){
+  q = String(q||"").toLowerCase();
+  const s = String(text||"");
+  const ls = s.toLowerCase();
+  if(!q) return { score: 10, positions: [] };
+  const direct = fuzzyScoreCore(ls, q);
+  if(direct.score > 0) return direct;
+  /* 拼音首字母：仅当查询是纯 ASCII 时尝试（中文查询不做二次尝试，避免语义混乱）。
+     分值乘 0.8 —— 让"直接匹配"排在同分首字母匹配之前。 */
+  if(/^[a-z0-9]+$/.test(q)){
+    const py = pinyinInitials(s);
+    if(py.text){
+      const m = fuzzyScoreCore(py.text, q);
+      if(m.score > 0) return { score: Math.round(m.score * 0.8), positions: m.positions.map(i => py.idx[i]) };
+    }
+  }
+  return { score: -1, positions: [] };
 }
 /**
  * 模糊匹配打分（fuzzyMatch 的轻量包装，保持既有调用方与测试不变）
@@ -25692,7 +25742,13 @@ $("#cmdInput").onkeydown = e=>{
   if(e.key==="ArrowDown"){ e.preventDefault(); if(!n) return; cmdSel=(cmdSel+1) % n; updateCmdSel(); }
   else if(e.key==="ArrowUp"){ e.preventDefault(); if(!n) return; cmdSel=(cmdSel-1+n) % n; updateCmdSel(); }
   else if(e.key==="Enter"){ e.preventDefault(); runCmd(cmdSel); }
-  else if(e.key==="Escape"){ closeCmd(); }
+  /* v3.7.10：Esc 分两级 —— 有查询词时先清空（常见于"打错了想重来"），空查询时才关闭面板。
+     这样"清空"不需要全选删除，也避免误关面板丢掉最近使用上下文。 */
+  else if(e.key==="Escape"){
+    const inp=$("#cmdInput");
+    if(inp && String(inp.value||"").trim()){ e.preventDefault(); inp.value=""; renderCmd(""); }
+    else closeCmd();
+  }
 };
 // L1：输入时实时过滤命令（openCmd 仅初次渲染空列表，此前打字不刷新）
 $("#cmdInput").oninput = e=> renderCmd(e.target.value);
@@ -26627,7 +26683,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     getLastMergeLog, detectLegacyData, getMigrationLog,
     getPendingCSVImport, setPendingCSVImport,
     // P5' 命令面板增强（模糊搜索 / 最近使用）访问器
-    fuzzyScore, fuzzyMatch, highlightHits, getCmdRecent, pushCmdRecent,
+    fuzzyScore, fuzzyMatch, highlightHits, pinyinInitials, getCmdRecent, pushCmdRecent,
     // P1 自定义场景访问器（供测试驱动与断言）
     addCustomScenario, updateCustomScenario, removeCustomScenario,
     setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,
