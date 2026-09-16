@@ -20,12 +20,12 @@
     "pet:inject": "node scripts/pet-art.mjs",
     "pet:extract": "node scripts/pet-art.mjs --extract",
     "pet:check": "node scripts/pet-art.mjs --check",
-    "pretest": "node scripts/pet-art.mjs && node scripts/src-split.mjs",
-    "pretest:coverage": "node scripts/pet-art.mjs && node scripts/src-split.mjs",
-    "prebuild": "node scripts/pet-art.mjs && node scripts/src-split.mjs",
-    "prebuild:check": "node scripts/pet-art.mjs && node scripts/src-split.mjs",
-    "prebuild:prod": "node scripts/pet-art.mjs && node scripts/src-split.mjs",
-    "pree2e": "node scripts/pet-art.mjs && node scripts/src-split.mjs",
+    "pretest": "node scripts/src-split.mjs && node scripts/pet-art.mjs",
+    "pretest:coverage": "node scripts/src-split.mjs && node scripts/pet-art.mjs",
+    "prebuild": "node scripts/src-split.mjs && node scripts/pet-art.mjs",
+    "prebuild:check": "node scripts/src-split.mjs && node scripts/pet-art.mjs",
+    "prebuild:prod": "node scripts/src-split.mjs && node scripts/pet-art.mjs",
+    "pree2e": "node scripts/src-split.mjs && node scripts/pet-art.mjs",
     "make:pwa-icons": "node scripts/make-pwa-icons.mjs",
     "check:pwa-icons": "node scripts/make-pwa-icons.mjs --check",
     "make:ai-tools-doc": "node scripts/gen-ai-tools-doc.mjs",
@@ -34,7 +34,7 @@
     "src:extract": "node scripts/src-split.mjs --extract",
     "src:check": "node scripts/src-split.mjs --check",
     "src:verify": "node scripts/src-split.mjs --verify",
-    "prelint": "node scripts/pet-art.mjs && node scripts/src-split.mjs"
+    "prelint": "node scripts/src-split.mjs && node scripts/pet-art.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

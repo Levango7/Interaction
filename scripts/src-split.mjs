@@ -186,7 +186,9 @@ if (process.argv.includes('--verify')) {
   const cur = readFileSync(HTML, 'utf8');
   const norm = t => t.replace(/\r\n/g, '\n')
     .replace(/^\/\*SRC:[\w-]+:(?:BEGIN|END)\*\/\n/gm, '')
-    .replace(/\n{2,}/g, '\n');   /* 接缝处会多/少一个空行（纯版式），这里把连续空行折叠为 1 行：只证明「代码零改动」 */
+    .replace(/\n{2,}/g, '\n')   /* 接缝处会多/少一个空行（纯版式），这里把连续空行折叠为 1 行：只证明「代码零改动」 */
+    /* 立绘 base64 归一化：萌宠 _PET_ART 现位于 src/render-widgets.js，注入与否只影响这串数据，不影响代码 */
+    .replace(/data:image\/png;base64,[A-Za-z0-9+/=]+/g, 'data:image/png;base64,<ART>');
   const a = norm(head), b = norm(cur);
   console.log('[src-split] verify（基准 ' + base + '）：' + a.length + ' 字符 / 现在 ' + b.length + ' 字符');
   if (a === b) { console.log('[src-split] verify ✓ 归一化后完全一致（代码零改动）'); process.exit(0); }
