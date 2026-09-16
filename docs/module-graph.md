@@ -1,0 +1,121 @@
+# 分层源块依赖图（自动生成，勿手改）
+
+> 由 `scripts/module-graph.mjs` 从 `src/*.js` 的**符号级引用**分析得出：
+> 定义 = 块内顶格书写的 function/const/let/var/class；依赖 = 某块引用了恰好由另一块定义的符号。
+> 块数 26（本文件由脚本生成；不含时间戳，避免每日无意义 diff）
+
+## 1. 依赖矩阵（行依赖列）
+
+| 块 \ 依赖 | 层 | 依赖的块 | 依赖符号数 |
+|---|---|---|---|
+| `util-markdown` | Util | — | 0 |
+| `util-perf` | Util | — | 0 |
+| `crypto` | Crypto | `data-idb` | 2 |
+| `data-idb` | Data | `render-scene-main` | 1 |
+| `data-links` | Data | `ai-retry` `crypto` `render-scene-main` `render-widgets` `ui-global-events` `ui-theme` | 9 |
+| `data-migrate` | Data | `data-links` `ui-backup-stats` | 2 |
+| `data-rw` | Data | `chain` `crypto` `data-links` `ui-backup-stats` | 5 |
+| `chain` | Chain | `data-links` `data-migrate` `ui-theme` | 3 |
+| `ai-tools` | AI | `ai-retry` `chain` `data-rw` `render-scene-main` `ui-global-events` | 11 |
+| `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `crypto` `data-migrate` `render-overview` | 10 |
+| `ai-retry` | AI | `ai-loop` `ai-tools` `data-links` `render-scene-main` `render-widgets` `ui-drawer` `ui-global-events` `util-perf` | 18 |
+| `render-entry` | Render | `ai-retry` `data-links` `data-migrate` `render-overview` `render-scene-main` `render-widgets` `ui-daily` `ui-drawer` `ui-scene-bind` | 33 |
+| `render-scene-sub` | Render | `render-scene-main` `render-widgets` `ui-scene-bind` `util-perf` | 10 |
+| `render-scene-main` | Render | `ai-retry` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `ui-global-events` `ui-theme` `util-perf` | 22 |
+| `render-overview` | Render | `ai-retry` `chain` `data-links` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-drawer` `ui-global-events` `ui-scene-bind` `ui-theme` | 55 |
+| `render-widgets` | Render | `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `ui-drawer` `ui-global-events` `ui-guide` `ui-theme` `util-perf` | 31 |
+| `ui-theme` | UI | — | 0 |
+| `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
+| `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 9 |
+| `ui-scene-bind` | UI | `chain` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-global-events` | 18 |
+| `ui-palette` | UI | `ai-tools` `data-links` `ui-backup-stats` `ui-drawer` `ui-global-events` `ui-theme` | 7 |
+| `ui-daily` | UI | `chain` `data-links` `render-scene-sub` | 3 |
+| `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `ui-global-events` | 20 |
+| `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-global-events` `ui-guide` `ui-theme` | 57 |
+| `ui-hotkeys` | UI | `ai-retry` `data-links` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
+| `ui-global-events` | UI | `ai-retry` `ai-tools` `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-palette` `ui-theme` `util-perf` | 107 |
+
+## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
+
+| 符号 | 定义于 | 被多少块使用 |
+|---|---|---|
+| `t` | `ui-global-events` | 22 |
+| `toast` | `ui-theme` | 21 |
+| `SCENARIOS` | `ui-theme` | 18 |
+| `render` | `render-entry` | 16 |
+| `ORDER` | `ui-theme` | 14 |
+| `getTasks` | `data-rw` | 13 |
+| `getCfg` | `data-links` | 13 |
+| `active` | `data-links` | 12 |
+| `getActiveTasks` | `data-rw` | 12 |
+| `setTasks` | `data-rw` | 10 |
+| `el` | `render-scene-main` | 9 |
+| `getRec` | `data-rw` | 9 |
+| `arr` | `render-scene-main` | 8 |
+
+> 这些是事实上的"全局助手"。层间倒挂多由它们造成，若要继续解耦，优先从这里动手。
+
+## 3. 校验结果
+
+- 跨块重复定义：**0** 项
+- 循环依赖：**64** 条（data-links → ui-global-events → ai-tools → chain → data-links；data-links → ui-global-events → ai-tools → chain → data-migrate → data-links；data-links → ui-global-events → ai-tools → chain → data-migrate → ui-backup-stats → data-links；data-migrate → ui-backup-stats → data-migrate；crypto → data-idb → render-scene-main → data-links → ui-global-events → ai-tools → chain → data-migrate → ui-backup-stats → crypto）
+- 逆层依赖（低层用高层符号）：**54** 条
+
+| 从（层） | 到（层） | 涉及符号 |
+|---|---|---|
+| `ai-loop`（AI） | `ai-retry`（AI） | `abortChat` `renderChat` `scrollChat` `trimChatHist` |
+| `ai-loop`（AI） | `render-overview`（Render） | `addTokensUsage` |
+| `ai-retry`（AI） | `render-scene-main`（Render） | `rec` `renderMiniChart` |
+| `ai-retry`（AI） | `render-widgets`（Render） | `trapFocus` |
+| `ai-retry`（AI） | `ui-drawer`（UI） | `openAiPage` |
+| `ai-retry`（AI） | `ui-global-events`（UI） | `recommend` |
+| `ai-tools`（AI） | `ai-retry`（AI） | `pendingConfirm` |
+| `ai-tools`（AI） | `render-scene-main`（Render） | `SCENE_FEATURE_BIND` `loadSqlJs` `rec` `runJsSnippet` `runSql` |
+| `ai-tools`（AI） | `ui-global-events`（UI） | `createNote` `getNotes` |
+| `chain`（Chain） | `ui-theme`（UI） | `UI_ICONS` |
+| `crypto`（Crypto） | `data-idb`（Data） | `idbMirrorKey` `idbReadKey` |
+| `data-idb`（Data） | `render-scene-main`（Render） | `rec` |
+| `data-links`（Data） | `ai-retry`（AI） | `_chatContentToText` |
+| `data-links`（Data） | `render-scene-main`（Render） | `SCENE_FEATURE_BIND` `SCENE_FEATURE_RENDER` |
+| `data-links`（Data） | `render-widgets`（Render） | `_sideActive` `addToRecycleBin` |
+| `data-links`（Data） | `ui-global-events`（UI） | `getPluginScenarios` |
+| `data-links`（Data） | `ui-theme`（UI） | `SCENE_FEATURES` `UI_ICONS` |
+| `data-migrate`（Data） | `ui-backup-stats`（UI） | `allKeys` |
+| `data-rw`（Data） | `chain`（Chain） | `completeTask` |
+| `data-rw`（Data） | `ui-backup-stats`（UI） | `allKeys` |
+| `render-entry`（Render） | `render-overview`（Render） | `renderAuthLogin` `renderAuthRegister` `renderAuthWelcome` `renderChainPage` `renderOverview` `renderStats` … |
+| `render-entry`（Render） | `render-scene-main`（Render） | `SCENE_FEATURE_BIND` `_featureCardBind` `_hydrateRecImgs` `bindCodeFrontendCard` `bindCodeRunnerCard` `bindCodeSqlCard` … |
+| `render-entry`（Render） | `render-widgets`（Render） | `openRecycle` `renderSide` |
+| `render-entry`（Render） | `ui-daily`（UI） | `snoozeTask` |
+| `render-entry`（Render） | `ui-drawer`（UI） | `_moveDrawerHome` |
+| `render-entry`（Render） | `ui-scene-bind`（UI） | `bindScenario` `setupKanbanDnD` `setupKanbanKeyboard` |
+| `render-overview`（Render） | `render-widgets`（Render） | `SIDE_MENU_ICONS` `TOOL_APPS` `lineChartSVG` `openChartStore` |
+| `render-overview`（Render） | `ui-backup-stats`（UI） | `allKeys` |
+| `render-overview`（Render） | `ui-drawer`（UI） | `openAiPage` `openDrawer` `openTemplateModal` `registerPluginFromJson` |
+| `render-overview`（Render） | `ui-global-events`（UI） | `BUILTIN_PLUGINS` `_bindDashToolbar` `_switchSetTab` `bindCalendarEvents` `bindDashboardDnD` `bindReportModal` … |
+| `render-overview`（Render） | `ui-scene-bind`（UI） | `openTaskEdit` |
+| `render-overview`（Render） | `ui-theme`（UI） | `UI_ICONS` |
+| `render-scene-main`（Render） | `render-overview`（Render） | `_renderDiagramCanvas` `_renderFinanceStats` `_renderHealthTrend` |
+| `render-scene-main`（Render） | `render-widgets`（Render） | `TOOL_APPS` `lineChartSVG` |
+| `render-scene-main`（Render） | `ui-global-events`（UI） | `renderCalendarView` |
+| `render-scene-main`（Render） | `ui-theme`（UI） | `SCENE_FEATURES` `UI_ICONS` |
+| `render-scene-sub`（Render） | `render-scene-main`（Render） | `renderMiniChart` |
+| `render-scene-sub`（Render） | `render-widgets`（Render） | `thisWeekDone` `weekRange` |
+| `render-scene-sub`（Render） | `ui-scene-bind`（UI） | `bindReportCard` `bindReviewCard` |
+| `render-widgets`（Render） | `ui-drawer`（UI） | `closeDrawer` `openAiPage` `openDrawer` `openTemplateModal` |
+| `render-widgets`（Render） | `ui-global-events`（UI） | `_notifyNotesChanged` `_plugins` `getNotes` `openKnowledgeBaseModal` `openMindmapModal` `openNotesModal` … |
+| `render-widgets`（Render） | `ui-guide`（UI） | `renderHelp` |
+| `render-widgets`（Render） | `ui-theme`（UI） | `UI_ICONS` |
+| `ui-backup-stats`（UI） | `ui-global-events`（UI） | `getAiConfig` |
+| `ui-drawer`（UI） | `ui-global-events`（UI） | `closeKnowledgeBaseModal` `closeNoteEditorModal` `closeNotesModal` `closeSearchModal` `createCustomTheme` `deleteCustomTheme` … |
+| `ui-guide`（UI） | `ui-drawer`（UI） | `_moveDrawerHome` |
+| `ui-onboarding`（UI） | `ui-backup-stats`（UI） | `checkCount` |
+| `ui-onboarding`（UI） | `ui-daily`（UI） | `dailyDigest` |
+| `ui-onboarding`（UI） | `ui-drawer`（UI） | `openDrawer` |
+| `ui-palette`（UI） | `ui-backup-stats`（UI） | `doClear` |
+| `ui-palette`（UI） | `ui-drawer`（UI） | `openDrawer` |
+| `ui-palette`（UI） | `ui-global-events`（UI） | `showMemories` |
+| `ui-scene-bind`（UI） | `ui-backup-stats`（UI） | `checkCount` |
+| `ui-scene-bind`（UI） | `ui-global-events`（UI） | `bindCalendarEvents` |
+
+> 逆层依赖多为"低层回调/工具被高层注入"的历史耦合，不必然错误；基线策略只拦**新增**项。

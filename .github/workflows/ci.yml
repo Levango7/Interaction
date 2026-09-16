@@ -23,6 +23,8 @@ jobs:
       # 源码态门禁：仓库里提交的应是源码态（HTML 只有占位标记、代码在 src/、立绘在 assets/pet）
       # 必须在任何 pre 钩子（src-split / pet-art）之前跑，否则工作区已被拼成交付态、检查失效
       - run: npm run check:source-state
+      # 模块依赖门禁：对照基线，新增「循环依赖 / 逆层依赖 / 跨块重复定义」即失败
+      - run: npm run check:modules
       - run: npm ci
       - run: npm test
       - run: npm run test:coverage
