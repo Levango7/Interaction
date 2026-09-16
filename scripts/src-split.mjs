@@ -49,9 +49,15 @@ const BLOCKS = [
   /* 任务 4 第四步：AI Layer 三块（合计约 131KB：工具调用 / 对话循环 / 取消重试） */
   { name: 'ai-tools', layer: 'AI', title: 'AI 层·工具调用' },
   { name: 'ai-loop', layer: 'AI', title: 'AI 层·对话循环' },
-  { name: 'ai-retry', layer: 'AI', title: 'AI 层·取消/重试控制器' }
+  { name: 'ai-retry', layer: 'AI', title: 'AI 层·取消/重试控制器' },
+  /* 任务 4 第五步：Render Layer 五块（合计约 517KB：入口 / 场景细分 / 场景主区 / 概览 / 小工具） */
+  { name: 'render-entry', layer: 'Render', title: '渲染层·入口' },
+  { name: 'render-scene-sub', layer: 'Render', title: '渲染层·场景细分模块' },
+  { name: 'render-scene-main', layer: 'Render', title: '渲染层·场景主区' },
+  { name: 'render-overview', layer: 'Render', title: '渲染层·概览' },
+  { name: 'render-widgets', layer: 'Render', title: '渲染层·小工具' }
 ];
-const MIN_EXPECTED = 11;   // 至少应解析出这么多块，否则判定解析失败
+const MIN_EXPECTED = 16;   // 至少应解析出这么多块，否则判定解析失败
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');

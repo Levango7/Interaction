@@ -51,7 +51,7 @@
   "name": "ai-tools",
   "layer": "AI",
   "title": "AI 层·工具调用",
-  "tailBlanks": 2
+  "tailBlanks": 0
  },
  {
   "name": "ai-loop",
@@ -63,6 +63,36 @@
   "name": "ai-retry",
   "layer": "AI",
   "title": "AI 层·取消/重试控制器",
+  "tailBlanks": 0
+ },
+ {
+  "name": "render-entry",
+  "layer": "Render",
+  "title": "渲染层·入口",
+  "tailBlanks": 1
+ },
+ {
+  "name": "render-scene-sub",
+  "layer": "Render",
+  "title": "渲染层·场景细分模块",
+  "tailBlanks": 2
+ },
+ {
+  "name": "render-scene-main",
+  "layer": "Render",
+  "title": "渲染层·场景主区",
+  "tailBlanks": 1
+ },
+ {
+  "name": "render-overview",
+  "layer": "Render",
+  "title": "渲染层·概览",
+  "tailBlanks": 1
+ },
+ {
+  "name": "render-widgets",
+  "layer": "Render",
+  "title": "渲染层·小工具",
   "tailBlanks": 1
  }
 ]
