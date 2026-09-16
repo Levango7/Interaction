@@ -31,7 +31,8 @@ test.describe("跨视口布局不变量", () => {
 
   test("布局不变量：按宽度走对断点且无横向溢出", async ({ page }) => {
     await page.goto(APP_URL);
-    await page.waitForSelector("#mobBar", { timeout: 15_000 });
+    /* 用 state:"attached"：#mobBar 在桌面是 display:none（默认的 waitForSelector 等"可见"会在桌面超时） */
+    await page.waitForSelector("#mobBar", { state: "attached", timeout: 15_000 });
 
     const vw = page.viewportSize().width;
     const isNarrow = vw < 768;
