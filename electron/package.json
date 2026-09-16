@@ -31,8 +31,7 @@
       "target": [
         "portable"
       ],
-      "icon": "icon.ico",
-      "signingHashAlgorithms": []
+      "icon": "icon.ico"
     }
   }
 }

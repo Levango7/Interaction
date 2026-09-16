@@ -345,3 +345,12 @@ function batchWrite(store){
 }
 /*SRC:util-perf:END*/
 /*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/
+/*SRC:util-perf:END*/

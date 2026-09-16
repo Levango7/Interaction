@@ -33,7 +33,8 @@
     "src:inject": "node scripts/src-split.mjs",
     "src:extract": "node scripts/src-split.mjs --extract",
     "src:check": "node scripts/src-split.mjs --check",
-    "src:verify": "node scripts/src-split.mjs --verify"
+    "src:verify": "node scripts/src-split.mjs --verify",
+    "prelint": "node scripts/pet-art.mjs && node scripts/src-split.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

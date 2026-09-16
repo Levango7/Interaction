@@ -226,3 +226,12 @@ async function initCrypto(){
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
 /*SRC:crypto:END*/
 /*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
+/*SRC:crypto:END*/
