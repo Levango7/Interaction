@@ -43,9 +43,11 @@ const BLOCKS = [
   { name: 'data-idb', layer: 'Data', title: '数据层·IndexedDB 持久镜像' },
   { name: 'data-links', layer: 'Data', title: '数据层·联动规则与全局状态' },
   { name: 'data-migrate', layer: 'Data', title: '数据层·迁移与初始化' },
-  { name: 'data-rw', layer: 'Data', title: '数据层·读写' }
+  { name: 'data-rw', layer: 'Data', title: '数据层·读写' },
+  /* 任务 4 第三步：Chain Layer（联动层·任务完成与跨场景触发，约 34KB，耦合最低） */
+  { name: 'chain', layer: 'Chain', title: '联动层·任务完成与跨场景触发' }
 ];
-const MIN_EXPECTED = 7;   // 至少应解析出这么多块，否则判定解析失败
+const MIN_EXPECTED = 8;   // 至少应解析出这么多块，否则判定解析失败
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');
@@ -95,8 +97,13 @@ if (EXTRACT) {
     }
     const hits = findLayerLine(b.layer, b.title);
     if (!hits.length) { console.error(`[src-split] 未找到层块 ${b.layer} / ${b.title}`); continue; }
-    const s = hits[0], e = blockEndIdx(s);
-    const raw = lines.slice(s, e).join('\n');
+    let s = hits[0], e = blockEndIdx(s);
+    /* 拼回后再抽取的情形：本块外面还留着上次的 BEGIN/END 标记（层注释已被拼回）。
+       此时把旧标记一并纳入替换范围，否则会嵌套出「两个 BEGIN / 两个 END」的重复标记。 */
+    const inOldPair = s > 0 && lines[s - 1].trim() === mk(b.name) && lines[e] && lines[e].trim() === mkEnd(b.name);
+    if (inOldPair) s = s - 1;
+    const eAdj = inOldPair ? e + 1 : e;
+    const raw = lines.slice(inOldPair ? s + 1 : s, e).join('\n');
     /* 记录尾部空行数：块末的空白行属于原文件版式，拼回时要原样还原（否则无法做到字节级无损比对） */
     const tailBlanks = (raw.match(/\n+$/) || [''])[0].length;
     const body = raw.replace(/\n+$/, '');
@@ -104,7 +111,7 @@ if (EXTRACT) {
     meta.push({ name: b.name, layer: b.layer, title: b.title, tailBlanks: tailBlanks });
     console.log(`  抽出 src/${b.name}.js  ${e - s} 行  ${Math.round(Buffer.byteLength(body) / 1024)}KB  （${b.layer} · ${b.title}）`);
     /* 原地替换成标记占位（保留缩进/位置） */
-    lines.splice(s, e - s, mk(b.name), mkEnd(b.name));
+    lines.splice(s, eAdj - s, mk(b.name), mkEnd(b.name));
     extracted++;
     order.push(b.name);
     /* splice 后行号已变，重新扫描 */

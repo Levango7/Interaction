@@ -40,5 +40,11 @@
   "layer": "Data",
   "title": "数据层·读写",
   "tailBlanks": 0
+ },
+ {
+  "name": "chain",
+  "layer": "Chain",
+  "title": "联动层·任务完成与跨场景触发",
+  "tailBlanks": 1
  }
 ]
