@@ -20,6 +20,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+      # 源码态门禁：仓库里提交的应是源码态（HTML 只有占位标记、代码在 src/、立绘在 assets/pet）
+      # 必须在任何 pre 钩子（src-split / pet-art）之前跑，否则工作区已被拼成交付态、检查失效
+      - run: npm run check:source-state
       - run: npm ci
       - run: npm test
       - run: npm run test:coverage
@@ -37,6 +40,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+      - run: npm run check:source-state
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Run E2E (full user flow)
