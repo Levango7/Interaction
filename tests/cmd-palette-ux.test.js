@@ -109,4 +109,63 @@ describe("命令面板 UX 增强（v3.7.8）", () => {
       expect(hits).toBe("统计");
     });
   });
+
+  describe('拼音首字母搜索（v3.7.10）', () => {
+    it('pinyinInitials：汉字取首字母、ASCII 保留、其余忽略，并给出原文下标', () => {
+      const win = loadApp();
+      const a = win.__test.pinyinInitials('新建任务');
+      expect(a.text).toBe('xjrw');
+      expect(a.idx).toEqual([0, 1, 2, 3]);
+      const c = win.__test.pinyinInitials('切到 办公');
+      expect(c.text).toBe('qdbg');
+    });
+
+    it('fuzzyMatch 支持纯 ASCII 查询走首字母匹配，并把命中映射回原文字符', () => {
+      const win = loadApp();
+      const m = win.__test.fuzzyMatch('新建任务', 'xjrw');
+      expect(m.score).toBeGreaterThan(0);
+      expect(m.positions).toEqual([0, 1, 2, 3]);
+      const sub = win.__test.fuzzyMatch('切换明暗主题', 'qhzt');
+      expect(sub.score).toBeGreaterThan(0);
+      expect(sub.positions.length).toBe(4);
+    });
+
+    it('中文查询不做首字母二次尝试；直接匹配优先于首字母匹配', () => {
+      const win = loadApp();
+      expect(win.__test.fuzzyScore('新建任务', '务任')).toBe(-1);
+      expect(win.__test.fuzzyScore('abc', 'ba')).toBe(-1);
+      expect(win.__test.fuzzyMatch('AI 配置', 'ai').score).toBeGreaterThan(win.__test.fuzzyMatch('新建任务', 'xjrw').score);
+    });
+
+    it('面板里输入 xjrw 能筛到「新建任务」', () => {
+      const win = loadApp();
+      win.openCmd();
+      const input = win.document.getElementById('cmdInput');
+      input.value = 'xjrw';
+      input.dispatchEvent(new win.Event('input'));
+      expect(win.document.querySelector('#cmdList li[data-i]').textContent).toContain('新建任务');
+    });
+  });
+
+  describe('Esc 两级：先清空查询、再关闭面板', () => {
+    it('有查询时第一次 Esc 只清空并保留面板；再按才关闭', () => {
+      const win = loadApp();
+      win.openCmd();
+      const input = win.document.getElementById('cmdInput');
+      input.value = 'abc';
+      input.dispatchEvent(new win.Event('input'));
+      press(win, 'Escape');
+      expect(input.value, '第一次 Esc 应清空输入').toBe('');
+      expect(win.document.getElementById('cmd').classList.contains('show'), '面板应仍开着').toBe(true);
+      press(win, 'Escape');
+      expect(win.document.getElementById('cmd').classList.contains('show'), '第二次 Esc 应关闭').toBe(false);
+    });
+
+    it('查询为空时按 Esc 直接关闭', () => {
+      const win = loadApp();
+      win.openCmd();
+      press(win, 'Escape');
+      expect(win.document.getElementById('cmd').classList.contains('show')).toBe(false);
+    });
+  });
 });

@@ -1107,7 +1107,13 @@ $("#cmdInput").onkeydown = e=>{
   if(e.key==="ArrowDown"){ e.preventDefault(); if(!n) return; cmdSel=(cmdSel+1) % n; updateCmdSel(); }
   else if(e.key==="ArrowUp"){ e.preventDefault(); if(!n) return; cmdSel=(cmdSel-1+n) % n; updateCmdSel(); }
   else if(e.key==="Enter"){ e.preventDefault(); runCmd(cmdSel); }
-  else if(e.key==="Escape"){ closeCmd(); }
+  /* v3.7.10：Esc 分两级 —— 有查询词时先清空（常见于"打错了想重来"），空查询时才关闭面板。
+     这样"清空"不需要全选删除，也避免误关面板丢掉最近使用上下文。 */
+  else if(e.key==="Escape"){
+    const inp=$("#cmdInput");
+    if(inp && String(inp.value||"").trim()){ e.preventDefault(); inp.value=""; renderCmd(""); }
+    else closeCmd();
+  }
 };
 // L1：输入时实时过滤命令（openCmd 仅初次渲染空列表，此前打字不刷新）
 $("#cmdInput").oninput = e=> renderCmd(e.target.value);
@@ -2048,7 +2054,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     getLastMergeLog, detectLegacyData, getMigrationLog,
     getPendingCSVImport, setPendingCSVImport,
     // P5' 命令面板增强（模糊搜索 / 最近使用）访问器
-    fuzzyScore, fuzzyMatch, highlightHits, getCmdRecent, pushCmdRecent,
+    fuzzyScore, fuzzyMatch, highlightHits, pinyinInitials, getCmdRecent, pushCmdRecent,
     // P1 自定义场景访问器（供测试驱动与断言）
     addCustomScenario, updateCustomScenario, removeCustomScenario,
     setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,
