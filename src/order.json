@@ -1,5 +1,11 @@
 [
  {
+  "name": "core",
+  "layer": "Core",
+  "title": "核心层·全局助手与基础数据",
+  "tailBlanks": 0
+ },
+ {
   "name": "util-markdown",
   "layer": "Util",
   "title": "Markdown 解析·T3.5",

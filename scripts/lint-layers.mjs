@@ -52,7 +52,7 @@ LAYERS.forEach((l) => { byName[l.name] = (byName[l.name] || 0) + 1; });
 const info = Object.entries(byName).filter(([, n]) => n > 1).map(([name, n]) => `${name}×${n}`);
 
 // 4) 关键分层必须存在（架构契约）
-const REQUIRED = ["Bootstrap", "Data Layer", "AI Layer", "Render Layer", "UI Layer", "Util Layer", "Crypto Layer", "Chain Layer"];
+const REQUIRED = ["Bootstrap", "Core Layer", "Data Layer", "AI Layer", "Render Layer", "UI Layer", "Util Layer", "Crypto Layer", "Chain Layer"];
 const missing = REQUIRED.filter((r) => !byName[r] && !byName[r.replace(" Layer", " Layer")]);
 if (missing.length) errors.push(`缺少关键分层：${missing.join(", ")}`);
 

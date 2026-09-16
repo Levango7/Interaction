@@ -111,7 +111,10 @@ const duplicates = [...defOwners.entries()].filter(([, owners]) => owners.length
    它们会把几乎每个块都连到定义它的那个块上 → 图被噪声淹没（实测：不排除时 26 块报出 83 条环）。
    处理：扇出 ≥ SHARED_FANOUT 的符号单独归类为「共享符号」，不计入依赖边；在报告里单列，
    它们恰恰是「架构倒挂」的元凶，值得单独观察。 ---------- */
-const SHARED_FANOUT = 8;
+/* 可用 --fanout=N 覆盖：阈值越小越保守（把更多符号当"共享"排除）。默认 8 用于门禁，
+   想观察"把全局助手抽到 core 之后"的结构收益，可用更大的阈值（如 --fanout=20）。 */
+const _fArg = process.argv.find(a => a.startsWith("--fanout="));
+const SHARED_FANOUT = _fArg ? Math.max(1, parseInt(_fArg.slice(9), 10) || 8) : 8;
 const fanout = new Map();   // symbol -> Set(使用它的块名)
 for (const b of blocks) {
   for (const r of b.refs) {

@@ -36,6 +36,8 @@ const BACKUP_DIR = join(root, '_srcbackup');
 
 /* 可外置的层块：以「层注释行」为起止边界（含注释行本身），保证 lint-layers 的分层契约在拼回后不变 */
 const BLOCKS = [
+  /* v3.7.9：核心层 —— 全局助手与基础数据。摆在最前：它必须零外部依赖，且被上层普遍引用 */
+  { name: 'core', layer: 'Core', title: '核心层·全局助手与基础数据' },
   { name: 'util-markdown', layer: 'Util', title: 'Markdown 解析·T3.5' },
   { name: 'util-perf', layer: 'Util', title: '性能优化工具·v1.4-B' },
   { name: 'crypto', layer: 'Crypto', title: '加密层' },
@@ -68,7 +70,7 @@ const BLOCKS = [
   { name: 'ui-hotkeys', layer: 'UI', title: '交互层·快捷键' },
   { name: 'ui-global-events', layer: 'UI', title: '交互层·全局事件绑定' }
 ];
-const MIN_EXPECTED = 26;   // 至少应解析出这么多块，否则判定解析失败
+const MIN_EXPECTED = 27;   // 至少应解析出这么多块，否则判定解析失败
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');

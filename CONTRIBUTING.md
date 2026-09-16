@@ -37,6 +37,9 @@ npm install
 | `npm run check:ai-tools-doc` | 校验工具文档与源码工具集完全一致（缺/多都报错） |
 | `npm run src:verify` | 与基准提交比对，证明分层拼回是**代码零改动** |
 | `npm run e2e` | Playwright：桌面/平板/手机三视口矩阵（需 `E2E=1`） |
+| `npm run module:graph` | 生成 `docs/module-graph.md`（符号级依赖矩阵 + 共享符号 + 逆层清单） |
+| `npm run check:modules` | 对照基线校验：新增环/逆层/重复定义即失败 |
+| `npm run module:freeze` | 人工确认后把当前依赖状态冻为新基线 |
 
 ### Electron 桌面端（可选）
 

@@ -10059,28 +10059,6 @@ function setLang(lang){
   return true;
 }
 
-/**
- * 翻译函数：按 key 查找当前语言对应文案
- * 查找顺序：当前语言 → 中文（兜底）→ fallback → key 本身
- * @param {string} key - 消息 key（如 "common.save"）
- * @param {string} [fallback] - 找不到 key 时的兜底文案
- * @returns {string} 翻译后的文案
- */
-function t(key, fallback){
-  /* v2.2.0：MESSAGES 为 const，模块加载早期（TDZ）或字典缺失时回退兜底，不抛错 */
-  let msgs = null;
-  try{ msgs = MESSAGES[_currentLang] || MESSAGES.zh; }catch(e){ msgs = null; }
-  if(msgs){
-    const val = msgs[key];
-    if(val !== undefined) return val;
-    // fallback 到中文（确保即使 en 缺 key 也有合理输出）
-    const zhVal = MESSAGES.zh[key];
-    if(zhVal !== undefined) return zhVal;
-  }
-  // fallback 到传入的 fallback 或 key 本身
-  return fallback !== undefined ? fallback : key;
-}
-
 // 模块加载时自动初始化（从 localStorage 恢复语言偏好）
 initI18n();
 /**

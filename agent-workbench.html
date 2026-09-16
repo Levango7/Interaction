@@ -5748,6 +5748,8 @@ function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.get
 function esc(s){ return String(s===null||s===undefined?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function sameDay(ts,y,m,d){ const t=new Date(ts); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
 
+/*SRC:core:BEGIN*/
+/*SRC:core:END*/
 /*SRC:data-idb:BEGIN*/
 /*SRC:data-idb:END*/
 /*SRC:util-markdown:BEGIN*/
