@@ -8798,8 +8798,6 @@ function getStreamProgress(){
 function streamProgressClear(){
   _streamProgress = null;
 }
-
-
 /*SRC:ai-tools:END*/
 /*SRC:data-migrate:BEGIN*/
 // ===== Data Layer (数据层·迁移与初始化) =====
@@ -10178,6 +10176,7 @@ function renderChainGraph(){
   return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("hc.graphAriaLabel", "跨场景联动关系图")}">${defs}${edges}${nodes}</svg></div>`;
 }
 /*SRC:chain:END*/
+/*SRC:render-widgets:BEGIN*/
 // ===== Render Layer (渲染层·小工具) =====
 /* ---------- 小工具 ---------- */
 function lineChartSVG(vals, color){
@@ -14368,6 +14367,7 @@ function renderToday(){
   </div>`;
 }
 
+/*SRC:render-widgets:END*/
 // ===== UI Layer (交互层·Onboarding 引导) =====
 /* ---------- B：Onboarding 首次启动引导 ---------- */
 // B1：首次启动检测（未标记 onboarded 且无任务）
@@ -14976,6 +14976,7 @@ const renderBatched = (function(){
   });
 })();
 
+/*SRC:render-overview:BEGIN*/
 // ===== Render Layer (渲染层·概览) =====
 /* ---------- 渲染：概览 ---------- */
 /**
@@ -16966,6 +16967,8 @@ function renderGlob(q){
   res.innerHTML=sanitizeHtml(html||renderEmpty("no-search"));
 }
 
+/*SRC:render-overview:END*/
+/*SRC:render-scene-sub:BEGIN*/
 // ===== Render Layer (渲染层·场景细分模块) =====
 /* ---------- 场景细分模块 ---------- */
 /* CARD_REGISTRY：场景专属卡片 render/bind 查表（A-P2-7，替代 renderExtra/bindExtra 硬编码分支；FB-2/6） */
@@ -17485,6 +17488,8 @@ function codeCard(sc){
 function bindCodeCard(sc){ /* 编程卡片无需额外绑定 */ }
 
 
+/*SRC:render-scene-sub:END*/
+/*SRC:render-scene-main:BEGIN*/
 // ===== Render Layer (渲染层·场景主区) =====
 /* ---------- 渲染：场景主区 ---------- */
 /**
@@ -19387,6 +19392,7 @@ function _updateRecVScroll(viewport, sc){
   items.style.top = range.offsetY + "px";
 }
 
+/*SRC:render-scene-main:END*/
 // ===== UI Layer (交互层·场景绑定) =====
 /* ---------- 绑定 ---------- */
 /**
@@ -21436,7 +21442,6 @@ document.addEventListener("click", function(e){
     askAiAboutScene(sc);
   }
 });
-
 /*SRC:ai-retry:END*/
 // ===== UI Layer (交互层·命令面板) =====
 /* ---------- 命令面板（P5' 增强：模糊搜索 / 分组 / 最近使用） ---------- */
@@ -21900,6 +21905,7 @@ function stopNotifyScheduler(){
   if(_notifyTimer){ clearInterval(_notifyTimer); _notifyTimer = null; }
 }
 
+/*SRC:render-entry:BEGIN*/
 // ===== Render Layer (渲染层·入口) =====
 /* ---------- 渲染入口 ---------- */
 /**
@@ -22052,6 +22058,7 @@ function render(){
   }
 }
 
+/*SRC:render-entry:END*/
 // ===== UI Layer (交互层·备份与统计) =====
 /* ---------- 备份 / 统计 ---------- */
 function allKeys(){ try{ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }catch(e){ return []; } }
