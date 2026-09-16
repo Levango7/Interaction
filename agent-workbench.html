@@ -6150,7 +6150,6 @@ function idbDeleteModel(modelId){
 function idbListModels(){
   return idbGetAll(IDB_MODELS_STORE);
 }
-
 /*SRC:data-idb:END*/
 /*SRC:util-markdown:BEGIN*/
 // ===== Util Layer (Markdown 解析·T3.5) =====
@@ -6361,7 +6360,6 @@ function sanitizeHtml(html){
   }
   return s;
 }
-
 /*SRC:util-markdown:END*/
 /*SRC:util-perf:BEGIN*/
 // ===== Util Layer (性能优化工具·v1.4-B) =====
@@ -7739,8 +7737,8 @@ function bindSessionModal(){
  * @returns {Cfg}
  */
 function getCfg(){ return _cfgCache || load(PREFIX+"cfg", {}); }
-
 /*SRC:data-links:END*/
+/*SRC:ai-tools:BEGIN*/
 // ===== AI Layer (AI 层·工具调用) =====
 /* ---------- 工具（AI 可调用） ---------- */
 function findTask(key){
@@ -8802,6 +8800,7 @@ function streamProgressClear(){
 }
 
 
+/*SRC:ai-tools:END*/
 /*SRC:data-migrate:BEGIN*/
 // ===== Data Layer (数据层·迁移与初始化) =====
 /* ---------- 初始化 + 迁移 ---------- */
@@ -9059,7 +9058,6 @@ function seed(){
   save(PREFIX+"rec_life", [{id:uid(),title:t("seed.rec4.title", "周末采买清单"),cat:t("seed.rec4.cat", "购物"),note:t("seed.rec4.note", "牛奶、鸡蛋、水果、洗衣液"),created:Date.now()}]);
   save(PREFIX+"init", true);
 }
-
 /*SRC:data-migrate:END*/
 /*SRC:data-rw:BEGIN*/
 // ===== Data Layer (数据层·读写) =====
@@ -9516,7 +9514,6 @@ async function initCrypto(){
   return _cfgCache;
 }
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
-
 /*SRC:crypto:END*/
 /*SRC:chain:BEGIN*/
 // ===== Chain Layer (联动层·任务完成与跨场景触发) =====
@@ -10180,7 +10177,6 @@ function renderChainGraph(){
   }).join("");
   return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("hc.graphAriaLabel", "跨场景联动关系图")}">${defs}${edges}${nodes}</svg></div>`;
 }
-
 /*SRC:chain:END*/
 // ===== Render Layer (渲染层·小工具) =====
 /* ---------- 小工具 ---------- */
@@ -20010,6 +20006,7 @@ function bindBatchToolbar(){
   };
 }
 
+/*SRC:ai-loop:BEGIN*/
 // ===== AI Layer (AI 层·对话循环) =====
 /* ---------- v1.4-D AI 能力增强：自然语言解析 ---------- */
 /**
@@ -20641,6 +20638,8 @@ async function handleAiCodeGen(parsed, hist){
  * 在 renderChat 之后调用，幂等注入
  * @returns {void}
  */
+/*SRC:ai-loop:END*/
+/*SRC:ai-retry:BEGIN*/
 // ===== AI Layer (AI 层·取消/重试控制器) =====
 let chatController=null;       // { ac, timer, aborted, reason }
 let lastChatRequest=null;      // { messages, hist } 用于重试
@@ -21438,6 +21437,7 @@ document.addEventListener("click", function(e){
   }
 });
 
+/*SRC:ai-retry:END*/
 // ===== UI Layer (交互层·命令面板) =====
 /* ---------- 命令面板（P5' 增强：模糊搜索 / 分组 / 最近使用） ---------- */
 let cmdItems=[], cmdSel=0;
