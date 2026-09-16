@@ -5746,6 +5746,7 @@ function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.get
 function esc(s){ return String(s===null||s===undefined?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function sameDay(ts,y,m,d){ const t=new Date(ts); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
 
+/*SRC:data-idb:BEGIN*/
 // ===== Data Layer (数据层·IndexedDB 持久镜像) =====
 /* ---------- IDB 持久存储镜像（架构项①：容量与可靠性） ----------
  * 设计契约：
@@ -6150,6 +6151,7 @@ function idbListModels(){
   return idbGetAll(IDB_MODELS_STORE);
 }
 
+/*SRC:data-idb:END*/
 /*SRC:util-markdown:BEGIN*/
 // ===== Util Layer (Markdown 解析·T3.5) =====
 /**
@@ -6359,6 +6361,7 @@ function sanitizeHtml(html){
   }
   return s;
 }
+
 /*SRC:util-markdown:END*/
 /*SRC:util-perf:BEGIN*/
 // ===== Util Layer (性能优化工具·v1.4-B) =====
@@ -6707,17 +6710,6 @@ function batchWrite(store){
   };
 }
 /*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
-/*SRC:util-perf:END*/
 // ===== UI Layer (交互层·主题与通知) =====
 /* ---------- 主题 / 通知 ---------- */
 /* T4：主题三态（light / dark / system）。system 跟随 prefers-color-scheme 实时切换；
@@ -7042,6 +7034,7 @@ const SCENE_FEATURES = {
   ]
 };
 
+/*SRC:data-links:BEGIN*/
 // ===== Data Layer (数据层·联动规则与全局状态) =====
 /* ---------- 场景联动规则（任务完成时触发，跨场景生成任务） ---------- */
 const DEFAULT_LINKS = [
@@ -7747,6 +7740,7 @@ function bindSessionModal(){
  */
 function getCfg(){ return _cfgCache || load(PREFIX+"cfg", {}); }
 
+/*SRC:data-links:END*/
 // ===== AI Layer (AI 层·工具调用) =====
 /* ---------- 工具（AI 可调用） ---------- */
 function findTask(key){
@@ -8808,6 +8802,7 @@ function streamProgressClear(){
 }
 
 
+/*SRC:data-migrate:BEGIN*/
 // ===== Data Layer (数据层·迁移与初始化) =====
 /* ---------- 初始化 + 迁移 ---------- */
 /* v1.4-C 迁移日志：记录每次迁移操作（最多 50 条，溢出裁剪旧条目） */
@@ -9065,6 +9060,8 @@ function seed(){
   save(PREFIX+"init", true);
 }
 
+/*SRC:data-migrate:END*/
+/*SRC:data-rw:BEGIN*/
 // ===== Data Layer (数据层·读写) =====
 /* ---------- 数据读写 ---------- */
 /**
@@ -9291,6 +9288,7 @@ function recoverAutoBackup(){
   render();
   return true;
 }
+/*SRC:data-rw:END*/
 /*SRC:crypto:BEGIN*/
 // ===== Crypto Layer (加密层) =====
 /* ---------- AI Key 加密存储（AES-GCM + 设备密钥）---------- */
@@ -9518,17 +9516,7 @@ async function initCrypto(){
   return _cfgCache;
 }
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
-/*SRC:crypto:END*/
+
 /*SRC:crypto:END*/
 // ===== Chain Layer (联动层·任务完成与跨场景触发) =====
 /**
