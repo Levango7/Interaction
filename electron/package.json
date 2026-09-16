@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "prebuild": "node -e \"const fs=require('fs'),p=require('path');const s=p.resolve(__dirname,'..','agent-workbench.html'),d=p.resolve(__dirname,'agent-workbench.html');fs.copyFileSync(s,d);console.log('[prebuild] copied',p.basename(s),'->',p.basename(d))\"",
+    "prebuild": "node ../scripts/src-split.mjs && node ../scripts/pet-art.mjs && node -e \"const fs=require('fs'),p=require('path');const s=p.resolve(__dirname,'..','agent-workbench.html'),d=p.resolve(__dirname,'agent-workbench.html');fs.copyFileSync(s,d);console.log('[prebuild] copied',p.basename(s),'->',p.basename(d))\"",
     "dist": "npm run prebuild && electron-builder --win --x64 --publish=never"
   },
   "author": "",

@@ -7,6 +7,9 @@ build/
 agent-workbench.prod.html
 service-worker.prod.js
 
+# Electron Builder 缓存（7zip/nsis/icons/downloads，可重新下载）
+.eb-cache/
+
 # 临时文件
 tmp.*
 _lc_*
