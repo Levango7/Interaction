@@ -35,6 +35,8 @@ npm install
 | `npm run check:pwa-icons` | 校验两个 PWA 图标与重绘结果一致 |
 | `npm run make:ai-tools-doc` | 从源码 TOOLS 重新生成 `docs/ai-tools.md`（改过 AI 工具后必跑） |
 | `npm run check:ai-tools-doc` | 校验工具文档与源码工具集完全一致（缺/多都报错） |
+| `npm run src:verify` | 与基准提交比对，证明分层拼回是**代码零改动** |
+| `npm run e2e` | Playwright：桌面/平板/手机三视口矩阵（需 `E2E=1`） |
 
 ### Electron 桌面端（可选）
 
@@ -171,6 +173,15 @@ vitest.config.js       # 测试配置
   否则每次提交都带上 1MB 级 base64 diff。
 - `npm test` / `npm run build:check` / `npm run build:prod` 都有 `pre` 钩子自动回注，CI 不需要额外步骤。
 - 直接打开**未回注**的源码 HTML 时立绘为空（控制台有告警、5 个原始角色退化为 SVG 兜底），属预期行为。
+
+### 结构守护测试
+
+`tests/build-structure.test.js` 是「分层外置 + 立绘外置」的防复发测试，断言结构不变量：
+标记成对且不重复、所有标记都在 `<script>` 内（防块边界越过 `</script>`）、7 大层注释齐全、
+src 文件与 `order.json` 一一对应、注入的立绘与 `assets/pet/*.png` 字节一致。
+
+`tests/e2e/viewport.spec.js` 断言三视口的**布局不变量**（无横向溢出、断点分流正确、顶栏高度合理、
+主区未被压扁、移动端触控目标尺寸）—— 不做像素基线，避免基线噪声。
 
 ### 两条硬性写法约定
 
