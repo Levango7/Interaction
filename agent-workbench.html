@@ -6708,6 +6708,7 @@ function batchWrite(store){
   };
 }
 /*SRC:util-perf:END*/
+/*SRC:ui-theme:BEGIN*/
 // ===== UI Layer (交互层·主题与通知) =====
 /* ---------- 主题 / 通知 ---------- */
 /* T4：主题三态（light / dark / system）。system 跟随 prefers-color-scheme 实时切换；
@@ -7032,6 +7033,7 @@ const SCENE_FEATURES = {
   ]
 };
 
+/*SRC:ui-theme:END*/
 /*SRC:data-links:BEGIN*/
 // ===== Data Layer (数据层·联动规则与全局状态) =====
 /* ---------- 场景联动规则（任务完成时触发，跨场景生成任务） ---------- */
@@ -14366,8 +14368,8 @@ function renderToday(){
     ${chainBar}
   </div>`;
 }
-
 /*SRC:render-widgets:END*/
+/*SRC:ui-onboarding:BEGIN*/
 // ===== UI Layer (交互层·Onboarding 引导) =====
 /* ---------- B：Onboarding 首次启动引导 ---------- */
 // B1：首次启动检测（未标记 onboarded 且无任务）
@@ -14495,6 +14497,8 @@ function renderOnboarding(){
   _onboardRenderStep(_onboardStepNo);
 }
 
+/*SRC:ui-onboarding:END*/
+/*SRC:ui-guide:BEGIN*/
 // ===== UI Layer (交互层·使用指南) =====
 /* ---------- 渲染：使用指南 modal ---------- */
 // helpSection(id, title, content) — 生成一个可折叠章节；id==="快速上手" 时默认展开
@@ -14976,6 +14980,7 @@ const renderBatched = (function(){
   });
 })();
 
+/*SRC:ui-guide:END*/
 /*SRC:render-overview:BEGIN*/
 // ===== Render Layer (渲染层·概览) =====
 /* ---------- 渲染：概览 ---------- */
@@ -16966,7 +16971,6 @@ function renderGlob(q){
     recs.map(r=>`<li><div class="body"><div class="t">${esc(r.title)}</div><div class="m">${SCENARIOS[r.sc].name}</div></div></li>`).join("")+`</ul>`;
   res.innerHTML=sanitizeHtml(html||renderEmpty("no-search"));
 }
-
 /*SRC:render-overview:END*/
 /*SRC:render-scene-sub:BEGIN*/
 // ===== Render Layer (渲染层·场景细分模块) =====
@@ -17486,8 +17490,6 @@ function codeCard(sc){
   return '<div class="card extra-card"><h3>'+t("sceneCard.code.title", t("record.code.label","代码片段"))+'</h3><p class="sub">'+t("sceneCard.code.sub", t("sceneCard.code.sub","各语言片段数 · 最近速览"))+'</p><div class="extra-stats">'+statHtml+'</div><div class="extra-list">'+items+'</div></div>';
 }
 function bindCodeCard(sc){ /* 编程卡片无需额外绑定 */ }
-
-
 /*SRC:render-scene-sub:END*/
 /*SRC:render-scene-main:BEGIN*/
 // ===== Render Layer (渲染层·场景主区) =====
@@ -19391,8 +19393,8 @@ function _updateRecVScroll(viewport, sc){
   items.innerHTML = sanitizeHtml(html);
   items.style.top = range.offsetY + "px";
 }
-
 /*SRC:render-scene-main:END*/
+/*SRC:ui-scene-bind:BEGIN*/
 // ===== UI Layer (交互层·场景绑定) =====
 /* ---------- 绑定 ---------- */
 /**
@@ -20012,6 +20014,7 @@ function bindBatchToolbar(){
   };
 }
 
+/*SRC:ui-scene-bind:END*/
 /*SRC:ai-loop:BEGIN*/
 // ===== AI Layer (AI 层·对话循环) =====
 /* ---------- v1.4-D AI 能力增强：自然语言解析 ---------- */
@@ -21443,6 +21446,7 @@ document.addEventListener("click", function(e){
   }
 });
 /*SRC:ai-retry:END*/
+/*SRC:ui-palette:BEGIN*/
 // ===== UI Layer (交互层·命令面板) =====
 /* ---------- 命令面板（P5' 增强：模糊搜索 / 分组 / 最近使用） ---------- */
 let cmdItems=[], cmdSel=0;
@@ -21568,6 +21572,8 @@ function runCmd(i){ const it=cmdItems[i]; if(!it||!it.run) return; if(it.trackRe
 function openCmd(){ const c=$("#cmd"); if(!c) return; c.classList.add("show"); $("#cmdOverlay").classList.add("show");
   const i=$("#cmdInput"); i.value=""; renderCmd(""); i.focus(); }
 function closeCmd(){ $("#cmd").classList.remove("show"); $("#cmdOverlay").classList.remove("show"); }
+/*SRC:ui-palette:END*/
+/*SRC:ui-daily:BEGIN*/
 // ===== UI Layer (交互层·每日播报) =====
 /* ---------- 每日播报 ---------- */
 // PWA 通知：优先用系统 Notification API（已授权时），否则 fallback 到 toast
@@ -21905,6 +21911,7 @@ function stopNotifyScheduler(){
   if(_notifyTimer){ clearInterval(_notifyTimer); _notifyTimer = null; }
 }
 
+/*SRC:ui-daily:END*/
 /*SRC:render-entry:BEGIN*/
 // ===== Render Layer (渲染层·入口) =====
 /* ---------- 渲染入口 ---------- */
@@ -22057,8 +22064,8 @@ function render(){
     try{ toast(t("err.renderException","渲染异常：")+(e&&e.message||t("tool.unknownErrorMsg", t("common.unknownError","未知错误"))), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
   }
 }
-
 /*SRC:render-entry:END*/
+/*SRC:ui-backup-stats:BEGIN*/
 // ===== UI Layer (交互层·备份与统计) =====
 /* ---------- 备份 / 统计 ---------- */
 function allKeys(){ try{ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }catch(e){ return []; } }
@@ -23073,6 +23080,8 @@ function doImportCSVFile(file){
   reader.readAsText(file, "utf-8");
 }
 
+/*SRC:ui-backup-stats:END*/
+/*SRC:ui-drawer:BEGIN*/
 // ===== UI Layer (交互层·设置抽屉) =====
 /* ---------- 设置抽屉 ---------- */
 /* 渲染单个链行（含启用 toggle、源图标、关键词、→、目标图标、目标名、删除按钮） */
@@ -24472,6 +24481,8 @@ if(!window._v16dSearchHotkeyBound){
   });
 }
 
+/*SRC:ui-drawer:END*/
+/*SRC:ui-hotkeys:BEGIN*/
 // ===== UI Layer (交互层·快捷键) =====
 /* ---------- 快捷键 ---------- */
 document.addEventListener("keydown", e=>{
@@ -24508,6 +24519,8 @@ document.addEventListener("keydown", e=>{
   }
 });
 
+/*SRC:ui-hotkeys:END*/
+/*SRC:ui-global-events:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定) =====
 /* ---------- 绑定 ---------- */
 /* Agent 状态条：记忆条数 + 进行中目标进度 */
@@ -43151,6 +43164,7 @@ function _resetIntegrationRateLimits(){
 }// ===== v1.8-C OAuth2 Framework (OAuth2 授权框架) =====
 
 // ----------------------------------------------------------------------------
+/*SRC:ui-global-events:END*/
 </script>
 </body>
 </html>
