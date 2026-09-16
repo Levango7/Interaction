@@ -24,6 +24,9 @@ import { crc32, pngChunk } from './make-icon.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 const SIZES = [192, 512];
+/* electron-builder 打包 Windows 要求图标 ≥256×256（现有 icon.ico 是自制 32×32 PNG-in-ICO，
+   会在 WinPackager.getOrConvertIcon 阶段失败），故额外产出 electron/icon-256.png */
+const ELECTRON_ICON = 'electron/icon-256.png';
 const BG = [0x0a, 0x6c, 0xbd];
 const CHECK = process.argv.includes('--check');
 
@@ -121,5 +124,10 @@ for (const s of SIZES) {
   const png = encodePNG(drawMark(s));
   writeFileSync(join(root, `icon-${s}.png`), png);
   console.log(`[pwa-icon] wrote icon-${s}.png (${png.length} bytes)`);
+}
+{
+  const png = encodePNG(drawMark(256));
+  writeFileSync(join(root, ELECTRON_ICON), png);
+  console.log(`[pwa-icon] wrote ${ELECTRON_ICON} (${png.length} bytes) —— 供 electron-builder 打包用`);
 }
 console.log('[pwa-icon] 完成：manifest.json 的 ./icon-192.png 与 ./icon-512.png 现在真实存在');

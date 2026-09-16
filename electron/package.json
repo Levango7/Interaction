@@ -31,7 +31,7 @@
       "target": [
         "portable"
       ],
-      "icon": "icon.ico"
+      "icon": "icon-256.png"
     }
   }
 }
