@@ -45,9 +45,13 @@ const BLOCKS = [
   { name: 'data-migrate', layer: 'Data', title: '数据层·迁移与初始化' },
   { name: 'data-rw', layer: 'Data', title: '数据层·读写' },
   /* 任务 4 第三步：Chain Layer（联动层·任务完成与跨场景触发，约 34KB，耦合最低） */
-  { name: 'chain', layer: 'Chain', title: '联动层·任务完成与跨场景触发' }
+  { name: 'chain', layer: 'Chain', title: '联动层·任务完成与跨场景触发' },
+  /* 任务 4 第四步：AI Layer 三块（合计约 131KB：工具调用 / 对话循环 / 取消重试） */
+  { name: 'ai-tools', layer: 'AI', title: 'AI 层·工具调用' },
+  { name: 'ai-loop', layer: 'AI', title: 'AI 层·对话循环' },
+  { name: 'ai-retry', layer: 'AI', title: 'AI 层·取消/重试控制器' }
 ];
-const MIN_EXPECTED = 8;   // 至少应解析出这么多块，否则判定解析失败
+const MIN_EXPECTED = 11;   // 至少应解析出这么多块，否则判定解析失败
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');

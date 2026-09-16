@@ -3,7 +3,7 @@
   "name": "util-markdown",
   "layer": "Util",
   "title": "Markdown 解析·T3.5",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "util-perf",
@@ -15,25 +15,25 @@
   "name": "crypto",
   "layer": "Crypto",
   "title": "加密层",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "data-idb",
   "layer": "Data",
   "title": "数据层·IndexedDB 持久镜像",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "data-links",
   "layer": "Data",
   "title": "数据层·联动规则与全局状态",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "data-migrate",
   "layer": "Data",
   "title": "数据层·迁移与初始化",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "data-rw",
@@ -45,6 +45,24 @@
   "name": "chain",
   "layer": "Chain",
   "title": "联动层·任务完成与跨场景触发",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ai-tools",
+  "layer": "AI",
+  "title": "AI 层·工具调用",
+  "tailBlanks": 2
+ },
+ {
+  "name": "ai-loop",
+  "layer": "AI",
+  "title": "AI 层·对话循环",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ai-retry",
+  "layer": "AI",
+  "title": "AI 层·取消/重试控制器",
   "tailBlanks": 1
  }
 ]
