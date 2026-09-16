@@ -69,30 +69,90 @@
   "name": "render-entry",
   "layer": "Render",
   "title": "渲染层·入口",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "render-scene-sub",
   "layer": "Render",
   "title": "渲染层·场景细分模块",
-  "tailBlanks": 2
+  "tailBlanks": 0
  },
  {
   "name": "render-scene-main",
   "layer": "Render",
   "title": "渲染层·场景主区",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "render-overview",
   "layer": "Render",
   "title": "渲染层·概览",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "render-widgets",
   "layer": "Render",
   "title": "渲染层·小工具",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ui-theme",
+  "layer": "UI",
+  "title": "交互层·主题与通知",
   "tailBlanks": 1
+ },
+ {
+  "name": "ui-onboarding",
+  "layer": "UI",
+  "title": "交互层·Onboarding 引导",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-guide",
+  "layer": "UI",
+  "title": "交互层·使用指南",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-scene-bind",
+  "layer": "UI",
+  "title": "交互层·场景绑定",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-palette",
+  "layer": "UI",
+  "title": "交互层·命令面板",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ui-daily",
+  "layer": "UI",
+  "title": "交互层·每日播报",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-backup-stats",
+  "layer": "UI",
+  "title": "交互层·备份与统计",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-drawer",
+  "layer": "UI",
+  "title": "交互层·设置抽屉",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-hotkeys",
+  "layer": "UI",
+  "title": "交互层·快捷键",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-global-events",
+  "layer": "UI",
+  "title": "交互层·全局事件绑定",
+  "tailBlanks": 0
  }
 ]

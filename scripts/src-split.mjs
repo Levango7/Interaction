@@ -55,9 +55,20 @@ const BLOCKS = [
   { name: 'render-scene-sub', layer: 'Render', title: '渲染层·场景细分模块' },
   { name: 'render-scene-main', layer: 'Render', title: '渲染层·场景主区' },
   { name: 'render-overview', layer: 'Render', title: '渲染层·概览' },
-  { name: 'render-widgets', layer: 'Render', title: '渲染层·小工具' }
+  { name: 'render-widgets', layer: 'Render', title: '渲染层·小工具' },
+  /* 任务 4 第六步：UI Layer 十块（合计约 1,140KB，含最大的「全局事件绑定」839.5KB） */
+  { name: 'ui-theme', layer: 'UI', title: '交互层·主题与通知' },
+  { name: 'ui-onboarding', layer: 'UI', title: '交互层·Onboarding 引导' },
+  { name: 'ui-guide', layer: 'UI', title: '交互层·使用指南' },
+  { name: 'ui-scene-bind', layer: 'UI', title: '交互层·场景绑定' },
+  { name: 'ui-palette', layer: 'UI', title: '交互层·命令面板' },
+  { name: 'ui-daily', layer: 'UI', title: '交互层·每日播报' },
+  { name: 'ui-backup-stats', layer: 'UI', title: '交互层·备份与统计' },
+  { name: 'ui-drawer', layer: 'UI', title: '交互层·设置抽屉' },
+  { name: 'ui-hotkeys', layer: 'UI', title: '交互层·快捷键' },
+  { name: 'ui-global-events', layer: 'UI', title: '交互层·全局事件绑定' }
 ];
-const MIN_EXPECTED = 16;   // 至少应解析出这么多块，否则判定解析失败
+const MIN_EXPECTED = 26;   // 至少应解析出这么多块，否则判定解析失败
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');
@@ -83,6 +94,9 @@ function blockEndIdx(startIdx) {
   for (let i = startIdx + 1; i < lines.length; i++) {
     if (/^\/\/ ===== \w+ Layer/.test(lines[i])) return i;
     if (/^\/\*SRC:[\w-]+:(BEGIN|END)\*\//.test(lines[i])) return i;
+    /* 块不得越过 </script>：文件最后一个层块后面是文档收尾标签（</script></body></html>），
+       不设这条边界会把它们一起搬进 src，拼回后 END 标记会落到 HTML 之外（本轮实测踩到）。 */
+    if (/^<\/script>/.test(lines[i])) return i;
   }
   return lines.length;
 }
