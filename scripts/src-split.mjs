@@ -195,7 +195,9 @@ if (process.argv.includes('--verify')) {
   /* 参照系：默认用「拆分前的干净提交 5d35c8d」，可用 --base=<sha> 覆盖。
      不用 HEAD —— 因为 HEAD 里可能留着历史脏标记（重复占位），拿它比对会误报。 */
   const baseArg = process.argv.find(a => a.startsWith('--base='));
-  const base = baseArg ? baseArg.slice(7) : '5d35c8d';
+  /* 默认基准 = HEAD：语义是「这次抽取/拼回往返是否改动代码」——功能改动后应配合 --base 指定旧提交，
+     或在功能提交后再跑（此时 HEAD 已含新代码，往返仍应为零改动）。 */
+  const base = baseArg ? baseArg.slice(7) : 'HEAD';
   const head = cp.execSync('git show ' + base + ':agent-workbench.html', { maxBuffer: 1 << 28 }).toString('utf8');
   const cur = readFileSync(HTML, 'utf8');
   const norm = t => t.replace(/\r\n/g, '\n')

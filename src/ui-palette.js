@@ -22,27 +22,50 @@ function pushCmdRecent(label){
   save(CMD_RECENT_KEY, list.slice(0,5));
 }
 /**
- * 模糊匹配打分：子串命中 > 子序列命中；连续匹配与首字符命中加分
+ * 模糊匹配（带命中位置）：子串命中 > 子序列命中；连续匹配与首字符命中加分
  * @param {string} text - 候选文本
  * @param {string} q - 查询词（内部转小写）
- * @returns {number} >0 匹配（分值），-1 不匹配
+ * @returns {{score:number, positions:number[]}} score>0 匹配（分值），-1 不匹配；positions 为 text 中命中的下标
  */
-function fuzzyScore(text, q){
+function fuzzyMatch(text, q){
   q = String(q||"").toLowerCase();
-  if(!q) return 10;
-  const s = String(text||"").toLowerCase();
-  const i0 = s.indexOf(q);
-  if(i0 >= 0) return 200 - Math.min(i0, 100) + (i0===0 ? 20 : 0); // 子串：基础高分，开头命中再加
+  const s = String(text||"");
+  const ls = s.toLowerCase();
+  if(!q) return { score: 10, positions: [] };
+  const i0 = ls.indexOf(q);
+  if(i0 >= 0){
+    const positions = [];
+    for(let i=0;i<q.length;i++) positions.push(i0+i);
+    return { score: 200 - Math.min(i0, 100) + (i0===0 ? 20 : 0), positions }; // 子串：基础高分，开头命中再加
+  }
   let pos = 0, score = 0, prev = -2;
+  const positions = [];
   for(let qi=0; qi<q.length; qi++){
-    const f = s.indexOf(q[qi], pos);
-    if(f < 0) return -1;
+    const f = ls.indexOf(q[qi], pos);
+    if(f < 0) return { score: -1, positions: [] };
     score += 1;
     if(f === prev + 1) score += 4; // 连续匹配加分
     if(f === 0) score += 6;        // 首字符加分
-    prev = f; pos = f + 1;
+    positions.push(f); prev = f; pos = f + 1;
   }
-  return score;
+  return { score, positions };
+}
+/**
+ * 模糊匹配打分（fuzzyMatch 的轻量包装，保持既有调用方与测试不变）
+ * @param {string} text - 候选文本
+ * @param {string} q - 查询词
+ * @returns {number} >0 匹配（分值），-1 不匹配
+ */
+function fuzzyScore(text, q){ return fuzzyMatch(text, q).score; }
+/**
+ * 按命中位置给文本加高亮标签（逐字符转义，避免下标错位与注入）
+ * @param {string} text - 原始文本
+ * @param {number[]} positions - 需要高亮的字符下标
+ * @returns {string} 可直接插入 innerHTML 的片段（内部已转义）
+ */
+function highlightHits(text, positions){
+  const set = new Set(positions || []);
+  return String(text||"").split("").map((ch,i)=> set.has(i) ? `<b class="cmd-hit">${esc(ch)}</b>` : esc(ch)).join("");
 }
 /**
  * 构建命令列表（命令/场景/任务三组；无查询时「最近使用」置顶；有查询时模糊匹配按分值排序）
@@ -63,16 +86,25 @@ function buildCmds(q){
     {label:t("cmd.viewMemory","查看工作记忆"), icon:UI_ICONS.chat, group:t("cmd.command","命令"), run:showMemories},
     {label:t("cmd.clearMemory","清空工作记忆"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ save(PREFIX+"memory",[]); toast(t("msg.memoryCleared","已清空工作记忆"),"ok"); }},
     {label:t("cmd.cancelGoal","取消当前目标"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ const g=cancelGoal(); toast(g?(t("msg.goalCancelled","已取消目标「")+g.title+"」"):t("msg.noActiveGoal","当前无进行中目标"),"ok"); }},
-    {label:t("cmd.viewOverview","查看总览"), icon:UI_ICONS.overview, group:t("cmd.command","命令"), run:()=>{active="overview";render();}}
+    {label:t("cmd.viewOverview","查看总览"), icon:UI_ICONS.overview, group:t("cmd.command","命令"), run:()=>{active="overview";render();}},
+    /* v3.7.8：补三条"此前只能靠内部路由到达"的入口 —— 统计页在 v3.6.6 撤掉了侧栏入口后一直是孤岛，
+       这里给它一个真实可达的入口（同时也是命令面板该有的能力：所有主视图都能一条命令直达）。 */
+    {label:t("cmd.viewStats","查看统计"), icon:UI_ICONS.grid, group:t("cmd.command","命令"), run:()=>{ setActive("stats"); render(); }},
+    {label:t("cmd.openAi","打开 AI 配置"), icon:UI_ICONS.robot, group:t("cmd.command","命令"), run:()=>{ if(typeof openAiPage==="function") openAiPage(); }},
+    {label:t("cmd.openRecycle","打开回收站"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ if(typeof openRecycle==="function") openRecycle(); }}
   ];
   const scs=ORDER.map(sc=>({label:t("cmd.switchTo","切到 ")+SCENARIOS[sc].name, icon:SCENARIOS[sc].icon || "", group:t("cmd.scenario","场景"), run:()=>{setActive(sc);render();}}));
   const tasks=getActiveTasks().filter(t=>t.status!=="done").slice(0,12)
     .map(task=>({label:task.title, icon:SCENARIOS[task.sc].icon || "", sub:SCENARIOS[task.sc].name, group:t("cmd.task","任务"), trackRecent:false, run:()=>{setActive(task.sc);render();}}));
   const items=acts.concat(scs, tasks);
   if(q){
-    // 模糊匹配：标签+副标题联合打分，按分值降序
+    // 模糊匹配：标签+副标题联合打分，按分值降序；命中位置取「标签」上的（高亮给用户看的就是标签）
     return items
-      .map(it=>Object.assign({}, it, { _score: fuzzyScore((it.label||"")+(it.sub?" "+it.sub:""), q) }))
+      .map(it=>{
+        const m = fuzzyMatch((it.label||"")+(it.sub?" "+it.sub:""), q);
+        const inLabel = fuzzyMatch(it.label||"", q);
+        return Object.assign({}, it, { _score: m.score, _pos: inLabel.score > 0 ? inLabel.positions : [] });
+      })
       .filter(it=> it._score > 0)
       .sort((a,b)=> b._score - a._score);
   }
@@ -99,8 +131,10 @@ function renderCmd(q){
   cmdItems.forEach((it,i)=>{
     const g = it.group || "";
     if(g && g!==lastGroup){ html += `<li class="cmd-group">${esc(g)}</li>`; lastGroup=g; }
+    /* 有命中位置时逐字符高亮（highlightHits 内部已转义）；否则走 esc */
+    const labelHtml = (it._pos && it._pos.length) ? highlightHits(it.label, it._pos) : esc(it.label);
     html += `<li class="${i===cmdSel?"sel":""}" data-i="${i}">
-    <span class="ci">${it.icon}</span><span>${esc(it.label)}</span>${it.sub?`<span class="sub">${esc(it.sub)}</span>`:""}</li>`;
+    <span class="ci">${it.icon}</span><span>${labelHtml}</span>${it.sub?`<span class="sub">${esc(it.sub)}</span>`:""}</li>`;
   });
   ul.innerHTML=sanitizeHtml(html);
   [...ul.querySelectorAll("li[data-i]")].forEach(li=>{

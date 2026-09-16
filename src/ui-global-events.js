@@ -1101,8 +1101,11 @@ $("#linksBox").addEventListener("change", e=>{
 });
 $("#cmdOverlay").onclick = closeCmd;
 $("#cmdInput").onkeydown = e=>{
-  if(e.key==="ArrowDown"){ e.preventDefault(); cmdSel=Math.min(cmdSel+1, cmdItems.length-1); updateCmdSel(); }
-  else if(e.key==="ArrowUp"){ e.preventDefault(); cmdSel=Math.max(cmdSel-1,0); updateCmdSel(); }
+  /* v3.7.8：↑↓ 改为**循环**（此前到顶/到底就停住，长列表里想回到第一条得狂按）。
+     列表为空时不做处理，避免 cmdSel 变成 -1。 */
+  const n = cmdItems.length;
+  if(e.key==="ArrowDown"){ e.preventDefault(); if(!n) return; cmdSel=(cmdSel+1) % n; updateCmdSel(); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); if(!n) return; cmdSel=(cmdSel-1+n) % n; updateCmdSel(); }
   else if(e.key==="Enter"){ e.preventDefault(); runCmd(cmdSel); }
   else if(e.key==="Escape"){ closeCmd(); }
 };
@@ -2045,7 +2048,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     getLastMergeLog, detectLegacyData, getMigrationLog,
     getPendingCSVImport, setPendingCSVImport,
     // P5' 命令面板增强（模糊搜索 / 最近使用）访问器
-    fuzzyScore, getCmdRecent, pushCmdRecent,
+    fuzzyScore, fuzzyMatch, highlightHits, getCmdRecent, pushCmdRecent,
     // P1 自定义场景访问器（供测试驱动与断言）
     addCustomScenario, updateCustomScenario, removeCustomScenario,
     setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,

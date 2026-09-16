@@ -28,7 +28,7 @@
 | `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 9 |
 | `ui-scene-bind` | UI | `chain` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-global-events` | 18 |
-| `ui-palette` | UI | `ai-tools` `data-links` `ui-backup-stats` `ui-drawer` `ui-global-events` `ui-theme` | 7 |
+| `ui-palette` | UI | `ai-tools` `data-links` `render-widgets` `ui-backup-stats` `ui-drawer` `ui-global-events` `ui-theme` | 9 |
 | `ui-daily` | UI | `chain` `data-links` `render-scene-sub` | 3 |
 | `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `ui-global-events` | 20 |
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-global-events` `ui-guide` `ui-theme` | 57 |
@@ -113,7 +113,7 @@
 | `ui-onboarding`（UI） | `ui-daily`（UI） | `dailyDigest` |
 | `ui-onboarding`（UI） | `ui-drawer`（UI） | `openDrawer` |
 | `ui-palette`（UI） | `ui-backup-stats`（UI） | `doClear` |
-| `ui-palette`（UI） | `ui-drawer`（UI） | `openDrawer` |
+| `ui-palette`（UI） | `ui-drawer`（UI） | `openAiPage` `openDrawer` |
 | `ui-palette`（UI） | `ui-global-events`（UI） | `showMemories` |
 | `ui-scene-bind`（UI） | `ui-backup-stats`（UI） | `checkCount` |
 | `ui-scene-bind`（UI） | `ui-global-events`（UI） | `bindCalendarEvents` |

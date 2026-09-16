@@ -99,25 +99,25 @@
   "name": "ui-theme",
   "layer": "UI",
   "title": "交互层·主题与通知",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-onboarding",
   "layer": "UI",
   "title": "交互层·Onboarding 引导",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-guide",
   "layer": "UI",
   "title": "交互层·使用指南",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-scene-bind",
   "layer": "UI",
   "title": "交互层·场景绑定",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-palette",
@@ -129,25 +129,25 @@
   "name": "ui-daily",
   "layer": "UI",
   "title": "交互层·每日播报",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-backup-stats",
   "layer": "UI",
   "title": "交互层·备份与统计",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-drawer",
   "layer": "UI",
   "title": "交互层·设置抽屉",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-hotkeys",
   "layer": "UI",
   "title": "交互层·快捷键",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-global-events",

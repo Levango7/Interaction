@@ -2449,6 +2449,8 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .cmd li.sel{background:var(--accent);color:var(--on-accent)}
 .cmd li.sel .ci,.cmd li.sel .sub{color:var(--on-accent)}
 .cmd li.cmd-group{padding:var(--space-1) var(--space-3) 2px;font-size:var(--fs-xs);font-weight:600;
+/* v3.7.8：命令面板模糊匹配命中字符高亮（用令牌，勿硬编码色值） */
+.cmd li b.cmd-hit{color:var(--accent);font-weight:600;background:color-mix(in srgb, var(--accent) 12%, transparent);border-radius:var(--radius-xs,4px)}
   color:var(--text-faint);cursor:default;letter-spacing:.02em}
 .cmd li.cmd-empty{cursor:default}
 
