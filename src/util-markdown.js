@@ -206,5 +206,3 @@ function sanitizeHtml(html){
   }
   return s;
 }
-/*SRC:util-markdown:END*/
-/*SRC:util-perf:BEGIN*/

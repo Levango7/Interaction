@@ -38,9 +38,14 @@ const BACKUP_DIR = join(root, '_srcbackup');
 const BLOCKS = [
   { name: 'util-markdown', layer: 'Util', title: 'Markdown 解析·T3.5' },
   { name: 'util-perf', layer: 'Util', title: '性能优化工具·v1.4-B' },
-  { name: 'crypto', layer: 'Crypto', title: '加密层' }
+  { name: 'crypto', layer: 'Crypto', title: '加密层' },
+  /* 任务 4 第二步：Data Layer 四块（标题必须与源码里的层注释逐字一致，用于定位块边界） */
+  { name: 'data-idb', layer: 'Data', title: '数据层·IndexedDB 持久镜像' },
+  { name: 'data-links', layer: 'Data', title: '数据层·联动规则与全局状态' },
+  { name: 'data-migrate', layer: 'Data', title: '数据层·迁移与初始化' },
+  { name: 'data-rw', layer: 'Data', title: '数据层·读写' }
 ];
-const MIN_EXPECTED = 3;   // 至少应解析出这么多块，否则判定解析失败
+const MIN_EXPECTED = 7;   // 至少应解析出这么多块，否则判定解析失败
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');
@@ -59,9 +64,14 @@ function findLayerLine(layer, title) {
   });
   return out;
 }
-/* 该层块的结束 = 下一个「任何层标记行」之前 */
+/* 该层块的结束 = 下一个「层注释行」或「已抽出的 SRC 占位标记行」之前。
+   必须把 SRC 标记行也算边界：否则当内层块已被抽出（只剩标记）时，外层块的边界扫描会越过这些标记，
+   把标记连同外层内容一起搬进 src —— 表现为「抽出 N 块但 HTML 里只有 M 组标记」（本次实测踩到）。 */
 function blockEndIdx(startIdx) {
-  for (let i = startIdx + 1; i < lines.length; i++) if (/^\/\/ ===== \w+ Layer/.test(lines[i])) return i;
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    if (/^\/\/ ===== \w+ Layer/.test(lines[i])) return i;
+    if (/^\/\*SRC:[\w-]+:(BEGIN|END)\*\//.test(lines[i])) return i;
+  }
   return lines.length;
 }
 
@@ -75,6 +85,14 @@ if (EXTRACT) {
   const order = [];
   const meta = [];
   for (const b of BLOCKS) {
+    /* 已抽出过的块：HTML 里只剩标记占位、层注释随内容进了 src/ —— 这是正常状态，不算失败 */
+    if (!findLayerLine(b.layer, b.title).length && existsSync(join(SRC_DIR, b.name + '.js'))) {
+      console.log(`  已抽出（跳过）src/${b.name}.js  —— HTML 中是标记占位`);
+      order.push(b.name);
+      meta.push({ name: b.name, layer: b.layer, title: b.title, tailBlanks: 0 });
+      extracted++;
+      continue;
+    }
     const hits = findLayerLine(b.layer, b.title);
     if (!hits.length) { console.error(`[src-split] 未找到层块 ${b.layer} / ${b.title}`); continue; }
     const s = hits[0], e = blockEndIdx(s);
@@ -143,18 +161,22 @@ console.log(`[src-split] 拼回 ${injected} 块 → HTML ${(Buffer.byteLength(ht
    本模式把「标记行」与「连续空行」都归一化后逐字节比对，用来证明**代码零改动**。 */
 if (process.argv.includes('--verify')) {
   const cp = await import('node:child_process');
-  const head = cp.execSync('git show HEAD:agent-workbench.html', { maxBuffer: 1 << 28 }).toString('utf8');
+  /* 参照系：默认用「拆分前的干净提交 5d35c8d」，可用 --base=<sha> 覆盖。
+     不用 HEAD —— 因为 HEAD 里可能留着历史脏标记（重复占位），拿它比对会误报。 */
+  const baseArg = process.argv.find(a => a.startsWith('--base='));
+  const base = baseArg ? baseArg.slice(7) : '5d35c8d';
+  const head = cp.execSync('git show ' + base + ':agent-workbench.html', { maxBuffer: 1 << 28 }).toString('utf8');
   const cur = readFileSync(HTML, 'utf8');
   const norm = t => t.replace(/\r\n/g, '\n')
     .replace(/^\/\*SRC:[\w-]+:(?:BEGIN|END)\*\/\n/gm, '')
     .replace(/\n{2,}/g, '\n');   /* 接缝处会多/少一个空行（纯版式），这里把连续空行折叠为 1 行：只证明「代码零改动」 */
   const a = norm(head), b = norm(cur);
-  console.log('[src-split] verify：HEAD ' + a.length + ' 字符 / 现在 ' + b.length + ' 字符');
+  console.log('[src-split] verify（基准 ' + base + '）：' + a.length + ' 字符 / 现在 ' + b.length + ' 字符');
   if (a === b) { console.log('[src-split] verify ✓ 归一化后完全一致（代码零改动）'); process.exit(0); }
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     if (a[i] !== b[i]) {
       console.log('  ✗ 首个差异 @' + i);
-      console.log('    HEAD: ' + JSON.stringify(a.slice(Math.max(0, i - 60), i + 60)));
+      console.log('    基准: ' + JSON.stringify(a.slice(Math.max(0, i - 60), i + 60)));
       console.log('    现在: ' + JSON.stringify(b.slice(Math.max(0, i - 60), i + 60)));
       break;
     }

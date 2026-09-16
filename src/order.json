@@ -3,7 +3,7 @@
   "name": "util-markdown",
   "layer": "Util",
   "title": "Markdown 解析·T3.5",
-  "tailBlanks": 0
+  "tailBlanks": 1
  },
  {
   "name": "util-perf",
@@ -15,6 +15,30 @@
   "name": "crypto",
   "layer": "Crypto",
   "title": "加密层",
+  "tailBlanks": 1
+ },
+ {
+  "name": "data-idb",
+  "layer": "Data",
+  "title": "数据层·IndexedDB 持久镜像",
+  "tailBlanks": 1
+ },
+ {
+  "name": "data-links",
+  "layer": "Data",
+  "title": "数据层·联动规则与全局状态",
+  "tailBlanks": 1
+ },
+ {
+  "name": "data-migrate",
+  "layer": "Data",
+  "title": "数据层·迁移与初始化",
+  "tailBlanks": 1
+ },
+ {
+  "name": "data-rw",
+  "layer": "Data",
+  "title": "数据层·读写",
   "tailBlanks": 0
  }
 ]

@@ -57,7 +57,11 @@ const readArt = () => {
 if (EXTRACT) {
   const art = readArt();
   const kinds = Object.keys(art);
-  if (!kinds.length) fail('HTML 里没有可抽出的立绘（也许已经抽过了）');
+  if (!kinds.length) {
+    /* 已经是源码态（未注入）→ 无操作成功，不要当失败（否则会被误判成命令出错） */
+    console.log('[pet-art] 已经是源码态（HTML 内无立绘），无需抽取');
+    process.exit(0);
+  }
   mkdirSync(ART_DIR, { recursive: true });
   let bytes = 0;
   for (const k of kinds) {
