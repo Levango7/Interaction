@@ -9518,6 +9518,7 @@ async function initCrypto(){
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
 
 /*SRC:crypto:END*/
+/*SRC:chain:BEGIN*/
 // ===== Chain Layer (联动层·任务完成与跨场景触发) =====
 /**
  * 统一的"完成任务"入口：集中设置完成态并触发场景联动
@@ -10180,6 +10181,7 @@ function renderChainGraph(){
   return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("hc.graphAriaLabel", "跨场景联动关系图")}">${defs}${edges}${nodes}</svg></div>`;
 }
 
+/*SRC:chain:END*/
 // ===== Render Layer (渲染层·小工具) =====
 /* ---------- 小工具 ---------- */
 function lineChartSVG(vals, color){
