@@ -16,22 +16,32 @@ AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `T
 
 | # | 工具名 | 所属分发器 | 必填参数 | 说明 |
 |---|--------|-----------|----------|------|
-| 1 | `create_task` | execTool | `title` | 在某场景创建任务 |
-| 2 | `list_tasks` | execTool | — | 查询某场景任务（可按状态过滤） |
-| 3 | `complete_task` | execTool | `task_id` | 按 id 或关键词标记完成 |
-| 4 | `update_task` | execTool | `task_id` | 改状态/优先级/截止日/标签（**两步确认**） |
-| 5 | `delete_task` | execTool | `task_id` | 软删除进回收站（**两步确认**） |
-| 6 | `add_record` | execTool | `scenario`,`fields` | 向场景资料库添加记录 |
-| 7 | `search` | execTool | `query` | 全局搜索任务与资料库 |
-| 8 | `query_overview` | execTool | — | 各场景任务统计 + 今日/逾期 |
-| 9 | `export_data` | execTool | — | 触发 JSON 备份导出 |
-| 10 | `remember` | agentExec | `text` | 写入工作记忆 |
-| 11 | `recall` | agentExec | — | 检索工作记忆 |
-| 12 | `forget` | agentExec | `id` | 删除一条工作记忆 |
-| 13 | `plan` | agentExec | `goal`,`steps` | 建立多步目标 |
-| 14 | `complete_step` | agentExec | `index` | 标记目标某步完成 |
-| 15 | `complete_goal` | agentExec | — | 收尾并总结目标 |
-| 16 | `list_records` | agentExec | — | 查某场景资料库最近记录 |
+| 1 | `create_task` | execTool | `title` | 在指定场景创建一条任务（标题必填），可带标签 |
+| 2 | `list_tasks` | execTool | — | 查询某场景的任务，可按状态过滤 |
+| 3 | `complete_task` | execTool | `task_id` | 按任务 id 或标题关键词标记任务完成 |
+| 4 | `update_task` | execTool | `task_id` | 修改任务的状态/优先级/截止日期/标签（按 id 或标题关键词定位） |
+| 5 | `delete_task` | execTool | `task_id` | 按 id 或标题关键词删除一条任务（进入回收站，可恢复） |
+| 6 | `add_record` | execTool | `scenario`,`fields` | 向某场景的资料库添加一条记录 |
+| 7 | `search` | execTool | `query` | 全局搜索任务与资料库中的条目 |
+| 8 | `query_overview` | execTool | — | 返回各场景任务统计与今日/逾期待处理数量 |
+| 9 | `export_data` | execTool | — | 导出当前全部数据为 JSON 备份 |
+| 10 | `remember` | agentExec | `text` | 把用户的事实/偏好/决定写入工作记忆，供后续对话自动召回（如“我喜欢简洁回复”“本周重点 |
+| 11 | `recall` | agentExec | `query` | 按关键词检索工作记忆，回答涉及用户偏好/历史决定前先查 |
+| 12 | `forget` | agentExec | `id` | 按 id 或内容关键词删除一条工作记忆 |
+| 13 | `plan` | agentExec | `goal`,`steps` | 为多步任务建立目标与步骤清单（跨场景可拆步）。建立后按步骤调用工具执行，每步完成用 co |
+| 14 | `complete_step` | agentExec | `index` | 标记当前目标的某一步已完成 |
+| 15 | `complete_goal` | agentExec | — | 目标全部步骤完成后调用，收尾并总结 |
+| 16 | `list_records` | agentExec | `scenario` | 查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等） |
+| 17 | `add_feature_record` | execTool | `feature`,`fields` | 向当前场景的功能卡添加一条记录（如会议/项目/考勤/报销/知识库/阅读/练习/考试/报表 |
+| 18 | `web_search` | execTool | `query` | 联网搜索（可配置搜索引擎，返回标题/摘要/链接） |
+| 19 | `web_fetch` | execTool | `url` | 抓取指定 URL 的网页内容（纯文本，去标签） |
+| 20 | `code_run` | execTool | `code` | 在 Web Worker 沙箱中运行 JS 代码（5s 超时，收集 console 输出 |
+| 21 | `sql_query` | execTool | `sql` | 在内存 SQLite（sql.js WASM）中运行 SQL，返回列名与行数据 |
+| 22 | `note_add` | execTool | `title`,`content` | 新增一条笔记（标题/内容/标签/分类），存 localStorage |
+| 23 | `note_search` | execTool | `query` | 按关键词搜索笔记（标题+内容匹配） |
+| 24 | `generate_report` | execTool | — | 生成指定周期的工作报表（Markdown 文本）：完成/逾期任务、各场景分布、周期内记录 |
+| 25 | `render_chart` | execTool | `label`,`value` | 在对话里渲染一张数据图表（bar/line/pie），数据由你根据已查到的数据整理 |
+| 26 | `generate_doc` | execTool | `title`,`content` | 生成一份文档（Markdown）并保存到笔记库 |
 
 **分发边界**：
 - `execTool` 处理任务 / 资料库 / 搜索 / 概览 / 导出类。
@@ -67,180 +77,219 @@ const ORDER = ["office","code","study","life"];
 
 ## 3. 工具逐项定义
 
-> 每个条目含：描述（取源码 `description`）、参数（取 `parameters.properties` + `required`）、执行行为（取自 `execTool`/`agentExec` 源码）、返回结构示例、与 schema 不一致的实现细节（⚠️ 备注）。
+> 本节由脚本从源码 `const TOOLS` 生成（描述取 `description` 的中文兜底，参数取 `parameters.properties` + `required`）；
+> **以源码为唯一权威**，改动 TOOLS 后请重新生成，不要手改本节。
 
 ### 3.1 `create_task`
 
-- **描述**：在指定场景创建一条任务（标题必填），可带标签。
+- **描述**：在指定场景创建一条任务（标题必填），可带标签
 - **参数**：
-  - `scenario` `{string, enum: ORDER}` — 场景键，如 office/code/study；缺省时取当前激活场景 `active`。
-  - `title` `{string}` — 任务标题（必填）。
-  - `due` `{string}` — 截止日期 `YYYY-MM-DD`，可空。
-  - `priority` `{string, enum: ["","P0","P1","P2"]}`。
-  - `tags` `{array<string>}` — 标签列表。
+  - `scenario` `{string, enum: ORDER}` — 场景键，如 office/code/study
+  - `title` `{string}` — 任务标题
+  - `due` `{string}` — 截止日期 YYYY-MM-DD，可空
+  - `priority` `{string, enum: ["","P0","P1","P2"]}` — （无说明）
+  - `tags` `{array<string>}` — 标签列表
 - **必填**：`["title"]`
-- **执行**：`ORDER.includes(scenario)` 校验，否则回退 `active`；`tags` 转为字符串数组去空。
-- **返回**：`{ok:true, id:"<uid>", msg:"已在<场景名>创建任务：<title>"}`
 
 ### 3.2 `list_tasks`
 
-- **描述**：查询某场景的任务，可按状态过滤。
+- **描述**：查询某场景的任务，可按状态过滤
 - **参数**：
-  - `scenario` `{string, enum: ORDER}`
-  - `status` `{string, enum: ["","todo","doing","done"]}`
+  - `scenario` `{string, enum: ORDER}` — （无说明）
+  - `status` `{string, enum: ["","todo","doing","done"]}` — （无说明）
 - **必填**：`[]`
-- **执行**：按场景过滤，可选状态过滤；**最多返回前 20 条**。
-- **返回**：`{count:N, items:[{title, status, due}]}`
 
 ### 3.3 `complete_task`
 
-- **描述**：按任务 id 或标题关键词标记任务完成。
+- **描述**：按任务 id 或标题关键词标记任务完成
 - **参数**：
-  - `task_id` `{string}` — 任务 id，或任务标题中的关键词（用于定位，经 `findTask`）。
+  - `task_id` `{string}` — 任务 id，或任务标题中的关键词（用于定位任务）
 - **必填**：`["task_id"]`
-- **返回**：
-  - 命中：`{ok:true, msg:"已完成：<title>"}`
-  - 未命中：`{ok:false, msg:"未找到匹配任务：<task_id>"}`
 
-### 3.4 `update_task` ⚠️ 两步确认
+### 3.4 `update_task`
 
-- **描述**：修改任务的状态/优先级/截止日期/标签（按 id 或标题关键词定位）。
+- **描述**：修改任务的状态/优先级/截止日期/标签（按 id 或标题关键词定位）
 - **参数**：
-  - `task_id` `{string}`（必填）
-  - `status` `{string, enum: ["todo","doing","done"]}`
-  - `priority` `{string, enum: ["","P0","P1","P2"]}`
-  - `due` `{string}` — 新截止日期 `YYYY-MM-DD`
+  - `task_id` `{string}` — 任务 id，或任务标题中的关键词
+  - `status` `{string, enum: ["todo","doing","done"]}` — （无说明）
+  - `priority` `{string, enum: ["","P0","P1","P2"]}` — （无说明）
+  - `due` `{string}` — 新截止日期 YYYY-MM-DD
   - `tags` `{array<string>}` — 覆盖该任务的标签
-  - `force` `{boolean}` — 设为 `true` 直接执行修改；默认 `false` 会先返回确认提示（需二次确认）
+  - `force` `{boolean}` — 设为 true 直接执行修改；默认 false 会先返回确认提示（需二次确认）
 - **必填**：`["task_id"]`
-- **⚠️ 实现细节（两步确认）**：首次调用且 `force` 未置 `true` 时，不真正修改，而是返回确认提示并挂起 `pendingConfirm`：
-  ```json
-  {"ok":false, "confirm":"将修改：「<title>」（id <id>）。发送「确认」以继续，其他内容取消。", "op":"update_task", "task_id":"<id>", "title":"<title>"}
-  ```
-  用户回复「确认」后由 UI 以 `force=true` 再次调用才落地。
-- **返回（force 后）**：`{ok:true, msg:"已更新「<title>」：<变更JSON>"}`
-  - `status==="done"` 会复用 `completeTask` 路径并设 `doneAt`；其余状态清空 `doneAt`。
 
-### 3.5 `delete_task` ⚠️ 两步确认
+### 3.5 `delete_task`
 
-- **描述**：按 id 或标题关键词删除一条任务（进入回收站，可恢复）。
+- **描述**：按 id 或标题关键词删除一条任务（进入回收站，可恢复）
 - **参数**：
-  - `task_id` `{string}`（必填）
-  - `force` `{boolean}` — 设为 `true` 直接软删除（进回收站）；默认 `false` 会先返回确认提示（需二次确认）
+  - `task_id` `{string}` — 任务 id，或任务标题中的关键词
+  - `force` `{boolean}` — 设为 true 直接软删除（进回收站）；默认 false 会先返回确认提示（需二次确认）
 - **必填**：`["task_id"]`
-- **⚠️ 实现细节**：同 `update_task`，`force` 未置 `true` 时返回确认提示。`force=true` 后才执行软删除：
-  ```js
-  ft.task.deletedAt = Date.now(); setTasks(ft.tasks); // ③ 软删除：进回收站，可恢复
-  ```
-- **返回（force 后）**：`{ok:true, msg:"已删除（进入回收站，可在看板底部恢复）：<title>"}`
 
 ### 3.6 `add_record`
 
-- **描述**：向某场景的资料库添加一条记录。
+- **描述**：向某场景的资料库添加一条记录
 - **参数**：
-  - `scenario` `{string, enum: ORDER}`（必填）
-  - `fields` `{object}` — 该场景资料库的字段（必填）。schema 已按场景生成子结构（`anyOf`），键随 `scenario` 而定（见第 2 节表）。
+  - `scenario` `{string, enum: ORDER}` — （无说明）
 - **必填**：`["scenario","fields"]`
-- **⚠️ 字段键由场景决定**：实际落库字段以 `SCENARIOS[sc].record.fields` 为准（第 2 节表）。`fields` 中非场景字段会被忽略，缺字段置空字符串。v1.14.1 起 schema 已从 `SCENARIOS` 派生场景子 schema（`_recordFieldsSchema`）。
-- **返回**：`{ok:true, msg:"已向<场景名>资料库添加记录"}`
 
 ### 3.7 `search`
 
-- **描述**：全局搜索任务与资料库中的条目。
+- **描述**：全局搜索任务与资料库中的条目
 - **参数**：
-  - `query` `{string}`（必填）
+  - `query` `{string}` — 搜索关键词
 - **必填**：`["query"]`
-- **执行**：任务标题 + 各场景资料库 `title` 做 `includes` 子串匹配（大小写不敏感）；各最多 10 条。
-- **返回**：`{tasks:[{sc,name,title,status,due}], records:[{sc,name,title}], count:N}`
 
 ### 3.8 `query_overview`
 
-- **描述**：返回各场景任务统计与今日/逾期待处理数量。
-- **参数**：无。
+- **描述**：返回各场景任务统计与今日/逾期待处理数量
+- **参数**：
+  - （无参数）
 - **必填**：`[]`
-- **返回**：
-  ```json
-  {"byScenario": {"office":{"name":"办公","open":N,"done":N}, ...},
-   "today":N, "overdue":N}
-  ```
-  - `today`：截止日等于今天且未完成（未删）。
-  - `overdue`：有截止日且 `<` 今天且未完成（未删）。
 
 ### 3.9 `export_data`
 
-- **描述**：导出当前全部数据为 JSON 备份。
-- **参数**：无。
+- **描述**：导出当前全部数据为 JSON 备份
+- **参数**：
+  - （无参数）
 - **必填**：`[]`
-- **执行**：调用 `doExport()` 触发浏览器下载。
-- **返回**：`{ok:true, msg:"已触发 JSON 备份导出"}`
 
 ### 3.10 `remember`
 
-- **描述**：把用户的事实/偏好/决定写入工作记忆，供后续对话自动召回（如"我喜欢简洁回复""本周重点是 v2 上线"）。
+- **描述**：把用户的事实/偏好/决定写入工作记忆，供后续对话自动召回（如“我喜欢简洁回复”“本周重点是 v2 上线”）
 - **参数**：
-  - `scope` `{string, enum: ["global","office","code","study","life"]}` — `global`=全场景通用，否则按场景键隔离。
-  - `text` `{string}` — 要记住的内容，一句话（必填）。
+  - `scope` `{string, enum: ["global"]}` — global=全场景通用，否则按场景键隔离
+  - `text` `{string}` — 要记住的内容，一句话
 - **必填**：`["text"]`
-- **执行**：`scope` 不合法时回退 `active`；空文本不写入。
-- **返回**：`{ok:true, id:"<uid>", msg:"已记住[<全局/场景名>]：<text>"}` 或 `{ok:false, msg:"记忆内容为空"}`
 
 ### 3.11 `recall`
 
-- **描述**：按关键词检索工作记忆，回答涉及用户偏好/历史决定前先查。
+- **描述**：按关键词检索工作记忆，回答涉及用户偏好/历史决定前先查
 - **参数**：
-  - `query` `{string}`
-- **必填**：`[]`
-- **执行**：场景匹配 + 关键词命中 + 近期加权 + 命中次数，返回 **top 8**。
-- **返回**：`{count:N, items:[{id, scope, text}]}`
+  - `query` `{string}` — 检索关键词
+- **必填**：`["query"]`
 
 ### 3.12 `forget`
 
-- **描述**：按 id 或内容关键词删除一条工作记忆。
+- **描述**：按 id 或内容关键词删除一条工作记忆
 - **参数**：
-  - `id` `{string}` — 记忆 id 或内容关键词（必填）。
+  - `id` `{string}` — 记忆 id 或内容关键词
 - **必填**：`["id"]`
-- **返回**：`{ok:true, msg:"已遗忘：<text>"}` 或 `{ok:false, msg:"未找到该记忆"}`
 
 ### 3.13 `plan`
 
-- **描述**：为多步任务建立目标与步骤清单（跨场景可拆步）。建立后按步骤调用工具执行，每步完成用 `complete_step` 标记，全部完成用 `complete_goal` 收尾。
+- **描述**：为多步任务建立目标与步骤清单（跨场景可拆步）。建立后按步骤调用工具执行，每步完成用 complete_step 标记，全部完成用 complete_goal 收尾
 - **参数**：
-  - `goal` `{string}` — 目标标题（必填）。
-  - `scenario` `{string, enum: ORDER}` — 主场景。
-  - `steps` `{array<string>}` — 步骤清单，按执行顺序（必填）。
+  - `goal` `{string}` — 目标标题
+  - `scenario` `{string, enum: ORDER}` — 主场景
+  - `steps` `{array<string>}` — 步骤清单，按执行顺序
 - **必填**：`["goal","steps"]`
-- **执行**：新目标顶替旧进行中目标。
-- **返回**：`{ok:true, id:"<uid>", msg:"已建立目标「<goal>」，共<N>步。请按步骤调用工具执行，每完成一步用 complete_step 标记，全部完成后用 complete_goal 收尾。"}`
 
 ### 3.14 `complete_step`
 
-- **描述**：标记当前目标的某一步已完成。
+- **描述**：标记当前目标的某一步已完成
 - **参数**：
-  - `index` `{integer}` — 步骤序号（从 0 开始，必填）。
-  - `note` `{string}` — 该步结果说明，可空。
+  - `index` `{integer}` — 步骤序号（从 0 开始）
+  - `note` `{string}` — 该步结果说明，可空
 - **必填**：`["index"]`
-- **返回**：
-  - 有效：`{ok:true, msg:"步骤<N>已完成，剩余<M>步", remaining:M}`
-  - 无效：`{ok:false, msg:"无进行中的目标或步骤序号无效"}`
 
 ### 3.15 `complete_goal`
 
-- **描述**：目标全部步骤完成后调用，收尾并总结。
+- **描述**：目标全部步骤完成后调用，收尾并总结
 - **参数**：
-  - `summary` `{string}` — 完成总结。
+  - `summary` `{string}` — 完成总结
 - **必填**：`[]`
-- **返回**：`{ok:true, msg:"目标完成：<title>"}` 或 `{ok:false, msg:"当前无进行中的目标"}`
 
 ### 3.16 `list_records`
 
-- **描述**：查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等）。
+- **描述**：查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等）
 - **参数**：
-  - `scenario` `{string, enum: ORDER}`
-- **必填**：`[]`
-- **执行**：返回该场景最近记录 **最多 10 条**，并剥离 `id`/`created` 字段。
-- **返回**：`{count:N, items:[{<场景字段>}]}`
+  - `scenario` `{string, enum: ORDER}` — （无说明）
+- **必填**：`["scenario"]`
 
----
+### 3.17 `add_feature_record`
+
+- **描述**：向当前场景的功能卡添加一条记录（如会议/项目/考勤/报销/知识库/阅读/练习/考试/报表/图表/前端/SQL/UI/3D/计划）
+- **参数**：
+  - `feature` `{string}` — 功能 id：meeting/project/attendance/expense/knowledge/reading/exercise/exam/report/chart/frontend/sql/ui/model3d/plan
+  - `fields` `{object}` — 字段键值对（各功能表单字段，如会议 title/date/who/note）
+- **必填**：`["feature","fields"]`
+
+### 3.18 `web_search`
+
+- **描述**：联网搜索（可配置搜索引擎，返回标题/摘要/链接）
+- **参数**：
+  - `query` `{string}` — 搜索关键词
+  - `engine` `{string}` — 搜索引擎 id（可空，默认用配置）
+  - `limit` `{integer}` — 返回条数（默认 5）
+- **必填**：`["query"]`
+
+### 3.19 `web_fetch`
+
+- **描述**：抓取指定 URL 的网页内容（纯文本，去标签）
+- **参数**：
+  - `url` `{string}` — 要抓取的 URL（http/https）
+  - `selector` `{string}` — 可选 CSS 选择器（提取局部）
+- **必填**：`["url"]`
+
+### 3.20 `code_run`
+
+- **描述**：在 Web Worker 沙箱中运行 JS 代码（5s 超时，收集 console 输出）
+- **参数**：
+  - `code` `{string}` — 要执行的 JS 代码片段
+  - `timeout` `{integer}` — 超时毫秒（默认 5000）
+- **必填**：`["code"]`
+
+### 3.21 `sql_query`
+
+- **描述**：在内存 SQLite（sql.js WASM）中运行 SQL，返回列名与行数据
+- **参数**：
+  - `sql` `{string}` — SQL 语句（支持多语句，以分号分隔）
+  - `schema` `{string}` — 建表 DDL（可选，执行前先运行）
+- **必填**：`["sql"]`
+
+### 3.22 `note_add`
+
+- **描述**：新增一条笔记（标题/内容/标签/分类），存 localStorage
+- **参数**：
+  - `title` `{string}` — 笔记标题
+  - `content` `{string}` — Markdown 内容
+  - `tags` `{array<string>}` — 标签列表
+  - `category` `{string}` — 分类（如知识库/工作笔记）
+- **必填**：`["title","content"]`
+
+### 3.23 `note_search`
+
+- **描述**：按关键词搜索笔记（标题+内容匹配）
+- **参数**：
+  - `query` `{string}` — 搜索关键词
+- **必填**：`["query"]`
+
+### 3.24 `generate_report`
+
+- **描述**：生成指定周期的工作报表（Markdown 文本）：完成/逾期任务、各场景分布、周期内记录统计
+- **参数**：
+  - `period` `{string, enum: ["day","week","month"]}` — 统计周期，默认 week
+  - `scope` `{string}` — 场景键（office/health/finance 等），留空为全部场景
+- **必填**：`[]`
+
+### 3.25 `render_chart`
+
+- **描述**：在对话里渲染一张数据图表（bar/line/pie），数据由你根据已查到的数据整理
+- **参数**：
+  - `type` `{string, enum: ["bar","line","pie"]}` — 图表类型，默认 bar
+  - `title` `{string}` — 图表标题
+  - `data` `{array<string>}` — 数据点数组，如 [{label:'周一',value:3}]
+- **必填**：`["label","value"]`
+
+### 3.26 `generate_doc`
+
+- **描述**：生成一份文档（Markdown）并保存到笔记库
+- **参数**：
+  - `title` `{string}` — 文档标题
+  - `content` `{string}` — Markdown 正文
+  - `category` `{string}` — 分类，如 方案/复盘/工作文档
+- **必填**：`["title","content"]`
 
 ## 4. 调用契约与错误模型
 

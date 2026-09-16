@@ -27,7 +27,9 @@
     "prebuild:prod": "node scripts/pet-art.mjs",
     "pree2e": "node scripts/pet-art.mjs",
     "make:pwa-icons": "node scripts/make-pwa-icons.mjs",
-    "check:pwa-icons": "node scripts/make-pwa-icons.mjs --check"
+    "check:pwa-icons": "node scripts/make-pwa-icons.mjs --check",
+    "make:ai-tools-doc": "node scripts/gen-ai-tools-doc.mjs",
+    "check:ai-tools-doc": "node scripts/gen-ai-tools-doc.mjs --check"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

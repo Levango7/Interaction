@@ -31,6 +31,10 @@ npm install
 | `npm run pet:inject` | 把 `assets/pet/*.png` 回注进 HTML（改了立绘或抽出后必跑） |
 | `npm run pet:extract` | 从 HTML 抽出立绘到 `assets/pet/`（把仓库置回源码态） |
 | `npm run pet:check` | 校验立绘 assets 与 HTML 注入一致 |
+| `npm run make:pwa-icons` | 生成 PWA 图标 `icon-192.png` / `icon-512.png`（纯 Node，与托盘图标同源） |
+| `npm run check:pwa-icons` | 校验两个 PWA 图标与重绘结果一致 |
+| `npm run make:ai-tools-doc` | 从源码 TOOLS 重新生成 `docs/ai-tools.md`（改过 AI 工具后必跑） |
+| `npm run check:ai-tools-doc` | 校验工具文档与源码工具集完全一致（缺/多都报错） |
 
 ### Electron 桌面端（可选）
 
