@@ -21969,7 +21969,14 @@ const PY_INIT = {
   "总":"z","恢":"h","打":"d","换":"h","据":"j","收":"s","数":"s","新":"x","明":"m","景":"j",
   "暗":"a","最":"z","查":"c","标":"b","活":"h","消":"x","清":"q","生":"s","目":"m","看":"k",
   "程":"c","空":"k","站":"z","统":"t","编":"b","置":"z","览":"l","计":"j","记":"j","设":"s",
-  "近":"j","部":"b","配":"p","题":"t"
+  "近":"j","部":"b","配":"p","题":"t",
+  /* v3.7.22：接入工具面板后补齐 —— 工具名用到的字（原先 64 字只覆盖命令标签） */
+  "辑":"j","器":"q","富":"f","文":"w","本":"b","表":"b","格":"g","幻":"h","灯":"d","片":"p",
+  "阅":"y","读":"d","截":"j","图":"t","画":"h","布":"b","视":"s","频":"p","成":"c","在":"z",
+  "线":"x","检":"j","索":"s","代":"d","码":"m","运":"y","行":"x","具":"j","时":"s","间":"j",
+  "戳":"c","解":"j","随":"s","机":"j","串":"c","正":"z","则":"z","测":"c","试":"s","转":"z",
+  "动":"d","录":"l","缴":"j","费":"f","提":"t","醒":"x","采":"c","购":"g","单":"d","外":"w",
+  "卖":"m",
 };
 /**
  * 取文本的「拼音首字母串」：汉字取首字母、ASCII 字母数字原样保留，其余字符忽略
@@ -22082,7 +22089,14 @@ function buildCmds(q){
   const scs=ORDER.map(sc=>({label:t("cmd.switchTo","切到 ")+SCENARIOS[sc].name, icon:SCENARIOS[sc].icon || "", group:t("cmd.scenario","场景"), run:()=>{setActive(sc);render();}}));
   const tasks=getActiveTasks().filter(t=>t.status!=="done").slice(0,12)
     .map(task=>({label:task.title, icon:SCENARIOS[task.sc].icon || "", sub:SCENARIOS[task.sc].name, group:t("cmd.task","任务"), trackRecent:false, run:()=>{setActive(task.sc);render();}}));
-  const items=acts.concat(scs, tasks);
+  /* v3.7.22：把工具面板的 22 个工具接入命令面板 ——
+     此前它们只能从侧栏二级菜单进，而"快速入口"搜不到；
+     接入后自动获得模糊搜索 / 拼音首字母（sjc → 时间戳）/ 最近使用。 */
+  const tools=(typeof TOOL_APPS === "object" && TOOL_APPS) ? Object.keys(TOOL_APPS).map(function(id){
+    const a=TOOL_APPS[id] || {};
+    return { label:a.name || id, icon:a.icon || "", sub:a.desc || "", group:t("cmd.tool","工具"), run:function(){ if(typeof openToolStub === "function") openToolStub(id); } };
+  }) : [];
+  const items=acts.concat(scs, tasks, tools);
   if(q){
     // 模糊匹配：标签+副标题联合打分，按分值降序；命中位置取「标签」上的（高亮给用户看的就是标签）
     return items
