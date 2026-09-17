@@ -41,6 +41,9 @@ function renderMetricsStrip(){
   return '<div class="card ms-strip">'+item(todo,t("kanban.todo","待办"))+item(doing,t("kanban.doing","进行中"))+item(done,t("kanban.done","已完成"))+item(recN,t("tool.webSearch.records","资料"))+'</div>';
 }
 
+/* v3.7.15（解耦 S2b）：把渲染调度器注册到桥接，供低层受控调用（见 docs/decoupling-plan.md） */
+AppBridge.render = render;
+
 function render(){
   try{
     // v1.9.4：切出回收站页面时移除铺满类（openRecycle 会重新添加）

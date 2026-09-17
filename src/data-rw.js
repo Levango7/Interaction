@@ -242,6 +242,6 @@ function recoverAutoBackup(){
   try{ initCrypto(); }catch(e){ /* 降级明文 */ }
 
   toast(t("backup.recoveredToast", "已从自动备份恢复（{time}）").replace("{time}", new Date(snap._ts||Date.now()).toLocaleString()), "ok");
-  render();
+  AppBridge.render();
   return true;
 }

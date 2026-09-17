@@ -164,7 +164,7 @@ function cancelPendingDanger(userText){
   pendingConfirm=null;
   closeConfirmModal();
   trimChatHist(hist);
-  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
+  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
 }
 /**
  * A2：关闭危险操作确认模态框（若存在）
@@ -288,7 +288,7 @@ async function onChatSubmit(e){
       : t("ai.taskCreateFail","创建任务失败：")+(rj && rj.msg ? rj.msg : t("common.unknownError","未知错误"));
     hist.push({role:"assistant", content:reply});
     trimChatHist(hist);
-    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
+    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
     return;
   }
   // v1.4-D：自然语言操作拦截（"完成第一个任务" / "把数学任务标记为已完成" / "删除数学"）
@@ -298,7 +298,7 @@ async function onChatSubmit(e){
     hist.push({role:"user", content:text});
     hist.push({role:"assistant", content: r.ok ? r.msg : t("ai.opFail","操作失败：")+r.msg});
     trimChatHist(hist);
-    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); render();
+    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
     return;
   }
   // v1.6-A：AI 任务拆解拦截（"拆解任务 XXX" / "分解 XXX"）
@@ -356,7 +356,7 @@ async function runChatLoop(messages, hist){
               hist.push(streamMsg);
             }
             streamMsg.content += chunkText;
-            render();
+            AppBridge.render();
           }catch(_e){ /* 渲染异常不阻断流 */ }
         } : undefined
       });
@@ -376,7 +376,7 @@ async function runChatLoop(messages, hist){
           if(autoConfirm){
             pendingConfirm={ toolCalls:calls, title:titles.join(t("ai.confirmJoinSep","、"))||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:active };
             hist.push({role:"assistant", content:t("ai.pendingConfirm","（待确认）将执行删除/修改操作：「")+(titles.join(t("ai.confirmJoinSep","、"))||t("ai.unknown","未知"))+t("ai.pendingConfirmSuffix","」。发送「确认」以继续，其他内容取消。")});
-            render(); openConfirmModal(); break; // A2：同时弹出确认模态框
+            AppBridge.render(); openConfirmModal(); break; // A2：同时弹出确认模态框
           }
         }
         // 工具白名单过滤
@@ -389,7 +389,7 @@ async function runChatLoop(messages, hist){
               const tm={role:"assistant", content:t("ai.toolDeniedPrefix","工具 ")+c.name+t("ai.toolDeniedSuffix"," 不在当前允许列表中，已跳过。"), _tool_denied:true};
               messages.push(tm); hist.push(tm);
             });
-            render(); continue;
+            AppBridge.render(); continue;
           }
           calls.forEach(c=>{
             const args=JSON.parse(c.args||"{}");
@@ -397,7 +397,7 @@ async function runChatLoop(messages, hist){
             const tm={role:"tool", tool_call_id:c.id, content:res, _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
             messages.push(tm); hist.push(tm);
           });
-          render(); continue;
+          AppBridge.render(); continue;
         }
         // 无危险：完整 assistant + tool（含 tool_calls / tool_call_id）入 hist，B1 安全
         messages.push(msg); hist.push(msg);
@@ -407,7 +407,7 @@ async function runChatLoop(messages, hist){
           const tm={role:"tool", tool_call_id:tc.id, content:res, _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
           messages.push(tm); hist.push(tm);
         }
-        render(); continue;
+        AppBridge.render(); continue;
       }
       hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)")});
       break;

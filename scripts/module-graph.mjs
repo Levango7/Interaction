@@ -259,7 +259,11 @@ lines.push('## 3. 校验结果');
 lines.push('');
 lines.push(`- 跨块重复定义：**${duplicates.length}** 项${duplicates.length ? '（' + duplicates.map(([n, o]) => n + ' → ' + o.join('/')).join('；') + '）' : ''}`);
 lines.push(`- 循环依赖：**${new Set(cycles).size}** 条${cycles.length ? '（' + [...new Set(cycles)].slice(0, 5).join('；') + '）' : ''}`);
-lines.push(`- 逆层依赖（低层用高层符号）：**${upward.length}** 条`);
+lines.push(`- 逆层依赖（低层用高层符号）：**${upward.length}** 条（按「块对」计）`);
+/* 符号级计数：同一条块对边可能由多个符号造成，且解耦往往一次只消掉其中一个符号
+   （实测：S2b 把 render 改走桥接后，data-links→render-entry 这条边因 setActive 等符号仍在，条数不变，
+   但逆层**符号**确实少了）→ 两个口径都给出，才看得出逐步解耦的真实进展。 */
+lines.push(`- 逆层依赖（按**符号**计，去重）：**${new Set(upward.flatMap(u => u.symbols)).size}** 个符号`);
 lines.push('');
 if (upward.length) {
   lines.push('| 从（层） | 到（层） | 涉及符号 |');
