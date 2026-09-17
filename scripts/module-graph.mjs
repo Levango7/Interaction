@@ -102,9 +102,24 @@ function depthAt(code, idx) {
 /* ---------- 抽引用（剥注释/字符串后的标识符） ---------- */
 function identifiers(code) {
   const out = new Set();
-  for (const m of code.matchAll(/[A-Za-z_$][\w$]*/g)) {
+  const re = /[A-Za-z_$][\w$]*/g;
+  let m;
+  while ((m = re.exec(code))) {
     const id = m[0];
-    if (!KEYWORDS.has(id)) out.add(id);
+    if (KEYWORDS.has(id)) continue;
+    const after = code.slice(m.index + id.length, m.index + id.length + 8);
+    /* 视为「对象字面量键名」的条件：后面紧跟冒号（非 `::`），且前面最近的非空字符是 `{` 或 `,`。
+       实测踩到：core 里声明 AppBridge 的键 `openDrawer: () => {}` 被算成"core 引用了 ui-drawer 的 openDrawer"，
+       凭空造出 core→UI 出边与 core↔ui-drawer 假环（循环 49→57、core 出边 0→2）。
+       加"前一个非空字符"这一条是为了不误伤三元表达式 `cond ? a : b`（那里 a 前面是 `?` 或空白，不是 `{`/`,`）。 */
+    let k = m.index - 1;
+    while (k >= 0 && /\s/.test(code[k])) k--;
+    const prevCh = k >= 0 ? code[k] : '';
+    /* 成员访问不算变量引用：`AppBridge.addToRecycleBin(...)` 里的 addToRecycleBin 是属性名，
+       不应算作"Data 层引用了 Render 层的 addToRecycleBin"（实测踩到，会让 S2 的成果看起来没生效）。 */
+    if (prevCh === '.' || (prevCh === '?' && code[k - 1] === '.')) continue;
+    if (/^\s*:(?!:)/.test(after) && (prevCh === '{' || prevCh === ',')) continue;
+    out.add(id);
   }
   return out;
 }

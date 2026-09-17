@@ -459,7 +459,7 @@ function renderChat(){
       if(typeof _disp === "string" && _disp.indexOf("__CHART__") === 0){
         try{
           var _spec = JSON.parse(_disp.slice(9));
-          return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + renderMiniChart(_spec.type, _spec.data) + '</div>';
+          return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + AppBridge.miniChart(_spec.type, _spec.data) + '</div>';
         }catch(_e){ /* 解析失败回退文本 */ }
       }
       return '<div class="msg tool">' + esc(_disp) + '</div>';
@@ -562,8 +562,8 @@ function bindChatPanel(){
     modelSelect.onclick=()=>{
       const c = getCfg();
       const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
-      if(profiles.length === 0 && typeof openAiPage === "function"){
-        openAiPage();
+      if(profiles.length === 0 && typeof AppBridge.openAiPage === "function"){
+        AppBridge.openAiPage();
       }
     };
     // 暴露刷新方法供外部（如设置保存后）调用
@@ -658,7 +658,7 @@ function bindChatPanel(){
     e.stopPropagation();
     if(panel.classList.contains("collapsed")) toggleCollapse();
     // AI 配置使用独立 drawer 页面，不是场景 key；保留当前场景供返回时恢复。
-    openAiPage();
+    AppBridge.openAiPage();
   };
   if(rail){
     rail.onclick=toggleCollapse;
@@ -711,7 +711,7 @@ function askAiAboutScene(sc, hintKey){
       save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: sc, hintKey: hintKey || "", ts: Date.now() }));
     }catch(e){ /* noop */ }
     toast(t("ai.notEnabled","请先在设置 → AI 中启用并填写 API Key"), "warn");
-    if(typeof openAiPage==="function") openAiPage();
+    if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage();
     return;
   }
   /* v3.2.1 修复：展开 AI 聊天面板（折叠态时）。bindChatPanel 暴露了 window.__aiPanelExpand()
@@ -766,7 +766,7 @@ function discussInAi(type){
       save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: "", hintKey: "discuss." + type, prompt: prompt, ts: Date.now() }));
     }catch(e){ /* noop */ }
     toast(t("ai.notEnabled","请先在设置 → AI 中启用并填写 API Key"), "warn");
-    if(typeof openAiPage==="function") openAiPage();
+    if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage();
     return;
   }
   if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); }

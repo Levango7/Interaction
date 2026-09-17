@@ -86,7 +86,14 @@ const AppBridge = {
   /* 渲染调度：Data/AI 改完数据后请求重绘（实现见 render-entry 块的注册段） */
   render: () => {},
   /* 题库保存后钩子（错题自动入 SM-2 复习）：实现由 Data 层注册 */
-  onExerciseSave: null
+  onExerciseSave: null,
+  /* v3.7.14（解耦 S2a）：动作类接口 —— 低层只调接口，实现由 UI/Render 层注册 */
+  openDrawer: () => {},
+  openAiPage: () => {},
+  /* 入回收站：有返回值，注册时整体替换以保留签名与返回值 */
+  addToRecycleBin: () => undefined,
+  /* 迷你图表：返回 SVG 字符串（调用侧拼进 HTML），默认空串保证拼接安全 */
+  miniChart: () => ""
 };
 /* 通知/toast 用的图标表（TOAST_ICONS 依赖 UI_ICONS，故紧随其后声明）；从 ui-theme 下移而来 */
 const TOAST_ICONS = { ok: UI_ICONS.check, warn: UI_ICONS.alert, error: UI_ICONS.error, danger: UI_ICONS.error };

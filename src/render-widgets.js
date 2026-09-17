@@ -273,9 +273,9 @@ function setupSideMenu(){
       return;
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
-    if(btn.dataset.gear){ _sideActive = null; openDrawer(); return; }
+    if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
     if(btn.dataset.help){ _sideActive = null; if(typeof renderHelp==="function") renderHelp(); return; }
-    if(btn.dataset.aipage){ _sideActive = null; if(typeof openAiPage==="function") openAiPage(); return; }
+    if(btn.dataset.aipage){ _sideActive = null; if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
     /* 子项：执行注册动作 */
     const menuId = btn.getAttribute("data-menu");
     if(menuId){
@@ -298,7 +298,7 @@ function setupSideMenu(){
 /* 在侧栏菜单中查找子项/叶子项动作（v2.4.0：菜单全叶子化，仅保留无 sc 路由的固定项；v2.5：外观合并至设置，移除 sys-look） */
 function _findSideMenuItem(menuId){
   const fixed = {
-    "feat-ai":{run:()=>{ if(typeof openAiPage==="function") openAiPage(); }}
+    "feat-ai":{run:()=>{ if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); }}
   };
   return fixed[menuId] || null;
 }
@@ -409,9 +409,9 @@ function setupMobNav(){
         closeSideSheet();
         return;
       }
-      if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); openDrawer(); return; }
+      if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); AppBridge.openDrawer(); return; }
       if(btn.dataset.help){ _sideActive = null; closeSideSheet(); if(typeof renderHelp==="function") renderHelp(); return; }
-      if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof openAiPage==="function") openAiPage(); return; }
+      if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
       const menuId = btn.getAttribute("data-menu");
       if(!menuId) return;
       const item = _findSideMenuItem(menuId);
@@ -792,6 +792,9 @@ function saveRecycleBin(items){
  *  @param {Object} data - 原始数据快照（用于恢复）
  *  @param {string} source - 来源标识
  *  @returns {string|null} 新增项 id（失败返回 null） */
+/* v3.7.14（解耦 S2a）：注册入回收站实现（整体赋值，保留签名与返回值） */
+AppBridge.addToRecycleBin = addToRecycleBin;
+
 function addToRecycleBin(type, title, desc, data, source){
   if(type!=="config" && type!=="file" && type!=="plugin") return null;
   const items = load(RECYCLE_BIN_KEY, []);

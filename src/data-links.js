@@ -327,7 +327,7 @@ function removeCustomLink(id){
   // v3.1：接入回收站——保存被删除的联动规则快照
   const removed = links[i];
   try{
-    addToRecycleBin("config",
+    AppBridge.addToRecycleBin("config",
       t("chain.linkRecycleTitlePrefix", "联动规则：「")+(removed.name||removed.id||t("tool.unnamed", "未命名"))+t("chain.linkRecycleTitleSuffix", "」"),
       (removed.fromSc||"?")+" → "+(removed.toSc||"?")+t("chain.linkRecycleDescKwPrefix", "，关键词：「")+(removed.kw||"")+t("chain.linkRecycleDescKwSuffix", "」"),
       { kind: "link", link: removed },

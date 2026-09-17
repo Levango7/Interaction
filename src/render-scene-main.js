@@ -390,6 +390,9 @@ function _miniLineSVG(data){
  * @param {Array<{label:string,value:number}>} dataArr - 已校验的数据点数组
  * @returns {string} SVG 字符串；空数据/非法输入返回友好占位文案
  */
+/* v3.7.14（解耦 S2a）：注册迷你图表实现（AI 经桥接调用，消除 AI→Render 逆层依赖） */
+AppBridge.miniChart = renderMiniChart;
+
 function renderMiniChart(chartType, dataArr){
   if(!Array.isArray(dataArr) || !dataArr.length){
     return t("p3.html.chartEmpty","<div class=\"mini-chart-empty\">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{\"label\":\"Q1\",\"value\":30}]</div>");

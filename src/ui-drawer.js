@@ -155,6 +155,10 @@ function renderProfileSelect(){
  * 打开设置抽屉：填充表单、渲染 profile 选择器与联动规则、更新 Agent 状态
  * @returns {void}
  */
+/* v3.7.14（解耦 S2a）：动作实现注册到桥接，供低层受控调用（见 docs/decoupling-plan.md） */
+AppBridge.openDrawer = openDrawer;
+AppBridge.openAiPage = openAiPage;
+
 function openDrawer(){ const cfg=getCfg();
   $("#cfgEnabled").checked=!!cfg.enabled;
   $("#cfgAgent").checked = cfg.agent!==false; // 默认开启（cfg.agent 未定义时视为开）

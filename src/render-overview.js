@@ -144,7 +144,7 @@ function renderOverview(){
       const act = b.getAttribute("data-kpi-act");
       if(act==="office"){ setActive("office"); render(); }
       else if(act==="stats"){ setActive("stats"); render(); }
-      else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
+      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); _switchSetTab("set-chain"); } }
     };
   });
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
@@ -176,7 +176,7 @@ function renderOverview(){
       if(act==="overview"){ setActive("overview"); render(); }
       else if(act==="office"){ setActive("office"); render(); }
       else if(act==="stats"){ setActive("stats"); render(); }
-      else if(act==="chain"){ if(typeof openDrawer==="function"){ openDrawer(); _switchSetTab("set-chain"); } }
+      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); _switchSetTab("set-chain"); } }
     };
   });
   // v2.3.0：系统概况卡 AI 设置链接（v3.1.2 修复：原 _switchSetTab("set-ai") 指向不存在的分区，
@@ -188,7 +188,7 @@ function renderOverview(){
       try{
         save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: "", hintKey: "overview-setup", ts: Date.now() }));
       }catch(_){ /* noop */ }
-      if(typeof openAiPage==="function"){ openAiPage(); }
+      if(typeof AppBridge.openAiPage==="function"){ AppBridge.openAiPage(); }
     };
   });
   // v2.2.1：主页今日待办点击跳场景 / 「还有 N 项」跳办公场景看板
