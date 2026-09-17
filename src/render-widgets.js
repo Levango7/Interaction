@@ -1109,6 +1109,69 @@ function _addDaysStr(ymd, n){
 /* v2.3.1：CAD 画布当前会话（des-cad bind 时替换；window mouseup 单例监听器读取） */
 let _cadSession = null;
 
+/* ---------- v3.7.21：视频分镜/提示词工具的纯函数（可单测） ---------- */
+/** 纯函数：把用户描述 + 时长 + 风格 拼成给文本 AI 的提示词（产出"分镜 + 视频提示词"，不产出视频本身） */
+function _vgBuildPrompt(desc, seconds, style){
+  const d = String(desc === null || desc === undefined ? "" : desc).trim();
+  const secs = String(seconds || "5");
+  const styles = { real: "写实", anime: "动画", cg: "3D/CG" };
+  const st = styles[style] || "写实";
+  return "你是分镜师。请根据下面的视频描述，输出两部分（用 Markdown 小标题分隔，语言与描述一致）：\n"
+    + "## 分镜\n按时间轴给出分镜（每个镜头一行：时间区间 / 画面内容 / 镜头运动 / 景别），总时长 " + secs + " 秒，风格：" + st + "。\n"
+    + "## 视频提示词\n给出一段可直接粘贴到视频生成模型的提示词（单段、具体、含主体+动作+环境+光线+镜头语言+风格），并额外给出 3 条负面词。\n"
+    + "要求：只输出这两部分，不要解释、不要客套。\n\n视频描述：\n" + d;
+}
+
+/* ---------- v3.7.21：时间戳工具的纯函数（可单测） ---------- */
+/** 纯函数：ISO 双行显示（本地 + UTC），供多处复用 */
+function _tsDualLine(d){
+  try{ return "ISO: " + d.toISOString() + "   ·   UTC: " + d.toUTCString(); }catch(_e){ return ""; }
+}
+/** 纯函数：解析"时间点"文本 —— 支持 10/13 位时间戳、2026-09-13、2026-09-13 12:00(:ss)、12:00(:ss)（今天）
+ *  返回 Date 或 null（无法解析时给出 null，调用方决定如何提示） */
+function _tsParsePoint(text, now){
+  const s = String(text === null || text === undefined ? "" : text).trim();
+  if(!s) return null;
+  const base = (now instanceof Date) ? now : new Date();
+  if(/^-?\d{9,15}$/.test(s)){                     /* 纯数字 → 时间戳（10 位当秒，其余当毫秒） */
+    let n = Number(s);
+    if(String(Math.trunc(Math.abs(n))).length <= 10) n *= 1000;
+    const d = new Date(n);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const hm = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);   /* 只有时间 → 落在今天 */
+  if(hm){
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate(), Number(hm[1]), Number(hm[2]), Number(hm[3] || 0));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(s.replace(" ", "T"));          /* 其余交给 Date 解析（yyyy-mm-dd / yyyy/mm/dd 等） */
+  return isNaN(d.getTime()) ? null : d;
+}
+/** 纯函数：人类可读的时间差（固定单位换算，不用日历月；负值表示 b 早于 a） */
+function _tsHumanDiff(ms){
+  const neg = ms < 0, v = Math.abs(ms);
+  if(v < 1000) return (neg ? "-" : "") + v + " 毫秒";
+  const s = Math.floor(v/1000), m = Math.floor(s/60), h = Math.floor(m/60), day = Math.floor(h/24);
+  const parts = [];
+  if(day) parts.push(day + " 天");
+  if(h % 24) parts.push((h % 24) + " 小时");
+  if(m % 60) parts.push((m % 60) + " 分");
+  if(!day && !(h % 24) && !(m % 60)) parts.push((s % 60) + " 秒");
+  return (neg ? "-" : "") + parts.join(" ") + "（共 " + s + " 秒）";
+}
+/** 纯函数：常用时间点（今天零点 / 本周一 / 本月 1 日 / 今年元旦；周一为一周起点） */
+function _tsCommonPoints(now){
+  const n = (now instanceof Date) ? now : new Date();
+  const mk = function(y, mo, d){ return new Date(y, mo, d, 0, 0, 0, 0); };
+  const dow = (n.getDay() + 6) % 7;                 /* 0 = 周一 */
+  return [
+    { label: t("tool.time.pt.today","今天 00:00"), ts: mk(n.getFullYear(), n.getMonth(), n.getDate()).getTime() },
+    { label: t("tool.time.pt.week","本周一 00:00"), ts: mk(n.getFullYear(), n.getMonth(), n.getDate() - dow).getTime() },
+    { label: t("tool.time.pt.month","本月 1 日"), ts: mk(n.getFullYear(), n.getMonth(), 1).getTime() },
+    { label: t("tool.time.pt.year","今年元旦"), ts: mk(n.getFullYear(), 0, 1).getTime() }
+  ];
+}
+
 /* ---------- v3.7.20：PDF 阅读工具（做深）的状态 / 纯函数 / 原地刷新 ---------- */
 /* 设计要点：
    ① iframe 无法被脚本控制（内置阅读器是独立进程）→ 页码/缩放只能通过 **PDF 打开参数** 重建 src，
@@ -1854,21 +1917,47 @@ const TOOL_APPS = {
     }
   },
   "des-vidgen": {
-    name:t("tool.vidGen.name", "AI 视频生成"), icon:UI_ICONS.vidgen, desc:t("tool.vidGen.desc", "文本描述 → AI 视频生成"),
+    /* v3.7.21：原 desc 声称"文本描述 → AI 视频生成"，但按钮只弹"通道暂未开放" —— 承诺了不存在的能力。
+       现如实说明，并把这一步做成**当下真能用**的能力：用已配置的文本 AI 产出分镜脚本 + 视频提示词
+       （可直接粘贴到任何视频模型）。视频模型真接入后可在同处扩展。 */
+    name:t("tool.vidGen.name", "AI 视频生成"), icon:UI_ICONS.vidgen, desc:t("tool.vidGen.desc2", "分镜脚本 + 视频提示词（视频模型尚未接入）"),
     render: function(){
       const aiOn = (typeof getCfg === "function") && getCfg().enabled;
       return '<label>' + t("tool.vidGen.descLabel", "视频描述") + '</label><textarea id="vgPrompt" placeholder="' + t("tool.vidGen.descPlaceholder", "描述想要的视频画面与镜头运动…") + '" class="u-min-h-100"></textarea>'
-        + '<div class="tool-form-grid"><div class="tool-field"><label>' + t("tool.vidGen.duration", "时长") + '</label><select id="vgLen"><option value="3">' + t("tool.vidGen.duration.3", "3 秒") + '</option><option value="5">' + t("tool.vidGen.duration.5", "5 秒") + '</option><option value="10">' + t("tool.vidGen.duration.10", "10 秒") + '</option></select></div></div>'
-        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="vgGo"' + (aiOn ? "" : " disabled") + ">" + t("tool.vidGen.generate", "生成视频") + "</button></div>"
+        + '<div class="tool-form-grid"><div class="tool-field"><label>' + t("tool.vidGen.duration", "时长") + '</label><select id="vgLen"><option value="3">' + t("tool.vidGen.duration.3", "3 秒") + '</option><option value="5">' + t("tool.vidGen.duration.5", "5 秒") + '</option><option value="10">' + t("tool.vidGen.duration.10", "10 秒") + '</option></select></div>'
+        + '<div class="tool-field"><label>' + t("tool.vidGen.style", "风格") + '</label><select id="vgStyle">'
+        +   '<option value="real">' + t("tool.vidGen.style.real", "写实") + '</option>'
+        +   '<option value="anime">' + t("tool.vidGen.style.anime", "动画") + '</option>'
+        +   '<option value="cg">' + t("tool.vidGen.style.cg", "3D/CG") + '</option></select></div></div>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="vgGo"' + (aiOn ? "" : " disabled") + ">" + t("tool.vidGen.go", "生成分镜与提示词") + "</button>"
+        + '<button type="button" class="addbtn sm" id="vgCopy">' + t("tool.json.copy", "复制") + '</button></div>'
+        + '<div id="vgOut" class="u-mt-3"></div>'
         + (aiOn
-          ? '<p class="sub u-mt-2">' + t("tool.vidGen.noteAi", "注意：视频生成为 AI 高级能力，取决于所用模型是否支持；不支持时将提示降级方案。") + '</p>'
-          : '<p class="sub u-mt-2">' + t("tool.vidGen.noAiTip", "未配置 AI——视频生成依赖 AI 服务。到 设置→AI 配置 API Key 后启用。") + '</p>');
+          ? '<p class="sub u-mt-2">' + t("tool.vidGen.noteAi2", "说明：本工具产出**分镜脚本 + 视频提示词**，可直接粘贴到任意视频生成模型使用；工坊尚未接入视频模型，不代生成视频。") + '</p>'
+          : '<p class="sub u-mt-2">' + t("tool.vidGen.noAiTip", "未配置 AI——本工具需要文本 AI 生成分镜与提示词。到 设置→AI 配置 API Key 后启用。") + '</p>');
     },
     bind: function(){
-      const go = $("#vgGo"); if(!go) return;
+      const go = $("#vgGo"), out = $("#vgOut"), copy = $("#vgCopy");
+      if(copy) copy.onclick = function(){
+        const t2 = out && out.querySelector("textarea");
+        try{ if(t2 && t2.value){ navigator.clipboard.writeText(t2.value); toast(t("tool.copied", "已复制"), "ok"); } }catch(_e){}
+      };
+      if(!go) return;
       go.onclick = async function(){
-        if(!$("#vgPrompt").value.trim()){ toast(t("tool.vidGen.enterDesc", "请输入视频描述"), "warn"); return; }
-        $("#vgOut").innerHTML = sanitizeHtml('<div class="empty">' + t("tool.vidGen.emptyResult", "视频生成通道暂未开放。<br><small>当前接入的 AI 模型以文本为主；视频模型上线后会在此自动启用。</small>") + '</div>');
+        const desc = ($("#vgPrompt") || {}).value || "";
+        if(!desc.trim()){ toast(t("tool.vidGen.enterDesc", "请输入视频描述"), "warn"); return; }
+        const secs = ($("#vgLen") || {}).value || "5";
+        const style = ($("#vgStyle") || {}).value || "real";
+        out.innerHTML = sanitizeHtml('<div class="coach-hint">' + t("tool.vidGen.generating", "生成中…（约 10–30 秒）") + '</div>');
+        const text = await _aiChatText([{ role:"user", content:_vgBuildPrompt(desc, secs, style) }]);
+        if(!text){ out.innerHTML = sanitizeHtml('<div class="empty">' + t("tool.vidGen.failed", "生成失败或未返回内容（请检查 AI 配置与网络）") + '</div>'); return; }
+        /* 结果放到只读 textarea：便于整段复制粘贴（而不是塞进 HTML —— 也顺手避免注入面） */
+        out.innerHTML = "";
+        const ta = document.createElement("textarea");
+        ta.className = "u-min-h-240 u-font-mono u-fs-2xs";
+        ta.readOnly = true;
+        ta.value = String(text).trim();
+        out.appendChild(ta);
       };
     }
   },
@@ -1985,7 +2074,7 @@ const TOOL_APPS = {
     }
   },
   "cod-time": {
-    name:t("tool.time.name","时间戳"), icon:UI_ICONS.stopwatch, desc:t("tool.time.desc","Unix ↔ 日期 双向转换"),
+    name:t("tool.time.name","时间戳"), icon:UI_ICONS.stopwatch, desc:t("tool.time.desc2","Unix ↔ 日期 双向转换 · 时间差 · 常用时间点"),
     render: function(){
       return '<div class="tool-filter-bar">'
         + '<button type="button" class="addbtn sm" id="tsNow">'+t("tool.time.now","当前时间")+'</button>'
@@ -1995,7 +2084,17 @@ const TOOL_APPS = {
         + '<div><label>'+t("tool.time.unix","Unix 时间戳")+'</label><input type="text" id="tsUnix" class="u-font-mono" placeholder="1789250411553 或 1789250411"></div>'
         + '<div><label>'+t("tool.time.local","本地日期时间")+'</label><input type="text" id="tsDate" class="u-font-mono" placeholder="2026-09-13 12:00:00"></div>'
         + '</div>'
-        + '<div id="tsInfo" class="u-fs-2xs u-text-muted u-mt-1"></div>';
+        + '<div id="tsInfo" class="u-fs-2xs u-text-muted u-mt-1"></div>'
+        /* v3.7.21：常用时间点（一键填入；做日报/周报、算"距今天数"最常用） */
+        + '<label class="u-mt-3">'+t("tool.time.common","常用时间点")+'</label>'
+        + '<div class="tool-actions" id="tsCommon"></div>'
+        /* v3.7.21：时间差计算（时间戳工具最高频的真实用途之一） */
+        + '<label class="u-mt-3">'+t("tool.time.diffTitle","时间差计算")+'</label>'
+        + '<div class="u-grid-2col u-gap-3">'
+        + '<div><label class="u-fs-2xs">'+t("tool.time.diffA","A（早）")+'</label><input type="text" id="tsA" class="u-font-mono" placeholder="2026-09-01 或 时间戳"></div>'
+        + '<div><label class="u-fs-2xs">'+t("tool.time.diffB","B（晚）")+'</label><input type="text" id="tsB" class="u-font-mono" placeholder="留空 = 现在"></div>'
+        + '</div>'
+        + '<div id="tsDiffOut" class="u-fs-2xs u-text-muted u-mt-1"></div>';
     },
     bind: function(){
       const $u=$("#tsUnix"), $d=$("#tsDate"), $f=$("#tsInfo");
@@ -2014,11 +2113,39 @@ const TOOL_APPS = {
         const raw=$d.value.trim(); if(!raw) return;
         const d=new Date(raw.replace(" ","T")); if(isNaN(d.getTime())) return;
         $u.value=String(d.getTime());
-        if($f) $f.textContent="ISO: "+d.toISOString();
+        if($f) $f.textContent=_tsDualLine(d);
       };
-      const b1=$("#tsNow"); if(b1) b1.onclick=function(){ const d=new Date(); if($u)$u.value=String(d.getTime()); if($d)$d.value=fmt(d); if($f)$f.textContent="ISO: "+d.toISOString(); };
+      const b1=$("#tsNow"); if(b1) b1.onclick=function(){ const d=new Date(); if($u)$u.value=String(d.getTime()); if($d)$d.value=fmt(d); if($f)$f.textContent=_tsDualLine(d); };
       if($u) $u.oninput=fromUnix;
       if($d) $d.oninput=fromDate;
+      /* 常用时间点：一键填入（同时写 unix 与本地日期，保持两侧一致） */
+      const host=$("#tsCommon");
+      if(host){
+        host.innerHTML = sanitizeHtml(_tsCommonPoints(new Date()).map(function(p){
+          return '<button type="button" class="addbtn sm" data-ts-pt="' + p.ts + '">' + esc(p.label) + '</button>';
+        }).join(""));
+        $$("#tsCommon [data-ts-pt]").forEach(function(b){
+          b.onclick=function(){
+            const ts=parseInt(b.getAttribute("data-ts-pt"),10);
+            const dt=new Date(ts);
+            if($u) $u.value=String(ts);
+            if($d) $d.value=fmt(dt);
+            if($f) $f.textContent=_tsDualLine(dt);
+          };
+        });
+      }
+      /* 时间差：A/B 任一变动即重算（B 留空 = 现在，实时用途最多） */
+      const calcDiff=function(){
+        const out=$("#tsDiffOut"); if(!out) return;
+        const a=_tsParsePoint(($("#tsA")||{}).value, new Date());
+        const bRaw=($("#tsB")||{}).value;
+        const b=bRaw && String(bRaw).trim() ? _tsParsePoint(bRaw, new Date()) : new Date();
+        if(!a || !b){ out.textContent = ""; return; }
+        const ms=b.getTime()-a.getTime();
+        out.textContent = _tsHumanDiff(ms) + "（" + (ms<0?"B 早于 A":"A → B") + "，" + Math.abs(ms) + " ms）";
+      };
+      ["#tsA","#tsB"].forEach(function(sel){ const el=$(sel); if(el) el.oninput=calcDiff; });
+      calcDiff();
     }
   },
   "cod-codec": {
