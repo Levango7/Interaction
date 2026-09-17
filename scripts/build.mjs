@@ -2,9 +2,12 @@
 /**
  * Build for agent-workbench.html
  * --------------------------------------------------
- * 架构（v1.8.9+ 定稿）：agent-workbench.html 是唯一交付真相源。
- * v1.8.8–v1.8.9 的功能（插件系统 / 场景模板 / 习惯链可视化等）直接演进于
- * 交付 HTML；src/modules 是早期模块化快照、已落后，不再参与构建。
+ * 架构（v3.7.6 起修订）：**`src/` 是应用源码，`agent-workbench.html` 是组装产物**。
+ * 27 个模块由 scripts/src-split.mjs 与单文件 HTML 双向同步：
+ *   src:extract（HTML → src）/ src:inject（src → HTML）/ src:check（一致性门禁）。
+ * 因此仓库内提交的 HTML 是"骨架态"（含 SRC:xxx:BEGIN/END 标记、无应用 JS），
+ * 必须先 inject 才是可运行的单文件；本脚本的 --check/--prod 均假设 HTML 已注入。
+ * （历史：v1.8.9 曾定稿"HTML 是唯一真相源"，该结论已被上述重构取代。）
  *
  * 命令：
  *   node scripts/build.mjs                # 锁死：提示以 HTML 为源，不落盘、退出码 0

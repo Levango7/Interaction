@@ -4,6 +4,14 @@
 
 零安装、单文件、纯本地；数据存本机浏览器，**默认不依赖任何后端服务器**（可选开启账号云同步与联网工具）。
 
+> **源码态说明（v3.7.6 起）**：仓库内的 `agent-workbench.html` 是约 544 KB 的**骨架**——应用 JS 已外置到 `src/`（27 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
+>
+> ```bash
+> npm run src:inject     # 把 src/ 拼回单文件 HTML
+> ```
+>
+> 线上体验与 Electron 打包产物由构建自动组装（`pretest` / `prebuild*` / `pree2e` 均会先跑 `src-split.mjs`），不受此影响。
+
 > **线上体验**：<https://levango7.github.io/Interaction/>（PWA，可安装到桌面/手机，离线可用）
 
 ---
@@ -174,7 +182,8 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 九、相关文件
 
-- `agent-workbench.html` — 工坊本体（核心交付物；源码态不含立绘 base64，构建时回注）
+- `agent-workbench.html` — 工坊本体（核心交付物；**源码态是骨架**：不含立绘 base64，且应用 JS 已外置到 `src/`，构建时由 `src-split.mjs` 拼回 + 回注立绘）
+- `src/` — 应用源码（27 个模块 + `order.json`），由 `src-split.mjs` 与单文件 HTML 双向同步（`src:extract` / `src:inject` / `src:check`）
 - `assets/pet/` — 萌宠立绘 PNG + 注入顺序 `order.json`（见 [docs/pet-system.md](docs/pet-system.md)）
 - `启动Agent工坊.bat` — Edge 应用模式启动器
 - `启动本地服务.bat` — 本地服务模式启动器（解决 AI 跨域）
