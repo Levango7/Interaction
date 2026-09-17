@@ -8,6 +8,7 @@ function helpSection(id, title, content){
 // renderHelp() — 渲染使用指南页面（10 章节，内联内容，details 原生折叠）
 // v1.9：从 modal 改为页面渲染到 #main（撑满主内容区），保留折叠面板交互与 a11y focus 管理
 // v1.8.4：新增「性能优化 / 企业级功能 / AI 工作流」3 章节
+AppBridge.renderHelp = renderHelp;
 function renderHelp(){
   // v1.9.3：若设置页(drawer-page)正在显示，先移回并恢复 #main，避免指南渲染到隐藏的 #main
   const _drawer = $("#drawer");

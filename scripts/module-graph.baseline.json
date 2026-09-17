@@ -51,7 +51,6 @@
     "render-entry>render-widgets",
     "render-entry>ui-daily",
     "render-entry>ui-drawer",
-    "render-entry>ui-scene-bind",
     "render-overview>render-widgets",
     "render-overview>ui-drawer",
     "render-overview>ui-global-events",

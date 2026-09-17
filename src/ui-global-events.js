@@ -179,6 +179,7 @@ $("#cfgTestConn").onclick = async function(){
   })());
 };
 $("#cfgProfileSelect").onchange = e => switchProfile(e.target.value);
+AppBridge._switchSetTab = _switchSetTab;
 /* v2.0.3：设置页分区导航切换（独立导航栏 .set-nav-btn，点击切换下方 card 显示） */
 function _switchSetTab(tabId){
   $$("#drawer .set-nav-btn[data-set-tab]").forEach(function(b){
@@ -953,6 +954,7 @@ function _closeAllToolPops(){
     try{ b.setAttribute("aria-expanded", "false"); }catch(e){ /* noop */ }
   });
 }
+AppBridge.toggleToolPop = toggleToolPop;
 /* 切换笃行/时间追踪浮层：锚定侧栏按钮右侧（右缘溢出改左侧），再点同按钮=关闭 */
 function toggleToolPop(popId, btn){
   const pop = document.getElementById(popId);

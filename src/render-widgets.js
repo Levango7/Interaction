@@ -270,7 +270,7 @@ function setupSideMenu(){
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
     if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
-    if(btn.dataset.help){ _sideActive = null; if(typeof renderHelp==="function") renderHelp(); return; }
+    if(btn.dataset.help){ _sideActive = null; if(typeof renderHelp==="function") AppBridge.renderHelp(); return; }
     if(btn.dataset.aipage){ _sideActive = null; if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
     /* 子项：执行注册动作 */
     const menuId = btn.getAttribute("data-menu");
@@ -406,7 +406,7 @@ function setupMobNav(){
         return;
       }
       if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); AppBridge.openDrawer(); return; }
-      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); if(typeof renderHelp==="function") renderHelp(); return; }
+      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); if(typeof renderHelp==="function") AppBridge.renderHelp(); return; }
       if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
       const menuId = btn.getAttribute("data-menu");
       if(!menuId) return;

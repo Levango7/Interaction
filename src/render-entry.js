@@ -83,7 +83,7 @@ function render(){
     // v3.0：功能菜单（renderSceneFeatNav）独立于标题栏，置于标题卡与主内容之间
     $("#main").innerHTML = sanitizeHtml(renderSceneHead() + renderSceneFeatNav() + renderMetricsStrip() + renderMainHTML());
     appendFoot();
-    bindScenario();
+    AppBridge.bindScenario();
     _hydrateRecImgs(); // v3.2 C-档：记录缩略图异步填充（IDB blob → objectURL）
     // v3.0：场景内功能 tab 点击切换（SCENE_FEATURES；按钮复用 .set-nav-btn，限定在 .scene-feat-nav 内）
     $$("#main .scene-feat-nav .set-nav-btn").forEach(function(b){
@@ -108,8 +108,8 @@ function render(){
       // v3.1.2 B-档：会议管理「→ 生成任务」按钮绑定（行动项识别 → office 任务）
       if(active === "office" && sceneFeatureMode === "meeting") bindMeetingActionCard();
     }
-    setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
-    setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
+    AppBridge.setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
+    AppBridge.setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
     // P9：「稍后提醒」按钮绑定（Top3 待处理任务）
     $$("#main [data-snooze]").forEach(b=> b.onclick=()=>{
       snoozeTask(b.getAttribute("data-snooze"), 30);

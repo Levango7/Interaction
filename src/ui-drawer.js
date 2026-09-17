@@ -416,6 +416,7 @@ function _enforceDrawerWidth(){
     });
   }catch(_){}
 }
+AppBridge._moveDrawerHome = _moveDrawerHome;
 function _moveDrawerHome(){
   const drawer = $("#drawer");
   const overlay = $("#overlay");
@@ -427,6 +428,7 @@ function _moveDrawerHome(){
     overlay.parentNode.insertBefore(drawer, overlay.nextSibling);
   }
 }
+AppBridge.closeDrawer = closeDrawer;
 function closeDrawer(){
   $("#drawer").classList.remove("open");
   delete $("#drawer").dataset.page; // v1.9.6：清掉子页标记，下次打开回到默认 settings 页头
@@ -889,6 +891,7 @@ function applyTemplate(template){
   setTasks(tasks);
   return {ok:true, count: createdIds.length, ids: createdIds};
 }
+AppBridge.openTemplateModal = openTemplateModal;
 /**
  * 打开场景模板选择弹窗
  * @returns {void}
@@ -1082,6 +1085,7 @@ function openPluginPanel(){
   renderPluginBox();
 }
 
+AppBridge.registerPluginFromJson = registerPluginFromJson;
 /**
  * 从 JSON 字符串注册新插件（设置抽屉「注册插件」按钮入口）
  * @param {string} jsonStr - 插件 JSON 定义字符串

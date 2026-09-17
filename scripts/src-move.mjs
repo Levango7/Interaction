@@ -101,6 +101,35 @@ const blocks = readdirSync(SRC).filter(f => f.endsWith('.js')).map(f => f.replac
 const beforeDefs = new Map();
 for (const b of blocks) for (const d of topDefs(readFileSync(join(SRC, b + '.js'), 'utf8'))) beforeDefs.set(d, b);
 
+/* ---------- 预演 ---------- */
+/* bridge 任务：把「低层调用高层动作」改成走 AppBridge
+   三件事一次做完：① core 的 AppBridge 里声明接口 ② 拥有方块注册实现 ③ 低层调用点改道 */
+const bridgePlan = [];
+for (const br of jobs.bridge || []) {
+  const owner = br.owner;
+  const declLine = br.declareIn || 'core';
+  console.log('  bridge  拥有方 ' + owner + ' · 声明于 ' + declLine + ' · 符号 ' + br.symbols.length + ' 个');
+  console.log('        [' + br.symbols.join(', ') + ']');
+  /* 自动探测各块的真实调用点数（不手写 expect，避免写错 —— S2b 曾因计数错而中断） */
+  const sites = [];
+  for (const b of blocks) {
+    if (b === owner) continue;
+    /* onlyIn：只改指定块（用于"只处理跨层调用"——同层调用不是倒挂，改了只增风险，不该动。S6 实测踩到） */
+    if (Array.isArray(br.onlyIn) && !br.onlyIn.includes(b)) continue;
+    const raw = readFileSync(join(SRC, b + '.js'), 'utf8');
+    const rawL = raw.split('\n'), skL = stripKeep(raw).split('\n');
+    const lineNos = [];
+    skL.forEach((l, i) => {
+      for (const s of br.symbols) {
+        if (new RegExp('(^|[^\\w$.])' + s + '\\s*\\(').test(l)) { lineNos.push({ line: i + 1, sym: s }); break; }
+      }
+    });
+    if (lineNos.length) sites.push({ block: b, lineNos, rawL });
+  }
+  sites.forEach(s => console.log('        改道 ' + s.block.padEnd(18) + s.lineNos.length + ' 行 → L' + s.lineNos.map(x => x.line).join(',L')));
+  bridgePlan.push({ ...br, declLine, sites });
+}
+
 console.log('=== 预演（dry-run）===');
 /* 跨块依赖表：用于判断"搬到目标层后，闭包里的符号会不会引用更晚的块"（那等于把倒挂换个方向） */
 const ownerAll = new Map();
@@ -170,6 +199,59 @@ for (const x of rewritePlan) {
   }
   writeFileSync(join(SRC, x.block + '.js'), x.rawL.join('\n'), 'utf8');
   console.log('  rewrite ' + x.block + '：' + n + ' 行 ' + x.symbol + ' → ' + x.to);
+}
+
+/* bridge 执行：① 声明 ② 注册 ③ 调用点改道 */
+for (const br of bridgePlan) {
+  /* ① core 的 AppBridge 对象内追加接口声明 */
+  const corePath = join(SRC, br.declLine + '.js');
+  let coreSrc = readFileSync(corePath, 'utf8');
+  const objStart = coreSrc.indexOf('const AppBridge = {');
+  if (objStart < 0) { console.error('  ✗ 未找到 AppBridge 对象'); process.exit(1); }
+  let i = coreSrc.indexOf('{', objStart), d = 0, objEnd = -1;
+  for (; i < coreSrc.length; i++) { if (coreSrc[i] === '{') d++; else if (coreSrc[i] === '}') { d--; if (!d) { objEnd = i; break; } } }
+  const addKeys = br.symbols.filter(s => !new RegExp('(^|\\s)' + s + ':').test(coreSrc.slice(objStart, objEnd)))
+    .map(s => '  ' + s + ': () => undefined,').join('\n');
+  if (addKeys) {
+    /* 自动补逗号：插入点前面若是"最后一个键"（没有尾逗号），直接插会成为语法错误 ——
+       实测踩到：`miniChart: () => ""` 后面接新键 → SyntaxError（依赖图也会把键名误判为引用）。
+       做法：向前跳过空白，前一非空白字符不是 `,` 就补一个。 */
+    let k = objEnd - 1;
+    while (k > objStart && /\s/.test(coreSrc[k])) k--;
+    const needComma = coreSrc[k] !== ',' && coreSrc[k] !== '{';
+    coreSrc = coreSrc.slice(0, objEnd) + (needComma ? ',' : '') + '\n' + addKeys + '\n' + coreSrc.slice(objEnd);
+  }
+  writeFileSync(corePath, coreSrc, 'utf8');
+  console.log('  bridge ① ' + br.declLine + '：声明 ' + (addKeys ? br.symbols.length : 0) + ' 个接口');
+
+  /* ② 拥有块内、各符号定义之前插入注册（从下往上，避免行号错位） */
+  {
+    const L = readLines(br.owner);
+    const targets = [];
+    for (const s of br.symbols) {
+      const sp = span(L, s);
+      if (!sp) { console.log('    （跳过注册 ' + s + '：定义未找到）'); continue; }
+      if (L.slice(Math.max(0, sp.top - 3), sp.top).some(x => x.includes('AppBridge.' + s + ' ='))) continue;
+      targets.push({ s, top: sp.top });
+    }
+    targets.sort((a, b) => b.top - a.top);
+    for (const t of targets) L.splice(t.top, 0, 'AppBridge.' + t.s + ' = ' + t.s + ';');
+    writeLines(br.owner, L);
+    console.log('  bridge ② ' + br.owner + '：注册 ' + targets.length + ' 个实现');
+  }
+
+  /* ③ 低层调用点改道（按行粒度） */
+  for (const st of br.sites) {
+    let n = 0;
+    for (const item of st.lineNos) {
+      const before = st.rawL[item.line - 1];
+      const after = before.replace(new RegExp('(^|[^\\w$.])' + item.sym + '(\\s*\\()'), '$1AppBridge.' + item.sym + '$2');
+      if (after === before) { console.error('    ✗ ' + st.block + ' L' + item.line + ' 替换未生效，请 git checkout 还原'); process.exit(1); }
+      st.rawL[item.line - 1] = after; n++;
+    }
+    writeFileSync(join(SRC, st.block + '.js'), st.rawL.join('\n'), 'utf8');
+    console.log('  bridge ③ ' + st.block + '：' + n + ' 行改走桥接');
+  }
 }
 
 /* ---------- 落盘后：定义不变量 ---------- */

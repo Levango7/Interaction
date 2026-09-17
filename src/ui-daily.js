@@ -53,6 +53,7 @@ function getSnoozeMap(){
   const m = load(SNOOZE_KEY, {});
   return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
 }
+AppBridge.snoozeTask = snoozeTask;
 /**
  * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
  * @param {string} id - 任务 id

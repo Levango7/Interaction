@@ -1,5 +1,6 @@
 // ===== UI Layer (交互层·场景绑定) =====
 /* ---------- 绑定 ---------- */
+AppBridge.bindScenario = bindScenario;
 /**
  * 绑定场景主区事件：任务表单、记录表单、看板移动/删除、标签筛选、聊天提交、场景专属卡片
  * @returns {void}
@@ -103,9 +104,11 @@ function bindScenario(){
   // 右侧 AI 聊天面板的 #chatForm/#chatCancel 已移到静态 HTML（三栏布局第三栏），
   // 由 bindChatPanel() 在启动时一次性绑定，不再随 render() 重建，故此处移除原绑定。
 }
+AppBridge.bindReportCard = bindReportCard;
 function bindReportCard(sc){
   if((sc==="office"||sc==="code") && $("#copyRep")) $("#copyRep").onclick=()=> navigator.clipboard.writeText($("#repTxt").value);
 }
+AppBridge.bindReviewCard = bindReviewCard;
 function bindReviewCard(sc){
   $$("[data-rev]").forEach(b=> b.onclick=()=>{
     const [id,q]=b.dataset.rev.split(":"); const arr=getRec("study"); const i=arr.findIndex(r=>r.id===id);
@@ -136,6 +139,7 @@ function bindExtra(sc){
 }
 
 /* ---------- B4：看板拖拽排序（HTML5 DnD，零依赖） ---------- */
+AppBridge.setupKanbanDnD = setupKanbanDnD;
 /**
  * 看板拖拽初始化：事件委托绑在 #main（静态元素），不随 innerHTML 重建丢失。
  * 同列拖拽=改顺序；跨列拖拽=改状态（拖入已完成列走 completeTask 触发场景联动）。
@@ -194,6 +198,7 @@ function setupKanbanDnD(){
 }
 
 /* ---------- B5：看板卡片键盘操作（Enter=编辑 / Delete=软删进回收站） ---------- */
+AppBridge.setupKanbanKeyboard = setupKanbanKeyboard;
 /**
  * 看板键盘操作初始化：事件委托绑在 #main，卡片获焦时 Enter 打开编辑、Delete 软删。
  * @returns {void}
@@ -240,6 +245,7 @@ function applyBoardFilter(){
 }
 
 /* ---------- A1：任务编辑弹窗 ---------- */
+AppBridge.openTaskEdit = openTaskEdit;
 /**
  * 打开任务编辑弹窗（复用回收站弹窗的焦点陷阱与关闭交互）
  * @param {string} id - 任务 id

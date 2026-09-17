@@ -96,6 +96,25 @@ const AppBridge = {
   completeTask: () => undefined,
   /* 迷你图表：返回 SVG 字符串（调用侧拼进 HTML），默认空串保证拼接安全 */
   miniChart: () => ""
+,
+  snoozeTask: () => undefined,
+
+  _moveDrawerHome: () => undefined,
+  openTemplateModal: () => undefined,
+  registerPluginFromJson: () => undefined,
+  closeDrawer: () => undefined,
+
+  bindScenario: () => undefined,
+  setupKanbanDnD: () => undefined,
+  setupKanbanKeyboard: () => undefined,
+  openTaskEdit: () => undefined,
+  bindReportCard: () => undefined,
+  bindReviewCard: () => undefined,
+
+  _switchSetTab: () => undefined,
+  toggleToolPop: () => undefined,
+
+  renderHelp: () => undefined,
 };
 /* 通知/toast 用的图标表（TOAST_ICONS 依赖 UI_ICONS，故紧随其后声明）；从 ui-theme 下移而来 */
 const TOAST_ICONS = { ok: UI_ICONS.check, warn: UI_ICONS.alert, error: UI_ICONS.error, danger: UI_ICONS.error };

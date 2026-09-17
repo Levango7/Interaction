@@ -20,10 +20,10 @@
 | `ai-tools` | AI | `ai-retry` `chain` `core` `data-rw` | 5 |
 | `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `crypto` `data-migrate` | 8 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-perf` | 15 |
-| `render-entry` | Render | `ai-retry` `core` `data-links` `data-migrate` `render-overview` `render-scene-main` `render-widgets` `ui-daily` `ui-drawer` `ui-scene-bind` | 33 |
+| `render-entry` | Render | `ai-retry` `core` `data-links` `data-migrate` `render-overview` `render-scene-main` `render-widgets` `ui-daily` `ui-drawer` | 30 |
 | `render-scene-sub` | Render | `render-scene-main` `render-widgets` `ui-scene-bind` `util-perf` | 10 |
 | `render-scene-main` | Render | `ai-retry` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `util-perf` | 20 |
-| `render-overview` | Render | `ai-retry` `chain` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 29 |
+| `render-overview` | Render | `ai-retry` `chain` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 28 |
 | `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` `util-perf` | 16 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
@@ -46,11 +46,11 @@
 | `ORDER` | `core` | 14 |
 | `render` | `render-entry` | 13 |
 | `getTasks` | `data-rw` | 13 |
+| `AppBridge` | `core` | 13 |
 | `getCfg` | `data-links` | 13 |
 | `active` | `data-links` | 12 |
 | `getActiveTasks` | `data-rw` | 12 |
 | `setTasks` | `data-rw` | 10 |
-| `AppBridge` | `core` | 9 |
 | `getRec` | `data-rw` | 9 |
 | `UI_ICONS` | `core` | 8 |
 
@@ -64,8 +64,8 @@
 
 - 跨块重复定义：**0** 项
 - 循环依赖：**39** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → chain → data-links）
-- 逆层依赖（低层用高层符号）：**30** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**59** 个符号
+- 逆层依赖（低层用高层符号）：**29** 条（按「块对」计）
+- 逆层依赖（按**符号**计，去重）：**55** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
@@ -78,10 +78,9 @@
 | `render-entry`（Render） | `render-widgets`（Render） | `openRecycle` `renderSide` |
 | `render-entry`（Render） | `ui-daily`（UI） | `snoozeTask` |
 | `render-entry`（Render） | `ui-drawer`（UI） | `_moveDrawerHome` |
-| `render-entry`（Render） | `ui-scene-bind`（UI） | `bindScenario` `setupKanbanDnD` `setupKanbanKeyboard` |
 | `render-overview`（Render） | `render-widgets`（Render） | `SIDE_MENU_ICONS` `TOOL_APPS` `lineChartSVG` `openChartStore` |
 | `render-overview`（Render） | `ui-drawer`（UI） | `openTemplateModal` `registerPluginFromJson` |
-| `render-overview`（Render） | `ui-global-events`（UI） | `_switchSetTab` `toggleToolPop` |
+| `render-overview`（Render） | `ui-global-events`（UI） | `toggleToolPop` |
 | `render-overview`（Render） | `ui-scene-bind`（UI） | `openTaskEdit` |
 | `render-scene-main`（Render） | `render-overview`（Render） | `_renderDiagramCanvas` `_renderFinanceStats` `_renderHealthTrend` |
 | `render-scene-main`（Render） | `render-widgets`（Render） | `TOOL_APPS` `lineChartSVG` |

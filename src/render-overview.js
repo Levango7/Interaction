@@ -144,7 +144,7 @@ function renderOverview(){
       const act = b.getAttribute("data-kpi-act");
       if(act==="office"){ setActive("office"); render(); }
       else if(act==="stats"){ setActive("stats"); render(); }
-      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); _switchSetTab("set-chain"); } }
+      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); AppBridge._switchSetTab("set-chain"); } }
     };
   });
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
@@ -176,7 +176,7 @@ function renderOverview(){
       if(act==="overview"){ setActive("overview"); render(); }
       else if(act==="office"){ setActive("office"); render(); }
       else if(act==="stats"){ setActive("stats"); render(); }
-      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); _switchSetTab("set-chain"); } }
+      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); AppBridge._switchSetTab("set-chain"); } }
     };
   });
   // v2.3.0：系统概况卡 AI 设置链接（v3.1.2 修复：原 _switchSetTab("set-ai") 指向不存在的分区，
@@ -789,7 +789,7 @@ function renderToolboxPage(){
       if(TOOL_APPS[id]){ openToolStub(id); return; }
       const extra = TOOLBOX_EXTRAS.find(x=>x.id===id);
       if(!extra) return;
-      if(extra.pop){ if(typeof toggleToolPop==="function") toggleToolPop(extra.pop, card); return; }
+      if(extra.pop){ if(typeof toggleToolPop==="function") AppBridge.toggleToolPop(extra.pop, card); return; }
       if(extra.run){ extra.run(); }
     };
   });
