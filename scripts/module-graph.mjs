@@ -234,6 +234,12 @@ if (shared.length) {
   lines.push('> 这些是事实上的"全局助手"。层间倒挂多由它们造成，若要继续解耦，优先从这里动手。');
 } else lines.push('（无）');
 lines.push('');
+lines.push('### Core 层出边（必须为 0 —— 核心层零外部依赖）');
+lines.push('');
+const coreBlock = blocks.find(b => b.layer === 'Core');
+const coreDeps = coreBlock ? [...(depOf.get(coreBlock.name) || [])] : [];
+lines.push(coreDeps.length ? ('✗ core 依赖了：' + coreDeps.map(d => '`' + d + '`').join(' ') + '（共 ' + coreDeps.length + ' 个块）—— 见 docs/decoupling-plan.md 的 S0') : '✓ core 无外部依赖');
+lines.push('');
 lines.push('## 3. 校验结果');
 lines.push('');
 lines.push(`- 跨块重复定义：**${duplicates.length}** 项${duplicates.length ? '（' + duplicates.map(([n, o]) => n + ' → ' + o.join('/')).join('；') + '）' : ''}`);
