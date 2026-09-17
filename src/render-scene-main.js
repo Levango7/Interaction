@@ -919,66 +919,6 @@ render();
   });
 }
 
-/* v3.0：功能卡绑定配置（key + 表单字段名；与 SCENE_FEATURE_RENDER 的渲染配置一一对应） */
-const SCENE_FEATURE_BIND = {
-  office: {
-    meeting:    { key:"meetings",    fieldKeys:["title","type","date","host","duration","note"] },
-    project:    { key:"projects",    fieldKeys:["name","owner","milestone","status","progress","due"] },
-    attendance: { key:"attendance",  fieldKeys:["date","type","checkIn","checkOut","note"] },
-    expense:    { key:"expenses",    fieldKeys:["title","who","amount","category","date","status"] }
-  },
-  study: {
-    knowledge: { key:"knowledge", fieldKeys:["title","category","source","importance","tags","content"] },
-    reading:   { key:"reading",   fieldKeys:["book","author","status","progress","rating","startDate","finishDate","excerpt","note"] },
-exercise:  { key:"exercises", fieldKeys:["subject","question","answer","correct","explain"],
-  // v3.2 任务四阶段二：错题自动入 SM-2 复习（正确率 < 70 视为错题 → 写入 rec_study 复习队列）
-  onSave:function(rec){
-    if(Number(rec.correct) < 70 && rec.question){
-      const tomorrow = (function(){ const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
-      const study = (typeof getRec === "function" ? getRec("study") : []) || [];
-      study.unshift({
-        id: "sm2_" + (rec.id || uid()),
-        title: t("study.errorReviewPrefix","错题复习：") + ((rec.subject ? rec.subject + " · " : "") + (rec.question || "")).slice(0, 40),
-        type: t("study.materialType","学习资料"),
-        status: t("study.statusNotReviewed","未复习"),
-        nextReview: tomorrow,
-        note: t("study.sourceExercisePrefix","来源练习题（正确率 ") + rec.correct + "%）：" + ((rec.explain || rec.answer || "")).slice(0, 200),
-        created: Date.now()
-      });
-      setRec("study", study);
-    }
-  }
-},
-    exam:      { key:"exams",     fieldKeys:["title","subject","date","score","total"] }
-  },
-  data: {
-    report: { key:"data_reports", fieldKeys:["title","source","dims","metrics","note"] },
-    /* v3.0.1 B-5：chart 卡扩展 data（JSON 数据点）+ chartType（图表类型），旧记录无新字段仍按台账行显示 */
-    chart:  { key:"data_charts",  fieldKeys:["title","type","source","data","chartType","note"] },
-    /* v3.1.2 A-档：SQL 查数能力复用给 data 场景（独立存储键 data_sql，与 code_sql 不互串；
-       运行按钮 data-f-sqlrun 是全局事件委托，同一实现天然兼容双场景） */
-    sql:    { key:"data_sql",     fieldKeys:["title","db","schema","sql","note"] }
-  },
-  design: {
-    ui:      { key:"design_ui", fieldKeys:["title","type","tool","palette","note"] },
-    model3d: { key:"design_3d", fieldKeys:["title","format","usage","note"] },
-    cad:     { key:"design_cad", fieldKeys:["title","type","version","note"] },
-    image:   { key:"design_image", fieldKeys:["title","type","size","note"] }
-  },
-  code: {
-    frontend: { key:"code_frontend", fieldKeys:["title","framework","html","css","js"] },
-    sql:      { key:"code_sql",      fieldKeys:["title","db","schema","sql","note"] },
-    runner:   { key:"code_runner",   fieldKeys:["title","language","code","result"] },
-    regex:    { key:"code_regex",    fieldKeys:["title","pattern","text","result"] }
-  },
-  life: {
-    plan:   { key:"life_plans",    fieldKeys:["title","type","priority","date","note"] },
-    health: { key:"life_health",   fieldKeys:["date","weight","exercise","sleep","note"] },
-    bill:   { key:"life_bills",    fieldKeys:["name","amount","cycle","due","status"] },
-    shop:   { key:"life_shopping", fieldKeys:["name","qty","amount","status"] }
-  }
-};
-
 /* ---------- 办公场景功能卡（P2） ---------- */
 SCENE_FEATURE_RENDER.office = {
   meeting: function(){

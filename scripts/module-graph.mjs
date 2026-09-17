@@ -80,8 +80,24 @@ function stripCommentsAndStrings(text) {
 function topLevelDefs(code) {
   const out = new Set();
   const re = /^(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)|class\s+([A-Za-z_$][\w$]*))/gm;
-  for (const m of code.matchAll(re)) out.add(m[1] || m[2] || m[3]);
+  /* 只看**花括号深度为 0** 的定义：函数体内若把语句顶格写（作者习惯），
+     只按 ^ 锚点会把 rec/arr 这类局部变量误判成"顶层定义"（实测踩到），
+     进而把它们的引用算成跨块依赖，污染依赖图。 */
+  for (const m of code.matchAll(re)) {
+    const depth = depthAt(code, m.index);
+    if (depth === 0) out.add(m[1] || m[2] || m[3]);
+  }
   return out;
+}
+/* 计算某个下标处的花括号深度（忽略注释与字符串，输入应为已 strip 的代码） */
+function depthAt(code, idx) {
+  let d = 0;
+  for (let i = 0; i < idx; i++) {
+    const c = code[i];
+    if (c === '{') d++;
+    else if (c === '}') d--;
+  }
+  return d;
 }
 /* ---------- 抽引用（剥注释/字符串后的标识符） ---------- */
 function identifiers(code) {
