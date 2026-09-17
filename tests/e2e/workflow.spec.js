@@ -16,6 +16,10 @@
  * 选择器策略：优先用现有 id/class（应用未暴露 data-testid）。
  *   启动有异步初始化（initCrypto / SW 注册），用 waitForSelector 等关键元素。
  */
+/* 超时策略：
+   · 「等数据写入反映到界面」的断言用 10s —— CI 慢机器上曾出现 5s 不够的偶发失败
+     （CI 日志实证：workflow.spec.js:87 的 .kcard 文本断言超时，且仅 tablet 那一遍失败、本地连跑 5 次全过）
+   · 静态元素等待（#taskForm / 侧栏项等）保持 5s，快速失败更利于定位 */
 const { test, expect } = require("@playwright/test");
 
 const APP_URL = "./agent-workbench.html";
@@ -72,8 +76,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.click('#taskForm button[type="submit"]');
       // 等待看板卡片出现，验证任务创建成功
       // 注：seed 播种了默认任务，看板可能有多张卡片；用 locator 过滤含新建标题的卡片
-      await page.waitForSelector(".kcard", { timeout: 5_000 });
-      await expect(page.locator(".kcard", { hasText: "E2E测试任务-办公" })).toBeVisible({ timeout: 5_000 });
+      await page.waitForSelector(".kcard", { timeout: 10_000 });
+      await expect(page.locator(".kcard", { hasText: "E2E测试任务-办公" })).toBeVisible({ timeout: 10_000 });
     });
 
     // ---------- 4. 切场景 ----------
@@ -83,19 +87,19 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       // 创建一个编程任务，便于后续完成
       await page.fill('#taskForm input[name="title"]', "E2E测试任务-编程");
       await page.click('#taskForm button[type="submit"]');
-      await page.waitForSelector(".kcard", { timeout: 5_000 });
-      await expect(page.locator(".kcard", { hasText: "E2E测试任务-编程" })).toBeVisible({ timeout: 5_000 });
+      await page.waitForSelector(".kcard", { timeout: 10_000 });
+      await expect(page.locator(".kcard", { hasText: "E2E测试任务-编程" })).toBeVisible({ timeout: 10_000 });
     });
 
     // ---------- 5. 完成任务 ----------
     await test.step("完成任务（todo→doing→done）", async () => {
       // 当前在编程场景，刚建的 P2 任务在 todo 列
       // 点 → 进行中
-      await page.waitForSelector('[data-move$=":doing"]', { timeout: 5_000 });
+      await page.waitForSelector('[data-move$=":doing"]', { timeout: 10_000 });
       const moveTodoBtn = page.locator(".kcard").filter({ hasText: "E2E测试任务-编程" }).locator('[data-move$=":doing"]').first();
       await moveTodoBtn.click();
       // doing 列出现 → 完成按钮
-      await page.waitForSelector('[data-move$=":done"]', { timeout: 5_000 });
+      await page.waitForSelector('[data-move$=":done"]', { timeout: 10_000 });
       const moveDoneBtn = page.locator(".kcard").filter({ hasText: "E2E测试任务-编程" }).locator('[data-move$=":done"]').first();
       await moveDoneBtn.click();
       // 验证任务进入 done 列（看板里 done 列含该卡片）
