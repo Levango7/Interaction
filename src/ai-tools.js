@@ -1089,3 +1089,170 @@ function getStreamProgress(){
 function streamProgressClear(){
   _streamProgress = null;
 }
+
+/* ---------- v3.7.13（解耦 S1）：AI 工具实现归位 ----------
+   原先散落在 Render 层（render-scene-main），但调用者是 AI 层（execTool 分发 code_run / sql_query）→ AI→Render 逆层依赖。
+   按"谁是主要调用者就归谁的层"归位到本块。**纯搬迁，不改一行实现**。
+   注：sql.js 加载器依赖 _sqlJsPromise / _sqlJsLoadedBase / _sqlJsBases（及其基址常量），
+   本次按**依赖闭包**整组搬迁，避免"搬函数漏状态"导致运行期引用错误。 */
+
+let _sqlJsPromise = null;
+
+let _sqlJsLoadedBase = "";
+
+const SQLJS_LOCAL_BASE = "assets/sql/";   // 仓库/部署自带副本（scripts/deploy 会随包发布）
+
+/* sql.js 资源基址：默认 CDN，首次使用需联网（WASM 约 640KB，内联进单文件会增约 1MB，
+   故不默认内联）。若需完全离线，把 cfg.sqlJsBase 指向自托管的同版本目录即可
+   （该目录需含 sql-wasm.js 与 sql-wasm.wasm），无需改动本文件。 */
+const SQLJS_DEFAULT_BASE = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/";
+
+/**
+ * 执行 SQL 语句（在 sql.js WASM 沙箱中）。
+ * @param {string} sqlText - SQL 语句
+ * @param {string} [schemaDdl] - 建表 DDL（可选，执行前先运行）
+ * @returns {Promise<{ok:boolean, cols:string[], rows:array[], ms:number, error?:string}>}
+ */
+function runSql(sqlText, schemaDdl){
+  const t0 = Date.now();
+  return loadSqlJs().then(function(SQL){
+    const db = new SQL.Database();
+    try{
+      if(schemaDdl){
+        try{ db.exec(schemaDdl); }catch(_){ /* DDL 容错 */ }
+      }
+      const res = db.exec(sqlText);
+      if(!res || !res.length){
+        return { ok:true, cols:[], rows:[], ms: Date.now() - t0 };
+      }
+      const first = res[0];
+      return { ok:true, cols: first.columns || [], rows: first.values || [], ms: Date.now() - t0 };
+    }catch(e){
+      return { ok:false, cols:[], rows:[], ms: Date.now() - t0, error: e && e.message ? e.message : String(e) };
+    }finally{
+      db.close();
+    }
+  }).catch(function(e){
+    return { ok:false, cols:[], rows:[], ms: Date.now() - t0, error: e && e.message ? e.message : String(e) };
+  });
+}
+
+/* ---------- v3.0.1 B-3：真·JS 运行器 ----------
+ * runJsSnippet(code, opts)：在沙箱 Web Worker 中执行 JS 片段。
+ *   - Worker 源码 = console 重写胶水（收集 log/error 经 postMessage 回传）+ 用户代码 + done 信号
+ *   - 默认 5 秒超时 terminate；worker.onerror / 运行时异常统一捕获
+ *   - opts.timeout：注入毫秒数（测试用）；opts.workerFactory：注入假 Worker（jsdom 测试环境无真实 Worker）
+ * @returns {Promise<{ok:boolean, output:string, ms:number}>}
+ */
+function runJsSnippet(code, opts){
+  const o = opts || {};
+  const timeoutMs = (typeof o.timeout === "number" && o.timeout >= 0) ? o.timeout : 5000;
+  return new Promise(function(resolve){
+    const t0 = Date.now();
+    // 默认工厂：Blob URL 创建 Worker；url 挂到 worker._blobUrl 供结束后 revoke 清理
+    const makeWorker = o.workerFactory || function(src){
+      if(typeof Worker === "undefined") throw new Error(t("msg.noWorkerSupport","当前环境不支持 Web Worker"));
+      const url = URL.createObjectURL(new Blob([src], { type: "application/javascript" }));
+      const w = new Worker(url);
+      w._blobUrl = url;
+      return w;
+    };
+    // 胶水代码：重写 console 收集输出；捕获运行时错误；同步代码结束后发 done 信号
+    const glue =
+      "self.console={log:function(){self.postMessage({type:'log',text:[].slice.call(arguments).map(function(x){try{return (x&&typeof x==='object')?JSON.stringify(x):String(x)}catch(_){return String(x)}}).join(' ')})}," +
+      "warn:function(){self.console.log.apply(null,arguments)},error:function(){self.postMessage({type:'error',text:[].slice.call(arguments).map(String).join(' ')})},info:function(){self.console.log.apply(null,arguments)}};" +
+      "self.onerror=function(m){self.postMessage({type:'error',text:String(m)});return true};";
+    let worker;
+    try{
+      worker = makeWorker(glue + "\n" + String(code === null || code === undefined ? "" : code) + "\nself.postMessage({type:'done'});");
+    }catch(err){
+      resolve({ ok:false, output:t("sql.workerCreateFail","Worker 创建失败：") + err.message, ms: Date.now() - t0 });
+      return;
+    }
+    const logs = [];
+    let errText = "";
+    let settled = false;
+    function finish(ok, output){
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try{ worker.terminate(); }catch(_){ }
+      if(worker._blobUrl){ try{ URL.revokeObjectURL(worker._blobUrl); }catch(_){ } }
+      resolve({ ok: ok, output: output, ms: Date.now() - t0 });
+    }
+    const timer = setTimeout(function(){
+      finish(false, (logs.length ? logs.join("\n") + "\n" : "") + t("sql.execTimeout","执行超时(") + Math.round(timeoutMs / 1000) + "s)");
+    }, timeoutMs);
+    worker.onmessage = function(e){
+      const d = e && e.data;
+      if(!d || !d.type) return;
+      if(d.type === "log"){ logs.push(d.text); return; }
+      if(d.type === "error"){ if(!errText) errText = d.text; return; }
+      if(d.type === "done"){
+        if(errText) finish(false, errText);
+        else finish(true, logs.length ? logs.join("\n") : t("label.noOutput","(无输出)"));
+      }
+    };
+    worker.onerror = function(e){
+      // 语法错误等在脚本解析期触发主线程 error 事件（此时胶水未执行，收不到内部 postMessage）
+      const msg = (e && (e.message || (e.error && e.error.message))) || t("sql.unknownExecError","未知执行错误");
+      finish(false, msg);
+    };
+  });
+}
+
+function loadSqlJs(){
+  if(_sqlJsPromise) return _sqlJsPromise;
+  const bases = _sqlJsBases();
+  const attempt = function(i){
+    if(i >= bases.length){
+      return Promise.reject(new Error(t("sql.cdnFail","sql.js 加载失败（需联网；或把 cfg.sqlJsBase 指向自托管副本以离线使用）")));
+    }
+    const base = bases[i];
+    const init = function(){ _sqlJsLoadedBase = base; return window.initSqlJs({ locateFile: function(f){ return base + f; } }); };
+    // 已加载过 initSqlJs：直接复用（locateFile 仍指向本次基址）
+    if(typeof window !== "undefined" && window.initSqlJs){ return Promise.resolve(init()); }
+    return new Promise(function(resolve, reject){
+      const s = document.createElement("script");
+      s.src = base + "sql-wasm.js";
+      s.onload = function(){
+        if(!window.initSqlJs){ reject(new Error(t("sql.initFail","sql.js 加载失败：initSqlJs 未找到"))); return; }
+        resolve(init());
+      };
+      s.onerror = function(){ reject(new Error("sql.js 资源不可达：" + s.src)); };
+      document.head.appendChild(s);
+    }).catch(function(){ return attempt(i + 1); });   // 本基址失败 → 尝试下一个
+  };
+  _sqlJsPromise = attempt(0).catch(function(e){ _sqlJsPromise = null; throw e; });
+  return _sqlJsPromise;
+}
+
+/** 候选基址（按序尝试）：cfg.sqlJsBase → 项目自带 → CDN。显式配置时不再兜底 CDN，尊重用户选择。 */
+function _sqlJsBases(){
+  let cfg = {};
+  try{ cfg = getCfg() || {}; }catch(_e){ cfg = {}; }
+  const c = String(cfg.sqlJsBase || "").trim();
+  if(c) return [c.replace(/\/+$/, "") + "/"];
+  return [SQLJS_LOCAL_BASE, SQLJS_DEFAULT_BASE];
+}
+
+/* v3.7.13（解耦 S1）：AI 用量统计归位（原在 render-overview，调用者是 AI 层）。纯搬迁。 */
+
+/* ---------- AI Token 用量统计（来自 v3.5.0 包）---------- */
+function addTokensUsage(resp) {
+  try {
+    const u = resp && resp.usage;
+    if (!u) return;
+    const n = (u.total_tokens | 0) || ((u.prompt_tokens | 0) + (u.completion_tokens | 0));
+    if (!(n > 0)) return;
+    const d = JSON.parse(localStorage.getItem(PREFIX + "ai_tokens") || '{"total":0,"days":{}}');
+    d.total = (d.total | 0) + n;
+    const now = new Date();
+    const k = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+    d.days = d.days || {};
+    d.days[k] = (d.days[k] | 0) + n;
+    const ks = Object.keys(d.days).sort();
+    while (ks.length > 90) { delete d.days[ks.shift()]; }
+    localStorage.setItem(PREFIX + "ai_tokens", JSON.stringify(d));
+  } catch (e) { /* localStorage 不可用/解析失败：静默，不阻塞 AI 调用 */ }
+}

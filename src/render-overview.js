@@ -1344,25 +1344,6 @@ function _renderCloudState(rec) {
   }
 }
 
-/* ---------- AI Token 用量统计（来自 v3.5.0 包）---------- */
-function addTokensUsage(resp) {
-  try {
-    const u = resp && resp.usage;
-    if (!u) return;
-    const n = (u.total_tokens | 0) || ((u.prompt_tokens | 0) + (u.completion_tokens | 0));
-    if (!(n > 0)) return;
-    const d = JSON.parse(localStorage.getItem(PREFIX + "ai_tokens") || '{"total":0,"days":{}}');
-    d.total = (d.total | 0) + n;
-    const now = new Date();
-    const k = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
-    d.days = d.days || {};
-    d.days[k] = (d.days[k] | 0) + n;
-    const ks = Object.keys(d.days).sort();
-    while (ks.length > 90) { delete d.days[ks.shift()]; }
-    localStorage.setItem(PREFIX + "ai_tokens", JSON.stringify(d));
-  } catch (e) { /* localStorage 不可用/解析失败：静默，不阻塞 AI 调用 */ }
-}
-
 /* ---------- ov4 速览卡点击直达场景（补接线，包内缺失）---------- */
 function _bindOv4Cards() {
   if (typeof document === "undefined" || document._ov4Bound) return;

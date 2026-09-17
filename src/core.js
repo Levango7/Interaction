@@ -289,3 +289,33 @@ exercise:  { key:"exercises", fieldKeys:["subject","question","answer","correct"
     shop:   { key:"life_shopping", fieldKeys:["name","qty","amount","status"] }
   }
 };
+
+/* v3.7.13（解耦 S1）：通用 DOM 助手归位。
+   原先在 render-widgets（Render 层），但被 Data / AI / UI 多层调用 → 多层逆层依赖。
+   它不依赖任何应用符号（只用 document/window）→ 归入核心层，符合"核心层零外部依赖"。 */
+
+/**
+ * 在容器内启用 Tab 焦点循环；返回 release() 用于解除并归还焦点
+ * @param {Element} container - 模态容器
+ * @returns {Function|null} release 函数；容器无效时返回 null
+ */
+function trapFocus(container){
+  if(!container || typeof container.querySelectorAll!=="function") return null;
+  const SEL='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const prev=document.activeElement;
+  function onKey(e){
+    if(e.key!=="Tab") return;
+    const items=[].slice.call(container.querySelectorAll(SEL));
+    if(!items.length) return;
+    const first=items[0], last=items[items.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+  container.addEventListener("keydown", onKey);
+  const first=/** @type {HTMLElement} */(container.querySelector(SEL));
+  if(first && typeof first.focus==="function"){ try{ first.focus(); }catch(e){ /* noop */ } }
+  return function release(){
+    container.removeEventListener("keydown", onKey);
+    if(prev && typeof /** @type {HTMLElement} */(prev).focus==="function" && document.contains(prev)){ try{ /** @type {HTMLElement} */(prev).focus(); }catch(e){ /* noop */ } }
+  };
+}

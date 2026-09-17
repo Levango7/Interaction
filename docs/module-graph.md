@@ -17,18 +17,18 @@
 | `data-migrate` | Data | `data-links` `ui-backup-stats` | 2 |
 | `data-rw` | Data | `chain` `core` `crypto` `data-links` `ui-backup-stats` | 6 |
 | `chain` | Chain | `data-links` `data-migrate` | 2 |
-| `ai-tools` | AI | `ai-retry` `chain` `core` `data-rw` `render-scene-main` | 8 |
-| `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `crypto` `data-migrate` `render-overview` | 10 |
-| `ai-retry` | AI | `ai-loop` `ai-tools` `data-links` `render-scene-main` `render-widgets` `ui-drawer` `util-perf` | 16 |
+| `ai-tools` | AI | `ai-retry` `chain` `core` `data-rw` | 5 |
+| `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `crypto` `data-migrate` | 9 |
+| `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `render-scene-main` `ui-drawer` `util-perf` | 16 |
 | `render-entry` | Render | `ai-retry` `core` `data-links` `data-migrate` `render-overview` `render-scene-main` `render-widgets` `ui-daily` `ui-drawer` `ui-scene-bind` | 33 |
 | `render-scene-sub` | Render | `render-scene-main` `render-widgets` `ui-scene-bind` `util-perf` | 10 |
 | `render-scene-main` | Render | `ai-retry` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `ui-theme` `util-perf` | 20 |
 | `render-overview` | Render | `ai-retry` `chain` `data-links` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-drawer` `ui-global-events` `ui-scene-bind` | 31 |
-| `render-widgets` | Render | `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `ui-drawer` `ui-guide` `util-perf` | 17 |
+| `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` `util-perf` | 17 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 9 |
-| `ui-scene-bind` | UI | `chain` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` | 17 |
+| `ui-scene-bind` | UI | `chain` `core` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` `ui-backup-stats` | 17 |
 | `ui-palette` | UI | `ai-tools` `data-links` `render-widgets` `ui-backup-stats` `ui-drawer` `ui-global-events` | 8 |
 | `ui-daily` | UI | `chain` `data-links` `render-scene-sub` | 3 |
 | `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `ui-global-events` | 20 |
@@ -62,18 +62,15 @@
 ## 3. 校验结果
 
 - 跨块重复定义：**0** 项
-- 循环依赖：**51** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；ui-backup-stats → data-migrate → ui-backup-stats；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links）
-- 逆层依赖（低层用高层符号）：**44** 条
+- 循环依赖：**49** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；ui-backup-stats → data-migrate → ui-backup-stats；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links）
+- 逆层依赖（低层用高层符号）：**41** 条
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
 | `ai-loop`（AI） | `ai-retry`（AI） | `abortChat` `renderChat` `scrollChat` `trimChatHist` |
-| `ai-loop`（AI） | `render-overview`（Render） | `addTokensUsage` |
 | `ai-retry`（AI） | `render-scene-main`（Render） | `renderMiniChart` |
-| `ai-retry`（AI） | `render-widgets`（Render） | `trapFocus` |
 | `ai-retry`（AI） | `ui-drawer`（UI） | `openAiPage` |
 | `ai-tools`（AI） | `ai-retry`（AI） | `pendingConfirm` |
-| `ai-tools`（AI） | `render-scene-main`（Render） | `loadSqlJs` `runJsSnippet` `runSql` |
 | `crypto`（Crypto） | `data-idb`（Data） | `idbMirrorKey` `idbReadKey` |
 | `data-links`（Data） | `ai-retry`（AI） | `_chatContentToText` |
 | `data-links`（Data） | `render-scene-main`（Render） | `SCENE_FEATURE_RENDER` |
