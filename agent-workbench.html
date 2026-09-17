@@ -11639,6 +11639,46 @@ function _toolDownload(name, content, mime){
   }catch(e){ toast(t("tool.exportFailToast", "导出失败：{err}").replace("{err}", (e && e.message || e)), "warn"); }
 }
 /* 生活簇通用记录工具骨架：config = {fields:[{k,label,type,options}], cols:[{k,label}], sum(fn), emptyTip} */
+/* ---------- v3.7.22：生活簇记录工具的 CSV 导出（纯函数，可单测） ---------- */
+/** CSV 单元格转义：含 逗号/引号/换行 时加引号，内部引号翻倍 */
+function _csvCell(v){
+  const s = String(v === null || v === undefined ? "" : v);
+  return /[",\r\n]/.test(s) ? '"' + s.split('"').join('""') + '"' : s;
+}
+/** 从渲染后的表格导出 CSV 文本（列名直接取 <th>，天然是本地化文案，不用再传 cfg）
+ *  跳过首尾两列：首列是勾选框、末列是删除按钮（都是操作列，不该进导出） */
+function _toolCsvFromTable(root){
+  if(!root) return "";
+  const ths = Array.prototype.slice.call(root.querySelectorAll("table.tool-table thead th"));
+  if(!ths.length) return "";
+  const labels = ths.map(function(th){ return th.textContent.trim(); });
+  const first = labels.length ? labels[0] : "";
+  const skipHead = !first;                       /* 首列为"空 th"= 勾选列 */
+  const cut = skipHead ? labels.length - 1 : labels.length;   /* 末列 = 删除按钮 */
+  const out = [labels.slice(skipHead ? 1 : 0, cut).map(_csvCell).join(",")];
+  Array.prototype.slice.call(root.querySelectorAll("table.tool-table tbody tr")).forEach(function(tr){
+    const tds = Array.prototype.slice.call(tr.querySelectorAll("td"));
+    const cells = tds.slice(skipHead ? 1 : 0, cut).map(function(td){
+      const cb = td.querySelector('input[type="checkbox"]');
+      return cb ? (cb.checked ? t("tool.csv.yes","是") : t("tool.csv.no","否")) : td.textContent.trim();
+    });
+    out.push(cells.map(_csvCell).join(","));
+  });
+  return out.join("\r\n");
+}
+/** 绑定导出按钮（骨架已渲染 #recExportBtn）→ 导出当前表格为 CSV */
+function _bindRecordExport(rootId, toolId, fileName){
+  const root = document.getElementById(rootId);
+  if(!root) return;
+  const btn = root.querySelector("#recExportBtn");
+  if(!btn) return;
+  btn.onclick = function(){
+    const csv = _toolCsvFromTable(root);
+    if(!csv){ toast(t("tool.csv.emptyTip","没有可导出的记录"), "warn"); return; }
+    _toolDownload((fileName || toolId || "records") + ".csv", "\uFEFF" + csv, "text/csv;charset=utf-8");
+  };
+}
+
 function _recordToolHtml(cfg, records){
   const form = '<div class="tool-form-grid">' + cfg.fields.map(function(f){
     if(f.type === "select"){
@@ -11670,7 +11710,8 @@ function _recordToolHtml(cfg, records){
     }
   }
   return '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">'+t("tool.addLabel", "添加")+'</span><button type="button" class="addbtn sm add-round" id="recAddBtn" data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
-    '<span class="sub u-m-0">共 ' + records.length + ' 条</span>' + summary + '</div>' +
+    '<span class="sub u-m-0">共 ' + records.length + ' 条</span>' + summary
+      + '<button type="button" class="addbtn sm" id="recExportBtn">' + t("tool.exportCsv", "导出 CSV") + '</button></div>' +
     '<div class="tool-form-box">' + form + "</div>" +
     (records.length
       ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + "</th>"; }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table>"
@@ -11679,7 +11720,8 @@ function _recordToolHtml(cfg, records){
 /* v3.2 C-档双轨收敛：双轨工具的写入入口改为引导跳转功能卡（数据以功能卡为真相源）。
  * 提示条替代表单提交——点「去功能卡添加」切到对应场景功能 tab。 */
 function _bindRecordToolRedirect(toolId, targetName, sceneKey, featId){
-  const root = $("#toolAppBody"); if(!root) return;
+    const root = $("#toolAppBody"); if(!root) return;
+    _bindRecordExport("toolAppBody", toolId);   /* v3.7.22：导出 CSV（双轨工具的表格仍可导出） */
   const add = root.querySelector("#recAddBtn");
   if(add){
     add.onclick = function(){
@@ -11692,7 +11734,8 @@ function _bindRecordToolRedirect(toolId, targetName, sceneKey, featId){
   // 已有的表单/表格交互（勾选已缴等）不再绑定独立写入——数据变更请去功能卡
 }
 function _bindRecordTool(rootId, toolId, fields, afterChange){
-  const root = $("#" + rootId); if(!root) return;
+    const root = $("#" + rootId); if(!root) return;
+    _bindRecordExport(rootId, toolId);      /* v3.7.22：导出 CSV（生活簇共用） */
   const add = root.querySelector("#recAddBtn");
   if(add) add.onclick = function(){
     const rec = { id: _toolUid(), createdAt: Date.now() };
