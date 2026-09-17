@@ -38,7 +38,8 @@
     "check:source-state": "node scripts/check-source-state.mjs",
     "module:graph": "node scripts/module-graph.mjs",
     "check:modules": "node scripts/module-graph.mjs --check",
-    "module:freeze": "node scripts/module-graph.mjs --freeze"
+    "module:freeze": "node scripts/module-graph.mjs --freeze",
+    "src:move": "node scripts/src-move.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

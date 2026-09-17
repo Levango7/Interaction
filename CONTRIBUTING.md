@@ -40,6 +40,7 @@ npm install
 | `npm run module:graph` | 生成 `docs/module-graph.md`（符号级依赖矩阵 + 共享符号 + 逆层清单） |
 | `npm run check:modules` | 对照基线校验：新增环/逆层/重复定义即失败 |
 | `npm run module:freeze` | 人工确认后把当前依赖状态冻为新基线 |
+| `npm run src:move -- --jobs=<jobs.json>` | **分层块安全搬迁/调用点改写**（默认预演，`--apply` 才落盘） |
 
 ### Electron 桌面端（可选）
 
@@ -176,6 +177,24 @@ vitest.config.js       # 测试配置
   否则每次提交都带上 1MB 级 base64 diff。
 - `npm test` / `npm run build:check` / `npm run build:prod` 都有 `pre` 钩子自动回注，CI 不需要额外步骤。
 - 直接打开**未回注**的源码 HTML 时立绘为空（控制台有告警、5 个原始角色退化为 SVG 兜底），属预期行为。
+
+### 分层块搬迁工具（scripts/src-move.mjs）
+
+搬迁 src 里的符号时用它，别手写脚本 —— 它把踩过的三类坑做成了默认行为：
+
+1. **依赖闭包**：自动把同块内被引用且同块定义的符号一并搬（人工清单必然漏 —— 实测漏过 3 个，搬到一半失败）
+2. **定义不变量**：落盘后自动核对"顶层定义全集不变"，不一致直接报错（保证是**纯搬迁**、没改行为）
+3. **按行粒度改写**：`rewrite` 任务只在**含真实调用的行**上替换（剥离文本仅用于判定；注释/字符串里的同名文本不会被动），
+   并要求逐行替换生效、总数符合预期（曾因"按偏移回写依赖剥离等长"把 app 改坏）
+
+```
+# jobs.json: {"move":[{"roots":["某符号"],"from":"ui-theme","to":"core","note":"..."}],
+#             "rewrite":[{"block":"data-rw","symbol":"completeTask","to":"AppBridge.completeTask(","expect":2}]}
+npm run src:move -- --jobs=jobs.json          # 预演（打印闭包、行数、跨块依赖、改写计数）
+npm run src:move -- --jobs=jobs.json --apply  # 执行 + 自动校验不变量
+```
+
+> 预演里会列出**跨块依赖**：若闭包里的符号引用了排在目标块之后的块，搬过去等于把倒挂换个方向，需先调整目标层。
 
 ### 结构守护测试
 

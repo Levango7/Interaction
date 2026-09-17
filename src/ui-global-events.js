@@ -605,17 +605,6 @@ $$("#drawer .set-nav-btn[data-set-tab]").forEach(function(b){
   if(first) _switchSetTab(first.getAttribute("data-set-tab"));
 })();
 
-/* ===== v3.2：AI 页面 8 子模块导航切换 + 独立配置保存 ===== */
-function getAiConfig(module){
-  try{
-    const raw = localStorage.getItem(PREFIX + "ai_config_" + module);
-    return raw ? JSON.parse(raw) : null;
-  }catch(_e){ return null; }
-}
-function saveAiConfig(module, data){
-  // v3.4.7 批次三（G5）：收编进 save() 主入口——此前裸 setItem 绕过 IDB 镜像/配额告警/损坏登记
-  return save(PREFIX + "ai_config_" + module, data);
-}
 function _switchAiTab(tabId){
   $$("#drawer .set-nav-btn[data-ai-tab]").forEach(function(b){
     b.classList.toggle("active", b.getAttribute("data-ai-tab") === tabId);

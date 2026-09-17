@@ -23,7 +23,7 @@
 | `render-entry` | Render | `ai-retry` `core` `data-links` `data-migrate` `render-overview` `render-scene-main` `render-widgets` `ui-daily` `ui-drawer` `ui-scene-bind` | 33 |
 | `render-scene-sub` | Render | `render-scene-main` `render-widgets` `ui-scene-bind` `util-perf` | 10 |
 | `render-scene-main` | Render | `ai-retry` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `util-perf` | 20 |
-| `render-overview` | Render | `ai-retry` `chain` `data-links` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 29 |
+| `render-overview` | Render | `ai-retry` `chain` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 29 |
 | `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` `util-perf` | 16 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
@@ -34,7 +34,7 @@
 | `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` | 20 |
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-global-events` `ui-guide` `ui-theme` | 31 |
 | `ui-hotkeys` | UI | `ai-retry` `data-links` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
-| `ui-global-events` | UI | `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-palette` `ui-theme` `util-perf` | 99 |
+| `ui-global-events` | UI | `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-palette` `ui-theme` `util-perf` | 101 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
 
@@ -65,7 +65,7 @@
 - 跨块重复定义：**0** 项
 - 循环依赖：**39** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → chain → data-links）
 - 逆层依赖（低层用高层符号）：**30** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**61** 个符号
+- 逆层依赖（按**符号**计，去重）：**59** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
@@ -81,7 +81,7 @@
 | `render-entry`（Render） | `ui-scene-bind`（UI） | `bindScenario` `setupKanbanDnD` `setupKanbanKeyboard` |
 | `render-overview`（Render） | `render-widgets`（Render） | `SIDE_MENU_ICONS` `TOOL_APPS` `lineChartSVG` `openChartStore` |
 | `render-overview`（Render） | `ui-drawer`（UI） | `openTemplateModal` `registerPluginFromJson` |
-| `render-overview`（Render） | `ui-global-events`（UI） | `_switchSetTab` `getAiConfig` `saveAiConfig` `toggleToolPop` |
+| `render-overview`（Render） | `ui-global-events`（UI） | `_switchSetTab` `toggleToolPop` |
 | `render-overview`（Render） | `ui-scene-bind`（UI） | `openTaskEdit` |
 | `render-scene-main`（Render） | `render-overview`（Render） | `_renderDiagramCanvas` `_renderFinanceStats` `_renderHealthTrend` |
 | `render-scene-main`（Render） | `render-widgets`（Render） | `TOOL_APPS` `lineChartSVG` |
