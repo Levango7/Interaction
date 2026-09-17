@@ -14,7 +14,7 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
-var CACHE_VERSION = "v3.6.4-20260917020408"; /* [prod build] auto-bumped */
+var CACHE_VERSION = "v3.6.4-20260917022603"; /* [prod build] auto-bumped */
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -31,7 +31,11 @@ var PRECACHE_URLS = [
   "./",
   "./agent-workbench.html",
   "./manifest.json",
-  "./icon.svg"
+  "./icon.svg",
+  // sql.js 本地副本：SQL Playground / RAG 离线可用。
+  // 非关键（不在 CRITICAL_PRECACHE 内），缺失时安装仍成功，前端会自动回退 CDN。
+  "./assets/sql/sql-wasm.js",
+  "./assets/sql/sql-wasm.wasm"
 ];
 
 // 同源静态资源扩展名（cache-first 命中范围）
@@ -43,7 +47,7 @@ var PRECACHE_URLS = [
 //      于是**哨兵从未触发过**（no-store 只能绕 HTTP 缓存，绕不过 SW 拦截）。
 //   ② 一旦用户卡在早于 b20260912b 的旧版 HTML（那时还没有哨兵），就永久死锁、再也拿不到新版。
 //   移出后 .html 落入 (3) network-first 分支：在线必取最新，离线回退缓存。
-var STATIC_EXT = [".svg", ".js", ".css"];
+var STATIC_EXT = [".svg", ".js", ".css", ".wasm"];
 
 /**
  * 判断给定 URL 是否为同源静态资源（按扩展名匹配）。
