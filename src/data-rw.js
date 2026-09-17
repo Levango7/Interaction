@@ -22,6 +22,27 @@ function setTasks(a){
 }
 
 /* ---------- B6：undo/redo 操作历史栈（任务数组快照式，上限 50） ---------- */
+/* v3.7.12（解耦 S0）：注册「错题自动入 SM-2 复习」实现到 AppBridge。
+   这段原先在 core 的 SCENE_FEATURE_BIND.exercise.onSave 里，但它要调 getRec/setRec（本块），
+   导致核心层反向依赖 Data。现改为：core 只保留钩子调用，实现由本层在加载时注册。
+   **实现逐字搬迁，行为不变**（含 typeof 守卫、字段顺序、截断长度）。 */
+AppBridge.onExerciseSave = function(rec){
+  if(Number(rec.correct) < 70 && rec.question){
+    const tomorrow = (function(){ const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+    const study = (typeof getRec === "function" ? getRec("study") : []) || [];
+    study.unshift({
+      id: "sm2_" + (rec.id || uid()),
+      title: t("study.errorReviewPrefix","错题复习：") + ((rec.subject ? rec.subject + " · " : "") + (rec.question || "")).slice(0, 40),
+      type: t("study.materialType","学习资料"),
+      status: t("study.statusNotReviewed","未复习"),
+      nextReview: tomorrow,
+      note: t("study.sourceExercisePrefix","来源练习题（正确率 ") + rec.correct + "%）：" + ((rec.explain || rec.answer || "")).slice(0, 200),
+      created: Date.now()
+    });
+    setRec("study", study);
+  }
+};
+
 let _undoStack = [];   // 历史快照（变更前的任务数组深拷贝）
 let _redoStack = [];   // 重做栈
 let _undoGuard = false; // 防重入：undo/redo 恢复时不再记录历史

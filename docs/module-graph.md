@@ -8,14 +8,14 @@
 
 | 块 \ 依赖 | 层 | 依赖的块 | 依赖符号数 |
 |---|---|---|---|
-| `core` | Core | `data-rw` `ui-theme` | 2 |
+| `core` | Core | — | 0 |
 | `util-markdown` | Util | — | 0 |
 | `util-perf` | Util | — | 0 |
 | `crypto` | Crypto | `data-idb` | 2 |
 | `data-idb` | Data | — | 0 |
 | `data-links` | Data | `ai-retry` `core` `crypto` `render-scene-main` `render-widgets` `ui-theme` | 7 |
 | `data-migrate` | Data | `data-links` `ui-backup-stats` | 2 |
-| `data-rw` | Data | `chain` `crypto` `data-links` `ui-backup-stats` | 5 |
+| `data-rw` | Data | `chain` `core` `crypto` `data-links` `ui-backup-stats` | 6 |
 | `chain` | Chain | `data-links` `data-migrate` | 2 |
 | `ai-tools` | AI | `ai-retry` `chain` `core` `data-rw` `render-scene-main` | 8 |
 | `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `crypto` `data-migrate` `render-overview` | 10 |
@@ -43,27 +43,27 @@
 | `t` | `core` | 23 |
 | `toast` | `core` | 22 |
 | `SCENARIOS` | `core` | 18 |
-| `render` | `render-entry` | 16 |
+| `render` | `render-entry` | 17 |
 | `ORDER` | `core` | 14 |
 | `getTasks` | `data-rw` | 13 |
 | `getCfg` | `data-links` | 13 |
 | `active` | `data-links` | 12 |
 | `getActiveTasks` | `data-rw` | 12 |
-| `getRec` | `data-rw` | 10 |
 | `setTasks` | `data-rw` | 10 |
+| `getRec` | `data-rw` | 9 |
 | `UI_ICONS` | `core` | 8 |
 
 > 这些是事实上的"全局助手"。层间倒挂多由它们造成，若要继续解耦，优先从这里动手。
 
 ### Core 层出边（必须为 0 —— 核心层零外部依赖）
 
-✗ core 依赖了：`ui-theme` `data-rw`（共 2 个块）—— 见 docs/decoupling-plan.md 的 S0
+✓ core 无外部依赖
 
 ## 3. 校验结果
 
 - 跨块重复定义：**0** 项
-- 循环依赖：**59** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；ui-backup-stats → data-migrate → ui-backup-stats；data-rw → data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw）
-- 逆层依赖（低层用高层符号）：**46** 条
+- 循环依赖：**51** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；ui-backup-stats → data-migrate → ui-backup-stats；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links）
+- 逆层依赖（低层用高层符号）：**44** 条
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
@@ -74,8 +74,6 @@
 | `ai-retry`（AI） | `ui-drawer`（UI） | `openAiPage` |
 | `ai-tools`（AI） | `ai-retry`（AI） | `pendingConfirm` |
 | `ai-tools`（AI） | `render-scene-main`（Render） | `loadSqlJs` `runJsSnippet` `runSql` |
-| `core`（Core） | `data-rw`（Data） | `setRec` |
-| `core`（Core） | `ui-theme`（UI） | `TOAST_ICONS` |
 | `crypto`（Crypto） | `data-idb`（Data） | `idbMirrorKey` `idbReadKey` |
 | `data-links`（Data） | `ai-retry`（AI） | `_chatContentToText` |
 | `data-links`（Data） | `render-scene-main`（Render） | `SCENE_FEATURE_RENDER` |

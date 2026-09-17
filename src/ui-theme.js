@@ -60,14 +60,8 @@ async function toggleTheme(){
  */
 // UI_ICONS：全局图标单一真相源（A-P2-7，FB-1；v2.1.1 去重——所有字典引用此处）。
 // 场景图标收编进 SCENARIOS[sc].icon；chrome/状态/空态图标一律在此定义，其他字典按 key 引用。
-// toast 类型图标映射（toast 可访问的最小公共感知）——值引用 UI_ICONS 单一真相源
-const TOAST_ICONS = {
-  ok: UI_ICONS.check,
-  warn: UI_ICONS.alert,
-  error: UI_ICONS.error,
-  danger: UI_ICONS.error
-};
-// UI_ICONS 已上移至 TOAST_ICONS 之前（v2.1.1 去重：单一真相源，供 toast/侧栏/空态字典引用）
+// 注：TOAST_ICONS 已于 v3.7.12 下移至 core（解耦 S0：它被 core 里的 toast() 使用，
+//   留在 UI 层会让核心层反向依赖 UI）；UI_ICONS 亦早于本轮下移，现居 core。
 
 // ===== Bootstrap (配置常量) =====
 /* v3.0：场景内功能 tab 注册表——标题栏导航条 + 场景内视图切换。

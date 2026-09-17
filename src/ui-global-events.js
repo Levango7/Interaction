@@ -2008,6 +2008,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   _guardGenericJsonKeys, _brokenBackup,
     getTasks, setTasks, getRec, setRec, getLinks,
     SCENARIOS, ORDER, TOOLS, DEFAULT_LINKS, PREFIX, MVP_SCOPE,
+    // v3.7.12（解耦 S0）：暴露核心层数据表与跨层通道，供测试驱动钩子与断言"谁注册了实现"
+    SCENE_FEATURE_BIND, AppBridge,
     effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
     effectiveSysprompt, setCustomSysprompt, trimChatHist, // v1.15：sysprompt 可编辑 + 上下文 token 预算
     // T2.3 轻量 store 访问器（供测试驱动与断言）

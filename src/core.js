@@ -77,6 +77,20 @@ const UI_ICONS = {
  * @param {string} [fallback] - 找不到 key 时的兜底文案
  * @returns {string} 翻译后的文案
  */
+/* ===== AppBridge：跨层调用的受控通道（v3.7.12 · 见 docs/decoupling-plan.md 工具 B）=====
+   核心层**只声明接口、不实现** —— 这样 core 保持零外部依赖（这是硬约束，有门禁守着）。
+   实现由上层在自己的块加载时注册；下层（Data/AI）只调接口。
+   未注册时是**安全空操作**：这是刻意设计而非遗漏 —— 让"加载顺序"不至于变成隐性依赖，
+   也避免 EventBus 那种"漏订阅就静默丢事件"的坑。 */
+const AppBridge = {
+  /* 渲染调度：Data/AI 改完数据后请求重绘（实现见 render-entry 块的注册段） */
+  render: () => {},
+  /* 题库保存后钩子（错题自动入 SM-2 复习）：实现由 Data 层注册 */
+  onExerciseSave: null
+};
+/* 通知/toast 用的图标表（TOAST_ICONS 依赖 UI_ICONS，故紧随其后声明）；从 ui-theme 下移而来 */
+const TOAST_ICONS = { ok: UI_ICONS.check, warn: UI_ICONS.alert, error: UI_ICONS.error, danger: UI_ICONS.error };
+
 function t(key, fallback){
   /* v2.2.0：MESSAGES 为 const，模块加载早期（TDZ）或字典缺失时回退兜底，不抛错 */
   let msgs = null;
@@ -238,22 +252,12 @@ const SCENE_FEATURE_BIND = {
     knowledge: { key:"knowledge", fieldKeys:["title","category","source","importance","tags","content"] },
     reading:   { key:"reading",   fieldKeys:["book","author","status","progress","rating","startDate","finishDate","excerpt","note"] },
 exercise:  { key:"exercises", fieldKeys:["subject","question","answer","correct","explain"],
-  // v3.2 任务四阶段二：错题自动入 SM-2 复习（正确率 < 70 视为错题 → 写入 rec_study 复习队列）
+  /* v3.2 任务四阶段二：错题自动入 SM-2 复习（正确率 < 70 视为错题 → 写入 rec_study 复习队列）。
+     v3.7.12（解耦 S0）：实现**移出核心层** —— 它要调 getRec/setRec（Data 层），留在 core 会让
+     core 反向依赖 Data。核心层只保留"钩子调用"，具体实现由 Data 层通过 AppBridge 注册。
+     行为完全不变（实现逐字搬迁，含 typeof 守卫与字段顺序）。 */
   onSave:function(rec){
-    if(Number(rec.correct) < 70 && rec.question){
-      const tomorrow = (function(){ const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
-      const study = (typeof getRec === "function" ? getRec("study") : []) || [];
-      study.unshift({
-        id: "sm2_" + (rec.id || uid()),
-        title: t("study.errorReviewPrefix","错题复习：") + ((rec.subject ? rec.subject + " · " : "") + (rec.question || "")).slice(0, 40),
-        type: t("study.materialType","学习资料"),
-        status: t("study.statusNotReviewed","未复习"),
-        nextReview: tomorrow,
-        note: t("study.sourceExercisePrefix","来源练习题（正确率 ") + rec.correct + "%）：" + ((rec.explain || rec.answer || "")).slice(0, 200),
-        created: Date.now()
-      });
-      setRec("study", study);
-    }
+    if(typeof AppBridge.onExerciseSave === "function") AppBridge.onExerciseSave(rec);
   }
 },
     exam:      { key:"exams",     fieldKeys:["title","subject","date","score","total"] }
