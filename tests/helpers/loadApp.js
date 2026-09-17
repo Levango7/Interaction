@@ -1,4 +1,4 @@
-import { JSDOM } from "jsdom";
+import { JSDOM, VirtualConsole } from "jsdom";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,9 +8,24 @@ import { TextEncoder, TextDecoder } from "node:util";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HTML_PATH = path.resolve(__dirname, "..", "..", "agent-workbench.html");
 
+/* 只过滤 jsdom 的 CSS 解析噪声（见文件顶部说明与提交信息），其余错误/日志照常转发 */
+function makeQuietVirtualConsole() {
+  const vc = new VirtualConsole();
+  vc.on("jsdomError", (err) => {
+    const msg = String((err && err.message) || err || "");
+    if (/could not parse css stylesheet/i.test(msg)) return;
+    try { console.error("[jsdom] " + msg); } catch (_e) { /* 忽略 */ }
+  });
+  ["log", "info", "warn", "error", "debug"].forEach((m) => {
+    vc.on(m, (...args) => { try { console[m](...args); } catch (_e) { /* 忽略 */ } });
+  });
+  return vc;
+}
+
 export function loadApp({ storage = {} } = {}) {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const dom = new JSDOM(html, {
+    virtualConsole: makeQuietVirtualConsole(),
     runScripts: "dangerously",
     resources: "usable",
     url: "http://localhost/",
