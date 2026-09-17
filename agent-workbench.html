@@ -8496,6 +8496,22 @@ async function toolWebSearch(query, opts){
 }
 
 /**
+ * 解析网页抓取代理基址（web_fetch 的 CORS 兜底）
+ * 优先级：cfg.fetchProxy（独立代理）→ cfg.apiBase + /api/tools/fetch（复用自建后端）。
+ * 两者都未配置时返回 "" —— 调用方回退为直连，行为与旧版一致。
+ * @returns {string} 代理基址（不含 query），无代理时为空串
+ */
+function _webFetchProxyBase(){
+  let cfg = {};
+  try{ cfg = getCfg() || {}; }catch(_e){ cfg = {}; }
+  const p = String(cfg.fetchProxy || "").trim();
+  if(p) return p.replace(/\/+$/, "");
+  const base = String(cfg.apiBase || "").trim();
+  if(base) return base.replace(/\/+$/, "") + "/api/tools/fetch";
+  return "";
+}
+
+/**
  * web_fetch：抓取网页内容（fetch + 去标签纯文本）
  * @param {string} url - 要抓取的 URL
  * @param {{selector?:string}} [opts]
@@ -8510,7 +8526,23 @@ async function toolWebFetch(url, opts){
     if(typeof fetch === "undefined"){
       return { ok:false, error:t("aiagent.noFetch","当前环境不支持 fetch") };
     }
-    const r = await fetch(u, { method:"GET" });
+    /* CORS：浏览器直连绝大多数站点会被跨域策略拦截（file:// 与本地服务形态下必然失败）。
+       有代理则优先走代理（cfg.fetchProxy → cfg.apiBase + /api/tools/fetch），
+       两者都未配置时保持直连，行为与旧版一致；失败时给可操作提示而非裸 TypeError。 */
+    const proxy = _webFetchProxyBase();
+    let r = null;
+    if(proxy){
+      try{ r = await fetch(proxy + "?url=" + encodeURIComponent(u), { method:"GET" }); }
+      catch(_e){ r = null; } // 代理不可用 → 回退直连
+    }
+    if(!r){
+      try{ r = await fetch(u, { method:"GET" }); }
+      catch(e2){
+        return { ok:false, error: proxy
+          ? t("aiagent.fetchBothFail","代理与直连均失败：") + String(e2&&e2.message||e2)
+          : t("aiagent.fetchCorsHint","直连被浏览器跨域策略（CORS）拦截。请在设置中配置「抓取代理」，或配置自建后端 apiBase 后重试。") };
+      }
+    }
     if(!r.ok) return { ok:false, error:t("aiagent.fetchFail","抓取失败：HTTP ")+r.status };
     const html = await r.text();
     // 去标签：提取 <title> + body 纯文本（DOMParser 不可用时用正则兜底）
