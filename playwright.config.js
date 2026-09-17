@@ -11,7 +11,10 @@ const path = require("path");
  * - 每个测试 30s 超时，整体 180s，避免偶发慢启动误报
  * - testDir 指向 tests/e2e，与 vitest 的单元测试完全隔离
  * - E2E 守护由测试文件内 beforeAll + test.skip 控制，默认跳过
- * - retry=0、workers=1：开启时保持串行可预测
+ * - retry：**CI 下 2 次、本地 0 次**。原先两边都是 0；实测 CI 上 e2e 出现过两次偶发失败
+ *   （同一 commit 本地 10/10 全过、重跑即绿），而 GitHub 的 job 日志又常拉不到，排查成本高。
+ *   按 Playwright 官方建议给 CI 加 2 次重试吸收环境抖动；**本地保持 0**，避免掩盖真实不稳定。
+ *   workers=1：开启时保持串行可预测
  *
  * baseURL 解析：把 agent-workbench.html 的绝对路径转成 file URL。
  *   Windows 路径 F:\foo\bar.html 转成 file:///F:/foo/bar.html
@@ -24,7 +27,7 @@ module.exports = defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
   forbidOnly: true,
-  retries: 0,
+  retries: process.env.CI ? 2 : 0,   // CI 吸收环境抖动；本地保持 0（见上方注释）
   workers: 1,
   reporter: [["list"]],
   timeout: 30_000,
