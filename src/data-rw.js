@@ -250,17 +250,17 @@ function recoverAutoBackup(){
    原先在 ui-global-events（UI），被 render-overview 引用 → 逆层依赖。它本质是**配置读写**，
    与 save() 主入口同层。纯搬迁，不改一行实现。
 
-   ⚠️ 搬迁时发现一处既有不一致（**不属于本次范围**，按纯搬迁保留原行为，仅记录待跟进）：
-      saveAiConfig 走 save() 主入口（v3.4.7 收敛，注释称此前 setItem 会「绕过 IDB 镜像/配额告警/损坏登记」），
-      但 getAiConfig 仍直接读 localStorage（PREFIX+"ai_config_"+module）→ **读路径绕过了写路径已收敛的那套机制**，
-      可能出现「写进去了却读不到」（值经 IDB 镜像/降级路径写入时）。建议后续统一走 store 的读入口。 */
+   ✅ 已修复（v3.7.19）：saveAiConfig 走 save() 主入口，而 getAiConfig 此前直接读 localStorage，
+      读路径绕过了写路径已收敛的那套机制（IDB 镜像/配额告警/损坏登记）→ 已统一走同一 store 的 load() 读入口。*/
 
 /* ===== v3.2：AI 页面 8 子模块导航切换 + 独立配置保存 ===== */
 function getAiConfig(module){
-  try{
-    const raw = localStorage.getItem(PREFIX + "ai_config_" + module);
-    return raw ? JSON.parse(raw) : null;
-  }catch(_e){ return null; }
+  /* v3.7.19（修复）：读路径与写路径统一。
+     背景：saveAiConfig 走 save() 主入口（v3.4.7 收敛，注释称此前 setItem 会「绕过 IDB 镜像/配额告警/损坏登记」），
+     而本函数此前**直接读 localStorage** → 读路径绕过了写路径已收敛的那套机制，
+     可能出现「写进去了却读不到」（值经 IDB 镜像/降级路径写入时）。
+     现改为走同一 store 的读入口 load()；缺失/损坏时仍返回 null（与旧行为对齐，防御性 try 保留）。 */
+  try { return load(PREFIX + "ai_config_" + module, null); } catch(_e){ return null; }
 }
 
 function saveAiConfig(module, data){

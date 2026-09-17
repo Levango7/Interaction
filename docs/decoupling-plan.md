@@ -155,3 +155,55 @@ setTasks(next); markDirty();     // 而不是 render();
 ---
 
 **附**：本方案与 `docs/architecture-layers.md` 的分层契约、`docs/module-graph.md` 的依赖数据配套使用。
+
+---
+
+## 八、实施记录（S0~S6，已完成 · 2026-09-17）
+
+### 结果对照
+
+| 指标 | 方案起点 | 现在 | 说明 |
+|---|---|---|---|
+| 逆层依赖（块对） | 38 | **29** | 见下"为什么没归零" |
+| 逆层依赖（**符号级**） | 97 | **55（-43%）** | 更能反映逐步解耦的真实进展 |
+| 循环依赖 | 49 | **39** | |
+| 重复定义 | 0 | 0 | |
+| **Core 层出边** | 2 | **0** | 硬指标，已加进依赖图报告 |
+
+### 各阶段做了什么
+
+| 阶段 | 内容 | 效果 |
+|---|---|---|
+| **S0** | 修核心层反向依赖（`TOAST_ICONS` 下移 core；`exercise.onSave` 改为 AppBridge 注册） | **core 出边 2→0** |
+| **S1** | AI 工具实现归位（`runSql`/`runJsSnippet`/`loadSqlJs` + 依赖闭包共 8 符号 → ai-tools；`trapFocus` → core） | 逆层 44→41 |
+| **S2a** | 动作类接口走桥接（openDrawer/openAiPage/addToRecycleBin/miniChart，14 处跨层调用点） | 41→38 |
+| **S2b** | 渲染调度器 `render` 走桥接（12 处调用点） | 符号级减少 |
+| **S3** | Data 层改 `markDirty()` 置脏 + rAF 合帧 | **合帧：5 次变更 → 1 次渲染** |
+| **S4** | 4 个纯搬迁（`SCENE_FEATURES`/`_chatContentToText`→core；`_sideActive`/`allKeys`→data-links）+ `completeTask` 桥接 | 38→**30** |
+| **S5** | 迁搬**工具化**（`scripts/src-move.mjs`）+ `getAiConfig`/`saveAiConfig` 归位 | — |
+| **S6** | Render→UI 13 个 bind/动作符号走桥接（工具新增 `bridge` 任务） | 30→**29** |
+
+### 顺带修掉的真缺陷
+
+`getAiConfig` 读路径不一致（v3.7.19）：`saveAiConfig` 早已收敛到 `save()` 主入口，
+但读路径仍**直接读 localStorage** → 绕过 IDB 镜像/配额告警/损坏登记 →
+可能出现"写进去了却读不到"。已统一走同一 store 的读入口 `load()`，并补 `tests/ai-config-readpath.test.js`。
+
+### 为什么没有归零（刻意保留）
+
+1. **`Crypto→Data`**（`idbMirrorKey`/`idbReadKey`）：依赖闭包会把**整个 8 符号持久化层**（`idbTxn`/`idbOpen`/`IDB_*`）
+   一起拖走 —— 为消 1 条边搬走整个持久化层不划算。
+2. **`Data→Render`**（`SCENE_FEATURE_RENDER`）：它依赖 3 个 Render 函数，是**真实的渲染路由需求**，不是"放错层"。
+3. **同层 ~25 条**：`render-entry` 作为分发器调用各子渲染器、UI 内部互调 —— **设计使然**，
+   按块序统计会显示为"逆层"，但不存在层间倒挂。
+
+> 这正是方案第六条原则（**不追求 0 逆层**）的落地：目标是消除**跨层倒挂**，不是消灭所有反向调用。
+
+### 沉淀出的工具与方法
+
+- **`scripts/src-move.mjs`**（`npm run src:move`）：分层块安全搬迁/调用点改写，默认 dry-run。
+  内置三类防护：**依赖闭包**（人工清单必然漏）、**定义不变量**（落盘后核对定义全集不变）、
+  **按行粒度改写**（注释/字符串里的同名文本不会被动）。S6 起支持 `bridge` 任务（声明+注册+改道一体化）。
+- **依赖图四处准确性修正**：花括号深度（函数内变量误判）、对象键名不算引用、成员访问不算引用、符号级口径。
+- **验证纪律**：改完先跑**本地两套**（vitest 全量 651 条 + Playwright e2e 10 条，合计约 5 分钟）再推 CI ——
+  本轮靠它拦下过 546/647 的灾难性破坏。
