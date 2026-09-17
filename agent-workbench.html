@@ -5847,6 +5847,25 @@ const AppBridge = {
   completeTask: () => undefined,
   /* 迷你图表：返回 SVG 字符串（调用侧拼进 HTML），默认空串保证拼接安全 */
   miniChart: () => ""
+,
+  snoozeTask: () => undefined,
+
+  _moveDrawerHome: () => undefined,
+  openTemplateModal: () => undefined,
+  registerPluginFromJson: () => undefined,
+  closeDrawer: () => undefined,
+
+  bindScenario: () => undefined,
+  setupKanbanDnD: () => undefined,
+  setupKanbanKeyboard: () => undefined,
+  openTaskEdit: () => undefined,
+  bindReportCard: () => undefined,
+  bindReviewCard: () => undefined,
+
+  _switchSetTab: () => undefined,
+  toggleToolPop: () => undefined,
+
+  renderHelp: () => undefined,
 };
 /* 通知/toast 用的图标表（TOAST_ICONS 依赖 UI_ICONS，故紧随其后声明）；从 ui-theme 下移而来 */
 const TOAST_ICONS = { ok: UI_ICONS.check, warn: UI_ICONS.alert, error: UI_ICONS.error, danger: UI_ICONS.error };
@@ -10872,7 +10891,7 @@ function setupSideMenu(){
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
     if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
-    if(btn.dataset.help){ _sideActive = null; if(typeof renderHelp==="function") renderHelp(); return; }
+    if(btn.dataset.help){ _sideActive = null; if(typeof renderHelp==="function") AppBridge.renderHelp(); return; }
     if(btn.dataset.aipage){ _sideActive = null; if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
     /* 子项：执行注册动作 */
     const menuId = btn.getAttribute("data-menu");
@@ -11008,7 +11027,7 @@ function setupMobNav(){
         return;
       }
       if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); AppBridge.openDrawer(); return; }
-      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); if(typeof renderHelp==="function") renderHelp(); return; }
+      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); if(typeof renderHelp==="function") AppBridge.renderHelp(); return; }
       if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
       const menuId = btn.getAttribute("data-menu");
       if(!menuId) return;
@@ -14903,6 +14922,7 @@ function helpSection(id, title, content){
 // renderHelp() — 渲染使用指南页面（10 章节，内联内容，details 原生折叠）
 // v1.9：从 modal 改为页面渲染到 #main（撑满主内容区），保留折叠面板交互与 a11y focus 管理
 // v1.8.4：新增「性能优化 / 企业级功能 / AI 工作流」3 章节
+AppBridge.renderHelp = renderHelp;
 function renderHelp(){
   // v1.9.3：若设置页(drawer-page)正在显示，先移回并恢复 #main，避免指南渲染到隐藏的 #main
   const _drawer = $("#drawer");
@@ -15521,7 +15541,7 @@ function renderOverview(){
       const act = b.getAttribute("data-kpi-act");
       if(act==="office"){ setActive("office"); render(); }
       else if(act==="stats"){ setActive("stats"); render(); }
-      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); _switchSetTab("set-chain"); } }
+      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); AppBridge._switchSetTab("set-chain"); } }
     };
   });
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
@@ -15553,7 +15573,7 @@ function renderOverview(){
       if(act==="overview"){ setActive("overview"); render(); }
       else if(act==="office"){ setActive("office"); render(); }
       else if(act==="stats"){ setActive("stats"); render(); }
-      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); _switchSetTab("set-chain"); } }
+      else if(act==="chain"){ if(typeof AppBridge.openDrawer==="function"){ AppBridge.openDrawer(); AppBridge._switchSetTab("set-chain"); } }
     };
   });
   // v2.3.0：系统概况卡 AI 设置链接（v3.1.2 修复：原 _switchSetTab("set-ai") 指向不存在的分区，
@@ -16166,7 +16186,7 @@ function renderToolboxPage(){
       if(TOOL_APPS[id]){ openToolStub(id); return; }
       const extra = TOOLBOX_EXTRAS.find(x=>x.id===id);
       if(!extra) return;
-      if(extra.pop){ if(typeof toggleToolPop==="function") toggleToolPop(extra.pop, card); return; }
+      if(extra.pop){ if(typeof toggleToolPop==="function") AppBridge.toggleToolPop(extra.pop, card); return; }
       if(extra.run){ extra.run(); }
     };
   });
@@ -19597,6 +19617,7 @@ function _updateRecVScroll(viewport, sc){
 /*SRC:ui-scene-bind:BEGIN*/
 // ===== UI Layer (交互层·场景绑定) =====
 /* ---------- 绑定 ---------- */
+AppBridge.bindScenario = bindScenario;
 /**
  * 绑定场景主区事件：任务表单、记录表单、看板移动/删除、标签筛选、聊天提交、场景专属卡片
  * @returns {void}
@@ -19700,9 +19721,11 @@ function bindScenario(){
   // 右侧 AI 聊天面板的 #chatForm/#chatCancel 已移到静态 HTML（三栏布局第三栏），
   // 由 bindChatPanel() 在启动时一次性绑定，不再随 render() 重建，故此处移除原绑定。
 }
+AppBridge.bindReportCard = bindReportCard;
 function bindReportCard(sc){
   if((sc==="office"||sc==="code") && $("#copyRep")) $("#copyRep").onclick=()=> navigator.clipboard.writeText($("#repTxt").value);
 }
+AppBridge.bindReviewCard = bindReviewCard;
 function bindReviewCard(sc){
   $$("[data-rev]").forEach(b=> b.onclick=()=>{
     const [id,q]=b.dataset.rev.split(":"); const arr=getRec("study"); const i=arr.findIndex(r=>r.id===id);
@@ -19733,6 +19756,7 @@ function bindExtra(sc){
 }
 
 /* ---------- B4：看板拖拽排序（HTML5 DnD，零依赖） ---------- */
+AppBridge.setupKanbanDnD = setupKanbanDnD;
 /**
  * 看板拖拽初始化：事件委托绑在 #main（静态元素），不随 innerHTML 重建丢失。
  * 同列拖拽=改顺序；跨列拖拽=改状态（拖入已完成列走 completeTask 触发场景联动）。
@@ -19791,6 +19815,7 @@ function setupKanbanDnD(){
 }
 
 /* ---------- B5：看板卡片键盘操作（Enter=编辑 / Delete=软删进回收站） ---------- */
+AppBridge.setupKanbanKeyboard = setupKanbanKeyboard;
 /**
  * 看板键盘操作初始化：事件委托绑在 #main，卡片获焦时 Enter 打开编辑、Delete 软删。
  * @returns {void}
@@ -19837,6 +19862,7 @@ function applyBoardFilter(){
 }
 
 /* ---------- A1：任务编辑弹窗 ---------- */
+AppBridge.openTaskEdit = openTaskEdit;
 /**
  * 打开任务编辑弹窗（复用回收站弹窗的焦点陷阱与关闭交互）
  * @param {string} id - 任务 id
@@ -21903,6 +21929,7 @@ function getSnoozeMap(){
   const m = load(SNOOZE_KEY, {});
   return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
 }
+AppBridge.snoozeTask = snoozeTask;
 /**
  * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
  * @param {string} id - 任务 id
@@ -22271,7 +22298,7 @@ function render(){
     // v3.0：功能菜单（renderSceneFeatNav）独立于标题栏，置于标题卡与主内容之间
     $("#main").innerHTML = sanitizeHtml(renderSceneHead() + renderSceneFeatNav() + renderMetricsStrip() + renderMainHTML());
     appendFoot();
-    bindScenario();
+    AppBridge.bindScenario();
     _hydrateRecImgs(); // v3.2 C-档：记录缩略图异步填充（IDB blob → objectURL）
     // v3.0：场景内功能 tab 点击切换（SCENE_FEATURES；按钮复用 .set-nav-btn，限定在 .scene-feat-nav 内）
     $$("#main .scene-feat-nav .set-nav-btn").forEach(function(b){
@@ -22296,8 +22323,8 @@ function render(){
       // v3.1.2 B-档：会议管理「→ 生成任务」按钮绑定（行动项识别 → office 任务）
       if(active === "office" && sceneFeatureMode === "meeting") bindMeetingActionCard();
     }
-    setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
-    setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
+    AppBridge.setupKanbanDnD();      // B4：看板拖拽（委托绑定，幂等）
+    AppBridge.setupKanbanKeyboard(); // B5：看板卡片键盘操作（委托绑定，幂等）
     // P9：「稍后提醒」按钮绑定（Top3 待处理任务）
     $$("#main [data-snooze]").forEach(b=> b.onclick=()=>{
       snoozeTask(b.getAttribute("data-snooze"), 30);
@@ -23773,6 +23800,7 @@ function _enforceDrawerWidth(){
     });
   }catch(_){}
 }
+AppBridge._moveDrawerHome = _moveDrawerHome;
 function _moveDrawerHome(){
   const drawer = $("#drawer");
   const overlay = $("#overlay");
@@ -23784,6 +23812,7 @@ function _moveDrawerHome(){
     overlay.parentNode.insertBefore(drawer, overlay.nextSibling);
   }
 }
+AppBridge.closeDrawer = closeDrawer;
 function closeDrawer(){
   $("#drawer").classList.remove("open");
   delete $("#drawer").dataset.page; // v1.9.6：清掉子页标记，下次打开回到默认 settings 页头
@@ -24246,6 +24275,7 @@ function applyTemplate(template){
   setTasks(tasks);
   return {ok:true, count: createdIds.length, ids: createdIds};
 }
+AppBridge.openTemplateModal = openTemplateModal;
 /**
  * 打开场景模板选择弹窗
  * @returns {void}
@@ -24439,6 +24469,7 @@ function openPluginPanel(){
   renderPluginBox();
 }
 
+AppBridge.registerPluginFromJson = registerPluginFromJson;
 /**
  * 从 JSON 字符串注册新插件（设置抽屉「注册插件」按钮入口）
  * @param {string} jsonStr - 插件 JSON 定义字符串
@@ -24977,6 +25008,7 @@ $("#cfgTestConn").onclick = async function(){
   })());
 };
 $("#cfgProfileSelect").onchange = e => switchProfile(e.target.value);
+AppBridge._switchSetTab = _switchSetTab;
 /* v2.0.3：设置页分区导航切换（独立导航栏 .set-nav-btn，点击切换下方 card 显示） */
 function _switchSetTab(tabId){
   $$("#drawer .set-nav-btn[data-set-tab]").forEach(function(b){
@@ -25751,6 +25783,7 @@ function _closeAllToolPops(){
     try{ b.setAttribute("aria-expanded", "false"); }catch(e){ /* noop */ }
   });
 }
+AppBridge.toggleToolPop = toggleToolPop;
 /* 切换笃行/时间追踪浮层：锚定侧栏按钮右侧（右缘溢出改左侧），再点同按钮=关闭 */
 function toggleToolPop(popId, btn){
   const pop = document.getElementById(popId);
