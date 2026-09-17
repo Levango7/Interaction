@@ -98,6 +98,22 @@ const AppBridge = {
 /* 通知/toast 用的图标表（TOAST_ICONS 依赖 UI_ICONS，故紧随其后声明）；从 ui-theme 下移而来 */
 const TOAST_ICONS = { ok: UI_ICONS.check, warn: UI_ICONS.alert, error: UI_ICONS.error, danger: UI_ICONS.error };
 
+/* v3.7.16（解耦 S3）：渲染调度 —— 数据层改完数据只"置脏"，由本函数在下一帧统一请求重绘。
+   两个收益：
+     ① Data 层不再认识"渲染"这个概念，只依赖核心层的 markDirty（依赖方向回归向下）
+     ② **同一帧内多次数据变更只触发一次渲染**（批量导入 / 迁移 / AI 连续写数据时最明显）
+   为什么用 rAF 而不是同步调用：rAF 回调必然在本轮脚本执行完之后才跑，那时各层早已注册完毕 ——
+   顺带保证"调用早于注册"也不会丢渲染（这一点在 S2 的桥接里是隐性风险，这里彻底消掉）。
+   无 rAF 的环境（如 jsdom 默认）回退 setTimeout，保证行为一致、可测。 */
+let _dirty = false;
+function markDirty(){
+  if (_dirty) return;
+  _dirty = true;
+  const run = function(){ _dirty = false; try { AppBridge.render(); } catch (_e) { /* 渲染异常不影响数据写入 */ } };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
+  else setTimeout(run, 0);
+}
+
 function t(key, fallback){
   /* v2.2.0：MESSAGES 为 const，模块加载早期（TDZ）或字典缺失时回退兜底，不抛错 */
   let msgs = null;

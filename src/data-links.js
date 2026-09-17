@@ -256,7 +256,7 @@ linkStore.get = () => load(PREFIX+"links", null) || DEFAULT_LINKS.slice();
 let _renderTimer = null;
 taskStore.subscribe(() => {
   if(_renderTimer) clearTimeout(_renderTimer);
-  _renderTimer = setTimeout(() => { try{ AppBridge.render(); }catch(e){ try{ pushDiag("error", "render schedule error: "+(e&&e.message||e), {where:"renderSchedule"}); }catch(_){} } }, 50);
+  _renderTimer = setTimeout(() => { try{ markDirty(); }catch(e){ try{ pushDiag("error", "render schedule error: "+(e&&e.message||e), {where:"renderSchedule"}); }catch(_){} } }, 50);
 });
 
 /**
@@ -397,7 +397,7 @@ function setSceneViewMode(mode){
   _sideActive = "view-"+mode;
   const nonScene = ["overview","stats","recycle"];
   if(nonScene.indexOf(active)>=0){ setActive("office"); }
-  AppBridge.render();
+  markDirty();
 }
 /* v3.0：场景内功能 tab 状态（SCENE_FEATURES 中某场景的 tab id，默认 overview）。
    切换后重渲染主区；切场景时由 render() 复位为 overview。 */
@@ -411,7 +411,7 @@ function setSceneFeature(mode){
   const feats = SCENE_FEATURES[active] || [];
   if(!feats.some(function(f){ return f.id === mode; })) mode = "overview";
   sceneFeatureMode = mode;
-  AppBridge.render();
+  markDirty();
 }
 const chats = {};
 ORDER.forEach(sc=> chats[sc] = load(PREFIX+"chat_"+sc, []).slice(-50) );
