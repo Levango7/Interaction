@@ -1109,6 +1109,113 @@ function _addDaysStr(ymd, n){
 /* v2.3.1：CAD 画布当前会话（des-cad bind 时替换；window mouseup 单例监听器读取） */
 let _cadSession = null;
 
+/* ---------- v3.7.20：PDF 阅读工具（做深）的状态 / 纯函数 / 原地刷新 ---------- */
+/* 设计要点：
+   ① iframe 无法被脚本控制（内置阅读器是独立进程）→ 页码/缩放只能通过 **PDF 打开参数** 重建 src，
+      所以把"拼 URL"抽成纯函数 _pdfUrl()（可单测）。
+   ② 只做各浏览器确实支持的参数：page / zoom / view=FitH。刻意不做 rotate / toolbar=0
+      （Chromium 内置阅读器不认，做了就是假功能）。
+   ③ **不调全局 render()**：它会把当前视图重置 → 表现为"选完 PDF 页面没了"（由测试先发现）。
+      改为 _pdfRefresh() 原地更新控制条 + 重挂 iframe。
+   ④ blob URL 只在本次会话有效：localStorage 只存文件名/页码/缩放（url 不落盘，否则刷新后是死链）。 */
+const _PDF_KEY = "pdf_reader";
+let _pdfBlobUrl = "";
+function _pdfState(){
+  const s = load(PREFIX + _PDF_KEY, {}) || {};
+  return {
+    name: String(s.name || ""),
+    page: Math.max(1, parseInt(s.page, 10) || 1),
+    zoom: (typeof s.zoom === "number" && s.zoom > 0) ? s.zoom : 1,
+    fit: !!s.fit,
+    url: _pdfBlobUrl
+  };
+}
+function _pdfWrite(patch){
+  const s = Object.assign(_pdfState(), patch || {});
+  save(PREFIX + _PDF_KEY, { name: s.name, page: s.page, zoom: s.zoom, fit: s.fit });
+  if(patch && patch.url) _pdfBlobUrl = patch.url;
+  return s;
+}
+/** 纯函数：按状态拼 PDF 打开 URL（page / zoom / view=FitH 均为内置阅读器支持的参数） */
+function _pdfUrl(base, st){
+  if(!base) return "";
+  const s = st || {};
+  const parts = ["page=" + Math.max(1, parseInt(s.page, 10) || 1)];
+  if(s.fit) parts.push("view=FitH"); else parts.push("zoom=" + Number(s.zoom || 1).toFixed(2));
+  return base.split("#")[0] + "#" + parts.join("&");
+}
+/** 控制条 HTML（独立函数，便于原地替换） */
+function _pdfBarHtml(S){
+  const opt = function(v, label){ return '<option value="' + v + '"' + (Math.abs(v - S.zoom) < 0.001 ? ' selected' : '') + '>' + label + '</option>'; };
+  return '<div class="pdf-bar">'
+    + '<button type="button" class="addbtn sm" id="pdfPrev" title="' + esc(t("tool.pdf.prev", "上一页")) + '">‹</button>'
+    + '<input id="pdfPage" class="pdf-page-inp" type="number" min="1" step="1" value="' + S.page + '" aria-label="' + esc(t("tool.pdf.pageAria", "页码")) + '">'
+    + '<button type="button" class="addbtn sm" id="pdfNext" title="' + esc(t("tool.pdf.next", "下一页")) + '">›</button>'
+    + '<span class="pdf-sep"></span>'
+    + '<select id="pdfZoom" aria-label="' + esc(t("tool.pdf.zoom", "缩放")) + '">' + opt(0.5,"50%") + opt(0.75,"75%") + opt(1,"100%") + opt(1.25,"125%") + opt(1.5,"150%") + opt(2,"200%") + '</select>'
+    + '<button type="button" class="addbtn sm' + (S.fit ? ' btn-primary' : '') + '" id="pdfFit">' + t("tool.pdf.fitWidth", "适应宽度") + '</button>'
+    + '<button type="button" class="addbtn sm" id="pdfOpen">' + t("tool.pdf.openNew", "新窗口打开") + '</button>'
+    + '</div>'
+    + '<div class="pdf-meta sub">' + esc(S.name) + ' · ' + t("tool.pdf.atPage", "第 {page} 页").replace("{page}", String(S.page)) + '</div>';
+}
+/** 原地刷新：控制条 + 空态 + iframe（**不触发全局 render()**） */
+function _pdfRefresh(){
+  const bar = $("#pdfBar"), empty = $("#pdfEmpty"), wrap = $("#pdfViewWrap");
+  if(!bar) return;
+  const S = _pdfState();
+  if(!S.url){
+    bar.innerHTML = "";
+    if(empty) empty.innerHTML = sanitizeHtml('<div class="pdf-empty">' + (S.name
+      ? esc(t("tool.pdf.reselectHint", "上次读到《{name}》第 {page} 页 —— 请重新选择该文件（浏览器安全限制，无法自动恢复文件访问）").replace("{name}", S.name).replace("{page}", String(S.page)))
+      : t("tool.pdf.dropHint", "把 PDF 拖到这里，或点上方按钮选择文件")) + '</div>');
+    if(wrap) wrap.innerHTML = "";
+    return;
+  }
+  if(empty) empty.innerHTML = "";
+  bar.innerHTML = sanitizeHtml(_pdfBarHtml(S));
+  /* 控制条事件（原地重建后需重新绑定） */
+  const go = function(p){ _pdfGo(p); };
+  if($("#pdfPrev")) $("#pdfPrev").onclick = function(){ go(_pdfState().page - 1); };
+  if($("#pdfNext")) $("#pdfNext").onclick = function(){ go(_pdfState().page + 1); };
+  if($("#pdfPage")) $("#pdfPage").onchange = function(e){ go(parseInt(e.target.value, 10) || 1); };
+  if($("#pdfZoom")) $("#pdfZoom").onchange = function(e){ _pdfSet({ zoom: parseFloat(e.target.value) || 1, fit: false }); };
+  if($("#pdfFit")) $("#pdfFit").onclick = function(){ _pdfSet({ fit: !_pdfState().fit }); };
+  if($("#pdfOpen")) $("#pdfOpen").onclick = function(){
+    const st = _pdfState();
+    if(!st.url) return;
+    try{ window.open(_pdfUrl(st.url, st), "_blank", "noopener"); }
+    catch(_e){ toast(t("tool.pdf.openFail2", "新窗口打开被拦截，请允许弹窗后重试"), "warn"); }
+  };
+  /* 关键：iframe 必须用 DOM API 创建 —— 本项目的 sanitizeHtml 会**主动剥离 iframe/object/embed**
+     （见其规则 2），用 innerHTML 注入的话啥都渲染不出来。
+     实测教训：本工具此前正是用 sanitizeHtml 注入 iframe，所以"选了文件、弹了提示，但预览区始终空白" ——
+     即该工具自上线起就没真正工作过（由 tests/pdf-reader.test.js 发现）。
+     用 createElement 同时更安全：属性逐个 setAttribute，没有 HTML 注入面。 */
+  if(wrap){
+    wrap.innerHTML = "";
+    const frame = document.createElement("iframe");
+    frame.className = "u-w-full u-h-560 u-border-line u-radius-md";
+    frame.setAttribute("src", _pdfUrl(S.url, S));
+    frame.setAttribute("title", S.name);
+    frame.setAttribute("referrerpolicy", "no-referrer");
+    wrap.appendChild(frame);
+  }
+}
+function _pdfOpen(name, url){
+  _pdfWrite({ name: name, url: url, page: 1, zoom: 1, fit: false });     /* 换文件 → 页码回到 1（不沿用旧文件页码） */
+  _pdfRefresh();
+}
+function _pdfGo(page){
+  if(!_pdfState().url) return;
+  _pdfWrite({ page: Math.max(1, page || 1) });
+  _pdfRefresh();
+}
+function _pdfSet(patch){
+  if(!_pdfState().url) return;
+  _pdfWrite(patch);
+  _pdfRefresh();
+}
+
 const TOOL_APPS = {
   /* ================= 文档簇 ================= */
   "off-md": {
@@ -1288,21 +1395,49 @@ const TOOL_APPS = {
     }
   },
   "off-pdf": {
-    name:t("tool.pdf.name", "PDF 阅读"), icon:UI_ICONS.pdf, desc:t("tool.pdf.desc", "导入本地 PDF · iframe 预览"),
+    name:t("tool.pdf.name", "PDF 阅读"), icon:UI_ICONS.pdf, desc:t("tool.pdf.desc2", "导入本地 PDF · 页码/缩放控制 · 支持拖拽"),
     render: function(){
-      return '<label>' + t("tool.pdf.importLabel", "导入 PDF 文件") + '</label><input type="file" id="pdfFile" accept=".pdf,application/pdf" class="u-mt-2">'
+      /* 只产出稳定锚点：控制条与空态由 _pdfRefresh() 原地填充（避免为一次翻页重渲染整个视图） */
+      return '<label>' + t("tool.pdf.importLabel", "导入 PDF 文件") + '</label>'
+        + '<input type="file" id="pdfFile" accept=".pdf,application/pdf" class="u-mt-2">'
+        + '<div id="pdfDrop" class="pdf-drop u-mt-3" tabindex="0" role="button" aria-label="' + esc(t("tool.pdf.dropAria", "拖拽 PDF 到此处，或点击选择文件")) + '">'
+        +   '<div id="pdfBar"></div>'
+        +   '<div id="pdfEmpty"></div>'
+        + '</div>'
         + '<div id="pdfViewWrap" class="u-mt-3"></div>'
-        + '<p class="sub u-mt-3">' + t("tool.pdf.note", "说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。") + '</p>';
+        + '<p class="sub u-mt-3">' + t("tool.pdf.note", "说明：PDF 在本地浏览器内嵌预览；部分环境（file:// 协议）可能受限，此时建议用系统阅读器打开。页码/缩放通过 PDF 打开参数交给内置阅读器，各浏览器支持程度略有差异。") + '</p>';
     },
     bind: function(){
-      const inp = $("#pdfFile"); if(!inp) return;
-      inp.onchange = function(){
-        const f = inp.files && inp.files[0]; if(!f) return;
-        const url = URL.createObjectURL(f);
-        $("#pdfViewWrap").innerHTML = sanitizeHtml(
-          '<iframe src="' + url + '" class="u-w-full u-h-560 u-border-line u-radius-md" title="' + esc(f.name) + '"></iframe>');
+      const inp = $("#pdfFile"), drop = $("#pdfDrop");
+      if(!inp) return;
+      const open = function(f){
+        if(!f) return;
+        const isPdf = (f.type === "application/pdf") || /\.pdf$/i.test(f.name || "");
+        if(!isPdf){ toast(t("tool.pdf.needPdf", "请选择 PDF 文件"), "warn"); return; }
+        if(f.size > 50*1024*1024){ toast(t("tool.pdf.tooBig", "文件过大（建议 <50MB）"), "warn"); return; }
+        let url = "";
+        try{ url = URL.createObjectURL(f); }catch(e){ toast(t("tool.pdf.openFail", "无法打开该文件：") + (e && e.message || e), "warn"); return; }
+        _pdfOpen(f.name, url);
         toast(t("tool.pdf.openedToast", "已打开 {name}").replace("{name}", f.name), "ok");
       };
+      inp.onchange = function(){ open(inp.files && inp.files[0]); };
+      if(drop){
+        ["dragenter","dragover"].forEach(function(ev){
+          drop.addEventListener(ev, function(e){ e.preventDefault(); e.stopPropagation(); drop.classList.add("pdf-drop-hot"); });
+        });
+        ["dragleave","drop"].forEach(function(ev){
+          drop.addEventListener(ev, function(e){ e.preventDefault(); e.stopPropagation(); drop.classList.remove("pdf-drop-hot"); });
+        });
+        drop.addEventListener("drop", function(e){
+          const dt = e.dataTransfer; open(dt && dt.files && dt.files[0]);
+        });
+        drop.addEventListener("click", function(e){
+          if(e.target && e.target.closest && e.target.closest("#pdfBar")) return;   /* 点控制条 ≠ 重新选文件 */
+          inp.click();
+        });
+        drop.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); inp.click(); } });
+      }
+      _pdfRefresh();      /* 首次进入：按当前状态填充控制条 / 空态 / iframe */
     }
   },
   "off-ocr": {
