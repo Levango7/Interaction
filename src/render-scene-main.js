@@ -469,24 +469,30 @@ function runJsSnippet(code, opts){
 }
 
 /* ---------- v3.1：SQL Playground（sql.js WASM 沙箱） ---------- */
+/* sql.js 资源基址：默认 CDN，首次使用需联网（WASM 约 640KB，内联进单文件会增约 1MB，
+   故不默认内联）。若需完全离线，把 cfg.sqlJsBase 指向自托管的同版本目录即可
+   （该目录需含 sql-wasm.js 与 sql-wasm.wasm），无需改动本文件。 */
+const SQLJS_DEFAULT_BASE = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/";
+function _sqlJsBase(){
+  let cfg = {};
+  try{ cfg = getCfg() || {}; }catch(_e){ cfg = {}; }
+  const b = String(cfg.sqlJsBase || "").trim();
+  return b ? (b.replace(/\/+$/, "") + "/") : SQLJS_DEFAULT_BASE;
+}
 let _sqlJsPromise = null;
 function loadSqlJs(){
   if(_sqlJsPromise) return _sqlJsPromise;
+  const base = _sqlJsBase();
   _sqlJsPromise = new Promise(function(resolve, reject){
-    if(typeof window !== "undefined" && window.initSqlJs){
-      resolve(window.initSqlJs({ locateFile: function(f){ return "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/" + f; } }));
-      return;
-    }
+    const init = function(){ return window.initSqlJs({ locateFile: function(f){ return base + f; } }); };
+    if(typeof window !== "undefined" && window.initSqlJs){ resolve(init()); return; }
     const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js";
+    s.src = base + "sql-wasm.js";
     s.onload = function(){
-      if(window.initSqlJs){
-        resolve(window.initSqlJs({ locateFile: function(f){ return "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/" + f; } }));
-      }else{
-        reject(new Error(t("sql.initFail","sql.js 加载失败：initSqlJs 未找到")));
-      }
+      if(window.initSqlJs){ resolve(init()); }
+      else{ reject(new Error(t("sql.initFail","sql.js 加载失败：initSqlJs 未找到"))); }
     };
-    s.onerror = function(){ reject(new Error(t("sql.cdnFail","sql.js CDN 加载失败（需联网）"))); };
+    s.onerror = function(){ reject(new Error(t("sql.cdnFail","sql.js 加载失败（需联网；或把 cfg.sqlJsBase 指向自托管副本以离线使用）"))); };
     document.head.appendChild(s);
   }).catch(function(e){ _sqlJsPromise = null; throw e; });
   return _sqlJsPromise;
