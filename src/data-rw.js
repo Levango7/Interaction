@@ -118,7 +118,7 @@ function updateTask(id, patch){
   if(Array.isArray(patch.tags)) t.tags = patch.tags.map(String).filter(Boolean);
   if(patch.note!==undefined) t.note = String(patch.note);
   if(patch.status && patch.status!==t.status){
-    if(patch.status==="done"){ setTasks(tasks); return completeTask(id); }
+    if(patch.status==="done"){ setTasks(tasks); return AppBridge.completeTask(id); }
     if(["todo","doing"].includes(patch.status)){ t.status=patch.status; t.doneAt=null; }
   }
   t.updatedAt = Date.now();
@@ -146,7 +146,7 @@ function reorderTask(id, beforeId, targetStatus){
   if(j<0) j = tasks.length;
   tasks.splice(j, 0, t);
   setTasks(tasks);
-  if(targetStatus==="done" && t.status!=="done") return completeTask(id); // 完成态 + 联动
+  if(targetStatus==="done" && t.status!=="done") return AppBridge.completeTask(id); // 完成态 + 联动
   return true;
 }
 /**

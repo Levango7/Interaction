@@ -25,6 +25,9 @@ function _emitTaskEvent(type, task){
     save(TASK_EVENTS_KEY, evs);
   }catch(_e){ /* 事件日志写失败不阻塞业务 */ }
 }
+/* v3.7.17（解耦 S4）：任务完成动作注册到桥接（整体赋值，保留签名与返回值），供低层受控调用 */
+AppBridge.completeTask = completeTask;
+
 function completeTask(id){
   const tasks = getTasks(); const i = tasks.findIndex(t=>t.id===id);
   if(i < 0) return false;

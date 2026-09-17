@@ -13,25 +13,25 @@
 | `util-perf` | Util | — | 0 |
 | `crypto` | Crypto | `data-idb` | 2 |
 | `data-idb` | Data | — | 0 |
-| `data-links` | Data | `ai-retry` `core` `crypto` `render-scene-main` `render-widgets` `ui-theme` | 7 |
-| `data-migrate` | Data | `data-links` `ui-backup-stats` | 2 |
-| `data-rw` | Data | `chain` `core` `crypto` `data-links` `ui-backup-stats` | 6 |
+| `data-links` | Data | `core` `crypto` `render-scene-main` | 6 |
+| `data-migrate` | Data | `data-links` | 2 |
+| `data-rw` | Data | `core` `crypto` `data-links` | 5 |
 | `chain` | Chain | `data-links` `data-migrate` | 2 |
 | `ai-tools` | AI | `ai-retry` `chain` `core` `data-rw` | 5 |
 | `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `crypto` `data-migrate` | 8 |
-| `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-perf` | 14 |
+| `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-perf` | 15 |
 | `render-entry` | Render | `ai-retry` `core` `data-links` `data-migrate` `render-overview` `render-scene-main` `render-widgets` `ui-daily` `ui-drawer` `ui-scene-bind` | 33 |
 | `render-scene-sub` | Render | `render-scene-main` `render-widgets` `ui-scene-bind` `util-perf` | 10 |
-| `render-scene-main` | Render | `ai-retry` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `ui-theme` `util-perf` | 20 |
-| `render-overview` | Render | `ai-retry` `chain` `data-links` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-drawer` `ui-global-events` `ui-scene-bind` | 29 |
-| `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` `util-perf` | 15 |
+| `render-scene-main` | Render | `ai-retry` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `util-perf` | 20 |
+| `render-overview` | Render | `ai-retry` `chain` `data-links` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 29 |
+| `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` `util-perf` | 16 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 9 |
 | `ui-scene-bind` | UI | `chain` `core` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` `ui-backup-stats` | 17 |
 | `ui-palette` | UI | `ai-tools` `data-links` `render-widgets` `ui-backup-stats` `ui-drawer` `ui-global-events` | 8 |
 | `ui-daily` | UI | `chain` `data-links` | 2 |
-| `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` | 19 |
+| `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` | 20 |
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-global-events` `ui-guide` `ui-theme` | 31 |
 | `ui-hotkeys` | UI | `ai-retry` `data-links` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-global-events` | UI | `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-palette` `ui-theme` `util-perf` | 99 |
@@ -50,9 +50,9 @@
 | `active` | `data-links` | 12 |
 | `getActiveTasks` | `data-rw` | 12 |
 | `setTasks` | `data-rw` | 10 |
+| `AppBridge` | `core` | 9 |
 | `getRec` | `data-rw` | 9 |
 | `UI_ICONS` | `core` | 8 |
-| `AppBridge` | `core` | 8 |
 
 > 这些是事实上的"全局助手"。层间倒挂多由它们造成，若要继续解耦，优先从这里动手。
 
@@ -63,22 +63,16 @@
 ## 3. 校验结果
 
 - 跨块重复定义：**0** 项
-- 循环依赖：**41** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；ui-backup-stats → data-migrate → ui-backup-stats；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links）
-- 逆层依赖（低层用高层符号）：**38** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**66** 个符号
+- 循环依赖：**39** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → chain → data-links）
+- 逆层依赖（低层用高层符号）：**30** 条（按「块对」计）
+- 逆层依赖（按**符号**计，去重）：**61** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
 | `ai-loop`（AI） | `ai-retry`（AI） | `renderChat` `scrollChat` `trimChatHist` |
 | `ai-tools`（AI） | `ai-retry`（AI） | `pendingConfirm` |
 | `crypto`（Crypto） | `data-idb`（Data） | `idbMirrorKey` `idbReadKey` |
-| `data-links`（Data） | `ai-retry`（AI） | `_chatContentToText` |
 | `data-links`（Data） | `render-scene-main`（Render） | `SCENE_FEATURE_RENDER` |
-| `data-links`（Data） | `render-widgets`（Render） | `_sideActive` |
-| `data-links`（Data） | `ui-theme`（UI） | `SCENE_FEATURES` |
-| `data-migrate`（Data） | `ui-backup-stats`（UI） | `allKeys` |
-| `data-rw`（Data） | `chain`（Chain） | `completeTask` |
-| `data-rw`（Data） | `ui-backup-stats`（UI） | `allKeys` |
 | `render-entry`（Render） | `render-overview`（Render） | `renderAuthLogin` `renderAuthRegister` `renderAuthWelcome` `renderChainPage` `renderOverview` `renderStats` … |
 | `render-entry`（Render） | `render-scene-main`（Render） | `_featureCardBind` `_hydrateRecImgs` `bindCodeFrontendCard` `bindCodeRunnerCard` `bindCodeSqlCard` `bindMeetingActionCard` … |
 | `render-entry`（Render） | `render-widgets`（Render） | `openRecycle` `renderSide` |
@@ -86,13 +80,11 @@
 | `render-entry`（Render） | `ui-drawer`（UI） | `_moveDrawerHome` |
 | `render-entry`（Render） | `ui-scene-bind`（UI） | `bindScenario` `setupKanbanDnD` `setupKanbanKeyboard` |
 | `render-overview`（Render） | `render-widgets`（Render） | `SIDE_MENU_ICONS` `TOOL_APPS` `lineChartSVG` `openChartStore` |
-| `render-overview`（Render） | `ui-backup-stats`（UI） | `allKeys` |
 | `render-overview`（Render） | `ui-drawer`（UI） | `openTemplateModal` `registerPluginFromJson` |
 | `render-overview`（Render） | `ui-global-events`（UI） | `_switchSetTab` `getAiConfig` `saveAiConfig` `toggleToolPop` |
 | `render-overview`（Render） | `ui-scene-bind`（UI） | `openTaskEdit` |
 | `render-scene-main`（Render） | `render-overview`（Render） | `_renderDiagramCanvas` `_renderFinanceStats` `_renderHealthTrend` |
 | `render-scene-main`（Render） | `render-widgets`（Render） | `TOOL_APPS` `lineChartSVG` |
-| `render-scene-main`（Render） | `ui-theme`（UI） | `SCENE_FEATURES` |
 | `render-scene-sub`（Render） | `render-scene-main`（Render） | `renderMiniChart` |
 | `render-scene-sub`（Render） | `render-widgets`（Render） | `thisWeekDone` `weekRange` |
 | `render-scene-sub`（Render） | `ui-scene-bind`（UI） | `bindReportCard` `bindReviewCard` |

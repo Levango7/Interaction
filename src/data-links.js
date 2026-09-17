@@ -702,3 +702,15 @@ function bindSessionModal(){
  * @returns {Cfg}
  */
 function getCfg(){ return _cfgCache || load(PREFIX+"cfg", {}); }
+
+/* v3.7.17（解耦 S4）：侧栏子项选中态从 render-widgets（Render）移到 Data 层 —— 它是**应用状态**，
+   应与 active 同处；原先被 data-links 引用形成逆层依赖。纯搬迁，无依赖。 */
+/* v2.1.0：菜单展开状态（持久化）+ 当前激活子项（会话内）。
+   高亮不变量：任一时刻至多 1 个 .nav-item.active——
+   _sideActive 非空时仅该子项 active；为空时按 uiView/active 命中唯一顶级项。 */
+let _sideActive = null;
+
+/* v3.7.17（解耦 S4）：存储键枚举助手从 ui-backup-stats（UI）移到 Data 层 —— 它依赖本块的 CUSTOM_LINKS_KEY，
+   且被 data-migrate / data-rw / render-overview 引用形成逆层依赖。纯搬迁。 */
+/* ---------- 备份 / 统计 ---------- */
+function allKeys(){ try{ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }catch(e){ return []; } }

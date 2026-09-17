@@ -1,6 +1,4 @@
 // ===== UI Layer (交互层·备份与统计) =====
-/* ---------- 备份 / 统计 ---------- */
-function allKeys(){ try{ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }catch(e){ return []; } }
 async function doExport(){
   // Helper: base64 encode Uint8Array
   const toBase64 = (buf)=>{

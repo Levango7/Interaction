@@ -88,10 +88,6 @@ const SC_SUBMENU = {
   ]
 };
 
-/* v2.1.0：菜单展开状态（持久化）+ 当前激活子项（会话内）。
-   高亮不变量：任一时刻至多 1 个 .nav-item.active——
-   _sideActive 非空时仅该子项 active；为空时按 uiView/active 命中唯一顶级项。 */
-let _sideActive = null;
 function _loadSideExpanded(){
   try{ const v = JSON.parse(localStorage.getItem(PREFIX+"sideExpanded") || "{}"); return (v && typeof v==="object") ? v : {}; }catch(e){ return {}; }
 }

@@ -238,15 +238,6 @@ function chatSysPrompt(userText){
     +t("ai.sysPromptRemember","用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。")
     +agentContextPrompt(userText);
 }
-/* ---------- 历史消息 content 兼容（v1.14 前多模态可能遗留数组格式，渲染时兜底转文本） ---------- */
-function _chatContentToText(c){
-  if(Array.isArray(c)){
-    const txt = c.filter(function(p){ return p && p.type === "text"; }).map(function(p){ return p.text; }).join("\n");
-    const imgs = c.filter(function(p){ return p && p.type === "image_url"; }).length;
-    return txt + (imgs ? t("ai.imageCount"," [图×") + imgs + "]" : "");
-  }
-  return c;
-}
 async function onChatSubmit(e){
  try{
   e.preventDefault();

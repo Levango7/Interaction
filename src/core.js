@@ -92,6 +92,8 @@ const AppBridge = {
   openAiPage: () => {},
   /* 入回收站：有返回值，注册时整体替换以保留签名与返回值 */
   addToRecycleBin: () => undefined,
+  /* 任务完成动作（含跨场景联动副作用）：实现由 Chain 层注册 */
+  completeTask: () => undefined,
   /* 迷你图表：返回 SVG 字符串（调用侧拼进 HTML），默认空串保证拼接安全 */
   miniChart: () => ""
 };
@@ -341,4 +343,76 @@ function trapFocus(container){
     container.removeEventListener("keydown", onKey);
     if(prev && typeof /** @type {HTMLElement} */(prev).focus==="function" && document.contains(prev)){ try{ /** @type {HTMLElement} */(prev).focus(); }catch(e){ /* noop */ } }
   };
+}
+
+/* v3.7.17（解耦 S4）：场景特性表下移核心层。原先在 ui-theme（UI），却被 data-links / render-scene-main 引用 → 逆层依赖。
+   它是纯数据表（仅依赖 core 的 t）→ 归入核心层。纯搬迁，不改一行实现。 */
+/* v3.0：场景内功能 tab 注册表——标题栏导航条 + 场景内视图切换。
+   每场景「求同存异」：骨架统一（概览=任务+资料库+专属卡），功能 tab 对症下药。 */
+const SCENE_FEATURES = {
+  office: [
+    { id:"overview", type:"core",   label:t("tab.overview", "概览") },
+    { id:"meeting", type:"tool",    label:t("tab.meeting", "会议") },
+    { id:"project", type:"tool",    label:t("tab.project", "项目") },
+    { id:"attendance", type:"record", label:t("tab.attendance", "考勤") },
+    { id:"expense", type:"record",    label:t("tab.expense", "报销") },
+  ],
+  study: [
+    { id:"overview", type:"core",  label:t("tab.overview", "概览") },
+    { id:"knowledge", type:"record", label:t("tab.knowledge", "知识库") },
+    /* v3.5.8：阅读改为商店可添加项（用户需求），渲染器与绑定保留，启用后自动出现 */
+    { id:"exercise", type:"record",  label:t("tab.exercise", "练习") },
+    { id:"exam", type:"record",      label:t("tab.exam", "考试") }
+  ],
+  data: [
+    { id:"overview", type:"core", label:t("tab.overview", "概览") },
+    { id:"report", type:"tool",   label:t("option.report", "报表") },
+    { id:"chart", type:"tool",    label:t("tab.chart", "可视化") },
+    { id:"sql", type:"tool",      label:"SQL" } // v3.1.2 A-档：SQL 查数能力复用给 data 场景（此前只在 code，data 用户被迫切场景查数）
+  ],
+  design: [
+    { id:"overview", type:"core", label:t("tab.overview", "概览") },
+    { id:"canvas", type:"tool",     label:t("tab.canvas", "画布") },
+    { id:"cad", type:"record",      label:"CAD" },
+    { id:"image", type:"record",    label:t("tab.image", "图片") },
+    { id:"ui", type:"record",       label:"UI" },
+    { id:"model3d", type:"record",  label:"3D" }
+  ],
+  code: [
+    { id:"overview", type:"core", label:t("tab.overview", "概览") },
+    { id:"runner", type:"tool",   label:t("tab.runner", "运行器") },
+    { id:"regex", type:"record",    label:t("tab.regex", "正则") },
+    { id:"json", type:"tool",     label:t("tool.json.name", "JSON") },
+    { id:"time", type:"tool",     label:t("tool.time.name", "时间戳") },
+    { id:"codec", type:"tool",    label:t("tool.codec.name", "编解码") },
+    { id:"uuid", type:"tool",     label:t("tool.uuid.name", "UUID") },
+    { id:"frontend", type:"record", label:t("tab.frontend", "前端") },
+    { id:"sql", type:"tool",      label:"SQL" }
+  ],
+  life: [
+    { id:"overview", type:"core", label:t("tab.overview", "概览") },
+    { id:"plan", type:"record",     label:t("tab.plan", "计划") },
+    { id:"health", type:"record",   label:t("tab.health", "健康") },
+    { id:"bill", type:"record",     label:t("tab.bill", "缴费") },
+    { id:"shop", type:"record",     label:t("tab.shop", "采购") }
+  ],
+  health: [
+    { id:"overview", type:"core",   label:t("tab.overview", "概览") },
+    { id:"trend", type:"record",    label:t("tab.trend", "趋势") }
+  ],
+  finance: [
+    { id:"overview", type:"core",   label:t("tab.overview", "概览") },
+    { id:"stats", type:"record",    label:t("tab.stats", "收支统计") }
+  ]
+};
+
+/* v3.7.17（解耦 S4）：对话内容转文本助手下移核心层（原在 ai-retry，被 data-links 引用 → 逆层依赖；仅依赖 t）。纯搬迁。 */
+/* ---------- 历史消息 content 兼容（v1.14 前多模态可能遗留数组格式，渲染时兜底转文本） ---------- */
+function _chatContentToText(c){
+  if(Array.isArray(c)){
+    const txt = c.filter(function(p){ return p && p.type === "text"; }).map(function(p){ return p.text; }).join("\n");
+    const imgs = c.filter(function(p){ return p && p.type === "image_url"; }).length;
+    return txt + (imgs ? t("ai.imageCount"," [图×") + imgs + "]" : "");
+  }
+  return c;
 }
