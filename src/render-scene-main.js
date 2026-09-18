@@ -160,7 +160,7 @@ function renderMainHTML(){
   const rec = s.record;
   const cfg = getCfg();
 
-  const taskForm = `<form class="form-row" id="taskForm">
+  const taskForm = `<form class="form-row form-row--board" id="taskForm">
     <div class="fld fld-lg"><label>${t("field.taskTitle","任务标题")}</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
     <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" placeholder="${t("placeholder.dueDate","选日期")}"></div>
     <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
@@ -169,11 +169,11 @@ function renderMainHTML(){
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
-  const tagFilterHTML = `<div class="form-row">
+  const tagFilterHTML = `<div class="form-row form-row--board">
     <div class="fld fld-xl"><label for="boardSearch">${t("field.searchTaskA3","搜索任务（A3）")}</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
     <div class="fld fld-md"><label>${t("field.linkedRecord","联动记录")}</label>
       <select id="boardStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
-    <div class="fld fld-lg"><label for="tagFilter">${t("field.tagFilterAll","标签（留空=全部）")}</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
+    <div class="fld fld-lg fld-fill"><label for="tagFilter">${t("field.tagFilterAll","标签（留空=全部）")}</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
