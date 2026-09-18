@@ -896,7 +896,7 @@ input[type="file"]:hover{border-color:var(--accent)}
    现按语义跨轨对齐：
      第1轨 任务标题 | 第2轨 截止日期 | 第3轨 优先级 | 第4轨 标签 | 第5轨 添加按钮(定宽)
      筛选行：搜索(跨1-2) · 联动记录(第3轨，正好在优先级下方) · 标签(跨4-5，正好在标签+按钮下方) */
-.form-row--board{display:grid;grid-template-columns:1.6fr 1fr .9fr 1.2fr 64px;gap:var(--space-2) var(--space-3);align-items:end;margin-bottom:var(--space-2)}
+.form-row--board{display:grid;grid-template-columns:1.6fr 1fr .9fr 1.6fr 42px;gap:var(--space-2) var(--space-3);align-items:end;margin-bottom:var(--space-2)}
 .form-row--board>*{min-width:0}
 .form-row--board>.fld>label{min-height:var(--label-h)}
 .form-row--board>.fld>input,.form-row--board>.fld>select{height:var(--control-h)}
@@ -1413,11 +1413,17 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .kcard .m .tag{margin-right:0}
 .kcard .m .due{background:var(--surface-muted);padding:1px 6px;border-radius:var(--radius-md);color:var(--text-dim-2)}
 .kcard .m .due.od{background:var(--danger-soft);color:var(--danger);font-weight:600}
-.kbtns{display:flex;gap:var(--space-1);margin-top:var(--space-2);flex-wrap:wrap}
+.kbtns{display:flex;gap:var(--space-1);margin-top:var(--space-2);flex-wrap:wrap;
+  /* v3.7.31 分类：卡片内部分三层 —— 标题(.t) / 属性(.m，只读 chip) / 操作(.kbtns，可点按钮)。
+     这里给"操作层"加一条极淡分隔线，让"信息"与"可点"一眼可辨；
+     危险操作（删除）靠右独立成组，避免与常用按钮误触。 */
+  border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent);padding-top:var(--space-2)}
 .kbtns button{font-size:var(--fs-xs);padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);
   background:var(--panel2);border:1px solid var(--line);min-height:32px;color:var(--text-dim);
   transition:background var(--transition-fast),color var(--transition-fast)}
 .kbtns button:hover{background:var(--surface-hover);color:var(--text)}
+.kbtns [data-del]{margin-left:auto}          /* v3.7.31：危险操作靠右独立成组 */
+@media (max-width:520px){.kbtns [data-del]{margin-left:0}}
 
 /* ===== v2.1.0 待办视图（todo 模式） ===== */
 .todo-list{display:flex;flex-direction:column;gap:var(--space-1)}

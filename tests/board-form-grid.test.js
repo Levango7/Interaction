@@ -23,11 +23,18 @@ const CSS = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
 const JS = fs.readFileSync(path.join(ROOT, "src/render-scene-main.js"), "utf8");
 
 describe("看板卡 · 共用列栅格", () => {
-  it("存在 .form-row--board 的 5 轨栅格（末轨 64px 定宽，否则 fr 计算会被按钮宽度带偏）", () => {
+  it("存在 .form-row--board 的 5 轨栅格（末轨定宽，否则 fr 计算会被按钮宽度带偏）", () => {
+    /* 这里只断言"形状"：5 轨 + 末轨是 px 定宽。
+       具体 fr 数值**只在 card-layers.test.js 里钉一处** —— 以前两个文件都写死数值，
+       改模板时漏改这个，CI 就红过一次（"改了实现忘了改断言"）。 */
     const m = CSS.match(/\.form-row--board\{[^}]*\}/);
     expect(m, "应存在 .form-row--board 规则").toBeTruthy();
     expect(m[0]).toContain("display:grid");
-    expect(m[0]).toMatch(/grid-template-columns:1\.6fr 1fr \.9fr 1\.2fr 64px/);
+    const tpl = m[0].match(/grid-template-columns:([^;}]+)/);
+    expect(tpl, "应有列模板").toBeTruthy();
+    const tracks = tpl[1].trim().split(/\s+/);
+    expect(tracks.length, "应为 5 轨").toBe(5);
+    expect(tracks[4], "末轨必须是 px 定宽").toMatch(/px$/);
     expect(m[0]).toContain("align-items:end");
   });
 
