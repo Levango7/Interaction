@@ -901,6 +901,10 @@ input[type="file"]:hover{border-color:var(--accent)}
 .form-row--board>.fld>label{min-height:var(--label-h)}
 .form-row--board>.fld>input,.form-row--board>.fld>select{height:var(--control-h)}
 .form-row--board>.fld-xl{grid-column:span 2}
+/* v3.7.30：栅格变体里，.fld-* 尺寸类**只决定跨几轨**，不再限制宽度 —— 宽度由轨道决定。
+   否则 .fld-sm{max-width:120px} 会把 129px 的轨道压窄：实测"优先级"120px 而同一轨道的
+   "联动记录"129px，左右不等长（差 9px）。普通 .form-row 是 flex，仍需尺寸类表达宽度，故不动。 */
+.form-row--board>.fld{max-width:none}
 .form-row--board>.fld-fill{grid-column:span 2}
 .form-row--board>.add-wrap{justify-self:end}
 @media (max-width:820px){

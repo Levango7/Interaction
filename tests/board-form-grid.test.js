@@ -36,6 +36,14 @@ describe("看板卡 · 共用列栅格", () => {
     expect(CSS).toMatch(/\.form-row--board>\.fld-fill\{grid-column:span 2\}/);
   });
 
+  it("栅格变体里 .fld-* 尺寸类只决定跨轨、不再限宽（否则左右不等长）", () => {
+    /* 实测：同一轨道里「优先级」120px 而「联动记录」129px —— 因为 .fld-sm{max-width:120px}
+       把 129px 的轨道压窄了 9px。应用里已有先例（.form-row .fld-lg{max-width:none}）。
+       只在栅格变体里释放：普通 .form-row 是 flex，仍需尺寸类表达宽度，不能动。 */
+    expect(CSS).toMatch(/\.form-row--board>\.fld\{max-width:none\}/);
+    expect(CSS, "普通 .form-row 的尺寸类必须保留（不能误伤）").toMatch(/\.fld-sm\{max-width:120px\}/);
+  });
+
   it("栅格子项 min-width:0（否则长内容会把轨道撑破）", () => {
     expect(CSS).toMatch(/\.form-row--board>\*\{min-width:0\}/);
   });
