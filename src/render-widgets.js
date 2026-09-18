@@ -1363,6 +1363,70 @@ function _pptFromJson(text){
   return out.length ? out : null;
 }
 
+/** 纯函数：纯文本 → HTML 段落（逐行转义并包 <p>；空行保留为占位段） */
+function _txtToHtmlParagraphs(text){
+  const t2 = String(text === null || text === undefined ? "" : text).replace(/\r\n?/g, "\n");
+  return t2.split("\n").map(function(line){ return "<p>" + esc(line) + "</p>"; }).join("");
+}
+/** 纯函数：解析 CSV 文本 → 二维数组（RFC4180 常用子集）
+ *  支持：双引号包裹、引号内逗号/换行、"" 转义引号、CRLF/LF、去除 BOM
+ *  不合法（结果为空）返回 null，调用方提示 */
+function _csvParse(text){
+  let s = String(text === null || text === undefined ? "" : text);
+  if(s.charCodeAt(0) === 0xFEFF) s = s.slice(1);          /* 去掉 Excel 常带的 BOM */
+  if(!s.trim()) return null;
+  const rows = [];
+  let row = [], cell = "", inQ = false;
+  for(let i = 0; i < s.length; i++){
+    const c = s[i];
+    if(inQ){
+      if(c === '"'){
+        if(s[i + 1] === '"'){ cell += '"'; i++; }           /* "" → 一个引号 */
+        else inQ = false;
+      } else cell += c;
+    } else {
+      if(c === '"') inQ = true;
+      else if(c === ",") { row.push(cell); cell = ""; }
+      else if(c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+      else if(c === "\r") { /* 忽略，交给 \n */ }
+      else cell += c;
+    }
+  }
+  row.push(cell);
+  rows.push(row);
+  /* 丢掉末尾的空行（文件结尾的换行造成） */
+  while(rows.length && rows[rows.length - 1].every(function(x){ return x === ""; })) rows.pop();
+  return rows.length ? rows : null;
+}
+
+/** 把「拖入文件」接到与 _toolImportFile 相同的回调（dragover 必须 preventDefault，
+ *  否则浏览器会直接打开文件、丢掉当前页面 —— PDF 工具里踩过的坑，这里统一处理） */
+function _bindDropImport(el, accept, cb){
+  if(!el) return;
+  const re = new RegExp("^(" + String(accept || "").split(",").map(function(s){
+    return s.trim().replace(/[.]/g, "\\.").replace(/\*/g, ".*");
+  }).join("|") + ")$", "i");
+  ["dragenter","dragover"].forEach(function(ev){
+    el.addEventListener(ev, function(e){ e.preventDefault(); e.stopPropagation(); el.classList.add("drop-hot"); });
+  });
+  ["dragleave","drop"].forEach(function(ev){
+    el.addEventListener(ev, function(e){ e.preventDefault(); e.stopPropagation(); el.classList.remove("drop-hot"); });
+  });
+  el.addEventListener("drop", function(e){
+    const dt = e.dataTransfer;
+    const f = dt && dt.files && dt.files[0];
+    if(!f) return;
+    const ok = !accept || re.test(f.name || "") || re.test(f.type || "");
+    if(!ok){ toast(t("tool.dropTypeBad", "文件类型不支持：{name}").replace("{name}", f.name || ""), "warn"); return; }
+    try{
+      const fr = new FileReader();
+      fr.onload = function(){ try{ cb(String(fr.result || ""), f); }catch(_e){ /* 回调异常不冒泡 */ } };
+      fr.onerror = function(){ toast(t("tool.importReadFail", "文件读取失败"), "warn"); };
+      fr.readAsText(f);
+    }catch(err){ toast(t("tool.importReadFail", "文件读取失败"), "warn"); }
+  });
+}
+
 const TOOL_APPS = {
   /* ================= 文档簇 ================= */
   "off-md": {
@@ -1392,12 +1456,15 @@ const TOOL_APPS = {
         catch(e){ prev.textContent = src.value; }
       };
       const sync = function(){ renderPrev(); _toolSaveDoc("off-md", src.value); };
+      /* v3.7.24：导入回调抽成具名函数，按钮与"拖拽到源码框"共用 */
+      const _mdApply = function(text, f){
+        src.value = text; sync();
+        toast(t("tool.md.imported", "已导入 {name}").replace("{name}", (f && f.name) || ""), "ok");
+      };
+      _bindDropImport(src, ".md,.markdown,.txt,text/*", _mdApply);
       const imp = $("#mdImport");
       if(imp) imp.onclick = function(){
-        _toolImportFile(".md,.markdown,.txt,text/*", function(text, f){
-          src.value = text; sync();
-          toast(t("tool.md.imported", "已导入 {name}").replace("{name}", (f && f.name) || ""), "ok");
-        });
+        _toolImportFile(".md,.markdown,.txt,text/*", _mdApply);
       };
       let _mdDebT = null; /* 防抖句柄：150ms 内连续输入只保留最后一次渲染 */
       src.oninput = function(){
@@ -1422,7 +1489,8 @@ const TOOL_APPS = {
         + btns.map(function(b){ return '<button type="button" class="addbtn xs" data-wcmd="' + b[0] + '" title="' + esc(b[2]) + '"><b>' + esc(b[1]) + "</b></button>"; }).join("")
         + '<select id="wFont" aria-label="标题级别" data-i18n-aria="a11y.titleLevel"><option value="">正文</option><option value="H1">标题 1</option><option value="H2">标题 2</option><option value="H3">标题 3</option></select></div>'
         + '<div contenteditable="true" id="wordEd" class="card u-min-h-360 u-outline-none u-lh-17"class="u-p-4">' + saved + "</div>"
-        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="wordExportHtml">导出 .html</button>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="wordImport">' + t("tool.word.import", "导入 HTML/TXT") + '</button>'
+       + '<div class="tool-actions"><button type="button" class="addbtn sm" id="wordExportHtml">导出 .html</button>'
         + '<button type="button" class="addbtn sm" id="wordExportDoc">导出 .doc</button></div>';
     },
     bind: function(){
@@ -1433,6 +1501,18 @@ const TOOL_APPS = {
       const font = $("#wFont");
       if(font) font.onchange = function(){ ed.focus(); if(font.value) document.execCommand("formatBlock", false, font.value); font.value = ""; };
       ed.oninput = function(){ _toolSaveDoc("off-word", ed.innerHTML); };
+      /* v3.7.24：导入回调抽成具名函数，按钮与"拖拽到编辑区"共用 */
+      const _wordApply = function(text, f){
+        const looksHtml = /<\w+[\s>/]/.test(text);
+        ed.innerHTML = sanitizeHtml(looksHtml ? text : _txtToHtmlParagraphs(text));
+        _toolSaveDoc("off-word", ed.innerHTML);
+        toast(t("tool.word.imported", "已导入 {name}").replace("{name}", (f && f.name) || ""), "ok");
+      };
+      _bindDropImport(ed, ".html,.htm,.txt,text/*", _wordApply);
+      const wimp = $("#wordImport");
+      if(wimp) wimp.onclick = function(){
+        _toolImportFile(".html,.htm,.txt,text/*", _wordApply);
+      };
       // A-4 纵深防御：contenteditable 可能含用户从网页粘贴的富文本，导出文件会被再次打开/分发，
       // 拼接前必须过 sanitizeHtml（渲染路径 openToolStub 已统一消毒，此处堵住「导出物再分发」缺口）
       $("#wordExportHtml").onclick = function(){
@@ -1465,6 +1545,7 @@ const TOOL_APPS = {
         + '<span class="add-wrap"><span class="add-label">' + t("tool.sheet.addCol", "添加列") + '</span><button type="button" class="addbtn sm add-round" id="shAddCol" aria-label="' + t("tool.sheet.addCol", "添加列") + '">＋</button></span>'
         + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelRow">' + t("tool.sheet.delLastRow", "－ 删除末行") + '</button>'
         + '<button type="button" class="addbtn sm" data-sc="danger" id="shDelCol">' + t("tool.sheet.delLastCol", "－ 删除末列") + '</button>'
+        + '<button type="button" class="addbtn sm" id="shImportCsv">' + t("tool.sheet.importCsv", "导入 CSV") + '</button>'
         + '<button type="button" class="addbtn sm" id="shExportCsv">' + t("tool.sheet.exportCsvBtn", "导出 CSV") + '</button></div>';
     },
     bind: function(){
@@ -1484,6 +1565,23 @@ const TOOL_APPS = {
       $("#shAddCol").onclick = function(){ persist(); const d = load(PREFIX+"tool_off-sheet", {rows:[[""]]}); d.rows.forEach(function(r){ r.push(""); }); _toolSave("off-sheet", d); rerender(); };
       $("#shDelRow").onclick = function(){ persist(); const d = load(PREFIX+"tool_off-sheet", {rows:[[]]}); if(d.rows.length > 1){ d.rows.pop(); _toolSave("off-sheet", d); rerender(); } else toast(t("tool.sheet.minRow", "至少保留一行"), "warn"); };
       $("#shDelCol").onclick = function(){ persist(); const d = load(PREFIX+"tool_off-sheet", {rows:[[]]}); if(d.rows[0].length > 1){ d.rows.forEach(function(r){ r.pop(); }); _toolSave("off-sheet", d); rerender(); } else toast(t("tool.sheet.minCol", "至少保留一列"), "warn"); };
+      /* v3.7.24：拖到表格区也能导入（与按钮同一套解析） */
+      _bindDropImport($("#sheetTbl"), ".csv,text/csv,text/plain", function(text){
+        const rows = _csvParse(text);
+        if(!rows){ toast(t("tool.sheet.importBad", "导入失败：没有解析到有效行"), "warn"); return; }
+        save(PREFIX + "tool_off-sheet", { rows: rows });
+        openToolStub("off-sheet");
+        toast(t("tool.sheet.imported", "已导入 {n} 行").replace("{n}", String(rows.length)), "ok");
+      });
+      $("#shImportCsv").onclick = function(){
+        _toolImportFile(".csv,text/csv,text/plain", function(text, f){
+          const rows = _csvParse(text);
+          if(!rows){ toast(t("tool.sheet.importBad", "导入失败：没有解析到有效行"), "warn"); return; }
+          save(PREFIX + "tool_off-sheet", { rows: rows });
+          openToolStub("off-sheet");
+          toast(t("tool.sheet.imported", "已导入 {n} 行").replace("{n}", String(rows.length)), "ok");
+        });
+      };
       $("#shExportCsv").onclick = function(){
         const csv = getRows().map(function(row){ return row.map(function(v){ return '"' + String(v).replace(/"/g, '""') + '"'; }).join(","); }).join("\r\n");
         _toolDownload("sheet.csv", "\uFEFF" + csv, "text/csv;charset=utf-8");
