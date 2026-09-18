@@ -11952,6 +11952,47 @@ function _pdfSet(patch){
   _pdfRefresh();
 }
 
+/* ---------- v3.7.23：工具「导入文件」共用助手 + PPT JSON 归一化（纯函数，可单测） ---------- */
+/** 动态创建隐藏 file input 并读取文本（无需改各工具 HTML 结构 —— 按钮直接调用即可） */
+function _toolImportFile(accept, cb){
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = accept;
+  inp.style.display = "none";
+  document.body.appendChild(inp);
+  inp.onchange = function(){
+    const f = inp.files && inp.files[0];
+    const cleanup = function(){ setTimeout(function(){ try{ inp.remove(); }catch(_e){ /* ignore */ } }, 0); };
+    if(!f){ cleanup(); return; }
+    try{
+      const fr = new FileReader();
+      fr.onload = function(){ try{ cb(String(fr.result || ""), f); }catch(_e){ /* 回调异常不影响清理 */ } cleanup(); };
+      fr.onerror = function(){ toast(t("tool.importReadFail", "文件读取失败"), "warn"); cleanup(); };
+      fr.readAsText(f);
+    }catch(e){ toast(t("tool.importReadFail", "文件读取失败") + "：" + (e && e.message || e), "warn"); cleanup(); }
+  };
+  inp.click();
+}
+/** 纯函数：把导入的 JSON 归一化为 slides 数组；不合法返回 null（调用方提示，不抛错）
+ *  规则：必须是数组；元素可为对象或字符串；title/body 统一成字符串；缺 id 的补一个 */
+function _pptFromJson(text){
+  let arr;
+  try{ arr = JSON.parse(String(text === null || text === undefined ? "" : text)); }catch(_e){ return null; }
+  if(!Array.isArray(arr) || !arr.length) return null;
+  const out = [];
+  for(const it of arr){
+    if(it === null || it === undefined) continue;
+    if(typeof it === "string"){ out.push({ id:_toolUid(), title:it, body:"" }); continue; }
+    if(typeof it !== "object") continue;
+    out.push({
+      id: String(it.id || _toolUid()),
+      title: String(it.title === null || it.title === undefined ? "" : it.title),
+      body: String(it.body === null || it.body === undefined ? "" : it.body)
+    });
+  }
+  return out.length ? out : null;
+}
+
 const TOOL_APPS = {
   /* ================= 文档簇 ================= */
   "off-md": {
@@ -11960,7 +12001,8 @@ const TOOL_APPS = {
       const saved = _toolDoc("off-md");
       return '<div class="md-ed-wrap u-gap-3"class="u-grid-2col">'
         + '<div><label>Markdown 源码</label><textarea id="mdSrc" class="u-fs-2xs u-min-h-360"style="font-family:\'SF Mono\',Consolas,monospace">' + esc(saved) + '</textarea>'
-        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="mdExportMd">导出 .md</button>'
+        + '<div class="tool-actions"><button type="button" class="addbtn sm" id="mdImport">' + t("tool.md.import", "导入 .md") + '</button>'
+        + '<button type="button" class="addbtn sm" id="mdExportMd">导出 .md</button>'
         + '<button type="button" class="addbtn sm" id="mdExportHtml">导出 .html</button>'
         + '<button type="button" class="addbtn sm" data-sc="muted" id="mdClear">清空</button></div></div>'
         + '<div><label>预览</label><div class="md-body card u-min-h-360 u-p-3 u-overflow-auto" id="mdPrev"></div></div></div>';
@@ -11980,6 +12022,13 @@ const TOOL_APPS = {
         catch(e){ prev.textContent = src.value; }
       };
       const sync = function(){ renderPrev(); _toolSaveDoc("off-md", src.value); };
+      const imp = $("#mdImport");
+      if(imp) imp.onclick = function(){
+        _toolImportFile(".md,.markdown,.txt,text/*", function(text, f){
+          src.value = text; sync();
+          toast(t("tool.md.imported", "已导入 {name}").replace("{name}", (f && f.name) || ""), "ok");
+        });
+      };
       let _mdDebT = null; /* 防抖句柄：150ms 内连续输入只保留最后一次渲染 */
       src.oninput = function(){
         _toolSaveDoc("off-md", src.value); /* 即时保存（轻量），不走解析/重绘 */
@@ -12088,7 +12137,7 @@ const TOOL_APPS = {
         + '<label class="u-mt-2">内容</label><textarea id="pptBody" class="u-w-full u-min-h-220"></textarea>'
         + '<div class="tool-actions"><button type="button" class="addbtn sm" id="pptPlay">▶ 放映</button>'
         + '<button type="button" class="addbtn sm" data-sc="danger" id="pptDel">删除本页</button>'
-        + '<button type="button" class="addbtn sm" id="pptExportJson">导出 JSON</button></div></div></div>'
+        + '<button type="button" class="addbtn sm" id="pptImportJson">' + t("tool.ppt.importJson", "导入 JSON") + '</button>' + '<button type="button" class="addbtn sm" id="pptExportJson">导出 JSON</button></div></div></div>'
         + '<div id="pptStage" hidden class="u-flex u-flex-col u-ai-center u-jc-center u-pos-fixed u-inset-0 u-z-modal u-p-6 u-bg-bg">'
         + '<h1 id="stageTitle" class="u-mb-4"style="font-size:32px"></h1>'
         + '<p id="stageBody" class="u-text-center u-lh-18 u-max-w-720"style="font-size:18px"></p>'
@@ -12116,6 +12165,15 @@ const TOOL_APPS = {
       $("#pptBody").oninput = saveAll;
       $("#pptAdd").onclick = function(){ saveAll(); slides.push({ id:_toolUid(), title:t("tool.ppt.newPageTitle", "新页面"), body:"" }); _toolSave("off-ppt", slides); openToolStub("off-ppt", "幻灯片"); };
       $("#pptDel").onclick = function(){ if(slides.length <= 1){ toast(t("tool.ppt.minPage", "至少保留一页"), "warn"); return; } saveAll(); slides.splice(cur, 1); _toolSave("off-ppt", slides); openToolStub("off-ppt", t("tool.ppt.slidesName", "幻灯片")); };
+      $("#pptImportJson").onclick = function(){
+        _toolImportFile(".json,application/json", function(text, f){
+          const arr = _pptFromJson(text);
+          if(!arr){ toast(t("tool.ppt.importBad", "导入失败：不是有效的 slides JSON"), "warn"); return; }
+          _toolSave("off-ppt", arr);
+          openToolStub("off-ppt");
+          toast(t("tool.ppt.imported", "已导入 {n} 页").replace("{n}", String(arr.length)), "ok");
+        });
+      };
       $("#pptExportJson").onclick = function(){ saveAll(); _toolDownload("slides.json", JSON.stringify(slides, null, 2), "application/json"); };
       const showStage = function(i){
         stageIdx = Math.max(0, Math.min(i, slides.length - 1));
