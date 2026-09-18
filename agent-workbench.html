@@ -1413,7 +1413,7 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .kcard .m .tag{margin-right:0}
 .kcard .m .due{background:var(--surface-muted);padding:1px 6px;border-radius:var(--radius-md);color:var(--text-dim-2)}
 .kcard .m .due.od{background:var(--danger-soft);color:var(--danger);font-weight:600}
-.kbtns{display:flex;gap:var(--space-1);margin-top:var(--space-2);flex-wrap:wrap;
+.kbtns{display:flex;gap:2px;margin-top:var(--space-2);flex-wrap:wrap;
   /* v3.7.31 分类：卡片内部分三层 —— 标题(.t) / 属性(.m，只读 chip) / 操作(.kbtns，可点按钮)。
      这里给"操作层"加一条极淡分隔线，让"信息"与"可点"一眼可辨；
      危险操作（删除）靠右独立成组，避免与常用按钮误触。 */
@@ -1422,8 +1422,11 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
   background:var(--panel2);border:1px solid var(--line);min-height:32px;color:var(--text-dim);
   transition:background var(--transition-fast),color var(--transition-fast)}
 .kbtns button:hover{background:var(--surface-hover);color:var(--text)}
-.kbtns [data-del]{margin-left:auto}          /* v3.7.31：危险操作靠右独立成组 */
-@media (max-width:520px){.kbtns [data-del]{margin-left:0}}
+/* v3.7.32 收紧：只压水平内边距，**不动高度**（32px）与移动端 44px 触控高度 */
+.kbtns button{padding-left:6px;padding-right:6px}
+/* v3.7.32：上一版用 margin-left:auto 让"删除"靠右独立 —— **这是错的**：
+   卡片宽度只有 ~223px，删除被推到最右后孤零零占一行，不像排列。
+   正确做法是让**四颗按钮挤进同一行**（实测可用 205px、四颗共需 216px，只差 12px）。 */
 
 /* ===== v2.1.0 待办视图（todo 模式） ===== */
 .todo-list{display:flex;flex-direction:column;gap:var(--space-1)}
