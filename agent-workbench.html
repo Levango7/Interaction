@@ -3332,6 +3332,45 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --transition-fast:.15s ease; --transition-base:.25s ease; --transition-slow:.4s ease;
 }
 
+:root[data-theme="ink"]{
+  /* v3.7.25：第 11 个主题「黑金」—— 墨底 + 鎏金。
+     设计要点：
+       · 底色用**暖黑**（不是纯黑），长文阅读不刺眼；层级靠 --panel/--panel2 三档拉开
+       · 强调色只用**一支金**（--accent 亮金）+ 一支深金（--accent-2），避免多色打架
+       · 正文用暖白（非纯白），与金形成「墨底宣纸」的观感
+       · 热力图 --heat-0..4 做成「暗 → 金」渐变，是把主题色真正用进数据可视化的地方
+       · 光效（canvas/sidebar/topbar 微光）统一走金色低透明度，暗色下才看得出来
+       · 注意：本注释**不写裸色值** —— lint-colors 的白名单只放行「--令牌: 值」定义行，注释里的色值会被拦 */
+  --bg:#0a0a0c; --panel:#131317; --panel2:#1a1a20; --line:#2b2b33;
+  --side-bg:#0e0e12;
+  --canvas-glow:radial-gradient(ellipse 70% 45% at 50% -10%,rgba(212,175,55,.10),transparent 55%),radial-gradient(ellipse 40% 35% at 90% 10%,rgba(184,134,11,.07),transparent 50%);
+  --brand-grad:linear-gradient(135deg,#e8c766,#b8860b);
+  --tb-row2-bg:var(--panel);
+  --text:#ece5d8; --muted:#9c937f; --accent:#d4af37; --accent-soft:#2a2210; --accent-2:#b8860b;
+  --shadow:0 1px 3px rgba(0,0,0,.55);
+  --shadow-1:0 1px 2px rgba(0,0,0,.45);
+  --shadow-2:0 2px 8px rgba(0,0,0,.55);
+  --shadow-3:0 4px 16px rgba(0,0,0,.65);
+  --surface-hover:#1f1f26; --surface-muted:#17171c;
+  --on-accent:#1a1400; --on-accent-soft:rgba(212,175,55,.18);
+  --text-dim:#bdb49e; --text-dim-2:#8a8271; --text-dim-3:#a89f8a; --text-faint:#6f695b;
+  --danger:#e0645a; --danger-soft:#2a1412; --danger-border:#4a2420;
+  --danger-overdue-bg:#2a1412; --danger-overdue-border:#4a2420;
+  --warn:#e0a83a; --warn-soft:#2a2110;
+  --ok:#6fae86;
+  --sc-office:#7aa2d6; --sc-design:#c98bb0; --sc-study:#d4af37; --sc-data:#6fae86; --sc-code:#8fb8d8; --sc-life:#b8a0d8;
+  --scenario-default:#d4af37;
+  --banner-bg:#241d0c; --banner-border:#5a4a1a; --banner-ink:#e8c766; --banner-border-2:#3a3010;
+  --kbd-border:#2b2b33; --snip-bg:#1a1610; --snip-fg:#ece5d8; --toast-bg:#ece5d8;
+  --overlay:rgba(0,0,0,.62); --shadow-drawer:rgba(0,0,0,.45);
+  --shadow-overlay:rgba(0,0,0,.58); --shadow-toast:rgba(0,0,0,.52);
+  --heat-0:#1a1a20; --heat-1:#3a3418; --heat-2:#6a5c1f; --heat-3:#a08a2a; --heat-4:#d4af37;
+  --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+  --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
+}
+
 /* ===== v1.5-C 主题系统：自定义主题编辑器 UI ===== */
 .theme-editor-section{margin-top:var(--space-2);padding:var(--space-2);border:1px solid color-mix(in srgb,var(--line) 45%,transparent);border-radius:var(--radius-md);background:color-mix(in srgb,var(--panel) 40%,transparent)}
 .theme-token-row{display:flex;align-items:center;gap:var(--space-2);margin:var(--space-1) 0;font-size:var(--fs-sm)}
@@ -4793,6 +4832,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <option value="forest" data-i18n="look.theme.forest">秘境森林</option>
           <option value="ocean" data-i18n="look.theme.ocean">微蓝浅海</option>
           <option value="mist" data-i18n="look.theme.mist">晓光晨雾</option>
+          <option value="ink" data-i18n="look.theme.ink">黑金</option>
         </select>
       </div>
     </div>
@@ -7183,6 +7223,7 @@ function applyTheme(){
   else if(pref==="forest") th="forest";
   else if(pref==="ocean") th="ocean";
   else if(pref==="mist") th="mist";
+  else if(pref==="ink") th="ink";   // v3.7.25 黑金
   else th = _systemPrefersDark() ? "dark" : "light";
   if(th!=="light") el.setAttribute("data-theme", th);
   // 更新主题按钮：图标 + 当前主题名（亮色/暗色/跟随）；暗色显示太阳（提示可切到亮色），亮色/跟随显示月亮
@@ -28109,6 +28150,8 @@ const MESSAGES = {
     "look.theme.forest": "秘境森林",
     "look.theme.ocean": "微蓝浅海",
     "look.theme.mist": "晓光晨雾",
+    "look.theme.ink": "黑金",
+    "look.themeDesc.ink": "墨底鎏金 · 暖黑低饱和，为暗色环境设计",
     "look.themeDesc.light": "Vercel 风格默认主题",
     "look.themeDesc.aurora": "极光渐变亮色主题",
     "look.themeDesc.dark": "暗色护眼主题",
@@ -31501,6 +31544,8 @@ const MESSAGES = {
     "look.theme.forest": "Mystic Forest",
     "look.theme.ocean": "Pale Blue Sea",
     "look.theme.mist": "Dawn Mist",
+    "look.theme.ink": "Ink & Gold",
+    "look.themeDesc.ink": "Ink-black with gilded accents, tuned for dark rooms",
     "look.themeDesc.light": "Vercel-style default theme",
     "look.themeDesc.aurora": "Aurora gradient light theme",
     "look.themeDesc.dark": "Dark eye-friendly theme",
@@ -35934,7 +35979,10 @@ const PRESET_THEMES = {
   // v3.6.3 修复：mist（晓光晨雾）此前只存在于 CSS :root[data-theme="mist"]、下拉 option、applyTheme 分支与 i18n，
   // 但漏在注册表里——与 v3.1.2 的 elegant/matrix、v3.4.0 的 forest/ocean 是同一类漏注册，
   // 后果：主题管理/列表类消费 getAllThemes() 的地方看不到「晓光晨雾」。
-  mist:     { name: t("look.theme.mist","晓光晨雾"),   desc: t("look.themeDesc.mist","破晓暖色 · 橄榄绿底暖金主题") }
+  mist:     { name: t("look.theme.mist","晓光晨雾"),   desc: t("look.themeDesc.mist","破晓暖色 · 橄榄绿底暖金主题") },
+  // v3.7.25：新增第 11 个主题（黑金）。这次**六处一次做全**，不再重演历史漏注册。
+  //        注意：插入时 mist 那行原本**没有尾逗号**，直接追加会造成语法错误 —— 已补逗号（与 S6 的 AppBridge 注入同款坑）。
+  ink:      { name: t("look.theme.ink","黑金"), desc: t("look.themeDesc.ink","墨底鎏金 · 暖黑低饱和，为暗色环境设计") },
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
@@ -36083,6 +36131,11 @@ function setTheme(themeId){
     el.setAttribute("data-theme", "forest");
   }else if(themeId === "ocean"){
     el.setAttribute("data-theme", "ocean");
+  }else if(themeId === "ink"){
+    // v3.7.25：新增「黑金」。**这里是最易漏的第 7 处** ——
+    // 漏加本分支会落入下方自定义主题 else，getCustomThemes() 找不到即回退 "light"，
+    // 表现为"选中黑金后页面毫无变化"（v3.4.1 的 forest/ocean 就是这样漏的）。
+    el.setAttribute("data-theme", "ink");
   }else{
     // 自定义主题：通过 inline style 应用 token 覆盖
     const custom = getCustomThemes()[themeId];
