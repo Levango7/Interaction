@@ -334,7 +334,10 @@ button:active:not([disabled]){transform:scale(.97)}
 button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 button[disabled]:active{transform:none}
 input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
-  border-radius:var(--control-r);padding:0 var(--space-2);background:var(--panel);color:var(--text);width:100%;
+  /* v3.7.33：输入框背景改用 --surface-muted —— 原来与卡片同为 --panel，实测两者色值**完全相同**，
+     缺少"这里能输入"的视觉暗示。（注意：本注释不写具体色值 —— lint-colors 只放行「--令牌: 值」定义行，
+     注释里的裸色值会被判违规，这个坑我踩过两次。） */
+  border-radius:var(--control-r);padding:0 var(--space-2);background:var(--surface-muted);color:var(--text);width:100%;
   height:var(--control-h);line-height:1.4;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 /* v3.6.2：输入框文字垂直居中——旧规则 padding 上0下10px 不对称，placeholder 偏上；
    固定高度 + display:inline-flex + align-items:center 让文字行盒在框内精确居中（select 仍走原生渲染） */
@@ -1408,6 +1411,11 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .kcard.dragging{opacity:.45;transform:rotate(2deg) scale(1.02);box-shadow:var(--shadow-3);cursor:grabbing}
 .kcol.drag-over{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
 .kcard .t{font-size:var(--fs-base);font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+/* v3.7.33：标题行 = 标题 + 状态切换（状态不是"操作"，不该混在操作行里） */
+.khead{display:flex;align-items:flex-start;gap:var(--space-2)}
+.khead .t{flex:1;min-width:0}
+.kstate{display:flex;gap:2px;flex-shrink:0}
+.kstate button{font-size:var(--fs-3xs);padding:0 6px;min-height:var(--control-h-sm)}
 .kcard .m{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-2);line-height:1.5;
   display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1)}
 .kcard .m .tag{margin-right:0}
