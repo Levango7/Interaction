@@ -45,8 +45,12 @@ describe("看板卡 · 共用列栅格", () => {
     expect(CSS).toMatch(/\.form-row--board>\.fld>label\{min-height:var\(--label-h\)\}/);
   });
 
-  it("有窄屏回退（否则小屏下 5 轨会挤成条）", () => {
-    expect(CSS).toMatch(/@media \(max-width:760px\)\{[\s\S]*?\.form-row--board\{grid-template-columns:1fr 1fr\}/);
+  it("有窄屏回退（否则小屏下 5 轨会挤成条）—— 断点 820px，须覆盖 768 的平板", () => {
+    /* 断点原写 760px，实测**平板 768 不触发回退** → 5 轨被压得过窄、字段不可交互，
+       e2e 的 tablet 项目整片超时；抬到 820px。测试这里也把断点值一并锁住，
+       避免"改了实现忘了改断言"（CI 就是这么红的）。 */
+    expect(CSS).toMatch(/@media \(max-width:820px\)\{[\s\S]*?\.form-row--board\{grid-template-columns:1fr 1fr\}/);
+    expect(CSS).not.toMatch(/@media \(max-width:760px\)\{\s*\.form-row--board/);
   });
 });
 
