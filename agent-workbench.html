@@ -73,6 +73,9 @@
 --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
 /* v3.2 控制高度令牌（统一 input/select/button 高度——避免水平对齐场景下不同元素错位） */
 --control-h:38px;       /* 主控件高（input/select/主按钮/导航胶囊） */
+  /* v3.7.27：方案 A 的两个几何令牌 —— 标签行高 / 字段提示行高。
+     它们只关乎间距节奏，与配色无关，故**只在 :root 定义**，11 个主题共用（不必逐主题覆盖）。 */
+  --label-h:18px; --field-msg-h:16px;
 --control-h-sm:28px;    /* 小控件高（行内小按钮、紧凑操作） */
 --control-r:12px;       /* v3.2 控制元素统一圆角（替代原 radius-md 散落） */
   /* 字号体系（v3.1.2：补 --fs-3xs/--fs-2xs 收编历史 10/11px 幽灵值——
@@ -1222,7 +1225,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .tool-app-card textarea:focus,.tool-app-card input:focus,.tool-app-card select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
 .tool-app-card textarea{min-height:120px;resize:vertical;font-family:inherit}
 .tool-app-card label{display:block;font-size:var(--fs-xs);color:var(--muted);margin:var(--space-2) 0 var(--space-1);font-weight:500}
-.tool-app-card .tool-actions{display:flex;gap:var(--space-2);margin-top:var(--space-3);flex-wrap:wrap}
+.tool-app-card .tool-actions{display:flex;gap:var(--space-2);margin-top:var(--space-3);flex-wrap:wrap;align-items:flex-end}
+/* 工具条：底部对齐 —— "添加"是"标签+按钮"两行，靠 flex-end 让按钮与计数/chip 落在同一基线 */
+.tool-filter-bar{align-items:flex-end;gap:var(--space-2) var(--space-3)}
+.tool-filter-bar>.sub,.tool-filter-bar .tool-summary-item{display:inline-flex;align-items:center;min-height:var(--control-h-sm)}
 .tool-app-card .tool-table{width:100%;border-collapse:collapse;margin-top:var(--space-2);font-size:var(--fs-sm)}
 .tool-app-card .tool-table th,.tool-app-card .tool-table td{border:1px solid var(--line);padding:var(--space-1) var(--space-2);text-align:left}
 .tool-app-card .tool-table th{background:var(--panel2);font-weight:600;font-size:var(--fs-xs);color:var(--text-dim)}
@@ -1280,7 +1286,7 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
   .ps-primary{margin-left:0;flex:1 1 100%}
 }
 .tool-app-card canvas{max-width:100%;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
-.tool-app-card .tool-filter-bar{display:flex;gap:var(--space-2);align-items:center;margin-bottom:var(--space-3);flex-wrap:wrap}
+.tool-app-card .tool-filter-bar{display:flex;gap:var(--space-2) var(--space-3);align-items:flex-end;margin-bottom:var(--space-3);flex-wrap:wrap}
 .tool-app-card .tool-filter-bar input,.tool-app-card .tool-filter-bar select{padding:var(--space-1) var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);font-size:var(--fs-sm)}
 /* v3.0：场景添加按钮——上方「添加」标签 + 圆角矩形加号居中（v3.2 改为圆角矩形，不再圆形——与页面整体风格统一） */
 .add-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
@@ -1295,8 +1301,14 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .form-row .add-wrap{flex-direction:row;align-items:center;align-self:flex-end;gap:0}
 .form-row .add-wrap .add-label{display:none}
 .form-row .add-wrap .add-round{width:var(--control-h);height:var(--control-h)}
-.tool-app-card .tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-2);margin-top:var(--space-2)}
-.tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column;gap:2px}
+.tool-app-card /* v3.7.27 方案 A（试点）：工具表单的"统一基线栅格" —— 见 docs 与提交说明
+   四条规则：控件等高（复用 --control-h）· 标签占固定行高 · 行距列距同源 · 提示占固定高度 */
+.tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-3) var(--space-3);margin-top:var(--space-3);align-items:start}
+.tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column;gap:var(--space-1h)}
+.tool-field>label{display:flex;align-items:center;min-height:var(--label-h);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool-field>input,.tool-field>select{height:var(--control-h)}
+.tool-field>textarea{min-height:calc(var(--control-h) * 2)}
+.tool-field>.hint,.tool-field>.sub,.tool-field>.err{min-height:var(--field-msg-h);margin:0}
 .tool-app-card .tool-form-grid .tool-field label{margin:0;font-size:var(--fs-xs);color:var(--muted);font-weight:500}
 /* v3.0：表单与列表之间加虚线分隔，视觉层次更清晰 */
 .tool-app-card .tool-form-box{padding-bottom:var(--space-3);border-bottom:1px dashed var(--line);margin-bottom:var(--space-2)}
