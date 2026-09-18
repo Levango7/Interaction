@@ -75,7 +75,7 @@
 --control-h:38px;       /* 主控件高（input/select/主按钮/导航胶囊） */
   /* v3.7.27：方案 A 的两个几何令牌 —— 标签行高 / 字段提示行高。
      它们只关乎间距节奏，与配色无关，故**只在 :root 定义**，11 个主题共用（不必逐主题覆盖）。 */
-  --label-h:18px; --field-msg-h:16px;
+  --label-h:18px; --field-msg-h:16px; --label-col-w:88px;   /* v3.7.28：键值行/设置行的标签列宽（B 变体） */
 --control-h-sm:28px;    /* 小控件高（行内小按钮、紧凑操作） */
 --control-r:12px;       /* v3.2 控制元素统一圆角（替代原 radius-md 散落） */
   /* 字号体系（v3.1.2：补 --fs-3xs/--fs-2xs 收编历史 10/11px 幽灵值——
@@ -890,7 +890,7 @@ input[type="file"]{height:var(--control-h);box-sizing:border-box;padding:0;borde
 input[type="file"]::file-selector-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
 input[type="file"]::-webkit-file-upload-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
 input[type="file"]:hover{border-color:var(--accent)}
-.form-row{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
+.form-row{display:flex;gap:var(--space-2) var(--space-3);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
 .form-row .fld{flex:1;min-width:120px}
 /* v3.2 阶段三：表单字段分组卡片（移动端分组节奏）——label+input 包在 .field-group 内，
    带左侧色条 + 间距 --space-3，确保表单在移动端有良好的视觉节奏 */
@@ -3068,6 +3068,11 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
 .api-row:last-child{border-bottom:none}
 .api-row .api-label{font-size:var(--fs-sm);color:var(--text)}
+/* v3.7.28 方案 B（铺开第二步）：键值行 .api-row —— 此前**无任何样式**，标签与值紧挨，
+   标签长度不同（"邮箱" vs "上次同步"）会让值的起始位置参差不齐。
+   改为「定宽标签列 + 统一行距」：所有标签左对齐成一条竖线，所有值从同一 x 起排。 */
+.api-row{display:grid;grid-template-columns:var(--label-col-w) 1fr;align-items:center;gap:var(--space-3);min-height:var(--control-h-sm)}
+.api-row .api-value{overflow-wrap:anywhere}
 .api-row .api-value{font-size:var(--fs-xs);color:var(--muted)}
 .api-btn{padding:var(--space-1) var(--space-3);border-radius:var(--radius-md);font-size:var(--fs-xs);
   border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;
