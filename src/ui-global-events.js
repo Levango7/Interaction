@@ -2802,6 +2802,8 @@ const MESSAGES = {
     "look.theme.forest": "秘境森林",
     "look.theme.ocean": "微蓝浅海",
     "look.theme.mist": "晓光晨雾",
+    "look.theme.ink": "黑金",
+    "look.themeDesc.ink": "墨底鎏金 · 暖黑低饱和，为暗色环境设计",
     "look.themeDesc.light": "Vercel 风格默认主题",
     "look.themeDesc.aurora": "极光渐变亮色主题",
     "look.themeDesc.dark": "暗色护眼主题",
@@ -6194,6 +6196,8 @@ const MESSAGES = {
     "look.theme.forest": "Mystic Forest",
     "look.theme.ocean": "Pale Blue Sea",
     "look.theme.mist": "Dawn Mist",
+    "look.theme.ink": "Ink & Gold",
+    "look.themeDesc.ink": "Ink-black with gilded accents, tuned for dark rooms",
     "look.themeDesc.light": "Vercel-style default theme",
     "look.themeDesc.aurora": "Aurora gradient light theme",
     "look.themeDesc.dark": "Dark eye-friendly theme",
@@ -10627,7 +10631,10 @@ const PRESET_THEMES = {
   // v3.6.3 修复：mist（晓光晨雾）此前只存在于 CSS :root[data-theme="mist"]、下拉 option、applyTheme 分支与 i18n，
   // 但漏在注册表里——与 v3.1.2 的 elegant/matrix、v3.4.0 的 forest/ocean 是同一类漏注册，
   // 后果：主题管理/列表类消费 getAllThemes() 的地方看不到「晓光晨雾」。
-  mist:     { name: t("look.theme.mist","晓光晨雾"),   desc: t("look.themeDesc.mist","破晓暖色 · 橄榄绿底暖金主题") }
+  mist:     { name: t("look.theme.mist","晓光晨雾"),   desc: t("look.themeDesc.mist","破晓暖色 · 橄榄绿底暖金主题") },
+  // v3.7.25：新增第 11 个主题（黑金）。这次**六处一次做全**，不再重演历史漏注册。
+  //        注意：插入时 mist 那行原本**没有尾逗号**，直接追加会造成语法错误 —— 已补逗号（与 S6 的 AppBridge 注入同款坑）。
+  ink:      { name: t("look.theme.ink","黑金"), desc: t("look.themeDesc.ink","墨底鎏金 · 暖黑低饱和，为暗色环境设计") },
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
@@ -10776,6 +10783,11 @@ function setTheme(themeId){
     el.setAttribute("data-theme", "forest");
   }else if(themeId === "ocean"){
     el.setAttribute("data-theme", "ocean");
+  }else if(themeId === "ink"){
+    // v3.7.25：新增「黑金」。**这里是最易漏的第 7 处** ——
+    // 漏加本分支会落入下方自定义主题 else，getCustomThemes() 找不到即回退 "light"，
+    // 表现为"选中黑金后页面毫无变化"（v3.4.1 的 forest/ocean 就是这样漏的）。
+    el.setAttribute("data-theme", "ink");
   }else{
     // 自定义主题：通过 inline style 应用 token 覆盖
     const custom = getCustomThemes()[themeId];

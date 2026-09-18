@@ -22,6 +22,7 @@ function applyTheme(){
   else if(pref==="forest") th="forest";
   else if(pref==="ocean") th="ocean";
   else if(pref==="mist") th="mist";
+  else if(pref==="ink") th="ink";   // v3.7.25 黑金
   else th = _systemPrefersDark() ? "dark" : "light";
   if(th!=="light") el.setAttribute("data-theme", th);
   // 更新主题按钮：图标 + 当前主题名（亮色/暗色/跟随）；暗色显示太阳（提示可切到亮色），亮色/跟随显示月亮
