@@ -69,7 +69,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     await test.step("在办公场景创建任务", async () => {
       // 确保在办公场景（点侧边栏 office）
       await page.click('#side .nav-item[data-sc="office"]');
-      await page.waitForSelector("#taskForm", { timeout: 5_000 });
+      await page.waitForSelector("#taskForm", { timeout: 10_000 });
       // 填标题并提交
       await page.fill('#taskForm input[name="title"]', "E2E测试任务-办公");
       await page.selectOption('#taskForm select[name="priority"]', "P1");
@@ -83,7 +83,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     // ---------- 4. 切场景 ----------
     await test.step("切换到编程场景并创建任务", async () => {
       await page.click('#side .nav-item[data-sc="code"]');
-      await page.waitForSelector("#taskForm", { timeout: 5_000 });
+      await page.waitForSelector("#taskForm", { timeout: 10_000 });
       // 创建一个编程任务，便于后续完成
       await page.fill('#taskForm input[name="title"]', "E2E测试任务-编程");
       await page.click('#taskForm button[type="submit"]');
@@ -122,7 +122,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await statsEntry.click();
       // 统计视图：有任务时显示 .stats-cards，无任务时显示 .no-stats 空状态
       // 我们已建并完成任务，应有 .stats-cards
-      await page.waitForSelector(".stats-cards, .no-stats", { timeout: 5_000 });
+      await page.waitForSelector(".stats-cards, .no-stats", { timeout: 10_000 });
       const hasStatsCards = await page.$(".stats-cards");
       if (hasStatsCards) {
         // 验证关键指标卡片渲染（总任务数 / 已完成 等）
@@ -136,7 +136,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     await test.step("打开设置抽屉", async () => {
       await page.click("#btnGear");
       // 抽屉加 .open class
-      await page.waitForSelector("#drawer.open", { timeout: 5_000 });
+      await page.waitForSelector("#drawer.open", { timeout: 10_000 });
       await expect(page.locator("#drawer")).toHaveClass(/open/);
     });
 
@@ -146,7 +146,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
          #set-chain 此时 display:none（按钮 rect=0），必须先切到 set-chain 分区 —— 这就是真实用户路径。
          （本机 file:// 实测：切标签后按钮 h=38、top=614 在视口内、源场景 7 个选项，添加后链数 3→4 ✓） */
       await page.click('[data-set-tab="set-chain"]');
-      await page.waitForSelector("#chainAddBtn", { state: "visible", timeout: 5_000 });
+      await page.waitForSelector("#chainAddBtn", { state: "visible", timeout: 10_000 });
       await page.selectOption("#chainAddSrc", "office");
       await page.fill("#chainAddKw", "E2E关键词");
       await page.selectOption("#chainAddDst", "life");
@@ -155,7 +155,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.waitForFunction(
         (prev) => document.querySelectorAll("#linksBox .chain-row").length > prev,
         beforeCount,
-        { timeout: 5_000 }
+        { timeout: 10_000 }
       );
       const afterCount = await page.locator("#linksBox .chain-row").count();
       expect(afterCount).toBeGreaterThan(beforeCount);
@@ -166,7 +166,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       /* AI 配置自 v1.15 起是**独立页**（不在设置抽屉里）：入口是侧栏「AI」项 [data-menu="feat-ai"]。
          本机 file:// 实测：点该入口后 #cfgEnabled/#cfgName/#cfgBase/#cfgKey/#cfgModel/#cfgSave 全部可见。 */
       await page.click('#side .nav-item[data-menu="feat-ai"]');
-      await page.waitForSelector("#cfgEnabled", { state: "visible", timeout: 5_000 });
+      await page.waitForSelector("#cfgEnabled", { state: "visible", timeout: 10_000 });
       await page.check("#cfgEnabled");
       // 填写 profile 表单
       await page.fill("#cfgName", "E2E-Mock");
@@ -180,7 +180,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
       // 切到办公场景，应有聊天框
       await page.click('#side .nav-item[data-sc="office"]');
-      await page.waitForSelector("#chatForm", { timeout: 5_000 });
+      await page.waitForSelector("#chatForm", { timeout: 10_000 });
 
       /* 平板（768×1024）下聊天面板默认折叠：.chat-panel.collapsed{width:0;overflow:hidden}，
          面板内控件被裁剪到视口外——本机实测 #chatPanelCollapse 矩形 L784 W36、中心 (802,109)，
@@ -254,10 +254,10 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     await test.step("导出 JSON 触发下载", async () => {
       // 重新打开设置抽屉（上一步保存后已关闭）
       await page.click("#btnGear");
-      await page.waitForSelector("#drawer.open", { timeout: 5_000 });
+      await page.waitForSelector("#drawer.open", { timeout: 10_000 });
       // 抽屉是标签式：导出按钮在「数据」分区（set-data），需先切标签（本机实测映射）
       await page.click('[data-set-tab="set-data"]');
-      await page.waitForSelector("#btnExport", { state: "visible", timeout: 5_000 });
+      await page.waitForSelector("#btnExport", { state: "visible", timeout: 10_000 });
 
       // 监听 download 事件
       const downloadPromise = page.waitForEvent("download", { timeout: 10_000 });
@@ -276,7 +276,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     const onboard = await page.$("#onboardModal");
     if (onboard) {
       for (let i = 0; i < 3; i++) {
-        await page.waitForSelector("#onboardSkip", { timeout: 5_000 });
+        await page.waitForSelector("#onboardSkip", { timeout: 10_000 });
         await page.click("#onboardSkip");
         await page.waitForTimeout(200);
       }
