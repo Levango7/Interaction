@@ -101,6 +101,11 @@
 }
 /* 极光主题（aurora）：原亮色画布完整视觉——极光渐变 + 蓝调浅底 + 近黑主色 */
 :root[data-theme="aurora"]{
+  /* v3.7.34 配对补全：本主题覆盖了 --accent，必须同时给 --on-accent ——
+     否则会继承 root 的值（碰巧是 #fff 才可读）。显式声明后不再依赖继承，也不会静默变差。
+     （值与继承到的 root 值相同，视觉零变化。） */
+  --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.42);
+
 --bg:#f0eef9; --panel:#ffffff; --panel2:#f5f3ff; --line:#e1dcf3;
 --text:#1a1430; --muted:#5d5680; --accent:#7b3fec; --accent-soft:#e0d2ff; --accent-2:#19b4e6;
 --surface-hover:#ded7f2; --surface-muted:#ece7f7;
