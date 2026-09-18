@@ -891,6 +891,24 @@ input[type="file"]::file-selector-button{margin-right:var(--space-2);height:calc
 input[type="file"]::-webkit-file-upload-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
 input[type="file"]:hover{border-color:var(--accent)}
 .form-row{display:flex;gap:var(--space-2) var(--space-3);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
+/* v3.7.29 方案 A（第三批·看板卡试点）：两行字段共用一套 5 轨栅格，使上下列位一一对应。
+   看板卡里两行各自 flex 时，列宽由内容决定 → "截止日期"与"联动记录"不在同一条竖线上。
+   现按语义跨轨对齐：
+     第1轨 任务标题 | 第2轨 截止日期 | 第3轨 优先级 | 第4轨 标签 | 第5轨 添加按钮(定宽)
+     筛选行：搜索(跨1-2) · 联动记录(第3轨，正好在优先级下方) · 标签(跨4-5，正好在标签+按钮下方) */
+.form-row--board{display:grid;grid-template-columns:1.6fr 1fr .9fr 1.2fr 64px;gap:var(--space-2) var(--space-3);align-items:end;margin-bottom:var(--space-2)}
+.form-row--board>*{min-width:0}
+.form-row--board>.fld>label{min-height:var(--label-h)}
+.form-row--board>.fld>input,.form-row--board>.fld>select{height:var(--control-h)}
+.form-row--board>.fld-xl{grid-column:span 2}
+.form-row--board>.fld-fill{grid-column:span 2}
+.form-row--board>.add-wrap{justify-self:end}
+@media (max-width:820px){
+  /* v3.7.29 修正：断点原为 760px，**平板 768px 不触发回退** → 5 轨被压得过窄、字段不可交互，
+     e2e 的 tablet 项目因此整片超时（desktop 通过、tablet 挂）。抬到 820px 覆盖平板。 */
+  .form-row--board{grid-template-columns:1fr 1fr}
+  .form-row--board>*{grid-column:auto}
+}
 .form-row .fld{flex:1;min-width:120px}
 /* v3.2 阶段三：表单字段分组卡片（移动端分组节奏）——label+input 包在 .field-group 内，
    带左侧色条 + 间距 --space-3，确保表单在移动端有良好的视觉节奏 */
@@ -18581,7 +18599,7 @@ function renderMainHTML(){
   const rec = s.record;
   const cfg = getCfg();
 
-  const taskForm = `<form class="form-row" id="taskForm">
+  const taskForm = `<form class="form-row form-row--board" id="taskForm">
     <div class="fld fld-lg"><label>${t("field.taskTitle","任务标题")}</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
     <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" placeholder="${t("placeholder.dueDate","选日期")}"></div>
     <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
@@ -18590,11 +18608,11 @@ function renderMainHTML(){
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
-  const tagFilterHTML = `<div class="form-row">
+  const tagFilterHTML = `<div class="form-row form-row--board">
     <div class="fld fld-xl"><label for="boardSearch">${t("field.searchTaskA3","搜索任务（A3）")}</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
     <div class="fld fld-md"><label>${t("field.linkedRecord","联动记录")}</label>
       <select id="boardStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
-    <div class="fld fld-lg"><label for="tagFilter">${t("field.tagFilterAll","标签（留空=全部）")}</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
+    <div class="fld fld-lg fld-fill"><label for="tagFilter">${t("field.tagFilterAll","标签（留空=全部）")}</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
