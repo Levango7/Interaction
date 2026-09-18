@@ -139,7 +139,7 @@
 }
 :root[data-theme="aurora"] .topbar .tbtn{color:var(--text);font-weight:600}
 :root[data-theme="aurora"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
-:root[data-theme="aurora"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:var(--nav-shadow)}
+:root[data-theme="aurora"] .nav-item.active{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--nav-shadow)}
 :root[data-theme="aurora"] .chat-panel{
   background:color-mix(in srgb,var(--panel) 60%,transparent);
   background-image:var(--sidebar-glow);
@@ -246,7 +246,7 @@
 }
 :root[data-theme="forest"] .topbar .tbtn{color:var(--text);font-weight:600}
 :root[data-theme="forest"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
-:root[data-theme="forest"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:var(--nav-shadow)}
+:root[data-theme="forest"] .nav-item.active{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--nav-shadow)}
 :root[data-theme="forest"] .chat-panel{
   background:color-mix(in srgb,var(--panel) 78%,transparent);
   background-image:var(--sidebar-glow);
@@ -307,7 +307,7 @@
 }
 :root[data-theme="ocean"] .topbar .tbtn{color:var(--text);font-weight:600}
 :root[data-theme="ocean"] .nav-item:hover{background:var(--surface-hover);color:var(--accent)}
-:root[data-theme="ocean"] .nav-item.active{background:var(--brand-grad);color:#fff;font-weight:700;box-shadow:var(--nav-shadow)}
+:root[data-theme="ocean"] .nav-item.active{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--nav-shadow)}
 :root[data-theme="ocean"] .chat-panel{
   background:color-mix(in srgb,var(--panel) 52%,transparent);
   background-image:var(--sidebar-glow);
@@ -517,11 +517,12 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .nav-subitem{padding-left:calc(var(--space-2) + 22px);min-height:28px;font-size:var(--fs-xs)}
 .nav-subitem .nm{color:var(--text-dim)}
 .nav-subitem:hover .nm{color:var(--text)}
-.nav-subitem.active .nm{color:var(--on-accent)}
+.nav-subitem.active{background:var(--accent-soft);border-radius:var(--radius-sm)}
+.nav-subitem.active .nm{color:var(--text);font-weight:600}
 .sub-dot{width:5px;height:5px;border-radius:50%;background:var(--text-faint);flex-shrink:0;
   margin-right:var(--space-2);transition:background var(--transition-fast)}
 .nav-subitem:hover .sub-dot{background:var(--accent)}
-.nav-subitem.active .sub-dot{background:var(--on-accent)}
+.nav-subitem.active .sub-dot{background:var(--accent)}
 /* 父项含激活子项时的弱高亮（不算 active，保证全局唯一 active 不变量） */
 .nav-parent.has-active{background:var(--surface-hover)}
 .nav-parent.has-active .nm{color:var(--text);font-weight:500}
@@ -680,16 +681,20 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .nav-item:hover{background:var(--surface-hover)}
 /* v1.9.5：侧栏为专属浅灰背景时，hover 提亮为白，保证在灰底上可辨（暗色主题 panel 亦深于 side-bg） */
 .side .nav-item:hover{background:var(--surface-hover)}
-.nav-item.active{background:var(--text);color:var(--panel);font-weight:600}
-.nav-item.active .cnt{background:color-mix(in srgb,var(--panel) 22%,transparent);color:var(--panel)}
-.nav-item.active svg{color:var(--panel)}
+.nav-item.active{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--nav-shadow)}
+.nav-item.active .cnt{background:var(--on-accent-soft);color:var(--on-accent)}
+.nav-item.active svg{color:var(--on-accent)}
 .nav-item.active::before{content:"";position:absolute;left:0;top:50%;width:3px;height:24px;
   border-radius:2px;background:var(--sc,var(--accent));transform:translateY(-50%) scaleY(0);
   animation:nav-indicator var(--transition-fast) ease-out forwards}
 @keyframes nav-indicator{from{transform:translateY(-50%) scaleY(0);opacity:0}
   to{transform:translateY(-50%) scaleY(1);opacity:1}}
 
-/* v3.4.16 移除 #btnGear.nav-item.active 覆盖：让全局 .nav-item.active{background:var(--brand-grad)} 生效，与其他菜单一致 */
+/* v3.4.16 移除 #btnGear.nav-item.active 覆盖，让全局 .nav-item.active 生效，与其他菜单一致。
+   v3.7.26 起全局规则统一为 {background:var(--accent); color:var(--on-accent)} ——
+   与应用既有的 .cal-modal-tab/.chain-tab/.glob-view-chip/.ktag-chip/.pet-style-tab 选中态同款，
+   因此**不再需要任何主题特例**（原 aurora/forest/ocean 的 --brand-grad 覆盖已移除，11 个主题表现一致）。
+   二级用 .nav-subitem.active{background:var(--accent-soft)} 形成层级差。 */
 
 /* 统一页面头（v1.9.5：统计/回收站/设置等独立页面共用，保证布局风格一致） */
 .page-head{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);padding:var(--space-2) 0}
