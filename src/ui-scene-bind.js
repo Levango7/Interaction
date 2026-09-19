@@ -264,7 +264,7 @@ function openTaskEdit(id){
       <div class="recycle-header"><h2>${t("task.editTitle","编辑任务")}</h2><button type="button" class="recycle-close" id="taskEditClose">✕</button></div>
       <form id="taskEditForm" class="u-flex u-flex-col u-pad-5-6 u-gap-4">
         <div class="fld"><label>${t("field.taskTitle","任务标题")}</label><input name="title" value="${esc(task.title)}" maxlength="200" required></div>
-        <div class="form-row u-mb-0">
+        <div class="form-row form-row--grid u-mb-0">
           <div class="fld"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" value="${esc(task.due||"")}" placeholder="${t("placeholder.dueDate","选日期")}"></div>
           <div class="fld"><label>${t("task.priority","优先级")}</label><select name="priority">${priSel}</select></div>
           <div class="fld"><label>${t("field.linkedRecord","联动记录")}</label><select name="status">${statusSel}</select></div>
