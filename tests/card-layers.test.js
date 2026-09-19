@@ -51,10 +51,34 @@ describe("CSS：各行铺满", () => {
     expect(CSS).toMatch(/\.kstate button\{flex:1/);
   });
 
-  it("操作三颗等宽铺满（flex:1 + gap）", () => {
+  it("状态按钮与操作按钮**同一套圆角矩形卡片外观**（v3.7.37）", () => {
+    /* 根因：全局 `button{border:none;background:none;color:inherit}`，
+       而 .kstate button 原先只给了 flex/字号/最小高 → 状态行看着就是一行纯文字。
+       现补齐与 .kbtns button 相同的四项外观，二者视觉一致。 */
+    const pick = (sel) => {
+      const out = []; let i = 0;
+      while ((i = CSS.indexOf(sel + '{', i)) >= 0) {
+        let d = 0; const s = CSS.indexOf('{', i);
+        for (let k = s; k < CSS.length; k++) {
+          if (CSS[k] === '{') d++; else if (CSS[k] === '}') { d--; if (!d) { out.push(CSS.slice(s + 1, k)); i = k; break; } }
+        }
+        i++;
+      }
+      return out.join(' ');
+    };
+    const st = pick('.kstate button'), kb = pick('.kbtns button');
+    ['background:var(--panel2)', 'border:1px solid var(--line)', 'border-radius:var(--radius-sm)', 'flex:1', 'min-height']
+      .forEach(k => {
+        expect(st, '状态按钮缺 ' + k).toContain(k);
+        expect(kb, '操作按钮缺 ' + k).toContain(k);
+      });
+    expect(CSS).toMatch(/\.kstate button:hover\{background:var\(--surface-hover\)/);
+  });
+
+  it("操作按钮间隙已收紧到 1px", () => {
     const m = CSS.match(/\.kbtns\{[^}]*\}/);
     expect(m[0]).toContain("display:flex");
-    expect(CSS).toMatch(/\.kbtns button\{flex:1\}/);
+    expect(m[0]).toMatch(/gap:1px/);
   });
 
   it("列模板保持 5 轨（表单区不受本次影响）", () => {
