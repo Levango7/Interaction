@@ -1429,14 +1429,22 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
    长标题就会把它挤到变形；分行使"标题任意长"与"状态位置稳定"同时成立。
    三行各占一行：状态 / 属性 / 操作，且状态与操作**铺满整行**。 */
 .kstate{display:flex;margin-top:var(--space-1h)}
-.kstate button{flex:1;width:100%;font-size:var(--fs-3xs);min-height:var(--control-h-sm)}
+.kstate button{flex:1;width:100%;font-size:var(--fs-3xs);min-height:var(--control-h-sm);
+  /* v3.7.37：与 .kbtns button 同一套「圆角矩形卡片」外观。
+     根因：全局 button 是 border:none/background:none，而这里原先只给了 flex/字号/最小高
+     → 状态行看起来就是一行纯文字（用户指出"做得不太合理"，确实如此）。 */
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1);
+  padding:0 var(--space-2);border-radius:var(--radius-sm);
+  background:var(--panel2);border:1px solid var(--line);color:var(--text-dim);
+  transition:background var(--transition-fast),color var(--transition-fast)}
+.kstate button:hover{background:var(--surface-hover);color:var(--text)}
 .kbtns button{flex:1}
 .kcard .m{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-2);line-height:1.5;
   display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1)}
 .kcard .m .tag{margin-right:0}
 .kcard .m .due{background:var(--surface-muted);padding:1px 6px;border-radius:var(--radius-md);color:var(--text-dim-2)}
 .kcard .m .due.od{background:var(--danger-soft);color:var(--danger);font-weight:600}
-.kbtns{display:flex;gap:2px;margin-top:var(--space-2);flex-wrap:wrap;
+.kbtns{display:flex;gap:1px;margin-top:var(--space-2);flex-wrap:wrap;
   /* v3.7.31 分类：卡片内部分三层 —— 标题(.t) / 属性(.m，只读 chip) / 操作(.kbtns，可点按钮)。
      这里给"操作层"加一条极淡分隔线，让"信息"与"可点"一眼可辨；
      危险操作（删除）靠右独立成组，避免与常用按钮误触。 */
