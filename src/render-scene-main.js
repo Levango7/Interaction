@@ -16,7 +16,7 @@ function _renderKanbanCard(x, st, colName){
   if(st==="todo") btns=`<button type="button" data-move="${x.id}:doing">→ 进行中</button>`;
   if(st==="doing") btns=`<button type="button" data-move="${x.id}:todo">← 待办</button><button type="button" data-move="${x.id}:done">→ 完成</button>`;
   if(st==="done") btns=`<button type="button" data-move="${x.id}:doing">← 进行中</button>`;
-  return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="khead"><div class="t">${esc(x.title)}</div><div class="kstate">${btns}</div></div>
+  return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="t">${esc(x.title)}</div><div class="kstate">${btns}</div>
     <div class="m">${pri} ${due}${tags}</div><div class="kbtns">
     <button type="button" data-edit="${x.id}" data-i18n="task.editBtn">编辑</button>
     <button type="button" data-share="${x.id}" data-i18n="task.shareBtnText" title="${t("action.shareLink", "生成分享链接")}">分享</button>

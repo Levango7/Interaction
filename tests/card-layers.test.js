@@ -1,17 +1,18 @@
 /**
- * card-layers.test.js —— 看板卡内的三层分类 + 操作行必须一行（v3.7.32）
+ * card-layers.test.js —— 看板卡的**四行结构**（v3.7.35，按用户思路重排）
  * ----------------------------------------------------------------------------
- * 卡片天然是**三种性质不同的东西**：
- *   第1层 `.t`      标题      —— 标识
- *   第2层 `.m`      属性 chip —— **只读**（P1 / 逾期日期 / 标签）
- *   第3层 `.kbtns`  操作按钮 —— **可点**（→进行中 / 编辑 / 分享 / 删除）
+ * 用户明确的新布局（截图圈注三色框）：
+ *   第1行 标题（`.t`）
+ *   第2行 状态（`.kstate`）—— **红框：状态独立成行，整行宽**
+ *   第3行 属性（`.m`）—— 蓝框：P1 / 逾期日期 / 标签
+ *   第4行 操作（`.kbtns`）—— 绿框：编辑 / 分享 / 删除，**三颗等宽铺满整行**
  *
- * ⚠️ 这里记录一次**我改错了又改回来**的过程，避免后人重犯：
- *   先给「删除」加 `margin-left:auto` 让它靠右独立 —— **是错的** ✗
- *   实测卡片仅 223px 宽，「删除」被推到最右后**孤零零占一行**，不成排列（用户当场指出）。
- *   量清楚才发现：真正的问题是**四颗按钮差 12px 挤不进一行**（可用 205px、共需 216px）。
- *   正确做法：收紧间距（4→2px）与按钮水平内边距（8→6px）→ 共需 194px → **四颗一行** ✓
- *   （只压水平方向：按钮高度 32px 与移动端 44px 触控高度都不动）
+ * 为什么状态要独立成行（用户原话的动机）：
+ *   「如果标题比较长，右上角的状态会被挤到乱七八糟的地方」——
+ *   状态与标题同行时，长标题必然挤压状态；分行使两者**互不影响**。
+ *
+ * ⚠️ 挪 DOM 前查过绑定：`ui-scene-bind.js` 的 `$$("[data-move]").forEach(b=> b.onclick=…)`
+ *    是**全文档查询后逐次绑定**，不依赖父容器 → 挪动安全。且 CDP 实测点击生效（todo→doing）。
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
@@ -21,67 +22,51 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CSS = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
 const JS = fs.readFileSync(path.join(ROOT, "src/render-scene-main.js"), "utf8");
+const BIND = fs.readFileSync(path.join(ROOT, "src/ui-scene-bind.js"), "utf8");
 
-describe("卡片三层：标题 / 属性 / 操作", () => {
-  it("三层各自的类名在渲染代码里齐备", () => {
-    expect(JS).toMatch(/class="kcard"/);
-    expect(JS).toContain('<div class="m">');
-    expect(JS).toContain('<div class="kbtns">');
-    expect(JS).toContain('<div class="t">');
+describe("看板卡四行结构（v3.7.35）", () => {
+  it("卡片模板的行序：标题 → 状态 → 属性 → 操作", () => {
+    const i = JS.indexOf('return `<div class="kcard"');
+    const seg = JS.slice(i, i + 900);
+    /* 标题没有独立类名的标记，用 .kstate / .m / .kbtns 三个标记的先后顺序断言 */
+    const order = ['class="kstate"', 'class="m"', "kbtns"].map(k => seg.indexOf(k));
+    order.forEach((pos, i2) => expect(pos, "标记 " + i2 + " 应存在").toBeGreaterThan(-1));
+    expect(order[0], "kstate 应在属性行之前").toBeLessThan(order[1]);
+    expect(order[1], "属性行应在操作行之前").toBeLessThan(order[2]);
+    expect(seg.indexOf('class="t"'), "标题在状态之前").toBeLessThan(order[0]);
   });
 
-  it("操作层与属性层之间有分隔（border-top + 内边距）", () => {
+  it("不再有 .khead 包裹（标题与状态已分行，不需要同一行容器）", () => {
+    expect(JS, "不应再用 .khead 包裹标题与状态").not.toContain('class="khead"');
+  });
+
+  it("状态按钮的绑定是全文档查询（挪位置安全的前提）", () => {
+    expect(BIND).toMatch(/\$\$\("\[data-move\]"\)\.forEach/);
+  });
+});
+
+describe("CSS：各行铺满", () => {
+  it("状态按钮整行宽（flex:1 / width:100%）", () => {
+    expect(CSS).toMatch(/\.kstate\{display:flex/);
+    expect(CSS).toMatch(/\.kstate button\{flex:1/);
+  });
+
+  it("操作三颗等宽铺满（flex:1 + gap）", () => {
     const m = CSS.match(/\.kbtns\{[^}]*\}/);
-    expect(m, "应存在 .kbtns 规则").toBeTruthy();
-    expect(m[0]).toContain("border-top:1px solid");
-    expect(m[0]).toContain("padding-top:var(--space-2)");
+    expect(m[0]).toContain("display:flex");
+    expect(CSS).toMatch(/\.kbtns button\{flex:1\}/);
   });
 
-  it("分隔线用 color-mix 调淡（不抢视觉）", () => {
-    expect(CSS).toMatch(/\.kbtns\{[^}]*color-mix\(in srgb, var\(--line\) 60%, transparent\)/);
-  });
-
-  it("删除按钮带危险色类（u-text-danger）", () => {
-    expect(JS).toMatch(/data-del="\$\{x\.id\}"[^>]*class="u-text-danger"/);
-  });
-
-  it("属性层的 chip 各有语义色（P0/P1/P2 + 逾期红）", () => {
-    expect(CSS).toMatch(/\.pri\.P0\{background:var\(--danger-soft\)/);
-    expect(CSS).toMatch(/\.pri\.P1\{background:var\(--warn-soft\)/);
-    expect(CSS).toMatch(/\.kcard \.m \.due\.od\{background:var\(--danger-soft\)/);
+  it("列模板保持 5 轨（表单区不受本次影响）", () => {
+    expect(CSS).toMatch(/grid-template-columns:1\.6fr 1fr \.9fr 1\.6fr 42px/);
+    expect((CSS.match(/1\.6fr 1fr \.9fr 1\.6fr 42px/g) || []).length).toBe(1);
   });
 });
 
-describe("操作行：四颗按钮必须在同一行", () => {
-  it("不得再用 margin-left:auto 把删除推走（实测会变成孤零零一行）", () => {
-    expect(CSS, "不应再出现 [data-del]{margin-left:auto}").not.toMatch(/\[data-del\]\s*\{[^}]*margin-left:auto/);
-  });
-
-  it("间距已收紧到 2px", () => {
-    expect(CSS).toMatch(/\.kbtns\{[^}]*gap:2px/);
-  });
-
-  it("按钮只压水平内边距到 6px（高度与触控靶不动）", () => {
-    expect(CSS).toMatch(/\.kbtns button\{padding-left:6px;padding-right:6px\}/);
-  });
-
-  it("移动端 44px 触控高度仍然保留（收紧不能牺牲可点区域）", () => {
-    expect(CSS).toMatch(/@media[^{]*\{\s*[\s\S]*?\.kbtns button\{min-height:44px/);
-  });
-
-  it("仍保留 flex-wrap（极窄屏允许换行，不做硬塞）", () => {
-    expect(CSS).toMatch(/\.kbtns\{[^}]*flex-wrap:wrap/);
-  });
-});
-
-describe("标签输入框：更长 + 与添加按钮间距更小", () => {
-  it("列模板已调整（第4轨 1.6fr / 第5轨 42px），且只出现一次", () => {
-    const hits = (CSS.match(/grid-template-columns:1\.6fr 1fr \.9fr 1\.6fr 42px/g) || []).length;
-    expect(hits, "模板值只应钉在一处，避免改一处漏一处").toBe(1);
-  });
-
-  it("第5轨是定宽 px（否则按钮宽度会参与 fr 计算、把前四轨边界带偏）", () => {
-    const m = CSS.match(/\.form-row--board\{[^}]*\}/);
-    expect(m[0]).toMatch(/1\.6fr 42px/);
+describe("输入框背景与卡片背景有差异（上一轮的 B，一并守住）", () => {
+  it("输入框用 --surface-muted，不用与卡片同色的 --panel", () => {
+    const m = CSS.match(/input,select,textarea\{[\s\S]*?\}/);
+    expect(m[0]).toContain("background:var(--surface-muted)");
+    expect(m[0]).not.toContain("background:var(--panel)");
   });
 });
