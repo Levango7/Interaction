@@ -222,7 +222,7 @@ function renderMainHTML(){
     const wdCls = wideFields[f.k] ? "fld-lg" : narrowFields[f.k] ? "fld-sm" : "";
     return `<div class="fld${wdCls?" "+wdCls:""}"><label>${f.label}</label>${inp}</div>`;
   }).join("");
-  const recForm = `<form class="form-row" id="recForm">${recFields}
+  const recForm = `<form class="form-row form-row--grid" id="recForm">${recFields}
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span></form>`;
   const recList = recs.length? _renderRecList(recs, rec) : renderEmpty("no-records");
 
