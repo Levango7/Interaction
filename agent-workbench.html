@@ -904,7 +904,7 @@ input[type="file"]:hover{border-color:var(--accent)}
    现按语义跨轨对齐：
      第1轨 任务标题 | 第2轨 截止日期 | 第3轨 优先级 | 第4轨 标签 | 第5轨 添加按钮(定宽)
      筛选行：搜索(跨1-2) · 联动记录(第3轨，正好在优先级下方) · 标签(跨4-5，正好在标签+按钮下方) */
-.form-row--board{display:grid;grid-template-columns:1.6fr 1fr .9fr 1.6fr 42px;gap:var(--space-2) var(--space-3);align-items:end;margin-bottom:var(--space-2)}
+.form-row--board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
 .form-row--board>*{min-width:0}
 /* v3.7.36：.form-row--grid —— 字段**多于 5 个**的表单用 auto-fill 栅格
    （实测记录表单 8 个字段硬套看板 5 轨会溢出换行；auto-fill 按 150px 自动分行且每行对齐） */
@@ -921,6 +921,14 @@ input[type="file"]:hover{border-color:var(--accent)}
    否则 .fld-sm{max-width:120px} 会把 129px 的轨道压窄：实测"优先级"120px 而同一轨道的
    "联动记录"129px，左右不等长（差 9px）。普通 .form-row 是 flex，仍需尺寸类表达宽度，故不动。 */
 .form-row--board>.fld{max-width:none}
+/* v3.7.44：表单与看板同构 —— 6 轨 = 看板 3 列各拆两半，gap 相同（8px），
+   因此「任务标题右缘＝待办卡右缘／截止日期左缘＝进行中卡左缘／标签左缘＝已完成卡左缘」自动成立。
+   lg 跨 2 轨（＝一整列）· md/sm 占 1 轨（半列）· 添加按钮占最后 1 轨。 */
+.form-row--board>.fld-lg{grid-column:span 2}
+.form-row--board>.fld-md{grid-column:span 1}
+.form-row--board>.fld-sm{grid-column:span 1}
+.form-row--board>.add-wrap{grid-column:span 1;justify-self:stretch}
+.form-row--board>.add-wrap .addbtn{width:100%}
 .form-row--board>.fld-fill{grid-column:span 2}
 .form-row--board>.add-wrap{justify-self:end}
 @media (max-width:820px){
@@ -1210,6 +1218,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .foot-ai.on{color:var(--ok)}
 .foot-ai.off{color:var(--text-faint)}
 .ms-strip{display:flex;gap:var(--space-4);flex-wrap:wrap;padding:var(--space-3) var(--space-4);align-items:stretch}
+/* v3.7.45：指标项做成圆角矩形卡片（与记录表格容器同一套"卡片"语言），并等分铺满一行 */
+.ms-strip>*{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
 .ms-item{display:flex;flex-direction:column;gap:2px;min-width:64px;flex:1 1 64px;padding:0 var(--space-1)}
 .ms-item:not(:first-child){border-left:1px solid var(--line);padding-left:var(--space-2)}
 .ms-n{font-size:var(--fs-xl);font-weight:700;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
@@ -1399,6 +1409,8 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .overview-card.ov4-alert .v{color:var(--danger)}
 .ov4-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:var(--space-1);padding:0 5px;border-radius:var(--radius-full);background:var(--danger);color:#fff;font-size:var(--fs-2xs);font-weight:600;vertical-align:middle}
 .overview-4cards{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-2)}
+/* v3.7.44：指标项也做成圆角矩形卡片（与记录表格容器同一套"卡片"语言） */
+.overview-4cards>*{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
 .overview-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);text-align:center}
 .overview-card .v{font-size:var(--fs-2xl);font-weight:600;color:var(--accent);line-height:1.2}
 .overview-card .l{font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--space-1)}
