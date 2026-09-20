@@ -1355,6 +1355,11 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
    （基准 56px + 间距 8px → 文字 191 · 数字/日期 124）——用户要求数字稍宽、日期稍窄。 */
 .tool-field--wide{grid-column:span 3}
 .tool-field--num{grid-column:span 2}
+/* v3.7.42：下拉框 2 单位（与数字/日期同宽）—— 选项值都短，没必要占 3 单位 */
+.tool-field--sel{grid-column:span 2}
+/* v3.7.42：网格内 label 的上边距归零 —— .tool-app-card label 自带 margin-top:8px，
+   与栅格 gap 叠加成"双份间距"，是"大量空白"的来源之一。 */
+.tool-form-grid .tool-field>label{margin-top:0}
 .tool-field--date{grid-column:span 2}
 .tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column;gap:var(--space-1h)}
 .tool-field>label{display:flex;align-items:center;min-height:var(--label-h);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -11826,7 +11831,10 @@ function _recordToolHtml(cfg, records){
     }
     const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
     /* v3.7.38：按类型跨列 —— 文字宽、日期中、数字（金额/评分）窄 */
-    const wcls = f.type === "number" ? " tool-field--num" : f.type === "date" ? " tool-field--date" : " tool-field--wide";
+    /* v3.7.42：改用与工具卡（_featureCardHtml）共用的 _fieldSpanCls —— 原来这里自己写了一套，
+       且**漏了下拉框**（select 落进 else 分支拿了 --wide，而实际上它的判断链里没有 select 分支）。
+       两族共用一套后，文字/下拉/数字/日期的宽度才真正一致。 */
+    const wcls = _fieldSpanCls(f);
     return '<div class="tool-field' + wcls + '"><label>' + esc(f.label) + '</label><input' + t + ' data-rec-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
   }).join("") + '</div>';
   const today = todayStr();
@@ -19073,11 +19081,23 @@ function bindMeetingActionCard(){
   });
 }
 
+/**
+ * 表单字段的跨列类（工具卡与记录工具**共用同一套规则**，保证两族视觉一致）。
+ * 单位制：文字 3 · 下拉 2 · 数字 2 · 日期 2（基准列 56px + 间距 8px）
+ * 依据：.tool-form-grid 的 auto-fill 栅格；曾因不给跨列类导致字段只有 1 单位（58px）被压扁。
+ */
+function _fieldSpanCls(f){
+  if(f.type === "number") return " tool-field--num";
+  if(f.type === "date")   return " tool-field--date";
+  if(f.type === "select") return " tool-field--sel";
+  return " tool-field--wide";
+}
+
 function _featureCardHtml(cfg){
   const records = load(PREFIX + cfg.key, []);
   const form = '<div class="tool-form-grid">' + cfg.fields.map(function(f){
     if(f.type === "select"){
-      return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-f-field="' + esc(f.k) + '">' +
+      return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><select data-f-field="' + esc(f.k) + '">' +
         f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
     }
     // v3.0.1 B-5：支持 textarea（多行 JSON 数据输入）
@@ -19085,7 +19105,7 @@ function _featureCardHtml(cfg){
       return '<div class="tool-field u-col-span-all"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" class="u-fs-2xs u-min-h-0"style="font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace"></textarea></div>';
     }
     const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
-    return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
+    return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
   }).join("") + '</div>';
   const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
   const summary = sums.length
