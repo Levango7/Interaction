@@ -40,10 +40,10 @@ describe("看板卡 · 共用列栅格", () => {
     const kb = CSS.match(/\.kanban\{[^}]*grid-template-columns:repeat\((\d+),minmax\(0,1fr\)\)/);
     expect(kb, "看板应为 repeat(N,minmax(0,1fr))").toBeTruthy();
     expect(tracks, "表单轨数 = 看板列数 × 2").toBe(Number(kb[1]) * 2);
-    /* 轨宽比例：截止日期 : 优先级 = 2 : 1（用户规格），且列2 两个轨之和 = 列1 两轨之和 → 边界不变 */
-    expect(m[0], "截止日期轨应为 1.333fr").toContain("minmax(0,1.333fr)");
-    expect(m[0], "优先级轨应为 0.667fr").toContain("minmax(0,0.667fr)");
-    expect(1.333 + 0.667, "列2 两轨之和必须 = 列1 的 1+1，否则边界错位").toBeCloseTo(2, 3);
+    /* 轨宽：**6 轨等宽**（用户 2026-09-21 定稿：「输入框与下拉框同宽」，
+       取代早先的「截止日期:优先级 = 2:1」）。等宽时 列2 的 1+1 自然等于 列1 的 1+1，边界不变。 */
+    expect((m[0].match(/minmax\(0,1fr\)/g) || []).length, "6 轨应等宽").toBe(6);
+    expect(m[0], "不应再出现 1.333fr 的比例轨").not.toContain("1.333fr");
     /* 同一个列间距 —— 注意：看板**基础规则**写 --space-2，但桌面媒体查询里覆盖为 --space-5
        （实测桌面 1440 下看板 column-gap = 20px = --space-5）。所以要比的是**桌面生效值**。 */
     const formGap = (m[0].match(/gap:var\((--[\w-]+)\) var\((--[\w-]+)\)/) || [])[2];

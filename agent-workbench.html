@@ -904,11 +904,11 @@ input[type="file"]:hover{border-color:var(--accent)}
    现按语义跨轨对齐：
      第1轨 任务标题 | 第2轨 截止日期 | 第3轨 优先级 | 第4轨 标签 | 第5轨 添加按钮(定宽)
      筛选行：搜索(跨1-2) · 联动记录(第3轨，正好在优先级下方) · 标签(跨4-5，正好在标签+按钮下方) */
-.form-row--board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.333fr) minmax(0,0.667fr) minmax(0,1fr) minmax(0,1fr);gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
+.form-row--board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
 /* v3.7.47：把基础栅格规则**提到媒体查询外** —— 原规则写在 `@media(min-width:1440px)` 里，
    而视口减去滚动条后常不足 1440 → 媒体查询不命中 → 表单退回旧模板（实测视口 1440 时被判定为 ~1425）。
    基础规则必须与视口无关，窄屏再用媒体查询覆盖。 */
-.form-row--board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.333fr) minmax(0,0.667fr) minmax(0,1fr) minmax(0,1fr);gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
+.form-row--board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
 .form-row--board>*{min-width:0}
 /* v3.7.48：输入框/下拉框也要 min-width:0 —— 否则它们的固有最小宽度会把窄轨撑开（优先级曾被撑到 120px 并与标签重叠） */
 .form-row--board input,.form-row--board select,.form-row--board textarea{min-width:0;width:100%}

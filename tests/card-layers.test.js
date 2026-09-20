@@ -101,11 +101,15 @@ describe("属性 chips：左右均匀分布", () => {
 });
 
 describe("列模板：6 轨 + 与看板同构（对齐的数学前提）", () => {
-  it("表单为 6 个 minmax(0,Nfr) 轨，且含 1.333/0.667（截止日期:优先级 = 2:1）", () => {
-    const m = CSS.match(/\.form-row--board\{[^}]*\}/);
-    expect(m[0]).toContain('minmax(0,1.333fr)');
-    expect(m[0]).toContain('minmax(0,0.667fr)');
-    expect((m[0].match(/minmax\(0,[\d.]+fr\)/g) || []).length, '应为 6 轨').toBe(6);
+  it("表单为 6 个等宽 minmax(0,1fr) 轨（用户定稿：输入框与下拉框同宽）", () => {
+    /* ⚠️ .form-row--board 有多条规则，且**第一条未必含列模板** ——
+       必须扫描出「含 grid-template-columns 的那条」，不能只取第一条（这个坑踩过多次）。 */
+    const rules = []; let i = 0;
+    while ((i = CSS.indexOf('.form-row--board{', i)) >= 0) { rules.push(CSS.slice(i, CSS.indexOf('}', i) + 1)); i++; }
+    const tpl = rules.find(r => r.indexOf('grid-template-columns') >= 0);
+    expect(tpl, '应有含列模板的 .form-row--board 规则').toBeTruthy();
+    expect((tpl.match(/minmax\(0,1fr\)/g) || []).length, '6 轨应等宽').toBe(6);
+    expect(tpl, '不应再有 1.333fr 的比例轨').not.toContain('1.333fr');
   });
 
   it("输入框也要 min-width:0（否则固有最小宽会把窄轨撑开）", () => {
