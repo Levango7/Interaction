@@ -904,8 +904,14 @@ input[type="file"]:hover{border-color:var(--accent)}
    现按语义跨轨对齐：
      第1轨 任务标题 | 第2轨 截止日期 | 第3轨 优先级 | 第4轨 标签 | 第5轨 添加按钮(定宽)
      筛选行：搜索(跨1-2) · 联动记录(第3轨，正好在优先级下方) · 标签(跨4-5，正好在标签+按钮下方) */
-.form-row--board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
+.form-row--board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.333fr) minmax(0,0.667fr) minmax(0,1fr) minmax(0,1fr);gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
+/* v3.7.47：把基础栅格规则**提到媒体查询外** —— 原规则写在 `@media(min-width:1440px)` 里，
+   而视口减去滚动条后常不足 1440 → 媒体查询不命中 → 表单退回旧模板（实测视口 1440 时被判定为 ~1425）。
+   基础规则必须与视口无关，窄屏再用媒体查询覆盖。 */
+.form-row--board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.333fr) minmax(0,0.667fr) minmax(0,1fr) minmax(0,1fr);gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
 .form-row--board>*{min-width:0}
+/* v3.7.48：输入框/下拉框也要 min-width:0 —— 否则它们的固有最小宽度会把窄轨撑开（优先级曾被撑到 120px 并与标签重叠） */
+.form-row--board input,.form-row--board select,.form-row--board textarea{min-width:0;width:100%}
 /* v3.7.36：.form-row--grid —— 字段**多于 5 个**的表单用 auto-fill 栅格
    （实测记录表单 8 个字段硬套看板 5 轨会溢出换行；auto-fill 按 150px 自动分行且每行对齐） */
 .form-row--grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-2) var(--space-3);align-items:end;margin-bottom:var(--space-2)}
@@ -928,6 +934,8 @@ input[type="file"]:hover{border-color:var(--accent)}
 .form-row--board>.fld-md{grid-column:span 1}
 .form-row--board>.fld-sm{grid-column:span 1}
 .form-row--board>.add-wrap{grid-column:span 1;justify-self:stretch}
+/* 第二行的标签筛选用满第三列（＝第一行「标签+加号」的总宽） */
+.form-row--board>.fld-lg{grid-column:span 2}
 .form-row--board>.add-wrap .addbtn{width:100%}
 .form-row--board>.fld-fill{grid-column:span 2}
 .form-row--board>.add-wrap{justify-self:end}
@@ -1219,7 +1227,7 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .foot-ai.off{color:var(--text-faint)}
 .ms-strip{display:flex;gap:var(--space-4);flex-wrap:wrap;padding:var(--space-3) var(--space-4);align-items:stretch}
 /* v3.7.45：指标项做成圆角矩形卡片（与记录表格容器同一套"卡片"语言），并等分铺满一行 */
-.ms-strip>*{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
+.ms-strip>*{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ms-item{display:flex;flex-direction:column;gap:2px;min-width:64px;flex:1 1 64px;padding:0 var(--space-1)}
 .ms-item:not(:first-child){border-left:1px solid var(--line);padding-left:var(--space-2)}
 .ms-n{font-size:var(--fs-xl);font-weight:700;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
@@ -1469,11 +1477,15 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
   background:var(--panel2);border:1px solid var(--line);color:var(--text-dim);
   transition:background var(--transition-fast),color var(--transition-fast)}
 .kstate button:hover{background:var(--surface-hover);color:var(--text)}
-.kbtns button{flex:1}
+/* v3.7.46 操作按钮：不再等分铺满，改为"窄一点 + 间距大一点 + 左右中分布" */
+.kbtns{justify-content:space-between;gap:var(--space-3)}
+.kbtns button{flex:0 1 auto;min-width:0}
 .kcard .m{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-2);line-height:1.5;
   display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1)}
 .kcard .m .tag{margin-right:0}
 .kcard .m .due{background:var(--surface-muted);padding:1px 6px;border-radius:var(--radius-md);color:var(--text-dim-2)}
+/* v3.7.46：卡片属性 chips 左右均匀分布（原来全部左聚拢，看着偏左） */
+.kcard .m{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1);margin-top:var(--space-2)}
 .kcard .m .due.od{background:var(--danger-soft);color:var(--danger);font-weight:600}
 .kbtns{display:flex;gap:1px;margin-top:var(--space-2);flex-wrap:wrap;
   /* v3.7.31 分类：卡片内部分三层 —— 标题(.t) / 属性(.m，只读 chip) / 操作(.kbtns，可点按钮)。

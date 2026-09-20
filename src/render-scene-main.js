@@ -171,7 +171,7 @@ function renderMainHTML(){
 
   const tagFilterHTML = `<div class="form-row form-row--board">
     <div class="fld fld-xl"><label for="boardSearch">${t("field.searchTaskA3","搜索任务（A3）")}</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
-    <div class="fld fld-md"><label>${t("field.linkedRecord","联动记录")}</label>
+    <div class="fld fld-lg"><label>${t("field.linkedRecord","联动记录")}</label>
       <select id="boardStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
     <div class="fld fld-lg fld-fill"><label for="tagFilter">${t("field.tagFilterAll","标签（留空=全部）")}</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
   </div>`;
@@ -185,7 +185,7 @@ function renderMainHTML(){
   } else if(sceneViewMode === "todo"){
     taskArea = renderTodoListView(tasks, s);
     filterHtml = tasks.length ? `<div class="form-row">
-      <div class="fld fld-md"><label>${t("field.linkedRecord","联动记录")}</label>
+      <div class="fld fld-lg"><label>${t("field.linkedRecord","联动记录")}</label>
         <select id="todoStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
     </div>` : "";
   } else if(tasksAll.length === 0){

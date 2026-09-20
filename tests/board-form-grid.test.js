@@ -33,13 +33,17 @@ describe("看板卡 · 共用列栅格", () => {
     const m = CSS.match(/\.form-row--board\{[^}]*\}/);
     expect(m, "应存在 .form-row--board 规则").toBeTruthy();
     expect(m[0]).toContain("display:grid");
-    const tpl = m[0].match(/grid-template-columns:repeat\((\d+),minmax\(0,1fr\)\)/);
-    expect(tpl, "列模板应为 repeat(N,minmax(0,1fr))").toBeTruthy();
-    expect(Number(tpl[1]), "表单轨数应为 6（= 看板 3 列的 2 倍）").toBe(6);
+    /* 轨数按 minmax(0,Nfr) 的个数数（模板里既有 1fr 也有 1.333fr，不能按 repeat 解） */
+    const tracks = (m[0].match(/minmax\(0,[\d.]+fr\)/g) || []).length;
+    expect(tracks, "表单轨数应为 6（= 看板 3 列的 2 倍）").toBe(6);
     /* 看板列数 */
     const kb = CSS.match(/\.kanban\{[^}]*grid-template-columns:repeat\((\d+),minmax\(0,1fr\)\)/);
     expect(kb, "看板应为 repeat(N,minmax(0,1fr))").toBeTruthy();
-    expect(Number(tpl[1]), "表单轨数 = 看板列数 × 2").toBe(Number(kb[1]) * 2);
+    expect(tracks, "表单轨数 = 看板列数 × 2").toBe(Number(kb[1]) * 2);
+    /* 轨宽比例：截止日期 : 优先级 = 2 : 1（用户规格），且列2 两个轨之和 = 列1 两轨之和 → 边界不变 */
+    expect(m[0], "截止日期轨应为 1.333fr").toContain("minmax(0,1.333fr)");
+    expect(m[0], "优先级轨应为 0.667fr").toContain("minmax(0,0.667fr)");
+    expect(1.333 + 0.667, "列2 两轨之和必须 = 列1 的 1+1，否则边界错位").toBeCloseTo(2, 3);
     /* 同一个列间距 —— 注意：看板**基础规则**写 --space-2，但桌面媒体查询里覆盖为 --space-5
        （实测桌面 1440 下看板 column-gap = 20px = --space-5）。所以要比的是**桌面生效值**。 */
     const formGap = (m[0].match(/gap:var\((--[\w-]+)\) var\((--[\w-]+)\)/) || [])[2];

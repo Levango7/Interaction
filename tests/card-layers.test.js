@@ -1,18 +1,17 @@
 /**
- * card-layers.test.js —— 看板卡的**四行结构**（v3.7.35，按用户思路重排）
+ * card-layers.test.js —— 看板卡的层次与四行结构（v3.7.46/48 版）
  * ----------------------------------------------------------------------------
- * 用户明确的新布局（截图圈注三色框）：
- *   第1行 标题（`.t`）
- *   第2行 状态（`.kstate`）—— **红框：状态独立成行，整行宽**
- *   第3行 属性（`.m`）—— 蓝框：P1 / 逾期日期 / 标签
- *   第4行 操作（`.kbtns`）—— 绿框：编辑 / 分享 / 删除，**三颗等宽铺满整行**
+ * 卡片自上而下四行：
+ *   第1行 `.t`      标题
+ *   第2行 `.kstate` 状态（整行宽的圆角矩形卡 · 点它可切换状态）
+ *   第3行 `.m`      属性 chips（**左右均匀分布**——用户规格："三个的位置太偏左，左中右"）
+ *   第4行 `.kbtns`  操作按钮（**窄一点 + 间距大一点 + 左右中分布**——用户规格）
  *
- * 为什么状态要独立成行（用户原话的动机）：
- *   「如果标题比较长，右上角的状态会被挤到乱七八糟的地方」——
- *   状态与标题同行时，长标题必然挤压状态；分行使两者**互不影响**。
- *
- * ⚠️ 挪 DOM 前查过绑定：`ui-scene-bind.js` 的 `$$("[data-move]").forEach(b=> b.onclick=…)`
- *    是**全文档查询后逐次绑定**，不依赖父容器 → 挪动安全。且 CDP 实测点击生效（todo→doing）。
+ * ⚠️ 两条血泪教训（改本文件前先读）：
+ *  ① 状态/操作两类按钮必须是**同一套圆角矩形外观**（背景/边框/圆角/最小高逐项一致）——
+ *     全局 `button{border:none;background:none}` 之下，少补一项就会退化成"一行纯文字"。
+ *  ② 操作按钮**不再等分铺满**：用户明确要求"左右宽度小一点、间距大一点、左中右" →
+ *     `flex:0 1 auto` + `justify-content:space-between`。别再改回 `flex:1`。
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
@@ -24,20 +23,34 @@ const CSS = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
 const JS = fs.readFileSync(path.join(ROOT, "src/render-scene-main.js"), "utf8");
 const BIND = fs.readFileSync(path.join(ROOT, "src/ui-scene-bind.js"), "utf8");
 
-describe("看板卡四行结构（v3.7.35）", () => {
-  it("卡片模板的行序：标题 → 状态 → 属性 → 操作", () => {
+/** 取某选择器的**全部**规则体（同名可能多条，真实样式是它们的叠加） */
+function allRules(sel) {
+  const out = []; let i = 0;
+  while ((i = CSS.indexOf(sel + '{', i)) >= 0) {
+    let d = 0; const s = CSS.indexOf('{', i);
+    for (let k = s; k < CSS.length; k++) {
+      if (CSS[k] === '{') d++; else if (CSS[k] === '}') { d--; if (!d) { out.push(CSS.slice(s + 1, k)); i = k; break; } }
+    }
+    i++;
+  }
+  return out.join(' ');
+}
+
+describe("卡片四行结构", () => {
+  it("行序：标题 → 状态 → 属性 → 操作", () => {
     const i = JS.indexOf('return `<div class="kcard"');
     const seg = JS.slice(i, i + 900);
-    /* 标题没有独立类名的标记，用 .kstate / .m / .kbtns 三个标记的先后顺序断言 */
-    const order = ['class="kstate"', 'class="m"', "kbtns"].map(k => seg.indexOf(k));
-    order.forEach((pos, i2) => expect(pos, "标记 " + i2 + " 应存在").toBeGreaterThan(-1));
-    expect(order[0], "kstate 应在属性行之前").toBeLessThan(order[1]);
-    expect(order[1], "属性行应在操作行之前").toBeLessThan(order[2]);
-    expect(seg.indexOf('class="t"'), "标题在状态之前").toBeLessThan(order[0]);
+    const st = seg.indexOf('class="kstate"'), m = seg.indexOf('class="m"'), kb = seg.indexOf("kbtns");
+    expect(st).toBeGreaterThan(-1); expect(m).toBeGreaterThan(-1); expect(kb).toBeGreaterThan(-1);
+    expect(seg.indexOf('class="t"')).toBeLessThan(st);
+    expect(st).toBeLessThan(m);
+    expect(m).toBeLessThan(kb);
   });
 
-  it("不再有 .khead 包裹（标题与状态已分行，不需要同一行容器）", () => {
-    expect(JS, "不应再用 .khead 包裹标题与状态").not.toContain('class="khead"');
+  it("状态行引用 btns；data-move 定义在 btns 赋值处", () => {
+    const i = JS.indexOf('return `<div class="kcard"');
+    expect(JS.slice(i, i + 900)).toContain("${btns}");
+    expect(JS.slice(0, i)).toMatch(/data-move/);
   });
 
   it("状态按钮的绑定是全文档查询（挪位置安全的前提）", () => {
@@ -45,53 +58,65 @@ describe("看板卡四行结构（v3.7.35）", () => {
   });
 });
 
-describe("CSS：各行铺满", () => {
+describe("状态/操作按钮：同一套圆角矩形外观", () => {
+  const st = allRules('.kstate button'), kb = allRules('.kbtns button');
+
   it("状态按钮整行宽（flex:1 / width:100%）", () => {
     expect(CSS).toMatch(/\.kstate\{display:flex/);
     expect(CSS).toMatch(/\.kstate button\{flex:1/);
   });
 
-  it("状态按钮与操作按钮**同一套圆角矩形卡片外观**（v3.7.37）", () => {
-    /* 根因：全局 `button{border:none;background:none;color:inherit}`，
-       而 .kstate button 原先只给了 flex/字号/最小高 → 状态行看着就是一行纯文字。
-       现补齐与 .kbtns button 相同的四项外观，二者视觉一致。 */
-    const pick = (sel) => {
-      const out = []; let i = 0;
-      while ((i = CSS.indexOf(sel + '{', i)) >= 0) {
-        let d = 0; const s = CSS.indexOf('{', i);
-        for (let k = s; k < CSS.length; k++) {
-          if (CSS[k] === '{') d++; else if (CSS[k] === '}') { d--; if (!d) { out.push(CSS.slice(s + 1, k)); i = k; break; } }
-        }
-        i++;
-      }
-      return out.join(' ');
-    };
-    const st = pick('.kstate button'), kb = pick('.kbtns button');
-    ['background:var(--panel2)', 'border:1px solid var(--line)', 'border-radius:var(--radius-sm)', 'flex:1', 'min-height']
-      .forEach(k => {
-        expect(st, '状态按钮缺 ' + k).toContain(k);
-        expect(kb, '操作按钮缺 ' + k).toContain(k);
-      });
+  it("四项目外观看齐：背景 / 边框 / 圆角 / 最小高", () => {
+    ['background:var(--panel2)', 'border:1px solid var(--line)', 'border-radius:var(--radius-sm)', 'min-height']
+      .forEach(k => { expect(st, '状态按钮缺 ' + k).toContain(k); expect(kb, '操作按钮缺 ' + k).toContain(k); });
+  });
+
+  it("两类按钮都有 hover", () => {
     expect(CSS).toMatch(/\.kstate button:hover\{background:var\(--surface-hover\)/);
-  });
-
-  it("操作按钮间隙已收紧到 1px", () => {
-    const m = CSS.match(/\.kbtns\{[^}]*\}/);
-    expect(m[0]).toContain("display:flex");
-    expect(m[0]).toMatch(/gap:1px/);
-  });
-
-  it("列模板为 6 轨（v3.7.44 起与看板三列同构：3 列各拆两半）", () => {
-    /* 这条只断"形态"。数值关系（轨数 = 看板列数×2、同一个 gap token）由 board-form-grid.test.js 守。 */
-    expect(CSS).toMatch(/\.form-row--board\{[^}]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
-    expect((CSS.match(/repeat\(6,minmax\(0,1fr\)\)/g) || []).length).toBeGreaterThanOrEqual(1);
+    expect(CSS).toMatch(/\.kbtns button:hover\{background:var\(--surface-hover\)/);
   });
 });
 
-describe("输入框背景与卡片背景有差异（上一轮的 B，一并守住）", () => {
+describe("操作按钮：窄一点 + 间距大一点 + 左中右（用户规格）", () => {
+  it("不再等分铺满：flex:0 1 auto", () => {
+    expect(CSS).toMatch(/\.kbtns button\{flex:0 1 auto/);
+    expect(CSS, '不应再回到 flex:1 等分').not.toMatch(/\.kbtns button\{flex:1\}/);
+  });
+
+  it("左右均匀分布：justify-content:space-between", () => {
+    const kb = CSS.match(/\.kbtns\{[^}]*\}/);
+    expect(kb[0]).toContain('justify-content:space-between');
+  });
+});
+
+describe("属性 chips：左右均匀分布", () => {
+  it(".kcard .m 用 space-between + flex", () => {
+    /* ⚠️ .kcard .m 有**多条**规则（旧的 font-size/color 一条、分布这条另一条）——
+       必须按 allRules 合并看，不能只取第一条（本文件开头已写明这个坑）。 */
+    const m = allRules('.kcard .m');
+    expect(m, '应存在 .kcard .m 规则').toBeTruthy();
+    expect(m).toContain('display:flex');
+    expect(m).toContain('justify-content:space-between');
+  });
+});
+
+describe("列模板：6 轨 + 与看板同构（对齐的数学前提）", () => {
+  it("表单为 6 个 minmax(0,Nfr) 轨，且含 1.333/0.667（截止日期:优先级 = 2:1）", () => {
+    const m = CSS.match(/\.form-row--board\{[^}]*\}/);
+    expect(m[0]).toContain('minmax(0,1.333fr)');
+    expect(m[0]).toContain('minmax(0,0.667fr)');
+    expect((m[0].match(/minmax\(0,[\d.]+fr\)/g) || []).length, '应为 6 轨').toBe(6);
+  });
+
+  it("输入框也要 min-width:0（否则固有最小宽会把窄轨撑开）", () => {
+    expect(CSS).toMatch(/\.form-row--board input[^{]*\{[^}]*min-width:0/);
+  });
+});
+
+describe("输入框背景与卡片有差异", () => {
   it("输入框用 --surface-muted，不用与卡片同色的 --panel", () => {
     const m = CSS.match(/input,select,textarea\{[\s\S]*?\}/);
-    expect(m[0]).toContain("background:var(--surface-muted)");
-    expect(m[0]).not.toContain("background:var(--panel)");
+    expect(m[0]).toContain('background:var(--surface-muted)');
+    expect(m[0]).not.toContain('background:var(--panel)');
   });
 });
