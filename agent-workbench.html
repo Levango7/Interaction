@@ -1271,6 +1271,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 /* v3.7.38：表格做成圆角矩形 —— <table> 在 border-collapse 下不吃 border-radius，
    所以外面包一层圆角容器并裁切（overflow:hidden），表格本体不动。 */
 .tool-table-wrap{border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;margin-top:var(--space-3)}
+/* v3.7.39：容器内的表格 margin 归零 —— 否则表格自带的 margin-top:8px 会在圆角容器里
+   形成一条**空白小节**，看起来像表头被拆成了两行（用户截图指出）。 */
+.tool-table-wrap .tool-table{margin-top:0}
 .tool-app-card .tool-table th,.tool-app-card .tool-table td{border:1px solid var(--line);padding:var(--space-1) var(--space-2);text-align:left}
 .tool-app-card .tool-table th{background:var(--panel2);font-weight:600;font-size:var(--fs-xs);color:var(--text-dim)}
 
