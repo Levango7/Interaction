@@ -574,11 +574,23 @@ function bindMeetingActionCard(){
   });
 }
 
+/**
+ * 表单字段的跨列类（工具卡与记录工具**共用同一套规则**，保证两族视觉一致）。
+ * 单位制：文字 3 · 下拉 2 · 数字 2 · 日期 2（基准列 56px + 间距 8px）
+ * 依据：.tool-form-grid 的 auto-fill 栅格；曾因不给跨列类导致字段只有 1 单位（58px）被压扁。
+ */
+function _fieldSpanCls(f){
+  if(f.type === "number") return " tool-field--num";
+  if(f.type === "date")   return " tool-field--date";
+  if(f.type === "select") return " tool-field--sel";
+  return " tool-field--wide";
+}
+
 function _featureCardHtml(cfg){
   const records = load(PREFIX + cfg.key, []);
   const form = '<div class="tool-form-grid">' + cfg.fields.map(function(f){
     if(f.type === "select"){
-      return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-f-field="' + esc(f.k) + '">' +
+      return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><select data-f-field="' + esc(f.k) + '">' +
         f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
     }
     // v3.0.1 B-5：支持 textarea（多行 JSON 数据输入）
@@ -586,7 +598,7 @@ function _featureCardHtml(cfg){
       return '<div class="tool-field u-col-span-all"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" class="u-fs-2xs u-min-h-0"style="font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace"></textarea></div>';
     }
     const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
-    return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
+    return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
   }).join("") + '</div>';
   const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
   const summary = sums.length

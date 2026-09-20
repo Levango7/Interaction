@@ -1057,7 +1057,10 @@ function _recordToolHtml(cfg, records){
     }
     const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
     /* v3.7.38：按类型跨列 —— 文字宽、日期中、数字（金额/评分）窄 */
-    const wcls = f.type === "number" ? " tool-field--num" : f.type === "date" ? " tool-field--date" : " tool-field--wide";
+    /* v3.7.42：改用与工具卡（_featureCardHtml）共用的 _fieldSpanCls —— 原来这里自己写了一套，
+       且**漏了下拉框**（select 落进 else 分支拿了 --wide，而实际上它的判断链里没有 select 分支）。
+       两族共用一套后，文字/下拉/数字/日期的宽度才真正一致。 */
+    const wcls = _fieldSpanCls(f);
     return '<div class="tool-field' + wcls + '"><label>' + esc(f.label) + '</label><input' + t + ' data-rec-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
   }).join("") + '</div>';
   const today = todayStr();

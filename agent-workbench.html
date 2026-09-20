@@ -1355,6 +1355,11 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
    （基准 56px + 间距 8px → 文字 191 · 数字/日期 124）——用户要求数字稍宽、日期稍窄。 */
 .tool-field--wide{grid-column:span 3}
 .tool-field--num{grid-column:span 2}
+/* v3.7.42：下拉框 2 单位（与数字/日期同宽）—— 选项值都短，没必要占 3 单位 */
+.tool-field--sel{grid-column:span 2}
+/* v3.7.42：网格内 label 的上边距归零 —— .tool-app-card label 自带 margin-top:8px，
+   与栅格 gap 叠加成"双份间距"，是"大量空白"的来源之一。 */
+.tool-form-grid .tool-field>label{margin-top:0}
 .tool-field--date{grid-column:span 2}
 .tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column;gap:var(--space-1h)}
 .tool-field>label{display:flex;align-items:center;min-height:var(--label-h);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
