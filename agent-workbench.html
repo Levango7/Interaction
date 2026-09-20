@@ -1516,7 +1516,8 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 /* v3.7.54：chips **等宽**分布 —— 原来只做 space-between，三枚宽度悬殊（31/118/42），看着不均 */
 /* v3.7.56：撤销上一版的 flex:1 —— 它把「逾期 2026-09-18」这类长 chip 压窄**折成两行** ✗
    改为按内容宽度 + 禁止折行，同时保留 space-between 做均匀分布。 */
-.kcard .m>*{flex:0 1 auto;min-width:0;white-space:nowrap}
+.kcard .m{flex-wrap:wrap}
+.kcard .m>*{flex:0 0 auto;min-width:0;white-space:nowrap}
 /* v3.7.46：卡片属性 chips 左右均匀分布（原来全部左聚拢，看着偏左） */
 .kcard .m{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1);margin-top:var(--space-2)}
 .kcard .m .due.od{background:var(--danger-soft);color:var(--danger);font-weight:600}
@@ -5570,10 +5571,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.2"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.7.3"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260921c";
+const BUILD_TAG = "20260921d";
 
 
 
