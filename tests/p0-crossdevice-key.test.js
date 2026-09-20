@@ -70,6 +70,13 @@ function toastMsgs(spy) {
 // 等待异步导入链路真正完成：doImport 在 onload 内经 FileReader 异步读取 + await initCrypto()
 // 后才 emit 收尾 toast。固定 50ms 在整套并行负载下偶发不足（getCfg().key 读到中间态）→ 改为
 // 轮询「收尾 toast 已触发」这一确定性完成信号，消除 flaky。
+// ⚠️ 2026-09-20 复查结论（**先别急着怪超时**）：
+//   本文件（以及所有走 loadApp 的测试）在**源码态 HTML** 上会整片失败：
+//     `[jsdom] Uncaught [ReferenceError: t is not defined]` → `win.initCrypto is not a function`
+//   原因：`loadApp` 直接读 `agent-workbench.html`，而源码态里应用代码被 src 标记取代 → 应用起不来。
+//   **跑测试前必须先拼回**：`node scripts/src-split.mjs && node scripts/pet-art.mjs`
+//   （实测：源码态 650 条失败 → 拼回态全绿；CI 的流程就是先拼回再测，所以一直是绿的。）
+//   曾误判为"全量并行负载导致 waitFor 2000ms 超时"并把上限放宽到 8000ms —— **误诊，已回退**。
 function waitFor(predicate, timeout = 2000, interval = 10) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
