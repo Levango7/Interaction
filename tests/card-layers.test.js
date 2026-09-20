@@ -11,7 +11,7 @@
  *  ① 状态/操作两类按钮必须是**同一套圆角矩形外观**（背景/边框/圆角/最小高逐项一致）——
  *     全局 `button{border:none;background:none}` 之下，少补一项就会退化成"一行纯文字"。
  *  ② 操作按钮**等分填满一行**：用户明确要求"左右宽度小一点、间距大一点、左中右" →
- *     按钮要「宽、饱满」用 `flex:1 1 auto`（等分填满一行），同时保留 `justify-content:space-between` 保证左中右。
+ *     按钮要「宽、饱满**且留间距**」→ `flex:1 1 0`（basis 0，先扣间距再分空间）+ `:not(:last-child){margin-right}` 给间距。
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
@@ -78,8 +78,11 @@ describe("状态/操作按钮：同一套圆角矩形外观", () => {
 });
 
 describe("操作按钮：窄一点 + 间距大一点 + 左中右（用户规格）", () => {
-  it("等分填满一行：flex:1 1 auto（但仍保留左中右）", () => {
-    expect(CSS).toMatch(/\.kbtns button\{flex:1 1 auto/);
+  it("等宽 + 留间距 + 左中右（flex:1 1 0 + margin 间距）", () => {
+    /* v3.7.55 定稿：**flex-basis 必须是 0**（auto 会让按钮先把间距吃掉，实测间距只剩 1px）；
+       间距用 `:not(:last-child){margin-right}` 给 —— `.kbtns` 的 gap 会被同名规则压掉（本项目老问题）。 */
+    expect(CSS).toMatch(/\.kbtns button\{flex:1 1 0/);
+    expect(CSS).toMatch(/\.kbtns button:not\(:last-child\)\{margin-right/);
     expect(CSS, '不应再回到 flex:1 等分').not.toMatch(/\.kbtns button\{flex:1\}/);
   });
 
