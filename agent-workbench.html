@@ -1350,8 +1350,11 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 /* v3.7.38：基准列宽 180→104px，并把字段按类型跨列 —— 这样
      「店铺/菜品(文字) 宽 · 金额/评分(数字) 窄 · 日期 中」且 5 个字段能排进同一行
      （原来 180px 基准只放得下 4 列，日期被挤到第二行）。 */
-.tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:var(--space-2) var(--space-2);margin-top:var(--space-3);align-items:start}
-.tool-field--wide{grid-column:span 2}
+.tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:var(--space-2) var(--space-2);margin-top:var(--space-3);align-items:start}
+/* v3.7.40：单位制改为「文字/下拉 3 · 数字 2 · 日期 2」= 12 单位
+   （基准 56px + 间距 8px → 文字 191 · 数字/日期 124）——用户要求数字稍宽、日期稍窄。 */
+.tool-field--wide{grid-column:span 3}
+.tool-field--num{grid-column:span 2}
 .tool-field--date{grid-column:span 2}
 .tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column;gap:var(--space-1h)}
 .tool-field>label{display:flex;align-items:center;min-height:var(--label-h);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

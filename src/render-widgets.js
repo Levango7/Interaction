@@ -1057,7 +1057,7 @@ function _recordToolHtml(cfg, records){
     }
     const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
     /* v3.7.38：按类型跨列 —— 文字宽、日期中、数字（金额/评分）窄 */
-    const wcls = f.type === "number" ? "" : f.type === "date" ? " tool-field--date" : " tool-field--wide";
+    const wcls = f.type === "number" ? " tool-field--num" : f.type === "date" ? " tool-field--date" : " tool-field--wide";
     return '<div class="tool-field' + wcls + '"><label>' + esc(f.label) + '</label><input' + t + ' data-rec-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
   }).join("") + '</div>';
   const today = todayStr();

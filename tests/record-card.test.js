@@ -36,19 +36,20 @@ function rule(sel) {
 }
 
 describe("③ 日期并入同一行：基准列宽与跨列", () => {
-  it("基准列宽 90px、列间距 8px（按 N×min+(N−1)×gap 才排得下 8 列）", () => {
+  it("基准 56px + 间距 8px（单位制：文字3 数字2 日期2 = 12 单位，须满足 N×c+(N−1)×g ≤ 可用宽）", () => {
     const g = rule('.tool-form-grid');
-    expect(g).toContain('minmax(90px,1fr)');
+    expect(g).toContain('minmax(56px,1fr)');
     expect(g).toMatch(/gap:var\(--space-2\) var\(--space-2\)/);
   });
 
-  it("文字/日期字段跨 2 列、数字字段 1 列", () => {
-    expect(CSS).toMatch(/\.tool-field--wide\{grid-column:span 2\}/);
+  it("跨列：文字/下拉 3、数字 2、日期 2", () => {
+    expect(CSS).toMatch(/\.tool-field--wide\{grid-column:span 3\}/);
+    expect(CSS).toMatch(/\.tool-field--num\{grid-column:span 2\}/);
     expect(CSS).toMatch(/\.tool-field--date\{grid-column:span 2\}/);
   });
 
-  it("渲染侧按字段类型加类（数字不加宽类 → 保持窄）", () => {
-    expect(JS).toMatch(/const wcls = f\.type === "number" \? "" : f\.type === "date" \? " tool-field--date" : " tool-field--wide"/);
+  it("渲染侧按字段类型加类（数字走 --num，不再是不加类的 1 单位）", () => {
+    expect(JS).toMatch(/const wcls = f\.type === "number" \? " tool-field--num" : f\.type === "date" \? " tool-field--date" : " tool-field--wide"/);
     expect(JS).toContain('class="tool-field\' + wcls + \'"');
   });
 });
@@ -82,10 +83,13 @@ describe("① 表格圆角矩形", () => {
   });
 });
 
-describe("② 金额/评分窄", () => {
-  it("数字类型不加跨列类（默认 1 列 ≈ 91px，是文字字段的 48%）", () => {
-    const wide = (JS.match(/tool-field--wide/g) || []).length;
-    expect(wide, "只应出现在宽类的定义处，不应给数字类型").toBeGreaterThan(0);
-    expect(JS).toMatch(/f\.type === "number" \? ""/);
+describe("② 金额/评分（数字）宽度", () => {
+  it("数字走 --num（2 单位 ≈124px）—— 比原来的 1 单位 91px 宽，比文字字段 191px 窄", () => {
+    expect(JS).toMatch(/f\.type === "number" \? " tool-field--num"/);
+    expect(CSS).toMatch(/\.tool-field--num\{grid-column:span 2\}/);
+  });
+
+  it("日期同为 2 单位（191→124 变窄），'2026-09-18' 这类时间戳够显示", () => {
+    expect(CSS).toMatch(/\.tool-field--date\{grid-column:span 2\}/);
   });
 });
