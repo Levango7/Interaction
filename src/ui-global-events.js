@@ -2802,8 +2802,8 @@ const MESSAGES = {
     "look.theme.forest": "秘境森林",
     "look.theme.ocean": "微蓝浅海",
     "look.theme.mist": "晓光晨雾",
-    "look.theme.ink": "黑金",
-    "look.themeDesc.ink": "墨底鎏金 · 暖黑低饱和，为暗色环境设计",
+    "look.theme.ink": "墨底鎏金",
+    "look.themeDesc.ink": "暖黑低饱和 · 为暗色环境设计",
     "look.themeDesc.light": "Vercel 风格默认主题",
     "look.themeDesc.aurora": "极光渐变亮色主题",
     "look.themeDesc.dark": "暗色护眼主题",
@@ -10634,7 +10634,7 @@ const PRESET_THEMES = {
   mist:     { name: t("look.theme.mist","晓光晨雾"),   desc: t("look.themeDesc.mist","破晓暖色 · 橄榄绿底暖金主题") },
   // v3.7.25：新增第 11 个主题（黑金）。这次**六处一次做全**，不再重演历史漏注册。
   //        注意：插入时 mist 那行原本**没有尾逗号**，直接追加会造成语法错误 —— 已补逗号（与 S6 的 AppBridge 注入同款坑）。
-  ink:      { name: t("look.theme.ink","黑金"), desc: t("look.themeDesc.ink","墨底鎏金 · 暖黑低饱和，为暗色环境设计") },
+  ink:      { name: t("look.theme.ink","墨底鎏金"), desc: t("look.themeDesc.ink","墨底鎏金 · 暖黑低饱和，为暗色环境设计") },
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）

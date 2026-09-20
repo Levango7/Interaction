@@ -465,7 +465,7 @@ function bindDataCard(sc){ /* 数据卡片无需额外绑定 */ }
 /** 生活场景专属卡片：健康摘要（按类型统计 + 运动/体重/睡眠/喝水最近记录） */
 function lifeCard(sc){
   const recs = getRec(sc);
-  if(!recs.length) return '<div class="card extra-card"><h3>'+t("sceneCard.life.title", "健康摘要")+'</h3><p class="sub">'+t("sceneCard.life.emptySub", "记录生活数据后这里会汇总健康指标")+'</p><div class="extra-empty">'+t("sceneCard.life.empty", "暂无生活记录 · 在上方资料库添加第一条")+'</div></div>';
+  if(!recs.length) return '<div class="card extra-card"><h3>'+`<span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4L12 21.4l8.8-8.4a5.2 5.2 0 0 0 0-7.4z"/></svg></span>`+t("sceneCard.life.title", "健康摘要")+'</h3><p class="sub">'+t("sceneCard.life.emptySub", "记录生活数据后这里会汇总健康指标")+'</p><div class="extra-empty">'+t("sceneCard.life.empty", "暂无生活记录 · 在上方资料库添加第一条")+'</div></div>';
   const byType = {};
   recs.forEach(r=>{ const t = r.type || "日常事务"; if(!byType[t]) byType[t] = []; byType[t].push(r); });
   const types = ["运动记录","体重追踪","睡眠记录","喝水记录"];
