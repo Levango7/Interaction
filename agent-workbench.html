@@ -927,6 +927,11 @@ input[type="file"]:hover{border-color:var(--accent)}
    否则 .fld-sm{max-width:120px} 会把 129px 的轨道压窄：实测"优先级"120px 而同一轨道的
    "联动记录"129px，左右不等长（差 9px）。普通 .form-row 是 flex，仍需尺寸类表达宽度，故不动。 */
 .form-row--board>.fld{max-width:none}
+/* v3.7.50：栅格变体里 .fld 的 min-width 必须归零 —— 基础规则 .form-row .fld{flex:1;min-width:120px}
+   与 .form-row--board>*{min-width:0} **同为 (0,2,0)~ 特异性**（前者 0,2,0、后者 0,1,0 其实更低），
+   且前者在源码中更靠后 → 会压过它，把 76px 的「优先级」轨撑到 120px 并与相邻字段重叠（实测重叠 24px）。
+   这里用 .form-row.form-row--board（0,3,0）提高特异性，**不依赖源码顺序**，后续谁在文件里插规则都不会翻车。 */
+.form-row.form-row--board>.fld,.form-row.form-row--grid>.fld{min-width:0}
 /* v3.7.44：表单与看板同构 —— 6 轨 = 看板 3 列各拆两半，gap 相同（8px），
    因此「任务标题右缘＝待办卡右缘／截止日期左缘＝进行中卡左缘／标签左缘＝已完成卡左缘」自动成立。
    lg 跨 2 轨（＝一整列）· md/sm 占 1 轨（半列）· 添加按钮占最后 1 轨。 */
