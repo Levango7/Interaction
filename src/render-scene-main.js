@@ -165,7 +165,7 @@ function renderMainHTML(){
     <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" placeholder="${t("placeholder.dueDate","选日期")}"></div>
     <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
       <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
-    <div class="fld"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
+    <div class="fld fld-lg"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
