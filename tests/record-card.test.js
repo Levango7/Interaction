@@ -65,6 +65,21 @@ describe("① 表格圆角矩形", () => {
     expect(JS).toContain('<div class="tool-table-wrap"><table class="tool-table">');
     expect(JS).toMatch(/<\/tbody><\/table><\/div>/);
   });
+
+  it("容器内的表格 margin 必须归零（否则多出一条空白小节，看着像表头被拆两行）", () => {
+    /* 用户截图指出：表格上方有一条空白小节。实测是 table 自带的 margin-top:8px 被圆角容器圈住了
+       （wrapper 顶到 table 顶之间 9px）。加 .tool-table-wrap .tool-table{margin-top:0} 后降到 1px（＝容器自身边框）。 */
+    expect(CSS).toMatch(/\.tool-table-wrap \.tool-table\{margin-top:0\}/);
+  });
+
+  it("表头只有一行（空白首格是「删除✕」那一列的列头，属于同一行，不是被拆出来的）", () => {
+    /* 结构上就一行：<thead><tr><th></th><th>日期</th>…</tr></thead> —— CDP 实测 thead 行数=1。
+       只在本函数范围内数，避免把文件里**其它表格**的 thead 也算进来。 */
+    const i = JS.indexOf('function _recordToolHtml');
+    const seg = JS.slice(i, i + 4000);
+    expect(seg).toMatch(/<thead><tr><th><\/th>/);
+    expect((seg.match(/<thead><tr>/g) || []).length, "本函数内表头不应出现第二个 tr").toBe(1);
+  });
 });
 
 describe("② 金额/评分窄", () => {
