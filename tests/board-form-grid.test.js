@@ -23,18 +23,29 @@ const CSS = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
 const JS = fs.readFileSync(path.join(ROOT, "src/render-scene-main.js"), "utf8");
 
 describe("看板卡 · 共用列栅格", () => {
-  it("存在 .form-row--board 的 5 轨栅格（末轨定宽，否则 fr 计算会被按钮宽度带偏）", () => {
-    /* 这里只断言"形状"：5 轨 + 末轨是 px 定宽。
-       具体 fr 数值**只在 card-layers.test.js 里钉一处** —— 以前两个文件都写死数值，
-       改模板时漏改这个，CI 就红过一次（"改了实现忘了改断言"）。 */
+  it("存在 .form-row--board 的 6 轨栅格，且与看板三列**同构**（对齐的数学保证）", () => {
+    /* v3.7.44 起：表单 = 6 个等宽轨道 + 与看板**同一个**列间距（3 列各拆两半）。
+       这样 2t + g === 看板列宽 必然成立 → 字段边界与卡边框线自动咬合（实测 0px 误差）。
+       ⚠️ 这两条必须成对存在，少一条对齐就崩：
+       · 表单轨数 = 看板列数 × 2
+       · 两者用同一个 gap token
+       具体数值不在本文件钉（避免"改一处漏一处"），只断结构关系。 */
     const m = CSS.match(/\.form-row--board\{[^}]*\}/);
     expect(m, "应存在 .form-row--board 规则").toBeTruthy();
     expect(m[0]).toContain("display:grid");
-    const tpl = m[0].match(/grid-template-columns:([^;}]+)/);
-    expect(tpl, "应有列模板").toBeTruthy();
-    const tracks = tpl[1].trim().split(/\s+/);
-    expect(tracks.length, "应为 5 轨").toBe(5);
-    expect(tracks[4], "末轨必须是 px 定宽").toMatch(/px$/);
+    const tpl = m[0].match(/grid-template-columns:repeat\((\d+),minmax\(0,1fr\)\)/);
+    expect(tpl, "列模板应为 repeat(N,minmax(0,1fr))").toBeTruthy();
+    expect(Number(tpl[1]), "表单轨数应为 6（= 看板 3 列的 2 倍）").toBe(6);
+    /* 看板列数 */
+    const kb = CSS.match(/\.kanban\{[^}]*grid-template-columns:repeat\((\d+),minmax\(0,1fr\)\)/);
+    expect(kb, "看板应为 repeat(N,minmax(0,1fr))").toBeTruthy();
+    expect(Number(tpl[1]), "表单轨数 = 看板列数 × 2").toBe(Number(kb[1]) * 2);
+    /* 同一个列间距 —— 注意：看板**基础规则**写 --space-2，但桌面媒体查询里覆盖为 --space-5
+       （实测桌面 1440 下看板 column-gap = 20px = --space-5）。所以要比的是**桌面生效值**。 */
+    const formGap = (m[0].match(/gap:var\((--[\w-]+)\) var\((--[\w-]+)\)/) || [])[2];
+    expect(formGap, "表单需显式给列间距 token").toBeTruthy();
+    expect(formGap, "表单列间距应为 --space-5（与看板桌面生效值一致）").toBe("--space-5");
+    expect(CSS, "看板桌面下也必须是 --space-5").toMatch(/\.kanban\{[^}]*gap:var\(--space-5\)/);
     expect(m[0]).toContain("align-items:end");
   });
 

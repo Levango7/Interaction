@@ -81,9 +81,10 @@ describe("CSS：各行铺满", () => {
     expect(m[0]).toMatch(/gap:1px/);
   });
 
-  it("列模板保持 5 轨（表单区不受本次影响）", () => {
-    expect(CSS).toMatch(/grid-template-columns:1\.6fr 1fr \.9fr 1\.6fr 42px/);
-    expect((CSS.match(/1\.6fr 1fr \.9fr 1\.6fr 42px/g) || []).length).toBe(1);
+  it("列模板为 6 轨（v3.7.44 起与看板三列同构：3 列各拆两半）", () => {
+    /* 这条只断"形态"。数值关系（轨数 = 看板列数×2、同一个 gap token）由 board-form-grid.test.js 守。 */
+    expect(CSS).toMatch(/\.form-row--board\{[^}]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+    expect((CSS.match(/repeat\(6,minmax\(0,1fr\)\)/g) || []).length).toBeGreaterThanOrEqual(1);
   });
 });
 

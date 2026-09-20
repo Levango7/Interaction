@@ -24,6 +24,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CSS = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
 const JS = fs.readFileSync(path.join(ROOT, "src/render-widgets.js"), "utf8");
+/* _fieldSpanCls 定义在场景主区（render-scene-main.js）：两族共用，故两文件都要读 */
+const JS_MAIN = fs.readFileSync(path.join(ROOT, "src/render-scene-main.js"), "utf8");
 
 function rule(sel) {
   const i = CSS.indexOf(sel + '{');
@@ -48,9 +50,16 @@ describe("③ 日期并入同一行：基准列宽与跨列", () => {
     expect(CSS).toMatch(/\.tool-field--date\{grid-column:span 2\}/);
   });
 
-  it("渲染侧按字段类型加类（数字走 --num，不再是不加类的 1 单位）", () => {
-    expect(JS).toMatch(/const wcls = f\.type === "number" \? " tool-field--num" : f\.type === "date" \? " tool-field--date" : " tool-field--wide"/);
+  it("渲染侧按字段类型加类（两族共用 _fieldSpanCls，不再各写一套）", () => {
+    /* v3.7.42 起：记录工具与工具卡共用 _fieldSpanCls —— 之前记录工具自己写了一套内联表达式，
+       且漏了下拉框；共用后 select 才拿得到 --sel。 */
+    expect(JS).toMatch(/const wcls = _fieldSpanCls\(f\);/);
     expect(JS).toContain('class="tool-field\' + wcls + \'"');
+    /* 共用函数本身必须覆盖四种类型（定义在 render-scene-main.js） */
+    expect(JS_MAIN).toMatch(/function _fieldSpanCls\(f\)\{/);
+    expect(JS_MAIN).toMatch(/tool-field--sel/);
+    expect(JS_MAIN).toMatch(/tool-field--num/);
+    expect(JS_MAIN).toMatch(/tool-field--date/);
   });
 });
 
@@ -85,7 +94,8 @@ describe("① 表格圆角矩形", () => {
 
 describe("② 金额/评分（数字）宽度", () => {
   it("数字走 --num（2 单位 ≈124px）—— 比原来的 1 单位 91px 宽，比文字字段 191px 窄", () => {
-    expect(JS).toMatch(/f\.type === "number" \? " tool-field--num"/);
+    expect(JS_MAIN).toMatch(/" tool-field--num"/);
+    expect(JS).toMatch(/const wcls = _fieldSpanCls\(f\);/);
     expect(CSS).toMatch(/\.tool-field--num\{grid-column:span 2\}/);
   });
 

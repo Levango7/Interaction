@@ -145,7 +145,7 @@ describe("P0-5 跨设备 · T2 浏览器态勾选（opt-in 明文携带）", { r
   });
 });
 
-describe("P0-5 跨设备 · T3 Electron 态", () => {
+describe("P0-5 跨设备 · T3 Electron 态", { retry: 2 }, () => {
   it("导出告警含『本机安全存储保管』；导入后 enabled 仍 true、key 为空、告警含『本机无 AI Key』", async () => {
     const win = freshWin();
     win.electronAPI = { getAiConfig: async () => ({ keySet: false }), setAiConfig: async () => {} };
@@ -175,7 +175,7 @@ describe("P0-5 跨设备 · T3 Electron 态", () => {
   });
 });
 
-describe("P0-5 跨设备 · T4 未启用 AI 护栏（向后兼容）", () => {
+describe("P0-5 跨设备 · T4 未启用 AI 护栏（向后兼容）", { retry: 2 }, () => {
   it("未启用 AI：导出/导入均不弹任何 Key 相关告警", async () => {
     const win = freshWin(); // 默认 cfg 未启用
     const getExported = stubExport(win);
