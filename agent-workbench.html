@@ -954,7 +954,7 @@ input[type="file"]:hover{border-color:var(--accent)}
 #taskForm>.fld:nth-child(3){grid-column:4/5;grid-row:1}
 #taskForm>.fld:nth-child(4){grid-column:5/7;grid-row:1}
 #taskForm>.fld:nth-child(4)>input{padding-right:48px}
-#taskForm>.add-wrap{grid-column:5/7;grid-row:1;justify-self:end;align-self:center;z-index:var(--z-under);margin-right:8px}
+#taskForm>.add-wrap{grid-column:5/7;grid-row:1;justify-self:end;align-self:center;z-index:var(--z-under)}
 .form-row--board>.add-wrap{grid-column:span 1;justify-self:stretch}
 
 /* 显式定位：标签占第 5-6 轨（第三列整列），加号叠加其右端；不靠自动排布，避免被挤到下一行 */
@@ -1505,11 +1505,16 @@ input[data-date-picker]::placeholder{color:var(--text-faint)}
 .kstate button:hover{background:var(--surface-hover);color:var(--text)}
 /* v3.7.46 操作按钮：不再等分铺满，改为"窄一点 + 间距大一点 + 左右中分布" */
 .kbtns{justify-content:space-between;gap:var(--space-3)}
-.kbtns button{flex:1 1 auto;min-width:0}
+.kbtns button{flex:1 1 0;min-width:0}
+/* v3.7.55：用外边距给按钮**留出间距** —— .kbtns 的 gap 被同名规则压掉了（本项目老问题），
+   margin 直接落在按钮上，不依赖 gap 的层叠胜负。flex-basis:0 保证先扣间距再分空间。 */
+.kbtns button:not(:last-child){margin-right:var(--space-2)}
 .kcard .m{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-2);line-height:1.5;
   display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1)}
 .kcard .m .tag{margin-right:0}
 .kcard .m .due{background:var(--surface-muted);padding:1px 6px;border-radius:var(--radius-md);color:var(--text-dim-2)}
+/* v3.7.54：chips **等宽**分布 —— 原来只做 space-between，三枚宽度悬殊（31/118/42），看着不均 */
+.kcard .m>*{flex:1;min-width:0;text-align:center;justify-content:center}
 /* v3.7.46：卡片属性 chips 左右均匀分布（原来全部左聚拢，看着偏左） */
 .kcard .m{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1);margin-top:var(--space-2)}
 .kcard .m .due.od{background:var(--danger-soft);color:var(--danger);font-weight:600}
@@ -5563,10 +5568,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.0"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.7.1"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260921a";
+const BUILD_TAG = "20260921b";
 
 
 
