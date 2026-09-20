@@ -1056,7 +1056,9 @@ function _recordToolHtml(cfg, records){
         f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
     }
     const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
-    return '<div class="tool-field"><label>' + esc(f.label) + '</label><input' + t + ' data-rec-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
+    /* v3.7.38：按类型跨列 —— 文字宽、日期中、数字（金额/评分）窄 */
+    const wcls = f.type === "number" ? "" : f.type === "date" ? " tool-field--date" : " tool-field--wide";
+    return '<div class="tool-field' + wcls + '"><label>' + esc(f.label) + '</label><input' + t + ' data-rec-field="' + esc(f.k) + '" placeholder="' + esc(f.label) + '"></div>';
   }).join("") + '</div>';
   const today = todayStr();
   const rows = records.map(function(r){
@@ -1084,7 +1086,7 @@ function _recordToolHtml(cfg, records){
       + '<button type="button" class="addbtn sm" id="recExportBtn">' + t("tool.exportCsv", "导出 CSV") + '</button></div>' +
     '<div class="tool-form-box">' + form + "</div>" +
     (records.length
-      ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + "</th>"; }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table>"
+      ? '<div class="tool-table-wrap"><table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + "</th>"; }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>"
       : '<div class="tool-empty">' + esc(cfg.emptyTip || t("tool.emptyDefault", "暂无记录")) + "</div>");
 }
 /* v3.2 C-档双轨收敛：双轨工具的写入入口改为引导跳转功能卡（数据以功能卡为真相源）。
