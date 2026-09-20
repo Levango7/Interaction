@@ -4930,7 +4930,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <option value="forest" data-i18n="look.theme.forest">秘境森林</option>
           <option value="ocean" data-i18n="look.theme.ocean">微蓝浅海</option>
           <option value="mist" data-i18n="look.theme.mist">晓光晨雾</option>
-          <option value="ink" data-i18n="look.theme.ink">黑金</option>
+          <option value="ink" data-i18n="look.theme.ink">墨底鎏金</option>
         </select>
       </div>
     </div>
@@ -18445,7 +18445,7 @@ function bindDataCard(sc){ /* 数据卡片无需额外绑定 */ }
 /** 生活场景专属卡片：健康摘要（按类型统计 + 运动/体重/睡眠/喝水最近记录） */
 function lifeCard(sc){
   const recs = getRec(sc);
-  if(!recs.length) return '<div class="card extra-card"><h3>'+t("sceneCard.life.title", "健康摘要")+'</h3><p class="sub">'+t("sceneCard.life.emptySub", "记录生活数据后这里会汇总健康指标")+'</p><div class="extra-empty">'+t("sceneCard.life.empty", "暂无生活记录 · 在上方资料库添加第一条")+'</div></div>';
+  if(!recs.length) return '<div class="card extra-card"><h3>'+`<span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.2 5.2 0 0 0-7.4 0L12 7l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4L12 21.4l8.8-8.4a5.2 5.2 0 0 0 0-7.4z"/></svg></span>`+t("sceneCard.life.title", "健康摘要")+'</h3><p class="sub">'+t("sceneCard.life.emptySub", "记录生活数据后这里会汇总健康指标")+'</p><div class="extra-empty">'+t("sceneCard.life.empty", "暂无生活记录 · 在上方资料库添加第一条")+'</div></div>';
   const byType = {};
   recs.forEach(r=>{ const t = r.type || "日常事务"; if(!byType[t]) byType[t] = []; byType[t].push(r); });
   const types = ["运动记录","体重追踪","睡眠记录","喝水记录"];
@@ -28250,8 +28250,8 @@ const MESSAGES = {
     "look.theme.forest": "秘境森林",
     "look.theme.ocean": "微蓝浅海",
     "look.theme.mist": "晓光晨雾",
-    "look.theme.ink": "黑金",
-    "look.themeDesc.ink": "墨底鎏金 · 暖黑低饱和，为暗色环境设计",
+    "look.theme.ink": "墨底鎏金",
+    "look.themeDesc.ink": "暖黑低饱和 · 为暗色环境设计",
     "look.themeDesc.light": "Vercel 风格默认主题",
     "look.themeDesc.aurora": "极光渐变亮色主题",
     "look.themeDesc.dark": "暗色护眼主题",
@@ -36082,7 +36082,7 @@ const PRESET_THEMES = {
   mist:     { name: t("look.theme.mist","晓光晨雾"),   desc: t("look.themeDesc.mist","破晓暖色 · 橄榄绿底暖金主题") },
   // v3.7.25：新增第 11 个主题（黑金）。这次**六处一次做全**，不再重演历史漏注册。
   //        注意：插入时 mist 那行原本**没有尾逗号**，直接追加会造成语法错误 —— 已补逗号（与 S6 的 AppBridge 注入同款坑）。
-  ink:      { name: t("look.theme.ink","黑金"), desc: t("look.themeDesc.ink","墨底鎏金 · 暖黑低饱和，为暗色环境设计") },
+  ink:      { name: t("look.theme.ink","墨底鎏金"), desc: t("look.themeDesc.ink","墨底鎏金 · 暖黑低饱和，为暗色环境设计") },
 };
 
 // 护眼模式令牌覆盖（用于测试与导出；实际渲染由 top.html CSS [data-theme="sepia"] 负责）
