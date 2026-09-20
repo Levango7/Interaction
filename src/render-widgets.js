@@ -3845,6 +3845,21 @@ function mountPet(kind){
     placeFaceRetry();
     artImg.addEventListener("load", placeFaceRetry, { once:true });
   }
+  /* v3.7.49：眨眼/张嘴浮层必须**随宠物尺寸变化重新定位**。
+     原实现只在"挂载时"和"图片 load"各定位一次 —— 而宠物尺寸由 CSS 变量 --pet-size 控制，
+     换档（大/中/小）时盒子尺寸变了、浮层却还留在旧像素位置 → 表现就是"尺寸一变、眼睛还在远处"。
+     这里用 ResizeObserver 覆盖一切尺寸变化（换档 / 窗口缩放 / 面板展开收起 / 布局变化）。 */
+  const faceBox = el.querySelector(".pet-art");
+  if(faceBox && typeof ResizeObserver === "function"){
+    try{
+      if(el._faceRO) el._faceRO.disconnect();
+      el._faceRO = new ResizeObserver(function(){
+        if(!document.body.contains(el)){ try{ el._faceRO.disconnect(); }catch(_){} return; }
+        placeFace();
+      });
+      el._faceRO.observe(faceBox);
+    }catch(_){ /* 不支持时忽略：至少原有的首次定位仍生效 */ }
+  }
   let blinkTimer = null;
   const blinkArt = function(){
     if(!artLids || !lidEls.length) return false;
