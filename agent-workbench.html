@@ -899,16 +899,17 @@ input[type="file"]::file-selector-button{margin-right:var(--space-2);height:calc
 input[type="file"]::-webkit-file-upload-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
 input[type="file"]:hover{border-color:var(--accent)}
 .form-row{display:flex;gap:var(--space-2) var(--space-3);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
-/* v3.7.29 方案 A（第三批·看板卡试点）：两行字段共用一套 5 轨栅格，使上下列位一一对应。
-   看板卡里两行各自 flex 时，列宽由内容决定 → "截止日期"与"联动记录"不在同一条竖线上。
-   现按语义跨轨对齐：
-     第1轨 任务标题 | 第2轨 截止日期 | 第3轨 优先级 | 第4轨 标签 | 第5轨 添加按钮(定宽)
-     筛选行：搜索(跨1-2) · 联动记录(第3轨，正好在优先级下方) · 标签(跨4-5，正好在标签+按钮下方) */
-.form-row--board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
-/* v3.7.47：把基础栅格规则**提到媒体查询外** —— 原规则写在 `@media(min-width:1440px)` 里，
-   而视口减去滚动条后常不足 1440 → 媒体查询不命中 → 表单退回旧模板（实测视口 1440 时被判定为 ~1425）。
-   基础规则必须与视口无关，窄屏再用媒体查询覆盖。 */
-.form-row--board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
+/* v3.7.29 方案 A（第三批·看板卡试点）：两行字段共用一套栅格，使上下列位一一对应。
+   v3.7.58 重大修正：**轨数与 gap 必须跟随看板在该断点的列数与 gap**，不能写死 6 轨 + 20px。
+   事故（用户 1128px 截图实证）：写死 6 轨 + gap:20px 时，1128px 下每轨仅 74px ——
+     优先级下拉框被挤成 74px 小方块、"标签"文字被加号盖住、"标签（留空=全部）"竖成两行。
+   规律（实测各断点）：
+     ≥1440      看板 3 列 gap20 → 表单 6 轨 ×(w-5×20)/6   · 1440 时 114px，截止日期 248px ✓
+     1024~1439  看板 3 列 gap 8 → 表单 6 轨 ×(w-5×8)/6    · 1280 时 109px，截止日期 226px ✓
+     601~1023   看板 2 列 gap 8 → 表单**放弃同列位**，退回 2 列（4 轨在 820px 下只剩 60px，不可用）
+     ≤600       单列
+   ⚠️ gap 必须与看板同断点同值：原来表单钉 20px 而看板 <1440 是 8px，凭空吃掉 60px。 */
+.form-row--board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
 .form-row--board>*{min-width:0}
 /* v3.7.48：输入框/下拉框也要 min-width:0 —— 否则它们的固有最小宽度会把窄轨撑开（优先级曾被撑到 120px 并与标签重叠） */
 .form-row--board input,.form-row--board select,.form-row--board textarea{min-width:0;width:100%}
@@ -976,17 +977,51 @@ input[type="file"]:hover{border-color:var(--accent)}
 .form-row--board>.add-wrap .addbtn{width:100%}
 .form-row--board>.fld-fill{grid-column:span 2}
 .form-row--board>.add-wrap{justify-self:end}
-@media (max-width:820px){
-  /* v3.7.29 修正：断点原为 760px，**平板 768px 不触发回退** → 5 轨被压得过窄、字段不可交互，
-     e2e 的 tablet 项目因此整片超时（desktop 通过、tablet 挂）。抬到 820px 覆盖平板。 */
-  .form-row--board{grid-template-columns:1fr 1fr}
+/* v3.7.58：回退区间由 max-width:820px 扩到 **max-width:1023px** —— 依据实测：
+   1024px 时看板仍是 3 列（每列 141px）而表单 6 轨只剩 56px；即便把 gap 降到 8px 也只有 66px，
+   优先级/标签仍不可用（下拉框要容纳「P0」文本 + 箭头）。平板档(768-1023)看板本来就是 2 列，
+   此区间表单也退回 2 列，视觉上"表单两列 / 看板两列"依然同构。
+   代价：1024-1120 这段窄 PC 失去"字段与看板列边框严格咬合"，换取控件可用性（用户明确要求"窄一点但不能挤成方块"）。 */
+@media (max-width:1023px){
+  /* gap 也要一并回退 —— 基础规则的列间距是 --space-5(20px)，2 列布局下 20px 间隙过宽 */
+  .form-row--board{grid-template-columns:1fr 1fr;gap:var(--space-2) var(--space-3)}
   .form-row--board>*{grid-column:auto}
   /* v3.7.57：上面两条的特异性 (0,1,0) 压不过 #taskForm/#taskFilterRow 的 id 显式定位 (1,2,0)，
      窄屏必须在同特异性下**显式解除** grid-column **和 grid-row**——只解除 column 时，
-     5 个元素仍全被 grid-row:1 钉在第 1 行，auto-placement 会造出隐式第 3-5 列
+     元素仍全被 grid-row:1 钉在第 1 行，auto-placement 会造出隐式列
      （实测 768px 下模板变成 0 0 47 47 38 五轨，两个字段宽 0）。 */
   #taskForm>.fld:nth-child(1),#taskForm>.fld:nth-child(2),#taskForm>.fld:nth-child(3),#taskForm>.fld:nth-child(4),#taskForm>.add-wrap,
   #taskFilterRow>.fld:nth-child(1),#taskFilterRow>.fld:nth-child(2),#taskFilterRow>.fld:nth-child(3){grid-column:auto;grid-row:auto}
+  /* 加号恢复独立成列（不再叠加）—— 2 列布局里叠加会把 1/2 宽度的标签框盖掉大半 */
+  #taskForm>.fld:nth-child(4)>input{padding-right:0}
+}
+/* v3.7.58：1024-1439 区间两处修正：
+   ① 列间距跟随看板降到 8px（原来钉 20px 白吃 60px，1128 下轨宽 74→84）
+   ② **短字段保底 96px** —— 实测该区间 6 轨等分只有 84px：标签框「逗号分隔」被截断成
+      「逗号分…」、label「标签（留空=全部）」竖成两行（用户截图实证）。
+      改 minmax(96px,1fr)：宽度有余时仍等分；不足时短字段保底 96px，
+      标题/截止日期（各跨 2 轨）自动让出空间 → 1128 下变成 短字段 96 / 长字段 163。
+      ⚠️ 只在本区间加保底，≥1440 时 6 轨有 114~141px，等分即可，不必保底。
+   ③ 加号不再叠加：84px 的标签框里 38px 按钮吃掉 45% 可见宽度（「标签」两字被盖住）。 */
+/* v3.7.58：1024-1439 区间**改为上下两行**（用户 2026-09-21 决定）。
+   依据：542px（1128 视口）要放 5 个控件且与看板 3 列对齐 → 每格仅 68~84px，
+   标签框「逗号分隔」被截断、label「标签（留空=全部）」竖成两行（截图实证）。
+   取舍：窄屏放弃"字段边界与看板列边框严格对齐"，换取控件宽度达标。
+   布局：行1 = 标题(跨1-4) + 截止日期(跨5-6)
+         行2 = 优先级(跨1-2) + 标签(跨3-4) + 加号(跨5-6，独立成列不叠加) */
+@media (min-width:1024px) and (max-width:1439px){
+  .form-row--board{gap:var(--space-3) var(--space-3)}
+  #taskForm>.fld:nth-child(1){grid-column:1/4;grid-row:1}
+  #taskForm>.fld:nth-child(2){grid-column:4/7;grid-row:1}
+  #taskForm>.fld:nth-child(3){grid-column:1/3;grid-row:2}
+  #taskForm>.fld:nth-child(4){grid-column:3/5;grid-row:2}
+  #taskForm>.fld:nth-child(4)>input{padding-right:8px}
+  /* 加号紧跟标签框右端（轨 5 起始）—— 原来 justify-self:end 把它推到容器最右，
+     与标签框之间有 147px 空隙，视觉上孤零零悬空（实拍确认）。 */
+  #taskForm>.add-wrap{grid-column:5/6;grid-row:2;justify-self:start;align-self:end}
+  #taskFilterRow>.fld:nth-child(1){grid-column:1/4;grid-row:1}
+  #taskFilterRow>.fld:nth-child(2){grid-column:4/7;grid-row:1}
+  #taskFilterRow>.fld:nth-child(3){grid-column:1/3;grid-row:2}
 }
 .form-row .fld{flex:1;min-width:120px}
 /* v3.2 阶段三：表单字段分组卡片（移动端分组节奏）——label+input 包在 .field-group 内，
@@ -5593,10 +5628,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.4"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
+const VERSION = "3.7.5"; /* v3.2 IA 重构：让 AI 服务于整套平台 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260921e";
+const BUILD_TAG = "20260921f";
 
 
 
