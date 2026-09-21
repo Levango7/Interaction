@@ -37,8 +37,11 @@ describe("看板卡 · 共用列栅格", () => {
     const m = CSS.match(/\.form-row--board\{[^}]*\}/);
     expect(m, "应存在 .form-row--board 规则").toBeTruthy();
     expect(m[0]).toContain("display:grid");
-    /* 轨数按 minmax(0,Nfr) 的个数数（模板里既有 1fr 也有 1.333fr，不能按 repeat 解） */
-    const tracks = (m[0].match(/minmax\(0,[\d.]+fr\)/g) || []).length;
+    /* v3.7.58：模板改为 repeat(6,minmax(0,1fr)) 简写 —— 数轨要同时兼容两种写法：
+       ① 逐个展开 "minmax(0,1fr) minmax(0,1fr)…"  ② 简写 "repeat(6,minmax(0,1fr))" */
+    const tpl = (m[0].match(/grid-template-columns:([^;]+)/) || [])[1] || "";
+    const rep = tpl.match(/repeat\((\d+),minmax\(0,1fr\)\)/);
+    const tracks = rep ? Number(rep[1]) : (tpl.match(/minmax\(0,[\d.]+fr\)/g) || []).length;
     expect(tracks, "表单轨数应为 6（= 看板 3 列的 2 倍）").toBe(6);
     /* 看板列数 */
     const kb = CSS.match(/\.kanban\{[^}]*grid-template-columns:repeat\((\d+),minmax\(0,1fr\)\)/);
@@ -46,8 +49,8 @@ describe("看板卡 · 共用列栅格", () => {
     expect(tracks, "表单轨数 = 看板列数 × 2").toBe(Number(kb[1]) * 2);
     /* 轨宽：**6 轨等宽**（用户 2026-09-21 定稿：「输入框与下拉框同宽」，
        取代早先的「截止日期:优先级 = 2:1」）。等宽时 列2 的 1+1 自然等于 列1 的 1+1，边界不变。 */
-    expect((m[0].match(/minmax\(0,1fr\)/g) || []).length, "6 轨应等宽").toBe(6);
-    expect(m[0], "不应再出现 1.333fr 的比例轨").not.toContain("1.333fr");
+    expect(rep, "6 轨应用 repeat(6,minmax(0,1fr)) 等宽写法").toBeTruthy();
+    expect(tpl, "不应再出现 1.333fr 的比例轨").not.toContain("1.333fr");
     /* 同一个列间距 —— 注意：看板**基础规则**写 --space-2，但桌面媒体查询里覆盖为 --space-5
        （实测桌面 1440 下看板 column-gap = 20px = --space-5）。所以要比的是**桌面生效值**。 */
     const formGap = (m[0].match(/gap:var\((--[\w-]+)\) var\((--[\w-]+)\)/) || [])[2];
@@ -79,12 +82,26 @@ describe("看板卡 · 共用列栅格", () => {
     expect(CSS).toMatch(/\.form-row--board>\.fld>label\{min-height:var\(--label-h\)\}/);
   });
 
-  it("有窄屏回退（否则小屏下 6 轨会挤成条）—— 断点 820px，须覆盖 768 的平板", () => {
-    /* 断点原写 760px，实测**平板 768 不触发回退** → 轨道被压得过窄、字段不可交互，
-       e2e 的 tablet 项目整片超时；抬到 820px。测试这里也把断点值一并锁住，
-       避免"改了实现忘了改断言"（CI 就是这么红的）。 */
-    expect(CSS).toMatch(/@media \(max-width:820px\)\{[\s\S]*?\.form-row--board\{grid-template-columns:1fr 1fr\}/);
+  it("有窄屏回退（否则小屏下 6 轨会挤成条）—— 断点 1023px，须覆盖 768 的平板", () => {
+    /* v3.7.29：断点原写 760px，实测平板 768 不触发回退 → 轨道过窄、e2e tablet 整片超时。
+       v3.7.58：抬到 **1023px** —— 实测 1024px 时 6 轨只剩 63px（优先级/标签不可用），
+       而平板档(768-1023)看板本来就是 2 列，表单同期退回 2 列才同构。 */
+    expect(CSS).toMatch(/@media \(max-width:1023px\)\{[\s\S]*?\.form-row--board\{grid-template-columns:1fr 1fr/);
     expect(CSS).not.toMatch(/@media \(max-width:760px\)\{\s*\.form-row--board/);
+  });
+
+  it("窄 PC(1024-1439) 改上下两行，且间距跟随看板降到 12px（v3.7.58）", () => {
+    /* 用户 1128px 截图实证：6 轨等分 84px → 标签框「逗号分隔」截断、label 竖成两行。
+       取舍（用户决定）：窄屏放弃与看板列严格对齐，改两行 —— 标题+截止日期 / 优先级+标签+加号 */
+    const m = CSS.match(/@media \(min-width:1024px\) and \(max-width:1439px\)\{[\s\S]*?\n\}/);
+    expect(m, "应存在 1024-1439 区间的表单重排规则").toBeTruthy();
+    const blk = m[0];
+    expect(blk, "标题跨 1-3 轨占首行").toContain("#taskForm>.fld:nth-child(1){grid-column:1/4;grid-row:1}");
+    expect(blk, "截止日期跨 4-6 轨占首行").toContain("#taskForm>.fld:nth-child(2){grid-column:4/7;grid-row:1}");
+    expect(blk, "优先级落到第二行").toContain("#taskForm>.fld:nth-child(3){grid-column:1/3;grid-row:2}");
+    expect(blk, "标签落到第二行").toContain("#taskForm>.fld:nth-child(4){grid-column:3/5;grid-row:2}");
+    // 加号必须紧跟标签框（justify-self:start），用 end 会把它推到容器最右造成悬空
+    expect(blk, "加号紧跟标签框而非推到最右").toContain("justify-self:start");
   });
 });
 

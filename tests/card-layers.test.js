@@ -111,7 +111,11 @@ describe("列模板：6 轨 + 与看板同构（对齐的数学前提）", () =>
     while ((i = CSS.indexOf('.form-row--board{', i)) >= 0) { rules.push(CSS.slice(i, CSS.indexOf('}', i) + 1)); i++; }
     const tpl = rules.find(r => r.indexOf('grid-template-columns') >= 0);
     expect(tpl, '应有含列模板的 .form-row--board 规则').toBeTruthy();
-    expect((tpl.match(/minmax\(0,1fr\)/g) || []).length, '6 轨应等宽').toBe(6);
+    /* v3.7.58：模板改用 repeat(6,minmax(0,1fr)) 简写 → 数轨要兼容两种写法 */
+    const tplVal = (tpl.match(/grid-template-columns:([^;]+)/) || [])[1] || '';
+    const rep = tplVal.match(/repeat\((\d+),minmax\(0,1fr\)\)/);
+    const tracks = rep ? Number(rep[1]) : (tplVal.match(/minmax\(0,1fr\)/g) || []).length;
+    expect(tracks, '6 轨应等宽').toBe(6);
     expect(tpl, '不应再有 1.333fr 的比例轨').not.toContain('1.333fr');
   });
 
