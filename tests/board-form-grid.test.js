@@ -120,24 +120,23 @@ describe("看板卡 · 标记侧", () => {
     expect(JS).toContain('const tagFilterHTML = `<div class="form-row form-row--board" id="taskFilterRow">');
   });
 
-  it("两行的显式列位互相咬合（红框宽度序列：整列 · 整列 · 半列 · 半列+加号）", () => {
-    // v3.7.59：这些是 CSS 规则，真相源在 HTML（src-split 只管 JS，CSS 不进 src）
-    // 第一行：任务标 1-5(整列1) · 截止日 5-9(整列2) · 优先级 9-11(半列3) · 标签 11-13(半列3)
+  it("两行的显式列位：第一行按「宽·中·窄·中」分配（v3.7.11 起不再锚定看板列）", () => {
+    /* v3.7.11：**放弃"与看板列严格对齐"** —— 那是 v3.7.4 我自己引入的目标，用户从未要求。
+       用户在辅助线图上用三个箭头标出「截止日期/优先级/标签」的起始位置（比原布局整体左移），
+       并框住「优先级」那个 56px 的小 select，说明他要的是**字段按比例分配宽度**。
+       新序列：任务标题 4 · 截止日期 3 · 优先级 2 · 标签 3 微轨 → 302/222/141/221 @1600。 */
     expect(CSS).toContain('#taskForm>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:5/9;grid-row:1}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:9/11;grid-row:1;min-width:0}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:11/13;grid-row:1}');
-    // 优先级必须真的窄下来 —— 占位符/标签都显示不全时用它兜底
-    expect(CSS, "优先级 select 固定 56px（37px 会让「优先级」三字竖排）").toContain("#taskForm>.fld:nth-child(3)>select{width:56px}");
+    expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:5/8;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:8/10;grid-row:1;min-width:0}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:10/13;grid-row:1}');
+    // 优先级 select 撑满轨道（用户框住的正是这个 56px 小框：141px 轨道里只占 56px、右侧空 85px）
+    expect(CSS, "优先级 select 应撑满轨道").toContain("#taskForm>.fld:nth-child(3)>select{width:100%}");
+    expect(CSS, "不得回到定宽 56px").not.toContain("#taskForm>.fld:nth-child(3)>select{width:56px}");
     // 标签输入框右侧给加号让出 44px（加号叠在其右端，否则文字被盖）
     expect(CSS).toContain("#taskForm>.fld:nth-child(4)>input{padding-right:44px}");
-    // 加号：横跨标签那半列 + 之外，靠右对齐、底对齐。
-    // ⚠️ 用 width:56px 而非 min-width:56px —— min-width 会撑破轨道与相邻元素重叠 10px（实测）。
+    // 加号：靠右对齐、底对齐。
     expect(CSS).toContain('#taskForm>.add-wrap{grid-column:10/13;grid-row:1;justify-self:end;align-self:end;');
-    expect(CSS, "加号不得用 min-width（会撑破轨道）").not.toMatch(/#taskForm>\.fld:nth-child\(3\)>select\{min-width:56px\}/);
-    // 筛选行：与第一行**同一套列锚点**（v3.7.7）→ 搜索=列1 · 联动记录=列2 · 标签=列3。
-    // ⚠️ v3.7.6 及以前是 1/7 · 7/10 · 10/13，与看板列（4 微轨一列）无对应关系，
-    // 实测「联动记录」右缘与看板列2 右缘差 107px@1920 / 80.5px@1600（用户截图指出的就是这个）。
+    // 筛选行仍锚定看板列（用户未提出改动，保持 1/5 · 5/9 · 9/13）
     expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
     expect(CSS).toContain('#taskFilterRow>.fld:nth-child(2){grid-column:5/9;grid-row:1}');
     expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:9/13;grid-row:1}');

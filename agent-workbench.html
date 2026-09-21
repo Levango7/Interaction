@@ -979,16 +979,24 @@ input[type="file"]:hover{border-color:var(--accent)}
 .form-row--board>.fld-xl{grid-column:span 4}
 .form-row--board>.fld-lg{grid-column:span 4}
 .form-row--board>.fld-fill{grid-column:span 4}
+/* v3.7.11：**放弃"与看板列严格对齐"，改按用户标注的宽度序列排布**。
+   依据：用户在辅助线图上用三个箭头标出「截止日期 / 优先级 / 标签」各自的起始位置，
+   并框住「优先级」字段（原话"注意我方框框的位置"）。他标的位置比原布局整体左移一截，
+   说明要的是**四个字段按比例分配宽度**，而不是"每个字段都锚定看板列边界"——
+   后者是我 v3.7.4 自己引入的目标，用户从未要求过（他自始至终只说"截止日期宽一点、
+   优先级窄一点"）。把自造的目标当成用户诉求，是这几轮反复改错的根源。
+   新序列（12 微轨）：任务标题 4 · 截止日期 3 · 优先级 2 · 标签 3
+   → 形成「宽 · 中 · 窄 · 中」的渐变，标签变宽、截止日期收窄。
+   ⚠️ 若日后要恢复"与看板列对齐"，注意 1 列 = 4 微轨（1/5 · 5/9 · 9/13）。 */
 #taskForm>.fld:nth-child(1){grid-column:1/5;grid-row:1}
-#taskForm>.fld:nth-child(2){grid-column:5/9;grid-row:1}
-/* 优先级：跨第 9-10 微轨（真实空间 ≈74px@1120），下拉框定宽 56px（用户定稿）。
-   标签必须从第 11 微轨起（= 看板列3 左缘），所以优先级占 9/11（2 轨）后标签顺延到 11/13，
-   这与"标签左缘 = 看板列3 左缘"冲突。取舍：**标签左缘让位**（视觉上标签紧贴优先级右侧，
-   不再锚定列3 左缘），换取优先级 label 能横排 + 下拉框 56px 可用。
-   ⚠️ 用 width 不用 min-width —— min-width 会撑破轨道与标签重叠（实测 10px）。 */
-#taskForm>.fld:nth-child(3){grid-column:9/11;grid-row:1;min-width:0}
-#taskForm>.fld:nth-child(3)>select{width:56px}
-#taskForm>.fld:nth-child(4){grid-column:11/13;grid-row:1}
+#taskForm>.fld:nth-child(2){grid-column:5/8;grid-row:1}
+/* v3.7.11：优先级 select 由**定宽 56px 改为撑满所在轨道** ——
+   用户框住的正是这个 select：它在 141px 的轨道里只占 56px、右侧空 85px，
+   与右边撑满的「标签」输入框明显不协调。
+   （56px 是 v3.7.6 为防「优先级」三字竖排定的下限，现在 label 独占一行，不需要了。） */
+#taskForm>.fld:nth-child(3){grid-column:8/10;grid-row:1;min-width:0}
+#taskForm>.fld:nth-child(3)>select{width:100%}
+#taskForm>.fld:nth-child(4){grid-column:10/13;grid-row:1}
 #taskForm>.fld:nth-child(4)>input{padding-right:44px}
 #taskForm>.add-wrap{grid-column:10/13;grid-row:1;justify-self:end;align-self:end;z-index:var(--z-under)}
 /* 筛选行：与第一行**同一套列锚点**（v3.7.7 修正）。
@@ -5683,10 +5691,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.10"; /* v3.7.10 日期面板整块紧凑化：高度 286 → 234 */
+const VERSION = "3.7.11"; /* v3.7.11 第一行改按「宽·中·窄·中」比例分配（4/3/2/3 微轨），放弃锚定看板列 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260921k";
+const BUILD_TAG = "20260921m";
 
 
 
