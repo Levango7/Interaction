@@ -338,7 +338,7 @@ button{transition:transform var(--transition-fast),opacity var(--transition-fast
 button:active:not([disabled]){transform:scale(.97)}
 button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 button[disabled]:active{transform:none}
-input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
+input,select,textarea{font-family:inherit;font-size:var(--fs-base);border:1px solid var(--line);
   /* v3.7.33：输入框背景改用 --surface-muted —— 原来与卡片同为 --panel，实测两者色值**完全相同**，
      缺少"这里能输入"的视觉暗示。（注意：本注释不写具体色值 —— lint-colors 只放行「--令牌: 值」定义行，
      注释里的裸色值会被判违规，这个坑我踩过两次。） */
@@ -352,6 +352,10 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px soli
 input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="number"]):not([type="date"]):not([type="time"]):not([type="range"]){display:inline-flex;align-items:center}
 input[type="number"]{padding-top:0;padding-bottom:0;line-height:calc(var(--control-h) - 2px)}
 input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"])::placeholder{line-height:1}
+/* v3.7.8：placeholder 提亮加粗（用户 2026-09-21 截图标注："字体大一点，粗一点，显眼一点"）。
+   旧态用浏览器默认 —— 浅灰 + 常规字重，在 --surface-muted 底上看不清提示语。
+   ⚠️ `opacity:1` 不能省：Firefox 对 placeholder 默认套 opacity，不显式覆盖会一直发灰。 */
+input::placeholder,textarea::placeholder{color:var(--text-dim);font-weight:600;opacity:1}
 /* v3.2：textarea 允许多行（高度由 min-height 兜底，不由 --control-h 限制） */
 textarea{height:auto;min-height:64px;padding:var(--space-2) var(--space-2h);line-height:1.5}
 /* v2.1.1：checkbox/radio 天然小尺寸，不继承 width:100%（替代散落各处的内联 width:auto） */
@@ -1380,9 +1384,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== v3.6.2 自定义日期选择器（圆角矩形 + 主题色，替代浏览器原生白底方角弹层） ===== */
 input[data-date-picker]{cursor:pointer;caret-color:transparent}
-input[data-date-picker]::placeholder{color:var(--text-faint)}
+input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随全局 placeholder 提亮 */
 .dp-overlay{position:fixed;inset:0;z-index:var(--z-modal,3000)}
-.dp-panel{position:fixed;z-index:var(--z-modal,3000)+1;min-width:220px;width:max-content;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-3);padding:var(--space-3);font-size:var(--fs-sm);user-select:none}
+.dp-panel{position:fixed;z-index:calc(var(--z-modal,3000) + 1);width:206px;max-width:260px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-3);padding:var(--space-2);font-size:var(--fs-sm);user-select:none}
+/* ⚠️ z-index 必须写成 `calc(var(...) + 1)`：原来写的是 `var(--z-modal,3000)+1`，
+   少了 calc → **整条声明非法被丢弃** → 面板退化成 z-index:auto，
+   结果触发它的输入框反而盖在日历上（用户 2026-09-21 截图里「选日期」文字压在日期格上）。
+   面板要盖住 overlay(81 > 80)，overlay 要盖住页面其余内容。 */
+/* v3.7.8：由 `min-width:220px;width:max-content` 改为**固定宽度**（用户："日期的下拉框没必要这么宽大"）。
+   max-content 会被表头（"2026 年 9 月" + 两个 28px 按钮）撑到 ~270px，比触发输入框还宽。
+   现在 206px 起步、由 _dpOpen 按输入框宽度在 [206,260] 内覆盖；格子用 1fr 均分。
+   padding 同步由 --space-3 收到 --space-2，整体更紧凑（用户窗口只有 560px 高时尤其明显）。 */
 .dp-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2)}
 .dp-head .dp-title{font-weight:600;color:var(--text);font-size:var(--fs-base)}
 .dp-nav{display:flex;align-items:center;gap:var(--space-1)}
@@ -5644,10 +5656,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.7"; /* v3.7.7 响应式三档定稿：PC 筛选行对齐看板列 · pad 看板自适应列宽 · phone 加号跨行贴右 */
+const VERSION = "3.7.8"; /* v3.7.8 日期面板永远向下 + 宽度收敛 [206,260] + placeholder 提亮 + 修 z-index 非法 calc */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260921h";
+const BUILD_TAG = "20260921i";
 
 
 
@@ -19371,23 +19383,71 @@ function _dpOpen(input){
   document.body.appendChild(panel);
   _dpOverlay = overlay; _dpPanel = panel;
   _dpRender();
-  // v3.7.57：面板宽度**跟随触发输入框**。
-  // 原因（实测）：面板原本写死 min-width:250px，而看板表单里的截止日期输入框只有 114px
-  // → 面板比输入框宽 136px，视觉上"输入框和它的下拉框不是一套"。这是**全站通病**（所有
-  // data-date-picker 输入框都受影响），所以在 _dpOpen 里统一处理，而不是给某个表单打补丁。
-  // 下限 220px：日历 7 列 + 两位数字，低于此值会挤到断行，宁可面板略宽于输入框。
-  // 用 min-width（而非固定 width）→ 内容更宽时面板自动让出空间，不会裁掉头部/页脚。
-  try{
-    const w = Math.max(220, Math.round(input.getBoundingClientRect().width || 0));
-    panel.style.minWidth = w + "px";
-  }catch(_e){}
-  const r = input.getBoundingClientRect();
-  const pw = panel.offsetWidth, ph = panel.offsetHeight;
-  let left = r.left; let top = r.bottom + 6;
+  /* v3.7.8：面板宽度**跟随触发输入框**，并收敛到 [206, 260] 区间。
+     下限 206px：日历 7 列 + 两位数字的物理下限（再窄会挤到断行）。
+     上限 260px：用户 2026-09-21 反馈"日期的下拉框没必要这么宽大" —— 旧实现用
+       `min-width:220 + width:max-content`，面板会被表头（"2026 年 9 月" + 两个 28px 按钮）
+       撑到 ~270px，比输入框还宽，看着臃肿。改成**固定 width**（而非 min-width）后，
+       面板永远不会比 260 更宽；格子由 `1fr` 自动均分。
+     ⚠️ 必须用 width 不用 min-width —— min-width 拦不住 max-content 的膨胀。 */
+  const iw = Math.round(input.getBoundingClientRect().width || 0);
+  const panelW = Math.min(260, Math.max(206, iw));
+  panel.style.width = panelW + "px";
+  _dpLayout(true);
+}
+/* v3.7.8：面板定位（**打开时**与**滚动跟随**共用）。
+   allowScroll=true 才允许"把输入框滚到视口中央"来腾出下方空间（只有打开时需要；
+   滚动跟随里再滚一次会造成自我循环）。
+   ⚠️ 本函数**永不把面板放到输入框上方**（用户："下拉框，不是上拉框"）。 */
+function _dpLayout(allowScroll){
+  if(!_dpPanel || !_dpInput) return;
+  const panel = _dpPanel, input = _dpInput;
+  /* 每次重算前先复位高度限制 —— 否则上一轮压扁的高度会锁死后续计算 */
+  if(panel.style.maxHeight){ panel.style.maxHeight = ""; panel.style.overflowY = ""; }
+  let r = input.getBoundingClientRect();
+  const pw = panel.offsetWidth;
+  let left = r.left;
   if(left + pw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - pw - 8);
-  if(top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
+  const GAP = 6;
+  let top = r.bottom + GAP;
+  let availDown = window.innerHeight - top - 8;
+  if(availDown < panel.offsetHeight){
+    if(allowScroll){
+      /* 下方放不下 → 把输入框**上移**，使面板底部刚好落在视口内（面板方向保持不变）。
+         比 `block:"center"` 精准：center 在 560px 高的窗口里往往仍留不够空间，
+         结果面板被 maxHeight 压扁、底部「清除/今天」按钮要滚动才看得到（实测过）。 */
+      const wantBottom = Math.max(80, window.innerHeight - (panel.offsetHeight + GAP + 16));
+      const delta = r.bottom - wantBottom;
+      if(delta > 0){
+        const sc = _dpScroller(input);
+        if(sc) sc.scrollTop += delta;
+        else { try{ input.scrollIntoView({ block: "center" }); }catch(_e){} }
+      }
+      r = input.getBoundingClientRect();
+      top = r.bottom + GAP;
+      availDown = window.innerHeight - top - 8;
+    }
+    if(availDown > 60 && panel.offsetHeight > availDown){
+      panel.style.maxHeight = availDown + "px";
+      panel.style.overflowY = "auto";
+    }else if(availDown <= 60){
+      /* 视口极矮（连 60px 都腾不出来）：保证不溢出视口底，但仍留在输入框下方 */
+      const maxTop = window.innerHeight - panel.offsetHeight - 8;
+      if(top > maxTop) top = Math.max(r.bottom + GAP, maxTop);
+    }
+  }
   panel.style.left = left + "px";
   panel.style.top = top + "px";
+}
+/* 从输入框往上找第一个"可滚动且真的在滚"的祖先容器（面板要滚的是它，不是 window） */
+function _dpScroller(el){
+  let n = el && el.parentElement;
+  while(n && n !== document.body && n !== document.documentElement){
+    const oy = getComputedStyle(n).overflowY;
+    if((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 4) return n;
+    n = n.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
 }
 // 事件委托：点击带 data-date-picker 的输入框弹出自定义面板
 document.addEventListener("focus", function(e){
@@ -19400,7 +19460,7 @@ document.addEventListener("click", function(e){
   if(!_dpPanel) return;
   // 面板内按钮
   const nav = t2 && t2.closest && t2.closest("[data-dp-nav]");
-  if(nav){ const step = Number(nav.getAttribute("data-dp-nav")) || 0; const d = new Date(_dpViewY, _dpViewM + step, 1); _dpViewY = d.getFullYear(); _dpViewM = d.getMonth(); _dpRender(); return; }
+  if(nav){ const step = Number(nav.getAttribute("data-dp-nav")) || 0; const d = new Date(_dpViewY, _dpViewM + step, 1); _dpViewY = d.getFullYear(); _dpViewM = d.getMonth(); _dpRender(); _dpLayout(false); return; }
   const day = t2 && t2.closest && t2.closest("[data-dp-day]");
   if(day){ const seg = (day.getAttribute("data-dp-day") || "").split(":"); const monShift = Number(seg[0]) || 0; const dd = Number(seg[1]); const base = new Date(_dpViewY, _dpViewM + monShift, 1); _dpPick(base.getFullYear(), base.getMonth(), dd); return; }
   const clear = t2 && t2.closest && t2.closest("[data-dp-clear]");
@@ -19410,7 +19470,11 @@ document.addEventListener("click", function(e){
 }, true);
 document.addEventListener("keydown", function(e){ if(e.key === "Escape" && _dpPanel) _dpClose(); });
 window.addEventListener("resize", function(){ _dpClose(); });
-window.addEventListener("scroll", function(){ _dpClose(); }, true);
+window.addEventListener("scroll", function(){ _dpLayout(false); }, true);
+/* v3.7.8：由 `_dpClose()` 改为 `_dpLayout(false)` —— **滚动时跟随重定位，而不是关闭面板**。
+   原因（实测踩坑）：_dpLayout 在"下方放不下"时会 scrollIntoView 把输入框滚到视口中央，
+   而旧的 scroll handler 是"一滚动就关面板" → 滚动把面板自己关掉了（1080x560 等矮窗口下
+   表现为"点了日期框什么都不出现"）。跟随重定位同时也是更好的交互（原生 select 亦如此）。 */
 
 /** 通用功能卡事件绑定（委托到 #main，幂等）
  * @param {string} key - 存储键（PREFIX + key）
