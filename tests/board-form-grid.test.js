@@ -1,17 +1,21 @@
 /**
- * board-form-grid.test.js —— 方案 A 第三批：看板卡两行共用列栅格（v3.7.29）
+ * board-form-grid.test.js —— 看板卡两行共用列栅格（v3.7.29 创立 / v3.7.57 重排）
  * ----------------------------------------------------------------------------
  * 问题（截图实证）：看板卡里两行字段各自 flex，列宽由内容决定 →
- *   行1「截止日期」右缘 672、行2「联动记录」左缘 684，同列的东西不在同一条竖线上。
+ *   同列的东西不在同一条竖线上（行1「截止日期」右缘 672、行2「联动记录」左缘 684）。
  *
- * 改法：两行**共用一套 5 轨栅格**，按语义跨轨：
- *   第1轨 任务标题 | 第2轨 截止日期 | 第3轨 优先级 | 第4轨 标签 | 第5轨 添加按钮(64px 定宽)
- *   行2：搜索(跨1-2轨) · 联动记录(第3轨) · 标签(跨4-5轨)
+ * v3.7.57 现状（用户定稿「截止日期与下拉面板同宽 / 优先级窄 / 标签窄」）：
+ *   6 轨 = 看板 3 列各拆两半，两行全部**显式定位**：
+ *     行1：任务标题 轨1-2(249=待办列) · 截止日期 轨3-4(249=进行中列)
+ *          优先级 轨5(114) · 标签 轨6(114) + 加号叠加其右端（align-self:end）
+ *     行2：搜索 轨1-3(383) · 联动记录 轨4-5(249) · 标签 轨6(114，与上方同位)
  *
- * CDP 实测（改造后）：
- *   行1：任务标题 287→516 | 截止日期 528→672 | 优先级 684→804 | 标签 825→997 | [+] 1035→1073
- *   行2：搜索 287→672 | 联动记录 684→813 | 标签 825→1073
- *   → 行2 的每条边界都落在行1 已有的竖线上（287/672/684/825/1073 全部咬合）
+ * CDP 实测（v3.7.4）：
+ *   待办列 287→536 · 进行中列 556→804 · 已完成列 824→1073
+ *   → 标题右缘=待办右缘 0 / 截止整列=进行中列 0 / 优先级左缘=已完成左缘 0 / 加号右缘=已完成右缘 0
+ *   → 截止日期输入框 249 = 日期面板 249（差 0，旧态差 136px）
+ *
+ * ⚠️ 改实现必须同步改本文件（CI 因此红过多次）；改测试文件要整篇重写，禁止正则手术。
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
@@ -75,8 +79,8 @@ describe("看板卡 · 共用列栅格", () => {
     expect(CSS).toMatch(/\.form-row--board>\.fld>label\{min-height:var\(--label-h\)\}/);
   });
 
-  it("有窄屏回退（否则小屏下 5 轨会挤成条）—— 断点 820px，须覆盖 768 的平板", () => {
-    /* 断点原写 760px，实测**平板 768 不触发回退** → 5 轨被压得过窄、字段不可交互，
+  it("有窄屏回退（否则小屏下 6 轨会挤成条）—— 断点 820px，须覆盖 768 的平板", () => {
+    /* 断点原写 760px，实测**平板 768 不触发回退** → 轨道被压得过窄、字段不可交互，
        e2e 的 tablet 项目整片超时；抬到 820px。测试这里也把断点值一并锁住，
        避免"改了实现忘了改断言"（CI 就是这么红的）。 */
     expect(CSS).toMatch(/@media \(max-width:820px\)\{[\s\S]*?\.form-row--board\{grid-template-columns:1fr 1fr\}/);
@@ -87,7 +91,28 @@ describe("看板卡 · 共用列栅格", () => {
 describe("看板卡 · 标记侧", () => {
   it("任务表单与筛选行都带上了变体类（两行必须同一套栅格才谈得上对齐）", () => {
     expect(JS).toContain('class="form-row form-row--board" id="taskForm"');
-    expect(JS).toContain('const tagFilterHTML = `<div class="form-row form-row--board">');
+    // v3.7.57：筛选行加 id="taskFilterRow" —— 两行都显式定位，标签列位上下对齐
+    expect(JS).toContain('const tagFilterHTML = `<div class="form-row form-row--board" id="taskFilterRow">');
+  });
+
+  it("两行的显式列位互相咬合（标签列上下同位，截止日期占满进行中列）", () => {
+    // v3.7.57：这些是 CSS 规则，真相源在 HTML（src-split 只管 JS，CSS 不进 src）
+    // 第一行：标题轨1-2 · 截止日期轨3-4 · 优先级轨5 · 标签轨6
+    expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:3/5;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:5/6;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:6/7;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.add-wrap{grid-column:6/7;grid-row:1;justify-self:end;align-self:end;');
+    // 筛选行：搜索轨1-3 · 联动记录轨4-5 · 标签轨6（与第一行标签同位）
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/4;grid-row:1}');
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:6/7;grid-row:1}');
+    // 加号与输入框底对齐（align-self:center 会让 38px 按钮比输入框高出 13px——实测过的坑）
+    expect(CSS).not.toContain('#taskForm>.add-wrap{grid-column:6/7;grid-row:1;justify-self:end;align-self:center');
+  });
+
+  it("窄屏解除两行的 id 显式定位（column 与 row 都要解除，否则挤成一行造隐式列）", () => {
+    /* 实测（768px）：只解除 grid-column 时 5 个元素仍被 grid-row:1 钉在第 1 行，
+       auto-placement 造出隐式列（模板变 0 0 47 47 38 五轨、两字段宽 0）。 */
+    expect(CSS).toContain('{grid-column:auto;grid-row:auto}');
   });
 
   it("筛选行的标签字段带跨轨类（跨 4-5 轨，正好盖住标签+添加按钮）", () => {

@@ -169,7 +169,7 @@ function renderMainHTML(){
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
-  const tagFilterHTML = `<div class="form-row form-row--board">
+  const tagFilterHTML = `<div class="form-row form-row--board" id="taskFilterRow">
     <div class="fld fld-xl"><label for="boardSearch">${t("field.searchTaskA3","搜索任务（A3）")}</label><input id="boardSearch" placeholder="${t("placeholder.searchTitle","输入标题关键词")}" maxlength="200"></div>
     <div class="fld fld-lg"><label>${t("field.linkedRecord","联动记录")}</label>
       <select id="boardStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
@@ -718,6 +718,16 @@ function _dpOpen(input){
   document.body.appendChild(panel);
   _dpOverlay = overlay; _dpPanel = panel;
   _dpRender();
+  // v3.7.57：面板宽度**跟随触发输入框**。
+  // 原因（实测）：面板原本写死 min-width:250px，而看板表单里的截止日期输入框只有 114px
+  // → 面板比输入框宽 136px，视觉上"输入框和它的下拉框不是一套"。这是**全站通病**（所有
+  // data-date-picker 输入框都受影响），所以在 _dpOpen 里统一处理，而不是给某个表单打补丁。
+  // 下限 220px：日历 7 列 + 两位数字，低于此值会挤到断行，宁可面板略宽于输入框。
+  // 用 min-width（而非固定 width）→ 内容更宽时面板自动让出空间，不会裁掉头部/页脚。
+  try{
+    const w = Math.max(220, Math.round(input.getBoundingClientRect().width || 0));
+    panel.style.minWidth = w + "px";
+  }catch(_e){}
   const r = input.getBoundingClientRect();
   const pw = panel.offsetWidth, ph = panel.offsetHeight;
   let left = r.left; let top = r.bottom + 6;
