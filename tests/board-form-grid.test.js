@@ -135,10 +135,12 @@ describe("看板卡 · 标记侧", () => {
     // ⚠️ 用 width:56px 而非 min-width:56px —— min-width 会撑破轨道与相邻元素重叠 10px（实测）。
     expect(CSS).toContain('#taskForm>.add-wrap{grid-column:10/13;grid-row:1;justify-self:end;align-self:end;');
     expect(CSS, "加号不得用 min-width（会撑破轨道）").not.toMatch(/#taskForm>\.fld:nth-child\(3\)>select\{min-width:56px\}/);
-    // 筛选行：搜索 1-7(一列半) · 联动记录 7-10 · 标签 10-13（右端与第一行标签右缘同位）
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/7;grid-row:1}');
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(2){grid-column:7/10;grid-row:1}');
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:10/13;grid-row:1}');
+    // 筛选行：与第一行**同一套列锚点**（v3.7.7）→ 搜索=列1 · 联动记录=列2 · 标签=列3。
+    // ⚠️ v3.7.6 及以前是 1/7 · 7/10 · 10/13，与看板列（4 微轨一列）无对应关系，
+    // 实测「联动记录」右缘与看板列2 右缘差 107px@1920 / 80.5px@1600（用户截图指出的就是这个）。
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(2){grid-column:5/9;grid-row:1}');
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:9/13;grid-row:1}');
     // 加号与输入框底对齐（align-self:center 会让 38px 按钮比输入框高出 13px——实测过的坑）
     expect(CSS).not.toContain('#taskForm>.add-wrap{grid-column:10/13;grid-row:1;justify-self:end;align-self:center');
   });
