@@ -718,23 +718,71 @@ function _dpOpen(input){
   document.body.appendChild(panel);
   _dpOverlay = overlay; _dpPanel = panel;
   _dpRender();
-  // v3.7.57：面板宽度**跟随触发输入框**。
-  // 原因（实测）：面板原本写死 min-width:250px，而看板表单里的截止日期输入框只有 114px
-  // → 面板比输入框宽 136px，视觉上"输入框和它的下拉框不是一套"。这是**全站通病**（所有
-  // data-date-picker 输入框都受影响），所以在 _dpOpen 里统一处理，而不是给某个表单打补丁。
-  // 下限 220px：日历 7 列 + 两位数字，低于此值会挤到断行，宁可面板略宽于输入框。
-  // 用 min-width（而非固定 width）→ 内容更宽时面板自动让出空间，不会裁掉头部/页脚。
-  try{
-    const w = Math.max(220, Math.round(input.getBoundingClientRect().width || 0));
-    panel.style.minWidth = w + "px";
-  }catch(_e){}
-  const r = input.getBoundingClientRect();
-  const pw = panel.offsetWidth, ph = panel.offsetHeight;
-  let left = r.left; let top = r.bottom + 6;
+  /* v3.7.8：面板宽度**跟随触发输入框**，并收敛到 [206, 260] 区间。
+     下限 206px：日历 7 列 + 两位数字的物理下限（再窄会挤到断行）。
+     上限 260px：用户 2026-09-21 反馈"日期的下拉框没必要这么宽大" —— 旧实现用
+       `min-width:220 + width:max-content`，面板会被表头（"2026 年 9 月" + 两个 28px 按钮）
+       撑到 ~270px，比输入框还宽，看着臃肿。改成**固定 width**（而非 min-width）后，
+       面板永远不会比 260 更宽；格子由 `1fr` 自动均分。
+     ⚠️ 必须用 width 不用 min-width —— min-width 拦不住 max-content 的膨胀。 */
+  const iw = Math.round(input.getBoundingClientRect().width || 0);
+  const panelW = Math.min(260, Math.max(206, iw));
+  panel.style.width = panelW + "px";
+  _dpLayout(true);
+}
+/* v3.7.8：面板定位（**打开时**与**滚动跟随**共用）。
+   allowScroll=true 才允许"把输入框滚到视口中央"来腾出下方空间（只有打开时需要；
+   滚动跟随里再滚一次会造成自我循环）。
+   ⚠️ 本函数**永不把面板放到输入框上方**（用户："下拉框，不是上拉框"）。 */
+function _dpLayout(allowScroll){
+  if(!_dpPanel || !_dpInput) return;
+  const panel = _dpPanel, input = _dpInput;
+  /* 每次重算前先复位高度限制 —— 否则上一轮压扁的高度会锁死后续计算 */
+  if(panel.style.maxHeight){ panel.style.maxHeight = ""; panel.style.overflowY = ""; }
+  let r = input.getBoundingClientRect();
+  const pw = panel.offsetWidth;
+  let left = r.left;
   if(left + pw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - pw - 8);
-  if(top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
+  const GAP = 6;
+  let top = r.bottom + GAP;
+  let availDown = window.innerHeight - top - 8;
+  if(availDown < panel.offsetHeight){
+    if(allowScroll){
+      /* 下方放不下 → 把输入框**上移**，使面板底部刚好落在视口内（面板方向保持不变）。
+         比 `block:"center"` 精准：center 在 560px 高的窗口里往往仍留不够空间，
+         结果面板被 maxHeight 压扁、底部「清除/今天」按钮要滚动才看得到（实测过）。 */
+      const wantBottom = Math.max(80, window.innerHeight - (panel.offsetHeight + GAP + 16));
+      const delta = r.bottom - wantBottom;
+      if(delta > 0){
+        const sc = _dpScroller(input);
+        if(sc) sc.scrollTop += delta;
+        else { try{ input.scrollIntoView({ block: "center" }); }catch(_e){} }
+      }
+      r = input.getBoundingClientRect();
+      top = r.bottom + GAP;
+      availDown = window.innerHeight - top - 8;
+    }
+    if(availDown > 60 && panel.offsetHeight > availDown){
+      panel.style.maxHeight = availDown + "px";
+      panel.style.overflowY = "auto";
+    }else if(availDown <= 60){
+      /* 视口极矮（连 60px 都腾不出来）：保证不溢出视口底，但仍留在输入框下方 */
+      const maxTop = window.innerHeight - panel.offsetHeight - 8;
+      if(top > maxTop) top = Math.max(r.bottom + GAP, maxTop);
+    }
+  }
   panel.style.left = left + "px";
   panel.style.top = top + "px";
+}
+/* 从输入框往上找第一个"可滚动且真的在滚"的祖先容器（面板要滚的是它，不是 window） */
+function _dpScroller(el){
+  let n = el && el.parentElement;
+  while(n && n !== document.body && n !== document.documentElement){
+    const oy = getComputedStyle(n).overflowY;
+    if((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 4) return n;
+    n = n.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
 }
 // 事件委托：点击带 data-date-picker 的输入框弹出自定义面板
 document.addEventListener("focus", function(e){
@@ -747,7 +795,7 @@ document.addEventListener("click", function(e){
   if(!_dpPanel) return;
   // 面板内按钮
   const nav = t2 && t2.closest && t2.closest("[data-dp-nav]");
-  if(nav){ const step = Number(nav.getAttribute("data-dp-nav")) || 0; const d = new Date(_dpViewY, _dpViewM + step, 1); _dpViewY = d.getFullYear(); _dpViewM = d.getMonth(); _dpRender(); return; }
+  if(nav){ const step = Number(nav.getAttribute("data-dp-nav")) || 0; const d = new Date(_dpViewY, _dpViewM + step, 1); _dpViewY = d.getFullYear(); _dpViewM = d.getMonth(); _dpRender(); _dpLayout(false); return; }
   const day = t2 && t2.closest && t2.closest("[data-dp-day]");
   if(day){ const seg = (day.getAttribute("data-dp-day") || "").split(":"); const monShift = Number(seg[0]) || 0; const dd = Number(seg[1]); const base = new Date(_dpViewY, _dpViewM + monShift, 1); _dpPick(base.getFullYear(), base.getMonth(), dd); return; }
   const clear = t2 && t2.closest && t2.closest("[data-dp-clear]");
@@ -757,7 +805,11 @@ document.addEventListener("click", function(e){
 }, true);
 document.addEventListener("keydown", function(e){ if(e.key === "Escape" && _dpPanel) _dpClose(); });
 window.addEventListener("resize", function(){ _dpClose(); });
-window.addEventListener("scroll", function(){ _dpClose(); }, true);
+window.addEventListener("scroll", function(){ _dpLayout(false); }, true);
+/* v3.7.8：由 `_dpClose()` 改为 `_dpLayout(false)` —— **滚动时跟随重定位，而不是关闭面板**。
+   原因（实测踩坑）：_dpLayout 在"下方放不下"时会 scrollIntoView 把输入框滚到视口中央，
+   而旧的 scroll handler 是"一滚动就关面板" → 滚动把面板自己关掉了（1080x560 等矮窗口下
+   表现为"点了日期框什么都不出现"）。跟随重定位同时也是更好的交互（原生 select 亦如此）。 */
 
 /** 通用功能卡事件绑定（委托到 #main，幂等）
  * @param {string} key - 存储键（PREFIX + key）

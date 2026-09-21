@@ -338,7 +338,7 @@ button{transition:transform var(--transition-fast),opacity var(--transition-fast
 button:active:not([disabled]){transform:scale(.97)}
 button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 button[disabled]:active{transform:none}
-input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
+input,select,textarea{font-family:inherit;font-size:var(--fs-base);border:1px solid var(--line);
   /* v3.7.33：输入框背景改用 --surface-muted —— 原来与卡片同为 --panel，实测两者色值**完全相同**，
      缺少"这里能输入"的视觉暗示。（注意：本注释不写具体色值 —— lint-colors 只放行「--令牌: 值」定义行，
      注释里的裸色值会被判违规，这个坑我踩过两次。） */
@@ -352,6 +352,10 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px soli
 input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="number"]):not([type="date"]):not([type="time"]):not([type="range"]){display:inline-flex;align-items:center}
 input[type="number"]{padding-top:0;padding-bottom:0;line-height:calc(var(--control-h) - 2px)}
 input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"])::placeholder{line-height:1}
+/* v3.7.8：placeholder 提亮加粗（用户 2026-09-21 截图标注："字体大一点，粗一点，显眼一点"）。
+   旧态用浏览器默认 —— 浅灰 + 常规字重，在 --surface-muted 底上看不清提示语。
+   ⚠️ `opacity:1` 不能省：Firefox 对 placeholder 默认套 opacity，不显式覆盖会一直发灰。 */
+input::placeholder,textarea::placeholder{color:var(--text-dim);font-weight:600;opacity:1}
 /* v3.2：textarea 允许多行（高度由 min-height 兜底，不由 --control-h 限制） */
 textarea{height:auto;min-height:64px;padding:var(--space-2) var(--space-2h);line-height:1.5}
 /* v2.1.1：checkbox/radio 天然小尺寸，不继承 width:100%（替代散落各处的内联 width:auto） */
@@ -1380,9 +1384,17 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== v3.6.2 自定义日期选择器（圆角矩形 + 主题色，替代浏览器原生白底方角弹层） ===== */
 input[data-date-picker]{cursor:pointer;caret-color:transparent}
-input[data-date-picker]::placeholder{color:var(--text-faint)}
+input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随全局 placeholder 提亮 */
 .dp-overlay{position:fixed;inset:0;z-index:var(--z-modal,3000)}
-.dp-panel{position:fixed;z-index:var(--z-modal,3000)+1;min-width:220px;width:max-content;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-3);padding:var(--space-3);font-size:var(--fs-sm);user-select:none}
+.dp-panel{position:fixed;z-index:calc(var(--z-modal,3000) + 1);width:206px;max-width:260px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-3);padding:var(--space-2);font-size:var(--fs-sm);user-select:none}
+/* ⚠️ z-index 必须写成 `calc(var(...) + 1)`：原来写的是 `var(--z-modal,3000)+1`，
+   少了 calc → **整条声明非法被丢弃** → 面板退化成 z-index:auto，
+   结果触发它的输入框反而盖在日历上（用户 2026-09-21 截图里「选日期」文字压在日期格上）。
+   面板要盖住 overlay(81 > 80)，overlay 要盖住页面其余内容。 */
+/* v3.7.8：由 `min-width:220px;width:max-content` 改为**固定宽度**（用户："日期的下拉框没必要这么宽大"）。
+   max-content 会被表头（"2026 年 9 月" + 两个 28px 按钮）撑到 ~270px，比触发输入框还宽。
+   现在 206px 起步、由 _dpOpen 按输入框宽度在 [206,260] 内覆盖；格子用 1fr 均分。
+   padding 同步由 --space-3 收到 --space-2，整体更紧凑（用户窗口只有 560px 高时尤其明显）。 */
 .dp-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2)}
 .dp-head .dp-title{font-weight:600;color:var(--text);font-size:var(--fs-base)}
 .dp-nav{display:flex;align-items:center;gap:var(--space-1)}
@@ -5644,10 +5656,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.7"; /* v3.7.7 响应式三档定稿：PC 筛选行对齐看板列 · pad 看板自适应列宽 · phone 加号跨行贴右 */
+const VERSION = "3.7.8"; /* v3.7.8 日期面板永远向下 + 宽度收敛 [206,260] + placeholder 提亮 + 修 z-index 非法 calc */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260921h";
+const BUILD_TAG = "20260921i";
 
 
 
