@@ -1023,6 +1023,12 @@ input[type="file"]:hover{border-color:var(--accent)}
      ⚠️ 试过 `grid-column:1/-1;justify-self:end`（跨行贴右），实测 390px 下落到 309-347 ——
      正好被右下角的桌面宠物浮层盖住，按钮点不到。回退。 */
   #taskForm>.add-wrap{grid-column:auto;justify-self:end;grid-row:auto}
+  /* v3.7.9：卡片按钮字号在窄列回退 —— pad 看板列只有 168px（900px 档），
+     14px 字号下 3 个按钮放不下会换行。PC 档（列宽 248~408）保持 14px。
+     ⚠️ 必须写成 `.kcol .kbtns button`（提高特异性）：本块在源码里位于
+     `.kbtns button{font-size:var(--fs-sm)}` **之前**，同特异性会被后者按源码顺序覆盖 ——
+     第一版写 `.kbtns button` 时就是这么静默失效的（CDP 实测 900px 下仍是 14px）。 */
+  .kcol .kbtns button{font-size:var(--fs-xs)}
 }
 /* v3.7.59：**撤销 v3.7.5 的 PC 两行方案**（用户明确否掉："我让你向东，你非要向西"）。
    PC(≥1024) 一律单行；只用 12 半轨 + 红框宽度实现"标题宽/截止日期中宽/优先级最窄/标签中窄"。
@@ -1548,8 +1554,8 @@ input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随�
 .kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2)}
 .kcol{background:transparent;border:1px solid var(--line);border-radius:var(--radius-lg);
   padding:var(--space-3);min-height:140px}
-.kcol h4{margin:0 0 var(--space-2);font-size:var(--fs-xs);font-weight:600;
-  display:flex;justify-content:space-between;align-items:center;color:var(--text-dim);letter-spacing:.01em}
+.kcol h4{margin:0 0 var(--space-2);font-size:var(--fs-sm);font-weight:700;
+  display:flex;justify-content:space-between;align-items:center;color:var(--text);letter-spacing:.01em}
 .kcol h4 .n{background:var(--surface-muted);border-radius:var(--radius-md);padding:1px 8px;font-size:var(--fs-xs);color:var(--text-dim-2)}
 .kcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
   padding:var(--space-2);margin-bottom:var(--space-2);transition:box-shadow var(--transition-fast),transform var(--transition-fast),border-color var(--transition-fast);cursor:grab}
@@ -1563,18 +1569,23 @@ input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随�
    长标题就会把它挤到变形；分行使"标题任意长"与"状态位置稳定"同时成立。
    三行各占一行：状态 / 属性 / 操作，且状态与操作**铺满整行**。 */
 .kstate{display:flex;margin-top:var(--space-1h)}
-.kstate button{flex:1;width:100%;font-size:var(--fs-3xs);min-height:var(--control-h-sm);
+.kstate button{flex:1;width:100%;font-size:var(--fs-sm);font-weight:600;min-height:var(--control-h-sm);
   /* v3.7.37：与 .kbtns button 同一套「圆角矩形卡片」外观。
      根因：全局 button 是 border:none/background:none，而这里原先只给了 flex/字号/最小高
      → 状态行看起来就是一行纯文字（用户指出"做得不太合理"，确实如此）。 */
   display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1);
   padding:0 var(--space-2);border-radius:var(--radius-sm);
-  background:var(--panel2);border:1px solid var(--line);color:var(--text-dim);
+  background:var(--panel2);border:1px solid var(--line);color:var(--text);
   transition:background var(--transition-fast),color var(--transition-fast)}
 .kstate button:hover{background:var(--surface-hover);color:var(--text)}
 /* v3.7.46 操作按钮：不再等分铺满，改为"窄一点 + 间距大一点 + 左右中分布" */
 .kbtns{justify-content:space-between;gap:var(--space-3)}
-.kbtns button{flex:1 1 0;min-width:0}
+.kbtns button{flex:1 1 0;min-width:max-content}
+/* v3.7.9：`min-width` 由 0 改为 `max-content` —— 原来是 0，按钮可以被压到比文字还窄，
+   配合 `white-space:nowrap` 就变成**文字被裁**（实测 1024px 下看板列 140px、
+   3 个按钮各 34px，14px 字号「编辑」=28px + 12px padding，6 个按钮全部溢出）。
+   `max-content` 让按钮至少装得下自己的文字：空间够时照旧等分（flex:1 1 0），
+   不够时由 `.kbtns{flex-wrap:wrap}` 换行，**永远不会裁字**。 */
 /* v3.7.55：用外边距给按钮**留出间距** —— .kbtns 的 gap 被同名规则压掉了（本项目老问题），
    margin 直接落在按钮上，不依赖 gap 的层叠胜负。flex-basis:0 保证先扣间距再分空间。 */
 .kbtns button:not(:last-child){margin-right:var(--space-2)}
@@ -1595,12 +1606,19 @@ input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随�
      这里给"操作层"加一条极淡分隔线，让"信息"与"可点"一眼可辨；
      危险操作（删除）靠右独立成组，避免与常用按钮误触。 */
   border-top:1px solid color-mix(in srgb, var(--line) 60%, transparent);padding-top:var(--space-2)}
-.kbtns button{font-size:var(--fs-xs);padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);
-  background:var(--panel2);border:1px solid var(--line);min-height:32px;color:var(--text-dim);
+.kbtns button{font-size:var(--fs-sm);font-weight:600;padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);
+  background:var(--panel2);border:1px solid var(--line);min-height:32px;color:var(--text);
   transition:background var(--transition-fast),color var(--transition-fast)}
 .kbtns button:hover{background:var(--surface-hover);color:var(--text)}
 /* v3.7.32 收紧：只压水平内边距，**不动高度**（32px）与移动端 44px 触控高度 */
-.kbtns button{padding-left:6px;padding-right:6px;white-space:nowrap}
+.kbtns button{padding-left:5px;padding-right:5px;white-space:nowrap}
+/* v3.7.9：水平内边距 6px → 5px（字号提到 14px 后按钮变宽，给窄列多留一点余地）。
+   ⚠️ 1024px 档仍会换行成「编辑 / 分享 删除」两行 —— 这是**物理限制，不是没修**：
+   看板列 140.7px，扣掉 .kcard 内边距后按钮可用宽只有 ~102px，
+   而 14px 中文「编辑」= 28px + 左右 padding 10 + border 2 = 40px，3 个共 120px，放不下。
+   要单行只能把字号压回 11~12px，与本次「字大一点、显眼一点」直接冲突
+   → 取舍：**宁可按钮换两行，也不缩小字号**。
+   1600px 档（看板列 302px）不受影响，始终单行。 */
 /* v3.7.7：`white-space:nowrap` 是必须的 —— 按钮 `flex:1 1 0;min-width:0` 允许被压，
    而中文按钮文字在临界宽度下会**逐字竖排**（实测 pad 900px、列宽 168px 时
    「编辑/分享/删除」全部变成上下两字）。nowrap 后 min-content = 文字宽，
@@ -5656,10 +5674,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.8"; /* v3.7.8 日期面板永远向下 + 宽度收敛 [206,260] + placeholder 提亮 + 修 z-index 非法 calc */
+const VERSION = "3.7.9"; /* v3.7.9 卡片文字可读性：状态/操作按钮与列标题字号+字重+主色 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260921i";
+const BUILD_TAG = "20260921j";
 
 
 
