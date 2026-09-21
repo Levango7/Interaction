@@ -134,3 +134,39 @@ describe("输入框背景与卡片有差异", () => {
     expect(m[0]).not.toContain('background:var(--panel)');
   });
 });
+
+describe("卡片文字可读性（v3.7.9 · 用户：「字体大小，字体粗细，让字体显眼一点」）", () => {
+  /* 背景：用户红框圈住待办卡片里的「→ 进行中」，要求字号、字重、显眼度一起提。
+     实测旧态：.kstate button 只有 --fs-3xs（10px）——确实小到看不清。 */
+
+  it("状态按钮：字号提到 --fs-sm 且加粗、文字色提到主色", () => {
+    const st = allRules(".kstate button");
+    expect(st, "状态按钮字号应 ≥ --fs-sm").toContain("font-size:var(--fs-sm)");
+    expect(st, "必须加粗").toContain("font-weight:600");
+    expect(st, "10px 的 --fs-3xs 已被否掉").not.toContain("font-size:var(--fs-3xs)");
+    expect(st, "文字色由次要的 --text-dim 提到主色 --text").toContain("color:var(--text)");
+  });
+
+  it("操作按钮：同样放大加粗，且 min-width 必须是 max-content", () => {
+    const kb = allRules(".kbtns button");
+    expect(kb).toContain("font-size:var(--fs-sm)");
+    expect(kb).toContain("font-weight:600");
+    /* `min-width:0` + `white-space:nowrap` = 文字被裁（实测 1024px 下 6 个按钮全裁）。
+       max-content 让按钮至少装得下自己的文字：空间够时照旧等分，不够则换行，永不裁字。 */
+    expect(kb, "min-width 应为 max-content（0 会让 nowrap 的文字被裁）").toContain("min-width:max-content");
+    expect(CSS, "不得回到 min-width:0").not.toMatch(/\.kbtns button\{flex:1 1 0;min-width:0\}/);
+  });
+
+  it("看板列标题加粗到 700", () => {
+    expect(CSS).toMatch(/\.kcol h4\{[^}]*font-size:var\(--fs-sm\);font-weight:700/);
+  });
+
+  it("窄屏(≤1023) 操作按钮字号回退（pad 看板列仅 168px）", () => {
+    const blk = CSS.match(/@media \(max-width:1023px\)\{[\s\S]*?\n\}/);
+    expect(blk, "应存在窄屏回退块").toBeTruthy();
+    /* ⚠️ 必须是 `.kcol .kbtns button` 这种更高特异性的写法 ——
+       该块在源码里位于 `.kbtns button{font-size:var(--fs-sm)}` 之前，
+       同特异性会被后者按源码顺序覆盖而静默失效（实测 900px 下仍是 14px）。 */
+    expect(blk[0], "回退要用 .kcol 提高特异性").toContain(".kcol .kbtns button{font-size:var(--fs-xs)}");
+  });
+});
