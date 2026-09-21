@@ -104,18 +104,21 @@ describe("属性 chips：左右均匀分布", () => {
 });
 
 describe("列模板：6 轨 + 与看板同构（对齐的数学前提）", () => {
-  it("表单为 6 个等宽 minmax(0,1fr) 轨（用户定稿：输入框与下拉框同宽）", () => {
+  it("表单为 12 个等宽 minmax(0,1fr) 轨（v3.7.59：微轨化，看板 1 列 = 4 微轨）", () => {
     /* ⚠️ .form-row--board 有多条规则，且**第一条未必含列模板** ——
        必须扫描出「含 grid-template-columns 的那条」，不能只取第一条（这个坑踩过多次）。 */
     const rules = []; let i = 0;
     while ((i = CSS.indexOf('.form-row--board{', i)) >= 0) { rules.push(CSS.slice(i, CSS.indexOf('}', i) + 1)); i++; }
     const tpl = rules.find(r => r.indexOf('grid-template-columns') >= 0);
     expect(tpl, '应有含列模板的 .form-row--board 规则').toBeTruthy();
-    /* v3.7.58：模板改用 repeat(6,minmax(0,1fr)) 简写 → 数轨要兼容两种写法 */
+    /* v3.7.58 起模板用 repeat(N,minmax(0,1fr)) 简写 → 数轨要兼容两种写法 */
     const tplVal = (tpl.match(/grid-template-columns:([^;]+)/) || [])[1] || '';
     const rep = tplVal.match(/repeat\((\d+),minmax\(0,1fr\)\)/);
     const tracks = rep ? Number(rep[1]) : (tplVal.match(/minmax\(0,1fr\)/g) || []).length;
-    expect(tracks, '6 轨应等宽').toBe(6);
+    /* v3.7.59：6 轨 → 12 微轨。看板 1 列宽 W = 4t + 3g（4 微轨 3 间隙），
+       故 3 列 = 12 微轨 + 11 间隙 → 表单 12 微轨与看板三列**严格同宽**，
+       且能用"半列"粒度表达红框要求的宽度（优先级 56px / 截止日期整列等）。 */
+    expect(tracks, '12 微轨（看板 3 列 × 4）').toBe(12);
     expect(tpl, '不应再有 1.333fr 的比例轨').not.toContain('1.333fr');
   });
 
