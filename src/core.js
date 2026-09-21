@@ -181,7 +181,7 @@ const SCENARIOS = {
       fields:[
         {k:"title",label:t("field.meetingTitle", "会议主题"),type:"text"},
         {k:"type",label:t("field.meetingType","会议类型"),type:"select",options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
-        {k:"date",label:t("field.date","日期"),type:"date"},
+        {k:"date",label:t("field.date","日期"),type:"date",timePicker:true},
         {k:"host",label:t("field.host","主持人"),type:"text"},
         {k:"who",label:t("field.attendees", "参会人"),type:"text"},
         {k:"duration",label:t("field.durationHours","时长(小时)"),type:"number"},
