@@ -1886,8 +1886,10 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .chat-model-inline:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .chat-model-inline:hover{border-color:var(--accent-soft)}
 /* v3.7.13：AI 未配置时的「去配置」按钮 */
-.chat-setup-btn{margin-top:var(--space-3);padding:6px 16px;border:1px solid var(--accent);
-  border-radius:var(--radius-md);background:var(--accent);color:var(--on-accent);
+/* v3.7.13：AI 未配置时的「去配置」行动条——独立于消息气泡 */
+.chat-setup-bar{display:flex;justify-content:center;padding:var(--space-3) 0;margin-top:var(--space-2)}
+.chat-setup-btn{padding:6px 16px;border:1px solid var(--accent);
+  border-radius:var(--control-r);background:var(--accent);color:var(--on-accent);
   font-size:var(--fs-sm);cursor:pointer;transition:filter var(--transition-fast)}
 .chat-setup-btn:hover{filter:brightness(.96)}
 /* 发送/暂停按钮：图标方块 32×32；暂停态变红底 */
@@ -19330,7 +19332,7 @@ function _featureCardHtml(cfg){
     if(f.type === "textarea"){
       return '<div class="tool-field u-col-span-all"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" class="u-fs-2xs u-min-h-0"style="font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace"></textarea></div>';
     }
-    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
+    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
     return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
   }).join("") + '</div>';
   const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
@@ -19677,7 +19679,7 @@ SCENE_FEATURE_RENDER.office = {
       fields:[
         {k:"title", label:t("field.meetingTitle", t("field.meetingTitle","会议主题")), type:"text"},
         {k:"type", label:t("field.meetingType","会议类型"), type:"select", options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
-        {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date"},
+        {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date", timePicker:true},
         {k:"host", label:t("field.host","主持人"), type:"text"},
         {k:"who", label:t("field.attendees","参会人"), type:"text"},
         {k:"duration", label:t("field.durationHours","时长(小时)"), type:"number"},
@@ -22347,10 +22349,14 @@ function renderChatDisabled(){
   const s = SCENARIOS[active] || {name:""};
   el.innerHTML = sanitizeHtml(
     t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是") + esc(s.name) +
-    t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>") +
-    '<button type="button" class="chat-setup-btn" onclick="AppBridge.openAiPage()">' +
-    t("ai.goSetup","去配置") + '</button>'
+    t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>")
   );
+  // 在消息提示下方放一个独立的行动条（不在气泡内部）
+  const bar=document.createElement("div");
+  bar.className="chat-setup-bar";
+  bar.innerHTML='<button type="button" class="chat-setup-btn">' + t("ai.goSetup","去配置") + '</button>';
+  bar.querySelector(".chat-setup-btn").onclick=function(){ if(typeof AppBridge!=="undefined"&&AppBridge.openAiPage) AppBridge.openAiPage(); };
+  el.appendChild(bar);
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------

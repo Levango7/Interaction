@@ -597,7 +597,7 @@ function _featureCardHtml(cfg){
     if(f.type === "textarea"){
       return '<div class="tool-field u-col-span-all"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" class="u-fs-2xs u-min-h-0"style="font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace"></textarea></div>';
     }
-    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
+    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
     return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
   }).join("") + '</div>';
   const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
@@ -944,7 +944,7 @@ SCENE_FEATURE_RENDER.office = {
       fields:[
         {k:"title", label:t("field.meetingTitle", t("field.meetingTitle","会议主题")), type:"text"},
         {k:"type", label:t("field.meetingType","会议类型"), type:"select", options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
-        {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date"},
+        {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date", timePicker:true},
         {k:"host", label:t("field.host","主持人"), type:"text"},
         {k:"who", label:t("field.attendees","参会人"), type:"text"},
         {k:"duration", label:t("field.durationHours","时长(小时)"), type:"number"},
