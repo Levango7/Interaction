@@ -1084,13 +1084,19 @@ function _recordToolHtml(cfg, records){
       }).join("") + "</div>";
     }
   }
-  return '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">'+t("tool.addLabel", "添加")+'</span><button type="button" class="addbtn sm add-round" id="recAddBtn" data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
+  /* v3.7.12：**补上 .card.tool-app-card 外壳**（用户："做成 card"）。
+     这一族此前直接返回裸的 filter-bar + form-box + table，没有卡片类 ——
+     而 CSS 里有一大批 `.tool-app-card …` 限定的规则（栅格/统计/表格/工具栏样式）全都不生效，
+     放大看就是"字段独占一行 + 没有卡片外观"。`_featureCardHtml` 那一族本来就带该类。 */
+  return '<div class="card tool-app-card">' +
+    '<div class="tool-filter-bar"><span class="add-wrap"><span class="add-label">'+t("tool.addLabel", "添加")+'</span><button type="button" class="addbtn sm add-round" id="recAddBtn" data-sc="accent" aria-label="'+t("tool.ariaAdd", "添加")+'">＋</button></span>' +
     '<span class="sub u-m-0">共 ' + records.length + ' 条</span>' + summary
       + '<button type="button" class="addbtn sm" id="recExportBtn">' + t("tool.exportCsv", "导出 CSV") + '</button></div>' +
     '<div class="tool-form-box">' + form + "</div>" +
     (records.length
       ? '<div class="tool-table-wrap"><table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + "</th>"; }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table></div>"
-      : '<div class="tool-empty">' + esc(cfg.emptyTip || t("tool.emptyDefault", "暂无记录")) + "</div>");
+      : '<div class="tool-empty">' + esc(cfg.emptyTip || t("tool.emptyDefault", "暂无记录")) + "</div>") +
+    "</div>";
 }
 /* v3.2 C-档双轨收敛：双轨工具的写入入口改为引导跳转功能卡（数据以功能卡为真相源）。
  * 提示条替代表单提交——点「去功能卡添加」切到对应场景功能 tab。 */
