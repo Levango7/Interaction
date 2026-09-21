@@ -164,8 +164,8 @@ function renderMainHTML(){
     <div class="fld fld-lg"><label>${t("field.taskTitle","任务标题")}</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
     <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" placeholder="${t("placeholder.dueDate","选日期")}"></div>
     <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
-      <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
-    <div class="fld fld-lg"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
+      <select name="priority"><option value="">${t("common.none","无")}</option><option value="P0">${t("task.priority.p0","P0 紧急")}</option><option value="P1">${t("task.priority.p1","P1 重要")}</option><option value="P2">${t("task.priority.p2","P2 一般")}</option></select></div>
+    <div class="fld fld-md"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
@@ -650,6 +650,7 @@ function _featureCardHtml(cfg){
  * 点击/聚焦该输入框时弹出主题化圆角面板；选定后把 YYYY-MM-DD 写入 input.value。
  * 全局单例（_dpPanel/_dpOverlay），ESC / 点面板外 / 选完即关闭。 */
 var _dpPanel = null, _dpOverlay = null, _dpInput = null, _dpViewY = null, _dpViewM = null;
+var _dpTimeH = null, _dpTimeM = null; // 小时(0-23) 和 分钟(0-59)
 function _dpClose(){
   if(_dpOverlay){ try{ _dpOverlay.remove(); }catch(_e){} _dpOverlay = null; }
   if(_dpPanel){ try{ _dpPanel.remove(); }catch(_e){} _dpPanel = null; }
@@ -657,8 +658,8 @@ function _dpClose(){
 }
 function _dpMonthDays(y, m){ return new Date(y, m + 1, 0).getDate(); }
 function _dpFirstWeekday(y, m){ return new Date(y, m, 1).getDay(); } // 0=Sun
-function _dpParseVal(v){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || "").trim()); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null; }
-function _dpFmt(y, m, d){ return y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0"); }
+function _dpParseVal(v){ const m = /^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?$/.exec(String(v || "").trim()); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3], h: m[4] ? +m[4] : null, min: m[5] ? +m[5] : null } : null; }
+function _dpFmt(y, m, d, h, min){ var s = y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0"); if(h !== null && h !== undefined) s += " " + String(h).padStart(2, "0") + ":" + String(min || 0).padStart(2, "0"); return s; }
 function _dpRender(){
   if(!_dpPanel) return;
   const today = new Date();
@@ -689,18 +690,50 @@ function _dpRender(){
   for(let i = 1; i <= tail; i++){
     html += '<button type="button" class="dp-day other" data-dp-day="1:' + i + '">' + i + '</button>';
   }
-  html += '</div>' +
-    '<div class="dp-foot">' +
+  html += '</div>';
+  // 时间选择行（仅当 input 有 data-time-picker 属性时显示）
+  if(_dpInput && _dpInput.hasAttribute("data-time-picker")){
+    var defH = _dpTimeH !== null ? _dpTimeH : 9;
+    var defM = _dpTimeM !== null ? _dpTimeM : 0;
+    var hOpts = "";
+    for(var hh = 0; hh < 24; hh++){
+      hOpts += '<option value="' + hh + '"' + (hh === defH ? " selected" : "") + '>' + String(hh).padStart(2, "0") + '</option>';
+    }
+    var mOpts = "";
+    for(var mm = 0; mm < 60; mm += 5){
+      mOpts += '<option value="' + mm + '"' + (mm === defM ? " selected" : "") + '>' + String(mm).padStart(2, "0") + '</option>';
+    }
+    html += '<div class="dp-time">' +
+      '<select class="dp-time-h" data-dp-time="h">' + hOpts + '</select>' +
+      '<span>:</span>' +
+      '<select class="dp-time-m" data-dp-time="m">' + mOpts + '</select>' +
+      '</div>';
+  }
+  html += '<div class="dp-foot">' +
     '<button type="button" class="btn-ghost btn-sm" data-dp-clear="1">' + t("datepicker.clear","清除") + '</button>' +
-    '<button type="button" class="btn-ghost btn-sm" data-dp-today="1">' + t("datepicker.today","今天") + '</button>' +
-    '</div>';
+    '<button type="button" class="btn-ghost btn-sm" data-dp-today="1">' + t("datepicker.today","今天") + '</button>';
+  if(_dpInput && _dpInput.hasAttribute("data-time-picker")){
+    html += '<button type="button" class="dp-confirm-btn" data-dp-confirm="1">' + t("datepicker.confirm","确定") + '</button>';
+  }
+  html += '</div>';
   _dpPanel.innerHTML = html;
 }
 function _dpPick(y, m, d){
   if(!_dpInput) return;
-  _dpInput.value = _dpFmt(y, m, d);
+  // 如果之前没有时间，默认设为 09:00
+  if(_dpTimeH === null) _dpTimeH = 9;
+  if(_dpTimeM === null) _dpTimeM = 0;
+  // 有 data-time-picker 属性时输出带时间格式，否则纯日期（向后兼容）
+  if(_dpInput.hasAttribute("data-time-picker")){
+    _dpInput.value = _dpFmt(y, m, d, _dpTimeH, _dpTimeM);
+  } else {
+    _dpInput.value = _dpFmt(y, m, d);
+  }
   try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){}
-  _dpClose();
+  // 纯日期场景：选完即关闭；带时间场景：保持打开让用户调整时间
+  if(!_dpInput.hasAttribute("data-time-picker")){
+    _dpClose();
+  }
 }
 function _dpOpen(input){
   _dpClose();
@@ -708,6 +741,8 @@ function _dpOpen(input){
   _dpInput = input;
   const cur = _dpParseVal(input.value) || (function(){ const n = new Date(); return { y: n.getFullYear(), m: n.getMonth(), d: n.getDate() }; })();
   _dpViewY = cur.y; _dpViewM = cur.m;
+  _dpTimeH = cur && cur.h !== null ? cur.h : null;
+  _dpTimeM = cur && cur.min !== null ? cur.min : null;
   const overlay = document.createElement("div");
   overlay.className = "dp-overlay";
   overlay.addEventListener("mousedown", function(){ _dpClose(); });
@@ -799,10 +834,32 @@ document.addEventListener("click", function(e){
   const day = t2 && t2.closest && t2.closest("[data-dp-day]");
   if(day){ const seg = (day.getAttribute("data-dp-day") || "").split(":"); const monShift = Number(seg[0]) || 0; const dd = Number(seg[1]); const base = new Date(_dpViewY, _dpViewM + monShift, 1); _dpPick(base.getFullYear(), base.getMonth(), dd); return; }
   const clear = t2 && t2.closest && t2.closest("[data-dp-clear]");
-  if(clear){ if(_dpInput){ _dpInput.value = ""; try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){} } _dpClose(); return; }
+  if(clear){ if(_dpInput){ _dpInput.value = ""; try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){} } _dpTimeH = null; _dpTimeM = null; _dpClose(); return; }
   const todayBtn = t2 && t2.closest && t2.closest("[data-dp-today]");
-  if(todayBtn){ const n = new Date(); _dpPick(n.getFullYear(), n.getMonth(), n.getDate()); return; }
+  if(todayBtn){ const n = new Date(); if(_dpTimeH === null) _dpTimeH = 9; if(_dpTimeM === null) _dpTimeM = 0; _dpPick(n.getFullYear(), n.getMonth(), n.getDate()); return; }
+  const confirmBtn = t2 && t2.closest && t2.closest("[data-dp-confirm]");
+  if(confirmBtn){ _dpClose(); return; }
 }, true);
+// 时间选择变更
+document.addEventListener("change", function(e){
+  if(!_dpPanel) return;
+  var sel = e.target && e.target.closest ? e.target.closest("[data-dp-time]") : null;
+  if(!sel) return;
+  if(sel.getAttribute("data-dp-time") === "h") _dpTimeH = parseInt(sel.value, 10);
+  if(sel.getAttribute("data-dp-time") === "m") _dpTimeM = parseInt(sel.value, 10);
+  // 更新 input 值
+  if(_dpInput){
+    var cur = _dpParseVal(_dpInput.value);
+    if(cur){
+      if(_dpInput.hasAttribute("data-time-picker")){
+        _dpInput.value = _dpFmt(cur.y, cur.m, cur.d, _dpTimeH, _dpTimeM);
+      } else {
+        _dpInput.value = _dpFmt(cur.y, cur.m, cur.d);
+      }
+      try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){}
+    }
+  }
+});
 document.addEventListener("keydown", function(e){ if(e.key === "Escape" && _dpPanel) _dpClose(); });
 window.addEventListener("resize", function(){ _dpClose(); });
 window.addEventListener("scroll", function(){ _dpLayout(false); }, true);
@@ -889,6 +946,7 @@ SCENE_FEATURE_RENDER.office = {
         {k:"type", label:t("field.meetingType","会议类型"), type:"select", options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
         {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date"},
         {k:"host", label:t("field.host","主持人"), type:"text"},
+        {k:"who", label:t("field.attendees","参会人"), type:"text"},
         {k:"duration", label:t("field.durationHours","时长(小时)"), type:"number"},
         {k:"note", label:t("field.conclusion", t("field.conclusion","结论 / 跟进")), type:"text"}
       ],
@@ -896,6 +954,7 @@ SCENE_FEATURE_RENDER.office = {
         {label:t("field.meetingTitle", t("field.meetingTitle","会议主题")), k:"title"},
         {label:t("field.type", t("field.type","类型")), k:"type"},
         {label:t("tool.regex.preset.date", t("field.date","日期")), k:"date"},
+        {label:t("field.attendees","参会人"), k:"who"},
         {label:t("field.status", t("field.status","状态")), fmt:function(r){ return r.done ? t("p3.html.meetingOpened","<span class=\"u-text-ok\">已开</span>") : t("p3.html.meetingPending","<span class=\"u-text-warn\">待开</span>"); }}
       ],
       sum:function(recs){

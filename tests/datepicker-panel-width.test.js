@@ -41,7 +41,7 @@ describe("日期面板 · 宽度跟随输入框并收敛到 [206,260]（v3.7.8�
   });
 
   it("CSS 用固定 width + max-width，不再 max-content / min-width:2xx", () => {
-    expect(HTML).toMatch(/\.dp-panel\{[^}]*width:206px/);
+    expect(HTML).toMatch(/\.dp-panel\{[^}]*width:220px/);
     expect(HTML).toMatch(/\.dp-panel\{[^}]*max-width:260px/);
     expect(HTML, "max-content 会被表头撑到 ~270px").not.toMatch(/\.dp-panel\{[^}]*width:max-content/);
     expect(HTML, "旧地板 220/250 都应消失").not.toMatch(/\.dp-panel\{[^}]*min-width:2\d\dpx/);
