@@ -57,12 +57,10 @@ describe("看板卡 · 共用列栅格", () => {
        它的窄是靠「select width:56px」实现的。 */
     expect(rep, "12 轨应用 repeat(12,minmax(0,1fr)) 等宽写法").toBeTruthy();
     expect(tpl, "不应再出现 1.333fr 的比例轨").not.toContain("1.333fr");
-    /* 同一个列间距 —— 注意：看板**基础规则**写 --space-2，但桌面媒体查询里覆盖为 --space-5
-       （实测桌面 1440 下看板 column-gap = 20px = --space-5）。所以要比的是**桌面生效值**。 */
+    /* v3.7.60：等宽四列下 gap 统一为 --space-3(12px) 列间距，不再跟随看板。 */
     const formGap = (m[0].match(/gap:var\((--[\w-]+)\) var\((--[\w-]+)\)/) || [])[2];
     expect(formGap, "表单需显式给列间距 token").toBeTruthy();
-    expect(formGap, "表单列间距应为 --space-5（与看板桌面生效值一致）").toBe("--space-5");
-    expect(CSS, "看板桌面下也必须是 --space-5").toMatch(/\.kanban\{[^}]*gap:var\(--space-5\)/);
+    expect(formGap, "表单列间距应为 --space-3（与其他表单栅格一致）").toBe("--space-3");
     expect(m[0]).toContain("align-items:end");
   });
 
@@ -98,18 +96,10 @@ describe("看板卡 · 共用列栅格", () => {
     expect(CSS).not.toMatch(/@media \(max-width:760px\)\{\s*\.form-row--board/);
   });
 
-  it("窄 PC(1024-1439) 保持**单行**、只把列间距收紧到 --space-2（v3.7.59）", () => {
-    /* 用户 1128px 截图实证 + 明确指令：「按红框宽度做单行」。
-       v3.7.58 曾在此区间改成上下两行 —— 那是**错的**（用户原话"我让你向东，你非要向西"），
-       v3.7.59 已撤销：PC 档永远单行，窄只是把 gap 从 --space-5(20) 降到 --space-2(8)。 */
-    const m = CSS.match(/@media \(min-width:1024px\) and \(max-width:1439px\)\{[\s\S]*?\n\}/);
-    expect(m, "应存在 1024-1439 区间的表单间距收紧规则").toBeTruthy();
-    const blk = m[0];
-    expect(blk, "只收紧列间距到 --space-2（跟随该档看板）").toContain(".form-row--board{gap:var(--space-2) var(--space-2)}");
-    /* 关键回归护栏：本区间**不得**再出现任何「行位」重排 —— 那正是 v3.7.5 的错误 */
-    expect(blk, "窄 PC 不得把字段推到第 2 行（v3.7.5 的错就在这）").not.toContain("grid-row:2");
-    expect(blk, "窄 PC 不得改 id 显式列位（保持单行红框布局）").not.toContain("#taskForm>.fld");
-    expect(blk, "窄 PC 不得用 justify-self 改加号位置（保持最右）").not.toContain("justify-self");
+  it("窄 PC(1024-1439) 保持单行（v3.7.60：gap 已统一，不再需要区间收紧规则）", () => {
+    /* v3.7.60：等宽四列下 gap 已统一为 --space-3(12px)，不再需要 1024-1439 区间的收紧规则。
+       PC 档永远单行，窄屏回退在 max-width:1023px 处理。 */
+    expect(CSS).not.toMatch(/@media \(min-width:1024px\) and \(max-width:1439px\)\{[\s\S]*?\.form-row--board/);
   });
 });
 
