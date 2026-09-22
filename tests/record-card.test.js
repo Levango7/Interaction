@@ -38,28 +38,26 @@ function rule(sel) {
 }
 
 describe("③ 日期并入同一行：基准列宽与跨列", () => {
-  it("基准 56px + 间距 8px（单位制：文字3 数字2 日期2 = 12 单位，须满足 N×c+(N−1)×g ≤ 可用宽）", () => {
+  it("基准 120px + 间距 8px（v3.7.60：auto-fill 120px，字段等宽 span 1）", () => {
     const g = rule('.tool-form-grid');
-    expect(g).toContain('minmax(56px,1fr)');
+    expect(g).toContain('minmax(120px,1fr)');
     expect(g).toMatch(/gap:var\(--space-2\) var\(--space-2\)/);
   });
 
-  it("跨列：文字/下拉 3、数字 2、日期 2", () => {
-    expect(CSS).toMatch(/\.tool-field--wide\{grid-column:span 3\}/);
-    expect(CSS).toMatch(/\.tool-field--num\{grid-column:span 2\}/);
-    expect(CSS).toMatch(/\.tool-field--date\{grid-column:span 2\}/);
+  it("跨列：所有字段统一 span 1（等宽，不再按类型区分）", () => {
+    expect(CSS).toMatch(/\.tool-field--wide\{grid-column:span 1\}/);
+    expect(CSS).toMatch(/\.tool-field--num\{grid-column:span 1\}/);
+    expect(CSS).toMatch(/\.tool-field--date\{grid-column:span 1\}/);
   });
 
-  it("渲染侧按字段类型加类（两族共用 _fieldSpanCls，不再各写一套）", () => {
-    /* v3.7.42 起：记录工具与工具卡共用 _fieldSpanCls —— 之前记录工具自己写了一套内联表达式，
-       且漏了下拉框；共用后 select 才拿得到 --sel。 */
+  it("渲染侧 _fieldSpanCls 统一返回空（所有字段等宽）", () => {
+    /* v3.7.60 起：_fieldSpanCls 统一返回空字符串，不再按类型区分。
+       保留函数签名是为了向后兼容 _recordToolHtml 的调用。 */
     expect(JS).toMatch(/const wcls = _fieldSpanCls\(f\);/);
     expect(JS).toContain('class="tool-field\' + wcls + \'"');
-    /* 共用函数本身必须覆盖四种类型（定义在 render-scene-main.js） */
     expect(JS_MAIN).toMatch(/function _fieldSpanCls\(f\)\{/);
-    expect(JS_MAIN).toMatch(/tool-field--sel/);
-    expect(JS_MAIN).toMatch(/tool-field--num/);
-    expect(JS_MAIN).toMatch(/tool-field--date/);
+    /* 函数体统一返回空字符串 */
+    expect(JS_MAIN).toMatch(/function _fieldSpanCls\(f\)\{\s*return "";\s*\}/);
   });
 });
 
@@ -93,13 +91,12 @@ describe("① 表格圆角矩形", () => {
 });
 
 describe("② 金额/评分（数字）宽度", () => {
-  it("数字走 --num（2 单位 ≈124px）—— 比原来的 1 单位 91px 宽，比文字字段 191px 窄", () => {
-    expect(JS_MAIN).toMatch(/" tool-field--num"/);
+  it("数字字段与其他字段等宽（v3.7.60：统一 span 1）", () => {
     expect(JS).toMatch(/const wcls = _fieldSpanCls\(f\);/);
-    expect(CSS).toMatch(/\.tool-field--num\{grid-column:span 2\}/);
+    expect(CSS).toMatch(/\.tool-field--num\{grid-column:span 1\}/);
   });
 
-  it("日期同为 2 单位（191→124 变窄），'2026-09-18' 这类时间戳够显示", () => {
-    expect(CSS).toMatch(/\.tool-field--date\{grid-column:span 2\}/);
+  it("日期与其他字段等宽（v3.7.60：统一 span 1）", () => {
+    expect(CSS).toMatch(/\.tool-field--date\{grid-column:span 1\}/);
   });
 });

@@ -109,7 +109,11 @@ function renderSceneFeatNav(){
     feats.map(f=>{
       const ft = f.type || "record";
       const act = f.id===sceneFeatureMode?" active":"";
-      const typeBadge = ft==="core" ? "" : (ft==="tool" ? " <span class=\"feat-tag feat-tag-tool\" aria-hidden=\"true\">"+t("scene.featTag.tool","工具")+"</span>" : " <span class=\"feat-tag feat-tag-record\" aria-hidden=\"true\">"+t("scene.featTag.record","记录")+"</span>");
+      /* v3.7.13：**去掉 tab 上的「工具 / 记录」灰色小标签**。
+         用户 2026-09-22 截图质问："这个 记录的标注的小字 是干什么的？什么意思？？有必要留吗？？"
+         → 确认没有必要：这个徽标只是把内部的 type（core/tool/record）暴露给了用户，
+           对用户没有信息价值，反而让 tab 行显得杂乱。`type` 仍保留用于按钮样式（scene-feat-*）。 */
+      const typeBadge = "";
       return `<button type="button" class="set-nav-btn scene-feat-btn scene-feat-${ft}${act}" data-feat="${f.id}">${esc(f.label)}${typeBadge}</button>`;
     }).join("") +
   `</nav>`;
@@ -216,11 +220,9 @@ function renderMainHTML(){
       const ph = f.placeholder || f.label;
       inp = `<input name="${f.k}" type="${f.type==="number"?"number":"text"}" placeholder="${esc(ph)}" maxlength="500">`;
     }
-    // 字段宽度分级：title/note/code 等关键字段占宽，type/lang/value 等短字段占窄
-    const wideFields = {title:1, note:1, code:1, desc:1, who:1};
-    const narrowFields = {type:1, lang:1, status:1, value:1};
-    const wdCls = wideFields[f.k] ? "fld-lg" : narrowFields[f.k] ? "fld-sm" : "";
-    return `<div class="fld${wdCls?" "+wdCls:""}"><label>${f.label}</label>${inp}</div>`;
+    // v3.7.60：textarea 字段占整行（u-col-span-all），其他字段等宽（不再区分 fld-lg/fld-sm）
+    const spanCls = f.type === "textarea" ? " u-col-span-all" : "";
+    return `<div class="fld${spanCls}"><label>${f.label}</label>${inp}</div>`;
   }).join("");
   const recForm = `<form class="form-row form-row--grid" id="recForm">${recFields}
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span></form>`;
@@ -575,15 +577,12 @@ function bindMeetingActionCard(){
 }
 
 /**
- * 表单字段的跨列类（工具卡与记录工具**共用同一套规则**，保证两族视觉一致）。
- * 单位制：文字 3 · 下拉 2 · 数字 2 · 日期 2（基准列 56px + 间距 8px）
- * 依据：.tool-form-grid 的 auto-fill 栅格；曾因不给跨列类导致字段只有 1 单位（58px）被压扁。
+ * v3.7.60：表单字段跨列类 —— 统一返回空字符串（所有字段等宽 span 1）。
+ * 原来按类型区分（文字3/数字2/日期2/下拉2）导致字段宽度参差不齐，
+ * 改为固定4列栅格后所有字段默认 span 1，等宽对齐。
  */
 function _fieldSpanCls(f){
-  if(f.type === "number") return " tool-field--num";
-  if(f.type === "date")   return " tool-field--date";
-  if(f.type === "select") return " tool-field--sel";
-  return " tool-field--wide";
+  return "";
 }
 
 function _featureCardHtml(cfg){

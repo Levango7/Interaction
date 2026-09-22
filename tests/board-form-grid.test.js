@@ -66,11 +66,11 @@ describe("看板卡 · 共用列栅格", () => {
     expect(m[0]).toContain("align-items:end");
   });
 
-  it("跨轨规则齐备：xl/lg/fill 都跨 4 微轨（= 看板一列）", () => {
-    /* v3.7.59：跨轨类全部统一为 4 微轨 —— 正好等于看板一列宽，语义清晰。 */
-    expect(CSS).toMatch(/\.form-row--board>\.fld-xl\{grid-column:span 4\}/);
-    expect(CSS).toMatch(/\.form-row--board>\.fld-lg\{grid-column:span 4\}/);
-    expect(CSS).toMatch(/\.form-row--board>\.fld-fill\{grid-column:span 4\}/);
+  it("跨轨规则齐备：所有 fld-* 统一 span 3（等宽四列）", () => {
+    /* v3.7.60：所有 fld-* 统一 span 3 —— 等宽四列，不再区分宽窄。 */
+    expect(CSS).toMatch(/\.form-row--board>\.fld-xl\{grid-column:span 3\}/);
+    expect(CSS).toMatch(/\.form-row--board>\.fld-lg\{grid-column:span 3\}/);
+    expect(CSS).toMatch(/\.form-row--board>\.fld-fill\{grid-column:span 3\}/);
   });
 
   it("栅格变体里 .fld-* 尺寸类只决定跨轨、不再限宽（否则左右不等长）", () => {
@@ -120,27 +120,25 @@ describe("看板卡 · 标记侧", () => {
     expect(JS).toContain('const tagFilterHTML = `<div class="form-row form-row--board" id="taskFilterRow">');
   });
 
-  it("两行的显式列位：第一行按「宽·中·窄·中」分配（v3.7.11 起不再锚定看板列）", () => {
-    /* v3.7.11：**放弃"与看板列严格对齐"** —— 那是 v3.7.4 我自己引入的目标，用户从未要求。
-       用户在辅助线图上用三个箭头标出「截止日期/优先级/标签」的起始位置（比原布局整体左移），
-       并框住「优先级」那个 56px 的小 select，说明他要的是**字段按比例分配宽度**。
-       新序列：任务标题 4 · 截止日期 3 · 优先级 2 · 标签 3 微轨 → 302/222/141/221 @1600。 */
-    expect(CSS).toContain('#taskForm>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:5/8;grid-row:1}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:8/10;grid-row:1;min-width:0}');
+  it("两行的显式列位：等宽四列（v3.7.60 起字段宽度统一）", () => {
+    /* v3.7.60：任务表单改为**等宽四列**（每列 span 3），字段宽度统一、视觉规整。
+       标题(1/4) · 截止日期(4/7) · 优先级(7/10) · 标签(10/13) —— 四个字段等宽。
+       筛选行：搜索(1/4) · 联动记录(4/7) · 标签筛选(7/13) —— 前两字段与任务表单对齐。 */
+    expect(CSS).toContain('#taskForm>.fld:nth-child(1){grid-column:1/4;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:4/7;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:7/10;grid-row:1;min-width:0}');
     expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:10/13;grid-row:1}');
-    // 优先级 select 撑满轨道（用户框住的正是这个 56px 小框：141px 轨道里只占 56px、右侧空 85px）
+    // 优先级 select 撑满轨道
     expect(CSS, "优先级 select 应撑满轨道").toContain("#taskForm>.fld:nth-child(3)>select{width:100%}");
-    expect(CSS, "不得回到定宽 56px").not.toContain("#taskForm>.fld:nth-child(3)>select{width:56px}");
-    // 标签输入框右侧给加号让出 44px（加号叠在其右端，否则文字被盖）
+    // 标签输入框右侧给加号让出 44px
     expect(CSS).toContain("#taskForm>.fld:nth-child(4)>input{padding-right:44px}");
     // 加号：靠右对齐、底对齐。
     expect(CSS).toContain('#taskForm>.add-wrap{grid-column:10/13;grid-row:1;justify-self:end;align-self:end;');
-    // 筛选行仍锚定看板列（用户未提出改动，保持 1/5 · 5/9 · 9/13）
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(2){grid-column:5/9;grid-row:1}');
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:9/13;grid-row:1}');
-    // 加号与输入框底对齐（align-self:center 会让 38px 按钮比输入框高出 13px——实测过的坑）
+    // 筛选行前两字段与任务表单对齐，第三字段延伸到末尾
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/4;grid-row:1}');
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(2){grid-column:4/7;grid-row:1}');
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:7/13;grid-row:1}');
+    // 加号与输入框底对齐
     expect(CSS).not.toContain('#taskForm>.add-wrap{grid-column:10/13;grid-row:1;justify-self:end;align-self:center');
   });
 
