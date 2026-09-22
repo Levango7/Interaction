@@ -597,7 +597,10 @@ function _featureCardHtml(cfg){
       return '<div class="tool-field u-col-span-all"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" class="u-fs-2xs u-min-h-0"style="font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace"></textarea></div>';
     }
     const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
-    return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
+    /* v3.7.13：日期字段**预填今天**（用户 2026-09-22 截图质问："这个要手动录入吗？不是系统自动记录吗？"）。
+       记录型场景里日期几乎总是"当下"，预填今天省一步操作；带时间选择器的字段不预填。 */
+    const prefill = (f.type === "date" && !f.timePicker) ? ' value="' + todayStr() + '"' : '';
+    return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><input' + inputType + prefill + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
   }).join("") + '</div>';
   const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
   const summary = sums.length
@@ -760,7 +763,7 @@ function _dpOpen(input){
        面板永远不会比 260 更宽；格子由 `1fr` 自动均分。
      ⚠️ 必须用 width 不用 min-width —— min-width 拦不住 max-content 的膨胀。 */
   const iw = Math.round(input.getBoundingClientRect().width || 0);
-  const panelW = Math.min(260, Math.max(206, iw));
+  const panelW = Math.min(300, Math.max(240, iw));
   panel.style.width = panelW + "px";
   _dpLayout(true);
 }

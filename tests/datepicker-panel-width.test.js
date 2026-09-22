@@ -8,7 +8,8 @@
  *  ① **永远向下展开**（用户原话："下拉框，不是上拉框"）。
  *     旧实现在下方空间不足时翻到输入框上方；用户窗口只有 560px 高，面板必然上翻。
  *     新策略：不够就先把输入框上移腾空间；仍不够就压缩高度 + 内部滚动。**绝不翻上去**。
- *  ② **宽度收敛到 [206, 260]**（用户："日期的下拉框没必要这么宽大"）。
+ *  ② **宽度收敛到 [240, 300]**（v3.7.12 前是 [206,260]；用户 2026-09-22 又反馈"日期下拉框是不是左右太窄了"
+ *     → 地板 206→240、上限 260→300。两次反馈的方向不同，以最新一次为准）。
  *     旧实现 `min-width:220 + width:max-content` 会被表头撑到 ~270px，比输入框还宽。
  *  ③ **滚动跟随重定位，而不是关闭面板**。
  *     旧的 scroll handler 是 `_dpClose()` —— 结果 ① 里的"滚动腾空间"把面板自己关掉了
@@ -31,18 +32,18 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const JS_MAIN = readFileSync(join(ROOT, "src/render-scene-main.js"), "utf8");
 const HTML = readFileSync(join(ROOT, "agent-workbench.html"), "utf8");
 
-describe("日期面板 · 宽度跟随输入框并收敛到 [206,260]（v3.7.8）", () => {
+describe("日期面板 · 宽度跟随输入框并收敛到 [240,300]（v3.7.13）", () => {
   it("_dpOpen 按输入框宽度取**固定**宽度（不再 min-width）", () => {
     expect(JS_MAIN).toContain("const iw = Math.round(input.getBoundingClientRect().width || 0);");
-    expect(JS_MAIN).toContain("const panelW = Math.min(260, Math.max(206, iw));");
+    expect(JS_MAIN).toContain("const panelW = Math.min(300, Math.max(240, iw));");
     expect(JS_MAIN).toContain('panel.style.width = panelW + "px"');
     /* 回到 min-width 就会重新被表头撑宽 —— 这是本条守护的核心 */
     expect(JS_MAIN, "不得再设 panel.style.minWidth").not.toContain("panel.style.minWidth");
   });
 
   it("CSS 用固定 width + max-width，不再 max-content / min-width:2xx", () => {
-    expect(HTML).toMatch(/\.dp-panel\{[^}]*width:220px/);
-    expect(HTML).toMatch(/\.dp-panel\{[^}]*max-width:260px/);
+    expect(HTML).toMatch(/\.dp-panel\{[^}]*width:240px/);
+    expect(HTML).toMatch(/\.dp-panel\{[^}]*max-width:300px/);
     expect(HTML, "max-content 会被表头撑到 ~270px").not.toMatch(/\.dp-panel\{[^}]*width:max-content/);
     expect(HTML, "旧地板 220/250 都应消失").not.toMatch(/\.dp-panel\{[^}]*min-width:2\d\dpx/);
   });
