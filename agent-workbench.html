@@ -4076,6 +4076,18 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   0%{ -webkit-mask-position:135% 0; mask-position:135% 0; }
   55%,100%{ -webkit-mask-position:-135% 0; mask-position:-135% 0; }
 }
+/* v3.7.17：**浅色毛发（豆柴 / 雪团）的光影修正**。
+   默认那套是给深色宠物调的，套到白毛上会出问题：
+   ① shade（明暗层）soft-light 的暗部 rgba(0,0,0,.30) 会把白毛压成灰 → 改用 overlay 并收敛暗部
+   ② sheen（扫光层）screen 在接近纯白的毛色上等于没加 → 改用 overlay 才看得出柔光掠过
+   ③ 接地影 rgba(0,0,0,.40) 对白毛过重 → 整体降到 0.62 倍 */
+.pet-pale .pet-3d-shade{
+  mix-blend-mode:overlay;opacity:.55;
+  -webkit-mask-image:linear-gradient(133deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.28) 34%, rgba(255,255,255,.05) 52%, rgba(0,0,0,.06) 74%, rgba(0,0,0,.14) 100%);
+          mask-image:linear-gradient(133deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.28) 34%, rgba(255,255,255,.05) 52%, rgba(0,0,0,.06) 74%, rgba(0,0,0,.14) 100%);
+}
+.pet-pale .pet-3d-sheen{mix-blend-mode:overlay;opacity:.5}
+.pet-pale .pet-3d-shadow{opacity:.62}
 .pet-3d-shadow{position:absolute;left:50%;bottom:-4%;width:74%;height:12%;transform:translateX(-50%);
   background:radial-gradient(ellipse at center, rgba(0,0,0,.40) 0%, rgba(0,0,0,.16) 45%, rgba(0,0,0,0) 72%);
   pointer-events:none;z-index:-1}
@@ -5690,10 +5702,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.16"; /* v3.7.16 第一行定稿：优先级1轨(68px) 标签3轨 加号独立占最右1轨（不再叠加） */
+const VERSION = "3.7.17"; /* v3.7.17 浅色宠物(豆柴/雪团)光影修正：明暗层改 overlay + 扫光改 overlay + 接地影减弱 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923a";
+const BUILD_TAG = "20260923b";
 
 
 
