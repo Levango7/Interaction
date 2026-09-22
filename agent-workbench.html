@@ -1857,10 +1857,21 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .chat-model-inline:hover{border-color:var(--accent-soft)}
 /* v3.7.13：AI 未配置时的「去配置」按钮 */
 /* v3.7.13：AI 未配置时的「去配置」行动条——独立于消息气泡 */
-.chat-setup-bar{display:flex;justify-content:center;padding:var(--space-3) 0;margin-top:var(--space-2)}
-.chat-setup-btn{padding:6px 16px;border:1px solid var(--accent);
+/* v3.7.18：「去配置」从消息流移到输入框上方，做成**常驻状态条**。
+   用户连续两轮质疑"它应该在聊天区域出现吗"——原实现把按钮插在 #chat 消息流末尾，
+   看起来像 AI 回复的一条消息，语义混乱且位置随消息浮动。
+   现在固定在输入框正上方：黄底小条 + 左侧提示语 + 右侧胶囊按钮，配置 Key 后整条消失。 */
+/* v3.7.18：**上下两行 + 按钮靠左** —— 右下角桌面宠物默认落位会盖住状态条右端，
+   「去配置」按钮在右侧时被宠物身体挡住、点不到（v3.7.7 同类坑：浮层吃点击区）。
+   改为提示一行 + 按钮一行（左对齐），按钮落在安全区。 */
+.chat-setup-bar{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-1);
+  margin:var(--space-2) var(--space-2) 0;padding:var(--space-2) var(--space-2h);
+  background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+  border-radius:var(--control-r)}
+.chat-setup-bar .chat-setup-tip{font-size:var(--fs-xs);color:var(--text-dim);line-height:1.4}
+.chat-setup-btn{padding:5px 14px;border:1px solid var(--accent);
   border-radius:var(--control-r);background:var(--accent);color:var(--on-accent);
-  font-size:var(--fs-sm);cursor:pointer;transition:filter var(--transition-fast)}
+  font-size:var(--fs-xs);cursor:pointer;transition:filter var(--transition-fast);white-space:nowrap}
 .chat-setup-btn:hover{filter:brightness(.96)}
 /* 发送/暂停按钮：图标方块 32×32；暂停态变红底 */
 .chat-send-btn{flex-shrink:0;width:32px;height:32px;padding:0;border:none;border-radius:var(--radius-md);
@@ -5702,10 +5713,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.17"; /* v3.7.17 浅色宠物(豆柴/雪团)光影修正：明暗层改 overlay + 扫光改 overlay + 接地影减弱 */
+const VERSION = "3.7.18"; /* v3.7.18 「去配置」移出消息流 → 输入框上方状态条（上下两行、按钮靠左避开宠物遮挡） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923b";
+const BUILD_TAG = "20260923c";
 
 
 
@@ -22327,12 +22338,17 @@ function renderChatDisabled(){
     t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是") + esc(s.name) +
     t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>")
   );
-  // 在消息提示下方放一个独立的行动条（不在气泡内部）
+  // v3.7.18：行动条从消息流末尾移到**输入框正上方**（常驻状态条）。
+  // 原来插在 #chat 末尾会像"AI 回复的一条消息"，语义混乱且随消息滚动；
+  // 现在固定在输入框上沿，配置 Key 后随整条未启用态一起消失。
   const bar=document.createElement("div");
   bar.className="chat-setup-bar";
-  bar.innerHTML='<button type="button" class="chat-setup-btn">' + t("ai.goSetup","去配置") + '</button>';
+  bar.innerHTML='<span class="chat-setup-tip">' + t("ai.needKeyTip","尚未启用 AI：填入 API Key 即可对话并调用工具修改数据") + '</span>'
+    + '<button type="button" class="chat-setup-btn">' + t("ai.goSetup","去配置") + '</button>';
   bar.querySelector(".chat-setup-btn").onclick=function(){ if(typeof AppBridge!=="undefined"&&AppBridge.openAiPage) AppBridge.openAiPage(); };
-  el.appendChild(bar);
+  const chatForm=document.getElementById("chatForm");
+  if(chatForm && chatForm.parentElement) chatForm.parentElement.insertBefore(bar, chatForm);
+  else el.appendChild(bar);
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------
