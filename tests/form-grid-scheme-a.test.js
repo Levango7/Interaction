@@ -49,8 +49,8 @@ describe("方案 A · 字段层规则", () => {
   it("栅格行距列距走 --space-*（不写魔法数字）", () => {
     const m = CSS.match(/\.tool-form-grid\{[^}]*\}/);
     expect(m).toBeTruthy();
-    /* v3.7.60：gap 格式为 var(--space-2) var(--space-2) —— 两个 --space-* token */
-    expect(m[0]).toMatch(/gap:var\(--space-2\) var\(--space-2\)/);
+    /* v3.7.60：gap 格式为 var(--space-2) var(--space-3) —— 行距8px 列距12px，与 .form-row--board 一致 */
+    expect(m[0]).toMatch(/gap:var\(--space-2\) var\(--space-3\)/);
     expect(m[0]).toContain("align-items:start");
   });
 

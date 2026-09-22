@@ -919,7 +919,7 @@ input[type="file"]:hover{border-color:var(--accent)}
 .form-row--grid{min-width:0}
 .form-row--grid>.fld>label{min-height:var(--label-h)}
 .form-row--grid>.fld>input,.form-row--grid>.fld>select{height:var(--control-h)}
-.form-row--grid>.add-wrap{justify-self:end}
+
 @media (max-width:520px){.form-row--grid{grid-template-columns:1fr 1fr}}
 
 .form-row--board>.fld>label{min-height:var(--label-h)}
@@ -1320,7 +1320,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== v2.3.0 工具应用卡（TOOL_APPS 落地页） ===== */
 .tool-app-card{padding:var(--space-3)}
-.tool-app-card textarea,.tool-app-card input[type="text"],.tool-app-card input[type="number"],.tool-app-card input[type="date"],.tool-app-card select{width:100%;padding:var(--space-2) var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);font-size:var(--fs-sm);box-sizing:border-box;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+/* v3.7.60：功能卡内输入框样式与全局统一 —— 圆角/背景/padding/字号均复用全局 input,select,textarea 规则。
+   仅保留 width:100%（全局已有）+ box-sizing + transition + focus 态，不再覆盖圆角/背景/padding/字号。 */
+.tool-app-card textarea,.tool-app-card input[type="text"],.tool-app-card input[type="number"],.tool-app-card input[type="date"],.tool-app-card select{width:100%;box-sizing:border-box;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .tool-app-card textarea:focus,.tool-app-card input:focus,.tool-app-card select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
 .tool-app-card textarea{min-height:120px;resize:vertical;font-family:inherit}
 .tool-app-card label{display:block;font-size:var(--fs-xs);color:var(--muted);margin:var(--space-2) 0 var(--space-1);font-weight:500}
@@ -1440,8 +1442,9 @@ input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随�
    已删掉这个孤儿 `.tool-app-card`，让栅格规则独立成立。 */
 /* v3.7.60：.tool-form-grid 改为 auto-fill(120px) + 统一 span 1 —— 所有字段等宽，不再按类型区分。
    原 auto-fill(56px) + 不同 span(wide=3,num=2,date=2,sel=2) 导致字段宽度参差不齐。
-   120px 基准列宽：400px容器≈3列、600px≈4列、800px≈5列，字段等宽自适应。 */
-.tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-2) var(--space-2);margin-top:var(--space-3);align-items:start}
+   120px 基准列宽：400px容器≈3列、600px≈4列、800px≈5列，字段等宽自适应。
+   v3.7.60：gap 列间距统一为 --space-3(12px)，与 .form-row--board/.form-row--grid 一致。 */
+.tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-2) var(--space-3);margin-top:var(--space-3);align-items:start}
 /* v3.7.60：跨列类统一为 span 1（等宽），保留类名兼容已生成的 HTML。 */
 .tool-field--wide{grid-column:span 1}
 .tool-field--num{grid-column:span 1}

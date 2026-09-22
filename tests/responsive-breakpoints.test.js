@@ -91,12 +91,14 @@ describe("响应式三档 · 窄屏表单回退(≤1023)", () => {
 });
 
 describe("响应式三档 · PC 宽屏(≥1024) 不得重排", () => {
-  it("1024-1439 只收列间距，不得改行位或列位", () => {
-    const blk = mediaBlock(SMALL_PC_Q, "gap:var(--space-2) var(--space-2)");
-    expect(blk, "应存在 1024-1439 区间规则").toBeTruthy();
-    expect(blk, "只收紧列间距").toContain(".form-row--board{gap:var(--space-2) var(--space-2)}");
-    expect(blk, "PC 不得把字段推到第 2 行").not.toContain("grid-row:2");
-    expect(blk, "PC 不得改 id 显式列位").not.toContain("#taskForm>.fld");
+  it("1024-1439 不得改行位或列位（gap 已在基础规则统一，无需区间收紧）", () => {
+    /* v3.7.60：等宽四列改造后，.form-row--board 的 gap 已统一为 var(--space-2) var(--space-3)，
+       不再需要 1024-1439 区间单独收紧。只验证 PC 不得重排行位/列位。 */
+    const blk = mediaBlock(SMALL_PC_Q);
+    if (blk) {
+      expect(blk, "PC 不得把字段推到第 2 行").not.toContain("grid-row:2");
+      expect(blk, "PC 不得改 id 显式列位").not.toContain("#taskForm>.fld");
+    }
   });
 
   it("≥1440 放宽看板间距，且不得重排行位", () => {
