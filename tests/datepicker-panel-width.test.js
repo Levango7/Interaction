@@ -87,17 +87,22 @@ describe("日期面板 · z-index 必须是合法 calc（v3.7.8）", () => {
   });
 });
 
-describe("placeholder 提亮加粗（v3.7.8 · 用户：「字体大一点，粗一点，显眼一点」）", () => {
-  it("全局 ::placeholder 有 color / weight / opacity 三项", () => {
-    expect(HTML).toMatch(/input::placeholder,textarea::placeholder\{color:var\(--text-dim\);font-weight:600;opacity:1\}/);
+describe("placeholder 视觉权重（v3.7.14 回调：不得盖过 label 与框线）", () => {
+  /* 历史：v3.7.8 用户要"字体大一点、粗一点、显眼一点" → 提到 600 字重 + --text-dim；
+     v3.7.14 用户又反馈"输入框里的字太大太粗，喧宾夺主（压过框线和上面的名称）"
+     → 回落到 400 字重 + --muted。两次方向相反，以最新的为准。 */
+  it("全局 ::placeholder 为 400 字重 + --muted（不得再用 600/--text-dim）", () => {
+    expect(HTML).toMatch(/input::placeholder,textarea::placeholder\{color:var\(--muted\);font-weight:400;opacity:1\}/);
+    expect(HTML, "placeholder 不得加粗到 600").not.toMatch(/::placeholder\{[^}]*font-weight:600/);
   });
 
   it("日期框 placeholder 跟随全局（不再单独用更淡的 --text-faint）", () => {
-    expect(HTML).toContain("input[data-date-picker]::placeholder{color:var(--text-dim)}");
+    expect(HTML).toMatch(/input\[data-date-picker\]::placeholder\{color:var\(--muted\)/);
   });
 
-  it("输入框基础字号提到 --fs-base（原来 --fs-sm 偏小）", () => {
-    expect(HTML).toMatch(/input,select,textarea\{font-family:inherit;font-size:var\(--fs-base\)/);
+  it("输入框字号 14px（--fs-sm）——15px 会压过 label", () => {
+    expect(HTML).toMatch(/input,select,textarea\{font-family:inherit;font-size:var\(--fs-sm\)/);
+    expect(HTML, "不得回到 15px(--fs-base)").not.toMatch(/input,select,textarea\{font-family:inherit;font-size:var\(--fs-base\)/);
   });
 });
 

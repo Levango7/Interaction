@@ -41,7 +41,9 @@ describe("③ 日期并入同一行：基准列宽与跨列", () => {
   it("基准 120px + 间距 8px（v3.7.60：auto-fill 120px，字段等宽 span 1）", () => {
     const g = rule('.tool-form-grid');
     expect(g).toContain('minmax(120px,1fr)');
-    expect(g).toMatch(/gap:var\(--space-2\) var\(--space-3\)/);
+    /* v3.7.14：行距 = 列距，统一为单一 --space-2（原 8/12 不一致） */
+    expect(g).toMatch(/gap:var\(--space-2\);/);
+    expect(g, "不得回到 8/12").not.toMatch(/gap:var\(--space-2\) var\(--space-3\)/);
   });
 
   it("跨列：所有字段统一 span 1（等宽，不再按类型区分）", () => {

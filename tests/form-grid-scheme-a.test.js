@@ -49,8 +49,10 @@ describe("方案 A · 字段层规则", () => {
   it("栅格行距列距走 --space-*（不写魔法数字）", () => {
     const m = CSS.match(/\.tool-form-grid\{[^}]*\}/);
     expect(m).toBeTruthy();
-    /* v3.7.60：gap 格式为 var(--space-2) var(--space-3) —— 行距8px 列距12px，与 .form-row--board 一致 */
-    expect(m[0]).toMatch(/gap:var\(--space-2\) var\(--space-3\)/);
+    /* v3.7.14 规范统一：gap 为单一 var(--space-2)，**行距 = 列距**（原为 --space-2/--space-3
+       即 8/12，纵向偏挤、横向偏松，是审计发现的不一致项）。 */
+    expect(m[0]).toMatch(/gap:var\(--space-2\);/);
+    expect(m[0], "行距列距必须相等，不得再出现 8/12").not.toMatch(/gap:var\(--space-2\) var\(--space-3\)/);
     expect(m[0]).toContain("align-items:start");
   });
 
