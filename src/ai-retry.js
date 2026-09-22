@@ -495,12 +495,17 @@ function renderChatDisabled(){
     t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是") + esc(s.name) +
     t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>")
   );
-  // 在消息提示下方放一个独立的行动条（不在气泡内部）
+  // v3.7.18：行动条从消息流末尾移到**输入框正上方**（常驻状态条）。
+  // 原来插在 #chat 末尾会像"AI 回复的一条消息"，语义混乱且随消息滚动；
+  // 现在固定在输入框上沿，配置 Key 后随整条未启用态一起消失。
   const bar=document.createElement("div");
   bar.className="chat-setup-bar";
-  bar.innerHTML='<button type="button" class="chat-setup-btn">' + t("ai.goSetup","去配置") + '</button>';
+  bar.innerHTML='<span class="chat-setup-tip">' + t("ai.needKeyTip","尚未启用 AI：填入 API Key 即可对话并调用工具修改数据") + '</span>'
+    + '<button type="button" class="chat-setup-btn">' + t("ai.goSetup","去配置") + '</button>';
   bar.querySelector(".chat-setup-btn").onclick=function(){ if(typeof AppBridge!=="undefined"&&AppBridge.openAiPage) AppBridge.openAiPage(); };
-  el.appendChild(bar);
+  const chatForm=document.getElementById("chatForm");
+  if(chatForm && chatForm.parentElement) chatForm.parentElement.insertBefore(bar, chatForm);
+  else el.appendChild(bar);
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------
