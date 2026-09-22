@@ -32,18 +32,15 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const JS_MAIN = readFileSync(join(ROOT, "src/render-scene-main.js"), "utf8");
 const HTML = readFileSync(join(ROOT, "agent-workbench.html"), "utf8");
 
-describe("日期面板 · 宽度跟随输入框并收敛到 [240,300]（v3.7.13）", () => {
-  it("_dpOpen 按输入框宽度取**固定**宽度（不再 min-width）", () => {
-    expect(JS_MAIN).toContain("const iw = Math.round(input.getBoundingClientRect().width || 0);");
-    expect(JS_MAIN).toContain("const panelW = Math.min(300, Math.max(240, iw));");
-    expect(JS_MAIN).toContain('panel.style.width = panelW + "px"');
+describe("日期面板 · 固定宽度 240px（v3.7.61）", () => {
+  it("_dpOpen 固定面板宽度 240px（不再跟随输入框宽度）", () => {
+    expect(JS_MAIN).toContain('panel.style.width = "240px"');
     /* 回到 min-width 就会重新被表头撑宽 —— 这是本条守护的核心 */
     expect(JS_MAIN, "不得再设 panel.style.minWidth").not.toContain("panel.style.minWidth");
   });
 
-  it("CSS 用固定 width + max-width，不再 max-content / min-width:2xx", () => {
+  it("CSS 用固定 width 240px，不再 max-width:300px / max-content / min-width:2xx", () => {
     expect(HTML).toMatch(/\.dp-panel\{[^}]*width:240px/);
-    expect(HTML).toMatch(/\.dp-panel\{[^}]*max-width:300px/);
     expect(HTML, "max-content 会被表头撑到 ~270px").not.toMatch(/\.dp-panel\{[^}]*width:max-content/);
     expect(HTML, "旧地板 220/250 都应消失").not.toMatch(/\.dp-panel\{[^}]*min-width:2\d\dpx/);
   });

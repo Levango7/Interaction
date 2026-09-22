@@ -755,16 +755,8 @@ function _dpOpen(input){
   document.body.appendChild(panel);
   _dpOverlay = overlay; _dpPanel = panel;
   _dpRender();
-  /* v3.7.8：面板宽度**跟随触发输入框**，并收敛到 [206, 260] 区间。
-     下限 206px：日历 7 列 + 两位数字的物理下限（再窄会挤到断行）。
-     上限 260px：用户 2026-09-21 反馈"日期的下拉框没必要这么宽大" —— 旧实现用
-       `min-width:220 + width:max-content`，面板会被表头（"2026 年 9 月" + 两个 28px 按钮）
-       撑到 ~270px，比输入框还宽，看着臃肿。改成**固定 width**（而非 min-width）后，
-       面板永远不会比 260 更宽；格子由 `1fr` 自动均分。
-     ⚠️ 必须用 width 不用 min-width —— min-width 拦不住 max-content 的膨胀。 */
-  const iw = Math.round(input.getBoundingClientRect().width || 0);
-  const panelW = Math.min(300, Math.max(240, iw));
-  panel.style.width = panelW + "px";
+  /* v3.7.61：面板宽度固定 240px —— 不再跟随触发输入框宽度变化，确保所有日期卡片统一宽度。 */
+  panel.style.width = "240px";
   _dpLayout(true);
 }
 /* v3.7.8：面板定位（**打开时**与**滚动跟随**共用）。
