@@ -338,7 +338,7 @@ button{transition:transform var(--transition-fast),opacity var(--transition-fast
 button:active:not([disabled]){transform:scale(.97)}
 button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 button[disabled]:active{transform:none}
-input,select,textarea{font-family:inherit;font-size:var(--fs-base);border:1px solid var(--line);
+input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
   /* v3.7.33：输入框背景改用 --surface-muted —— 原来与卡片同为 --panel，实测两者色值**完全相同**，
      缺少"这里能输入"的视觉暗示。（注意：本注释不写具体色值 —— lint-colors 只放行「--令牌: 值」定义行，
      注释里的裸色值会被判违规，这个坑我踩过两次。） */
@@ -355,7 +355,12 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="
 /* v3.7.8：placeholder 提亮加粗（用户 2026-09-21 截图标注："字体大一点，粗一点，显眼一点"）。
    旧态用浏览器默认 —— 浅灰 + 常规字重，在 --surface-muted 底上看不清提示语。
    ⚠️ `opacity:1` 不能省：Firefox 对 placeholder 默认套 opacity，不显式覆盖会一直发灰。 */
-input::placeholder,textarea::placeholder{color:var(--text-dim);font-weight:600;opacity:1}
+/* v3.7.14：**降低输入框的视觉权重** —— 用户反馈"输入框/下拉框里的字体太大太粗，
+   几乎把框线和上面的名称给喧宾夺主了"。
+   v3.7.8 曾把字号 14→15、v3.7.9 把 placeholder 提到 600 字重，方向过头了：
+   表单的层级应该是「label（次要说明）→ 输入值（主体）」，输入值不该比 label 强势太多。
+   现在：输入值 14px/400（原 15px）；placeholder 14px/**400**/--muted（原 600 + --text-dim）。 */
+input::placeholder,textarea::placeholder{color:var(--muted);font-weight:400;opacity:1}
 /* v3.2：textarea 允许多行（高度由 min-height 兜底，不由 --control-h 限制） */
 textarea{height:auto;min-height:64px;padding:var(--space-2) var(--space-2h);line-height:1.5}
 /* v2.1.1：checkbox/radio 天然小尺寸，不继承 width:100%（替代散落各处的内联 width:auto） */
@@ -903,46 +908,25 @@ input[type="file"]::file-selector-button{margin-right:var(--space-2);height:calc
 input[type="file"]::-webkit-file-upload-button{margin-right:var(--space-2);height:calc(var(--control-h) - 2px);padding:0 var(--space-3);border:none;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--text);font:inherit;font-size:var(--fs-sm);font-weight:500;cursor:pointer}
 input[type="file"]:hover{border-color:var(--accent)}
 .form-row{display:flex;gap:var(--space-2) var(--space-3);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--space-2)}
-/* v3.7.29 方案 A（第三批·看板卡试点）：两行字段共用一套栅格，使上下列位一一对应。
-   v3.7.58 重大修正：**轨数与 gap 必须跟随看板在该断点的列数与 gap**，不能写死 6 轨 + 20px。
-   事故（用户 1128px 截图实证）：写死 6 轨 + gap:20px 时，1128px 下每轨仅 74px ——
-     优先级下拉框被挤成 74px 小方块、"标签"文字被加号盖住、"标签（留空=全部）"竖成两行。
-   规律（实测各断点）：
-     ≥1440      看板 3 列 gap20 → 表单 6 轨 ×(w-5×20)/6   · 1440 时 114px，截止日期 248px ✓
-     1024~1439  看板 3 列 gap 8 → 表单 6 轨 ×(w-5×8)/6    · 1280 时 109px，截止日期 226px ✓
-     601~1023   看板 2 列 gap 8 → 表单**放弃同列位**，退回 2 列（4 轨在 820px 下只剩 60px，不可用）
-     ≤600       单列
-   ⚠️ gap 必须与看板同断点同值：原来表单钉 20px 而看板 <1440 是 8px，凭空吃掉 60px。 */
-/* v3.7.59：**14 微轨**（每轨 = 看板列宽/4 的一半 → 看板 1 列 = 8 微轨）。
-   ⚠️ 关键：**所有轨必须等宽 1fr**，才能与看板保持"4 微轨 = 1 列 + 3 间隙"的精确咬合。
-   优先级**不能**用固定 px 写在轨定义里（那会破坏等分，实测 1440 下截止日期被挤掉 69px）。
-   改法：轨定义纯 14×1fr；优先级的窄用 `grid-column` span 1 + **justify-self:start + 固定 width**。
-   14 微轨布局（每列 4 微轨）：
-     标题   1/9   (= 列1 整列)
-     截止   9/13
-     优先   13/14 (1 微轨 = 列宽/4，1120 下 37px、1440 下 47px → 再给它 min-width 让文字横排)
-     标签   13/17 与优先级交叠？不行。
-   重算：14 轨仅够 标题4+截止4+优先1+标签4 = 13，余 1 轨作缓冲。
-   → 标题 1/5 · 截止 5/9 · 优先 9/10 · 标签 10/14 （12 轨，余 2 轨并入标签）
-   优先级 1 微轨在 1440 下 = 47px，仍装不下"优先级"三字 → 单独给它 min-width:56px，
-   并从**标签**借 9px（标签本就有余量），这样截止日期不再受损。 */
-.form-row--board{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--space-2) var(--space-5);align-items:end;margin-bottom:var(--space-2)}
+/* v3.7.60：看板卡表单 —— 等宽四列布局（12 微轨，每字段 span 3）。
+   gap 统一为 --space-2(8px) 行间距 + --space-3(12px) 列间距，与其他表单栅格一致。 */
+.form-row--board{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--space-2) var(--space-3);align-items:end;margin-bottom:var(--space-2)}
 .form-row--board>*{min-width:0}
 /* v3.7.48：输入框/下拉框也要 min-width:0 —— 否则它们的固有最小宽度会把窄轨撑开（优先级曾被撑到 120px 并与标签重叠） */
 .form-row--board input,.form-row--board select,.form-row--board textarea{min-width:0;width:100%}
-/* v3.7.36：.form-row--grid —— 字段**多于 5 个**的表单用 auto-fill 栅格
-   （实测记录表单 8 个字段硬套看板 5 轨会溢出换行；auto-fill 按 150px 自动分行且每行对齐） */
-.form-row--grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:var(--space-3) var(--space-3);align-items:end;margin-bottom:var(--space-2)}
+/* v3.7.60：.form-row--grid 改为**固定4列**栅格 —— 字段等宽对齐，不再参差。
+   原 auto-fill(minmax(190px,1fr)) 导致每行列数随容器宽度变化，字段宽度参差不齐。 */
+.form-row--grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3) var(--space-3);align-items:end;margin-bottom:var(--space-2)}
 .form-row--grid>*{min-width:0}
-/* v3.7.53：多字段工具卡（学习资料那种 >5 字段）两处修正：
-   ① 最小列宽 150 → 190px、间距统一 12px —— 原来宽度参差（实测 135/140/205/220），标签挤在一起
-   ② 加号**钉死在最右列**（grid-column-end:-1）—— 原来它被当普通网格项排，字段换行后它飘到中间 ✗ */
-.form-row--grid>.add-wrap{grid-column-end:-1;justify-self:end;align-self:end}
+/* v3.7.60：固定4列栅格下加号不再钉死最右列（grid-column-end:-1 会让加号占整行），
+   改为自然排列 + 靠右对齐。 */
+.form-row--grid>.add-wrap{justify-self:end;align-self:end}
 .form-row--grid{min-width:0}
 .form-row--grid>.fld>label{min-height:var(--label-h)}
 .form-row--grid>.fld>input,.form-row--grid>.fld>select{height:var(--control-h)}
-.form-row--grid>.add-wrap{justify-self:end}
+
 @media (max-width:520px){.form-row--grid{grid-template-columns:1fr 1fr}}
+
 .form-row--board>.fld>label{min-height:var(--label-h)}
 .form-row--board>.fld>input,.form-row--board>.fld>select{height:var(--control-h)}
 /* v3.7.30：栅格变体里，.fld-* 尺寸类**只决定跨几轨**，不再限制宽度 —— 宽度由轨道决定。
@@ -954,58 +938,28 @@ input[type="file"]:hover{border-color:var(--accent)}
    且前者在源码中更靠后 → 会压过它，把 76px 的「优先级」轨撑到 120px 并与相邻字段重叠（实测重叠 24px）。
    这里用 .form-row.form-row--board（0,3,0）提高特异性，**不依赖源码顺序**，后续谁在文件里插规则都不会翻车。 */
 .form-row.form-row--board>.fld,.form-row.form-row--grid>.fld{min-width:0;max-width:none}
-/* v3.7.51：加号**叠加**在标签输入框右端（用户："标签输入框宽一点"）——
-   标签改回跨 2 轨吃满第三列，加号不再占独立轨，而是叠在输入框右侧；输入框补右内边距避免文字钻到按钮下。 */
-/* v3.7.57：任务表单这一行**全部显式定位**（6 轨＝看板 3 列各拆两半，点位不随内容变化）：
-     任务标题 轨1-2 (249px＝待办列整列) · 截止日期 轨3-4 (249px＝进行中列整列)
-     优先级   轨5   (114px＝已完成列左半) · 标签 轨6 (114px＝已完成列右半) + 加号叠加其右端
-   宽度依据（v3.7.3 实测）：截止日期原仅 114px，而它的日期下拉面板 min-width 250px → **相差 136px**；
-   标签原占满整列 249px。按"截止日期与下拉面板同宽／优先级窄／标签窄"重排后，
-   截止日期 : 优先级 ≈ 249 : 114 ≈ 2.2 : 1，回到最初要的"日期长一点、优先级短一点"。
-   ⚠ align-self 必须是 **end**（＝与输入框底边对齐）：行高 63px = label(24)+gap+控件(38)，
-   而 add-wrap 自身只有 38px 高；用 center 会让它相对 38px 的输入框**高出 13px**（实测 -13px）。
-   这是纯视觉错位，JS/DOM 层面测不出来，只能靠 CSS 显式声明。 */
-/* v3.7.59：PC(≥1024) 恢复**单行**，按用户红框宽度定稿（用户截图圈注 + 明确答复"按红框宽度做单行"）。
-   红框规律（截图实证，1120px）：标题宽 → 截止日期中宽 → **优先级最窄** → 标签中窄 → 加号最右。
-   ⚠️ 3.7.5 我把它改成两行是**方向错误**（用户："我让你向东，你非要向西"）—— PC 就该单行。
-   为精确表达"优先级 0.5 轨 / 截止日期 1.5 轨"，栅格由 6 轨细化为 **12 半轨**
-   （每半轨 = 看板列宽/4；1120px 下 = 42px），于是：
-     任务标题 半轨1-4  (=看板列1 整列 173px)
-     截止日期 半轨5-8  (前 3 半轨=127px，右缘对齐看板列2 右缘)
-     优先级   半轨9    (42px  + 间距 → 视觉 ~50px，最窄)
-     标签     半轨10-12(后 3 半轨=127px，与截止日期同宽)
-     加号     贴合标签右端
-   → 边界 243 / 416 / 596 / 777 全部与看板三列框线咬合。 */
-.form-row--board>.fld-xl{grid-column:span 4}
-.form-row--board>.fld-lg{grid-column:span 4}
-.form-row--board>.fld-fill{grid-column:span 4}
-/* v3.7.11：**放弃"与看板列严格对齐"，改按用户标注的宽度序列排布**。
-   依据：用户在辅助线图上用三个箭头标出「截止日期 / 优先级 / 标签」各自的起始位置，
-   并框住「优先级」字段（原话"注意我方框框的位置"）。他标的位置比原布局整体左移一截，
-   说明要的是**四个字段按比例分配宽度**，而不是"每个字段都锚定看板列边界"——
-   后者是我 v3.7.4 自己引入的目标，用户从未要求过（他自始至终只说"截止日期宽一点、
-   优先级窄一点"）。把自造的目标当成用户诉求，是这几轮反复改错的根源。
-   新序列（12 微轨）：任务标题 4 · 截止日期 3 · 优先级 2 · 标签 3
-   → 形成「宽 · 中 · 窄 · 中」的渐变，标签变宽、截止日期收窄。
-   ⚠️ 若日后要恢复"与看板列对齐"，注意 1 列 = 4 微轨（1/5 · 5/9 · 9/13）。 */
-#taskForm>.fld:nth-child(1){grid-column:1/5;grid-row:1}
-#taskForm>.fld:nth-child(2){grid-column:5/8;grid-row:1}
-/* v3.7.11：优先级 select 由**定宽 56px 改为撑满所在轨道** ——
-   用户框住的正是这个 select：它在 141px 的轨道里只占 56px、右侧空 85px，
-   与右边撑满的「标签」输入框明显不协调。
-   （56px 是 v3.7.6 为防「优先级」三字竖排定的下限，现在 label 独占一行，不需要了。） */
-#taskForm>.fld:nth-child(3){grid-column:8/10;grid-row:1;min-width:0}
-#taskForm>.fld:nth-child(3)>select{width:100%}
+/* v3.7.60：加号叠加在标签输入框右端，输入框补右内边距避免文字钻到按钮下。
+   align-self 必须是 end（与输入框底边对齐），center 会让按钮高出 13px。 */
+/* v3.7.60：所有 fld-* 统一 span 3（等宽四列），不再区分宽窄。 */
+.form-row--board>.fld-xl{grid-column:span 3}
+.form-row--board>.fld-lg{grid-column:span 3}
+.form-row--board>.fld-md{grid-column:span 3}
+.form-row--board>.fld-sm{grid-column:span 3}
+.form-row--board>.fld-fill{grid-column:span 3}
+/* v3.7.62：任务表单 —— 四字段等宽(span 3)，加号叠加在标签输入框右端。
+   标题(1/4) · 截止日期(4/7) · 优先级(7/10) · 标签(10/13) · 加号叠加。
+   所有字段等宽对齐，筛选行前两列与任务表单完全对齐。 */
+#taskForm>.fld:nth-child(1){grid-column:1/4;grid-row:1}
+#taskForm>.fld:nth-child(2){grid-column:4/7;grid-row:1}
+#taskForm>.fld:nth-child(3){grid-column:7/10;grid-row:1;min-width:0}
+#taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}
 #taskForm>.fld:nth-child(4){grid-column:10/13;grid-row:1}
-#taskForm>.fld:nth-child(4)>input{padding-right:44px}
+#taskForm>.fld:nth-child(4)>input{padding-right:calc(var(--control-h) + var(--space-2))}
 #taskForm>.add-wrap{grid-column:10/13;grid-row:1;justify-self:end;align-self:end;z-index:var(--z-under)}
-/* 筛选行：与第一行**同一套列锚点**（v3.7.7 修正）。
-   ⚠️ 旧值给的是 1/7 · 7/10 · 10/13 —— 与看板列（1 列 = 4 微轨）没有对应关系，
-   实测「联动记录」右缘与看板列2 右缘差 107px@1920 / 80.5px@1600（用户截图箭头指的就是这里）。
-   改为与第一行同构后，三个字段边界全部落在看板列框线上。 */
-#taskFilterRow>.fld:nth-child(1){grid-column:1/5;grid-row:1}
-#taskFilterRow>.fld:nth-child(2){grid-column:5/9;grid-row:1}
-#taskFilterRow>.fld:nth-child(3){grid-column:9/13;grid-row:1}
+/* v3.7.62：筛选行 —— 前两字段与任务表单对齐(span 3+3)，标签筛选占满剩余(span 6)。 */
+#taskFilterRow>.fld:nth-child(1){grid-column:1/4;grid-row:1}
+#taskFilterRow>.fld:nth-child(2){grid-column:4/7;grid-row:1}
+#taskFilterRow>.fld:nth-child(3){grid-column:7/13;grid-row:1}
 
 /* 看板卡第二行（筛选行）用满第三列（＝第一行「标签+加号」的总宽） */
 .form-row--board>.add-wrap .addbtn{width:100%}
@@ -1038,14 +992,11 @@ input[type="file"]:hover{border-color:var(--accent)}
      第一版写 `.kbtns button` 时就是这么静默失效的（CDP 实测 900px 下仍是 14px）。 */
   .kcol .kbtns button{font-size:var(--fs-xs)}
 }
-/* v3.7.59：**撤销 v3.7.5 的 PC 两行方案**（用户明确否掉："我让你向东，你非要向西"）。
-   PC(≥1024) 一律单行；只用 12 半轨 + 红框宽度实现"标题宽/截止日期中宽/优先级最窄/标签中窄"。
-   此处仅保留一条必要修正：1024-1439 区间 gap 跟随看板降到 8px
-   （看板此区间是 8px，表单若钉 20px 会白吃 11×12=132px，控件无谓变窄）。 */
-@media (min-width:1024px) and (max-width:1439px){
-  .form-row--board{gap:var(--space-2) var(--space-2)}
+/* v3.7.60：等宽四列下 gap 已统一为 --space-3(12px) 列间距，不再需要区间收紧规则。 */
 }
-}
+/* v3.7.62：优先级下拉框在非栅格表单（编辑模态框等）中限制宽度，
+   栅格表单中由 #taskForm>.fld:nth-child(3)>select{max-width:none} 覆盖。 */
+select[name="priority"]{max-width:120px}
 .form-row .fld{flex:1;min-width:120px}
 /* v3.2 阶段三：表单字段分组卡片（移动端分组节奏）——label+input 包在 .field-group 内，
    带左侧色条 + 间距 --space-3，确保表单在移动端有良好的视觉节奏 */
@@ -1072,7 +1023,7 @@ input[type="file"]:hover{border-color:var(--accent)}
 /* v3.2 修复：加 display:inline-flex+align-items/justify-content center 确保加号/图标/文字垂直水平居中 */
 .addbtn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1);
   padding:0 var(--space-3);border-radius:var(--control-r);background:var(--sc,var(--accent));
-  color:var(--on-accent);font-size:var(--fs-sm);height:var(--control-h);font-weight:600;line-height:1;
+  color:var(--on-accent);font-size:var(--fs-base);height:var(--control-h);font-weight:600;line-height:1;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast);letter-spacing:-.01em}
 .addbtn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .addbtn:active{filter:brightness(.92)}
@@ -1080,7 +1031,14 @@ input[type="file"]:hover{border-color:var(--accent)}
 /* v3.2：按钮尺寸阶梯统一（v2.1.1 高度阶梯：sm=28/xs=24——v3.2 改用 --control-h 令牌对齐，xs 改为 24 圆角矩形而非胶囊） */
 .addbtn.sm{height:var(--control-h-sm);padding:0 var(--space-2h);font-size:var(--fs-sm);font-weight:500;border-radius:var(--control-r)}
 .addbtn.xs{height:24px;padding:0 var(--space-2);font-size:var(--fs-xs);font-weight:500;border-radius:var(--control-r)}
-.addbtn.min{min-width:90px;padding:6px var(--space-3);min-height:32px;font-size:var(--fs-sm)}
+.addbtn.min{min-width:90px;padding:6px var(--space-3);min-height:var(--control-h);font-size:var(--fs-base)}
+/* v3.7.14 规范统一：**圆形按钮恒为 38×38**（--control-h），且不受 .sm/.xs 影响。
+   ⚠️ 实测过：`.add-round` 只有 (0,1,0)，会被 `.addbtn.sm` (0,2,0) 的高度覆盖 →
+   出现过 90×14 的塌陷按钮（宽被子元素撑开、高只剩 line-height）。
+   这里用 (0,3,0) 的三类复合选择器钉死，并加 flex:0 0 auto 防止被父级 flex 拉伸。 */
+.addbtn.add-round,.addbtn.sm.add-round,.addbtn.xs.add-round,.addbtn.min.add-round{
+  width:var(--control-h);height:var(--control-h);min-width:0;flex:0 0 auto;padding:0;
+  font-size:var(--fs-base);line-height:1;border-radius:var(--control-r)}
 .addbtn.danger{background:var(--danger,var(--muted));color:var(--on-accent)}
 /* ===== v3.2 阶段四：data-sc 属性选择器映射（替代内联 style="--sc:..."，规避 lint-colors 硬编码门禁）
    语义：data-sc="accent" 等价于 data-sc="accent"，由属性选择器注入 CSS 自定义属性。
@@ -1332,7 +1290,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .ms-item{display:flex;flex-direction:column;gap:2px;min-width:64px;flex:1 1 64px;padding:0 var(--space-1)}
 .ms-item:not(:first-child){border-left:1px solid var(--line);padding-left:var(--space-2)}
 .ms-n{font-size:var(--fs-xl);font-weight:700;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
-.ms-l{font-size:var(--fs-xs);color:var(--text-faint)}
+/* v3.7.14：与卡片副标题 .sub 统一用 --muted（原为 --text-faint，同为"次要说明文字"却比 .sub 更淡） */
+.ms-l{font-size:var(--fs-xs);color:var(--muted)}
 .ov-sec-h{grid-column:1/-1;font-size:var(--fs-sm);font-weight:600;color:var(--text);margin:var(--space-3) 0 var(--space-1);padding:var(--space-1) 0 var(--space-1) var(--space-2);border-bottom:1px solid var(--line);border-left:3px solid var(--accent);border-radius:2px 0 0 2px}
 .ov-viz-card .addbtn{margin-top:var(--space-2h)}
 
@@ -1378,7 +1337,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== v2.3.0 工具应用卡（TOOL_APPS 落地页） ===== */
 .tool-app-card{padding:var(--space-3)}
-.tool-app-card textarea,.tool-app-card input[type="text"],.tool-app-card input[type="number"],.tool-app-card input[type="date"],.tool-app-card select{width:100%;padding:var(--space-2) var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);font-size:var(--fs-sm);box-sizing:border-box;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+/* v3.7.60：功能卡内输入框样式与全局统一 —— 圆角/背景/padding/字号均复用全局 input,select,textarea 规则。
+   仅保留 width:100%（全局已有）+ box-sizing + transition + focus 态，不再覆盖圆角/背景/padding/字号。 */
+.tool-app-card textarea,.tool-app-card input[type="text"],.tool-app-card input[type="number"],.tool-app-card input[type="date"],.tool-app-card select{width:100%;box-sizing:border-box;transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .tool-app-card textarea:focus,.tool-app-card input:focus,.tool-app-card select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
 .tool-app-card textarea{min-height:120px;resize:vertical;font-family:inherit}
 .tool-app-card label{display:block;font-size:var(--fs-xs);color:var(--muted);margin:var(--space-2) 0 var(--space-1);font-weight:500}
@@ -1398,9 +1359,9 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 
 /* ===== v3.6.2 自定义日期选择器（圆角矩形 + 主题色，替代浏览器原生白底方角弹层） ===== */
 input[data-date-picker]{cursor:pointer;caret-color:transparent}
-input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随全局 placeholder 提亮 */
+input[data-date-picker]::placeholder{color:var(--muted)} /* v3.7.14：跟随全局 placeholder（v3.7.8 曾提亮到 --text-dim，现回落） */
 .dp-overlay{position:fixed;inset:0;z-index:var(--z-modal,3000)}
-.dp-panel{position:fixed;z-index:calc(var(--z-modal,3000) + 1);width:206px;max-width:260px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-3);padding:var(--space-2);font-size:var(--fs-sm);user-select:none}
+.dp-panel{position:fixed;z-index:calc(var(--z-modal,3000) + 1);width:240px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-3);padding:var(--space-2);font-size:var(--fs-sm);user-select:none}
 /* ⚠️ z-index 必须写成 `calc(var(...) + 1)`：原来写的是 `var(--z-modal,3000)+1`，
    少了 calc → **整条声明非法被丢弃** → 面板退化成 z-index:auto，
    结果触发它的输入框反而盖在日历上（用户 2026-09-21 截图里「选日期」文字压在日期格上）。
@@ -1435,6 +1396,13 @@ input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随�
 .dp-day.other:hover{background:var(--surface-muted);color:var(--text-faint)}
 .dp-foot{display:flex;gap:var(--space-1);margin-top:var(--space-2)}
 .dp-foot .btn-ghost{flex:1}
+.dp-confirm-btn{flex:1;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--control-r);cursor:pointer;font-size:var(--fs-xs);padding:4px 8px;transition:filter var(--transition-fast)}
+.dp-confirm-btn:hover{filter:brightness(.96)}
+/* v3.7.13：时间选择行 —— 在日期网格与底部按钮之间 */
+.dp-time{display:flex;align-items:center;justify-content:center;gap:var(--space-1);margin-top:var(--space-2);padding-top:var(--space-1);border-top:1px solid var(--line)}
+.dp-time select{font-size:var(--fs-xs);padding:2px 4px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel2);color:var(--text);cursor:pointer;min-width:48px}
+.dp-time select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.dp-time span{color:var(--text-dim);font-size:var(--fs-xs)}
 .tool-app-card .tool-table tr:hover td{background:var(--surface-hover)}
 .tool-app-card .tool-empty{color:var(--muted);text-align:center;padding:var(--space-5);font-size:var(--fs-sm)}
 /* v3.6.5：统计改为「紧凑圆角徽章」并入工具栏右侧（margin-left:auto）——
@@ -1489,26 +1457,28 @@ input[data-date-picker]::placeholder{color:var(--text-dim)} /* v3.7.8：跟随�
    于是凡是不带 .tool-app-card 的卡片（`_recordToolHtml` 那一族）栅格规则全部失效，
    退化成 display:block → **每个字段独占一行**（用户截图："不要一个输入框独占一行"）。
    已删掉这个孤儿 `.tool-app-card`，让栅格规则独立成立。 */
-/* v3.7.38：基准列宽 180→104px，并把字段按类型跨列 —— 这样
-     「店铺/菜品(文字) 宽 · 金额/评分(数字) 窄 · 日期 中」且 5 个字段能排进同一行
-     （原来 180px 基准只放得下 4 列，日期被挤到第二行）。 */
-.tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:var(--space-2) var(--space-2);margin-top:var(--space-3);align-items:start}
-/* v3.7.40：单位制改为「文字/下拉 3 · 数字 2 · 日期 2」= 12 单位
-   （基准 56px + 间距 8px → 文字 191 · 数字/日期 124）——用户要求数字稍宽、日期稍窄。 */
-.tool-field--wide{grid-column:span 3}
-.tool-field--num{grid-column:span 2}
-/* v3.7.42：下拉框 2 单位（与数字/日期同宽）—— 选项值都短，没必要占 3 单位 */
-.tool-field--sel{grid-column:span 2}
+/* v3.7.60：.tool-form-grid 改为 auto-fill(120px) + 统一 span 1 —— 所有字段等宽，不再按类型区分。
+   原 auto-fill(56px) + 不同 span(wide=3,num=2,date=2,sel=2) 导致字段宽度参差不齐。
+   120px 基准列宽：400px容器≈3列、600px≈4列、800px≈5列，字段等宽自适应。
+   v3.7.60：gap 列间距统一为 --space-3(12px)，与 .form-row--board/.form-row--grid 一致。 */
+/* v3.7.14 规范统一：行距 = 列距（原为 --space-2 / --space-3，即 8/12，纵向偏挤横向偏松） */
+.tool-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-2);margin-top:var(--space-3);align-items:start}
+/* v3.7.60：跨列类统一为 span 1（等宽），保留类名兼容已生成的 HTML。 */
+.tool-field--wide{grid-column:span 1}
+.tool-field--num{grid-column:span 1}
+.tool-field--sel{grid-column:span 1}
 /* v3.7.42：网格内 label 的上边距归零 —— .tool-app-card label 自带 margin-top:8px，
    与栅格 gap 叠加成"双份间距"，是"大量空白"的来源之一。 */
 .tool-form-grid .tool-field>label{margin-top:0}
-.tool-field--date{grid-column:span 2}
+.tool-field--date{grid-column:span 1}
 .tool-app-card .tool-form-grid .tool-field{display:flex;flex-direction:column;gap:var(--space-1h)}
 .tool-field>label{display:flex;align-items:center;min-height:var(--label-h);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tool-field>input,.tool-field>select{height:var(--control-h)}
 .tool-field>textarea{min-height:calc(var(--control-h) * 2)}
 .tool-field>.hint,.tool-field>.sub,.tool-field>.err{min-height:var(--field-msg-h);margin:0}
 .tool-app-card .tool-form-grid .tool-field label{margin:0;font-size:var(--fs-xs);color:var(--muted);font-weight:500}
+/* v3.7.60：窄屏下 .tool-form-grid 回退到2列 */
+@media (max-width:520px){.tool-form-grid{grid-template-columns:1fr 1fr}}
 /* v3.0：表单与列表之间加虚线分隔，视觉层次更清晰 */
 .tool-app-card .tool-form-box{padding-bottom:var(--space-3);border-bottom:1px dashed var(--line);margin-bottom:var(--space-2)}
 /* v3.7.12：**兜底卡片外观** —— 实测数据场景的「报表」tab 会把 `.tool-form-box` 直接挂在
@@ -1872,10 +1842,17 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .chat-text-input:not(:placeholder-shown){min-height:96px}
 .chat-model-inline{font-size:var(--fs-xs);padding:2px 6px;border:1px solid var(--line);
   border-radius:var(--radius-sm);background:var(--panel2);color:var(--text);
-  flex:1;min-width:0;max-width:160px;cursor:pointer;min-height:20px;line-height:1.3;
+  flex:1;min-width:80px;max-width:220px;cursor:pointer;min-height:20px;line-height:1.3;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-model-inline:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .chat-model-inline:hover{border-color:var(--accent-soft)}
+/* v3.7.13：AI 未配置时的「去配置」按钮 */
+/* v3.7.13：AI 未配置时的「去配置」行动条——独立于消息气泡 */
+.chat-setup-bar{display:flex;justify-content:center;padding:var(--space-3) 0;margin-top:var(--space-2)}
+.chat-setup-btn{padding:6px 16px;border:1px solid var(--accent);
+  border-radius:var(--control-r);background:var(--accent);color:var(--on-accent);
+  font-size:var(--fs-sm);cursor:pointer;transition:filter var(--transition-fast)}
+.chat-setup-btn:hover{filter:brightness(.96)}
 /* 发送/暂停按钮：图标方块 32×32；暂停态变红底 */
 .chat-send-btn{flex-shrink:0;width:32px;height:32px;padding:0;border:none;border-radius:var(--radius-md);
   background:var(--accent);color:var(--on-accent);cursor:pointer;
@@ -2662,7 +2639,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
    - 视觉收敛：胶囊圆角（--radius-full）+ 36px 默认高，与现有 .addbtn 视觉对齐避免破版 */
 .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1h);
   padding:0 var(--space-4);border-radius:var(--control-r);border:none;
-  background:var(--sc,var(--accent));color:var(--on-accent);font-size:var(--fs-sm);font-weight:600;
+  background:var(--sc,var(--accent));color:var(--on-accent);font-size:var(--fs-base);font-weight:600;
   height:var(--control-h);line-height:1;white-space:nowrap;cursor:pointer;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}
 .btn-primary:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
@@ -5704,10 +5681,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.12"; /* v3.7.12 工具卡表单栅格修复（CSS 注释嵌套事故）+ 卡片外观兜底 */
+const VERSION = "3.7.14"; /* v3.7.14 UI 规范统一：输入框降级(15→14px, placeholder 600→400) + 按钮字号统一 + 圆按钮强制 38x38 + 工具卡行列间距相等 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260921n";
+const BUILD_TAG = "20260922b";
 
 
 
@@ -6275,7 +6252,7 @@ const SCENARIOS = {
       fields:[
         {k:"title",label:t("field.meetingTitle", "会议主题"),type:"text"},
         {k:"type",label:t("field.meetingType","会议类型"),type:"select",options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
-        {k:"date",label:t("field.date","日期"),type:"date"},
+        {k:"date",label:t("field.date","日期"),type:"date",timePicker:true},
         {k:"host",label:t("field.host","主持人"),type:"text"},
         {k:"who",label:t("field.attendees", "参会人"),type:"text"},
         {k:"duration",label:t("field.durationHours","时长(小时)"),type:"number"},
@@ -12020,7 +11997,7 @@ function _recordToolHtml(cfg, records){
       return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-rec-field="' + esc(f.k) + '">' +
         f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
     }
-    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
+    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
     /* v3.7.38：按类型跨列 —— 文字宽、日期中、数字（金额/评分）窄 */
     /* v3.7.42：改用与工具卡（_featureCardHtml）共用的 _fieldSpanCls —— 原来这里自己写了一套，
        且**漏了下拉框**（select 落进 else 分支拿了 --wide，而实际上它的判断链里没有 select 分支）。
@@ -18828,7 +18805,11 @@ function renderSceneFeatNav(){
     feats.map(f=>{
       const ft = f.type || "record";
       const act = f.id===sceneFeatureMode?" active":"";
-      const typeBadge = ft==="core" ? "" : (ft==="tool" ? " <span class=\"feat-tag feat-tag-tool\" aria-hidden=\"true\">"+t("scene.featTag.tool","工具")+"</span>" : " <span class=\"feat-tag feat-tag-record\" aria-hidden=\"true\">"+t("scene.featTag.record","记录")+"</span>");
+      /* v3.7.13：**去掉 tab 上的「工具 / 记录」灰色小标签**。
+         用户 2026-09-22 截图质问："这个 记录的标注的小字 是干什么的？什么意思？？有必要留吗？？"
+         → 确认没有必要：这个徽标只是把内部的 type（core/tool/record）暴露给了用户，
+           对用户没有信息价值，反而让 tab 行显得杂乱。`type` 仍保留用于按钮样式（scene-feat-*）。 */
+      const typeBadge = "";
       return `<button type="button" class="set-nav-btn scene-feat-btn scene-feat-${ft}${act}" data-feat="${f.id}">${esc(f.label)}${typeBadge}</button>`;
     }).join("") +
   `</nav>`;
@@ -18883,8 +18864,8 @@ function renderMainHTML(){
     <div class="fld fld-lg"><label>${t("field.taskTitle","任务标题")}</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
     <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" placeholder="${t("placeholder.dueDate","选日期")}"></div>
     <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
-      <select name="priority"><option value="">-</option><option>P0</option><option>P1</option><option>P2</option></select></div>
-    <div class="fld fld-lg"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
+      <select name="priority"><option value="">${t("common.none","无")}</option><option value="P0">${t("task.priority.p0","P0 紧急")}</option><option value="P1">${t("task.priority.p1","P1 重要")}</option><option value="P2">${t("task.priority.p2","P2 一般")}</option></select></div>
+    <div class="fld fld-md"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
@@ -18935,11 +18916,9 @@ function renderMainHTML(){
       const ph = f.placeholder || f.label;
       inp = `<input name="${f.k}" type="${f.type==="number"?"number":"text"}" placeholder="${esc(ph)}" maxlength="500">`;
     }
-    // 字段宽度分级：title/note/code 等关键字段占宽，type/lang/value 等短字段占窄
-    const wideFields = {title:1, note:1, code:1, desc:1, who:1};
-    const narrowFields = {type:1, lang:1, status:1, value:1};
-    const wdCls = wideFields[f.k] ? "fld-lg" : narrowFields[f.k] ? "fld-sm" : "";
-    return `<div class="fld${wdCls?" "+wdCls:""}"><label>${f.label}</label>${inp}</div>`;
+    // v3.7.60：textarea 字段占整行（u-col-span-all），其他字段等宽（不再区分 fld-lg/fld-sm）
+    const spanCls = f.type === "textarea" ? " u-col-span-all" : "";
+    return `<div class="fld${spanCls}"><label>${f.label}</label>${inp}</div>`;
   }).join("");
   const recForm = `<form class="form-row form-row--grid" id="recForm">${recFields}
     <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span></form>`;
@@ -19294,15 +19273,12 @@ function bindMeetingActionCard(){
 }
 
 /**
- * 表单字段的跨列类（工具卡与记录工具**共用同一套规则**，保证两族视觉一致）。
- * 单位制：文字 3 · 下拉 2 · 数字 2 · 日期 2（基准列 56px + 间距 8px）
- * 依据：.tool-form-grid 的 auto-fill 栅格；曾因不给跨列类导致字段只有 1 单位（58px）被压扁。
+ * v3.7.60：表单字段跨列类 —— 统一返回空字符串（所有字段等宽 span 1）。
+ * 原来按类型区分（文字3/数字2/日期2/下拉2）导致字段宽度参差不齐，
+ * 改为固定4列栅格后所有字段默认 span 1，等宽对齐。
  */
 function _fieldSpanCls(f){
-  if(f.type === "number") return " tool-field--num";
-  if(f.type === "date")   return " tool-field--date";
-  if(f.type === "select") return " tool-field--sel";
-  return " tool-field--wide";
+  return "";
 }
 
 function _featureCardHtml(cfg){
@@ -19316,8 +19292,11 @@ function _featureCardHtml(cfg){
     if(f.type === "textarea"){
       return '<div class="tool-field u-col-span-all"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" class="u-fs-2xs u-min-h-0"style="font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace"></textarea></div>';
     }
-    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' : ' type="text"';
-    return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><input' + inputType + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
+    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
+    /* v3.7.13：日期字段**预填今天**（用户 2026-09-22 截图质问："这个要手动录入吗？不是系统自动记录吗？"）。
+       记录型场景里日期几乎总是"当下"，预填今天省一步操作；带时间选择器的字段不预填。 */
+    const prefill = (f.type === "date" && !f.timePicker) ? ' value="' + todayStr() + '"' : '';
+    return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label><input' + inputType + prefill + ' data-f-field="' + esc(f.k) + '" placeholder="' + esc(f.placeholder || f.label) + '"></div>';
   }).join("") + '</div>';
   const sums = (typeof cfg.sum === "function") ? cfg.sum(records) : [];
   const summary = sums.length
@@ -19369,6 +19348,7 @@ function _featureCardHtml(cfg){
  * 点击/聚焦该输入框时弹出主题化圆角面板；选定后把 YYYY-MM-DD 写入 input.value。
  * 全局单例（_dpPanel/_dpOverlay），ESC / 点面板外 / 选完即关闭。 */
 var _dpPanel = null, _dpOverlay = null, _dpInput = null, _dpViewY = null, _dpViewM = null;
+var _dpTimeH = null, _dpTimeM = null; // 小时(0-23) 和 分钟(0-59)
 function _dpClose(){
   if(_dpOverlay){ try{ _dpOverlay.remove(); }catch(_e){} _dpOverlay = null; }
   if(_dpPanel){ try{ _dpPanel.remove(); }catch(_e){} _dpPanel = null; }
@@ -19376,8 +19356,8 @@ function _dpClose(){
 }
 function _dpMonthDays(y, m){ return new Date(y, m + 1, 0).getDate(); }
 function _dpFirstWeekday(y, m){ return new Date(y, m, 1).getDay(); } // 0=Sun
-function _dpParseVal(v){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || "").trim()); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null; }
-function _dpFmt(y, m, d){ return y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0"); }
+function _dpParseVal(v){ const m = /^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?$/.exec(String(v || "").trim()); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3], h: m[4] ? +m[4] : null, min: m[5] ? +m[5] : null } : null; }
+function _dpFmt(y, m, d, h, min){ var s = y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0"); if(h !== null && h !== undefined) s += " " + String(h).padStart(2, "0") + ":" + String(min || 0).padStart(2, "0"); return s; }
 function _dpRender(){
   if(!_dpPanel) return;
   const today = new Date();
@@ -19408,18 +19388,50 @@ function _dpRender(){
   for(let i = 1; i <= tail; i++){
     html += '<button type="button" class="dp-day other" data-dp-day="1:' + i + '">' + i + '</button>';
   }
-  html += '</div>' +
-    '<div class="dp-foot">' +
+  html += '</div>';
+  // 时间选择行（仅当 input 有 data-time-picker 属性时显示）
+  if(_dpInput && _dpInput.hasAttribute("data-time-picker")){
+    var defH = _dpTimeH !== null ? _dpTimeH : 9;
+    var defM = _dpTimeM !== null ? _dpTimeM : 0;
+    var hOpts = "";
+    for(var hh = 0; hh < 24; hh++){
+      hOpts += '<option value="' + hh + '"' + (hh === defH ? " selected" : "") + '>' + String(hh).padStart(2, "0") + '</option>';
+    }
+    var mOpts = "";
+    for(var mm = 0; mm < 60; mm += 5){
+      mOpts += '<option value="' + mm + '"' + (mm === defM ? " selected" : "") + '>' + String(mm).padStart(2, "0") + '</option>';
+    }
+    html += '<div class="dp-time">' +
+      '<select class="dp-time-h" data-dp-time="h">' + hOpts + '</select>' +
+      '<span>:</span>' +
+      '<select class="dp-time-m" data-dp-time="m">' + mOpts + '</select>' +
+      '</div>';
+  }
+  html += '<div class="dp-foot">' +
     '<button type="button" class="btn-ghost btn-sm" data-dp-clear="1">' + t("datepicker.clear","清除") + '</button>' +
-    '<button type="button" class="btn-ghost btn-sm" data-dp-today="1">' + t("datepicker.today","今天") + '</button>' +
-    '</div>';
+    '<button type="button" class="btn-ghost btn-sm" data-dp-today="1">' + t("datepicker.today","今天") + '</button>';
+  if(_dpInput && _dpInput.hasAttribute("data-time-picker")){
+    html += '<button type="button" class="dp-confirm-btn" data-dp-confirm="1">' + t("datepicker.confirm","确定") + '</button>';
+  }
+  html += '</div>';
   _dpPanel.innerHTML = html;
 }
 function _dpPick(y, m, d){
   if(!_dpInput) return;
-  _dpInput.value = _dpFmt(y, m, d);
+  // 如果之前没有时间，默认设为 09:00
+  if(_dpTimeH === null) _dpTimeH = 9;
+  if(_dpTimeM === null) _dpTimeM = 0;
+  // 有 data-time-picker 属性时输出带时间格式，否则纯日期（向后兼容）
+  if(_dpInput.hasAttribute("data-time-picker")){
+    _dpInput.value = _dpFmt(y, m, d, _dpTimeH, _dpTimeM);
+  } else {
+    _dpInput.value = _dpFmt(y, m, d);
+  }
   try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){}
-  _dpClose();
+  // 纯日期场景：选完即关闭；带时间场景：保持打开让用户调整时间
+  if(!_dpInput.hasAttribute("data-time-picker")){
+    _dpClose();
+  }
 }
 function _dpOpen(input){
   _dpClose();
@@ -19427,6 +19439,8 @@ function _dpOpen(input){
   _dpInput = input;
   const cur = _dpParseVal(input.value) || (function(){ const n = new Date(); return { y: n.getFullYear(), m: n.getMonth(), d: n.getDate() }; })();
   _dpViewY = cur.y; _dpViewM = cur.m;
+  _dpTimeH = cur && cur.h !== null ? cur.h : null;
+  _dpTimeM = cur && cur.min !== null ? cur.min : null;
   const overlay = document.createElement("div");
   overlay.className = "dp-overlay";
   overlay.addEventListener("mousedown", function(){ _dpClose(); });
@@ -19437,16 +19451,8 @@ function _dpOpen(input){
   document.body.appendChild(panel);
   _dpOverlay = overlay; _dpPanel = panel;
   _dpRender();
-  /* v3.7.8：面板宽度**跟随触发输入框**，并收敛到 [206, 260] 区间。
-     下限 206px：日历 7 列 + 两位数字的物理下限（再窄会挤到断行）。
-     上限 260px：用户 2026-09-21 反馈"日期的下拉框没必要这么宽大" —— 旧实现用
-       `min-width:220 + width:max-content`，面板会被表头（"2026 年 9 月" + 两个 28px 按钮）
-       撑到 ~270px，比输入框还宽，看着臃肿。改成**固定 width**（而非 min-width）后，
-       面板永远不会比 260 更宽；格子由 `1fr` 自动均分。
-     ⚠️ 必须用 width 不用 min-width —— min-width 拦不住 max-content 的膨胀。 */
-  const iw = Math.round(input.getBoundingClientRect().width || 0);
-  const panelW = Math.min(260, Math.max(206, iw));
-  panel.style.width = panelW + "px";
+  /* v3.7.61：面板宽度固定 240px —— 不再跟随触发输入框宽度变化，确保所有日期卡片统一宽度。 */
+  panel.style.width = "240px";
   _dpLayout(true);
 }
 /* v3.7.8：面板定位（**打开时**与**滚动跟随**共用）。
@@ -19518,10 +19524,32 @@ document.addEventListener("click", function(e){
   const day = t2 && t2.closest && t2.closest("[data-dp-day]");
   if(day){ const seg = (day.getAttribute("data-dp-day") || "").split(":"); const monShift = Number(seg[0]) || 0; const dd = Number(seg[1]); const base = new Date(_dpViewY, _dpViewM + monShift, 1); _dpPick(base.getFullYear(), base.getMonth(), dd); return; }
   const clear = t2 && t2.closest && t2.closest("[data-dp-clear]");
-  if(clear){ if(_dpInput){ _dpInput.value = ""; try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){} } _dpClose(); return; }
+  if(clear){ if(_dpInput){ _dpInput.value = ""; try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){} } _dpTimeH = null; _dpTimeM = null; _dpClose(); return; }
   const todayBtn = t2 && t2.closest && t2.closest("[data-dp-today]");
-  if(todayBtn){ const n = new Date(); _dpPick(n.getFullYear(), n.getMonth(), n.getDate()); return; }
+  if(todayBtn){ const n = new Date(); if(_dpTimeH === null) _dpTimeH = 9; if(_dpTimeM === null) _dpTimeM = 0; _dpPick(n.getFullYear(), n.getMonth(), n.getDate()); return; }
+  const confirmBtn = t2 && t2.closest && t2.closest("[data-dp-confirm]");
+  if(confirmBtn){ _dpClose(); return; }
 }, true);
+// 时间选择变更
+document.addEventListener("change", function(e){
+  if(!_dpPanel) return;
+  var sel = e.target && e.target.closest ? e.target.closest("[data-dp-time]") : null;
+  if(!sel) return;
+  if(sel.getAttribute("data-dp-time") === "h") _dpTimeH = parseInt(sel.value, 10);
+  if(sel.getAttribute("data-dp-time") === "m") _dpTimeM = parseInt(sel.value, 10);
+  // 更新 input 值
+  if(_dpInput){
+    var cur = _dpParseVal(_dpInput.value);
+    if(cur){
+      if(_dpInput.hasAttribute("data-time-picker")){
+        _dpInput.value = _dpFmt(cur.y, cur.m, cur.d, _dpTimeH, _dpTimeM);
+      } else {
+        _dpInput.value = _dpFmt(cur.y, cur.m, cur.d);
+      }
+      try{ _dpInput.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){}
+    }
+  }
+});
 document.addEventListener("keydown", function(e){ if(e.key === "Escape" && _dpPanel) _dpClose(); });
 window.addEventListener("resize", function(){ _dpClose(); });
 window.addEventListener("scroll", function(){ _dpLayout(false); }, true);
@@ -19606,8 +19634,9 @@ SCENE_FEATURE_RENDER.office = {
       fields:[
         {k:"title", label:t("field.meetingTitle", t("field.meetingTitle","会议主题")), type:"text"},
         {k:"type", label:t("field.meetingType","会议类型"), type:"select", options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
-        {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date"},
+        {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date", timePicker:true},
         {k:"host", label:t("field.host","主持人"), type:"text"},
+        {k:"who", label:t("field.attendees","参会人"), type:"text"},
         {k:"duration", label:t("field.durationHours","时长(小时)"), type:"number"},
         {k:"note", label:t("field.conclusion", t("field.conclusion","结论 / 跟进")), type:"text"}
       ],
@@ -19615,6 +19644,7 @@ SCENE_FEATURE_RENDER.office = {
         {label:t("field.meetingTitle", t("field.meetingTitle","会议主题")), k:"title"},
         {label:t("field.type", t("field.type","类型")), k:"type"},
         {label:t("tool.regex.preset.date", t("field.date","日期")), k:"date"},
+        {label:t("field.attendees","参会人"), k:"who"},
         {label:t("field.status", t("field.status","状态")), fmt:function(r){ return r.done ? t("p3.html.meetingOpened","<span class=\"u-text-ok\">已开</span>") : t("p3.html.meetingPending","<span class=\"u-text-warn\">待开</span>"); }}
       ],
       sum:function(recs){
@@ -22272,7 +22302,16 @@ function scrollChat(){ const el=$("#chat"); if(el) el.scrollTop=el.scrollHeight;
 function renderChatDisabled(){
   const el=$("#chat"); if(!el) return;
   const s = SCENARIOS[active] || {name:""};
-  el.innerHTML = sanitizeHtml(t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是")+esc(s.name)+t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>"));
+  el.innerHTML = sanitizeHtml(
+    t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是") + esc(s.name) +
+    t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>")
+  );
+  // 在消息提示下方放一个独立的行动条（不在气泡内部）
+  const bar=document.createElement("div");
+  bar.className="chat-setup-bar";
+  bar.innerHTML='<button type="button" class="chat-setup-btn">' + t("ai.goSetup","去配置") + '</button>';
+  bar.querySelector(".chat-setup-btn").onclick=function(){ if(typeof AppBridge!=="undefined"&&AppBridge.openAiPage) AppBridge.openAiPage(); };
+  el.appendChild(bar);
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------
@@ -29927,7 +29966,7 @@ const MESSAGES = {
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"选择此任务\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{\"label\":\"Q1\",\"value\":30}]</div>",
     "p3.html.countPrefix": "<span class=\"sub\" class=\"u-m-0\">共 ",
-    "p3.html.countSuffix": " 条</span></div>",
+    "p3.html.countSuffix": " 条</span>",
     "p3.html.dataError": "<h2>⚠️ 数据异常</h2>",
     "p3.html.dataErrorSub": "<p style=\"color:var(--muted);margin:var(--space-4) 0\">渲染时发生错误，建议导出备份后清空数据。</p>",
     "p3.html.docCenterSub": "<p class=\"sub\">办公文档工具集：表格 / PPT / PDF / Word / Markdown / OCR</p>",
@@ -33321,7 +33360,7 @@ const MESSAGES = {
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"选择此任务\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{\"label\":\"Q1\",\"value\":30}]</div>",
     "p3.html.countPrefix": "<span class=\"sub\" class=\"u-m-0\">共 ",
-    "p3.html.countSuffix": " 条</span></div>",
+    "p3.html.countSuffix": " 条</span>",
     "p3.html.dataError": "<h2>⚠️ 数据异常</h2>",
     "p3.html.dataErrorSub": "<p style=\"color:var(--muted);margin:var(--space-4) 0\">渲染时发生错误，建议导出备份后清空数据。</p>",
     "p3.html.docCenterSub": "<p class=\"sub\">办公文档工具集：表格 / PPT / PDF / Word / Markdown / OCR</p>",
