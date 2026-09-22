@@ -110,31 +110,33 @@ describe("看板卡 · 标记侧", () => {
     expect(JS).toContain('const tagFilterHTML = `<div class="form-row form-row--board" id="taskFilterRow">');
   });
 
-  it("两行的显式列位：优先级缩小+标签扩展+加号独立（v3.7.61）", () => {
-    /* v3.7.61：优先级从 span 3 缩小到 span 1（约原来的33%），标签扩展到 span 4，
-       加号独立占 span 1 不再叠加在标签上。
-       标题(1/4) · 截止日期(4/7) · 优先级(7/8) · 标签(8/12) · 加号(12/13)。
-       筛选行：搜索(1/4) · 联动记录(4/7) · 标签筛选(8/13) —— 前两字段与任务表单对齐。 */
+  it("两行的显式列位：四字段等宽+加号叠加（v3.7.62）", () => {
+    /* v3.7.62：四字段等宽(span 3)，加号叠加在标签输入框右端。
+       标题(1/4) · 截止日期(4/7) · 优先级(7/10) · 标签(10/13) · 加号叠加。
+       筛选行：搜索(1/4) · 联动记录(4/7) · 标签筛选(7/13) —— 前两字段与任务表单对齐。 */
     expect(CSS).toContain('#taskForm>.fld:nth-child(1){grid-column:1/4;grid-row:1}');
     expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:4/7;grid-row:1}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:7/8;grid-row:1;min-width:0}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:8/12;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:7/10;grid-row:1;min-width:0}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:10/13;grid-row:1}');
     // 优先级 select 撑满轨道
-    expect(CSS, "优先级 select 应撑满轨道").toContain("#taskForm>.fld:nth-child(3)>select{width:100%}");
-    // 加号：独立列、靠右对齐、底对齐（不再叠加在标签上）
-    expect(CSS).toContain('#taskForm>.add-wrap{grid-column:12/13;grid-row:1;justify-self:end;align-self:end}');
-    // 筛选行前两字段与任务表单对齐，第三字段从 8/13 开始（与标签字段左边界对齐）
+    expect(CSS, "优先级 select 应撑满轨道").toContain("#taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}");
+    // 标签输入框补右内边距给加号留空间
+    expect(CSS).toContain('#taskForm>.fld:nth-child(4)>input{padding-right:calc(var(--control-h) + var(--space-2))}');
+    // 加号：叠加在标签字段上、靠右对齐、底对齐
+    expect(CSS).toContain('#taskForm>.add-wrap{grid-column:10/13;grid-row:1;justify-self:end;align-self:end;z-index:var(--z-under)}');
+    // 筛选行前两字段与任务表单对齐，第三字段从 7/13 占满剩余
     expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/4;grid-row:1}');
     expect(CSS).toContain('#taskFilterRow>.fld:nth-child(2){grid-column:4/7;grid-row:1}');
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:8/13;grid-row:1}');
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:7/13;grid-row:1}');
   });
 
   it("窄屏解除显式定位（column 与 row 都要解除，否则挤成一行造隐式列）", () => {
     /* 实测（768px）：只解除 grid-column 时 5 个元素仍被 grid-row:1 钉在第 1 行，
        auto-placement 造出隐式列（模板变 0 0 47 47 38 五轨、两字段宽 0）。 */
     expect(CSS).toContain('{grid-column:auto;grid-row:auto}');
-    /* v3.7.61：加号已独立占 span 1 列，不再叠加在标签上，无需 padding-right 回退 */
-    expect(CSS).not.toContain("#taskForm>.fld:nth-child(4)>input{padding-right:44px}");
+    /* v3.7.62：加号叠加在标签输入框右端，宽屏下标签 input 有 padding-right 给加号留空间，
+       窄屏回退需把 padding-right 重置为 0（加号恢复独立成列不再叠加）。 */
+    expect(CSS).toContain("#taskForm>.fld:nth-child(4)>input{padding-right:0}");
   });
 
   it("筛选行的标签字段带跨轨类（跨 4 微轨 = 看板一列）", () => {
