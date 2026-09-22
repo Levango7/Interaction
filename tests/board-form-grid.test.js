@@ -110,13 +110,15 @@ describe("看板卡 · 标记侧", () => {
     expect(JS).toContain('const tagFilterHTML = `<div class="form-row form-row--board" id="taskFilterRow">');
   });
 
-  it("两行的显式列位：四字段等宽+加号叠加（v3.7.62）", () => {
-    /* v3.7.62：四字段等宽(span 3)，加号叠加在标签输入框右端。
-       标题(1/4) · 截止日期(4/7) · 优先级(7/10) · 标签(10/13) · 加号叠加。
+  it("两行的显式列位：宽·中·窄·中（v3.7.15 优先级收窄）", () => {
+    /* v3.7.15：用户"优先级 左右窄一点" —— 此前 v3.7.62 是四字段等宽（各 3 微轨 / 228px@1600），
+       优先级和「任务标题」一样宽，本该最次要的字段反而最抢眼（用户原话"喧宾夺主"）。
+       改为 4/3/2/3：标题(1/5) · 截止(5/8) · 优先级(8/10) · 标签(10/13) · 加号叠加。
+       实测 @1600 = 307 / 228 / 148 / 228。
        筛选行：搜索(1/4) · 联动记录(4/7) · 标签筛选(7/13) —— 前两字段与任务表单对齐。 */
-    expect(CSS).toContain('#taskForm>.fld:nth-child(1){grid-column:1/4;grid-row:1}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:4/7;grid-row:1}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:7/10;grid-row:1;min-width:0}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:5/8;grid-row:1}');
+    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:8/10;grid-row:1;min-width:0}');
     expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:10/13;grid-row:1}');
     // 优先级 select 撑满轨道
     expect(CSS, "优先级 select 应撑满轨道").toContain("#taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}");

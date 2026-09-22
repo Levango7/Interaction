@@ -338,7 +338,10 @@ button{transition:transform var(--transition-fast),opacity var(--transition-fast
 button:active:not([disabled]){transform:scale(.97)}
 button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 button[disabled]:active{transform:none}
-input,select,textarea{font-family:inherit;font-size:var(--fs-sm);border:1px solid var(--line);
+/* v3.7.15：显式 font-weight:400 —— 下拉框/输入框**不能继承父级的粗体**。
+   用户："许多下拉框里面字体还是太粗，喧宾夺主"。实测大部分已是 400，
+   但只要父级（如 label、strong 容器）带粗体就会被继承过去 → 这里钉死为 400。 */
+input,select,textarea{font-family:inherit;font-size:var(--fs-sm);font-weight:400;border:1px solid var(--line);
   /* v3.7.33：输入框背景改用 --surface-muted —— 原来与卡片同为 --panel，实测两者色值**完全相同**，
      缺少"这里能输入"的视觉暗示。（注意：本注释不写具体色值 —— lint-colors 只放行「--令牌: 值」定义行，
      注释里的裸色值会被判违规，这个坑我踩过两次。） */
@@ -949,9 +952,13 @@ input[type="file"]:hover{border-color:var(--accent)}
 /* v3.7.62：任务表单 —— 四字段等宽(span 3)，加号叠加在标签输入框右端。
    标题(1/4) · 截止日期(4/7) · 优先级(7/10) · 标签(10/13) · 加号叠加。
    所有字段等宽对齐，筛选行前两列与任务表单完全对齐。 */
-#taskForm>.fld:nth-child(1){grid-column:1/4;grid-row:1}
-#taskForm>.fld:nth-child(2){grid-column:4/7;grid-row:1}
-#taskForm>.fld:nth-child(3){grid-column:7/10;grid-row:1;min-width:0}
+/* v3.7.15：**优先级收窄** —— 用户："优先级 左右窄一点"。
+   此前四个字段均等（各 3 微轨 / 228px@1600），优先级和"任务标题"一样宽，
+   视觉上本该最"次要"的字段反而最抢眼（这就是他说的"喧宾夺主"）。
+   恢复「宽 · 中 · 窄 · 中」序列 = 4 / 3 / 2 / 3 微轨（302 / 228 / 152 / 228 @1600）。 */
+#taskForm>.fld:nth-child(1){grid-column:1/5;grid-row:1}
+#taskForm>.fld:nth-child(2){grid-column:5/8;grid-row:1}
+#taskForm>.fld:nth-child(3){grid-column:8/10;grid-row:1;min-width:0}
 #taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}
 #taskForm>.fld:nth-child(4){grid-column:10/13;grid-row:1}
 #taskForm>.fld:nth-child(4)>input{padding-right:calc(var(--control-h) + var(--space-2))}
@@ -5681,10 +5688,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.14"; /* v3.7.14 UI 规范统一：输入框降级(15→14px, placeholder 600→400) + 按钮字号统一 + 圆按钮强制 38x38 + 工具卡行列间距相等 */
+const VERSION = "3.7.15"; /* v3.7.15 优先级收窄(228→148) + 下拉框显式 font-weight:400 防继承粗体 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260922b";
+const BUILD_TAG = "20260922c";
 
 
 
