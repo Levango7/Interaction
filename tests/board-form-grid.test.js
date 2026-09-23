@@ -125,7 +125,9 @@ describe("看板卡 · 标记侧", () => {
     expect(CSS).toContain('#taskForm>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
     expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:5/8;grid-row:1}');
     expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0}');
-    expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:9/12;grid-row:1}');
+    // v3.7.20：标签字段占满列3（9/13），右侧 padding 给加号让位 —— 用户"标签框左右宽一点"
+    // 实测标签 input 228 → 244px，与加号间隙由 42px 收到 20px（= 栅格间距）
+    expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:9/13;grid-row:1;padding-right:calc(var(--control-h) + var(--space-2))}');
     // 优先级 select 撑满轨道
     expect(CSS, "优先级 select 应撑满轨道").toContain("#taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}");
     // 加号不再叠加在标签输入框内 —— 标签输入框的右内边距让位规则已删除

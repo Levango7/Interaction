@@ -495,17 +495,12 @@ function renderChatDisabled(){
     t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是") + esc(s.name) +
     t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>")
   );
-  // v3.7.18：行动条从消息流末尾移到**输入框正上方**（常驻状态条）。
-  // 原来插在 #chat 末尾会像"AI 回复的一条消息"，语义混乱且随消息滚动；
-  // 现在固定在输入框上沿，配置 Key 后随整条未启用态一起消失。
-  const bar=document.createElement("div");
-  bar.className="chat-setup-bar";
-  bar.innerHTML='<span class="chat-setup-tip">' + t("ai.needKeyTip","尚未启用 AI：填入 API Key 即可对话并调用工具修改数据") + '</span>'
-    + '<button type="button" class="chat-setup-btn">' + t("ai.goSetup","去配置") + '</button>';
-  bar.querySelector(".chat-setup-btn").onclick=function(){ if(typeof AppBridge!=="undefined"&&AppBridge.openAiPage) AppBridge.openAiPage(); };
-  const chatForm=document.getElementById("chatForm");
-  if(chatForm && chatForm.parentElement) chatForm.parentElement.insertBefore(bar, chatForm);
-  else el.appendChild(bar);
+  /* v3.7.20：**移除「去配置」行动条**（用户 2026-09-23 截图标注"去掉"）。
+     历史：v3.7.18 把按钮从消息流末位移到输入框上方做成常驻状态条，
+     但那条 87px 高的条会挤压输入区 —— CI e2e 在 1280×800 下报
+     "waiting for element to be visible, enabled and stable" 超时（发送按钮位置不稳）。
+     且提示消息本身已写明"点击右上角「设置」填入 API Key"，按钮属重复引导。
+     → 整条删除，只保留提示气泡。 */
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------
