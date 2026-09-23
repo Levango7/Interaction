@@ -156,6 +156,12 @@
   "tailBlanks": 0
  },
  {
+  "name": "ui-select",
+  "layer": "UI",
+  "title": "交互层·自研下拉选择框",
+  "tailBlanks": 0
+ },
+ {
   "name": "ui-global-events",
   "layer": "UI",
   "title": "交互层·全局事件绑定",
