@@ -157,7 +157,13 @@
   /** 批量增强（重渲染后对新出现的 select 调用即可，幂等） */
   function dsEnhanceAll(root){
     var list = (root || document).querySelectorAll("select");
-    Array.prototype.forEach.call(list, dsEnhance);
+    Array.prototype.forEach.call(list, function(s){
+      /* v3.7.29：跳过日期面板里的时/分选择器（.dp-time 内）——
+         它们空间紧凑、样式由 `.dp-time select` 统一控制，
+         若被替换成 42px 高的自研触发器会把日期面板撑变形。 */
+      if (s.closest && s.closest(".dp-time")) return;
+      dsEnhance(s);
+    });
   }
 
   /* 点击外部关闭；滚动/尺寸变化时也关闭（避免列表脱离触发框） */

@@ -532,7 +532,9 @@ function bindChatPanel(){
       if(profiles.length === 0){
         // v1.15 修复：未配置时不 disabled（disabled 的 select 不触发 onclick，
         // 导致"未配置模型→点击跳设置"永远无效），改为保持可点击 + 显式样式提示
-        modelSelect.innerHTML = sanitizeHtml(`<option value="">${t("msg.notConfigured","未配置")} ⚠</option>`);
+        /* v3.7.29：去掉文案后的 "⚠"（用户："如果未配置大模型，就应该显示「未配置」"）。
+           告警感由 .chat-model-empty 的虚线边框承担，文字保持干净。 */
+        modelSelect.innerHTML = sanitizeHtml(`<option value="">${t("msg.notConfigured","未配置")}</option>`);
         modelSelect.classList.add("chat-model-empty");
         modelSelect.title = t("msg.noAiProfile","未配置 AI Profile，点击打开设置");
         return;

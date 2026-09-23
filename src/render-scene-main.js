@@ -705,10 +705,13 @@ function _dpRender(){
     for(var mm = 0; mm < 60; mm += 5){
       mOpts += '<option value="' + mm + '"' + (mm === defM ? " selected" : "") + '>' + String(mm).padStart(2, "0") + '</option>';
     }
+    /* v3.7.29：加「时间」标签 —— 用户看截图问"会议只有日期，没时分吗？"，
+       说明 [时]:[分] 两个下拉无标签时根本无法识别。 */
     html += '<div class="dp-time">' +
-      '<select class="dp-time-h" data-dp-time="h">' + hOpts + '</select>' +
+      '<span class="dp-time-lbl">' + t("datepicker.time","时间") + '</span>' +
+      '<select class="dp-time-h" data-dp-time="h" aria-label="' + t("datepicker.hour","时") + '">' + hOpts + '</select>' +
       '<span>:</span>' +
-      '<select class="dp-time-m" data-dp-time="m">' + mOpts + '</select>' +
+      '<select class="dp-time-m" data-dp-time="m" aria-label="' + t("datepicker.minute","分") + '">' + mOpts + '</select>' +
       '</div>';
   }
   html += '<div class="dp-foot">' +
