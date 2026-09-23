@@ -1319,8 +1319,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .foot-ai{flex:0 0 auto;display:inline-flex;align-items:center;gap:var(--space-1h)}
 .foot-ai.on{color:var(--ok)}
 .foot-ai.off{color:var(--text-faint)}
-/* v3.7.23：上下内边距 12 → 16px（用户："指标卡片上下高度高一点"），左右不变 */
-.ms-strip{display:flex;gap:var(--space-4);flex-wrap:wrap;padding:var(--space-4);align-items:stretch}
+/* v3.7.24：上下内边距 16 → 20px（v3.7.23 只加了 4px，用户反馈"好像没有生效" —— 幅度太小看不出） */
+.ms-strip{display:flex;gap:var(--space-4);flex-wrap:wrap;padding:var(--space-5) var(--space-4);align-items:stretch}
+/* v3.7.24：指标项也补一个下限高度，避免窄屏下被压扁 */
+.ms-item{min-height:52px;justify-content:center}
 /* v3.7.45：指标项做成圆角矩形卡片（与记录表格容器同一套"卡片"语言），并等分铺满一行 */
 .ms-strip>*{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ms-item{display:flex;flex-direction:column;gap:2px;min-width:64px;flex:1 1 64px;padding:0 var(--space-1)}
@@ -5754,10 +5756,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.23"; /* v3.7.23 指标条加高 + 模型下拉边框加深且文字居中 + 优先级选项文字缩短 */
+const VERSION = "3.7.24"; /* v3.7.24 指标条再加高（padding 20 + 指标项 min-height 52） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923h";
+const BUILD_TAG = "20260923i";
 
 
 
