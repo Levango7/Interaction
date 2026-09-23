@@ -2947,7 +2947,10 @@ function openAlarmModal(){
   body.innerHTML = sanitizeHtml(
     '<div class="alarm-now"><div class="time" id="alarmNowTime">--:--</div><div class="date" id="alarmNowDate">--</div></div>' +
     '<form class="alarm-form" id="alarmForm" autocomplete="off">' +
-      '<input type="time" id="alarmTime" value="'+_nowHHMM()+'" required aria-label="' + t("alarm.timeAria", "闹钟时间") + '">' +
+      /* v3.7.37：原生 <input type="time"> → 自研可编辑下拉（与会议「开始时间」口径一致）。
+         原生控件弹出的时分选择器是系统样式，与 11 套主题脱节。 */
+      '<select id="alarmTime" data-editable="1" required aria-label="' + t("alarm.timeAria", "闹钟时间") + '">'
+        + timeOptionsHtml(_nowHHMM()) + '</select>' +
       '<input type="text" id="alarmLabel" placeholder="' + t("alarm.labelPlaceholder", "备注（可选）") + '" maxlength="20">' +
       '<div class="loop-pick" role="group" aria-label="' + t("alarm.repeatAria", "重复") + '">' +
         loopPicks.map(function(i){return '<button type="button" data-loop="'+i+'" title="' + t("alarm.weekPrefix", "周") + wk[i] + '">'+wk[i]+'</button>';}).join("") +

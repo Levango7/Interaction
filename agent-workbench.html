@@ -798,10 +798,12 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
   border-right:1px solid var(--line);
   padding:var(--space-3) var(--space-2);overflow:auto;flex-shrink:0;transition:width .2s ease}
+/* v3.7.37（控件矩阵 P1）：min-height 30 → 32px —— 实测渲染 31px，
+   低于可点击区建议下限 32px（触控/鼠标精度）。侧栏是全站最高频的点击区。 */
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
-  min-height:30px}
+  min-height:32px}
 .nav-item svg{width:var(--icon-sm);height:var(--icon-sm);flex-shrink:0}
 .nav-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item .cnt{font-size:var(--fs-xs);background:var(--surface-muted);border-radius:var(--radius-md);
@@ -1985,7 +1987,9 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .chat-attach-btn svg{width:15px;height:15px}
 /* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹）
    v2.4.0：单行起步（44px）聚焦增高到 96px，上限 200px——空态更轻，长输入仍够用 */
-.chat-text-input{resize:none;min-height:44px;max-height:200px;padding:var(--space-2);
+/* v3.7.37：min-height 44 → 42，与同行的模型下拉/附件/发送按钮（均为 42）统一。
+   （原先靠 align-items:flex-end 保证底线齐平，但顶部会差 2px；统一后整行同高。） */
+.chat-text-input{resize:none;min-height:42px;max-height:200px;padding:var(--space-2);
   border:none;border-radius:0;font-size:var(--fs-sm);background:transparent;
   color:var(--text);font-family:inherit;line-height:1.5;width:100%;
   outline:none;transition:min-height var(--transition-base)}
@@ -3009,7 +3013,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);
   /* v3.6.3：配方与右侧 .rail-expand 完全统一（此前左 10%/32% vs 右 12%/38%，肉眼看色差） */
   background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));
-  color:var(--accent);font-size:var(--fs-sm);font-weight:600;margin-bottom:var(--space-2);min-height:28px;
+  color:var(--accent);font-size:var(--fs-sm);font-weight:600;margin-bottom:var(--space-2);min-height:32px;
   /* 实测校准：顶栏下沿(53px)↔待办栏对齐线(98px)区间高 45px，按钮高 29px，
      居中需上移 4px 抵消 .side 的 padding-top（12px），使按钮与顶栏间距收至 8px */
   margin-top:calc(var(--space-1) * -1);
@@ -4073,9 +4077,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 /* v2.1.1：加 flex-wrap 防窄屏溢出（time+备注+7 循环钮+添加钮挤一行） */
 .alarm-form{display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;padding:var(--space-3);
   background:var(--panel2);border-radius:var(--radius-md);margin-bottom:var(--space-3)}
-.alarm-form input[type="time"]{padding:var(--space-2);border:1px solid var(--line);
-  border-radius:var(--radius-md);background:var(--panel);color:var(--text);font-size:var(--fs-md);
-  font-variant-numeric:tabular-nums;font-family:inherit}
+/* v3.7.37：闹钟时间由原生 input[type=time] 改为自研可编辑下拉（.ds-select），
+   选择器同步更新；边框口径随之统一为加深版（原先单独用 --line，与全站不一致）。 */
+.alarm-form .ds-select{flex:0 0 auto;min-width:104px}
+.alarm-form .ds-select .ds-trigger{font-variant-numeric:tabular-nums}
 .alarm-form input[type="text"]{flex:1;padding:var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel);color:var(--text);font-size:var(--fs-sm);
   font-family:inherit;min-width:0}
@@ -5878,10 +5883,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.36"; /* v3.7.36 控件矩阵审查：range×16/color×27 主题化（此前用浏览器默认外观） */
+const VERSION = "3.7.37"; /* v3.7.37 全站原生 time 清零 + 点击区 32px + 聊天区尺寸统一 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924j";
+const BUILD_TAG = "20260924k";
 
 
 

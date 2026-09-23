@@ -119,6 +119,25 @@ const AppBridge = {
 /* 通知/toast 用的图标表（TOAST_ICONS 依赖 UI_ICONS，故紧随其后声明）；从 ui-theme 下移而来 */
 const TOAST_ICONS = { ok: UI_ICONS.check, warn: UI_ICONS.alert, error: UI_ICONS.error, danger: UI_ICONS.error };
 
+/* v3.7.37：时间字段的选项生成器（供各处复用）。
+   背景：原生 <input type="time"> 的弹出选择器是**系统样式**，在 11 套主题下都与
+   设计系统脱节；而它又是全站仅剩的两处原生弹层控件（闹钟、AI 工作流时间）。
+   统一改为「<select data-editable>」—— 既能从列表选，也能直接敲 "09:30"
+   （combobox 逻辑见 src/ui-select.js）。
+   5 分钟粒度共 288 档；selected 为要预选的值，emptyLabel 非空时插入一个空值项
+   （会被可编辑模式当作 placeholder）。 */
+function timeOptionsHtml(selected, emptyLabel){
+  var out = emptyLabel ? '<option value="">' + emptyLabel + '</option>' : '';
+  for (var h = 0; h < 24; h++) {
+    for (var m = 0; m < 60; m += 5) {
+      var v = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+      out += '<option value="' + v + '"' + (v === selected ? " selected" : "") + '>' + v + '</option>';
+    }
+  }
+  return out;
+}
+
+
 /* v3.7.16（解耦 S3）：渲染调度 —— 数据层改完数据只"置脏"，由本函数在下一帧统一请求重绘。
    两个收益：
      ① Data 层不再认识"渲染"这个概念，只依赖核心层的 markDirty（依赖方向回归向下）

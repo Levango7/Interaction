@@ -723,7 +723,9 @@ function renderAiWorkflowList(){
         '<option value="daily"' + (sch.freq === "daily" ? ' selected' : '') + '>' + t("wf.freqDaily","每天") + '</option>' +
         '<option value="weekly"' + (sch.freq === "weekly" ? ' selected' : '') + '>' + t("wf.freqWeekly","每周") + '</option>' +
       '</select>' +
-      '<input type="time" id="aiWfTime_'+i+'" value="' + esc(sch.time || "09:00") + '" class="u-nowrap">' +
+      /* v3.7.37：原生 <input type="time"> → 自研可编辑下拉（同上） */
+      '<select id="aiWfTime_'+i+'" data-editable="1" class="u-nowrap" aria-label="' + t("wf.timeAria","执行时间") + '">'
+        + timeOptionsHtml(sch.time || "09:00") + '</select>' +
       '<button type="button" class="addbtn sm" data-wf-del="'+i+'" data-sc="danger-muted" class="u-nowrap">' + t("p4.html.aiDeleteBtn","删除") + '</button>' +
       '</div></div>';
     box.appendChild(row);
