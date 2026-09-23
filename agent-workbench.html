@@ -5831,10 +5831,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.30"; /* v3.7.30 下拉箭头加强可见 + 附件按钮 42×42 同发送按钮 + 自研下拉 label 随 options 同步 */
+const VERSION = "3.7.31"; /* v3.7.31 学习资料「类型/状态」由自由文本改为下拉（业务定义修正） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924d";
+const BUILD_TAG = "20260924e";
 
 
 
@@ -6427,11 +6427,19 @@ const SCENARIOS = {
     extraCard:"review",
     record:{ label:t("record.study.label", "学习资料"),
       // v3.1.2 B-档：学习资料此前无来源字段——SM-2 到期复习时看到主题却点不开任何原始材料。补 source/url + 关联任务。
+      // v3.7.31：类型/状态由 text 改 select —— 用户："这里为什么不是下拉框、选择框"。
+      // 这两个字段语义是**枚举**，用自由文本会导致同义不同词（"在读"/"学习中"/"已读完"…）无法聚合。
+      // 选项取值必须兼容既有数据：错题自动入库时写入 type="学习资料"、status="未复习"（见 render-scene-main.js 的错题 → SM-2 逻辑），
+      // 故两者都作为首项保留。
       fields:[
         {k:"title",label:t("field.topic", "主题"),type:"text"},
-        {k:"type",label:t("field.type", "类型"),type:"text"},
+        {k:"type",label:t("field.type", "类型"),type:"select",options:[
+          t("study.type.material","学习资料"),t("study.type.book","书籍"),t("study.type.course","课程"),
+          t("study.type.article","文章"),t("study.type.video","视频"),t("option.other","其他")]},
         {k:"source",label:t("field.source","来源链接"),type:"text",placeholder:"https://... / 书名 / 课程名"},
-        {k:"status",label:t("field.status", "状态"),type:"text"},
+        {k:"status",label:t("field.status", "状态"),type:"select",options:[
+          t("study.status.notReviewed","未复习"),t("study.status.todo","待读"),t("study.status.reading","在读"),
+          t("study.status.done","已读完"),t("study.status.shelved","已搁置")]},
         {k:"note",label:t("side.sub.notes", "笔记"),type:"textarea"}
       ] } },
 
