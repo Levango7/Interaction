@@ -390,7 +390,11 @@ button[disabled]:active{transform:none}
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .ds-trigger:hover{border-color:var(--accent-soft)}
 .ds-trigger:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
-/* 焦点落到透明原生 select 上时，把视觉反馈转到自绘触发按钮 */
+/* v3.7.35：可编辑下拉（combobox）—— input 作触发器，caret 是它的兄弟节点（input 不能有子元素） */
+.ds-select--edit>.ds-trigger{padding-right:calc(var(--space-2) + 20px)}
+.ds-select--edit>.ds-caret{position:absolute;right:var(--space-2);top:50%;
+  transform:translateY(-50%);pointer-events:none}
+/* 焦点落到原生 select 上时，把视觉反馈转到自绘触发按钮 */
 .ds-select>select:focus-visible+.ds-trigger{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .ds-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
 .ds-caret{width:16px;height:16px;flex-shrink:0;color:var(--text-dim-2);
@@ -5850,10 +5854,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.34"; /* v3.7.34 UI 审查：复选框 13→16px 点击区、颜色选择器 32→38px 统一 */
+const VERSION = "3.7.35"; /* v3.7.35 修弹出方向真根因(scrollHeight 未受 max-height 约束) + 时间字段改可编辑下拉 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924h";
+const BUILD_TAG = "20260924i";
 
 
 

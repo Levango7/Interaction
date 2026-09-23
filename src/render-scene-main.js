@@ -237,7 +237,10 @@ function renderMainHTML(){
           _tOpts += '<option value="' + v + '">' + v + '</option>';
         }
       }
-      inp = `<select name="${f.k}" aria-label="${esc(f.label)}">${_tOpts}</select>`;
+      /* v3.7.35：data-editable="1" —— 用户："不但可以选择也可以输入"。
+         时间值的常见输入习惯是直接敲 "09:30"，288 项列表里翻找太慢；
+         可编辑下拉同时支持"敲"和"选"。 */
+      inp = `<select name="${f.k}" data-editable="1" aria-label="${esc(f.label)}">${_tOpts}</select>`;
     } else if(f.type==="image"){
       // v3.6.0：图片字段——隐藏原生 input，用按钮触发 + 文件名 + 缩略图预览（对齐主流做法）
       inp = `<div class="img-pick"><label class="img-pick-btn">${ic("upload")}<input name="${f.k}" type="file" accept="image/*" data-rec-img="1" class="img-pick-input"><span>${t("field.pickImage","选择图片")}</span></label><span class="img-pick-name" data-img-name="1">${t("field.noImage","未选择")}</span></div>`;

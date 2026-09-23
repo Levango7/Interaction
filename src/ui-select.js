@@ -38,21 +38,29 @@
     var inst = sel && sel.__ds;
     if (!inst) return;
     var list = inst.list, trigger = inst.trigger;
+    var EDITABLE = sel.hasAttribute("data-editable");
+    var kw = EDITABLE ? String(trigger.value || "").trim().toLowerCase() : "";
     list.innerHTML = "";
     Array.prototype.forEach.call(sel.options, function(o){
+      /* 可编辑模式：按输入内容过滤（本地匹配，不区分大小写） */
+      if (EDITABLE && kw && o.text.toLowerCase().indexOf(kw) === -1) return;
       var d = document.createElement("div");
       d.className = "ds-opt" + (o.value === sel.value ? " is-sel" : "");
       d.setAttribute("role", "option");
       d.setAttribute("data-value", o.value);
       d.setAttribute("aria-selected", o.value === sel.value ? "true" : "false");
       d.textContent = o.text;
-      d.addEventListener("click", function(){
+      var pick = function(e){
+        if (e) e.preventDefault();
         sel.value = o.value;
         /* 沿用原生事件契约：现有所有 change 监听无需改动 */
         sel.dispatchEvent(new Event("change", { bubbles: true }));
         inst.syncLabel();
         dsClose();
-      });
+      };
+      /* v3.7.35：可编辑模式必须用 mousedown —— input 失焦会先于 click 触发，
+         用 click 会导致 blur 里的"还原/提交"把选择结果覆盖掉。 */
+      d.addEventListener(EDITABLE ? "mousedown" : "click", pick);
       list.appendChild(d);
     });
     inst.syncLabel();
@@ -63,6 +71,8 @@
     if (!sel || sel.__ds) return;
     var parent = sel.parentNode;
     if (!parent) return;
+    /* v3.7.35：data-editable="1" 的 select 走 combobox 模式（可敲可选的输入框） */
+    var EDITABLE = sel.hasAttribute("data-editable");
 
     var wrap = document.createElement("div");
     wrap.className = "ds-select";
@@ -77,16 +87,34 @@
     parent.insertBefore(wrap, sel);
     wrap.appendChild(sel);                       /* 原生 select 移入，作为透明数据源 */
 
-    var trigger = document.createElement("button");
-    trigger.type = "button";
-    trigger.className = "ds-trigger";
+    var trigger = document.createElement(EDITABLE ? "input" : "button");
+    if (EDITABLE) {
+      /* v3.7.35：可编辑下拉（combobox）—— 用户："不但可以选择也可以输入"。
+         触发器用 input 而非 button，用户可直接敲 "09:30"，也可从列表选。 */
+      trigger.type = "text";
+      trigger.className = "ds-trigger ds-trigger--input";
+      trigger.setAttribute("autocomplete", "off");
+      trigger.setAttribute("spellcheck", "false");
+    } else {
+      trigger.type = "button";
+      trigger.className = "ds-trigger";
+    }
     trigger.setAttribute("aria-haspopup", "listbox");
     trigger.setAttribute("aria-expanded", "false");
-    trigger.innerHTML = '<span class="ds-label"></span>'
-      + '<svg class="ds-caret" viewBox="0 0 24 24" aria-hidden="true">'
+    trigger.setAttribute("role", "combobox");
+    trigger.setAttribute("aria-autocomplete", EDITABLE ? "list" : "none");
+    var CARET = '<svg class="ds-caret" viewBox="0 0 24 24" aria-hidden="true">'
       + '<path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"'
       + ' stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    wrap.appendChild(trigger);
+    if (EDITABLE) {
+      /* input 不能有子元素 → caret 作为兄弟节点绝对定位（见 .ds-select--edit .ds-caret） */
+      wrap.appendChild(trigger);
+      wrap.insertAdjacentHTML("beforeend", CARET);
+      wrap.classList.add("ds-select--edit");
+    } else {
+      trigger.innerHTML = '<span class="ds-label"></span>' + CARET;
+      wrap.appendChild(trigger);
+    }
 
     var list = document.createElement("div");
     list.className = "ds-list";
@@ -96,6 +124,18 @@
 
     var inst = { wrap: wrap, trigger: trigger, list: list, sel: sel };
     inst.syncLabel = function(){
+      if (EDITABLE) {
+        /* 空值选项（如「选时间」）在可编辑模式下应当作 **placeholder**，
+           而不是让用户看到"值" —— 否则得先删掉这四个字才能输入。 */
+        var o = sel.options[sel.selectedIndex];
+        if (!o || !o.value) {
+          trigger.value = "";
+          trigger.placeholder = o ? o.text : "";
+        } else {
+          trigger.value = o.text;
+        }
+        return;
+      }
       var lb = trigger.querySelector(".ds-label");
       if (lb) lb.textContent = _label(sel);
     };
@@ -104,17 +144,20 @@
     function open(){
       if (OPEN && OPEN !== inst) dsClose();
       list.hidden = false;
-      /* v3.7.27：向上弹判定修正 —— 用户："点击后是上拉框，不是下拉框"。
-         旧逻辑用 list.scrollHeight，隐藏转可见的当帧可能读不到正确值；
-         新逻辑改为按"下方剩余空间 vs 上方剩余空间"取大的那边，
-         且下方空间 < 80px（≈ 3 个选项）时优先向上 —— 聊天区输入框贴近视口底部，
-         实测 bottom=883/视口 900，下方只剩 17px，必须向上。 */
+      /* v3.7.35：向上弹判定修正（第三次修这里，这次是**真根因**）。
+         ✗ 旧逻辑：need = Math.max(list.scrollHeight, 44) + 8
+           scrollHeight 是**内容全高**，不受 max-height:264px 约束 ——
+           时间字段有 288 个选项，scrollHeight ≈ 8640px，
+           于是 `below < need` **恒为真** → 任何位置都向上弹
+           （用户："应该是下拉框，不是上拉框"）。
+         ✓ 新逻辑：用 getBoundingClientRect().height —— 它是**渲染后的实际高度**
+           （即 min(scrollHeight, max-height)），才是真正需要占用的空间。
+         同时条件收紧为"下方确实放不下"才上翻。 */
       var r = trigger.getBoundingClientRect();
+      var listH = list.getBoundingClientRect().height;   /* 已含 max-height 约束 */
       var below = window.innerHeight - r.bottom;
       var above = r.top;
-      var need = Math.max(list.scrollHeight, 44) + 8;
-      if (below < need && above > below) list.classList.add("up");
-      else if (below < need && above <= below) list.classList.remove("up");
+      if (below < listH + 8 && above > below) list.classList.add("up");
       else list.classList.remove("up");
       trigger.setAttribute("aria-expanded", "true");
       OPEN = inst;
@@ -126,6 +169,66 @@
       e.preventDefault(); e.stopPropagation();
       if (OPEN === inst) dsClose(); else open();
     });
+
+    /* ---------- 可编辑模式（combobox）的交互 ---------- */
+    if (EDITABLE) {
+      /* 把输入值提交回原生 select：能精确匹配就采纳，否则还原为当前选中项 */
+      function commit(){
+        var v = String(trigger.value || "").trim();
+        if (!v) {                                 /* 清空 → 回到空值选项 */
+          sel.value = "";
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+          inst.syncLabel();
+          return;
+        }
+        var hit = null;
+        Array.prototype.forEach.call(sel.options, function(o){
+          if (!hit && o.value && (o.value === v || o.text === v || o.text.toLowerCase() === v.toLowerCase())) hit = o;
+        });
+        if (hit) {
+          if (sel.value !== hit.value) {
+            sel.value = hit.value;
+            sel.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+          trigger.value = hit.text;
+        } else {
+          inst.syncLabel();   /* 输入无效 → 还原，避免留下脏值 */
+        }
+      }
+      trigger.addEventListener("focus", function(){ if (OPEN !== inst) open(); });
+      trigger.addEventListener("input", function(){
+        dsRefresh(sel);                  /* 按输入过滤选项 */
+        if (OPEN !== inst) open(); else open();   /* 保持展开 */
+      });
+      trigger.addEventListener("blur", function(){
+        /* 延迟到选项的 mousedown 之后再提交（mousedown 先于 blur） */
+        setTimeout(function(){
+          if (OPEN === inst) dsClose();
+          commit();
+        }, 120);
+      });
+      trigger.addEventListener("keydown", function(e){
+        var opts, idx;
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          if (OPEN !== inst) { open(); return; }
+          opts = Array.prototype.slice.call(list.querySelectorAll(".ds-opt"));
+          if (!opts.length) return;
+          idx = opts.findIndex(function(o){ return o.classList.contains("is-active"); });
+          idx = (e.key === "ArrowDown") ? (idx + 1) % opts.length : (idx - 1 + opts.length) % opts.length;
+          opts.forEach(function(o){ o.classList.remove("is-active"); });
+          opts[idx].classList.add("is-active");
+          opts[idx].scrollIntoView({ block: "nearest" });
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          var act = list.querySelector(".ds-opt.is-active");
+          if (OPEN === inst && act) act.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+          else commit();
+        } else if (e.key === "Escape") {
+          dsClose(); commit();
+        }
+      });
+    }
 
     /* 键盘：↑↓ 移动 / Enter 选中 / Esc 关闭 */
     trigger.addEventListener("keydown", function(e){
