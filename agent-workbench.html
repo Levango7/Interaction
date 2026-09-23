@@ -348,19 +348,18 @@ button[disabled]:active{transform:none}
 /* v3.7.15：显式 font-weight:400 —— 下拉框/输入框**不能继承父级的粗体**。
    用户："许多下拉框里面字体还是太粗，喧宾夺主"。实测大部分已是 400，
    但只要父级（如 label、strong 容器）带粗体就会被继承过去 → 这里钉死为 400。 */
-/* v3.7.27：记录表单（recForm）单行布局 —— 用户："添加按钮位置不对"（＋飘到第二行左侧）。
-   根因：.form-row--grid 是 auto-fill 网格，3 字段 + add-wrap 放不下时 add-wrap 掉到第二行左侧，
-   与空态文案"在上方表单填写后点「添加」"形成怪异布局（＋按钮孤零零在左上）。
-   改为 flex 单行：三字段等分、图片列稍宽（控件含按钮+文件名），添加按钮固定贴行尾不换行。 */
-#recForm{display:flex;flex-wrap:nowrap;align-items:flex-end;gap:var(--space-3)}
-#recForm>.fld{flex:1 1 0;min-width:0}
-#recForm>.fld:has(>.img-pick){flex:1.4 1 0}
-#recForm>.add-wrap{flex:0 0 auto}
-/* 窄屏（<720px）降级为可换行，字段独占整行 */
-@media (max-width:719px){
-  #recForm{flex-wrap:wrap}
-  #recForm>.fld{flex:1 1 100%}
-}
+/* v3.7.32：记录表单改为 **4 列网格** —— 会议字段增至 8 个（含新增「开始时间」），
+   flex 方案会摊出 5/2/1 这种不均衡的行（第一行 5 个、第二行只剩 2 个撑满）。
+   固定 4 列后每行整齐：7 个短字段 → 4 + 3，textarea 独占整行，
+   ＋按钮 justify-self:end 贴右端。 */
+#recForm{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:var(--space-3);align-items:end}
+#recForm>.fld{min-width:0}
+#recForm>.fld:has(>textarea){grid-column:1/-1}
+#recForm>.add-wrap{justify-self:end;align-self:end}
+/* 窄屏：2 列 → 1 列 */
+@media (max-width:879px){ #recForm{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:519px){ #recForm{grid-template-columns:1fr} }
 /* ===== v3.7.26 自研下拉选择框（渐进增强原生 <select>）=====
    原生 select 展开的 option 列表由浏览器渲染，宽度/对齐/配色全不可控。
    这里保留原生 select 作数据源与表单提交通道，仅在视觉层叠加自绘的
@@ -5831,10 +5830,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.31"; /* v3.7.31 学习资料「类型/状态」由自由文本改为下拉（业务定义修正） */
+const VERSION = "3.7.32"; /* v3.7.32 会议「日期/开始时间/预设时长」三字段正交 + 记录表单 4 列网格 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924e";
+const BUILD_TAG = "20260924f";
 
 
 
@@ -6402,10 +6401,16 @@ const SCENARIOS = {
       fields:[
         {k:"title",label:t("field.meetingTitle", "会议主题"),type:"text"},
         {k:"type",label:t("field.meetingType","会议类型"),type:"select",options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
-        {k:"date",label:t("field.date","日期"),type:"date",timePicker:true},
+        /* v3.7.32：日期与开始时间**拆成两个字段** —— 用户："有些业务场景日期是需要跟开始时间的，
+           比如会议的日期是？开始时间是？预设时长是？"
+           原先 {k:"date", timePicker:true} 把两者塞在一起：日期选择器底部挂时/分，
+           概念混淆（日期本身没有时分；开始时间也不该藏在日期组件里）。
+           现在：日期 / 开始时间 / 时长(小时) 三个正交字段。 */
+        {k:"date",label:t("field.date","日期"),type:"date"},
+        {k:"startTime",label:t("field.startTime","开始时间"),type:"time"},
         {k:"host",label:t("field.host","主持人"),type:"text"},
         {k:"who",label:t("field.attendees", "参会人"),type:"text"},
-        {k:"duration",label:t("field.durationHours","时长(小时)"),type:"number"},
+        {k:"duration",label:t("field.durationHours","预设时长(小时)"),type:"number"},
         {k:"note",label:t("field.conclusion", "结论 / 跟进"),type:"textarea"}
       ] } },
 
@@ -19067,6 +19072,13 @@ function renderMainHTML(){
     } else if(f.type==="select"){
       const opts = (f.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
       inp = `<select name="${f.k}">${opts}</select>`;
+    } else if(f.type === "time"){
+      /* v3.7.32：**时间字段**（只时分）—— 用户："有些业务场景日期是需要跟开始时间的，
+         比如会议的日期是？开始时间是？预设时长是？"
+         原先会议把"日期"和"开始时间"塞进一个 date 字段（timePicker:true），
+         概念混淆：日期没有时分、会议的开始时间也不该依附于日期选择器。
+         → 拆为独立的 time 字段。step=300 表示 5 分钟粒度，与日期面板的时间行一致。 */
+      inp = `<input name="${f.k}" type="time" step="300" aria-label="${esc(f.label)}">`;
     } else if(f.type==="image"){
       // v3.6.0：图片字段——隐藏原生 input，用按钮触发 + 文件名 + 缩略图预览（对齐主流做法）
       inp = `<div class="img-pick"><label class="img-pick-btn">${ic("upload")}<input name="${f.k}" type="file" accept="image/*" data-rec-img="1" class="img-pick-input"><span>${t("field.pickImage","选择图片")}</span></label><span class="img-pick-name" data-img-name="1">${t("field.noImage","未选择")}</span></div>`;
@@ -19810,6 +19822,8 @@ SCENE_FEATURE_RENDER.office = {
         {label:t("field.meetingTitle", t("field.meetingTitle","会议主题")), k:"title"},
         {label:t("field.type", t("field.type","类型")), k:"type"},
         {label:t("tool.regex.preset.date", t("field.date","日期")), k:"date"},
+        /* v3.7.32：开始时间独立成列（与字段拆分保持一致） */
+        {label:t("field.startTime","开始时间"), k:"startTime"},
         {label:t("field.attendees","参会人"), k:"who"},
         {label:t("field.status", t("field.status","状态")), fmt:function(r){ return r.done ? t("p3.html.meetingOpened","<span class=\"u-text-ok\">已开</span>") : t("p3.html.meetingPending","<span class=\"u-text-warn\">待开</span>"); }}
       ],
@@ -30203,7 +30217,8 @@ const MESSAGES = {
     "datepicker.monthNext": "下一月",
     "datepicker.clear": "清除",
     "datepicker.today": "今天",
-    "field.durationHours": "时长(小时)",
+    "field.durationHours": "预设时长(小时)",
+    "field.startTime": "开始时间",
     "field.entry": "条目",
     "field.examName": "考试名",
     "field.excerpt": "摘录",
@@ -33597,7 +33612,8 @@ const MESSAGES = {
     "datepicker.monthNext": "Next",
     "datepicker.clear": "Clear",
     "datepicker.today": "Today",
-    "field.durationHours": "Duration (hours)",
+    "field.durationHours": "Estimated duration (hours)",
+    "field.startTime": "Start time",
     "field.entry": "Entry",
     "field.examName": "Exam Name",
     "field.excerpt": "Excerpt",
