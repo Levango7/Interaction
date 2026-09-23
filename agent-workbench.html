@@ -367,6 +367,30 @@ button[disabled]:active{transform:none}
    （它们在本文件中位置更靠后，会按源码顺序覆盖同特异性声明；
    另加规则在此处是无效的 —— 本次先在这里写过一遍，实测没生效）。 */
 
+/* ===== v3.7.36 滑块与取色器主题化（控件矩阵审查 P1 发现）=====
+   全站 range ×16、color ×27 此前**完全没有主题化**，用浏览器默认外观 ——
+   在 11 套主题（深色/森林/海洋/黑金…）下都是系统蓝/灰，与设计系统无关。
+   这两类控件的**收起态外观可以完全用 CSS 接管**（弹层只有 color 的取色面板是原生的），
+   因此不需要自研控件，补样式即可。 */
+input[type="range"]{-webkit-appearance:none;appearance:none;height:20px;background:transparent;cursor:pointer;padding:0;border:none}
+input[type="range"]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;
+  border-radius:50%;background:var(--accent);border:2px solid var(--panel);
+  box-shadow:var(--shadow-1);transition:transform var(--transition-fast)}
+input[type="range"]:hover::-webkit-slider-thumb{transform:scale(1.12)}
+input[type="range"]:focus-visible{outline:none}
+input[type="range"]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--accent-soft)}
+/* Firefox */
+input[type="range"]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);
+  border:2px solid var(--panel);box-shadow:var(--shadow-1)}
+input[type="range"]:disabled{opacity:.5;cursor:not-allowed}
+
+/* 取色器：内部色块去默认描边+直角（外框已由 input[type=color] 规则统一为 --control-h） */
+input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+input[type="color"]::-webkit-color-swatch{border:none;border-radius:calc(var(--radius-sm) - 2px)}
+input[type="color"]::-moz-color-swatch{border:none;border-radius:calc(var(--radius-sm) - 2px)}
+
 /* v3.7.33：日期字段的 ▼ 指示符（用户："日期是下拉框，点击有日期卡片"）。
    原先日期字段外观与普通文本框无异，用户不知道可点开面板。
    用真实 svg 而非 background-image —— 可继承 currentColor，避免硬编码色值。 */
@@ -5854,10 +5878,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.35"; /* v3.7.35 修弹出方向真根因(scrollHeight 未受 max-height 约束) + 时间字段改可编辑下拉 */
+const VERSION = "3.7.36"; /* v3.7.36 控件矩阵审查：range×16/color×27 主题化（此前用浏览器默认外观） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924i";
+const BUILD_TAG = "20260924j";
 
 
 
