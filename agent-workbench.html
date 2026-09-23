@@ -348,6 +348,19 @@ button[disabled]:active{transform:none}
 /* v3.7.15：显式 font-weight:400 —— 下拉框/输入框**不能继承父级的粗体**。
    用户："许多下拉框里面字体还是太粗，喧宾夺主"。实测大部分已是 400，
    但只要父级（如 label、strong 容器）带粗体就会被继承过去 → 这里钉死为 400。 */
+/* v3.7.27：记录表单（recForm）单行布局 —— 用户："添加按钮位置不对"（＋飘到第二行左侧）。
+   根因：.form-row--grid 是 auto-fill 网格，3 字段 + add-wrap 放不下时 add-wrap 掉到第二行左侧，
+   与空态文案"在上方表单填写后点「添加」"形成怪异布局（＋按钮孤零零在左上）。
+   改为 flex 单行：三字段等分、图片列稍宽（控件含按钮+文件名），添加按钮固定贴行尾不换行。 */
+#recForm{display:flex;flex-wrap:nowrap;align-items:flex-end;gap:var(--space-3)}
+#recForm>.fld{flex:1 1 0;min-width:0}
+#recForm>.fld:has(>.img-pick){flex:1.4 1 0}
+#recForm>.add-wrap{flex:0 0 auto}
+/* 窄屏（<720px）降级为可换行，字段独占整行 */
+@media (max-width:719px){
+  #recForm{flex-wrap:wrap}
+  #recForm>.fld{flex:1 1 100%}
+}
 /* ===== v3.7.26 自研下拉选择框（渐进增强原生 <select>）=====
    原生 select 展开的 option 列表由浏览器渲染，宽度/对齐/配色全不可控。
    这里保留原生 select 作数据源与表单提交通道，仅在视觉层叠加自绘的
@@ -5808,10 +5821,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.27"; /* v3.7.27 模型下拉加宽加高且向上弹+与发送按钮底对齐 + 指标条再加高 */
+const VERSION = "3.7.28"; /* v3.7.28 记录表单单行（＋按钮不再掉行）+ 图片列稍宽 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924a";
+const BUILD_TAG = "20260924b";
 
 
 
