@@ -969,7 +969,10 @@ input[type="file"]:hover{border-color:var(--accent)}
    加号不再叠加在标签输入框内（原 padding-right 让位规则随之删除）。 */
 #taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0}
 #taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}
-#taskForm>.fld:nth-child(4){grid-column:9/12;grid-row:1}
+/* v3.7.20：标签字段占满列3（9/13），右侧用 padding 给加号让位 —— 用户"标签框左右宽一点"。
+   实测 228px → 244px（@1600），与加号的间隙由 42px 收到 20px（= 栅格间距，与全站一致）。
+   加号仍在 12/13 微轨、仍 justify-self:end，右缘继续贴齐列3 右边界（竖线对齐不破坏）。 */
+#taskForm>.fld:nth-child(4){grid-column:9/13;grid-row:1;padding-right:calc(var(--control-h) + var(--space-2))}
 /* v3.7.19：**竖直线对齐**（用户："左右边框线在竖直方向上对齐，宽度对齐，间距合理，竖直方向上对齐整洁"）。
    实测：表单微轨 68px / gap 12px，看板三列各 307.3px @1600 —— 两者数学上同构
    （12 微轨 + 11 gap ≡ 3 列 + 2 gap），所以列1 右缘、列2 右缘本来就与字段边界吻合。
@@ -1796,7 +1799,9 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 /* 底部输入区：附件按钮 + textarea + 模型选择（嵌入） + 发送/暂停按钮
    v1.10.0b：附件按钮变小（28×28）、模型下拉嵌入、发送变图标（28×28），生成中切为暂停图标 */
 /* v1.15：聊天输入区 = 与消息区合成一个完整卡片（无顶边框，底部圆角闭合；无分割线） */
-.chat-input-area{margin:0 var(--space-3) var(--space-2);
+/* v3.7.20：左右留白 12px → 8px —— 用户截图圈住聊天输入区标注"左右宽一点"。
+   面板宽 300px 固定，输入区可用宽 276px → 284px。 */
+.chat-input-area{margin:0 var(--space-2) var(--space-2);
   border:1px solid color-mix(in srgb,var(--line) 45%,transparent);border-radius:var(--radius-lg);
   background:transparent;display:flex;flex-direction:column;overflow:hidden;
     transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
@@ -5731,10 +5736,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.19"; /* v3.7.19 竖线对齐：表单列距与看板 gap 同源 + 加号右对齐 + 筛选行改 4/4/4 */
+const VERSION = "3.7.20"; /* v3.7.20 去掉「去配置」状态条（修 v3.7.18 引入的 e2e 失败）+ 标签框加宽 + 聊天输入区留白收窄 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923d";
+const BUILD_TAG = "20260923e";
 
 
 
@@ -22356,17 +22361,12 @@ function renderChatDisabled(){
     t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是") + esc(s.name) +
     t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>")
   );
-  // v3.7.18：行动条从消息流末尾移到**输入框正上方**（常驻状态条）。
-  // 原来插在 #chat 末尾会像"AI 回复的一条消息"，语义混乱且随消息滚动；
-  // 现在固定在输入框上沿，配置 Key 后随整条未启用态一起消失。
-  const bar=document.createElement("div");
-  bar.className="chat-setup-bar";
-  bar.innerHTML='<span class="chat-setup-tip">' + t("ai.needKeyTip","尚未启用 AI：填入 API Key 即可对话并调用工具修改数据") + '</span>'
-    + '<button type="button" class="chat-setup-btn">' + t("ai.goSetup","去配置") + '</button>';
-  bar.querySelector(".chat-setup-btn").onclick=function(){ if(typeof AppBridge!=="undefined"&&AppBridge.openAiPage) AppBridge.openAiPage(); };
-  const chatForm=document.getElementById("chatForm");
-  if(chatForm && chatForm.parentElement) chatForm.parentElement.insertBefore(bar, chatForm);
-  else el.appendChild(bar);
+  /* v3.7.20：**移除「去配置」行动条**（用户 2026-09-23 截图标注"去掉"）。
+     历史：v3.7.18 把按钮从消息流末位移到输入框上方做成常驻状态条，
+     但那条 87px 高的条会挤压输入区 —— CI e2e 在 1280×800 下报
+     "waiting for element to be visible, enabled and stable" 超时（发送按钮位置不稳）。
+     且提示消息本身已写明"点击右上角「设置」填入 API Key"，按钮属重复引导。
+     → 整条删除，只保留提示气泡。 */
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------
