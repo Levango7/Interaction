@@ -57,10 +57,15 @@ describe("看板卡 · 共用列栅格", () => {
        它的窄是靠「select width:56px」实现的。 */
     expect(rep, "12 轨应用 repeat(12,minmax(0,1fr)) 等宽写法").toBeTruthy();
     expect(tpl, "不应再出现 1.333fr 的比例轨").not.toContain("1.333fr");
-    /* v3.7.60：等宽四列下 gap 统一为 --space-3(12px) 列间距，不再跟随看板。 */
+    /* v3.7.19：列间距必须**与看板 gap 同源**（用户："左右边框线在竖直方向上对齐"）。
+       推导：看板列宽 = (W−2s)/3；表单 4 微轨 = 4·(W−11s)/12 + 3s = (W−2s)/3 —— 恒等，
+       但前提是 **表单列距 = 看板 gap**。默认段两者都用 --space-2；
+       ≥1440 大屏看板 gap 放大到 --space-5，表单列距在媒体查询里同步跟随。 */
     const formGap = (m[0].match(/gap:var\((--[\w-]+)\) var\((--[\w-]+)\)/) || [])[2];
     expect(formGap, "表单需显式给列间距 token").toBeTruthy();
-    expect(formGap, "表单列间距应为 --space-3（与其他表单栅格一致）").toBe("--space-3");
+    expect(formGap, "默认段表单列距须与看板 gap 同源（--space-2）").toBe("--space-2");
+    // 大屏段必须同步放大，否则列1/列2 边界会差 5px / 3px（实测过）
+    expect(CSS, "≥1440 大屏下表单列距须跟随看板 gap(--space-5)").toMatch(/\.form-row--board\{gap:var\(--space-2\) var\(--space-5\)\}/);
     expect(m[0]).toContain("align-items:end");
   });
 
@@ -126,11 +131,13 @@ describe("看板卡 · 标记侧", () => {
     // 加号不再叠加在标签输入框内 —— 标签输入框的右内边距让位规则已删除
     expect(CSS, "标签输入框不得再保留加号让位的右内边距").not.toContain('#taskForm>.fld:nth-child(4)>input{padding-right:calc(var(--control-h) + var(--space-2))}');
     // 加号：独立占最右 1 微轨、水平居中、底对齐
-    expect(CSS).toContain('#taskForm>.add-wrap{grid-column:12/13;grid-row:1;justify-self:center;align-self:end;z-index:var(--z-under)}');
+    // v3.7.19：加号改为靠右（justify-self:end），右缘贴齐看板列3 右边界 —— 实测 1218 → 1233
+    expect(CSS).toContain('#taskForm>.add-wrap{grid-column:12/13;grid-row:1;justify-self:end;align-self:end;z-index:var(--z-under)}');
     // 筛选行前两字段与任务表单对齐，第三字段从 7/13 占满剩余
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/4;grid-row:1}');
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(2){grid-column:4/7;grid-row:1}');
-    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:7/13;grid-row:1}');
+    // v3.7.19：筛选行改为与看板三列同构（4/4/4）—— 原来是 4/3/6，中间两条边界都不落在看板列上
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(2){grid-column:5/9;grid-row:1}');
+    expect(CSS).toContain('#taskFilterRow>.fld:nth-child(3){grid-column:9/13;grid-row:1}');
   });
 
   it("窄屏解除显式定位（column 与 row 都要解除，否则挤成一行造隐式列）", () => {
