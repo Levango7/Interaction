@@ -71,6 +71,13 @@
 6px 是徽标/标签条微间隙、10px 是按钮与输入框横向留白的高频设计值，正式收编避免散落） */
 --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
 --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
+/* v3.7.25 图标尺寸令牌（审计发现全站 7 种硬编码：14/15/16/17/18/19/20/22px）。
+   收敛为三档，按「层级」而非「感觉」取用：
+     sm 16px — 行内、次级小按钮、导航项、状态徽标
+     md 20px — 工具栏按钮、卡片标题、消息图标、面板标题
+     lg 24px — 应用卡片、文档工具等主入口
+   例外（不纳入令牌）：.page-head .ph-ic 32px（页面级标识）、.mini-chart-wrap svg（100% 自适应） */
+--icon-sm:16px; --icon-md:20px; --icon-lg:24px;
 /* v3.2 控制高度令牌（统一 input/select/button 高度——避免水平对齐场景下不同元素错位） */
 --control-h:38px;       /* 主控件高（input/select/主按钮/导航胶囊） */
   /* v3.7.27：方案 A 的两个几何令牌 —— 标签行高 / 字段提示行高。
@@ -341,6 +348,39 @@ button[disabled]:active{transform:none}
 /* v3.7.15：显式 font-weight:400 —— 下拉框/输入框**不能继承父级的粗体**。
    用户："许多下拉框里面字体还是太粗，喧宾夺主"。实测大部分已是 400，
    但只要父级（如 label、strong 容器）带粗体就会被继承过去 → 这里钉死为 400。 */
+/* ===== v3.7.26 自研下拉选择框（渐进增强原生 <select>）=====
+   原生 select 展开的 option 列表由浏览器渲染，宽度/对齐/配色全不可控。
+   这里保留原生 select 作数据源与表单提交通道，仅在视觉层叠加自绘的
+   「触发按钮 + 选项列表」，从而让列表与触发框**严格同宽**、文字可居中。 */
+.ds-select{position:relative;width:100%;display:block}
+/* 原生 select 仅透明覆盖（不用 display:none —— 保留表单提交与无障碍语义） */
+.ds-select>select{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;margin:0}
+.ds-trigger{width:100%;height:var(--control-h);display:flex;align-items:center;gap:var(--space-1);
+  padding:0 var(--space-2);font-family:inherit;font-size:var(--fs-sm);font-weight:400;
+  color:var(--text);background:var(--panel);
+  border:1px solid color-mix(in srgb,var(--line) 65%,var(--text) 35%);
+  border-radius:var(--control-r);cursor:pointer;
+  transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.ds-trigger:hover{border-color:var(--accent-soft)}
+.ds-trigger:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+/* 焦点落到透明原生 select 上时，把视觉反馈转到自绘触发按钮 */
+.ds-select>select:focus-visible+.ds-trigger{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.ds-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.ds-caret{width:14px;height:14px;flex-shrink:0;color:var(--text-dim);
+  transition:transform var(--transition-fast)}
+.ds-trigger[aria-expanded="true"] .ds-caret{transform:rotate(180deg)}
+/* ★ 关键：width:100% 相对 .ds-select 定位 → 与触发框严格同宽 */
+.ds-list{position:absolute;left:0;top:calc(100% + var(--space-1));width:100%;
+  z-index:calc(var(--z-modal,3000) + 2);
+  background:var(--panel);border:1px solid color-mix(in srgb,var(--line) 65%,var(--text) 35%);
+  border-radius:var(--control-r);box-shadow:var(--shadow-3);padding:var(--space-1);
+  max-height:264px;overflow-y:auto}
+.ds-list.up{top:auto;bottom:calc(100% + var(--space-1))}
+.ds-opt{padding:var(--space-1h) var(--space-2);font-size:var(--fs-sm);font-weight:400;
+  color:var(--text);border-radius:var(--radius-sm);cursor:pointer;
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ds-opt:hover,.ds-opt.is-active{background:var(--surface-hover)}
+.ds-opt.is-sel{color:var(--accent);font-weight:500}
 /* v3.7.22：边框加深 35%（用户："输入框框线明显一点"）。
    用 color-mix 把 --line 与 --text 混合，各主题（含深色/绿色主题）自动适配，不留硬编码色值。 */
 input,select,textarea{font-family:inherit;font-size:var(--fs-sm);font-weight:400;border:1px solid color-mix(in srgb,var(--line) 65%,var(--text) 35%);
@@ -435,7 +475,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .toolbar-row .tbtn:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);
   box-shadow:var(--shadow-1)}
 .toolbar-row .tbtn:active{transform:scale(.97)}
-.toolbar-row .tbtn svg{width:15px;height:15px}
+.toolbar-row .tbtn svg{width:var(--icon-sm);height:var(--icon-sm)}
 /* 工具行形状语言统一：widget 也改胶囊圆角，告别"按钮圆胶囊 + widget 方块"的混杂 */
 .toolbar-row .pomo-widget,.toolbar-row .tracker-widget{flex-shrink:0;padding:2px var(--space-2);gap:var(--space-1);
   border-radius:var(--radius-full);border:1px solid var(--line);background:var(--panel)}
@@ -459,7 +499,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 待办栏顶部一行 = 图标 + 摘要文本 + 展开按钮（始终可见）；展开时下方出现 Top3 列表 */
 .todo-bar-row{display:flex;align-items:center;gap:var(--space-2);padding:2px var(--space-2);min-height:30px;flex-shrink:0}
 .todo-bar .todo-bar-ic{flex-shrink:0;display:inline-flex;align-items:center;color:var(--accent)}
-.todo-bar .todo-bar-ic svg{width:15px;height:15px}
+.todo-bar .todo-bar-ic svg{width:var(--icon-sm);height:var(--icon-sm)}
 .todo-bar-preview{flex:1;min-width:0;text-align:left;background:transparent;
   border:none;color:var(--text-dim);font-size:var(--fs-xs);padding:4px var(--space-2);
   cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -469,7 +509,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   width:24px;height:24px;border:0;background:transparent;color:var(--text-faint);
   border-radius:var(--radius-sm);cursor:pointer;transition:transform var(--transition-base),color var(--transition-fast),background var(--transition-fast)}
 .todo-bar-toggle:hover{color:var(--text);background:var(--surface-hover)}
-.todo-bar-toggle svg{width:14px;height:14px;transition:transform var(--transition-base)}
+.todo-bar-toggle svg{width:var(--icon-sm);height:var(--icon-sm);transition:transform var(--transition-base)}
 /* 展开态：待办栏纵向增长，下方出现 Top3 列表 */
 .todo-bar.todo-bar-collapsed .todo-bar-list{display:none}
 .todo-bar.todo-bar-collapsed .todo-bar-toggle svg{transform:rotate(0)}
@@ -512,7 +552,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   padding:var(--space-1) var(--space-3);font-size:var(--fs-sm);color:var(--text-dim);
   border:1px solid transparent;background:transparent;border-radius:var(--radius-md)}
 .more-menu .tbtn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--line)}
-.more-menu .tbtn svg{width:16px;height:16px;flex-shrink:0}
+.more-menu .tbtn svg{width:var(--icon-sm);height:var(--icon-sm);flex-shrink:0}
 .more-menu .tbtn .lbl{font-size:var(--fs-sm)}
 /* v1.9.9：侧栏功能组三大类（图表/组件/应用）popover——竖排子菜单，JS 锚定按钮右侧 */
 .side-pop{position:fixed;background:var(--panel);border:1px solid var(--line);
@@ -522,7 +562,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   padding:var(--space-1) var(--space-3);font-size:var(--fs-sm);color:var(--text-dim);
   border:1px solid transparent;background:transparent;border-radius:var(--radius-md)}
 .side-pop .tbtn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--line)}
-.side-pop .tbtn svg{width:16px;height:16px;flex-shrink:0}
+.side-pop .tbtn svg{width:var(--icon-sm);height:var(--icon-sm);flex-shrink:0}
 .side-pop .tbtn .lbl{font-size:var(--fs-sm)}
 /* v1.10.0：应用 popover 内的二级开关标签（如"指针特效"右侧"关/开"） */
 .side-pop-toggle{position:absolute;right:var(--space-3);top:50%;transform:translateY(-50%);
@@ -532,7 +572,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* v1.10.0：应用 popover 内的分组分隔线（生活工具 vs 可玩性机制） */
 .side-pop-sep{height:1px;background:var(--line);margin:var(--space-1) var(--space-2)}
 .side-caret{margin-left:auto;display:inline-flex;align-items:center;color:var(--text-faint);transition:transform .2s}
-.side-caret svg{width:14px;height:14px}
+.side-caret svg{width:var(--icon-sm);height:var(--icon-sm)}
 .nav-item[aria-expanded="true"] .side-caret{transform:rotate(90deg);color:var(--accent)}
 /* v2.1.0：两级菜单——父项节点 + 可展开子菜单 */
 .nav-node{display:block}
@@ -569,7 +609,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
     gap:2px;min-height:48px;padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);
     background:transparent;border:none;color:var(--text-dim);font-size:var(--fs-xs);cursor:pointer;
     transition:background var(--transition-fast),color var(--transition-fast)}
-  .mob-bar-btn svg{width:20px;height:20px}
+  .mob-bar-btn svg{width:var(--icon-md);height:var(--icon-md)}
   .mob-bar-btn .nm{font-size:var(--fs-xs)}
   .mob-bar-btn.active{color:var(--accent);background:var(--accent-soft)}
   /* 底部抽屉：纯 display 开关（不依赖 transform/opacity 入场动画——
@@ -596,7 +636,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
     padding:var(--space-2) var(--space-3);min-height:44px;border-radius:var(--radius-md);
     background:transparent;border:none;color:var(--text);font-size:var(--fs-sm);font-weight:500;
     cursor:pointer;text-align:left;transition:background var(--transition-fast)}
-  .sheet-parent svg{width:18px;height:18px;color:var(--sc,var(--muted));flex-shrink:0}
+  .sheet-parent svg{width:var(--icon-md);height:var(--icon-md);color:var(--sc,var(--muted));flex-shrink:0}
   .sheet-parent .cnt{margin-left:auto;font-size:var(--fs-xs);background:var(--surface-muted);
     border-radius:var(--radius-md);padding:1px 8px;color:var(--text-dim)}
   .sheet-parent:hover{background:var(--surface-hover)}
@@ -620,7 +660,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   letter-spacing:-.03em;min-height:36px;flex-shrink:0}
 .logo .mark{width:28px;height:28px;border-radius:var(--radius-md);background:var(--brand-grad);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--on-accent)}
-.logo .mark svg{width:17px;height:17px;display:block;stroke:var(--on-accent)}
+.logo .mark svg{width:var(--icon-sm);height:var(--icon-sm);display:block;stroke:var(--on-accent)}
 .logo .mark{width:28px;height:28px;border-radius:var(--radius-md);background:var(--brand-grad);
   display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-size:var(--fs-base);
   box-shadow:var(--shadow-1),inset 0 1px 0 var(--on-accent-soft)}
@@ -632,7 +672,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .tbtn:hover{background:var(--surface-hover);color:var(--text)}
 .tbtn:active{background:var(--surface-muted)}
 .tbtn.danger:hover{background:var(--danger-soft);color:var(--danger);border-color:var(--danger-border)}
-.tbtn svg{width:18px;height:18px}
+.tbtn svg{width:var(--icon-md);height:var(--icon-md)}
 /* 系统级消息按钮角标（红色小圆点 / 未读数） */
 .tbtn{position:relative}
 /* v3.1.1：顶栏系统级按钮纵排布局（图标在上·文字在下）——同等宽高方形按钮
@@ -642,14 +682,14 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   padding:var(--space-1) var(--space-2);min-height:48px;min-width:48px;
   font-size:var(--fs-xs);line-height:1.1;white-space:nowrap}
 .topbar .tbtn .lbl{display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64px;font-size:var(--fs-xs)}
-.topbar .tbtn svg{width:20px;height:20px;flex-shrink:0}
+.topbar .tbtn svg{width:var(--icon-md);height:var(--icon-md);flex-shrink:0}
 .topbar .tbtn .badge{position:absolute;top:2px;right:6px}
 /* ===== v3.6.5：窄屏顶栏收紧 —— 8 个系统按钮（48px/个）在 380px 视口装不下，横向溢出 ===== */
 @media(max-width:767px){
   .topbar{gap:var(--space-1)}
   .topbar .tbtn{min-width:38px;padding:var(--space-1) 2px}
   .topbar .tbtn .lbl{font-size:10px;max-width:46px}
-  .topbar .tbtn svg{width:17px;height:17px}
+  .topbar .tbtn svg{width:var(--icon-sm);height:var(--icon-sm)}
 }
 @media(max-width:479px){
   .topbar{gap:1px;padding-left:var(--space-1)}
@@ -678,7 +718,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .msg-item:last-child{border-bottom:none}
 .msg-item.unread{background:var(--accent-soft)}
 .msg-item-icon{flex-shrink:0;width:20px;height:20px;color:var(--accent);display:flex;align-items:center;justify-content:center}
-.msg-item-icon svg{width:20px;height:20px}
+.msg-item-icon svg{width:var(--icon-md);height:var(--icon-md)}
 .msg-item-body{flex:1;min-width:0}
 .msg-item-title{font-weight:600;font-size:var(--fs-sm);margin-bottom:2px}
 .msg-item-text{font-size:var(--fs-xs);color:var(--muted);line-height:1.4;word-break:break-word}
@@ -699,7 +739,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
   min-height:30px}
-.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-item svg{width:var(--icon-sm);height:var(--icon-sm);flex-shrink:0}
 .nav-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item .cnt{font-size:var(--fs-xs);background:var(--surface-muted);border-radius:var(--radius-md);
   padding:1px 8px;color:var(--text-dim-2);min-width:20px;text-align:center}
@@ -725,7 +765,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .page-head{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);padding:var(--space-2) 0}
 .page-head .ph-ic{width:32px;height:32px;border-radius:var(--radius-md);flex-shrink:0;
   background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center}
-.page-head .ph-ic svg{width:17px;height:17px}
+.page-head .ph-ic svg{width:var(--icon-md);height:var(--icon-md)}
 .page-head .ph-tx{flex:1;min-width:0}
 .page-head h2{margin:0;font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em}
 .page-head .sub{margin:1px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
@@ -740,13 +780,13 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* v1.15：以下两个变体已废弃（标题栏统一为基础 .page-head），定义保留仅为兼容旧引用 */
 .page-head.page-head-loose{padding:var(--space-4) 0;margin-bottom:var(--space-5)}
 .page-head.page-head-loose .ph-ic{width:38px;height:38px;border-radius:var(--radius-lg)}
-.page-head.page-head-loose .ph-ic svg{width:19px;height:19px}
+.page-head.page-head-loose .ph-ic svg{width:var(--icon-md);height:var(--icon-md)}
 .page-head.page-head-loose h2{font-size:var(--fs-xl)}
 .page-head.page-head-loose .sub{font-size:var(--fs-sm);margin-top:2px}
 /* v1.15：page-head-sm 变体已废弃（标题栏统一为基础 .page-head），定义保留仅为兼容旧引用 */
 .page-head-sm{padding:var(--space-1) 0;margin-bottom:var(--space-2);gap:var(--space-2)}
 .page-head-sm .ph-ic{width:28px;height:28px;border-radius:var(--radius-md)}
-.page-head-sm .ph-ic svg{width:15px;height:15px}
+.page-head-sm .ph-ic svg{width:var(--icon-sm);height:var(--icon-sm)}
 .page-head-sm h2{font-size:var(--fs-md)}
 .page-head-sm .sub{margin:1px 0 0;font-size:var(--fs-xs)}
 /* v1.9.7：场景页标题独立成卡（renderSceneHead）——page-head 装进 .card 后取消自带下边距，标题与下方内容块彻底分离 */
@@ -787,7 +827,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   transition:background var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast)}
 .doc-tool-item:hover{background:var(--surface-hover);border-color:var(--accent-soft);transform:translateY(-1px)}
 .doc-tool-ic{color:var(--accent);display:flex;align-items:center;flex-shrink:0}
-.doc-tool-ic svg{width:22px;height:22px}
+.doc-tool-ic svg{width:var(--icon-lg);height:var(--icon-lg)}
 .doc-tool-tx{flex:1;min-width:0}
 .doc-tool-tx b{display:block;font-size:var(--fs-sm);color:var(--text)}
 .doc-tool-tx small{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
@@ -839,7 +879,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .card .sub{color:var(--muted);font-size:var(--fs-xs);margin:0 0 var(--space-2);line-height:1.4}
 .card h3{font-size:var(--fs-sm);font-weight:600;margin:var(--space-3) 0 var(--space-2);
   display:flex;align-items:center;gap:var(--space-2)}
-.card h2 svg,.card h3 svg{width:20px;height:20px;flex-shrink:0}
+.card h2 svg,.card h3 svg{width:var(--icon-md);height:var(--icon-md);flex-shrink:0}
 
 /* ===== 今日仪表盘 ===== */
 .today-head{display:flex;align-items:center;gap:var(--space-4)}
@@ -1305,8 +1345,8 @@ select[name="priority"]{max-width:120px}
   border:1px solid var(--line);font-size:var(--fs-xs);margin-left:var(--space-2);min-height:36px;
   transition:background var(--transition-fast);display:inline-flex;align-items:center;gap:var(--space-1)}
 .copy:hover{background:var(--surface-hover)}
-.copy svg{width:14px;height:14px;flex-shrink:0}
-.del svg{width:14px;height:14px;flex-shrink:0}
+.copy svg{width:var(--icon-sm);height:var(--icon-sm);flex-shrink:0}
+.del svg{width:var(--icon-sm);height:var(--icon-sm);flex-shrink:0}
 code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var(--snip-fg);
   padding:var(--space-3);border-radius:var(--radius-md);font-family:"SF Mono","SFMono-Regular",Consolas,monospace;
   font-size:var(--fs-sm);margin-top:var(--space-2);overflow:auto;line-height:1.5}
@@ -1361,14 +1401,14 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .sys-ov-item:hover{background:var(--surface-hover);border-color:var(--accent-soft);transform:translateY(-1px)}
 .sys-ov-item:active{transform:scale(.98)}
 .sys-ov-ic{color:var(--accent);display:flex;align-items:center}
-.sys-ov-ic svg{width:16px;height:16px}
+.sys-ov-ic svg{width:var(--icon-sm);height:var(--icon-sm)}
 .sys-ov-val{font-size:var(--fs-base);font-weight:700;color:var(--text);line-height:1.2}
 .sys-ov-lbl{font-size:var(--fs-3xs);color:var(--muted);text-align:center}
 .sys-ov-ai{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1) var(--space-2);margin-top:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);font-size:var(--fs-xs)}
 .sys-ov-ai-ok{color:var(--ok);display:flex;align-items:center}
-.sys-ov-ai-ok svg{width:14px;height:14px}
+.sys-ov-ai-ok svg{width:var(--icon-sm);height:var(--icon-sm)}
 .sys-ov-ai-warn{color:var(--warn);display:flex;align-items:center}
-.sys-ov-ai-warn svg{width:14px;height:14px}
+.sys-ov-ai-warn svg{width:var(--icon-sm);height:var(--icon-sm)}
 .sys-ov-ai a{color:var(--accent);text-decoration:underline;font-size:var(--fs-xs)}
 .sys-ov-ai a:hover{color:var(--on-accent)}
 .sys-ov-tip{margin-top:var(--space-1);font-size:var(--fs-xs);color:var(--muted);text-align:center}
@@ -1480,7 +1520,7 @@ input[data-date-picker]::placeholder{color:var(--muted)} /* v3.7.14：跟随全�
 .add-round{width:var(--control-h);height:var(--control-h);padding:0;border-radius:var(--control-r);display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1}
 /* v3.6.2：AI 图标按钮的机器人 SVG 尺寸，与「＋」加号视觉同高对齐；共 N 条推到行尾 */
 .add-round .ic-inline{display:inline-flex;align-items:center;justify-content:center}
-.ai-round .ic-inline svg{width:16px;height:16px;display:block}
+.ai-round .ic-inline svg{width:var(--icon-sm);height:var(--icon-sm);display:block}
 .ai-wrap{min-width:44px}
 .tool-app-card .tool-filter-bar > .sub{margin:0 0 0 auto}
 /* v3.2 对齐修复：form-row 内的 add-wrap 改为单行（label 隐藏，加号高度拉满对齐 input 框 38px）——此前 add-wrap 是 column 布局（标签+加号堆叠），总高度超出 input 导致加号高出框底 */
@@ -1763,7 +1803,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));
   box-shadow:var(--shadow-1);
   color:var(--accent);display:flex;align-items:center;justify-content:center}
-.chat-panel-title .ph-ic svg{width:15px;height:15px;color:var(--accent)}
+.chat-panel-title .ph-ic svg{width:var(--icon-sm);height:var(--icon-sm);color:var(--accent)}
 /* v3.6.3：右侧栏展开态头部图标（会话管理/折叠）统一为"展开按钮"标准规格——
    36×28、radius-md、accent 12% 背景芯片（与两侧折叠态展开按钮同款），替代旧的透明 radius-sm 小按钮 */
 .chat-panel-collapse{display:inline-flex;align-items:center;justify-content:center;
@@ -1777,7 +1817,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 /* v3.6.3 修复：图标 15px → 18px，与左侧栏折叠态按钮（.side-toggle svg{18px}）及右侧 rail 展开按钮
    （.rail-btn svg{18px}）统一为「展开按钮标准规格」。此前按钮盒子已统一（36×28/accent 芯片），
    唯独图标漏改留在 15px，导致同一形制的按钮图标一大一小。方向维持朝右「>」不变。 */
-.chat-panel-collapse svg{width:18px;height:18px;display:block}
+.chat-panel-collapse svg{width:var(--icon-md);height:var(--icon-md);display:block}
 /* v3.6.3 方向：右侧栏「展开态折叠键」点击后面板向右收起 → 箭头朝右「>」。
    path 与其余三个按钮同源（M15 18l-6-6 6-6，原生朝左），靠这一条 rotate 翻向。
    注意必须用 ID 选择器：同 class 的 #chatSessionBtn（三条横线）若被旋转 180° 会上下翻转换形。 */
@@ -1791,7 +1831,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .chat-panel .msg.user{max-width:65%}
 /* v3.6.3 修复：本规则原为 15px，与 .chat-panel-collapse svg 同特异性但在其后（源码顺序取胜），
    会把头部两个图标按回 15px。改为与「展开按钮标准规格」一致 —— 详见 .chat-panel-collapse svg 处注释 */
-.chat-ic-btn svg{width:18px;height:18px;display:block}
+.chat-ic-btn svg{width:var(--icon-md);height:var(--icon-md);display:block}
 /* 模型选择下拉框：复用 cfg.profiles，切换 active profile */
 .chat-model-select{font-size:var(--fs-xs);padding:2px var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel);color:var(--text);max-width:140px;cursor:pointer;
@@ -1829,7 +1869,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .app-card:hover{border-color:var(--accent);box-shadow:var(--shadow-2)}
 .app-card-ic{width:40px;height:40px;border-radius:var(--radius-md);background:var(--accent-soft);
   color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.app-card-ic svg{width:22px;height:22px}
+.app-card-ic svg{width:var(--icon-lg);height:var(--icon-lg)}
 .app-card-name{font-weight:600;font-size:var(--fs-base);text-align:center}
 .app-card-desc{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;text-align:center}
 .app-card-tx{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
@@ -5756,10 +5796,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.24"; /* v3.7.24 指标条再加高（padding 20 + 指标项 min-height 52） */
+const VERSION = "3.7.26"; /* v3.7.26 自研下拉（列表与触发框严格同宽+文字居中） + v3.7.25 图标三档令牌 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923i";
+const BUILD_TAG = "20260923j";
 
 
 
@@ -25864,6 +25904,8 @@ document.addEventListener("keydown", e=>{
   }
 });
 /*SRC:ui-hotkeys:END*/
+/*SRC:ui-select:BEGIN*/
+/*SRC:ui-select:END*/
 /*SRC:ui-global-events:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定) =====
 /* ---------- 绑定 ---------- */
