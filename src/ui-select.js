@@ -66,6 +66,14 @@
 
     var wrap = document.createElement("div");
     wrap.className = "ds-select";
+    /* v3.7.27：把原生 select 的宽度约束**继承到外层 wrap**。
+       否则 .ds-select 在 flex 容器里会被压扁 —— 实测聊天区模型下拉
+       原 120px，自研后只剩 36px（min-width:120px 写在原生 select 上，
+       而它已被置为透明覆盖层，不再参与布局）。 */
+    var cs0 = getComputedStyle(sel);
+    ["minWidth", "maxWidth", "flex", "flexGrow", "flexBasis"].forEach(function(k){
+      if (cs0[k] && cs0[k] !== "0px" && cs0[k] !== "none" && cs0[k] !== "auto") wrap.style[k] = cs0[k];
+    });
     parent.insertBefore(wrap, sel);
     wrap.appendChild(sel);                       /* 原生 select 移入，作为透明数据源 */
 
@@ -96,11 +104,17 @@
     function open(){
       if (OPEN && OPEN !== inst) dsClose();
       list.hidden = false;
-      /* 空间不足则向上弹 —— 与日期面板保持一致的"不溢出视口"策略 */
+      /* v3.7.27：向上弹判定修正 —— 用户："点击后是上拉框，不是下拉框"。
+         旧逻辑用 list.scrollHeight，隐藏转可见的当帧可能读不到正确值；
+         新逻辑改为按"下方剩余空间 vs 上方剩余空间"取大的那边，
+         且下方空间 < 80px（≈ 3 个选项）时优先向上 —— 聊天区输入框贴近视口底部，
+         实测 bottom=883/视口 900，下方只剩 17px，必须向上。 */
       var r = trigger.getBoundingClientRect();
-      var need = list.scrollHeight + 8;
       var below = window.innerHeight - r.bottom;
-      if (below < need && r.top > need) list.classList.add("up");
+      var above = r.top;
+      var need = Math.max(list.scrollHeight, 44) + 8;
+      if (below < need && above > below) list.classList.add("up");
+      else if (below < need && above <= below) list.classList.remove("up");
       else list.classList.remove("up");
       trigger.setAttribute("aria-expanded", "true");
       OPEN = inst;
