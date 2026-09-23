@@ -124,9 +124,10 @@ describe("看板卡 · 标记侧", () => {
        筛选行：搜索(1/4) · 联动记录(4/7) · 标签筛选(7/13) —— 前两字段与任务表单对齐。 */
     expect(CSS).toContain('#taskForm>.fld:nth-child(1){grid-column:1/5;grid-row:1}');
     expect(CSS).toContain('#taskForm>.fld:nth-child(2){grid-column:5/8;grid-row:1}');
-    // v3.7.21：优先级向左加宽 12px（吃掉与截止日期间距的一半）—— 用户"优先级稍微宽一点"。
-    // 只向左扩，右缘 911 不动，保证"优先级框线与下面框线竖直对齐"不被破坏。
-    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0;margin-left:-12px}');
+    // v3.7.22：撤销 v3.7.21 的 margin-left —— 用户"优先级左框线向右一点…保证几个间距一致"。
+    // 实测四个间距由 20/8/20/8 统一为 20/20/20/20（标签→加号靠大屏 padding 跟随栅格 gap）
+    expect(CSS).toContain('#taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0}');
+    expect(CSS, "不得再有 margin-left 负值（会破坏间距统一）").not.toContain('#taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0;margin-left');
     // v3.7.20：标签字段占满列3（9/13），右侧 padding 给加号让位 —— 用户"标签框左右宽一点"
     // 实测标签 input 228 → 244px，与加号间隙由 42px 收到 20px（= 栅格间距）
     expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:9/13;grid-row:1;padding-right:calc(var(--control-h) + var(--space-2))}');

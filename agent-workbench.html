@@ -341,7 +341,9 @@ button[disabled]:active{transform:none}
 /* v3.7.15：显式 font-weight:400 —— 下拉框/输入框**不能继承父级的粗体**。
    用户："许多下拉框里面字体还是太粗，喧宾夺主"。实测大部分已是 400，
    但只要父级（如 label、strong 容器）带粗体就会被继承过去 → 这里钉死为 400。 */
-input,select,textarea{font-family:inherit;font-size:var(--fs-sm);font-weight:400;border:1px solid var(--line);
+/* v3.7.22：边框加深 35%（用户："输入框框线明显一点"）。
+   用 color-mix 把 --line 与 --text 混合，各主题（含深色/绿色主题）自动适配，不留硬编码色值。 */
+input,select,textarea{font-family:inherit;font-size:var(--fs-sm);font-weight:400;border:1px solid color-mix(in srgb,var(--line) 65%,var(--text) 35%);
   /* v3.7.33：输入框背景改用 --surface-muted —— 原来与卡片同为 --panel，实测两者色值**完全相同**，
      缺少"这里能输入"的视觉暗示。（注意：本注释不写具体色值 —— lint-colors 只放行「--令牌: 值」定义行，
      注释里的裸色值会被判违规，这个坑我踩过两次。） */
@@ -967,11 +969,13 @@ input[type="file"]:hover{border-color:var(--accent)}
 /* v3.7.16：按用户 2026-09-23 截图标注定稿 ——
    「优先级保持窄（1 微轨 ≈60px @1600）· 标签加长（3 微轨）· 右侧留间距 · 加号独立占最右 1 微轨」。
    加号不再叠加在标签输入框内（原 padding-right 让位规则随之删除）。 */
-/* v3.7.21：优先级**向左加宽** —— 用户："优先级稍微宽一点" + "优先级框线和下面的框线在竖直方向上对齐"。
-   68px @1600 对"优先级"3 字 + 下拉箭头偏紧。若向右扩会顶破列2 右边界（= 破坏下面那条竖线的对齐），
-   故只向左扩：`margin-left:-12px` 让左缘左移、吃掉与截止日期之间 20px 间距的一半，
-   实测 68 → 80px（+18%），**右缘 911 保持不动**，竖线对齐不受影响。 */
-#taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0;margin-left:-12px}
+/* v3.7.22：**四个间距统一为栅格 gap**（用户 2026-09-23："间距能不能统一一点…保证几个间距一致"）。
+   实测此前为 20 / 8 / 20 / 8 —— 两处 8 是"偏心"的：
+     ① 截止→优先级 = 8：v3.7.21 给优先级加了 margin-left:-12px 所致（用户现改口："优先级左框线向右一点"）
+     ② 标签→加号   = 8：标签右 padding 用的是 --space-2(8)，而大屏栅格 gap 是 --space-5(20)
+   → 撤销 ①，并让 ② 也跟随栅格 gap（默认 8 / 大屏 20，见下方媒体查询）。
+   加号右缘 1233 与列3 右边界仍对齐，竖线不受影响。 */
+#taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0}
 #taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}
 /* v3.7.20：标签字段占满列3（9/13），右侧用 padding 给加号让位 —— 用户"标签框左右宽一点"。
    实测 228px → 244px（@1600），与加号的间隙由 42px 收到 20px（= 栅格间距，与全站一致）。
@@ -1873,9 +1877,11 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   outline:none;transition:min-height var(--transition-base)}
 .chat-input-area:focus-within .chat-text-input,
 .chat-text-input:not(:placeholder-shown){min-height:96px}
+/* v3.7.22：min-width 80 → 120（用户："大模型上拉框左框线向左一些"）。
+   它虽写了 flex:1，但右侧容器宽度由内容决定，实际一直被 min-width 卡在 80px。 */
 .chat-model-inline{font-size:var(--fs-xs);padding:2px 6px;border:1px solid var(--line);
   border-radius:var(--radius-sm);background:var(--panel2);color:var(--text);
-  flex:1;min-width:80px;max-width:220px;cursor:pointer;min-height:20px;line-height:1.3;
+  flex:1;min-width:120px;max-width:220px;cursor:pointer;min-height:20px;line-height:1.3;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-model-inline:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .chat-model-inline:hover{border-color:var(--accent-soft)}
@@ -2956,6 +2962,8 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   /* v3.7.19：表单列距跟随看板一起放大，保证「看板列边界 ⟷ 表单字段边界」竖直对齐
      （看板 gap 与表单列距必须同值，见 .form-row--board 处的推导） */
   .form-row--board{gap:var(--space-2) var(--space-5)}
+  /* v3.7.22：标签→加号的间距也跟随栅格 gap（默认 8 / 大屏 20），保证第一行四个间距一致 */
+  #taskForm>.fld:nth-child(4){padding-right:calc(var(--control-h) + var(--space-5))}
   .side{width:230px}
   /* 顶栏 padding 已统一为基础规则 var(--space-3)，此断点不再单独覆写（消除高度跳变） */
   /* 工具行在固定宽度(1200px)内居中，统一左右 padding */
@@ -5740,10 +5748,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.21"; /* v3.7.21 日期面板宽度跟随输入框(240→222) + 优先级向左加宽 12px */
+const VERSION = "3.7.22"; /* v3.7.22 第一行四间距统一为 20px + 输入框边框加深 35% + 模型下拉 80→120px */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923f";
+const BUILD_TAG = "20260923g";
 
 
 
