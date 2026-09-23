@@ -1319,7 +1319,8 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .foot-ai{flex:0 0 auto;display:inline-flex;align-items:center;gap:var(--space-1h)}
 .foot-ai.on{color:var(--ok)}
 .foot-ai.off{color:var(--text-faint)}
-.ms-strip{display:flex;gap:var(--space-4);flex-wrap:wrap;padding:var(--space-3) var(--space-4);align-items:stretch}
+/* v3.7.23：上下内边距 12 → 16px（用户："指标卡片上下高度高一点"），左右不变 */
+.ms-strip{display:flex;gap:var(--space-4);flex-wrap:wrap;padding:var(--space-4);align-items:stretch}
 /* v3.7.45：指标项做成圆角矩形卡片（与记录表格容器同一套"卡片"语言），并等分铺满一行 */
 .ms-strip>*{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ms-item{display:flex;flex-direction:column;gap:2px;min-width:64px;flex:1 1 64px;padding:0 var(--space-1)}
@@ -1879,8 +1880,13 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .chat-text-input:not(:placeholder-shown){min-height:96px}
 /* v3.7.22：min-width 80 → 120（用户："大模型上拉框左框线向左一些"）。
    它虽写了 flex:1，但右侧容器宽度由内容决定，实际一直被 min-width 卡在 80px。 */
-.chat-model-inline{font-size:var(--fs-xs);padding:2px 6px;border:1px solid var(--line);
+/* v3.7.23：① 边框同步加深（与 input/select 同口径）；② 文字左右居中 ——
+   用户："框线明显一点" + "未配置 或者模型名称在输入框内左右居中，不是居左对齐"。
+   select 的居中需要同时给 text-align 与 text-align-last（后者覆盖原生下拉的默认左对齐）。 */
+.chat-model-inline{font-size:var(--fs-xs);padding:2px 6px;
+  border:1px solid color-mix(in srgb,var(--line) 65%,var(--text) 35%);
   border-radius:var(--radius-sm);background:var(--panel2);color:var(--text);
+  text-align:center;text-align-last:center;
   flex:1;min-width:120px;max-width:220px;cursor:pointer;min-height:20px;line-height:1.3;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
 .chat-model-inline:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
@@ -5748,10 +5754,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.22"; /* v3.7.22 第一行四间距统一为 20px + 输入框边框加深 35% + 模型下拉 80→120px */
+const VERSION = "3.7.23"; /* v3.7.23 指标条加高 + 模型下拉边框加深且文字居中 + 优先级选项文字缩短 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923g";
+const BUILD_TAG = "20260923h";
 
 
 
