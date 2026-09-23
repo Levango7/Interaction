@@ -25935,7 +25935,7 @@ document.addEventListener("keydown", e=>{
  *   原生 select 仅置为透明覆盖层（**不用 display:none** —— 保留表单提交与无障碍语义，
  *   且它仍是唯一的数据源，选项变更时调用 dsRefresh 即可同步）。
  */
-;(function(){
+(function(){
   var OPEN = null;                 /* 当前展开的实例，保证同时只开一个 */
 
   function _label(sel){
