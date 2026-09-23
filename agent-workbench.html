@@ -439,6 +439,39 @@ input[type="color"]::-moz-color-swatch{border:none;border-radius:calc(var(--radi
   text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ds-opt:hover,.ds-opt.is-active{background:var(--surface-hover)}
 .ds-opt.is-sel{color:var(--accent);font-weight:500}
+/* ===== v3.7.38 控件状态视觉（控件矩阵 P2 补齐）=====
+   审查发现：:readonly 全站 0 处样式；:disabled 只有 8 处**局部组件**规则
+   （range / chain-pill / auth-submit 等），输入类控件（input/select/textarea）
+   的禁用态没有任何视觉；更关键的是 —— JS 侧早就实现了校验机制
+   （setAttribute("aria-invalid","true") + .is-invalid 类，见 ui-global-events.js），
+   但**对应的 CSS 从未写过**，于是校验失败时界面上毫无反馈。
+   三态统一补在这里，全部走令牌，11 套主题自适应。
+
+   注意：刻意**不用 `:invalid` 伪类** —— 它会在页面初始就对所有空 required 字段
+   立即标红（原生表单行为），体验很糟。校验态一律由 JS 显式打标后再上样式。 */
+
+/* ① 禁用 */
+input:disabled,select:disabled,textarea:disabled,
+.ds-select>select:disabled~.ds-trigger{
+  opacity:.55;cursor:not-allowed;background:var(--surface-muted)}
+.ds-select>select:disabled~.ds-trigger{pointer-events:none}
+input:disabled::placeholder,textarea:disabled::placeholder{color:var(--muted)}
+
+/* ② 只读 */
+input:read-only:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+textarea:read-only{background:var(--surface-muted);color:var(--text-dim);cursor:default}
+input:read-only:focus,textarea:read-only:focus{border-color:var(--line);box-shadow:none}
+
+/* ③ 校验失败（由 JS 打 aria-invalid / .is-invalid，不依赖 :invalid 伪类） */
+input[aria-invalid="true"],textarea[aria-invalid="true"],select[aria-invalid="true"],
+input.is-invalid,textarea.is-invalid,select.is-invalid,
+.ds-select:has(>select[aria-invalid="true"])>.ds-trigger,
+.ds-select:has(>select.is-invalid)>.ds-trigger{
+  border-color:var(--danger);background:var(--danger-soft)}
+input[aria-invalid="true"]:focus,textarea[aria-invalid="true"]:focus,select[aria-invalid="true"]:focus,
+input.is-invalid:focus,textarea.is-invalid:focus,select.is-invalid:focus{
+  border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+
 /* v3.7.22：边框加深 35%（用户："输入框框线明显一点"）。
    用 color-mix 把 --line 与 --text 混合，各主题（含深色/绿色主题）自动适配，不留硬编码色值。 */
 input,select,textarea{font-family:inherit;font-size:var(--fs-sm);font-weight:400;border:1px solid color-mix(in srgb,var(--line) 65%,var(--text) 35%);
@@ -5883,10 +5916,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.37"; /* v3.7.37 全站原生 time 清零 + 点击区 32px + 聊天区尺寸统一 */
+const VERSION = "3.7.38"; /* v3.7.38 补控件三态视觉(禁用/只读/校验失败) + 焦点环真键盘验证 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924k";
+const BUILD_TAG = "20260924l";
 
 
 
