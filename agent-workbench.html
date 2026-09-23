@@ -967,7 +967,11 @@ input[type="file"]:hover{border-color:var(--accent)}
 /* v3.7.16：按用户 2026-09-23 截图标注定稿 ——
    「优先级保持窄（1 微轨 ≈60px @1600）· 标签加长（3 微轨）· 右侧留间距 · 加号独立占最右 1 微轨」。
    加号不再叠加在标签输入框内（原 padding-right 让位规则随之删除）。 */
-#taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0}
+/* v3.7.21：优先级**向左加宽** —— 用户："优先级稍微宽一点" + "优先级框线和下面的框线在竖直方向上对齐"。
+   68px @1600 对"优先级"3 字 + 下拉箭头偏紧。若向右扩会顶破列2 右边界（= 破坏下面那条竖线的对齐），
+   故只向左扩：`margin-left:-12px` 让左缘左移、吃掉与截止日期之间 20px 间距的一半，
+   实测 68 → 80px（+18%），**右缘 911 保持不动**，竖线对齐不受影响。 */
+#taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0;margin-left:-12px}
 #taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}
 /* v3.7.20：标签字段占满列3（9/13），右侧用 padding 给加号让位 —— 用户"标签框左右宽一点"。
    实测 228px → 244px（@1600），与加号的间隙由 42px 收到 20px（= 栅格间距，与全站一致）。
@@ -5736,10 +5740,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.20"; /* v3.7.20 去掉「去配置」状态条（修 v3.7.18 引入的 e2e 失败）+ 标签框加宽 + 聊天输入区留白收窄 */
+const VERSION = "3.7.21"; /* v3.7.21 日期面板宽度跟随输入框(240→222) + 优先级向左加宽 12px */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923e";
+const BUILD_TAG = "20260923f";
 
 
 
@@ -19506,8 +19510,13 @@ function _dpOpen(input){
   document.body.appendChild(panel);
   _dpOverlay = overlay; _dpPanel = panel;
   _dpRender();
-  /* v3.7.61：面板宽度固定 240px —— 不再跟随触发输入框宽度变化，确保所有日期卡片统一宽度。 */
-  panel.style.width = "240px";
+  /* v3.7.21：面板宽度**跟随触发输入框**（用户 2026-09-23 截图标注：
+     "下拉框和日期卡片的宽度应该一致，和右侧的优先级下拉框间距不变"）。
+     此前 v3.7.61 固定 240px，实测输入框 222px、面板 240px —— 面板比输入框宽 18px，
+     右缘多出的一截正好压向右侧的优先级下拉框，视觉上"日期卡片和输入框不齐"。
+     下限 200px 兜底：日历 7 列 + 表头在该宽度下仍可容纳；上限 300px 防止超宽屏失真。 */
+  const _iw = (input && input.getBoundingClientRect) ? input.getBoundingClientRect().width : 240;
+  panel.style.width = Math.min(300, Math.max(200, Math.round(_iw))) + "px";
   _dpLayout(true);
 }
 /* v3.7.8：面板定位（**打开时**与**滚动跟随**共用）。
