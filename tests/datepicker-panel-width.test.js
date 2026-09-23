@@ -32,14 +32,21 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const JS_MAIN = readFileSync(join(ROOT, "src/render-scene-main.js"), "utf8");
 const HTML = readFileSync(join(ROOT, "agent-workbench.html"), "utf8");
 
-describe("日期面板 · 固定宽度 240px（v3.7.61）", () => {
-  it("_dpOpen 固定面板宽度 240px（不再跟随输入框宽度）", () => {
-    expect(JS_MAIN).toContain('panel.style.width = "240px"');
+describe("日期面板 · 宽度跟随输入框并收敛到 [200, 300]（v3.7.21）", () => {
+  /* 历史反复（三年四版，以最新一次为准）：
+     v3.7.8  → 收敛 [206,260]（用户："没必要这么宽大"）
+     v3.7.12 → [240,300]（用户："左右太窄了"）
+     v3.7.61 → **固定 240px**（保证所有位置统一宽度）
+     v3.7.21 → **跟随输入框**（用户 2026-09-23："下拉框和日期卡片的宽度应该一致"）
+              实测输入框 222px、面板 240px → 面板宽出 18px，右缘压向右侧优先级下拉框。 */
+  it("_dpOpen 宽度跟随触发输入框（下限 200 / 上限 300）", () => {
+    expect(JS_MAIN).toContain("panel.style.width = Math.min(300, Math.max(200, Math.round(_iw)))");
+    expect(JS_MAIN, "宽度须基于触发输入框实测宽度").toContain("input.getBoundingClientRect().width");
     /* 回到 min-width 就会重新被表头撑宽 —— 这是本条守护的核心 */
     expect(JS_MAIN, "不得再设 panel.style.minWidth").not.toContain("panel.style.minWidth");
   });
 
-  it("CSS 用固定 width 240px，不再 max-width:300px / max-content / min-width:2xx", () => {
+  it("CSS 保留 240px 兜底，且不得用 max-content / min-width:2xx", () => {
     expect(HTML).toMatch(/\.dp-panel\{[^}]*width:240px/);
     expect(HTML, "max-content 会被表头撑到 ~270px").not.toMatch(/\.dp-panel\{[^}]*width:max-content/);
     expect(HTML, "旧地板 220/250 都应消失").not.toMatch(/\.dp-panel\{[^}]*min-width:2\d\dpx/);

@@ -755,8 +755,13 @@ function _dpOpen(input){
   document.body.appendChild(panel);
   _dpOverlay = overlay; _dpPanel = panel;
   _dpRender();
-  /* v3.7.61：面板宽度固定 240px —— 不再跟随触发输入框宽度变化，确保所有日期卡片统一宽度。 */
-  panel.style.width = "240px";
+  /* v3.7.21：面板宽度**跟随触发输入框**（用户 2026-09-23 截图标注：
+     "下拉框和日期卡片的宽度应该一致，和右侧的优先级下拉框间距不变"）。
+     此前 v3.7.61 固定 240px，实测输入框 222px、面板 240px —— 面板比输入框宽 18px，
+     右缘多出的一截正好压向右侧的优先级下拉框，视觉上"日期卡片和输入框不齐"。
+     下限 200px 兜底：日历 7 列 + 表头在该宽度下仍可容纳；上限 300px 防止超宽屏失真。 */
+  const _iw = (input && input.getBoundingClientRect) ? input.getBoundingClientRect().width : 240;
+  panel.style.width = Math.min(300, Math.max(200, Math.round(_iw))) + "px";
   _dpLayout(true);
 }
 /* v3.7.8：面板定位（**打开时**与**滚动跟随**共用）。
