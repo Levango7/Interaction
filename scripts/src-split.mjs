@@ -68,9 +68,10 @@ const BLOCKS = [
   { name: 'ui-backup-stats', layer: 'UI', title: '交互层·备份与统计' },
   { name: 'ui-drawer', layer: 'UI', title: '交互层·设置抽屉' },
   { name: 'ui-hotkeys', layer: 'UI', title: '交互层·快捷键' },
+  { name: 'ui-select', layer: 'UI', title: '交互层·自研下拉选择框' },
   { name: 'ui-global-events', layer: 'UI', title: '交互层·全局事件绑定' }
 ];
-const MIN_EXPECTED = 27;   // 至少应解析出这么多块，否则判定解析失败
+const MIN_EXPECTED = 28;   // v3.7.26 新增 ui-select 块：至少应解析出这么多块，否则判定解析失败
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');
