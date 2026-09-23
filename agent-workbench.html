@@ -379,8 +379,11 @@ button[disabled]:active{transform:none}
 /* 焦点落到透明原生 select 上时，把视觉反馈转到自绘触发按钮 */
 .ds-select>select:focus-visible+.ds-trigger{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .ds-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
-.ds-caret{width:14px;height:14px;flex-shrink:0;color:var(--text-dim);
+.ds-caret{width:16px;height:16px;flex-shrink:0;color:var(--text-dim-2);
   transition:transform var(--transition-fast)}
+/* v3.7.30：箭头加强 —— 用户对着「会议类型/周会」问"这个为什么不是下拉框？"
+   实测箭头确实存在，但 14px + --text-dim 在该主题下几乎看不见，
+   导致下拉框被当成普通文本输入框。→ 14→16px、色值提到 --text-dim-2。 */
 .ds-trigger[aria-expanded="true"] .ds-caret{transform:rotate(180deg)}
 /* ★ 关键：width:100% 相对 .ds-select 定位 → 与触发框严格同宽 */
 .ds-list{position:absolute;left:0;top:calc(100% + var(--space-1));width:100%;
@@ -1925,7 +1928,9 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .tool-stub-tip{font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin:0;
   padding-top:var(--space-3);border-top:1px solid var(--line)}
 /* v2.1.1：附件按钮与发送按钮同档 32×32（图标钮统一高度阶梯） */
-.chat-attach-btn{flex-shrink:0;width:32px;height:32px;padding:0;border:1px solid var(--line);
+/* v3.7.30：32 → 42，与右侧发送按钮同等大小（用户："插入附件按钮应该和右侧发送按钮同等大小"）。
+   边框同步用加深口径（原先仍是 var(--line)，与其它控件不一致）。 */
+.chat-attach-btn{flex-shrink:0;width:42px;height:42px;padding:0;border:1px solid color-mix(in srgb,var(--line) 65%,var(--text) 35%);
   border-radius:var(--radius-md);background:var(--panel2);color:var(--text-dim);cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-base);line-height:1;
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
@@ -5826,10 +5831,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.29"; /* v3.7.29 模型下拉：箭头朝上（上拉框）+ 去⚠ + 与发送按钮同高；日期面板时间行加标签 */
+const VERSION = "3.7.30"; /* v3.7.30 下拉箭头加强可见 + 附件按钮 42×42 同发送按钮 + 自研下拉 label 随 options 同步 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924c";
+const BUILD_TAG = "20260924d";
 
 
 

@@ -152,6 +152,17 @@
     });
 
     dsRefresh(sel);
+
+    /* v3.7.30：监听 options 变化 → 自动同步自绘 label。
+       本项目很多 select 的 options 是**异步填充**的（最典型：#chatModelSelect
+       由 AI 配置逻辑在启动后写入），而增强发生在 DOMContentLoaded，
+       此时 options 还是空的 → label 恒为空串（用户："未配置 字样呢？"）。
+       监听自身 childList 即可覆盖这种"先建后填"模式。 */
+    if (window.MutationObserver) {
+      var mo = new MutationObserver(function(){ dsRefresh(sel); });
+      mo.observe(sel, { childList: true });
+      inst.mo = mo;
+    }
   }
 
   /** 批量增强（重渲染后对新出现的 select 调用即可，幂等） */
