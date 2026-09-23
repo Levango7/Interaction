@@ -213,6 +213,13 @@ function renderMainHTML(){
     } else if(f.type==="select"){
       const opts = (f.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
       inp = `<select name="${f.k}">${opts}</select>`;
+    } else if(f.type === "time"){
+      /* v3.7.32：**时间字段**（只时分）—— 用户："有些业务场景日期是需要跟开始时间的，
+         比如会议的日期是？开始时间是？预设时长是？"
+         原先会议把"日期"和"开始时间"塞进一个 date 字段（timePicker:true），
+         概念混淆：日期没有时分、会议的开始时间也不该依附于日期选择器。
+         → 拆为独立的 time 字段。step=300 表示 5 分钟粒度，与日期面板的时间行一致。 */
+      inp = `<input name="${f.k}" type="time" step="300" aria-label="${esc(f.label)}">`;
     } else if(f.type==="image"){
       // v3.6.0：图片字段——隐藏原生 input，用按钮触发 + 文件名 + 缩略图预览（对齐主流做法）
       inp = `<div class="img-pick"><label class="img-pick-btn">${ic("upload")}<input name="${f.k}" type="file" accept="image/*" data-rec-img="1" class="img-pick-input"><span>${t("field.pickImage","选择图片")}</span></label><span class="img-pick-name" data-img-name="1">${t("field.noImage","未选择")}</span></div>`;
@@ -956,6 +963,8 @@ SCENE_FEATURE_RENDER.office = {
         {label:t("field.meetingTitle", t("field.meetingTitle","会议主题")), k:"title"},
         {label:t("field.type", t("field.type","类型")), k:"type"},
         {label:t("tool.regex.preset.date", t("field.date","日期")), k:"date"},
+        /* v3.7.32：开始时间独立成列（与字段拆分保持一致） */
+        {label:t("field.startTime","开始时间"), k:"startTime"},
         {label:t("field.attendees","参会人"), k:"who"},
         {label:t("field.status", t("field.status","状态")), fmt:function(r){ return r.done ? t("p3.html.meetingOpened","<span class=\"u-text-ok\">已开</span>") : t("p3.html.meetingPending","<span class=\"u-text-warn\">待开</span>"); }}
       ],
