@@ -356,10 +356,21 @@ button[disabled]:active{transform:none}
   gap:var(--space-3);align-items:end}
 #recForm>.fld{min-width:0}
 #recForm>.fld:has(>textarea){grid-column:1/-1}
-#recForm>.add-wrap{justify-self:end;align-self:end}
+/* v3.7.33：＋按钮跨整行再靠右 —— v3.7.32 只写了 justify-self:end，
+   但它在 grid 里被自动排到**第 3 行第 1 列**，justify-self 只在格内生效 →
+   结果仍贴在左端（用户："这个排版能不能合理舒服一点？"）。必须先跨列再靠右。 */
+#recForm>.add-wrap{grid-column:1/-1;justify-self:end;align-self:end}
 /* 窄屏：2 列 → 1 列 */
 @media (max-width:879px){ #recForm{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:519px){ #recForm{grid-template-columns:1fr} }
+/* v3.7.33：日期字段的 ▼ 指示符（用户："日期是下拉框，点击有日期卡片"）。
+   原先日期字段外观与普通文本框无异，用户不知道可点开面板。
+   用真实 svg 而非 background-image —— 可继承 currentColor，避免硬编码色值。 */
+.date-pick{position:relative;display:block}
+.date-pick>input{width:100%;padding-right:calc(var(--space-2) + 20px)}
+.date-pick-caret{position:absolute;right:var(--space-2);top:50%;transform:translateY(-50%);
+  width:16px;height:16px;color:var(--text-dim-2);pointer-events:none}
+
 /* ===== v3.7.26 自研下拉选择框（渐进增强原生 <select>）=====
    原生 select 展开的 option 列表由浏览器渲染，宽度/对齐/配色全不可控。
    这里保留原生 select 作数据源与表单提交通道，仅在视觉层叠加自绘的
@@ -5830,10 +5841,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.32"; /* v3.7.32 会议「日期/开始时间/预设时长」三字段正交 + 记录表单 4 列网格 */
+const VERSION = "3.7.33"; /* v3.7.33 开始时间改自研下拉 + ＋按钮跨行靠右 + 日期字段加 ▼ 指示符 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924f";
+const BUILD_TAG = "20260924g";
 
 
 
