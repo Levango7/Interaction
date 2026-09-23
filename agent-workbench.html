@@ -363,6 +363,10 @@ button[disabled]:active{transform:none}
 /* 窄屏：2 列 → 1 列 */
 @media (max-width:879px){ #recForm{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:519px){ #recForm{grid-template-columns:1fr} }
+/* v3.7.34：复选框与颜色选择器的尺寸统一已并入下方 v2.1.1 那组规则
+   （它们在本文件中位置更靠后，会按源码顺序覆盖同特异性声明；
+   另加规则在此处是无效的 —— 本次先在这里写过一遍，实测没生效）。 */
+
 /* v3.7.33：日期字段的 ▼ 指示符（用户："日期是下拉框，点击有日期卡片"）。
    原先日期字段外观与普通文本框无异，用户不知道可点开面板。
    用真实 svg 而非 background-image —— 可继承 currentColor，避免硬编码色值。 */
@@ -434,10 +438,15 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="
 input::placeholder,textarea::placeholder{color:var(--muted);font-weight:400;opacity:1}
 /* v3.2：textarea 允许多行（高度由 min-height 兜底，不由 --control-h 限制） */
 textarea{height:auto;min-height:64px;padding:var(--space-2) var(--space-2h);line-height:1.5}
-/* v2.1.1：checkbox/radio 天然小尺寸，不继承 width:100%（替代散落各处的内联 width:auto） */
-input[type="checkbox"],input[type="radio"]{width:auto;height:auto}
-/* v2.1.1：颜色选择器统一规格（替代内联 width:44px;padding:2px） */
-input[type="color"],.color-input{width:44px;height:32px;padding:2px;flex-shrink:0;cursor:pointer}
+/* v2.1.1：checkbox/radio 天然小尺寸，不继承 width:100%（替代散落各处的内联 width:auto）。
+   v3.7.34（UI 审查）：浏览器默认约 13px，点击区明显偏小（全站 3 处 aiSkill_* + 表格 check 列）
+   → 定为 16px；accent-color 跟随主题，免自绘。
+   ⚠️ 本行与下面的 color 规则是这两个控件的**唯一真相源** ——
+   它们在本文件中位置靠后，会按源码顺序覆盖前面任何同特异性声明（本次踩到）。 */
+input[type="checkbox"],input[type="radio"]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+/* v2.1.1：颜色选择器统一规格（替代内联 width:44px;padding:2px）
+   v3.7.34（UI 审查）：原 32px 与同类控件的 --control-h 不一致且偏小 → 与控件同高 */
+input[type="color"],.color-input{width:var(--control-h);height:var(--control-h);padding:2px;flex-shrink:0;cursor:pointer;background:var(--panel2);border-radius:var(--radius-sm)}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-sm)}
 /* 关闭鼠标点击态的默认 outline，但保留键盘 :focus-visible 可视焦点环（a11y） */
@@ -5841,10 +5850,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.33"; /* v3.7.33 开始时间改自研下拉 + ＋按钮跨行靠右 + 日期字段加 ▼ 指示符 */
+const VERSION = "3.7.34"; /* v3.7.34 UI 审查：复选框 13→16px 点击区、颜色选择器 32→38px 统一 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924g";
+const BUILD_TAG = "20260924h";
 
 
 
