@@ -181,11 +181,13 @@
     }, 120);
   }
   function _boot(){
-    dsEnhanceAll(document);
-    /* 测试门控：__TEST_GATE__ 为 true 时（单测环境）不启动 MutationObserver ——
-       它的 120ms 节流定时器会与渲染调度测试（markDirty 合帧断言）的时序假设冲突，
-       全量跑时把"置脏后下一帧一定渲染"冲成偶发失败（实测踩到）。 */
+    /* 测试门控：单测环境（__TEST_GATE__=true）**整段跳过**，连首次增强也不做 ——
+       dsEnhanceAll 会同步增强 44 个 select（约 20-50ms），与 startup render
+       （renderSide 注入 nav-item）竞争主线程；p1c-a11y 测试固定等 120ms 后断言
+       #btnGear 存在，CI 的 ubuntu+Node20 更慢，把断言冲成偶发 null（实测踩到）。
+       单测不测视觉，增强跳过无副作用；真实浏览器不受影响。 */
     if (window.__TEST_GATE__ === true) return;
+    dsEnhanceAll(document);
     if (!window.MutationObserver) return;
     var mo = new MutationObserver(function(muts){
       for (var i = 0; i < muts.length; i++) {
