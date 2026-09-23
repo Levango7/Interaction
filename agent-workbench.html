@@ -355,11 +355,12 @@ button[disabled]:active{transform:none}
 #recForm{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
   gap:var(--space-3);align-items:end}
 #recForm>.fld{min-width:0}
-#recForm>.fld:has(>textarea){grid-column:1/-1}
-/* v3.7.33：＋按钮跨整行再靠右 —— v3.7.32 只写了 justify-self:end，
-   但它在 grid 里被自动排到**第 3 行第 1 列**，justify-self 只在格内生效 →
-   结果仍贴在左端（用户："这个排版能不能合理舒服一点？"）。必须先跨列再靠右。 */
-#recForm>.add-wrap{grid-column:1/-1;justify-self:end;align-self:end}
+/* v3.7.39：＋按钮与 textarea **同行右端** —— 用户："添加键应该在输入框右侧"。
+   此前 textarea 独占整行（grid-column:1/-1）、add-wrap 又跨整行靠右，
+   结果 ＋ 落到 textarea 的**下一行**，看起来像悬空。
+   → textarea 收为 1~3 列，＋ 固定放第 4 列并底部对齐，两者同行。 */
+#recForm>.fld:has(>textarea){grid-column:1/4}
+#recForm>.add-wrap{grid-column:4;justify-self:end;align-self:end}
 /* 窄屏：2 列 → 1 列 */
 @media (max-width:879px){ #recForm{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:519px){ #recForm{grid-template-columns:1fr} }
@@ -5916,10 +5917,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.38"; /* v3.7.38 补控件三态视觉(禁用/只读/校验失败) + 焦点环真键盘验证 */
+const VERSION = "3.7.39"; /* v3.7.39 日期面板键盘模型(roving tabindex+方向键) + ＋按钮与输入框同行 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924l";
+const BUILD_TAG = "20260924m";
 
 
 
