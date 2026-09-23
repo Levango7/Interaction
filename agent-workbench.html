@@ -1360,9 +1360,11 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .foot-ai.on{color:var(--ok)}
 .foot-ai.off{color:var(--text-faint)}
 /* v3.7.24：上下内边距 16 → 20px（v3.7.23 只加了 4px，用户反馈"好像没有生效" —— 幅度太小看不出） */
-.ms-strip{display:flex;gap:var(--space-4);flex-wrap:wrap;padding:var(--space-5) var(--space-4);align-items:stretch}
+/* v3.7.27：再高一点（用户二次反馈"四个指标框的上下高度高一点"）——
+   v3.7.23 +4px、v3.7.24 +8px 仍不够，这次 padding 20 → 24、指标项 52 → 60 */
+.ms-strip{display:flex;gap:var(--space-4);flex-wrap:wrap;padding:var(--space-6) var(--space-4);align-items:stretch}
 /* v3.7.24：指标项也补一个下限高度，避免窄屏下被压扁 */
-.ms-item{min-height:52px;justify-content:center}
+.ms-item{min-height:60px;justify-content:center}
 /* v3.7.45：指标项做成圆角矩形卡片（与记录表格容器同一套"卡片"语言），并等分铺满一行 */
 .ms-strip>*{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .ms-item{display:flex;flex-direction:column;gap:2px;min-width:64px;flex:1 1 64px;padding:0 var(--space-1)}
@@ -1860,7 +1862,9 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 /* 底部一行：附件键（左） + 模型选择 + 发送暂停（右），紧贴无分割线 */
 .chat-input-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);
   padding:var(--space-1) var(--space-2) var(--space-2)}
-.chat-input-right{display:flex;align-items:center;gap:var(--space-1)}
+/* v3.7.27：align-items center → flex-end —— 用户："大模型选择框和右边的发送按钮水平方向对齐"。
+   模型下拉 42 高、发送按钮 32 高，center 对齐必然差 5px；贴底则底线齐平。 */
+.chat-input-right{display:flex;align-items:flex-end;gap:var(--space-1)}
 .chat-model-empty{border-style:dashed;color:var(--accent);cursor:pointer}
 /* v1.15：应用独立页网格（图标 + 名称 + 描述卡片） */
 .app-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3)}
@@ -1925,12 +1929,20 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 /* v3.7.23：① 边框同步加深（与 input/select 同口径）；② 文字左右居中 ——
    用户："框线明显一点" + "未配置 或者模型名称在输入框内左右居中，不是居左对齐"。
    select 的居中需要同时给 text-align 与 text-align-last（后者覆盖原生下拉的默认左对齐）。 */
+/* v3.7.27：min-width 120 → 150（用户："左右宽度长一点"）；
+   高度 38 → 42 靠下方 .ds-select:has 规则（自研下拉的触发按钮）。 */
 .chat-model-inline{font-size:var(--fs-xs);padding:2px 6px;
+  min-width:150px;
   border:1px solid color-mix(in srgb,var(--line) 65%,var(--text) 35%);
   border-radius:var(--radius-sm);background:var(--panel2);color:var(--text);
   text-align:center;text-align-last:center;
-  flex:1;min-width:120px;max-width:220px;cursor:pointer;min-height:20px;line-height:1.3;
+  flex:1;max-width:220px;cursor:pointer;min-height:20px;line-height:1.3;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast)}
+/* v3.7.27：模型下拉加高 38 → 42（用户："上下高度高一点"）——只对聊天区模型下拉生效。
+   同时 align-self:flex-end —— 外层的 .chat-input-bar 是 align-items:center，
+   42 高的下拉与 32 高的发送按钮居中对齐会差 5px；贴底则两者底线齐平（用户："水平方向对齐"）。 */
+.ds-select:has(>#chatModelSelect)>.ds-trigger{height:42px}
+.ds-select:has(>#chatModelSelect){align-self:flex-end}
 .chat-model-inline:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .chat-model-inline:hover{border-color:var(--accent-soft)}
 /* v3.7.13：AI 未配置时的「去配置」按钮 */
@@ -5796,10 +5808,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.26"; /* v3.7.26 自研下拉（列表与触发框严格同宽+文字居中） + v3.7.25 图标三档令牌 */
+const VERSION = "3.7.27"; /* v3.7.27 模型下拉加宽加高且向上弹+与发送按钮底对齐 + 指标条再加高 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260923j";
+const BUILD_TAG = "20260924a";
 
 
 
@@ -25973,6 +25985,14 @@ document.addEventListener("keydown", e=>{
 
     var wrap = document.createElement("div");
     wrap.className = "ds-select";
+    /* v3.7.27：把原生 select 的宽度约束**继承到外层 wrap**。
+       否则 .ds-select 在 flex 容器里会被压扁 —— 实测聊天区模型下拉
+       原 120px，自研后只剩 36px（min-width:120px 写在原生 select 上，
+       而它已被置为透明覆盖层，不再参与布局）。 */
+    var cs0 = getComputedStyle(sel);
+    ["minWidth", "maxWidth", "flex", "flexGrow", "flexBasis"].forEach(function(k){
+      if (cs0[k] && cs0[k] !== "0px" && cs0[k] !== "none" && cs0[k] !== "auto") wrap.style[k] = cs0[k];
+    });
     parent.insertBefore(wrap, sel);
     wrap.appendChild(sel);                       /* 原生 select 移入，作为透明数据源 */
 
@@ -26003,11 +26023,17 @@ document.addEventListener("keydown", e=>{
     function open(){
       if (OPEN && OPEN !== inst) dsClose();
       list.hidden = false;
-      /* 空间不足则向上弹 —— 与日期面板保持一致的"不溢出视口"策略 */
+      /* v3.7.27：向上弹判定修正 —— 用户："点击后是上拉框，不是下拉框"。
+         旧逻辑用 list.scrollHeight，隐藏转可见的当帧可能读不到正确值；
+         新逻辑改为按"下方剩余空间 vs 上方剩余空间"取大的那边，
+         且下方空间 < 80px（≈ 3 个选项）时优先向上 —— 聊天区输入框贴近视口底部，
+         实测 bottom=883/视口 900，下方只剩 17px，必须向上。 */
       var r = trigger.getBoundingClientRect();
-      var need = list.scrollHeight + 8;
       var below = window.innerHeight - r.bottom;
-      if (below < need && r.top > need) list.classList.add("up");
+      var above = r.top;
+      var need = Math.max(list.scrollHeight, 44) + 8;
+      if (below < need && above > below) list.classList.add("up");
+      else if (below < need && above <= below) list.classList.remove("up");
       else list.classList.remove("up");
       trigger.setAttribute("aria-expanded", "true");
       OPEN = inst;
