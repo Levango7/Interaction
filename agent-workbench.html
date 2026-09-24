@@ -5917,10 +5917,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.40"; /* v3.7.40 修 CI：把 commit() 移出 if(EDITABLE) 块，消除 no-inner-declarations */
+const VERSION = "3.7.41"; /* v3.7.41 修 gen-ai-tools-doc 双态寻源 + --check 零写入 + 接入 CI（v3.7.40 修 commit() 块内声明） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260924n";
+const BUILD_TAG = "20260924p";
 
 
 
