@@ -8,7 +8,7 @@ const path = require("path");
  * 设计要点：
  * - 只装 chromium（CI 省时），headless 默认开
  * - baseURL 用 file 协议直接加载单文件 agent-workbench.html，无需起本地服务器
- * - 每个测试 30s 超时，整体 180s，避免偶发慢启动误报
+ * - 每个测试 30s 超时；整体上限 600s（v3.7.42 从 180s 放宽，见下方 globalTimeout 注释）
  * - testDir 指向 tests/e2e，与 vitest 的单元测试完全隔离
  * - E2E 守护由测试文件内 beforeAll + test.skip 控制，默认跳过
  * - retry：**CI 下 2 次、本地 0 次**。原先两边都是 0；实测 CI 上 e2e 出现过两次偶发失败
@@ -32,7 +32,27 @@ module.exports = defineConfig({
   reporter: [["list"]],
   timeout: 30_000,
   expect: { timeout: 5_000 },
-  globalTimeout: 180_000,
+  /* globalTimeout：整套 e2e 的**总**上限（防挂死）。
+     v3.7.42：原为 180_000（180s），实测**本机跑不完全部 3 个项目的 14 个用例** ——
+       单个用例仅 2~9s，但每个用例都要新起一个 chromium 实例加载 3.3MB 单文件，
+       启动开销累积起来 >3 分钟。表现为「7 passed / 7 did not run / Timed out waiting 180s」，
+       看起来像"测试崩了"，实际只是**全局超时太紧**。
+     即：CI（ubuntu 跑得更快 + 只跑 e2e job）能过，**本机无法自验 e2e**。
+     现放宽到 600s，并支持 `E2E_GLOBAL_TIMEOUT` 覆盖（CI 想收紧可自行设）。 */
+     globalTimeout: Number(process.env.E2E_GLOBAL_TIMEOUT || 600_000),
+
+     ⚠️ v3.7.42 实测记录 —— 本机「测试全过但退出码 1」是**环境问题，不是代码问题**：
+       现象：14 个用例全部 `ok`，随后报
+         `Error: worker-0 process did not exit within 300000ms after stop, force-killed it`
+       并最终 `EXIT=1`；CI（ubuntu）同版本代码全绿。
+       定位过程（`_probe/probe-exit*.mjs`，只读对照实验）：
+         · 打开 `about:blank` → `ctx.close()` 2456ms 返回 OK；
+         · 紧接的 `await browser.close()` **永不 resolve**（15s 未返回）；
+         · `browser.process()` 返回 null（拿不到底层句柄，无法自行 kill）；
+         · 逐层降级后仍卡 → 与本应用代码/定时器/beforeunload 全部无关。
+       → 结论：**本机沙箱内 chromium 的关闭路径不通**（与「拦 spawnSync 子进程」同源的环境限制）。
+         判据：只要输出里 `ok N` 数量 == 用例总数、且无 failed 用例，就视为**本机通过**；
+         退出码以 **CI 为准**。 */
   use: {
     headless: true,
     actionTimeout: 10_000,
@@ -42,7 +62,9 @@ module.exports = defineConfig({
   },
   /* v3.7.6：多视口矩阵。桌面/平板跑完整用户流程（workflow.spec.js）；
      手机竖屏用真实移动预设（Pixel 5：移动 UA + isMobile + 触摸）只跑移动专属断言（mobile.spec.js）——
-     因为 ≤767px 时侧栏 #side 不可见，改走「底部 5 组导航 #mobBar + 底部抽屉 #sideSheet」的 IA。 */
+     因为 ≤767px 时侧栏 #side 不可见，改走「底部 5 组导航 #mobBar + 底部抽屉 #sideSheet」的 IA。
+     v3.7.42：theme-matrix.spec.js 与视口无关（跑的是「主题 → 令牌 → 对比度/可见性」），
+     仅在 desktop 项目跑一次即可 —— 否则 3 视口 × 4 用例会让 e2e 时长无谓翻倍。 */
   projects: [
     {
       name: "desktop-1280x800",
@@ -52,7 +74,7 @@ module.exports = defineConfig({
     {
       name: "tablet-768x1024",
       use: { ...devices["Desktop Chrome"], channel: undefined, viewport: { width: 768, height: 1024 } },
-      testIgnore: /mobile\.spec\.js/,
+      testIgnore: /mobile\.spec\.js|theme-matrix\.spec\.js/,
     },
     {
       name: "mobile-375x667",
