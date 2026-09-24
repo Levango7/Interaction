@@ -982,14 +982,16 @@ document.addEventListener("focus", function(e){
    · 失焦时做一次**规范化**：能解析就统一成 YYYY-MM-DD，不能解析则清空（避免留脏值）。
    注意：面板内的方向键导航用 activeElement 判定，敲字时焦点在 input 上，两者不冲突。 */
 function _dpParseLoose(v){
-  const s = String(v == null ? "" : v).trim();
+  const s = String(v === null || v === undefined ? "" : v).trim();
   if(!s) return null;
   /* ⚠️ 不能直接用 _dpParseVal 的返回值 —— 它的正则只校验 `\d{2}` **格式**，
      不校验范围，于是 "2026-13-45"（13 月 45 日）也会"解析成功"。
      用户敲错时最需要的就是被挡下来（否则脏值会存进记录里）。
      因此这里把两种写法都收敛到同一套**范围校验**。 */
   let m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2}))?$/.exec(s);
-  if(!m) m = /^(\d{4})[\/.\s](\d{1,2})[\/.\s](\d{1,2})$/.exec(s);
+  /* ⚠️ 字符类里 `/` 不必转义（`no-useless-escape` 会报 error、CI lint job 直接红 —— v3.7.44 实测踩过）：
+     写 `[\/.\s]` 让 v3.7.43 的 ubuntu test job 挂在 eslint 上。改成 `[./\s]`（规范允许类内裸 `/`）。 */
+  if(!m) m = /^(\d{4})[./\s](\d{1,2})[./\s](\d{1,2})$/.exec(s);
   if(!m) m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
   if(!m) return null;
   const y = +m[1], mo = +m[2], d = +m[3];
