@@ -291,7 +291,31 @@
     if (OPEN && !OPEN.wrap.contains(e.target)) dsClose();
   }, true);
   window.addEventListener("resize", dsClose);
-  window.addEventListener("scroll", dsClose, true);
+  /* v3.7.43 修复「一滑动列表，下拉框就缩回去」（用户实测反馈的真 bug）。
+     ✗ 旧实现：window.addEventListener("scroll", dsClose, true)
+       `true` = **捕获阶段**，于是它收得到**任意元素**的 scroll 事件 ——
+       包括下拉列表自己（.ds-list 有 max-height:264px; overflow-y:auto）。
+       列表内滚动 → 事件到达 window → 立刻 dsClose() → 列表当场消失。
+       结果：288 项的时间下拉、以及任何超过 264px 的列表，**根本无法滚动**
+       （实测：scrollTop 一直是 0，列表 h=264 / scrollHeight≈9947 却滚不动）。
+     ✓ 新实现：**两步判定**
+       ① 若事件源在列表内部 → 明确是"用户在滚列表" → 记一个时间戳，不关；
+       ② 否则（页面/外层容器在滚）→ 只有当**最近 250ms 内没有滚过列表**时才关。
+       ② 的宽限期是必要的：列表与外层滚动容器（如 `main-wrap`）是嵌套关系，
+          滚列表时**外层也会收到 scroll**（滚动链传播）。若只看当前这一条事件，
+          外层那条会把刚滚起来的列表立刻关掉 —— 这正是第一版修复没解决的残留问题。
+       保留"页面滚动则关闭"的原意：列表是 position:absolute，页面一滚就与触发框错位。 */
+  let _dsListScrollTs = 0;
+  window.addEventListener("scroll", function(e){
+    if (!OPEN) return;
+    const t = e && e.target;
+    const src = (t && t.nodeType === 1) ? t : document.documentElement;
+    const inList = (src === OPEN.list) || (OPEN.list && OPEN.list.contains && OPEN.list.contains(src));
+    if (inList) { _dsListScrollTs = Date.now(); return; }
+    /* 外层容器的滚动：若刚滚过列表，视为同一次滚动的传播，不关 */
+    if (Date.now() - _dsListScrollTs < 250) return;
+    dsClose();
+  }, true);
 
   /* ---------- 自动增强 ----------
      本项目大量 DOM 是运行时渲染的（切场景、重渲染卡片都会重建 select），

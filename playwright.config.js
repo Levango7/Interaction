@@ -53,7 +53,21 @@ module.exports = defineConfig({
          判据：只要输出里 `ok N` 数量 == 用例总数、且无 failed 用例，就视为**本机通过**；
          退出码以 **CI 为准**。
      补充（v3.7.42 实测）：Playwright 清理上次 `test-results/` 时会被本机 safe-delete shim 拦下
-       （报 `[safe-delete] 操作失败 ... trash` 且 exit 1）→ **再跑一次即可**（目录已存在时不触发）。 */
+       （报 `[safe-delete] 操作失败 ... trash` 且 exit 1）→ **再跑一次即可**（目录已存在时不触发）。
+
+     🔴 v3.7.43 补充实测 —— 本机**跑不了"多条"用例，但可以逐条跑**（关键排障姿势）：
+       现象：`Running 4 tests` 后长时间无输出，最终
+         `Timed out waiting 600s for the test suite to run` + `4 did not run`；
+         看起来像"整套崩了/用例挂死"。
+       真相：第 1 条用例往往**已经 `ok`**（如 `ok 1 ... (5.0s)`），卡住的是
+         **该 worker 收尾时的 `browser.close()`（永不 resolve，见上面 v3.7.42 记录）**，
+         于是 runner 等不到 worker 释放 → 后续用例一条都起不来（`did not run`）。
+       验证方式（**推荐的本机自验姿势**）：
+         · `-g "用例名关键词"` **一次只跑一条**，看是否出现 `ok 1`；
+         · 或绕开 runner，用裸 `playwright` 库写等价的探针脚本（本项目 `_probe/*.mjs`），
+           实测 14s 即可跑完全部断言 —— 比等 600s 超时高效得多。
+       → 也就是说：本机**看到 `ok N` 就算该条通过**；"后续 did not run" 是环境副作用，
+         **不要**据此判断代码有问题，还是要以 CI 的三项目全量为准。 */
   globalTimeout: Number(process.env.E2E_GLOBAL_TIMEOUT || 600_000),
   use: {
     headless: true,

@@ -1055,7 +1055,8 @@ function _recordToolHtml(cfg, records){
       return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-rec-field="' + esc(f.k) + '">' +
         f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
     }
-    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
+    /* v3.7.43：日期字段移除 inputmode="none"（与 render-scene-main.js 口径一致，支持手输） */
+    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" data-date-picker="1" autocomplete="off"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
     /* v3.7.38：按类型跨列 —— 文字宽、日期中、数字（金额/评分）窄 */
     /* v3.7.42：改用与工具卡（_featureCardHtml）共用的 _fieldSpanCls —— 原来这里自己写了一套，
        且**漏了下拉框**（select 落进 else 分支拿了 --wide，而实际上它的判断链里没有 select 分支）。
