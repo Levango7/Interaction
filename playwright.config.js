@@ -38,8 +38,7 @@ module.exports = defineConfig({
        启动开销累积起来 >3 分钟。表现为「7 passed / 7 did not run / Timed out waiting 180s」，
        看起来像"测试崩了"，实际只是**全局超时太紧**。
      即：CI（ubuntu 跑得更快 + 只跑 e2e job）能过，**本机无法自验 e2e**。
-     现放宽到 600s，并支持 `E2E_GLOBAL_TIMEOUT` 覆盖（CI 想收紧可自行设）。 */
-     globalTimeout: Number(process.env.E2E_GLOBAL_TIMEOUT || 600_000),
+     现放宽到 600s，并支持 `E2E_GLOBAL_TIMEOUT` 覆盖（CI 想收紧可自行设）。
 
      ⚠️ v3.7.42 实测记录 —— 本机「测试全过但退出码 1」是**环境问题，不是代码问题**：
        现象：14 个用例全部 `ok`，随后报
@@ -52,7 +51,10 @@ module.exports = defineConfig({
          · 逐层降级后仍卡 → 与本应用代码/定时器/beforeunload 全部无关。
        → 结论：**本机沙箱内 chromium 的关闭路径不通**（与「拦 spawnSync 子进程」同源的环境限制）。
          判据：只要输出里 `ok N` 数量 == 用例总数、且无 failed 用例，就视为**本机通过**；
-         退出码以 **CI 为准**。 */
+         退出码以 **CI 为准**。
+     补充（v3.7.42 实测）：Playwright 清理上次 `test-results/` 时会被本机 safe-delete shim 拦下
+       （报 `[safe-delete] 操作失败 ... trash` 且 exit 1）→ **再跑一次即可**（目录已存在时不触发）。 */
+  globalTimeout: Number(process.env.E2E_GLOBAL_TIMEOUT || 600_000),
   use: {
     headless: true,
     actionTimeout: 10_000,
