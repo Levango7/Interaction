@@ -5917,10 +5917,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.45"; /* v3.7.45 修 eslint no-useless-escape（日期宽松解析正则字符类内的 \/）· v3.7.44 下拉列表按"实际错位"判定关闭+可见区自适应高度（修"无法滑动"） */
+const VERSION = "3.7.46"; /* v3.7.46 存储安全壳：localStorage 不可用时降级内存，不再整页灰块（修「灰色大块没内容」）· v3.7.45 修 eslint no-useless-escape · v3.7.44 下拉列表按"实际错位"判定关闭+可见区自适应高度（修"无法滑动"） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260925a";
+const BUILD_TAG = "20260925b";
 
 
 
@@ -6303,6 +6303,95 @@ function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+pad(d.getMon
 function shiftDay(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
 function esc(s){ return String(s===null||s===undefined?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function sameDay(ts,y,m,d){ const t=new Date(ts); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
+
+/* ===== v3.7.46：存储安全壳（Storage Guard）—— 必须位于所有业务块之前 =====
+ * ── 它修的是什么 ──
+ * 用户 2026-09-24 截图反馈「灰色大块没内容」：顶栏和 AI 助手面板都在，
+ * 但**侧栏 .nav-item 为 0 项、主区 #main 的 innerHTML 为 0 却仍有 441px 高度**
+ * —— 那块高度就是截图里看到的灰块。
+ * 本机故障注入实验（_probe/diag-idb.mjs）找到了唯一触发条件：
+ *   · indexedDB 抛错      → nav=17，正常（本来就有兜底）
+ *   · **localStorage 抛错 → nav=0、mainLen=0、mainH=441** ★与截图完全对上★
+ * 现实里 localStorage 不可用并不罕见：浏览器勾了「阻止网站保存数据」、
+ * 隐私模式、file:// 被企业策略限制、配额超限（QuotaExceededError）。
+ * 而应用里 **240+ 处裸 localStorage 调用**散在 19 个文件
+ * （getItem 55 / setItem 38 / removeItem 15 / clear 2 / key 2 / length 3），
+ * 逐个包 try/catch 不现实；且**启动期任意一处抛出都会中断渲染** → 整页白屏。
+ * ── 做法 ──
+ * 在这里把 window.localStorage 换成安全代理：
+ *   · 原生可用 → 走原生（正常路径零行为变化）；
+ *   · 原生抛错（访问被拒 / 配额超）→ 落内存兜底，关键渲染不再中断；
+ *   · 写入失败过的 key 记在 mem 覆盖层，读时优先取（避免配额场景读到旧值）。
+ * 已确认业务代码只用 getItem/setItem/removeItem/clear/key/length 六种方法
+ * （源码里出现的 localStorage.theme / localStorage.wb 全是注释），故无需 Proxy。
+ */
+(function(){
+  if (typeof window === "undefined") return;
+  var real = null;
+  try { real = window.localStorage || null; } catch(e){ real = null; }
+  /* ★ 关键：原生可用就**完全不接管**（直接 return，连 window.localStorage 都不碰）。
+     为什么必须这样 —— 第一版无条件装壳，实测把 16 条既有测试打红（7 个文件）：
+     一旦把 window.localStorage 换成固定 getter，测试（以及任何第三方代码）
+     后续对 localStorage 的**替换/打桩就不再生效**，因为业务代码拿到的永远是壳里那个对象，
+     而壳早就把"原生"引用抓死在闭包里了。
+     → 只在原生**真的不可用**时才装兜底壳；正常路径零行为变化。
+     （已知取舍：这样覆盖不到"启动时正常、运行中才配额超限"的场景 —— 那种情况概率远低于
+      "存储被整个禁用"，且即便发生也只是单次写入失败，不会让整页渲染中断。） */
+  try {
+    if (real && typeof real.getItem === "function"){
+      real.setItem("__wb_probe__", "1");
+      real.removeItem("__wb_probe__");
+      return;
+    }
+  } catch(e){ /* 探测失败 → 继续往下装兜底壳 */ }
+  var mem = Object.create(null);        /* 仅当原生写入失败时落这里（覆盖层） */
+  var hasOwn = function(o, k){ return Object.prototype.hasOwnProperty.call(o, k); };
+  var degraded = false;
+  function keys(){
+    var out = [];
+    try {
+      if (real){ for (var i = 0; i < real.length; i++){ var k = real.key(i); if (k !== null && k !== undefined) out.push(k); } }
+    } catch(e){}
+    for (var k2 in mem){ if (out.indexOf(k2) < 0) out.push(k2); }
+    return out;
+  }
+  var safe = {
+    getItem: function(k){
+      k = String(k);
+      if (hasOwn(mem, k)) return mem[k];            /* 原生那次写入失败过 → 以内存值为准 */
+      try { return real ? real.getItem(k) : null; } catch(e){ return null; }
+    },
+    setItem: function(k, v){
+      k = String(k); v = String(v);
+      try { if (real){ real.setItem(k, v); delete mem[k]; return; } } catch(e){}
+      mem[k] = v; degraded = true;                  /* 配额超 / 被拒 → 退内存 */
+    },
+    removeItem: function(k){
+      k = String(k); delete mem[k];
+      try { if (real) real.removeItem(k); } catch(e){}
+    },
+    clear: function(){
+      mem = Object.create(null);
+      try { if (real) real.clear(); } catch(e){}
+    },
+    key: function(i){ var ks = keys(); return (i >= 0 && i < ks.length) ? ks[i] : null; },
+    get length(){ return keys().length; }
+  };
+  try {
+    Object.defineProperty(window, "localStorage", { configurable: true, get: function(){ return safe; } });
+  } catch(e){ /* 极少数环境不允许改写；下面再兜一次 */ }
+  try { if (window.localStorage !== safe) window.localStorage = safe; } catch(e){}
+  /* 降级时给一次可见提示：延迟到 toast 就绪后；拿不到 toast 就静默，不因此二次抛错 */
+  setTimeout(function(){
+    try {
+      if (!degraded) return;
+      var msg = (typeof t === "function")
+        ? t("msg.storageDegraded", "浏览器存储不可用，本次改动只保存在内存中（刷新会丢失）")
+        : "浏览器存储不可用，本次改动只保存在内存中（刷新会丢失）";
+      if (typeof toast === "function") toast(msg, "warn");
+    } catch(e){}
+  }, 1500);
+})();
 
 /*SRC:core:BEGIN*/
 /*SRC:core:END*/
