@@ -2,7 +2,7 @@
 
 > 由 `scripts/module-graph.mjs` 从 `src/*.js` 的**符号级引用**分析得出：
 > 定义 = 块内顶格书写的 function/const/let/var/class；依赖 = 某块引用了恰好由另一块定义的符号。
-> 块数 27（本文件由脚本生成；不含时间戳，避免每日无意义 diff）
+> 块数 28（本文件由脚本生成；不含时间戳，避免每日无意义 diff）
 
 ## 1. 依赖矩阵（行依赖列）
 
@@ -22,9 +22,9 @@
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-perf` | 15 |
 | `render-entry` | Render | `ai-retry` `core` `data-links` `data-migrate` `render-overview` `render-scene-main` `render-widgets` `ui-daily` `ui-drawer` | 30 |
 | `render-scene-sub` | Render | `render-scene-main` `render-widgets` `ui-scene-bind` `util-perf` | 10 |
-| `render-scene-main` | Render | `ai-retry` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `util-perf` | 20 |
-| `render-overview` | Render | `ai-retry` `chain` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 28 |
-| `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` `util-perf` | 16 |
+| `render-scene-main` | Render | `ai-retry` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `util-perf` | 19 |
+| `render-overview` | Render | `ai-retry` `chain` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 27 |
+| `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` | 14 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 9 |
@@ -34,6 +34,7 @@
 | `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` | 20 |
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-global-events` `ui-guide` `ui-theme` | 31 |
 | `ui-hotkeys` | UI | `ai-retry` `data-links` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
+| `ui-select` | UI | — | 0 |
 | `ui-global-events` | UI | `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-palette` `ui-theme` `util-perf` | 101 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
@@ -51,7 +52,7 @@
 | `active` | `data-links` | 12 |
 | `getActiveTasks` | `data-rw` | 12 |
 | `setTasks` | `data-rw` | 10 |
-| `getRec` | `data-rw` | 9 |
+| `getRec` | `data-rw` | 10 |
 | `UI_ICONS` | `core` | 8 |
 
 > 这些是事实上的"全局助手"。层间倒挂多由它们造成，若要继续解耦，优先从这里动手。
@@ -65,7 +66,7 @@
 - 跨块重复定义：**0** 项
 - 循环依赖：**39** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-migrate → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links；data-links → render-scene-main → render-scene-sub → ui-scene-bind → ui-backup-stats → chain → data-links）
 - 逆层依赖（低层用高层符号）：**29** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**55** 个符号
+- 逆层依赖（按**符号**计，去重）：**54** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
@@ -78,12 +79,12 @@
 | `render-entry`（Render） | `render-widgets`（Render） | `openRecycle` `renderSide` |
 | `render-entry`（Render） | `ui-daily`（UI） | `snoozeTask` |
 | `render-entry`（Render） | `ui-drawer`（UI） | `_moveDrawerHome` |
-| `render-overview`（Render） | `render-widgets`（Render） | `SIDE_MENU_ICONS` `TOOL_APPS` `lineChartSVG` `openChartStore` |
+| `render-overview`（Render） | `render-widgets`（Render） | `SIDE_MENU_ICONS` `lineChartSVG` `openChartStore` |
 | `render-overview`（Render） | `ui-drawer`（UI） | `openTemplateModal` `registerPluginFromJson` |
 | `render-overview`（Render） | `ui-global-events`（UI） | `toggleToolPop` |
 | `render-overview`（Render） | `ui-scene-bind`（UI） | `openTaskEdit` |
 | `render-scene-main`（Render） | `render-overview`（Render） | `_renderDiagramCanvas` `_renderFinanceStats` `_renderHealthTrend` |
-| `render-scene-main`（Render） | `render-widgets`（Render） | `TOOL_APPS` `lineChartSVG` |
+| `render-scene-main`（Render） | `render-widgets`（Render） | `lineChartSVG` |
 | `render-scene-sub`（Render） | `render-scene-main`（Render） | `renderMiniChart` |
 | `render-scene-sub`（Render） | `render-widgets`（Render） | `thisWeekDone` `weekRange` |
 | `render-scene-sub`（Render） | `ui-scene-bind`（UI） | `bindReportCard` `bindReviewCard` |

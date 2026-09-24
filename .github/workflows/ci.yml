@@ -25,6 +25,10 @@ jobs:
       - run: npm run check:source-state
       # 模块依赖门禁：对照基线，新增「循环依赖 / 逆层依赖 / 跨块重复定义」即失败
       - run: npm run check:modules
+      # AI 工具文档门禁：docs/ai-tools.md 的工具集必须与源码 TOOLS 完全一致（防文档漂移）。
+      # v3.7.41：本脚本此前只读 agent-workbench.html，而仓库恒为源码态 → 恒解析到 0 个工具、
+      # 静默 abort（且未接 CI）。修复为双态寻源后正式接入。
+      - run: npm run check:ai-tools-doc
       - run: npm ci
       - run: npm test
       - run: npm run test:coverage
