@@ -5917,7 +5917,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.42"; /* v3.7.42 主题渲染层 e2e 守护（11 主题对比度实测基线）· 控件矩阵 P3 清空 */
+const VERSION = "3.7.43"; /* v3.7.43 日期框可手输（点击全选）· 下拉列表可滚 · 会议卡补齐「开始时间」 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
 const BUILD_TAG = "20260924q";
@@ -12266,7 +12266,8 @@ function _recordToolHtml(cfg, records){
       return '<div class="tool-field"><label>' + esc(f.label) + '</label><select data-rec-field="' + esc(f.k) + '">' +
         f.options.map(function(o){ return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join("") + '</select></div>';
     }
-    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
+    /* v3.7.43：日期字段移除 inputmode="none"（与 render-scene-main.js 口径一致，支持手输） */
+    const t = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" data-date-picker="1" autocomplete="off"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
     /* v3.7.38：按类型跨列 —— 文字宽、日期中、数字（金额/评分）窄 */
     /* v3.7.42：改用与工具卡（_featureCardHtml）共用的 _fieldSpanCls —— 原来这里自己写了一套，
        且**漏了下拉框**（select 落进 else 分支拿了 --wide，而实际上它的判断链里没有 select 分支）。
@@ -19134,7 +19135,7 @@ function renderMainHTML(){
 
   const taskForm = `<form class="form-row form-row--board" id="taskForm">
     <div class="fld fld-lg"><label>${t("field.taskTitle","任务标题")}</label><input name="title" placeholder="${t("placeholder.taskTitle","要做什么？")}" maxlength="200" required></div>
-    <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><div class="date-pick"><input name="due" type="text" inputmode="none" data-date-picker="1" placeholder="${t("placeholder.dueDate","选日期")}" aria-label="${t("field.dueDate","截止日期")}"><svg class="date-pick-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="fld fld-md"><label>${t("field.dueDate","截止日期")}</label><div class="date-pick"><input name="due" type="text" data-date-picker="1" placeholder="${t("placeholder.dueDate","选日期")}" aria-label="${t("field.dueDate","截止日期")}" autocomplete="off"><svg class="date-pick-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
     <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
       <select name="priority"><option value="">${t("common.none","无")}</option><option value="P0">${t("task.priority.p0","P0 紧急")}</option><option value="P1">${t("task.priority.p1","P1 重要")}</option><option value="P2">${t("task.priority.p2","P2 一般")}</option></select></div>
     <div class="fld fld-md"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
@@ -19185,10 +19186,11 @@ function renderMainHTML(){
       /* v3.7.33：日期字段加 ▼ 指示符 —— 用户："日期是下拉框，点击有日期卡片"。
          原先它就是个普通文本框外观，用户不知道可以点开日期面板。
          结构：.date-pick 包一层，右侧绝对定位一个 caret（用真实 svg 以继承 currentColor，
-         避免为了图标色值而硬编码颜色）。点击仍由 data-date-picker 委托处理，包一层不影响。 */
-      inp = `<div class="date-pick"><input name="${f.k}" type="text" inputmode="none" data-date-picker="1"`
+         避免为了图标色值而硬编码颜色）。点击仍由 data-date-picker 委托处理，包一层不影响。
+         v3.7.43：**移除 inputmode="none"** —— 见下方 _dpOpen 处的详细说明。 */
+      inp = `<div class="date-pick"><input name="${f.k}" type="text" data-date-picker="1"`
         + (f.timePicker ? ' data-time-picker="1"' : '')
-        + ` placeholder="${t("placeholder.dueDate","选日期")}" aria-label="${esc(f.label)}">`
+        + ` placeholder="${t("placeholder.dueDate","选日期")}" aria-label="${esc(f.label)}" autocomplete="off">`
         + '<svg class="date-pick-caret" viewBox="0 0 24 24" aria-hidden="true">'
         + '<path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"'
         + ' stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
@@ -19592,7 +19594,24 @@ function _featureCardHtml(cfg){
     if(f.type === "textarea"){
       return '<div class="tool-field u-col-span-all"><label>' + esc(f.label) + '</label><textarea data-f-field="' + esc(f.k) + '" rows="3" placeholder="' + esc(f.placeholder || f.label) + '" class="u-fs-2xs u-min-h-0"style="font-family:\'SF Mono\',\'SFMono-Regular\',Consolas,monospace"></textarea></div>';
     }
-    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" inputmode="none" data-date-picker="1"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
+    /* v3.7.43：工具卡支持 type:"time" —— 与 recFields（render-scene-main.js 上方）**同一口径**：
+       00:00~23:55 每 5 分钟一档共 288 项、data-editable="1"（既能选也能敲）。
+       之前工具卡只把 time 落到 else → 渲染成普通文本框，于是「开始时间」被拆成独立字段后
+       在这里拿不到时间选择器。两处构造必须保持一致，否则同一语义在不同卡片里表现不同。 */
+    if(f.type === "time"){
+      let _tOpts = '<option value="">' + t("field.pickTime","选时间") + '</option>';
+      for(let _h = 0; _h < 24; _h++){
+        for(let _m = 0; _m < 60; _m += 5){
+          const _v = String(_h).padStart(2,"0") + ":" + String(_m).padStart(2,"0");
+          _tOpts += '<option value="' + _v + '">' + _v + '</option>';
+        }
+      }
+      return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label>'
+        + '<select data-f-field="' + esc(f.k) + '" data-editable="1" aria-label="' + esc(f.label) + '">' + _tOpts + '</select></div>';
+    }
+    /* v3.7.43：日期字段移除 inputmode="none"（详见 _dpOpen 处说明），并加 autocomplete="off"
+       避免浏览器把历史输入当成表单自动填充弹层盖住日期面板。 */
+    const inputType = f.type === "number" ? ' type="number" step="any"' : f.type === "date" ? ' type="text" data-date-picker="1" autocomplete="off"' + (f.timePicker ? ' data-time-picker="1"' : '') : ' type="text"';
     /* v3.7.13：日期字段**预填今天**（用户 2026-09-22 截图质问："这个要手动录入吗？不是系统自动记录吗？"）。
        记录型场景里日期几乎总是"当下"，预填今天省一步操作；带时间选择器的字段不预填。 */
     const prefill = (f.type === "date" && !f.timePicker) ? ' value="' + todayStr() + '"' : '';
@@ -19649,12 +19668,23 @@ function _featureCardHtml(cfg){
 }
 
 /* ===== v3.6.2 自定义日期选择器（替代浏览器原生白底方角弹层） =====
- * 用法：<input type="text" inputmode="none" data-date-picker="1">。
+ * 用法：<input type="text" data-date-picker="1">。（v3.7.43 起支持手输，详见下方 input 委托）
  * 点击/聚焦该输入框时弹出主题化圆角面板；选定后把 YYYY-MM-DD 写入 input.value。
  * 全局单例（_dpPanel/_dpOverlay），ESC / 点面板外 / 选完即关闭。 */
 var _dpPanel = null, _dpOverlay = null, _dpInput = null, _dpViewY = null, _dpViewM = null;
 var _dpTimeH = null, _dpTimeM = null; // 小时(0-23) 和 分钟(0-59)
 var _dpReFocusing = false;            // v3.7.39：关闭面板归还焦点期间，抑制 focus 委托重新打开
+var _dpRaisedInput = null;            // v3.7.43：被临时抬到 overlay 之上的触发输入框（关闭时需复位）
+var _dpOpenByKeyboard = false;        // v3.7.43：本次打开是否由键盘触发 → 决定要不要把焦点移进日格
+/* v3.7.43：程序化移焦豁免标志（注释 B）。
+   为什么需要它 —— blur 委托里有"失焦即关面板"的逻辑（本意：用户离开日期框就收起日历）。
+   但 **内部程序化移焦**（_dpOpen 把焦点移入日格）也会让输入框 blur，于是"刚开就被自己关掉"。
+   实测调用栈：Tab → focus 委托 → _dpOpen 建面板 → el.focus() 到日格
+     → 输入框 blur → blur 委托 → _dpClose()  ← 面板消失
+   曾试图用 document.activeElement / relatedTarget 判断"焦点是否落在面板内"，
+   两者在 blur 派发时的取值时机不稳定，实测均未拦住。
+   改用显式豁免：移焦前置真，下一轮宏任务解除。判据不依赖浏览器派发细节。 */
+var _dpFocusGuard = false;
 function _dpClose(){
   /* v3.7.39：关闭时把焦点**归还触发输入框**。
      此前没有这一步 —— 之所以看起来"焦点归位"，只是因为那时焦点本来就在输入框上；
@@ -19663,13 +19693,19 @@ function _dpClose(){
   const back = _dpInput;
   if(_dpOverlay){ try{ _dpOverlay.remove(); }catch(_e){} _dpOverlay = null; }
   if(_dpPanel){ try{ _dpPanel.remove(); }catch(_e){} _dpPanel = null; }
+  /* v3.7.43：复位被临时抬高的触发输入框（见 _dpOpen）。
+     不清掉的话 z-index 会长期滞留在输入框上，可能压住后续浮层。 */
+  if(_dpRaisedInput){ try{ _dpRaisedInput.style.zIndex = ""; _dpRaisedInput.style.position = ""; }catch(_e){} _dpRaisedInput = null; }
   _dpInput = null;
   if(back && document.contains(back)){
     /* 防循环：归还焦点会再次触发下方那个 focus 委托 → 面板又打开。
-       用一个一次性标志把这次程序化聚焦排除掉。 */
+       用一个一次性标志把这次程序化聚焦排除掉。
+       v3.7.43：同时开 _dpFocusGuard —— 归还焦点会让**面板内的日格 blur**（若焦点在日格上），
+       虽然 blur 委托只认日期输入框、不会命中，但保持"程序化移焦一律豁免"的一致性更安全。 */
     _dpReFocusing = true;
+    _dpFocusGuard = true;
     try { back.focus(); } catch(_e){}
-    setTimeout(function(){ _dpReFocusing = false; }, 0);
+    setTimeout(function(){ _dpReFocusing = false; _dpFocusGuard = false; }, 0);
   }
 }
 function _dpMonthDays(y, m){ return new Date(y, m + 1, 0).getDate(); }
@@ -19772,7 +19808,15 @@ function _dpOpen(input){
   _dpTimeM = cur && cur.min !== null ? cur.min : null;
   const overlay = document.createElement("div");
   overlay.className = "dp-overlay";
+  /* v3.7.43：遮罩层不再"吃掉"触发输入框的点击 —— 否则日期框**无法用鼠标点回去继续输入**
+     （用户诉求"也能输入"，但点第二下就被 overlay 拦住，实测 Playwright
+     报 `<div class="dp-overlay"></div> intercepts pointer events`）。
+     做法：
+       ① overlay 保留（点空白处仍能关闭面板，这是它存在的理由）；
+       ② 但给触发输入框临时抬到 overlay 之上（z-index 面板同级），
+          这样点是能点、敲是能敲，而点其它任何地方依旧走 overlay 关闭。 */
   overlay.addEventListener("mousedown", function(){ _dpClose(); });
+  try{ input.style.position = "relative"; input.style.zIndex = "calc(var(--z-modal, 3000) + 2)"; _dpRaisedInput = input; }catch(_e){}
   const panel = document.createElement("div");
   panel.className = "dp-panel";
   panel.addEventListener("mousedown", function(e){ e.stopPropagation(); });
@@ -19782,13 +19826,26 @@ function _dpOpen(input){
   _dpRender();
   /* v3.7.39：打开后**把焦点移入当前日格** —— 否则焦点仍停在输入框上，
      下面那段方向键监听（要求 activeElement 是 .dp-day）永远不成立，
-     用户在面板打开状态下按 ←→↑↓ 毫无反应。这是 roving tabindex 的标准配套动作。 */
-  setTimeout(function(){
+     用户在面板打开状态下按 ←→↑↓ 毫无反应。这是 roving tabindex 的标准配套动作。
+     v3.7.43：**仅在"键盘打开"时移焦**。用户要是想手输日期，焦点被抢走就没法敲了
+     （实测：抢焦后键盘输入全部落到日格上）。
+     判定：本轮是否已知是键盘唤起 —— Enter/空格/↓ 打开时把 _dpOpenByKeyboard 置真。 */
+  const _kb = _dpOpenByKeyboard;
+  _dpOpenByKeyboard = false;
+  if(_kb){
+    /* v3.7.43：键盘打开时把焦点移入当前日格（roving tabindex 标准配套）。
+       ⚠️ 这里**必须同步**执行（不能放 setTimeout），且必须开 _dpFocusGuard 豁免 ——
+       否则输入框的 blur 会命中"失焦关面板"委托，把刚建好的面板当场关掉
+       （实测：panelOpen:false；详见 _dpFocusGuard 声明处的注释 B）。 */
+    _dpFocusGuard = true;
     try {
       const el = panel.querySelector('.dp-day[tabindex="0"]');
       if (el) el.focus();
     } catch (_) {}
-  }, 0);
+    setTimeout(function(){ _dpFocusGuard = false; }, 0);
+  }
+  /* 鼠标路径的"全选已有值"不在这里做 —— 见下方 focus 委托（那里能覆盖
+     "面板已打开时点回来"的场景，而 _dpOpen 对已打开的面板会直接早退）。 */
   /* v3.7.21：面板宽度**跟随触发输入框**（用户 2026-09-23 截图标注：
      "下拉框和日期卡片的宽度应该一致，和右侧的优先级下拉框间距不变"）。
      此前 v3.7.61 固定 240px，实测输入框 222px、面板 240px —— 面板比输入框宽 18px，
@@ -19853,10 +19910,109 @@ function _dpScroller(el){
   return document.scrollingElement || document.documentElement;
 }
 // 事件委托：点击带 data-date-picker 的输入框弹出自定义面板
+/* v3.7.43：区分"鼠标点开"与"键盘 Tab 到"：
+   鼠标点开 → 焦点留在输入框，用户可以直接接着敲日期；
+   键盘聚焦 → 把焦点移进日格，←→↑↓ 立刻可用（roving tabindex 的标准配套）。
+   用一个 pointerdown 标记判定：鼠标按下的那一刻置真，focus 事件里读它。
+   （Playwright 的 click / 真人的鼠标点击都会先派发 pointerdown；
+     Tab 键聚焦不会，因此能干净区分。） */
+var _dpPointerDown = false;
+document.addEventListener("pointerdown", function(){ _dpPointerDown = true; setTimeout(function(){ _dpPointerDown = false; }, 0); }, true);
 document.addEventListener("focus", function(e){
   const t2 = e && e.target;
   if(_dpReFocusing) return;   /* v3.7.39：关闭时归还焦点的那次聚焦，不应重新打开面板 */
-  if(t2 && t2.matches && t2.matches('input[data-date-picker="1"]')) _dpOpen(t2);
+  if(t2 && t2.matches && t2.matches('input[data-date-picker="1"]')){
+    const byMouse = _dpPointerDown;
+    _dpOpenByKeyboard = !byMouse;   /* 不是鼠标按下的 → 当作键盘操作 */
+    _dpOpen(t2);
+    /* v3.7.43：鼠标点进已有值的日期框时**全选**，否则光标落在点击处、接着敲就成"插入"。
+       实测：预填 2026-09-24 时点进去光标 index=7（末尾），键入 "2026-10-01"
+       得到 `2026-092026-10-01-24`（见 _probe/diag-caret.txt）。
+       放在 focus 里（而非 _dpOpen 内部）是因为面板**已经打开**时 _dpOpen 会早退，
+       而"点回来继续改"正是需要全选的第二种场景。
+       setTimeout(0)：等浏览器完成点击自带的光标定位后再覆盖选区。 */
+    if(byMouse){
+      setTimeout(function(){
+        try{ if(t2.value && document.activeElement === t2) t2.select(); }catch(_e){}
+      }, 0);
+    }
+  }
+}, true);
+/* v3.7.43：日期框改为**可手输**（用户："应该是能选择，也能输入的吧"）。
+   ── 为什么之前不能输 ──
+   ① 模板写了 inputmode="none"（本意"移动端不弹软键盘"），桌面端把键盘输入一并吞掉；
+   ② 且没有任何 input 监听把敲进去的字符解析成日期 → 面板也不会跟着跳。
+   实测：点击后面板正常弹出，但键入 "2026-10-01" 后 input.value 仍是 ""（整串丢弃）。
+   ── 现在 ──
+   · 键盘可直接敲 YYYY-MM-DD（也接受 YYYY/MM/DD、YYYY.MM.DD、YYYYMMDD，见 _dpParseLoose）；
+   · 输入合法日期 → 面板**实时跳到该月**并把该日高亮（所见即所得，边敲边看）；
+   · 输入重开面板时以当前值为准（_dpOpen 已用 _dpParseVal）；
+   · 非法的中间状态（如只敲了 "2026-"）不报错、不打断，只是面板暂不跳转；
+   · 失焦时做一次**规范化**：能解析就统一成 YYYY-MM-DD，不能解析则清空（避免留脏值）。
+   注意：面板内的方向键导航用 activeElement 判定，敲字时焦点在 input 上，两者不冲突。 */
+function _dpParseLoose(v){
+  const s = String(v == null ? "" : v).trim();
+  if(!s) return null;
+  /* ⚠️ 不能直接用 _dpParseVal 的返回值 —— 它的正则只校验 `\d{2}` **格式**，
+     不校验范围，于是 "2026-13-45"（13 月 45 日）也会"解析成功"。
+     用户敲错时最需要的就是被挡下来（否则脏值会存进记录里）。
+     因此这里把两种写法都收敛到同一套**范围校验**。 */
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2}))?$/.exec(s);
+  if(!m) m = /^(\d{4})[\/.\s](\d{1,2})[\/.\s](\d{1,2})$/.exec(s);
+  if(!m) m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
+  if(!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const hh = m[4] === undefined ? null : +m[4];
+  const mi = m[5] === undefined ? null : +m[5];
+  /* 年份给个合理区间，防止 "0000"/"9999" 这类误敲 */
+  if(!(y >= 1900 && y <= 2999)) return null;
+  if(!(mo >= 1 && mo <= 12)) return null;
+  const dim = new Date(y, mo, 0).getDate();     /* 该月实际天数，自动处理闰年 */
+  if(!(d >= 1 && d <= dim)) return null;
+  if(hh !== null && !(hh >= 0 && hh <= 23)) return null;
+  if(mi !== null && !(mi >= 0 && mi <= 59)) return null;
+  return { y: y, m: mo - 1, d: d, h: hh, min: mi };
+}
+document.addEventListener("input", function(e){
+  const el = e && e.target;
+  if(!el || !el.matches || !el.matches('input[data-date-picker="1"]')) return;
+  const cur = _dpParseLoose(el.value);
+  if(!cur) return;                       /* 半成品不处理，等用户敲完 */
+  /* 日期合法 → 让面板跟随（重开会把视图月设为该值所在月并高亮该日） */
+  if(_dpPanel && _dpInput === el){
+    if(cur.y !== _dpViewY || cur.m !== _dpViewM){ _dpViewY = cur.y; _dpViewM = cur.m; _dpRender(); }
+  }
+}, true);
+/* 失焦规范化：只认「完整且合法」的值；敲了一半就离开的，清掉而不是留着误导。
+   v3.7.43 补：blur 时**同时关闭面板**。
+     仅规范化而不关面板会留下一个尴尬状态 —— 值已经写好了，日历却还开着、
+     且 .dp-overlay 仍盖住全屏，用户下一次点击会先被 overlay 吃掉（表现为"点不动"）。
+     这正是自动化测试里暴露出来的：第二次想点输入框，点击落在了 overlay 上。
+     Esc 键走的是另一条路径（keydown → _dpClose），不受影响。 */
+document.addEventListener("blur", function(e){
+  const el = e && e.target;
+  if(!el || !el.matches || !el.matches('input[data-date-picker="1"]')) return;
+  if(_dpFocusGuard) return;             /* v3.7.43：内部程序化移焦 → 放行，不关面板（见下方注释 B） */
+  const raw = String(el.value || "").trim();
+  if(!raw){
+    if(_dpPanel) _dpClose();           /* 空值也收面板，行为一致 */
+    return;
+  }
+  const cur = _dpParseLoose(raw);
+  if(!cur){
+    el.value = "";                     /* 非法 → 清空，避免把脏值当日期提交 */
+    if(_dpPanel) _dpClose();
+    return;
+  }
+  const norm = el.hasAttribute("data-time-picker")
+    ? _dpFmt(cur.y, cur.m, cur.d, cur.h === null ? (_dpTimeH === null ? 9 : _dpTimeH) : cur.h,
+             cur.min === null ? (_dpTimeM === null ? 0 : _dpTimeM) : cur.min)
+    : _dpFmt(cur.y, cur.m, cur.d);
+  if(norm !== el.value){
+    el.value = norm;
+    try{ el.dispatchEvent(new Event("change", { bubbles: true })); }catch(_e){}
+  }
+  if(_dpPanel) _dpClose();
 }, true);
 document.addEventListener("click", function(e){
   const t2 = e && e.target;
@@ -20022,7 +20178,14 @@ SCENE_FEATURE_RENDER.office = {
       fields:[
         {k:"title", label:t("field.meetingTitle", t("field.meetingTitle","会议主题")), type:"text"},
         {k:"type", label:t("field.meetingType","会议类型"), type:"select", options:[t("type.weeklyMeeting","周会"),t("type.review","评审"),t("type.client","客户"),t("type.team","团队"),t("option.other","其他")]},
-        {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date", timePicker:true},
+        /* v3.7.43 修复：v3.7.32 把「日期」与「开始时间」拆成两个正交字段（core.js 的会议**记录卡**
+           已改成 date + startTime），但**管理卡这里只改了半截** ——
+           只在 cols 里加了 {k:"startTime"} 列，fields 里却没补对应的输入框，
+           于是 startTime 有列、无输入 → **永远无法录入开始时间**，表格该列恒为空。
+           同时 date 还挂着 timePicker:true（"时分藏在日期面板里"的旧设计残留），
+           与拆分后的语义重复。这里补齐：拆成 date（纯日期）+ startTime（288 项可编辑时间下拉）。 */
+        {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date"},
+        {k:"startTime", label:t("field.startTime","开始时间"), type:"time"},
         {k:"host", label:t("field.host","主持人"), type:"text"},
         {k:"who", label:t("field.attendees","参会人"), type:"text"},
         {k:"duration", label:t("field.durationHours","时长(小时)"), type:"number"},
@@ -21207,7 +21370,7 @@ function openTaskEdit(id){
       <form id="taskEditForm" class="u-flex u-flex-col u-pad-5-6 u-gap-4">
         <div class="fld"><label>${t("field.taskTitle","任务标题")}</label><input name="title" value="${esc(task.title)}" maxlength="200" required></div>
         <div class="form-row form-row--grid u-mb-0">
-          <div class="fld"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" inputmode="none" data-date-picker="1" value="${esc(task.due||"")}" placeholder="${t("placeholder.dueDate","选日期")}"></div>
+          <div class="fld"><label>${t("field.dueDate","截止日期")}</label><input name="due" type="text" data-date-picker="1" autocomplete="off" value="${esc(task.due||"")}" placeholder="${t("placeholder.dueDate","选日期")}"></div>
           <div class="fld"><label>${t("task.priority","优先级")}</label><select name="priority">${priSel}</select></div>
           <div class="fld"><label>${t("field.linkedRecord","联动记录")}</label><select name="status">${statusSel}</select></div>
         </div>
@@ -26470,7 +26633,31 @@ document.addEventListener("keydown", e=>{
     if (OPEN && !OPEN.wrap.contains(e.target)) dsClose();
   }, true);
   window.addEventListener("resize", dsClose);
-  window.addEventListener("scroll", dsClose, true);
+  /* v3.7.43 修复「一滑动列表，下拉框就缩回去」（用户实测反馈的真 bug）。
+     ✗ 旧实现：window.addEventListener("scroll", dsClose, true)
+       `true` = **捕获阶段**，于是它收得到**任意元素**的 scroll 事件 ——
+       包括下拉列表自己（.ds-list 有 max-height:264px; overflow-y:auto）。
+       列表内滚动 → 事件到达 window → 立刻 dsClose() → 列表当场消失。
+       结果：288 项的时间下拉、以及任何超过 264px 的列表，**根本无法滚动**
+       （实测：scrollTop 一直是 0，列表 h=264 / scrollHeight≈9947 却滚不动）。
+     ✓ 新实现：**两步判定**
+       ① 若事件源在列表内部 → 明确是"用户在滚列表" → 记一个时间戳，不关；
+       ② 否则（页面/外层容器在滚）→ 只有当**最近 250ms 内没有滚过列表**时才关。
+       ② 的宽限期是必要的：列表与外层滚动容器（如 `main-wrap`）是嵌套关系，
+          滚列表时**外层也会收到 scroll**（滚动链传播）。若只看当前这一条事件，
+          外层那条会把刚滚起来的列表立刻关掉 —— 这正是第一版修复没解决的残留问题。
+       保留"页面滚动则关闭"的原意：列表是 position:absolute，页面一滚就与触发框错位。 */
+  let _dsListScrollTs = 0;
+  window.addEventListener("scroll", function(e){
+    if (!OPEN) return;
+    const t = e && e.target;
+    const src = (t && t.nodeType === 1) ? t : document.documentElement;
+    const inList = (src === OPEN.list) || (OPEN.list && OPEN.list.contains && OPEN.list.contains(src));
+    if (inList) { _dsListScrollTs = Date.now(); return; }
+    /* 外层容器的滚动：若刚滚过列表，视为同一次滚动的传播，不关 */
+    if (Date.now() - _dsListScrollTs < 250) return;
+    dsClose();
+  }, true);
 
   /* ---------- 自动增强 ----------
      本项目大量 DOM 是运行时渲染的（切场景、重渲染卡片都会重建 select），
