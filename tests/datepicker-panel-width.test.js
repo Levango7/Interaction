@@ -39,8 +39,11 @@ describe("日期面板 · 宽度跟随输入框并收敛到 [200, 300]（v3.7.21
      v3.7.61 → **固定 240px**（保证所有位置统一宽度）
      v3.7.21 → **跟随输入框**（用户 2026-09-23："下拉框和日期卡片的宽度应该一致"）
               实测输入框 222px、面板 240px → 面板宽出 18px，右缘压向右侧优先级下拉框。 */
-  it("_dpOpen 宽度跟随触发输入框（下限 200 / 上限 300）", () => {
-    expect(JS_MAIN).toContain("panel.style.width = Math.min(300, Math.max(200, Math.round(_iw)))");
+  it("_dpOpen 宽度跟随触发输入框（下限 150 / 上限 320）", () => {
+    /* v3.7.47：下限 200→150、上限 300→320。用户 2026-09-25 截图重申"选择框和日期卡片宽度应该一致"——
+       记录卡表单改 4 列后触发框约 165px，下限 200 会让面板比输入框宽 35px，正是截图里"不齐"的来源。
+       日历内部全流式（.dp-grid=repeat(7,1fr)），150px 下表头约 129px+内边距仍容纳得下。 */
+    expect(JS_MAIN).toContain("panel.style.width = Math.min(320, Math.max(150, Math.round(_iw)))");
     expect(JS_MAIN, "宽度须基于触发输入框实测宽度").toContain("input.getBoundingClientRect().width");
     /* 回到 min-width 就会重新被表头撑宽 —— 这是本条守护的核心 */
     expect(JS_MAIN, "不得再设 panel.style.minWidth").not.toContain("panel.style.minWidth");

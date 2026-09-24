@@ -38,12 +38,20 @@ function rule(sel) {
 }
 
 describe("③ 日期并入同一行：基准列宽与跨列", () => {
-  it("基准 120px + 间距 8px（v3.7.60：auto-fill 120px，字段等宽 span 1）", () => {
+  it("固定 4 列等宽（v3.7.47：用户 2026-09-25 截图标注会议管理 8 字段『两行、一行四个』）", () => {
     const g = rule('.tool-form-grid');
-    expect(g).toContain('minmax(120px,1fr)');
+    /* v3.7.60 的 auto-fill(120px) 在宽卡片下会排出 5~8 列，字段被压到 90~120px ——
+       日期框放不下、下拉当前值被省略号吃光。改固定 4 列，690px 卡片每字段约 165px。 */
+    expect(g).toContain('repeat(4,minmax(0,1fr))');
+    expect(g, "不得回到 auto-fill").not.toContain('auto-fill');
     /* v3.7.14：行距 = 列距，统一为单一 --space-2（原 8/12 不一致） */
     expect(g).toMatch(/gap:var\(--space-2\);/);
     expect(g, "不得回到 8/12").not.toMatch(/gap:var\(--space-2\) var\(--space-3\)/);
+  });
+
+  it("字段数 ≡1 (mod 4) 时末项跨全行；含 textarea 的字段跨全行（v3.7.47）", () => {
+    expect(CSS).toMatch(/\.tool-form-grid>\.tool-field:last-child:nth-child\(4n\+1\)\{grid-column:1\/-1\}/);
+    expect(CSS).toMatch(/\.tool-form-grid>\.tool-field:has\(>textarea\)\{grid-column:1\/-1\}/);
   });
 
   it("跨列：所有字段统一 span 1（等宽，不再按类型区分）", () => {

@@ -103,6 +103,16 @@
     trigger.setAttribute("aria-expanded", "false");
     trigger.setAttribute("role", "combobox");
     trigger.setAttribute("aria-autocomplete", EDITABLE ? "list" : "none");
+    /* v3.7.47：无障碍名（UI 体检 D 类）。原生 select 被改成透明覆盖层后，
+       页面上关联它的 <label> 不再指向可见触发器 → 屏幕阅读器读不出这个下拉是干什么的
+       （体检实测：input.ds-trigger--input / button.ds-trigger 无可访问名）。
+       优先级：原生 select 的 aria-label > 关联 label 文本 > title。 */
+    try {
+      var _al = sel.getAttribute("aria-label")
+        || (sel.labels && sel.labels[0] && sel.labels[0].textContent.trim())
+        || sel.getAttribute("title") || "";
+      if (_al) trigger.setAttribute("aria-label", _al);
+    } catch (_e0) { /* 取不到就保持无名，不因此阻断增强 */ }
     var CARET = '<svg class="ds-caret" viewBox="0 0 24 24" aria-hidden="true">'
       + '<path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"'
       + ' stroke-linecap="round" stroke-linejoin="round"/></svg>';
