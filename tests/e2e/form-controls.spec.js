@@ -202,11 +202,48 @@ test.describe("表单控件交互不变量", () => {
     expect(inList.open, "在列表内滚动**不应**关闭下拉（v3.7.43 修复的真 bug）").toBe(true);
     expect(inList.scrollTop, "列表应真的滚动起来（此前 scrollTop 恒为 0）").toBeGreaterThan(0);
 
-    // ② 在页面空白处滚动 → 应关闭（列表是 absolute，页面一滚就与触发框错位）
+    /* ② 在页面空白处滚动 → 列表**保持打开且与触发框保持贴合**。
+       ⚠️ v3.7.44 语义变更：旧断言是"滚页面就关"——那是**误关**的根源之一。
+       列表 .ds-list 是 position:absolute 定位于 .ds-select，与触发框同在
+       .main-wrap 滚动容器内：容器滚动时两者**一起位移、不会错位**，
+       此时关闭只会打断用户（滚着页面想继续选时间，列表却没了）。
+       新不变量：任何滚动之后，列表与触发框的间距必须仍 ≤24px（贴合）；
+       真正错位（间距 >24px）才会被关闭 —— 这是 v3.7.44 的关闭判据本身。 */
     await page.mouse.move(640, 400);
     await page.mouse.wheel(0, 300);
     await page.waitForTimeout(500);
-    const pageScroll = await page.evaluate(() => !!document.querySelector(".ds-list:not([hidden])"));
-    expect(pageScroll, "滚动页面（列表之外）应关闭下拉").toBe(false);
+    const pageScroll = await page.evaluate(() => {
+      const inst = document.querySelector('select[data-editable="1"]').__ds;
+      if (!inst || inst.list.hidden) return { open: false };
+      const tr = inst.trigger.getBoundingClientRect();
+      const lr = inst.list.getBoundingClientRect();
+      const gap = (lr.top >= tr.bottom) ? (lr.top - tr.bottom)
+                : (lr.bottom <= tr.top) ? (tr.top - lr.bottom) : 0;
+      return { open: true, gap: Math.round(gap) };
+    });
+    expect(pageScroll.open, "滚动页面后下拉应保持打开（列表与触发框同容器、一起位移）").toBe(true);
+    expect(pageScroll.gap, "页面滚动后列表应仍贴合触发框（间距 ≤24px，v3.7.44 错位判据）").toBeLessThanOrEqual(24);
+
+    // ③ 列表不得被祖先滚动容器裁切（用户"列表被窗口/容器硬切、上半截点不到"的回归守护）
+    const clipCheck = await page.evaluate(() => {
+      const l = document.querySelector(".ds-list:not([hidden])");
+      if (!l) return null;
+      const lr = l.getBoundingClientRect();
+      let clip = null, p = l.parentElement;
+      while (p && p !== document.body){
+        if (getComputedStyle(p).overflowY !== "visible"){ clip = p; break; }
+        p = p.parentElement;
+      }
+      if (!clip) return { hasClip: false };
+      const cr = clip.getBoundingClientRect();
+      return {
+        hasClip: true,
+        clippedTop: lr.top < cr.top - 1,
+        clippedBottom: lr.bottom > cr.bottom + 1,
+      };
+    });
+    expect(clipCheck, "应能定位列表的裁切容器").not.toBeNull();
+    expect(clipCheck.clippedTop, "列表顶部不得被祖先滚动容器裁切").toBe(false);
+    expect(clipCheck.clippedBottom, "列表底部不得被祖先滚动容器裁切").toBe(false);
   });
 });

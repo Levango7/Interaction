@@ -143,6 +143,13 @@
 
     function open(){
       if (OPEN && OPEN !== inst) dsClose();
+      /* v3.7.44：触发框若不在视口内，先把它滚进来再定位 ——
+         否则列表整块渲染在视口之外（实测 1080x555 视口、页面未滚到表单时打开：
+         列表 top=695 > 视口高 555，可见高度为 0），用户感知就是"点开了却什么都没有/没法滑"。 */
+      try{
+        const r0 = trigger.getBoundingClientRect();
+        if (r0.bottom < 0 || r0.top > window.innerHeight) trigger.scrollIntoView({ block: "center" });
+      }catch(_e){}
       list.hidden = false;
       /* v3.7.35：向上弹判定修正（第三次修这里，这次是**真根因**）。
          ✗ 旧逻辑：need = Math.max(list.scrollHeight, 44) + 8
@@ -154,11 +161,36 @@
            （即 min(scrollHeight, max-height)），才是真正需要占用的空间。
          同时条件收紧为"下方确实放不下"才上翻。 */
       var r = trigger.getBoundingClientRect();
-      var listH = list.getBoundingClientRect().height;   /* 已含 max-height 约束 */
-      var below = window.innerHeight - r.bottom;
-      var above = r.top;
-      if (below < listH + 8 && above > below) list.classList.add("up");
-      else list.classList.remove("up");
+      /* v3.7.44：空间判定必须用「**实际可见区**」而不是 window 视口 ——
+         踩过（用户 2026-09-25 截图"无法滑动"的第二个真因）：
+         列表的绝对定位祖先链上有滚动容器（.main-wrap，overflow-y:auto），
+         它会**裁切**超出自身可见矩形的后代 —— 而列表是它内部的绝对定位元素。
+         旧判定按 window.innerHeight 算出"上方放得下"→ 向上翻到 top=23，
+         但 .main-wrap 的可见顶边在 y≈110，列表 23~110 那段被裁掉：
+         上半截点不到、滚不动（elementFromPoint 命中的是顶栏按钮），
+         下半截悬在窗口里 —— 用户看到的就是"被硬切一段、滑不动"。
+         ✓ 现在：向上找最近的**裁切滚动容器**，用「视口 ∩ 容器可见矩形」当边界，
+           上下各算可用空间，选空间大的一侧，并把 max-height 压到该侧放得下 ——
+           列表从此完整可见，不会被裁，自然就能滚。 */
+      var clip = null, p = trigger.parentElement;
+      while (p && p !== document.body){
+        /* overflow 非 visible 即建立裁切（auto/scroll/hidden/clip 都算），
+           与容器当前是否真的在滚无关 */
+        if (getComputedStyle(p).overflowY !== "visible"){ clip = p; break; }
+        p = p.parentElement;
+      }
+      var topBound = 0, botBound = window.innerHeight;
+      if (clip){
+        var cr = clip.getBoundingClientRect();
+        topBound = Math.max(topBound, cr.top);
+        botBound = Math.min(botBound, cr.bottom);
+      }
+      var belowSpace = botBound - r.bottom - 6;
+      var aboveSpace = r.top - topBound - 6;
+      var useDown = belowSpace >= aboveSpace;
+      var space = Math.max(120, useDown ? belowSpace : aboveSpace);
+      if (useDown) list.classList.remove("up"); else list.classList.add("up");
+      list.style.maxHeight = Math.min(264, Math.round(space)) + "px";
       trigger.setAttribute("aria-expanded", "true");
       OPEN = inst;
       var cur = list.querySelector(".ds-opt.is-sel") || list.querySelector(".ds-opt");
@@ -291,30 +323,39 @@
     if (OPEN && !OPEN.wrap.contains(e.target)) dsClose();
   }, true);
   window.addEventListener("resize", dsClose);
-  /* v3.7.43 修复「一滑动列表，下拉框就缩回去」（用户实测反馈的真 bug）。
-     ✗ 旧实现：window.addEventListener("scroll", dsClose, true)
-       `true` = **捕获阶段**，于是它收得到**任意元素**的 scroll 事件 ——
-       包括下拉列表自己（.ds-list 有 max-height:264px; overflow-y:auto）。
-       列表内滚动 → 事件到达 window → 立刻 dsClose() → 列表当场消失。
-       结果：288 项的时间下拉、以及任何超过 264px 的列表，**根本无法滚动**
-       （实测：scrollTop 一直是 0，列表 h=264 / scrollHeight≈9947 却滚不动）。
-     ✓ 新实现：**两步判定**
-       ① 若事件源在列表内部 → 明确是"用户在滚列表" → 记一个时间戳，不关；
-       ② 否则（页面/外层容器在滚）→ 只有当**最近 250ms 内没有滚过列表**时才关。
-       ② 的宽限期是必要的：列表与外层滚动容器（如 `main-wrap`）是嵌套关系，
-          滚列表时**外层也会收到 scroll**（滚动链传播）。若只看当前这一条事件，
-          外层那条会把刚滚起来的列表立刻关掉 —— 这正是第一版修复没解决的残留问题。
-       保留"页面滚动则关闭"的原意：列表是 position:absolute，页面一滚就与触发框错位。 */
-  let _dsListScrollTs = 0;
+  /* v3.7.44 修复「列表滑着滑着就没了 / 完全滑不动」（用户 2026-09-25 截图再反馈）。
+     ── v3.7.43 第一版修复为什么还不够 ──
+       实现：列表内滚动记时间戳；外层滚动仅在"最近 250ms 内滚过列表"时豁免。
+       实测（_probe/diag-555.mjs，1080x555 视口）仍会误关：滚轮一滚 → open:false。
+       两个原因：
+       ① 滚动链传播时**外层容器的 scroll 事件与列表的到达顺序不保证**，
+          一旦外层那条落在 250ms 宽限窗之外，列表照样被关 —— 时间窗是在赌时序；
+       ② 更根本的是，"页面滚动就关"这个前提在本项目**不成立**：
+          .ds-list 是 position:absolute 定位于 .ds-select（与触发框同一包含块），
+          .main-wrap 滚动时列表与触发框**一起位移**，根本不会错位。
+          当初那条规则针对的是"列表不跟随滚动"的场景，在这里属于过度关闭。
+     ── v3.7.44 新实现：只按「是否真的错位」判定，与滚动源无关 ──
+       · 事件源在列表内 → 是用户在滚列表，直接放行；
+       · 其它任何滚动 → 等一帧（rAF，让滚动布局生效）后量两者间距：
+         列表仍紧贴触发框（间距 ≤24px）→ 没错位 → 保持打开；
+         间距 >24px → 真错位（如列表被布局甩开）→ 关闭。
+       判据不依赖事件到达顺序，也不再需要魔法时间窗。 */
   window.addEventListener("scroll", function(e){
     if (!OPEN) return;
     const t = e && e.target;
     const src = (t && t.nodeType === 1) ? t : document.documentElement;
-    const inList = (src === OPEN.list) || (OPEN.list && OPEN.list.contains && OPEN.list.contains(src));
-    if (inList) { _dsListScrollTs = Date.now(); return; }
-    /* 外层容器的滚动：若刚滚过列表，视为同一次滚动的传播，不关 */
-    if (Date.now() - _dsListScrollTs < 250) return;
-    dsClose();
+    if (src === OPEN.list || (OPEN.list.contains && OPEN.list.contains(src))) return;
+    requestAnimationFrame(function(){
+      if (!OPEN) return;
+      try{
+        const tr = OPEN.trigger.getBoundingClientRect();
+        const lr = OPEN.list.getBoundingClientRect();
+        /* 间距取"列表在触发框下方/上方"两种几何里的实际缝隙；重叠视为 0 */
+        const gap = (lr.top >= tr.bottom) ? (lr.top - tr.bottom)
+                  : (lr.bottom <= tr.top) ? (tr.top - lr.bottom) : 0;
+        if (gap > 24) dsClose();
+      }catch(_e){ /* 量测失败不致崩溃，保持现状 */ }
+    });
   }, true);
 
   /* ---------- 自动增强 ----------
