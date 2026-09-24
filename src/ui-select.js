@@ -170,31 +170,37 @@
       if (OPEN === inst) dsClose(); else open();
     });
 
+    /* v3.7.40：把输入值提交回原生 select：能精确匹配就采纳，否则还原为当前选中项。
+       ⚠️ 必须声明在 **函数体根部**，不能放在下面 `if (EDITABLE) { … }` 块里 ——
+       块内 `function` 声明违反 eslint `no-inner-declarations`（CI 实测红：
+       `26355:7 error Move function declaration to function body root`）。
+       非可编辑模式下 `trigger` 是 button、没有 .value，本函数永不会被调用。 */
+    function commit(){
+      if (!EDITABLE) return;
+      var v = String(trigger.value || "").trim();
+      if (!v) {                                   /* 清空 → 回到空值选项 */
+        sel.value = "";
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        inst.syncLabel();
+        return;
+      }
+      var hit = null;
+      Array.prototype.forEach.call(sel.options, function(o){
+        if (!hit && o.value && (o.value === v || o.text === v || o.text.toLowerCase() === v.toLowerCase())) hit = o;
+      });
+      if (hit) {
+        if (sel.value !== hit.value) {
+          sel.value = hit.value;
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        trigger.value = hit.text;
+      } else {
+        inst.syncLabel();     /* 输入无效 → 还原，避免留下脏值 */
+      }
+    }
+
     /* ---------- 可编辑模式（combobox）的交互 ---------- */
     if (EDITABLE) {
-      /* 把输入值提交回原生 select：能精确匹配就采纳，否则还原为当前选中项 */
-      function commit(){
-        var v = String(trigger.value || "").trim();
-        if (!v) {                                 /* 清空 → 回到空值选项 */
-          sel.value = "";
-          sel.dispatchEvent(new Event("change", { bubbles: true }));
-          inst.syncLabel();
-          return;
-        }
-        var hit = null;
-        Array.prototype.forEach.call(sel.options, function(o){
-          if (!hit && o.value && (o.value === v || o.text === v || o.text.toLowerCase() === v.toLowerCase())) hit = o;
-        });
-        if (hit) {
-          if (sel.value !== hit.value) {
-            sel.value = hit.value;
-            sel.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-          trigger.value = hit.text;
-        } else {
-          inst.syncLabel();   /* 输入无效 → 还原，避免留下脏值 */
-        }
-      }
       trigger.addEventListener("focus", function(){ if (OPEN !== inst) open(); });
       trigger.addEventListener("input", function(){
         dsRefresh(sel);                  /* 按输入过滤选项 */
