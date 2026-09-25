@@ -46,17 +46,30 @@ if (CHECK) {
   // 变更原因：① src/modules 孤儿快照已归档删除（git tag archive/src-snapshot-v1.9.9）；
   // ② lockfile 根版本滞后是 npm 生态常态，纳入硬门禁导致 CI 长期必红——lockfile 的版本
   //   字段改由 scripts/release.mjs 发版时同步维护，不做 CI 硬校验。
+  // v3.7.54 追加 README 为第五源：README 里写着「当前版本 vX.Y.Z（与…保持一致）」，
+  //   但它既不被 release.mjs 写、也不被这里校验 → 实测已漂到 v3.7.52（真实 3.7.54）。
+  //   纳入门禁才是正解：手改一次只是把漂移推迟到下次发版。
   const readJsonVer = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')).version || null; } catch(e){ return null; } };
   const htmlVer = (() => { const m = readFileSync(TRUTH_HTML, 'utf8').match(/const VERSION = "([^"]+)"/); return m ? m[1] : null; })();
+  const readmeVer = (() => {
+    try {
+      const md = readFileSync(join(root, 'README.md'), 'utf8');
+      const cur = (md.match(/当前版本 \*\*v(\d+\.\d+\.\d+)\*\*/) || [])[1] || null;
+      const h1 = (md.match(/^# Agent 工坊（v(\d+\.\d+\.\d+)）/m) || [])[1] || null;
+      if (cur && h1 && cur !== h1) fail(`README 自相矛盾：H1 写 v${h1}，「当前版本」写 v${cur}`);
+      return cur || h1;
+    } catch (e) { return null; }
+  })();
   const vers = {
     'package.json':              readJsonVer(join(root, 'package.json')),
     'electron/package.json':     readJsonVer(join(root, 'electron', 'package.json')),
     'manifest.json':             readJsonVer(join(root, 'manifest.json')),
     'agent-workbench.html':      htmlVer,
+    'README.md':                 readmeVer,
   };
   for (const [k,v] of Object.entries(vers)) console.log(`[version] ${k.padEnd(28)} ${v || '(缺失)'}`);
   const vals = Object.values(vers).filter(Boolean);
-  const ok = vals.length === 4 && vals.every(v => v === vals[0]);
+  const ok = vals.length === 5 && vals.every(v => v === vals[0]);
   // 完整性：真相源必须含关键功能区（防误传旧 src 拼接产物）
   const html = readFileSync(TRUTH_HTML, 'utf8');
   const required = ['__TEST_GATE__', 'window.__test', 'scMeta', 'sanitizeHtml'];

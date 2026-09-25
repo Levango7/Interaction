@@ -133,15 +133,19 @@ test.describe("11 套主题渲染层不变量", () => {
        这样既不会因"理想值 4.5"造成既有基线红，又能精确抓住"某次改主题把字改淡了"。
        ⚠️ 调基线必须在提交信息里说明原因，不要为了变绿而下调。 */
     const BASELINE = {
-      light:  { "text/panel": 18.88, "text/bg": 14.34, "muted/panel": 5.74, "on-accent/accent": 4.55, "danger/panel": 4.56, "accent/panel": 4.55 },
-      dark:   { "text/panel": 12.47, "text/bg": 15.22, "muted/panel": 4.99, "on-accent/accent": 2.82, "danger/panel": 5.02, "accent/panel": 4.95 },
-      sepia:  { "text/panel": 7.94,  "text/bg": 7.52,  "muted/panel": 4.17, "on-accent/accent": 2.54, "danger/panel": 4.88, "accent/panel": 2.28 },
-      elegant:{ "text/panel": 13.00, "text/bg": 10.90, "muted/panel": 4.49, "on-accent/accent": 4.02, "danger/panel": 4.15, "accent/panel": 4.02 },
+      /* v3.7.52 更新：场景色令牌化 + 弱色阶提档 + -text 系列落地后的实测值。
+         其中 muted/panel 与 on-accent/accent 两类整体上台阶（例：forest muted 2.61→4.64、
+         mist muted 2.82→4.63、dark on-accent 2.82→4.68、sepia on-accent 2.54→4.61），
+         基线随之上调，避免"已经修好了又慢慢退回去"却不报警。 */
+      light:  { "text/panel": 18.88, "text/bg": 14.34, "muted/panel": 6.19, "on-accent/accent": 5.23, "danger/panel": 4.56, "accent/panel": 5.23 },
+      dark:   { "text/panel": 12.47, "text/bg": 15.22, "muted/panel": 5.28, "on-accent/accent": 4.68, "danger/panel": 5.02, "accent/panel": 4.95 },
+      sepia:  { "text/panel": 7.94,  "text/bg": 7.52,  "muted/panel": 5.39, "on-accent/accent": 4.61, "danger/panel": 4.88, "accent/panel": 2.28 },
+      elegant:{ "text/panel": 13.00, "text/bg": 10.90, "muted/panel": 5.49, "on-accent/accent": 4.66, "danger/panel": 4.15, "accent/panel": 4.02 },
       aurora: { "text/panel": 17.70, "text/bg": 15.42, "muted/panel": 6.76, "on-accent/accent": 5.58, "danger/panel": 4.56, "accent/panel": 5.58 },
       matrix: { "text/panel": 13.34, "text/bg": 14.30, "muted/panel": 6.71, "on-accent/accent": 11.04, "danger/panel": 4.77, "accent/panel": 10.30 },
-      forest: { "text/panel": 5.61,  "text/bg": 8.58,  "muted/panel": 2.61, "on-accent/accent": 10.12, "danger/panel": 2.19, "accent/panel": 3.89 },
+      forest: { "text/panel": 5.61,  "text/bg": 8.58,  "muted/panel": 4.64, "on-accent/accent": 10.12, "danger/panel": 2.19, "accent/panel": 3.89 },
       ocean:  { "text/panel": 14.17, "text/bg": 11.42, "muted/panel": 6.33, "on-accent/accent": 8.75, "danger/panel": 3.93, "accent/panel": 8.25 },
-      mist:   { "text/panel": 4.80,  "text/bg": 7.36,  "muted/panel": 2.82, "on-accent/accent": 7.88, "danger/panel": 2.11, "accent/panel": 3.08 },
+      mist:   { "text/panel": 4.80,  "text/bg": 7.36,  "muted/panel": 4.63, "on-accent/accent": 7.88, "danger/panel": 2.11, "accent/panel": 3.08 },
       ink:    { "text/panel": 14.80, "text/bg": 15.79, "muted/panel": 6.08, "on-accent/accent": 8.73, "danger/panel": 5.42, "accent/panel": 8.81 }
     };
     /* 绝对硬底线：任何主题、任何配对都不得低于此值（低于就完全读不清了） */
@@ -168,6 +172,39 @@ test.describe("11 套主题渲染层不变量", () => {
     }
     /* 把实测值落盘 —— 便于人工复核与将来调基线 */
     dumpReport(report);
+  });
+
+  /* v3.7.52 硬断言：场景色与 -text 系列令牌
+     ------------------------------------------------------------------
+     背景：模板原先直接内联 SCENARIOS[].color 的裸 hex，11 套主题下场景标签/页头图标不随主题变化 ——
+     mist 下标签文字与自身底色亮度相同（对比度 1.0，完全不可见）、forest 1.2:1；
+     而 accent/danger/warn/ok 直接当小字色时在浅底上也只有 4.0 左右。
+     修复后：--sc-<场景> 每套主题各有一份达标值，-text 系列专供「色当字」的场景。
+     这条断言把它们钉死在 4.5（新增主题 / 改配色漏配一处即红）。 */
+  test("场景色与 -text 系列令牌每套主题都达标（≥4.5）", async ({ page }) => {
+    const SCENES = ["office", "design", "study", "data", "code", "life", "health", "finance"];
+    const SEM = ["accent", "danger", "warn", "ok"];
+    const fails = [];
+    for (const th of THEMES) {
+      await applyTheme(page, th);
+      const rows = await page.evaluate(({ SCENES, SEM }) => {
+        const cs = getComputedStyle(document.documentElement);
+        const g = (k) => cs.getPropertyValue(k).trim();
+        const panel = g("--panel");
+        const out = [];
+        for (const s of SCENES) out.push({ name: "--sc-" + s, fg: g("--sc-" + s), bg: panel });
+        for (const k of SEM) out.push({ name: "--" + k + "-text/panel", fg: g("--" + k + "-text"), bg: panel });
+        /* -text 的实际落点多半是各自的 -soft 浅底（徽章），一并钉住；
+           注意 --ok-soft 全仓未定义（ok 语义色没有浅底配对），故只查有配对的三组 */
+        for (const k of ["accent", "danger", "warn"]) out.push({ name: "--" + k + "-text/" + k + "-soft", fg: g("--" + k + "-text"), bg: g("--" + k + "-soft") });
+        return out.map((x) => Object.assign(x, { c: window.__contrast(x.fg, x.bg) }));
+      }, { SCENES, SEM });
+      for (const r of rows) {
+        if (r.c === null) { fails.push(th + " " + r.name + " 无法解析（" + r.fg + "）"); continue; }
+        if (r.c < 4.5) fails.push(th + " " + r.name + " = " + r.c.toFixed(2) + "（" + r.fg + " on " + r.bg + "）");
+      }
+    }
+    expect(fails, "以下令牌对比度低于 4.5:1：\n" + fails.join("\n")).toEqual([]);
   });
 
   /* 单独一条：低对比度**清单**（不失败，只记录）

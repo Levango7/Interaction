@@ -213,7 +213,7 @@ function renderSide(){
     const cnt = (o.cnt!==null && o.cnt!=="") ? `<span class="cnt">${o.cnt}</span>` : "";
     const dataAttr = o.sc ? ` data-sc="${o.sc}"` : ` data-menu="${o.id}"`;
     const extra = o.extraAttrs || "";
-    return `<button type="button" class="nav-item nav-parent${act}${hasAct}"${dataAttr}${o.children?` aria-expanded="${isExp}"`:""}${extra} style="--sc:${o.color||"var(--muted)"}" title="${esc(o.label)}" aria-label="${esc(o.label)}">
+    return `<button type="button" class="nav-item nav-parent${act}${hasAct}"${dataAttr}${o.children?` aria-expanded="${isExp}"`:""}${extra} style="--sc:${o.color ? scCss(o.color) : "var(--muted)"}" title="${esc(o.label)}" aria-label="${esc(o.label)}">
       ${o.icon}<span class="nm">${esc(o.label)}</span>${cnt}${caret}</button>`;
   };
   const nodeHtml = (o)=>{
@@ -449,7 +449,7 @@ function openRecycle(){
     const descHtml = v.desc ? `<span class="recycle-desc">${esc(v.desc)}</span>` : "";
     return `<div class="recycle-item" data-id="${esc(v.id)}">
       <input type="checkbox" class="recycle-chk" data-chk="${esc(v.id)}" data-is-task="${v.isTask?1:0}" aria-label="选择 ${esc(v.title)}">
-      <span class="recycle-dot" style="background:${v.color}"></span>
+      <span class="recycle-dot" style="background:${scCss(v.color)}"></span>
       <span class="recycle-title">${esc(v.title)}</span>
       ${descHtml}
       <span class="recycle-sc">${esc(v.scName)}</span>
@@ -2107,7 +2107,12 @@ const TOOL_APPS = {
       return '<label>' + t("tool.imgGen.descLabel", "图片描述") + '</label><textarea id="igPrompt" placeholder="' + t("tool.imgGen.descPlaceholder", "例如：一只橘猫坐在窗台上看雨，水彩风格") + '" class="u-min-h-80"></textarea>'
         + '<div class="tool-form-grid"><div class="tool-field"><label>' + t("tool.imgGen.size", "尺寸") + '</label><select id="igSize"><option value="512x512">512×512</option><option value="768x768">768×768</option><option value="1024x1024">1024×1024</option></select></div></div>'
         + '<div class="tool-actions"><button type="button" class="addbtn sm btn-primary" id="igGo"' + (aiOn ? "" : " disabled") + ">" + t("tool.imgGen.generate", "生成图片") + "</button></div>"
-        + (aiOn ? "" : '<p class="sub u-mt-2">' + t("tool.imgGen.noAiTip", "未配置 AI——文生图需要 AI API。到 设置→AI 配置后即可使用。") + '</p>');
+        + (aiOn ? "" : '<p class="sub u-mt-2">' + t("tool.imgGen.noAiTip", "未配置 AI——文生图需要 AI API。到 设置→AI 配置后即可使用。") + '</p>')
+        /* v3.7.54：补输出容器。bind() 里点「生成图片」要往 #igOut 写 innerHTML，
+           而 render() 此前从没输出这个节点 → AI 一旦启用，点下去就是
+           `Cannot read properties of null (reading 'innerHTML')`。按钮在 aiOn=false 时
+           被 disabled，所以这个洞在默认配置下一直没人踩到。 */
+        + '<div id="igOut" class="u-mt-2"></div>';
     },
     bind: function(){
       const go = $("#igGo"); if(!go) return;
@@ -2366,7 +2371,7 @@ const TOOL_APPS = {
         + '<select id="ccMode" class="u-flex-0-1-160"><option value="b64">Base64</option><option value="url">URL</option></select>'
         + '<button type="button" class="addbtn sm" id="ccEnc">'+t("tool.codec.enc","编码 →")+'</button>'
         + '<button type="button" class="addbtn sm" id="ccDec">'+t("tool.codec.dec","← 解码")+'</button>'
-        + '<button type="button" class="addbtn sm" id="ccSwap">⇅ 互换</button>'
+        + '<button type="button" class="addbtn sm" id="ccSwap">'+t("codec.swap","⇅ 互换")+'</button>'
         + '</div>'
         + '<div class="u-grid-2col u-gap-3">'
         + '<div><label>'+t("tool.codec.in","输入")+'</label><textarea id="ccIn" class="u-min-h-200 u-font-mono u-fs-2xs"></textarea></div>'
@@ -4611,7 +4616,7 @@ function renderToday(){
       // 默认前 3 项展开，超出 3 项的折叠隐藏（.top3-item-extra class + CSS max-height 控制）
       const extraCls = i >= TOP3_PREVIEW ? " top3-item-extra" : "";
       return `<li class="top3-item${extraCls}">
-        <span class="dot" style="background:${s.color}"></span>
+        <span class="dot" style="background:${scCss(s.color)}"></span>
         <span class="title">${esc(x.title)}</span>
         <span class="sc-name">${s.name}</span>
         <button type="button" class="mini snooze-btn" data-snooze="${esc(x.id)}" title="30 分钟后再提醒" data-i18n-title="ui.snooze30MinTitle" data-i18n="task.snoozeBtnText">稍后</button>
@@ -4639,9 +4644,9 @@ function renderToday(){
     else { icon = "○"; label = "未开始"; }
     const fs = scMeta(l.fromSc), ts = scMeta(l.toSc);
     return `<button type="button" class="chain-pill" data-chain-sc="${l.fromSc}"${enabled?"":" disabled"}>
-      <span style="color:${fs.color}">${fs.name}</span>
+      <span style="color:${scCss(fs.color)}">${fs.name}</span>
       <span class="arr">→</span>
-      <span style="color:${ts.color}">${ts.name}</span>
+      <span style="color:${scCss(ts.color)}">${ts.name}</span>
       <span class="fire">${icon}</span>
       <span class="chain-label">${label}</span>
     </button>`;

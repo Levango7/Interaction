@@ -273,7 +273,7 @@ function openTaskEdit(id){
         <div class="fld"><label>${t("field.note","备注")}</label><textarea name="note" rows="3" maxlength="2000">${esc(task.note||"")}</textarea></div>
         <div class="u-flex u-gap-2 u-jc-end">
           <button type="button" class="btn-ghost" id="taskEditCancel">${t("common.cancel","取消")}</button>
-          <button type="submit" class="btn-primary" style="--sc:${s.color}">${t("common.save","保存")}</button>
+          <button type="submit" class="btn-primary" style="--sc:${scCss(s.color)}">${t("common.save","保存")}</button>
         </div>
       </form>
     </div></div>`;

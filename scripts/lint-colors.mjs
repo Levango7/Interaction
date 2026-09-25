@@ -111,8 +111,14 @@ const inPetCss = markPetCssRanges(lines);
 
 /** 白名单：返回 true 表示该行允许出现颜色字面量 */
 function isWhitelisted(line, idx) {
-  // A1) CSS 自定义属性定义行（含 --shadow:0 1px 3px rgba(...) 这类带前缀写法）
-  if (/--[\w-]+\s*:.*?(#[0-9a-fA-F]{3,6}|rgba?\(|hsl)/.test(line)) return true;
+  // A1) CSS 自定义属性定义行。
+  //     v3.7.52 修洞：原实现「行内出现 --token: 颜色 就整行豁免」，于是把违规声明挂在令牌后面
+  //     （`--wp-ok:#111;color:#e74c3c`）可以整行蒙混过关。现改为：先摘掉行内全部 `--token: 值;`
+  //     声明，若不再剩颜色字面量才放行 —— 既保住「一行多令牌」的既有写法，又堵住夹带。
+  if (/--[\w-]+\s*:/.test(line)) {
+    const rest = line.replace(/--[\w-]+\s*:[^;{}]*;?/g, "");
+    if (!/(#[0-9a-fA-F]{3,8}(?![0-9a-zA-Z_-])|rgba?\(|hsl)/.test(rest)) return true;
+  }
   // A2) PWA meta 主题色
   if (/<meta\s+name=["']theme-color["']/.test(line)) return true;
   // B1) SCENARIOS 场景语义色 / 自定义场景默认色：color:"#..." 或 color = "#..."

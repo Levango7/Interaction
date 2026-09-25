@@ -13,9 +13,9 @@ function _renderKanbanCard(x, st, colName){
   const due = x.due? `<span class="due ${od?"od":""}">${od?t("label.overduePrefix","逾期 "):""}${x.due}</span>`:"";
   const tags=(x.tags&&x.tags.length)?` <span class="tag">${x.tags.map(t=>esc(t)).join('</span> <span class="tag">')}</span>`:"";
   let btns="";
-  if(st==="todo") btns=`<button type="button" data-move="${x.id}:doing">→ 进行中</button>`;
-  if(st==="doing") btns=`<button type="button" data-move="${x.id}:todo">← 待办</button><button type="button" data-move="${x.id}:done">→ 完成</button>`;
-  if(st==="done") btns=`<button type="button" data-move="${x.id}:doing">← 进行中</button>`;
+  if(st==="todo") btns=`<button type="button" data-move="${x.id}:doing">${t("kanban.toDoing","→ 进行中")}</button>`;
+  if(st==="doing") btns=`<button type="button" data-move="${x.id}:todo">${t("kanban.toTodo","← 待办")}</button><button type="button" data-move="${x.id}:done">${t("kanban.toDone","→ 完成")}</button>`;
+  if(st==="done") btns=`<button type="button" data-move="${x.id}:doing">${t("kanban.backToDoing","← 进行中")}</button>`;
   return `<div class="kcard" draggable="true" tabindex="0" data-drag="${x.id}" data-tags="${(x.tags||[]).join(" ")}" data-title="${esc(x.title)}" data-status="${st}" aria-label="${esc(x.title)}（${colName[st]}）"><div class="t">${esc(x.title)}</div><div class="kstate">${btns}</div>
     <div class="m">${pri} ${due}${tags}</div><div class="kbtns">
     <button type="button" data-edit="${x.id}" data-i18n="task.editBtn">编辑</button>
@@ -91,7 +91,7 @@ function renderSceneHead(){
     <span>${t("page.ai.askBtn","问 AI 助手")}</span>
   </button>`;
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
-    <span class="ph-ic" style="background:${s.color}1f;color:${s.color}" aria-hidden="true">${s.icon || ""}</span>
+    <span class="ph-ic" style="background:${scSoft(s.color,12)};color:${scCss(s.color)}" aria-hidden="true">${s.icon || ""}</span>
     <div class="ph-tx"><h2>${esc(s.name)}</h2>
       <p class="sub">${t("scene.headSub","带截止日期的任务会汇总到下方「今天要处理」")}</p></div>
     ${aiBtn}
@@ -170,7 +170,7 @@ function renderMainHTML(){
     <div class="fld fld-sm"><label>${t("task.priority","优先级")}</label>
       <select name="priority"><option value="">${t("common.none","无")}</option><option value="P0">${t("task.priority.p0","P0 紧急")}</option><option value="P1">${t("task.priority.p1","P1 重要")}</option><option value="P2">${t("task.priority.p2","P2 一般")}</option></select></div>
     <div class="fld fld-md"><label>${t("task.tags","标签")}</label><input name="tags" placeholder="${t("placeholder.commaSep","逗号分隔")}" maxlength="200"></div>
-    <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
+    <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${scCss(s.color)}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span>
   </form>`;
 
   const tagFilterHTML = `<div class="form-row form-row--board" id="taskFilterRow">
@@ -232,10 +232,13 @@ function renderMainHTML(){
          现在：选项 00:00 ~ 23:55 每 5 分钟一档（288 项，自研列表可滚动），
          值即 "HH:MM"，保存逻辑无需特殊处理。 */
       let _tOpts = '<option value="">' + t("field.pickTime","选时间") + '</option>';
+      /* v3.7.53：支持 default:"now" —— 预选当前时间（向下取整到 5 分钟档）。
+         报销/打卡这类"现在发生"的场景，不必每次在 288 项里翻找。 */
+      const _nowT = (f.default === "now") ? (function(){ const d = new Date(); const mm = Math.floor(d.getMinutes() / 5) * 5; return String(d.getHours()).padStart(2,"0") + ":" + String(mm).padStart(2,"0"); })() : "";
       for(let _h = 0; _h < 24; _h++){
         for(let _m = 0; _m < 60; _m += 5){
           const v = String(_h).padStart(2,"0") + ":" + String(_m).padStart(2,"0");
-          _tOpts += '<option value="' + v + '">' + v + '</option>';
+          _tOpts += '<option value="' + v + '"' + (v === _nowT ? " selected" : "") + '>' + v + '</option>';
         }
       }
       /* v3.7.35：data-editable="1" —— 用户："不但可以选择也可以输入"。
@@ -254,7 +257,7 @@ function renderMainHTML(){
     return `<div class="fld${spanCls}"><label>${f.label}</label>${inp}</div>`;
   }).join("");
   const recForm = `<form class="form-row form-row--grid" id="recForm">${recFields}
-    <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${s.color}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span></form>`;
+    <span class="add-wrap"><span class="add-label">${t("tool.addLabel", t("common.add","添加"))}</span><button type="submit" class="addbtn add-round" style="--sc:${scCss(s.color)}" aria-label="${t("tool.ariaAdd", "添加")}">＋</button></span></form>`;
   const recList = recs.length? _renderRecList(recs, rec) : renderEmpty("no-records");
 
   // 右侧 AI 聊天面板已把 #chat/#chatForm/#chatThinking/#chatCancel 移出主内容区（静态 HTML，三栏布局第三栏）
@@ -631,10 +634,12 @@ function _featureCardHtml(cfg){
        在这里拿不到时间选择器。两处构造必须保持一致，否则同一语义在不同卡片里表现不同。 */
     if(f.type === "time"){
       let _tOpts = '<option value="">' + t("field.pickTime","选时间") + '</option>';
+      /* v3.7.53：与 recFields 的 time 分支同口径 —— 支持 default:"now" 预选当前时间 */
+      const _nowT = (f.default === "now") ? (function(){ const d = new Date(); const mm = Math.floor(d.getMinutes() / 5) * 5; return String(d.getHours()).padStart(2,"0") + ":" + String(mm).padStart(2,"0"); })() : "";
       for(let _h = 0; _h < 24; _h++){
         for(let _m = 0; _m < 60; _m += 5){
           const _v = String(_h).padStart(2,"0") + ":" + String(_m).padStart(2,"0");
-          _tOpts += '<option value="' + _v + '">' + _v + '</option>';
+          _tOpts += '<option value="' + _v + '"' + (_v === _nowT ? " selected" : "") + '>' + _v + '</option>';
         }
       }
       return '<div class="tool-field' + _fieldSpanCls(f) + '"><label>' + esc(f.label) + '</label>'
@@ -1374,6 +1379,10 @@ SCENE_FEATURE_RENDER.office = {
         {k:"amount", label:t("field.amount","金额"), type:"number"},
         {k:"category", label:t("field.category2","类别"), type:"select", options:[t("category.travel","差旅"),t("category.meal","餐饮"),t("category.office","办公"),t("category.transport","交通"),t("option.other","其他")]},
         {k:"date", label:t("tool.regex.preset.date", t("field.date","日期")), type:"date"},
+        /* v3.7.53：补「时间」字段 —— 用户实测反馈「一天如果很多个时间点都要报销呢？」
+           （原字段只有日期，同日多笔无法区分先后）。与会议卡同一口径（288 项可编辑时间下拉），
+           default:"now" 预选当前时间（向下取整到 5 分钟档），报销多为"现在就报"。 */
+        {k:"time", label:t("field.time","时间"), type:"time", default:"now"},
         {k:"status", label:t("field.status", t("field.status","状态")), type:"select", options:[t("status.pendingReview","待审"),t("status.approved","已批"),t("status.reported","已报")]}
       ],
       cols:[
@@ -1381,6 +1390,7 @@ SCENE_FEATURE_RENDER.office = {
         {label:t("field.reimburser","报销人"), k:"who"},
         {label:t("field.amount","金额"), fmt:function(r){ return "¥" + (Number(r.amount)||0).toFixed(2); }},
         {label:t("field.category2","类别"), k:"category"},
+        {label:t("field.time","时间"), k:"time"},
         {label:t("field.status", t("field.status","状态")), k:"status"}
       ],
       sum:function(recs){
@@ -1873,7 +1883,7 @@ SCENE_FEATURE_RENDER.code = {
       fields:[
         {k:"title", label:t("field.title", t("field.title","标题")), type:"text"},
         {k:"language", label:t("field.lang", t("settings.language","语言")), type:"select", options:["JavaScript","Python","Java","Go",t("option.other","其他")]},
-        {k:"code", label:"代码", type:"textarea", placeholder:'// 在此编写 JavaScript 代码...'},
+        {k:"code", label:t("field.code","代码"), type:"textarea", placeholder:t("field.codePh","// 在此编写 JavaScript 代码...")},
         {k:"result", label:t("field.runResult","运行结果"), type:"text"}
       ],
       cols:[

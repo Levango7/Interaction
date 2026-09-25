@@ -351,22 +351,46 @@ app.setAppUserModelId("com.agent.workbench");
  * 现策略：远程 URL 一律转系统浏览器打开并拒绝应用内加载；file://（本应用页面）与
  * about:blank（报表打印窗口 window.open("")+document.write 使用）放行。
  * 挂在 web-contents-created 上，覆盖主窗口与所有子窗口。 */
+/* 本应用自己的页面文件（打包：与 main.js 同目录；开发：上一级仓库根） */
+const _APP_FILES = new Set([
+  path.join(__dirname, "agent-workbench.html"),
+  path.resolve(__dirname, "..", "agent-workbench.html"),
+  path.resolve(__dirname, "..", "index.html"),
+].map(function(p){ return path.resolve(p).toLowerCase(); }));
+/* v3.7.52：收紧「内部页面」判定——原实现把**任意 file:** 都当内部页面放行，而 IPC 侧
+ * assertTrustedSender 也只校验 file:// 前缀（见其上方注释），两者叠加后：任意本地 HTML 一旦被
+ * 导航或新窗口打开，就处在带 preload 的窗口里 = 直接拿到 window.electronAPI（可读 AI 配置等）。
+ * 现只认本应用自己的页面 + about:blank（报表打印窗口 window.open("") 依赖它）。 */
 function _isInternalUrl(url){
   try{
     const u = new URL(url);
-    return u.protocol === "file:" || u.protocol === "about:";
+    if (u.protocol === "about:") return true;
+    if (u.protocol !== "file:") return false;
+    const fp = decodeURIComponent(u.pathname || "").replace(/^\/+/, "");
+    return _APP_FILES.has(path.resolve(fp).toLowerCase());
+  }catch(e){ return false; }
+}
+/* v3.7.52：外链一律走协议白名单——openExternal 会把 URL 原样交给系统处理器，不限协议即可触达
+ * ms-msdt: / search-ms: / vbscript: 一类本机协议处理器。放行 http/https/file（file 交给系统浏览器打开
+ * 不经过本应用的 preload，与"内部页面"是两回事），其余拒绝。 */
+function _openExternalSafe(url){
+  try{
+    const u = new URL(url);
+    if (u.protocol !== "http:" && u.protocol !== "https:" && u.protocol !== "file:") return false;
+    shell.openExternal(url).catch(() => {});
+    return true;
   }catch(e){ return false; }
 }
 app.on("web-contents-created", (event, contents) => {
   contents.setWindowOpenHandler(({ url }) => {
     if (_isInternalUrl(url)) return { action: "allow" };
-    shell.openExternal(url).catch(() => {});
+    _openExternalSafe(url);
     return { action: "deny" };
   });
   contents.on("will-navigate", (e, url) => {
     if (!_isInternalUrl(url)){
       e.preventDefault();
-      shell.openExternal(url).catch(() => {});
+      _openExternalSafe(url);
     }
   });
 });

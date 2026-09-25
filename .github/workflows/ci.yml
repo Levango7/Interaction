@@ -5,6 +5,12 @@ on:
   pull_request:
     branches: [main, master]
 
+# v3.7.52：连续 push 时旧 run 自动取消，避免两套全量测试互相抢资源（本地并发跑会触发
+# vitest worker RPC 超时，CI 上表现为随机假红）。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     # v1.11.1：补 Windows 矩阵——项目为 Windows-first（.bat 启动器 + Electron win portable），
@@ -31,14 +37,21 @@ jobs:
       - run: npm run check:ai-tools-doc
       - run: npm ci
       - run: npm test
-      - run: npm run test:coverage
+      # v3.7.52：移除 `npm run test:coverage`——单文件 HTML 架构下 v8 无法插桩，
+      # 覆盖率恒为 0%（vitest.config.js 已注明），该步骤既无语义又让整套测试白跑第二遍。
+      # 拆分模块（docs/architecture-layers.md 步骤②~⑤）之后再加回并配 thresholds。
       - run: npm run build:check
       - run: npm run lint
+      # v3.7.52：补齐三处「写了但没接」的门禁（此前仅本机手动跑）
+      - run: npm run lint:layers
+      - run: npm run check:pwa-icons
+      - run: npm run pet:check
 
   # D6: E2E 完整用户流程（Playwright，file:// 直接加载单文件，无需服务器）
-  # 仅在 main/master push 时运行（PR 已由上面的单测矩阵覆盖），避免拖慢每次提交
+  # v3.7.53：改为 **push 与 PR 都运行**。原策略只在 main push 跑，理由是"PR 已由单测矩阵覆盖"——
+  # 但渲染层的不变量（对比度硬断言、跨视口布局、表单等宽、按钮居中）单测覆盖不到，
+  # 用户标注的窄屏缺陷正是这类：合并后才发现。代价约 3 分钟 CI（单 job，可接受）。
   e2e:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

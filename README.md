@@ -1,10 +1,10 @@
-# Agent 工坊（v3.7.12）
+# Agent 工坊（v3.7.55）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活 / 健康七类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
 零安装、单文件、纯本地；数据存本机浏览器，**默认不依赖任何后端服务器**（可选开启账号云同步与联网工具）。
 
-> **源码态说明（v3.7.6 起）**：仓库内的 `agent-workbench.html` 是约 544 KB 的**骨架**——应用 JS 已外置到 `src/`（27 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
+> **源码态说明（v3.7.0 起）**：仓库内的 `agent-workbench.html` 是约 605 KB 的**骨架**——应用 JS 已外置到 `src/`（28 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
 >
 > ```bash
 > npm run src:inject     # 把 src/ 拼回单文件 HTML
@@ -170,20 +170,22 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **隐私边界**：部署/分享只涉及文件本身；数据在用户本机，不在服务器。不要在工坊里预填真实敏感信息后再把文件发给他人。
 - **AI 工具**：调用真实改写同一份 localStorage，AI 操作与手动操作等价；工具定位任务靠标题关键词，重名时取第一条。
 - **可选账号与云同步**：客户端包含登录、注册、邮箱验证码与同步接口，依赖兼容后端；API 基址取 `cfg.apiBase`，默认 `http://localhost:3001`。本仓库未附带该服务，不能把打开静态页面或 Electron 外壳等同于后端已运行。未配置后端时用导出 / 导入迁移数据。
+  - **同步端点契约（v3.7.53 补齐推送侧）**：`GET /api/sync/snapshot` 取快照、`PUT /api/sync/snapshot` 上传快照（body `{snapshot, updatedAt}`，快照内含 `_deviceMeta.deviceId`）。客户端两侧都已实现；**未与真实后端联调**，故同步状态如实显示：推成功才显示「已同步」，失败/离线显示「同步失败 / 离线模式」，能力缺失显示「仅本机（云同步未接入）」。
 - **第三方登录回调契约**：GitHub 授权接口需返回 `authorizeUrl` 和 `state`；回调页面必须位于配置的 API 同源，在本次打开的登录窗口内发送 `{type:"agent-github-oauth", state, accessToken, refreshToken}`。客户端校验来源、窗口及一次性 state；未与实际后端完成联调。
+- **Electron 本机同步入口会自动隐藏（v3.7.52 起）**：页面侧曾调用 preload 未暴露的 `electronAPI.syncPush/syncGet`，而主进程从未实现 127.0.0.1:8124 同步服务，导致每 60s 弹一次失败告警。现按「stub + 活 UI = 虚假功能」原则：检测到能力缺失时直接隐藏「本机同步下载」按钮并停掉定时器。恢复方式（补 IPC + 同步服务）见 [docs/product-scope.md](docs/product-scope.md)。
 
 ---
 
 ## 八、版本
 
-当前版本 **v3.6.4**（与 `electron/package.json`、`package.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.7.55**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.6.4 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.55 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 九、相关文件
 
 - `agent-workbench.html` — 工坊本体（核心交付物；**源码态是骨架**：不含立绘 base64，且应用 JS 已外置到 `src/`，构建时由 `src-split.mjs` 拼回 + 回注立绘）
-- `src/` — 应用源码（27 个模块 + `order.json`），由 `src-split.mjs` 与单文件 HTML 双向同步（`src:extract` / `src:inject` / `src:check`）
+- `src/` — 应用源码（28 个模块 + `order.json`），由 `src-split.mjs` 与单文件 HTML 双向同步（`src:extract` / `src:inject` / `src:check`）
 - `assets/pet/` — 萌宠立绘 PNG + 注入顺序 `order.json`（见 [docs/pet-system.md](docs/pet-system.md)）
 - `启动Agent工坊.bat` — Edge 应用模式启动器
 - `启动本地服务.bat` — 本地服务模式启动器（解决 AI 跨域）
@@ -198,8 +200,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 | [docs/architecture-layers.md](docs/architecture-layers.md) | 单文件架构分层契约（改结构前必读） |
 | [docs/pet-system.md](docs/pet-system.md) | 萌宠系统：角色 / 立绘外置与回注 / 五官标定 / 双风格 / 加新角色 |
 | [docs/ai-tools.md](docs/ai-tools.md) | AI 工具（function-calling）接口与 Schema |
-| [docs/ui-standards.md](docs/ui-standards.md) | UI 标准：标题栏 / 顶栏 / 卡片 / 断点 |
-| [docs/design-ui-guidelines.md](docs/design-ui-guidelines.md) | UI 设计规范：分层 / 模态 / 表单 / 动效 / 空态 |
+| [docs/ui-standards.md](docs/ui-standards.md) | UI 唯一权威规范（含规范⇄测试对照表） |
 | [docs/product-scope.md](docs/product-scope.md) | 产品边界与已移除功能清单（防"死 UI 回潮"） |
 | [docs/半成品功能完善路线图.md](docs/半成品功能完善路线图.md) | 半成品处置与收尾计划 |
 | [docs/项目诊断报告-2026-08-17.md](docs/项目诊断报告-2026-08-17.md) | 历史诊断（病因与整改依据） |
@@ -210,7 +211,11 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 十一、开发与发布
 
-**唯一真相源是 `agent-workbench.html`**：所有功能直接演进于该 HTML，不再有 `src/` → HTML 的字节拼接。
+**真相源分两处，各管一段**（顶部「源码态说明」是这一节的前提）：
+- **CSS 与内联 JS**（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html` —— 改这些就改 HTML。
+- **应用 JS**（28 个模块）在 `src/*.js` 里演进，由 `scripts/src-split.mjs` 在**构建期**拼回 HTML；
+  运行时仍是单个 `<script>`，不存在多文件加载（`file://` 下会失败）。
+- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/`）；本地要双击运行先跑 `npm run src:inject`。
 
 ```bash
 npm ci
@@ -219,7 +224,9 @@ npm test                # vitest 单测
 npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod.js
 ```
 
-**立绘已外置（v3.7.5 起）**：9 张萌宠立绘移出 HTML，存在 `assets/pet/*.png`，由构建回注。
+> **覆盖率口径**：`npm run test:coverage` 当前**恒为 0%**（单文件 HTML 无法插桩），已从 CI 移除，暂不纳入验收。
+
+**立绘已外置（v3.7.0 起）**：9 张萌宠立绘移出 HTML，存在 `assets/pet/*.png`，由构建回注。
 
 | 命令 | 作用 |
 |---|---|
@@ -227,14 +234,15 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
 | `npm run pet:extract` | 反向：从 HTML 抽出立绘到 `assets/pet/`，HTML 留标记占位 |
 | `npm run pet:check` | 校验 assets 与 HTML 注入是否一致 |
 
-- 源码态 HTML（2.34MB，无 base64）**不能直接当成品用**：立绘区会退化为 SVG 兜底 + 控制台告警。
+- 源码态 HTML（约 605KB，无 base64、JS 与立绘均已外置）**不能直接当成品用**：立绘区会退化为 SVG 兜底 + 控制台告警。
   本地预览前先 `npm run pet:inject`；`npm test` / `npm run build:check` / `npm run build:prod`
   都挂了 `pre` 钩子会自动回注，CI 无需额外步骤。
 - 改立绘 = 替换 `assets/pet/<kind>.png` → `npm run pet:inject`（顺序由 `assets/pet/order.json` 保持）。
-- 收益：源码 HTML 3.50MB → **2.34MB（-33%）**，编辑器与 diff 恢复可用；交付产物仍是**单个 HTML**（3.17MB）。
+- 收益：立绘外置让源码 HTML 3.50MB → 2.34MB，JS 分层外置后再降到**约 605KB（28 个模块）**，编辑器与 diff 恢复可用；交付产物仍是**单个 HTML**（拼回 + 立绘回注后约 3.5MB）。
 
-**分层源块已外置（v3.7.7 起 · 任务 4 第一步）**：`Util`（Markdown 解析、性能工具）与 `Crypto` 两个层块
-抽到 `src/*.js`（合计约 32KB），HTML 内留标记占位，构建/测试前由 `scripts/src-split.mjs` 拼回。
+**分层源块已外置（v3.7.0 起 · 任务 4 第一步）**：`Util`（Markdown 解析、性能工具）与 `Crypto` 两个层块
+先行抽到 `src/*.js`（合计约 32KB），HTML 内留标记占位，构建/测试前由 `scripts/src-split.mjs` 拼回；
+此后五层全部外置，共 **28 个模块**。
 
 | 命令 | 作用 |
 |---|---|
@@ -257,6 +265,6 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
 | `manifest.json` | `version` |
 
 发版请用 `npm run release <版本号>`（自动同步四处 + 锁文件根字段 + CHANGELOG）。
-部署：`.github/workflows/deploy.yml` 在 push 到 `main` 时自动执行 `build:prod` 并发布到 GitHub Pages；`.github/workflows/ci.yml` 跑测试 / 门禁 / lint。
+部署：`.github/workflows/deploy.yml` 在 push 到 `main` 时**先过门禁**（`verify` job：源码态 + 测试 + build:check + lint + 模块图）再执行 `build:prod` 发布到 GitHub Pages；`.github/workflows/ci.yml` 跑测试 / 门禁 / lint / 静态检查，**e2e 在 push 与 PR 都运行**（含渲染层对比度与跨视口布局硬断言），两个工作流都带 `concurrency`（连续 push 自动取消旧 run）。
 
 > **改完主文件的自检清单**：`npm run build:check` 通过 → 页面无控制台报错 → PWA 资源（manifest 图标等）无 404。

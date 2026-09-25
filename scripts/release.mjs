@@ -75,6 +75,20 @@ sw = sw.replace(/var CACHE_VERSION = "[^"]*";/, `var CACHE_VERSION = "v${newVer}
 write('service-worker.js', sw);
 console.log(`[release] service-worker.js → CACHE_VERSION=v${newVer}-${buildTag}`);
 
+/* 3b) README：标题 / 「当前版本」/ 页脚示例三处版本号
+   —— build.mjs --check 已把 README 列为第五个版本源，这里必须同步写，否则发版即漂。 */
+let md = read('README.md');
+const mdPats = [
+  [/^# Agent 工坊（v\d+\.\d+\.\d+）/m, `# Agent 工坊（v${newVer}）`],
+  [/当前版本 \*\*v\d+\.\d+\.\d+\*\*/, `当前版本 **v${newVer}**`],
+  [/`v\d+\.\d+\.\d+ · b\{构建标记\}`/, `\`v${newVer} · b{构建标记}\``],
+];
+let mdHits = 0;
+for (const [re, to] of mdPats) { if (re.test(md)) { md = md.replace(re, to); mdHits++; } }
+if (!mdHits) fail('README.md 里找不到任何版本号锚点（标题/「当前版本」/页脚示例），请核对文案是否被改动');
+write('README.md', md);
+console.log(`[release] README.md → ${mdHits}/3 处版本号已更新`);
+
 /* 4) lockfile 版本字段同步 */
 for (const p of ['package-lock.json', 'electron/package-lock.json']) {
   if (!existsSync(join(root, p))) continue;

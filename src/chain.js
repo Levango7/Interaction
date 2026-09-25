@@ -463,9 +463,9 @@ function renderHabitChainStatus(){
       else lastText = t("chain.lastTrigger", "上次触发：{n} 天前").replace("{n}", daysAgo);
     }
     return `<div class="lk${enabled ? "" : " disabled"}">` +
-      `<span style="color:${fm.color}">${fm.name}</span>` +
+      `<span style="color:${scCss(fm.color)}">${fm.name}</span>` +
       `<span class="arr">→</span>` +
-      `<span style="color:${tm.color}">${tm.name}</span>` +
+      `<span style="color:${scCss(tm.color)}">${tm.name}</span>` +
       `<span class="cnt">${t("chain.triggerCount", "触发 {n} 次").replace("{n}", triggered)}</span>` +
       `<span class="last">${lastText}</span></div>`;
   }).join("");
@@ -658,7 +658,7 @@ function renderChainGraph(){
       ? `<text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[0])}</text>`
       : `<text x="${p.x.toFixed(1)}" y="${(p.y-1.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[0])}</text>` +
         `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[1])}</text>`;
-    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${NR}" style="fill:var(--panel);stroke:${s.color}" stroke-width="2"/>${txt}`;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${NR}" style="fill:var(--panel);stroke:${scCss(s.color)}" stroke-width="2"/>${txt}`;
   }).join("");
   return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("hc.graphAriaLabel", "跨场景联动关系图")}">${defs}${edges}${nodes}</svg></div>`;
 }

@@ -3,7 +3,7 @@
  * module-graph.mjs — 分层源块的「符号级依赖图」分析与静态校验
  * --------------------------------------------------
  * 背景：交付物是经典 <script> 单文件（不能用 ESM import）。因此"模块化"的落点不是 import/export，
- *   而是**可验证的边界**：把 26 个 src 块的真实依赖关系（谁用了谁定义的符号）算出来，并校验：
+ *   而是**可验证的边界**：把 28 个 src 块的真实依赖关系（谁用了谁定义的符号）算出来，并校验：
  *     ① 跨块重复定义（同名符号在多个块里定义 → 拼回后后者覆盖前者，是真实 bug 温床）
  *     ② 循环依赖（A 用 B 的符号、B 又用 A 的 → 无法单独理解任何一个）
  *     ③ 逆层依赖（文件序靠前的低层块，用了靠后高层块定义的符号 → 架构倒挂）
@@ -139,7 +139,7 @@ for (const b of blocks) for (const d of b.defs) {
 const duplicates = [...defOwners.entries()].filter(([, owners]) => owners.length > 1);
 
 /* ---------- 高扇出符号：被很多块共用的"全局助手"（t / el / render / toast …）
-   它们会把几乎每个块都连到定义它的那个块上 → 图被噪声淹没（实测：不排除时 26 块报出 83 条环）。
+   它们会把几乎每个块都连到定义它的那个块上 → 图被噪声淹没（实测：不排除时 26 块曾报出 83 条环）。
    处理：扇出 ≥ SHARED_FANOUT 的符号单独归类为「共享符号」，不计入依赖边；在报告里单列，
    它们恰恰是「架构倒挂」的元凶，值得单独观察。 ---------- */
 /* 可用 --fanout=N 覆盖：阈值越小越保守（把更多符号当"共享"排除）。默认 8 用于门禁，
@@ -287,6 +287,10 @@ if (CHECK) {
   if (added.cycles.length) { console.log('  ✗ 新增循环依赖：'); added.cycles.forEach(x => console.log('     ' + x)); }
   if (added.upward.length) { console.log('  ✗ 新增逆层依赖：'); added.upward.forEach(x => console.log('     ' + x)); }
   console.log(total ? `[module-graph] check ✗ 新增 ${total} 项（如确为有意，跑 --freeze 更新基线）` : '[module-graph] check ✓ 无新增问题');
+  /* v3.7.52：显式提示口径 —— 扇出 ≥SHARED_FANOUT 的「共享符号」不计入依赖边（见文件顶部说明）。
+     后果：经由共享符号（t / save / PREFIX …）新增的逆层依赖不会被这里拦下；
+     也意味着**新增一个窄符号**（扇出 < 阈值）可能闭合出新的环，属真实结构变化而非误报。 */
+  console.log(`[module-graph] 口径：共享符号（扇出 ≥${SHARED_FANOUT}）已排除，不计依赖边；用 --fanout=1 可看全量边`);
   process.exit(total ? 1 : 0);
 }
 console.log('[module-graph] 已写 docs/module-graph.md（基线未更新，需 --freeze 才写入）');

@@ -150,5 +150,8 @@ function render(){
       if(_fbClearBtn) _fbClearBtn.addEventListener("click", function(){ if(confirm(t("confirm.clear","确定清空？"))){ try{ localStorage.clear(); }catch(e2){ /* 静默降级 */ } location.reload(); } });
     }
     try{ toast(t("err.renderException","渲染异常：")+(e&&e.message||t("tool.unknownErrorMsg", t("common.unknownError","未知错误"))), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
+  }finally{
+    /* 放 finally 而非 try 尾部：本函数有 12 条提前 return 的路由，放尾部只有 office 会触发 */
+    try{ if(AppBridge.applyI18n) AppBridge.applyI18n(); }catch(_ie){ /* i18n 缺失不阻断渲染 */ }
   }
 }

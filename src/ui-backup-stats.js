@@ -375,13 +375,24 @@ function doIdbImport(file){
   if(!isElectron()) return;
   const btnSync = $("#btnSyncLocal");
   if(!btnSync) return;
+  /* v3.7.52：本机同步服务（127.0.0.1:8124）与其 syncPush/syncGet 通道从未在 electron/main.js 实现
+     （实测 main.js 只有 chat / ai-config / auto-launch 三组通道，preload 也只暴露 6 个 API）。
+     原代码在此直接调用 → Electron 下启动即抛 TypeError 并每 60s 弹一次「本机快照推送失败」，
+     点按钮还提示「本机同步服务启动失败」。按 docs/product-scope.md §四.2「stub + 活 UI = 虚假功能」：
+     能力缺失时不显示入口、不启动定时器；待主进程侧真正落地后，此守卫会自动放行。 */
+  const _hasSyncApi = !!(window.electronAPI && typeof window.electronAPI.syncPush === "function" && typeof window.electronAPI.syncGet === "function");
+  if(!_hasSyncApi){ btnSync.style.display = "none"; return; }
   // v3.1.2：syncPush 渲染侧接线（修复断链——此前主进程 syncSnapshot 恒为 {}，
   // 「本机同步下载」导出空数据）。启动时 + 每次点击同步按钮时推送一次本机快照；
   // 快照键集合与 doExport 一致（allKeys 的 wb_agent_ 前缀 + wb_custom_links）。
   const pushSnapshot = async () => {
     try{
       const snap = {};
-      const keys = (typeof allKeys === "function" ? allKeys() : Object.keys(localStorage).filter(function(k){ return k.indexOf(PREFIX) === 0 || k === "wb_custom_links"; }));
+      /* v3.7.52：兜底分支与 allKeys() 同口径（length + key(i)）——Object.keys(localStorage)
+         在存储安全壳接管时返回的是方法名，会枚举出空集。 */
+      const keys = (typeof allKeys === "function")
+        ? allKeys()
+        : (function(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && (k.indexOf(PREFIX)===0 || k==="wb_custom_links")) out.push(k); } }catch(e){} return out; })();
       keys.forEach(function(k){
         const v = localStorage.getItem(k);
         if(typeof v === "string") snap[k] = v;

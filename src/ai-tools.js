@@ -50,14 +50,18 @@ function execTool(name, args, force){
         return JSON.stringify({ok:false, confirm:t("tool.updateConfirmPrefix", "将修改：「")+ft.task.title+t("tool.updateConfirmInfix", "」（id ")+ft.task.id+t("tool.updateConfirmSuffix", "）。发送「确认」以继续，其他内容取消。"), op:"update_task", task_id:ft.task.id, title:ft.task.title});
       }
       const ch={};
-      if(args.status && ["todo","doing","done"].includes(args.status)){
-        if(args.status==="done"){ completeTask(ft.task.id); ft.tasks=getTasks(); ch.status="done"; }
-        else { ft.task.status=args.status; ft.task.doneAt=null; ch.status=args.status; }
+      /* v3.7.52：写序修复。原实现先调 completeTask()（其内部会重新读数组并回写），之后仍在旧对象
+         ft.task 上改优先级/截止，再 setTasks(ft.tasks) —— 实测「完成 + 改其他字段」时后者被静默丢弃，
+         而工具回执却报全部成功（与手改不等价，违反 README 的等价承诺）。现改为先落盘非完成态字段、
+         最后再打完成标记。 */
+      if(args.status && ["todo","doing","done"].includes(args.status) && args.status!=="done"){
+        ft.task.status=args.status; ft.task.doneAt=null; ch.status=args.status;
       }
       if(args.priority!==undefined && ["","P0","P1","P2"].includes(args.priority)){ ft.task.priority=args.priority; ch.priority=args.priority; }
       if(args.due!==undefined){ ft.task.due=args.due; ch.due=args.due; }
       if(Array.isArray(args.tags)){ ft.task.tags=args.tags.map(String).filter(Boolean); ch.tags=ft.task.tags; }
-      setTasks(ft.tasks);
+      if(Object.keys(ch).length) setTasks(ft.tasks);
+      if(args.status==="done"){ completeTask(ft.task.id); ch.status="done"; }
       return JSON.stringify({ok:true, msg:t("tool.updatedPrefix", "已更新「")+ft.task.title+t("tool.updatedInfix", "」：")+JSON.stringify(ch)});
     }
     if(name==="delete_task"){
@@ -488,7 +492,6 @@ async function executeAgentPlan(plan, opts){
   const o = opts || {};
   const t0 = Date.now();
   const results = [];
-  const ASYNC_TOOLS = new Set(["web_search","web_fetch","code_run","sql_query"]);
   for(let i=0; i<plan.steps.length; i++){
     if(o.signal && o.signal.aborted){
       return { ok:false, results, summary:t("aiagent.cancelled","已取消"), ms:Date.now()-t0 };
@@ -497,7 +500,7 @@ async function executeAgentPlan(plan, opts){
     let resultStr = "";
     let stepOk = false;
     try{
-      if(ASYNC_TOOLS.has(step.tool)){
+      if(ASYNC_TOOL_NAMES.has(step.tool)){
         const r = await agentExecAsync(step.tool, step.args);
         resultStr = JSON.stringify(r);
         stepOk = !!(r && r.ok);
@@ -583,6 +586,24 @@ async function chatOnceAgent(messages, opts){
 }
 
 /* ---------- 2. 新工具调用：web_search / web_fetch / code_run / sql_query ---------- */
+/** 需异步执行的工具名（单一来源：chat 路径与 Agent 计划路径共用，避免两处清单漂移） */
+const ASYNC_TOOL_NAMES = new Set(["web_search", "web_fetch", "code_run", "sql_query"]);
+/**
+ * 同步/异步工具的统一执行入口。
+ * v3.7.52：chat 路径原先只调 execTool —— 系统提示与 README 都告诉模型「可以联网检索 / 跑代码 / 跑 SQL」，
+ * 但真调这些工具时只拿到「未知工具」，而同一批工具在 Agent 计划路径却可用（两条路径行为不一致）。
+ * 现统一：异步工具走 agentExecAsync 并归一成与 execTool 同口径的 JSON 字符串。
+ * @param {string} name
+ * @param {Object} args
+ * @returns {Promise<string>}
+ */
+async function execToolAuto(name, args){
+  if(ASYNC_TOOL_NAMES.has(name)){
+    try{ return JSON.stringify(await agentExecAsync(name, args)); }
+    catch(e){ return JSON.stringify({ ok:false, msg:t("agent.toolRunFail","工具执行失败：")+((e&&e.message)||String(e)) }); }
+  }
+  return execTool(name, args);
+}
 /**
  * 异步工具分发器（web_search/web_fetch/code_run/sql_query）
  * @param {string} name - 工具名
@@ -1161,7 +1182,12 @@ function runJsSnippet(code, opts){
     const glue =
       "self.console={log:function(){self.postMessage({type:'log',text:[].slice.call(arguments).map(function(x){try{return (x&&typeof x==='object')?JSON.stringify(x):String(x)}catch(_){return String(x)}}).join(' ')})}," +
       "warn:function(){self.console.log.apply(null,arguments)},error:function(){self.postMessage({type:'error',text:[].slice.call(arguments).map(String).join(' ')})},info:function(){self.console.log.apply(null,arguments)}};" +
-      "self.onerror=function(m){self.postMessage({type:'error',text:String(m)});return true};";
+      /* ⚠️ 必须自己补发 done：`return true` 会抑制浏览器默认的 error 处理，主线程的
+         worker.onerror 因此**不会触发**；而用户代码在顶层抛异常时脚本直接中止，
+         末尾那句 postMessage({type:'done'}) 也执行不到。两条退出路径同时断掉，
+         主线程只收到 error 却没人调 finish() → 干等满 5 秒超时，
+         还把真实异常换成误导性的「执行超时(5s)」（v3.7.54 实测）。 */
+      "self.onerror=function(m){self.postMessage({type:'error',text:String(m)});self.postMessage({type:'done'});return true};";
     let worker;
     try{
       worker = makeWorker(glue + "\n" + String(code === null || code === undefined ? "" : code) + "\nself.postMessage({type:'done'});");
@@ -1181,7 +1207,11 @@ function runJsSnippet(code, opts){
       resolve({ ok: ok, output: output, ms: Date.now() - t0 });
     }
     const timer = setTimeout(function(){
-      finish(false, (logs.length ? logs.join("\n") + "\n" : "") + t("sql.execTimeout","执行超时(") + Math.round(timeoutMs / 1000) + "s)");
+      /* 兜底：已经收到过异常就不要报「执行超时」——那是误导性的诊断（真实原因被吞掉）。
+         正常路径下上面的 self.onerror 已补发 done 走不到这里，留这层防其它退出路径。 */
+      const tail = errText ? errText
+        : t("sql.execTimeout","执行超时(") + Math.round(timeoutMs / 1000) + "s)";
+      finish(false, (logs.length ? logs.join("\n") + "\n" : "") + tail);
     }, timeoutMs);
     worker.onmessage = function(e){
       const d = e && e.data;

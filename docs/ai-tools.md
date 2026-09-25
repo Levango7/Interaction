@@ -10,7 +10,9 @@
 
 ## 1. 总览
 
-AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `TOOLS` 作为 `tools` 参数下发，模型返回 `tool_calls`，由前端 `execTool(name, args)` 分发执行，结果回灌下一轮对话。
+AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `TOOLS` 作为 `tools` 参数下发，模型返回 `tool_calls`，由前端分发执行，结果回灌下一轮对话：
+同步工具走 `execTool(name, args)`；异步工具（`web_search` / `web_fetch` / `code_run` / `sql_query`，需 await）
+经 `execToolAuto(name, args)` 转 `agentExecAsync` —— chat 路径与 Agent 计划路径共用同一入口（v3.7.52 起）。
 
 **工具总数**：26。
 
@@ -33,10 +35,10 @@ AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `T
 | 15 | `complete_goal` | agentExec | — | 目标全部步骤完成后调用，收尾并总结 |
 | 16 | `list_records` | agentExec | `scenario` | 查询某场景资料库的最近记录（会议纪要/代码片段/学习资料/生活备忘等） |
 | 17 | `add_feature_record` | execTool | `feature`,`fields` | 向当前场景的功能卡添加一条记录（如会议/项目/考勤/报销/知识库/阅读/练习/考试/报表 |
-| 18 | `web_search` | execTool | `query` | 联网搜索（可配置搜索引擎，返回标题/摘要/链接） |
-| 19 | `web_fetch` | execTool | `url` | 抓取指定 URL 的网页内容（纯文本，去标签） |
-| 20 | `code_run` | execTool | `code` | 在 Web Worker 沙箱中运行 JS 代码（5s 超时，收集 console 输出 |
-| 21 | `sql_query` | execTool | `sql` | 在内存 SQLite（sql.js WASM）中运行 SQL，返回列名与行数据 |
+| 18 | `web_search` | agentExecAsync（经 execToolAuto） | `query` | 联网搜索（可配置搜索引擎，返回标题/摘要/链接） |
+| 19 | `web_fetch` | agentExecAsync（经 execToolAuto） | `url` | 抓取指定 URL 的网页内容（纯文本，去标签） |
+| 20 | `code_run` | agentExecAsync（经 execToolAuto） | `code` | 在 Web Worker 沙箱中运行 JS 代码（5s 超时，收集 console 输出 |
+| 21 | `sql_query` | agentExecAsync（经 execToolAuto） | `sql` | 在内存 SQLite（sql.js WASM）中运行 SQL，返回列名与行数据 |
 | 22 | `note_add` | execTool | `title`,`content` | 新增一条笔记（标题/内容/标签/分类），存 localStorage |
 | 23 | `note_search` | execTool | `query` | 按关键词搜索笔记（标题+内容匹配） |
 | 24 | `generate_report` | execTool | — | 生成指定周期的工作报表（Markdown 文本）：完成/逾期任务、各场景分布、周期内记录 |

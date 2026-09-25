@@ -77,6 +77,7 @@ test.describe("表单控件交互不变量", () => {
   });
 
   test("日期框：宽松格式可解析，非法值被清空不残留", async ({ page }) => {
+    test.setTimeout(45_000); // 五轮真实键鼠交互，留给负载抖动余量
     await gotoForm(page);
     const box = page.locator(DATE_SEL).first();
 
@@ -113,6 +114,11 @@ test.describe("表单控件交互不变量", () => {
       await page.waitForTimeout(200);
       await box.evaluate((el) => el.blur());
       await page.waitForTimeout(350);
+      /* v3.7.53：把「日期框仍存在」的断言**放进循环** —— 原先只在用例末尾查一次，
+         而末尾那次恰好撞上用例收尾的会话销毁竞态（实测 ~40% 概率报
+         `Protocol error ... session closed`，本机 2/5 复现；实质断言全部通过）。
+         放进循环后信号更精确：哪一轮丢元素，报错就指到哪一轮。 */
+      expect(await page.locator(DATE_SEL).count(), "输入「" + text + "」后日期框应仍存在").toBeGreaterThan(0);
       return box.evaluate((el) => (el ? el.value : "(元素不存在)"));
     }
 
@@ -131,7 +137,9 @@ test.describe("表单控件交互不变量", () => {
     // 收尾：确认面板已关（不留 overlay 影响后续用例）
     await closePanel();
     expect(await page.evaluate(() => !!document.querySelector(".dp-overlay")), "用例结束后面板应已关闭").toBe(false);
-    expect(box, "日期框应始终存在").toHaveCount(1);
+    /* 末尾的存在性检查改为**即时读取**（不用会重试 5s 的 toHaveCount）：
+       上面的竞态已由循环内断言覆盖，这里只需一个不含等待的收尾确认。 */
+    expect(await page.evaluate(() => document.querySelectorAll('input[data-date-picker="1"]').length), "收尾时日期框应仍在").toBeGreaterThan(0);
   });
 
   test("日期框：键盘 Tab 进入时焦点移入日格（键盘导航可用）", async ({ page }) => {

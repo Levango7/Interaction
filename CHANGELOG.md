@@ -1,3 +1,309 @@
+## [v3.7.55] - 2026-09-26
+
+**文档/注释声明 vs 代码实况的一致性审计**：v3.7.54 收尾时抓到两条"CSP 与代码自相矛盾"，于是把这类
+「声明说有能力、代码里查无实据」的问题系统查了一遍，逐条**独立复核**后才动手。本轮 5 项修复里
+有 2 项是**用户可感知的功能失效**。
+
+### code_run 此前从未真正工作过（P0 级）
+
+- **CSP 缺 `worker-src`**：全仓库唯一的 `new Worker(...)` 就是 code_run 的 blob Worker（`src/ai-tools.js:1177`）。
+  CSP 从未声明 `worker-src`/`child-src`，于是 Worker 回落到 `script-src`（不含 `blob:`）→ **每次调用都被拒**，
+  工具恒返回 `{"ok":false,"output":"未知执行错误"}`；而 README 与 docs/product-scope.md 都写着
+  "本机沙箱执行、不需联网"。补 `worker-src 'self' blob:` 后实测 `{"ok":true,"output":"3"}`。
+  只放 blob: 给 worker，不扩 `script-src`、不动 `connect-src`。
+  **为什么一直没被发现**：jsdom 跑不了 Worker，单测全绿；只有真浏览器能暴露。
+- **异常被吞成"执行超时"**：glue 里 `self.onerror` 用 `return true` 抑制了主线程的 `worker.onerror`，
+  而用户代码顶层抛异常后脚本中止、末尾的 `postMessage({type:'done'})` 也执行不到 ——
+  **两条退出路径同时断掉**，主线程只收到 error 却没人调 `finish()`，于是干等满 5 秒、
+  把真实异常换成误导性的「执行超时(5s)」。修法：`self.onerror` 补发 `done`；并在超时兜底里
+  规定"已收到异常就不许报超时"。实测该场景从 7.4s / `执行超时(5s)` 变成 2.4s / 回传真实错误文本。
+- 新增守护：`tests/csp.test.js`（5 条，解析 CSP 并钉住 `worker-src` 必含 `blob:`、
+  `object-src 'none'`、`base-uri 'self'`、`connect-src` 未被顺手放宽、`<head>` 不得有游离文本、
+  注释必须成对闭合）+ `tests/e2e/toolbox.spec.js` 里一条 code_run 真执行断言（正向 console 输出、
+  反向异常捕获都验）。写这条断言时我自己的第一版期望就是错的（把 console 输出当成末表达式返回值），
+  是 runner 报的 `Received: "hi"` 纠正了我 —— 契约见 `ai-tools.js:1159`：`output` 只含 console 文本。
+
+### README 版本漂移纳入门禁
+
+- README 三处仍写 v3.7.52（真实已 3.7.54），而它第 181 行自称"与 package.json / manifest.json /
+  VERSION 常量保持一致"——**根因是它既不被 `release.mjs` 写、也不被 `build:check` 校验**，
+  所以漂移是必然。修法两端都补：`release.mjs` 新增 README 写入步骤（标题 /「当前版本」/ 页脚示例三处锚点，
+  一处都找不到就报错退出）；`build.mjs --check` 把 README 列为**第五个版本源**，并额外校验 H1 与
+  「当前版本」自相矛盾。
+- 反向验证过门禁真的会拦：人为把「当前版本」改成 v3.7.9，`build:check` 报
+  「README 自相矛盾：H1 写 v3.7.55，「当前版本」写 v3.7.9」并失败；还原后通过。
+
+### Electron OAuth：按自家"能力缺失即隐藏"原则收口
+
+- 实测 `electron/main.js`（590 行）里 `oauth` / `createServer` / `8124` **0 命中**，`preload.js` 也只暴露
+  6 个 API、不含 `oauthBegin` → 本地授权回调服务**从未实现**。但四处仍在承诺：注释写"后端
+  （electron/main.js B3）：oauth-begin 接收…"、日历凭据弹窗**无条件渲染**「OAuth 授权」按钮、
+  token 字段占位写"或点下方「OAuth 授权」自动获取"、应用内帮助写"v3.1.2 起支持 OAuth 授权"。
+- 更糟的是原错误文案「OAuth 授权仅 Electron 桌面版支持」在 Electron 里**反而是假话**
+  （它确实是桌面版，只是没那个 IPC）。现改为：新增 `integrationOAuthAvailable()` 探函数本身
+  → 桥不在就**不渲染按钮、不渲染承诺段落**（与 v3.7.52 处理本机同步入口的做法一致）；
+  错误文案改为"当前构建未包含本地授权回调服务…"；注释、占位文案、帮助文本全部改成如实描述，
+  并保留后端补全步骤。字典侧 `int.errOAuthDesktopOnly` 随之删除、新增 `int.errOAuthBridgeMissing`
+  （zh/en 同步，字母序插入）。实测弹窗仍开、按钮不出现、无报错。
+- 顺带一条与本仓库既有原则相关的提醒（未改）：帮助里那句承诺位于 `<b data-i18n="help.featOauth">` **之外**，
+  所以只改字典不会生效；反过来，**改这种带 `data-i18n` 的元素模板时必须同步字典值**，
+  否则 v3.7.54 加的渲染期 `applyI18n` 会用字典旧值覆盖回去。
+
+### 文档陈旧声明更正
+
+- `docs/半成品功能完善路线图.md` §0.1 原标「✅ 已完成」并引用 `tests/l4-webhook-ssrf.test.js` 36 用例。
+  查 git 历史：该实现与测试**确实存在过**，在 `2321ec3`「归档自动化工作流+语音助手——移除约 4000 行
+  代码与对应测试」时随宿主功能一并删除，只是文档没跟。已改为如实标注（含"若 webhook 复活需按本节重做"），
+  设计沉淀保留。
+- `scripts/module-graph.mjs` 注释里的「26 个 src 块」更正为 28（`src/order.json` 实测 28 项）；
+  另一处「不排除时 26 块报出 83 条环」是**历史测量值**，保留数字、加"曾"字明确时态，不篡改。
+
+### 实测与门禁
+
+- 单测 **995/995**（91 文件，含新增 csp.test.js 5 条）；e2e **41/41**（三视口，含新增 code_run 断言）。
+- 版本五源一致 3.7.55 / `b20260925g`；`build:check` 真相源 sha256 通过；`check:modules` 无新增环/逆层；
+  `lint:layers` / `lint-colors` / `check:ai-tools-doc` / `check:pwa-icons` / `pet:check` / eslint 全过；
+  `check:source-state` ✓。
+- **待决项（未擅自处理）**：`connect-src 'self' https:` 与两处代码自相矛盾 ——
+  `_apiBase` 默认值就是 `http://localhost:3001`，`ai-loop.js` 的 `validateBaseUrl` 还专门放行
+  `http://localhost`（README 列 Ollama 为支持供应商），但 CSP 一律拦死。试过只放开回环，
+  tablet 的 `workflow.spec.js` 会稳定挂起（单变量 A/B 证实），故回退并记进 HTML 的
+  `SECURITY NOTE [C-CSP-connect]`。要么先查清那个挂起，要么明确"本地后端必须 https"并同步改掉那两处默认口径。
+
+## [v3.7.54] - 2026-09-26
+
+**i18n 遗留彻底收口**：v3.7.53 只补齐了字典，英文界面仍大面积显示中文。本轮把四类成因逐一定位并修到底，
+实测「英文模式下可见中文」从 **196 条降到 17 条**，且剩余 17 条全是用户自己的数据（种子任务标题/标签/笔记正文），
+按设计不该翻译。
+
+### ① 根因：字典的加载位置错了（最值得记的一条）
+
+- `SCENARIOS` / `SCENE_FEATURES` / `TOOL_APPS` / `SIDE_SUBMENU` 这些模块级常量**本来就写了** `name:t("scenario.office","办公")` —— 所以"英文界面显示中文"根本不是漏挂 `t()`，而是**求值时机**：`t()` 在 core 块（第 1 个），而 `MESSAGES` 和 `_currentLang` 当时都在最后一个 UI 块 `ui-global-events.js` 里。core 求值时字典还在 TDZ，`t()` 只能返回中文兜底 → 这些文案被永久冻结成中文。
+  实测冻结量：`SCENARIOS` **105/219** 条、`TOOL_APPS` **45/69** 条、`SCENE_FEATURES` **30/111** 条。
+- 修法是把 `MESSAGES` + `SUPPORTED_LANGS` + `_currentLang`（并在原地就读出 localStorage 里的语言偏好）**整体上移到 core 的 `t()` 之前** —— 纯搬迁，不改一行实现，也正好补完 v3.7.9「把 `t` 收进 core、字典却仍留在 UI」那件没收尾的事。冻结量随之降到 **2 / 0 / 0**。
+- 曾考虑过两条更"小"的路子并都否掉：给 180 个字段逐个改 getter（改动面更大且 `options:[t(),t()]` 这类数组元素无法惰性化）；把字典搬进内联 HTML 区（等于把受管代码塞回不受 `src-split` 管的黑盒）。
+
+### ② 运行中切语言只换一半
+
+- 常量在加载时就求值成当时语言，`setLang()` 再怎么 `render()` 也换不掉 → 实测切完仍有 **41 处**可见中文，而全新加载只剩 17 处。
+- 语言下拉的处理器改为**落盘后重载一次**（`markDirty` 只调度重渲染、各写入点是同步落盘、`beforeunload` 还有备份兜底 → 不丢数据）。`setLang()` 本身保持纯内存原语，测试仍可单测。
+- 验收走**真实 UI 路径**（打开设置 → 改 `#cfgLang` → 派发 change），而非直接调 `setLang()`：zh 启动 **215 条**可见中文 → 切 en 重载后只剩 **5 条**，且全是种子数据；场景名 `办公→Office`、工具名 `Markdown 编辑器→Markdown Editor`、功能 tab `概览→Overview`。
+  ⚠️ 这条之所以值得单列：第一次改完我"以为"生效了，实测才发现 `location.reload()` 那处编辑当时根本没落盘（Edit 静默失败），**只有走真实点击路径才暴露得出来**。
+
+### ③ 动态模板里的 `data-i18n` 从不被翻译
+
+- `applyI18n()` 原先只在启动和切语言时跑，而 JS 动态插入的 `[data-i18n]` 节点（534 个键，如看板卡的编辑/删除、总览筛选按钮）在那之后才进 DOM → 英文模式下恒为中文。
+- 在 `render()` 收口处补一次 `AppBridge.applyI18n()`。**关键细节：必须挂在 `finally` 上**，因为 `render()` 有 12 条提前 `return` 的路由（overview/stats/recycle/tasks/toolbox/store/chainpage/auth×3/timeline），第一版放在 `try` 尾部，实测只有 office 触发、overview 与 kanban 各 0 次。经 AppBridge 调用以免 Render 层反向依赖 UI 层（`check:modules` 无新增环/逆层）。
+- A/B 同页实测（把钩子置空 = 修复前）：13 条路由合计 **41 → 0** 处残留，且「渲染成原始 key」的泄漏为 **0**（先做了前置校验，534 个 `data-i18n` 键在中英两套全部存在 —— 否则这条修复会把中文换成 `kanban.share` 这种裸键，比不修更糟）。
+
+### ④ 字典里「key 在、值没翻」
+
+- **en 侧曾直接照抄中文**：62 条 `p3.html.*` / `p4.html.*`（HTML 片段型词条）的 en 值就是中文。逐条翻译后只剩 **2 条**按设计显示双语的语言名（`settings.language.zh` = 中文、`settings.language.label` = 语言 / Language）。
+- 翻译只替换值里的**中文片段**、不重写整条值 —— 这些值满是 `\"` 甚至 `\\\"` 转义，整条重写极易漏一层把 script 写坏（上一轮批量替换就炸过一次 eslint）。
+- **修掉一处门禁假绿**：`i18n-completeness.test.js` 的"en 值不得含中文"用 `"([^"\n]*)"` 匹配值，在 `\"` 处截断，于是 `<div class=\"msg assistant\">你好，我是` 只被截到 `<div class=`、不含中文 → **43 条漏判、长期判绿**。改为转义感知的 `"((?:[^"\\]|\\.)*)"`，并加一条"模式必须真能解析出 >3000 条"的自检，防止将来又是解析失败式的假绿。
+
+### 新增守护与顺带修正
+
+- **`tests/e2e/i18n.spec.js`（新，4 条）**：① 英文全新加载时常量必须已是英文、非用户数据的可见中文 ≤6 条（历史基线 196）② 12 条路由上 `[data-i18n]` 既无中文残留也无裸 key ③ 真实下拉切语言后确实重载并换掉常量 ④ 反向兜底：中文模式不得漏翻（防"只修英文方向"）。按 theme-matrix 先例只在 desktop 项目跑一次。
+  写第 ② 条时真抓到一处误报：`#set-look .set-tip` 的 `data-i18n=""` 空占位被"文本 === 键"的判据命中 —— 收紧为只看非空键（`applyI18n` 本就跳过空键）。
+- `tests/i18n-completeness.test.js` 加**第 ④ 组「加载顺序锁」**：断言 `MESSAGES`/`_currentLang` 必须先于 `SCENARIOS`/`SCENE_FEATURES`/`ORDER` 求值、字典在全部 src 块里只能有一份、`render()` 的 i18n 收口必须在 `finally` 上 —— 防止以后有人把字典搬回去。
+- 该测试与 `tests/theme-registration.test.js` 原先都写死读 `src/ui-global-events.js` 来数键，字典搬家后 10 条断言集体误判；改为**按内容定位**字典所在文件。
+- 模板侧 13 处裸中文包进 `t()`（看板移动按钮、streak 面板 6 处、主页 3 个卡标题、星期表头、编解码「⇅ 互换」、代码运行器字段标签、`x-cal` 工具名/描述），新增 21 对词条；星期表头改为复用字典里早已存在的 `weekday.*`（原先同一行里中文数组被复制两份）。
+- 2 个静态 HTML 按钮补 `data-i18n`（`#btnExportCSV`、`#btnAiNewKey`）—— 它们的 `data-i18n-aria` 早就接上了，唯独可见文本没接。
+
+### 云同步契约端到端（同轮任务 #10）
+
+- **新增 `tests/mocks/sync-server.mjs` + `tests/e2e/sync-contract.spec.js`（7 条）**。此前 `apiPutSnapshot` / `doSync` / `flushSyncQueue` 三处修复只有代码层面的信心。
+  为什么起**真 HTTP 服务**而不是 mock `fetch`：被测链路里 `apiFetch` 的 401→refresh→重试、`offline` 判定（fetch 抛 TypeError）、CORS 预检、以及 `apiGetSnapshot()` 对 `data.snapshot` 的形状要求，**只有真 fetch 才走得到**；mock 掉 fetch 等于只测自己写的分支。
+  端口用 0（临时端口）—— 三个 project 并行跑，写死端口必然撞车。覆盖：PUT 的 body 形状契约（`snapshot`/`updatedAt`/`_deviceMeta.deviceId`）、`doSync` 四态（idle/error/offline/未登录不发请求）、**完整往返**（本机改数据→push→抹掉本机→pull+apply→数据回来）、云端无快照返回 null、401→refresh→只重试一次、覆盖式恢复前留 `pre_restore_backup`、`SYNC_ENDPOINT` 未配置时不得谎报成功且不得清空队列。
+- **顺带挖出一个产品级缺陷（CSP 挡死本地后端）—— 已记录，未擅自修**：`connect-src 'self' https:` 不放行任何 `http://`，
+  而代码里 `_apiBase` 的**默认值就是 `http://localhost:3001`**、设置页也让你填任意 apiBase
+  → 「自建后端 / 云同步 / 抓取代理 / SQL 后端」在本地明文 HTTP 部署下**全部被 CSP 静默拦成 network error**，
+  界面只表现为"连不上"。
+  试过加 `http://127.0.0.1:* http://localhost:*`（只放开回环、远程仍要求 https），**但先否掉**：
+  单变量 A/B 实测，一旦放开回环，tablet 的既有 `workflow.spec.js` 用例从 4.5s 通过变成稳定挂起
+  （150s 超时，且与本次新增的 i18n 渲染钩子无关 —— 关掉钩子照样挂）。机制未查清（独立探针复现不出来），
+  在没搞清之前放宽一条安全策略不值当，故**已回退为原样并把这个矛盾记进 HTML 的 `SECURITY NOTE [C-CSP-connect]`**。
+  要支持本地 HTTP 后端需先查清该挂起根因，或明确要求部署方用 https。**这是留给使用方的待决项。**
+- **测试因此改为同源托管**：`sync-server.mjs` 顺手把 `agent-workbench.html` 也从 mock 自己的端口发出去，
+  页面与 API 同 origin → `connect-src 'self'` 天然放行，**不必为了跑测试动 CSP**。
+  副作用是 `apiBase` 与页面 origin 要能分开传（才能构造"页面正常但后端是死端口"的 offline 用例）。
+- **顺带纠正一处虚假安全声明**：HTML 里的 `SECURITY NOTE [M3]` 声称"frame-ancestors 改由 Electron 主进程
+  `onHeadersReceived` 注入完整 CSP 实现双层防护"，但 `electron/main.js`（590 行）里**根本没有**
+  `webRequest`/`onHeadersReceived` 任何代码 —— 那层防护不存在，Electron 形态下 frame-ancestors 目前无防护。
+  本轮只把注释改成如实描述（补实现属独立事项）。
+- 写这套测试时踩到三个自身坑，都记下来：① 跨源 PUT/POST 会各带一发 **OPTIONS 预检**，只按 `path`
+  筛请求会把预检算进去、使 refresh 次数凭空翻倍；② `_applyCloudSnapshot(data)` 收的是**快照本身**而不是
+  `{snapshot, updatedAt}` 整条记录，传错层级会让合并静默拿到空任务；③ mock 里用 `import.meta.url` 定根目录
+  会 `SyntaxError` —— Playwright 把 `.spec.js` 按 CJS 转译后再加载相邻 `.mjs`，那里不许用 `import.meta`。
+
+### 工具箱 23 页冒烟（同轮任务 #11）
+
+- **新增 `tests/e2e/toolbox.spec.js`（3 条）**，工具清单**运行时从 `TOOL_APPS` 枚举**（实测 23 个，全部有
+  `render`+`bind`、无一个是占位页），不写死名单 —— 写死的话新增/改名工具会悄悄脱离覆盖。
+  每页断言：走真实实现（有 `#toolAppBody`）、非「规划中」占位页、至少 1 个可交互控件、有「← 返回」、
+  渲染结果无未插值残渣（`${`/`[object Object]`/`undefined`/`NaN`）、打开过程无 pageerror/console error、
+  **375px 窄屏无横向溢出**、连续切完 23 页再返回不残留不报错。
+- **核心一条：`bind()` 里引用的每个 `#id` 必须存在于渲染后的 DOM。** 靠这条抓到真 bug：
+  **`des-imggen` 的 `render()` 从不输出 `#igOut`，而 `bind()` 的点击处理器要往它写 `innerHTML`**
+  → AI 一旦启用，点「生成图片」立即 `Cannot read properties of null (reading 'innerHTML')`。
+  之所以长期没被发现：该按钮在 `aiOn === false`（默认配置）时是 `disabled`，正常路径走不到。已补输出容器。
+- 同类"两份清单会脱节"的问题这次有了机器守：此前 `docs` 与记忆里记的是「表单 inputs vs fieldKeys 白名单」
+  那一对，这是**另一对**（`render()` 的 DOM id vs `bind()` 的选择器）。
+- 该断言自带防空转：若 id 抽取正则失效，"缺失=[]"会**静默全绿**，故额外断言 23 页累计引用到的 id 数 > 60
+  （实测 130+）—— 与上面 `en` 值正则那条"必须真能解析出 >3000 条"是同一个原则：**负向断言必须配一个
+  证明抽取本身有效的正向断言**。
+
+### 实测与门禁
+
+- 「英文模式下可见中文唯一串」：**196 → 17**，剩余 17 条全为用户数据（种子任务标题 / 标签 / 笔记正文），按设计不翻译。
+- 单测 **990/990**（90 文件）全绿；e2e **40/40**（desktop-1280 / tablet-768 / mobile-375）全绿 ——
+  含本轮新增 `i18n.spec.js` 4 条、`sync-contract.spec.js` 7 条、`toolbox.spec.js` 3 条。
+- `playwright.config.js` 开了 `use.screenshot = { mode: "only-on-failure" }`：本轮定位 tablet 挂起时，
+  a11y 快照看不出"谁盖住了目标"，一张失败截图直接给出了答案 —— 这类问题没有图基本查不动。
+- `check:modules` 块 28 · 重复定义 0 · 循环 39 · 逆层 29（**无新增**）；`lint:layers` OK；`lint-colors` 0 违规；`check:ai-tools-doc` 26/26 一致；`check:pwa-icons` ✓；`pet:check` ✓；eslint 0 error；`build:check` 四源版本一致 + sha256 真相源通过；`check:source-state` ✓（HTML 598KB / 28 标记 / 28 文件）。
+
+## [v3.7.53] - 2026-09-25
+
+**承接 v3.7.52 的同轮后续三批**：交互与数据安全（第二批）→ 窄屏与表单（第三批）→ 遗留项收口（第四批）。
+版本为何单列：这三批在 v3.7.52 发版 bump 之后才完成（含 e2e 上了 PR 门禁、云同步推送侧补齐、i18n 字典契约守护），
+为让已装上旧缓存 PWA 的用户能通过版本哨兵拿到新版，单独 bump 一版。
+
+### 遗留项收口（同轮第四批）
+
+- **云同步「只有拉、没有推」补齐**：客户端只有 `apiGetSnapshot`（GET），`doSync()` 只能是空转桩 → 新增 `apiPutSnapshot()`（`PUT /api/sync/snapshot`，与 GET 同契约，body `{snapshot, updatedAt}`，快照含 `_deviceMeta`），`doSync` 按真实结果置状态：推成功 → idle（「已同步」此时才诚实）、失败 → error、网络不可用 → offline、能力缺失 → local（仅本机）。仓库仍不含该后端，需部署方实现同名端点（product-scope 已注明）。
+- **同步队列的假成功**：`flushSyncQueue()` 里真正的 fetch 被注释掉、却仍 `okCount++`，结尾 `failCount===0` 就 `clearSyncQueue()` —— 一旦部署方填了 `SYNC_ENDPOINT`，会**谎报成功并把整条队列丢掉**（与 v1.11.1「不谎报已同步」自相矛盾）。改为真发真判：只有 2xx 才算成功、才允许清队列。
+- **e2e 改为 PR 也跑**：原先只在 push main 跑（理由"PR 已由单测覆盖"），但渲染层不变量（对比度硬断言、跨视口布局）单测覆盖不到 —— 用户标注的窄屏缺陷正是这类。同时给 `viewport.spec.js` 补 3 条渲染层断言（**表单字段等宽**、**看板按钮文字居中**、**streak 徽章单行**），这三条若早存在就能拦住本轮用户标注的问题。
+- **i18n 完整性守护（新）**：字典契约写着「zh/en 两套 key 完全对齐」，但此前**无任何测试守着**。新增 `tests/i18n-completeness.test.js`：① key 集合完全一致（硬）② 不得两边都为空（硬）③ 无默认值的 `t("key")` 必须查得到（硬）④ 带默认值的写法按基线只拦增长（实测积压 274 个 key，字典头部注明是"逐步替换"的迁移状态）。**顺带修掉**：补齐 24 条「en 有、zh 缺」的账号/云同步词条；删除死键 `chainPage.subExtra`（两边都空且无调用点）。
+- 另记录一处方法论：i18n 守护首版用**大括号计数**切字典体，被值里的花括号带偏、把 JS 代码当字典（误报 `chai` 为空值 key）—— 改为按 `en: {`/结尾 `};` 的**结构边界**切片。
+- **既有 e2e flaky 修复**（为让「PR 也跑 e2e」真正可用）：`form-controls.spec.js` 的日期框用例本机 2/5 失败，症状是末尾存在性断言报 `Protocol error … session closed`（会话销毁竞态），而**实质断言全过**。改为「元素存在性断言放进循环内（哪一轮丢元素就指到哪一轮）+ 末尾改即时读取（不再重试 5s）+ 本例超时放到 45s」—— 加固后连跑 **5/5 通过**。
+
+### 窄屏与表单（同轮第三批 · 用户标注实测）
+
+- **报销缺「时间」**：字段只有日期，一天多笔报销无法区分先后。补 `time`（288 项可编辑时间下拉，与会议卡同口径）+ 列表新增「时间」列 + `default:"now"` 预选当前时间（向下取整到 5 分钟档，报销多为"现在就报"）。
+- **一类静默丢数据（顺带查出）**：`_featureCardBind(key, fieldKeys)` 用 **fieldKeys 白名单**采集表单值 —— 不在名单里的字段**有输入框也永远存不进去**。实测会议卡正是如此：v3.7.43 补了「开始时间 / 参会人」输入框，白名单没同步 → 录完保存即丢、表格该列恒空。两处白名单补齐，并加静态守护「每个功能卡的输入框必须都在白名单里」（21 张卡全量扫描，防同类复发）。
+- **窄屏任务表单「标签」比同排字段窄 46px**（用户标注"对齐，等宽"）：给 ＋ 预留的 `padding-right` 在窄屏仍生效（实测 390px 105 vs 151 · 768px 178 vs 224）。≤1023px 撤掉该预留 —— ＋ 在窄屏已自成一行，无需让位（其位置保持 v3.7.7 的决策：贴左列右端，避开桌面萌宠浮层）。
+- **看板卡操作按钮不居中、与卡片无底色差**（用户标注"按钮内居中啊，左右居中，按钮与卡片背景色应该有点色差"）：手机端 `inline-flex` 让 `text-align` 失效 → 补 `justify-content:center`（实测各档文字中心偏差 0）；底色 `--panel2` 与卡片底只差约 4% → 改用「分隔线色混入面板色」现算，各主题拉开约 7~10% 的可见差（旧浏览器仍回退 `--panel2`）。
+- **streak 徽章窄屏被压成三行**（用户标注"这个状态呈现的效果你认为好看吗？"）：7 枚一行时每枚仅 64px，「办公 + ⚠️未开始」折成三行（实测 64×68）。改为**不依赖断点**的修法：容器允许换行 + 徽章不参与压缩（`flex:0 0 auto`）+ 徽章内单行 —— 360/390 折 4 行、768 折 3 行、1024/1440 折 2 行，各档均为单行 126×29、无横向溢出。
+- 新增守护 `tests/feature-card-fields.test.js`（9 条：白名单一致性 + 会议卡 startTime/who + 报销时间端到端 + 三处窄屏修复的静态护栏）。
+- 顺带记录：本轮我把裸十六进制写进了 CSS 注释，被 `color-tokens.test.js` 当场判红（规范 §6.5 的"踩过 3 次"变成第 4 次）—— 守卫生效，已改为「令牌名 + 实测数值」表述。
+
+### 交互与数据安全（同轮第二批 · 先实测后修）
+
+- **用户取消会上屏英文 `user-cancel`**：`abort(reason)` 时浏览器 fetch 是以**传入的 reason 拒绝**（`name` 是 `Error` 而非 `AbortError`），旧实现只认 `AbortError` → 取消与超时都落进错误分支、把 `user-cancel` / `timeout` 当助手回复显示。改为**以控制器上的 reason 为准**，并补超时专用提示。既有测试测不出这条：它的 mock 自己造了个 `AbortError`，**与真机行为不符** —— 本轮的回归测试改用「把传入 reason 原样抛回」的忠实 mock。
+- **超时语义**：原是一个 30s 定时器罩住**整个多轮循环**（agent 模式 6~12 轮必在第 30 秒被掐断），且设置里的「请求超时」在浏览器路径根本不生效。改为**每轮重置 + 读 `aiTimeoutSec`**（缺省/越界回退 30s）。
+- **危险操作确认被反转**：确认分支挂在 `if(autoConfirm)` 上，而 `autoConfirm = !(cfg.agentAutoConfirm===false)` —— 把设置里「自动确认非危险操作」**关掉反而免确认**（反向到更不安全的一侧，且实测还有「既不弹窗也不执行、空转 maxLoops 轮」的第三态）。现改为：危险操作**始终**需确认；该开关只按字面作用于非危险批次（关闭时非危险工具调用也要确认，状态徽章文案同步改为「工具调用需确认」）。
+- **异步工具在 chat 路径不可达**：系统提示与 README 都告诉模型可以「联网检索 / 跑代码 / 跑 SQL」，但 chat 路径只调 `execTool`，模型真调 `web_search`/`code_run`/`sql_query` 时只拿到「未知工具」（同一批工具在 Agent 计划路径却可用）。新增 **`execToolAuto`** 统一入口（异步走 `agentExecAsync` 并归一成同口径 JSON 字符串），两条路径共用同一份工具清单（清单原先在计划执行器里局部重复）。`docs/ai-tools.md` 的分发器标注同步改为三态，生成器一并更新。
+- **降级环境下备份/导出静默变空**：`allKeys()` 用 `Object.keys(localStorage)`，而「存储安全壳」接管时对象上只有 6 个方法 → 枚举出的是**方法名**，备份 / 导出 / IDB 镜像 / 云快照全部为空。改用 `length + key(i)`（同文件其它两处早已如此，只这里漏了）。
+- **损坏守卫漏守 11 个数组型键**：`memory` / `goals` / `meetings` / `life_bills` / `life_shopping` / `life_health` / `expenses` / `attendance` / `code_runner` / `code_frontend` 等原先不在清单里 —— 一次 JSON 截断即原值不留档、直接降级为空。清单补齐（非数组键如 `cfg`/`links`/`onboarded` 明确不加，否则会被本守卫误重置）。
+- **云快照恢复的两处数据风险**：① 「本机有无数据」的判据读的是 `PREFIX+"records"` —— 该键全仓无写入点（幽灵键），于是「只有资料/笔记/记忆、没有任务」的用户被判成"本机无数据"，紧接着被云端快照整体覆盖；改用真实键枚举，且判定失败按「有数据」处理（宁可不动）。② 覆盖前先落一份 `pre_restore_backup` 回滚档（云端 push 端尚未实现时，覆盖即不可逆）。
+- **云同步状态是虚假成功**：`doSync()` 是「转 syncing 再转 idle」的空转桩（后端通用同步端点未实现），而 idle 的文案是**「已同步」** —— 用户点「立即上传」看到"已同步"，实际一个字节都没上传。新增如实的 `local` 状态并渲染为「仅本机（云同步未接入）」，两处空转分支改置该状态（接后端后改回：成功→idle / 失败→error / 离线→offline）。
+- 新增守护 `tests/ai-interaction-fixes.test.js`（15 条，含忠实 abort mock、确认语义三态、异步工具路由、降级壳枚举、守卫误伤反向断言、云恢复不覆盖既有数据、同步状态不撒谎）。
+
+
+## [v3.7.52] - 2026-09-25
+
+**主题可读性根治**：场景色从「模板内联裸 hex」收编为按主题计算的令牌，语义色当小字的用法全部改走 `-text` 安全档；同轮修掉 3 个 AI/数据静默失败缺陷，并收紧 Electron 守卫与 CI 门禁。
+
+### UI 主题可读性（本轮主项）
+
+- **根因**：模板把 `SCENARIOS[].color` 的**裸 hex 内联**进 style，11 套主题下场景标签 / 页头图标 / 链路图标 / 分享徽记不随主题变化。实测：`mist` 主题下任务标签文字与自身底色对比度 **1.0**（完全不可见）、`forest` 1.21；浅色主题下 study/code/health 仅 2.7~4.3:1，页头图标同理。
+- **场景色令牌化**：`--sc-*` 补齐为 **8 档 × 10 个令牌块**（`:root` + 9 个 `data-theme`），每档按「对该主题面板与浅底 ≥4.6:1」**计算**得出（浅色主题≈品牌原色 / 深色主题提亮 / 中间调主题走浅粉彩）。新增 `scCss(hex)` / `scSoft(hex,pct)`（`src/data-links.js`：出厂色按 hex 反查 `SC_ORIGINALS` 走 `var(--sc-<场景>)`，**用户自定义色仍原样内联**），替换 26 处内联渲染点；浅底改用 `color-mix()`（裸 hex 拼透明度后缀对 `var()` 无效）。
+- **文字安全色**：新增 `--accent-text` / `--danger-text` / `--warn-text` / `--ok-text`；83 处 `color:var(--accent)` 与 57 处 `color:var(--danger|warn|ok)` 全部改走 `-text` 档。`--accent` 品牌蓝在浅色主题下压深 4%（`--on-accent` 白字 4.43 → 5.23）。
+- **弱色阶提档**：`--muted` / `--text-dim` / `--text-dim-2` / `--text-dim-3` / `--text-faint` 逐主题重算（light 页脚 AI 状态 2.23→6.19、forest 次要文字 2.61→4.64、mist 2.82→4.63）；`--text-dim-2/-3/--text-faint` 三档值收敛到同一档（保留令牌名避免破坏既有引用，弱化层级改由字号/字重承担）。
+- **配对修正**：`--on-accent` dark 2.82→4.68、sepia 2.54→4.61、elegant 4.02→4.66；`data-sc="muted"/"danger"` 按钮补 `--on-sc` 配对（原先白字压 `--muted` 底，sepia/dark 不达标）。
+- **结果**：10 主题 × 6 视图全文本对比度扫描 **779 处不达标 → 0**；新增守护 `tests/theme-scene-tokens.test.js`（8 条：令牌齐全/唯一/渲染端不得内联场景 hex/`scCss` 语义）+ e2e 硬断言（10 主题 × 8 场景 + 4 个 `-text` 档 ≥4.5）。规范同步见 `docs/ui-standards.md` §6.6 / C14 / 附录 A。
+
+### AI / 数据正确性
+
+- **`update_task` 静默丢字段**：一次性传 `status:"done"` + 其他字段时其余字段被丢弃（旧实现先 `completeTask()` 再改旧对象引用）——实测「完成 + 改优先级/截止」只有完成生效，回执却报全部成功；改为先落盘其余字段、最后打完成标记。
+- **工具白名单分支三处修复**：对已解析对象再 `JSON.parse` 必抛（白名单一开所有工具都不执行）、有任一被拒时同轮允许的调用被一并丢弃、被拒调用缺 `role:"tool"` 回执（真 API 会 400）。
+- **聊天历史键漂移**：历史原先按「写入那一刻的 active」落盘 → 生成中切场景会把 A 场景历史写进 B 场景的键并覆盖；改为 hist 数组挂不可枚举 `_sc` 标记，`save()` 内部按标记纠偏键。
+- **踩坑记（模块图环检测）**：新增符号会改变依赖图环检测——最初把 `saveChat()` 放数据层由 AI 层调用，图工具把「窄符号」计为一条新边、多出一条循环依赖（旧的 `save`/`PREFIX` 属共享符号被排除、不计边）。最终把「聊天键纠偏」下沉进 `save()` 内部的键改写（内联区，不参与跨块依赖），依赖图恢复 39 环、0 新增。
+
+### Electron / CI
+
+- **导航守卫收紧**：`_isInternalUrl` 不再把「任意 `file:`」当内部页面（原实现 + IPC 只校验 `file://` 前缀 ⇒ 任意本地 HTML 被打开即可拿到带 preload 的窗口），只认本应用自己的页面 + `about:blank`；`shell.openExternal` 改走协议白名单（http/https/file）。
+- **本机同步入口关闭**：页面侧调用了 preload 未暴露的 `electronAPI.syncPush/syncGet`（主进程也从未实现 8124 同步服务）→ 按 product-scope「stub + 活 UI = 虚假功能」在能力缺失时隐藏入口、不启定时器（原先每 60s 弹一次失败告警）。
+- **发布门禁**：`deploy.yml` 新增 `verify` 前置 job（check:source-state + 测试 + build:check + lint + check:modules），发布必须过门禁（此前 push main 直接发布，CI 全红照样上线）；两个工作流补 `concurrency`。
+- **CI 清理**：移除 `npm run test:coverage`（单文件 HTML 无法插桩、覆盖率恒 0、白跑第二遍全量）；补接三处「写了但没接」的门禁（`lint:layers` / `check:pwa-icons` / `pet:check`）。
+- **门禁修洞**：`lint-colors` 的「令牌定义行整行豁免」可被 `--wp-ok:#111;color:#e74c3c` 夹带绕过（实测），改为「摘掉行内全部 `--tok: 值;` 后仍不得残留颜色字面量」；`src-split --check` 原先静默忽略 `src/` 下未登记进 `order.json` 的 .js 并仍打「齐全 ✓」，改为硬失败。
+
+## [v3.7.51] - 2026-09-25
+
+**非 CSS 载体字号收编**：SVG `font-size` 裸值 18 处（`chain.js` 7 · `ui-global-events.js` 7 · `render-overview.js` 2 · `ui-guide.js` 2）+ Canvas `ctx.font` 1 处全部入令牌——实测 SVG 属性**支持** `var()`（此前"不支持"的判断被实测推翻），Canvas 走新增 `_pfCssFont()` 运行时读值。同轮做字号阶梯使用率盘点（结论：不合并，展示级档位低频是本质属性），`_probe/` 探针目录整理归档。
+
+## [v3.7.50] - 2026-09-25
+
+**零散字号/图标值收编**：22 处裸 `font-size` + 3 处 15px 图标 + 4 处内联 `font-size` 全部改走令牌，新增 `--fs-4xs`(9px) / `--fs-3xl`(22px) / `--fs-display-sm`(32px) / `--fs-display`(36px) / `--fs-display-lg`(48px)，CSS 与内联 style 的裸字号**双双归零**；补上「令牌在 6 处重复声明、漏改主题块会静默回退」的守护盲区（断言各声明处内容完全一致，已做故障注入验证）。
+
+## [v3.7.49] - 2026-09-25
+
+**技术债复核**：附录 11 条逐条 CDP 实测复验——5 条为误判删除（主因：`getComputedStyle` 对 `display:none` 子树返回的是 UA 默认值，看起来像幽灵样式污染），1 条为真债已修；18px 图标 14 处收编为新增的 `--icon-set` 令牌（教训：静态扫描与运行时实测缺一不可）。方法与证据见 ui-standards 附录 C 与 `_probe/DEBT-REVIEW.md`。
+
+## [v3.7.48] - 2026-09-25
+
+**统一设计规范**：把 `ui-standards.md` 与 `design-ui-guidelines.md` 两份旧文档合并为唯一权威（后者删除，README 索引同步）；新增 22 条守护测试（`ui-spec-guards.test.js` 19 条等），补上图标尺寸 / 几何令牌数值 / 半档间距三处此前完全无守护的空洞；断点收敛（879→1023、519→520）并修复 `#recForm` 固定列位在窄屏越界（同特异性成对解除 grid-column/grid-row）。另记一条禁令：修复注释里写彩色 emoji 会被全站零 emoji 门禁判红。
+
+## [v3.7.47] - 2026-09-25
+
+**UI 体检修复**：记录卡表单固定 4 列、日期面板宽=触发框、全站对比度达标（页脚底文字 2.23→7.61、P1/实验性徽章 3.26→4.95、成功 toast 白字 3.06→5.0）；补丁：`lint-colors` 把 CSS 注释里的裸十六进制色值误判 7 处——「注释只写令牌名 + 对比度数值」的惯例由此而来。
+
+## [v3.7.46] - 2026-09-25
+
+**存储安全壳**：`localStorage` 不可用（隐私模式 / 被禁用）时降级为内存存储，不再整页灰块。已知限制：只覆盖"启动时不可用"，不覆盖"运行中写入超限"（记录于 ui-standards 附录 C9）。
+
+## [v3.7.45] - 2026-09-25
+
+修复 CI eslint error：日期宽松解析正则去掉字符类内多余的 `\/` 转义（`no-useless-escape`）。
+
+## [v3.7.1 – v3.7.44] - 2026-09-21
+
+**看板表单栅格 / 卡片 / 控件体系的密集修复（41 个子版本，v3.7.2/3.7.3/3.7.25 无独立提交）**。主题：表单与看板精确对齐、自研下拉替换原生 select、控件矩阵主题化、以及源码态/CI 的维护。
+
+### v3.7.1–v3.7.12：表单栅格与 datepicker（09-21）
+
+逐版本记录见下方 v3.7.0 条目「v3.7.1–v3.7.12」小节；同批另修看板卡 chips 被 flex-shrink 压成三行（生活页「逾期」徽标）的问题。
+
+### v3.7.13–v3.7.15：卡片布局统一与规范统一（09-22）
+
+- 卡片布局统一改造——字段宽度统一、上下对齐、视觉规整；同批把看板卡表单（12 微轨）、`.form-row--grid`、`.tool-form-grid` 统一为**等宽四列**（`.fld-*` 全部 `span 3`，尺寸类退化为语义标签）
+- v3.7.13：修 tool-card 结构错位根因（i18n 多了一个 `</div>`）+ 日期预填今天 + tab 去灰标
+- v3.7.14：规范统一——输入框降级、按钮字号统一、圆按钮强制 38×38、行列间距相等；表单行距 gap 20→12px
+- v3.7.15：优先级收窄 + 下拉框显式降字重
+- 会议纪要 / 资料库日期字段启用时间选择（补齐 render-widgets 渲染路径 + core.js 字段定义）；「去配置」按钮移至独立行动条
+
+### v3.7.16–v3.7.24：看板第一行与聊天状态条（09-23）
+
+- 看板第一行定稿（优先级占 1 轨 68px、标签加长、加号独立占最右 1 轨）；表单列距与看板 gap 同源（微轨数学推导），筛选行改 4/4/4
+- 「去配置」状态条两连改：先移出消息流为常驻条，随后整体撤掉（修 v3.7.18 引入的 e2e 失败）
+- 日期面板宽度跟随输入框、优先级向左加宽；输入框边框加深、模型下拉加宽居中、指标条两次加高
+- 浅色宠物（豆柴 / 雪团）光影修正
+
+### v3.7.26–v3.7.33：自研下拉与记录表单（09-23 ~ 09-24）
+
+- v3.7.26：自研下拉选择框（渐进增强原生 select）+ 全站图标三档令牌；新增 `src/ui-select.js` 与 `order.json` 登记（src 模块 27→28，补提交）
+- v3.7.27–v3.7.30：模型下拉加宽加高 / 上拉观感 / 与发送按钮底对齐；下拉箭头加强可见；label 随 options 同步；附件按钮与发送按钮同高
+- v3.7.28：记录表单单行——＋按钮不再掉行、图片列稍宽
+- v3.7.31：学习资料「类型/状态」由自由文本改下拉（业务定义修正）
+- v3.7.32：会议拆出「开始时间」独立字段（日期 / 开始时间 / 预设时长三正交）+ 记录表单改 4 列固定网格
+- v3.7.33：开始时间改自研下拉 + ＋按钮跨行靠右 + 日期字段加 ▼
+
+### v3.7.34–v3.7.39：控件矩阵与键盘可达（09-24）
+
+- 控件矩阵审查（range×16 / color×27 主题化）→ P1+P2 全量落地：原生 time 清零、点击区 32px、尺寸统一
+- 补控件三态视觉 + 焦点环 / Tab 序真键盘验证；日期面板键盘模型、＋按钮与输入框同行
+- 复选框点击区 13→16px、颜色选择器 32→38px 统一；修弹出方向真根因、时间字段改可编辑下拉
+
+### v3.7.40–v3.7.44：构建与 e2e（09-24 ~ 09-25）
+
+- v3.7.40：修 no-inner-declarations（`commit()` 移出 `if(EDITABLE)`）+ 更正误提交的拼回态、重提源码态 HTML
+- v3.7.41：`gen-ai-tools-doc` 双态寻源 + `--check` 零写入并接入 CI
+- v3.7.42：主题渲染层守护（`theme-matrix.spec`）+ 修 3 个本机 e2e 可用性缺陷；playwright.config 注释块提前闭合修复
+- v3.7.43：日期框可手输（点击全选）+ 下拉列表滚动不再误关 + 会议管理卡补齐开始时间
+- v3.7.44：下拉列表按「实际错位」判定关闭 + 可见区自适应高度（修「列表无法滑动」）
+- 杂项：`.trash/` 本地回收站入 .gitignore；自研下拉在测试环境整段跳过增强（修偶发失败）
+
 ## [v3.7.0] - 2026-09-16
 
 **大版本跳跃**：从单文件 HTML 架构迁移到分层源码外置 + 解耦方案，同时补齐 PWA / E2E / 命令面板 / 主题 / 离线 SQL 等能力。后续 v3.7.1–v3.7.12 为 UI 栅格与 datepicker 的快速迭代修复。

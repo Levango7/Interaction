@@ -2,11 +2,21 @@
 let chatController=null;       // { ac, timer, aborted, reason }
 let lastChatRequest=null;      // { messages, hist } 用于重试
 
+/** 聊天请求超时毫秒数：与设置页「请求超时」同一来源（缺省/越界回退 30s，范围 5~120） */
+function _chatTimeoutMs(){
+  try{
+    const n = Number((getCfg() || {}).aiTimeoutSec);
+    if(isFinite(n) && n >= 5 && n <= 120) return Math.round(n * 1000);
+  }catch(e){ /* 配置不可读时用默认值 */ }
+  return 30000;
+}
 /**
- * 创建聊天控制器（AbortController + 30s 超时定时器）
+ * 创建聊天控制器（AbortController + 超时定时器）
  * T5.3 浏览器兼容：AbortController / AbortSignal.timeout 不可用时降级为「无取消、无超时」，
  *                  仍返回结构体（ac=null）保证调用方解构不崩；取消按钮由 showChatThinking 守卫隐藏
- * @returns {{ac:AbortController|null, timer:number|null, aborted:boolean, reason:string|null}}
+ * v3.7.52：超时改为**每轮请求重置**并读取 `aiTimeoutSec`。此前是一个 30s 定时器罩住整个多轮循环，
+ *          agent 模式（6~12 轮）必然在第 30 秒被掐断，而设置里的「请求超时」在浏览器路径根本不生效。
+ * @returns {{ac:AbortController|null, timer:number|null, aborted:boolean, reason:string|null, resetTimeout?:Function}}
  */
 function createChatController(){
   // AbortController 不存在 → 返回空骨架，chatOnce 不传 signal、abortChat 静默 false
@@ -15,9 +25,19 @@ function createChatController(){
   }
   let ac=null;
   try{ ac=new AbortController(); }catch(e){ return { ac:null, timer:null, aborted:false, reason:null }; }
-  let timer=null;
-  try{ timer=setTimeout(function(){ try{ ac.abort(new Error("timeout")); }catch(e){} }, 30000); }catch(e){ timer=null; }
-  return { ac:ac, timer:timer, aborted:false, reason:null };
+  const ctrl={ ac:ac, timer:null, aborted:false, reason:null };
+  /** 重置超时计时（每轮调用；reason 置 timeout 供上层区分「超时」与「用户取消」） */
+  ctrl.resetTimeout=function(ms){
+    try{
+      if(ctrl.timer) clearTimeout(ctrl.timer);
+      ctrl.timer=setTimeout(function(){
+        ctrl.reason="timeout";
+        try{ ac.abort(new Error("timeout")); }catch(e){ /* 已 abort 过 */ }
+      }, (ms>0) ? ms : _chatTimeoutMs());
+    }catch(e){ ctrl.timer=null; }
+  };
+  ctrl.resetTimeout();
+  return ctrl;
 }
 
 /**
@@ -182,7 +202,8 @@ function closeConfirmModal(){
 function openConfirmModal(){
   if(!pendingConfirm) return;
   closeConfirmModal();
-  const ops = pendingConfirm.toolCalls.map(c=> c.name==="delete_task"?t("ai.deleteTask","删除任务"):t("ai.editTask","修改任务"));
+  /* v3.7.52：op 标签覆盖非危险工具（关闭「自动确认非危险操作」时，批次里可能是任意工具） */
+  const ops = pendingConfirm.toolCalls.map(c=> c.name==="delete_task"?t("ai.deleteTask","删除任务"):(c.name==="update_task"?t("ai.editTask","修改任务"):c.name));
   const uniq = [...new Set(ops)];
   const html = `<div class="recycle-modal" id="aiConfirmModal">
     <div class="recycle-card u-max-w-440">
@@ -332,6 +353,8 @@ async function runChatLoop(messages, hist){
     const toolWhitelist = wl ? new Set(wl.split(/[,\s\u3000]+/).filter(Boolean)) : null;
     const autoConfirm = !(acfg.agentAutoConfirm===false);
     while(guard++<maxLoops){
+      // v3.7.52：每轮重置超时——超时语义应是「单次请求超时」，而不是「整段循环总预算」
+      if(chatController && chatController.resetTimeout) chatController.resetTimeout();
       // T5.3 浏览器兼容：chatController.ac 可为 null（AbortController 不可用），此时不传 signal
       const chatSignal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
       // v3.2 C-档：流式打字机——纯文本轮（无工具调用压力）边收边渲染：流式中先挂一条 _streaming 消息增量更新，
@@ -361,40 +384,54 @@ async function runChatLoop(messages, hist){
       if(msg.tool_calls && msg.tool_calls.length){
         const DANGER=new Set(["delete_task","update_task"]);
         const calls = msg.tool_calls.map(tc=>({name:tc.function.name, id:tc.id, args:JSON.parse(tc.function.arguments||"{}")}));
-        if(calls.some(c=>DANGER.has(c.name))){
+        const hasDanger = calls.some(c=>DANGER.has(c.name));
+        /* v3.7.52：危险操作**始终**需用户确认。原实现把这段挂在 `if(autoConfirm)` 上，而
+           autoConfirm = !(cfg.agentAutoConfirm===false) —— 于是把设置里「自动确认非危险操作」
+           关掉反而变成「危险操作免确认」（语义反向，且反向到**更不安全**的那侧；实测还有
+           「既不弹窗也不执行、空转 maxLoops 轮」的第三态）。
+           现在开关只按字面作用于非危险批次：关闭时非危险的工具调用也要先确认。 */
+        if(hasDanger || !autoConfirm){
           // ② 危险操作：整体延后到用户确认后执行，避免半截工具回执引发下一轮 400
           const titles = calls.map(c=>{ const ft=findTask(c.args.task_id); return ft? ft.task.title : c.args.task_id; }).filter(Boolean);
-          if(autoConfirm){
-            pendingConfirm={ toolCalls:calls, title:titles.join(t("ai.confirmJoinSep","、"))||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:active };
-            hist.push({role:"assistant", content:t("ai.pendingConfirm","（待确认）将执行删除/修改操作：「")+(titles.join(t("ai.confirmJoinSep","、"))||t("ai.unknown","未知"))+t("ai.pendingConfirmSuffix","」。发送「确认」以继续，其他内容取消。")});
-            AppBridge.render(); openConfirmModal(); break; // A2：同时弹出确认模态框
-          }
+          const titleText = titles.join(t("ai.confirmJoinSep","、"));
+          pendingConfirm={ toolCalls:calls, title:titleText||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:active };
+          hist.push({role:"assistant", content: hasDanger
+            ? t("ai.pendingConfirm","（待确认）将执行删除/修改操作：「")+(titleText||t("ai.unknown","未知"))+t("ai.pendingConfirmSuffix","」。发送「确认」以继续，其他内容取消。")
+            : t("ai.pendingConfirmTools","（待确认）将执行 ")+calls.length+t("ai.pendingConfirmToolsSuffix"," 个工具调用。发送「确认」以继续，其他内容取消。")});
+          AppBridge.render(); openConfirmModal(); break; // A2：同时弹出确认模态框
         }
         // 工具白名单过滤
         if(toolWhitelist){
           const allowed = calls.filter(c=>toolWhitelist.has(c.name));
           const denied = calls.filter(c=>!toolWhitelist.has(c.name));
-          if(denied.length>0){
-            messages.push(msg); hist.push(msg);
-            denied.forEach(c=>{
-              const tm={role:"assistant", content:t("ai.toolDeniedPrefix","工具 ")+c.name+t("ai.toolDeniedSuffix"," 不在当前允许列表中，已跳过。"), _tool_denied:true};
-              messages.push(tm); hist.push(tm);
-            });
-            AppBridge.render(); continue;
-          }
-          calls.forEach(c=>{
-            const args=JSON.parse(c.args||"{}");
-            const res=execTool(c.name, args);
-            const tm={role:"tool", tool_call_id:c.id, content:res, _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
+          /* v3.7.52：本分支三处修复——
+             ① calls 构造时 args 已 JSON.parse 成对象（见上方 map），原实现又 JSON.parse(c.args)，
+                必然抛「"[object Object]" is not valid JSON」→ 白名单一开，所有工具都不执行；
+             ② 原实现「有任一被拒」就 continue，把同一轮里**允许**的调用一并丢弃；
+             ③ 被拒调用原以 assistant 文本充当回执，缺 role:"tool" 应答，真 API 会 400。
+             现改为：允许与被拒都按 tool_call_id 正常回执，允许的照常执行。 */
+          messages.push(msg); hist.push(msg);
+          denied.forEach(c=>{
+            const denyMsg=t("ai.toolDeniedPrefix","工具 ")+c.name+t("ai.toolDeniedSuffix"," 不在当前允许列表中，已跳过。");
+            const tm={role:"tool", tool_call_id:c.id, content:JSON.stringify({ok:false, msg:denyMsg}), _disp:denyMsg, _tool_denied:true};
             messages.push(tm); hist.push(tm);
           });
+          for(const c of allowed){
+            const args=c.args;
+            /* v3.7.52：走统一入口 execToolAuto —— 异步工具（联网/代码/SQL）在 chat 路径也能真正执行 */
+            const res=await execToolAuto(c.name, args);
+            const tm={role:"tool", tool_call_id:c.id, content:res, _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
+            messages.push(tm); hist.push(tm);
+          }
           AppBridge.render(); continue;
         }
         // 无危险：完整 assistant + tool（含 tool_calls / tool_call_id）入 hist，B1 安全
         messages.push(msg); hist.push(msg);
         for(const tc of msg.tool_calls){
           const args=JSON.parse(tc.function.arguments||"{}");
-          const res=execTool(tc.function.name, args);
+          /* v3.7.52：统一入口 —— 异步工具（web_search/web_fetch/code_run/sql_query）
+             此前在 chat 路径只拿到「未知工具」，与 Agent 计划路径行为不一致 */
+          const res=await execToolAuto(tc.function.name, args);
           const tm={role:"tool", tool_call_id:tc.id, content:res, _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
           messages.push(tm); hist.push(tm);
         }
@@ -404,10 +441,18 @@ async function runChatLoop(messages, hist){
       break;
     }
   }catch(err){
-    const isAbort = err && err.name==="AbortError";
-    if(isAbort && chatController && chatController.reason==="user"){
+    /* v3.7.52：取消/超时判定以**控制器上的 reason** 为准。
+       原因：`ac.abort(reason)` 时浏览器 fetch 是以**传入的 reason 拒绝**的（name 是 "Error"，
+       不是 "AbortError"）—— 原实现只认 `err.name==="AbortError"`，于是用户点「取消」会落进错误分支，
+       把英文 "user-cancel" 当助手回复上屏（超时同理会显示 "timeout"）。 */
+    const cReason = chatController ? chatController.reason : null;
+    const isAbort = (err && err.name === "AbortError") || cReason === "user" || cReason === "timeout";
+    if(isAbort && cReason !== "timeout"){
       // T3.1 用户主动取消：显示「已取消」提示（灰色斜体），不报错
       hist.push({role:"assistant", content:t("ai.cancelled","已取消"), _canceled:true});
+    } else if(isAbort){
+      hist.push({role:"assistant", content:t("ai.timeout","请求超时（可在「设置 → AI」调大「请求超时」秒数）"), _failed:true});
+      try{ pushDiag("error", "chat timeout", {where:"runChatLoop"}); }catch(_e){}
     } else {
       const m=(err&&err.message)?err.message:String(err);
       hist.push({role:"assistant", content:m, _failed:true});

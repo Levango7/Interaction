@@ -23,6 +23,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 const HTML = () => read("agent-workbench.html");
 const GL = () => read("src/ui-global-events.js");
+/* v3.7.53：中英词典（const MESSAGES）从 UI 层搬进了 core —— 按内容定位，别写死文件名 */
+const DICT = () => fs.readdirSync(path.join(ROOT, "src")).filter((x) => x.endsWith(".js"))
+  .map((x) => "src/" + x).find((p) => read(p).includes("const MESSAGES = {")) || "src/ui-global-events.js";
 const TH = () => read("src/ui-theme.js");
 
 /* 从注册表里取出全部主题 id（作为"应有主题"的唯一真相源） */
@@ -60,7 +63,7 @@ describe("主题注册一致性（7 处）", () => {
   });
 
   it.each(registeredThemes().filter((id) => id !== "system"))("主题 %s：⑥⑦ 中英词典都有 theme 与 themeDesc", (id) => {
-    const gl = GL();
+    const gl = read(DICT());
     const key = '"look.theme.' + id + '":';
     const desc = '"look.themeDesc.' + id + '":';
     const counts = (k) => gl.split(k).length - 1;

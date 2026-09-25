@@ -40,7 +40,7 @@ function renderOverview(){
   for(let d=1;d<=dim;d++) cells.push(d);
   const lvl=c=> c===0?"l0": c<=2?"l1": c<=4?"l2": c<=9?"l3":"l4";
   const heat=`<div class="heat">`+
-    ["日","一","二","三","四","五","六"].map(w=>`<div class="dow">${w}</div>`).join("")+
+    [["weekday.sun","日"],["weekday.mon","一"],["weekday.tue","二"],["weekday.wed","三"],["weekday.thu","四"],["weekday.fri","五"],["weekday.sat","六"]].map(([wk,wd])=>`<div class="dow">${t(wk,wd)}</div>`).join("")+
     cells.map(d=> d? `<div class="hcell ${lvl(tasks.filter(t=>t.status==="done"&&t.doneAt&&sameDay(t.doneAt,y,m,d)).length)}">${d}</div>`
                    : `<div class="hcell u-bg-transparent"></div>`).join("")+
     `</div><div class="u-fs-2xs u-text-muted u-mt-1h">${t("overview.heatmap.legend", "本月每日完成密度（颜色越深越多）")}</div>`;
@@ -50,12 +50,12 @@ function renderOverview(){
     const dn=all.filter(t=>t.status==="done").length; const tot=all.length;
     const pct= tot? Math.round(dn/tot*100):0;
     return `<div class="bar"><span class="nm">${s.name}</span>
-      <span class="track"><span class="fill" style="width:${pct}%;background:${s.color}"></span></span>
+      <span class="track"><span class="fill" style="width:${pct}%;background:${scCss(s.color)}"></span></span>
       <span class="v">${dn}/${tot}</span></div>`;
   }).join("");
 
-  const todayTitle = _overviewView === "all" ? "全部待办" : "今日待办";
-  const todaySub = _overviewView === "all" ? "所有未完成的任务（按优先级排序，点击跳转场景）" : "今天到期与逾期的任务（按优先级排序，点击跳转场景）";
+  const todayTitle = _overviewView === "all" ? t("overview.todoAllTitle", "全部待办") : t("overview.todoTodayTitle", "今日待办");
+  const todaySub = _overviewView === "all" ? t("overview.todoAllSub", "所有未完成的任务（按优先级排序，点击跳转场景）") : t("overview.todoTodaySub", "今天到期与逾期的任务（按优先级排序，点击跳转场景）");
   const todayHtml = _overviewView === "all" ? _renderAllTopHtml() : _renderTodayTopHtml();
   const overviewNav = `<nav class="set-nav overview-view-nav" aria-label="概览视图切换" data-i18n-aria="a11y.overviewViewSwitch">
     <button type="button" class="set-nav-btn${_overviewView==="today"?" active":""}" data-overview-view="today" data-i18n="overview.today">今日</button>
@@ -73,7 +73,7 @@ function renderOverview(){
     ${renderSystemOverviewCard()}
     <div class="overview-grid">
       <div class="ov-sec-h" data-i18n="overview.sysData">系统数据</div>
-     <div class="card ov-span2"><h2>${ic("search")} 全局搜索</h2>
+     <div class="card ov-span2"><h2>${ic("search")} ${t("overview.globalSearch","全局搜索")}</h2>
         <div class="glob-filters">
           <input id="globSearch" class="glob-search-main" placeholder="关键词，如 周报 / 跑步…" data-i18n-placeholder="field.globSearchPh">
           <select id="globFSc" aria-label="按场景筛选" data-i18n-aria="a11y.filterByScene"><option value="">全部场景</option>${ORDER.map(sc=>`<option value="${esc(sc)}">${esc(SCENARIOS[sc].name)}</option>`).join("")}</select>
@@ -93,7 +93,7 @@ function renderOverview(){
        ${todayHtml}
        <h3 data-i18n="overview.sceneProgress">各场景进度</h3><div class="bars">${bars}</div>
      </div>
-	     <div class="card"><h2>${ic("grid")} 数据速览</h2>
+	     <div class="card"><h2>${ic("grid")} ${t("overview.dataGlance","数据速览")}</h2>
 	       <p class="sub" data-i18n="overview.trendSub">完成趋势与本月密度</p>
 	       <h3 data-i18n="overview.trendTitle">完成趋势（近 14 天）</h3>${lineChart}
 	       <h3 data-i18n="overview.heatTitle">日历热力图（本月）</h3>${heat}
@@ -101,7 +101,7 @@ function renderOverview(){
 	     <div class="ov-span2">${renderHabitChainCard()}</div>
 	     <div class="ov-span2">${renderAiHubCard()}</div>
      <div class="ov-sec-h" data-i18n="overview.vizSection">数据可视化制作</div>
-     <div class="ov-span2"><div class="card ov-viz-card"><h2>${ic("grid")} 数据可视化制作</h2><p class="sub" data-i18n="overview.vizSub">用画布自由编排图表，展示业务与系统数据</p><button type="button" class="addbtn" id="btnOpenChartStore" data-sc="accent" data-i18n="overview.openViz">打开图表制作器</button></div></div>
+     <div class="ov-span2"><div class="card ov-viz-card"><h2>${ic("grid")} ${t("overview.vizSection","数据可视化制作")}</h2><p class="sub" data-i18n="overview.vizSub">用画布自由编排图表，展示业务与系统数据</p><button type="button" class="addbtn" id="btnOpenChartStore" data-sc="accent" data-i18n="overview.openViz">打开图表制作器</button></div></div>
      </div>`);
 
   // 全局搜索 oninput 同步响应（保证空状态即时渲染；搜索范围小，无需防抖）
@@ -413,7 +413,7 @@ function _renderTodayTopHtml(){
     const s = scMeta(x.sc);
     const overdue = x.due < today;
     return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="${t("overview.today.itemTitle", "点击进入「{name}」场景")}".replace("{name}", esc(s.name))}">
-      <span class="dot" style="background:${s.color}"></span>
+      <span class="dot" style="background:${scCss(s.color)}"></span>
       <span class="title">${esc(x.title)}${overdue ? `<span class="ov-overdue-tag">${t("overview.overdue.tag", "逾期")}</span>` : ""}</span>
       <span class="sc-name">${s.name}</span>
     </li>`;
@@ -442,7 +442,7 @@ function _renderAllTopHtml(){
     const s = scMeta(x.sc);
     const overdue = x.due && x.due < today;
     return `<li class="top3-item ov-today-item" data-goto-sc="${esc(x.sc)}" title="${t("overview.today.itemTitle", "点击进入「{name}」场景")}".replace("{name}", esc(s.name))}">
-      <span class="dot" style="background:${s.color}"></span>
+      <span class="dot" style="background:${scCss(s.color)}"></span>
       <span class="title">${esc(x.title)}${overdue ? `<span class="ov-overdue-tag">${t("overview.overdue.tag", "逾期")}</span>` : ""}</span>
       <span class="sc-name">${s.name}</span>
     </li>`;
@@ -520,12 +520,12 @@ function renderPieChart(dist){
     const large = (end - start) > Math.PI ? 1 : 0;
     const x1 = CX + R * Math.cos(start), y1 = CY + R * Math.sin(start);
     const x2 = CX + R * Math.cos(end), y2 = CY + R * Math.sin(end);
-    svg += `<path d="M${CX},${CY} L${x1.toFixed(2)},${y1.toFixed(2)} A${R},${R} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${d.color}"><title>${t("statsChart.pie.title", "{name}：{count} 个（{pct}%）").replace("{name}", esc(d.name)).replace("{count}", d.count).replace("{pct}", d.pct)}</title></path>`;
+    svg += `<path d="M${CX},${CY} L${x1.toFixed(2)},${y1.toFixed(2)} A${R},${R} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${scCss(d.color)}"><title>${t("statsChart.pie.title", "{name}：{count} 个（{pct}%）").replace("{name}", esc(d.name)).replace("{count}", d.count).replace("{pct}", d.pct)}</title></path>`;
   });
   svg += `</svg>`;
   const legend = dist.map(d =>
     `<div class="stats-pie-legend-item">` +
-      `<span class="sw" style="background:${d.color}"></span>` +
+      `<span class="sw" style="background:${scCss(d.color)}"></span>` +
       `<span class="nm">${esc(d.name)}</span>` +
       `<span class="v">${d.count} · ${d.pct}%</span>` +
     `</div>`
@@ -642,7 +642,7 @@ function renderTasksPage(){
       const overdue = x.due && x.due < today;
       return `<li class="todo-row" data-task-id="${esc(x.id)}">
         <input type="checkbox" class="todo-chk" data-tasks-done="${esc(x.id)}" aria-label="完成" data-i18n-aria="a11y.complete">
-        <span class="dot" style="background:${s.color};width:8px;height:8px;border-radius:50%;flex-shrink:0" title="${esc(s.name)}"></span>
+        <span class="dot" style="background:${scCss(s.color)};width:8px;height:8px;border-radius:50%;flex-shrink:0" title="${esc(s.name)}"></span>
         <span class="todo-title">${esc(x.title)}</span>
         <span class="todo-meta">
           <span class="pri ${x.priority||"none"}">${esc(x.priority||"-")}</span>
@@ -686,7 +686,7 @@ function renderTasksPage(){
       return `<div class="kcard" data-tasks-card="${esc(x.id)}" tabindex="0" role="button" aria-label="${esc(x.title)}">
         <div class="t">${esc(x.title)}</div>
         <div class="m">
-          <span class="tag" style="background:${s.color}22;color:${s.color}">${esc(s.name)}</span>
+          <span class="tag" style="background:${scSoft(s.color)};color:${scCss(s.color)}">${esc(s.name)}</span>
           ${x.priority&&x.priority!=="none"?`<span class="pri ${x.priority}">${esc(x.priority)}</span>`:""}
           ${x.due?`<span class="due${overdue?" od":""}">${esc(x.due)}</span>`:""}
         </div>
@@ -723,7 +723,7 @@ function _bindTasksTabs(){
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
-  { id:"x-cal",     name:"日历",     desc:"按月查看任务分布", cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
+  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
   { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
   { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.bell, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
   { id:"x-pomo",    name:t("tool.pomo.name","笃行"),     desc:t("tool.pomo.desc","25 分钟专注 + 5 分钟休息"), cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
@@ -915,16 +915,16 @@ function renderChainPage(){
       const lvl = days >= 7 ? 3 : days >= 3 ? 2 : days >= 1 ? 1 : 0;
       const ic = lvl === 0 ? UI_ICONS.theme : UI_ICONS.flame;
       return '<div class="streak-card lv' + lvl + '"><div class="sc-ic">' + ic + '</div>' +
-        '<div class="sc-days">' + days + '<span>天</span></div>' +
+        '<div class="sc-days">' + days + '<span>' + t("streak.dayUnit","天") + '</span></div>' +
         '<div class="sc-label">' + SCENARIOS[sc].name + '</div></div>';
     }).join("");
     const activeCount = ORDER.filter(function(sc){return SCENARIOS[sc] && (calcStreak(sc).current||0) > 0;}).length;
     const bestStreak = Math.max.apply(null, [0].concat(ORDER.filter(function(sc){return SCENARIOS[sc];}).map(function(sc){return calcStreak(sc).current||0;})));
-    page = '<div class="chain-page active"><div class="card"><h2>' + ic("flame") + " Streak 总览</h2>" +
-      '<div class="kpi-grid"><div class="kpi"><div class="v">' + activeCount + '</div><div class="l">活跃场景</div></div>' +
-      '<div class="kpi"><div class="v">' + bestStreak + '</div><div class="l">最长连续(天)</div></div>' +
-      '<div class="kpi"><div class="v">' + ORDER.filter(function(sc){return SCENARIOS[sc];}).length + '</div><div class="l">场景总数</div></div></div></div>' +
-      '<div class="card"><h3>各场景连续打卡</h3><div class="streak-grid">' + badges + '</div></div></div>';
+    page = '<div class="chain-page active"><div class="card"><h2>' + ic("flame") + " " + t("streak.title","Streak 总览") + "</h2>" +
+      '<div class="kpi-grid"><div class="kpi"><div class="v">' + activeCount + '</div><div class="l">' + t("streak.activeScenes","活跃场景") + '</div></div>' +
+      '<div class="kpi"><div class="v">' + bestStreak + '</div><div class="l">' + t("streak.bestDays","最长连续(天)") + '</div></div>' +
+      '<div class="kpi"><div class="v">' + ORDER.filter(function(sc){return SCENARIOS[sc];}).length + '</div><div class="l">' + t("streak.totalScenes","场景总数") + '</div></div></div></div>' +
+      '<div class="card"><h3>' + t("streak.perScene","各场景连续打卡") + '</h3><div class="streak-grid">' + badges + '</div></div></div>';
   }
   else if(_chainTab === "graph"){
     /* v3.6.5：说明卡与图合并 —— 此前"场景联动关系图"单独一个 card 只有标题+一句话说明，
@@ -1272,6 +1272,22 @@ async function apiGetSnapshot() {
   if (r.ok && r.data && r.data.snapshot) return r.data;
   return null;
 }
+/**
+ * 上传本机快照到同步端点 —— v3.7.53 补齐：此前客户端**只有 GET，没有 PUT**，
+ * 于是「立即上传」只能是空转（界面却显示「已同步」）。
+ * 契约与 apiGetSnapshot 对称：`PUT /api/sync/snapshot`，body `{ snapshot, updatedAt }`；
+ * 快照内含 `_deviceMeta`（deviceId / exportedAt / version），服务端原样存、GET 时回传。
+ * ⚠️ 本仓库不含该后端，需部署方实现同名端点（见 docs/product-scope.md「可选账号与云同步」）。
+ * @param {Object} [snapshot] 不传则现构（_buildCloudSnapshot）
+ * @returns {Promise<boolean>} 是否推送成功（2xx 才算）
+ */
+async function apiPutSnapshot(snapshot) {
+  const r = await window.apiFetch("/api/sync/snapshot", {
+    method: "PUT",
+    body: JSON.stringify({ snapshot: snapshot || _buildCloudSnapshot(), updatedAt: Date.now() })
+  });
+  return !!(r && r.ok);
+}
 function _applyCloudSnapshot(data) {
   try {
     const remoteRaw = data[PREFIX + "tasks"];
@@ -1288,6 +1304,13 @@ function _applyCloudSnapshot(data) {
       data[PREFIX + "tasks"] = JSON.stringify(Array.from(map.values()));
     }
   } catch (e) { /* 合并失败时按覆盖处理 */ }
+  /* v3.7.52：覆盖前先给本机留一份回滚档。下面这段是「快照里有啥就覆盖啥」，
+     而云端 push 端尚未实现（本机改动不会上传）时，覆盖即不可逆 —— 留档后至少能人工比对/回滚。 */
+  try {
+    const pre = {};
+    if (typeof allKeys === "function") allKeys().forEach(function (k) { const v = localStorage.getItem(k); if (typeof v === "string") pre[k] = v; });
+    if (Object.keys(pre).length) save(PREFIX + "pre_restore_backup", { at: Date.now(), keys: pre });
+  } catch (e) { /* 备份失败不阻塞恢复 */ }
   Object.keys(data).forEach(k => {
     if (k === SYNC_META_KEY || k === "_deviceMeta" || k === "_meta") return;
     if (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY) {
@@ -1306,7 +1329,18 @@ async function cloudCheckOnLogin() {
     const remoteDevice = (rec.snapshot._deviceMeta && rec.snapshot._deviceMeta.deviceId) || "";
     const fromOther = remoteDevice && remoteDevice !== getDeviceId();
     let hasLocal = false;
-    try { hasLocal = !!((typeof getTasks === "function" && getTasks().length) || (load(PREFIX + "records", []) || []).length); } catch (e) { hasLocal = false; }
+    try {
+      /* v3.7.52：判「本机有没有数据」原先读 PREFIX+"records" —— 该键全仓无写入点（幽灵键），
+         于是「只有资料/笔记/记忆、没有任务」的用户被判成"本机无数据"，紧接着被云端快照整体覆盖。
+         改用真实键枚举（allKeys）；判定失败时按「有本地数据」处理：宁可不动，不可误覆盖。 */
+      hasLocal = !!(typeof getTasks === "function" && getTasks().length);
+      if (!hasLocal && typeof allKeys === "function") {
+        hasLocal = allKeys().some(function (k) {
+          if (k === PREFIX + "tasks") return false;
+          try { const v = localStorage.getItem(k); return typeof v === "string" && v.length > 2 && v !== "[]" && v !== "{}"; } catch (e) { return false; }
+        });
+      }
+    } catch (e) { hasLocal = true; }
     if (!hasLocal && fromOther) {
       _applyCloudSnapshot(rec.snapshot);
       try { toast(t("api.cloudRestored", "已从云端恢复数据，页面即将刷新"), "ok"); } catch (_) {}

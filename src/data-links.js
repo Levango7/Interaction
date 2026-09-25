@@ -21,6 +21,32 @@ const CUSTOM_ICON_KEYS = ["tag","overview","plus","check","chat","download","upl
 const SC_ORIGINALS = {};
 BUILTIN_SC_KEYS.forEach(k => { SC_ORIGINALS[k] = { name: SCENARIOS[k].name, color: SCENARIOS[k].color }; });
 
+/* ---------- v3.7.52：场景色的渲染口径 ----------
+ * 背景：模板原先直接内联 SCENARIOS[sc].color 的裸 hex，导致 11 套主题下来源色不随主题变化 ——
+ * 实测 mist 主题下任务标签文字与自身底色亮度相同（对比度 1.0，完全不可见）、forest 仅 1.2:1，
+ * 页头图标/链路图标/分享徽记同理。而 CSS 侧早已有 --sc-<场景> 令牌（每套主题各有一份达标值）。
+ * 口径：出厂色 → var(--sc-<场景>A) 主题令牌（随主题自适应）；用户改过色 → 保留自定义 hex。
+ * 判定走 SC_ORIGINALS（出厂快照）按 hex 反查，调用点只需持有 color 值，零改造。
+ * 浅底用 color-mix 现算 —— 裸 hex 拼透明度后缀（形如 #RRGGBB + 22）对 var() 无效，会让令牌化失效。
+ */
+/**
+ * 场景色 hex → 可安全内联的 CSS 颜色（出厂值走主题令牌，自定义值原样返回）
+ * @param {string} hex
+ * @returns {string}
+ */
+function scCss(hex){
+  const h = String(hex || "").toLowerCase();
+  const key = Object.keys(SC_ORIGINALS).find(function(k){ return SC_ORIGINALS[k] && String(SC_ORIGINALS[k].color || "").toLowerCase() === h; });
+  return key ? "var(--sc-" + key + ", " + hex + ")" : (hex || "var(--accent)");
+}
+/**
+ * 场景色的浅底写法（同源色按百分比叠加，兼容 var() 令牌）
+ * @param {string} hex
+ * @param {number} [pct]
+ * @returns {string}
+ */
+function scSoft(hex, pct){ return "color-mix(in srgb, " + scCss(hex) + " " + (pct || 14) + "%, transparent)"; }
+
 function loadCustomScenarios(){
   const arr = load(CUSTOM_SC_KEY, []);
   return Array.isArray(arr) ? arr.filter(s => s && typeof s.key === "string" && typeof s.name === "string") : [];
@@ -413,8 +439,14 @@ function setSceneFeature(mode){
   sceneFeatureMode = mode;
   markDirty();
 }
+/* v3.7.52：聊天历史「所属场景」标记。
+   背景：聊天落盘原先一律用「写入那一刻的 active」拼键，而 hist 属于**发起对话时**的场景 ——
+   生成过程中切场景，会把 A 场景整段历史写进 B 场景的键并覆盖它。
+   做法：hist 数组挂一个不可枚举 `_sc`（`JSON.stringify` 只序列化索引项，落盘格式不变）；
+   真正的纠偏在 save() 内部完成（见 HTML 内联区的 save 定义），各调用点写法保持不变。 */
+function _chatTag(hist, sc){ try{ Object.defineProperty(hist, "_sc", { value: sc, writable: true, configurable: true, enumerable: false }); }catch(e){ /* 冻结/代理等异常：退化为旧行为 */ } return hist; }
 const chats = {};
-ORDER.forEach(sc=> chats[sc] = load(PREFIX+"chat_"+sc, []).slice(-50) );
+ORDER.forEach(sc=> chats[sc] = _chatTag(load(PREFIX+"chat_"+sc, []).slice(-50), sc) );
 
 /* ---------- 全局状态契约（A-P2-7：状态层唯一出入口；render 层经此读写，禁止直读 active/chats/_cfgCache） ---------- */
 /**
@@ -432,7 +464,7 @@ function getChat(sc){ return chats[sc] || []; }
 /* v3.4.5 G2 修复：写路径补 slice(-50) 裁剪——与读路径（启动/导入 slice(-50)，L6765/6950）对齐。
  * 此前 appendChat 直接 concat 全量写回：读时裁过的数组一经追加即恢复超长并持续增长，
  * 7 个 chat_<sc> 键是 5MB 配额的持续膨胀源。镜像层 _mirrorChatToSession 已有同款裁剪（L6931）。 */
-function appendChat(sc, msg){ chats[sc] = (chats[sc]||[]).concat(msg).slice(-50); save(PREFIX+"chat_"+sc, chats[sc]); }
+function appendChat(sc, msg){ chats[sc] = _chatTag((chats[sc]||[]).concat(msg).slice(-50), sc); save(PREFIX+"chat_"+sc, chats[sc]); }
 
 /* ---------- v2.0 多 Session 聊天存储层（自 .bak2 回填，适配当前版 load/save 封装） ----------
  * 会话模型 Session：{ id, title, sc, createdAt, updatedAt, msgs: [...] }
@@ -600,7 +632,7 @@ function _resetSessions(){ _sessions = null; _activeSid = null; }
  */
 function _reloadChatsFromStorage(){
   try{
-    ORDER.forEach(function(sc){ chats[sc] = load(PREFIX+"chat_"+sc, []).slice(-50); });
+    ORDER.forEach(function(sc){ chats[sc] = _chatTag(load(PREFIX+"chat_"+sc, []).slice(-50), sc); });
   }catch(_){ /* noop */ }
 }
 
@@ -713,4 +745,22 @@ let _sideActive = null;
 /* v3.7.17（解耦 S4）：存储键枚举助手从 ui-backup-stats（UI）移到 Data 层 —— 它依赖本块的 CUSTOM_LINKS_KEY，
    且被 data-migrate / data-rw / render-overview 引用形成逆层依赖。纯搬迁。 */
 /* ---------- 备份 / 统计 ---------- */
-function allKeys(){ try{ return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY); }catch(e){ return []; } }
+/* v3.7.52：枚举本应用的存储键。
+   原实现用 `Object.keys(localStorage)` —— 在「存储安全壳」接管时（localStorage 被浏览器禁用/配额耗尽），
+   壳只实现了 getItem/setItem/removeItem/clear/key/length 六个成员，`Object.keys` 返回的是**这些方法名**，
+   于是备份 / 导出 / IDB 镜像 / 云快照在降级环境下全部**静默变空**（同文件其它两处早已用 length+key(i)，
+   只有这里漏了）。改用 length + key(i) 对原生与壳都正确。 */
+function allKeys(){
+  try{
+    const out = [];
+    const ls = localStorage;
+    if(typeof ls.length === "number" && typeof ls.key === "function"){
+      for(let i = 0; i < ls.length; i++){
+        const k = ls.key(i);
+        if(k && (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY)) out.push(k);
+      }
+      return out;
+    }
+    return Object.keys(ls).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY);
+  }catch(e){ return []; }
+}

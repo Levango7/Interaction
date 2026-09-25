@@ -9,8 +9,32 @@ permissions:
   pages: write
   id-token: write
 
+# v3.7.52：连续 push 时取消上一次未完成的部署（否则两个 run 会并发写 gh-pages 互踩）
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
 jobs:
+  # v3.7.52：发布前必须过门禁。此前 deploy 是独立工作流、与 ci.yml 无任何依赖关系，
+  # push main 直接 build:prod 就发线上 —— **CI 全红也照样上线**。
+  # 现在把最小必要门禁内联成前置 job（不跨工作流耦合，同时保持「发出去的产物一定过了测试」）。
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm run check:source-state
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:check
+      - run: npm run lint
+      - run: npm run check:modules
+
   deploy:
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

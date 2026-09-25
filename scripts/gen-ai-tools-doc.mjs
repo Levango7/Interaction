@@ -142,11 +142,15 @@ if (IS_CHECK) {
 /* ---------- 生成（仅在非 --check 时执行） ---------- */
 let doc = doc0;
 const agentExecSet = new Set(['remember', 'recall', 'forget', 'plan', 'complete_step', 'complete_goal', 'list_records']);
+/* v3.7.52：异步工具（需 await）单列一档 —— 它们在 chat 路径经 execToolAuto 转 agentExecAsync，
+   在 Agent 计划路径直接走 agentExecAsync。此前表里一律标 execTool，与实现不符。 */
+const asyncToolSet = new Set(['web_search', 'web_fetch', 'code_run', 'sql_query']);
+const dispatchOf = (n) => asyncToolSet.has(n) ? 'agentExecAsync（经 execToolAuto）' : (agentExecSet.has(n) ? 'agentExec' : 'execTool');
 const reqText = r => (r === '[]' ? '—' : '`' + r.replace(/[[\]"]/g, '').replace(/,/g, '`,`') + '`');
 const table = [
   '| # | 工具名 | 所属分发器 | 必填参数 | 说明 |',
   '|---|--------|-----------|----------|------|',
-  ...tools.map((t, i) => '| ' + (i + 1) + ' | `' + t.name + '` | ' + (agentExecSet.has(t.name) ? 'agentExec' : 'execTool') + ' | ' + reqText(t.required) + ' | ' + t.desc.replace(/\|/g, '\\|').slice(0, 44) + ' |'),
+  ...tools.map((t, i) => '| ' + (i + 1) + ' | `' + t.name + '` | ' + (dispatchOf(t.name)) + ' | ' + reqText(t.required) + ' | ' + t.desc.replace(/\|/g, '\\|').slice(0, 44) + ' |'),
 ].join('\n');
 
 const sections = tools.map((t, i) => {

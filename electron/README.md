@@ -55,34 +55,15 @@ npm run dist         # 打包成 Windows 便携版 exe（dist/*.exe，portable�
 `main.js` 的 `resolveHtml()` 打包态优先读同目录 `agent-workbench.html`，开发态回退到 `../agent-workbench.html`，
 两种路径都能正确加载同一份 HTML。
 
-## 自动更新
-集成 `electron-updater`，启动时自动检查是否有新版本，发现新版本通知用户（**不自动下载**，由用户手动决定是否更新）。
+## 自动更新（已移除）
 
-### 工作原理
-1. 应用启动后（仅打包态），主进程向 feed 服务器请求 `latest.yml`（electron-builder 自动生成的版本清单）。
-2. 把清单里的版本号与本地 `package.json` 的 `version` 比对，若服务器版本更高，触发 `update-available` 事件。
-3. 主进程把更新信息通过 `win.webContents.send("update-available", info)` 推给渲染进程，由前端 UI 决定如何提示用户。
-4. `autoDownload = false`：**不会**自动下载安装包，避免打断用户；用户确认后再调用下载（前端可后续扩展）。
-5. 任何更新错误（网络不通、服务器未配置、签名校验失败等）均**静默忽略**，不影响应用正常启动与使用。
+本目录曾集成 `electron-updater`（启动时检查新版本并通知用户），**该链路已整体移除，不要再按旧教程配置**：
 
-### 配置 feed 服务器
-默认 **未写入** `publish` 配置——避免打包版每次启动都向占位域名发起无效的更新检查请求。
-如需启用自动更新，在 `package.json` 的 `build` 节点自行添加你自己的静态服务器地址（OSS / S3 / 自建 nginx 均可），该目录需要能公开访问 `latest.yml` 和安装包 `.exe`。例如：
-```json
-"build": {
-  "publish": {
-    "provider": "generic",
-    "url": "https://your-bucket.oss-cn-hangzhou.aliyuncs.com/agent-workbench/"
-  }
-}
-```
-未配置 `publish` 时，`autoUpdater.checkForUpdates()` 会因缺少 feed 而报错，已被主进程 try/catch 静默忽略，不影响应用启动与使用。
+- `electron/package.json` 已无 `electron-updater` 依赖（只剩 `electron-builder`）；`main.js` 中只保留移除原因注释。
+- 移除原因：三处断点使其从未真正可用 —— portable 打包目标不支持自动更新、无 `publish` feed 配置、渲染端也没有 `update-available` 监听（v1.11.1 移除）。
+- 主进程不会再发起任何更新检查，也没有 `build.publish` 配置；旧文档里的 feed 服务器（`latest.yml` + 静态目录）整套流程均已作废。
 
-### 发布新版本
-1. 改 `package.json` 的 `version`（如 `"1.0.1"`）。
-2. 在 `electron/` 目录执行 `npm run dist`，生成新安装包与 `latest.yml`。
-3. 把 `electron/dist/` 下的最新 `*.exe`（含 `latest.yml`）上传到 feed 服务器对应目录。
-4. 用户下次启动旧版本时即会收到新版本通知。
+**当前升级方式**：重新 `npm run dist` 打包出新的便携版 exe，手动分发给用户覆盖旧文件即可（数据存在本机用户目录，不受影响；GitHub Releases 只作为分发渠道，客户端不会自动检查）。
 
-### 开发态行为
-`npm start` 运行时 `app.isPackaged === false`，**不会**检查更新（跳过整个更新逻辑），避免开发时误连 feed 服务器。未配置服务器前，更新检查会静默失败，应用一切功能照常。
+> 若将来要恢复自动更新，需要**同时**补齐四样：`electron-updater` 依赖、主进程检查逻辑、渲染端提示 UI、可公开访问的发布源 —— 缺任何一样都会退回"名有实无"。
+

@@ -16,32 +16,32 @@
 | `data-links` | Data | `core` `crypto` `render-scene-main` | 6 |
 | `data-migrate` | Data | `data-links` | 2 |
 | `data-rw` | Data | `core` `crypto` `data-links` | 5 |
-| `chain` | Chain | `data-links` `data-migrate` | 2 |
+| `chain` | Chain | `data-links` `data-migrate` | 3 |
 | `ai-tools` | AI | `ai-retry` `chain` `core` `data-rw` | 5 |
 | `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `crypto` `data-migrate` | 8 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-perf` | 15 |
 | `render-entry` | Render | `ai-retry` `core` `data-links` `data-migrate` `render-overview` `render-scene-main` `render-widgets` `ui-daily` `ui-drawer` | 30 |
 | `render-scene-sub` | Render | `render-scene-main` `render-widgets` `ui-scene-bind` `util-perf` | 10 |
-| `render-scene-main` | Render | `ai-retry` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `util-perf` | 19 |
-| `render-overview` | Render | `ai-retry` `chain` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 27 |
-| `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` | 14 |
+| `render-scene-main` | Render | `ai-retry` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `util-perf` | 21 |
+| `render-overview` | Render | `ai-retry` `chain` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-global-events` `ui-scene-bind` | 29 |
+| `render-widgets` | Render | `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `ui-drawer` `ui-guide` | 15 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
-| `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 9 |
-| `ui-scene-bind` | UI | `chain` `core` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` `ui-backup-stats` | 17 |
+| `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 10 |
+| `ui-scene-bind` | UI | `chain` `core` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` `ui-backup-stats` | 18 |
 | `ui-palette` | UI | `ai-tools` `data-links` `render-widgets` `ui-backup-stats` `ui-drawer` `ui-global-events` | 8 |
 | `ui-daily` | UI | `chain` `data-links` | 2 |
 | `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` | 20 |
-| `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-global-events` `ui-guide` `ui-theme` | 31 |
+| `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-global-events` `ui-guide` `ui-theme` | 32 |
 | `ui-hotkeys` | UI | `ai-retry` `data-links` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-palette` `ui-theme` `util-perf` | 101 |
+| `ui-global-events` | UI | `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-palette` `ui-theme` `util-perf` | 104 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
 
 | 符号 | 定义于 | 被多少块使用 |
 |---|---|---|
-| `t` | `core` | 23 |
+| `t` | `core` | 24 |
 | `toast` | `core` | 22 |
 | `SCENARIOS` | `core` | 18 |
 | `ORDER` | `core` | 14 |

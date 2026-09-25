@@ -157,7 +157,14 @@ function detectLegacyData(){
 function _guardGenericJsonKeys(){
   const keys = [];
   ORDER.forEach(function(sc){ keys.push(PREFIX+"rec_"+sc, PREFIX+"chat_"+sc); }); // 场景记录/聊天（动态生成）
-  [ "ai_sessions", "notes", "rag_docs", "wb_conversations", "wb_long_term_memory", "recycle_bin", "migrationLog" ]
+  /* v3.7.52：补齐漏守的数组型业务键（判据：下游以 load(..., []) 读取，即「被截断就静默变空」的那些）。
+     此前只守了下面这 7 个 + rec_/chat_，于是工作记忆、目标、会议、生活账本、健康、报销、考勤、
+     代码工具等键一旦写半截（配额边缘）就**原值不留档、直接降级为空**，用户无从恢复。
+     ⚠️ 只能加**数组型**键：本守卫对非数组值也会重置为 []，把对象型键（cfg/links/onboarded 等）加进来
+     会真的造成数据丢失。 */
+  [ "ai_sessions", "notes", "rag_docs", "wb_conversations", "wb_long_term_memory", "recycle_bin", "migrationLog",
+    "memory", "goals", "meetings", "life_bills", "life_shopping", "life_health", "expenses", "attendance",
+    "code_runner", "code_frontend" ]
     .forEach(function(k){ keys.push(PREFIX + k); });
   keys.forEach(function(k){
     if(k.indexOf("_broken_") >= 0) return; // 备份键自身不二次守卫（残值已存档）

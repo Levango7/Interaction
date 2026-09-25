@@ -56,7 +56,7 @@ function renderScBox(){
     const s = SCENARIOS[k], o = ov[k]||{};
     const overridden = o.name || o.color;
     return `<div class="chain-row" data-sc="${esc(k)}">
-      <span class="chain-ic" style="color:${s.color}">${s.icon||""}</span>
+      <span class="chain-ic" style="color:${scCss(s.color)}">${s.icon||""}</span>
       <input class="sc-edit-name" value="${esc(s.name)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" class="u-max-w-90">
       <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
       <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label="${t("action.saveRenameColor","保存改名换色")}">✓</button>
@@ -774,7 +774,7 @@ function openChainImportModal(){
     pendingLinks = r.links;
     const rows = r.links.map(l => {
       const fs = scMeta(l.fromSc), ts = scMeta(l.toSc);
-      return `<div class="chain-preview-row"><span style="color:${fs.color}">${esc(fs.name)}</span> <b>${esc(l.kw)}</b> → <span style="color:${ts.color}">${esc(ts.name)}</span></div>`;
+      return `<div class="chain-preview-row"><span style="color:${scCss(fs.color)}">${esc(fs.name)}</span> <b>${esc(l.kw)}</b> → <span style="color:${scCss(ts.color)}">${esc(ts.name)}</span></div>`;
     }).join("");
     previewEl.innerHTML = sanitizeHtml(`<div class="u-p-1h u-radius-sm u-border-line"><b>${t("chainShare.willImportPrefix","将导入 ")}${r.count}${t("chainShare.willImportSuffix"," 条链：")}</b>${rows}</div>`);
     $("#chainImportConfirmBtn").disabled = false;
@@ -901,7 +901,7 @@ function openTemplateModal(){
   if(old) old.remove();
   const cards = SCENE_TEMPLATES.map((tpl, i) => {
     const scSet = [...new Set(tpl.tasks.map(x => x.scenario))];
-    const scBadges = scSet.map(sc => { const s = scMeta(sc); return `<span class="tpl-sc-badge" style="background:${s.color};color:var(--on-accent)">${esc(s.name)}</span>`; }).join(" ");
+    const scBadges = scSet.map(sc => { const s = scMeta(sc); return `<span class="tpl-sc-badge" style="background:${scCss(s.color)};color:var(--on-accent)">${esc(s.name)}</span>`; }).join(" ");
     return `<div class="tpl-card" data-tpl="${i}">
       <div class="tpl-card-head">
         <h3>${esc(tpl.name)}</h3>

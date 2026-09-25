@@ -165,6 +165,15 @@ const meta = (rawOrder || []).map(x => (typeof x === 'string' ? { name: x, tailB
 const names = meta.length ? meta.map(m => m.name) : files.map(f => f.replace(/\.js$/, ''));
 
 let injected = 0, missing = [];
+/* v3.7.52：src/ 下未登记在 order.json 的 .js 必须报错，而不是静默忽略。
+   原实现只循环 order.json 里的名字 —— 新加的模块忘了登记时，代码不会被拼回 HTML，
+   而 --check 仍打印「齐全 ✓」并退 0：静默丢代码是最危险的一类构建缺陷。
+   静默丢代码是最危险的一类构建缺陷，故两个模式都硬失败。 */
+const orphans = files.map(f => f.replace(/\.js$/, '')).filter(n => !names.includes(n));
+if (orphans.length) {
+  console.error('[src-split] src/ 下以下文件未登记在 ' + orderFile + '（不会被拼回）：' + orphans.join(', '));
+  process.exit(1);
+}
 for (const n of names) {
   const f = join(SRC_DIR, n + '.js');
   if (!existsSync(f)) { missing.push(n); continue; }
@@ -183,6 +192,10 @@ if (missing.length) {
   process.exit(1);
 }
 if (CHECK) {
+  if (names.length !== files.length) {
+    console.error(`[src-split] check ✗ 数量不一致：order.json ${names.length} 个 / src 文件 ${files.length} 个`);
+    process.exit(1);
+  }
   console.log(`[src-split] check：HTML 标记 ${names.length} 个 / src 文件 ${files.length} 个 —— 齐全 ✓`);
   process.exit(0);
 }

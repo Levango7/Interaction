@@ -86,3 +86,95 @@ test.describe("跨视口布局不变量", () => {
     }
   });
 });
+
+/**
+ * 窄屏表单/卡片专项（v3.7.53 用户标注实测）
+ * ----------------------------------------------------------------------------
+ * 这三条都是「用户截图标注 → 实测定位 → 修好」的真实缺陷，故固化为渲染层断言：
+ *   ① 窄屏任务表单四个字段必须**等宽**（此前给 ＋ 预留的内边距让「标签」窄 46px）
+ *   ② 看板卡操作按钮文字**水平居中**（手机端 inline-flex 后 text-align 失效 → 左贴）
+ *   ③ 场景联动 streak 徽章**单行**（此前每枚被压到 64px，「办公+⚠️未开始」折成三行）
+ * 三视口（375 / 768 / 1280）下都必须成立 —— 修法本身不依赖断点。
+ */
+test.describe("窄屏表单与卡片不变量", () => {
+  test.beforeAll(() => {
+    test.skip(!process.env.E2E, "set E2E=1 to run");
+  });
+
+  test("表单等宽 · 按钮居中 · 徽章单行", async ({ page }) => {
+    page.on("dialog", async (d) => { try { await d.accept(); } catch (e) { /* ignore */ } });
+    await page.goto(APP_URL);
+    await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
+
+    for (const vw of [375, 768, 1280]) {
+      await page.setViewportSize({ width: vw, height: 900 });
+      await page.evaluate(() => { setActive("office"); render(); });
+      await page.waitForTimeout(350);
+      /* 造一条任务，让看板卡片出现（按钮才可测） */
+      await page.evaluate(() => {
+        const f = document.querySelector("#taskForm");
+        if (!f) return;
+        const t = f.querySelector('input[name="title"], .fld input:not([type])');
+        if (t) { t.value = "e2e-响应式检查"; t.dispatchEvent(new Event("input", { bubbles: true })); }
+        const b = f.querySelector('button[type="submit"], .addbtn');
+        if (b) b.click();
+      });
+      await page.waitForTimeout(500);
+
+      const r = await page.evaluate((width) => {
+        const out = { vw: width };
+        const f = document.querySelector("#taskForm");
+        if (f) {
+          const ws = [...f.children]
+            .filter((c) => c.querySelector("input,select"))
+            .map((c) => Math.round(c.querySelector("input,select").getBoundingClientRect().width));
+          out.fieldWidths = ws;
+          /* 桌面（≥1024）字段刻意不等宽（标题/优先级等按微轨分配），只在窄屏要求等宽 */
+          out.expectEqual = width < 1024;
+          out.allEqual = new Set(ws).size === 1;
+        }
+        const btn = document.querySelector(".kbtns button");
+        if (btn) {
+          const br = btn.getBoundingClientRect();
+          const rg = document.createRange();
+          rg.selectNodeContents(btn);
+          const tr = rg.getBoundingClientRect();
+          out.centerOffset = Math.round(Math.abs((br.x + br.width / 2) - (tr.x + tr.width / 2)));
+        }
+        const badges = [...document.querySelectorAll(".streak-badge")];
+        if (badges.length) {
+          out.badgeHeights = [...new Set(badges.map((b) => Math.round(b.getBoundingClientRect().height)))];
+          const inner = document.querySelector(".hc-streak-inner");
+          out.streakOverflow = inner ? Math.max(0, inner.scrollWidth - inner.clientWidth) : 0;
+        }
+        return out;
+      }, vw);
+
+      if (r.fieldWidths) {
+        if (r.expectEqual) {
+          expect(r.allEqual, `视口 ${vw}px 表单字段不等宽：${JSON.stringify(r.fieldWidths)}`).toBe(true);
+        }
+      }
+      if (r.centerOffset !== undefined) {
+        expect(r.centerOffset, `视口 ${vw}px 看板按钮文字未居中，偏心 ${r.centerOffset}px`).toBeLessThanOrEqual(1);
+      }
+
+      /* streak 徽章在总览页 */
+      await page.evaluate(() => { setActive("overview"); render(); });
+      await page.waitForTimeout(900);
+      const st = await page.evaluate(() => {
+        const badges = [...document.querySelectorAll(".streak-badge")];
+        const inner = document.querySelector(".hc-streak-inner");
+        return {
+          n: badges.length,
+          heights: [...new Set(badges.map((b) => Math.round(b.getBoundingClientRect().height)))],
+          overflow: inner ? Math.max(0, inner.scrollWidth - inner.clientWidth) : 0
+        };
+      });
+      if (st.n) {
+        expect(Math.max(...st.heights), `视口 ${vw}px streak 徽章被折行（高度 ${JSON.stringify(st.heights)}）`).toBeLessThanOrEqual(34);
+        expect(st.overflow, `视口 ${vw}px streak 容器横向溢出 ${st.overflow}px`).toBeLessThanOrEqual(0);
+      }
+    }
+  });
+});

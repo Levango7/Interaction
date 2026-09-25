@@ -108,7 +108,7 @@ function renderHelp(){
         `)}
         ${helpSection("integration", t("help.integration", "集成与扩展"), `
           <p><b data-i18n="help.featIntegrations">集成中心</b>：设置抽屉「集成」Tab 列出 7 个外部集成（Notion/Linear/Jira/Slack/飞书/钉钉/日历）+ OpenAPI Key 管理。每个集成可配置凭据后连接。</p>
-          <p><b data-i18n="help.featOauth">OAuth 授权</b>（日历）：v3.1.2 起日历集成支持 OAuth 授权——在凭据弹窗填入服务商控制台注册的 Client ID，<code>点击 OAuth 授权</code> 自动获取 Access Token。redirect_uri 需登记 <code>http://127.0.0.1:8124/oauth/callback</code>（仅 Electron 版支持）。</p>
+          <p><b data-i18n="help.featOauth">OAuth 授权</b>（日历）：日历集成支持 OAuth——主路径是在凭据弹窗填入服务商控制台注册的 Client ID 并<b>手动粘贴 Access Token</b>。若当前构建包含本地授权回调服务（Electron 主进程实现 <code>oauth-begin</code> + <code>http://127.0.0.1:8124/oauth/callback</code>），弹窗内会额外出现 <code>点击 OAuth 授权</code> 按钮可自动取 Token；<b>按钮未出现即表示该服务未包含在本次构建中</b>，请走手动粘贴。redirect_uri 需登记上述回调地址。</p>
           <p><b>SQL Playground</b>：编程场景 SQL 标签，sql.js WASM 本地 SQLite 沙箱执行（无服务端）。</p>
           <p><b data-i18n="help.featPluginMarket">插件市场</b>：侧栏「商店」内置插件（pomodoro/reading/finance/budget/health/habit-tracker/weather/quote/focus-timer/mindmap），其中 reading/finance 启用后会在侧栏新增「阅读」「理财」场景，health/budget 挂专属卡片——见插件卡片描述。</p>
           <p><b data-i18n="help.featRecycle">回收站多类型</b>（v3.1 起）：软删任务与卸载/重置的配置/文件/插件均入「回收站」页（侧栏系统组），可恢复或彻底删除；自动清理策略在设置抽屉「外观」或回收站页可调（off/7/30/90 天）。</p>
@@ -211,7 +211,7 @@ function renderSharedTaskCard(task){
     ? `<div class="share-tags">${task.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join(" ")}</div>`
     : "";
   return `<div class="share-task-card">
-    <div class="share-sc-badge" style="background:${sm.color};color:var(--on-accent)">${esc(sm.name)}</div>
+    <div class="share-sc-badge" style="background:${scCss(sm.color)};color:var(--on-accent)">${esc(sm.name)}</div>
     <h3 class="share-title">${esc(task.title)}</h3>
     <div class="share-meta">
       <div class="share-meta-row"><span class="share-meta-label" data-i18n="share.chainLog">联动记录</span><span class="share-meta-val">${esc(statusLabel)}</span></div>
