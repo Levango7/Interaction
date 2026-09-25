@@ -48,12 +48,13 @@
   --danger:#d83b3b; --danger-soft:#fdeeee; --danger-border:#f3c4c4;
   --danger-overdue-bg:#fef6f6; --danger-overdue-border:#f0c8c8;
   --warn:#9a5a12; --warn-soft:#fdf3e3;
-  /* v3.7.47：--warn #c0761f → #9a5a12（UI 体检 A 类：P1 徽章 / 实验性徽章
+  /* v3.7.47：--warn 加深（UI 体检 A 类：P1 徽章 / 实验性徽章
      深琥珀字 on 浅琥珀底实测 3.26:1 < 4.5）。各主题都自带 --warn，这里只影响浅色；
-     加深后 #9a5a12 on #fdf3e3 ≈ 4.95:1 ✓，警告横幅/图标同步受益（浅底上更深=更清楚）。 */
+     加深后同底色实测 4.95:1 ✓，警告横幅/图标同步受益（浅底上更深=更清楚）。
+     ⚠️ lint-colors 只放行「--令牌: 值」定义行 —— 注释里不得写裸十六进制色值（已踩第 3 次）。 */
   --ok:#188038; --accent-soft:#e8f2fe;
-  /* v3.7.47：--ok #34a853 → #188038（同上：成功 toast 白字 on 绿底实测 3.06:1 < 4.5，
-     #188038 上白字 ≈ 5.0:1 ✓；浅底上的绿色成功文字也一并更清楚）。 */
+  /* v3.7.47：--ok 加深（同上：成功 toast 白字 on 绿底实测 3.06:1 < 4.5，
+     加深后白字 ≈ 5.0:1 ✓；浅底上的绿色成功文字也一并更清楚）。 */
   /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/联动图标引用） */
   --sc-office:#0a6cbd; --sc-design:#d6409f; --sc-study:#d97706; --sc-data:#0d9488; --sc-code:#34a853; --sc-life:#7c5cbf;
   /* 自定义场景默认色（P1：color input 默认值 / 非法色值回退） */
@@ -1465,9 +1466,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .foot{border-top:1px solid var(--line);color:var(--text-dim);font-size:var(--fs-xs);line-height:1.6;padding:var(--space-3) var(--space-4)}
 /* v3.7.47：页脚文字 --text-faint → --text-dim（UI 体检 A 类：浅色主题下实测对比度仅 2.23:1，
    WCAG 正文要求 4.5）。版本号 / 待办统计 / AI 状态三处都在页脚，几乎看不清。
-   ⚠️ 实测记录：先试过 --text-dim-2（#6e6e73），CDP 量出只有 **3.85:1** 仍不达标 ——
-   页脚底 #e0e0e4 的相对亮度是 0.744 不是直觉里的"很浅"，中间档不够，必须用 --text-dim
-   （#424245 → 7.6:1 ✓）。不动 --text-faint 全局值（它是"最淡一档"，别处当纯装饰用）。 */
+   ⚠️ 实测记录：先试过 --text-dim-2，CDP 量出只有 **3.85:1** 仍不达标 ——
+   页脚底色的相对亮度是 0.744 不是直觉里的"很浅"，中间档不够，必须用 --text-dim（7.6:1 ✓）。
+   不动 --text-faint 全局值（它是"最淡一档"，别处当纯装饰用）。
+   ⚠️ lint-colors 只放行「--令牌: 值」定义行 —— 注释里不得写裸十六进制色值。 */
 .foot-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}
 .foot-id{flex:0 0 auto}
 .foot-stat{flex:1 1 auto;text-align:center}
