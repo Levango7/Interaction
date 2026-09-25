@@ -134,40 +134,70 @@
 
 ### 4.1 字号阶梯
 
+**十四档**（v3.7.50 收编零散值后定稿；全部引用均为令牌，CSS 内**零裸 px**）：
+
 | 令牌 | 值 | 用途 |
 |---|---|---|
-| `--fs-3xs` | 10px | 顶栏徽标、时间戳、迷你图表标签（密集场景） |
-| `--fs-2xs` | 11px | 顶栏按钮文字、次级注释 |
+| `--fs-4xs` | 9px | 热力日历格内数字、时间轴 +N 角标（方块内塞得下的极限刻度） |
+| `--fs-3xs` | 10px | 顶栏徽标、时间戳、迷你图表标签、功能角标（密集场景） |
+| `--fs-2xs` | 11px | 顶栏按钮文字、次级注释、图节点标签 |
 | `--fs-xs` | 13px | 小标题（`.sub`）、chip、辅助文字、表格 |
-| `--fs-sm` | 14px | **正文主力**（实测出现 901 次）、卡片标题、按钮、看板卡 ⚑ |
-| `--fs-base` | 15px | 长文阅读区（实测 423 次） |
-| `--fs-md` | 16px | 页面大标题（`--fs-lg` 别名场景） |
-| `--fs-lg` | 18px | 页面标题 h2、区块标题 |
-| `--fs-xl` | 20px | 统计数字 |
-| `--fs-2xl` | 24px | hero 数字（罕见） |
+| `--fs-sm` | 14px | **正文主力**、卡片标题、按钮、看板卡 ⚑ |
+| `--fs-base` | 15px | 长文阅读区 |
+| `--fs-md` | 16px | 区块标题 |
+| `--fs-lg` | 18px | 页面标题 h2、场景名、引导页正文 |
+| `--fs-xl` | 20px | 统计数字、浮层关闭键（✕ 字形） |
+| `--fs-3xl` | 22px | 统计卡数值 |
+| `--fs-2xl` | 24px | 抽屉关闭键、安装卡图标 |
+| `--fs-display-sm` | 32px | 引导页 hero 标题 |
+| `--fs-display` | 36px | 天气温度、天气图标容器 |
+| `--fs-display-lg` | 48px | 闹钟时间（hero 展示级） |
+
+> **档位编号与大小不完全同序**：`--fs-3xl`(22) < `--fs-2xl`(24)。这是历史命名沿用
+> （2xl 先被占用），**不是错误**。守护测试按显式 `ASCENDING` 顺序断言递增，不按数组序。
+> 新增档位时**必须同步加入 `ASCENDING`**。
 
 **规则**：
 - 正文默认 `--fs-sm`（14px），不是 `--fs-base`。15px 只用于长文阅读。
 - 输入框字号 `--fs-sm`，**不得**回 `--fs-base`。
   ⚑ 守护：`tests/datepicker-panel-width.test.js`
 - placeholder 全局 400 字重 + `var(--muted)`，**不得 600**。
-- 阶梯外幽灵值必须收敛。
+- 🔴 **CSS 与内联 style 均不得出现裸 `font-size:NNpx`** —— 必须走令牌。
+  ⚑ 守护：`tests/ui-spec-guards.test.js`（CSS + 内联两条，已做故障注入验证）
 
-### 4.2 图标三档制
+🔴 **令牌块有 6 处声明，改一处必须全改**（`:root` + dark/sepia/elegant/matrix/ink 五个主题覆盖块）。
+漏改主题块会导致 `var(--fs-*)` 在该主题下**静默回退**（不报错、不显形，只是字变小/变大）。
+⚑ 守护：断言全部声明处内容**完全一致**（v3.7.50 新增，已做故障注入验证）。
 
-⚑ 实测（**已排除 `display:none` 子树**）：真渲染图标 69 个，为 **16 / 18 / 20 / 15** 四档。
+### 4.2 图标四档制
 
-**18px 已收敛为 `--icon-set` 令牌**（v3.7.49）。它原为 **14 处硬编码**，散落在设置页图标容器
-（`.set-ic`）、侧栏折叠键（`.side-toggle`）、聊天 rail（`.rail-btn`/`.rail-ic`）、
-命令面板（`.cmd li .ci`）、离线横幅、SSO 登录图标、用户头像、安装卡勾选、联动行图标等处。
-详见 [附录 C](#附录-c已知例外与债务)。新代码禁止再用非令牌的裸 px 图标尺寸。
-**收敛为三档，按「层级」而非「感觉」取用**：
+⚑ 实测（**已排除 `display:none` 子树**）：真渲染图标 **69 个**，收敛为 **16 / 18 / 20** 三档在用。
+
+**档位表**：
 
 | 令牌 | 值 | 用途 | 实测用量 |
 |---|---|---|---|
-| `--icon-sm` | 16px | 行内、次级小按钮、导航项、状态徽标 | 40 处 ✅ 主力 |
+| `--icon-sm` | 16px | 行内、次级小按钮、导航项、状态徽标、紧凑按钮内图标 | ~43 处 ✅ 主力 |
+| `--icon-set` | 18px | 图标"中间档"：设置页图标容器、侧栏折叠键、聊天 rail、命令面板等 | 24 处 ✅ |
 | `--icon-md` | 20px | 工具栏按钮、卡片标题、消息图标、面板标题 | 15 处 ✅ |
-| `--icon-lg` | 24px | 应用卡片、文档工具主入口、空态 | 0 处 ⚠️ |
+| `--icon-lg` | 24px | 应用卡片、文档工具主入口、空态 | 0 处（保留备用） |
+
+**收敛历史**（两轮，共 17 处硬编码入令牌）：
+- **18px（14 处）→ `--icon-set`**（v3.7.49）：`.set-ic svg` · `.rail-btn svg`×2 · `.rail-ic` ·
+  `.chain-ic svg` · `.cmd li .ci` · `.side-toggle svg` · `.offline-banner .ic`+`svg` ·
+  `.user-avatar svg` · `.auth-sso-ic svg` · `.install-card .check`
+- **15px（3 处）→ 并入 `--icon-sm`**（v3.7.50）：`.chat-attach-btn svg` · `.ph-ai-btn .ic-inline`+`svg`
+  （15→16 视觉差 1px，所在按钮高 33px 容得下，**不为 1px 新增档位**）
+- **3 处非图标 18px 豁免**：`.ov4-badge`（徽标 `min-width`）· `.todo-chk`（原生复选框）·
+  `.pet .pet-close`（圆形关闭键）
+
+⚑ 守护：`tests/ui-spec-guards.test.js`（含 **ALLOWED 白名单 + 清单腐化检测** + 故障注入验证）。
+新代码禁止再用非令牌的裸 px 图标尺寸。
+
+**仍保留的布局尺寸（豁免，不纳入图标档）**：
+
+| 令牌 | 值 | 用途 | 实测用量 |
+|---|---|---|---|
 
 **例外（不纳入令牌）**：
 - `.page-head .ph-ic` 32px —— 页面级标识，属布局尺寸
@@ -649,8 +679,8 @@ Esc / 遮罩点击 / 焦点陷阱由 `setupModalA11yBase()` **全局接管** —
 | §1.4 半档间距 | `ui-spec-guards.test.js` | — |
 | §2 间距令牌 | `design-tokens.test.js` + `ui-spec-guards.test.js` | 10 |
 | §3 控件高度 | `form-grid-scheme-a.test.js` + `ui-spec-guards.test.js` | — |
-| §4.1 字号阶梯 | `design-tokens.test.js` + `ui-spec-guards.test.js` | — |
-| §4.2 图标三档 | `ui-spec-guards.test.js` | — |
+| §4.1 字号阶梯（14 档 + 6 处声明一致性 + 零裸 px） | `design-tokens.test.js` + `ui-spec-guards.test.js` | ✅ |
+| §4.2 图标四档（含豁免白名单与腐化检测） | `ui-spec-guards.test.js` | ✅ |
 | §5 圆角/阴影 | `design-tokens.test.js` | — |
 | §6 颜色 | `color-tokens.test.js` + `lint-colors.mjs` | — |
 | §7 主题注册 | `theme-registration.test.js` | 53 |
@@ -858,6 +888,54 @@ const fs = getComputedStyle(el).fontSize;   // 真实生效值
 **同时必须核对规则的媒体查询归属**：`.mob-bar-btn{...}` 在源码里写了
 `font-size:var(--fs-xs)`，但整块位于 `@media(max-width:767px)` 内 ——
 桌面态不生效是**正确行为**，不是遗漏。
+
+### C13. 零散字号与图标值收编（v3.7.50 **已完成，残留归零**）
+
+**范围**：22 处裸 `font-size` + 3 处 15px 图标 + 4 处内联 `font-size`。
+
+| 类别 | 处数 | 处置 |
+|---|---|---|
+| 值 = 既有令牌（10/11/13/15/20/24px） | 15 | ✅ 直替令牌 |
+| 9px（热力日历格/时间轴角标） | 3 | ✅ 新增 `--fs-4xs` |
+| 22px（统计卡数值） | 2 | ✅ 新增 `--fs-3xl` |
+| 36/48px（天气/闹钟 hero） | 3 | ✅ 新增 `--fs-display` / `--fs-display-lg` |
+| 15px 图标 | 3 | ✅ 并入 `--icon-sm`（16px） |
+| 内联 `style="font-size:NNpx"` | 4 | ✅ 改 `var(--fs-*)`（32px → `--fs-display-sm` 新增） |
+
+**结果**：CSS 与内联 style 的裸 `font-size` **双双归零**（守护断言 `[]`）。
+
+#### 🔴 本轮踩到的最大坑：令牌块在 6 处重复声明
+
+字号令牌行（`--fs-4xs…--fs-display-lg`）**同时存在于 6 个块**：
+
+```
+:root                         (L29)
+:root[data-theme="dark"]      (L2876)
+:root[data-theme="sepia"]     (L3789)
+:root[data-theme="elegant"]   (L3825)
+:root[data-theme="matrix"]    (L3858)
+:root[data-theme="ink"]       (L3890)
+```
+
+**原守护的缺陷**：`rootToken()` 用 `HTML.match()` 只取**第一处**（`:root`）。
+→ 新增令牌时若漏改主题块，这些主题下 `var(--fs-*)` 会**静默回退**（不报错、不显形），
+守护**完全不会红**。
+
+**修法**：新增断言「全部声明处内容**完全一致**」—— 连这一条也做了**故障注入验证**
+（删掉 dark 块的令牌行 → 立刻变红）。
+
+> 🔴 **通用教训**：任何"在 N 处重复声明"的令牌，守护必须覆盖**一致性**，
+> 而不只是"第一处存在"。这类漏改是**静默失效**里最隐蔽的一种。
+
+#### 🔴 第二个坑：内联样式藏在 `src/*.js`，不在 HTML
+
+我第一次改完 HTML 后 rebuild，改动**全部丢失**（`src-split` 从 `src/` 重新生成 JS）。
+真因：`<h1 style="font-size:32px">` 这类模板字符串住在
+`src/render-widgets.js` / `src/ui-onboarding.js` / `src/ui-global-events.js`。
+
+> 🔴 **改 JS 模板字符串里的样式，必须改 `src/`，不能只改拼回态 HTML** ——
+> 否则下次 rebuild 就没了。**该坑由我新写的守护断言当场抓住**（它报出 32px/18px 仍在），
+> 证明"先写守护再修"的顺序是对的。
 
 → 已同步写入 §6.5「写注释的两条禁令」之后，作为第三条禁令。
 

@@ -1619,8 +1619,8 @@ const TOOL_APPS = {
         + '<button type="button" class="addbtn sm" data-sc="danger" id="pptDel">删除本页</button>'
         + '<button type="button" class="addbtn sm" id="pptImportJson">' + t("tool.ppt.importJson", "导入 JSON") + '</button>' + '<button type="button" class="addbtn sm" id="pptExportJson">导出 JSON</button></div></div></div>'
         + '<div id="pptStage" hidden class="u-flex u-flex-col u-ai-center u-jc-center u-pos-fixed u-inset-0 u-z-modal u-p-6 u-bg-bg">'
-        + '<h1 id="stageTitle" class="u-mb-4"style="font-size:32px"></h1>'
-        + '<p id="stageBody" class="u-text-center u-lh-18 u-max-w-720"style="font-size:18px"></p>'
+        + '<h1 id="stageTitle" class="u-mb-4"style="font-size:var(--fs-display-sm)"></h1>'
+        + '<p id="stageBody" class="u-text-center u-lh-18 u-max-w-720"style="font-size:var(--fs-lg)"></p>'
         + '<div class="u-flex u-gap-3 u-pos-absolute"style="bottom:24px"><button type="button" class="addbtn sm" id="stagePrev">← 上一页</button>'
         + '<button type="button" class="addbtn sm" id="stageNext">下一页 →</button>'
         + '<button type="button" class="addbtn sm" data-sc="danger" id="stageExit">退出放映</button></div></div>';

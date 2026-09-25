@@ -11274,7 +11274,7 @@ function exportReportPDF(report){
   if(rootStyle){ w.document.write(rootStyle); }
   w.document.write("}");
   w.document.write("body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:var(--space-5);color:var(--text)}");
-  w.document.write("h1{color:var(--accent);font-size:22px}");
+  w.document.write("h1{color:var(--accent);font-size:var(--fs-3xl)}");
   w.document.write("h2{font-size:var(--fs-md);margin-top:var(--space-6)}");
   w.document.write("table{width:100%;border-collapse:collapse;margin:var(--space-2) 0}");
   w.document.write("td,th{border:1px solid var(--line);padding:var(--space-2);text-align:left}");

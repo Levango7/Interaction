@@ -38,9 +38,9 @@ function _onboardRenderStep(step){
         <div class="onboard-title" data-i18n="onboard.step2Title">场景联动 — 让正反馈转起来</div>
         <div class="onboard-desc" data-i18n="onboard.step2Desc">完成任务可以触发跨场景联动。比如交付任务完成后自动提醒你学习充电。</div>
         <div class="onboard-chain-demo">
-          <span class="u-fw-600" style="color:${SCENARIOS.office.color};font-size:18px">${SCENARIOS.office.name}</span>
+          <span class="u-fw-600" style="color:${SCENARIOS.office.color};font-size:var(--fs-lg)">${SCENARIOS.office.name}</span>
           <span class="arr">→</span>
-          <span class="u-fw-600" style="color:${SCENARIOS.study.color};font-size:18px">${SCENARIOS.study.name}</span>
+          <span class="u-fw-600" style="color:${SCENARIOS.study.color};font-size:var(--fs-lg)">${SCENARIOS.study.name}</span>
         </div>
         <div class="onboard-actions">
           <button type="button" class="onboard-btn-secondary" id="onboardSkip" data-i18n="onboard.skip2">跳过</button>

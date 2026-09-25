@@ -125,6 +125,14 @@ describe("图标三档制：令牌齐备且按层级取用", () => {
         expect(HTML, "豁免选择器应仍存在于源码：" + sel).toContain(sel);
       }
     });
+
+    /* v3.7.50：15px 档已并入 --icon-sm（16px）。
+       原 3 处：.chat-attach-btn svg / .ph-ai-btn .ic-inline(+svg)。
+       15→16 视觉差 1px，且所在按钮高 33px 容得下 —— 不必为此新增第五档。 */
+    it("禁止再出现硬编码 15px 的图标尺寸（已并入 --icon-sm）", () => {
+      const bad = [...HTML.matchAll(/width\s*:\s*15px\s*;\s*height\s*:\s*15px/g)];
+      expect(bad.length, "15px 图标应改为 var(--icon-sm)（16px）").toBe(0);
+    });
   });
 });
 
@@ -211,23 +219,53 @@ describe("间距体系：整档 + 半档都钉死（半档此前完全无守护�
 /* ═══════════════════════════════════════════════════════════════════════
    ④ 字号阶梯（ui-standards §4.1）—— 整梯钉死
    ═══════════════════════════════════════════════════════════════════════ */
-describe("字号阶梯：九档钉死", () => {
-  it("--fs-3xs..--fs-2xl 全部有定义且值正确", () => {
-    const want = {
-      "--fs-3xs": "10px", "--fs-2xs": "11px", "--fs-xs": "13px", "--fs-sm": "14px",
-      "--fs-base": "15px", "--fs-md": "16px", "--fs-lg": "18px", "--fs-xl": "20px", "--fs-2xl": "24px"
-    };
-    for (const [k, v] of Object.entries(want)) {
+describe("字号阶梯：十四档钉死 + 全站点一致性", () => {
+  const LADDER = {
+    "--fs-4xs": "9px", "--fs-3xs": "10px", "--fs-2xs": "11px", "--fs-xs": "13px",
+    "--fs-sm": "14px", "--fs-base": "15px", "--fs-md": "16px", "--fs-lg": "18px",
+    "--fs-xl": "20px", "--fs-2xl": "24px", "--fs-3xl": "22px",
+    "--fs-display-sm": "32px", "--fs-display": "36px", "--fs-display-lg": "48px",
+  };
+  /** 递增顺序 = 视觉大小顺序（--fs-3xl 排在 2xl 后，但 22 < 24 —— 故不按数组序断言） */
+  const ASCENDING = ["--fs-4xs", "--fs-3xs", "--fs-2xs", "--fs-xs", "--fs-sm", "--fs-base",
+    "--fs-md", "--fs-lg", "--fs-xl", "--fs-3xl", "--fs-2xl", "--fs-display-sm", "--fs-display", "--fs-display-lg"];
+
+  it("十四档全部有定义且值正确", () => {
+    for (const [k, v] of Object.entries(LADDER)) {
       expect(rootToken(k), k).toBe(v);
     }
   });
 
-  it("阶梯严格递增（防止某档被改成同值/倒序，导致层级语义失效）", () => {
-    const names = ["--fs-3xs", "--fs-2xs", "--fs-xs", "--fs-sm", "--fs-base", "--fs-md", "--fs-lg", "--fs-xl", "--fs-2xl"];
-    const px = names.map(n => parseInt(rootToken(n), 10));
+  it("字号严格递增（按 ASCENDING 顺序）—— 防止某档被改成同值/倒序", () => {
+    const px = ASCENDING.map(n => parseInt(rootToken(n), 10));
     for (let i = 1; i < px.length; i++) {
-      expect(px[i], names[i] + " 应大于 " + names[i - 1]).toBeGreaterThan(px[i - 1]);
+      expect(px[i], ASCENDING[i] + " 应大于 " + ASCENDING[i - 1]).toBeGreaterThan(px[i - 1]);
     }
+  });
+
+  /* ── v3.7.49 补的关键守护：令牌块在 6 处重复声明 ──────────────────────
+     发现：字号令牌行同时存在于 :root + 5 个主题覆盖块
+     （dark / sepia / elegant / matrix / ink）。
+     原守护只用 match() 取**第一处**，新增令牌时若漏改主题块，
+     这些主题下 var(--fs-4xs) 会**静默失效**（回退到继承值），守护却不会红。
+     → 断言：所有出现处的内容**必须完全一致**。 */
+  it("字号令牌块在全部声明处（:root + 5 主题）完全一致", () => {
+    const RE = /--fs-4xs:[\d.]+px;(?:\s*--fs-[a-z0-9-]+:[\d.]+px;)+/g;
+    const all = [...HTML.matchAll(RE)].map(m => m[0].trim());
+    expect(all.length, "字号令牌行应有多处声明（:root + 主题覆盖块）").toBeGreaterThanOrEqual(6);
+    const uniq = [...new Set(all)];
+    expect(uniq.length, "字号令牌块在不同声明处不一致（说明漏改了某个主题块）：\n" + uniq.join("\n")).toBe(1);
+  });
+
+  it("禁止 CSS 里再出现裸 font-size（必须走令牌）", () => {
+    const css = (HTML.match(/<style[^>]*>([\s\S]*?)<\/style>/) || [])[1] || "";
+    const bad = [...css.matchAll(/font-size\s*:\s*(\d+)px/g)].map(m => m[1] + "px");
+    expect([...new Set(bad)], "CSS 里不应有裸 font-size（应用 --fs-* 令牌）").toEqual([]);
+  });
+
+  it("禁止内联 style 里出现裸 font-size（含 JS 模板字符串）", () => {
+    const bad = [...HTML.matchAll(/style="[^"]*font-size\s*:\s*(\d+)px/g)].map(m => m[1] + "px");
+    expect([...new Set(bad)], "内联 style 不应有裸 font-size（应用 var(--fs-*)）").toEqual([]);
   });
 });
 
