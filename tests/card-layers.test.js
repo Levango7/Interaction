@@ -17,6 +17,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { mediaBlocks } from "./helpers/media-blocks.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CSS = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
@@ -162,11 +163,18 @@ describe("卡片文字可读性（v3.7.9 · 用户：「字体大小，字体粗
   });
 
   it("窄屏(≤1023) 操作按钮字号回退（pad 看板列仅 168px）", () => {
-    const blk = CSS.match(/@media \(max-width:1023px\)\{[\s\S]*?\n\}/);
-    expect(blk, "应存在窄屏回退块").toBeTruthy();
+    /* ⚠️ 定位方式必须**锚定到规则所在的块本身**，不能用「取全文第一个 max-width:1023px 块」——
+       那样写法极度脆弱：任何在它之前新增/改动一个同断点的媒体查询，断言就会指到别处。
+       v3.7.48 实测踩到：断点收敛把 `#recForm` 的 879→1023 后，
+       原正则 `@media \(max-width:1023px\)\{[\s\S]*?\n\}` 直接命中了 `#recForm` 块，误报失败。
+       → 改用 tests/helpers/media-blocks.js 的括号计数扫描器，
+         先切出**全部** 1023 块，再挑含看板按钮规则的那个。 */
+    const blocks = mediaBlocks(CSS).filter(b => /max-width:\s*1023px/.test(b.query));
+    const blk = blocks.find(b => b.body.includes(".kcol .kbtns button"));
+    expect(blk, "应存在含看板按钮回退的 ≤1023 块").toBeTruthy();
     /* ⚠️ 必须是 `.kcol .kbtns button` 这种更高特异性的写法 ——
        该块在源码里位于 `.kbtns button{font-size:var(--fs-sm)}` 之前，
        同特异性会被后者按源码顺序覆盖而静默失效（实测 900px 下仍是 14px）。 */
-    expect(blk[0], "回退要用 .kcol 提高特异性").toContain(".kcol .kbtns button{font-size:var(--fs-xs)}");
+    expect(blk.body, "回退要用 .kcol 提高特异性").toContain(".kcol .kbtns button{font-size:var(--fs-xs)}");
   });
 });
