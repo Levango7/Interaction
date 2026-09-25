@@ -1282,6 +1282,7 @@ select[name="priority"]{max-width:120px}
 .u-text-warn{color:var(--warn)}
 .u-text-ok{color:var(--ok)}
 .u-text-dim{color:var(--text-dim)}
+.u-fs-4xs{font-size:var(--fs-4xs)}
 .u-fs-3xs{font-size:var(--fs-3xs)}
 .u-fs-2xs{font-size:var(--fs-2xs)}
 .u-fs-xs{font-size:var(--fs-xs)}
@@ -5978,10 +5979,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.50"; /* v3.7.50 零散值收编：22 处裸 font-size + 3 处 15px 图标 + 4 处内联字号全部入令牌 · 字号阶梯补至 14 档 · CSS 与内联裸字号双双归零 · 补上「令牌块 6 处声明漏改主题即静默失效」的守护盲区 */
+const VERSION = "3.7.51"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260925b";
+const BUILD_TAG = "20260925c";
 
 
 
@@ -10976,7 +10977,7 @@ function renderHeatmap(sc){
     }
   }
   const labels = weekdays.map((wd, i) =>
-    `<text x="2" y="${gap + i * colW + cell - 2}" font-size="9" fill="var(--muted)">${wd}</text>`
+    `<text x="2" y="${gap + i * colW + cell - 2}" font-size="var(--fs-4xs)" fill="var(--muted)">${wd}</text>`
   ).join("");
   const legend = `<div class="heatmap-legend">${t("stats.heatLess", "少")} <span class="sw l0"></span><span class="sw l1"></span><span class="sw l2"></span><span class="sw l3"></span><span class="sw l4"></span> ${t("stats.heatMore", "多")}</div>`;
   return `<div class="heatmap-wrap"><svg class="heatmap-svg" viewBox="0 0 ${W} ${H}" aria-label="${SCENARIOS[sc] ? SCENARIOS[sc].name : sc} ${t("stats.heatmapAria", "热力图")}">${labels}${cells}</svg></div>${legend}`;
@@ -11234,8 +11235,8 @@ function renderWeekBars(){
     const color = SCENARIOS[sc]?SCENARIOS[sc].color:"var(--muted)";
     const name = SCENARIOS[sc]?SCENARIOS[sc].name:sc;
     return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="3" fill="${color}" fill-opacity="0.8"/>
-      <text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="9" fill="var(--muted)">${done}</text>
-      <text x="${x+bw/2}" y="${H-4}" text-anchor="middle" font-size="9" fill="var(--muted)">${name}</text>`;
+      <text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="var(--fs-4xs)" fill="var(--muted)">${done}</text>
+      <text x="${x+bw/2}" y="${H-4}" text-anchor="middle" font-size="var(--fs-4xs)" fill="var(--muted)">${name}</text>`;
   }).join("");
   // 零线
   const zeroY = H-padB;
@@ -11343,16 +11344,16 @@ function renderChainGraph(){
     const lx = mx + (CX-mx)*0.34, ly = my + (CY-my)*0.34;
     const disabled = l.enabled === false;
     return `<path d="M${sx.toFixed(1)},${sy.toFixed(1)} Q${cxp.toFixed(1)},${cyp.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" fill="none" style="stroke:${disabled?"var(--line)":"var(--muted)"}" stroke-width="1.6"${disabled?' stroke-dasharray="4 3"':""} marker-end="url(#wbChainArrow)"/>` +
-      (l.kw ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="9" class="u-fill-muted">${esc(l.kw)}</text>` : "");
+      (l.kw ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="var(--fs-4xs)" class="u-fill-muted">${esc(l.kw)}</text>` : "");
   }).join("");
   // 节点：圆 + 场景名（超 5 字折两行）
   const nodes = scs.map(sc=>{
     const p = pos[sc], s = SCENARIOS[sc] || { name: sc, color: "var(--muted)" };
     const lines = _graphNameLines(s.name);
     const txt = lines.length === 1
-      ? `<text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" class="u-fill-text">${esc(lines[0])}</text>`
-      : `<text x="${p.x.toFixed(1)}" y="${(p.y-1.5).toFixed(1)}" text-anchor="middle" font-size="10" class="u-fill-text">${esc(lines[0])}</text>` +
-        `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="10" class="u-fill-text">${esc(lines[1])}</text>`;
+      ? `<text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[0])}</text>`
+      : `<text x="${p.x.toFixed(1)}" y="${(p.y-1.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[0])}</text>` +
+        `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[1])}</text>`;
     return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${NR}" style="fill:var(--panel);stroke:${s.color}" stroke-width="2"/>${txt}`;
   }).join("");
   return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("hc.graphAriaLabel", "跨场景联动关系图")}">${defs}${edges}${nodes}</svg></div>`;
@@ -13427,7 +13428,7 @@ const TOOL_APPS = {
         if(!needImg()) return;
         const txt = $("#psText").value.trim();
         if(!txt){ toast(t("tool.ps.watermarkFirst", "请输入水印文字"), "warn"); return; }
-        ctx.font = "bold 32px sans-serif";
+        ctx.font = "bold " + _pfCssFont("--fs-display-sm", "32px") + " sans-serif";
         ctx.fillStyle = _pfCssColor("--ps-wm-fill", "");
         ctx.shadowColor = _pfCssColor("--ps-wm-shadow", ""); ctx.shadowBlur = 4;
         ctx.fillText(txt, 20, cv.height - 30);
@@ -14391,6 +14392,13 @@ function _pfResize(){
 }
 /* 运行时读取 CSS 变量色值（canvas 绘制需要真实颜色；避免源码硬编码触发 lint-colors 门禁） */
 function _pfCssColor(name, fallback){
+  try{
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }catch(e){ return fallback; }
+}
+/* 运行时读取 CSS 字号令牌（canvas 的 ctx.font 不参与 CSS 级联，无法直接写 var()） */
+function _pfCssFont(name, fallback){
   try{
     const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return v || fallback;
@@ -16455,7 +16463,7 @@ function radarChartSVG(data){
     svg += '<line x1="' + CX + '" y1="' + CY + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="var(--line)" stroke-width="1"/>';
     const lx = CX + Math.cos(a) * (R + 18);
     const ly = CY + Math.sin(a) * (R + 18) + 4;
-    svg += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + esc(d[i].name) + '</text>';
+    svg += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" font-size="var(--fs-2xs)" fill="var(--text)">' + esc(d[i].name) + '</text>';
   }
   // 数据多边形
   const dataPts = [];
@@ -16574,7 +16582,7 @@ function sankeyChartSVG(data){
     svg += '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="' + barW + '" height="' + h.toFixed(1) + '" fill="var(--accent)"><title>' + esc(n.name) + '：' + (nodeFlow[i] || 0) + '</title></rect>';
     const labelX = isLeft ? (x - 6) : (x + barW + 6);
     const anchor = isLeft ? "end" : "start";
-    svg += '<text x="' + labelX + '" y="' + ((nodeY[i] || padY) + 4).toFixed(1) + '" text-anchor="' + anchor + '" font-size="11" fill="var(--text)">' + esc(n.name) + '</text>';
+    svg += '<text x="' + labelX + '" y="' + ((nodeY[i] || padY) + 4).toFixed(1) + '" text-anchor="' + anchor + '" font-size="var(--fs-2xs)" fill="var(--text)">' + esc(n.name) + '</text>';
   });
   // 链路：贝塞尔曲线
   // 跟踪每个节点已分配的偏移（避免链路重叠）
@@ -17104,7 +17112,7 @@ function renderTrendChart(data, color){
     const v = Math.round(max * i / ticks);
     const yy = y(v);
     grid += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="var(--line)" stroke-width="1"/>` +
-      `<text x="${padL - 4}" y="${yy + 3}" text-anchor="end" font-size="9" fill="var(--muted)">${v}</text>`;
+      `<text x="${padL - 4}" y="${yy + 3}" text-anchor="end" font-size="var(--fs-4xs)" fill="var(--muted)">${v}</text>`;
   }
   // X 轴标签：7 天全标，30 天每 5 天标一个
   let xLabels = "";
@@ -17112,7 +17120,7 @@ function renderTrendChart(data, color){
   data.forEach((d, i) => {
     if(i % labelStep !== 0 && i !== n - 1) return;
     const mm = d.date.slice(5); // MM-DD
-    xLabels += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="var(--muted)">${mm}</text>`;
+    xLabels += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="var(--fs-4xs)" fill="var(--muted)">${mm}</text>`;
   });
   // 折线 + 数据点
   const pts = data.map((d, i) => [x(i), y(d.count)]);
@@ -38945,8 +38953,8 @@ function renderGanttChart(){
   // 起止日期标签
   const minLabel = _ganttFmtDate(minDate);
   const maxLabel = _ganttFmtDate(maxDate);
-  svg += '<text x="' + labelW + '" y="14" font-size="10" fill="var(--muted)">' + esc(minLabel) + '</text>';
-  svg += '<text x="' + (W - 10) + '" y="14" text-anchor="end" font-size="10" fill="var(--muted)">' + esc(maxLabel) + '</text>';
+  svg += '<text x="' + labelW + '" y="14" font-size="var(--fs-3xs)" fill="var(--muted)">' + esc(minLabel) + '</text>';
+  svg += '<text x="' + (W - 10) + '" y="14" text-anchor="end" font-size="var(--fs-3xs)" fill="var(--muted)">' + esc(maxLabel) + '</text>';
 
   tasks.forEach(function(t, i){
     const y = i * 28 + 26;
@@ -38971,7 +38979,7 @@ function renderGanttChart(){
       if (wAcc > 22){ cut = ci; break; }
     }
     const label = cut < rawTitle.length ? rawTitle.slice(0, Math.max(1, cut - 1)) + "…" : rawTitle;
-    svg += '<text x="6" y="' + (y + 13) + '" class="gantt-label" font-size="11" fill="var(--text)">' + esc(label) + '</text>';
+    svg += '<text x="6" y="' + (y + 13) + '" class="gantt-label" font-size="var(--fs-2xs)" fill="var(--text)">' + esc(label) + '</text>';
   });
   svg += '</svg>';
   return svg;
@@ -39056,7 +39064,7 @@ function renderMindmap(){
   let svg = '<svg class="mindmap" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + t("p5.mindmapAria", "任务思维导图") + '">';
   // 中心节点
   svg += '<circle cx="' + cx + '" cy="' + cy + '" r="40" fill="var(--accent)"/>';
-  svg += '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" fill="var(--on-accent)" font-size="14">' + t("p5.task", "任务") + '</text>';
+  svg += '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" fill="var(--on-accent)" font-size="var(--fs-sm)">' + t("p5.task", "任务") + '</text>';
 
   // 场景分支
   const scCount = ORDER.length;
@@ -39091,13 +39099,13 @@ function renderMindmap(){
       const label = (t.title || "").length > 10 ? (t.title || "").slice(0, 9) + "…" : (t.title || "");
       const textX = tx + (angle > -Math.PI / 2 && angle < Math.PI / 2 ? 6 : -6);
       const anchor = (angle > -Math.PI / 2 && angle < Math.PI / 2) ? "start" : "end";
-      svg += '<text x="' + textX.toFixed(1) + '" y="' + (ty + 4).toFixed(1) + '" text-anchor="' + anchor + '" fill="var(--text-dim)" font-size="10">' + esc(label) + '</text>';
+      svg += '<text x="' + textX.toFixed(1) + '" y="' + (ty + 4).toFixed(1) + '" text-anchor="' + anchor + '" fill="var(--text-dim)" font-size="var(--fs-3xs)">' + esc(label) + '</text>';
     });
     // 超出 5 个时显示省略提示
     if(scTasks.length > 5){
       const moreX = x + Math.cos(angle) * 80;
       const moreY = y + Math.sin(angle) * 80 + leafCount * 11;
-      svg += '<text x="' + moreX.toFixed(1) + '" y="' + moreY.toFixed(1) + '" text-anchor="middle" fill="var(--muted)" font-size="10">+' + (scTasks.length - 5) + '</text>';
+      svg += '<text x="' + moreX.toFixed(1) + '" y="' + moreY.toFixed(1) + '" text-anchor="middle" fill="var(--muted)" font-size="var(--fs-3xs)">+' + (scTasks.length - 5) + '</text>';
     }
   });
   svg += '</svg>';
@@ -39311,7 +39319,7 @@ function _renderDashboardWidget(id){
       const ringSvg = '<svg class="stats-chain-ring-svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="' + t('p5.successRate', '成功率 ') + c.rate + '%">' +
         '<circle cx="24" cy="24" r="' + ringR + '" fill="none" stroke="var(--surface-muted)" stroke-width="4"></circle>' +
         '<circle cx="24" cy="24" r="' + ringR + '" fill="none" stroke="' + fromColor + '" stroke-width="4" stroke-dasharray="' + ringC.toFixed(2) + '" stroke-dashoffset="' + dashOffset.toFixed(2) + '" transform="rotate(-90 24 24)" stroke-linecap="round"></circle>' +
-        '<text x="24" y="28" text-anchor="middle" font-size="11" fill="var(--text)">' + c.rate + '%</text></svg>';
+        '<text x="24" y="28" text-anchor="middle" font-size="var(--fs-2xs)" fill="var(--text)">' + c.rate + '%</text></svg>';
       return '<div class="stats-chain' + (c.enabled ? "" : " disabled") + '">' +
         '<div class="stats-chain-head">' +
         '<span style="color:' + fromColor + '">' + esc((SCENARIOS[c.fromSc] ? SCENARIOS[c.fromSc].name : c.fromSc)) + '</span>' +
