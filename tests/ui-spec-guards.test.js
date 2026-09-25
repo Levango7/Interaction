@@ -71,6 +71,61 @@ describe("图标三档制：令牌齐备且按层级取用", () => {
     expect(m, ".page-head .ph-ic 应有 width 定义").toBeTruthy();
     expect(m[1], "页面标识图标尺寸（规范 §10.1）").toBe("32");
   });
+
+  /* ── v3.7.49 新增：--icon-set 令牌（设置页图标容器专用档） ──────────────
+     背景：真实渲染的图标中 18px 有 12 处，全部来自 .set-ic svg 一条硬编码规则。
+     它不是散落混乱，而是"容器 36px + 内图标 18px"的成对几何 —— 故单列一档收编，
+     而不是强行并入 sm(16)/md(20)（并进去会让图标在 36px 容器里显小）。 */
+  describe("--icon-set 第四档（设置页图标容器专用）", () => {
+    it("--icon-set 在 :root 定义为 18px", () => {
+      expect(rootToken("--icon-set"), "--icon-set 应在 :root 定义").toBeTruthy();
+      expect(rootToken("--icon-set"), "--icon-set 的值应钉死为 18px").toBe("18px");
+    });
+
+    it("--icon-set 介于 sm(16) 与 md(20) 之间 —— 它是「中间档」的正式收编", () => {
+      const n = s => parseInt(s, 10);
+      const sm = n(rootToken("--icon-sm")), set = n(rootToken("--icon-set")), md = n(rootToken("--icon-md"));
+      expect(sm, "--icon-set 必须大于 sm").toBeLessThan(set);
+      expect(set, "--icon-set 必须小于 md").toBeLessThan(md);
+    });
+
+    it(".set-ic{width:36px} 与 .set-ic svg 用 --icon-set —— 容器/图标成对，改一个必改另一个", () => {
+      const box = HTML.match(/\.set-ic\{[^}]*width\s*:\s*(\d+)px/);
+      expect(box, ".set-ic 应有 width 定义").toBeTruthy();
+      expect(box[1], "设置页图标容器尺寸").toBe("36");
+      const svgRule = HTML.match(/\.set-ic\s+svg\s*\{([^}]*)\}/);
+      expect(svgRule, ".set-ic svg 规则应存在").toBeTruthy();
+      expect(svgRule[1], ".set-ic svg 必须用 --icon-set 令牌").toContain("var(--icon-set)");
+    });
+
+    it("禁止再出现硬编码 18px 的图标尺寸（收编后必须走令牌）", () => {
+      /* 18px 是「图标中间档」的正式收编档（--icon-set）。
+         但 18px 在非图标语境下是合法的几何值，必须逐条豁免 ——
+         否则会误伤，且无法表达"哪些 18px 是被允许的"。 */
+      const ALLOWED = [
+        ".ov4-badge",        // 通知徽标：min-width 撑椭圆，非图标
+        ".todo-chk",         // 原生复选框：浏览器绘制，非 svg 图标
+        ".pet .pet-close",   // 桌宠关闭键：圆形按钮，非图标
+      ];
+      /* 逐行扫描所有 width:18px;height:18px（含 min-width 变体） */
+      const lines = HTML.split("\n");
+      const bad = [];
+      lines.forEach((ln, i) => {
+        if (!/(width|height)\s*:\s*18px\s*;\s*(width|height)\s*:\s*18px/.test(ln)) return;
+        if (ALLOWED.some(a => ln.includes(a))) return;   // 命中白名单 → 放行
+        bad.push("L" + (i + 1) + ": " + ln.trim().slice(0, 80));
+      });
+      expect(bad, "硬编码 18px 图标尺寸应改为 var(--icon-set)（新增豁免需在 ALLOWED 登记）").toEqual([]);
+    });
+
+    it("豁免清单自身有效：三条豁免确为「非图标」几何（防止清单腐化）", () => {
+      /* 若某条豁免的选择器在源码里消失，说明它被删/改名了 —— 清单该同步收缩，
+         否则 ALLOWED 会变成"永久免死金牌"，掩护真的回归。 */
+      for (const sel of [".ov4-badge", ".todo-chk", ".pet .pet-close"]) {
+        expect(HTML, "豁免选择器应仍存在于源码：" + sel).toContain(sel);
+      }
+    });
+  });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -103,7 +158,7 @@ describe("几何令牌：具体数值钉死（此前只断言「是 px」，改�
      扩到全部几何令牌（此前只守了一条，其余可被逐主题抄漏而不报错）。 */
   it("所有几何令牌只在 :root 定义，主题块不得重复声明", () => {
     const GEO = ["--control-h", "--control-h-sm", "--control-r", "--label-h", "--field-msg-h", "--label-col-w",
-      "--icon-sm", "--icon-md", "--icon-lg", "--topbar-h"];
+      "--icon-sm", "--icon-md", "--icon-lg", "--icon-set", "--topbar-h"];
     /* 切成「:root{...}」与「:root[data-theme=X]{...}」块，只看后者里有没有几何令牌 */
     const blocks = [...HTML.matchAll(/:root\[data-theme="(\w+)"\]\{([\s\S]*?)\n\}/g)];
     const bad = [];
