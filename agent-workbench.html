@@ -367,9 +367,28 @@ button[disabled]:active{transform:none}
    → textarea 收为 1~3 列，＋ 固定放第 4 列并底部对齐，两者同行。 */
 #recForm>.fld:has(>textarea){grid-column:1/4}
 #recForm>.add-wrap{grid-column:4;justify-self:end;align-self:end}
-/* 窄屏：2 列 → 1 列 */
-@media (max-width:879px){ #recForm{grid-template-columns:repeat(2,minmax(0,1fr))} }
-@media (max-width:519px){ #recForm{grid-template-columns:1fr} }
+/* 窄屏：2 列 → 1 列
+   v3.7.48：断点收敛 —— 原 879/519 是历史随意值，并入规范四档制（ui-standards §8.1）：
+     879 → 1023（与 .form-row--board 的 pad/phone 边界一致）
+     519 → 520（与 .form-row--grid / .tool-form-grid 的 2→1 列边界一致，差 1px 无意义）
+
+   【必读】**成对解除固定列位**（本项目第 N 次栽在这个坑，见 MEMORY §5.4）：
+   上面 `#recForm>.fld:has(>textarea){grid-column:1/4}`（id 特异性 1,2,0）与
+   `#recForm>.add-wrap{grid-column:4}` 在 2 列/1 列布局里**越界** →
+   Grid 会造出隐式列，把前两列挤成 0px（CDP 实测 768px → `0px 0px 138px 38px`）。
+   仅解除 `grid-column` 还不够：残留的 `grid-row` 会把元素全钉在第 1 行、
+   再引发 auto-placement 造隐式列 —— 必须 `grid-column` 与 `grid-row` **同时**归位。
+   且必须**同特异性**（用 `#recForm>.fld:has(>textarea)` 原样写），否则压不过 id 规则。 */
+@media (max-width:1023px){
+  #recForm{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #recForm>.fld:has(>textarea){grid-column:auto;grid-row:auto}
+  #recForm>.add-wrap{grid-column:auto;grid-row:auto}
+}
+@media (max-width:520px){
+  #recForm{grid-template-columns:1fr}
+  #recForm>.fld:has(>textarea){grid-column:auto;grid-row:auto}
+  #recForm>.add-wrap{grid-column:auto;grid-row:auto}
+}
 /* v3.7.34：复选框与颜色选择器的尺寸统一已并入下方 v2.1.1 那组规则
    （它们在本文件中位置更靠后，会按源码顺序覆盖同特异性声明；
    另加规则在此处是无效的 —— 本次先在这里写过一遍，实测没生效）。 */
@@ -5953,10 +5972,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.47"; /* v3.7.47 UI 体检修复：记录卡表单固定4列（用户"一行四个"）·日期面板宽=触发框（下限150）·页脚/警告/成功色对比度达标·设置页窄栏下拉挤压·优先级值不再截尾·aria-label 补全 */
+const VERSION = "3.7.48"; /* v3.7.48 统一设计规范：新建 docs/ui-standards.md（唯一权威，合并旧 ui-standards/design-ui-guidelines）·补 ui-spec-guards 守护19条（图标三档/几何令牌数值/半档间距/字号阶梯/断点四档）·断点收敛 879→1023、519→520 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260925c";
+const BUILD_TAG = "20260925d";
 
 
 
