@@ -2066,7 +2066,7 @@ const TOOL_APPS = {
         if(!needImg()) return;
         const txt = $("#psText").value.trim();
         if(!txt){ toast(t("tool.ps.watermarkFirst", "请输入水印文字"), "warn"); return; }
-        ctx.font = "bold 32px sans-serif";
+        ctx.font = "bold " + _pfCssFont("--fs-display-sm", "32px") + " sans-serif";
         ctx.fillStyle = _pfCssColor("--ps-wm-fill", "");
         ctx.shadowColor = _pfCssColor("--ps-wm-shadow", ""); ctx.shadowBlur = 4;
         ctx.fillText(txt, 20, cv.height - 30);
@@ -3030,6 +3030,13 @@ function _pfResize(){
 }
 /* 运行时读取 CSS 变量色值（canvas 绘制需要真实颜色；避免源码硬编码触发 lint-colors 门禁） */
 function _pfCssColor(name, fallback){
+  try{
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }catch(e){ return fallback; }
+}
+/* 运行时读取 CSS 字号令牌（canvas 的 ctx.font 不参与 CSS 级联，无法直接写 var()） */
+function _pfCssFont(name, fallback){
   try{
     const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return v || fallback;

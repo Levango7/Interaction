@@ -476,7 +476,7 @@ function renderTrendChart(data, color){
     const v = Math.round(max * i / ticks);
     const yy = y(v);
     grid += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="var(--line)" stroke-width="1"/>` +
-      `<text x="${padL - 4}" y="${yy + 3}" text-anchor="end" font-size="9" fill="var(--muted)">${v}</text>`;
+      `<text x="${padL - 4}" y="${yy + 3}" text-anchor="end" font-size="var(--fs-4xs)" fill="var(--muted)">${v}</text>`;
   }
   // X 轴标签：7 天全标，30 天每 5 天标一个
   let xLabels = "";
@@ -484,7 +484,7 @@ function renderTrendChart(data, color){
   data.forEach((d, i) => {
     if(i % labelStep !== 0 && i !== n - 1) return;
     const mm = d.date.slice(5); // MM-DD
-    xLabels += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="var(--muted)">${mm}</text>`;
+    xLabels += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="var(--fs-4xs)" fill="var(--muted)">${mm}</text>`;
   });
   // 折线 + 数据点
   const pts = data.map((d, i) => [x(i), y(d.count)]);

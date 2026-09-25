@@ -310,7 +310,7 @@ function radarChartSVG(data){
     svg += '<line x1="' + CX + '" y1="' + CY + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="var(--line)" stroke-width="1"/>';
     const lx = CX + Math.cos(a) * (R + 18);
     const ly = CY + Math.sin(a) * (R + 18) + 4;
-    svg += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" font-size="11" fill="var(--text)">' + esc(d[i].name) + '</text>';
+    svg += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" font-size="var(--fs-2xs)" fill="var(--text)">' + esc(d[i].name) + '</text>';
   }
   // 数据多边形
   const dataPts = [];
@@ -429,7 +429,7 @@ function sankeyChartSVG(data){
     svg += '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="' + barW + '" height="' + h.toFixed(1) + '" fill="var(--accent)"><title>' + esc(n.name) + '：' + (nodeFlow[i] || 0) + '</title></rect>';
     const labelX = isLeft ? (x - 6) : (x + barW + 6);
     const anchor = isLeft ? "end" : "start";
-    svg += '<text x="' + labelX + '" y="' + ((nodeY[i] || padY) + 4).toFixed(1) + '" text-anchor="' + anchor + '" font-size="11" fill="var(--text)">' + esc(n.name) + '</text>';
+    svg += '<text x="' + labelX + '" y="' + ((nodeY[i] || padY) + 4).toFixed(1) + '" text-anchor="' + anchor + '" font-size="var(--fs-2xs)" fill="var(--text)">' + esc(n.name) + '</text>';
   });
   // 链路：贝塞尔曲线
   // 跟踪每个节点已分配的偏移（避免链路重叠）

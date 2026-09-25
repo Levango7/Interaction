@@ -12044,8 +12044,8 @@ function renderGanttChart(){
   // 起止日期标签
   const minLabel = _ganttFmtDate(minDate);
   const maxLabel = _ganttFmtDate(maxDate);
-  svg += '<text x="' + labelW + '" y="14" font-size="10" fill="var(--muted)">' + esc(minLabel) + '</text>';
-  svg += '<text x="' + (W - 10) + '" y="14" text-anchor="end" font-size="10" fill="var(--muted)">' + esc(maxLabel) + '</text>';
+  svg += '<text x="' + labelW + '" y="14" font-size="var(--fs-3xs)" fill="var(--muted)">' + esc(minLabel) + '</text>';
+  svg += '<text x="' + (W - 10) + '" y="14" text-anchor="end" font-size="var(--fs-3xs)" fill="var(--muted)">' + esc(maxLabel) + '</text>';
 
   tasks.forEach(function(t, i){
     const y = i * 28 + 26;
@@ -12070,7 +12070,7 @@ function renderGanttChart(){
       if (wAcc > 22){ cut = ci; break; }
     }
     const label = cut < rawTitle.length ? rawTitle.slice(0, Math.max(1, cut - 1)) + "…" : rawTitle;
-    svg += '<text x="6" y="' + (y + 13) + '" class="gantt-label" font-size="11" fill="var(--text)">' + esc(label) + '</text>';
+    svg += '<text x="6" y="' + (y + 13) + '" class="gantt-label" font-size="var(--fs-2xs)" fill="var(--text)">' + esc(label) + '</text>';
   });
   svg += '</svg>';
   return svg;
@@ -12155,7 +12155,7 @@ function renderMindmap(){
   let svg = '<svg class="mindmap" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + t("p5.mindmapAria", "任务思维导图") + '">';
   // 中心节点
   svg += '<circle cx="' + cx + '" cy="' + cy + '" r="40" fill="var(--accent)"/>';
-  svg += '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" fill="var(--on-accent)" font-size="14">' + t("p5.task", "任务") + '</text>';
+  svg += '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" fill="var(--on-accent)" font-size="var(--fs-sm)">' + t("p5.task", "任务") + '</text>';
 
   // 场景分支
   const scCount = ORDER.length;
@@ -12190,13 +12190,13 @@ function renderMindmap(){
       const label = (t.title || "").length > 10 ? (t.title || "").slice(0, 9) + "…" : (t.title || "");
       const textX = tx + (angle > -Math.PI / 2 && angle < Math.PI / 2 ? 6 : -6);
       const anchor = (angle > -Math.PI / 2 && angle < Math.PI / 2) ? "start" : "end";
-      svg += '<text x="' + textX.toFixed(1) + '" y="' + (ty + 4).toFixed(1) + '" text-anchor="' + anchor + '" fill="var(--text-dim)" font-size="10">' + esc(label) + '</text>';
+      svg += '<text x="' + textX.toFixed(1) + '" y="' + (ty + 4).toFixed(1) + '" text-anchor="' + anchor + '" fill="var(--text-dim)" font-size="var(--fs-3xs)">' + esc(label) + '</text>';
     });
     // 超出 5 个时显示省略提示
     if(scTasks.length > 5){
       const moreX = x + Math.cos(angle) * 80;
       const moreY = y + Math.sin(angle) * 80 + leafCount * 11;
-      svg += '<text x="' + moreX.toFixed(1) + '" y="' + moreY.toFixed(1) + '" text-anchor="middle" fill="var(--muted)" font-size="10">+' + (scTasks.length - 5) + '</text>';
+      svg += '<text x="' + moreX.toFixed(1) + '" y="' + moreY.toFixed(1) + '" text-anchor="middle" fill="var(--muted)" font-size="var(--fs-3xs)">+' + (scTasks.length - 5) + '</text>';
     }
   });
   svg += '</svg>';
@@ -12410,7 +12410,7 @@ function _renderDashboardWidget(id){
       const ringSvg = '<svg class="stats-chain-ring-svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="' + t('p5.successRate', '成功率 ') + c.rate + '%">' +
         '<circle cx="24" cy="24" r="' + ringR + '" fill="none" stroke="var(--surface-muted)" stroke-width="4"></circle>' +
         '<circle cx="24" cy="24" r="' + ringR + '" fill="none" stroke="' + fromColor + '" stroke-width="4" stroke-dasharray="' + ringC.toFixed(2) + '" stroke-dashoffset="' + dashOffset.toFixed(2) + '" transform="rotate(-90 24 24)" stroke-linecap="round"></circle>' +
-        '<text x="24" y="28" text-anchor="middle" font-size="11" fill="var(--text)">' + c.rate + '%</text></svg>';
+        '<text x="24" y="28" text-anchor="middle" font-size="var(--fs-2xs)" fill="var(--text)">' + c.rate + '%</text></svg>';
       return '<div class="stats-chain' + (c.enabled ? "" : " disabled") + '">' +
         '<div class="stats-chain-head">' +
         '<span style="color:' + fromColor + '">' + esc((SCENARIOS[c.fromSc] ? SCENARIOS[c.fromSc].name : c.fromSc)) + '</span>' +

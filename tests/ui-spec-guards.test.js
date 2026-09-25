@@ -267,6 +267,52 @@ describe("字号阶梯：十四档钉死 + 全站点一致性", () => {
     const bad = [...HTML.matchAll(/style="[^"]*font-size\s*:\s*(\d+)px/g)].map(m => m[1] + "px");
     expect([...new Set(bad)], "内联 style 不应有裸 font-size（应用 var(--fs-*)）").toEqual([]);
   });
+
+  /* ── v3.7.51 补：非 CSS 载体 ────────────────────────────────────────────
+     CSS / 内联 style 两条上轮已守，但**三种载体漏了**：
+       ① SVG 的 font-size **属性**（font-size="9"，不是 font-size:9px）
+       ② Canvas 的 ctx.font = "bold 32px sans-serif"
+       ③ 内联 style 走 var() 但用了不存在的令牌名
+     实测确认 SVG 属性**支持** var()（_probe/svg-var-test.mjs），故可收编；
+     Canvas 不参与级联，须运行时读值（_pfCssFont）。 */
+  const SVG_ALLOWED = [
+    // 思维导图三级层次字号：中心 14 / 场景 12 / 叶子 10，12px 不在阶梯内但刻意保留
+    // （改动会破坏层级视觉递进；实测三者渲染宽度差 4~8px，肉眼可辨）
+    { file: "ui-global-events.js", value: "12", why: "思维导图场景节点：三级层次中间档，刻意保留" },
+  ];
+
+  it("SVG font-size 属性不得出现裸值（白名单外）", () => {
+    const bad = [];
+    for (const m of HTML.matchAll(/font-size="(\d+)"/g)) {
+      const v = m[1];
+      if (SVG_ALLOWED.some(a => a.value === v)) continue;
+      const at = HTML.slice(Math.max(0, m.index - 90), m.index);
+      bad.push(v + "px  ← …" + at.replace(/\s+/g, " ").slice(-70));
+    }
+    expect(bad, "SVG font-size 属性应走 var(--fs-*)（实测 SVG 属性支持 var()）").toEqual([]);
+  });
+
+  it("豁免清单未腐化：白名单里的裸值必须仍存在于源码", () => {
+    for (const a of SVG_ALLOWED) {
+      expect(HTML, `豁免 ${a.file} 的 font-size="${a.value}"（${a.why}）已不存在，请从白名单移除`)
+        .toContain(`font-size="${a.value}"`);
+    }
+  });
+
+  it("Canvas ctx.font 不得出现裸 px（应运行时读令牌）", () => {
+    /* 注意：_pfCssFont("--fs-x", "32px") 的第二个实参是**降级兜底**（令牌读不到时的 fallback），
+       不是硬编码 —— 必须排除，否则误报。故先剥掉 fallback 实参再扫。 */
+    const stripped = HTML.replace(/,\s*"\d+px"/g, ',"<fallback>"');
+    const bad = [...stripped.matchAll(/ctx\.font\s*=\s*[^;]*?(\d+)px/g)].map(m => m[1] + "px");
+    expect([...new Set(bad)], "ctx.font 不应硬编码 px（canvas 不参与级联，用 _pfCssFont 读令牌）").toEqual([]);
+  });
+
+  it("内联 style 引用的字号令牌必须真实存在", () => {
+    const defined = new Set(Object.keys(LADDER));
+    const used = [...HTML.matchAll(/font-size\s*:\s*var\((--fs-[a-z0-9-]+)\)/g)].map(m => m[1]);
+    const missing = [...new Set(used)].filter(t => !defined.has(t));
+    expect(missing, "引用了未定义的字号令牌 → 会静默回退到继承字号").toEqual([]);
+  });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════

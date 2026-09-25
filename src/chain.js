@@ -281,7 +281,7 @@ function renderHeatmap(sc){
     }
   }
   const labels = weekdays.map((wd, i) =>
-    `<text x="2" y="${gap + i * colW + cell - 2}" font-size="9" fill="var(--muted)">${wd}</text>`
+    `<text x="2" y="${gap + i * colW + cell - 2}" font-size="var(--fs-4xs)" fill="var(--muted)">${wd}</text>`
   ).join("");
   const legend = `<div class="heatmap-legend">${t("stats.heatLess", "少")} <span class="sw l0"></span><span class="sw l1"></span><span class="sw l2"></span><span class="sw l3"></span><span class="sw l4"></span> ${t("stats.heatMore", "多")}</div>`;
   return `<div class="heatmap-wrap"><svg class="heatmap-svg" viewBox="0 0 ${W} ${H}" aria-label="${SCENARIOS[sc] ? SCENARIOS[sc].name : sc} ${t("stats.heatmapAria", "热力图")}">${labels}${cells}</svg></div>${legend}`;
@@ -539,8 +539,8 @@ function renderWeekBars(){
     const color = SCENARIOS[sc]?SCENARIOS[sc].color:"var(--muted)";
     const name = SCENARIOS[sc]?SCENARIOS[sc].name:sc;
     return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="3" fill="${color}" fill-opacity="0.8"/>
-      <text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="9" fill="var(--muted)">${done}</text>
-      <text x="${x+bw/2}" y="${H-4}" text-anchor="middle" font-size="9" fill="var(--muted)">${name}</text>`;
+      <text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="var(--fs-4xs)" fill="var(--muted)">${done}</text>
+      <text x="${x+bw/2}" y="${H-4}" text-anchor="middle" font-size="var(--fs-4xs)" fill="var(--muted)">${name}</text>`;
   }).join("");
   // 零线
   const zeroY = H-padB;
@@ -648,16 +648,16 @@ function renderChainGraph(){
     const lx = mx + (CX-mx)*0.34, ly = my + (CY-my)*0.34;
     const disabled = l.enabled === false;
     return `<path d="M${sx.toFixed(1)},${sy.toFixed(1)} Q${cxp.toFixed(1)},${cyp.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" fill="none" style="stroke:${disabled?"var(--line)":"var(--muted)"}" stroke-width="1.6"${disabled?' stroke-dasharray="4 3"':""} marker-end="url(#wbChainArrow)"/>` +
-      (l.kw ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="9" class="u-fill-muted">${esc(l.kw)}</text>` : "");
+      (l.kw ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="var(--fs-4xs)" class="u-fill-muted">${esc(l.kw)}</text>` : "");
   }).join("");
   // 节点：圆 + 场景名（超 5 字折两行）
   const nodes = scs.map(sc=>{
     const p = pos[sc], s = SCENARIOS[sc] || { name: sc, color: "var(--muted)" };
     const lines = _graphNameLines(s.name);
     const txt = lines.length === 1
-      ? `<text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" class="u-fill-text">${esc(lines[0])}</text>`
-      : `<text x="${p.x.toFixed(1)}" y="${(p.y-1.5).toFixed(1)}" text-anchor="middle" font-size="10" class="u-fill-text">${esc(lines[0])}</text>` +
-        `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="10" class="u-fill-text">${esc(lines[1])}</text>`;
+      ? `<text x="${p.x.toFixed(1)}" y="${(p.y+3.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[0])}</text>`
+      : `<text x="${p.x.toFixed(1)}" y="${(p.y-1.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[0])}</text>` +
+        `<text x="${p.x.toFixed(1)}" y="${(p.y+10.5).toFixed(1)}" text-anchor="middle" font-size="var(--fs-3xs)" class="u-fill-text">${esc(lines[1])}</text>`;
     return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${NR}" style="fill:var(--panel);stroke:${s.color}" stroke-width="2"/>${txt}`;
   }).join("");
   return `<div class="chain-graph-wrap"><svg class="chain-graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t("hc.graphAriaLabel", "跨场景联动关系图")}">${defs}${edges}${nodes}</svg></div>`;
