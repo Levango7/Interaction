@@ -13,19 +13,24 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="preload" href="./icon.svg" as="image" type="image/svg+xml">
 <link rel="preload" href="./manifest.json" as="fetch" crossorigin>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- SECURITY NOTE [C-CSP-worker]: 必须显式给 worker-src。此前 CSP 没有 worker-src/child-src，
      Worker 会回落到 script-src（'self' 'unsafe-inline' https://cdnjs…，不含 blob:），
      于是 code_run 的 `new Worker(URL.createObjectURL(...))`（src/ai-tools.js:1177）
      **每次都被拦**，工具恒返回 {"ok":false,"output":"未知执行错误"} —— 而 README 与
      docs/product-scope.md 都写着"本机沙箱执行、不需联网"。v3.7.54 浏览器实测坐实后补上。
      只放 blob: 给 worker，不扩 script-src，也不动 connect-src。 -->
-<!-- SECURITY NOTE [C-CSP-connect] 待决（v3.7.54 实测，未擅自放宽）：connect-src 只允许 'self' 与 https:，
-     而设置页「自建后端 apiBase」的**代码默认值就是 http://localhost:3001** → 云同步 / 抓取代理 / SQL 后端
-     在本地明文 HTTP 部署下会被 CSP 静默拦成 "network error"，界面只表现为"连不上"。
-     试过加 `http://127.0.0.1:* http://localhost:*`（只放开回环），但 tablet 的 workflow e2e 会因此
-     稳定挂住（单变量 A/B 已证实是这处差异引起，机制未查清）→ 已回退。
-     要支持本地 HTTP 后端，需先查清该挂起根因，或改为要求部署方用 https。 -->
+<!-- SECURITY NOTE [C-CSP-connect]: connect-src 放行 http 仅限回环（127.0.0.1 / localhost，任意端口）。
+     动机：设置页「自建后端 apiBase」的代码默认值就是 http://localhost:3001，ai-loop.js 的
+     validateBaseUrl 也专门放行 http://localhost（README 列 Ollama 为支持供应商），而旧策略只写
+     `https:` → 云同步 / 抓取代理 / SQL 后端 / 本地模型在明文 HTTP 部署下全被静默拦成 network error。
+     验收（v3.7.56 实测）：file:// 页面跨源 fetch 本机服务返回 200 且 CSP 零违规；全量 e2e 连跑两遍 41/41。
+     远程明文 http 仍不放行，对外 AI 端点继续要求 https。
+     ⚠️ 走过的弯路（记下来免得重犯）：放开回环后 tablet 的 workflow.spec.js 一度稳定超时，我据此
+     做过"单变量 A/B 证明是 CSP 引起"的结论并回退了它 —— **那个结论是错的**。真因是该用例
+     10 个 step 的累计耗时顶不过默认 30s 预算（其注释本身记录了"点击重试 10s 会中断整个用例"），
+     CSP 只是把耗时推过那条线的放大器；单 worker 下放开 CSP 连跑 4 次全过，把该用例超时放宽到 60s 后
+     全量并行也连过 2 次。教训：**对照实验必须排除负载混淆**（一边单跑、一边全量并行 = 无效对照）。 -->
 <!-- SECURITY TODO [C3]: 当前 CSP 保留 script-src 'unsafe-inline' 是因为本应用为单文件内联 JS 架构，
      移除 unsafe-inline 会导致应用完全无法运行。真正的修复依赖于 H4（模块化拆分为外部 JS/CSS 文件），
      拆分完成后可改用 nonce 或 hash 策略并移除 unsafe-inline。当前阶段仅做标记，不做破坏性变更。 -->
@@ -6012,10 +6017,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.55"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
+const VERSION = "3.7.56"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260925g";
+const BUILD_TAG = "20260926a";
 
 
 

@@ -44,12 +44,24 @@ describe("CSP 必须声明的关键指令", () => {
   });
 
   it("既有的安全底线不得被放宽", () => {
-    /* object-src/base-uri 是历史约定；connect-src 保持 'self' + https: ——
-       回环 http 的放宽仍属待决项（见 HTML 的 SECURITY NOTE [C-CSP-connect]），
-       这里显式钉住"未拍板前不得顺手放宽"。 */
+    /* object-src/base-uri 是历史约定。connect-src 的策略（v3.7.56 起）：
+       'self' + https: + **仅回环** http —— 本地 Ollama / 自建后端是真实需求
+       （_apiBase 默认值就是 http://localhost:3001），但远程明文 http 一律不许。
+       这里不用等值比较而是逐条约束，免得以后有人加个 http://0.0.0.0 也能过。 */
     expect(directives["object-src"]).toBe("'none'");
     expect(directives["base-uri"]).toBe("'self'");
-    expect(directives["connect-src"]).toBe("'self' https:");
+    const cs = directives["connect-src"] || "";
+    expect(cs, "connect-src 必须保留 'self'").toContain("'self'");
+    expect(cs, "connect-src 必须保留 https:").toContain("https:");
+    /* 按 token 判定，别用 /\shttp:/ —— `http://127.0.0.1` 本身就以 `http:` 开头，
+       那样写会把合法的回环源误判成"任意 http"（第一版就踩了）。 */
+    const toks = cs.split(/\s+/).filter(Boolean);
+    expect(toks, "禁止用裸 `http:` 放开任意明文源").not.toContain("http:");
+    for (const tok of toks) {
+      if (tok.startsWith("http://")) {
+        expect(tok, `connect-src 里出现了非回环的 http 源：${tok}`).toMatch(/^http:\/\/(127\.0\.0\.1|localhost)(:\*)?$/);
+      }
+    }
     expect(directives["script-src"], "script-src 不得被扩到 blob:").not.toContain("blob:");
   });
 });

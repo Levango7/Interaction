@@ -39,6 +39,10 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
   });
 
   test("完整用户流程：启动→onboarding→建任务→切场景→完成任务→统计→设置→习惯链→AI对话→导出", async ({ page }) => {
+    /* 10 个 test.step 的长流程，单次 action 重试预算就有 10s；全量并行跑时机器负载会把
+       累计耗时顶过默认 30s（本用例注释里记录的 tablet 老毛病同此）。放宽到 60s 是**容忍负载**，
+       不是掩盖缺陷：断言本身一个都没放松。 */
+    test.setTimeout(60_000);
     // ---------- 1. 启动应用 ----------
     await test.step("启动应用并等待侧边栏渲染", async () => {
       await page.goto(APP_URL);

@@ -1,3 +1,42 @@
+## [v3.7.56] - 2026-09-26
+
+**放行本地回环后端 + 一处错误结论的勘误**。v3.7.54/55 把"CSP 拦死本地 HTTP 后端"记成待决项，
+并声称"放开回环会让 tablet e2e 稳定挂起（单变量 A/B 证实）"。**那个因果是错的**，本轮查清并修正。
+
+### 勘误：那次 A/B 是无效对照
+
+- 复现路径本身就不一致：判定"CSP 导致失败"的那几轮，失败方是**全量并行**跑（多 worker、机器有负载），
+  通过方是**单条用例单 worker**跑。变量不止 CSP 一个，结论不成立。
+- 补齐对照后的实测：单 worker 下**放开回环连跑 4 次全过**（每次 ~8.6s）；**关闭回环连跑 6 次全过**
+  （~9.9s）。也就是说单 worker 下两种状态都稳定，失败只在"回环放开 + 全量并行"这一组合出现。
+- 真因是**用例超时预算**：`workflow.spec.js` 的完整用户流程有 10 个 `test.step`，而该文件自己的注释
+  就记录了"点击重试 10s 会抛 TimeoutError 直接中断整个用例（CI 在 tablet 连续失败的根因，
+  此前 4 次修复均未奏效）"。默认 30s 预算在并行负载下本来就不够，放开回环只是又加了一点耗时、
+  把它推过那条线。
+- 处置：给该用例显式 `test.setTimeout(60_000)`（**容忍负载，不放宽任何断言**），随后
+  放开回环 + 全量并行**连跑两遍 41/41**。
+
+### 正式放行本地回环后端
+
+- CSP `connect-src` 增加 `http://127.0.0.1:* http://localhost:*`：只放开回环，
+  **远程明文 http 仍不放行**，对外 AI 端点继续要求 https。
+- 产品验收（真起一个本机 HTTP 服务，从 `file://` 页面跨源请求）：返回 `{"ok":true,"from":"local-backend"}`
+  且 **CSP 零违规** —— 此前这类请求会被静默拦成 `network error`。
+  受益面：本地 Ollama / 自建后端（`_apiBase` 默认值本就是 `http://localhost:3001`、
+  `validateBaseUrl` 也专门放行 localhost）、云同步、抓取代理、SQL 后端。
+- 顺带纠正一处误判：排查过程中我猜"测试会真打公网 api.openai.com 导致延迟不可控"—— 查证后发现
+  该用例**在发送前就 `page.route` 拦截并本地 fulfill 了**，从不出网，假设不成立。
+  同源托管的 mock 设计保留（它让同步测试与 CSP 策略解耦，两种状态下都成立）。
+- HTML 的 `SECURITY NOTE [C-CSP-connect]` 已改写为放行说明，并**把这段弯路原样记在里面**
+  （含"对照实验必须排除负载混淆"这条教训），避免以后有人再犯或再把它回退。
+
+### 实测与门禁
+
+- 单测 **995/995**（91 文件）；e2e **41/41** 连跑两遍（三视口、并行 worker）。
+- 产品侧跨源回环 fetch 实测 200 + CSP 零违规；版本五源一致 3.7.56；
+  `build:check` / `check:modules` / `lint:layers` / `lint-colors` / `check:ai-tools-doc` /
+  `check:pwa-icons` / `pet:check` / eslint 全过；`check:source-state` ✓。
+
 ## [v3.7.55] - 2026-09-26
 
 **文档/注释声明 vs 代码实况的一致性审计**：v3.7.54 收尾时抓到两条"CSP 与代码自相矛盾"，于是把这类
@@ -67,8 +106,9 @@
 - **待决项（未擅自处理）**：`connect-src 'self' https:` 与两处代码自相矛盾 ——
   `_apiBase` 默认值就是 `http://localhost:3001`，`ai-loop.js` 的 `validateBaseUrl` 还专门放行
   `http://localhost`（README 列 Ollama 为支持供应商），但 CSP 一律拦死。试过只放开回环，
-  tablet 的 `workflow.spec.js` 会稳定挂起（单变量 A/B 证实），故回退并记进 HTML 的
-  `SECURITY NOTE [C-CSP-connect]`。要么先查清那个挂起，要么明确"本地后端必须 https"并同步改掉那两处默认口径。
+  tablet 的 `workflow.spec.js` 会稳定挂起（"单变量 A/B 证实"），故回退并记进 HTML 的
+  `SECURITY NOTE [C-CSP-connect]`。—— **该结论在 v3.7.56 被推翻**：那次对照被负载混淆，真因是用例
+  超时预算；放开回环 + 放宽该用例超时后全量并行连跑两遍 41/41，最终已正式放行回环。
 
 ## [v3.7.54] - 2026-09-26
 
@@ -116,18 +156,16 @@
 - **新增 `tests/mocks/sync-server.mjs` + `tests/e2e/sync-contract.spec.js`（7 条）**。此前 `apiPutSnapshot` / `doSync` / `flushSyncQueue` 三处修复只有代码层面的信心。
   为什么起**真 HTTP 服务**而不是 mock `fetch`：被测链路里 `apiFetch` 的 401→refresh→重试、`offline` 判定（fetch 抛 TypeError）、CORS 预检、以及 `apiGetSnapshot()` 对 `data.snapshot` 的形状要求，**只有真 fetch 才走得到**；mock 掉 fetch 等于只测自己写的分支。
   端口用 0（临时端口）—— 三个 project 并行跑，写死端口必然撞车。覆盖：PUT 的 body 形状契约（`snapshot`/`updatedAt`/`_deviceMeta.deviceId`）、`doSync` 四态（idle/error/offline/未登录不发请求）、**完整往返**（本机改数据→push→抹掉本机→pull+apply→数据回来）、云端无快照返回 null、401→refresh→只重试一次、覆盖式恢复前留 `pre_restore_backup`、`SYNC_ENDPOINT` 未配置时不得谎报成功且不得清空队列。
-- **顺带挖出一个产品级缺陷（CSP 挡死本地后端）—— 已记录，未擅自修**：`connect-src 'self' https:` 不放行任何 `http://`，
+- **顺带挖出一个产品级缺陷（CSP 挡死本地后端）**：`connect-src 'self' https:` 不放行任何 `http://`，
   而代码里 `_apiBase` 的**默认值就是 `http://localhost:3001`**、设置页也让你填任意 apiBase
   → 「自建后端 / 云同步 / 抓取代理 / SQL 后端」在本地明文 HTTP 部署下**全部被 CSP 静默拦成 network error**，
   界面只表现为"连不上"。
-  试过加 `http://127.0.0.1:* http://localhost:*`（只放开回环、远程仍要求 https），**但先否掉**：
-  单变量 A/B 实测，一旦放开回环，tablet 的既有 `workflow.spec.js` 用例从 4.5s 通过变成稳定挂起
-  （150s 超时，且与本次新增的 i18n 渲染钩子无关 —— 关掉钩子照样挂）。机制未查清（独立探针复现不出来），
-  在没搞清之前放宽一条安全策略不值当，故**已回退为原样并把这个矛盾记进 HTML 的 `SECURITY NOTE [C-CSP-connect]`**。
-  要支持本地 HTTP 后端需先查清该挂起根因，或明确要求部署方用 https。**这是留给使用方的待决项。**
-- **测试因此改为同源托管**：`sync-server.mjs` 顺手把 `agent-workbench.html` 也从 mock 自己的端口发出去，
-  页面与 API 同 origin → `connect-src 'self'` 天然放行，**不必为了跑测试动 CSP**。
-  副作用是 `apiBase` 与页面 origin 要能分开传（才能构造"页面正常但后端是死端口"的 offline 用例）。
+  ⚠️ **本条当时的处置是错的，v3.7.56 已勘误**：我试过只放开回环，tablet 的 `workflow.spec.js` 一度稳定超时，
+  我据此下了"单变量 A/B 证实是 CSP 引起"的结论并回退。实际那次对照**被负载混淆**（一边单 worker 跑、
+  一边全量并行跑），结论无效。真因与处置见 v3.7.56。
+- **测试改为同源托管**：`sync-server.mjs` 顺手把 `agent-workbench.html` 也从 mock 自己的端口发出去，
+  页面与 API 同 origin → `connect-src 'self'` 天然放行。这个设计**保留下来**（它让同步测试
+  与 CSP 策略解耦，无论 CSP 放不放开回环都成立）。
 - **顺带纠正一处虚假安全声明**：HTML 里的 `SECURITY NOTE [M3]` 声称"frame-ancestors 改由 Electron 主进程
   `onHeadersReceived` 注入完整 CSP 实现双层防护"，但 `electron/main.js`（590 行）里**根本没有**
   `webRequest`/`onHeadersReceived` 任何代码 —— 那层防护不存在，Electron 形态下 frame-ancestors 目前无防护。
