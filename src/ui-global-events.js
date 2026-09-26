@@ -2247,15 +2247,15 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // ===== AI 能力增强（任务 232）：Agent 自动化 + 新工具 + RAG + 流式增强 =====
     agentPlanSysPrompt, parseAgentPlan, executeAgentPlan, summarizeAgentPlan, chatOnceAgent,
     agentExecAsync, toolWebSearch, toolWebFetch, toolCodeRun, toolSqlQuery,
-    ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch, ragSearchFallback,
+    ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
+    ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,
     switchModel, listModels, retryChatWithParams,
     streamProgressStart, streamProgressUpdate, getStreamProgress, streamProgressClear,
     get RAG_STORAGE_KEY(){ return RAG_STORAGE_KEY; },
     get _ragReady(){ return _ragReady; },
     set _ragReady(v){ _ragReady = !!v; },
-    get _ragDb(){ return _ragDb; },
-    set _ragDb(v){ _ragDb = v; },
+    get _ragLex(){ return _ragLex; },
     get _retryOverrides(){ return _retryOverrides; },
     get _streamProgress(){ return _streamProgress; }
   };

@@ -426,13 +426,13 @@ function agentContextPrompt(userText){
  * ------------------------------------------------------------
  *   1. AI Agent 自动化：多步骤任务规划 + 自动执行 + 结果汇总
  *   2. 新工具调用：web_search / web_fetch / code_run / sql_query / note_add / note_search
- *   3. RAG（检索增强生成）：SQLite FTS5 全文索引 + 自动注入相关上下文
+ *   3. RAG（检索增强生成）：CJK 分词 BM25 + 向量混合召回，自动注入相关上下文
  *   4. 流式输出增强：多模型切换 / 重试改参数 / 流式进度指示
  *
  * 设计原则：
  *   - 不修改既有 chatOnce / execTool / runChatLoop 主体，仅新增函数并在 execTool 末尾分发
  *   - 异步工具(web_search/web_fetch/code_run/sql_query)经 agentExecAsync 分发，execTool 同步路径只处理 note_*
- *   - RAG 索引持久化到 localStorage（FTS5 内存表 + 倒排记录），避免引入 IndexedDB 二级存储
+ *   - RAG 正文索引持久化到 localStorage，向量持久化到 IndexedDB（ragvec: 前缀，不进同步镜像）
  *   - 所有颜色用 var(--token) 令牌；i18n 键值新增 aiagent.* / rag.* / aistream.* 命名空间
  * ============================================================ */
 
@@ -772,23 +772,33 @@ async function toolSqlQuery(sql, schema){
   return await runSql(sql, schema);
 }
 
-/* ---------- 3. RAG（检索增强生成）：SQLite FTS5 全文索引 ---------- */
+/* ---------- 3. RAG（检索增强生成）：词法 BM25 + 向量混合召回 ---------- */
 /**
- * RAG 索引模块：用 SQLite FTS5（sql.js WASM）做全文索引
+ * RAG 索引模块
  *   - 索引内容：任务标题/描述/记录内容/AI 对话历史/笔记
- *   - 增量索引：新增/修改内容时自动更新（ragIndexAdd/ragIndexUpdate/ragIndexRemove）
+ *   - 增量索引：新增/修改内容时自动更新（ragIndexAdd/ragIndexRemove）
  *   - 检索：ragSearch(query, limit) 返回 topK 相关上下文
  *   - 注入：ragInjectContext(userText) 拼接相关上下文到 system prompt
  *
  * 存储策略：
- *   - FTS5 索引表保存在内存 SQLite（每次 ragInit 重建）
- *   - 文档元数据（docId/source/content）持久化到 localStorage（增量更新）
- *   - 避免引入 IndexedDB 二级存储，保持单文件架构
+ *   - 文档正文（docId/source/content）持久化到 localStorage；向量持久化到 IndexedDB
+ *   - 词法倒排索引在内存惰性构建（ragIndex 变更即失效重建），不落任何二级存储
+ *
+ * 为什么词法索引不再走 SQLite FTS5（v3.7.57）：
+ *   ① 仓库自带的 assets/sql/sql-wasm.wasm（SQLite 3.45.2）编译时没开 FTS5 ——
+ *      实测 `CREATE VIRTUAL TABLE … USING fts5(…)` 直接 "no such module: fts5"，
+ *      于是 ragInit() 恒失败、_ragReady 恒 false、词法召回恒为空，整条 FTS5 链路
+ *      从来没跑通过一次（此前对外却写着"FTS5/BM25 全文检索"）。
+ *   ② 即便换成 FTS5 也救不了中文：unicode61 分词器把连续汉字当成**一个** token，
+ *      实测「修复登录页 500 报错」这条记录，MATCH '登录' / '报错' 召不回、
+ *      MATCH '修复登录页' 才召得回。要能切词得上 trigram/分词扩展。
+ *   ③ 换成自带倒排索引后，RAG 不再依赖 sql.js（assets/sql 640KB WASM，未打包时还要
+ *      回源 CDN），离线、Electron、以及 CDN 抖动的环境下检索都能正常工作。
  */
 const RAG_STORAGE_KEY = "rag_docs";
-let _ragDb = null;        // sql.js Database 实例（内存）
-let _ragReady = false;    // 是否已初始化
+let _ragReady = false;    // 是否已初始化（向量缓存 + 回填已发起）
 let _ragDocs = null;      // 文档列表缓存（从 localStorage 加载）
+let _ragLex = null;       // 词法倒排索引缓存（null = 待重建，见 ragLexBuild）
 
 /**
  * 获取 RAG 文档列表（从 localStorage）
@@ -810,27 +820,25 @@ function getRagDocs(){
  */
 function saveRagDocs(docs){
   _ragDocs = docs || [];
+  _ragLex = null;   // v3.7.57：任何写路径都使词法倒排索引作废，下次检索惰性重建
   save(PREFIX + RAG_STORAGE_KEY, _ragDocs); // v3.4.7 批次三（G5）：收编进 save() 主入口（配额耗尽有告警，不再静默）
 }
 
 /**
- * 初始化 RAG 索引：加载 sql.js + 建 FTS5 表 + 索引所有文档
+ * 初始化 RAG：载入向量缓存 + 发起一次有界回填。
+ * v3.7.57 起不再加载 sql.js / 不再建 FTS5 表（词法召回改由 ragLexBuild 提供），
+ * 因此本函数与网络、WASM 都无关，毫秒级返回。
  * @returns {Promise<boolean>} 是否成功
  */
 async function ragInit(){
   if(_ragReady) return true;
   try{
-    const SQL = await loadSqlJs();
-    _ragDb = new SQL.Database();
-    // 建 FTS5 虚拟表（content 列做全文索引，source/docId 作为 unindexed 元数据）
-    _ragDb.exec("CREATE VIRTUAL TABLE IF NOT EXISTS rag_fts USING fts5(content, source UNINDEXED, docId UNINDEXED);");
-    // 索引所有已存储文档
-    const docs = getRagDocs();
-    for(const d of docs){
-      try{
-        _ragDb.run("INSERT INTO rag_fts(content, source, docId) VALUES(?, ?, ?);", [d.content, d.source, d.docId]);
-      }catch(_){ /* 单条索引失败跳过 */ }
-    }
+    /* 缺失的向量做一次**有界**回填（上限 20 条），避免文档多时启动长时间占住主线程；
+       剩下的在检索时按需再补。
+       注意这里**不能**把 _ragVecCache 置空来"重新载入"：ragVecPut 是"先写内存缓存、
+       再尽力写 IDB"，IDB 不可用（无 IDB 的环境 / 配额满）时缓存就是唯一副本，
+       置空等于把已经算出来的向量丢了。 */
+    ragEnsureVectors(20).catch(e => pushDiag("warn", "rag backfill failed: " + ((e && e.message) || e), { where: "ragInit" }));
     _ragReady = true;
     return true;
   }catch(e){
@@ -845,9 +853,10 @@ async function ragInit(){
  * @param {string} docId - 文档唯一 id
  * @param {string} content - 文档内容
  * @param {string} source - 来源（task/record/chat/note）
+ * @param {{skipEmbed?:boolean}} [opts] - skipEmbed：只入库不建向量，交给随后的 ragEnsureVectors 批量回填
  * @returns {Promise<boolean>}
  */
-async function ragIndexAdd(docId, content, source){
+async function ragIndexAdd(docId, content, source, opts){
   const id = String(docId||"");
   const text = String(content||"").trim();
   if(!id || !text) return false;
@@ -855,10 +864,11 @@ async function ragIndexAdd(docId, content, source){
   await ragIndexRemove(id);
   const docs = getRagDocs();
   docs.push({ docId:id, source:String(source||""), content:text, ts:Date.now() });
-  saveRagDocs(docs);
-  if(_ragReady && _ragDb){
-    try{ _ragDb.run("INSERT INTO rag_fts(content, source, docId) VALUES(?, ?, ?);", [text, String(source||""), id]); }catch(_){}
-  }
+  saveRagDocs(docs);   // 内部会作废词法索引缓存（_ragLex）
+  /* v3.7.57：入库即建向量，让刚存的资料马上能被语义召回。
+     失败（未配 AI / 通道异常）不影响入库 —— 检索侧会自动退化为纯词法。
+     全量重建走 skipEmbed：逐条发请求 = N 次往返，改为末尾一次批量回填。 */
+  if(!(opts && opts.skipEmbed)) await ragEmbedDoc(id, text);
   return true;
 }
 
@@ -873,66 +883,316 @@ async function ragIndexRemove(docId){
   const docs = getRagDocs();
   const filtered = docs.filter(d => d.docId !== id);
   if(filtered.length === docs.length) return false;
-  saveRagDocs(filtered);
-  if(_ragReady && _ragDb){
-    try{ _ragDb.run("DELETE FROM rag_fts WHERE docId = ?;", [id]); }catch(_){}
-  }
+  saveRagDocs(filtered);   // 内部会作废词法索引缓存（_ragLex）
+  await ragVecDelete(id);   // v3.7.57：向量必须同步删，否则已删文档仍会被语义召回
   return true;
 }
 
+/* ============================================================
+ * v3.7.57 语义检索：embedding 通道 + 词法/向量混合召回（RRF）
+ * ------------------------------------------------------------
+ * 动机：知识基座原本只有"字面重合才算命中"的检索 —— 问「上次登录报 500 的事」
+ * 匹配不到写着「修复登录页 500 报错」的条目（汉字没切开），
+ * 换个说法、换种语言就直接召不回。agent 的 plan/记忆骨架都在，缺的就是喂进去的上下文质量。
+ *
+ * 向量存哪儿：IndexedDB 的 kv store，键前缀 **ragvec:**（刻意不带 wb_agent_）。
+ *   带该前缀的键会被 idbShouldMirror/idbRestoreAll 认作用户数据镜像，
+ *   启动时可能把值 JSON.stringify 回写进 localStorage —— 1536 维 Float32
+ *   序列化后每条约 30KB，几十条就爆配额。用 ragvec: 前缀可确保它只待在 IDB。
+ *
+ * 降级策略（必须显式，不能静默）：结果里的 via 字段标明这条怎么召回的：
+ *   lex  = 只有词法命中（未配 AI / embedding 请求失败 / IDB 不可用时就是这种）
+ *   vec  = 只有向量命中（换了说法、换了语言仍能召回，正是本轮要新增的能力）
+ *   both = 两路都命中（RRF 融合后排在前）
+ * ============================================================ */
+const RAG_VEC_PREFIX = "ragvec:";
+let _ragVecCache = null;   // Map<docId, Float32Array> | null（null = 尚未加载）
+let _ragEnsuring = null;   // 进行中的回填 Promise（防同一批缺失向量被并发重复 embedding）
+
+/** embedding 通道配置；不可用时返回 null（调用方负责降级） */
+function _embedCfg(){
+  try{
+    const ap = (typeof getActiveProfile === "function") ? getActiveProfile() : null;
+    const base = String((ap && ap.base) || "").replace(/\/+$/, "");
+    if(!base) return null;
+    if(typeof validateBaseUrl === "function" && !validateBaseUrl(base)) return null;
+    const cfg = (typeof getCfg === "function") ? (getCfg() || {}) : {};
+    /* 优先取**当前 profile** 的 embedModel（换了 AI 配置就该连向量模型一起换），
+       其次全局 cfg.embedModel，最后默认值。 */
+    const model = String((ap && ap.embedModel) || cfg.embedModel || "").trim() || "bge-m3";
+    return { base: base, key: (ap && ap.key) || "", model: model };
+  }catch(e){ return null; }
+}
+
 /**
- * RAG 检索：用 FTS5 match 查询相关文档
+ * 批量取文本向量。走 OpenAI 兼容的 POST {base}/embeddings，
+ * 同时容忍 Ollama 的两种返回形状（不同版本字段不一样）。
+ * @param {string[]} texts
+ * @returns {Promise<Float32Array[]|null>} null = 通道不可用（调用方降级，不要抛）
+ */
+async function aiEmbedTexts(texts){
+  const list = (texts || []).map(x => String(x || "").slice(0, 8000)).filter(Boolean);
+  if(!list.length) return [];
+  const ec = _embedCfg();
+  if(!ec) return null;
+  try{
+    const r = await fetch(ec.base + "/embeddings", {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, ec.key ? { "Authorization": "Bearer " + ec.key } : {}),
+      body: JSON.stringify({ model: ec.model, input: list.length === 1 ? list[0] : list })
+    });
+    if(!r.ok) { pushDiag("warn", "embeddings HTTP " + r.status, { where: "aiEmbedTexts" }); return null; }
+    const j = await r.json();
+    // 三种已知形状：OpenAI data[].embedding / Ollama /api/embed embeddings[][] / 单条 embedding[]
+    let raw = null;
+    if(j && Array.isArray(j.data)) raw = j.data.map(d => d && d.embedding).filter(Boolean);
+    else if(j && Array.isArray(j.embeddings)) raw = j.embeddings;
+    else if(j && Array.isArray(j.embedding)) raw = [j.embedding];
+    if(!raw || !raw.length) return null;
+    const out = raw.map(v => Float32Array.from(v));
+    // 单输入但服务返回多条（或反之）时不猜，直接判失败走降级
+    if(out.length !== list.length) return null;
+    return out;
+  }catch(e){
+    pushDiag("warn", "embeddings error: " + ((e && e.message) || e), { where: "aiEmbedTexts" });
+    return null;
+  }
+}
+
+/** 余弦相似度；维度不一致或零向量返回 0 */
+function ragCosine(a, b){
+  if(!a || !b || a.length !== b.length || !a.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for(let i = 0; i < a.length; i++){ const x = a[i], y = b[i]; dot += x * y; na += x * x; nb += y * y; }
+  if(na <= 0 || nb <= 0) return 0;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
+
+/** 载入全部向量到内存缓存（一次性；IDB 不可用时返回空 Map 并降级到纯词法） */
+async function ragVecLoadAll(){
+  if(_ragVecCache) return _ragVecCache;
+  const m = new Map();
+  try{
+    const keys = await idbKeys();
+    for(const k of (keys || [])){
+      if(typeof k !== "string" || k.indexOf(RAG_VEC_PREFIX) !== 0) continue;
+      const v = await idbReadKey(k);
+      if(v) m.set(k.slice(RAG_VEC_PREFIX.length), v instanceof Float32Array ? v : Float32Array.from(v));
+    }
+  }catch(e){ pushDiag("warn", "ragVecLoadAll error: " + ((e && e.message) || e), { where: "ragVecLoadAll" }); }
+  _ragVecCache = m;
+  return m;
+}
+
+/** 写入/删除单篇文档的向量（删除时同时清内存缓存，避免陈旧命中） */
+async function ragVecPut(docId, vec){
+  const cache = await ragVecLoadAll();
+  if(!docId || !vec || !vec.length){ cache.delete(String(docId)); return false; }
+  cache.set(String(docId), vec);
+  try{ await idbMirrorKey(RAG_VEC_PREFIX + docId, vec); return true; }
+  catch(e){ pushDiag("warn", "ragVecPut failed: " + ((e && e.message) || e), { where: "ragVecPut" }); return false; }
+}
+async function ragVecDelete(docId){
+  const cache = await ragVecLoadAll();
+  cache.delete(String(docId));
+  try{ await idbDeleteKey(RAG_VEC_PREFIX + docId); }catch(e){ /* 删不掉下次重载仍会清 */ }
+}
+
+/** 给单篇文档建向量；embedding 通道不可用时静默返回 false（检索自会降级） */
+async function ragEmbedDoc(docId, content){
+  const vecs = await aiEmbedTexts([String(content || "")]);
+  if(!vecs || !vecs.length) return false;
+  return ragVecPut(docId, vecs[0]);
+}
+
+/**
+ * 回填缺失的向量：**批量**送 /embeddings（一次 32 条），单次上限 max 条，
+ * 避免启动时长时间占住主线程。max 传 Infinity 表示全量（ragReindex 用）。
+ * @returns {Promise<{done:number, left:number}>}
+ */
+async function ragEnsureVectors(max){
+  const cap = (typeof max === "number" && max > 0) ? max : 20;
+  /* 同一时刻只跑一趟：ragInit 的后台回填与显式全量回填会挑同一批缺失文档，
+     并发跑等于把同样的文本重复发给 provider 一遍。 */
+  if(_ragEnsuring) return _ragEnsuring;
+  _ragEnsuring = (async () => {
+    const docs = getRagDocs();
+    const cache = await ragVecLoadAll();
+    const missing = docs.filter(d => d && d.docId && !cache.has(String(d.docId)));
+    if(!missing.length) return { done: 0, left: 0 };
+    const todo = missing.slice(0, cap);
+    let done = 0;
+    const BATCH = 32;
+    for(let i = 0; i < todo.length; i += BATCH){
+      const chunk = todo.slice(i, i + BATCH);
+      const vecs = await aiEmbedTexts(chunk.map(d => d.content));
+      if(!vecs || vecs.length !== chunk.length) break; // 通道不可用：别再逐批重试，本轮到此为止
+      for(let j = 0; j < chunk.length; j++){
+        if(await ragVecPut(chunk[j].docId, vecs[j])) done++;
+      }
+    }
+    return { done: done, left: Math.max(0, missing.length - done) };
+  })().finally(() => { _ragEnsuring = null; });
+  return _ragEnsuring;
+}
+
+/**
+ * 向量召回：对缓存里的全部文档算余弦并取 topK。
+ * @returns {Promise<Array<{docId:string, sim:number}>>}
+ */
+async function ragVectorSearch(query, topK){
+  const cache = await ragVecLoadAll();
+  if(!cache.size) return [];
+  const qv = await aiEmbedTexts([String(query || "")]);
+  if(!qv || !qv.length) return [];
+  const scored = [];
+  for(const [docId, vec] of cache){
+    const s = ragCosine(qv[0], vec);
+    if(s > 0) scored.push({ docId: docId, sim: s });
+  }
+  scored.sort((a, b) => b.sim - a.sim);
+  return scored.slice(0, topK);
+}
+
+/**
+ * 混合召回：词法 BM25 与向量各出一份排序，用 RRF（Reciprocal Rank Fusion）融合。
+ * 用 RRF 而非"分数相加"，因为 BM25 与余弦不同量纲，直接相加会被其中一侧主导。
+ * @returns {Promise<Array<{docId,source,content,score,via}>>}
+ */
+async function ragHybridSearch(q, topK){
+  const lexical = ragLexicalTop(q, topK * 3);
+  const vectorial = await ragVectorSearch(q, topK * 3);
+  if(!vectorial.length) {
+    return lexical.slice(0, topK).map(r => Object.assign({}, r, { via: "lex" }));
+  }
+  const K = 60, byId = new Map();
+  lexical.forEach((r, i) => {
+    byId.set(r.docId, { docId: r.docId, source: r.source, content: r.content, bm25: r.score, score: 1 / (K + i + 1), via: "lex" });
+  });
+  vectorial.forEach((v, i) => {
+    const d = byId.get(v.docId) || Object.assign({ score: 0, via: "", bm25: null }, _ragDocMeta(v.docId));
+    d.score += 1 / (K + i + 1);
+    d.via = d.via ? "both" : "vec";
+    byId.set(v.docId, d);
+  });
+  return [...byId.values()].sort((a, b) => b.score - a.score).slice(0, topK);
+}
+
+/** 从持久化文档表里补元数据（向量命中但词法没命中时，标题/正文要靠它） */
+function _ragDocMeta(docId){
+  const d = getRagDocs().find(x => String(x.docId) === String(docId));
+  return d ? { docId: d.docId, source: d.source, content: d.content } : { docId: docId, source: "", content: "" };
+}
+
+/**
+ * RAG 检索：词法 BM25 + 向量召回，RRF 融合
  * @param {string} query - 查询文本
  * @param {number} [limit=5] - 返回条数
- * @returns {Promise<Array<{docId:string, source:string, content:string, rank:number}>>}
+ * @returns {Promise<Array<{docId:string, source:string, content:string, score:number, via:string}>>}
  */
+/* ---------- 词法召回：CJK 友好分词 + BM25（纯 JS，不依赖 SQLite / WASM / CDN） ---------- */
+
+/** 汉字 + 日文假名 + 韩文音节；其余（含拉丁、数字）走按词切分 */
+const CJK_CHAR = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]/;
+const LATIN_WORD = /[a-z0-9][a-z0-9_.-]*/g;
+
+/** 连续汉字 → 二元组 + 单字。单字也入表，否则「猫」这类一字查询永远召不回 */
+function _cjkRunTokens(run, out){
+  if(run.length === 1){ out.push(run); return; }
+  for(let i = 0; i + 1 < run.length; i++) out.push(run.slice(i, i + 2));
+  for(const ch of run) out.push(ch);
+}
+
+/**
+ * 切词：拉丁按词、数字串整体保留，**连续汉字切成二元组**。
+ * 为什么自己做：SQLite 的 unicode61 把「修复登录页」整段当成一个 token，
+ * 查「登录」召不回（v3.7.57 实测）；二元组是无需词典、中英混排都成立的折中。
+ * @param {string} text
+ * @returns {string[]} 词频列表（未去重）
+ */
+function ragTokenize(text){
+  const s = String(text || "").toLowerCase();
+  const out = [];
+  let m;
+  LATIN_WORD.lastIndex = 0;
+  while((m = LATIN_WORD.exec(s))) out.push(m[0]);
+  let run = "";
+  for(const ch of s){
+    if(CJK_CHAR.test(ch)){ run += ch; continue; }
+    if(run){ _cjkRunTokens(run, out); run = ""; }
+  }
+  if(run) _cjkRunTokens(run, out);
+  return out;
+}
+
+const RAG_BM25_K1 = 1.2;
+const RAG_BM25_B = 0.75;
+
+/** 由当前文档表构建倒排索引（ragIndexAdd/Remove 后经 saveRagDocs 置空，下次检索惰性重建） */
+function ragLexBuild(){
+  const docs = getRagDocs();
+  const metas = [];
+  const postings = new Map();   // term -> Map<docIdx, tf>
+  let total = 0;
+  for(let i = 0; i < docs.length; i++){
+    const d = docs[i] || {};
+    const toks = ragTokenize(d.content);
+    metas.push({ docId: String(d.docId || ""), source: String(d.source || ""), content: String(d.content || ""), len: toks.length });
+    total += toks.length;
+    const tf = new Map();
+    for(const tk of toks) tf.set(tk, (tf.get(tk) || 0) + 1);
+    for(const [tk, c] of tf){
+      let p = postings.get(tk);
+      if(!p){ p = new Map(); postings.set(tk, p); }
+      p.set(i, c);
+    }
+  }
+  _ragLex = { N: metas.length, metas, postings, avgdl: metas.length ? total / metas.length : 0 };
+  return _ragLex;
+}
+
+/**
+ * 词法召回（同步）：BM25 Okapi 打分取 topK。空表/无有效词返回 []
+ * @param {string} q
+ * @param {number} topK
+ * @returns {Array<{docId:string, source:string, content:string, score:number}>}
+ */
+function ragLexicalTop(q, topK){
+  const query = String(q || "").trim();
+  if(!query) return [];
+  if(!_ragLex) ragLexBuild();
+  const ix = _ragLex;
+  if(!ix || !ix.N) return [];
+  const terms = [...new Set(ragTokenize(query))];
+  if(!terms.length) return [];
+  const avgdl = ix.avgdl || 1;
+  const scores = new Float64Array(ix.N);
+  for(const term of terms){
+    const p = ix.postings.get(term);
+    if(!p) continue;
+    const idf = Math.log(1 + (ix.N - p.size + 0.5) / (p.size + 0.5));
+    if(idf <= 0) continue;
+    for(const [idx, tf] of p){
+      const dl = ix.metas[idx].len || 1;
+      scores[idx] += idf * (tf * (RAG_BM25_K1 + 1)) / (tf + RAG_BM25_K1 * (1 - RAG_BM25_B + RAG_BM25_B * dl / avgdl));
+    }
+  }
+  const hits = [];
+  for(let i = 0; i < ix.N; i++){
+    if(scores[i] > 0) hits.push({ docId: ix.metas[i].docId, source: ix.metas[i].source, content: ix.metas[i].content, score: scores[i] });
+  }
+  hits.sort((a, b) => b.score - a.score);
+  return hits.slice(0, Math.max(1, topK | 0));
+}
+
 async function ragSearch(query, limit){
   const q = String(query||"").trim();
   const topK = (typeof limit === "number" && limit > 0) ? limit : 5;
   if(!q) return [];
-  if(!_ragReady){
-    const ok = await ragInit();
-    if(!ok) return ragSearchFallback(q, topK); // v3.4.7 批次六：sql.js/FTS5 不可用时降级关键词匹配（此前直接空——RAG 在无 WASM 环境完全失效）
-  }
-  try{
-    // FTS5 match 查询：转义特殊字符，用 BM25 排序
-    const safeQ = q.replace(/["']/g, " ").replace(/[^\w\u4e00-\u9fff\s]/g, " ").trim();
-    if(!safeQ) return [];
-    const stmt = _ragDb.prepare("SELECT docId, source, content, rank FROM rag_fts WHERE rag_fts MATCH ? ORDER BY rank LIMIT ?;");
-    stmt.bind([safeQ, topK]);
-    const results = [];
-    while(stmt.step()){
-      const row = stmt.getAsObject();
-      results.push({ docId:row.docId, source:row.source, content:row.content, rank:row.rank });
-    }
-    stmt.free();
-    return results;
-  }catch(e){
-    // FTS5 查询失败（如语法错误）→ 降级到关键词匹配
-    return ragSearchFallback(q, topK);
-  }
-}
-
-/**
- * RAG 检索降级：关键词匹配（FTS5 不可用时）
- * @param {string} query
- * @param {number} limit
- * @returns {Array}
- */
-function ragSearchFallback(query, limit){
-  const q = String(query||"").toLowerCase();
-  const kws = q.split(/[\s,，。、;；]+/).filter(w => w.length >= 2);
-  if(!kws.length) return [];
-  const docs = getRagDocs();
-  return docs.map(d => {
-    const text = (d.content || "").toLowerCase();
-    let score = 0;
-    for(const w of kws){ if(text.indexOf(w) >= 0) score += 1; }
-    return { docId:d.docId, source:d.source, content:d.content, rank:-score };
-  })
-  .filter(d => d.rank < 0)
-  .sort((a, b) => a.rank - b.rank)
-  .slice(0, limit);
+  /* ragInit 只做"载入向量缓存 + 发起有界回填"，与网络/WASM 无关，毫秒级；
+     它失败也不该拦检索 —— 词法一路本来就不依赖它。 */
+  if(!_ragReady && typeof ragInit === "function") await ragInit().catch(() => false);
+  return ragHybridSearch(q, topK);
 }
 
 /**
@@ -958,9 +1218,11 @@ async function ragInjectContext(userText){
  * @returns {Promise<number>} 索引文档数
  */
 async function ragReindex(){
-  // ragInit 失败（如 sql.js 不可用）时仍继续索引到 localStorage（FTS5 表跳过，ragIndexAdd 内部守卫）
   await ragInit();
   let count = 0;
+  /* 全量重建一律 skipEmbed：逐条 embed = N 次网络往返（几百条就是几百次），
+     改成"先把正文全入库，末尾一次批量回填"（ragEnsureVectors 每 32 条一个请求）。 */
+  const OPT = { skipEmbed: true };
   // 索引任务
   try{
     const tasks = getTasks();
@@ -968,22 +1230,22 @@ async function ragReindex(){
       if(t.deletedAt) continue;
       const content = [t.title, t.note || "", (t.tags || []).join(" ")].join(" ").trim();
       if(content){
-        await ragIndexAdd("task:"+t.id, content, "task");
+        await ragIndexAdd("task:"+t.id, content, "task", OPT);
         count++;
       }
     }
   }catch(_){}
   // 索引记录
   try{
-    ORDER.forEach(sc => {
-      getRec(sc).forEach(r => {
+    for(const sc of ORDER){
+      for(const r of getRec(sc)){
         const content = Object.values(r).filter(v => typeof v === "string").join(" ").trim();
         if(content){
-          ragIndexAdd("rec:"+sc+":"+r.id, content, "record:"+sc);
+          await ragIndexAdd("rec:"+sc+":"+r.id, content, "record:"+sc, OPT);
           count++;
         }
-      });
-    });
+      }
+    }
   }catch(_){}
   // 索引笔记
   try{
@@ -991,26 +1253,30 @@ async function ragReindex(){
     for(const n of notes){
       const content = [n.title, n.content, (n.tags || []).join(" ")].join(" ").trim();
       if(content){
-        await ragIndexAdd("note:"+n.id, content, "note");
+        await ragIndexAdd("note:"+n.id, content, "note", OPT);
         count++;
       }
     }
   }catch(_){}
   // 索引对话历史
   try{
-    ORDER.forEach(sc => {
+    for(const sc of ORDER){
       const hist = getChat(sc);
-      hist.forEach((m, i) => {
+      for(let i = 0; i < hist.length; i++){
+        const m = hist[i];
         if(m.role === "user" || m.role === "assistant"){
           const content = String(m.content || "").trim();
           if(content){
-            ragIndexAdd("chat:"+sc+":"+i, content, "chat:"+sc);
+            await ragIndexAdd("chat:"+sc+":"+i, content, "chat:"+sc, OPT);
             count++;
           }
         }
-      });
-    });
+      }
+    }
   }catch(_){}
+  /* 一次批量补齐所有缺失向量（配了 embedding 通道才有；没配就直接返回）。
+     上限传 Infinity：重建场景要覆盖全表，而不是像启动期那样只补 20 条。 */
+  try{ await ragEnsureVectors(Infinity); }catch(_){}
   return count;
 }
 

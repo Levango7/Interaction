@@ -1,3 +1,79 @@
+## [v3.7.57] - 2026-09-26
+
+**知识库检索换血：把"从没跑通过一次的 FTS5"换成自带 BM25，并真的加上向量召回**。
+方向来自一条要求：不要只把不成立的声明藏起来，要让能力名副其实。本轮先把检索做对。
+
+### 先立证据：旧声明为什么不成立
+
+1. 仓库自带的 `assets/sql/sql-wasm.wasm` 是 **SQLite 3.45.2，编译时没开 FTS5**：
+   实测 `CREATE VIRTUAL TABLE t USING fts5(x)` → `no such module: fts5`（fts3 / fts4 在）。
+   而 `ragInit()` 建的就是 fts5 表 → 每次必抛 → 被宽 catch 吞掉 → `_ragReady` 恒 false →
+   `ragLexicalTop()` 恒返回 `[]`。所谓"FTS5/BM25 全文检索"**一次都没跑通过**，
+   线上真实行为一直是 `ragSearchFallback()` 的朴素 substring 关键词匹配。
+2. 就算换成开了 FTS5 的构建也救不了中文：`unicode61` 把连续汉字当成**一个** token。
+   实测对「修复登录页 500 报错」这条记录：`MATCH '登录'` 召不回、`MATCH '报错'` 召不回，
+   只有 `MATCH '修复登录页'` 才召得回。
+
+### 词法一路：自带 CJK 分词 + BM25（不再依赖 WASM / CDN）
+
+- `ragTokenize()`：拉丁按词 + 数字串保留 + **连续汉字切二元组**（并保留单字，否则一字查询永不命中）。
+- `ragLexBuild()` / `ragLexicalTop()`：BM25 Okapi（k1=1.2、b=0.75），倒排索引惰性构建，
+  任何写入都经 `saveRagDocs()` 统一作废重建（不会再出现"更新了内容却还按旧词命中"）。
+- 效果：`ragSearch("登录")` 现在召得回「修复登录页 500 报错」—— 旧结构上做不到这件事。
+- RAG 检索**不再需要 sql.js**：不联网、不等 CDN、离线与 Electron 表现一致（sql.js 仍留给 `sql_query` 工具）。
+- 删除 `ragSearchFallback()`：它当初解决的问题（无 WASM 时 RAG 完全失效）已被上面这条吸收。
+
+### 语义一路：provider 的 `/embeddings` + RRF 混合召回
+
+- `aiEmbedTexts()`：OpenAI 兼容 `POST {base}/embeddings`，同时认 Ollama 的
+  `embeddings[][]` 与 `embedding[]` 形状；非 2xx 或条数对不上统一返回 `null` 走降级（不抛）。
+- 新增设置项「向量模型」（profile 级 `embedModel`，留空默认 `bge-m3`）：换 provider 连带换向量模型，
+  国内 / 本地部署（Ollama、XInference、vLLM 等自带 /embeddings 的）都能接。
+- 向量存 IndexedDB `kv`，键前缀 `ragvec:` —— 刻意不带 `wb_agent_`，否则会被同步镜像
+  `JSON.stringify` 回写进 localStorage（1536 维 Float32 约 30KB/条），几十条就爆配额。
+- `ragHybridSearch()`：词法与向量各出一份排序，用 **RRF（K=60）** 融合（BM25 与余弦不同量纲，
+  不能直接加分）；每条结果带 `via` = `lex` / `vec` / `both`，降级是显式可观测的而不是静默。
+- 回填：`ragEnsureVectors()` 改为**批量**（32 条/请求）并加并发单飞锁；启动只补 20 条，
+  `ragReindex()` 走全量。
+
+### 顺带修掉的三个真实缺陷
+
+1. `ragInit()` 一进门就把向量内存缓存置空"重新载入"：`ragVecPut()` 是"先写缓存、再尽力写 IDB"，
+   IDB 不可用时缓存是唯一副本 —— 这一进一出会把刚算好的向量丢掉。
+2. `ragReindex()` 的记录段与对话历史段用 `forEach` 调 async 的 `ragIndexAdd()` 且**不 await**：
+   发出一堆没人管的 promise，函数返回时向量根本没建完，异常也无人接。
+3. 检索在 AI 关键路径上，原先可能等满 CDN 超时（此前用 `Promise.race(1.5s)` 兜底）。
+   词法一路去掉外部依赖后，那个 race 连同它的固定尾延迟一起删掉。
+
+### 门禁自身也有一个"失明"bug（这条更值得记）
+
+追查 check:modules 报出的"新增 1 条循环依赖"时发现：**`scripts/module-graph.mjs` 的预处理
+只认引号、不认正则字面量**。`src/ai-tools.js` 里的 `/["']/g` 被当成字符串开头，一路吃到后面
+的引号才收尾，**该文件 61834 字节被剥到只剩 35079** —— 区间里 9 个顶层函数
+（ragInjectContext / ragReindex / switchModel / listModels / retryChatWithParams / streamProgress* …）
+以及 `getChat`、`lastChatRequest` 等真实引用直接从依赖图里消失。
+- 修好后的口径对比（**同一份 HEAD 源码**）：循环 39 → 44、逆层块对 29 → 35。
+  基线数字变大是**测量口径被修正**，不是新增技术债；本轮改动在修正后的口径下
+  对循环 / 逆层的增量实测为 **0**（HEAD 与工作树同为 44 / 35）。
+- 预处理抽成 `scripts/lib/code-scan.mjs`，新增 `tests/code-scan.test.js`：除单元断言外，
+  还对全部 28 个源块跑两条不变式（剥完括号必须配对、顶层函数名必须都还在），
+  并且**把旧实现内嵌进测试证明哨兵真能抓住它** —— 防"永远为真的测试"。
+
+### 实测与门禁
+
+- 单测 **1025/1025**（93 文件）全过；e2e **45/45**（三视口，含新增 `tests/e2e/rag-hybrid.spec.js` 4 例）。
+- 真浏览器（Chromium + `file://`）实测：IndexedDB 可用；`ragSearch("login bug")` →
+  `doc-auth` 且 `via=vec`，**刷新后仍召回**（IDB 里 `ragvec:` 键 2 个，确实落盘）；
+  `ragSearch("认证 报错")` → `via=both`；`ragInjectContext()` 输出含「修复登录页 500 报错」。
+- 版本五源一致 3.7.57；`build:check` / `check:modules` / `lint:layers` / eslint / `lint-colors` /
+  `check:ai-tools-doc` / `check:pwa-icons` / `pet:check` 全过。
+
+### 下一轮候选（本轮刻意未做）
+
+- 长期记忆召回仍是"词袋 + 余弦"（`ui-global-events.js` 那段写着"RAG 用 TF-IDF"），可直接复用本轮 embedding 通道。
+- 上下文装配：固定 top5 + 每条截 200 字，没有按相关性/长度做预算分配，结果里也没有引用出处。
+- 换 `embedModel` 后没有"重建索引"入口：旧维度向量会因维度不符自然失效，但不会自动重算。
+
 ## [v3.7.56] - 2026-09-26
 
 **放行本地回环后端 + 一处错误结论的勘误**。v3.7.54/55 把"CSP 拦死本地 HTTP 后端"记成待决项，

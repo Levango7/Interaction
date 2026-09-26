@@ -292,21 +292,6 @@ async function generateDailyReport(){
 
 /* ---------- AI 对话（带工具调用） ---------- */
 /**
- * R07：base URL 安全校验——只允许 https://（允许 http://localhost / http://127.0.0.1 供开发）。
- * 防止配置错误或恶意配置导致 Key 明文发往 http:// 公网。
- * @param {string} base
- * @returns {boolean}
- */
-function validateBaseUrl(base){
-  if (!base || typeof base !== "string") return false;
-  try {
-    const u = new URL(base);
-    if (u.protocol === "https:") return true;
-    if (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) return true;
-    return false;
-  } catch (e){ return false; }
-}
-/**
  * B8：读取 AI 请求参数（超时秒数 / 温度），带默认值与范围校验。
  * 存储于 cfg 顶层（非 profile 字段），浏览器与 Electron 双路径共用。
  * @returns {{timeoutSec:number, temperature:number}}

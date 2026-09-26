@@ -136,6 +136,7 @@ function fillProfileForm(p){
   $("#cfgBase").value = (p && p.base) || "https://api.openai.com/v1";
   $("#cfgKey").value = (p && p.key) || "";
   $("#cfgModel").value = (p && p.model) || "gpt-4o-mini";
+  if($("#cfgEmbedModel")) $("#cfgEmbedModel").value = (p && p.embedModel) || "";
 }
 /* 渲染 profile 下拉选择器（列出所有 profile，选中 activeId） */
 function renderProfileSelect(){
@@ -511,7 +512,8 @@ async function saveCfg(){
       name: $("#cfgName").value.trim() || t("common.unnamed","未命名"),
       base: $("#cfgBase").value.trim(),
       key: $("#cfgKey").value.trim(),
-      model: $("#cfgModel").value.trim()
+      model: $("#cfgModel").value.trim(),
+      embedModel: ($("#cfgEmbedModel") ? $("#cfgEmbedModel").value.trim() : "")
     };
     if(idx >= 0){ profiles[idx] = Object.assign({}, profiles[idx], formProfile); }
     else { profiles.push(formProfile); }

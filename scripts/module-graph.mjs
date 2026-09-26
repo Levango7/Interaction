@@ -24,6 +24,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stripCommentsAndStrings } from './lib/code-scan.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(root, 'src');
@@ -43,39 +44,8 @@ const blocks = order.map((o, idx) => {
 /* ---------- 关键字/内置名（避免把语言关键字当引用） ---------- */
 const KEYWORDS = new Set(('break case catch class const continue debugger default delete do else export extends finally for function if import in instanceof let new return super switch this throw try typeof var void while with yield async await of from as static get set true false null undefined void 0 arguments'.split(' ')));
 
-/* ---------- 去注释与字符串字面量 ----------
-   必须先剥掉再抽标识符：这些块里注释/文案大量提到别的函数名（如 "见 renderOverview"、t("chain.reset")），
-   不剥会把它们当成真实引用 → 图里出现大量假边与假环（实测：不加这步会报 122 条环，加完降到个位数）。 */
-function stripCommentsAndStrings(text) {
-  let out = '';
-  let i = 0;
-  const n = text.length;
-  while (i < n) {
-    const c = text[i], d = text[i + 1];
-    if (c === '/' && d === '/') { while (i < n && text[i] !== '\n') i++; continue; }
-    if (c === '/' && d === '*') { i += 2; while (i < n && !(text[i] === '*' && text[i + 1] === '/')) i++; i += 2; continue; }
-    if (c === '"' || c === "'" || c === '`') {
-      const q = c; i++; out += ' ';
-      while (i < n && text[i] !== q) {
-        if (text[i] === '\\') { i += 2; continue; }
-        if (q === '`' && text[i] === '$' && text[i + 1] === '{') {
-          /* 模板字符串里的 ${...} 是真实表达式 → 保留其内容 */
-          let depth = 1; i += 2;
-          while (i < n && depth > 0) {
-            if (text[i] === '{') depth++;
-            else if (text[i] === '}') { depth--; if (!depth) { i++; break; } }
-            out += text[i]; i++;
-          }
-          continue;
-        }
-        i++;
-      }
-      i++; continue;
-    }
-    out += c; i++;
-  }
-  return out;
-}
+/* 词法预处理（剥注释/字符串/正则）在 scripts/lib/code-scan.mjs —— 它有独立单元测试，
+   因为这段逻辑的正确性直接决定门禁口径（见该文件顶部对老 bug 的说明）。 */
 /* ---------- 抽顶层定义 ---------- */
 function topLevelDefs(code) {
   const out = new Set();

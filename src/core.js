@@ -155,6 +155,20 @@ function markDirty(){
 }
 
 // 支持的语言列表
+/* v3.7.57：AI base URL 校验从 ai-loop 上移到核心层。
+   原因：ai-tools 也要用它（embedding 通道复用同一口径），而 ai-loop 在 order.json 里排在
+   ai-tools 之后 → 直接引用会新增 ai-tools>ai-loop 逆层边并闭合出循环依赖（check:modules 实测）。
+   它是纯字符串逻辑、零依赖，放这里才是它本来的层级。 */
+function validateBaseUrl(base){
+  if (!base || typeof base !== "string") return false;
+  try {
+    const u = new URL(base);
+    if (u.protocol === "https:") return true;
+    if (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) return true;
+    return false;
+  } catch (e){ return false; }
+}
+
 const SUPPORTED_LANGS = ["zh", "en"];
 // 当前语言（模块级私有状态）
 let _currentLang = "zh";
@@ -377,6 +391,8 @@ const MESSAGES = {
     "settings.baseUrl": "API Base URL",
     "settings.apiKey": "API Key",
     "settings.model": "模型",
+    "settings.embedModel": "向量模型（知识库语义检索用，留空走默认）",
+    "settings.embedModelPh": "bge-m3",
     "settings.timeout": "请求超时（秒，5~120）",
     "settings.temperature": "温度 Temperature（0~2）",
     "settings.memMax": "工作记忆容量（条，20~500）",
@@ -4081,6 +4097,8 @@ const MESSAGES = {
     "settings.baseUrl": "API Base URL",
     "settings.apiKey": "API Key",
     "settings.model": "Model",
+    "settings.embedModel": "Embedding model (for knowledge-base semantic search; blank uses default)",
+    "settings.embedModelPh": "bge-m3",
     "settings.timeout": "Request timeout (sec, 5~120)",
     "settings.temperature": "Temperature (0~2)",
     "settings.memMax": "Memory capacity (items, 20~500)",

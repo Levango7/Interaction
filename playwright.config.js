@@ -93,7 +93,7 @@ module.exports = defineConfig({
     {
       name: "tablet-768x1024",
       use: { ...devices["Desktop Chrome"], channel: undefined, viewport: { width: 768, height: 1024 } },
-      testIgnore: /mobile\.spec\.js|theme-matrix\.spec\.js|i18n\.spec\.js|sync-contract\.spec\.js|toolbox\.spec\.js/,
+      testIgnore: /mobile\.spec\.js|theme-matrix\.spec\.js|i18n\.spec\.js|sync-contract\.spec\.js|toolbox\.spec\.js|rag-hybrid\.spec\.js/,
     },
     {
       name: "mobile-375x667",
