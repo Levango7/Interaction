@@ -69,6 +69,10 @@
 | **OAuth2 管理函数**（oauth2GetToken/BuildAuthUrl/RevokeToken/RegisterProvider） | v1.14 | stub 死链（无调用者） | ✅ 已删（v1.15，保留 `_oauth2HandleCallback` 启动占位） |
 | **协作 / 分享按钮**（btnCollab / btnShare） | v1.15 | 死按钮（仅 HTML 定义、无 JS 绑定）；CRDT 协作模块 v1.14 已归档，纯本地无后端无法真正协作/分享 | ✅ 已删（v1.15，随更多菜单一并移除） |
 | **"更多"工具菜单**（btnMoreTop / moreMenu） | v1.15 | 甘特/导图/仪表盘在图表页已有入口、笔记在知识页已有入口，菜单冗余 | ✅ 已删（v1.15，功能无丢失） |
+| **离线 AI 框架**（WebLLM 本地推理 / ONNX Runtime / 模型缓存 / 隐私过滤 API） | v3.7.58 | 无 UI 入口、无测试引用、零外部调用的沉睡框架：`initWebLLM` 假进度条 + `_webllmEngine` 模拟引擎对象 + ONNX 模型表指向从未存在的 `assets/onnx/` | ✅ 已删（v3.7.58，连 data-idb 模型缓存四助手与 p5.* 孤儿 i18n 键一并清理，约 2270 行） |
+| **ML 行为预测**（predictCompletionRate / calcProductivityScore / recommend 协同过滤等） | v3.7.58 | 数学实现真实但无任何 render/UI 调用点（"智能推荐"卡片走的是 LLM 版 `aiSmartRecommend`，与此无关） | ✅ 已删（v3.7.58，同上批） |
+| **智能排期**（scoreTask / optimizeSchedule / smartSchedule / suggestBreaks） | v3.7.58 | 无 UI 入口、零外部调用 | ✅ 已删（v3.7.58，同上批） |
+| **情绪分析**（analyzeSentiment / detectEmotion / emotionTrend） | v3.7.58 | 无 UI 入口、零外部调用 | ✅ 已删（v3.7.58，同上批） |
 
 ### 🟡 代码仅留占位，入口已关（观察期后清理）
 

@@ -24,7 +24,7 @@
  *   ② 拼回后做**字节级比对**（与抽取前一致），不一致就报错退出、不写盘；
  *   ③ 解析出的块数少于预期时 abort，不写盘（防止把文件写空）。
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -75,6 +75,9 @@ const MIN_EXPECTED = 28;   // v3.7.26 新增 ui-select 块：至少应解析出�
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');
+/* v3.7.58：--no-backup 供 posttest 自动还原使用 —— 自动化路径高频触发，不为每次
+   还原都留 3MB 整页快照（人工排查时的 --extract 仍默认备份）。 */
+const NO_BACKUP = process.argv.includes('--no-backup');
 const mk = n => '/*SRC:' + n + ':BEGIN*/';
 const mkEnd = n => '/*SRC:' + n + ':END*/';
 
@@ -106,8 +109,22 @@ function blockEndIdx(startIdx) {
 
 /* ---------- --extract ---------- */
 if (EXTRACT) {
-  mkdirSync(BACKUP_DIR, { recursive: true });
-  writeFileSync(join(BACKUP_DIR, 'agent-workbench.' + Date.now() + '.html'), html, 'utf8');
+  if (!NO_BACKUP) {
+    mkdirSync(BACKUP_DIR, { recursive: true });
+    writeFileSync(join(BACKUP_DIR, 'agent-workbench.' + Date.now() + '.html'), html, 'utf8');
+    /* v3.7.58：备份轮转 —— 只保留最近 KEEP_BACKUPS 份。历史实测无轮转时该目录
+       曾累积 141 份 / 451MB，纯磁盘债；备份只服务"最近一次抽取"的回退场景。 */
+    try {
+      const KEEP_BACKUPS = 10;
+      const baks = readdirSync(BACKUP_DIR)
+        .filter(f => f.endsWith('.html'))
+        .map(f => ({ f, m: statSync(join(BACKUP_DIR, f)).mtimeMs }))
+        .sort((a, b) => b.m - a.m);
+      for (const old of baks.slice(KEEP_BACKUPS)) {
+        try { unlinkSync(join(BACKUP_DIR, old.f)); } catch (_e) { /* 占用/权限：跳过 */ }
+      }
+    } catch (_e) { /* 轮转失败不影响主流程 */ }
+  }
   mkdirSync(SRC_DIR, { recursive: true });
 
   let extracted = 0;

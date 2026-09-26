@@ -1,3 +1,70 @@
+## [v3.7.58] - 2026-09-26
+
+**安全收口 + 死代码清仓 + 测试循环自动化**。本轮来自一次全面评估的整改：三项安全修复、约 2440 行无出口死代码移除，以及把"跑完测试工作区必脏"这个有前科的坑从人肉纪律变成结构上不可能。
+
+### 安全：云同步快照不再携带密钥（含一处 README 与实况不符的更正）
+
+- `_buildCloudSnapshot()`（render-overview）此前枚举全部 `wb_agent_*` 键上传自建后端，包括：
+  - `wb_agent_cfg` —— AI Key 的 AES-GCM 密文；且 cfg 的 Key 用**设备密钥**加密，换设备本就解不开（密钥不出本机），同步它无跨端收益、纯增泄露面；
+  - `wb_agent___dk` —— 无 IndexedDB 环境下设备密钥**本体**（"密文 + 钥匙"同交即等于明文）；
+  - `wb_agent_pre_restore_backup` —— 恢复前的本机回滚档，内嵌全部本地键值（含 cfg）。
+- 现按 `SYNC_EXCLUDED_KEYS` 显式排除上述键（sync_meta 沿用旧排除）；任务 / 记录 / 笔记 / 记忆 / AI 会话等业务数据的快照语义不变。
+- README 同步更正：「Key 不上传任何服务器」→ 如实描述快照范围（v3.7.58 起排除 cfg 等密钥键）。
+- 新增 `tests/sync-snapshot-scope.test.js`（5 用例）；e2e `sync-contract.spec.js` 7/7 实测通过（真实浏览器 + mock 后端）。
+
+### 安全：两处注入面收口
+
+- 微信扫码二维码的 `src` 属性此前未转义直拼后端响应 —— 后端被攻破或返回恶意串即可注入属性逃逸 `<img>`。现经 `esc()` 转义（render-overview）。
+- sql.js 的 CDN 兜底加载补 **SRI 完整性哈希**（`sha384-8D3Rsfo…`，先与官方 npm sql.js@1.10.3 的 dist 文件逐字节比对一致、再按本地副本 `assets/sql/` 实测计算）；integrity 不匹配触发 onerror 自动落到下一候选基址，失败路径与「CDN 不可达」完全一致。本地同源加载与用户自配 `sqlJsBase` 不受影响。
+
+### 修复：自研下拉（可编辑模式）双重键盘绑定
+
+- 旧实现给同一触发器绑了两个 keydown 处理器（EDITABLE 分支一个 + 无条件再绑一个）：
+  ① ↓/↑ 被各移一步，一次按键跳两行；
+  ② Enter 经 mousedown 选中 → `dsClose()` 置空 OPEN，第二个处理器走 `else open()` 把刚关上的列表**重新弹开**；
+  ③ 可编辑 input 里按空格被通用分支拦截成开合，打不出空格。
+- 修复后可编辑模式只保留 combobox 分支的键盘处理（顺带把 `if (OPEN !== inst) open(); else open();` 笔误式冗余收成一句），非可编辑模式的绑定路径与行为完全不变。
+- 新增 `tests/ui-select-keyboard.test.js`（4 用例回归）。
+
+### 死代码清仓：移除 4 个无出口子系统（-2276 行）+ 配套 i18n（-164 行）
+
+按 product-scope「stub + 活 UI = 虚假功能」纪律，移除 ui-global-events 中四个「无 UI 入口、无测试引用、零外部调用」的沉睡框架（v1.7-B/C 时期遗留）：
+
+- **54-离线AI**（WebLLM 假进度条 + `_webllmEngine` 模拟引擎对象 + ONNX 模型表指向从未存在的 `assets/onnx/` + 模型缓存 + 隐私过滤 API）；
+- **55-ML预测**（行为预测 / 生产力评分 / 协同过滤——数学实现真实但无任何 render/UI 调用点；"智能推荐"卡片走的是 LLM 版 `aiSmartRecommend`，与此无关）；
+- **56-智能排期**（scoreTask / optimizeSchedule / smartSchedule）；
+- **57-情绪分析**（analyzeSentiment / detectEmotion / emotionTrend）。
+
+引用核查：上述 59 个导出符号在活代码中零调用（脚本化全量扫描 + 人工复核 `recommend` 同名子串误报、`webllmChat` 仅存于 i18n 文案值）。配套清理：
+
+- data-idb 的模型缓存四助手（idbPutModel 等，唯一消费者已删）；
+- core.js 中 82 个 p5.* 孤儿 i18n 键（中英双语 164 行；i18n-completeness 门禁通过，zh/en 配对无破损）；
+- `initHeavyModules` 上方注释与实况对齐（此前还列着更早移除的 58 / 65~70 号模块）。
+
+已登记 docs/product-scope.md §三。ui-global-events 11841 → 9564 行，交付 HTML 3.40 → 3.31MB。
+
+### 工程化：测试循环与源码态流转自动化
+
+- `npm test` 新增 **posttest 自动还原源码态**（先 `src:extract --no-backup` 后 `pet:extract`，顺序刻意：趁立绘仍在 HTML 内把含 `_PET_ART` 完整数据的 render-widgets 抽回 src，后者此时为 no-op）——v3.7.40 曾误提交拼回态，此坑从"人肉记得"变为"结构上不可能"。
+- `启动Agent工坊.bat` **源码态自愈**：双击时检测到源码态自动拼回再启动，日常双击体验不变。
+- `lint:layers` 补 `prelint:layers` 钩子：此前干净检出后直跑必红（校验结果依赖"恰好注入过"的时序耦合）。
+- `_srcbackup/` 备份轮转：只保留最近 10 份（历史实测累积 141 份 / 451MB 纯磁盘债，本次已清 132 份）。
+- `release` 自动打 `v<版本>` 附注 tag：此前 53 个版本全部无 tag 可回溯，从本版起发布历史可直接 checkout。
+- 删除 `.prettierrc` / `.prettierignore` 死配置（无依赖、无脚本、无 CI 步骤，从未接入任何链路）。
+- CONTRIBUTING 与实况对齐：删幽灵命令 `lint:fix`、结构树补 `src/`、改写"不再有字节拼接"过时段落、测试规模改为以 `npm test` 输出为准。
+
+### 明确缓办（评估结论，非遗漏）
+
+- refresh token 明文本机：加密的收益依赖后端真实上线（当前未联调），而改动会触碰未联调的登录链路 —— 等云同步真实接入时随 auth 联调一并做。
+- ui-global-events 拆块（9564 行仍偏大）：按 docs/decoupling-plan.md 的节奏推进，不在本轮。
+
+### 门禁
+
+- 单测 95 文件 / **1038 用例全部通过**（含新增 9 例）；e2e sync-contract 7/7。
+- build:check（五源版本一致 + 真相源完整）/ lint / lint:layers / check:modules（无新增环）/ check:ai-tools-doc / check:pwa-icons / pet:check 全绿。
+
+---
+
 ## [v3.7.57] - 2026-09-26
 
 **知识库检索换血：把"从没跑通过一次的 FTS5"换成自带 BM25，并真的加上向量召回**。

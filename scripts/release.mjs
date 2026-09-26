@@ -105,3 +105,17 @@ if (r.status !== 0) fail('build:check 自检未通过，请检查上方输出');
 
 console.log(`[release] OK 已统一 bump 至 v${newVer}（BUILD_TAG=${buildTag}）`);
 console.log('[release] 提醒：请更新 CHANGELOG.md，测试通过后提交。');
+
+/* 6) 自动打 release tag（v3.7.58 起）
+   此前 53 个版本全部无 tag 可回溯（仓库仅有重构过程快照 tag）。从本版起，
+   release 即打 `v<版本>` 附注 tag，发布历史可用 tag 直接 checkout。 */
+if (spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: 'ignore' }).status === 0) {
+  const tagName = 'v' + newVer;
+  const dup = spawnSync('git', ['rev-parse', '-q', '--verify', 'refs/tags/' + tagName], { stdio: 'ignore' });
+  if (dup.status === 0) {
+    console.log(`[release] tag ${tagName} 已存在，跳过`);
+  } else {
+    const t = spawnSync('git', ['tag', '-a', tagName, '-m', `release v${newVer}`], { stdio: 'inherit' });
+    console.log(t.status === 0 ? `[release] tag ${tagName} 已创建` : '[release] tag 创建失败（可手动 git tag ' + tagName + '）');
+  }
+}

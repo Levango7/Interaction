@@ -19,15 +19,14 @@ npm install
 
 | 命令 | 作用 |
 |---|---|
-| `npm test` | 运行全部测试（vitest） |
+| `npm test` | 运行全部测试（vitest）；结束自动还原源码态 HTML（posttest） |
 | `npm run test:watch` | 监听模式，文件改动自动重跑 |
 | `npm run lint` | ESLint + 颜色令牌检查 |
-| `npm run lint:fix` | 自动修复 ESLint 可修问题 |
 | `npm run serve` | 本地预览（<http://localhost:8123>） |
 | `npm run build:check` | **提交前必跑**：版本四处一致性 + 真相源完整性门禁 |
 | `npm run lint:layers` | 单文件分层契约校验（缺层 / 顺序错即失败） |
 | `npm run build:prod` | 生产构建（`agent-workbench.prod.html` + `service-worker.prod.js`） |
-| `npm run release <版本号>` | 发版：自动同步四处版本号 + 锁文件根字段 + CHANGELOG |
+| `npm run release <版本号>` | 发版：自动同步版本号五源 + 锁文件根字段 + 自动打 `v<版本>` tag（CHANGELOG 人工更新） |
 | `npm run pet:inject` | 把 `assets/pet/*.png` 回注进 HTML（改了立绘或抽出后必跑） |
 | `npm run pet:extract` | 从 HTML 抽出立绘到 `assets/pet/`（把仓库置回源码态） |
 | `npm run pet:check` | 校验立绘 assets 与 HTML 注入一致 |
@@ -95,7 +94,7 @@ npm test              # 全量
 npm run test:watch    # 监听
 ```
 
-当前测试规模：**894 个测试 / 82 个测试文件**（v3.7.12）。新增功能不应使既有测试回归。
+当前测试规模：**1000+ 个测试 / 95+ 个测试文件**（v3.7.58 起，随功能增长，精确数以 `npm test` 输出为准）。新增功能不应使既有测试回归。
 
 ---
 
@@ -126,17 +125,19 @@ docs: 更新 README 至 v1.1.0
 ## 项目结构
 
 ```
-agent-workbench.html   # 核心单文件应用（UI + 逻辑 + 数据）
+agent-workbench.html   # 交付物（源码态为骨架：应用 JS 外置于 src/，构建期拼回；立绘回注后约 3.4MB）
+src/                   # 应用源码（28 个模块 + order.json，src-split.mjs 与 HTML 双向同步）
 tests/                 # 测试文件
   helpers/loadApp.js   # 应用加载辅助
+  e2e/                 # Playwright 三视口 e2e
 electron/              # Electron 桌面壳（main.js + preload.js）
-scripts/               # 工具脚本（build.mjs / lint-colors.mjs / lint-layers.mjs / release.mjs）
+scripts/               # 工具脚本（src-split / build / lint-* / release / module-graph 等）
 docs/                  # 设计文档（架构分层 / 萌宠系统 / UI 标准 / AI 工具 / 产品边界）
 assets/pet/            # 萌宠立绘 PNG + order.json（源码态 HTML 不含 base64，构建回注）
-dist/                  # 部署文件
+assets/sql/            # sql.js 本地副本（SQL/RAG 离线可用；CDN 兜底带 SRI）
 manifest.json          # PWA manifest
 service-worker.js      # PWA service worker
-package.json           # 工程化入口（test / lint / serve）
+package.json           # 工程化入口（test / lint / serve 等）
 .eslintrc.cjs          # ESLint 配置
 vitest.config.js       # 测试配置
 ```
@@ -145,7 +146,7 @@ vitest.config.js       # 测试配置
 
 ## 版本与发布
 
-**唯一真相源是 `agent-workbench.html`**：所有功能直接演进于这个 HTML，不再有 `src/` → HTML 的字节拼接。
+**真相源分两处**（v3.7.0 起双态架构）：CSS 与内联 JS（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html`；应用 JS（28 个模块）在 `src/*.js` 里演进，构建期由 `scripts/src-split.mjs` 拼回单文件 HTML（`file://` 下多 `<script>` 会失败，交付物始终是单个文件）。
 
 **版本号四处必须一致**（`npm run build:check` 会校验，不一致直接失败）：
 
@@ -177,6 +178,15 @@ vitest.config.js       # 测试配置
   否则每次提交都带上 1MB 级 base64 diff。
 - `npm test` / `npm run build:check` / `npm run build:prod` 都有 `pre` 钩子自动回注，CI 不需要额外步骤。
 - 直接打开**未回注**的源码 HTML 时立绘为空（控制台有告警、5 个原始角色退化为 SVG 兜底），属预期行为。
+
+### 源码态 / 拼回态的日常流转（v3.7.58 起自动化）
+
+历史上"跑完测试工作区必脏（HTML 变拼回态）"靠人肉记得还原，曾导致一次误提交拼回态（v3.7.40）。现已自动化：
+
+- **`npm test` 结束后 posttest 自动还原源码态**（`pet:extract` + `src:extract --no-backup`），测试循环后 `git status` 只剩真正的手工改动；
+- **`启动Agent工坊.bat` 自愈**：双击时检测到源码态会先自动拼回再打开，日常双击体验不变；
+- 手动还原仍可用 `npm run src:extract`（排查场景，默认带备份到 `_srcbackup/`，只保留最近 10 份）；
+- CI 侧防御不变：`check:source-state` 在一切 pre 钩子之前执行，提交拼回态会在门禁直接红。
 
 ### 分层块搬迁工具（scripts/src-move.mjs）
 

@@ -246,7 +246,7 @@
       trigger.addEventListener("focus", function(){ if (OPEN !== inst) open(); });
       trigger.addEventListener("input", function(){
         dsRefresh(sel);                  /* 按输入过滤选项 */
-        if (OPEN !== inst) open(); else open();   /* 保持展开 */
+        open();   /* v3.7.58：保持展开（旧写法 if/else 两分支同码，纯冗余） */
       });
       trigger.addEventListener("blur", function(){
         /* 延迟到选项的 mousedown 之后再提交（mousedown 先于 blur） */
@@ -278,7 +278,16 @@
       });
     }
 
-    /* 键盘：↑↓ 移动 / Enter 选中 / Esc 关闭 */
+    /* 键盘：↑↓ 移动 / Enter 选中 / Esc 关闭
+       v3.7.58（bug 修复）：本处理器只对**非可编辑**模式绑定 ——
+       旧实现无条件再绑一个 keydown，可编辑模式于是有两个处理器同跑：
+       ① ↓/↑ 被各移一步，一次按键跳两行；
+       ② Enter 经 mousedown 选中 → dsClose() 置空 OPEN，随后本处理器走
+          else open() 把刚关上的列表**重新弹开**；
+       ③ input 里按空格被本处理器的 " " 分支拦截成开合，打不出空格。
+       修复后可编辑模式的键盘交互由上方 if(EDITABLE) 块独家承担，
+       空格回归输入语义；非可编辑模式绑定路径与行为完全不变。 */
+    if (!EDITABLE) {
     trigger.addEventListener("keydown", function(e){
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
@@ -301,6 +310,7 @@
         dsClose();
       }
     });
+    }
 
     dsRefresh(sel);
 

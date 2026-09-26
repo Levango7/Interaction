@@ -35,7 +35,7 @@
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 58 |
 | `ui-hotkeys` | UI | `ai-retry` `data-links` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 9 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `ui-theme` `util-markdown` `util-perf` | 374 |
+| `ui-global-events` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `ui-theme` `util-markdown` `util-perf` | 369 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
 

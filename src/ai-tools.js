@@ -1412,6 +1412,15 @@ const SQLJS_LOCAL_BASE = "assets/sql/";   // 仓库/部署自带副本（scripts
    （该目录需含 sql-wasm.js 与 sql-wasm.wasm），无需改动本文件。 */
 const SQLJS_DEFAULT_BASE = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/";
 
+/* v3.7.58（安全）：CDN 兜底的 SRI 完整性哈希 —— sql-wasm.js（49,857 字节）已与官方
+   npm sql.js@1.10.3 dist 文件逐字节比对一致，哈希按本地副本（assets/sql/）实测计算。
+   只钉已知默认 CDN（用户自配 sqlJsBase 无法预知内容故不钉）；本地同源加载无需钉。
+   若 CDN 内容被篡改/版本漂移，integrity 不匹配会触发 onerror → 自动落到下一候选基址，
+   失败路径与「CDN 不可达」完全一致。注：SRI 只覆盖 sql-wasm.js 这条 <script> 注入链，
+   wasm 本体走 fetch，由同版本绑定 + 自托管选项兜底。 */
+const SQLJS_SRI = {};
+SQLJS_SRI[SQLJS_DEFAULT_BASE] = "sha384-8D3Rsfo535FqoC1pHCCQMrNf75UgzyoG/HQm9zOzITRrz3QKzecc2E7JXKGCXoWu";
+
 /**
  * 执行 SQL 语句（在 sql.js WASM 沙箱中）。
  * @param {string} sqlText - SQL 语句
@@ -1529,6 +1538,8 @@ function loadSqlJs(){
     return new Promise(function(resolve, reject){
       const s = document.createElement("script");
       s.src = base + "sql-wasm.js";
+      /* v3.7.58（安全）：已知 CDN 基址钉 SRI（见 SQLJS_SRI 注释），防 CDN 投毒注入 */
+      if (SQLJS_SRI[base]) { s.integrity = SQLJS_SRI[base]; s.crossOrigin = "anonymous"; }
       s.onload = function(){
         if(!window.initSqlJs){ reject(new Error(t("sql.initFail","sql.js 加载失败：initSqlJs 未找到"))); return; }
         resolve(init());

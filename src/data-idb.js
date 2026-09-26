@@ -348,56 +348,7 @@ function getHybridData(type){
   });
 }
 
-/* ============================================================
- * v1.7-B 模型缓存 store（IDB V2 'models' 逻辑 store）
- * ============================================================
- * 设计契约：
- *   - 复用 IDB V2 单 store 'data'，用复合键 ['models', modelId] 区分
- *   - 元数据字段：{modelId, version, size, blob, cachedAt, lastUsed, __store:'models'}
- *   - IDB 不可用时调用方负责降级到内存（54-offline-ai.js 中处理）
- *   - idbPutModel / idbGetModel / idbDeleteModel / idbListModels
- * ============================================================ */
-const IDB_MODELS_STORE = "models";
-
-/**
- * 写入/更新模型缓存记录
- * @param {string} modelId - 模型 ID
- * @param {Object} record - 缓存记录（{modelId, version, size, blob, cachedAt, lastUsed}）
- * @returns {Promise<*>} idbPut 返回值（undefined 表示 IDB 不可用）
- */
-function idbPutModel(modelId, record){
-  const mid = String(modelId || "").trim();
-  if(!mid) return Promise.resolve(undefined);
-  const rec = Object.assign({}, record || {}, { id: mid, modelId: mid });
-  return idbPut(IDB_MODELS_STORE, rec);
-}
-
-/**
- * 读取模型缓存记录
- * @param {string} modelId
- * @returns {Promise<Object|undefined>} 缓存记录或 undefined
- */
-function idbGetModel(modelId){
-  const mid = String(modelId || "").trim();
-  if(!mid) return Promise.resolve(undefined);
-  return idbGet(IDB_MODELS_STORE, mid);
-}
-
-/**
- * 删除模型缓存记录
- * @param {string} modelId
- * @returns {Promise<*>}
- */
-function idbDeleteModel(modelId){
-  const mid = String(modelId || "").trim();
-  if(!mid) return Promise.resolve(undefined);
-  return idbDelete(IDB_MODELS_STORE, mid);
-}
-
-/**
- * 列出所有模型缓存记录
- * @returns {Promise<Array<Object>>}
- */
-function idbListModels(){
-  return idbGetAll(IDB_MODELS_STORE);
-}
+/* v3.7.58（诚实性收口）：移除 idbPutModel / idbGetModel / idbDeleteModel / idbListModels 四个
+   模型缓存助手 —— 它们的唯一调用方 54-离线AI（WebLLM/ONNX 假框架）已按 product-scope 纪律
+   整体移除（见 ui-global-events.js 的 v3.7.58 墓碑注释），本块随之失去消费者，一并清理。
+   需要时从 git 历史恢复。 */

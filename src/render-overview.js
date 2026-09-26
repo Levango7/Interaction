@@ -1170,7 +1170,9 @@ function _wechatPollStart(){
     var scene = d.scene || "";
     if(body){
       if(qr){
-        body.innerHTML = '<div class="auth-wechat-qr"><img src="' + qr + '" alt="' + t("auth.wechatLogin", "微信扫码登录") + '"></div><p class="sub u-text-center">' + t("auth.wechatTip", "打开微信「扫一扫」完成登录") + '</p>';
+        /* v3.7.58（安全）：qr 来自后端响应，原样拼进 src 属性 —— 后端被攻破/返回恶意串
+           即可注入属性逃逸出 <img>。转义后属性内闭合与内联事件均失效。 */
+        body.innerHTML = '<div class="auth-wechat-qr"><img src="' + esc(qr) + '" alt="' + esc(t("auth.wechatLogin", "微信扫码登录")) + '"></div><p class="sub u-text-center">' + t("auth.wechatTip", "打开微信「扫一扫」完成登录") + '</p>';
       }else{
         body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>';
       }
@@ -1258,10 +1260,22 @@ function _setSyncMeta(patch) {
   try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(_getSyncMeta(), patch))); } catch (e) { /* 配额等：静默 */ }
   _renderLastSync();
 }
+/* v3.7.58（安全）：云快照排除"密钥/本机控制类"键。
+   旧行为枚举全部 wb_agent_* 键，会把 wb_agent_cfg（AI Key 密文）推上自建后端；
+   无 IndexedDB 的环境更会把设备密钥本体 wb_agent___dk 一并上传 ——「密文 + 钥匙」同交即等于明文。
+   且 cfg 里的 Key 用**设备密钥**加密，换设备本就解不开（密钥不出本机），同步 cfg 无跨端收益、纯增泄露面。
+   pre_restore_backup 是恢复前的本机回滚档（内嵌全部本地键值，含 cfg），同样不该上云。
+   业务数据（任务/记录/笔记/记忆/AI 会话）保持原快照语义不变。 */
+const SYNC_EXCLUDED_KEYS = [
+  SYNC_META_KEY,
+  PREFIX + "cfg",
+  PREFIX + "__dk",
+  PREFIX + "pre_restore_backup"
+];
 function _buildCloudSnapshot() {
   const data = {};
   allKeys().forEach(k => {
-    if (k === SYNC_META_KEY) return;
+    if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
     try { const v = localStorage.getItem(k); if (v !== null) data[k] = v; } catch (e) { /* 静默降级 */ }
   });
   data["_deviceMeta"] = { deviceId: getDeviceId(), exportedAt: Date.now(), version: VERSION };

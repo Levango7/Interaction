@@ -27,7 +27,7 @@
   "name": "data-idb",
   "layer": "Data",
   "title": "数据层·IndexedDB 持久镜像",
-  "tailBlanks": 0
+  "tailBlanks": 1
  },
  {
   "name": "data-links",

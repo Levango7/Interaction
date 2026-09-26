@@ -1,4 +1,4 @@
-# Agent 工坊（v3.7.57）
+# Agent 工坊（v3.7.58）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活 / 健康七类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -137,7 +137,7 @@
    - **删除**：移除不再使用的 profile；
    - **复制**：基于现有 profile 克隆一份再微调。
    - 每个 profile 独立存储，切换不丢配置。
-3. Key **仅存本机浏览器**（`wb_agent_cfg`，AES-GCM 加密），不上传任何服务器。
+3. Key **仅存本机浏览器**（`wb_agent_cfg`，AES-GCM 加密），且云同步快照**排除** `cfg` 键（v3.7.58 起）——Key 密文不会上传任何服务器。
    - **威胁模型（诚实说明）**：浏览器形态下加密用的设备密钥与密文同存 localStorage，属**混淆级防护**——防随手翻看，不防本机恶意进程读取。需要操作系统级保护（Windows DPAPI）请用 Electron 版，Key 由主进程 `safeStorage` 加密保管，不进渲染进程。
 4. **跨域**：从 `file://` 直接调 API 可能被浏览器 CORS 拦截。最稳妥用 **`启动本地服务.bat`**（`http://localhost:8123`）打开再启用 AI。
 
@@ -171,6 +171,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **AI 工具**：调用真实改写同一份 localStorage，AI 操作与手动操作等价；工具定位任务靠标题关键词，重名时取第一条。
 - **可选账号与云同步**：客户端包含登录、注册、邮箱验证码与同步接口，依赖兼容后端；API 基址取 `cfg.apiBase`，默认 `http://localhost:3001`。本仓库未附带该服务，不能把打开静态页面或 Electron 外壳等同于后端已运行。未配置后端时用导出 / 导入迁移数据。
   - **同步端点契约（v3.7.53 补齐推送侧）**：`GET /api/sync/snapshot` 取快照、`PUT /api/sync/snapshot` 上传快照（body `{snapshot, updatedAt}`，快照内含 `_deviceMeta.deviceId`）。客户端两侧都已实现；**未与真实后端联调**，故同步状态如实显示：推成功才显示「已同步」，失败/离线显示「同步失败 / 离线模式」，能力缺失显示「仅本机（云同步未接入）」。
+  - **快照范围（v3.7.58 修订）**：快照包含业务数据（任务 / 记录 / 笔记 / 记忆 / AI 会话历史等 `wb_agent_*` 键）；**排除** AI 配置（`wb_agent_cfg`，内含 Key 密文）、设备密钥（`wb_agent___dk`）、同步元数据与本机回滚备份（`wb_agent_pre_restore_backup`）。
 - **第三方登录回调契约**：GitHub 授权接口需返回 `authorizeUrl` 和 `state`；回调页面必须位于配置的 API 同源，在本次打开的登录窗口内发送 `{type:"agent-github-oauth", state, accessToken, refreshToken}`。客户端校验来源、窗口及一次性 state；未与实际后端完成联调。
 - **Electron 本机同步入口会自动隐藏（v3.7.52 起）**：页面侧曾调用 preload 未暴露的 `electronAPI.syncPush/syncGet`，而主进程从未实现 127.0.0.1:8124 同步服务，导致每 60s 弹一次失败告警。现按「stub + 活 UI = 虚假功能」原则：检测到能力缺失时直接隐藏「本机同步下载」按钮并停掉定时器。恢复方式（补 IPC + 同步服务）见 [docs/product-scope.md](docs/product-scope.md)。
 
@@ -178,9 +179,9 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v3.7.57**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.7.58**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.57 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.58 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 九、相关文件
 
@@ -215,7 +216,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **CSS 与内联 JS**（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html` —— 改这些就改 HTML。
 - **应用 JS**（28 个模块）在 `src/*.js` 里演进，由 `scripts/src-split.mjs` 在**构建期**拼回 HTML；
   运行时仍是单个 `<script>`，不存在多文件加载（`file://` 下会失败）。
-- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/`）；本地要双击运行先跑 `npm run src:inject`。
+- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/`）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。`npm test` 结束时 posttest 会自动还原源码态，工作区不再因跑测试而变脏。
 
 ```bash
 npm ci
