@@ -110,11 +110,16 @@ test.describe("知识库混合召回（真浏览器）", () => {
       await ragIndexAdd("doc-shop", "周末采买清单：牛奶", "工作记录");
       const en = await ragSearch("login bug", 5);
       const keys = (await idbKeys()).filter(k => String(k).indexOf("ragvec:") === 0);
-      return { en: en.map(h => ({ id: h.docId, via: h.via })), vecKeys: keys.length, calls: 0 };
+      const rec = keys.length ? await idbReadKey(keys[0]) : null;
+      return { en: en.map(h => ({ id: h.docId, via: h.via })), vecKeys: keys.length, recModel: rec && rec.m, hasVec: !!(rec && rec.v && rec.v.length > 0) };
     });
     expect(before.en[0], "英文查询应召回中文条目").toMatchObject({ id: "doc-auth" });
     expect(before.en[0].via).toMatch(/vec|both/);
     expect(before.vecKeys, "向量没写进 IDB（前缀/镜像通道用错）").toBe(2);
+    /* 落盘形状必须是 {m: 模型, v: 向量}：只存裸向量的话，以后换 embedModel 就会
+       因为维度不符而"静默召不回"，且没有任何地方能判断这批向量已失效。 */
+    expect(before.recModel, "IDB 记录没带模型号").toBe("bge-m3");
+    expect(before.hasVec, "IDB 记录里没有向量本体").toBe(true);
     expect(calls.n, "两篇入库 + 一次查询至少 3 次 embedding 调用").toBeGreaterThanOrEqual(3);
 
     /* 刷新：内存缓存清零，只剩 IDB —— 还能召回才证明"持久化"是真的 */

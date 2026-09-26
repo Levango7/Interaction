@@ -211,6 +211,61 @@ describe("语义召回：字面不重合也能命中（本轮新增的能力）"
   });
 });
 
+describe("向量落盘格式带模型号（换 embedModel 不能静默失灵）", () => {
+  /* 动机：换了向量模型后，旧向量的维度/语义空间都不同，ragCosine 只会一律返回 0 ——
+     症状是"明明配了 embedModel，语义召回却不命中"，而且全程没有任何报错。
+     jsdom 没有 IndexedDB，所以这里直接把 IDB 三个原语换成内存桩来观察真实读写形状。 */
+  const MODEL = "bge-m3";
+
+  function appWithIdbStub(records) {
+    const win = appWithAi();
+    const written = {};
+    win.idbKeys = async () => Object.keys(records);
+    win.idbReadKey = async (k) => records[k];
+    win.idbMirrorKey = async (k, v) => { written[k] = v; };
+    win.idbDeleteKey = async (k) => { delete records[k]; };
+    win.__written = written;
+    return win;
+  }
+
+  it("ragVecPut 写的是 {m: 模型, v: 向量}，不是裸向量", async () => {
+    const win = appWithIdbStub({});
+    stubEmbeddings(win);
+    await win.ragIndexAdd("doc-auth", "修复登录页 500 报错", "工作记录");
+    const rec = win.__written["ragvec:doc-auth"];
+    expect(rec, "向量没写到 ragvec: 键下").toBeTruthy();
+    expect(rec.m, "没记录模型号 → 换模型后无从判断哪些向量已失效").toBe(MODEL);
+    expect(Array.from(rec.v)).toEqual(expect.arrayContaining([expect.any(Number)]));
+  });
+
+  it("载入时丢掉别的模型产出的向量（并因此不再冒充语义命中）", async () => {
+    const vec = Float32Array.from(fakeEmbed("修复登录页 500 报错"));
+    const win = appWithIdbStub({
+      "ragvec:doc-auth": { m: "some-other-embedding", v: vec },
+    });
+    stubEmbeddings(win);
+    const hits = await win.ragSearch("login bug", 5);
+    expect(hits.some(h => h.docId === "doc-auth" && /vec|both/.test(String(h.via))),
+      "旧模型的向量仍被当成语义命中 = 模型号过滤没生效").toBe(false);
+  });
+
+  it("同模型的向量正常载入并命中", async () => {
+    const vec = Float32Array.from(fakeEmbed("修复登录页 500 报错"));
+    const win = appWithIdbStub({ "ragvec:doc-auth": { m: MODEL, v: vec } });
+    stubEmbeddings(win);
+    const hits = await win.ragSearch("login bug", 5);
+    expect(hits[0]).toMatchObject({ docId: "doc-auth" });
+    expect(String(hits[0].via)).toMatch(/vec|both/);
+  });
+
+  it("旧格式（裸向量、无模型号）一律重算，不猜它来自哪个模型", async () => {
+    const win = appWithIdbStub({ "ragvec:doc-auth": Float32Array.from(fakeEmbed("修复登录页 500 报错")) });
+    stubEmbeddings(win);
+    const hits = await win.ragSearch("login bug", 5);
+    expect(hits.some(h => /vec|both/.test(String(h.via))), "无模型号的旧向量仍被使用").toBe(false);
+  });
+});
+
 describe("降级路径保持原行为", () => {
   it("ragInjectContext 未开启 rag 时不注入", async () => {
     const win = loadApp({ storage: { [PREFIX + "cfg"]: JSON.stringify({ enabled: true, base: "http://127.0.0.1:11434/v1", key: "k", model: "m" }) } });

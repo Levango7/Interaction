@@ -906,7 +906,7 @@ async function ragIndexRemove(docId){
  *   both = 两路都命中（RRF 融合后排在前）
  * ============================================================ */
 const RAG_VEC_PREFIX = "ragvec:";
-let _ragVecCache = null;   // Map<docId, Float32Array> | null（null = 尚未加载）
+let _ragVecCache = null;   // {model:string, map:Map<docId, Float32Array>} | null（null = 尚未加载）
 let _ragEnsuring = null;   // 进行中的回填 Promise（防同一批缺失向量被并发重复 embedding）
 
 /** embedding 通道配置；不可用时返回 null（调用方负责降级） */
@@ -968,19 +968,37 @@ function ragCosine(a, b){
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
-/** 载入全部向量到内存缓存（一次性；IDB 不可用时返回空 Map 并降级到纯词法） */
+/**
+ * 向量在 IDB 里的落盘格式是 `{ m: 产生它的 embedModel, v: Float32Array }`，而不是裸向量。
+ * 为什么要带 m：换了向量模型之后，旧向量的维度与语义空间都变了，`ragCosine` 只会因
+ * 维度不符一律返回 0 —— 症状是"明明配了 embedModel，语义召回却一直不命中"，且全程无报错。
+ * 载入时按 m 过滤，不匹配就当没有，交给 ragEnsureVectors 重算。
+ */
+function _ragVecModel(){
+  const ec = _embedCfg();
+  return ec ? ec.model : "";
+}
+
+/** 载入全部向量到内存缓存（按当前 embedModel 校验；IDB 不可用时返回空 Map 并降级到纯词法） */
 async function ragVecLoadAll(){
-  if(_ragVecCache) return _ragVecCache;
+  const wantModel = _ragVecModel();
+  /* 缓存自带模型号：设置页改了 embedModel 之后无需任何显式通知，下一次用到就自动重载
+     （不做成"保存时调一个失效函数"是因为那要新增一个跨块窄符号，模块图上会多一条真边）。 */
+  if(_ragVecCache && _ragVecCache.model === wantModel) return _ragVecCache.map;
   const m = new Map();
+  let skipped = 0;
   try{
     const keys = await idbKeys();
     for(const k of (keys || [])){
       if(typeof k !== "string" || k.indexOf(RAG_VEC_PREFIX) !== 0) continue;
-      const v = await idbReadKey(k);
-      if(v) m.set(k.slice(RAG_VEC_PREFIX.length), v instanceof Float32Array ? v : Float32Array.from(v));
+      const rec = await idbReadKey(k);
+      if(!rec || !rec.v || !rec.m){ if(rec) skipped++; continue; }   // 旧格式（裸向量/无模型标记）→ 重算
+      if(String(rec.m) !== String(wantModel)){ skipped++; continue; }  // 换过模型 → 重算
+      m.set(k.slice(RAG_VEC_PREFIX.length), rec.v instanceof Float32Array ? rec.v : Float32Array.from(rec.v));
     }
+    if(skipped) pushDiag("info", "rag vectors stale=" + skipped + " (embedModel=" + wantModel + ")，待重算", { where: "ragVecLoadAll" });
   }catch(e){ pushDiag("warn", "ragVecLoadAll error: " + ((e && e.message) || e), { where: "ragVecLoadAll" }); }
-  _ragVecCache = m;
+  _ragVecCache = { model: wantModel, map: m };
   return m;
 }
 
@@ -989,7 +1007,7 @@ async function ragVecPut(docId, vec){
   const cache = await ragVecLoadAll();
   if(!docId || !vec || !vec.length){ cache.delete(String(docId)); return false; }
   cache.set(String(docId), vec);
-  try{ await idbMirrorKey(RAG_VEC_PREFIX + docId, vec); return true; }
+  try{ await idbMirrorKey(RAG_VEC_PREFIX + docId, { m: _ragVecModel(), v: vec }); return true; }
   catch(e){ pushDiag("warn", "ragVecPut failed: " + ((e && e.message) || e), { where: "ragVecPut" }); return false; }
 }
 async function ragVecDelete(docId){

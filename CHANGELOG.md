@@ -29,8 +29,11 @@
   `embeddings[][]` 与 `embedding[]` 形状；非 2xx 或条数对不上统一返回 `null` 走降级（不抛）。
 - 新增设置项「向量模型」（profile 级 `embedModel`，留空默认 `bge-m3`）：换 provider 连带换向量模型，
   国内 / 本地部署（Ollama、XInference、vLLM 等自带 /embeddings 的）都能接。
-- 向量存 IndexedDB `kv`，键前缀 `ragvec:` —— 刻意不带 `wb_agent_`，否则会被同步镜像
-  `JSON.stringify` 回写进 localStorage（1536 维 Float32 约 30KB/条），几十条就爆配额。
+- 向量存 IndexedDB `kv`，键前缀 `ragvec:`（刻意不带 `wb_agent_`，否则会被同步镜像
+  `JSON.stringify` 回写进 localStorage（1536 维 Float32 约 30KB/条），几十条就爆配额）。
+  落盘形状是 `{ m: 模型号, v: Float32Array }` 而**不是裸向量**：换了 `embedModel` 之后
+  旧向量维度不同，`ragCosine` 只会一律返回 0 —— 症状是"明明配了向量模型却永远召不回"，
+  且全程没有报错。载入时按 m 过滤，不匹配（含旧格式裸向量）就当没有，交给回填自动重算。
 - `ragHybridSearch()`：词法与向量各出一份排序，用 **RRF（K=60）** 融合（BM25 与余弦不同量纲，
   不能直接加分）；每条结果带 `via` = `lex` / `vec` / `both`，降级是显式可观测的而不是静默。
 - 回填：`ragEnsureVectors()` 改为**批量**（32 条/请求）并加并发单飞锁；启动只补 20 条，
@@ -61,10 +64,11 @@
 
 ### 实测与门禁
 
-- 单测 **1025/1025**（93 文件）全过；e2e **45/45**（三视口，含新增 `tests/e2e/rag-hybrid.spec.js` 4 例）。
+- 单测 **1029/1029**（93 文件）全过；e2e **45/45**（三视口，含新增 `tests/e2e/rag-hybrid.spec.js` 4 例）。
 - 真浏览器（Chromium + `file://`）实测：IndexedDB 可用；`ragSearch("login bug")` →
-  `doc-auth` 且 `via=vec`，**刷新后仍召回**（IDB 里 `ragvec:` 键 2 个，确实落盘）；
-  `ragSearch("认证 报错")` → `via=both`；`ragInjectContext()` 输出含「修复登录页 500 报错」。
+  `doc-auth` 且 `via=vec`，**刷新后仍召回**（IDB 里 `ragvec:` 键 2 个、记录形状确实是
+  `{m:"bge-m3", v:Float32Array}`）；`ragSearch("认证 报错")` → `via=both`；
+  `ragInjectContext()` 输出含「修复登录页 500 报错」。
 - 版本五源一致 3.7.57；`build:check` / `check:modules` / `lint:layers` / eslint / `lint-colors` /
   `check:ai-tools-doc` / `check:pwa-icons` / `pet:check` 全过。
 
@@ -72,7 +76,8 @@
 
 - 长期记忆召回仍是"词袋 + 余弦"（`ui-global-events.js` 那段写着"RAG 用 TF-IDF"），可直接复用本轮 embedding 通道。
 - 上下文装配：固定 top5 + 每条截 200 字，没有按相关性/长度做预算分配，结果里也没有引用出处。
-- 换 `embedModel` 后没有"重建索引"入口：旧维度向量会因维度不符自然失效，但不会自动重算。
+- 换 `embedModel` 后的旧向量已按模型号自动作废重算，但**没有进度反馈**：文档多时
+  后台回填是静默的，用户看不到"重建到哪了"。
 
 ## [v3.7.56] - 2026-09-26
 
