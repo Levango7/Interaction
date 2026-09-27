@@ -99,6 +99,23 @@
    - **v3.6.6 新增案例（已修）**：`#btnGantt` / `#btnDashboard` 自 v1.15「更多菜单移除」后已不在 DOM，但 `openGanttModal` / `openDashboardModal` 仍只绑在它们身上 → 甘特图与自定义仪表盘（15 组件 + 拖拽布局）全无入口。已在「工具箱 → 功能」补 `x-gantt` / `x-dashboard` 两个入口。
 2. **stub 无 UI 引用**：删除模块时，保留的 stub 若被 UI 引用（按钮 / 开关 / 表单），必须同步移除 UI 或改为"已停用"提示——**stub + 活 UI = 虚假功能**。
 3. **文档与代码一致**：帮助文档中出现的每个功能入口，必须在代码中有对应实现；README 宣称的每个功能，必须能在 UI 找到。
+4. **文案承诺不得超出实际接线**（v3.7.60 集成簇实测）：入口和后端调用都是真的，但**说明文字承诺了没接的部分**，同样是虚假功能。
+   - 实例：`设置 → 集成` 七个 provider 的文案写着"同步笔记和任务到 Notion""接收 Slack 消息通知"，
+     实测「连接」确实各自打到正确端点（`api.notion.com/v1/users/me`、`slack.com/api/auth.test` 等）并落盘 `_verified`，
+     但**没有任何代码路径消费这个连接** —— 建任务 / 完成任务 / 触发通知 / 每日检查后，集成域名 0 次外发，
+     UI 里也没有任何"同步到 X"按钮。已把 8 条文案改为只承诺"验证凭据"，并在面板总说明里写明
+     "任务 / 笔记 / 日程同步与消息通知尚未接入，连接本身不会向任何服务发送数据"。
+   - 守护：`tests/integration-jira-domain.test.js` 断言 7 条 provider 描述 + 总说明的措辞。
+
+> 🔴 **静态可达性普查有已知盲区，不能单独作为"可删"的依据**（v3.7.60 复核结论）：
+> 本簇曾被普查判为"零引用死码"，真因是 `openIntegrationConfig` 用**字符串拼接派发**
+> —— `window[name + "Connect"]` / `window[name + "Disconnect"]`（`src/ui-global-events.js`），
+> 任何按标识符引用计数的工具都看不见这条边。全仓 `window[...]` 动态派发点只有 3 处
+> （另 1 处是消息动作的 `data-msg-fn`，无集成用法）。
+> **判"零引用可删"前必须**：① 枚举 `window[` / `new Function` / `eval` 类派发点；
+> ② 真机跑一遍入口（点开、提交、看是否真的外发/落盘）。
+> 反之，`*SyncTask` / `*SendMessage` / `*NotifyEvent` / `calendar*Event` 这批
+> **确认既无静态调用方、也不在任何动态派发面上**，才是可删候选。
 
 ---
 

@@ -292,13 +292,13 @@ function renderIntegrationPanel(){
   const panel = $("#integrationPanel");
   if(!panel) return;
   const providers = [
-    {name:"notion", label:"Notion", desc:t("int.notionDesc","同步笔记和任务到 Notion"), connectFn:"notionConnect", disconnectFn:"notionDisconnect"},
-    {name:"linear", label:"Linear", desc:t("int.linearDesc","同步任务到 Linear"), connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
-    {name:"jira", label:"Jira", desc:t("int.jiraDesc","同步任务到 Jira"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
-    {name:"slack", label:"Slack", desc:t("int.slackDesc","接收 Slack 消息通知"), connectFn:"slackConnect", disconnectFn:"slackDisconnect"},
-    {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","接收飞书消息通知"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect"},
-    {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","接收钉钉消息通知"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect"},
-    {name:"calendar", label:t("appPage.calview", "日历"), desc:t("int.calendarDesc","同步日程到 Google/Outlook 日历"), connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
+    {name:"notion", label:"Notion", desc:t("int.notionDesc","验证 Notion Integration Token（笔记 / 任务同步尚未接入）"), connectFn:"notionConnect", disconnectFn:"notionDisconnect"},
+    {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
+    {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Jira API Token（任务同步尚未接入）"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
+    {name:"slack", label:"Slack", desc:t("int.slackDesc","验证 Slack Bot Token（消息通知尚未接入）"), connectFn:"slackConnect", disconnectFn:"slackDisconnect"},
+    {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","验证飞书 App 凭据（消息通知尚未接入）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect"},
+    {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","验证钉钉 App 凭据（消息通知尚未接入）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect"},
+    {name:"calendar", label:t("appPage.calview", "日历"), desc:t("int.calendarDesc","验证日历凭据（日程同步尚未接入）"), connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
   ];
   const rows = providers.map(function(p){
     // v3.1.1 修复：原用一个不存在的 getProvider 全局函数，状态恒为「未连接」；真实函数为 integrationGetProvider。
@@ -6944,6 +6944,35 @@ function _intSaveRateLimits(){
   _intSafeLSSet(INTEGRATION_RATE_LIMITS_KEY, JSON.stringify(_integrationRateLimits));
 }
 
+/* ---------- 内部：Jira 站点域名 → 安全 base ----------
+   Jira 的域名是用户填的自由文本，且会被拼成**请求主机位**并带上 API Token。
+   不校验就等于把凭据发往任意主机 —— 实测（v3.7.60，_probe/integration-census.mjs）：
+     domain="evil.example.com/?x="  →  https://evil.example.com/?x=/rest/api/3/myself
+     domain="attacker.io/@x"        →  https://attacker.io/@x/rest/api/3/myself
+   两者都带着 `Authorization: Bearer <token>`，而 CSP 的 `connect-src https:` 不拦任何 https 主机。
+   规则：只接受「纯主机名（可带端口）」。允许用户直接粘贴 https:// 前缀；
+   拒绝路径 / 查询 / 片段 / 账号信息 —— 这些正是拼 URL 注入的载体。
+   不限制成 *.atlassian.net：Jira Server / Data Center 用自建域名是正常部署形态。
+   返回 null 表示域名不合法，调用方**必须**放弃请求（不要退回裸拼）。 */
+function _intJiraBase(domain){
+  const raw = String(domain || "").trim();
+  /* 前导 `/` 显式拒掉：`new URL("https:////a.com")` 会被 Chromium 归一成 host=a.com（结果无害），
+     但「站点域名」字段本就不该以斜杠开头，靠解析器怪癖放行不如直接判死。
+     可见 ASCII 判据同时挡掉空白与控制字符 —— 这条是**有牙齿的**：Chromium 会剥掉 URL 里的
+     tab/换行，`a.com\tevil.io` 若不挡会被拼成 `a.comevil.io`（两个主机粘连）。
+     （写成"必须全在 ! 到 ~ 之间"而不是 /[\s\x00-\x1f]/，是为了不触发 eslint no-control-regex。） */
+  if(!raw || raw.startsWith("/") || !/^[\x21-\x7e]+$/.test(raw)) return null;
+  let u;
+  try{ u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : "https://" + raw); }
+  catch(e){ return null; }
+  if(u.protocol !== "https:") return null;
+  if(u.username || u.password) return null;
+  if(u.search || u.hash) return null;
+  if(u.pathname !== "/" && u.pathname !== "") return null;
+  if(!/^[a-z0-9]([a-z0-9.\-_]*[a-z0-9])?$/i.test(u.hostname)) return null;
+  return "https://" + u.hostname + (u.port ? ":" + u.port : "");
+}
+
 /* ---------- 内部：HTTP 请求 ---------- */
 async function _intDoRequest(url, opts){
   const client = _integrationHttpClient || (typeof fetch !== "undefined" ? fetch : null);
@@ -7475,7 +7504,9 @@ async function jiraConnect(config){
   const provider = integrationRegisterProvider("jira", INTEGRATION_TYPES.JIRA, config);
   if(!provider) return null;
   // 验证 token
-  const resp = await _intDoRequest("https://" + config.domain + "/rest/api/3/myself", {
+  const base = _intJiraBase(config.domain);   // 域名必须是纯主机名，否则不拼 URL（见 _intJiraBase）
+  if(!base) return null;
+  const resp = await _intDoRequest(base + "/rest/api/3/myself", {
     method: "GET",
     headers: { "Authorization": "Bearer " + config.token }
   });
@@ -7502,7 +7533,9 @@ async function jiraSyncIssue(issue, direction){
   const token = provider.config.token;
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
-  const base = "https://" + domain + "/rest/api/3";
+  const jiraHost = _intJiraBase(domain);
+  if(!jiraHost) return { success: false, error: "invalid_domain" };
+  const base = jiraHost + "/rest/api/3";
   const headers = { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
   const mappedStatus = JIRA_STATUS_MAP[issue.status] || issue.status || "To Do";
 
@@ -7567,7 +7600,9 @@ async function jiraListIssues(filter){
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   const jql = filter.jql || ("project = " + projectKey);
-  const base = "https://" + domain + "/rest/api/3";
+  const jiraHost = _intJiraBase(domain);
+  if(!jiraHost) return [];
+  const base = jiraHost + "/rest/api/3";
   const resp = await _intDoRequest(base + "/search?jql=" + encodeURIComponent(jql) + "&maxResults=" + (filter.limit || 50), {
     method: "GET",
     headers: { "Authorization": "Bearer " + token }

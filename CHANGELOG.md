@@ -1,6 +1,6 @@
 ## [v3.7.60] - 2026-09-28
 
-**两处用户截图标注的响应式缺陷 + 顺带挖出的三条「浏览器静默容错」缺陷**。全量 100 文件 / 1127 条用例、`lint`（四道）、`check:modules`（44 循环 / 35 逆层未变）、`build:check`、e2e **51/51**（新增 2 条渲染层不变量 ×3 视口 = 6 项，45 → 51）均本机绿。
+**两处用户截图标注的响应式缺陷 + 三条「浏览器静默容错」的 CSS 结构缺陷 + 集成簇真机定性（含一个凭据外泄面）**。全量 101 文件 / 1135 条用例、`lint`（四道）、`check:modules`（44 循环 / 35 逆层未变）、`build:check`、e2e **51/51**（新增 2 条渲染层不变量 ×3 视口 = 6 项，45 → 51）均本机绿。
 
 ### 用户标注的两条
 
@@ -17,10 +17,22 @@
 - **两条缺陷互相掩盖**：上面那条 120px 夹宽度复活后，立刻暴露出 `#taskForm>.fld:nth-child(3)>select{max-width:none}` 早已失配——自研下拉把原生 select 包成 `div.ds-select > select`，`>` 断了。实测 `sel.matches(那条选择器) === false`。它此前没显故障，纯粹因为对手规则也是死的。补齐 `.ds-select>select` 分支后恢复原意。
   - 连带修了一条**测试精度缺陷**：`tests/e2e/viewport.spec.js` 的「表单等宽」量的是 `input,select`，即那个 `position:absolute` 的隐藏原生控件，不是用户看见的 `.ds-trigger`。改为优先量可见控件（可见框一直是对的 144px，隐藏控件被夹成 120px 才被当成"不等宽"）。
 
+### 集成簇定性（真机实测，推翻了我此前"零引用可删"的判断）
+
+此前普查把 notion/linear/jira/slack/feishu/dingtalk/calendar 这一簇判为"静态零引用"，我据此记为"不能凭静态证据删"。**真因找到了**：`openIntegrationConfig` 用字符串拼接派发 —— `window[name + "Connect"]` / `window[name + "Disconnect"]`，任何按标识符计数的工具都看不见这条边（全仓 `window[...]` 动态派发点只有 3 处）。本轮用真实 Chromium + stub fetch（不外发）逐 provider 实测，定性如下：
+
+- **连接链路是真的**：七个 provider 各自打到正确端点 —— `api.notion.com/v1/users/me`、`api.linear.app/graphql`、`<domain>/rest/api/3/myself`、`slack.com/api/auth.test`、`open.feishu.cn/…/tenant_access_token`、`oapi.dingtalk.com/gettoken`、`googleapis.com/calendar/v3/…/calendarList`，凭据进 `Authorization` 头，结果落 `wb_integration_providers`；401 时面板如实显示「已连接 · 未验证」（v3.1.1 那个"假成功 toast"的修复成立）。日历的 OAuth 按钮在非 Electron 下**自动隐藏**，也是诚实的。
+- **没有任何消费方**：连上七个 provider 后跑「建任务 / 完成任务 / 重渲染 / `notifySystem` / `checkDueTasks`」，集成域名 **0 次外发**；UI 里也不存在任何"同步到 X"按钮。`*SyncTask` / `*SendMessage` / `*NotifyEvent` / `calendar*Event` / `integrationList·Enable·Disable·ConfigureProvider` 共 **31 个函数、约 855 行**既无静态调用方也不在任何动态派发面上（其中少数只是测试入口）。**这批是可删候选，但本轮没删** —— 删与留是产品决策（留着就是把同步能力接下去的地基），要用户拍板。
+- **修了一个凭据外泄面**：`jiraConnect` 把用户填的 `domain` 直接拼成 `"https://" + domain + "/rest/api/3/myself"` 并带上 Bearer token，而 CSP 的 `connect-src` 含裸 `https:` 不拦任何主机。实测 `domain="evil.example.com/?x="` 会打出 `https://evil.example.com/?x=/rest/api/3/myself`、`"attacker.io/@x"` 会打出 `https://attacker.io/@x/…` —— 即把 domain 填成（或被诱导粘贴成）攻击者控制的值，Jira token 就发过去了。新增 `_intJiraBase()` 只接受「纯主机名（可带端口，允许粘贴 `https://` 前缀）」，拒绝路径 / 查询 / 片段 / userinfo / 前导斜杠，三处拼 URL 的点全部走它。合法自建 Jira（含 `:8443`）不受影响。
+- **修了文案过度承诺**：七个 provider 的说明写着"同步笔记和任务到 Notion""接收 Slack 消息通知"，而上面说了没有任何消费方 —— 按 §四.2「stub + 活 UI = 虚假功能」的同一条标准，**真连接 + 假承诺也算虚假功能**。8 条文案（zh + en + `t()` 兜底参数共 24 处）改为只承诺"验证凭据"，面板总说明补"任务 / 笔记 / 日程同步与消息通知尚未接入，连接本身不会向任何服务发送数据"。
+- **另记一项实测缺口（未修）**：备份/迁移只枚举 `wb_agent_` 前缀 + `wb_custom_links`（`src/ui-backup-stats.js:395`），所以 `wb_integration_providers` / `_sync_state` / `_api_keys` / `_rate_limits` **不进备份**。对凭据来说这偏安全、可能是有意的，但它没写在任何文档里，且意味着恢复备份后连接状态静默丢失。
+- 守护：`tests/integration-jira-domain.test.js`（8 条）—— 合法主机 / 粘贴前缀 / 自定义端口三种放行且 URL 精确、十种注入形态一律 0 外发、**已注册 provider 的 domain 被事后篡改时 sync 与 list 同样不发**、以及文案措辞断言。真机侧另存 `_probe/integration-census.mjs`（逐 provider 外发记录 + 消费路径探测）。
+- 方法论进 `docs/product-scope.md` §四：新增第 4 条自查「文案承诺不得超出实际接线」，并写明静态普查的已知盲区与"判可删前必须做的两件事"。
+
 ### 门禁
 
 - 新增第四道 lint：`scripts/lint-css-structure.mjs`（静态扫 `<style>`：孤立 `}` / 未闭合 `{` / 声明块内出现子规则 / 子规则后仍有声明）。这类缺陷能活 6 个版本的原因就是**没有任何门禁看结构**——ESLint 只看 JS，`lint-colors` 只看色值，浏览器只做错误恢复。
-  - 该脚本自身踩到并修掉一个**状态依赖缺陷**：直接正则扫 `<style>` 时，交付态里应用 JS 的 5 处字符串常量（导出/打印模板、`document.write`）会被当成样式表，实测报 **1766 条假阳性**；改为先把 `<script>` 与 `<!-- -->` 内容等长屏蔽再找块，两态实测均为「1 个 style 块 / 2456 条规则 / 73 个 at-rule」。
+  - 该脚本自身踩到并修掉一个**状态依赖缺陷**：直接正则扫 `<style>` 时，交付态里应用 JS 的 5 处字符串常量（导出/打印模板、`document.write`）会被当成样式表，实测报 **1766 条假阳性**；改为线性走查（遇 `<style>` 收内容、遇 `<script>` / `<!-- -->` 整段跳过），两态实测均为「1 个 style 块 / 2456 条规则 / 73 个 at-rule」。
   - 契约与自证在 `tests/css-structure.test.js`（10 条）：真实现存样式表 0 问题、三类变异各报对应错误码、合法写法（`url()` 内括号、`@media` 内规则、字符串里的花括号、script/注释里的假 `<style>`）不误伤。
   - ⚠️ **本轮自造并修掉的回归**：该测试文件最初用 `execFileSync` 起子进程跑门禁，实测让 `npm test` 出现「1127 条全绿但退出码 1」的间歇失败 —— vitest 报 `[vitest-worker]: Timeout calling "onTaskUpdate"`。采样：带该文件 4 次挂 2 次；拿掉该文件 3 次全干净；改成 **import 同一份 `scanCssStructure` 在进程内调用**（先例 `scripts/lib/code-scan.mjs`）后又跑 2 次全干净，且该文件耗时 2168ms → 71ms。样本量不足以证明因果，但这个写法本身更该这么做，且方向一致。
   - 同一函数被 CLI 与测试共用，所以「测试绿」与「`npm run lint` 绿」不会各说各话。
