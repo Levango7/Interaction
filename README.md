@@ -222,7 +222,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **CSS 与内联 JS**（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html` —— 改这些就改 HTML。
 - **应用 JS**（28 个模块）在 `src/*.js` 里演进，由 `scripts/src-split.mjs` 在**构建期**拼回 HTML；
   运行时仍是单个 `<script>`，不存在多文件加载（`file://` 下会失败）。
-- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/`）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。`npm test` 结束时 posttest 会自动还原源码态，工作区不再因跑测试而变脏。
+- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/`）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。所有 `pre*` 注入钩子都配了自愈：`npm test` / `lint` / `lint:layers` / `test:coverage` / `build:check` / `e2e` 跑完由对应 `post*` 自动还原源码态，工作区不再因跑检查而变脏。**两个例外是发布路径**：`build` 与 `build:prod` 跑完故意留在拼回态（它们的产物就是完整的单文件交付物）。
 
 ```bash
 npm ci

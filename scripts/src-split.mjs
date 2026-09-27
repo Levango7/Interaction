@@ -250,33 +250,37 @@ if (CHECK) {
   console.log(`[src-split] check：HTML 标记 ${names.length} 个 / src 文件 ${files.length} 个 —— 齐全 ✓（${stateNote}）`);
   process.exit(0);
 }
-/* 安全：拼回前后若「非标记内容」发生改变则说明脚本有 bug → 不写盘 */
-writeFileSync(HTML, html, 'utf8');
-console.log(`[src-split] 拼回 ${injected} 块 → HTML ${(Buffer.byteLength(html) / 1024 / 1024).toFixed(2)}MB`);
-
-/* ---------- --verify：与 git HEAD 版比对（去标记 + 折叠连续空行）----------
-   说明：拼接会在每个块的边界处多出两行标记注释、并吃掉块尾的一个空行（版式差异，非代码差异）。
-   本模式把「标记行」与「连续空行」都归一化后逐字节比对，用来证明**代码零改动**。 */
+/* ---------- --verify：与指定提交的 HTML 比对（只读、与源码态/拼回态无关）----------
+   ⚠️ 本分支必须放在下面的注入 + writeFileSync **之前**：
+   旧实现放在注入之后，于是这个号称"证明代码零改动"的只读检查会先把 HTML 拼回写盘，
+   再拿"源码态的 HEAD"去比"刚被自己写成拼回态的文件" —— 结构上永远不可能通过，
+   而且顺带把工作区弄脏（check:source-state 变红）。实测于 v3.7.59。
+   归一化口径：把「标记行 + 块体」整段摘除，只留下**非外置骨架**（内联脚本 / CSS / 静态 HTML）。
+   这样源码态与拼回态都能直接比，也才符合本工具的真正用途：
+   确认这次往返没有动到 src/ 之外的那部分文件。
+   src/ 各块内容与 HTML 是否一致，是 `--check` 的职责（它会逐块比对）。 */
 if (process.argv.includes('--verify')) {
   const cp = await import('node:child_process');
   /* 参照系：默认用「拆分前的干净提交 5d35c8d」，可用 --base=<sha> 覆盖。
      不用 HEAD —— 因为 HEAD 里可能留着历史脏标记（重复占位），拿它比对会误报。 */
   const baseArg = process.argv.find(a => a.startsWith('--base='));
-  /* 默认基准 = HEAD：语义是「这次抽取/拼回往返是否改动代码」——功能改动后应配合 --base 指定旧提交，
-     或在功能提交后再跑（此时 HEAD 已含新代码，往返仍应为零改动）。 */
   const base = baseArg ? baseArg.slice(7) : 'HEAD';
   const head = cp.execSync('git show ' + base + ':agent-workbench.html', { maxBuffer: 1 << 28 }).toString('utf8');
   const cur = readFileSync(HTML, 'utf8');
   const norm = t => t.replace(/\r\n/g, '\n')
-    .replace(/^\/\*SRC:[\w-]+:(?:BEGIN|END)\*\/\n/gm, '')
-    .replace(/\n{2,}/g, '\n')   /* 接缝处会多/少一个空行（纯版式），这里把连续空行折叠为 1 行：只证明「代码零改动」 */
-    /* 立绘 base64 归一化：萌宠 _PET_ART 现位于 src/render-widgets.js，注入与否只影响这串数据，不影响代码 */
+    /* 一次到位：标记行连同其块体整体摘除（旧规则只删标记行 → 两种状态长度差 4 倍，必然误报） */
+    .replace(/^\/\*SRC:[\w-]+:BEGIN\*\/[\s\S]*?\/\*SRC:[\w-]+:END\*\/\n?/gm, '')
+    .replace(/\n{2,}/g, '\n')   /* 接缝处会多/少一个空行（纯版式），折叠为 1 行 */
+    /* 立绘 base64 归一化：萌宠 _PET_ART 现位于 src/render-widgets.js，注入与否只影响这串数据 */
     .replace(/data:image\/png;base64,[A-Za-z0-9+/=]+/g, 'data:image/png;base64,<ART>')
-    /* 立绘键的「0 条 vs 9 条」也要归一化：源码态是空占位、交付态含 9 条 —— 只证明代码零改动 */
     .replace(/const _PET_ART = \{[\s\S]*?\};/, 'const _PET_ART = {<ART_MAP>};');
   const a = norm(head), b = norm(cur);
-  console.log('[src-split] verify（基准 ' + base + '）：' + a.length + ' 字符 / 现在 ' + b.length + ' 字符');
-  if (a === b) { console.log('[src-split] verify ✓ 归一化后完全一致（代码零改动）'); process.exit(0); }
+  console.log(`[src-split] verify（基准 ${base} · 非外置骨架）：${a.length} 字符 / 现在 ${b.length} 字符`);
+  if (a === b) {
+    console.log('[src-split] verify ✓ 内联脚本 / CSS / 静态 HTML 与基准完全一致（src/ 之外的部分零改动）');
+    console.log('[src-split]   注：本模式不改写 HTML；各 src 块与 HTML 是否一致请用 --check');
+    process.exit(0);
+  }
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     if (a[i] !== b[i]) {
       console.log('  ✗ 首个差异 @' + i);
@@ -287,3 +291,7 @@ if (process.argv.includes('--verify')) {
   }
   process.exit(1);
 }
+
+/* 安全：拼回前后若「非标记内容」发生改变则说明脚本有 bug → 不写盘 */
+writeFileSync(HTML, html, 'utf8');
+console.log(`[src-split] 拼回 ${injected} 块 → HTML ${(Buffer.byteLength(html) / 1024 / 1024).toFixed(2)}MB`);
