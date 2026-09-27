@@ -128,5 +128,20 @@ if (spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: 'ignore' }
   } else {
     const t = spawnSync('git', ['tag', '-a', tagName, '-m', `release v${newVer}`], { stdio: 'inherit' });
     console.log(t.status === 0 ? `[release] tag ${tagName} 已创建` : '[release] tag 创建失败（可手动 git tag ' + tagName + '）');
+    /* v3.7.59：验证 tag 到底指向谁 —— 本脚本按自身文档的流程（先 bump → 更 CHANGELOG →
+       测过 → 再提交）必然在**提交之前**打 tag，于是 tag 会指向上一个提交：
+       实测 v3.7.59 的 tag 落在 v3.7.58 的提交上，而 release.mjs 的注释写着
+       "发布历史可用 tag 直接 checkout"，即 tag 越用越误导。
+       判据用"tag 那个提交里的 package.json 版本"，与本次 newVer 不符就撤掉并提示补打。 */
+    if (t.status === 0) {
+      const shown = spawnSync('git', ['show', `${tagName}:package.json`], { encoding: 'utf8' });
+      let taggedVer = null;
+      try { taggedVer = JSON.parse(shown.stdout).version; } catch (_) { /* 读不到当作未知 */ }
+      if (taggedVer !== newVer) {
+        spawnSync('git', ['tag', '-d', tagName], { stdio: 'ignore' });
+        console.log(`[release] ⚠️ tag ${tagName} 已撤回：它指向的提交里 package.json 是 ${taggedVer || '未知'}，不是 ${newVer}。`);
+        console.log(`[release]    正确顺序是先提交本次发版改动，再执行：git tag -a ${tagName} -m "release v${newVer}"`);
+      }
+    }
   }
 }
