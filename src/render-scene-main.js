@@ -815,7 +815,7 @@ function _dpRender(){
     html += '<button type="button" class="dp-confirm-btn" data-dp-confirm="1">' + t("datepicker.confirm","确定") + '</button>';
   }
   html += '</div>';
-  _dpPanel.innerHTML = html;
+  _dpPanel.innerHTML = html; // lint-xss-ok: html 由 _dpRenderPanel 内本地拼接，只含静态标记 + 循环下标 i + t(...) 字典值，无外部数据
 }
 function _dpPick(y, m, d){
   if(!_dpInput) return;

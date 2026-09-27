@@ -858,7 +858,7 @@ function restoreFromRecycleBin(id){
       // 文件回收：恢复到 notes
       const notes = getNotes();
       if(d_noteMissing(notes, item.data)){
-        if(item.data && item.data.note){ notes.push(item.data.note); saveNotes(notes); _notifyNotesChanged(); }
+        if(item.data && item.data.note){ notes.push(item.data.note); saveNotes(notes); }
       }
     }else if(item.type === "plugin"){
       // 插件回收：仅恢复 enabled/config 状态（无法恢复代码，需用户重新安装）
@@ -3712,7 +3712,7 @@ function openPetModal(){
   /* v3.6.5：立绘 img/dataURI 不走 sanitizeHtml（sanitizer 可能剥 img/data:），渲染后原始注入 */
   $$(".pc-svg", body).forEach(function(el){
     const k = el.getAttribute("data-pc");
-    if(k){ el.style.setProperty("--pet-art-scale", _petArtScale(k)); el.innerHTML = _petSvgFor(k); }
+    if(k){ el.style.setProperty("--pet-art-scale", _petArtScale(k)); el.innerHTML = _petSvgFor(k); } // lint-xss-ok: _petSvgFor 只从内部 _PETS_V2/_PET_ART 常量表取标记，未知 key 返回空串
   });
   $$(".pet-card", body).forEach(function(c){
     c.onclick = function(){
@@ -3771,7 +3771,7 @@ function mountPet(kind){
   );
   /* v3.6.5：立绘原始注入（不经 sanitizeHtml，data:img 会被 sanitizer 剥除） */
   const petSvgBox = el.querySelector("[data-pet-svg]");
-  if(petSvgBox) petSvgBox.innerHTML = _petSvgFor(kind);
+  petSvgBox.innerHTML = _petSvgFor(kind); // lint-xss-ok: 同上，只取内部常量表
   /* ---------- v3.6.5 特效增强 ----------
      原 2 项：petBob 待机浮动、petBubble 气泡。新增 6 项：
        眨眼（随机 scaleY 闭合）· 点击跳跃 · 点击爱心 · 随机星光 · 久置打盹(zZZ) · 拖拽（已有）

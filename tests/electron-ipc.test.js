@@ -104,11 +104,21 @@ afterAll(() => {
 
 // v1.11.1 [M4]：主进程 IPC 已加 sender 信任校验（assertTrustedSender 要求 senderFrame.url 为 file://），
 // 测试事件对象需模拟真实渲染端形态。
+// v3.7.59：判定口径收紧为与导航守卫 _isInternalUrl 同源 —— 只认「本应用自己的页面 + about:blank」，
+// 非本应用的 file:// 同样拒绝。故这里补 foreignFileEv() 守这一行为（下方用例）。
 function trustedEv(id){
   return { sender: { id: id || "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } };
 }
 function forgedEv(){
   return { sender: { id: "evil" }, senderFrame: { url: "https://evil.example.com/index.html" } };
+}
+/** 非本应用的本地 HTML —— 修复前会被 `file://` 前缀判定放行 */
+function foreignFileEv(){
+  return { sender: { id: "evil-local" }, senderFrame: { url: "file:///C:/Users/public/evil.html" } };
+}
+/** 报表打印窗口：window.open("") + document.write 产生，必须放行 */
+function blankEv(id){
+  return { sender: { id: id || "s1" }, senderFrame: { url: "about:blank" } };
 }
 
 // 动态 import main.js 触发顶层注册（含 ipcMain.handle/on 注册与 app.whenReady 副作用）。
@@ -383,6 +393,25 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
       mockApp.getLoginItemSettings.mockReturnValue({ openAtLogin: true });
       const result = await ipcHandlers["get-auto-launch"](forgedEv());
       expect(result).toBe(false);
+    });
+    /* v3.7.59：判定收紧为「本应用页面 + about:blank」。这两条守的就是收紧本身 ——
+       没有它们，任何人把 assertTrustedSender 改回 `url.startsWith("file://")` 都不会被发现。 */
+    it("非本应用的 file:// 来源被拒绝（收紧前会被 file:// 前缀放行）", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      const { calls } = installFetch();
+      await expect(ipcHandlers["chat"](foreignFileEv(), chatReq())).rejects.toThrow("不受信任");
+      expect(calls.length, "被拒的请求不得发出").toBe(0);
+    });
+    it("非本应用的 file:// 调 set-ai-config 被拒且不落盘", async () => {
+      freshConfig({ enabled: false, profiles: {} });
+      expect(() => ipcHandlers["set-ai-config"](foreignFileEv(), { enabled: true, profiles: [] })).toThrow("不受信任");
+      expect(readConfigFile()).toEqual({ enabled: false, profiles: {} });
+    });
+    it("about:blank 来源放行（报表打印窗口依赖）", async () => {
+      // get-ai-config 会返回配置对象；能拿到结果即说明未被 assertTrustedSender 拦下
+      const r = await ipcHandlers["get-ai-config"](blankEv());
+      expect(r).toBeTruthy();
+      expect(typeof r.enabled).toBe("boolean");
     });
     it("set-auto-launch 对不可信来源不产生副作用", async () => {
       const mockApp = mockAppRef.current;

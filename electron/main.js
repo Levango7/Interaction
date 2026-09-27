@@ -316,13 +316,23 @@ function logLine(scope, msg){
 }
 
 /* ---------- 开机自启（由设置抽屉开关控制） ---------- */
-/* v1.11.1 [M4]：IPC sender 信任校验——仅接受来自本应用 file:// 页面的调用，
- * 远程/未知来源（如被导航守卫拦下之前曾可能创建的远程窗口）一律拒绝。
- * senderFrame 在 ipcMain 事件上始终存在；缺失或非 file:// 视为不可信（fail-closed）。 */
+/* v1.11.1 [M4]：IPC sender 信任校验——仅接受来自本应用页面的调用，
+ * 远程/未知来源一律拒绝。senderFrame 在 ipcMain 事件上始终存在；缺失即视为不可信（fail-closed）。
+ *
+ * v3.7.59：判定口径收紧为与导航守卫**同源**（复用 _isInternalUrl）。
+ * 此前只校验 `file://` 前缀，而 _isInternalUrl 已因「任意本地 HTML 一旦被导航/新窗口打开，
+ * 就处在带 preload 的窗口里 = 直接拿到 window.electronAPI（可读 AI 配置等）」而收紧成
+ * 「本应用自己的页面 + about:blank」。两处口径不一致时，IPC 侧的宽松判定就是那条最短路径。
+ * 现在两者共用一份白名单：
+ *   · 本应用页面（打包：与 main.js 同目录；开发：仓库根）→ 放行
+ *   · about:blank（报表打印窗口 window.open("") + document.write 依赖它）→ 放行
+ *   · 其余一切（含**非本应用**的 file://）→ 拒绝
+ * 注：_isInternalUrl / _APP_FILES 定义在本函数之后，但函数声明提升 + 二者仅在 IPC 运行时
+ * 被调用（那时顶层已执行完毕，const 已完成初始化），故不存在 TDZ 问题。 */
 function assertTrustedSender(e){
   let url = "";
   try{ url = (e && e.senderFrame && e.senderFrame.url) || ""; }catch(err){ url = ""; }
-  if(url.startsWith("file://")) return;
+  if(typeof _isInternalUrl === "function" && _isInternalUrl(url)) return;
   throw new Error("IPC 拒绝：不受信任的调用来源");
 }
 ipcMain.handle("get-auto-launch", (e) => {

@@ -266,6 +266,28 @@ const TOOLS = [
  * 修复：effectiveTools() 按 cfg.agent 过滤；chatSysPrompt 同步降级话术。
  */
 const AGENT_TOOL_NAMES = ["remember","recall","forget","plan","complete_step","complete_goal","list_records"];
+/**
+ * 「需要用户确认才允许落地」的工具 —— 唯一清单（v3.7.59 收口）。
+ * 背景：runChatLoop 里写了一份 DANGER=["delete_task","update_task"]，而 executeAgentPlan 用
+ * execTool(...,force=true) 绕过确认 —— 同一个工具在对话路径要弹窗、在 Agent 计划路径直接删。
+ * 现在两条路径共用这份清单，Agent 计划路径见 executeAgentPlan。
+ * ⚠️ 不要在这里加 forget：那属于「不该被固化成可反复触发的技能」那一类（SKILL_DANGER_TOOLS），
+ *    把 forget 变成要确认会改变现有对话 UX，超出修 bug 的范围。
+ */
+const DANGER_CONFIRM_TOOLS = new Set(["delete_task","update_task"]);
+/**
+ * 工具白名单（cfg.toolWhitelist）→ Set；未配置/留空返回 null（=允许全部）。
+ * v3.7.59 收口为单一来源：runChatLoop 与 executeAgentPlan 都按它过滤。
+ * 此前只有 runChatLoop 读它 —— 于是「技能/白名单」在对话路径挡住了工具，
+ * 换一条自主规划路径就绕开，同一个开关两种含义。
+ * @param {Object} [cfgOverride]
+ * @returns {Set<string>|null}
+ */
+function toolWhitelistSet(cfgOverride){
+  const c = cfgOverride || getCfg() || {};
+  const wl = String(c.toolWhitelist || "").trim();
+  return wl ? new Set(wl.split(/[,\s\u3000]+/).filter(Boolean)) : null;
+}
 /** 计算实际暴露给模型的工具集（cfg.agent=false 时剔除 Agent 工具） */
 function effectiveTools(){
   const cfg = getCfg();
@@ -281,6 +303,10 @@ function effectiveTools(){
 /* ---------- Agent 引擎：记忆 / 目标 / 多步编排（A-P3：在既有 chatOnce + TOOLS 契约上扩展，不另起链路） ---------- */
 const AGENT_MEM_MAX = 60;        // 工作记忆容量默认值（R5：可在设置页配置，见 getMemMax）
 const AGENT_GOAL_LOOP_MAX = 12;  // 目标激活时 runChatLoop 循环上限（无目标时仍用默认 6）
+/* Agent 自主计划的步骤上限：模型一旦跑偏会连出几十步工具调用，每一步都是真实写操作，
+   而这条路径没有对话那样的循环护栏。超出部分在 parseAgentPlan 就被裁掉，
+   并在计划评审文案里明说"还有 N 步未纳入"，不静默丢弃。 */
+const AGENT_PLAN_STEPS_MAX = 12;
 
 /**
  * R5：读取工作记忆容量（cfg.memMax，默认 60，钳制到 20~500）
@@ -299,16 +325,140 @@ function saveMemories(a){ save(PREFIX+"memory", a.slice(-getMemMax())); }
 function addMemory(scope, text){
   const rec = { id: uid(), scope: scope||"global", text: String(text||"").trim(), ts: Date.now(), hits: 0 };
   if(!rec.text) return null;
-  const mem = getMemories(); mem.push(rec); saveMemories(mem); return rec;
+  const mem = getMemories(); mem.push(rec); saveMemories(mem);
+  memVecInvalidate([rec.id]);   // 新条目还没向量，下一轮 memEnsureVectors 补
+  return rec;
 }
 function forgetMemory(id){
   const mem = getMemories();
   const i = mem.findIndex(m=>m.id===id || (m.text||"").includes(String(id||"")));
   if(i<0) return null;
-  const r = mem.splice(i,1)[0]; saveMemories(mem); return r;
+  const r = mem.splice(i,1)[0]; saveMemories(mem);
+  memVecInvalidate([r && r.id]);
+  try{ if(r && r.id) idbDeleteKey(MEM_VEC_PREFIX + r.id); }catch(_){ /* 清不掉只是留个孤儿，下轮清扫 */ }
+  return r;
 }
-/* 召回：场景匹配 + 关键词命中 + 近期加权 + 命中次数，返回 topN */
-function recallMemories(query, sc, limit){
+/* v3.7.59 修正：此处原有一份**词法版** recallMemories（场景匹配 + 关键词命中 + 近期加权 +
+   命中次数）。向量召回改造时只新增了下方的融合版、未删除这一份，于是 recallMemories 被定义了两次：
+   函数声明提升下**后者生效**（功能正确、测试全绿），这一份成为死代码，同时触发 ESLint
+   `no-redeclare` → CI 的 npm run lint 直接失败。
+   词法打分已由 _memLexScored（下方）完整承接，recallMemoriesLex 是其薄封装，故此处直接删除。 */
+function touchMemories(list){
+  const ids=new Set(list.map(m=>m.id)); const mem=getMemories();
+  mem.forEach(m=>{ if(ids.has(m.id)) m.hits=(m.hits||0)+1; });
+  saveMemories(mem);
+}
+
+/* ============================================================
+ * 工作记忆的向量召回（v3.7.59 · 任务 #19）—— 复用 #17/#18 建好的 embedding 通道
+ * ------------------------------------------------------------
+ * 原来的 recallMemories 是纯词法：按空白/标点切词 + substring。中文没有空格，
+ * 「我喜欢简洁的回复」整句是一个 token，于是用户说「以后短点说」永远召不回那条偏好 ——
+ * 工作记忆这块**写了但基本不生效**（v1.x 起就一直如此）。
+ * RAG 那套（CJK 分词 / provider embeddings / 模型戳 / RRF / 显式降级）v3.7.57 已经建好，
+ * 这里把它接到记忆上，而不是再造一套。
+ *
+ * 向量存放：IndexedDB kv，键前缀 **memvec:**（刻意不带 wb_agent_ —— 带该前缀会被
+ * idbShouldMirror 当成用户数据镜像，启动时 JSON.stringify 回写 localStorage，
+ * 1536 维 Float32 每条约 30KB，几十条就爆配额）。与 ragvec: 同一个理由。
+ *
+ * 同步链路上怎么拿到"查询向量"：agentContextPrompt → recallMemories 是**同步**调用
+ * （chatSysPrompt 是同步的，改成 async 会让任何漏掉的调用点静默拼出 "[object Promise]"），
+ * 而求查询向量必须走网络。做法是 onChatSubmit 在拼系统提示前 await memPrimeQueryVector(text)
+ * 把结果放进 _memQueryVec；recallMemories 只在 key 与本次 query 完全相同时才用它。
+ * 拿不到（没配 embedding / 请求失败 / 从 recall 工具直接进来）就退回纯词法，不报错、不卡。
+ * ============================================================ */
+const MEM_VEC_PREFIX = "memvec:";
+const MEM_VEC_BATCH = 32;       // 一次 /embeddings 送几条（与 ragEnsureVectors 同口径）
+const MEM_VEC_MAX = 60;         // 单轮回填上限；记忆本身就被 getMemMax 钳在 500 条内
+let _memVecCache = null;        // {model:string, map:Map<memId, Float32Array>} | null（null=尚未加载）
+let _memEnsuring = null;        // 进行中的回填 Promise（防并发重复 embedding）
+let _memQueryVec = null;        // {key:string, vec:Float32Array|null} 本轮已算好的查询向量
+
+/** 送去 embedding 的记忆文本：带上作用域标记，让"全局偏好"和"场景内事实"在向量空间里也分得开 */
+function _memVecText(m){
+  return (m.scope === "global" ? "[global] " : "[" + (m.scope || "") + "] ") + String(m.text || "");
+}
+
+/** 载入记忆向量（按当前 embedModel 校验；IDB 不可用 → 空 Map，静默退回纯词法） */
+async function memVecLoadAll(){
+  const wantModel = _ragVecModel();
+  if(_memVecCache && _memVecCache.model === wantModel) return _memVecCache.map;
+  const m = new Map();
+  try{
+    const keys = await idbKeys();
+    for(const k of (keys || [])){
+      if(typeof k !== "string" || k.indexOf(MEM_VEC_PREFIX) !== 0) continue;
+      const rec = await idbReadKey(k);
+      if(!rec || !rec.v || !rec.m) continue;                    // 旧格式/缺模型戳 → 当没有，重算
+      if(String(rec.m) !== String(wantModel)) continue;         // 换过向量模型 → 重算
+      m.set(k.slice(MEM_VEC_PREFIX.length), rec.v instanceof Float32Array ? rec.v : Float32Array.from(rec.v));
+    }
+  }catch(e){ pushDiag("warn", "memVecLoadAll error: "+((e&&e.message)||e), {where:"memVecLoadAll"}); }
+  _memVecCache = { model: wantModel, map: m };
+  return m;
+}
+
+/** 写入/删除单条记忆的向量（同步清内存缓存，避免陈旧命中） */
+async function memVecPut(memId, vec){
+  const cache = await memVecLoadAll();
+  const id = String(memId || "");
+  if(!id || !vec || !vec.length){ cache.delete(id); return false; }
+  cache.set(id, vec);
+  try{ await idbMirrorKey(MEM_VEC_PREFIX + id, { m: _ragVecModel(), v: vec }); return true; }
+  catch(e){ return false; }
+}
+
+/** 给还没有向量的记忆补上（单飞 + 批量 + 有界；通道不可用就到此为止，下轮再试） */
+async function memEnsureVectors(max){
+  if(_memEnsuring) return _memEnsuring;
+  _memEnsuring = (async () => {
+    const cap = (typeof max === "number" && max > 0) ? Math.min(max, MEM_VEC_MAX) : MEM_VEC_MAX;
+    const mems = getMemories();
+    const cache = await memVecLoadAll();
+    const live = new Set(mems.map(m => String(m.id)));
+    /* 顺手清扫：清空工作记忆是从 UI 直接 save(PREFIX+"memory",[])，不经过本模块的钩子，
+       于是 IDB 里会留下孤儿向量。它们永远匹配不上（已按 live 过滤），但占地方，删掉。 */
+    for(const id of [...cache.keys()]){
+      if(live.has(id)) continue;
+      cache.delete(id);
+      try{ await idbDeleteKey(MEM_VEC_PREFIX + id); }catch(_){ /* 删不掉也不影响召回 */ }
+    }
+    const missing = mems.filter(m => m && m.id && !cache.has(String(m.id)) && String(m.text||"").trim());
+    if(!missing.length) return { done: 0, left: 0 };
+    let done = 0;
+    const todo = missing.slice(0, cap);
+    for(let i = 0; i < todo.length; i += MEM_VEC_BATCH){
+      const chunk = todo.slice(i, i + MEM_VEC_BATCH);
+      const vecs = await aiEmbedTexts(chunk.map(_memVecText));
+      if(!vecs || vecs.length !== chunk.length) break;   // 通道不可用：不逐批重试
+      for(let j = 0; j < chunk.length; j++){ if(await memVecPut(chunk[j].id, vecs[j])) done++; }
+    }
+    return { done: done, left: Math.max(0, missing.length - done) };
+  })().finally(() => { _memEnsuring = null; });
+  return _memEnsuring;
+}
+
+/** 用查询向量给记忆打分排序（只看当前场景可见的记忆；向量缺失的条目不参与） */
+function memVectorTop(qVec, sc, topK){
+  if(!qVec || !qVec.length) return [];
+  const cache = (_memVecCache && _memVecCache.map) || null;
+  if(!cache || !cache.size) return [];
+  const scored = [];
+  getMemories().forEach(function(m){
+    if(!m || !m.id) return;
+    if(!(m.scope === "global" || m.scope === sc)) return;
+    const v = cache.get(String(m.id));
+    if(!v) return;
+    const sim = ragCosine(qVec, v);
+    if(sim > 0) scored.push({ m: m, sim: sim });
+  });
+  scored.sort((a, b) => b.sim - a.sim);
+  return scored.slice(0, topK);
+}
+
+/** 词法打分明细：score 用于排序，kw>0 表示这条是**真的按字面匹配上的**（区分于纯新近度填充） */
+function _memLexScored(query, sc){
   const q = String(query||"").toLowerCase();
   const kws = q.split(/[\s,，。、;；]+/).filter(w=>w.length>=2);
   const now = Date.now();
@@ -318,18 +468,86 @@ function recallMemories(query, sc, limit){
       let score = (m.scope==="global"?1:2) + (m.hits||0)*0.1;
       score += Math.max(0, 3 - ((now-(m.ts||now))/86400000)*0.05); // 约 2 个月内线性衰减
       const text=(m.text||"").toLowerCase();
-      for(const w of kws){ if(text.includes(w)) score+=2; }
-      return {m, score};
+      let kw = 0;
+      for(const w of kws){ if(text.includes(w)) kw++; }
+      score += kw*2;
+      return { m, score, kw };
     })
-    .sort((a,b)=>b.score-a.score)
-    .slice(0, limit||8)
-    .map(x=>x.m);
+    .sort((a,b)=>b.score-a.score);
 }
-function touchMemories(list){
-  const ids=new Set(list.map(m=>m.id)); const mem=getMemories();
-  mem.forEach(m=>{ if(ids.has(m.id)) m.hits=(m.hits||0)+1; });
-  saveMemories(mem);
+
+/** 词法召回（原 recallMemories 的实现，保留为向量不可用时的降级路径） */
+function recallMemoriesLex(query, sc, limit){
+  return _memLexScored(query, sc).slice(0, limit||8).map(x=>x.m);
 }
+
+/**
+ * 召回：词法 + 向量 RRF 融合（v3.7.59 起）。
+ * 保持**同步**签名不变 —— 调用方（agentContextPrompt / recall 工具 / 测试）都在同步链上。
+ * 本轮没备好查询向量时，返回值与改造前逐条一致。
+ * @returns {Array<object>} 命中项上带 _via:"lex"|"vec"|"both" 与 _score，供展示层标注来源
+ */
+function recallMemories(query, sc, limit){
+  const topK = limit || 8;
+  const lexical = _memLexScored(query, sc).slice(0, topK * 3);
+  const primed = _memQueryVec && _memQueryVec.key === String(query || "") ? _memQueryVec.vec : null;
+  const vecHits = primed ? memVectorTop(primed, sc, topK * 3) : [];
+  if(!vecHits.length) return lexical.slice(0, topK).map(x => x.m);
+  /* ⚠️ 只有 kw>0 的才当"词法命中"送进 RRF。词法列表其实是**全量返回再按分数排**：
+     没有任何关键词命中的条目，只是按"新近度 + 全局加权"排下来的填充项。
+     把它们也算进 RRF，第一条填充项的 1/(60+1) 会和第一条语义命中**完全同分**，
+     稳定排序下语义命中反而被压到后面（实测：25 条记忆时向量捞到的那条排在 f0 之后）。 */
+  const kwHits = lexical.filter(x => x.kw > 0);
+  const filler = lexical.filter(x => x.kw === 0);
+  // 与 ragHybridSearch 同一个理由：BM25 式打分与余弦不同量纲，直接相加会被一侧主导 → 用 RRF。
+  const K = 60, byId = new Map();
+  kwHits.forEach(function(x, i){ byId.set(x.m.id, { m: x.m, score: 1/(K+i+1), _via: "lex" }); });
+  vecHits.forEach(function(v, i){
+    const cur = byId.get(v.m.id) || { m: v.m, score: 0, _via: "" };
+    cur.score += 1/(K+i+1);
+    cur._via = cur._via ? "both" : "vec";
+    byId.set(v.m.id, cur);
+  });
+  const merged = [...byId.values()].sort((a,b)=>b.score-a.score).map(function(x){
+    return Object.assign({}, x.m, { _via: x._via, _score: x.score });
+  });
+  return merged.concat(filler.map(x => x.m)).slice(0, topK);
+}
+
+/**
+ * 本轮对话前的一次性预备：补记忆向量 + 求查询向量，供同步的 recallMemories 使用。
+ * 任何一步不可用都静默返回 false（词法路径照常），绝不抛。
+ * ⚠️ 开关复用 cfg.rag：那一项在设置页就叫「上下文注入」，语义是"发消息前检索相关内容拼进
+ *    AI 上下文、会多消耗 token"，与记忆语义召回同性质同代价 —— 与其再造一个没人写的配置键，
+ *    不如把这一个的覆盖面在文案里说清楚。cfg.rag 关着时本函数直接返回，行为与改造前完全一致。
+ * @param {string} text - 本轮用户输入
+ * @returns {Promise<boolean>} 是否备好了可用的查询向量
+ */
+async function memPrimeQueryVector(text){
+  const q = String(text || "").trim();
+  _memQueryVec = null;
+  const cfg = getCfg() || {};
+  if(cfg.agent === false || cfg.rag !== true) return false;   // Agent 关 → 记忆段本来就不注入
+  if(!_embedCfg()) return false;                              // 没配 embedding 通道 → 纯词法
+  if(!getMemories().length) return false;
+  try{
+    await memEnsureVectors();
+    const vecs = await aiEmbedTexts([q]);
+    const v = (vecs && vecs.length) ? vecs[0] : null;
+    _memQueryVec = { key: q, vec: v && v.length ? v : null };
+    return !!_memQueryVec.vec;
+  }catch(e){
+    pushDiag("warn", "memPrimeQueryVector error: "+((e&&e.message)||e), {where:"memPrimeQueryVector"});
+    return false;
+  }
+}
+
+/** 记忆集变化后失效内存缓存（新增/遗忘的条目下一轮重算） */
+function memVecInvalidate(ids){
+  if(!_memVecCache) return;
+  (Array.isArray(ids) ? ids : [ids]).forEach(function(id){ if(id) _memVecCache.map.delete(String(id)); });
+}
+
 
 /* 目标：单目标聚焦（新目标顶替旧的进行中目标），步骤可跨场景调用既有工具 */
 function getGoals(){ return load(PREFIX+"goals", []); }
@@ -370,7 +588,8 @@ function agentExec(name, args){
   }
   if(name==="recall"){
     const hits=recallMemories(args.query||"", active, 8);
-    return JSON.stringify({count:hits.length, items:hits.map(m=>({id:m.id,scope:m.scope,text:m.text}))});
+    // via 一并回给模型：它需要知道"这条是语义召回的（换了说法也命中）还是仅字面命中"
+    return JSON.stringify({count:hits.length, items:hits.map(m=>({id:m.id,scope:m.scope,text:m.text,via:m._via||"lex"}))});
   }
   if(name==="forget"){
     const r=forgetMemory(args.id);
@@ -398,6 +617,13 @@ function agentExec(name, args){
   return JSON.stringify({ok:false, msg:t("agent.unknownToolPrefix", "未知工具：")+name});
 }
 
+/** 召回方式标注（词法 / 语义 / 两者都有）—— 让"这条为什么被想起来"对用户是可见的 */
+function memViaLabel(via){
+  if(via === "both") return t("agent.memViaBoth","·语义+词法");
+  if(via === "vec") return t("agent.memViaVec","·语义");
+  return "";
+}
+
 /* Agent 上下文：工作记忆 + 进行中目标，注入系统提示（cfg.agent=false 时整体关闭） */
 function agentContextPrompt(userText){
   const cfg=getCfg();
@@ -407,7 +633,7 @@ function agentContextPrompt(userText){
   if(mems.length){
     touchMemories(mems);
     parts.push(t("agent.ctx.memHeader", "【工作记忆】（你与用户此前沉淀的事实/偏好，回答与操作时请保持一致；过时内容可用 forget 清理）：\n")+
-      mems.map(m=>"- ["+(m.scope==="global"?t("agent.scope.global", "全局"):(SCENARIOS[m.scope]?SCENARIOS[m.scope].name:m.scope))+"] "+m.text).join("\n"));
+      mems.map(m=>"- ["+(m.scope==="global"?t("agent.scope.global", "全局"):(SCENARIOS[m.scope]?SCENARIOS[m.scope].name:m.scope))+"] "+m.text+memViaLabel(m._via)).join("\n"));
   }
   const g=activeGoal();
   if(g){
@@ -418,6 +644,357 @@ function agentContextPrompt(userText){
                  : t("agent.ctx.goalAllDone", "\n所有步骤已完成，请调用 complete_goal 收尾并总结。")));
   }
   return parts.length? "\n\n"+parts.join("\n\n") : "";
+}
+
+/* ============================================================
+ * Skills 引擎（v3.7.59）—— 让「扩展 → 技能配置」里存下的自定义 JSON 真正生效
+ * ------------------------------------------------------------
+ * 此前 #aiSkillsCustom 的 JSON 只被写、从未被读（保存后无任何消费者），
+ * 六个勾选项也只是减法地写 cfg.toolWhitelist —— 即"技能"是个配置壳。
+ * 现在接上三条真实通路：
+ *   ① skillsPromptBlock()          每轮把相关技能注入系统提示（chatSysPrompt 调用）
+ *   ② findSkill() + sendChatText() 命令面板「技能」组一键触发（ui-palette.js 调用）
+ *   ③ noteSkillOffer()/commitPendingSkill() 一轮成功执行 ≥2 个工具后可固化为新技能
+ *
+ * 依赖方向：只用 data-rw 的 getAiConfig/saveAiConfig（AI→Data 下行依赖，合规）。
+ * 刻意**不**读 ui-global-events.js 里的 AI_BUILTIN_SKILLS：那是最末层，ai-* 引用它会
+ * 新增一条上行依赖，撞 check:modules 的冻结基线；且内置技能本来只是工具名（没有流程可注入），
+ * 其开关已经通过 cfg.toolWhitelist 真实生效。
+ * ============================================================ */
+const SKILL_INJECT_MAX = 6;     // 每轮最多注入的技能条数（防 token 膨胀）
+const SKILL_PROMPT_MAX = 400;   // 单条技能「做法」截断长度
+const SKILL_NAME_MAX = 32;
+const SKILL_DESC_MAX = 120;
+const SKILL_TOTAL_MAX = 40;     // 持久化技能条数上限（超出丢最旧）
+const SKILL_STEPS_MAX = 8;      // 自动固化时保留的步骤数
+/* 破坏性工具不参与"固化"：技能是可反复触发的，把删除/改写沉淀进去等于给未来的自己埋雷。
+   = 要确认的那几个 + forget（遗忘记忆不该被自动化反复触发），派生自单一来源避免漂移。 */
+const SKILL_DANGER_TOOLS = new Set([...DANGER_CONFIRM_TOOLS, "forget"]);
+const SKILL_KNOWN_TOOLS = (function(){
+  const s = new Set(AGENT_TOOL_NAMES);
+  TOOLS.forEach(function(x){ if(x && x.function && x.function.name) s.add(x.function.name); });
+  return s;
+})();
+
+let pendingSkillOffer = null;   // 上一轮可固化的工具流程：{steps, tools, userText, ts, signature}
+let skillsJsonError = "";       // custom JSON 解析失败的原因（供设置页/toast 提示，空=正常）
+
+/**
+ * 读出「扩展 → 技能配置」里保存的自定义技能原始数组。
+ * 容错：JSON 数组 / {skills:[…]} / 单对象 / 已经是数组（历史写法）都接受；
+ * 解析失败不抛异常，只把原因记进 skillsJsonError 并返回空（对话不受影响）。
+ * @returns {Array<object>}
+ */
+function _skillRawList(){
+  skillsJsonError = "";
+  let saved = null;
+  try{ saved = getAiConfig("skills"); }catch(e){ return []; }
+  const raw = saved && saved.custom;
+  if(!raw) return [];
+  if(Array.isArray(raw)) return raw;
+  const s = String(raw).trim();
+  if(!s) return [];
+  try{
+    const v = JSON.parse(s);
+    if(Array.isArray(v)) return v;
+    if(v && Array.isArray(v.skills)) return v.skills;
+    if(v && typeof v === "object") return [v];
+  }catch(e){
+    skillsJsonError = String((e && e.message) || e);
+    try{ if(typeof pushDiag === "function") pushDiag("error", "skills custom JSON parse error: "+skillsJsonError, {where:"_skillRawList"}); }catch(_){ /* 诊断不可用时静默 */ }
+  }
+  return [];
+}
+
+/** 工具名列表 → 只保留真实存在且非破坏性的（拼错的名字不进提示，避免引导模型幻觉调用） */
+function _skillValidTools(v){
+  if(!v) return [];
+  const arr = Array.isArray(v) ? v : String(v).split(/[,\s\u3000]+/);
+  const out = [];
+  arr.forEach(function(n){
+    n = String(n || "").trim();
+    if(n && SKILL_KNOWN_TOOLS.has(n) && !SKILL_DANGER_TOOLS.has(n) && out.indexOf(n) === -1) out.push(n);
+  });
+  return out.slice(0, SKILL_STEPS_MAX);
+}
+
+/** 触发词：数组或分隔串 → 去空去重，最多 5 个、每个 ≤16 字 */
+function _skillTriggerList(v){
+  if(!v) return [];
+  const arr = Array.isArray(v) ? v : String(v).split(/[,，、;；\s\u3000]+/);
+  const out = [];
+  arr.forEach(function(k){
+    k = String(k || "").trim();
+    if(k && k.length <= 16 && out.indexOf(k) === -1) out.push(k);
+  });
+  return out.slice(0, 5);
+}
+
+/** steps 数组 → 编号文本（自动固化的技能也把步骤存在这里，便于用户在设置页直接改） */
+function _skillStepsText(steps){
+  if(!Array.isArray(steps)) return "";
+  const lines = [];
+  steps.forEach(function(s){
+    if(!s) return;
+    const tool = String((typeof s === "object" ? s.tool : "") || "").trim();
+    const keys = (typeof s === "object" && Array.isArray(s.args)) ? s.args.filter(Boolean) : [];
+    const txt = (typeof s === "object") ? String(s.text || s.desc || "").trim() : String(s).trim();
+    if(tool) lines.push(tool + (keys.length ? "("+keys.join(", ")+")" : ""));
+    else if(txt) lines.push(txt);
+  });
+  return lines.slice(0, SKILL_STEPS_MAX).map(function(x, i){ return (i+1)+". "+x; }).join("\n");
+}
+
+/**
+ * 归一化一条技能定义。名字为空 → null（丢弃）。
+ * 「做法」按 prompt > instruction > steps(数组) > desc 的优先级取，缺全则退化成只有名字。
+ * @param {object} o - 原始定义
+ * @returns {{name:string,desc:string,prompt:string,tools:string[],trigger:string[],steps:Array,enabled:boolean}|null}
+ */
+function normalizeSkill(o){
+  if(!o || typeof o !== "object") return null;
+  const name = String(o.name || "").trim().slice(0, SKILL_NAME_MAX);
+  if(!name) return null;
+  const desc = String(o.desc || o.description || "").trim().slice(0, SKILL_DESC_MAX);
+  let prompt = String(o.prompt || o.instruction || "").trim();
+  if(!prompt) prompt = _skillStepsText(o.steps);
+  if(!prompt) prompt = desc;
+  prompt = prompt.slice(0, SKILL_PROMPT_MAX);
+  return {
+    name: name,
+    desc: desc,
+    prompt: prompt,
+    tools: _skillValidTools(o.tools),
+    trigger: _skillTriggerList(o.trigger || o.keywords),
+    steps: Array.isArray(o.steps) ? o.steps.slice(0, SKILL_STEPS_MAX) : [],
+    enabled: o.enabled !== false
+  };
+}
+
+/** 全部技能（含停用），归一化后按定义顺序返回 */
+function listSkills(){
+  const out = [];
+  _skillRawList().forEach(function(o){ const s = normalizeSkill(o); if(s) out.push(s); });
+  return out.slice(0, SKILL_TOTAL_MAX);
+}
+
+/** 已启用的技能（注入提示与命令面板都用这个） */
+function listEnabledSkills(){ return listSkills().filter(function(s){ return s.enabled; }); }
+
+/**
+ * 按名字找技能：精确 → 忽略大小写/首尾空白 → 触发词命中。
+ * @param {string} name
+ * @returns {object|null}
+ */
+function findSkill(name){
+  const q = String(name || "").trim();
+  if(!q) return null;
+  const all = listEnabledSkills();
+  const exact = all.find(function(s){ return s.name === q; });
+  if(exact) return exact;
+  const lower = q.toLowerCase();
+  const ci = all.find(function(s){ return s.name.toLowerCase() === lower; });
+  if(ci) return ci;
+  return all.find(function(s){ return s.trigger.some(function(k){ return k.toLowerCase() === lower; }); }) || null;
+}
+
+/**
+ * 相关度打分：整名命中 > 触发词命中 > 分词交集；无输入时全 0（保持定义顺序）。
+ * ⚠️ 交集必须用 ragTokenize 的 CJK 二元组，不能只按空白切词：中文没有空格，
+ * 整句会被切成一个 token，于是「帮我写周报」和技能「周报流程」永远对不上（实测），
+ * 结果就是技能永远排不进前 6 条、等于没接线。
+ */
+function _skillRelevance(sk, text){
+  const s = String(text || "").trim().toLowerCase();
+  if(!s) return 0;
+  let score = 0;
+  const name = sk.name.toLowerCase();
+  if(name && s.indexOf(name) >= 0) score += 10;
+  sk.trigger.forEach(function(k){
+    const kk = String(k || "").toLowerCase();
+    if(kk && s.indexOf(kk) >= 0) score += 6;
+  });
+  const q = new Set(ragTokenize(s));
+  const seen = new Set();
+  ragTokenize(sk.name + " " + sk.desc + " " + sk.prompt + " " + sk.tools.join(" ")).forEach(function(w){
+    if(seen.has(w) || !q.has(w)) return;
+    seen.add(w);
+    score += w.length >= 2 ? 2 : 1;   // 二元组比单字更说明问题
+  });
+  return score;
+}
+
+/**
+ * 生成注入系统提示的技能段。无启用技能时返回空串（对话提示与今天完全一致）。
+ * 相关度高的优先，最多 SKILL_INJECT_MAX 条。
+ * @param {string} userText - 本轮用户输入
+ * @returns {string} 以 "\n\n" 开头的提示片段，或 ""
+ */
+function skillsPromptBlock(userText){
+  const skills = listEnabledSkills();
+  if(!skills.length) return "";
+  const ranked = skills
+    .map(function(s, i){ return { s: s, i: i, r: _skillRelevance(s, userText) }; })
+    .sort(function(a, b){ return (b.r - a.r) || (a.i - b.i); })
+    .slice(0, SKILL_INJECT_MAX)
+    .map(function(x){ return x.s; });
+  const head = t("skills.ctxHeader", "【用户自定义技能】（用户沉淀的标准作业流程。请求与之相符时按「做法」执行、工具优先从「建议工具」里选；不相符时忽略本节且不要向用户提及它）：");
+  /* v3.7.59 (#20)：技能段也进预算（占 ctxBudgetTokens 的一部分）。
+     技能条数本身有 SKILL_TOTAL_MAX=40 的上限，全量注入会把每轮固定成本抬到几千 token ——
+     相关性排序解决"先给谁"，预算解决"给多少"，两者都要有。 */
+  const budget = ctxBudgetTokens() * CTX_SKILL_SHARE;
+  const out = [];
+  let used = _estTokens(head);
+  for(const s of ranked){
+    let line = "- " + s.name + (s.desc && s.desc !== s.prompt ? "（" + s.desc + "）" : "");
+    if(s.prompt && s.prompt !== s.desc) line += "\n  " + t("skills.ctxHow", "做法：") + s.prompt.replace(/\n/g, "\n  ");
+    if(s.tools.length) line += "\n  " + t("skills.ctxTools", "建议工具：") + s.tools.join(", ");
+    const cost = _estTokens(line);
+    if(used + cost > budget && out.length >= 1) break;   // 至少留 1 条（命中的那条最有用）
+    used += cost; out.push(line);
+  }
+  return "\n\n" + head + "\n" + out.join("\n");
+}
+
+/** 工具序列签名（去重保序），用于判断"这条流程是否已经存过技能" */
+function _skillSig(names){
+  const seen = [];
+  (names || []).forEach(function(n){ if(n && seen.indexOf(n) === -1) seen.push(n); });
+  return seen.join(">");
+}
+
+/**
+ * 记录一轮对话的工具执行结果，供结束后判断是否值得固化。
+ * 由 runChatLoop 在每次工具执行后调用。
+ * @param {Array} trace - 累加器
+ * @param {string} name - 工具名
+ * @param {object} args - 调用参数（只取 key，不存值：值会过期且可能含用户数据）
+ * @param {string} res - execToolAuto 的返回串
+ * @returns {void}
+ */
+function skillTracePush(trace, name, args, res){
+  if(!Array.isArray(trace)) return;
+  let ok = false;
+  const s = String(res === null || res === undefined ? "" : res);
+  if(s.indexOf("__CHART__") === 0){ ok = true; }
+  else {
+    try{ const j = JSON.parse(s); ok = !!(j && j.ok !== false && !j.error); }
+    catch(e){ ok = s.length > 0; }
+  }
+  trace.push({
+    name: String(name || ""),
+    args: (args && typeof args === "object") ? Object.keys(args).slice(0, 8) : [],
+    ok: ok
+  });
+}
+
+/**
+ * 一轮结束后调用：成功执行 ≥2 个非破坏性工具 → 挂出"可固化为技能"的候选。
+ * 已存过同一工具序列的技能时不再打扰。
+ * @param {Array} trace - skillTracePush 累加出来的执行记录
+ * @param {string} userText - 本轮用户输入（用作默认技能名/描述）
+ * @returns {object|null} 候选（同时也是 pendingSkillOffer）
+ */
+function noteSkillOffer(trace, userText){
+  pendingSkillOffer = null;
+  const good = (trace || []).filter(function(x){ return x && x.ok && x.name && !SKILL_DANGER_TOOLS.has(x.name); });
+  if(good.length < 2) return null;
+  const sig = _skillSig(good.map(function(x){ return x.name; }));
+  const dup = listSkills().some(function(s){ return _skillSig(s.tools) === sig; });
+  if(dup) return null;
+  pendingSkillOffer = {
+    steps: good.slice(0, SKILL_STEPS_MAX).map(function(x){ return { tool: x.name, args: x.args }; }),
+    tools: _skillValidTools(good.map(function(x){ return x.name; })),
+    userText: String(userText || "").replace(/\s+/g, " ").trim().slice(0, SKILL_DESC_MAX),
+    ts: Date.now(),
+    signature: sig
+  };
+  return pendingSkillOffer;
+}
+
+/** 当前待固化的候选（命令面板据此决定是否显示「把上一轮固化为技能」） */
+function getPendingSkillOffer(){ return pendingSkillOffer; }
+
+/**
+ * 把候选流程写成一条技能定义。
+ * @param {object} offer - noteSkillOffer 的产物
+ * @param {string} [name] - 用户指定的技能名，缺省取本轮输入的开头
+ * @returns {object|null} 归一化后的技能（未落盘）
+ */
+function buildSkillFromTrace(offer, name){
+  if(!offer || !Array.isArray(offer.steps) || offer.steps.length < 2) return null;
+  const nm = String(name || "").trim().slice(0, SKILL_NAME_MAX)
+    || (offer.userText ? offer.userText.slice(0, 16) : "")
+    || (t("skills.autoName", "流程技能") + "-" + offer.steps.length);
+  return normalizeSkill({
+    name: nm,
+    desc: t("skills.autoDesc", "由一轮成功的多工具执行固化") + "：" + offer.steps.map(function(s){ return s.tool; }).join(" → "),
+    steps: offer.steps,
+    tools: offer.tools,
+    enabled: true
+  });
+}
+
+/**
+ * 落盘一条技能（同名覆盖），写回 aiSkillsCustom —— 设置页的文本框下次打开即显示，可直接编辑/删除。
+ * @param {object} sk - 技能定义（会先过 normalizeSkill）
+ * @returns {object|null} 落盘后的归一化技能
+ */
+function saveSkill(sk){
+  const norm = normalizeSkill(sk);
+  if(!norm) return null;
+  const all = listSkills();
+  const i = all.findIndex(function(s){ return s.name === norm.name; });
+  if(i >= 0) all[i] = norm; else all.push(norm);
+  const list = all.slice(-SKILL_TOTAL_MAX).map(function(s){
+    return { name: s.name, desc: s.desc, steps: s.steps, tools: s.tools, trigger: s.trigger, enabled: s.enabled };
+  });
+  let saved = null;
+  try{ saved = getAiConfig("skills") || {}; }catch(e){ saved = {}; }
+  try{ saveAiConfig("skills", Object.assign({}, saved, { custom: JSON.stringify(list, null, 2) })); }
+  catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("error", "saveSkill failed: "+((e && e.message) || e), {where:"saveSkill"}); }catch(_){ /* 诊断不可用时静默 */ }
+    return null;
+  }
+  return norm;
+}
+
+/**
+ * 消费候选：把上一轮流程固化为技能。无候选返回 null（调用方据此提示）。
+ * @param {string} [name] - 技能名
+ * @returns {object|null}
+ */
+function commitPendingSkill(name){
+  const offer = pendingSkillOffer;
+  if(!offer) return null;
+  const sk = buildSkillFromTrace(offer, name);
+  if(!sk) return null;
+  const r = saveSkill(sk);
+  pendingSkillOffer = null;
+  return r;
+}
+
+/**
+ * 删除一条技能（命令面板/设置页可用）。
+ * @param {string} name
+ * @returns {boolean} 是否删掉
+ */
+function deleteSkill(name){
+  const q = String(name || "").trim();
+  if(!q) return false;
+  const all = listSkills();
+  const rest = all.filter(function(s){ return s.name !== q; });
+  if(rest.length === all.length) return false;
+  let saved = null;
+  try{ saved = getAiConfig("skills") || {}; }catch(e){ saved = {}; }
+  try{
+    saveAiConfig("skills", Object.assign({}, saved, {
+      custom: JSON.stringify(rest.map(function(s){
+        return { name: s.name, desc: s.desc, steps: s.steps, tools: s.tools, trigger: s.trigger, enabled: s.enabled };
+      }), null, 2)
+    }));
+  }catch(e){ return false; }
+  return true;
 }
 
 
@@ -438,16 +1015,32 @@ function agentContextPrompt(userText){
 
 /* ---------- 1. AI Agent 自动化：多步骤规划 + 自动执行 + 结果汇总 ---------- */
 /**
+ * 本系统「可直接执行」的工具名清单（用于规划提示词）。
+ * 剔除两类：需要用户确认的破坏性工具（executeAgentPlan 不会自主执行它），
+ * 以及白名单外的工具（cfg.toolWhitelist 在对话路径生效，规划路径也必须一致）。
+ * @returns {string[]}
+ */
+function agentPlannableTools(){
+  const wl = toolWhitelistSet();
+  const all = (typeof effectiveTools === "function" ? effectiveTools() : TOOLS);
+  return all
+    .map(x => x && x.function && x.function.name)
+    .filter(n => n && !DANGER_CONFIRM_TOOLS.has(n) && (!wl || wl.has(n)));
+}
+/**
  * Agent 模式系统提示：引导 AI 输出 JSON 格式的步骤计划
+ * v3.7.59：可用工具改成从 effectiveTools() 现算。此前字典里硬写了 12 个名字，
+ * 而真实工具已 26 个 —— 模型被引导去用 add_record/generate_report/render_chart 之外的路子，
+ * 规划质量白白掉一层，且清单与代码没有任何同步机制。
  * @param {string} userText - 用户请求
  * @returns {string} 系统提示
  */
 function agentPlanSysPrompt(userText){
-  return t("aiagent.sysPrompt",
+  const names = agentPlannableTools();
+  return String(t("aiagent.sysPrompt",
     "你是任务规划助手。收到用户请求后，请先拆解为可执行步骤，输出 JSON 格式的计划：\n"+
-    '```json\n{"goal":"目标标题","steps":[{"tool":"工具名","args":{},"desc":"步骤说明"}]}\n```\n'+
-    "可用工具：create_task/list_tasks/complete_task/update_task/search/query_overview/note_add/note_search/web_search/web_fetch/code_run/sql_query。\n"+
-    "只输出 JSON，不要额外解释。");
+    "```json\n{\"goal\":\"目标标题\",\"steps\":[{\"tool\":\"工具名\",\"args\":{},\"desc\":\"步骤说明\"}]}\n```\n"+
+    "可用工具：{tools}。\n只输出 JSON，不要额外解释。")).replace("{tools}", names.join("/"));
 }
 
 /**
@@ -473,6 +1066,13 @@ function parseAgentPlan(text){
   // 规范化：每步必须有 tool 字段
   plan.steps = plan.steps.filter(st => st && typeof st.tool === "string");
   if(!plan.steps.length) return null;
+  /* v3.7.59：步骤数封顶。这条链现在真的有用户入口了（命令面板「让 AI 自主完成」），
+     于是一次失控的规划 = 几十次连续写库/联网调用。超限就截断并在计划里如实标注，
+     而不是静默丢弃 —— 用户确认前必须看得见少了什么。 */
+  if(plan.steps.length > AGENT_PLAN_STEPS_MAX){
+    plan.truncatedFrom = plan.steps.length;
+    plan.steps = plan.steps.slice(0, AGENT_PLAN_STEPS_MAX);
+  }
   plan.goal = String(plan.goal || t("aiagent.unnamedGoal","未命名目标"));
   plan.steps = plan.steps.map(st => ({
     tool: String(st.tool),
@@ -486,17 +1086,43 @@ function parseAgentPlan(text){
  * 逐步执行 Agent 计划：每步调用 execTool（同步工具）或 agentExecAsync（异步工具）
  * @param {{goal:string, steps:Array}} plan - parseAgentPlan 返回值
  * @param {{onProgress?:Function, signal?:AbortSignal}} [opts]
- * @returns {Promise<{ok:boolean, results:Array<{step:object, result:string, ok:boolean}>, summary:string, ms:number}>}
+ * @returns {Promise<{ok:boolean, results:Array<{step:object, result:string, ok:boolean, blocked?:boolean}>, needsConfirm:Array, summary:string, ms:number}>}
  */
 async function executeAgentPlan(plan, opts){
   const o = opts || {};
   const t0 = Date.now();
   const results = [];
+  const needsConfirm = [];
+  const wl = (o.whitelist !== undefined) ? o.whitelist : toolWhitelistSet();
   for(let i=0; i<plan.steps.length; i++){
     if(o.signal && o.signal.aborted){
-      return { ok:false, results, summary:t("aiagent.cancelled","已取消"), ms:Date.now()-t0 };
+      return { ok:false, results, needsConfirm, summary:t("aiagent.cancelled","已取消"), ms:Date.now()-t0 };
     }
     const step = plan.steps[i];
+    /* v3.7.59 P0（安全）：自主执行**不碰**需要用户确认的工具。
+       此前这一步无条件 execTool(step.tool, step.args, true)，而 force=true 正是
+       runChatLoop 里 delete_task/update_task 用来跳过二次确认的那把钥匙 ——
+       于是"AI 自主规划"能在用户不知情的情况下删任务/改任务，同一个工具在对话路径却要弹窗。
+       取向：自主执行只做可逆的写操作，破坏性那步标 needsConfirm 交回交互路径（那里正常确认）。
+       不中断整个计划 —— 后面的非破坏步骤照常跑，避免"一步被拒全盘停摆"。 */
+    if(DANGER_CONFIRM_TOOLS.has(step.tool)){
+      const msg = t("aiagent.needConfirm","该步骤需用户确认，自主执行已跳过：请到对话里直接要求执行（会弹出确认）");
+      needsConfirm.push(step);
+      results.push({ step, result: JSON.stringify({ ok:false, confirm:true, msg }), ok:false, blocked:true });
+      if(typeof o.onProgress === "function"){
+        try{ o.onProgress(i+1, plan.steps.length, step, msg); }catch(_){}
+      }
+      continue;
+    }
+    /* v3.7.59：白名单在自主执行路径同样生效（此前只有对话路径读它 → 换个入口就绕过开关）。 */
+    if(wl && !wl.has(step.tool)){
+      const msg = t("aiagent.notWhitelisted","该工具不在允许列表中，已跳过：")+step.tool;
+      results.push({ step, result: JSON.stringify({ ok:false, msg }), ok:false, blocked:true });
+      if(typeof o.onProgress === "function"){
+        try{ o.onProgress(i+1, plan.steps.length, step, msg); }catch(_){}
+      }
+      continue;
+    }
     let resultStr = "";
     let stepOk = false;
     try{
@@ -505,7 +1131,7 @@ async function executeAgentPlan(plan, opts){
         resultStr = JSON.stringify(r);
         stepOk = !!(r && r.ok);
       } else {
-        resultStr = execTool(step.tool, step.args, true); // 强制执行（Agent 自动模式）
+        resultStr = execTool(step.tool, step.args); // 不传 force：需确认的工具已在上面拦掉
         let rj = null; try{ rj = JSON.parse(resultStr); }catch(_){}
         stepOk = !!(rj && rj.ok !== false);
       }
@@ -519,23 +1145,28 @@ async function executeAgentPlan(plan, opts){
     }
   }
   const summary = summarizeAgentPlan(plan, results);
-  return { ok:true, results, summary, ms:Date.now()-t0 };
+  return { ok:true, results, needsConfirm, summary, ms:Date.now()-t0 };
 }
 
 /**
  * 汇总 Agent 计划执行结果
  * @param {{goal:string, steps:Array}} plan
- * @param {Array<{step:object, result:string, ok:boolean}>} results
+ * @param {Array<{step:object, result:string, ok:boolean, blocked?:boolean}>} results
  * @returns {string} 汇总文本
  */
 function summarizeAgentPlan(plan, results){
   const lines = [t("aiagent.summaryHeader","【任务汇总】目标：")+plan.goal];
   results.forEach((r, i) => {
-    const mark = r.ok ? "✓" : "✗";
-    lines.push((i+1)+". "+mark+" "+r.step.desc+" → "+(r.ok?t("aiagent.done","完成"):t("aiagent.failed","失败")));
+    const mark = r.ok ? "✓" : (r.blocked ? "⏸" : "✗");
+    const state = r.ok ? t("aiagent.done","完成") : (r.blocked ? t("aiagent.blocked","待确认已跳过") : t("aiagent.failed","失败"));
+    lines.push((i+1)+". "+mark+" "+r.step.desc+" → "+state);
   });
   const okCount = results.filter(r=>r.ok).length;
   lines.push(t("aiagent.summaryFooter","共 ")+results.length+t("aiagent.summaryStepUnit"," 步，")+okCount+t("aiagent.summaryOkUnit"," 步成功"));
+  const blocked = results.filter(r=>r.blocked);
+  if(blocked.length){
+    lines.push(t("aiagent.summaryBlocked","其中 ")+blocked.length+t("aiagent.summaryBlockedSuffix"," 步涉及删除/修改等破坏性操作，未自主执行，请在对话里逐项确认。"));
+  }
   return lines.join("\n");
 }
 
@@ -1218,16 +1849,64 @@ async function ragSearch(query, limit){
  * @param {string} userText - 用户输入
  * @returns {Promise<string>} 注入的上下文文本（空串表示无相关内容）
  */
-async function ragInjectContext(userText){
+/* ---------- 上下文装配预算（v3.7.59 · 任务 #20）----------
+ * 此前每轮注入的系统提示由三段各自为政拼成：记忆/目标（agentContextPrompt）、技能
+ * （skillsPromptBlock）、检索（ragInjectContext）。RAG 固定 top5 × 每条 200 字，
+ * 既不按相关性收口，也没有总量约束 —— 索引一大，token 成本就是失控的，
+ * 而且结果里没有出处，用户无法回溯"这条是依据哪条记录说的"。
+ * 现在：一个可配置的总预算（cfg.ctxBudgetTokens），每段带来源与召回方式标注，
+ * 超预算时**整条丢弃**而不是截半句（半句引用比没有引用更容易误导）。
+ */
+const CTX_BUDGET_DEFAULT = 1200;
+const CTX_SKILL_SHARE = 0.4;   // 技能段最多占预算的四成，剩下的给检索
+const CTX_RAG_HITS = 8;        // 多召几条，装配时按预算裁
+const CTX_RAG_CHARS = 240;     // 单条正文上限
+
+/** 每轮注入上下文的 token 预算（粗算口径同 _estTokens） */
+function ctxBudgetTokens(){
+  const cfg = getCfg() || {};
+  let n = Number(cfg.ctxBudgetTokens);
+  if(!isFinite(n) || n <= 0) n = CTX_BUDGET_DEFAULT;
+  return Math.min(4000, Math.max(200, Math.round(n)));
+}
+
+/** 检索结果的引用标签：[序号·来源·召回方式] —— 用户能据此回查到原始条目 */
+function ragCiteLabel(h, n){
+  const via = h.via === "both" ? t("rag.viaBoth","词法+语义")
+    : (h.via === "vec" ? t("rag.viaVec","语义") : t("rag.viaLex","词法"));
+  return "["+n+"·"+(h.source || t("rag.srcUnknown","未知来源"))+"·"+via+"]";
+}
+
+/**
+ * RAG 检索注入：按预算装配 + 带出处。
+ * @param {string} userText
+ * @param {{budget?:number}} [opts]
+ * @returns {Promise<string>} 以 "\n\n" 开头的片段，或 ""
+ */
+async function ragInjectContext(userText, opts){
   const cfg = getCfg() || {};
   if(cfg.rag !== true) return ""; // v3.4.7 批次六：显式开启才注入（设置页 AI→记忆「上下文注入」开关，默认关——防 token 意外膨胀；此前 ===false 判定在无 UI 写入下等效永远开）
-  const hits = await ragSearch(userText, 5);
+  const budget = (opts && typeof opts.budget === "number") ? opts.budget : ctxBudgetTokens();
+  const hits = await ragSearch(userText, CTX_RAG_HITS);
   if(!hits.length) return "";
-  const lines = [t("rag.ctxHeader","【相关上下文】（来自任务/记录、笔记、对话历史的检索增强）：")];
-  hits.forEach((h, i) => {
-    const preview = (h.content || "").slice(0, 200);
-    lines.push((i+1)+". ["+h.source+"] "+preview+((h.content||"").length > 200 ? "..." : ""));
-  });
+  const head = t("rag.ctxHeader","【相关上下文】（来自任务/记录、笔记、对话历史的检索增强）：");
+  const cite = t("rag.ctxCite","引用时请标注来源编号（如「依据[2·笔记]」），没有依据的部分请说明是推断。");
+  const lines = [head, cite];
+  let used = _estTokens(head) + _estTokens(cite);
+  let kept = 0;
+  for(let i = 0; i < hits.length; i++){
+    const h = hits[i];
+    const full = String(h.content || "");
+    const preview = full.slice(0, CTX_RAG_CHARS);
+    const line = (kept+1)+". "+ragCiteLabel(h, kept+1)+" "+preview+(full.length > preview.length ? "…" : "");
+    const cost = _estTokens(line);
+    if(used + cost > budget && kept >= 1) break;   // 至少留 1 条：预算配得过小时也不该整段消失
+    used += cost; kept++; lines.push(line);
+  }
+  if(hits.length > kept){
+    const note = t("rag.ctxTrimmed","（受上下文预算限制，相关度较低的 ")+(hits.length-kept)+t("rag.ctxTrimmedSuffix"," 条未注入");
+    lines.push(note + "）");
+  }
   return "\n\n" + lines.join("\n");
 }
 

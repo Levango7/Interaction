@@ -14,7 +14,7 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
-var CACHE_VERSION = "v3.7.58-20260926c";
+var CACHE_VERSION = "v3.7.59-20260927c";
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -76,6 +76,37 @@ function isCrossOriginHttp(url, origin) {
 
 // S5: 时间戳元数据键的虚拟路径前缀（同源，相对于 SW 作用域）
 var TS_BASE = "./__wb_cache_ts__/";
+
+/**
+ * v3.7.59：判断请求是否为「带凭据 / 业务 API」——这类响应**不得写入 Cache Storage**。
+ *
+ * 背景：本 SW 的跨域 GET 分支是 stale-while-revalidate，会把**任意** 200 响应写进缓存。
+ * 于是 `GET /api/sync/snapshot`（返回体含全部任务 / 记录 / 笔记 / 记忆）会被落盘到
+ * Cache Storage 并在 TTL（24h）内长期驻留 —— 数据在页面会话结束后仍留在磁盘上，
+ * 与 README「数据在用户本机、不落服务器」的表述虽不冲突，但确实扩大了本机留存面。
+ *
+ * 判据（任一命中即视为凭据请求）：
+ *   ① 带 `Authorization` 头（本项目 apiFetch 恒带；LLM 供应商 GET 亦同）
+ *   ② 路径以 `/api/` 开头（本项目全部业务端点前缀）
+ *   ③ `credentials: "include"`（Cookie 型凭据）
+ * 命中的请求走 network-only（离线时按约定返回 504），既不写也不读缓存 ——
+ * 读也跳过，避免修复前遗留的旧条目被继续命中。
+ * @param {Request} req
+ * @returns {boolean}
+ */
+function _isCredentialedRequest(req) {
+  try {
+    if (req.headers && typeof req.headers.has === "function" && req.headers.has("authorization")) return true;
+  } catch (e) { /* 某些上下文不允许读 headers：按非凭据处理，不阻断请求 */ }
+  try {
+    if (req.credentials === "include") return true;
+  } catch (e) { /* 同上 */ }
+  try {
+    var u = new URL(req.url, self.location.href);
+    if (/^\/api(\/|$)/.test(u.pathname)) return true;
+  } catch (e) { /* 解析失败按非凭据处理 */ }
+  return false;
+}
 
 /**
  * S5: 生成时间戳元数据的 Request（同源虚拟路径，避免与真实资源冲突）。
@@ -304,15 +335,18 @@ self.addEventListener("fetch", function (event) {
 
   // (2) 跨域 API 请求：stale-while-revalidate（v1.11.1 [L9]：带 24h TTL——过期条目视为未命中，
   //     避免跨域 GET 响应体（可能含鉴权数据）被无限期复用；cache.put 失败不再双层静默）
+  //     v3.7.59：带凭据 / `/api/` 的请求改为 network-only，不读也不写缓存（见 _isCredentialedRequest）
   if (isCrossOriginHttp(url, origin)) {
+    var noStore = _isCredentialedRequest(req);
     event.respondWith(
       caches.open(CACHE_NAME).then(function (cache) {
-        return _cachedWithinTtl(cache, req, SWR_TTL_MS).then(function (cached) {
+        var lookup = noStore ? Promise.resolve(null) : _cachedWithinTtl(cache, req, SWR_TTL_MS);
+        return lookup.then(function (cached) {
         // 后台拉取并更新缓存（不阻塞响应）
         var fetchPromise = fetch(req).then(function (resp) {
           // R15: 不缓存 opaque 响应（跨域 no-cors 产物，缓存可能产生意外行为）
           if (resp && resp.type === "opaque") return resp;
-          if (resp && resp.status === 200) {
+          if (resp && resp.status === 200 && !noStore) {
             var copy = resp.clone();
             caches.open(CACHE_NAME).then(function (cache2) {
               _putWithTimestamp(cache2, req, copy).then(function () {

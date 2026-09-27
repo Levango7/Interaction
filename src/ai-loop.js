@@ -357,6 +357,15 @@ async function chatOnce(messages, opts){
     }
 
     // 浏览器 / Edge / 本地服务：直连兜底（P0-10：超时 + 错误分级）
+    /* v3.7.59 P0（隐私外泄面，真实 Chromium 实测发现）：没配 profile / 没配 Key 时**绝不发请求**。
+       此前 base 会回退到硬编码的 https://api.openai.com/v1、Authorization 带一个空 Bearer 照样真发 POST
+       并重试 3 次 —— 用户一个模型都没配，系统提示（含工作记忆、技能、RAG 片段）与输入原文
+       就已经出了本机，只换回一个 401；顺带表现为「未配置时聊天卡十几秒」。
+       规则与 electron/main.js chat IPC 的 `if(!prof || !prof.key) throw` 保持一致 ——
+       这条链是跨进程双实现，改一侧必须同步另一侧与两侧契约用例（见下方 [镜像警示]）。 */
+    if(!ap || !ap.key){
+      throw new Error(t("err.aiNotConfigured","尚未配置 AI 模型：请到「设置 → AI」填写 API 地址与 Key 后再对话（未配置时不会向任何端点发送请求）。"));
+    }
     const base=((ap && ap.base) || "https://api.openai.com/v1").replace(/\/+$/,"");
     // R07：base URL 安全校验——只允许 https://（允许 http://localhost 供开发），非法 URL 直接报错不发送请求
     if (!validateBaseUrl(base)) {

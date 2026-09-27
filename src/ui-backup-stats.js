@@ -620,7 +620,7 @@ function renderMsgPanel(){
     iconWrap.className = "msg-item-icon";
     iconWrap.setAttribute("aria-hidden", "true");
     const iconSvg = MSG_ICONS[m.type] || MSG_ICONS.system;
-    iconWrap.innerHTML = iconSvg; // 静态可信 SVG 字符串
+    iconWrap.innerHTML = iconSvg; // 静态可信 SVG 字符串 // lint-xss-ok: MSG_ICONS 是内部常量表，且有 MSG_ICONS.system 兜底
     item.appendChild(iconWrap);
 
     // 主体

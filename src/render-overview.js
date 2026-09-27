@@ -1325,8 +1325,14 @@ function _applyCloudSnapshot(data) {
     if (typeof allKeys === "function") allKeys().forEach(function (k) { const v = localStorage.getItem(k); if (typeof v === "string") pre[k] = v; });
     if (Object.keys(pre).length) save(PREFIX + "pre_restore_backup", { at: Date.now(), keys: pre });
   } catch (e) { /* 备份失败不阻塞恢复 */ }
+  /* v3.7.59 安全修正：入站必须与出站（_buildCloudSnapshot）对称地排除密钥/本机控制类键。
+     此前只有出站排除，入站是「快照里有啥就写啥」——于是服务端（或被篡改/被劫持的链路）
+     只要回传 wb_agent___dk（**设备密钥本体**），就会覆盖本机密钥；此后应用用攻击者已知的
+     密钥加密 API Key，README 声称的「密钥不出本机」被实际打破。
+     入站过滤同时挡掉 cfg（Key 密文）与 pre_restore_backup（内嵌全部本地键值的回滚档）。 */
   Object.keys(data).forEach(k => {
     if (k === SYNC_META_KEY || k === "_deviceMeta" || k === "_meta") return;
+    if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
     if (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY) {
       try { localStorage.setItem(k, data[k]); } catch (e) { /* 静默降级 */ }
     }
@@ -1485,30 +1491,62 @@ function _dgmPreset(kind) {
   return { nodes: nodes, edges: edges };
 }
 
+/* v3.7.59 安全修正：本函数此前把 n.id / n.color 直接拼进属性与 style，且调用点
+   （_renderDiagramCanvas 内 `tmp.innerHTML = _dgmSvgHtml(d)`）**没有过 sanitizeHtml**。
+   n.color 落在 `style="fill:<color>"` 里 → 可提前闭合属性与元素，注入 <img src=x onerror=...>；
+   n.id 落在 `data-dgm="<id>"` 里 → 可注入 onmouseover 等事件属性。
+   数据源是 localStorage 的 wb_agent_diagram，**导入 JSON 备份 / 云同步快照都能写入任意值**，
+   故按不可信输入处理：数值强制转 Number，字符串一律 esc()，颜色只放行安全 CSS 颜色字面量。
+   实测（_audit_evidence/xss-probe.mjs）：修复前 SVG <g> 内解析出 2 个 HTML 命名空间 <img> 且带 onerror。 */
+function _dgmNum(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+/* null/undefined → 空串，其余 String()。不用 `== null`（eslint eqeqeq 会告警） */
+function _dgmStr(v) {
+  return (v === null || v === undefined) ? "" : String(v);
+}
+/* 只放行 CSS 颜色字面量：#rgb/#rrggbb/#rrggbbaa、rgb()/rgba()/hsl()/hsla()、纯字母色名。
+   其余（含任何引号、尖括号、分号）一律丢弃 —— 宁可节点无色，不可让样式属性成为注入出口。 */
+function _dgmColor(v) {
+  const s = _dgmStr(v).trim();
+  if (!s) return "";
+  if (/^#[0-9a-fA-F]{3,8}$/.test(s)) return s;
+  if (/^[a-zA-Z]{1,24}$/.test(s)) return s;
+  if (/^(rgb|rgba|hsl|hsla)\(\s*[0-9.,%\s/deg]+\)$/i.test(s)) return s;
+  return "";
+}
 function _dgmSvgHtml(d) {
-  const nodes = d.nodes || [], edges = d.edges || [];
-  const byId = {}; nodes.forEach(function (n) { byId[n.id] = n; });
+  const nodes = Array.isArray(d && d.nodes) ? d.nodes : [];
+  const edges = Array.isArray(d && d.edges) ? d.edges : [];
+  const byId = {}; nodes.forEach(function (n) { if (n && n.id !== null && n.id !== undefined) byId[n.id] = n; });
   let out = "";
   // 连线
   edges.forEach(function (e) {
+    if (!e) return;
     const a = byId[e.from], b = byId[e.to];
     if (!a || !b) return;
-    const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2;
+    const ax = _dgmNum(a.x, 0) + _dgmNum(a.w, 0) / 2, ay = _dgmNum(a.y, 0) + _dgmNum(a.h, 0) / 2;
+    const bx = _dgmNum(b.x, 0) + _dgmNum(b.w, 0) / 2, by = _dgmNum(b.y, 0) + _dgmNum(b.h, 0) / 2;
     const mx = (ax + bx) / 2, my = (ay + by) / 2;
     out += '<line class="dgm-edge" x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '" marker-end="url(#dgmArrow)"></line>';
     if (e.label) out += '<text class="dgm-edge-label" x="' + mx + '" y="' + (my - 6) + '">' + esc(e.label) + '</text>';
   });
   // 节点
   nodes.forEach(function (n) {
+    if (!n) return;
+    const idAttr = esc(_dgmStr(n.id));
     const sel = (_dgmSel === n.id) ? " dgm-selected" : "";
-    const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
-    const fill = n.color ? ' style="fill:' + n.color + ';fill-opacity:.18;stroke:' + n.color + '"' : '';
+    const nx = _dgmNum(n.x, 0), ny = _dgmNum(n.y, 0), nw = _dgmNum(n.w, 0), nh = _dgmNum(n.h, 0);
+    const cx = nx + nw / 2, cy = ny + nh / 2;
+    const col = _dgmColor(n.color);
+    const fill = col ? ' style="fill:' + col + ';fill-opacity:.18;stroke:' + col + '"' : '';
     let shape;
-    if (n.shape === "ellipse") shape = '<ellipse class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" cx="' + cx + '" cy="' + cy + '" rx="' + (n.w / 2) + '" ry="' + (n.h / 2) + '"' + fill + '></ellipse>';
-    else if (n.shape === "round") shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" rx="' + (n.h / 2) + '"' + fill + '></rect>';
-    else if (n.shape === "diamond") shape = '<polygon class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" points="' + cx + ',' + n.y + ' ' + (n.x + n.w) + ',' + cy + ' ' + cx + ',' + (n.y + n.h) + ' ' + n.x + ',' + cy + '"' + fill + '></polygon>';
-    else shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" rx="6"' + fill + '></rect>';
-    out += shape + '<text class="dgm-node-text" data-dgm="' + n.id + '" x="' + cx + '" y="' + (cy + 4) + '">' + esc(n.text || "") + '</text>';
+    if (n.shape === "ellipse") shape = '<ellipse class="dgm-node-shape' + sel + '" data-dgm="' + idAttr + '" cx="' + cx + '" cy="' + cy + '" rx="' + (nw / 2) + '" ry="' + (nh / 2) + '"' + fill + '></ellipse>';
+    else if (n.shape === "round") shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + idAttr + '" x="' + nx + '" y="' + ny + '" width="' + nw + '" height="' + nh + '" rx="' + (nh / 2) + '"' + fill + '></rect>';
+    else if (n.shape === "diamond") shape = '<polygon class="dgm-node-shape' + sel + '" data-dgm="' + idAttr + '" points="' + cx + ',' + ny + ' ' + (nx + nw) + ',' + cy + ' ' + cx + ',' + (ny + nh) + ' ' + nx + ',' + cy + '"' + fill + '></polygon>';
+    else shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + idAttr + '" x="' + nx + '" y="' + ny + '" width="' + nw + '" height="' + nh + '" rx="6"' + fill + '></rect>';
+    out += shape + '<text class="dgm-node-text" data-dgm="' + idAttr + '" x="' + cx + '" y="' + (cy + 4) + '">' + esc(n.text || "") + '</text>';
   });
   return out;
 }
@@ -1550,7 +1588,9 @@ function _dgmBind() {
     svg.innerHTML = "";
     if (defs) svg.appendChild(defs);
     var tmp = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    tmp.innerHTML = _dgmSvgHtml(d);
+    /* v3.7.59 安全修正：补 sanitizeHtml 兜底。_dgmSvgHtml 内部已对 id/color/数值逐项转义，
+       这里再叠一层——两层任一生效即可挡住注入，避免今后有人改回裸拼接时又静默开洞。 */
+    tmp.innerHTML = sanitizeHtml(_dgmSvgHtml(d));
     while (tmp.firstChild) svg.appendChild(tmp.firstChild);
     _dgmBind();
   }

@@ -182,6 +182,14 @@ const meta = (rawOrder || []).map(x => (typeof x === 'string' ? { name: x, tailB
 const names = meta.length ? meta.map(m => m.name) : files.map(f => f.replace(/\.js$/, ''));
 
 let injected = 0, missing = [];
+/* v3.7.59：--check 增加**内容比对**（此前只查「标记在不在、数量对不对」，不比对内容）。
+   缺口实测：HTML 已改、src 未同步抽取时，check 仍打印「齐全 ✓」并退 0 —— 而
+   pretest / prebuild / pree2e / prelint 都会跑默认的**注入**方向（src → HTML），
+   于是「直接改 HTML」的编辑会在下一次跑测试或构建时被 src 静默覆盖回滚。
+   （本次审计开始时工作区正处该状态：HTML 已删 AI_BUILTIN_PLUGINS，src/ui-global-events.js 未同步。）
+   比对口径与注入方向严格对齐：注入写的是 `'\n' + body + '\n'`（body 已按 tailBlanks 补齐）。 */
+const mismatched = [];
+let placeholderBlocks = 0;
 /* v3.7.52：src/ 下未登记在 order.json 的 .js 必须报错，而不是静默忽略。
    原实现只循环 order.json 里的名字 —— 新加的模块忘了登记时，代码不会被拼回 HTML，
    而 --check 仍打印「齐全 ✓」并退 0：静默丢代码是最危险的一类构建缺陷。
@@ -198,7 +206,23 @@ for (const n of names) {
   const body = readFileSync(f, 'utf8').replace(/\n$/, '') + '\n'.repeat(blanks);
   const re = new RegExp('(\\/\\*SRC:' + n + ':BEGIN\\*\\/)[\\s\\S]*?(\\/\\*SRC:' + n + ':END\\*\\/)');
   if (!re.test(html)) { missing.push(n); continue; }
-  if (CHECK) { console.log(`  ✓ ${n.padEnd(16)} ${Math.round(Buffer.byteLength(body) / 1024)}KB`); continue; }
+  if (CHECK) {
+    const cur = html.match(new RegExp('\\/\\*SRC:' + n + ':BEGIN\\*\\/([\\s\\S]*?)\\/\\*SRC:' + n + ':END\\*\\/'));
+    const actual = cur ? cur[1] : null;
+    /* 源码态占位（标记之间只有空白）：内容在 src/，HTML 侧无可比对对象 → 视为通过。
+       形状由 check-source-state.mjs 守（标记数 / 体积 / 无 base64）。
+       ⚠️ 忘了这一支会让 --check 在**源码态**（即提交进 git 的常态）对 28 个块全部误报不一致。 */
+    if (actual !== null && /^\s*$/.test(actual)) {
+      placeholderBlocks++;
+      console.log(`  ✓ ${n.padEnd(16)} ${Math.round(Buffer.byteLength(body) / 1024)}KB（源码态占位）`);
+    } else if (actual === '\n' + body + '\n') {
+      console.log(`  ✓ ${n.padEnd(16)} ${Math.round(Buffer.byteLength(body) / 1024)}KB`);
+    } else {
+      mismatched.push(n);
+      console.log(`  ✗ ${n.padEnd(16)} HTML 块内容与 src/${n}.js 不一致`);
+    }
+    continue;
+  }
   /* 必须用「函数式替换」：被拼回的源码里含 `$1`/`$&` 这类文本（如 markdown 替换逻辑 "<strong>$1</strong>"），
      用字符串替换会被 String.replace 当成捕获组引用而改坏代码（本次实测踩到，靠字节比对拦下）。 */
   html = html.replace(re, (m, g1, g2) => g1 + '\n' + body + '\n' + g2);
@@ -213,7 +237,17 @@ if (CHECK) {
     console.error(`[src-split] check ✗ 数量不一致：order.json ${names.length} 个 / src 文件 ${files.length} 个`);
     process.exit(1);
   }
-  console.log(`[src-split] check：HTML 标记 ${names.length} 个 / src 文件 ${files.length} 个 —— 齐全 ✓`);
+  if (mismatched.length) {
+    console.error(`[src-split] check ✗ ${mismatched.length} 个块的 HTML 内容与 src/ 不一致：${mismatched.join(', ')}`);
+    console.error('  说明：HTML 被直接编辑但未同步到 src/。若这些改动是要保留的，先跑');
+    console.error('        node scripts/src-split.mjs --extract   （把 HTML 的内容抽回 src/）');
+    console.error('        否则下一次注入（pretest/prebuild/pree2e 都会跑）会把它们覆盖回 src 的旧内容。');
+    process.exit(1);
+  }
+  const stateNote = placeholderBlocks === names.length
+    ? '源码态占位 · 内容在 src/，形状由 check-source-state 守'
+    : `内容逐块一致 · 已比对 ${names.length - placeholderBlocks} 块`;
+  console.log(`[src-split] check：HTML 标记 ${names.length} 个 / src 文件 ${files.length} 个 —— 齐全 ✓（${stateNote}）`);
   process.exit(0);
 }
 /* 安全：拼回前后若「非标记内容」发生改变则说明脚本有 bug → 不写盘 */

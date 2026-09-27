@@ -99,12 +99,23 @@ for (const p of ['package-lock.json', 'electron/package-lock.json']) {
   console.log(`[release] ${p} → ${newVer}（仅 version 字段）`);
 }
 
-/* 5) 自检 */
+/* 5) 自检
+   ⚠️ 必须先注入再 check：build.mjs --check 要的是**拼回态** HTML（它在文件里找
+   __TEST_GATE__ / window.__test / sanitizeHtml 这些关键标记，而源码态的块位置只剩 SRC 占位注释）。
+   平时 `npm run build:check` 有 prebuild:check 钩子负责注入，而这里是 spawn 直接调
+   build.mjs，绕过了钩子 —— 于是"源码态下发版"必然以「真相源缺少关键标记」失败，
+   且此时版本已写完、tag 未打，留下半截发版状态。 */
+for (const step of ['src-split.mjs', 'pet-art.mjs']) {
+  const inj = spawnSync(process.execPath, [join(__dirname, step)], { stdio: 'ignore' });
+  if (inj.status !== 0) fail(`${step} 注入失败，无法自检（请手动 node scripts/${step} 查看原因）`);
+}
 const r = spawnSync(process.execPath, [join(__dirname, 'build.mjs'), '--check'], { stdio: 'inherit' });
 if (r.status !== 0) fail('build:check 自检未通过，请检查上方输出');
 
 console.log(`[release] OK 已统一 bump 至 v${newVer}（BUILD_TAG=${buildTag}）`);
 console.log('[release] 提醒：请更新 CHANGELOG.md，测试通过后提交。');
+console.log('[release] 提醒：本脚本已把 HTML 留在拼回态；提交前记得 '
+  + 'node scripts/src-split.mjs --extract && node scripts/pet-art.mjs --extract（或跑一次 npm test 由 posttest 自动还原）。');
 
 /* 6) 自动打 release tag（v3.7.58 起）
    此前 53 个版本全部无 tag 可回溯（仓库仅有重构过程快照 tag）。从本版起，

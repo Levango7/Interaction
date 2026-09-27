@@ -7,7 +7,9 @@
  *   ① 429 → 退避重试（1s*(attempt+1)），默认 3 次耗尽后抛「请求过于频繁」；
  *   ② 网络错误（TypeError）→ 同款退避重试；
  *   ③ 401 → 立即失败不重试（「API Key 无效」）；
- *   ④ 成功路径透传 JSON。
+ *   ④ 成功路径透传 JSON；
+ *   ⑤ 未配置 profile/Key → 直接拒绝且一个请求都不发（v3.7.59 补，此前浏览器侧会带着空
+ *      Bearer 真打 api.openai.com）。
  * electron 侧同矩阵由 tests/electron-ipc.test.js 的 F2 用例覆盖——两侧任何一处
  * 修改重试行为都应先改本契约（及对侧用例），再同步实现。
  */
@@ -81,3 +83,48 @@ describe("AI 调用链重试契约（浏览器侧 chatOnce）", () => {
     expect(win.fetch).toHaveBeenCalledTimes(3);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * ⑤ 未配置就不发请求（v3.7.59 P0 · 隐私外泄面）
+ * 浏览器侧此前没有 electron/main.js 那句 `if(!prof || !prof.key) throw`，
+ * 于是 base 回退到硬编码 https://api.openai.com/v1、带空 Bearer 真发 POST 并重试 3 次 ——
+ * 用户一个模型都没配，系统提示（含工作记忆/技能/RAG 片段）与输入原文就已出了本机。
+ * 对侧守卫由 tests/electron-ipc.test.js「未配置（无 ai-config.enc）抛 AI 未配置」覆盖；
+ * 这里锁浏览器侧，两侧任一被改动都会红。断言的是**没发出任何请求**，不只是文案。
+ * ------------------------------------------------------------------------- */
+describe("AI 调用链 · 未配置时不得发出任何请求（浏览器侧）", () => {
+  let win;
+  /** 把 cfg 清成指定形态（走 _resetCrypto 置空内存缓存这条既定注入模式） */
+  async function setCfg(cfg) {
+    win.__test._resetCrypto();
+    win.localStorage.clear();
+    if (cfg) win.localStorage.setItem(win.__test.PREFIX + "cfg", JSON.stringify(cfg));
+    await new Promise((r) => setTimeout(r, 80));
+  }
+  beforeEach(async () => {
+    win = loadApp();
+    await new Promise((r) => setTimeout(r, 80));
+    win.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+  });
+
+  it("完全没有 cfg（没配过任何 profile）→ 抛「尚未配置」且 fetch 一次都没调", async () => {
+    await setCfg(null);
+    await expect(win.__test.chatOnce([{ role: "user", content: "我的私密待办" }]))
+      .rejects.toThrow(/尚未配置 AI 模型/);
+    expect(win.fetch).toHaveBeenCalledTimes(0);
+  });
+
+  it("有 profile 但没 Key（本地手写 cfg / Key 解密失败）→ 同样拒绝，不回退 api.openai.com", async () => {
+    await setCfg({ enabled: true, profiles: [{ id: "p1", name: "NoKey", base: "", key: "", model: "m" }], activeId: "p1" });
+    await expect(win.__test.chatOnce([{ role: "user", content: "x" }])).rejects.toThrow(/尚未配置 AI 模型/);
+    expect(win.fetch).toHaveBeenCalledTimes(0);
+  });
+
+  it("有 Key 才会真发请求（守住上一用例不是因为守卫太松而通过）", async () => {
+    await setCfg({ enabled: true, profiles: [{ id: "p1", name: "HasKey", base: "https://api.test.com/v1", key: "sk-test", model: "m" }], activeId: "p1" });
+    await win.__test.chatOnce([{ role: "user", content: "x" }]);
+    expect(win.fetch).toHaveBeenCalledTimes(1);
+    expect(String(win.fetch.mock.calls[0][0])).toContain("api.test.com");
+  });
+});
+

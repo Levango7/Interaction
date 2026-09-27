@@ -122,7 +122,7 @@
       wrap.insertAdjacentHTML("beforeend", CARET);
       wrap.classList.add("ds-select--edit");
     } else {
-      trigger.innerHTML = '<span class="ds-label"></span>' + CARET;
+      trigger.innerHTML = '<span class="ds-label"></span>' + CARET; // lint-xss-ok: CARET 是本文件顶部的 SVG 常量
       wrap.appendChild(trigger);
     }
 

@@ -162,15 +162,41 @@ function sanitizeHtml(html){
     s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
     s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*\/?\s*>/gi, "");
     // 3. 移除所有 on* 事件属性
-    s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-    // 4. 移除 href/src 的危险协议（javascript:/vbscript:/data:）——属性值先经实体解码+控制字符剥离
-    //    再判协议（_isDangerousUrlValue），封堵以实体编码或控制字符插值隐藏协议名的绕过
-    s = s.replace(/(href|src)\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, attr, _q, dq, sq){
+    //    v3.7.59：分两遍。① 常规（空白分隔）；② **斜杠分隔**——`<svg/onload=…>`、
+    //    `<img/src=x/onerror=…>` 这类写法里 `/` 在 HTML 解析器中同样充当属性分隔符
+    //    （before attribute name → after attribute name → 新属性），故浏览器照样触发事件，
+    //    而旧的 `\s+on\w+` 要求前置空白，**拦不住**。
+    //    第 ② 遍刻意限定在「标签内部」（<…>）做替换，而不是全局——避免误伤
+    //    href="https://x/one=1" 这类含 `/on…=` 的普通 URL 值。
+    //    且第 ② 遍是**引号感知**的逐字符扫描：只剥离引号外的 `/on…=`，属性值里的原样保留。
+    //    （纯正则做不到这点：`/one=` 与 `/onerror=` 的前置字符都是普通字母，无法区分。）
+    s = s.replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+    s = s.replace(/<[^>]*>/g, function (tag) {
+      let out = "", i = 0, quote = "";
+      while (i < tag.length) {
+        const ch = tag[i];
+        if (quote) { out += ch; if (ch === quote) quote = ""; i++; continue; }
+        if (ch === '"' || ch === "'") { quote = ch; out += ch; i++; continue; }
+        if (ch === "/") {
+          const mm = tag.slice(i + 1).match(/^\s*on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i);
+          if (mm) { i += 1 + mm[0].length; continue; } // 丢弃这段（斜杠充当属性分隔符的事件属性）
+        }
+        out += ch; i++;
+      }
+      return out;
+    });
+    // 4. 移除「URL 属性」里的危险协议（javascript:/vbscript:/data:）——属性值先经实体解码 +
+    //    控制字符剥离再判协议（_isDangerousUrlValue），封堵以实体编码或控制字符隐藏协议名的绕过。
+    //    v3.7.59：属性清单由 href|src 扩到 formaction/action/poster/background/dynsrc/lowsrc +
+    //    xlink:href。此前 `<button formaction="javascript:…">` 与 `<form action="javascript:…">`
+    //    都原样保留（实测见 _audit_evidence/xss-probe.mjs），点击即执行。原 6b 段（xlink:href）
+    //    随之合并到此处，不再单列。
+    s = s.replace(/(href|src|xlink:href|formaction|action|poster|background|dynsrc|lowsrc)\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, attr, _q, dq, sq){
       const val = dq !== undefined ? dq : (sq !== undefined ? sq : "");
       return _isDangerousUrlValue(val) ? attr + '=""' : m;
     });
     // 4b. 无引号情况
-    s = s.replace(/(href|src)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
+    s = s.replace(/(href|src|xlink:href|formaction|action|poster|background|dynsrc|lowsrc)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
       return _isDangerousUrlValue(val) ? attr + '=""' : m;
     });
     // 5. 移除 CSS expression() 及其编码变体（\28 / \x28 等编码括号）
@@ -182,15 +208,15 @@ function sanitizeHtml(html){
     //    SVG 内的危险内容已由步骤 1-5 消毒（script 标签、on* 事件、javascript:/data: 协议等）
     s = s.replace(/<\s*math\b[^>]*>[\s\S]*?<\s*\/\s*math\s*>/gi, "");
     s = s.replace(/<\s*math\b[^>]*\/?\s*>/gi, "");
-    // 6b. 移除 SVG 中 xlink:href 的危险协议（javascript:/vbscript:/data:），防御 <use xlink:href="javascript:..."> 载荷
-    //     与步骤 4 同口径：实体解码+控制字符剥离后判协议
-    s = s.replace(/(xlink:href)\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, attr, _q, dq, sq){
-      const val = dq !== undefined ? dq : (sq !== undefined ? sq : "");
-      return _isDangerousUrlValue(val) ? attr + '=""' : m;
-    });
-    s = s.replace(/(xlink:href)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
-      return _isDangerousUrlValue(val) ? attr + '=""' : m;
-    });
+    // 6b. （v3.7.59 已合并至步骤 4/4b 的属性清单，此处不再单列 xlink:href）
+    // 6c. 移除 SVG 动画标签 animate/animateTransform/animateMotion/set。
+    //     它们能在**运行期**把某个属性改成 javascript: —— 例如
+    //       <svg><a><animate attributeName="href" values="javascript:alert(1)"/><text>x</text></a></svg>
+    //     此时源码里根本没有 `href=` 可供步骤 4 判协议，消毒器看不见、浏览器却会执行。
+    //     实测（_audit_evidence/xss-probe.mjs）修复前 animate/set 两种写法均原样通过。
+    //     本应用的图标/图表（UI_ICONS、_dgmSvgHtml、萌宠 SVG）均不含这四个标签（全仓 0 命中），
+    //     故整体移除不影响任何现有渲染。
+    s = s.replace(/<\s*\/?\s*(animate|animateTransform|animateMotion|set)\b[^>]*>/gi, "");
     // 7. 移除其他危险标签：template/noscript/noembed/noframes
     s = s.replace(/<\s*\/?\s*(template|noscript|noembed|noframes)\b[^>]*>/gi, "");
     // 8. 防御 HTML 实体编码绕过（&#x...; / &#...; 形式的 < > " '）

@@ -41,6 +41,9 @@ jobs:
       # 覆盖率恒为 0%（vitest.config.js 已注明），该步骤既无语义又让整套测试白跑第二遍。
       # 拆分模块（docs/architecture-layers.md 步骤②~⑤）之后再加回并配 thresholds。
       - run: npm run build:check
+      # v3.7.59：npm run lint 现在含三道 —— eslint + lint-colors（硬编码色）+ lint-xss（未消毒 innerHTML）。
+      # lint-xss 是本轮审计新增的构建期门禁：此前「xss_risk」只是应用内 dev-tools 的提示规则，
+      # 从未接入构建，于是「id/color 直接拼进属性且调用点不过 sanitizeHtml」这类注入能长期存在。
       - run: npm run lint
       # v3.7.52：补齐三处「写了但没接」的门禁（此前仅本机手动跑）
       - run: npm run lint:layers

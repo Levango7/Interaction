@@ -18,7 +18,35 @@ jobs:
   # v3.7.52：发布前必须过门禁。此前 deploy 是独立工作流、与 ci.yml 无任何依赖关系，
   # push main 直接 build:prod 就发线上 —— **CI 全红也照样上线**。
   # 现在把最小必要门禁内联成前置 job（不跨工作流耦合，同时保持「发出去的产物一定过了测试」）。
+  #
+  # v3.7.59：补齐与 ci.yml 的差距。此前 verify 只跑 5 项，比 ci.yml 少
+  # check:ai-tools-doc / lint:layers / check:pwa-icons / pet:check，且**完全不跑 e2e** ——
+  # 即「CI 全绿才上线」这句只做到了一半：渲染层不变量（对比度、跨视口布局、表单等宽）
+  # 恰恰是单测覆盖不到、而 ci.yml 专门加了 e2e 来守的那一类。
+  # 现按 ci.yml 的步骤与顺序对齐；e2e 另起一个并行 job，不增加发布总时长。
   verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      # 与 ci.yml 同序：源码态/模块图/AI 工具文档三项不依赖 node_modules，先跑
+      - run: npm run check:source-state
+      - run: npm run check:modules
+      - run: npm run check:ai-tools-doc
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:check
+      - run: npm run lint
+      - run: npm run lint:layers
+      - run: npm run check:pwa-icons
+      - run: npm run pet:check
+
+  # v3.7.59：与 ci.yml 的 e2e job 对齐（同一套用例、同一 file:// 加载方式）。
+  # 与 verify 并行 → 发布总时长不增加；deploy 需两者都过。
+  e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,13 +56,13 @@ jobs:
           cache: 'npm'
       - run: npm run check:source-state
       - run: npm ci
-      - run: npm test
-      - run: npm run build:check
-      - run: npm run lint
-      - run: npm run check:modules
+      - run: npx playwright install --with-deps chromium
+      - name: Run E2E (full user flow)
+        run: npm run e2e
+        timeout-minutes: 10
 
   deploy:
-    needs: verify
+    needs: [verify, e2e]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

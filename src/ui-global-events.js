@@ -671,8 +671,14 @@ function renderAiSkillsBuiltin(){
   skills.forEach(function(s, i){
     const row = document.createElement("div");
     row.className = "set-switch";
-    row.innerHTML = '<input type="checkbox" id="aiSkill_'+i+'"'+(s.enabled?" checked":"")+" aria-label=\""+s.name+'">'+
-      "<div><div class=\"sw-label\">"+s.name+"</div><div class=\"sw-sub\">"+s.desc+"</div></div>";
+    /* v3.7.59 安全修正：s.name / s.desc 原样拼进 innerHTML —— name 还落在 aria-label="…" 属性里，
+       一个含引号的技能名即可截断属性并注入事件。数据源是 wb_agent_ai_cfg 的 skills.builtin，
+       **导入 JSON 备份 / 云同步快照都能写入任意值**，故按不可信输入处理。
+       同批核查：renderAiMcpList / renderAiWorkflowList 早已用 esc()，只有本函数与会话历史漏了。
+       这里刻意把 esc() 内联（而非先赋给中间变量）——这样构建期门禁 scripts/lint-xss.mjs
+       能直接看出该行已消毒，不必走豁免。 */
+    row.innerHTML = '<input type="checkbox" id="aiSkill_'+i+'"'+(s.enabled?" checked":"")+' aria-label="'+esc(s.name || "")+'">'+
+      "<div><div class=\"sw-label\">"+esc(s.name || "")+"</div><div class=\"sw-sub\">"+esc(s.desc || "")+"</div></div>";
     box.appendChild(row);
   });
 }
@@ -756,24 +762,12 @@ function renderAiWorkflowList(){
     };
   });
 }
-const AI_BUILTIN_PLUGINS = [
-  {name:"code_runner", desc:t("ai.pluginCodeRunner","代码执行"), enabled:false},
-  {name:"web_search", desc:t("ai.pluginWebSearch","网页搜索"), enabled:false},
-  {name:"file_reader", desc:t("ai.pluginFileReader","文件读取"), enabled:false}
-];
-function renderAiPluginList(){
-  const box = $("#aiPluginList"); if(!box) return;
-  const saved = getAiConfig("plugin");
-  const plugins = saved && Array.isArray(saved.plugins) ? saved.plugins : AI_BUILTIN_PLUGINS;
-  box.innerHTML = "";
-  plugins.forEach(function(p, i){
-    const row = document.createElement("div");
-    row.className = "set-switch";
-    row.innerHTML = '<input type="checkbox" id="aiPlugin_'+i+'"'+(p.enabled?" checked":"")+" aria-label=\""+p.name+'">'+
-      "<div><div class=\"sw-label\">"+p.name+"</div><div class=\"sw-sub\">"+p.desc+"</div></div>";
-    box.appendChild(row);
-  });
-}
+/* v3.7.59：AI_BUILTIN_PLUGINS / renderAiPluginList 已删除。
+   那 3 项（code_runner / web_search / file_reader）是"已有真实能力的假副本"——
+   web_search 与 code_run 早就是 TOOLS 里的真工具（模型直接可调），勾选它们不改变任何东西；
+   而本仓库 product-scope §四 的死 UI 规范明确写着「stub + 活 UI = 虚假功能」，
+   连它自己的文案都写着"暂无执行代码，勾选状态仅保存配置"。
+   真·插件市场是另一套（BUILTIN_PLUGINS / 概览页 store，10 个可安装插件），未受影响。 */
 function renderAiSessHistory(){
   const box = $("#aiSessHistory"); if(!box) return;
   const saved = getAiConfig("session");
@@ -789,7 +783,10 @@ function renderAiSessHistory(){
   history.slice(0, 20).forEach(function(h, i){
     const row = document.createElement("div");
     row.className = "set-switch";
-    row.innerHTML = "<div><div class=\"sw-label\">"+(h.title||(t("ai.sessPrefix","会话 ")+(i+1)))+"</div><div class=\"sw-sub\">"+(h.time||"")+"</div></div>";
+    /* v3.7.59 安全修正：h.title / h.time 原样拼进 innerHTML。会话标题取自首条用户消息或 AI 生成，
+       经导入 JSON 备份 / 云同步快照可被写成含标签的串 → 持久化 XSS（读走整个 localStorage）。
+       esc() 内联写法同上，便于构建期门禁直接识别。 */
+    row.innerHTML = "<div><div class=\"sw-label\">"+esc(h.title || (t("ai.sessPrefix","会话 ")+(i+1)))+"</div><div class=\"sw-sub\">"+esc(h.time || "")+"</div></div>";
     box.appendChild(row);
   });
 }
@@ -815,7 +812,6 @@ restoreAiSkillsCustom();
 renderAiMcpList();
 renderAiWorkflowList();
 restoreAiMemory();
-renderAiPluginList();
 restoreAiSession();
 renderAiSessHistory();
 $("#aiSkillsSave").onclick = function(){
@@ -911,23 +907,6 @@ $("#aiMemSave").onclick = function(){
     save(PREFIX + "cfg", cfg);
   }catch(_e){ /* cfg 写失败不影响 ai_config_memory 已存——注入静默保持旧态 */ }
   toast(t("ai.memoryConfigSaved","记忆配置已保存"));
-};
-$("#aiPluginSave").onclick = function(){
-  // v3.1.2 A-档：插件勾选按 name 匹配（防顺序错配）+ 同步清空提示（这 3 项是占位假插件）
-  const boxes = $$("#aiPluginList input[type=checkbox]");
-  const boxByName = new Map();
-  boxes.forEach(function(cb){
-    const nm = cb.getAttribute("aria-label") || cb.id.replace(/^aiPlugin_\d+_/, "");
-    boxByName.set(nm, cb.checked);
-  });
-  const enabled = AI_BUILTIN_PLUGINS.filter(function(p){ return boxByName.get(p.name) === true; }).map(function(p){ return p.name; });
-  saveAiConfig("plugin", {plugins: AI_BUILTIN_PLUGINS.map(function(p){ return {name:p.name,desc:p.desc,enabled: boxByName.get(p.name)===true}; })});
-  // 已知占位插件诚实提示（不假装勾选后会有能力变化）
-  if(enabled.length > 0){
-    toast(t("ai.pluginConfigSavedStub","插件配置已保存（注意：code_runner/web_search/file_reader 暂未接线执行代码，勾选状态仅保存配置）"));
-  } else {
-    toast(t("plugin.configSaved","插件配置已保存"));
-  }
 };
 $("#aiSessSave").onclick = function(){
   const sessTimeoutEl = $("#aiSessTimeout");
@@ -2026,6 +2005,10 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
     mdToHtml, escapeHtml: esc, safeUrl, inlineMd, sanitizeHtml,
+    /* v3.7.59：图表画布 SVG 生成器（render-overview 的 _dgmSvgHtml）。与 _buildCloudSnapshot
+       同理——安全相关的内部函数需要单测入口，否则「id/color 未转义」这类注入只能靠人眼守。
+       回归用例见 tests/sanitize-xss-regression.test.js。 */
+    _dgmSvgHtml, _dgmColor, _dgmNum,
     todayStr, shiftDay, esc, uid, lineChartSVG, seed, sm2,
     encryptKey, decryptKey, initCrypto, getDeviceKey,
     base64Encode, base64Decode, persistCfg, getCfg, saveCfg, _resetCrypto,
@@ -2233,7 +2216,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     runSql, loadSqlJs, bindCodeSqlCard,
     // v3.1.2：AI 页 8 子模块配置存取 + 回收站多类型 bin 通道（供测试驱动与断言；此前结构性不可测）
     getAiConfig, saveAiConfig, renderAiSkillsBuiltin, renderAiMcpList, renderAiWorkflowList,
-    renderAiPluginList, renderAiSessHistory, AI_BUILTIN_SKILLS, AI_BUILTIN_PLUGINS,
+    renderAiSessHistory, AI_BUILTIN_SKILLS,
     getRecycleBin, addToRecycleBin, restoreFromRecycleBin,
     get _dashEditMode(){ return _dashEditMode; },
     set _dashEditMode(v){ _dashEditMode = !!v; },
@@ -4594,30 +4577,16 @@ async function _aiChatText(messages){
 /* ---------- 1) AI 自动拆解复杂任务 ---------- */
 /**
  * AI 自动拆解复杂任务为 3-5 个子任务
- * v1.7-A：可选使用 agentPlan 做更智能的本地分解（通过 useLocalPlan 选项启用）
  * @param {string} taskTitle - 任务标题
  * @param {string} [scenario] - 场景键（office/code/study/life），可选
- * @param {Object} [opts] - 选项 {useLocalPlan: boolean}，可选（v1.7-A）
  * @returns {Promise<Array<{title:string,priority:string}>|null>} 子任务列表；无 AI Key 或失败返回 null
  */
-async function aiDecomposeTask(taskTitle, scenario, opts){
+async function aiDecomposeTask(taskTitle, scenario){
   const profile = getActiveProfile();
-
-  /* v1.7-A：显式启用 useLocalPlan 时，无 AI Key 降级使用 agentPlan 本地分解 */
-  if(!profile || !profile.key){
-    if(opts && opts.useLocalPlan && typeof agentPlan === "function"){
-      const steps = agentPlan(taskTitle, {scenario: scenario});
-      if(steps && steps.length){
-        return steps.map(function(s){
-          return {
-            title: (s.params && (s.params.title || s.params.task_id || s.params.query)) || s.action,
-            priority: "medium"
-          };
-        });
-      }
-    }
-    return null;
-  }
+  /* v3.7.59：这里原有 `opts.useLocalPlan → agentPlan(...)` 的本地降级分支已随 v1.7-A 死链一并移除。
+     全仓没有任何调用方传过 useLocalPlan（实测只剩定义与注释命中），
+     而 agentPlan 内部靠关键词猜工具、猜出来的步骤并不比"直接返回 null 让上层走人工拆解"更可靠。 */
+  if(!profile || !profile.key) return null;
 
   let prompt = t("p5.splitPrompt", "请将以下任务拆解为3-5个可执行的子任务，每个子任务一行，格式：子任务标题|优先级(high/medium/low)\n");
   prompt += t("p5.sceneLabel", "场景：") + (SCENARIOS[scenario] ? SCENARIOS[scenario].name : (scenario || t("p5.general", "通用"))) + "\n";
@@ -4632,18 +4601,10 @@ async function aiDecomposeTask(taskTitle, scenario, opts){
   return parseDecomposeResult(resp);
 }
 
-/**
- * v1.7-A：AI Agent 自主执行集成入口
- * 将目标交给 agentRun 自主执行（plan→execute→verify→修正）
- * @param {string} goal - 目标描述
- * @param {Object} [context] - 上下文
- * @param {number} [maxSteps] - 最大步数
- * @returns {Object} agentRun 执行结果 {goal, steps, log, success, summary}
- */
-function aiAgentAutoRun(goal, context, maxSteps){
-  if(typeof agentRun !== "function") return {goal: goal, steps: [], log: [], success: false, summary: t("p5.agentRunUnavailable", "agentRun 不可用")};
-  return agentRun(goal, context, maxSteps);
-}
+/* v3.7.59：aiAgentAutoRun 已删除 —— 它是 v1.7-A agentRun 的死包装（全仓零调用方、零测试、
+ * 也没上 __test 桥）。"AI 自主执行"现在的真实入口是命令面板的 > 前缀
+ * → ai-retry.js 的 proposeAgentPlan（先出计划）→ 用户回「确认执行」→ executeAgentPlan，
+ * 且破坏性步骤被 DANGER_CONFIRM_TOOLS 拦住。*/
 
 /**
  * 解析 AI 拆解结果文本为子任务数组（纯函数，供测试）
@@ -5965,7 +5926,6 @@ function createNote(title, content, tags, category){
   };
   notes.push(note);
   saveNotes(notes);
-  _notifyNotesChanged();
   return note;
 }
 /**
@@ -5988,7 +5948,6 @@ function updateNote(id, updates){
   }
   note.updatedAt = Date.now();
   saveNotes(notes);
-  _notifyNotesChanged();
   return true;
 }
 /**
@@ -6013,7 +5972,6 @@ function deleteNote(id){
     }catch(_){ /* 回收站写入失败不影响删除 */ }
   }
   saveNotes(filtered);
-  _notifyNotesChanged();
   return true;
 }
 /**
@@ -6439,22 +6397,12 @@ function _bindKnowledgeBaseEvents(){
   });
 }
 
-/* ---------- v1.7-A 笔记变更钩子：自动更新 RAG 索引 ----------
- * 笔记 CRUD 后调用 _notifyNotesChanged，触发 RAG 索引重建（若已存在）。
- * 53-ai-deep.js 编号 > 47，但函数声明提升使 _onNotesChanged 引用安全。
- * 设计：钩子失败不影响笔记操作；仅当索引已存在时才重建，避免无谓开销。
- */
-/**
- * 笔记变更通知：触发 RAG 索引自动更新
- * @returns {void}
- */
-function _notifyNotesChanged(){
-  try{
-    if(typeof _onNotesChanged === "function"){
-      _onNotesChanged();
-    }
-  }catch(e){ /* 钩子失败静默降级，不影响笔记操作 */ }
-}// ===== Full-Text Search (v1.6-D 知识管理) =====
+/* v3.7.59：v1.7-A 的「笔记变更钩子 → 重建 RAG 索引」已移除。
+ * 它维护的是 v1.7-A 自己的旧 TF-IDF 索引 _ragIndex（buildIndex/indexFromNotes/saveRagIndex），
+ * 而 v3.7.57 起真正被检索的是 ai-tools.js 里的 getRagDocs/ragIndexAdd 一套 —— 旧索引没有任何读取方，
+ * 所以这个挂在笔记 CRUD 上的钩子只是在刷一份死表。
+ * 真实的状态（不粉饰）：笔记改动同样要等「重建索引」才进真 RAG，任务/记录/对话历史一直如此。
+ * 若要做增量索引，应作为独立特性接到 ragIndexAdd 上，而不是留着这份空转的旧钩子。 */// ===== Full-Text Search (v1.6-D 知识管理) =====
 /* ---------- 全文搜索：跨任务 / 记录 / 笔记搜索 + 关键词高亮 ----------
  * 能力：
  *   1) searchAll(query, options)           — 跨任务/记录/笔记全文搜索
@@ -6740,1165 +6688,24 @@ async function _intNotionPullWriteback(){
 
 
 
-// ===== AI Deep Enhancement (v1.7-A AI 深度增强) =====
-/* ============================================================
- * v1.7-A AI 深度增强
- * ------------------------------------------------------------
- *  四大能力：
- *   1) AI Agent 自主执行：多步规划→执行→验证→修正循环
- *      - agentPlan / agentExecuteStep / agentVerify / agentRun / agentReflect
- *   2) 多轮对话记忆：对话上下文持久化 + 摘要压缩 + 长期记忆向量检索
- *      - saveConversation / loadConversation / listConversations
- *      - summarizeConversation / getRelevantMemory / addLongTermMemory
- *   3) RAG 知识检索：TF-IDF 索引 + 相似度检索 + 上下文增强
- *      - buildIndex / tfidfScore / ragRetrieve / ragAugment
- *      - indexFromNotes / indexFromTasks
- *   4) AI 代码审查：模式匹配 + 安全漏洞检测 + 性能优化建议
- *      - reviewCode / detectSecurityIssues / suggestOptimization / reviewScore
- *
- *  设计约定：
- *   - 使用 var 声明模块级私有状态（53 > 31，避免 TDZ）
- *   - 持久化键（带 PREFIX）：wb_conversations / wb_long_term_memory / wb_rag_index
- *   - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
- *   - 颜色用 var(--token) CSS 令牌（lint-colors 门禁）
- *   - innerHTML 赋值由调用方用 sanitizeHtml 包裹
- *   - Agent 自主执行安全：限制 maxSteps（默认 10），每步 try-catch，不无限循环
- *   - RAG 用 TF-IDF，不依赖外部向量数据库，索引存 localStorage
- *   - 代码审查用模式匹配，不依赖 AI API（本地分析）
- *   - 对话记忆摘要简单：提取最后 N 条 + 关键词，不依赖 AI
- *   - execTool / getNotes / getTasks / getActiveTasks / SCENARIOS / ORDER
- *     在更早模块定义（08/11/47/00），可直接引用
- * ============================================================ */
-
-/* ---------- 持久化键 ---------- */
-const CONVERSATIONS_KEY = "wb_conversations";
-const LONG_TERM_MEMORY_KEY = "wb_long_term_memory";
-const RAG_INDEX_KEY = "wb_rag_index";
-
-/* ---------- 模块级私有状态（var 声明，避免 TDZ） ---------- */
-let _ragIndex = null;          // RAG 索引缓存（{docs, df, N, avgLen}）
-let _agentRunLog = [];         // 最近一次 agentRun 执行日志
-
-/* ============================================================
- * 1. AI Agent 自主执行：plan → execute → verify → 修正
- * ============================================================ */
-
-/**
- * AI 规划：将目标分解为步骤列表
- * 本地启发式分解（不依赖 AI API）：按标点/连词切分目标为子步骤
- * @param {string} goal - 目标描述
- * @param {Object} [context] - 上下文（可选 {scenario, tasks, notes}）
- * @returns {Array<{action:string, params:Object, expect:string}>} 步骤列表
+// ===== v1.7-A AI 深度增强：已于 v3.7.59 整段移除（死代码清仓） =====
+/* 被删掉的是四大能力共 34 个顶层函数 + 2 个模块级状态 + 3 个持久化键：
+ *   1) agentPlan / agentExecuteStep / agentVerify / agentReflect / agentRun（关键词猜工具的本地规划）
+ *   2) saveConversation / loadConversation / listConversations / summarizeConversation
+ *      / getRelevantMemory / addLongTermMemory（含 _textToVector/_cosineSimilarity 这套词袋假向量）
+ *   3) buildIndex / tfidfScore / ragRetrieve / ragAugment / indexFromNotes / indexFromTasks
+ *      / saveRagIndex / loadRagIndex（v1.7-A 自己的 TF-IDF 索引，v3.7.57 起已无任何读取方）
+ *   4) reviewCode / detectSecurityIssues / suggestOptimization / reviewScore（本地模式匹配冒充 AI 审查）
+ * 判据不是看着没用，而是 reach4 --contain 实测「区间外引用 0 处」：
+ * 无 UI 入口、无测试引用、也没上 __test 导出桥。曾指向它们的两处活代码一并处理：
+ *   - aiDecomposeTask 的 opts.useLocalPlan 分支（全仓没有任何调用方传该选项）
+ *   - 笔记变更钩子 _notifyNotesChanged / _onNotesChanged（在刷一份没人读的旧索引）
+ * 替代关系：AI 自主执行 = 命令面板 > 前缀 → proposeAgentPlan 先出计划 → 用户回「确认执行」
+ *   → executeAgentPlan（破坏性步骤被 DANGER_CONFIRM_TOOLS 拦下）；
+ *   语义检索 = ai-tools.js 的 ragSearch / getRagDocs（CJK 二元组 BM25 + provider 向量 + RRF）。
+ * 要考古就从 git 历史取回（本提交的上一版）。孤儿 i18n 键保留：按仓库口径未使用不判红。
  */
-function agentPlan(goal, context){
-  const g = String(goal || "").trim();
-  if(!g) return [];
-  context = context || {};
 
-  /* 启发式 1：目标含「然后」「接着」「再」「，」等连接词 → 按连接词切分 */
-  const sepRe = /然后|接着|再|之后|，|;|；|。\s*/g;
-  const parts = g.split(sepRe).map(function(s){ return s.trim(); }).filter(Boolean);
-
-  /* 启发式 2：识别常见动作关键词，映射到 execTool 工具 */
-  let steps = parts.map(function(p){
-    return _planStepFromText(p, context);
-  });
-
-  /* 若切分后只有 1 步，尝试按动词关键词再分解 */
-  if(steps.length <= 1){
-    const verbRe = /(创建|新增|添加|完成|删除|更新|查询|搜索|列出|查看|导出|规划|分析|检查|执行)/g;
-    const verbs = g.match(verbRe) || [];
-    if(verbs.length > 1){
-      /* 按动词位置切分 */
-      const chunks = [];
-      let lastIdx = 0;
-      for(let i = 1; i < verbs.length; i++){
-        const idx = g.indexOf(verbs[i], lastIdx + 1);
-        if(idx > lastIdx){
-          chunks.push(g.slice(lastIdx, idx).trim());
-          lastIdx = idx;
-        }
-      }
-      chunks.push(g.slice(lastIdx).trim());
-      steps = chunks.filter(Boolean).map(function(p){ return _planStepFromText(p, context); });
-    }
-  }
-
-  /* 兜底：若仍无步骤，整体作为一个步骤 */
-  if(!steps.length){
-    steps = [_planStepFromText(g, context)];
-  }
-
-  /* 限制最多 8 步，防止过度分解 */
-  return steps.slice(0, 8);
-}
-
-/**
- * 从单段文本推断步骤（动作 + 参数 + 预期）
- * @param {string} text - 步骤文本
- * @param {Object} context - 上下文
- * @returns {{action:string, params:Object, expect:string}}
- */
-function _planStepFromText(text, context){
-  const textStr = String(text || "").trim();
-  let action = "noop";
-  const params = {};
-  let expect = "执行成功";
-
-  /* 创建任务 */
-  if(/创建|新增|添加|建一个|新建/.test(textStr)){
-    action = "create_task";
-    params.title = textStr.replace(/^(请)?\s*(创建|新增|添加|建一个|新建)/, "").replace(/(任务|待办)?$/, "").trim() || textStr;
-    if(context.scenario) params.scenario = context.scenario;
-    expect = "任务已创建";
-  }
-  /* 完成任务 */
-  else if(/完成|标记完成|标记为完成|做完/.test(textStr)){
-    action = "complete_task";
-    const m = textStr.match(/["「『]([^"」』]+)["」』]/);
-    params.task_id = m ? m[1] : textStr.replace(/^(请)?\s*(完成|标记完成|标记为完成|做完)/, "").trim();
-    expect = "任务已完成";
-  }
-  /* 删除任务 */
-  else if(/删除|移除|去掉/.test(textStr)){
-    action = "delete_task";
-    const m2 = textStr.match(/["「『]([^"」』]+)["」』]/);
-    params.task_id = m2 ? m2[1] : textStr.replace(/^(请)?\s*(删除|移除|去掉)/, "").trim();
-    expect = "任务已删除";
-  }
-  /* 查询/列出 */
-  else if(/查询|列出|查看|显示|列出所有|列表/.test(textStr)){
-    action = "list_tasks";
-    if(context.scenario) params.scenario = context.scenario;
-    expect = "返回任务列表";
-  }
-  /* 搜索 */
-  else if(/搜索|查找|找/.test(textStr)){
-    action = "search";
-    params.query = textStr.replace(/^(请)?\s*(搜索|查找|找)/, "").trim() || textStr;
-    expect = "返回搜索结果";
-  }
-  /* 概览 */
-  else if(/概览|统计|总览|overview/.test(textStr)){
-    action = "query_overview";
-    expect = "返回概览统计";
-  }
-  /* 导出 */
-  else if(/导出|备份|export/.test(textStr)){
-    action = "export_data";
-    expect = "已触发导出";
-  }
-  /* 默认：noop，仅记录文本 */
-  else {
-    action = "noop";
-    params.text = textStr;
-    expect = "已记录";
-  }
-
-  return {action: action, params: params, expect: expect};
-}
-
-/**
- * 执行单步：调用 execTool 或其他工具
- * @param {{action:string, params:Object, expect:string}} step - 步骤
- * @param {Object} [context] - 上下文
- * @returns {{ok:boolean, result:*, raw:string}} 执行结果
- */
-function agentExecuteStep(step, context){
-  context = context || {};
-  if(!step || !step.action){
-    return {ok: false, result: null, raw: JSON.stringify({ok: false, msg: t("agent.invalidStep","步骤无效")})};
-  }
-  /* noop：仅记录，不调用工具 */
-  if(step.action === "noop"){
-    return {ok: true, result: {msg: "noop", text: step.params && step.params.text}, raw: JSON.stringify({ok: true, msg: "noop"})};
-  }
-  try{
-    const raw = execTool(step.action, step.params || {}, true);
-    let parsed = null;
-    try{ parsed = JSON.parse(raw); }catch(e){ parsed = raw; }
-    const ok = parsed && typeof parsed === "object" && parsed.ok === true;
-    return {ok: ok, result: parsed, raw: raw};
-  }catch(e){
-    return {ok: false, result: null, raw: JSON.stringify({ok: false, error: String(e)})};
-  }
-}
-
-/**
- * 验证结果是否符合预期
- * @param {*} result - 执行结果（agentExecuteStep 的返回值或解析后的对象）
- * @param {string} [expect] - 预期描述
- * @returns {{verified:boolean, reason:string}} 验证结果
- */
-function agentVerify(result, expect){
-  /* result 可能是 agentExecuteStep 的返回 {ok, result, raw}，也可能是直接的对象 */
-  let ok = false;
-  if(result && typeof result === "object"){
-    if(typeof result.ok === "boolean"){
-      ok = result.ok;
-    } else if(result.result && typeof result.result === "object" && typeof result.result.ok === "boolean"){
-      ok = result.result.ok;
-    }
-  }
-  const exp = String(expect || "").trim();
-  let reason = ok ? t("p5.execSuccess", "执行成功") : t("p5.execFail", "执行失败");
-  /* 若预期包含「失败」字样，则 ok=false 才算验证通过（用于负向验证） */
-  if(exp && /失败|不|无/.test(exp) && !ok){
-    reason = t("p5.negMatch", "符合预期（负向验证）");
-    return {verified: true, reason: reason};
-  }
-  return {verified: ok, reason: reason};
-}
-
-/**
- * 反思失败原因，生成修正方案
- * @param {{action:string, params:Object, expect:string}} failedStep - 失败的步骤
- * @param {string|Error} error - 错误信息
- * @param {Object} [context] - 上下文
- * @returns {{action:string, params:Object, expect:string, reason:string}} 修正后的步骤
- */
-function agentReflect(failedStep, error, context){
-  context = context || {};
-  const err = String(error && error.message ? error.message : error || t("tool.unknownErrorMsg", "未知错误"));
-  const step = failedStep || {action: "noop", params: {}, expect: ""};
-  const reason = t("p5.reflect", "反思：") + err;
-
-  /* 反思策略 1：create_task 失败 → 简化标题重试 */
-  if(step.action === "create_task"){
-    const title = (step.params && step.params.title) || "";
-    if(title.length > 50){
-      return {
-        action: "create_task",
-        params: Object.assign({}, step.params, {title: title.slice(0, 50)}),
-        expect: step.expect,
-        reason: reason + t("p5.titleTooLong", "；标题过长，已截断重试")
-      };
-    }
-    if(!title.trim()){
-      return {
-        action: "create_task",
-        params: Object.assign({}, step.params, {title: t("p5.unnamedTask", "未命名任务")}),
-        expect: step.expect,
-        reason: reason + t("p5.titleEmpty", "；标题为空，使用默认标题重试")
-      };
-    }
-  }
-
-  /* 反思策略 2：complete_task / delete_task 失败 → task_id 可能是标题片段，原样重试一次 */
-  if(step.action === "complete_task" || step.action === "delete_task" || step.action === "update_task"){
-    return {
-      action: step.action,
-      params: step.params,
-      expect: step.expect,
-      reason: reason + t("p5.taskNotFound", "；任务定位失败，建议检查任务 id 或标题")
-    };
-  }
-
-  /* 反思策略 3：未知工具 → 降级为 noop */
-  if(/未知工具/.test(err)){
-    return {
-      action: "noop",
-      params: {text: JSON.stringify(step)},
-      expect: t("agent.recorded","已记录"),
-      reason: reason + t("p5.unknownTool", "；未知工具，降级为 noop")
-    };
-  }
-
-  /* 默认：原样重试 */
-  return {
-    action: step.action,
-    params: step.params,
-    expect: step.expect,
-    reason: reason
-  };
-}
-
-/**
- * 自主执行循环：plan → execute → verify → 修正，最多 maxSteps 步
- * @param {string} goal - 目标描述
- * @param {Object} [context] - 上下文
- * @param {number} [maxSteps] - 最大步数（默认 10，上限 20）
- * @returns {{goal:string, steps:Array, log:Array, success:boolean, summary:string}} 执行结果
- */
-function agentRun(goal, context, maxSteps){
-  const g = String(goal || "").trim();
-  context = context || {};
-  const max = Math.min(20, Math.max(1, Number(maxSteps) || 10));
-
-  if(!g){
-    _agentRunLog = [];
-    return {goal: "", steps: [], log: [], success: false, summary: t("p5.goalEmpty", "目标为空")};
-  }
-
-  const plan = agentPlan(g, context);
-  const log = [];
-  let stepIdx = 0;
-  let successCount = 0;
-  let failCount = 0;
-  let retryCount = 0;
-  const maxRetries = 2;  /* 每步最多重试 2 次 */
-
-  while(stepIdx < plan.length && log.length < max){
-    let step = plan[stepIdx];
-    let attempt = 0;
-    let lastResult = null;
-    let verified = false;
-    let reflection = null;
-
-    while(attempt <= maxRetries && log.length < max){
-      lastResult = agentExecuteStep(step, context);
-      const v = agentVerify(lastResult, step.expect);
-      verified = v.verified;
-      if(verified) break;
-
-      /* 失败：反思并修正 */
-      const err = (lastResult && lastResult.raw) || v.reason;
-      reflection = agentReflect(step, err, context);
-      attempt++;
-      retryCount++;
-      if(reflection && reflection.action && reflection.action !== step.action){
-        step = reflection;  /* 应用修正方案 */
-      } else if(reflection && reflection.action === step.action){
-        step = reflection;  /* 同动作，参数可能已修正 */
-      }
-    }
-
-    log.push({
-      step: step,
-      result: lastResult,
-      verified: verified,
-      reflection: reflection,
-      attempts: attempt + 1
-    });
-    if(verified) successCount++; else failCount++;
-    stepIdx++;
-  }
-
-  _agentRunLog = log;
-  const success = failCount === 0 && successCount > 0;
-  const summary = t("p5.goalPrefix", "目标「") + g + t("p5.goalMid", "」执行完成：") + successCount + t("p5.goalSuccess", " 步成功，") + failCount + t("p5.goalFail", " 步失败，") + retryCount + t("p5.goalRetry", " 次重试");
-
-  return {
-    goal: g,
-    steps: plan,
-    log: log,
-    success: success,
-    summary: summary
-  };
-}
-
-/* ============================================================
- * 2. 多轮对话记忆：持久化 + 摘要压缩 + 长期记忆向量检索
- * ============================================================ */
-
-/**
- * 持久化对话到 localStorage
- * @param {Object} conv - 对话对象 {id, title, messages, summary, createdAt}
- * @returns {boolean} 是否保存成功
- */
-function saveConversation(conv){
-  if(!conv || typeof conv !== "object") return false;
-  try{
-    const all = _loadAllConversations();
-    const c = {
-      id: conv.id || ("conv_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6)),
-      title: conv.title || (conv.messages && conv.messages.length ? String(conv.messages[0].content || "").slice(0, 30) : t("chat.newConversation","新对话")),
-      messages: Array.isArray(conv.messages) ? conv.messages : [],
-      summary: conv.summary || "",
-      createdAt: conv.createdAt || Date.now(),
-      updatedAt: Date.now()
-    };
-    /* 找到并替换或新增 */
-    let found = false;
-    for(let i = 0; i < all.length; i++){
-      if(all[i].id === c.id){ all[i] = c; found = true; break; }
-    }
-    if(!found) all.push(c);
-    return save(PREFIX + CONVERSATIONS_KEY, all); // v3.4.7 批次三（G5）：收编进 save() 主入口
-  }catch(e){ return false; }
-}
-
-/**
- * 加载对话
- * @param {string} id - 对话 ID
- * @returns {Object|null} 对话对象或 null
- */
-function loadConversation(id){
-  if(!id) return null;
-  const all = _loadAllConversations();
-  for(let i = 0; i < all.length; i++){
-    if(all[i].id === id) return all[i];
-  }
-  return null;
-}
-
-/**
- * 列出所有对话
- * @returns {Array<Object>} 对话列表（按 updatedAt 降序）
- */
-function listConversations(){
-  const all = _loadAllConversations();
-  return all.sort(function(a, b){
-    return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
-  });
-}
-
-/**
- * 摘要压缩：提取关键信息，压缩旧消息
- * 策略：保留最后 N 条原文 + 提取前 N 条的关键句 + 关键词云
- * @param {Array<{role:string, content:string, timestamp:number}>} messages - 消息列表
- * @param {number} [keepLast] - 保留最后几条原文（默认 4）
- * @returns {{summary:string, kept:Array, keywords:string[]}} 摘要结果
- */
-function summarizeConversation(messages, keepLast){
-  if(!Array.isArray(messages)) return {summary: "", kept: [], keywords: []};
-  const n = Math.max(1, Number(keepLast) || 4);
-  const msgs = messages.filter(function(m){ return m && m.content; });
-
-  if(msgs.length <= n){
-    return {
-      summary: msgs.map(function(m){ return (m.role || "?") + ": " + String(m.content).slice(0, 80); }).join(" | "),
-      kept: msgs.slice(),
-      keywords: _extractKeywords(msgs.map(function(m){ return m.content; }).join(" "))
-    };
-  }
-
-  const head = msgs.slice(0, msgs.length - n);
-  const tail = msgs.slice(msgs.length - n);
-
-  /* 提取 head 的关键句（每条取首句） */
-  const headSummary = head.map(function(m){
-    const c = String(m.content);
-    const firstSentence = c.split(/[。！？!?.\n]/)[0] || c;
-    return (m.role || "?") + ": " + firstSentence.slice(0, 60);
-  }).join(" | ");
-
-  const keywords = _extractKeywords(msgs.map(function(m){ return m.content; }).join(" "));
-  const summary = t("p5.historyPrefix", "【历史摘要】") + headSummary + t("p5.historyMid", "（共 ") + head.length + t("p5.historySuffix", " 条已压缩）");
-
-  return {summary: summary, kept: tail, keywords: keywords};
-}
-
-/**
- * 检索相关长期记忆（简单向量相似度：词袋 + 余弦）
- * @param {string} query - 查询文本
- * @param {number} [topK] - 返回前 K 条（默认 5）
- * @returns {Array<{memory:Object, score:number}>} 相关记忆列表
- */
-function getRelevantMemory(query, topK){
-  const q = String(query || "").trim();
-  if(!q) return [];
-  const k = Math.max(1, Number(topK) || 5);
-  const all = _loadAllLongTermMemory();
-  if(!all.length) return [];
-
-  const qVec = _textToVector(q);
-  const scored = all.map(function(m){
-    const mVec = _textToVector(m.content || "");
-    const score = _cosineSimilarity(qVec, mVec);
-    return {memory: m, score: score};
-  });
-  scored.sort(function(a, b){ return b.score - a.score; });
-  return scored.slice(0, k).filter(function(x){ return x.score > 0; });
-}
-
-/**
- * 添加长期记忆
- * @param {string} content - 记忆内容
- * @param {Object} [metadata] - 元数据 {type, tags, source, ...}
- * @returns {Object|null} 添加后的记忆对象，失败返回 null
- */
-function addLongTermMemory(content, metadata){
-  const c = String(content || "").trim();
-  if(!c) return null;
-  try{
-    let all = _loadAllLongTermMemory();
-    const m = {
-      id: "mem_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
-      content: c,
-      metadata: metadata || {},
-      vector: _textToVector(c),
-      createdAt: Date.now()
-    };
-    all.push(m);
-    /* 限制最多 500 条长期记忆，超出删除最早的 */
-    if(all.length > 500) all = all.slice(all.length - 500);
-    localStorage.setItem(PREFIX + LONG_TERM_MEMORY_KEY, JSON.stringify(all));
-    return m;
-  }catch(e){ return null; }
-}
-
-/* ---------- 对话记忆内部辅助 ---------- */
-function _loadAllConversations(){
-  try{
-    const raw = localStorage.getItem(PREFIX + CONVERSATIONS_KEY);
-    if(!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  }catch(e){ return []; }
-}
-
-function _loadAllLongTermMemory(){
-  try{
-    const raw = localStorage.getItem(PREFIX + LONG_TERM_MEMORY_KEY);
-    if(!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  }catch(e){ return []; }
-}
-
-/**
- * 提取关键词（简单词频统计，取 top 10）
- * @param {string} text - 文本
- * @returns {string[]} 关键词列表
- */
-function _extractKeywords(text){
-  const textStr = String(text || "");
-  if(!textStr) return [];
-  /* 中文分词简化：按标点和空格切分，过滤停用词和短词 */
-  const stopWords = {"的":1, "了":1, "是":1, "在":1, "我":1, "你":1, "他":1, "她":1, "它":1, "这":1, "那":1, "和":1, "与":1, "或":1, "及":1, "也":1, "都":1, "就":1, "不":1, "没":1, "有":1, "要":1, "会":1, "能":1, "可以":1, "请":1, "把":1, "被":1, "对":1, "为":1, "上":1, "下":1, "中":1, "里":1, "外":1, "前":1, "后":1};
-  const tokens = textStr.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>]+/).filter(Boolean);
-  const freq = {};
-  for(let i = 0; i < tokens.length; i++){
-    const w = tokens[i];
-    if(w.length < 2) continue;
-    if(stopWords[w]) continue;
-    freq[w] = (freq[w] || 0) + 1;
-  }
-  return Object.keys(freq).sort(function(a, b){ return freq[b] - freq[a]; }).slice(0, 10);
-}
-
-/**
- * 文本转向量（词袋模型：词频）
- * 中文按字切分，英文按空格/标点切分，提升中文检索效果
- * @param {string} text - 文本
- * @returns {Object<string, number>} 词频向量
- */
-function _textToVector(text){
-  const textStr = String(text || "").toLowerCase();
-  if(!textStr) return {};
-  const vec = {};
-  /* 英文按空格/标点切分 */
-  const parts = textStr.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>0-9]+/);
-  for(let i = 0; i < parts.length; i++){
-    const p = parts[i];
-    if(!p) continue;
-    if(/^[a-z_]+$/.test(p)){
-      /* 英文词 */
-      if(p.length >= 2) vec[p] = (vec[p] || 0) + 1;
-      continue;
-    }
-    /* 中文按字切分 */
-    for(let j = 0; j < p.length; j++){
-      const ch = p.charAt(j);
-      if(/[\u4e00-\u9fa5]/.test(ch)) vec[ch] = (vec[ch] || 0) + 1;
-    }
-  }
-  return vec;
-}
-
-/**
- * 余弦相似度
- * @param {Object<string, number>} a - 向量 A
- * @param {Object<string, number>} b - 向量 B
- * @returns {number} 相似度 [0, 1]
- */
-function _cosineSimilarity(a, b){
-  if(!a || !b) return 0;
-  const keys = Object.keys(a);
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for(let i = 0; i < keys.length; i++){
-    const k = keys[i];
-    normA += a[k] * a[k];
-    if(b[k] !== undefined) dot += a[k] * b[k];
-  }
-  const bKeys = Object.keys(b);
-  for(let j = 0; j < bKeys.length; j++){
-    normB += b[bKeys[j]] * b[bKeys[j]];
-  }
-  if(normA === 0 || normB === 0) return 0;
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-/* ============================================================
- * 3. RAG 知识检索：TF-IDF 索引 + 相似度检索 + 上下文增强
- * ============================================================ */
-
-/**
- * 构建 TF-IDF 索引
- * @param {Array<{id:string, content:string, type:string, metadata:Object}>} documents - 文档列表
- * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
- */
-function buildIndex(documents){
-  const docs = Array.isArray(documents) ? documents.filter(function(d){
-    return d && d.content && String(d.content).trim();
-  }) : [];
-
-  /* 文档频率（DF）：每个词在多少篇文档中出现 */
-  const df = {};
-  let totalLen = 0;
-  for(let i = 0; i < docs.length; i++){
-    const tokens = _tokenize(docs[i].content);
-    const seen = {};
-    for(let j = 0; j < tokens.length; j++){
-      const w = tokens[j];
-      seen[w] = true;
-    }
-    const keys = Object.keys(seen);
-    for(let k = 0; k < keys.length; k++){
-      df[keys[k]] = (df[keys[k]] || 0) + 1;
-    }
-    totalLen += tokens.length;
-    /* 缓存 token 频次到文档上，避免重复计算 */
-    docs[i]._tf = _termFreq(tokens);
-    docs[i]._len = tokens.length;
-  }
-
-  const N = docs.length;
-  const avgLen = N > 0 ? totalLen / N : 0;
-
-  const index = {docs: docs, df: df, N: N, avgLen: avgLen};
-  _ragIndex = index;
-  return index;
-}
-
-/**
- * 计算 TF-IDF 分数（query 对 doc）
- * @param {string} query - 查询文本
- * @param {Object} doc - 文档对象（含 _tf 缓存）
- * @param {Object} [index] - 索引对象（默认用 _ragIndex）
- * @returns {number} TF-IDF 分数
- */
-function tfidfScore(query, doc, index){
-  const idx = index || _ragIndex;
-  if(!idx || !doc) return 0;
-  const qTokens = _tokenize(query);
-  if(!qTokens.length) return 0;
-
-  const tf = doc._tf || _termFreq(_tokenize(doc.content));
-  const df = idx.df || {};
-  const N = idx.N || 1;
-  let score = 0;
-
-  /* query 中每个词的 TF-IDF 累加 */
-  const qFreq = {};
-  for(let i = 0; i < qTokens.length; i++){
-    qFreq[qTokens[i]] = (qFreq[qTokens[i]] || 0) + 1;
-  }
-
-  const keys = Object.keys(qFreq);
-  for(let k = 0; k < keys.length; k++){
-    const w = keys[k];
-    if(tf[w] === undefined) continue;
-    const qTf = qFreq[w] / qTokens.length;
-    const dTf = tf[w] / (doc._len || Object.keys(tf).length || 1);
-    const dFreq = df[w] || 0;
-    if(dFreq === 0) continue;
-    const idf = Math.log(1 + N / dFreq);
-    score += qTf * dTf * idf;
-  }
-
-  return score;
-}
-
-/**
- * 检索最相关的 K 篇文档
- * @param {string} query - 查询文本
- * @param {number} [topK] - 返回前 K 篇（默认 5）
- * @returns {Array<{doc:Object, score:number}>} 相关文档列表
- */
-function ragRetrieve(query, topK){
-  const q = String(query || "").trim();
-  if(!q) return [];
-  const k = Math.max(1, Number(topK) || 5);
-  const idx = _ragIndex;
-  if(!idx || !idx.docs || !idx.docs.length) return [];
-
-  const scored = idx.docs.map(function(doc){
-    return {doc: doc, score: tfidfScore(q, doc, idx)};
-  });
-  scored.sort(function(a, b){ return b.score - a.score; });
-  return scored.slice(0, k).filter(function(x){ return x.score > 0; });
-}
-
-/**
- * 用检索结果增强 AI 上下文（拼接相关内容到 prompt）
- * @param {string} query - 原始查询
- * @param {Array<{doc:Object, score:number}>} retrievedDocs - 检索结果
- * @returns {string} 增强后的 prompt
- */
-function ragAugment(query, retrievedDocs){
-  const q = String(query || "");
-  const docs = Array.isArray(retrievedDocs) ? retrievedDocs : [];
-  if(!docs.length) return q;
-
-  const contextParts = docs.map(function(item, i){
-    const d = item.doc || {};
-    const content = String(d.content || "").slice(0, 200);
-    const type = d.type || t("p5.doc", "文档");
-    const meta = d.metadata ? " " + JSON.stringify(d.metadata) : "";
-    return "[" + (i + 1) + "] (" + type + meta + ") " + content;
-  });
-
-  return t("p5.knowledgePrefix", "【相关知识】\n") + contextParts.join("\n") + t("p5.userQuestionPrefix", "\n\n【用户问题】\n") + q;
-}
-
-/**
- * 从笔记系统构建索引
- * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
- */
-function indexFromNotes(){
-  const notes = (typeof getNotes === "function") ? getNotes() : [];
-  const docs = notes.map(function(n){
-    return {
-      id: n.id,
-      content: (n.title || "") + " " + (n.content || "") + " " + ((n.tags || []).join(" ")),
-      type: "note",
-      metadata: {title: n.title, category: n.category, tags: n.tags}
-    };
-  });
-  return buildIndex(docs);
-}
-
-/**
- * 从任务记录构建索引
- * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
- */
-function indexFromTasks(){
-  const tasks = (typeof getActiveTasks === "function") ? getActiveTasks() : [];
-  const docs = tasks.map(function(t){
-    return {
-      id: t.id,
-      content: (t.title || "") + " " + (t.note || "") + " " + ((t.tags || []).join(" ")),
-      type: "task",
-      metadata: {title: t.title, scenario: t.sc, status: t.status, priority: t.priority}
-    };
-  });
-  return buildIndex(docs);
-}
-
-/**
- * 持久化 RAG 索引到 localStorage
- * @param {Object} [index] - 索引对象（默认用 _ragIndex）
- * @returns {boolean} 是否保存成功
- */
-function saveRagIndex(index){
-  const idx = index || _ragIndex;
-  if(!idx) return false;
-  try{
-    /* 剥离 _tf / _len 等内部缓存，只持久化必要字段 */
-    const docs = (idx.docs || []).map(function(d){
-      return {
-        id: d.id,
-        content: d.content,
-        type: d.type,
-        metadata: d.metadata,
-        _tf: d._tf,
-        _len: d._len
-      };
-    });
-    const serializable = {docs: docs, df: idx.df, N: idx.N, avgLen: idx.avgLen};
-    localStorage.setItem(PREFIX + RAG_INDEX_KEY, JSON.stringify(serializable));
-    return true;
-  }catch(e){ return false; }
-}
-
-/**
- * 从 localStorage 加载 RAG 索引
- * @returns {Object|null} 索引对象或 null
- */
-function loadRagIndex(){
-  try{
-    const raw = localStorage.getItem(PREFIX + RAG_INDEX_KEY);
-    if(!raw) return null;
-    const parsed = JSON.parse(raw);
-    if(!parsed || !Array.isArray(parsed.docs)) return null;
-    _ragIndex = parsed;
-    return parsed;
-  }catch(e){ return null; }
-}
-
-/* ---------- RAG 内部辅助 ---------- */
-/**
- * 分词（中英文混合：英文按空格/标点，中文按字）
- * @param {string} text - 文本
- * @returns {string[]} 词列表
- */
-function _tokenize(text){
-  const textStr = String(text || "").toLowerCase();
-  if(!textStr) return [];
-  /* 简化分词：英文按空格/标点切分，中文按字切分 */
-  const tokens = [];
-  const parts = textStr.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>0-9]+/);
-  for(let i = 0; i < parts.length; i++){
-    const p = parts[i];
-    if(!p) continue;
-    /* 英文词直接加入 */
-    if(/^[a-z_]+$/.test(p)){
-      if(p.length >= 2) tokens.push(p);
-      continue;
-    }
-    /* 中文按字切分（简化） */
-    for(let j = 0; j < p.length; j++){
-      const ch = p.charAt(j);
-      if(/[\u4e00-\u9fa5]/.test(ch)) tokens.push(ch);
-    }
-  }
-  return tokens;
-}
-
-/**
- * 词频统计
- * @param {string[]} tokens - 词列表
- * @returns {Object<string, number>} 词频映射
- */
-function _termFreq(tokens){
-  const freq = {};
-  for(let i = 0; i < tokens.length; i++){
-    const w = tokens[i];
-    freq[w] = (freq[w] || 0) + 1;
-  }
-  return freq;
-}
-
-/* ============================================================
- * 4. AI 代码审查：模式匹配 + 安全漏洞检测 + 性能优化建议
- * ============================================================ */
-
-/**
- * AI 审查代码片段（本地分析，不依赖 AI API）
- * @param {string} code - 代码片段
- * @param {string} [language] - 编程语言（默认 javascript）
- * @param {Object} [context] - 上下文（可选）
- * @returns {{issues:Array, score:number, summary:string}} 审查结果
- */
-function reviewCode(code, language, context){
-  const c = String(code || "");
-  const lang = String(language || "javascript").toLowerCase();
-  if(!c.trim()){
-    return {issues: [], score: 100, summary: t("p5.codeEmpty", "代码为空")};
-  }
-
-  const issues = [];
-
-  /* 安全漏洞检测 */
-  const secIssues = detectSecurityIssues(c);
-  for(let i = 0; i < secIssues.length; i++){
-    secIssues[i].category = "security";
-    issues.push(secIssues[i]);
-  }
-
-  /* 性能优化建议 */
-  const perfIssues = suggestOptimization(c);
-  for(let j = 0; j < perfIssues.length; j++){
-    perfIssues[j].category = "performance";
-    issues.push(perfIssues[j]);
-  }
-
-  /* 代码风格/质量检测（语言相关） */
-  const styleIssues = _detectStyleIssues(c, lang);
-  for(let k = 0; k < styleIssues.length; k++){
-    styleIssues[k].category = "style";
-    issues.push(styleIssues[k]);
-  }
-
-  const score = reviewScore(issues);
-  const summary = _buildReviewSummary(issues, score, c);
-
-  return {issues: issues, score: score, summary: summary};
-}
-
-/**
- * 安全漏洞检测（模式匹配）
- * @param {string} code - 代码片段
- * @returns {Array<{type:string, severity:string, line:number, message:string, suggestion:string}>} 问题列表
- */
-function detectSecurityIssues(code){
-  const c = String(code || "");
-  const lines = c.split("\n");
-  const issues = [];
-
-  /* 检测模式列表 */
-  const patterns = [
-    /* 硬编码密钥/密码 */
-    {re: /(?:api[_-]?key|apikey|secret|password|passwd|pwd|token|access[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/i,
-     type: "hardcoded_secret", severity: "high",
-     msg: t("lint.hardcoded_secret.msg","疑似硬编码密钥/密码"), sug: t("lint.hardcoded_secret.sug","使用环境变量或配置文件管理敏感信息")},
-    /* SQL 注入（字符串拼接：execute 调用参数中含 + 或 ${ 且含 SQL 关键词） */
-    {re: /(?:execute|query|exec)\s*\(\s*[^)]*(?:select|insert|update|delete|drop|where)\b[^)]*(?:\+|\$\{)/i,
-     type: "sql_injection", severity: "high",
-     msg: t("lint.sql_injection.msg","疑似 SQL 注入（字符串拼接）"), sug: t("lint.sql_injection.sug","使用参数化查询或预编译语句")},
-    /* eval 使用 */
-    {re: /\beval\s*\(/,
-     type: "eval_usage", severity: "high",
-     msg: t("lint.eval_usage.msg","使用 eval() 可能导致代码注入"), sug: t("lint.eval_usage.sug","避免使用 eval，改用 JSON.parse 或 Function 构造器")},
-    /* innerHTML 赋值（XSS 风险） */
-    {re: /\.innerHTML\s*=\s*[^;]*[a-zA-Z_$]/,
-     type: "xss_risk", severity: "medium",
-     msg: t("lint.xss_risk.msg","直接赋值 innerHTML 可能存在 XSS 风险"), sug: t("lint.xss_risk.sug","使用 sanitizeHtml 包裹或 textContent")},
-    /* document.write */
-    {re: /document\.write\s*\(/,
-     type: "document_write", severity: "medium",
-     msg: t("lint.document_write.msg","使用 document.write 可能导致 XSS"), sug: t("lint.document_write.sug","使用 DOM API 或 innerHTML（已消毒）")},
-    /* 命令注入（child_process exec 字符串拼接） */
-    {re: /(?:exec|execSync|spawn)\s*\(\s*["'`].*(?:\+|\$\{)/,
-     type: "command_injection", severity: "high",
-     msg: t("lint.command_injection.msg","疑似命令注入（字符串拼接）"), sug: t("lint.command_injection.sug","使用 execFile 或传入参数数组")},
-    /* 危险的正则表达式（ReDoS） */
-    {re: /new RegExp\s*\(\s*["'`].*(?:\([^)]*\+\)|\([^)]*\*\))/,
-     type: "redos_risk", severity: "medium",
-     msg: t("lint.redos_risk.msg","疑似 ReDoS 风险的正则表达式"), sug: t("lint.redos_risk.sug","简化正则或使用安全正则库")},
-    /* http 明文传输 */
-    {re: /http:\/\/(?!localhost|127\.0\.0\.1)/,
-     type: "insecure_http", severity: "low",
-     msg: t("lint.insecure_http.msg","使用明文 HTTP 传输"), sug: t("lint.insecure_http.sug","使用 HTTPS 加密传输")},
-    /* localStorage 存储敏感数据 */
-    {re: /localStorage\.setItem\s*\(\s*["'].*(?:token|password|secret|key|auth)["']/i,
-     type: "insecure_storage", severity: "medium",
-     msg: t("lint.insecure_storage.msg","在 localStorage 存储敏感数据"), sug: t("lint.insecure_storage.sug","敏感数据应加密存储或使用 sessionStorage/IndexedDB")},
-    /* prototype 污染 */
-    {re: /__proto__|constructor\s*\[|prototype\s*\[/,
-     type: "prototype_pollution", severity: "high",
-     msg: t("lint.prototype_pollution.msg","疑似原型链污染"), sug: t("lint.prototype_pollution.sug","避免直接操作 __proto__，使用 Object.create")},
-    /* innerHTML + 用户输入 */
-    {re: /innerHTML\s*=\s*.*(?:prompt|confirm|location\.hash|document\.cookie)/,
-     type: "xss_user_input", severity: "high",
-     msg: t("lint.xss_user_input.msg","innerHTML 赋值用户输入，XSS 风险高"), sug: t("lint.xss_user_input.sug","必须对用户输入进行转义/消毒")}
-  ];
-
-  for(let p = 0; p < patterns.length; p++){
-    const pat = patterns[p];
-    let match = null;
-    const re = new RegExp(pat.re.source, pat.re.flags + (pat.re.flags.indexOf("g") >= 0 ? "" : "g"));
-    while((match = re.exec(c)) !== null){
-      /* 计算行号 */
-      const lineNum = c.slice(0, match.index).split("\n").length;
-      issues.push({
-        type: pat.type,
-        severity: pat.severity,
-        line: lineNum,
-        message: pat.msg,
-        suggestion: pat.sug
-      });
-      if(re.lastIndex === match.index) re.lastIndex++;  /* 防止零宽匹配死循环 */
-    }
-  }
-
-  return issues;
-}
-
-/**
- * 性能优化建议（模式匹配）
- * @param {string} code - 代码片段
- * @returns {Array<{type:string, severity:string, line:number, message:string, suggestion:string}>} 建议列表
- */
-function suggestOptimization(code){
-  const c = String(code || "");
-  const issues = [];
-
-  /* 检测模式列表 */
-  const patterns = [
-    /* for 循环内重复读取 length */
-    {re: /for\s*\(\s*(?:var|let|const)?\s*\w+\s*=\s*0\s*;\s*\w+\s*<\s*\w+\.length\s*;\s*\w+\+\+/,
-     type: "loop_length", severity: "low",
-     msg: t("lint.loop_length.msg","循环条件中重复读取 length"), sug: t("lint.loop_length.sug","缓存 length 到局部变量：for(let i=0, len=arr.length; i<len; i++)")},
-    /* 嵌套循环（O(n²)） */
-    {re: /for\s*\([^)]*\)\s*\{[^}]*for\s*\(/,
-     type: "nested_loop", severity: "medium",
-     msg: t("lint.nested_loop.msg","嵌套循环可能导致 O(n²) 复杂度"), sug: t("lint.nested_loop.sug","考虑使用哈希表或优化算法降低复杂度")},
-    /* 同步 IO（fs.readFileSync） */
-    {re: /readFileSync|writeFileSync|execSync|existsSync/,
-     type: "sync_io", severity: "medium",
-     msg: t("lint.sync_io.msg","同步 IO 调用阻塞事件循环"), sug: t("lint.sync_io.sug","使用异步版本 readFile/writeFile")},
-    /* 大量 DOM 操作未批量 */
-    {re: /for\s*\([^)]*\)\s*\{[^}]*(?:appendChild|insertBefore|createElement)/,
-     type: "dom_loop", severity: "medium",
-     msg: t("lint.dom_loop.msg","循环内 DOM 操作可能触发频繁重排"), sug: t("lint.dom_loop.sug","使用 DocumentFragment 批量操作或 requestAnimationFrame")},
-    /* 未使用 debounce 的事件监听 */
-    {re: /addEventListener\s*\(\s*["'](?:scroll|resize|input|mousemove)["']\s*,/,
-     type: "no_debounce", severity: "low",
-     msg: t("lint.no_debounce.msg","高频事件未防抖"), sug: t("lint.no_debounce.sug","使用 debounce/throttle 节流")},
-    /* JSON.parse 未 try-catch（简化检测：直接匹配 JSON.parse 调用） */
-    {re: /JSON\.parse\s*\(/,
-     type: "unsafe_parse", severity: "low",
-     msg: t("lint.unsafe_parse.msg","JSON.parse 建议包裹 try-catch"), sug: t("lint.unsafe_parse.sug","包裹 try-catch 防止解析失败崩溃")},
-    /* Promise 未 await/catch */
-    {re: /\w+\([^)]*\)\s*\.\s*then\s*\(\s*(?:[^)]*\)\s*)?(?![^;]*catch)/,
-     type: "unhandled_promise", severity: "medium",
-     msg: t("lint.unhandled_promise.msg","Promise 可能未处理 rejection"), sug: t("lint.unhandled_promise.sug","添加 .catch() 或使用 async/await + try-catch")},
-    /* 重复正则编译 */
-    {re: /for\s*\([^)]*\)\s*\{[^}]*new RegExp\s*\(/,
-     type: "regex_in_loop", severity: "low",
-     msg: t("lint.regex_in_loop.msg","循环内重复编译正则表达式"), sug: t("lint.regex_in_loop.sug","将正则提到循环外编译一次")},
-    /* console.log 残留 */
-    {re: /console\.log\s*\(/,
-     type: "console_log", severity: "low",
-     msg: t("lint.console_log.msg","残留 console.log 调试代码"), sug: t("lint.console_log.sug","移除调试代码或使用条件日志")},
-    /* var 声明（应使用 let/const） */
-    {re: /\bvar\s+\w+/,
-     type: "var_decl", severity: "low",
-     msg: t("lint.var_decl.msg","使用 var 声明（函数作用域，易出错）"), sug: t("lint.var_decl.sug","使用 let/const 声明块作用域变量")}
-  ];
-
-  for(let p = 0; p < patterns.length; p++){
-    const pat = patterns[p];
-    try{
-      const re = new RegExp(pat.re.source, (pat.re.flags || "") + "g");
-      let match = null;
-      while((match = re.exec(c)) !== null){
-        const lineNum = c.slice(0, match.index).split("\n").length;
-        issues.push({
-          type: pat.type,
-          severity: pat.severity,
-          line: lineNum,
-          message: pat.msg,
-          suggestion: pat.sug
-        });
-        if(re.lastIndex === match.index) re.lastIndex++;
-      }
-    }catch(e){ /* 正则编译失败：跳过该模式 */ }
-  }
-
-  return issues;
-}
-
-/**
- * 代码风格/质量检测
- * @param {string} code - 代码片段
- * @param {string} lang - 语言
- * @returns {Array} 问题列表
- */
-function _detectStyleIssues(code, lang){
-  const c = String(code || "");
-  const issues = [];
-  const lines = c.split("\n");
-
-  /* 行长度检测 */
-  for(let i = 0; i < lines.length; i++){
-    if(lines[i].length > 120){
-      issues.push({
-        type: "long_line",
-        severity: "low",
-        line: i + 1,
-        message: t("p5.longLine", "行长度超过 120 字符（") + lines[i].length + t("p5.longLineSuffix", "）"),
-        suggestion: t("p5.splitLongLine", "拆分长行以提升可读性")
-      });
-    }
-  }
-
-  /* TODO/FIXME 标记 */
-  const todoRe = /(?:TODO|FIXME|HACK|XXX)\b/g;
-  let m = null;
-  while((m = todoRe.exec(c)) !== null){
-    const lineNum = c.slice(0, m.index).split("\n").length;
-    issues.push({
-      type: "todo",
-      severity: "low",
-      line: lineNum,
-      message: t("p5.unfinishedMark", "未完成的标记：") + m[0],
-      suggestion: t("p5.finishOrIssue", "完成或转为 issue 跟踪")
-    });
-  }
-
-  /* 空函数体 */
-  const emptyFnRe = /function\s*\w*\s*\([^)]*\)\s*\{\s*\}/g;
-  while((m = emptyFnRe.exec(c)) !== null){
-    const emptyLineNum = c.slice(0, m.index).split("\n").length;
-    issues.push({
-      type: "empty_function",
-      severity: "low",
-      line: emptyLineNum,
-      message: t("p5.emptyFn", "空函数体"),
-      suggestion: t("p5.addImpl", "添加实现或注释说明")
-    });
-  }
-
-  return issues;
-}
-
-/**
- * 计算代码质量评分（0-100）
- * 评分规则：100 - Σ(severity 权重)
- *   high=15, medium=8, low=3
- * @param {Array<{severity:string}>} issues - 问题列表
- * @returns {number} 评分 [0, 100]
- */
-function reviewScore(issues){
-  if(!Array.isArray(issues) || !issues.length) return 100;
-  const weights = {high: 15, medium: 8, low: 3};
-  let total = 0;
-  for(let i = 0; i < issues.length; i++){
-    const sev = issues[i] && issues[i].severity;
-    total += weights[sev] || 5;
-  }
-  return Math.max(0, 100 - total);
-}
-
-/**
- * 构建审查摘要
- * @param {Array} issues - 问题列表
- * @param {number} score - 评分
- * @param {string} code - 代码
- * @returns {string} 摘要
- */
-function _buildReviewSummary(issues, score, code){
-  const lines = String(code || "").split("\n").length;
-  const parts = [];
-  parts.push(t("p5.codeLines", "代码行数：") + lines + t("p5.scoreMid", "，评分：") + score + "/100");
-
-  if(!issues.length){
-    parts.push(t("p5.noIssues", "未发现问题。"));
-    return parts.join("；");
-  }
-
-  /* 按严重度统计 */
-  const counts = {high: 0, medium: 0, low: 0};
-  for(let i = 0; i < issues.length; i++){
-    const sev = issues[i].severity || "low";
-    counts[sev] = (counts[sev] || 0) + 1;
-  }
-  const parts2 = [];
-  if(counts.high) parts2.push(t("p5.high", "高危 ") + counts.high);
-  if(counts.medium) parts2.push(t("p5.medium", "中等 ") + counts.medium);
-  if(counts.low) parts2.push(t("p5.low", "低 ") + counts.low);
-  parts.push(t("p5.issues", "问题：") + parts2.join("、"));
-
-  /* 按类别统计 */
-  const cats = {};
-  for(let j = 0; j < issues.length; j++){
-    const cat = issues[j].category || "other";
-    cats[cat] = (cats[cat] || 0) + 1;
-  }
-  const catParts = [];
-  const catKeys = Object.keys(cats);
-  for(let k = 0; k < catKeys.length; k++){
-    catParts.push(catKeys[k] + " " + cats[catKeys[k]]);
-  }
-  parts.push(t("p5.category", "类别：") + catParts.join("、"));
-
-  return parts.join("；");
-}
-
-/* ============================================================
- * 5. 笔记变更钩子：自动更新 RAG 索引
- * ============================================================ */
-
-/**
- * 笔记变更后自动更新 RAG 索引（钩子函数）
- * 调用时机：createNote / updateNote / deleteNote 之后
- * @returns {void}
- */
-function _onNotesChanged(){
-  try{
-    /* 仅当已有索引时才更新，避免无谓重建 */
-    if(_ragIndex && _ragIndex.docs && _ragIndex.docs.length){
-      indexFromNotes();
-      saveRagIndex();
-    }
-  }catch(e){ /* 钩子失败不影响笔记操作 */ }
-}
 /* ---------- v3.7.58（诚实性收口）：移除 54-离线AI / 55-ML预测 / 56-智能排期 / 57-情绪分析 ----------
  * 四个子系统均为「无 UI 入口、无测试引用、零外部调用」的沉睡框架：假进度条 + 模拟引擎对象 +
  * 指向不存在文件的 ONNX 模型表（assets/onnx/ 从未存在）。按 product-scope 的
@@ -9558,6 +8365,11 @@ function _resetIntegrationApiKeys(){
 function _resetIntegrationRateLimits(){
   _integrationRateLimits = {};
   _intSafeLSRemove(INTEGRATION_RATE_LIMITS_KEY);
-}// ===== v1.8-C OAuth2 Framework (OAuth2 授权框架) =====
-
-// ----------------------------------------------------------------------------
+}
+/* v3.7.59 清理：此处原有一段悬空的注释头 ——
+     // ===== v1.8-C OAuth2 Framework (OAuth2 授权框架) =====
+     // ----------------------------------------------------------------------------
+   OAuth2 模块已在 v1.14.0「做减法」中整体移除，只剩注释头与分隔线（全仓 oauth2BuildAuthUrl 0 处，
+   实际接线点在 src/data-idb.js 的 _oauth2HandleCallback stub）。留着会误导读者以为该模块仍存在 ——
+   2026-09-27 审计时我自己就先被它误导了一次（在源码态 grep 应用代码得到 0 处，一度误判为「被抽取破坏」）。
+   纯注释残留，删除无功能影响。 */

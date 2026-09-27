@@ -135,7 +135,13 @@ async function persistCfg(cfg){
       const np = Object.assign({}, p);
       if(typeof np.key === "string" && np.key){
         try{ np.key = await encryptKey(np.key); }
-        catch(e){ np.key = ""; } // D4：加密失败则丢弃，不落明文
+        catch(e){
+          /* D4：加密失败则丢弃，不落明文。v3.7.59：补诊断——静默丢 Key 会让用户
+             「填了 Key、当时能用、重启后失效」，且日志里毫无线索（本项目 732 个 catch 中
+             仅 52 处上报 pushDiag，密钥路径此前不在其中）。 */
+          np.key = "";
+          try{ pushDiag("error", "encryptKey failed, key dropped: "+(e&&e.message||e), {where:"persistCfg", profile:p && p.id}); }catch(_){}
+        }
       }
       return np;
     }));
@@ -202,7 +208,14 @@ async function initCrypto(){
     raw.profiles = await Promise.all(raw.profiles.map(async p => {
       const np = Object.assign({}, p);
       if(isEncKey(np.key)){
-        try{ np.key = await decryptKey(np.key); needRepersist = true; }catch(e){ np.key = ""; }
+        try{ np.key = await decryptKey(np.key); needRepersist = true; }
+        catch(e){
+          /* v3.7.59：解密失败 = 设备密钥换了/密文损坏，Key 实际已丢失。
+             此前只把 np.key 置空，界面上表现为「AI 未配置」，用户无从判断是"没填过"
+             还是"填过但解不开"。补诊断以便定位（含是否 IDB 可用等上下文）。 */
+          np.key = "";
+          try{ pushDiag("error", "decryptKey failed, key unusable: "+(e&&e.message||e), {where:"initCrypto", profile:p && p.id}); }catch(_){}
+        }
       }else if(typeof np.key === "string" && np.key){
         needRepersist = true; // 旧明文，待重新加密持久化
       }

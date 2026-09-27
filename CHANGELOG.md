@@ -1,3 +1,42 @@
+## [v3.7.59] - 2026-09-27
+
+**两条并行工作合流**：一条是 AI 能力从"配置壳"改成真实能力 + 一个隐私外发面收口 + 死代码清仓；另一条是 XSS 防线加固与把它升级成构建期门禁。全量 99 文件 / 1117 条用例、`lint`（三道）、`check:modules`（44 循环 / 35 逆层未变）、`build:check`、e2e 7/7 均绿。
+
+### AI 能力：技能、自主执行、记忆语义召回、上下文预算
+
+- **技能（Skills）从壳变能力**。`ai_config_skills.custom` 这份 JSON 此前**只写不读**（实测：写进去后 `chatSysPrompt` 一个字节都不变），六个勾选项也只是减法地写 `cfg.toolWhitelist`。现在新增 `src/ai-tools.js` 的 Skills 引擎：容错解析（数组 / `{skills:[…]}` / 单对象 / 坏 JSON 静默降级）、工具名白名单校验（拼错的名字与危险工具不进提示）、相关度排序（复用 `ragTokenize` 的 CJK 二元组——只按空白切词时中文整句是一个 token，"帮我写周报"与技能"周报流程"永远对不上）、注入系统提示、命令面板「技能」组一键触发。实测：系统提示 172 → 440 字节，命中技能排首位。
+- **"把流程存成技能"**：一轮对话成功执行 ≥2 个非破坏性工具后挂出候选，回「存为技能」才落盘（候选不自动写盘）；`delete_task`/`update_task`/`forget` 不参与固化；同一工具序列只提示一次。存的步骤只留**参数名**不留值（值会过期且可能含用户数据）。
+- **AI 自主执行有了入口，且先修安全洞**：`executeAgentPlan` 此前无条件 `execTool(tool, args, force=true)`，而 `force` 正是 `runChatLoop` 里 `delete_task`/`update_task` 跳过二次确认的那把钥匙——同一个工具在对话路径要弹窗、在自主规划路径直接删。现在危险清单收口成单一来源 `DANGER_CONFIRM_TOOLS`（`SKILL_DANGER_TOOLS` 由它派生，`toolWhitelistSet()` 同理，三处重复解析归一），自主执行遇到危险步骤标 `needsConfirm` 跳过并如实汇总（不中断整盘）；白名单在此路径同样生效；步骤数封顶 `AGENT_PLAN_STEPS_MAX=12`，超出如实标注裁了多少。入口 = 命令面板 `>` 前缀 → 先出计划（不动数据）→ 回「确认执行」→ 逐步落地；其他内容取消，切场景自动作废。真 Chromium 实测：含 `delete_task` 的三步计划执行后任务未被删，汇总打 `⏸ 待确认已跳过`。
+- **规划提示词的工具清单不再硬写**：字典里写着 12 个工具名而真实有 26 个，且没有同步机制；现由 `agentPlannableTools()` 从 `effectiveTools()` 现算并排除危险工具（实测 26 → 可规划 24）。
+- **工作记忆改用语义召回（#19）**：`recallMemories` 原是实现缺陷——**不是召不回，而是全量返回、排序失效**（关键词那档对中文永不生效），于是注入上下文的 6 个名额归属只由插入顺序决定，用户后沉淀的偏好永远挤不进去。现接 v3.7.57 的 embedding 通道做 RRF 混合召回，向量独立存 IndexedDB `memvec:` 前缀（不带 `wb_agent_`，否则被同步镜像回写 localStorage，1536 维 Float32 每条 ~30KB）、带 embedModel 模型戳（换模型自动判失效重算）、批量单飞回填、孤儿清扫、遗忘连带删向量。⚠️ 修 RRF 时踩到一处真实设计错：词法列表里无关键词命中的条目只是按新近度排的填充项，把它们也丢进 RRF 会让"最老的无关条目"与语义命中拿到同一个 `1/61` 并因稳定排序反超——现只有 `kw>0` 的进 RRF。签名保持同步，无向量时返回值与改造前逐条一致。开关**复用 `cfg.rag`**（设置页那一项本就叫「上下文注入」、语义与代价同类），不凭空造一个没 UI 写的配置键。
+- **上下文装配预算 + 可溯源引用（#20）**：`ragInjectContext` 原先固定 top5 × 200 字、无出处、无总量约束。现在 `ctxBudgetTokens`（默认 1200，钳 200~4000，非数字/0/负数视为未配回默认）逐条整段装配（超预算**整条丢弃**而非截半句），每条带 `[序号·来源·召回方式]`，并提示模型引用时标注编号、无依据部分说明是推断；截断时明说有几条没进来。技能段占同一预算 40% 份额。
+
+### 安全：未配置 AI 时不再向第三方外发内容
+
+- `chatOnce` 缺 `electron/main.js` 那句 `if(!prof || !prof.key) throw` 的对应守卫，于是**没配任何模型**时 base 仍回退硬编码 `https://api.openai.com/v1`、`Authorization: Bearer `（空值）照样真发 POST 并重试 3 次——系统提示（含工作记忆、技能、RAG 片段）与输入原文已经出了本机，只换回 401；外在症状是"未配置时聊天卡十几秒"（曾被误判成死循环，实为 3 次重试）。守卫放在 `isElectron()` 分支**之后**（Electron 下渲染进程的 `ap.key` 本就被 crypto 掩成空串，放前面整条打不通）。修完实测：**0 次外发 / 13ms 上屏**；配了 Key 恰好 1 次且打用户自己的 base。契约锁在 `tests/ai-retry-contract.test.js` 第⑤组（断言 `fetch` 次数为 0，不只看文案），与对侧 `tests/electron-ipc.test.js` 形成双向对称。
+
+### 死代码清仓：v1.7-A 整链 + AI 插件假壳（约 1220 行）
+
+- **「AI 插件」卡删除**：`code_runner`/`web_search`/`file_reader` 三项是已有真实能力的假副本（`web_search`、`code_run` 本就是模型可直接调用的工具），文案自己写着"暂无执行代码，勾选状态仅保存配置"——按本仓库 §四「stub + 活 UI = 虚假功能」纪律移除（卡片 + 渲染函数 + 保存处理器 + 桥导出 + `aiPlugin.*`/`ai.plugin*` i18n 键）。**真·插件市场 `BUILTIN_PLUGINS`（10 个可安装插件）未受影响。**
+- **v1.7-A「AI 深度增强」1159 行整段移除**：本地 `agentPlan` 链（关键词猜工具）、词袋"长期记忆"（`_textToVector`/`_cosineSimilarity`）、旧 TF-IDF RAG 索引、本地模式匹配冒充的 AI 代码审查。判据不是"看着没用"，而是 `_probe/reach4.mjs --contain 6678 7836` 实测**区间外引用 0 处**。两处指向它的活代码一并处理：`aiDecomposeTask` 的 `opts.useLocalPlan` 分支（全仓无人传该选项）、笔记变更钩子 `_notifyNotesChanged`/`_onNotesChanged`（每次笔记 CRUD 都在刷一份没人读的旧索引）。
+- 死代码普查基线：1202 个顶层函数 / 不可达 171（14%）→ **1127 / 127**。
+- **遗留问题如实登记**：笔记/任务/记录/对话历史目前都只在「重建索引」时进真 RAG，没有增量索引（旧钩子刷的是死索引，删掉它不改变任何可观测行为）。要做增量应接到 `ragIndexAdd` 上另开一轮，已记 product-scope §三。
+
+### 另一条线：XSS 防线加固与构建期门禁（同批合入）
+
+- `sanitizeHtml` 修复 4 类可绕过写法（`<svg/onload=…>` 斜杠分隔事件属性、`<img/src=x/onerror=…>`、SVG `<animate>/<set>` 运行期改 `href`、`<button formaction="javascript:…">`）与 1 条未消毒注入路径（图表画布 `_dgmSvgHtml`）；回归 `tests/sanitize-xss-regression.test.js`（21 条）。
+- 新增 `scripts/lint-xss.mjs` 并接进 `npm run lint` 与 CI：扫描 `src/` 的未消毒动态 `innerHTML`，6 处显式豁免带定位。
+- `scripts/src-split.mjs --check` 从"只查标记齐不齐"升级为**逐块内容比对**：堵住"直接改 HTML 但未抽回 src → 下一次 pretest/prebuild 注入静默回滚"这一类最危险的丢代码缺陷。
+- `docs/control-matrix-audit.md` 复核更正：文档多处写"11 套主题"而实况是 **10 套**（`CHANGELOG:548` 记过新增第 11 个，但代码侧从未对上）。
+- 另含 service-worker / Electron 主进程 / crypto / data-idb / deploy 工作流与 `tests/helpers/loadApp.js` 的配套改动；本提交按整体绿色（全量 + lint + build:check + e2e）验证，未逐条复核其设计意图。
+
+### 本轮自查中纠错两处（不留文档只留代码）
+
+- 曾把「Agent 自主完成」命令 unshift 到搜索结果首位，连带弄红 3 条既有面板用例（`无匹配`空态不可达、首项断言被抢、工具项进「最近使用」失效）；改为 `>` 前缀显式触发。
+- 曾把上述真因误判成"新增 jsdom 窗口泄漏定时器"，加 `win.close()` 换来 2 个 unhandled rejection（关在 `startup()` 的 `await initCrypto()` 之前）；真因是既有用例**真点面板第 0 项**。教训：红测先做同模式 A/B 定因。
+
+---
+
 ## [v3.7.58] - 2026-09-26
 
 **安全收口 + 死代码清仓 + 测试循环自动化**。本轮来自一次全面评估的整改：三项安全修复、约 2440 行无出口死代码移除，以及把"跑完测试工作区必脏"这个有前科的坑从人肉纪律变成结构上不可能。

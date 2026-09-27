@@ -1,4 +1,4 @@
-# Agent 工坊（v3.7.58）
+# Agent 工坊（v3.7.59）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活 / 健康七类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -57,6 +57,10 @@
   - **工作记忆**：助手可用 `remember`/`recall`/`forget` 工具沉淀用户偏好与决定，按场景隔离、近期+命中加权召回、自动注入对话上下文（也可对我说「记住：xxx」直接写入）；最多 60 条环形截断。
   - **多步目标编排**：`plan` 工具把一句话目标拆成有序步骤，激活后对话循环上限由 6 轮放宽至 12 轮，助手逐步执行并用 `complete_step`/`complete_goal` 推进与收尾（单目标聚焦，新目标自动顶替旧的）。
   - **跨场景协调**：`list_records` 工具查任意场景资料库，目标步骤可跨场景调用既有工具。设置抽屉与命令面板（Ctrl/Cmd+K）提供记忆/目标管理入口。
+- **技能（v3.7.59 起为真实能力）**：「设置 → AI → 扩展 → 技能配置」里的自定义 JSON 不再只是存配置——已启用的技能会按相关度注入每轮对话的系统提示（带做法与建议工具，单次最多 6 条且受上下文预算约束），命令面板（Ctrl/Cmd+K）新增「技能」组可一键触发；一轮对话成功执行 ≥2 个工具后，回「存为技能」即可把这条流程固化成可复用技能（`delete_task`/`update_task`/`forget` 不参与固化）。
+- **AI 自主执行（v3.7.59 起有入口）**：命令面板输入 `>` 开头的一句话 → 助手先出**计划**（只问模型、不改任何数据）→ 我回「确认执行」才逐步落地。三条硬约束：破坏性步骤（删除/修改任务）一律拦成「待确认已跳过」交回交互路径、工具白名单在此路径同样生效、步骤数封顶 12（超出如实标注裁了多少）。
+- **上下文装配（v3.7.59）**：开启「上下文注入」后，工作记忆改用**语义召回**（复用 embedding 通道，换了说法也能命中）而非仅字面匹配；检索结果按可配置 token 预算（`ctxBudgetTokens`，默认 1200）整条装配，每条带 `[序号·来源·召回方式]` 出处标注，被裁掉时如实说明。未配置 embedding 或未开开关时自动退回纯词法，行为与从前一致。
+- **未配置 AI 时不再外发请求（v3.7.59 安全修复）**：此前没配模型也会带空 Bearer 真打 `api.openai.com` 并重试 3 次（内容已出本机、且表现为卡十几秒）；现在直接拒发并给出可操作的提示，与 Electron 主进程侧的既有守卫对齐。
 - **需联网的工具（例外说明）**：`web_search` / `web_fetch` 需访问外网；`code_run` / `sql_query` 在本机沙箱（WASM）内执行，不需联网。除此之外全部功能可离线使用。
 - **场景联动（习惯链）**：任务完成时按规则跨场景自动生成奖励/后续任务，形成"习惯链"：
   - 办公(交付) → 学习(看技术视频)
@@ -168,6 +172,8 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 - **数据归属**：全部存于浏览器 `localStorage`（键前缀 `wb_agent_`），刷新 / 关闭不丢；但**换浏览器、清缓存、移动 HTML 文件**（尤其是 `file://` 形态）可能导致数据不跟随。需要稳定数据请用本地服务模式或 Electron exe（同源持久）。
 - **隐私边界**：部署/分享只涉及文件本身；数据在用户本机，不在服务器。不要在工坊里预填真实敏感信息后再把文件发给他人。
+- **浏览器态 XSS 防护能力（如实说明，v3.7.59 补充）**：CSP 为 `script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com 'wasm-unsafe-eval'` —— 单文件架构必须内联脚本，`'unsafe-inline'` 去不掉，**因此 CSP 对 XSS 不提供任何缓解**（它只约束资源类型与协议，`object-src 'none'` / `base-uri 'self'` / `form-action 'self'` 三项是有效的）。同理 `connect-src` 含裸 `https:`：应用需要调用用户自填的任意 API 基址、`web_fetch` 抓任意 URL、`web_search` 用可配置引擎，**不能**收敛为域名白名单 —— 这是功能必需的放宽，不是配置疏漏。
+  真正的 XSS 防线是 `sanitizeHtml`（自研轻量消毒，约 130 处 `innerHTML` 依赖它；已知限制见 `src/util-markdown.js` 顶部 SECURITY NOTE）。2026-09-27 审计实测修复了 4 类可绕过写法（`<svg/onload=…>` 斜杠分隔事件属性、`<img/src=x/onerror=…>`、SVG `<animate>/<set>` 运行期改 `href`、`<button formaction="javascript:…">`）与 1 条未消毒的注入路径（图表画布 `_dgmSvgHtml`），回归用例见 `tests/sanitize-xss-regression.test.js`（21 条）。**注意：XSS 在本应用中等价于读走整个 localStorage（含 Key 密文与设备密钥），故不要把「混淆级防护」当作能扛住 XSS 的保护。**
 - **AI 工具**：调用真实改写同一份 localStorage，AI 操作与手动操作等价；工具定位任务靠标题关键词，重名时取第一条。
 - **可选账号与云同步**：客户端包含登录、注册、邮箱验证码与同步接口，依赖兼容后端；API 基址取 `cfg.apiBase`，默认 `http://localhost:3001`。本仓库未附带该服务，不能把打开静态页面或 Electron 外壳等同于后端已运行。未配置后端时用导出 / 导入迁移数据。
   - **同步端点契约（v3.7.53 补齐推送侧）**：`GET /api/sync/snapshot` 取快照、`PUT /api/sync/snapshot` 上传快照（body `{snapshot, updatedAt}`，快照内含 `_deviceMeta.deviceId`）。客户端两侧都已实现；**未与真实后端联调**，故同步状态如实显示：推成功才显示「已同步」，失败/离线显示「同步失败 / 离线模式」，能力缺失显示「仅本机（云同步未接入）」。
@@ -179,9 +185,9 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v3.7.58**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.7.59**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.58 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.59 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 九、相关文件
 

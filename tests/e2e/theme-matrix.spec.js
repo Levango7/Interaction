@@ -35,7 +35,10 @@ function dumpReport(lines) {
   } catch (e) { /* 落盘失败不影响断言 */ }
 }
 
-/* 11 套主题：light 是默认态（无 data-theme 属性），其余走属性 */
+/* 10 套主题：light 是默认态（无 data-theme 属性），其余 9 套走属性。
+   口径来源（2026-09-27 复核）：CSS 里 `[data-theme="…"]` 去重 9 个 + light 默认态 = 10；
+   PRESET_THEMES（src/ui-global-events.js）同为 10 条。
+   此前注释与 describe 标题写「11 套」，与数组和实际 CSS 都不符 —— 已按实况更正。 */
 const THEMES = ["light", "dark", "sepia", "elegant", "aurora", "matrix", "forest", "ocean", "mist", "ink"];
 
 /* 亮度/对比度计算：注入页面上下文（sRGB 相对亮度，WCAG 2.x 口径）
@@ -100,7 +103,7 @@ async function readTheme(page) {
   });
 }
 
-test.describe("11 套主题渲染层不变量", () => {
+test.describe("10 套主题渲染层不变量", () => {
   test.beforeAll(() => {
     test.skip(!process.env.E2E, "set E2E=1 to run");
   });

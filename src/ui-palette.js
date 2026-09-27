@@ -41,6 +41,8 @@ const PY_INIT = {
   "戳":"c","解":"j","随":"s","机":"j","串":"c","正":"z","则":"z","测":"c","试":"s","转":"z",
   "动":"d","录":"l","缴":"j","费":"f","提":"t","醒":"x","采":"c","购":"g","单":"d","外":"w",
   "卖":"m",
+  /* v3.7.59：「技能」组固定标签用到的字（技能 = j n，把上一轮固化为技能 = b s y l g h w j n） */
+  "技":"j","能":"n","把":"b","上":"s","一":"y","轮":"l","固":"g","化":"h","为":"w",
 };
 /**
  * 取文本的「拼音首字母串」：汉字取首字母、ASCII 字母数字原样保留，其余字符忽略
@@ -130,6 +132,7 @@ function highlightHits(text, positions){
  * @returns {Array<{label:string,group?:string,icon?:string,sub?:string,run:Function}>}
  */
 function buildCmds(q){
+  const qRaw = String(q||"").trim();   // 原文：喂给 Agent 的诉求不能是小写化之后的
   q=(q||"").toLowerCase();
   const acts=[
     {label:t("cmd.newTask","新建任务"), icon:UI_ICONS.plus, sub:"N", group:t("cmd.command","命令"), run:()=>{ if(getActive()==="overview"){setActive("office");render();} const f=$("#taskForm"); if(f) f.title.focus(); }},
@@ -160,10 +163,31 @@ function buildCmds(q){
     const a=TOOL_APPS[id] || {};
     return { label:a.name || id, icon:a.icon || "", sub:a.desc || "", group:t("cmd.tool","工具"), run:function(){ if(typeof openToolStub === "function") openToolStub(id); } };
   }) : [];
-  const items=acts.concat(scs, tasks, tools);
+  /* v3.7.59：「扩展 → 技能配置」里定义的自定义技能接进命令面板 ——
+     此前那份 JSON 只写不读，勾选项也只是减法地写工具白名单，技能开关点了没反应。
+     接线后两条真实通路：① 每条已启用技能一键发进 AI 聊天面板执行；
+     ② 上一轮对话成功跑了 ≥2 个工具时，这里出现「把上一轮固化为技能」。
+     发出的文本（技能：X / 存为技能）要能被 ai-retry 的拦截正则认出，故用固定字面量并中英各一。 */
+  const skills=[];
+  if(typeof listEnabledSkills === "function"){
+    try{
+      if(typeof getPendingSkillOffer === "function" && getPendingSkillOffer()){
+        const offer = getPendingSkillOffer();
+        skills.push({ label:t("cmd.skillSaveOffer","把上一轮固化为技能"), icon:UI_ICONS.plus,
+          sub: offer.steps.map(function(s){ return s.tool; }).join(" → "), group:t("cmd.skill","技能"),
+          run:function(){ if(typeof sendChatText === "function") sendChatText(t("cmd.skillSaveText","存为技能")); } });
+      }
+      listEnabledSkills().slice(0,12).forEach(function(s){
+        skills.push({ label:s.name, icon:UI_ICONS.brain,
+          sub: s.desc || s.prompt.slice(0,40), group:t("cmd.skill","技能"),
+          run:function(){ if(typeof sendChatText === "function") sendChatText(t("cmd.skillInvoke","技能：")+s.name); } });
+      });
+    }catch(_e){ /* 技能数据异常时命令面板照常工作，不连带拖垮 */ }
+  }
+  const items=acts.concat(scs, tasks, tools, skills);
   if(q){
     // 模糊匹配：标签+副标题联合打分，按分值降序；命中位置取「标签」上的（高亮给用户看的就是标签）
-    return items
+    const matched = items
       .map(it=>{
         const m = fuzzyMatch((it.label||"")+(it.sub?" "+it.sub:""), q);
         const inLabel = fuzzyMatch(it.label||"", q);
@@ -171,6 +195,21 @@ function buildCmds(q){
       })
       .filter(it=> it._score > 0)
       .sort((a,b)=> b._score - a._score);
+    /* v3.7.59：把「让 AI 自主完成」接进命令面板 —— chatOnceAgent 这条链早就写全但零入口，
+       用户根本走不到它。⚠️ 只在查询以 > 开头时出现，且不去抢普通查询的结果首位：
+       早先做成"任何 ≥4 字查询都 unshift 一条"，实测连带弄红三条既有面板用例
+       （「无匹配」空态变得不可达、li[data-i] 首项被抢、工具项进「最近使用」按下标取也失效）。
+       风险由三段兜住：先出计划要用户回「确认执行」、破坏性步骤被 executeAgentPlan 拦掉、步数有上限。 */
+    if(qRaw.charAt(0) === ">" && typeof proposeAgentPlan === "function" && getCfg().agent !== false){
+      const task = qRaw.slice(1).trim();
+      if(task.length >= 2){
+        matched.unshift({ label: t("cmd.agentRun","让 AI 自主完成：")+task, icon: UI_ICONS.brain,
+          sub: t("cmd.agentRunSub","先出计划，回「确认执行」才落地；删除/修改类步骤不会自主执行"),
+          group: t("cmd.command","命令"), trackRecent: false,
+          run: function(){ proposeAgentPlan(task); } });
+      }
+    }
+    return matched;
   }
   // 无查询：「最近使用」组置顶（去重复制，执行幂等）
   const recentLabels = getCmdRecent();

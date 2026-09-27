@@ -5208,7 +5208,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <!-- v3.4.7 批次六：RAG 上下文注入开关（默认关——发送消息前检索任务/记录/笔记相关片段拼进 system prompt） -->
         <div class="set-switch">
           <input type="checkbox" id="aiMemRag" data-i18n-aria="mem.ragLabel" aria-label="上下文注入（实验性）">
-          <div><div class="sw-label" data-i18n="mem.ragLabel">上下文注入（实验性）</div><div class="sw-sub" data-i18n="mem.ragSub">发送消息时自动检索任务/记录/笔记中的相关内容，拼进 AI 上下文——提问更精准，但会多消耗一些 token</div></div>
+          <div><div class="sw-label" data-i18n="mem.ragLabel">上下文注入（实验性）</div><div class="sw-sub" data-i18n="mem.ragSub">发送消息时自动检索任务/记录/笔记中的相关内容，并让工作记忆改用语义召回（换了说法也能命中），一起拼进 AI 上下文——提问更精准，但会多消耗一些 token 并调用一次 embedding 接口</div></div>
         </div>
         <div class="set-field">
           <label for="aiMemThreshold" data-i18n="mem.thresholdLabel">记忆检索阈值（0~1）</label>
@@ -5229,17 +5229,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         </div>
       </div>
     </details>
-
-    <details class="ext-collapse">
-      <summary><span class="nm" data-i18n="aiPlugin.summaryNm">AI 插件</span><span class="hint-inline" data-i18n="aiPlugin.summaryHint">扩展插件清单</span></summary>
-      <div class="ext-body">
-        <p class="set-tip" data-i18n="aiPlugin.desc">AI 扩展插件清单（实验性——暂无执行代码，勾选状态仅保存配置）。</p>
-        <div id="aiPluginList"></div>
-        <div class="set-actions">
-          <button type="button" class="addbtn sm u-flex-1" id="aiPluginSave" data-sc="accent" data-i18n="aiPlugin.save">保存插件配置</button>
-        </div>
-      </div>
-    </details>
+    <!-- v3.7.59：原「AI 插件」卡片已删除 —— code_runner/web_search/file_reader 三项是已有真实
+         能力的假副本（web_search 与 code_run 本就是模型可直接调用的工具），勾选不改变任何行为。
+         真·插件市场在概览页 store（BUILTIN_PLUGINS，10 个可安装插件），未受影响。 -->
   </section>
 
   <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-ext" aria-label="会话管理" data-i18n-aria="a11y.sessionMgmt2">
@@ -5728,7 +5720,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 <div class="overlay" id="cmdOverlay"></div>
 <div class="cmd" id="cmd">
-  <input id="cmdInput" data-i18n-placeholder="cmd.placeholder" placeholder="搜索场景 / 命令 / 任务…（↑↓ 选择，Enter 执行，Esc 关闭）" autocomplete="off" maxlength="200">
+  <input id="cmdInput" data-i18n-placeholder="cmd.placeholder" placeholder="搜索场景 / 命令 / 任务…（↑↓ 选择，Enter 执行，Esc 关闭；以 > 开头可让 AI 自主完成）" autocomplete="off" maxlength="200">
   <ul id="cmdList"></ul>
 </div>
 
@@ -6021,10 +6013,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.58"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
+const VERSION = "3.7.59"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260926c";
+const BUILD_TAG = "20260927c";
 
 
 

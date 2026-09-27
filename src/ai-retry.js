@@ -55,6 +55,60 @@ function abortChat(){
 }
 
 /**
+ * v3.7.59：当前聊天是否已被用户取消。
+ * 取消语义此前只作用于 fetch：`execToolAuto` / `execTool` 都不接收 signal，工具批次的循环里
+ * 也没有任何取消检查 —— 于是用户点「取消」后，同一批 tool_calls 里**尚未执行**的写操作
+ * （删除任务 / 新增记录 / 改状态…）仍会照常落地，界面却显示「已取消」。
+ * AbortController 不可用时 chatController.ac 为 null，abortChat 直接 return false，
+ * aborted 恒为 false —— 与「无取消能力」的既有语义一致。
+ * @returns {boolean}
+ */
+function _chatCancelled(){
+  return !!(typeof chatController !== "undefined" && chatController && chatController.aborted);
+}
+/**
+ * 为「因取消而未执行」的工具调用补一条 tool 回执。
+ * 必须补：assistant 消息里的 tool_calls 与后续 tool 应答是**一一对应**的，
+ * 少一条下一轮 API 调用会直接 400（本文件 v3.7.52 已因同类问题踩过坑）。
+ * @param {Array} messages 送往 API 的消息数组
+ * @param {Array} hist 界面历史数组
+ * @param {string} id tool_call_id
+ * @param {string} name 工具名
+ */
+function _pushSkippedToolReceipt(messages, hist, id, name){
+  const msg = t("ai.toolSkipped","工具 {name} 因取消已跳过，未执行。").replace("{name}", name);
+  const tm = { role:"tool", tool_call_id:id, content:JSON.stringify({ ok:false, msg:msg }), _disp:msg, _tool_skipped:true };
+  messages.push(tm); hist.push(tm);
+}
+
+/**
+ * 解析工具调用的 `arguments`。
+ * 模型返回的 arguments 是**不可信的 JSON 文本**，现实里会出现截断（被 max_tokens 掐断）、
+ * 尾随逗号、单引号、裸字符串等非法形态。
+ * 原实现直接 `JSON.parse(tc.function.arguments||"{}")` —— 一旦非法就抛裸 SyntaxError 冒到用户
+ * 面前（界面显示 "Unexpected token ..."），而且该 tool_call **没有任何回执**：
+ * assistant 消息里的 tool_calls 与后续 tool 应答数量对不上，模型既拿不到反馈、也无法自我纠正，
+ * 整个多步循环就此中断。
+ * 现改为失败返回 null，由调用方按「参数非法」回执给模型并跳过执行。
+ * @param {string|Object|undefined} raw
+ * @returns {Object|null} 合法对象；非法返回 null
+ */
+function _parseToolArgs(raw){
+  if(raw === undefined || raw === null || raw === "") return {};
+  if(typeof raw === "object") return raw;
+  try{
+    const v = JSON.parse(String(raw));
+    return (v && typeof v === "object" && !Array.isArray(v)) ? v : null;
+  }catch(e){ return null; }
+}
+/** 为「arguments 非法」的工具调用补一条 tool 回执（理由同 _pushSkippedToolReceipt：必须一一对应） */
+function _pushBadArgsToolReceipt(messages, hist, id, name){
+  const msg = t("ai.badToolArgs","工具 {name} 的参数不是合法 JSON，已跳过执行；请重新给出合法参数。").replace("{name}", name);
+  const tm = { role:"tool", tool_call_id:id, content:JSON.stringify({ ok:false, msg:msg }), _disp:msg, _tool_badargs:true };
+  messages.push(tm); hist.push(tm);
+}
+
+/**
  * 重试上次失败的聊天请求：移除失败消息后重新走 runChatLoop
  * @returns {Promise<boolean>} 是否触发了重试
  */
@@ -122,6 +176,8 @@ async function confirmPendingDanger(){
   hist.push(pendingConfirm.assistantMsg);
   const messages=[{role:"system", content:chatSysPrompt(t("common.confirm","确认"))}].concat(hist.map(m=>({...m})));
   for(const c of pendingConfirm.toolCalls){
+    /* v3.7.59：参数非法的调用即使被确认也不执行（execTool 收到 null args 会抛内部 TypeError） */
+    if(c.args === null){ _pushBadArgsToolReceipt(messages, hist, c.id, c.name); continue; }
     const res=execTool(c.name, c.args, true); // 强制（已确认）
     let rj=null; try{ rj=JSON.parse(res); }catch(e){ try{ pushDiag("error", "confirm tool result parse error: "+(e&&e.message||e), {where:"confirmExecTool"}); }catch(_){} }
     const tm={role:"tool", tool_call_id:c.id, content:res, _disp:(rj&&rj.msg)||(t("ai.toolPrefix","工具 ")+c.name)};
@@ -183,6 +239,119 @@ function cancelPendingDanger(userText){
   hist.push({role:"assistant", content:t("ai.cancelledOp","已取消操作：「")+title+t("ai.cancelledOpSuffix","」。")});
   pendingConfirm=null;
   closeConfirmModal();
+  trimChatHist(hist);
+  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
+}
+
+/* ---------- Agent 自主执行：先规划 → 用户评审 → 确认后才落地（v3.7.59 给 chatOnceAgent 一个真入口） ----------
+ * 为什么不让它一键跑完：chatOnceAgent / executeAgentPlan / parseAgentPlan 这条链早就写全了，
+ * 但**零生产调用方、零测试**（v3.7.59 实测：只挂在 __test 桥上），而且旧实现用
+ * execTool(...,force=true) 绕开了危险操作确认。直接给它一个"点了就跑完"的入口，
+ * 等于把一条没人走过的自动改数据路径交给用户 —— 所以入口按「规划 → 评审 → 执行」两段式做。
+ * 破坏性步骤（delete_task/update_task）在 executeAgentPlan 里被拦成 needsConfirm，
+ * 白名单在这条路径同样生效，步数有 AGENT_PLAN_STEPS_MAX 封顶。
+ */
+let pendingAgentPlan = null; // { plan, text, sc }
+
+/** 把计划渲染成人能读的评审文本（聊天里显示，也用作确认提示的正文） */
+function agentPlanReviewText(plan){
+  const lines = plan.steps.map(function(s, i){
+    return (i+1)+". "+s.desc+"  →  "+s.tool+(DANGER_CONFIRM_TOOLS.has(s.tool) ? t("aiagent.planDangerMark"," ⚠️ 需确认，不会自主执行") : "");
+  });
+  let out = t("aiagent.planHead","【执行计划】")+plan.goal+"\n"+lines.join("\n");
+  if(plan.truncatedFrom) out += "\n"+t("aiagent.planTruncated","（原计划 ")+plan.truncatedFrom+t("aiagent.planTruncatedMid"," 步，已裁到 ")+plan.steps.length+t("aiagent.planTruncatedSuffix"," 步 —— 自主执行有步数上限）");
+  return out + "\n" + t("aiagent.planAsk","发送「确认执行」开始逐步执行；发送其他内容取消该计划。");
+}
+
+/**
+ * 只做规划并请用户评审，不执行任何变更。
+ * @param {string} text - 用户诉求
+ * @returns {Promise<boolean>} 是否产出了待确认的计划
+ */
+async function proposeAgentPlan(text){
+  const raw = String(text || "").trim();
+  if(!raw) return false;
+  const hist = getChat(active);
+  if(getCfg().agent === false){
+    toast(t("aiagent.offWarn","Agent 模式已关闭（设置 → AI → Agent 模式），无法自主规划执行。"), "warn");
+    return false;
+  }
+  hist.push({ role:"user", content: raw });
+  renderChat(); scrollChat();
+  chatController = createChatController();
+  showChatThinking(true);
+  let plan = null, errText = "";
+  try{
+    /* 规划阶段也带上技能段：用户沉淀的标准作业流程正是"该怎么拆"的现成答案 */
+    const msgs = [
+      { role:"system", content: agentPlanSysPrompt(raw) + skillsPromptBlock(raw) },
+      { role:"user", content: raw }
+    ];
+    const resp = await chatOnce(msgs, { signal: (chatController && chatController.ac) ? chatController.ac.signal : undefined });
+    const content = (resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content) || "";
+    plan = parseAgentPlan(content);
+    if(!plan) errText = t("aiagent.noPlan","模型没有返回可执行的计划，请换个说法，或直接走普通对话。");
+  }catch(e){
+    errText = t("aiagent.planError","规划失败：")+String((e && e.message) || e);
+  }finally{
+    showChatThinking(false);
+    if(chatController && chatController.timer) clearTimeout(chatController.timer);
+    chatController = null;
+  }
+  if(plan){
+    pendingAgentPlan = { plan: plan, text: raw, sc: active };
+    hist.push({ role:"assistant", content: agentPlanReviewText(plan) });
+  }else{
+    hist.push({ role:"assistant", content: errText, _failed: true });
+  }
+  trimChatHist(hist);
+  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+  return !!plan;
+}
+
+/** 执行已评审的计划（非破坏性步骤），并把流程交给"固化为技能"候选 */
+async function confirmAgentPlan(){
+  const p = pendingAgentPlan;
+  if(!p || p.sc !== active){ pendingAgentPlan = null; return false; }
+  pendingAgentPlan = null;
+  const hist = getChat(active);
+  hist.push({ role:"user", content: t("common.confirm","确认") });
+  chatController = createChatController();
+  showChatThinking(true);
+  const signal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
+  try{
+    const r = await executeAgentPlan(p.plan, { signal: signal });
+    hist.push({ role:"assistant", content: r.summary });
+    /* 自主执行跑通的流程 = 一条现成的可复用技能候选（与对话路径同一套机制、同一个门槛） */
+    const trace = r.results.filter(function(x){ return !x.blocked; }).map(function(x){
+      return { name: x.step.tool, args: Object.keys(x.step.args || {}).slice(0, 8), ok: x.ok };
+    });
+    try{
+      const offer = noteSkillOffer(trace, p.text);
+      if(offer) toast(t("skills.offerToast","本轮成功执行了 ")+offer.steps.length
+        +t("skills.offerToastMid"," 个工具调用。发送「存为技能」即可把这条流程固化成可复用技能（命令面板 Ctrl+K 的「技能」组也能一键保存）。"),"ok");
+    }catch(_e){ /* 候选提示失败不影响已完成的执行 */ }
+    AppBridge.render();
+  }catch(e){
+    hist.push({ role:"assistant", content: String((e && e.message) || e), _failed: true });
+  }finally{
+    showChatThinking(false);
+    if(chatController && chatController.timer) clearTimeout(chatController.timer);
+    chatController = null;
+    trimChatHist(hist);
+    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+  }
+  return true;
+}
+
+/** 取消待确认的计划（用户的其他输入照常记进历史，与 cancelPendingDanger 同形） */
+function cancelAgentPlan(userText){
+  const goal = pendingAgentPlan && pendingAgentPlan.plan ? pendingAgentPlan.plan.goal : "";
+  const hist = getChat(active);
+  if(hist.length && hist[hist.length-1].role === "assistant" && !hist[hist.length-1].tool_calls) hist.pop(); // 移除待确认的计划
+  hist.push({ role:"user", content: userText });
+  hist.push({ role:"assistant", content: t("aiagent.planCancelled","已取消该执行计划：")+goal });
+  pendingAgentPlan = null;
   trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
 }
@@ -249,15 +418,38 @@ function chatSysPrompt(userText){
   const cfg = getCfg();
   // v1.15：话术与能力对齐——cfg.agent=false 时不引导记忆/编排（对应工具也已被 effectiveTools 剔除）
   const base = effectiveSysprompt(active) || t("ai.sysPrompt","你是一个全能 AI 助手，可调用工具管理任务与工坊数据。");
+  /* v3.7.59：技能段与 Agent 模式正交（技能描述的是工具用法，cfg.agent=false 时工具仍在），
+     故两条分支都追加；无启用技能时 skillsPromptBlock 返回空串，提示与改动前逐字节一致。 */
+  const skillsCtx = skillsPromptBlock(userText);
   if(cfg && cfg.agent === false){
     return base
       +t("ai.sysPromptTool","\\n你可以调用工具来创建、修改、删除任务，查询与搜索工坊数据，需要时直接调用。")
-      +agentContextPrompt(userText);
+      +agentContextPrompt(userText)
+      +skillsCtx;
   }
   return base
     +t("ai.sysPromptTool","\\n你可以调用工具来创建、修改、删除任务，查询与搜索工坊数据，需要时直接调用。")
     +t("ai.sysPromptRemember","用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。")
-    +agentContextPrompt(userText);
+    +agentContextPrompt(userText)
+    +skillsCtx;
+}
+/**
+ * v3.7.59：把一段文本送进右侧聊天面板并提交（命令面板「技能」组一键触发用）。
+ * 走真实表单提交路径，因此 onChatSubmit 的全部拦截（技能展开、待确认危险操作、RAG 注入）都照常生效。
+ * @param {string} text - 要发送的用户消息
+ * @returns {boolean} 是否成功提交
+ */
+function sendChatText(text){
+  const s = String(text || "").trim();
+  if(!s) return false;
+  const el = $("#chatTextInput");
+  const form = $("#chatForm");
+  if(!el || !form) return false;
+  el.value = s;
+  el.dispatchEvent(new Event("input", {bubbles:true}));
+  if(form.requestSubmit) form.requestSubmit();
+  else form.dispatchEvent(new Event("submit", {cancelable:true}));
+  return true;
 }
 async function onChatSubmit(e){
  try{
@@ -274,6 +466,16 @@ async function onChatSubmit(e){
       return;
     }
   }
+  /* v3.7.59：Agent 计划的评审态（命令面板「让 AI 自主完成」产出）——与上面同形，
+     只有「确认执行」才落地，任何别的内容取消，绝不在用户没说确认时动数据。 */
+  if(pendingAgentPlan){
+    if(pendingAgentPlan.sc !== active){ pendingAgentPlan = null; }
+    else {
+      const yes = /^(确认执行|确认|确定|执行|yes|confirm|run|y)$/i.test(text.trim());
+      if(yes){ await confirmAgentPlan(); } else { cancelAgentPlan(text); }
+      return;
+    }
+  }
   // Agent：显式记忆指令「记住：xxx」直接落工作记忆（不走模型，确定可靠）
   const memHit = /^(记住|请记住|帮我记住)[:：\s]+(.+)$/s.exec(text);
   if(memHit && memHit[2]){
@@ -283,6 +485,36 @@ async function onChatSubmit(e){
     trimChatHist(hist);
     save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
     return;
+  }
+  /* v3.7.59 Skills ①：「存为技能 [名字]」——把上一轮成功执行的工具流程固化成可复用技能（不走模型，确定可靠）。
+     同时接受英文 save (as) skill，因为命令面板发出的文本随界面语言变化。
+     ⚠️ 命令词后必须紧跟冒号、空白或到此为止（(?:[:：]\s*|\s+|$)），否则「保存技能说明文档」这类
+     正常句子会被吞掉。 */
+  const skillSaveHit = /^(?:存为技能|保存为技能|存成技能|保存技能|save(?:\s+as)?\s+skill)(?:\s*[:：]\s*|\s+|$)(.*)$/i.exec(text);
+  if(skillSaveHit){
+    const r = commitPendingSkill((skillSaveHit[1] || "").trim());
+    hist.push({role:"user", content:text});
+    hist.push({role:"assistant", content: r
+      ? t("skills.savedPrefix","已把上一轮流程固化为技能「")+r.name
+        +t("skills.savedSuffix","」。它会在每轮对话注入系统提示，也可在命令面板（Ctrl+K）「技能」组一键触发；到「扩展 → 技能配置」可直接编辑或删除。")
+      : t("skills.noOffer","当前没有可固化的流程：需要上一轮对话成功执行 ≥2 个工具调用（删除/修改类工具不计入）。")});
+    trimChatHist(hist);
+    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+    return;
+  }
+  /* v3.7.59 Skills ②：「技能：X」/「用技能 X」显式触发。
+     只有 X 精确对上已启用技能的名字或触发词才拦截（findSkill 返回 null 就原样走正常路径），
+     所以「技能树怎么加点」这类普通输入不会被吞。 */
+  let outbound = text;
+  const skillRunHit = /^(?:用|执行|运行|调用)?\s*(?:技能|skill)(?:[:：]\s*|\s+)(.+)$/is.exec(text);
+  if(skillRunHit){
+    const sk = findSkill((skillRunHit[1] || "").trim());
+    if(sk){
+      outbound = text + "\n\n" + t("skills.runWrapPrefix","（请立即按已定义技能「")+sk.name
+        + t("skills.runWrapMid","」执行：")+sk.prompt
+        + (sk.tools.length ? t("skills.runWrapTools","；优先使用工具：")+sk.tools.join(", ") : "")
+        + t("skills.runWrapSuffix","。）");
+    }
   }
   // v1.4-D：自然语言建任务拦截（"帮我建个任务：明天下午3点复习数学"）
   const taskHit = parseNaturalLanguageTask(text);
@@ -331,10 +563,23 @@ async function onChatSubmit(e){
   // v3.4.7 批次六：RAG 上下文注入（激活闲置索引资产）——检索任务/记录/笔记/对话历史，
   // 相关片段拼进 system prompt。开关：cfg.rag（设置页 AI→记忆），默认关（防 token 意外膨胀）；
   // ragInjectContext 内部已判 cfg.rag === false 返回空串，检索失败/无索引同样安全降级为空。
+  /* v3.7.59 (#19)：先把本轮查询向量备好 —— agentContextPrompt → recallMemories 是同步链，
+     拿不到预置向量时它只会退回纯词法。传 outbound（与 chatSysPrompt 收的同一个串），
+     否则「技能：X」触发时 key 对不上、语义召回静默失效。失败一律降级，绝不拦对话。 */
+  await memPrimeQueryVector(outbound).catch(()=> false);
   const ragCtx = await ragInjectContext(text).catch(()=> "");
-  const messages=[{role:"system", content:chatSysPrompt(text) + ragCtx}]
+  /* v3.7.59：chatSysPrompt 收 outbound —— 「技能：X」时系统提示里的技能段会因整名命中把它排到第一条。
+     未触发技能时 outbound === text，行为与改动前一致。 */
+  const messages=[{role:"system", content:chatSysPrompt(outbound) + ragCtx}]
     // B1 修复：保留完整结构（含 tool_calls / tool_call_id），否则含工具调用的会话第二轮会缺 id 触发 400
     .concat(hist.map(m=>({...m})));
+  /* v3.7.59：触发技能时，把**发出去**的最后一条 user 消息换成展开版（附上该技能的做法与建议工具）。
+     hist 里仍存用户原话 —— 界面与历史记录不被一大段指令污染，模型也确实收到"按这个流程做"。 */
+  if(outbound !== text){
+    for(let mi=messages.length-1; mi>=0; mi--){
+      if(messages[mi] && messages[mi].role === "user"){ messages[mi].content = outbound; break; }
+    }
+  }
   await runChatLoop(messages, hist);
   }catch(err){ const m=(err&&err.message)?err.message:String(err); pushDiag("error", m, {where:"onChatSubmit"}); try{ toast(t("ai.chatError","对话出错：")+m, "error"); }catch(e2){} }
 }
@@ -349,9 +594,16 @@ async function runChatLoop(messages, hist){
     const acfg = getCfg()||{};
     if(!activeGoal()){ const n=Number(acfg.agentLoops); if(isFinite(n)&&n>=6&&n<=30) maxLoops=Math.round(n); }
     else { const n=Number(acfg.agentGoalLoops); if(isFinite(n)&&n>=12&&n<=50) maxLoops=Math.round(n); }
-    const wl = String(acfg.toolWhitelist||"").trim();
-    const toolWhitelist = wl ? new Set(wl.split(/[,\s\u3000]+/).filter(Boolean)) : null;
+    const toolWhitelist = toolWhitelistSet(acfg); // v3.7.59：与 executeAgentPlan 同一来源，别再各写一份解析
     const autoConfirm = !(acfg.agentAutoConfirm===false);
+    /* v3.7.59 Skills ③：采集本轮的工具执行结果，循环结束后判断是否值得固化成技能。
+       turnUserText 取 messages 里最后一条 user —— 工具执行只追加 assistant/tool 角色，
+       所以循环结束时它仍是本轮的用户输入（打字确认路径下会是「确认」，用户可自行命名）。 */
+    const skillTrace = [];
+    let turnUserText = "";
+    for(let mi=messages.length-1; mi>=0; mi--){
+      if(messages[mi] && messages[mi].role === "user"){ turnUserText = String(messages[mi].content || ""); break; }
+    }
     while(guard++<maxLoops){
       // v3.7.52：每轮重置超时——超时语义应是「单次请求超时」，而不是「整段循环总预算」
       if(chatController && chatController.resetTimeout) chatController.resetTimeout();
@@ -382,9 +634,10 @@ async function runChatLoop(messages, hist){
       const msg = j.choices && j.choices[0] && j.choices[0].message;
       if(!msg) throw new Error(t("ai.emptyResponse","空响应"));
       if(msg.tool_calls && msg.tool_calls.length){
-        const DANGER=new Set(["delete_task","update_task"]);
-        const calls = msg.tool_calls.map(tc=>({name:tc.function.name, id:tc.id, args:JSON.parse(tc.function.arguments||"{}")}));
-        const hasDanger = calls.some(c=>DANGER.has(c.name));
+        // v3.7.59：清单收口到 ai-tools.js 的 DANGER_CONFIRM_TOOLS（此前这里各写一份，Agent 计划路径没走它）
+        // v3.7.59：args 走 _parseToolArgs —— 模型给的 JSON 可能非法，返回 null 由下方按「参数非法」回执
+        const calls = msg.tool_calls.map(tc=>({name:tc.function.name, id:tc.id, args:_parseToolArgs(tc.function.arguments)}));
+        const hasDanger = calls.some(c=>DANGER_CONFIRM_TOOLS.has(c.name));
         /* v3.7.52：危险操作**始终**需用户确认。原实现把这段挂在 `if(autoConfirm)` 上，而
            autoConfirm = !(cfg.agentAutoConfirm===false) —— 于是把设置里「自动确认非危险操作」
            关掉反而变成「危险操作免确认」（语义反向，且反向到**更不安全**的那侧；实测还有
@@ -392,7 +645,8 @@ async function runChatLoop(messages, hist){
            现在开关只按字面作用于非危险批次：关闭时非危险的工具调用也要先确认。 */
         if(hasDanger || !autoConfirm){
           // ② 危险操作：整体延后到用户确认后执行，避免半截工具回执引发下一轮 400
-          const titles = calls.map(c=>{ const ft=findTask(c.args.task_id); return ft? ft.task.title : c.args.task_id; }).filter(Boolean);
+          // v3.7.59：args 可能为 null（模型给了非法 JSON）→ 用 {} 兜底取标题，执行环节会跳过并回执
+          const titles = calls.map(c=>{ const a=c.args||{}; const ft=findTask(a.task_id); return ft? ft.task.title : a.task_id; }).filter(Boolean);
           const titleText = titles.join(t("ai.confirmJoinSep","、"));
           pendingConfirm={ toolCalls:calls, title:titleText||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:active };
           hist.push({role:"assistant", content: hasDanger
@@ -416,10 +670,22 @@ async function runChatLoop(messages, hist){
             const tm={role:"tool", tool_call_id:c.id, content:JSON.stringify({ok:false, msg:denyMsg}), _disp:denyMsg, _tool_denied:true};
             messages.push(tm); hist.push(tm);
           });
-          for(const c of allowed){
+          for(let ci=0; ci<allowed.length; ci++){
+            const c = allowed[ci];
+            /* v3.7.59：取消即刻生效——剩余调用不再执行，补「已跳过」回执后退出循环 */
+            if(_chatCancelled()){
+              for(let k=ci; k<allowed.length; k++) _pushSkippedToolReceipt(messages, hist, allowed[k].id, allowed[k].name);
+              throw new Error("__USER_CANCEL__");
+            }
             const args=c.args;
+            /* v3.7.59：参数非法的调用不执行，只回执 —— 让模型下一轮自行修正 */
+            if(args === null){
+              _pushBadArgsToolReceipt(messages, hist, c.id, c.name);
+              continue;
+            }
             /* v3.7.52：走统一入口 execToolAuto —— 异步工具（联网/代码/SQL）在 chat 路径也能真正执行 */
             const res=await execToolAuto(c.name, args);
+            skillTracePush(skillTrace, c.name, args, res); // v3.7.59 Skills：记录本轮流程
             const tm={role:"tool", tool_call_id:c.id, content:res, _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
             messages.push(tm); hist.push(tm);
           }
@@ -427,11 +693,25 @@ async function runChatLoop(messages, hist){
         }
         // 无危险：完整 assistant + tool（含 tool_calls / tool_call_id）入 hist，B1 安全
         messages.push(msg); hist.push(msg);
-        for(const tc of msg.tool_calls){
-          const args=JSON.parse(tc.function.arguments||"{}");
+        for(let ti=0; ti<msg.tool_calls.length; ti++){
+          const tc = msg.tool_calls[ti];
+          /* v3.7.59：取消即刻生效——剩余调用不再执行，补「已跳过」回执后退出循环 */
+          if(_chatCancelled()){
+            for(let k=ti; k<msg.tool_calls.length; k++)
+              _pushSkippedToolReceipt(messages, hist, msg.tool_calls[k].id, msg.tool_calls[k].function.name);
+            throw new Error("__USER_CANCEL__");
+          }
+          const args=_parseToolArgs(tc.function.arguments);
+          /* v3.7.59：参数非法（截断/尾随逗号/单引号…）不执行、不抛裸 SyntaxError，
+             改为回执给模型让它下一轮修正 —— 原实现会让整段多步循环直接中断。 */
+          if(args === null){
+            _pushBadArgsToolReceipt(messages, hist, tc.id, tc.function.name);
+            continue;
+          }
           /* v3.7.52：统一入口 —— 异步工具（web_search/web_fetch/code_run/sql_query）
              此前在 chat 路径只拿到「未知工具」，与 Agent 计划路径行为不一致 */
           const res=await execToolAuto(tc.function.name, args);
+          skillTracePush(skillTrace, tc.function.name, args, res); // v3.7.59 Skills：记录本轮流程
           const tm={role:"tool", tool_call_id:tc.id, content:res, _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
           messages.push(tm); hist.push(tm);
         }
@@ -440,6 +720,16 @@ async function runChatLoop(messages, hist){
       hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)")});
       break;
     }
+    /* v3.7.59 Skills ③：本轮成功执行了 ≥2 个非破坏性工具 → 提示可把这条流程固化成技能。
+       只是挂出候选（内存态）+ 一条 toast，不自动写盘：用户回「存为技能」或走命令面板才落库，
+       避免把一次性偶发调用沉淀成噪声技能。 */
+    try{
+      const offer = noteSkillOffer(skillTrace, turnUserText);
+      if(offer){
+        toast(t("skills.offerToast","本轮成功执行了 ")+offer.steps.length
+          +t("skills.offerToastMid"," 个工具调用。发送「存为技能」即可把这条流程固化成可复用技能（命令面板 Ctrl+K 的「技能」组也能一键保存）。"),"ok");
+      }
+    }catch(_e){ /* 固化提示失败不影响已完成的对话 */ }
   }catch(err){
     /* v3.7.52：取消/超时判定以**控制器上的 reason** 为准。
        原因：`ac.abort(reason)` 时浏览器 fetch 是以**传入的 reason 拒绝**的（name 是 "Error"，

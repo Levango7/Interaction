@@ -41,6 +41,23 @@ function idbOpen(){
   return _idbDbPromise;
 }
 
+/* v3.7.59：IDB 写失败此前**完全不可见**。
+   原实现里 `tx.onerror` / `tx.onabort` 与 `req.onerror` 都直接 `resolve(n)` / `resolve(undefined)`
+   —— 谎报成功；调用方（`idbQueueMirror` 的 setTimeout、pagehide 钩子）还额外 `.catch(()=>{})` 兜着。
+   而 IDB 镜像正是 localStorage 的**恢复来源**（idbRestoreAll）：它静默失效意味着
+   「用户以为有备份，其实早就停了」，且任何日志里都查不到。
+   现改为：失败即上报 pushDiag，并 resolve 0（如实表示「没有键被确认写入」）。
+   节流：同一分钟内只报一次，避免持续失败把诊断环形缓冲冲掉、反而把其它线索挤没。 */
+let _idbDiagAt = 0;
+function _idbDiag(msg, e){
+  const now = Date.now();
+  if(now - _idbDiagAt < 60000) return;
+  _idbDiagAt = now;
+  try{
+    if(typeof pushDiag === "function") pushDiag("error", msg + ((e && e.message) ? ": " + e.message : ""), { where: "idb" });
+  }catch(_){ /* 诊断不可用时不阻塞存储路径 */ }
+}
+
 /**
  * 单键事务包装
  * @param {IDBTransactionMode} mode - "readonly" | "readwrite"
@@ -55,8 +72,8 @@ function idbTxn(mode, fn){
       const st = tx.objectStore(IDB_STORE);
       const req = fn(st);
       req.onsuccess = () => resolve(req.result);
-      req.onerror = () => resolve(undefined);
-    }catch(e){ resolve(undefined); }
+      req.onerror = () => { _idbDiag("idbTxn request error", req.error); resolve(undefined); };
+    }catch(e){ _idbDiag("idbTxn threw", e); resolve(undefined); }
   }));
 }
 
@@ -102,9 +119,10 @@ function idbFlushQueue(){
       const st = tx.objectStore(IDB_STORE);
       entries.forEach(k => { const v = q[k]; if(v === undefined){ st.delete(k); } else { st.put(v, k); } n++; });
       tx.oncomplete = () => resolve(n);
-      tx.onerror = () => resolve(n);
-      tx.onabort = () => resolve(n);
-    }catch(e){ resolve(0); }
+      /* v3.7.59：error/abort 不再谎报 n，改为上报诊断 + 如实返回 0 */
+      tx.onerror = () => { _idbDiag("idbFlushQueue tx error (" + entries.length + " keys)", tx.error); resolve(0); };
+      tx.onabort = () => { _idbDiag("idbFlushQueue tx aborted (" + entries.length + " keys)", tx.error); resolve(0); };
+    }catch(e){ _idbDiag("idbFlushQueue threw", e); resolve(0); }
   }));
 }
 
@@ -138,7 +156,10 @@ function idbRestoreAll(){
       if(has) continue;
       const v = await idbReadKey(k);
       if(v === undefined || v === null) continue;
-      try{ localStorage.setItem(k, JSON.stringify(v)); restored.push(k); }catch(e){ /* 配额不足等：跳过 */ }
+      /* v3.7.59：恢复写回失败（配额不足等）此前静默跳过 —— 表现为「镜像里有数据，但恢复后
+         某些键不见了」，用户与日志都看不出发生过什么。节流上报。 */
+      try{ localStorage.setItem(k, JSON.stringify(v)); restored.push(k); }
+      catch(e){ _idbDiag("idbRestoreAll setItem failed for " + k, e); }
     }
     return restored;
   });
