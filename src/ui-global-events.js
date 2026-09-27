@@ -6658,6 +6658,21 @@ function executeSearch(query){
   }
   return results;
 }// ===== Automation Workflow (v1.6-E 自动化工作流) [DEPRECATED v1.14.1：入口已冻结] =====
+/* ===== v3.7.60 集成同步 / 通知层：标记废弃，等渠道定案（不删、不接）=====
+   真实 Chromium 逐 provider 实测（_probe/integration-census.mjs）的定性结论：
+   · **活着的**：`*Connect` / `*Disconnect` 七个 + 面板渲染 + 凭据落盘 —— 由
+     openIntegrationConfig 用 `window[name + "Connect"]` 字符串拼接派发（静态普查看不见这条边，
+     所以本簇曾被误判为零引用死码）。连接确实打到各服务商的验证端点。
+   · **零调用方的**：下面标了 @deprecated 的 30 个函数（约 855 行）—— 同步任务 / 笔记 / 日程、
+     发消息、从消息建任务、状态映射等。连上七个 provider 后跑「建任务 / 完成任务 / 通知 /
+     到期检查」，集成域名 0 次外发；UI 里也没有任何"同步到 X"入口。
+   处置：**只标记，不动代码**。删掉还是把渠道接下去，是产品决策（用户 2026-09-28 定：
+   「先标记废弃，等我定好渠道再动」）。渠道定案后：
+     - 若要接：给这些函数找/建一个消费点（任务变更钩子、通知分发、日程同步），
+       逐个摘掉 @deprecated 并补真发请求的用例；
+     - 若要删：连同 `__test` 桥条目、i18n 键一起清，并登记进 docs/product-scope.md §三。
+   守护：tests/integration-deprecated.test.js 锁住「这些函数仍然零调用 + 标记仍在」。 */
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
 function integrationGetStatus(name){
   const p = integrationGetProvider(name);
   if(!p) return { connected:false, reason:"not_registered" };
@@ -6665,6 +6680,7 @@ function integrationGetStatus(name){
   if(p.config && p.config._verified === false) return { connected:false, reason:"verify_failed" };
   return { connected:true, verified:!!(p.config && p.config._verified) };
 }
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
 async function _intNotionPullWriteback(){
   let synced = [];
   try{ synced = notionListSynced() || []; }catch(e0){ return 0; }
@@ -7034,6 +7050,7 @@ function integrationGetProvider(name){
  * 列出所有 provider（可按类型过滤）
  * @param {string} [type] - 类型过滤
  * @returns {Array} provider 列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function integrationListProviders(type){
   _intLoadProviders();
@@ -7050,6 +7067,7 @@ function integrationListProviders(type){
  * 启用 provider
  * @param {string} name - provider 名称
  * @returns {boolean} 是否成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function integrationEnableProvider(name){
   if(!name) return false;
@@ -7065,6 +7083,7 @@ function integrationEnableProvider(name){
  * 禁用 provider
  * @param {string} name - provider 名称
  * @returns {boolean} 是否成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function integrationDisableProvider(name){
   if(!name) return false;
@@ -7101,6 +7120,7 @@ function integrationRemoveProvider(name){
  * @param {string} name - provider 名称
  * @param {Object} config - 新配置（合并到现有配置）
  * @returns {boolean} 是否成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function integrationConfigureProvider(name, config){
   if(!name || !config || typeof config !== "object") return false;
@@ -7146,6 +7166,7 @@ function _intRecordSync(providerName, localId, remoteId, type){
   state.lastSyncAt = _intNow();
   _intSaveSyncState();
 }
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
 function _intFindLocalId(providerName, remoteId){
   const state = _intGetSyncState(providerName);
   for(const localId in state.syncedItems){
@@ -7186,6 +7207,7 @@ async function notionConnect(config){
  * @param {Object} task - 本地任务 { id, title, status, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'（默认 sync）
  * @returns {Promise<Object>} 同步结果 { success, action, remoteId, localId }
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function notionSyncTask(task, direction){
   if(!task || !task.id) return { success: false, error: "invalid_task" };
@@ -7255,6 +7277,7 @@ async function notionSyncTask(task, direction){
  * @param {Object} note - 本地笔记 { id, title, content, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function notionSyncNote(note, direction){
   if(!note || !note.id) return { success: false, error: "invalid_note" };
@@ -7303,6 +7326,7 @@ async function notionSyncNote(note, direction){
 /**
  * 列出已同步的 Notion 项
  * @returns {Array} 已同步项列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function notionListSynced(){
   const state = _intGetSyncState("notion");
@@ -7389,6 +7413,7 @@ async function linearConnect(config){
  * @param {Object} issue - 本地 issue { id, title, description, status, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function linearSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
@@ -7450,6 +7475,7 @@ async function linearSyncIssue(issue, direction){
  * Linear 状态映射（本地状态 → Linear 状态）
  * @param {string} localStatus - 本地状态
  * @returns {string} Linear 状态
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function linearMapStatus(localStatus){
   return LINEAR_STATUS_MAP[localStatus] || localStatus;
@@ -7459,6 +7485,7 @@ function linearMapStatus(localStatus){
  * 列出 Linear issues（框架）
  * @param {Object} [filter] - { status, assignee, limit }
  * @returns {Promise<Array>} issue 列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function linearListIssues(filter){
   const provider = await _intRequireProvider("linear", INTEGRATION_TYPES.LINEAR);
@@ -7521,6 +7548,7 @@ async function jiraConnect(config){
  * @param {Object} issue - 本地 issue { id, title, description, status, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function jiraSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
@@ -7582,6 +7610,7 @@ async function jiraSyncIssue(issue, direction){
  * Jira 状态映射
  * @param {string} localStatus - 本地状态
  * @returns {string} Jira 状态
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function jiraMapStatus(localStatus){
   return JIRA_STATUS_MAP[localStatus] || localStatus;
@@ -7591,6 +7620,7 @@ function jiraMapStatus(localStatus){
  * 列出 Jira issues（框架）
  * @param {Object} [filter] - { jql, limit }
  * @returns {Promise<Array>} issue 列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function jiraListIssues(filter){
   const provider = await _intRequireProvider("jira", INTEGRATION_TYPES.JIRA);
@@ -7648,6 +7678,7 @@ async function slackConnect(config){
  * @param {string} text - 消息文本
  * @param {Object} [extra] - 额外参数（如 blocks, attachments）
  * @returns {Promise<boolean>} 是否发送成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function slackSendMessage(channel, text, extra){
   const provider = await _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
@@ -7672,6 +7703,7 @@ async function slackSendMessage(channel, text, extra){
  * @param {string} eventType - 事件类型
  * @param {Object} payload - 事件负载
  * @returns {Promise<boolean>} 是否通知成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function slackNotifyEvent(eventType, payload){
   const provider = await _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
@@ -7684,6 +7716,7 @@ async function slackNotifyEvent(eventType, payload){
  * 从 Slack 消息创建任务（解析消息文本为任务）
  * @param {Object} message - Slack 消息 { text, user, ts, channel }
  * @returns {Object|null} 任务对象或 null
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function slackCreateTaskFromMessage(message){
   if(!message || !message.text) return null;
@@ -7742,6 +7775,7 @@ async function feishuConnect(config){
  * @param {string} chatId - 群聊 ID（不传则用配置中的默认 chatId）
  * @param {string} text - 消息文本
  * @returns {Promise<boolean>} 是否成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function feishuSendMessage(chatId, text){
   const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
@@ -7773,6 +7807,7 @@ async function feishuSendMessage(chatId, text){
  * @param {string} eventType - 事件类型
  * @param {Object} payload - 事件负载
  * @returns {Promise<boolean>}
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function feishuNotifyEvent(eventType, payload){
   const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
@@ -7785,6 +7820,7 @@ async function feishuNotifyEvent(eventType, payload){
  * 从飞书消息创建任务
  * @param {Object} message - { text, senderId, chatId }
  * @returns {Object|null} 任务对象
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function feishuCreateTaskFromMessage(message){
   if(!message || !message.text) return null;
@@ -7839,6 +7875,7 @@ async function dingtalkConnect(config){
  * @param {string} chatId - 群聊 ID（不传则用配置默认）
  * @param {string} text - 消息文本
  * @returns {Promise<boolean>}
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function dingtalkSendMessage(chatId, text){
   const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
@@ -7864,6 +7901,7 @@ async function dingtalkSendMessage(chatId, text){
 
 /**
  * 钉钉事件通知
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function dingtalkNotifyEvent(eventType, payload){
   const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
@@ -7874,6 +7912,7 @@ async function dingtalkNotifyEvent(eventType, payload){
 
 /**
  * 从钉钉消息创建任务
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function dingtalkCreateTaskFromMessage(message){
   if(!message || !message.text) return null;
@@ -8001,6 +8040,7 @@ function _intCalendarParseEvent(providerName, remoteEvent){
  * @param {Object} event - 本地事件 { id, title, start, end, description }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarSyncEvent(providerName, event, direction){
   if(!providerName || !event || !event.id) return { success: false, error: "invalid_params" };
@@ -8065,6 +8105,7 @@ async function calendarSyncEvent(providerName, event, direction){
  * @param {string} providerName - 'google_calendar' | 'outlook_calendar'
  * @param {Object} [range] - { start, end, limit }
  * @returns {Promise<Array>} 事件列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarListEvents(providerName, range){
   const provider = await _intRequireProvider(providerName);
@@ -8100,6 +8141,7 @@ async function calendarListEvents(providerName, range){
  * @param {string} providerName
  * @param {Object} event
  * @returns {Promise<Object|null>} 创建的事件或 null
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarCreateEvent(providerName, event){
   const provider = await _intRequireProvider(providerName);
@@ -8122,6 +8164,7 @@ async function calendarCreateEvent(providerName, event){
  * @param {string} eventId
  * @param {Object} event
  * @returns {Promise<Object|null>} 更新后的事件或 null
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarUpdateEvent(providerName, eventId, event){
   const provider = await _intRequireProvider(providerName);
@@ -8143,6 +8186,7 @@ async function calendarUpdateEvent(providerName, eventId, event){
  * @param {string} providerName
  * @param {string} eventId
  * @returns {Promise<boolean>}
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarDeleteEvent(providerName, eventId){
   const provider = await _intRequireProvider(providerName);

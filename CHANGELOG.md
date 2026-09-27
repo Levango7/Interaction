@@ -1,6 +1,6 @@
 ## [v3.7.60] - 2026-09-28
 
-**两处用户截图标注的响应式缺陷 + 三条「浏览器静默容错」的 CSS 结构缺陷 + 集成簇真机定性（含一个凭据外泄面）**。全量 101 文件 / 1135 条用例、`lint`（四道）、`check:modules`（44 循环 / 35 逆层未变）、`build:check`、e2e **51/51**（新增 2 条渲染层不变量 ×3 视口 = 6 项，45 → 51）均本机绿。
+**两处用户截图标注的响应式缺陷 + 三条「浏览器静默容错」的 CSS 结构缺陷 + 集成簇真机定性（含一个凭据外泄面，同步/通知层按用户决定标记废弃）**。全量 102 文件 / 1141 条用例、`lint`（四道）、`check:modules`（44 循环 / 35 逆层未变）、`build:check`、e2e **51/51**（新增 2 条渲染层不变量 ×3 视口 = 6 项，45 → 51）均本机绿。
 
 ### 用户标注的两条
 
@@ -22,10 +22,12 @@
 此前普查把 notion/linear/jira/slack/feishu/dingtalk/calendar 这一簇判为"静态零引用"，我据此记为"不能凭静态证据删"。**真因找到了**：`openIntegrationConfig` 用字符串拼接派发 —— `window[name + "Connect"]` / `window[name + "Disconnect"]`，任何按标识符计数的工具都看不见这条边（全仓 `window[...]` 动态派发点只有 3 处）。本轮用真实 Chromium + stub fetch（不外发）逐 provider 实测，定性如下：
 
 - **连接链路是真的**：七个 provider 各自打到正确端点 —— `api.notion.com/v1/users/me`、`api.linear.app/graphql`、`<domain>/rest/api/3/myself`、`slack.com/api/auth.test`、`open.feishu.cn/…/tenant_access_token`、`oapi.dingtalk.com/gettoken`、`googleapis.com/calendar/v3/…/calendarList`，凭据进 `Authorization` 头，结果落 `wb_integration_providers`；401 时面板如实显示「已连接 · 未验证」（v3.1.1 那个"假成功 toast"的修复成立）。日历的 OAuth 按钮在非 Electron 下**自动隐藏**，也是诚实的。
-- **没有任何消费方**：连上七个 provider 后跑「建任务 / 完成任务 / 重渲染 / `notifySystem` / `checkDueTasks`」，集成域名 **0 次外发**；UI 里也不存在任何"同步到 X"按钮。`*SyncTask` / `*SendMessage` / `*NotifyEvent` / `calendar*Event` / `integrationList·Enable·Disable·ConfigureProvider` 共 **31 个函数、约 855 行**既无静态调用方也不在任何动态派发面上（其中少数只是测试入口）。**这批是可删候选，但本轮没删** —— 删与留是产品决策（留着就是把同步能力接下去的地基），要用户拍板。
+- **没有任何消费方**：连上七个 provider 后跑「建任务 / 完成任务 / 重渲染 / `notifySystem` / `checkDueTasks`」，集成域名 **0 次外发**；UI 里也不存在任何"同步到 X"按钮。`*SyncTask` / `*SendMessage` / `*NotifyEvent` / `calendar*Event` / `integrationList·Enable·Disable·ConfigureProvider` / `integrationGetStatus` 共 **30 个函数、约 855 行**既无静态调用方也不在任何动态派发面上（逐个复核见 `_probe/verify-deprecated-set.mjs`；其中 5 个只被同为废弃的函数调用，属传递性死）。
+- **处置（用户定：「先标记废弃，等我定好渠道再动」）**：不删、不接，只把状态做实 —— 30 个函数逐个挂 `@deprecated v3.7.60 应用内零调用方…`，区域头留一段处置说明（含"摘除条件"：接上消费点就摘标记并补真发请求的用例，否则连 `__test` 桥与 i18n 键一起清）。`docs/product-scope.md` §三新增 🟠 一档「代码在、入口在、但能力未接到底」，与既有的 🔴（代码已删）/ 🟡（只剩占位、入口已关）并列。
+  - ⚑ 守护 `tests/integration-deprecated.test.js`（6 条）：标记数量与名单精确相等（防无差别批量插标记）、30 个函数仍无"非废弃集内"调用方、废弃集内部互调仅限已知的 5 处、**七个 `*Connect` / `*Disconnect` 与面板/域名校验不得被误标**、并锁住"拼接派发确实存在"这一前提。**已做变异验证**：在 `renderIntegrationPanel` 里插一句 `void calendarListEvents({})`，守护立刻红并报出 `ui-global-events.js:292 calendarListEvents ← 宿主 renderIntegrationPanel`；撤掉后回绿。
 - **修了一个凭据外泄面**：`jiraConnect` 把用户填的 `domain` 直接拼成 `"https://" + domain + "/rest/api/3/myself"` 并带上 Bearer token，而 CSP 的 `connect-src` 含裸 `https:` 不拦任何主机。实测 `domain="evil.example.com/?x="` 会打出 `https://evil.example.com/?x=/rest/api/3/myself`、`"attacker.io/@x"` 会打出 `https://attacker.io/@x/…` —— 即把 domain 填成（或被诱导粘贴成）攻击者控制的值，Jira token 就发过去了。新增 `_intJiraBase()` 只接受「纯主机名（可带端口，允许粘贴 `https://` 前缀）」，拒绝路径 / 查询 / 片段 / userinfo / 前导斜杠，三处拼 URL 的点全部走它。合法自建 Jira（含 `:8443`）不受影响。
 - **修了文案过度承诺**：七个 provider 的说明写着"同步笔记和任务到 Notion""接收 Slack 消息通知"，而上面说了没有任何消费方 —— 按 §四.2「stub + 活 UI = 虚假功能」的同一条标准，**真连接 + 假承诺也算虚假功能**。8 条文案（zh + en + `t()` 兜底参数共 24 处）改为只承诺"验证凭据"，面板总说明补"任务 / 笔记 / 日程同步与消息通知尚未接入，连接本身不会向任何服务发送数据"。
-- **另记一项实测缺口（未修）**：备份/迁移只枚举 `wb_agent_` 前缀 + `wb_custom_links`（`src/ui-backup-stats.js:395`），所以 `wb_integration_providers` / `_sync_state` / `_api_keys` / `_rate_limits` **不进备份**。对凭据来说这偏安全、可能是有意的，但它没写在任何文档里，且意味着恢复备份后连接状态静默丢失。
+- **另记一项实测缺口（未修，已登记）**：备份/迁移只枚举 `wb_agent_` 前缀 + `wb_custom_links`（`src/ui-backup-stats.js:395`），所以 `wb_integration_providers` / `_sync_state` / `_api_keys` / `_rate_limits` **不进备份**。对凭据来说这偏安全、可能是有意的，但它没写在任何文档里，且意味着恢复备份后连接状态静默丢失 —— 现登记进 `docs/product-scope.md` §三🟠 的注记，与渠道定案一起决定"显式声明凭据不随备份走"还是"纳入并加密"。
 - 守护：`tests/integration-jira-domain.test.js`（8 条）—— 合法主机 / 粘贴前缀 / 自定义端口三种放行且 URL 精确、十种注入形态一律 0 外发、**已注册 provider 的 domain 被事后篡改时 sync 与 list 同样不发**、以及文案措辞断言。真机侧另存 `_probe/integration-census.mjs`（逐 provider 外发记录 + 消费路径探测）。
 - 方法论进 `docs/product-scope.md` §四：新增第 4 条自查「文案承诺不得超出实际接线」，并写明静态普查的已知盲区与"判可删前必须做的两件事"。
 

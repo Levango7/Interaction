@@ -88,11 +88,28 @@
 | **Electron 本机同步**（127.0.0.1:8124 + `syncPush`/`syncGet`） | 主进程侧从未实现；v3.7.52 起页面侧按能力缺失隐藏入口 | 页面曾调用 preload 未暴露的 `electronAPI.syncPush/syncGet`，并每 60s 弹一次失败告警（stub + 活 UI = 虚假功能）。现检测不到能力时隐藏「本机同步下载」按钮、不启定时器。**恢复方式**：主进程补 `sync-push` / `sync-get` IPC + 实现 8124 同步服务，preload 同步暴露 API 后入口自恢复 |
 | 企业协作 / CRDT / Capacitor / RBAC / **企业级 SSO** | 已归档（`892a1da`） | 无 UI 残留。**注意区分**：v3.5 起新增的微信 / GitHub 第三方登录属「个人账号 + 可选云同步」，不是企业 SSO，见 §二 |
 
+### 🟠 代码在、入口在、但能力未接到底（v3.7.60 标记废弃，等渠道定案）
+
+| 功能 | 实测定性（v3.7.60，真实 Chromium + stub fetch） | 处置 |
+|---|---|---|
+| **集成中心 · 连接与凭据验证**（notion / linear / jira / slack / 飞书 / 钉钉 / 日历） | **是真的**：七个 provider 各打到正确验证端点（`api.notion.com/v1/users/me`、`slack.com/api/auth.test` 等），凭据进 `Authorization` 头、结果落 `wb_integration_providers`；401 时面板如实显示「已连接 · 未验证」；日历 OAuth 按钮在非 Electron 下自动隐藏 | 保留。附带修了一个凭据外泄面：`jiraConnect` 原样把用户填的 `domain` 拼成请求主机位，实测 `domain="evil.example.com/?x="` 会把 Bearer token 发去该主机；现由 `_intJiraBase()` 只放行纯主机名 |
+| **集成中心 · 同步 / 通知**（`*SyncTask` / `*SyncNote` / `*ListIssues` / `*SendMessage` / `*NotifyEvent` / `*CreateTaskFromMessage` / `calendar*Event` / `integrationList·Enable·Disable·ConfigureProvider` / `integrationGetStatus`） | **零调用方**：连上七个 provider 后跑「建任务 / 完成任务 / 重渲染 / `notifySystem` / `checkDueTasks`」，集成域名 **0 次外发**；UI 里也没有任何"同步到 X"入口。共 **30 个函数、约 855 行**（其中 5 个只被同为废弃的函数调用，属传递性死） | **只标记不删**（用户 2026-09-28：「先标记废弃，等我定好渠道再动」）。30 个函数逐个挂 `@deprecated v3.7.60 应用内零调用方…`，区域头留处置说明。**摘除条件**：渠道定案后要么接上消费点并逐个摘标记 + 补真发请求的用例，要么连 `__test` 桥条目与 i18n 键一起清并移入上面的 🔴 表。⚑ 守护：`tests/integration-deprecated.test.js`（锁"标记仍在 + 仍然零调用 + 活路径未被误标"） |
+
+> ⚠️ **本簇曾被误判为"静态零引用死码"**，真因是 `openIntegrationConfig` 用字符串拼接派发
+> `window[name + "Connect"]` / `window[name + "Disconnect"]` —— 按标识符计数的可达性普查看不见这条边。
+> 判"零引用可删"前必须：① 枚举 `window[` / `new Function` / `eval` 类派发点（本仓 `window[...]` 仅 3 处）；
+> ② 真机把入口跑一遍。详见 §四.4。
+
+> ⚠️ **另一项实测缺口（未修，仅登记）**：备份/迁移只枚举 `wb_agent_` 前缀 + `wb_custom_links`
+> （`src/ui-backup-stats.js:395`），所以 `wb_integration_providers` / `_sync_state` / `_api_keys` /
+> `_rate_limits` **不进备份**。对凭据而言这偏安全、可能是有意的，但它从未写进文档，
+> 且意味着恢复备份后连接状态静默丢失。定渠道时一并决定：显式声明"凭据不随备份走"，还是纳入并加密。
+
 ---
 
 ## 四、死 UI 检测规范（防回潮）
 
-**每次改动 UI 后，自查三条：**
+**每次改动 UI 后，自查四条：**
 
 1. **按钮有绑定**：设置页 / 顶栏 / 侧栏每个 `<button id="...">` 必须有对应 `.onclick` 或事件委托分支。新增按钮时同步加绑定，否则视为 bug。
    - 已发现并修复的历史案例：日历按钮、自动化按钮、番茄钟/计时按钮、空态"新建任务"按钮、生物识别按钮、图片附件（均曾"点了没反应"）。
