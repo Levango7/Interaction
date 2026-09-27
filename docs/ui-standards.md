@@ -349,9 +349,9 @@ Canvas `ctx.font` 1 处。
 🔴 **语义色当"小字颜色"时必须走 `-text` 档**（`--accent-text` / `--danger-text` / `--warn-text` / `--ok-text`）：
 裸语义色只按"图形/大按钮"场景调过，当正文小字用时对比度不够（v3.7.52 全站替换，见 §6.6）。
 
-### 6.5 写注释与量测的三条禁令（**踩过 3 次 + 1 次 + 1 次**）
+### 6.5 写注释与量测的四条禁令（**踩过 3 次 + 1 次 + 1 次 + 1 次**）
 
-在 CSS/JS 注释里写"改了什么"的说明时，**下列两样都不许写**：
+在 CSS/JS 注释里写"改了什么"的说明时，**下列几样都不许写**：
 
 | 禁止 | 原因 | 替代句式 |
 |---|---|---|
@@ -378,6 +378,24 @@ const fs = getComputedStyle(el).fontSize;   // 真实生效值
 
 **同时必须核对规则的媒体查询归属**：`.mob-bar-btn` 源码里确有 `font-size:var(--fs-xs)`，
 但整块位于 `@media(max-width:767px)` 内 —— 桌面态不生效是**正确行为**，不是遗漏。
+
+**第四条禁令 —— 别拿原生 `select` 的盒子当「用户看到的宽度」**（v3.7.60，**误报过一次等宽缺陷**）：
+
+自研下拉（`src/ui-select.js`）会把原生 select 包成 `div.ds-select > button.ds-trigger`，
+原生 `select` 转为 `position:absolute;inset:0;opacity:0;pointer-events:none` 的**隐藏表单控件**。
+于是：
+
+- 量 `input,select` 得到的是隐藏盒，不是可见控件 —— 实测可见 `.ds-trigger` 一直是 144px，
+  隐藏 `select` 被 `max-width` 夹成 120px，`tests/e2e/viewport.spec.js` 的「表单等宽」因此误报。
+- 更隐蔽的是**选择器会失配**：`#taskForm>.fld:nth-child(3)>select` 里的 `>` 在包装后不再成立，
+  实测 `sel.matches(该选择器) === false`。写 `>select` 时必须同时给 `>.ds-select>select` 分支。
+
+```js
+// ❌ 量到隐藏控件
+const w = c.querySelector("input,select").getBoundingClientRect().width;
+// ✅ 优先量可见控件
+const vis = c.querySelector(".ds-trigger, input, select");
+```
 
 ### 6.6 场景语义色与文字安全色（v3.7.52）
 
@@ -413,6 +431,29 @@ const fs = getComputedStyle(el).fontSize;   // 真实生效值
 ⚑ 守护：`tests/theme-scene-tokens.test.js`（8 条）+ `tests/e2e/theme-matrix.spec.js` 硬断言
 （10 主题 × 8 场景 + 4 个 `-text` 档 ≥ 4.5，见附录 A）。
 
+### 6.7 样式表结构：孤立/缺失的右括号**不是无害的**（v3.7.60 新增门禁）
+
+浏览器对残缺样式表只做错误恢复、**不报任何错**，所以这类缺陷可以静默存活多个版本。
+本轮实测到两种真实后果：
+
+| 残缺 | 浏览器的实际处理 | 实测后果 |
+|---|---|---|
+| 规则漏右括号，下一条规则紧跟其后 | 后一条被解析成 **CSS 嵌套**，生效选择器变成 `父 子` | `.cmd li.cmd-group{…}` 漏 `}` → `.cmd-hit` 实际匹配 `.cmd li.cmd-group .cmd li b.cmd-hit`，**永不命中**；命令面板模糊匹配高亮自 v3.7.8 起从未生效（实测计算色 = 继承正文色、背景 transparent） |
+| 顶层多余右括号（删媒体查询内容时漏删的 `}`） | 连带**吞掉紧随其后的那条规则** | `select[name="priority"]{max-width:120px}` 修复前**根本不在 CSSOM 里**（遍历 `document.styleSheets` 查不到） |
+
+> ⚠️ 别把「浏览器没报错」当成「没影响」。上面两行都是实测推翻静态推断得来的：
+> 我最初判断孤立 `}` "只是让工具报错、不影响渲染"，实测它吞掉了一整条规则。
+> 两条缺陷还会**互相掩盖** —— 120px 夹宽度复活后，才暴露出早已失配的那条覆盖规则。
+
+门禁：`node scripts/lint-css-structure.mjs` 必须 exit 0（已并入 `npm run lint` 第四道）。
+它静态扫 `<style>`，报四类问题：`E1 ORPHAN_BRACE` / `E2 UNCLOSED` / `E3 NESTED_RULE` /
+`E4 DECL_AFTER_NESTED`（子规则之后仍有声明 —— 那些声明会被意外算进父选择器）。
+⚑ 守护：`tests/css-structure.test.js`（10 条，含三类变异探针 + 「script/注释里的假 `<style>` 不误伤」）。
+
+> 该脚本自身踩过一个**状态依赖**坑：直接正则扫 `<style>` 时，交付态里应用 JS 的 5 处字符串常量
+> （导出/打印模板、`document.write`）会被当成样式表，实测报 **1766 条假阳性**。
+> 凡是对拼回态 HTML 做静态扫描的脚本，都要先想清楚**两态是否同结论**
+> （实测：`1 个 style 块 / 2456 条规则 / 73 个 at-rule` 两态一致才算过关）。
 ---
 
 ## 七、主题体系
@@ -780,6 +821,7 @@ Esc / 遮罩点击 / 焦点陷阱由 `setupModalA11yBase()` **全局接管** —
 | §4.2 图标四档（含豁免白名单与腐化检测） | `ui-spec-guards.test.js` | ✅ |
 | §5 圆角/阴影 | `design-tokens.test.js` | — |
 | §6 颜色 | `color-tokens.test.js` + `lint-colors.mjs` | — |
+| §6.7 样式表结构（括号配平 / 意外嵌套 / 吞规则） | `css-structure.test.js` + `lint-css-structure.mjs` | 10 |
 | §7 主题注册 | `theme-registration.test.js` | 53 |
 | §7 令牌配对 | `theme-token-pairing.test.js` | 14 |
 | §8 断点 | `responsive-breakpoints.test.js` + `ui-spec-guards.test.js` | — |
@@ -810,6 +852,7 @@ Esc / 遮罩点击 / 焦点陷阱由 `setupModalA11yBase()` **全局接管** —
 # ① 改 src/*.js 或 HTML 内联区
 node_modules/.bin/eslint agent-workbench.html electron/main.js electron/preload.js service-worker.js
 node scripts/lint-colors.mjs agent-workbench.html   # 必须 PASS
+node scripts/lint-css-structure.mjs                 # 样式表结构（括号配平 / 意外嵌套）必须 PASS
 node scripts/lint-tokens.mjs                        # 非阻断，看收敛提示
 node scripts/lint-layers.mjs                        # 分层契约
 

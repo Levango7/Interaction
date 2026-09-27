@@ -134,6 +134,12 @@
   /* 顶栏高度令牌（布局修复：统一各断点顶栏高度=54px，消除 1440 断点处跳变；
      供 msg-panel 等下拉面板兜底定位引用；<768px 触摸态按钮 44px 时保持 54px 不变） */
   --topbar-h:54px; /* v1.15：75→54，顶栏按钮改横排（图标左·文字右）回收垂直空间 */
+  /* v3.7.60：常驻头部两行的**实测**总高 = .topbar 65 + .toolbar-row 45 = 110px，
+     320/360/375/390/768/1023/1024/1280/1440/1920 十档实测完全一致（工具行 flex-wrap:nowrap
+     + overflow-x:auto，永不换行，所以高度恒定）。
+     ⚠️ 不用 --topbar-h 推导：那个令牌记的是 54px，实测 65px（v1.15 之后没人回改），
+     拿它算出来的定位一律偏 11px —— 见 #toasts 压住工具行那次。 */
+  --chrome-h:110px;
 }
 /* 极光主题（aurora）：原亮色画布完整视觉——极光渐变 + 蓝调浅底 + 近黑主色 */
 :root[data-theme="aurora"]{
@@ -1170,7 +1176,15 @@ input[type="file"]:hover{border-color:var(--accent)}
    → 撤销 ①，并让 ② 也跟随栅格 gap（默认 8 / 大屏 20，见下方媒体查询）。
    加号右缘 1233 与列3 右边界仍对齐，竖线不受影响。 */
 #taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0}
-#taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}
+/* v3.7.60：选择器补上 `.ds-select>select` 分支。原写法 `>.fld:nth-child(3)>select`
+   自研下拉（ui-select.js 把原生 select 包成 div.ds-select + button.ds-trigger，原生 select
+   转为 position:absolute;inset:0 的隐藏表单控件）**之后就失配了** —— 实测
+   `sel.matches("#taskForm>.fld:nth-child(3)>select") === false`。
+   它此前没暴露成故障，只是因为下方 `select[name="priority"]{max-width:120px}` 恰好被一个
+   孤立右括号吞掉而未生效（见 v3.7.60 结构修复）；那条规则复活后这条死规则立刻现形。
+   夹 120px 只影响隐藏的原生 select（可见触发框仍是 144），但控件盒与触发框不一致会影响
+   `select:focus-visible + .ds-trigger` 这类几何，所以按**原意**把它覆盖掉。 */
+#taskForm>.fld:nth-child(3)>select,#taskForm>.fld:nth-child(3)>.ds-select>select{width:100%;max-width:none}
 /* v3.7.20：标签字段占满列3（9/13），右侧用 padding 给加号让位 —— 用户"标签框左右宽一点"。
    实测 228px → 244px（@1600），与加号的间隙由 42px 收到 20px（= 栅格间距，与全站一致）。
    加号仍在 12/13 微轨、仍 justify-self:end，右缘继续贴齐列3 右边界（竖线对齐不破坏）。 */
@@ -1214,10 +1228,21 @@ input[type="file"]:hover{border-color:var(--accent)}
      否则「标签」内容区比同排字段少 46px（实测 390px 105 vs 151 · 768px 178 vs 224），
      用户标注"对齐，等宽"。 */
   #taskForm>.fld:nth-child(4){padding-right:0}
-  /* v3.7.7：加号**保持 auto-placement 的单格右对齐**（落在左列右端，紧邻右列的「标签」字段）。
-     ⚠️ 试过 `grid-column:1/-1;justify-self:end`（跨行贴右），实测 390px 下落到 309-347 ——
-     正好被右下角的桌面宠物浮层盖住，按钮点不到。回退。 */
-  #taskForm>.add-wrap{grid-column:auto;justify-self:end;grid-row:auto}
+  /* v3.7.60：加号**跨整行居中**。
+     历史：v3.7.7 定的是 auto-placement 单格右对齐 —— 于是窄屏下 ＋ 独占第三行、却只贴住
+     **左列**的右端（375px 实测 x=139..177），右侧 189..332 一整格空着，看起来悬在表单中间。
+     ≥1024 是贴齐表单右缘的（1440px：标签字段与 ＋ 右缘同为 1073），所以窄屏是**唯一不一致**的那档。
+     ⚠️ 不能改成 `justify-self:end` 贴右：v3.7.7 已试并回退过，本轮用命中测试复现确认 ——
+       390px 下按钮落到 309..347，而萌宠舞台静止在 x=252..348（mountPet 里
+       `x = innerWidth - size - 42`），document.elementFromPoint(按钮中心) 返回 pet-art-img，
+       即首屏打不到按钮。
+     ✓ 居中则数学上不可能撞上：宠物永远贴在右边缘（左界 = W-126），居中按钮占 W/2±19，
+       两者不相交的条件是 W > 271，覆盖全部支持档位。390px 实测把按钮滚到与宠物**同一 y 带**
+       （最不利位置）后 elementFromPoint 仍命中 addbtn —— 与滚动位置无关，恒可点。
+     ⚠️ 同一条规则**没有**推广到 #recForm：任务表单恒为 4 字段（偶数）→ 窄屏两列布局里
+       ＋ 永远独占第三行；而 recForm 字段数随场景变，奇数时 ＋ 本来就落在末行右列、
+       与字段同排，强行居中反而更糟。 */
+  #taskForm>.add-wrap{grid-column:1/-1;justify-self:center;grid-row:auto}
   /* v3.7.9：卡片按钮字号在窄列回退 —— pad 看板列只有 168px（900px 档），
      14px 字号下 3 个按钮放不下会换行。PC 档（列宽 248~408）保持 14px。
      ⚠️ 必须写成 `.kcol .kbtns button`（提高特异性）：本块在源码里位于
@@ -1225,10 +1250,18 @@ input[type="file"]:hover{border-color:var(--accent)}
      第一版写 `.kbtns button` 时就是这么静默失效的（CDP 实测 900px 下仍是 14px）。 */
   .kcol .kbtns button{font-size:var(--fs-xs)}
 }
-/* v3.7.60：等宽四列下 gap 已统一为 --space-3(12px) 列间距，不再需要区间收紧规则。 */
-}
+/* v3.7.60：等宽四列下 gap 已统一为 --space-3(12px) 列间距，不再需要区间收紧规则。
+   ⚠️ 这里原本残留一个孤立 `}` —— 是删掉那段区间收紧规则时漏删的媒体查询右括号。
+   **它不是无害的**：紧跟其后的 `select[name="priority"]{max-width:120px}` 被错误恢复一起
+   吞掉，实测该规则在修复前根本不在 CSSOM 里（Chrome 对顶层多余 `}` 会连带吃掉下一条规则）。
+   也就是说这条 120px 夹宽度从写下起就没生效过；把它救活的代价是暴露出下面那条
+   早已失配的覆盖规则（见 #taskForm>.fld:nth-child(3) 那段）。
+   新门禁 scripts/lint-css-structure.mjs 就是为这类「浏览器静默、人眼看不出」的结构问题加的。 */
 /* v3.7.62：优先级下拉框在非栅格表单（编辑模态框等）中限制宽度，
-   栅格表单中由 #taskForm>.fld:nth-child(3)>select{max-width:none} 覆盖。 */
+   栅格表单中由 #taskForm>.fld:nth-child(3)>select{max-width:none} 覆盖
+   —— ⚠️ v3.7.60 实测：那条覆盖因自研下拉包装而失配，已在上方修好；
+   改这里之前先确认「可见的是 .ds-trigger、原生 select 是 absolute 隐藏控件」，
+   别拿 select 的盒子当用户看到的宽度。 */
 select[name="priority"]{max-width:120px}
 .form-row .fld{flex:1;min-width:120px}
 /* v3.2 阶段三：表单字段分组卡片（移动端分组节奏）——label+input 包在 .field-group 内，
@@ -3033,13 +3066,21 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .cmd li.sel{background:var(--accent);color:var(--on-accent)}
 .cmd li.sel .ci,.cmd li.sel .sub{color:var(--on-accent)}
 .cmd li.cmd-group{padding:var(--space-1) var(--space-3) 2px;font-size:var(--fs-xs);font-weight:600;
-/* v3.7.8：命令面板模糊匹配命中字符高亮（用令牌，勿硬编码色值） */
-.cmd li b.cmd-hit{color:var(--accent-text,var(--accent));font-weight:600;background:color-mix(in srgb, var(--accent) 12%, transparent);border-radius:var(--radius-xs,4px)}
   color:var(--text-faint);cursor:default;letter-spacing:.02em}
+/* v3.7.8：命令面板模糊匹配命中字符高亮（用令牌，勿硬编码色值）
+   ⚠️ v3.7.60 归位：本条原本被**夹在**上面 .cmd-group 的声明块中间（那条漏了右括号），
+   浏览器按 CSS 嵌套把它解析成 `.cmd li.cmd-group .cmd li b.cmd-hit` —— 永不命中，
+   实测面板里 <b class="cmd-hit"> 的计算色就是继承来的正文色、背景 transparent，
+   即这个高亮从 v3.7.8 起就没生效过。挪到独立规则后恢复。 */
+.cmd li b.cmd-hit{color:var(--accent-text,var(--accent));font-weight:600;background:color-mix(in srgb, var(--accent) 12%, transparent);border-radius:var(--radius-xs,4px)}
 .cmd li.cmd-empty{cursor:default}
 
 /* ===== Toast ===== */
-#toasts{position:fixed;top:calc(var(--topbar-h) + var(--space-3));right:var(--space-4);left:auto;
+/* v3.7.60：让位给常驻头部两行。原 top = --topbar-h(54) + space-3 = 66px，而工具行实际占到
+   y=65..110 —— toast 正好盖在「今天 N 件待处理 · 已完成 N 件」这条消息栏上（390px 实测
+   toast y=66..103 vs todo-bar y=69..101，右侧文字被胶囊截断）。容器 pointer-events:none
+   所以不挡点击，但 3.6s 内读不到消息栏。改锚 --chrome-h（实测 110px）后即落在正文区。 */
+#toasts{position:fixed;top:calc(var(--chrome-h) + var(--space-3));right:var(--space-4);left:auto;
   transform:none;z-index:var(--z-toast);
   display:flex;flex-direction:column;gap:var(--space-2);align-items:flex-end;pointer-events:none}
 .toast{background:var(--toast-bg);color:var(--on-accent);padding:var(--space-2) var(--space-4);
@@ -6013,10 +6054,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.59"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
+const VERSION = "3.7.60"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260927c";
+const BUILD_TAG = "20260927d";
 
 
 

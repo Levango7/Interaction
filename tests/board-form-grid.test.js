@@ -131,8 +131,13 @@ describe("看板卡 · 标记侧", () => {
     // v3.7.20：标签字段占满列3（9/13），右侧 padding 给加号让位 —— 用户"标签框左右宽一点"
     // 实测标签 input 228 → 244px，与加号间隙由 42px 收到 20px（= 栅格间距）
     expect(CSS).toContain('#taskForm>.fld:nth-child(4){grid-column:9/13;grid-row:1;padding-right:calc(var(--control-h) + var(--space-2))}');
-    // 优先级 select 撑满轨道
-    expect(CSS, "优先级 select 应撑满轨道").toContain("#taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}");
+    /* 优先级 select 撑满轨道。
+       ⚠️ 这条以前只断言**字符串存在**，于是选择器失配（自研下拉把原生 select 包成
+       div.ds-select>select，`>.fld:nth-child(3)>select` 的 `>` 断了）它照样绿。
+       v3.7.60 实测 `sel.matches("#taskForm>.fld:nth-child(3)>select") === false` 后补上分支，
+       这里同步锁住两个分支 —— 真实的几何断言在 tests/e2e/viewport.spec.js「表单等宽」。 */
+    expect(CSS, "优先级 select 应撑满轨道（含 ds-select 包装后的分支）")
+      .toContain("#taskForm>.fld:nth-child(3)>select,#taskForm>.fld:nth-child(3)>.ds-select>select{width:100%;max-width:none}");
     // 加号不再叠加在标签输入框内 —— 标签输入框的右内边距让位规则已删除
     expect(CSS, "标签输入框不得再保留加号让位的右内边距").not.toContain('#taskForm>.fld:nth-child(4)>input{padding-right:calc(var(--control-h) + var(--space-2))}');
     // 加号：独立占最右 1 微轨、水平居中、底对齐

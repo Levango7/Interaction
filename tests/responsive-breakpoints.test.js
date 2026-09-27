@@ -78,15 +78,24 @@ describe("响应式三档 · 窄屏表单回退(≤1023)", () => {
     expect(blk).toContain(".form-row--board{grid-template-columns:1fr 1fr;gap:var(--space-2) var(--space-3)}");
   });
 
-  it("加号保持单格右对齐（**不要**跨行贴右 —— 会落进宠物浮层被遮挡）", () => {
-    /* 实测 390px：跨行贴右 → 加号落到 309-347，正好被右下角的桌面宠物盖住，点不到。
-       回到 auto-placement 的列 1 右对齐（166-204）后既避开宠物、又紧邻右列的「标签」字段。 */
+  it("加号跨整行**居中**（贴右会被桌面萌宠挡住 · 居中数学上避开）", () => {
+    /* v3.7.60 改判。原契约是「auto 单格右对齐」，代价是 ＋ 独占第三行却只贴住**左列**右端
+       （375px 实测 x=139..177，右侧 189..332 空着）—— 任务表单恒为 4 字段＝偶数，
+       两列布局下永远轮不到它填右格，所以窄屏是唯一与 ≥1024「贴表单右缘」不一致的档。
+       ⚠️ 三条实测约束（改之前必须重新验证，别只看静态代码）：
+       ① 不能贴右：390px 下按钮落到 309..347，而萌宠舞台贴在右缘（render-widgets.js
+          `x = innerWidth - size - 42` → 252..348），elementFromPoint(按钮中心) 返回 pet-art-img。
+          这就是 v3.7.7 当初回退的原因，本次复现确认它依然成立。
+       ② 居中安全：宠物左界 = W-126，居中按钮占 W/2±19，不相交条件 W > 271 → 全档位成立。
+          实测把按钮滚到与宠物**同一 y 带**（最不利位）后 elementFromPoint 仍命中 addbtn。
+       ③ 不能推广到 #recForm：它字段数随场景变，奇数时 ＋ 本就落在末行右列＝表单右缘（正确）。 */
     const blk = mediaBlock(NARROW_FORM_Q, "#taskForm>.add-wrap");
     expect(blk, "窄屏应显式声明加号列位").toBeTruthy();
-    expect(blk, "加号保持单格（auto）右对齐").toContain("#taskForm>.add-wrap{grid-column:auto;justify-self:end");
-    /* ⚠️ 只匹配**规则行**，不能用 `not.toContain("grid-column:1/-1")` ——
-       上方注释里为了留档写了「试过 grid-column:1/-1 但被宠物盖住」，toContain 会扫到注释。 */
-    expect(blk, "不得跨行贴右（宠物遮挡）").not.toMatch(/#taskForm>\.add-wrap\{grid-column:1\/-1/);
+    expect(blk, "加号跨整行居中").toMatch(/#taskForm>\.add-wrap\{grid-column:1\/-1;justify-self:center;grid-row:auto\}/);
+    /* ⚠️ 只匹配**规则行**，不能用 `not.toContain("justify-self:end")` ——
+       上方注释里为了留档写了「不能改成 justify-self:end」，toContain 会扫到注释。 */
+    expect(blk, "不得跨行贴右（宠物遮挡）").not.toMatch(/#taskForm>\.add-wrap\{grid-column:1\/-1;justify-self:end/);
+    expect(blk, "不得退回单格右对齐（窄屏悬空）").not.toMatch(/#taskForm>\.add-wrap\{grid-column:auto;justify-self:end/);
   });
 });
 
