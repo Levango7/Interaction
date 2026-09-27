@@ -88,7 +88,9 @@ describe("响应式三档 · 窄屏表单回退(≤1023)", () => {
           这就是 v3.7.7 当初回退的原因，本次复现确认它依然成立。
        ② 居中安全：宠物左界 = W-126，居中按钮占 W/2±19，不相交条件 W > 271 → 全档位成立。
           实测把按钮滚到与宠物**同一 y 带**（最不利位）后 elementFromPoint 仍命中 addbtn。
-       ③ 不能推广到 #recForm：它字段数随场景变，奇数时 ＋ 本就落在末行右列＝表单右缘（正确）。 */
+       ③ 不能推广到 #recForm：它字段数随场景变，居中会让奇数场景反而更糟；
+          recForm 走的是另一条修法（≤1023 把 ＋ 钉在右列 grid-column:2，奇偶都贴表单右缘），
+          守护在 tests/ui-spec-guards.test.js「#recForm 固定列位在窄屏必须成对解除」。 */
     const blk = mediaBlock(NARROW_FORM_Q, "#taskForm>.add-wrap");
     expect(blk, "窄屏应显式声明加号列位").toBeTruthy();
     expect(blk, "加号跨整行居中").toMatch(/#taskForm>\.add-wrap\{grid-column:1\/-1;justify-self:center;grid-row:auto\}/);

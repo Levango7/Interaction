@@ -358,18 +358,27 @@ describe("断点体系：四档制，不得新增", () => {
       .filter(b => new RegExp("max-width:\\s*" + px + "px").test(b.query))
       .map(b => b.body).join("\n");
 
-    it("1023 块里 textarea 字段与加号都回归自动列位", () => {
+    it("1023 块里 textarea 字段回归自动列位、加号钉在右列（两者都不得越界）", () => {
       const body = at(1023);
       expect(body, "≤1023 应有 textarea 字段的列位解除").toMatch(
         /#recForm>\.fld:has\(>textarea\)\{grid-column:auto;grid-row:auto\}/);
-      expect(body, "≤1023 应有加号的列位解除").toMatch(
-        /#recForm>\.add-wrap\{grid-column:auto;grid-row:auto\}/);
+      /* v3.7.60：加号由 `grid-column:auto` 改成钉右列 `grid-column:2`（= 2/3）。
+         本条守护的真正不变量是「列位不得越界」，不是「必须写 auto」——
+         ≤1023 模板是 repeat(2,minmax(0,1fr))，显式列线只有 1/2/3，写 2 在界内，
+         不会重演 v3.7.48 的隐式列塌陷（那次写的是 1/4 与 4）。
+         为什么钉右列：auto-placement 下字段数为偶数的场景 ＋ 会另起一行落在**左列**
+         （768px 实测距表单右缘 236px 悬空），奇数才正好补上末行右格；钉 2 之后奇偶都贴右缘。 */
+      expect(body, "≤1023 加号应钉在右列且同时解除 grid-row").toMatch(
+        /#recForm>\.add-wrap\{grid-column:2;grid-row:auto\}/);
+      expect(body, "≤1023 加号不得出现越界列位（>3 的列线会造隐式列）")
+        .not.toMatch(/#recForm>\.add-wrap\{grid-column:\s*(?:[4-9]|1[0-9]|\/-)/);
     });
 
-    it("520 块里同样成对解除", () => {
+    it("520 块里必须回到 auto（1 列模板写 2 就越界）", () => {
       const body = at(520);
       expect(body).toMatch(/#recForm>\.fld:has\(>textarea\)\{grid-column:auto;grid-row:auto\}/);
-      expect(body).toMatch(/#recForm>\.add-wrap\{grid-column:auto;grid-row:auto\}/);
+      expect(body, "≤520 是 1 列模板，列位只能是 auto，照抄 1023 块的 grid-column:2 会造隐式列")
+        .toMatch(/#recForm>\.add-wrap\{grid-column:auto;grid-row:auto\}/);
     });
 
     it("解除必须同特异性（#recForm 前缀不能省，否则压不过 id 规则）", () => {

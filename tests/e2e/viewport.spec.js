@@ -303,4 +303,43 @@ test.describe("提示带 · 加号 · 面板高亮不变量", () => {
       expect(c.bg, `视口 ${vw}px：.cmd-hit 没有背景淡色`).not.toBe("rgba(0, 0, 0, 0)");
     }
   });
+
+  /* #recForm 的 ＋ 必须**在所有宽度、所有字段奇偶下**都贴住表单右缘。
+     缺陷只在「两列档 + 偶数字段」出现（auto-placement 让 ＋ 另起一行落在左列右端，
+     768px 实测距右缘 236px），所以必须按场景遍历才测得到 —— 只跑 office 一个场景会漏掉
+     奇偶差异，只跑一个宽度会漏掉断点。 */
+  test("资料库表单的加号在奇偶字段数与全断点下都贴表单右缘", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
+    const SCENES = ["design", "study", "data", "life", "health", "finance", "office"];
+    for (const vw of [375, 521, 768, 1023, 1440]) {
+      await page.setViewportSize({ width: vw, height: 900 });
+      const rows = await page.evaluate(async (scenes) => {
+        const out = [];
+        for (const s of scenes) {
+          try { setActive(s); render(); } catch (e) { continue; }
+          await new Promise((r) => setTimeout(r, 120));
+          const f = document.querySelector("#recForm");
+          if (!f) continue;
+          const aw = f.querySelector(".add-wrap");
+          if (!aw) continue;
+          const r = aw.getBoundingClientRect();
+          const fr = f.getBoundingClientRect();
+          out.push({
+            s,
+            字段: [...f.children].filter((x) => x.classList.contains("fld")).length,
+            列: getComputedStyle(f).gridTemplateColumns.split(" ").length,
+            距右: Math.round(fr.right - r.right),
+          });
+        }
+        return out;
+      }, SCENES);
+      expect(rows.length, `视口 ${vw}px：一个 #recForm 都没渲染出来，测试失效`).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.距右,
+          `视口 ${vw}px · ${row.s}（${row.字段} 字段=${row.字段 % 2 === 0 ? "偶" : "奇"} · ${row.列} 列）：＋ 距表单右缘 ${row.距右}px`)
+          .toBeLessThanOrEqual(1);
+      }
+    }
+  });
 });

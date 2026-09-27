@@ -412,7 +412,18 @@ button[disabled]:active{transform:none}
 @media (max-width:1023px){
   #recForm{grid-template-columns:repeat(2,minmax(0,1fr))}
   #recForm>.fld:has(>textarea){grid-column:auto;grid-row:auto}
-  #recForm>.add-wrap{grid-column:auto;grid-row:auto}
+  /* v3.7.60：两列档把 ＋ **钉在右列**（不是 auto、也不是居中）。
+     实测痛点：`grid-column:auto` 时 ＋ 走 auto-placement —— 字段数为**偶数**的场景
+     （design/data/life 各 4 字段）它另起一行落在左列右端，768px 实测距表单右缘 236px，
+     悬在表单中间；字段数为**奇数**的场景（study/health/finance 各 5 字段）它正好补上
+     末行右格，距右缘 0 —— 同一个规则两种结果，只有偶数那种是错的。
+     钉 `grid-column:2`（= 2/3，两列模板内不越界）后两种奇偶都落在右列、右缘＝表单右缘，
+     与 1 列档（≤520，实测距右 0）和 4 列档（≥1024 钉 grid-column:4，同为 0）自洽。
+     ⚠️ 不照抄 #taskForm 的居中方案：taskForm 恒为 4 字段（偶数）→ ＋ 永远独占一行才需要居中；
+     且它居中是为了躲右下角的桌面萌宠，而 recForm 在 1 列档本来就已经贴右缘（宠物 x 区间内），
+     贴右是它的既有现状，不是新引入的遮挡面。
+     ⚠️ ≤520 那条块保持 `grid-column:auto` —— 那里是 1 列模板，写 2 会造隐式列（见上方必读）。 */
+  #recForm>.add-wrap{grid-column:2;grid-row:auto}
 }
 @media (max-width:520px){
   #recForm{grid-template-columns:1fr}
@@ -1240,8 +1251,9 @@ input[type="file"]:hover{border-color:var(--accent)}
        两者不相交的条件是 W > 271，覆盖全部支持档位。390px 实测把按钮滚到与宠物**同一 y 带**
        （最不利位置）后 elementFromPoint 仍命中 addbtn —— 与滚动位置无关，恒可点。
      ⚠️ 同一条规则**没有**推广到 #recForm：任务表单恒为 4 字段（偶数）→ 窄屏两列布局里
-       ＋ 永远独占第三行；而 recForm 字段数随场景变，奇数时 ＋ 本来就落在末行右列、
-       与字段同排，强行居中反而更糟。 */
+       ＋ 永远独占第三行；而 recForm 字段数随场景变（design/data/life 4 个、study/health/finance 5 个、
+       office 8 个），居中会让奇数场景反而更糟。recForm 走另一条修法：≤1023 把 ＋ 钉在右列
+       `grid-column:2`，实测奇偶两种都贴住表单右缘（见 #recForm 窄屏块）。 */
   #taskForm>.add-wrap{grid-column:1/-1;justify-self:center;grid-row:auto}
   /* v3.7.9：卡片按钮字号在窄列回退 —— pad 看板列只有 168px（900px 档），
      14px 字号下 3 个按钮放不下会换行。PC 档（列宽 248~408）保持 14px。
