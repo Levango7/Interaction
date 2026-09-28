@@ -134,6 +134,12 @@
   /* 顶栏高度令牌（布局修复：统一各断点顶栏高度=54px，消除 1440 断点处跳变；
      供 msg-panel 等下拉面板兜底定位引用；<768px 触摸态按钮 44px 时保持 54px 不变） */
   --topbar-h:54px; /* v1.15：75→54，顶栏按钮改横排（图标左·文字右）回收垂直空间 */
+  /* v3.7.60：常驻头部两行的**实测**总高 = .topbar 65 + .toolbar-row 45 = 110px，
+     320/360/375/390/768/1023/1024/1280/1440/1920 十档实测完全一致（工具行 flex-wrap:nowrap
+     + overflow-x:auto，永不换行，所以高度恒定）。
+     ⚠️ 不用 --topbar-h 推导：那个令牌记的是 54px，实测 65px（v1.15 之后没人回改），
+     拿它算出来的定位一律偏 11px —— 见 #toasts 压住工具行那次。 */
+  --chrome-h:110px;
 }
 /* 极光主题（aurora）：原亮色画布完整视觉——极光渐变 + 蓝调浅底 + 近黑主色 */
 :root[data-theme="aurora"]{
@@ -406,7 +412,18 @@ button[disabled]:active{transform:none}
 @media (max-width:1023px){
   #recForm{grid-template-columns:repeat(2,minmax(0,1fr))}
   #recForm>.fld:has(>textarea){grid-column:auto;grid-row:auto}
-  #recForm>.add-wrap{grid-column:auto;grid-row:auto}
+  /* v3.7.60：两列档把 ＋ **钉在右列**（不是 auto、也不是居中）。
+     实测痛点：`grid-column:auto` 时 ＋ 走 auto-placement —— 字段数为**偶数**的场景
+     （design/data/life 各 4 字段）它另起一行落在左列右端，768px 实测距表单右缘 236px，
+     悬在表单中间；字段数为**奇数**的场景（study/health/finance 各 5 字段）它正好补上
+     末行右格，距右缘 0 —— 同一个规则两种结果，只有偶数那种是错的。
+     钉 `grid-column:2`（= 2/3，两列模板内不越界）后两种奇偶都落在右列、右缘＝表单右缘，
+     与 1 列档（≤520，实测距右 0）和 4 列档（≥1024 钉 grid-column:4，同为 0）自洽。
+     ⚠️ 不照抄 #taskForm 的居中方案：taskForm 恒为 4 字段（偶数）→ ＋ 永远独占一行才需要居中；
+     且它居中是为了躲右下角的桌面萌宠，而 recForm 在 1 列档本来就已经贴右缘（宠物 x 区间内），
+     贴右是它的既有现状，不是新引入的遮挡面。
+     ⚠️ ≤520 那条块保持 `grid-column:auto` —— 那里是 1 列模板，写 2 会造隐式列（见上方必读）。 */
+  #recForm>.add-wrap{grid-column:2;grid-row:auto}
 }
 @media (max-width:520px){
   #recForm{grid-template-columns:1fr}
@@ -1170,7 +1187,15 @@ input[type="file"]:hover{border-color:var(--accent)}
    → 撤销 ①，并让 ② 也跟随栅格 gap（默认 8 / 大屏 20，见下方媒体查询）。
    加号右缘 1233 与列3 右边界仍对齐，竖线不受影响。 */
 #taskForm>.fld:nth-child(3){grid-column:8/9;grid-row:1;min-width:0}
-#taskForm>.fld:nth-child(3)>select{width:100%;max-width:none}
+/* v3.7.60：选择器补上 `.ds-select>select` 分支。原写法 `>.fld:nth-child(3)>select`
+   自研下拉（ui-select.js 把原生 select 包成 div.ds-select + button.ds-trigger，原生 select
+   转为 position:absolute;inset:0 的隐藏表单控件）**之后就失配了** —— 实测
+   `sel.matches("#taskForm>.fld:nth-child(3)>select") === false`。
+   它此前没暴露成故障，只是因为下方 `select[name="priority"]{max-width:120px}` 恰好被一个
+   孤立右括号吞掉而未生效（见 v3.7.60 结构修复）；那条规则复活后这条死规则立刻现形。
+   夹 120px 只影响隐藏的原生 select（可见触发框仍是 144），但控件盒与触发框不一致会影响
+   `select:focus-visible + .ds-trigger` 这类几何，所以按**原意**把它覆盖掉。 */
+#taskForm>.fld:nth-child(3)>select,#taskForm>.fld:nth-child(3)>.ds-select>select{width:100%;max-width:none}
 /* v3.7.20：标签字段占满列3（9/13），右侧用 padding 给加号让位 —— 用户"标签框左右宽一点"。
    实测 228px → 244px（@1600），与加号的间隙由 42px 收到 20px（= 栅格间距，与全站一致）。
    加号仍在 12/13 微轨、仍 justify-self:end，右缘继续贴齐列3 右边界（竖线对齐不破坏）。 */
@@ -1214,10 +1239,22 @@ input[type="file"]:hover{border-color:var(--accent)}
      否则「标签」内容区比同排字段少 46px（实测 390px 105 vs 151 · 768px 178 vs 224），
      用户标注"对齐，等宽"。 */
   #taskForm>.fld:nth-child(4){padding-right:0}
-  /* v3.7.7：加号**保持 auto-placement 的单格右对齐**（落在左列右端，紧邻右列的「标签」字段）。
-     ⚠️ 试过 `grid-column:1/-1;justify-self:end`（跨行贴右），实测 390px 下落到 309-347 ——
-     正好被右下角的桌面宠物浮层盖住，按钮点不到。回退。 */
-  #taskForm>.add-wrap{grid-column:auto;justify-self:end;grid-row:auto}
+  /* v3.7.60：加号**跨整行居中**。
+     历史：v3.7.7 定的是 auto-placement 单格右对齐 —— 于是窄屏下 ＋ 独占第三行、却只贴住
+     **左列**的右端（375px 实测 x=139..177），右侧 189..332 一整格空着，看起来悬在表单中间。
+     ≥1024 是贴齐表单右缘的（1440px：标签字段与 ＋ 右缘同为 1073），所以窄屏是**唯一不一致**的那档。
+     ⚠️ 不能改成 `justify-self:end` 贴右：v3.7.7 已试并回退过，本轮用命中测试复现确认 ——
+       390px 下按钮落到 309..347，而萌宠舞台静止在 x=252..348（mountPet 里
+       `x = innerWidth - size - 42`），document.elementFromPoint(按钮中心) 返回 pet-art-img，
+       即首屏打不到按钮。
+     ✓ 居中则数学上不可能撞上：宠物永远贴在右边缘（左界 = W-126），居中按钮占 W/2±19，
+       两者不相交的条件是 W > 271，覆盖全部支持档位。390px 实测把按钮滚到与宠物**同一 y 带**
+       （最不利位置）后 elementFromPoint 仍命中 addbtn —— 与滚动位置无关，恒可点。
+     ⚠️ 同一条规则**没有**推广到 #recForm：任务表单恒为 4 字段（偶数）→ 窄屏两列布局里
+       ＋ 永远独占第三行；而 recForm 字段数随场景变（design/data/life 4 个、study/health/finance 5 个、
+       office 8 个），居中会让奇数场景反而更糟。recForm 走另一条修法：≤1023 把 ＋ 钉在右列
+       `grid-column:2`，实测奇偶两种都贴住表单右缘（见 #recForm 窄屏块）。 */
+  #taskForm>.add-wrap{grid-column:1/-1;justify-self:center;grid-row:auto}
   /* v3.7.9：卡片按钮字号在窄列回退 —— pad 看板列只有 168px（900px 档），
      14px 字号下 3 个按钮放不下会换行。PC 档（列宽 248~408）保持 14px。
      ⚠️ 必须写成 `.kcol .kbtns button`（提高特异性）：本块在源码里位于
@@ -1225,10 +1262,18 @@ input[type="file"]:hover{border-color:var(--accent)}
      第一版写 `.kbtns button` 时就是这么静默失效的（CDP 实测 900px 下仍是 14px）。 */
   .kcol .kbtns button{font-size:var(--fs-xs)}
 }
-/* v3.7.60：等宽四列下 gap 已统一为 --space-3(12px) 列间距，不再需要区间收紧规则。 */
-}
+/* v3.7.60：等宽四列下 gap 已统一为 --space-3(12px) 列间距，不再需要区间收紧规则。
+   ⚠️ 这里原本残留一个孤立 `}` —— 是删掉那段区间收紧规则时漏删的媒体查询右括号。
+   **它不是无害的**：紧跟其后的 `select[name="priority"]{max-width:120px}` 被错误恢复一起
+   吞掉，实测该规则在修复前根本不在 CSSOM 里（Chrome 对顶层多余 `}` 会连带吃掉下一条规则）。
+   也就是说这条 120px 夹宽度从写下起就没生效过；把它救活的代价是暴露出下面那条
+   早已失配的覆盖规则（见 #taskForm>.fld:nth-child(3) 那段）。
+   新门禁 scripts/lint-css-structure.mjs 就是为这类「浏览器静默、人眼看不出」的结构问题加的。 */
 /* v3.7.62：优先级下拉框在非栅格表单（编辑模态框等）中限制宽度，
-   栅格表单中由 #taskForm>.fld:nth-child(3)>select{max-width:none} 覆盖。 */
+   栅格表单中由 #taskForm>.fld:nth-child(3)>select{max-width:none} 覆盖
+   —— ⚠️ v3.7.60 实测：那条覆盖因自研下拉包装而失配，已在上方修好；
+   改这里之前先确认「可见的是 .ds-trigger、原生 select 是 absolute 隐藏控件」，
+   别拿 select 的盒子当用户看到的宽度。 */
 select[name="priority"]{max-width:120px}
 .form-row .fld{flex:1;min-width:120px}
 /* v3.2 阶段三：表单字段分组卡片（移动端分组节奏）——label+input 包在 .field-group 内，
@@ -3033,13 +3078,21 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .cmd li.sel{background:var(--accent);color:var(--on-accent)}
 .cmd li.sel .ci,.cmd li.sel .sub{color:var(--on-accent)}
 .cmd li.cmd-group{padding:var(--space-1) var(--space-3) 2px;font-size:var(--fs-xs);font-weight:600;
-/* v3.7.8：命令面板模糊匹配命中字符高亮（用令牌，勿硬编码色值） */
-.cmd li b.cmd-hit{color:var(--accent-text,var(--accent));font-weight:600;background:color-mix(in srgb, var(--accent) 12%, transparent);border-radius:var(--radius-xs,4px)}
   color:var(--text-faint);cursor:default;letter-spacing:.02em}
+/* v3.7.8：命令面板模糊匹配命中字符高亮（用令牌，勿硬编码色值）
+   ⚠️ v3.7.60 归位：本条原本被**夹在**上面 .cmd-group 的声明块中间（那条漏了右括号），
+   浏览器按 CSS 嵌套把它解析成 `.cmd li.cmd-group .cmd li b.cmd-hit` —— 永不命中，
+   实测面板里 <b class="cmd-hit"> 的计算色就是继承来的正文色、背景 transparent，
+   即这个高亮从 v3.7.8 起就没生效过。挪到独立规则后恢复。 */
+.cmd li b.cmd-hit{color:var(--accent-text,var(--accent));font-weight:600;background:color-mix(in srgb, var(--accent) 12%, transparent);border-radius:var(--radius-xs,4px)}
 .cmd li.cmd-empty{cursor:default}
 
 /* ===== Toast ===== */
-#toasts{position:fixed;top:calc(var(--topbar-h) + var(--space-3));right:var(--space-4);left:auto;
+/* v3.7.60：让位给常驻头部两行。原 top = --topbar-h(54) + space-3 = 66px，而工具行实际占到
+   y=65..110 —— toast 正好盖在「今天 N 件待处理 · 已完成 N 件」这条消息栏上（390px 实测
+   toast y=66..103 vs todo-bar y=69..101，右侧文字被胶囊截断）。容器 pointer-events:none
+   所以不挡点击，但 3.6s 内读不到消息栏。改锚 --chrome-h（实测 110px）后即落在正文区。 */
+#toasts{position:fixed;top:calc(var(--chrome-h) + var(--space-3));right:var(--space-4);left:auto;
   transform:none;z-index:var(--z-toast);
   display:flex;flex-direction:column;gap:var(--space-2);align-items:flex-end;pointer-events:none}
 .toast{background:var(--toast-bg);color:var(--on-accent);padding:var(--space-2) var(--space-4);
@@ -3327,6 +3380,16 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   .toolbar-row{gap:var(--space-2)}
   /* 表单输入触摸友好 */
   input, select, textarea{min-height:44px;font-size:var(--fs-lg)}
+  /* v3.7.61：自研下拉的**可见**触发框漏在这条规则之外 —— 它是 `<button class="ds-trigger">`，
+     而上面只点名了 `input, select, textarea`。原生 select 被 ui-select 包成
+     `position:absolute;inset:0;opacity:0` 的隐藏控件，给它加高度对画面毫无作用，
+     所以必须单独补触发框。用户截图标注的"上下高度不一致"就是这里：
+     390px 实测同排 input y=621..665(h44) vs ds-trigger y=621..659(h38)，底边差 6px，
+     字号也差（input 18px vs trigger 14px）。 */
+  .ds-trigger{min-height:44px;font-size:var(--fs-lg)}
+  /* 例外：聊天输入行的模型下拉与同排的 附件 / 发送 / 输入框 统一为 42（v3.7.37 定稿），
+     不能被上面这条拉到 44 而破掉整行同高。 */
+  .ds-select:has(>#chatModelSelect)>.ds-trigger{min-height:42px;font-size:var(--fs-sm)}
   /* 看板卡片触摸友好 */
   .kcard{min-height:44px}
   /* v3.0.2 批次1：高频小控件触摸目标补齐至 44px（原 24~32px，仅移动端生效，桌面样式不变）；
@@ -5208,7 +5271,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <!-- v3.4.7 批次六：RAG 上下文注入开关（默认关——发送消息前检索任务/记录/笔记相关片段拼进 system prompt） -->
         <div class="set-switch">
           <input type="checkbox" id="aiMemRag" data-i18n-aria="mem.ragLabel" aria-label="上下文注入（实验性）">
-          <div><div class="sw-label" data-i18n="mem.ragLabel">上下文注入（实验性）</div><div class="sw-sub" data-i18n="mem.ragSub">发送消息时自动检索任务/记录/笔记中的相关内容，拼进 AI 上下文——提问更精准，但会多消耗一些 token</div></div>
+          <div><div class="sw-label" data-i18n="mem.ragLabel">上下文注入（实验性）</div><div class="sw-sub" data-i18n="mem.ragSub">发送消息时自动检索任务/记录/笔记中的相关内容，并让工作记忆改用语义召回（换了说法也能命中），一起拼进 AI 上下文——提问更精准，但会多消耗一些 token 并调用一次 embedding 接口</div></div>
         </div>
         <div class="set-field">
           <label for="aiMemThreshold" data-i18n="mem.thresholdLabel">记忆检索阈值（0~1）</label>
@@ -5229,17 +5292,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         </div>
       </div>
     </details>
-
-    <details class="ext-collapse">
-      <summary><span class="nm" data-i18n="aiPlugin.summaryNm">AI 插件</span><span class="hint-inline" data-i18n="aiPlugin.summaryHint">扩展插件清单</span></summary>
-      <div class="ext-body">
-        <p class="set-tip" data-i18n="aiPlugin.desc">AI 扩展插件清单（实验性——暂无执行代码，勾选状态仅保存配置）。</p>
-        <div id="aiPluginList"></div>
-        <div class="set-actions">
-          <button type="button" class="addbtn sm u-flex-1" id="aiPluginSave" data-sc="accent" data-i18n="aiPlugin.save">保存插件配置</button>
-        </div>
-      </div>
-    </details>
+    <!-- v3.7.59：原「AI 插件」卡片已删除 —— code_runner/web_search/file_reader 三项是已有真实
+         能力的假副本（web_search 与 code_run 本就是模型可直接调用的工具），勾选不改变任何行为。
+         真·插件市场在概览页 store（BUILTIN_PLUGINS，10 个可安装插件），未受影响。 -->
   </section>
 
   <section class="set-card ai-section" id="ai-session" data-ai-tab="ai-ext" aria-label="会话管理" data-i18n-aria="a11y.sessionMgmt2">
@@ -5728,7 +5783,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 <div class="overlay" id="cmdOverlay"></div>
 <div class="cmd" id="cmd">
-  <input id="cmdInput" data-i18n-placeholder="cmd.placeholder" placeholder="搜索场景 / 命令 / 任务…（↑↓ 选择，Enter 执行，Esc 关闭）" autocomplete="off" maxlength="200">
+  <input id="cmdInput" data-i18n-placeholder="cmd.placeholder" placeholder="搜索场景 / 命令 / 任务…（↑↓ 选择，Enter 执行，Esc 关闭；以 > 开头可让 AI 自主完成）" autocomplete="off" maxlength="200">
   <ul id="cmdList"></ul>
 </div>
 
@@ -6021,10 +6076,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.58"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
+const VERSION = "3.7.61"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260926c";
+const BUILD_TAG = "20260928a";
 
 
 
@@ -6793,6 +6848,8 @@ const MESSAGES = {
     "ai.greetingSuffix": "助手，可以直接让我「建个任务」「查总览」「搜索」。",
     "ai.toolDeniedPrefix": "工具 ",
     "ai.toolDeniedSuffix": " 不在当前允许列表中，已跳过。",
+    "ai.toolSkipped": "工具 {name} 因取消已跳过，未执行。",
+    "ai.badToolArgs": "工具 {name} 的参数不是合法 JSON，已跳过执行；请重新给出合法参数。",
     "ai.taskCreatedSuffix": "）",
     "ai.cancelledOpSuffix": "」。",
     "ai.confirmDangerTitle": "危险操作确认",
@@ -7155,9 +7212,9 @@ const MESSAGES = {
     "agent.cancelGoal": "取消当前目标",
     "aiExt.title": "AI 扩展",
     "aiExt.badge": "实验性",
-    "aiExt.desc": "5 个扩展维度的统一管理：技能 / MCP / 工作流 / 记忆 / AI 插件。当前仅保存配置，AI 引擎的消费接线在路线图中。普通用户无需修改此处。",
+    "aiExt.desc": "4 个扩展维度的统一管理：技能 / MCP / 工作流 / 记忆。技能已接入 AI（注入系统提示 + 命令面板一键触发）；MCP 与工作流仍在接线途中。普通用户无需修改此处。",
     "skills.title": "技能配置",
-    "skills.desc": "管理 AI 可调用的内置与自定义技能（实验性——当前开关仅保存配置，Agent 实际按下方「允许调用的工具」白名单执行；接线在路线图中）。",
+    "skills.desc": "管理 AI 可调用的内置与自定义技能：内置勾选同步到「允许调用的工具」白名单；自定义 JSON 会注入每轮对话的系统提示，并可在命令面板（Ctrl+K）「技能」组一键触发。",
     "skills.builtin": "内置技能",
     "skills.summaryNm": "技能",
     "skills.summaryHint": "内置 + 自定义 JSON",
@@ -7165,6 +7222,25 @@ const MESSAGES = {
     "skills.customJson": "自定义技能 JSON",
     "skills.jsonHint": "JSON 数组格式，每项含 name / desc / enabled 字段。",
     "skills.save": "保存技能配置",
+    /* v3.7.59：技能接线成真实能力后新增的文案（消费方在 ai-tools.js 的 Skills 引擎 / ai-retry.js / ui-palette.js） */
+    "skills.ctxHeader": "【用户自定义技能】（用户沉淀的标准作业流程。请求与之相符时按「做法」执行、工具优先从「建议工具」里选；不相符时忽略本节且不要向用户提及它）：",
+    "skills.ctxHow": "做法：",
+    "skills.ctxTools": "建议工具：",
+    "skills.autoName": "流程技能",
+    "skills.autoDesc": "由一轮成功的多工具执行固化",
+    "skills.savedPrefix": "已把上一轮流程固化为技能「",
+    "skills.savedSuffix": "」。它会在每轮对话注入系统提示，也可在命令面板（Ctrl+K）「技能」组一键触发；到「扩展 → 技能配置」可直接编辑或删除。",
+    "skills.noOffer": "当前没有可固化的流程：需要上一轮对话成功执行 ≥2 个工具调用（删除/修改类工具不计入）。",
+    "skills.runWrapPrefix": "（请立即按已定义技能「",
+    "skills.runWrapMid": "」执行：",
+    "skills.runWrapTools": "；优先使用工具：",
+    "skills.runWrapSuffix": "。）",
+    "skills.offerToast": "本轮成功执行了 ",
+    "skills.offerToastMid": " 个工具调用。发送「存为技能」即可把这条流程固化成可复用技能（命令面板 Ctrl+K 的「技能」组也能一键保存）。",
+    "cmd.skill": "技能",
+    "cmd.skillInvoke": "技能：",
+    "cmd.skillSaveOffer": "把上一轮固化为技能",
+    "cmd.skillSaveText": "存为技能",
     "mcp.title": "MCP 服务器",
     "mcp.desc": "配置 Model Context Protocol 服务器（实验性——配置仅本机存储，AI 引擎的消费接线在路线图中，当前不会改变 AI 能力）。",
     "mcp.summaryNm": "MCP 服务器",
@@ -7184,7 +7260,7 @@ const MESSAGES = {
     "mem.windowPlaceholder": "10（默认）",
     "mem.longTermLabel": "长期记忆",
     "mem.ragLabel": "上下文注入（实验性）",
-    "mem.ragSub": "发送消息时自动检索任务/记录/笔记中的相关内容，拼进 AI 上下文——提问更精准，但会多消耗一些 token",
+    "mem.ragSub": "发送消息时自动检索任务/记录/笔记中的相关内容，并让工作记忆改用语义召回（换了说法也能命中），一起拼进 AI 上下文——提问更精准，但会多消耗一些 token 并调用一次 embedding 接口",
     "mem.longTermSub": "开启后 AI 可跨会话检索历史记忆",
     "mem.thresholdLabel": "记忆检索阈值（0~1）",
     "mem.strategyLabel": "记忆策略",
@@ -7192,11 +7268,6 @@ const MESSAGES = {
     "mem.strategy.relevant": "相关",
     "mem.strategy.mixed": "混合",
     "mem.save": "保存记忆配置",
-    "aiPlugin.title": "AI 插件",
-    "aiPlugin.desc": "AI 扩展插件清单（实验性——暂无执行代码，勾选状态仅保存配置）。",
-    "aiPlugin.summaryNm": "AI 插件",
-    "aiPlugin.summaryHint": "扩展插件清单",
-    "aiPlugin.save": "保存插件配置",
     "sess.title": "会话管理",
     "sess.desc": "会话超时与自动保存设置（实验性——对话会话的实际管理在聊天面板「☰」，此处配置的消费接线在路线图中）。",
     "sess.timeoutLabel": "会话超时（分钟，5~1440）",
@@ -7327,7 +7398,7 @@ const MESSAGES = {
     "notify.pushStatus": "未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。",
     "notify.pushHint": "⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。",
     "integration.title": "集成中心",
-    "integration.desc": "连接外部服务，同步任务、笔记和日程。Key 仅存本机浏览器。",
+    "integration.desc": "连接外部服务并验证凭据（Key 仅存本机浏览器）。注意：任务 / 笔记 / 日程同步与消息通知尚未接入，连接本身不会向任何服务发送数据。",
     "about.title": "关于与兼容说明",
     "about.desc": "使用 AI 功能前，请先了解以下说明。",
     "about.tip": "启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工坊数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。",
@@ -7339,7 +7410,7 @@ const MESSAGES = {
     "csvImport.title": "CSV 导入预览",
     "csvImport.preview5": "前 5 条预览",
     "csvImport.confirm": "确认导入",
-    "cmd.placeholder": "搜索场景 / 命令 / 任务…（↑↓ 选择，Enter 执行，Esc 关闭）",
+    "cmd.placeholder": "搜索场景 / 命令 / 任务…（↑↓ 选择，Enter 执行，Esc 关闭；以 > 开头可让 AI 自主完成）",
     "pwa.installDesc2": "像原生应用一样使用，离线可用、桌面快捷启动、独立窗口。",
     "pwa.feature.offline": "离线优先：数据本地存储，无网络也能用",
     "pwa.feature.desktop": "桌面图标：一键启动，独立窗口运行",
@@ -8451,6 +8522,8 @@ const MESSAGES = {
     "empty.noSql": "暂无 SQL · 点击「添加」生成第一条 SQL",
     "empty.noUiDesign": "暂无 UI 设计 · 点击「添加」记录第一个设计",
     "err.aiBaseUrlUnsafe": "AI base URL 不安全：必须使用 https:// 协议（开发环境可用 http://localhost）",
+    /* v3.7.59：chatOnce 补上「未配置就不发请求」守卫后的文案（消费方 src/ai-loop.js） */
+    "err.aiNotConfigured": "尚未配置 AI 模型：请到「设置 → AI」填写 API 地址与 Key 后再对话（未配置时不会向任何端点发送请求）。",
     "err.apiConnectFail": "无法连接 API（可能被跨域拦截）。请用本地服务模式启动（见 README 第四节），或在 Electron 版中使用内置代理",
     "err.apiError": "API 返回错误：",
     "err.apiKeyInvalid": "API Key 无效，请检查设置中的 Key",
@@ -8812,9 +8885,6 @@ const MESSAGES = {
     "ai.noMcpServer": "暂无 MCP 服务器，点击「添加服务器」新建。",
     "ai.noSessHistory": "暂无会话历史。",
     "ai.noWorkflow": "暂无工作流，点击「新建工作流」创建。",
-    "ai.pluginCodeRunner": "代码执行",
-    "ai.pluginFileReader": "文件读取",
-    "ai.pluginWebSearch": "网页搜索",
     "ai.sessPrefix": "会话 ",
     "ai.skillCompleteTask": "完成任务",
     "ai.skillCreateTask": "创建任务",
@@ -8840,14 +8910,14 @@ const MESSAGES = {
     "common.unknown": "未知",
     "common.unnamed": "未命名",
     "int.calService": "日历服务",
-    "int.calendarDesc": "同步日程到 Google/Outlook 日历",
+    "int.calendarDesc": "验证日历凭据（日程同步尚未接入）",
     "int.calendarLabel": "日历",
     "int.clientIdPh": "服务商控制台注册应用的 Client ID",
     "int.confirmRevoke": "确定吊销此 API Key？",
     "int.connect": "连接",
     "int.connected": "已连接",
     "int.connecting": "连接中…",
-    "int.dingtalkDesc": "接收钉钉消息通知",
+    "int.dingtalkDesc": "验证钉钉 App 凭据（消息通知尚未接入）",
     "int.dingtalkLabel": "钉钉",
     "int.errCannotOpenAuth": "无法打开授权页（既无系统浏览器也无 window.open）",
     "int.errMissingClientId": "缺少 OAuth Client ID（需先在服务商控制台注册应用）",
@@ -8858,17 +8928,17 @@ const MESSAGES = {
     "int.errOauthTimeout": "授权超时（",
     "int.errOauthTimeoutSuffix": " 秒内未完成），请重试",
     "int.errUnsupportedProvider": "不支持的 OAuth provider：",
-    "int.feishuDesc": "接收飞书消息通知",
+    "int.feishuDesc": "验证飞书 App 凭据（消息通知尚未接入）",
     "int.feishuLabel": "飞书",
     "int.googleCal": "Google 日历",
-    "int.jiraDesc": "同步任务到 Jira",
+    "int.jiraDesc": "验证 Jira API Token（任务同步尚未接入）",
     "int.jiraDomain": "站点域名",
-    "int.linearDesc": "同步任务到 Linear",
+    "int.linearDesc": "验证 Linear API Key（任务同步尚未接入）",
     "int.linearTeamIdPh": "可选，用于 issue 同步",
     "int.notConnected": "未连接",
     "int.notionDbId": "任务数据库 ID",
     "int.notionDbIdPh": "可选，用于任务同步",
-    "int.notionDesc": "同步笔记和任务到 Notion",
+    "int.notionDesc": "验证 Notion Integration Token（笔记 / 任务同步尚未接入）",
     "int.notionNotesDbId": "笔记数据库 ID",
     "int.notionNotesDbIdPh": "可选，用于笔记同步",
     "int.oauthAuth": "OAuth 授权",
@@ -8876,7 +8946,7 @@ const MESSAGES = {
     "int.oauthInProgress": "授权中…（浏览器完成授权后自动回填）",
     "int.outlookCal": "Outlook 日历",
     "int.revoked": "已吊销",
-    "int.slackDesc": "接收 Slack 消息通知",
+    "int.slackDesc": "验证 Slack Bot Token（消息通知尚未接入）",
     "int.unverified": " · 未验证",
     "int.valid": "有效",
     "int.verified": " · 已验证",
@@ -8979,7 +9049,7 @@ const MESSAGES = {
     "p5.categoryPlaceholder": "分类（如：知识库/工作笔记/学习笔记）",
     "p5.chainHeader": "<h2>联动表现</h2><table><tr><th>规则</th><th>触发次数</th></tr>",
     // ===== AI 能力增强（任务 232）i18n 键值 =====
-    "aiagent.sysPrompt": "你是任务规划助手。收到用户请求后，请先拆解为可执行步骤，输出 JSON 格式的计划：\n```json\n{\"goal\":\"目标标题\",\"steps\":[{\"tool\":\"工具名\",\"args\":{},\"desc\":\"步骤说明\"}]}\n```\n可用工具：create_task/list_tasks/complete_task/update_task/search/query_overview/note_add/note_search/web_search/web_fetch/code_run/sql_query。\n只输出 JSON，不要额外解释。",
+    "aiagent.sysPrompt": "你是任务规划助手。收到用户请求后，请先拆解为可执行步骤，输出 JSON 格式的计划：\n```json\n{\"goal\":\"目标标题\",\"steps\":[{\"tool\":\"工具名\",\"args\":{},\"desc\":\"步骤说明\"}]}\n```\n可用工具：{tools}。\n注意：删除/修改类操作不在可用清单里（它们需要用户在对话中逐项确认，自主执行不会做）。只输出 JSON，不要额外解释。",
     "aiagent.unnamedGoal": "未命名目标",
     "aiagent.cancelled": "已取消",
     "aiagent.summaryHeader": "【任务汇总】目标：",
@@ -8988,6 +9058,24 @@ const MESSAGES = {
     "aiagent.summaryFooter": "共 ",
     "aiagent.summaryStepUnit": " 步，",
     "aiagent.summaryOkUnit": " 步成功",
+    /* v3.7.59：Agent 自主执行有了真入口（命令面板）+ 危险操作/白名单收口后新增的文案 */
+    "aiagent.blocked": "待确认已跳过",
+    "aiagent.summaryBlocked": "其中 ",
+    "aiagent.summaryBlockedSuffix": " 步涉及删除/修改等破坏性操作，未自主执行，请在对话里逐项确认。",
+    "aiagent.needConfirm": "该步骤需用户确认，自主执行已跳过：请到对话里直接要求执行（会弹出确认）",
+    "aiagent.notWhitelisted": "该工具不在允许列表中，已跳过：",
+    "aiagent.planHead": "【执行计划】",
+    "aiagent.planDangerMark": " ⚠️ 需确认，不会自主执行",
+    "aiagent.planTruncated": "（原计划 ",
+    "aiagent.planTruncatedMid": " 步，已裁到 ",
+    "aiagent.planTruncatedSuffix": " 步 —— 自主执行有步数上限）",
+    "aiagent.planAsk": "发送「确认执行」开始逐步执行；发送其他内容取消该计划。",
+    "aiagent.planCancelled": "已取消该执行计划：",
+    "aiagent.noPlan": "模型没有返回可执行的计划，请换个说法，或直接走普通对话。",
+    "aiagent.planError": "规划失败：",
+    "aiagent.offWarn": "Agent 模式已关闭（设置 → AI → Agent 模式），无法自主规划执行。",
+    "cmd.agentRun": "让 AI 自主完成：",
+    "cmd.agentRunSub": "先出计划，回「确认执行」才落地；删除/修改类步骤不会自主执行",
     "aiagent.sumSysPrompt": "你是任务助手，请基于执行结果用简洁的自然语言总结完成情况。",
     "aiagent.sumUserPrompt": "执行结果：\n",
     "aiagent.unknownAsyncTool": "未知异步工具：",
@@ -8998,6 +9086,16 @@ const MESSAGES = {
     "aiagent.invalidUrl": "URL 必须以 http:// 或 https:// 开头",
     "aiagent.fetchFail": "抓取失败：HTTP ",
     "rag.ctxHeader": "【相关上下文】（来自任务/记录、笔记、对话历史的检索增强）：",
+    /* v3.7.59 (#19/#20)：上下文预算装配 + 可溯源引用 + 记忆语义召回的召回方式标注 */
+    "rag.ctxCite": "引用时请标注来源编号（如「依据[2·笔记]」），没有依据的部分请说明是推断。",
+    "rag.ctxTrimmed": "（受上下文预算限制，相关度较低的 ",
+    "rag.ctxTrimmedSuffix": " 条未注入）",
+    "rag.viaBoth": "词法+语义",
+    "rag.viaVec": "语义",
+    "rag.viaLex": "词法",
+    "rag.srcUnknown": "未知来源",
+    "agent.memViaBoth": "·语义+词法",
+    "agent.memViaVec": "·语义",
     "aistream.modelSwitched": "已切换模型：",
     "agent.noteAdded": "已添加笔记：",
     "p5.codeEmpty": "代码为空",
@@ -9222,7 +9320,6 @@ const MESSAGES = {
     "api.offlineMode": "离线模式，数据已保存到本地",
     "api.backOnline": "已恢复在线，正在同步…",
     "ai.memoryConfigSaved": "记忆配置已保存",
-    "ai.pluginConfigSavedStub": "插件配置已保存（注意：code_runner/web_search/file_reader 暂未接线执行代码，勾选状态仅保存配置）",
     "ai.sessHistoryCleared": "已清除所有会话历史",
     "chain.addedPrefix": "已添加链：",
     "chain.resetDone": "已重置为默认联动规则",
@@ -10417,6 +10514,8 @@ const MESSAGES = {
     "ai.greetingSuffix": " assistant. You can ask me to \"create a task\", \"show overview\", or \"search\".",
     "ai.toolDeniedPrefix": "Tool ",
     "ai.toolDeniedSuffix": " is not in the allowed list, skipped.",
+    "ai.toolSkipped": "Tool {name} skipped because the request was cancelled; nothing was executed.",
+    "ai.badToolArgs": "Tool {name} was given malformed JSON arguments, so it was skipped; please supply valid arguments.",
     "ai.taskCreatedSuffix": ")",
     "ai.cancelledOpSuffix": "\".",
     "ai.confirmDangerTitle": "Confirm dangerous action",
@@ -10779,9 +10878,9 @@ const MESSAGES = {
     "agent.cancelGoal": "Cancel Current Goal",
     "aiExt.title": "AI Extensions",
     "aiExt.badge": "Experimental",
-    "aiExt.desc": "Unified management of 5 extension dimensions: Skills / MCP / Workflows / Memory / AI Plugins. Currently saves config only; AI engine wiring is in roadmap. Ordinary users do not need to modify this.",
+    "aiExt.desc": "Unified management of 4 extension dimensions: Skills / MCP / Workflows / Memory. Skills are now wired into the AI (system-prompt injection + one-click trigger from the command palette); MCP and workflows are still being wired. Ordinary users do not need to modify this.",
     "skills.title": "Skills Config",
-    "skills.desc": "Manage built-in and custom AI skills (experimental—switches only save config; Agent uses the tool whitelist above; wiring in roadmap).",
+    "skills.desc": "Manage built-in and custom AI skills: built-in checkboxes sync to the 'allowed tools' whitelist; custom JSON is injected into the system prompt every turn and can be triggered from the Skills group of the command palette (Ctrl+K).",
     "skills.builtin": "Built-in Skills",
     "skills.summaryNm": "Skills",
     "skills.summaryHint": "Built-in + Custom JSON",
@@ -10789,6 +10888,25 @@ const MESSAGES = {
     "skills.customJson": "Custom Skills JSON",
     "skills.jsonHint": "JSON array, each item has name / desc / enabled fields.",
     "skills.save": "Save Skills Config",
+    /* v3.7.59：与 zh 侧同步新增（消费方在 ai-tools.js 的 Skills 引擎 / ai-retry.js / ui-palette.js） */
+    "skills.ctxHeader": "[User-defined skills] (standard operating procedures the user has saved. When a request matches one, follow its steps and prefer its suggested tools; otherwise ignore this section and never mention it to the user):",
+    "skills.ctxHow": "Steps:",
+    "skills.ctxTools": "Suggested tools:",
+    "skills.autoName": "Workflow skill",
+    "skills.autoDesc": "Captured from a successful multi-tool turn",
+    "skills.savedPrefix": "Saved the last turn as skill '",
+    "skills.savedSuffix": "'. It is injected into the system prompt every turn and can be triggered from the Skills group of the command palette (Ctrl+K); edit or delete it under Extensions > Skills Config.",
+    "skills.noOffer": "Nothing to capture yet: the previous turn must have successfully run at least 2 tool calls (delete/update tools are excluded).",
+    "skills.runWrapPrefix": " (Execute the defined skill '",
+    "skills.runWrapMid": "' right now: ",
+    "skills.runWrapTools": "; prefer these tools: ",
+    "skills.runWrapSuffix": ".)",
+    "skills.offerToast": "This turn successfully ran ",
+    "skills.offerToastMid": " tool calls. Send 'save as skill' to capture this workflow as a reusable skill (also available in the Skills group of the command palette, Ctrl+K).",
+    "cmd.skill": "Skills",
+    "cmd.skillInvoke": "Skill: ",
+    "cmd.skillSaveOffer": "Save last turn as a skill",
+    "cmd.skillSaveText": "save as skill",
     "mcp.title": "MCP Servers",
     "mcp.desc": "Configure Model Context Protocol servers (experimental—config stored locally; AI engine wiring in roadmap; does not change AI capabilities yet).",
     "mcp.summaryNm": "MCP Servers",
@@ -10808,7 +10926,7 @@ const MESSAGES = {
     "mem.windowPlaceholder": "10 (default)",
     "mem.longTermLabel": "Long-term Memory",
     "mem.ragLabel": "Context injection (experimental)",
-    "mem.ragSub": "When sending a message, automatically retrieve related tasks/records/notes and inject them into the AI context — sharper answers, slightly more token usage",
+    "mem.ragSub": "When sending a message, automatically retrieve related tasks/records/notes and switch working-memory recall to semantic matching (still hits when you rephrase), then inject both into the AI context — sharper answers, at the cost of some tokens and one embeddings call",
     "mem.longTermSub": "Enables cross-session historical memory retrieval",
     "mem.thresholdLabel": "Memory Retrieval Threshold (0~1)",
     "mem.strategyLabel": "Memory Strategy",
@@ -10816,11 +10934,6 @@ const MESSAGES = {
     "mem.strategy.relevant": "Relevant",
     "mem.strategy.mixed": "Mixed",
     "mem.save": "Save Memory Config",
-    "aiPlugin.title": "AI Plugins",
-    "aiPlugin.desc": "AI extension plugin list (experimental—no execution code; checkbox state saved as config only).",
-    "aiPlugin.summaryNm": "AI Plugins",
-    "aiPlugin.summaryHint": "Extension Plugin List",
-    "aiPlugin.save": "Save Plugin Config",
     "sess.title": "Session Management",
     "sess.desc": "Session timeout and auto-save settings (experimental—actual session management in chat panel '☰'; wiring in roadmap).",
     "sess.timeoutLabel": "Session Timeout (minutes, 5~1440)",
@@ -10951,7 +11064,7 @@ const MESSAGES = {
     "notify.pushStatus": "Not subscribed. Enable to push task due and chain break reminders (requires Push API support).",
     "notify.pushHint": "⚠️ Framework mode: VAPID key is placeholder, not connected to push server. Subscribing calls PushManager.subscribe, but server-side push requires VAPID key and push service configuration.",
     "integration.title": "Integration Center",
-    "integration.desc": "Connect external services to sync tasks, notes and schedules. Key stored locally only.",
+    "integration.desc": "Connect external services and verify credentials (keys stay in this browser only). Note: task / note / calendar sync and message notifications are not implemented — connecting does not send data anywhere.",
     "about.title": "About & Compatibility",
     "about.desc": "Please read the following before using AI features.",
     "about.tip": "When enabled, each scenario's AI assistant can call tools: create/modify/delete tasks, query/complete tasks, search, add records, view overview, export—your instructions actually modify workbench data.<br><br>With Agent Mode: remember/recall/forget working memory, plan/complete_step/complete_goal multi-step goals, list_records cross-scenario records.<br><br>CORS tip: calling from local files may be blocked by browser CORS. Best to open via 'start-local-service.bat' as http://localhost, then enable AI.",
@@ -10963,7 +11076,7 @@ const MESSAGES = {
     "csvImport.title": "CSV Import Preview",
     "csvImport.preview5": "First 5 Rows Preview",
     "csvImport.confirm": "Confirm Import",
-    "cmd.placeholder": "Search scenario / command / task… (↑↓ select, Enter run, Esc close)",
+    "cmd.placeholder": "Search scenarios / commands / tasks… (↑↓ select, Enter run, Esc close; start with > to let the AI do it end to end)",
     "pwa.installDesc2": "Use like a native app: offline-ready, desktop shortcut, standalone window.",
     "pwa.feature.offline": "Offline-first: data stored locally, works without network",
     "pwa.feature.desktop": "Desktop icon: one-click launch, standalone window",
@@ -12075,6 +12188,7 @@ const MESSAGES = {
     "empty.noSql": "No SQL yet · Click \"Add\" to generate your first SQL",
     "empty.noUiDesign": "No UI designs yet · Click \"Add\" to add your first design",
     "err.aiBaseUrlUnsafe": "AI base URL is insecure: https:// is required (http://localhost is allowed in development)",
+    "err.aiNotConfigured": "No AI model configured: open Settings > AI and fill in the API base URL and key before chatting (nothing is sent to any endpoint while unconfigured).",
     "err.apiConnectFail": "Cannot reach the API (possibly blocked by CORS). Start in local service mode (see README section 4), or use the built-in proxy in the Electron build",
     "err.apiError": "API returned an error: ",
     "err.apiKeyInvalid": "Invalid API Key; check the Key in Settings",
@@ -12436,9 +12550,6 @@ const MESSAGES = {
     "ai.noMcpServer": "No MCP servers, click \"Add Server\" to create.",
     "ai.noSessHistory": "No session history.",
     "ai.noWorkflow": "No workflows, click \"New Workflow\" to create.",
-    "ai.pluginCodeRunner": "Code runner",
-    "ai.pluginFileReader": "File reader",
-    "ai.pluginWebSearch": "Web search",
     "ai.sessPrefix": "Session ",
     "ai.skillCompleteTask": "Complete task",
     "ai.skillCreateTask": "Create task",
@@ -12464,14 +12575,14 @@ const MESSAGES = {
     "common.unknown": "Unknown",
     "common.unnamed": "Unnamed",
     "int.calService": "Calendar service",
-    "int.calendarDesc": "Sync schedule to Google/Outlook calendar",
+    "int.calendarDesc": "Verify calendar credentials (event sync not implemented)",
     "int.calendarLabel": "Calendar",
     "int.clientIdPh": "Client ID from provider console",
     "int.confirmRevoke": "Confirm revoke this API Key?",
     "int.connect": "Connect",
     "int.connected": "Connected",
     "int.connecting": "Connecting…",
-    "int.dingtalkDesc": "Receive DingTalk notifications",
+    "int.dingtalkDesc": "Verify DingTalk app credentials (notifications not implemented)",
     "int.dingtalkLabel": "DingTalk",
     "int.errCannotOpenAuth": "Cannot open auth page (no system browser or window.open)",
     "int.errMissingClientId": "Missing OAuth Client ID (register app at provider console first)",
@@ -12482,17 +12593,17 @@ const MESSAGES = {
     "int.errOauthTimeout": "Auth timeout (",
     "int.errOauthTimeoutSuffix": " seconds not completed), please retry",
     "int.errUnsupportedProvider": "Unsupported OAuth provider: ",
-    "int.feishuDesc": "Receive Feishu notifications",
+    "int.feishuDesc": "Verify Feishu app credentials (notifications not implemented)",
     "int.feishuLabel": "Feishu",
     "int.googleCal": "Google Calendar",
-    "int.jiraDesc": "Sync tasks to Jira",
+    "int.jiraDesc": "Verify Jira API token (task sync not implemented)",
     "int.jiraDomain": "Site domain",
-    "int.linearDesc": "Sync tasks to Linear",
+    "int.linearDesc": "Verify Linear API key (task sync not implemented)",
     "int.linearTeamIdPh": "Optional, for issue sync",
     "int.notConnected": "Not connected",
     "int.notionDbId": "Task database ID",
     "int.notionDbIdPh": "Optional, for task sync",
-    "int.notionDesc": "Sync notes and tasks to Notion",
+    "int.notionDesc": "Verify Notion integration token (note / task sync not implemented)",
     "int.notionNotesDbId": "Notes database ID",
     "int.notionNotesDbIdPh": "Optional, for notes sync",
     "int.oauthAuth": "OAuth Authorize",
@@ -12500,7 +12611,7 @@ const MESSAGES = {
     "int.oauthInProgress": "Authorizing… (auto-fill after browser auth)",
     "int.outlookCal": "Outlook Calendar",
     "int.revoked": "Revoked",
-    "int.slackDesc": "Receive Slack notifications",
+    "int.slackDesc": "Verify Slack bot token (notifications not implemented)",
     "int.unverified": " · Unverified",
     "int.valid": "Valid",
     "int.verified": " · Verified",
@@ -12603,7 +12714,7 @@ const MESSAGES = {
     "p5.categoryPlaceholder": "Category (e.g.: Knowledge/Work/Study)",
     "p5.chainHeader": "<h2>Habit Chain Performance</h2><table><tr><th>Chain</th><th>Triggers</th></tr>",
     // ===== AI capability enhancement (task 232) i18n keys =====
-    "aiagent.sysPrompt": "You are a task planning assistant. After receiving a user request, decompose it into executable steps and output a JSON plan:\n```json\n{\"goal\":\"Goal title\",\"steps\":[{\"tool\":\"tool_name\",\"args\":{},\"desc\":\"step description\"}]}\n```\nAvailable tools: create_task/list_tasks/complete_task/update_task/search/query_overview/note_add/note_search/web_search/web_fetch/code_run/sql_query.\nOutput JSON only, no extra explanation.",
+    "aiagent.sysPrompt": "You are a task planning assistant. After receiving a user request, decompose it into executable steps and output a JSON plan:\n```json\n{\"goal\":\"Goal title\",\"steps\":[{\"tool\":\"tool_name\",\"args\":{},\"desc\":\"step description\"}]}\n```\nAvailable tools: {tools}.\nNote: delete/update operations are not in this list (they require the user to confirm each time; autonomous execution never does them). Output JSON only, no extra explanation.",
     "aiagent.unnamedGoal": "Unnamed goal",
     "aiagent.cancelled": "Cancelled",
     "aiagent.summaryHeader": "[Task Summary] Goal: ",
@@ -12612,6 +12723,23 @@ const MESSAGES = {
     "aiagent.summaryFooter": "Total ",
     "aiagent.summaryStepUnit": " steps, ",
     "aiagent.summaryOkUnit": " succeeded",
+    "aiagent.blocked": "skipped (needs confirmation)",
+    "aiagent.summaryBlocked": "Of these ",
+    "aiagent.summaryBlockedSuffix": " steps were destructive (delete/update) and were not executed autonomously; confirm them one by one in the chat.",
+    "aiagent.needConfirm": "This step needs user confirmation, skipped by autonomous execution: ask for it directly in the chat (a confirmation dialog will appear)",
+    "aiagent.notWhitelisted": "Tool is not in the allowed list, skipped: ",
+    "aiagent.planHead": "[Execution plan] ",
+    "aiagent.planDangerMark": " ⚠️ needs confirmation, will not run autonomously",
+    "aiagent.planTruncated": "(original plan ",
+    "aiagent.planTruncatedMid": " steps, truncated to ",
+    "aiagent.planTruncatedSuffix": " steps — autonomous execution is step-capped)",
+    "aiagent.planAsk": "Send 'confirm run' to start step by step; send anything else to cancel this plan.",
+    "aiagent.planCancelled": "Execution plan cancelled: ",
+    "aiagent.noPlan": "The model returned no executable plan. Rephrase, or just continue with normal chat.",
+    "aiagent.planError": "Planning failed: ",
+    "aiagent.offWarn": "Agent mode is off (Settings > AI > Agent mode); autonomous planning is unavailable.",
+    "cmd.agentRun": "Let the AI do it end to end: ",
+    "cmd.agentRunSub": "Plans first; nothing runs until you reply 'confirm run'; delete/update steps never run autonomously",
     "aiagent.sumSysPrompt": "You are a task assistant. Summarize the execution results concisely in natural language.",
     "aiagent.sumUserPrompt": "Execution results:\n",
     "aiagent.unknownAsyncTool": "Unknown async tool: ",
@@ -12622,6 +12750,15 @@ const MESSAGES = {
     "aiagent.invalidUrl": "URL must start with http:// or https://",
     "aiagent.fetchFail": "Fetch failed: HTTP ",
     "rag.ctxHeader": "[Relevant Context] (retrieval-augmented from tasks/records, notes, chat history):",
+    "rag.ctxCite": "When referring to these, cite the source number (e.g. 'per [2·note]'); mark anything without a source as inference.",
+    "rag.ctxTrimmed": "(context budget reached; ",
+    "rag.ctxTrimmedSuffix": " lower-relevance hits were not injected)",
+    "rag.viaBoth": "lex+semantic",
+    "rag.viaVec": "semantic",
+    "rag.viaLex": "lexical",
+    "rag.srcUnknown": "unknown source",
+    "agent.memViaBoth": "·semantic+lexical",
+    "agent.memViaVec": "·semantic",
     "aistream.modelSwitched": "Switched model: ",
     "agent.noteAdded": "Note added: ",
     "p5.codeEmpty": "Code is empty",
@@ -12870,7 +13007,6 @@ const MESSAGES = {
     "api.offlineMode": "Offline, data saved locally",
     "api.backOnline": "Back online, syncing…",
     "ai.memoryConfigSaved": "Memory config saved",
-    "ai.pluginConfigSavedStub": "Plugin config saved (note: code_runner/web_search/file_reader are not wired to execute code, toggle state only saves config)",
     "ai.sessHistoryCleared": "Cleared all session history",
     "chain.addedPrefix": "Chain added: ",
     "chain.resetDone": "Reset to default chain rules",
@@ -13969,7 +14105,7 @@ function toast(msg, type){
   if(key){
     const icEl=document.createElement("span"); icEl.className="ic-inline"; icEl.style.margin="0 6px 0 0";
     // 可信的静态 SVG 字符串（无用户输入），直接用 innerHTML
-    icEl.innerHTML = TOAST_ICONS[key];
+    icEl.innerHTML = TOAST_ICONS[key]; // lint-xss-ok: TOAST_ICONS 是内部常量表，且 key 已在上一行用 TOAST_ICONS[type] 校验过
     d.appendChild(icEl);
   }
   d.appendChild(document.createTextNode(msg)); // 用户输入走 textNode，不怕 XSS
@@ -14310,6 +14446,23 @@ function idbOpen(){
   return _idbDbPromise;
 }
 
+/* v3.7.59：IDB 写失败此前**完全不可见**。
+   原实现里 `tx.onerror` / `tx.onabort` 与 `req.onerror` 都直接 `resolve(n)` / `resolve(undefined)`
+   —— 谎报成功；调用方（`idbQueueMirror` 的 setTimeout、pagehide 钩子）还额外 `.catch(()=>{})` 兜着。
+   而 IDB 镜像正是 localStorage 的**恢复来源**（idbRestoreAll）：它静默失效意味着
+   「用户以为有备份，其实早就停了」，且任何日志里都查不到。
+   现改为：失败即上报 pushDiag，并 resolve 0（如实表示「没有键被确认写入」）。
+   节流：同一分钟内只报一次，避免持续失败把诊断环形缓冲冲掉、反而把其它线索挤没。 */
+let _idbDiagAt = 0;
+function _idbDiag(msg, e){
+  const now = Date.now();
+  if(now - _idbDiagAt < 60000) return;
+  _idbDiagAt = now;
+  try{
+    if(typeof pushDiag === "function") pushDiag("error", msg + ((e && e.message) ? ": " + e.message : ""), { where: "idb" });
+  }catch(_){ /* 诊断不可用时不阻塞存储路径 */ }
+}
+
 /**
  * 单键事务包装
  * @param {IDBTransactionMode} mode - "readonly" | "readwrite"
@@ -14324,8 +14477,8 @@ function idbTxn(mode, fn){
       const st = tx.objectStore(IDB_STORE);
       const req = fn(st);
       req.onsuccess = () => resolve(req.result);
-      req.onerror = () => resolve(undefined);
-    }catch(e){ resolve(undefined); }
+      req.onerror = () => { _idbDiag("idbTxn request error", req.error); resolve(undefined); };
+    }catch(e){ _idbDiag("idbTxn threw", e); resolve(undefined); }
   }));
 }
 
@@ -14371,9 +14524,10 @@ function idbFlushQueue(){
       const st = tx.objectStore(IDB_STORE);
       entries.forEach(k => { const v = q[k]; if(v === undefined){ st.delete(k); } else { st.put(v, k); } n++; });
       tx.oncomplete = () => resolve(n);
-      tx.onerror = () => resolve(n);
-      tx.onabort = () => resolve(n);
-    }catch(e){ resolve(0); }
+      /* v3.7.59：error/abort 不再谎报 n，改为上报诊断 + 如实返回 0 */
+      tx.onerror = () => { _idbDiag("idbFlushQueue tx error (" + entries.length + " keys)", tx.error); resolve(0); };
+      tx.onabort = () => { _idbDiag("idbFlushQueue tx aborted (" + entries.length + " keys)", tx.error); resolve(0); };
+    }catch(e){ _idbDiag("idbFlushQueue threw", e); resolve(0); }
   }));
 }
 
@@ -14407,7 +14561,10 @@ function idbRestoreAll(){
       if(has) continue;
       const v = await idbReadKey(k);
       if(v === undefined || v === null) continue;
-      try{ localStorage.setItem(k, JSON.stringify(v)); restored.push(k); }catch(e){ /* 配额不足等：跳过 */ }
+      /* v3.7.59：恢复写回失败（配额不足等）此前静默跳过 —— 表现为「镜像里有数据，但恢复后
+         某些键不见了」，用户与日志都看不出发生过什么。节流上报。 */
+      try{ localStorage.setItem(k, JSON.stringify(v)); restored.push(k); }
+      catch(e){ _idbDiag("idbRestoreAll setItem failed for " + k, e); }
     }
     return restored;
   });
@@ -14788,15 +14945,41 @@ function sanitizeHtml(html){
     s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
     s = s.replace(/<\s*(iframe|object|embed|applet)\b[^>]*\/?\s*>/gi, "");
     // 3. 移除所有 on* 事件属性
-    s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-    // 4. 移除 href/src 的危险协议（javascript:/vbscript:/data:）——属性值先经实体解码+控制字符剥离
-    //    再判协议（_isDangerousUrlValue），封堵以实体编码或控制字符插值隐藏协议名的绕过
-    s = s.replace(/(href|src)\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, attr, _q, dq, sq){
+    //    v3.7.59：分两遍。① 常规（空白分隔）；② **斜杠分隔**——`<svg/onload=…>`、
+    //    `<img/src=x/onerror=…>` 这类写法里 `/` 在 HTML 解析器中同样充当属性分隔符
+    //    （before attribute name → after attribute name → 新属性），故浏览器照样触发事件，
+    //    而旧的 `\s+on\w+` 要求前置空白，**拦不住**。
+    //    第 ② 遍刻意限定在「标签内部」（<…>）做替换，而不是全局——避免误伤
+    //    href="https://x/one=1" 这类含 `/on…=` 的普通 URL 值。
+    //    且第 ② 遍是**引号感知**的逐字符扫描：只剥离引号外的 `/on…=`，属性值里的原样保留。
+    //    （纯正则做不到这点：`/one=` 与 `/onerror=` 的前置字符都是普通字母，无法区分。）
+    s = s.replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+    s = s.replace(/<[^>]*>/g, function (tag) {
+      let out = "", i = 0, quote = "";
+      while (i < tag.length) {
+        const ch = tag[i];
+        if (quote) { out += ch; if (ch === quote) quote = ""; i++; continue; }
+        if (ch === '"' || ch === "'") { quote = ch; out += ch; i++; continue; }
+        if (ch === "/") {
+          const mm = tag.slice(i + 1).match(/^\s*on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i);
+          if (mm) { i += 1 + mm[0].length; continue; } // 丢弃这段（斜杠充当属性分隔符的事件属性）
+        }
+        out += ch; i++;
+      }
+      return out;
+    });
+    // 4. 移除「URL 属性」里的危险协议（javascript:/vbscript:/data:）——属性值先经实体解码 +
+    //    控制字符剥离再判协议（_isDangerousUrlValue），封堵以实体编码或控制字符隐藏协议名的绕过。
+    //    v3.7.59：属性清单由 href|src 扩到 formaction/action/poster/background/dynsrc/lowsrc +
+    //    xlink:href。此前 `<button formaction="javascript:…">` 与 `<form action="javascript:…">`
+    //    都原样保留（实测见 _audit_evidence/xss-probe.mjs），点击即执行。原 6b 段（xlink:href）
+    //    随之合并到此处，不再单列。
+    s = s.replace(/(href|src|xlink:href|formaction|action|poster|background|dynsrc|lowsrc)\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, attr, _q, dq, sq){
       const val = dq !== undefined ? dq : (sq !== undefined ? sq : "");
       return _isDangerousUrlValue(val) ? attr + '=""' : m;
     });
     // 4b. 无引号情况
-    s = s.replace(/(href|src)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
+    s = s.replace(/(href|src|xlink:href|formaction|action|poster|background|dynsrc|lowsrc)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
       return _isDangerousUrlValue(val) ? attr + '=""' : m;
     });
     // 5. 移除 CSS expression() 及其编码变体（\28 / \x28 等编码括号）
@@ -14808,15 +14991,15 @@ function sanitizeHtml(html){
     //    SVG 内的危险内容已由步骤 1-5 消毒（script 标签、on* 事件、javascript:/data: 协议等）
     s = s.replace(/<\s*math\b[^>]*>[\s\S]*?<\s*\/\s*math\s*>/gi, "");
     s = s.replace(/<\s*math\b[^>]*\/?\s*>/gi, "");
-    // 6b. 移除 SVG 中 xlink:href 的危险协议（javascript:/vbscript:/data:），防御 <use xlink:href="javascript:..."> 载荷
-    //     与步骤 4 同口径：实体解码+控制字符剥离后判协议
-    s = s.replace(/(xlink:href)\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, attr, _q, dq, sq){
-      const val = dq !== undefined ? dq : (sq !== undefined ? sq : "");
-      return _isDangerousUrlValue(val) ? attr + '=""' : m;
-    });
-    s = s.replace(/(xlink:href)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
-      return _isDangerousUrlValue(val) ? attr + '=""' : m;
-    });
+    // 6b. （v3.7.59 已合并至步骤 4/4b 的属性清单，此处不再单列 xlink:href）
+    // 6c. 移除 SVG 动画标签 animate/animateTransform/animateMotion/set。
+    //     它们能在**运行期**把某个属性改成 javascript: —— 例如
+    //       <svg><a><animate attributeName="href" values="javascript:alert(1)"/><text>x</text></a></svg>
+    //     此时源码里根本没有 `href=` 可供步骤 4 判协议，消毒器看不见、浏览器却会执行。
+    //     实测（_audit_evidence/xss-probe.mjs）修复前 animate/set 两种写法均原样通过。
+    //     本应用的图标/图表（UI_ICONS、_dgmSvgHtml、萌宠 SVG）均不含这四个标签（全仓 0 命中），
+    //     故整体移除不影响任何现有渲染。
+    s = s.replace(/<\s*\/?\s*(animate|animateTransform|animateMotion|set)\b[^>]*>/gi, "");
     // 7. 移除其他危险标签：template/noscript/noembed/noframes
     s = s.replace(/<\s*\/?\s*(template|noscript|noembed|noframes)\b[^>]*>/gi, "");
     // 8. 防御 HTML 实体编码绕过（&#x...; / &#...; 形式的 < > " '）
@@ -16286,6 +16469,28 @@ const TOOLS = [
  * 修复：effectiveTools() 按 cfg.agent 过滤；chatSysPrompt 同步降级话术。
  */
 const AGENT_TOOL_NAMES = ["remember","recall","forget","plan","complete_step","complete_goal","list_records"];
+/**
+ * 「需要用户确认才允许落地」的工具 —— 唯一清单（v3.7.59 收口）。
+ * 背景：runChatLoop 里写了一份 DANGER=["delete_task","update_task"]，而 executeAgentPlan 用
+ * execTool(...,force=true) 绕过确认 —— 同一个工具在对话路径要弹窗、在 Agent 计划路径直接删。
+ * 现在两条路径共用这份清单，Agent 计划路径见 executeAgentPlan。
+ * ⚠️ 不要在这里加 forget：那属于「不该被固化成可反复触发的技能」那一类（SKILL_DANGER_TOOLS），
+ *    把 forget 变成要确认会改变现有对话 UX，超出修 bug 的范围。
+ */
+const DANGER_CONFIRM_TOOLS = new Set(["delete_task","update_task"]);
+/**
+ * 工具白名单（cfg.toolWhitelist）→ Set；未配置/留空返回 null（=允许全部）。
+ * v3.7.59 收口为单一来源：runChatLoop 与 executeAgentPlan 都按它过滤。
+ * 此前只有 runChatLoop 读它 —— 于是「技能/白名单」在对话路径挡住了工具，
+ * 换一条自主规划路径就绕开，同一个开关两种含义。
+ * @param {Object} [cfgOverride]
+ * @returns {Set<string>|null}
+ */
+function toolWhitelistSet(cfgOverride){
+  const c = cfgOverride || getCfg() || {};
+  const wl = String(c.toolWhitelist || "").trim();
+  return wl ? new Set(wl.split(/[,\s\u3000]+/).filter(Boolean)) : null;
+}
 /** 计算实际暴露给模型的工具集（cfg.agent=false 时剔除 Agent 工具） */
 function effectiveTools(){
   const cfg = getCfg();
@@ -16301,6 +16506,10 @@ function effectiveTools(){
 /* ---------- Agent 引擎：记忆 / 目标 / 多步编排（A-P3：在既有 chatOnce + TOOLS 契约上扩展，不另起链路） ---------- */
 const AGENT_MEM_MAX = 60;        // 工作记忆容量默认值（R5：可在设置页配置，见 getMemMax）
 const AGENT_GOAL_LOOP_MAX = 12;  // 目标激活时 runChatLoop 循环上限（无目标时仍用默认 6）
+/* Agent 自主计划的步骤上限：模型一旦跑偏会连出几十步工具调用，每一步都是真实写操作，
+   而这条路径没有对话那样的循环护栏。超出部分在 parseAgentPlan 就被裁掉，
+   并在计划评审文案里明说"还有 N 步未纳入"，不静默丢弃。 */
+const AGENT_PLAN_STEPS_MAX = 12;
 
 /**
  * R5：读取工作记忆容量（cfg.memMax，默认 60，钳制到 20~500）
@@ -16319,16 +16528,140 @@ function saveMemories(a){ save(PREFIX+"memory", a.slice(-getMemMax())); }
 function addMemory(scope, text){
   const rec = { id: uid(), scope: scope||"global", text: String(text||"").trim(), ts: Date.now(), hits: 0 };
   if(!rec.text) return null;
-  const mem = getMemories(); mem.push(rec); saveMemories(mem); return rec;
+  const mem = getMemories(); mem.push(rec); saveMemories(mem);
+  memVecInvalidate([rec.id]);   // 新条目还没向量，下一轮 memEnsureVectors 补
+  return rec;
 }
 function forgetMemory(id){
   const mem = getMemories();
   const i = mem.findIndex(m=>m.id===id || (m.text||"").includes(String(id||"")));
   if(i<0) return null;
-  const r = mem.splice(i,1)[0]; saveMemories(mem); return r;
+  const r = mem.splice(i,1)[0]; saveMemories(mem);
+  memVecInvalidate([r && r.id]);
+  try{ if(r && r.id) idbDeleteKey(MEM_VEC_PREFIX + r.id); }catch(_){ /* 清不掉只是留个孤儿，下轮清扫 */ }
+  return r;
 }
-/* 召回：场景匹配 + 关键词命中 + 近期加权 + 命中次数，返回 topN */
-function recallMemories(query, sc, limit){
+/* v3.7.59 修正：此处原有一份**词法版** recallMemories（场景匹配 + 关键词命中 + 近期加权 +
+   命中次数）。向量召回改造时只新增了下方的融合版、未删除这一份，于是 recallMemories 被定义了两次：
+   函数声明提升下**后者生效**（功能正确、测试全绿），这一份成为死代码，同时触发 ESLint
+   `no-redeclare` → CI 的 npm run lint 直接失败。
+   词法打分已由 _memLexScored（下方）完整承接，recallMemoriesLex 是其薄封装，故此处直接删除。 */
+function touchMemories(list){
+  const ids=new Set(list.map(m=>m.id)); const mem=getMemories();
+  mem.forEach(m=>{ if(ids.has(m.id)) m.hits=(m.hits||0)+1; });
+  saveMemories(mem);
+}
+
+/* ============================================================
+ * 工作记忆的向量召回（v3.7.59 · 任务 #19）—— 复用 #17/#18 建好的 embedding 通道
+ * ------------------------------------------------------------
+ * 原来的 recallMemories 是纯词法：按空白/标点切词 + substring。中文没有空格，
+ * 「我喜欢简洁的回复」整句是一个 token，于是用户说「以后短点说」永远召不回那条偏好 ——
+ * 工作记忆这块**写了但基本不生效**（v1.x 起就一直如此）。
+ * RAG 那套（CJK 分词 / provider embeddings / 模型戳 / RRF / 显式降级）v3.7.57 已经建好，
+ * 这里把它接到记忆上，而不是再造一套。
+ *
+ * 向量存放：IndexedDB kv，键前缀 **memvec:**（刻意不带 wb_agent_ —— 带该前缀会被
+ * idbShouldMirror 当成用户数据镜像，启动时 JSON.stringify 回写 localStorage，
+ * 1536 维 Float32 每条约 30KB，几十条就爆配额）。与 ragvec: 同一个理由。
+ *
+ * 同步链路上怎么拿到"查询向量"：agentContextPrompt → recallMemories 是**同步**调用
+ * （chatSysPrompt 是同步的，改成 async 会让任何漏掉的调用点静默拼出 "[object Promise]"），
+ * 而求查询向量必须走网络。做法是 onChatSubmit 在拼系统提示前 await memPrimeQueryVector(text)
+ * 把结果放进 _memQueryVec；recallMemories 只在 key 与本次 query 完全相同时才用它。
+ * 拿不到（没配 embedding / 请求失败 / 从 recall 工具直接进来）就退回纯词法，不报错、不卡。
+ * ============================================================ */
+const MEM_VEC_PREFIX = "memvec:";
+const MEM_VEC_BATCH = 32;       // 一次 /embeddings 送几条（与 ragEnsureVectors 同口径）
+const MEM_VEC_MAX = 60;         // 单轮回填上限；记忆本身就被 getMemMax 钳在 500 条内
+let _memVecCache = null;        // {model:string, map:Map<memId, Float32Array>} | null（null=尚未加载）
+let _memEnsuring = null;        // 进行中的回填 Promise（防并发重复 embedding）
+let _memQueryVec = null;        // {key:string, vec:Float32Array|null} 本轮已算好的查询向量
+
+/** 送去 embedding 的记忆文本：带上作用域标记，让"全局偏好"和"场景内事实"在向量空间里也分得开 */
+function _memVecText(m){
+  return (m.scope === "global" ? "[global] " : "[" + (m.scope || "") + "] ") + String(m.text || "");
+}
+
+/** 载入记忆向量（按当前 embedModel 校验；IDB 不可用 → 空 Map，静默退回纯词法） */
+async function memVecLoadAll(){
+  const wantModel = _ragVecModel();
+  if(_memVecCache && _memVecCache.model === wantModel) return _memVecCache.map;
+  const m = new Map();
+  try{
+    const keys = await idbKeys();
+    for(const k of (keys || [])){
+      if(typeof k !== "string" || k.indexOf(MEM_VEC_PREFIX) !== 0) continue;
+      const rec = await idbReadKey(k);
+      if(!rec || !rec.v || !rec.m) continue;                    // 旧格式/缺模型戳 → 当没有，重算
+      if(String(rec.m) !== String(wantModel)) continue;         // 换过向量模型 → 重算
+      m.set(k.slice(MEM_VEC_PREFIX.length), rec.v instanceof Float32Array ? rec.v : Float32Array.from(rec.v));
+    }
+  }catch(e){ pushDiag("warn", "memVecLoadAll error: "+((e&&e.message)||e), {where:"memVecLoadAll"}); }
+  _memVecCache = { model: wantModel, map: m };
+  return m;
+}
+
+/** 写入/删除单条记忆的向量（同步清内存缓存，避免陈旧命中） */
+async function memVecPut(memId, vec){
+  const cache = await memVecLoadAll();
+  const id = String(memId || "");
+  if(!id || !vec || !vec.length){ cache.delete(id); return false; }
+  cache.set(id, vec);
+  try{ await idbMirrorKey(MEM_VEC_PREFIX + id, { m: _ragVecModel(), v: vec }); return true; }
+  catch(e){ return false; }
+}
+
+/** 给还没有向量的记忆补上（单飞 + 批量 + 有界；通道不可用就到此为止，下轮再试） */
+async function memEnsureVectors(max){
+  if(_memEnsuring) return _memEnsuring;
+  _memEnsuring = (async () => {
+    const cap = (typeof max === "number" && max > 0) ? Math.min(max, MEM_VEC_MAX) : MEM_VEC_MAX;
+    const mems = getMemories();
+    const cache = await memVecLoadAll();
+    const live = new Set(mems.map(m => String(m.id)));
+    /* 顺手清扫：清空工作记忆是从 UI 直接 save(PREFIX+"memory",[])，不经过本模块的钩子，
+       于是 IDB 里会留下孤儿向量。它们永远匹配不上（已按 live 过滤），但占地方，删掉。 */
+    for(const id of [...cache.keys()]){
+      if(live.has(id)) continue;
+      cache.delete(id);
+      try{ await idbDeleteKey(MEM_VEC_PREFIX + id); }catch(_){ /* 删不掉也不影响召回 */ }
+    }
+    const missing = mems.filter(m => m && m.id && !cache.has(String(m.id)) && String(m.text||"").trim());
+    if(!missing.length) return { done: 0, left: 0 };
+    let done = 0;
+    const todo = missing.slice(0, cap);
+    for(let i = 0; i < todo.length; i += MEM_VEC_BATCH){
+      const chunk = todo.slice(i, i + MEM_VEC_BATCH);
+      const vecs = await aiEmbedTexts(chunk.map(_memVecText));
+      if(!vecs || vecs.length !== chunk.length) break;   // 通道不可用：不逐批重试
+      for(let j = 0; j < chunk.length; j++){ if(await memVecPut(chunk[j].id, vecs[j])) done++; }
+    }
+    return { done: done, left: Math.max(0, missing.length - done) };
+  })().finally(() => { _memEnsuring = null; });
+  return _memEnsuring;
+}
+
+/** 用查询向量给记忆打分排序（只看当前场景可见的记忆；向量缺失的条目不参与） */
+function memVectorTop(qVec, sc, topK){
+  if(!qVec || !qVec.length) return [];
+  const cache = (_memVecCache && _memVecCache.map) || null;
+  if(!cache || !cache.size) return [];
+  const scored = [];
+  getMemories().forEach(function(m){
+    if(!m || !m.id) return;
+    if(!(m.scope === "global" || m.scope === sc)) return;
+    const v = cache.get(String(m.id));
+    if(!v) return;
+    const sim = ragCosine(qVec, v);
+    if(sim > 0) scored.push({ m: m, sim: sim });
+  });
+  scored.sort((a, b) => b.sim - a.sim);
+  return scored.slice(0, topK);
+}
+
+/** 词法打分明细：score 用于排序，kw>0 表示这条是**真的按字面匹配上的**（区分于纯新近度填充） */
+function _memLexScored(query, sc){
   const q = String(query||"").toLowerCase();
   const kws = q.split(/[\s,，。、;；]+/).filter(w=>w.length>=2);
   const now = Date.now();
@@ -16338,18 +16671,86 @@ function recallMemories(query, sc, limit){
       let score = (m.scope==="global"?1:2) + (m.hits||0)*0.1;
       score += Math.max(0, 3 - ((now-(m.ts||now))/86400000)*0.05); // 约 2 个月内线性衰减
       const text=(m.text||"").toLowerCase();
-      for(const w of kws){ if(text.includes(w)) score+=2; }
-      return {m, score};
+      let kw = 0;
+      for(const w of kws){ if(text.includes(w)) kw++; }
+      score += kw*2;
+      return { m, score, kw };
     })
-    .sort((a,b)=>b.score-a.score)
-    .slice(0, limit||8)
-    .map(x=>x.m);
+    .sort((a,b)=>b.score-a.score);
 }
-function touchMemories(list){
-  const ids=new Set(list.map(m=>m.id)); const mem=getMemories();
-  mem.forEach(m=>{ if(ids.has(m.id)) m.hits=(m.hits||0)+1; });
-  saveMemories(mem);
+
+/** 词法召回（原 recallMemories 的实现，保留为向量不可用时的降级路径） */
+function recallMemoriesLex(query, sc, limit){
+  return _memLexScored(query, sc).slice(0, limit||8).map(x=>x.m);
 }
+
+/**
+ * 召回：词法 + 向量 RRF 融合（v3.7.59 起）。
+ * 保持**同步**签名不变 —— 调用方（agentContextPrompt / recall 工具 / 测试）都在同步链上。
+ * 本轮没备好查询向量时，返回值与改造前逐条一致。
+ * @returns {Array<object>} 命中项上带 _via:"lex"|"vec"|"both" 与 _score，供展示层标注来源
+ */
+function recallMemories(query, sc, limit){
+  const topK = limit || 8;
+  const lexical = _memLexScored(query, sc).slice(0, topK * 3);
+  const primed = _memQueryVec && _memQueryVec.key === String(query || "") ? _memQueryVec.vec : null;
+  const vecHits = primed ? memVectorTop(primed, sc, topK * 3) : [];
+  if(!vecHits.length) return lexical.slice(0, topK).map(x => x.m);
+  /* ⚠️ 只有 kw>0 的才当"词法命中"送进 RRF。词法列表其实是**全量返回再按分数排**：
+     没有任何关键词命中的条目，只是按"新近度 + 全局加权"排下来的填充项。
+     把它们也算进 RRF，第一条填充项的 1/(60+1) 会和第一条语义命中**完全同分**，
+     稳定排序下语义命中反而被压到后面（实测：25 条记忆时向量捞到的那条排在 f0 之后）。 */
+  const kwHits = lexical.filter(x => x.kw > 0);
+  const filler = lexical.filter(x => x.kw === 0);
+  // 与 ragHybridSearch 同一个理由：BM25 式打分与余弦不同量纲，直接相加会被一侧主导 → 用 RRF。
+  const K = 60, byId = new Map();
+  kwHits.forEach(function(x, i){ byId.set(x.m.id, { m: x.m, score: 1/(K+i+1), _via: "lex" }); });
+  vecHits.forEach(function(v, i){
+    const cur = byId.get(v.m.id) || { m: v.m, score: 0, _via: "" };
+    cur.score += 1/(K+i+1);
+    cur._via = cur._via ? "both" : "vec";
+    byId.set(v.m.id, cur);
+  });
+  const merged = [...byId.values()].sort((a,b)=>b.score-a.score).map(function(x){
+    return Object.assign({}, x.m, { _via: x._via, _score: x.score });
+  });
+  return merged.concat(filler.map(x => x.m)).slice(0, topK);
+}
+
+/**
+ * 本轮对话前的一次性预备：补记忆向量 + 求查询向量，供同步的 recallMemories 使用。
+ * 任何一步不可用都静默返回 false（词法路径照常），绝不抛。
+ * ⚠️ 开关复用 cfg.rag：那一项在设置页就叫「上下文注入」，语义是"发消息前检索相关内容拼进
+ *    AI 上下文、会多消耗 token"，与记忆语义召回同性质同代价 —— 与其再造一个没人写的配置键，
+ *    不如把这一个的覆盖面在文案里说清楚。cfg.rag 关着时本函数直接返回，行为与改造前完全一致。
+ * @param {string} text - 本轮用户输入
+ * @returns {Promise<boolean>} 是否备好了可用的查询向量
+ */
+async function memPrimeQueryVector(text){
+  const q = String(text || "").trim();
+  _memQueryVec = null;
+  const cfg = getCfg() || {};
+  if(cfg.agent === false || cfg.rag !== true) return false;   // Agent 关 → 记忆段本来就不注入
+  if(!_embedCfg()) return false;                              // 没配 embedding 通道 → 纯词法
+  if(!getMemories().length) return false;
+  try{
+    await memEnsureVectors();
+    const vecs = await aiEmbedTexts([q]);
+    const v = (vecs && vecs.length) ? vecs[0] : null;
+    _memQueryVec = { key: q, vec: v && v.length ? v : null };
+    return !!_memQueryVec.vec;
+  }catch(e){
+    pushDiag("warn", "memPrimeQueryVector error: "+((e&&e.message)||e), {where:"memPrimeQueryVector"});
+    return false;
+  }
+}
+
+/** 记忆集变化后失效内存缓存（新增/遗忘的条目下一轮重算） */
+function memVecInvalidate(ids){
+  if(!_memVecCache) return;
+  (Array.isArray(ids) ? ids : [ids]).forEach(function(id){ if(id) _memVecCache.map.delete(String(id)); });
+}
+
 
 /* 目标：单目标聚焦（新目标顶替旧的进行中目标），步骤可跨场景调用既有工具 */
 function getGoals(){ return load(PREFIX+"goals", []); }
@@ -16390,7 +16791,8 @@ function agentExec(name, args){
   }
   if(name==="recall"){
     const hits=recallMemories(args.query||"", active, 8);
-    return JSON.stringify({count:hits.length, items:hits.map(m=>({id:m.id,scope:m.scope,text:m.text}))});
+    // via 一并回给模型：它需要知道"这条是语义召回的（换了说法也命中）还是仅字面命中"
+    return JSON.stringify({count:hits.length, items:hits.map(m=>({id:m.id,scope:m.scope,text:m.text,via:m._via||"lex"}))});
   }
   if(name==="forget"){
     const r=forgetMemory(args.id);
@@ -16418,6 +16820,13 @@ function agentExec(name, args){
   return JSON.stringify({ok:false, msg:t("agent.unknownToolPrefix", "未知工具：")+name});
 }
 
+/** 召回方式标注（词法 / 语义 / 两者都有）—— 让"这条为什么被想起来"对用户是可见的 */
+function memViaLabel(via){
+  if(via === "both") return t("agent.memViaBoth","·语义+词法");
+  if(via === "vec") return t("agent.memViaVec","·语义");
+  return "";
+}
+
 /* Agent 上下文：工作记忆 + 进行中目标，注入系统提示（cfg.agent=false 时整体关闭） */
 function agentContextPrompt(userText){
   const cfg=getCfg();
@@ -16427,7 +16836,7 @@ function agentContextPrompt(userText){
   if(mems.length){
     touchMemories(mems);
     parts.push(t("agent.ctx.memHeader", "【工作记忆】（你与用户此前沉淀的事实/偏好，回答与操作时请保持一致；过时内容可用 forget 清理）：\n")+
-      mems.map(m=>"- ["+(m.scope==="global"?t("agent.scope.global", "全局"):(SCENARIOS[m.scope]?SCENARIOS[m.scope].name:m.scope))+"] "+m.text).join("\n"));
+      mems.map(m=>"- ["+(m.scope==="global"?t("agent.scope.global", "全局"):(SCENARIOS[m.scope]?SCENARIOS[m.scope].name:m.scope))+"] "+m.text+memViaLabel(m._via)).join("\n"));
   }
   const g=activeGoal();
   if(g){
@@ -16438,6 +16847,357 @@ function agentContextPrompt(userText){
                  : t("agent.ctx.goalAllDone", "\n所有步骤已完成，请调用 complete_goal 收尾并总结。")));
   }
   return parts.length? "\n\n"+parts.join("\n\n") : "";
+}
+
+/* ============================================================
+ * Skills 引擎（v3.7.59）—— 让「扩展 → 技能配置」里存下的自定义 JSON 真正生效
+ * ------------------------------------------------------------
+ * 此前 #aiSkillsCustom 的 JSON 只被写、从未被读（保存后无任何消费者），
+ * 六个勾选项也只是减法地写 cfg.toolWhitelist —— 即"技能"是个配置壳。
+ * 现在接上三条真实通路：
+ *   ① skillsPromptBlock()          每轮把相关技能注入系统提示（chatSysPrompt 调用）
+ *   ② findSkill() + sendChatText() 命令面板「技能」组一键触发（ui-palette.js 调用）
+ *   ③ noteSkillOffer()/commitPendingSkill() 一轮成功执行 ≥2 个工具后可固化为新技能
+ *
+ * 依赖方向：只用 data-rw 的 getAiConfig/saveAiConfig（AI→Data 下行依赖，合规）。
+ * 刻意**不**读 ui-global-events.js 里的 AI_BUILTIN_SKILLS：那是最末层，ai-* 引用它会
+ * 新增一条上行依赖，撞 check:modules 的冻结基线；且内置技能本来只是工具名（没有流程可注入），
+ * 其开关已经通过 cfg.toolWhitelist 真实生效。
+ * ============================================================ */
+const SKILL_INJECT_MAX = 6;     // 每轮最多注入的技能条数（防 token 膨胀）
+const SKILL_PROMPT_MAX = 400;   // 单条技能「做法」截断长度
+const SKILL_NAME_MAX = 32;
+const SKILL_DESC_MAX = 120;
+const SKILL_TOTAL_MAX = 40;     // 持久化技能条数上限（超出丢最旧）
+const SKILL_STEPS_MAX = 8;      // 自动固化时保留的步骤数
+/* 破坏性工具不参与"固化"：技能是可反复触发的，把删除/改写沉淀进去等于给未来的自己埋雷。
+   = 要确认的那几个 + forget（遗忘记忆不该被自动化反复触发），派生自单一来源避免漂移。 */
+const SKILL_DANGER_TOOLS = new Set([...DANGER_CONFIRM_TOOLS, "forget"]);
+const SKILL_KNOWN_TOOLS = (function(){
+  const s = new Set(AGENT_TOOL_NAMES);
+  TOOLS.forEach(function(x){ if(x && x.function && x.function.name) s.add(x.function.name); });
+  return s;
+})();
+
+let pendingSkillOffer = null;   // 上一轮可固化的工具流程：{steps, tools, userText, ts, signature}
+let skillsJsonError = "";       // custom JSON 解析失败的原因（供设置页/toast 提示，空=正常）
+
+/**
+ * 读出「扩展 → 技能配置」里保存的自定义技能原始数组。
+ * 容错：JSON 数组 / {skills:[…]} / 单对象 / 已经是数组（历史写法）都接受；
+ * 解析失败不抛异常，只把原因记进 skillsJsonError 并返回空（对话不受影响）。
+ * @returns {Array<object>}
+ */
+function _skillRawList(){
+  skillsJsonError = "";
+  let saved = null;
+  try{ saved = getAiConfig("skills"); }catch(e){ return []; }
+  const raw = saved && saved.custom;
+  if(!raw) return [];
+  if(Array.isArray(raw)) return raw;
+  const s = String(raw).trim();
+  if(!s) return [];
+  try{
+    const v = JSON.parse(s);
+    if(Array.isArray(v)) return v;
+    if(v && Array.isArray(v.skills)) return v.skills;
+    if(v && typeof v === "object") return [v];
+  }catch(e){
+    skillsJsonError = String((e && e.message) || e);
+    try{ if(typeof pushDiag === "function") pushDiag("error", "skills custom JSON parse error: "+skillsJsonError, {where:"_skillRawList"}); }catch(_){ /* 诊断不可用时静默 */ }
+  }
+  return [];
+}
+
+/** 工具名列表 → 只保留真实存在且非破坏性的（拼错的名字不进提示，避免引导模型幻觉调用） */
+function _skillValidTools(v){
+  if(!v) return [];
+  const arr = Array.isArray(v) ? v : String(v).split(/[,\s\u3000]+/);
+  const out = [];
+  arr.forEach(function(n){
+    n = String(n || "").trim();
+    if(n && SKILL_KNOWN_TOOLS.has(n) && !SKILL_DANGER_TOOLS.has(n) && out.indexOf(n) === -1) out.push(n);
+  });
+  return out.slice(0, SKILL_STEPS_MAX);
+}
+
+/** 触发词：数组或分隔串 → 去空去重，最多 5 个、每个 ≤16 字 */
+function _skillTriggerList(v){
+  if(!v) return [];
+  const arr = Array.isArray(v) ? v : String(v).split(/[,，、;；\s\u3000]+/);
+  const out = [];
+  arr.forEach(function(k){
+    k = String(k || "").trim();
+    if(k && k.length <= 16 && out.indexOf(k) === -1) out.push(k);
+  });
+  return out.slice(0, 5);
+}
+
+/** steps 数组 → 编号文本（自动固化的技能也把步骤存在这里，便于用户在设置页直接改） */
+function _skillStepsText(steps){
+  if(!Array.isArray(steps)) return "";
+  const lines = [];
+  steps.forEach(function(s){
+    if(!s) return;
+    const tool = String((typeof s === "object" ? s.tool : "") || "").trim();
+    const keys = (typeof s === "object" && Array.isArray(s.args)) ? s.args.filter(Boolean) : [];
+    const txt = (typeof s === "object") ? String(s.text || s.desc || "").trim() : String(s).trim();
+    if(tool) lines.push(tool + (keys.length ? "("+keys.join(", ")+")" : ""));
+    else if(txt) lines.push(txt);
+  });
+  return lines.slice(0, SKILL_STEPS_MAX).map(function(x, i){ return (i+1)+". "+x; }).join("\n");
+}
+
+/**
+ * 归一化一条技能定义。名字为空 → null（丢弃）。
+ * 「做法」按 prompt > instruction > steps(数组) > desc 的优先级取，缺全则退化成只有名字。
+ * @param {object} o - 原始定义
+ * @returns {{name:string,desc:string,prompt:string,tools:string[],trigger:string[],steps:Array,enabled:boolean}|null}
+ */
+function normalizeSkill(o){
+  if(!o || typeof o !== "object") return null;
+  const name = String(o.name || "").trim().slice(0, SKILL_NAME_MAX);
+  if(!name) return null;
+  const desc = String(o.desc || o.description || "").trim().slice(0, SKILL_DESC_MAX);
+  let prompt = String(o.prompt || o.instruction || "").trim();
+  if(!prompt) prompt = _skillStepsText(o.steps);
+  if(!prompt) prompt = desc;
+  prompt = prompt.slice(0, SKILL_PROMPT_MAX);
+  return {
+    name: name,
+    desc: desc,
+    prompt: prompt,
+    tools: _skillValidTools(o.tools),
+    trigger: _skillTriggerList(o.trigger || o.keywords),
+    steps: Array.isArray(o.steps) ? o.steps.slice(0, SKILL_STEPS_MAX) : [],
+    enabled: o.enabled !== false
+  };
+}
+
+/** 全部技能（含停用），归一化后按定义顺序返回 */
+function listSkills(){
+  const out = [];
+  _skillRawList().forEach(function(o){ const s = normalizeSkill(o); if(s) out.push(s); });
+  return out.slice(0, SKILL_TOTAL_MAX);
+}
+
+/** 已启用的技能（注入提示与命令面板都用这个） */
+function listEnabledSkills(){ return listSkills().filter(function(s){ return s.enabled; }); }
+
+/**
+ * 按名字找技能：精确 → 忽略大小写/首尾空白 → 触发词命中。
+ * @param {string} name
+ * @returns {object|null}
+ */
+function findSkill(name){
+  const q = String(name || "").trim();
+  if(!q) return null;
+  const all = listEnabledSkills();
+  const exact = all.find(function(s){ return s.name === q; });
+  if(exact) return exact;
+  const lower = q.toLowerCase();
+  const ci = all.find(function(s){ return s.name.toLowerCase() === lower; });
+  if(ci) return ci;
+  return all.find(function(s){ return s.trigger.some(function(k){ return k.toLowerCase() === lower; }); }) || null;
+}
+
+/**
+ * 相关度打分：整名命中 > 触发词命中 > 分词交集；无输入时全 0（保持定义顺序）。
+ * ⚠️ 交集必须用 ragTokenize 的 CJK 二元组，不能只按空白切词：中文没有空格，
+ * 整句会被切成一个 token，于是「帮我写周报」和技能「周报流程」永远对不上（实测），
+ * 结果就是技能永远排不进前 6 条、等于没接线。
+ */
+function _skillRelevance(sk, text){
+  const s = String(text || "").trim().toLowerCase();
+  if(!s) return 0;
+  let score = 0;
+  const name = sk.name.toLowerCase();
+  if(name && s.indexOf(name) >= 0) score += 10;
+  sk.trigger.forEach(function(k){
+    const kk = String(k || "").toLowerCase();
+    if(kk && s.indexOf(kk) >= 0) score += 6;
+  });
+  const q = new Set(ragTokenize(s));
+  const seen = new Set();
+  ragTokenize(sk.name + " " + sk.desc + " " + sk.prompt + " " + sk.tools.join(" ")).forEach(function(w){
+    if(seen.has(w) || !q.has(w)) return;
+    seen.add(w);
+    score += w.length >= 2 ? 2 : 1;   // 二元组比单字更说明问题
+  });
+  return score;
+}
+
+/**
+ * 生成注入系统提示的技能段。无启用技能时返回空串（对话提示与今天完全一致）。
+ * 相关度高的优先，最多 SKILL_INJECT_MAX 条。
+ * @param {string} userText - 本轮用户输入
+ * @returns {string} 以 "\n\n" 开头的提示片段，或 ""
+ */
+function skillsPromptBlock(userText){
+  const skills = listEnabledSkills();
+  if(!skills.length) return "";
+  const ranked = skills
+    .map(function(s, i){ return { s: s, i: i, r: _skillRelevance(s, userText) }; })
+    .sort(function(a, b){ return (b.r - a.r) || (a.i - b.i); })
+    .slice(0, SKILL_INJECT_MAX)
+    .map(function(x){ return x.s; });
+  const head = t("skills.ctxHeader", "【用户自定义技能】（用户沉淀的标准作业流程。请求与之相符时按「做法」执行、工具优先从「建议工具」里选；不相符时忽略本节且不要向用户提及它）：");
+  /* v3.7.59 (#20)：技能段也进预算（占 ctxBudgetTokens 的一部分）。
+     技能条数本身有 SKILL_TOTAL_MAX=40 的上限，全量注入会把每轮固定成本抬到几千 token ——
+     相关性排序解决"先给谁"，预算解决"给多少"，两者都要有。 */
+  const budget = ctxBudgetTokens() * CTX_SKILL_SHARE;
+  const out = [];
+  let used = _estTokens(head);
+  for(const s of ranked){
+    let line = "- " + s.name + (s.desc && s.desc !== s.prompt ? "（" + s.desc + "）" : "");
+    if(s.prompt && s.prompt !== s.desc) line += "\n  " + t("skills.ctxHow", "做法：") + s.prompt.replace(/\n/g, "\n  ");
+    if(s.tools.length) line += "\n  " + t("skills.ctxTools", "建议工具：") + s.tools.join(", ");
+    const cost = _estTokens(line);
+    if(used + cost > budget && out.length >= 1) break;   // 至少留 1 条（命中的那条最有用）
+    used += cost; out.push(line);
+  }
+  return "\n\n" + head + "\n" + out.join("\n");
+}
+
+/** 工具序列签名（去重保序），用于判断"这条流程是否已经存过技能" */
+function _skillSig(names){
+  const seen = [];
+  (names || []).forEach(function(n){ if(n && seen.indexOf(n) === -1) seen.push(n); });
+  return seen.join(">");
+}
+
+/**
+ * 记录一轮对话的工具执行结果，供结束后判断是否值得固化。
+ * 由 runChatLoop 在每次工具执行后调用。
+ * @param {Array} trace - 累加器
+ * @param {string} name - 工具名
+ * @param {object} args - 调用参数（只取 key，不存值：值会过期且可能含用户数据）
+ * @param {string} res - execToolAuto 的返回串
+ * @returns {void}
+ */
+function skillTracePush(trace, name, args, res){
+  if(!Array.isArray(trace)) return;
+  let ok = false;
+  const s = String(res === null || res === undefined ? "" : res);
+  if(s.indexOf("__CHART__") === 0){ ok = true; }
+  else {
+    try{ const j = JSON.parse(s); ok = !!(j && j.ok !== false && !j.error); }
+    catch(e){ ok = s.length > 0; }
+  }
+  trace.push({
+    name: String(name || ""),
+    args: (args && typeof args === "object") ? Object.keys(args).slice(0, 8) : [],
+    ok: ok
+  });
+}
+
+/**
+ * 一轮结束后调用：成功执行 ≥2 个非破坏性工具 → 挂出"可固化为技能"的候选。
+ * 已存过同一工具序列的技能时不再打扰。
+ * @param {Array} trace - skillTracePush 累加出来的执行记录
+ * @param {string} userText - 本轮用户输入（用作默认技能名/描述）
+ * @returns {object|null} 候选（同时也是 pendingSkillOffer）
+ */
+function noteSkillOffer(trace, userText){
+  pendingSkillOffer = null;
+  const good = (trace || []).filter(function(x){ return x && x.ok && x.name && !SKILL_DANGER_TOOLS.has(x.name); });
+  if(good.length < 2) return null;
+  const sig = _skillSig(good.map(function(x){ return x.name; }));
+  const dup = listSkills().some(function(s){ return _skillSig(s.tools) === sig; });
+  if(dup) return null;
+  pendingSkillOffer = {
+    steps: good.slice(0, SKILL_STEPS_MAX).map(function(x){ return { tool: x.name, args: x.args }; }),
+    tools: _skillValidTools(good.map(function(x){ return x.name; })),
+    userText: String(userText || "").replace(/\s+/g, " ").trim().slice(0, SKILL_DESC_MAX),
+    ts: Date.now(),
+    signature: sig
+  };
+  return pendingSkillOffer;
+}
+
+/** 当前待固化的候选（命令面板据此决定是否显示「把上一轮固化为技能」） */
+function getPendingSkillOffer(){ return pendingSkillOffer; }
+
+/**
+ * 把候选流程写成一条技能定义。
+ * @param {object} offer - noteSkillOffer 的产物
+ * @param {string} [name] - 用户指定的技能名，缺省取本轮输入的开头
+ * @returns {object|null} 归一化后的技能（未落盘）
+ */
+function buildSkillFromTrace(offer, name){
+  if(!offer || !Array.isArray(offer.steps) || offer.steps.length < 2) return null;
+  const nm = String(name || "").trim().slice(0, SKILL_NAME_MAX)
+    || (offer.userText ? offer.userText.slice(0, 16) : "")
+    || (t("skills.autoName", "流程技能") + "-" + offer.steps.length);
+  return normalizeSkill({
+    name: nm,
+    desc: t("skills.autoDesc", "由一轮成功的多工具执行固化") + "：" + offer.steps.map(function(s){ return s.tool; }).join(" → "),
+    steps: offer.steps,
+    tools: offer.tools,
+    enabled: true
+  });
+}
+
+/**
+ * 落盘一条技能（同名覆盖），写回 aiSkillsCustom —— 设置页的文本框下次打开即显示，可直接编辑/删除。
+ * @param {object} sk - 技能定义（会先过 normalizeSkill）
+ * @returns {object|null} 落盘后的归一化技能
+ */
+function saveSkill(sk){
+  const norm = normalizeSkill(sk);
+  if(!norm) return null;
+  const all = listSkills();
+  const i = all.findIndex(function(s){ return s.name === norm.name; });
+  if(i >= 0) all[i] = norm; else all.push(norm);
+  const list = all.slice(-SKILL_TOTAL_MAX).map(function(s){
+    return { name: s.name, desc: s.desc, steps: s.steps, tools: s.tools, trigger: s.trigger, enabled: s.enabled };
+  });
+  let saved = null;
+  try{ saved = getAiConfig("skills") || {}; }catch(e){ saved = {}; }
+  try{ saveAiConfig("skills", Object.assign({}, saved, { custom: JSON.stringify(list, null, 2) })); }
+  catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("error", "saveSkill failed: "+((e && e.message) || e), {where:"saveSkill"}); }catch(_){ /* 诊断不可用时静默 */ }
+    return null;
+  }
+  return norm;
+}
+
+/**
+ * 消费候选：把上一轮流程固化为技能。无候选返回 null（调用方据此提示）。
+ * @param {string} [name] - 技能名
+ * @returns {object|null}
+ */
+function commitPendingSkill(name){
+  const offer = pendingSkillOffer;
+  if(!offer) return null;
+  const sk = buildSkillFromTrace(offer, name);
+  if(!sk) return null;
+  const r = saveSkill(sk);
+  pendingSkillOffer = null;
+  return r;
+}
+
+/**
+ * 删除一条技能（命令面板/设置页可用）。
+ * @param {string} name
+ * @returns {boolean} 是否删掉
+ */
+function deleteSkill(name){
+  const q = String(name || "").trim();
+  if(!q) return false;
+  const all = listSkills();
+  const rest = all.filter(function(s){ return s.name !== q; });
+  if(rest.length === all.length) return false;
+  let saved = null;
+  try{ saved = getAiConfig("skills") || {}; }catch(e){ saved = {}; }
+  try{
+    saveAiConfig("skills", Object.assign({}, saved, {
+      custom: JSON.stringify(rest.map(function(s){
+        return { name: s.name, desc: s.desc, steps: s.steps, tools: s.tools, trigger: s.trigger, enabled: s.enabled };
+      }), null, 2)
+    }));
+  }catch(e){ return false; }
+  return true;
 }
 
 
@@ -16458,16 +17218,32 @@ function agentContextPrompt(userText){
 
 /* ---------- 1. AI Agent 自动化：多步骤规划 + 自动执行 + 结果汇总 ---------- */
 /**
+ * 本系统「可直接执行」的工具名清单（用于规划提示词）。
+ * 剔除两类：需要用户确认的破坏性工具（executeAgentPlan 不会自主执行它），
+ * 以及白名单外的工具（cfg.toolWhitelist 在对话路径生效，规划路径也必须一致）。
+ * @returns {string[]}
+ */
+function agentPlannableTools(){
+  const wl = toolWhitelistSet();
+  const all = (typeof effectiveTools === "function" ? effectiveTools() : TOOLS);
+  return all
+    .map(x => x && x.function && x.function.name)
+    .filter(n => n && !DANGER_CONFIRM_TOOLS.has(n) && (!wl || wl.has(n)));
+}
+/**
  * Agent 模式系统提示：引导 AI 输出 JSON 格式的步骤计划
+ * v3.7.59：可用工具改成从 effectiveTools() 现算。此前字典里硬写了 12 个名字，
+ * 而真实工具已 26 个 —— 模型被引导去用 add_record/generate_report/render_chart 之外的路子，
+ * 规划质量白白掉一层，且清单与代码没有任何同步机制。
  * @param {string} userText - 用户请求
  * @returns {string} 系统提示
  */
 function agentPlanSysPrompt(userText){
-  return t("aiagent.sysPrompt",
+  const names = agentPlannableTools();
+  return String(t("aiagent.sysPrompt",
     "你是任务规划助手。收到用户请求后，请先拆解为可执行步骤，输出 JSON 格式的计划：\n"+
-    '```json\n{"goal":"目标标题","steps":[{"tool":"工具名","args":{},"desc":"步骤说明"}]}\n```\n'+
-    "可用工具：create_task/list_tasks/complete_task/update_task/search/query_overview/note_add/note_search/web_search/web_fetch/code_run/sql_query。\n"+
-    "只输出 JSON，不要额外解释。");
+    "```json\n{\"goal\":\"目标标题\",\"steps\":[{\"tool\":\"工具名\",\"args\":{},\"desc\":\"步骤说明\"}]}\n```\n"+
+    "可用工具：{tools}。\n只输出 JSON，不要额外解释。")).replace("{tools}", names.join("/"));
 }
 
 /**
@@ -16493,6 +17269,13 @@ function parseAgentPlan(text){
   // 规范化：每步必须有 tool 字段
   plan.steps = plan.steps.filter(st => st && typeof st.tool === "string");
   if(!plan.steps.length) return null;
+  /* v3.7.59：步骤数封顶。这条链现在真的有用户入口了（命令面板「让 AI 自主完成」），
+     于是一次失控的规划 = 几十次连续写库/联网调用。超限就截断并在计划里如实标注，
+     而不是静默丢弃 —— 用户确认前必须看得见少了什么。 */
+  if(plan.steps.length > AGENT_PLAN_STEPS_MAX){
+    plan.truncatedFrom = plan.steps.length;
+    plan.steps = plan.steps.slice(0, AGENT_PLAN_STEPS_MAX);
+  }
   plan.goal = String(plan.goal || t("aiagent.unnamedGoal","未命名目标"));
   plan.steps = plan.steps.map(st => ({
     tool: String(st.tool),
@@ -16506,17 +17289,43 @@ function parseAgentPlan(text){
  * 逐步执行 Agent 计划：每步调用 execTool（同步工具）或 agentExecAsync（异步工具）
  * @param {{goal:string, steps:Array}} plan - parseAgentPlan 返回值
  * @param {{onProgress?:Function, signal?:AbortSignal}} [opts]
- * @returns {Promise<{ok:boolean, results:Array<{step:object, result:string, ok:boolean}>, summary:string, ms:number}>}
+ * @returns {Promise<{ok:boolean, results:Array<{step:object, result:string, ok:boolean, blocked?:boolean}>, needsConfirm:Array, summary:string, ms:number}>}
  */
 async function executeAgentPlan(plan, opts){
   const o = opts || {};
   const t0 = Date.now();
   const results = [];
+  const needsConfirm = [];
+  const wl = (o.whitelist !== undefined) ? o.whitelist : toolWhitelistSet();
   for(let i=0; i<plan.steps.length; i++){
     if(o.signal && o.signal.aborted){
-      return { ok:false, results, summary:t("aiagent.cancelled","已取消"), ms:Date.now()-t0 };
+      return { ok:false, results, needsConfirm, summary:t("aiagent.cancelled","已取消"), ms:Date.now()-t0 };
     }
     const step = plan.steps[i];
+    /* v3.7.59 P0（安全）：自主执行**不碰**需要用户确认的工具。
+       此前这一步无条件 execTool(step.tool, step.args, true)，而 force=true 正是
+       runChatLoop 里 delete_task/update_task 用来跳过二次确认的那把钥匙 ——
+       于是"AI 自主规划"能在用户不知情的情况下删任务/改任务，同一个工具在对话路径却要弹窗。
+       取向：自主执行只做可逆的写操作，破坏性那步标 needsConfirm 交回交互路径（那里正常确认）。
+       不中断整个计划 —— 后面的非破坏步骤照常跑，避免"一步被拒全盘停摆"。 */
+    if(DANGER_CONFIRM_TOOLS.has(step.tool)){
+      const msg = t("aiagent.needConfirm","该步骤需用户确认，自主执行已跳过：请到对话里直接要求执行（会弹出确认）");
+      needsConfirm.push(step);
+      results.push({ step, result: JSON.stringify({ ok:false, confirm:true, msg }), ok:false, blocked:true });
+      if(typeof o.onProgress === "function"){
+        try{ o.onProgress(i+1, plan.steps.length, step, msg); }catch(_){}
+      }
+      continue;
+    }
+    /* v3.7.59：白名单在自主执行路径同样生效（此前只有对话路径读它 → 换个入口就绕过开关）。 */
+    if(wl && !wl.has(step.tool)){
+      const msg = t("aiagent.notWhitelisted","该工具不在允许列表中，已跳过：")+step.tool;
+      results.push({ step, result: JSON.stringify({ ok:false, msg }), ok:false, blocked:true });
+      if(typeof o.onProgress === "function"){
+        try{ o.onProgress(i+1, plan.steps.length, step, msg); }catch(_){}
+      }
+      continue;
+    }
     let resultStr = "";
     let stepOk = false;
     try{
@@ -16525,7 +17334,7 @@ async function executeAgentPlan(plan, opts){
         resultStr = JSON.stringify(r);
         stepOk = !!(r && r.ok);
       } else {
-        resultStr = execTool(step.tool, step.args, true); // 强制执行（Agent 自动模式）
+        resultStr = execTool(step.tool, step.args); // 不传 force：需确认的工具已在上面拦掉
         let rj = null; try{ rj = JSON.parse(resultStr); }catch(_){}
         stepOk = !!(rj && rj.ok !== false);
       }
@@ -16539,23 +17348,28 @@ async function executeAgentPlan(plan, opts){
     }
   }
   const summary = summarizeAgentPlan(plan, results);
-  return { ok:true, results, summary, ms:Date.now()-t0 };
+  return { ok:true, results, needsConfirm, summary, ms:Date.now()-t0 };
 }
 
 /**
  * 汇总 Agent 计划执行结果
  * @param {{goal:string, steps:Array}} plan
- * @param {Array<{step:object, result:string, ok:boolean}>} results
+ * @param {Array<{step:object, result:string, ok:boolean, blocked?:boolean}>} results
  * @returns {string} 汇总文本
  */
 function summarizeAgentPlan(plan, results){
   const lines = [t("aiagent.summaryHeader","【任务汇总】目标：")+plan.goal];
   results.forEach((r, i) => {
-    const mark = r.ok ? "✓" : "✗";
-    lines.push((i+1)+". "+mark+" "+r.step.desc+" → "+(r.ok?t("aiagent.done","完成"):t("aiagent.failed","失败")));
+    const mark = r.ok ? "✓" : (r.blocked ? "⏸" : "✗");
+    const state = r.ok ? t("aiagent.done","完成") : (r.blocked ? t("aiagent.blocked","待确认已跳过") : t("aiagent.failed","失败"));
+    lines.push((i+1)+". "+mark+" "+r.step.desc+" → "+state);
   });
   const okCount = results.filter(r=>r.ok).length;
   lines.push(t("aiagent.summaryFooter","共 ")+results.length+t("aiagent.summaryStepUnit"," 步，")+okCount+t("aiagent.summaryOkUnit"," 步成功"));
+  const blocked = results.filter(r=>r.blocked);
+  if(blocked.length){
+    lines.push(t("aiagent.summaryBlocked","其中 ")+blocked.length+t("aiagent.summaryBlockedSuffix"," 步涉及删除/修改等破坏性操作，未自主执行，请在对话里逐项确认。"));
+  }
   return lines.join("\n");
 }
 
@@ -17238,16 +18052,64 @@ async function ragSearch(query, limit){
  * @param {string} userText - 用户输入
  * @returns {Promise<string>} 注入的上下文文本（空串表示无相关内容）
  */
-async function ragInjectContext(userText){
+/* ---------- 上下文装配预算（v3.7.59 · 任务 #20）----------
+ * 此前每轮注入的系统提示由三段各自为政拼成：记忆/目标（agentContextPrompt）、技能
+ * （skillsPromptBlock）、检索（ragInjectContext）。RAG 固定 top5 × 每条 200 字，
+ * 既不按相关性收口，也没有总量约束 —— 索引一大，token 成本就是失控的，
+ * 而且结果里没有出处，用户无法回溯"这条是依据哪条记录说的"。
+ * 现在：一个可配置的总预算（cfg.ctxBudgetTokens），每段带来源与召回方式标注，
+ * 超预算时**整条丢弃**而不是截半句（半句引用比没有引用更容易误导）。
+ */
+const CTX_BUDGET_DEFAULT = 1200;
+const CTX_SKILL_SHARE = 0.4;   // 技能段最多占预算的四成，剩下的给检索
+const CTX_RAG_HITS = 8;        // 多召几条，装配时按预算裁
+const CTX_RAG_CHARS = 240;     // 单条正文上限
+
+/** 每轮注入上下文的 token 预算（粗算口径同 _estTokens） */
+function ctxBudgetTokens(){
+  const cfg = getCfg() || {};
+  let n = Number(cfg.ctxBudgetTokens);
+  if(!isFinite(n) || n <= 0) n = CTX_BUDGET_DEFAULT;
+  return Math.min(4000, Math.max(200, Math.round(n)));
+}
+
+/** 检索结果的引用标签：[序号·来源·召回方式] —— 用户能据此回查到原始条目 */
+function ragCiteLabel(h, n){
+  const via = h.via === "both" ? t("rag.viaBoth","词法+语义")
+    : (h.via === "vec" ? t("rag.viaVec","语义") : t("rag.viaLex","词法"));
+  return "["+n+"·"+(h.source || t("rag.srcUnknown","未知来源"))+"·"+via+"]";
+}
+
+/**
+ * RAG 检索注入：按预算装配 + 带出处。
+ * @param {string} userText
+ * @param {{budget?:number}} [opts]
+ * @returns {Promise<string>} 以 "\n\n" 开头的片段，或 ""
+ */
+async function ragInjectContext(userText, opts){
   const cfg = getCfg() || {};
   if(cfg.rag !== true) return ""; // v3.4.7 批次六：显式开启才注入（设置页 AI→记忆「上下文注入」开关，默认关——防 token 意外膨胀；此前 ===false 判定在无 UI 写入下等效永远开）
-  const hits = await ragSearch(userText, 5);
+  const budget = (opts && typeof opts.budget === "number") ? opts.budget : ctxBudgetTokens();
+  const hits = await ragSearch(userText, CTX_RAG_HITS);
   if(!hits.length) return "";
-  const lines = [t("rag.ctxHeader","【相关上下文】（来自任务/记录、笔记、对话历史的检索增强）：")];
-  hits.forEach((h, i) => {
-    const preview = (h.content || "").slice(0, 200);
-    lines.push((i+1)+". ["+h.source+"] "+preview+((h.content||"").length > 200 ? "..." : ""));
-  });
+  const head = t("rag.ctxHeader","【相关上下文】（来自任务/记录、笔记、对话历史的检索增强）：");
+  const cite = t("rag.ctxCite","引用时请标注来源编号（如「依据[2·笔记]」），没有依据的部分请说明是推断。");
+  const lines = [head, cite];
+  let used = _estTokens(head) + _estTokens(cite);
+  let kept = 0;
+  for(let i = 0; i < hits.length; i++){
+    const h = hits[i];
+    const full = String(h.content || "");
+    const preview = full.slice(0, CTX_RAG_CHARS);
+    const line = (kept+1)+". "+ragCiteLabel(h, kept+1)+" "+preview+(full.length > preview.length ? "…" : "");
+    const cost = _estTokens(line);
+    if(used + cost > budget && kept >= 1) break;   // 至少留 1 条：预算配得过小时也不该整段消失
+    used += cost; kept++; lines.push(line);
+  }
+  if(hits.length > kept){
+    const note = t("rag.ctxTrimmed","（受上下文预算限制，相关度较低的 ")+(hits.length-kept)+t("rag.ctxTrimmedSuffix"," 条未注入");
+    lines.push(note + "）");
+  }
   return "\n\n" + lines.join("\n");
 }
 
@@ -18276,7 +19138,13 @@ async function persistCfg(cfg){
       const np = Object.assign({}, p);
       if(typeof np.key === "string" && np.key){
         try{ np.key = await encryptKey(np.key); }
-        catch(e){ np.key = ""; } // D4：加密失败则丢弃，不落明文
+        catch(e){
+          /* D4：加密失败则丢弃，不落明文。v3.7.59：补诊断——静默丢 Key 会让用户
+             「填了 Key、当时能用、重启后失效」，且日志里毫无线索（本项目 732 个 catch 中
+             仅 52 处上报 pushDiag，密钥路径此前不在其中）。 */
+          np.key = "";
+          try{ pushDiag("error", "encryptKey failed, key dropped: "+(e&&e.message||e), {where:"persistCfg", profile:p && p.id}); }catch(_){}
+        }
       }
       return np;
     }));
@@ -18343,7 +19211,14 @@ async function initCrypto(){
     raw.profiles = await Promise.all(raw.profiles.map(async p => {
       const np = Object.assign({}, p);
       if(isEncKey(np.key)){
-        try{ np.key = await decryptKey(np.key); needRepersist = true; }catch(e){ np.key = ""; }
+        try{ np.key = await decryptKey(np.key); needRepersist = true; }
+        catch(e){
+          /* v3.7.59：解密失败 = 设备密钥换了/密文损坏，Key 实际已丢失。
+             此前只把 np.key 置空，界面上表现为「AI 未配置」，用户无从判断是"没填过"
+             还是"填过但解不开"。补诊断以便定位（含是否 IDB 可用等上下文）。 */
+          np.key = "";
+          try{ pushDiag("error", "decryptKey failed, key unusable: "+(e&&e.message||e), {where:"initCrypto", profile:p && p.id}); }catch(_){}
+        }
       }else if(typeof np.key === "string" && np.key){
         needRepersist = true; // 旧明文，待重新加密持久化
       }
@@ -19893,7 +20768,7 @@ function restoreFromRecycleBin(id){
       // 文件回收：恢复到 notes
       const notes = getNotes();
       if(d_noteMissing(notes, item.data)){
-        if(item.data && item.data.note){ notes.push(item.data.note); saveNotes(notes); _notifyNotesChanged(); }
+        if(item.data && item.data.note){ notes.push(item.data.note); saveNotes(notes); }
       }
     }else if(item.type === "plugin"){
       // 插件回收：仅恢复 enabled/config 状态（无法恢复代码，需用户重新安装）
@@ -22747,7 +23622,7 @@ function openPetModal(){
   /* v3.6.5：立绘 img/dataURI 不走 sanitizeHtml（sanitizer 可能剥 img/data:），渲染后原始注入 */
   $$(".pc-svg", body).forEach(function(el){
     const k = el.getAttribute("data-pc");
-    if(k){ el.style.setProperty("--pet-art-scale", _petArtScale(k)); el.innerHTML = _petSvgFor(k); }
+    if(k){ el.style.setProperty("--pet-art-scale", _petArtScale(k)); el.innerHTML = _petSvgFor(k); } // lint-xss-ok: _petSvgFor 只从内部 _PETS_V2/_PET_ART 常量表取标记，未知 key 返回空串
   });
   $$(".pet-card", body).forEach(function(c){
     c.onclick = function(){
@@ -22806,7 +23681,7 @@ function mountPet(kind){
   );
   /* v3.6.5：立绘原始注入（不经 sanitizeHtml，data:img 会被 sanitizer 剥除） */
   const petSvgBox = el.querySelector("[data-pet-svg]");
-  if(petSvgBox) petSvgBox.innerHTML = _petSvgFor(kind);
+  petSvgBox.innerHTML = _petSvgFor(kind); // lint-xss-ok: 同上，只取内部常量表
   /* ---------- v3.6.5 特效增强 ----------
      原 2 项：petBob 待机浮动、petBubble 气泡。新增 6 项：
        眨眼（随机 scaleY 闭合）· 点击跳跃 · 点击爱心 · 随机星光 · 久置打盹(zZZ) · 拖拽（已有）
@@ -25639,8 +26514,14 @@ function _applyCloudSnapshot(data) {
     if (typeof allKeys === "function") allKeys().forEach(function (k) { const v = localStorage.getItem(k); if (typeof v === "string") pre[k] = v; });
     if (Object.keys(pre).length) save(PREFIX + "pre_restore_backup", { at: Date.now(), keys: pre });
   } catch (e) { /* 备份失败不阻塞恢复 */ }
+  /* v3.7.59 安全修正：入站必须与出站（_buildCloudSnapshot）对称地排除密钥/本机控制类键。
+     此前只有出站排除，入站是「快照里有啥就写啥」——于是服务端（或被篡改/被劫持的链路）
+     只要回传 wb_agent___dk（**设备密钥本体**），就会覆盖本机密钥；此后应用用攻击者已知的
+     密钥加密 API Key，README 声称的「密钥不出本机」被实际打破。
+     入站过滤同时挡掉 cfg（Key 密文）与 pre_restore_backup（内嵌全部本地键值的回滚档）。 */
   Object.keys(data).forEach(k => {
     if (k === SYNC_META_KEY || k === "_deviceMeta" || k === "_meta") return;
+    if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
     if (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY) {
       try { localStorage.setItem(k, data[k]); } catch (e) { /* 静默降级 */ }
     }
@@ -25799,30 +26680,62 @@ function _dgmPreset(kind) {
   return { nodes: nodes, edges: edges };
 }
 
+/* v3.7.59 安全修正：本函数此前把 n.id / n.color 直接拼进属性与 style，且调用点
+   （_renderDiagramCanvas 内 `tmp.innerHTML = _dgmSvgHtml(d)`）**没有过 sanitizeHtml**。
+   n.color 落在 `style="fill:<color>"` 里 → 可提前闭合属性与元素，注入 <img src=x onerror=...>；
+   n.id 落在 `data-dgm="<id>"` 里 → 可注入 onmouseover 等事件属性。
+   数据源是 localStorage 的 wb_agent_diagram，**导入 JSON 备份 / 云同步快照都能写入任意值**，
+   故按不可信输入处理：数值强制转 Number，字符串一律 esc()，颜色只放行安全 CSS 颜色字面量。
+   实测（_audit_evidence/xss-probe.mjs）：修复前 SVG <g> 内解析出 2 个 HTML 命名空间 <img> 且带 onerror。 */
+function _dgmNum(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+/* null/undefined → 空串，其余 String()。不用 `== null`（eslint eqeqeq 会告警） */
+function _dgmStr(v) {
+  return (v === null || v === undefined) ? "" : String(v);
+}
+/* 只放行 CSS 颜色字面量：#rgb/#rrggbb/#rrggbbaa、rgb()/rgba()/hsl()/hsla()、纯字母色名。
+   其余（含任何引号、尖括号、分号）一律丢弃 —— 宁可节点无色，不可让样式属性成为注入出口。 */
+function _dgmColor(v) {
+  const s = _dgmStr(v).trim();
+  if (!s) return "";
+  if (/^#[0-9a-fA-F]{3,8}$/.test(s)) return s;
+  if (/^[a-zA-Z]{1,24}$/.test(s)) return s;
+  if (/^(rgb|rgba|hsl|hsla)\(\s*[0-9.,%\s/deg]+\)$/i.test(s)) return s;
+  return "";
+}
 function _dgmSvgHtml(d) {
-  const nodes = d.nodes || [], edges = d.edges || [];
-  const byId = {}; nodes.forEach(function (n) { byId[n.id] = n; });
+  const nodes = Array.isArray(d && d.nodes) ? d.nodes : [];
+  const edges = Array.isArray(d && d.edges) ? d.edges : [];
+  const byId = {}; nodes.forEach(function (n) { if (n && n.id !== null && n.id !== undefined) byId[n.id] = n; });
   let out = "";
   // 连线
   edges.forEach(function (e) {
+    if (!e) return;
     const a = byId[e.from], b = byId[e.to];
     if (!a || !b) return;
-    const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2;
+    const ax = _dgmNum(a.x, 0) + _dgmNum(a.w, 0) / 2, ay = _dgmNum(a.y, 0) + _dgmNum(a.h, 0) / 2;
+    const bx = _dgmNum(b.x, 0) + _dgmNum(b.w, 0) / 2, by = _dgmNum(b.y, 0) + _dgmNum(b.h, 0) / 2;
     const mx = (ax + bx) / 2, my = (ay + by) / 2;
     out += '<line class="dgm-edge" x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '" marker-end="url(#dgmArrow)"></line>';
     if (e.label) out += '<text class="dgm-edge-label" x="' + mx + '" y="' + (my - 6) + '">' + esc(e.label) + '</text>';
   });
   // 节点
   nodes.forEach(function (n) {
+    if (!n) return;
+    const idAttr = esc(_dgmStr(n.id));
     const sel = (_dgmSel === n.id) ? " dgm-selected" : "";
-    const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
-    const fill = n.color ? ' style="fill:' + n.color + ';fill-opacity:.18;stroke:' + n.color + '"' : '';
+    const nx = _dgmNum(n.x, 0), ny = _dgmNum(n.y, 0), nw = _dgmNum(n.w, 0), nh = _dgmNum(n.h, 0);
+    const cx = nx + nw / 2, cy = ny + nh / 2;
+    const col = _dgmColor(n.color);
+    const fill = col ? ' style="fill:' + col + ';fill-opacity:.18;stroke:' + col + '"' : '';
     let shape;
-    if (n.shape === "ellipse") shape = '<ellipse class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" cx="' + cx + '" cy="' + cy + '" rx="' + (n.w / 2) + '" ry="' + (n.h / 2) + '"' + fill + '></ellipse>';
-    else if (n.shape === "round") shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" rx="' + (n.h / 2) + '"' + fill + '></rect>';
-    else if (n.shape === "diamond") shape = '<polygon class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" points="' + cx + ',' + n.y + ' ' + (n.x + n.w) + ',' + cy + ' ' + cx + ',' + (n.y + n.h) + ' ' + n.x + ',' + cy + '"' + fill + '></polygon>';
-    else shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + n.id + '" x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" rx="6"' + fill + '></rect>';
-    out += shape + '<text class="dgm-node-text" data-dgm="' + n.id + '" x="' + cx + '" y="' + (cy + 4) + '">' + esc(n.text || "") + '</text>';
+    if (n.shape === "ellipse") shape = '<ellipse class="dgm-node-shape' + sel + '" data-dgm="' + idAttr + '" cx="' + cx + '" cy="' + cy + '" rx="' + (nw / 2) + '" ry="' + (nh / 2) + '"' + fill + '></ellipse>';
+    else if (n.shape === "round") shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + idAttr + '" x="' + nx + '" y="' + ny + '" width="' + nw + '" height="' + nh + '" rx="' + (nh / 2) + '"' + fill + '></rect>';
+    else if (n.shape === "diamond") shape = '<polygon class="dgm-node-shape' + sel + '" data-dgm="' + idAttr + '" points="' + cx + ',' + ny + ' ' + (nx + nw) + ',' + cy + ' ' + cx + ',' + (ny + nh) + ' ' + nx + ',' + cy + '"' + fill + '></polygon>';
+    else shape = '<rect class="dgm-node-shape' + sel + '" data-dgm="' + idAttr + '" x="' + nx + '" y="' + ny + '" width="' + nw + '" height="' + nh + '" rx="6"' + fill + '></rect>';
+    out += shape + '<text class="dgm-node-text" data-dgm="' + idAttr + '" x="' + cx + '" y="' + (cy + 4) + '">' + esc(n.text || "") + '</text>';
   });
   return out;
 }
@@ -25864,7 +26777,9 @@ function _dgmBind() {
     svg.innerHTML = "";
     if (defs) svg.appendChild(defs);
     var tmp = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    tmp.innerHTML = _dgmSvgHtml(d);
+    /* v3.7.59 安全修正：补 sanitizeHtml 兜底。_dgmSvgHtml 内部已对 id/color/数值逐项转义，
+       这里再叠一层——两层任一生效即可挡住注入，避免今后有人改回裸拼接时又静默开洞。 */
+    tmp.innerHTML = sanitizeHtml(_dgmSvgHtml(d));
     while (tmp.firstChild) svg.appendChild(tmp.firstChild);
     _dgmBind();
   }
@@ -27668,7 +28583,7 @@ function _dpRender(){
     html += '<button type="button" class="dp-confirm-btn" data-dp-confirm="1">' + t("datepicker.confirm","确定") + '</button>';
   }
   html += '</div>';
-  _dpPanel.innerHTML = html;
+  _dpPanel.innerHTML = html; // lint-xss-ok: html 由 _dpRenderPanel 内本地拼接，只含静态标记 + 循环下标 i + t(...) 字典值，无外部数据
 }
 function _dpPick(y, m, d){
   if(!_dpInput) return;
@@ -29987,6 +30902,15 @@ async function chatOnce(messages, opts){
     }
 
     // 浏览器 / Edge / 本地服务：直连兜底（P0-10：超时 + 错误分级）
+    /* v3.7.59 P0（隐私外泄面，真实 Chromium 实测发现）：没配 profile / 没配 Key 时**绝不发请求**。
+       此前 base 会回退到硬编码的 https://api.openai.com/v1、Authorization 带一个空 Bearer 照样真发 POST
+       并重试 3 次 —— 用户一个模型都没配，系统提示（含工作记忆、技能、RAG 片段）与输入原文
+       就已经出了本机，只换回一个 401；顺带表现为「未配置时聊天卡十几秒」。
+       规则与 electron/main.js chat IPC 的 `if(!prof || !prof.key) throw` 保持一致 ——
+       这条链是跨进程双实现，改一侧必须同步另一侧与两侧契约用例（见下方 [镜像警示]）。 */
+    if(!ap || !ap.key){
+      throw new Error(t("err.aiNotConfigured","尚未配置 AI 模型：请到「设置 → AI」填写 API 地址与 Key 后再对话（未配置时不会向任何端点发送请求）。"));
+    }
     const base=((ap && ap.base) || "https://api.openai.com/v1").replace(/\/+$/,"");
     // R07：base URL 安全校验——只允许 https://（允许 http://localhost 供开发），非法 URL 直接报错不发送请求
     if (!validateBaseUrl(base)) {
@@ -30303,6 +31227,60 @@ function abortChat(){
 }
 
 /**
+ * v3.7.59：当前聊天是否已被用户取消。
+ * 取消语义此前只作用于 fetch：`execToolAuto` / `execTool` 都不接收 signal，工具批次的循环里
+ * 也没有任何取消检查 —— 于是用户点「取消」后，同一批 tool_calls 里**尚未执行**的写操作
+ * （删除任务 / 新增记录 / 改状态…）仍会照常落地，界面却显示「已取消」。
+ * AbortController 不可用时 chatController.ac 为 null，abortChat 直接 return false，
+ * aborted 恒为 false —— 与「无取消能力」的既有语义一致。
+ * @returns {boolean}
+ */
+function _chatCancelled(){
+  return !!(typeof chatController !== "undefined" && chatController && chatController.aborted);
+}
+/**
+ * 为「因取消而未执行」的工具调用补一条 tool 回执。
+ * 必须补：assistant 消息里的 tool_calls 与后续 tool 应答是**一一对应**的，
+ * 少一条下一轮 API 调用会直接 400（本文件 v3.7.52 已因同类问题踩过坑）。
+ * @param {Array} messages 送往 API 的消息数组
+ * @param {Array} hist 界面历史数组
+ * @param {string} id tool_call_id
+ * @param {string} name 工具名
+ */
+function _pushSkippedToolReceipt(messages, hist, id, name){
+  const msg = t("ai.toolSkipped","工具 {name} 因取消已跳过，未执行。").replace("{name}", name);
+  const tm = { role:"tool", tool_call_id:id, content:JSON.stringify({ ok:false, msg:msg }), _disp:msg, _tool_skipped:true };
+  messages.push(tm); hist.push(tm);
+}
+
+/**
+ * 解析工具调用的 `arguments`。
+ * 模型返回的 arguments 是**不可信的 JSON 文本**，现实里会出现截断（被 max_tokens 掐断）、
+ * 尾随逗号、单引号、裸字符串等非法形态。
+ * 原实现直接 `JSON.parse(tc.function.arguments||"{}")` —— 一旦非法就抛裸 SyntaxError 冒到用户
+ * 面前（界面显示 "Unexpected token ..."），而且该 tool_call **没有任何回执**：
+ * assistant 消息里的 tool_calls 与后续 tool 应答数量对不上，模型既拿不到反馈、也无法自我纠正，
+ * 整个多步循环就此中断。
+ * 现改为失败返回 null，由调用方按「参数非法」回执给模型并跳过执行。
+ * @param {string|Object|undefined} raw
+ * @returns {Object|null} 合法对象；非法返回 null
+ */
+function _parseToolArgs(raw){
+  if(raw === undefined || raw === null || raw === "") return {};
+  if(typeof raw === "object") return raw;
+  try{
+    const v = JSON.parse(String(raw));
+    return (v && typeof v === "object" && !Array.isArray(v)) ? v : null;
+  }catch(e){ return null; }
+}
+/** 为「arguments 非法」的工具调用补一条 tool 回执（理由同 _pushSkippedToolReceipt：必须一一对应） */
+function _pushBadArgsToolReceipt(messages, hist, id, name){
+  const msg = t("ai.badToolArgs","工具 {name} 的参数不是合法 JSON，已跳过执行；请重新给出合法参数。").replace("{name}", name);
+  const tm = { role:"tool", tool_call_id:id, content:JSON.stringify({ ok:false, msg:msg }), _disp:msg, _tool_badargs:true };
+  messages.push(tm); hist.push(tm);
+}
+
+/**
  * 重试上次失败的聊天请求：移除失败消息后重新走 runChatLoop
  * @returns {Promise<boolean>} 是否触发了重试
  */
@@ -30370,6 +31348,8 @@ async function confirmPendingDanger(){
   hist.push(pendingConfirm.assistantMsg);
   const messages=[{role:"system", content:chatSysPrompt(t("common.confirm","确认"))}].concat(hist.map(m=>({...m})));
   for(const c of pendingConfirm.toolCalls){
+    /* v3.7.59：参数非法的调用即使被确认也不执行（execTool 收到 null args 会抛内部 TypeError） */
+    if(c.args === null){ _pushBadArgsToolReceipt(messages, hist, c.id, c.name); continue; }
     const res=execTool(c.name, c.args, true); // 强制（已确认）
     let rj=null; try{ rj=JSON.parse(res); }catch(e){ try{ pushDiag("error", "confirm tool result parse error: "+(e&&e.message||e), {where:"confirmExecTool"}); }catch(_){} }
     const tm={role:"tool", tool_call_id:c.id, content:res, _disp:(rj&&rj.msg)||(t("ai.toolPrefix","工具 ")+c.name)};
@@ -30431,6 +31411,119 @@ function cancelPendingDanger(userText){
   hist.push({role:"assistant", content:t("ai.cancelledOp","已取消操作：「")+title+t("ai.cancelledOpSuffix","」。")});
   pendingConfirm=null;
   closeConfirmModal();
+  trimChatHist(hist);
+  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
+}
+
+/* ---------- Agent 自主执行：先规划 → 用户评审 → 确认后才落地（v3.7.59 给 chatOnceAgent 一个真入口） ----------
+ * 为什么不让它一键跑完：chatOnceAgent / executeAgentPlan / parseAgentPlan 这条链早就写全了，
+ * 但**零生产调用方、零测试**（v3.7.59 实测：只挂在 __test 桥上），而且旧实现用
+ * execTool(...,force=true) 绕开了危险操作确认。直接给它一个"点了就跑完"的入口，
+ * 等于把一条没人走过的自动改数据路径交给用户 —— 所以入口按「规划 → 评审 → 执行」两段式做。
+ * 破坏性步骤（delete_task/update_task）在 executeAgentPlan 里被拦成 needsConfirm，
+ * 白名单在这条路径同样生效，步数有 AGENT_PLAN_STEPS_MAX 封顶。
+ */
+let pendingAgentPlan = null; // { plan, text, sc }
+
+/** 把计划渲染成人能读的评审文本（聊天里显示，也用作确认提示的正文） */
+function agentPlanReviewText(plan){
+  const lines = plan.steps.map(function(s, i){
+    return (i+1)+". "+s.desc+"  →  "+s.tool+(DANGER_CONFIRM_TOOLS.has(s.tool) ? t("aiagent.planDangerMark"," ⚠️ 需确认，不会自主执行") : "");
+  });
+  let out = t("aiagent.planHead","【执行计划】")+plan.goal+"\n"+lines.join("\n");
+  if(plan.truncatedFrom) out += "\n"+t("aiagent.planTruncated","（原计划 ")+plan.truncatedFrom+t("aiagent.planTruncatedMid"," 步，已裁到 ")+plan.steps.length+t("aiagent.planTruncatedSuffix"," 步 —— 自主执行有步数上限）");
+  return out + "\n" + t("aiagent.planAsk","发送「确认执行」开始逐步执行；发送其他内容取消该计划。");
+}
+
+/**
+ * 只做规划并请用户评审，不执行任何变更。
+ * @param {string} text - 用户诉求
+ * @returns {Promise<boolean>} 是否产出了待确认的计划
+ */
+async function proposeAgentPlan(text){
+  const raw = String(text || "").trim();
+  if(!raw) return false;
+  const hist = getChat(active);
+  if(getCfg().agent === false){
+    toast(t("aiagent.offWarn","Agent 模式已关闭（设置 → AI → Agent 模式），无法自主规划执行。"), "warn");
+    return false;
+  }
+  hist.push({ role:"user", content: raw });
+  renderChat(); scrollChat();
+  chatController = createChatController();
+  showChatThinking(true);
+  let plan = null, errText = "";
+  try{
+    /* 规划阶段也带上技能段：用户沉淀的标准作业流程正是"该怎么拆"的现成答案 */
+    const msgs = [
+      { role:"system", content: agentPlanSysPrompt(raw) + skillsPromptBlock(raw) },
+      { role:"user", content: raw }
+    ];
+    const resp = await chatOnce(msgs, { signal: (chatController && chatController.ac) ? chatController.ac.signal : undefined });
+    const content = (resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content) || "";
+    plan = parseAgentPlan(content);
+    if(!plan) errText = t("aiagent.noPlan","模型没有返回可执行的计划，请换个说法，或直接走普通对话。");
+  }catch(e){
+    errText = t("aiagent.planError","规划失败：")+String((e && e.message) || e);
+  }finally{
+    showChatThinking(false);
+    if(chatController && chatController.timer) clearTimeout(chatController.timer);
+    chatController = null;
+  }
+  if(plan){
+    pendingAgentPlan = { plan: plan, text: raw, sc: active };
+    hist.push({ role:"assistant", content: agentPlanReviewText(plan) });
+  }else{
+    hist.push({ role:"assistant", content: errText, _failed: true });
+  }
+  trimChatHist(hist);
+  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+  return !!plan;
+}
+
+/** 执行已评审的计划（非破坏性步骤），并把流程交给"固化为技能"候选 */
+async function confirmAgentPlan(){
+  const p = pendingAgentPlan;
+  if(!p || p.sc !== active){ pendingAgentPlan = null; return false; }
+  pendingAgentPlan = null;
+  const hist = getChat(active);
+  hist.push({ role:"user", content: t("common.confirm","确认") });
+  chatController = createChatController();
+  showChatThinking(true);
+  const signal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
+  try{
+    const r = await executeAgentPlan(p.plan, { signal: signal });
+    hist.push({ role:"assistant", content: r.summary });
+    /* 自主执行跑通的流程 = 一条现成的可复用技能候选（与对话路径同一套机制、同一个门槛） */
+    const trace = r.results.filter(function(x){ return !x.blocked; }).map(function(x){
+      return { name: x.step.tool, args: Object.keys(x.step.args || {}).slice(0, 8), ok: x.ok };
+    });
+    try{
+      const offer = noteSkillOffer(trace, p.text);
+      if(offer) toast(t("skills.offerToast","本轮成功执行了 ")+offer.steps.length
+        +t("skills.offerToastMid"," 个工具调用。发送「存为技能」即可把这条流程固化成可复用技能（命令面板 Ctrl+K 的「技能」组也能一键保存）。"),"ok");
+    }catch(_e){ /* 候选提示失败不影响已完成的执行 */ }
+    AppBridge.render();
+  }catch(e){
+    hist.push({ role:"assistant", content: String((e && e.message) || e), _failed: true });
+  }finally{
+    showChatThinking(false);
+    if(chatController && chatController.timer) clearTimeout(chatController.timer);
+    chatController = null;
+    trimChatHist(hist);
+    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+  }
+  return true;
+}
+
+/** 取消待确认的计划（用户的其他输入照常记进历史，与 cancelPendingDanger 同形） */
+function cancelAgentPlan(userText){
+  const goal = pendingAgentPlan && pendingAgentPlan.plan ? pendingAgentPlan.plan.goal : "";
+  const hist = getChat(active);
+  if(hist.length && hist[hist.length-1].role === "assistant" && !hist[hist.length-1].tool_calls) hist.pop(); // 移除待确认的计划
+  hist.push({ role:"user", content: userText });
+  hist.push({ role:"assistant", content: t("aiagent.planCancelled","已取消该执行计划：")+goal });
+  pendingAgentPlan = null;
   trimChatHist(hist);
   save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
 }
@@ -30497,15 +31590,38 @@ function chatSysPrompt(userText){
   const cfg = getCfg();
   // v1.15：话术与能力对齐——cfg.agent=false 时不引导记忆/编排（对应工具也已被 effectiveTools 剔除）
   const base = effectiveSysprompt(active) || t("ai.sysPrompt","你是一个全能 AI 助手，可调用工具管理任务与工坊数据。");
+  /* v3.7.59：技能段与 Agent 模式正交（技能描述的是工具用法，cfg.agent=false 时工具仍在），
+     故两条分支都追加；无启用技能时 skillsPromptBlock 返回空串，提示与改动前逐字节一致。 */
+  const skillsCtx = skillsPromptBlock(userText);
   if(cfg && cfg.agent === false){
     return base
       +t("ai.sysPromptTool","\\n你可以调用工具来创建、修改、删除任务，查询与搜索工坊数据，需要时直接调用。")
-      +agentContextPrompt(userText);
+      +agentContextPrompt(userText)
+      +skillsCtx;
   }
   return base
     +t("ai.sysPromptTool","\\n你可以调用工具来创建、修改、删除任务，查询与搜索工坊数据，需要时直接调用。")
     +t("ai.sysPromptRemember","用户的事实/偏好/决定用 remember 存入工作记忆；多步任务先用 plan 建立目标与步骤，再逐步执行并用 complete_step/complete_goal 收尾。")
-    +agentContextPrompt(userText);
+    +agentContextPrompt(userText)
+    +skillsCtx;
+}
+/**
+ * v3.7.59：把一段文本送进右侧聊天面板并提交（命令面板「技能」组一键触发用）。
+ * 走真实表单提交路径，因此 onChatSubmit 的全部拦截（技能展开、待确认危险操作、RAG 注入）都照常生效。
+ * @param {string} text - 要发送的用户消息
+ * @returns {boolean} 是否成功提交
+ */
+function sendChatText(text){
+  const s = String(text || "").trim();
+  if(!s) return false;
+  const el = $("#chatTextInput");
+  const form = $("#chatForm");
+  if(!el || !form) return false;
+  el.value = s;
+  el.dispatchEvent(new Event("input", {bubbles:true}));
+  if(form.requestSubmit) form.requestSubmit();
+  else form.dispatchEvent(new Event("submit", {cancelable:true}));
+  return true;
 }
 async function onChatSubmit(e){
  try{
@@ -30522,6 +31638,16 @@ async function onChatSubmit(e){
       return;
     }
   }
+  /* v3.7.59：Agent 计划的评审态（命令面板「让 AI 自主完成」产出）——与上面同形，
+     只有「确认执行」才落地，任何别的内容取消，绝不在用户没说确认时动数据。 */
+  if(pendingAgentPlan){
+    if(pendingAgentPlan.sc !== active){ pendingAgentPlan = null; }
+    else {
+      const yes = /^(确认执行|确认|确定|执行|yes|confirm|run|y)$/i.test(text.trim());
+      if(yes){ await confirmAgentPlan(); } else { cancelAgentPlan(text); }
+      return;
+    }
+  }
   // Agent：显式记忆指令「记住：xxx」直接落工作记忆（不走模型，确定可靠）
   const memHit = /^(记住|请记住|帮我记住)[:：\s]+(.+)$/s.exec(text);
   if(memHit && memHit[2]){
@@ -30531,6 +31657,36 @@ async function onChatSubmit(e){
     trimChatHist(hist);
     save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
     return;
+  }
+  /* v3.7.59 Skills ①：「存为技能 [名字]」——把上一轮成功执行的工具流程固化成可复用技能（不走模型，确定可靠）。
+     同时接受英文 save (as) skill，因为命令面板发出的文本随界面语言变化。
+     ⚠️ 命令词后必须紧跟冒号、空白或到此为止（(?:[:：]\s*|\s+|$)），否则「保存技能说明文档」这类
+     正常句子会被吞掉。 */
+  const skillSaveHit = /^(?:存为技能|保存为技能|存成技能|保存技能|save(?:\s+as)?\s+skill)(?:\s*[:：]\s*|\s+|$)(.*)$/i.exec(text);
+  if(skillSaveHit){
+    const r = commitPendingSkill((skillSaveHit[1] || "").trim());
+    hist.push({role:"user", content:text});
+    hist.push({role:"assistant", content: r
+      ? t("skills.savedPrefix","已把上一轮流程固化为技能「")+r.name
+        +t("skills.savedSuffix","」。它会在每轮对话注入系统提示，也可在命令面板（Ctrl+K）「技能」组一键触发；到「扩展 → 技能配置」可直接编辑或删除。")
+      : t("skills.noOffer","当前没有可固化的流程：需要上一轮对话成功执行 ≥2 个工具调用（删除/修改类工具不计入）。")});
+    trimChatHist(hist);
+    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+    return;
+  }
+  /* v3.7.59 Skills ②：「技能：X」/「用技能 X」显式触发。
+     只有 X 精确对上已启用技能的名字或触发词才拦截（findSkill 返回 null 就原样走正常路径），
+     所以「技能树怎么加点」这类普通输入不会被吞。 */
+  let outbound = text;
+  const skillRunHit = /^(?:用|执行|运行|调用)?\s*(?:技能|skill)(?:[:：]\s*|\s+)(.+)$/is.exec(text);
+  if(skillRunHit){
+    const sk = findSkill((skillRunHit[1] || "").trim());
+    if(sk){
+      outbound = text + "\n\n" + t("skills.runWrapPrefix","（请立即按已定义技能「")+sk.name
+        + t("skills.runWrapMid","」执行：")+sk.prompt
+        + (sk.tools.length ? t("skills.runWrapTools","；优先使用工具：")+sk.tools.join(", ") : "")
+        + t("skills.runWrapSuffix","。）");
+    }
   }
   // v1.4-D：自然语言建任务拦截（"帮我建个任务：明天下午3点复习数学"）
   const taskHit = parseNaturalLanguageTask(text);
@@ -30579,10 +31735,23 @@ async function onChatSubmit(e){
   // v3.4.7 批次六：RAG 上下文注入（激活闲置索引资产）——检索任务/记录/笔记/对话历史，
   // 相关片段拼进 system prompt。开关：cfg.rag（设置页 AI→记忆），默认关（防 token 意外膨胀）；
   // ragInjectContext 内部已判 cfg.rag === false 返回空串，检索失败/无索引同样安全降级为空。
+  /* v3.7.59 (#19)：先把本轮查询向量备好 —— agentContextPrompt → recallMemories 是同步链，
+     拿不到预置向量时它只会退回纯词法。传 outbound（与 chatSysPrompt 收的同一个串），
+     否则「技能：X」触发时 key 对不上、语义召回静默失效。失败一律降级，绝不拦对话。 */
+  await memPrimeQueryVector(outbound).catch(()=> false);
   const ragCtx = await ragInjectContext(text).catch(()=> "");
-  const messages=[{role:"system", content:chatSysPrompt(text) + ragCtx}]
+  /* v3.7.59：chatSysPrompt 收 outbound —— 「技能：X」时系统提示里的技能段会因整名命中把它排到第一条。
+     未触发技能时 outbound === text，行为与改动前一致。 */
+  const messages=[{role:"system", content:chatSysPrompt(outbound) + ragCtx}]
     // B1 修复：保留完整结构（含 tool_calls / tool_call_id），否则含工具调用的会话第二轮会缺 id 触发 400
     .concat(hist.map(m=>({...m})));
+  /* v3.7.59：触发技能时，把**发出去**的最后一条 user 消息换成展开版（附上该技能的做法与建议工具）。
+     hist 里仍存用户原话 —— 界面与历史记录不被一大段指令污染，模型也确实收到"按这个流程做"。 */
+  if(outbound !== text){
+    for(let mi=messages.length-1; mi>=0; mi--){
+      if(messages[mi] && messages[mi].role === "user"){ messages[mi].content = outbound; break; }
+    }
+  }
   await runChatLoop(messages, hist);
   }catch(err){ const m=(err&&err.message)?err.message:String(err); pushDiag("error", m, {where:"onChatSubmit"}); try{ toast(t("ai.chatError","对话出错：")+m, "error"); }catch(e2){} }
 }
@@ -30597,9 +31766,16 @@ async function runChatLoop(messages, hist){
     const acfg = getCfg()||{};
     if(!activeGoal()){ const n=Number(acfg.agentLoops); if(isFinite(n)&&n>=6&&n<=30) maxLoops=Math.round(n); }
     else { const n=Number(acfg.agentGoalLoops); if(isFinite(n)&&n>=12&&n<=50) maxLoops=Math.round(n); }
-    const wl = String(acfg.toolWhitelist||"").trim();
-    const toolWhitelist = wl ? new Set(wl.split(/[,\s\u3000]+/).filter(Boolean)) : null;
+    const toolWhitelist = toolWhitelistSet(acfg); // v3.7.59：与 executeAgentPlan 同一来源，别再各写一份解析
     const autoConfirm = !(acfg.agentAutoConfirm===false);
+    /* v3.7.59 Skills ③：采集本轮的工具执行结果，循环结束后判断是否值得固化成技能。
+       turnUserText 取 messages 里最后一条 user —— 工具执行只追加 assistant/tool 角色，
+       所以循环结束时它仍是本轮的用户输入（打字确认路径下会是「确认」，用户可自行命名）。 */
+    const skillTrace = [];
+    let turnUserText = "";
+    for(let mi=messages.length-1; mi>=0; mi--){
+      if(messages[mi] && messages[mi].role === "user"){ turnUserText = String(messages[mi].content || ""); break; }
+    }
     while(guard++<maxLoops){
       // v3.7.52：每轮重置超时——超时语义应是「单次请求超时」，而不是「整段循环总预算」
       if(chatController && chatController.resetTimeout) chatController.resetTimeout();
@@ -30630,9 +31806,10 @@ async function runChatLoop(messages, hist){
       const msg = j.choices && j.choices[0] && j.choices[0].message;
       if(!msg) throw new Error(t("ai.emptyResponse","空响应"));
       if(msg.tool_calls && msg.tool_calls.length){
-        const DANGER=new Set(["delete_task","update_task"]);
-        const calls = msg.tool_calls.map(tc=>({name:tc.function.name, id:tc.id, args:JSON.parse(tc.function.arguments||"{}")}));
-        const hasDanger = calls.some(c=>DANGER.has(c.name));
+        // v3.7.59：清单收口到 ai-tools.js 的 DANGER_CONFIRM_TOOLS（此前这里各写一份，Agent 计划路径没走它）
+        // v3.7.59：args 走 _parseToolArgs —— 模型给的 JSON 可能非法，返回 null 由下方按「参数非法」回执
+        const calls = msg.tool_calls.map(tc=>({name:tc.function.name, id:tc.id, args:_parseToolArgs(tc.function.arguments)}));
+        const hasDanger = calls.some(c=>DANGER_CONFIRM_TOOLS.has(c.name));
         /* v3.7.52：危险操作**始终**需用户确认。原实现把这段挂在 `if(autoConfirm)` 上，而
            autoConfirm = !(cfg.agentAutoConfirm===false) —— 于是把设置里「自动确认非危险操作」
            关掉反而变成「危险操作免确认」（语义反向，且反向到**更不安全**的那侧；实测还有
@@ -30640,7 +31817,8 @@ async function runChatLoop(messages, hist){
            现在开关只按字面作用于非危险批次：关闭时非危险的工具调用也要先确认。 */
         if(hasDanger || !autoConfirm){
           // ② 危险操作：整体延后到用户确认后执行，避免半截工具回执引发下一轮 400
-          const titles = calls.map(c=>{ const ft=findTask(c.args.task_id); return ft? ft.task.title : c.args.task_id; }).filter(Boolean);
+          // v3.7.59：args 可能为 null（模型给了非法 JSON）→ 用 {} 兜底取标题，执行环节会跳过并回执
+          const titles = calls.map(c=>{ const a=c.args||{}; const ft=findTask(a.task_id); return ft? ft.task.title : a.task_id; }).filter(Boolean);
           const titleText = titles.join(t("ai.confirmJoinSep","、"));
           pendingConfirm={ toolCalls:calls, title:titleText||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:active };
           hist.push({role:"assistant", content: hasDanger
@@ -30664,10 +31842,22 @@ async function runChatLoop(messages, hist){
             const tm={role:"tool", tool_call_id:c.id, content:JSON.stringify({ok:false, msg:denyMsg}), _disp:denyMsg, _tool_denied:true};
             messages.push(tm); hist.push(tm);
           });
-          for(const c of allowed){
+          for(let ci=0; ci<allowed.length; ci++){
+            const c = allowed[ci];
+            /* v3.7.59：取消即刻生效——剩余调用不再执行，补「已跳过」回执后退出循环 */
+            if(_chatCancelled()){
+              for(let k=ci; k<allowed.length; k++) _pushSkippedToolReceipt(messages, hist, allowed[k].id, allowed[k].name);
+              throw new Error("__USER_CANCEL__");
+            }
             const args=c.args;
+            /* v3.7.59：参数非法的调用不执行，只回执 —— 让模型下一轮自行修正 */
+            if(args === null){
+              _pushBadArgsToolReceipt(messages, hist, c.id, c.name);
+              continue;
+            }
             /* v3.7.52：走统一入口 execToolAuto —— 异步工具（联网/代码/SQL）在 chat 路径也能真正执行 */
             const res=await execToolAuto(c.name, args);
+            skillTracePush(skillTrace, c.name, args, res); // v3.7.59 Skills：记录本轮流程
             const tm={role:"tool", tool_call_id:c.id, content:res, _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
             messages.push(tm); hist.push(tm);
           }
@@ -30675,11 +31865,25 @@ async function runChatLoop(messages, hist){
         }
         // 无危险：完整 assistant + tool（含 tool_calls / tool_call_id）入 hist，B1 安全
         messages.push(msg); hist.push(msg);
-        for(const tc of msg.tool_calls){
-          const args=JSON.parse(tc.function.arguments||"{}");
+        for(let ti=0; ti<msg.tool_calls.length; ti++){
+          const tc = msg.tool_calls[ti];
+          /* v3.7.59：取消即刻生效——剩余调用不再执行，补「已跳过」回执后退出循环 */
+          if(_chatCancelled()){
+            for(let k=ti; k<msg.tool_calls.length; k++)
+              _pushSkippedToolReceipt(messages, hist, msg.tool_calls[k].id, msg.tool_calls[k].function.name);
+            throw new Error("__USER_CANCEL__");
+          }
+          const args=_parseToolArgs(tc.function.arguments);
+          /* v3.7.59：参数非法（截断/尾随逗号/单引号…）不执行、不抛裸 SyntaxError，
+             改为回执给模型让它下一轮修正 —— 原实现会让整段多步循环直接中断。 */
+          if(args === null){
+            _pushBadArgsToolReceipt(messages, hist, tc.id, tc.function.name);
+            continue;
+          }
           /* v3.7.52：统一入口 —— 异步工具（web_search/web_fetch/code_run/sql_query）
              此前在 chat 路径只拿到「未知工具」，与 Agent 计划路径行为不一致 */
           const res=await execToolAuto(tc.function.name, args);
+          skillTracePush(skillTrace, tc.function.name, args, res); // v3.7.59 Skills：记录本轮流程
           const tm={role:"tool", tool_call_id:tc.id, content:res, _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
           messages.push(tm); hist.push(tm);
         }
@@ -30688,6 +31892,16 @@ async function runChatLoop(messages, hist){
       hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)")});
       break;
     }
+    /* v3.7.59 Skills ③：本轮成功执行了 ≥2 个非破坏性工具 → 提示可把这条流程固化成技能。
+       只是挂出候选（内存态）+ 一条 toast，不自动写盘：用户回「存为技能」或走命令面板才落库，
+       避免把一次性偶发调用沉淀成噪声技能。 */
+    try{
+      const offer = noteSkillOffer(skillTrace, turnUserText);
+      if(offer){
+        toast(t("skills.offerToast","本轮成功执行了 ")+offer.steps.length
+          +t("skills.offerToastMid"," 个工具调用。发送「存为技能」即可把这条流程固化成可复用技能（命令面板 Ctrl+K 的「技能」组也能一键保存）。"),"ok");
+      }
+    }catch(_e){ /* 固化提示失败不影响已完成的对话 */ }
   }catch(err){
     /* v3.7.52：取消/超时判定以**控制器上的 reason** 为准。
        原因：`ac.abort(reason)` 时浏览器 fetch 是以**传入的 reason 拒绝**的（name 是 "Error"，
@@ -31134,6 +32348,8 @@ const PY_INIT = {
   "戳":"c","解":"j","随":"s","机":"j","串":"c","正":"z","则":"z","测":"c","试":"s","转":"z",
   "动":"d","录":"l","缴":"j","费":"f","提":"t","醒":"x","采":"c","购":"g","单":"d","外":"w",
   "卖":"m",
+  /* v3.7.59：「技能」组固定标签用到的字（技能 = j n，把上一轮固化为技能 = b s y l g h w j n） */
+  "技":"j","能":"n","把":"b","上":"s","一":"y","轮":"l","固":"g","化":"h","为":"w",
 };
 /**
  * 取文本的「拼音首字母串」：汉字取首字母、ASCII 字母数字原样保留，其余字符忽略
@@ -31223,6 +32439,7 @@ function highlightHits(text, positions){
  * @returns {Array<{label:string,group?:string,icon?:string,sub?:string,run:Function}>}
  */
 function buildCmds(q){
+  const qRaw = String(q||"").trim();   // 原文：喂给 Agent 的诉求不能是小写化之后的
   q=(q||"").toLowerCase();
   const acts=[
     {label:t("cmd.newTask","新建任务"), icon:UI_ICONS.plus, sub:"N", group:t("cmd.command","命令"), run:()=>{ if(getActive()==="overview"){setActive("office");render();} const f=$("#taskForm"); if(f) f.title.focus(); }},
@@ -31253,10 +32470,31 @@ function buildCmds(q){
     const a=TOOL_APPS[id] || {};
     return { label:a.name || id, icon:a.icon || "", sub:a.desc || "", group:t("cmd.tool","工具"), run:function(){ if(typeof openToolStub === "function") openToolStub(id); } };
   }) : [];
-  const items=acts.concat(scs, tasks, tools);
+  /* v3.7.59：「扩展 → 技能配置」里定义的自定义技能接进命令面板 ——
+     此前那份 JSON 只写不读，勾选项也只是减法地写工具白名单，技能开关点了没反应。
+     接线后两条真实通路：① 每条已启用技能一键发进 AI 聊天面板执行；
+     ② 上一轮对话成功跑了 ≥2 个工具时，这里出现「把上一轮固化为技能」。
+     发出的文本（技能：X / 存为技能）要能被 ai-retry 的拦截正则认出，故用固定字面量并中英各一。 */
+  const skills=[];
+  if(typeof listEnabledSkills === "function"){
+    try{
+      if(typeof getPendingSkillOffer === "function" && getPendingSkillOffer()){
+        const offer = getPendingSkillOffer();
+        skills.push({ label:t("cmd.skillSaveOffer","把上一轮固化为技能"), icon:UI_ICONS.plus,
+          sub: offer.steps.map(function(s){ return s.tool; }).join(" → "), group:t("cmd.skill","技能"),
+          run:function(){ if(typeof sendChatText === "function") sendChatText(t("cmd.skillSaveText","存为技能")); } });
+      }
+      listEnabledSkills().slice(0,12).forEach(function(s){
+        skills.push({ label:s.name, icon:UI_ICONS.brain,
+          sub: s.desc || s.prompt.slice(0,40), group:t("cmd.skill","技能"),
+          run:function(){ if(typeof sendChatText === "function") sendChatText(t("cmd.skillInvoke","技能：")+s.name); } });
+      });
+    }catch(_e){ /* 技能数据异常时命令面板照常工作，不连带拖垮 */ }
+  }
+  const items=acts.concat(scs, tasks, tools, skills);
   if(q){
     // 模糊匹配：标签+副标题联合打分，按分值降序；命中位置取「标签」上的（高亮给用户看的就是标签）
-    return items
+    const matched = items
       .map(it=>{
         const m = fuzzyMatch((it.label||"")+(it.sub?" "+it.sub:""), q);
         const inLabel = fuzzyMatch(it.label||"", q);
@@ -31264,6 +32502,21 @@ function buildCmds(q){
       })
       .filter(it=> it._score > 0)
       .sort((a,b)=> b._score - a._score);
+    /* v3.7.59：把「让 AI 自主完成」接进命令面板 —— chatOnceAgent 这条链早就写全但零入口，
+       用户根本走不到它。⚠️ 只在查询以 > 开头时出现，且不去抢普通查询的结果首位：
+       早先做成"任何 ≥4 字查询都 unshift 一条"，实测连带弄红三条既有面板用例
+       （「无匹配」空态变得不可达、li[data-i] 首项被抢、工具项进「最近使用」按下标取也失效）。
+       风险由三段兜住：先出计划要用户回「确认执行」、破坏性步骤被 executeAgentPlan 拦掉、步数有上限。 */
+    if(qRaw.charAt(0) === ">" && typeof proposeAgentPlan === "function" && getCfg().agent !== false){
+      const task = qRaw.slice(1).trim();
+      if(task.length >= 2){
+        matched.unshift({ label: t("cmd.agentRun","让 AI 自主完成：")+task, icon: UI_ICONS.brain,
+          sub: t("cmd.agentRunSub","先出计划，回「确认执行」才落地；删除/修改类步骤不会自主执行"),
+          group: t("cmd.command","命令"), trackRecent: false,
+          run: function(){ proposeAgentPlan(task); } });
+      }
+    }
+    return matched;
   }
   // 无查询：「最近使用」组置顶（去重复制，执行幂等）
   const recentLabels = getCmdRecent();
@@ -32436,7 +33689,7 @@ function renderMsgPanel(){
     iconWrap.className = "msg-item-icon";
     iconWrap.setAttribute("aria-hidden", "true");
     const iconSvg = MSG_ICONS[m.type] || MSG_ICONS.system;
-    iconWrap.innerHTML = iconSvg; // 静态可信 SVG 字符串
+    iconWrap.innerHTML = iconSvg; // 静态可信 SVG 字符串 // lint-xss-ok: MSG_ICONS 是内部常量表，且有 MSG_ICONS.system 兜底
     item.appendChild(iconWrap);
 
     // 主体
@@ -34409,7 +35662,7 @@ document.addEventListener("keydown", e=>{
       wrap.insertAdjacentHTML("beforeend", CARET);
       wrap.classList.add("ds-select--edit");
     } else {
-      trigger.innerHTML = '<span class="ds-label"></span>' + CARET;
+      trigger.innerHTML = '<span class="ds-label"></span>' + CARET; // lint-xss-ok: CARET 是本文件顶部的 SVG 常量
       wrap.appendChild(trigger);
     }
 
@@ -34999,13 +36252,13 @@ function renderIntegrationPanel(){
   const panel = $("#integrationPanel");
   if(!panel) return;
   const providers = [
-    {name:"notion", label:"Notion", desc:t("int.notionDesc","同步笔记和任务到 Notion"), connectFn:"notionConnect", disconnectFn:"notionDisconnect"},
-    {name:"linear", label:"Linear", desc:t("int.linearDesc","同步任务到 Linear"), connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
-    {name:"jira", label:"Jira", desc:t("int.jiraDesc","同步任务到 Jira"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
-    {name:"slack", label:"Slack", desc:t("int.slackDesc","接收 Slack 消息通知"), connectFn:"slackConnect", disconnectFn:"slackDisconnect"},
-    {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","接收飞书消息通知"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect"},
-    {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","接收钉钉消息通知"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect"},
-    {name:"calendar", label:t("appPage.calview", "日历"), desc:t("int.calendarDesc","同步日程到 Google/Outlook 日历"), connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
+    {name:"notion", label:"Notion", desc:t("int.notionDesc","验证 Notion Integration Token（笔记 / 任务同步尚未接入）"), connectFn:"notionConnect", disconnectFn:"notionDisconnect"},
+    {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
+    {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Jira API Token（任务同步尚未接入）"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
+    {name:"slack", label:"Slack", desc:t("int.slackDesc","验证 Slack Bot Token（消息通知尚未接入）"), connectFn:"slackConnect", disconnectFn:"slackDisconnect"},
+    {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","验证飞书 App 凭据（消息通知尚未接入）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect"},
+    {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","验证钉钉 App 凭据（消息通知尚未接入）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect"},
+    {name:"calendar", label:t("appPage.calview", "日历"), desc:t("int.calendarDesc","验证日历凭据（日程同步尚未接入）"), connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
   ];
   const rows = providers.map(function(p){
     // v3.1.1 修复：原用一个不存在的 getProvider 全局函数，状态恒为「未连接」；真实函数为 integrationGetProvider。
@@ -35378,8 +36631,14 @@ function renderAiSkillsBuiltin(){
   skills.forEach(function(s, i){
     const row = document.createElement("div");
     row.className = "set-switch";
-    row.innerHTML = '<input type="checkbox" id="aiSkill_'+i+'"'+(s.enabled?" checked":"")+" aria-label=\""+s.name+'">'+
-      "<div><div class=\"sw-label\">"+s.name+"</div><div class=\"sw-sub\">"+s.desc+"</div></div>";
+    /* v3.7.59 安全修正：s.name / s.desc 原样拼进 innerHTML —— name 还落在 aria-label="…" 属性里，
+       一个含引号的技能名即可截断属性并注入事件。数据源是 wb_agent_ai_cfg 的 skills.builtin，
+       **导入 JSON 备份 / 云同步快照都能写入任意值**，故按不可信输入处理。
+       同批核查：renderAiMcpList / renderAiWorkflowList 早已用 esc()，只有本函数与会话历史漏了。
+       这里刻意把 esc() 内联（而非先赋给中间变量）——这样构建期门禁 scripts/lint-xss.mjs
+       能直接看出该行已消毒，不必走豁免。 */
+    row.innerHTML = '<input type="checkbox" id="aiSkill_'+i+'"'+(s.enabled?" checked":"")+' aria-label="'+esc(s.name || "")+'">'+
+      "<div><div class=\"sw-label\">"+esc(s.name || "")+"</div><div class=\"sw-sub\">"+esc(s.desc || "")+"</div></div>";
     box.appendChild(row);
   });
 }
@@ -35463,24 +36722,12 @@ function renderAiWorkflowList(){
     };
   });
 }
-const AI_BUILTIN_PLUGINS = [
-  {name:"code_runner", desc:t("ai.pluginCodeRunner","代码执行"), enabled:false},
-  {name:"web_search", desc:t("ai.pluginWebSearch","网页搜索"), enabled:false},
-  {name:"file_reader", desc:t("ai.pluginFileReader","文件读取"), enabled:false}
-];
-function renderAiPluginList(){
-  const box = $("#aiPluginList"); if(!box) return;
-  const saved = getAiConfig("plugin");
-  const plugins = saved && Array.isArray(saved.plugins) ? saved.plugins : AI_BUILTIN_PLUGINS;
-  box.innerHTML = "";
-  plugins.forEach(function(p, i){
-    const row = document.createElement("div");
-    row.className = "set-switch";
-    row.innerHTML = '<input type="checkbox" id="aiPlugin_'+i+'"'+(p.enabled?" checked":"")+" aria-label=\""+p.name+'">'+
-      "<div><div class=\"sw-label\">"+p.name+"</div><div class=\"sw-sub\">"+p.desc+"</div></div>";
-    box.appendChild(row);
-  });
-}
+/* v3.7.59：AI_BUILTIN_PLUGINS / renderAiPluginList 已删除。
+   那 3 项（code_runner / web_search / file_reader）是"已有真实能力的假副本"——
+   web_search 与 code_run 早就是 TOOLS 里的真工具（模型直接可调），勾选它们不改变任何东西；
+   而本仓库 product-scope §四 的死 UI 规范明确写着「stub + 活 UI = 虚假功能」，
+   连它自己的文案都写着"暂无执行代码，勾选状态仅保存配置"。
+   真·插件市场是另一套（BUILTIN_PLUGINS / 概览页 store，10 个可安装插件），未受影响。 */
 function renderAiSessHistory(){
   const box = $("#aiSessHistory"); if(!box) return;
   const saved = getAiConfig("session");
@@ -35496,7 +36743,10 @@ function renderAiSessHistory(){
   history.slice(0, 20).forEach(function(h, i){
     const row = document.createElement("div");
     row.className = "set-switch";
-    row.innerHTML = "<div><div class=\"sw-label\">"+(h.title||(t("ai.sessPrefix","会话 ")+(i+1)))+"</div><div class=\"sw-sub\">"+(h.time||"")+"</div></div>";
+    /* v3.7.59 安全修正：h.title / h.time 原样拼进 innerHTML。会话标题取自首条用户消息或 AI 生成，
+       经导入 JSON 备份 / 云同步快照可被写成含标签的串 → 持久化 XSS（读走整个 localStorage）。
+       esc() 内联写法同上，便于构建期门禁直接识别。 */
+    row.innerHTML = "<div><div class=\"sw-label\">"+esc(h.title || (t("ai.sessPrefix","会话 ")+(i+1)))+"</div><div class=\"sw-sub\">"+esc(h.time || "")+"</div></div>";
     box.appendChild(row);
   });
 }
@@ -35522,7 +36772,6 @@ restoreAiSkillsCustom();
 renderAiMcpList();
 renderAiWorkflowList();
 restoreAiMemory();
-renderAiPluginList();
 restoreAiSession();
 renderAiSessHistory();
 $("#aiSkillsSave").onclick = function(){
@@ -35618,23 +36867,6 @@ $("#aiMemSave").onclick = function(){
     save(PREFIX + "cfg", cfg);
   }catch(_e){ /* cfg 写失败不影响 ai_config_memory 已存——注入静默保持旧态 */ }
   toast(t("ai.memoryConfigSaved","记忆配置已保存"));
-};
-$("#aiPluginSave").onclick = function(){
-  // v3.1.2 A-档：插件勾选按 name 匹配（防顺序错配）+ 同步清空提示（这 3 项是占位假插件）
-  const boxes = $$("#aiPluginList input[type=checkbox]");
-  const boxByName = new Map();
-  boxes.forEach(function(cb){
-    const nm = cb.getAttribute("aria-label") || cb.id.replace(/^aiPlugin_\d+_/, "");
-    boxByName.set(nm, cb.checked);
-  });
-  const enabled = AI_BUILTIN_PLUGINS.filter(function(p){ return boxByName.get(p.name) === true; }).map(function(p){ return p.name; });
-  saveAiConfig("plugin", {plugins: AI_BUILTIN_PLUGINS.map(function(p){ return {name:p.name,desc:p.desc,enabled: boxByName.get(p.name)===true}; })});
-  // 已知占位插件诚实提示（不假装勾选后会有能力变化）
-  if(enabled.length > 0){
-    toast(t("ai.pluginConfigSavedStub","插件配置已保存（注意：code_runner/web_search/file_reader 暂未接线执行代码，勾选状态仅保存配置）"));
-  } else {
-    toast(t("plugin.configSaved","插件配置已保存"));
-  }
 };
 $("#aiSessSave").onclick = function(){
   const sessTimeoutEl = $("#aiSessTimeout");
@@ -36727,6 +37959,10 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
     mdToHtml, escapeHtml: esc, safeUrl, inlineMd, sanitizeHtml,
+    /* v3.7.59：图表画布 SVG 生成器（render-overview 的 _dgmSvgHtml）。与 _buildCloudSnapshot
+       同理——安全相关的内部函数需要单测入口，否则「id/color 未转义」这类注入只能靠人眼守。
+       回归用例见 tests/sanitize-xss-regression.test.js。 */
+    _dgmSvgHtml, _dgmColor, _dgmNum,
     todayStr, shiftDay, esc, uid, lineChartSVG, seed, sm2,
     encryptKey, decryptKey, initCrypto, getDeviceKey,
     base64Encode, base64Decode, persistCfg, getCfg, saveCfg, _resetCrypto,
@@ -36934,7 +38170,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     runSql, loadSqlJs, bindCodeSqlCard,
     // v3.1.2：AI 页 8 子模块配置存取 + 回收站多类型 bin 通道（供测试驱动与断言；此前结构性不可测）
     getAiConfig, saveAiConfig, renderAiSkillsBuiltin, renderAiMcpList, renderAiWorkflowList,
-    renderAiPluginList, renderAiSessHistory, AI_BUILTIN_SKILLS, AI_BUILTIN_PLUGINS,
+    renderAiSessHistory, AI_BUILTIN_SKILLS,
     getRecycleBin, addToRecycleBin, restoreFromRecycleBin,
     get _dashEditMode(){ return _dashEditMode; },
     set _dashEditMode(v){ _dashEditMode = !!v; },
@@ -39295,30 +40531,16 @@ async function _aiChatText(messages){
 /* ---------- 1) AI 自动拆解复杂任务 ---------- */
 /**
  * AI 自动拆解复杂任务为 3-5 个子任务
- * v1.7-A：可选使用 agentPlan 做更智能的本地分解（通过 useLocalPlan 选项启用）
  * @param {string} taskTitle - 任务标题
  * @param {string} [scenario] - 场景键（office/code/study/life），可选
- * @param {Object} [opts] - 选项 {useLocalPlan: boolean}，可选（v1.7-A）
  * @returns {Promise<Array<{title:string,priority:string}>|null>} 子任务列表；无 AI Key 或失败返回 null
  */
-async function aiDecomposeTask(taskTitle, scenario, opts){
+async function aiDecomposeTask(taskTitle, scenario){
   const profile = getActiveProfile();
-
-  /* v1.7-A：显式启用 useLocalPlan 时，无 AI Key 降级使用 agentPlan 本地分解 */
-  if(!profile || !profile.key){
-    if(opts && opts.useLocalPlan && typeof agentPlan === "function"){
-      const steps = agentPlan(taskTitle, {scenario: scenario});
-      if(steps && steps.length){
-        return steps.map(function(s){
-          return {
-            title: (s.params && (s.params.title || s.params.task_id || s.params.query)) || s.action,
-            priority: "medium"
-          };
-        });
-      }
-    }
-    return null;
-  }
+  /* v3.7.59：这里原有 `opts.useLocalPlan → agentPlan(...)` 的本地降级分支已随 v1.7-A 死链一并移除。
+     全仓没有任何调用方传过 useLocalPlan（实测只剩定义与注释命中），
+     而 agentPlan 内部靠关键词猜工具、猜出来的步骤并不比"直接返回 null 让上层走人工拆解"更可靠。 */
+  if(!profile || !profile.key) return null;
 
   let prompt = t("p5.splitPrompt", "请将以下任务拆解为3-5个可执行的子任务，每个子任务一行，格式：子任务标题|优先级(high/medium/low)\n");
   prompt += t("p5.sceneLabel", "场景：") + (SCENARIOS[scenario] ? SCENARIOS[scenario].name : (scenario || t("p5.general", "通用"))) + "\n";
@@ -39333,18 +40555,10 @@ async function aiDecomposeTask(taskTitle, scenario, opts){
   return parseDecomposeResult(resp);
 }
 
-/**
- * v1.7-A：AI Agent 自主执行集成入口
- * 将目标交给 agentRun 自主执行（plan→execute→verify→修正）
- * @param {string} goal - 目标描述
- * @param {Object} [context] - 上下文
- * @param {number} [maxSteps] - 最大步数
- * @returns {Object} agentRun 执行结果 {goal, steps, log, success, summary}
- */
-function aiAgentAutoRun(goal, context, maxSteps){
-  if(typeof agentRun !== "function") return {goal: goal, steps: [], log: [], success: false, summary: t("p5.agentRunUnavailable", "agentRun 不可用")};
-  return agentRun(goal, context, maxSteps);
-}
+/* v3.7.59：aiAgentAutoRun 已删除 —— 它是 v1.7-A agentRun 的死包装（全仓零调用方、零测试、
+ * 也没上 __test 桥）。"AI 自主执行"现在的真实入口是命令面板的 > 前缀
+ * → ai-retry.js 的 proposeAgentPlan（先出计划）→ 用户回「确认执行」→ executeAgentPlan，
+ * 且破坏性步骤被 DANGER_CONFIRM_TOOLS 拦住。*/
 
 /**
  * 解析 AI 拆解结果文本为子任务数组（纯函数，供测试）
@@ -40666,7 +41880,6 @@ function createNote(title, content, tags, category){
   };
   notes.push(note);
   saveNotes(notes);
-  _notifyNotesChanged();
   return note;
 }
 /**
@@ -40689,7 +41902,6 @@ function updateNote(id, updates){
   }
   note.updatedAt = Date.now();
   saveNotes(notes);
-  _notifyNotesChanged();
   return true;
 }
 /**
@@ -40714,7 +41926,6 @@ function deleteNote(id){
     }catch(_){ /* 回收站写入失败不影响删除 */ }
   }
   saveNotes(filtered);
-  _notifyNotesChanged();
   return true;
 }
 /**
@@ -41140,22 +42351,12 @@ function _bindKnowledgeBaseEvents(){
   });
 }
 
-/* ---------- v1.7-A 笔记变更钩子：自动更新 RAG 索引 ----------
- * 笔记 CRUD 后调用 _notifyNotesChanged，触发 RAG 索引重建（若已存在）。
- * 53-ai-deep.js 编号 > 47，但函数声明提升使 _onNotesChanged 引用安全。
- * 设计：钩子失败不影响笔记操作；仅当索引已存在时才重建，避免无谓开销。
- */
-/**
- * 笔记变更通知：触发 RAG 索引自动更新
- * @returns {void}
- */
-function _notifyNotesChanged(){
-  try{
-    if(typeof _onNotesChanged === "function"){
-      _onNotesChanged();
-    }
-  }catch(e){ /* 钩子失败静默降级，不影响笔记操作 */ }
-}// ===== Full-Text Search (v1.6-D 知识管理) =====
+/* v3.7.59：v1.7-A 的「笔记变更钩子 → 重建 RAG 索引」已移除。
+ * 它维护的是 v1.7-A 自己的旧 TF-IDF 索引 _ragIndex（buildIndex/indexFromNotes/saveRagIndex），
+ * 而 v3.7.57 起真正被检索的是 ai-tools.js 里的 getRagDocs/ragIndexAdd 一套 —— 旧索引没有任何读取方，
+ * 所以这个挂在笔记 CRUD 上的钩子只是在刷一份死表。
+ * 真实的状态（不粉饰）：笔记改动同样要等「重建索引」才进真 RAG，任务/记录/对话历史一直如此。
+ * 若要做增量索引，应作为独立特性接到 ragIndexAdd 上，而不是留着这份空转的旧钩子。 */// ===== Full-Text Search (v1.6-D 知识管理) =====
 /* ---------- 全文搜索：跨任务 / 记录 / 笔记搜索 + 关键词高亮 ----------
  * 能力：
  *   1) searchAll(query, options)           — 跨任务/记录/笔记全文搜索
@@ -41411,6 +42612,21 @@ function executeSearch(query){
   }
   return results;
 }// ===== Automation Workflow (v1.6-E 自动化工作流) [DEPRECATED v1.14.1：入口已冻结] =====
+/* ===== v3.7.60 集成同步 / 通知层：标记废弃，等渠道定案（不删、不接）=====
+   真实 Chromium 逐 provider 实测（_probe/integration-census.mjs）的定性结论：
+   · **活着的**：`*Connect` / `*Disconnect` 七个 + 面板渲染 + 凭据落盘 —— 由
+     openIntegrationConfig 用 `window[name + "Connect"]` 字符串拼接派发（静态普查看不见这条边，
+     所以本簇曾被误判为零引用死码）。连接确实打到各服务商的验证端点。
+   · **零调用方的**：下面标了 @deprecated 的 30 个函数（约 855 行）—— 同步任务 / 笔记 / 日程、
+     发消息、从消息建任务、状态映射等。连上七个 provider 后跑「建任务 / 完成任务 / 通知 /
+     到期检查」，集成域名 0 次外发；UI 里也没有任何"同步到 X"入口。
+   处置：**只标记，不动代码**。删掉还是把渠道接下去，是产品决策（用户 2026-09-28 定：
+   「先标记废弃，等我定好渠道再动」）。渠道定案后：
+     - 若要接：给这些函数找/建一个消费点（任务变更钩子、通知分发、日程同步），
+       逐个摘掉 @deprecated 并补真发请求的用例；
+     - 若要删：连同 `__test` 桥条目、i18n 键一起清，并登记进 docs/product-scope.md §三。
+   守护：tests/integration-deprecated.test.js 锁住「这些函数仍然零调用 + 标记仍在」。 */
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
 function integrationGetStatus(name){
   const p = integrationGetProvider(name);
   if(!p) return { connected:false, reason:"not_registered" };
@@ -41418,6 +42634,7 @@ function integrationGetStatus(name){
   if(p.config && p.config._verified === false) return { connected:false, reason:"verify_failed" };
   return { connected:true, verified:!!(p.config && p.config._verified) };
 }
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
 async function _intNotionPullWriteback(){
   let synced = [];
   try{ synced = notionListSynced() || []; }catch(e0){ return 0; }
@@ -41441,1165 +42658,24 @@ async function _intNotionPullWriteback(){
 
 
 
-// ===== AI Deep Enhancement (v1.7-A AI 深度增强) =====
-/* ============================================================
- * v1.7-A AI 深度增强
- * ------------------------------------------------------------
- *  四大能力：
- *   1) AI Agent 自主执行：多步规划→执行→验证→修正循环
- *      - agentPlan / agentExecuteStep / agentVerify / agentRun / agentReflect
- *   2) 多轮对话记忆：对话上下文持久化 + 摘要压缩 + 长期记忆向量检索
- *      - saveConversation / loadConversation / listConversations
- *      - summarizeConversation / getRelevantMemory / addLongTermMemory
- *   3) RAG 知识检索：TF-IDF 索引 + 相似度检索 + 上下文增强
- *      - buildIndex / tfidfScore / ragRetrieve / ragAugment
- *      - indexFromNotes / indexFromTasks
- *   4) AI 代码审查：模式匹配 + 安全漏洞检测 + 性能优化建议
- *      - reviewCode / detectSecurityIssues / suggestOptimization / reviewScore
- *
- *  设计约定：
- *   - 使用 var 声明模块级私有状态（53 > 31，避免 TDZ）
- *   - 持久化键（带 PREFIX）：wb_conversations / wb_long_term_memory / wb_rag_index
- *   - 所有导出函数均为 function 声明（提升），可在 31 中直接引用
- *   - 颜色用 var(--token) CSS 令牌（lint-colors 门禁）
- *   - innerHTML 赋值由调用方用 sanitizeHtml 包裹
- *   - Agent 自主执行安全：限制 maxSteps（默认 10），每步 try-catch，不无限循环
- *   - RAG 用 TF-IDF，不依赖外部向量数据库，索引存 localStorage
- *   - 代码审查用模式匹配，不依赖 AI API（本地分析）
- *   - 对话记忆摘要简单：提取最后 N 条 + 关键词，不依赖 AI
- *   - execTool / getNotes / getTasks / getActiveTasks / SCENARIOS / ORDER
- *     在更早模块定义（08/11/47/00），可直接引用
- * ============================================================ */
-
-/* ---------- 持久化键 ---------- */
-const CONVERSATIONS_KEY = "wb_conversations";
-const LONG_TERM_MEMORY_KEY = "wb_long_term_memory";
-const RAG_INDEX_KEY = "wb_rag_index";
-
-/* ---------- 模块级私有状态（var 声明，避免 TDZ） ---------- */
-let _ragIndex = null;          // RAG 索引缓存（{docs, df, N, avgLen}）
-let _agentRunLog = [];         // 最近一次 agentRun 执行日志
-
-/* ============================================================
- * 1. AI Agent 自主执行：plan → execute → verify → 修正
- * ============================================================ */
-
-/**
- * AI 规划：将目标分解为步骤列表
- * 本地启发式分解（不依赖 AI API）：按标点/连词切分目标为子步骤
- * @param {string} goal - 目标描述
- * @param {Object} [context] - 上下文（可选 {scenario, tasks, notes}）
- * @returns {Array<{action:string, params:Object, expect:string}>} 步骤列表
+// ===== v1.7-A AI 深度增强：已于 v3.7.59 整段移除（死代码清仓） =====
+/* 被删掉的是四大能力共 34 个顶层函数 + 2 个模块级状态 + 3 个持久化键：
+ *   1) agentPlan / agentExecuteStep / agentVerify / agentReflect / agentRun（关键词猜工具的本地规划）
+ *   2) saveConversation / loadConversation / listConversations / summarizeConversation
+ *      / getRelevantMemory / addLongTermMemory（含 _textToVector/_cosineSimilarity 这套词袋假向量）
+ *   3) buildIndex / tfidfScore / ragRetrieve / ragAugment / indexFromNotes / indexFromTasks
+ *      / saveRagIndex / loadRagIndex（v1.7-A 自己的 TF-IDF 索引，v3.7.57 起已无任何读取方）
+ *   4) reviewCode / detectSecurityIssues / suggestOptimization / reviewScore（本地模式匹配冒充 AI 审查）
+ * 判据不是看着没用，而是 reach4 --contain 实测「区间外引用 0 处」：
+ * 无 UI 入口、无测试引用、也没上 __test 导出桥。曾指向它们的两处活代码一并处理：
+ *   - aiDecomposeTask 的 opts.useLocalPlan 分支（全仓没有任何调用方传该选项）
+ *   - 笔记变更钩子 _notifyNotesChanged / _onNotesChanged（在刷一份没人读的旧索引）
+ * 替代关系：AI 自主执行 = 命令面板 > 前缀 → proposeAgentPlan 先出计划 → 用户回「确认执行」
+ *   → executeAgentPlan（破坏性步骤被 DANGER_CONFIRM_TOOLS 拦下）；
+ *   语义检索 = ai-tools.js 的 ragSearch / getRagDocs（CJK 二元组 BM25 + provider 向量 + RRF）。
+ * 要考古就从 git 历史取回（本提交的上一版）。孤儿 i18n 键保留：按仓库口径未使用不判红。
  */
-function agentPlan(goal, context){
-  const g = String(goal || "").trim();
-  if(!g) return [];
-  context = context || {};
 
-  /* 启发式 1：目标含「然后」「接着」「再」「，」等连接词 → 按连接词切分 */
-  const sepRe = /然后|接着|再|之后|，|;|；|。\s*/g;
-  const parts = g.split(sepRe).map(function(s){ return s.trim(); }).filter(Boolean);
-
-  /* 启发式 2：识别常见动作关键词，映射到 execTool 工具 */
-  let steps = parts.map(function(p){
-    return _planStepFromText(p, context);
-  });
-
-  /* 若切分后只有 1 步，尝试按动词关键词再分解 */
-  if(steps.length <= 1){
-    const verbRe = /(创建|新增|添加|完成|删除|更新|查询|搜索|列出|查看|导出|规划|分析|检查|执行)/g;
-    const verbs = g.match(verbRe) || [];
-    if(verbs.length > 1){
-      /* 按动词位置切分 */
-      const chunks = [];
-      let lastIdx = 0;
-      for(let i = 1; i < verbs.length; i++){
-        const idx = g.indexOf(verbs[i], lastIdx + 1);
-        if(idx > lastIdx){
-          chunks.push(g.slice(lastIdx, idx).trim());
-          lastIdx = idx;
-        }
-      }
-      chunks.push(g.slice(lastIdx).trim());
-      steps = chunks.filter(Boolean).map(function(p){ return _planStepFromText(p, context); });
-    }
-  }
-
-  /* 兜底：若仍无步骤，整体作为一个步骤 */
-  if(!steps.length){
-    steps = [_planStepFromText(g, context)];
-  }
-
-  /* 限制最多 8 步，防止过度分解 */
-  return steps.slice(0, 8);
-}
-
-/**
- * 从单段文本推断步骤（动作 + 参数 + 预期）
- * @param {string} text - 步骤文本
- * @param {Object} context - 上下文
- * @returns {{action:string, params:Object, expect:string}}
- */
-function _planStepFromText(text, context){
-  const textStr = String(text || "").trim();
-  let action = "noop";
-  const params = {};
-  let expect = "执行成功";
-
-  /* 创建任务 */
-  if(/创建|新增|添加|建一个|新建/.test(textStr)){
-    action = "create_task";
-    params.title = textStr.replace(/^(请)?\s*(创建|新增|添加|建一个|新建)/, "").replace(/(任务|待办)?$/, "").trim() || textStr;
-    if(context.scenario) params.scenario = context.scenario;
-    expect = "任务已创建";
-  }
-  /* 完成任务 */
-  else if(/完成|标记完成|标记为完成|做完/.test(textStr)){
-    action = "complete_task";
-    const m = textStr.match(/["「『]([^"」』]+)["」』]/);
-    params.task_id = m ? m[1] : textStr.replace(/^(请)?\s*(完成|标记完成|标记为完成|做完)/, "").trim();
-    expect = "任务已完成";
-  }
-  /* 删除任务 */
-  else if(/删除|移除|去掉/.test(textStr)){
-    action = "delete_task";
-    const m2 = textStr.match(/["「『]([^"」』]+)["」』]/);
-    params.task_id = m2 ? m2[1] : textStr.replace(/^(请)?\s*(删除|移除|去掉)/, "").trim();
-    expect = "任务已删除";
-  }
-  /* 查询/列出 */
-  else if(/查询|列出|查看|显示|列出所有|列表/.test(textStr)){
-    action = "list_tasks";
-    if(context.scenario) params.scenario = context.scenario;
-    expect = "返回任务列表";
-  }
-  /* 搜索 */
-  else if(/搜索|查找|找/.test(textStr)){
-    action = "search";
-    params.query = textStr.replace(/^(请)?\s*(搜索|查找|找)/, "").trim() || textStr;
-    expect = "返回搜索结果";
-  }
-  /* 概览 */
-  else if(/概览|统计|总览|overview/.test(textStr)){
-    action = "query_overview";
-    expect = "返回概览统计";
-  }
-  /* 导出 */
-  else if(/导出|备份|export/.test(textStr)){
-    action = "export_data";
-    expect = "已触发导出";
-  }
-  /* 默认：noop，仅记录文本 */
-  else {
-    action = "noop";
-    params.text = textStr;
-    expect = "已记录";
-  }
-
-  return {action: action, params: params, expect: expect};
-}
-
-/**
- * 执行单步：调用 execTool 或其他工具
- * @param {{action:string, params:Object, expect:string}} step - 步骤
- * @param {Object} [context] - 上下文
- * @returns {{ok:boolean, result:*, raw:string}} 执行结果
- */
-function agentExecuteStep(step, context){
-  context = context || {};
-  if(!step || !step.action){
-    return {ok: false, result: null, raw: JSON.stringify({ok: false, msg: t("agent.invalidStep","步骤无效")})};
-  }
-  /* noop：仅记录，不调用工具 */
-  if(step.action === "noop"){
-    return {ok: true, result: {msg: "noop", text: step.params && step.params.text}, raw: JSON.stringify({ok: true, msg: "noop"})};
-  }
-  try{
-    const raw = execTool(step.action, step.params || {}, true);
-    let parsed = null;
-    try{ parsed = JSON.parse(raw); }catch(e){ parsed = raw; }
-    const ok = parsed && typeof parsed === "object" && parsed.ok === true;
-    return {ok: ok, result: parsed, raw: raw};
-  }catch(e){
-    return {ok: false, result: null, raw: JSON.stringify({ok: false, error: String(e)})};
-  }
-}
-
-/**
- * 验证结果是否符合预期
- * @param {*} result - 执行结果（agentExecuteStep 的返回值或解析后的对象）
- * @param {string} [expect] - 预期描述
- * @returns {{verified:boolean, reason:string}} 验证结果
- */
-function agentVerify(result, expect){
-  /* result 可能是 agentExecuteStep 的返回 {ok, result, raw}，也可能是直接的对象 */
-  let ok = false;
-  if(result && typeof result === "object"){
-    if(typeof result.ok === "boolean"){
-      ok = result.ok;
-    } else if(result.result && typeof result.result === "object" && typeof result.result.ok === "boolean"){
-      ok = result.result.ok;
-    }
-  }
-  const exp = String(expect || "").trim();
-  let reason = ok ? t("p5.execSuccess", "执行成功") : t("p5.execFail", "执行失败");
-  /* 若预期包含「失败」字样，则 ok=false 才算验证通过（用于负向验证） */
-  if(exp && /失败|不|无/.test(exp) && !ok){
-    reason = t("p5.negMatch", "符合预期（负向验证）");
-    return {verified: true, reason: reason};
-  }
-  return {verified: ok, reason: reason};
-}
-
-/**
- * 反思失败原因，生成修正方案
- * @param {{action:string, params:Object, expect:string}} failedStep - 失败的步骤
- * @param {string|Error} error - 错误信息
- * @param {Object} [context] - 上下文
- * @returns {{action:string, params:Object, expect:string, reason:string}} 修正后的步骤
- */
-function agentReflect(failedStep, error, context){
-  context = context || {};
-  const err = String(error && error.message ? error.message : error || t("tool.unknownErrorMsg", "未知错误"));
-  const step = failedStep || {action: "noop", params: {}, expect: ""};
-  const reason = t("p5.reflect", "反思：") + err;
-
-  /* 反思策略 1：create_task 失败 → 简化标题重试 */
-  if(step.action === "create_task"){
-    const title = (step.params && step.params.title) || "";
-    if(title.length > 50){
-      return {
-        action: "create_task",
-        params: Object.assign({}, step.params, {title: title.slice(0, 50)}),
-        expect: step.expect,
-        reason: reason + t("p5.titleTooLong", "；标题过长，已截断重试")
-      };
-    }
-    if(!title.trim()){
-      return {
-        action: "create_task",
-        params: Object.assign({}, step.params, {title: t("p5.unnamedTask", "未命名任务")}),
-        expect: step.expect,
-        reason: reason + t("p5.titleEmpty", "；标题为空，使用默认标题重试")
-      };
-    }
-  }
-
-  /* 反思策略 2：complete_task / delete_task 失败 → task_id 可能是标题片段，原样重试一次 */
-  if(step.action === "complete_task" || step.action === "delete_task" || step.action === "update_task"){
-    return {
-      action: step.action,
-      params: step.params,
-      expect: step.expect,
-      reason: reason + t("p5.taskNotFound", "；任务定位失败，建议检查任务 id 或标题")
-    };
-  }
-
-  /* 反思策略 3：未知工具 → 降级为 noop */
-  if(/未知工具/.test(err)){
-    return {
-      action: "noop",
-      params: {text: JSON.stringify(step)},
-      expect: t("agent.recorded","已记录"),
-      reason: reason + t("p5.unknownTool", "；未知工具，降级为 noop")
-    };
-  }
-
-  /* 默认：原样重试 */
-  return {
-    action: step.action,
-    params: step.params,
-    expect: step.expect,
-    reason: reason
-  };
-}
-
-/**
- * 自主执行循环：plan → execute → verify → 修正，最多 maxSteps 步
- * @param {string} goal - 目标描述
- * @param {Object} [context] - 上下文
- * @param {number} [maxSteps] - 最大步数（默认 10，上限 20）
- * @returns {{goal:string, steps:Array, log:Array, success:boolean, summary:string}} 执行结果
- */
-function agentRun(goal, context, maxSteps){
-  const g = String(goal || "").trim();
-  context = context || {};
-  const max = Math.min(20, Math.max(1, Number(maxSteps) || 10));
-
-  if(!g){
-    _agentRunLog = [];
-    return {goal: "", steps: [], log: [], success: false, summary: t("p5.goalEmpty", "目标为空")};
-  }
-
-  const plan = agentPlan(g, context);
-  const log = [];
-  let stepIdx = 0;
-  let successCount = 0;
-  let failCount = 0;
-  let retryCount = 0;
-  const maxRetries = 2;  /* 每步最多重试 2 次 */
-
-  while(stepIdx < plan.length && log.length < max){
-    let step = plan[stepIdx];
-    let attempt = 0;
-    let lastResult = null;
-    let verified = false;
-    let reflection = null;
-
-    while(attempt <= maxRetries && log.length < max){
-      lastResult = agentExecuteStep(step, context);
-      const v = agentVerify(lastResult, step.expect);
-      verified = v.verified;
-      if(verified) break;
-
-      /* 失败：反思并修正 */
-      const err = (lastResult && lastResult.raw) || v.reason;
-      reflection = agentReflect(step, err, context);
-      attempt++;
-      retryCount++;
-      if(reflection && reflection.action && reflection.action !== step.action){
-        step = reflection;  /* 应用修正方案 */
-      } else if(reflection && reflection.action === step.action){
-        step = reflection;  /* 同动作，参数可能已修正 */
-      }
-    }
-
-    log.push({
-      step: step,
-      result: lastResult,
-      verified: verified,
-      reflection: reflection,
-      attempts: attempt + 1
-    });
-    if(verified) successCount++; else failCount++;
-    stepIdx++;
-  }
-
-  _agentRunLog = log;
-  const success = failCount === 0 && successCount > 0;
-  const summary = t("p5.goalPrefix", "目标「") + g + t("p5.goalMid", "」执行完成：") + successCount + t("p5.goalSuccess", " 步成功，") + failCount + t("p5.goalFail", " 步失败，") + retryCount + t("p5.goalRetry", " 次重试");
-
-  return {
-    goal: g,
-    steps: plan,
-    log: log,
-    success: success,
-    summary: summary
-  };
-}
-
-/* ============================================================
- * 2. 多轮对话记忆：持久化 + 摘要压缩 + 长期记忆向量检索
- * ============================================================ */
-
-/**
- * 持久化对话到 localStorage
- * @param {Object} conv - 对话对象 {id, title, messages, summary, createdAt}
- * @returns {boolean} 是否保存成功
- */
-function saveConversation(conv){
-  if(!conv || typeof conv !== "object") return false;
-  try{
-    const all = _loadAllConversations();
-    const c = {
-      id: conv.id || ("conv_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6)),
-      title: conv.title || (conv.messages && conv.messages.length ? String(conv.messages[0].content || "").slice(0, 30) : t("chat.newConversation","新对话")),
-      messages: Array.isArray(conv.messages) ? conv.messages : [],
-      summary: conv.summary || "",
-      createdAt: conv.createdAt || Date.now(),
-      updatedAt: Date.now()
-    };
-    /* 找到并替换或新增 */
-    let found = false;
-    for(let i = 0; i < all.length; i++){
-      if(all[i].id === c.id){ all[i] = c; found = true; break; }
-    }
-    if(!found) all.push(c);
-    return save(PREFIX + CONVERSATIONS_KEY, all); // v3.4.7 批次三（G5）：收编进 save() 主入口
-  }catch(e){ return false; }
-}
-
-/**
- * 加载对话
- * @param {string} id - 对话 ID
- * @returns {Object|null} 对话对象或 null
- */
-function loadConversation(id){
-  if(!id) return null;
-  const all = _loadAllConversations();
-  for(let i = 0; i < all.length; i++){
-    if(all[i].id === id) return all[i];
-  }
-  return null;
-}
-
-/**
- * 列出所有对话
- * @returns {Array<Object>} 对话列表（按 updatedAt 降序）
- */
-function listConversations(){
-  const all = _loadAllConversations();
-  return all.sort(function(a, b){
-    return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
-  });
-}
-
-/**
- * 摘要压缩：提取关键信息，压缩旧消息
- * 策略：保留最后 N 条原文 + 提取前 N 条的关键句 + 关键词云
- * @param {Array<{role:string, content:string, timestamp:number}>} messages - 消息列表
- * @param {number} [keepLast] - 保留最后几条原文（默认 4）
- * @returns {{summary:string, kept:Array, keywords:string[]}} 摘要结果
- */
-function summarizeConversation(messages, keepLast){
-  if(!Array.isArray(messages)) return {summary: "", kept: [], keywords: []};
-  const n = Math.max(1, Number(keepLast) || 4);
-  const msgs = messages.filter(function(m){ return m && m.content; });
-
-  if(msgs.length <= n){
-    return {
-      summary: msgs.map(function(m){ return (m.role || "?") + ": " + String(m.content).slice(0, 80); }).join(" | "),
-      kept: msgs.slice(),
-      keywords: _extractKeywords(msgs.map(function(m){ return m.content; }).join(" "))
-    };
-  }
-
-  const head = msgs.slice(0, msgs.length - n);
-  const tail = msgs.slice(msgs.length - n);
-
-  /* 提取 head 的关键句（每条取首句） */
-  const headSummary = head.map(function(m){
-    const c = String(m.content);
-    const firstSentence = c.split(/[。！？!?.\n]/)[0] || c;
-    return (m.role || "?") + ": " + firstSentence.slice(0, 60);
-  }).join(" | ");
-
-  const keywords = _extractKeywords(msgs.map(function(m){ return m.content; }).join(" "));
-  const summary = t("p5.historyPrefix", "【历史摘要】") + headSummary + t("p5.historyMid", "（共 ") + head.length + t("p5.historySuffix", " 条已压缩）");
-
-  return {summary: summary, kept: tail, keywords: keywords};
-}
-
-/**
- * 检索相关长期记忆（简单向量相似度：词袋 + 余弦）
- * @param {string} query - 查询文本
- * @param {number} [topK] - 返回前 K 条（默认 5）
- * @returns {Array<{memory:Object, score:number}>} 相关记忆列表
- */
-function getRelevantMemory(query, topK){
-  const q = String(query || "").trim();
-  if(!q) return [];
-  const k = Math.max(1, Number(topK) || 5);
-  const all = _loadAllLongTermMemory();
-  if(!all.length) return [];
-
-  const qVec = _textToVector(q);
-  const scored = all.map(function(m){
-    const mVec = _textToVector(m.content || "");
-    const score = _cosineSimilarity(qVec, mVec);
-    return {memory: m, score: score};
-  });
-  scored.sort(function(a, b){ return b.score - a.score; });
-  return scored.slice(0, k).filter(function(x){ return x.score > 0; });
-}
-
-/**
- * 添加长期记忆
- * @param {string} content - 记忆内容
- * @param {Object} [metadata] - 元数据 {type, tags, source, ...}
- * @returns {Object|null} 添加后的记忆对象，失败返回 null
- */
-function addLongTermMemory(content, metadata){
-  const c = String(content || "").trim();
-  if(!c) return null;
-  try{
-    let all = _loadAllLongTermMemory();
-    const m = {
-      id: "mem_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
-      content: c,
-      metadata: metadata || {},
-      vector: _textToVector(c),
-      createdAt: Date.now()
-    };
-    all.push(m);
-    /* 限制最多 500 条长期记忆，超出删除最早的 */
-    if(all.length > 500) all = all.slice(all.length - 500);
-    localStorage.setItem(PREFIX + LONG_TERM_MEMORY_KEY, JSON.stringify(all));
-    return m;
-  }catch(e){ return null; }
-}
-
-/* ---------- 对话记忆内部辅助 ---------- */
-function _loadAllConversations(){
-  try{
-    const raw = localStorage.getItem(PREFIX + CONVERSATIONS_KEY);
-    if(!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  }catch(e){ return []; }
-}
-
-function _loadAllLongTermMemory(){
-  try{
-    const raw = localStorage.getItem(PREFIX + LONG_TERM_MEMORY_KEY);
-    if(!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  }catch(e){ return []; }
-}
-
-/**
- * 提取关键词（简单词频统计，取 top 10）
- * @param {string} text - 文本
- * @returns {string[]} 关键词列表
- */
-function _extractKeywords(text){
-  const textStr = String(text || "");
-  if(!textStr) return [];
-  /* 中文分词简化：按标点和空格切分，过滤停用词和短词 */
-  const stopWords = {"的":1, "了":1, "是":1, "在":1, "我":1, "你":1, "他":1, "她":1, "它":1, "这":1, "那":1, "和":1, "与":1, "或":1, "及":1, "也":1, "都":1, "就":1, "不":1, "没":1, "有":1, "要":1, "会":1, "能":1, "可以":1, "请":1, "把":1, "被":1, "对":1, "为":1, "上":1, "下":1, "中":1, "里":1, "外":1, "前":1, "后":1};
-  const tokens = textStr.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>]+/).filter(Boolean);
-  const freq = {};
-  for(let i = 0; i < tokens.length; i++){
-    const w = tokens[i];
-    if(w.length < 2) continue;
-    if(stopWords[w]) continue;
-    freq[w] = (freq[w] || 0) + 1;
-  }
-  return Object.keys(freq).sort(function(a, b){ return freq[b] - freq[a]; }).slice(0, 10);
-}
-
-/**
- * 文本转向量（词袋模型：词频）
- * 中文按字切分，英文按空格/标点切分，提升中文检索效果
- * @param {string} text - 文本
- * @returns {Object<string, number>} 词频向量
- */
-function _textToVector(text){
-  const textStr = String(text || "").toLowerCase();
-  if(!textStr) return {};
-  const vec = {};
-  /* 英文按空格/标点切分 */
-  const parts = textStr.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>0-9]+/);
-  for(let i = 0; i < parts.length; i++){
-    const p = parts[i];
-    if(!p) continue;
-    if(/^[a-z_]+$/.test(p)){
-      /* 英文词 */
-      if(p.length >= 2) vec[p] = (vec[p] || 0) + 1;
-      continue;
-    }
-    /* 中文按字切分 */
-    for(let j = 0; j < p.length; j++){
-      const ch = p.charAt(j);
-      if(/[\u4e00-\u9fa5]/.test(ch)) vec[ch] = (vec[ch] || 0) + 1;
-    }
-  }
-  return vec;
-}
-
-/**
- * 余弦相似度
- * @param {Object<string, number>} a - 向量 A
- * @param {Object<string, number>} b - 向量 B
- * @returns {number} 相似度 [0, 1]
- */
-function _cosineSimilarity(a, b){
-  if(!a || !b) return 0;
-  const keys = Object.keys(a);
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for(let i = 0; i < keys.length; i++){
-    const k = keys[i];
-    normA += a[k] * a[k];
-    if(b[k] !== undefined) dot += a[k] * b[k];
-  }
-  const bKeys = Object.keys(b);
-  for(let j = 0; j < bKeys.length; j++){
-    normB += b[bKeys[j]] * b[bKeys[j]];
-  }
-  if(normA === 0 || normB === 0) return 0;
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-/* ============================================================
- * 3. RAG 知识检索：TF-IDF 索引 + 相似度检索 + 上下文增强
- * ============================================================ */
-
-/**
- * 构建 TF-IDF 索引
- * @param {Array<{id:string, content:string, type:string, metadata:Object}>} documents - 文档列表
- * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
- */
-function buildIndex(documents){
-  const docs = Array.isArray(documents) ? documents.filter(function(d){
-    return d && d.content && String(d.content).trim();
-  }) : [];
-
-  /* 文档频率（DF）：每个词在多少篇文档中出现 */
-  const df = {};
-  let totalLen = 0;
-  for(let i = 0; i < docs.length; i++){
-    const tokens = _tokenize(docs[i].content);
-    const seen = {};
-    for(let j = 0; j < tokens.length; j++){
-      const w = tokens[j];
-      seen[w] = true;
-    }
-    const keys = Object.keys(seen);
-    for(let k = 0; k < keys.length; k++){
-      df[keys[k]] = (df[keys[k]] || 0) + 1;
-    }
-    totalLen += tokens.length;
-    /* 缓存 token 频次到文档上，避免重复计算 */
-    docs[i]._tf = _termFreq(tokens);
-    docs[i]._len = tokens.length;
-  }
-
-  const N = docs.length;
-  const avgLen = N > 0 ? totalLen / N : 0;
-
-  const index = {docs: docs, df: df, N: N, avgLen: avgLen};
-  _ragIndex = index;
-  return index;
-}
-
-/**
- * 计算 TF-IDF 分数（query 对 doc）
- * @param {string} query - 查询文本
- * @param {Object} doc - 文档对象（含 _tf 缓存）
- * @param {Object} [index] - 索引对象（默认用 _ragIndex）
- * @returns {number} TF-IDF 分数
- */
-function tfidfScore(query, doc, index){
-  const idx = index || _ragIndex;
-  if(!idx || !doc) return 0;
-  const qTokens = _tokenize(query);
-  if(!qTokens.length) return 0;
-
-  const tf = doc._tf || _termFreq(_tokenize(doc.content));
-  const df = idx.df || {};
-  const N = idx.N || 1;
-  let score = 0;
-
-  /* query 中每个词的 TF-IDF 累加 */
-  const qFreq = {};
-  for(let i = 0; i < qTokens.length; i++){
-    qFreq[qTokens[i]] = (qFreq[qTokens[i]] || 0) + 1;
-  }
-
-  const keys = Object.keys(qFreq);
-  for(let k = 0; k < keys.length; k++){
-    const w = keys[k];
-    if(tf[w] === undefined) continue;
-    const qTf = qFreq[w] / qTokens.length;
-    const dTf = tf[w] / (doc._len || Object.keys(tf).length || 1);
-    const dFreq = df[w] || 0;
-    if(dFreq === 0) continue;
-    const idf = Math.log(1 + N / dFreq);
-    score += qTf * dTf * idf;
-  }
-
-  return score;
-}
-
-/**
- * 检索最相关的 K 篇文档
- * @param {string} query - 查询文本
- * @param {number} [topK] - 返回前 K 篇（默认 5）
- * @returns {Array<{doc:Object, score:number}>} 相关文档列表
- */
-function ragRetrieve(query, topK){
-  const q = String(query || "").trim();
-  if(!q) return [];
-  const k = Math.max(1, Number(topK) || 5);
-  const idx = _ragIndex;
-  if(!idx || !idx.docs || !idx.docs.length) return [];
-
-  const scored = idx.docs.map(function(doc){
-    return {doc: doc, score: tfidfScore(q, doc, idx)};
-  });
-  scored.sort(function(a, b){ return b.score - a.score; });
-  return scored.slice(0, k).filter(function(x){ return x.score > 0; });
-}
-
-/**
- * 用检索结果增强 AI 上下文（拼接相关内容到 prompt）
- * @param {string} query - 原始查询
- * @param {Array<{doc:Object, score:number}>} retrievedDocs - 检索结果
- * @returns {string} 增强后的 prompt
- */
-function ragAugment(query, retrievedDocs){
-  const q = String(query || "");
-  const docs = Array.isArray(retrievedDocs) ? retrievedDocs : [];
-  if(!docs.length) return q;
-
-  const contextParts = docs.map(function(item, i){
-    const d = item.doc || {};
-    const content = String(d.content || "").slice(0, 200);
-    const type = d.type || t("p5.doc", "文档");
-    const meta = d.metadata ? " " + JSON.stringify(d.metadata) : "";
-    return "[" + (i + 1) + "] (" + type + meta + ") " + content;
-  });
-
-  return t("p5.knowledgePrefix", "【相关知识】\n") + contextParts.join("\n") + t("p5.userQuestionPrefix", "\n\n【用户问题】\n") + q;
-}
-
-/**
- * 从笔记系统构建索引
- * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
- */
-function indexFromNotes(){
-  const notes = (typeof getNotes === "function") ? getNotes() : [];
-  const docs = notes.map(function(n){
-    return {
-      id: n.id,
-      content: (n.title || "") + " " + (n.content || "") + " " + ((n.tags || []).join(" ")),
-      type: "note",
-      metadata: {title: n.title, category: n.category, tags: n.tags}
-    };
-  });
-  return buildIndex(docs);
-}
-
-/**
- * 从任务记录构建索引
- * @returns {{docs:Array, df:Object, N:number, avgLen:number}} 索引对象
- */
-function indexFromTasks(){
-  const tasks = (typeof getActiveTasks === "function") ? getActiveTasks() : [];
-  const docs = tasks.map(function(t){
-    return {
-      id: t.id,
-      content: (t.title || "") + " " + (t.note || "") + " " + ((t.tags || []).join(" ")),
-      type: "task",
-      metadata: {title: t.title, scenario: t.sc, status: t.status, priority: t.priority}
-    };
-  });
-  return buildIndex(docs);
-}
-
-/**
- * 持久化 RAG 索引到 localStorage
- * @param {Object} [index] - 索引对象（默认用 _ragIndex）
- * @returns {boolean} 是否保存成功
- */
-function saveRagIndex(index){
-  const idx = index || _ragIndex;
-  if(!idx) return false;
-  try{
-    /* 剥离 _tf / _len 等内部缓存，只持久化必要字段 */
-    const docs = (idx.docs || []).map(function(d){
-      return {
-        id: d.id,
-        content: d.content,
-        type: d.type,
-        metadata: d.metadata,
-        _tf: d._tf,
-        _len: d._len
-      };
-    });
-    const serializable = {docs: docs, df: idx.df, N: idx.N, avgLen: idx.avgLen};
-    localStorage.setItem(PREFIX + RAG_INDEX_KEY, JSON.stringify(serializable));
-    return true;
-  }catch(e){ return false; }
-}
-
-/**
- * 从 localStorage 加载 RAG 索引
- * @returns {Object|null} 索引对象或 null
- */
-function loadRagIndex(){
-  try{
-    const raw = localStorage.getItem(PREFIX + RAG_INDEX_KEY);
-    if(!raw) return null;
-    const parsed = JSON.parse(raw);
-    if(!parsed || !Array.isArray(parsed.docs)) return null;
-    _ragIndex = parsed;
-    return parsed;
-  }catch(e){ return null; }
-}
-
-/* ---------- RAG 内部辅助 ---------- */
-/**
- * 分词（中英文混合：英文按空格/标点，中文按字）
- * @param {string} text - 文本
- * @returns {string[]} 词列表
- */
-function _tokenize(text){
-  const textStr = String(text || "").toLowerCase();
-  if(!textStr) return [];
-  /* 简化分词：英文按空格/标点切分，中文按字切分 */
-  const tokens = [];
-  const parts = textStr.split(/[\s,，。、；;：:！!？?（）()[\]【】{}""''""''`~@#$%^&*\-_=+|\\/<>0-9]+/);
-  for(let i = 0; i < parts.length; i++){
-    const p = parts[i];
-    if(!p) continue;
-    /* 英文词直接加入 */
-    if(/^[a-z_]+$/.test(p)){
-      if(p.length >= 2) tokens.push(p);
-      continue;
-    }
-    /* 中文按字切分（简化） */
-    for(let j = 0; j < p.length; j++){
-      const ch = p.charAt(j);
-      if(/[\u4e00-\u9fa5]/.test(ch)) tokens.push(ch);
-    }
-  }
-  return tokens;
-}
-
-/**
- * 词频统计
- * @param {string[]} tokens - 词列表
- * @returns {Object<string, number>} 词频映射
- */
-function _termFreq(tokens){
-  const freq = {};
-  for(let i = 0; i < tokens.length; i++){
-    const w = tokens[i];
-    freq[w] = (freq[w] || 0) + 1;
-  }
-  return freq;
-}
-
-/* ============================================================
- * 4. AI 代码审查：模式匹配 + 安全漏洞检测 + 性能优化建议
- * ============================================================ */
-
-/**
- * AI 审查代码片段（本地分析，不依赖 AI API）
- * @param {string} code - 代码片段
- * @param {string} [language] - 编程语言（默认 javascript）
- * @param {Object} [context] - 上下文（可选）
- * @returns {{issues:Array, score:number, summary:string}} 审查结果
- */
-function reviewCode(code, language, context){
-  const c = String(code || "");
-  const lang = String(language || "javascript").toLowerCase();
-  if(!c.trim()){
-    return {issues: [], score: 100, summary: t("p5.codeEmpty", "代码为空")};
-  }
-
-  const issues = [];
-
-  /* 安全漏洞检测 */
-  const secIssues = detectSecurityIssues(c);
-  for(let i = 0; i < secIssues.length; i++){
-    secIssues[i].category = "security";
-    issues.push(secIssues[i]);
-  }
-
-  /* 性能优化建议 */
-  const perfIssues = suggestOptimization(c);
-  for(let j = 0; j < perfIssues.length; j++){
-    perfIssues[j].category = "performance";
-    issues.push(perfIssues[j]);
-  }
-
-  /* 代码风格/质量检测（语言相关） */
-  const styleIssues = _detectStyleIssues(c, lang);
-  for(let k = 0; k < styleIssues.length; k++){
-    styleIssues[k].category = "style";
-    issues.push(styleIssues[k]);
-  }
-
-  const score = reviewScore(issues);
-  const summary = _buildReviewSummary(issues, score, c);
-
-  return {issues: issues, score: score, summary: summary};
-}
-
-/**
- * 安全漏洞检测（模式匹配）
- * @param {string} code - 代码片段
- * @returns {Array<{type:string, severity:string, line:number, message:string, suggestion:string}>} 问题列表
- */
-function detectSecurityIssues(code){
-  const c = String(code || "");
-  const lines = c.split("\n");
-  const issues = [];
-
-  /* 检测模式列表 */
-  const patterns = [
-    /* 硬编码密钥/密码 */
-    {re: /(?:api[_-]?key|apikey|secret|password|passwd|pwd|token|access[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/i,
-     type: "hardcoded_secret", severity: "high",
-     msg: t("lint.hardcoded_secret.msg","疑似硬编码密钥/密码"), sug: t("lint.hardcoded_secret.sug","使用环境变量或配置文件管理敏感信息")},
-    /* SQL 注入（字符串拼接：execute 调用参数中含 + 或 ${ 且含 SQL 关键词） */
-    {re: /(?:execute|query|exec)\s*\(\s*[^)]*(?:select|insert|update|delete|drop|where)\b[^)]*(?:\+|\$\{)/i,
-     type: "sql_injection", severity: "high",
-     msg: t("lint.sql_injection.msg","疑似 SQL 注入（字符串拼接）"), sug: t("lint.sql_injection.sug","使用参数化查询或预编译语句")},
-    /* eval 使用 */
-    {re: /\beval\s*\(/,
-     type: "eval_usage", severity: "high",
-     msg: t("lint.eval_usage.msg","使用 eval() 可能导致代码注入"), sug: t("lint.eval_usage.sug","避免使用 eval，改用 JSON.parse 或 Function 构造器")},
-    /* innerHTML 赋值（XSS 风险） */
-    {re: /\.innerHTML\s*=\s*[^;]*[a-zA-Z_$]/,
-     type: "xss_risk", severity: "medium",
-     msg: t("lint.xss_risk.msg","直接赋值 innerHTML 可能存在 XSS 风险"), sug: t("lint.xss_risk.sug","使用 sanitizeHtml 包裹或 textContent")},
-    /* document.write */
-    {re: /document\.write\s*\(/,
-     type: "document_write", severity: "medium",
-     msg: t("lint.document_write.msg","使用 document.write 可能导致 XSS"), sug: t("lint.document_write.sug","使用 DOM API 或 innerHTML（已消毒）")},
-    /* 命令注入（child_process exec 字符串拼接） */
-    {re: /(?:exec|execSync|spawn)\s*\(\s*["'`].*(?:\+|\$\{)/,
-     type: "command_injection", severity: "high",
-     msg: t("lint.command_injection.msg","疑似命令注入（字符串拼接）"), sug: t("lint.command_injection.sug","使用 execFile 或传入参数数组")},
-    /* 危险的正则表达式（ReDoS） */
-    {re: /new RegExp\s*\(\s*["'`].*(?:\([^)]*\+\)|\([^)]*\*\))/,
-     type: "redos_risk", severity: "medium",
-     msg: t("lint.redos_risk.msg","疑似 ReDoS 风险的正则表达式"), sug: t("lint.redos_risk.sug","简化正则或使用安全正则库")},
-    /* http 明文传输 */
-    {re: /http:\/\/(?!localhost|127\.0\.0\.1)/,
-     type: "insecure_http", severity: "low",
-     msg: t("lint.insecure_http.msg","使用明文 HTTP 传输"), sug: t("lint.insecure_http.sug","使用 HTTPS 加密传输")},
-    /* localStorage 存储敏感数据 */
-    {re: /localStorage\.setItem\s*\(\s*["'].*(?:token|password|secret|key|auth)["']/i,
-     type: "insecure_storage", severity: "medium",
-     msg: t("lint.insecure_storage.msg","在 localStorage 存储敏感数据"), sug: t("lint.insecure_storage.sug","敏感数据应加密存储或使用 sessionStorage/IndexedDB")},
-    /* prototype 污染 */
-    {re: /__proto__|constructor\s*\[|prototype\s*\[/,
-     type: "prototype_pollution", severity: "high",
-     msg: t("lint.prototype_pollution.msg","疑似原型链污染"), sug: t("lint.prototype_pollution.sug","避免直接操作 __proto__，使用 Object.create")},
-    /* innerHTML + 用户输入 */
-    {re: /innerHTML\s*=\s*.*(?:prompt|confirm|location\.hash|document\.cookie)/,
-     type: "xss_user_input", severity: "high",
-     msg: t("lint.xss_user_input.msg","innerHTML 赋值用户输入，XSS 风险高"), sug: t("lint.xss_user_input.sug","必须对用户输入进行转义/消毒")}
-  ];
-
-  for(let p = 0; p < patterns.length; p++){
-    const pat = patterns[p];
-    let match = null;
-    const re = new RegExp(pat.re.source, pat.re.flags + (pat.re.flags.indexOf("g") >= 0 ? "" : "g"));
-    while((match = re.exec(c)) !== null){
-      /* 计算行号 */
-      const lineNum = c.slice(0, match.index).split("\n").length;
-      issues.push({
-        type: pat.type,
-        severity: pat.severity,
-        line: lineNum,
-        message: pat.msg,
-        suggestion: pat.sug
-      });
-      if(re.lastIndex === match.index) re.lastIndex++;  /* 防止零宽匹配死循环 */
-    }
-  }
-
-  return issues;
-}
-
-/**
- * 性能优化建议（模式匹配）
- * @param {string} code - 代码片段
- * @returns {Array<{type:string, severity:string, line:number, message:string, suggestion:string}>} 建议列表
- */
-function suggestOptimization(code){
-  const c = String(code || "");
-  const issues = [];
-
-  /* 检测模式列表 */
-  const patterns = [
-    /* for 循环内重复读取 length */
-    {re: /for\s*\(\s*(?:var|let|const)?\s*\w+\s*=\s*0\s*;\s*\w+\s*<\s*\w+\.length\s*;\s*\w+\+\+/,
-     type: "loop_length", severity: "low",
-     msg: t("lint.loop_length.msg","循环条件中重复读取 length"), sug: t("lint.loop_length.sug","缓存 length 到局部变量：for(let i=0, len=arr.length; i<len; i++)")},
-    /* 嵌套循环（O(n²)） */
-    {re: /for\s*\([^)]*\)\s*\{[^}]*for\s*\(/,
-     type: "nested_loop", severity: "medium",
-     msg: t("lint.nested_loop.msg","嵌套循环可能导致 O(n²) 复杂度"), sug: t("lint.nested_loop.sug","考虑使用哈希表或优化算法降低复杂度")},
-    /* 同步 IO（fs.readFileSync） */
-    {re: /readFileSync|writeFileSync|execSync|existsSync/,
-     type: "sync_io", severity: "medium",
-     msg: t("lint.sync_io.msg","同步 IO 调用阻塞事件循环"), sug: t("lint.sync_io.sug","使用异步版本 readFile/writeFile")},
-    /* 大量 DOM 操作未批量 */
-    {re: /for\s*\([^)]*\)\s*\{[^}]*(?:appendChild|insertBefore|createElement)/,
-     type: "dom_loop", severity: "medium",
-     msg: t("lint.dom_loop.msg","循环内 DOM 操作可能触发频繁重排"), sug: t("lint.dom_loop.sug","使用 DocumentFragment 批量操作或 requestAnimationFrame")},
-    /* 未使用 debounce 的事件监听 */
-    {re: /addEventListener\s*\(\s*["'](?:scroll|resize|input|mousemove)["']\s*,/,
-     type: "no_debounce", severity: "low",
-     msg: t("lint.no_debounce.msg","高频事件未防抖"), sug: t("lint.no_debounce.sug","使用 debounce/throttle 节流")},
-    /* JSON.parse 未 try-catch（简化检测：直接匹配 JSON.parse 调用） */
-    {re: /JSON\.parse\s*\(/,
-     type: "unsafe_parse", severity: "low",
-     msg: t("lint.unsafe_parse.msg","JSON.parse 建议包裹 try-catch"), sug: t("lint.unsafe_parse.sug","包裹 try-catch 防止解析失败崩溃")},
-    /* Promise 未 await/catch */
-    {re: /\w+\([^)]*\)\s*\.\s*then\s*\(\s*(?:[^)]*\)\s*)?(?![^;]*catch)/,
-     type: "unhandled_promise", severity: "medium",
-     msg: t("lint.unhandled_promise.msg","Promise 可能未处理 rejection"), sug: t("lint.unhandled_promise.sug","添加 .catch() 或使用 async/await + try-catch")},
-    /* 重复正则编译 */
-    {re: /for\s*\([^)]*\)\s*\{[^}]*new RegExp\s*\(/,
-     type: "regex_in_loop", severity: "low",
-     msg: t("lint.regex_in_loop.msg","循环内重复编译正则表达式"), sug: t("lint.regex_in_loop.sug","将正则提到循环外编译一次")},
-    /* console.log 残留 */
-    {re: /console\.log\s*\(/,
-     type: "console_log", severity: "low",
-     msg: t("lint.console_log.msg","残留 console.log 调试代码"), sug: t("lint.console_log.sug","移除调试代码或使用条件日志")},
-    /* var 声明（应使用 let/const） */
-    {re: /\bvar\s+\w+/,
-     type: "var_decl", severity: "low",
-     msg: t("lint.var_decl.msg","使用 var 声明（函数作用域，易出错）"), sug: t("lint.var_decl.sug","使用 let/const 声明块作用域变量")}
-  ];
-
-  for(let p = 0; p < patterns.length; p++){
-    const pat = patterns[p];
-    try{
-      const re = new RegExp(pat.re.source, (pat.re.flags || "") + "g");
-      let match = null;
-      while((match = re.exec(c)) !== null){
-        const lineNum = c.slice(0, match.index).split("\n").length;
-        issues.push({
-          type: pat.type,
-          severity: pat.severity,
-          line: lineNum,
-          message: pat.msg,
-          suggestion: pat.sug
-        });
-        if(re.lastIndex === match.index) re.lastIndex++;
-      }
-    }catch(e){ /* 正则编译失败：跳过该模式 */ }
-  }
-
-  return issues;
-}
-
-/**
- * 代码风格/质量检测
- * @param {string} code - 代码片段
- * @param {string} lang - 语言
- * @returns {Array} 问题列表
- */
-function _detectStyleIssues(code, lang){
-  const c = String(code || "");
-  const issues = [];
-  const lines = c.split("\n");
-
-  /* 行长度检测 */
-  for(let i = 0; i < lines.length; i++){
-    if(lines[i].length > 120){
-      issues.push({
-        type: "long_line",
-        severity: "low",
-        line: i + 1,
-        message: t("p5.longLine", "行长度超过 120 字符（") + lines[i].length + t("p5.longLineSuffix", "）"),
-        suggestion: t("p5.splitLongLine", "拆分长行以提升可读性")
-      });
-    }
-  }
-
-  /* TODO/FIXME 标记 */
-  const todoRe = /(?:TODO|FIXME|HACK|XXX)\b/g;
-  let m = null;
-  while((m = todoRe.exec(c)) !== null){
-    const lineNum = c.slice(0, m.index).split("\n").length;
-    issues.push({
-      type: "todo",
-      severity: "low",
-      line: lineNum,
-      message: t("p5.unfinishedMark", "未完成的标记：") + m[0],
-      suggestion: t("p5.finishOrIssue", "完成或转为 issue 跟踪")
-    });
-  }
-
-  /* 空函数体 */
-  const emptyFnRe = /function\s*\w*\s*\([^)]*\)\s*\{\s*\}/g;
-  while((m = emptyFnRe.exec(c)) !== null){
-    const emptyLineNum = c.slice(0, m.index).split("\n").length;
-    issues.push({
-      type: "empty_function",
-      severity: "low",
-      line: emptyLineNum,
-      message: t("p5.emptyFn", "空函数体"),
-      suggestion: t("p5.addImpl", "添加实现或注释说明")
-    });
-  }
-
-  return issues;
-}
-
-/**
- * 计算代码质量评分（0-100）
- * 评分规则：100 - Σ(severity 权重)
- *   high=15, medium=8, low=3
- * @param {Array<{severity:string}>} issues - 问题列表
- * @returns {number} 评分 [0, 100]
- */
-function reviewScore(issues){
-  if(!Array.isArray(issues) || !issues.length) return 100;
-  const weights = {high: 15, medium: 8, low: 3};
-  let total = 0;
-  for(let i = 0; i < issues.length; i++){
-    const sev = issues[i] && issues[i].severity;
-    total += weights[sev] || 5;
-  }
-  return Math.max(0, 100 - total);
-}
-
-/**
- * 构建审查摘要
- * @param {Array} issues - 问题列表
- * @param {number} score - 评分
- * @param {string} code - 代码
- * @returns {string} 摘要
- */
-function _buildReviewSummary(issues, score, code){
-  const lines = String(code || "").split("\n").length;
-  const parts = [];
-  parts.push(t("p5.codeLines", "代码行数：") + lines + t("p5.scoreMid", "，评分：") + score + "/100");
-
-  if(!issues.length){
-    parts.push(t("p5.noIssues", "未发现问题。"));
-    return parts.join("；");
-  }
-
-  /* 按严重度统计 */
-  const counts = {high: 0, medium: 0, low: 0};
-  for(let i = 0; i < issues.length; i++){
-    const sev = issues[i].severity || "low";
-    counts[sev] = (counts[sev] || 0) + 1;
-  }
-  const parts2 = [];
-  if(counts.high) parts2.push(t("p5.high", "高危 ") + counts.high);
-  if(counts.medium) parts2.push(t("p5.medium", "中等 ") + counts.medium);
-  if(counts.low) parts2.push(t("p5.low", "低 ") + counts.low);
-  parts.push(t("p5.issues", "问题：") + parts2.join("、"));
-
-  /* 按类别统计 */
-  const cats = {};
-  for(let j = 0; j < issues.length; j++){
-    const cat = issues[j].category || "other";
-    cats[cat] = (cats[cat] || 0) + 1;
-  }
-  const catParts = [];
-  const catKeys = Object.keys(cats);
-  for(let k = 0; k < catKeys.length; k++){
-    catParts.push(catKeys[k] + " " + cats[catKeys[k]]);
-  }
-  parts.push(t("p5.category", "类别：") + catParts.join("、"));
-
-  return parts.join("；");
-}
-
-/* ============================================================
- * 5. 笔记变更钩子：自动更新 RAG 索引
- * ============================================================ */
-
-/**
- * 笔记变更后自动更新 RAG 索引（钩子函数）
- * 调用时机：createNote / updateNote / deleteNote 之后
- * @returns {void}
- */
-function _onNotesChanged(){
-  try{
-    /* 仅当已有索引时才更新，避免无谓重建 */
-    if(_ragIndex && _ragIndex.docs && _ragIndex.docs.length){
-      indexFromNotes();
-      saveRagIndex();
-    }
-  }catch(e){ /* 钩子失败不影响笔记操作 */ }
-}
 /* ---------- v3.7.58（诚实性收口）：移除 54-离线AI / 55-ML预测 / 56-智能排期 / 57-情绪分析 ----------
  * 四个子系统均为「无 UI 入口、无测试引用、零外部调用」的沉睡框架：假进度条 + 模拟引擎对象 +
  * 指向不存在文件的 ONNX 模型表（assets/onnx/ 从未存在）。按 product-scope 的
@@ -42838,6 +42914,35 @@ function _intSaveRateLimits(){
   _intSafeLSSet(INTEGRATION_RATE_LIMITS_KEY, JSON.stringify(_integrationRateLimits));
 }
 
+/* ---------- 内部：Jira 站点域名 → 安全 base ----------
+   Jira 的域名是用户填的自由文本，且会被拼成**请求主机位**并带上 API Token。
+   不校验就等于把凭据发往任意主机 —— 实测（v3.7.60，_probe/integration-census.mjs）：
+     domain="evil.example.com/?x="  →  https://evil.example.com/?x=/rest/api/3/myself
+     domain="attacker.io/@x"        →  https://attacker.io/@x/rest/api/3/myself
+   两者都带着 `Authorization: Bearer <token>`，而 CSP 的 `connect-src https:` 不拦任何 https 主机。
+   规则：只接受「纯主机名（可带端口）」。允许用户直接粘贴 https:// 前缀；
+   拒绝路径 / 查询 / 片段 / 账号信息 —— 这些正是拼 URL 注入的载体。
+   不限制成 *.atlassian.net：Jira Server / Data Center 用自建域名是正常部署形态。
+   返回 null 表示域名不合法，调用方**必须**放弃请求（不要退回裸拼）。 */
+function _intJiraBase(domain){
+  const raw = String(domain || "").trim();
+  /* 前导 `/` 显式拒掉：`new URL("https:////a.com")` 会被 Chromium 归一成 host=a.com（结果无害），
+     但「站点域名」字段本就不该以斜杠开头，靠解析器怪癖放行不如直接判死。
+     可见 ASCII 判据同时挡掉空白与控制字符 —— 这条是**有牙齿的**：Chromium 会剥掉 URL 里的
+     tab/换行，`a.com\tevil.io` 若不挡会被拼成 `a.comevil.io`（两个主机粘连）。
+     （写成"必须全在 ! 到 ~ 之间"而不是 /[\s\x00-\x1f]/，是为了不触发 eslint no-control-regex。） */
+  if(!raw || raw.startsWith("/") || !/^[\x21-\x7e]+$/.test(raw)) return null;
+  let u;
+  try{ u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : "https://" + raw); }
+  catch(e){ return null; }
+  if(u.protocol !== "https:") return null;
+  if(u.username || u.password) return null;
+  if(u.search || u.hash) return null;
+  if(u.pathname !== "/" && u.pathname !== "") return null;
+  if(!/^[a-z0-9]([a-z0-9.\-_]*[a-z0-9])?$/i.test(u.hostname)) return null;
+  return "https://" + u.hostname + (u.port ? ":" + u.port : "");
+}
+
 /* ---------- 内部：HTTP 请求 ---------- */
 async function _intDoRequest(url, opts){
   const client = _integrationHttpClient || (typeof fetch !== "undefined" ? fetch : null);
@@ -42899,6 +43004,7 @@ function integrationGetProvider(name){
  * 列出所有 provider（可按类型过滤）
  * @param {string} [type] - 类型过滤
  * @returns {Array} provider 列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function integrationListProviders(type){
   _intLoadProviders();
@@ -42915,6 +43021,7 @@ function integrationListProviders(type){
  * 启用 provider
  * @param {string} name - provider 名称
  * @returns {boolean} 是否成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function integrationEnableProvider(name){
   if(!name) return false;
@@ -42930,6 +43037,7 @@ function integrationEnableProvider(name){
  * 禁用 provider
  * @param {string} name - provider 名称
  * @returns {boolean} 是否成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function integrationDisableProvider(name){
   if(!name) return false;
@@ -42966,6 +43074,7 @@ function integrationRemoveProvider(name){
  * @param {string} name - provider 名称
  * @param {Object} config - 新配置（合并到现有配置）
  * @returns {boolean} 是否成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function integrationConfigureProvider(name, config){
   if(!name || !config || typeof config !== "object") return false;
@@ -43011,6 +43120,7 @@ function _intRecordSync(providerName, localId, remoteId, type){
   state.lastSyncAt = _intNow();
   _intSaveSyncState();
 }
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
 function _intFindLocalId(providerName, remoteId){
   const state = _intGetSyncState(providerName);
   for(const localId in state.syncedItems){
@@ -43051,6 +43161,7 @@ async function notionConnect(config){
  * @param {Object} task - 本地任务 { id, title, status, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'（默认 sync）
  * @returns {Promise<Object>} 同步结果 { success, action, remoteId, localId }
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function notionSyncTask(task, direction){
   if(!task || !task.id) return { success: false, error: "invalid_task" };
@@ -43120,6 +43231,7 @@ async function notionSyncTask(task, direction){
  * @param {Object} note - 本地笔记 { id, title, content, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function notionSyncNote(note, direction){
   if(!note || !note.id) return { success: false, error: "invalid_note" };
@@ -43168,6 +43280,7 @@ async function notionSyncNote(note, direction){
 /**
  * 列出已同步的 Notion 项
  * @returns {Array} 已同步项列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function notionListSynced(){
   const state = _intGetSyncState("notion");
@@ -43254,6 +43367,7 @@ async function linearConnect(config){
  * @param {Object} issue - 本地 issue { id, title, description, status, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function linearSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
@@ -43315,6 +43429,7 @@ async function linearSyncIssue(issue, direction){
  * Linear 状态映射（本地状态 → Linear 状态）
  * @param {string} localStatus - 本地状态
  * @returns {string} Linear 状态
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function linearMapStatus(localStatus){
   return LINEAR_STATUS_MAP[localStatus] || localStatus;
@@ -43324,6 +43439,7 @@ function linearMapStatus(localStatus){
  * 列出 Linear issues（框架）
  * @param {Object} [filter] - { status, assignee, limit }
  * @returns {Promise<Array>} issue 列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function linearListIssues(filter){
   const provider = await _intRequireProvider("linear", INTEGRATION_TYPES.LINEAR);
@@ -43369,7 +43485,9 @@ async function jiraConnect(config){
   const provider = integrationRegisterProvider("jira", INTEGRATION_TYPES.JIRA, config);
   if(!provider) return null;
   // 验证 token
-  const resp = await _intDoRequest("https://" + config.domain + "/rest/api/3/myself", {
+  const base = _intJiraBase(config.domain);   // 域名必须是纯主机名，否则不拼 URL（见 _intJiraBase）
+  if(!base) return null;
+  const resp = await _intDoRequest(base + "/rest/api/3/myself", {
     method: "GET",
     headers: { "Authorization": "Bearer " + config.token }
   });
@@ -43384,6 +43502,7 @@ async function jiraConnect(config){
  * @param {Object} issue - 本地 issue { id, title, description, status, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function jiraSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
@@ -43396,7 +43515,9 @@ async function jiraSyncIssue(issue, direction){
   const token = provider.config.token;
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
-  const base = "https://" + domain + "/rest/api/3";
+  const jiraHost = _intJiraBase(domain);
+  if(!jiraHost) return { success: false, error: "invalid_domain" };
+  const base = jiraHost + "/rest/api/3";
   const headers = { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
   const mappedStatus = JIRA_STATUS_MAP[issue.status] || issue.status || "To Do";
 
@@ -43443,6 +43564,7 @@ async function jiraSyncIssue(issue, direction){
  * Jira 状态映射
  * @param {string} localStatus - 本地状态
  * @returns {string} Jira 状态
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function jiraMapStatus(localStatus){
   return JIRA_STATUS_MAP[localStatus] || localStatus;
@@ -43452,6 +43574,7 @@ function jiraMapStatus(localStatus){
  * 列出 Jira issues（框架）
  * @param {Object} [filter] - { jql, limit }
  * @returns {Promise<Array>} issue 列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function jiraListIssues(filter){
   const provider = await _intRequireProvider("jira", INTEGRATION_TYPES.JIRA);
@@ -43461,7 +43584,9 @@ async function jiraListIssues(filter){
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   const jql = filter.jql || ("project = " + projectKey);
-  const base = "https://" + domain + "/rest/api/3";
+  const jiraHost = _intJiraBase(domain);
+  if(!jiraHost) return [];
+  const base = jiraHost + "/rest/api/3";
   const resp = await _intDoRequest(base + "/search?jql=" + encodeURIComponent(jql) + "&maxResults=" + (filter.limit || 50), {
     method: "GET",
     headers: { "Authorization": "Bearer " + token }
@@ -43507,6 +43632,7 @@ async function slackConnect(config){
  * @param {string} text - 消息文本
  * @param {Object} [extra] - 额外参数（如 blocks, attachments）
  * @returns {Promise<boolean>} 是否发送成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function slackSendMessage(channel, text, extra){
   const provider = await _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
@@ -43531,6 +43657,7 @@ async function slackSendMessage(channel, text, extra){
  * @param {string} eventType - 事件类型
  * @param {Object} payload - 事件负载
  * @returns {Promise<boolean>} 是否通知成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function slackNotifyEvent(eventType, payload){
   const provider = await _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
@@ -43543,6 +43670,7 @@ async function slackNotifyEvent(eventType, payload){
  * 从 Slack 消息创建任务（解析消息文本为任务）
  * @param {Object} message - Slack 消息 { text, user, ts, channel }
  * @returns {Object|null} 任务对象或 null
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function slackCreateTaskFromMessage(message){
   if(!message || !message.text) return null;
@@ -43601,6 +43729,7 @@ async function feishuConnect(config){
  * @param {string} chatId - 群聊 ID（不传则用配置中的默认 chatId）
  * @param {string} text - 消息文本
  * @returns {Promise<boolean>} 是否成功
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function feishuSendMessage(chatId, text){
   const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
@@ -43632,6 +43761,7 @@ async function feishuSendMessage(chatId, text){
  * @param {string} eventType - 事件类型
  * @param {Object} payload - 事件负载
  * @returns {Promise<boolean>}
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function feishuNotifyEvent(eventType, payload){
   const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
@@ -43644,6 +43774,7 @@ async function feishuNotifyEvent(eventType, payload){
  * 从飞书消息创建任务
  * @param {Object} message - { text, senderId, chatId }
  * @returns {Object|null} 任务对象
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function feishuCreateTaskFromMessage(message){
   if(!message || !message.text) return null;
@@ -43698,6 +43829,7 @@ async function dingtalkConnect(config){
  * @param {string} chatId - 群聊 ID（不传则用配置默认）
  * @param {string} text - 消息文本
  * @returns {Promise<boolean>}
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function dingtalkSendMessage(chatId, text){
   const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
@@ -43723,6 +43855,7 @@ async function dingtalkSendMessage(chatId, text){
 
 /**
  * 钉钉事件通知
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function dingtalkNotifyEvent(eventType, payload){
   const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
@@ -43733,6 +43866,7 @@ async function dingtalkNotifyEvent(eventType, payload){
 
 /**
  * 从钉钉消息创建任务
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 function dingtalkCreateTaskFromMessage(message){
   if(!message || !message.text) return null;
@@ -43860,6 +43994,7 @@ function _intCalendarParseEvent(providerName, remoteEvent){
  * @param {Object} event - 本地事件 { id, title, start, end, description }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarSyncEvent(providerName, event, direction){
   if(!providerName || !event || !event.id) return { success: false, error: "invalid_params" };
@@ -43924,6 +44059,7 @@ async function calendarSyncEvent(providerName, event, direction){
  * @param {string} providerName - 'google_calendar' | 'outlook_calendar'
  * @param {Object} [range] - { start, end, limit }
  * @returns {Promise<Array>} 事件列表
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarListEvents(providerName, range){
   const provider = await _intRequireProvider(providerName);
@@ -43959,6 +44095,7 @@ async function calendarListEvents(providerName, range){
  * @param {string} providerName
  * @param {Object} event
  * @returns {Promise<Object|null>} 创建的事件或 null
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarCreateEvent(providerName, event){
   const provider = await _intRequireProvider(providerName);
@@ -43981,6 +44118,7 @@ async function calendarCreateEvent(providerName, event){
  * @param {string} eventId
  * @param {Object} event
  * @returns {Promise<Object|null>} 更新后的事件或 null
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarUpdateEvent(providerName, eventId, event){
   const provider = await _intRequireProvider(providerName);
@@ -44002,6 +44140,7 @@ async function calendarUpdateEvent(providerName, eventId, event){
  * @param {string} providerName
  * @param {string} eventId
  * @returns {Promise<boolean>}
+ * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
 async function calendarDeleteEvent(providerName, eventId){
   const provider = await _intRequireProvider(providerName);
@@ -44259,9 +44398,14 @@ function _resetIntegrationApiKeys(){
 function _resetIntegrationRateLimits(){
   _integrationRateLimits = {};
   _intSafeLSRemove(INTEGRATION_RATE_LIMITS_KEY);
-}// ===== v1.8-C OAuth2 Framework (OAuth2 授权框架) =====
-
-// ----------------------------------------------------------------------------
+}
+/* v3.7.59 清理：此处原有一段悬空的注释头 ——
+     // ===== v1.8-C OAuth2 Framework (OAuth2 授权框架) =====
+     // ----------------------------------------------------------------------------
+   OAuth2 模块已在 v1.14.0「做减法」中整体移除，只剩注释头与分隔线（全仓 oauth2BuildAuthUrl 0 处，
+   实际接线点在 src/data-idb.js 的 _oauth2HandleCallback stub）。留着会误导读者以为该模块仍存在 ——
+   2026-09-27 审计时我自己就先被它误导了一次（在源码态 grep 应用代码得到 0 处，一度误判为「被抽取破坏」）。
+   纯注释残留，删除无功能影响。 */
 /*SRC:ui-global-events:END*/
 </script>
 </body>
