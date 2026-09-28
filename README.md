@@ -224,7 +224,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **应用 JS**（35 个模块）在 `src/*.js` 里演进，由 `scripts/src-split.mjs` 在**构建期**拼回 HTML；
   运行时仍是单个 `<script>`，不存在多文件加载（`file://` 下会失败）。
 - 推送前用 `npm run verify:ci` 按 **CI 的真实步骤顺序**在本机预演一遍（从 `.github/workflows/*.yml` 读序列，不写死清单；`--job=verify --ci=.github/workflows/deploy.yml` 可预演发布链）。单个门禁各自跑绿 ≠ CI 绿：验证命令会改写 `agent-workbench.html`（`pre*` 注入 / `post*` 抽回），**上一步把目录留在哪种状态直接决定下一步的结论**——v3.7.59 补齐 post* 自愈钩子后，`pet:check`（要在拼装态才读得到 `_PET_ART`）就被前一步抽回源码态而长期 exit 1，逐个命令手跑完全看不出来。
-- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/` —— 两份文本都不含 base64）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。所有 `pre*` 注入钩子都配了自愈：`npm test` / `lint` / `lint:layers` / `test:coverage` / `build:check` / `e2e` / `pet:check` 跑完由对应 `post*` 自动还原源码态，工作区不再因跑检查而变脏。**两个例外是发布路径**：`build` 与 `build:prod` 跑完故意留在拼回态（它们的产物就是完整的单文件交付物）。
+- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/` —— 两份文本都不含 base64）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。所有 `pre*` 注入钩子都配了自愈：`npm test` / `lint` / `lint:layers` / `test:coverage` / `build` / `build:check` / `build:prod` / `e2e` / `pet:check` 跑完由对应 `post*` 自动还原源码态，工作区不会因跑检查或跑发布构建而变脏。**v3.7.65 起不再有例外**：原先 `build` 与 `build:prod` 跑完故意留在拼回态（称其产物即完整交付物），但交付物实际落在独立的 `agent-workbench.prod.html` / `service-worker.prod.js` 里，真相源留在拼回态只会让工作区变脏并诱发误提交，故补齐两条 `post*` 钩子；需要完整单文件请用 `npm run src:inject` 显式获取。
 
 ```bash
 npm ci

@@ -97,7 +97,10 @@ if (PROD) {
   if (!RE.test(html)) fail('未找到 __TEST_GATE__ 定义，无法安全生成生产构建');
   const prodHtml = html.replace(RE, 'var __TEST_GATE__ = false; /* [prod build] test hooks disabled */');
   writeFileSync(PROD_HTML, prodHtml);
-  console.log(`[build] wrote ${PROD_HTML} (${prodHtml.length} bytes, sha256:${sha(Buffer.from(prodHtml))}) · __TEST_GATE__=false`);
+  /* 与 --check 同口径用 Buffer.byteLength：此前用 String.length，UTF-16 字符数冒充字节数
+     （实测 v3.7.64 线上文件 3,537,005 B 被报成 3191998 "bytes"，见 96ee171 的同类修正）。
+     这里的 sha256 是用户真正拿到的产物指纹，发版时应与 --check 的注入态指纹一起记入 CHANGELOG。 */
+  console.log(`[build] wrote ${PROD_HTML} (${Buffer.byteLength(prodHtml)} bytes, sha256:${sha(Buffer.from(prodHtml))}) · __TEST_GATE__=false`);
 
   // 2) SW 缓存版本自动 bump：从真相源提取应用版本，叠加 UTC 时间戳，
   //    保证每次 prod 构建产物的 CACHE_VERSION 全局唯一 → SW activate 必然清旧缓存，
