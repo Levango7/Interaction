@@ -11,7 +11,7 @@
 > （第 59 / 72 / 104 / 164 行），**当前实况是 10 套**。实测口径：
 > CSS 里 `[data-theme="…"]` 去重 9 个（aurora / dark / sepia / elegant / matrix / forest /
 > ocean / mist / ink）+ `light` 默认态（无 data-theme 属性）= **10**；
-> `PRESET_THEMES`（`src/ui-global-events.js`）10 条键；
+> `PRESET_THEMES`（`src/ui-ge-theme.js`）10 条键；
 > `tests/e2e/theme-matrix.spec.js` 的 `THEMES` 数组也是 10 个。
 > 注意：`CHANGELOG.md:548` 记有「新增第 11 个主题『墨底鎏金 ink』」，而 CHANGELOG 中
 > **查不到任何主题被移除的记录** —— 即「11」这个数字在文档里存续至今，但代码侧从未对得上。

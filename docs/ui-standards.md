@@ -200,7 +200,7 @@
 且白名单条目必须在源码中真实存在（腐化检测）。
 
 **已收编的非 CSS 载体**（v3.7.51）：SVG `font-size` 裸值 18 处
-（`chain.js` 7 · `ui-global-events.js` 7 · `render-overview.js` 2 · `ui-guide.js` 2）+
+（`chain.js` 7 · `ui-ge-calendar.js` 7 · `render-overview.js` 2 · `ui-guide.js` 2）+
 Canvas `ctx.font` 1 处。
 
 **使用率盘点（v3.7.51 实测，⚑ 每档都有真实用途，不得凭"看着差不多"改档）**：
@@ -864,7 +864,7 @@ node scripts/run-e2e.mjs --project=mobile
 
 # ③ 提交前必须还原源码态
 node scripts/src-split.mjs --extract && node scripts/pet-art.mjs --extract
-npm run check:source-state                          # 必须 ✓（HTML < 1.2MB / 28 个 src 标记）
+npm run check:source-state                          # 必须 ✓（HTML < 1.2MB / 35 个 src 标记）
 git diff --stat                                     # HTML 应只 2 行
 ```
 
@@ -1075,7 +1075,7 @@ const fs = getComputedStyle(el).fontSize;   // 真实生效值
 
 我第一次改完 HTML 后 rebuild，改动**全部丢失**（`src-split` 从 `src/` 重新生成 JS）。
 真因：`<h1 style="font-size:32px">` 这类模板字符串住在
-`src/render-widgets.js` / `src/ui-onboarding.js` / `src/ui-global-events.js`。
+`src/render-widgets.js` / `src/ui-onboarding.js` / `src/render-overview.js`。
 
 > 🔴 **改 JS 模板字符串里的样式，必须改 `src/`，不能只改拼回态 HTML** ——
 > 否则下次 rebuild 就没了。**该坑由我新写的守护断言当场抓住**（它报出 32px/18px 仍在），

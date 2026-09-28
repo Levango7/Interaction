@@ -7,7 +7,7 @@
  *   ② 设置页下拉      <option value="X">
  *   ③ PRESET_THEMES   注册表（主题管理/列表消费它）
  *   ④ applyTheme()    ui-theme.js 的判定链
- *   ⑤ **setTheme()**  ui-global-events.js 的判定链 ← **最易漏的一处**
+ *   ⑤ **setTheme()**  ui-ge-theme.js 的判定链 ← **最易漏的一处**
  *      （漏了会落入下方"自定义主题"else → getCustomThemes 找不到 → 回退 light）
  *   ⑥ i18n 中文词典   look.theme.X / look.themeDesc.X
  *   ⑦ i18n 英文词典   同上
@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 const HTML = () => read("agent-workbench.html");
-const GL = () => read("src/ui-global-events.js");
+const GL = () => read("src/ui-ge-theme.js");   // v3.7.63：原 ui-global-events.js 按 section 拆块，主题系统归此
 /* v3.7.53：中英词典（const MESSAGES）从 UI 层搬进了 core —— 按内容定位，别写死文件名 */
 const DICT = () => fs.readdirSync(path.join(ROOT, "src")).filter((x) => x.endsWith(".js"))
   .map((x) => "src/" + x).find((p) => read(p).includes("const MESSAGES = {")) || "src/ui-global-events.js";

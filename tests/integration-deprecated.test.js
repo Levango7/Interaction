@@ -18,7 +18,6 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const SRC_DIR = path.join(ROOT, "src");
-const GE_FILE = path.join(SRC_DIR, "ui-global-events.js");
 const MARK = "@deprecated v3.7.60 应用内零调用方";
 
 const DEPRECATED = `integrationListProviders integrationEnableProvider integrationDisableProvider integrationConfigureProvider
@@ -37,6 +36,12 @@ const LIVE = ["notionConnect", "linearConnect", "jiraConnect", "slackConnect", "
 
 const srcFiles = fs.readdirSync(SRC_DIR).filter((f) => f.endsWith(".js"));
 const texts = new Map(srcFiles.map((f) => [f, fs.readFileSync(path.join(SRC_DIR, f), "utf8")]));
+
+/* v3.7.63：ui-global-events 按 section 拆成 8 块后，本文件关心的符号横跨其中两块 ——
+   面板渲染 / 拼接派发在 ui-global-events.js，30 个废弃定义与 *Connect 在 ui-ge-integrations.js。
+   故对「全局事件绑定家族」合并读取（ui-ge-* 前缀自动纳入，后续再拆块不会漏）。 */
+const geText = () => srcFiles.filter((f) => f === "ui-global-events.js" || f.startsWith("ui-ge-"))
+  .map((f) => texts.get(f)).join("\n");
 
 /** 某符号在某个 src 文件里的"引用行"（排除定义行、注释行、__test 桥的裸标识符列表行） */
 function refLines(file, name) {
@@ -62,7 +67,7 @@ function refLines(file, name) {
 
 describe("集成同步/通知层：废弃标记仍在（用户决定「先标记废弃，等渠道定好再动」）", () => {
   it("30 个零调用函数逐个带 @deprecated 标记", () => {
-    const lines = texts.get("ui-global-events.js").split(/\r?\n/);
+    const lines = geText().split(/\r?\n/);
     const missing = DEPRECATED.filter((n) => {
       const def = lines.findIndex((l) => /^(?:async\s+)?function\s+/.test(l) && new RegExp("function\\s+" + n + "\\b").test(l));
       if (def < 0) return true;
@@ -77,12 +82,12 @@ describe("集成同步/通知层：废弃标记仍在（用户决定「先标记
   });
 
   it("标记数量恰好等于名单长度（防止无差别批量插标记）", () => {
-    const n = (texts.get("ui-global-events.js").match(new RegExp(MARK.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length;
+    const n = (geText().match(new RegExp(MARK.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length;
     expect(n, "带标记的函数数应与 DEPRECATED 名单一致").toBe(DEPRECATED.length);
   });
 
   it("活路径（*Connect / *Disconnect / 面板 / 域名校验）没有被误标废弃", () => {
-    const lines = texts.get("ui-global-events.js").split(/\r?\n/);
+    const lines = geText().split(/\r?\n/);
     const wrong = LIVE.filter((n) => {
       const def = lines.findIndex((l) => /^(?:async\s+)?function\s+/.test(l) && new RegExp("function\\s+" + n + "\\b").test(l));
       if (def < 0) return false;
@@ -93,7 +98,7 @@ describe("集成同步/通知层：废弃标记仍在（用户决定「先标记
   });
 
   it("拼接派发后缀确实存在（前提不成立时本文件的结论就全废了，所以先锁前提）", () => {
-    const t = texts.get("ui-global-events.js");
+    const t = geText();
     expect(t).toMatch(/window\[\s*\w+\s*\+\s*"Connect"\s*\]/);
     expect(t).toMatch(/window\[\s*\w+\s*\+\s*"Disconnect"\s*\]/);
   });

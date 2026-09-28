@@ -3,7 +3,7 @@
  * Build for agent-workbench.html
  * --------------------------------------------------
  * 架构（v3.7.6 起修订）：**`src/` 是应用源码，`agent-workbench.html` 是组装产物**。
- * 27 个模块由 scripts/src-split.mjs 与单文件 HTML 双向同步：
+ * src/ 下的模块（清单以 src/order.json 为准）由 scripts/src-split.mjs 与单文件 HTML 双向同步：
  *   src:extract（HTML → src）/ src:inject（src → HTML）/ src:check（一致性门禁）。
  * 因此仓库内提交的 HTML 是"骨架态"（含 SRC:xxx:BEGIN/END 标记、无应用 JS），
  * 必须先 inject 才是可运行的单文件；本脚本的 --check/--prod 均假设 HTML 已注入。

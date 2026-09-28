@@ -165,6 +165,48 @@
   "name": "ui-global-events",
   "layer": "UI",
   "title": "交互层·全局事件绑定",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-ge-api",
+  "layer": "UI",
+  "title": "交互层·全局事件绑定·后端 API 客户端",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ui-ge-plugins",
+  "layer": "UI",
+  "title": "交互层·全局事件绑定·插件系统",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ui-ge-theme",
+  "layer": "UI",
+  "title": "交互层·全局事件绑定·主题/报表/AI 引擎",
+  "tailBlanks": 1
+ },
+ {
+  "name": "ui-ge-pomodoro",
+  "layer": "UI",
+  "title": "交互层·全局事件绑定·专注与时间追踪",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ui-ge-calendar",
+  "layer": "UI",
+  "title": "交互层·全局事件绑定·日历与可视化",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ui-ge-notes",
+  "layer": "UI",
+  "title": "交互层·全局事件绑定·笔记与知识库",
+  "tailBlanks": 0
+ },
+ {
+  "name": "ui-ge-integrations",
+  "layer": "UI",
+  "title": "交互层·全局事件绑定·集成框架与废弃簇",
   "tailBlanks": 0
  }
 ]

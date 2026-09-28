@@ -1,3 +1,38 @@
+## [v3.7.63] - 2026-09-29
+
+**「全局事件绑定」全仓最大的块按 section 拆成 8 块（8,566 行 / 376KB，行数口径 → `ui-global-events` 2,238 行 + 7 个 `ui-ge-*` 合计 6,333 行；7 个切点经 espree 机械审计；纯位移 —— 拼回产物与拆前逐字节等值）+ `module-graph` 基线重冻结（35 块 · 50 循环 / 53 逆层 · 重复定义 0；「44→50 / 35→53」经粗粒度合并等价验证证明是表示层效应，非新增耦合）。**全量 103 文件 / 1149 条用例（未新增用例，5 个测试文件只做块路径同步）、`verify:ci` 10 步按序全绿、`lint`（四道）、`check:modules` ✓、`build:check` 五源一致（v3.7.63 · BUILD_TAG 20260928c · sha256:847e07f4cdb64d88）、e2e **57/57**，均本机实测。
+
+### ① 拆「全局事件绑定」最大块（v3.7.62 护栏先行后的第一步）
+
+**为什么拆它**：8,566 行 / 376KB，全仓行数最大的块；层注释写「交互层·全局事件绑定」，实际承载集成框架 / OAuth2 残留 / 列表渲染等本应属其它层的内容 —— 是逆层边的主要成因，也是拆分收益最高的一块（拆分记录见 `docs/architecture-layers.md` 三·补）。
+
+**切点**：7 处全部经 espree 机械审计 —— 行首、AST 深度 0（最内层节点为 Program）、不在任何 token / 注释内部；新块标题 = 源码里新插入的层注释行文本（逐字一致，用于定位）。8 块：
+
+| 块 | 行数 | 内容 |
+|---|---|---|
+| `ui-global-events` | 2,238 | 全局事件绑定（沿用原名） |
+| `ui-ge-api` | 1,144 | 后端 API 客户端 |
+| `ui-ge-plugins` | 484 | 插件系统 |
+| `ui-ge-theme` | 928 | 主题 / 报表 / AI 引擎 |
+| `ui-ge-pomodoro` | 283 | 专注与时间追踪 |
+| `ui-ge-calendar` | 894 | 日历与可视化 |
+| `ui-ge-notes` | 805 | 笔记与知识库 |
+| `ui-ge-integrations` | 1,795 | 集成框架与废弃簇 |
+
+**不变量（「纯位移」的验证）**：
+1. **骨架字节恒等**：src-split `--verify` 对拆前提交比对 —— `src/` 之外的内联骨架零改动（554,993 字符）；本次发版后复核（版本常量归一化后）：与拆前提交逐字符相等（554,984 字符，少 9 字符 = 版本常量被归一化为占位符的长度差）。
+2. **行数守恒**：8,571 行（8 块文件合计）+ 2 行尾空行（`tailBlanks` 记入 order.json）= 8,573 = 8,566 + 7 个新层注释行。
+3. `src:check` 35/35、`check:source-state` ✓（HTML 606.8KB / 35 标记）。
+
+**粒度效应的证明（44→50 / 35→53 不是新增耦合）**：拆后 `--check` 对照拆前基线报「新增 66 项」（循环 43 / 逆层 23）。把 8 块合并回单块、用**同一分析逻辑**重跑 → 与拆前基线逐项完全一致（0 差异）→ 66 项全部是表示层产物（粒度展开 + DFS 枚举旋转的路径重排），拆块没有引入任何真实图变化。基线随即 `--freeze` 重冻结（35 块 · 50 循环 / 53 逆层 · 重复定义 0），后续真新增照旧被拦。
+
+### ② 配套同步（tests×5 / docs×5 / scripts×4 / src×2）
+
+- **tests×5**：块路径引用更新（`ui-global-events.js` → `ui-ge-theme.js` / `ui-ge-calendar.js` / `ui-ge-integrations.js`）；`integration-deprecated.test.js` 改为「全局事件绑定家族合并读取」（`ui-ge-*` 前缀自动纳入 —— 后续再拆不走漏）。
+- **docs×5**：`architecture-layers.md`（拆分记录 + v3.7.63 实测 40 个分层 = 39 + Core 1 + 扇出更新：`t` 30 块 / `toast` 26 / `SCENARIOS` 21 / `ORDER` 17）；`module-graph.md` 按 35 块口径重生成；`ui-standards.md` / `control-matrix-audit.md` / `半成品功能完善路线图.md` 的块引用与标记数更正（28 → 35）。
+- **scripts×4**：`src-split.mjs`（BLOCKS 35 条 + `MIN_EXPECTED=35`）；`module-graph.baseline.json` 重冻结；`build.mjs` / `module-graph.mjs` 的块数注释不再写死（改为「以 src/order.json 为准」）。
+- **src×2**：`order.json` 新增 7 条记录（`ui-global-events` 与 `ui-ge-theme` 的 `tailBlanks` 按 HTML 实测记 1）；`data-idb.js` 一处墓碑注释出处更正（→ `ui-ge-integrations.js`）。
+
 ## [v3.7.62] - 2026-09-29
 
 **token 落盘加密（access/refresh 从 localStorage 明文改为设备密钥 AES-GCM 密文，「降级不丢登录 + 透明迁移」）+ `src-split.mjs` 三道护栏（写盘前骨架自检 / 标记全文件唯一 / 跳过分支 tailBlanks 保真）并把 `src:check` 加进 CI 首段 —— 护栏先行，是为下一版拆「全局事件绑定」最大块准备的安全带。**全量 103 文件 / 1149 条用例（v3.7.61 为 102/1142；+1 文件 = 新增 7 条 token 加密用例）、`verify:ci` 10 步按序全绿、`lint`（四道）、`check:modules`（28 块 · 44 循环 / 35 逆层，对照基线无新增）、`build:check` 版本五源一致（v3.7.62 · BUILD_TAG 20260928b · sha256:39e45b1b23b98679）、e2e **57/57**，均本机实测。

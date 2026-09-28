@@ -8,7 +8,7 @@
  *      （jsdom 跑不了真 Worker，所以只有真浏览器能暴露）。
  *   ② 改 CSP 时我把相邻注释的起始行吃掉，剩下 5 行成了 <head> 里的裸文本 —— 会被浏览器搬进
  *      body **显示出来**。所以这里同时守"head 不得有游离文本"。
- * 本文件只读 HTML，不依赖拼回态（CSP meta 一直在内联 head 里，不在 28 个 src 块内）。
+ * 本文件只读 HTML，不依赖拼回态（CSP meta 一直在内联 head 里，不在 src 块内）。
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";

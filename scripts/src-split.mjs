@@ -2,10 +2,11 @@
 /**
  * src-split.mjs — 把单文件里的「分层源块」外置到 src/，构建期再拼回单文件
  * --------------------------------------------------
- * 背景（任务 4 · 模块化第一步）：`agent-workbench.html` 是 2.3MB 单文件，分层契约
- * （`scripts/lint-layers.mjs` + `docs/architecture-layers.md`）已经把 JS 划成 8 大层、31 块。
- * 本脚本把**最安全先拆的层**（Util、Crypto）抽到 `src/<name>.js`，让这些代码可以用编辑器/工具
- * 单独处理；交付物仍是**单个 HTML**（file:// 直开 / PWA 离线 / Electron 打包都不变）。
+ * 背景（任务 4 · 模块化第一步）：`agent-workbench.html` 曾是 2.3MB 单文件，分层契约
+ * （`scripts/lint-layers.mjs` + `docs/architecture-layers.md`）把 JS 划成 8 大层、35 块
+ * （v3.7.63：原 28 块，其中 369KB 的「全局事件绑定」按 section 拆成 8 块 → 28+7=35）。
+ * 本脚本把这些层块抽到 `src/<name>.js`，让代码可以用编辑器/工具单独处理；
+ * 交付物仍是**单个 HTML**（file:// 直开 / PWA 离线 / Electron 打包都不变）。
  *
  * 与 build.mjs 的「不做 src→HTML 字节拼接」定稿不冲突：那条讲的是**不把 HTML 拆成运行时多个
  * <script src>**（file:// 下会失败）。这里只是「源码可编辑性」的构建期回填，产物与手写单文件等价。
@@ -52,17 +53,17 @@ const BLOCKS = [
   { name: 'data-rw', layer: 'Data', title: '数据层·读写' },
   /* 任务 4 第三步：Chain Layer（联动层·任务完成与跨场景触发，约 34KB，耦合最低） */
   { name: 'chain', layer: 'Chain', title: '联动层·任务完成与跨场景触发' },
-  /* 任务 4 第四步：AI Layer 三块（合计约 131KB：工具调用 / 对话循环 / 取消重试） */
+  /* 任务 4 第四步：AI Layer 三块（合计约 214KB：工具调用 / 对话循环 / 取消重试） */
   { name: 'ai-tools', layer: 'AI', title: 'AI 层·工具调用' },
   { name: 'ai-loop', layer: 'AI', title: 'AI 层·对话循环' },
   { name: 'ai-retry', layer: 'AI', title: 'AI 层·取消/重试控制器' },
-  /* 任务 4 第五步：Render Layer 五块（合计约 517KB：入口 / 场景细分 / 场景主区 / 概览 / 小工具） */
+  /* 任务 4 第五步：Render Layer 五块（合计约 1,422KB：入口 / 场景细分 / 场景主区 / 概览 / 小工具） */
   { name: 'render-entry', layer: 'Render', title: '渲染层·入口' },
   { name: 'render-scene-sub', layer: 'Render', title: '渲染层·场景细分模块' },
   { name: 'render-scene-main', layer: 'Render', title: '渲染层·场景主区' },
   { name: 'render-overview', layer: 'Render', title: '渲染层·概览' },
   { name: 'render-widgets', layer: 'Render', title: '渲染层·小工具' },
-  /* 任务 4 第六步：UI Layer 十块（合计约 1,140KB，含最大的「全局事件绑定」839.5KB） */
+  /* 任务 4 第六步：UI Layer 十一块（合计约 618KB，含最大的「全局事件绑定」369KB） */
   { name: 'ui-theme', layer: 'UI', title: '交互层·主题与通知' },
   { name: 'ui-onboarding', layer: 'UI', title: '交互层·Onboarding 引导' },
   { name: 'ui-guide', layer: 'UI', title: '交互层·使用指南' },
@@ -73,9 +74,19 @@ const BLOCKS = [
   { name: 'ui-drawer', layer: 'UI', title: '交互层·设置抽屉' },
   { name: 'ui-hotkeys', layer: 'UI', title: '交互层·快捷键' },
   { name: 'ui-select', layer: 'UI', title: '交互层·自研下拉选择框' },
-  { name: 'ui-global-events', layer: 'UI', title: '交互层·全局事件绑定' }
+  { name: 'ui-global-events', layer: 'UI', title: '交互层·全局事件绑定' },
+  /* v3.7.63：把「全局事件绑定」（8566 行 / 376KB，原全仓最大块）按 section 拆成 8 块。
+     第 1 块沿用原名与原标题；7 个新块的标题 = 源码里新插入的层注释行文本（逐字一致用于定位）。
+     7 个切点均经 espree 机械审计：行首、AST 深度 0（最内层节点为 Program）、不在任何 token/注释内部。 */
+  { name: 'ui-ge-api', layer: 'UI', title: '交互层·全局事件绑定·后端 API 客户端' },
+  { name: 'ui-ge-plugins', layer: 'UI', title: '交互层·全局事件绑定·插件系统' },
+  { name: 'ui-ge-theme', layer: 'UI', title: '交互层·全局事件绑定·主题/报表/AI 引擎' },
+  { name: 'ui-ge-pomodoro', layer: 'UI', title: '交互层·全局事件绑定·专注与时间追踪' },
+  { name: 'ui-ge-calendar', layer: 'UI', title: '交互层·全局事件绑定·日历与可视化' },
+  { name: 'ui-ge-notes', layer: 'UI', title: '交互层·全局事件绑定·笔记与知识库' },
+  { name: 'ui-ge-integrations', layer: 'UI', title: '交互层·全局事件绑定·集成框架与废弃簇' }
 ];
-const MIN_EXPECTED = 28;   // v3.7.26 新增 ui-select 块：至少应解析出这么多块，否则判定解析失败
+const MIN_EXPECTED = 35;   // v3.7.26 引入（28）→ v3.7.63 拆块后 35：至少应解析出这么多块，否则判定解析失败
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');

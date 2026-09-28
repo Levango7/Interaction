@@ -37,7 +37,7 @@ function dumpReport(lines) {
 
 /* 10 套主题：light 是默认态（无 data-theme 属性），其余 9 套走属性。
    口径来源（2026-09-27 复核）：CSS 里 `[data-theme="…"]` 去重 9 个 + light 默认态 = 10；
-   PRESET_THEMES（src/ui-global-events.js）同为 10 条。
+   PRESET_THEMES（src/ui-ge-theme.js，v3.7.63 拆块前在 ui-global-events.js）同为 10 条。
    此前注释与 describe 标题写「11 套」，与数组和实际 CSS 都不符 —— 已按实况更正。 */
 const THEMES = ["light", "dark", "sepia", "elegant", "aurora", "matrix", "forest", "ocean", "mist", "ink"];
 

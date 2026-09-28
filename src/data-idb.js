@@ -371,5 +371,5 @@ function getHybridData(type){
 
 /* v3.7.58（诚实性收口）：移除 idbPutModel / idbGetModel / idbDeleteModel / idbListModels 四个
    模型缓存助手 —— 它们的唯一调用方 54-离线AI（WebLLM/ONNX 假框架）已按 product-scope 纪律
-   整体移除（见 ui-global-events.js 的 v3.7.58 墓碑注释），本块随之失去消费者，一并清理。
+   整体移除（见 ui-ge-integrations.js 的 v3.7.58 墓碑注释），本块随之失去消费者，一并清理。
    需要时从 git 历史恢复。 */
