@@ -15,6 +15,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -111,5 +112,31 @@ describe("构建结构守护 · 立绘外置", () => {
   it("src/ 不含 base64 图片数据（立绘只在 assets/pet；防 post 钩子顺序回归）", () => {
     const offenders = srcFiles.filter(f => /data:image\/[a-z0-9.+-]+;base64,/i.test(readFileSync(join(srcDir, f), "utf8")));
     expect(offenders, "以下 src 文件内联了 base64 —— 抽取必须按「pet-art --extract → src-split --extract」顺序").toEqual([]);
+  });
+
+  it("静态标记里同一元素不得有两个 class 属性（第二个会被解析器静默丢弃）", () => {
+    /* v3.7.65：实测清掉 4 处（btnHelp / btnInstall / chatSessionBtn / pluginAddJson）。
+       HTML 规范只采用第一个 class 属性，第二个连同它的意图一起消失 —— 表现为「样式莫名失效」，
+       不报错、lint 与用例都照不到，只有对比渲染才发现。故把这条结构不变量钉住。
+       只扫静态标记：注入态的 JS 里合法存在拼 HTML 的字符串，先剥掉 <script> 再匹配。 */
+    const markup = html.replace(/<script[\s\S]*?<\/script>/g, "");
+    const dup = [...markup.matchAll(/<[a-zA-Z][^>]*\bclass="[^"]*"[^>]*\bclass="/g)].map(m => m[0].slice(0, 120));
+    expect(dup, "发现重复 class 属性：" + dup.join(" ;; ")).toEqual([]);
+  });
+
+  it("拼回态下 check:source-state 必须拦住并说出还原指令（npm 失败不跑 posttest 的兜底）", () => {
+    /* npm 的语义是 test 脚本非 0 → posttest 不执行，工作区会留在拼回态（v3.7.64 记为「仅观察」）。
+       本版把兜底核实并钉住：门禁必须①拒绝退出、②给出可执行指令；且实测该指令幂等安全
+       （源码态重复跑 `src:extract` 走「跳过」分支，src 与 HTML 逐字节不变，不会抽空源码）。
+       断言按当前状态分支：npm test 下是拼回态 → 要求拦住；源码态手跑 → 要求放行。 */
+    const injected = Buffer.byteLength(html) > 1_200_000;
+    const r = spawnSync(process.execPath, [join(root, "scripts", "check-source-state.mjs")], { encoding: "utf8", cwd: root });
+    const out = (r.stdout || "") + (r.stderr || "");
+    if (injected) {
+      expect(r.status, "拼回态下 check:source-state 必须非 0 退出").not.toBe(0);
+      expect(out, "拦截信息必须给出可执行的还原指令").toContain("npm run src:extract");
+    } else {
+      expect(r.status, "源码态下 check:source-state 应放行：" + out).toBe(0);
+    }
   });
 });

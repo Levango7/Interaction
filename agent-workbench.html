@@ -4884,7 +4884,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
-    <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南" class="u-hidden">
+    <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl" data-i18n="top.help">指南</span></button>
     <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
     <button type="button" class="tbtn" id="btnSearchTop" data-i18n-aria="a11y.fullSearch" aria-label="全文搜索">
@@ -4901,7 +4901,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <button type="button" class="tbtn" id="btnDownload" data-i18n-aria="a11y.exportData" aria-label="导出数据">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
     <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
-    <button type="button" class="tbtn install-btn" id="btnInstall" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面" class="u-hidden">
+    <button type="button" class="tbtn install-btn" id="btnInstall" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
     <!-- 任务235：同步状态指示器（登录后显示，同步中/已同步/离线/错误） -->
     <span class="sync-status u-hidden" id="syncStatus" role="status" aria-live="polite">
@@ -4970,7 +4970,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         </span>
         <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
         <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
-        <button class="chat-panel-collapse chat-ic-btn" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理" class="u-mr-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
+        <button class="chat-panel-collapse chat-ic-btn u-mr-1" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
         <!-- v3.6.3：全站折叠/展开按钮共用同一个箭头 path「M15 18l-6-6 6-6」（原生朝左），形状来源单一；
              方向由 CSS transform 决定，规则是「箭头指向面板的移动方向」，左右互为镜像：
                左侧栏  展开 → 点击向左收起 → 朝左「<」（不旋转）    折叠 → 点击向右展开 → 朝右「>」（rotate 180）
@@ -5403,7 +5403,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <div class="chain-add-form">
       <div class="set-subhead" data-i18n="store.registerNew">注册新插件</div>
       <p class="set-tip" data-i18n="store.pasteJson">粘贴插件 JSON 定义。</p>
-      <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"插件ID","name":"插件名称","version":"1.0.0","description":"插件描述"}' data-i18n-placeholder="field.pluginAddJsonPh" class="u-resize-v"></textarea>
+      <textarea id="pluginAddJson" rows="3" class="code-input u-resize-v" placeholder='{"id":"插件ID","name":"插件名称","version":"1.0.0","description":"插件描述"}' data-i18n-placeholder="field.pluginAddJsonPh"></textarea>
       <button type="button" class="addbtn sm u-mt-1" id="pluginAddBtn" data-sc="accent" data-i18n="store.registerBtn">注册插件</button>
     </div>
   </section>
