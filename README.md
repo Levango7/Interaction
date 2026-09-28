@@ -223,7 +223,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **应用 JS**（35 个模块）在 `src/*.js` 里演进，由 `scripts/src-split.mjs` 在**构建期**拼回 HTML；
   运行时仍是单个 `<script>`，不存在多文件加载（`file://` 下会失败）。
 - 推送前用 `npm run verify:ci` 按 **CI 的真实步骤顺序**在本机预演一遍（从 `.github/workflows/*.yml` 读序列，不写死清单；`--job=verify --ci=.github/workflows/deploy.yml` 可预演发布链）。单个门禁各自跑绿 ≠ CI 绿：验证命令会改写 `agent-workbench.html`（`pre*` 注入 / `post*` 抽回），**上一步把目录留在哪种状态直接决定下一步的结论**——v3.7.59 补齐 post* 自愈钩子后，`pet:check`（要在拼装态才读得到 `_PET_ART`）就被前一步抽回源码态而长期 exit 1，逐个命令手跑完全看不出来。
-- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/`）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。所有 `pre*` 注入钩子都配了自愈：`npm test` / `lint` / `lint:layers` / `test:coverage` / `build:check` / `e2e` / `pet:check` 跑完由对应 `post*` 自动还原源码态，工作区不再因跑检查而变脏。**两个例外是发布路径**：`build` 与 `build:prod` 跑完故意留在拼回态（它们的产物就是完整的单文件交付物）。
+- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/` —— 两份文本都不含 base64）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。所有 `pre*` 注入钩子都配了自愈：`npm test` / `lint` / `lint:layers` / `test:coverage` / `build:check` / `e2e` / `pet:check` 跑完由对应 `post*` 自动还原源码态，工作区不再因跑检查而变脏。**两个例外是发布路径**：`build` 与 `build:prod` 跑完故意留在拼回态（它们的产物就是完整的单文件交付物）。
 
 ```bash
 npm ci
@@ -234,7 +234,7 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
 
 > **覆盖率口径**：`npm run test:coverage` 当前**恒为 0%**（单文件 HTML 无法插桩），已从 CI 移除，暂不纳入验收。
 
-**立绘已外置（v3.7.0 起）**：9 张萌宠立绘移出 HTML，存在 `assets/pet/*.png`，由构建回注。
+**立绘已外置（v3.7.0 起）**：9 张萌宠立绘移出 HTML，存在 `assets/pet/*.png`，由构建回注；v3.7.64 起 `src/` 侧也不再残留 base64（立绘数据在仓库里只以 PNG 存在）。
 
 | 命令 | 作用 |
 |---|---|
@@ -246,7 +246,8 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
   本地预览前先 `npm run pet:inject`；`npm test` / `npm run build:check` / `npm run build:prod`
   都挂了 `pre` 钩子会自动回注，CI 无需额外步骤。
 - 改立绘 = 替换 `assets/pet/<kind>.png` → `npm run pet:inject`（顺序由 `assets/pet/order.json` 保持）。
-- 收益：立绘外置让源码 HTML 3.50MB → 2.34MB，JS 分层外置后再降到**约 607KB（35 个模块）**，编辑器与 diff 恢复可用；交付产物仍是**单个 HTML**（拼回 + 立绘回注后约 3.5MB）。
+- **抽取方向顺序固定**：`pet-art --extract` → `src-split --extract`（`npm run src:extract` 与所有 `post*` 钩子都已按此链好）。顺序反了会把 base64 抽进 `src/render-widgets.js`（v3.7.58~v3.7.63 的历史双存坑，`check:source-state` 现已拦）。
+- 收益：立绘外置让源码 HTML 3.50MB → 2.34MB，JS 分层外置后再降到**约 607KB（35 个模块）**，`src/render-widgets.js` 也不再内联 base64（v3.7.64：1,149,465 → 279,851 字节，-869KB），编辑器与 diff 恢复可用；交付产物仍是**单个 HTML**（拼回 + 立绘回注后约 3.5MB）。
 
 **分层源块已外置（v3.7.0 起 · 任务 4 第一步）**：`Util`（Markdown 解析、性能工具）与 `Crypto` 两个层块
 先行抽到 `src/*.js`（合计约 36KB），HTML 内留标记占位，构建/测试前由 `scripts/src-split.mjs` 拼回；
@@ -254,8 +255,8 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
 
 | 命令 | 作用 |
 |---|---|
-| `npm run src:inject` | 把 `src/*.js` 拼回 HTML（幂等） |
-| `npm run src:extract` | 反向：再抽取（按层标记定位；抽取前自动备份到 `_srcbackup/`） |
+| `npm run src:inject` | 把 `src/*.js` 拼回 HTML 并回注立绘（幂等；链 = `src-split` → `pet-art`） |
+| `npm run src:extract` | 反向：回到源码态（链 = `pet-art --extract` → `src-split --extract`，与注入严格逆序；抽取前自动备份到 `_srcbackup/`） |
 | `npm run src:check` | 校验 src 与 HTML 两侧标记齐全 |
 | `npm run src:verify` | 与 git HEAD 比对，证明拼接是**代码零改动**（空白不敏感） |
 

@@ -175,8 +175,9 @@ vitest.config.js       # 测试配置
 （构建期回注，交付物始终是单个 HTML）。约定：
 
 - 只改立绘：替换 `assets/pet/<kind>.png` → `npm run pet:inject`（幂等；顺序看 `order.json`）。
-- 只改代码：正常编辑 HTML；**提交前跑 `npm run pet:extract`**，让仓库保持源码态（不含 base64），
-  否则每次提交都带上 1MB 级 base64 diff。
+- 只改代码：正常编辑 HTML / `src/*.js`；**提交前跑 `npm run src:extract`**（v3.7.64 起一步回源码态：
+  先抽立绘再抽层块，顺序固定），让仓库保持源码态（HTML 与 src/ 都不含 base64），
+  否则每次提交都带上 1MB 级 base64 diff；顺序反了更糟——base64 会被抽进 `src/render-widgets.js`。
 - `npm test` / `npm run build:check` / `npm run build:prod` 都有 `pre` 钩子自动回注，CI 不需要额外步骤。
 - 直接打开**未回注**的源码 HTML 时立绘为空（控制台有告警、5 个原始角色退化为 SVG 兜底），属预期行为。
 
@@ -184,7 +185,7 @@ vitest.config.js       # 测试配置
 
 历史上"跑完测试工作区必脏（HTML 变拼回态）"靠人肉记得还原，曾导致一次误提交拼回态（v3.7.40）。现已自动化：
 
-- **`npm test` 结束后 posttest 自动还原源码态**（`pet:extract` + `src:extract --no-backup`），测试循环后 `git status` 只剩真正的手工改动；
+- **`npm test` 结束后 posttest 自动还原源码态**（先 `pet:extract` 再 `src:extract --no-backup`，顺序与注入严格逆序），测试循环后 `git status` 只剩真正的手工改动；
 - **`启动Agent工坊.bat` 自愈**：双击时检测到源码态会先自动拼回再打开，日常双击体验不变；
 - 手动还原仍可用 `npm run src:extract`（排查场景，默认带备份到 `_srcbackup/`，只保留最近 10 份）；
 - CI 侧防御不变：`check:source-state` 在一切 pre 钩子之前执行，提交拼回态会在门禁直接红。

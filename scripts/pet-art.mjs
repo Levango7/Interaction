@@ -11,6 +11,12 @@
  *   node scripts/pet-art.mjs              # 默认：把 assets/pet/*.png 回注进 HTML（幂等）
  *   node scripts/pet-art.mjs --check      # 只校验：assets 齐全、HTML 已注入、两侧一致
  *
+ * 顺序（抽取方向必须在 src-split.mjs --extract **之前**跑，与注入方向严格逆序）：
+ *   post 钩子 = pet-art --extract → src-split --extract（先把数据搬回 assets/pet/，再抽层块）；
+ *   pre  钩子 = src-split → pet-art（pet-art 依赖拼回后的 HTML 里有可替换的字面量）。
+ *   反过来（先抽层块）会把 base64 随 render-widgets 抽回 src/render-widgets.js —— v3.7.58~v3.7.63
+ *   即此状态（仓库双存 ~849KB），现由 check-source-state 的 src 侧断言与 build-structure 用例兜底。
+ *
  * 标记：const _PET_ART = { <BEGIN标记> ... <END标记> };
  *   回注即替换两个标记之间的内容；重复执行结果一致（幂等）。
  *   注意：标记字面量只在本文件的 BEGIN/END 常量里出现 —— 不要在块注释里写完整标记，
@@ -45,8 +51,9 @@ function fail(msg) { console.error('[pet-art] ' + msg); process.exit(1); }
 
 let html = readFileSync(HTML, 'utf8');
 if (!RE_ANY.test(html)) {
-  /* 分层外置后，萌宠段（含 _PET_ART 占位符）位于 src/render-widgets.js —— 此时源码态 HTML 里本就没有该字面量，
-     属正常情形：--extract 视为无操作成功；注入方向则由 pre 钩子先跑 src-split 拼回后再执行。 */
+  /* 分层外置后，源码态 HTML 里没有该字面量（占位与代码一起在 src/render-widgets.js，且占位是**空**的）——
+     属正常情形：--extract 视为无操作成功；注入方向由 pre 钩子先跑 src-split 拼回后再执行。
+     抽取方向必须在 src-split --extract 之前跑（见文件头「顺序」），否则 base64 会被抽进 src（双存坑）。 */
   if (process.argv.includes('--extract')) {
     console.log('[pet-art] HTML 内无 _PET_ART（占位符位于 src/）→ 已是源码态，无需抽取');
     process.exit(0);

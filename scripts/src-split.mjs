@@ -230,6 +230,7 @@ let injected = 0, missing = [];
    比对口径与注入方向严格对齐：注入写的是 `'\n' + body + '\n'`（body 已按 tailBlanks 补齐）。 */
 const mismatched = [];
 let placeholderBlocks = 0;
+let artInjectedBlocks = 0;   /* v3.7.64：--check 中立绘已注入、按素材归一化比对的块数 */
 const htmlBefore = html;   /* v3.7.62：写盘前「骨架自检」的对照样本（见文件尾部的 collapse 断言） */
 /* v3.7.52：src/ 下未登记在 order.json 的 .js 必须报错，而不是静默忽略。
    原实现只循环 order.json 里的名字 —— 新加的模块忘了登记时，代码不会被拼回 HTML，
@@ -267,11 +268,17 @@ for (const n of names) {
     /* 源码态占位（标记之间只有空白）：内容在 src/，HTML 侧无可比对对象 → 视为通过。
        形状由 check-source-state.mjs 守（标记数 / 体积 / 无 base64）。
        ⚠️ 忘了这一支会让 --check 在**源码态**（即提交进 git 的常态）对每个块都误报不一致。 */
+    /* v3.7.64：立绘数据归一化（与 --verify 同口径）。立绘在源码态只存 assets/pet/，两份文本都不含 base64；
+       拼回态由 pet-art 把它注回 HTML —— 这是合法中间态，逐字节硬比会在 render-widgets 块上误报
+       「HTML 与 src 不一致」，而报错建议的「先跑 --extract」恰好会把 base64 抽回 src（双存坑的入口）。 */
+    const normArt = t => t.replace(/const _PET_ART = \{[\s\S]*?\};/, 'const _PET_ART = {<ART>};');
+    const rawEq = actual === '\n' + body + '\n';
     if (/^\s*$/.test(actual)) {
       placeholderBlocks++;
       console.log(`  ✓ ${n.padEnd(16)} ${Math.round(Buffer.byteLength(body) / 1024)}KB（源码态占位）`);
-    } else if (actual === '\n' + body + '\n') {
-      console.log(`  ✓ ${n.padEnd(16)} ${Math.round(Buffer.byteLength(body) / 1024)}KB`);
+    } else if (rawEq || normArt(actual) === normArt('\n' + body + '\n')) {
+      if (!rawEq) artInjectedBlocks++;
+      console.log(`  ✓ ${n.padEnd(16)} ${Math.round(Buffer.byteLength(body) / 1024)}KB${rawEq ? '' : '（立绘已注入，按素材归一化）'}`);
     } else {
       mismatched.push(n);
       console.log(`  ✗ ${n.padEnd(16)} HTML 块内容与 src/${n}.js 不一致`);
@@ -299,7 +306,8 @@ if (CHECK) {
   }
   const stateNote = placeholderBlocks === names.length
     ? '源码态占位 · 内容在 src/，形状由 check-source-state 守'
-    : `内容逐块一致 · 已比对 ${names.length - placeholderBlocks} 块`;
+    : `内容逐块一致 · 已比对 ${names.length - placeholderBlocks} 块`
+      + (artInjectedBlocks ? `（其中 ${artInjectedBlocks} 块为立绘注入态，按 assets/pet 归一化）` : '');
   console.log(`[src-split] check：HTML 标记 ${names.length} 个 / src 文件 ${files.length} 个 —— 齐全 ✓（${stateNote}）`);
   process.exit(0);
 }

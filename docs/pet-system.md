@@ -48,10 +48,7 @@
 
 ## 三、立绘素材管线（构建期，纯 Node，零 GPU）
 
-**立绘数据已外置（v3.7.5 起）**：9 张 PNG 放在 `assets/pet/`，源码态 `agent-workbench.html`
-**不含 base64**（占位为 `const _PET_ART = { /*PET_ART:BEGIN*/ /*PET_ART:END*/ };`），
-由 `scripts/pet-art.mjs` 在构建/测试前回注。**代码**仍以 HTML 为唯一真相源（与 build.mjs 的
-「不做 src→HTML 字节拼接」定稿不冲突：外置的只是**素材数据**，不是代码）。
+**立绘数据已外置（v3.7.5 起）**：9 张 PNG 放在 `assets/pet/`；`_PET_ART` 字面量（在 `src/render-widgets.js` 里）源码态是**空对象**，HTML 与 `src/` 两份文本都不含 base64（v3.7.64 起），由 `scripts/pet-art.mjs` 在构建/测试前回注。**代码**仍以 HTML 为唯一真相源（与 build.mjs 的「不做 src→HTML 字节拼接」定稿不冲突：外置的只是**素材数据**，不是代码）。
 
 ```
 AI 生成 1024²（要求：中调纯色背景 #8FA3B8、无水印、全身）
@@ -72,6 +69,8 @@ AI 生成 1024²（要求：中调纯色背景 #8FA3B8、无水印、全身）
 `npm test` / `npm run build:check` / `npm run build:prod` 均挂了 `pre` 钩子自动回注，
 CI 与发版不需要额外步骤；**只有本地直接双击打开源码 HTML 时才需要手工 `pet:inject`**
 （否则立绘为空：控制台有告警、5 个原始角色退化为 SVG 兜底，属预期行为）。
+
+**抽取方向的顺序（v3.7.64 起固定）**：`pet-art --extract` 必须在 `src-split --extract` **之前**跑（与注入严格逆序；`npm run src:extract` 与所有 `post*` 钩子已按此链好）。反序会把 base64 随 render-widgets 抽回 `src/render-widgets.js` —— v3.7.58~v3.7.63 的历史双存坑（~849KB），现由 `npm run check:source-state` 的 src 侧断言兜底。
 
 ### 显示尺寸与素材分辨率的关系（降采样依据）
 

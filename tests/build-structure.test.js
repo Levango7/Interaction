@@ -1,11 +1,12 @@
 /**
  * build-structure.test.js —— 构建结构守护（分层外置 + 立绘外置的"防复发"测试）
  * ----------------------------------------------------------------------------
- * 背景：源码态（HTML 只有占位标记 + src/ 26 个层块 + assets/pet 9 张立绘）经 pre 钩子拼回成
- * 交付态单文件。这套"外置/拼回"机制在开发中踩过三类结构性坑，本文件把它们固化成断言：
+ * 背景：源码态（HTML 只有占位标记 + src/ 35 个层块 + assets/pet 9 张立绘）经 pre 钩子拼回成
+ * 交付态单文件。这套"外置/拼回"机制在开发中踩过四类结构性坑，本文件把它们固化成断言：
  *   ① 块边界越过 </script>（收尾标签被搬进 src，拼回后 END 标记落到 HTML 之外）
  *   ② 拼回后再抽取产生重复标记（BEGIN/END 嵌套成两份）
  *   ③ 依赖 HTML 字面量的老脚本失效（如 pet-art 找不到 _PET_ART 占位符）
+ *   ④ post 钩子顺序颠倒：立绘 base64 被抽回 src/（v3.7.58~v3.7.63 双存 ~849KB；v3.7.64 修复并在此设防）
  * 因此这里断言的是「结构不变量」，与具体业务无关，任何一次外置/拼回改动都要过这一关。
  *
  * 注意：本测试读磁盘文件（HTML + src/ + assets/pet），不通过 loadApp 加载应用。
@@ -105,5 +106,10 @@ describe("构建结构守护 · 立绘外置", () => {
       const b = readFileSync(join(root, "assets/pet", k + ".png"));
       expect(a.equals(b), k + ".png 注入内容与素材文件不一致").toBe(true);
     }
+  });
+
+  it("src/ 不含 base64 图片数据（立绘只在 assets/pet；防 post 钩子顺序回归）", () => {
+    const offenders = srcFiles.filter(f => /data:image\/[a-z0-9.+-]+;base64,/i.test(readFileSync(join(srcDir, f), "utf8")));
+    expect(offenders, "以下 src 文件内联了 base64 —— 抽取必须按「pet-art --extract → src-split --extract」顺序").toEqual([]);
   });
 });

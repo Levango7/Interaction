@@ -4,11 +4,11 @@
  * --------------------------------------------------
  * 仓库约定（v3.7.5+ 任务 4）：提交进 git 的应是**源码态** ——
  *   · HTML 内只有层块占位标记（形如 SRC-xxx-BEGIN 的注释对）与立绘占位（_PET_ART 空对象）
- *   · 具体代码在 src/，立绘在 assets/pet/
+ *   · 具体代码在 src/，立绘在 assets/pet/（HTML 与 src/ 两份文本都不得内联 base64；v3.7.64 起 src 侧也纳入本门禁）
  *   · 拼回/注入由 pre 钩子在构建、测试、e2e、部署前自动完成（交付态仍是单个 HTML）
  *   （注：本注释刻意不写完整的标记字面量，否则其中的注释结束符会提前闭合块注释 —— 踩过两次）
  *
- * 为什么需要这个门禁：开发者为了调试常先跑 `src-split`/`pet-art`（变成 3.18MB 拼回态），
+ * 为什么需要这个门禁：开发者为了调试常先跑 `src-split`/`pet-art`（变成 3MB+ 拼回态），
  *   若忘记 `--extract` 就提交，会把 3MB+ 的拼回态塞进仓库，源码态收益（-85%）直接失效。
  *   （本脚本就是因为真实发生过一次误提交而加的。）
  *
@@ -35,13 +35,26 @@ if (srcBlocks.length !== srcFiles.length) problems.push(`标记数 ${srcBlocks.l
 /* ② 立绘占位应是空对象（不含 base64） */
 if (/const _PET_ART = \{[^}]*data:image\/png;base64/.test(html)) problems.push('HTML 内嵌了立绘 base64（疑似已注入态）');
 
+/* ②b v3.7.64：src/ 侧同断言 —— 立绘数据在仓库里只允许以 assets/pet/*.png 存在，两份文本都不得内联 base64。
+   历史坑（v3.7.58~v3.7.63，本断言就是为它而加）：post 钩子按「src-split --extract → pet-art --extract」顺序时，
+   base64 会随 render-widgets 层块被抽回 src/render-widgets.js —— 仓库双存 ~849KB，且当时 HTML 侧检查恒绿。
+   正确顺序 = 与注入严格逆序：pet-art --extract 先跑（数据搬回 assets），再 src-split --extract。 */
+for (const n of srcFiles) {
+  const p = join(srcDir, n + '.js');
+  if (!existsSync(p)) continue;
+  if (/data:image\/[a-z0-9.+-]+;base64,/i.test(readFileSync(p, 'utf8'))) {
+    problems.push(`src/${n}.js 内联了 base64 图片数据（立绘只应存 assets/pet/）`);
+  }
+}
+
 /* ③ 体量守门：源码态应显著小于交付态 */
 if (bytes > 1_200_000) problems.push(`HTML 体积 ${(bytes / 1024 / 1024).toFixed(2)}MB 偏大（源码态应 <1.2MB；交付态约 3.2MB）`);
 
 if (problems.length) {
   console.error('[check-source-state] ✗ 当前不是源码态：');
   for (const p of problems) console.error('  · ' + p);
-  console.error('\n回到源码态：node scripts/src-split.mjs --extract && node scripts/pet-art.mjs --extract');
+  console.error('\n回到源码态：npm run src:extract   （链内顺序 = post 钩子：pet-art --extract → src-split --extract）');
+  console.error('  若报的是「src/ 内联 base64」（历史遗留态）：先拼回再按上述顺序抽一遍即可迁出 —— 直接跑一次 npm test 会自动完成。');
   process.exit(1);
 }
 console.log(`[check-source-state] ✓ 源码态（HTML ${(bytes / 1024).toFixed(0)}KB；src 标记 ${srcBlocks.length} 个 / 文件 ${srcFiles.length} 个）`);

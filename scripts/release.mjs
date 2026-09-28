@@ -116,7 +116,8 @@ if (r.status !== 0) fail('build:check 自检未通过，请检查上方输出');
 console.log(`[release] OK 已统一 bump 至 v${newVer}（BUILD_TAG=${buildTag}）`);
 console.log('[release] 提醒：请更新 CHANGELOG.md，测试通过后提交。');
 console.log('[release] 提醒：本脚本已把 HTML 留在拼回态；提交前记得 '
-  + 'node scripts/src-split.mjs --extract && node scripts/pet-art.mjs --extract（或跑一次 npm test 由 posttest 自动还原）。');
+  + 'node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup'
+  + '（顺序即 post 钩子：先抽立绘再抽层块；或跑一次 npm test 由 posttest 自动还原）。');
 
 /* 6) 自动打 release tag（v3.7.58 起）
    此前 53 个版本全部无 tag 可回溯（仓库仅有重构过程快照 tag）。从本版起，
