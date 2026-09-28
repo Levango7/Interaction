@@ -35,7 +35,7 @@
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-notes` `ui-ge-plugins` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 56 |
 | `ui-hotkeys` | UI | `ai-retry` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `ui-theme` `util-markdown` `util-perf` | 494 |
+| `ui-global-events` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `ui-theme` `util-markdown` `util-perf` | 497 |
 | `ui-ge-api` | UI | `core` `render-overview` `ui-drawer` | 4 |
 | `ui-ge-plugins` | UI | `data-links` `render-widgets` `util-markdown` | 4 |
 | `ui-ge-theme` | UI | `chain` | 1 |

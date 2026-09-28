@@ -374,7 +374,9 @@ function doIdbImport(file){
    背景：诊断缓冲（_diagLog，Bootstrap 段）全仓 50+ 处上报、入队即 _scrub 脱敏，
    但此前消费者只有 tests/ —— 用户遇到异常时没有把现场交出来的通道。
    本面板是「免费期体验反馈回收」的最小机制：查看近期诊断 + 一键复制脱敏报告。
-   边界：纯本地，不联网、不上传；报告不含任务/笔记正文与任何凭据。 */
+   边界：报告由用户主动生成，应用不自动上传；不含任务/笔记正文与任何凭据。
+   v3.7.65 补上出口：新增「提交 Issue」按钮，把脱敏报告预填到 GitHub 新建 Issue 页——
+   这一步是用户点击后由浏览器打开 github.com，应用自身仍零请求（见 openDiagIssue 的守卫断言）。 */
 function _diagFmtTime(ts){
   const d = new Date(Number(ts) || Date.now());
   const p = function(n){ return (n < 10 ? "0" : "") + n; };
@@ -402,8 +404,10 @@ function _diagStorageLine(){
     return keys.length + " 个键 · 约 " + (units * 2 / 1024).toFixed(1) + " KB（localStorage，UTF-16 估算）";
   }catch(e){ return "不可用"; }
 }
-/** 构造可复制的诊断报告（纯文本；环境信息 + 已脱敏日志，不含任务/笔记正文与凭据） */
-function buildDiagReport(){
+/** 构造可复制的诊断报告（纯文本；环境信息 + 已脱敏日志，不含任务/笔记正文与凭据）
+ *  opts.maxEntries：仅保留最近 N 条。v3.7.65 供 Issue 预填的截断版使用；缺省为全量（与 v3.7.64 行为一致）。 */
+function buildDiagReport(opts){
+  const maxEntries = (opts && typeof opts.maxEntries === "number" && opts.maxEntries > 0) ? opts.maxEntries : Infinity;
   const list = (typeof getDiag === "function") ? getDiag() : [];
   const L = [];
   L.push("=== " + t("app.name","Agent 工坊") + " 诊断报告 ===");
@@ -417,12 +421,16 @@ function buildDiagReport(){
   L.push("");
   L.push("—— 近期诊断（新→旧，入队时已脱敏）——");
   if(!list.length) L.push("（无诊断记录）");
+  let shown = 0;
   for(let i = list.length - 1; i >= 0; i--){
+    if(shown >= maxEntries) break;
     const e = list[i] || {};
     let line = "[" + _diagFmtTime(e.t) + "] " + String(e.level || "").toUpperCase() + " " + String(e.msg || "");
     if(e.ctx){ try{ line += " | ctx: " + JSON.stringify(e.ctx); }catch(e2){ line += " | ctx: [unserializable]"; } }
     L.push(line);
+    shown++;
   }
+  if(list.length > shown) L.push("（此处仅列最近 " + shown + " 条，共 " + list.length + " 条；完整报告请用「复制诊断报告」获取）");
   L.push("");
   L.push("（本报告由「设置 → 关于 → 诊断与反馈」生成；不含任务/笔记正文与凭据）");
   return L.join("\n");
@@ -456,9 +464,84 @@ function renderDiagList(){
     box.appendChild(row);
   }
 }
+/* ---------- v3.7.65：反馈出口（把脱敏报告带到 GitHub Issue） ----------
+ * 单一模板 + config.yml 关闭空白 Issue，使 /issues/new 直达该模板、预填参数才确定。
+ * URL 预算：GitHub 文档明示超长链接返回 414、非法返回 404，故编码后总长必须封顶。 */
+const DIAG_ISSUE_URL = "https://github.com/Levango7/Interaction/issues/new";
+const DIAG_ISSUE_URL_BUDGET = 7000;
+/* Electron 形态取更紧的预算：外链不是浏览器地址栏，而是经主进程 shell.openExternal 交给系统
+   处理器（electron/main.js:390-403），长 URL 行为本机未实测 —— 保守截断，完整报告仍走剪贴板。 */
+const DIAG_ISSUE_URL_BUDGET_ELECTRON = 2000;
+/** 标题里的运行形态标签：ASCII、与界面语言无关，便于按环境分诊（electron/pwa/file/local/web） */
+function _diagEnvTag(){
+  try{ if(typeof isElectron === "function" && isElectron()) return "electron"; }catch(e){}
+  try{
+    if(typeof window !== "undefined" && window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return "pwa";
+    const host = (typeof location !== "undefined" && location.hostname) || "";
+    const proto = (typeof location !== "undefined" && location.protocol) || "";
+    if(proto === "file:") return "file";
+    if(/^(localhost|127\.0\.0\.1)$/.test(host)) return "local";
+    return "web";
+  }catch(e){ return "unknown"; }
+}
+/** 生成预填反馈 Issue 的 URL：标题=版本+形态，正文=按条数逐级截断的诊断报告，保证编码后总长 ≤ 预算 */
+function _diagIssueUrl(){
+  const title = "[" + (typeof VERSION === "string" ? "v" + VERSION : "?") + " \u00b7 " + _diagEnvTag() + "] ";
+  const tail = "\n\n（正文为截断版；完整报告请点面板里的「复制诊断报告」后粘贴）";
+  const q = DIAG_ISSUE_URL + "?title=" + encodeURIComponent(title);
+  let budget = DIAG_ISSUE_URL_BUDGET;
+  try{ if(typeof isElectron === "function" && isElectron()) budget = DIAG_ISSUE_URL_BUDGET_ELECTRON; }catch(e){}
+  const steps = [40, 20, 10, 5, 2];
+  let body = "";
+  for(let i = 0; i < steps.length; i++){
+    body = buildDiagReport({ maxEntries: steps[i] });
+    const url = q + "&body=" + encodeURIComponent(body + tail);
+    if(url.length <= budget) return url;
+  }
+  /* 极端场景（单条日志极长）：按字符收缩到预算内 */
+  let cut = body;
+  for(let guard = 0; guard < 40; guard++){
+    const url = q + "&body=" + encodeURIComponent(cut + tail);
+    if(url.length <= budget) return url;
+    if(cut.length < 240) break;
+    cut = cut.slice(0, Math.floor(cut.length * 0.8));
+  }
+  return q + "&body=" + encodeURIComponent("（诊断报告过长，请点「复制诊断报告」后粘贴到正文）");
+}
+/** 提交反馈：复制完整报告（尽力而为）+ 打开预填 Issue 页。全程不发起任何 fetch/XHR。 */
+function openDiagIssue(){
+  let report = "";
+  try{ report = buildDiagReport(); }catch(e){ report = ""; }
+  let url = "";
+  try{ url = _diagIssueUrl(); }catch(e){
+    try{ toast(t("about.diagIssueFail", "无法打开反馈页，请手动访问项目仓库新建 Issue"), "warn"); }catch(e2){}
+    return { ok:false, opened:false, copied:false, url:"", error:String((e && e.message) || e) };
+  }
+  let copied = false;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(report).then(function(){}, function(){});
+      copied = true;
+    }
+  }catch(e){}
+  let opened = false;
+  try{
+    /* Electron 下外链由主进程的协议白名单转交系统浏览器（见 electron/main.js _openExternalSafe），
+       此时 window.open 可能返回 null —— 以「未抛错」视为已打开，不按返回值误报失败。 */
+    window.open(url, "_blank", "noopener");
+    opened = true;
+  }catch(e){}
+  try{
+    if(opened && copied) toast(t("about.diagIssueOk", "反馈页已打开 · 完整报告已复制，可直接粘贴补全"), "ok");
+    else if(opened) toast(t("about.diagIssueNoCopy", "反馈页已打开 · 请点「复制诊断报告」后粘贴正文"), "warn");
+    else toast(t("about.diagIssueFail", "无法打开反馈页，请手动访问项目仓库新建 Issue"), "warn");
+  }catch(e){}
+  return { ok:opened, opened:opened, copied:copied, url:url };
+}
 (function bindDiagPanel(){
   const det = $("#diagCollapse");
   const btn = $("#btnCopyDiag");
+  const btnIssue = $("#btnOpenIssue");
   if(det){
     det.addEventListener("toggle", function(){
       if(!det.open) return;
@@ -482,6 +565,12 @@ function renderDiagList(){
         if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(report).then(ok, fail); }
         else fail();
       }catch(e){ fail(); }
+    };
+  }
+  if(btnIssue){
+    btnIssue.onclick = function(){
+      try{ openDiagIssue(); }
+      catch(e){ try{ pushDiag("error", "openDiagIssue failed: " + ((e && e.message) || e), { where: "diagPanel" }); }catch(e2){} }
     };
   }
 })();

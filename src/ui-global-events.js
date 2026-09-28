@@ -2017,6 +2017,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     pushDiag, getDiag,
     // v3.7.64：诊断与反馈面板（关于卡）—— 报告构造与列表渲染的单测入口
     buildDiagReport, renderDiagList,
+    /* v3.7.65：反馈出口 —— Issue 预填 URL 构造 / 形态标签 / 提交动作（守卫用例见 tests/diag-report.test.js ⑤⑥⑦） */
+    _diagIssueUrl, _diagEnvTag, openDiagIssue,
     // P0-4 诊断寄存器访问器（只读快照 + 测试间复位）
     calcStreak, heatmapData, analyzeBehavior, renderHeatmap,
     fetchCoachAdvice, renderHabitChainStatus,

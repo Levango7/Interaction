@@ -172,6 +172,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 - **数据归属**：全部存于浏览器 `localStorage`（键前缀 `wb_agent_`），刷新 / 关闭不丢；但**换浏览器、清缓存、移动 HTML 文件**（尤其是 `file://` 形态）可能导致数据不跟随。需要稳定数据请用本地服务模式或 Electron exe（同源持久）。
 - **隐私边界**：部署/分享只涉及文件本身；数据在用户本机，不在服务器。不要在工坊里预填真实敏感信息后再把文件发给他人。
+- **反馈出口（v3.7.65 起）**：「设置 → 关于 → 诊断与反馈」可自助查看近期诊断、复制脱敏报告，或一键「提交 Issue」—— 由浏览器打开 GitHub 新建 Issue 页并预填报告，**应用自身不发起任何请求**（回归用例 `tests/diag-report.test.js` ⑤ 断言 fetch / XHR 零调用）。报告只含版本、运行形态、存储用量与脱敏后的技术日志，不含任务 / 笔记正文与凭据。模板见 `.github/ISSUE_TEMPLATE/feedback.md`；该目录刻意**只保留一个模板并关闭空白 Issue**，以保证 `/issues/new?title=&body=` 的预填参数直达表单 —— 多模板或允许空白 Issue 时 GitHub 会先进「选择模板」页，预填参数存在丢失风险。
 - **浏览器态 XSS 防护能力（如实说明，v3.7.59 补充）**：CSP 为 `script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com 'wasm-unsafe-eval'` —— 单文件架构必须内联脚本，`'unsafe-inline'` 去不掉，**因此 CSP 对 XSS 不提供任何缓解**（它只约束资源类型与协议，`object-src 'none'` / `base-uri 'self'` / `form-action 'self'` 三项是有效的）。同理 `connect-src` 含裸 `https:`：应用需要调用用户自填的任意 API 基址、`web_fetch` 抓任意 URL、`web_search` 用可配置引擎，**不能**收敛为域名白名单 —— 这是功能必需的放宽，不是配置疏漏。
   真正的 XSS 防线是 `sanitizeHtml`（自研轻量消毒，约 130 处 `innerHTML` 依赖它；已知限制见 `src/util-markdown.js` 顶部 SECURITY NOTE）。2026-09-27 审计实测修复了 4 类可绕过写法（`<svg/onload=…>` 斜杠分隔事件属性、`<img/src=x/onerror=…>`、SVG `<animate>/<set>` 运行期改 `href`、`<button formaction="javascript:…">`）与 1 条未消毒的注入路径（图表画布 `_dgmSvgHtml`），回归用例见 `tests/sanitize-xss-regression.test.js`（21 条）。**注意：XSS 在本应用中等价于读走整个 localStorage（含 Key 密文与设备密钥），故不要把「混淆级防护」当作能扛住 XSS 的保护。**
 - **AI 工具**：调用真实改写同一份 localStorage，AI 操作与手动操作等价；工具定位任务靠标题关键词，重名时取第一条。

@@ -1,0 +1,5 @@
+# v3.7.65：本仓库只保留一个反馈模板，并关闭空白 Issue。
+# 原因：应用内「提交 Issue」按钮打开的是 /issues/new?title=&body=（预填脱敏诊断报告）。
+# 一旦存在多个模板或允许空白 Issue，GitHub 会先进「选择模板」页，预填参数就有被丢弃的风险；
+# 单一模板 + blank_issues_enabled: false 使 /issues/new 直达该模板，预填行为确定。
+blank_issues_enabled: false

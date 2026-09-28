@@ -5744,13 +5744,15 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <p class="set-tip u-fs-2xs u-mt-3" id="aboutVersion"></p>
     <button type="button" class="addbtn sm u-w-full u-mt-2" id="btnOpenShortcutHelp" data-sc="accent" data-i18n="about.shortcutBtn">快捷键帮助</button>
     <!-- v3.7.64：诊断与反馈——诊断缓冲（_diagLog）此前只有测试侧读取，用户遇到问题没有上报出口。
-         免费期「体验反馈回收」的最小机制：查看近期诊断 + 一键复制脱敏报告。纯本地，不联网。 -->
+         免费期「体验反馈回收」的最小机制：查看近期诊断 + 一键复制脱敏报告。
+         v3.7.65：再补最后一公里——「提交 Issue」把报告预填到 GitHub 新建 Issue 页（由用户点击触发，应用自身零请求）。 -->
     <details class="ext-collapse" id="diagCollapse">
       <summary><span class="nm" data-i18n="about.diagNm">诊断与反馈</span><span class="hint-inline" data-i18n="about.diagHint">遇到问题时可自助排查与上报</span></summary>
       <div class="ext-body">
-        <p class="set-tip" data-i18n="about.diagDesc">复制诊断报告发给开发者可协助定位问题。报告只含版本、运行环境与脱敏后的技术日志，不含任务/笔记正文。</p>
+        <p class="set-tip" data-i18n="about.diagDesc">复制诊断报告发给开发者可协助定位问题；也可一键提交 Issue（会在浏览器打开 GitHub 反馈页）。报告只含版本、运行环境与脱敏后的技术日志，不含任务/笔记正文，应用不会自动上传任何数据。</p>
         <div class="set-actions">
           <button type="button" class="addbtn sm u-flex-1" id="btnCopyDiag" data-sc="accent" data-i18n="about.diagCopy">复制诊断报告</button>
+          <button type="button" class="addbtn sm u-flex-1" id="btnOpenIssue" data-sc="accent" data-i18n="about.diagIssue">提交 Issue</button>
         </div>
         <textarea id="diagFallback" class="code-input u-hidden u-mt-2" rows="6" readonly data-i18n-placeholder="about.diagFallbackPh" placeholder="剪贴板不可用时，报告会显示在这里，可手动全选复制"></textarea>
         <div class="set-subhead" data-i18n="about.diagRecent">近期诊断（已脱敏）</div>
