@@ -2015,6 +2015,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     // P1-b 自动备份访问器（供测试驱动与断言）
     snapshotAutoBackup, scheduleAutoBackup, getAutoBackup, recoverAutoBackup,
     pushDiag, getDiag,
+    // v3.7.64：诊断与反馈面板（关于卡）—— 报告构造与列表渲染的单测入口
+    buildDiagReport, renderDiagList,
     // P0-4 诊断寄存器访问器（只读快照 + 测试间复位）
     calcStreak, heatmapData, analyzeBehavior, renderHeatmap,
     fetchCoachAdvice, renderHabitChainStatus,

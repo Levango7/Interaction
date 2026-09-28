@@ -370,6 +370,122 @@ function doIdbImport(file){
   if(btn && typeof openShortcutHelp === "function"){ btn.onclick = function(){ openShortcutHelp(); }; }
 })();
 
+/* ---------- v3.7.64：诊断与反馈面板（关于卡） ----------
+   背景：诊断缓冲（_diagLog，Bootstrap 段）全仓 50+ 处上报、入队即 _scrub 脱敏，
+   但此前消费者只有 tests/ —— 用户遇到异常时没有把现场交出来的通道。
+   本面板是「免费期体验反馈回收」的最小机制：查看近期诊断 + 一键复制脱敏报告。
+   边界：纯本地，不联网、不上传；报告不含任务/笔记正文与任何凭据。 */
+function _diagFmtTime(ts){
+  const d = new Date(Number(ts) || Date.now());
+  const p = function(n){ return (n < 10 ? "0" : "") + n; };
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+}
+function _diagEnvLine(){
+  const parts = [];
+  try{ if(typeof isElectron === "function" && isElectron()) parts.push("Electron 桌面版"); }catch(e){}
+  try{
+    if(!parts.length){
+      const proto = (typeof location !== "undefined" && location.protocol) || "";
+      const local = (typeof location !== "undefined") && /^(localhost|127\.0\.0\.1)$/.test(location.hostname || "");
+      const where = proto === "file:" ? "网页（file://）" : local ? "网页（本地服务）" : "网页（" + (proto || "未知协议") + "）";
+      const standalone = !!(typeof window !== "undefined" && window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+      parts.push(standalone ? where + " · PWA 独立窗口" : where);
+    }
+  }catch(e){}
+  return parts.join(" · ") || "未知";
+}
+function _diagStorageLine(){
+  try{
+    const keys = (typeof allKeys === "function") ? allKeys() : [];
+    let units = 0;
+    keys.forEach(function(k){ try{ const v = localStorage.getItem(k); units += k.length + (v ? v.length : 0); }catch(e){} });
+    return keys.length + " 个键 · 约 " + (units * 2 / 1024).toFixed(1) + " KB（localStorage，UTF-16 估算）";
+  }catch(e){ return "不可用"; }
+}
+/** 构造可复制的诊断报告（纯文本；环境信息 + 已脱敏日志，不含任务/笔记正文与凭据） */
+function buildDiagReport(){
+  const list = (typeof getDiag === "function") ? getDiag() : [];
+  const L = [];
+  L.push("=== " + t("app.name","Agent 工坊") + " 诊断报告 ===");
+  L.push("生成时间: " + _diagFmtTime(Date.now()));
+  L.push("应用版本: v" + (typeof VERSION === "string" ? VERSION : "?") + " · b" + (typeof BUILD_TAG === "string" ? BUILD_TAG : "?"));
+  L.push("运行形态: " + _diagEnvLine());
+  try{ L.push("浏览器: " + (navigator.userAgent || "未知")); }catch(e){}
+  try{ L.push("语言: " + (navigator.language || "未知") + " · 时区: " + ((Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || "未知")); }catch(e){}
+  L.push("存储: " + _diagStorageLine());
+  L.push("诊断条数: " + list.length);
+  L.push("");
+  L.push("—— 近期诊断（新→旧，入队时已脱敏）——");
+  if(!list.length) L.push("（无诊断记录）");
+  for(let i = list.length - 1; i >= 0; i--){
+    const e = list[i] || {};
+    let line = "[" + _diagFmtTime(e.t) + "] " + String(e.level || "").toUpperCase() + " " + String(e.msg || "");
+    if(e.ctx){ try{ line += " | ctx: " + JSON.stringify(e.ctx); }catch(e2){ line += " | ctx: [unserializable]"; } }
+    L.push(line);
+  }
+  L.push("");
+  L.push("（本报告由「设置 → 关于 → 诊断与反馈」生成；不含任务/笔记正文与凭据）");
+  return L.join("\n");
+}
+/** 渲染近期诊断列表（新→旧）到面板；每条经 textContent 写入，不做 HTML 拼接 */
+function renderDiagList(){
+  const box = $("#diagList");
+  if(!box) return;
+  const list = (typeof getDiag === "function") ? getDiag() : [];
+  box.textContent = "";
+  if(!list.length){
+    const p = document.createElement("p");
+    p.className = "hint u-fs-2xs";
+    p.textContent = t("about.diagEmpty", "暂无诊断记录");
+    box.appendChild(p);
+    return;
+  }
+  for(let i = list.length - 1; i >= 0; i--){
+    const e = list[i] || {};
+    const row = document.createElement("div");
+    row.className = "u-fs-2xs u-mt-1h";
+    const time = document.createElement("span");
+    time.className = "u-text-dim";
+    time.textContent = "[" + _diagFmtTime(e.t) + "]";
+    const lv = document.createElement("span");
+    lv.className = "muted";
+    lv.textContent = " " + String(e.level || "").toUpperCase() + " ";
+    const msg = document.createElement("span");
+    msg.textContent = String(e.msg || "");
+    row.appendChild(time); row.appendChild(lv); row.appendChild(msg);
+    box.appendChild(row);
+  }
+}
+(function bindDiagPanel(){
+  const det = $("#diagCollapse");
+  const btn = $("#btnCopyDiag");
+  if(det){
+    det.addEventListener("toggle", function(){
+      if(!det.open) return;
+      try{ renderDiagList(); }catch(e){ try{ pushDiag("warn", "renderDiagList failed: " + ((e && e.message) || e), { where: "diagPanel" }); }catch(e2){} }
+    });
+  }
+  if(btn){
+    btn.onclick = function(){
+      let report = "";
+      try{ report = buildDiagReport(); }catch(e){ report = String((e && e.message) || e); }
+      const ok = function(){ try{ toast(t("about.diagCopyOk", "诊断报告已复制"), "ok"); }catch(e){} };
+      const fail = function(){
+        try{ toast(t("about.diagCopyFail", "自动复制不可用，请手动复制下方文本"), "warn"); }catch(e){}
+        try{
+          const box = $("#diagFallback");
+          if(box){ box.value = report; box.classList.remove("u-hidden"); box.focus(); box.select(); }
+        }catch(e){}
+      };
+      /* clipboard API 在 file:// / 旧环境可能不存在 —— 与 shareLink 同款守卫 + 回退 */
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(report).then(ok, fail); }
+        else fail();
+      }catch(e){ fail(); }
+    };
+  }
+})();
+
 /* ---------- P0-8：局域网同步（仅 Electron 环境） ---------- */
 (function bindSyncButtons(){
   if(!isElectron()) return;
