@@ -6076,10 +6076,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.62"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
+const VERSION = "3.7.63"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260928b";
+const BUILD_TAG = "20260928c";
 
 
 
@@ -14776,7 +14776,7 @@ function getHybridData(type){
 
 /* v3.7.58（诚实性收口）：移除 idbPutModel / idbGetModel / idbDeleteModel / idbListModels 四个
    模型缓存助手 —— 它们的唯一调用方 54-离线AI（WebLLM/ONNX 假框架）已按 product-scope 纪律
-   整体移除（见 ui-global-events.js 的 v3.7.58 墓碑注释），本块随之失去消费者，一并清理。
+   整体移除（见 ui-ge-integrations.js 的 v3.7.58 墓碑注释），本块随之失去消费者，一并清理。
    需要时从 git 历史恢复。 */
 
 /*SRC:data-idb:END*/
@@ -37902,7 +37902,7 @@ seed();
 /* ---------- v1.8.3 性能优化：重模块懒初始化入口 ----------
  * 历史上此处列出 53-ai-deep 与 54~58、65~70 等重模块。其中 58/65~70 已在更早版本
  * 按 product-scope 纪律移除；54-离线AI / 55-ML预测 / 56-智能排期 / 57-情绪分析
- * 四个无出口沉睡框架已于 v3.7.58 整体移除（见下方 v3.7.58 墓碑注释）。
+ * 四个无出口沉睡框架已于 v3.7.58 整体移除（见 ui-ge-integrations.js 的 v3.7.58 墓碑注释）。
  * 现存的自动初始化重模块仅剩：
  *   - 53-ai-deep        (AI 深度增强：Agent 自主执行 / RAG / 代码审查)
  *
@@ -38199,6 +38199,9 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   };
 }
 
+/*SRC:ui-global-events:END*/
+/*SRC:ui-ge-api:BEGIN*/
+// ===== UI Layer (交互层·全局事件绑定·后端 API 客户端) =====
 /* ============================================================
  * 任务235：后端 API 客户端模块
  * ------------------------------------------------------------
@@ -39342,6 +39345,9 @@ function applyI18n(root){
 AppBridge.applyI18n = applyI18n;
 // 启动时同步标题与静态节点（initI18n 已恢复语言偏好）
 try{ document.title = t("app.name"); applyI18n(document); }catch(e){ /* noop */ }// ===== Plugin System (v1.5-B 插件/扩展体系) =====
+/*SRC:ui-ge-api:END*/
+/*SRC:ui-ge-plugins:BEGIN*/
+// ===== UI Layer (交互层·全局事件绑定·插件系统) =====
 /* ============================================================
  * 插件系统核心：注册框架 + 自定义场景 + 自定义卡片 + 自定义联动规则
  * ------------------------------------------------------------
@@ -39825,6 +39831,9 @@ function _initPlugins(){
 
 // 模块加载时自动初始化
 _initPlugins();// ===== Theme System (v1.5-C 多主题 / 自定义编辑 / 场景配色 / 导入导出) =====
+/*SRC:ui-ge-plugins:END*/
+/*SRC:ui-ge-theme:BEGIN*/
+// ===== UI Layer (交互层·全局事件绑定·主题/报表/AI 引擎) =====
 /* ============================================================
  * 主题系统核心：预置主题 + 自定义主题 + 场景配色个性化 + 主题导入导出
  * ------------------------------------------------------------
@@ -40753,6 +40762,9 @@ async function aiGenerateCode(description, language){
   return resp;
 }
 
+/*SRC:ui-ge-theme:END*/
+/*SRC:ui-ge-pomodoro:BEGIN*/
+// ===== UI Layer (交互层·全局事件绑定·专注与时间追踪) =====
 // ===== Pomodoro Timer (v1.6-B) =====
 /* ---------- v1.6-B 笃行：25 分钟专注 + 5 分钟休息 ----------
  * 能力：
@@ -41035,6 +41047,9 @@ function getTrackerState(){
 function getTaskTime(taskId){
   return _getTaskElapsed(taskId);
 }// ===== Calendar View (v1.6-B) =====
+/*SRC:ui-ge-pomodoro:END*/
+/*SRC:ui-ge-calendar:BEGIN*/
+// ===== UI Layer (交互层·全局事件绑定·日历与可视化) =====
 /* ---------- v1.6-B 日历视图：月历看任务 dueDate 分布 ----------
  * 能力：
  *   1) renderCalendarView(monthOffset)  — 生成某月日历 HTML（含任务计数徽章）
@@ -41928,6 +41943,9 @@ function _bindDashToolbar(container, editMode){
     if(typeof doExport === "function"){ try{ doExport(); }catch(e){} }
   };
 }// ===== Notes & Knowledge Base (v1.6-D 知识管理) =====
+/*SRC:ui-ge-calendar:END*/
+/*SRC:ui-ge-notes:BEGIN*/
+// ===== UI Layer (交互层·全局事件绑定·笔记与知识库) =====
 /* ---------- 笔记系统 + 知识库：Markdown 笔记 CRUD + 标签分类 + 任务关联 ----------
  * 能力：
  *   1) getNotes() / saveNotes(notes)              — 存储访问器（localStorage）
@@ -42732,6 +42750,9 @@ function executeSearch(query){
   }
   return results;
 }// ===== Automation Workflow (v1.6-E 自动化工作流) [DEPRECATED v1.14.1：入口已冻结] =====
+/*SRC:ui-ge-notes:END*/
+/*SRC:ui-ge-integrations:BEGIN*/
+// ===== UI Layer (交互层·全局事件绑定·集成框架与废弃簇) =====
 /* ===== v3.7.60 集成同步 / 通知层：标记废弃，等渠道定案（不删、不接）=====
    真实 Chromium 逐 provider 实测（_probe/integration-census.mjs）的定性结论：
    · **活着的**：`*Connect` / `*Disconnect` 七个 + 面板渲染 + 凭据落盘 —— 由
@@ -44526,7 +44547,7 @@ function _resetIntegrationRateLimits(){
    实际接线点在 src/data-idb.js 的 _oauth2HandleCallback stub）。留着会误导读者以为该模块仍存在 ——
    2026-09-27 审计时我自己就先被它误导了一次（在源码态 grep 应用代码得到 0 处，一度误判为「被抽取破坏」）。
    纯注释残留，删除无功能影响。 */
-/*SRC:ui-global-events:END*/
+/*SRC:ui-ge-integrations:END*/
 </script>
 </body>
 </html>
