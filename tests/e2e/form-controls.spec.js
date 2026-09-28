@@ -19,7 +19,7 @@
  * 本文件用**真实鼠标/键盘事件**复现并锁死这两条，防止回退。
  * 守护策略同其它 e2e：默认跳过，E2E=1 才跑。
  */
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./_fixture");
 
 const APP_URL = "./agent-workbench.html";
 

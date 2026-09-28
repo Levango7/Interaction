@@ -16,7 +16,7 @@
  *
  * 默认跳过，E2E=1 才跑。只在 desktop 项目跑（窄屏那条在用例内部自己改视口）。
  */
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./_fixture");
 
 const APP_URL = "./agent-workbench.html";
 

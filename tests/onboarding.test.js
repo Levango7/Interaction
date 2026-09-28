@@ -6,6 +6,18 @@
 import { describe, it, expect } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
 
+/* 启动链是 async IIFE（先 await initCrypto），断言 boot 产出的 DOM 需要等宏任务。
+   以 render() 的产物 #taskForm 作「boot 完成」信号：引导 modal 与它在同一同步块内插入，
+   所以等到信号后 modal 的有无即是确定结论，不靠固定 sleep（并行争用时固定 sleep 会假红）。 */
+async function waitFor(win, cond, ms = 30000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    try { if (cond()) return true; } catch (_e) { /* 未就绪 */ }
+    await new Promise((r) => win.setTimeout(r, 20));
+  }
+  return false;
+}
+
 describe("今日仪表盘 + Onboarding", () => {
   it("greeting: 按时间段返回问候语", () => {
     const win = loadApp();
@@ -29,13 +41,41 @@ describe("今日仪表盘 + Onboarding", () => {
     expect(needsOnboarding()).toBe(false);
   });
 
-  it("needsOnboarding: 有任务 → false", () => {
+  it("needsOnboarding: 有任务但未标记引导 → true（v3.7.65 修正）", () => {
     const win = loadApp();
     win.localStorage.clear();
     const { needsOnboarding, setTasks } = win.__test;
     setTasks([{ id: "t1", sc: "office", title: "测试", status: "todo", due: "2026-08-04", priority: "P1" }]);
-    expect(needsOnboarding()).toBe(false);
+    // 旧实现要求「无任务」才触发，于是 seed() 播种后新用户永远进不了引导（线上实测复现）。
+    expect(needsOnboarding()).toBe(true);
   });
+
+  it("needsOnboarding: 首次启动播种演示数据后仍必须触发引导（缺陷回归）", () => {
+    const win = loadApp(); // 空存储 → 启动链里的 seed() 会写入演示任务
+    const { needsOnboarding, getTasks, PREFIX } = win.__test;
+    expect(getTasks().length, "前提：演示数据已播种").toBeGreaterThan(0);
+    expect(win.localStorage.getItem(PREFIX + "onboarded"), "前提：未标记已引导").toBeFalsy();
+    expect(needsOnboarding(), "结论：引导不能被播种挤掉").toBe(true);
+  });
+
+  /* boot 级断言（v3.7.65）。三点加固，都是实测逼出来的：
+     · noCrypto：startup IIFE 先 await initCrypto()（PBKDF2），全量并行 31 worker 下这一步就能吃掉十几秒；
+       关掉 crypto 走「降级明文」分支，boot 立刻继续，断言只依赖 B4 分支接线本身。
+     · 上限 30s + retry 2：单跑本条 2.7s，全量并行实测 >15s 未达（与 p0-crossdevice-key.test.js
+       记录的②类抖动同源），只放宽天花板与重试，不放宽判据。 */
+  it("boot: 未引导时主界面照常渲染，引导以 modal 叠加", async () => {
+    const win = loadApp({ noCrypto: true });
+    const booted = await waitFor(win, () => win.document.getElementById("taskForm"));
+    expect(booted, "boot 应完成主界面渲染（旧 if/else 分支互斥时这里是空白）").toBe(true);
+    expect(win.document.querySelector(".onboard-modal"), "未引导应在主界面之上叠加引导 modal").toBeTruthy();
+  }, { retry: 2, timeout: 180000 });
+
+  it("boot: 已标记 onboarded 时不出现引导 modal", async () => {
+    const win = loadApp({ storage: { wb_agent_onboarded: "true" }, noCrypto: true });
+    const booted = await waitFor(win, () => win.document.getElementById("taskForm"));
+    expect(booted, "boot 应完成").toBe(true);
+    expect(win.document.querySelector(".onboard-modal")).toBeFalsy();
+  }, { retry: 2, timeout: 180000 });
 
   it("renderOnboarding: 生成 modal DOM", () => {
     const win = loadApp();

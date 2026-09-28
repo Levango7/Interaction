@@ -1917,11 +1917,14 @@ seed();
     window.addEventListener("orientationchange", applyLandscapeFold); // orientationchange 无需防抖（低频）
   }
   // B4：首次启动引导（不阻塞主题；引导完成或不需要时走正常流程）
+  /* v3.7.65：主界面恒渲染，引导改为 modal 叠加。旧写法两个分支互斥 —— 命中引导时 render()/checkCount()
+     根本不执行，用户在走完三步之前看到的是一片空白主页；关掉页面还不会写 onboarded，下次重来。
+     dailyDigest 仍只在「无需引导」或引导结束时触发（_finishOnboarding 内会调用），行为与原意一致。 */
+  render();
+  checkCount();
   if(needsOnboarding()){
     renderOnboarding();
   }else{
-    render();
-    checkCount();
     dailyDigest();
   }
   scheduleAutoBackup(); // 启动即留一份基线快照，确保 recover 始终有可还原点

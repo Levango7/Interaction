@@ -15,7 +15,7 @@
  *
  * 默认跳过，E2E=1 才跑（与其余 spec 一致）。视口无关，只在 desktop 项目跑。
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./_fixture.js";
 import { startSyncMock } from "../mocks/sync-server.mjs";
 
 const PREFIX = "wb_agent_";

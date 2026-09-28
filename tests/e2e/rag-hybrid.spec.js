@@ -13,7 +13,7 @@
  *
  * 默认跳过，E2E=1 才跑；只在 desktop 项目跑（见 playwright.config.js 的 testIgnore）。
  */
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./_fixture");
 
 const APP_URL = "./agent-workbench.html";
 const API_BASE = "http://127.0.0.1:11434/v1";   // validateBaseUrl 只放行 https 与回环 http

@@ -16,7 +16,7 @@
  * 本机以 CDP + 375/768/1280 三视口实测过这些量级后才写成断言（阈值取实测值并留余量）。
  * 守护策略同其它 e2e：默认跳过，E2E=1 才跑。
  */
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./_fixture");
 
 const APP_URL = "./agent-workbench.html";
 

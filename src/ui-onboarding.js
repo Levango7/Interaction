@@ -1,10 +1,11 @@
 // ===== UI Layer (交互层·Onboarding 引导) =====
 /* ---------- B：Onboarding 首次启动引导 ---------- */
-// B1：首次启动检测（未标记 onboarded 且无任务）
+/* B1：首次启动检测 —— v3.7.65 修正：只看「是否已标记 onboarded」。
+   旧实现额外要求 tasks.length === 0，但启动链在 ui-global-events.js 顶层就调用了 seed()
+   （首次启动播种 4 条演示任务），于是真实新用户永远得到 false —— 三步引导成为不可达路径。
+   线上实测复现：清空 localStorage 后重载，演示数据被重新播种、onboarded 为空、引导不出现。 */
 function needsOnboarding(){
-  if(load(PREFIX+"onboarded", false)) return false;
-  const tasks = getTasks();
-  return tasks.length === 0;
+  return !load(PREFIX+"onboarded", false);
 }
 // B2：引导 modal 内部状态（当前步 + step1 选中的场景）
 let _onboardStepNo = 1;

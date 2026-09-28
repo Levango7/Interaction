@@ -11,7 +11,7 @@
  * 视口无关（跑的是语言而非布局），按 theme-matrix 的先例只在 desktop 项目跑一次。
  * 守护策略同其余 spec：默认跳过，E2E=1 才跑。
  */
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./_fixture");
 
 const APP_URL = "./agent-workbench.html";
 

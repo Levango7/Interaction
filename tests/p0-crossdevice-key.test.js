@@ -78,7 +78,11 @@ function toastMsgs(spy) {
 //  ② **本文件自身的抖动**：**并行**跑时这套 jsdom 异步链（FileReader + initCrypto）偶尔**根本不完成**，
 //     连 20s 的 testTimeout 都会被打满（`Test timed out in 20000ms`）；单跑必过。
 //     对策：两个 describe 加 `{ retry: 2 }`（有限重试，只针对这类环境抖动；CI 干净机器上一直绿）。
-function waitFor(predicate, timeout = 2000, interval = 10) {
+/* v3.7.65 追记（同一②类抖动的第二次实测）：把首次启动引导接回真实路径后（needsOnboarding 不再
+ * 被 seed() 的演示任务挤掉，见 ui-onboarding.js），每次 boot 都要多渲染一层 modal，全量并行时
+ * T4 的「导入收尾 toast」在 2000ms 窗口内**三次重试全部未达**（84s 打满），而单跑本文件 4/4 必过。
+ * 上限按 v3.7.64 的超时预算口径放大到 15s：只放宽等待天花板，不改变完成信号本身。 */
+function waitFor(predicate, timeout = 15000, interval = 10) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     const tick = () => {

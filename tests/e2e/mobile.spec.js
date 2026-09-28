@@ -14,7 +14,7 @@
 /* 等待策略（与 workflow.spec 一致，依据 CI 日志实证的偶发）：
    等「导航/视图切换 → 界面刷新」用 10s；等静态元素用 5s（快速失败更利于定位）。
    CI 日志实证过 workflow.spec.js:87 的 .kcard 文本断言在 5s 下超时（仅 tablet 那一次、本地连跑 5 次全过）→ 负载偶发。 */
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./_fixture");
 
 const APP_URL = "./agent-workbench.html";
 
