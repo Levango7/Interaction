@@ -1,4 +1,4 @@
-# Agent 工坊（v3.7.60）
+# Agent 工坊（v3.7.61）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活 / 健康七类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -185,9 +185,9 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v3.7.60**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.7.61**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.60 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.61 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 九、相关文件
 
@@ -222,7 +222,8 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **CSS 与内联 JS**（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html` —— 改这些就改 HTML。
 - **应用 JS**（28 个模块）在 `src/*.js` 里演进，由 `scripts/src-split.mjs` 在**构建期**拼回 HTML；
   运行时仍是单个 `<script>`，不存在多文件加载（`file://` 下会失败）。
-- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/`）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。所有 `pre*` 注入钩子都配了自愈：`npm test` / `lint` / `lint:layers` / `test:coverage` / `build:check` / `e2e` 跑完由对应 `post*` 自动还原源码态，工作区不再因跑检查而变脏。**两个例外是发布路径**：`build` 与 `build:prod` 跑完故意留在拼回态（它们的产物就是完整的单文件交付物）。
+- 推送前用 `npm run verify:ci` 按 **CI 的真实步骤顺序**在本机预演一遍（从 `.github/workflows/*.yml` 读序列，不写死清单；`--job=verify --ci=.github/workflows/deploy.yml` 可预演发布链）。单个门禁各自跑绿 ≠ CI 绿：验证命令会改写 `agent-workbench.html`（`pre*` 注入 / `post*` 抽回），**上一步把目录留在哪种状态直接决定下一步的结论**——v3.7.59 补齐 post* 自愈钩子后，`pet:check`（要在拼装态才读得到 `_PET_ART`）就被前一步抽回源码态而长期 exit 1，逐个命令手跑完全看不出来。
+- 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/`）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。所有 `pre*` 注入钩子都配了自愈：`npm test` / `lint` / `lint:layers` / `test:coverage` / `build:check` / `e2e` / `pet:check` 跑完由对应 `post*` 自动还原源码态，工作区不再因跑检查而变脏。**两个例外是发布路径**：`build` 与 `build:prod` 跑完故意留在拼回态（它们的产物就是完整的单文件交付物）。
 
 ```bash
 npm ci

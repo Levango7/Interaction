@@ -1,3 +1,47 @@
+## [v3.7.61] - 2026-09-28
+
+**一处用户截图标注的窄屏控件不齐（根因是触控规则的"点名式"覆盖漏洞）+ 披露并修掉我 v3.7.59 自造的一条 CI 回归 + 新增按 CI 真实顺序预演的 `npm run verify:ci`**。全量 102 文件 / 1142 条用例、`lint`（四道）、`check:modules`（44 循环 / 35 逆层未变）、`build:check`、e2e **57/57**（新增 1 条全应用扫描 ×2 宽度 ×3 项目 = 6 项，51 → 57）、`verify:ci` 9 步按序全绿，均本机实测。
+
+### 症状与根因
+
+用户截图：数据场景 → 可视化 功能卡，红框那一行四个控件（图表名 / 类型 / 数据源 / 图表类型）上下边线不齐。390px 实测：同排 `input` 是 `y=621..665`（h44），而 `button.ds-trigger` 是 `y=621..659`（h38）—— 顶边相同、底边差 6px，字号也差（input 18px vs 触发框 14px）。
+
+根因不在栅格，而在 `@media(max-width:767px)` 那条 WCAG 2.5.5 触控规则：它是**逐个类名点名**的（`.tbtn` / `.addbtn` / `.mini` / `input, select, textarea` / `.set-nav-btn` / …），而自研下拉的**可见**触发框是 `<button class="ds-trigger">`，不在这份名单里。给原生 `select` 加高度毫无作用 —— `ui-select.js` 已把它包成 `position:absolute;inset:0;opacity:0` 的隐藏表单控件。触发框是 v3.6.x 引入的，晚于这条规则，所以一直漏着。
+
+- **影响面比截图大得多**：撤掉修复后重跑扫描，767px 下共 **6 组**同行不等高，跨 `data/SQL`、`office/会议`、`office/项目`、`office/报销`、`life/计划`、`code/运行器`。截图那张只是最容易看见的一处。
+- 修法：`.ds-trigger{min-height:44px;font-size:var(--fs-lg)}`。实测修复后 ≤767 那一行四个控件全部 44px/18px 且底边齐平；≥768 仍是 38px 不受影响。
+- **例外必须显式保留**：聊天输入行的模型下拉与同排的 附件 / 发送 / 输入框 是 v3.7.37 定稿的 **42px 统一组**，若被这条拉到 44 反而破掉那行的整组同高。故同时加 `.ds-select:has(>#chatModelSelect)>.ds-trigger{min-height:42px;font-size:var(--fs-sm)}`，实测聊天四个控件仍全为 42。
+
+### 守护（这次刻意不写点对点断言）
+
+- `tests/e2e/viewport.spec.js` 新增「窄屏同一行控件必须等高」：在 375 / 767 两个宽度遍历全部场景 × 全部功能 tab × 设置各分区，**按 top 分组后断言同一行内可见控件高度相等**。以后任何新控件类漏出触控规则，都会被这条抓到 —— 点对点断言（"ds-trigger 必须 44"）做不到这点。
+- `tests/mobile-enhance.test.js` 补一条覆盖面断言：解析 ≤767 块里所有带 `min-height:44px` 的选择器，逐个核 `input / select / textarea / .ds-trigger / .addbtn / .tbtn / .set-nav-btn / .kbtns button` 都在名单内，并锁住聊天面板那条 42 例外必须存在。
+  - ⚠️ 既有的那条老断言只写了"块里存在某个 `min-height:44px`"，**没有任何覆盖面**，所以 `.ds-trigger` 漏了这么久它一直是绿的。老断言保留（不削强度），新增这条补洞。
+  - 写这条时连踩两个自己的坑，都记进注释了：① `[^{]+{[^}]*min-height` 这种一步式正则跨不过上一条规则的 `}`，会把选择器错配到别处；② 全文件有**多个** `@media(max-width:767px)` 块，用 `.find()` 只取第一条会静默漏掉真正那块（表现为"解析出 1 条规则"却仍然像是测试通过）。
+- 两条守护都做了**变异验证**：删掉 `.ds-trigger` 那行后，单元断言红并把整张点名清单打出来（`已点名：.sheet-parent | .tbtn | … 缺 .ds-trigger`），e2e 扫描红并报出 `[data/SQL] input(h44) vs button.ds-trigger(h38)` 等具体组；撤掉删除后双双回绿。
+
+### 🔴 披露一条我自己在 v3.7.59 造出来的 CI 回归（本轮修复）
+
+v3.7.59 我给 `build:check` / `lint` / `lint:layers` / `test:coverage` / `e2e` 补齐 `post*` 自愈钩子（让工作区不再因跑检查而变脏），**没检查后续步骤对状态的依赖**，于是把 CI 弄红了：
+
+- 之前只有 `posttest` 一个抽回钩子，所以 `build:check` → `lint` → `lint:layers` 跑完目录**留在拼装态**，排在最后的 `pet:check` 正好能在 HTML 里读到 `_PET_ART` 而通过。
+- 补齐 post* 之后，`pet:check` 的前一步会把目录抽回源码态 → `pet-art.mjs --check` 找不到字面量 → **exit 1**。（`pet-art.mjs --extract` 早就处理过"源码态属正常情形"，`--check` 却没有，所以这个不对称一直潜伏着。）
+- 为什么当时没发现：我逐个命令手跑，每个单独看都是绿的；而且我有一两次用 `npm run X | tail` 取状态，**管道把退出码换成了 `tail` 的 0**。本轮改用 `out=$(npm run X); echo $?` 才撞见。
+
+修法与防复发：
+
+1. `package.json` 补 `prepet:check`（注入）+ `postpet:check`（抽回），与其他验证命令同构。实测 `npm run pet:check` 从源码态起跑 → exit 0 并自动还原。
+2. 新增 `npm run verify:ci`（`scripts/verify-ci-order.mjs`）：**从 `.github/workflows/*.yml` 读出 job 的 `run:` 序列按序执行**，不写死清单（防脚本与 workflow 漂移），任一步非零即打印该步输出尾部并停止，末尾再断言工作区已回到源码态。支持 `--job=` / `--ci=` / `--only=` / `--list` / `--with-e2e`。本机实测：ci.yml 的 `test` job 9 步（去掉 `npm ci`）全 exit 0；deploy.yml 的 `verify` job 序列同样能解析。
+   - **变异验证**：临时撤掉 `prepet:check` / `postpet:check` 回到 v3.7.59 之后的破损态，`verify:ci --only=...` 立刻在第 3 步报 `pet:check exit 1` 并打出原始错误行 —— 即这条回归如果当时有预演就会被拦住。
+3. README 增补一条"推送前跑 `npm run verify:ci`"，并把 `pet:check` 写进自愈钩子清单。
+
+> 教训：**给构建链加"自愈"钩子等于改变了后续步骤的输入状态**，必须按 CI 的真实顺序复演一遍，而不是逐个命令验证。
+
+### 过程中的两次自我纠正
+
+- 第一版探测用 `FORMS + ' button'` 拼选择器 —— 逗号列表里的后代组合器**只作用于最后一项**，于是 `.set-field` 等容器被当成控件匹配进来，扫描结果全废。改成 `el.closest(FORMS)` 重扫才拿到真数据。
+- 第一版在 1200px 量到"四个控件都是 38px、完全一致"，差点据此判"无法复现"。截图底部有 `#mobBar` 才定位出真实视口 ≤767px —— **判断视口别只看图片像素宽**，要看页面里哪些元素在渲染。
+
 ## [v3.7.60] - 2026-09-28
 
 **两处用户截图标注的响应式缺陷 + 三条「浏览器静默容错」的 CSS 结构缺陷 + 集成簇真机定性（含一个凭据外泄面，同步/通知层按用户决定标记废弃）**。全量 102 文件 / 1141 条用例、`lint`（四道）、`check:modules`（44 循环 / 35 逆层未变）、`build:check`、e2e **51/51**（新增 2 条渲染层不变量 ×3 视口 = 6 项，45 → 51）均本机绿。

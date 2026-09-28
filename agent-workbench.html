@@ -3380,6 +3380,16 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   .toolbar-row{gap:var(--space-2)}
   /* 表单输入触摸友好 */
   input, select, textarea{min-height:44px;font-size:var(--fs-lg)}
+  /* v3.7.61：自研下拉的**可见**触发框漏在这条规则之外 —— 它是 `<button class="ds-trigger">`，
+     而上面只点名了 `input, select, textarea`。原生 select 被 ui-select 包成
+     `position:absolute;inset:0;opacity:0` 的隐藏控件，给它加高度对画面毫无作用，
+     所以必须单独补触发框。用户截图标注的"上下高度不一致"就是这里：
+     390px 实测同排 input y=621..665(h44) vs ds-trigger y=621..659(h38)，底边差 6px，
+     字号也差（input 18px vs trigger 14px）。 */
+  .ds-trigger{min-height:44px;font-size:var(--fs-lg)}
+  /* 例外：聊天输入行的模型下拉与同排的 附件 / 发送 / 输入框 统一为 42（v3.7.37 定稿），
+     不能被上面这条拉到 44 而破掉整行同高。 */
+  .ds-select:has(>#chatModelSelect)>.ds-trigger{min-height:42px;font-size:var(--fs-sm)}
   /* 看板卡片触摸友好 */
   .kcard{min-height:44px}
   /* v3.0.2 批次1：高频小控件触摸目标补齐至 44px（原 24~32px，仅移动端生效，桌面样式不变）；
@@ -6066,10 +6076,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.60"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
+const VERSION = "3.7.61"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260927d";
+const BUILD_TAG = "20260928a";
 
 
 

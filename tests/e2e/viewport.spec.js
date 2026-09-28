@@ -343,3 +343,72 @@ test.describe("提示带 · 加号 · 面板高亮不变量", () => {
     }
   });
 });
+
+/**
+ * 触控目标覆盖不变量（v3.7.61 用户截图标注）
+ * ----------------------------------------------------------------------------
+ * `@media(max-width:767px)` 里的 44px 触控规则是**逐个类名点名**的，所以每引入一种新控件
+ * 都可能漏网。实测漏网的是自研下拉：它的可见触发框是 `<button class="ds-trigger">`，
+ * 而规则只写了 `input, select, textarea{min-height:44px}` —— 原生 select 被包成
+ * `position:absolute;inset:0` 的隐藏控件，给它加高度毫无作用。
+ * 用户截图那张卡（数据 → 可视化）只是最容易看见的一处；撤掉修复后扫描，767px 下有 **6 组**
+ * 同行不等高，跨 data/office/life/code 四个场景。
+ * 所以这里不写"ds-trigger 必须是 44"这种点对点断言，而是**全应用扫同一行内的可见控件高度**
+ * —— 以后任何新控件类漏出触控规则，都会被这条抓到。
+ */
+test.describe("窄屏同一行控件必须等高", () => {
+  test.beforeAll(() => {
+    test.skip(!process.env.E2E, "set E2E=1 to run");
+  });
+
+  const GRID = ".tool-form-grid, .form-row, .set-field, .tool-filter-bar, .chain-add-row, .btn-row";
+  const SCENES = ["data", "office", "study", "life", "health", "finance", "code"];
+
+  for (const vw of [375, 767]) {
+    test(`≤767 触控规则覆盖所有表单可见控件（${vw}px 全场景扫描）`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await page.goto(APP_URL);
+      await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
+      await page.setViewportSize({ width: vw, height: 900 });
+      const bad = await page.evaluate(async ({ gridSel, scenes }) => {
+        const out = [];
+        const seen = new Set();
+        const visCtrl = (f) => f.querySelector(".ds-trigger") || f.querySelector("input:not([type=hidden]),select,textarea,button");
+        const scan = (ctx) => {
+          for (const grid of document.querySelectorAll(gridSel)) {
+            if (!grid.getClientRects().length) continue;
+            const rows = new Map();
+            for (const child of [...grid.children]) {
+              const el = (child.classList && (child.classList.contains("ds-trigger") || child.matches("input,select,textarea,button")))
+                ? child : visCtrl(child);
+              if (!el || !el.getClientRects().length) continue;
+              const r = el.getBoundingClientRect();
+              if (r.height < 1) continue;
+              const k = Math.round(r.top);
+              if (!rows.has(k)) rows.set(k, []);
+              const cls = (typeof el.className === "string" && el.className.trim()) ? "." + el.className.trim().split(/\s+/)[0] : "";
+              rows.get(k).push({ h: Math.round(r.height), tag: el.tagName.toLowerCase() + cls });
+            }
+            for (const items of rows.values()) {
+              if (items.length < 2) continue;
+              const hs = new Set(items.map(i => i.h));
+              if (hs.size === 1) continue;
+              const sig = items.map(i => `${i.tag}(h${i.h})`).join(" vs ");
+              if (seen.has(sig)) continue;
+              seen.add(sig);
+              out.push(`[${ctx}] ${sig}`);
+            }
+          }
+        };
+        for (const s of scenes) {
+          try { setActive(s); render(); } catch (e) { continue; }
+          await new Promise(r => setTimeout(r, 120)); scan(s);
+          for (const t of [...document.querySelectorAll(".scene-feat-btn")]) { t.click(); await new Promise(r => setTimeout(r, 110)); scan(`${s}/${t.textContent.trim()}`); }
+        }
+        for (const t of [...document.querySelectorAll("[data-set-tab]")]) { if (t.click) t.click(); await new Promise(r => setTimeout(r, 120)); scan("set/" + t.getAttribute("data-set-tab")); }
+        return out;
+      }, { gridSel: GRID, scenes: SCENES });
+      expect(bad, `视口 ${vw}px 下有 ${bad.length} 组同一行控件高度不等（说明有控件类漏出了 ≤767 的 44px 触控规则）：\n  ${bad.join("\n  ")}`).toEqual([]);
+    });
+  }
+});

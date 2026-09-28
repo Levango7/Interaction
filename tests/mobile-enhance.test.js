@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
+import { mediaBlocks } from "./helpers/media-blocks.js";
 
 describe("T4.3 移动端增强 - 手势支持 + 触摸优化 + 横屏适配", () => {
   let win;
@@ -262,6 +263,40 @@ describe("T4.3 移动端增强 - 手势支持 + 触摸优化 + 横屏适配", ()
       expect(cssText).toMatch(/@media\(max-width:767px\)/);
       expect(cssText).toMatch(/min-height:44px/);
       expect(cssText).toMatch(/min-width:44px/);
+    });
+
+    /* ⚠️ 上面那条只证明"块里有某个 44px"，**不证明覆盖面** —— 这条触控规则是逐个类名点名的，
+       所以每加一种新控件都可能漏网。v3.7.61 用户截图标注的"上下高度不一致"正是这么漏的：
+       自研下拉的可见触发框 `<button class="ds-trigger">` 不在 `input, select, textarea` 里，
+       于是窄屏下同排 input 44px、它仍 38px（原生 select 是 position:absolute 的隐藏控件，
+       给它加高度对画面毫无作用）。下面这条把"点名清单"钉住，防同类回潮。 */
+    it("≤767 的 44px 触控规则点名清单覆盖所有表单可见控件类（v3.7.61）", () => {
+      /* ⚠️ 全文件有**多个** @media(max-width:767px) 块（触控尺寸那块只是其一），
+         必须 filter 后合并 —— 用 find 只取第一条会静默漏掉真正的规则。 */
+      const blocks = mediaBlocks(cssText).filter(b => /max-width:\s*767px/.test(b.query));
+      expect(blocks.length, "应存在 @media(max-width:767px) 块").toBeGreaterThan(0);
+      /* 先剥注释，再按「最内层 selector{decls}」切块 —— 媒体块里没有嵌套规则，切出来的
+         第一段就是选择器列表。不能用 `[^{}]+{[^}]*min-height` 那种一步式正则：
+         `[^}]*` 跨不过上一条规则的 `}`，会把选择器错配到别处。 */
+      const body = blocks.map(b => b.body).join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
+      const covered = [];
+      const re = /([^{}]+)\{([^{}]*)\}/g;
+      let mm;
+      while ((mm = re.exec(body))) {
+        if (!/min-height:\s*44px/.test(mm[2])) continue;
+        for (const s of mm[1].split(",")) {
+          const sel = s.replace(/\s+/g, " ").trim();
+          if (sel) covered.push(sel);
+        }
+      }
+      expect(covered.length, "没从 ≤767 块里解析出任何 44px 规则，测试本身失效").toBeGreaterThan(5);
+      for (const sel of ["input", "select", "textarea", ".ds-trigger", ".addbtn", ".tbtn", ".set-nav-btn", ".kbtns button"]) {
+        expect(covered, `触控规则漏了 ${sel}（已点名：${covered.join(" | ")}）`).toContain(sel);
+      }
+      /* 聊天输入行的模型下拉与同排 附件/发送/输入框 统一 42（v3.7.37 定稿），
+         不能被 44 那条拉走 —— 这条例外必须显式存在 */
+      expect(body, "缺聊天面板模型下拉的 42px 例外（会把整行拉歪）")
+        .toMatch(/\.ds-select:has\(>#chatModelSelect\)>\.ds-trigger\{[^}]*min-height:42px/);
     });
 
     it("iOS 平滑滚动 -webkit-overflow-scrolling:touch 已启用", () => {
