@@ -84,7 +84,7 @@ async function seedCfg(page) {
 
 test.describe("知识库混合召回（真浏览器）", () => {
   test.beforeAll(() => { test.skip(!process.env.E2E, "set E2E=1 to run"); });
-  /* 首屏加载 3.4MB 单文件 + 两次 reload：默认 30s 在本机实测会顶到线（同 workflow.spec.js 的处置） */
+  /* 首屏加载 3.5MB 单文件 + 两次 reload：默认 30s 在本机实测会顶到线（同 workflow.spec.js 的处置） */
   test.setTimeout(90_000);
 
   test("汉字查询走词法就能召回（旧的 FTS5 路径做不到这件事）", async ({ page }) => {

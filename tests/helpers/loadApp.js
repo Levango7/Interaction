@@ -10,7 +10,7 @@ const HTML_PATH = path.resolve(__dirname, "..", "..", "agent-workbench.html");
 
 /* v3.7.59：源码态守卫。
    本仓库是「双态」架构：提交进 git 的是**源码态**（HTML 里只有 SRC 块占位标记、代码在 src/，
-   约 605KB），交付态（约 3.4MB）由 pre 钩子拼回。`posttest` 会在每次 `npm test` 结束后
+   约 607KB），交付态（约 3.5MB）由 pre 钩子拼回。`posttest` 会在每次 `npm test` 结束后
    **自动抽回源码态** —— 于是此后任何不经 npm 生命周期的直跑（`npx vitest run`）都会拿到
    一个「没有应用 JS」的 HTML：脚本执行中断 → 末尾的 `window.__test` 从未挂载 →
    每个用例都以 `TypeError: Cannot read properties of undefined` 或

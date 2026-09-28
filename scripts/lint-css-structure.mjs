@@ -29,9 +29,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 /* ---------- 1. 抽出所有**真** <style> 块 ----------
    ⚠️ 不能直接正则扫 `<style>`：本文件的应用 JS 里有 5 处字符串常量含 `<style>`
    （导出/打印模板、window.document.write 等）。源码态下它们是占位标记、扫不到；
-   一旦拼回成交付态（pre 钩子之后），直接正则会把 3.4MB 的 JS 当 CSS 解析 ——
+   一旦拼回成交付态（pre 钩子之后），直接正则会把 3.5MB 的 JS 当 CSS 解析 ——
    实测报 1766 条假阳性。所以做一次线性走查：遇到 <style> 收内容、
-   遇到 <script>/<!-- --> 整段跳过。纯 indexOf 跳转，不建字符数组（交付态 3.4MB）。 */
+   遇到 <script>/<!-- --> 整段跳过。纯 indexOf 跳转，不建字符数组（交付态 3.5MB）。 */
 export function findStyleBlocks(text) {
   const out = [];
   const lower = text.toLowerCase();          /* 只做一次小写化，用于定位标签 */

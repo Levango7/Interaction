@@ -7,10 +7,11 @@
  * 用法：node scripts/release.mjs <版本号> [--tag 20260816a]
  *   npm run release 1.11.2
  *
- * bump 目标（与 build.mjs --check 的四源门禁一致 + lockfile 同步）：
+ * bump 目标（与 build.mjs --check 的五源门禁一致 + lockfile 同步）：
  *   1. package.json / electron/package.json / manifest.json 的 version
  *   2. agent-workbench.html 的 VERSION + BUILD_TAG（未指定 --tag 时按当日日期+序号字母自动生成）
  *   3. service-worker.js 的 CACHE_VERSION = v{版本}-{tag}（保证 SW activate 清旧缓存）
+ *   3b. README.md 的标题 /「当前版本」/ 页脚示例三处版本号（第五个版本源）
  *   4. 两份 package-lock.json 的 version 字段（仅版本字段；依赖变更请另行 npm install 后提交）
  *   5. 收尾自动跑 build:check 自检，失败即退出非零
  *

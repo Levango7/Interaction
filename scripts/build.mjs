@@ -84,7 +84,7 @@ if (CHECK) {
   } catch (e) {
     fail('无法执行分层校验：' + (e && e.message));
   }
-  console.log(`[build] OK 版本一致: ${vals[0]} · 真相源完整 (${html.length} bytes, sha256:${sha(Buffer.from(html))})`);
+  console.log(`[build] OK 版本一致: ${vals[0]} · 真相源完整 (${Buffer.byteLength(html)} bytes, sha256:${sha(Buffer.from(html))})`);
   process.exit(0);
 }
 

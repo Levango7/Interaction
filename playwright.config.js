@@ -75,7 +75,7 @@ module.exports = defineConfig({
     navigationTimeout: 15_000,
     baseURL: appFileUrl,
     /* 失败时留截图：点击类失败（元素存在但被浮层挡住）光看 a11y 快照定不出是谁盖在上面，
-       没有图这类问题基本查不动。trace 太重（单文件 3.4MB 应用），只开截图。 */
+       没有图这类问题基本查不动。trace 太重（单文件 3.5MB 应用），只开截图。 */
     screenshot: { mode: "only-on-failure", fullPage: false },
     launchOptions: { args: ["--no-sandbox", "--disable-setuid-sandbox"] },
   },
