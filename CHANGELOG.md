@@ -1,3 +1,41 @@
+## [v3.7.65] - 2026-09-29
+
+**反馈出口 + 一条死路径修复 + 构建口径修正 —— ① 诊断面板补「提交 Issue」，把 v3.7.64 只到「复制到剪贴板」的反馈链路接到「有人能收」（脱敏报告预填 GitHub 新建 Issue，应用自身零请求）；② 线上实测揪出「新用户三步引导永不可达」：`seed()` 先播种演示任务、`needsOnboarding()` 又要求无任务，两者互斥 → 修正为只看标记，启动处不再让主界面渲染与引导互斥（引导改 modal 叠加），8 个 e2e spec 随之接入稳态夹具；③ `--prod` 日志的「bytes」实为 UTF-16 字符数（与 96ee171 给 `--check` 修掉的同一病灶），并补齐 `build` / `build:prod` 缺失的 post 自愈钩子。**本机实测全绿：`verify:ci` 十步按序 exit 0 + 收尾断言回源码态、全量 **104 文件 / 1166 用例**（v3.7.64 为 104/1156；+10 条 = diag 7→13、onboarding 7→12）、`lint`（四道）、`lint:layers`、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，无新增）、`build:check` 五源一致 **v3.7.65 · BUILD_TAG 20260929a · 3,544,739 bytes · sha256:90f1745bb53d1ab3**、`e2e` **57/57（3.5m）**。**本版起台账同时记线上产物指纹**：`build:prod` → `agent-workbench.prod.html` **3,544,529 bytes · sha256:20ae62518278bab5**（与注入态差 210 B，即 `__TEST_GATE__` 置 false 的替换量），`CACHE_VERSION=v3.7.65-20260928221216`。
+
+### ① 反馈出口：把「复制报告」接到「有人能收」
+
+**动因**：v3.7.64 的 R1 面板只能把报告复制到剪贴板，而 `.github/` 下只有 `workflows/`、无 `ISSUE_TEMPLATE`，全仓也没有任何 issues 出口 —— 用户复制完没有地方粘，免费期最想要的「体验反馈回收」其实没闭环。
+
+- **实现**：面板新增 `#btnOpenIssue` → `openDiagIssue()`：先把**完整**报告写入剪贴板（尽力而为），再打开预填链接。`_diagIssueUrl()` 的标题为 `[v3.7.65 · 形态标签]`，标签是 ASCII（`electron`/`pwa`/`file`/`local`/`web`），**不随界面语言变化**；正文按条数 `40→20→10→5→2` 逐级截断，仍超长则按字符收缩到预算内。预算：浏览器 7000、Electron 2000 —— GitHub 文档明示超长链接返回 414、非法返回 404。
+- **出口链路取证**（结论都带出处，不靠记忆）：仓库为 PUBLIC 且 Issues 已开启（`gh repo view`）；匿名 `curl /issues/new?body=x` 返回 **302 → 登录页且 `return_to` 完整保留查询参数**，说明链接可达、参数不丢；Electron 下外链由 `setWindowOpenHandler` 交给 `_openExternalSafe`（协议白名单放行 `http/https/file`，`electron/main.js:390-403`）后 `deny` 内窗，`window.open` 因此**返回 null** —— 实现按「未抛错即视为已打开」判定，不按返回值误报失败。
+- **单一模板是刻意的**：`.github/ISSUE_TEMPLATE/config.yml` 关闭空白 Issue、只留 `feedback.md`。存在多模板或允许空白 Issue 时 GitHub 先进「选择模板」页，`/issues/new?title=&body=` 的预填参数有被丢弃的风险；该交互无法匿名实测（需登录），故用配置消除分叉，并把理由写进 config 注释。
+- **口径诚实化**：面板注释与 `about.diagDesc` 原写「纯本地，不联网」—— 新增出口后如实改为「由用户点击在浏览器打开 GitHub，应用不会自动上传任何数据」；隐私边界不变（报告只含版本/运行形态/存储用量/脱敏技术日志）。用例 ⑤ 以 `fetch`/`XMLHttpRequest` 探针黑盒断言**零网络请求**。
+- **数据面**：`buildDiagReport(opts.maxEntries)` 为 Issue 正文而生，缺省调用逐字保持 v3.7.64 行为（⑦ 守护）；i18n 中英各 +4 条 key（`i18n-completeness` 要求两侧集合完全一致）；`docs/module-graph.md` 由 `check:modules` 再生成（`ui-global-events` 扇出 494→497，来自新增的 3 处跨块引用 —— 顺带记录：`--check` 模式也会重写该文档，见 `scripts/module-graph.mjs:245` 在 CHECK 分支之前）。
+- **测试**：`tests/diag-report.test.js` 7 → **13** 条（出口行为 / 剪贴板不可用仍开页 / 爆量与单条超长的预算 / Electron 更紧预算 / maxEntries 语义 / ASCII 标题）。
+
+### ② 新用户引导此前是一条死路径（线上实测揪出）
+
+**症状**：清空 `localStorage` 模拟新用户后重载 —— 演示数据被重新播种（4 条任务）、`wb_agent_onboarded` 为 null、**引导界面不出现**。
+
+**根因**（代码 + 实测双证）：`seed()` 在 `ui-global-events.js:1871` 的模块顶层先执行并写入演示任务，而 `needsOnboarding()`（`ui-onboarding.js:4-8`）要求 `tasks.length === 0` 才为真 → 两者互斥，真实新用户永远进不了三步引导。单测此前直接调用 `renderOnboarding()` 断言 modal，恰好照不到这条接线。
+
+- **修法**：`needsOnboarding()` 只看 `onboarded` 标记；启动处不再让两个分支互斥 —— `render()`/`checkCount()` **恒执行**，引导作为 modal 叠加（旧写法命中引导时主页是一片空白，用户走完三步前看不到任何看板）。`dailyDigest()` 语义保持不变（无需引导或 `_finishOnboarding()` 收尾时触发）。
+- **连带（这一步是本版最大的隐藏成本）**：`.onboard-modal` 是 `position:fixed;inset:0` 的全屏层（`agent-workbench.html:2631`），真实浏览器有 hit-testing，不清掉就会挡住其余 spec 的所有点击断言。新增 `tests/e2e/_fixture.js`（页面脚本执行前写入 `onboarded`），8 个 spec 改为从夹具取 `test`；`workflow.spec.js` **故意保留原生 test**，由它真跑引导三步本身（该 spec 早已写好 `#onboardModal, #taskForm` 与三步跳过逻辑 —— 也就是说它一直是按「引导会出现」设计的，此前从未被触发）。e2e 实测 57/57。
+- **抖动加固（都带实测依据，只放宽天花板、不放宽判据）**：`tests/p0-crossdevice-key.test.js` 的 `waitFor` 上限 2000→15000 —— 该文件自述的第②类并行抖动被加重的 boot 顶了出来（全量并行下 T4 的「导入收尾 toast」三次重试都未在 2s 内到达，单跑 4/4 必过）；onboarding 的 boot 用例改用 `loadApp({ noCrypto: true })` + 30s + `retry: 2`（单跑 2.7s，全量并行实测 >15s 未达）。
+- **测试**：`tests/onboarding.test.js` 7 → **12** 条，含「播种后仍必须触发引导」的缺陷回归与 boot 级接线断言。
+
+### ③ 构建工具两处口径修正
+
+- **`--prod` 的「bytes」不是字节**：`scripts/build.mjs:100` 用 `prodHtml.length`（UTF-16 字符数）标称 bytes —— v3.7.64 实测把 3,537,005 B 的线上文件报成 `3191998 bytes`（Pages deploy 日志第 2308 行）。改用 `Buffer.byteLength`，与 96ee171 给 `--check` 定的口径统一；本版日志已给出真实值 3,544,529 B。
+- **补齐两条 post 钩子**：`prebuild` 与 `prebuild:prod` 是唯二没有 post 对应项的注入钩子（其余 7 条 `pre*` 都配了自愈），本地跑 `npm run build` / `npm run build:prod` 会把工作区留在拼回态、诱发误提交。补齐后实测 `build:prod` 结束 HTML 自动回到源码态 623,053 B，`.prod` 产物照常落盘且都在 `.gitignore` 第 7-8 行内。README 第十一节旧口径「两个例外是发布路径……故意留在拼回态」随之删除，并注明交付物实际落在独立的 `agent-workbench.prod.html` / `service-worker.prod.js`。
+- **顺带澄清一个易误读现象**：线上产物比 `build:check` 少 210 B **不是版本漂移**，而是 `--prod` 把 `__TEST_GATE__` 硬置 false 的固定差值（该替换有 `RE.test` 守卫，替换不成会直接 fail）。本版起台账同时记录注入态与 prod 两个指纹，核对线上时不必再靠猜。
+
+### 另一观察（未修，仅记录）
+
+`npm test` 失败时 npm 不执行 posttest，工作区留在拼回态 —— 本版取用例数时再次现场遇到：一次运行因 vitest worker RPC 超时（`[vitest-worker]: Timeout calling "onTaskUpdate"`，同批单条用例被拖到 26-46s）以 exit 1 收场、7 条用例未计入，需手动 `npm run src:extract` 还原。属并行争用的环境级抖动而非断言失败；权威背书是同套代码的 `verify:ci` 第⑤步 exit 0 与另一次 104 文件全绿。
+
+
+
 ## [v3.7.64] - 2026-09-29
 
 **新增「诊断与反馈」面板（关于卡内，纯本地不联网：查看近期诊断 + 一键复制脱敏报告）+ 修掉一处构建怪癖 —— post 钩子把立绘注入顺序写反，导致仓库把立绘双存约 849KB（`src/render-widgets.js` 内联 base64 与 `assets/pet/` 并存）+ vitest 超时预算 20s→60s（本机全量并行下偶发假红，根因取证并入注释）。**全量 104 文件 / 1156 条用例（v3.7.63 为 103/1149；+1 文件 = 新增 7 条诊断报告用例）、`verify:ci` 10 步按序全绿、`lint`（四道）、`check:modules`（35 块 · 50 循环 / 53 逆层，对照基线无新增）、`build:check` 五源一致（v3.7.64 · BUILD_TAG 20260928d · sha256:b04f6ca80ef3451a）、e2e **57/57**，均本机实测。
