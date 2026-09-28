@@ -9,6 +9,11 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
+import { pathToFileURL, fileURLToPath } from "node:url";
+
+/* 受信 senderFrame.url —— 按仓库根动态构造（_APP_FILES 成员），勿写死绝对路径（CI Linux 上必挂，
+ * 根因与修法见 electron-ipc.test.js 中 TRUSTED_FILE_URL 处注释） */
+const TRUSTED_FILE_URL = pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "agent-workbench.html")).href;
 
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "awb-batch4-"));
 
@@ -61,9 +66,9 @@ afterAll(() => {
   if (originalLoadRef.current) { Module._load = originalLoadRef.current; originalLoadRef.current = null; }
 });
 
-// v1.11.1 [M4]：主进程 IPC 已加 sender 信任校验，测试事件需带 file:// 的 senderFrame
+// v1.11.1 [M4]：主进程 IPC 已加 sender 信任校验，测试事件需带本应用页面的 senderFrame
 function trustedEv(){
-  return { sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } };
+  return { sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } };
 }
 
 // 预置旧版派生密钥格式的 ai-config.enc，使 loadAiConfig 能解出带 key 的配置

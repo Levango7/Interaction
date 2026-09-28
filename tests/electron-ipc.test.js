@@ -12,6 +12,12 @@ import Module from "node:module";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
+
+/* 受信发送方 URL：= 仓库根 agent-workbench.html（main.js _APP_FILES 成员），按本文件位置动态构造。
+ * 不要写死某台机器的绝对路径 —— 此前写死 file:///F:/Nexus/... 使 CI Ubuntu 上 checkout 路径不同，
+ * 信任校验把"受信"页也拒了，19 条用例全红（v3.7.61 后 CI 实测）。 */
+const TRUSTED_FILE_URL = pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "agent-workbench.html")).href;
 
 // vi.mock 工厂会被提升到文件顶部，因此工厂内不能直接引用外部 const 变量。
 // 用 vi.hoisted 把共享容器与 stub 工厂也提升到顶部，工厂与测试体通过引用读写同一对象。
@@ -102,12 +108,12 @@ afterAll(() => {
   }
 });
 
-// v1.11.1 [M4]：主进程 IPC 已加 sender 信任校验（assertTrustedSender 要求 senderFrame.url 为 file://），
+// v1.11.1 [M4]：主进程 IPC 已加 sender 信任校验（assertTrustedSender 要求 senderFrame.url 为本应用自己的页面），
 // 测试事件对象需模拟真实渲染端形态。
 // v3.7.59：判定口径收紧为与导航守卫 _isInternalUrl 同源 —— 只认「本应用自己的页面 + about:blank」，
 // 非本应用的 file:// 同样拒绝。故这里补 foreignFileEv() 守这一行为（下方用例）。
 function trustedEv(id){
-  return { sender: { id: id || "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } };
+  return { sender: { id: id || "s1" }, senderFrame: { url: TRUSTED_FILE_URL } };
 }
 function forgedEv(){
   return { sender: { id: "evil" }, senderFrame: { url: "https://evil.example.com/index.html" } };
@@ -249,13 +255,13 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
     it("http:// 公网 base 直接拒绝且不发请求", async () => {
       freshConfig({ enabled: true, profiles: { p1: { base: "http://evil.example.com/v1", model: "m", key: "k" } } });
       const { calls } = installFetch();
-      await expect(ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq())).rejects.toThrow("AI base URL 不安全");
+      await expect(ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } }, chatReq())).rejects.toThrow("AI base URL 不安全");
       expect(calls.length).toBe(0);
     });
     it("http://localhost 放行并携带 Key", async () => {
       freshConfig({ enabled: true, profiles: { p1: { base: "http://localhost:1234/v1", model: "m", key: "secret" } } });
       const { calls } = installFetch();
-      const r = await ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq());
+      const r = await ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } }, chatReq());
       expect(r.choices[0].message.content).toBe("hi");
       expect(calls.length).toBe(1);
       expect(calls[0].url).toBe("http://localhost:1234/v1/chat/completions");
@@ -263,7 +269,7 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
     });
     it("未配置（无 ai-config.enc）抛 AI 未配置", async () => {
       const { calls } = installFetch();
-      await expect(ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq())).rejects.toThrow("AI 未配置");
+      await expect(ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } }, chatReq())).rejects.toThrow("AI 未配置");
       expect(calls.length).toBe(0);
     });
   });
@@ -278,7 +284,7 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
         },
       });
       const { calls } = installFetch();
-      const r = await ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, Object.assign(chatReq(), { profileId: "b" }));
+      const r = await ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } }, Object.assign(chatReq(), { profileId: "b" }));
       expect(r.choices[0].message.content).toBe("hi");
       expect(calls.length).toBe(1);
       expect(calls[0].url).toBe("https://b.example.com/v1/chat/completions");
@@ -291,7 +297,7 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
       vi.useFakeTimers();
       freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
       const { calls } = installFetch("status", 429);
-      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq());
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } }, chatReq());
       const assertion = expect(p).rejects.toThrow("请求过于频繁"); // 先 attach，避免 advance 期间 unhandled rejection
       await vi.advanceTimersByTimeAsync(7000);
       await assertion;
@@ -301,7 +307,7 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
       vi.useFakeTimers();
       freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
       installFetch("pending");
-      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq({ timeoutSec: 5 }));
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } }, chatReq({ timeoutSec: 5 }));
       const assertion = expect(p).rejects.toThrow("请求超时"); // 先 attach
       await vi.advanceTimersByTimeAsync(6000);
       await assertion;
@@ -309,18 +315,18 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
     it("进行中取消 → __USER_CANCEL__", async () => {
       freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
       installFetch("pending");
-      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq());
-      ipcHandlers["abort-chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } });
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } }, chatReq());
+      ipcHandlers["abort-chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } });
       await expect(p).rejects.toThrow("__USER_CANCEL__");
     });
     it("退避 sleep 窗口内取消 → 下一轮不发出请求", async () => {
       vi.useFakeTimers();
       freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
       const { calls } = installFetch("status", 429);
-      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } }, chatReq());
+      const p = ipcHandlers["chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } }, chatReq());
       const assertion = expect(p).rejects.toThrow("__USER_CANCEL__"); // 先 attach
       await vi.advanceTimersByTimeAsync(500); // 第一次 429 已返回，处于第一次退避 sleep 中
-      ipcHandlers["abort-chat"]({ sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } });
+      ipcHandlers["abort-chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } });
       await vi.advanceTimersByTimeAsync(3000); // sleep 结束 → 循环顶部捕获标记
       await assertion;
       expect(calls.length).toBe(1);

@@ -376,7 +376,11 @@ function _isInternalUrl(url){
     const u = new URL(url);
     if (u.protocol === "about:") return true;
     if (u.protocol !== "file:") return false;
-    const fp = decodeURIComponent(u.pathname || "").replace(/^\/+/, "");
+    let fp = decodeURIComponent(u.pathname || "");
+    /* v3.7.61 跨平台修复：Windows 的 file URL 形如 /C:/...（前导斜杠须去掉才是合法盘符路径）；
+     * POSIX 绝对路径必须以 / 开头——此前无条件剥掉前导斜杠，Linux 下 resolve 会把
+     * "home/runner/..." 当相对路径拼到 cwd 上，本应用自己的页面都判为外部来源（CI 实测复现）。 */
+    if (/^\/[A-Za-z]:/.test(fp)) fp = fp.replace(/^\/+/, "");
     return _APP_FILES.has(path.resolve(fp).toLowerCase());
   }catch(e){ return false; }
 }

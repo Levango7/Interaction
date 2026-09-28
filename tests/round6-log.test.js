@@ -10,6 +10,11 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
+import { pathToFileURL, fileURLToPath } from "node:url";
+
+/* 受信 senderFrame.url —— 按仓库根动态构造（_APP_FILES 成员），勿写死绝对路径（CI Linux 上必挂，
+ * 根因与修法见 electron-ipc.test.js 中 TRUSTED_FILE_URL 处注释） */
+const TRUSTED_FILE_URL = pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "agent-workbench.html")).href;
 
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "awb-r6-log-"));
 
@@ -77,8 +82,8 @@ describe("R3 · 主进程日志结构化", () => {
   it("chat 请求写出的日志每行均为合法 JSON（ts/scope/msg）", async () => {
     const fetchMock = vi.fn(async () => ({ ok: false, status: 401 }));
     global.fetch = fetchMock;
-    // v1.11.1 [M4]：chat IPC 已加 sender 信任校验，事件需带 file:// 的 senderFrame
-    const trustedEv = { sender: { id: "s1" }, senderFrame: { url: "file:///F:/Nexus/Interaction/electron/agent-workbench.html" } };
+    // v1.11.1 [M4]：chat IPC 已加 sender 信任校验，事件需带本应用页面的 senderFrame
+    const trustedEv = { sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } };
     // 触发一次 chat：内部走 logLine("chat", ...)
     await expect(handlers.chat(trustedEv, { messages: [{ role: "user", content: "hi" }], temperature: 0.7, timeoutSec: 30 }))
       .rejects.toThrow("API Key 无效");
