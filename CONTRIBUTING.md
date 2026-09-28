@@ -23,7 +23,7 @@ npm install
 | `npm run test:watch` | 监听模式，文件改动自动重跑 |
 | `npm run lint` | ESLint + 颜色令牌检查 |
 | `npm run serve` | 本地预览（<http://localhost:8123>） |
-| `npm run build:check` | **提交前必跑**：版本四处一致性 + 真相源完整性门禁 |
+| `npm run build:check` | **提交前必跑**：版本五处一致性 + 真相源完整性门禁 |
 | `npm run lint:layers` | 单文件分层契约校验（缺层 / 顺序错即失败） |
 | `npm run build:prod` | 生产构建（`agent-workbench.prod.html` + `service-worker.prod.js`） |
 | `npm run release <版本号>` | 发版：自动同步版本号五源 + 锁文件根字段 + 自动打 `v<版本>` tag（CHANGELOG 人工更新） |
@@ -125,8 +125,8 @@ docs: 更新 README 至 v1.1.0
 ## 项目结构
 
 ```
-agent-workbench.html   # 交付物（源码态为骨架：应用 JS 外置于 src/，构建期拼回；立绘回注后约 3.4MB）
-src/                   # 应用源码（28 个模块 + order.json，src-split.mjs 与 HTML 双向同步）
+agent-workbench.html   # 交付物（源码态为骨架：应用 JS 外置于 src/，构建期拼回；立绘回注后约 3.5MB）
+src/                   # 应用源码（35 个模块 + order.json，src-split.mjs 与 HTML 双向同步）
 tests/                 # 测试文件
   helpers/loadApp.js   # 应用加载辅助
   e2e/                 # Playwright 三视口 e2e
@@ -146,9 +146,9 @@ vitest.config.js       # 测试配置
 
 ## 版本与发布
 
-**真相源分两处**（v3.7.0 起双态架构）：CSS 与内联 JS（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html`；应用 JS（28 个模块）在 `src/*.js` 里演进，构建期由 `scripts/src-split.mjs` 拼回单文件 HTML（`file://` 下多 `<script>` 会失败，交付物始终是单个文件）。
+**真相源分两处**（v3.7.0 起双态架构）：CSS 与内联 JS（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html`；应用 JS（35 个模块）在 `src/*.js` 里演进，构建期由 `scripts/src-split.mjs` 拼回单文件 HTML（`file://` 下多 `<script>` 会失败，交付物始终是单个文件）。
 
-**版本号四处必须一致**（`npm run build:check` 会校验，不一致直接失败）：
+**版本号五处必须一致**（`npm run build:check` 会校验，不一致直接失败）：
 
 | 位置 | 字段 |
 |---|---|
@@ -156,8 +156,9 @@ vitest.config.js       # 测试配置
 | `package.json` | `version` |
 | `electron/package.json` | `version` |
 | `manifest.json` | `version` |
+| `README.md` | 标题 / 「当前版本」/ 页脚示例 |
 
-- 发版用 `npm run release <版本号>`，**不要手工改四处**（易漂移；锁文件根字段也会被同步）。
+- 发版用 `npm run release <版本号>`，**不要手工改五处**（易漂移；锁文件根字段也会被同步）。
 - 构建标记 `BUILD_TAG` 与 SW 的 `CACHE_VERSION` 每次改主文件都要 bump，否则 PWA 吃旧缓存。
 - 部署：push 到 `main` 后 `.github/workflows/deploy.yml` 自动 `build:prod` 并发布 GitHub Pages；`ci.yml` 跑测试 / 门禁 / lint。
 
@@ -226,7 +227,7 @@ src 文件与 `order.json` 一一对应、注入的立绘与 `assets/pet/*.png` 
 
 提交 PR 前请确认：
 - [ ] `npm run lint` 通过（无硬编码颜色、无 ESLint 错误）
-- [ ] `npm run build:check` 通过（版本号四处一致）
+- [ ] `npm run build:check` 通过（版本号五处一致）
 - [ ] `npm test` 全部通过
 - [ ] 新功能已附测试
 - [ ] 文档（README / CHANGELOG）已同步更新

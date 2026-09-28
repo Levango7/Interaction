@@ -182,5 +182,5 @@ lady: { l:[0.400,0.163], r:[0.550,0.163], ew:0.085, eh:0.022, m:[0.478,0.205],
 4. **`@property` 未注册 → 角度无法插值**：转台摇摆失效（静默降级）。
 5. **点击中重建 DOM → 误触新节点**：阻断冒泡 + 延后重渲染。
 6. **用正则改 JSON**：曾把 `"screenshots":` 键吃掉导致 JSON 非法。**改 JSON 一律解析再序列化**。
-7. **版本号四处漂移**：`build:check` 会拦，发版用 `npm run release`。
+7. **版本号五处漂移**：`build:check` 会拦，发版用 `npm run release`。
 8. **`git add -A`** 会把 `.playwright-mcp/` 等会话产物带进提交 → 用精确 `git add <文件>`。
