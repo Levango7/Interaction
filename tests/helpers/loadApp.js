@@ -46,7 +46,7 @@ function makeQuietVirtualConsole() {
   return vc;
 }
 
-export function loadApp({ storage = {} } = {}) {
+export function loadApp({ storage = {}, noCrypto = false } = {}) {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   assertDeliveredState(html);
   const dom = new JSDOM(html, {
@@ -65,7 +65,8 @@ export function loadApp({ storage = {} } = {}) {
         clearTimeout(id);
       };
       // jsdom 的 window.crypto 没有 subtle，注入 Node webcrypto 作为 polyfill
-      if (!window.crypto || !window.crypto.subtle) {
+      // noCrypto: true —— 模拟「WebCrypto 不可用」的降级环境（token 加密的「降级不丢登录」用例）
+      if (!noCrypto && (!window.crypto || !window.crypto.subtle)) {
         Object.defineProperty(window, "crypto", { value: webcrypto, writable: true, configurable: true });
       }
       // jsdom 不提供 TextEncoder/TextDecoder（Web Crypto API 编解码需要）

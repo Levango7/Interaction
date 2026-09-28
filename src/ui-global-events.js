@@ -2244,6 +2244,11 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
  * 设计要点：
  *  - API_BASE 从 cfg.apiBase 或默认 http://localhost:3001（与 server/src/index.js 默认端口一致）
  *  - accessToken/refreshToken 存 localStorage（wb_access_token 等）
+ *  - 存储加密（v3.7.62）：access/refresh 落盘为设备密钥密文 {__enc,iv,data}；旧明文读时兼容、
+ *    启动后透明升级为密文。WebCrypto/设备密钥不可用或密文解不开时**保留密文不销毁**
+ *    （降级不丢登录：宁可暂时不可用，换回可用环境后登录仍在）
+ *  - token 恢复是异步的：initApiClient() 调用后密文解密可能仍在途，isApiLoggedIn() 水合完成前为 false；
+ *    apiFetch/apiRefreshAccessToken/doSync 会先 await 水合，保证发包与判登录看到的是最终状态
  *  - apiFetch 自动加 Authorization header；401 时自动刷新重试一次
  *  - 网络错误 throw {offline:true}，调用方降级到 localStorage
  *  - 返回 {ok, data, status} 统一响应形状
@@ -2269,28 +2274,117 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   let _syncStatus = "idle"; // idle | syncing | offline | error
   let _apiUser = null; // 已登录用户信息缓存
   let _refreshing = false; // 防止并发刷新
+  /* v3.7.62（token 落盘加密）——
+     · _tokensHydrated：本次会话是否完成「恢复/解密」。密文解密完成前 isApiLoggedIn() 恒为 false。
+     · _tokensLocked：存储里存在**解不开的密文**（本环境无 WebCrypto / 设备密钥更换）。true 时
+       一切隐式落盘（刷新后的持久化、明文升级）都不改写 token 三键 —— 「降级不丢登录」的兜底：
+       宁可暂时不可用，也绝不销毁密文，换回可用环境后登录仍在。
+     · _tokenGen：代际计数。登录/登出后，过期的异步解密结果不得回写内存（防旧 token 复活）。
+     · _persistChain：落盘串行链 —— set/clear/升级/刷新交错时，「先入队的旧写」不会覆盖「后入队的新写」。 */
+  let _tokensHydrated = false;
+  let _tokensLocked = false;
+  let _tokenGen = 0;
+  let _hydratePromise = null;
+  let _persistChain = Promise.resolve();
+  function _whenTokensHydrated(){ return _hydratePromise || Promise.resolve(); }
 
-  // 从 localStorage 恢复 token（启动时调用）
-  function _restoreTokens(){
+  // 存储值解析：兼容「旧明文裸串」与「密文 JSON {__enc,iv,data}」两种形态
+  function _parseTokenRaw(raw){
+    if(!raw) return { value: null, sealed: false, enc: null };
     try{
-      _accessToken = localStorage.getItem(API_TOKEN_KEY) || null;
-      _refreshToken = localStorage.getItem(API_REFRESH_KEY) || null;
-      const exp = localStorage.getItem(API_EXPIRY_KEY);
-      _tokenExpiry = exp ? Number(exp) : 0;
-    }catch(e){ /* localStorage 不可用时静默降级 */ }
+      const o = JSON.parse(raw);
+      if(o && typeof o === "object" && o.__enc === true && typeof o.iv === "string" && typeof o.data === "string"){
+        return { value: null, sealed: true, enc: o };
+      }
+    }catch(e){ /* 非 JSON → 旧明文 */ }
+    return { value: raw, sealed: false, enc: null };
   }
 
-  // token 持久化到 localStorage
+  /* 加密单个 token：不可加密或加密失败 → 返回明文原值（与改造前落盘行为一致，绝不丢登录）。
+     ⚠️ 与 cfg 的 D4「不可加密即丢弃」策略有意不同：AI Key 是长期凭据，token 是短时凭据（15 分钟
+     access + refresh 轮换）；且改造前所有环境都落明文，回落明文不会比现状更差。 */
+  async function _sealTokenValue(plain){
+    try{
+      const enc = await encryptKey(plain);
+      if(enc && typeof enc === "object" && enc.__enc === true) return enc;
+      return plain;
+    }catch(e){
+      try{ pushDiag("error", "token seal failed, plaintext kept: "+(e&&e.message||e), {where:"_sealTokenValue"}); }catch(_e2){}
+      return plain;
+    }
+  }
+
+  // 从 localStorage 恢复 token（启动时调用；返回水合 Promise —— 密文需异步解密）
+  function _restoreTokens(){
+    _tokensHydrated = false;
+    _tokensLocked = false;
+    let pa = { value: null, sealed: false, enc: null }, pr = { value: null, sealed: false, enc: null };
+    try{
+      const exp = localStorage.getItem(API_EXPIRY_KEY);
+      _tokenExpiry = exp ? Number(exp) : 0;
+      pa = _parseTokenRaw(localStorage.getItem(API_TOKEN_KEY));
+      pr = _parseTokenRaw(localStorage.getItem(API_REFRESH_KEY));
+    }catch(e){ /* localStorage 不可用时静默降级 */ }
+    /* 明文（含旧数据）：立即可用（无缝迁移）；密文：内存先不持有，等解密 */
+    _accessToken = pa.sealed ? null : (pa.value || null);
+    _refreshToken = pr.sealed ? null : (pr.value || null);
+    if(!pa.sealed && !pr.sealed){
+      _tokensHydrated = true;
+      _hydratePromise = Promise.resolve();
+      /* 透明迁移：有明文就升级为密文（不可加密的环境由 _sealTokenValue 原样回落，无副作用） */
+      if(pa.value || pr.value) _persistTokens();
+      return _hydratePromise;
+    }
+    const gen = ++_tokenGen;
+    _tokensLocked = true;
+    _hydratePromise = (async () => {
+      const dec = { access: null, refresh: null };
+      let failed = false;
+      for(const [k, p] of [["access", pa], ["refresh", pr]]){
+        if(!p.sealed){ dec[k] = p.value || null; continue; }
+        let plain = null;
+        try{
+          const out = await decryptKey(p.enc);
+          if(typeof out === "string") plain = out;
+        }catch(e){ /* 解不开：设备密钥换了 / 密文损坏 */ }
+        if(plain === null) failed = true;
+        dec[k] = plain;
+      }
+      if(gen !== _tokenGen) return;                 // 期间已登录/登出 → 丢弃过期结果
+      _accessToken = dec.access;
+      _refreshToken = dec.refresh;
+      _tokensHydrated = true;                       // 水合尝试已完成（是否登录另由 token 判断）
+      _tokensLocked = failed;                       // 任一密文解不开 → 存储保持只读
+      if(failed){
+        try{ pushDiag("error", "token decrypt failed; sealed values preserved (storage locked)", {where:"_restoreTokens"}); }catch(_e2){}
+      }
+    })();
+    return _hydratePromise;
+  }
+
+  // token 持久化到 localStorage（同步签名保留，落盘为串行链上的异步任务）
   function _persistTokens(){
     // v3.4.7 批次三（G5）：token 三键（wb_ 前缀、非 wb_agent_ 命名空间）不进 save()——
     // save 的 JSON 序列化会与读侧裸串读取不对称、且 wb_ 前缀不在 IDB 镜像范围。
     // 此处保留裸写但补齐可观测性：失败经 pushDiag 登记（此前完全静默）。
+    /* v3.7.62：① 快照当前内存状态 —— 任务执行时以快照为准，避免与后续 set/clear 交错；
+       ② 串行链保证「登出」永远不会被先入队的旧写入（如启动时的明文升级）覆盖回来。 */
+    const snap = { access: _accessToken, refresh: _refreshToken, expiry: _tokenExpiry, locked: _tokensLocked };
+    _persistChain = _persistChain.then(() => _persistTokensTask(snap)).catch(() => {});
+    return _persistChain;
+  }
+  async function _persistTokensTask(snap){
+    if(snap.locked) return; // 存储中是解不开的密文 → 隐式写入一律不动它（降级不丢登录）
     try{
-      if(_accessToken) localStorage.setItem(API_TOKEN_KEY, _accessToken);
-      else localStorage.removeItem(API_TOKEN_KEY);
-      if(_refreshToken) localStorage.setItem(API_REFRESH_KEY, _refreshToken);
-      else localStorage.removeItem(API_REFRESH_KEY);
-      localStorage.setItem(API_EXPIRY_KEY, String(_tokenExpiry));
+      if(snap.access){
+        const v = await _sealTokenValue(snap.access);
+        localStorage.setItem(API_TOKEN_KEY, typeof v === "string" ? v : JSON.stringify(v));
+      } else localStorage.removeItem(API_TOKEN_KEY);
+      if(snap.refresh){
+        const v = await _sealTokenValue(snap.refresh);
+        localStorage.setItem(API_REFRESH_KEY, typeof v === "string" ? v : JSON.stringify(v));
+      } else localStorage.removeItem(API_REFRESH_KEY);
+      localStorage.setItem(API_EXPIRY_KEY, String(snap.expiry));
     }catch(e){
       try{ if(typeof pushDiag === "function") pushDiag("error", "token persist failed: "+(e&&e.message||e), {where:"_persistTokens"}); }catch(_e2){}
     }
@@ -2301,6 +2395,9 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     _accessToken = access || null;
     _refreshToken = refresh || null;
     _tokenExpiry = exp || 0;
+    _tokenGen++;                 // 显式登录：作废在途解密（旧密文结果不得回写）
+    _tokensHydrated = true;
+    _tokensLocked = false;       // 显式登录接管存储（此前解不开的密文允许被覆盖）
     _persistTokens();
   }
 
@@ -2310,12 +2407,15 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     _refreshToken = null;
     _tokenExpiry = 0;
     _apiUser = null;
+    _tokenGen++;                 // 显式登出：同 apiSetTokens
+    _tokensHydrated = true;
+    _tokensLocked = false;
     _persistTokens();
   }
 
-  // 判断是否已登录（有 accessToken 且未过期）
+  // 判断是否已登录（水合完成 + 有 accessToken + 未过期）
   function isApiLoggedIn(){
-    return !!_accessToken && Date.now() < _tokenExpiry;
+    return _tokensHydrated && !!_accessToken && Date.now() < _tokenExpiry;
   }
 
   // 构造带 Authorization 的 headers
@@ -2327,6 +2427,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
 
   // 用 refreshToken 换新 accessToken；成功返回 true，失败返回 false
   async function apiRefreshAccessToken(){
+    await _whenTokensHydrated(); // v3.7.62：密文未解密时 _refreshToken 暂为 null，先等水合再判
     if(!_refreshToken) return false;
     if(_refreshing) return false; // 防止并发刷新
     _refreshing = true;
@@ -2356,6 +2457,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   // 核心 fetch 封装：自动加 Authorization、401 自动刷新重试、网络错误 throw {offline:true}
   // 返回 {ok, data, status}
   async function apiFetch(path, options){
+    await _whenTokensHydrated(); // v3.7.62：水合完成前不带鉴权头发包（密文解密在途时 Authorization 尚不可得）
     const opts = options || {};
     const url = path.startsWith("http") ? path : API_BASE + path;
     const doFetch = async (withAuth) => {
@@ -2608,6 +2710,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
 
   // 执行同步：尝试推送到后端，离线时降级到 localStorage（已由现有存储保证）
   async function doSync(){
+    await _whenTokensHydrated(); // v3.7.62：同 apiFetch —— 避免把「水合未完成」误判成「未登录」
     if(!isApiLoggedIn()) return; // 未登录不同步
     /* v3.7.53：本函数此前是「转 syncing 再转 idle」的空转桩，而 idle 的文案是「已同步」——
        点「立即上传」会看到"已同步"，实际一个字节都没上传（虚假成功，违反 product-scope §四.2）。
@@ -2657,14 +2760,21 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   // 获取已缓存用户信息
   function getApiUser(){ return _apiUser; }
 
-  // 启动时恢复 token + 检查有效性
+  // 启动时恢复 token + 检查有效性（v3.7.62：恢复可能是异步的 —— 密文需解密）
   function initApiClient(){
-    _restoreTokens();
+    const hydration = _restoreTokens();
     _renderSyncStatus();
-    // 如果有 token 但已过期，尝试刷新
-    if(_refreshToken && !isApiLoggedIn()){
-      apiRefreshAccessToken().then(() => { _renderSyncStatus(); }).catch(() => {});
-    }
+    /* 水合完成后：① 有 access 已过期但有 refresh → 自动刷新；
+       ② 刷新登录态相关 UI（DOM 未就绪时这些函数自带守卫，稍后 _initApiUI 还会再跑一遍）；
+       ③ 已登录则加载面板数据（与 _initApiUI 的尾部逻辑一致，只是时机改到水合之后）。 */
+    hydration.then(() => {
+      if(_refreshToken && !isApiLoggedIn()){
+        apiRefreshAccessToken().then(() => { _renderSyncStatus(); }).catch(() => {});
+      }
+      try{ _updateUserButton(); }catch(e){}
+      try{ _showApiPanels(); }catch(e){}
+      try{ if(isApiLoggedIn()) _loadApiPanels(); }catch(e){}
+    }).catch(() => {});
   }
 
   // 暴露到外层作用域（函数声明提升使 window.__test 可引用）
@@ -2726,6 +2836,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
       apiGetIntegrations, apiConnectNotion, apiConnectTodoist, apiConnectGCalendar,
       apiDisconnectIntegration, isApiLoggedIn, getSyncStatus, setSyncStatus,
       scheduleSync, doSync, apiHealthCheck, getApiUser, initApiClient, apiGetHeaders,
+      /* v3.7.62：token 水合/落盘是异步的，测试用这两个取出在途 Promise 以确定性等待 */
+      _whenTokensHydrated, _whenTokensPersisted: () => _persistChain,
       get API_BASE(){ return API_BASE; },
     });
   }

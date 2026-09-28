@@ -8,6 +8,7 @@ const DK_KEY = PREFIX + "__dk"; // 设备密钥存储键（旧路径，仅迁移
 const DK_IDB_KEY = "__dk_v2";   // 设备密钥 IDB 键（不参与 idbQueueMirror 镜像命名空间）
 let _dkIdbGet = () => Promise.resolve(null);  // 生产接线在 initCryptoRuntimeWiring()
 let _dkIdbPut = () => Promise.resolve(false);
+let _dkPromise = null;  // v3.7.62：ensureDeviceKey 在途去重（token 水合与 initCrypto 会并发调用）
 /** 把可用的 idb 助手接到设备密钥存取上（若 idb 层尚未定义则保持默认禁用态） */
 function initCryptoRuntimeWiring(){
   try{
@@ -29,10 +30,17 @@ function base64Decode(str){
 }
 function getDeviceKey(){ return _deviceKey; }
 function isEncKey(v){ return v && typeof v === "object" && v.__enc === true; }
-function _resetCrypto(){ _deviceKey = null; _cfgCache = null; _cryptoReady = false; }
+function _resetCrypto(){ _deviceKey = null; _cfgCache = null; _cryptoReady = false; _dkPromise = null; }
 async function ensureDeviceKey(){
   if(_deviceKey) return _deviceKey;
   if(!_cryptoReady) return null;
+  /* v3.7.62：在途去重。token 水合（_hydrateTokens）与 startup 的 initCrypto 会在同一 tick 内
+     都触发设备密钥读取/生成；无去重时「首次生成」路径会生成两把不同的密钥并互相覆盖
+     （内存与存储可能各留一把），下次启动即解不开本会话加密的数据。 */
+  if(!_dkPromise) _dkPromise = _ensureDeviceKeyImpl().finally(() => { _dkPromise = null; });
+  return _dkPromise;
+}
+async function _ensureDeviceKeyImpl(){
   /* SECURITY [H3 已清偿]：设备密钥优先存 IndexedDB（浏览器扩展注入脚本通常无 IDB 访问权，
    * 缩小 XSS 泄露面）。jsdom/无 IDB 环境回退旧 localStorage 路径。
    * 迁移顺序：读 IDB → 读旧键并迁移（写入成功且回读一致后才删旧键）→ 全新生成。

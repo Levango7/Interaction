@@ -1,3 +1,33 @@
+## [v3.7.62] - 2026-09-29
+
+**token 落盘加密（access/refresh 从 localStorage 明文改为设备密钥 AES-GCM 密文，「降级不丢登录 + 透明迁移」）+ `src-split.mjs` 三道护栏（写盘前骨架自检 / 标记全文件唯一 / 跳过分支 tailBlanks 保真）并把 `src:check` 加进 CI 首段 —— 护栏先行，是为下一版拆「全局事件绑定」最大块准备的安全带。**全量 103 文件 / 1149 条用例（v3.7.61 为 102/1142；+1 文件 = 新增 7 条 token 加密用例）、`verify:ci` 10 步按序全绿、`lint`（四道）、`check:modules`（28 块 · 44 循环 / 35 逆层，对照基线无新增）、`build:check` 版本五源一致（v3.7.62 · BUILD_TAG 20260928b · sha256:39e45b1b23b98679）、e2e **57/57**，均本机实测。
+
+### ① token 落盘加密（设备密钥 AES-GCM）
+
+**背景**：`wb_access_token` / `wb_refresh_token` / `wb_token_expiry` 此前**明文**落 localStorage（`docs/半成品功能完善路线图.md:94` 记有「token 明文存 localStorage 是既有现状」，当时处置为维持）。本版起改为 AES-GCM 密文落盘，密钥为设备密钥（`wb_agent___dk`，与 AI Key 同一套 `encryptKey` / `decryptKey` 设施）。设计约束是「**不能因为加密把用户锁在门外**」，落成六条语义（`tests/api-token-crypto.test.js` 逐条钉住）：
+
+1. **旧明文读时立即可用，随后透明迁移为密文**（升级在写回路径上完成，不需要用户重登）；
+2. **密文启动 → 水合（异步解密）前不谎报登录**（`isApiLoggedIn()` 在水合完成前为 false），水合后恢复；存储保持密文原样；
+3. **密文解不开（设备密钥更换/损坏）→ 不抛错、不谎报、不销毁** —— 换回可用环境后登录仍在（「降级不丢登录」的核心条款）；
+4. **无 WebCrypto 环境 → 明文照常可用**、密文原样保留、写入回落明文（与改造前行为完全一致）；
+5. **登出清除 + 写序串行**：`_persistChain` 把落盘串行化，在途旧写不得把已登出的 token 复活；
+6. **水合在途时登录** → 旧密文解密结果不得回写内存（覆盖启动竞态）。
+
+实现要点：API 客户端段新增 `_hydrateTokens` / `_whenTokensHydrated`，`apiFetch` / `apiRefreshAccessToken` / `doSync` / `isApiLoggedIn` 全部先 `await` 水合再判登录、发包；`_sealTokenValue` 在不可加密环境原样回落。另修 `crypto.js` 一处**首启双密钥生成竞态**：token 水合与 `initCrypto` 会在同一 tick 并发调用 `ensureDeviceKey`，无在途去重时「首次生成」路径会生成两把不同密钥互相覆盖（内存与存储各留一把），下次启动即解不开本会话加密的数据 —— 现以 `_dkPromise` 合并并发调用，`_resetCrypto()` 同步清空。
+
+测试手法：jsdom 无 indexedDB → 设备密钥走 localStorage 旧路径，预置**固定**密钥即可在 A 环境加密、B 环境启动，复现真实「重启」路径；`loadApp({ noCrypto: true })` 模拟 WebCrypto 不可用环境。
+
+### ② src-split 三道护栏（+ CI 增 `src:check`）
+
+**动机**：`src-split.mjs` 是源码态 ⇄ 交付态的**唯一**双向通道，此前有三处「静默错」面，而下一版要拆全仓最大的块（376KB），必须先把这个通道锁死：
+
+1. **写盘前骨架自检（Gap1）**：文件头安全约定②「拼回只允许改标记之间区间、伤到骨架即不写盘」**此前只有注释、没有实现**。现以 `collapse()` 把两侧标记区折叠为 `<SRC>` 占位后逐字符比对，不同即报错、不写盘。同批把注入替换从正则改为**显式定位 + 切片**：① 唯一性可断言（历史出现过「两个 BEGIN / 两个 END」的嵌套重复，非贪婪正则只认第一对、静默忽略其余）；② 替换范围可精确证明 = 标记之间区间，骨架自检才成立。另拦一类历史坑：被拼回的源码含 `$1`/`$&` 文本（markdown 逻辑里的 `<strong>$1</strong>`），字符串替换会被 `String.replace` 当捕获组展开而改坏代码。
+2. **标记全文件唯一**：每个块 BEGIN/END 计数 ≠1 即硬失败（此前是「静默取第一对」）。
+3. **跳过分支 tailBlanks 保真（Gap2）**：源码态跑 `--extract` 时块已只剩标记（走跳过分支），旧实现硬编码 `tailBlanks: 0` 并照写 order.json —— 实测 `data-idb` 的 1 被抹成 0（git diff 可复现），此后每次拼回的空白版式都会漂移且无门禁可查。现改为**沿用旧 order.json 记录**，实测值与记录不符时告警并按实测值修正（HTML 是抽取方向的事实源）；同批把块文件写入推迟到「块数校验」之后（`pendingWrites`），中途失败不再留下半写状态。
+4. **CI 增 `src:check`（必须在任何 pre 钩子之前）**：`check:source-state` 只守「标记在 + 体积 <1.2MB」，**部分块被拼回内容提交**（总量没超上限）能溜过它；`src:check` 逐块比对内容兜住这类半交付态。它和 `check:source-state` 一样排在一切 pre 钩子前（pre 钩子会把工作区拼成交付态，比对口径随之改变）。
+
+本版实测：发版 bump 后的 extract 产物与 bump 前 `cmp` **逐字节一致**（`ui-global-events.js`，8566 行）；全量测试跑批日志中未见任何 ⚠ 告警输出。
+
 ## [v3.7.61] - 2026-09-28
 
 **一处用户截图标注的窄屏控件不齐（根因是触控规则的"点名式"覆盖漏洞）+ 披露并修掉我 v3.7.59 自造的一条 CI 回归 + 新增按 CI 真实顺序预演的 `npm run verify:ci`**。全量 102 文件 / 1142 条用例、`lint`（四道）、`check:modules`（44 循环 / 35 逆层未变）、`build:check`、e2e **57/57**（新增 1 条全应用扫描 ×2 宽度 ×3 项目 = 6 项，51 → 57）、`verify:ci` 9 步按序全绿，均本机实测。

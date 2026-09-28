@@ -29,6 +29,10 @@ jobs:
       # 源码态门禁：仓库里提交的应是源码态（HTML 只有占位标记、代码在 src/、立绘在 assets/pet）
       # 必须在任何 pre 钩子（src-split / pet-art）之前跑，否则工作区已被拼成交付态、检查失效
       - run: npm run check:source-state
+      # v3.7.62：src↔HTML 一致性门禁。check:source-state 只守「标记在、体积 <1.2MB」——
+      # 部分块被拼回内容提交（总量没超上限）能溜过它；--check 逐块比对内容兜住这类半交付态。
+      # 同样必须在任何 pre 钩子之前跑（pre* 会把工作区拼成交付态，比对口径随之改变）。
+      - run: npm run src:check
       # 模块依赖门禁：对照基线，新增「循环依赖 / 逆层依赖 / 跨块重复定义」即失败
       - run: npm run check:modules
       # AI 工具文档门禁：docs/ai-tools.md 的工具集必须与源码 TOOLS 完全一致（防文档漂移）。

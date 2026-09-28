@@ -21,8 +21,12 @@
  *
  * 安全约定（踩过的坑，务必遵守）：
  *   ① 抽取前会把 HTML 备份到 _srcbackup/；
- *   ② 拼回后做**字节级比对**（与抽取前一致），不一致就报错退出、不写盘；
- *   ③ 解析出的块数少于预期时 abort，不写盘（防止把文件写空）。
+ *   ② 拼回只允许改 SRC 标记之间的区间：写盘前把两侧的标记区折叠，再对「非标记骨架」逐字符
+ *      比对，不同就报错退出、不写盘；
+ *   ③ 抽取在跳过分支沿用 order.json 里记录的 tailBlanks（不再归零）；实测值与旧记录不一致时
+ *      告警并按实测值修正（HTML 是抽取方向的事实源）；
+ *   ④ 每个块的 BEGIN/END 标记必须全文件唯一；重复（历史嵌套）即硬失败；
+ *   ⑤ 解析出的块数少于预期时 abort，不写盘（防止把文件写空）。
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -127,15 +131,33 @@ if (EXTRACT) {
   }
   mkdirSync(SRC_DIR, { recursive: true });
 
+  /* v3.7.62：先读旧 order.json —— 跳过分支的 tailBlanks 必须**沿用历史**。
+     实测缺口：源码态跑 --extract 时块已只剩标记（走跳过分支），旧实现硬编码 tailBlanks:0
+     并照写 order.json —— data-idb 的 1 被抹成 0（git diff 可复现），此后每次拼回的空白版式
+     都会漂移，且没有任何门禁能发现。 */
+  const prevByName = new Map();
+  if (existsSync(join(SRC_DIR, 'order.json'))) {
+    try {
+      for (const x of JSON.parse(readFileSync(join(SRC_DIR, 'order.json'), 'utf8'))) {
+        if (x && typeof x === 'object' && x.name) prevByName.set(x.name, x);
+        else if (typeof x === 'string') prevByName.set(x, { name: x, tailBlanks: 0 });
+      }
+    } catch (_e) { /* 旧文件不可解析：按无历史处理 */ }
+  }
+
   let extracted = 0;
   const order = [];
   const meta = [];
+  const pendingWrites = [];   /* 全部写盘推迟到「块数校验」之后：中途失败不得留下半写状态 */
   for (const b of BLOCKS) {
     /* 已抽出过的块：HTML 里只剩标记占位、层注释随内容进了 src/ —— 这是正常状态，不算失败 */
     if (!findLayerLine(b.layer, b.title).length && existsSync(join(SRC_DIR, b.name + '.js'))) {
-      console.log(`  已抽出（跳过）src/${b.name}.js  —— HTML 中是标记占位`);
+      const prev = prevByName.get(b.name);
+      const tailBlanks = prev && typeof prev.tailBlanks === 'number' ? prev.tailBlanks : 0;
+      if (!prev) console.warn(`  ⚠ src/${b.name}.js 不在旧 order.json 中，tailBlanks 暂按 0；建议在拼回态再跑一次 --extract 校准`);
+      console.log(`  已抽出（跳过）src/${b.name}.js  —— HTML 中是标记占位（tailBlanks ${tailBlanks} 沿用旧记录）`);
       order.push(b.name);
-      meta.push({ name: b.name, layer: b.layer, title: b.title, tailBlanks: 0 });
+      meta.push({ name: b.name, layer: b.layer, title: b.title, tailBlanks: tailBlanks });
       extracted++;
       continue;
     }
@@ -151,7 +173,13 @@ if (EXTRACT) {
     /* 记录尾部空行数：块末的空白行属于原文件版式，拼回时要原样还原（否则无法做到字节级无损比对） */
     const tailBlanks = (raw.match(/\n+$/) || [''])[0].length;
     const body = raw.replace(/\n+$/, '');
-    writeFileSync(join(SRC_DIR, b.name + '.js'), body + '\n', 'utf8');
+    /* v3.7.62：实测值与旧记录不一致 → 告警并按实测值修正（HTML 是抽取方向的事实源）。
+       这条会捕获 order.json 曾被旧缺陷归零 / 有人手改过块末空行的情形。 */
+    const prev = prevByName.get(b.name);
+    if (inOldPair && prev && typeof prev.tailBlanks === 'number' && prev.tailBlanks !== tailBlanks) {
+      console.warn(`  ⚠ src/${b.name}.js tailBlanks ${prev.tailBlanks} → ${tailBlanks}（与旧 order.json 记录不符，按 HTML 实测值修正）`);
+    }
+    pendingWrites.push({ file: join(SRC_DIR, b.name + '.js'), data: body + '\n' });
     meta.push({ name: b.name, layer: b.layer, title: b.title, tailBlanks: tailBlanks });
     console.log(`  抽出 src/${b.name}.js  ${e - s} 行  ${Math.round(Buffer.byteLength(body) / 1024)}KB  （${b.layer} · ${b.title}）`);
     /* 原地替换成标记占位（保留缩进/位置） */
@@ -164,6 +192,7 @@ if (EXTRACT) {
     console.error(`[src-split] 只抽出 ${extracted} 块（预期 ≥ ${MIN_EXPECTED}）→ 不写盘，请检查层标记`);
     process.exit(1);
   }
+  for (const w of pendingWrites) writeFileSync(w.file, w.data, 'utf8');
   writeFileSync(join(SRC_DIR, 'order.json'), JSON.stringify(meta, null, 1) + '\n', 'utf8');
   const out = lines.join('\n');
   writeFileSync(HTML, out, 'utf8');
@@ -190,6 +219,7 @@ let injected = 0, missing = [];
    比对口径与注入方向严格对齐：注入写的是 `'\n' + body + '\n'`（body 已按 tailBlanks 补齐）。 */
 const mismatched = [];
 let placeholderBlocks = 0;
+const htmlBefore = html;   /* v3.7.62：写盘前「骨架自检」的对照样本（见文件尾部的 collapse 断言） */
 /* v3.7.52：src/ 下未登记在 order.json 的 .js 必须报错，而不是静默忽略。
    原实现只循环 order.json 里的名字 —— 新加的模块忘了登记时，代码不会被拼回 HTML，
    而 --check 仍打印「齐全 ✓」并退 0：静默丢代码是最危险的一类构建缺陷。
@@ -204,15 +234,29 @@ for (const n of names) {
   if (!existsSync(f)) { missing.push(n); continue; }
   const blanks = (meta.find(m => m.name === n) || {}).tailBlanks || 0;
   const body = readFileSync(f, 'utf8').replace(/\n$/, '') + '\n'.repeat(blanks);
-  const re = new RegExp('(\\/\\*SRC:' + n + ':BEGIN\\*\\/)[\\s\\S]*?(\\/\\*SRC:' + n + ':END\\*\\/)');
-  if (!re.test(html)) { missing.push(n); continue; }
+  /* v3.7.62：改为「显式定位 + 切片」替换，不再用正则。理由有二：
+     ① 唯一性可断言 —— 历史上出现过「两个 BEGIN / 两个 END」的嵌套重复（旧版抽取未把已有
+        标记一并纳入替换范围），非贪婪正则只认第一对、静默忽略其余；
+     ② 替换范围可精确证明 = 标记之间的区间，写盘前的骨架自检（见尾部 collapse 断言）才成立。
+     另一个历史坑（正是骨架自检要拦的那类）：被拼回的源码含 `$1`/`$&` 这类文本（markdown
+     替换逻辑里的 "<strong>$1</strong>"），字符串替换会被 String.replace 当捕获组展开而改坏代码。 */
+  const beginTok = mk(n), endTok = mkEnd(n);
+  const nBegin = html.split(beginTok).length - 1;
+  const nEnd = html.split(endTok).length - 1;
+  if (nBegin === 0 || nEnd === 0) { missing.push(n); continue; }
+  if (nBegin !== 1 || nEnd !== 1) {
+    console.error(`[src-split] ${n} 的标记不唯一（BEGIN ${nBegin} 个 / END ${nEnd} 个）→ 疑似历史嵌套重复，请人工修复后重跑`);
+    process.exit(1);
+  }
+  const bi = html.indexOf(beginTok);
+  const ei = html.indexOf(endTok, bi + beginTok.length);
+  if (bi === -1 || ei === -1) { missing.push(n); continue; }
   if (CHECK) {
-    const cur = html.match(new RegExp('\\/\\*SRC:' + n + ':BEGIN\\*\\/([\\s\\S]*?)\\/\\*SRC:' + n + ':END\\*\\/'));
-    const actual = cur ? cur[1] : null;
+    const actual = html.slice(bi + beginTok.length, ei);
     /* 源码态占位（标记之间只有空白）：内容在 src/，HTML 侧无可比对对象 → 视为通过。
        形状由 check-source-state.mjs 守（标记数 / 体积 / 无 base64）。
-       ⚠️ 忘了这一支会让 --check 在**源码态**（即提交进 git 的常态）对 28 个块全部误报不一致。 */
-    if (actual !== null && /^\s*$/.test(actual)) {
+       ⚠️ 忘了这一支会让 --check 在**源码态**（即提交进 git 的常态）对每个块都误报不一致。 */
+    if (/^\s*$/.test(actual)) {
       placeholderBlocks++;
       console.log(`  ✓ ${n.padEnd(16)} ${Math.round(Buffer.byteLength(body) / 1024)}KB（源码态占位）`);
     } else if (actual === '\n' + body + '\n') {
@@ -223,9 +267,7 @@ for (const n of names) {
     }
     continue;
   }
-  /* 必须用「函数式替换」：被拼回的源码里含 `$1`/`$&` 这类文本（如 markdown 替换逻辑 "<strong>$1</strong>"），
-     用字符串替换会被 String.replace 当成捕获组引用而改坏代码（本次实测踩到，靠字节比对拦下）。 */
-  html = html.replace(re, (m, g1, g2) => g1 + '\n' + body + '\n' + g2);
+  html = html.slice(0, bi + beginTok.length) + '\n' + body + '\n' + html.slice(ei);
   injected++;
 }
 if (missing.length) {
@@ -292,6 +334,21 @@ if (process.argv.includes('--verify')) {
   process.exit(1);
 }
 
-/* 安全：拼回前后若「非标记内容」发生改变则说明脚本有 bug → 不写盘 */
+/* v3.7.62：写盘前的**骨架自检**（对齐头部 ② 承诺；此前这里只有注释、没有实现）——
+   把两侧的 SRC 标记区都折叠成 <SRC> 占位后，其余部分必须逐字符相同：
+   注入只允许改标记之间的区间，伤到骨架即说明替换逻辑有 bug → 报错退出、不写盘。 */
+if (injected) {
+  const collapse = t => t.replace(/\/\*SRC:[\w-]+:BEGIN\*\/[\s\S]*?\/\*SRC:[\w-]+:END\*\//g, '<SRC>');
+  const a = collapse(htmlBefore), b = collapse(html);
+  if (a !== b) {
+    let at = 0;
+    while (at < Math.max(a.length, b.length) && a[at] === b[at]) at++;
+    console.error('[src-split] 骨架自检失败：注入伤到了 SRC 标记之外的内容 → 不写盘');
+    console.error(`  首个差异 @${at}:`);
+    console.error(`    注入前 ${JSON.stringify(a.slice(Math.max(0, at - 60), at + 60))}`);
+    console.error(`    注入后 ${JSON.stringify(b.slice(Math.max(0, at - 60), at + 60))}`);
+    process.exit(1);
+  }
+}
 writeFileSync(HTML, html, 'utf8');
 console.log(`[src-split] 拼回 ${injected} 块 → HTML ${(Buffer.byteLength(html) / 1024 / 1024).toFixed(2)}MB`);
