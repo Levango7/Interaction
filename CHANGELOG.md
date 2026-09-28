@@ -1,3 +1,40 @@
+## [v3.7.64] - 2026-09-29
+
+**新增「诊断与反馈」面板（关于卡内，纯本地不联网：查看近期诊断 + 一键复制脱敏报告）+ 修掉一处构建怪癖 —— post 钩子把立绘注入顺序写反，导致仓库把立绘双存约 849KB（`src/render-widgets.js` 内联 base64 与 `assets/pet/` 并存）+ vitest 超时预算 20s→60s（本机全量并行下偶发假红，根因取证并入注释）。**全量 104 文件 / 1156 条用例（v3.7.63 为 103/1149；+1 文件 = 新增 7 条诊断报告用例）、`verify:ci` 10 步按序全绿、`lint`（四道）、`check:modules`（35 块 · 50 循环 / 53 逆层，对照基线无新增）、`build:check` 五源一致（v3.7.64 · BUILD_TAG 20260928d · sha256:b04f6ca80ef3451a）、e2e **57/57**，均本机实测。
+
+### ① 诊断与反馈面板（免费期的「体验反馈回收」最小机制）
+
+**背景**：`_diagLog` 诊断缓冲此前只有测试侧读取，用户遇到问题没有上报出口（截图/口述都难复现）。本版在「关于」卡加一个纯本地的诊断与反馈面板 —— 不做任何联网上报，反馈靠用户自愿复制。
+
+- **报告内容**（`buildDiagReport()`）：应用版本 `v{版本} · b{BUILD_TAG}`、运行形态（独立/嵌入）、浏览器 UA、语言与时区、存储用量行、诊断条数、近期诊断条目；条目**入队即脱敏**（`_scrub`：32 位 token 一律显示为 `[REDACTED]`，不是只在上报时洗）。
+- **复制路径**：`#btnCopyDiag` → `navigator.clipboard.writeText`，成功 toast「诊断报告已复制」；剪贴板不可用/抛错 → 回退 `#diagFallback` 只读 textarea（移除 `u-hidden` + focus + 全选），提示手动全选复制。
+- **列表**：展开 `<details id="diagCollapse">` 时渲染 `#diagList`（新→旧；`textContent` 写入防 XSS），空态有文案。
+- **隐私边界显式写进文案与测试**：报告只含版本/运行环境/脱敏技术日志，不含任务/笔记正文 —— 单测以「隐私黑盒」钉住（预置含 `SECRET_TITLE_XYZ` 的内容，断言其不得出现在报告里）。
+- **测试**：新增 `tests/diag-report.test.js` 7 条（报告内容 / 脱敏+隐私黑盒 / clipboard 可用路径 / 回退路径 / 列表渲染 / 空态）。
+- **浏览器实测**（Playwright，本机）：展开收起与列表渲染、入队即脱敏、clipboard 路径（436 字符报告 + 成功 toast + 回退框保持隐藏）、回退路径（warn toast + 回退框可见/聚焦/全选 0–436）、明暗两主题布局正常；唯一控制台 error 是应用请求未启动的 `localhost:3001` 开发接口，与面板无关。
+- **文件**：`src/ui-backup-stats.js`（+116 行）、`src/core.js`（MESSAGES +18 行，中英双语）、`src/ui-global-events.js`（`__TEST_GATE__` 导出 +2）、HTML 骨架 +14 行。
+
+### ② 修构建怪癖：post 钩子立绘注入顺序颠倒（仓库双存 ~849KB）
+
+**症状**：`src/render-widgets.js` 在 git 里带着 869,324 字符内联 base64（`_PET_ART`）—— 立绘在仓库**双存**：既在 `src/render-widgets.js` 里，也在 `assets/pet/` 9 张 PNG 里。
+
+**根因**：post 钩子（拼回态 → 源码态）两步顺序写反。旧顺序 `src-split --extract` 先执行时立绘还在 HTML 内（`pet-art --extract` 尚未抽出）→ base64 被当源码抽回 `src/render-widgets.js`；随后 `pet-art --extract` 发现 HTML 里已无立绘，**静默无操作**。抽取方向必须严格是 `src-split` 的反向逆序（`pet-art --extract` 先、`src-split --extract` 后）。
+
+- **修法**：7 处 post 钩子（posttest / postlint / postlint:layers / posttest:coverage / postbuild:check / poste2e / postpet:check）全部改为 `node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup`；固化 `src:inject`（`src-split && pet-art`）与 `src:extract`（`pet-art --extract && src-split --extract`）两条链式命令；`release.mjs` 的还原提示同步为正确顺序。
+- **防回归三道**：`check-source-state.mjs` 新增 ②b 门禁（`src/` 内联 base64 图片数据即失败）；`src-split.mjs --check` 新增 `normArt` 归一化（拼回态下 `render-widgets.js` 的 `_PET_ART` 按 `assets/pet/` 归一化后再比对，避免误报「内容不一致」诱导人回退到旧顺序）；`tests/build-structure.test.js` 新增「`src/` 不含 base64」断言。
+- **实测**：`src/render-widgets.js` 1,149,465 → 279,851 字节（-869,614），4,667 行。**字节恒等闭环三次验证**（迁移后 / 全量测试后 / 再抽取后）：`render-widgets` 与「legacy 仅替换 `_PET_ART` 行」逐字节一致、骨架与拆前 SRC0 一致、order.json×2 与 9 张 PNG 未变、重拼交付态逐字节恒等。
+- **文档同步**：README / CONTRIBUTING / `docs/pet-system.md` / `docs/module-graph.md` 的双向链与顺序口径更正。
+
+### ③ vitest 超时预算 20s → 60s（全量并行下偶发假红的取证与修正）
+
+**症状**：本机全量并行（32 核 ~31 worker）跑 `npm test`，`tests/api-token-crypto.test.js` 偶发「Test timed out in 20000ms」假红（②③ 都出现过，复现依赖并行争用程度）。
+
+**取证**：同一文件隔离运行 ② 仅 1.7s；全量并行下 ① 16.7s、④ 31.4s（均通过）、③ 44.5s 被 20s 掐断；插桩 ② 内部 `seal=4.7s / loadApp=4.0s`。**关键反证**：④ 在 20s 预算下实际跑到 31.4s 才成功 —— 超时定时器本身被事件循环饥饿拖晚，说明瓶颈是预算本身而非产品挂死（jsdom 无 IDB 路径已排除挂死面）。
+
+**修法**：`vitest.config.js` 的 `testTimeout` / `hookTimeout` 20000 → 60000，注释写明实测依据；单用例仍可用 `it(..., { timeout })` 单独覆盖。
+
+**另一观察（未修，仅记录）**：`npm test` 失败时 npm 不执行 posttest，工作区会留在**拼回态**（重跑一次或手动 `src:extract` 还原即可）—— 本次仅记录该 npm 行为，不改变现有钩子结构。
+
 ## [v3.7.63] - 2026-09-29
 
 **「全局事件绑定」全仓最大的块按 section 拆成 8 块（8,566 行 / 376KB，行数口径 → `ui-global-events` 2,238 行 + 7 个 `ui-ge-*` 合计 6,333 行；7 个切点经 espree 机械审计；纯位移 —— 拼回产物与拆前逐字节等值）+ `module-graph` 基线重冻结（35 块 · 50 循环 / 53 逆层 · 重复定义 0；「44→50 / 35→53」经粗粒度合并等价验证证明是表示层效应，非新增耦合）。**全量 103 文件 / 1149 条用例（未新增用例，5 个测试文件只做块路径同步）、`verify:ci` 10 步按序全绿、`lint`（四道）、`check:modules` ✓、`build:check` 五源一致（v3.7.63 · BUILD_TAG 20260928c · sha256:847e07f4cdb64d88）、e2e **57/57**，均本机实测。
