@@ -1870,6 +1870,28 @@ if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
 migrate();
 seed();
 
+/* v3.7.66：把 manifest.json 的三个 shortcuts 落到真实视图。
+   此前它们指向 ./#overview、./#stats、./#settings，但全仓只有 src/ui-guide.js:188（指南锚点）
+   与 :256（#share= 只读分享）读 location.hash —— 也就是说从桌面图标 / 主屏快捷方式进来，
+   只会落到上次退出时的视图，快捷方式形同虚设（按 product-scope 的纪律：入口存在但无接线＝虚假功能）。
+   这里只认这三个已知片段并复用应用既有的切换入口（setActive / openDrawer），
+   不自己拼 DOM；其余 hash 一律不碰，避免抢 ui-guide 的锚点语义。 */
+function applyStartHash(){
+  let hash = "";
+  try{
+    hash = String((typeof location !== "undefined" && location.hash) || "").replace(/^#/, "").trim().toLowerCase();
+  }catch(e){ return ""; }
+  if(hash === "overview" || hash === "stats"){
+    try{ setActive(hash); render(); }catch(e){ return ""; }   // setActive 内含持久化；render 让目标视图真正上屏
+    return hash;
+  }
+  if(hash === "settings"){
+    try{ openDrawer(); }catch(e){ return ""; }
+    return hash;
+  }
+  return "";
+}
+
 (async function startup(){
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
   // v1.11.2 认证补码：OAuth2 回调闭环——URL 带 ?code&state 时换 token（正常启动零开销，fire-and-forget）
@@ -1927,6 +1949,11 @@ seed();
   }else{
     dailyDigest();
   }
+  /* v3.7.66：manifest shortcuts（./#overview / ./#stats / ./#settings）的 hash → 视图接线。
+     必须排在 render 之后 —— render() 会把设置抽屉收回主视图（src/render-entry.js:52-58 的
+     _moveDrawerHome + classList.remove("open") + uiView="main"），先接线再 render 等于把
+     #settings 的跳转当场抹掉（实测就是这样红了一条用例才看出来）。 */
+  applyStartHash();
   scheduleAutoBackup(); // 启动即留一份基线快照，确保 recover 始终有可还原点
   // T3.4 启动通知调度器：仅生产环境启动（jsdom 测试环境跳过，避免 setInterval 阻塞测试进程）
   if(getNotifyEnabled() && typeof navigator !== "undefined" && !/jsdom/i.test(navigator.userAgent)){
@@ -2022,6 +2049,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     buildDiagReport, renderDiagList,
     /* v3.7.65：反馈出口 —— Issue 预填 URL 构造 / 形态标签 / 提交动作（守卫用例见 tests/diag-report.test.js ⑤⑥⑦） */
     _diagIssueUrl, _diagEnvTag, openDiagIssue,
+    // v3.7.66：manifest shortcuts 的 hash → 视图接线（用例见 tests/pwa-shortcuts.test.js）
+    applyStartHash,
     // P0-4 诊断寄存器访问器（只读快照 + 测试间复位）
     calcStreak, heatmapData, analyzeBehavior, renderHeatmap,
     fetchCoachAdvice, renderHabitChainStatus,
