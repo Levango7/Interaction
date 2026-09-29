@@ -7,9 +7,9 @@
 function needsOnboarding(){
   return !load(PREFIX+"onboarded", false);
 }
-// B2：引导 modal 内部状态（当前步 + step1 选中的场景）
+// B2：引导 modal 内部状态（当前步 + 第 1 步要完成的那条演示任务 id）
 let _onboardStepNo = 1;
-let _onboardSelectedSc = "office";
+let _onboardDemoId = null;
 // 渲染指定步的 modal
 function _onboardRenderStep(step){
   // 移除已有 modal
@@ -17,18 +17,21 @@ function _onboardRenderStep(step){
   if(old) old.remove();
   let html;
   if(step === 1){
+    /* v3.7.66：第 1 步从「凭空建一条任务」改成「完成一条演示任务」。
+       不是审美改动：首次启动 seed() 已放好演示任务，原文案「先创建你的第一个任务吧」与用户眼前的
+       事实直接矛盾；而这个产品真正要教的第一件事是「标记完成 → 统计与联动立刻给反馈」，
+       所以让它第 1 步就发生。没有未完成任务时（老数据全完成过的极端）退化为纯「下一步」。 */
+    const _demo = getTasks().filter(function(x){ return x && x.status !== "done"; })[0] || null;
+    _onboardDemoId = _demo ? _demo.id : null;
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
         <div class="onboard-title">${t("onboard.welcome")}</div>
-        <div class="onboard-desc" data-i18n="onboard.step1Desc">这是一个帮你管理任务、养成习惯的工具。先创建你的第一个任务吧！</div>
-        <div class="onboard-scenarios" id="onboardSc">
-          ${ORDER.map(sc=>`<button type="button" class="onboard-sc-btn${sc===_onboardSelectedSc?" selected":""}" data-sc="${sc}">${SCENARIOS[sc].name}</button>`).join("")}
-        </div>
-        <input class="onboard-input" id="onboardTaskInput" placeholder="任务标题，如 写周报 / 修复报错 / 缴水电费" data-i18n-placeholder="field.onboardTaskInputPh">
+        <div class="onboard-desc" data-i18n="onboard.step1Desc">这是帮你管理任务、养成习惯的本地工坊。屏幕上这几条是演示数据——先完成一条，感受「任务 → 统计与联动」的闭环。</div>
+        ${_demo ? `<div class="card u-mt-2 u-fs-sm"><span class="u-text-dim" data-i18n="onboard.demoTaskLabel">演示任务：</span> <strong>${esc(_demo.title)}</strong></div>` : ""}
         <div class="onboard-actions">
           <button type="button" class="onboard-btn-secondary" id="onboardSkip" data-i18n="onboard.skip1">跳过</button>
-          <button type="button" class="onboard-btn-primary" id="onboardCreate" data-i18n="onboard.create">创建</button>
+          <button type="button" class="onboard-btn-primary" id="onboardDone" data-i18n="${_demo ? "onboard.completeDemo" : "onboard.next"}">${_demo ? t("onboard.completeDemo") : t("onboard.next")}</button>
         </div>
       </div>
     </div>`;
@@ -73,22 +76,15 @@ function _onboardBindStep(step){
   const modal = document.getElementById("onboardModal");
   const close = ()=>{ if(modal) modal.remove(); };
   if(step === 1){
-    document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(b=> /** @type {HTMLElement} */(b).onclick=()=>{
-      _onboardSelectedSc = /** @type {HTMLElement} */(b).dataset.sc;
-      document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(x=> x.classList.remove("selected"));
-      b.classList.add("selected");
-    });
     const skip = document.getElementById("onboardSkip");
     if(skip) skip.onclick = ()=>{ close(); _onboardRenderStep(2); };
-    const create = document.getElementById("onboardCreate");
-    if(create) create.onclick = ()=>{
-      const input = /** @type {HTMLInputElement} */(document.getElementById("onboardTaskInput"));
-      const title = input ? input.value.trim() : "";
-      if(!title){ toast(t("onboard.titleRequired", "请输入任务标题"), "warn"); return; }
-      const tasks = getTasks();
-      tasks.push({id:uid(), sc:_onboardSelectedSc, title, due:todayStr(), priority:"", status:"todo", doneAt:null, note:"", tags:[], created:Date.now()});
-      setTasks(tasks);
-      toast(t("onboard.firstTaskCreated", "已创建第一个任务，去「{name}」场景查看").replace("{name}", SCENARIOS[_onboardSelectedSc].name), "ok");
+    const done = document.getElementById("onboardDone");
+    if(done) done.onclick = ()=>{
+      if(_onboardDemoId){
+        const _dt = getTasks().filter(function(x){ return x && x.id === _onboardDemoId; })[0] || null;
+        try{ completeTask(_onboardDemoId); }catch(e){ /* 完成动作本身失败也不该卡住引导 */ }
+        toast(t("onboard.demoDone", "已把「{title}」标记完成，切到「统计」页就能看到反馈").replace("{title}", _dt ? _dt.title : ""), "ok");
+      }
       close(); _onboardRenderStep(2);
     };
   }else if(step === 2){
@@ -119,9 +115,11 @@ function _finishOnboarding(){
   save(PREFIX+"onboarded", true);
   try{ render(); checkCount(); dailyDigest(); }catch(e){ /* noop */ }
 }
-// B2：渲染引导 modal（入口）
+/* B2：渲染引导 modal（入口）—— v3.7.66「看过即记」：modal 一展示就写 onboarded 标记。
+   旧语义要等走完三步 / 点到最后一次跳过才写，于是中途关页面或直接刷新的人下次从头再被弹一次；
+   对免费期新用户，被同一个 modal 拦两道比少看一道更劝退。_finishOnboarding 仍会写一次（幂等）。 */
 function renderOnboarding(){
   _onboardStepNo = 1;
-  _onboardSelectedSc = "office";
+  try{ save(PREFIX+"onboarded", true); }catch(e){ /* 存储不可用时退回「每次都弹」，不阻塞功能 */ }
   _onboardRenderStep(_onboardStepNo);
 }

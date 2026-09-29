@@ -54,8 +54,53 @@ describe("今日仪表盘 + Onboarding", () => {
     const win = loadApp(); // 空存储 → 启动链里的 seed() 会写入演示任务
     const { needsOnboarding, getTasks, PREFIX } = win.__test;
     expect(getTasks().length, "前提：演示数据已播种").toBeGreaterThan(0);
-    expect(win.localStorage.getItem(PREFIX + "onboarded"), "前提：未标记已引导").toBeFalsy();
+    /* v3.7.66「看过即记」后，boot 展示引导时就会写 onboarded —— 这里要断言的是「播种不该挤掉引导」，
+       所以先把状态摆回「没看过」，避免与写入时机赛跑（那是不确定判据，会让用例随机红）。 */
+    win.localStorage.removeItem(PREFIX + "onboarded");
     expect(needsOnboarding(), "结论：引导不能被播种挤掉").toBe(true);
+  });
+
+  it("看过即记：引导一展示就写 onboarded，中途关页面不会下次从头再弹", () => {
+    const win = loadApp();
+    const { renderOnboarding, needsOnboarding, PREFIX } = win.__test;
+    win.localStorage.removeItem(PREFIX + "onboarded");
+    expect(needsOnboarding()).toBe(true);
+    renderOnboarding();
+    expect(win.localStorage.getItem(PREFIX + "onboarded"), "展示即应记录，别让没走完三步的人被同一块引导拦两次").toBeTruthy();
+    expect(needsOnboarding()).toBe(false);
+  });
+
+  it("第 1 步是「完成一条演示任务」：显示标题、点击后真的走完成路径并进入第 2 步", () => {
+    const win = loadApp();
+    const { renderOnboarding, getTasks } = win.__test;
+    const open = getTasks().filter((t) => t && t.status !== "done")[0];
+    expect(open, "前提：存在未完成的演示任务").toBeTruthy();
+    renderOnboarding();
+    const modal = win.document.querySelector(".onboard-modal");
+    const btn = win.document.getElementById("onboardDone");
+    expect(btn, "第 1 步必须有主按钮 onboardDone（旧 onboardCreate 已废弃：凭空建任务与屏上现状矛盾）").toBeTruthy();
+    expect(modal.textContent, "演示任务标题应当显示出来，用户才知道要完成哪一条").toContain(open.title);
+    const labelWithDemo = btn.textContent.trim();
+    btn.click();
+    const after = win.__test.getTasks().filter((t) => t.id === open.id)[0];
+    expect(after.status, "点击应真的走 completeTask，而不是只改文案").toBe("done");
+    expect(win.document.getElementById("onboardTrigger"), "第 1 步完成后应进入第 2 步（场景联动）").toBeTruthy();
+    // 语言无关断言：有演示任务与没有时按钮文案必须不同（zh「完成它」/ en「Mark it done」 vs「下一步」）
+    expect(labelWithDemo.length).toBeGreaterThan(0);
+  });
+
+  it("没有未完成任务时第 1 步退化为「下一步」，点击不报错也进第 2 步", () => {
+    const win = loadApp();
+    const { renderOnboarding, setTasks, getTasks } = win.__test;
+    setTasks([{ id: "d1", sc: "office", title: "已完成的旧任务", status: "done", due: "", priority: "", doneAt: Date.now(), note: "", tags: [], created: Date.now() }]);
+    expect(getTasks().filter((t) => t.status !== "done").length, "前提：没有未完成任务").toBe(0);
+    renderOnboarding();
+    const modal = win.document.querySelector(".onboard-modal");
+    const btn = win.document.getElementById("onboardDone");
+    expect(btn).toBeTruthy();
+    expect(modal.textContent, "无演示任务时不应出现「演示任务：」卡片").not.toContain("演示任务：");
+    btn.click();
+    expect(win.document.getElementById("onboardTrigger"), "空数据也应顺利进入第 2 步").toBeTruthy();
   });
 
   /* boot 级断言（v3.7.65）。三点加固，都是实测逼出来的：
@@ -87,13 +132,19 @@ describe("今日仪表盘 + Onboarding", () => {
     expect(modal.textContent).toContain("欢迎使用 Agent 工坊");
   });
 
-  it("onboarding 完成后标记 onboarded", () => {
+  it("一路「跳过」走到底：三步都跳过仍算完成，收尾把主界面渲染回来", () => {
     const win = loadApp();
-    win.localStorage.clear();
-    const { PREFIX } = win.__test;
-    // 模拟完成引导
-    win.localStorage.setItem(PREFIX + "onboarded", "true");
+    const { renderOnboarding, PREFIX } = win.__test;
+    win.localStorage.removeItem(PREFIX + "onboarded");
+    renderOnboarding();
+    for (let i = 0; i < 3; i++) {
+      const skip = win.document.getElementById("onboardSkip");
+      expect(skip, `第 ${i + 1} 步应有跳过入口`).toBeTruthy();
+      skip.click();
+    }
     expect(win.localStorage.getItem(PREFIX + "onboarded")).toBe("true");
+    expect(win.document.querySelector(".onboard-modal"), "走完后 modal 应被移除").toBeFalsy();
+    expect(win.document.getElementById("taskForm"), "_finishOnboarding 应把主界面渲染回来").toBeTruthy();
   });
 
   it("renderToday: 仪表盘头部包含问候语 + Top3 + 联动状态条", () => {
