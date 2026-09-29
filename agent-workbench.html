@@ -6,13 +6,18 @@
 <meta name="theme-color" content="#111118">
 <meta name="description" content="Agent 工坊 — 多场景任务 / 记录 / AI 助手的本地优先工坊（PWA，离线可用）">
 <meta name="author" content="Agent Workshop">
+<!-- v3.7.66：`mobile-web-app-capable` 是标准名（Chrome 与 iOS 16.4+ 都认），浏览器已把 apple-* 判为废弃并在控制台出警告。
+     旧名保留只为更老的 iOS 仍能全屏 —— 两条并存是兼容策略，不是配置疏漏。 -->
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
-<link rel="preload" href="./icon.svg" as="image" type="image/svg+xml">
-<link rel="preload" href="./manifest.json" as="fetch" crossorigin>
+<!-- v3.7.66：删掉两条 preload。icon.svg 只被 manifest / apple-touch-icon / favicon 引用，页面里没有 <img> 用它；
+     manifest.json 由浏览器的清单解析器取，不吃 preload。证据是线上控制台原话：
+     「The resource … was preloaded using link preload but not used within a few seconds from the window's load event」。
+     即纯首屏浪费字节 + 一条常驻警告，没有任何收益。 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- SECURITY NOTE [C-CSP-worker]: 必须显式给 worker-src。此前 CSP 没有 worker-src/child-src，
      Worker 会回落到 script-src（'self' 'unsafe-inline' https://cdnjs…，不含 blob:），

@@ -83,21 +83,5 @@
         }
       ]
     }
-  ],
-  "screenshots": [
-    {
-      "src": "./icon.svg",
-      "sizes": "1280x720",
-      "type": "image/svg+xml",
-      "form": "wide",
-      "label": "桌面端看板视图"
-    },
-    {
-      "src": "./icon.svg",
-      "sizes": "390x844",
-      "type": "image/svg+xml",
-      "form": "narrow",
-      "label": "移动端窄屏视图"
-    }
   ]
 }
