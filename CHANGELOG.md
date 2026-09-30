@@ -20,6 +20,14 @@
 - 本机实测：`onboarding` 17/17、`mobile` e2e 6/6、`desktop workflow` 2/2、`lint`（四道）+ `src:check` 全过；推送后 **CI run 36780279872** 与 **Deploy run 36780279800** 逐 job success（ubuntu/windows/e2e + verify/e2e/deploy）。
 - 复核线上的判据写法（本次先写错过一次，记下来）：`close(); _onboardRenderStep(n)` 线上有 2 处是**正常**的 —— 那是第 1 步主按钮与第 2 步「下一步」的推进接线（`src/ui-onboarding.js:91/:108`），只有挂在 `skip.onclick` 上才算残留；「跳过」修复的判据是 `skip.onclick = ()=>{ close(); _finishOnboarding(); }` 命中 **3**（末步本来就有 1 处）。
 
+### 发版后线上复核（v3.7.68 · 逐字节对上）
+
+- CI run **36788382454** 与 Deploy run **36788382477** 全 job success（22:56:16Z 触发 → 23:05 终态，这次没排托管队列）。
+- 线上 `agent-workbench.html` = **3,571,339 B · sha256:be38d612a2730970e8c47de21639f27df42b2d3d950000cf757205a3661f6b62**，与本机在**干净发版树**（`git archive 1e4f9e7` 导出后自行 inject + `build.mjs --prod`）算出的 prod 产物 **完整 sha256 逐字节相同**；`VERSION="3.7.68"`、`BUILD_TAG="20260930c"`、`var __TEST_GATE__ = false`。
+- 修复本身在线上的命中计数：`.onboard-step{margin-top:auto}` 1、`.onboard-actions{margin-top:auto` 1、`skip.onclick = ()=>{ close(); _finishOnboarding(); }` 3、挂在 `skip.onclick` 上的 `_onboardRenderStep` **0**。
+- 线上 `service-worker.js` = 24,795 B、`CACHE_VERSION = "v3.7.68-20260930230410"`（与 gh-pages 那份一致；此值每次构建叠 UTC 时间戳，**不能当跨构建指纹**，指纹只认 HTML 的 sha256）。
+- 本次 bump 的字节数与上一版**完全相同**（`3.7.67→3.7.68`、`20260930b→20260930c` 都是等长替换）→ 判"是否已上线"不能看 bytes，必须看 `VERSION`/`BUILD_TAG`；上一版（同 3,571,339 B / sha256:0d309e585c8a6b57…）是这两笔修复在 v3.7.67 标签下的那次线上内容。
+
 ### 已知取舍（如实登记）
 
 - 引导 modal 仍**没接 Esc / 遮罩点击**（`src/ui-global-events.js` 里没有它的分支）。现在每步都有「立刻结束」的次要按钮，不再是拦路，但键盘用户仍然关不掉 —— 留给下一批。
