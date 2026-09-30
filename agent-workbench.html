@@ -3347,7 +3347,15 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   .chain-bar{overflow-x:auto;flex-wrap:nowrap}
   .drawer{width:100%;max-width:100%}
   .onboard-modal{padding:0}
-  .onboard-card{max-width:100%;width:100%;max-height:100vh;max-height:100dvh;border-radius:0;height:100vh;height:100dvh;padding:var(--space-5)}
+  /* v3.7.68：移动端引导改为弹性列 —— 内容居中、操作贴底。
+     此前这里只把卡片拉到 100dvh，内容仍按文档流顶对齐 —— 375×667 真机实测：三步里主按钮停在
+     y≈265–309，下方 358px 是一整块空白面板（看着像页面没渲染完），CTA 也不在拇指区。 */
+  .onboard-card{max-width:100%;width:100%;max-height:100vh;max-height:100dvh;border-radius:0;height:100vh;height:100dvh;padding:var(--space-5);padding-bottom:calc(var(--space-5) + var(--safe));display:flex;flex-direction:column}
+  .onboard-actions{margin-top:auto;padding-top:var(--space-6)}
+  .onboard-actions .onboard-btn-primary,.onboard-actions .onboard-btn-secondary{flex:1 1 0}
+  /* 首个子元素也吃 auto margin：两处 auto 平分剩余空间 → 内容块居中在操作区之上，
+     而不是顶对齐后留一整段空白。内容超出时 auto margin 自动归零，卡片自身的 overflow-y:auto 接管。 */
+  .onboard-step{margin-top:auto}
   .help-modal{padding:0}
   .help-card{max-width:100%;width:100%;max-height:100vh;max-height:100dvh;border-radius:0;height:100vh;height:100dvh}
   .side-toggle{display:none}
@@ -24865,8 +24873,11 @@ function _onboardBindStep(step){
   const modal = document.getElementById("onboardModal");
   const close = ()=>{ if(modal) modal.remove(); };
   if(step === 1){
+    /* v3.7.68：「跳过」按字面意思结束引导，而不是翻到下一步。
+       旧接线是 close() + 渲染下一步 —— 按钮写着跳过，点了却再来一屏；移动端 modal 是全屏 sheet，
+       既没有 Esc 也没有点遮罩关闭（src/ui-global-events.js 未接），等于把新用户按在三步里走不出来。 */
     const skip = document.getElementById("onboardSkip");
-    if(skip) skip.onclick = ()=>{ close(); _onboardRenderStep(2); };
+    if(skip) skip.onclick = ()=>{ close(); _finishOnboarding(); };
     const done = document.getElementById("onboardDone");
     if(done) done.onclick = ()=>{
       if(_onboardDemoId){
@@ -24878,7 +24889,7 @@ function _onboardBindStep(step){
     };
   }else if(step === 2){
     const skip = document.getElementById("onboardSkip");
-    if(skip) skip.onclick = ()=>{ close(); _onboardRenderStep(3); };
+    if(skip) skip.onclick = ()=>{ close(); _finishOnboarding(); };
     const trigger = document.getElementById("onboardTrigger");
     if(trigger) trigger.onclick = ()=>{
       // 创建一个 office 交付任务并完成，触发联动
