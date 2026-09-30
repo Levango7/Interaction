@@ -1,3 +1,30 @@
+## [v3.7.68] - 2026-10-01
+
+**移动端首屏引导的两处缺陷收口：① ≤767px 下引导 modal 是「满屏卡片 + 顶对齐内容」，主按钮悬在屏幕中部、下方 358px 是一整块空白面板；②「跳过」按钮不结束引导，只是翻到下一步。** 第 ② 条是第 ① 条的守护用例自己抓出来的，不是人工 review 发现的。本机 Pixel 5 预设与线上真机各走查一遍；`tests/e2e/mobile.spec.js` 新增 3 条移动端布局不变量，`tests/onboarding.test.js` 15 → 17 条。**版本串与台账的口径要先说清：这两笔此前已单独推过 main（`5b1a04b..13789ac`），而 deploy 工作流是 `on: push: branches[main]` → 它们已经在 `v3.7.67` 的标签下跑过一段线上（CDN 实测 3,571,339 B / sha256:0d309e585c8a6b57…）。所以 v3.7.67 台账里那条 prod 指纹（3,570,127 B / sha256:783f4212be9f4d0b…）只对它自己那次构建成立，不含这两笔；本次 bump 的作用是让「版本串 ↔ 产物字节」重新对上。**
+
+### ① 满屏卡片 + 顶对齐内容 = 半块空白面板
+
+`@media(max-width:767px)` 里只把 `.onboard-card` 拉到 `height:100dvh`，内容仍按文档流顶对齐 —— 三步实测主按钮停在 y≈265–309，`vh - actions.bottom = 337.8`。修法照**同仓已经正确的** `.help-card` 形状（`display:flex` + `.help-body{flex:1;overflow-y:auto}`）：卡片改 flex 列，`.onboard-actions` 与**首个子元素** `.onboard-step` 各吃一个 `margin-top:auto` → 剩余空间上下平分（内容居中、操作贴底）；内容超出时两处 auto margin 自动归零，基线 `.onboard-card{overflow-y:auto}` 接管，不会裁切。另补 `padding-bottom:calc(var(--space-5) + var(--safe))` 让刘海机不压 Home 指示条。
+
+修后实测（375×667，本机与线上同一组数字）：三步 `gapAbove` 177–229 对 `gapToActions` 171–229、`vh - actions.bottom = 20`（就是 padding）、按钮高全 44、无横向溢出、零 pageerror。窄屏另测 375×400（仍居中贴底）与 375×320（auto margin 归零、卡片滚动接管，CTA 滚一点即达）。
+
+### ②「跳过」按字面意思结束引导
+
+第 1/2 步的 `#onboardSkip` 旧接线是 `close() + 渲染下一步` —— 按钮写着「跳过」，点了却再来一屏。引导 modal 既没接 Esc 也没接遮罩点击，移动端又是全屏 sheet，于是新用户必须连点三次才脱身；真正会结束的反而是末步那颗「稍后再说」。现在三步的次要按钮统一为「立刻结束」，主按钮负责推进。
+
+连带改测试口径：`onboarding.test.js` 原「一路跳过走到底」三步循环不再成立，改为用每步主按钮走完（`#onboardDone → #onboardNext → 末步 #onboardSkip`），并补两条「第 1 步跳过即结束」「第 2 步跳过即结束」的缺陷回归；`workflow.spec.js` 两处「连点三次 `#onboardSkip`」收敛为点一次 + 断言不再弹出。
+
+### 守护与门禁
+
+- 3 条移动端布局不变量（卡片满屏 / 操作贴底 ≤32px / CTA 落在视口下 40% / **上下留白差 ≤40** / 按钮 ≥44px / 无横向溢出）。**只断言「贴底」会漏掉空白本身**，所以把「内容上方留白 ≈ 内容到按钮的留白」写成不变量 —— 回归时该差值是 338px。删掉两条 `margin-top:auto` 即红（实测 337.8），守护不是哑的。
+- 本机实测：`onboarding` 17/17、`mobile` e2e 6/6、`desktop workflow` 2/2、`lint`（四道）+ `src:check` 全过；推送后 **CI run 36780279872** 与 **Deploy run 36780279800** 逐 job success（ubuntu/windows/e2e + verify/e2e/deploy）。
+- 复核线上的判据写法（本次先写错过一次，记下来）：`close(); _onboardRenderStep(n)` 线上有 2 处是**正常**的 —— 那是第 1 步主按钮与第 2 步「下一步」的推进接线（`src/ui-onboarding.js:91/:108`），只有挂在 `skip.onclick` 上才算残留；「跳过」修复的判据是 `skip.onclick = ()=>{ close(); _finishOnboarding(); }` 命中 **3**（末步本来就有 1 处）。
+
+### 已知取舍（如实登记）
+
+- 引导 modal 仍**没接 Esc / 遮罩点击**（`src/ui-global-events.js` 里没有它的分支）。现在每步都有「立刻结束」的次要按钮，不再是拦路，但键盘用户仍然关不掉 —— 留给下一批。
+- 第 2 步刚进来时那条「已把「…」标记完成」toast 会短暂压住「第 2 / 3 步」这行眉标（toast 层级 `--z-toast:90` 高于 `--z-modal:80` 是有意为之，反馈必须可见）。内容改居中后正文已不再被压，故不再动 toast 层。
+
 ## [v3.7.67] - 2026-09-30
 
 **RAG 增量索引落地 —— v3.7.59 登记的「笔记/任务/记录/对话历史只在手动『重建索引』时进真 RAG」缺陷清偿（product-scope §三 同步改判 ✅）。数据写路径经 core 新增的 `emitDataMutate` 广播位触发 ai-tools 的 `ragSyncIncremental`：内容哈希 diff 只落变更文档，新增/修改即入库即召回，删除即连向量一起移除；手动重建保留作全量兜底。全量 **109 文件 / 1233 用例**（v3.7.66 为 108/1223；+10 = `rag-incremental.test.js`）、`e2e` **71/71（3.8m）**、`lint`（四道）、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，**无新增**）、`check:source-state` 源码态，均本机实测。**发版后线上复核**：Pages 取回 **3,570,127 B · sha256:783f4212be9f4d0b58a5a3224769bde86647812a7a4240f57e70b6b693aee9de**（与本机 `build:prod` 指纹**逐字节相同**）、`VERSION="3.7.67"`、`BUILD_TAG="20260930b"`、`var __TEST_GATE__ = false`。**
