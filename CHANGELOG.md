@@ -1,3 +1,28 @@
+## [v3.7.67] - 2026-09-30
+
+**RAG 增量索引落地 —— v3.7.59 登记的「笔记/任务/记录/对话历史只在手动『重建索引』时进真 RAG」缺陷清偿（product-scope §三 同步改判 ✅）。数据写路径经 core 新增的 `emitDataMutate` 广播位触发 ai-tools 的 `ragSyncIncremental`：内容哈希 diff 只落变更文档，新增/修改即入库即召回，删除即连向量一起移除；手动重建保留作全量兜底。全量 **109 文件 / 1233 用例**（v3.7.66 为 108/1223；+10 = `rag-incremental.test.js`）、`e2e` **71/71（3.8m）**、`lint`（四道）、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，**无新增**）、`check:source-state` 源码态，均本机实测。**
+
+### 挂接点与分层（零新增逆层）
+
+- **四个写路径**：`setTasks` / `setRec`（data-rw）、`saveNotes`（ui-ge-notes，创建/更新/删除全走它）、`appendChat`（data-links，对话唯一运行时写口）；**两个批量入口**：`doImport`（ui-backup-stats，整表覆盖后全量收敛）与 `_applyCloudSnapshot`（render-overview，云端恢复后收敛）。
+- Data 直接调 ai-tools 会新增**逆层边**（data-rw>ai-tools），照 v3.7.66 `registerExternalNotifier` 的同款解法：core 留注册位 `registerDataMutateListener` / `emitDataMutate`（低层 emit、高层注册、异常隔离），两条边都向下。实测依赖图新增 7 条边**全部指向 core**（data-links/data-rw/ai-tools/render-overview/ui-backup-stats/ui-ge-notes +1），循环 50 / 逆层 53 未动。
+- `ragReindex` 与 `ragSyncIncremental` 共用同一份构建器 `_ragCurrentDocs()`（docId 规则/内容拼法/deletedAt 过滤单一来源），两条路径永不漂移。
+
+### diff 语义与节流
+
+- **FNV-1a 内容哈希**比对已索引 vs 当前：内容没变就一个字节都不动 —— 只改不入索引的字段（如任务 status 勾选完成）**零重建、零 embedding 请求**（有用例直接数 fetch）。
+- **≤48 条直嵌**（入库即召回，小改动即时可语义检索）；**>48 条退回批量回填**（`ragEnsureVectors`，32 条/请求），导入几百条也不会打几百个网络往返。防抖 4s 合并勾选风暴；同步单飞（进行中调用只登记 pending，结束后自动再排一轮直至收敛）。
+
+### 顺手修掉一个真缺陷：ragInit 回填与同步循环的竞态
+
+- `ragInit` 里有 fire-and-forget 的有界回填（`ragEnsureVectors(20)`）。增量同步调用 ragInit 后立刻开始逐条入库+直嵌，回填并发地把你**刚写入的文档**当成"缺失向量"再嵌一遍 —— 实测 4 文档同步打出 **5 个请求**（同一条任务文本两次网络往返）。生产里是小浪费，测试里是非确定性。修法：`ragInit` 加 `skipBackfill` 选项，同步路径传入（向量由同步自己确定性负责：直嵌或批量回填二选一）；检索/重建路径行为不变。
+
+### 已知取舍（如实登记，非缺陷遮掩）
+
+- 对话历史 docId 按数组下标编（`chat:sc:i`，沿用重建索引的既有规则）：`slice(-50)` 裁剪触发时下标整体平移，位移条目会按哈希 diff 重建一轮 —— 防抖+单飞把它合并成一次，且哈希不变的不重嵌。改成内容稳定 id 需迁移既有向量，收益不抵，故保留。
+- 云端恢复（`_applyCloudSnapshot`）直写 localStorage 但不刷新 `chats[sc]` 内存 → 任务/记录/笔记文档立即收敛（live 读），**对话文档在下一次 appendChat 后收敛**。导入（doImport）有 `_reloadChatsFromStorage` 不受此限。
+- 测试假象教训披露一次：直跑 `npx vitest` 改完 src 后忘重新注入，测的是**旧拼回产物** —— loadApp 的源码态守卫能防"完全没注入"，防不了"改后没重新注入"。本轮定位竞态时被它骗过一次（skipBackfill 修复"无效"其实是没重注入），重新注入后 10/10。
+
 ## [v3.7.66] - 2026-09-30
 
 **飞书/钉钉「群机器人 webhook」通知通道接到底（用户 09-29 定案：渠道取飞书+钉钉，"那种东西"=凭据，口径是绝不落盘）+ 修掉「集成连接弹窗点了不出现」的长期缺陷 + preload 暴露面契约测试（顺带清掉一个从不执行的假守护）。全量 **108 文件 / 1223 用例**（v3.7.65 为 104/1166；+39 = notify-webhook 22 · electron-ipc notify-send 13 · preload-contract 4）、`e2e` **71/71（5.6m）**（notify-hook 按 origin 分组 7 条 × desktop/tablet 两项目，真实 Chromium）、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，无新增）、`build:check` 五源一致 **v3.7.66 · BUILD_TAG 20260930a · sha256:ad9a25f290b28d03**，均本机实测。**
