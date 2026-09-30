@@ -1,3 +1,39 @@
+## [v3.7.66] - 2026-09-30
+
+**飞书/钉钉「群机器人 webhook」通知通道接到底（用户 09-29 定案：渠道取飞书+钉钉，"那种东西"=凭据，口径是绝不落盘）+ 修掉「集成连接弹窗点了不出现」的长期缺陷 + preload 暴露面契约测试（顺带清掉一个从不执行的假守护）。全量 **108 文件 / 1223 用例**（v3.7.65 为 104/1166；+39 = notify-webhook 22 · electron-ipc notify-send 13 · preload-contract 4）、`e2e` **71/71（5.6m）**（notify-hook 按 origin 分组 7 条 × desktop/tablet 两项目，真实 Chromium）、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，无新增）、`build:check` 五源一致 **v3.7.66 · BUILD_TAG 20260930a · sha256:ad9a25f290b28d03**，均本机实测。**
+
+### 通道与可达性（origin × 传输两轴，实测而非推断）
+
+- **通道选型**：群**自定义机器人 webhook**，不是企业自建应用。旧 `appKey/appSecret + chatId` 要管理员权限、还要用户拿不到的 `chatId`，个人场景根本配不通 —— 这正是 v3.7.60 把 6 个旧函数判死的原因。webhook 一个地址即可、天然单向，恰好匹配"通知推出去"。
+- **CORS 矩阵实测**（`_probe/cors-origin-matrix.mjs` 真实 Chromium 分别跑 `file://` 与 `http://127.0.0.1`；`_probe/electron-cors-main.cjs` 真 Electron）：webhook 是 `Content-Type: application/json` 的 POST **必触发预检** —— 飞书只在 Origin 为真实 http(s) 源时回 `ACAO: *`（`file://` 下一个 CORS 头都不回，`curl -H "Origin: null"` 复测确认）；钉钉**任何 origin 都不回**。本应用 Electron 窗口 `sandbox:true` 且 `loadFile()` = `file://` → 渲染进程连飞书都发不出去，只有主进程能发。结论落成分流：**飞书**在 http(s) 源（启动本地服务.bat / 线上站点）或有主进程时开放，**钉钉仅桌面版**；其余情况面板禁用连接按钮并用 title 写明原因与出路。⚠️ 取证教训已记档：只带一个 Origin 用 curl 测出 `ACAO: *` 就下"浏览器可用"结论，是一轴的证据推两轴的结论。
+- **被拒的通道一个请求都不发**，也不把 webhook 存内存冒充已连接（`notifyHookConnect` 里拦，不在按钮上拦 —— e2e 有绕过 UI 直接调用的用例）。
+
+### 主进程代发（`notify-send` IPC）的安全边界
+
+- **主机白名单** `isSafeNotifyWebhookUrl` 只放行三家公开 webhook 主机：**精确匹配**（`oapi.dingtalk.com.evil.example.com` 必拒）、强制 `https:`、拒 userinfo（`https://oapi.dingtalk.com@evil`）、拒回环与链路本地（`127.0.0.1` / `169.254.169.254`）；`assertTrustedSender` 与 chat 同一道门；`timeoutMs` 钳 1–20s。
+- **日志脱敏**：只记主机与状态码，绝不记 `access_token` / `sign` / 正文（有用例直接读 `logs/app.log` 反证）。
+- **签名口径**：钉钉 ts 用**毫秒**、`sign = HMAC(key=secret, data=ts+"\n"+secret)` 进 **URL query**；飞书 ts 用**秒**、`sign = HMAC(key=ts+"\n"+secret, data="")` 进 **JSON body** —— 两者方向相反，写反必签失败。
+- **失败口径**：钉钉 HTTP 200 仍可能 `errcode≠0`，只看 `resp.ok` 会把失败当成功，已按 `errcode` 判定；`notifyHookSend` **永不抛错**，失败只进诊断面板（`pushDiag`），本地通知不受影响。
+
+### 不落盘（🔴 硬约束）+ 历史凭据回扫
+
+- webhook 地址与 Secret **只存会话内存**：不走 `integrationRegisterProvider` / `_intSaveProviders` 密封写盘链。**三条零持久化断言**在真实 Chromium 里跑：配置后 localStorage 无 `wb_integration_*` 飞书/钉钉条目、刷新后凭据确实失效、面板回显只给 `host/…xxxx…` 脱敏 hint。
+- `_notifyScrubPersisted()` 在 `startup()` 一次性抹掉旧版本写进 `wb_integration_providers` 的 feishu/dingtalk 凭据（含当时不算"敏感"的 `appId` / `accessKey` 明文），幂等。
+- 文案显式写「⚠ 只保存在本次会话内存里：不写入本地存储、不进备份与云同步，刷新或关闭页面即失效」；文案诚实度守护归 `integration-jira-domain.test.js`（未接线 5 家必须写"尚未接入"、已接线 2 家必须写 webhook + 会话内存 + 不许承诺同步 + 钉钉必须写「仅桌面版」）。
+
+### 顺带修的缺陷与假守护
+
+- **修「连接弹窗点了不出现」**：`openIntegrationConfig` 只给外层 `.overlay` 加 show，内层 `.cmd` 基类是 `display:none` —— 点「连接」后弹窗根本不出现。jsdom 测不出（不渲染样式），e2e 才能抓到。
+- **删 `tests/preload-static-check.cjs`**：它从不被 vitest 收集（`include` 只收 `tests/**/*.test.js`，CI 与 npm 脚本都没引用），断言本身还是错的（要求 preload 从 `electron` 解构 `app`，而 `app` 属主进程、preload 本就不该有），实测 `node tests/preload-static-check.cjs` 直接 exit 1 —— "看起来在检查、真跑必红"比没有更糟。替代者 `tests/preload-contract.test.js` 真的用假 `require("electron")` 执行 preload、捕获交给 `exposeInMainWorld` 的对象来断言（非文本正则），堵住「preload 少暴露一个方法 → `typeof api.notifySend === "function"` 恒 false → 钉钉永久退化」而全部门禁照绿的缝隙。
+- **废弃函数 30 → 24**：飞书/钉钉选定 webhook 后，6 个旧凭据模型函数（feishu/dingtalk × SendMessage/NotifyEvent/CreateTaskFromMessage，含 1 条传递性内部边）**直接删除**；其余 24 个（notion/linear/jira/slack/日历）**仍只标记**，等五家定案。守护 `integration-deprecated.test.js` 锁「标记仍在 + 仍然零调用 + 活路径未被误标 + 已删的 6 个不回流」。
+- **分层**：没有让 `ui-daily` 直接调 `ui-ge-integrations`（`check:modules` 实测会新增逆层边）。改为 `core` 暴露 `registerExternalNotifier` / `emitExternalNotify` 注册位，两条边都向下；通道自己决定要不要真外发，任何通道抛错不冒到调用方。
+- **消费点**：`notifySystem`（`src/ui-daily.js`）本地展示之外多一条外发漏斗，5 个生产调用点全部带上事件类别：`daily` / `due` / `chain` / `review`×2。
+
+### 披露
+
+- 每条新守护都做过**变异验证**：注入 `localStorage.setItem("wb_integration_providers", …)` → 零持久化转红并点名该键；摘掉 `_notifyScrubPersisted` 写回 → 回扫两条转红；未登记类别兜底改回旧写法 → 「关不掉的通道」转红；摘掉 `preload.js` 的 `notifySend` → 契约组 3 条转红且报出方法名。
+- 本机 `verify:ci` 首跑遇一次 **vitest worker「Timeout calling onTaskUpdate」偶发假红**：108/108 文件全过后主进程 RPC 超时退 1 → posttest 未执行 → HTML 留在注入态，被收尾断言如实抓下；单独重跑全绿后十步全过。与 v3.7.64 的超时预算取证同源（本机全量并行下的基础设施抖动，非代码缺陷）。
+
 ## [v3.7.65] - 2026-09-29
 
 **反馈出口 + 一条死路径修复 + 构建口径修正 —— ① 诊断面板补「提交 Issue」，把 v3.7.64 只到「复制到剪贴板」的反馈链路接到「有人能收」（脱敏报告预填 GitHub 新建 Issue，应用自身零请求）；② 线上实测揪出「新用户三步引导永不可达」：`seed()` 先播种演示任务、`needsOnboarding()` 又要求无任务，两者互斥 → 修正为只看标记，启动处不再让主界面渲染与引导互斥（引导改 modal 叠加），8 个 e2e spec 随之接入稳态夹具；③ `--prod` 日志的「bytes」实为 UTF-16 字符数（与 96ee171 给 `--check` 修掉的同一病灶），并补齐 `build` / `build:prod` 缺失的 post 自愈钩子。**本机实测全绿：`verify:ci` 十步按序 exit 0 + 收尾断言回源码态、全量 **104 文件 / 1166 用例**（v3.7.64 为 104/1156；+10 条 = diag 7→13、onboarding 7→12）、`lint`（四道）、`lint:layers`、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，无新增）、`build:check` 五源一致 **v3.7.65 · BUILD_TAG 20260929a · 3,544,739 bytes · sha256:90f1745bb53d1ab3**、`e2e` **57/57（3.5m）**。**本版起台账同时记线上产物指纹**：`build:prod` → `agent-workbench.prod.html` **3,544,529 bytes · sha256:20ae62518278bab5**（与注入态差 210 B，即 `__TEST_GATE__` 置 false 的替换量）。**发版后线上复核**：Pages 取回 **3,544,529 B · sha256:20ae62518278bab5**（与本机 prod 指纹逐字节相同）、`VERSION="3.7.65"`、`BUILD_TAG="20260929a"`、页内已含 `btnOpenIssue`、`var __TEST_GATE__ = false`。**`CACHE_VERSION` 不入等价性判据** —— 它由每次 prod 构建叠加 UTC 时间戳生成：部署作业那次是 `v3.7.65-20260928231049`（线上 `service-worker.js` 与 deploy 日志双向对上），本机预演那次是 `v3.7.65-20260928221216`，拿后者去核对线上必然「对不上」，属口径而非缺陷。
