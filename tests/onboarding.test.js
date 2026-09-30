@@ -132,19 +132,50 @@ describe("今日仪表盘 + Onboarding", () => {
     expect(modal.textContent).toContain("欢迎使用 Agent 工坊");
   });
 
-  it("一路「跳过」走到底：三步都跳过仍算完成，收尾把主界面渲染回来", () => {
+  it("走完三步（主按钮推进 + 末步收尾）：modal 移除、标记写入、主界面渲染回来", () => {
     const win = loadApp();
     const { renderOnboarding, PREFIX } = win.__test;
     win.localStorage.removeItem(PREFIX + "onboarded");
     renderOnboarding();
-    for (let i = 0; i < 3; i++) {
-      const skip = win.document.getElementById("onboardSkip");
-      expect(skip, `第 ${i + 1} 步应有跳过入口`).toBeTruthy();
-      skip.click();
-    }
+    /* v3.7.68 起「跳过」= 立刻结束，所以「走到底」必须用每一步的主按钮：
+       第 1 步 #onboardDone（完成演示任务）→ 第 2 步 #onboardNext → 第 3 步 #onboardSkip（稍后再说）。 */
+    const click = (id, stepLabel) => {
+      const el = win.document.getElementById(id);
+      expect(el, `${stepLabel} 应有按钮 #${id}`).toBeTruthy();
+      el.click();
+    };
+    click("onboardDone", "第 1 步");
+    expect(win.document.querySelector(".onboard-modal"), "第 2 步应重新弹出").toBeTruthy();
+    click("onboardNext", "第 2 步");
+    expect(win.document.querySelector(".onboard-modal"), "第 3 步应重新弹出").toBeTruthy();
+    click("onboardSkip", "第 3 步");
     expect(win.localStorage.getItem(PREFIX + "onboarded")).toBe("true");
     expect(win.document.querySelector(".onboard-modal"), "走完后 modal 应被移除").toBeFalsy();
     expect(win.document.getElementById("taskForm"), "_finishOnboarding 应把主界面渲染回来").toBeTruthy();
+  });
+
+  it("第 1 步点「跳过」立即结束引导（缺陷回归：旧接线会再弹第 2 步）", () => {
+    const win = loadApp();
+    const { renderOnboarding, PREFIX } = win.__test;
+    win.localStorage.removeItem(PREFIX + "onboarded");
+    renderOnboarding();
+    win.document.getElementById("onboardSkip").click();
+    expect(win.document.querySelector(".onboard-modal"),
+      "按钮写着「跳过」就不该翻到下一步 —— 移动端是全屏 sheet，没有 Esc/遮罩可关，点不掉的引导就是拦路").toBeFalsy();
+    expect(win.localStorage.getItem(PREFIX + "onboarded")).toBe("true");
+    expect(win.document.getElementById("taskForm"), "跳过后主界面应渲染回来").toBeTruthy();
+  });
+
+  it("第 2 步点「跳过」同样立即结束（不再弹第 3 步）", () => {
+    const win = loadApp();
+    const { renderOnboarding, PREFIX } = win.__test;
+    win.localStorage.removeItem(PREFIX + "onboarded");
+    renderOnboarding();
+    win.document.getElementById("onboardDone").click();
+    expect(win.document.getElementById("onboardSkip"), "前提：已进入第 2 步").toBeTruthy();
+    win.document.getElementById("onboardSkip").click();
+    expect(win.document.querySelector(".onboard-modal")).toBeFalsy();
+    expect(win.localStorage.getItem(PREFIX + "onboarded")).toBe("true");
   });
 
   it("renderToday: 仪表盘头部包含问候语 + Top3 + 联动状态条", () => {

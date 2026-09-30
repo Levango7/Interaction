@@ -76,8 +76,11 @@ function _onboardBindStep(step){
   const modal = document.getElementById("onboardModal");
   const close = ()=>{ if(modal) modal.remove(); };
   if(step === 1){
+    /* v3.7.68：「跳过」按字面意思结束引导，而不是翻到下一步。
+       旧接线是 close() + 渲染下一步 —— 按钮写着跳过，点了却再来一屏；移动端 modal 是全屏 sheet，
+       既没有 Esc 也没有点遮罩关闭（src/ui-global-events.js 未接），等于把新用户按在三步里走不出来。 */
     const skip = document.getElementById("onboardSkip");
-    if(skip) skip.onclick = ()=>{ close(); _onboardRenderStep(2); };
+    if(skip) skip.onclick = ()=>{ close(); _finishOnboarding(); };
     const done = document.getElementById("onboardDone");
     if(done) done.onclick = ()=>{
       if(_onboardDemoId){
@@ -89,7 +92,7 @@ function _onboardBindStep(step){
     };
   }else if(step === 2){
     const skip = document.getElementById("onboardSkip");
-    if(skip) skip.onclick = ()=>{ close(); _onboardRenderStep(3); };
+    if(skip) skip.onclick = ()=>{ close(); _finishOnboarding(); };
     const trigger = document.getElementById("onboardTrigger");
     if(trigger) trigger.onclick = ()=>{
       // 创建一个 office 交付任务并完成，触发联动

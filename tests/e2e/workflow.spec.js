@@ -54,17 +54,13 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     });
 
     // ---------- 2. onboarding 跳过 ----------
-    await test.step("onboarding 三步跳过", async () => {
+    await test.step("onboarding 一步跳过", async () => {
       // 若未触发 onboarding（非首次启动），则 #onboardModal 不存在，直接返回
       const onboard = await page.$("#onboardModal");
       if (!onboard) return;
-      // 三步引导：step1 跳过 → step2，step2 跳过 → step3，step3 跳过 → 完成
-      // 每步点 #onboardSkip（同步重新渲染，新按钮立即可用）
-      for (let i = 0; i < 3; i++) {
-        await page.locator("#onboardSkip").click();
-        // 等待 modal 重新渲染或关闭（同步操作，150ms 足够）
-        await page.waitForTimeout(150);
-      }
+      // v3.7.68：「跳过」直接结束引导（旧语义是翻到下一步，要连点三次才脱身），所以只点一次
+      await page.locator("#onboardSkip").click();
+      await expect(page.locator(".onboard-modal"), "跳过后不应再弹下一步").toHaveCount(0);
       // 引导完成后主区渲染，等待任务表单出现
       await page.waitForSelector("#taskForm", { timeout: 10_000 });
     });
@@ -276,14 +272,12 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
   test("smoke：应用可启动且渲染侧边栏四个场景", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#side .nav-item", { timeout: 15_000 });
-    // 处理 onboarding（若存在）以便主区渲染
+    // 处理 onboarding（若存在）以便主区渲染 —— v3.7.68 起「跳过」一次即结束
     const onboard = await page.$("#onboardModal");
     if (onboard) {
-      for (let i = 0; i < 3; i++) {
-        await page.waitForSelector("#onboardSkip", { timeout: 10_000 });
-        await page.click("#onboardSkip");
-        await page.waitForTimeout(200);
-      }
+      await page.waitForSelector("#onboardSkip", { timeout: 10_000 });
+      await page.click("#onboardSkip");
+      await expect(page.locator(".onboard-modal"), "跳过后不应再弹下一步").toHaveCount(0);
     }
     // 侧边栏应含 overview / stats / office / code / study / life 六个 nav-item
     const navCount = await page.locator("#side .nav-item").count();
