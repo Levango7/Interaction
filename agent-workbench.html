@@ -6090,10 +6090,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.66"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
+const VERSION = "3.7.67"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260930a";
+const BUILD_TAG = "20260930b";
 
 
 
@@ -14173,6 +14173,25 @@ function emitExternalNotify(title, body, kind){
   }
 }
 
+/* ---------- v3.7.67 数据变更广播（RAG 增量索引的挂接位） ----------
+ * 为什么放 core：数据写入口在 Data 层（setTasks/setRec/appendChat），而增量索引
+ * 实现在 AI 层（ai-tools 的 ragSyncIncremental）。让 Data 直接调 ai-tools 会新增
+ * 逆层依赖（data-rw>ai-tools）。与上方 registerExternalNotifier 同款解法：
+ * 低层只 emit，高层注册实现，两条边都向下。domain 是触发源提示（task/rec/note/
+ * chat/import/restore），监听方目前只有 RAG 同步，但接口按通用事件留。 */
+const _dataMutateListeners = [];
+function registerDataMutateListener(fn){
+  if(typeof fn !== "function") return false;
+  if(_dataMutateListeners.indexOf(fn) < 0) _dataMutateListeners.push(fn);
+  return true;
+}
+function emitDataMutate(domain){
+  for(let i = 0; i < _dataMutateListeners.length; i++){
+    try{ _dataMutateListeners[i](String(domain || "")); }
+    catch(e){ /* 索引同步的任何故障都不该冒回数据写路径 */ }
+  }
+}
+
 function toast(msg, type){
   let c=$("#toasts"); if(!c){ c=document.createElement("div"); c.id="toasts"; c.setAttribute("role","status"); c.setAttribute("aria-live","polite"); document.body.appendChild(c); }
   const d=document.createElement("div"); d.className="toast"+(type?" "+type:"");
@@ -15975,7 +15994,14 @@ function getChat(sc){ return chats[sc] || []; }
 /* v3.4.5 G2 修复：写路径补 slice(-50) 裁剪——与读路径（启动/导入 slice(-50)，L6765/6950）对齐。
  * 此前 appendChat 直接 concat 全量写回：读时裁过的数组一经追加即恢复超长并持续增长，
  * 7 个 chat_<sc> 键是 5MB 配额的持续膨胀源。镜像层 _mirrorChatToSession 已有同款裁剪（L6931）。 */
-function appendChat(sc, msg){ chats[sc] = _chatTag((chats[sc]||[]).concat(msg).slice(-50), sc); save(PREFIX+"chat_"+sc, chats[sc]); }
+function appendChat(sc, msg){
+  chats[sc] = _chatTag((chats[sc]||[]).concat(msg).slice(-50), sc);
+  save(PREFIX+"chat_"+sc, chats[sc]);
+  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费）。对话历史是唯一按
+     数组下标编 docId 的来源（chat:sc:i）——slice(-50) 裁剪触发时下标整体平移，
+     增量同步会按哈希 diff 重建位移条目；防抖 + 单飞已把这种风暴合并成一轮。 */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("chat"); }catch(e){ /* 索引不阻塞写路径 */ }
+}
 
 /* ---------- v2.0 多 Session 聊天存储层（自 .bak2 回填，适配当前版 load/save 封装） ----------
  * 会话模型 Session：{ id, title, sc, createdAt, updatedAt, msgs: [...] }
@@ -17738,9 +17764,13 @@ function saveRagDocs(docs){
  * 初始化 RAG：载入向量缓存 + 发起一次有界回填。
  * v3.7.57 起不再加载 sql.js / 不再建 FTS5 表（词法召回改由 ragLexBuild 提供），
  * 因此本函数与网络、WASM 都无关，毫秒级返回。
+ * @param {{skipBackfill?:boolean}} [opts] - v3.7.67：ragSyncIncremental 传 true 跳过
+ *   发射后不管的回填 —— 否则回填与同步循环并发，循环刚写入的文档会被回填当成"缺失"
+ *   再嵌一遍（同一条文本两次网络往返；实测 4 文档同步打出 5 个请求）。同步路径的
+ *   向量由循环自己确定性负责（直嵌或大批量回填二选一）。
  * @returns {Promise<boolean>} 是否成功
  */
-async function ragInit(){
+async function ragInit(opts){
   if(_ragReady) return true;
   try{
     /* 缺失的向量做一次**有界**回填（上限 20 条），避免文档多时启动长时间占住主线程；
@@ -17748,7 +17778,9 @@ async function ragInit(){
        注意这里**不能**把 _ragVecCache 置空来"重新载入"：ragVecPut 是"先写内存缓存、
        再尽力写 IDB"，IDB 不可用（无 IDB 的环境 / 配额满）时缓存就是唯一副本，
        置空等于把已经算出来的向量丢了。 */
-    ragEnsureVectors(20).catch(e => pushDiag("warn", "rag backfill failed: " + ((e && e.message) || e), { where: "ragInit" }));
+    if(!(opts && opts.skipBackfill)){
+      ragEnsureVectors(20).catch(e => pushDiag("warn", "rag backfill failed: " + ((e && e.message) || e), { where: "ragInit" }));
+    }
     _ragReady = true;
     return true;
   }catch(e){
@@ -18190,6 +18222,142 @@ async function ragInjectContext(userText, opts){
 }
 
 /**
+ * 收集当前应当入索引的全部文档（任务/记录/笔记/对话历史）
+ * —— ragReindex（全量重建）与 ragSyncIncremental（增量同步）共用同一份构建器，
+ * 保证两条路径的 docId 规则、内容拼法、过滤条件（如 deletedAt）永远一致。
+ * @returns {Array<{docId:string, source:string, content:string}>}
+ */
+function _ragCurrentDocs(){
+  const out = [];
+  try{
+    const tasks = getTasks();
+    for(const t of tasks){
+      if(t.deletedAt) continue;
+      const content = [t.title, t.note || "", (t.tags || []).join(" ")].join(" ").trim();
+      if(content) out.push({ docId: "task:"+t.id, source: "task", content });
+    }
+  }catch(_){}
+  try{
+    for(const sc of ORDER){
+      for(const r of getRec(sc)){
+        const content = Object.values(r).filter(v => typeof v === "string").join(" ").trim();
+        if(content) out.push({ docId: "rec:"+sc+":"+r.id, source: "record:"+sc, content });
+      }
+    }
+  }catch(_){}
+  try{
+    const notes = getNotes();
+    for(const n of notes){
+      const content = [n.title, n.content, (n.tags || []).join(" ")].join(" ").trim();
+      if(content) out.push({ docId: "note:"+n.id, source: "note", content });
+    }
+  }catch(_){}
+  try{
+    for(const sc of ORDER){
+      const hist = getChat(sc);
+      for(let i = 0; i < hist.length; i++){
+        const m = hist[i];
+        if(m.role === "user" || m.role === "assistant"){
+          const content = String(m.content || "").trim();
+          if(content) out.push({ docId: "chat:"+sc+":"+i, source: "chat:"+sc, content });
+        }
+      }
+    }
+  }catch(_){}
+  return out;
+}
+
+/** FNV-1a 32 位内容哈希（hex）。只用于"内容变没变"的比较，不承载安全语义。 */
+function _ragDocHash(s){
+  let h = 0x811c9dc5;
+  for(let i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h.toString(16);
+}
+
+/* v3.7.67 增量同步的节流/批量参数：
+   - 防抖 4s：任务连续勾选、批量导入等风暴只触发一次同步；
+   - 单轮直嵌上限 48：小改动即时建向量（入库即召回），大批量（导入/迁移）退回
+     skipEmbed + 一次 ragEnsureVectors 批量回填，避免几十次单独网络往返。 */
+const RAG_SYNC_DEBOUNCE_MS = 4000;
+const RAG_SYNC_EMBED_CAP = 48;
+let _ragSyncTimer = null;
+let _ragSyncing = false;
+let _ragSyncPending = false;
+
+/**
+ * RAG 增量同步（v3.7.67）：把当前数据与已索引文档做哈希 diff，
+ * 只对新增/内容变化/已删除的 docId 落库——替代此前"只有手动重建索引才进 RAG"。
+ * @returns {Promise<{added:number, updated:number, removed:number}>}
+ */
+async function ragSyncIncremental(){
+  if(_ragSyncing){ _ragSyncPending = true; return { added:0, updated:0, removed:0 }; }
+  _ragSyncing = true;
+  try{
+    /* skipBackfill：本函数对向量完全负责（≤CAP 直嵌 / >CAP 批量回填），
+       不与 ragInit 的发射后不管回填并发 —— 否则刚写入的文档会被回填再嵌一遍 */
+    await ragInit({ skipBackfill: true });
+    const docs = getRagDocs();
+    const indexed = new Map();
+    for(const d of docs) indexed.set(d.docId, _ragDocHash(String(d.content || "")));
+    const current = _ragCurrentDocs();
+    const wanted = new Map();
+    for(const c of current) wanted.set(c.docId, _ragDocHash(c.content));
+
+    let removed = 0;
+    for(const d of docs){
+      if(!wanted.has(d.docId)){ await ragIndexRemove(d.docId); removed++; }
+    }
+    const changed = current.filter(c => indexed.get(c.docId) !== wanted.get(c.docId));
+    let added = 0, updated = 0;
+    if(changed.length){
+      const bigBatch = changed.length > RAG_SYNC_EMBED_CAP;
+      const OPT = bigBatch ? { skipEmbed: true } : undefined;
+      for(const c of changed){
+        const isNew = !indexed.has(c.docId);
+        await ragIndexAdd(c.docId, c.content, c.source, OPT);
+        if(isNew) added++; else updated++;
+      }
+      /* 大批量走批量回填而非逐条网络往返；本轮没补到的缺失向量由检索侧按需再补。 */
+      if(bigBatch){ try{ await ragEnsureVectors(Math.min(64, changed.length)); }catch(_){} }
+    }
+    return { added, updated, removed };
+  }finally{
+    _ragSyncing = false;
+    if(_ragSyncPending){
+      _ragSyncPending = false;
+      ragScheduleSync(500);
+    }
+  }
+}
+
+/**
+ * 防抖触发增量同步：数据写路径（setTasks/setRec/saveNotes/appendChat）经
+ * core 的 emitDataMutate 广播到这里。多次触发合并为最后一次。
+ * @param {number} [delayMs] - 覆盖默认防抖（pending 重排与测试用）
+ */
+function ragScheduleSync(delayMs){
+  try{
+    if(_ragSyncTimer) clearTimeout(_ragSyncTimer);
+    const wait = (typeof delayMs === "number" && delayMs >= 0) ? delayMs : RAG_SYNC_DEBOUNCE_MS;
+    _ragSyncTimer = setTimeout(function(){
+      _ragSyncTimer = null;
+      ragSyncIncremental().catch(function(e){
+        pushDiag("error", "rag sync failed: " + ((e && e.message) || e), { where: "ragSyncIncremental" });
+      });
+    }, wait);
+  }catch(e){ /* 定时器不可用的极端环境下放弃本轮同步（手动重建索引仍在） */ }
+}
+
+/* v3.7.67：向 core 注册数据变更监听 —— Data 层写路径 emit，本层消费。
+   typeof 守卫：个别 node 环境测试只加载 ai-tools 不加载 core 时不炸。 */
+if(typeof registerDataMutateListener === "function"){
+  registerDataMutateListener(function(){ ragScheduleSync(); });
+}
+
+/**
  * RAG 增量索引：从任务/记录/笔记/对话历史构建索引
  * @returns {Promise<number>} 索引文档数
  */
@@ -18199,57 +18367,10 @@ async function ragReindex(){
   /* 全量重建一律 skipEmbed：逐条 embed = N 次网络往返（几百条就是几百次），
      改成"先把正文全入库，末尾一次批量回填"（ragEnsureVectors 每 32 条一个请求）。 */
   const OPT = { skipEmbed: true };
-  // 索引任务
-  try{
-    const tasks = getTasks();
-    for(const t of tasks){
-      if(t.deletedAt) continue;
-      const content = [t.title, t.note || "", (t.tags || []).join(" ")].join(" ").trim();
-      if(content){
-        await ragIndexAdd("task:"+t.id, content, "task", OPT);
-        count++;
-      }
-    }
-  }catch(_){}
-  // 索引记录
-  try{
-    for(const sc of ORDER){
-      for(const r of getRec(sc)){
-        const content = Object.values(r).filter(v => typeof v === "string").join(" ").trim();
-        if(content){
-          await ragIndexAdd("rec:"+sc+":"+r.id, content, "record:"+sc, OPT);
-          count++;
-        }
-      }
-    }
-  }catch(_){}
-  // 索引笔记
-  try{
-    const notes = getNotes();
-    for(const n of notes){
-      const content = [n.title, n.content, (n.tags || []).join(" ")].join(" ").trim();
-      if(content){
-        await ragIndexAdd("note:"+n.id, content, "note", OPT);
-        count++;
-      }
-    }
-  }catch(_){}
-  // 索引对话历史
-  try{
-    for(const sc of ORDER){
-      const hist = getChat(sc);
-      for(let i = 0; i < hist.length; i++){
-        const m = hist[i];
-        if(m.role === "user" || m.role === "assistant"){
-          const content = String(m.content || "").trim();
-          if(content){
-            await ragIndexAdd("chat:"+sc+":"+i, content, "chat:"+sc, OPT);
-            count++;
-          }
-        }
-      }
-    }
-  }catch(_){}
+  for(const c of _ragCurrentDocs()){
+    await ragIndexAdd(c.docId, c.content, c.source, OPT);
+    count++;
+  }
   /* 一次批量补齐所有缺失向量（配了 embedding 通道才有；没配就直接返回）。
      上限传 Infinity：重建场景要覆盖全表，而不是像启动期那样只补 20 条。 */
   try{ await ragEnsureVectors(Infinity); }catch(_){}
@@ -18827,6 +18948,8 @@ function getActiveTasks(){ return taskStore.get().filter(t=>!t.deletedAt); }
 function setTasks(a){
   _pushUndo(taskStore.get()); // B6：写入前记录变更前快照（undo/redo 恢复时 _undoGuard 跳过）
   taskStore.set(a); save(PREFIX+"tasks", a); scheduleAutoBackup();
+  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费，避免 Data→AI 逆层） */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("task"); }catch(e){ /* 索引不阻塞写路径 */ }
 }
 
 /* ---------- B6：undo/redo 操作历史栈（任务数组快照式，上限 50） ---------- */
@@ -18969,7 +19092,11 @@ function getRec(sc){ return load(PREFIX+"rec_"+sc, []); }
  * @param {Object[]} a - 记录数组
  * @returns {void}
  */
-function setRec(sc, a){ save(PREFIX+"rec_"+sc, a); scheduleAutoBackup(); }
+function setRec(sc, a){
+  save(PREFIX+"rec_"+sc, a); scheduleAutoBackup();
+  /* v3.7.67：广播数据变更（RAG 增量同步消费） */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("rec"); }catch(e){ /* 索引不阻塞写路径 */ }
+}
 
 /* ---------- P1-b 自动备份（防抖快照，独立于手动导出） ---------- */
 const AUTO_BACKUP_KEY = PREFIX + "autobackup";
@@ -26610,6 +26737,8 @@ function _applyCloudSnapshot(data) {
     }
   });
   _setSyncMeta({ lastPullAt: Date.now() });
+  /* v3.7.67：云端恢复覆盖了本机键值，RAG 增量同步按哈希 diff 收敛（经 core 广播位，避免 Render→AI 逆层） */
+  try { if (typeof emitDataMutate === "function") emitDataMutate("restore"); } catch (e) { /* 索引不阻塞恢复 */ }
 }
 async function cloudCheckOnLogin() {
   if (!window.isApiLoggedIn()) return;
@@ -33358,6 +33487,8 @@ function doImport(file){
         toast(t("msg.importSuccess","导入成功，数据已恢复"), "ok");
       }
 
+      /* v3.7.67：导入整表覆盖了任务/记录/笔记/对话，RAG 增量同步按哈希 diff 全量收敛 */
+      try{ if(typeof emitDataMutate === "function") emitDataMutate("import"); }catch(e){ /* 索引不阻塞导入 */ }
       render();
     }catch(e){
       // 导入文件损坏：告警并中止，不让异常冒泡导致崩溃
@@ -38551,6 +38682,10 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
     ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,
+    // v3.7.67：RAG 增量同步（哈希 diff + 防抖）——测试直接驱动 ragSyncIncremental 免等定时器
+    ragSyncIncremental, ragScheduleSync, _ragCurrentDocs, _ragDocHash,
+    get RAG_SYNC_DEBOUNCE_MS(){ return RAG_SYNC_DEBOUNCE_MS; },
+    get RAG_SYNC_EMBED_CAP(){ return RAG_SYNC_EMBED_CAP; },
     switchModel, listModels, retryChatWithParams,
     streamProgressStart, streamProgressUpdate, getStreamProgress, streamProgressClear,
     get RAG_STORAGE_KEY(){ return RAG_STORAGE_KEY; },
@@ -42357,7 +42492,10 @@ function getNotes(){
  */
 function saveNotes(notes){
   // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
-  return save(PREFIX + NOTES_STORAGE_KEY, notes || []);
+  const ok = save(PREFIX + NOTES_STORAGE_KEY, notes || []);
+  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费；创建/更新/删除全走本函数） */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("note"); }catch(e){ /* 索引不阻塞写路径 */ }
+  return ok;
 }
 /**
  * 创建新笔记
@@ -42856,8 +42994,9 @@ function _bindKnowledgeBaseEvents(){
  * 它维护的是 v1.7-A 自己的旧 TF-IDF 索引 _ragIndex（buildIndex/indexFromNotes/saveRagIndex），
  * 而 v3.7.57 起真正被检索的是 ai-tools.js 里的 getRagDocs/ragIndexAdd 一套 —— 旧索引没有任何读取方，
  * 所以这个挂在笔记 CRUD 上的钩子只是在刷一份死表。
- * 真实的状态（不粉饰）：笔记改动同样要等「重建索引」才进真 RAG，任务/记录/对话历史一直如此。
- * 若要做增量索引，应作为独立特性接到 ragIndexAdd 上，而不是留着这份空转的旧钩子。 */// ===== Full-Text Search (v1.6-D 知识管理) =====
+ * v3.7.67：增量索引已落地 —— saveNotes（上方）经 core 的 emitDataMutate 广播，
+ * ai-tools 的 ragSyncIncremental 按内容哈希 diff 只落变更文档，笔记改动即时进真 RAG，
+ * 任务/记录/对话历史同理（写路径各自广播）。手动「重建索引」（ragReindex）保留作全量兜底。 */// ===== Full-Text Search (v1.6-D 知识管理) =====
 /* ---------- 全文搜索：跨任务 / 记录 / 笔记搜索 + 关键词高亮 ----------
  * 能力：
  *   1) searchAll(query, options)           — 跨任务/记录/笔记全文搜索
