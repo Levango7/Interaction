@@ -2304,6 +2304,10 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
     ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,
+    // v3.7.67：RAG 增量同步（哈希 diff + 防抖）——测试直接驱动 ragSyncIncremental 免等定时器
+    ragSyncIncremental, ragScheduleSync, _ragCurrentDocs, _ragDocHash,
+    get RAG_SYNC_DEBOUNCE_MS(){ return RAG_SYNC_DEBOUNCE_MS; },
+    get RAG_SYNC_EMBED_CAP(){ return RAG_SYNC_EMBED_CAP; },
     switchModel, listModels, retryChatWithParams,
     streamProgressStart, streamProgressUpdate, getStreamProgress, streamProgressClear,
     get RAG_STORAGE_KEY(){ return RAG_STORAGE_KEY; },

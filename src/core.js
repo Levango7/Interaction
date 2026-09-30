@@ -7596,6 +7596,25 @@ function emitExternalNotify(title, body, kind){
   }
 }
 
+/* ---------- v3.7.67 数据变更广播（RAG 增量索引的挂接位） ----------
+ * 为什么放 core：数据写入口在 Data 层（setTasks/setRec/appendChat），而增量索引
+ * 实现在 AI 层（ai-tools 的 ragSyncIncremental）。让 Data 直接调 ai-tools 会新增
+ * 逆层依赖（data-rw>ai-tools）。与上方 registerExternalNotifier 同款解法：
+ * 低层只 emit，高层注册实现，两条边都向下。domain 是触发源提示（task/rec/note/
+ * chat/import/restore），监听方目前只有 RAG 同步，但接口按通用事件留。 */
+const _dataMutateListeners = [];
+function registerDataMutateListener(fn){
+  if(typeof fn !== "function") return false;
+  if(_dataMutateListeners.indexOf(fn) < 0) _dataMutateListeners.push(fn);
+  return true;
+}
+function emitDataMutate(domain){
+  for(let i = 0; i < _dataMutateListeners.length; i++){
+    try{ _dataMutateListeners[i](String(domain || "")); }
+    catch(e){ /* 索引同步的任何故障都不该冒回数据写路径 */ }
+  }
+}
+
 function toast(msg, type){
   let c=$("#toasts"); if(!c){ c=document.createElement("div"); c.id="toasts"; c.setAttribute("role","status"); c.setAttribute("aria-live","polite"); document.body.appendChild(c); }
   const d=document.createElement("div"); d.className="toast"+(type?" "+type:"");

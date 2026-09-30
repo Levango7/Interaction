@@ -464,7 +464,14 @@ function getChat(sc){ return chats[sc] || []; }
 /* v3.4.5 G2 修复：写路径补 slice(-50) 裁剪——与读路径（启动/导入 slice(-50)，L6765/6950）对齐。
  * 此前 appendChat 直接 concat 全量写回：读时裁过的数组一经追加即恢复超长并持续增长，
  * 7 个 chat_<sc> 键是 5MB 配额的持续膨胀源。镜像层 _mirrorChatToSession 已有同款裁剪（L6931）。 */
-function appendChat(sc, msg){ chats[sc] = _chatTag((chats[sc]||[]).concat(msg).slice(-50), sc); save(PREFIX+"chat_"+sc, chats[sc]); }
+function appendChat(sc, msg){
+  chats[sc] = _chatTag((chats[sc]||[]).concat(msg).slice(-50), sc);
+  save(PREFIX+"chat_"+sc, chats[sc]);
+  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费）。对话历史是唯一按
+     数组下标编 docId 的来源（chat:sc:i）——slice(-50) 裁剪触发时下标整体平移，
+     增量同步会按哈希 diff 重建位移条目；防抖 + 单飞已把这种风暴合并成一轮。 */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("chat"); }catch(e){ /* 索引不阻塞写路径 */ }
+}
 
 /* ---------- v2.0 多 Session 聊天存储层（自 .bak2 回填，适配当前版 load/save 封装） ----------
  * 会话模型 Session：{ id, title, sc, createdAt, updatedAt, msgs: [...] }

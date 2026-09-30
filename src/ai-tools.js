@@ -1459,9 +1459,13 @@ function saveRagDocs(docs){
  * 初始化 RAG：载入向量缓存 + 发起一次有界回填。
  * v3.7.57 起不再加载 sql.js / 不再建 FTS5 表（词法召回改由 ragLexBuild 提供），
  * 因此本函数与网络、WASM 都无关，毫秒级返回。
+ * @param {{skipBackfill?:boolean}} [opts] - v3.7.67：ragSyncIncremental 传 true 跳过
+ *   发射后不管的回填 —— 否则回填与同步循环并发，循环刚写入的文档会被回填当成"缺失"
+ *   再嵌一遍（同一条文本两次网络往返；实测 4 文档同步打出 5 个请求）。同步路径的
+ *   向量由循环自己确定性负责（直嵌或大批量回填二选一）。
  * @returns {Promise<boolean>} 是否成功
  */
-async function ragInit(){
+async function ragInit(opts){
   if(_ragReady) return true;
   try{
     /* 缺失的向量做一次**有界**回填（上限 20 条），避免文档多时启动长时间占住主线程；
@@ -1469,7 +1473,9 @@ async function ragInit(){
        注意这里**不能**把 _ragVecCache 置空来"重新载入"：ragVecPut 是"先写内存缓存、
        再尽力写 IDB"，IDB 不可用（无 IDB 的环境 / 配额满）时缓存就是唯一副本，
        置空等于把已经算出来的向量丢了。 */
-    ragEnsureVectors(20).catch(e => pushDiag("warn", "rag backfill failed: " + ((e && e.message) || e), { where: "ragInit" }));
+    if(!(opts && opts.skipBackfill)){
+      ragEnsureVectors(20).catch(e => pushDiag("warn", "rag backfill failed: " + ((e && e.message) || e), { where: "ragInit" }));
+    }
     _ragReady = true;
     return true;
   }catch(e){
@@ -1911,6 +1917,142 @@ async function ragInjectContext(userText, opts){
 }
 
 /**
+ * 收集当前应当入索引的全部文档（任务/记录/笔记/对话历史）
+ * —— ragReindex（全量重建）与 ragSyncIncremental（增量同步）共用同一份构建器，
+ * 保证两条路径的 docId 规则、内容拼法、过滤条件（如 deletedAt）永远一致。
+ * @returns {Array<{docId:string, source:string, content:string}>}
+ */
+function _ragCurrentDocs(){
+  const out = [];
+  try{
+    const tasks = getTasks();
+    for(const t of tasks){
+      if(t.deletedAt) continue;
+      const content = [t.title, t.note || "", (t.tags || []).join(" ")].join(" ").trim();
+      if(content) out.push({ docId: "task:"+t.id, source: "task", content });
+    }
+  }catch(_){}
+  try{
+    for(const sc of ORDER){
+      for(const r of getRec(sc)){
+        const content = Object.values(r).filter(v => typeof v === "string").join(" ").trim();
+        if(content) out.push({ docId: "rec:"+sc+":"+r.id, source: "record:"+sc, content });
+      }
+    }
+  }catch(_){}
+  try{
+    const notes = getNotes();
+    for(const n of notes){
+      const content = [n.title, n.content, (n.tags || []).join(" ")].join(" ").trim();
+      if(content) out.push({ docId: "note:"+n.id, source: "note", content });
+    }
+  }catch(_){}
+  try{
+    for(const sc of ORDER){
+      const hist = getChat(sc);
+      for(let i = 0; i < hist.length; i++){
+        const m = hist[i];
+        if(m.role === "user" || m.role === "assistant"){
+          const content = String(m.content || "").trim();
+          if(content) out.push({ docId: "chat:"+sc+":"+i, source: "chat:"+sc, content });
+        }
+      }
+    }
+  }catch(_){}
+  return out;
+}
+
+/** FNV-1a 32 位内容哈希（hex）。只用于"内容变没变"的比较，不承载安全语义。 */
+function _ragDocHash(s){
+  let h = 0x811c9dc5;
+  for(let i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h.toString(16);
+}
+
+/* v3.7.67 增量同步的节流/批量参数：
+   - 防抖 4s：任务连续勾选、批量导入等风暴只触发一次同步；
+   - 单轮直嵌上限 48：小改动即时建向量（入库即召回），大批量（导入/迁移）退回
+     skipEmbed + 一次 ragEnsureVectors 批量回填，避免几十次单独网络往返。 */
+const RAG_SYNC_DEBOUNCE_MS = 4000;
+const RAG_SYNC_EMBED_CAP = 48;
+let _ragSyncTimer = null;
+let _ragSyncing = false;
+let _ragSyncPending = false;
+
+/**
+ * RAG 增量同步（v3.7.67）：把当前数据与已索引文档做哈希 diff，
+ * 只对新增/内容变化/已删除的 docId 落库——替代此前"只有手动重建索引才进 RAG"。
+ * @returns {Promise<{added:number, updated:number, removed:number}>}
+ */
+async function ragSyncIncremental(){
+  if(_ragSyncing){ _ragSyncPending = true; return { added:0, updated:0, removed:0 }; }
+  _ragSyncing = true;
+  try{
+    /* skipBackfill：本函数对向量完全负责（≤CAP 直嵌 / >CAP 批量回填），
+       不与 ragInit 的发射后不管回填并发 —— 否则刚写入的文档会被回填再嵌一遍 */
+    await ragInit({ skipBackfill: true });
+    const docs = getRagDocs();
+    const indexed = new Map();
+    for(const d of docs) indexed.set(d.docId, _ragDocHash(String(d.content || "")));
+    const current = _ragCurrentDocs();
+    const wanted = new Map();
+    for(const c of current) wanted.set(c.docId, _ragDocHash(c.content));
+
+    let removed = 0;
+    for(const d of docs){
+      if(!wanted.has(d.docId)){ await ragIndexRemove(d.docId); removed++; }
+    }
+    const changed = current.filter(c => indexed.get(c.docId) !== wanted.get(c.docId));
+    let added = 0, updated = 0;
+    if(changed.length){
+      const bigBatch = changed.length > RAG_SYNC_EMBED_CAP;
+      const OPT = bigBatch ? { skipEmbed: true } : undefined;
+      for(const c of changed){
+        const isNew = !indexed.has(c.docId);
+        await ragIndexAdd(c.docId, c.content, c.source, OPT);
+        if(isNew) added++; else updated++;
+      }
+      /* 大批量走批量回填而非逐条网络往返；本轮没补到的缺失向量由检索侧按需再补。 */
+      if(bigBatch){ try{ await ragEnsureVectors(Math.min(64, changed.length)); }catch(_){} }
+    }
+    return { added, updated, removed };
+  }finally{
+    _ragSyncing = false;
+    if(_ragSyncPending){
+      _ragSyncPending = false;
+      ragScheduleSync(500);
+    }
+  }
+}
+
+/**
+ * 防抖触发增量同步：数据写路径（setTasks/setRec/saveNotes/appendChat）经
+ * core 的 emitDataMutate 广播到这里。多次触发合并为最后一次。
+ * @param {number} [delayMs] - 覆盖默认防抖（pending 重排与测试用）
+ */
+function ragScheduleSync(delayMs){
+  try{
+    if(_ragSyncTimer) clearTimeout(_ragSyncTimer);
+    const wait = (typeof delayMs === "number" && delayMs >= 0) ? delayMs : RAG_SYNC_DEBOUNCE_MS;
+    _ragSyncTimer = setTimeout(function(){
+      _ragSyncTimer = null;
+      ragSyncIncremental().catch(function(e){
+        pushDiag("error", "rag sync failed: " + ((e && e.message) || e), { where: "ragSyncIncremental" });
+      });
+    }, wait);
+  }catch(e){ /* 定时器不可用的极端环境下放弃本轮同步（手动重建索引仍在） */ }
+}
+
+/* v3.7.67：向 core 注册数据变更监听 —— Data 层写路径 emit，本层消费。
+   typeof 守卫：个别 node 环境测试只加载 ai-tools 不加载 core 时不炸。 */
+if(typeof registerDataMutateListener === "function"){
+  registerDataMutateListener(function(){ ragScheduleSync(); });
+}
+
+/**
  * RAG 增量索引：从任务/记录/笔记/对话历史构建索引
  * @returns {Promise<number>} 索引文档数
  */
@@ -1920,57 +2062,10 @@ async function ragReindex(){
   /* 全量重建一律 skipEmbed：逐条 embed = N 次网络往返（几百条就是几百次），
      改成"先把正文全入库，末尾一次批量回填"（ragEnsureVectors 每 32 条一个请求）。 */
   const OPT = { skipEmbed: true };
-  // 索引任务
-  try{
-    const tasks = getTasks();
-    for(const t of tasks){
-      if(t.deletedAt) continue;
-      const content = [t.title, t.note || "", (t.tags || []).join(" ")].join(" ").trim();
-      if(content){
-        await ragIndexAdd("task:"+t.id, content, "task", OPT);
-        count++;
-      }
-    }
-  }catch(_){}
-  // 索引记录
-  try{
-    for(const sc of ORDER){
-      for(const r of getRec(sc)){
-        const content = Object.values(r).filter(v => typeof v === "string").join(" ").trim();
-        if(content){
-          await ragIndexAdd("rec:"+sc+":"+r.id, content, "record:"+sc, OPT);
-          count++;
-        }
-      }
-    }
-  }catch(_){}
-  // 索引笔记
-  try{
-    const notes = getNotes();
-    for(const n of notes){
-      const content = [n.title, n.content, (n.tags || []).join(" ")].join(" ").trim();
-      if(content){
-        await ragIndexAdd("note:"+n.id, content, "note", OPT);
-        count++;
-      }
-    }
-  }catch(_){}
-  // 索引对话历史
-  try{
-    for(const sc of ORDER){
-      const hist = getChat(sc);
-      for(let i = 0; i < hist.length; i++){
-        const m = hist[i];
-        if(m.role === "user" || m.role === "assistant"){
-          const content = String(m.content || "").trim();
-          if(content){
-            await ragIndexAdd("chat:"+sc+":"+i, content, "chat:"+sc, OPT);
-            count++;
-          }
-        }
-      }
-    }
-  }catch(_){}
+  for(const c of _ragCurrentDocs()){
+    await ragIndexAdd(c.docId, c.content, c.source, OPT);
+    count++;
+  }
   /* 一次批量补齐所有缺失向量（配了 embedding 通道才有；没配就直接返回）。
      上限传 Infinity：重建场景要覆盖全表，而不是像启动期那样只补 20 条。 */
   try{ await ragEnsureVectors(Infinity); }catch(_){}

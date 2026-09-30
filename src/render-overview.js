@@ -1338,6 +1338,8 @@ function _applyCloudSnapshot(data) {
     }
   });
   _setSyncMeta({ lastPullAt: Date.now() });
+  /* v3.7.67：云端恢复覆盖了本机键值，RAG 增量同步按哈希 diff 收敛（经 core 广播位，避免 Render→AI 逆层） */
+  try { if (typeof emitDataMutate === "function") emitDataMutate("restore"); } catch (e) { /* 索引不阻塞恢复 */ }
 }
 async function cloudCheckOnLogin() {
   if (!window.isApiLoggedIn()) return;

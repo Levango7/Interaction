@@ -201,6 +201,8 @@ function doImport(file){
         toast(t("msg.importSuccess","导入成功，数据已恢复"), "ok");
       }
 
+      /* v3.7.67：导入整表覆盖了任务/记录/笔记/对话，RAG 增量同步按哈希 diff 全量收敛 */
+      try{ if(typeof emitDataMutate === "function") emitDataMutate("import"); }catch(e){ /* 索引不阻塞导入 */ }
       render();
     }catch(e){
       // 导入文件损坏：告警并中止，不让异常冒泡导致崩溃

@@ -19,6 +19,8 @@ function getActiveTasks(){ return taskStore.get().filter(t=>!t.deletedAt); }
 function setTasks(a){
   _pushUndo(taskStore.get()); // B6：写入前记录变更前快照（undo/redo 恢复时 _undoGuard 跳过）
   taskStore.set(a); save(PREFIX+"tasks", a); scheduleAutoBackup();
+  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费，避免 Data→AI 逆层） */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("task"); }catch(e){ /* 索引不阻塞写路径 */ }
 }
 
 /* ---------- B6：undo/redo 操作历史栈（任务数组快照式，上限 50） ---------- */
@@ -161,7 +163,11 @@ function getRec(sc){ return load(PREFIX+"rec_"+sc, []); }
  * @param {Object[]} a - 记录数组
  * @returns {void}
  */
-function setRec(sc, a){ save(PREFIX+"rec_"+sc, a); scheduleAutoBackup(); }
+function setRec(sc, a){
+  save(PREFIX+"rec_"+sc, a); scheduleAutoBackup();
+  /* v3.7.67：广播数据变更（RAG 增量同步消费） */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("rec"); }catch(e){ /* 索引不阻塞写路径 */ }
+}
 
 /* ---------- P1-b 自动备份（防抖快照，独立于手动导出） ---------- */
 const AUTO_BACKUP_KEY = PREFIX + "autobackup";

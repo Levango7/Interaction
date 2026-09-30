@@ -47,7 +47,10 @@ function getNotes(){
  */
 function saveNotes(notes){
   // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
-  return save(PREFIX + NOTES_STORAGE_KEY, notes || []);
+  const ok = save(PREFIX + NOTES_STORAGE_KEY, notes || []);
+  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费；创建/更新/删除全走本函数） */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("note"); }catch(e){ /* 索引不阻塞写路径 */ }
+  return ok;
 }
 /**
  * 创建新笔记
@@ -546,8 +549,9 @@ function _bindKnowledgeBaseEvents(){
  * 它维护的是 v1.7-A 自己的旧 TF-IDF 索引 _ragIndex（buildIndex/indexFromNotes/saveRagIndex），
  * 而 v3.7.57 起真正被检索的是 ai-tools.js 里的 getRagDocs/ragIndexAdd 一套 —— 旧索引没有任何读取方，
  * 所以这个挂在笔记 CRUD 上的钩子只是在刷一份死表。
- * 真实的状态（不粉饰）：笔记改动同样要等「重建索引」才进真 RAG，任务/记录/对话历史一直如此。
- * 若要做增量索引，应作为独立特性接到 ragIndexAdd 上，而不是留着这份空转的旧钩子。 */// ===== Full-Text Search (v1.6-D 知识管理) =====
+ * v3.7.67：增量索引已落地 —— saveNotes（上方）经 core 的 emitDataMutate 广播，
+ * ai-tools 的 ragSyncIncremental 按内容哈希 diff 只落变更文档，笔记改动即时进真 RAG，
+ * 任务/记录/对话历史同理（写路径各自广播）。手动「重建索引」（ragReindex）保留作全量兜底。 */// ===== Full-Text Search (v1.6-D 知识管理) =====
 /* ---------- 全文搜索：跨任务 / 记录 / 笔记搜索 + 关键词高亮 ----------
  * 能力：
  *   1) searchAll(query, options)           — 跨任务/记录/笔记全文搜索
