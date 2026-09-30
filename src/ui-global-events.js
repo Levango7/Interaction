@@ -296,11 +296,33 @@ function renderIntegrationPanel(){
     {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
     {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Jira API Token（任务同步尚未接入）"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
     {name:"slack", label:"Slack", desc:t("int.slackDesc","验证 Slack Bot Token（消息通知尚未接入）"), connectFn:"slackConnect", disconnectFn:"slackDisconnect"},
-    {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","验证飞书 App 凭据（消息通知尚未接入）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect"},
-    {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","验证钉钉 App 凭据（消息通知尚未接入）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect"},
+    {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect", ephemeral:true},
+    {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect", ephemeral:true},
     {name:"calendar", label:t("appPage.calview", "日历"), desc:t("int.calendarDesc","验证日历凭据（日程同步尚未接入）"), connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
   ];
   const rows = providers.map(function(p){
+    /* v3.7.66：飞书 / 钉钉是「会话内存态」通道，**不进取 provider 存储**（那里是加密落盘的
+       持久凭据，与"绝不落盘"的决定冲突），状态改从 notifyHookGet 读。 */
+    if(p.ephemeral){
+      const hk = (typeof notifyHookGet === "function") ? notifyHookGet(p.name) : { configured:false };
+      /* 钉钉的 webhook 不回 CORS 头（实测），浏览器里发不出去 → 只有主进程发送可用时才开放。
+         不可用时按钮禁用并写清原因，别给一个"连上了但其实没连"的入口。 */
+      const usable = (typeof notifyChannelAvailable === "function") ? notifyChannelAvailable(p.name) : true;
+      const on = usable && !!hk.configured;
+      const st = !usable ? t(notifyUnavailableKey(p.name), "当前形态不可用")
+        : on ? (t("int.sessionOn","本会话已配置") + (hk.hasSecret ? t("int.signed"," · 加签") : "") + (hk.urlHint ? " · " + hk.urlHint : ""))
+        : t("int.notConnected","未连接");
+      const btn = !usable
+        ? '<button type="button" class="addbtn sm" disabled title="' + esc(notifyUnavailableHint(p.name)) + '">' + t("p4.html.intConnDisabled",">连接（当前形态不可用）</button>")
+        : on
+        ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + t("p4.html.intDiscBtn","\">断开</button>")
+        : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + t("p4.html.intConnBtn","\">连接</button>");
+      return '<div class="int-row ' + (on ? "int-on" : "int-off") + '">' +
+        '<div class="int-info"><div class="int-label">' + esc(p.label) + '</div><div class="int-desc">' + esc(p.desc) + '</div></div>' +
+        '<div class="int-status">' + esc(st) + '</div>' +
+        '<div class="int-action">' + btn + '</div>' +
+        '</div>';
+    }
     // v3.1.1 修复：原用一个不存在的 getProvider 全局函数，状态恒为「未连接」；真实函数为 integrationGetProvider。
     // calendar 的注册名是具体日历类型（google_calendar / outlook_calendar），需按两个名字兜底查询。
     let prov = null;
@@ -439,10 +461,13 @@ const INTEGRATION_CONFIG_FIELDS = {
   jira:     [{ k:"domain", label:t("int.jiraDomain","站点域名"), ph:"your-domain.atlassian.net", required:true },
              { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true }],
   slack:    [{ k:"botToken", label:"Bot User OAuth Token", ph:"xoxb-…", required:true, secret:true }],
-  feishu:   [{ k:"appId", label:"App ID", ph:"cli_…", required:true },
-             { k:"appSecret", label:"App Secret", required:true, secret:true }],
-  dingtalk: [{ k:"accessKey", label:"AppKey", required:true },
-             { k:"accessSecret", label:"AppSecret", required:true, secret:true }],
+  /* v3.7.66：飞书 / 钉钉改成「群自定义机器人 webhook」—— 旧的 App ID/Secret + chatId
+     那套要企业自建应用管理员权限，个人配不通（且那 6 个发送函数应用内零调用方）。
+     ⚠️ 这两项填了**不会保存**：凭据只活在本次会话内存里，刷新即失效（用户 2026-09-29 定）。 */
+  feishu:   [{ k:"url", label:t("int.feishuHook","群机器人 Webhook 地址"), ph:"https://open.feishu.cn/open-apis/bot/v2/hook/…", required:true, secret:true },
+             { k:"secret", label:t("int.signSecret","加签密钥（机器人未开加签就留空）"), required:false, secret:true }],
+  dingtalk: [{ k:"url", label:t("int.dingHook","群机器人 Webhook 地址"), ph:"https://oapi.dingtalk.com/robot/send?access_token=…", required:true, secret:true },
+             { k:"secret", label:t("int.signSecret","加签密钥（机器人未开加签就留空）"), required:false, secret:true }],
   calendar: [{ k:"_calType", label:t("int.calService","日历服务"), type:"select", required:true,
                options:[["google_calendar",t("int.googleCal","Google 日历")],["outlook_calendar",t("int.outlookCal","Outlook 日历")]] },
              { k:"clientId", label:"OAuth Client ID", ph:t("int.clientIdPh","服务商控制台注册应用的 Client ID"), required:false },
@@ -547,7 +572,11 @@ function openIntegrationConfig(name){
   ov.id = "intCfgOverlay";
   ov.innerHTML = sanitizeHtml(t("p4.html.intCfgDialog",'<div class="cmd u-max-w-480 u-p-5" role="dialog" aria-modal="true" aria-label="连接 ') + esc(label) + '">'
     + t("p4.html.intCfgTitle",'<h3 class="u-m-0-0-1 u-fs-md">连接 ') + esc(label) + '</h3>'
-    + t("p4.html.intCredentialHint",'<p class="sub u-m-0-0-2">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>')
+    /* v3.7.66：飞书 / 钉钉的凭据**不落盘**，所以不能再用那句"随应用数据加密持久化"——
+       那是别的 provider 的口径，用在这里就是一句假话。按通道分开给。 */
+    + (name === "feishu" || name === "dingtalk"
+        ? t("p4.html.intEphemeralHint",'<p class="sub u-m-0-0-2 u-text-warn">⚠ 只保存在本次会话内存里：不写入本地存储、不进备份与云同步，<b>刷新或关闭页面即失效</b>，需要重新粘贴。</p>')
+        : t("p4.html.intCredentialHint",'<p class="sub u-m-0-0-2">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>'))
     + inputsHtml
     /* 「OAuth 授权」按钮只在桥真在的时候出现 —— 原先无条件渲染，用户点了才拿到一句
        "不支持"，属"stub + 活 UI = 虚假功能"（同本机同步入口 v3.7.52 的处理）。 */
@@ -559,6 +588,14 @@ function openIntegrationConfig(name){
     + t("p4.html.intGoBtn",'<button type="button" class="addbtn sm btn-primary" id="btnIntCfgGo">连接</button>')
     + t("p4.html.intCancelBtn",'<button type="button" class="addbtn sm" id="btnIntCfgCancel" data-sc="muted">取消</button></div></div>'));
   document.body.appendChild(ov);
+  /* v3.7.66 真机实测修掉的既有缺陷：`.cmd` 基类是 display:none，靠自身 `.show` 才显示；
+     而这里只给外层 .overlay 加了 show → 弹窗面板一直是不渲染的（点「连接」后什么都没出现）。
+     之所以长期没被发现：单测跑在 jsdom（不应用样式表）、e2e 没覆盖这个弹窗，
+     而 v3.7.60 那轮我用 element.value= / .click() 直接驱动，隐藏元素照样能点。
+     ⚠️ 必须同步加，不能塞进下面那个 rAF —— rAF 在无合成帧的环境里根本不触发
+     （headless Chromium 实测：不强制出帧时回调永不执行，弹窗就永远不出现）。 */
+  const _cmdEl = ov.querySelector(".cmd");
+  if(_cmdEl) _cmdEl.classList.add("show");
   requestAnimationFrame(function(){ ov.classList.add("show"); });
   const close = function(){ ov.classList.remove("show"); setTimeout(function(){ ov.remove(); }, 160); };
   ov.onclick = function(e){ if(e.target === ov) close(); };
@@ -1894,6 +1931,11 @@ function applyStartHash(){
 
 (async function startup(){
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
+  /* v3.7.66：飞书 / 钉钉凭据策略改为「仅会话内存、绝不落盘」——
+     历史版本可能已把 appSecret / accessSecret（甚至当时不算敏感字段的 appId / accessKey）
+     写进 wb_integration_providers，启动时一次性抹掉。放在 initCrypto 之后是因为
+     _intSaveProviders 的密封链要用设备密钥。 */
+  try{ if(typeof _notifyScrubPersisted === "function") _notifyScrubPersisted(); }catch(e){ /* 清不动也不能挡住启动 */ }
   // v1.11.2 认证补码：OAuth2 回调闭环——URL 带 ?code&state 时换 token（正常启动零开销，fire-and-forget）
   try{ _oauth2HandleCallback().catch(function(e9){ try{ pushDiag("error", "oauth2 callback: "+(e9&&e9.message||e9), {where:"oauth2"}); }catch(e10){} }); }catch(_){ }
   // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）

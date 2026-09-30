@@ -13,6 +13,8 @@
  * 最后再断言工作区回到源码态（CI 的下一步依赖它）。
  *
  * 用法：node scripts/verify-ci-order.mjs [--with-e2e] [--only=a,b] [--list]
+ *   经 npm 调用时标志必须放在 `--` 之后，否则被 npm 吞掉：
+ *   npm run verify:ci -- --with-e2e
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -25,6 +27,18 @@ const ROOT = path.resolve(__dirname, "..");
 const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
 const optVal = (name) => { const m = argv.find(a => a.startsWith(`--${name}=`)); return m ? m.slice(name.length + 3) : null; };
+
+/* 🔴 参数被 npm 吞掉的陷阱：`npm run verify:ci --with-e2e` 不会把标志传进来，
+   npm 自己收作配置项（只 warn "Unknown cli config"），脚本 argv 是空的 →
+   e2e 那步**静默不跑**，其余十步照样全绿退出 0。属"空 check 判绿"一类，必须挡。
+   正确写法是加 `--` 分隔：npm run verify:ci -- --with-e2e */
+const SWALLOWED = ["with-e2e", "list", "job", "only", "ci"]
+  .filter((f) => process.env["npm_config_" + f.replace(/-/g, "_")] !== undefined);
+if (SWALLOWED.length) {
+  console.error(`ERR: 标志 ${SWALLOWED.map((f) => "--" + f).join(" ")} 被 npm 吞掉了，本次**不会生效**。`);
+  console.error(`     改成：npm run verify:ci -- ${SWALLOWED.map((f) => "--" + f).join(" ")}`);
+  process.exit(2);
+}
 
 const CI = path.resolve(ROOT, optVal("ci") || path.join(".github", "workflows", "ci.yml"));
 
@@ -72,6 +86,14 @@ for (let i = 0; i < run.length; i++) {
   } else {
     console.log(`exit ${r.status}  ✗`);
     failures.push({ cmd, out });
+    /* 只给尾部 25 行会把失败清单本身切掉：实测 `npm test` 报 3 条失败时，
+       尾部只剩最后 1 条 FAIL，另外 2 条看不见 —— 排查得先单独重跑一次全量。
+       所以先把 FAIL / 汇总行整份打出来，尾部只作上下文。 */
+    const hits = out.split("\n").filter((l) => /\bFAIL\b|Test Files\s|Tests\s+\d|✕|MOCK/.test(l));
+    if (hits.length) {
+      console.log("  ---- 失败清单（从完整输出里挑，不受尾部长度限制）----");
+      for (const l of hits.slice(0, 60)) console.log("  " + l.trim());
+    }
     console.log("  ---- 该步输出尾部 ----");
     for (const l of out.split("\n").slice(-25)) console.log("  " + l);
     break;                                       // 后续步骤的状态已被污染，先修这一个

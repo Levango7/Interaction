@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
  *
  * 用户 2026-09-28 的处置决定：**先标记废弃，等渠道定好再动**。所以这里既不测功能，
  * 也不许代码悄悄变化，只锁三件事：
- *   ① 30 个零调用函数都还带着 @deprecated 标记（没被人顺手摘掉）；
+ *   ① 24 个零调用函数都还带着 @deprecated 标记（没被人顺手摘掉）；
  *   ② 它们仍然**没有应用内调用方**（只有同为废弃集的函数互相调用才算合法）；
  *   ③ 真活着的 `*Connect` / `*Disconnect` 没被误标废弃（它们由
  *      `window[name + "Connect"]` 字符串拼接派发，静态普查看不见，最容易被误判）。
@@ -20,11 +20,13 @@ const ROOT = path.resolve(__dirname, "..");
 const SRC_DIR = path.join(ROOT, "src");
 const MARK = "@deprecated v3.7.60 应用内零调用方";
 
+/* v3.7.66：飞书 / 钉钉的 6 个旧函数（× SendMessage / NotifyEvent / CreateTaskFromMessage）
+   已随「群机器人 webhook 通道」接通而删除 —— 那套 appKey/appSecret + chatId 个人配不通，
+   留着只是死码。名单从 30 → 24。slack/notion/linear/jira/calendar 的仍按废弃冻结。 */
 const DEPRECATED = `integrationListProviders integrationEnableProvider integrationDisableProvider integrationConfigureProvider
 integrationGetStatus notionSyncNote notionSyncTask notionListSynced linearSyncIssue linearListIssues linearMapStatus
 jiraSyncIssue jiraListIssues jiraMapStatus slackNotifyEvent slackSendMessage slackCreateTaskFromMessage
-feishuNotifyEvent feishuSendMessage feishuCreateTaskFromMessage dingtalkNotifyEvent dingtalkSendMessage
-dingtalkCreateTaskFromMessage calendarSyncEvent calendarCreateEvent calendarListEvents calendarUpdateEvent
+calendarSyncEvent calendarCreateEvent calendarListEvents calendarUpdateEvent
 calendarDeleteEvent _intNotionPullWriteback _intFindLocalId`.split(/\s+/).filter(Boolean);
 
 /* 真活着的：由 openIntegrationConfig / 断开按钮 拼接派发，绝不能标废弃 */
@@ -66,7 +68,7 @@ function refLines(file, name) {
 }
 
 describe("集成同步/通知层：废弃标记仍在（用户决定「先标记废弃，等渠道定好再动」）", () => {
-  it("30 个零调用函数逐个带 @deprecated 标记", () => {
+  it("24 个零调用函数逐个带 @deprecated 标记", () => {
     const lines = geText().split(/\r?\n/);
     const missing = DEPRECATED.filter((n) => {
       const def = lines.findIndex((l) => /^(?:async\s+)?function\s+/.test(l) && new RegExp("function\\s+" + n + "\\b").test(l));
@@ -115,14 +117,14 @@ describe("集成同步/通知层：仍然零调用（有人接上就该摘标记
       }
     }
   }
-  it("30 个函数没有任何「非废弃集内」的调用方", () => {
+  it("24 个函数没有任何「非废弃集内」的调用方", () => {
     expect(violations,
       "这些废弃函数出现了新的调用方 —— 说明渠道定了并接上了链路。\n" +
       "正确做法：摘掉对应 @deprecated、更新 docs/product-scope.md §三 与本文件的 DEPRECATED 名单、" +
       "并补真发请求的用例。\n  " + violations.join("\n  ")).toEqual([]);
   });
 
-  it("废弃集内部互调仅限已知的 5 处（防止悄悄长出新的内部依赖）", () => {
+  it("废弃集内部互调仅限已知的 3 处（防止悄悄长出新的内部依赖）", () => {
     const internal = [];
     for (const name of DEPRECATED) {
       for (const f of srcFiles) {
@@ -132,8 +134,6 @@ describe("集成同步/通知层：仍然零调用（有人接上就该摘标记
     expect(internal.sort()).toEqual([
       "_intNotionPullWriteback → notionListSynced",
       "_intNotionPullWriteback → notionSyncTask",
-      "dingtalkNotifyEvent → dingtalkSendMessage",
-      "feishuNotifyEvent → feishuSendMessage",
       "slackNotifyEvent → slackSendMessage",
     ].sort());
   });

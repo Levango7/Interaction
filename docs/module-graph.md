@@ -30,19 +30,19 @@
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 10 |
 | `ui-scene-bind` | UI | `chain` `core` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` `ui-backup-stats` `ui-ge-calendar` | 18 |
 | `ui-palette` | UI | `ai-retry` `ai-tools` `data-links` `render-widgets` `ui-backup-stats` `ui-drawer` `ui-global-events` | 14 |
-| `ui-daily` | UI | `chain` | 1 |
+| `ui-daily` | UI | `chain` `core` | 2 |
 | `ui-backup-stats` | UI | `chain` `crypto` `data-idb` `data-links` `data-rw` `render-widgets` | 19 |
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-notes` `ui-ge-plugins` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 56 |
 | `ui-hotkeys` | UI | `ai-retry` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `ui-theme` `util-markdown` `util-perf` | 497 |
+| `ui-global-events` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `ui-theme` `util-markdown` `util-perf` | 502 |
 | `ui-ge-api` | UI | `core` `render-overview` `ui-drawer` | 4 |
 | `ui-ge-plugins` | UI | `data-links` `render-widgets` `util-markdown` | 4 |
 | `ui-ge-theme` | UI | `chain` | 1 |
 | `ui-ge-pomodoro` | UI | `chain` | 1 |
 | `ui-ge-calendar` | UI | `chain` `render-overview` `ui-ge-theme` `ui-guide` | 21 |
 | `ui-ge-notes` | UI | `core` `render-widgets` `util-markdown` | 5 |
-| `ui-ge-integrations` | UI | `crypto` | 1 |
+| `ui-ge-integrations` | UI | `core` `crypto` | 2 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
 
@@ -52,8 +52,8 @@
 | `toast` | `core` | 26 |
 | `SCENARIOS` | `core` | 21 |
 | `sanitizeHtml` | `util-markdown` | 19 |
-| `ORDER` | `core` | 17 |
 | `render` | `render-entry` | 16 |
+| `ORDER` | `core` | 16 |
 | `getCfg` | `data-links` | 16 |
 | `getTasks` | `data-rw` | 14 |
 | `AppBridge` | `core` | 14 |
@@ -77,7 +77,7 @@
 - 跨块重复定义：**0** 项
 - 循环依赖：**50** 条（data-links → ui-ge-plugins → render-widgets → ui-ge-calendar → chain → data-links；data-links → ui-ge-plugins → render-widgets → ui-ge-calendar → render-overview → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → ui-ge-plugins → render-widgets → ui-ge-calendar → render-overview → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links；render-widgets → ui-ge-calendar → render-overview → render-scene-sub → ui-scene-bind → ui-backup-stats → render-widgets；ui-ge-calendar → render-overview → render-scene-sub → ui-scene-bind → ui-ge-calendar）
 - 逆层依赖（低层用高层符号）：**53** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**202** 个符号
+- 逆层依赖（按**符号**计，去重）：**207** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|

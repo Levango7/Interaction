@@ -447,3 +447,178 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
     });
   });
 });
+
+/* ============================================================
+ * notify-send：主进程代渲染进程发群机器人 webhook（v3.7.66）
+ * 为什么需要这条 IPC：真实网络实测 —— 钉钉 webhook 的预检与 POST 都不回
+ * Access-Control-Allow-Origin、企业微信预检 403，而 webhook 是 application/json
+ * 的 POST 必触发预检；本窗口 sandbox:true 且未关 webSecurity，渲染进程走 Chromium
+ * 网络栈 → 发不出去。主进程用 Node 全局 fetch，不受 CORS 约束。
+ * 这条 IPC 等于「渲染进程可以让主进程对一个 URL 发 POST」，所以白名单是承重墙：
+ * 下面每一拒绝路径都必须断言 fetch 一次都没发生（否则就是 SSRF / 数据外泄出口）。
+ * ============================================================ */
+describe("Electron IPC: notify-send 主进程 webhook 外发", () => {
+  let tmpDir = null;
+  let origGetPathImpl = null;
+  const OK_URL = "https://oapi.dingtalk.com/robot/send?access_token=TOK-abc123";
+  const OK_PAYLOAD = { msgtype: "text", text: { content: "hello" } };
+
+  const installFetch = (behavior) => {
+    const calls = [];
+    const fn = vi.fn((url, opts) => {
+      calls.push({ url, opts });
+      if (behavior === "boom") return Promise.reject(new Error("ECONNREFUSED"));
+      if (behavior === "pending"){
+        /* 必须真的响应 abort：真实 fetch 在 signal 触发时是**拒绝**的，
+           替身若永不 settle，超时用例只会等到 vitest 自身超时（实测 60s 挂死），
+           根本测不到被测代码的超时分支。 */
+        return new Promise((resolve, reject) => {
+          if (opts && opts.signal){
+            if (opts.signal.aborted) { const e = new Error("aborted"); e.name = "AbortError"; reject(e); return; }
+            opts.signal.addEventListener("abort", () => { const e = new Error("aborted"); e.name = "AbortError"; reject(e); });
+          }
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ errcode: 0, errmsg: "ok" }) });
+    });
+    vi.stubGlobal("fetch", fn);
+    return { fn, calls };
+  };
+  const logText = () => {
+    try { return readFileSync(path.join(tmpDir, "logs", "app.log"), "utf8"); } catch (e) { return ""; }
+  };
+
+  beforeEach(async () => {
+    await ensureMain();
+    const app = mockAppRef.current;
+    if (origGetPathImpl === null) origGetPathImpl = app.getPath.getMockImplementation();
+    tmpDir = mkdtempSync(path.join(os.tmpdir(), "aw-notify-"));
+    app.getPath.mockReturnValue(tmpDir);
+  });
+  afterEach(() => {
+    if (tmpDir) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch (e) { /* noop */ } tmpDir = null; }
+    const app = mockAppRef.current;
+    if (app && origGetPathImpl !== null) app.getPath.mockImplementation(origGetPathImpl);
+    vi.unstubAllGlobals();
+  });
+
+  it("白名单内：POST 带 JSON，返回主进程读到的业务体", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["notify-send"](trustedEv(), { url: OK_URL, payload: OK_PAYLOAD });
+    expect(r.ok).toBe(true);
+    expect(r.status).toBe(200);
+    expect(r.body.errcode).toBe(0);
+    expect(calls.length).toBe(1);
+    expect(calls[0].url).toBe(OK_URL);
+    expect(calls[0].opts.method).toBe("POST");
+    expect(calls[0].opts.headers["Content-Type"]).toBe("application/json");
+    expect(JSON.parse(calls[0].opts.body)).toEqual(OK_PAYLOAD);
+  });
+
+  it("飞书与企业微信也在白名单内", async () => {
+    const { calls } = installFetch();
+    for (const u of ["https://open.feishu.cn/open-apis/bot/v2/hook/abc",
+                    "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc"]) {
+      const r = await ipcHandlers["notify-send"](trustedEv(), { url: u, payload: OK_PAYLOAD });
+      expect(r.ok, u).toBe(true);
+    }
+    expect(calls.length).toBe(2);
+  });
+
+  /* 以下每条都是「拒绝 + 零请求」：白名单一旦被写成前缀匹配或放行任意 https，
+     这条 IPC 就变成让渲染进程驱动主进程打任意主机（SSRF + 内网探测）的出口。 */
+  it("非白名单主机：拒绝且一次请求都不发", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["notify-send"](trustedEv(), { url: "https://evil.example.com/robot/send", payload: OK_PAYLOAD });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("unsafe_webhook_url");
+    expect(calls.length).toBe(0);
+  });
+
+  it("子域伪装（oapi.dingtalk.com.evil）：拒绝 —— 白名单必须精确匹配主机", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["notify-send"](trustedEv(), { url: "https://oapi.dingtalk.com.evil.example.com/robot/send", payload: OK_PAYLOAD });
+    expect(r.error).toBe("unsafe_webhook_url");
+    expect(calls.length).toBe(0);
+  });
+
+  it("userinfo 拼接（https://oapi.dingtalk.com@evil）：拒绝", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["notify-send"](trustedEv(), { url: "https://oapi.dingtalk.com@evil.example.com/x", payload: OK_PAYLOAD });
+    expect(r.error).toBe("unsafe_webhook_url");
+    expect(calls.length).toBe(0);
+  });
+
+  it("明文 http、回环与私网：一律拒绝（webhook 只可能是 https）", async () => {
+    const { calls } = installFetch();
+    for (const u of ["http://oapi.dingtalk.com/robot/send", "https://127.0.0.1:8124/x",
+                    "https://169.254.169.254/latest/meta-data", "javascript:alert(1)", "not-a-url", ""]) {
+      const r = await ipcHandlers["notify-send"](trustedEv(), { url: u, payload: OK_PAYLOAD });
+      expect(r.error, `应拒绝 ${JSON.stringify(u)}`).toBe("unsafe_webhook_url");
+    }
+    expect(calls.length).toBe(0);
+  });
+
+  it("payload 非对象或数组：拒绝且不发请求", async () => {
+    const { calls } = installFetch();
+    for (const bad of ["string", 42, null, undefined, ["a"], () => {}]) {
+      const r = await ipcHandlers["notify-send"](trustedEv(), { url: OK_URL, payload: bad });
+      expect(r.error, `应拒绝 payload=${typeof bad === "function" ? "function" : JSON.stringify(bad)}`).toBe("bad_payload");
+    }
+    expect(calls.length).toBe(0);
+  });
+
+  it("空对象 payload 属合法结构（内容由调用方负责），仍会发出请求", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["notify-send"](trustedEv(), { url: OK_URL, payload: {} });
+    expect(r.ok).toBe(true);
+    expect(calls.length).toBe(1);
+  });
+
+  it("未受信发送方：直接抛错（与 chat 同一道 M4 门）", async () => {
+    const { calls } = installFetch();
+    await expect(ipcHandlers["notify-send"](forgedEv(), { url: OK_URL, payload: OK_PAYLOAD })).rejects.toThrow();
+    await expect(ipcHandlers["notify-send"](foreignFileEv(), { url: OK_URL, payload: OK_PAYLOAD })).rejects.toThrow();
+    expect(calls.length).toBe(0);
+  });
+
+  it("网络异常：返回 {ok:false,error}，绝不把异常抛回渲染进程", async () => {
+    installFetch("boom");
+    const r = await ipcHandlers["notify-send"](trustedEv(), { url: OK_URL, payload: OK_PAYLOAD });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/ECONNREFUSED/);
+  });
+
+  it("超时：到点 abort 并回报超时", async () => {
+    installFetch("pending");
+    const t0 = Date.now();
+    const r = await ipcHandlers["notify-send"](trustedEv(), { url: OK_URL, payload: OK_PAYLOAD, timeoutMs: 1000 });
+    expect(r.ok).toBe(false);
+    expect(r.error, "超时必须报成超时而不是静默失败：" + r.error).toMatch(/超时/);
+    expect(Date.now() - t0).toBeLessThan(5000);
+  });
+
+  it("timeoutMs 越界被钳制（不许设成 0 立即 abort，也不许无限等）", async () => {
+    installFetch();
+    const r1 = await ipcHandlers["notify-send"](trustedEv(), { url: OK_URL, payload: OK_PAYLOAD, timeoutMs: 0 });
+    expect(r1.ok, "timeoutMs=0 应被钳到下限而不是当成 0 超时").toBe(true);
+    const r2 = await ipcHandlers["notify-send"](trustedEv(), { url: OK_URL, payload: OK_PAYLOAD, timeoutMs: 999999 });
+    expect(r2.ok).toBe(true);
+  });
+
+  /* 日志泄露是这类"代外部请求"最容易漏的一环：token 在 URL 里、签名在 URL/body 里、正文是用户数据。 */
+  it("日志只记主机与状态码，绝不记 access_token / 正文", async () => {
+    const { calls } = installFetch();
+    await ipcHandlers["notify-send"](trustedEv(), {
+      url: OK_URL + "&timestamp=1700000000000&sign=SIGN-SECRET-VALUE",
+      payload: { msgtype: "text", text: { content: "机密正文-DO-NOT-LOG" } }
+    });
+    expect(calls.length).toBe(1);
+    const log = logText();
+    expect(log, "日志必须有记录").toMatch(/notify/);
+    expect(log, "🔴 日志泄露 access_token").not.toContain("TOK-abc123");
+    expect(log, "🔴 日志泄露 sign").not.toContain("SIGN-SECRET-VALUE");
+    expect(log, "🔴 日志泄露消息正文").not.toContain("机密正文-DO-NOT-LOG");
+    expect(log).toContain("oapi.dingtalk.com");
+  });
+});

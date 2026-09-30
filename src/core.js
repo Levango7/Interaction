@@ -835,7 +835,7 @@ const MESSAGES = {
     "notify.pushStatus": "未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。",
     "notify.pushHint": "⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。",
     "integration.title": "集成中心",
-    "integration.desc": "连接外部服务并验证凭据（Key 仅存本机浏览器）。注意：任务 / 笔记 / 日程同步与消息通知尚未接入，连接本身不会向任何服务发送数据。",
+    "integration.desc": "连接外部服务并验证凭据。群机器人 webhook 通知已接通，但能不能发出去取决于打开方式：飞书需要页面跑在真实 http(s) 源上（用「启动本地服务.bat」以 http://localhost 打开，或走线上站点），双击 file:// 打开时飞书不回 CORS 头；钉钉的 webhook 任何浏览器形态都不回 CORS 头，只有桌面版（Electron）经主进程发送才可用。凭据只存在本次会话内存里，刷新即失效，不落任何磁盘。注意：任务 / 笔记 / 日程同步仍未接入，除你主动推送外不会向任何服务发送数据。",
     "about.title": "关于与兼容说明",
     "about.desc": "使用 AI 功能前，请先了解以下说明。",
     "about.tip": "启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工坊数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。",
@@ -2367,8 +2367,9 @@ const MESSAGES = {
     "int.connect": "连接",
     "int.connected": "已连接",
     "int.connecting": "连接中…",
-    "int.dingtalkDesc": "验证钉钉 App 凭据（消息通知尚未接入）",
+    "int.dingtalkDesc": "群机器人 webhook · 仅桌面版可用（webhook 不回 CORS 头，浏览器发不出去）；凭据仅本次会话，刷新即失效",
     "int.dingtalkLabel": "钉钉",
+    "int.dingHook": "群机器人 Webhook 地址",
     "int.errCannotOpenAuth": "无法打开授权页（既无系统浏览器也无 window.open）",
     "int.errMissingClientId": "缺少 OAuth Client ID（需先在服务商控制台注册应用）",
     "int.errOauthBegin": "发起授权失败：",
@@ -2378,14 +2379,20 @@ const MESSAGES = {
     "int.errOauthTimeout": "授权超时（",
     "int.errOauthTimeoutSuffix": " 秒内未完成），请重试",
     "int.errUnsupportedProvider": "不支持的 OAuth provider：",
-    "int.feishuDesc": "验证飞书 App 凭据（消息通知尚未接入）",
+    "int.feishuDesc": "群机器人 webhook · 推送通知（需以 http(s) 方式打开：file:// 双击形态拿不到 CORS 头）；凭据仅本次会话，刷新即失效",
     "int.feishuLabel": "飞书",
+    "int.feishuHook": "群机器人 Webhook 地址",
     "int.googleCal": "Google 日历",
     "int.jiraDesc": "验证 Jira API Token（任务同步尚未接入）",
     "int.jiraDomain": "站点域名",
     "int.linearDesc": "验证 Linear API Key（任务同步尚未接入）",
     "int.linearTeamIdPh": "可选，用于 issue 同步",
+    "int.sessionOn": "本会话已配置",
+    "int.desktopOnly": "仅桌面版可用",
+    "int.needHttpOrigin": "需以 http 方式打开",
     "int.notConnected": "未连接",
+    "int.signed": " · 加签",
+    "int.signSecret": "加签密钥（机器人未开加签就留空）",
     "int.notionDbId": "任务数据库 ID",
     "int.notionDbIdPh": "可选，用于任务同步",
     "int.notionDesc": "验证 Notion Integration Token（笔记 / 任务同步尚未接入）",
@@ -2418,7 +2425,9 @@ const MESSAGES = {
     "p4.html.intCfgTitle": "<h3 class=\"u-m0-0-1-fs-md\">连接 ",
     "p4.html.intConnAria": "连接 ' + esc(label) + '",
     "p4.html.intConnBtn": "\">连接</button>",
-    "p4.html.intCredentialHint": "<p class=\"sub\" class=\"u-m-0-0-2\">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>",
+    "p4.html.intConnDisabled": "\">连接（当前形态不可用）</button>",
+    "p4.html.intCredentialHint": "<p class=\"sub u-m-0-0-2\">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>",
+    "p4.html.intEphemeralHint": "<p class=\"sub u-m-0-0-2 u-text-warn\">⚠ 只保存在本次会话内存里：不写入本地存储、不进备份与云同步，<b>刷新或关闭页面即失效</b>，需要重新粘贴。</p>",
     "p4.html.intDiscBtn": "\">断开</button>",
     "p4.html.intGoBtn": "<button type=\"button\" class=\"addbtn sm btn-primary\" id=\"btnIntCfgGo\">连接</button>",
     "p4.html.intNoApiKey": "<p class=\"hint\">暂无 API Key</p>",
@@ -4513,7 +4522,7 @@ const MESSAGES = {
     "notify.pushStatus": "Not subscribed. Enable to push task due and chain break reminders (requires Push API support).",
     "notify.pushHint": "⚠️ Framework mode: VAPID key is placeholder, not connected to push server. Subscribing calls PushManager.subscribe, but server-side push requires VAPID key and push service configuration.",
     "integration.title": "Integration Center",
-    "integration.desc": "Connect external services and verify credentials (keys stay in this browser only). Note: task / note / calendar sync and message notifications are not implemented — connecting does not send data anywhere.",
+    "integration.desc": "Connect external services and verify credentials. The group-robot webhook notification channel is wired up, but whether it can actually send depends on how the app is opened: Feishu needs the page on a real http(s) origin (open it via 'start-local-service.bat' at http://localhost, or use the hosted site) - from a file:// double-click Feishu returns no CORS headers. DingTalk's webhook returns no CORS headers in any browser form, so it only works in the desktop (Electron) app where the main process sends. Credentials live in this session only - never written to disk, lost on reload. Note: task / note / calendar sync is still not implemented; nothing leaves this app unless you push it.",
     "about.title": "About & Compatibility",
     "about.desc": "Please read the following before using AI features.",
     "about.tip": "When enabled, each scenario's AI assistant can call tools: create/modify/delete tasks, query/complete tasks, search, add records, view overview, export—your instructions actually modify workbench data.<br><br>With Agent Mode: remember/recall/forget working memory, plan/complete_step/complete_goal multi-step goals, list_records cross-scenario records.<br><br>CORS tip: calling from local files may be blocked by browser CORS. Best to open via 'start-local-service.bat' as http://localhost, then enable AI.",
@@ -6044,8 +6053,9 @@ const MESSAGES = {
     "int.connect": "Connect",
     "int.connected": "Connected",
     "int.connecting": "Connecting…",
-    "int.dingtalkDesc": "Verify DingTalk app credentials (notifications not implemented)",
+    "int.dingtalkDesc": "Group robot webhook · desktop (Electron) only — its webhook sends no CORS headers, so a browser cannot post; credentials live in this session only, lost on reload",
     "int.dingtalkLabel": "DingTalk",
+    "int.dingHook": "Group robot webhook URL",
     "int.errCannotOpenAuth": "Cannot open auth page (no system browser or window.open)",
     "int.errMissingClientId": "Missing OAuth Client ID (register app at provider console first)",
     "int.errOauthBegin": "Begin auth failed: ",
@@ -6055,14 +6065,20 @@ const MESSAGES = {
     "int.errOauthTimeout": "Auth timeout (",
     "int.errOauthTimeoutSuffix": " seconds not completed), please retry",
     "int.errUnsupportedProvider": "Unsupported OAuth provider: ",
-    "int.feishuDesc": "Verify Feishu app credentials (notifications not implemented)",
+    "int.feishuDesc": "Group robot webhook · pushes notifications (needs an http(s) origin - a file:// double-click gets no CORS headers); credentials live in this session only, lost on reload",
     "int.feishuLabel": "Feishu",
+    "int.feishuHook": "Group robot webhook URL",
     "int.googleCal": "Google Calendar",
     "int.jiraDesc": "Verify Jira API token (task sync not implemented)",
     "int.jiraDomain": "Site domain",
     "int.linearDesc": "Verify Linear API key (task sync not implemented)",
     "int.linearTeamIdPh": "Optional, for issue sync",
+    "int.sessionOn": "Configured for this session",
+    "int.desktopOnly": "Desktop app only",
+    "int.needHttpOrigin": "Needs an http(s) origin",
     "int.notConnected": "Not connected",
+    "int.signed": " · signed",
+    "int.signSecret": "Signing secret (leave empty if the robot has no signature requirement)",
     "int.notionDbId": "Task database ID",
     "int.notionDbIdPh": "Optional, for task sync",
     "int.notionDesc": "Verify Notion integration token (note / task sync not implemented)",
@@ -6095,7 +6111,9 @@ const MESSAGES = {
     "p4.html.intCfgTitle": "<h3 class=\"u-m0-0-1-fs-md\">Connect  ",
     "p4.html.intConnAria": "Connect ' + esc(label) + '",
     "p4.html.intConnBtn": "\">Connect</button>",
-    "p4.html.intCredentialHint": "<p class=\"sub\" class=\"u-m-0-0-2\">Credentials stay on this device (encrypted with your app data) and are never uploaded to any server</p>",
+    "p4.html.intConnDisabled": "\">Connect (unavailable in this form)</button>",
+    "p4.html.intCredentialHint": "<p class=\"sub u-m-0-0-2\">Credentials stay on this device (encrypted with your app data) and are never uploaded to any server</p>",
+    "p4.html.intEphemeralHint": "<p class=\"sub u-m-0-0-2 u-text-warn\">⚠ Kept in this session's memory only: never written to local storage, backups or cloud sync. <b>It is lost as soon as you reload or close the page</b> and must be pasted again.</p>",
     "p4.html.intDiscBtn": "\">Disconnect</button>",
     "p4.html.intGoBtn": "<button type=\"button\" class=\"addbtn sm btn-primary\" id=\"btnIntCfgGo\">Connect</button>",
     "p4.html.intNoApiKey": "<p class=\"hint\">No API keys yet</p>",
@@ -7556,6 +7574,26 @@ function t(key, fallback){
   }
   // fallback 到传入的 fallback 或 key 本身
   return fallback !== undefined ? fallback : key;
+}
+
+/* ---------- v3.7.66 外发通知通道注册表 ----------
+ * 为什么放 core：通知的产生点在 ui-daily，而通道实现（飞书 / 钉钉 webhook）在
+ * ui-ge-integrations。让 ui-daily 直接调它会新增一条 **逆层依赖**
+ * （check:modules 实测报 `ui-daily>ui-ge-integrations`）。改成「低层留钩子位、
+ * 高层来注册」后两条边都是向下的：ui-daily→core、ui-ge-integrations→core。
+ * 通道自己决定要不要真外发（未配置 / 该类事件被关掉 → 直接 return），
+ * 所以这里只做无脑分发 + 隔离异常：任何一个通道抛错都不能影响本地通知。 */
+const _externalNotifiers = [];
+function registerExternalNotifier(fn){
+  if(typeof fn !== "function") return false;
+  if(_externalNotifiers.indexOf(fn) < 0) _externalNotifiers.push(fn);
+  return true;
+}
+function emitExternalNotify(title, body, kind){
+  for(let i = 0; i < _externalNotifiers.length; i++){
+    try{ _externalNotifiers[i](title, body, kind); }
+    catch(e){ /* 外发通道的任何故障都不该冒到调用方 */ }
+  }
 }
 
 function toast(msg, type){

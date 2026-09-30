@@ -13,5 +13,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // chat 参数原样透传；F3：新增 profileId 字段（当前激活 profile 的 id，主进程据此取 base/model/key）
   chat: (arg) => ipcRenderer.invoke("chat", arg),
   // P1-1：取消进行中的 AI 请求（主进程 fetch 对应 AbortController）
-  abortChat: () => ipcRenderer.send("abort-chat")
+  abortChat: () => ipcRenderer.send("abort-chat"),
+  // v3.7.66：群机器人 webhook 外发。必须在主进程发 —— 钉钉/企业微信的 webhook 不回 CORS 头，
+  // 渲染进程（sandbox + webSecurity 默认开）发不出去。参数 { url, payload, timeoutMs? }，
+  // 凭据只在本次调用里传递、主进程不落盘。
+  notifySend: (arg) => ipcRenderer.invoke("notify-send", arg)
 });

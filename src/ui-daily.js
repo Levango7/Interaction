@@ -1,11 +1,16 @@
 // ===== UI Layer (交互层·每日播报) =====
 /* ---------- 每日播报 ---------- */
 // PWA 通知：优先用系统 Notification API（已授权时），否则 fallback 到 toast
-function notifySystem(title, body){
+function notifySystem(title, body, kind){
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-    try { new Notification(title, { body: body || "", icon: "./icon.svg" }); return; } catch (e) { /* fallback 至 toast */ }
+    try { new Notification(title, { body: body || "", icon: "./icon.svg" }); } catch (e) { /* fallback 至 toast */ }
+  } else {
+    toast(title + (body ? "：" + body : ""), "warn");
   }
-  toast(title + (body ? "：" + body : ""), "warn");
+  /* v3.7.66：本地展示之外，把同一份内容交给「外发通道」（飞书 / 钉钉群机器人 webhook，
+     由 ui-ge-integrations 注册到 core 的 emitExternalNotify）。走注册表而不是直接调用，
+     是为了不给 ui-daily 加一条逆层依赖。emitExternalNotify 内部已逐通道吞异常。 */
+  try{ emitExternalNotify(title, body, kind || "daily"); }catch(e){ /* 外发绝不干扰本地通知 */ }
 }
 function dailyDigest(){
   const last=localStorage.getItem(PREFIX+"last_open"); const today=todayStr();
@@ -20,7 +25,7 @@ function dailyDigest(){
   if(!pending.length) return;
   const top=pending.slice(0,3).map(x=>"· "+x.title+(x.due<today?t("label.overdue","（逾期）"):t("label.today","（今天）"))).join("\n");
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-    notifySystem(t("msg.dailyDigest","每日播报：今日待处理 ")+pending.length+t("unit.items"," 项"), top);
+    notifySystem(t("msg.dailyDigest","每日播报：今日待处理 ")+pending.length+t("unit.items"," 项"), top, "daily");
   } else {
     toast(t("msg.todayTodo","今日待处理 ")+pending.length+t("unit.items"," 项"), "ok");
   }
@@ -280,14 +285,14 @@ function runNotifyCheck(){
   // 1. 到期任务
   const due = checkDueTasks(now);
   if(due.length){
-    due.forEach(d => { try{ notifySystem(d.msg, ""); }catch(e){ pushDiag("error", "notify due: "+(e&&e.message||e), {where:"notify"}); } });
+    due.forEach(d => { try{ notifySystem(d.msg, "", "due"); }catch(e){ pushDiag("error", "notify due: "+(e&&e.message||e), {where:"notify"}); } });
     markNotifiedIds(due.map(d => d.id));
     stats.due = due.length;
   }
   // 2. 断链
   const breaks = checkChainBreak(now);
   if(breaks.length){
-    breaks.forEach(b => { try{ notifySystem(b.msg, ""); }catch(e){ pushDiag("error", "notify chain: "+(e&&e.message||e), {where:"notify"}); } });
+    breaks.forEach(b => { try{ notifySystem(b.msg, "", "chain"); }catch(e){ pushDiag("error", "notify chain: "+(e&&e.message||e), {where:"notify"}); } });
     markChainBreakNotified(breaks.map(b => b.id), todayStr());
     stats.breaks = breaks.length;
   }
@@ -302,10 +307,10 @@ function runNotifyCheck(){
     const fresh = dueReviews.filter(function(r){ return !notifiedIds.includes("sm2:" + r.id); });
     if(fresh.length){
       fresh.slice(0, 5).forEach(function(r){
-        try{ notifySystem(t("notify.sm2Due","今日待复习：") + (r.title || ""), ""); }catch(e){ pushDiag("error", "notify sm2: "+(e&&e.message||e), {where:"notify"}); }
+        try{ notifySystem(t("notify.sm2Due","今日待复习：") + (r.title || ""), "", "review"); }catch(e){ pushDiag("error", "notify sm2: "+(e&&e.message||e), {where:"notify"}); }
       });
       if(fresh.length > 5){
-        try{ notifySystem(t("notify.sm2DueMore","还有 N 项复习待到期，去学习场景查看").replace("N", String(fresh.length - 5)), ""); }catch(e){}
+        try{ notifySystem(t("notify.sm2DueMore","还有 N 项复习待到期，去学习场景查看").replace("N", String(fresh.length - 5)), "", "review"); }catch(e){}
       }
       markNotifiedIds(fresh.map(function(r){ return "sm2:" + r.id; }));
       stats.sm2 = fresh.length;

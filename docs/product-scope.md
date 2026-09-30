@@ -90,20 +90,59 @@
 
 ### 🟠 代码在、入口在、但能力未接到底（v3.7.60 标记废弃，等渠道定案）
 
+> **v3.7.66 定案进度**：七个 provider 里 **飞书已接到底**（群机器人 webhook 通知；需页面跑在真实
+> http(s) 源，即「启动本地服务.bat」或线上站点，双击 `file://` 拿不到 CORS 故被禁用），
+> **钉钉接到底但仅桌面版**（它的 webhook 任何 origin 都不回 CORS 头，只能由 Electron 主进程发）。
+> 详见下一节 ✅。本表只剩 **Notion / Linear / Jira / Slack / 日历** 五个待定
+> （用户 2026-09-29：「等接通后再定」）。
+
 | 功能 | 实测定性（v3.7.60，真实 Chromium + stub fetch） | 处置 |
 |---|---|---|
-| **集成中心 · 连接与凭据验证**（notion / linear / jira / slack / 飞书 / 钉钉 / 日历） | **是真的**：七个 provider 各打到正确验证端点（`api.notion.com/v1/users/me`、`slack.com/api/auth.test` 等），凭据进 `Authorization` 头、结果落 `wb_integration_providers`；401 时面板如实显示「已连接 · 未验证」；日历 OAuth 按钮在非 Electron 下自动隐藏 | 保留。附带修了一个凭据外泄面：`jiraConnect` 原样把用户填的 `domain` 拼成请求主机位，实测 `domain="evil.example.com/?x="` 会把 Bearer token 发去该主机；现由 `_intJiraBase()` 只放行纯主机名 |
-| **集成中心 · 同步 / 通知**（`*SyncTask` / `*SyncNote` / `*ListIssues` / `*SendMessage` / `*NotifyEvent` / `*CreateTaskFromMessage` / `calendar*Event` / `integrationList·Enable·Disable·ConfigureProvider` / `integrationGetStatus`） | **零调用方**：连上七个 provider 后跑「建任务 / 完成任务 / 重渲染 / `notifySystem` / `checkDueTasks`」，集成域名 **0 次外发**；UI 里也没有任何"同步到 X"入口。共 **30 个函数、约 855 行**（其中 5 个只被同为废弃的函数调用，属传递性死） | **只标记不删**（用户 2026-09-28：「先标记废弃，等我定好渠道再动」）。30 个函数逐个挂 `@deprecated v3.7.60 应用内零调用方…`，区域头留处置说明。**摘除条件**：渠道定案后要么接上消费点并逐个摘标记 + 补真发请求的用例，要么连 `__test` 桥条目与 i18n 键一起清并移入上面的 🔴 表。⚑ 守护：`tests/integration-deprecated.test.js`（锁"标记仍在 + 仍然零调用 + 活路径未被误标"） |
+| **集成中心 · 连接与凭据验证**（v3.7.60 时含 notion / linear / jira / slack / 飞书 / 钉钉 / 日历 七个；**现剩五个**，飞书 / 钉钉改走 webhook 且不再走凭据存储） | **是真的**：各 provider 打到正确验证端点（`api.notion.com/v1/users/me`、`slack.com/api/auth.test` 等），凭据进 `Authorization` 头、结果落 `wb_integration_providers`；401 时面板如实显示「已连接 · 未验证」；日历 OAuth 按钮在非 Electron 下自动隐藏 | 保留。附带修了一个凭据外泄面：`jiraConnect` 原样把用户填的 `domain` 拼成请求主机位，实测 `domain="evil.example.com/?x="` 会把 Bearer token 发去该主机；现由 `_intJiraBase()` 只放行纯主机名 |
+| **集成中心 · 同步 / 通知**（`*SyncTask` / `*SyncNote` / `*ListIssues` / `*SendMessage` / `*NotifyEvent` / `*CreateTaskFromMessage` / `calendar*Event` / `integrationList·Enable·Disable·ConfigureProvider` / `integrationGetStatus`） | **零调用方**：连上七个 provider 后跑「建任务 / 完成任务 / 重渲染 / `notifySystem` / `checkDueTasks`」，集成域名 **0 次外发**；UI 里也没有任何"同步到 X"入口。共 **30 个函数、约 855 行**（其中 5 个只被同为废弃的函数调用，属传递性死） | **先只标记不删**（用户 2026-09-28：「先标记废弃，等我定好渠道再动」）。30 个函数逐个挂 `@deprecated v3.7.60 应用内零调用方…`，区域头留处置说明。**v3.7.66 渠道定案后已降到 24 个**：飞书 / 钉钉选定 webhook 通道，其 6 个旧函数（`feishu` / `dingtalk` × `SendMessage` / `NotifyEvent` / `CreateTaskFromMessage`，含被 `feishuNotifyEvent` 调用的 1 条内部边）随本次改造**直接删除** —— 留着就是给一个已被判定"个人场景配不通"的 App 凭据模型留尸体。剩余 24 个（notion / linear / jira / slack / 日历）**仍只标记**，等其余五个 provider 的定案（用户 2026-09-29：「等接通后再定」）。⚑ 守护：`tests/integration-deprecated.test.js`（锁"标记仍在 + 仍然零调用 + 活路径未被误标 + 已删的 6 个不回流"） |
+
+### ✅ 已接到底：飞书（需 http(s) 源）/ 钉钉（仅桌面版）群机器人 webhook 通知（v3.7.66）
+
+用户 2026-09-29 定案：「**那就飞书和钉钉吧，那种东西最好不要上远程，本地也不要**」—— 经追问明确
+"那种东西"指 **凭据**，口径是 **绝不落盘**（不写 localStorage、不进备份、不上云）。
+
+| 维度 | 落地情况（均实测，非静态结论） |
+|---|---|
+| **通道选型** | 群**自定义机器人 webhook**，不是企业自建应用。旧 `appKey/appSecret + chatId` 那套要管理员权限、还要用户拿不到的 `chatId`，个人场景根本配不通 —— 这正是 v3.7.60 把 6 个旧函数判死的原因。webhook 一个地址即可、天然单向，恰好匹配"通知推出去" |
+| **可达性分流（v3.7.66，真实网络 + 真实 Chromium 矩阵实测）** | webhook 是 `Content-Type: application/json` 的 POST，**必触发 CORS 预检**，所以"能不能发"由 **origin × 传输两个轴**决定，单看渠道会判错。实测（`_probe/cors-origin-matrix.mjs` 用真实 Chromium 分别跑 `file://` 与 `http://127.0.0.1`；`_probe/electron-cors-main.cjs` 用真 Electron、webPreferences 与本应用一致）：<br>┌ 渠道 · 渲染进程 · `file://`（双击） ┐ 渠道 · 渲染进程 · `http(s)`（本地服务/线上站点） ┐ 主进程 Node fetch ┐<br>· **飞书**：❌ 被拦 ┐ ✅ 放行 ┐ ✅<br>· **钉钉**：❌ 被拦 ┐ ❌ 被拦 ┐ ✅<br>机制：钉钉/企微**任何 origin 都不回 `Access-Control-Allow-Origin`**（企微预检直接 403）；飞书只在 Origin 是真实 http(s) 源时给 `ACAO: *`，`file://` 下**一个 CORS 头都不回**（`curl -H "Origin: null"` 复测确认）。本应用 Electron 窗口 `sandbox:true` 且未关 `webSecurity`，加载方式又是 `loadFile()` = `file://` → **渲染进程连飞书都发不出去**，只有主进程能发。<br>⚠️ 我一开始只带 `Origin: http://localhost:8124` 用 curl 测出飞书给 `ACAO: *`，就下结论"飞书浏览器可用"—— 那是**一轴的证据推两轴的结论**，双击 `file://` 的用户实际发不出去。 |
+| **主进程代发的由来** | 上面那条不是"能不能加个渠道"的问题，是"已写好的渠道是否真发得出去"。解法：`ipcMain.handle("notify-send")` 用主进程 Node 全局 `fetch`（无 CORS 约束）代发，`preload.js` 暴露 `electronAPI.notifySend`。渲染层按**两轴**分流（`notifyHasMainSender` + `notifyOriginIsHttpish`，汇成 `notifyChannelAvailable`）：飞书在 http(s) 源或有主进程时开放，**钉钉只在有主进程时开放**；其余情况面板给出对应标签（钉钉「仅桌面版可用」、飞书「需以 http 方式打开」）并禁用连接按钮、用 title 写出原因与出路。<br>被拒的通道**一个请求都不许发**，也不许把 webhook 存进内存冒充已连接（`notifyHookConnect` 里拦，不在按钮上拦 —— e2e 有绕过 UI 直接调用的用例）。 |
+| **这条 IPC 的安全边界** | 它等于"让渲染进程驱动主进程对一个 URL 发 POST"，所以承重墙是主机白名单：`isSafeNotifyWebhookUrl` 只放行三家公开 webhook 主机，**精确匹配**（`oapi.dingtalk.com.evil.example.com` 必须拒）、强制 `https:`、拒 userinfo（`https://oapi.dingtalk.com@evil`）、拒回环与链路本地（`127.0.0.1` / `169.254.169.254`）。`assertTrustedSender` 与 chat 同一道门。`timeoutMs` 钳在 1s–20s。日志**只记主机与状态码**，绝不记 `access_token` / `sign` / 正文（有用例直接读 `logs/app.log` 反证）。 |
+| **消费点** | `notifySystem(title, body, kind)`（`src/ui-daily.js`）本地展示之外多走一条外发漏斗，5 个生产调用点全部带上事件类别：`daily` / `due` / `chain` / `review`×2 |
+| **层级** | 没有让 `ui-daily` 直接调 `ui-ge-integrations`（`check:modules` 实测会新增逆层边 `ui-daily>ui-ge-integrations`）。改为 `core` 暴露 `registerExternalNotifier` / `emitExternalNotify` 注册位，两条边都向下 |
+| **签名口径** | 钉钉：ts 用**毫秒**，`sign = HMAC(key=secret, data=ts+"\n"+secret)`，进 **URL query**。飞书：ts 用**秒**，`sign = HMAC(key=ts+"\n"+secret, data=空串)`，进 **JSON body**。两者方向相反，写反必签失败 |
+| **失败口径** | 钉钉 HTTP 200 仍可能 `errcode≠0` —— 只看 `resp.ok` 会把失败当成功，已按 `errcode` 判定。`notifyHookSend` **永不抛错**，广播 fire-and-forget，失败只进诊断面板（`pushDiag`），本地通知不受影响 |
+| **不落盘（🔴 硬约束）** | webhook 地址与 Secret 只存在模块内存对象；不走 `integrationRegisterProvider` / `_intSaveProviders` 那条密封写盘链。**三条零持久化断言**在真实 Chromium 里跑：配置后 `localStorage` 无 `wb_integration_*` 飞书/钉钉条目、刷新后凭据确实失效、面板回显只给 `host/…xxxx…` 脱敏 hint |
+| **历史凭据回扫** | 旧版本把 `appSecret` / `accessSecret`（甚至当时不算"敏感"的 `appId` / `accessKey` 明文）写进过 `wb_integration_providers`。`_notifyScrubPersisted()` 在 `startup()` 里一次性抹掉 feishu / dingtalk 两条，幂等 |
+| **文案** | 面板与描述改成 webhook 口径，并显式写「⚠ 只保存在本次会话内存里：不写入本地存储、不进备份与云同步，**刷新或关闭页面即失效**」。不让用户误以为存下来了。钉钉的描述与状态位必须写明**仅桌面版可用**并带限制原因，飞书不许被一并误标。⚑ 文案诚实度守护统一归 `tests/integration-jira-domain.test.js` 的「集成中心文案只承诺真接了的能力」（分组：未接线 5 家必须写"尚未接入"、已接线 2 家必须写 webhook + 会话内存 + 不许承诺同步 + 钉钉必须写「仅桌面版」）；`tests/notify-webhook.test.js` 只测通道行为，不重复断言措辞 |
+| **测试** | `tests/notify-webhook.test.js` 22 条（jsdom，签名用 Node `createHmac` 当独立 oracle；§⑥ 是传输分流与能力门）· `tests/electron-ipc.test.js` notify-send 组 13 条（白名单/子域伪装/userinfo/明文 http/回环与链路本地/payload 校验/未受信 sender/网络异常/超时/钳值/**日志不泄露 token**）· `tests/preload-contract.test.js` 4 条（preload 暴露面契约，见下）· `tests/e2e/notify-hook.spec.js` **按 origin 分两组**共 7 条 × desktop/tablet 两项目（真实 Chromium，实测 14/14）：http 组 6 条证明「接通了真能发」+ 零落盘 + 刷新失效 + 非法地址零外发 + http 源下钉钉仍禁；file 组 1 条证明 `file://` 下**两个渠道都被如实禁用且零外发**。另用 `_probe/pw.mobile-notify.config.js` 一次性在 375×667 复跑 · `_probe/verify-notify-hook.mjs` 真机断言（含 3 项零持久化）。**每条新守护都做过变异验证**：① 注入 `localStorage.setItem("wb_integration_providers", …)` → 零持久化转红并点名该键；② 摘掉 `_notifyScrubPersisted` 的写回 → 回扫两条转红；③ 未登记类别兜底改回旧写法 → 「关不掉的通道」转红（expected 2 to be 1）；④ 摘掉 `preload.js` 的 `notifySend` → 契约组 3 条转红且报出方法名 |
+| **接线守护（为什么还要 preload 契约测试）** | 桌面专属能力是三段接线：主进程注册 IPC + preload 暴露同名方法 + 渲染层探测该方法。前两段与第三段此前各自有测试，**中间那层无人覆盖** —— preload 少暴露或改名，渲染层 `typeof api.notifySend === "function"` 恒 false，钉钉就退化成"标了仅桌面版但桌面版也用不了"，而全部门禁照绿。`tests/preload-contract.test.js` 是真的把 preload 用假 `require("electron")` 执行、捕获交给 `exposeInMainWorld` 的对象来断言（不是文本正则），与 §⑥ 的 consumer 侧断言合成闭环。**顺带清掉一个假守护**：原 `tests/preload-static-check.cjs` 已删除 —— 它永不执行（vitest `include` 只收 `tests/**/*.test.js`，CI 与 npm 脚本都没引用），断言本身还是错的（要求 preload 从 `electron` 解构出 `app`，而 `app` 属主进程、preload 里本就不该有），实测 `node tests/preload-static-check.cjs` 直接 exit 1。留着一个"看起来在检查、真跑必红"的文件比没有更糟。删除只落工作区、未入索引，避免与并行会话的提交纠缠。 |
+
+**顺带修掉一个既有 P1（真机实测才发现）**：集成配置弹窗此前**完全不可见**。`.cmd` 基类是
+`display:none`，靠自身 `.show` 才显示，而旧代码把 `.show` 加在外层 overlay 上、并把 `.cmd` 的
+`classList.add("show")` 塞进了 `requestAnimationFrame`。headless 下没有合成帧，rAF 根本不触发 ——
+这正是我用 `p.screenshot()` 强制出帧才暴露出来的。现改为 `appendChild` 后**同步**加 `.show`。
+> 单测（jsdom）照不到：jsdom 不应用样式表，`display:none` 对它而言不存在。**"看不见"类缺陷必须真机断言。**
+
+**剩余待决（等这条渠道跑通后再定，用户 2026-09-29）**：Notion / Linear / Jira / Slack / 日历 这五个
+provider 的 24 个废弃函数是接消费点还是整清 —— 本轮不动，也不在它们上面加新 UI。
 
 > ⚠️ **本簇曾被误判为"静态零引用死码"**，真因是 `openIntegrationConfig` 用字符串拼接派发
 > `window[name + "Connect"]` / `window[name + "Disconnect"]` —— 按标识符计数的可达性普查看不见这条边。
 > 判"零引用可删"前必须：① 枚举 `window[` / `new Function` / `eval` 类派发点（本仓 `window[...]` 仅 3 处）；
 > ② 真机把入口跑一遍。详见 §四.4。
 
-> ⚠️ **另一项实测缺口（未修，仅登记）**：备份/迁移只枚举 `wb_agent_` 前缀 + `wb_custom_links`
+> ⚠️ **另一项实测缺口（部分定案，剩余未决）**：备份/迁移只枚举 `wb_agent_` 前缀 + `wb_custom_links`
 > （`src/ui-backup-stats.js:395`），所以 `wb_integration_providers` / `_sync_state` / `_api_keys` /
-> `_rate_limits` **不进备份**。对凭据而言这偏安全、可能是有意的，但它从未写进文档，
-> 且意味着恢复备份后连接状态静默丢失。定渠道时一并决定：显式声明"凭据不随备份走"，还是纳入并加密。
+> `_rate_limits` **不进备份**。
+> - **飞书 / 钉钉（v3.7.66 已定案）**：本就不落任何磁盘，"不进备份"是策略的一部分而非副作用；
+>   UI 与文档均已显式声明。旧版本可能残留的历史条目由 `_notifyScrubPersisted()` 启动时抹掉。
+> - **Notion / Linear / Jira / Slack / 日历（未决）**：仍走 `wb_integration_providers` 密封写盘，
+>   因而"连上就存、恢复备份后连接状态静默丢失"。要么显式声明"这批凭据不随备份走"，要么纳入并加密 —— 待用户定。
 
 ---
 

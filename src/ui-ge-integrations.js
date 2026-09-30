@@ -1087,196 +1087,295 @@ function slackDisconnect(){
 }
 
 /* ============================================================
- * 6. 飞书集成
- * ============================================================ */
+ * 6. 飞书 / 钉钉 —— 群机器人 webhook 通知通道（v3.7.66）
+ * ============================================================
+ * 为什么是 webhook 而不是企业应用：旧的 appKey/appSecret + chatId 那套要企业自建应用
+ * 管理员权限、还要用户拿不到的 chatId，个人场景根本配不通 —— 实测旧实现 6 个函数
+ * （feishu/dingtalk × SendMessage / NotifyEvent / CreateTaskFromMessage）应用内零调用方，
+ * v3.7.60 已整批标废弃。群自定义机器人只要一个 webhook 地址就能收消息，且天然单向，
+ * 正好匹配"通知推出去"这个真实需求。旧的 6 个函数随本次删除。
+ *
+ * 凭据策略（硬约束，用户 2026-09-29 定：「那种东西最好不要上远程，本地也不要」）：
+ *   webhook 地址与加签 Secret **只存在本模块的内存对象里** —— 不走
+ *   integrationRegisterProvider / _intSaveProviders 那条密封写盘链，不进 localStorage、
+ *   不进备份、不进云同步。刷新或关闭页面即失效，需要重新粘贴。
+ *   这是刻意的产品决定，不是实现遗漏；UI 必须同样写明，别让用户以为存下来了。
+ *   历史版本可能已把 feishu / dingtalk 的 appSecret 落过盘（appId/accessKey 当时还
+ *   不算"敏感字段"，是明文存的）—— 启动时由 _notifyScrubPersisted 一次性抹掉。
+ */
+
+/** 会话内存态：null = 未配置 */
+const _notifyHooks = { feishu: null, dingtalk: null };
+/** 推送开关同样只在内存里（刷新回到未启用，避免出现"开关开着但凭据没了"的假状态） */
+const _notifyHookKinds = { daily: true, due: true, chain: true, review: true };
+
+/** 统一消息前缀：机器人若配「自定义关键词」安全策略，用户可以把这个词填进去 */
+const NOTIFY_PREFIX = "[Agent工坊]";
 
 /**
- * 连接飞书
- * @param {Object} config - { appId, appSecret, chatId }
- * @returns {Promise<Object|null>} provider 或 null
+ * HMAC-SHA256 → base64（WebCrypto）。两个平台的签名算法见各自调用处注释。
+ * @returns {Promise<string>} 失败时抛错，由调用方兜住
+ */
+async function _notifyHmacB64(keyStr, msgStr){
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(keyStr), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const buf = await crypto.subtle.sign("HMAC", key, enc.encode(msgStr));
+  let bin = "";
+  const bytes = new Uint8Array(buf);
+  for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+/** 配置一个通道（纯内存）。cfg = { url, secret }；不写任何持久层。 */
+function notifyHookSet(kind, cfg){
+  if(!Object.prototype.hasOwnProperty.call(_notifyHooks, kind)) return false;
+  const url = String((cfg && cfg.url) || "").trim();
+  if(!/^https:\/\//i.test(url)) return false;               /* webhook 必须是 https，且不放行任意协议 */
+  _notifyHooks[kind] = { url: url, secret: String((cfg && cfg.secret) || "").trim() };
+  return true;
+}
+function notifyHookGet(kind){
+  const h = _notifyHooks[kind];
+  return h ? { kind: kind, configured: true, hasSecret: !!h.secret, urlHint: _notifyUrlHint(h.url) } : { kind: kind, configured: false, hasSecret: false, urlHint: "" };
+}
+function notifyHookClear(kind){
+  if(!Object.prototype.hasOwnProperty.call(_notifyHooks, kind)) return false;
+  _notifyHooks[kind] = null;
+  return true;
+}
+/** 给 UI 看的脱敏回显：只保留 host + 路径末段前 4 位，绝不回显完整 token */
+function _notifyUrlHint(url){
+  try{
+    const u = new URL(url);
+    const seg = u.pathname.split("/").filter(Boolean).pop() || "";
+    return u.host + "/…" + (seg ? "/" + seg.slice(0, 4) + "…" : "");
+  }catch(e){ return "（地址无效）"; }
+}
+
+/** 该类事件当前是否允许外推 */
+function notifyHookKindOn(kind){
+  return _notifyHookKinds[kind] !== false;
+}
+function notifyHookKindSet(kind, on){
+  if(!Object.prototype.hasOwnProperty.call(_notifyHookKinds, kind)) return false;
+  _notifyHookKinds[kind] = !!on;
+  return true;
+}
+function notifyHookState(){
+  return { kinds: Object.assign({}, _notifyHookKinds), feishu: notifyHookGet("feishu"), dingtalk: notifyHookGet("dingtalk") };
+}
+
+/**
+ * 主进程发送能力探测（桌面版专属）。
+ * 为什么要有这一层：2026-09-29/30 用真实网络 + 真实 Chromium 量了一整套
+ * 「origin × 渠道 × 传输」矩阵（`_probe/cors-origin-matrix.mjs`、`_probe/electron-cors-main.cjs`）。
+ * webhook 是 `Content-Type: application/json` 的 POST，**必触发 CORS 预检**，于是"发得出去吗"
+ * 由两个轴决定，不是渠道单轴：
+ *   飞书  渲染进程 · file://  → ❌ 被拦     飞书  渲染进程 · http(s) → ✅ 放行   飞书 主进程 → ✅
+ *   钉钉  渲染进程 · file://  → ❌ 被拦     钉钉  渲染进程 · http(s) → ❌ 被拦   钉钉 主进程 → ✅
+ * 机制：钉钉/企业微信**任何 origin 都不回 ACAO**（企微预检直接 403）；飞书只在 Origin 是真实
+ * http(s) 源时给 `ACAO: *`，而 `file://` 的 Origin 下**一个 CORS 头都不回**
+ * （`curl -H "Origin: null"` 复测确认）。本应用 Electron 窗口 `sandbox:true` 且未关 `webSecurity`，
+ * 加载方式又是 `loadFile()` = file:// → 渲染进程照样被拦，只有主进程 Node fetch 发得出去。
+ * @returns {boolean}
+ */
+function notifyHasMainSender(){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return !!(api && typeof api.notifySend === "function");
+}
+
+/** 页面是否跑在"真实 http(s) 源"上 —— file:// 与 data: 拿不到对端的 CORS 头 */
+function notifyOriginIsHttpish(){
+  try{
+    const p = (typeof location !== "undefined" && location.protocol) || "";
+    return p === "http:" || p === "https:";
+  }catch(e){ return false; }
+}
+
+/** 该渠道在当前运行形态下**真发得出去**吗（UI 与「连接」都以它为准，不许承诺发不到的通道） */
+function notifyChannelAvailable(kind){
+  if(kind === "feishu") return notifyHasMainSender() || notifyOriginIsHttpish();
+  if(kind === "dingtalk") return notifyHasMainSender();
+  return false;
+}
+
+/** 不可用时的一句话标签键（进面板状态位）：钉钉缺的是主进程，飞书缺的是一个正经 origin */
+function notifyUnavailableKey(kind){
+  return kind === "dingtalk" ? "int.desktopOnly" : "int.needHttpOrigin";
+}
+
+/** 不可用时如实说明为什么 + 怎么办（进 title 与连接弹窗，不是报错文案） */
+function notifyUnavailableHint(kind){
+  if(kind === "dingtalk") return "仅桌面版（Electron）可用：钉钉 webhook 不回 CORS 头，任何浏览器形态都发不出去";
+  return "请用「启动本地服务.bat」以 http://localhost 打开，或用线上站点：file:// 的 Origin 拿不到飞书的 CORS 头";
+}
+
+/**
+ * 外发传输：桌面版优先走主进程 IPC（无 CORS 约束），其余走渲染进程 fetch。
+ * 返回 { ok, status, body, error }，**永不抛错**。
+ * 两条路径返回结构一致，所以平台侧的成功/失败判定（errcode / code）只有一份。
+ */
+async function _notifyTransport(url, payload){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  if(api && typeof api.notifySend === "function"){
+    try{
+      const r = await api.notifySend({ url: url, payload: payload });
+      if(!r) return { ok: false, status: 0, body: null, error: "no_response" };
+      return { ok: !!r.ok, status: r.status || 0, body: r.body || null, error: r.error || "" };
+    }catch(e){
+      return { ok: false, status: 0, body: null, error: (e && e.message) ? e.message : String(e) };
+    }
+  }
+  return await _intDoRequest(url, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * 向单个通道发一条文本。返回 { ok, error }，**永不抛错**（通知失败不能影响本地体验）。
+ * 签名口径（易错点，都核对过官方文档要求的形式）：
+ *   钉钉：timestamp 用**毫秒**；sign = base64(HMAC-SHA256(key=secret, data=timestamp+"\n"+secret))，
+ *         放在 **URL query** 上（timestamp & sign）。
+ *   飞书：timestamp 用**秒**；sign = base64(HMAC-SHA256(key=timestamp+"\n"+secret, data=**空串**))，
+ *         与 timestamp 一起放在 **JSON body** 里。方向与钉钉相反，别写反。
+ */
+async function notifyHookSend(kind, text){
+  const h = _notifyHooks[kind];
+  if(!h) return { ok: false, error: "not_configured" };
+  const body = String(text || "");
+  if(!body) return { ok: false, error: "empty_text" };
+  try{
+    if(kind === "dingtalk"){
+      const ts = Date.now();
+      let url = h.url;
+      if(h.secret){
+        const sign = await _notifyHmacB64(h.secret, ts + "\n" + h.secret);
+        url += (url.indexOf("?") >= 0 ? "&" : "?") + "timestamp=" + ts + "&sign=" + encodeURIComponent(sign);
+      }
+      const resp = await _notifyTransport(url, { msgtype: "text", text: { content: body } });
+      /* 钉钉即使 HTTP 200 也可能业务失败（errcode≠0），只看 resp.ok 会把失败当成功 */
+      const errcode = resp.body && resp.body.errcode;
+      if(resp.ok && (errcode === undefined || errcode === 0)) return { ok: true, error: "" };
+      return { ok: false, error: "errcode=" + errcode + " " + ((resp.body && resp.body.errmsg) || resp.error || "") };
+    }
+    if(kind === "feishu"){
+      const ts = Math.floor(Date.now() / 1000);
+      const payload = { msg_type: "text", content: { text: body } };
+      if(h.secret){
+        payload.timestamp = String(ts);
+        payload.sign = await _notifyHmacB64(ts + "\n" + h.secret, "");
+      }
+      const resp = await _notifyTransport(h.url, payload);
+      const code = resp.body && (resp.body.code !== undefined ? resp.body.code : resp.body.StatusCode);
+      if(resp.ok && (code === undefined || code === 0)) return { ok: true, error: "" };
+      return { ok: false, error: "code=" + code + " " + ((resp.body && resp.body.msg) || resp.error || "") };
+    }
+    return { ok: false, error: "unknown_kind" };
+  }catch(e){
+    return { ok: false, error: (e && e.message) ? e.message : String(e) };
+  }
+}
+
+/**
+ * 通知漏斗：本地展示之外，向所有已配置且启用的通道推一份。
+ * fire-and-forget —— 不 await、不抛错、失败只进诊断面板。
+ * @param {string} title - 通知标题（已是成品文案）
+ * @param {string} body - 正文（可空）
+ * @param {string} kind - daily | due | chain | review
+ */
+function notifyHookBroadcast(title, body, kind){
+  /* 未登记的类别落到 daily 的开关上 —— 否则 `notifyHookKindOn` 对未知键恒为真，
+     这类事件就成了关不掉的通道。 */
+  const k = Object.prototype.hasOwnProperty.call(_notifyHookKinds, String(kind)) ? String(kind) : "daily";
+  if(!notifyHookKindOn(k)) return;
+  const text = NOTIFY_PREFIX + " " + String(title || "") + (body ? "\n" + String(body) : "");
+  ["feishu", "dingtalk"].forEach(function(ch){
+    if(!_notifyHooks[ch]) return;
+    Promise.resolve().then(function(){ return notifyHookSend(ch, text); }).then(function(r){
+      if(!r.ok) pushDiag("warn", ch + " 通知推送失败：" + r.error, { where: "notify-hook", kind: k });
+    }).catch(function(e){
+      pushDiag("warn", ch + " 通知推送异常：" + ((e && e.message) || e), { where: "notify-hook", kind: k });
+    });
+  });
+}
+
+/**
+ * 注册到 core 的外发漏斗（v3.7.66）。
+ * 不在 ui-daily 里直接调本函数 —— 那会给 ui-daily 加一条逆层依赖，
+ * check:modules 会报 `ui-daily>ui-ge-integrations`。
+ */
+try{ registerExternalNotifier(notifyHookBroadcast); }catch(e){ /* core 未就绪时静默跳过，本地通知不受影响 */ }
+
+/**
+ * 抹掉历史版本可能已落盘的飞书 / 钉钉凭据（一次性，幂等）。
+ * 旧实现把整个 config（含 appSecret / accessSecret，甚至当时不算"敏感"的 appId / accessKey）
+ * 写进了 wb_integration_providers；按新策略这些一律不许留在磁盘上。
+ * @returns {number} 被清除的条目数
+ */
+function _notifyScrubPersisted(){
+  let n = 0;
+  try{
+    _intLoadProviders();
+    ["feishu", "dingtalk"].forEach(function(k){
+      if(_integrationProviders && Object.prototype.hasOwnProperty.call(_integrationProviders, k)){
+        delete _integrationProviders[k];
+        n++;
+      }
+    });
+    if(n) _intSaveProviders();
+  }catch(e){ /* 清不动也不能挡住启动 */ }
+  return n;
+}
+
+/**
+ * 「连接」= 校验 webhook 可用并把凭据留在内存里，随后发一条问候消息确认通路。
+ * 返回一个 provider 形状的对象给面板复用（_verified 决定显示「已连接 · 已验证」）。
+ * @param {string} kind - feishu | dingtalk
+ * @param {Object} cfg - { url, secret }
+ */
+async function notifyHookConnect(kind, cfg){
+  /* 先发不出去就别存：一个"已连接"的死配置比没配更糟，而且它会谎报通路存在。 */
+  if(!notifyChannelAvailable(kind)){
+    try{ pushDiag("warn", kind + " 渠道在当前形态不可用：" + notifyUnavailableHint(kind), { where: "notify-hook", op: "connect" }); }catch(e){}
+    return null;
+  }
+  if(!notifyHookSet(kind, cfg)) return null;
+  const prov = { name: kind, type: kind === "feishu" ? INTEGRATION_TYPES.FEISHU : INTEGRATION_TYPES.DINGTALK, config: { _lastVerifiedAt: _intNow() }, enabled: true, ephemeral: true };
+  const r = await notifyHookSend(kind, NOTIFY_PREFIX + " 连接成功 —— 这条通知由本会话内存中的 webhook 发出，刷新页面后需重新配置。");
+  if(!r.ok){
+    /* 验证不过就退回未配置：留一个发不出去的死配置比"没配"更糟。
+       失败原因进诊断面板（面板上的 toast 只有通用文案，装不下平台返回的 errmsg）。 */
+    notifyHookClear(kind);
+    try{ pushDiag("warn", kind + " webhook 验证失败：" + r.error, { where: "notify-hook", op: "connect" }); }catch(e){}
+    return null;
+  }
+  return prov;
+}
+
+/**
+ * 连接飞书（群机器人 webhook · 会话内存态）
+ * @param {Object} config - { url, secret }
  */
 async function feishuConnect(config){
-  if(!config || !config.appId || !config.appSecret) return null;
-  const provider = integrationRegisterProvider("feishu", INTEGRATION_TYPES.FEISHU, config);
-  if(!provider) return null;
-  // 获取 tenant_access_token 验证
-  const resp = await _intDoRequest("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ app_id: config.appId, app_secret: config.appSecret })
-  });
-  provider.config._verified = !!(resp.ok && resp.body && resp.body.tenant_access_token);
-  provider.config._lastVerifiedAt = _intNow();
-  _intSaveProviders();
-  return provider;
+  return notifyHookConnect("feishu", config);
 }
-
 /**
- * 发送飞书消息
- * @param {string} chatId - 群聊 ID（不传则用配置中的默认 chatId）
- * @param {string} text - 消息文本
- * @returns {Promise<boolean>} 是否成功
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function feishuSendMessage(chatId, text){
-  const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
-  if(!provider) return false;
-  const ch = chatId || provider.config.chatId;
-  if(!ch || !text) return false;
-  // 先获取 tenant_access_token
-  const tokenResp = await _intDoRequest("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ app_id: provider.config.appId, app_secret: provider.config.appSecret })
-  });
-  if(!tokenResp.ok || !tokenResp.body || !tokenResp.body.tenant_access_token) return false;
-  const accessToken = tokenResp.body.tenant_access_token;
-  const resp = await _intDoRequest("https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + accessToken, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      receive_id: ch,
-      msg_type: "text",
-      content: JSON.stringify({ text: text })
-    })
-  });
-  return !!resp.ok;
-}
-
-/**
- * 飞书事件通知
- * @param {string} eventType - 事件类型
- * @param {Object} payload - 事件负载
- * @returns {Promise<boolean>}
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function feishuNotifyEvent(eventType, payload){
-  const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
-  if(!provider) return false;
-  const text = "[" + eventType + "] " + JSON.stringify(payload);
-  return await feishuSendMessage(provider.config.chatId, text);
-}
-
-/**
- * 从飞书消息创建任务
- * @param {Object} message - { text, senderId, chatId }
- * @returns {Object|null} 任务对象
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-function feishuCreateTaskFromMessage(message){
-  if(!message || !message.text) return null;
-  const lines = message.text.split("\n");
-  const title = lines[0].trim();
-  const description = lines.slice(1).join("\n").trim();
-  if(!title) return null;
-  return {
-    id: _intUid("task_"),
-    title: title,
-    description: description,
-    status: "todo",
-    source: "feishu",
-    sourceSenderId: message.senderId || null,
-    sourceChatId: message.chatId || null,
-    createdAt: _intNow()
-  };
-}
-
-/**
- * 断开飞书连接
- */
-function feishuDisconnect(){
-  return integrationRemoveProvider("feishu");
-}
-
-/* ============================================================
- * 7. 钉钉集成
- * ============================================================ */
-
-/**
- * 连接钉钉
- * @param {Object} config - { accessKey, accessSecret, chatId }
- * @returns {Promise<Object|null>} provider 或 null
+ * 连接钉钉（群机器人 webhook · 会话内存态）
+ * @param {Object} config - { url, secret }
  */
 async function dingtalkConnect(config){
-  if(!config || !config.accessKey || !config.accessSecret) return null;
-  const provider = integrationRegisterProvider("dingtalk", INTEGRATION_TYPES.DINGTALK, config);
-  if(!provider) return null;
-  // 获取 access_token 验证
-  const resp = await _intDoRequest("https://oapi.dingtalk.com/gettoken?appkey=" + encodeURIComponent(config.accessKey) + "&appsecret=" + encodeURIComponent(config.accessSecret), {
-    method: "GET"
-  });
-  provider.config._verified = !!(resp.ok && resp.body && resp.body.errcode === 0);
-  provider.config._lastVerifiedAt = _intNow();
-  _intSaveProviders();
-  return provider;
+  return notifyHookConnect("dingtalk", config);
 }
-
-/**
- * 发送钉钉消息
- * @param {string} chatId - 群聊 ID（不传则用配置默认）
- * @param {string} text - 消息文本
- * @returns {Promise<boolean>}
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function dingtalkSendMessage(chatId, text){
-  const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
-  if(!provider) return false;
-  const ch = chatId || provider.config.chatId;
-  if(!ch || !text) return false;
-  // 获取 access_token
-  const tokenResp = await _intDoRequest("https://oapi.dingtalk.com/gettoken?appkey=" + encodeURIComponent(provider.config.accessKey) + "&appsecret=" + encodeURIComponent(provider.config.accessSecret), {
-    method: "GET"
-  });
-  if(!tokenResp.ok || !tokenResp.body || !tokenResp.body.access_token) return false;
-  const accessToken = tokenResp.body.access_token;
-  const resp = await _intDoRequest("https://oapi.dingtalk.com/chat/send?access_token=" + accessToken, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chatid: ch,
-      msg: { msgtype: "text", text: { content: text } }
-    })
-  });
-  return !!(resp.ok && resp.body && resp.body.errcode === 0);
+/** 断开：清内存凭据，并顺手确认存储里没有残留 */
+function feishuDisconnect(){
+  notifyHookClear("feishu");
+  _notifyScrubPersisted();
+  return integrationRemoveProvider("feishu");
 }
-
-/**
- * 钉钉事件通知
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function dingtalkNotifyEvent(eventType, payload){
-  const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
-  if(!provider) return false;
-  const text = "[" + eventType + "] " + JSON.stringify(payload);
-  return await dingtalkSendMessage(provider.config.chatId, text);
-}
-
-/**
- * 从钉钉消息创建任务
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-function dingtalkCreateTaskFromMessage(message){
-  if(!message || !message.text) return null;
-  const lines = message.text.split("\n");
-  const title = lines[0].trim();
-  const description = lines.slice(1).join("\n").trim();
-  if(!title) return null;
-  return {
-    id: _intUid("task_"),
-    title: title,
-    description: description,
-    status: "todo",
-    source: "dingtalk",
-    sourceSenderId: message.senderId || null,
-    sourceChatId: message.chatId || null,
-    createdAt: _intNow()
-  };
-}
-
-/**
- * 断开钉钉连接
- */
 function dingtalkDisconnect(){
+  notifyHookClear("dingtalk");
+  _notifyScrubPersisted();
   return integrationRemoveProvider("dingtalk");
 }
 

@@ -112,9 +112,11 @@ describe("集成中心文案只承诺真接了的能力", () => {
   let win;
   beforeEach(() => { win = freshWin(); });
 
-  it("7 个 provider 的描述都写明「同步 / 通知尚未接入」", () => {
-    const keys = ["int.notionDesc", "int.linearDesc", "int.jiraDesc", "int.slackDesc",
-      "int.feishuDesc", "int.dingtalkDesc", "int.calendarDesc"];
+  /* v3.7.66：飞书 / 钉钉真接了群机器人 webhook，"7 家全写尚未接入"的旧口径不再成立。
+     守护不松，改成分组断言：本文件是「文案诚实度」的唯一归属（describe 即此职），
+     `tests/notify-webhook.test.js` 不再重复断言措辞，只测通道行为。 */
+  it("未接线的 5 个 provider 仍必须写明「同步 / 通知尚未接入」", () => {
+    const keys = ["int.notionDesc", "int.linearDesc", "int.jiraDesc", "int.slackDesc", "int.calendarDesc"];
     for (const k of keys) {
       const v = win.t(k, "");
       expect(v, `${k} 文案为空`).toBeTruthy();
@@ -123,9 +125,40 @@ describe("集成中心文案只承诺真接了的能力", () => {
     }
   });
 
-  it("面板总说明明确「连接本身不会向任何服务发送数据」", () => {
+  it("已接线的飞书 / 钉钉：必须写得出真发了什么，并如实交代凭据仅会话内存", () => {
+    for (const k of ["int.feishuDesc", "int.dingtalkDesc"]) {
+      const v = win.t(k, "");
+      expect(v, `${k} 文案为空`).toBeTruthy();
+      expect(v, `${k} 应写明走群机器人 webhook：${v}`).toMatch(/webhook/i);
+      expect(v, `${k} 已接通，不许再写"尚未接入"这种过时口径：${v}`).not.toMatch(/尚未接入|not implemented/);
+      /* 存不下是产品决定，写进文案才是诚实：不交代就是让用户以为刷新后还在。 */
+      expect(v, `${k} 必须交代凭据刷新即失效：${v}`).toMatch(/本次会话|会话内存|刷新即失效|this session|lost on reload/);
+      expect(v, `${k} 不许反过来承诺同步（同步仍未接线）：${v}`).not.toMatch(/同步.*到|任务同步|sync.*notes?/i);
+    }
+  });
+
+  /* v3.7.66 实测：钉钉 webhook 不回 CORS 头（预检与 POST 都没有），企业微信预检 403 ——
+     所以钉钉只有借主进程发送的桌面版才真发得出去。文案若写得像两家都一样，就是新的空头承诺。 */
+  it("钉钉文案必须写明「仅桌面版」，飞书不许被误标", () => {
+    expect(win.t("int.dingtalkDesc", "")).toMatch(/仅桌面版|桌面版|desktop/i);
+    const fs = win.t("int.feishuDesc", "");
+    expect(fs, "飞书有 ACAO，浏览器可用，不该被一并标成桌面版专属：" + fs).not.toMatch(/仅桌面版|desktop only/i);
+    const d = win.t("integration.desc", "");
+    expect(d, "总说明必须解释清钉钉为什么只限桌面版：" + d).toMatch(/CORS|桌面版|desktop/i);
+  });
+
+  it("面板总说明：同步仍未接入要说清，且不许写得像「一连上就自动外发」", () => {
     const v = win.t("integration.desc", "");
-    expect(v).toMatch(/不会向任何服务发送数据|does not send data/);
-    expect(v).toMatch(/验证凭据|verify credentials/);
+    expect(v).toMatch(/同步.*仍未接入|同步仍未|is still not implemented|sync is still not/);
+    expect(v).toMatch(/验证凭据|凭据|credentials/i);
+    expect(v, "总说明必须写明外发只发生在用户主动推送这一侧").toMatch(/除你主动推送|unless you push|主动/);
+  });
+
+  it("会话内存态提示条存在且写明三条不落盘去向", () => {
+    const v = win.t("p4.html.intEphemeralHint", "");
+    expect(v).toBeTruthy();
+    expect(v).toMatch(/不写入本地存储|never written to local storage/);
+    expect(v).toMatch(/备份|backups/);
+    expect(v).toMatch(/刷新|关闭页面|reload/);
   });
 });

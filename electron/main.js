@@ -587,6 +587,57 @@ if (!gotLock){
       });
     });
 
+    /* 群机器人 webhook 外发（v3.7.66）。为什么必须在主进程发：
+       真实网络实测（带 Origin 头打预检与实际 POST）——
+         · 钉钉 oapi.dingtalk.com：预检 200 但**不回任何 Access-Control-Allow-Origin**，POST 响应同样没有；
+         · 企业微信 qyapi.weixin.qq.com：预检直接 403；
+         · 飞书 open.feishu.cn：预检与 POST 都给 `ACAO: *`，浏览器可用。
+       webhook 是 `Content-Type: application/json` 的 POST，必触发预检；本窗口是
+       `sandbox:true` 且没关 `webSecurity`（见 createWindow 的 webPreferences），渲染进程走的就是
+       Chromium 网络栈 → 钉钉在桌面版渲染进程里同样发不出去。只有 Node 侧 fetch 无 CORS 约束。
+       安全边界：只放行公开 webhook 主机白名单 + 强制 https + 拒 userinfo；
+       日志只记主机与状态码，**绝不记 access_token / sign / 消息正文**。 */
+    const NOTIFY_WEBHOOK_HOSTS = ["oapi.dingtalk.com", "open.feishu.cn", "qyapi.weixin.qq.com"];
+    function _notifyHostOf(raw){
+      try{ return new URL(String(raw)).hostname.toLowerCase(); }catch(err){ return ""; }
+    }
+    function isSafeNotifyWebhookUrl(raw){
+      let u;
+      try{ u = new URL(String(raw)); }catch(err){ return false; }
+      if(u.protocol !== "https:") return false;
+      if(u.username || u.password) return false;
+      return NOTIFY_WEBHOOK_HOSTS.indexOf(u.hostname.toLowerCase()) >= 0;
+    }
+    ipcMain.handle("notify-send", async (e, arg) => {
+      assertTrustedSender(e);
+      const url = arg && arg.url;
+      const payload = arg && arg.payload;
+      const host = _notifyHostOf(url);
+      if(!isSafeNotifyWebhookUrl(url)) return { ok: false, status: 0, error: "unsafe_webhook_url" };
+      if(!payload || typeof payload !== "object" || Array.isArray(payload)) return { ok: false, status: 0, error: "bad_payload" };
+      const ctrl = new AbortController();
+      const tmo = Math.min(Math.max(Number(arg.timeoutMs) || 8000, 1000), 20000);
+      const timer = setTimeout(() => ctrl.abort(), tmo);
+      try{
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: ctrl.signal
+        });
+        clearTimeout(timer);
+        let body = null;
+        try{ body = await r.json(); }catch(err2){ /* 非 JSON 响应：交回状态码判定 */ }
+        logLine("notify", "host=" + host + " status=" + r.status);
+        return { ok: !!r.ok, status: r.status, body: body };
+      }catch(err){
+        clearTimeout(timer);
+        const msg = (err && err.name === "AbortError") ? ("请求超时（" + tmo + "ms）") : ((err && err.message) || String(err));
+        logLine("notify", "host=" + host + " error=" + msg);
+        return { ok: false, status: 0, error: msg };
+      }
+    });
+
     /* v1.11.1 [M5]：electron-updater 更新链路已整体移除——三处断点（portable 目标不支持
      * 自动更新 / 无 publish 配置 / 渲染端 preload 无 update-available 监听）使其从未可用。
      * 分发形态维持 portable + 手动下载：更新 = 从 GitHub Releases 重新下载。 */
