@@ -1,6 +1,6 @@
 ## [v3.7.67] - 2026-09-30
 
-**RAG 增量索引落地 —— v3.7.59 登记的「笔记/任务/记录/对话历史只在手动『重建索引』时进真 RAG」缺陷清偿（product-scope §三 同步改判 ✅）。数据写路径经 core 新增的 `emitDataMutate` 广播位触发 ai-tools 的 `ragSyncIncremental`：内容哈希 diff 只落变更文档，新增/修改即入库即召回，删除即连向量一起移除；手动重建保留作全量兜底。全量 **109 文件 / 1233 用例**（v3.7.66 为 108/1223；+10 = `rag-incremental.test.js`）、`e2e` **71/71（3.8m）**、`lint`（四道）、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，**无新增**）、`check:source-state` 源码态，均本机实测。**
+**RAG 增量索引落地 —— v3.7.59 登记的「笔记/任务/记录/对话历史只在手动『重建索引』时进真 RAG」缺陷清偿（product-scope §三 同步改判 ✅）。数据写路径经 core 新增的 `emitDataMutate` 广播位触发 ai-tools 的 `ragSyncIncremental`：内容哈希 diff 只落变更文档，新增/修改即入库即召回，删除即连向量一起移除；手动重建保留作全量兜底。全量 **109 文件 / 1233 用例**（v3.7.66 为 108/1223；+10 = `rag-incremental.test.js`）、`e2e` **71/71（3.8m）**、`lint`（四道）、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，**无新增**）、`check:source-state` 源码态，均本机实测。**发版后线上复核**：Pages 取回 **3,570,127 B · sha256:783f4212be9f4d0b58a5a3224769bde86647812a7a4240f57e70b6b693aee9de**（与本机 `build:prod` 指纹**逐字节相同**）、`VERSION="3.7.67"`、`BUILD_TAG="20260930b"`、`var __TEST_GATE__ = false`。**
 
 ### 挂接点与分层（零新增逆层）
 
@@ -25,7 +25,7 @@
 
 ## [v3.7.66] - 2026-09-30
 
-**飞书/钉钉「群机器人 webhook」通知通道接到底（用户 09-29 定案：渠道取飞书+钉钉，"那种东西"=凭据，口径是绝不落盘）+ 修掉「集成连接弹窗点了不出现」的长期缺陷 + preload 暴露面契约测试（顺带清掉一个从不执行的假守护）。全量 **108 文件 / 1223 用例**（v3.7.65 为 104/1166；+39 = notify-webhook 22 · electron-ipc notify-send 13 · preload-contract 4）、`e2e` **71/71（5.6m）**（notify-hook 按 origin 分组 7 条 × desktop/tablet 两项目，真实 Chromium）、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，无新增）、`build:check` 五源一致 **v3.7.66 · BUILD_TAG 20260930a · sha256:ad9a25f290b28d03**，均本机实测。**
+**飞书/钉钉「群机器人 webhook」通知通道接到底（用户 09-29 定案：渠道取飞书+钉钉，"那种东西"=凭据，口径是绝不落盘）+ 修掉「集成连接弹窗点了不出现」的长期缺陷 + preload 暴露面契约测试（顺带清掉一个从不执行的假守护）。全量 **108 文件 / 1223 用例**（v3.7.65 为 104/1166；+39 = notify-webhook 22 · electron-ipc notify-send 13 · preload-contract 4）、`e2e` **71/71（5.6m）**（notify-hook 按 origin 分组 7 条 × desktop/tablet 两项目，真实 Chromium）、`check:modules`（35 块 · 50 循环 / 53 逆层 · 重复定义 0，无新增）、`build:check` 五源一致 **v3.7.66 · BUILD_TAG 20260930a · sha256:ad9a25f290b28d03**，均本机实测。**发版后线上复核**：Pages 取回 **3,562,424 B · sha256:4974d227c039596556a8ae86beeab4e3f1aacf4f9eaf7dbf3c16f0f268dea68c**（= 注入态 3,562,634 − 210 B，恰为 prod 口径的 `__TEST_GATE__` 替换量）、`VERSION="3.7.66"`、`BUILD_TAG="20260930a"`、`var __TEST_GATE__ = false`（`[prod build]` 标记在位）。⚠️ 核对口径补一笔：粗放正则 `__TEST_GATE__\s*=\s*\w+` 会命中**注释里**的 `__TEST_GATE__=true` 字样而误报"线上是注入态"——必须锚定 `var __TEST_GATE__` 定义处（本轮实测踩到并复核澄清）。**
 
 ### 通道与可达性（origin × 传输两轴，实测而非推断）
 
