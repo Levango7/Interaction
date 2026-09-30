@@ -3,7 +3,7 @@
   "name": "Agent 工坊",
   "short_name": "工坊",
   "description": "Agent 工坊 — 多场景任务 / 记录 / AI 助手的本地优先工坊（PWA，离线可用）",
-  "version": "3.7.65",
+  "version": "3.7.66",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -82,22 +82,6 @@
           "type": "image/svg+xml"
         }
       ]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "./icon.svg",
-      "sizes": "1280x720",
-      "type": "image/svg+xml",
-      "form": "wide",
-      "label": "桌面端看板视图"
-    },
-    {
-      "src": "./icon.svg",
-      "sizes": "390x844",
-      "type": "image/svg+xml",
-      "form": "narrow",
-      "label": "移动端窄屏视图"
     }
   ]
 }

@@ -6,13 +6,18 @@
 <meta name="theme-color" content="#111118">
 <meta name="description" content="Agent 工坊 — 多场景任务 / 记录 / AI 助手的本地优先工坊（PWA，离线可用）">
 <meta name="author" content="Agent Workshop">
+<!-- v3.7.66：`mobile-web-app-capable` 是标准名（Chrome 与 iOS 16.4+ 都认），浏览器已把 apple-* 判为废弃并在控制台出警告。
+     旧名保留只为更老的 iOS 仍能全屏 —— 两条并存是兼容策略，不是配置疏漏。 -->
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
-<link rel="preload" href="./icon.svg" as="image" type="image/svg+xml">
-<link rel="preload" href="./manifest.json" as="fetch" crossorigin>
+<!-- v3.7.66：删掉两条 preload。icon.svg 只被 manifest / apple-touch-icon / favicon 引用，页面里没有 <img> 用它；
+     manifest.json 由浏览器的清单解析器取，不吃 preload。证据是线上控制台原话：
+     「The resource … was preloaded using link preload but not used within a few seconds from the window's load event」。
+     即纯首屏浪费字节 + 一条常驻警告，没有任何收益。 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; img-src 'self' data: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- SECURITY NOTE [C-CSP-worker]: 必须显式给 worker-src。此前 CSP 没有 worker-src/child-src，
      Worker 会回落到 script-src（'self' 'unsafe-inline' https://cdnjs…，不含 blob:），
@@ -2634,12 +2639,6 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .onboard-step{font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--space-2);text-transform:uppercase;letter-spacing:.05em}
 .onboard-title{font-size:var(--fs-xl);font-weight:700;margin-bottom:var(--space-3);letter-spacing:-.01em}
 .onboard-desc{font-size:var(--fs-base);color:var(--text-dim);margin-bottom:var(--space-5);line-height:1.6}
-.onboard-scenarios{display:flex;gap:var(--space-2);margin-bottom:var(--space-4);flex-wrap:wrap}
-.onboard-sc-btn{padding:var(--space-3) var(--space-4);border:1px solid var(--line);border-radius:var(--radius-md);
-  font-size:var(--fs-base);background:var(--panel);transition:background var(--transition-fast),border-color var(--transition-fast)}
-.onboard-sc-btn:hover{background:var(--surface-hover)}
-.onboard-sc-btn.selected{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-text,var(--accent));font-weight:500}
-.onboard-input{margin-bottom:var(--space-4)}
 .onboard-actions{display:flex;gap:var(--space-3);justify-content:flex-end;margin-top:var(--space-6)}
 .onboard-btn-primary{padding:10px var(--space-5);border-radius:var(--radius-md);background:var(--accent);
   color:var(--on-accent);font-weight:600;transition:filter var(--transition-fast)}
@@ -3372,7 +3371,6 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   .tbtn{min-height:44px;min-width:44px;padding:var(--space-3)}
   .addbtn{min-height:44px;padding:var(--space-3) var(--space-4)}
   .mini{min-height:44px;padding:var(--space-2) var(--space-3)}
-  .onboard-sc-btn{min-height:44px;min-width:44px}
   .onboard-btn-primary, .onboard-btn-secondary{min-height:44px}
   .help-close{min-height:44px;min-width:44px}
   /* 顶栏按钮间距加大，避免误触 */
@@ -4884,7 +4882,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
-    <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南" class="u-hidden">
+    <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl" data-i18n="top.help">指南</span></button>
     <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
     <button type="button" class="tbtn" id="btnSearchTop" data-i18n-aria="a11y.fullSearch" aria-label="全文搜索">
@@ -4901,7 +4899,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <button type="button" class="tbtn" id="btnDownload" data-i18n-aria="a11y.exportData" aria-label="导出数据">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
     <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
-    <button type="button" class="tbtn install-btn" id="btnInstall" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面" class="u-hidden">
+    <button type="button" class="tbtn install-btn" id="btnInstall" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
     <!-- 任务235：同步状态指示器（登录后显示，同步中/已同步/离线/错误） -->
     <span class="sync-status u-hidden" id="syncStatus" role="status" aria-live="polite">
@@ -4970,7 +4968,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         </span>
         <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
         <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
-        <button class="chat-panel-collapse chat-ic-btn" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理" class="u-mr-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
+        <button class="chat-panel-collapse chat-ic-btn u-mr-1" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
         <!-- v3.6.3：全站折叠/展开按钮共用同一个箭头 path「M15 18l-6-6 6-6」（原生朝左），形状来源单一；
              方向由 CSS transform 决定，规则是「箭头指向面板的移动方向」，左右互为镜像：
                左侧栏  展开 → 点击向左收起 → 朝左「<」（不旋转）    折叠 → 点击向右展开 → 朝右「>」（rotate 180）
@@ -5403,7 +5401,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <div class="chain-add-form">
       <div class="set-subhead" data-i18n="store.registerNew">注册新插件</div>
       <p class="set-tip" data-i18n="store.pasteJson">粘贴插件 JSON 定义。</p>
-      <textarea id="pluginAddJson" rows="3" class="code-input" placeholder='{"id":"插件ID","name":"插件名称","version":"1.0.0","description":"插件描述"}' data-i18n-placeholder="field.pluginAddJsonPh" class="u-resize-v"></textarea>
+      <textarea id="pluginAddJson" rows="3" class="code-input u-resize-v" placeholder='{"id":"插件ID","name":"插件名称","version":"1.0.0","description":"插件描述"}' data-i18n-placeholder="field.pluginAddJsonPh"></textarea>
       <button type="button" class="addbtn sm u-mt-1" id="pluginAddBtn" data-sc="accent" data-i18n="store.registerBtn">注册插件</button>
     </div>
   </section>
@@ -6092,10 +6090,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.65"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
+const VERSION = "3.7.66"; /* v3.7.51 非 CSS 载体收编：SVG font-size 裸值 18 处 + Canvas ctx.font 1 处入令牌（实测 SVG 属性支持 var()）· 新增 .u-fs-4xs 工具类 · 字号阶梯使用率盘点（结论：不合并，低频展示级档位保留）· _probe 整理归档 161 个文件 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20260929a";
+const BUILD_TAG = "20260930a";
 
 
 
@@ -7414,7 +7412,7 @@ const MESSAGES = {
     "notify.pushStatus": "未订阅。开启后将向浏览器推送任务到期与断链提醒（需浏览器支持 Push API）。",
     "notify.pushHint": "⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。",
     "integration.title": "集成中心",
-    "integration.desc": "连接外部服务并验证凭据（Key 仅存本机浏览器）。注意：任务 / 笔记 / 日程同步与消息通知尚未接入，连接本身不会向任何服务发送数据。",
+    "integration.desc": "连接外部服务并验证凭据。群机器人 webhook 通知已接通，但能不能发出去取决于打开方式：飞书需要页面跑在真实 http(s) 源上（用「启动本地服务.bat」以 http://localhost 打开，或走线上站点），双击 file:// 打开时飞书不回 CORS 头；钉钉的 webhook 任何浏览器形态都不回 CORS 头，只有桌面版（Electron）经主进程发送才可用。凭据只存在本次会话内存里，刷新即失效，不落任何磁盘。注意：任务 / 笔记 / 日程同步仍未接入，除你主动推送外不会向任何服务发送数据。",
     "about.title": "关于与兼容说明",
     "about.desc": "使用 AI 功能前，请先了解以下说明。",
     "about.tip": "启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工坊数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。",
@@ -8946,8 +8944,9 @@ const MESSAGES = {
     "int.connect": "连接",
     "int.connected": "已连接",
     "int.connecting": "连接中…",
-    "int.dingtalkDesc": "验证钉钉 App 凭据（消息通知尚未接入）",
+    "int.dingtalkDesc": "群机器人 webhook · 仅桌面版可用（webhook 不回 CORS 头，浏览器发不出去）；凭据仅本次会话，刷新即失效",
     "int.dingtalkLabel": "钉钉",
+    "int.dingHook": "群机器人 Webhook 地址",
     "int.errCannotOpenAuth": "无法打开授权页（既无系统浏览器也无 window.open）",
     "int.errMissingClientId": "缺少 OAuth Client ID（需先在服务商控制台注册应用）",
     "int.errOauthBegin": "发起授权失败：",
@@ -8957,14 +8956,20 @@ const MESSAGES = {
     "int.errOauthTimeout": "授权超时（",
     "int.errOauthTimeoutSuffix": " 秒内未完成），请重试",
     "int.errUnsupportedProvider": "不支持的 OAuth provider：",
-    "int.feishuDesc": "验证飞书 App 凭据（消息通知尚未接入）",
+    "int.feishuDesc": "群机器人 webhook · 推送通知（需以 http(s) 方式打开：file:// 双击形态拿不到 CORS 头）；凭据仅本次会话，刷新即失效",
     "int.feishuLabel": "飞书",
+    "int.feishuHook": "群机器人 Webhook 地址",
     "int.googleCal": "Google 日历",
     "int.jiraDesc": "验证 Jira API Token（任务同步尚未接入）",
     "int.jiraDomain": "站点域名",
     "int.linearDesc": "验证 Linear API Key（任务同步尚未接入）",
     "int.linearTeamIdPh": "可选，用于 issue 同步",
+    "int.sessionOn": "本会话已配置",
+    "int.desktopOnly": "仅桌面版可用",
+    "int.needHttpOrigin": "需以 http 方式打开",
     "int.notConnected": "未连接",
+    "int.signed": " · 加签",
+    "int.signSecret": "加签密钥（机器人未开加签就留空）",
     "int.notionDbId": "任务数据库 ID",
     "int.notionDbIdPh": "可选，用于任务同步",
     "int.notionDesc": "验证 Notion Integration Token（笔记 / 任务同步尚未接入）",
@@ -8997,7 +9002,9 @@ const MESSAGES = {
     "p4.html.intCfgTitle": "<h3 class=\"u-m0-0-1-fs-md\">连接 ",
     "p4.html.intConnAria": "连接 ' + esc(label) + '",
     "p4.html.intConnBtn": "\">连接</button>",
-    "p4.html.intCredentialHint": "<p class=\"sub\" class=\"u-m-0-0-2\">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>",
+    "p4.html.intConnDisabled": "\">连接（当前形态不可用）</button>",
+    "p4.html.intCredentialHint": "<p class=\"sub u-m-0-0-2\">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>",
+    "p4.html.intEphemeralHint": "<p class=\"sub u-m-0-0-2 u-text-warn\">⚠ 只保存在本次会话内存里：不写入本地存储、不进备份与云同步，<b>刷新或关闭页面即失效</b>，需要重新粘贴。</p>",
     "p4.html.intDiscBtn": "\">断开</button>",
     "p4.html.intGoBtn": "<button type=\"button\" class=\"addbtn sm btn-primary\" id=\"btnIntCfgGo\">连接</button>",
     "p4.html.intNoApiKey": "<p class=\"hint\">暂无 API Key</p>",
@@ -9380,8 +9387,6 @@ const MESSAGES = {
     "pwa.syncFailedRetry": "同步失败，请稍后重试",
     "msg.langSwitched": "已切换语言",
     // 任务243：遗漏的硬编码中文补全（toast/confirm/字符串拼接）
-    "onboard.titleRequired": "请输入任务标题",
-    "onboard.firstTaskCreated": "已创建第一个任务，去「{name}」场景查看",
     "onboard.simTriggered": "已模拟触发：交付完成 → 自动生成学习充电任务",
     "coach.adviceUnavailable": "暂无法获取建议（{reason}），请稍后重试",
     "card.cannotOverrideBuiltin": "不能覆盖内置卡片：{key}",
@@ -9750,16 +9755,17 @@ const MESSAGES = {
     "a11y.sceneRadar": "场景完成度雷达图",
     "a11y.taskFlowSankey": "任务流向桑基图",
     "field.memMaxPh": "60（默认）",
-    "field.onboardTaskInputPh": "任务标题，如 写周报 / 修复报错 / 缴水电费",
     "field.globSearchPh": "关键词，如 周报 / 跑步…",
     "field.globFTagPh": "标签，如 紧急",
     "ui.snooze30MinTitle": "30 分钟后再提醒",
     "chat.collapseLbl": "折叠",
     "chartStore.libTitle": "图表库",
     "task.snoozeBtnText": "稍后",
-    "onboard.step1Desc": "这是一个帮你管理任务、养成习惯的工具。先创建你的第一个任务吧！",
+    "onboard.step1Desc": "这是帮你管理任务、养成习惯的本地工坊。屏幕上这几条是演示数据——先完成一条，感受「任务 → 统计与联动」的闭环。",
+    "onboard.demoTaskLabel": "演示任务：",
+    "onboard.completeDemo": "完成它",
+    "onboard.demoDone": "已把「{title}」标记完成，切到「统计」页就能看到反馈",
     "onboard.skip1": "跳过",
-    "onboard.create": "创建",
     "onboard.step2Title": "场景联动 — 让正反馈转起来",
     "onboard.step2Desc": "完成任务可以触发跨场景联动。比如交付任务完成后自动提醒你学习充电。",
     "onboard.skip2": "跳过",
@@ -11093,7 +11099,7 @@ const MESSAGES = {
     "notify.pushStatus": "Not subscribed. Enable to push task due and chain break reminders (requires Push API support).",
     "notify.pushHint": "⚠️ Framework mode: VAPID key is placeholder, not connected to push server. Subscribing calls PushManager.subscribe, but server-side push requires VAPID key and push service configuration.",
     "integration.title": "Integration Center",
-    "integration.desc": "Connect external services and verify credentials (keys stay in this browser only). Note: task / note / calendar sync and message notifications are not implemented — connecting does not send data anywhere.",
+    "integration.desc": "Connect external services and verify credentials. The group-robot webhook notification channel is wired up, but whether it can actually send depends on how the app is opened: Feishu needs the page on a real http(s) origin (open it via 'start-local-service.bat' at http://localhost, or use the hosted site) - from a file:// double-click Feishu returns no CORS headers. DingTalk's webhook returns no CORS headers in any browser form, so it only works in the desktop (Electron) app where the main process sends. Credentials live in this session only - never written to disk, lost on reload. Note: task / note / calendar sync is still not implemented; nothing leaves this app unless you push it.",
     "about.title": "About & Compatibility",
     "about.desc": "Please read the following before using AI features.",
     "about.tip": "When enabled, each scenario's AI assistant can call tools: create/modify/delete tasks, query/complete tasks, search, add records, view overview, export—your instructions actually modify workbench data.<br><br>With Agent Mode: remember/recall/forget working memory, plan/complete_step/complete_goal multi-step goals, list_records cross-scenario records.<br><br>CORS tip: calling from local files may be blocked by browser CORS. Best to open via 'start-local-service.bat' as http://localhost, then enable AI.",
@@ -12624,8 +12630,9 @@ const MESSAGES = {
     "int.connect": "Connect",
     "int.connected": "Connected",
     "int.connecting": "Connecting…",
-    "int.dingtalkDesc": "Verify DingTalk app credentials (notifications not implemented)",
+    "int.dingtalkDesc": "Group robot webhook · desktop (Electron) only — its webhook sends no CORS headers, so a browser cannot post; credentials live in this session only, lost on reload",
     "int.dingtalkLabel": "DingTalk",
+    "int.dingHook": "Group robot webhook URL",
     "int.errCannotOpenAuth": "Cannot open auth page (no system browser or window.open)",
     "int.errMissingClientId": "Missing OAuth Client ID (register app at provider console first)",
     "int.errOauthBegin": "Begin auth failed: ",
@@ -12635,14 +12642,20 @@ const MESSAGES = {
     "int.errOauthTimeout": "Auth timeout (",
     "int.errOauthTimeoutSuffix": " seconds not completed), please retry",
     "int.errUnsupportedProvider": "Unsupported OAuth provider: ",
-    "int.feishuDesc": "Verify Feishu app credentials (notifications not implemented)",
+    "int.feishuDesc": "Group robot webhook · pushes notifications (needs an http(s) origin - a file:// double-click gets no CORS headers); credentials live in this session only, lost on reload",
     "int.feishuLabel": "Feishu",
+    "int.feishuHook": "Group robot webhook URL",
     "int.googleCal": "Google Calendar",
     "int.jiraDesc": "Verify Jira API token (task sync not implemented)",
     "int.jiraDomain": "Site domain",
     "int.linearDesc": "Verify Linear API key (task sync not implemented)",
     "int.linearTeamIdPh": "Optional, for issue sync",
+    "int.sessionOn": "Configured for this session",
+    "int.desktopOnly": "Desktop app only",
+    "int.needHttpOrigin": "Needs an http(s) origin",
     "int.notConnected": "Not connected",
+    "int.signed": " · signed",
+    "int.signSecret": "Signing secret (leave empty if the robot has no signature requirement)",
     "int.notionDbId": "Task database ID",
     "int.notionDbIdPh": "Optional, for task sync",
     "int.notionDesc": "Verify Notion integration token (note / task sync not implemented)",
@@ -12675,7 +12688,9 @@ const MESSAGES = {
     "p4.html.intCfgTitle": "<h3 class=\"u-m0-0-1-fs-md\">Connect  ",
     "p4.html.intConnAria": "Connect ' + esc(label) + '",
     "p4.html.intConnBtn": "\">Connect</button>",
-    "p4.html.intCredentialHint": "<p class=\"sub\" class=\"u-m-0-0-2\">Credentials stay on this device (encrypted with your app data) and are never uploaded to any server</p>",
+    "p4.html.intConnDisabled": "\">Connect (unavailable in this form)</button>",
+    "p4.html.intCredentialHint": "<p class=\"sub u-m-0-0-2\">Credentials stay on this device (encrypted with your app data) and are never uploaded to any server</p>",
+    "p4.html.intEphemeralHint": "<p class=\"sub u-m-0-0-2 u-text-warn\">⚠ Kept in this session's memory only: never written to local storage, backups or cloud sync. <b>It is lost as soon as you reload or close the page</b> and must be pasted again.</p>",
     "p4.html.intDiscBtn": "\">Disconnect</button>",
     "p4.html.intGoBtn": "<button type=\"button\" class=\"addbtn sm btn-primary\" id=\"btnIntCfgGo\">Connect</button>",
     "p4.html.intNoApiKey": "<p class=\"hint\">No API keys yet</p>",
@@ -13080,8 +13095,6 @@ const MESSAGES = {
     "pwa.syncFailedRetry": "Sync failed, please retry later",
     "msg.langSwitched": "Language switched",
     // Task 243: missing hardcoded Chinese toast/confirm/string-concat i18n
-    "onboard.titleRequired": "Please enter a task title",
-    "onboard.firstTaskCreated": "First task created, go to \"{name}\" scenario to view",
     "onboard.simTriggered": "Simulated trigger: delivery complete → auto-generated learning task",
     "coach.adviceUnavailable": "Unable to get suggestions ({reason}), please retry later",
     "card.cannotOverrideBuiltin": "Cannot override built-in card: {key}",
@@ -13449,16 +13462,17 @@ const MESSAGES = {
     "a11y.sceneRadar": "Scenario completion radar chart",
     "a11y.taskFlowSankey": "Task flow Sankey diagram",
     "field.memMaxPh": "60 (default)",
-    "field.onboardTaskInputPh": "Task title, e.g. write weekly report / fix bug / pay utility bill",
     "field.globSearchPh": "Keyword, e.g. weekly report / running…",
     "field.globFTagPh": "Tag, e.g. urgent",
     "ui.snooze30MinTitle": "Remind again in 30 minutes",
     "chat.collapseLbl": "Collapse",
     "chartStore.libTitle": "Chart Library",
     "task.snoozeBtnText": "Later",
-    "onboard.step1Desc": "This is a tool to help you manage tasks and build habits. Let's create your first task!",
+    "onboard.step1Desc": "Agent Workshop keeps your tasks and habits on your own machine. The tasks on screen are samples - mark one done and feel the loop: task -> stats & chaining.",
+    "onboard.demoTaskLabel": "Sample task:",
+    "onboard.completeDemo": "Mark it done",
+    "onboard.demoDone": "Marked '{title}' as done - open the Stats page to see the feedback",
     "onboard.skip1": "Skip",
-    "onboard.create": "Create",
     "onboard.step2Title": "Scenario chaining — keep the positive feedback going",
     "onboard.step2Desc": "Completing tasks can trigger cross-scenario chaining. For example, after delivering a task, you can be automatically reminded to study and recharge.",
     "onboard.skip2": "Skip",
@@ -14137,6 +14151,26 @@ function t(key, fallback){
   }
   // fallback 到传入的 fallback 或 key 本身
   return fallback !== undefined ? fallback : key;
+}
+
+/* ---------- v3.7.66 外发通知通道注册表 ----------
+ * 为什么放 core：通知的产生点在 ui-daily，而通道实现（飞书 / 钉钉 webhook）在
+ * ui-ge-integrations。让 ui-daily 直接调它会新增一条 **逆层依赖**
+ * （check:modules 实测报 `ui-daily>ui-ge-integrations`）。改成「低层留钩子位、
+ * 高层来注册」后两条边都是向下的：ui-daily→core、ui-ge-integrations→core。
+ * 通道自己决定要不要真外发（未配置 / 该类事件被关掉 → 直接 return），
+ * 所以这里只做无脑分发 + 隔离异常：任何一个通道抛错都不能影响本地通知。 */
+const _externalNotifiers = [];
+function registerExternalNotifier(fn){
+  if(typeof fn !== "function") return false;
+  if(_externalNotifiers.indexOf(fn) < 0) _externalNotifiers.push(fn);
+  return true;
+}
+function emitExternalNotify(title, body, kind){
+  for(let i = 0; i < _externalNotifiers.length; i++){
+    try{ _externalNotifiers[i](title, body, kind); }
+    catch(e){ /* 外发通道的任何故障都不该冒到调用方 */ }
+  }
 }
 
 function toast(msg, type){
@@ -24635,9 +24669,9 @@ function renderToday(){
 function needsOnboarding(){
   return !load(PREFIX+"onboarded", false);
 }
-// B2：引导 modal 内部状态（当前步 + step1 选中的场景）
+// B2：引导 modal 内部状态（当前步 + 第 1 步要完成的那条演示任务 id）
 let _onboardStepNo = 1;
-let _onboardSelectedSc = "office";
+let _onboardDemoId = null;
 // 渲染指定步的 modal
 function _onboardRenderStep(step){
   // 移除已有 modal
@@ -24645,18 +24679,21 @@ function _onboardRenderStep(step){
   if(old) old.remove();
   let html;
   if(step === 1){
+    /* v3.7.66：第 1 步从「凭空建一条任务」改成「完成一条演示任务」。
+       不是审美改动：首次启动 seed() 已放好演示任务，原文案「先创建你的第一个任务吧」与用户眼前的
+       事实直接矛盾；而这个产品真正要教的第一件事是「标记完成 → 统计与联动立刻给反馈」，
+       所以让它第 1 步就发生。没有未完成任务时（老数据全完成过的极端）退化为纯「下一步」。 */
+    const _demo = getTasks().filter(function(x){ return x && x.status !== "done"; })[0] || null;
+    _onboardDemoId = _demo ? _demo.id : null;
     html = `<div class="onboard-modal" id="onboardModal">
       <div class="onboard-card">
         <div class="onboard-step">第 ${step} / 3 步</div>
         <div class="onboard-title">${t("onboard.welcome")}</div>
-        <div class="onboard-desc" data-i18n="onboard.step1Desc">这是一个帮你管理任务、养成习惯的工具。先创建你的第一个任务吧！</div>
-        <div class="onboard-scenarios" id="onboardSc">
-          ${ORDER.map(sc=>`<button type="button" class="onboard-sc-btn${sc===_onboardSelectedSc?" selected":""}" data-sc="${sc}">${SCENARIOS[sc].name}</button>`).join("")}
-        </div>
-        <input class="onboard-input" id="onboardTaskInput" placeholder="任务标题，如 写周报 / 修复报错 / 缴水电费" data-i18n-placeholder="field.onboardTaskInputPh">
+        <div class="onboard-desc" data-i18n="onboard.step1Desc">这是帮你管理任务、养成习惯的本地工坊。屏幕上这几条是演示数据——先完成一条，感受「任务 → 统计与联动」的闭环。</div>
+        ${_demo ? `<div class="card u-mt-2 u-fs-sm"><span class="u-text-dim" data-i18n="onboard.demoTaskLabel">演示任务：</span> <strong>${esc(_demo.title)}</strong></div>` : ""}
         <div class="onboard-actions">
           <button type="button" class="onboard-btn-secondary" id="onboardSkip" data-i18n="onboard.skip1">跳过</button>
-          <button type="button" class="onboard-btn-primary" id="onboardCreate" data-i18n="onboard.create">创建</button>
+          <button type="button" class="onboard-btn-primary" id="onboardDone" data-i18n="${_demo ? "onboard.completeDemo" : "onboard.next"}">${_demo ? t("onboard.completeDemo") : t("onboard.next")}</button>
         </div>
       </div>
     </div>`;
@@ -24701,22 +24738,15 @@ function _onboardBindStep(step){
   const modal = document.getElementById("onboardModal");
   const close = ()=>{ if(modal) modal.remove(); };
   if(step === 1){
-    document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(b=> /** @type {HTMLElement} */(b).onclick=()=>{
-      _onboardSelectedSc = /** @type {HTMLElement} */(b).dataset.sc;
-      document.querySelectorAll("#onboardSc .onboard-sc-btn").forEach(x=> x.classList.remove("selected"));
-      b.classList.add("selected");
-    });
     const skip = document.getElementById("onboardSkip");
     if(skip) skip.onclick = ()=>{ close(); _onboardRenderStep(2); };
-    const create = document.getElementById("onboardCreate");
-    if(create) create.onclick = ()=>{
-      const input = /** @type {HTMLInputElement} */(document.getElementById("onboardTaskInput"));
-      const title = input ? input.value.trim() : "";
-      if(!title){ toast(t("onboard.titleRequired", "请输入任务标题"), "warn"); return; }
-      const tasks = getTasks();
-      tasks.push({id:uid(), sc:_onboardSelectedSc, title, due:todayStr(), priority:"", status:"todo", doneAt:null, note:"", tags:[], created:Date.now()});
-      setTasks(tasks);
-      toast(t("onboard.firstTaskCreated", "已创建第一个任务，去「{name}」场景查看").replace("{name}", SCENARIOS[_onboardSelectedSc].name), "ok");
+    const done = document.getElementById("onboardDone");
+    if(done) done.onclick = ()=>{
+      if(_onboardDemoId){
+        const _dt = getTasks().filter(function(x){ return x && x.id === _onboardDemoId; })[0] || null;
+        try{ completeTask(_onboardDemoId); }catch(e){ /* 完成动作本身失败也不该卡住引导 */ }
+        toast(t("onboard.demoDone", "已把「{title}」标记完成，切到「统计」页就能看到反馈").replace("{title}", _dt ? _dt.title : ""), "ok");
+      }
       close(); _onboardRenderStep(2);
     };
   }else if(step === 2){
@@ -24747,10 +24777,12 @@ function _finishOnboarding(){
   save(PREFIX+"onboarded", true);
   try{ render(); checkCount(); dailyDigest(); }catch(e){ /* noop */ }
 }
-// B2：渲染引导 modal（入口）
+/* B2：渲染引导 modal（入口）—— v3.7.66「看过即记」：modal 一展示就写 onboarded 标记。
+   旧语义要等走完三步 / 点到最后一次跳过才写，于是中途关页面或直接刷新的人下次从头再被弹一次；
+   对免费期新用户，被同一个 modal 拦两道比少看一道更劝退。_finishOnboarding 仍会写一次（幂等）。 */
 function renderOnboarding(){
   _onboardStepNo = 1;
-  _onboardSelectedSc = "office";
+  try{ save(PREFIX+"onboarded", true); }catch(e){ /* 存储不可用时退回「每次都弹」，不阻塞功能 */ }
   _onboardRenderStep(_onboardStepNo);
 }
 /*SRC:ui-onboarding:END*/
@@ -32623,11 +32655,16 @@ function closeCmd(){ $("#cmd").classList.remove("show"); $("#cmdOverlay").classL
 // ===== UI Layer (交互层·每日播报) =====
 /* ---------- 每日播报 ---------- */
 // PWA 通知：优先用系统 Notification API（已授权时），否则 fallback 到 toast
-function notifySystem(title, body){
+function notifySystem(title, body, kind){
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-    try { new Notification(title, { body: body || "", icon: "./icon.svg" }); return; } catch (e) { /* fallback 至 toast */ }
+    try { new Notification(title, { body: body || "", icon: "./icon.svg" }); } catch (e) { /* fallback 至 toast */ }
+  } else {
+    toast(title + (body ? "：" + body : ""), "warn");
   }
-  toast(title + (body ? "：" + body : ""), "warn");
+  /* v3.7.66：本地展示之外，把同一份内容交给「外发通道」（飞书 / 钉钉群机器人 webhook，
+     由 ui-ge-integrations 注册到 core 的 emitExternalNotify）。走注册表而不是直接调用，
+     是为了不给 ui-daily 加一条逆层依赖。emitExternalNotify 内部已逐通道吞异常。 */
+  try{ emitExternalNotify(title, body, kind || "daily"); }catch(e){ /* 外发绝不干扰本地通知 */ }
 }
 function dailyDigest(){
   const last=localStorage.getItem(PREFIX+"last_open"); const today=todayStr();
@@ -32642,7 +32679,7 @@ function dailyDigest(){
   if(!pending.length) return;
   const top=pending.slice(0,3).map(x=>"· "+x.title+(x.due<today?t("label.overdue","（逾期）"):t("label.today","（今天）"))).join("\n");
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-    notifySystem(t("msg.dailyDigest","每日播报：今日待处理 ")+pending.length+t("unit.items"," 项"), top);
+    notifySystem(t("msg.dailyDigest","每日播报：今日待处理 ")+pending.length+t("unit.items"," 项"), top, "daily");
   } else {
     toast(t("msg.todayTodo","今日待处理 ")+pending.length+t("unit.items"," 项"), "ok");
   }
@@ -32902,14 +32939,14 @@ function runNotifyCheck(){
   // 1. 到期任务
   const due = checkDueTasks(now);
   if(due.length){
-    due.forEach(d => { try{ notifySystem(d.msg, ""); }catch(e){ pushDiag("error", "notify due: "+(e&&e.message||e), {where:"notify"}); } });
+    due.forEach(d => { try{ notifySystem(d.msg, "", "due"); }catch(e){ pushDiag("error", "notify due: "+(e&&e.message||e), {where:"notify"}); } });
     markNotifiedIds(due.map(d => d.id));
     stats.due = due.length;
   }
   // 2. 断链
   const breaks = checkChainBreak(now);
   if(breaks.length){
-    breaks.forEach(b => { try{ notifySystem(b.msg, ""); }catch(e){ pushDiag("error", "notify chain: "+(e&&e.message||e), {where:"notify"}); } });
+    breaks.forEach(b => { try{ notifySystem(b.msg, "", "chain"); }catch(e){ pushDiag("error", "notify chain: "+(e&&e.message||e), {where:"notify"}); } });
     markChainBreakNotified(breaks.map(b => b.id), todayStr());
     stats.breaks = breaks.length;
   }
@@ -32924,10 +32961,10 @@ function runNotifyCheck(){
     const fresh = dueReviews.filter(function(r){ return !notifiedIds.includes("sm2:" + r.id); });
     if(fresh.length){
       fresh.slice(0, 5).forEach(function(r){
-        try{ notifySystem(t("notify.sm2Due","今日待复习：") + (r.title || ""), ""); }catch(e){ pushDiag("error", "notify sm2: "+(e&&e.message||e), {where:"notify"}); }
+        try{ notifySystem(t("notify.sm2Due","今日待复习：") + (r.title || ""), "", "review"); }catch(e){ pushDiag("error", "notify sm2: "+(e&&e.message||e), {where:"notify"}); }
       });
       if(fresh.length > 5){
-        try{ notifySystem(t("notify.sm2DueMore","还有 N 项复习待到期，去学习场景查看").replace("N", String(fresh.length - 5)), ""); }catch(e){}
+        try{ notifySystem(t("notify.sm2DueMore","还有 N 项复习待到期，去学习场景查看").replace("N", String(fresh.length - 5)), "", "review"); }catch(e){}
       }
       markNotifiedIds(fresh.map(function(r){ return "sm2:" + r.id; }));
       stats.sm2 = fresh.length;
@@ -36512,11 +36549,33 @@ function renderIntegrationPanel(){
     {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
     {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Jira API Token（任务同步尚未接入）"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
     {name:"slack", label:"Slack", desc:t("int.slackDesc","验证 Slack Bot Token（消息通知尚未接入）"), connectFn:"slackConnect", disconnectFn:"slackDisconnect"},
-    {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","验证飞书 App 凭据（消息通知尚未接入）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect"},
-    {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","验证钉钉 App 凭据（消息通知尚未接入）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect"},
+    {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect", ephemeral:true},
+    {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect", ephemeral:true},
     {name:"calendar", label:t("appPage.calview", "日历"), desc:t("int.calendarDesc","验证日历凭据（日程同步尚未接入）"), connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
   ];
   const rows = providers.map(function(p){
+    /* v3.7.66：飞书 / 钉钉是「会话内存态」通道，**不进取 provider 存储**（那里是加密落盘的
+       持久凭据，与"绝不落盘"的决定冲突），状态改从 notifyHookGet 读。 */
+    if(p.ephemeral){
+      const hk = (typeof notifyHookGet === "function") ? notifyHookGet(p.name) : { configured:false };
+      /* 钉钉的 webhook 不回 CORS 头（实测），浏览器里发不出去 → 只有主进程发送可用时才开放。
+         不可用时按钮禁用并写清原因，别给一个"连上了但其实没连"的入口。 */
+      const usable = (typeof notifyChannelAvailable === "function") ? notifyChannelAvailable(p.name) : true;
+      const on = usable && !!hk.configured;
+      const st = !usable ? t(notifyUnavailableKey(p.name), "当前形态不可用")
+        : on ? (t("int.sessionOn","本会话已配置") + (hk.hasSecret ? t("int.signed"," · 加签") : "") + (hk.urlHint ? " · " + hk.urlHint : ""))
+        : t("int.notConnected","未连接");
+      const btn = !usable
+        ? '<button type="button" class="addbtn sm" disabled title="' + esc(notifyUnavailableHint(p.name)) + '">' + t("p4.html.intConnDisabled",">连接（当前形态不可用）</button>")
+        : on
+        ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + t("p4.html.intDiscBtn","\">断开</button>")
+        : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + t("p4.html.intConnBtn","\">连接</button>");
+      return '<div class="int-row ' + (on ? "int-on" : "int-off") + '">' +
+        '<div class="int-info"><div class="int-label">' + esc(p.label) + '</div><div class="int-desc">' + esc(p.desc) + '</div></div>' +
+        '<div class="int-status">' + esc(st) + '</div>' +
+        '<div class="int-action">' + btn + '</div>' +
+        '</div>';
+    }
     // v3.1.1 修复：原用一个不存在的 getProvider 全局函数，状态恒为「未连接」；真实函数为 integrationGetProvider。
     // calendar 的注册名是具体日历类型（google_calendar / outlook_calendar），需按两个名字兜底查询。
     let prov = null;
@@ -36655,10 +36714,13 @@ const INTEGRATION_CONFIG_FIELDS = {
   jira:     [{ k:"domain", label:t("int.jiraDomain","站点域名"), ph:"your-domain.atlassian.net", required:true },
              { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true }],
   slack:    [{ k:"botToken", label:"Bot User OAuth Token", ph:"xoxb-…", required:true, secret:true }],
-  feishu:   [{ k:"appId", label:"App ID", ph:"cli_…", required:true },
-             { k:"appSecret", label:"App Secret", required:true, secret:true }],
-  dingtalk: [{ k:"accessKey", label:"AppKey", required:true },
-             { k:"accessSecret", label:"AppSecret", required:true, secret:true }],
+  /* v3.7.66：飞书 / 钉钉改成「群自定义机器人 webhook」—— 旧的 App ID/Secret + chatId
+     那套要企业自建应用管理员权限，个人配不通（且那 6 个发送函数应用内零调用方）。
+     ⚠️ 这两项填了**不会保存**：凭据只活在本次会话内存里，刷新即失效（用户 2026-09-29 定）。 */
+  feishu:   [{ k:"url", label:t("int.feishuHook","群机器人 Webhook 地址"), ph:"https://open.feishu.cn/open-apis/bot/v2/hook/…", required:true, secret:true },
+             { k:"secret", label:t("int.signSecret","加签密钥（机器人未开加签就留空）"), required:false, secret:true }],
+  dingtalk: [{ k:"url", label:t("int.dingHook","群机器人 Webhook 地址"), ph:"https://oapi.dingtalk.com/robot/send?access_token=…", required:true, secret:true },
+             { k:"secret", label:t("int.signSecret","加签密钥（机器人未开加签就留空）"), required:false, secret:true }],
   calendar: [{ k:"_calType", label:t("int.calService","日历服务"), type:"select", required:true,
                options:[["google_calendar",t("int.googleCal","Google 日历")],["outlook_calendar",t("int.outlookCal","Outlook 日历")]] },
              { k:"clientId", label:"OAuth Client ID", ph:t("int.clientIdPh","服务商控制台注册应用的 Client ID"), required:false },
@@ -36763,7 +36825,11 @@ function openIntegrationConfig(name){
   ov.id = "intCfgOverlay";
   ov.innerHTML = sanitizeHtml(t("p4.html.intCfgDialog",'<div class="cmd u-max-w-480 u-p-5" role="dialog" aria-modal="true" aria-label="连接 ') + esc(label) + '">'
     + t("p4.html.intCfgTitle",'<h3 class="u-m-0-0-1 u-fs-md">连接 ') + esc(label) + '</h3>'
-    + t("p4.html.intCredentialHint",'<p class="sub u-m-0-0-2">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>')
+    /* v3.7.66：飞书 / 钉钉的凭据**不落盘**，所以不能再用那句"随应用数据加密持久化"——
+       那是别的 provider 的口径，用在这里就是一句假话。按通道分开给。 */
+    + (name === "feishu" || name === "dingtalk"
+        ? t("p4.html.intEphemeralHint",'<p class="sub u-m-0-0-2 u-text-warn">⚠ 只保存在本次会话内存里：不写入本地存储、不进备份与云同步，<b>刷新或关闭页面即失效</b>，需要重新粘贴。</p>')
+        : t("p4.html.intCredentialHint",'<p class="sub u-m-0-0-2">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>'))
     + inputsHtml
     /* 「OAuth 授权」按钮只在桥真在的时候出现 —— 原先无条件渲染，用户点了才拿到一句
        "不支持"，属"stub + 活 UI = 虚假功能"（同本机同步入口 v3.7.52 的处理）。 */
@@ -36775,6 +36841,14 @@ function openIntegrationConfig(name){
     + t("p4.html.intGoBtn",'<button type="button" class="addbtn sm btn-primary" id="btnIntCfgGo">连接</button>')
     + t("p4.html.intCancelBtn",'<button type="button" class="addbtn sm" id="btnIntCfgCancel" data-sc="muted">取消</button></div></div>'));
   document.body.appendChild(ov);
+  /* v3.7.66 真机实测修掉的既有缺陷：`.cmd` 基类是 display:none，靠自身 `.show` 才显示；
+     而这里只给外层 .overlay 加了 show → 弹窗面板一直是不渲染的（点「连接」后什么都没出现）。
+     之所以长期没被发现：单测跑在 jsdom（不应用样式表）、e2e 没覆盖这个弹窗，
+     而 v3.7.60 那轮我用 element.value= / .click() 直接驱动，隐藏元素照样能点。
+     ⚠️ 必须同步加，不能塞进下面那个 rAF —— rAF 在无合成帧的环境里根本不触发
+     （headless Chromium 实测：不强制出帧时回调永不执行，弹窗就永远不出现）。 */
+  const _cmdEl = ov.querySelector(".cmd");
+  if(_cmdEl) _cmdEl.classList.add("show");
   requestAnimationFrame(function(){ ov.classList.add("show"); });
   const close = function(){ ov.classList.remove("show"); setTimeout(function(){ ov.remove(); }, 160); };
   ov.onclick = function(e){ if(e.target === ov) close(); };
@@ -38086,8 +38160,35 @@ if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
 migrate();
 seed();
 
+/* v3.7.66：把 manifest.json 的三个 shortcuts 落到真实视图。
+   此前它们指向 ./#overview、./#stats、./#settings，但全仓只有 src/ui-guide.js:188（指南锚点）
+   与 :256（#share= 只读分享）读 location.hash —— 也就是说从桌面图标 / 主屏快捷方式进来，
+   只会落到上次退出时的视图，快捷方式形同虚设（按 product-scope 的纪律：入口存在但无接线＝虚假功能）。
+   这里只认这三个已知片段并复用应用既有的切换入口（setActive / openDrawer），
+   不自己拼 DOM；其余 hash 一律不碰，避免抢 ui-guide 的锚点语义。 */
+function applyStartHash(){
+  let hash = "";
+  try{
+    hash = String((typeof location !== "undefined" && location.hash) || "").replace(/^#/, "").trim().toLowerCase();
+  }catch(e){ return ""; }
+  if(hash === "overview" || hash === "stats"){
+    try{ setActive(hash); render(); }catch(e){ return ""; }   // setActive 内含持久化；render 让目标视图真正上屏
+    return hash;
+  }
+  if(hash === "settings"){
+    try{ openDrawer(); }catch(e){ return ""; }
+    return hash;
+  }
+  return "";
+}
+
 (async function startup(){
   try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
+  /* v3.7.66：飞书 / 钉钉凭据策略改为「仅会话内存、绝不落盘」——
+     历史版本可能已把 appSecret / accessSecret（甚至当时不算敏感字段的 appId / accessKey）
+     写进 wb_integration_providers，启动时一次性抹掉。放在 initCrypto 之后是因为
+     _intSaveProviders 的密封链要用设备密钥。 */
+  try{ if(typeof _notifyScrubPersisted === "function") _notifyScrubPersisted(); }catch(e){ /* 清不动也不能挡住启动 */ }
   // v1.11.2 认证补码：OAuth2 回调闭环——URL 带 ?code&state 时换 token（正常启动零开销，fire-and-forget）
   try{ _oauth2HandleCallback().catch(function(e9){ try{ pushDiag("error", "oauth2 callback: "+(e9&&e9.message||e9), {where:"oauth2"}); }catch(e10){} }); }catch(_){ }
   // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
@@ -38143,6 +38244,11 @@ seed();
   }else{
     dailyDigest();
   }
+  /* v3.7.66：manifest shortcuts（./#overview / ./#stats / ./#settings）的 hash → 视图接线。
+     必须排在 render 之后 —— render() 会把设置抽屉收回主视图（src/render-entry.js:52-58 的
+     _moveDrawerHome + classList.remove("open") + uiView="main"），先接线再 render 等于把
+     #settings 的跳转当场抹掉（实测就是这样红了一条用例才看出来）。 */
+  applyStartHash();
   scheduleAutoBackup(); // 启动即留一份基线快照，确保 recover 始终有可还原点
   // T3.4 启动通知调度器：仅生产环境启动（jsdom 测试环境跳过，避免 setInterval 阻塞测试进程）
   if(getNotifyEnabled() && typeof navigator !== "undefined" && !/jsdom/i.test(navigator.userAgent)){
@@ -38232,6 +38338,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     buildDiagReport, renderDiagList,
     /* v3.7.65：反馈出口 —— Issue 预填 URL 构造 / 形态标签 / 提交动作（守卫用例见 tests/diag-report.test.js ⑤⑥⑦） */
     _diagIssueUrl, _diagEnvTag, openDiagIssue,
+    // v3.7.66：manifest shortcuts 的 hash → 视图接线（用例见 tests/pwa-shortcuts.test.js）
+    applyStartHash,
     // P0-4 诊断寄存器访问器（只读快照 + 测试间复位）
     calcStreak, heatmapData, analyzeBehavior, renderHeatmap,
     fetchCoachAdvice, renderHabitChainStatus,
@@ -44096,196 +44204,295 @@ function slackDisconnect(){
 }
 
 /* ============================================================
- * 6. 飞书集成
- * ============================================================ */
+ * 6. 飞书 / 钉钉 —— 群机器人 webhook 通知通道（v3.7.66）
+ * ============================================================
+ * 为什么是 webhook 而不是企业应用：旧的 appKey/appSecret + chatId 那套要企业自建应用
+ * 管理员权限、还要用户拿不到的 chatId，个人场景根本配不通 —— 实测旧实现 6 个函数
+ * （feishu/dingtalk × SendMessage / NotifyEvent / CreateTaskFromMessage）应用内零调用方，
+ * v3.7.60 已整批标废弃。群自定义机器人只要一个 webhook 地址就能收消息，且天然单向，
+ * 正好匹配"通知推出去"这个真实需求。旧的 6 个函数随本次删除。
+ *
+ * 凭据策略（硬约束，用户 2026-09-29 定：「那种东西最好不要上远程，本地也不要」）：
+ *   webhook 地址与加签 Secret **只存在本模块的内存对象里** —— 不走
+ *   integrationRegisterProvider / _intSaveProviders 那条密封写盘链，不进 localStorage、
+ *   不进备份、不进云同步。刷新或关闭页面即失效，需要重新粘贴。
+ *   这是刻意的产品决定，不是实现遗漏；UI 必须同样写明，别让用户以为存下来了。
+ *   历史版本可能已把 feishu / dingtalk 的 appSecret 落过盘（appId/accessKey 当时还
+ *   不算"敏感字段"，是明文存的）—— 启动时由 _notifyScrubPersisted 一次性抹掉。
+ */
+
+/** 会话内存态：null = 未配置 */
+const _notifyHooks = { feishu: null, dingtalk: null };
+/** 推送开关同样只在内存里（刷新回到未启用，避免出现"开关开着但凭据没了"的假状态） */
+const _notifyHookKinds = { daily: true, due: true, chain: true, review: true };
+
+/** 统一消息前缀：机器人若配「自定义关键词」安全策略，用户可以把这个词填进去 */
+const NOTIFY_PREFIX = "[Agent工坊]";
 
 /**
- * 连接飞书
- * @param {Object} config - { appId, appSecret, chatId }
- * @returns {Promise<Object|null>} provider 或 null
+ * HMAC-SHA256 → base64（WebCrypto）。两个平台的签名算法见各自调用处注释。
+ * @returns {Promise<string>} 失败时抛错，由调用方兜住
+ */
+async function _notifyHmacB64(keyStr, msgStr){
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(keyStr), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const buf = await crypto.subtle.sign("HMAC", key, enc.encode(msgStr));
+  let bin = "";
+  const bytes = new Uint8Array(buf);
+  for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+/** 配置一个通道（纯内存）。cfg = { url, secret }；不写任何持久层。 */
+function notifyHookSet(kind, cfg){
+  if(!Object.prototype.hasOwnProperty.call(_notifyHooks, kind)) return false;
+  const url = String((cfg && cfg.url) || "").trim();
+  if(!/^https:\/\//i.test(url)) return false;               /* webhook 必须是 https，且不放行任意协议 */
+  _notifyHooks[kind] = { url: url, secret: String((cfg && cfg.secret) || "").trim() };
+  return true;
+}
+function notifyHookGet(kind){
+  const h = _notifyHooks[kind];
+  return h ? { kind: kind, configured: true, hasSecret: !!h.secret, urlHint: _notifyUrlHint(h.url) } : { kind: kind, configured: false, hasSecret: false, urlHint: "" };
+}
+function notifyHookClear(kind){
+  if(!Object.prototype.hasOwnProperty.call(_notifyHooks, kind)) return false;
+  _notifyHooks[kind] = null;
+  return true;
+}
+/** 给 UI 看的脱敏回显：只保留 host + 路径末段前 4 位，绝不回显完整 token */
+function _notifyUrlHint(url){
+  try{
+    const u = new URL(url);
+    const seg = u.pathname.split("/").filter(Boolean).pop() || "";
+    return u.host + "/…" + (seg ? "/" + seg.slice(0, 4) + "…" : "");
+  }catch(e){ return "（地址无效）"; }
+}
+
+/** 该类事件当前是否允许外推 */
+function notifyHookKindOn(kind){
+  return _notifyHookKinds[kind] !== false;
+}
+function notifyHookKindSet(kind, on){
+  if(!Object.prototype.hasOwnProperty.call(_notifyHookKinds, kind)) return false;
+  _notifyHookKinds[kind] = !!on;
+  return true;
+}
+function notifyHookState(){
+  return { kinds: Object.assign({}, _notifyHookKinds), feishu: notifyHookGet("feishu"), dingtalk: notifyHookGet("dingtalk") };
+}
+
+/**
+ * 主进程发送能力探测（桌面版专属）。
+ * 为什么要有这一层：2026-09-29/30 用真实网络 + 真实 Chromium 量了一整套
+ * 「origin × 渠道 × 传输」矩阵（`_probe/cors-origin-matrix.mjs`、`_probe/electron-cors-main.cjs`）。
+ * webhook 是 `Content-Type: application/json` 的 POST，**必触发 CORS 预检**，于是"发得出去吗"
+ * 由两个轴决定，不是渠道单轴：
+ *   飞书  渲染进程 · file://  → ❌ 被拦     飞书  渲染进程 · http(s) → ✅ 放行   飞书 主进程 → ✅
+ *   钉钉  渲染进程 · file://  → ❌ 被拦     钉钉  渲染进程 · http(s) → ❌ 被拦   钉钉 主进程 → ✅
+ * 机制：钉钉/企业微信**任何 origin 都不回 ACAO**（企微预检直接 403）；飞书只在 Origin 是真实
+ * http(s) 源时给 `ACAO: *`，而 `file://` 的 Origin 下**一个 CORS 头都不回**
+ * （`curl -H "Origin: null"` 复测确认）。本应用 Electron 窗口 `sandbox:true` 且未关 `webSecurity`，
+ * 加载方式又是 `loadFile()` = file:// → 渲染进程照样被拦，只有主进程 Node fetch 发得出去。
+ * @returns {boolean}
+ */
+function notifyHasMainSender(){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return !!(api && typeof api.notifySend === "function");
+}
+
+/** 页面是否跑在"真实 http(s) 源"上 —— file:// 与 data: 拿不到对端的 CORS 头 */
+function notifyOriginIsHttpish(){
+  try{
+    const p = (typeof location !== "undefined" && location.protocol) || "";
+    return p === "http:" || p === "https:";
+  }catch(e){ return false; }
+}
+
+/** 该渠道在当前运行形态下**真发得出去**吗（UI 与「连接」都以它为准，不许承诺发不到的通道） */
+function notifyChannelAvailable(kind){
+  if(kind === "feishu") return notifyHasMainSender() || notifyOriginIsHttpish();
+  if(kind === "dingtalk") return notifyHasMainSender();
+  return false;
+}
+
+/** 不可用时的一句话标签键（进面板状态位）：钉钉缺的是主进程，飞书缺的是一个正经 origin */
+function notifyUnavailableKey(kind){
+  return kind === "dingtalk" ? "int.desktopOnly" : "int.needHttpOrigin";
+}
+
+/** 不可用时如实说明为什么 + 怎么办（进 title 与连接弹窗，不是报错文案） */
+function notifyUnavailableHint(kind){
+  if(kind === "dingtalk") return "仅桌面版（Electron）可用：钉钉 webhook 不回 CORS 头，任何浏览器形态都发不出去";
+  return "请用「启动本地服务.bat」以 http://localhost 打开，或用线上站点：file:// 的 Origin 拿不到飞书的 CORS 头";
+}
+
+/**
+ * 外发传输：桌面版优先走主进程 IPC（无 CORS 约束），其余走渲染进程 fetch。
+ * 返回 { ok, status, body, error }，**永不抛错**。
+ * 两条路径返回结构一致，所以平台侧的成功/失败判定（errcode / code）只有一份。
+ */
+async function _notifyTransport(url, payload){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  if(api && typeof api.notifySend === "function"){
+    try{
+      const r = await api.notifySend({ url: url, payload: payload });
+      if(!r) return { ok: false, status: 0, body: null, error: "no_response" };
+      return { ok: !!r.ok, status: r.status || 0, body: r.body || null, error: r.error || "" };
+    }catch(e){
+      return { ok: false, status: 0, body: null, error: (e && e.message) ? e.message : String(e) };
+    }
+  }
+  return await _intDoRequest(url, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * 向单个通道发一条文本。返回 { ok, error }，**永不抛错**（通知失败不能影响本地体验）。
+ * 签名口径（易错点，都核对过官方文档要求的形式）：
+ *   钉钉：timestamp 用**毫秒**；sign = base64(HMAC-SHA256(key=secret, data=timestamp+"\n"+secret))，
+ *         放在 **URL query** 上（timestamp & sign）。
+ *   飞书：timestamp 用**秒**；sign = base64(HMAC-SHA256(key=timestamp+"\n"+secret, data=**空串**))，
+ *         与 timestamp 一起放在 **JSON body** 里。方向与钉钉相反，别写反。
+ */
+async function notifyHookSend(kind, text){
+  const h = _notifyHooks[kind];
+  if(!h) return { ok: false, error: "not_configured" };
+  const body = String(text || "");
+  if(!body) return { ok: false, error: "empty_text" };
+  try{
+    if(kind === "dingtalk"){
+      const ts = Date.now();
+      let url = h.url;
+      if(h.secret){
+        const sign = await _notifyHmacB64(h.secret, ts + "\n" + h.secret);
+        url += (url.indexOf("?") >= 0 ? "&" : "?") + "timestamp=" + ts + "&sign=" + encodeURIComponent(sign);
+      }
+      const resp = await _notifyTransport(url, { msgtype: "text", text: { content: body } });
+      /* 钉钉即使 HTTP 200 也可能业务失败（errcode≠0），只看 resp.ok 会把失败当成功 */
+      const errcode = resp.body && resp.body.errcode;
+      if(resp.ok && (errcode === undefined || errcode === 0)) return { ok: true, error: "" };
+      return { ok: false, error: "errcode=" + errcode + " " + ((resp.body && resp.body.errmsg) || resp.error || "") };
+    }
+    if(kind === "feishu"){
+      const ts = Math.floor(Date.now() / 1000);
+      const payload = { msg_type: "text", content: { text: body } };
+      if(h.secret){
+        payload.timestamp = String(ts);
+        payload.sign = await _notifyHmacB64(ts + "\n" + h.secret, "");
+      }
+      const resp = await _notifyTransport(h.url, payload);
+      const code = resp.body && (resp.body.code !== undefined ? resp.body.code : resp.body.StatusCode);
+      if(resp.ok && (code === undefined || code === 0)) return { ok: true, error: "" };
+      return { ok: false, error: "code=" + code + " " + ((resp.body && resp.body.msg) || resp.error || "") };
+    }
+    return { ok: false, error: "unknown_kind" };
+  }catch(e){
+    return { ok: false, error: (e && e.message) ? e.message : String(e) };
+  }
+}
+
+/**
+ * 通知漏斗：本地展示之外，向所有已配置且启用的通道推一份。
+ * fire-and-forget —— 不 await、不抛错、失败只进诊断面板。
+ * @param {string} title - 通知标题（已是成品文案）
+ * @param {string} body - 正文（可空）
+ * @param {string} kind - daily | due | chain | review
+ */
+function notifyHookBroadcast(title, body, kind){
+  /* 未登记的类别落到 daily 的开关上 —— 否则 `notifyHookKindOn` 对未知键恒为真，
+     这类事件就成了关不掉的通道。 */
+  const k = Object.prototype.hasOwnProperty.call(_notifyHookKinds, String(kind)) ? String(kind) : "daily";
+  if(!notifyHookKindOn(k)) return;
+  const text = NOTIFY_PREFIX + " " + String(title || "") + (body ? "\n" + String(body) : "");
+  ["feishu", "dingtalk"].forEach(function(ch){
+    if(!_notifyHooks[ch]) return;
+    Promise.resolve().then(function(){ return notifyHookSend(ch, text); }).then(function(r){
+      if(!r.ok) pushDiag("warn", ch + " 通知推送失败：" + r.error, { where: "notify-hook", kind: k });
+    }).catch(function(e){
+      pushDiag("warn", ch + " 通知推送异常：" + ((e && e.message) || e), { where: "notify-hook", kind: k });
+    });
+  });
+}
+
+/**
+ * 注册到 core 的外发漏斗（v3.7.66）。
+ * 不在 ui-daily 里直接调本函数 —— 那会给 ui-daily 加一条逆层依赖，
+ * check:modules 会报 `ui-daily>ui-ge-integrations`。
+ */
+try{ registerExternalNotifier(notifyHookBroadcast); }catch(e){ /* core 未就绪时静默跳过，本地通知不受影响 */ }
+
+/**
+ * 抹掉历史版本可能已落盘的飞书 / 钉钉凭据（一次性，幂等）。
+ * 旧实现把整个 config（含 appSecret / accessSecret，甚至当时不算"敏感"的 appId / accessKey）
+ * 写进了 wb_integration_providers；按新策略这些一律不许留在磁盘上。
+ * @returns {number} 被清除的条目数
+ */
+function _notifyScrubPersisted(){
+  let n = 0;
+  try{
+    _intLoadProviders();
+    ["feishu", "dingtalk"].forEach(function(k){
+      if(_integrationProviders && Object.prototype.hasOwnProperty.call(_integrationProviders, k)){
+        delete _integrationProviders[k];
+        n++;
+      }
+    });
+    if(n) _intSaveProviders();
+  }catch(e){ /* 清不动也不能挡住启动 */ }
+  return n;
+}
+
+/**
+ * 「连接」= 校验 webhook 可用并把凭据留在内存里，随后发一条问候消息确认通路。
+ * 返回一个 provider 形状的对象给面板复用（_verified 决定显示「已连接 · 已验证」）。
+ * @param {string} kind - feishu | dingtalk
+ * @param {Object} cfg - { url, secret }
+ */
+async function notifyHookConnect(kind, cfg){
+  /* 先发不出去就别存：一个"已连接"的死配置比没配更糟，而且它会谎报通路存在。 */
+  if(!notifyChannelAvailable(kind)){
+    try{ pushDiag("warn", kind + " 渠道在当前形态不可用：" + notifyUnavailableHint(kind), { where: "notify-hook", op: "connect" }); }catch(e){}
+    return null;
+  }
+  if(!notifyHookSet(kind, cfg)) return null;
+  const prov = { name: kind, type: kind === "feishu" ? INTEGRATION_TYPES.FEISHU : INTEGRATION_TYPES.DINGTALK, config: { _lastVerifiedAt: _intNow() }, enabled: true, ephemeral: true };
+  const r = await notifyHookSend(kind, NOTIFY_PREFIX + " 连接成功 —— 这条通知由本会话内存中的 webhook 发出，刷新页面后需重新配置。");
+  if(!r.ok){
+    /* 验证不过就退回未配置：留一个发不出去的死配置比"没配"更糟。
+       失败原因进诊断面板（面板上的 toast 只有通用文案，装不下平台返回的 errmsg）。 */
+    notifyHookClear(kind);
+    try{ pushDiag("warn", kind + " webhook 验证失败：" + r.error, { where: "notify-hook", op: "connect" }); }catch(e){}
+    return null;
+  }
+  return prov;
+}
+
+/**
+ * 连接飞书（群机器人 webhook · 会话内存态）
+ * @param {Object} config - { url, secret }
  */
 async function feishuConnect(config){
-  if(!config || !config.appId || !config.appSecret) return null;
-  const provider = integrationRegisterProvider("feishu", INTEGRATION_TYPES.FEISHU, config);
-  if(!provider) return null;
-  // 获取 tenant_access_token 验证
-  const resp = await _intDoRequest("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ app_id: config.appId, app_secret: config.appSecret })
-  });
-  provider.config._verified = !!(resp.ok && resp.body && resp.body.tenant_access_token);
-  provider.config._lastVerifiedAt = _intNow();
-  _intSaveProviders();
-  return provider;
+  return notifyHookConnect("feishu", config);
 }
-
 /**
- * 发送飞书消息
- * @param {string} chatId - 群聊 ID（不传则用配置中的默认 chatId）
- * @param {string} text - 消息文本
- * @returns {Promise<boolean>} 是否成功
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function feishuSendMessage(chatId, text){
-  const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
-  if(!provider) return false;
-  const ch = chatId || provider.config.chatId;
-  if(!ch || !text) return false;
-  // 先获取 tenant_access_token
-  const tokenResp = await _intDoRequest("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ app_id: provider.config.appId, app_secret: provider.config.appSecret })
-  });
-  if(!tokenResp.ok || !tokenResp.body || !tokenResp.body.tenant_access_token) return false;
-  const accessToken = tokenResp.body.tenant_access_token;
-  const resp = await _intDoRequest("https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + accessToken, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      receive_id: ch,
-      msg_type: "text",
-      content: JSON.stringify({ text: text })
-    })
-  });
-  return !!resp.ok;
-}
-
-/**
- * 飞书事件通知
- * @param {string} eventType - 事件类型
- * @param {Object} payload - 事件负载
- * @returns {Promise<boolean>}
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function feishuNotifyEvent(eventType, payload){
-  const provider = await _intRequireProvider("feishu", INTEGRATION_TYPES.FEISHU);
-  if(!provider) return false;
-  const text = "[" + eventType + "] " + JSON.stringify(payload);
-  return await feishuSendMessage(provider.config.chatId, text);
-}
-
-/**
- * 从飞书消息创建任务
- * @param {Object} message - { text, senderId, chatId }
- * @returns {Object|null} 任务对象
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-function feishuCreateTaskFromMessage(message){
-  if(!message || !message.text) return null;
-  const lines = message.text.split("\n");
-  const title = lines[0].trim();
-  const description = lines.slice(1).join("\n").trim();
-  if(!title) return null;
-  return {
-    id: _intUid("task_"),
-    title: title,
-    description: description,
-    status: "todo",
-    source: "feishu",
-    sourceSenderId: message.senderId || null,
-    sourceChatId: message.chatId || null,
-    createdAt: _intNow()
-  };
-}
-
-/**
- * 断开飞书连接
- */
-function feishuDisconnect(){
-  return integrationRemoveProvider("feishu");
-}
-
-/* ============================================================
- * 7. 钉钉集成
- * ============================================================ */
-
-/**
- * 连接钉钉
- * @param {Object} config - { accessKey, accessSecret, chatId }
- * @returns {Promise<Object|null>} provider 或 null
+ * 连接钉钉（群机器人 webhook · 会话内存态）
+ * @param {Object} config - { url, secret }
  */
 async function dingtalkConnect(config){
-  if(!config || !config.accessKey || !config.accessSecret) return null;
-  const provider = integrationRegisterProvider("dingtalk", INTEGRATION_TYPES.DINGTALK, config);
-  if(!provider) return null;
-  // 获取 access_token 验证
-  const resp = await _intDoRequest("https://oapi.dingtalk.com/gettoken?appkey=" + encodeURIComponent(config.accessKey) + "&appsecret=" + encodeURIComponent(config.accessSecret), {
-    method: "GET"
-  });
-  provider.config._verified = !!(resp.ok && resp.body && resp.body.errcode === 0);
-  provider.config._lastVerifiedAt = _intNow();
-  _intSaveProviders();
-  return provider;
+  return notifyHookConnect("dingtalk", config);
 }
-
-/**
- * 发送钉钉消息
- * @param {string} chatId - 群聊 ID（不传则用配置默认）
- * @param {string} text - 消息文本
- * @returns {Promise<boolean>}
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function dingtalkSendMessage(chatId, text){
-  const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
-  if(!provider) return false;
-  const ch = chatId || provider.config.chatId;
-  if(!ch || !text) return false;
-  // 获取 access_token
-  const tokenResp = await _intDoRequest("https://oapi.dingtalk.com/gettoken?appkey=" + encodeURIComponent(provider.config.accessKey) + "&appsecret=" + encodeURIComponent(provider.config.accessSecret), {
-    method: "GET"
-  });
-  if(!tokenResp.ok || !tokenResp.body || !tokenResp.body.access_token) return false;
-  const accessToken = tokenResp.body.access_token;
-  const resp = await _intDoRequest("https://oapi.dingtalk.com/chat/send?access_token=" + accessToken, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chatid: ch,
-      msg: { msgtype: "text", text: { content: text } }
-    })
-  });
-  return !!(resp.ok && resp.body && resp.body.errcode === 0);
+/** 断开：清内存凭据，并顺手确认存储里没有残留 */
+function feishuDisconnect(){
+  notifyHookClear("feishu");
+  _notifyScrubPersisted();
+  return integrationRemoveProvider("feishu");
 }
-
-/**
- * 钉钉事件通知
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function dingtalkNotifyEvent(eventType, payload){
-  const provider = await _intRequireProvider("dingtalk", INTEGRATION_TYPES.DINGTALK);
-  if(!provider) return false;
-  const text = "[" + eventType + "] " + JSON.stringify(payload);
-  return await dingtalkSendMessage(provider.config.chatId, text);
-}
-
-/**
- * 从钉钉消息创建任务
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-function dingtalkCreateTaskFromMessage(message){
-  if(!message || !message.text) return null;
-  const lines = message.text.split("\n");
-  const title = lines[0].trim();
-  const description = lines.slice(1).join("\n").trim();
-  if(!title) return null;
-  return {
-    id: _intUid("task_"),
-    title: title,
-    description: description,
-    status: "todo",
-    source: "dingtalk",
-    sourceSenderId: message.senderId || null,
-    sourceChatId: message.chatId || null,
-    createdAt: _intNow()
-  };
-}
-
-/**
- * 断开钉钉连接
- */
 function dingtalkDisconnect(){
+  notifyHookClear("dingtalk");
+  _notifyScrubPersisted();
   return integrationRemoveProvider("dingtalk");
 }
 
