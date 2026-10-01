@@ -990,99 +990,35 @@ function jiraDisconnect(){
 }
 
 /* ============================================================
- * 5. Slack 集成（消息通知 + 任务事件推送）
- * ============================================================ */
+ * 5. Slack —— 群机器人 Incoming Webhook 通知通道（v3.7.69，与 §6 同一套会话内存基建）
+ * ============================================================
+ * 通道定案依据（`_probe/cors-matrix-providers.mjs` 真实 Chromium 实测）：hooks.slack.com
+ * 在 file:// 与 http(s) 两个 origin 下都不回任何 CORS 头（双双 "Failed to fetch"），
+ * 主进程 Node fetch 可达 —— 与钉钉同款「仅桌面版」分流。
+ * 旧的 Bot Token 模型（slackConnect 落盘 botToken + slackSendMessage/slackNotifyEvent/
+ * slackCreateTaskFromMessage，应用内零调用方）整体删除；历史落盘的 botToken 由
+ * _notifyScrubPersisted 一并回扫抹掉。
+ * Incoming Webhook 的 URL 本身即凭据、无加签；成功判定只用 HTTP 200（正文是纯文本 "ok"）。 */
 
 /**
- * 连接 Slack
- * @param {Object} config - { botToken, channel }
+ * 连接 Slack（群机器人 Incoming Webhook · 会话内存态，仅桌面版）
+ * @param {Object} config - { url }
  * @returns {Promise<Object|null>} provider 或 null
  */
 async function slackConnect(config){
-  if(!config || !config.botToken) return null;
-  const provider = integrationRegisterProvider("slack", INTEGRATION_TYPES.SLACK, config);
-  if(!provider) return null;
-  // 验证 token
-  const resp = await _intDoRequest("https://slack.com/api/auth.test", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + config.botToken }
-  });
-  provider.config._verified = !!(resp.ok && resp.body && resp.body.ok);
-  provider.config._lastVerifiedAt = _intNow();
-  _intSaveProviders();
-  return provider;
+  return notifyHookConnect("slack", config);
 }
 
-/**
- * 发送 Slack 消息
- * @param {string} channel - 频道（不传则用配置中的默认频道）
- * @param {string} text - 消息文本
- * @param {Object} [extra] - 额外参数（如 blocks, attachments）
- * @returns {Promise<boolean>} 是否发送成功
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function slackSendMessage(channel, text, extra){
-  const provider = await _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
-  if(!provider) return false;
-  const token = provider.config.botToken;
-  const ch = channel || provider.config.channel;
-  if(!ch || !text) return false;
-  const body = { channel: ch, text: text };
-  if(extra){
-    for(const k in extra) body[k] = extra[k];
-  }
-  const resp = await _intDoRequest("https://slack.com/api/chat.postMessage", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  return !!(resp.ok && resp.body && resp.body.ok);
-}
+/* v3.7.69：旧的 slackSendMessage / slackNotifyEvent / slackCreateTaskFromMessage
+ * （Bot Token 模型，应用内零调用方，v3.7.60 起标废弃）随通道改型一并删除 ——
+ * 留着就是给一个已被判定配不通的凭据模型留尸体。守护：integration-deprecated.test.js。 */
 
 /**
- * Slack 事件通知（任务创建/更新等）
- * @param {string} eventType - 事件类型
- * @param {Object} payload - 事件负载
- * @returns {Promise<boolean>} 是否通知成功
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-async function slackNotifyEvent(eventType, payload){
-  const provider = await _intRequireProvider("slack", INTEGRATION_TYPES.SLACK);
-  if(!provider) return false;
-  const text = "[" + eventType + "] " + JSON.stringify(payload);
-  return await slackSendMessage(provider.config.channel, text);
-}
-
-/**
- * 从 Slack 消息创建任务（解析消息文本为任务）
- * @param {Object} message - Slack 消息 { text, user, ts, channel }
- * @returns {Object|null} 任务对象或 null
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-function slackCreateTaskFromMessage(message){
-  if(!message || !message.text) return null;
-  // 简单解析：第一行作为标题，其余作为描述
-  const lines = message.text.split("\n");
-  const title = lines[0].trim();
-  const description = lines.slice(1).join("\n").trim();
-  if(!title) return null;
-  return {
-    id: _intUid("task_"),
-    title: title,
-    description: description,
-    status: "todo",
-    source: "slack",
-    sourceMessageTs: message.ts || null,
-    sourceChannel: message.channel || null,
-    sourceUser: message.user || null,
-    createdAt: _intNow()
-  };
-}
-
-/**
- * 断开 Slack 连接
+ * 断开 Slack：清内存凭据 + 回扫历史落盘 + 移除 provider 记录
  */
 function slackDisconnect(){
+  notifyHookClear("slack");
+  _notifyScrubPersisted();
   return integrationRemoveProvider("slack");
 }
 
@@ -1104,8 +1040,8 @@ function slackDisconnect(){
  *   不算"敏感字段"，是明文存的）—— 启动时由 _notifyScrubPersisted 一次性抹掉。
  */
 
-/** 会话内存态：null = 未配置 */
-const _notifyHooks = { feishu: null, dingtalk: null };
+/** 会话内存态：null = 未配置（v3.7.69 + slack：Incoming Webhook，仅桌面版可达） */
+const _notifyHooks = { feishu: null, dingtalk: null, slack: null };
 /** 推送开关同样只在内存里（刷新回到未启用，避免出现"开关开着但凭据没了"的假状态） */
 const _notifyHookKinds = { daily: true, due: true, chain: true, review: true };
 
@@ -1151,6 +1087,10 @@ function _notifyUrlHint(url){
     return u.host + "/…" + (seg ? "/" + seg.slice(0, 4) + "…" : "");
   }catch(e){ return "（地址无效）"; }
 }
+/** webhook 地址的主机名（无效地址返回空串），供渠道侧做渲染端口径的主机校验 */
+function _notifyUrlHost(url){
+  try{ return new URL(String(url)).hostname.toLowerCase(); }catch(e){ return ""; }
+}
 
 /** 该类事件当前是否允许外推 */
 function notifyHookKindOn(kind){
@@ -1162,7 +1102,7 @@ function notifyHookKindSet(kind, on){
   return true;
 }
 function notifyHookState(){
-  return { kinds: Object.assign({}, _notifyHookKinds), feishu: notifyHookGet("feishu"), dingtalk: notifyHookGet("dingtalk") };
+  return { kinds: Object.assign({}, _notifyHookKinds), feishu: notifyHookGet("feishu"), dingtalk: notifyHookGet("dingtalk"), slack: notifyHookGet("slack") };
 }
 
 /**
@@ -1196,17 +1136,21 @@ function notifyOriginIsHttpish(){
 function notifyChannelAvailable(kind){
   if(kind === "feishu") return notifyHasMainSender() || notifyOriginIsHttpish();
   if(kind === "dingtalk") return notifyHasMainSender();
+  /* v3.7.69：Slack Incoming Webhook 与钉钉同款 —— hooks.slack.com 不回任何 CORS 头
+     （`_probe/cors-matrix-providers.mjs` 实测 file:// 与 http(s) 双双 "Failed to fetch"，
+     主进程 Node fetch 可达 404 no_team），只有桌面版发得出去。 */
+  if(kind === "slack") return notifyHasMainSender();
   return false;
 }
 
-/** 不可用时的一句话标签键（进面板状态位）：钉钉缺的是主进程，飞书缺的是一个正经 origin */
+/** 不可用时的一句话标签键（进面板状态位）：钉钉/Slack 缺的是主进程，飞书缺的是一个正经 origin */
 function notifyUnavailableKey(kind){
-  return kind === "dingtalk" ? "int.desktopOnly" : "int.needHttpOrigin";
+  return (kind === "dingtalk" || kind === "slack") ? "int.desktopOnly" : "int.needHttpOrigin";
 }
 
 /** 不可用时如实说明为什么 + 怎么办（进 title 与连接弹窗，不是报错文案） */
 function notifyUnavailableHint(kind){
-  if(kind === "dingtalk") return "仅桌面版（Electron）可用：钉钉 webhook 不回 CORS 头，任何浏览器形态都发不出去";
+  if(kind === "dingtalk" || kind === "slack") return "仅桌面版（Electron）可用：该 webhook 不回 CORS 头，任何浏览器形态都发不出去";
   return "请用「启动本地服务.bat」以 http://localhost 打开，或用线上站点：file:// 的 Origin 拿不到飞书的 CORS 头";
 }
 
@@ -1271,6 +1215,17 @@ async function notifyHookSend(kind, text){
       if(resp.ok && (code === undefined || code === 0)) return { ok: true, error: "" };
       return { ok: false, error: "code=" + code + " " + ((resp.body && resp.body.msg) || resp.error || "") };
     }
+    if(kind === "slack"){
+      /* v3.7.69：Slack Incoming Webhook —— URL 本身即凭据，无加签；成功=HTTP 200 且正文
+         是纯文本 "ok"（主进程对非 JSON 响应回 body=null，不能拿 body 判定）；
+         失败一律 4xx（404 no_team / 403 / 410），resp.ok 判定即可。 */
+      if(!/(^|\.)hooks\.slack\.com$/i.test(_notifyUrlHost(h.url))){
+        return { ok: false, error: "invalid_slack_host" };   /* 渲染侧同口径把主机钉死，主进程白名单是第二道门 */
+      }
+      const resp = await _notifyTransport(h.url, { text: body });
+      if(resp.ok) return { ok: true, error: "" };
+      return { ok: false, error: "HTTP " + resp.status + " " + (resp.error || "") };
+    }
     return { ok: false, error: "unknown_kind" };
   }catch(e){
     return { ok: false, error: (e && e.message) ? e.message : String(e) };
@@ -1290,7 +1245,8 @@ function notifyHookBroadcast(title, body, kind){
   const k = Object.prototype.hasOwnProperty.call(_notifyHookKinds, String(kind)) ? String(kind) : "daily";
   if(!notifyHookKindOn(k)) return;
   const text = NOTIFY_PREFIX + " " + String(title || "") + (body ? "\n" + String(body) : "");
-  ["feishu", "dingtalk"].forEach(function(ch){
+  /* v3.7.69：+ slack（桌面版专属通道，不可用形态下 _notifyHooks.slack 恒为 null，天然跳过） */
+  ["feishu", "dingtalk", "slack"].forEach(function(ch){
     if(!_notifyHooks[ch]) return;
     Promise.resolve().then(function(){ return notifyHookSend(ch, text); }).then(function(r){
       if(!r.ok) pushDiag("warn", ch + " 通知推送失败：" + r.error, { where: "notify-hook", kind: k });
@@ -1317,7 +1273,8 @@ function _notifyScrubPersisted(){
   let n = 0;
   try{
     _intLoadProviders();
-    ["feishu", "dingtalk"].forEach(function(k){
+    /* v3.7.69 + slack：旧 slackConnect 把 botToken 持久化在 providers 里，一并回扫 */
+    ["feishu", "dingtalk", "slack"].forEach(function(k){
       if(_integrationProviders && Object.prototype.hasOwnProperty.call(_integrationProviders, k)){
         delete _integrationProviders[k];
         n++;

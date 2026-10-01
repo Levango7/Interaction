@@ -597,7 +597,7 @@ if (!gotLock){
        Chromium 网络栈 → 钉钉在桌面版渲染进程里同样发不出去。只有 Node 侧 fetch 无 CORS 约束。
        安全边界：只放行公开 webhook 主机白名单 + 强制 https + 拒 userinfo；
        日志只记主机与状态码，**绝不记 access_token / sign / 消息正文**。 */
-    const NOTIFY_WEBHOOK_HOSTS = ["oapi.dingtalk.com", "open.feishu.cn", "qyapi.weixin.qq.com"];
+    const NOTIFY_WEBHOOK_HOSTS = ["oapi.dingtalk.com", "open.feishu.cn", "qyapi.weixin.qq.com", "hooks.slack.com"];
     function _notifyHostOf(raw){
       try{ return new URL(String(raw)).hostname.toLowerCase(); }catch(err){ return ""; }
     }

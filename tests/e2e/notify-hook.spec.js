@@ -42,7 +42,7 @@ const DING_HOOK = "https://oapi.dingtalk.com/robot/send?access_token=e2e-fake-to
  */
 async function stubHooks(page) {
   const seen = [];
-  await page.route(/^https:\/\/(open\.feishu\.cn|oapi\.dingtalk\.com)\//, async (route) => {
+  await page.route(/^https:\/\/(open\.feishu\.cn|oapi\.dingtalk\.com|hooks\.slack\.com)\//, async (route) => {
     seen.push(route.request().url());
     await route.fulfill({
       status: 200, contentType: "application/json",
@@ -161,20 +161,28 @@ test.describe("通知通道 · http 源形态（本地服务 / 线上站点）",
   });
 
   /* http 源下钉钉依旧发不出去（钉钉任何 origin 都不回 ACAO）→ 必须仍然禁用。
-     这条存在是因为「feishu 可用」与「dingtalk 可用」的判据不同轴，不能一起推。 */
-  test("⑥ http 源下钉钉仍判不可用且入口禁用", async ({ page }) => {
+     这条存在是因为「feishu 可用」与「dingtalk 可用」的判据不同轴，不能一起推。
+     v3.7.69 + Slack：hooks.slack.com 同款不回 CORS 头（实测），与钉钉同轴。 */
+  test("⑥ http 源下钉钉 / Slack 仍判不可用且入口禁用", async ({ page }) => {
     const seen = await stubHooks(page);
     expect(await page.evaluate(() => notifyHasMainSender()), "浏览器里没有主进程发送").toBe(false);
     expect(await page.evaluate(() => notifyChannelAvailable("dingtalk"))).toBe(false);
+    expect(await page.evaluate(() => notifyChannelAvailable("slack")), "Slack 在浏览器形态同样发不出去").toBe(false);
     await page.evaluate(() => document.querySelector('[data-set-tab="set-integration"]').click());
     const got = await statusOf(page, "钉钉");
     expect(got.status, "状态位要写「仅桌面版可用」：" + got.status).toContain("仅桌面版");
     expect(got.disabled, "入口必须禁用").toBe(true);
     expect(got.title, "禁用要给出原因：" + got.title).toMatch(/CORS|桌面/);
+    const slk = await statusOf(page, "Slack");
+    expect(slk.status, "Slack 状态位同样要写「仅桌面版」：" + slk.status).toContain("仅桌面版");
+    expect(slk.disabled, "Slack 入口必须禁用").toBe(true);
     const bypass = await page.evaluate(async (u) => await dingtalkConnect({ url: u, secret: "" }), DING_HOOK);
     expect(bypass, "绕过 UI 直接调也不该返回 provider").toBeNull();
+    const bypassSlack = await page.evaluate(async (u) => await slackConnect({ url: u }), "https://hooks.slack.com/services/T0/B0/e2e-fake");
+    expect(bypassSlack, "绕过 UI 直接调 Slack 连接也不该返回 provider").toBeNull();
     expect(await page.evaluate(() => notifyHookGet("dingtalk").configured), "更不能把 webhook 存进内存").toBe(false);
-    expect(seen, "被拒的钉钉一个请求都不许发").toEqual([]);
+    expect(await page.evaluate(() => notifyHookGet("slack").configured)).toBe(false);
+    expect(seen, "被拒的钉钉 / Slack 一个请求都不许发").toEqual([]);
   });
 });
 
@@ -190,23 +198,26 @@ test.describe("通知通道 · file:// 形态（双击本地文件）", () => {
     expect(proto, "前提：这组必须真的跑在 file:// 上").toBe("file:");
   });
 
-  /* file:// 下连飞书都拿不到 CORS 头（实测），所以两个渠道都必须禁用。
+  /* file:// 下连飞书都拿不到 CORS 头（实测），所以三个渠道都必须禁用。
      这是本文件最重要的一条：如果判据写成「飞书 = 恒可用」，双击打开的用户会配出一个
      永远发不出的通道，而单测（jsdom 固定 http://localhost）与 http 组 e2e 都照不到这个形态。 */
-  test("⑦ file:// 下两个渠道都被如实禁用，且零外发", async ({ page }) => {
+  test("⑦ file:// 下三个渠道都被如实禁用，且零外发", async ({ page }) => {
     const seen = await stubHooks(page);
     await page.evaluate(() => document.querySelector('[data-set-tab="set-integration"]').click());
-    const fs = await statusOf(page, "飞书"), ding = await statusOf(page, "钉钉");
+    const fs = await statusOf(page, "飞书"), ding = await statusOf(page, "钉钉"), slk = await statusOf(page, "Slack");
     expect(await page.evaluate(() => notifyOriginIsHttpish()), "前提：file:// 不是 http 源").toBe(false);
     expect(await page.evaluate(() => notifyChannelAvailable("feishu")), "file:// 下飞书发不出去").toBe(false);
     expect(await page.evaluate(() => notifyChannelAvailable("dingtalk"))).toBe(false);
+    expect(await page.evaluate(() => notifyChannelAvailable("slack"))).toBe(false);
     expect(fs.disabled, "飞书入口必须禁用").toBe(true);
     expect(fs.status, "飞书状态要指向 origin 问题而不是「桌面版」：" + fs.status).toContain("需以 http 方式打开");
     expect(fs.title, "禁用原因要给出可操作出路：" + fs.title).toMatch(/本地服务|http/);
     expect(fs.desc, "说明文字也要带上限制：" + fs.desc).toMatch(/CORS|http/);
     expect(ding.disabled, "钉钉入口必须禁用").toBe(true);
     expect(ding.status).toContain("仅桌面版");
-    expect(seen, "file:// 形态下两个渠道都不许发出任何请求").toEqual([]);
+    expect(slk.disabled, "Slack 入口必须禁用").toBe(true);
+    expect(slk.status).toContain("仅桌面版");
+    expect(seen, "file:// 形态下三个渠道都不许发出任何请求").toEqual([]);
     expect(await leakKeys(page), "被禁的渠道不该留下任何配置痕迹").toEqual([]);
   });
 });

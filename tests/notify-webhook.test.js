@@ -281,8 +281,10 @@ describe("⑥ 传输分流与渠道能力门", () => {
     expect(win.notifyHasMainSender(), "没有 electronAPI 就不该假装是桌面版").toBe(false);
     expect(win.notifyChannelAvailable("feishu")).toBe(true);
     expect(win.notifyChannelAvailable("dingtalk"), "钉钉只有主进程发送可用").toBe(false);
+    expect(win.notifyChannelAvailable("slack"), "Slack 同钉钉：hooks.slack.com 不回 CORS 头，只有桌面版可用（v3.7.69 实测）").toBe(false);
     expect(win.notifyChannelAvailable("weixin"), "未登记的渠道一律判不可用").toBe(false);
     expect(win.notifyUnavailableKey("dingtalk")).toBe("int.desktopOnly");
+    expect(win.notifyUnavailableKey("slack"), "Slack 缺的也是主进程，不是 origin").toBe("int.desktopOnly");
     expect(win.notifyUnavailableKey("feishu"), "飞书缺的是 origin，不是桌面版").toBe("int.needHttpOrigin");
     expect(win.notifyUnavailableHint("dingtalk")).toMatch(/桌面|CORS/);
     expect(win.notifyUnavailableHint("feishu")).toMatch(/file:|http|本地服务/);
@@ -338,5 +340,45 @@ describe("⑥ 传输分流与渠道能力门", () => {
     const prov = await win.dingtalkConnect({ url: DING_URL, secret: "" });
     expect(prov, "钉钉 200 但业务失败，不能当连接成功").toBeNull();
     expect(win.notifyHookGet("dingtalk").configured).toBe(false);
+  });
+
+  /* ---- v3.7.69 Slack：与钉钉同款的「仅桌面版」通道 ---- */
+
+  it("非桌面形态下「连接」Slack：必须返回 null 且零请求（hooks.slack.com 不回 CORS 头）", async () => {
+    const win = freshWin();
+    const calls = spy(win);
+    const prov = await win.slackConnect({ url: "https://hooks.slack.com/services/T0/B0/xyz" });
+    expect(prov, "发不出去的渠道不该返回一个 provider 对象").toBeNull();
+    expect(win.notifyHookGet("slack").configured, "更不能把 webhook 存进内存冒充已连接").toBe(false);
+    expect(calls.length, "被拒的渠道一个请求都不能发").toBe(0);
+  });
+
+  it("桌面形态：Slack 走主进程 IPC，payload 是 {text}，成功只看 HTTP 200（响应是纯文本）", async () => {
+    const win = freshWin();
+    const ipc = asDesktop(win, { ok: true, status: 200, body: null });   /* Slack 200 正文是 "ok" 纯文本，body 为 null */
+    const prov = await win.slackConnect({ url: "https://hooks.slack.com/services/T0/B0/xyz" });
+    expect(prov, "200 即通路成立（无加签、无业务码）").toBeTruthy();
+    expect(await waitFor(() => ipc.length >= 1), "问候消息必须经主进程发出").toBe(true);
+    expect(ipc[0].url).toBe("https://hooks.slack.com/services/T0/B0/xyz");
+    expect(Object.keys(ipc[0].payload).sort()).toEqual(["text"], "Incoming Webhook 只收 {text}，无 msgtype/code 结构");
+    expect(ipc[0].payload.text).toMatch(/^\[Agent工坊\]/);
+  });
+
+  it("Slack 通道的 URL 主机钉死 hooks.slack.com：配成别家主机在渲染侧就被拒（主进程白名单是第二道门）", async () => {
+    const win = freshWin();
+    const ipc = asDesktop(win);
+    win.notifyHookSet("slack", { url: "https://oapi.dingtalk.com/robot/send?access_token=x" });
+    const r = await win.notifyHookSend("slack", "hi");
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("invalid_slack_host");
+    expect(ipc.length, "渲染侧已拒，不该再劳烦主进程").toBe(0);
+  });
+
+  it("主进程回报失败（ok:false）时「连接」Slack 必须退回未配置", async () => {
+    const win = freshWin();
+    asDesktop(win, { ok: false, status: 404, error: "not_found" });
+    const prov = await win.slackConnect({ url: "https://hooks.slack.com/services/T0/B0/xyz" });
+    expect(prov, "404 no_team 一类失败不能当连接成功").toBeNull();
+    expect(win.notifyHookGet("slack").configured, "验证不过不能留下死配置").toBe(false);
   });
 });

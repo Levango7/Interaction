@@ -295,7 +295,7 @@ function renderIntegrationPanel(){
     {name:"notion", label:"Notion", desc:t("int.notionDesc","验证 Notion Integration Token（笔记 / 任务同步尚未接入）"), connectFn:"notionConnect", disconnectFn:"notionDisconnect"},
     {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
     {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Jira API Token（任务同步尚未接入）"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
-    {name:"slack", label:"Slack", desc:t("int.slackDesc","验证 Slack Bot Token（消息通知尚未接入）"), connectFn:"slackConnect", disconnectFn:"slackDisconnect"},
+    {name:"slack", label:"Slack", desc:t("int.slackDesc","群机器人 Incoming Webhook · 推送通知（仅桌面版可用：Slack webhook 不回 CORS 头，浏览器形态发不出去）；凭据仅本次会话，刷新即失效"), connectFn:"slackConnect", disconnectFn:"slackDisconnect", ephemeral:true},
     {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect", ephemeral:true},
     {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect", ephemeral:true},
     {name:"calendar", label:t("appPage.calview", "日历"), desc:t("int.calendarDesc","验证日历凭据（日程同步尚未接入）"), connectFn:"calendarConnect", disconnectFn:"calendarDisconnect"}
@@ -460,7 +460,9 @@ const INTEGRATION_CONFIG_FIELDS = {
              { k:"teamId", label:"Team ID", ph:t("int.linearTeamIdPh","可选，用于 issue 同步") }],
   jira:     [{ k:"domain", label:t("int.jiraDomain","站点域名"), ph:"your-domain.atlassian.net", required:true },
              { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true }],
-  slack:    [{ k:"botToken", label:"Bot User OAuth Token", ph:"xoxb-…", required:true, secret:true }],
+  /* v3.7.69：Slack 改成「群机器人 Incoming Webhook」—— URL 本身即凭据、无加签；
+     hooks.slack.com 不回 CORS 头（实测），仅桌面版可发。填了**不会保存**（会话内存）。 */
+  slack:    [{ k:"url", label:t("int.slackHook","Incoming Webhook 地址"), ph:"https://hooks.slack.com/services/…", required:true, secret:true }],
   /* v3.7.66：飞书 / 钉钉改成「群自定义机器人 webhook」—— 旧的 App ID/Secret + chatId
      那套要企业自建应用管理员权限，个人配不通（且那 6 个发送函数应用内零调用方）。
      ⚠️ 这两项填了**不会保存**：凭据只活在本次会话内存里，刷新即失效（用户 2026-09-29 定）。 */
@@ -574,7 +576,7 @@ function openIntegrationConfig(name){
     + t("p4.html.intCfgTitle",'<h3 class="u-m-0-0-1 u-fs-md">连接 ') + esc(label) + '</h3>'
     /* v3.7.66：飞书 / 钉钉的凭据**不落盘**，所以不能再用那句"随应用数据加密持久化"——
        那是别的 provider 的口径，用在这里就是一句假话。按通道分开给。 */
-    + (name === "feishu" || name === "dingtalk"
+    + (name === "feishu" || name === "dingtalk" || name === "slack"
         ? t("p4.html.intEphemeralHint",'<p class="sub u-m-0-0-2 u-text-warn">⚠ 只保存在本次会话内存里：不写入本地存储、不进备份与云同步，<b>刷新或关闭页面即失效</b>，需要重新粘贴。</p>')
         : t("p4.html.intCredentialHint",'<p class="sub u-m-0-0-2">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>'))
     + inputsHtml

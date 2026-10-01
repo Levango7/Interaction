@@ -22,12 +22,21 @@ const MARK = "@deprecated v3.7.60 应用内零调用方";
 
 /* v3.7.66：飞书 / 钉钉的 6 个旧函数（× SendMessage / NotifyEvent / CreateTaskFromMessage）
    已随「群机器人 webhook 通道」接通而删除 —— 那套 appKey/appSecret + chatId 个人配不通，
-   留着只是死码。名单从 30 → 24。slack/notion/linear/jira/calendar 的仍按废弃冻结。 */
+   留着只是死码。名单从 30 → 24。
+   v3.7.69：Slack 改型「群机器人 Incoming Webhook」—— 3 个 Bot Token 模型旧函数
+   （slackNotifyEvent / slackSendMessage / slackCreateTaskFromMessage）随之删除，名单 24 → 21。
+   slack/notion/linear/jira/calendar 剩余的仍按废弃冻结。DELETED 名单 = 9 个已删函数，
+   守护它们不回流（有人重新实现必须走"摘废弃 + 补真发用例"的正门）。 */
 const DEPRECATED = `integrationListProviders integrationEnableProvider integrationDisableProvider integrationConfigureProvider
 integrationGetStatus notionSyncNote notionSyncTask notionListSynced linearSyncIssue linearListIssues linearMapStatus
-jiraSyncIssue jiraListIssues jiraMapStatus slackNotifyEvent slackSendMessage slackCreateTaskFromMessage
+jiraSyncIssue jiraListIssues jiraMapStatus
 calendarSyncEvent calendarCreateEvent calendarListEvents calendarUpdateEvent
 calendarDeleteEvent _intNotionPullWriteback _intFindLocalId`.split(/\s+/).filter(Boolean);
+
+/* v3.7.66/68 两轮渠道定案后已整体删除的旧模型函数：不许回流 */
+const DELETED = `feishuSendMessage feishuNotifyEvent feishuCreateTaskFromMessage
+dingtalkSendMessage dingtalkNotifyEvent dingtalkCreateTaskFromMessage
+slackNotifyEvent slackSendMessage slackCreateTaskFromMessage`.split(/\s+/).filter(Boolean);
 
 /* 真活着的：由 openIntegrationConfig / 断开按钮 拼接派发，绝不能标废弃 */
 const LIVE = ["notionConnect", "linearConnect", "jiraConnect", "slackConnect", "feishuConnect",
@@ -68,7 +77,7 @@ function refLines(file, name) {
 }
 
 describe("集成同步/通知层：废弃标记仍在（用户决定「先标记废弃，等渠道定好再动」）", () => {
-  it("24 个零调用函数逐个带 @deprecated 标记", () => {
+  it("21 个零调用函数逐个带 @deprecated 标记", () => {
     const lines = geText().split(/\r?\n/);
     const missing = DEPRECATED.filter((n) => {
       const def = lines.findIndex((l) => /^(?:async\s+)?function\s+/.test(l) && new RegExp("function\\s+" + n + "\\b").test(l));
@@ -117,14 +126,14 @@ describe("集成同步/通知层：仍然零调用（有人接上就该摘标记
       }
     }
   }
-  it("24 个函数没有任何「非废弃集内」的调用方", () => {
+  it("21 个函数没有任何「非废弃集内」的调用方", () => {
     expect(violations,
       "这些废弃函数出现了新的调用方 —— 说明渠道定了并接上了链路。\n" +
       "正确做法：摘掉对应 @deprecated、更新 docs/product-scope.md §三 与本文件的 DEPRECATED 名单、" +
       "并补真发请求的用例。\n  " + violations.join("\n  ")).toEqual([]);
   });
 
-  it("废弃集内部互调仅限已知的 3 处（防止悄悄长出新的内部依赖）", () => {
+  it("废弃集内部互调仅限已知的 2 处（防止悄悄长出新的内部依赖）", () => {
     const internal = [];
     for (const name of DEPRECATED) {
       for (const f of srcFiles) {
@@ -134,7 +143,12 @@ describe("集成同步/通知层：仍然零调用（有人接上就该摘标记
     expect(internal.sort()).toEqual([
       "_intNotionPullWriteback → notionListSynced",
       "_intNotionPullWriteback → notionSyncTask",
-      "slackNotifyEvent → slackSendMessage",
     ].sort());
+  });
+
+  it("已删的 9 个旧模型函数不回流（v3.7.66 飞书/钉钉 6 个 + v3.7.69 Slack 3 个）", () => {
+    const lines = geText().split(/\r?\n/);
+    const back = DELETED.filter((n) => lines.some((l) => new RegExp("function\\s+" + n + "\\b").test(l)));
+    expect(back, "这些旧凭据模型的函数被重新实现了 —— 渠道改型已定案，回流必须走「摘废弃 + 补真发用例」的正门").toEqual([]);
   });
 });

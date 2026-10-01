@@ -515,14 +515,15 @@ describe("Electron IPC: notify-send 主进程 webhook 外发", () => {
     expect(JSON.parse(calls[0].opts.body)).toEqual(OK_PAYLOAD);
   });
 
-  it("飞书与企业微信也在白名单内", async () => {
+  it("飞书、企业微信与 Slack（v3.7.69）都在白名单内", async () => {
     const { calls } = installFetch();
     for (const u of ["https://open.feishu.cn/open-apis/bot/v2/hook/abc",
-                    "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc"]) {
+                    "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc",
+                    "https://hooks.slack.com/services/T0/B0/xyz"]) {
       const r = await ipcHandlers["notify-send"](trustedEv(), { url: u, payload: OK_PAYLOAD });
       expect(r.ok, u).toBe(true);
     }
-    expect(calls.length).toBe(2);
+    expect(calls.length).toBe(3);
   });
 
   /* 以下每条都是「拒绝 + 零请求」：白名单一旦被写成前缀匹配或放行任意 https，
@@ -531,6 +532,13 @@ describe("Electron IPC: notify-send 主进程 webhook 外发", () => {
     const { calls } = installFetch();
     const r = await ipcHandlers["notify-send"](trustedEv(), { url: "https://evil.example.com/robot/send", payload: OK_PAYLOAD });
     expect(r.ok).toBe(false);
+    expect(r.error).toBe("unsafe_webhook_url");
+    expect(calls.length).toBe(0);
+  });
+
+  it("Slack 子域伪装（hooks.slack.com.evil）：拒绝（v3.7.69）", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["notify-send"](trustedEv(), { url: "https://hooks.slack.com.evil.example.com/services/T0/B0/x", payload: OK_PAYLOAD });
     expect(r.error).toBe("unsafe_webhook_url");
     expect(calls.length).toBe(0);
   });

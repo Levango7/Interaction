@@ -115,8 +115,8 @@ describe("集成中心文案只承诺真接了的能力", () => {
   /* v3.7.66：飞书 / 钉钉真接了群机器人 webhook，"7 家全写尚未接入"的旧口径不再成立。
      守护不松，改成分组断言：本文件是「文案诚实度」的唯一归属（describe 即此职），
      `tests/notify-webhook.test.js` 不再重复断言措辞，只测通道行为。 */
-  it("未接线的 5 个 provider 仍必须写明「同步 / 通知尚未接入」", () => {
-    const keys = ["int.notionDesc", "int.linearDesc", "int.jiraDesc", "int.slackDesc", "int.calendarDesc"];
+  it("未接线的 4 个 provider 仍必须写明「同步 / 通知尚未接入」（v3.7.69 Slack 转已接线）", () => {
+    const keys = ["int.notionDesc", "int.linearDesc", "int.jiraDesc", "int.calendarDesc"];
     for (const k of keys) {
       const v = win.t(k, "");
       expect(v, `${k} 文案为空`).toBeTruthy();
@@ -125,8 +125,8 @@ describe("集成中心文案只承诺真接了的能力", () => {
     }
   });
 
-  it("已接线的飞书 / 钉钉：必须写得出真发了什么，并如实交代凭据仅会话内存", () => {
-    for (const k of ["int.feishuDesc", "int.dingtalkDesc"]) {
+  it("已接线的飞书 / 钉钉 / Slack：必须写得出真发了什么，并如实交代凭据仅会话内存", () => {
+    for (const k of ["int.feishuDesc", "int.dingtalkDesc", "int.slackDesc"]) {
       const v = win.t(k, "");
       expect(v, `${k} 文案为空`).toBeTruthy();
       expect(v, `${k} 应写明走群机器人 webhook：${v}`).toMatch(/webhook/i);
@@ -139,8 +139,9 @@ describe("集成中心文案只承诺真接了的能力", () => {
 
   /* v3.7.66 实测：钉钉 webhook 不回 CORS 头（预检与 POST 都没有），企业微信预检 403 ——
      所以钉钉只有借主进程发送的桌面版才真发得出去。文案若写得像两家都一样，就是新的空头承诺。 */
-  it("钉钉文案必须写明「仅桌面版」，飞书不许被误标", () => {
+  it("钉钉 / Slack 文案必须写明「仅桌面版」，飞书不许被误标", () => {
     expect(win.t("int.dingtalkDesc", "")).toMatch(/仅桌面版|桌面版|desktop/i);
+    expect(win.t("int.slackDesc", ""), "Slack 与钉钉同款不回 CORS 头，必须写明仅桌面版").toMatch(/仅桌面版|桌面版|desktop/i);
     const fs = win.t("int.feishuDesc", "");
     expect(fs, "飞书有 ACAO，浏览器可用，不该被一并标成桌面版专属：" + fs).not.toMatch(/仅桌面版|desktop only/i);
     const d = win.t("integration.desc", "");
