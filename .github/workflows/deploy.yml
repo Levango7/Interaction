@@ -34,6 +34,12 @@ jobs:
           cache: 'npm'
       # 与 ci.yml 同序：源码态/模块图/AI 工具文档三项不依赖 node_modules，先跑
       - run: npm run check:source-state
+      # v3.7.70 补：发布链此前缺这一步（ci.yml:35 有，本文件无）。
+      # check:source-state 只守「标记在、体积 <1.2MB」——部分块被拼回内容提交而总量没超上限时
+      # 能溜过它；src:check 逐块比对内容兜住这类「半交付态」。
+      # 缺口后果：src↔HTML 不一致的代码在合并进 main 后会被 ci.yml 拦下，
+      # 但 deploy 链无人把守 → 仍可能上线。必须在 pre 钩子之前跑。
+      - run: npm run src:check
       - run: npm run check:modules
       - run: npm run check:ai-tools-doc
       - run: npm ci
@@ -41,6 +47,7 @@ jobs:
       - run: npm run build:check
       - run: npm run lint
       - run: npm run lint:layers
+      - run: npm run lint:tokens
       - run: npm run check:pwa-icons
       - run: npm run pet:check
 

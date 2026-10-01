@@ -22,6 +22,8 @@
     "lint:layers": "node scripts/lint-layers.mjs",
     "prelint:layers": "node scripts/src-split.mjs && node scripts/pet-art.mjs",
     "postlint:layers": "node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup",
+    "lint:tokens": "node scripts/lint-tokens.mjs",
+    "lint:tokens:freeze": "node scripts/lint-tokens.mjs --freeze",
     "pet:inject": "node scripts/pet-art.mjs",
     "pet:extract": "node scripts/pet-art.mjs --extract",
     "verify:ci": "node scripts/verify-ci-order.mjs",

@@ -54,6 +54,11 @@ jobs:
       - run: npm run lint
       # v3.7.52：补齐三处「写了但没接」的门禁（此前仅本机手动跑）
       - run: npm run lint:layers
+      # v3.7.70 接入：此前 scripts/lint-tokens.mjs 零引用（package.json 与所有 workflow 均无）。
+      # 本轮给它补了「悬空令牌」检查（var(--x) 引用了但零定义 → 浏览器静默回退，
+      # 背景透明/描边丢失/字号回默认，无任何其他手段能发现），并按基线棘轮只拦新增。
+      # 裸 px 收敛提示部分仍为非阻断，与本步骤的阻断语义分开。
+      - run: npm run lint:tokens
       - run: npm run check:pwa-icons
       - run: npm run pet:check
 
