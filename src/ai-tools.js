@@ -1170,6 +1170,152 @@ function summarizeAgentPlan(plan, results){
   return lines.join("\n");
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   v3.7.72 执行反馈回路：Plan-Confirm-Execute-Adapt（单 agent 分段校准）
+   ─────────────────────────────────────────────────────────────────────
+   架构决策（为什么不是 multi-agent orchestration）：
+   · 产品定位是「个人任务工坊」，26 个工具里 22 个是本应用数据操作 —— 任务域封闭，
+     没有多专家分工的必要性；multi-agent 每步 2~3 倍 token，与「节省用户 token」直接矛盾。
+   · 现有 runChatLoop（真 function-calling + 6/12 轮）+ 危险确认 + 白名单基础设施全复用。
+   · 形态：保留 Plan（proposeAgentPlan）→ Confirm（人工评审，产品最强项）→
+     Execute（分段）→ Adapt（每段结束把真实结果回喂模型，模型可 continue / replan）。
+     本质是 Plan-Execute 骨架 + ReAct 式执行反馈，单 agent。
+
+   与旧 executeAgentPlan（盲跑）的差别：
+   · 每 3 步一段；段末把「已执行的真实结果（每步一行压缩）+ 剩余计划」发给模型校准，
+     返回 continue（按原计划）或 replan（用新步骤替换剩余，封顶 12 步、全程重规划 ≤2 次）
+   · 读操作失败自动重试 1 次（写操作不自动重试 —— 可能已生效，交给重规划处理）
+   · 连续 ≥2 步失败强制触发校准；校准调用不进用户聊天 hist（独立 messages，token 最小化）
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* 读操作集合：失败自动重试一次是安全的（无副作用）；写操作不自动重试（可能已生效） */
+const AGENT_READ_TOOLS = new Set(["search","list_tasks","list_records","query_overview","recall","note_search","web_search","web_fetch","sql_query"]);
+
+/* 单步执行（从 executeAgentPlan 抽出的公共体）：确认拦截 → 白名单 → 执行 → 读失败重试 1 次 */
+async function _execPlanStep(step, wl){
+  if(DANGER_CONFIRM_TOOLS.has(step.tool)){
+    return { blocked:true, stepOk:false,
+      resultStr: JSON.stringify({ ok:false, confirm:true, msg:t("aiagent.needConfirm","该步骤需用户确认，自主执行已跳过：请到对话里直接要求执行（会弹出确认）") }) };
+  }
+  if(wl && !wl.has(step.tool)){
+    return { blocked:true, stepOk:false,
+      resultStr: JSON.stringify({ ok:false, msg:t("aiagent.notWhitelisted","该工具不在允许列表中，已跳过：")+step.tool }) };
+  }
+  let resultStr = "", stepOk = false;
+  for(let attempt=0; attempt<2; attempt++){
+    try{
+      if(ASYNC_TOOL_NAMES.has(step.tool)){
+        const r = await agentExecAsync(step.tool, step.args);
+        resultStr = JSON.stringify(r);
+        stepOk = !!(r && r.ok);
+      } else {
+        resultStr = execTool(step.tool, step.args); // 不传 force：需确认的工具已在上面拦掉
+        let rj = null; try{ rj = JSON.parse(resultStr); }catch(_){}
+        stepOk = !!(rj && rj.ok !== false);
+      }
+    }catch(e){
+      resultStr = JSON.stringify({ok:false, error:String(e&&e.message||e)});
+      stepOk = false;
+    }
+    if(stepOk || attempt === 1 || !AGENT_READ_TOOLS.has(step.tool)) break; // 仅读操作重试
+  }
+  return { resultStr, stepOk };
+}
+
+/* 单步结果 → 一行压缩（回喂模型用；完整 JSON 太费 token，模型只需要成败与关键标识） */
+function _execLine(ok, step, resultStr){
+  let brief = "";
+  try{
+    const rj = JSON.parse(resultStr);
+    brief = (rj && rj.msg) ? String(rj.msg) : (rj && rj.id ? "id=" + rj.id : "");
+    if(!brief && rj && typeof rj.count === "number") brief = "count=" + rj.count;
+  }catch(_){ brief = resultStr.slice(0, 60); }
+  if(brief.length > 80) brief = brief.slice(0, 80) + "…";
+  return (ok ? "✓ " : "✗ ") + step.tool + (brief ? "：" + brief : "");
+}
+
+/* 校准调用：独立 messages，不进用户聊天 hist。失败/非法输出一律返回 null（= 按原计划继续） */
+const _CALIB_SYSTEM = [
+  "你是任务计划执行过程的校准器。输入：原始目标、已执行步骤的真实结果、剩余计划。",
+  "判断剩余计划是否仍有效：某步失败且后续依赖它 → 替换后续步骤；结果已使某步多余 → 删除；其余 → 原样继续。",
+  "只输出一个 JSON 对象，不要解释：",
+  '{"action":"continue"} 或 {"action":"replan","steps":[{"tool":"工具名","args":{}}]}',
+  "约束：replan 步骤总数不超过 12；tool 只能取剩余计划中出现过的工具名。"
+].join("\n");
+
+async function _calibrateRemaining(goalText, executedLines, remaining, opts){
+  const o = opts || {};
+  try{
+    const user = [
+      "目标：" + (goalText || t("aiagent.goalUnknown","（未提供）")),
+      "",
+      "已执行（真实结果）：",
+      executedLines.join("\n") || t("aiagent.none","（无）"),
+      "",
+      "剩余计划：",
+      remaining.map(s => JSON.stringify({ tool: s.tool, args: s.args })).join("\n"),
+      "",
+      t("aiagent.calibAsk","请输出校准 JSON。")
+    ].join("\n");
+    const j = await chatOnce(
+      [{ role:"system", content:_CALIB_SYSTEM }, { role:"user", content:user }],
+      { signal: o.signal, retry: 1 }
+    );
+    const txt = (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
+    const m = txt.match(/\{[\s\S]*\}/);
+    if(!m) return null;
+    const cal = JSON.parse(m[0]);
+    if(!cal || (cal.action !== "continue" && cal.action !== "replan")) return null;
+    return cal;
+  }catch(e){ return null; } // 校准失败 ≠ 计划失败：静默按原计划继续
+}
+
+/* 自适应执行主入口（与 executeAgentPlan 同签名同返回，可直接互换） */
+async function executeAgentPlanReactive(plan, opts){
+  const o = opts || {};
+  const t0 = Date.now();
+  const results = [];
+  const needsConfirm = [];
+  const wl = (o.whitelist !== undefined) ? o.whitelist : toolWhitelistSet();
+  const SEG = 3;              // 每段步数
+  const MAX_REPLANS = 2;      // 全程重规划上限
+  const STEP_CAP = 12;        // replan 后剩余步骤上限（防失控）
+  let remaining = plan.steps.slice();
+  let executedLines = [];
+  let replans = 0, consecFail = 0;
+  const goalText = o.goal || plan.goal || "";
+
+  while(remaining.length){
+    if(o.signal && o.signal.aborted){
+      return { ok:false, results, needsConfirm, summary:t("aiagent.cancelled","已取消"), ms:Date.now()-t0 };
+    }
+    const seg = remaining.splice(0, SEG);
+    for(const step of seg){
+      const r = await _execPlanStep(step, wl);
+      const blocked = !!r.blocked;
+      if(blocked) needsConfirm.push(step);
+      results.push({ step, result:r.resultStr, ok:r.stepOk, blocked });
+      executedLines.push(_execLine(r.stepOk, step, r.resultStr));
+      consecFail = r.stepOk ? 0 : consecFail + 1;
+      if(typeof o.onProgress === "function"){
+        try{ o.onProgress(results.length, results.length + remaining.length, step, r.resultStr); }catch(_){}
+      }
+    }
+    if(!remaining.length) break;
+    /* 段末校准：例行触发（replans 未封顶时）；连续失败 ≥2 强制触发（哪怕 replans 已满也试最后一次） */
+    if(replans < MAX_REPLANS || consecFail >= 2){
+      const cal = await _calibrateRemaining(goalText, executedLines.slice(-6), remaining, o);
+      if(cal && cal.action === "replan" && Array.isArray(cal.steps) && cal.steps.length){
+        remaining = cal.steps.slice(0, STEP_CAP).filter(s => s && s.tool);
+        replans++; consecFail = 0;
+      }
+      /* cal 为 null 或 continue → 按原剩余计划继续 */
+    }
+  }
+  const summary = summarizeAgentPlan(plan, results);
+  return { ok:true, results, needsConfirm, summary, ms:Date.now()-t0, replans };
+}
+
 /**
  * Agent 模式 chatOnce：先规划再执行再汇总
  * @param {Array<{role:string,content:string}>} messages - 对话历史
@@ -1194,7 +1340,7 @@ async function chatOnceAgent(messages, opts){
       return { ok:true, raw, summary:raw };
     }
     // ② 执行阶段
-    const execResult = await executeAgentPlan(plan, { signal:o.signal, onProgress:o.onProgress });
+    const execResult = await executeAgentPlanReactive(plan, { signal:o.signal, onProgress:o.onProgress, goal:plan.goal || "" });
     // ③ 汇总阶段：让 AI 基于执行结果生成自然语言总结
     let summary = execResult.summary;
     try{

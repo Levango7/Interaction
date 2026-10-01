@@ -6101,10 +6101,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.71"; /* v3.7.71 深评修复：confirmAgentPlan 跨场景聊天串写竞态（键名定格 p.sc）· 指针特效重复叠加守卫 · 云同步客户端加固（并发刷新共享在途 Promise / expiresIn 服务端优先 / API_BASE 动态读取 / OAuth code 改随 query 传递）· 插件与天气卡文案诚实化 · onboarding 硬编码中文入 i18n */
+const VERSION = "3.7.72"; /* v3.7.72 Agent 执行架构升级：Plan-Confirm-Execute-Adapt（单 agent 分段校准，拒绝 multi-agent 的理由见 ai-tools.js 设计注释）· executeAgentPlanReactive 替换盲跑（每 3 步回喂真实结果，模型可 continue/replan，重规划≤2 次/剩余步数封顶 12/读操作失败重试 1 次/校准独立 messages 不进 hist）· token 优化：工具结果回填超 2400 字符截断（3 处回填点）· 校准系统提示内置工具纪律 · 新增 5 条 Reactive 单测 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261002b";
+const BUILD_TAG = "20261002c";
 
 
 

@@ -1,3 +1,33 @@
+## [v3.7.72] - 2026-10-02
+
+**Agent 执行架构升级：`executeAgentPlanReactive` 替换盲跑 —— 自主执行从「确认后按 JSON 顺序跑到底」变成「每 3 步把真实结果回喂模型，可继续可重规划」。** 这是深评指出的「与真 agent 最本质的差距」的正面修复，也是 product-scope 路线项 ① 的落地。
+
+### 架构决策：Plan-Confirm-Execute-Adapt（单 agent），不做 multi-agent orchestration
+
+- 任务域封闭：26 个工具里 22 个是本应用数据操作，没有多专家分工的必要性
+- token 成本：multi-agent 每步 2~3 倍，与「节省用户 token」直接矛盾
+- 基础设施：runChatLoop（真 function-calling + 6/12 轮循环）+ 危险确认 + 白名单全部复用
+- 完整理由写在 `src/ai-tools.js` 的设计注释里，防止后人凭感觉加 agent
+
+### 执行反馈回路（executeAgentPlanReactive）
+
+- **分段执行**：每 3 步一段；段末把「目标 + 已执行结果（每步一行压缩：✓/✗ + 工具名 + msg/id，≤80 字符）+ 剩余计划」发给模型校准
+- **模型可两选**：`{"action":"continue"}` 按原计划继续；`{"action":"replan","steps":[...]}` 替换剩余（步数封顶 12、全程重规划 ≤2 次）
+- **读操作重试**：search/list/query 等无副作用工具失败自动重试 1 次；写操作不自动重试（可能已生效，交给重规划）
+- **校准独立 messages**：不进用户聊天 hist，系统提示内置工具纪律（只输出 JSON、tool 只能取剩余计划出现过的工具）
+- **降级安全**：校准抛错/输出非法 → 返回 null 按原计划继续（AI 未配置时自主执行照样能跑完）
+- **安全护栏原样保留**：危险确认拦截、白名单、取消信号、onProgress 兼容；盲跑版 `executeAgentPlan` 保留未删
+- 接入点：命令面板确认执行（ai-retry.js）与 chatOnceAgent 一键路径（ai-tools.js）两处
+
+### Token 优化（同任务成本下降）
+
+- **工具结果回填截断**：3 处回填点（对话循环 ×2 + 确认路径 ×1）超 2400 字符截断并注明全长 —— 此前 list_tasks 等返回的大 JSON 整段回填是 token 无底洞
+- 校准调用本身即 token 优化：模型看到的是每步一行的压缩结果而非全量 JSON；且校准不占聊天上下文预算
+
+### 测试
+
+新增 `tests/agent-reactive.test.js` **5 条**：continue 全跑 / replan 替换（原剩余不执行）/ 校准抛错降级 / replans 封顶 / 危险工具在 Reactive 路径同样被拦。全量 **111 文件 / 1255 用例**。
+
 ## [v3.7.71] - 2026-10-02
 
 **深评修复版：修掉一批「会咬人的静默问题」（竞态 / 泄漏 / 空转），并把四处与产品纪律相悖的虚假承诺文案诚实化。** 全量门禁 + CI 三 job 全绿。⚠️ 本版同时**代为收口了另一条会话遗留 11 项的在途工作**（v3.7.70 的 Notion/Linear 推送，commit `dcec2bd` 已并入，见该条台账）——两批工作的边界在那条 commit message 里有如实划分。

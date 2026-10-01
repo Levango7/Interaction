@@ -180,7 +180,9 @@ async function confirmPendingDanger(){
     if(c.args === null){ _pushBadArgsToolReceipt(messages, hist, c.id, c.name); continue; }
     const res=execTool(c.name, c.args, true); // 强制（已确认）
     let rj=null; try{ rj=JSON.parse(res); }catch(e){ try{ pushDiag("error", "confirm tool result parse error: "+(e&&e.message||e), {where:"confirmExecTool"}); }catch(_){} }
-    const tm={role:"tool", tool_call_id:c.id, content:res, _disp:(rj&&rj.msg)||(t("ai.toolPrefix","工具 ")+c.name)};
+    /* v3.7.72 token 优化：超长工具结果截断 —— 整段 JSON 回填是 token 无底洞，模型只需关键字段 */
+    let _res=res; if(typeof _res==="string" && _res.length>2400){ _res=_res.slice(0,2400)+"…(截断，共 "+res.length+" 字符)"; }
+    const tm={role:"tool", tool_call_id:c.id, content:_res, _disp:(rj&&rj.msg)||(t("ai.toolPrefix","工具 ")+c.name)};
     messages.push(tm); hist.push(tm);
   }
   pendingConfirm=null;
@@ -324,7 +326,8 @@ async function confirmAgentPlan(){
   showChatThinking(true);
   const signal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
   try{
-    const r = await executeAgentPlan(p.plan, { signal: signal });
+    // v3.7.72：换自适应执行（分段 + 结果回喂校准），盲跑版 executeAgentPlan 保留作降级
+    const r = await executeAgentPlanReactive(p.plan, { signal: signal, goal: p.goal || "" });
     hist.push({ role:"assistant", content: r.summary });
     /* 自主执行跑通的流程 = 一条现成的可复用技能候选（与对话路径同一套机制、同一个门槛） */
     const trace = r.results.filter(function(x){ return !x.blocked; }).map(function(x){
@@ -587,6 +590,8 @@ async function onChatSubmit(e){
   await runChatLoop(messages, hist);
   }catch(err){ const m=(err&&err.message)?err.message:String(err); pushDiag("error", m, {where:"onChatSubmit"}); try{ toast(t("ai.chatError","对话出错：")+m, "error"); }catch(e2){} }
 }
+/* v3.7.72 token 优化：超长工具结果截断（>2400 字符取头 + 注明全长），模型只需关键字段 */
+function _cutToolRes(r){ return (typeof r==="string" && r.length>2400) ? r.slice(0,2400)+"…(截断，共 "+r.length+" 字符)" : r; }
 async function runChatLoop(messages, hist){
   // T3.1：创建控制器 + 记录上次请求（重试用）+ 显示思考中
   chatController=createChatController();
@@ -690,7 +695,7 @@ async function runChatLoop(messages, hist){
             /* v3.7.52：走统一入口 execToolAuto —— 异步工具（联网/代码/SQL）在 chat 路径也能真正执行 */
             const res=await execToolAuto(c.name, args);
             skillTracePush(skillTrace, c.name, args, res); // v3.7.59 Skills：记录本轮流程
-            const tm={role:"tool", tool_call_id:c.id, content:res, _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
+            const tm={role:"tool", tool_call_id:c.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
             messages.push(tm); hist.push(tm);
           }
           AppBridge.render(); continue;
@@ -716,7 +721,7 @@ async function runChatLoop(messages, hist){
              此前在 chat 路径只拿到「未知工具」，与 Agent 计划路径行为不一致 */
           const res=await execToolAuto(tc.function.name, args);
           skillTracePush(skillTrace, tc.function.name, args, res); // v3.7.59 Skills：记录本轮流程
-          const tm={role:"tool", tool_call_id:tc.id, content:res, _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
+          const tm={role:"tool", tool_call_id:tc.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
           messages.push(tm); hist.push(tm);
         }
         AppBridge.render(); continue;
