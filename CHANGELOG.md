@@ -1,3 +1,30 @@
+## [v3.7.69] - 2026-10-01
+
+**Slack 通道改型：从「验证 Bot Token」接成「群机器人 Incoming Webhook 真发通知」（仅桌面版）。** 七家 provider 里第三家接到底，与飞书 / 钉钉共用同一套会话内存 + 主进程代发基建。全量 **109 文件 / 1241 用例**（v3.7.68 为 1235；+6 = Slack 的通道行为与 IPC 白名单用例）、`e2e` **74/74（3.1m）**、`lint`（四道）、`src:check`、`check:source-state` 均本机实测。
+
+> **这批的来源要如实写**：代码与工作区里的测试是同一工作区**另一条会话**在 01:39–02:03 写的，写完闲置约 5 小时、**从未进过 git**（丢弃即不可恢复）。本会话按用户决定「不废弃、归并成正式能力」接手，补的是：版本归属（那批注释与文档原写 `v3.7.68`，而 3.7.68 已被上一版占用 → 17 处统一改 `v3.7.69`）、`docs/product-scope.md` 的全面对齐（见下）、本条台账，以及在**合并后的干净导出树**上重跑全门禁 —— 那批代码此前只在混合工作区里绿过。
+
+### 为什么 Slack 只能走桌面版（两轴实测，不是推断）
+
+`_probe/cors-matrix-providers.mjs` 用真实 Chromium 分别打 `file://` 与 `http(s)`：`hooks.slack.com` **两个 origin 都不回任何 CORS 头**（双双 `Failed to fetch`），而主进程 Node `fetch` 可达（回 404 `no_team`）—— 与钉钉同轴。所以 `notifyChannelAvailable("slack") = notifyHasMainSender()`，浏览器形态下面板写「仅桌面版可用」并**禁用连接按钮**；被拒的通道一个请求都不许发、也不许把 webhook 存进内存冒充已连接（拦在 `notifyHookConnect` 里而不是按钮上 —— e2e 有绕过 UI 直接调 `slackConnect` 的用例，本版本它就负责钉这一点）。
+
+### 改型落点
+
+- **凭据模型**：`{ botToken }` → `{ url }`，URL 本身即凭据、无加签；成功判定只看 HTTP 200（正文是纯文本 `ok`，主进程对非 JSON 响应回 `body=null`，所以**不能拿 body 判**）。填了不落盘：与飞书 / 钉钉同走 `_notifyHooks` 会话内存，刷新即失效，面板显式提示。
+- **两道主机门**：渲染侧 `notifyHookSend("slack")` 先把主机钉死 `/(^|\.)hooks\.slack\.com$/i`（`hooks.slack.com.evil` 拒），主进程 `isSafeNotifyWebhookUrl` 白名单从三家加到四家作为第二道门。
+- **删死码 + 反守护**：旧 Bot Token 模型 3 个函数（`slackSendMessage` / `slackNotifyEvent` / `slackCreateTaskFromMessage`，v3.7.60 起零调用方）整体删除，废弃名单 **24 → 21**；`integration-deprecated.test.js` 新增 `DELETED` 名单（v3.7.66 的 6 个 + 本轮 3 个）钉住「不回流」，内部互调已知数从 3 降到 2。
+- **历史凭据回扫**：旧 `slackConnect` 曾把 `botToken` 密封写进 `wb_integration_providers`，`_notifyScrubPersisted()` 现在一并抹掉 feishu / dingtalk / slack 三条。
+- **广播与状态**：`notifyHookBroadcast` 的渠道表、`notifyState` 的回显都加上 slack；不可用文案键 `notifyUnavailableKey("slack") = int.desktopOnly`（缺的是主进程，不是 origin）。
+
+### 文档口径对齐（那批只改了 §三 开头一段，其余会自相矛盾）
+
+`docs/product-scope.md` 里以下七处此前仍是"Slack 未接线"的旧口径，本轮逐条改到位：§三 表头「现剩五个」→ 四个、凭据验证举例里的 `slack.com/api/auth.test` 标注为已退役、废弃名单 24 → 21 与其守护描述「已删 6 个」→ 9 个、IPC 白名单「三家」→ 四家、历史回扫「两条」→ 三条、文案诚实度分组「未接线 5 / 已接线 2」→ 4 / 3、测试计数 22 → 26 与 13 → 14、以及「剩余待决」名单与「未决：仍走密封写盘」名单里都把 Slack 摘出去。**同一轮 CORS 矩阵还量出**：Notion / Linear 全形态浏览器直连可达（具备接线条件）、Jira 仅主进程可达（需中转 + 动态白名单，SSRF 面单独设计）、Google 日历本机网络不可达无法实测 —— 待定从五个变四个，逐条写进 §三。
+
+### 已知取舍
+
+- Slack 与钉钉一样是**桌面版专属**：浏览器与线上站点形态下这条渠道恒禁用，面板如实说明原因，不做"看起来能连"的降级。
+- 本轮只接**通知**这一条消费链路；Slack 侧「从消息建任务」这类反向同步仍不存在（旧函数已删，不再留可复活的尸体）。
+
 ## [v3.7.68] - 2026-10-01
 
 **移动端首屏引导的两处缺陷收口：① ≤767px 下引导 modal 是「满屏卡片 + 顶对齐内容」，主按钮悬在屏幕中部、下方 358px 是一整块空白面板；②「跳过」按钮不结束引导，只是翻到下一步。** 第 ② 条是第 ① 条的守护用例自己抓出来的，不是人工 review 发现的。本机 Pixel 5 预设与线上真机各走查一遍；`tests/e2e/mobile.spec.js` 新增 3 条移动端布局不变量，`tests/onboarding.test.js` 15 → 17 条。**版本串与台账的口径要先说清：这两笔此前已单独推过 main（`5b1a04b..13789ac`），而 deploy 工作流是 `on: push: branches[main]` → 它们已经在 `v3.7.67` 的标签下跑过一段线上（CDN 实测 3,571,339 B / sha256:0d309e585c8a6b57…）。所以 v3.7.67 台账里那条 prod 指纹（3,570,127 B / sha256:783f4212be9f4d0b…）只对它自己那次构建成立，不含这两笔；本次 bump 的作用是让「版本串 ↔ 产物字节」重新对上。**
