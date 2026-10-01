@@ -40068,13 +40068,17 @@ const BUILTIN_PLUGINS = [
     version: "1.0.0",
     description: t("plugin.mindmap.desc", "可视化思维梳理，支持节点增删、连线、导出"),
     enabled: false,
+    /* v3.7.70 实测：本卡**无节点增删/连线/导出实现**——旧版 render 只吐一个空 <canvas>，
+       与 description 的承诺不符，属「stub + 活 UI = 虚假功能」（docs/product-scope.md §四.2）。
+       真能力在工具箱「思维导图」（src/render-overview.js 的 dgmAdd/dgmLink/dgmDel/dgmExportSvg）。
+       本轮先摘掉空 canvas（它是"看起来能画"的直接误导源）；
+       文案仍需与 core.js 的 plugin.mindmap.desc/hint 词条同步（本轮该文件有他人在途改动，未一并改）。 */
     cards: [{
       type: "mindmap-widget",
       name: t("plugin.mindmap.cardName", "思维导图"),
       render: function(){
         return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.mindmap.title", "思维导图") + '</div>'
-          + '<div class="plugin-body u-text-muted u-text-center u-p-5">' + t("plugin.mindmap.hint", "拖拽节点、创建关系，梳理你的想法") + '</div>'
-          + '<canvas id="mindmapCanvas" width="400" height="200" class="u-radius-sm u-border-line u-max-w-100"></canvas></div>';
+          + '<div class="plugin-body u-text-muted u-text-center u-p-5">' + t("plugin.mindmap.hint", "拖拽节点、创建关系，梳理你的想法") + '</div></div>';
       }
     }]
   }
