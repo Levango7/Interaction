@@ -6101,10 +6101,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.70"; /* v3.7.70 审计修复：门禁假守护（lint-layers 补依赖方向校验 / lint-tokens 补悬空令牌检查并接入 CI/deploy）· deploy 补 src:check · README 快捷键按 ORDER 重写 · 思维导图插件卡摘空 canvas · 文生图改名 AI 示意图 · 悬空令牌 10 条全部修复（--border/--surface 系改用 --line/--panel2 等 + 补 --font-mono 定义）· emoji 门禁违规清除 */
+const VERSION = "3.7.71"; /* v3.7.71 深评修复：confirmAgentPlan 跨场景聊天串写竞态（键名定格 p.sc）· 指针特效重复叠加守卫 · 云同步客户端加固（并发刷新共享在途 Promise / expiresIn 服务端优先 / API_BASE 动态读取 / OAuth code 改随 query 传递）· 插件与天气卡文案诚实化 · onboarding 硬编码中文入 i18n */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261002a";
+const BUILD_TAG = "20261002b";
 
 
 
@@ -9401,6 +9401,7 @@ const MESSAGES = {
     "msg.langSwitched": "已切换语言",
     // 任务243：遗漏的硬编码中文补全（toast/confirm/字符串拼接）
     "onboard.simTriggered": "已模拟触发：交付完成 → 自动生成学习充电任务",
+    "onboard.simTriggeredDone": "已触发",
     "coach.adviceUnavailable": "暂无法获取建议（{reason}），请稍后重试",
     "card.cannotOverrideBuiltin": "不能覆盖内置卡片：{key}",
     "card.alreadyRegistered": "卡片已注册：{key}",
@@ -9436,7 +9437,7 @@ const MESSAGES = {
     "plugin.health.name": "健康助手",
     "plugin.health.desc": "运动/体重/睡眠/喝水记录与健康概览，挂载到「生活」场景",
     "plugin.habit-tracker.name": "习惯追踪器",
-    "plugin.habit-tracker.desc": "每日习惯打卡记录，支持连续天数统计与可视化图表",
+    "plugin.habit-tracker.desc": "每日习惯打卡任务场景（连续天数与趋势统计见核心「习惯链」）",
     "plugin.habit-tracker.scenarioName": "习惯追踪",
     "plugin.weather.name": "天气预报",
     "plugin.weather.desc": "查看今日及未来几天天气，出行穿衣参考",
@@ -9445,16 +9446,16 @@ const MESSAGES = {
     "plugin.quote.desc": "随机名言/鸡汤/诗句，给每天一点灵感",
     "plugin.quote.cardName": "每日一言",
     "plugin.focus-timer.name": "专注时钟",
-    "plugin.focus-timer.desc": "番茄钟升级版：自定义时长 + 多段间隔 + 进度圆环",
+    "plugin.focus-timer.desc": "专注任务场景（计时器见工具箱「番茄钟」，固定 25/5 分钟）",
     "plugin.focus-timer.scenarioName": "专注时钟",
     "plugin.mindmap.name": "思维导图",
     "plugin.mindmap.desc": "可视化思维梳理（节点增删 / 连线 / 导出在「工具箱 → 思维导图」中）",
     "plugin.mindmap.cardName": "思维导图",
     // BUILTIN_PLUGINS 剩余中文 i18n（description/scenarios[].desc/render 文案）
-    "plugin.pomodoro.desc": "25分钟专注+5分钟休息的深度工作法场景",
+    "plugin.pomodoro.desc": "25 分钟专注 + 5 分钟休息的深度工作法任务场景（计时器见工具箱「番茄钟」）",
     "plugin.pomodoro.scenarioDesc": "笃行专注法",
     "plugin.reading.scenarioDesc": "阅读管理",
-    "plugin.habit-tracker.scenarioDesc": "每日打卡 · 连续记录 · 趋势图表",
+    "plugin.habit-tracker.scenarioDesc": "每日打卡 · 连续记录",
     "plugin.focus-timer.scenarioDesc": "自定义专注时长与休息间隔",
     "plugin.budget.total": "本月总支出",
     "plugin.budget.bills": "缴费",
@@ -9463,7 +9464,7 @@ const MESSAGES = {
     "plugin.budget.hint": "来源：生活场景的缴费/采购台账 + 工具箱记录（v3.1.2 A-档：插件卡接真数据）",
     "plugin.weather.title": "天气",
     "plugin.weather.loading": "获取中...",
-    "plugin.weather.sync": "点击同步",
+    "plugin.weather.where": "详细天气见工具箱「天气」",
     "plugin.quote.title": "每日一言",
     "plugin.quote.q1": "种一棵树最好的时间是十年前，其次是现在。",
     "plugin.quote.q2": "千里之行，始于足下。",
@@ -13118,6 +13119,8 @@ const MESSAGES = {
     "msg.langSwitched": "Language switched",
     // Task 243: missing hardcoded Chinese toast/confirm/string-concat i18n
     "onboard.simTriggered": "Simulated trigger: delivery complete → auto-generated learning task",
+
+    "onboard.simTriggeredDone": "Triggered",
     "coach.adviceUnavailable": "Unable to get suggestions ({reason}), please retry later",
     "card.cannotOverrideBuiltin": "Cannot override built-in card: {key}",
     "card.alreadyRegistered": "Card already registered: {key}",
@@ -13153,7 +13156,7 @@ const MESSAGES = {
     "plugin.health.name": "Health Assistant",
     "plugin.health.desc": "Exercise/weight/sleep/water intake records and health overview, mounted to \"Life\" scenario",
     "plugin.habit-tracker.name": "Habit Tracker",
-    "plugin.habit-tracker.desc": "Daily habit check-in records, supports streak statistics and visualization charts",
+    "plugin.habit-tracker.desc": "Daily habit check-in task scenario (streaks and trends live in the core Habit Chain)",
     "plugin.habit-tracker.scenarioName": "Habit Tracking",
     "plugin.weather.name": "Weather Forecast",
     "plugin.weather.desc": "View today and future weather, reference for outing and dressing",
@@ -13162,12 +13165,12 @@ const MESSAGES = {
     "plugin.quote.desc": "Random quotes/chicken soup/poems, a little inspiration every day",
     "plugin.quote.cardName": "Daily Quote",
     "plugin.focus-timer.name": "Focus Timer",
-    "plugin.focus-timer.desc": "Pomodoro upgrade: custom duration + multi-segment intervals + progress ring",
+    "plugin.focus-timer.desc": "Focus task scenario (timer lives in Toolbox → Pomodoro, fixed 25/5 min)",
     "plugin.focus-timer.scenarioName": "Focus Timer",
     "plugin.mindmap.name": "Mind Map",
     "plugin.mindmap.desc": "Visual thinking organization (node editing / linking / export live in Toolbox → Mind Map)",
     "plugin.mindmap.cardName": "Mind Map",
-    "plugin.pomodoro.desc": "25min focus + 5min break deep work method scenario",
+    "plugin.pomodoro.desc": "25min focus + 5min break deep-work task scenario (timer in Toolbox → Pomodoro)",
     "plugin.pomodoro.scenarioDesc": "Dedicated Focus Method",
     "plugin.reading.scenarioDesc": "Reading Management",
     "plugin.habit-tracker.scenarioDesc": "Daily check-in · Streak tracking · Trend charts",
@@ -13179,7 +13182,7 @@ const MESSAGES = {
     "plugin.budget.hint": "Source: Life scenario bills/shopping ledger + toolbox records (v3.1.2: plugin card connects real data)",
     "plugin.weather.title": "Weather",
     "plugin.weather.loading": "Loading...",
-    "plugin.weather.sync": "Click to sync",
+    "plugin.weather.where": "See Toolbox → Weather for details",
     "plugin.quote.title": "Daily Quote",
     "plugin.quote.q1": "The best time to plant a tree was ten years ago, the second best is now.",
     "plugin.quote.q2": "A journey of a thousand miles begins with a single step.",
@@ -23266,6 +23269,10 @@ function _pfLoop(ts){
   _pointerFx.raf = requestAnimationFrame(_pfLoop);
 }
 function _enablePointerFx(){
+  /* v3.7.71 守卫：类型切换路径（sel.onchange）会在 enabled 状态下再调本函数，
+     旧版无守卫 → resize/mousemove/touchmove 三连重复叠加（监听数随切换次数线性涨）。
+     监听回调读的是 _pointerFx.type，换类型无需重绑；粒子清空由调用方负责。 */
+  if(_pointerFx.enabled) return;
   const cv = $("#pointerFxCanvas"); if(!cv) return;
   _pointerFx.canvas = cv;
   _pointerFx.ctx = cv.getContext("2d");
@@ -24921,7 +24928,7 @@ function _onboardBindStep(step){
       setTasks(tasks);
       completeTask(_task.id);
       toast(t("onboard.simTriggered", "已模拟触发：交付完成 → 自动生成学习充电任务"), "ok");
-      /** @type {HTMLButtonElement} */(trigger).disabled = true; trigger.textContent = "已触发";
+      /** @type {HTMLButtonElement} */(trigger).disabled = true; trigger.textContent = t("onboard.simTriggeredDone", "已触发");
     };
     const next = document.getElementById("onboardNext");
     if(next) next.onclick = ()=>{ close(); _onboardRenderStep(3); };
@@ -31731,7 +31738,11 @@ async function confirmAgentPlan(){
   const p = pendingAgentPlan;
   if(!p || p.sc !== active){ pendingAgentPlan = null; return false; }
   pendingAgentPlan = null;
-  const hist = getChat(active);
+  /* v3.7.71 竞态修复：长执行期间用户可能切场景 → active 已变。
+     键名必须用**入口时定格**的 p.sc（入口已校验 p.sc===active），否则会把
+     A 场景的聊天整段写进 B 场景的键。读、写、trim 三处统一用 sc。 */
+  const sc = p.sc;
+  const hist = getChat(sc);
   hist.push({ role:"user", content: t("common.confirm","确认") });
   chatController = createChatController();
   showChatThinking(true);
@@ -31756,7 +31767,7 @@ async function confirmAgentPlan(){
     if(chatController && chatController.timer) clearTimeout(chatController.timer);
     chatController = null;
     trimChatHist(hist);
-    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+    save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
   }
   return true;
 }
@@ -38785,7 +38796,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
  * ------------------------------------------------------------
  * fetch 封装 + JWT token 管理 + 自动刷新 + 错误处理 + 离线降级
  * 设计要点：
- *  - API_BASE 从 cfg.apiBase 或默认 http://localhost:3001（与 server/src/index.js 默认端口一致）
+ *  - apiBase() 动态读 cfg.apiBase 或默认 http://localhost:3001（与 server/src/index.js 默认端口一致）
  *  - accessToken/refreshToken 存 localStorage（wb_access_token 等）
  *  - 存储加密（v3.7.62）：access/refresh 落盘为设备密钥密文 {__enc,iv,data}；旧明文读时兼容、
  *    启动后透明升级为密文。WebCrypto/设备密钥不可用或密文解不开时**保留密文不销毁**
@@ -38800,10 +38811,12 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
 (function apiClientModule(){
   "use strict";
 
-  // API 基址：优先 cfg.apiBase，回退默认
-  let _apiBase = "http://localhost:3001";
-  try { if (typeof getCfg === "function") { const _c = getCfg(); if (_c && _c.apiBase) _apiBase = _c.apiBase; } } catch(e) { /* getCfg 不可用时用默认 */ }
-  const API_BASE = _apiBase;
+  // API 基址：优先 cfg.apiBase，回退默认。
+  // v3.7.71：改为每次调用时动态读取 —— 旧版在模块加载时定格，设置里改 apiBase 不刷新页面不生效。
+  function apiBase(){
+    try { if (typeof getCfg === "function") { const _c = getCfg(); if (_c && _c.apiBase) return _c.apiBase; } } catch(e) { /* getCfg 不可用时用默认 */ }
+    return "http://localhost:3001";
+  }
 
   // token 存储键（任务要求 wb_ 前缀，不带 wb_agent_ 前缀）
   const API_TOKEN_KEY = "wb_access_token";
@@ -38969,31 +38982,40 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   }
 
   // 用 refreshToken 换新 accessToken；成功返回 true，失败返回 false
+  // v3.7.71：并发刷新改为**共享在途 Promise** —— 旧版用 _refreshing 布尔，
+  // 第二个并发 401 直接拿 false 放弃（请求白白失败）；现在后来者等待并复用同一结果。
+  let _refreshPromise = null;
   async function apiRefreshAccessToken(){
     await _whenTokensHydrated(); // v3.7.62：密文未解密时 _refreshToken 暂为 null，先等水合再判
     if(!_refreshToken) return false;
-    if(_refreshing) return false; // 防止并发刷新
-    _refreshing = true;
-    try{
-      const resp = await fetch(API_BASE + "/api/auth/refresh", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: _refreshToken }),
-      });
-      if(!resp.ok){ return false; }
-      const data = await resp.json();
-      if(data && data.accessToken){
-        _accessToken = data.accessToken;
-        // accessToken 默认 15 分钟过期（后端 JWT 默认）
-        _tokenExpiry = Date.now() + 15 * 60 * 1000;
-        _persistTokens();
-        return true;
+    if(_refreshPromise) return _refreshPromise;
+    _refreshPromise = (async () => {
+      try{
+        const resp = await fetch(apiBase() + "/api/auth/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: _refreshToken }),
+        });
+        if(!resp.ok){ return false; }
+        const data = await resp.json();
+        if(data && data.accessToken){
+          _accessToken = data.accessToken;
+          // 优先服务端给的 expiresIn（秒）；缺省回退 15 分钟（后端 JWT 默认）。
+          // v3.7.71：旧版写死 15 分钟、忽略服务端值 —— 后端改签发时长后客户端会提前/滞后误判。
+          const ttlMs = (data.expiresIn && data.expiresIn > 0) ? data.expiresIn * 1000 : 15 * 60 * 1000;
+          _tokenExpiry = Date.now() + ttlMs;
+          _persistTokens();
+          return true;
+        }
+        return false;
+      }catch(e){
+        return false;
       }
-      return false;
-    }catch(e){
-      return false;
+    })();
+    try{
+      return await _refreshPromise;
     }finally{
-      _refreshing = false;
+      _refreshPromise = null;
     }
   }
 
@@ -39002,7 +39024,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   async function apiFetch(path, options){
     await _whenTokensHydrated(); // v3.7.62：水合完成前不带鉴权头发包（密文解密在途时 Authorization 尚不可得）
     const opts = options || {};
-    const url = path.startsWith("http") ? path : API_BASE + path;
+    const url = path.startsWith("http") ? path : apiBase() + path;
     const doFetch = async (withAuth) => {
       const headers = apiGetHeaders(opts.headers);
       if(!withAuth) delete headers["Authorization"];
@@ -39178,19 +39200,25 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   }
 
   async function apiConnectNotion(code){
-    return apiFetch("/api/integrations/oauth/notion/callback", {
+    // v3.7.71：code 此前收下即弃，后端回调端点没有它无法完成 OAuth 交换（空转）。
+    if(!code) return { ok:false, data:null, status:0 };
+    return apiFetch("/api/integrations/oauth/notion/callback?code=" + encodeURIComponent(code), {
       method: "GET",
     });
   }
 
   async function apiConnectTodoist(code){
-    return apiFetch("/api/integrations/oauth/todoist/callback", {
+    // v3.7.71：code 此前收下即弃，后端回调端点没有它无法完成 OAuth 交换（空转）。
+    if(!code) return { ok:false, data:null, status:0 };
+    return apiFetch("/api/integrations/oauth/todoist/callback?code=" + encodeURIComponent(code), {
       method: "GET",
     });
   }
 
   async function apiConnectGCalendar(code){
-    return apiFetch("/api/integrations/oauth/google/callback", {
+    // v3.7.71：code 此前收下即弃，后端回调端点没有它无法完成 OAuth 交换（空转）。
+    if(!code) return { ok:false, data:null, status:0 };
+    return apiFetch("/api/integrations/oauth/google/callback?code=" + encodeURIComponent(code), {
       method: "GET",
     });
   }
@@ -39359,7 +39387,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
   window.apiHealthCheck = apiHealthCheck;
   window.getApiUser = getApiUser;
   window.initApiClient = initApiClient;
-  window.API_BASE = API_BASE;
+  window.API_BASE = apiBase();
   // 修复：认证页（IIFE 外部的 _doAuthLogin/_doAuthRegister）登录成功后需刷新用户按钮与账号面板，
   // 这两个函数此前只导出到 window.__test（仅测试门控下存在），顶层调用恒抛 ReferenceError 且被
   // try/catch 静默吞掉 → 登录后账号面板不刷新。补齐正式 window 导出。
@@ -39381,7 +39409,7 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
       scheduleSync, doSync, apiHealthCheck, getApiUser, initApiClient, apiGetHeaders,
       /* v3.7.62：token 水合/落盘是异步的，测试用这两个取出在途 Promise 以确定性等待 */
       _whenTokensHydrated, _whenTokensPersisted: () => _persistChain,
-      get API_BASE(){ return API_BASE; },
+      get API_BASE(){ return apiBase(); },
     });
   }
 
@@ -40081,9 +40109,11 @@ const BUILTIN_PLUGINS = [
       type: "weather-widget",
       name: t("plugin.weather.cardName", "天气卡片"),
       render: function(data){
+        /* v3.7.71 文案诚实化：旧兜底「点击同步」无任何事件处理（卡片不绑事件），
+           且本卡无数据供给链 —— 真天气在工具箱「天气」（openWeatherModal）。 */
         return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.weather.title", "天气") + '</div>'
           + '<div class="plugin-body">\u2600 FE ' + (data&&data.temp ? data.temp+'\u00B0C' : t("plugin.weather.loading", "获取中..."))
-          + '<br><span class="u-fs-2xs u-text-muted">'+(data&&data.desc||t("plugin.weather.sync", "点击同步"))+'</span></div></div>';
+          + '<br><span class="u-fs-2xs u-text-muted">'+(data&&data.desc||t("plugin.weather.where", "详细天气见工具箱「天气」"))+'</span></div></div>';
       }
     }]
   },
