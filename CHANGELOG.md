@@ -20,6 +20,13 @@
 
 `docs/product-scope.md` 里以下七处此前仍是"Slack 未接线"的旧口径，本轮逐条改到位：§三 表头「现剩五个」→ 四个、凭据验证举例里的 `slack.com/api/auth.test` 标注为已退役、废弃名单 24 → 21 与其守护描述「已删 6 个」→ 9 个、IPC 白名单「三家」→ 四家、历史回扫「两条」→ 三条、文案诚实度分组「未接线 5 / 已接线 2」→ 4 / 3、测试计数 22 → 26 与 13 → 14、以及「剩余待决」名单与「未决：仍走密封写盘」名单里都把 Slack 摘出去。**同一轮 CORS 矩阵还量出**：Notion / Linear 全形态浏览器直连可达（具备接线条件）、Jira 仅主进程可达（需中转 + 动态白名单，SSRF 面单独设计）、Google 日历本机网络不可达无法实测 —— 待定从五个变四个，逐条写进 §三。
 
+### 发版后线上复核（v3.7.69 · 逐字节对上）
+
+- **CI run 36800496421** 与 **Deploy run 36800496413** 全 job success（`e2e` + `test (ubuntu-latest)` + `test (windows-latest)` / `verify` + `e2e` + `deploy`）。
+- 线上 `agent-workbench.html` = **3,571,810 B · sha256:ca6567f6a1fdaebef6f55a4148a029d027ad53fd01dfcd1d9d5bb101e83b36f5**，与干净导出树（`git archive a681a1e` → 树内 inject → `build.mjs --prod`）的产物 **`Buffer.compare === 0` 逐字节相同**；`VERSION="3.7.69"`、`BUILD_TAG="20261001a"`、`var __TEST_GATE__ = false`；Slack 通道分支 `kind === "slack"` 命中 4，v3.7.68 的移动端弹性列守护内容仍在（`.onboard-step{margin-top:auto}` 命中 1）。
+- 线上 `service-worker.js` 的 `CACHE_VERSION = "v3.7.69-20261001012553"`（deploy 构建时叠 UTC 时间戳，**只用于确认用户吃到新版而非旧缓存**，不作跨构建指纹）。
+- 本机门禁（同一棵干净导出树、以该树为 cwd）：全量 **109 文件 / 1241 例**、`e2e` **74/74（3.2m）**、`lint` 四道 + `lint:layers` + `check:pwa-icons` + `pet:check` 全绿。
+
 ### 已知取舍
 
 - Slack 与钉钉一样是**桌面版专属**：浏览器与线上站点形态下这条渠道恒禁用，面板如实说明原因，不做"看起来能连"的降级。
