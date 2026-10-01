@@ -314,7 +314,11 @@ async function confirmAgentPlan(){
   const p = pendingAgentPlan;
   if(!p || p.sc !== active){ pendingAgentPlan = null; return false; }
   pendingAgentPlan = null;
-  const hist = getChat(active);
+  /* v3.7.71 竞态修复：长执行期间用户可能切场景 → active 已变。
+     键名必须用**入口时定格**的 p.sc（入口已校验 p.sc===active），否则会把
+     A 场景的聊天整段写进 B 场景的键。读、写、trim 三处统一用 sc。 */
+  const sc = p.sc;
+  const hist = getChat(sc);
   hist.push({ role:"user", content: t("common.confirm","确认") });
   chatController = createChatController();
   showChatThinking(true);
@@ -339,7 +343,7 @@ async function confirmAgentPlan(){
     if(chatController && chatController.timer) clearTimeout(chatController.timer);
     chatController = null;
     trimChatHist(hist);
-    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+    save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
   }
   return true;
 }

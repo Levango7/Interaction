@@ -4,7 +4,7 @@
  * ------------------------------------------------------------
  * fetch 封装 + JWT token 管理 + 自动刷新 + 错误处理 + 离线降级
  * 设计要点：
- *  - API_BASE 从 cfg.apiBase 或默认 http://localhost:3001（与 server/src/index.js 默认端口一致）
+ *  - apiBase() 动态读 cfg.apiBase 或默认 http://localhost:3001（与 server/src/index.js 默认端口一致）
  *  - accessToken/refreshToken 存 localStorage（wb_access_token 等）
  *  - 存储加密（v3.7.62）：access/refresh 落盘为设备密钥密文 {__enc,iv,data}；旧明文读时兼容、
  *    启动后透明升级为密文。WebCrypto/设备密钥不可用或密文解不开时**保留密文不销毁**
@@ -19,10 +19,12 @@
 (function apiClientModule(){
   "use strict";
 
-  // API 基址：优先 cfg.apiBase，回退默认
-  let _apiBase = "http://localhost:3001";
-  try { if (typeof getCfg === "function") { const _c = getCfg(); if (_c && _c.apiBase) _apiBase = _c.apiBase; } } catch(e) { /* getCfg 不可用时用默认 */ }
-  const API_BASE = _apiBase;
+  // API 基址：优先 cfg.apiBase，回退默认。
+  // v3.7.71：改为每次调用时动态读取 —— 旧版在模块加载时定格，设置里改 apiBase 不刷新页面不生效。
+  function apiBase(){
+    try { if (typeof getCfg === "function") { const _c = getCfg(); if (_c && _c.apiBase) return _c.apiBase; } } catch(e) { /* getCfg 不可用时用默认 */ }
+    return "http://localhost:3001";
+  }
 
   // token 存储键（任务要求 wb_ 前缀，不带 wb_agent_ 前缀）
   const API_TOKEN_KEY = "wb_access_token";
@@ -188,31 +190,40 @@
   }
 
   // 用 refreshToken 换新 accessToken；成功返回 true，失败返回 false
+  // v3.7.71：并发刷新改为**共享在途 Promise** —— 旧版用 _refreshing 布尔，
+  // 第二个并发 401 直接拿 false 放弃（请求白白失败）；现在后来者等待并复用同一结果。
+  let _refreshPromise = null;
   async function apiRefreshAccessToken(){
     await _whenTokensHydrated(); // v3.7.62：密文未解密时 _refreshToken 暂为 null，先等水合再判
     if(!_refreshToken) return false;
-    if(_refreshing) return false; // 防止并发刷新
-    _refreshing = true;
-    try{
-      const resp = await fetch(API_BASE + "/api/auth/refresh", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: _refreshToken }),
-      });
-      if(!resp.ok){ return false; }
-      const data = await resp.json();
-      if(data && data.accessToken){
-        _accessToken = data.accessToken;
-        // accessToken 默认 15 分钟过期（后端 JWT 默认）
-        _tokenExpiry = Date.now() + 15 * 60 * 1000;
-        _persistTokens();
-        return true;
+    if(_refreshPromise) return _refreshPromise;
+    _refreshPromise = (async () => {
+      try{
+        const resp = await fetch(apiBase() + "/api/auth/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: _refreshToken }),
+        });
+        if(!resp.ok){ return false; }
+        const data = await resp.json();
+        if(data && data.accessToken){
+          _accessToken = data.accessToken;
+          // 优先服务端给的 expiresIn（秒）；缺省回退 15 分钟（后端 JWT 默认）。
+          // v3.7.71：旧版写死 15 分钟、忽略服务端值 —— 后端改签发时长后客户端会提前/滞后误判。
+          const ttlMs = (data.expiresIn && data.expiresIn > 0) ? data.expiresIn * 1000 : 15 * 60 * 1000;
+          _tokenExpiry = Date.now() + ttlMs;
+          _persistTokens();
+          return true;
+        }
+        return false;
+      }catch(e){
+        return false;
       }
-      return false;
-    }catch(e){
-      return false;
+    })();
+    try{
+      return await _refreshPromise;
     }finally{
-      _refreshing = false;
+      _refreshPromise = null;
     }
   }
 
@@ -221,7 +232,7 @@
   async function apiFetch(path, options){
     await _whenTokensHydrated(); // v3.7.62：水合完成前不带鉴权头发包（密文解密在途时 Authorization 尚不可得）
     const opts = options || {};
-    const url = path.startsWith("http") ? path : API_BASE + path;
+    const url = path.startsWith("http") ? path : apiBase() + path;
     const doFetch = async (withAuth) => {
       const headers = apiGetHeaders(opts.headers);
       if(!withAuth) delete headers["Authorization"];
@@ -397,19 +408,25 @@
   }
 
   async function apiConnectNotion(code){
-    return apiFetch("/api/integrations/oauth/notion/callback", {
+    // v3.7.71：code 此前收下即弃，后端回调端点没有它无法完成 OAuth 交换（空转）。
+    if(!code) return { ok:false, data:null, status:0 };
+    return apiFetch("/api/integrations/oauth/notion/callback?code=" + encodeURIComponent(code), {
       method: "GET",
     });
   }
 
   async function apiConnectTodoist(code){
-    return apiFetch("/api/integrations/oauth/todoist/callback", {
+    // v3.7.71：code 此前收下即弃，后端回调端点没有它无法完成 OAuth 交换（空转）。
+    if(!code) return { ok:false, data:null, status:0 };
+    return apiFetch("/api/integrations/oauth/todoist/callback?code=" + encodeURIComponent(code), {
       method: "GET",
     });
   }
 
   async function apiConnectGCalendar(code){
-    return apiFetch("/api/integrations/oauth/google/callback", {
+    // v3.7.71：code 此前收下即弃，后端回调端点没有它无法完成 OAuth 交换（空转）。
+    if(!code) return { ok:false, data:null, status:0 };
+    return apiFetch("/api/integrations/oauth/google/callback?code=" + encodeURIComponent(code), {
       method: "GET",
     });
   }
@@ -578,7 +595,7 @@
   window.apiHealthCheck = apiHealthCheck;
   window.getApiUser = getApiUser;
   window.initApiClient = initApiClient;
-  window.API_BASE = API_BASE;
+  window.API_BASE = apiBase();
   // 修复：认证页（IIFE 外部的 _doAuthLogin/_doAuthRegister）登录成功后需刷新用户按钮与账号面板，
   // 这两个函数此前只导出到 window.__test（仅测试门控下存在），顶层调用恒抛 ReferenceError 且被
   // try/catch 静默吞掉 → 登录后账号面板不刷新。补齐正式 window 导出。
@@ -600,7 +617,7 @@
       scheduleSync, doSync, apiHealthCheck, getApiUser, initApiClient, apiGetHeaders,
       /* v3.7.62：token 水合/落盘是异步的，测试用这两个取出在途 Promise 以确定性等待 */
       _whenTokensHydrated, _whenTokensPersisted: () => _persistChain,
-      get API_BASE(){ return API_BASE; },
+      get API_BASE(){ return apiBase(); },
     });
   }
 

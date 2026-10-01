@@ -3115,6 +3115,10 @@ function _pfLoop(ts){
   _pointerFx.raf = requestAnimationFrame(_pfLoop);
 }
 function _enablePointerFx(){
+  /* v3.7.71 守卫：类型切换路径（sel.onchange）会在 enabled 状态下再调本函数，
+     旧版无守卫 → resize/mousemove/touchmove 三连重复叠加（监听数随切换次数线性涨）。
+     监听回调读的是 _pointerFx.type，换类型无需重绑；粒子清空由调用方负责。 */
+  if(_pointerFx.enabled) return;
   const cv = $("#pointerFxCanvas"); if(!cv) return;
   _pointerFx.canvas = cv;
   _pointerFx.ctx = cv.getContext("2d");

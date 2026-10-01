@@ -1,3 +1,32 @@
+## [v3.7.71] - 2026-10-02
+
+**深评修复版：修掉一批「会咬人的静默问题」（竞态 / 泄漏 / 空转），并把四处与产品纪律相悖的虚假承诺文案诚实化。** 全量门禁 + CI 三 job 全绿。⚠️ 本版同时**代为收口了另一条会话遗留 11 项的在途工作**（v3.7.70 的 Notion/Linear 推送，commit `dcec2bd` 已并入，见该条台账）——两批工作的边界在那条 commit message 里有如实划分。
+
+### 竞态与泄漏（本轮扫描的新角度，此前从未查过）
+
+- **`confirmAgentPlan` 跨场景聊天串写**（`src/ai-retry.js`）：函数入口校验过 `p.sc === active`，但长执行期间用户切场景后 `active` 已变，`finally` 里 `save(PREFIX+"chat_"+active, hist)` 会把 A 场景的整段聊天写进 B 场景的键。修法：键名用**入口时定格**的 `p.sc`，读/写/trim 三处统一。
+- **指针特效监听叠加**（`src/render-widgets.js` `_enablePointerFx`）：类型切换路径会在 enabled 状态下重复调用 → resize/mousemove/touchmove 三连重复绑定，监听数随切换次数线性涨。加 `enabled` 守卫（回调读的是 `_pointerFx.type`，换类型无需重绑）。
+- **复核后不修的一条**：`_wfCheckDue`（60s）曾被扫出为「已归档功能残活」，复核确认它是 **v3.5 的 AI 定时工作流活功能**（有真实 UI 入口与删除按钮），与已归档的旧规则引擎是两套东西 —— flows 为空时 forEach 即 no-op，保持原样。**agent 的扫描结论必须人工复核再动手**，这条是反例。
+
+### 云同步客户端加固（`src/ui-ge-api.js`）
+
+- **并发刷新排队**：`_refreshing` 布尔 → 共享在途 Promise。旧版第二个并发 401 直接拿 `false` 放弃（请求白白失败）；现在后来者等待并复用同一刷新结果。
+- **`expiresIn` 服务端优先**：旧版写死 15 分钟、忽略服务端签发时长 —— 后端调整后客户端会提前/滞后误判过期。
+- **`API_BASE` 动态读取**：旧版模块加载时定格，设置里改 `apiBase` 不刷新页面不生效。改 `apiBase()` 函数，`window.API_BASE` 测试导出走 getter 保持兼容。
+- **OAuth code 空转修复**：`apiConnectNotion/Todoist/GCalendar(code)` 此前**收下 code 即弃**，回调 URL 不带它 —— 后端没有 code 无法完成 OAuth 交换，连接按钮等于白点。改为 `?code=` 随 query 传递，code 缺失时直接短路返回失败。
+
+### 文案诚实化（product-scope §四.4「文案承诺不得超出实际接线」）
+
+- **habit-tracker 插件**：desc 承诺的「可视化图表」不存在、连续天数统计在核心「习惯链」—— desc/scenarioDesc 改为如实指向（中英）。
+- **focus-timer 插件**：承诺「自定义时长 + 多段间隔 + 进度圆环」全不存在（计时器在工具箱番茄钟、固定 25/5）—— 改为如实指向（中英）。
+- **pomodoro 插件**：场景真实，desc 补计时器位置指引（中英）。
+- **天气插件卡**：兜底文案「点击同步」无任何事件处理（卡片不绑事件、也无数据供给链）→ 改「详细天气见工具箱『天气』」，`plugin.weather.sync` 词条更名为 `plugin.weather.where`。
+- **onboarding**：`trigger.textContent = "已触发"` 硬编码中文入 i18n（新增 `onboard.simTriggeredDone` 中英词条）。
+
+### 路线项（本版不动，记账防丢）
+
+按产品定位「个人任务工坊、AI 真正动手」排序：① `executeAgentPlan` 加执行反馈回路（每步结果回喂模型，失败重试/重规划 —— 基础设施全在，是与"真 agent"最本质的差距）；② RAG 支持用户导入文档 + 按段落切块（现在只索引应用内四类数据且整条入索引）；③ 让语义召回/RAG 默认可用（内置本地 embedding 或至少显式告知降级）。
+
 ## [v3.7.69] - 2026-10-01
 
 **Slack 通道改型：从「验证 Bot Token」接成「群机器人 Incoming Webhook 真发通知」（仅桌面版）。** 七家 provider 里第三家接到底，与飞书 / 钉钉共用同一套会话内存 + 主进程代发基建。全量 **109 文件 / 1241 用例**（v3.7.68 为 1235；+6 = Slack 的通道行为与 IPC 白名单用例）、`e2e` **74/74（3.1m）**、`lint`（四道）、`src:check`、`check:source-state` 均本机实测。

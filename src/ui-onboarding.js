@@ -102,7 +102,7 @@ function _onboardBindStep(step){
       setTasks(tasks);
       completeTask(_task.id);
       toast(t("onboard.simTriggered", "已模拟触发：交付完成 → 自动生成学习充电任务"), "ok");
-      /** @type {HTMLButtonElement} */(trigger).disabled = true; trigger.textContent = "已触发";
+      /** @type {HTMLButtonElement} */(trigger).disabled = true; trigger.textContent = t("onboard.simTriggeredDone", "已触发");
     };
     const next = document.getElementById("onboardNext");
     if(next) next.onclick = ()=>{ close(); _onboardRenderStep(3); };

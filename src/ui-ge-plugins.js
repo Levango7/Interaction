@@ -154,9 +154,11 @@ const BUILTIN_PLUGINS = [
       type: "weather-widget",
       name: t("plugin.weather.cardName", "天气卡片"),
       render: function(data){
+        /* v3.7.71 文案诚实化：旧兜底「点击同步」无任何事件处理（卡片不绑事件），
+           且本卡无数据供给链 —— 真天气在工具箱「天气」（openWeatherModal）。 */
         return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.weather.title", "天气") + '</div>'
           + '<div class="plugin-body">\u2600 FE ' + (data&&data.temp ? data.temp+'\u00B0C' : t("plugin.weather.loading", "获取中..."))
-          + '<br><span class="u-fs-2xs u-text-muted">'+(data&&data.desc||t("plugin.weather.sync", "点击同步"))+'</span></div></div>';
+          + '<br><span class="u-fs-2xs u-text-muted">'+(data&&data.desc||t("plugin.weather.where", "详细天气见工具箱「天气」"))+'</span></div></div>';
       }
     }]
   },
