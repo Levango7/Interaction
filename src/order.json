@@ -27,7 +27,7 @@
   "name": "data-idb",
   "layer": "Data",
   "title": "数据层·IndexedDB 持久镜像",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "data-links",
@@ -165,7 +165,7 @@
   "name": "ui-global-events",
   "layer": "UI",
   "title": "交互层·全局事件绑定",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-ge-api",
@@ -183,7 +183,7 @@
   "name": "ui-ge-theme",
   "layer": "UI",
   "title": "交互层·全局事件绑定·主题/报表/AI 引擎",
-  "tailBlanks": 1
+  "tailBlanks": 0
  },
  {
   "name": "ui-ge-pomodoro",

@@ -2,7 +2,7 @@
  * 第 2 期 · 回归验证（v1.13 → v1.15 裁剪）
  * ① 多模态：v1.14 已移除（_visionContent 删除），保留 _chatContentToText 历史数组消息兼容
  * ② 画布：注入器接线后 aiReasoning 节点真调 chatOnce；CRUD+SVG 渲染
- * ④ 集成：状态薄封装、Notion 连接验证、pull 写回
+ * ④ 集成：状态薄封装、Notion 连接验证（pull 写回 v3.7.70 已随 pull 路径删除，见文件末尾注释）
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
@@ -12,7 +12,6 @@ function freshWin() {
   win.localStorage.clear();
   return win;
 }
-const BASE = { sc: "code", status: "todo", doneAt: null, priority: "P0", note: "", tags: [], created: Date.now(), due: "" };
 
 describe("第 2 期 · 多模态历史兼容（2b）", () => {
   let win;
@@ -51,14 +50,8 @@ describe("第 2 期 · 外部集成（2d）", () => {
     });
   });
 
-  it("_intNotionPullWriteback：按 synced 映射 pull 并合并写回任务", async () => {
-    win.__test.setTasks([{ id: "t1", ...BASE, title: "本地旧标题" }]);
-    win.localStorage.setItem("wb_integration_sync_state", JSON.stringify({
-      notion: { lastSyncAt: 1, syncedItems: { t1: { remoteId: "r1", type: "task", syncedAt: 1 } } },
-    }));
-    win.notionSyncTask = async (t, dir) => (dir === "pull" ? { success: true, action: "pulled", updatedTask: { title: "远程新标题" } } : { success: false });
-    const n = await win._intNotionPullWriteback();
-    expect(n).toBe(1);
-    expect(win.__test.getTasks().find((t) => t.id === "t1").title).toBe("远程新标题");
-  });
+  /* v3.7.70：原「_intNotionPullWriteback：按 synced 映射 pull 并合并写回任务」随 pull 路径一并删除 ——
+     该函数与其依赖的 notionSyncTask(pull) 分支都已移除（Notion 只接**任务单向推送**）。
+     推送这一侧的覆盖在 tests/notion-push.test.js（9 条，含逐条记账 / 部分失败如实报 / 幂等 PATCH / 面板接线），
+     比原来这条只测"合并写回"的用例更贴近真实消费点。 */
 });

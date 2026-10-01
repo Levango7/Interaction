@@ -1482,8 +1482,8 @@ const MESSAGES = {
     "tool.ps.brushModeOff": "已退出画笔模式",
     "tool.ps.resetDone": "已还原原图",
     "tool.ps.exported": "已导出 pslite.png",
-    "tool.imgGen.name": "AI 文生图",
-    "tool.imgGen.desc": "输入描述 → AI 生成图片",
+    "tool.imgGen.name": "AI 示意图",
+    "tool.imgGen.desc": "输入描述 → AI 生成 SVG 简笔示意图",
     "tool.imgGen.descLabel": "图片描述",
     "tool.imgGen.descPlaceholder": "例如：一只橘猫坐在窗台上看雨，水彩风格",
     "tool.imgGen.size": "尺寸",
@@ -2385,7 +2385,7 @@ const MESSAGES = {
     "int.googleCal": "Google 日历",
     "int.jiraDesc": "验证 Jira API Token（任务同步尚未接入）",
     "int.jiraDomain": "站点域名",
-    "int.linearDesc": "验证 Linear API Key（任务同步尚未接入）",
+    "int.linearDesc": "验证 Linear API Key（已连接后可把未完成任务单向推送为 issue；状态映射与反向拉取尚未接入）",
     "int.linearTeamIdPh": "可选，用于 issue 同步",
     "int.sessionOn": "本会话已配置",
     "int.desktopOnly": "仅桌面版可用",
@@ -2395,7 +2395,7 @@ const MESSAGES = {
     "int.signSecret": "加签密钥（机器人未开加签就留空）",
     "int.notionDbId": "任务数据库 ID",
     "int.notionDbIdPh": "可选，用于任务同步",
-    "int.notionDesc": "验证 Notion Integration Token（笔记 / 任务同步尚未接入）",
+    "int.notionDesc": "验证 Notion Integration Token（已连接后可把未完成任务单向推送过去；笔记推送与反向拉取尚未接入）",
     "int.notionNotesDbId": "笔记数据库 ID",
     "int.notionNotesDbIdPh": "可选，用于笔记同步",
     "int.oauthAuth": "OAuth 授权",
@@ -2430,6 +2430,7 @@ const MESSAGES = {
     "p4.html.intCredentialHint": "<p class=\"sub u-m-0-0-2\">凭据仅存储于本机（随应用数据加密持久化），不上传任何服务器</p>",
     "p4.html.intEphemeralHint": "<p class=\"sub u-m-0-0-2 u-text-warn\">⚠ 只保存在本次会话内存里：不写入本地存储、不进备份与云同步，<b>刷新或关闭页面即失效</b>，需要重新粘贴。</p>",
     "p4.html.intDiscBtn": "\">断开</button>",
+    "p4.html.intPushBtn": "\">推送任务</button>",
     "p4.html.intGoBtn": "<button type=\"button\" class=\"addbtn sm btn-primary\" id=\"btnIntCfgGo\">连接</button>",
     "p4.html.intNoApiKey": "<p class=\"hint\">暂无 API Key</p>",
     "p4.html.intOAuthBtn": "<button type=\"button\" class=\"addbtn sm\" id=\"btnIntCfgOAuth\" class=\"u-mt2-sc-accent\">OAuth 授权</button>",
@@ -2823,6 +2824,13 @@ const MESSAGES = {
     "theme.pasteJsonFirst": "请先粘贴主题 JSON",
     "theme.imported": "已导入主题「{id}」",
     "integration.disconnectFail": "断开异常：{err}",
+    "integration.pushUnsupported": "该集成暂不支持推送",
+    "integration.pushNoTasks": "没有未完成的任务可推送",
+    "integration.pushConfirm": "把 {n} 条未完成任务推送到 {name}？只推不拉，不会改动本地数据。",
+    "integration.pushing": "推送中…",
+    "integration.pushOk": "已推送到 {name}：新建 {c} 条、更新 {u} 条",
+    "integration.pushFail": "推送到 {name} 失败：{n} 条未成功（{why}）",
+    "integration.pushUnknown": "未知原因",
     "integration.createFail": "创建失败：{err}",
     // 任务245：BUILTIN_PLUGINS name/description 硬编码中文 i18n
     "plugin.pomodoro.name": "笃行专注法",
@@ -2852,7 +2860,7 @@ const MESSAGES = {
     "plugin.focus-timer.desc": "番茄钟升级版：自定义时长 + 多段间隔 + 进度圆环",
     "plugin.focus-timer.scenarioName": "专注时钟",
     "plugin.mindmap.name": "思维导图",
-    "plugin.mindmap.desc": "可视化思维梳理，支持节点增删、连线、导出",
+    "plugin.mindmap.desc": "可视化思维梳理（节点增删 / 连线 / 导出在「工具箱 → 思维导图」中）",
     "plugin.mindmap.cardName": "思维导图",
     // BUILTIN_PLUGINS 剩余中文 i18n（description/scenarios[].desc/render 文案）
     "plugin.pomodoro.desc": "25分钟专注+5分钟休息的深度工作法场景",
@@ -2878,7 +2886,7 @@ const MESSAGES = {
     "plugin.quote.q7": "简单是终极的复杂。",
     "plugin.quote.q8": "保持饥饿，保持愚蠢。",
     "plugin.mindmap.title": "思维导图",
-    "plugin.mindmap.hint": "拖拽节点、创建关系，梳理你的想法",
+    "plugin.mindmap.hint": "完整编辑（增删节点 / 连线 / 导出）请到「工具箱 → 思维导图」",
     // v3.4.6 第三批 i18n：单引号形态 t('key','fallback') 的 15 个 key（提取器首轮只匹配双引号漏掉）
 
     // v3.4.6 第二批 i18n（调用面 vs 字典交叉审计补齐）——222 个 t() 调用 key 一直不在字典，
@@ -5170,8 +5178,8 @@ const MESSAGES = {
     "tool.ps.brushModeOff": "Exited brush mode",
     "tool.ps.resetDone": "Reset to original",
     "tool.ps.exported": "Exported pslite.png",
-    "tool.imgGen.name": "AI Text-to-Image",
-    "tool.imgGen.desc": "Enter description → AI generates image",
+    "tool.imgGen.name": "AI Diagram",
+    "tool.imgGen.desc": "Enter description → AI generates a simple SVG sketch",
     "tool.imgGen.descLabel": "Image Description",
     "tool.imgGen.descPlaceholder": "e.g. an orange cat on a windowsill watching rain, watercolor style",
     "tool.imgGen.size": "Size",
@@ -6072,7 +6080,7 @@ const MESSAGES = {
     "int.googleCal": "Google Calendar",
     "int.jiraDesc": "Verify Jira API token (task sync not implemented)",
     "int.jiraDomain": "Site domain",
-    "int.linearDesc": "Verify Linear API key (task sync not implemented)",
+    "int.linearDesc": "Verify Linear API key (once connected, open tasks can be pushed one-way as issues; status mapping and pull are not implemented)",
     "int.linearTeamIdPh": "Optional, for issue sync",
     "int.sessionOn": "Configured for this session",
     "int.desktopOnly": "Desktop app only",
@@ -6082,7 +6090,7 @@ const MESSAGES = {
     "int.signSecret": "Signing secret (leave empty if the robot has no signature requirement)",
     "int.notionDbId": "Task database ID",
     "int.notionDbIdPh": "Optional, for task sync",
-    "int.notionDesc": "Verify Notion integration token (note / task sync not implemented)",
+    "int.notionDesc": "Verify Notion integration token (once connected, open tasks can be pushed one-way; note push and pull are not implemented)",
     "int.notionNotesDbId": "Notes database ID",
     "int.notionNotesDbIdPh": "Optional, for notes sync",
     "int.oauthAuth": "OAuth Authorize",
@@ -6117,6 +6125,7 @@ const MESSAGES = {
     "p4.html.intCredentialHint": "<p class=\"sub u-m-0-0-2\">Credentials stay on this device (encrypted with your app data) and are never uploaded to any server</p>",
     "p4.html.intEphemeralHint": "<p class=\"sub u-m-0-0-2 u-text-warn\">⚠ Kept in this session's memory only: never written to local storage, backups or cloud sync. <b>It is lost as soon as you reload or close the page</b> and must be pasted again.</p>",
     "p4.html.intDiscBtn": "\">Disconnect</button>",
+    "p4.html.intPushBtn": "\">Push tasks</button>",
     "p4.html.intGoBtn": "<button type=\"button\" class=\"addbtn sm btn-primary\" id=\"btnIntCfgGo\">Connect</button>",
     "p4.html.intNoApiKey": "<p class=\"hint\">No API keys yet</p>",
     "p4.html.intOAuthBtn": "<button type=\"button\" class=\"addbtn sm\" id=\"btnIntCfgOAuth\" class=\"u-mt2-sc-accent\">OAuth authorization</button>",
@@ -6532,6 +6541,13 @@ const MESSAGES = {
     "theme.pasteJsonFirst": "Please paste theme JSON first",
     "theme.imported": "Imported theme \"{id}\"",
     "integration.disconnectFail": "Disconnect error: {err}",
+    "integration.pushUnsupported": "This integration does not support push yet",
+    "integration.pushNoTasks": "No open tasks to push",
+    "integration.pushConfirm": "Push {n} open task(s) to {name}? Push only — local data is not modified.",
+    "integration.pushing": "Pushing…",
+    "integration.pushOk": "Pushed to {name}: {c} created, {u} updated",
+    "integration.pushFail": "Push to {name} failed: {n} not pushed ({why})",
+    "integration.pushUnknown": "unknown reason",
     "integration.createFail": "Create failed: {err}",
     // Task 245: BUILTIN_PLUGINS name/description hardcoded Chinese i18n
     "plugin.pomodoro.name": "Dedicated Focus Method",
@@ -6561,7 +6577,7 @@ const MESSAGES = {
     "plugin.focus-timer.desc": "Pomodoro upgrade: custom duration + multi-segment intervals + progress ring",
     "plugin.focus-timer.scenarioName": "Focus Timer",
     "plugin.mindmap.name": "Mind Map",
-    "plugin.mindmap.desc": "Visual thinking organization, supports node add/delete, connection, export",
+    "plugin.mindmap.desc": "Visual thinking organization (node editing / linking / export live in Toolbox → Mind Map)",
     "plugin.mindmap.cardName": "Mind Map",
     "plugin.pomodoro.desc": "25min focus + 5min break deep work method scenario",
     "plugin.pomodoro.scenarioDesc": "Dedicated Focus Method",
@@ -6586,7 +6602,7 @@ const MESSAGES = {
     "plugin.quote.q7": "Simplicity is the ultimate sophistication.",
     "plugin.quote.q8": "Stay hungry, stay foolish.",
     "plugin.mindmap.title": "Mind Map",
-    "plugin.mindmap.hint": "Drag nodes, create relationships, organize your thoughts",
+    "plugin.mindmap.hint": "For full editing (add/delete nodes, linking, export) go to Toolbox → Mind Map",
     // v3.4.6 batch-3 i18n: 15 single-quote-form t('key','fallback') keys (extractor missed them in round 1)
 
     // v3.4.6 batch-2 i18n (call-site vs dict cross-audit): 222 t() keys missing from dict —
@@ -7760,7 +7776,8 @@ const SCENARIOS = {
       ] } }
 };
 
-/* v2.1.0：6 内置场景——新增 设计(design)/数据(data)；顺序即侧栏场景组显示序与滑动手势序 */
+/* v2.1.0：内置场景——新增 设计(design)/数据(data)；顺序即侧栏场景组显示序与滑动手势序。
+   v3.5.2 后为 7 个（补 health）；v3.7.70 修：此处旧写「6 内置场景」与下方数组长度不符。 */
 const ORDER = ["office","data","design","study","code","life","health"];
 
 /* v3.7.11：场景→特性绑定表（纯数据）。原先放在 render-scene-main（Render 层），

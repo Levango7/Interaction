@@ -25,25 +25,36 @@ const MARK = "@deprecated v3.7.60 应用内零调用方";
    留着只是死码。名单从 30 → 24。
    v3.7.69：Slack 改型「群机器人 Incoming Webhook」—— 3 个 Bot Token 模型旧函数
    （slackNotifyEvent / slackSendMessage / slackCreateTaskFromMessage）随之删除，名单 24 → 21。
-   slack/notion/linear/jira/calendar 剩余的仍按废弃冻结。DELETED 名单 = 9 个已删函数，
-   守护它们不回流（有人重新实现必须走"摘废弃 + 补真发用例"的正门）。 */
+   v3.7.70：Notion 接上**任务单向推送**消费点（面板「推送任务」→ notionPushTasks → notionSyncTask）
+   —— notionSyncTask 摘掉标记并补了真发请求的用例（本文件 §「仍然零调用」正是被它触发变红才发现的）。
+   同轮把 notionSyncTask 收窄成纯 push：pull 分支删除 ⇒ `_intNotionPullWriteback`（拉取回写辅助）
+   与 `_intNotionParsePage`（页面→本地任务的解析器）一并删除 —— 留着前者是陷阱（再被调用时会推而不是拉），
+   留后者是无人调用的尸体。名单 21 → 19，DELETED +2。
+   v3.7.70 续：Linear 也接上**任务单向推送**（同款消费点），linearSyncIssue 摘标记并补用例；
+   状态映射仍按"未接"处理（Linear 要 stateId 而非状态名，见该函数注释），linearMapStatus 继续冻结。名单 19 → 18。
+   slack/jira/calendar 剩余的仍按废弃冻结。DELETED 名单守护它们不回流
+   （有人重新实现必须走"摘废弃 + 补真发用例"的正门）。 */
 const DEPRECATED = `integrationListProviders integrationEnableProvider integrationDisableProvider integrationConfigureProvider
-integrationGetStatus notionSyncNote notionSyncTask notionListSynced linearSyncIssue linearListIssues linearMapStatus
+integrationGetStatus notionSyncNote notionListSynced linearListIssues linearMapStatus
 jiraSyncIssue jiraListIssues jiraMapStatus
 calendarSyncEvent calendarCreateEvent calendarListEvents calendarUpdateEvent
-calendarDeleteEvent _intNotionPullWriteback _intFindLocalId`.split(/\s+/).filter(Boolean);
+calendarDeleteEvent _intFindLocalId`.split(/\s+/).filter(Boolean);
 
-/* v3.7.66/68 两轮渠道定案后已整体删除的旧模型函数：不许回流 */
+/* 已整体删除的旧模型函数 / 死路径：不许回流 */
 const DELETED = `feishuSendMessage feishuNotifyEvent feishuCreateTaskFromMessage
 dingtalkSendMessage dingtalkNotifyEvent dingtalkCreateTaskFromMessage
-slackNotifyEvent slackSendMessage slackCreateTaskFromMessage`.split(/\s+/).filter(Boolean);
+slackNotifyEvent slackSendMessage slackCreateTaskFromMessage
+_intNotionPullWriteback _intNotionParsePage`.split(/\s+/).filter(Boolean);
 
-/* 真活着的：由 openIntegrationConfig / 断开按钮 拼接派发，绝不能标废弃 */
+/* 真活着的：由 openIntegrationConfig / 断开按钮 拼接派发，绝不能标废弃。
+   v3.7.70 起 Notion 的推送链（notionPushTasks ← 面板按钮）也是活的，一并纳入 ——
+   谁把它们标成废弃，这条会红。 */
 const LIVE = ["notionConnect", "linearConnect", "jiraConnect", "slackConnect", "feishuConnect",
   "dingtalkConnect", "calendarConnect", "notionDisconnect", "linearDisconnect", "jiraDisconnect",
   "slackDisconnect", "feishuDisconnect", "dingtalkDisconnect", "calendarDisconnect",
   "renderIntegrationPanel", "openIntegrationConfig", "integrationRegisterProvider",
-  "integrationGetProvider", "integrationRemoveProvider", "_intJiraBase"];
+  "integrationGetProvider", "integrationRemoveProvider", "_intJiraBase",
+  "notionSyncTask", "notionPushTasks", "linearSyncIssue", "linearPushTasks"];
 
 const srcFiles = fs.readdirSync(SRC_DIR).filter((f) => f.endsWith(".js"));
 const texts = new Map(srcFiles.map((f) => [f, fs.readFileSync(path.join(SRC_DIR, f), "utf8")]));
@@ -77,7 +88,7 @@ function refLines(file, name) {
 }
 
 describe("集成同步/通知层：废弃标记仍在（用户决定「先标记废弃，等渠道定好再动」）", () => {
-  it("21 个零调用函数逐个带 @deprecated 标记", () => {
+  it("18 个零调用函数逐个带 @deprecated 标记", () => {
     const lines = geText().split(/\r?\n/);
     const missing = DEPRECATED.filter((n) => {
       const def = lines.findIndex((l) => /^(?:async\s+)?function\s+/.test(l) && new RegExp("function\\s+" + n + "\\b").test(l));
@@ -126,7 +137,7 @@ describe("集成同步/通知层：仍然零调用（有人接上就该摘标记
       }
     }
   }
-  it("21 个函数没有任何「非废弃集内」的调用方", () => {
+  it("18 个函数没有任何「非废弃集内」的调用方", () => {
     expect(violations,
       "这些废弃函数出现了新的调用方 —— 说明渠道定了并接上了链路。\n" +
       "正确做法：摘掉对应 @deprecated、更新 docs/product-scope.md §三 与本文件的 DEPRECATED 名单、" +
@@ -140,13 +151,12 @@ describe("集成同步/通知层：仍然零调用（有人接上就该摘标记
         for (const r of refLines(f, name)) if (r.host && set.has(r.host)) internal.push(r.host + " → " + name);
       }
     }
-    expect(internal.sort()).toEqual([
-      "_intNotionPullWriteback → notionListSynced",
-      "_intNotionPullWriteback → notionSyncTask",
-    ].sort());
+    /* v3.7.70：原来仅有的两处内部边都挂在 _intNotionPullWriteback 上，它已随 pull 一并删除，
+       所以现在应当是**零内部互调** —— 再长出新的内部依赖就说明有人在废弃集里互相接线。 */
+    expect(internal.sort()).toEqual([]);
   });
 
-  it("已删的 9 个旧模型函数不回流（v3.7.66 飞书/钉钉 6 个 + v3.7.69 Slack 3 个）", () => {
+  it("已删的 11 个函数不回流（飞书/钉钉 6 个 + Slack 3 个 + Notion pull 路径 2 个）", () => {
     const lines = geText().split(/\r?\n/);
     const back = DELETED.filter((n) => lines.some((l) => new RegExp("function\\s+" + n + "\\b").test(l)));
     expect(back, "这些旧凭据模型的函数被重新实现了 —— 渠道改型已定案，回流必须走「摘废弃 + 补真发用例」的正门").toEqual([]);

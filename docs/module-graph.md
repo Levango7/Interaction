@@ -55,12 +55,12 @@
 | `render` | `render-entry` | 16 |
 | `ORDER` | `core` | 16 |
 | `getCfg` | `data-links` | 16 |
-| `getTasks` | `data-rw` | 14 |
 | `AppBridge` | `core` | 14 |
 | `getActiveTasks` | `data-rw` | 14 |
+| `getTasks` | `data-rw` | 13 |
 | `active` | `data-links` | 12 |
 | `getRec` | `data-rw` | 12 |
-| `setTasks` | `data-rw` | 11 |
+| `setTasks` | `data-rw` | 10 |
 | `UI_ICONS` | `core` | 9 |
 | `setActive` | `data-links` | 9 |
 | `getLinks` | `data-links` | 8 |

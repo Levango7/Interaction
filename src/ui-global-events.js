@@ -292,8 +292,8 @@ function renderIntegrationPanel(){
   const panel = $("#integrationPanel");
   if(!panel) return;
   const providers = [
-    {name:"notion", label:"Notion", desc:t("int.notionDesc","验证 Notion Integration Token（笔记 / 任务同步尚未接入）"), connectFn:"notionConnect", disconnectFn:"notionDisconnect"},
-    {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect"},
+    {name:"notion", label:"Notion", desc:t("int.notionDesc","验证 Notion Integration Token（笔记 / 任务同步尚未接入）"), connectFn:"notionConnect", disconnectFn:"notionDisconnect", pushFn:"notionPushTasks"},
+    {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect", pushFn:"linearPushTasks"},
     {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Jira API Token（任务同步尚未接入）"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
     {name:"slack", label:"Slack", desc:t("int.slackDesc","群机器人 Incoming Webhook · 推送通知（仅桌面版可用：Slack webhook 不回 CORS 头，浏览器形态发不出去）；凭据仅本次会话，刷新即失效"), connectFn:"slackConnect", disconnectFn:"slackDisconnect", ephemeral:true},
     {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect", ephemeral:true},
@@ -334,9 +334,14 @@ function renderIntegrationPanel(){
     const statusCls = enabled ? "int-on" : "int-off";
     const verified = !!(prov && prov.config && prov.config._verified);
     const statusText = enabled ? (t("int.connected","已连接") + (verified ? t("int.verified"," · 已验证") : t("int.unverified"," · 未验证"))) : t("int.notConnected","未连接");
-    const actionBtn = enabled
+    /* v3.7.70：已连接且有推送消费点的 provider 多给一个显式动作。
+       「推送任务」是本地→远端的单向动作，用户点一下才发生（没有后台自动同步）。 */
+    const pushBtn = (enabled && p.pushFn)
+      ? '<button type="button" class="addbtn sm int-push" data-int-push="' + p.name + t("p4.html.intPushBtn",">推送任务</button>")
+      : "";
+    const actionBtn = pushBtn + (enabled
       ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + t("p4.html.intDiscBtn","\">断开</button>")
-      : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + t("p4.html.intConnBtn","\">连接</button>");
+      : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + t("p4.html.intConnBtn","\">连接</button>"));
     return '<div class="int-row ' + statusCls + '">' +
       '<div class="int-info"><div class="int-label">' + esc(p.label) + '</div><div class="int-desc">' + esc(p.desc) + '</div></div>' +
       '<div class="int-status">' + esc(statusText) + '</div>' +
@@ -371,6 +376,46 @@ function renderIntegrationPanel(){
         renderIntegrationPanel();
         toast(name + t("integration.disconnected", " 已断开"), "ok");
       }catch(e){ toast(t("integration.disconnectFail", "断开异常：{err}").replace("{err}", (e.message || e)), "warn"); }
+    };
+  });
+  /* v3.7.70：推送消费点。
+     刻意**不用** `window[name + "PushTasks"]` 那种拼接派发 —— 本仓的静态可达性普查
+     （docs/product-scope.md §四）就是被拼接派发坑过，且文档记着「全仓 window[...] 派发点仅 3 处」。
+     这里用显式字面量表，普查看得见，那个计数也不会被无声改掉。 */
+  const PUSH_FNS = { notion: notionPushTasks, linear: linearPushTasks };
+  const LABELS = {};
+  providers.forEach(function(p){ LABELS[p.name] = p.label; });
+  panel.querySelectorAll("[data-int-push]").forEach(function(btn){
+    btn.onclick = async function(){
+      const name = btn.getAttribute("data-int-push");
+      const fn = PUSH_FNS[name];
+      const label = LABELS[name] || name;
+      if(typeof fn !== "function"){ toast(t("integration.pushUnsupported", "该集成暂不支持推送"), "warn"); return; }
+      /* 推送范围＝未完成任务。**不做全量**：把历史已完成任务一次性灌进对方工作区是噪音，
+         而且是不可逆的（对方那边只增不删）。 */
+      const tasks = getTasks().filter(function(x){ return x && x.status !== "done"; });
+      if(!tasks.length){ toast(t("integration.pushNoTasks", "没有未完成的任务可推送"), "warn"); return; }
+      if(!confirm(t("integration.pushConfirm", "把 {n} 条未完成任务推送到 {name}？只推不拉，不会改动本地数据。")
+        .replace("{n}", String(tasks.length)).replace("{name}", label))) return;
+      btn.disabled = true;
+      const oldText = btn.textContent;
+      btn.textContent = t("integration.pushing", "推送中…");
+      let r = null;
+      try{ r = await fn(tasks); }
+      catch(e){ r = { ok: false, error: (e && e.message) || String(e) }; }
+      btn.disabled = false;
+      btn.textContent = oldText;
+      if(r && r.ok){
+        toast(t("integration.pushOk", "已推送到 {name}：新建 {c} 条、更新 {u} 条")
+          .replace("{name}", label).replace("{c}", String(r.created)).replace("{u}", String(r.updated)), "ok");
+      }else{
+        /* 部分失败不得报成成功：失败条数与第一条原因都要说出来，明细进诊断面板 */
+        const n = (r && r.failed && r.failed.length) || 0;
+        const first = (r && r.failed && r.failed[0] && r.failed[0].error) || (r && r.error) || t("integration.pushUnknown", "未知原因");
+        toast(t("integration.pushFail", "推送到 {name} 失败：{n} 条未成功（{why}）")
+          .replace("{name}", label).replace("{n}", String(n || tasks.length)).replace("{why}", String(first).slice(0, 80)), "warn");
+        try{ pushDiag("warn", name + " 推送失败", { where: "integration-push", failed: (r && r.failed) || [], error: (r && r.error) || "" }); }catch(e){}
+      }
     };
   });
   // 渲染API Key列表
@@ -2320,3 +2365,4 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     get _streamProgress(){ return _streamProgress; }
   };
 }
+

@@ -14,6 +14,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stripCommentsAndStrings } from './lib/code-scan.mjs';
 
 const _dir = dirname(fileURLToPath(import.meta.url));
 const _root = join(_dir, '..');
@@ -64,7 +65,9 @@ if (hits.length) {
 /* 收集所有「定义」：--x: 值 （含 6 处主题块重复声明，任一处有定义即算已定义） */
 const defRe = /(--[a-z][\w-]*)\s*:/g;
 const defs = new Set();
-const addDefs = (text) => { for (const m of text.matchAll(defRe)) defs.add(m[1]); };
+const addDefs = (text) => {
+  for (const m of stripCommentsAndStrings(text).matchAll(defRe)) defs.add(m[1]);
+};
 addDefs(html);
 const SRC = join(_root, 'src');
 const srcList = [];
@@ -79,8 +82,13 @@ if (existsSync(SRC)) {
 /* 收集所有「引用」：var(--x) */
 const useRe = /var\(\s*(--[a-z][\w-]*)/g;
 const useAt = new Map();
+/* ⚠️ 必须先剥注释再扫：注释里若写了 `var(--某悬空令牌)` 作说明，会被当成真引用误报
+   （与项目「CSS 注释里不得写裸色值」同一类坑；本轮实测踩到）。
+   复用 scripts/lib/code-scan.mjs —— 它剥注释/字符串/正则，且有独立单元测试。
+   注意：剥除会改变字符偏移 → 行号按「剥后文本」重算，仅作定位参考。 */
 const addUses = (text, where) => {
-  text.split('\n').forEach((ln, i) => {
+  const stripped = stripCommentsAndStrings(text);
+  stripped.split('\n').forEach((ln, i) => {
     for (const m of ln.matchAll(useRe)) {
       const n = m[1];
       if (!useAt.has(n)) useAt.set(n, []);

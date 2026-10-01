@@ -103,11 +103,39 @@
 > **Jira 浏览器不可达、仅主进程可达**（需主进程中转 + \*.atlassian.net 动态白名单，
 > SSRF 面单独设计）；**Google 日历本机网络不可达（googleapis 连主进程 fetch 都失败），
 > 无法实测 CORS，维持不接**。待定剩 **Notion / Linear / Jira / 日历** 四个。
+>
+> **v3.7.70 追加**：Notion 与 Linear 先后接上**任务单向推送**消费点 —— 集成面板里已连接的
+> 对应行多一个「推送任务」按钮，点一下把**未完成**任务逐条推过去，结果如实上屏（新建 N / 更新 N；
+> 部分失败必须报条数与平台给的原因）。这是 v3.7.60 那批"零调用方"里头两个真正落地的**数据外发
+> 消费点**，顺带暴露了三件必须处理的事：
+> ① `notionSyncTask` / `linearSyncIssue` 摘标记并补真发请求的用例（守护变红才发现的，
+>    见 tests/integration-deprecated.test.js）；
+> ② Notion 收窄成纯 push 后，pull 分支与它的两个帮手（`_intNotionPullWriteback` /
+>    `_intNotionParsePage`）一并删除 —— 留着前者是**陷阱**（再被调用时会推而不是拉），
+>    留后者是无人调用的尸体；
+> ③ **Linear 旧实现有一处会静默失败的错误**：两个 mutation 都传 `state: "In Progress"`（状态**名**），
+>    而 Linear 的 `IssueCreateInput` / `IssueUpdateInput` 要的是 **`stateId`（团队工作流状态的 ID）**，
+>    schema 里没有 `state` 这个字段 → 真机必被拒。核对官方文档后**故意不带状态**（没有可验证的
+>    Linear 工作区来把名字映射成 ID），issue 落到团队默认状态，文案如实写明；
+>    `LINEAR_STATUS_MAP` 因此继续冻结在废弃名单里 —— 它正好代表"没接的那部分"。
+> 名单 21 → **18**（Notion 2 个 + Linear 1 个），`DELETED` 增至 11 个。
+> 仍未接：Notion 笔记推送、Jira、日历；Linear 的状态映射与反向拉取。<br>
+> ⚑ 测试：`tests/notion-push.test.js` 9 条 · `tests/linear-push.test.js` 9 条
+> （逐条记账 / 部分失败如实报 / 未连接零外发 / 缺 database_id·teamId 不算成功 / 幂等 PATCH·issueUpdate /
+> 面板接线；Linear 那组额外锁 **GraphQL 的 HTTP 200 + `errors[]` 必须判失败**，
+> 以及"请求里不许出现 state/stateId"）· `tests/e2e/integration-push.spec.js` 4 条 ×
+> desktop/tablet（真实 Chromium，实测 8/8）：入口落视口内可点、点一次真发请求、
+> 平台拒绝时 toast 必须说失败条数与原因（Notion 走 HTTP 400、Linear 走 HTTP 200 + errors）。
+> ⚠️ 写这组用例踩到两个"看着绿其实没验"的坑，都记在用例注释里：
+> ① `toBeVisible()` **看不见抽屉被 transform 平移到屏外**，得用 `toBeInViewport()`；
+> ② 用 `evaluate(() => el.click())` 开面板不经 hit-testing，于是"面板开着"是假的 ——
+> 要调应用自己的 `AppBridge.openDrawer()`；且 `setTasks` 会触发应用**自动收起抽屉**（实测约 600ms），
+> 必须等收起发生后再开、再点。
 
 | 功能 | 实测定性（v3.7.60，真实 Chromium + stub fetch） | 处置 |
 |---|---|---|
 | **集成中心 · 连接与凭据验证**（v3.7.60 时含 notion / linear / jira / slack / 飞书 / 钉钉 / 日历 七个；**现剩四个**，飞书 / 钉钉 / Slack 改走 webhook 且不再走凭据存储） | **是真的**：各 provider 打到正确验证端点（`api.notion.com/v1/users/me`、`api.linear.app/graphql` 等；Slack 的 `auth.test` 随 v3.7.69 通道改型退役，改走主进程代发 webhook），凭据进 `Authorization` 头、结果落 `wb_integration_providers`；401 时面板如实显示「已连接 · 未验证」；日历 OAuth 按钮在非 Electron 下自动隐藏 | 保留。附带修了一个凭据外泄面：`jiraConnect` 原样把用户填的 `domain` 拼成请求主机位，实测 `domain="evil.example.com/?x="` 会把 Bearer token 发去该主机；现由 `_intJiraBase()` 只放行纯主机名 |
-| **集成中心 · 同步 / 通知**（`*SyncTask` / `*SyncNote` / `*ListIssues` / `*SendMessage` / `*NotifyEvent` / `*CreateTaskFromMessage` / `calendar*Event` / `integrationList·Enable·Disable·ConfigureProvider` / `integrationGetStatus`） | **零调用方**：连上七个 provider 后跑「建任务 / 完成任务 / 重渲染 / `notifySystem` / `checkDueTasks`」，集成域名 **0 次外发**；UI 里也没有任何"同步到 X"入口。共 **30 个函数、约 855 行**（其中 5 个只被同为废弃的函数调用，属传递性死） | **先只标记不删**（用户 2026-09-28：「先标记废弃，等我定好渠道再动」）。30 个函数逐个挂 `@deprecated v3.7.60 应用内零调用方…`，区域头留处置说明。**v3.7.66 渠道定案后已降到 24 个**：飞书 / 钉钉选定 webhook 通道，其 6 个旧函数（`feishu` / `dingtalk` × `SendMessage` / `NotifyEvent` / `CreateTaskFromMessage`，含被 `feishuNotifyEvent` 调用的 1 条内部边）随本次改造**直接删除** —— 留着就是给一个已被判定"个人场景配不通"的 App 凭据模型留尸体。剩余 21 个（notion / linear / jira / 日历）**仍只标记**，等其余四个 provider 的定案。**v3.7.69 再加一刀**：Slack 选定与钉钉同款的群机器人 Incoming Webhook 通道，其 3 个 Bot Token 模型旧函数（`slackSendMessage` / `slackNotifyEvent` / `slackCreateTaskFromMessage`）随之删除，名单 24 → 21（用户 2026-09-29：「等接通后再定」）。⚑ 守护：`tests/integration-deprecated.test.js`（锁"标记仍在 + 仍然零调用 + 活路径未被误标 + 已删的 9 个不回流（v3.7.66 六 + v3.7.69 Slack 三）"） |
+| **集成中心 · 同步 / 通知**（`*SyncTask` / `*SyncNote` / `*ListIssues` / `*SendMessage` / `*NotifyEvent` / `*CreateTaskFromMessage` / `calendar*Event` / `integrationList·Enable·Disable·ConfigureProvider` / `integrationGetStatus`） | **零调用方**：连上七个 provider 后跑「建任务 / 完成任务 / 重渲染 / `notifySystem` / `checkDueTasks`」，集成域名 **0 次外发**；UI 里也没有任何"同步到 X"入口。共 **30 个函数、约 855 行**（其中 5 个只被同为废弃的函数调用，属传递性死） | **先只标记不删**（用户 2026-09-28：「先标记废弃，等我定好渠道再动」）。30 个函数逐个挂 `@deprecated v3.7.60 应用内零调用方…`，区域头留处置说明。**v3.7.66 渠道定案后已降到 24 个**：飞书 / 钉钉选定 webhook 通道，其 6 个旧函数（`feishu` / `dingtalk` × `SendMessage` / `NotifyEvent` / `CreateTaskFromMessage`，含被 `feishuNotifyEvent` 调用的 1 条内部边）随本次改造**直接删除** —— 留着就是给一个已被判定"个人场景配不通"的 App 凭据模型留尸体。剩余 21 个（notion / linear / jira / 日历）**仍只标记**，等其余四个 provider 的定案。**v3.7.69 再加一刀**：Slack 选定与钉钉同款的群机器人 Incoming Webhook 通道，其 3 个 Bot Token 模型旧函数（`slackSendMessage` / `slackNotifyEvent` / `slackCreateTaskFromMessage`）随之删除，名单 24 → 21（用户 2026-09-29：「等接通后再定」）。**v3.7.70 起 Notion 与 Linear 都有了真消费点**：任务单向推送接到底，`notionSyncTask` / `linearSyncIssue` 摘标记并补真发用例；Notion 的 pull 分支与其两个帮手（`_intNotionPullWriteback` / `_intNotionParsePage`）删除，名单 21 → **18**，`DELETED` 名单增至 11 个。⚑ 守护：`tests/integration-deprecated.test.js`（锁"标记仍在 + 仍然零调用 + 活路径未被误标 + 已删的 11 个不回流"，且把 `notionSyncTask` / `notionPushTasks` / `linearSyncIssue` / `linearPushTasks` 列入 LIVE 名单 —— 谁再标它们废弃会红） |
 
 ### ✅ 已接到底：飞书（需 http(s) 源）/ 钉钉（仅桌面版）/ Slack（仅桌面版）群机器人 webhook 通知（v3.7.66 两家 · v3.7.69 加 Slack）
 
@@ -136,9 +164,12 @@
 这正是我用 `p.screenshot()` 强制出帧才暴露出来的。现改为 `appendChild` 后**同步**加 `.show`。
 > 单测（jsdom）照不到：jsdom 不应用样式表，`display:none` 对它而言不存在。**"看不见"类缺陷必须真机断言。**
 
-**剩余待决（等这条渠道跑通后再定，用户 2026-09-29）**：Notion / Linear / Jira / 日历 这四个
-provider 的 21 个废弃函数是接消费点还是整清 —— 本轮不动，也不在它们上面加新 UI。
-（Slack 已于 v3.7.69 定案改走群机器人 Incoming Webhook，其 3 个 Bot Token 模型旧函数随之删除，不再在此名单内。）
+**剩余待决（用户 2026-09-30 定「五家都接」）**：Notion 的**任务**推送已于 v3.7.70 接到底；
+剩下 Notion 笔记推送、Linear、Jira、日历 —— 其中 Linear 与 Notion 同为"全形态浏览器可达"，
+接线路径已经证明可行，缺的是消费点（与 Notion 同款单向推送即可）；Jira 要先设计主进程中转的
+动态主机白名单（SSRF 面）；日历需先换网络重测可达性。这四家对应的 19 个废弃函数**继续冻结**
+（只标记不删），未接通前不在它们上面加新 UI。
+（Slack 已于 v3.7.69 定案改走群机器人 Incoming Webhook，其 3 个 Bot Token 模型旧函数随之删除。）
 
 > ⚠️ **本簇曾被误判为"静态零引用死码"**，真因是 `openIntegrationConfig` 用字符串拼接派发
 > `window[name + "Connect"]` / `window[name + "Disconnect"]` —— 按标识符计数的可达性普查看不见这条边。

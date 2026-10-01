@@ -353,9 +353,11 @@ function renderMindmap(){
     const meta = scMeta(sc);
     const name = meta.name;
     // 连线（中心→场景）
-    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="var(--border)" stroke-width="2"/>';
+    /* v3.7.70：旧写 var(--border) / var(--panel2) 全仓零定义 → 浏览器静默回退
+       （连线取初始描边色、圆填充变透明）。项目实际令牌是 --line（线）/ --panel（主表面）。 */
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="var(--line)" stroke-width="2"/>';
     // 场景节点
-    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="25" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>';
+    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="25" fill="var(--panel)" stroke="var(--accent)" stroke-width="2"/>';
     svg += '<text x="' + x.toFixed(1) + '" y="' + (y + 5).toFixed(1) + '" text-anchor="middle" fill="var(--text)" font-size="12">' + esc(name) + '</text>';
     // 任务叶子（最多 5 个，沿同方向外延展开）
     const scTasks = tree[sc] || [];

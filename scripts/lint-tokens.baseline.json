@@ -1,14 +1,3 @@
 {
-  "dangling": [
-    "--border",
-    "--color-border-secondary",
-    "--color-border-tertiary",
-    "--font-mono",
-    "--radius-xs",
-    "--surface",
-    "--surface-0",
-    "--surface-1",
-    "--text-1",
-    "--text-3"
-  ]
+  "dangling": []
 }

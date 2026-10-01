@@ -21,27 +21,9 @@ function integrationGetStatus(name){
   if(p.config && p.config._verified === false) return { connected:false, reason:"verify_failed" };
   return { connected:true, verified:!!(p.config && p.config._verified) };
 }
-/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
-async function _intNotionPullWriteback(){
-  let synced = [];
-  try{ synced = notionListSynced() || []; }catch(e0){ return 0; }
-  const tasks = getTasks(); let n = 0;
-  for(let i = 0; i < synced.length; i++){
-    const it = synced[i];
-    if(it.type && it.type !== "task") continue;
-    let idx = -1;
-    for(let j = 0; j < tasks.length; j++){ if(tasks[j].id === it.localId){ idx = j; break; } }
-    if(idx < 0) continue;
-    let r = null;
-    try{ r = await notionSyncTask(tasks[idx], "pull"); }catch(e1){ r = null; }
-    if(r && r.success && r.updatedTask){
-      tasks[idx] = Object.assign({}, tasks[idx], r.updatedTask);
-      n++;
-    }
-  }
-  if(n > 0) setTasks(tasks);
-  return n;
-}
+/* v3.7.70：`_intNotionPullWriteback` 随 pull 路径一并删除。它是"把 Notion 侧改动写回本地任务"
+   的辅助，而本轮把 notionSyncTask 收窄成纯 push 后，它继续存在会变成**陷阱** ——
+   再有人调它拿到的会是推送而不是拉取。拉取（连同冲突/删除语义）要做时按那时的设计重写。 */
 
 
 
@@ -544,73 +526,84 @@ async function notionConnect(config){
 }
 
 /**
- * 同步任务到 Notion（双向）
+ * 把一条本地任务单向推到 Notion 数据库（v3.7.70 接到底）。
+ * 只做 push：本地是唯一真相源，Notion 侧只创建/更新，**不拉回、不做冲突合并**。
+ * 双向同步要处理删除语义、离线合并与冲突裁决，是另一个数量级的工程量；而本产品定位是
+ * 「本地优先、不主动外发」，所以消费点设计成"用户点一下才推"的单向动作。
  * @param {Object} task - 本地任务 { id, title, status, ... }
- * @param {string} direction - 'push' | 'pull' | 'sync'（默认 sync）
- * @returns {Promise<Object>} 同步结果 { success, action, remoteId, localId }
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
+ * @returns {Promise<Object>} { success, action:'created'|'updated', remoteId, localId } 或 { success:false, error }
  */
-async function notionSyncTask(task, direction){
+async function notionSyncTask(task){
   if(!task || !task.id) return { success: false, error: "invalid_task" };
-  direction = direction || "sync";
   const provider = await _intRequireProvider("notion", INTEGRATION_TYPES.NOTION);
   if(!provider) return { success: false, error: "provider_not_available" };
 
   const state = _intGetSyncState("notion");
   const syncInfo = state.syncedItems[task.id];
   const databaseId = provider.config.databaseId;
-  const token = provider.config.token;
+  if(!databaseId) return { success: false, error: "missing_database_id" };
   const headers = {
-    "Authorization": "Bearer " + token,
+    "Authorization": "Bearer " + provider.config.token,
     "Notion-Version": "2022-06-28",
     "Content-Type": "application/json"
   };
+  const props = JSON.stringify(_intNotionBuildPageProperties(task, databaseId));
 
-  // push：本地 → Notion
-  if(direction === "push" || direction === "sync"){
-    let resp;
-    if(syncInfo){
-      // 更新已有页面
-      resp = await _intDoRequest("https://api.notion.com/v1/pages/" + syncInfo.remoteId, {
-        method: "PATCH",
-        headers: headers,
-        body: JSON.stringify(_intNotionBuildPageProperties(task, databaseId))
-      });
-      if(resp.ok){
-        _intRecordSync("notion", task.id, syncInfo.remoteId, "task");
-        if(direction === "push") return { success: true, action: "updated", remoteId: syncInfo.remoteId, localId: task.id };
-      }
-    }else{
-      // 创建新页面
-      resp = await _intDoRequest("https://api.notion.com/v1/pages", {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(_intNotionBuildPageProperties(task, databaseId))
-      });
-      if(resp.ok && resp.body && resp.body.id){
-        _intRecordSync("notion", task.id, resp.body.id, "task");
-        if(direction === "push") return { success: true, action: "created", remoteId: resp.body.id, localId: task.id };
-      }
+  let resp;
+  if(syncInfo){
+    resp = await _intDoRequest("https://api.notion.com/v1/pages/" + syncInfo.remoteId, { method: "PATCH", headers: headers, body: props });
+    if(resp.ok){
+      _intRecordSync("notion", task.id, syncInfo.remoteId, "task");
+      return { success: true, action: "updated", remoteId: syncInfo.remoteId, localId: task.id };
+    }
+  }else{
+    resp = await _intDoRequest("https://api.notion.com/v1/pages", { method: "POST", headers: headers, body: props });
+    if(resp.ok && resp.body && resp.body.id){
+      _intRecordSync("notion", task.id, resp.body.id, "task");
+      return { success: true, action: "created", remoteId: resp.body.id, localId: task.id };
     }
   }
+  /* 失败原因要带出来：只回一个 sync_failed 会让"哪些没推上去"变成一笔糊涂账 */
+  const detail = (resp.body && (resp.body.message || resp.body.code)) || resp.error || ("HTTP " + resp.status);
+  return { success: false, error: String(detail).slice(0, 200) };
+}
 
-  // pull：Notion → 本地（这里仅返回框架结果，实际应更新本地任务）
-  if(direction === "pull" || direction === "sync"){
-    let resp;
-    if(syncInfo){
-      resp = await _intDoRequest("https://api.notion.com/v1/pages/" + syncInfo.remoteId, {
-        method: "GET",
-        headers: headers
-      });
-      if(resp.ok && resp.body){
-        const updatedTask = _intNotionParsePage(resp.body);
-        _intRecordSync("notion", task.id, syncInfo.remoteId, "task");
-        return { success: true, action: "pulled", remoteId: syncInfo.remoteId, localId: task.id, updatedTask: updatedTask };
-      }
-    }
+/**
+ * 单向推送的公共记账骨架（Notion / Linear 共用，Jira 接线时同样复用）。
+ * 逐条 push、逐条记账，**永不抛错** —— 部分失败必须如实报出失败条数与原因，
+ * 不能因为"大多数成功了"就整体报成功（那是假账）。
+ * @param {string} providerName - provider 注册名
+ * @param {string} type - INTEGRATION_TYPES 之一
+ * @param {Function} pushOne - 单条推送函数 (item) => { success, action, error }
+ * @param {Array} tasks - 待推送项
+ * @returns {Promise<Object>} { ok, created, updated, failed:[{title, error}] }
+ */
+async function _intPushEach(providerName, type, pushOne, tasks){
+  const list = Array.isArray(tasks) ? tasks : [];
+  const out = { ok: false, created: 0, updated: 0, failed: [] };
+  if(!list.length){ out.error = "no_tasks"; return out; }
+  if(!(await _intRequireProvider(providerName, type))){
+    out.error = "provider_not_available";
+    return out;
   }
+  for(const item of list){
+    let r;
+    try{ r = await pushOne(item); }
+    catch(e){ r = { success: false, error: (e && e.message) || String(e) }; }
+    if(r && r.success){ if(r.action === "created") out.created++; else out.updated++; }
+    else out.failed.push({ title: (item && item.title) || "", error: (r && r.error) || "unknown" });
+  }
+  out.ok = out.failed.length === 0;
+  return out;
+}
 
-  return { success: false, error: "sync_failed" };
+/**
+ * 消费点：把一批任务推送到 Notion（面板「推送任务」按钮调的就是它）。
+ * @param {Array} tasks - 待推送任务列表
+ * @returns {Promise<Object>} 见 _intPushEach
+ */
+async function notionPushTasks(tasks){
+  return await _intPushEach("notion", INTEGRATION_TYPES.NOTION, notionSyncTask, tasks);
 }
 
 /**
@@ -618,7 +611,8 @@ async function notionSyncTask(task, direction){
  * @param {Object} note - 本地笔记 { id, title, content, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
+ * @deprecated v3.7.60 应用内零调用方 · v3.7.70 起 Notion 只接了**任务**单向推送（notionPushTasks），
+ *   笔记这条仍未接线 —— 待定，别在它上面加 UI，见 docs/product-scope.md §三
  */
 async function notionSyncNote(note, direction){
   if(!note || !note.id) return { success: false, error: "invalid_note" };
@@ -667,7 +661,8 @@ async function notionSyncNote(note, direction){
 /**
  * 列出已同步的 Notion 项
  * @returns {Array} 已同步项列表
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
+ * @deprecated v3.7.60 应用内零调用方 · v3.7.70 的任务单向推送只用同步状态表记账，
+ *   没有消费这个列表函数（面板上还没有"已同步 N 条"这类回显）—— 待定，见 docs/product-scope.md §三
  */
 function notionListSynced(){
   const state = _intGetSyncState("notion");
@@ -697,29 +692,9 @@ function _intNotionBuildPageProperties(item, databaseId){
     }
   };
 }
-function _intNotionParsePage(page){
-  if(!page) return null;
-  let title = "";
-  try{
-    const titleProp = page.properties && page.properties.Title;
-    if(titleProp && titleProp.title && titleProp.title[0]){
-      title = titleProp.title[0].plain_text || "";
-    }
-  }catch(e){ /* noop */ }
-  let status = "todo";
-  try{
-    const statusProp = page.properties && page.properties.Status;
-    if(statusProp && statusProp.select){
-      status = statusProp.select.name || "todo";
-    }
-  }catch(e){ /* noop */ }
-  return {
-    id: page.id,
-    title: title,
-    status: status,
-    updatedAt: page.last_edited_time || null
-  };
-}
+/* v3.7.70：`_intNotionParsePage`（Notion 页面 → 本地任务）随 pull 分支一并删除。
+   单向推送消费点不需要它，留着就是一段没人调的解析器 —— 真要做双向同步时再按那时的
+   字段映射重写，而不是把今天猜的形状冻在这里。 */
 
 /* ============================================================
  * 3. Linear 集成（issue 双向同步，状态映射）
@@ -750,66 +725,68 @@ async function linearConnect(config){
 }
 
 /**
- * 同步 Linear issue（双向）
- * @param {Object} issue - 本地 issue { id, title, description, status, ... }
- * @param {string} direction - 'push' | 'pull' | 'sync'
- * @returns {Promise<Object>} 同步结果
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
+ * 把一条本地任务单向推到 Linear（v3.7.70 接到底）。
+ * 只做 push：本地是唯一真相源，Linear 侧只创建/更新，不拉回、不做冲突合并。
+ *
+ * **注意**：状态映射**故意不接**（这是本轮核对文档后改掉的一处静默错误）：
+ * Linear 的 `IssueCreateInput` / `IssueUpdateInput` 要的是 **`stateId`（团队工作流状态的 ID）**，
+ * 而旧实现对两个 mutation 都传了 `state: "In Progress"`（状态**名**）—— schema 里没有这个字段，
+ * 真机必被拒。名字→ID 得先查该团队的工作流状态，我手边没有可验证的 Linear 工作区，
+ * 所以不猜：**推送不带状态**，issue 落到团队默认状态，面板文案如实写明这一点。
+ * `LINEAR_STATUS_MAP` 因此继续冻结在废弃名单里 —— 它现在正好代表"没接的那部分"。
+ * @param {Object} issue - 本地任务 { id, title, note, ... }
+ * @returns {Promise<Object>} { success, action:'created'|'updated', remoteId, localId } 或 { success:false, error }
  */
-async function linearSyncIssue(issue, direction){
+async function linearSyncIssue(issue){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
-  direction = direction || "sync";
   const provider = await _intRequireProvider("linear", INTEGRATION_TYPES.LINEAR);
   if(!provider) return { success: false, error: "provider_not_available" };
 
   const state = _intGetSyncState("linear");
   const syncInfo = state.syncedItems[issue.id];
-  const token = provider.config.token;
   const teamId = provider.config.teamId;
+  /* teamId 只在**建** issue 时必需（更新走 issue id）；缺了别静默降级成"推送成功" */
+  if(!syncInfo && !teamId) return { success: false, error: "missing_team_id" };
+
   const headers = {
-    "Authorization": "Bearer " + token,
+    "Authorization": "Bearer " + provider.config.token,
     "Content-Type": "application/json"
   };
-  // Linear 状态映射
-  const mappedStatus = LINEAR_STATUS_MAP[issue.status] || issue.status || "Backlog";
+  const desc = issue.note || issue.description || "";
+  const query = syncInfo
+    ? "mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id } } }"
+    : "mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id } } }";
+  const variables = syncInfo
+    ? { id: syncInfo.remoteId, input: { title: issue.title, description: desc } }
+    : { input: { teamId: teamId, title: issue.title, description: desc } };
 
-  if(direction === "push" || direction === "sync"){
-    let resp, mutation;
-    if(syncInfo){
-      // 更新 issue
-      mutation = "mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id } } }";
-      resp = await _intDoRequest("https://api.linear.app/graphql", {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify({
-          query: mutation,
-          variables: { id: syncInfo.remoteId, input: { title: issue.title, description: issue.description, state: mappedStatus } }
-        })
-      });
-      if(resp.ok){
-        _intRecordSync("linear", issue.id, syncInfo.remoteId, "issue");
-        if(direction === "push") return { success: true, action: "updated", remoteId: syncInfo.remoteId, localId: issue.id };
-      }
-    }else{
-      // 创建 issue
-      mutation = "mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id } } }";
-      resp = await _intDoRequest("https://api.linear.app/graphql", {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify({
-          query: mutation,
-          variables: { input: { teamId: teamId, title: issue.title, description: issue.description, state: mappedStatus } }
-        })
-      });
-      if(resp.ok && resp.body && resp.body.data && resp.body.data.issueCreate && resp.body.data.issueCreate.issue){
-        const newId = resp.body.data.issueCreate.issue.id;
-        _intRecordSync("linear", issue.id, newId, "issue");
-        if(direction === "push") return { success: true, action: "created", remoteId: newId, localId: issue.id };
-      }
-    }
+  const resp = await _intDoRequest("https://api.linear.app/graphql", {
+    method: "POST", headers: headers, body: JSON.stringify({ query: query, variables: variables })
+  });
+
+  const node = syncInfo
+    ? (resp.body && resp.body.data && resp.body.data.issueUpdate)
+    : (resp.body && resp.body.data && resp.body.data.issueCreate);
+  const graphqlErr = resp.body && resp.body.errors && resp.body.errors[0] && resp.body.errors[0].message;
+  if(resp.ok && !graphqlErr && node && node.success && node.issue && node.issue.id){
+    const remoteId = syncInfo ? syncInfo.remoteId : node.issue.id;
+    _intRecordSync("linear", issue.id, remoteId, "issue");
+    return { success: true, action: syncInfo ? "updated" : "created", remoteId: remoteId, localId: issue.id };
   }
+  /* GraphQL 的失败是 **HTTP 200 + errors[]**，只回一句 sync_failed 等于什么都没说 ——
+     排查时拿不到 mutation 名字、拿不到字段错误。这里把平台给的原因带出去。 */
+  const why = graphqlErr || (node && node.success === false ? "issue 创建/更新被拒（success=false）" : "")
+    || resp.error || ("HTTP " + resp.status);
+  return { success: false, error: String(why).slice(0, 200) };
+}
 
-  return { success: false, error: "sync_failed" };
+/**
+ * 消费点：把一批任务推送到 Linear（面板「推送任务」按钮调的就是它）。
+ * @param {Array} tasks - 待推送任务列表
+ * @returns {Promise<Object>} 见 _intPushEach
+ */
+async function linearPushTasks(tasks){
+  return await _intPushEach("linear", INTEGRATION_TYPES.LINEAR, linearSyncIssue, tasks);
 }
 
 /**
