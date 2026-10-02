@@ -1236,14 +1236,14 @@ function _execLine(ok, step, resultStr){
   return (ok ? "✓ " : "✗ ") + step.tool + (brief ? "：" + brief : "");
 }
 
-/* 校准调用：独立 messages，不进用户聊天 hist。失败/非法输出一律返回 null（= 按原计划继续） */
-const _CALIB_SYSTEM = [
-  "你是任务计划执行过程的校准器。输入：原始目标、已执行步骤的真实结果、剩余计划。",
-  "判断剩余计划是否仍有效：某步失败且后续依赖它 → 替换后续步骤；结果已使某步多余 → 删除；其余 → 原样继续。",
-  "只输出一个 JSON 对象，不要解释：",
-  '{"action":"continue"} 或 {"action":"replan","steps":[{"tool":"工具名","args":{}}]}',
-  "约束：replan 步骤总数不超过 12；tool 只能取剩余计划中出现过的工具名。"
-].join("\n");
+/* 校准调用：独立 messages，不进用户聊天 hist。失败/非法输出一律返回 null（= 按原计划继续）。
+   v3.7.71：校准系统提示走 t() 词条 —— 模块级硬编码中文会被 i18n e2e
+   「英文模式下模块级常量必须已是英文」判红（提示词也要跟 UI 语言走）。 */
+function _calibSystem(){
+  return t("aiagent.calibSystem",
+    "You are the plan-execution calibrator. Decide whether the remaining plan is still valid. "
+    + 'Output only {"action":"continue"} or {"action":"replan","steps":[...]} (<=12 steps, tools from the remaining plan).');
+}
 
 async function _calibrateRemaining(goalText, executedLines, remaining, opts){
   const o = opts || {};
@@ -1260,7 +1260,7 @@ async function _calibrateRemaining(goalText, executedLines, remaining, opts){
       t("aiagent.calibAsk","请输出校准 JSON。")
     ].join("\n");
     const j = await chatOnce(
-      [{ role:"system", content:_CALIB_SYSTEM }, { role:"user", content:user }],
+      [{ role:"system", content:_calibSystem() }, { role:"user", content:user }],
       { signal: o.signal, retry: 1 }
     );
     const txt = (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";

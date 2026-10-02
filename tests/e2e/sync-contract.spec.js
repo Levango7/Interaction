@@ -92,10 +92,16 @@ test.describe("云同步契约端到端", () => {
     const meta = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || "{}"), PREFIX + "sync_meta");
     expect(meta.lastPushAt, "成功推送后应记录 lastPushAt").toBeGreaterThan(0);
 
-    /* 服务端 500 → error（不能仍显示已同步） */
+    /* v3.7.71 重试矩阵：瞬时 500 ×2 → 退避重试 2 次后第 3 次成功 → idle（真推上去了才显示已同步） */
     mock.setBehaviors({ putFails: 2 });
     await page.evaluate(() => { window.setSyncStatus("idle"); return window.doSync(); });
-    expect(await page.evaluate(() => window.getSyncStatus()), "服务端拒绝应为 error").toBe("error");
+    expect(await page.evaluate(() => window.getSyncStatus()), "瞬时 500 重试后成功应为 idle").toBe("idle");
+
+    /* 持续性 500（重试 2 次仍失败）→ error（不能仍显示已同步） */
+    mock.setBehaviors({ putFails: 99 });
+    await page.evaluate(() => { window.setSyncStatus("idle"); return window.doSync(); });
+    expect(await page.evaluate(() => window.getSyncStatus()), "持续性服务端拒绝应为 error").toBe("error");
+    mock.setBehaviors({ putFails: 0 });
 
     /* 网络不可达 → offline：另开一个"已登录但 apiBase 指向死端口"的页面。
        不能在该页调 apiLogin（连 /api/auth/login 都连不上，会直接抛），故用注入的假 token。 */
