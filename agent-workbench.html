@@ -6114,10 +6114,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.78"; /* v3.7.74 路线项①②落地：会议进日历（办公 record date/startTime 进月历「会」标记与周视图会议行，按开始时间排序，与任务徽章分列）· 双标签页数据守护（storage 事件节流 30s 提示刷新，此前全仓 0 监听双开互覆盖）· RAG 文件导入与云同步增量记账为路线余量（后者依赖后端契约） */
+const VERSION = "3.7.79"; /* v3.7.74 路线项①②落地：会议进日历（办公 record date/startTime 进月历「会」标记与周视图会议行，按开始时间排序，与任务徽章分列）· 双标签页数据守护（storage 事件节流 30s 提示刷新，此前全仓 0 监听双开互覆盖）· RAG 文件导入与云同步增量记账为路线余量（后者依赖后端契约） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261002i";
+const BUILD_TAG = "20261002j";
 
 
 
@@ -9038,7 +9038,8 @@ const MESSAGES = {
     "int.feishuLabel": "飞书",
     "int.feishuHook": "群机器人 Webhook 地址",
     "int.googleCal": "Google 日历",
-    "int.jiraDesc": "验证 Jira API Token（任务同步尚未接入）",
+    "int.jiraDesc": "验证 Token 并推送任务到项目（仅桌面版可用：Atlassian 不回 CORS 头，浏览器形态请求发不出去）；凭据随应用数据加密落盘",
+    "int.jiraProjectKey": "项目 Key（推送任务用，如 PROJ）",
     "int.jiraDomain": "站点域名",
     "int.linearDesc": "验证 Linear API Key（已连接后可把未完成任务单向推送为 issue；状态映射与反向拉取尚未接入）",
     "int.linearTeamIdPh": "可选，用于 issue 同步",
@@ -12758,7 +12759,8 @@ const MESSAGES = {
     "int.feishuLabel": "Feishu",
     "int.feishuHook": "Group robot webhook URL",
     "int.googleCal": "Google Calendar",
-    "int.jiraDesc": "Verify Jira API token (task sync not implemented)",
+    "int.jiraDesc": "Verify the token and push tasks to a project (desktop app only - Atlassian returns no CORS headers, so no browser form can send requests); credentials are encrypted at rest with app data",
+    "int.jiraProjectKey": "Project key (for task push, e.g. PROJ)",
     "int.jiraDomain": "Site domain",
     "int.linearDesc": "Verify Linear API key (once connected, open tasks can be pushed one-way as issues; status mapping and pull are not implemented)",
     "int.linearTeamIdPh": "Optional, for issue sync",
@@ -37654,7 +37656,7 @@ function renderIntegrationPanel(){
   const providers = [
     {name:"notion", label:"Notion", desc:t("int.notionDesc","验证 Notion Integration Token（笔记 / 任务同步尚未接入）"), connectFn:"notionConnect", disconnectFn:"notionDisconnect", pushFn:"notionPushTasks"},
     {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect", pushFn:"linearPushTasks"},
-    {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Jira API Token（任务同步尚未接入）"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
+    {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Token 并推送任务到项目（仅桌面版可用：Atlassian 不回 CORS 头，浏览器形态请求发不出去）；凭据随应用数据加密落盘"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect", pushFn:"jiraPushTasks"},
     {name:"slack", label:"Slack", desc:t("int.slackDesc","群机器人 Incoming Webhook · 推送通知（仅桌面版可用：Slack webhook 不回 CORS 头，浏览器形态发不出去）；凭据仅本次会话，刷新即失效"), connectFn:"slackConnect", disconnectFn:"slackDisconnect", ephemeral:true},
     {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect", ephemeral:true},
     {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect", ephemeral:true},
@@ -37691,15 +37693,21 @@ function renderIntegrationPanel(){
       try{ prov = integrationGetProvider(INTEGRATION_TYPES.GOOGLE_CALENDAR) || integrationGetProvider(INTEGRATION_TYPES.OUTLOOK_CALENDAR); }catch(e){ prov = null; }
     }
     const enabled = !!(prov && prov.enabled);
-    const statusCls = enabled ? "int-on" : "int-off";
+    /* v3.7.79：Jira 仅桌面版可达（Atlassian 不回 CORS 头）——浏览器形态连接按钮禁用并写明原因，
+       别给一个"连上了但每次请求都失败"的入口。 */
+    const jiraLocked = (p.name === "jira") && (typeof jiraHasRelay === "function") && !jiraHasRelay();
+    const statusCls = (enabled && !jiraLocked) ? "int-on" : "int-off";
     const verified = !!(prov && prov.config && prov.config._verified);
-    const statusText = enabled ? (t("int.connected","已连接") + (verified ? t("int.verified"," · 已验证") : t("int.unverified"," · 未验证"))) : t("int.notConnected","未连接");
+    const statusText = jiraLocked ? t("int.desktopOnly","仅桌面版可用")
+      : enabled ? (t("int.connected","已连接") + (verified ? t("int.verified"," · 已验证") : t("int.unverified"," · 未验证"))) : t("int.notConnected","未连接");
     /* v3.7.70：已连接且有推送消费点的 provider 多给一个显式动作。
        「推送任务」是本地→远端的单向动作，用户点一下才发生（没有后台自动同步）。 */
-    const pushBtn = (enabled && p.pushFn)
+    const pushBtn = (enabled && p.pushFn && !jiraLocked)
       ? '<button type="button" class="addbtn sm int-push" data-int-push="' + p.name + t("p4.html.intPushBtn",">推送任务</button>")
       : "";
-    const actionBtn = pushBtn + (enabled
+    const actionBtn = pushBtn + (jiraLocked
+      ? '<button type="button" class="addbtn sm" disabled title="' + esc("仅桌面版（Electron）可用：Atlassian 的 REST 端点不回 CORS 头，任何浏览器形态都发不出去") + '">' + t("p4.html.intConnDisabled",">连接（当前形态不可用）</button>")
+      : enabled
       ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + t("p4.html.intDiscBtn","\">断开</button>")
       : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + t("p4.html.intConnBtn","\">连接</button>"));
     return '<div class="int-row ' + statusCls + '">' +
@@ -37742,7 +37750,7 @@ function renderIntegrationPanel(){
      刻意**不用** `window[name + "PushTasks"]` 那种拼接派发 —— 本仓的静态可达性普查
      （docs/product-scope.md §四）就是被拼接派发坑过，且文档记着「全仓 window[...] 派发点仅 3 处」。
      这里用显式字面量表，普查看得见，那个计数也不会被无声改掉。 */
-  const PUSH_FNS = { notion: notionPushTasks, linear: linearPushTasks };
+  const PUSH_FNS = { notion: notionPushTasks, linear: linearPushTasks, jira: jiraPushTasks };
   const LABELS = {};
   providers.forEach(function(p){ LABELS[p.name] = p.label; });
   panel.querySelectorAll("[data-int-push]").forEach(function(btn){
@@ -37864,7 +37872,8 @@ const INTEGRATION_CONFIG_FIELDS = {
   linear:   [{ k:"token", label:"API Key", ph:"lin_api_…", required:true, secret:true },
              { k:"teamId", label:"Team ID", ph:t("int.linearTeamIdPh","可选，用于 issue 同步") }],
   jira:     [{ k:"domain", label:t("int.jiraDomain","站点域名"), ph:"your-domain.atlassian.net", required:true },
-             { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true }],
+             { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true },
+             { k:"projectKey", label:t("int.jiraProjectKey","项目 Key（推送任务用，如 PROJ）"), ph:"PROJ" }],
   /* v3.7.69：Slack 改成「群机器人 Incoming Webhook」—— URL 本身即凭据、无加签；
      hooks.slack.com 不回 CORS 头（实测），仅桌面版可发。填了**不会保存**（会话内存）。 */
   slack:    [{ k:"url", label:t("int.slackHook","Incoming Webhook 地址"), ph:"https://hooks.slack.com/services/…", required:true, secret:true }],
@@ -44123,6 +44132,37 @@ function _intJiraBase(domain){
 }
 
 /* ---------- 内部：HTTP 请求 ---------- */
+/** v3.7.79：桌面版是否有 Jira 主进程中继（浏览器形态没有 → Jira 仅桌面版可用） */
+function jiraHasRelay(){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return !!(api && typeof api.jiraFetch === "function");
+}
+/**
+ * Jira 统一请求：有中继走主进程（无 CORS 约束），否则回落渲染进程直连
+ * （浏览器形态会被 Atlassian 的 CORS 拦下 —— 如实失败，不假装成功）。
+ * 域名/路径校验在两侧都有：这里先过 _intJiraBase 把主机钉死，主进程是第二道门。
+ * @returns {Promise<{ok:boolean, status:number, body:any, error?:string}>}
+ */
+async function _jiraRequest(domain, path, opts){
+  opts = opts || {};
+  const base = _intJiraBase(domain);
+  if(!base) return { ok: false, status: 0, body: null, error: "invalid_domain" };
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  if(api && typeof api.jiraFetch === "function"){
+    try{
+      const host = new URL(base).hostname;
+      const r = await api.jiraFetch({ domain: host, path: String(path), method: opts.method || "GET", body: opts.body || "", token: opts.token || "", timeoutMs: opts.timeoutMs });
+      return r ? { ok: !!r.ok, status: r.status || 0, body: r.body || null, error: r.error || "" } : { ok: false, status: 0, body: null, error: "no_response" };
+    }catch(e){
+      return { ok: false, status: 0, body: null, error: (e && e.message) ? e.message : String(e) };
+    }
+  }
+  return await _intDoRequest(base + path, {
+    method: opts.method || "GET",
+    headers: Object.assign({ "Authorization": "Bearer " + (opts.token || ""), "Content-Type": "application/json" }, opts.headers || {}),
+    body: opts.body
+  });
+}
 async function _intDoRequest(url, opts){
   const client = _integrationHttpClient || (typeof fetch !== "undefined" ? fetch : null);
   if(!client) return { ok: false, status: 0, error: "no_http_client" };
@@ -44417,6 +44457,14 @@ async function notionPushTasks(tasks){
 }
 
 /**
+ * 消费点：把一批任务推送到 Jira（面板「推送任务」按钮调的就是它，v3.7.79）。
+ * 与 notion/linear 同款：只推不拉、未完成任务、逐条结果如实上屏。
+ */
+async function jiraPushTasks(tasks){
+  return await _intPushEach("jira", INTEGRATION_TYPES.JIRA, jiraSyncIssue, tasks);
+}
+
+/**
  * 同步笔记到 Notion（双向）
  * @param {Object} note - 本地笔记 { id, title, content, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
@@ -44656,15 +44704,16 @@ function linearDisconnect(){
  */
 async function jiraConnect(config){
   if(!config || !config.token || !config.domain) return null;
+  /* v3.7.79：浏览器形态连验证请求都发不出去（Atlassian 不回 CORS 头，实测）——
+     与其存下一个"连上了但每次请求都失败"的死配置，不如当场如实拒绝并给出路。 */
+  if(!jiraHasRelay()){
+    try{ pushDiag("warn", "Jira 仅桌面版可用：浏览器形态拿不到 Atlassian 的 CORS 头", { where: "jiraConnect" }); }catch(e){}
+    return null;
+  }
   const provider = integrationRegisterProvider("jira", INTEGRATION_TYPES.JIRA, config);
   if(!provider) return null;
-  // 验证 token
-  const base = _intJiraBase(config.domain);   // 域名必须是纯主机名，否则不拼 URL（见 _intJiraBase）
-  if(!base) return null;
-  const resp = await _intDoRequest(base + "/rest/api/3/myself", {
-    method: "GET",
-    headers: { "Authorization": "Bearer " + config.token }
-  });
+  // 验证 token（经主进程中继）
+  const resp = await _jiraRequest(config.domain, "/rest/api/3/myself", { method: "GET", token: config.token });
   provider.config._verified = !!resp.ok;
   provider.config._lastVerifiedAt = _intNow();
   _intSaveProviders();
@@ -44676,7 +44725,7 @@ async function jiraConnect(config){
  * @param {Object} issue - 本地 issue { id, title, description, status, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
+ * v3.7.79：已接线（jiraPushTasks 经主进程中继推送）。
  */
 async function jiraSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
@@ -44689,19 +44738,17 @@ async function jiraSyncIssue(issue, direction){
   const token = provider.config.token;
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
-  const jiraHost = _intJiraBase(domain);
-  if(!jiraHost) return { success: false, error: "invalid_domain" };
-  const base = jiraHost + "/rest/api/3";
-  const headers = { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
-  const mappedStatus = JIRA_STATUS_MAP[issue.status] || issue.status || "To Do";
+  if(!_intJiraBase(domain)) return { success: false, error: "invalid_domain" };
+  /* v3.7.79：状态映射（JIRA_STATUS_MAP）暂不参与推送 —— 变换状态要走 transitions API 且
+     transition id 因工作流而异，没有可验证工作区前带上必错（同 Linear 的处置）。 */
 
   if(direction === "push" || direction === "sync"){
     let resp;
     if(syncInfo){
       // 更新 issue
-      resp = await _intDoRequest(base + "/issue/" + syncInfo.remoteId, {
+      resp = await _jiraRequest(domain, "/rest/api/3/issue/" + syncInfo.remoteId, {
         method: "PUT",
-        headers: headers,
+        token: token,
         body: JSON.stringify({
           fields: { summary: issue.title, description: issue.description }
         })
@@ -44711,16 +44758,17 @@ async function jiraSyncIssue(issue, direction){
         if(direction === "push") return { success: true, action: "updated", remoteId: syncInfo.remoteId, localId: issue.id };
       }
     }else{
-      // 创建 issue
-      resp = await _intDoRequest(base + "/issue", {
+      /* 创建 issue —— **刻意不带 status**：Jira create 的 fields 不接受 status（要变换工作流需
+         走 transitions API，且 transition id 因工作流而异），带上真机必 400。新 issue 落项目
+         默认状态；本地状态与远端状态的映射（JIRA_STATUS_MAP）留待有可验证工作区后再接。 */
+      resp = await _jiraRequest(domain, "/rest/api/3/issue", {
         method: "POST",
-        headers: headers,
+        token: token,
         body: JSON.stringify({
           fields: {
             project: { key: projectKey },
             summary: issue.title,
-            description: issue.description || "",
-            status: { name: mappedStatus }
+            description: issue.description || ""
           }
         })
       });
@@ -44748,7 +44796,7 @@ function jiraMapStatus(localStatus){
  * 列出 Jira issues（框架）
  * @param {Object} [filter] - { jql, limit }
  * @returns {Promise<Array>} issue 列表
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
+ * v3.7.79：已接线（经主进程中继拉取；JQL 默认按项目 Key）。
  */
 async function jiraListIssues(filter){
   const provider = await _intRequireProvider("jira", INTEGRATION_TYPES.JIRA);
@@ -44758,12 +44806,10 @@ async function jiraListIssues(filter){
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   const jql = filter.jql || ("project = " + projectKey);
-  const jiraHost = _intJiraBase(domain);
-  if(!jiraHost) return [];
-  const base = jiraHost + "/rest/api/3";
-  const resp = await _intDoRequest(base + "/search?jql=" + encodeURIComponent(jql) + "&maxResults=" + (filter.limit || 50), {
+  if(!_intJiraBase(domain)) return [];
+  const resp = await _jiraRequest(domain, "/rest/api/3/search?jql=" + encodeURIComponent(jql) + "&maxResults=" + (filter.limit || 50), {
     method: "GET",
-    headers: { "Authorization": "Bearer " + token }
+    token: token
   });
   if(!resp.ok || !resp.body || !resp.body.issues) return [];
   return resp.body.issues;
