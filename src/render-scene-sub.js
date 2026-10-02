@@ -2,8 +2,8 @@
 /* ---------- 场景细分模块 ---------- */
 /* CARD_REGISTRY：场景专属卡片 render/bind 查表（A-P2-7，替代 renderExtra/bindExtra 硬编码分支；FB-2/6） */
 const CARD_REGISTRY = {
-  report:  { render: reportCard,  bind: bindReportCard },
-  review:  { render: reviewCard,  bind: bindReviewCard },
+  report:  { render: reportCard,  bind: function(el){ return AppBridge.bindReportCard(el); } },
+  review:  { render: reviewCard,  bind: function(el){ return AppBridge.bindReviewCard(el); } },
   health:  { render: healthCard,  bind: bindHealthCard },
   design:  { render: designCard,  bind: bindDesignCard },
   data:    { render: dataCard,    bind: bindDataCard },

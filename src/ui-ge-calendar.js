@@ -924,3 +924,13 @@ function _bindDashToolbar(container, editMode){
     if(typeof doExport === "function"){ try{ doExport(); }catch(e){} }
   };
 }// ===== Notes & Knowledge Base (v1.6-D 知识管理) =====
+
+/* v3.7.77 解耦：注册 AppBridge 槽（日历/看板/甘特/思维导图）—— render 块经桥调用，
+   不再直接引用本块符号（逆层边消除）。注册在加载时执行，晚于 core 定义、早于任何用户交互。 */
+try{ AppBridge.openMindmapModal = openMindmapModal; }catch(e){}
+try{ AppBridge.openGanttModal = openGanttModal; }catch(e){}
+try{ AppBridge.openDashboardModal = openDashboardModal; }catch(e){}
+try{ AppBridge.bindCalendarEvents = bindCalendarEvents; }catch(e){}
+try{ AppBridge.bindDashboardDnD = bindDashboardDnD; }catch(e){}
+try{ AppBridge._bindDashToolbar = _bindDashToolbar; }catch(e){}
+try{ AppBridge.renderCalendarView = renderCalendarView; }catch(e){}

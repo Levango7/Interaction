@@ -117,6 +117,28 @@ const AppBridge = {
   toggleToolPop: () => undefined,
 
   renderHelp: () => undefined,
+
+  /* v3.7.77（解耦 S2b 第二批）：知识库 / 日历 / 报表三簇 —— render 块经桥调用，
+     实现由各自 UI 块加载时注册（ui-ge-notes / ui-ge-calendar / ui-ge-theme）。 */
+  openKnowledgeBaseModal: () => undefined,
+  openNotesModal: () => undefined,
+  openReportModal: () => undefined,
+  bindReportModal: () => undefined,
+  openMindmapModal: () => undefined,
+  openGanttModal: () => undefined,
+  openDashboardModal: () => undefined,
+  bindCalendarEvents: () => undefined,
+  bindDashboardDnD: () => undefined,
+  _bindDashToolbar: () => undefined,
+  /* 返回 HTML 串（拼进模板）：默认空串保证拼接安全 */
+  renderCalendarView: () => "",
+  /* 异步返回：默认 null/空串让调用方的 if 兜底自然走降级分支 */
+  aiSmartRecommend: () => Promise.resolve(null),
+  _aiChatText: () => Promise.resolve(""),
+  /* v3.7.77：插件场景复用内置场景特性的读写口（data-links 注册自定义场景时用，
+     取代直接读写 render-scene-main 的 SCENE_FEATURE_RENDER 表 —— 最后一条真跨层逆层边） */
+  getSceneFeature: () => undefined,
+  setSceneFeature: () => undefined,
 };
 /* 通知/toast 用的图标表（TOAST_ICONS 依赖 UI_ICONS，故紧随其后声明）；从 ui-theme 下移而来 */
 const TOAST_ICONS = { ok: UI_ICONS.check, warn: UI_ICONS.alert, error: UI_ICONS.error, danger: UI_ICONS.error };

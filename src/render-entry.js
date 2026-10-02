@@ -52,7 +52,7 @@ function render(){
     // 切换场景/其他视图时需先把 #drawer 移回原位置并恢复 #main 显示
     const _drawer = $("#drawer");
     if(_drawer && _drawer.classList.contains("drawer-page")){
-      _moveDrawerHome();
+      try{ AppBridge._moveDrawerHome(); }catch(e){ /* 桥异常不影响渲染 */ }
       _drawer.classList.remove("open");
       delete _drawer.dataset.page; // v1.9.6：清掉子页标记（settings/ai/plugin）
     }

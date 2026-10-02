@@ -927,3 +927,10 @@ async function aiGenerateCode(description, language){
   return resp;
 }
 
+
+/* v3.7.77 解耦：注册 AppBridge 槽（报表/AI 引擎）—— render 块经桥调用，
+   不再直接引用本块符号（逆层边消除）。注册在加载时执行，晚于 core 定义、早于任何用户交互。 */
+try{ AppBridge.openReportModal = openReportModal; }catch(e){}
+try{ AppBridge.bindReportModal = bindReportModal; }catch(e){}
+try{ AppBridge.aiSmartRecommend = aiSmartRecommend; }catch(e){}
+try{ AppBridge._aiChatText = _aiChatText; }catch(e){}

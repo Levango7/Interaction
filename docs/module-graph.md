@@ -13,18 +13,18 @@
 | `util-perf` | Util | — | 0 |
 | `crypto` | Crypto | — | 0 |
 | `data-idb` | Data | `crypto` | 1 |
-| `data-links` | Data | `core` `crypto` `render-scene-main` | 7 |
+| `data-links` | Data | `core` `crypto` | 6 |
 | `data-migrate` | Data | `data-links` | 2 |
 | `data-rw` | Data | `core` `crypto` `data-links` | 6 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
 | `ai-tools` | AI | `ai-retry` `chain` `core` `data-idb` `data-links` `data-rw` | 20 |
 | `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `core` `crypto` | 9 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-markdown` `util-perf` | 25 |
-| `render-entry` | Render | `ai-retry` `core` `data-links` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-drawer` | 30 |
-| `render-scene-sub` | Render | `render-scene-main` `render-widgets` `ui-scene-bind` `util-markdown` `util-perf` | 11 |
-| `render-scene-main` | Render | `ai-retry` `ai-tools` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `ui-ge-calendar` `util-markdown` `util-perf` | 28 |
-| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `ui-drawer` `ui-ge-calendar` `ui-ge-notes` `ui-ge-theme` `ui-global-events` `ui-scene-bind` `util-markdown` | 58 |
-| `render-widgets` | Render | `ai-tools` `chain` `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `ui-drawer` `ui-ge-calendar` `ui-ge-notes` `ui-ge-theme` `ui-guide` `util-markdown` `util-perf` | 33 |
+| `render-entry` | Render | `ai-retry` `core` `data-links` `data-rw` `render-overview` `render-scene-main` `render-widgets` | 29 |
+| `render-scene-sub` | Render | `render-scene-main` `render-widgets` `util-markdown` `util-perf` | 9 |
+| `render-scene-main` | Render | `ai-retry` `ai-tools` `core` `data-idb` `data-links` `data-rw` `render-overview` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 27 |
+| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` | 43 |
+| `render-widgets` | Render | `ai-tools` `chain` `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `util-markdown` `util-perf` | 25 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-backup-stats` `ui-daily` `ui-drawer` | 4 |
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `ui-drawer` `util-perf` | 10 |
@@ -52,12 +52,12 @@
 | `toast` | `core` | 26 |
 | `SCENARIOS` | `core` | 20 |
 | `sanitizeHtml` | `util-markdown` | 19 |
+| `AppBridge` | `core` | 17 |
 | `ORDER` | `core` | 16 |
 | `getCfg` | `data-links` | 16 |
 | `render` | `render-entry` | 15 |
 | `getActiveTasks` | `data-rw` | 14 |
 | `getTasks` | `data-rw` | 13 |
-| `AppBridge` | `core` | 13 |
 | `getRec` | `data-rw` | 13 |
 | `active` | `data-links` | 12 |
 | `setTasks` | `data-rw` | 10 |
@@ -75,37 +75,22 @@
 ## 3. 校验结果
 
 - 跨块重复定义：**0** 项
-- 循环依赖：**47** 条（data-links → render-scene-main → data-links；data-links → render-scene-main → render-widgets → ui-ge-calendar → chain → data-links；data-links → render-scene-main → render-widgets → ui-ge-calendar → render-overview → render-scene-sub → ui-scene-bind → ui-backup-stats → data-links；data-links → render-scene-main → render-widgets → ui-ge-calendar → render-overview → render-scene-sub → ui-scene-bind → ui-backup-stats → data-rw → data-links；render-widgets → ui-ge-calendar → render-overview → render-scene-sub → ui-scene-bind → ui-backup-stats → render-widgets）
-- 逆层依赖（低层用高层符号）：**45** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**182** 个符号
+- 循环依赖：**16** 条（ai-tools → ai-retry → ai-tools；ai-tools → ai-retry → ai-loop → ai-tools；ai-retry → ai-loop → ai-retry；render-widgets → render-overview → render-scene-sub → render-widgets；render-widgets → render-overview → render-scene-sub → render-scene-main → render-widgets）
+- 逆层依赖（低层用高层符号）：**30** 条（按「块对」计）
+- 逆层依赖（按**符号**计，去重）：**172** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
 | `ai-loop`（AI） | `ai-retry`（AI） | `renderChat` `scrollChat` `trimChatHist` |
 | `ai-tools`（AI） | `ai-retry`（AI） | `_estTokens` `lastChatRequest` `pendingConfirm` |
-| `data-links`（Data） | `render-scene-main`（Render） | `SCENE_FEATURE_RENDER` |
 | `render-entry`（Render） | `render-overview`（Render） | `renderAuthLogin` `renderAuthRegister` `renderAuthWelcome` `renderChainPage` `renderOverview` `renderStats` … |
 | `render-entry`（Render） | `render-scene-main`（Render） | `_featureCardBind` `_hydrateRecImgs` `bindCodeFrontendCard` `bindCodeRunnerCard` `bindCodeSqlCard` `bindMeetingActionCard` … |
 | `render-entry`（Render） | `render-widgets`（Render） | `openRecycle` `openToolStub` `renderSide` |
-| `render-entry`（Render） | `ui-drawer`（UI） | `_moveDrawerHome` |
 | `render-overview`（Render） | `render-widgets`（Render） | `SIDE_MENU_ICONS` `TOOL_APPS` `_priWeight` `lineChartSVG` `openAlarmModal` `openChartStore` … |
-| `render-overview`（Render） | `ui-drawer`（UI） | `openTemplateModal` `registerPluginFromJson` |
-| `render-overview`（Render） | `ui-ge-calendar`（UI） | `_bindDashToolbar` `bindCalendarEvents` `bindDashboardDnD` `openDashboardModal` `openGanttModal` `openMindmapModal` … |
-| `render-overview`（Render） | `ui-ge-notes`（UI） | `openKnowledgeBaseModal` `openNotesModal` |
-| `render-overview`（Render） | `ui-ge-theme`（UI） | `bindReportModal` `openReportModal` |
-| `render-overview`（Render） | `ui-global-events`（UI） | `toggleToolPop` |
-| `render-overview`（Render） | `ui-scene-bind`（UI） | `openTaskEdit` |
 | `render-scene-main`（Render） | `render-overview`（Render） | `_renderDiagramCanvas` `_renderFinanceStats` `_renderHealthTrend` |
 | `render-scene-main`（Render） | `render-widgets`（Render） | `TOOL_APPS` `lineChartSVG` `renderEmpty` |
-| `render-scene-main`（Render） | `ui-ge-calendar`（UI） | `renderCalendarView` |
 | `render-scene-sub`（Render） | `render-scene-main`（Render） | `renderMiniChart` |
 | `render-scene-sub`（Render） | `render-widgets`（Render） | `thisWeekDone` `weekRange` |
-| `render-scene-sub`（Render） | `ui-scene-bind`（UI） | `bindReportCard` `bindReviewCard` |
-| `render-widgets`（Render） | `ui-drawer`（UI） | `closeDrawer` `openTemplateModal` |
-| `render-widgets`（Render） | `ui-ge-calendar`（UI） | `openMindmapModal` `renderCalendarView` |
-| `render-widgets`（Render） | `ui-ge-notes`（UI） | `openKnowledgeBaseModal` `openNotesModal` |
-| `render-widgets`（Render） | `ui-ge-theme`（UI） | `openReportModal` |
-| `render-widgets`（Render） | `ui-guide`（UI） | `renderHelp` |
 | `ui-drawer`（UI） | `ui-ge-api`（UI） | `getLang` |
 | `ui-drawer`（UI） | `ui-ge-notes`（UI） | `closeKnowledgeBaseModal` `closeNoteEditorModal` `closeNotesModal` `closeSearchModal` `executeSearch` `openKnowledgeBaseModal` … |
 | `ui-drawer`（UI） | `ui-ge-theme`（UI） | `createCustomTheme` `deleteCustomTheme` `exportTheme` `getCurrentTheme` `getCustomThemes` `getScenarioColors` … |

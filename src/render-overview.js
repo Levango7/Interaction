@@ -208,7 +208,7 @@ function renderOverview(){
   if(arBtn) arBtn.onclick=()=> handleAiRecommend();
   // v1.5-D 高级报表：绑定入口按钮 + 弹窗内事件
   const rBtn=$("#btnOpenReport");
-  if(rBtn) rBtn.onclick=()=>{ openReportModal("week", 0); bindReportModal(); };
+  if(rBtn) rBtn.onclick=()=>{ AppBridge.openReportModal("week", 0); AppBridge.bindReportModal(); };
 }
 
 /* ---------- v1.4-D AI 每日报告卡片 ---------- */
@@ -274,7 +274,7 @@ async function handleAiRecommend(){
   if(btn) btn.disabled=true;
   if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="coach-hint">${t("aiRecommend.loading", "正在分析你的任务数据…")}</div>`);
   try{
-    const advice = await aiSmartRecommend();
+    const advice = await AppBridge.aiSmartRecommend();
     if(advice && advice.length){
       _aiHubContent.recommend = advice.join("\n"); // v3.2.1：缓存供讨论按钮使用
       const html = `<div class="ai-recommend-list">` +
@@ -600,8 +600,8 @@ function renderStats(){
       renderStats();
     };
     /* 工具条 + tab + 报表入口（容器级委托）；DnD 仅编辑态有意义但绑定无副作用 */
-    _bindDashToolbar(host, _dashEditMode);
-    if(typeof bindDashboardDnD === "function") bindDashboardDnD(host, _dashEditMode);
+    AppBridge._bindDashToolbar(host, _dashEditMode);
+    AppBridge.bindDashboardDnD(host, _dashEditMode);
   }
   // v3.1：统计页时间筛选切换
   $$("#main .stats-range-nav .set-nav-btn").forEach(b=>{
@@ -621,9 +621,9 @@ function renderTasksPage(){
   const today = todayStr();
   let body;
   if(_tasksView === "calendar"){
-    body = `<div class="card"><h2>${ic("overview")}${t("appPage.calview", "日历")}</h2><div class="cal-inline">${renderCalendarView(0)}</div></div>`;
+    body = `<div class="card"><h2>${ic("overview")}${t("appPage.calview", "日历")}</h2><div class="cal-inline">${AppBridge.renderCalendarView(0)}</div></div>`;
     $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
-    bindCalendarEvents();
+    AppBridge.bindCalendarEvents();
     _bindTasksTabs();
     appendFoot();
     return;
@@ -661,7 +661,7 @@ function renderTasksPage(){
       };
     });
     $$("#main .todo-row .todo-title").forEach(el=>{
-      el.onclick = ()=>{ const id = el.closest(".todo-row").getAttribute("data-task-id"); if(typeof openTaskEdit==="function") openTaskEdit(id); };
+      el.onclick = ()=>{ const id = el.closest(".todo-row").getAttribute("data-task-id"); AppBridge.openTaskEdit(id); };
     });
     _bindTasksTabs();
     appendFoot();
@@ -697,7 +697,7 @@ function renderTasksPage(){
   body = `<div class="card"><h2>${ic("grid")}${t("tasksPage.kanban", "任务看板")} <span class="sub u-m-0">${t("tasksPage.kanban.sub", "点击卡片编辑 · 全场景")}</span></h2><div class="kanban">${colHtml}</div></div>`;
   $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
   $$("#main [data-tasks-card]").forEach(card=>{
-    card.onclick = ()=>{ const id = card.getAttribute("data-tasks-card"); if(typeof openTaskEdit==="function") openTaskEdit(id); };
+    card.onclick = ()=>{ const id = card.getAttribute("data-tasks-card"); AppBridge.openTaskEdit(id); };
   });
   _bindTasksTabs();
   appendFoot();
@@ -723,22 +723,22 @@ function _bindTasksTabs(){
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
-  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
+  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } } },
   { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
   { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.bell, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
   { id:"x-pomo",    name:t("tool.pomo.name","笃行"),     desc:t("tool.pomo.desc","25 分钟专注 + 5 分钟休息"), cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
   { id:"x-tracker", name:t("tool.tracker.name","时间追踪"), desc:t("tool.tracker.desc","任务计时秒表"), cat:"效率工具", icon:UI_ICONS.stopwatch, pop:"trackerPop", menuAttr:"plug-tracker" },
   { id:"x-pet",     name:t("tool.pet.name","萌宠"),     desc:t("tool.pet.desc","桌面陪伴小伙伴"), cat:"效率工具", icon:UI_ICONS.paw, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
-  { id:"x-mindmap", name:t("tool.mindmap.name","思维导图"), desc:t("tool.mindmap.desc","任务关系树状图"), cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
+  { id:"x-mindmap", name:t("tool.mindmap.name","思维导图"), desc:t("tool.mindmap.desc","任务关系树状图"), cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ AppBridge.openMindmapModal(); } },
   /* v3.6.6 死入口修复：openGanttModal / openDashboardModal 此前只绑在 #btnGantt / #btnDashboard 上，
      而这两个按钮自 v1.15「更多菜单移除」后已不存在于 DOM → 两个弹窗（甘特图 / 自定义仪表盘 15 组件）
      全无 UI 入口。按既有惯例（思维导图 / 知识库 / 笔记 / 高级报表同在此处）补工具箱入口。 */
-  { id:"x-gantt",   name:t("tool.gantt.name","甘特图"),   desc:t("tool.gantt.desc","任务时间线视图"), cat:"功能", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', run:()=>{ if(typeof openGanttModal==="function") openGanttModal(); } },
-  { id:"x-dashboard", name:t("tool.dashboard.name","自定义仪表盘"), desc:t("tool.dashboard.desc","拖拽编排 15 个组件"), cat:"功能", icon:UI_ICONS.gauge, run:()=>{ if(typeof openDashboardModal==="function") openDashboardModal(); } },
-  { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
-  { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
-  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ if(typeof openReportModal==="function") openReportModal(); } },
-  { id:"x-tpl",     name:t("tool.tpl.name","场景模板"), desc:t("tool.tpl.desc","一键导入预设任务集"), cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); } }
+  { id:"x-gantt",   name:t("tool.gantt.name","甘特图"),   desc:t("tool.gantt.desc","任务时间线视图"), cat:"功能", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', run:()=>{ AppBridge.openGanttModal(); } },
+  { id:"x-dashboard", name:t("tool.dashboard.name","自定义仪表盘"), desc:t("tool.dashboard.desc","拖拽编排 15 个组件"), cat:"功能", icon:UI_ICONS.gauge, run:()=>{ AppBridge.openDashboardModal(); } },
+  { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ AppBridge.openKnowledgeBaseModal(); } },
+  { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ AppBridge.openNotesModal(); } },
+  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ AppBridge.openReportModal(); } },
+  { id:"x-tpl",     name:t("tool.tpl.name","场景模板"), desc:t("tool.tpl.desc","一键导入预设任务集"), cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ AppBridge.openTemplateModal(); } }
 ];
 let _toolboxCat = "全部";
 let _toolboxQ = "";
@@ -789,7 +789,7 @@ function renderToolboxPage(){
       if(TOOL_APPS[id]){ openToolStub(id); return; }
       const extra = TOOLBOX_EXTRAS.find(x=>x.id===id);
       if(!extra) return;
-      if(extra.pop){ if(typeof toggleToolPop==="function") AppBridge.toggleToolPop(extra.pop, card); return; }
+      if(extra.pop){ AppBridge.toggleToolPop(extra.pop, card); return; }
       if(extra.run){ extra.run(); }
     };
   });
@@ -881,7 +881,7 @@ function renderStorePage(){
   if(imp) imp.onclick = ()=>{ if(typeof prompt!=="function") return;
     const json = prompt(t("storePage.importPrompt", "粘贴插件 JSON 定义："));
     if(json===null) return;
-    const r = registerPluginFromJson(json);
+    const r = AppBridge.registerPluginFromJson(json);
     if(r && r.ok){ toast(t("storePage.importOkToast", "插件导入成功"),"ok"); renderStorePage(); }
     else toast((r&&r.err)||t("storePage.importFailToast", "导入失败"),"warn");
   };

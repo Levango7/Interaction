@@ -62,16 +62,16 @@ const SC_SUBMENU = {
     {id:"des-ps", label:"PS lite"}
   ],
   study:[
-    {id:"stu-mindmap", label:t("side.sub.mindmap", "思维导图"), run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); }},
-    {id:"stu-kb", label:"知识库", run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); }},
+    {id:"stu-mindmap", label:t("side.sub.mindmap", "思维导图"), run:()=>{ AppBridge.openMindmapModal(); }},
+    {id:"stu-kb", label:"知识库", run:()=>{ AppBridge.openKnowledgeBaseModal(); }},
     {id:"stu-web", label:t("side.sub.webSearch", "在线检索")},
-    {id:"stu-notes", label:t("side.sub.notes", "笔记"), run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); }},
-    {id:"stu-tpl", label:t("side.sub.template", "场景模板"), run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); }}
+    {id:"stu-notes", label:t("side.sub.notes", "笔记"), run:()=>{ AppBridge.openNotesModal(); }},
+    {id:"stu-tpl", label:t("side.sub.template", "场景模板"), run:()=>{ AppBridge.openTemplateModal(); }}
   ],
   data:[
     {id:"dat-stats", label:t("side.sub.dataAnalysis", "数据分析"), run:()=>{ setActive("stats"); render(); }},
     {id:"dat-chart", label:t("side.sub.edit", "编辑"), run:()=>{ _sideActive=null; setActive("stats"); _dashEditMode=true; render(); }},
-    {id:"dat-report", label:t("side.sub.report", "报告"), run:()=>{ if(typeof openReportModal==="function") openReportModal(); }}
+    {id:"dat-report", label:t("side.sub.report", "报告"), run:()=>{ AppBridge.openReportModal(); }}
   ],
   code:[
     {id:"cod-compile", label:t("side.sub.compile", "脚本编译")},
@@ -270,7 +270,7 @@ function setupSideMenu(){
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
     if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
-    if(btn.dataset.help){ _sideActive = null; if(typeof renderHelp==="function") AppBridge.renderHelp(); return; }
+    if(btn.dataset.help){ _sideActive = null; AppBridge.renderHelp(); return; }
     if(btn.dataset.aipage){ _sideActive = null; if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
     /* 子项：执行注册动作 */
     const menuId = btn.getAttribute("data-menu");
@@ -406,7 +406,7 @@ function setupMobNav(){
         return;
       }
       if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); AppBridge.openDrawer(); return; }
-      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); if(typeof renderHelp==="function") AppBridge.renderHelp(); return; }
+      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); AppBridge.renderHelp(); return; }
       if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
       const menuId = btn.getAttribute("data-menu");
       if(!menuId) return;
@@ -524,7 +524,7 @@ function openRecycle(){
 */
 function openChartStore(){
   // v1.15 修复：从市场(抽屉)切到图表页时先关闭抽屉，避免新页面被覆盖层挡住
-  if(typeof closeDrawer === "function") closeDrawer();
+  AppBridge.closeDrawer();
   // 图表库（静态）——不用 emoji，用纯文字 + 矢量图标
   // v1.15：移除"日历"（用户要求；日历功能在应用页）
   const chartLibs = [
@@ -950,7 +950,7 @@ function setupSideToggle(){
    渲染到 #main（与图表商店/回收站页同模式），点击各卡片打开对应 modal */
 function openAppPage(){
   // v1.15 修复：从市场(抽屉)切到应用页时先关闭抽屉，避免新页面被覆盖层挡住
-  if(typeof closeDrawer === "function") closeDrawer();
+  AppBridge.closeDrawer();
   uiView = "app";
   renderSide();
   const apps = [
@@ -975,7 +975,7 @@ function openAppPage(){
   $$("#main [data-app]").forEach(function(c){
     c.onclick = function(){
       const id = c.getAttribute("data-app");
-      if(id==="calview"){ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } }
+      if(id==="calview"){ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } }
       else if(id==="weather"){ if(typeof openWeatherModal === "function") openWeatherModal(); }
       else if(id==="alarm"){ if(typeof openAlarmModal === "function") openAlarmModal(); }
       else if(id==="pet"){ if(typeof openPetModal === "function") openPetModal(); }
@@ -1741,7 +1741,7 @@ const TOOL_APPS = {
       $("#ocrRun").onclick = async function(){
         if(!dataUrl){ toast(t("tool.ocr.uploadFirst", "请先上传截图"), "warn"); return; }
         $("#ocrResult").value = t("tool.ocr.recognizing", "识别中…");
-        const text = await _aiChatText([
+        const text = await AppBridge._aiChatText([
           { role:"user", content:[
             { type:"text", text:t("tool.ocr.extractPrompt", "请提取这张图片中的所有文字，按原始排版输出，不要添加说明。") },
             { type:"image_url", image_url:{ url:dataUrl } }
@@ -2120,7 +2120,7 @@ const TOOL_APPS = {
         const p = $("#igPrompt").value.trim();
         if(!p){ toast(t("tool.imgGen.enterDesc", "请输入图片描述"), "warn"); return; }
         $("#igOut").innerHTML = sanitizeHtml('<div class="coach-hint">' + t("tool.imgGen.generating", "生成中…（约 10–30 秒）") + '</div>');
-        const text = await _aiChatText([{ role:"user", content:t("tool.imgGen.svgPrompt", "为以下描述生成一张图片的 SVG 简笔示意（仅返回 SVG 代码）：\n{desc}").replace("{desc}", p) }]);
+        const text = await AppBridge._aiChatText([{ role:"user", content:t("tool.imgGen.svgPrompt", "为以下描述生成一张图片的 SVG 简笔示意（仅返回 SVG 代码）：\n{desc}").replace("{desc}", p) }]);
         const out = $("#igOut");
         if(text && text.indexOf("<svg") >= 0){
           let svgPart = text.slice(text.indexOf("<svg"));
@@ -2165,7 +2165,7 @@ const TOOL_APPS = {
         const secs = ($("#vgLen") || {}).value || "5";
         const style = ($("#vgStyle") || {}).value || "real";
         out.innerHTML = sanitizeHtml('<div class="coach-hint">' + t("tool.vidGen.generating", "生成中…（约 10–30 秒）") + '</div>');
-        const text = await _aiChatText([{ role:"user", content:_vgBuildPrompt(desc, secs, style) }]);
+        const text = await AppBridge._aiChatText([{ role:"user", content:_vgBuildPrompt(desc, secs, style) }]);
         if(!text){ out.innerHTML = sanitizeHtml('<div class="empty">' + t("tool.vidGen.failed", "生成失败或未返回内容（请检查 AI 配置与网络）") + '</div>'); return; }
         /* 结果放到只读 textarea：便于整段复制粘贴（而不是塞进 HTML —— 也顺手避免注入面） */
         out.innerHTML = "";
@@ -2740,7 +2740,7 @@ const TOOL_APPS = {
  * @returns {void}
  */
 function openToolStub(toolId, label){
-  if(typeof closeDrawer === "function") closeDrawer();
+  AppBridge.closeDrawer();
   uiView = "tool";
   renderSide();
   /* v2.3.0：优先走 TOOL_APPS 真实实现 */

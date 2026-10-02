@@ -908,3 +908,8 @@ function executeSearch(query){
   }
   return results;
 }// ===== Automation Workflow (v1.6-E 自动化工作流) [DEPRECATED v1.14.1：入口已冻结] =====
+
+/* v3.7.77 解耦：注册 AppBridge 槽（知识库/笔记弹窗）—— render 块经桥调用，
+   不再直接引用本块符号（逆层边消除）。注册在加载时执行，晚于 core 定义、早于任何用户交互。 */
+try{ AppBridge.openKnowledgeBaseModal = openKnowledgeBaseModal; }catch(e){}
+try{ AppBridge.openNotesModal = openNotesModal; }catch(e){}

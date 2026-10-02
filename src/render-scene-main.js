@@ -184,7 +184,7 @@ function renderMainHTML(){
   // v2.1.0：任务区按 sceneViewMode 分支——kanban（看板）/ calendar（日历）/ todo（待办列表）
   let taskArea, filterHtml;
   if(sceneViewMode === "calendar"){
-    taskArea = `<div class="cal-inline" id="calInlineView" data-offset="0">${renderCalendarView(0)}</div>`;
+    taskArea = `<div class="cal-inline" id="calInlineView" data-offset="0">${AppBridge.renderCalendarView(0)}</div>`;
     filterHtml = "";
   } else if(sceneViewMode === "todo"){
     taskArea = renderTodoListView(tasks, s);
@@ -2147,3 +2147,10 @@ function _updateRecVScroll(viewport, sc){
   items.innerHTML = sanitizeHtml(html);
   items.style.top = range.offsetY + "px";
 }
+
+/* v3.7.77 解耦：SCENE_FEATURE_RENDER 的读写口注册到 AppBridge —— data-links（注册自定义
+   场景时复读内置特性渲染器）经桥访问，不再直接引用本块的表（消除最后一条真跨层逆层边）。 */
+try{
+  AppBridge.getSceneFeature = function(sc, fid){ const t = SCENE_FEATURE_RENDER[sc]; return t ? t[fid] : undefined; };
+  AppBridge.setSceneFeature = function(sc, obj){ SCENE_FEATURE_RENDER[sc] = obj; };
+}catch(e){}

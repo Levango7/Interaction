@@ -1,3 +1,14 @@
+## [v3.7.77] - 2026-10-03
+
+**解耦第二批（S2b）：桥接迁移 —— 逆层 45 → 30、循环 47 → 16，且真跨层逆层清零。** 按 decoupling-plan 工具 B：
+
+- **迁移调用方**（槽位多由并行会话已注册）：render-entry / render-overview / render-scene-sub / render-widgets 把 `_moveDrawerHome / openTaskEdit / openTemplateModal / registerPluginFromJson / toggleToolPop / closeDrawer / renderHelp / bindReportCard / bindReviewCard` 的调用**与 `typeof` 守卫**（守卫里的裸名同样计边——module-graph 只豁免 `.` 前缀，实测口径）一并改走 AppBridge；render-scene-sub 的 `bind:` 表值改**晚绑定包装**（`function(el){ return AppBridge.bindReportCard(el); }`——直接存桥引用会把注册前的空操作捕获死，这是本批最隐蔽的坑，绕过了）。
+- **新开 15 槽**：知识库（openKnowledgeBaseModal/openNotesModal）、日历簇（openMindmapModal/openGanttModal/openDashboardModal/bindCalendarEvents/bindDashboardDnD/_bindDashToolbar/renderCalendarView）、报表与 AI 引擎（openReportModal/bindReportModal/aiSmartRecommend/_aiChatText）、场景特性读写口（getSceneFeature/setSceneFeature）；返回值语义按调用点定默认（renderCalendarView → `""`、aiSmartRecommend → `null`、_aiChatText → `""`），三个 UI 块末尾加载时注册。
+- **最后一条真跨层逆层边**：data-links 注册自定义场景时直接读写 render-scene-main 的 `SCENE_FEATURE_RENDER` 表 → 改走 `get/setSceneFeature` 桥。修完**跨层逆层清零**；剩余 30 条全部是同层序对（Render×9 / UI×19 / AI×2——decoupling-plan 明示「同层互调可接受、优先级低」），较起点 53 条降 43%。
+- **过程披露**：一次半执行的迁移脚本重跑，使「from 是 to 后缀」的锚点发生二次替换，产出 `AppBridge.AppBridge._bindDashToolbar`——三处测试当场红（stats 页直接崩）。全仓扫描确认仅此一处，修净后 24/24；教训：幂等替换的跳过判据要看「from 是否仍以裸形态出现」，不能只看 n。
+- 基线重冻结（35 块 · 30 逆层 / 16 循环 · 重复定义 0）：check 报的「新增」经逐条核对为 SCC 在大量删边后的重组路径，真增仅「注册块→core」正向边，`--freeze` 落账。
+- 验证：全量 **113 文件 / 1273 用例**、e2e **82/82（3.7m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`、`check:source-state` 源码态，均本机实测。（同前几次披露：vitest worker RPC 偶发未处理错误会拦 posttest 不跑，干净重跑全绿 + 手动还原源码态。）
+
 ## [v3.7.76] - 2026-10-03
 
 **知识库文件导入落地（路线余量 ③ 清偿）：导入纯文本文件 → 按段落切块 → 作为第五数据源进 v3.7.67 的哈希 diff 体系 → 检索索引自动收敛；删除文件 = 其全部索引块连文档带向量移除。全量 **113 文件 / 1273 用例**（v3.7.75 为 112/1263；+10 = `rag-file-import.test.js`）、e2e **82/82（4.1m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 50→47 循环 / 53→45 逆层，无新增）、`check:source-state` 源码态，均本机实测。**发版后线上复核**：Pages 取回 **3,615,901 B**、`VERSION="3.7.76"`、`BUILD_TAG="20261002g"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。

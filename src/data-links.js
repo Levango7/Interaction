@@ -159,9 +159,9 @@ function _applyPluginScenarioPresets(){
         { id:"reading",  type:"record", label:t("tab.reading", "阅读") }
       ];
     }
-    const rf = SCENE_FEATURE_RENDER.study && SCENE_FEATURE_RENDER.study.reading;
-    if(rf && !(SCENE_FEATURE_RENDER.reading && SCENE_FEATURE_RENDER.reading.reading)){
-      SCENE_FEATURE_RENDER.reading = { reading: rf };
+    const rf = AppBridge.getSceneFeature("study", "reading");
+    if(rf && !AppBridge.getSceneFeature("reading", "reading")){
+      AppBridge.setSceneFeature("reading", { reading: rf });
     }
     const rb = SCENE_FEATURE_BIND.study && SCENE_FEATURE_BIND.study.reading;
     if(rb && !(SCENE_FEATURE_BIND.reading && SCENE_FEATURE_BIND.reading.reading)){
