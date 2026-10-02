@@ -187,6 +187,8 @@ function openDrawer(){ const cfg=getCfg();
   const mmInp=$("#cfgMemMax"); if(mmInp) mmInp.value = (cfg.memMax!==undefined && isFinite(Number(cfg.memMax))) ? String(cfg.memMax) : "";
   const agLoopsInp=$("#cfgAgentLoops"); if(agLoopsInp) agLoopsInp.value = (cfg.agentLoops!==undefined && isFinite(Number(cfg.agentLoops))) ? String(cfg.agentLoops) : "";
   const agGoalLoopsInp=$("#cfgAgentGoalLoops"); if(agGoalLoopsInp) agGoalLoopsInp.value = (cfg.agentGoalLoops!==undefined && isFinite(Number(cfg.agentGoalLoops))) ? String(cfg.agentGoalLoops) : "";
+  /* v3.7.71：RAG 上下文注入开关回填。默认开（cfg.rag===false 才关），旧档无字段时勾上 */
+  const ragChk=$("#cfgRagInject"); if(ragChk) ragChk.checked = cfg.rag !== false;
   const twInp=$("#cfgToolWhitelist"); if(twInp) twInp.value = cfg.toolWhitelist||"";
   const acInp=$("#cfgAgentAutoConfirm"); if(acInp) acInp.checked = cfg.agentAutoConfirm!==false;
   // v1.15：场景 sysprompt 编辑器回填（选择器填充 + 当前场景文本加载）
@@ -538,6 +540,8 @@ async function saveCfg(){
     // v2.4.0：Agent 循环上限、工具白名单、自动确认持久化
     const agLoopsInp=$("#cfgAgentLoops"); if(agLoopsInp){ const v=agLoopsInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.agentLoops=Number(v); else delete cfg.agentLoops; }
     const agGoalLoopsInp=$("#cfgAgentGoalLoops"); if(agGoalLoopsInp){ const v=agGoalLoopsInp.value.trim(); if(v!=="" && isFinite(Number(v))) cfg.agentGoalLoops=Number(v); else delete cfg.agentGoalLoops; }
+    /* v3.7.71：RAG 开关保存（与 ai-tools.js 的 cfg.rag===false 判定同一字段） */
+    const ragChk=$("#cfgRagInject"); if(ragChk) cfg.rag = ragChk.checked;
     const twInp=$("#cfgToolWhitelist"); if(twInp){ const v=twInp.value.trim(); cfg.toolWhitelist=v||undefined; if(!v) delete cfg.toolWhitelist; }
     const acInp=$("#cfgAgentAutoConfirm"); if(acInp) cfg.agentAutoConfirm=!!acInp.checked;
     // v1.15：保存当前场景自定义 sysprompt（空则恢复默认）

@@ -18,9 +18,6 @@ function idbShouldMirror(k){
   return IDB_MIRROR_PREFIXES.some(p => k === p || k.startsWith(p));
 }
 
-// v1.14 stub: OAuth2 callback handler (oauth2 module removed, startup wiring remains)
-function _oauth2HandleCallback() { return Promise.resolve(); }
-
 let _idbDbPromise = null;
 /**
  * 打开 IDB 连接（单例 Promise 缓存）
@@ -373,4 +370,3 @@ function getHybridData(type){
    模型缓存助手 —— 它们的唯一调用方 54-离线AI（WebLLM/ONNX 假框架）已按 product-scope 纪律
    整体移除（见 ui-ge-integrations.js 的 v3.7.58 墓碑注释），本块随之失去消费者，一并清理。
    需要时从 git 历史恢复。 */
-

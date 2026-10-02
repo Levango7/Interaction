@@ -1823,6 +1823,6 @@ function _resetIntegrationRateLimits(){
      // ===== v1.8-C OAuth2 Framework (OAuth2 授权框架) =====
      // ----------------------------------------------------------------------------
    OAuth2 模块已在 v1.14.0「做减法」中整体移除，只剩注释头与分隔线（全仓 oauth2BuildAuthUrl 0 处，
-   实际接线点在 src/data-idb.js 的 _oauth2HandleCallback stub）。留着会误导读者以为该模块仍存在 ——
+   data-idb.js 的 OAuth2 回调 stub 已随 v3.7.71 一并清掉）。留着会误导读者以为该模块仍存在 ——
    2026-09-27 审计时我自己就先被它误导了一次（在源码态 grep 应用代码得到 0 处，一度误判为「被抽取破坏」）。
    纯注释残留，删除无功能影响。 */

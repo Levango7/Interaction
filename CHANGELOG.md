@@ -1,3 +1,32 @@
+## [v3.7.73] - 2026-10-02
+
+**🔴 层五项清仓 + 🟠② 语义召回默认可用。** 本版最重要的发现：语义召回「默认关闭」的真正根因不是产品决策，而是**设置开关的 UI 元素从未被渲染**（`#aiMemRag` 在全仓渲染代码 0 命中，保存逻辑读 null → `cfg.rag` 恒 false）——用户被永久锁死在词法匹配上，这是第 7 例「死接线」。
+
+### 🔴 竞态清仓（聊天键 save(chat_active) 共 8 处，逐处审计）
+
+- **6 处含 await 路径全部修复**：入口定格场景（`const sc = active` / `p.sc` / `pendingConfirm.sc`），读、写、循环传参统一用定格值。涉及 onChatSubmit（4 处 save + runChatLoop 调用）/ runChatLoop 本体（save + 挂起确认归属 + lastChatRequest 记录 sc）/ proposeAgentPlan / confirmPendingDanger（psc）/ retryChat（重试用记录时场景 req.sc）/ confirmAgentPlan（上一版已修）。
+- **2 处同步 cancel 函数保留原样**：无 await → active 即当前场景，无竞态（改动无益徒增 diff）。
+- runChatLoop 签名加第三参 `sc`（缺省回退 active，向后兼容）。
+
+### 🔴 云同步与死码
+
+- **5xx/429 退避重试**：同步通道此前 5xx 零重试，后端抖动一次就失败。现重试 2 次（800ms/1.6s），与 AI 通道重试矩阵对齐；401 仍走刷新链。
+- **errKind 错误分类**：apiFetch 返回值新增 `errKind: "server"|"client"|null`，调用方可提示「稍后再试」vs「检查配置」。
+- **OAuth2 空 stub 清除**：`_oauth2HandleCallback`（v1.14 遗留、永远 resolve、每此启动 fire-and-forget 调用一次）定义与调用点一并删除。
+- **_lastSyncAt 死变量**删除（只赋值不读；持久化时间已由 `_setSyncMeta` 承担）。
+- **sync-contract.spec 口径对齐**：补 `test.skip(!E2E)` 门禁（此前注释声明跳过、实际始终执行）。
+
+### 🟠② 语义召回默认可用
+
+- **根因**：`#aiMemRag` checkbox 全仓渲染 0 命中 → `rg` 恒 null → `cfg.rag = rg ? ... : false` **恒 false**。绑定/回填/保存代码俱全，唯独没有 UI —— 第 7 例死接线。
+- **判定反转**：`cfg.rag !== true` → `cfg.rag === false`（默认开，显式关才关），共 2 处判定点。
+- **embed 失败缓存**：`/embeddings` 返回 404/401/403（通道不可用，非瞬时抖动）→ 会话内 10 分钟不再尝试，自动退回词法匹配，每条消息不再白打请求；5xx 视为抖动不缓存。
+- **设置抽屉新增「上下文注入（RAG，默认开）」开关**：抽屉为静态 HTML 结构（cfgAgentLoops 同款 set-field 模板），回填/保存/中英 i18n 齐备 —— 用户从此**可控**。
+- 附带：`_embedCfg()` 本就自动复用当前 AI profile 的 base+key（模型默认 bge-m3），通道无需额外配置。
+
+### 验证
+
+门禁六道全绿；check:source-state / src:check ✓。全量与 CI 见发布 run。
 ## [v3.7.72] - 2026-10-02
 
 **Agent 执行架构升级：`executeAgentPlanReactive` 替换盲跑 —— 自主执行从「确认后按 JSON 顺序跑到底」变成「每 3 步把真实结果回喂模型，可继续可重规划」。** 这是深评指出的「与真 agent 最本质的差距」的正面修复，也是 product-scope 路线项 ① 的落地。

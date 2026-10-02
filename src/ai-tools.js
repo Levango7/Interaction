@@ -527,7 +527,9 @@ async function memPrimeQueryVector(text){
   const q = String(text || "").trim();
   _memQueryVec = null;
   const cfg = getCfg() || {};
-  if(cfg.agent === false || cfg.rag !== true) return false;   // Agent 关 → 记忆段本来就不注入
+  /* v3.7.71 默认可用：旧判 cfg.rag!==true 且设置页从未渲染过该开关（#aiMemRag 恒 null → 恒 false）
+   → 语义召回对用户永久锁死。反转为「显式 false 才关」；embed 通道不可用时有失败缓存降级词法。 */
+  if(cfg.agent === false || cfg.rag === false) return false;  // Agent 关 → 记忆段本来就不注入
   if(!_embedCfg()) return false;                              // 没配 embedding 通道 → 纯词法
   if(!getMemories().length) return false;
   try{
@@ -1713,9 +1715,13 @@ function _embedCfg(){
  * @param {string[]} texts
  * @returns {Promise<Float32Array[]|null>} null = 通道不可用（调用方降级，不要抛）
  */
+/* v3.7.71：embed 通道失败缓存 —— 服务无 /embeddings（404/401 等）时 10 分钟内直接跳过，
+   避免每条消息都白打一次请求。会话级变量（不落盘）：重开页面/改配置后自动重试。 */
+let _embedFailUntil = 0;
 async function aiEmbedTexts(texts){
   const list = (texts || []).map(x => String(x || "").slice(0, 8000)).filter(Boolean);
   if(!list.length) return [];
+  if(Date.now() < _embedFailUntil) return null;
   const ec = _embedCfg();
   if(!ec) return null;
   try{
@@ -1724,7 +1730,16 @@ async function aiEmbedTexts(texts){
       headers: Object.assign({ "Content-Type": "application/json" }, ec.key ? { "Authorization": "Bearer " + ec.key } : {}),
       body: JSON.stringify({ model: ec.model, input: list.length === 1 ? list[0] : list })
     });
-    if(!r.ok) { pushDiag("warn", "embeddings HTTP " + r.status, { where: "aiEmbedTexts" }); return null; }
+    if(!r.ok) {
+      /* 404/401/403 属「通道不可用」（非瞬时抖动）→ 进入失败缓存；5xx 视为抖动不缓存 */
+      if(r.status === 404 || r.status === 401 || r.status === 403){
+        _embedFailUntil = Date.now() + 10 * 60 * 1000;
+        pushDiag("warn", "embeddings 不可用(HTTP " + r.status + ")，10 分钟内语义召回降级为词法", { where: "aiEmbedTexts" });
+      } else {
+        pushDiag("warn", "embeddings HTTP " + r.status, { where: "aiEmbedTexts" });
+      }
+      return null;
+    }
     const j = await r.json();
     // 三种已知形状：OpenAI data[].embedding / Ollama /api/embed embeddings[][] / 单条 embedding[]
     let raw = null;
@@ -2037,7 +2052,7 @@ function ragCiteLabel(h, n){
  */
 async function ragInjectContext(userText, opts){
   const cfg = getCfg() || {};
-  if(cfg.rag !== true) return ""; // v3.4.7 批次六：显式开启才注入（设置页 AI→记忆「上下文注入」开关，默认关——防 token 意外膨胀；此前 ===false 判定在无 UI 写入下等效永远开）
+  if(cfg.rag === false) return ""; /* v3.7.71 默认开（判定反转）：旧「!==true」在开关 UI 缺失下等效永久关闭。token 膨胀风险由 ctxBudgetTokens 预算与失败缓存兜底 */
   const budget = (opts && typeof opts.budget === "number") ? opts.budget : ctxBudgetTokens();
   const hits = await ragSearch(userText, CTX_RAG_HITS);
   if(!hits.length) return "";

@@ -1983,9 +1983,8 @@ function applyStartHash(){
      写进 wb_integration_providers，启动时一次性抹掉。放在 initCrypto 之后是因为
      _intSaveProviders 的密封链要用设备密钥。 */
   try{ if(typeof _notifyScrubPersisted === "function") _notifyScrubPersisted(); }catch(e){ /* 清不动也不能挡住启动 */ }
-  // v1.11.2 认证补码：OAuth2 回调闭环——URL 带 ?code&state 时换 token（正常启动零开销，fire-and-forget）
-  try{ _oauth2HandleCallback().catch(function(e9){ try{ pushDiag("error", "oauth2 callback: "+(e9&&e9.message||e9), {where:"oauth2"}); }catch(e10){} }); }catch(_){ }
-  // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
+  /* v3.7.71：OAuth2 回调调用已随 v1.14 移除 oauth2 模块一并清掉 —— 此前每此启动调一个
+     永远 resolve 的空 stub（data-idb.js），是「看起来在接线」的零开销死码。 */  // 架构项①：IndexedDB 持久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页）
   initIdb().catch(() => {});
   cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（off 时不动作）
   // v1.9.7 修复：恢复上次主题。setTheme 路径（aurora/sepia/elegant/matrix/自定义）持久化于 localStorage.theme，
@@ -2365,4 +2364,3 @@ if (typeof window !== "undefined" && __TEST_GATE__) {
     get _streamProgress(){ return _streamProgress; }
   };
 }
-

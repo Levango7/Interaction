@@ -5183,6 +5183,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <div class="set-field">
       <label for="cfgToolWhitelist" data-i18n="agent.whitelistLabel">允许调用的工具（逗号分隔，留空=全部）</label>
       <div class="ctl"><input id="cfgToolWhitelist" type="text" data-i18n-placeholder="agent.whitelistPlaceholder" placeholder="如 创建任务,完成搜索,查阅资料（留空=允许全部工具）"></div>
+      <div class="set-field">
+        <label for="cfgRagInject" data-i18n="agent.ragInjectLabel">上下文注入（RAG，默认开）</label>
+        <div class="ctl"><input id="cfgRagInject" type="checkbox" checked></div>
+        <p class="hint" data-i18n="agent.ragInjectHint">发消息前自动检索任务/记录/笔记/历史的相关内容拼进上下文（语义召回，Embedding 不可用时自动退回关键词匹配）。关闭可省 token。</p>
+      </div>
       <!-- v3.1.2 A-档：白名单与「扩展 → 技能配置」勾选框共享同一处存储（aiSkillsSave 写入此处） -->
       <p class="hint u-fs-2xs u-mt-1" data-i18n="agent.whitelistHint">与「扩展 → 技能配置」勾选框同步：在技能配置勾选会自动写到这里；在文本框手填保存后技能配置会重渲染为新值</p>
     </div>
@@ -6101,10 +6106,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.72"; /* v3.7.72 Agent 执行架构升级：Plan-Confirm-Execute-Adapt（单 agent 分段校准，拒绝 multi-agent 的理由见 ai-tools.js 设计注释）· executeAgentPlanReactive 替换盲跑（每 3 步回喂真实结果，模型可 continue/replan，重规划≤2 次/剩余步数封顶 12/读操作失败重试 1 次/校准独立 messages 不进 hist）· token 优化：工具结果回填超 2400 字符截断（3 处回填点）· 校准系统提示内置工具纪律 · 新增 5 条 Reactive 单测 */
+const VERSION = "3.7.73"; /* v3.7.73 竞态清仓（聊天键 save(chat_active) 8 处中 6 处含 await 路径全部入口定格 sc，2 处同步 cancel 无风险保留）· 云同步 5xx/429 退避重试 + errKind 错误分类 + OAuth2 空 stub 清除 + _lastSyncAt 死变量 · sync-contract E2E 门禁口径对齐 · 路线项②语义召回默认可用（cfg.rag 判定反转 + #aiMemRag 死接线根因修复 + /embeddings 失败缓存 10min + 设置抽屉新增「上下文注入」开关中英） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261002c";
+const BUILD_TAG = "20261002d";
 
 
 

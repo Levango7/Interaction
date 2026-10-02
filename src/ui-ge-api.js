@@ -240,7 +240,13 @@
       return fetch(url, fetchOpts);
     };
     try{
-      const resp = await doFetch(true);
+      /* v3.7.71：5xx/429 瞬时错误退避重试 2 次（800ms/1.6s）—— 与 AI 通道的重试矩阵对齐。
+         此前同步通道对 5xx 零重试，后端抖动一次就同步失败。401 不在此列（走下方刷新重试）。 */
+      let resp = await doFetch(true);
+      for(let attempt=0; attempt<2 && (resp.status===429 || resp.status>=500); attempt++){
+        await new Promise(r=>setTimeout(r, 800*(attempt+1)));
+        resp = await doFetch(true);
+      }
       // 401 时自动刷新重试一次
       if(resp.status === 401 && _refreshToken && !opts._retried){
         const refreshed = await apiRefreshAccessToken();
@@ -251,7 +257,9 @@
       }
       let data = null;
       try{ data = await resp.json(); }catch(e){ data = null; }
-      return { ok: resp.ok, data: data, status: resp.status };
+      /* v3.7.71：errKind 细分错误（server/client），调用方可据此提示「稍后再试」vs「检查配置」 */
+      const errKind = resp.status >= 500 ? "server" : (resp.status >= 400 ? "client" : null);
+      return { ok: resp.ok, data: data, status: resp.status, errKind };
     }catch(e){
       // 网络错误（fetch 抛 TypeError）：标记离线
       const err = new Error("network error");
@@ -479,7 +487,6 @@
   // ===== 数据同步（debounce + 增量 + 离线降级） =====
 
   let _syncTimer = null;
-  let _lastSyncAt = 0;
 
   // debounce 同步：本地数据变更后 2 秒触发
   function scheduleSync(){
@@ -500,7 +507,6 @@
     try{
       const ok = await apiPutSnapshot(_buildCloudSnapshot());
       if(ok){
-        _lastSyncAt = Date.now();
         _setSyncMeta({ lastPushAt: Date.now() });
         setSyncStatus("idle");
       }else{

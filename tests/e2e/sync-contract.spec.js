@@ -18,6 +18,10 @@
 import { test, expect } from "./_fixture.js";
 import { startSyncMock } from "../mocks/sync-server.mjs";
 
+// v3.7.71 口径修复：注释声明「默认跳过，E2E=1 才跑」但此前无 test.skip —— 实际始终执行。
+// 补上门禁与其余 10 个 spec 对齐（多跑不是错，但声明与行为必须一致）。
+test.skip(!process.env.E2E, "set E2E=1 to run");
+
 const PREFIX = "wb_agent_";
 
 let mock;

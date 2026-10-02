@@ -122,7 +122,7 @@ async function retryChat(){
   }
   // 隐藏重试按钮（若存在）
   const rb=$("#chatRetry"); if(rb) rb.style.display="none";
-  await runChatLoop(req.messages, hist);
+  await runChatLoop(req.messages, hist, req.sc);
   return true;
 }
 
@@ -170,7 +170,8 @@ let pendingConfirm = null; // ② 待确认的危险操作（delete/update）：
  */
 async function confirmPendingDanger(){
   if(!pendingConfirm || pendingConfirm.sc!==active){ pendingConfirm=null; closeConfirmModal(); return; }
-  const hist=getChat(active);
+  const psc = active; /* v3.7.71 竞态修复：入口定格场景，长 await 期间切场景不串写 */
+  const hist=getChat(psc);
   hist.push({role:"user", content:t("common.confirm","确认")});
   // 补全上一轮被延后的 assistant(tool_calls) + 工具回执，B1 安全
   hist.push(pendingConfirm.assistantMsg);
@@ -187,7 +188,7 @@ async function confirmPendingDanger(){
   }
   pendingConfirm=null;
   closeConfirmModal();
-  await runChatLoop(messages, hist);
+  await runChatLoop(messages, hist, psc);
 }
 /* ---------- 上下文 token 预算管理（v1.15：从"条数截断"升级为"token 估算裁剪"） ----------
  * 粗估算：中文≈1 token/字，英文≈4 字符/token（足够保守，不调用模型即可控制长度）。
@@ -273,7 +274,8 @@ function agentPlanReviewText(plan){
 async function proposeAgentPlan(text){
   const raw = String(text || "").trim();
   if(!raw) return false;
-  const hist = getChat(active);
+  const sc = active; /* v3.7.71 竞态修复：规划发起时的场景定格 */
+  const hist = getChat(sc);
   if(getCfg().agent === false){
     toast(t("aiagent.offWarn","Agent 模式已关闭（设置 → AI → Agent 模式），无法自主规划执行。"), "warn");
     return false;
@@ -307,7 +309,7 @@ async function proposeAgentPlan(text){
     hist.push({ role:"assistant", content: errText, _failed: true });
   }
   trimChatHist(hist);
-  save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+  save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
   return !!plan;
 }
 
@@ -463,7 +465,8 @@ async function onChatSubmit(e){
   e.preventDefault();
   const f=e.target; const text=f.msg.value.trim(); if(!text) return;
   f.msg.value="";
-  const hist=getChat(active);
+  const sc = active; /* v3.7.71 竞态修复：入口定格场景，长 await 期间切场景不串写 */
+  const hist=getChat(sc);
   // ② 拦截待确认的危险操作（不与模型交互）；A2：打字确认保留一个版本兼容
   if(pendingConfirm){
     if(pendingConfirm.sc!==active){ pendingConfirm=null; closeConfirmModal(); }
@@ -490,7 +493,7 @@ async function onChatSubmit(e){
     hist.push({role:"user", content:text});
     hist.push({role:"assistant", content: r? t("ai.remembered","好的，已记住：「")+r.text+t("ai.rememberedScene","」（场景：")+SCENARIOS[active].name+t("ai.rememberedSuffix","，后续对话会自动带上）") : t("ai.nothingToRemember","没有可记住的内容")});
     trimChatHist(hist);
-    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+    save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
     return;
   }
   /* v3.7.59 Skills ①：「存为技能 [名字]」——把上一轮成功执行的工具流程固化成可复用技能（不走模型，确定可靠）。
@@ -506,7 +509,7 @@ async function onChatSubmit(e){
         +t("skills.savedSuffix","」。它会在每轮对话注入系统提示，也可在命令面板（Ctrl+K）「技能」组一键触发；到「扩展 → 技能配置」可直接编辑或删除。")
       : t("skills.noOffer","当前没有可固化的流程：需要上一轮对话成功执行 ≥2 个工具调用（删除/修改类工具不计入）。")});
     trimChatHist(hist);
-    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat();
+    save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
     return;
   }
   /* v3.7.59 Skills ②：「技能：X」/「用技能 X」显式触发。
@@ -539,7 +542,7 @@ async function onChatSubmit(e){
       : t("ai.taskCreateFail","创建任务失败：")+(rj && rj.msg ? rj.msg : t("common.unknownError","未知错误"));
     hist.push({role:"assistant", content:reply});
     trimChatHist(hist);
-    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
+    save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat(); AppBridge.render();
     return;
   }
   // v1.4-D：自然语言操作拦截（"完成第一个任务" / "把数学任务标记为已完成" / "删除数学"）
@@ -549,7 +552,7 @@ async function onChatSubmit(e){
     hist.push({role:"user", content:text});
     hist.push({role:"assistant", content: r.ok ? r.msg : t("ai.opFail","操作失败：")+r.msg});
     trimChatHist(hist);
-    save(PREFIX+"chat_"+active, hist); renderChat(); scrollChat(); AppBridge.render();
+    save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat(); AppBridge.render();
     return;
   }
   // v1.6-A：AI 任务拆解拦截（"拆解任务 XXX" / "分解 XXX"）
@@ -587,15 +590,16 @@ async function onChatSubmit(e){
       if(messages[mi] && messages[mi].role === "user"){ messages[mi].content = outbound; break; }
     }
   }
-  await runChatLoop(messages, hist);
+  await runChatLoop(messages, hist, sc);
   }catch(err){ const m=(err&&err.message)?err.message:String(err); pushDiag("error", m, {where:"onChatSubmit"}); try{ toast(t("ai.chatError","对话出错：")+m, "error"); }catch(e2){} }
 }
 /* v3.7.72 token 优化：超长工具结果截断（>2400 字符取头 + 注明全长），模型只需关键字段 */
 function _cutToolRes(r){ return (typeof r==="string" && r.length>2400) ? r.slice(0,2400)+"…(截断，共 "+r.length+" 字符)" : r; }
-async function runChatLoop(messages, hist){
+async function runChatLoop(messages, hist, sc){
+  sc = sc || active; /* v3.7.71 竞态修复：长循环期间切场景不串写，数据键用定格场景 */
   // T3.1：创建控制器 + 记录上次请求（重试用）+ 显示思考中
   chatController=createChatController();
-  lastChatRequest={ messages:messages, hist:hist };
+  lastChatRequest={ messages:messages, hist:hist, sc:sc };
   showChatThinking(true);
   try{
     let guard=0;
@@ -657,7 +661,7 @@ async function runChatLoop(messages, hist){
           // v3.7.59：args 可能为 null（模型给了非法 JSON）→ 用 {} 兜底取标题，执行环节会跳过并回执
           const titles = calls.map(c=>{ const a=c.args||{}; const ft=findTask(a.task_id); return ft? ft.task.title : a.task_id; }).filter(Boolean);
           const titleText = titles.join(t("ai.confirmJoinSep","、"));
-          pendingConfirm={ toolCalls:calls, title:titleText||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:active };
+          pendingConfirm={ toolCalls:calls, title:titleText||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:sc };
           hist.push({role:"assistant", content: hasDanger
             ? t("ai.pendingConfirm","（待确认）将执行删除/修改操作：「")+(titleText||t("ai.unknown","未知"))+t("ai.pendingConfirmSuffix","」。发送「确认」以继续，其他内容取消。")
             : t("ai.pendingConfirmTools","（待确认）将执行 ")+calls.length+t("ai.pendingConfirmToolsSuffix"," 个工具调用。发送「确认」以继续，其他内容取消。")});
@@ -771,7 +775,7 @@ async function runChatLoop(messages, hist){
     showChatThinking(false);
   }
   trimChatHist(hist);
-  save(PREFIX+"chat_"+active, hist);
+  save(PREFIX+"chat_"+sc, hist);
   renderChat(); scrollChat();
 }
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·渲染 ---------- */

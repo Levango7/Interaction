@@ -267,8 +267,10 @@ describe("向量落盘格式带模型号（换 embedModel 不能静默失灵）"
 });
 
 describe("降级路径保持原行为", () => {
-  it("ragInjectContext 未开启 rag 时不注入", async () => {
-    const win = loadApp({ storage: { [PREFIX + "cfg"]: JSON.stringify({ enabled: true, base: "http://127.0.0.1:11434/v1", key: "k", model: "m" }) } });
+  it("ragInjectContext 显式关闭 rag（cfg.rag===false）时不注入", async () => {
+    /* v3.7.71 语义反转：RAG 默认开（旧「!==true」判定在开关 UI 缺失下等效永久关闭）。
+       「关闭」现在需要显式 cfg.rag=false —— 本用例守的就是这个降级路径。 */
+    const win = loadApp({ storage: { [PREFIX + "cfg"]: JSON.stringify({ enabled: true, base: "http://127.0.0.1:11434/v1", key: "k", model: "m", rag: false }) } });
     stubEmbeddings(win);
     await win.ragIndexAdd("d1", "修复登录页 500 报错", "s");
     expect(await win.ragInjectContext("login bug")).toBe("");
