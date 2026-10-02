@@ -4668,3 +4668,6 @@ function renderToday(){
     ${chainBar}
   </div>`;
 }
+/* v3.7.75 解耦：向 core 桥注册侧栏局部重绘 —— data-links（插件注册/启停）等低层只调桥，
+   不再直接引用本块符号（AppBridge.renderSide 槽位见 core.js）。 */
+try{ AppBridge.renderSide = renderSide; }catch(e){ /* 桥未就绪时静默，下一轮渲染自然补上 */ }

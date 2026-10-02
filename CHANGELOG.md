@@ -1,3 +1,15 @@
+## [v3.7.75] - 2026-10-02
+
+**解耦实战第一批：逆层 53 → 45、循环 50 → 47（全量验证行为零变更）。** 按 decoupling-plan 工具 A（归位）把四组「纯数据/存取」从高层块下沉到数据层：
+
+- **crypto→data-idb 接缝化**：设备密钥的 IDB 存取此前由 crypto 直接引用 `idbReadKey/idbMirrorKey`（crypto→data-idb 逆层边）。改为 crypto 暴露 `registerDkIdbHelpers(get,put)` 接缝，data-idb 加载时反向注册（data-idb→crypto 是正向边）；data-idb 层序在一切 initCrypto 调用方之前，注册时机天然成立。旧 `initCryptoRuntimeWiring` 删除，无测试引用。
+- **笔记存取下沉**：`NOTES_STORAGE_KEY / getNotes / saveNotes / createNote` 自 ui-ge-notes 下沉 data-rw —— 纯存取与模型工厂，被 AI（工具建笔记）与 render 多层引用；CRUD 弹窗 UI 留守。ai-tools→ui-ge-notes 逆层对消失。
+- **插件注册表下沉**：`_plugins / BUILTIN_PLUGINS / register·load·unload·set·get 系列 / _save·_load·_reset·_initPlugins` 整体自 ui-ge-plugins 下沉 data-links，一次消除 **5 条逆层对 + 3 个环**；ui-ge-plugins 只留 `renderPluginCards`（DOM 渲染属 UI）。`var _plugins` 的提升语义（早期访问返回 undefined）原样保留；顶层 `_initPlugins()` 自动执行时机与搬前等价（registerCustomScenarios 顶层调用期间注册表尚为空）。
+- **snooze 簇与 getDeviceId 下沉**：`snoozeTask / _snoozedUntil / _purgeExpiredSnooze / getSnoozeMap` + `NOTIFY_IDS_KEY / SNOOZE_KEY` 自 ui-daily、`getDeviceId` 自 ui-backup-stats 下沉 data-rw；免打扰时段策略（QUIET_KEY/getQuietHours）是 ui-daily 专用，留下。AppBridge.snoozeTask 注册随迁（本块 onExerciseSave 同款先例）。
+- **下沉的代价如实交代**：搬早的代码原本向上的引用会变成新逆层 —— `registerPlugin/loadPlugin` 里的两处 `render()` 改走 `AppBridge.render`；`renderSide()` 按工具 B 在 core 桥新增 `renderSide` 槽位、由 render-widgets 注册（窄域侧栏刷新语义不变）；`addToRecycleBin` 调用一并改走既有桥。手术曾引入 QUIET_KEY 重复定义与上两条新边，均在 check:modules 抓下后当场修净。
+- **基线重冻结（v3.7.63 同款口径）**：逆层 53→45、循环 50→47 为**净减**；check 报的 24 项「新增」经逐条核对全部是同一批 SCC 在删边后的重组路径（真新增边仅 `ui-ge-plugins→data-links` 一条正向边），非新耦合，`--freeze` 落账。
+- 验证：全量 **112 文件 / 1263 用例**、e2e **82/82（4.2m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:source-state` 源码态，均本机实测。首跑曾现 22 条「未过」——vitest worker RPC 超时假红（本机重载，与 v3.7.66 披露同源），干净重跑全绿。
+
 ## [v3.7.74] - 2026-10-02
 
 **路线项 ①② 落地：会议进日历 + 双标签页数据守护。** 另把 RAG 文件导入、云同步增量两项记为路线余量（后者依赖后端契约升级，单改客户端无意义）。

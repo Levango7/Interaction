@@ -1004,16 +1004,8 @@ function doExportRecsCSV(){
   toast(t("msg.exportedRecCsv","已导出记录 CSV（")+n+t("unit.recordsSuffix"," 条记录）"),"ok");
 }
 /* ---------- v1.4-C 导出预览（数据概览 + 字段选择） ---------- */
-/* 生成或复用设备标识（持久化到 localStorage，跨会话稳定） */
-function getDeviceId(){
-  let id = "";
-  try { id = localStorage.getItem(PREFIX + "deviceId") || ""; } catch(e){ id = ""; }
-  if(!id){
-    id = "dev-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 */ }
-  }
-  return id;
-}
+/* v3.7.75 解耦：getDeviceId 已下沉 data-rw（纯身份存取，render-overview 等多层引用）。 */
+
 /* 打开导出预览弹窗：显示任务数/记录数/配置是否包含 + 字段勾选 */
 function openExportPreview(){
   const modal = $("#exportPreviewModal");

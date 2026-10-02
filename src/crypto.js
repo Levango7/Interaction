@@ -6,15 +6,17 @@ let _cryptoWarned = false;    // Web Crypto 不可用 warn 去重标记（T5.3 �
 let _cfgCache = null;         // 解密后的内存明文 cfg
 const DK_KEY = PREFIX + "__dk"; // 设备密钥存储键（旧路径，仅迁移期间存在）
 const DK_IDB_KEY = "__dk_v2";   // 设备密钥 IDB 键（不参与 idbQueueMirror 镜像命名空间）
-let _dkIdbGet = () => Promise.resolve(null);  // 生产接线在 initCryptoRuntimeWiring()
+let _dkIdbGet = () => Promise.resolve(null);  // 生产接线由 data-idb 块加载时 registerDkIdbHelpers 注册
 let _dkIdbPut = () => Promise.resolve(false);
 let _dkPromise = null;  // v3.7.62：ensureDeviceKey 在途去重（token 水合与 initCrypto 会并发调用）
-/** 把可用的 idb 助手接到设备密钥存取上（若 idb 层尚未定义则保持默认禁用态） */
-function initCryptoRuntimeWiring(){
-  try{
-    if(typeof idbReadKey === "function") _dkIdbGet = (k)=>Promise.resolve(idbReadKey(k)).then(v=>(v===null?null:v));
-    if(typeof idbMirrorKey === "function") _dkIdbPut = (k,v)=>Promise.resolve(idbMirrorKey(k,v)).then(()=>true).catch(()=>false);
-  }catch(e){}
+/** 设备密钥的 IDB 存取接缝。
+ *  v3.7.75 解耦：本块此前直接引用 idbReadKey/idbMirrorKey（data-idb 块的符号），
+ *  构成一条 crypto→data-idb 逆层边；改为由 data-idb 加载时调用本函数反向注册
+ *  （data-idb 在层序上晚于 crypto，data-idb→crypto 是正向边），注册未发生时
+ *  保持默认禁用态（无 IDB 环境本就该禁用；jsdom 单测可照旧覆盖 _dkIdbGet/_dkIdbPut）。 */
+function registerDkIdbHelpers(getFn, putFn){
+  if(typeof getFn === "function") _dkIdbGet = (k)=>Promise.resolve(getFn(k)).then(v=>(v===null?null:v));
+  if(typeof putFn === "function") _dkIdbPut = (k,v)=>Promise.resolve(putFn(k,v)).then(()=>true).catch(()=>false);
 }
 
 function base64Encode(bytes){
@@ -166,7 +168,7 @@ async function persistCfg(cfg){
  * @returns {Promise<Cfg>} 解密后的内存明文 cfg
  */
 async function initCrypto(){
-  initCryptoRuntimeWiring();   // 接线设备密钥的 IDB 存取（P0 存储层专项）
+  /* IDB 接线已在 data-idb 块加载时经 registerDkIdbHelpers 注册（v3.7.75 解耦），此处无需再接 */
   try{
     _cryptoReady = !!(typeof crypto !== "undefined" && crypto.subtle && typeof crypto.subtle.generateKey === "function");
   }catch(e){ _cryptoReady = false; }

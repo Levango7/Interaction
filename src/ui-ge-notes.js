@@ -25,33 +25,9 @@
  *   - Markdown 渲染复用 mdToHtml（03-util-markdown.js，03 < 47，可直接引用）
  *   - esc / PREFIX / $ / $$ 在更早模块定义，可直接引用
  */
-const NOTES_STORAGE_KEY = "notes";
-/**
- * 读取全部笔记
- * @returns {Array<Object>} 笔记数组
- */
-function getNotes(){
-  try{
-    const raw = localStorage.getItem(PREFIX + NOTES_STORAGE_KEY);
-    if(!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  }catch(e){
-    return [];
-  }
-}
-/**
- * 持久化笔记数组到 localStorage
- * @param {Array<Object>} notes - 笔记数组
- * @returns {boolean} 是否保存成功
- */
-function saveNotes(notes){
-  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
-  const ok = save(PREFIX + NOTES_STORAGE_KEY, notes || []);
-  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费；创建/更新/删除全走本函数） */
-  try{ if(typeof emitDataMutate === "function") emitDataMutate("note"); }catch(e){ /* 索引不阻塞写路径 */ }
-  return ok;
-}
+/* v3.7.75 解耦：NOTES_STORAGE_KEY / getNotes / saveNotes 已下沉到 data-rw（纯存取归数据层，
+   消除 ai-tools / render-* 对本块的逆层引用）；本块保留 CRUD 与全部 UI。 */
+
 /**
  * 创建新笔记
  * @param {string} title - 标题
@@ -60,22 +36,9 @@ function saveNotes(notes){
  * @param {string} category - 分类
  * @returns {Object} 新建的笔记对象
  */
-function createNote(title, content, tags, category){
-  const notes = getNotes();
-  const note = {
-    id: "note_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
-    title: title || t("p5.untitled", "无标题"),
-    content: content || "",
-    tags: Array.isArray(tags) ? tags : [],
-    category: category || t("p5.default", "默认"),
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    linkedTaskIds: []
-  };
-  notes.push(note);
-  saveNotes(notes);
-  return note;
-}
+/* v3.7.75 解耦：createNote 亦下沉 data-rw —— 它是纯模型工厂且被 AI 工具直接调用，
+   留在本块就是 ai-tools→ui-ge-notes 的最后一条逆层边。 */
+
 /**
  * 更新笔记字段
  * @param {string} id - 笔记 ID

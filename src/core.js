@@ -98,6 +98,8 @@ const AppBridge = {
   miniChart: () => ""
 ,
   snoozeTask: () => undefined,
+  /* v3.7.75：侧栏局部重绘（插件注册/启停后刷新场景列表）——实现由 render-widgets 注册 */
+  renderSide: () => undefined,
 
   _moveDrawerHome: () => undefined,
   openTemplateModal: () => undefined,

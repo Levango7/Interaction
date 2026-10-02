@@ -169,6 +169,62 @@ function setRec(sc, a){
   try{ if(typeof emitDataMutate === "function") emitDataMutate("rec"); }catch(e){ /* 索引不阻塞写路径 */ }
 }
 
+/* ---------- v3.7.75 解耦：笔记存储访问器自 ui-ge-notes 下沉到本块 ----------
+   getNotes/saveNotes 是纯存取（无 UI 语义），原先住在 UI 层导致 ai-tools（AI）、
+   render-*（Render）对 ui-ge-notes 的逆层引用。下沉后各层→data-rw 全是正向边；
+   CRUD（createNote/updateNote/deleteNote）与弹窗 UI 仍留 ui-ge-notes（它→本块为正向）。 */
+const NOTES_STORAGE_KEY = "notes";
+/**
+ * 读取全部笔记
+ * @returns {Array<Object>} 笔记数组
+ */
+function getNotes(){
+  try{
+    const raw = localStorage.getItem(PREFIX + NOTES_STORAGE_KEY);
+    if(!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){
+    return [];
+  }
+}
+/**
+ * 持久化笔记数组到 localStorage
+ * @param {Array<Object>} notes - 笔记数组
+ * @returns {boolean} 是否保存成功
+ */
+function saveNotes(notes){
+  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
+  const ok = save(PREFIX + NOTES_STORAGE_KEY, notes || []);
+  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费；创建/更新/删除全走本函数） */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("note"); }catch(e){ /* 索引不阻塞写路径 */ }
+  return ok;
+}
+/**
+ * 创建新笔记（v3.7.75 自 ui-ge-notes 下沉：纯模型工厂，且被 AI 工具直接调用）
+ * @param {string} title - 标题
+ * @param {string} content - Markdown 内容
+ * @param {string[]} tags - 标签数组
+ * @param {string} category - 分类
+ * @returns {Object} 新建的笔记对象
+ */
+function createNote(title, content, tags, category){
+  const notes = getNotes();
+  const note = {
+    id: "note_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
+    title: title || t("p5.untitled", "无标题"),
+    content: content || "",
+    tags: Array.isArray(tags) ? tags : [],
+    category: category || t("p5.default", "默认"),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    linkedTaskIds: []
+  };
+  notes.push(note);
+  saveNotes(notes);
+  return note;
+}
+
 /* ---------- P1-b 自动备份（防抖快照，独立于手动导出） ---------- */
 const AUTO_BACKUP_KEY = PREFIX + "autobackup";
 const AUTO_BACKUP_GENS = [PREFIX + "autobackup.1", PREFIX + "autobackup.2"]; // v3.4.7 批次二（G3）：三代滚动——上一代/上上代
@@ -272,4 +328,61 @@ function getAiConfig(module){
 function saveAiConfig(module, data){
   // v3.4.7 批次三（G5）：收编进 save() 主入口——此前裸 setItem 绕过 IDB 镜像/配额告警/损坏登记
   return save(PREFIX + "ai_config_" + module, data);
+}
+
+/* ============================================================
+ * v3.7.75 解耦（续）：snooze 簇自 ui-daily、getDeviceId 自 ui-backup-stats 下沉本块。
+ * 均为纯数据/存取（无 UI 语义），多层引用留在他块即成逆层；AppBridge.snoozeTask
+ * 注册随迁（本块已有 onExerciseSave 同款先例）。行为逐字未改。
+ * ============================================================ */
+
+const NOTIFY_IDS_KEY = "wb_notified_ids";
+
+/* ---------- P9：稍后提醒（snooze）与免打扰时段 ----------
+ * 存储键（不带 PREFIX，按任务契约）：
+ *   wb_notify_snooze   { [taskId]: timestamp }  该时间戳前不再提醒此任务
+ *   wb_notify_quiet    { enabled, start, end }  免打扰时段（整点小时，支持跨天如 22→8）
+ */
+const SNOOZE_KEY = "wb_notify_snooze";
+
+function getSnoozeMap(){
+  const m = load(SNOOZE_KEY, {});
+  return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
+}
+AppBridge.snoozeTask = snoozeTask;
+/**
+ * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
+ * @param {string} id - 任务 id
+ * @param {number} [minutes] - 延后分钟数（默认 30，非法值回退 30）
+ * @returns {boolean}
+ */
+function snoozeTask(id, minutes){
+  if(!id) return false;
+  const mins = (typeof minutes === "number" && minutes > 0) ? minutes : 30;
+  const m = getSnoozeMap();
+  m[id] = Date.now() + mins * 60000;
+  save(SNOOZE_KEY, m);
+  save(NOTIFY_IDS_KEY, load(NOTIFY_IDS_KEY, []).filter(function(x){ return x !== id; }));
+  return true;
+}
+function _snoozedUntil(id){
+  const v = getSnoozeMap()[id];
+  return (typeof v === "number") ? v : 0;
+}
+/* 清理过期 snooze 记录（防键无限增长；checkDueTasks 时顺带调用） */
+function _purgeExpiredSnooze(now){
+  const m = getSnoozeMap(); let changed = false;
+  Object.keys(m).forEach(function(k){ if(m[k] <= now){ delete m[k]; changed = true; } });
+  if(changed) save(SNOOZE_KEY, m);
+}
+
+/* 生成或复用设备标识（持久化到 localStorage，跨会话稳定） */
+function getDeviceId(){
+  let id = "";
+  try { id = localStorage.getItem(PREFIX + "deviceId") || ""; } catch(e){ id = ""; }
+  if(!id){
+    id = "dev-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 */ }
+  }
+  return id;
 }

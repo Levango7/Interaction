@@ -81,6 +81,11 @@ function idbReadKey(k){ return idbTxn("readonly", st => st.get(k)); }
 /** 删除单键 IDB 镜像 */
 function idbDeleteKey(k){ return idbTxn("readwrite", st => st.delete(k)); }
 
+/* v3.7.75 解耦：把 IDB 助手注册进 crypto 的设备密钥接缝 —— 取代 crypto 直接引用
+   本块符号（那是一条 crypto→data-idb 逆层边，module-graph 实测）。本块层序在 crypto
+   之后、任何 initCrypto 调用方（data-rw 等）之前，注册时机天然成立。 */
+try{ if(typeof registerDkIdbHelpers === "function") registerDkIdbHelpers(idbReadKey, idbMirrorKey); }catch(e){ /* 接线失败不影响 IDB 本身 */ }
+
 /* ---------- 去抖批量写入队列（save 钩子） ---------- */
 let _idbQueue = {};
 let _idbTimer = null;

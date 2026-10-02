@@ -41,49 +41,14 @@ function dailyDigest(){
  *   wb_digest_date             string        上次 digest 日期 YYYY-MM-DD（同一天不重复）
  */
 const NOTIFY_KEY = "wb_notify_enabled";
-const NOTIFY_IDS_KEY = "wb_notified_ids";
 const CHAIN_BREAK_KEY = "wb_chain_break_notified";
 const DIGEST_DATE_KEY = "wb_digest_date";
 const NOTIFY_INTERVAL_MS = 60000; // 60s 检查一次
 
-/* ---------- P9：稍后提醒（snooze）与免打扰时段 ----------
- * 存储键（不带 PREFIX，按任务契约）：
- *   wb_notify_snooze   { [taskId]: timestamp }  该时间戳前不再提醒此任务
- *   wb_notify_quiet    { enabled, start, end }  免打扰时段（整点小时，支持跨天如 22→8）
- */
-const SNOOZE_KEY = "wb_notify_snooze";
+/* v3.7.75 解耦：snooze 簇（NOTIFY_IDS_KEY/SNOOZE_KEY/getSnoozeMap/snoozeTask/_snoozedUntil/
+   _purgeExpiredSnooze + AppBridge 注册）已下沉 data-rw —— 纯数据与存取，render-entry
+   经由 data-rw 引用为正向边。QUIET_KEY/免打扰时段（本块专用策略）留下。 */
 const QUIET_KEY = "wb_notify_quiet";
-
-function getSnoozeMap(){
-  const m = load(SNOOZE_KEY, {});
-  return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
-}
-AppBridge.snoozeTask = snoozeTask;
-/**
- * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
- * @param {string} id - 任务 id
- * @param {number} [minutes] - 延后分钟数（默认 30，非法值回退 30）
- * @returns {boolean}
- */
-function snoozeTask(id, minutes){
-  if(!id) return false;
-  const mins = (typeof minutes === "number" && minutes > 0) ? minutes : 30;
-  const m = getSnoozeMap();
-  m[id] = Date.now() + mins * 60000;
-  save(SNOOZE_KEY, m);
-  save(NOTIFY_IDS_KEY, load(NOTIFY_IDS_KEY, []).filter(function(x){ return x !== id; }));
-  return true;
-}
-function _snoozedUntil(id){
-  const v = getSnoozeMap()[id];
-  return (typeof v === "number") ? v : 0;
-}
-/* 清理过期 snooze 记录（防键无限增长；checkDueTasks 时顺带调用） */
-function _purgeExpiredSnooze(now){
-  const m = getSnoozeMap(); let changed = false;
-  Object.keys(m).forEach(function(k){ if(m[k] <= now){ delete m[k]; changed = true; } });
-  if(changed) save(SNOOZE_KEY, m);
-}
 
 function getQuietHours(){
   const q = load(QUIET_KEY, null);
