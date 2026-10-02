@@ -8,6 +8,7 @@
 - **过程披露**：一次半执行的迁移脚本重跑，使「from 是 to 后缀」的锚点发生二次替换，产出 `AppBridge.AppBridge._bindDashToolbar`——三处测试当场红（stats 页直接崩）。全仓扫描确认仅此一处，修净后 24/24；教训：幂等替换的跳过判据要看「from 是否仍以裸形态出现」，不能只看 n。
 - 基线重冻结（35 块 · 30 逆层 / 16 循环 · 重复定义 0）：check 报的「新增」经逐条核对为 SCC 在大量删边后的重组路径，真增仅「注册块→core」正向边，`--freeze` 落账。
 - 验证：全量 **113 文件 / 1273 用例**、e2e **82/82（3.7m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`、`check:source-state` 源码态，均本机实测。（同前几次披露：vitest worker RPC 偶发未处理错误会拦 posttest 不跑，干净重跑全绿 + 手动还原源码态。）
+- **发版后线上复核**：Pages 取回 **3,618,610 B**、`VERSION="3.7.77"`、`BUILD_TAG="20261002h"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。
 
 ## [v3.7.76] - 2026-10-03
 
