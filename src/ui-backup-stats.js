@@ -1219,3 +1219,6 @@ function doImportCSVFile(file){
   reader.onerror = () => { toast(t("msg.csvReadFailed","CSV 文件读取失败"), "error"); };
   reader.readAsText(file, "utf-8");
 }
+
+/* v3.7.78 解耦：checkCount 槽注册（ui-onboarding / ui-scene-bind 经桥调用）。 */
+try{ AppBridge.checkCount = checkCount; }catch(e){}

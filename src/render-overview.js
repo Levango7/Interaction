@@ -724,11 +724,11 @@ function _bindTasksTabs(){
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
   { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } } },
-  { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
-  { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.bell, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
+  { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ AppBridge.openWeatherModal(); } },
+  { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.bell, run:()=>{ AppBridge.openAlarmModal(); } },
   { id:"x-pomo",    name:t("tool.pomo.name","笃行"),     desc:t("tool.pomo.desc","25 分钟专注 + 5 分钟休息"), cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
   { id:"x-tracker", name:t("tool.tracker.name","时间追踪"), desc:t("tool.tracker.desc","任务计时秒表"), cat:"效率工具", icon:UI_ICONS.stopwatch, pop:"trackerPop", menuAttr:"plug-tracker" },
-  { id:"x-pet",     name:t("tool.pet.name","萌宠"),     desc:t("tool.pet.desc","桌面陪伴小伙伴"), cat:"效率工具", icon:UI_ICONS.paw, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
+  { id:"x-pet",     name:t("tool.pet.name","萌宠"),     desc:t("tool.pet.desc","桌面陪伴小伙伴"), cat:"效率工具", icon:UI_ICONS.paw, run:()=>{ AppBridge.openPetModal(); } },
   { id:"x-mindmap", name:t("tool.mindmap.name","思维导图"), desc:t("tool.mindmap.desc","任务关系树状图"), cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ AppBridge.openMindmapModal(); } },
   /* v3.6.6 死入口修复：openGanttModal / openDashboardModal 此前只绑在 #btnGantt / #btnDashboard 上，
      而这两个按钮自 v1.15「更多菜单移除」后已不存在于 DOM → 两个弹窗（甘特图 / 自定义仪表盘 15 组件）
@@ -786,7 +786,7 @@ function renderToolboxPage(){
   $$("#main .toolbox-card").forEach(card=>{
     card.onclick = function(){
       const id = card.getAttribute("data-toolbox");
-      if(TOOL_APPS[id]){ openToolStub(id); return; }
+      if(TOOL_APPS[id]){ AppBridge.openToolStub(id); return; }
       const extra = TOOLBOX_EXTRAS.find(x=>x.id===id);
       if(!extra) return;
       if(extra.pop){ AppBridge.toggleToolPop(extra.pop, card); return; }

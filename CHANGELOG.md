@@ -1,3 +1,17 @@
+## [v3.7.78] - 2026-10-03
+
+**解耦第三批（S2c）：同层逆层清剿 —— 逆层 30 → 18、循环 16 → 13，decoupling-plan 的 P4 目标（<20）达成；三批累计 53 → 18（-66%）、50 → 13（-74%）。全量 **113 文件 / 1273 用例**、e2e **82/82（4.2m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 18 逆层 / 13 循环 · 重复定义 0）、`check:source-state`，均本机实测。**
+
+### 三手齐下
+
+- **测试桥整块搬迁（最高杠杆）**：ui-global-events 里的 `window.__test = {…}` 巨型对象（数百个裸标识符来自所有块）迁到最后一个块 ui-ge-integrations —— 放在末尾使全部引用变为正向。⚠️ 桥的构建顺序改晚后暴露一个真问题：中间块（ui-ge-api）的守卫式 `Object.assign(window.__test,…)` 在对象创建**之前**执行被静默跳过（token 加密的 7 条钩子测试全红抓到）。修法：早期块只建**空对象**（`window.__test = {}`），末尾改 `Object.assign` 汇入 —— 顺序无关、任何块都可在自己加载时追加。
+- **纯助手搬家**（搬早即正向）：`SIDE_MENU_ICONS / TOOL_APPS / EMPTY_ICONS / _priWeight / lineChartSVG / renderEmpty / renderMiniChart` → render-entry（Render 最前块）；`thisWeekDone / weekRange` → core；`renderChat / scrollChat / trimChatHist / _estTokens / lastChatRequest / pendingConfirm` → ai-tools（AI 最前块）——AI 两条同层对随之消失。
+- **新槽与调用点迁移**：render 簇（openRecycle/openToolStub/四工具弹窗）、主题 API（12 个）、笔记/搜索弹窗（6 个）、checkCount 等约 25 个槽位开出并在提供方块注册；ui-drawer / ui-global-events / ui-palette / ui-onboarding / ui-guide / ui-scene-bind / render-entry / render-overview 的对应调用点全部改走桥。
+
+### 三处回归（全部被测试当场抓下，修净后才发版）
+
+1. **token 钩子丢失**（上面已述，7 条测试红）；2. **error-boundary C1/C2**：测试用 `win.renderSide = …throw` 注入异常——桥在注册时捕获原件后，打补丁 window 已无效；测试手法等价迁移为 `win.__test.AppBridge.renderSide = …`（契约不变：render 的第一步抛错必须进 fallback UI）。3. E3 为已知 vitest worker 负载假红，重跑即绿。教训入账：**桥化的代价之一是"可打补丁性"——测试注入点必须跟着搬**；以及**改变全局单例的构建顺序会静默打断守卫式扩展**（本次靠测试网兜住）。
+
 ## [v3.7.77] - 2026-10-03
 
 **解耦第二批（S2b）：桥接迁移 —— 逆层 45 → 30、循环 47 → 16，且真跨层逆层清零。** 按 decoupling-plan 工具 B：

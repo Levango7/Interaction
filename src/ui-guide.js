@@ -13,7 +13,7 @@ function renderHelp(){
   // v1.9.3：若设置页(drawer-page)正在显示，先移回并恢复 #main，避免指南渲染到隐藏的 #main
   const _drawer = $("#drawer");
   if(_drawer && _drawer.classList.contains("drawer-page")){
-    _moveDrawerHome();
+    AppBridge._moveDrawerHome();
     _drawer.classList.remove("open");
     delete _drawer.dataset.page; // v1.9.6：清掉子页标记（settings/ai/plugin）
   }

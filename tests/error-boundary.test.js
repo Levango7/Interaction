@@ -181,8 +181,10 @@ describe("T2.4 错误边界 · 用例 C：render 异常 fallback UI", () => {
 
   it("C1: render 异常时 #main 显示 fallback UI（含「数据异常」文案 + 导出/清空按钮）", () => {
     // 破坏 renderSide 让 render 抛错（renderSide 是 render 第一步）
-    const origRenderSide = win.renderSide;
-    win.renderSide = function () { throw new Error("renderSide boom"); };
+    /* v3.7.78：render 经 AppBridge.renderSide 调桥 —— 要注入异常必须打桥上的引用，
+       打 window.renderSide 已无效（桥在注册时捕获了原件）。 */
+    const origRenderSide = win.__test.AppBridge.renderSide;
+    win.__test.AppBridge.renderSide = function () { throw new Error("renderSide boom"); };
 
     let threw = false;
     try { win.render(); } catch (e) { threw = true; }
@@ -202,13 +204,14 @@ describe("T2.4 错误边界 · 用例 C：render 异常 fallback UI", () => {
     const diag = win.__test.getDiag();
     expect(diag.some(d => d.ctx && d.ctx.where === "render" && d.msg.includes("renderSide boom")), "应入诊断缓冲").toBe(true);
 
-    win.renderSide = origRenderSide;
+    win.__test.AppBridge.renderSide = origRenderSide;
   });
 
   it("C2: render 异常时 toast 提示「渲染异常：...」", () => {
     const toastSpy = vi.spyOn(win, "toast");
-    const origRenderSide = win.renderSide;
-    win.renderSide = function () { throw new Error("boom for toast"); };
+    /* v3.7.78：同上，注入点改到桥上 */
+    const origRenderSide = win.__test.AppBridge.renderSide;
+    win.__test.AppBridge.renderSide = function () { throw new Error("boom for toast"); };
 
     win.render();
 
@@ -218,7 +221,7 @@ describe("T2.4 错误边界 · 用例 C：render 异常 fallback UI", () => {
     expect(args[0]).toContain("boom for toast");
     expect(args[1]).toBe("error");
 
-    win.renderSide = origRenderSide;
+    win.__test.AppBridge.renderSide = origRenderSide;
     toastSpy.mockRestore();
   });
 

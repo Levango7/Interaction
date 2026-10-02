@@ -934,3 +934,13 @@ try{ AppBridge.openReportModal = openReportModal; }catch(e){}
 try{ AppBridge.bindReportModal = bindReportModal; }catch(e){}
 try{ AppBridge.aiSmartRecommend = aiSmartRecommend; }catch(e){}
 try{ AppBridge._aiChatText = _aiChatText; }catch(e){}
+
+/* v3.7.78 解耦：主题 API 槽注册（ui-drawer / ui-global-events 经桥调用）。 */
+try{
+  AppBridge.setTheme = setTheme; AppBridge.getCurrentTheme = getCurrentTheme;
+  AppBridge.getCustomThemes = getCustomThemes; AppBridge.saveCustomThemes = saveCustomThemes;
+  AppBridge.createCustomTheme = createCustomTheme; AppBridge.deleteCustomTheme = deleteCustomTheme;
+  AppBridge.updateCustomTheme = updateCustomTheme; AppBridge.exportTheme = exportTheme;
+  AppBridge.importTheme = importTheme; AppBridge.getScenarioColors = getScenarioColors;
+  AppBridge.saveScenarioColors = saveScenarioColors;
+}catch(e){}

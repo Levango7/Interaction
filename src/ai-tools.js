@@ -2524,3 +2524,88 @@ function addTokensUsage(resp) {
     localStorage.setItem(PREFIX + "ai_tokens", JSON.stringify(d));
   } catch (e) { /* localStorage 不可用/解析失败：静默，不阻塞 AI 调用 */ }
 }
+
+/* v3.7.78 解耦：自别处下沉 */
+function renderChat(){
+  const el=$("#chat"); if(!el) return;
+  const hist=getChat(active);
+  el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
+    if(m.role==="tool"){
+      var _disp = m._disp || _chatContentToText(m.content);
+      if(typeof _disp === "string" && _disp.indexOf("__CHART__") === 0){
+        try{
+          var _spec = JSON.parse(_disp.slice(9));
+          return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + AppBridge.miniChart(_spec.type, _spec.data) + '</div>';
+        }catch(_e){ /* 解析失败回退文本 */ }
+      }
+      return '<div class="msg tool">' + esc(_disp) + '</div>';
+    }
+    if(m.role==="assistant" && m.tool_calls && m.tool_calls.length){
+      const s=m.tool_calls.map(tc=>t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
+      return `<div class="msg assistant toolcall">${s}</div>`;
+    }
+    if(m.role==="assistant" && !m.content) return `<div class="msg assistant">${t("ai.toolCalling","（工具调用中…）")}</div>`;
+    // T3.1 已取消提示（灰色斜体）
+    if(m.role==="assistant" && m._canceled) return `<div class="msg assistant canceled">${t("ai.cancelled","已取消")}</div>`;
+    // T3.1 失败消息 + 重试按钮
+    if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">${t("ai.retry","重试")}</button></div>`;
+    // v3.2 C-档：流式打字机态（_streaming 标记的消息加 streaming class——半透明+光标动画）
+    if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming">${mdToHtml(m.content||"")}</div>`;
+    if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
+    // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
+    return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
+  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + CHAT_SUGGEST_HTML);
+  // T3.1 绑定重试按钮
+  const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
+  // v1.15：点击消息区任意位置 → 聚焦输入框（聊天面板本身即卡片，不另设输入框卡片）
+  if(!el._chatFocusBound){
+    el._chatFocusBound = true;
+    el.addEventListener("click", function(){
+      const ta = $("#chatTextInput"); if(ta) ta.focus();
+    });
+  }
+  scrollChat();
+
+}
+
+/* v3.7.78 解耦：自别处下沉 */
+function scrollChat(){ const el=$("#chat"); if(el) el.scrollTop=el.scrollHeight; }
+
+/* v3.7.78 解耦：自别处下沉 */
+function trimChatHist(hist, budget){
+  budget = budget || 6000;
+  if(!Array.isArray(hist)) return;
+  let total = 0;
+  for(let i=hist.length-1;i>=0;i--) total += _msgTokens(hist[i]);
+  if(total <= budget && hist.length <= 50) return;
+  let cut = 0;
+  // ① 预算约束：从最旧开始丢，至少留 2 条
+  while(cut < hist.length - 2 && total > budget){
+    total -= _msgTokens(hist[cut]);
+    cut++;
+  }
+  // ② 条数约束：超 50 条时裁到 ≤50，至少留 12 条
+  while(cut < hist.length - 12 && hist.length - cut > 50){
+    total -= _msgTokens(hist[cut]);
+    cut++;
+  }
+  if(cut > 0) hist.splice(0, cut);
+}
+
+/* v3.7.78 解耦：自别处下沉 */
+function _estTokens(text){
+  const s = String(text || "");
+  let zh = 0, other = 0;
+  for(let i=0;i<s.length;i++){
+    const c = s.charCodeAt(i);
+    if(c >= 0x2E80 && c <= 0x9FFF) zh++;
+    else other++;
+  }
+  return zh + Math.ceil(other / 4);
+}
+
+/* v3.7.78 解耦：自别处下沉（AI 层同层序逆层消除） */
+let lastChatRequest=null;
+
+/* v3.7.78 解耦：自别处下沉（AI 层同层序逆层消除） */
+let pendingConfirm = null;

@@ -1826,3 +1826,263 @@ function _resetIntegrationRateLimits(){
    data-idb.js 的 OAuth2 回调 stub 已随 v3.7.71 一并清掉）。留着会误导读者以为该模块仍存在 ——
    2026-09-27 审计时我自己就先被它误导了一次（在源码态 grep 应用代码得到 0 处，一度误判为「被抽取破坏」）。
    纯注释残留，删除无功能影响。 */
+
+/* v3.7.78 解耦：测试导出桥自 ui-global-events 迁来（见彼处说明）。
+   放最后一块后所有被引符号均已初始化，唯一行为差异是「桥在更晚的时刻构建」——
+   对测试（加载完才读）与生产（仅 localhost/?__test=1 挂载）都无感。 */
+if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
+  Object.assign(window.__test, {
+    execTool, migrate, runLinks, completeTask,
+  _guardGenericJsonKeys, _brokenBackup,
+    getTasks, setTasks, getRec, setRec, getLinks,
+    _buildCloudSnapshot, // v3.7.58：render-overview 的云快照构造（安全排除键的单测入口）
+    SCENARIOS, ORDER, TOOLS, DEFAULT_LINKS, PREFIX, MVP_SCOPE,
+    // v3.7.12（解耦 S0）：暴露核心层数据表与跨层通道，供测试驱动钩子与断言"谁注册了实现"
+    SCENE_FEATURE_BIND, AppBridge,
+    effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
+    effectiveSysprompt, setCustomSysprompt, trimChatHist, // v1.15：sysprompt 可编辑 + 上下文 token 预算
+    // T2.3 轻量 store 访问器（供测试驱动与断言）
+    createStore, taskStore, cfgStore, linkStore,
+    // T3.5 Markdown 解析器（供测试驱动与断言）
+    mdToHtml, escapeHtml: esc, safeUrl, inlineMd, sanitizeHtml,
+    /* v3.7.59：图表画布 SVG 生成器（render-overview 的 _dgmSvgHtml）。与 _buildCloudSnapshot
+       同理——安全相关的内部函数需要单测入口，否则「id/color 未转义」这类注入只能靠人眼守。
+       回归用例见 tests/sanitize-xss-regression.test.js。 */
+    _dgmSvgHtml, _dgmColor, _dgmNum,
+    todayStr, shiftDay, esc, uid, lineChartSVG, seed, sm2,
+    encryptKey, decryptKey, initCrypto, getDeviceKey,
+    base64Encode, base64Decode, persistCfg, getCfg, saveCfg, _resetCrypto,
+    // P1-b 自动备份访问器（供测试驱动与断言）
+    snapshotAutoBackup, scheduleAutoBackup, getAutoBackup, recoverAutoBackup,
+    pushDiag, getDiag,
+    // v3.7.64：诊断与反馈面板（关于卡）—— 报告构造与列表渲染的单测入口
+    buildDiagReport, renderDiagList,
+    /* v3.7.65：反馈出口 —— Issue 预填 URL 构造 / 形态标签 / 提交动作（守卫用例见 tests/diag-report.test.js ⑤⑥⑦） */
+    _diagIssueUrl, _diagEnvTag, openDiagIssue,
+    // v3.7.66：manifest shortcuts 的 hash → 视图接线（用例见 tests/pwa-shortcuts.test.js）
+    applyStartHash,
+    // P0-4 诊断寄存器访问器（只读快照 + 测试间复位）
+    calcStreak, heatmapData, analyzeBehavior, renderHeatmap,
+    fetchCoachAdvice, renderHabitChainStatus,
+    greeting, needsOnboarding, renderOnboarding,
+    renderToday,
+    renderHelp, helpSection,
+    // 测试用场景切换访问器
+    setActive, getActive, render,
+    genProfileId, getActiveProfile, migrateProfiles,
+    switchProfile, newProfile, dupProfile, delProfile,
+    renderProfileSelect, fillProfileForm, openDrawer, closeDrawer,
+    openAiPage, openPluginPage,
+    // T2.4 错误边界访问器（供测试驱动与断言）
+    _backupBroken, _validateAndMigrateTasks, _validateCfg, _validateLinks,
+    getCorrupted: () => _corrupted,
+    resetCorrupted: () => { _corrupted = {}; _corruptWarned = false; },
+    chatOnce, doExport,
+    // T3.1 AI 增强（取消/重试/流式）访问器（供测试驱动与断言）
+    abortChat, retryChat, createChatController, showChatThinking, runChatLoop,
+    getChat, appendChat,
+    // v2.0 多 Session 聊天存储层访问器（供测试驱动与断言）
+    getSessions, setActiveSession, getActiveSession, getActiveSessionObj,
+    createSession, renameSession, deleteSession,
+    appendSessionMsg, getSessionMsgs, clearSessionMsgs,
+    openSessionModal, closeSessionModal, renderSessionList, renderSessionPreview, bindSessionModal,
+    _resetSessions, _reloadChatsFromStorage,
+    restoreRecycleBatch, purgeRecycleBatch, getRecyclePolicy, setRecyclePolicy, cleanupRecycle,
+    buildTasksCSV, buildTasksMD, doExportCSV, doExportMD, trapFocus, closeRecycleModal,
+    // v1.4-C 数据导入导出增强：CSV 字段选择 / 记录导出 / CSV 导入 / 导出预览 / 多设备同步 / 迁移日志
+    parseCSV, parseCSVRows, csvRowToTask, previewImportCSV, doImportCSV, cancelImportCSV, doImportCSVFile,
+    openExportPreview, closeExportPreview, getDeviceId,
+    getLastMergeLog, detectLegacyData, getMigrationLog,
+    getPendingCSVImport, setPendingCSVImport,
+    // P5' 命令面板增强（模糊搜索 / 最近使用）访问器
+    fuzzyScore, fuzzyMatch, highlightHits, pinyinInitials, getCmdRecent, pushCmdRecent,
+    // P1 自定义场景访问器（供测试驱动与断言）
+    addCustomScenario, updateCustomScenario, removeCustomScenario,
+    setBuiltinOverride, resetBuiltinOverride, loadCustomScenarios, registerCustomScenarios,
+    // 第三轮：P8 多维筛选+保存视图 / P2' 联动关系图 / P9 稍后提醒+免打扰 访问器
+    renderChainGraph, getGlobViews, saveGlobView, removeGlobView, _applyGlobFilters,
+    snoozeTask, getQuietHours, setQuietHours, isQuietTime,
+    updateTask, openTaskEdit, closeTaskEditModal,
+    // 第四轮批次①：场景内联合筛选 + AI 确认弹窗关闭（ESC 链）
+    applyBoardFilter, closeConfirmModal, doClear,
+    // 第四轮批次②：看板拖拽排序 + 键盘操作（B4/B5）
+    reorderTask, setupKanbanDnD, setupKanbanKeyboard,
+    undoTasks, redoTasks, canUndo, canRedo, clearUndoStack,
+    // 第四轮批次④：AI 请求参数（超时/温度）可配置（B8）
+    getAiParams,
+    validateBaseUrl,
+    getCustomLinks, saveCustomLinks, addCustomLink, removeCustomLink,
+    updateCustomLink, toggleCustomLink, resetCustomLinks,
+    renderLinksBox, _renderChainRow, _renderChainEditRow,
+    // T3.3 数据统计（趋势/分布/链成功率/汇总指标 + 渲染）
+    calcTrend, calcSceneDist, calcChainSuccess, calcStats,
+    renderTrendChart, renderPieChart, renderStats,
+    getNotifyEnabled, setNotifyEnabled,
+    checkDueTasks, markNotifiedIds,
+    checkChainBreak, markChainBreakNotified,
+    dailyDigestNotify, markDigestSent,
+    runNotifyCheck, startNotifyScheduler, stopNotifyScheduler,
+    renderSkeleton, renderEmpty, withSkeleton,
+    // v3.2 阶段二：交互反馈工具（供测试驱动与断言）
+    withLoading, removeWithLeave, validateField,
+    // v3.2 阶段二：错误态组件（供测试驱动与断言）
+    renderErrorState, renderOfflineState,
+    // T4.3 移动端增强（手势方向计算 + 场景切换 + 移动端/横屏检测 + 横屏折叠）
+    handleSwipe, swipeToScene, isMobile, isMobileLandscape, applyLandscapeFold,
+    notifySystem, dailyDigest,
+    // T5.3 浏览器兼容（fallback 守卫函数 / 兼容性自检 / crypto warn 标记）
+    isAbortSupported: function(){ return (typeof AbortController !== "undefined" && typeof AbortSignal !== "undefined"); },
+    isReadableStreamSupported: function(){ return (typeof ReadableStream !== "undefined"); },
+    isCryptoReady: function(){ return _cryptoReady; },
+    resetCryptoWarn: function(){ _cryptoWarned = false; },
+    idbShouldMirror, idbOpen, idbMirrorKey, idbReadKey, idbDeleteKey,
+    idbQueueMirror, idbFlushQueue, idbKeys, idbRestoreAll, idbMirrorAll,
+    idbClearAll, initIdb, doIdbRestore,
+    // 架构项② 渲染扩展（卡片注册 + 场景扩展区注册）
+    registerCard, registerSceneSection, getSceneSections,
+    renderSceneSections, bindSceneSections,
+    // v1.3.4-C 生活场景·健康概览卡片（供测试驱动与断言）
+    healthCard, bindHealthCard, getHealthRecs, parseNum,
+    // 第六轮 R5：工作记忆容量可配置
+    getMemMax,
+    // v1.4-B 性能优化工具（防抖 + 虚拟滚动 + DOM 复用）
+    _renderKanbanCard, _renderKanbanCol, _updateKanbanVScroll,
+    _renderRecItem, _renderRecList, _updateRecVScroll,
+    _renderReviewItem, _updateReviewVScroll,
+    _tryMoveKanbanCardLocal, _bindVirtualScrolls,
+    // v1.4-E 协作/分享：任务分享链接 + 联动规则分享导入 + 场景模板一键导入
+    generateShareLink, parseShareLink, renderSharedTaskCard, openSharedTaskModal, checkSharedTaskOnLoad,
+    generateChainShareCode, importChainShareCode, openChainShareModal, openChainImportModal,
+    // v1.4-D AI 能力增强：自然语言建任务/操作解析 + AI 每日报告
+    parseNaturalLanguageTask, parseNaturalLanguageAction, executeNaturalLanguageAction,
+    generateDailyReport, collectDailyReportData,
+    renderDailyReportCard, handleDailyReport,
+    _cn2num,
+    getSyncQueue, enqueueSync, clearSyncQueue, registerBackgroundSync, flushSyncQueue,
+    showOfflineBanner, hideOfflineBanner, setSyncRetryState, updateOnlineStatus, initNetworkMonitor,
+    isAppInstalled, showInstallModal, hideInstallModal, showInstallButton, hideInstallButton,
+    promptInstall, initInstallPrompt,
+    subscribePush, unsubscribePush, sendTestPushNotification,
+    refreshPushUI, initPushUI, bindInstallUI, bindOfflineBanner, initPWAEnhancements,
+    // v1.4-D onChatSubmit（供集成测试调用）
+    onChatSubmit,
+    bindChatPanel, renderChatDisabled,
+    // 函数声明会被提升，可直接引用；MESSAGES / SUPPORTED_LANGS 是 const，
+    t, getLang, setLang, initI18n, applyI18n,
+    get MESSAGES(){ return MESSAGES; },
+    get SUPPORTED_LANGS(){ return SUPPORTED_LANGS; },
+    // v1.5-B 插件/扩展体系（注册框架 + 自定义场景/卡片/链规则 + 插件市场 UI）
+    // 函数声明会被提升，可直接引用；_plugins / BUILTIN_PLUGINS 用 var 声明
+    registerPlugin, loadPlugin, unloadPlugin, setPluginEnabled,
+    getPluginConfig, setPluginConfig, getAllPlugins, getEnabledPlugins,
+    getPlugin, getPluginScenarios, getPluginCards, getPluginChainRules,
+    _savePluginsState, _loadPluginsState, _resetPlugins,
+    renderPluginBox, openPluginDetailModal, openPluginPanel,
+    registerPluginFromJson, renderPluginCards,
+    get _plugins(){ return _plugins; },
+    get BUILTIN_PLUGINS(){ return BUILTIN_PLUGINS; },
+    // v1.5-C 主题系统（多主题切换 / 自定义主题编辑 / 场景配色个性化 / 主题导入导出）
+    // 函数声明会被提升，可直接引用；PRESET_THEMES / SEPIA_TOKENS 用 var 声明
+    setTheme, getCurrentTheme, getCustomThemes, saveCustomThemes,
+    createCustomTheme, deleteCustomTheme, updateCustomTheme,
+    exportTheme, importTheme, getScenarioColors, saveScenarioColors,
+    getAllThemes, _resetThemeSystem, _applyScenarioColors,
+    get PRESET_THEMES(){ return PRESET_THEMES; },
+
+    get SEPIA_TOKENS(){ return SEPIA_TOKENS; },
+    // v1.5-D 高级统计/报表（周/月/年报 + 自定义范围 + 对比 + PDF 导出）
+    // 函数声明会被提升，可直接引用；_reportModalState 用 var 声明
+    _rangeWeek, _rangeMonth, _rangeYear, _rangeCustom, _taskDateStr,
+    generateReport, compareReports, renderReportHTML, renderCompareHTML,
+    exportReportPDF, openReportModal, closeReportModal, bindReportModal,
+    _renderReportModal,
+    get _reportModalState(){ return _reportModalState; },
+    aiDecomposeTask, aiSmartRecommend, aiGenerateCode,
+    parseDecomposeResult, parseDecomposeIntent, parseCodeGenIntent,
+    handleAiDecompose, handleAiCodeGen,
+    _aiChatText,
+    renderAiRecommendCard, handleAiRecommend,
+    // v1.6-B 生产力工具增强：笃行 / 时间追踪 / 日历视图 / 批量操作
+    // 函数声明会被提升，可直接引用；_pomoState / _tracker / _batchState 用 var 声明
+    // 在 41/42/43/19 中定义（加载顺序 31 < 41/42/43，19 已在 31 之前加载）
+    // 使用 getter 延迟求值避免 TDZ；函数引用安全（函数声明提升）
+    startPomodoro, stopPomodoro, getPomoState, getPomoCount,
+    startTracking, pauseTracking, resumeTracking, stopTracking, getTrackerState, getTaskTime,
+    renderCalendarView, getCalendarMonthData, renderWeekView, bindCalendarEvents,
+    toggleBatchMode, toggleBatchSelect, toggleBatchSelectAll,
+    getBatchSelected, batchComplete, batchDelete,
+    batchMoveScenario, batchSetPriority, bindBatchToolbar,
+    get _pomoState(){ return _pomoState; },
+    get _tracker(){ return _tracker; },
+    get _batchState(){ return _batchState; },
+    get POMO_FOCUS_MIN(){ return POMO_FOCUS_MIN; },
+    get POMO_BREAK_MIN(){ return POMO_BREAK_MIN; },
+    // v1.6-C 数据可视化增强：甘特图 / 思维导图 / 自定义仪表盘 / 雷达图 / 桑基图
+    // 函数声明会被提升，可直接引用；DASHBOARD_WIDGETS 用 var 声明
+    renderGanttChart, getGanttData, openGanttModal, closeGanttModal,
+    renderMindmap, getMindmapTree, openMindmapModal, closeMindmapModal,
+    renderCustomDashboard, getDashboardLayout, saveDashboardLayout,
+    resetDashboard, moveDashboardWidget, bindDashboardDnD,
+    openDashboardModal, closeDashboardModal,
+    radarChartSVG, sankeyChartSVG, getRadarData, getSankeyData,
+    get DASHBOARD_WIDGETS(){ return DASHBOARD_WIDGETS; },
+    // v1.6-D 知识管理：笔记系统 + 知识库 + 全文搜索
+    // 函数声明会被提升，可直接引用；47/48 > 31，但函数声明提升使引用安全
+    getNotes, saveNotes, createNote, updateNote, deleteNote, getNoteById,
+    getNotesByTag, getNotesByCategory, getAllTags, getAllCategories,
+    linkNoteToTask, unlinkNoteFromTask, getNotesLinkedToTask,
+    renderNoteEditor, renderNoteList,
+    openNotesModal, closeNotesModal,
+    openNoteEditorModal, closeNoteEditorModal, saveNoteFromEditor,
+    renderKnowledgeBase, openKnowledgeBaseModal, closeKnowledgeBaseModal,
+    searchAll, highlightSearchResult, renderSearchResults,
+    openSearchModal, closeSearchModal, executeSearch,
+    get NOTES_STORAGE_KEY(){ return NOTES_STORAGE_KEY; },
+    // v1.8-C 集成（供测试驱动）
+    integrationGetStatus, integrationSetHttpClient,
+    // v1.8-C 集成内部件（async provider 取用 + 同步状态管理 + 存储 key，供注入式测试）
+    _intRequireProvider, _intLoadProviders, _intResetIntegrationCache,
+    _intGetSyncState, _intRecordSync, _intFindLocalId,
+    get INTEGRATION_PROVIDERS_KEY(){ return INTEGRATION_PROVIDERS_KEY; },
+    get INTEGRATION_SYNC_STATE_KEY(){ return INTEGRATION_SYNC_STATE_KEY; },
+    get INTEGRATION_TYPES(){ return INTEGRATION_TYPES; },
+    // 已移除模块的 getter（enterprise/collab/worker/security/e2ee/oauth2/webhook/voice/multimodal/capacitor/biometric）
+    initHeavyModules,
+    // 系统级消息中心访问器（供测试驱动与断言）
+    getMessages, addMessage, markMessageRead, markAllMessagesRead,
+    clearMessages, getUnreadCount, updateMsgBadge, renderMsgPanel,
+    get MSG_KEY(){ return MSG_KEY; },
+    // v2.3.0 工具应用注册表 + 系统概况卡（供测试驱动与断言）
+    TOOL_APPS, openToolStub, renderSystemOverviewCard, renderOverview,
+    // v2.4.0 四大新页面（供测试驱动与断言）
+    renderTasksPage, renderToolboxPage, renderStorePage, renderChainPage,
+    // v3.0.1 B-3/B-5：JS 沙箱运行器 + 数据可视化迷你图表（供测试驱动与断言）
+    runJsSnippet, parseChartData, renderMiniChart,
+    // v3.1：SQL Playground（sql.js WASM 沙箱，供测试驱动与断言）
+    runSql, loadSqlJs, bindCodeSqlCard,
+    // v3.1.2：AI 页 8 子模块配置存取 + 回收站多类型 bin 通道（供测试驱动与断言；此前结构性不可测）
+    getAiConfig, saveAiConfig, renderAiSkillsBuiltin, renderAiMcpList, renderAiWorkflowList,
+    renderAiSessHistory, AI_BUILTIN_SKILLS,
+    getRecycleBin, addToRecycleBin, restoreFromRecycleBin,
+    get _dashEditMode(){ return _dashEditMode; },
+    set _dashEditMode(v){ _dashEditMode = !!v; },
+    // ===== AI 能力增强（任务 232）：Agent 自动化 + 新工具 + RAG + 流式增强 =====
+    agentPlanSysPrompt, parseAgentPlan, executeAgentPlan, summarizeAgentPlan, chatOnceAgent,
+    agentExecAsync, toolWebSearch, toolWebFetch, toolCodeRun, toolSqlQuery,
+    ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
+    ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
+    ragInjectContext, ragReindex,
+    // v3.7.67：RAG 增量同步（哈希 diff + 防抖）——测试直接驱动 ragSyncIncremental 免等定时器
+    ragSyncIncremental, ragScheduleSync, _ragCurrentDocs, _ragDocHash,
+    get RAG_SYNC_DEBOUNCE_MS(){ return RAG_SYNC_DEBOUNCE_MS; },
+    get RAG_SYNC_EMBED_CAP(){ return RAG_SYNC_EMBED_CAP; },
+    switchModel, listModels, retryChatWithParams,
+    streamProgressStart, streamProgressUpdate, getStreamProgress, streamProgressClear,
+    get RAG_STORAGE_KEY(){ return RAG_STORAGE_KEY; },
+    get _ragReady(){ return _ragReady; },
+    set _ragReady(v){ _ragReady = !!v; },
+    get _ragLex(){ return _ragLex; },
+    get _retryOverrides(){ return _retryOverrides; },
+    get _streamProgress(){ return _streamProgress; }
+  });
+}

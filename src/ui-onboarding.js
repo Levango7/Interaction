@@ -110,13 +110,13 @@ function _onboardBindStep(step){
     const skip = document.getElementById("onboardSkip");
     if(skip) skip.onclick = ()=>{ close(); _finishOnboarding(); };
     const config = document.getElementById("onboardConfig");
-    if(config) config.onclick = ()=>{ close(); _finishOnboarding(); try{ openDrawer(); }catch(e){ /* noop */ } };
+    if(config) config.onclick = ()=>{ close(); _finishOnboarding(); try{ AppBridge.openDrawer(); }catch(e){ /* noop */ } };
   }
 }
 // 引导完成：标记 onboarded 并渲染主界面
 function _finishOnboarding(){
   save(PREFIX+"onboarded", true);
-  try{ render(); checkCount(); dailyDigest(); }catch(e){ /* noop */ }
+  try{ render(); AppBridge.checkCount(); dailyDigest(); }catch(e){ /* noop */ }
 }
 /* B2：渲染引导 modal（入口）—— v3.7.66「看过即记」：modal 一展示就写 onboarded 标记。
    旧语义要等走完三步 / 点到最后一次跳过才写，于是中途关页面或直接刷新的人下次从头再被弹一次；

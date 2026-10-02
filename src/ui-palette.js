@@ -142,7 +142,7 @@ function buildCmds(q){
     {label:t("cmd.exportMd","导出任务 Markdown"), icon:UI_ICONS.download, group:t("cmd.command","命令"), run:doExportMD},
     {label:t("cmd.importRestore","导入恢复"), icon:UI_ICONS.upload, group:t("cmd.command","命令"), run:()=> $("#fileInput").click()},
     {label:t("cmd.clearAll","清空全部数据"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:doClear},
-    {label:t("cmd.openSettings","打开设置"), icon:UI_ICONS.gear, group:t("cmd.command","命令"), run:openDrawer},
+    {label:t("cmd.openSettings","打开设置"), icon:UI_ICONS.gear, group:t("cmd.command","命令"), run:()=>{ AppBridge.openDrawer(); }},
     {label:t("cmd.viewMemory","查看工作记忆"), icon:UI_ICONS.chat, group:t("cmd.command","命令"), run:showMemories},
     {label:t("cmd.clearMemory","清空工作记忆"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ save(PREFIX+"memory",[]); toast(t("msg.memoryCleared","已清空工作记忆"),"ok"); }},
     {label:t("cmd.cancelGoal","取消当前目标"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ const g=cancelGoal(); toast(g?(t("msg.goalCancelled","已取消目标「")+g.title+"」"):t("msg.noActiveGoal","当前无进行中目标"),"ok"); }},
@@ -150,7 +150,7 @@ function buildCmds(q){
     /* v3.7.8：补三条"此前只能靠内部路由到达"的入口 —— 统计页在 v3.6.6 撤掉了侧栏入口后一直是孤岛，
        这里给它一个真实可达的入口（同时也是命令面板该有的能力：所有主视图都能一条命令直达）。 */
     {label:t("cmd.viewStats","查看统计"), icon:UI_ICONS.grid, group:t("cmd.command","命令"), run:()=>{ setActive("stats"); render(); }},
-    {label:t("cmd.openAi","打开 AI 配置"), icon:UI_ICONS.robot, group:t("cmd.command","命令"), run:()=>{ if(typeof openAiPage==="function") openAiPage(); }},
+    {label:t("cmd.openAi","打开 AI 配置"), icon:UI_ICONS.robot, group:t("cmd.command","命令"), run:()=>{ AppBridge.openAiPage(); }},
     {label:t("cmd.openRecycle","打开回收站"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ if(typeof openRecycle==="function") openRecycle(); }}
   ];
   const scs=ORDER.map(sc=>({label:t("cmd.switchTo","切到 ")+SCENARIOS[sc].name, icon:SCENARIOS[sc].icon || "", group:t("cmd.scenario","场景"), run:()=>{setActive(sc);render();}}));

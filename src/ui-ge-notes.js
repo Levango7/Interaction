@@ -913,3 +913,13 @@ function executeSearch(query){
    不再直接引用本块符号（逆层边消除）。注册在加载时执行，晚于 core 定义、早于任何用户交互。 */
 try{ AppBridge.openKnowledgeBaseModal = openKnowledgeBaseModal; }catch(e){}
 try{ AppBridge.openNotesModal = openNotesModal; }catch(e){}
+
+/* v3.7.78 解耦：笔记/搜索弹窗关闭与搜索执行槽注册（ui-drawer 经桥调用）。 */
+try{
+  AppBridge.closeKnowledgeBaseModal = closeKnowledgeBaseModal;
+  AppBridge.closeNoteEditorModal = closeNoteEditorModal;
+  AppBridge.closeNotesModal = closeNotesModal;
+  AppBridge.closeSearchModal = closeSearchModal;
+  AppBridge.openSearchModal = openSearchModal;
+  AppBridge.executeSearch = executeSearch;
+}catch(e){}

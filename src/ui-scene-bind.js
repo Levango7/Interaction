@@ -13,7 +13,7 @@ function bindScenario(){
     const nt = {id:uid(), sc:active, title:f.title.value.trim(), due:f.due.value,
       priority:f.priority.value, status:"todo", doneAt:null, note:"", tags, created:Date.now()};
     tasks.push(nt);
-    setTasks(tasks); checkCount(); render();
+    setTasks(tasks); AppBridge.checkCount(); render();
     _emitTaskEvent("task_create", nt); // v1.12 [1a]：表单创建任务发事件（自动化规则 + Webhook 总线）
   };
   const _rf = $("#recForm"); if(_rf) _rf.onsubmit = e=>{
@@ -85,7 +85,7 @@ function bindScenario(){
   // v2.1.0：日历内联视图——月份切换 + 点日期预填任务表单截止日期
   const calInline = $("#calInlineView");
   if(calInline){
-    bindCalendarEvents(calInline);
+    AppBridge.bindCalendarEvents(calInline);
     calInline.addEventListener("cal:date-select", function(e){
       const f = $("#taskForm");
       if(f && f.due){ f.due.value = e.detail.date; f.title.focus(); }

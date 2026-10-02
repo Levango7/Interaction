@@ -427,19 +427,7 @@ function _miniLineSVG(data){
 /* v3.7.14（解耦 S2a）：注册迷你图表实现（AI 经桥接调用，消除 AI→Render 逆层依赖） */
 AppBridge.miniChart = renderMiniChart;
 
-function renderMiniChart(chartType, dataArr){
-  if(!Array.isArray(dataArr) || !dataArr.length){
-    return t("p3.html.chartEmpty","<div class=\"mini-chart-empty\">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{\"label\":\"Q1\",\"value\":30}]</div>");
-  }
-  const ct = String(chartType || "bar").toLowerCase();
-  let inner;
-  if(ct === "pie") inner = _miniPieSVG(dataArr);
-  else if(ct === "line") inner = _miniLineSVG(dataArr);
-  else inner = _miniBarSVG(dataArr);
-  // line 类型自带布局容器，不再包 .mini-chart-wrap 的固定高度（避免双重滚动裁切）
-  if(ct === "line") return '<div class="mini-chart-line-box u-h-120 u-bg-panel2 u-radius-sm u-overflow-hidden">' + inner + "</div>";
-  return '<div class="mini-chart-wrap">' + inner + "</div>";
-}
+
 
 /* ---------- v3.1：SQL Playground（sql.js WASM 沙箱） ---------- */
 /**

@@ -117,6 +117,34 @@ const AppBridge = {
   toggleToolPop: () => undefined,
 
   renderHelp: () => undefined,
+  /* v3.7.78：render 簇槽（回收站/工具卡/四个工具弹窗） */
+  openRecycle: () => undefined,
+  openToolStub: () => undefined,
+  openAlarmModal: () => undefined,
+  openChartStore: () => undefined,
+  openWeatherModal: () => undefined,
+  openPetModal: () => undefined,
+  /* v3.7.78：数据量巡检（onboarding/scene-bind 触发，实现带通知副作用属 backup-stats） */
+  checkCount: () => undefined,
+  /* v3.7.78：主题 API（ui-drawer 设置页与 ui-global-events 命令面板经桥调用） */
+  setTheme: () => undefined,
+  getCurrentTheme: () => "",
+  getCustomThemes: () => [],
+  saveCustomThemes: () => undefined,
+  createCustomTheme: () => undefined,
+  deleteCustomTheme: () => undefined,
+  updateCustomTheme: () => undefined,
+  exportTheme: () => undefined,
+  importTheme: () => undefined,
+  getScenarioColors: () => ({}),
+  saveScenarioColors: () => undefined,
+  /* v3.7.78：笔记/搜索弹窗关闭与搜索执行（ui-drawer 经桥调用） */
+  closeKnowledgeBaseModal: () => undefined,
+  closeNoteEditorModal: () => undefined,
+  closeNotesModal: () => undefined,
+  closeSearchModal: () => undefined,
+  openSearchModal: () => undefined,
+  executeSearch: () => undefined,
 
   /* v3.7.77（解耦 S2b 第二批）：知识库 / 日历 / 报表三簇 —— render 块经桥调用，
      实现由各自 UI 块加载时注册（ui-ge-notes / ui-ge-calendar / ui-ge-theme）。 */
@@ -8025,4 +8053,19 @@ function _chatContentToText(c){
     return txt + (imgs ? t("ai.imageCount"," [图×") + imgs + "]" : "");
   }
   return c;
+}
+
+/* v3.7.78 解耦：自别处下沉（同层序逆层消除） */
+function thisWeekDone(sc){
+  const d=new Date(); const day=(d.getDay()+6)%7;
+  const mon=new Date(d); mon.setDate(d.getDate()-day); mon.setHours(0,0,0,0);
+  return getActiveTasks().filter(t=>t.sc===sc&&t.status==="done"&&t.doneAt&&t.doneAt>=mon.getTime());
+}
+
+/* v3.7.78 解耦：自别处下沉（同层序逆层消除） */
+function weekRange(){
+  const d=new Date(); const day=(d.getDay()+6)%7;
+  const mon=new Date(d); mon.setDate(d.getDate()-day);
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  return (mon.getMonth()+1)+"/"+mon.getDate()+" - "+(sun.getMonth()+1)+"/"+sun.getDate();
 }

@@ -1159,7 +1159,7 @@ function renderThemeEditor(){
       listEl.querySelectorAll("[data-theme-apply]").forEach(btn => {
         btn.onclick = () => {
           const id = btn.getAttribute("data-theme-apply");
-          if(typeof setTheme === "function") setTheme(id);
+          AppBridge.setTheme(id);
           const thSel = $("#cfgTheme"); if(thSel) thSel.value = id;
           renderThemeEditor();
           try{ toast(t("theme.applied", "已应用主题「")+(customs[id]&&customs[id].name||id)+t("theme.nameSuffix", "」"), "ok"); }catch(e){}
@@ -1176,7 +1176,7 @@ function renderThemeEditor(){
           const id = btn.getAttribute("data-theme-delete");
           const theme = customs[id];
           if(!confirm(t("theme.confirmDelete", "确定删除自定义主题「")+(theme&&theme.name||id)+t("theme.confirmDeleteSuffix", "」？"))) return;
-          if(typeof deleteCustomTheme === "function") deleteCustomTheme(id);
+          AppBridge.deleteCustomTheme(id);
           renderThemeEditor();
           try{ toast(t("theme.deleted", "已删除主题"), "ok"); }catch(e){}
         };
@@ -1205,7 +1205,7 @@ function renderThemeEditor(){
         const sc = inp.getAttribute("data-sc-color");
         const colors = (typeof getScenarioColors === "function") ? getScenarioColors() : {};
         colors[sc] = inp.value;
-        if(typeof saveScenarioColors === "function") saveScenarioColors(colors);
+        AppBridge.saveScenarioColors(colors);
         try{ toast(t("theme.sceneColorUpdated", "已更新场景配色"), "ok"); }catch(e){}
       };
     });
@@ -1214,7 +1214,7 @@ function renderThemeEditor(){
         const sc = btn.getAttribute("data-sc-reset");
         const colors = (typeof getScenarioColors === "function") ? getScenarioColors() : {};
         delete colors[sc];
-        if(typeof saveScenarioColors === "function") saveScenarioColors(colors);
+        AppBridge.saveScenarioColors(colors);
         renderThemeEditor();
         try{ toast(t("theme.sceneColorReset", "已重置场景配色"), "ok"); }catch(e){}
       };
@@ -1366,27 +1366,27 @@ function _importThemeFromJson(){
 /* ---------- v1.6-D 知识管理：笔记 / 知识库 / 全文搜索按钮事件绑定 ---------- */
 /* 设置抽屉入口 + 顶栏快捷按钮 + 弹窗关闭按钮
  * 使用 nullish 守卫防御：测试环境若 DOM 尚未挂载对应按钮时不报错 */
-const _btnNotes = $("#btnNotes"); if(_btnNotes) _btnNotes.onclick = function(){ if(typeof openNotesModal === "function") openNotesModal(); };
-const _btnKnowledgeBase = $("#btnKnowledgeBase"); if(_btnKnowledgeBase) _btnKnowledgeBase.onclick = function(){ if(typeof openKnowledgeBaseModal === "function") openKnowledgeBaseModal(); };
-const _btnSearch = $("#btnSearch"); if(_btnSearch) _btnSearch.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
-const _btnNotesTop = $("#btnNotesTop"); if(_btnNotesTop) _btnNotesTop.onclick = function(){ if(typeof openNotesModal === "function") openNotesModal(); };
-const _btnSearchTop = $("#btnSearchTop"); if(_btnSearchTop) _btnSearchTop.onclick = function(){ if(typeof openSearchModal === "function") openSearchModal(); };
+const _btnNotes = $("#btnNotes"); if(_btnNotes) _btnNotes.onclick = function(){ AppBridge.openNotesModal(); };
+const _btnKnowledgeBase = $("#btnKnowledgeBase"); if(_btnKnowledgeBase) _btnKnowledgeBase.onclick = function(){ AppBridge.openKnowledgeBaseModal(); };
+const _btnSearch = $("#btnSearch"); if(_btnSearch) _btnSearch.onclick = function(){ AppBridge.openSearchModal(); };
+const _btnNotesTop = $("#btnNotesTop"); if(_btnNotesTop) _btnNotesTop.onclick = function(){ AppBridge.openNotesModal(); };
+const _btnSearchTop = $("#btnSearchTop"); if(_btnSearchTop) _btnSearchTop.onclick = function(){ AppBridge.openSearchModal(); };
 // v1.9.9：顶栏右侧更多按钮（从侧栏功能组迁出）——点击展开次常用工具下拉
 /* v1.15：顶栏消息按钮已收敛为唯一入口（#btnMessages），绑定见系统级消息中心区 */
 /* 弹窗关闭按钮 */
-const _btnNotesClose = $("#btnNotesClose"); if(_btnNotesClose) _btnNotesClose.onclick = function(){ if(typeof closeNotesModal === "function") closeNotesModal(); };
-const _btnNoteEditorClose = $("#btnNoteEditorClose"); if(_btnNoteEditorClose) _btnNoteEditorClose.onclick = function(){ if(typeof closeNoteEditorModal === "function") closeNoteEditorModal(); };
-const _btnKnowledgeBaseClose = $("#btnKnowledgeBaseClose"); if(_btnKnowledgeBaseClose) _btnKnowledgeBaseClose.onclick = function(){ if(typeof closeKnowledgeBaseModal === "function") closeKnowledgeBaseModal(); };
-const _btnSearchClose = $("#btnSearchClose"); if(_btnSearchClose) _btnSearchClose.onclick = function(){ if(typeof closeSearchModal === "function") closeSearchModal(); };
+const _btnNotesClose = $("#btnNotesClose"); if(_btnNotesClose) _btnNotesClose.onclick = function(){ AppBridge.closeNotesModal(); };
+const _btnNoteEditorClose = $("#btnNoteEditorClose"); if(_btnNoteEditorClose) _btnNoteEditorClose.onclick = function(){ AppBridge.closeNoteEditorModal(); };
+const _btnKnowledgeBaseClose = $("#btnKnowledgeBaseClose"); if(_btnKnowledgeBaseClose) _btnKnowledgeBaseClose.onclick = function(){ AppBridge.closeKnowledgeBaseModal(); };
+const _btnSearchClose = $("#btnSearchClose"); if(_btnSearchClose) _btnSearchClose.onclick = function(){ AppBridge.closeSearchModal(); };
 /* 搜索输入框实时搜索 */
 const _searchInput = $("#searchInput");
 if(_searchInput && !_searchInput._v16dBound){
   _searchInput._v16dBound = true;
   _searchInput.oninput = function(e){
-    if(typeof executeSearch === "function") executeSearch(e.target.value);
+    AppBridge.executeSearch(e.target.value);
   };
   _searchInput.onkeydown = function(e){
-    if(e.key === "Escape"){ if(typeof closeSearchModal === "function") closeSearchModal(); }
+    if(e.key === "Escape"){ AppBridge.closeSearchModal(); }
   };
 }
 /* 弹窗背景点击关闭 */
@@ -1406,7 +1406,7 @@ if(!window._v16dSearchHotkeyBound){
   window.addEventListener("keydown", function(e){
     if(e.ctrlKey && e.shiftKey && (e.key === "F" || e.key === "f")){
       e.preventDefault();
-      if(typeof openSearchModal === "function") openSearchModal();
+      AppBridge.openSearchModal();
     }
   });
 }
