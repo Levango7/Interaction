@@ -6114,10 +6114,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.74"; /* v3.7.74 路线项①②落地：会议进日历（办公 record date/startTime 进月历「会」标记与周视图会议行，按开始时间排序，与任务徽章分列）· 双标签页数据守护（storage 事件节流 30s 提示刷新，此前全仓 0 监听双开互覆盖）· RAG 文件导入与云同步增量记账为路线余量（后者依赖后端契约） */
+const VERSION = "3.7.75"; /* v3.7.74 路线项①②落地：会议进日历（办公 record date/startTime 进月历「会」标记与周视图会议行，按开始时间排序，与任务徽章分列）· 双标签页数据守护（storage 事件节流 30s 提示刷新，此前全仓 0 监听双开互覆盖）· RAG 文件导入与云同步增量记账为路线余量（后者依赖后端契约） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261002e";
+const BUILD_TAG = "20261002f";
 
 
 
@@ -6699,6 +6699,8 @@ const AppBridge = {
   miniChart: () => ""
 ,
   snoozeTask: () => undefined,
+  /* v3.7.75：侧栏局部重绘（插件注册/启停后刷新场景列表）——实现由 render-widgets 注册 */
+  renderSide: () => undefined,
 
   _moveDrawerHome: () => undefined,
   openTemplateModal: () => undefined,
@@ -14643,6 +14645,11 @@ function idbReadKey(k){ return idbTxn("readonly", st => st.get(k)); }
 /** 删除单键 IDB 镜像 */
 function idbDeleteKey(k){ return idbTxn("readwrite", st => st.delete(k)); }
 
+/* v3.7.75 解耦：把 IDB 助手注册进 crypto 的设备密钥接缝 —— 取代 crypto 直接引用
+   本块符号（那是一条 crypto→data-idb 逆层边，module-graph 实测）。本块层序在 crypto
+   之后、任何 initCrypto 调用方（data-rw 等）之前，注册时机天然成立。 */
+try{ if(typeof registerDkIdbHelpers === "function") registerDkIdbHelpers(idbReadKey, idbMirrorKey); }catch(e){ /* 接线失败不影响 IDB 本身 */ }
+
 /* ---------- 去抖批量写入队列（save 钩子） ---------- */
 let _idbQueue = {};
 let _idbTimer = null;
@@ -16360,6 +16367,459 @@ function allKeys(){
     return Object.keys(ls).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY);
   }catch(e){ return []; }
 }
+
+/* ============================================================
+ * v3.7.75 解耦：插件**注册表**自 ui-ge-plugins 下沉本块（纯数据 + 存取 + 初始化）。
+ * ui-ge-plugins 只留 renderPluginCards（DOM）。_initPlugins() 在本块末尾自动执行，
+ * 时机与原先等价：registerCustomScenarios 顶层调用（本块 L172）期间注册表尚为空，
+ * 与搬前一致；var _plugins 的提升语义（见块内注释）保持不变。
+ * ============================================================ */
+
+// 已注册插件 Map（id -> plugin）
+// NOTE: 必须用 var 而非 let/const——_plugins 在行 5564 registerCustomScenarios() 顶层调用时
+// 即被 getEnabledPlugins() 访问，而此声明位于行 18785 之后。var 的函数作用域提升保证
+// 早期访问返回 undefined（getEnabledPlugins 有 typeof 守卫），let/const 的 TDZ 会抛 ReferenceError。
+// eslint-disable-next-line no-var
+var _plugins = {};
+var _pluginsInitializing = false;
+
+// 内置示例插件（注册后默认 enabled=false，由用户在插件市场启用）
+const BUILTIN_PLUGINS = [
+  {
+    id: "pomodoro",
+    name: t("plugin.pomodoro.name", "笃行专注法"),
+    version: "1.0.0",
+    description: t("plugin.pomodoro.desc", "25分钟专注+5分钟休息的深度工作法场景"),
+    enabled: false,
+    scenarios: [{
+      key: "pomodoro",
+      name: t("plugin.pomodoro.scenarioName", "笃行"),
+      icon: '',
+      color:"#e74c3c",
+      desc: t("plugin.pomodoro.scenarioDesc", "笃行专注法")
+    }]
+  },
+  {
+    id: "reading",
+    name: t("plugin.reading.name", "阅读管理"),
+    version: "1.0.0",
+    description: t("plugin.reading.desc", "书籍阅读进度跟踪与读书笔记"),
+    enabled: false,
+    scenarios: [{
+      key: "reading",
+      name: t("plugin.reading.scenarioName", "阅读"),
+      icon: '',
+      color:"#3498db",
+      desc: t("plugin.reading.scenarioDesc", "阅读管理")
+    }]
+  },
+  {
+    /* v3.6.0：理财不再默认占场景位——改为商店可添加项，启用后「理财」场景进入侧栏。
+       场景定义（记录字段/专属卡/统计 tab）复用 SCENARIOS.finance 预置定义，见 PRESET_SC_KEYS。 */
+    id: "finance",
+    name: t("plugin.finance.name", "理财助手"),
+    version: "1.0.0",
+    description: t("plugin.finance.desc", "收支记账、基金与股票持仓跟踪，启用后新增「理财」场景"),
+    enabled: false,
+    scenarios: [{
+      key: "finance",
+      name: t("plugin.finance.scenarioName", "理财"),
+      icon: '',
+      color:"#c9a227",
+      desc: t("plugin.finance.scenarioDesc", "个人理财")
+    }]
+  },
+  {
+    id: "budget",
+    name: t("plugin.budget.name", "预算追踪"),
+    version: "1.0.0",
+    description: t("plugin.budget.desc", "日常开支记录与预算管理"),
+    enabled: false,
+    cards: [{
+      type: "budget-summary",
+      name: t("plugin.budget.cardName", "预算概览"),
+      // v3.1.2 A-档：接真数据——聚合 life_bills（缴费台账 amount）+ life_shopping（采购台账 amount）+ lif-bill/lif-takeout（工具箱 amount）本月的支出
+      // 此前永远 ¥0：用户记的账不进插件卡
+      render: function(data){
+        const m = new Date().getMonth();
+        let bills = 0, shop = 0, toolBill = 0, toolTake = 0;
+        try{
+          const a = (load(PREFIX+"life_bills", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
+          const b = (load(PREFIX+"life_shopping", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
+          const tb = (load(PREFIX+"tool_lif-bill", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
+          const tt = (load(PREFIX+"tool_lif-takeout", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
+          // 注：上述合计为全量；如需严格按"本月"过滤，账单类需带 due 字段归入月份；当前先取累计以确保卡片始终有数据
+          bills = a; shop = b; toolBill = tb; toolTake = tt;
+        }catch(_e){}
+        const total = bills + shop + toolBill + toolTake;
+        return "<div class='plugin-card budget-card'>" +
+          "<div class='budget-total'>" + t("plugin.budget.total", "本月总支出") + " ¥" + total.toFixed(2) + "</div>" +
+          "<div class='budget-breakdown'>" +
+            "<span>" + t("plugin.budget.bills", "缴费") + " ¥" + bills.toFixed(2) + "</span>" +
+            "<span>" + t("plugin.budget.shop", "采购") + " ¥" + shop.toFixed(2) + "</span>" +
+            "<span>" + t("plugin.budget.tool", "工具") + " ¥" + (toolBill + toolTake).toFixed(2) + "</span>" +
+          "</div>" +
+          "<p class='hint' class='u-fs-2xs u-mt-1'>" + t("plugin.budget.hint", "来源：生活场景的缴费/采购台账 + 工具箱记录（v3.1.2 A-档：插件卡接真数据）") + "</p>" +
+        "</div>";
+      }
+    }]
+  },
+  {
+    id: "health",
+    name: t("plugin.health.name", "健康助手"),
+    version: "1.0.0",
+    description: t("plugin.health.desc", "运动/体重/睡眠/喝水记录与健康概览，挂载到「生活」场景"),
+    enabled: false,
+    onActivate: function(){
+      SCENARIOS.life.extraCard = "health";
+      try{ AppBridge.render(); }catch(e){ /* noop：桥未接前是安全空操作 */ }
+    },
+    onDeactivate: function(){
+      SCENARIOS.life.extraCard = "life";
+      try{ AppBridge.render(); }catch(e){ /* noop：桥未接前是安全空操作 */ }
+    }
+  },
+  {
+    id: "habit-tracker",
+    name: t("plugin.habit-tracker.name", "习惯追踪器"),
+    version: "1.0.0",
+    description: t("plugin.habit-tracker.desc", "每日习惯打卡记录，支持连续天数统计与可视化图表"),
+    enabled: false,
+    scenarios: [{
+      key: "habit-tracker",
+      name: t("plugin.habit-tracker.scenarioName", "习惯追踪"),
+      icon: '',
+      color:"#27ae60",
+      desc: t("plugin.habit-tracker.scenarioDesc", "每日打卡 · 连续记录 · 趋势图表")
+    }]
+  },
+  {
+    id: "weather",
+    name: t("plugin.weather.name", "天气预报"),
+    version: "1.0.0",
+    description: t("plugin.weather.desc", "查看今日及未来几天天气，出行穿衣参考"),
+    enabled: false,
+    cards: [{
+      type: "weather-widget",
+      name: t("plugin.weather.cardName", "天气卡片"),
+      render: function(data){
+        /* v3.7.71 文案诚实化：旧兜底「点击同步」无任何事件处理（卡片不绑事件），
+           且本卡无数据供给链 —— 真天气在工具箱「天气」（openWeatherModal）。 */
+        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.weather.title", "天气") + '</div>'
+          + '<div class="plugin-body">\u2600 FE ' + (data&&data.temp ? data.temp+'\u00B0C' : t("plugin.weather.loading", "获取中..."))
+          + '<br><span class="u-fs-2xs u-text-muted">'+(data&&data.desc||t("plugin.weather.where", "详细天气见工具箱「天气」"))+'</span></div></div>';
+      }
+    }]
+  },
+  {
+    id: "quote",
+    name: t("plugin.quote.name", "每日一言"),
+    version: "1.0.0",
+    description: t("plugin.quote.desc", "随机名言/鸡汤/诗句，给每天一点灵感"),
+    enabled: false,
+    cards: [{
+      type: "quote-widget",
+      name: t("plugin.quote.cardName", "每日一言"),
+      render: function(){
+        const quotes = [
+          t("plugin.quote.q1", "种一棵树最好的时间是十年前，其次是现在。"),
+          t("plugin.quote.q2", "千里之行，始于足下。"),
+          t("plugin.quote.q3", "不积跬步，无以至千里。"),
+          t("plugin.quote.q4", "学而不思则罔，思而不学则殆。"),
+          t("plugin.quote.q5", "知行合一。"),
+          t("plugin.quote.q6", "把每一天当作最后一天来过。"),
+          t("plugin.quote.q7", "简单是终极的复杂。"),
+          t("plugin.quote.q8", "保持饥饿，保持愚蠢。")
+        ];
+        const q = quotes[Math.floor(Math.random()*quotes.length)];
+        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.quote.title", "每日一言") + '</div>'
+          + '<div class="plugin-body u-italic u-lh-18">'+q+'</div></div>';
+      }
+    }]
+  },
+  {
+    id: "focus-timer",
+    name: t("plugin.focus-timer.name", "专注时钟"),
+    version: "1.0.0",
+    description: t("plugin.focus-timer.desc", "番茄钟升级版：自定义时长 + 多段间隔 + 进度圆环"),
+    enabled: false,
+    scenarios: [{
+      key: "focus-timer",
+      name: t("plugin.focus-timer.scenarioName", "专注时钟"),
+      icon: '',
+      color:"#e67e22",
+      desc: t("plugin.focus-timer.scenarioDesc", "自定义专注时长与休息间隔")
+    }]
+  },
+  {
+    id: "mindmap",
+    name: t("plugin.mindmap.name", "思维导图"),
+    version: "1.0.0",
+    description: t("plugin.mindmap.desc", "可视化思维梳理，支持节点增删、连线、导出"),
+    enabled: false,
+    /* v3.7.70 实测：本卡**无节点增删/连线/导出实现**——旧版 render 只吐一个空 <canvas>，
+       与 description 的承诺不符，属「stub + 活 UI = 虚假功能」（docs/product-scope.md §四.2）。
+       真能力在工具箱「思维导图」（src/render-overview.js 的 dgmAdd/dgmLink/dgmDel/dgmExportSvg）。
+       本轮先摘掉空 canvas（它是"看起来能画"的直接误导源）；
+       文案仍需与 core.js 的 plugin.mindmap.desc/hint 词条同步（本轮该文件有他人在途改动，未一并改）。 */
+    cards: [{
+      type: "mindmap-widget",
+      name: t("plugin.mindmap.cardName", "思维导图"),
+      render: function(){
+        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.mindmap.title", "思维导图") + '</div>'
+          + '<div class="plugin-body u-text-muted u-text-center u-p-5">' + t("plugin.mindmap.hint", "拖拽节点、创建关系，梳理你的想法") + '</div></div>';
+      }
+    }]
+  }
+];
+
+/**
+ * 注册插件：将插件加入 _plugins，初始 enabled=false
+ * @param {Plugin} plugin - 插件定义对象
+ * @returns {boolean} 是否注册成功（id 缺失或已存在返回 false）
+ */
+function registerPlugin(plugin){
+  if(!plugin || typeof plugin !== "object" || !plugin.id) return false;
+  if(_plugins[plugin.id]) return false; // 已存在，拒绝重复注册
+  _plugins[plugin.id] = Object.assign({}, plugin, { enabled: false });
+  _savePluginsState();
+  return true;
+}
+
+/**
+ * 卸载插件：从 _plugins 中移除，触发 onDeactivate 回调（若启用中）
+ * @param {string} id - 插件 id
+ * @returns {boolean} 是否卸载成功（不存在返回 false）
+ */
+function unloadPlugin(id){
+  if(!id || !_plugins[id]) return false;
+  const p = _plugins[id];
+  // v3.1：接入回收站——保存被卸载的插件元信息（不含函数体，仅存可恢复的 enabled/config）
+  try{
+    AppBridge.addToRecycleBin("plugin",
+      t("p5.pluginPrefix", "插件：「")+(p.name||id)+"」",
+      (p.version?("v"+p.version+"，"):"")+(p.desc||""),
+      { plugin: { id: id, name: p.name||id, version: p.version||"", desc: p.desc||"", enabled: !!p.enabled, config: p.config||{} } },
+      t("p5.pluginMgr", "插件管理"));
+  }catch(_){ /* 回收站写入失败不影响卸载 */ }
+  if(p.enabled && typeof p.onDeactivate === "function"){
+    try{ p.onDeactivate(); }catch(e){ /* 插件异常不影响主流程 */ }
+  }
+  delete _plugins[id];
+  _savePluginsState();
+  // v1.14.1：插件场景/卡片随卸载热更新
+  if(typeof registerCustomScenarios === "function"){ try{ registerCustomScenarios(); }catch(e){ /* noop */ } }
+  try{ AppBridge.renderSide(); }catch(e){ /* noop */ }
+  return true;
+}
+
+/**
+ * 加载插件（registerPlugin 别名，语义化对外接口）
+ * @param {Plugin} plugin - 插件定义对象
+ * @returns {boolean} 是否加载成功
+ */
+function loadPlugin(plugin){
+  return registerPlugin(plugin);
+}
+
+/**
+ * 启用/禁用插件：切换 enabled 状态，触发 onActivate/onDeactivate 回调
+ * @param {string} id - 插件 id
+ * @param {boolean} enabled - 目标状态
+ * @returns {boolean} 是否操作成功（不存在返回 false）
+ */
+function setPluginEnabled(id, enabled){
+  if(!id || !_plugins[id]) return false;
+  const p = _plugins[id];
+  const wasEnabled = p.enabled;
+  p.enabled = !!enabled;
+
+  if(p.enabled && !wasEnabled && typeof p.onActivate === "function"){
+    try{ p.onActivate(); }catch(e){ /* 插件异常不影响主流程 */ }
+  }
+  if(!p.enabled && wasEnabled && typeof p.onDeactivate === "function"){
+    try{ p.onDeactivate(); }catch(e){ /* 插件异常不影响主流程 */ }
+  }
+
+  _savePluginsState();
+  // v1.14.1：插件场景/卡片随启用状态热更新
+  if(typeof registerCustomScenarios === "function"){ try{ registerCustomScenarios(); }catch(e){ /* noop */ } }
+  try{ AppBridge.renderSide(); }catch(e){ /* noop */ }
+  return true;
+}
+
+/**
+ * 获取插件配置
+ * @param {string} id - 插件 id
+ * @returns {Object|null} 插件配置对象（不存在返回 null）
+ */
+function getPluginConfig(id){
+  if(!id || !_plugins[id]) return null;
+  return _plugins[id].config || {};
+}
+
+/**
+ * 更新插件配置
+ * @param {string} id - 插件 id
+ * @param {Object} config - 新配置对象（与现有配置浅合并）
+ * @returns {boolean} 是否更新成功
+ */
+function setPluginConfig(id, config){
+  if(!id || !_plugins[id]) return false;
+  _plugins[id].config = Object.assign({}, _plugins[id].config || {}, config || {});
+  _savePluginsState();
+  return true;
+}
+
+/**
+ * 获取所有已注册插件
+ * @returns {Plugin[]} 插件数组
+ */
+function getAllPlugins(){
+  if(typeof _plugins !== "object" || !_plugins) return [];
+  return Object.keys(_plugins).map(function(id){ return _plugins[id]; });
+}
+
+/**
+ * 获取已启用的插件
+ * @returns {Plugin[]} 已启用插件数组
+ */
+function getEnabledPlugins(){
+  if(typeof _plugins !== "object" || !_plugins) return [];
+  return Object.keys(_plugins).filter(function(id){ return _plugins[id].enabled; }).map(function(id){ return _plugins[id]; });
+}
+
+/**
+ * 根据 id 获取单个插件
+ * @param {string} id - 插件 id
+ * @returns {Plugin|null} 插件对象或 null
+ */
+function getPlugin(id){
+  if(!id || !_plugins[id]) return null;
+  return _plugins[id];
+}
+
+/**
+ * 获取插件提供的自定义场景（聚合所有已启用插件的 scenarios）
+ * @returns {Object} 场景对象 { key: { name, icon, color, desc } }
+ */
+function getPluginScenarios(){
+  const scenarios = {};
+  getEnabledPlugins().forEach(function(p){
+    if(Array.isArray(p.scenarios)){
+      p.scenarios.forEach(function(s){
+        if(s && s.key){
+          scenarios[s.key] = { name: s.name, icon: s.icon, color: s.color, desc: s.desc };
+        }
+      });
+    }
+  });
+  return scenarios;
+}
+
+/**
+ * 获取插件提供的自定义卡片（聚合所有已启用插件的 cards）
+ * @returns {Array} 卡片数组
+ */
+function getPluginCards(){
+  const cards = [];
+  getEnabledPlugins().forEach(function(p){
+    if(Array.isArray(p.cards)){
+      p.cards.forEach(function(c){ cards.push(c); });
+    }
+  });
+  return cards;
+}
+
+/**
+ * 获取插件提供的自定义联动规则（聚合所有已启用插件的 chainRules）
+ * @returns {Array} 链规则数组
+ */
+function getPluginChainRules(){
+  const rules = [];
+  getEnabledPlugins().forEach(function(p){
+    if(Array.isArray(p.chainRules)){
+      p.chainRules.forEach(function(r){ rules.push(r); });
+    }
+  });
+  return rules;
+}
+
+
+/**
+ * 持久化插件状态到 localStorage（仅存 enabled + config，不存函数）
+ * @returns {void}
+ */
+function _savePluginsState(){
+  // 注册内置插件期间禁止写默认状态，先恢复存档再允许用户操作落盘。
+  if(_pluginsInitializing) return;
+  try{
+    if(typeof localStorage === "undefined") return;
+    const state = {};
+    Object.keys(_plugins).forEach(function(id){
+      state[id] = {
+        enabled: !!_plugins[id].enabled,
+        config: _plugins[id].config || {}
+      };
+    });
+    localStorage.setItem(PREFIX + "plugins", JSON.stringify(state));
+  }catch(e){ /* localStorage 不可用或配额耗尽：静默降级 */ }
+}
+
+/**
+ * 从 localStorage 加载插件状态（恢复 enabled + config）
+ * @returns {void}
+ */
+function _loadPluginsState(){
+  try{
+    if(typeof localStorage === "undefined") return;
+    const saved = localStorage.getItem(PREFIX + "plugins");
+    if(!saved) return;
+    const state = JSON.parse(saved);
+    if(!state || typeof state !== "object") return;
+    Object.keys(state).forEach(function(id){
+      if(_plugins[id]){
+        _plugins[id].enabled = !!state[id].enabled;
+        _plugins[id].config = (state[id] && state[id].config) || {};
+      }
+    });
+  }catch(e){ /* 解析失败：保持默认状态 */ }
+}
+
+/**
+ * 重置插件系统：清空所有已注册插件并重新初始化（测试用）
+ * @returns {void}
+ */
+function _resetPlugins(){
+  _plugins = {};
+  _initPlugins();
+}
+
+/**
+ * 初始化：注册内置插件并加载持久化状态
+ * @returns {void}
+ */
+function _initPlugins(){
+  _pluginsInitializing = true;
+  try{
+    BUILTIN_PLUGINS.forEach(function(p){ registerPlugin(p); });
+    _loadPluginsState();
+  }finally{
+    _pluginsInitializing = false;
+  }
+  // v1.14.1：重新应用已启用插件的 onActivate（如「健康助手」挂载场景卡片）
+  Object.keys(_plugins).forEach(function(id){
+    const p = _plugins[id];
+    if(p.enabled && typeof p.onActivate === "function"){
+      try{ p.onActivate(); }catch(e){ /* 插件异常不影响主流程 */ }
+    }
+  });
+  // v1.14.1：插件场景并入 SCENARIOS/ORDER
+  try{ registerCustomScenarios(); }catch(e){ /* 插件场景注册失败不阻塞 */ }
+}
+
+// 模块加载时自动初始化
+_initPlugins();
 /*SRC:data-links:END*/
 /*SRC:ai-tools:BEGIN*/
 // ===== AI Layer (AI 层·工具调用) =====
@@ -19318,6 +19778,62 @@ function setRec(sc, a){
   try{ if(typeof emitDataMutate === "function") emitDataMutate("rec"); }catch(e){ /* 索引不阻塞写路径 */ }
 }
 
+/* ---------- v3.7.75 解耦：笔记存储访问器自 ui-ge-notes 下沉到本块 ----------
+   getNotes/saveNotes 是纯存取（无 UI 语义），原先住在 UI 层导致 ai-tools（AI）、
+   render-*（Render）对 ui-ge-notes 的逆层引用。下沉后各层→data-rw 全是正向边；
+   CRUD（createNote/updateNote/deleteNote）与弹窗 UI 仍留 ui-ge-notes（它→本块为正向）。 */
+const NOTES_STORAGE_KEY = "notes";
+/**
+ * 读取全部笔记
+ * @returns {Array<Object>} 笔记数组
+ */
+function getNotes(){
+  try{
+    const raw = localStorage.getItem(PREFIX + NOTES_STORAGE_KEY);
+    if(!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){
+    return [];
+  }
+}
+/**
+ * 持久化笔记数组到 localStorage
+ * @param {Array<Object>} notes - 笔记数组
+ * @returns {boolean} 是否保存成功
+ */
+function saveNotes(notes){
+  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
+  const ok = save(PREFIX + NOTES_STORAGE_KEY, notes || []);
+  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费；创建/更新/删除全走本函数） */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("note"); }catch(e){ /* 索引不阻塞写路径 */ }
+  return ok;
+}
+/**
+ * 创建新笔记（v3.7.75 自 ui-ge-notes 下沉：纯模型工厂，且被 AI 工具直接调用）
+ * @param {string} title - 标题
+ * @param {string} content - Markdown 内容
+ * @param {string[]} tags - 标签数组
+ * @param {string} category - 分类
+ * @returns {Object} 新建的笔记对象
+ */
+function createNote(title, content, tags, category){
+  const notes = getNotes();
+  const note = {
+    id: "note_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
+    title: title || t("p5.untitled", "无标题"),
+    content: content || "",
+    tags: Array.isArray(tags) ? tags : [],
+    category: category || t("p5.default", "默认"),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    linkedTaskIds: []
+  };
+  notes.push(note);
+  saveNotes(notes);
+  return note;
+}
+
 /* ---------- P1-b 自动备份（防抖快照，独立于手动导出） ---------- */
 const AUTO_BACKUP_KEY = PREFIX + "autobackup";
 const AUTO_BACKUP_GENS = [PREFIX + "autobackup.1", PREFIX + "autobackup.2"]; // v3.4.7 批次二（G3）：三代滚动——上一代/上上代
@@ -19422,6 +19938,63 @@ function saveAiConfig(module, data){
   // v3.4.7 批次三（G5）：收编进 save() 主入口——此前裸 setItem 绕过 IDB 镜像/配额告警/损坏登记
   return save(PREFIX + "ai_config_" + module, data);
 }
+
+/* ============================================================
+ * v3.7.75 解耦（续）：snooze 簇自 ui-daily、getDeviceId 自 ui-backup-stats 下沉本块。
+ * 均为纯数据/存取（无 UI 语义），多层引用留在他块即成逆层；AppBridge.snoozeTask
+ * 注册随迁（本块已有 onExerciseSave 同款先例）。行为逐字未改。
+ * ============================================================ */
+
+const NOTIFY_IDS_KEY = "wb_notified_ids";
+
+/* ---------- P9：稍后提醒（snooze）与免打扰时段 ----------
+ * 存储键（不带 PREFIX，按任务契约）：
+ *   wb_notify_snooze   { [taskId]: timestamp }  该时间戳前不再提醒此任务
+ *   wb_notify_quiet    { enabled, start, end }  免打扰时段（整点小时，支持跨天如 22→8）
+ */
+const SNOOZE_KEY = "wb_notify_snooze";
+
+function getSnoozeMap(){
+  const m = load(SNOOZE_KEY, {});
+  return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
+}
+AppBridge.snoozeTask = snoozeTask;
+/**
+ * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
+ * @param {string} id - 任务 id
+ * @param {number} [minutes] - 延后分钟数（默认 30，非法值回退 30）
+ * @returns {boolean}
+ */
+function snoozeTask(id, minutes){
+  if(!id) return false;
+  const mins = (typeof minutes === "number" && minutes > 0) ? minutes : 30;
+  const m = getSnoozeMap();
+  m[id] = Date.now() + mins * 60000;
+  save(SNOOZE_KEY, m);
+  save(NOTIFY_IDS_KEY, load(NOTIFY_IDS_KEY, []).filter(function(x){ return x !== id; }));
+  return true;
+}
+function _snoozedUntil(id){
+  const v = getSnoozeMap()[id];
+  return (typeof v === "number") ? v : 0;
+}
+/* 清理过期 snooze 记录（防键无限增长；checkDueTasks 时顺带调用） */
+function _purgeExpiredSnooze(now){
+  const m = getSnoozeMap(); let changed = false;
+  Object.keys(m).forEach(function(k){ if(m[k] <= now){ delete m[k]; changed = true; } });
+  if(changed) save(SNOOZE_KEY, m);
+}
+
+/* 生成或复用设备标识（持久化到 localStorage，跨会话稳定） */
+function getDeviceId(){
+  let id = "";
+  try { id = localStorage.getItem(PREFIX + "deviceId") || ""; } catch(e){ id = ""; }
+  if(!id){
+    id = "dev-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 */ }
+  }
+  return id;
+}
 /*SRC:data-rw:END*/
 /*SRC:crypto:BEGIN*/
 // ===== Crypto Layer (加密层) =====
@@ -19432,15 +20005,17 @@ let _cryptoWarned = false;    // Web Crypto 不可用 warn 去重标记（T5.3 �
 let _cfgCache = null;         // 解密后的内存明文 cfg
 const DK_KEY = PREFIX + "__dk"; // 设备密钥存储键（旧路径，仅迁移期间存在）
 const DK_IDB_KEY = "__dk_v2";   // 设备密钥 IDB 键（不参与 idbQueueMirror 镜像命名空间）
-let _dkIdbGet = () => Promise.resolve(null);  // 生产接线在 initCryptoRuntimeWiring()
+let _dkIdbGet = () => Promise.resolve(null);  // 生产接线由 data-idb 块加载时 registerDkIdbHelpers 注册
 let _dkIdbPut = () => Promise.resolve(false);
 let _dkPromise = null;  // v3.7.62：ensureDeviceKey 在途去重（token 水合与 initCrypto 会并发调用）
-/** 把可用的 idb 助手接到设备密钥存取上（若 idb 层尚未定义则保持默认禁用态） */
-function initCryptoRuntimeWiring(){
-  try{
-    if(typeof idbReadKey === "function") _dkIdbGet = (k)=>Promise.resolve(idbReadKey(k)).then(v=>(v===null?null:v));
-    if(typeof idbMirrorKey === "function") _dkIdbPut = (k,v)=>Promise.resolve(idbMirrorKey(k,v)).then(()=>true).catch(()=>false);
-  }catch(e){}
+/** 设备密钥的 IDB 存取接缝。
+ *  v3.7.75 解耦：本块此前直接引用 idbReadKey/idbMirrorKey（data-idb 块的符号），
+ *  构成一条 crypto→data-idb 逆层边；改为由 data-idb 加载时调用本函数反向注册
+ *  （data-idb 在层序上晚于 crypto，data-idb→crypto 是正向边），注册未发生时
+ *  保持默认禁用态（无 IDB 环境本就该禁用；jsdom 单测可照旧覆盖 _dkIdbGet/_dkIdbPut）。 */
+function registerDkIdbHelpers(getFn, putFn){
+  if(typeof getFn === "function") _dkIdbGet = (k)=>Promise.resolve(getFn(k)).then(v=>(v===null?null:v));
+  if(typeof putFn === "function") _dkIdbPut = (k,v)=>Promise.resolve(putFn(k,v)).then(()=>true).catch(()=>false);
 }
 
 function base64Encode(bytes){
@@ -19592,7 +20167,7 @@ async function persistCfg(cfg){
  * @returns {Promise<Cfg>} 解密后的内存明文 cfg
  */
 async function initCrypto(){
-  initCryptoRuntimeWiring();   // 接线设备密钥的 IDB 存取（P0 存储层专项）
+  /* IDB 接线已在 data-idb 块加载时经 registerDkIdbHelpers 注册（v3.7.75 解耦），此处无需再接 */
   try{
     _cryptoReady = !!(typeof crypto !== "undefined" && crypto.subtle && typeof crypto.subtle.generateKey === "function");
   }catch(e){ _cryptoReady = false; }
@@ -25009,6 +25584,9 @@ function renderToday(){
     ${chainBar}
   </div>`;
 }
+/* v3.7.75 解耦：向 core 桥注册侧栏局部重绘 —— data-links（插件注册/启停）等低层只调桥，
+   不再直接引用本块符号（AppBridge.renderSide 槽位见 core.js）。 */
+try{ AppBridge.renderSide = renderSide; }catch(e){ /* 桥未就绪时静默，下一轮渲染自然补上 */ }
 /*SRC:render-widgets:END*/
 /*SRC:ui-onboarding:BEGIN*/
 // ===== UI Layer (交互层·Onboarding 引导) =====
@@ -33064,49 +33642,14 @@ function dailyDigest(){
  *   wb_digest_date             string        上次 digest 日期 YYYY-MM-DD（同一天不重复）
  */
 const NOTIFY_KEY = "wb_notify_enabled";
-const NOTIFY_IDS_KEY = "wb_notified_ids";
 const CHAIN_BREAK_KEY = "wb_chain_break_notified";
 const DIGEST_DATE_KEY = "wb_digest_date";
 const NOTIFY_INTERVAL_MS = 60000; // 60s 检查一次
 
-/* ---------- P9：稍后提醒（snooze）与免打扰时段 ----------
- * 存储键（不带 PREFIX，按任务契约）：
- *   wb_notify_snooze   { [taskId]: timestamp }  该时间戳前不再提醒此任务
- *   wb_notify_quiet    { enabled, start, end }  免打扰时段（整点小时，支持跨天如 22→8）
- */
-const SNOOZE_KEY = "wb_notify_snooze";
+/* v3.7.75 解耦：snooze 簇（NOTIFY_IDS_KEY/SNOOZE_KEY/getSnoozeMap/snoozeTask/_snoozedUntil/
+   _purgeExpiredSnooze + AppBridge 注册）已下沉 data-rw —— 纯数据与存取，render-entry
+   经由 data-rw 引用为正向边。QUIET_KEY/免打扰时段（本块专用策略）留下。 */
 const QUIET_KEY = "wb_notify_quiet";
-
-function getSnoozeMap(){
-  const m = load(SNOOZE_KEY, {});
-  return (m && typeof m === "object" && !Array.isArray(m)) ? m : {};
-}
-AppBridge.snoozeTask = snoozeTask;
-/**
- * 稍后提醒：写入 snooze 时间戳，并从已提醒名单移除该任务（到期后允许再次提醒）
- * @param {string} id - 任务 id
- * @param {number} [minutes] - 延后分钟数（默认 30，非法值回退 30）
- * @returns {boolean}
- */
-function snoozeTask(id, minutes){
-  if(!id) return false;
-  const mins = (typeof minutes === "number" && minutes > 0) ? minutes : 30;
-  const m = getSnoozeMap();
-  m[id] = Date.now() + mins * 60000;
-  save(SNOOZE_KEY, m);
-  save(NOTIFY_IDS_KEY, load(NOTIFY_IDS_KEY, []).filter(function(x){ return x !== id; }));
-  return true;
-}
-function _snoozedUntil(id){
-  const v = getSnoozeMap()[id];
-  return (typeof v === "number") ? v : 0;
-}
-/* 清理过期 snooze 记录（防键无限增长；checkDueTasks 时顺带调用） */
-function _purgeExpiredSnooze(now){
-  const m = getSnoozeMap(); let changed = false;
-  Object.keys(m).forEach(function(k){ if(m[k] <= now){ delete m[k]; changed = true; } });
-  if(changed) save(SNOOZE_KEY, m);
-}
 
 function getQuietHours(){
   const q = load(QUIET_KEY, null);
@@ -34530,16 +35073,8 @@ function doExportRecsCSV(){
   toast(t("msg.exportedRecCsv","已导出记录 CSV（")+n+t("unit.recordsSuffix"," 条记录）"),"ok");
 }
 /* ---------- v1.4-C 导出预览（数据概览 + 字段选择） ---------- */
-/* 生成或复用设备标识（持久化到 localStorage，跨会话稳定） */
-function getDeviceId(){
-  let id = "";
-  try { id = localStorage.getItem(PREFIX + "deviceId") || ""; } catch(e){ id = ""; }
-  if(!id){
-    id = "dev-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 */ }
-  }
-  return id;
-}
+/* v3.7.75 解耦：getDeviceId 已下沉 data-rw（纯身份存取，render-overview 等多层引用）。 */
+
 /* 打开导出预览弹窗：显示任务数/记录数/配置是否包含 + 字段勾选 */
 function openExportPreview(){
   const modal = $("#exportPreviewModal");
@@ -40201,375 +40736,10 @@ try{ document.title = t("app.name"); applyI18n(document); }catch(e){ /* noop */ 
  * @property {Object} [config] - 插件配置
  */
 
-// 已注册插件 Map（id -> plugin）
-// NOTE: 必须用 var 而非 let/const——_plugins 在行 5564 registerCustomScenarios() 顶层调用时
-// 即被 getEnabledPlugins() 访问，而此声明位于行 18785 之后。var 的函数作用域提升保证
-// 早期访问返回 undefined（getEnabledPlugins 有 typeof 守卫），let/const 的 TDZ 会抛 ReferenceError。
-// eslint-disable-next-line no-var
-var _plugins = {};
-var _pluginsInitializing = false;
-
-// 内置示例插件（注册后默认 enabled=false，由用户在插件市场启用）
-const BUILTIN_PLUGINS = [
-  {
-    id: "pomodoro",
-    name: t("plugin.pomodoro.name", "笃行专注法"),
-    version: "1.0.0",
-    description: t("plugin.pomodoro.desc", "25分钟专注+5分钟休息的深度工作法场景"),
-    enabled: false,
-    scenarios: [{
-      key: "pomodoro",
-      name: t("plugin.pomodoro.scenarioName", "笃行"),
-      icon: '',
-      color:"#e74c3c",
-      desc: t("plugin.pomodoro.scenarioDesc", "笃行专注法")
-    }]
-  },
-  {
-    id: "reading",
-    name: t("plugin.reading.name", "阅读管理"),
-    version: "1.0.0",
-    description: t("plugin.reading.desc", "书籍阅读进度跟踪与读书笔记"),
-    enabled: false,
-    scenarios: [{
-      key: "reading",
-      name: t("plugin.reading.scenarioName", "阅读"),
-      icon: '',
-      color:"#3498db",
-      desc: t("plugin.reading.scenarioDesc", "阅读管理")
-    }]
-  },
-  {
-    /* v3.6.0：理财不再默认占场景位——改为商店可添加项，启用后「理财」场景进入侧栏。
-       场景定义（记录字段/专属卡/统计 tab）复用 SCENARIOS.finance 预置定义，见 PRESET_SC_KEYS。 */
-    id: "finance",
-    name: t("plugin.finance.name", "理财助手"),
-    version: "1.0.0",
-    description: t("plugin.finance.desc", "收支记账、基金与股票持仓跟踪，启用后新增「理财」场景"),
-    enabled: false,
-    scenarios: [{
-      key: "finance",
-      name: t("plugin.finance.scenarioName", "理财"),
-      icon: '',
-      color:"#c9a227",
-      desc: t("plugin.finance.scenarioDesc", "个人理财")
-    }]
-  },
-  {
-    id: "budget",
-    name: t("plugin.budget.name", "预算追踪"),
-    version: "1.0.0",
-    description: t("plugin.budget.desc", "日常开支记录与预算管理"),
-    enabled: false,
-    cards: [{
-      type: "budget-summary",
-      name: t("plugin.budget.cardName", "预算概览"),
-      // v3.1.2 A-档：接真数据——聚合 life_bills（缴费台账 amount）+ life_shopping（采购台账 amount）+ lif-bill/lif-takeout（工具箱 amount）本月的支出
-      // 此前永远 ¥0：用户记的账不进插件卡
-      render: function(data){
-        const m = new Date().getMonth();
-        let bills = 0, shop = 0, toolBill = 0, toolTake = 0;
-        try{
-          const a = (load(PREFIX+"life_bills", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
-          const b = (load(PREFIX+"life_shopping", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
-          const tb = (load(PREFIX+"tool_lif-bill", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
-          const tt = (load(PREFIX+"tool_lif-takeout", []) || []).reduce(function(s,r){ return s + (Number(r.amount) || 0); }, 0);
-          // 注：上述合计为全量；如需严格按"本月"过滤，账单类需带 due 字段归入月份；当前先取累计以确保卡片始终有数据
-          bills = a; shop = b; toolBill = tb; toolTake = tt;
-        }catch(_e){}
-        const total = bills + shop + toolBill + toolTake;
-        return "<div class='plugin-card budget-card'>" +
-          "<div class='budget-total'>" + t("plugin.budget.total", "本月总支出") + " ¥" + total.toFixed(2) + "</div>" +
-          "<div class='budget-breakdown'>" +
-            "<span>" + t("plugin.budget.bills", "缴费") + " ¥" + bills.toFixed(2) + "</span>" +
-            "<span>" + t("plugin.budget.shop", "采购") + " ¥" + shop.toFixed(2) + "</span>" +
-            "<span>" + t("plugin.budget.tool", "工具") + " ¥" + (toolBill + toolTake).toFixed(2) + "</span>" +
-          "</div>" +
-          "<p class='hint' class='u-fs-2xs u-mt-1'>" + t("plugin.budget.hint", "来源：生活场景的缴费/采购台账 + 工具箱记录（v3.1.2 A-档：插件卡接真数据）") + "</p>" +
-        "</div>";
-      }
-    }]
-  },
-  {
-    id: "health",
-    name: t("plugin.health.name", "健康助手"),
-    version: "1.0.0",
-    description: t("plugin.health.desc", "运动/体重/睡眠/喝水记录与健康概览，挂载到「生活」场景"),
-    enabled: false,
-    onActivate: function(){
-      SCENARIOS.life.extraCard = "health";
-      if(typeof render === "function"){ try{ render(); }catch(e){ /* noop */ } }
-    },
-    onDeactivate: function(){
-      SCENARIOS.life.extraCard = "life";
-      if(typeof render === "function"){ try{ render(); }catch(e){ /* noop */ } }
-    }
-  },
-  {
-    id: "habit-tracker",
-    name: t("plugin.habit-tracker.name", "习惯追踪器"),
-    version: "1.0.0",
-    description: t("plugin.habit-tracker.desc", "每日习惯打卡记录，支持连续天数统计与可视化图表"),
-    enabled: false,
-    scenarios: [{
-      key: "habit-tracker",
-      name: t("plugin.habit-tracker.scenarioName", "习惯追踪"),
-      icon: '',
-      color:"#27ae60",
-      desc: t("plugin.habit-tracker.scenarioDesc", "每日打卡 · 连续记录 · 趋势图表")
-    }]
-  },
-  {
-    id: "weather",
-    name: t("plugin.weather.name", "天气预报"),
-    version: "1.0.0",
-    description: t("plugin.weather.desc", "查看今日及未来几天天气，出行穿衣参考"),
-    enabled: false,
-    cards: [{
-      type: "weather-widget",
-      name: t("plugin.weather.cardName", "天气卡片"),
-      render: function(data){
-        /* v3.7.71 文案诚实化：旧兜底「点击同步」无任何事件处理（卡片不绑事件），
-           且本卡无数据供给链 —— 真天气在工具箱「天气」（openWeatherModal）。 */
-        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.weather.title", "天气") + '</div>'
-          + '<div class="plugin-body">\u2600 FE ' + (data&&data.temp ? data.temp+'\u00B0C' : t("plugin.weather.loading", "获取中..."))
-          + '<br><span class="u-fs-2xs u-text-muted">'+(data&&data.desc||t("plugin.weather.where", "详细天气见工具箱「天气」"))+'</span></div></div>';
-      }
-    }]
-  },
-  {
-    id: "quote",
-    name: t("plugin.quote.name", "每日一言"),
-    version: "1.0.0",
-    description: t("plugin.quote.desc", "随机名言/鸡汤/诗句，给每天一点灵感"),
-    enabled: false,
-    cards: [{
-      type: "quote-widget",
-      name: t("plugin.quote.cardName", "每日一言"),
-      render: function(){
-        const quotes = [
-          t("plugin.quote.q1", "种一棵树最好的时间是十年前，其次是现在。"),
-          t("plugin.quote.q2", "千里之行，始于足下。"),
-          t("plugin.quote.q3", "不积跬步，无以至千里。"),
-          t("plugin.quote.q4", "学而不思则罔，思而不学则殆。"),
-          t("plugin.quote.q5", "知行合一。"),
-          t("plugin.quote.q6", "把每一天当作最后一天来过。"),
-          t("plugin.quote.q7", "简单是终极的复杂。"),
-          t("plugin.quote.q8", "保持饥饿，保持愚蠢。")
-        ];
-        const q = quotes[Math.floor(Math.random()*quotes.length)];
-        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.quote.title", "每日一言") + '</div>'
-          + '<div class="plugin-body u-italic u-lh-18">'+q+'</div></div>';
-      }
-    }]
-  },
-  {
-    id: "focus-timer",
-    name: t("plugin.focus-timer.name", "专注时钟"),
-    version: "1.0.0",
-    description: t("plugin.focus-timer.desc", "番茄钟升级版：自定义时长 + 多段间隔 + 进度圆环"),
-    enabled: false,
-    scenarios: [{
-      key: "focus-timer",
-      name: t("plugin.focus-timer.scenarioName", "专注时钟"),
-      icon: '',
-      color:"#e67e22",
-      desc: t("plugin.focus-timer.scenarioDesc", "自定义专注时长与休息间隔")
-    }]
-  },
-  {
-    id: "mindmap",
-    name: t("plugin.mindmap.name", "思维导图"),
-    version: "1.0.0",
-    description: t("plugin.mindmap.desc", "可视化思维梳理，支持节点增删、连线、导出"),
-    enabled: false,
-    /* v3.7.70 实测：本卡**无节点增删/连线/导出实现**——旧版 render 只吐一个空 <canvas>，
-       与 description 的承诺不符，属「stub + 活 UI = 虚假功能」（docs/product-scope.md §四.2）。
-       真能力在工具箱「思维导图」（src/render-overview.js 的 dgmAdd/dgmLink/dgmDel/dgmExportSvg）。
-       本轮先摘掉空 canvas（它是"看起来能画"的直接误导源）；
-       文案仍需与 core.js 的 plugin.mindmap.desc/hint 词条同步（本轮该文件有他人在途改动，未一并改）。 */
-    cards: [{
-      type: "mindmap-widget",
-      name: t("plugin.mindmap.cardName", "思维导图"),
-      render: function(){
-        return '<div class="plugin-card"><div class="plugin-title">' + t("plugin.mindmap.title", "思维导图") + '</div>'
-          + '<div class="plugin-body u-text-muted u-text-center u-p-5">' + t("plugin.mindmap.hint", "拖拽节点、创建关系，梳理你的想法") + '</div></div>';
-      }
-    }]
-  }
-];
-
-/**
- * 注册插件：将插件加入 _plugins，初始 enabled=false
- * @param {Plugin} plugin - 插件定义对象
- * @returns {boolean} 是否注册成功（id 缺失或已存在返回 false）
- */
-function registerPlugin(plugin){
-  if(!plugin || typeof plugin !== "object" || !plugin.id) return false;
-  if(_plugins[plugin.id]) return false; // 已存在，拒绝重复注册
-  _plugins[plugin.id] = Object.assign({}, plugin, { enabled: false });
-  _savePluginsState();
-  return true;
-}
-
-/**
- * 卸载插件：从 _plugins 中移除，触发 onDeactivate 回调（若启用中）
- * @param {string} id - 插件 id
- * @returns {boolean} 是否卸载成功（不存在返回 false）
- */
-function unloadPlugin(id){
-  if(!id || !_plugins[id]) return false;
-  const p = _plugins[id];
-  // v3.1：接入回收站——保存被卸载的插件元信息（不含函数体，仅存可恢复的 enabled/config）
-  try{
-    addToRecycleBin("plugin",
-      t("p5.pluginPrefix", "插件：「")+(p.name||id)+"」",
-      (p.version?("v"+p.version+"，"):"")+(p.desc||""),
-      { plugin: { id: id, name: p.name||id, version: p.version||"", desc: p.desc||"", enabled: !!p.enabled, config: p.config||{} } },
-      t("p5.pluginMgr", "插件管理"));
-  }catch(_){ /* 回收站写入失败不影响卸载 */ }
-  if(p.enabled && typeof p.onDeactivate === "function"){
-    try{ p.onDeactivate(); }catch(e){ /* 插件异常不影响主流程 */ }
-  }
-  delete _plugins[id];
-  _savePluginsState();
-  // v1.14.1：插件场景/卡片随卸载热更新
-  if(typeof registerCustomScenarios === "function"){ try{ registerCustomScenarios(); }catch(e){ /* noop */ } }
-  if(typeof renderSide === "function"){ try{ renderSide(); }catch(e){ /* noop */ } }
-  return true;
-}
-
-/**
- * 加载插件（registerPlugin 别名，语义化对外接口）
- * @param {Plugin} plugin - 插件定义对象
- * @returns {boolean} 是否加载成功
- */
-function loadPlugin(plugin){
-  return registerPlugin(plugin);
-}
-
-/**
- * 启用/禁用插件：切换 enabled 状态，触发 onActivate/onDeactivate 回调
- * @param {string} id - 插件 id
- * @param {boolean} enabled - 目标状态
- * @returns {boolean} 是否操作成功（不存在返回 false）
- */
-function setPluginEnabled(id, enabled){
-  if(!id || !_plugins[id]) return false;
-  const p = _plugins[id];
-  const wasEnabled = p.enabled;
-  p.enabled = !!enabled;
-
-  if(p.enabled && !wasEnabled && typeof p.onActivate === "function"){
-    try{ p.onActivate(); }catch(e){ /* 插件异常不影响主流程 */ }
-  }
-  if(!p.enabled && wasEnabled && typeof p.onDeactivate === "function"){
-    try{ p.onDeactivate(); }catch(e){ /* 插件异常不影响主流程 */ }
-  }
-
-  _savePluginsState();
-  // v1.14.1：插件场景/卡片随启用状态热更新
-  if(typeof registerCustomScenarios === "function"){ try{ registerCustomScenarios(); }catch(e){ /* noop */ } }
-  if(typeof renderSide === "function"){ try{ renderSide(); }catch(e){ /* noop */ } }
-  return true;
-}
-
-/**
- * 获取插件配置
- * @param {string} id - 插件 id
- * @returns {Object|null} 插件配置对象（不存在返回 null）
- */
-function getPluginConfig(id){
-  if(!id || !_plugins[id]) return null;
-  return _plugins[id].config || {};
-}
-
-/**
- * 更新插件配置
- * @param {string} id - 插件 id
- * @param {Object} config - 新配置对象（与现有配置浅合并）
- * @returns {boolean} 是否更新成功
- */
-function setPluginConfig(id, config){
-  if(!id || !_plugins[id]) return false;
-  _plugins[id].config = Object.assign({}, _plugins[id].config || {}, config || {});
-  _savePluginsState();
-  return true;
-}
-
-/**
- * 获取所有已注册插件
- * @returns {Plugin[]} 插件数组
- */
-function getAllPlugins(){
-  if(typeof _plugins !== "object" || !_plugins) return [];
-  return Object.keys(_plugins).map(function(id){ return _plugins[id]; });
-}
-
-/**
- * 获取已启用的插件
- * @returns {Plugin[]} 已启用插件数组
- */
-function getEnabledPlugins(){
-  if(typeof _plugins !== "object" || !_plugins) return [];
-  return Object.keys(_plugins).filter(function(id){ return _plugins[id].enabled; }).map(function(id){ return _plugins[id]; });
-}
-
-/**
- * 根据 id 获取单个插件
- * @param {string} id - 插件 id
- * @returns {Plugin|null} 插件对象或 null
- */
-function getPlugin(id){
-  if(!id || !_plugins[id]) return null;
-  return _plugins[id];
-}
-
-/**
- * 获取插件提供的自定义场景（聚合所有已启用插件的 scenarios）
- * @returns {Object} 场景对象 { key: { name, icon, color, desc } }
- */
-function getPluginScenarios(){
-  const scenarios = {};
-  getEnabledPlugins().forEach(function(p){
-    if(Array.isArray(p.scenarios)){
-      p.scenarios.forEach(function(s){
-        if(s && s.key){
-          scenarios[s.key] = { name: s.name, icon: s.icon, color: s.color, desc: s.desc };
-        }
-      });
-    }
-  });
-  return scenarios;
-}
-
-/**
- * 获取插件提供的自定义卡片（聚合所有已启用插件的 cards）
- * @returns {Array} 卡片数组
- */
-function getPluginCards(){
-  const cards = [];
-  getEnabledPlugins().forEach(function(p){
-    if(Array.isArray(p.cards)){
-      p.cards.forEach(function(c){ cards.push(c); });
-    }
-  });
-  return cards;
-}
-
-/**
- * 获取插件提供的自定义联动规则（聚合所有已启用插件的 chainRules）
- * @returns {Array} 链规则数组
- */
-function getPluginChainRules(){
-  const rules = [];
-  getEnabledPlugins().forEach(function(p){
-    if(Array.isArray(p.chainRules)){
-      p.chainRules.forEach(function(r){ rules.push(r); });
-    }
-  });
-  return rules;
-}
+/* v3.7.75 解耦：插件**注册表**（_plugins / BUILTIN_PLUGINS / register·load·unload·set·get 系列 /
+ * 状态持久化与 _initPlugins）已整体下沉 data-links —— 它们是纯数据与存取，被 data/render/AI
+ * 多层引用，留在 UI 层就是 5 条逆层边。本块只留 renderPluginCards（DOM 渲染属 UI）。
+ * 若要删或改注册表符号，去 data-links；守护见 docs/module-graph.md。 */
 
 /**
  * 渲染插件卡片：聚合所有已启用插件的 cards（render(data) 返回 HTML，data 为插件 config）
@@ -40589,80 +40759,7 @@ function renderPluginCards(){
   return html;
 }
 
-/**
- * 持久化插件状态到 localStorage（仅存 enabled + config，不存函数）
- * @returns {void}
- */
-function _savePluginsState(){
-  // 注册内置插件期间禁止写默认状态，先恢复存档再允许用户操作落盘。
-  if(_pluginsInitializing) return;
-  try{
-    if(typeof localStorage === "undefined") return;
-    const state = {};
-    Object.keys(_plugins).forEach(function(id){
-      state[id] = {
-        enabled: !!_plugins[id].enabled,
-        config: _plugins[id].config || {}
-      };
-    });
-    localStorage.setItem(PREFIX + "plugins", JSON.stringify(state));
-  }catch(e){ /* localStorage 不可用或配额耗尽：静默降级 */ }
-}
-
-/**
- * 从 localStorage 加载插件状态（恢复 enabled + config）
- * @returns {void}
- */
-function _loadPluginsState(){
-  try{
-    if(typeof localStorage === "undefined") return;
-    const saved = localStorage.getItem(PREFIX + "plugins");
-    if(!saved) return;
-    const state = JSON.parse(saved);
-    if(!state || typeof state !== "object") return;
-    Object.keys(state).forEach(function(id){
-      if(_plugins[id]){
-        _plugins[id].enabled = !!state[id].enabled;
-        _plugins[id].config = (state[id] && state[id].config) || {};
-      }
-    });
-  }catch(e){ /* 解析失败：保持默认状态 */ }
-}
-
-/**
- * 重置插件系统：清空所有已注册插件并重新初始化（测试用）
- * @returns {void}
- */
-function _resetPlugins(){
-  _plugins = {};
-  _initPlugins();
-}
-
-/**
- * 初始化：注册内置插件并加载持久化状态
- * @returns {void}
- */
-function _initPlugins(){
-  _pluginsInitializing = true;
-  try{
-    BUILTIN_PLUGINS.forEach(function(p){ registerPlugin(p); });
-    _loadPluginsState();
-  }finally{
-    _pluginsInitializing = false;
-  }
-  // v1.14.1：重新应用已启用插件的 onActivate（如「健康助手」挂载场景卡片）
-  Object.keys(_plugins).forEach(function(id){
-    const p = _plugins[id];
-    if(p.enabled && typeof p.onActivate === "function"){
-      try{ p.onActivate(); }catch(e){ /* 插件异常不影响主流程 */ }
-    }
-  });
-  // v1.14.1：插件场景并入 SCENARIOS/ORDER
-  try{ registerCustomScenarios(); }catch(e){ /* 插件场景注册失败不阻塞 */ }
-}
-
-// 模块加载时自动初始化
-_initPlugins();// ===== Theme System (v1.5-C 多主题 / 自定义编辑 / 场景配色 / 导入导出) =====
+// ===== Theme System (v1.5-C 多主题 / 自定义编辑 / 场景配色 / 导入导出) =====
 /*SRC:ui-ge-plugins:END*/
 /*SRC:ui-ge-theme:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·主题/报表/AI 引擎) =====
@@ -42836,33 +42933,9 @@ function _bindDashToolbar(container, editMode){
  *   - Markdown 渲染复用 mdToHtml（03-util-markdown.js，03 < 47，可直接引用）
  *   - esc / PREFIX / $ / $$ 在更早模块定义，可直接引用
  */
-const NOTES_STORAGE_KEY = "notes";
-/**
- * 读取全部笔记
- * @returns {Array<Object>} 笔记数组
- */
-function getNotes(){
-  try{
-    const raw = localStorage.getItem(PREFIX + NOTES_STORAGE_KEY);
-    if(!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  }catch(e){
-    return [];
-  }
-}
-/**
- * 持久化笔记数组到 localStorage
- * @param {Array<Object>} notes - 笔记数组
- * @returns {boolean} 是否保存成功
- */
-function saveNotes(notes){
-  // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
-  const ok = save(PREFIX + NOTES_STORAGE_KEY, notes || []);
-  /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费；创建/更新/删除全走本函数） */
-  try{ if(typeof emitDataMutate === "function") emitDataMutate("note"); }catch(e){ /* 索引不阻塞写路径 */ }
-  return ok;
-}
+/* v3.7.75 解耦：NOTES_STORAGE_KEY / getNotes / saveNotes 已下沉到 data-rw（纯存取归数据层，
+   消除 ai-tools / render-* 对本块的逆层引用）；本块保留 CRUD 与全部 UI。 */
+
 /**
  * 创建新笔记
  * @param {string} title - 标题
@@ -42871,22 +42944,9 @@ function saveNotes(notes){
  * @param {string} category - 分类
  * @returns {Object} 新建的笔记对象
  */
-function createNote(title, content, tags, category){
-  const notes = getNotes();
-  const note = {
-    id: "note_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
-    title: title || t("p5.untitled", "无标题"),
-    content: content || "",
-    tags: Array.isArray(tags) ? tags : [],
-    category: category || t("p5.default", "默认"),
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    linkedTaskIds: []
-  };
-  notes.push(note);
-  saveNotes(notes);
-  return note;
-}
+/* v3.7.75 解耦：createNote 亦下沉 data-rw —— 它是纯模型工厂且被 AI 工具直接调用，
+   留在本块就是 ai-tools→ui-ge-notes 的最后一条逆层边。 */
+
 /**
  * 更新笔记字段
  * @param {string} id - 笔记 ID
