@@ -1,6 +1,6 @@
 ## [v3.7.78] - 2026-10-03
 
-**解耦第三批（S2c）：同层逆层清剿 —— 逆层 30 → 18、循环 16 → 13，decoupling-plan 的 P4 目标（<20）达成；三批累计 53 → 18（-66%）、50 → 13（-74%）。全量 **113 文件 / 1273 用例**、e2e **82/82（4.2m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 18 逆层 / 13 循环 · 重复定义 0）、`check:source-state`，均本机实测。**
+**解耦第三批（S2c）：同层逆层清剿 —— 逆层 30 → 18、循环 16 → 13，decoupling-plan 的 P4 目标（<20）达成；三批累计 53 → 18（-66%）、50 → 13（-74%）。**发版后线上复核**：Pages 取回 **3,622,762 B**、`VERSION="3.7.78"`、`BUILD_TAG="20261002i"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。全量 **113 文件 / 1273 用例**、e2e **82/82（4.2m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 18 逆层 / 13 循环 · 重复定义 0）、`check:source-state`，均本机实测。**
 
 ### 三手齐下
 
