@@ -4133,6 +4133,14 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   text-overflow:ellipsis;white-space:nowrap;border-left:2px solid var(--accent);padding-left:var(--space-1);margin-bottom:2px}
 .week-task-more{font-size:var(--fs-xs);color:var(--muted);padding:1px 0}
 .week-empty{font-size:var(--fs-xs);color:var(--text-faint);text-align:center;padding:var(--space-2) 0}
+/* v3.7.71 会议进日历：月历格子内「会」标记（accent 描边胶囊，区别于任务数徽章） */
+.cal-meeting{position:absolute;bottom:2px;left:2px;right:2px;font-size:var(--fs-3xs);
+  color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-sm);
+  text-align:center;line-height:1.2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* 周视图：会议行（time + 标题，区别于任务的 accent 左线 —— 用 --ok-text 绿系？不引入新色，用实线双边） */
+.week-meeting-item{font-size:var(--fs-xs);color:var(--text);padding:1px 0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;border-left:2px solid var(--ok-text,var(--accent));padding-left:var(--space-1);margin-bottom:2px}
+.week-meeting-time{color:var(--text-dim);font-variant-numeric:tabular-nums;margin-right:var(--space-1)}
 
 /* 批量操作工具栏：默认隐藏，进入批量模式时显示 */
 .batch-toolbar{display:none;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);
@@ -6106,10 +6114,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.73"; /* v3.7.73 竞态清仓（聊天键 save(chat_active) 8 处中 6 处含 await 路径全部入口定格 sc，2 处同步 cancel 无风险保留）· 云同步 5xx/429 退避重试 + errKind 错误分类 + OAuth2 空 stub 清除 + _lastSyncAt 死变量 · sync-contract E2E 门禁口径对齐 · 路线项②语义召回默认可用（cfg.rag 判定反转 + #aiMemRag 死接线根因修复 + /embeddings 失败缓存 10min + 设置抽屉新增「上下文注入」开关中英） */
+const VERSION = "3.7.74"; /* v3.7.74 路线项①②落地：会议进日历（办公 record date/startTime 进月历「会」标记与周视图会议行，按开始时间排序，与任务徽章分列）· 双标签页数据守护（storage 事件节流 30s 提示刷新，此前全仓 0 监听双开互覆盖）· RAG 文件导入与云同步增量记账为路线余量（后者依赖后端契约） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261002d";
+const BUILD_TAG = "20261002e";
 
 
 

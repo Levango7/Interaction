@@ -2710,6 +2710,7 @@ const MESSAGES = {
     "p5.weekDone": "本周完成",
     "p5.weekReport": "周报",
     "p5.weekView": "周视图",
+    "p5.meetingMark": "会",
     "p5.yearReport": "年报",
     "p5.yearSuffix": "年",
     // ===== 任务235：后端 API 对接 i18n 键（api_ 前缀） =====
@@ -2787,6 +2788,7 @@ const MESSAGES = {
     "api.offlineMode": "离线模式，数据已保存到本地",
     "api.backOnline": "已恢复在线，正在同步…",
     "ai.memoryConfigSaved": "记忆配置已保存",
+    "ai.xtabChanged": "检测到其他窗口修改了数据，为避免互相覆盖请刷新本窗口",
     "ai.sessHistoryCleared": "已清除所有会话历史",
     "chain.addedPrefix": "已添加链：",
     "chain.resetDone": "已重置为默认联动规则",
@@ -6410,6 +6412,7 @@ const MESSAGES = {
     "p5.weekDone": "Week Done",
     "p5.weekReport": "Weekly Report",
     "p5.weekView": "Week View",
+    "p5.meetingMark": "M",
     "p5.yearReport": "Annual Report",
     "p5.yearSuffix": "-",
     // ===== Task 235: backend API i18n keys (api_ prefix) =====
@@ -6511,6 +6514,7 @@ const MESSAGES = {
     "api.offlineMode": "Offline, data saved locally",
     "api.backOnline": "Back online, syncing…",
     "ai.memoryConfigSaved": "Memory config saved",
+    "ai.xtabChanged": "Data was modified in another window — refresh this one to avoid overwriting it.",
     "ai.sessHistoryCleared": "Cleared all session history",
     "chain.addedPrefix": "Chain added: ",
     "chain.resetDone": "Reset to default chain rules",

@@ -18,6 +18,21 @@
  * @param {number} [monthOffset=0] - 月偏移（0=本月，-1=上月，1=下月）
  * @returns {string} 日历 HTML（含表头/星期表头/日期格子）
  */
+/* ---------- v3.7.71 会议进日历：办公场景 record 的会议（date/startTime 字段）按日期分桶 ----------
+ * 此前日历只看任务 dueDate，办公场景「会议纪要」里明明录了会议日期/开始时间，
+ * 「今天的会」却在日历上看不到（数据在、链路断）。会议与任务分色展示，不混计数。 */
+function _meetingsByDate(){
+  const byDate = {};
+  let recs = [];
+  try{ recs = (typeof getRec === "function") ? getRec("office") : []; }catch(e){ recs = []; }
+  recs.forEach(function(r){
+    if(!r || !r.date) return;
+    if(!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r);
+  });
+  return byDate;
+}
+
 function renderCalendarView(monthOffset){
   const data = getCalendarMonthData(monthOffset);
   const year = data.year, month = data.month;
@@ -36,6 +51,7 @@ function renderCalendarView(monthOffset){
       taskByDate[key].push(t);
     }
   });
+  const meetingByDate = _meetingsByDate();
 
   let html = '<div class="cal-header">';
   html += '<button type="button" class="cal-nav" data-cal-prev title="' + t("p5.prevMonth", "上一月") + '">‹</button>';
@@ -57,6 +73,14 @@ function renderCalendarView(monthOffset){
     html += '<div class="' + cls + '" data-cal-date="' + dateStr + '">';
     html += '<span class="cal-num">' + d + '</span>';
     if(dayTasks.length > 0) html += '<span class="cal-badge">' + dayTasks.length + '</span>';
+    /* v3.7.71：当日有会议 → 格子底部「会」标记（hover 看场次），与任务徽章分开计数 */
+    const dayMeetings = meetingByDate[dateStr] || [];
+    if(dayMeetings.length > 0){
+      const first = dayMeetings[0];
+      const tip = dayMeetings.map(function(m){ return (m.startTime ? m.startTime + " " : "") + (m.title || ""); }).join("\n");
+      html += '<span class="cal-meeting" title="' + esc(tip) + '">' + esc(t("p5.meetingMark","会")) + (dayMeetings.length > 1 ? "×" + dayMeetings.length : "") + '</span>';
+      if(first && first.startTime) html += '<!-- mt:' + esc(first.startTime) + ' -->';
+    }
     html += '</div>';
   }
   html += '</div>';
@@ -96,6 +120,7 @@ function renderWeekView(weekOffset){
       taskByDate[key].push(t);
     }
   });
+  const meetingByDate = _meetingsByDate();
 
   const todayKey = _ymd(new Date());
   let html = '<div class="cal-header">';
@@ -116,8 +141,13 @@ function renderWeekView(weekOffset){
     html += '<div class="' + cls + '" data-cal-date="' + key + '">';
     html += '<div class="week-day-head"><span class="week-dow">' + dowNames[i] + '</span>';
     html += '<span class="week-date">' + (d.getMonth() + 1) + '/' + d.getDate() + '</span></div>';
-    if(dayTasks.length > 0){
+    const dayMeetings = (meetingByDate[key] || []).slice().sort(function(a,b){ return (a.startTime||"") < (b.startTime||"") ? -1 : 1; });
+    if(dayMeetings.length > 0 || dayTasks.length > 0){
       html += '<ul class="week-task-list">';
+      /* v3.7.71：会议行在前（有 startTime 的按时间序），任务随后 */
+      dayMeetings.forEach(function(m){
+        html += '<li class="week-meeting-item">' + (m.startTime ? '<span class="week-meeting-time">' + esc(m.startTime) + '</span>' : "") + esc(m.title || "") + '</li>';
+      });
       dayTasks.slice(0, 3).forEach(function(t){
         html += '<li class="week-task-item">' + esc(t.title) + '</li>';
       });

@@ -1869,6 +1869,21 @@ function bindOfflineBanner(){
 function initPWAEnhancements(){
   try {
     initNetworkMonitor();
+    /* v3.7.71 跨标签页数据守护（路线项②）：storage 事件只在**其它**标签页写入时触发。
+       双开窗口此前=后写覆盖先写且互不感知（全仓 0 处 storage 监听）。
+       最小正确实现：节流提示「数据已在其他窗口修改」，不自动刷新（防止打断用户输入）；
+       用户点击后走既有刷新路径。节流 30s 防多键连改刷屏。 */
+    let _xTabToastAt = 0;
+    window.addEventListener("storage", function(e){
+      if(!e.key || e.key.indexOf("wb_agent_") !== 0) return;
+      if(e.key === "wb_agent_cfg") return; // 配置类写入（如主题）不提示
+      const now = Date.now();
+      if(now - _xTabToastAt < 30000) return;
+      _xTabToastAt = now;
+      try{
+        toast(t("ai.xtabChanged","检测到其他窗口修改了数据，为避免互相覆盖请刷新本窗口"), "warn", 6000);
+      }catch(_e){ /* toast 不可用时静默（如页面尚未就绪） */ }
+    });
     initInstallPrompt();
     bindInstallUI();
     bindOfflineBanner();
