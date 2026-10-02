@@ -423,6 +423,26 @@ function renderKnowledgeBase(){
   const tagCount = Object.keys(tagMap).length;
   html += '<span class="kb-stat">' + tagCount + t('p5.tagSuffix', ' 个标签</span>');
   html += '</div>';
+  /* v3.7.76：文件知识（RAG 文件导入）—— 列表 + 导入入口，随知识库弹窗一起渲染 */
+  const ragFiles = (typeof getRagFiles === "function") ? getRagFiles() : [];
+  html += '<div class="kb-files" id="kbFiles">';
+  html += '<div class="kb-files-head"><h3 class="kb-cloud-title">' + esc(t('p5.kbFilesTitle', '文件知识（进 AI 检索索引）')) + '</h3>'
+    + '<label class="addbtn sm" for="kbFileInput" style="cursor:pointer">' + esc(t('p5.kbFilesImport', '导入文件'))
+    + '<input type="file" id="kbFileInput" multiple accept="' + esc(t('p5.kbFilesAccept', '.txt,.md,.markdown,.html,.htm,.csv,.json,.log')) + '" style="display:none"></label></div>';
+  if(!ragFiles.length){
+    html += '<p class="empty-hint">' + esc(t('p5.kbFilesEmpty', '尚未导入文件。支持 .txt / .md / .html 等纯文本，导入后按段落切块进检索索引，可随时删除。')) + '</p>';
+  } else {
+    html += '<div class="kb-files-list" style="margin-top:8px">';
+    ragFiles.forEach(function(f){
+      html += '<div class="kb-file-item" style="display:flex;align-items:center;gap:8px;padding:4px 0" data-file-id="' + esc(f.id) + '">'
+        + '<span class="kb-file-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(f.name) + '</span>'
+        + '<span class="kb-file-meta">' + ((f.chunks || []).length) + esc(t('p5.kbFilesChunkCount', ' 块')) + '</span>'
+        + '<button type="button" class="addbtn sm kb-file-del" data-file-del="' + esc(f.id) + '">' + esc(t('p5.kbFilesDelete', '删除')) + '</button>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
   if(!notes.length){
     html += t('p5.kbEmpty', '<p class="empty-hint">知识库为空，到「笔记管理」创建第一条笔记吧</p>');
   } else {
@@ -499,6 +519,17 @@ function _bindKnowledgeBaseEvents(){
       if(note) openNoteEditorModal(note);
       return;
     }
+    /* v3.7.76：删除文件条目（其索引块由增量同步随 diff 移除） */
+    const delBtn = e.target.closest(".kb-file-del");
+    if(delBtn){
+      const fid = delBtn.getAttribute("data-file-del");
+      if(fid && confirm(t('p5.kbFilesConfirmDelete', '删除该文件？其已建立的检索索引块会一并移除。'))){
+        ragDeleteFile(fid);
+        try{ toast(t('p5.kbFilesDeleted', '文件已删除，其索引块将随之移除'), "ok"); }catch(e2){}
+        openKnowledgeBaseModal();   /* 重渲染列表 */
+      }
+      return;
+    }
     const tagEl = e.target.closest(".kb-tag");
     if(tagEl){
       const tag = tagEl.getAttribute("data-tag");
@@ -506,6 +537,113 @@ function _bindKnowledgeBaseEvents(){
       try{ toast(t("p5.tagPrefix", "标签「") + tag + t("p5.tagCountMid", "」共 ") + tagged.length + t("p5.tagCountSuffix", " 条笔记"), "ok"); }catch(e){}
     }
   });
+  /* v3.7.76：文件选择器 —— 选完即导入并重渲染列表 */
+  const fileInput = $("#kbFileInput");
+  if(fileInput){
+    fileInput.addEventListener("change", async function(){
+      const fls = Array.prototype.slice.call(fileInput.files || []);
+      fileInput.value = "";                        /* 允许重选同一文件 */
+      if(!fls.length) return;
+      await ragImportFiles(fls);
+      openKnowledgeBaseModal();
+    });
+  }
+}
+
+
+/* ============================================================
+ * v3.7.76：知识库文件导入（RAG 文件知识）
+ * 分层：切块与导入动作在本块（UI 动作），存储 getRagFiles/saveRagFiles 在 data-rw，
+ * 内容哈希 fnv1aHex 在 core —— 全部正向边。导入只写存储 + emitDataMutate 广播，
+ * 建索引由 ai-tools 的 ragSyncIncremental（4s 防抖）完成：本块不发网络请求。
+ * ============================================================ */
+const RAG_FILE_TEXT_EXT = ["txt", "md", "markdown", "html", "htm", "csv", "json", "log"];
+/** 按扩展名准入并预清洗（html 剥 script/style/标签取正文）；不支持返回 null */
+function _ragFileText(name, raw){
+  const ext = (String(name || "").split(".").pop() || "").toLowerCase();
+  if(RAG_FILE_TEXT_EXT.indexOf(ext) < 0) return null;
+  let text = String(raw || "");
+  if(ext === "html" || ext === "htm"){
+    try{
+      const doc = new DOMParser().parseFromString(text, "text/html");
+      doc.querySelectorAll("script,style,noscript").forEach(function(n){ n.remove(); });
+      text = (doc.body && doc.body.textContent) || "";
+    }catch(e){ /* 解析失败按原文处理 */ }
+  }
+  return text.replace(/\r\n/g, "\n").trim();
+}
+/** 段落聚合切块：目标 ≤1000 字符，单段 >1600 按句读硬切。返回块数组 */
+function _ragChunkText(text){
+  const paras = String(text || "").split(/\n\s*\n+/).map(function(s){ return s.trim(); }).filter(Boolean);
+  const chunks = [];
+  let cur = "";
+  const flush = function(){ if(cur.trim()){ chunks.push(cur.trim()); cur = ""; } };
+  for(const p of paras){
+    if(p.length > 1600){
+      flush();
+      let buf = "";
+      const pieces = p.split(/(?<=[。！？.!?;；])\s*/);
+      for(const piece of pieces){
+        if((buf + piece).length > 1000 && buf){ chunks.push(buf.trim()); buf = piece; }
+        else buf += piece;
+        while(buf.length > 1600){ chunks.push(buf.slice(0, 1600)); buf = buf.slice(1600); }
+      }
+      cur = buf;
+      continue;
+    }
+    if((cur + "\n\n" + p).length > 1000 && cur){ flush(); cur = p; }
+    else cur = cur ? (cur + "\n\n" + p) : p;
+  }
+  flush();
+  return chunks;
+}
+/** 导入纯文本（File 选择与测试共用的核心路径）。返回 {added, replaced} 或 null（被拒） */
+async function ragImportText(name, rawText){
+  const text = _ragFileText(name, rawText);
+  if(text === null){ try{ toast(t('p5.kbFilesUnsupported', '暂不支持该类型（二进制如 PDF/DOCX 请先转成纯文本）'), "warn"); }catch(e){} return null; }
+  if(text.length > RAG_FILE_MAX_CHARS){ try{ toast(t('p5.kbFilesTooBig', '文件过大（上限 256KB 文本），请拆分后导入'), "warn"); }catch(e){} return null; }
+  const files = getRagFiles();
+  const replaced = files.some(function(f){ return f.name === name; });
+  const kept = files.filter(function(f){ return f.name !== name; });
+  if(!replaced && kept.length >= RAG_FILES_MAX_COUNT){ try{ toast(t('p5.kbFilesTooBig', '文件数已达上限'), "warn"); }catch(e){} return null; }
+  const fid = "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const chunks = _ragChunkText(text).map(function(ct){
+    /* docId 不含 fid（每次导入都会换）：由 <文件名>+<块内容> 派生 —— 同名同内容重导入
+       docId 不变 → 哈希 diff 零重嵌；改名或改内容才重嵌。 */
+    return { docId: "file:" + fnv1aHex(name + "\\n" + ct) + ":" + fnv1aHex(ct), text: ct };
+  });
+  kept.push({ id: fid, name: String(name), size: text.length, ts: Date.now(), chunks: chunks });
+  if(!saveRagFiles(kept)){ return null; }   /* 配额耗尽等：如实失败，不留半截状态 */
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("import"); }catch(e){ /* 索引不阻塞导入 */ }
+  return { added: chunks.length, replaced: replaced };
+}
+/** File 对象入口（真实选择器）：逐个读文本后走 ragImportText */
+async function ragImportFiles(fileList){
+  const arr = Array.prototype.slice.call(fileList || []);
+  let ok = 0, total = 0, replaced = false;
+  for(const f of arr){
+    const text = await new Promise(function(res){
+      try{
+        const fr = new FileReader();
+        fr.onload = function(){ res(String(fr.result || "")); };
+        fr.onerror = function(){ res(""); };
+        fr.readAsText(f);
+      }catch(e){ res(""); }
+    });
+    const r = await ragImportText(f.name, text);
+    if(r){ ok++; total += r.added; if(r.replaced) replaced = true; }
+  }
+  if(ok){
+    try{ toast(t('p5.kbFilesImported', '已入库：') + ok + t('p5.kbFilesCount', '个文件 · ') + total + t('p5.kbFilesChunkSuffix', ' 块（后台数秒内自动进检索索引，失败会进诊断面板）') + (replaced ? t('p5.kbFilesReplaced', '（同名旧文件已替换）') : ""), "ok"); }catch(e){}
+  }
+  return { files: ok, chunks: total };
+}
+/** 删除文件条目（其索引块由增量同步随 diff 移除） */
+function ragDeleteFile(id){
+  const kept = getRagFiles().filter(function(f){ return f.id !== id; });
+  const ok = saveRagFiles(kept);
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("import"); }catch(e){ /* 索引不阻塞 */ }
+  return ok;
 }
 
 /* v3.7.59：v1.7-A 的「笔记变更钩子 → 重建 RAG 索引」已移除。

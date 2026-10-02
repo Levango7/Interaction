@@ -2120,18 +2120,26 @@ function _ragCurrentDocs(){
       }
     }
   }catch(_){}
+  /* v3.7.76 第五数据源：知识库导入的文件切块（getRagFiles 存于 data-rw）。
+     块的 docId 在导入时按 <文件名>+<块内容> 哈希定死（file:<nameHash>:<chunkHash>）—— 同内容重导入
+     docId 不变 → 本 diff 天然零重嵌；删除文件条目 → 其块在本 diff 视角下消失 →
+     文档与向量一并移除。 */
+  try{
+    const files = getRagFiles();
+    for(const f of files){
+      const src = "file:" + (f.name || f.id || "");
+      const chunks = Array.isArray(f.chunks) ? f.chunks : [];
+      for(const c of chunks){
+        if(c && c.docId && c.text) out.push({ docId: c.docId, source: src, content: c.text });
+      }
+    }
+  }catch(_){}
   return out;
 }
 
-/** FNV-1a 32 位内容哈希（hex）。只用于"内容变没变"的比较，不承载安全语义。 */
-function _ragDocHash(s){
-  let h = 0x811c9dc5;
-  for(let i = 0; i < s.length; i++){
-    h ^= s.charCodeAt(i);
-    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
-  }
-  return h.toString(16);
-}
+/** FNV-1a 32 位内容哈希（hex）—— v3.7.76 起实现提升到 core 的 fnv1aHex
+ *  （RAG 文件导入的切块 docId 在 ui-ge-notes 也要用），此处保留别名兼容既有引用与测试。 */
+function _ragDocHash(s){ return fnv1aHex(s); }
 
 /* v3.7.67 增量同步的节流/批量参数：
    - 防抖 4s：任务连续勾选、批量导入等风暴只触发一次同步；

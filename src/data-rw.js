@@ -225,6 +225,35 @@ function createNote(title, content, tags, category){
   return note;
 }
 
+/* ---------- v3.7.76：RAG 文件知识（第五数据源） ----------
+ * 用户在知识库导入的纯文本文件，切块后存这里；ai-tools 的 _ragCurrentDocs 会把
+ * 每个文件的每个块当作一份文档纳入哈希 diff —— 因此删除文件条目 = 其索引块自动
+ * 被增量同步移除（v3.7.67 双刃剑的设计面：凡进索引的必须进 diff 体系）。
+ * chunks[].docId 由 <文件名>+<块内容> 哈希派生 —— 同内容重导入哈希不变，零重嵌。
+ */
+const RAG_FILES_KEY = "rag_files";
+const RAG_FILE_MAX_CHARS = 256 * 1024;  // 单文件文本上限（约 256K 字符）
+const RAG_FILES_MAX_COUNT = 60;         // 文件条数上限
+/**
+ * 读取全部已导入文件
+ * @returns {Array<{id:string, name:string, size:number, ts:number, chunks:Array<{docId:string, text:string}>}>}
+ */
+function getRagFiles(){
+  try{
+    const raw = localStorage.getItem(PREFIX + RAG_FILES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){ return []; }
+}
+/**
+ * 持久化文件列表（走 save() 主入口：镜像/配额告警与登记齐备）
+ * @param {Array} files
+ * @returns {boolean} 是否保存成功
+ */
+function saveRagFiles(files){
+  return save(PREFIX + RAG_FILES_KEY, files || []);
+}
+
 /* ---------- P1-b 自动备份（防抖快照，独立于手动导出） ---------- */
 const AUTO_BACKUP_KEY = PREFIX + "autobackup";
 const AUTO_BACKUP_GENS = [PREFIX + "autobackup.1", PREFIX + "autobackup.2"]; // v3.4.7 批次二（G3）：三代滚动——上一代/上上代

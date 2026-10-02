@@ -17,7 +17,7 @@
 | `data-migrate` | Data | `data-links` | 2 |
 | `data-rw` | Data | `core` `crypto` `data-links` | 6 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
-| `ai-tools` | AI | `ai-retry` `chain` `core` `data-idb` `data-links` `data-rw` | 18 |
+| `ai-tools` | AI | `ai-retry` `chain` `core` `data-idb` `data-links` `data-rw` | 20 |
 | `ai-loop` | AI | `ai-retry` `ai-tools` `chain` `core` `crypto` | 9 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-markdown` `util-perf` | 25 |
 | `render-entry` | Render | `ai-retry` `core` `data-links` `data-rw` `render-overview` `render-scene-main` `render-widgets` `ui-drawer` | 30 |
@@ -41,7 +41,7 @@
 | `ui-ge-theme` | UI | `chain` | 1 |
 | `ui-ge-pomodoro` | UI | `chain` | 1 |
 | `ui-ge-calendar` | UI | `chain` `render-overview` `ui-ge-theme` `ui-guide` | 21 |
-| `ui-ge-notes` | UI | `core` `data-rw` `render-widgets` `util-markdown` | 8 |
+| `ui-ge-notes` | UI | `core` `data-rw` `render-widgets` `util-markdown` | 14 |
 | `ui-ge-integrations` | UI | `core` `crypto` | 2 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）

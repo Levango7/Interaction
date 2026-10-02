@@ -3900,6 +3900,22 @@ const MESSAGES = {
     "wf.taskPrefix": "⏰ 执行工作流：",
     "wf.timeAria": "执行时间",
     "wf.unnamed": "工作流",
+
+    /* ---------- v3.7.76：知识库文件导入（RAG 文件知识） ---------- */
+    "p5.kbFilesTitle": "文件知识（进 AI 检索索引）",
+    "p5.kbFilesImport": "导入文件",
+    "p5.kbFilesEmpty": "尚未导入文件。支持 .txt / .md / .html 等纯文本，导入后按段落切块进检索索引，可随时删除。",
+    "p5.kbFilesAccept": ".txt,.md,.markdown,.html,.htm,.csv,.json,.log",
+    "p5.kbFilesImported": "已入库：",
+    "p5.kbFilesChunkSuffix": " 块（后台数秒内自动进检索索引，失败会进诊断面板）",
+    "p5.kbFilesReplaced": "（同名旧文件已替换）",
+    "p5.kbFilesDeleted": "文件已删除，其索引块将随之移除",
+    "p5.kbFilesTooBig": "文件过大（上限 256KB 文本），请拆分后导入",
+    "p5.kbFilesUnsupported": "暂不支持该类型（二进制如 PDF/DOCX 请先转成纯文本）",
+    "p5.kbFilesCount": "个文件 · ",
+    "p5.kbFilesChunkCount": " 块",
+    "p5.kbFilesConfirmDelete": "删除该文件？其已建立的检索索引块会一并移除。",
+    "p5.kbFilesDelete": "删除"
   },
   en: {
     // Common
@@ -7597,8 +7613,37 @@ const MESSAGES = {
     "wf.taskPrefix": "⏰ Run workflow: ",
     "wf.timeAria": "Run time",
     "wf.unnamed": "Workflow",
+
+        /* ---------- v3.7.76: knowledge-base file import (RAG file knowledge) ---------- */
+    "p5.kbFilesTitle": "File knowledge (fed into the AI retrieval index)",
+    "p5.kbFilesImport": "Import files",
+    "p5.kbFilesEmpty": "No files imported yet. Plain text such as .txt / .md / .html is supported; files are chunked by paragraph into the retrieval index and can be deleted anytime.",
+    "p5.kbFilesAccept": ".txt,.md,.markdown,.html,.htm,.csv,.json,.log",
+    "p5.kbFilesImported": "Imported: ",
+    "p5.kbFilesChunkSuffix": " chunks (indexed automatically within seconds; failures go to the diagnostics panel)",
+    "p5.kbFilesReplaced": " (previous file with the same name replaced)",
+    "p5.kbFilesDeleted": "File deleted; its index chunks will be removed",
+    "p5.kbFilesTooBig": "File too large (256KB text cap) - split it before importing",
+    "p5.kbFilesUnsupported": "Unsupported type (convert binaries like PDF/DOCX to plain text first)",
+    "p5.kbFilesCount": " file(s) · ",
+    "p5.kbFilesChunkCount": " chunks",
+    "p5.kbFilesConfirmDelete": "Delete this file? Its index chunks will be removed as well.",
+    "p5.kbFilesDelete": "Delete"
   }
 };
+
+/* v3.7.76：FNV-1a 32 位内容哈希（hex）。原为 ai-tools 的 _ragDocHash，因 RAG 文件导入
+ * 的切块 docId 也需要它（ui-ge-notes），提升到 core 供两块共用（各自→core 都是正向边）。
+ * 只用于"内容变没变"的比较，不承载安全语义。 */
+function fnv1aHex(s){
+  s = String(s || "");
+  let h = 0x811c9dc5;
+  for(let i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h.toString(16);
+}
 
 function t(key, fallback){
   /* v2.2.0：MESSAGES 为 const，模块加载早期（TDZ）或字典缺失时回退兜底，不抛错 */

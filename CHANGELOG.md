@@ -1,3 +1,25 @@
+## [v3.7.76] - 2026-10-03
+
+**知识库文件导入落地（路线余量 ③ 清偿）：导入纯文本文件 → 按段落切块 → 作为第五数据源进 v3.7.67 的哈希 diff 体系 → 检索索引自动收敛；删除文件 = 其全部索引块连文档带向量移除。全量 **113 文件 / 1273 用例**（v3.7.75 为 112/1263；+10 = `rag-file-import.test.js`）、e2e **82/82（4.1m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 50→47 循环 / 53→45 逆层，无新增）、`check:source-state` 源码态，均本机实测。**
+
+### 分层（零新增逆层）
+
+- **存储** `getRagFiles/saveRagFiles` 在 data-rw（走 save() 主入口：镜像/配额告警齐备；上限单文件 256K 字符、共 60 个文件）；**切块与导入动作**在 ui-ge-notes（`_ragFileText` 准入+预清洗、`_ragChunkText` 段落聚合切块、`ragImportText/ragImportFiles/ragDeleteFile`）；**内容哈希 `fnv1aHex`** 自 ai-tools 的 `_ragDocHash` 提升到 core（导入侧切块 docId 与同步侧 diff 都要用，各自→core 都是正向边）；`_ragDocHash` 保留别名兼容既有引用与测试。
+- 导入只写存储 + `emitDataMutate` 广播，**本块不发网络请求**——建索引由 ai-tools 的 `ragSyncIncremental`（4s 防抖）完成。UI：知识库弹窗新增「文件知识」区（列表 + 块数 + 删除 + 导入入口，label+隐藏 file input，`accept` 白名单七类扩展名）。
+
+### docId 设计（v3.7.67 双刃剑的兑付面，两个方向都实测）
+
+- **凡进索引的必须进 diff 体系**：文件块纳入 `_ragCurrentDocs` 后，删除文件条目 = 块在 diff 视角下消失 = 文档与向量一并移除（有用例证明）——不会被增量同步误删成孤儿。
+- **docId 不含每次导入都换的 fid**，由 `<文件名>+<块内容>` 哈希派生（`file:<nameHash>:<chunkHash>`）：**同名同内容重导入 = docId 不变 = 零重嵌零请求**（实测第二轮 diff 全 0）；同名改内容 → 旧块移除新块入库；改文件名 → 文档名哈希变化 → 同样收敛。fid 只作记录 id。
+- **切块**：段落聚合目标 ≤1000 字符（短段合并、跨 1000 即分块），单段 >1600 按句读（。！？.!?;）硬切，仍超按长度切——3000 字段落实测切多块且每块 ≤1600。
+- **准入诚实**：不支持类型（PDF/DOCX 等二进制）返回 null + toast 指路"先转纯文本"，零落库零外发；超上限拒绝；html 导入剥 script/style/noscript 后取正文（alert 注入文本不进索引）。
+
+### 过程中的坑（都当场修净）
+
+- 手术脚本把 `notes.slice(...)` 误接进插入字符串的 `+` 链，插入文本把文件尾部拖出一份重复（语法错误被 node --check 抓下）——恢复后重写脚本：**插入内容一律纯字符串常量**。
+- i18n 双语插入时 en 节一度写成中文值、`p5.kbFilesDelete` 出现四联重复（lint 的 no-dupe-keys 抓下）——en 改英文值、去重为每语言一条。
+- 验证首跑撞 vitest worker RPC 超时假红（E3 60s 超时 + posttest 被退出码拦截未跑致 HTML 留注入态；该文件单跑 22/22 全过），干净重跑全绿——与 v3.7.66/75 披露同源。
+
 ## [v3.7.75] - 2026-10-02
 
 **解耦实战第一批：逆层 53 → 45、循环 50 → 47（全量验证行为零变更）。** 按 decoupling-plan 工具 A（归位）把四组「纯数据/存取」从高层块下沉到数据层：
