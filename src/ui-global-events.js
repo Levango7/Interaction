@@ -294,7 +294,7 @@ function renderIntegrationPanel(){
   const providers = [
     {name:"notion", label:"Notion", desc:t("int.notionDesc","验证 Notion Integration Token（笔记 / 任务同步尚未接入）"), connectFn:"notionConnect", disconnectFn:"notionDisconnect", pushFn:"notionPushTasks"},
     {name:"linear", label:"Linear", desc:t("int.linearDesc","验证 Linear API Key（任务同步尚未接入）"), connectFn:"linearConnect", disconnectFn:"linearDisconnect", pushFn:"linearPushTasks"},
-    {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Jira API Token（任务同步尚未接入）"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect"},
+    {name:"jira", label:"Jira", desc:t("int.jiraDesc","验证 Token 并推送任务到项目（仅桌面版可用：Atlassian 不回 CORS 头，浏览器形态请求发不出去）；凭据随应用数据加密落盘"), connectFn:"jiraConnect", disconnectFn:"jiraDisconnect", pushFn:"jiraPushTasks"},
     {name:"slack", label:"Slack", desc:t("int.slackDesc","群机器人 Incoming Webhook · 推送通知（仅桌面版可用：Slack webhook 不回 CORS 头，浏览器形态发不出去）；凭据仅本次会话，刷新即失效"), connectFn:"slackConnect", disconnectFn:"slackDisconnect", ephemeral:true},
     {name:"feishu", label:t("int.feishuLabel","飞书"), desc:t("int.feishuDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"feishuConnect", disconnectFn:"feishuDisconnect", ephemeral:true},
     {name:"dingtalk", label:t("int.dingtalkLabel","钉钉"), desc:t("int.dingtalkDesc","群机器人 webhook · 推送通知（凭据仅本次会话，刷新即失效）"), connectFn:"dingtalkConnect", disconnectFn:"dingtalkDisconnect", ephemeral:true},
@@ -331,15 +331,21 @@ function renderIntegrationPanel(){
       try{ prov = integrationGetProvider(INTEGRATION_TYPES.GOOGLE_CALENDAR) || integrationGetProvider(INTEGRATION_TYPES.OUTLOOK_CALENDAR); }catch(e){ prov = null; }
     }
     const enabled = !!(prov && prov.enabled);
-    const statusCls = enabled ? "int-on" : "int-off";
+    /* v3.7.79：Jira 仅桌面版可达（Atlassian 不回 CORS 头）——浏览器形态连接按钮禁用并写明原因，
+       别给一个"连上了但每次请求都失败"的入口。 */
+    const jiraLocked = (p.name === "jira") && (typeof jiraHasRelay === "function") && !jiraHasRelay();
+    const statusCls = (enabled && !jiraLocked) ? "int-on" : "int-off";
     const verified = !!(prov && prov.config && prov.config._verified);
-    const statusText = enabled ? (t("int.connected","已连接") + (verified ? t("int.verified"," · 已验证") : t("int.unverified"," · 未验证"))) : t("int.notConnected","未连接");
+    const statusText = jiraLocked ? t("int.desktopOnly","仅桌面版可用")
+      : enabled ? (t("int.connected","已连接") + (verified ? t("int.verified"," · 已验证") : t("int.unverified"," · 未验证"))) : t("int.notConnected","未连接");
     /* v3.7.70：已连接且有推送消费点的 provider 多给一个显式动作。
        「推送任务」是本地→远端的单向动作，用户点一下才发生（没有后台自动同步）。 */
-    const pushBtn = (enabled && p.pushFn)
+    const pushBtn = (enabled && p.pushFn && !jiraLocked)
       ? '<button type="button" class="addbtn sm int-push" data-int-push="' + p.name + t("p4.html.intPushBtn",">推送任务</button>")
       : "";
-    const actionBtn = pushBtn + (enabled
+    const actionBtn = pushBtn + (jiraLocked
+      ? '<button type="button" class="addbtn sm" disabled title="' + esc("仅桌面版（Electron）可用：Atlassian 的 REST 端点不回 CORS 头，任何浏览器形态都发不出去") + '">' + t("p4.html.intConnDisabled",">连接（当前形态不可用）</button>")
+      : enabled
       ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + t("p4.html.intDiscBtn","\">断开</button>")
       : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + t("p4.html.intConnBtn","\">连接</button>"));
     return '<div class="int-row ' + statusCls + '">' +
@@ -382,7 +388,7 @@ function renderIntegrationPanel(){
      刻意**不用** `window[name + "PushTasks"]` 那种拼接派发 —— 本仓的静态可达性普查
      （docs/product-scope.md §四）就是被拼接派发坑过，且文档记着「全仓 window[...] 派发点仅 3 处」。
      这里用显式字面量表，普查看得见，那个计数也不会被无声改掉。 */
-  const PUSH_FNS = { notion: notionPushTasks, linear: linearPushTasks };
+  const PUSH_FNS = { notion: notionPushTasks, linear: linearPushTasks, jira: jiraPushTasks };
   const LABELS = {};
   providers.forEach(function(p){ LABELS[p.name] = p.label; });
   panel.querySelectorAll("[data-int-push]").forEach(function(btn){
@@ -504,7 +510,8 @@ const INTEGRATION_CONFIG_FIELDS = {
   linear:   [{ k:"token", label:"API Key", ph:"lin_api_…", required:true, secret:true },
              { k:"teamId", label:"Team ID", ph:t("int.linearTeamIdPh","可选，用于 issue 同步") }],
   jira:     [{ k:"domain", label:t("int.jiraDomain","站点域名"), ph:"your-domain.atlassian.net", required:true },
-             { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true }],
+             { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true },
+             { k:"projectKey", label:t("int.jiraProjectKey","项目 Key（推送任务用，如 PROJ）"), ph:"PROJ" }],
   /* v3.7.69：Slack 改成「群机器人 Incoming Webhook」—— URL 本身即凭据、无加签；
      hooks.slack.com 不回 CORS 头（实测），仅桌面版可发。填了**不会保存**（会话内存）。 */
   slack:    [{ k:"url", label:t("int.slackHook","Incoming Webhook 地址"), ph:"https://hooks.slack.com/services/…", required:true, secret:true }],

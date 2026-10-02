@@ -50,9 +50,9 @@ describe("electron/preload.js 暴露面契约", () => {
 
   /* 这份清单就是渲染层被允许依赖的全部能力。加方法要同时：主进程注册 IPC + 这里登记 +
      渲染层有用例。漏登记的那一侧就会在渲染层静默失效。 */
-  it("暴露的方法覆盖既有消费面 + v3.7.66 的 notifySend", () => {
+  it("暴露的方法覆盖既有消费面 + v3.7.66 notifySend + v3.7.79 jiraFetch", () => {
     const keys = Object.keys(exposed.obj);
-    for (const required of ["getAutoLaunch", "setAutoLaunch", "getAiConfig", "setAiConfig", "chat", "abortChat", "notifySend"]) {
+    for (const required of ["getAutoLaunch", "setAutoLaunch", "getAiConfig", "setAiConfig", "chat", "abortChat", "notifySend", "jiraFetch"]) {
       expect(keys, `electronAPI 缺方法 ${required}（渲染层会探测不到而静默降级）`).toContain(required);
       expect(typeof exposed.obj[required], `${required} 必须是函数`).toBe("function");
     }

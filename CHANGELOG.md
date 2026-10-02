@@ -1,3 +1,20 @@
+## [v3.7.79] - 2026-10-03
+
+**Jira 接线落地（五家定案的最后一家）：主进程 `jira-fetch` 中转 —— Atlassian 不回 CORS 头（`_probe/cors-matrix-providers.mjs` 实测 file:// 与 http(s) 双双被拦、主进程可达），浏览器形态连验证都发不出去，故 Jira = 仅桌面版。连接验证、任务推送（`jiraPushTasks`）、issue 拉取全部经中继；面板新增「推送任务」按钮（与 notion/linear 同款消费点）、配置补项目 Key 字段、文案如实标注仅桌面版与凭据加密落盘。全量 **113 文件 / 1281 用例**（v3.7.78 为 1273；+8 = IPC 白名单组 7 + preload 契约 1）、e2e **82/82（5.7m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（18 逆层 / 13 循环未动）、`check:source-state`，均本机实测。**
+
+### 中继的安全边界（这条 IPC = 让渲染进程驱动主进程带 Bearer token 访问网站，白名单是承重墙）
+
+- **域名精确匹配** `^<子域>.atlassian.net$`：子域伪装（`evil.atlassian.net.evil.com`）、裸 `atlassian.net`、任意主机、带端口、路径粘连一律 `bad_domain`，**零请求**；大小写统一归一化后判定。
+- **路径必须 `/rest/` 开头**（只放 REST 面，`/admin/users` 拒）；方法白名单 GET/POST/PUT/DELETE；token 必填；body ≤ 2MB；超时钳 1–20s；`assertTrustedSender` 与 chat / notify-send 同一道门。
+- **日志只记主机与状态码**：绝不出现 token 与请求正文（有专门用例读 `app.log` 反证）。
+- 渲染侧先过 `_intJiraBase`（v3.7.60 起的净化函数）把主机钉死，主进程是第二道门——两侧校验都有用例。
+
+### 功能面
+
+- `jiraConnect`：**无中继当场拒连**（不存"连上了但每次请求都失败"的死配置）并进诊断面板；面板行在浏览器形态显示「仅桌面版可用」+ 禁用按钮 + 原因 title。
+- `jiraSyncIssue` / `jiraListIssues` 改道 `_jiraRequest`（有中继走主进程，无则回落渲染直连如实失败）；**create 刻意不带 status**（Jira create 不接受 status，变换状态要走 transitions API 且 id 因工作流而异——同 Linear 的处置，`jiraMapStatus` 继续冻结在废弃名单）。
+- 废弃函数名单 18 → 16（`jiraSyncIssue`/`jiraListIssues` 摘牌入 LIVE 名单）；已知边界如实登记：自建域名/非标准端口在两种形态下均不可用（浏览器 CORS / 中继白名单只放 atlassian.net 云实例）。
+
 ## [v3.7.78] - 2026-10-03
 
 **解耦第三批（S2c）：同层逆层清剿 —— 逆层 30 → 18、循环 16 → 13，decoupling-plan 的 P4 目标（<20）达成；三批累计 53 → 18（-66%）、50 → 13（-74%）。**发版后线上复核**：Pages 取回 **3,622,762 B**、`VERSION="3.7.78"`、`BUILD_TAG="20261002i"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。全量 **113 文件 / 1273 用例**、e2e **82/82（4.2m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（35 块 · 18 逆层 / 13 循环 · 重复定义 0）、`check:source-state`，均本机实测。**

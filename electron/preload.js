@@ -17,5 +17,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // v3.7.66：群机器人 webhook 外发。必须在主进程发 —— 钉钉/企业微信的 webhook 不回 CORS 头，
   // 渲染进程（sandbox + webSecurity 默认开）发不出去。参数 { url, payload, timeoutMs? }，
   // 凭据只在本次调用里传递、主进程不落盘。
-  notifySend: (arg) => ipcRenderer.invoke("notify-send", arg)
+  notifySend: (arg) => ipcRenderer.invoke("notify-send", arg),
+  // v3.7.79：Jira REST 请求主进程中转（Atlassian 不回 CORS 头，渲染进程发不出去）。
+  // 参数 { domain, path, method, body, token, timeoutMs? }；白名单校验全在主进程，
+  // token 只随本次调用传递、主进程不落盘、日志不记。
+  jiraFetch: (arg) => ipcRenderer.invoke("jira-fetch", arg)
 });

@@ -313,6 +313,37 @@ function _intJiraBase(domain){
 }
 
 /* ---------- 内部：HTTP 请求 ---------- */
+/** v3.7.79：桌面版是否有 Jira 主进程中继（浏览器形态没有 → Jira 仅桌面版可用） */
+function jiraHasRelay(){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return !!(api && typeof api.jiraFetch === "function");
+}
+/**
+ * Jira 统一请求：有中继走主进程（无 CORS 约束），否则回落渲染进程直连
+ * （浏览器形态会被 Atlassian 的 CORS 拦下 —— 如实失败，不假装成功）。
+ * 域名/路径校验在两侧都有：这里先过 _intJiraBase 把主机钉死，主进程是第二道门。
+ * @returns {Promise<{ok:boolean, status:number, body:any, error?:string}>}
+ */
+async function _jiraRequest(domain, path, opts){
+  opts = opts || {};
+  const base = _intJiraBase(domain);
+  if(!base) return { ok: false, status: 0, body: null, error: "invalid_domain" };
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  if(api && typeof api.jiraFetch === "function"){
+    try{
+      const host = new URL(base).hostname;
+      const r = await api.jiraFetch({ domain: host, path: String(path), method: opts.method || "GET", body: opts.body || "", token: opts.token || "", timeoutMs: opts.timeoutMs });
+      return r ? { ok: !!r.ok, status: r.status || 0, body: r.body || null, error: r.error || "" } : { ok: false, status: 0, body: null, error: "no_response" };
+    }catch(e){
+      return { ok: false, status: 0, body: null, error: (e && e.message) ? e.message : String(e) };
+    }
+  }
+  return await _intDoRequest(base + path, {
+    method: opts.method || "GET",
+    headers: Object.assign({ "Authorization": "Bearer " + (opts.token || ""), "Content-Type": "application/json" }, opts.headers || {}),
+    body: opts.body
+  });
+}
 async function _intDoRequest(url, opts){
   const client = _integrationHttpClient || (typeof fetch !== "undefined" ? fetch : null);
   if(!client) return { ok: false, status: 0, error: "no_http_client" };
@@ -607,6 +638,14 @@ async function notionPushTasks(tasks){
 }
 
 /**
+ * 消费点：把一批任务推送到 Jira（面板「推送任务」按钮调的就是它，v3.7.79）。
+ * 与 notion/linear 同款：只推不拉、未完成任务、逐条结果如实上屏。
+ */
+async function jiraPushTasks(tasks){
+  return await _intPushEach("jira", INTEGRATION_TYPES.JIRA, jiraSyncIssue, tasks);
+}
+
+/**
  * 同步笔记到 Notion（双向）
  * @param {Object} note - 本地笔记 { id, title, content, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
@@ -846,15 +885,16 @@ function linearDisconnect(){
  */
 async function jiraConnect(config){
   if(!config || !config.token || !config.domain) return null;
+  /* v3.7.79：浏览器形态连验证请求都发不出去（Atlassian 不回 CORS 头，实测）——
+     与其存下一个"连上了但每次请求都失败"的死配置，不如当场如实拒绝并给出路。 */
+  if(!jiraHasRelay()){
+    try{ pushDiag("warn", "Jira 仅桌面版可用：浏览器形态拿不到 Atlassian 的 CORS 头", { where: "jiraConnect" }); }catch(e){}
+    return null;
+  }
   const provider = integrationRegisterProvider("jira", INTEGRATION_TYPES.JIRA, config);
   if(!provider) return null;
-  // 验证 token
-  const base = _intJiraBase(config.domain);   // 域名必须是纯主机名，否则不拼 URL（见 _intJiraBase）
-  if(!base) return null;
-  const resp = await _intDoRequest(base + "/rest/api/3/myself", {
-    method: "GET",
-    headers: { "Authorization": "Bearer " + config.token }
-  });
+  // 验证 token（经主进程中继）
+  const resp = await _jiraRequest(config.domain, "/rest/api/3/myself", { method: "GET", token: config.token });
   provider.config._verified = !!resp.ok;
   provider.config._lastVerifiedAt = _intNow();
   _intSaveProviders();
@@ -866,7 +906,7 @@ async function jiraConnect(config){
  * @param {Object} issue - 本地 issue { id, title, description, status, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
+ * v3.7.79：已接线（jiraPushTasks 经主进程中继推送）。
  */
 async function jiraSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
@@ -879,19 +919,17 @@ async function jiraSyncIssue(issue, direction){
   const token = provider.config.token;
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
-  const jiraHost = _intJiraBase(domain);
-  if(!jiraHost) return { success: false, error: "invalid_domain" };
-  const base = jiraHost + "/rest/api/3";
-  const headers = { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
-  const mappedStatus = JIRA_STATUS_MAP[issue.status] || issue.status || "To Do";
+  if(!_intJiraBase(domain)) return { success: false, error: "invalid_domain" };
+  /* v3.7.79：状态映射（JIRA_STATUS_MAP）暂不参与推送 —— 变换状态要走 transitions API 且
+     transition id 因工作流而异，没有可验证工作区前带上必错（同 Linear 的处置）。 */
 
   if(direction === "push" || direction === "sync"){
     let resp;
     if(syncInfo){
       // 更新 issue
-      resp = await _intDoRequest(base + "/issue/" + syncInfo.remoteId, {
+      resp = await _jiraRequest(domain, "/rest/api/3/issue/" + syncInfo.remoteId, {
         method: "PUT",
-        headers: headers,
+        token: token,
         body: JSON.stringify({
           fields: { summary: issue.title, description: issue.description }
         })
@@ -901,16 +939,17 @@ async function jiraSyncIssue(issue, direction){
         if(direction === "push") return { success: true, action: "updated", remoteId: syncInfo.remoteId, localId: issue.id };
       }
     }else{
-      // 创建 issue
-      resp = await _intDoRequest(base + "/issue", {
+      /* 创建 issue —— **刻意不带 status**：Jira create 的 fields 不接受 status（要变换工作流需
+         走 transitions API，且 transition id 因工作流而异），带上真机必 400。新 issue 落项目
+         默认状态；本地状态与远端状态的映射（JIRA_STATUS_MAP）留待有可验证工作区后再接。 */
+      resp = await _jiraRequest(domain, "/rest/api/3/issue", {
         method: "POST",
-        headers: headers,
+        token: token,
         body: JSON.stringify({
           fields: {
             project: { key: projectKey },
             summary: issue.title,
-            description: issue.description || "",
-            status: { name: mappedStatus }
+            description: issue.description || ""
           }
         })
       });
@@ -938,7 +977,7 @@ function jiraMapStatus(localStatus){
  * 列出 Jira issues（框架）
  * @param {Object} [filter] - { jql, limit }
  * @returns {Promise<Array>} issue 列表
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
+ * v3.7.79：已接线（经主进程中继拉取；JQL 默认按项目 Key）。
  */
 async function jiraListIssues(filter){
   const provider = await _intRequireProvider("jira", INTEGRATION_TYPES.JIRA);
@@ -948,12 +987,10 @@ async function jiraListIssues(filter){
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   const jql = filter.jql || ("project = " + projectKey);
-  const jiraHost = _intJiraBase(domain);
-  if(!jiraHost) return [];
-  const base = jiraHost + "/rest/api/3";
-  const resp = await _intDoRequest(base + "/search?jql=" + encodeURIComponent(jql) + "&maxResults=" + (filter.limit || 50), {
+  if(!_intJiraBase(domain)) return [];
+  const resp = await _jiraRequest(domain, "/rest/api/3/search?jql=" + encodeURIComponent(jql) + "&maxResults=" + (filter.limit || 50), {
     method: "GET",
-    headers: { "Authorization": "Bearer " + token }
+    token: token
   });
   if(!resp.ok || !resp.body || !resp.body.issues) return [];
   return resp.body.issues;

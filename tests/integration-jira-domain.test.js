@@ -46,31 +46,43 @@ const EVIL = [
   "",
 ];
 
+/** v3.7.79：桌面形态 —— 装一个 jiraFetch 中继替身，观察渲染侧发给主进程的调用形状 */
+function spyRelay(win) {
+  const calls = [];
+  win.electronAPI = { jiraFetch: async (arg) => { calls.push(arg); return { ok: true, status: 200, body: { accountId: "u1" } }; } };
+  return calls;
+}
+
 describe("Jira 站点域名校验（凭据不外泄）", () => {
   let win;
   beforeEach(() => { win = freshWin(); });
 
-  it("合法裸主机名：打到 <host>/rest/api/3/myself 并带 Bearer", async () => {
-    const calls = spyClient(win);
+  it("桌面形态：合法 atlassian.net 主机名经中继打 /rest/api/3/myself 并带 Bearer", async () => {
+    const relay = spyRelay(win);
     const prov = await win.jiraConnect({ token: "TK", domain: "jira.acme.atlassian.net" });
     expect(prov).toBeTruthy();
-    expect(calls.length).toBe(1);
-    expect(calls[0].url).toBe("https://jira.acme.atlassian.net/rest/api/3/myself");
-    expect(calls[0].auth).toBe("Bearer TK");
+    expect(relay.length).toBe(1);
+    expect(relay[0].domain).toBe("jira.acme.atlassian.net");
+    expect(relay[0].path).toBe("/rest/api/3/myself");
+    expect(relay[0].method).toBe("GET");
+    expect(relay[0].token).toBe("TK");
   });
 
-  it("用户粘贴完整 https:// 前缀也能归一化（不出现 https://https//）", async () => {
-    const calls = spyClient(win);
-    await win.jiraConnect({ token: "TK", domain: "https://jira.acme.com" });
-    expect(calls.length).toBe(1);
-    expect(calls[0].url).toBe("https://jira.acme.com/rest/api/3/myself");
+  it("用户粘贴完整 https:// 前缀也能归一化（中继收到的只有主机名）", async () => {
+    const relay = spyRelay(win);
+    await win.jiraConnect({ token: "TK", domain: "https://jira.acme.atlassian.net" });
+    expect(relay.length).toBe(1);
+    expect(relay[0].domain).toBe("jira.acme.atlassian.net");
   });
 
-  it("自建 Jira 的非标准端口仍可用（校验不能把合法部署挡死）", async () => {
-    const calls = spyClient(win);
+  it("已知边界：自建域名/端口在两种形态下都不可用（浏览器 CORS 拦、中继只放 *.atlassian.net）", async () => {
+    /* 渲染侧 _intJiraBase 仍接受端口（函数级断言见下一条）；但中继只传主机名 ——
+       主进程白名单是 atlassian.net 云实例面，自建部署经中继会被 bad_domain 拒。
+       这是如实的功能边界（自建 Jira 的 CORS 同样拿不到），不是校验误杀。 */
+    const relay = spyRelay(win);
     await win.jiraConnect({ token: "TK", domain: "jira.internal.example.com:8443" });
-    expect(calls.length).toBe(1);
-    expect(calls[0].url).toBe("https://jira.internal.example.com:8443/rest/api/3/myself");
+    expect(relay.length).toBe(1);
+    expect(relay[0].domain, "端口不进中继；主机是否放行由主进程白名单裁决").toBe("jira.internal.example.com");
   });
 
   it(`十二种注入/畸形形态一律拒发请求（0 次外发 + 返回 null）`, async () => {
@@ -83,16 +95,22 @@ describe("Jira 站点域名校验（凭据不外泄）", () => {
     }
   });
 
+  it("浏览器形态（无中继）：连接当场拒且零请求——不存「连上了但发不出去」的死配置", async () => {
+    const prov = await win.jiraConnect({ token: "TK", domain: "jira.acme.atlassian.net" });
+    expect(prov, "无中继必须返回 null").toBeNull();
+    expect(win.integrationGetProvider("jira"), "更不能落成一个 provider").toBeFalsy();
+  });
+
   it("已注册 provider 里的 domain 被改成恶意值后，sync / list 同样不发请求", async () => {
-    const c1 = spyClient(win);
-    await win.jiraConnect({ token: "TK", domain: "jira.acme.com" });
-    expect(c1.length).toBe(1);
+    const relay1 = spyRelay(win);
+    await win.jiraConnect({ token: "TK", domain: "jira.acme.atlassian.net" });
+    expect(relay1.length).toBe(1);
     /* 篡改已落盘的配置（模拟存储被改写 / 旧版本遗留的脏值） */
     win.integrationGetProvider("jira").config.domain = "evil.example.com/?x=";
-    const c2 = spyClient(win);
+    const relay2 = spyRelay(win);
     const r1 = await win.jiraSyncIssue({ id: "t1", title: "x", status: "doing" }, "push");
     const r2 = await win.jiraListIssues({ jql: "project = P" });
-    expect(c2, "坏域名下 sync/list 都必须 0 外发").toEqual([]);
+    expect(relay2, "坏域名下 sync/list 都必须 0 外发").toEqual([]);
     expect(r1 && r1.error).toBe("invalid_domain");
     expect(r2).toEqual([]);
   });
@@ -115,8 +133,8 @@ describe("集成中心文案只承诺真接了的能力", () => {
   /* v3.7.66：飞书 / 钉钉真接了群机器人 webhook，"7 家全写尚未接入"的旧口径不再成立。
      守护不松，改成分组断言：本文件是「文案诚实度」的唯一归属（describe 即此职），
      `tests/notify-webhook.test.js` 不再重复断言措辞，只测通道行为。 */
-  it("未接线的 4 个 provider 仍必须写明「同步 / 通知尚未接入」（v3.7.69 Slack 转已接线）", () => {
-    const keys = ["int.notionDesc", "int.linearDesc", "int.jiraDesc", "int.calendarDesc"];
+  it("未接线的 3 个 provider 仍必须写明「同步 / 通知尚未接入」（v3.7.79 Jira 转已接线）", () => {
+    const keys = ["int.notionDesc", "int.linearDesc", "int.calendarDesc"];
     for (const k of keys) {
       const v = win.t(k, "");
       expect(v, `${k} 文案为空`).toBeTruthy();
@@ -142,6 +160,10 @@ describe("集成中心文案只承诺真接了的能力", () => {
   it("钉钉 / Slack 文案必须写明「仅桌面版」，飞书不许被误标", () => {
     expect(win.t("int.dingtalkDesc", "")).toMatch(/仅桌面版|桌面版|desktop/i);
     expect(win.t("int.slackDesc", ""), "Slack 与钉钉同款不回 CORS 头，必须写明仅桌面版").toMatch(/仅桌面版|桌面版|desktop/i);
+    const jr = win.t("int.jiraDesc", "");
+    expect(jr, "Jira 必须写明仅桌面版：" + jr).toMatch(/仅桌面版|桌面版|desktop/i);
+    expect(jr, "Jira 凭据是加密落盘的（不是会话内存），文案不许写反：" + jr).not.toMatch(/仅本次会话|刷新即失效/);
+    expect(jr, "Jira 已接通，不许再写尚未接入：" + jr).not.toMatch(/尚未接入|not implemented/);
     const fs = win.t("int.feishuDesc", "");
     expect(fs, "飞书有 ACAO，浏览器可用，不该被一并标成桌面版专属：" + fs).not.toMatch(/仅桌面版|desktop only/i);
     const d = win.t("integration.desc", "");

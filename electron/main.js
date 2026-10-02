@@ -638,6 +638,51 @@ if (!gotLock){
       }
     });
 
+    /* ---------- v3.7.79：Jira 请求主进程中转 ----------
+       为什么必须中转：Atlassian 的 REST 端点不回 CORS 头（`_probe/cors-matrix-providers.mjs`
+       实测 file:// 与 http(s) 双双被拦、主进程 Node fetch 可达）—— 浏览器形态连验证都发不出去。
+       安全边界（这条 IPC = 让渲染进程驱动主进程带 Bearer token 访问网站，白名单是承重墙）：
+         · 域名**精确**匹配 `<子域>.atlassian.net`（拒 evil.atlassian.net.evil.com / 裸 atlassian.net /
+           拒绝任意其它主机）；路径必须 /rest/ 开头（只放 REST 面）；
+         · 方法白名单 GET/POST/PUT/DELETE；body ≤ 2MB；超时钳 1–20s；
+         · 日志只记主机与状态码，**绝不记 token 与正文**；
+         · assertTrustedSender 与 chat / notify-send 同一道门。 */
+    const JIRA_DOMAIN_RE = /^[a-z0-9][a-z0-9-]*\.atlassian\.net$/;
+    ipcMain.handle("jira-fetch", async (e, arg) => {
+      assertTrustedSender(e);
+      const domain = String((arg && arg.domain) || "").toLowerCase();
+      const reqPath = String((arg && arg.path) || "");
+      const method = String((arg && arg.method) || "GET").toUpperCase();
+      const token = String((arg && arg.token) || "");
+      const body = (arg && typeof arg.body === "string") ? arg.body : "";
+      if(!JIRA_DOMAIN_RE.test(domain)) return { ok: false, status: 0, error: "bad_domain" };
+      if(!/^\/rest\//.test(reqPath)) return { ok: false, status: 0, error: "bad_path" };
+      if(["GET", "POST", "PUT", "DELETE"].indexOf(method) < 0) return { ok: false, status: 0, error: "bad_method" };
+      if(!token) return { ok: false, status: 0, error: "no_token" };
+      if(body.length > 2 * 1024 * 1024) return { ok: false, status: 0, error: "body_too_large" };
+      const tmo = Math.min(Math.max(Number(arg && arg.timeoutMs) || 15000, 1000), 20000);
+      const ctrl2 = new AbortController();
+      const timer2 = setTimeout(() => ctrl2.abort(), tmo);
+      try{
+        const r2 = await fetch("https://" + domain + reqPath, {
+          method: method,
+          headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json", "Accept": "application/json" },
+          body: method === "GET" ? undefined : body,
+          signal: ctrl2.signal
+        });
+        clearTimeout(timer2);
+        let jb = null;
+        try{ jb = await r2.json(); }catch(err3){ /* 非 JSON 响应：交回状态码判定 */ }
+        logLine("jira", "host=" + domain + " status=" + r2.status);
+        return { ok: !!r2.ok, status: r2.status, body: jb };
+      }catch(err){
+        clearTimeout(timer2);
+        const msg2 = (err && err.name === "AbortError") ? ("请求超时（" + tmo + "ms）") : ((err && err.message) || String(err));
+        logLine("jira", "host=" + domain + " error=" + msg2);
+        return { ok: false, status: 0, error: msg2 };
+      }
+    });
+
     /* v1.11.1 [M5]：electron-updater 更新链路已整体移除——三处断点（portable 目标不支持
      * 自动更新 / 无 publish 配置 / 渲染端 preload 无 update-available 监听）使其从未可用。
      * 分发形态维持 portable + 手动下载：更新 = 从 GitHub Releases 重新下载。 */

@@ -7,7 +7,7 @@
 // 用 node 环境：main.js 顶层使用 fs/path/zlib/Buffer 等 Node 内置能力。
 // @vitest-environment node
 
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 import Module from "node:module";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
@@ -628,5 +628,89 @@ describe("Electron IPC: notify-send 主进程 webhook 外发", () => {
     expect(log, "🔴 日志泄露 sign").not.toContain("SIGN-SECRET-VALUE");
     expect(log, "🔴 日志泄露消息正文").not.toContain("机密正文-DO-NOT-LOG");
     expect(log).toContain("oapi.dingtalk.com");
+  });
+});
+
+/* ============================================================
+ * jira-fetch：Jira REST 请求主进程中转（v3.7.79）
+ * 为什么必须中转：Atlassian 的 REST 端点不回 CORS 头（真网络实测 file:// 与 http(s)
+ * 双双被拦、主进程 Node fetch 可达）—— 浏览器形态连验证都发不出去。
+ * 这条 IPC = 让渲染进程驱动主进程带 Bearer token 访问网站，域名/路径/方法白名单是承重墙：
+ * 下面每条拒绝路径都必须断言 fetch 一次都没发生（否则就是 SSRF / 凭据外泄出口）。
+ * ============================================================ */
+describe("Electron IPC: jira-fetch 主进程中转", () => {
+  /* notify-send 组的 installFetch 是那个 describe 的局部常量，这里自带一份同款 */
+  const installFetch = () => {
+    const calls = [];
+    const fn = vi.fn((url, opts) => {
+      calls.push({ url, opts });
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ accountId: "u1" }) });
+    });
+    vi.stubGlobal("fetch", fn);
+    return { fn, calls };
+  };
+  afterEach(() => { vi.unstubAllGlobals(); });
+  const OK_ARG = { domain: "corp.atlassian.net", path: "/rest/api/3/myself", method: "GET", token: "TK-secret" };
+  const logText2 = () => { try { return readFileSync(path.join(mockAppRef.current.getPath("userData"), "logs", "app.log"), "utf8"); } catch (e) { return ""; } };
+
+  it("合法调用：GET https://<domain><path> 带 Bearer，无 body", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["jira-fetch"](trustedEv(), OK_ARG);
+    expect(r.ok).toBe(true);
+    expect(calls.length).toBe(1);
+    expect(calls[0].url).toBe("https://corp.atlassian.net/rest/api/3/myself");
+    expect(calls[0].opts.method).toBe("GET");
+    expect(calls[0].opts.headers.Authorization).toBe("Bearer TK-secret");
+    expect(calls[0].opts.body).toBeUndefined();
+  });
+
+  it("POST 带 body 原样透传；PUT/DELETE 在白名单内", async () => {
+    const { calls } = installFetch();
+    await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { method: "POST", path: "/rest/api/3/issue", body: JSON.stringify({ fields: {} }) }));
+    await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { method: "PUT", path: "/rest/api/3/issue/1" }));
+    await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { method: "DELETE", path: "/rest/api/3/issue/1" }));
+    expect(calls.length).toBe(3);
+    expect(calls[0].opts.body).toContain("fields");
+  });
+
+  it("域名白名单必须精确：子域伪装 / 裸 atlassian.net / 任意主机 / 端口 / 路径粘连 一律拒", async () => {
+    const { calls } = installFetch();
+    for (const d of ["evil.atlassian.net.evil.com", "atlassian.net", "x.github.com", "a.atlassian.net.evil", "corp.atlassian.net/x", "corp.atlassian.net:8443"]) {
+      const r = await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { domain: d }));
+      expect(r.error, d).toBe("bad_domain");
+    }
+    expect(calls.length).toBe(0);
+  });
+
+  it("大小写归一化：CORP.ATLASSIAN.NET 放行（主进程统一 toLowerCase 判定）", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { domain: "CORP.ATLASSIAN.NET" }));
+    expect(r.ok).toBe(true);
+    expect(calls[0].url).toBe("https://corp.atlassian.net/rest/api/3/myself");
+  });
+
+  it("路径必须 /rest/ 开头（只放 REST 面）；方法白名单；token 必填；body 上限", async () => {
+    const { calls } = installFetch();
+    expect((await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { path: "/admin/users" }))).error).toBe("bad_path");
+    expect((await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { path: "rest/api" }))).error).toBe("bad_path");
+    expect((await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { method: "PATCH" }))).error).toBe("bad_method");
+    expect((await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { token: "" }))).error).toBe("no_token");
+    const big = "x".repeat(2 * 1024 * 1024 + 1);
+    expect((await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { method: "POST", body: big }))).error).toBe("body_too_large");
+    expect(calls.length).toBe(0);
+  });
+
+  it("未受信 sender：拒绝", async () => {
+    installFetch();
+    await expect(ipcHandlers["jira-fetch"](forgedEv(), OK_ARG)).rejects.toThrow("IPC 拒绝");
+  });
+
+  it("🔴 日志只记主机与状态码：绝不出现 token 与正文", async () => {
+    installFetch();
+    await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { method: "POST", path: "/rest/api/3/issue", body: JSON.stringify({ fields: { summary: "机密正文-DO-NOT-LOG" } }) }));
+    const log = logText2();
+    expect(log).toContain("corp.atlassian.net");
+    expect(log, "🔴 日志泄露 token").not.toContain("TK-secret");
+    expect(log, "🔴 日志泄露消息正文").not.toContain("机密正文-DO-NOT-LOG");
   });
 });
