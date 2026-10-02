@@ -6114,10 +6114,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.76"; /* v3.7.74 路线项①②落地：会议进日历（办公 record date/startTime 进月历「会」标记与周视图会议行，按开始时间排序，与任务徽章分列）· 双标签页数据守护（storage 事件节流 30s 提示刷新，此前全仓 0 监听双开互覆盖）· RAG 文件导入与云同步增量记账为路线余量（后者依赖后端契约） */
+const VERSION = "3.7.77"; /* v3.7.74 路线项①②落地：会议进日历（办公 record date/startTime 进月历「会」标记与周视图会议行，按开始时间排序，与任务徽章分列）· 双标签页数据守护（storage 事件节流 30s 提示刷新，此前全仓 0 监听双开互覆盖）· RAG 文件导入与云同步增量记账为路线余量（后者依赖后端契约） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261002g";
+const BUILD_TAG = "20261002h";
 
 
 
@@ -6718,6 +6718,28 @@ const AppBridge = {
   toggleToolPop: () => undefined,
 
   renderHelp: () => undefined,
+
+  /* v3.7.77（解耦 S2b 第二批）：知识库 / 日历 / 报表三簇 —— render 块经桥调用，
+     实现由各自 UI 块加载时注册（ui-ge-notes / ui-ge-calendar / ui-ge-theme）。 */
+  openKnowledgeBaseModal: () => undefined,
+  openNotesModal: () => undefined,
+  openReportModal: () => undefined,
+  bindReportModal: () => undefined,
+  openMindmapModal: () => undefined,
+  openGanttModal: () => undefined,
+  openDashboardModal: () => undefined,
+  bindCalendarEvents: () => undefined,
+  bindDashboardDnD: () => undefined,
+  _bindDashToolbar: () => undefined,
+  /* 返回 HTML 串（拼进模板）：默认空串保证拼接安全 */
+  renderCalendarView: () => "",
+  /* 异步返回：默认 null/空串让调用方的 if 兜底自然走降级分支 */
+  aiSmartRecommend: () => Promise.resolve(null),
+  _aiChatText: () => Promise.resolve(""),
+  /* v3.7.77：插件场景复用内置场景特性的读写口（data-links 注册自定义场景时用，
+     取代直接读写 render-scene-main 的 SCENE_FEATURE_RENDER 表 —— 最后一条真跨层逆层边） */
+  getSceneFeature: () => undefined,
+  setSceneFeature: () => undefined,
 };
 /* 通知/toast 用的图标表（TOAST_ICONS 依赖 UI_ICONS，故紧随其后声明）；从 ui-theme 下移而来 */
 const TOAST_ICONS = { ok: UI_ICONS.check, warn: UI_ICONS.alert, error: UI_ICONS.error, danger: UI_ICONS.error };
@@ -15800,9 +15822,9 @@ function _applyPluginScenarioPresets(){
         { id:"reading",  type:"record", label:t("tab.reading", "阅读") }
       ];
     }
-    const rf = SCENE_FEATURE_RENDER.study && SCENE_FEATURE_RENDER.study.reading;
-    if(rf && !(SCENE_FEATURE_RENDER.reading && SCENE_FEATURE_RENDER.reading.reading)){
-      SCENE_FEATURE_RENDER.reading = { reading: rf };
+    const rf = AppBridge.getSceneFeature("study", "reading");
+    if(rf && !AppBridge.getSceneFeature("reading", "reading")){
+      AppBridge.setSceneFeature("reading", { reading: rf });
     }
     const rb = SCENE_FEATURE_BIND.study && SCENE_FEATURE_BIND.study.reading;
     if(rb && !(SCENE_FEATURE_BIND.reading && SCENE_FEATURE_BIND.reading.reading)){
@@ -21060,16 +21082,16 @@ const SC_SUBMENU = {
     {id:"des-ps", label:"PS lite"}
   ],
   study:[
-    {id:"stu-mindmap", label:t("side.sub.mindmap", "思维导图"), run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); }},
-    {id:"stu-kb", label:"知识库", run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); }},
+    {id:"stu-mindmap", label:t("side.sub.mindmap", "思维导图"), run:()=>{ AppBridge.openMindmapModal(); }},
+    {id:"stu-kb", label:"知识库", run:()=>{ AppBridge.openKnowledgeBaseModal(); }},
     {id:"stu-web", label:t("side.sub.webSearch", "在线检索")},
-    {id:"stu-notes", label:t("side.sub.notes", "笔记"), run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); }},
-    {id:"stu-tpl", label:t("side.sub.template", "场景模板"), run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); }}
+    {id:"stu-notes", label:t("side.sub.notes", "笔记"), run:()=>{ AppBridge.openNotesModal(); }},
+    {id:"stu-tpl", label:t("side.sub.template", "场景模板"), run:()=>{ AppBridge.openTemplateModal(); }}
   ],
   data:[
     {id:"dat-stats", label:t("side.sub.dataAnalysis", "数据分析"), run:()=>{ setActive("stats"); render(); }},
     {id:"dat-chart", label:t("side.sub.edit", "编辑"), run:()=>{ _sideActive=null; setActive("stats"); _dashEditMode=true; render(); }},
-    {id:"dat-report", label:t("side.sub.report", "报告"), run:()=>{ if(typeof openReportModal==="function") openReportModal(); }}
+    {id:"dat-report", label:t("side.sub.report", "报告"), run:()=>{ AppBridge.openReportModal(); }}
   ],
   code:[
     {id:"cod-compile", label:t("side.sub.compile", "脚本编译")},
@@ -21268,7 +21290,7 @@ function setupSideMenu(){
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
     if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
-    if(btn.dataset.help){ _sideActive = null; if(typeof renderHelp==="function") AppBridge.renderHelp(); return; }
+    if(btn.dataset.help){ _sideActive = null; AppBridge.renderHelp(); return; }
     if(btn.dataset.aipage){ _sideActive = null; if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
     /* 子项：执行注册动作 */
     const menuId = btn.getAttribute("data-menu");
@@ -21404,7 +21426,7 @@ function setupMobNav(){
         return;
       }
       if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); AppBridge.openDrawer(); return; }
-      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); if(typeof renderHelp==="function") AppBridge.renderHelp(); return; }
+      if(btn.dataset.help){ _sideActive = null; closeSideSheet(); AppBridge.renderHelp(); return; }
       if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
       const menuId = btn.getAttribute("data-menu");
       if(!menuId) return;
@@ -21522,7 +21544,7 @@ function openRecycle(){
 */
 function openChartStore(){
   // v1.15 修复：从市场(抽屉)切到图表页时先关闭抽屉，避免新页面被覆盖层挡住
-  if(typeof closeDrawer === "function") closeDrawer();
+  AppBridge.closeDrawer();
   // 图表库（静态）——不用 emoji，用纯文字 + 矢量图标
   // v1.15：移除"日历"（用户要求；日历功能在应用页）
   const chartLibs = [
@@ -21948,7 +21970,7 @@ function setupSideToggle(){
    渲染到 #main（与图表商店/回收站页同模式），点击各卡片打开对应 modal */
 function openAppPage(){
   // v1.15 修复：从市场(抽屉)切到应用页时先关闭抽屉，避免新页面被覆盖层挡住
-  if(typeof closeDrawer === "function") closeDrawer();
+  AppBridge.closeDrawer();
   uiView = "app";
   renderSide();
   const apps = [
@@ -21973,7 +21995,7 @@ function openAppPage(){
   $$("#main [data-app]").forEach(function(c){
     c.onclick = function(){
       const id = c.getAttribute("data-app");
-      if(id==="calview"){ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } }
+      if(id==="calview"){ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } }
       else if(id==="weather"){ if(typeof openWeatherModal === "function") openWeatherModal(); }
       else if(id==="alarm"){ if(typeof openAlarmModal === "function") openAlarmModal(); }
       else if(id==="pet"){ if(typeof openPetModal === "function") openPetModal(); }
@@ -22739,7 +22761,7 @@ const TOOL_APPS = {
       $("#ocrRun").onclick = async function(){
         if(!dataUrl){ toast(t("tool.ocr.uploadFirst", "请先上传截图"), "warn"); return; }
         $("#ocrResult").value = t("tool.ocr.recognizing", "识别中…");
-        const text = await _aiChatText([
+        const text = await AppBridge._aiChatText([
           { role:"user", content:[
             { type:"text", text:t("tool.ocr.extractPrompt", "请提取这张图片中的所有文字，按原始排版输出，不要添加说明。") },
             { type:"image_url", image_url:{ url:dataUrl } }
@@ -23118,7 +23140,7 @@ const TOOL_APPS = {
         const p = $("#igPrompt").value.trim();
         if(!p){ toast(t("tool.imgGen.enterDesc", "请输入图片描述"), "warn"); return; }
         $("#igOut").innerHTML = sanitizeHtml('<div class="coach-hint">' + t("tool.imgGen.generating", "生成中…（约 10–30 秒）") + '</div>');
-        const text = await _aiChatText([{ role:"user", content:t("tool.imgGen.svgPrompt", "为以下描述生成一张图片的 SVG 简笔示意（仅返回 SVG 代码）：\n{desc}").replace("{desc}", p) }]);
+        const text = await AppBridge._aiChatText([{ role:"user", content:t("tool.imgGen.svgPrompt", "为以下描述生成一张图片的 SVG 简笔示意（仅返回 SVG 代码）：\n{desc}").replace("{desc}", p) }]);
         const out = $("#igOut");
         if(text && text.indexOf("<svg") >= 0){
           let svgPart = text.slice(text.indexOf("<svg"));
@@ -23163,7 +23185,7 @@ const TOOL_APPS = {
         const secs = ($("#vgLen") || {}).value || "5";
         const style = ($("#vgStyle") || {}).value || "real";
         out.innerHTML = sanitizeHtml('<div class="coach-hint">' + t("tool.vidGen.generating", "生成中…（约 10–30 秒）") + '</div>');
-        const text = await _aiChatText([{ role:"user", content:_vgBuildPrompt(desc, secs, style) }]);
+        const text = await AppBridge._aiChatText([{ role:"user", content:_vgBuildPrompt(desc, secs, style) }]);
         if(!text){ out.innerHTML = sanitizeHtml('<div class="empty">' + t("tool.vidGen.failed", "生成失败或未返回内容（请检查 AI 配置与网络）") + '</div>'); return; }
         /* 结果放到只读 textarea：便于整段复制粘贴（而不是塞进 HTML —— 也顺手避免注入面） */
         out.innerHTML = "";
@@ -23738,7 +23760,7 @@ const TOOL_APPS = {
  * @returns {void}
  */
 function openToolStub(toolId, label){
-  if(typeof closeDrawer === "function") closeDrawer();
+  AppBridge.closeDrawer();
   uiView = "tool";
   renderSide();
   /* v2.3.0：优先走 TOOL_APPS 真实实现 */
@@ -26494,7 +26516,7 @@ function renderOverview(){
   if(arBtn) arBtn.onclick=()=> handleAiRecommend();
   // v1.5-D 高级报表：绑定入口按钮 + 弹窗内事件
   const rBtn=$("#btnOpenReport");
-  if(rBtn) rBtn.onclick=()=>{ openReportModal("week", 0); bindReportModal(); };
+  if(rBtn) rBtn.onclick=()=>{ AppBridge.openReportModal("week", 0); AppBridge.bindReportModal(); };
 }
 
 /* ---------- v1.4-D AI 每日报告卡片 ---------- */
@@ -26560,7 +26582,7 @@ async function handleAiRecommend(){
   if(btn) btn.disabled=true;
   if(resultEl) resultEl.innerHTML=sanitizeHtml(`<div class="coach-hint">${t("aiRecommend.loading", "正在分析你的任务数据…")}</div>`);
   try{
-    const advice = await aiSmartRecommend();
+    const advice = await AppBridge.aiSmartRecommend();
     if(advice && advice.length){
       _aiHubContent.recommend = advice.join("\n"); // v3.2.1：缓存供讨论按钮使用
       const html = `<div class="ai-recommend-list">` +
@@ -26886,8 +26908,8 @@ function renderStats(){
       renderStats();
     };
     /* 工具条 + tab + 报表入口（容器级委托）；DnD 仅编辑态有意义但绑定无副作用 */
-    _bindDashToolbar(host, _dashEditMode);
-    if(typeof bindDashboardDnD === "function") bindDashboardDnD(host, _dashEditMode);
+    AppBridge._bindDashToolbar(host, _dashEditMode);
+    AppBridge.bindDashboardDnD(host, _dashEditMode);
   }
   // v3.1：统计页时间筛选切换
   $$("#main .stats-range-nav .set-nav-btn").forEach(b=>{
@@ -26907,9 +26929,9 @@ function renderTasksPage(){
   const today = todayStr();
   let body;
   if(_tasksView === "calendar"){
-    body = `<div class="card"><h2>${ic("overview")}${t("appPage.calview", "日历")}</h2><div class="cal-inline">${renderCalendarView(0)}</div></div>`;
+    body = `<div class="card"><h2>${ic("overview")}${t("appPage.calview", "日历")}</h2><div class="cal-inline">${AppBridge.renderCalendarView(0)}</div></div>`;
     $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
-    bindCalendarEvents();
+    AppBridge.bindCalendarEvents();
     _bindTasksTabs();
     appendFoot();
     return;
@@ -26947,7 +26969,7 @@ function renderTasksPage(){
       };
     });
     $$("#main .todo-row .todo-title").forEach(el=>{
-      el.onclick = ()=>{ const id = el.closest(".todo-row").getAttribute("data-task-id"); if(typeof openTaskEdit==="function") openTaskEdit(id); };
+      el.onclick = ()=>{ const id = el.closest(".todo-row").getAttribute("data-task-id"); AppBridge.openTaskEdit(id); };
     });
     _bindTasksTabs();
     appendFoot();
@@ -26983,7 +27005,7 @@ function renderTasksPage(){
   body = `<div class="card"><h2>${ic("grid")}${t("tasksPage.kanban", "任务看板")} <span class="sub u-m-0">${t("tasksPage.kanban.sub", "点击卡片编辑 · 全场景")}</span></h2><div class="kanban">${colHtml}</div></div>`;
   $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
   $$("#main [data-tasks-card]").forEach(card=>{
-    card.onclick = ()=>{ const id = card.getAttribute("data-tasks-card"); if(typeof openTaskEdit==="function") openTaskEdit(id); };
+    card.onclick = ()=>{ const id = card.getAttribute("data-tasks-card"); AppBridge.openTaskEdit(id); };
   });
   _bindTasksTabs();
   appendFoot();
@@ -27009,22 +27031,22 @@ function _bindTasksTabs(){
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
-  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b && typeof renderCalendarView==="function") b.innerHTML=sanitizeHtml(renderCalendarView(0)); m.classList.add("show"); } } },
+  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } } },
   { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ if(typeof openWeatherModal==="function") openWeatherModal(); } },
   { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.bell, run:()=>{ if(typeof openAlarmModal==="function") openAlarmModal(); } },
   { id:"x-pomo",    name:t("tool.pomo.name","笃行"),     desc:t("tool.pomo.desc","25 分钟专注 + 5 分钟休息"), cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
   { id:"x-tracker", name:t("tool.tracker.name","时间追踪"), desc:t("tool.tracker.desc","任务计时秒表"), cat:"效率工具", icon:UI_ICONS.stopwatch, pop:"trackerPop", menuAttr:"plug-tracker" },
   { id:"x-pet",     name:t("tool.pet.name","萌宠"),     desc:t("tool.pet.desc","桌面陪伴小伙伴"), cat:"效率工具", icon:UI_ICONS.paw, run:()=>{ if(typeof openPetModal==="function") openPetModal(); } },
-  { id:"x-mindmap", name:t("tool.mindmap.name","思维导图"), desc:t("tool.mindmap.desc","任务关系树状图"), cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ if(typeof openMindmapModal==="function") openMindmapModal(); } },
+  { id:"x-mindmap", name:t("tool.mindmap.name","思维导图"), desc:t("tool.mindmap.desc","任务关系树状图"), cat:"功能", icon:UI_ICONS.mindmap, run:()=>{ AppBridge.openMindmapModal(); } },
   /* v3.6.6 死入口修复：openGanttModal / openDashboardModal 此前只绑在 #btnGantt / #btnDashboard 上，
      而这两个按钮自 v1.15「更多菜单移除」后已不存在于 DOM → 两个弹窗（甘特图 / 自定义仪表盘 15 组件）
      全无 UI 入口。按既有惯例（思维导图 / 知识库 / 笔记 / 高级报表同在此处）补工具箱入口。 */
-  { id:"x-gantt",   name:t("tool.gantt.name","甘特图"),   desc:t("tool.gantt.desc","任务时间线视图"), cat:"功能", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', run:()=>{ if(typeof openGanttModal==="function") openGanttModal(); } },
-  { id:"x-dashboard", name:t("tool.dashboard.name","自定义仪表盘"), desc:t("tool.dashboard.desc","拖拽编排 15 个组件"), cat:"功能", icon:UI_ICONS.gauge, run:()=>{ if(typeof openDashboardModal==="function") openDashboardModal(); } },
-  { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ if(typeof openKnowledgeBaseModal==="function") openKnowledgeBaseModal(); } },
-  { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ if(typeof openNotesModal==="function") openNotesModal(); } },
-  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ if(typeof openReportModal==="function") openReportModal(); } },
-  { id:"x-tpl",     name:t("tool.tpl.name","场景模板"), desc:t("tool.tpl.desc","一键导入预设任务集"), cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ if(typeof openTemplateModal==="function") openTemplateModal(); } }
+  { id:"x-gantt",   name:t("tool.gantt.name","甘特图"),   desc:t("tool.gantt.desc","任务时间线视图"), cat:"功能", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><rect x="5" y="4" width="8" height="4" rx="1"/></svg>', run:()=>{ AppBridge.openGanttModal(); } },
+  { id:"x-dashboard", name:t("tool.dashboard.name","自定义仪表盘"), desc:t("tool.dashboard.desc","拖拽编排 15 个组件"), cat:"功能", icon:UI_ICONS.gauge, run:()=>{ AppBridge.openDashboardModal(); } },
+  { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ AppBridge.openKnowledgeBaseModal(); } },
+  { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ AppBridge.openNotesModal(); } },
+  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ AppBridge.openReportModal(); } },
+  { id:"x-tpl",     name:t("tool.tpl.name","场景模板"), desc:t("tool.tpl.desc","一键导入预设任务集"), cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ AppBridge.openTemplateModal(); } }
 ];
 let _toolboxCat = "全部";
 let _toolboxQ = "";
@@ -27075,7 +27097,7 @@ function renderToolboxPage(){
       if(TOOL_APPS[id]){ openToolStub(id); return; }
       const extra = TOOLBOX_EXTRAS.find(x=>x.id===id);
       if(!extra) return;
-      if(extra.pop){ if(typeof toggleToolPop==="function") AppBridge.toggleToolPop(extra.pop, card); return; }
+      if(extra.pop){ AppBridge.toggleToolPop(extra.pop, card); return; }
       if(extra.run){ extra.run(); }
     };
   });
@@ -27167,7 +27189,7 @@ function renderStorePage(){
   if(imp) imp.onclick = ()=>{ if(typeof prompt!=="function") return;
     const json = prompt(t("storePage.importPrompt", "粘贴插件 JSON 定义："));
     if(json===null) return;
-    const r = registerPluginFromJson(json);
+    const r = AppBridge.registerPluginFromJson(json);
     if(r && r.ok){ toast(t("storePage.importOkToast", "插件导入成功"),"ok"); renderStorePage(); }
     else toast((r&&r.err)||t("storePage.importFailToast", "导入失败"),"warn");
   };
@@ -28350,8 +28372,8 @@ function renderGlob(q){
 /* ---------- 场景细分模块 ---------- */
 /* CARD_REGISTRY：场景专属卡片 render/bind 查表（A-P2-7，替代 renderExtra/bindExtra 硬编码分支；FB-2/6） */
 const CARD_REGISTRY = {
-  report:  { render: reportCard,  bind: bindReportCard },
-  review:  { render: reviewCard,  bind: bindReviewCard },
+  report:  { render: reportCard,  bind: function(el){ return AppBridge.bindReportCard(el); } },
+  review:  { render: reviewCard,  bind: function(el){ return AppBridge.bindReviewCard(el); } },
   health:  { render: healthCard,  bind: bindHealthCard },
   design:  { render: designCard,  bind: bindDesignCard },
   data:    { render: dataCard,    bind: bindDataCard },
@@ -29051,7 +29073,7 @@ function renderMainHTML(){
   // v2.1.0：任务区按 sceneViewMode 分支——kanban（看板）/ calendar（日历）/ todo（待办列表）
   let taskArea, filterHtml;
   if(sceneViewMode === "calendar"){
-    taskArea = `<div class="cal-inline" id="calInlineView" data-offset="0">${renderCalendarView(0)}</div>`;
+    taskArea = `<div class="cal-inline" id="calInlineView" data-offset="0">${AppBridge.renderCalendarView(0)}</div>`;
     filterHtml = "";
   } else if(sceneViewMode === "todo"){
     taskArea = renderTodoListView(tasks, s);
@@ -31014,6 +31036,13 @@ function _updateRecVScroll(viewport, sc){
   items.innerHTML = sanitizeHtml(html);
   items.style.top = range.offsetY + "px";
 }
+
+/* v3.7.77 解耦：SCENE_FEATURE_RENDER 的读写口注册到 AppBridge —— data-links（注册自定义
+   场景时复读内置特性渲染器）经桥访问，不再直接引用本块的表（消除最后一条真跨层逆层边）。 */
+try{
+  AppBridge.getSceneFeature = function(sc, fid){ const t = SCENE_FEATURE_RENDER[sc]; return t ? t[fid] : undefined; };
+  AppBridge.setSceneFeature = function(sc, obj){ SCENE_FEATURE_RENDER[sc] = obj; };
+}catch(e){}
 /*SRC:render-scene-main:END*/
 /*SRC:ui-scene-bind:BEGIN*/
 // ===== UI Layer (交互层·场景绑定) =====
@@ -34044,7 +34073,7 @@ function render(){
     // 切换场景/其他视图时需先把 #drawer 移回原位置并恢复 #main 显示
     const _drawer = $("#drawer");
     if(_drawer && _drawer.classList.contains("drawer-page")){
-      _moveDrawerHome();
+      try{ AppBridge._moveDrawerHome(); }catch(e){ /* 桥异常不影响渲染 */ }
       _drawer.classList.remove("open");
       delete _drawer.dataset.page; // v1.9.6：清掉子页标记（settings/ai/plugin）
     }
@@ -41773,6 +41802,13 @@ async function aiGenerateCode(description, language){
   return resp;
 }
 
+
+/* v3.7.77 解耦：注册 AppBridge 槽（报表/AI 引擎）—— render 块经桥调用，
+   不再直接引用本块符号（逆层边消除）。注册在加载时执行，晚于 core 定义、早于任何用户交互。 */
+try{ AppBridge.openReportModal = openReportModal; }catch(e){}
+try{ AppBridge.bindReportModal = bindReportModal; }catch(e){}
+try{ AppBridge.aiSmartRecommend = aiSmartRecommend; }catch(e){}
+try{ AppBridge._aiChatText = _aiChatText; }catch(e){}
 /*SRC:ui-ge-theme:END*/
 /*SRC:ui-ge-pomodoro:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·专注与时间追踪) =====
@@ -42986,6 +43022,16 @@ function _bindDashToolbar(container, editMode){
     if(typeof doExport === "function"){ try{ doExport(); }catch(e){} }
   };
 }// ===== Notes & Knowledge Base (v1.6-D 知识管理) =====
+
+/* v3.7.77 解耦：注册 AppBridge 槽（日历/看板/甘特/思维导图）—— render 块经桥调用，
+   不再直接引用本块符号（逆层边消除）。注册在加载时执行，晚于 core 定义、早于任何用户交互。 */
+try{ AppBridge.openMindmapModal = openMindmapModal; }catch(e){}
+try{ AppBridge.openGanttModal = openGanttModal; }catch(e){}
+try{ AppBridge.openDashboardModal = openDashboardModal; }catch(e){}
+try{ AppBridge.bindCalendarEvents = bindCalendarEvents; }catch(e){}
+try{ AppBridge.bindDashboardDnD = bindDashboardDnD; }catch(e){}
+try{ AppBridge._bindDashToolbar = _bindDashToolbar; }catch(e){}
+try{ AppBridge.renderCalendarView = renderCalendarView; }catch(e){}
 /*SRC:ui-ge-calendar:END*/
 /*SRC:ui-ge-notes:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·笔记与知识库) =====
@@ -43898,6 +43944,11 @@ function executeSearch(query){
   }
   return results;
 }// ===== Automation Workflow (v1.6-E 自动化工作流) [DEPRECATED v1.14.1：入口已冻结] =====
+
+/* v3.7.77 解耦：注册 AppBridge 槽（知识库/笔记弹窗）—— render 块经桥调用，
+   不再直接引用本块符号（逆层边消除）。注册在加载时执行，晚于 core 定义、早于任何用户交互。 */
+try{ AppBridge.openKnowledgeBaseModal = openKnowledgeBaseModal; }catch(e){}
+try{ AppBridge.openNotesModal = openNotesModal; }catch(e){}
 /*SRC:ui-ge-notes:END*/
 /*SRC:ui-ge-integrations:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·集成框架与废弃簇) =====
