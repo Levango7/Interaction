@@ -1,5 +1,7 @@
 ## [v3.7.79] - 2026-10-03
 
+**发版后线上复核**：Pages 取回 **3,626,491 B**、`VERSION="3.7.79"`、`BUILD_TAG="20261002j"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。
+
 **Jira 接线落地（五家定案的最后一家）：主进程 `jira-fetch` 中转 —— Atlassian 不回 CORS 头（`_probe/cors-matrix-providers.mjs` 实测 file:// 与 http(s) 双双被拦、主进程可达），浏览器形态连验证都发不出去，故 Jira = 仅桌面版。连接验证、任务推送（`jiraPushTasks`）、issue 拉取全部经中继；面板新增「推送任务」按钮（与 notion/linear 同款消费点）、配置补项目 Key 字段、文案如实标注仅桌面版与凭据加密落盘。全量 **113 文件 / 1281 用例**（v3.7.78 为 1273；+8 = IPC 白名单组 7 + preload 契约 1）、e2e **82/82（5.7m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（18 逆层 / 13 循环未动）、`check:source-state`，均本机实测。**
 
 ### 中继的安全边界（这条 IPC = 让渲染进程驱动主进程带 Bearer token 访问网站，白名单是承重墙）
