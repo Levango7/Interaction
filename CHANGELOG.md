@@ -8,7 +8,7 @@
 - **snooze 簇与 getDeviceId 下沉**：`snoozeTask / _snoozedUntil / _purgeExpiredSnooze / getSnoozeMap` + `NOTIFY_IDS_KEY / SNOOZE_KEY` 自 ui-daily、`getDeviceId` 自 ui-backup-stats 下沉 data-rw；免打扰时段策略（QUIET_KEY/getQuietHours）是 ui-daily 专用，留下。AppBridge.snoozeTask 注册随迁（本块 onExerciseSave 同款先例）。
 - **下沉的代价如实交代**：搬早的代码原本向上的引用会变成新逆层 —— `registerPlugin/loadPlugin` 里的两处 `render()` 改走 `AppBridge.render`；`renderSide()` 按工具 B 在 core 桥新增 `renderSide` 槽位、由 render-widgets 注册（窄域侧栏刷新语义不变）；`addToRecycleBin` 调用一并改走既有桥。手术曾引入 QUIET_KEY 重复定义与上两条新边，均在 check:modules 抓下后当场修净。
 - **基线重冻结（v3.7.63 同款口径）**：逆层 53→45、循环 50→47 为**净减**；check 报的 24 项「新增」经逐条核对全部是同一批 SCC 在删边后的重组路径（真新增边仅 `ui-ge-plugins→data-links` 一条正向边），非新耦合，`--freeze` 落账。
-- 验证：全量 **112 文件 / 1263 用例**、e2e **82/82（4.2m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:source-state` 源码态，均本机实测。首跑曾现 22 条「未过」——vitest worker RPC 超时假红（本机重载，与 v3.7.66 披露同源），干净重跑全绿。
+- 验证：全量 **112 文件 / 1263 用例**、e2e **82/82（4.2m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:source-state` 源码态，均本机实测。首跑曾现 22 条「未过」——vitest worker RPC 超时假红（本机重载，与 v3.7.66 披露同源），干净重跑全绿。**发版后线上复核**：Pages 取回 **3,603,282 B**、`VERSION="3.7.75"`、`BUILD_TAG="20261002f"`、CI/Deploy 双绿。⚠️ 更正一处台账笔误：发版 commit message 写的 `20261002b` 是凭当日第几版想当然——脚本实发 `20261002f`（当日第 6 次构建），树内与线上均已核实为 f；commit message 不改（不给 main 上 force-push）。
 
 ## [v3.7.74] - 2026-10-02
 
