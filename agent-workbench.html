@@ -4134,6 +4134,21 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .week-task-more{font-size:var(--fs-xs);color:var(--muted);padding:1px 0}
 .week-empty{font-size:var(--fs-xs);color:var(--text-faint);text-align:center;padding:var(--space-2) 0}
 /* v3.7.71 会议进日历：月历格子内「会」标记（accent 描边胶囊，区别于任务数徽章） */
+/* v3.7.84：ICS 外部日历事件（绿系，与任务 accent / 会议 accent 分色） */
+.cal-ics{position:absolute;bottom:2px;right:2px;font-size:var(--fs-3xs);
+  color:var(--ok-text);background:var(--ok-soft);border:1px solid var(--ok);border-radius:var(--radius-full);
+  padding:0 4px;line-height:1.4;cursor:pointer}
+.week-ics-item{color:var(--ok-text)}
+.week-ics-time{margin-right:4px;opacity:.7;font-variant-numeric:tabular-nums}
+.ics-panel{max-width:760px;margin:0 auto}
+.ics-add{margin:var(--space-3) 0}
+.ics-list{display:flex;flex-direction:column;gap:var(--space-2)}
+.ics-item{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);
+  border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
+.ics-info{flex:1;min-width:0}
+.ics-item-name{font-size:var(--fs-sm)}
+.ics-item-meta{font-size:var(--fs-2xs);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ics-actions{display:flex;gap:var(--space-2)}
 .cal-meeting{position:absolute;bottom:2px;left:2px;right:2px;font-size:var(--fs-3xs);
   color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-sm);
   text-align:center;line-height:1.2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}

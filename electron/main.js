@@ -698,3 +698,52 @@ app.on("activate", () => {
 });
 
 app.on("before-quit", () => { willQuit = true; });
+
+    /* ---------- v3.7.84：ICS 订阅只读中转 ----------
+       多数日历站不回 CORS 头（桌面特色体：sandbox + webSecurity 默认开），订阅拉取要走主进程。
+       与 jira-fetch 同为「用户自填 URL」类接口，安全面按开放 SSRF 取严：
+         · 只 https、拒 userinfo；
+         · 拒回环 / 私网 / 链路本地 / .local / localhost（防误扫内网与云元数据）；
+         · redirect:"error"（防 302 跳内网绕过校验）；
+         · 不携带任何认证头（ICS 为公开只读）；URL 只由用户自己填写；
+         · ≤2MB、12s 超时、日志只记主机与状态码。 */
+    function _icsHostForbidden(host){
+      const h = String(host || "").toLowerCase();
+      if(!h) return true;
+      if(h === "localhost" || /\.local$/.test(h) || /\.localhost$/.test(h) || /\.internal$/.test(h)) return true;
+      if(/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^169\.254\./.test(h) || /^0\./.test(h)) return true;
+      const p2 = /^172\.(\d+)\./.exec(h);
+      if(p2 && +p2[1] >= 16 && +p2[1] <= 31) return true;
+      if(/^\[?::1\]?$/.test(h) || /^f[cd][0-9a-f]{2}:/i.test(h) || /^fe[89ab][0-9a-f]:/i.test(h)) return true;
+      return false;
+    }
+    ipcMain.handle("ics-fetch", async (e, arg) => {
+      assertTrustedSender(e);
+      let u;
+      try{ u = new URL(String((arg && arg.url) || "")); }catch(err){ return { ok: false, status: 0, error: "bad_url" }; }
+      if(u.protocol !== "https:") return { ok: false, status: 0, error: "https_only" };
+      if(u.username || u.password) return { ok: false, status: 0, error: "userinfo_forbidden" };
+      if(_icsHostForbidden(u.hostname)) return { ok: false, status: 0, error: "forbidden_host" };
+      const headers = { "Accept": "text/calendar, text/plain;q=0.9" };
+      if(arg && arg.etag) headers["If-None-Match"] = String(arg.etag);
+      if(arg && arg.lastModified) headers["If-Modified-Since"] = String(arg.lastModified);
+      const ctrl3 = new AbortController();
+      const timer3 = setTimeout(() => ctrl3.abort(), 12000);
+      try{
+        const r3 = await fetch(u.href, { method: "GET", headers: headers, redirect: "error", signal: ctrl3.signal });
+        clearTimeout(timer3);
+        const et3 = r3.headers.get("etag") || "";
+        const lm3 = r3.headers.get("last-modified") || "";
+        logLine("ics", "host=" + u.hostname + " status=" + r3.status);
+        if(r3.status === 304) return { ok: true, status: 304, notModified: true, etag: et3, lastModified: lm3 };
+        if(!r3.ok) return { ok: false, status: r3.status, error: "HTTP " + r3.status };
+        const buf3 = Buffer.from(await r3.arrayBuffer());
+        if(buf3.length > 2 * 1024 * 1024) return { ok: false, status: r3.status, error: "too_large" };
+        return { ok: true, status: r3.status, etag: et3, lastModified: lm3, text: buf3.toString("utf8") };
+      }catch(err){
+        clearTimeout(timer3);
+        const msg3 = (err && err.name === "AbortError") ? "请求超时（12000ms）" : ((err && err.message) || String(err));
+        logLine("ics", "host=" + u.hostname + " error=" + msg3);
+        return { ok: false, status: 0, error: msg3 };
+      }
+    });

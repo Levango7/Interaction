@@ -1,0 +1,160 @@
+/**
+ * ics-parse.test.js —— ICS 日历源（v3.7.84）
+ * ----------------------------------------------------------------------------
+ * 守三件事：
+ *   ① RFC5545 子集解析：行折叠 / 转义还原 / DATE 与 DATE-TIME（含时区）/ 有限 RRULE 展开；
+ *   ② 存储与刷新：本地导入零网络；订阅经桌面中继（etag 304 保留原事件、只更新时间）；
+ *   ③ 诚实边界：复杂 RRULE（BYDAY 等）只取本体；无中继的浏览器形态不假装成功。
+ */
+import { describe, it, expect, vi } from "vitest";
+import { loadApp } from "./helpers/loadApp.js";
+
+const PREFIX = "wb_agent_";
+const ICS = [
+  "BEGIN:VCALENDAR",
+  "VERSION:2.0",
+  "BEGIN:VEVENT",
+  "UID:evt-1@example.com",
+  "SUMMARY:产品评审会",
+  "LOCATION:三号会议室",
+  "DESCRIPTION:第一行\\n第二行",
+  "DTSTART;VALUE=DATE:20260115",
+  "DTEND;VALUE=DATE:20260116",
+  "END:VEVENT",
+  "BEGIN:VEVENT",
+  "UID:evt-2@example.com",
+  "SUMMARY:电话\\; 讨论（续）",
+  "DTSTART:20260120T090000+0800",
+  "DTEND:20260120T100000+0800",
+  "RRULE:FREQ=WEEKLY;COUNT=3",
+  "END:VEVENT",
+  "BEGIN:VEVENT",
+  "UID:evt-cancel@example.com",
+  "SUMMARY:已取消的会",
+  "DTSTART:20260122T090000Z",
+  "STATUS:CANCELLED",
+  "END:VEVENT",
+  "END:VCALENDAR",
+].join("\r\n");
+
+function app() {
+  return loadApp({ storage: { [PREFIX + "tasks"]: "[]" } });
+}
+
+describe("icsParseEvents：RFC5545 子集", () => {
+  it("解析 DATE / DATE-TIME / 转义 / 行折叠", () => {
+    const win = app();
+    const evs = win.icsParseEvents(ICS);
+    expect(evs.length, "CANCELLED 的事件应剔除：" + JSON.stringify(evs.map(e => e.title))).toBe(4);  /* evt-1 一条 + evt-2 展开 3 条 */
+    const e1 = evs.find((e) => e.uid === "evt-1@example.com");
+    expect(e1.title).toBe("产品评审会");
+    expect(e1.location).toBe("三号会议室");
+    expect(e1.desc).toBe("第一行\n第二行");
+    expect(e1.allDay).toBe(true);
+    expect(e1.start.getFullYear()).toBe(2026);
+    expect(e1.start.getMonth()).toBe(0);
+    expect(e1.start.getDate()).toBe(15);
+    const e2 = evs.filter((e) => e.uid === "evt-2@example.com");
+    expect(e2[0].title, "\\; 应还原为 ;").toBe("电话; 讨论（续）");
+    expect(e2.length, "FREQ=WEEKLY;COUNT=3 → 3 条").toBe(3);
+    expect(e2[1].start.getTime() - e2[0].start.getTime()).toBe(7 * 24 * 3600 * 1000);
+  });
+
+  it("行折叠：续行首空格是折叠标记、应被去掉（RFC5545）", () => {
+    const win = app();
+    const folded = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:x\r\nSUMMARY:很长\r\n 的标题\r\nDTSTART:20260101\r\nEND:VEVENT\r\nEND:VCALENDAR";
+    const evs = win.icsParseEvents(folded);
+    expect(evs[0].title).toBe("很长的标题");
+  });
+
+  it("诚实边界：复杂 RRULE（BYDAY）只取本体，不假装展开", () => {
+    const win = app();
+    const byday = ["BEGIN:VCALENDAR", "BEGIN:VEVENT", "UID:y", "SUMMARY:每周三例会",
+      "DTSTART:20260107T100000", "RRULE:FREQ=WEEKLY;BYDAY=WE", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    expect(win.icsParseEvents(byday).length).toBe(1);
+  });
+
+  it("上限：单源 ≤2000 条（防恶意大文件打爆 localStorage）", () => {
+    const win = app();
+    const many = ["BEGIN:VCALENDAR"];
+    for (let i = 0; i < 2100; i++) many.push("BEGIN:VEVENT", "UID:e" + i, "SUMMARY:E" + i, "DTSTART:20260101", "END:VEVENT");
+    many.push("END:VCALENDAR");
+    expect(win.icsParseEvents(many.join("\r\n")).length).toBe(2000);
+  });
+});
+
+describe("日历源存储与刷新", () => {
+  it("本地导入：零网络 + 立即进日期分桶", () => {
+    const win = app();
+    let net = 0;
+    win.fetch = async () => { net++; throw new Error("不应有网络"); };
+    const r = win.icsImportLocal("我的日历.ics", ICS);
+    expect(r.count).toBe(4);
+    expect(win.getIcsSubs().length).toBe(1);
+    const byDate = win._icsEventsByDate();
+    expect(byDate["2026-01-15"][0].title).toBe("产品评审会");
+    expect(net).toBe(0);
+    win.icsRemoveSub(win.getIcsSubs()[0].id);
+    expect(Object.keys(win._icsEventsByDate()).length).toBe(0);
+  });
+
+  it("订阅仅收 https 链接（http/裸域一律拒）", () => {
+    const win = app();
+    expect(win.icsAddSub("x", "http://evil.example.com/cal.ics")).toBeNull();
+    expect(win.icsAddSub("x", "evil.example.com/cal.ics")).toBeNull();
+    expect(win.getIcsSubs().length).toBe(0);
+    expect(win.icsAddSub("ok", "https://cal.example.com/basic.ics")).toBeTruthy();
+  });
+
+  it("桌面中继刷新：200 拉取并入库 + etag；再刷 304 只更新时间不动事件", async () => {
+    const win = app();
+    const calls = [];
+    win.electronAPI = {
+      icsFetch: async (arg) => {
+        calls.push(arg);
+        if (arg.etag) return { ok: true, status: 304, notModified: true, etag: arg.etag };
+        return { ok: true, status: 200, etag: "ET1", lastModified: "LM1", text: ICS };
+      },
+    };
+    const sub = win.icsAddSub("订阅", "https://cal.example.com/basic.ics");
+    const r1 = await win.icsRefreshSub(win.getIcsSubs().find((s) => s.id === sub.id));
+    expect(r1.ok).toBe(true);
+    expect(r1.count).toBe(4);
+    let subs = win.getIcsSubs();
+    expect(subs[0].etag).toBe("ET1");
+    const r2 = await win.icsRefreshSub(win.getIcsSubs()[0]);
+    expect(r2.ok).toBe(true);
+    expect(r2.notModified, "etag 命中 → 304").toBe(true);
+    expect(calls[1].etag).toBe("ET1");
+    expect(win.getIcsSubs()[0].evs.length, "304 后事件仍在").toBe(4);
+    expect(win.getIcsSubs()[0].lastCheckedAt).toBeTruthy();
+    void subs;
+  });
+
+  it("无中继的浏览器形态：不假装成功（错误如实回传、零写库）", async () => {
+    const win = app();
+    const sub = win.icsAddSub("订阅", "https://cal.example.com/basic.ics");
+    win.fetch = async () => { throw new Error("CORS"); };
+    const r = await win.icsRefreshSub(win.getIcsSubs().find((s) => s.id === sub.id));
+    expect(r.ok).toBe(false);
+    expect(win.getIcsSubs()[0].evs.length).toBe(0);
+  });
+});
+
+describe("订阅面板（容器内视图）", () => {
+  it("渲染面板 + 添加/导入入口齐备；返回后按当前 offset 重渲染月历", () => {
+    const win = app();
+    const c = win.document.createElement("div");
+    c.dataset.offset = "2";
+    win.document.body.appendChild(c);
+    win.openIcsPanel(c);
+    expect(c.querySelector(".ics-panel"), "面板应渲染").toBeTruthy();
+    expect(c.querySelector("#icsAdd")).toBeTruthy();
+    expect(c.querySelector("#icsFile")).toBeTruthy();
+    expect(c.textContent).toMatch(/ICS|订阅/);
+    /* 返回：月历重新出现且保留偏移 2 */
+    c.querySelector("[data-ics-back]").click();
+    expect(c.querySelector(".cal-grid"), "返回后应回到月历").toBeTruthy();
+    expect(c.dataset.offset).toBe("2");
+  });
+});

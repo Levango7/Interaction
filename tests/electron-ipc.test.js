@@ -714,3 +714,76 @@ describe("Electron IPC: jira-fetch 主进程中转", () => {
     expect(log, "🔴 日志泄露消息正文").not.toContain("机密正文-DO-NOT-LOG");
   });
 });
+
+/* ============================================================
+ * ics-fetch：ICS 订阅只读中转（v3.7.84）
+ * 与 jira-fetch 同为「用户自填 URL」类接口，但 URL 完全开放 —— 安全面按**开放 SSRF**取严：
+ * https 必 / 拒 userinfo / 拒回环·私网·链路本地·.local / **redirect:error**（防 302 跳内网）/
+ * ≤2MB / 12s / 不带认证头 / 日志只记主机与状态码。每条拒绝路径都必须零请求。
+ * ============================================================ */
+describe("Electron IPC: ics-fetch 订阅只读中转", () => {
+  const OK_ARG = { url: "https://cal.example.com/basic.ics" };
+  const icsLog = () => { try { return readFileSync(path.join(mockAppRef.current.getPath("userData"), "logs", "app.log"), "utf8"); } catch (e) { return ""; } };
+  const installFetch2 = (behavior) => {
+    const calls = [];
+    const fn = vi.fn((url, opts) => {
+      calls.push({ url, opts });
+      if (behavior === "boom") return Promise.reject(new Error("ECONNREFUSED"));
+      return Promise.resolve({ ok: true, status: 200, headers: { get: (k) => (k === "etag" ? "ET1" : "") }, arrayBuffer: async () => new TextEncoder().encode("BEGIN:VCALENDAR\r\nEND:VCALENDAR").buffer });
+    });
+    vi.stubGlobal("fetch", fn);
+    return { fn, calls };
+  };
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it("合法订阅：GET + Accept:text/calendar + 回传正文与 etag", async () => {
+    const { calls } = installFetch2();
+    const r = await ipcHandlers["ics-fetch"](trustedEv(), OK_ARG);
+    expect(r.ok).toBe(true);
+    expect(calls.length).toBe(1);
+    expect(calls[0].url).toBe("https://cal.example.com/basic.ics");
+    expect(calls[0].opts.method).toBe("GET");
+    expect(calls[0].opts.redirect).toBe("error");
+    expect(String(calls[0].opts.headers.Accept)).toMatch(/text\/calendar/);
+    expect(r.text).toContain("VCALENDAR");
+    expect(r.etag).toBe("ET1");
+  });
+
+  it("条件请求头透传（If-None-Match / If-Modified-Since）", async () => {
+    const { calls } = installFetch2();
+    await ipcHandlers["ics-fetch"](trustedEv(), Object.assign({}, OK_ARG, { etag: "ET9", lastModified: "LM9" }));
+    expect(calls[0].opts.headers["If-None-Match"]).toBe("ET9");
+    expect(calls[0].opts.headers["If-Modified-Since"]).toBe("LM9");
+  });
+
+  it("🔴 非 https / userinfo：拒且零请求", async () => {
+    const { calls } = installFetch2();
+    for (const bad of ["http://cal.example.com/x.ics", "https://user:pass@cal.example.com/x.ics", "not-a-url"]) {
+      const r = await ipcHandlers["ics-fetch"](trustedEv(), Object.assign({}, OK_ARG, { url: bad }));
+      expect(r.ok, bad).toBe(false);
+    }
+    expect(calls.length).toBe(0);
+  });
+
+  it("🔴 回环 / 私网 / 链路本地 / .local / localhost：拒且零请求（开放 SSRF 的核心防线）", async () => {
+    const { calls } = installFetch2();
+    for (const h of ["127.0.0.1", "127.0.0.1:8124", "10.0.0.5", "192.168.1.1", "172.16.0.9", "169.254.169.254"   /* 172.32 是公网段，不该被当私网拒 */, "0.0.0.0", "localhost", "nas.local", "box.internal", "[::1]"]) {
+      const r = await ipcHandlers["ics-fetch"](trustedEv(), Object.assign({}, OK_ARG, { url: "https://" + h + "/x.ics" }));
+      expect(r.error, h).toBe("forbidden_host");
+    }
+    expect(calls.length).toBe(0);
+  });
+
+  it("未受信 sender：拒绝", async () => {
+    installFetch2();
+    await expect(ipcHandlers["ics-fetch"](forgedEv(), OK_ARG)).rejects.toThrow("IPC 拒绝");
+  });
+
+  it("🔴 日志只记主机与状态码", async () => {
+    installFetch2();
+    await ipcHandlers["ics-fetch"](trustedEv(), OK_ARG);
+    const log = icsLog();
+    expect(log).toContain("cal.example.com");
+    expect(log).not.toContain("basic.ics");
+  });
+});

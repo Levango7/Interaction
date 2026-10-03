@@ -21,5 +21,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // v3.7.79：Jira REST 请求主进程中转（Atlassian 不回 CORS 头，渲染进程发不出去）。
   // 参数 { domain, path, method, body, token, timeoutMs? }；白名单校验全在主进程，
   // token 只随本次调用传递、主进程不落盘、日志不记。
-  jiraFetch: (arg) => ipcRenderer.invoke("jira-fetch", arg)
+  jiraFetch: (arg) => ipcRenderer.invoke("jira-fetch", arg),
+  // v3.7.84：ICS 订阅只读抓取（多数日历站不回 CORS 头，渲染进程发不出去）。
+  // 参数 { url, etag?, lastModified?, timeoutMs? }；只 GET、不带认证头，主进程不落盘。
+  icsFetch: (arg) => ipcRenderer.invoke("ics-fetch", arg)
 });
