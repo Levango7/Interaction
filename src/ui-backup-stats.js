@@ -364,10 +364,9 @@ function doIdbImport(file){
   }
 })();
 
-// v3.1.2 B-档：关于卡渲染版本号 + 快捷键帮助按钮绑定（此前版本只在抽屉尾栏、快捷键只能按 ? 唤起，用户找不到）
+// v3.1.2 B-档：快捷键帮助按钮绑定（此前快捷键只能按 ? 唤起，用户找不到）
+// v3.7.80：移除关于卡版本行（#aboutVersion，与尾栏重复，用户裁定版本号只保留尾栏一处）
 (function bindAboutCard(){
-  const ver = $("#aboutVersion");
-  if(ver){ ver.textContent = t("app.name","Agent 工坊") + " · v" + VERSION + " · b" + BUILD_TAG; }
   const btn = $("#btnOpenShortcutHelp");
   if(btn && typeof openShortcutHelp === "function"){ btn.onclick = function(){ openShortcutHelp(); }; }
 })();

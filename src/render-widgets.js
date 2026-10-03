@@ -2502,7 +2502,10 @@ function mountPet(kind){
   const artImg = el.querySelector(".pet-art-img");
   /* v3.7.2：是否立体档（同一张立绘 + 2.5D 渲染）——决定要不要撒星光特效 */
   const is3dArt = !!(artImg && el.querySelector(".pet-3d"));
-  const ACTS = ["act-shake", "act-nod", "act-dance", "act-tilt", "act-spin"];
+  /* v3.7.80：移除 act-spin（rotateY 360°）——单张立绘绕 Y 轴翻面时就是一张"纸片"，
+     穿帮感极强（用户点名吐槽）；且 3D 档的 shade/sheen 光影层不跟随 img 旋转，半程还会分层。
+     CSS 里的 @keyframes petSpinK 保留但不再触发。 */
+  const ACTS = ["act-shake", "act-nod", "act-dance", "act-tilt"];
   /* ---------- v3.6.7 立绘眨眼 / 张嘴：按标定坐标贴浮层 ----------
      .pet-art-img 是 object-fit:contain，四周可能留白，所以坐标必须基于「图片实际显示矩形」：
      由 naturalWidth/Height 与容器盒子算出缩放与偏移，再换算成容器内 px。 */
@@ -2563,9 +2566,21 @@ function mountPet(kind){
       el._faceRO.observe(faceBox);
     }catch(_){ /* 不支持时忽略：至少原有的首次定位仍生效 */ }
   }
+  /* v3.7.80：表情浮层与动作的互斥守卫。根因：act-* 动画/talking 都作用在 .pet-art-img 上，
+     而眨眼/张嘴遮罩是 .pet-art 下的独立兄弟层、不跟随 img 的 transform ——
+     二者并发时遮罩留在原地而脸已转走/浮走，表现就是「眯起来的眼睛跑到别的地方」。
+     此前只有 tick 抽签层互斥（同一次 tick 二选一），但 talkArt（聊天说话 1.4s）、
+     连眨第二下（+250ms）、点击反馈等入口仍可与 act 动画并发 → 这里在各入口统一防御。 */
+  const ACT_CLS = ["act-shake", "act-nod", "act-dance", "act-tilt", "talking"];
+  const _imgInAct = function(){
+    if(!artImg) return false;
+    for(var _i = 0; _i < ACT_CLS.length; _i++){ if(artImg.classList.contains(ACT_CLS[_i])) return true; }
+    return false;
+  };
   let blinkTimer = null;
   const blinkArt = function(){
     if(!artLids || !lidEls.length) return false;
+    if(_imgInAct()) return false;                     /* 动画中不贴遮罩（防错位） */
     artLids.classList.add("on");
     clearTimeout(blinkTimer);
     blinkTimer = setTimeout(function(){ artLids.classList.remove("on"); }, 130);
@@ -2579,6 +2594,7 @@ function mountPet(kind){
   };
   const talkArt = function(){
     if(!artMouth) return;
+    if(_imgInAct()) return;                           /* 动画中不开口（防遮罩错位，v3.7.80 同守卫） */
     let n = 0;
     if(artImg){ artImg.classList.remove("talking"); void artImg.offsetWidth; artImg.classList.add("talking");
       setTimeout(function(){ artImg.classList.remove("talking"); }, 1400); }
@@ -2592,6 +2608,7 @@ function mountPet(kind){
   };
   const playAct = function(){
     if(!artImg) return;
+    if(artLids && artLids.classList.contains("on")) artLids.classList.remove("on");  /* 先收起眨眼遮罩再动作 */
     const a = ACTS[Math.floor(Math.random() * ACTS.length)];
     ACTS.forEach(function(x){ artImg.classList.remove(x); });
     void artImg.offsetWidth;                     /* 重置动画进度 */
