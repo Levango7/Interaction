@@ -356,7 +356,33 @@ function renderIntegrationPanel(){
   });
   /* v3.6.5：OpenAPI Key 管理迁至 AI 页·大模型 —— Key 是 AI 机制的凭据，不该混在 Notion/Jira/Slack
      等 IM/办公集成列表里（用户反馈）。AI 侧渲染见 renderOpenApiKeyPanel()（_switchAiTab("ai-llm") 时触发）。 */
-  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>');
+  /* v3.7.86 B4：GitHub 设备授权段（Device Flow · 只需 client_id）。
+     诚实门控：未配置 client_id 时只有说明与输入框，**不渲染可点的授权按钮**（stub + 活 UI 的反面）；
+     轮询为手动按钮（点「检查授权结果」）——不用后台定时器，用户不授权时零打扰。 */
+  const ghCfg = (typeof getCfg === "function" && getCfg()) || {};
+  const ghCid = String(ghCfg.githubClientId || "").trim();
+  const ghAuthed = (typeof githubHasToken === "function") ? githubHasToken() : false;
+  let ghHtml = '<div class="int-gh"><div class="int-label">' + esc(t("gh.title", "GitHub 设备授权（Gist 云同步载体）")) + '</div>';
+  if(!ghCid){
+    ghHtml += '<p class="int-desc">' + esc(t("gh.noClientId", "未配置 client_id：注册 GitHub OAuth App 后把 Client ID 填到下面（Device Flow 不需要 secret、不需要回调服务器）。")) + '</p>';
+  } else if(!ghAuthed){
+    ghHtml += '<p class="int-desc">' + esc(t("gh.notAuthed", "已配置 client_id，尚未授权。点「开始授权」后在 GitHub 页面确认设备码。")) + '</p>';
+  } else {
+    const gid = (typeof githubGistId === "function") ? githubGistId() : "";
+    ghHtml += '<p class="int-desc">' + esc(t("gh.authed", "已授权（token 设备密钥加密存储）")) + (gid ? esc(t("gh.gistLinked", " · 已绑定 Gist")) : "") + '</p>';
+  }
+  ghHtml += '<div class="int-gh-row"><input id="ghClientId" class="u-w-full" placeholder="Client ID (Iv1.xxxx)" value="' + esc(ghCid) + '">';
+  ghHtml += '<button type="button" class="addbtn sm" id="ghSaveCid">' + esc(t("gh.save", "保存")) + '</button>';
+  if(ghCid && !ghAuthed){
+    ghHtml += '<button type="button" class="addbtn sm btn-primary" id="ghDevStart">' + esc(t("gh.start", "开始授权")) + '</button>';
+    ghHtml += '<button type="button" class="addbtn sm" id="ghDevPoll">' + esc(t("gh.poll", "检查授权结果")) + '</button>';
+  }
+  if(ghAuthed){
+    ghHtml += '<button type="button" class="addbtn sm" id="ghClear">' + esc(t("gh.clear", "断开并清除 token")) + '</button>';
+  }
+  ghHtml += '</div>';
+  ghHtml += '<div id="ghDevInfo" class="int-desc"></div></div>';
+  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + ghHtml);
   // 绑定连接/断开按钮
   // v3.1.1 修复：原实现直接以空 config 调 connectFn → 所有 connect 函数因缺凭据返回 null，
   // 却仍弹「已连接」假成功 toast；现改为先弹配置弹窗收集凭据（openIntegrationConfig），
@@ -389,6 +415,58 @@ function renderIntegrationPanel(){
      （docs/product-scope.md §四）就是被拼接派发坑过，且文档记着「全仓 window[...] 派发点仅 3 处」。
      这里用显式字面量表，普查看得见，那个计数也不会被无声改掉。 */
   const PUSH_FNS = { notion: notionPushTasks, linear: linearPushTasks, jira: jiraPushTasks };
+  /* v3.7.86 B4：GitHub 设备授权段事件（模块级暂存设备码，不落盘） */
+  let _ghDeviceCode = "";   /* 注：let 声明在函数体内，供本组处理器共享 */
+  const ghInfo = panel.querySelector("#ghDevInfo");
+  const ghCidInput = panel.querySelector("#ghClientId");
+  const ghSave = panel.querySelector("#ghSaveCid");
+  const ghStart = panel.querySelector("#ghDevStart");
+  const ghPoll = panel.querySelector("#ghDevPoll");
+  const ghClear = panel.querySelector("#ghClear");
+  if(ghSave && !ghSave._ghBound){
+    ghSave._ghBound = true;
+    ghSave.onclick = async function(){
+      const cid = String(ghCidInput.value || "").trim();
+      try{
+        const cfg0 = getCfg() || {};
+        cfg0.githubClientId = cid;
+        await persistCfg(cfg0);
+        toast(t("gh.cidSaved", "Client ID 已保存"), "ok");
+        renderIntegrationPanel();
+      }catch(e){ toast(t("gh.cidSaveFail", "保存失败"), "warn"); }
+    };
+  }
+  if(ghStart && !ghStart._ghBound){
+    ghStart._ghBound = true;
+    ghStart.onclick = async function(){
+      const r = await githubDeviceStart(String(ghCidInput.value || "").trim());
+      if(!r.ok){ toast(t("gh.startFail", "申请设备码失败") + "（" + (r.error || "") + "）", "warn"); return; }
+      _ghDeviceCode = r.deviceCode;
+      const html2 = t("gh.userCode", "设备码") + ' <code>' + esc(r.userCode) + '</code> · '
+        + '<a href="' + esc(r.verifyUrl) + '" target="_blank" rel="noopener">' + esc(t("gh.openVerify", "打开授权页")) + '</a> · '
+        + esc(t("gh.thenCheck", "确认后点「检查授权结果」"));
+      if(ghInfo) ghInfo.innerHTML = sanitizeHtml(html2);
+    };
+  }
+  if(ghPoll && !ghPoll._ghBound){
+    ghPoll._ghBound = true;
+    ghPoll.onclick = async function(){
+      if(!_ghDeviceCode){ toast(t("gh.noDeviceCode", "先点「开始授权」取得设备码"), "warn"); return; }
+      const r = await githubDevicePoll(String(ghCidInput.value || "").trim(), _ghDeviceCode);
+      if(r.ok && r.pending){ toast(t("gh.stillPending", "还没在 GitHub 上确认"), "info"); return; }
+      if(r.ok && r.done){ toast(t("gh.authOk", "授权成功，token 已加密存储"), "ok"); renderIntegrationPanel(); return; }
+      toast(t("gh.pollFail", "授权未完成") + "（" + (r.error || "") + "）", "warn");
+    };
+  }
+  if(ghClear && !ghClear._ghBound){
+    ghClear._ghBound = true;
+    ghClear.onclick = function(){
+      if(!confirm(t("gh.clearConfirm", "清除本机保存的 GitHub token（下次同步需重新授权）？"))) return;
+      githubTokenClear();
+      toast(t("gh.cleared", "已清除"), "ok");
+      renderIntegrationPanel();
+    };
+  }
   const LABELS = {};
   providers.forEach(function(p){ LABELS[p.name] = p.label; });
   panel.querySelectorAll("[data-int-push]").forEach(function(btn){

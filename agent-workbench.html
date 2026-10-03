@@ -4140,6 +4140,9 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   padding:0 4px;line-height:1.4;cursor:pointer}
 .week-ics-item{color:var(--ok-text)}
 .week-ics-time{margin-right:4px;opacity:.7;font-variant-numeric:tabular-nums}
+.evd-row{display:flex;gap:var(--space-2);padding:2px 0;font-size:var(--fs-sm)}
+.evd-label{color:var(--muted);min-width:5em}
+.evd-value{color:var(--text);flex:1;overflow-wrap:anywhere}
 .ics-panel{max-width:760px;margin:0 auto}
 .ics-add{margin:var(--space-3) 0}
 .ics-list{display:flex;flex-direction:column;gap:var(--space-2)}
@@ -5970,23 +5973,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   </div>
 </div>
 
-<!-- v1.6-B 日历视图弹窗：月历/周历看任务 dueDate 分布 -->
-<div class="cal-modal" id="calModal" role="dialog" aria-modal="true" aria-labelledby="calModalTitle">
-  <div class="cal-modal-card">
-    <div class="cal-modal-header">
-      <h2 id="calModalTitle" data-i18n="cal.title">日历视图</h2>
-      <button type="button" class="cal-modal-close" id="btnCalClose" data-i18n-aria="a11y.closeCalendar" aria-label="关闭日历视图">&times;</button>
-    </div>
-    <div class="cal-modal-body">
-      <div class="cal-modal-tabs">
-        <button type="button" class="cal-modal-tab active" id="btnCalTabMonth" data-i18n="cal.tab.month">月历</button>
-        <button type="button" class="cal-modal-tab" id="btnCalTabWeek" data-i18n="cal.tab.week">周历</button>
-      </div>
-      <div id="calendarView" data-offset="0"></div>
-    </div>
-  </div>
-</div>
-
+<!-- v3.7.86（B2 死接线普查）：原此处是 v1.6-B 的 #calModal 旧日历弹窗 —— btnCalClose /
+     btnCalTabMonth / btnCalTabWeek 与其 #calendarView 容器全仓零引用（第 8 例死接线），现行日历走
+     #calendarModal / 场景内嵌视图，整块删除。普查门禁见 tests/dead-wiring-guard.test.js。 -->
 <!-- v1.6-C 数据可视化弹窗：甘特图 / 思维导图 / 自定义仪表盘 -->
 <div class="viz-modal" id="ganttModal" role="dialog" aria-modal="true" aria-labelledby="ganttModalTitle">
   <div class="viz-modal-card">

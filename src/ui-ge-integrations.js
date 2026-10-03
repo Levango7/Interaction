@@ -2143,3 +2143,139 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     get _streamProgress(){ return _streamProgress; }
   });
 }
+
+/* ============================================================
+ * GitHub 接入底座（v3.7.86 B4）
+ * 为什么选 Device Flow：专为 CLI/桌面应用设计 —— **只需 client_id，不需要 client_secret、
+ * 不需要回调服务器与备案域名**（本仓自建后端不存在，这是唯一零后端可用的官方流程）。
+ * 传输：api.github.com 实测回 ACAO:*（预检 204），浏览器直连，无需主进程中继。
+ * 凭据：device token 与 AI Key 同款走设备密钥 AES-GCM 加密落盘（复用 encryptKey/decryptKey）。
+ * 载体：Gist（私有）存云同步快照 —— Gist 自带 revision 历史，与增量契约天然衔接。
+ * 边界：未配置 client_id 时只有状态提示，无可点按钮；device 流程的端到端需真实 client_id 验收。
+ * ============================================================ */
+const GH_TOKEN_KEY = "github_device_token";
+const GH_GIST_ID_KEY = "github_gist_id";
+/** GitHub 授权页地址（用户点开后确认，轮询在本机继续） */
+const GH_VERIFY_URL = "https://github.com/login/device";
+async function _ghJson(url, method, headers, body){
+  try{
+    const resp = await fetch(url, {
+      method: method || "GET",
+      headers: Object.assign({ "Accept": "application/vnd.github+json", "Content-Type": "application/json" }, headers || {}),
+      body: body ? JSON.stringify(body) : undefined
+    });
+    let j = null;
+    try{ j = await resp.json(); }catch(e){ /* 非 JSON 响应按状态码判定 */ }
+    return { ok: resp.ok, status: resp.status, data: j || {} };
+  }catch(e){
+    return { ok: false, status: 0, data: {}, error: (e && e.message) ? e.message : String(e) };
+  }
+}
+/** 取解密后的 device token（无/坏值返回 ""） */
+async function githubToken(){
+  try{
+    const raw = load(PREFIX + GH_TOKEN_KEY, "");
+    if(!raw) return "";
+    if(typeof isEncKey === "function" && isEncKey(raw)){
+      const plain = await decryptKey(raw);
+      return typeof plain === "string" ? plain : "";
+    }
+    return typeof raw === "string" ? raw : "";
+  }catch(e){ return ""; }
+}
+/** 保存 device token（加密落盘；失败如实返回 false） */
+async function githubTokenSet(token){
+  try{
+    if(!token) return githubTokenClear();
+    const enc = (typeof encryptKey === "function") ? await encryptKey(token) : token;
+    save(PREFIX + GH_TOKEN_KEY, enc);
+    return true;
+  }catch(e){ return false; }
+}
+/** 清除 device token 与 Gist 指针 */
+function githubTokenClear(){
+  try{
+    try{ localStorage.removeItem(PREFIX + GH_TOKEN_KEY); }catch(e){}
+    try{ localStorage.removeItem(PREFIX + GH_GIST_ID_KEY); }catch(e){}
+  }catch(e){}
+  return true;
+}
+/** 是否已授权（token 存在）；只查存储不解密，够 UI 用 */
+function githubHasToken(){ try{ return !!load(PREFIX + GH_TOKEN_KEY, ""); }catch(e){ return false; } }
+/** 已保存的 Gist 指针 */
+function githubGistId(){ try{ return load(PREFIX + GH_GIST_ID_KEY, ""); }catch(e){ return ""; } }
+/**
+ * 第一步：申请设备码（POST device/code）
+ * @param {string} clientId - GitHub OAuth App 的 client_id（公开值）
+ * @returns {Promise<{ok:boolean, userCode?:string, verifyUrl?:string, interval?:number, expiresIn?:number, error?:string}>}
+ */
+async function githubDeviceStart(clientId){
+  const cid = String(clientId || "").trim();
+  if(!cid) return { ok: false, error: "no_client_id" };
+  const r = await _ghJson("https://github.com/login/device/code", "POST", {}, { client_id: cid, scope: "gist" });
+  const d = r.data || {};
+  if(!r.ok || d.error || !d.device_code){
+    return { ok: false, error: (d.error && ("incorrect_client_credentials" === d.error ? "bad_client_id" : d.error)) || ("HTTP " + r.status) };
+  }
+  return { ok: true, deviceCode: d.device_code, userCode: d.user_code, verifyUrl: d.verification_uri || GH_VERIFY_URL,
+    interval: d.interval || 5, expiresIn: d.expires_in || 900 };
+}
+/**
+ * 第二步：轮询 token（POST oauth/access_token）—— authorization_pending 表示用户还没确认
+ * @returns {Promise<{ok:boolean, done?:boolean, pending?:boolean, slowDown?:boolean, error?:string}>}
+ */
+async function githubDevicePoll(clientId, deviceCode){
+  const cid = String(clientId || "").trim();
+  const dc = String(deviceCode || "").trim();
+  if(!cid || !dc) return { ok: false, error: "bad_args" };
+  const r = await _ghJson("https://github.com/login/oauth/access_token", "POST", {}, { client_id: cid, device_code: dc, grant_type: "urn:ietf:params:oauth:grant-type:device_code" });
+  const d = r.data || {};
+  if(d.access_token){
+    const saved = await githubTokenSet(d.access_token);
+    if(!saved) return { ok: false, error: "token_store_failed" };
+    return { ok: true, done: true };
+  }
+  if(d.error === "authorization_pending") return { ok: true, pending: true };
+  if(d.error === "slow_down") return { ok: true, slowDown: true };
+  if(d.error === "expired_token" || d.error === "access_denied") return { ok: false, error: d.error };
+  return { ok: false, error: d.error || ("HTTP " + r.status) };
+}
+/**
+ * 快照上行 → 私有 Gist（已存在则更新，保留 revision 历史）
+ * @param {string} text - 云快照 JSON
+ * @param {string} [filename] - gist 内文件名
+ * @returns {Promise<{ok:boolean, gistId?:string, url?:string, error?:string}>}
+ */
+async function gistSyncPut(text, filename){
+  const token = await githubToken();
+  if(!token) return { ok: false, error: "not_authorized" };
+  const name = String(filename || "agent-workshop-snapshot.json");
+  const body = { description: "Agent Workshop 云同步快照（设备自动维护）", public: false, files: {} };
+  body.files[name] = { content: String(text || "") };
+  const gid = githubGistId();
+  const url = gid ? ("https://api.github.com/gists/" + encodeURIComponent(gid)) : "https://api.github.com/gists";
+  const r = await _ghJson(url, gid ? "PATCH" : "POST", { Authorization: "Bearer " + token }, body);
+  const d = r.data || {};
+  if(!r.ok || d.message){ return { ok: false, error: d.message || ("HTTP " + r.status) }; }
+  if(d.id) save(PREFIX + GH_GIST_ID_KEY, d.id);
+  return { ok: true, gistId: d.id || gid, url: d.html_url || "" };
+}
+/**
+ * 快照下行 → 从私有 Gist 读回
+ * @returns {Promise<{ok:boolean, text?:string, error?:string}>}
+ */
+async function gistSyncGet(filename){
+  const token = await githubToken();
+  const gid = githubGistId();
+  if(!token) return { ok: false, error: "not_authorized" };
+  if(!gid) return { ok: false, error: "no_gist" };
+  const r = await _ghJson("https://api.github.com/gists/" + encodeURIComponent(gid), "GET", { Authorization: "Bearer " + token });
+  const d = r.data || {};
+  if(!r.ok) return { ok: false, error: d.message || ("HTTP " + r.status) };
+  const name = String(filename || "agent-workshop-snapshot.json");
+  const file = d.files && d.files[name];
+  if(!file || typeof file.content !== "string") return { ok: false, error: "file_missing" };
+  /* 大文件 content 可能为空（>1MB 时 API 只给 truncated + raw_url）——如实失败，不假装成功 */
+  if(file.truncated) return { ok: false, error: "file_truncated" };
+  return { ok: true, text: file.content };
+}

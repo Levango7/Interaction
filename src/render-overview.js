@@ -621,9 +621,11 @@ function renderTasksPage(){
   const today = todayStr();
   let body;
   if(_tasksView === "calendar"){
-    body = `<div class="card"><h2>${ic("overview")}${t("appPage.calview", "日历")}</h2><div class="cal-inline">${AppBridge.renderCalendarView(0)}</div></div>`;
+    /* v3.7.86 B2：内嵌日历容器给 id —— 此前下一行无参 bindCalendarEvents() 绑到 #calendarView
+       （旧弹窗化石容器，v3.7.86 已删），翻月与 ICS 入口实际是死的；现显式绑本容器。 */
+    body = `<div class="card"><h2>${ic("overview")}${t("appPage.calview", "日历")}</h2><div class="cal-inline" id="tasksCalView">${AppBridge.renderCalendarView(0)}</div></div>`;
     $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
-    AppBridge.bindCalendarEvents();
+    AppBridge.bindCalendarEvents($("#tasksCalView"));
     _bindTasksTabs();
     appendFoot();
     return;

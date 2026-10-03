@@ -35,14 +35,14 @@
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 46 |
 | `ui-hotkeys` | UI | `ai-retry` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 129 |
+| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 132 |
 | `ui-ge-api` | UI | `core` `render-overview` `ui-drawer` | 4 |
 | `ui-ge-plugins` | UI | `data-links` `util-markdown` | 2 |
 | `ui-ge-theme` | UI | `chain` | 1 |
 | `ui-ge-pomodoro` | UI | `chain` | 1 |
 | `ui-ge-calendar` | UI | `chain` `render-overview` `ui-ge-theme` `ui-guide` | 21 |
 | `ui-ge-notes` | UI | `core` `data-rw` `render-entry` `render-widgets` `util-markdown` | 14 |
-| `ui-ge-integrations` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `util-markdown` | 472 |
+| `ui-ge-integrations` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `util-markdown` | 473 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
 
@@ -77,7 +77,7 @@
 - 跨块重复定义：**0** 项
 - 循环依赖：**13** 条（ai-tools → ai-retry → ai-tools；ai-tools → ai-retry → ai-loop → ai-tools；render-entry → render-overview → render-scene-sub → render-entry；render-entry → render-overview → render-entry；render-overview → render-widgets → render-overview）
 - 逆层依赖（低层用高层符号）：**18** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**95** 个符号
+- 逆层依赖（按**符号**计，去重）：**98** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
@@ -93,7 +93,7 @@
 | `ui-drawer`（UI） | `ui-global-events`（UI） | `updateAgentStatus` |
 | `ui-global-events`（UI） | `ui-ge-api`（UI） | `setLang` |
 | `ui-global-events`（UI） | `ui-ge-calendar`（UI） | `closeDashboardModal` `closeGanttModal` `closeMindmapModal` `openDashboardModal` `openGanttModal` `openMindmapModal` … |
-| `ui-global-events`（UI） | `ui-ge-integrations`（UI） | `INTEGRATION_TYPES` `_notifyScrubPersisted` `calendarDisconnect` `integrationGetProvider` `integrationRemoveProvider` `jiraHasRelay` … |
+| `ui-global-events`（UI） | `ui-ge-integrations`（UI） | `INTEGRATION_TYPES` `_notifyScrubPersisted` `calendarDisconnect` `githubGistId` `githubHasToken` `githubTokenClear` … |
 | `ui-global-events`（UI） | `ui-ge-pomodoro`（UI） | `pauseTracking` `startPomodoro` `stopPomodoro` `stopTracking` |
 | `ui-global-events`（UI） | `ui-ge-theme`（UI） | `getCurrentTheme` `setTheme` |
 | `ui-onboarding`（UI） | `ui-daily`（UI） | `dailyDigest` |

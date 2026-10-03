@@ -161,9 +161,10 @@ function renderWeekView(weekOffset){
         html += '<li class="week-meeting-item">' + (m.startTime ? '<span class="week-meeting-time">' + esc(m.startTime) + '</span>' : "") + esc(m.title || "") + '</li>';
       });
       /* v3.7.84：外部日历事件行（绿系，按开始时间序，最多 3 条） */
-      dayExt2.slice(0, 3).forEach(function(e){
+      dayExt2.slice(0, 3).forEach(function(e, ei){
         const tm = e.start ? (e.start.getHours() + ":" + String(e.start.getMinutes()).padStart(2, "0")) : "";
-        html += '<li class="week-ics-item">' + (tm ? '<span class="week-ics-time">' + esc(tm) + '</span>' : "") + esc(e.title || "") + '</li>';
+        /* v3.7.86 B1：行可点 → 详情浮层（data 携带日期与序号） */
+        html += '<li class="week-ics-item" data-ev-open="' + esc(key) + '|' + ei + '" style="cursor:pointer">' + (tm ? '<span class="week-ics-time">' + esc(tm) + '</span>' : "") + esc(e.title || "") + '</li>';
       });
       dayTasks.slice(0, 3).forEach(function(t){
         html += '<li class="week-task-item">' + esc(t.title) + '</li>';
@@ -184,7 +185,7 @@ function renderWeekView(weekOffset){
  * @returns {void}
  */
 function bindCalendarEvents(container){
-  const c = container || $("#calendarView");
+  const c = container || $("#tasksCalView") || $("#calendarModalBody");   /* v3.7.86 B2：#calendarView 随旧弹窗化石删除 */
   if(!c) return;
   const prev = c.querySelector("[data-cal-prev]");
   const next = c.querySelector("[data-cal-next]");
@@ -212,17 +213,22 @@ function bindCalendarEvents(container){
     icsOpen._icsBound = true;
     icsOpen.onclick = function(){ openIcsPanel(c); };
   }
+  /* v3.7.86 B1：周视图外部事件行 → 详情浮层 */
+  c.querySelectorAll("[data-ev-open]").forEach(function(row){
+    if(row._evBound) return;
+    row._evBound = true;
+    row.onclick = function(ev){
+      ev.stopPropagation();
+      const parts = String(row.getAttribute("data-ev-open") || "").split("|");
+      openEventDetail(parts[0], parseInt(parts[1], 10) || 0);
+    };
+  });
   c.querySelectorAll("[data-ics-day]").forEach(function(badge){
     if(badge._icsBound) return;
     badge._icsBound = true;
     badge.onclick = function(ev){
       ev.stopPropagation();
-      const date = badge.getAttribute("data-ics-day");
-      const list = (typeof _icsEventsByDate === "function") ? (_icsEventsByDate()[date] || []) : [];
-      if(!list.length) return;
-      const first = list[0];
-      const when = first.start ? (first.start.getHours() + ":" + String(first.start.getMinutes()).padStart(2, "0")) : "";
-      try{ toast(when + " " + (first.title || "") + (first.subName ? "（" + first.subName + "）" : ""), "info"); }catch(e){}
+      openEventDetail(badge.getAttribute("data-ics-day"), 0);   /* v3.7.86 B1：完整详情浮层 */
     };
   });
   // 日期格子点击：派发自定义事件供外部监听
@@ -1233,7 +1239,7 @@ function renderIcsPanel(){
 }
 /** 打开订阅面板（替换日历容器内容；容器由调用方传入 —— 日历可能在场景内嵌视图或弹窗体内） */
 function openIcsPanel(container){
-  const c = container || $("#calendarView") || $("#calendarModalBody");
+  const c = container || $("#tasksCalView") || $("#calendarModalBody");
   if(!c) return;
   c.innerHTML = sanitizeHtml(renderIcsPanel());
   bindIcsPanel(c);
@@ -1404,4 +1410,102 @@ function icsExportLocal(filename){
   const okDl = icsDownload(text, filename || ("agent-workshop-" + _icsYmd(new Date()) + ".ics"));
   try{ toast(okDl ? t("p5.icsExported", "已导出 .ics（可导入/订阅到任意日历 App）") : t("p5.icsExportFail", "当前环境不支持文件下载，请用桌面版"), okDl ? "ok" : "warn"); }catch(e){}
   return okDl;
+}
+
+/* ============================================================
+ * 事件详情浮层（v3.7.86 B1）：月格徽章 / 周视图事件行点击 → 完整详情（标题、时间、
+ * 类型、地点、描述）。此前只有一句 toast —— 外部事件点开看不到地点与描述，订阅日历就
+ * 只剩个标题。浮层动态挂载（.overlay + .cmd 模式，同 openIcsPanel），不新增静态标记。
+ * ============================================================ */
+/** 拼一行详情（label: value），值空则跳过 */
+function _evDetailRow(label, value){
+  if(value === undefined || value === null || value === "") return "";
+  return '<div class="evd-row"><span class="evd-label">' + esc(label) + '</span><span class="evd-value">' + esc(value) + '</span></div>';
+}
+/** 外部事件的格式化时间行（全天 / 起止时刻） */
+function _evTimeText(ev){
+  if(!ev || !ev.start) return "";
+  const d = new Date(ev.start);
+  const ymd = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  if(ev.allDay) return ymd + t("p5.evAllDaySuffix", "（全天）");
+  const hm = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  if(ev.end){ const e2 = new Date(ev.end); return ymd + " " + hm + " – " + String(e2.getHours()).padStart(2, "0") + ":" + String(e2.getMinutes()).padStart(2, "0"); }
+  return ymd + " " + hm;
+}
+/** 收集某日的全部日历条目：本地会议 + 本地任务（截止日）+ 外部 ICS 事件 */
+function _evCollectDay(dateKey){
+  const list = [];
+  try{
+    (_meetingsByDate()[dateKey] || []).forEach(function(m0){
+      list.push({ title: m0.title || "", time: (m0.startTime || "") + (m0.endTime ? "–" + m0.endTime : ""),
+        place: m0.place || m0.location || "", desc: m0.note || "", kind: t("p5.evKindMeeting", "会议（本地记录）") });
+    });
+  }catch(e){ /* 无办公记录则跳过 */ }
+  try{
+    (typeof getActiveTasks === "function" ? getActiveTasks() : []).forEach(function(tk){
+      /* v3.7.86：参数名不用 t —— t 是本项目的 i18n 函数，遮蔽后 t("…") 会当对象调用并抛错 */
+      if(!tk.due) return;
+      const d = new Date(tk.due);
+      const k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      if(k !== dateKey) return;
+      list.push({ title: tk.title || "", time: tk.due, place: "", desc: tk.note || "",
+        kind: tk.status === "done" ? t("p5.evKindTaskDone", "任务（已完成）") : t("p5.evKindTask", "任务（未完成）") });
+    });
+  }catch(e){ /* 任务读取失败则跳过 */ }
+  const exts = (typeof _icsEventsByDate === "function") ? (_icsEventsByDate()[dateKey] || []) : [];
+  exts.forEach(function(e0){
+    list.push({ title: e0.title || "", time: _evTimeText(e0), place: e0.location || "", desc: e0.desc || "",
+      kind: t("p5.evKindExternal", "外部日历") + (e0.subName ? "（" + e0.subName + "）" : "") });
+  });
+  return list;
+}
+/**
+ * 打开某日的日历事件详情浮层
+ * @param {string} dateKey - YYYY-MM-DD
+ * @param {number} [focusIdx] - 聚焦第几条（周视图点击传入）
+ */
+function openEventDetail(dateKey, focusIdx){
+  const old = document.getElementById("evDetailOverlay");
+  if(old) old.remove();
+  const list = _evCollectDay(dateKey);
+  if(!list.length){
+    try{ toast(t("p5.evDetailEmpty", "当日没有日程事件"), "info"); }catch(e){}
+    return;
+  }
+  const idx = (typeof focusIdx === "number" && focusIdx >= 0 && focusIdx < list.length) ? focusIdx : 0;
+  const cur = list[idx];
+  let html = '<div class="cmd u-max-w-520 u-p-5" role="dialog" aria-modal="true" aria-label="' + esc(t("p5.evDetailTitle", "日程详情")) + '">';
+  html += '<div class="u-flex u-jc-between u-ai-center u-m-0-0-3"><h3 class="u-m-0 u-fs-md">' + esc(cur.title) + '</h3>';
+  html += '<button type="button" class="addbtn sm" data-ev-close title="' + esc(t("p5.evClose", "关闭")) + '">✕</button></div>';
+  html += _evDetailRow(t("p5.evKind", "类型"), cur.kind);
+  html += _evDetailRow(t("p5.evTime", "时间"), (dateKey ? dateKey + " " : "") + cur.time);
+  html += _evDetailRow(t("p5.evPlace", "地点"), cur.place);
+  html += _evDetailRow(t("p5.evDesc", "详情"), cur.desc);
+  if(list.length > 1){
+    html += '<div class="u-mt-2">' + t("p5.evMore", "当日共 {n} 条").replace("{n}", String(list.length)) + '</div>';
+    html += '<div class="u-mt-2 u-flex u-gap-2">'
+      + '<button type="button" class="addbtn sm" data-ev-step="-1">‹ ' + esc(t("p5.evPrev", "上一条")) + '</button>'
+      + '<button type="button" class="addbtn sm" data-ev-step="1">' + esc(t("p5.evNext", "下一条")) + '</button></div>';
+  }
+  html += '</div>';
+  const ov = document.createElement("div");
+  ov.className = "overlay show";
+  ov.id = "evDetailOverlay";
+  ov.innerHTML = sanitizeHtml(html);
+  document.body.appendChild(ov);
+  ov.addEventListener("click", function(e){
+    if(e.target === ov){ closeEventDetail(); return; }
+    if(e.target.closest("[data-ev-close]")){ closeEventDetail(); return; }
+    const step = e.target.closest("[data-ev-step]");
+    if(step){
+      const n2 = (idx + (parseInt(step.getAttribute("data-ev-step"), 10) || 0) + list.length) % list.length;
+      closeEventDetail();
+      openEventDetail(dateKey, n2);
+    }
+  });
+}
+/** 关闭事件详情浮层 */
+function closeEventDetail(){
+  const old = document.getElementById("evDetailOverlay");
+  if(old) old.remove();
 }

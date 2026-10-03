@@ -202,3 +202,62 @@ describe("ICS 导出（零凭据双向的另一半）", () => {
     if (orig) URL.createObjectURL = orig;
   });
 });
+
+describe("事件详情浮层（v3.7.86 B1）", () => {
+  function seed(win) {
+    win.icsImportLocal("工作日历.ics", [
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT", "UID:ev-1", "SUMMARY:客户现场会议",
+      "LOCATION:客户方会议室", "DESCRIPTION:讨论上线时间表",
+      "DTSTART;VALUE=DATE:20260305", "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n"));
+    win.setTasks([{ id: "tt1", title: "交方案", status: "todo", due: "2026-03-05", note: "带附件" }]);
+  }
+
+  it("外部事件 + 本地任务聚合到同一浮层：类型/时间/地点/详情齐备", () => {
+    const win = app();
+    seed(win);
+    /* 列表序固定为 会议 → 本地任务 → 外部日历（_evCollectDay） */
+    win.openEventDetail("2026-03-05", 0);
+    const ov = win.document.getElementById("evDetailOverlay");
+    expect(ov, "浮层应挂载").toBeTruthy();
+    let txt = ov.textContent;
+    expect(txt, "0 号为同日本地任务：" + txt).toContain("交方案");
+    expect(txt).toMatch(/任务（未完成）/);
+    expect(txt).toContain("带附件");
+    expect(ov.querySelector("[data-ev-step]"), "多条时应可翻页").toBeTruthy();
+    /* 翻到外部事件（1 号） */
+    ov.querySelector("[data-ev-step='1']").click();
+    txt = win.document.getElementById("evDetailOverlay").textContent;
+    expect(txt, "1 号为外部事件：" + txt).toContain("客户现场会议");
+    expect(txt).toContain("客户方会议室");
+    expect(txt).toContain("讨论上线时间表");
+    expect(txt).toMatch(/外部日历/);
+    win.closeEventDetail();
+    expect(win.document.getElementById("evDetailOverlay")).toBeFalsy();
+  });
+
+  it("翻页与关闭：点下一条换到另一条、点 ✕ 关闭、点遮罩关闭", () => {
+    const win = app();
+    seed(win);
+    win.openEventDetail("2026-03-05", 0);
+    const ov1 = win.document.getElementById("evDetailOverlay");
+    ov1.querySelector("[data-ev-step='1']").click();
+    const ov2 = win.document.getElementById("evDetailOverlay");
+    expect(ov2, "翻页后浮层仍在").toBeTruthy();
+    expect(ov2.textContent).not.toBe(ov1.textContent);
+    ov2.querySelector("[data-ev-close]").click();
+    expect(win.document.getElementById("evDetailOverlay")).toBeFalsy();
+    win.openEventDetail("2026-03-05", 0);
+    const ov3 = win.document.getElementById("evDetailOverlay");
+    ov3.dispatchEvent(new win.Event("click", { bubbles: true }));   /* 点遮罩本体 */
+    expect(win.document.getElementById("evDetailOverlay"), "点遮罩应关闭").toBeFalsy();
+  });
+
+  it("当日无事件：如实 toast、不挂空浮层", () => {
+    const win = app();
+    win.openEventDetail("2026-01-01", 0);
+    expect(win.document.getElementById("evDetailOverlay"), "空日不该挂浮层").toBeFalsy();
+  });
+});

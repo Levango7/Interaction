@@ -1,3 +1,28 @@
+## [v3.7.86] - 2026-10-03
+
+**Q4 批次 B（B1 日历事件详情浮层 · B2 死接线普查与门禁 · B4 GitHub 设备流底座）：全仓普查抓到**第 8 例死接线**并连带修好一个"按钮其实是死的"真 bug；GitHub 接入底座落地（实测 api.github.com 回 ACAO:*，浏览器直连成立）。全量 **118 文件 / 1333 用例**（v3.7.85 为 116/1317；+2 文件 = `dead-wiring-guard.test.js` 2 例、`github-device-flow.test.js` 11 例，另有 `ics-parse.test.js` +3 例浮层）、e2e **82/82（3.7m）**、七门禁全绿、源码态。
+
+### B1 · 日历事件详情浮层
+
+月格「历」徽章与周视图外部事件行点击 → 完整详情浮层（类型/时间/地点/描述/来源日历，多条可上下翻页；当日聚合**本地会议 + 本地任务 + 外部事件**三类）。此前只有一句 toast，订阅日历点开只剩标题。浮层动态挂载，不新增静态标记。
+*过程*：自写代码里 `forEach(function(t))` 的参数遮蔽了本项目的 i18n 函数 `t()` —— 调 `t("…")` 变成拿对象当函数调用抛 TypeError，又被容错 catch 吞掉，**本地任务永远不进列表**；用例抓出后改名修复（写这类回调不要用 `t` 做参数名）。
+
+### B2 · 死接线普查（双向口径）+ 门禁固化
+
+口径：静态 HTML 里的**可交互控件 id** 反查 src/ 的**字符串任意出现**（覆盖 `$("#x")` / `querySelector("#x")` / **事件委托 `el.id === "x"`** 三种绑定形态）。结果：
+
+- **方向②（代码读、HTML 无且无动态渲染）= 0 例** —— 此前 auth 弹窗等"幽灵读"嫌疑全部证伪（它们由模板动态渲染）。
+- **真死（第 8 例）**：`#calModal` 整块 —— v1.6-B 旧日历弹窗及其 `btnCalClose / btnCalTabMonth / btnCalTabWeek` 与 `#calendarView` 容器**全仓零引用**（现行日历走 `#calendarModal` 与场景内嵌视图），整块删除。
+- **顺带挖出真 bug**：概况卡内嵌日历的 `bindCalendarEvents()` **无参调用恰好绑到这个化石容器**，导致该日历的翻月/ICS 入口一直是死的 → 内嵌容器给 id 并显式传参修复。
+- **误报也记档**：第一次普查（未计事件委托形态）把 API/云同步区 8 个活控件误判为死 —— 教训：**审计器必须覆盖全部绑定形态，否则会把活代码判死**。
+- **门禁固化**：`tests/dead-wiring-guard.test.js` —— 静态可交互控件零引用即失败，并钉死"旧日历弹窗不得复活"。8 个 API/通知控件全部证活（`render-overview` 事件委托 + `ui-ge-api` 回填读写）。
+
+### B4 · GitHub 接入底座（Device Flow + Gist 载体）
+
+- **实测**（`_probe/github-cors2.mjs` 存档）：`api.github.com` 回 `ACAO: *`、预检 OPTIONS 204 放行 GET/POST/PATCH/PUT/DELETE → **浏览器直连成立，不经主进程**（与 Notion/Linear 同档；钉钉/Jira 才是需中转的）。`device/code` 以无效 client_id 调用返回 404 —— 端点需**有效 client_id**（用户注册 OAuth App 后填入）。
+- **实现**：设备流两步（申请设备码 / 轮询）+ device token 与 AI Key 同款**设备密钥 AES-GCM 加密落盘** + Gist 私有快照上行/下行（首推 POST 记 gistId、其后 PATCH 保留 revision 历史；文件缺失/截断如实失败）。集成页加一段：未配置 client_id 时**只有说明与输入框，不渲染可点的授权按钮**（不做 stub + 活 UI 的反面）；轮询是手动按钮，不起后台定时器；断开即清除 token 与 gist 指针。
+- **诚实边界**：授权端到端需真实 client_id 验收；**Gist 快照接入同步主流程未做**（无 token 时链不到任何东西）——按路线图留到 client_id 就位后一起接，本版只交付"少一个凭据就能通"的完整底座。11 例钉住请求形状（无 secret）、pending/slow_down/expired/access_denied 归类、token 密文落盘、Gist 形状与诚实失败、UI 门控。
+
 ## [v3.7.85] - 2026-10-03
 
 **两小时自主作业·收尾批次（B1–B4 + 规划文档）：**发版后线上复核**：Pages 取回 **3,684,759 B**、`VERSION="3.7.85"`、`BUILD_TAG="20261003f"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。① Linear/Jira 状态映射从"冻结待工作区"改为**运行时解析**（连接/推送时用用户自己的 token 查工作流状态，映射随各工作区实况走）；② ICS 导出（本地任务/会议 → .ics，零凭据"双向"的另一半）；③ 删除 4 个纯死 lifecycle 函数（废弃名单 16 → 10）；④ Linear 文案随①更新；⑤ 新增 `docs/cloud-sync-incremental-contract.md`（云同步增量的前后端职责切分）与 `docs/roadmap-2026Q4.md`（Q4 路线图）。全量 **116 文件 / 1317 用例**（v3.7.84 为 115/1307；+1 文件 = `integration-state-mapping.test.js` 8 例、`ics-parse.test.js` +2 例）、e2e **82/82（3.6m）**、七门禁全绿（含 CI 独有的 `lint:tokens`）、逆层 18 / 循环 13 未动。**
