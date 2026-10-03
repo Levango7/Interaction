@@ -4140,6 +4140,9 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   padding:0 4px;line-height:1.4;cursor:pointer}
 .week-ics-item{color:var(--ok-text)}
 .week-ics-time{margin-right:4px;opacity:.7;font-variant-numeric:tabular-nums}
+.evd-row{display:flex;gap:var(--space-2);padding:2px 0;font-size:var(--fs-sm)}
+.evd-label{color:var(--muted);min-width:5em}
+.evd-value{color:var(--text);flex:1;overflow-wrap:anywhere}
 .ics-panel{max-width:760px;margin:0 auto}
 .ics-add{margin:var(--space-3) 0}
 .ics-list{display:flex;flex-direction:column;gap:var(--space-2)}
@@ -5970,23 +5973,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   </div>
 </div>
 
-<!-- v1.6-B 日历视图弹窗：月历/周历看任务 dueDate 分布 -->
-<div class="cal-modal" id="calModal" role="dialog" aria-modal="true" aria-labelledby="calModalTitle">
-  <div class="cal-modal-card">
-    <div class="cal-modal-header">
-      <h2 id="calModalTitle" data-i18n="cal.title">日历视图</h2>
-      <button type="button" class="cal-modal-close" id="btnCalClose" data-i18n-aria="a11y.closeCalendar" aria-label="关闭日历视图">&times;</button>
-    </div>
-    <div class="cal-modal-body">
-      <div class="cal-modal-tabs">
-        <button type="button" class="cal-modal-tab active" id="btnCalTabMonth" data-i18n="cal.tab.month">月历</button>
-        <button type="button" class="cal-modal-tab" id="btnCalTabWeek" data-i18n="cal.tab.week">周历</button>
-      </div>
-      <div id="calendarView" data-offset="0"></div>
-    </div>
-  </div>
-</div>
-
+<!-- v3.7.86（B2 死接线普查）：原此处是 v1.6-B 的 #calModal 旧日历弹窗 —— btnCalClose /
+     btnCalTabMonth / btnCalTabWeek 与其 #calendarView 容器全仓零引用（第 8 例死接线），现行日历走
+     #calendarModal / 场景内嵌视图，整块删除。普查门禁见 tests/dead-wiring-guard.test.js。 -->
 <!-- v1.6-C 数据可视化弹窗：甘特图 / 思维导图 / 自定义仪表盘 -->
 <div class="viz-modal" id="ganttModal" role="dialog" aria-modal="true" aria-labelledby="ganttModalTitle">
   <div class="viz-modal-card">
@@ -6215,10 +6204,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.85"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.86"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261003f";
+const BUILD_TAG = "20261003g";
 
 
 
@@ -10704,7 +10693,45 @@ const MESSAGES = {
     "p5.icsExport": "导出本地日程 .ics",
     "p5.icsExported": "已导出 .ics（可导入/订阅到任意日历 App）",
     "p5.icsExportFail": "当前环境不支持文件下载，请用桌面版",
-    "p5.back": "返回"
+    "p5.back": "返回",
+    /* v3.7.86 B4：GitHub 设备授权 */
+    "gh.title": "GitHub 设备授权（Gist 云同步载体）",
+    "gh.noClientId": "未配置 client_id：注册 GitHub OAuth App 后把 Client ID 填到下面（Device Flow 不需要 secret、不需要回调服务器）。",
+    "gh.notAuthed": "已配置 client_id，尚未授权。点「开始授权」后在 GitHub 页面确认设备码。",
+    "gh.authed": "已授权（token 设备密钥存储）",
+    "gh.gistLinked": " · 已绑定 Gist",
+    "gh.save": "保存",
+    "gh.start": "开始授权",
+    "gh.poll": "检查授权结果",
+    "gh.clear": "断开并清除 token",
+    "gh.cidSaved": "Client ID 已保存",
+    "gh.cidSaveFail": "保存失败",
+    "gh.userCode": "设备码",
+    "gh.openVerify": "打开授权页",
+    "gh.thenCheck": "确认后点「检查授权结果」",
+    "gh.startFail": "申请设备码失败",
+    "gh.noDeviceCode": "先点「开始授权」取得设备码",
+    "gh.stillPending": "还没在 GitHub 上确认",
+    "gh.authOk": "授权成功，token 已加密存储",
+    "gh.pollFail": "授权未完成",
+    "gh.clearConfirm": "清除本机保存的 GitHub token（下次同步需重新授权）？",
+    "gh.cleared": "已清除",
+    /* v3.7.86 B1：日历事件详情浮层 */
+    "p5.evDetailTitle": "日程详情",
+    "p5.evClose": "关闭",
+    "p5.evKind": "类型",
+    "p5.evTime": "时间",
+    "p5.evPlace": "地点",
+    "p5.evDesc": "详情",
+    "p5.evMore": "当日共 {n} 条",
+    "p5.evPrev": "上一条",
+    "p5.evNext": "下一条",
+    "p5.evKindMeeting": "会议（本地记录）",
+    "p5.evKindTask": "任务（未完成）",
+    "p5.evKindTaskDone": "任务（已完成）",
+    "p5.evKindExternal": "外部日历",
+    "p5.evAllDaySuffix": "（全天）",
+    "p5.evDetailEmpty": "当日没有日程事件"
   },
   en: {
     // Common
@@ -14454,7 +14481,45 @@ const MESSAGES = {
     "p5.icsExport": "Export local schedule (.ics)",
     "p5.icsExported": "Exported .ics (import or subscribe it in any calendar app)",
     "p5.icsExportFail": "File download unavailable in this environment - use the desktop app",
-    "p5.back": "Back"
+    "p5.back": "Back",
+    /* v3.7.86 B4: GitHub device authorization */
+    "gh.title": "GitHub device authorization (Gist sync carrier)",
+    "gh.noClientId": "No client_id yet: register a GitHub OAuth App and paste its Client ID below (device flow needs no secret and no callback server).",
+    "gh.notAuthed": "client_id configured, not authorized yet. Click Start, then confirm the device code on GitHub.",
+    "gh.authed": "Authorized (token stored device-encrypted)",
+    "gh.gistLinked": " - Gist linked",
+    "gh.save": "Save",
+    "gh.start": "Start authorization",
+    "gh.poll": "Check result",
+    "gh.clear": "Disconnect and clear token",
+    "gh.cidSaved": "Client ID saved",
+    "gh.cidSaveFail": "Save failed",
+    "gh.userCode": "Device code",
+    "gh.openVerify": "Open authorization page",
+    "gh.thenCheck": "After confirming, click Check result",
+    "gh.startFail": "Failed to request device code",
+    "gh.noDeviceCode": "Click Start authorization first to get a device code",
+    "gh.stillPending": "Not confirmed on GitHub yet",
+    "gh.authOk": "Authorized, token stored encrypted",
+    "gh.pollFail": "Authorization not completed",
+    "gh.clearConfirm": "Clear the stored GitHub token (you will re-authorize before the next sync)?",
+    "gh.cleared": "Cleared",
+    /* v3.7.86 B1: calendar event details popup */
+    "p5.evDetailTitle": "Event details",
+    "p5.evClose": "Close",
+    "p5.evKind": "Type",
+    "p5.evTime": "Time",
+    "p5.evPlace": "Location",
+    "p5.evDesc": "Details",
+    "p5.evMore": "{n} events that day",
+    "p5.evPrev": "Previous",
+    "p5.evNext": "Next",
+    "p5.evKindMeeting": "Meeting (local record)",
+    "p5.evKindTask": "Task (open)",
+    "p5.evKindTaskDone": "Task (done)",
+    "p5.evKindExternal": "External calendar",
+    "p5.evAllDaySuffix": " (all day)",
+    "p5.evDetailEmpty": "No events that day"
   }
 };
 
@@ -26082,9 +26147,11 @@ function renderTasksPage(){
   const today = todayStr();
   let body;
   if(_tasksView === "calendar"){
-    body = `<div class="card"><h2>${ic("overview")}${t("appPage.calview", "日历")}</h2><div class="cal-inline">${AppBridge.renderCalendarView(0)}</div></div>`;
+    /* v3.7.86 B2：内嵌日历容器给 id —— 此前下一行无参 bindCalendarEvents() 绑到 #calendarView
+       （旧弹窗化石容器，v3.7.86 已删），翻月与 ICS 入口实际是死的；现显式绑本容器。 */
+    body = `<div class="card"><h2>${ic("overview")}${t("appPage.calview", "日历")}</h2><div class="cal-inline" id="tasksCalView">${AppBridge.renderCalendarView(0)}</div></div>`;
     $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
-    AppBridge.bindCalendarEvents();
+    AppBridge.bindCalendarEvents($("#tasksCalView"));
     _bindTasksTabs();
     appendFoot();
     return;
@@ -38132,7 +38199,33 @@ function renderIntegrationPanel(){
   });
   /* v3.6.5：OpenAPI Key 管理迁至 AI 页·大模型 —— Key 是 AI 机制的凭据，不该混在 Notion/Jira/Slack
      等 IM/办公集成列表里（用户反馈）。AI 侧渲染见 renderOpenApiKeyPanel()（_switchAiTab("ai-llm") 时触发）。 */
-  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>');
+  /* v3.7.86 B4：GitHub 设备授权段（Device Flow · 只需 client_id）。
+     诚实门控：未配置 client_id 时只有说明与输入框，**不渲染可点的授权按钮**（stub + 活 UI 的反面）；
+     轮询为手动按钮（点「检查授权结果」）——不用后台定时器，用户不授权时零打扰。 */
+  const ghCfg = (typeof getCfg === "function" && getCfg()) || {};
+  const ghCid = String(ghCfg.githubClientId || "").trim();
+  const ghAuthed = (typeof githubHasToken === "function") ? githubHasToken() : false;
+  let ghHtml = '<div class="int-gh"><div class="int-label">' + esc(t("gh.title", "GitHub 设备授权（Gist 云同步载体）")) + '</div>';
+  if(!ghCid){
+    ghHtml += '<p class="int-desc">' + esc(t("gh.noClientId", "未配置 client_id：注册 GitHub OAuth App 后把 Client ID 填到下面（Device Flow 不需要 secret、不需要回调服务器）。")) + '</p>';
+  } else if(!ghAuthed){
+    ghHtml += '<p class="int-desc">' + esc(t("gh.notAuthed", "已配置 client_id，尚未授权。点「开始授权」后在 GitHub 页面确认设备码。")) + '</p>';
+  } else {
+    const gid = (typeof githubGistId === "function") ? githubGistId() : "";
+    ghHtml += '<p class="int-desc">' + esc(t("gh.authed", "已授权（token 设备密钥加密存储）")) + (gid ? esc(t("gh.gistLinked", " · 已绑定 Gist")) : "") + '</p>';
+  }
+  ghHtml += '<div class="int-gh-row"><input id="ghClientId" class="u-w-full" placeholder="Client ID (Iv1.xxxx)" value="' + esc(ghCid) + '">';
+  ghHtml += '<button type="button" class="addbtn sm" id="ghSaveCid">' + esc(t("gh.save", "保存")) + '</button>';
+  if(ghCid && !ghAuthed){
+    ghHtml += '<button type="button" class="addbtn sm btn-primary" id="ghDevStart">' + esc(t("gh.start", "开始授权")) + '</button>';
+    ghHtml += '<button type="button" class="addbtn sm" id="ghDevPoll">' + esc(t("gh.poll", "检查授权结果")) + '</button>';
+  }
+  if(ghAuthed){
+    ghHtml += '<button type="button" class="addbtn sm" id="ghClear">' + esc(t("gh.clear", "断开并清除 token")) + '</button>';
+  }
+  ghHtml += '</div>';
+  ghHtml += '<div id="ghDevInfo" class="int-desc"></div></div>';
+  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + ghHtml);
   // 绑定连接/断开按钮
   // v3.1.1 修复：原实现直接以空 config 调 connectFn → 所有 connect 函数因缺凭据返回 null，
   // 却仍弹「已连接」假成功 toast；现改为先弹配置弹窗收集凭据（openIntegrationConfig），
@@ -38165,6 +38258,58 @@ function renderIntegrationPanel(){
      （docs/product-scope.md §四）就是被拼接派发坑过，且文档记着「全仓 window[...] 派发点仅 3 处」。
      这里用显式字面量表，普查看得见，那个计数也不会被无声改掉。 */
   const PUSH_FNS = { notion: notionPushTasks, linear: linearPushTasks, jira: jiraPushTasks };
+  /* v3.7.86 B4：GitHub 设备授权段事件（模块级暂存设备码，不落盘） */
+  let _ghDeviceCode = "";   /* 注：let 声明在函数体内，供本组处理器共享 */
+  const ghInfo = panel.querySelector("#ghDevInfo");
+  const ghCidInput = panel.querySelector("#ghClientId");
+  const ghSave = panel.querySelector("#ghSaveCid");
+  const ghStart = panel.querySelector("#ghDevStart");
+  const ghPoll = panel.querySelector("#ghDevPoll");
+  const ghClear = panel.querySelector("#ghClear");
+  if(ghSave && !ghSave._ghBound){
+    ghSave._ghBound = true;
+    ghSave.onclick = async function(){
+      const cid = String(ghCidInput.value || "").trim();
+      try{
+        const cfg0 = getCfg() || {};
+        cfg0.githubClientId = cid;
+        await persistCfg(cfg0);
+        toast(t("gh.cidSaved", "Client ID 已保存"), "ok");
+        renderIntegrationPanel();
+      }catch(e){ toast(t("gh.cidSaveFail", "保存失败"), "warn"); }
+    };
+  }
+  if(ghStart && !ghStart._ghBound){
+    ghStart._ghBound = true;
+    ghStart.onclick = async function(){
+      const r = await githubDeviceStart(String(ghCidInput.value || "").trim());
+      if(!r.ok){ toast(t("gh.startFail", "申请设备码失败") + "（" + (r.error || "") + "）", "warn"); return; }
+      _ghDeviceCode = r.deviceCode;
+      const html2 = t("gh.userCode", "设备码") + ' <code>' + esc(r.userCode) + '</code> · '
+        + '<a href="' + esc(r.verifyUrl) + '" target="_blank" rel="noopener">' + esc(t("gh.openVerify", "打开授权页")) + '</a> · '
+        + esc(t("gh.thenCheck", "确认后点「检查授权结果」"));
+      if(ghInfo) ghInfo.innerHTML = sanitizeHtml(html2);
+    };
+  }
+  if(ghPoll && !ghPoll._ghBound){
+    ghPoll._ghBound = true;
+    ghPoll.onclick = async function(){
+      if(!_ghDeviceCode){ toast(t("gh.noDeviceCode", "先点「开始授权」取得设备码"), "warn"); return; }
+      const r = await githubDevicePoll(String(ghCidInput.value || "").trim(), _ghDeviceCode);
+      if(r.ok && r.pending){ toast(t("gh.stillPending", "还没在 GitHub 上确认"), "info"); return; }
+      if(r.ok && r.done){ toast(t("gh.authOk", "授权成功，token 已加密存储"), "ok"); renderIntegrationPanel(); return; }
+      toast(t("gh.pollFail", "授权未完成") + "（" + (r.error || "") + "）", "warn");
+    };
+  }
+  if(ghClear && !ghClear._ghBound){
+    ghClear._ghBound = true;
+    ghClear.onclick = function(){
+      if(!confirm(t("gh.clearConfirm", "清除本机保存的 GitHub token（下次同步需重新授权）？"))) return;
+      githubTokenClear();
+      toast(t("gh.cleared", "已清除"), "ok");
+      renderIntegrationPanel();
+    };
+  }
   const LABELS = {};
   providers.forEach(function(p){ LABELS[p.name] = p.label; });
   panel.querySelectorAll("[data-int-push]").forEach(function(btn){
@@ -42530,9 +42675,10 @@ function renderWeekView(weekOffset){
         html += '<li class="week-meeting-item">' + (m.startTime ? '<span class="week-meeting-time">' + esc(m.startTime) + '</span>' : "") + esc(m.title || "") + '</li>';
       });
       /* v3.7.84：外部日历事件行（绿系，按开始时间序，最多 3 条） */
-      dayExt2.slice(0, 3).forEach(function(e){
+      dayExt2.slice(0, 3).forEach(function(e, ei){
         const tm = e.start ? (e.start.getHours() + ":" + String(e.start.getMinutes()).padStart(2, "0")) : "";
-        html += '<li class="week-ics-item">' + (tm ? '<span class="week-ics-time">' + esc(tm) + '</span>' : "") + esc(e.title || "") + '</li>';
+        /* v3.7.86 B1：行可点 → 详情浮层（data 携带日期与序号） */
+        html += '<li class="week-ics-item" data-ev-open="' + esc(key) + '|' + ei + '" style="cursor:pointer">' + (tm ? '<span class="week-ics-time">' + esc(tm) + '</span>' : "") + esc(e.title || "") + '</li>';
       });
       dayTasks.slice(0, 3).forEach(function(t){
         html += '<li class="week-task-item">' + esc(t.title) + '</li>';
@@ -42553,7 +42699,7 @@ function renderWeekView(weekOffset){
  * @returns {void}
  */
 function bindCalendarEvents(container){
-  const c = container || $("#calendarView");
+  const c = container || $("#tasksCalView") || $("#calendarModalBody");   /* v3.7.86 B2：#calendarView 随旧弹窗化石删除 */
   if(!c) return;
   const prev = c.querySelector("[data-cal-prev]");
   const next = c.querySelector("[data-cal-next]");
@@ -42581,17 +42727,22 @@ function bindCalendarEvents(container){
     icsOpen._icsBound = true;
     icsOpen.onclick = function(){ openIcsPanel(c); };
   }
+  /* v3.7.86 B1：周视图外部事件行 → 详情浮层 */
+  c.querySelectorAll("[data-ev-open]").forEach(function(row){
+    if(row._evBound) return;
+    row._evBound = true;
+    row.onclick = function(ev){
+      ev.stopPropagation();
+      const parts = String(row.getAttribute("data-ev-open") || "").split("|");
+      openEventDetail(parts[0], parseInt(parts[1], 10) || 0);
+    };
+  });
   c.querySelectorAll("[data-ics-day]").forEach(function(badge){
     if(badge._icsBound) return;
     badge._icsBound = true;
     badge.onclick = function(ev){
       ev.stopPropagation();
-      const date = badge.getAttribute("data-ics-day");
-      const list = (typeof _icsEventsByDate === "function") ? (_icsEventsByDate()[date] || []) : [];
-      if(!list.length) return;
-      const first = list[0];
-      const when = first.start ? (first.start.getHours() + ":" + String(first.start.getMinutes()).padStart(2, "0")) : "";
-      try{ toast(when + " " + (first.title || "") + (first.subName ? "（" + first.subName + "）" : ""), "info"); }catch(e){}
+      openEventDetail(badge.getAttribute("data-ics-day"), 0);   /* v3.7.86 B1：完整详情浮层 */
     };
   });
   // 日期格子点击：派发自定义事件供外部监听
@@ -43602,7 +43753,7 @@ function renderIcsPanel(){
 }
 /** 打开订阅面板（替换日历容器内容；容器由调用方传入 —— 日历可能在场景内嵌视图或弹窗体内） */
 function openIcsPanel(container){
-  const c = container || $("#calendarView") || $("#calendarModalBody");
+  const c = container || $("#tasksCalView") || $("#calendarModalBody");
   if(!c) return;
   c.innerHTML = sanitizeHtml(renderIcsPanel());
   bindIcsPanel(c);
@@ -43773,6 +43924,104 @@ function icsExportLocal(filename){
   const okDl = icsDownload(text, filename || ("agent-workshop-" + _icsYmd(new Date()) + ".ics"));
   try{ toast(okDl ? t("p5.icsExported", "已导出 .ics（可导入/订阅到任意日历 App）") : t("p5.icsExportFail", "当前环境不支持文件下载，请用桌面版"), okDl ? "ok" : "warn"); }catch(e){}
   return okDl;
+}
+
+/* ============================================================
+ * 事件详情浮层（v3.7.86 B1）：月格徽章 / 周视图事件行点击 → 完整详情（标题、时间、
+ * 类型、地点、描述）。此前只有一句 toast —— 外部事件点开看不到地点与描述，订阅日历就
+ * 只剩个标题。浮层动态挂载（.overlay + .cmd 模式，同 openIcsPanel），不新增静态标记。
+ * ============================================================ */
+/** 拼一行详情（label: value），值空则跳过 */
+function _evDetailRow(label, value){
+  if(value === undefined || value === null || value === "") return "";
+  return '<div class="evd-row"><span class="evd-label">' + esc(label) + '</span><span class="evd-value">' + esc(value) + '</span></div>';
+}
+/** 外部事件的格式化时间行（全天 / 起止时刻） */
+function _evTimeText(ev){
+  if(!ev || !ev.start) return "";
+  const d = new Date(ev.start);
+  const ymd = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  if(ev.allDay) return ymd + t("p5.evAllDaySuffix", "（全天）");
+  const hm = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  if(ev.end){ const e2 = new Date(ev.end); return ymd + " " + hm + " – " + String(e2.getHours()).padStart(2, "0") + ":" + String(e2.getMinutes()).padStart(2, "0"); }
+  return ymd + " " + hm;
+}
+/** 收集某日的全部日历条目：本地会议 + 本地任务（截止日）+ 外部 ICS 事件 */
+function _evCollectDay(dateKey){
+  const list = [];
+  try{
+    (_meetingsByDate()[dateKey] || []).forEach(function(m0){
+      list.push({ title: m0.title || "", time: (m0.startTime || "") + (m0.endTime ? "–" + m0.endTime : ""),
+        place: m0.place || m0.location || "", desc: m0.note || "", kind: t("p5.evKindMeeting", "会议（本地记录）") });
+    });
+  }catch(e){ /* 无办公记录则跳过 */ }
+  try{
+    (typeof getActiveTasks === "function" ? getActiveTasks() : []).forEach(function(tk){
+      /* v3.7.86：参数名不用 t —— t 是本项目的 i18n 函数，遮蔽后 t("…") 会当对象调用并抛错 */
+      if(!tk.due) return;
+      const d = new Date(tk.due);
+      const k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      if(k !== dateKey) return;
+      list.push({ title: tk.title || "", time: tk.due, place: "", desc: tk.note || "",
+        kind: tk.status === "done" ? t("p5.evKindTaskDone", "任务（已完成）") : t("p5.evKindTask", "任务（未完成）") });
+    });
+  }catch(e){ /* 任务读取失败则跳过 */ }
+  const exts = (typeof _icsEventsByDate === "function") ? (_icsEventsByDate()[dateKey] || []) : [];
+  exts.forEach(function(e0){
+    list.push({ title: e0.title || "", time: _evTimeText(e0), place: e0.location || "", desc: e0.desc || "",
+      kind: t("p5.evKindExternal", "外部日历") + (e0.subName ? "（" + e0.subName + "）" : "") });
+  });
+  return list;
+}
+/**
+ * 打开某日的日历事件详情浮层
+ * @param {string} dateKey - YYYY-MM-DD
+ * @param {number} [focusIdx] - 聚焦第几条（周视图点击传入）
+ */
+function openEventDetail(dateKey, focusIdx){
+  const old = document.getElementById("evDetailOverlay");
+  if(old) old.remove();
+  const list = _evCollectDay(dateKey);
+  if(!list.length){
+    try{ toast(t("p5.evDetailEmpty", "当日没有日程事件"), "info"); }catch(e){}
+    return;
+  }
+  const idx = (typeof focusIdx === "number" && focusIdx >= 0 && focusIdx < list.length) ? focusIdx : 0;
+  const cur = list[idx];
+  let html = '<div class="cmd u-max-w-520 u-p-5" role="dialog" aria-modal="true" aria-label="' + esc(t("p5.evDetailTitle", "日程详情")) + '">';
+  html += '<div class="u-flex u-jc-between u-ai-center u-m-0-0-3"><h3 class="u-m-0 u-fs-md">' + esc(cur.title) + '</h3>';
+  html += '<button type="button" class="addbtn sm" data-ev-close title="' + esc(t("p5.evClose", "关闭")) + '">✕</button></div>';
+  html += _evDetailRow(t("p5.evKind", "类型"), cur.kind);
+  html += _evDetailRow(t("p5.evTime", "时间"), (dateKey ? dateKey + " " : "") + cur.time);
+  html += _evDetailRow(t("p5.evPlace", "地点"), cur.place);
+  html += _evDetailRow(t("p5.evDesc", "详情"), cur.desc);
+  if(list.length > 1){
+    html += '<div class="u-mt-2">' + t("p5.evMore", "当日共 {n} 条").replace("{n}", String(list.length)) + '</div>';
+    html += '<div class="u-mt-2 u-flex u-gap-2">'
+      + '<button type="button" class="addbtn sm" data-ev-step="-1">‹ ' + esc(t("p5.evPrev", "上一条")) + '</button>'
+      + '<button type="button" class="addbtn sm" data-ev-step="1">' + esc(t("p5.evNext", "下一条")) + '</button></div>';
+  }
+  html += '</div>';
+  const ov = document.createElement("div");
+  ov.className = "overlay show";
+  ov.id = "evDetailOverlay";
+  ov.innerHTML = sanitizeHtml(html);
+  document.body.appendChild(ov);
+  ov.addEventListener("click", function(e){
+    if(e.target === ov){ closeEventDetail(); return; }
+    if(e.target.closest("[data-ev-close]")){ closeEventDetail(); return; }
+    const step = e.target.closest("[data-ev-step]");
+    if(step){
+      const n2 = (idx + (parseInt(step.getAttribute("data-ev-step"), 10) || 0) + list.length) % list.length;
+      closeEventDetail();
+      openEventDetail(dateKey, n2);
+    }
+  });
+}
+/** 关闭事件详情浮层 */
+function closeEventDetail(){
+  const old = document.getElementById("evDetailOverlay");
+  if(old) old.remove();
 }
 /*SRC:ui-ge-calendar:END*/
 /*SRC:ui-ge-notes:BEGIN*/
@@ -46847,6 +47096,142 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     get _retryOverrides(){ return _retryOverrides; },
     get _streamProgress(){ return _streamProgress; }
   });
+}
+
+/* ============================================================
+ * GitHub 接入底座（v3.7.86 B4）
+ * 为什么选 Device Flow：专为 CLI/桌面应用设计 —— **只需 client_id，不需要 client_secret、
+ * 不需要回调服务器与备案域名**（本仓自建后端不存在，这是唯一零后端可用的官方流程）。
+ * 传输：api.github.com 实测回 ACAO:*（预检 204），浏览器直连，无需主进程中继。
+ * 凭据：device token 与 AI Key 同款走设备密钥 AES-GCM 加密落盘（复用 encryptKey/decryptKey）。
+ * 载体：Gist（私有）存云同步快照 —— Gist 自带 revision 历史，与增量契约天然衔接。
+ * 边界：未配置 client_id 时只有状态提示，无可点按钮；device 流程的端到端需真实 client_id 验收。
+ * ============================================================ */
+const GH_TOKEN_KEY = "github_device_token";
+const GH_GIST_ID_KEY = "github_gist_id";
+/** GitHub 授权页地址（用户点开后确认，轮询在本机继续） */
+const GH_VERIFY_URL = "https://github.com/login/device";
+async function _ghJson(url, method, headers, body){
+  try{
+    const resp = await fetch(url, {
+      method: method || "GET",
+      headers: Object.assign({ "Accept": "application/vnd.github+json", "Content-Type": "application/json" }, headers || {}),
+      body: body ? JSON.stringify(body) : undefined
+    });
+    let j = null;
+    try{ j = await resp.json(); }catch(e){ /* 非 JSON 响应按状态码判定 */ }
+    return { ok: resp.ok, status: resp.status, data: j || {} };
+  }catch(e){
+    return { ok: false, status: 0, data: {}, error: (e && e.message) ? e.message : String(e) };
+  }
+}
+/** 取解密后的 device token（无/坏值返回 ""） */
+async function githubToken(){
+  try{
+    const raw = load(PREFIX + GH_TOKEN_KEY, "");
+    if(!raw) return "";
+    if(typeof isEncKey === "function" && isEncKey(raw)){
+      const plain = await decryptKey(raw);
+      return typeof plain === "string" ? plain : "";
+    }
+    return typeof raw === "string" ? raw : "";
+  }catch(e){ return ""; }
+}
+/** 保存 device token（加密落盘；失败如实返回 false） */
+async function githubTokenSet(token){
+  try{
+    if(!token) return githubTokenClear();
+    const enc = (typeof encryptKey === "function") ? await encryptKey(token) : token;
+    save(PREFIX + GH_TOKEN_KEY, enc);
+    return true;
+  }catch(e){ return false; }
+}
+/** 清除 device token 与 Gist 指针 */
+function githubTokenClear(){
+  try{
+    try{ localStorage.removeItem(PREFIX + GH_TOKEN_KEY); }catch(e){}
+    try{ localStorage.removeItem(PREFIX + GH_GIST_ID_KEY); }catch(e){}
+  }catch(e){}
+  return true;
+}
+/** 是否已授权（token 存在）；只查存储不解密，够 UI 用 */
+function githubHasToken(){ try{ return !!load(PREFIX + GH_TOKEN_KEY, ""); }catch(e){ return false; } }
+/** 已保存的 Gist 指针 */
+function githubGistId(){ try{ return load(PREFIX + GH_GIST_ID_KEY, ""); }catch(e){ return ""; } }
+/**
+ * 第一步：申请设备码（POST device/code）
+ * @param {string} clientId - GitHub OAuth App 的 client_id（公开值）
+ * @returns {Promise<{ok:boolean, userCode?:string, verifyUrl?:string, interval?:number, expiresIn?:number, error?:string}>}
+ */
+async function githubDeviceStart(clientId){
+  const cid = String(clientId || "").trim();
+  if(!cid) return { ok: false, error: "no_client_id" };
+  const r = await _ghJson("https://github.com/login/device/code", "POST", {}, { client_id: cid, scope: "gist" });
+  const d = r.data || {};
+  if(!r.ok || d.error || !d.device_code){
+    return { ok: false, error: (d.error && ("incorrect_client_credentials" === d.error ? "bad_client_id" : d.error)) || ("HTTP " + r.status) };
+  }
+  return { ok: true, deviceCode: d.device_code, userCode: d.user_code, verifyUrl: d.verification_uri || GH_VERIFY_URL,
+    interval: d.interval || 5, expiresIn: d.expires_in || 900 };
+}
+/**
+ * 第二步：轮询 token（POST oauth/access_token）—— authorization_pending 表示用户还没确认
+ * @returns {Promise<{ok:boolean, done?:boolean, pending?:boolean, slowDown?:boolean, error?:string}>}
+ */
+async function githubDevicePoll(clientId, deviceCode){
+  const cid = String(clientId || "").trim();
+  const dc = String(deviceCode || "").trim();
+  if(!cid || !dc) return { ok: false, error: "bad_args" };
+  const r = await _ghJson("https://github.com/login/oauth/access_token", "POST", {}, { client_id: cid, device_code: dc, grant_type: "urn:ietf:params:oauth:grant-type:device_code" });
+  const d = r.data || {};
+  if(d.access_token){
+    const saved = await githubTokenSet(d.access_token);
+    if(!saved) return { ok: false, error: "token_store_failed" };
+    return { ok: true, done: true };
+  }
+  if(d.error === "authorization_pending") return { ok: true, pending: true };
+  if(d.error === "slow_down") return { ok: true, slowDown: true };
+  if(d.error === "expired_token" || d.error === "access_denied") return { ok: false, error: d.error };
+  return { ok: false, error: d.error || ("HTTP " + r.status) };
+}
+/**
+ * 快照上行 → 私有 Gist（已存在则更新，保留 revision 历史）
+ * @param {string} text - 云快照 JSON
+ * @param {string} [filename] - gist 内文件名
+ * @returns {Promise<{ok:boolean, gistId?:string, url?:string, error?:string}>}
+ */
+async function gistSyncPut(text, filename){
+  const token = await githubToken();
+  if(!token) return { ok: false, error: "not_authorized" };
+  const name = String(filename || "agent-workshop-snapshot.json");
+  const body = { description: "Agent Workshop 云同步快照（设备自动维护）", public: false, files: {} };
+  body.files[name] = { content: String(text || "") };
+  const gid = githubGistId();
+  const url = gid ? ("https://api.github.com/gists/" + encodeURIComponent(gid)) : "https://api.github.com/gists";
+  const r = await _ghJson(url, gid ? "PATCH" : "POST", { Authorization: "Bearer " + token }, body);
+  const d = r.data || {};
+  if(!r.ok || d.message){ return { ok: false, error: d.message || ("HTTP " + r.status) }; }
+  if(d.id) save(PREFIX + GH_GIST_ID_KEY, d.id);
+  return { ok: true, gistId: d.id || gid, url: d.html_url || "" };
+}
+/**
+ * 快照下行 → 从私有 Gist 读回
+ * @returns {Promise<{ok:boolean, text?:string, error?:string}>}
+ */
+async function gistSyncGet(filename){
+  const token = await githubToken();
+  const gid = githubGistId();
+  if(!token) return { ok: false, error: "not_authorized" };
+  if(!gid) return { ok: false, error: "no_gist" };
+  const r = await _ghJson("https://api.github.com/gists/" + encodeURIComponent(gid), "GET", { Authorization: "Bearer " + token });
+  const d = r.data || {};
+  if(!r.ok) return { ok: false, error: d.message || ("HTTP " + r.status) };
+  const name = String(filename || "agent-workshop-snapshot.json");
+  const file = d.files && d.files[name];
+  if(!file || typeof file.content !== "string") return { ok: false, error: "file_missing" };
+  /* 大文件 content 可能为空（>1MB 时 API 只给 truncated + raw_url）——如实失败，不假装成功 */
+  if(file.truncated) return { ok: false, error: "file_truncated" };
+  return { ok: true, text: file.content };
 }
 /*SRC:ui-ge-integrations:END*/
 </script>
