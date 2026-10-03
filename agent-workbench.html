@@ -5650,6 +5650,19 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <div class="sw-sub" data-i18n="look.autoLaunchSub">仅桌面端 exe 生效</div>
       </div>
     </div>
+    <!-- v3.7.83 萌宠节奏档位：只管频率不管幅度（幅度由宠物弹窗的尺寸档负责，两轴正交）。
+         放在「鼠标特效」之前，同属装饰类外观项。切档只重启心跳定时器，不重挂载宠物。 -->
+    <div class="set-field u-mt-2">
+      <label for="cfgPetRhythm" data-i18n="pet.rhythm.label">萌宠节奏</label>
+      <div class="ctl">
+        <select id="cfgPetRhythm">
+          <option value="quiet" data-i18n="pet.rhythm.quiet">安静</option>
+          <option value="standard" data-i18n="pet.rhythm.standard">标准</option>
+          <option value="lively" data-i18n="pet.rhythm.lively">活泼</option>
+        </select>
+      </div>
+    </div>
+    <p class="set-tip" data-i18n="pet.rhythm.tip">调节萌宠自主动作、眨眼与星光的频率，以及多久无交互后打盹。手动摸头、摇尾巴等互动不受影响。</p>
     <!-- 鼠标特效（v1.15：从独立卡片移入外观卡内） -->
     <div class="set-field u-mt-2">
       <label for="cfgPointerFxType" data-i18n="look.pointerFxLabel">鼠标特效</label>
@@ -6187,10 +6200,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.82"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.83"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261003c";
+const BUILD_TAG = "20261003d";
 
 
 
@@ -10486,6 +10499,12 @@ const MESSAGES = {
     "pet.lady.bubble5": "喝杯奶茶？",
     "pet.lady.desc": "开衫配吊带的都市姐姐",
     "pet.lady.name": "阿妍",
+    "pet.rhythm.label": "萌宠节奏",
+    "pet.rhythm.applied": "萌宠节奏已切换",
+    "pet.rhythm.lively": "活泼",
+    "pet.rhythm.quiet": "安静",
+    "pet.rhythm.standard": "标准",
+    "pet.rhythm.tip": "调节萌宠自主动作、眨眼与星光的频率，以及多久无交互后打盹。手动摸头、摇尾巴等互动不受影响。",
     "pet.size.l": "大",
     "pet.size.m": "中",
     "pet.size.s": "小",
@@ -14200,6 +14219,12 @@ const MESSAGES = {
     "pet.lady.bubble5": "Milk tea?",
     "pet.lady.desc": "A city girl in a cardigan and camisole",
     "pet.lady.name": "Yan",
+    "pet.rhythm.label": "Pet rhythm",
+    "pet.rhythm.applied": "Pet rhythm updated",
+    "pet.rhythm.lively": "Lively",
+    "pet.rhythm.quiet": "Quiet",
+    "pet.rhythm.standard": "Standard",
+    "pet.rhythm.tip": "Controls how often your pet moves, blinks and sparkles on its own, and how long it takes before dozing off. Petting, tail-wagging and other direct interaction are unaffected.",
     "pet.size.l": "Large",
     "pet.size.m": "Medium",
     "pet.size.s": "Small",
@@ -23219,6 +23244,60 @@ function _petSizePx(){
   const s = PET_SIZES[_petSizeId()] || PET_SIZES.m;
   return s.px;
 }
+/* v3.7.83：萌宠节奏三档（安静 / 标准 / 活泼）—— 只管**频率**，不管幅度。
+   与 _PET_SIZE_TUNING（管幅度：动作放大率、特效大小）是两条正交轴：
+     尺寸档 → --pet-act-scale / --pet-fx-scale（换档需重挂载，改 CSS 变量）
+     节奏档 → 心跳间隔 + 各行为概率 + 打盹阈值（换档只需重启定时器，零闪烁）
+   四条硬约束（不可被档位覆盖）：
+     ① prefers-reduced-motion 最高优先 —— 已在 tick 开头 return，任何档位都不得绕过；
+     ② 主动交互不降级 —— 摸头/摸身/摇尾巴、拖拽反馈恒在。用户主动交互被静音是 bug 不是「安静」；
+     ③ 切档不 remount 宠物 —— 只重启定时器（见 applyPetRhythm），remount 会闪 + 位置重置；
+     ④ 待机呼吸 .pet.bobbing 恒开 —— 去掉它宠物会显得「死了」，故节奏档不含此项。
+   表驱动而非在 tick 里散落三套 if/else：调平衡只改这一张表。 */
+const PET_RHYTHMS = {
+  quiet: {
+    id: "quiet", name: t("pet.rhythm.quiet", "安静"),
+    tickMs: 7000,     /* 心跳：两次自主行为之间的间隔 */
+    actP:  0.30,      /* 有眨眼层时：抽中则播动作 */
+    blinkP: 0.22,     /* 有眨眼层时：抽中则眨眼 */
+    actNoBlinkP: 0.60,/* 3D 档无眨眼层 → 概率全给动作 */
+    starP: 0.05,       /* 星光密度 */
+    sparkP: 0.12,      /* 3D 档附加立体星光 */
+    spark2P: 0.08,     /* 立体星光二次触发 */
+    dozeMs: 180000,    /* 打盹空闲阈值：3 分钟无交互 */
+    zzzP:  0.12        /* 打盹期间冒 z Z 的概率 */
+  },
+  standard: {
+    id: "standard", name: t("pet.rhythm.standard", "标准"),
+    tickMs: 3400, actP: 0.40, blinkP: 0.42, actNoBlinkP: 0.72,
+    starP: 0.14, sparkP: 0.30, spark2P: 0.20,
+    dozeMs: 90000, zzzP: 0.30
+  },
+  lively: {
+    id: "lively", name: t("pet.rhythm.lively", "活泼"),
+    tickMs: 2000, actP: 0.55, blinkP: 0.35, actNoBlinkP: 0.85,
+    starP: 0.30, sparkP: 0.55, spark2P: 0.40,
+    dozeMs: 45000, zzzP: 0.45
+  }
+};
+const PET_RHYTHM_DEFAULT = "standard";
+function _petRhythmId(){
+  let v = "standard";
+  try{ v = _getPref("petRhythm", PET_RHYTHM_DEFAULT) || PET_RHYTHM_DEFAULT; }catch(_){}
+  return PET_RHYTHMS[v] ? v : PET_RHYTHM_DEFAULT;   /* 旧档/手改成非法值都回落标准 */
+}
+function _petRhythm(){ return PET_RHYTHMS[_petRhythmId()] || PET_RHYTHMS[PET_RHYTHM_DEFAULT]; }
+/* v3.7.83：设置页改档的落点。**只重启心跳定时器**，不 remount 宠物
+   （remount = 重新建 DOM + 重新定位浮层 + 位置跳回默认右下角，用户会看到「闪一下再跳位」）。
+   节奏档不涉及任何 CSS 变量，故无需重挂载即可生效。 */
+function applyPetRhythm(id){
+  _setPref("petRhythm", PET_RHYTHMS[id] ? id : PET_RHYTHM_DEFAULT);
+  const stage = $("#petStage"); if(!stage) return;
+  Array.prototype.forEach.call(stage.children, function(child){
+    if(child && typeof child._petTickStart === "function") child._petTickStart();
+  });
+  return _petRhythmId();
+}
 /* v3.6.9：全身立绘的身高全用在「身高」上、横向很窄，同样盒子下视觉体量明显小于 Q 版，
    故给一份按角色的整体缩放（作用在 .pet-art，浮层随之等比缩放）。 */
 const _PET_ART_SCALE = { lady: 1.5, boy: 1.5 };   /* v3.7.2：只留两位全身人物 */
@@ -23926,36 +24005,49 @@ function mountPet(kind){
   const playAct = function(){
     playActCls(ACTS[Math.floor(Math.random() * ACTS.length)]);
   };
+  /* v3.7.83：心跳改成「可重启的定时器」—— 抽成 startPetTick()，改节奏档时只重建定时器。
+     原实现是 `const tick = setInterval(..., 3400)`，间隔与 7 个概率全部写死，
+     节奏档无从下手；现在间隔与概率都读 PET_RHYTHMS，改档 = applyPetRhythm() 调一次本函数。
+     计时器句柄挂 el._petTimer（沿用旧名，unmountPet 与调试探针都认它）。 */
   let _tickN = 0;
-  const tick = setInterval(function(){
-    if(!document.body.contains(el)){ clearInterval(tick); return; }
-    /* v3.7.81 三条硬规则进 tick：
+  const onTick = function(){
+    if(!document.body.contains(el)){ if(el._petTimer){ clearInterval(el._petTimer); el._petTimer = null; } return; }
+    /* v3.7.81 三条硬规则进 tick（优先级高于任何节奏档）：
        ① 拖拽中不做动作/眨眼/特效 —— 宠物被按着走还一边点头是视觉打架（拖拽时才不是"没人陪它"）；
        ② prefers-reduced-motion 用户：完全静默（CSS 只停动画，JS 仍在加 class/放特效）；
        ③ 打盹改真实空闲计时：原先 idleTicks>=3 ≈ 10 秒就打盹、之后每 3.4s 冒一次 zzz（用户会觉得"它一直在睡"）。 */
     const _dnd = typeof drag !== "undefined" && !!drag;
     if(_dnd || _reduceMotion()) return;
+    const _R = _petRhythm();                            /* v3.7.83：本拍节奏参数快照 */
     /* v3.7.81：周期性校正浮层坐标 —— ResizeObserver 只在盒子尺寸变化时触发，
        而"立绘解码完成"不改变盒子尺寸，故极端情况下仍可能停在未解码时的空定位。
-       每 8 个 tick（约 27s）校正一次，代价可忽略。 */
+       每 8 个 tick 校正一次，代价可忽略（v3.7.83：拍长随档位变化，间隔由 27s 变成 16~56s，
+       但校正与节奏无关、代价本就为零，按拍数计即可，不必换算成时间）。 */
     if((++_tickN % 8) === 1 && artImg) placeFace();
     const _idleMs = Date.now() - _lastActive;
-    const _dozing = _idleMs > 90000;                       /* 90 秒无任何交互才打盹 */
+    const _dozing = _idleMs > _R.dozeMs;                  /* 无任何交互达到阈值才打盹 */
     if(artImg){
       /* 动作与眨眼互斥，避免同时触发导致表情浮层与骨骼变换打架；
          3D 风格没有眨眼浮层（见 _petArtMarkup 注释）→ 把那份概率让给动作 */
       const canBlink = !!(artLids && lidEls.length);
       const r = Math.random();
-      if(r < (canBlink ? .40 : .72)) playAct();
-      else if(canBlink && r < .82) blinkArt();
+      if(r < (canBlink ? _R.actP : _R.actNoBlinkP)) playAct();
+      else if(canBlink && r < _R.actP + _R.blinkP) blinkArt();
     } else if(Math.random() < .5) blink();
-    /* 特效频率 v3.7.81 下调：星光 35%→14%（原来几乎每 3.4s 一次，满天飞）；
-       3D 附加星 55%→30%、二次 45%→20%。打盹期间不出星光（物理上合理：睡了就不闪）。 */
-    if(!_dozing && Math.random() < .14) fx("pet-fx-star");
-    if(is3dArt && !_dozing && Math.random() < .30){ sparkFx(); if(Math.random() < .20) setTimeout(sparkFx, 260); }
-    if(_dozing && Math.random() < .30) fx("pet-fx-zzz", "z Z");
-  }, 3400);
-  el._petTimer = tick;
+    /* 特效频率 v3.7.81 下调（星光 35%→14%，原来几乎每 3.4s 一次，满天飞），
+       v3.7.83：密度改由节奏档控制。3D 附加星与二次触发同理。
+       打盹期间不出星光（物理上合理：睡了就不闪）。 */
+    if(!_dozing && Math.random() < _R.starP) fx("pet-fx-star");
+    if(is3dArt && !_dozing && Math.random() < _R.sparkP){ sparkFx(); if(Math.random() < _R.spark2P) setTimeout(sparkFx, 260); }
+    if(_dozing && Math.random() < _R.zzzP) fx("pet-fx-zzz", "z Z");
+  };
+  const startPetTick = function(){
+    if(el._petTimer){ clearInterval(el._petTimer); el._petTimer = null; }
+    el._petTimer = setInterval(onTick, _petRhythm().tickMs);
+    return el._petTimer;
+  };
+  el._petTickStart = startPetTick;      /* 供 applyPetRhythm() 换档调用 */
+  startPetTick();
   el.querySelector(".pet-close").onclick = function(e){
     e.stopPropagation();
     _setPref("pet", "");
@@ -24072,6 +24164,23 @@ function unmountPet(){
 function initPetFromPref(){
   const k = _getPref("pet", "");
   if(k && _PETS[k]) mountPet(k);
+}
+/* v3.7.83：设置页「外观 → 萌宠节奏」控件绑定。
+   幂等（_prBound 标志），沿用 initPointerFxFromPref 的既有模式 —— 抽屉可能被反复 open，
+   重复赋 .onchange 会叠加成多次 applyPetRhythm（虽然幂等但白跑一遍定时器重建）。
+   刻意**不走** ui-drawer 的「保存」路径：节奏档是即时生效的装饰偏好，
+   与指针特效开关同属一档 —— 点一下就该看到宠物安静下来，不需要再点保存。 */
+function initPetRhythmFromPref(){
+  const sel = $("#cfgPetRhythm"); if(!sel) return;
+  if(!sel._prBound){
+    sel._prBound = true;
+    sel.onchange = function(){
+      const id = applyPetRhythm(sel.value);
+      sel.value = id;                        /* 非法值已被 applyPetRhythm 回落，回写避免显示与实际不符 */
+      try{ toast(t("pet.rhythm.applied", "萌宠节奏已切换"), "info"); }catch(_){}
+    };
+  }
+  sel.value = _petRhythmId();                /* 回填：每次开抽屉都同步（可能被别处改过） */
 }
 
 /* ---------- P0② 模态框统一 a11y 基座（延迟绑定，不依赖各弹窗的调用点） ----------
@@ -39622,6 +39731,7 @@ function applyStartHash(){
     const _bw3 = $("#btnPetClose"); if(_bw3) _bw3.onclick = function(){ if(typeof closePetModal === "function") closePetModal(); };
     if(typeof initPointerFxFromPref === "function") initPointerFxFromPref();
     if(typeof initPetFromPref === "function") initPetFromPref();
+    if(typeof initPetRhythmFromPref === "function") initPetRhythmFromPref();   // v3.7.83 节奏档控件绑定+回填
   }catch(_){ }
   try{ bindChatPanel(); }catch(e){ pushDiag("error","bindChatPanel init: "+(e&&e.message||e),{where:"bindChatPanel"}); } // 右侧 AI 聊天面板事件绑定（三栏布局第三栏，静态 HTML 一次性绑定）
   // v2.0：会话管理弹窗绑定 + 聊天面板头部「会话」入口
