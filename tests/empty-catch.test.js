@@ -109,14 +109,16 @@ describe("v3.7.87 空 catch · 判别力（每条对应一个真实踩坑）", (
   });
 });
 
+/** 全仓扫描（纯函数调用，不 spawn；结果与 CLI 走同一套 lib，本机与 CI 一致） */
+function scanAll() {
+  const files = readdirSync(SRC).filter((f) => f.endsWith(".js")).sort();
+  const seen = {}; const out = [];
+  for (const f of files) out.push(...scanSource(readFileSync(join(SRC, f), "utf8"), f, seen));
+  return out;
+}
+
 describe("v3.7.87 空 catch · 基线与全仓一致性", () => {
-  /* 全仓扫描走纯函数调用（不 spawn），结果与 CLI 走同一套 lib，本机与 CI 一致 */
-  const allItems = (() => {
-    const files = readdirSync(SRC).filter((f) => f.endsWith(".js")).sort();
-    const seen = {}; const out = [];
-    for (const f of files) out.push(...scanSource(readFileSync(join(SRC, f), "utf8"), f, seen));
-    return out;
-  })();
+  const allItems = scanAll();
 
   /* ⚠️ 这里**绝不能**断言「当前扫描条数 == 基线条数」—— v3.7.87 首版就是这么写的，
      结果在 CI 上直接红：基线是在**含他人未提交改动的工作区**冻结的（493），
@@ -172,5 +174,93 @@ describe("v3.7.87 空 catch · 基线与全仓一致性", () => {
     const sample = p0.find((i) => i.why.includes("localStorage"));
     expect(sample, "应存在 localStorage 类 P0").toBeTruthy();
     expect(P0_PATTERNS.some((p) => sample.why === p.why), "why 应取自规则表").toBe(true);
+  });
+});
+
+/* ============================================================================
+ * v3.7.88：bare 判据扩边 —— catch 体 或 try 上方 说明注释 任一存在即算「已评估」
+ * ============================================================================
+ * 起因：`bare` 原先只看 catch 体内部，于是「说明写在 try 块上方」的合理降级
+ * （catch 体本身是空的）被误判成「作者未评估」→ P0-a 台账混进假阳性，
+ * 会误导人去改本来正确的代码。实测样本：ai-tools.js:2188 / 2240 两处 await 空 catch。
+ *
+ * ⚠️ 判据只影响台账排序，**不参与 P0/P1/P2 分级**；基线 key 也不含 bare
+ *   （keyOf = file:sig#occ），故改判据不动棘轮、不需要重冻基线 —— 这正是
+ *   把它设计成「只读 bare、不进 key」的原因，也是本组测试要钉住的前提。
+ */
+describe("v3.7.88 bare 判据扩边（try 上方说明也算已评估）", () => {
+  const BARE = (src) => scanSource(src, "fixture.js")[0]?.bare;
+  const CATCH = "try{ localStorage.setItem('k','v'); }catch(_){}";
+
+  it("catch 体有注释 → bare=false（原行为不变）", () => {
+    expect(BARE(`try{ localStorage.setItem('k','v'); }catch(_){ /* 已评估 */ }`)).toBe(false);
+  });
+
+  it("try 上方有行注释 → 判为已评估（v3.7.88 新增）", () => {
+    expect(BARE(`// 配额满时静默跳过，已确认无害\n${CATCH}`)).toBe(false);
+  });
+
+  it("try 上方有**跨行**块注释（行首星号续行）→ 判为已评估", () => {
+    const src = `/* 批量回填缺失向量\n * 没配 embedding 通道就直接返回\n */\n${CATCH}`;
+    expect(BARE(src)).toBe(false);
+  });
+
+  it("try 上方有跨行块注释（行尾收尾形态）→ 判为已评估", () => {
+    /* 这一形态是 v3.7.88 连踩三次才补上的：作者随手在句末写「星号斜杠」收尾，
+       而非行首星号续行 → 只判行首会整段漏掉上方说明。 */
+    const src = `/* 一次批量补齐所有缺失向量\n   上限传 Infinity：覆盖全表 */\n${CATCH}`;
+    expect(BARE(src)).toBe(false);
+  });
+
+  it("try 与 catch 同行时，上方注释仍要能读到（行首回溯不能撞上 try 本身）", () => {
+    const src = `/* 说明在上一行\n   跨两行收尾 */\n${CATCH}`;
+    expect(BARE(src)).toBe(false);
+  });
+
+  it("真正无解释 → 仍判 bare（判据没放水）", () => {
+    expect(BARE(CATCH)).toBe(true);
+    expect(BARE(`const a=1;\n${CATCH}`)).toBe(true);
+  });
+
+  it("上方隔了别的代码 → 该注释不算本 catch 的说明，仍判 bare", () => {
+    const src = `/* 这是别的函数的注释 */\nconst unrelated = 1;\n${CATCH}`;
+    expect(BARE(src)).toBe(true);
+  });
+
+  it("🔴 判据扩边不得改变分级（level/why/sig/occ 全部与扩边前一致）", () => {
+    /* 分级与 key 都不该被 bare 影响：同一段代码扩边前后，棘轮判定必须完全相同。
+       这是「只读 bare、不进 key」设计的守门断言 —— 若有人日后把 bare 塞进 keyOf，
+       改判据就会悄悄动基线，本条会先红。 */
+    const src = `/* 已评估：配额满属预期降级 */\n${CATCH}`;
+    const it = scanSource(src, "fixture.js")[0];
+    expect(it.level).toBe("P0");
+    expect(it.why).toContain("localStorage");
+    expect(keyOf(it)).toBe(keyOf({ ...it, bare: true }));   // key 与 bare 无关
+  });
+
+  it("🔴 真实台账：ai-tools.js 里「await 空 catch + 上方有跨行说明」应判为已评估", () => {
+    /* 钉死本次修复的现场证据，防止回归。
+     * ⚠️ **按内容定位而非硬编码行号** —— 并行 agent（zcode）随时在改 src/，
+     *   钉死 2188/2240 会在他插入代码后假红（v3.7.87 已栽过一次「条数相等」断言）。
+     *   这里改为「扫出所有 await 类 P0 → 逐条要求 bare=false」，
+     *   若将来真出现一条无说明的 await 空 catch，本条会如实红。 */
+    const raw = readFileSync(join(SRC, "ai-tools.js"), "utf8");
+    const awaits = scanSource(raw, "ai-tools.js")
+      .filter((i) => i.level === "P0" && i.why.includes("await"));
+    expect(awaits.length, "应存在 await 类 P0（回归时会先在这里提示）").toBeGreaterThan(0);
+    for (const it of awaits) {
+      expect(it.bare, `ai-tools.js:${it.line} 上方有说明注释，不该判 bare`).toBe(false);
+    }
+  });
+
+  it("🔴 反向守护：全仓不应出现「新增的无解释 P0」（判据过宽会掩盖新问题）", () => {
+    /* 判据扩边的风险是「把真有问题的也当成已评估」。此条反向兜底：
+     * 扩边只允许**减少** bare，不允许把 P0 从清单里藏起来。
+     * 具体口径：P0 总数与分级不因 bare 判据而变（下面按 level 统计），
+     * 且仍必须有相当比例的 P0 是 bare（否则判据宽到把所有 P0 都吞了）。 */
+    const p0 = scanAll().filter((i) => i.level === "P0");
+    const bareP0 = p0.filter((i) => i.bare);
+    expect(bareP0.length, "bare P0 不应为 0 —— 否则判据宽到把真问题也藏了").toBeGreaterThan(0);
+    expect(bareP0.length, "bare P0 不应等于全部 P0 —— 那说明判据失效").toBeLessThan(p0.length);
   });
 });

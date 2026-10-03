@@ -117,12 +117,78 @@ export function findEmptyCatches(raw, file) {
     if (end < 0) continue;
     if (stripCommentsAndStrings(raw.slice(open + 1, end)).trim() !== '') continue;
     const bodyText = raw.slice(open + 1, end);
-    /* bare = 连一句注释都没有。同风险下，它才是"作者压根没评估过"的那一类，优先处理。 */
-    const bare = !/\/\*[\s\S]*?\*\/|\/\/[^\n]*/.test(bodyText);
+    /* bare = 连一句解释都没有。同风险下，它才是"作者压根没评估过"的那一类，优先处理。
+     *
+     * ⚠️ 曾经的错误做法（只判 catch 体内部）：v3.7.88 实测踩到 ——
+     *   `/* 本轮没补到的缺失向量由检索侧按需再补 *\/` 这类说明写在 **try 块上方**，
+     *   catch 体本身是空的（`catch(_){}`），于是被判 bare="作者未评估"，
+     *   P0-a 台账 34 处里混进了这种**假阳性**，会误导人去改本来正确的代码。
+     *   实测 ai-tools.js:2188 / 2240 就是这种（await 空 catch 危害标成"永远等得到成功了"，
+     *   实际失败不改控制流、正文已入库、向量走检索侧兜底 —— 是合理设计）。
+     *   故 bare 改为「catch 体 **或** try 块上方」都没有解释才算 bare。
+     *   判据只影响台账排序，**不参与 P0/P1/P2 分级**，故不会削弱拦截能力。
+     */
+    const hasBodyNote = /\/\*[\s\S]*?\*\/|\/\/[^\n]*/.test(bodyText);
+    const hasTryNote = /\/\*[\s\S]*?\*\/|\/\/[^\n]*/.test(leadingCommentBefore(raw, m.index));
+    const bare = !hasBodyNote && !hasTryNote;
     out.push({ idx: m.index, end: end + 1, open, file, bare,
       note: bodyText.replace(/\s+/g, ' ').trim().slice(0, 60) });
   }
   return out;
+}
+
+/**
+ * 取 catch 之前、紧邻 try 块上方的一小段注释（最多向上 10 行），只认**真正连续的注释**。
+ *
+ * ⚠️ v3.7.88 实测踩了四轮才做对，教训是**别逐行独立判断**：
+ *   ① `try{ ... }catch(_){}` 常写在**同一行**。从「catch 前最后一个 `}`」所在整行回溯会撞上
+ *      同行的 `try` 真实代码而立即 break → 上方说明整段漏掉。故起点取 catch 所在行的**行首**。
+ *   ② 块注释跨行形态至少三种：行首星号续行（`   星号 B`）、行尾星号斜杠收尾（`   B 星号斜杠`）、
+ *      纯文本中间行（`   B`）。**逐行猜形态必然顾此失彼**（先漏 (b)，再漏 (c)）。
+ *   ③ 「把这行的块注释片段剔掉，看还剩不剩残留」这条看似聪明的判据同样错：
+ *      多行注释的**首行**（只有起始符没有闭合符）剔不掉 → 残留非空 → 被误判成代码。
+ *   ④ 正确姿势：**跨行跟踪块注释开闭配对**。从 catch 往上逐行喂进一个开关状态机
+ *      （遇块注释起始符 depth+1、遇闭合符 depth-1），任一时刻「处于注释内」或
+ *      「本行是完整行注释/纯空白」才收；一旦某行是**未处于注释内的真实代码**就停。
+ *      这样 (a)(b)(c) 三种形态自然统一处理，不需要任何逐行特例。
+ *
+ * @returns {string} 段文本（供调用方用「有没有注释」正则判是否已评估）；无则空串
+ */
+export function leadingCommentBefore(raw, catchStart) {
+  const lineStart = raw.lastIndexOf('\n', catchStart) + 1;
+  /* 步骤 1：自下而上粗收集最多 10 行（此时**不做**注释判断，方向是反的、判断必然失准） */
+  const raw_up = [];
+  let p0 = lineStart - 1;                  /* catch 所在行的行首前一字符 */
+  for (let hops = 0; hops < 10 && p0 >= 0; hops++) {
+    const prevStart = raw.lastIndexOf('\n', p0 - 1) + 1;
+    raw_up.push(raw.slice(prevStart, p0).trim());
+    p0 = prevStart - 1;
+  }
+  raw_up.reverse();                        /* 变为自上而下 */
+  /* 步骤 2：自上而下跑块注释配对状态机，给每行打「是否整行在注释内」的标记。
+     ⚠️ 必须自上而下：从下往上先遇到闭合符会让 depth 变负、配对全乱（v3.7.88 实测）。 */
+  const flags = [];
+  let depth = 0;
+  for (const line of raw_up) {
+    const entryDepth = depth;
+    let openedHere = false;
+    if (line.startsWith('//')) { flags.push('line'); continue; }   /* 行注释整行算注释 */
+    if (line === '') { flags.push('blank'); continue; }           /* 空行算中性 */
+    for (let k = 0; k < line.length - 1; k++) {
+      const two = line.slice(k, k + 2);
+      if (two === '*/') depth--;
+      else if (two === '/*') { depth++; openedHere = true; }
+    }
+    /* entryDepth>0 表示进入本行时已在注释中；openedHere 表示本行开启了注释（尚未闭合也算） */
+    flags.push(entryDepth > 0 || openedHere || depth > 0 ? 'block' : 'code');
+  }
+  /* 步骤 3：从最靠近 catch 的那一行（数组末尾）往前，截取**连续非 code** 的片段 */
+  const kept = [];
+  for (let i = flags.length - 1; i >= 0; i--) {
+    if (flags[i] === 'code') break;       /* 撞上真实代码 → 停 */
+    kept.unshift(raw_up[i]);
+  }
+  return kept.join('\n');
 }
 
 /**
