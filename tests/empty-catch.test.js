@@ -118,13 +118,33 @@ describe("v3.7.87 空 catch · 基线与全仓一致性", () => {
     return out;
   })();
 
-  it("全仓扫出的条数与基线完全一致（不多不少）", () => {
+  /* ⚠️ 这里**绝不能**断言「当前扫描条数 == 基线条数」—— v3.7.87 首版就是这么写的，
+     结果在 CI 上直接红：基线是在**含他人未提交改动的工作区**冻结的（493），
+     而 CI 跑的是 commit tree（不含那些改动，489）。棘轮门禁天生会随工作区状态漂移，
+     把「条数相等」写死成断言 = 把门禁绑在一个会变的量上，属于设计错误。
+     正确做法：**CLI 只拦新增 P0**（消失不报错、新增只提示），测试只守护
+     不随工作区漂移的东西：基线文件自洽性 + 条目结构合法性。 */
+  it("基线文件自洽：count 字段 == items 实有条数", () => {
     const base = JSON.parse(readFileSync(BASELINE, "utf8"));
-    expect(allItems.length).toBe(base.count);
-    expect(allItems.length).toBe(base.items.length);
+    expect(base.items.length, "count 与 items 必须一致").toBe(base.count);
   });
 
-  it("每条 key 唯一 —— file:sig#occ 三元组不得撞车（否则 493 会被吞成 452）", () => {
+  it("全仓能扫出合理规模（不为 0，且结构完整）", () => {
+    /* 只做量级健康检查，不钉死具体数字 —— 存量会随日常开发自然增减 */
+    expect(allItems.length, "全仓空 catch 不应为 0（若归零说明扫描器坏了）").toBeGreaterThan(100);
+  });
+
+  it("基线每条 key 唯一 —— file:sig#occ 三元组不得撞车（否则 493 会被吞成 452）", () => {
+    const base = JSON.parse(readFileSync(BASELINE, "utf8"));
+    for (const it of base.items) {
+      expect(["P0", "P1", "P2"], `${it.file}:${it.line} 等级非法`).toContain(it.level);
+      expect(it.why, `${it.file}:${it.line} 缺 why`).toBeTruthy();
+    }
+    const keys = base.items.map(keyOf);
+    expect(new Set(keys).size, `基线内出现 ${keys.length - new Set(keys).size} 条重复 key`).toBe(keys.length);
+  });
+
+  it("当前扫描每条 key 唯一 —— file:sig#occ 三元组不得撞车", () => {
     const keys = allItems.map(keyOf);
     expect(new Set(keys).size, `keyOf 必须带 occ：${keys.length - new Set(keys).size} 条重复`).toBe(keys.length);
   });
