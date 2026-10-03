@@ -1147,7 +1147,7 @@ async function icsRefreshSub(sub){
     if(!r || !r.ok) return { ok: false, error: "HTTP " + ((r && r.status) || 0) };
     sub.ts = Date.now();
     if(r.status === 304 || r.notModified){ sub.lastCheckedAt = Date.now(); _icsPersistSub(sub); return { ok: true, notModified: true }; }
-    sub.evs = icsParseEvents(r.text).slice(0, ICS_MAX_EVENTS);
+    _icsParseIntoSub(sub, r.text);
     sub.etag = (r.etag || "").toString();
     sub.lastModified = (r.lastModified || "").toString();
     sub.lastCheckedAt = Date.now();
@@ -1188,13 +1188,14 @@ function icsAddSub(name, url){
 }
 /** 导入本地 .ics（纯本地，无网络） */
 function icsImportLocal(name, text){
-  const evs = icsParseEvents(text).slice(0, ICS_MAX_EVENTS);
-  if(!evs.length) return null;
+  const probe = { evs: [], id: "probe", url: "", name: "" };
+  _icsParseIntoSub(probe, text);
+  if(!probe.evs.length) return null;
   const subs = getIcsSubs();
   subs.push({ id: "ics_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-    name: String(name || "导入日历").trim().slice(0, 60), url: "", local: true, evs: evs, ts: Date.now() });
+    name: String(name || "导入日历").trim().slice(0, 60), url: "", local: true, evs: probe.evs, diag: probe.diag, parsedAt: Date.now(), ts: Date.now() });
   saveIcsSubs(subs);
-  return { count: evs.length };
+  return { count: probe.evs.length, diag: probe.diag };
 }
 /** 删除日历源（其事件随之从日历视图移除） */
 function icsRemoveSub(id){
@@ -1225,9 +1226,11 @@ function renderIcsPanel(){
       const when = s.lastCheckedAt ? new Date(s.lastCheckedAt).toLocaleString() : t("p5.icsNever", "未刷新");
       html += '<div class="ics-item" data-ics-id="' + esc(s.id) + '">'
         + '<div class="ics-info"><div class="ics-item-name">' + esc(s.name) + (s.local ? " (" + esc(t("p5.icsLocalTag", "本地")) + ")" : "") + '</div>'
-        + '<div class="ics-item-meta">' + evN + " " + esc(t("p5.icsEventUnit", "个事件")) + " · " + esc(when) + (s.url ? " · " + esc(s.url.slice(0, 48)) : "") + '</div></div>'
+        + '<div class="ics-item-meta">' + evN + " " + esc(t("p5.icsEventUnit", "个事件")) + " · " + esc(when) + (s.url ? " · " + esc(s.url.slice(0, 48)) : "")
+        + ((s.diag && s.diag.count > 0) ? " · " + esc(t("p5.icsDiagWarn", "解析异常 {n} 条（缺标题或开始时间）").replace("{n}", String(s.diag.count))) : "") + '</div></div>'
         + '<div class="ics-actions">'
         + (s.url ? '<button type="button" class="addbtn sm" data-ics-refresh="' + esc(s.id) + '">' + esc(t("p5.icsRefresh", "刷新")) + '</button>' : "")
+        + '<button type="button" class="addbtn sm" data-ics-rename="' + esc(s.id) + '">' + esc(t("p5.icsRename", "重命名")) + '</button>'
         + '<button type="button" class="addbtn sm" data-ics-del="' + esc(s.id) + '">' + esc(t("p5.icsDelete", "删除")) + '</button>'
         + '</div></div>';
     });
@@ -1300,6 +1303,19 @@ function bindIcsPanel(c){
     exp._icsBound = true;
     exp.onclick = function(){ icsExportLocal(); };   /* 零凭据双向的另一半：本地 → 对方 */
   }
+  /* v3.7.87 D：重命名（id 不变 → chunk docId 稳定 → 零重嵌） */
+  c.querySelectorAll("[data-ics-rename]").forEach(function(b){
+    if(b._icsBound) return; b._icsBound = true;
+    b.onclick = function(){
+      const id = b.getAttribute("data-ics-rename");
+      const cur = getIcsSubs().find(function(x){ return x.id === id; });
+      if(!cur) return;
+      const nn = (typeof window !== "undefined" && typeof window.prompt === "function") ? window.prompt(t("p5.icsRenamePrompt", "新的日历源名称"), cur.name) : null;
+      if(nn === null || nn === undefined) return;
+      if(!icsRenameSub(id, nn)){ try{ toast(t("p5.icsRenameFail", "重命名失败"), "warn"); }catch(e){} return; }
+      openIcsPanel(c);
+    };
+  });
   c.querySelectorAll("[data-ics-refresh]").forEach(function(b){
     if(b._icsBound) return; b._icsBound = true;
     b.onclick = async function(){
@@ -1508,4 +1524,45 @@ function openEventDetail(dateKey, focusIdx){
 function closeEventDetail(){
   const old = document.getElementById("evDetailOverlay");
   if(old) old.remove();
+}
+
+/* ============================================================
+ * ICS 增强（v3.7.87 D）
+ * ① 重命名订阅源（此前只能删了重加，id/chunk docId 会全变）。
+ * ② 解析行级诊断：订阅源文件里坏掉的 VEVENT（缺 DTSTART/SUMMARY 等）此前静默丢弃，
+ *    用户只见"事件变少了"却不知原因；现在按源记录异常计数与首条原因，面板直接显示。
+ * ============================================================ */
+/** 重命名订阅源（id 不变 → chunk docId 稳定 → 零重嵌） */
+function icsRenameSub(id, name){
+  const nm = String(name || "").trim().slice(0, 60);
+  if(!id || !nm) return false;
+  const subs = getIcsSubs();
+  const hit = subs.find(function(s){ return s.id === id; });
+  if(!hit) return false;
+  hit.name = nm;
+  return saveIcsSubs(subs);
+}
+/**
+ * 带诊断的解析（v3.7.87）：与 icsParseEvents 同语义，另给每源异常计数
+ * @returns {{events:Array, diag:{count:number, first:string}}}
+ */
+function icsParseWithDiag(text){
+  const events = icsParseEvents(text);
+  /* 粗粒度诊断：总 VEVENT 数 vs 成功解析数 —— 差额即被丢弃的坏事件 */
+  const src = String(text || "");
+  const total = (src.match(/BEGIN:VEVENT/gi) || []).length;
+  const bad = Math.max(0, total - events.length);
+  let first = "";
+  if(!src.trim()) first = "empty";
+  else if(total === 0) first = "no_vevent";
+  else if(bad > 0) first = "missing_title_or_start";
+  return { events: events, diag: { count: bad, first: first } };
+}
+/** 解析源文本并把诊断写回源记录（导入与刷新共用） */
+function _icsParseIntoSub(sub, text){
+  const r = icsParseWithDiag(text);
+  sub.evs = r.events.slice(0, ICS_MAX_EVENTS);
+  sub.diag = r.diag;
+  sub.parsedAt = Date.now();
+  return sub;
 }

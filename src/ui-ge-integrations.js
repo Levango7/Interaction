@@ -2279,3 +2279,127 @@ async function gistSyncGet(filename){
   if(file.truncated) return { ok: false, error: "file_truncated" };
   return { ok: true, text: file.content };
 }
+
+/* ============================================================
+ * WebDAV 云同步载体（v3.7.87）
+ * 为什么是它（用户 2026-10-03：「不出国、GitHub 不方便」）：坚果云等国内网盘提供
+ * 标准 WebDAV + **应用密码** —— 凭据门槛最低（无 OAuth/企业资质），国内直连可达。
+ * 实测无 ACAO → 桌面版经主进程 webdav-fetch 中转（与 ics-fetch 同一套防线）。
+ * **ETag 冲突检测**：上传用 If-None-Match（首次）/ If-Match（续传）—— 云端被其他设备
+ * 改过（412）就如实报"冲突"，不静默覆盖。这是云同步全量契约（见
+ * docs/cloud-sync-incremental-contract.md）落地前的**第一个真冲突信号**。
+ * 诚实边界：本版只做载体（存/取一个快照文件），**未接同步主流程**；无 WebDAV 配
+ * 置时（app 无后端、云同步面板本就无入口）零影响。
+ * ============================================================ */
+const WD_CFG_KEY = "webdav_cfg";        /* { url, user } 公共部分 */
+const WD_PASS_KEY = "webdav_pass";      /* 应用密码（设备密钥加密） */
+const WD_META_KEY = "webdav_meta";      /* { etag, lastModified, path, ts } */
+const WD_DEF_PATH = "/agent-workshop-snapshot.json";
+/** WebDAV 中继是否可用（桌面版） */
+function webdavHasRelay(){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return !!(api && typeof api.webdavFetch === "function");
+}
+/** 公共配置（url/user/path），无则 null */
+function webdavCfg(){
+  try{
+    const c = load(PREFIX + WD_CFG_KEY, null);
+    if(!c || !c.url) return null;
+    return { url: String(c.url || "").replace(/\/+$/, ""), user: String(c.user || ""), path: String(c.path || WD_DEF_PATH) };
+  }catch(e){ return null; }
+}
+/** 是否已配置（含密码） */
+function webdavConfigured(){
+  if(!webdavCfg()) return false;
+  try{ return !!load(PREFIX + WD_PASS_KEY, ""); }catch(e){ return false; }
+}
+/** 取解密后的应用密码 */
+async function webdavPass(){
+  try{
+    const raw = load(PREFIX + WD_PASS_KEY, "");
+    if(!raw) return "";
+    if(typeof isEncKey === "function" && isEncKey(raw)) return String((await decryptKey(raw)) || "");
+    return String(raw);
+  }catch(e){ return ""; }
+}
+/** 保存配置（密码加密落盘；失败如实返回 false） */
+async function webdavSaveCfg(cfg){
+  try{
+    if(!cfg || !cfg.url) return false;
+    save(PREFIX + WD_CFG_KEY, { url: String(cfg.url).replace(/\/+$/, ""), user: String(cfg.user || ""), path: String(cfg.path || WD_DEF_PATH) });
+    const pass = String(cfg.pass || "");
+    if(pass){
+      const enc = (typeof encryptKey === "function") ? await encryptKey(pass) : pass;
+      save(PREFIX + WD_PASS_KEY, enc);
+    }
+    return true;
+  }catch(e){ return false; }
+}
+/** 清除配置与元信息 */
+function webdavClearCfg(){
+  try{
+    ["webdav_cfg", "webdav_pass", "webdav_meta"].forEach(function(k){ try{ localStorage.removeItem(PREFIX + k); }catch(e){} });
+  }catch(e){}
+  return true;
+}
+/** Basic 认证头（应用密码只在这里拼一次，不落日志） */
+async function _wdAuth(c, pass){
+  return "Basic " + btoa(c.user + ":" + pass);
+}
+/**
+ * 探活：PROPFIND Depth:0（207=可达；401/403=凭据问题）
+ * @returns {Promise<{ok:boolean, error?:string}>}
+ */
+async function webdavProbe(){
+  const c = webdavCfg();
+  if(!c) return { ok: false, error: "not_configured" };
+  if(!webdavHasRelay()) return { ok: false, error: "no_relay" };
+  const pass = await webdavPass();
+  if(!pass) return { ok: false, error: "no_password" };
+  const api = window.electronAPI;
+  const r = await api.webdavFetch({ url: c.url + "/", method: "PROPFIND", depth: "0", auth: await _wdAuth(c, pass) });
+  return r.ok ? { ok: true } : { ok: false, error: r.error || ("HTTP " + r.status) };
+}
+/**
+ * 快照上行 → WebDAV（首次 If-None-Match:*；续传 If-Match:<上次 etag>）
+ * 云端 412 → 如实报冲突（不覆盖）。
+ * @param {string} text - 云快照 JSON
+ * @returns {Promise<{ok:boolean, conflict?:boolean, error?:string}>}
+ */
+async function webdavPut(text){
+  const c = webdavCfg();
+  if(!c) return { ok: false, error: "not_configured" };
+  if(!webdavHasRelay()) return { ok: false, error: "no_relay" };
+  const pass = await webdavPass();
+  if(!pass) return { ok: false, error: "no_password" };
+  let meta = null;
+  try{ meta = load(PREFIX + WD_META_KEY, null); }catch(e){}
+  const arg = {
+    url: c.url + (c.path.charAt(0) === "/" ? c.path : ("/" + c.path)),
+    method: "PUT", body: String(text || ""), auth: await _wdAuth(c, pass),
+  };
+  if(meta && meta.etag) arg.ifMatch = meta.etag; else arg.ifNoneMatch = "*";
+  const r = await window.electronAPI.webdavFetch(arg);
+  if(r && r.conflict) return { ok: false, conflict: true, error: "etag_conflict" };
+  if(!r || !r.ok) return { ok: false, error: (r && r.error) || "upload_failed" };
+  try{ save(PREFIX + WD_META_KEY, { etag: r.etag || "", lastModified: r.lastModified || "", path: c.path, ts: Date.now() }); }catch(e){}
+  return { ok: true, etag: r.etag || "" };
+}
+/**
+ * 快照下行（取回云端快照；404 = 云端还没有 → ok:false, missing，不算错误）
+ * @returns {Promise<{ok:boolean, text?:string, missing?:boolean, error?:string}>}
+ */
+async function webdavGet(){
+  const c = webdavCfg();
+  if(!c) return { ok: false, error: "not_configured" };
+  if(!webdavHasRelay()) return { ok: false, error: "no_relay" };
+  const pass = await webdavPass();
+  if(!pass) return { ok: false, error: "no_password" };
+  const r = await window.electronAPI.webdavFetch({
+    url: c.url + (c.path.charAt(0) === "/" ? c.path : ("/" + c.path)),
+    method: "GET", auth: await _wdAuth(c, pass),
+  });
+  if(r && r.status === 404) return { ok: false, missing: true };
+  if(!r || !r.ok) return { ok: false, error: (r && r.error) || "download_failed" };
+  return { ok: true, text: r.text || "", etag: r.etag || "" };
+}

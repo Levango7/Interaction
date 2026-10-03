@@ -1,3 +1,22 @@
+## [v3.7.87] - 2026-10-03
+
+**用户四项裁定全部落账 + WebDAV 云同步载体（Q4 批次 C）**：① Google 日历**永久不做**（「暂不出国」）；② HMS 替代经评估**形态不兼容**（HMS Calendar Kit 是 Android 原生 SDK，本仓交付形态是 Web/PWA/Electron 单文件，走 HMS 等于新增 Android 构建轨 + 华为企业资质；国内日历需求已由 ICS 路线满足）；③ 微信扫码登录**转商务阶段条件项**（企业认证+备案域名+服务端，现有协议原样可用）；④ GitHub **暂缓**（拿不到 client_id，v3.7.86 底座保留且无 client_id 时不渲染授权按钮）—— 国内同档零门槛替代是 **WebDAV（坚果云等）**，本版接完。
+
+### C · WebDAV 云同步载体（坚果云等 · 仅桌面版）
+
+- 实测（`_probe/webdav-probe.mjs` 存档）：`dav.jianguoyun.com` 可达（401 + `Basic realm="nutstore"`）但**无 ACAO** → 浏览器直连被 CORS 拦，桌面版经主进程 `webdav-fetch` 中转（与 ics-fetch 同一套防线：https 必、拒 userinfo、**共用 `_netHostForbidden`** 拒回环·私网·链路本地·.local、`redirect:"error"`、方法白名单 PROPFIND/GET/PUT/DELETE/MKCOL、body ≤2MB、15s 超时、日志只记主机与方法状态码绝不记 Authorization）。
+- 渲染层：配置 + **应用密码设备密钥加密落盘**（与 AI Key 同款）；探活 PROPFIND 207；上行 PUT **首次 `If-None-Match:*` / 续传 `If-Match:<上次 etag>`**；**412 = 云端已被其他设备改过 → 如实报冲突，不静默覆盖** —— 这是云同步全量契约（`docs/cloud-sync-incremental-contract.md`）落地前的**第一个真冲突信号**；下行 404 = missing 而非错误。集成页一段 UI：未配置只给说明+输入框、浏览器形态无动作按钮、测试连接/清除。诚实边界：**本版只做载体，未接同步主流程**（配好 WebDAV 后可手动调/预留按钮，等 main flow 批次）。用例：electron-ipc 承重墙 7 组（每条拒绝路径零请求 + 日志不泄密 + 412 冲突标记）+ `tests/webdav-sync.test.js` 8 例（密文落盘、零请求降级、条件头、412、404、UI 门控）。
+- 过程中被测试抓出**一处实现 bug**：412 走早返回路径时漏了 conflict 标记（渲染层会拿不到冲突信号）—— 已修。
+
+### D · ICS 增强（批次 B 收尾）
+
+- 订阅源**重命名**（id 与块 docId 不变 → 哈希 diff 零重嵌，不必删了重加）；**解析行级诊断**：坏 VEVENT（缺标题/开始时间）此前静默丢弃、用户只见「事件变少了」，现在按源记录异常计数与首条原因并显示在列表行。3 例钉住。
+
+### B · 真机验收（Linear / Jira）
+
+- `_probe/accept-linear-jira.mjs`：一条命令按应用同款链路打**真机 API** 逐项 PASS/FAIL（Linear: viewer→team.states→issueCreate 带 stateId→issueUpdate；Jira: myself→建 issue（不带 status）→transitions→POST 流转→PUT 字段）。配好环境变量即可跑（文件头注释有 PowerShell 用法）。⚠️ 会真实创建 issue（标题以 [验收] 开头，可自行删除）。**待你给凭据后跑一次即完成端到端验收**。
+
+全量 **120 文件 / 1364 用例**（v3.7.86 为 118/1333；+1 文件 = `webdav-sync.test.js` 8 例，另 electron-ipc +7、ics-parse +3）、e2e **82/82（3.8m）**、七门禁全绿、逆层 18/13 未动。
 ## [v3.7.86] - 2026-10-03
 
 **Q4 批次 B（B1 日历事件详情浮层 · B2 死接线普查与门禁 · B4 GitHub 设备流底座）：**发版后线上复核**：Pages 取回 **3,706,179 B**、`VERSION="3.7.86"`、`BUILD_TAG="20261003g"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。全仓普查抓到**第 8 例死接线**并连带修好一个"按钮其实是死的"真 bug；GitHub 接入底座落地（实测 api.github.com 回 ACAO:*，浏览器直连成立）。全量 **118 文件 / 1333 用例**（v3.7.85 为 116/1317；+2 文件 = `dead-wiring-guard.test.js` 2 例、`github-device-flow.test.js` 11 例，另有 `ics-parse.test.js` +3 例浮层）、e2e **82/82（3.7m）**、七门禁全绿、源码态。

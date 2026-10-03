@@ -35,7 +35,7 @@
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 46 |
 | `ui-hotkeys` | UI | `ai-retry` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 132 |
+| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 136 |
 | `ui-ge-api` | UI | `core` `render-overview` `ui-drawer` | 4 |
 | `ui-ge-plugins` | UI | `data-links` `util-markdown` | 2 |
 | `ui-ge-theme` | UI | `chain` | 1 |
@@ -77,7 +77,7 @@
 - 跨块重复定义：**0** 项
 - 循环依赖：**13** 条（ai-tools → ai-retry → ai-tools；ai-tools → ai-retry → ai-loop → ai-tools；render-entry → render-overview → render-scene-sub → render-entry；render-entry → render-overview → render-entry；render-overview → render-widgets → render-overview）
 - 逆层依赖（低层用高层符号）：**18** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**98** 个符号
+- 逆层依赖（按**符号**计，去重）：**102** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|

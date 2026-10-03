@@ -787,3 +787,80 @@ describe("Electron IPC: ics-fetch 订阅只读中转", () => {
     expect(log).not.toContain("basic.ics");
   });
 });
+
+/* ============================================================
+ * webdav-fetch：WebDAV 云同步中转（v3.7.87）
+ * 与 ics-fetch 同一套防线（https / 拒 userinfo / 拒回环·私网·链路本地 / redirect:error /
+ * 方法白名单 / body 封顶 / 日志只记主机与方法）。412（ETag 冲突）如实回传。
+ * ============================================================ */
+describe("Electron IPC: webdav-fetch 云同步中转", () => {
+  const WD_OK = { url: "https://dav.example.com/dav/agent-workshop-snapshot.json", method: "PUT", body: "{}", auth: "Basic dXNlcjpwYXNz" };
+  const wdLog = () => { try { return readFileSync(path.join(mockAppRef.current.getPath("userData"), "logs", "app.log"), "utf8"); } catch (e) { return ""; } };
+  const installWd = (behavior) => {
+    const calls = [];
+    const fn = vi.fn((url, opts) => {
+      calls.push({ url, opts });
+      if (behavior === "conflict") return Promise.resolve({ ok: false, status: 412, headers: new Map([["etag", '"v1"']]) });
+      if (behavior === "propfind") return Promise.resolve({ ok: true, status: 207, headers: new Map() });
+      return Promise.resolve({ ok: true, status: 201, headers: new Map([["etag", '"v1"'], ["last-modified", "LM"]]), text: async () => "{}" });
+    });
+    vi.stubGlobal("fetch", fn);
+    return { fn, calls };
+  };
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it("PUT 合法调用：带 Authorization 参数（不记日志）+ 回传 ETag", async () => {
+    const { calls } = installWd();
+    const r = await ipcHandlers["webdav-fetch"](trustedEv(), WD_OK);
+    expect(r.ok).toBe(true);
+    expect(r.etag).toBe('"v1"');
+    expect(calls[0].url).toBe("https://dav.example.com/dav/agent-workshop-snapshot.json");
+    expect(calls[0].opts.method).toBe("PUT");
+    expect(calls[0].opts.redirect).toBe("error");
+    expect(calls[0].opts.headers.Authorization).toBe("Basic dXNlcjpwYXNz");
+    const log = wdLog();
+    expect(log).toContain("dav.example.com");
+    expect(log, "🔴 日志泄露应用密码").not.toContain("dXNlcjpwYXNz");
+  });
+
+  it("条件头透传：If-Match / If-None-Match / Depth / Range", async () => {
+    const { calls } = installWd();
+    await ipcHandlers["webdav-fetch"](trustedEv(), Object.assign({}, WD_OK, { ifMatch: '"v1"', ifNoneMatch: "*", range: "bytes=0-99" }));
+    expect(calls[0].opts.headers["If-Match"]).toBe('"v1"');
+    expect(calls[0].opts.headers["If-None-Match"]).toBe("*");
+    expect(calls[0].opts.headers.Range).toBe("bytes=0-99");
+  });
+
+  it("PROPFIND 207 视作可达；412 视作冲突（conflict=true）如实回传", async () => {
+    installWd("propfind");
+    expect((await ipcHandlers["webdav-fetch"](trustedEv(), { url: "https://dav.example.com/dav/", method: "PROPFIND", depth: "0", auth: "Basic x" })).ok).toBe(true);
+    vi.unstubAllGlobals();
+    installWd("conflict");
+    const r = await ipcHandlers["webdav-fetch"](trustedEv(), WD_OK);
+    expect(r.conflict).toBe(true);
+  });
+
+  it("🔴 http / userinfo / 私网·回环 / 非法方法 / 超大 body：拒且零请求", async () => {
+    const { calls } = installWd();
+    const bad = [
+      Object.assign({}, WD_OK, { url: "http://dav.example.com/x" }),
+      Object.assign({}, WD_OK, { url: "https://user:pass@dav.example.com/x" }),
+      Object.assign({}, WD_OK, { url: "https://127.0.0.1/x" }),
+      Object.assign({}, WD_OK, { url: "https://192.168.1.5/dav" }),
+      Object.assign({}, WD_OK, { url: "https://169.254.169.254/latest" }),
+      Object.assign({}, WD_OK, { url: "https://nas.local/dav" }),
+      Object.assign({}, WD_OK, { method: "PATCH" }),
+      Object.assign({}, WD_OK, { body: "x".repeat(2 * 1024 * 1024 + 1) }),
+    ];
+    for (const arg of bad) {
+      const r = await ipcHandlers["webdav-fetch"](trustedEv(), arg);
+      expect(r.ok, JSON.stringify(String(arg.url).slice(0, 40)) + " " + arg.method).toBe(false);
+    }
+    expect(calls.length, "所有拒绝路径必须零请求").toBe(0);
+  });
+
+  it("未受信 sender：拒绝", async () => {
+    installWd();
+    await expect(ipcHandlers["webdav-fetch"](forgedEv(), WD_OK)).rejects.toThrow("IPC 拒绝");
+  });
+});

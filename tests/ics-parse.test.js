@@ -261,3 +261,39 @@ describe("事件详情浮层（v3.7.86 B1）", () => {
     expect(win.document.getElementById("evDetailOverlay"), "空日不该挂浮层").toBeFalsy();
   });
 });
+
+describe("ICS 增强（v3.7.87 D）", () => {
+  it("重命名：id/chunk docId 不变 → 零重嵌（哈希 diff 天然不触发）", () => {
+    const win = app();
+    win.icsImportLocal("旧名.ics", "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:a\r\nSUMMARY:甲会\r\nDTSTART;VALUE=DATE:20260310\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    const before = win.getIcsSubs()[0];
+    const docIdsBefore = before.evs.map(c => c.docId);
+    expect(win.icsRenameSub(before.id, "新名.ics")).toBe(true);
+    const after = win.getIcsSubs()[0];
+    expect(after.name).toBe("新名.ics");
+    expect(after.id).toBe(before.id);
+    expect(after.evs.map(c => c.docId)).toEqual(docIdsBefore);
+    expect(win.icsRenameSub("无此 id", "x")).toBe(false);
+  });
+
+  it("诊断：坏 VEVENT 计数写进源记录（缺 SUMMARY / 缺 DTSTART 各计 1）", () => {
+    const win = app();
+    const r = win.icsImportLocal("含坏事件.ics", "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:g1\r\nSUMMARY:正常会\r\nDTSTART;VALUE=DATE:20260310\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:bad1\r\nSUMMARY:缺开始时间\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:bad2\r\nDTSTART;VALUE=DATE:20260311\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    expect(r.count).toBe(1);              /* 只有一条完整 */
+    const sub = win.getIcsSubs()[0];
+    expect(sub.diag.count, "两条坏事件应被计出").toBe(2);
+    expect(sub.diag.first).toBe("missing_title_or_start");
+    expect(win.icsParseWithDiag("").diag.first).toBe("empty");
+    expect(win.icsParseWithDiag("BEGIN:VCALENDAR\r\nEND:VCALENDAR").diag.first).toBe("no_vevent");
+  });
+
+  it("面板：诊断计数显示在源行；重命名按钮在列", () => {
+    const win = app();
+    win.icsImportLocal("含坏事件.ics", "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:g1\r\nSUMMARY:正常会\r\nDTSTART;VALUE=DATE:20260310\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:bad1\r\nSUMMARY:缺开始时间\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:bad2\r\nDTSTART;VALUE=DATE:20260311\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    const c = win.document.createElement("div");
+    win.document.body.appendChild(c);
+    win.openIcsPanel(c);
+    expect(c.textContent, "应显示解析异常计数").toMatch(/解析异常|failed to parse/);
+    expect(c.querySelector("[data-ics-rename]"), "应有重命名按钮").toBeTruthy();
+  });
+});

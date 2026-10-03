@@ -24,5 +24,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   jiraFetch: (arg) => ipcRenderer.invoke("jira-fetch", arg),
   // v3.7.84：ICS 订阅只读抓取（多数日历站不回 CORS 头，渲染进程发不出去）。
   // 参数 { url, etag?, lastModified?, timeoutMs? }；只 GET、不带认证头，主进程不落盘。
-  icsFetch: (arg) => ipcRenderer.invoke("ics-fetch", arg)
+  icsFetch: (arg) => ipcRenderer.invoke("ics-fetch", arg),
+  // v3.7.87：WebDAV 云同步中转（坚果云等；无 ACAO，浏览器直连被拦）。
+  // 参数 { url, method, body?, auth?(Basic 应用密码), depth?, ifMatch?, ifNoneMatch? }；
+  // Authorization 仅本次调用传递，主进程不落盘，日志不记。
+  webdavFetch: (arg) => ipcRenderer.invoke("webdav-fetch", arg)
 });

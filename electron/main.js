@@ -699,7 +699,7 @@ app.on("activate", () => {
 
 app.on("before-quit", () => { willQuit = true; });
 
-    /* ---------- v3.7.84：ICS 订阅只读中转 ----------
+    /* ---------- v3.7.84：ICS 订阅只读中转（主机防线与 v3.7.87 的 webdav-fetch 共享） ----------
        多数日历站不回 CORS 头（桌面特色体：sandbox + webSecurity 默认开），订阅拉取要走主进程。
        与 jira-fetch 同为「用户自填 URL」类接口，安全面按开放 SSRF 取严：
          · 只 https、拒 userinfo；
@@ -707,7 +707,7 @@ app.on("before-quit", () => { willQuit = true; });
          · redirect:"error"（防 302 跳内网绕过校验）；
          · 不携带任何认证头（ICS 为公开只读）；URL 只由用户自己填写；
          · ≤2MB、12s 超时、日志只记主机与状态码。 */
-    function _icsHostForbidden(host){
+    function _netHostForbidden(host){
       const h = String(host || "").toLowerCase();
       if(!h) return true;
       if(h === "localhost" || /\.local$/.test(h) || /\.localhost$/.test(h) || /\.internal$/.test(h)) return true;
@@ -723,7 +723,7 @@ app.on("before-quit", () => { willQuit = true; });
       try{ u = new URL(String((arg && arg.url) || "")); }catch(err){ return { ok: false, status: 0, error: "bad_url" }; }
       if(u.protocol !== "https:") return { ok: false, status: 0, error: "https_only" };
       if(u.username || u.password) return { ok: false, status: 0, error: "userinfo_forbidden" };
-      if(_icsHostForbidden(u.hostname)) return { ok: false, status: 0, error: "forbidden_host" };
+      if(_netHostForbidden(u.hostname)) return { ok: false, status: 0, error: "forbidden_host" };
       const headers = { "Accept": "text/calendar, text/plain;q=0.9" };
       if(arg && arg.etag) headers["If-None-Match"] = String(arg.etag);
       if(arg && arg.lastModified) headers["If-Modified-Since"] = String(arg.lastModified);
@@ -745,5 +745,57 @@ app.on("before-quit", () => { willQuit = true; });
         const msg3 = (err && err.name === "AbortError") ? "请求超时（12000ms）" : ((err && err.message) || String(err));
         logLine("ics", "host=" + u.hostname + " error=" + msg3);
         return { ok: false, status: 0, error: msg3 };
+      }
+    });
+
+    /* ---------- v3.7.87：WebDAV 云同步中转（坚果云等；国内直连可达） ----------
+       实测（`_probe/webdav-probe.mjs`）：dav.jianguoyun.com 可达（401 + Basic realm="nutstore"）
+       但**无 ACAO** → 浏览器直连被 CORS 拦，桌面版必须经主进程。与 ics-fetch 同一套防线：
+         · URL https 必、拒 userinfo（Authorization 单独走参数）；
+         · 拒回环/私网/链路本地/.local（共用 _netHostForbidden）；
+         · redirect:"error"（防跳内网）；方法白名单 PROPFIND/GET/PUT/DELETE/MKCOL；
+         · body ≤ 2MB、超时钳 1–20s；日志只记主机与方法状态码，**绝不记 Authorization**。
+       ETag 原样回传（渲染层据此做 If-Match 冲突检测 —— 第一个真正的冲突信号）。 */
+    ipcMain.handle("webdav-fetch", async (e, arg) => {
+      assertTrustedSender(e);
+      let u;
+      try{ u = new URL(String((arg && arg.url) || "")); }catch(err){ return { ok: false, status: 0, error: "bad_url" }; }
+      if(u.protocol !== "https:") return { ok: false, status: 0, error: "https_only" };
+      if(u.username || u.password) return { ok: false, status: 0, error: "userinfo_forbidden" };
+      if(_netHostForbidden(u.hostname)) return { ok: false, status: 0, error: "forbidden_host" };
+      const method = String((arg && arg.method) || "GET").toUpperCase();
+      if(["PROPFIND", "GET", "PUT", "DELETE", "MKCOL"].indexOf(method) < 0) return { ok: false, status: 0, error: "bad_method" };
+      const body = (arg && typeof arg.body === "string") ? arg.body : "";
+      if(body.length > 2 * 1024 * 1024) return { ok: false, status: 0, error: "body_too_large" };
+      const headers = {};
+      if(arg && arg.auth) headers["Authorization"] = String(arg.auth);      /* Basic 应用密码，仅本次调用传递 */
+      if(arg && arg.depth) headers["Depth"] = String(arg.depth);
+      if(arg && arg.ifNoneMatch) headers["If-None-Match"] = String(arg.ifNoneMatch);
+      if(arg && arg.ifMatch) headers["If-Match"] = String(arg.ifMatch);
+      if(arg && arg.range) headers["Range"] = String(arg.range);
+      const ctrl4 = new AbortController();
+      const timer4 = setTimeout(() => ctrl4.abort(), 15000);
+      try{
+        const r4 = await fetch(u.href, { method: method, headers: headers, body: (method === "GET" || method === "PROPFIND") ? undefined : body, redirect: "error", signal: ctrl4.signal });
+        clearTimeout(timer4);
+        const et4 = r4.headers.get("etag") || "";
+        const lm4 = r4.headers.get("last-modified") || "";
+        logLine("webdav", "host=" + u.hostname + " method=" + method + " status=" + r4.status);
+        if(method === "PROPFIND"){
+          /* 207 Multi-Status：判定可达即成功（能否读写交由真实 PUT/GET 验证） */
+          if(r4.status === 207 || r4.status === 200) return { ok: true, status: r4.status, etag: et4, lastModified: lm4 };
+          return { ok: false, status: r4.status, error: "HTTP " + r4.status };
+        }
+        let text = "";
+        if(method === "GET" && r4.status === 200){ try{ text = await r4.text(); }catch(err4){ text = ""; } }
+        /* 412 = ETag 冲突：早返回也要带 conflict 标记（渲染层据此不覆盖他人文件） */
+        if(!r4.ok && r4.status !== 204 && r4.status !== 207) return { ok: false, status: r4.status, error: "HTTP " + r4.status, etag: et4, lastModified: lm4, conflict: r4.status === 412 };
+        /* 412 = ETag 冲突（云端已被别处改过）：如实回传，交渲染层决策，不静默覆盖 */
+        return { ok: true, status: r4.status, etag: et4, lastModified: lm4, text: text, conflict: r4.status === 412 };
+      }catch(err){
+        clearTimeout(timer4);
+        const msg4 = (err && err.name === "AbortError") ? "请求超时（15000ms）" : ((err && err.message) || String(err));
+        logLine("webdav", "host=" + u.hostname + " error=" + msg4);
+        return { ok: false, status: 0, error: msg4 };
       }
     });

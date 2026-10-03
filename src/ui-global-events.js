@@ -382,7 +382,32 @@ function renderIntegrationPanel(){
   }
   ghHtml += '</div>';
   ghHtml += '<div id="ghDevInfo" class="int-desc"></div></div>';
-  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + ghHtml);
+  /* v3.7.87 C：WebDAV 云同步段（坚果云等；仅桌面版可达 —— 无 CORS 头）。
+     诚实门控：未配置只给说明+输入框；桌面版无中继时提示「仅桌面版」；浏览器形态无动作按钮。 */
+  const wdCfg0 = (typeof webdavCfg === "function") ? webdavCfg() : null;
+  const wdOn = (typeof webdavConfigured === "function") ? webdavConfigured() : false;
+  const wdRelay = (typeof webdavHasRelay === "function") ? webdavHasRelay() : false;
+  let wdHtml = '<div class="int-gh"><div class="int-label">' + esc(t("wd.title", "WebDAV 云同步（坚果云等 · 仅桌面版）")) + '</div>';
+  if(!wdRelay){
+    wdHtml += '<p class="int-desc">' + esc(t("wd.noRelay", "WebDAV 服务不返回 CORS 头，浏览器形态发不出去——请用桌面版（Electron）配置。")) + '</p>';
+  } else if(!wdCfg0){
+    wdHtml += '<p class="int-desc">' + esc(t("wd.noCfg", "未配置：填 WebDAV 地址（坚果云在「安全选项 → 应用密码」生成），密码与 AI Key 同款设备密钥加密存储。")) + '</p>';
+  } else if(!wdOn){
+    wdHtml += '<p class="int-desc">' + esc(t("wd.cfgNoPass", "已填地址与应用账号，还差应用密码。")) + '</p>';
+  } else {
+    wdHtml += '<p class="int-desc">' + esc(t("wd.on", "已配置。文件：")) + esc((wdCfg0.path || "/agent-workshop-snapshot.json")) + '</p>';
+  }
+  wdHtml += '<div class="int-gh-row">'
+    + '<input id="wdUrl" class="u-w-full" placeholder="' + esc(t("wd.urlPh", "https://dav.jianguoyun.com/dav")) + '" value="' + esc(wdCfg0 ? wdCfg0.url : "") + '">'
+    + '<input id="wdUser" class="u-w-full" placeholder="' + esc(t("wd.userPh", "账号邮箱")) + '" value="' + esc(wdCfg0 ? wdCfg0.user : "") + '">'
+    + '<input id="wdPass" class="u-w-full" type="password" placeholder="' + esc(t("wd.passPh", "应用密码")) + '">'
+    + '<button type="button" class="addbtn sm" id="wdSave">' + esc(t("wd.save", "保存")) + '</button>';
+  if(wdRelay && wdCfg0){
+    wdHtml += '<button type="button" class="addbtn sm" id="wdProbe">' + esc(t("wd.probe", "测试连接")) + '</button>';
+    wdHtml += '<button type="button" class="addbtn sm" id="wdClear">' + esc(t("wd.clear", "清除")) + '</button>';
+  }
+  wdHtml += '</div><div id="wdInfo" class="int-desc"></div></div>';
+  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + ghHtml + wdHtml);
   // 绑定连接/断开按钮
   // v3.1.1 修复：原实现直接以空 config 调 connectFn → 所有 connect 函数因缺凭据返回 null，
   // 却仍弹「已连接」假成功 toast；现改为先弹配置弹窗收集凭据（openIntegrationConfig），
@@ -464,6 +489,38 @@ function renderIntegrationPanel(){
       if(!confirm(t("gh.clearConfirm", "清除本机保存的 GitHub token（下次同步需重新授权）？"))) return;
       githubTokenClear();
       toast(t("gh.cleared", "已清除"), "ok");
+      renderIntegrationPanel();
+    };
+  }
+  /* v3.7.87 C：WebDAV 段事件 */
+  const wdInfo = panel.querySelector("#wdInfo");
+  const wdUrl = panel.querySelector("#wdUrl");
+  const wdUser = panel.querySelector("#wdUser");
+  const wdPassIn = panel.querySelector("#wdPass");
+  const wdSave = panel.querySelector("#wdSave");
+  const wdProbe = panel.querySelector("#wdProbe");
+  const wdClear = panel.querySelector("#wdClear");
+  if(wdSave && !wdSave._wdBound){
+    wdSave._wdBound = true;
+    wdSave.onclick = async function(){
+      const r = await webdavSaveCfg({ url: String(wdUrl.value || "").trim(), user: String(wdUser.value || "").trim(), pass: String(wdPassIn.value || "") });
+      toast(r ? t("wd.saved", "已保存（应用密码加密存储）") : t("wd.saveFail", "保存失败"), r ? "ok" : "warn");
+      if(r) renderIntegrationPanel();
+    };
+  }
+  if(wdProbe && !wdProbe._wdBound){
+    wdProbe._wdBound = true;
+    wdProbe.onclick = async function(){
+      const r = await webdavProbe();
+      if(wdInfo) wdInfo.textContent = r.ok ? t("wd.probeOk", "连接成功（应用密码有效）") : (t("wd.probeFail", "连接失败") + "（" + (r.error || "") + "）");
+    };
+  }
+  if(wdClear && !wdClear._wdBound){
+    wdClear._wdBound = true;
+    wdClear.onclick = function(){
+      if(!confirm(t("wd.clearConfirm", "清除本机 WebDAV 配置与密码？云端文件不受影响。"))) return;
+      webdavClearCfg();
+      toast(t("wd.cleared", "已清除"), "ok");
       renderIntegrationPanel();
     };
   }

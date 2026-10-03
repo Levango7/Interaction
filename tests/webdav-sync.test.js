@@ -1,0 +1,128 @@
+/**
+ * webdav-sync.test.js —— WebDAV 云同步载体（v3.7.87）
+ * ----------------------------------------------------------------------------
+ * 守四件事：
+ *   ① 配置：应用密码设备密钥加密落盘（存储里无明文）；无中继形态全部动作零请求；
+ *   ② 探活：PROPFIND 形状（Depth:0 + Basic 头走参数）；
+ *   ③ **ETag 冲突检测**：首次上传 If-None-Match:* / 续传 If-Match；412 → conflict=true
+ *      如实上报，不静默覆盖（云同步全量契约前的第一个真冲突信号）；
+ *   ④ 诚实失败：云端无文件(404)=missing 而非错误；浏览器形态无动作入口。
+ */
+import { describe, it, expect, beforeEach } from "vitest";
+import { loadApp } from "./helpers/loadApp.js";
+
+const PREFIX = "wb_agent_";
+
+function app() {
+  return loadApp({ storage: { [PREFIX + "tasks"]: "[]", [PREFIX + "cfg"]: JSON.stringify({ enabled: true, base: "https://api.x", key: "k" }) } });
+}
+function relayStub(win, respond) {
+  const calls = [];
+  win.electronAPI = { webdavFetch: async (arg) => { calls.push(arg); return respond(arg, calls.length); } };
+  return calls;
+}
+const OK_PUT = (arg) => ({ ok: true, status: 201, etag: '"v1"', lastModified: "LM1" });
+const CONFLICT = () => ({ ok: false, status: 412, conflict: true, error: "HTTP 412" });
+
+describe("WebDAV 配置与凭据", () => {
+  let win;
+  beforeEach(() => { win = app(); });
+
+  it("保存：密码加密落盘（存储无明文），可解密还原；清除即抹净", async () => {
+    const okc = await win.webdavSaveCfg({ url: "https://dav.jianguoyun.com/dav/", user: "me@x.com", pass: "appPass_123" });
+    expect(okc).toBe(true);
+    const raw = win.localStorage.getItem(PREFIX + "webdav_pass");
+    expect(raw, "密码不得明文落盘").not.toContain("appPass_123");
+    expect(raw).toMatch(/__enc/);
+    expect(await win.webdavPass()).toBe("appPass_123");
+    expect(win.webdavCfg().url, "尾斜杠归一").toBe("https://dav.jianguoyun.com/dav");
+    expect(win.webdavConfigured()).toBe(true);
+    win.webdavClearCfg();
+    expect(win.webdavCfg()).toBeNull();
+    expect(await win.webdavPass()).toBe("");
+  });
+
+  it("浏览器形态（无中继）：探活/上传/下行都拒且**零请求**", async () => {
+    await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u", pass: "p" });
+    const calls = [];
+    win.electronAPI = { webdavFetch: async (a) => { calls.push(a); return { ok: true, status: 207 }; } };
+    win.electronAPI = undefined;   /* 模拟浏览器：无 webdavFetch */
+    expect((await win.webdavProbe()).error).toBe("no_relay");
+    expect((await win.webdavPut("{}")).error).toBe("no_relay");
+    expect((await win.webdavGet()).error).toBe("no_relay");
+    expect(calls.length).toBe(0);
+  });
+});
+
+describe("WebDAV 探活与快照（ETag 冲突检测）", () => {
+  let win;
+  beforeEach(async () => { win = app(); await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "me@x.com", pass: "appPass_123" }); });
+
+  it("探活：PROPFIND + Depth:0 + Basic 头在参数里（不带头名）", async () => {
+    const calls = relayStub(win, () => ({ ok: true, status: 207 }));
+    const r = await win.webdavProbe();
+    expect(r.ok).toBe(true);
+    expect(calls[0].method).toBe("PROPFIND");
+    expect(calls[0].depth).toBe("0");
+    expect(calls[0].url).toBe("https://dav.example.com/dav/");
+    expect(String(calls[0].auth)).toMatch(/^Basic /);
+    expect(calls[0].headers, "渲染层不拼 headers：Authorization 作为独立参数传给中继").toBeUndefined();
+  });
+
+  it("首次上传：If-None-Match:*（不存在才建，防覆盖他人文件）；续传：If-Match:<上次 etag>", async () => {
+    let calls = relayStub(win, OK_PUT);
+    const r1 = await win.webdavPut('{"a":1}');
+    expect(r1.ok).toBe(true);
+    expect(calls[0].method).toBe("PUT");
+    expect(calls[0].ifNoneMatch).toBe("*");
+    expect(calls[0].body).toBe('{"a":1}');
+    calls = relayStub(win, OK_PUT);
+    await win.webdavPut('{"a":2}');
+    expect(calls[0].ifMatch, "续传带 If-Match").toBe('"v1"');
+    expect(calls[0].ifNoneMatch).toBeUndefined();
+  });
+
+  it("412 → conflict=true 如实上报，**不静默覆盖**", async () => {
+    relayStub(win, OK_PUT);
+    await win.webdavPut("{}");
+    relayStub(win, CONFLICT);
+    const r = await win.webdavPut('{"mine":1}');
+    expect(r.ok).toBe(false);
+    expect(r.conflict, "云端已被其他设备改过 → 冲突信号").toBe(true);
+  });
+
+  it("下行：取回文本；云端无文件(404) → missing 而非错误", async () => {
+    relayStub(win, OK_PUT);
+    await win.webdavPut("{}");
+    let calls = relayStub(win, () => ({ ok: true, status: 200, text: '{"tasks":[7]}', etag: '"v1"' }));
+    const g1 = await win.webdavGet();
+    expect(g1.ok).toBe(true);
+    expect(g1.text).toBe('{"tasks":[7]}');
+    expect(calls[0].method).toBe("GET");
+    relayStub(win, () => ({ ok: false, status: 404, error: "HTTP 404" }));
+    const g2 = await win.webdavGet();
+    expect(g2.missing).toBe(true);
+  });
+});
+
+describe("集成页 WebDAV 段门控", () => {
+  it("浏览器形态：显示「仅桌面版」说明，无测试连接按钮", () => {
+    const win = app();
+    win.renderIntegrationPanel();
+    const panel = win.document.getElementById("integrationPanel");
+    expect(panel.textContent).toMatch(/桌面版|desktop/);
+    expect(panel.querySelector("#wdProbe"), "无中继不得渲染动作按钮").toBeFalsy();
+    expect(panel.querySelector("#wdSave")).toBeTruthy();
+  });
+
+  it("桌面形态：已配置后有「测试连接/清除」；保存走密文", async () => {
+    const win = app();
+    win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 207 }) };
+    await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u@x", pass: "p" });
+    win.renderIntegrationPanel();
+    const panel = win.document.getElementById("integrationPanel");
+    expect(panel.querySelector("#wdProbe")).toBeTruthy();
+    expect(panel.querySelector("#wdClear")).toBeTruthy();
+    expect(win.localStorage.getItem(PREFIX + "webdav_pass")).toMatch(/__enc/);
+  });
+});
