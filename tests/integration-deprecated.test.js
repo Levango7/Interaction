@@ -36,9 +36,7 @@ const MARK = "@deprecated v3.7.60 应用内零调用方";
    jiraMapStatus 继续冻结（状态映射要走 transitions API，无可验证工作区前不接，同 Linear 处置）。
    slack/calendar 剩余的仍按废弃冻结。DELETED 名单守护它们不回流
    （有人重新实现必须走"摘废弃 + 补真发用例"的正门）。 */
-const DEPRECATED = `integrationListProviders integrationEnableProvider integrationDisableProvider integrationConfigureProvider
-integrationGetStatus notionSyncNote notionListSynced linearListIssues linearMapStatus
-jiraMapStatus
+const DEPRECATED = `integrationGetStatus notionSyncNote notionListSynced linearListIssues
 calendarSyncEvent calendarCreateEvent calendarListEvents calendarUpdateEvent
 calendarDeleteEvent _intFindLocalId`.split(/\s+/).filter(Boolean);
 
@@ -57,7 +55,9 @@ const LIVE = ["notionConnect", "linearConnect", "jiraConnect", "slackConnect", "
   "slackDisconnect", "feishuDisconnect", "dingtalkDisconnect", "calendarDisconnect",
   "renderIntegrationPanel", "openIntegrationConfig", "integrationRegisterProvider",
   "integrationGetProvider", "integrationRemoveProvider", "_intJiraBase",
-  "notionSyncTask", "notionPushTasks", "linearSyncIssue", "linearPushTasks"];
+  "notionSyncTask", "notionPushTasks", "linearSyncIssue", "linearPushTasks",
+  "icsBuildExport", "icsExportLocal", "icsImportLocal", "icsAddSub", "icsRefreshAll",
+  "_linearFetchStates", "_jiraFetchTransitions"];
 
 const srcFiles = fs.readdirSync(SRC_DIR).filter((f) => f.endsWith(".js"));
 const texts = new Map(srcFiles.map((f) => [f, fs.readFileSync(path.join(SRC_DIR, f), "utf8")]));
@@ -91,7 +91,7 @@ function refLines(file, name) {
 }
 
 describe("集成同步/通知层：废弃标记仍在（用户决定「先标记废弃，等渠道定好再动」）", () => {
-  it("16 个零调用函数逐个带 @deprecated 标记", () => {
+  it("10 个零调用函数逐个带 @deprecated 标记", () => {
     const lines = geText().split(/\r?\n/);
     const missing = DEPRECATED.filter((n) => {
       const def = lines.findIndex((l) => /^(?:async\s+)?function\s+/.test(l) && new RegExp("function\\s+" + n + "\\b").test(l));
@@ -140,7 +140,7 @@ describe("集成同步/通知层：仍然零调用（有人接上就该摘标记
       }
     }
   }
-  it("16 个函数没有任何「非废弃集内」的调用方", () => {
+  it("10 个函数没有任何「非废弃集内」的调用方", () => {
     expect(violations,
       "这些废弃函数出现了新的调用方 —— 说明渠道定了并接上了链路。\n" +
       "正确做法：摘掉对应 @deprecated、更新 docs/product-scope.md §三 与本文件的 DEPRECATED 名单、" +

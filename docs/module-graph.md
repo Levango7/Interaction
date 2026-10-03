@@ -57,7 +57,7 @@
 | `getCfg` | `data-links` | 17 |
 | `render` | `render-entry` | 16 |
 | `getActiveTasks` | `data-rw` | 15 |
-| `getTasks` | `data-rw` | 14 |
+| `getTasks` | `data-rw` | 15 |
 | `active` | `data-links` | 12 |
 | `getRec` | `data-rw` | 12 |
 | `UI_ICONS` | `core` | 10 |

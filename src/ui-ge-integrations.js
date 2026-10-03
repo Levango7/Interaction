@@ -13,14 +13,6 @@
        逐个摘掉 @deprecated 并补真发请求的用例；
      - 若要删：连同 `__test` 桥条目、i18n 键一起清，并登记进 docs/product-scope.md §三。
    守护：tests/integration-deprecated.test.js 锁住「这些函数仍然零调用 + 标记仍在」。 */
-/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
-function integrationGetStatus(name){
-  const p = integrationGetProvider(name);
-  if(!p) return { connected:false, reason:"not_registered" };
-  if(!p.enabled) return { connected:false, reason:"disabled" };
-  if(p.config && p.config._verified === false) return { connected:false, reason:"verify_failed" };
-  return { connected:true, verified:!!(p.config && p.config._verified) };
-}
 /* v3.7.70：`_intNotionPullWriteback` 随 pull 路径一并删除。它是"把 Notion 侧改动写回本地任务"
    的辅助，而本轮把 notionSyncTask 收窄成纯 push 后，它继续存在会变成**陷阱** ——
    再有人调它拿到的会是推送而不是拉取。拉取（连同冲突/删除语义）要做时按那时的设计重写。 */
@@ -75,6 +67,14 @@ function integrationGetStatus(name){
 // ----------------------------------------------------------------------------
 
 /* ---------- 持久化键 ---------- */
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
+function integrationGetStatus(name){
+  const p = integrationGetProvider(name);
+  if(!p) return { connected:false, reason:"not_registered" };
+  if(!p.enabled) return { connected:false, reason:"disabled" };
+  if(p.config && p.config._verified === false) return { connected:false, reason:"verify_failed" };
+  return { connected:true, verified:!!(p.config && p.config._verified) };
+}
 const INTEGRATION_PROVIDERS_KEY = "wb_integration_providers";
 const INTEGRATION_SYNC_STATE_KEY = "wb_integration_sync_state";
 const INTEGRATION_API_KEYS_KEY = "wb_integration_api_keys";
@@ -92,19 +92,32 @@ const INTEGRATION_TYPES = {
   OUTLOOK_CALENDAR: "outlook_calendar"
 };
 
-/* ---------- 状态映射表（Linear/Jira 状态 ↔ 本地任务状态） ---------- */
-const LINEAR_STATUS_MAP = {
-  "todo": "Backlog",
-  "in_progress": "In Progress",
-  "done": "Done",
-  "canceled": "Canceled"
+/* ---------- v3.7.85：状态映射改为**运行时动态解析** ----------
+ * 此前冻结的原因：「本地状态名 → 远端 ID」需要真实工作区才能验证（Linear 要 stateId、
+ * Jira 要 transition id）。但**查工作流状态本身不需要我持有工作区** —— 连接/推送时用
+ * 用户自己的 token 拉一次 states/transitions 建表，映射随各工作区实际配置走：
+ *   Linear：connect 时 GraphQL 拉 team.states → {小写名: stateId}，推送带 stateId；
+ *   Jira：更新后按 issue 拉 transitions → 本地状态名匹配 transition 名 → POST transitions。
+ * 匹配不上就**不带状态**（同旧行为，落对方默认），不猜、不静默改错状态。
+ * 候选名表只是"本地四态 → 常见远端名"的起点，最终以工作区实况为准。 */
+const _STATUS_NAME_CANDIDATES = {
+  todo: ["backlog", "todo", "to do", "open", "待办"],
+  in_progress: ["in progress", "doing", "started", "进行中"],
+  done: ["done", "completed", "closed", "已完成"],
+  canceled: ["canceled", "cancelled", "won't do", "已取消"]
 };
-const JIRA_STATUS_MAP = {
-  "todo": "To Do",
-  "in_progress": "In Progress",
-  "done": "Done",
-  "canceled": "Won't Do"
-};
+/** 本地状态 → 候选远端状态名列表（小写） */
+function _statusCandidates(localStatus){
+  const key = String(localStatus || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return _STATUS_NAME_CANDIDATES[key] || [String(localStatus || "").trim().toLowerCase()].filter(Boolean);
+}
+/** 在 {小写名: id} 表里按候选顺序找命中；查不到返回空串（调用方据此不带状态） */
+function _lookupStatusId(stateMap, localStatus){
+  if(!stateMap || typeof stateMap !== "object") return "";
+  const cands = _statusCandidates(localStatus);
+  for(const nm of cands){ const hit = stateMap[nm]; if(hit) return hit; }
+  return "";
+}
 
 /* ---------- 模块级私有状态（var 声明，避免 TDZ） ---------- */
 let _integrationProviders = {};  // { name: { name, type, config, enabled, createdAt } }
@@ -404,51 +417,17 @@ function integrationGetProvider(name){
  * 列出所有 provider（可按类型过滤）
  * @param {string} [type] - 类型过滤
  * @returns {Array} provider 列表
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
-function integrationListProviders(type){
-  _intLoadProviders();
-  const result = [];
-  for(const name in _integrationProviders){
-    const p = _integrationProviders[name];
-    if(type && p.type !== type) continue;
-    result.push(p);
-  }
-  return result;
-}
-
 /**
  * 启用 provider
  * @param {string} name - provider 名称
  * @returns {boolean} 是否成功
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
-function integrationEnableProvider(name){
-  if(!name) return false;
-  _intLoadProviders();
-  if(!_integrationProviders[name]) return false;
-  _integrationProviders[name].enabled = true;
-  _integrationProviders[name].updatedAt = _intNow();
-  _intSaveProviders();
-  return true;
-}
-
 /**
  * 禁用 provider
  * @param {string} name - provider 名称
  * @returns {boolean} 是否成功
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
-function integrationDisableProvider(name){
-  if(!name) return false;
-  _intLoadProviders();
-  if(!_integrationProviders[name]) return false;
-  _integrationProviders[name].enabled = false;
-  _integrationProviders[name].updatedAt = _intNow();
-  _intSaveProviders();
-  return true;
-}
-
 /**
  * 移除 provider
  * @param {string} name - provider 名称
@@ -474,20 +453,7 @@ function integrationRemoveProvider(name){
  * @param {string} name - provider 名称
  * @param {Object} config - 新配置（合并到现有配置）
  * @returns {boolean} 是否成功
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
  */
-function integrationConfigureProvider(name, config){
-  if(!name || !config || typeof config !== "object") return false;
-  _intLoadProviders();
-  if(!_integrationProviders[name]) return false;
-  for(const k in config){
-    _integrationProviders[name].config[k] = config[k];
-  }
-  _integrationProviders[name].updatedAt = _intNow();
-  _intSaveProviders();
-  return true;
-}
-
 /* ---------- 内部：检查 provider 是否可用 ---------- */
 async function _intRequireProvider(name, expectedType){
   if(!name) return null;
@@ -650,9 +616,9 @@ async function jiraPushTasks(tasks){
  * @param {Object} note - 本地笔记 { id, title, content, ... }
  * @param {string} direction - 'push' | 'pull' | 'sync'
  * @returns {Promise<Object>} 同步结果
- * @deprecated v3.7.60 应用内零调用方 · v3.7.70 起 Notion 只接了**任务**单向推送（notionPushTasks），
  *   笔记这条仍未接线 —— 待定，别在它上面加 UI，见 docs/product-scope.md §三
  */
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
 async function notionSyncNote(note, direction){
   if(!note || !note.id) return { success: false, error: "invalid_note" };
   direction = direction || "sync";
@@ -700,9 +666,9 @@ async function notionSyncNote(note, direction){
 /**
  * 列出已同步的 Notion 项
  * @returns {Array} 已同步项列表
- * @deprecated v3.7.60 应用内零调用方 · v3.7.70 的任务单向推送只用同步状态表记账，
  *   没有消费这个列表函数（面板上还没有"已同步 N 条"这类回显）—— 待定，见 docs/product-scope.md §三
  */
+/* @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三 */
 function notionListSynced(){
   const state = _intGetSyncState("notion");
   const result = [];
@@ -759,8 +725,36 @@ async function linearConnect(config){
   });
   provider.config._verified = !!resp.ok;
   provider.config._lastVerifiedAt = _intNow();
+  /* v3.7.85：连接即拉该团队的工作流状态 → 名字→stateId 映射（各工作区配置不同，运行时查最准） */
+  if(resp.ok && config.teamId){
+    const st = await _linearFetchStates(config.token, config.teamId);
+    if(st.map && Object.keys(st.map).length){ provider.config.stateMap = st.map; provider.config.statesFetchedAt = _intNow(); }
+  }
   _intSaveProviders();
   return provider;
+}
+
+/**
+ * 拉取 Linear 团队的工作流状态 → {小写状态名: stateId}（v3.7.85）
+ * @returns {Promise<{ok:boolean, map:Object|null, error?:string}>}
+ */
+async function _linearFetchStates(token, teamId){
+  try{
+    const resp = await _intDoRequest("https://api.linear.app/graphql", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: "query($id: String!) { team(id: $id) { states { nodes { id name } } } }",
+        variables: { id: teamId }
+      })
+    });
+    const err0 = resp.body && resp.body.errors && resp.body.errors[0];
+    const nodes = resp.body && resp.body.data && resp.body.data.team && resp.body.data.team.states && resp.body.data.team.states.nodes;
+    if(err0 || !Array.isArray(nodes)) return { ok: false, map: null, error: (err0 && err0.message) || "no_states" };
+    const map = {};
+    nodes.forEach(function(st){ if(st && st.id && st.name) map[String(st.name).trim().toLowerCase()] = st.id; });
+    return { ok: true, map: map };
+  }catch(e){ return { ok: false, map: null, error: (e && e.message) || String(e) }; }
 }
 
 /**
@@ -772,7 +766,9 @@ async function linearConnect(config){
  * 而旧实现对两个 mutation 都传了 `state: "In Progress"`（状态**名**）—— schema 里没有这个字段，
  * 真机必被拒。名字→ID 得先查该团队的工作流状态，我手边没有可验证的 Linear 工作区，
  * 所以不猜：**推送不带状态**，issue 落到团队默认状态，面板文案如实写明这一点。
- * `LINEAR_STATUS_MAP` 因此继续冻结在废弃名单里 —— 它现在正好代表"没接的那部分"。
+ * v3.7.85：状态映射改为**运行时**解析（connect 拉 team.states 建 名字→stateId 表）——
+ * "查工作流状态"不需要我持有工作区，用用户自己的 token 连接时查一次即可，映射随各团队
+ * 实况走；查不到就不带状态（落团队默认），不猜。
  * @param {Object} issue - 本地任务 { id, title, note, ... }
  * @returns {Promise<Object>} { success, action:'created'|'updated', remoteId, localId } 或 { success:false, error }
  */
@@ -792,12 +788,16 @@ async function linearSyncIssue(issue){
     "Content-Type": "application/json"
   };
   const desc = issue.note || issue.description || "";
+  /* v3.7.85：状态映射命中则带 stateId（查不到就不带 —— 落对方默认，不猜） */
+  const stateId = _lookupStatusId(provider.config.stateMap, issue.status);
   const query = syncInfo
     ? "mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id } } }"
     : "mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id } } }";
+  const inputBase = { title: issue.title, description: desc };
+  if(stateId) inputBase.stateId = stateId;
   const variables = syncInfo
-    ? { id: syncInfo.remoteId, input: { title: issue.title, description: desc } }
-    : { input: { teamId: teamId, title: issue.title, description: desc } };
+    ? { id: syncInfo.remoteId, input: inputBase }
+    : { input: Object.assign({ teamId: teamId }, inputBase) };
 
   const resp = await _intDoRequest("https://api.linear.app/graphql", {
     method: "POST", headers: headers, body: JSON.stringify({ query: query, variables: variables })
@@ -828,15 +828,7 @@ async function linearPushTasks(tasks){
   return await _intPushEach("linear", INTEGRATION_TYPES.LINEAR, linearSyncIssue, tasks);
 }
 
-/**
- * Linear 状态映射（本地状态 → Linear 状态）
- * @param {string} localStatus - 本地状态
- * @returns {string} Linear 状态
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-function linearMapStatus(localStatus){
-  return LINEAR_STATUS_MAP[localStatus] || localStatus;
-}
+
 
 /**
  * 列出 Linear issues（框架）
@@ -908,6 +900,29 @@ async function jiraConnect(config){
  * @returns {Promise<Object>} 同步结果
  * v3.7.79：已接线（jiraPushTasks 经主进程中继推送）。
  */
+/**
+ * 拉取某个 Jira issue 的可用流转 → [{id,name}]（v3.7.85，运行时解析，不预置映射表）
+ * @returns {Promise<{ok:boolean, list:Array<{id:string,name:string}>}>}
+ */
+async function _jiraFetchTransitions(domain, token, issueKey){
+  try{
+    const r = await _jiraRequest(domain, "/rest/api/3/issue/" + issueKey + "/transitions", { method: "GET", token: token });
+    const list = r && r.body && Array.isArray(r.body.transitions) ? r.body.transitions : [];
+    return { ok: !!(r && r.ok), list: list };
+  }catch(e){
+    return { ok: false, list: [] };
+  }
+}
+/** 本地状态名按候选表匹配 transitions → 命中返回 transition id，否则空串 */
+function _matchTransitionName(list, localStatus){
+  if(!Array.isArray(list)) return "";
+  const cands = _statusCandidates(localStatus);
+  for(const nm of cands){
+    const hit = list.find(function(x){ return x && x.id && String(x.name || "").trim().toLowerCase() === nm; });
+    if(hit) return hit.id;
+  }
+  return "";
+}
 async function jiraSyncIssue(issue, direction){
   if(!issue || !issue.id) return { success: false, error: "invalid_issue" };
   direction = direction || "sync";
@@ -920,8 +935,9 @@ async function jiraSyncIssue(issue, direction){
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   if(!_intJiraBase(domain)) return { success: false, error: "invalid_domain" };
-  /* v3.7.79：状态映射（JIRA_STATUS_MAP）暂不参与推送 —— 变换状态要走 transitions API 且
-     transition id 因工作流而异，没有可验证工作区前带上必错（同 Linear 的处置）。 */
+  /* v3.7.85：状态变换改为**运行时**解析 —— 更新成功后按该 issue 拉 transitions
+     （/rest/api/3/issue/{key}/transitions），本地状态名按候选表匹配 transition 名，
+     命中则 POST transitions；拉不到或匹配不上就**不变换**（对方状态保持不动），不猜。 */
 
   if(direction === "push" || direction === "sync"){
     let resp;
@@ -935,13 +951,25 @@ async function jiraSyncIssue(issue, direction){
         })
       });
       if(resp.ok){
+        /* v3.7.85：状态变换 —— 拉该 issue 的 transitions，本地状态名按候选匹配，命中才 POST */
+        let transitioned = false;
+        if(issue.status){
+          const tr = await _jiraFetchTransitions(domain, token, syncInfo.remoteId);
+          const tName = _matchTransitionName(tr.list, issue.status);
+          if(tName){
+            const trr = await _jiraRequest(domain, "/rest/api/3/issue/" + syncInfo.remoteId + "/transitions", {
+              method: "POST", token: token, body: JSON.stringify({ transition: { id: tName } })
+            });
+            transitioned = !!trr.ok;
+          }
+        }
         _intRecordSync("jira", issue.id, syncInfo.remoteId, "issue");
-        if(direction === "push") return { success: true, action: "updated", remoteId: syncInfo.remoteId, localId: issue.id };
+        if(direction === "push") return { success: true, action: "updated", transitioned: transitioned, remoteId: syncInfo.remoteId, localId: issue.id };
       }
     }else{
       /* 创建 issue —— **刻意不带 status**：Jira create 的 fields 不接受 status（要变换工作流需
          走 transitions API，且 transition id 因工作流而异），带上真机必 400。新 issue 落项目
-         默认状态；本地状态与远端状态的映射（JIRA_STATUS_MAP）留待有可验证工作区后再接。 */
+         默认状态；状态变换见上（运行时 transitions 匹配）。 */
       resp = await _jiraRequest(domain, "/rest/api/3/issue", {
         method: "POST",
         token: token,
@@ -963,15 +991,7 @@ async function jiraSyncIssue(issue, direction){
   return { success: false, error: "sync_failed" };
 }
 
-/**
- * Jira 状态映射
- * @param {string} localStatus - 本地状态
- * @returns {string} Jira 状态
- * @deprecated v3.7.60 应用内零调用方（同步 / 通知尚未接线）· 渠道定案前勿新增调用点或在其上加 UI · 见 docs/product-scope.md §三
- */
-function jiraMapStatus(localStatus){
-  return JIRA_STATUS_MAP[localStatus] || localStatus;
-}
+
 
 /**
  * 列出 Jira issues（框架）
@@ -2076,7 +2096,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     openSearchModal, closeSearchModal, executeSearch,
     get NOTES_STORAGE_KEY(){ return NOTES_STORAGE_KEY; },
     // v1.8-C 集成（供测试驱动）
-    integrationGetStatus, integrationSetHttpClient,
+    integrationSetHttpClient,
     // v1.8-C 集成内部件（async provider 取用 + 同步状态管理 + 存储 key，供注入式测试）
     _intRequireProvider, _intLoadProviders, _intResetIntegrationCache,
     _intGetSyncState, _intRecordSync, _intFindLocalId,

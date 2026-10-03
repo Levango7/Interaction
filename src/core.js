@@ -2440,7 +2440,7 @@ const MESSAGES = {
     "int.jiraDesc": "验证 Token 并推送任务到项目（仅桌面版可用：Atlassian 不回 CORS 头，浏览器形态请求发不出去）；凭据随应用数据加密落盘",
     "int.jiraProjectKey": "项目 Key（推送任务用，如 PROJ）",
     "int.jiraDomain": "站点域名",
-    "int.linearDesc": "验证 Linear API Key（已连接后可把未完成任务单向推送为 issue；状态映射与反向拉取尚未接入）",
+    "int.linearDesc": "验证 Linear API Key（已连接后可把未完成任务单向推送为 issue；状态按团队工作流运行时匹配；反向拉取尚未接入）",
     "int.linearTeamIdPh": "可选，用于 issue 同步",
     "int.sessionOn": "本会话已配置",
     "int.desktopOnly": "仅桌面版可用",
@@ -3999,6 +3999,9 @@ const MESSAGES = {
     "p5.icsRefreshFail": "刷新失败",
     "p5.icsDeleteConfirm": "删除该日历源？其事件将不再出现在日历里（不会改动任何本地任务）。",
     "p5.icsRelayHint": "提示：多数日历站不返回 CORS 头，浏览器形态直接拉取会被拦——订阅拉取建议用桌面版。",
+    "p5.icsExport": "导出本地日程 .ics",
+    "p5.icsExported": "已导出 .ics（可导入/订阅到任意日历 App）",
+    "p5.icsExportFail": "当前环境不支持文件下载，请用桌面版",
     "p5.back": "返回"
   },
   en: {
@@ -6194,7 +6197,7 @@ const MESSAGES = {
     "int.jiraDesc": "Verify the token and push tasks to a project (desktop app only - Atlassian returns no CORS headers, so no browser form can send requests); credentials are encrypted at rest with app data",
     "int.jiraProjectKey": "Project key (for task push, e.g. PROJ)",
     "int.jiraDomain": "Site domain",
-    "int.linearDesc": "Verify Linear API key (once connected, open tasks can be pushed one-way as issues; status mapping and pull are not implemented)",
+    "int.linearDesc": "Verify Linear API key (once connected, open tasks can be pushed one-way as issues; state is matched against the team workflow at runtime; pull is not implemented)",
     "int.linearTeamIdPh": "Optional, for issue sync",
     "int.sessionOn": "Configured for this session",
     "int.desktopOnly": "Desktop app only",
@@ -7746,6 +7749,9 @@ const MESSAGES = {
     "p5.icsRefreshFail": "Refresh failed",
     "p5.icsDeleteConfirm": "Delete this calendar source? Its events disappear from the calendar (no local task is touched).",
     "p5.icsRelayHint": "Note: most calendar servers send no CORS headers, so browser forms are blocked - use the desktop app to pull feeds.",
+    "p5.icsExport": "Export local schedule (.ics)",
+    "p5.icsExported": "Exported .ics (import or subscribe it in any calendar app)",
+    "p5.icsExportFail": "File download unavailable in this environment - use the desktop app",
     "p5.back": "Back"
   }
 };

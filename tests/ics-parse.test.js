@@ -158,3 +158,47 @@ describe("订阅面板（容器内视图）", () => {
     expect(c.dataset.offset).toBe("2");
   });
 });
+
+describe("ICS 导出（零凭据双向的另一半）", () => {
+  const tasks = [
+    { id: "t1", title: "修登录; 报错,\n第二行", note: "描述带;逗号", status: "todo", due: "2026-03-05" },
+    { id: "t2", title: "完成项", status: "done", due: "2026-03-06" },
+    { id: "t3", title: "无日期不导出", status: "todo" }
+  ];
+  const meetings = [
+    { id: "m1", title: "周会", date: "2026-03-05", startTime: "09:30", place: "三号会议室" },
+    { id: "m2", title: "全天活动", date: "2026-03-07" }
+  ];
+
+  it("导出 → 本应用解析器回读，往返一致（标题/描述转义可还原）", () => {
+    const win = app();
+    const ics = win.icsBuildExport(tasks, meetings);
+    expect(ics.startsWith("BEGIN:VCALENDAR")).toBe(true);
+    expect(ics.trimEnd().endsWith("END:VCALENDAR")).toBe(true);
+    /* 导出物本身必须已转义（不能把裸分号塞进 ICS） */
+    expect(ics).toContain("修登录\\; 报错\\,\\n第二行");
+    const back = win.icsParseEvents(ics);
+    expect(back.length, "两任务（无日期的不导出）+ 两会议").toBe(4);
+    const t1 = back.find((e) => e.title.indexOf("修登录") === 0);
+    expect(t1.title).toBe("修登录; 报错,\n第二行");
+    expect(t1.desc).toBe("描述带;逗号");
+    expect(back.some((e) => e.title === "完成项（已完成）")).toBe(true);
+    const m1 = back.find((e) => e.title === "周会");
+    expect(m1.location).toBe("三号会议室");
+    expect(m1.allDay, "带开始时间 → 非全天").toBe(false);
+    const m2 = back.find((e) => e.title === "全天活动");
+    expect(m2.allDay).toBe(true);
+    /* 会议带时刻：小时/分钟应落回 9:30 */
+    expect(m1.start.getHours()).toBe(9);
+    expect(m1.start.getMinutes()).toBe(30);
+  });
+
+  it("下载不可用环境如实返回 false（不假装成功）", () => {
+    const win = app();
+    const orig = URL.createObjectURL;
+    try{ delete URL.createObjectURL; }catch(e){}
+    const okDl = win.icsDownload(win.icsBuildExport(tasks, []), "x.ics");
+    expect(okDl).toBe(false);
+    if (orig) URL.createObjectURL = orig;
+  });
+});

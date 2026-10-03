@@ -1208,7 +1208,8 @@ function renderIcsPanel(){
     + '<div class="u-flex u-mt-2 u-gap-2"><label class="addbtn sm" for="icsFile" style="cursor:pointer">' + esc(t("p5.icsImport", "导入 .ics 文件")) + '</label>'
     + '<input type="file" id="icsFile" accept=".ics,text/calendar" style="display:none">'
     + '<button type="button" class="addbtn sm btn-primary" id="icsAdd">' + esc(t("p5.icsAdd", "添加订阅")) + '</button>'
-    + '<button type="button" class="addbtn sm" id="icsRefreshAll">' + esc(t("p5.icsRefreshAll", "刷新全部")) + '</button></div></div>';
+    + '<button type="button" class="addbtn sm" id="icsRefreshAll">' + esc(t("p5.icsRefreshAll", "刷新全部")) + '</button>'
+    + '<button type="button" class="addbtn sm" id="icsExport">' + esc(t("p5.icsExport", "导出本地日程 .ics")) + '</button></div></div>';
   if(!subs.length){
     html += '<p class="empty-hint">' + esc(t("p5.icsEmpty", "尚未添加日历源：支持公开只读 ICS 订阅链接（QQ日历 / 网易日历 等，无需账号授权）或本地 .ics 文件导入。")) + '</p>';
   } else {
@@ -1288,6 +1289,11 @@ function bindIcsPanel(c){
       openIcsPanel(c);
     };
   }
+  const exp = c.querySelector("#icsExport");
+  if(exp && !exp._icsBound){
+    exp._icsBound = true;
+    exp.onclick = function(){ icsExportLocal(); };   /* 零凭据双向的另一半：本地 → 对方 */
+  }
   c.querySelectorAll("[data-ics-refresh]").forEach(function(b){
     if(b._icsBound) return; b._icsBound = true;
     b.onclick = async function(){
@@ -1309,4 +1315,93 @@ function bindIcsPanel(c){
       openIcsPanel(c);
     };
   });
+}
+
+/* ============================================================
+ * ICS 导出（v3.7.85 批次2）：把本地任务（截止日）与会议（办公记录日期/开始时间）
+ * 导出成 .ics 文件 —— 用户丢进任意日历 App 即可「订阅」，这是**零凭据双向**的另一半：
+ * 本地→对方不需要任何厂商授权（对比 Google/Outlook OAuth 双向：需要企业应用+梯子）。
+ * 全天事件用 VALUE=DATE；会议带开始时间则用 DATE-TIME（本地时区）。
+ * ============================================================ */
+/** ICS 文本转义：\\ \\n ; , 换行 */
+function _icsEscapeText(v){
+  return String(v == null ? "" : v).replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/;/g, "\\;").replace(/,/g, "\\,");
+}
+/** Date → YYYYMMDD */
+function _icsYmd(d){
+  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+}
+/** Date → YYYYMMDDTHHMMSS（本地浮动时间） */
+function _icsYmdhm(d){
+  return _icsYmd(d) + "T" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + String(d.getSeconds()).padStart(2, "0");
+}
+/**
+ * 构建本地日程的 .ics 文本（任务截止日 + 会议记录）
+ * @param {Array} [tasks] - 任务（默认取未完成+已完成全部带 due 的）
+ * @param {Array} [meetings] - 会议记录（默认取办公场景带 date 的）
+ * @returns {string} VCALENDAR 文本
+ */
+function icsBuildExport(tasks, meetings){
+  const ts = _icsYmdhm(new Date());
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Agent Workshop//ICS Export//ZH", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+  const tsk = Array.isArray(tasks) ? tasks : (typeof getTasks === "function" ? getTasks() : []);
+  const mts = Array.isArray(meetings) ? meetings : _icsExportDefaultMeetings();
+  tsk.forEach(function(t){
+    if(!t || !t.due) return;
+    const d = new Date(t.due);
+    if(isNaN(d.getTime())) return;
+    lines.push("BEGIN:VEVENT");
+    lines.push("UID:task-" + t.id + "@agent-workshop");
+    lines.push("DTSTAMP:" + ts);
+    lines.push("DTSTART;VALUE=DATE:" + _icsYmd(d));
+    lines.push("DTEND;VALUE=DATE:" + _icsYmd(new Date(d.getTime() + 24 * 3600e3)));
+    lines.push("SUMMARY:" + _icsEscapeText((t.title || "") + (t.status === "done" ? "（已完成）" : "")));
+    if(t.note) lines.push("DESCRIPTION:" + _icsEscapeText(t.note));
+    lines.push("END:VEVENT");
+  });
+  mts.forEach(function(m0, idx){
+    if(!m0 || !m0.date) return;
+    const d = new Date(String(m0.date).length <= 10 ? m0.date + "T00:00:00" : m0.date);
+    if(isNaN(d.getTime())) return;
+    const hasTime = /\d{1,2}:\d{2}/.test(String(m0.startTime || ""));
+    if(hasTime){
+      const hm = /^(\d{1,2}):(\d{2})/.exec(String(m0.startTime));
+      d.setHours(+hm[1], +hm[2], 0, 0);
+    }
+    lines.push("BEGIN:VEVENT");
+    lines.push("UID:meeting-" + (m0.id || (idx + 1)) + "@agent-workshop");
+    lines.push("DTSTAMP:" + ts);
+    if(hasTime){ lines.push("DTSTART:" + _icsYmdhm(d)); lines.push("DTEND:" + _icsYmdhm(new Date(d.getTime() + 3600e3))); }
+    else { lines.push("DTSTART;VALUE=DATE:" + _icsYmd(d)); lines.push("DTEND;VALUE=DATE:" + _icsYmd(new Date(d.getTime() + 24 * 3600e3))); }
+    lines.push("SUMMARY:" + _icsEscapeText(m0.title || ""));
+    if(m0.note) lines.push("DESCRIPTION:" + _icsEscapeText(m0.note));
+    if(m0.place || m0.location) lines.push("LOCATION:" + _icsEscapeText(m0.place || m0.location));
+    lines.push("END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n") + "\r\n";
+}
+/** 默认会议集合（办公场景记录，与日历视图同源） */
+function _icsExportDefaultMeetings(){
+  try{ return (typeof getRec === "function") ? (getRec("office") || []) : []; }catch(e){ return []; }
+}
+/** 触发下载（浏览器与桌面通用；不可用环境如实返回 false 由调用方 toast） */
+function icsDownload(text, filename){
+  try{
+    if(typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return false;
+    const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename || "agent-workshop.ics";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 2000);
+    return true;
+  }catch(e){ return false; }
+}
+/** 导出入口：构建 + 下载 + 如实回报 */
+function icsExportLocal(filename){
+  const text = icsBuildExport();
+  const okDl = icsDownload(text, filename || ("agent-workshop-" + _icsYmd(new Date()) + ".ics"));
+  try{ toast(okDl ? t("p5.icsExported", "已导出 .ics（可导入/订阅到任意日历 App）") : t("p5.icsExportFail", "当前环境不支持文件下载，请用桌面版"), okDl ? "ok" : "warn"); }catch(e){}
+  return okDl;
 }

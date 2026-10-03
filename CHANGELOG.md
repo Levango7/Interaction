@@ -1,3 +1,31 @@
+## [v3.7.85] - 2026-10-03
+
+**两小时自主作业·收尾批次（B1–B4 + 规划文档）：① Linear/Jira 状态映射从"冻结待工作区"改为**运行时解析**（连接/推送时用用户自己的 token 查工作流状态，映射随各工作区实况走）；② ICS 导出（本地任务/会议 → .ics，零凭据"双向"的另一半）；③ 删除 4 个纯死 lifecycle 函数（废弃名单 16 → 10）；④ Linear 文案随①更新；⑤ 新增 `docs/cloud-sync-incremental-contract.md`（云同步增量的前后端职责切分）与 `docs/roadmap-2026Q4.md`（Q4 路线图）。全量 **116 文件 / 1317 用例**（v3.7.84 为 115/1307；+1 文件 = `integration-state-mapping.test.js` 8 例、`ics-parse.test.js` +2 例）、e2e **82/82（3.6m）**、七门禁全绿（含 CI 独有的 `lint:tokens`）、逆层 18 / 循环 13 未动。**
+
+### ① 状态映射运行时化（把硬阻塞就地解冻）
+
+此前 Linear/Jira 的状态变换冻结在废弃名单，理由是"状态名→远端 ID 需真实工作区验证"。本版换个角度：**查工作流状态本身不需要我持有工作区** ——
+
+- **Linear**：连接时 GraphQL 拉 `team.states` → `{小写状态名: stateId}` 落进 provider 配置（含落盘复现），推送命中则 mutation 带 `stateId`；查不到就**不带**（落团队默认，不猜）。
+- **Jira**：更新成功后按 issue 拉 `transitions` → 本地状态名按候选表匹配 → POST transition；结果如实带 `transitioned:true/false`。
+- 候选名表只是"本地四态 → 常见远端名"的起点，最终以工作区实况为准；中文状态名（进行中）也可匹配。
+- `LINEAR_STATUS_MAP` / `JIRA_STATUS_MAP` / `linearMapStatus` / `jiraMapStatus` 四个冻结项随之删除。新增 `tests/integration-state-mapping.test.js` 8 例钉住：建表落盘、命中带 stateId、**拉取失败不带 stateId 但推送仍算成功**（诚实性）、transitions 命中/不命中、中文匹配、浏览器无中继时 Jira 当场拒连。
+
+### ② ICS 导出（零凭据双向的另一半）
+
+`icsBuildExport()` 把本地任务（截止日 → 全天 VEVENT）与会议记录（带开始时间 → DATE-TIME）导出为 .ics，`icsDownload` 触发下载。往返用例：导出 → 本应用解析器回读，标题/描述里的 `;` `,` 换行经转义还原一致；下载不可用环境（如浏览器）如实返回 false + 提示用桌面版。面板加「导出本地日程 .ics」按钮。
+
+### ③ 死码与文案
+
+- 删除 4 个纯死 lifecycle 函数（`integrationListProviders/Enable/Disable/ConfigureProvider` —— 全仓+测试均无引用面）；**`integrationGetStatus` 保留**（死码判定第一轮漏扫 tests/，被 phase2 测试抓下后从 git 原样恢复 —— 教训：死码判定必须同时扫 tests/，测试消费者也是消费者）。
+- Linear 描述里"状态映射…尚未接入"随本版变为事实，文案更新为"状态按团队工作流运行时匹配"。
+- 废弃名单 16 → 10：剩余 10 个全部对应真未接能力（Notion 笔记/双向拉取、Linear 拉取、日历 OAuth 5 个、内部 id 查找器）。
+
+### ⑤ 规划文档（两份）
+
+- `docs/cloud-sync-incremental-contract.md`：云同步增量是**后端契约问题**，本文把"客户端能独立做的 C1–C4（变更日志/体积看板/冲突计数/开关位）"与"必须等后端的水位+变更清单+冲突策略+幂等"切清，附三阶段建议 —— 宁可记账，不做占位增量。
+- `docs/roadmap-2026Q4.md`：Q4 批次 A（收尾，本批）→ B（体验补齐：日历详情浮层、死接线普查、ICS 增强）→ C（联调验收/云同步）+ 硬阻塞前置条件清单（谁也不能在本机解的，列明缺什么）。
+
 ## [v3.7.84] - 2026-10-03
 
 **日历能力改走「零凭据 ICS 路线」（用户裁定：「国内没有梯子，Google 日历为什么要做？国内没有厂商有这个吗？」）——Google 日历路线**永久划掉**（用户不可达即不做），日历页新增：本地 `.ics` 文件导入 + 公开只读 ICS 订阅链接（QQ日历/网易日历等，国内直连可达、零账号授权），外部事件在月/周视图以第三种分色呈现（绿系，与任务徽章/会议标记分开计数）。**发版后线上复核**：Pages 取回 **3,676,449 B**、`VERSION="3.7.84"`、`BUILD_TAG="20261003e"`、`var __TEST_GATE__ = false`（锚定定义处）。**CI 抓出一处**：首推 CI 双红——`lint:tokens`（CI 独有的一道门）抓出 ICS 徽章底色引用了**不存在的 `--ok-soft` 令牌**（本仓只有 --danger-soft/--warn-soft），浏览器会静默回退；改为 `--panel` 后转绿。全量 **115 文件 / 1307 用例**（+9 = `ics-parse.test.js`）、e2e **82/82（3.6m）**、`lint`（四道）、`build:check`、`check:ai-tools-doc`、`pet:check`、`check:modules`（18 逆层 / 13 循环，未动）、`check:source-state`，均本机实测。**
