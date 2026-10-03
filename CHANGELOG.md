@@ -1,6 +1,6 @@
 ## [v3.7.86] - 2026-10-03
 
-**Q4 批次 B（B1 日历事件详情浮层 · B2 死接线普查与门禁 · B4 GitHub 设备流底座）：全仓普查抓到**第 8 例死接线**并连带修好一个"按钮其实是死的"真 bug；GitHub 接入底座落地（实测 api.github.com 回 ACAO:*，浏览器直连成立）。全量 **118 文件 / 1333 用例**（v3.7.85 为 116/1317；+2 文件 = `dead-wiring-guard.test.js` 2 例、`github-device-flow.test.js` 11 例，另有 `ics-parse.test.js` +3 例浮层）、e2e **82/82（3.7m）**、七门禁全绿、源码态。
+**Q4 批次 B（B1 日历事件详情浮层 · B2 死接线普查与门禁 · B4 GitHub 设备流底座）：**发版后线上复核**：Pages 取回 **3,706,179 B**、`VERSION="3.7.86"`、`BUILD_TAG="20261003g"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。全仓普查抓到**第 8 例死接线**并连带修好一个"按钮其实是死的"真 bug；GitHub 接入底座落地（实测 api.github.com 回 ACAO:*，浏览器直连成立）。全量 **118 文件 / 1333 用例**（v3.7.85 为 116/1317；+2 文件 = `dead-wiring-guard.test.js` 2 例、`github-device-flow.test.js` 11 例，另有 `ics-parse.test.js` +3 例浮层）、e2e **82/82（3.7m）**、七门禁全绿、源码态。
 
 ### B1 · 日历事件详情浮层
 
