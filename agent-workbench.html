@@ -5752,18 +5752,18 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <p class="api-login-hint" id="apiIntegrationsHint" data-i18n="api.loginRequired">请先登录以使用集成功能</p>
   </section>
 
-  <!-- ===== 关于与兼容说明 ===== -->
-  <section class="set-card" id="set-about" aria-label="关于与兼容说明" data-i18n-aria="a11y.aboutCompat">
+  <!-- ===== 关于本应用 ===== -->
+  <section class="set-card" id="set-about" aria-label="关于本应用" data-i18n-aria="a11y.aboutCompat">
     <header class="set-head">
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></span>
       <div>
-        <h3 data-i18n="about.title">关于与兼容说明</h3>
+        <h3 data-i18n="about.title">关于本应用</h3>
         <p class="set-desc" data-i18n="about.desc">使用 AI 功能前，请先了解以下说明。</p>
       </div>
     </header>
     <p class="set-tip" data-i18n="about.tip">启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工坊数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。</p>
-    <!-- v3.1.2 B-档：关于卡补版本号 + 快捷键帮助入口（此前版本只在抽屉尾栏、快捷键只能按 ? 唤起，用户找不到） -->
-    <p class="set-tip u-fs-2xs u-mt-3" id="aboutVersion"></p>
+    <!-- v3.1.2 B-档：快捷键帮助入口（此前快捷键只能按 ? 唤起，用户找不到）。
+         v3.7.80：移除关于卡版本行——与尾栏重复（用户裁定版本号只保留尾栏一处）。 -->
     <button type="button" class="addbtn sm u-w-full u-mt-2" id="btnOpenShortcutHelp" data-sc="accent" data-i18n="about.shortcutBtn">快捷键帮助</button>
     <!-- v3.7.64：诊断与反馈——诊断缓冲（_diagLog）此前只有测试侧读取，用户遇到问题没有上报出口。
          免费期「体验反馈回收」的最小机制：查看近期诊断 + 一键复制脱敏报告。
@@ -6114,10 +6114,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.79"; /* v3.7.74 路线项①②落地：会议进日历（办公 record date/startTime 进月历「会」标记与周视图会议行，按开始时间排序，与任务徽章分列）· 双标签页数据守护（storage 事件节流 30s 提示刷新，此前全仓 0 监听双开互覆盖）· RAG 文件导入与云同步增量记账为路线余量（后者依赖后端契约） */
+const VERSION = "3.7.80"; /* v3.7.80 关于卡移除版本行（与尾栏重复，版本号只保留尾栏一处）· 卡片标题「关于与兼容说明」改「关于本应用」（原并列措辞有歧义），i18n 双语与 aria 同步 */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261002j";
+const BUILD_TAG = "20261003a";
 
 
 
@@ -7491,7 +7491,7 @@ const MESSAGES = {
     "notify.pushHint": "⚠️ 框架模式：VAPID 密钥为占位符，未实际连接推送服务器。开启订阅后会调用 PushManager.subscribe，但服务器端推送需后续配置 VAPID 密钥与推送服务（如 Web Push 协议/VAPID）。",
     "integration.title": "集成中心",
     "integration.desc": "连接外部服务并验证凭据。群机器人 webhook 通知已接通，但能不能发出去取决于打开方式：飞书需要页面跑在真实 http(s) 源上（用「启动本地服务.bat」以 http://localhost 打开，或走线上站点），双击 file:// 打开时飞书不回 CORS 头；钉钉与 Slack 的 webhook 任何浏览器形态都不回 CORS 头，只有桌面版（Electron）经主进程发送才可用。凭据只存在本次会话内存里，刷新即失效，不落任何磁盘。注意：任务 / 笔记 / 日程同步仍未接入，除你主动推送外不会向任何服务发送数据。",
-    "about.title": "关于与兼容说明",
+    "about.title": "关于本应用",
     "about.desc": "使用 AI 功能前，请先了解以下说明。",
     "about.tip": "启用后，每个场景的 AI 助手可调用工具：创建/修改/删除任务、查询/完成任务、搜索、添加资料、查看总览、导出——你说的指令会真正落到工坊数据里。<br><br>开启 Agent 模式后还可：remember/recall/forget 工作记忆、plan/complete_step/complete_goal 多步目标编排、list_records 跨场景查资料。<br><br>跨域提示：从本地文件直接调用可能被浏览器 CORS 拦截。最稳妥是用「启动本地服务.bat」以 http://localhost 方式打开，再启用 AI。",
     "about.shortcutBtn": "快捷键帮助",
@@ -9837,7 +9837,7 @@ const MESSAGES = {
     "a11y.apiAccount": "账号设置",
     "a11y.apiNotify": "通知偏好",
     "a11y.thirdPartyIntegrations": "第三方集成",
-    "a11y.aboutCompat": "关于与兼容说明",
+    "a11y.aboutCompat": "关于本应用",
     "a11y.reportType": "报表类型",
     "a11y.returnPrevView": "返回上一视图",
     "a11y.closeBtn": "关闭",
@@ -11213,7 +11213,7 @@ const MESSAGES = {
     "notify.pushHint": "⚠️ Framework mode: VAPID key is placeholder, not connected to push server. Subscribing calls PushManager.subscribe, but server-side push requires VAPID key and push service configuration.",
     "integration.title": "Integration Center",
     "integration.desc": "Connect external services and verify credentials. The group-robot webhook notification channel is wired up, but whether it can actually send depends on how the app is opened: Feishu needs the page on a real http(s) origin (open it via 'start-local-service.bat' at http://localhost, or use the hosted site) - from a file:// double-click Feishu returns no CORS headers. DingTalk's and Slack's webhooks return no CORS headers in any browser form, so they only work in the desktop (Electron) app where the main process sends. Credentials live in this session only - never written to disk, lost on reload. Note: task / note / calendar sync is still not implemented; nothing leaves this app unless you push it.",
-    "about.title": "About & Compatibility",
+    "about.title": "About",
     "about.desc": "Please read the following before using AI features.",
     "about.tip": "When enabled, each scenario's AI assistant can call tools: create/modify/delete tasks, query/complete tasks, search, add records, view overview, export—your instructions actually modify workbench data.<br><br>With Agent Mode: remember/recall/forget working memory, plan/complete_step/complete_goal multi-step goals, list_records cross-scenario records.<br><br>CORS tip: calling from local files may be blocked by browser CORS. Best to open via 'start-local-service.bat' as http://localhost, then enable AI.",
     "about.shortcutBtn": "Shortcut Help",
@@ -13580,7 +13580,7 @@ const MESSAGES = {
     "a11y.apiAccount": "Account settings",
     "a11y.apiNotify": "Notification preferences",
     "a11y.thirdPartyIntegrations": "Third-party integrations",
-    "a11y.aboutCompat": "About and compatibility notes",
+    "a11y.aboutCompat": "About this app",
     "a11y.reportType": "Report type",
     "a11y.returnPrevView": "Return to previous view",
     "a11y.closeBtn": "Close",
@@ -23652,7 +23652,10 @@ function mountPet(kind){
   const artImg = el.querySelector(".pet-art-img");
   /* v3.7.2：是否立体档（同一张立绘 + 2.5D 渲染）——决定要不要撒星光特效 */
   const is3dArt = !!(artImg && el.querySelector(".pet-3d"));
-  const ACTS = ["act-shake", "act-nod", "act-dance", "act-tilt", "act-spin"];
+  /* v3.7.80：移除 act-spin（rotateY 360°）——单张立绘绕 Y 轴翻面时就是一张"纸片"，
+     穿帮感极强（用户点名吐槽）；且 3D 档的 shade/sheen 光影层不跟随 img 旋转，半程还会分层。
+     CSS 里的 @keyframes petSpinK 保留但不再触发。 */
+  const ACTS = ["act-shake", "act-nod", "act-dance", "act-tilt"];
   /* ---------- v3.6.7 立绘眨眼 / 张嘴：按标定坐标贴浮层 ----------
      .pet-art-img 是 object-fit:contain，四周可能留白，所以坐标必须基于「图片实际显示矩形」：
      由 naturalWidth/Height 与容器盒子算出缩放与偏移，再换算成容器内 px。 */
@@ -23713,9 +23716,21 @@ function mountPet(kind){
       el._faceRO.observe(faceBox);
     }catch(_){ /* 不支持时忽略：至少原有的首次定位仍生效 */ }
   }
+  /* v3.7.80：表情浮层与动作的互斥守卫。根因：act-* 动画/talking 都作用在 .pet-art-img 上，
+     而眨眼/张嘴遮罩是 .pet-art 下的独立兄弟层、不跟随 img 的 transform ——
+     二者并发时遮罩留在原地而脸已转走/浮走，表现就是「眯起来的眼睛跑到别的地方」。
+     此前只有 tick 抽签层互斥（同一次 tick 二选一），但 talkArt（聊天说话 1.4s）、
+     连眨第二下（+250ms）、点击反馈等入口仍可与 act 动画并发 → 这里在各入口统一防御。 */
+  const ACT_CLS = ["act-shake", "act-nod", "act-dance", "act-tilt", "talking"];
+  const _imgInAct = function(){
+    if(!artImg) return false;
+    for(var _i = 0; _i < ACT_CLS.length; _i++){ if(artImg.classList.contains(ACT_CLS[_i])) return true; }
+    return false;
+  };
   let blinkTimer = null;
   const blinkArt = function(){
     if(!artLids || !lidEls.length) return false;
+    if(_imgInAct()) return false;                     /* 动画中不贴遮罩（防错位） */
     artLids.classList.add("on");
     clearTimeout(blinkTimer);
     blinkTimer = setTimeout(function(){ artLids.classList.remove("on"); }, 130);
@@ -23729,6 +23744,7 @@ function mountPet(kind){
   };
   const talkArt = function(){
     if(!artMouth) return;
+    if(_imgInAct()) return;                           /* 动画中不开口（防遮罩错位，v3.7.80 同守卫） */
     let n = 0;
     if(artImg){ artImg.classList.remove("talking"); void artImg.offsetWidth; artImg.classList.add("talking");
       setTimeout(function(){ artImg.classList.remove("talking"); }, 1400); }
@@ -23742,6 +23758,7 @@ function mountPet(kind){
   };
   const playAct = function(){
     if(!artImg) return;
+    if(artLids && artLids.classList.contains("on")) artLids.classList.remove("on");  /* 先收起眨眼遮罩再动作 */
     const a = ACTS[Math.floor(Math.random() * ACTS.length)];
     ACTS.forEach(function(x){ artImg.classList.remove(x); });
     void artImg.offsetWidth;                     /* 重置动画进度 */
@@ -34629,10 +34646,9 @@ function doIdbImport(file){
   }
 })();
 
-// v3.1.2 B-档：关于卡渲染版本号 + 快捷键帮助按钮绑定（此前版本只在抽屉尾栏、快捷键只能按 ? 唤起，用户找不到）
+// v3.1.2 B-档：快捷键帮助按钮绑定（此前快捷键只能按 ? 唤起，用户找不到）
+// v3.7.80：移除关于卡版本行（#aboutVersion，与尾栏重复，用户裁定版本号只保留尾栏一处）
 (function bindAboutCard(){
-  const ver = $("#aboutVersion");
-  if(ver){ ver.textContent = t("app.name","Agent 工坊") + " · v" + VERSION + " · b" + BUILD_TAG; }
   const btn = $("#btnOpenShortcutHelp");
   if(btn && typeof openShortcutHelp === "function"){ btn.onclick = function(){ openShortcutHelp(); }; }
 })();
