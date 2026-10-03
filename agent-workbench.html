@@ -5650,6 +5650,19 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <div class="sw-sub" data-i18n="look.autoLaunchSub">仅桌面端 exe 生效</div>
       </div>
     </div>
+    <!-- v3.7.83 萌宠节奏档位：只管频率不管幅度（幅度由宠物弹窗的尺寸档负责，两轴正交）。
+         放在「鼠标特效」之前，同属装饰类外观项。切档只重启心跳定时器，不重挂载宠物。 -->
+    <div class="set-field u-mt-2">
+      <label for="cfgPetRhythm" data-i18n="pet.rhythm.label">萌宠节奏</label>
+      <div class="ctl">
+        <select id="cfgPetRhythm">
+          <option value="quiet" data-i18n="pet.rhythm.quiet">安静</option>
+          <option value="standard" data-i18n="pet.rhythm.standard">标准</option>
+          <option value="lively" data-i18n="pet.rhythm.lively">活泼</option>
+        </select>
+      </div>
+    </div>
+    <p class="set-tip" data-i18n="pet.rhythm.tip">调节萌宠自主动作、眨眼与星光的频率，以及多久无交互后打盹。手动摸头、摇尾巴等互动不受影响。</p>
     <!-- 鼠标特效（v1.15：从独立卡片移入外观卡内） -->
     <div class="set-field u-mt-2">
       <label for="cfgPointerFxType" data-i18n="look.pointerFxLabel">鼠标特效</label>
@@ -6187,10 +6200,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.82"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.83"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261003c";
+const BUILD_TAG = "20261003d";
 
 
 

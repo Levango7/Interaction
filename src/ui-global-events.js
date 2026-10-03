@@ -2030,6 +2030,7 @@ function applyStartHash(){
     const _bw3 = $("#btnPetClose"); if(_bw3) _bw3.onclick = function(){ if(typeof closePetModal === "function") closePetModal(); };
     if(typeof initPointerFxFromPref === "function") initPointerFxFromPref();
     if(typeof initPetFromPref === "function") initPetFromPref();
+    if(typeof initPetRhythmFromPref === "function") initPetRhythmFromPref();   // v3.7.83 节奏档控件绑定+回填
   }catch(_){ }
   try{ bindChatPanel(); }catch(e){ pushDiag("error","bindChatPanel init: "+(e&&e.message||e),{where:"bindChatPanel"}); } // 右侧 AI 聊天面板事件绑定（三栏布局第三栏，静态 HTML 一次性绑定）
   // v2.0：会话管理弹窗绑定 + 聊天面板头部「会话」入口
