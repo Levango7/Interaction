@@ -1,6 +1,6 @@
 ## [v3.7.85] - 2026-10-03
 
-**两小时自主作业·收尾批次（B1–B4 + 规划文档）：① Linear/Jira 状态映射从"冻结待工作区"改为**运行时解析**（连接/推送时用用户自己的 token 查工作流状态，映射随各工作区实况走）；② ICS 导出（本地任务/会议 → .ics，零凭据"双向"的另一半）；③ 删除 4 个纯死 lifecycle 函数（废弃名单 16 → 10）；④ Linear 文案随①更新；⑤ 新增 `docs/cloud-sync-incremental-contract.md`（云同步增量的前后端职责切分）与 `docs/roadmap-2026Q4.md`（Q4 路线图）。全量 **116 文件 / 1317 用例**（v3.7.84 为 115/1307；+1 文件 = `integration-state-mapping.test.js` 8 例、`ics-parse.test.js` +2 例）、e2e **82/82（3.6m）**、七门禁全绿（含 CI 独有的 `lint:tokens`）、逆层 18 / 循环 13 未动。**
+**两小时自主作业·收尾批次（B1–B4 + 规划文档）：**发版后线上复核**：Pages 取回 **3,684,759 B**、`VERSION="3.7.85"`、`BUILD_TAG="20261003f"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。① Linear/Jira 状态映射从"冻结待工作区"改为**运行时解析**（连接/推送时用用户自己的 token 查工作流状态，映射随各工作区实况走）；② ICS 导出（本地任务/会议 → .ics，零凭据"双向"的另一半）；③ 删除 4 个纯死 lifecycle 函数（废弃名单 16 → 10）；④ Linear 文案随①更新；⑤ 新增 `docs/cloud-sync-incremental-contract.md`（云同步增量的前后端职责切分）与 `docs/roadmap-2026Q4.md`（Q4 路线图）。全量 **116 文件 / 1317 用例**（v3.7.84 为 115/1307；+1 文件 = `integration-state-mapping.test.js` 8 例、`ics-parse.test.js` +2 例）、e2e **82/82（3.6m）**、七门禁全绿（含 CI 独有的 `lint:tokens`）、逆层 18 / 循环 13 未动。**
 
 ### ① 状态映射运行时化（把硬阻塞就地解冻）
 
