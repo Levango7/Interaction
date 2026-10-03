@@ -4444,6 +4444,16 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   75%{transform:rotateX(calc(-5deg * var(--pet-act-scale,1)))}
 }
 .pet-art-img.act-bob{animation:petBobK 1s ease-in-out}
+/* v3.7.82 摇尾巴：单张立绘没有独立尾巴部件，用「整图绕尾根摆动」造出身体跟着甩的惯性错觉。
+   旋转轴 = --pet-wag-origin（JS 按角色尾根坐标下发，如 dog 74% 60% / cat 30% 68%），
+   比绕图心转更像摇尾巴；幅度小、频率高（0.82s 三个来回）。仅由「点尾巴」触发，不进随机动作池。 */
+@keyframes petWagK{
+  0%,100%{transform:rotate(0)}
+  20%{transform:rotate(calc(3.4deg * var(--pet-act-scale,1)))}
+  50%{transform:rotate(calc(-3.4deg * var(--pet-act-scale,1)))}
+  78%{transform:rotate(calc(1.8deg * var(--pet-act-scale,1)))}
+}
+.pet-art-img.act-wag{animation:petWagK .82s ease-in-out;transform-origin:var(--pet-wag-origin,50% 78%)}
 /* ===== v3.6.7 立绘表情浮层：无多帧素材也能眨眼 / 张嘴 =====
    单张平面立绘没有可分部件，故用「按角色标定的坐标 + 运行时按图片实际显示矩形换算为 px」的浮层实现：
    · .pet-art 为定位上下文。.pet-art-img 用 object-fit:contain 渲染，四周可能有留白，
@@ -4470,6 +4480,13 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
    ⚑ 类名必须带 pet 前缀语义：曾用 `.mini`，与 UI 的小徽章类 `.mini{background:var(--accent)}` 撞名 ——
    结果整个 72×72 浮层被染成 accent 蓝方块盖住宠物（探针 DOM dump 抓出，截图只看到"一个蓝方块"）。 */
 .pet-art-lids.no-lash i b{display:none}
+/* v3.7.82 部位命中层（头/身/尾）：透明铺在立绘之上，坐标来自 _PET_PARTS（归一化）。
+   关键性质：它们是 .pet-art 的子元素，**与图一起被 transform**（1.5 倍缩放 / 3D 转体 / 转台摇摆）
+   → 点到的位置与用户看到的完全一致，无需任何 JS 坐标反算。
+   顺序：body 铺满兜底 → head/tail 叠在其上；透明但可点（不用 opacity:0，否则不产生命中盒）。 */
+.pet-hit{position:absolute;pointer-events:auto;background:transparent}
+.pet-hit-body{inset:0}
+.pet-hit-head,.pet-hit-tail{border-radius:50%}
 .pet-art-mouth{opacity:0;transition:opacity .07s linear}
 .pet-art-mouth.on{opacity:.92}
 .pet-art-mouth i{position:absolute;background:#5a2233;border-radius:50%;
@@ -4481,7 +4498,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 @media(prefers-reduced-motion:reduce){
   .pet-art-img.act-nod,.pet-art-img.act-dance,.pet-art-img.act-tilt,.pet-art-img.act-hop,
   .pet-art-img.act-sway,.pet-art-img.act-ruffle,.pet-art-img.act-squash,
-  .pet-art-img.act-turn,.pet-art-img.act-bob,.pet-art-img.talking{animation:none}
+  .pet-art-img.act-turn,.pet-art-img.act-bob,.pet-art-img.act-wag,.pet-art-img.talking{animation:none}
   .pet-art-lids,.pet-art-mouth{display:none}
 }
 /* ===== v3.7.0：3D 立体风格 =====
@@ -6170,10 +6187,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.81"; /* v3.7.81 宠物全档位架构改良：动作集按风格分流（2D 禁一切 rotateX/rotateY · 3D 专属转体俯仰）+ 尺寸调参表（幅度/特效/透视随档缩放）+ 打盹真实空闲 90s + 特效频率下调 + 浮层定位加固 + 类名冲突教训 */
+const VERSION = "3.7.82"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261003b";
+const BUILD_TAG = "20261003c";
 
 
 
