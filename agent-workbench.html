@@ -4134,6 +4134,21 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .week-task-more{font-size:var(--fs-xs);color:var(--muted);padding:1px 0}
 .week-empty{font-size:var(--fs-xs);color:var(--text-faint);text-align:center;padding:var(--space-2) 0}
 /* v3.7.71 会议进日历：月历格子内「会」标记（accent 描边胶囊，区别于任务数徽章） */
+/* v3.7.84：ICS 外部日历事件（绿系，与任务 accent / 会议 accent 分色） */
+.cal-ics{position:absolute;bottom:2px;right:2px;font-size:var(--fs-3xs);
+  color:var(--ok-text);background:var(--panel);border:1px solid var(--ok);border-radius:var(--radius-full);
+  padding:0 4px;line-height:1.4;cursor:pointer}
+.week-ics-item{color:var(--ok-text)}
+.week-ics-time{margin-right:4px;opacity:.7;font-variant-numeric:tabular-nums}
+.ics-panel{max-width:760px;margin:0 auto}
+.ics-add{margin:var(--space-3) 0}
+.ics-list{display:flex;flex-direction:column;gap:var(--space-2)}
+.ics-item{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);
+  border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
+.ics-info{flex:1;min-width:0}
+.ics-item-name{font-size:var(--fs-sm)}
+.ics-item-meta{font-size:var(--fs-2xs);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ics-actions{display:flex;gap:var(--space-2)}
 .cal-meeting{position:absolute;bottom:2px;left:2px;right:2px;font-size:var(--fs-3xs);
   color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-sm);
   text-align:center;line-height:1.2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -6200,10 +6215,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.83"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.84"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261003d";
+const BUILD_TAG = "20261003e";
 
 
 
@@ -10659,7 +10674,34 @@ const MESSAGES = {
     "p5.kbFilesCount": "个文件 · ",
     "p5.kbFilesChunkCount": " 块",
     "p5.kbFilesConfirmDelete": "删除该文件？其已建立的检索索引块会一并移除。",
-    "p5.kbFilesDelete": "删除"
+    "p5.kbFilesDelete": "删除",
+    /* v3.7.84：ICS 日历源 */
+    "p5.icsTitle": "订阅日历源",
+    "p5.icsName": "名称",
+    "p5.icsNamePh": "我的订阅",
+    "p5.icsUrl": "ICS 订阅链接（https）",
+    "p5.icsAdd": "添加订阅",
+    "p5.icsRefreshAll": "刷新全部",
+    "p5.icsImport": "导入 .ics 文件",
+    "p5.icsRefresh": "刷新",
+    "p5.icsDelete": "删除",
+    "p5.icsEmpty": "尚未添加日历源：支持公开只读 ICS 订阅链接（QQ日历 / 网易日历 等，无需账号授权）或本地 .ics 文件导入。",
+    "p5.icsLocalTag": "本地",
+    "p5.icsEventUnit": "个事件",
+    "p5.icsNever": "未刷新",
+    "p5.icsMark": "历",
+    "p5.icsUrlRequired": "请填写 https:// 开头的 ICS 订阅链接",
+    "p5.icsAdded": "已添加，载入 {n} 个事件",
+    "p5.icsAddFail": "已添加但拉取失败（稍后可刷新重试）",
+    "p5.icsImported": "已导入 {n} 个事件",
+    "p5.icsImportFail": "未在该文件里找到事件",
+    "p5.icsRefreshed": "刷新完成：{ok} 成功 / {fail} 失败",
+    "p5.icsRefreshedOne": "已刷新：{n} 个事件",
+    "p5.icsUnchanged": "内容未变化",
+    "p5.icsRefreshFail": "刷新失败",
+    "p5.icsDeleteConfirm": "删除该日历源？其事件将不再出现在日历里（不会改动任何本地任务）。",
+    "p5.icsRelayHint": "提示：多数日历站不返回 CORS 头，浏览器形态直接拉取会被拦——订阅拉取建议用桌面版。",
+    "p5.back": "返回"
   },
   en: {
     // Common
@@ -14379,7 +14421,34 @@ const MESSAGES = {
     "p5.kbFilesCount": " file(s) · ",
     "p5.kbFilesChunkCount": " chunks",
     "p5.kbFilesConfirmDelete": "Delete this file? Its index chunks will be removed as well.",
-    "p5.kbFilesDelete": "Delete"
+    "p5.kbFilesDelete": "Delete",
+    /* v3.7.84: ICS calendar sources */
+    "p5.icsTitle": "Calendar sources",
+    "p5.icsName": "Name",
+    "p5.icsNamePh": "My calendar",
+    "p5.icsUrl": "ICS feed URL (https)",
+    "p5.icsAdd": "Add feed",
+    "p5.icsRefreshAll": "Refresh all",
+    "p5.icsImport": "Import .ics file",
+    "p5.icsRefresh": "Refresh",
+    "p5.icsDelete": "Delete",
+    "p5.icsEmpty": "No calendar source yet: add a public read-only ICS feed URL (QQ Calendar / NetEase etc., no account grant needed) or import a local .ics file.",
+    "p5.icsLocalTag": "local",
+    "p5.icsEventUnit": " events",
+    "p5.icsNever": "never refreshed",
+    "p5.icsMark": "ICS",
+    "p5.icsUrlRequired": "Enter an ICS feed URL starting with https://",
+    "p5.icsAdded": "Added, loaded {n} events",
+    "p5.icsAddFail": "Added but the fetch failed (retry by refreshing later)",
+    "p5.icsImported": "Imported {n} events",
+    "p5.icsImportFail": "No events found in that file",
+    "p5.icsRefreshed": "Refresh done: {ok} ok / {fail} failed",
+    "p5.icsRefreshedOne": "Refreshed: {n} events",
+    "p5.icsUnchanged": "No changes",
+    "p5.icsRefreshFail": "Refresh failed",
+    "p5.icsDeleteConfirm": "Delete this calendar source? Its events disappear from the calendar (no local task is touched).",
+    "p5.icsRelayHint": "Note: most calendar servers send no CORS headers, so browser forms are blocked - use the desktop app to pull feeds.",
+    "p5.back": "Back"
   }
 };
 
@@ -42346,8 +42415,11 @@ function renderCalendarView(monthOffset){
     }
   });
   const meetingByDate = _meetingsByDate();
+  /* v3.7.84：外部日历事件（ICS 源）第三种分色，与任务徽章、会议标记三者分开计数 */
+  const extByDate = (typeof _icsEventsByDate === "function") ? _icsEventsByDate() : {};
 
   let html = '<div class="cal-header">';
+  html += '<button type="button" class="cal-nav" data-ics-open title="' + esc(t("p5.icsTitle", "订阅日历源")) + '">☰</button>';
   html += '<button type="button" class="cal-nav" data-cal-prev title="' + t("p5.prevMonth", "上一月") + '">‹</button>';
   html += '<span class="cal-title">' + year + t("p5.yearSuffix", "年") + (month + 1) + t("p5.monthSuffix", "月</span>");
   html += '<button type="button" class="cal-nav" data-cal-next title="' + t("p5.nextMonth", "下一月") + '">›</button>';
@@ -42374,6 +42446,12 @@ function renderCalendarView(monthOffset){
       const tip = dayMeetings.map(function(m){ return (m.startTime ? m.startTime + " " : "") + (m.title || ""); }).join("\n");
       html += '<span class="cal-meeting" title="' + esc(tip) + '">' + esc(t("p5.meetingMark","会")) + (dayMeetings.length > 1 ? "×" + dayMeetings.length : "") + '</span>';
       if(first && first.startTime) html += '<!-- mt:' + esc(first.startTime) + ' -->';
+    }
+    /* v3.7.84：外部事件徽章（绿系，与任务/会议分色；点击看当日首条详情） */
+    const dayExt = extByDate[dateStr] || [];
+    if(dayExt.length > 0){
+      const tip2 = dayExt.slice(0, 4).map(function(e){ return ((e.start && (e.start.getHours() + ":" + String(e.start.getMinutes()).padStart(2, "0")) || "") + " " + (e.title || "")) + (e.subName ? "（" + e.subName + "）" : ""); }).join("\n");
+      html += '<span class="cal-ics" data-ics-day="' + esc(dateStr) + '" title="' + esc(tip2) + '">' + esc(t("p5.icsMark", "历")) + (dayExt.length > 1 ? "×" + dayExt.length : "") + '</span>';
     }
     html += '</div>';
   }
@@ -42417,7 +42495,9 @@ function renderWeekView(weekOffset){
   const meetingByDate = _meetingsByDate();
 
   const todayKey = _ymd(new Date());
+  const extByDate2 = (typeof _icsEventsByDate === "function") ? _icsEventsByDate() : {};
   let html = '<div class="cal-header">';
+  html += '<button type="button" class="cal-nav" data-ics-open title="' + esc(t("p5.icsTitle", "订阅日历源")) + '">☰</button>';
   html += '<button type="button" class="cal-nav" data-cal-prev-week title="' + t("p5.prevWeek", "上一周") + '">‹</button>';
   html += '<span class="cal-title">' + t("p5.weekView", "周视图") + '</span>';
   html += '<button type="button" class="cal-nav" data-cal-next-week title="' + t("p5.nextWeek", "下一周") + '">›</button>';
@@ -42436,11 +42516,17 @@ function renderWeekView(weekOffset){
     html += '<div class="week-day-head"><span class="week-dow">' + dowNames[i] + '</span>';
     html += '<span class="week-date">' + (d.getMonth() + 1) + '/' + d.getDate() + '</span></div>';
     const dayMeetings = (meetingByDate[key] || []).slice().sort(function(a,b){ return (a.startTime||"") < (b.startTime||"") ? -1 : 1; });
-    if(dayMeetings.length > 0 || dayTasks.length > 0){
+    const dayExt2 = (extByDate2[key] || []).sort(function(a, b){ return (a.start ? a.start.getTime() : 0) - (b.start ? b.start.getTime() : 0); });
+    if(dayMeetings.length > 0 || dayTasks.length > 0 || dayExt2.length > 0){
       html += '<ul class="week-task-list">';
       /* v3.7.71：会议行在前（有 startTime 的按时间序），任务随后 */
       dayMeetings.forEach(function(m){
         html += '<li class="week-meeting-item">' + (m.startTime ? '<span class="week-meeting-time">' + esc(m.startTime) + '</span>' : "") + esc(m.title || "") + '</li>';
+      });
+      /* v3.7.84：外部日历事件行（绿系，按开始时间序，最多 3 条） */
+      dayExt2.slice(0, 3).forEach(function(e){
+        const tm = e.start ? (e.start.getHours() + ":" + String(e.start.getMinutes()).padStart(2, "0")) : "";
+        html += '<li class="week-ics-item">' + (tm ? '<span class="week-ics-time">' + esc(tm) + '</span>' : "") + esc(e.title || "") + '</li>';
       });
       dayTasks.slice(0, 3).forEach(function(t){
         html += '<li class="week-task-item">' + esc(t.title) + '</li>';
@@ -42483,6 +42569,25 @@ function bindCalendarEvents(container){
       bindCalendarEvents(c);
     };
   }
+  /* v3.7.84：订阅日历源面板入口 + 外部事件徽章点击（当日首条详情 toast） */
+  const icsOpen = c.querySelector("[data-ics-open]");
+  if(icsOpen && !icsOpen._icsBound){
+    icsOpen._icsBound = true;
+    icsOpen.onclick = function(){ openIcsPanel(c); };
+  }
+  c.querySelectorAll("[data-ics-day]").forEach(function(badge){
+    if(badge._icsBound) return;
+    badge._icsBound = true;
+    badge.onclick = function(ev){
+      ev.stopPropagation();
+      const date = badge.getAttribute("data-ics-day");
+      const list = (typeof _icsEventsByDate === "function") ? (_icsEventsByDate()[date] || []) : [];
+      if(!list.length) return;
+      const first = list[0];
+      const when = first.start ? (first.start.getHours() + ":" + String(first.start.getMinutes()).padStart(2, "0")) : "";
+      try{ toast(when + " " + (first.title || "") + (first.subName ? "（" + first.subName + "）" : ""), "info"); }catch(e){}
+    };
+  });
   // 日期格子点击：派发自定义事件供外部监听
   c.querySelectorAll("[data-cal-date]").forEach(function(cell){
     if(cell._calDateBound) return;
@@ -43228,6 +43333,346 @@ try{ AppBridge.bindCalendarEvents = bindCalendarEvents; }catch(e){}
 try{ AppBridge.bindDashboardDnD = bindDashboardDnD; }catch(e){}
 try{ AppBridge._bindDashToolbar = _bindDashToolbar; }catch(e){}
 try{ AppBridge.renderCalendarView = renderCalendarView; }catch(e){}
+
+
+/* ============================================================
+ * ICS 日历源（v3.7.84）
+ * 定位：日历内核（月/周视图）本就自研，缺的是"外部事件入口"。两条零凭据数据路：
+ *   ① 本地导入 .ics 文件（纯本地，零风险）；
+ *   ② 公开只读 ICS 订阅链接（QQ日历/网易日历等，**国内直连可达**）——
+ *      多数日历服务不回 CORS 头，桌面版经主进程只读中继抓取（安全面同 jira-fetch：
+ *      仅 GET、https、拒 userinfo、拒回环/私网/链路本地、**拒重定向**、≤2MB、URL 由
+ *      用户自己填且不携带任何认证头，日志只记主机）。
+ * 解析：**自写 RFC5545 子集**（VEVENT/SUMMARY/DTSTART/DTEND/LOCATION/DESCRIPTION/UID +
+ * 行折叠 + 转义还原 + FREQ=DAILY/WEEKLY/MONTHLY/YEARLY × COUNT/INTERVAL/UNTIL 的有限
+ * 展开）——本仓铁律是经典 <script> 单文件、零运行时依赖、无打包器，引 npm 解析库即破链
+ * （ical.js / node-ical 等开源实现只作边界情形对照）。
+ * 已知取舍（诚实登记）：BYDAY/BYMONTHDAY 等复杂 RRULE 不展开，只取 VEVENT 本体；
+ * 事件详情浮层本期只出 toast（完整浮层列为后续）；日历视图不随数据自动重拉（手动刷新）。
+ * ============================================================ */
+const ICS_SUBS_KEY = "cal_ics_subs";
+const ICS_MAX_EVENTS = 2000;          // 单源事件上限（防恶意/超大订阅打爆 localStorage）
+const ICS_TITLE_MAX = 300;            // 标题截断
+/** 读取全部日历源 */
+function getIcsSubs(){
+  try{
+    const raw = localStorage.getItem(PREFIX + ICS_SUBS_KEY);
+    const a = raw ? JSON.parse(raw) : [];
+    return Array.isArray(a) ? a : [];
+  }catch(e){ return []; }
+}
+/** 持久化日历源列表（走 save() 主入口：镜像/配额告警齐备） */
+function saveIcsSubs(subs){ return save(PREFIX + ICS_SUBS_KEY, subs || []); }
+/** 桌面版是否有 ICS 主进程中继（浏览器形态多数日历站不回 CORS 头） */
+function icsHasRelay(){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return !!(api && typeof api.icsFetch === "function");
+}
+/** RFC5545 转义还原：\\n \\ ; \\ , \\n */
+function _icsUnescape(s){ return String(s).replace(/\\([\\;,nN])/g, function(m, c){ return (c === "n" || c === "N") ? "\n" : c; }); }
+/**
+ * 解析 iCalendar 日期值：20260115 / 20260115T090000[Z|+0800]
+ * @returns {Date|null}
+ */
+function _icsDate(v){
+  const s = String(v || "").trim();
+  let m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
+  if(m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z|[+-]\d{2}:?\d{2})?$/.exec(s);
+  if(m){
+    if(m[7] === "Z") return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+    const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    if(m[7]){
+      const z = /^([+-])(\d{2}):?(\d{2})$/.exec(m[7]);
+      if(z) d.setMinutes(d.getMinutes() + (z[1] === "-" ? -1 : 1) * (Number(z[2]) * 60 + Number(z[3])));
+    }
+    return d;
+  }
+  return null;
+}
+/** RRULE 有限展开（FREQ=DAILY/WEEKLY/MONTHLY/YEARLY × INTERVAL/COUNT/UNTIL，≤100 条） */
+function _icsExpandRule(start, rruleText, cap){
+  const out = [];
+  if(!rruleText || !start) return [start];
+  const parts = {};
+  String(rruleText).replace(/^RRULE:/i, "").split(";").forEach(function(kv){
+    const i = kv.indexOf("=");
+    if(i > 0) parts[kv.slice(0, i).toUpperCase()] = kv.slice(i + 1);
+  });
+  const freq = String(parts.FREQ || "").toUpperCase();
+  if(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"].indexOf(freq) < 0) return [start];   /* 复杂规则只取本体 */
+  if(parts.BYDAY || parts.BYMONTHDAY || parts.BYMONTH) return [start];              /* 同上，如实受限 */
+  const step = Math.max(1, parseInt(parts.INTERVAL || "1", 10) || 1);
+  const count = parts.COUNT ? Math.max(1, parseInt(parts.COUNT, 10) || 1) : (cap || 100);
+  const until = parts.UNTIL ? _icsDate(parts.UNTIL) : null;
+  const limit = Math.min(count, cap || 100);
+  for(let i = 0; i < limit; i++){
+    const d = new Date(start.getTime());
+    if(freq === "DAILY") d.setDate(d.getDate() + i * step);
+    else if(freq === "WEEKLY") d.setDate(d.getDate() + i * step * 7);
+    else if(freq === "MONTHLY") d.setMonth(d.getMonth() + i * step);
+    else d.setFullYear(d.getFullYear() + i * step);
+    if(until && d > until) break;
+    out.push(d);
+  }
+  return out.length ? out : [start];
+}
+/**
+ * 解析 iCalendar 文本 → 事件数组。格式容忍度按主流日历导出（QQ/网易/Outlook/Google）。
+ * @param {string} text
+ * @returns {Array<{uid:string,title:string,start:Date,end:Date|null,allDay:boolean,location:string,desc:string}>}
+ */
+function icsParseEvents(text){
+  const raw = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = [];
+  raw.split("\n").forEach(function(l){
+    if(/^[ \t]/.test(l) && lines.length) lines[lines.length - 1] += l.slice(1);   /* 行折叠 */
+    else lines.push(l);
+  });
+  const events = [];
+  let cur = null;
+  for(const line of lines){
+    const b = /^BEGIN:VEVENT$/i.test(line.trim());
+    const e = /^END:VEVENT$/i.test(line.trim());
+    if(b){ cur = { }; continue; }
+    if(e){
+      if(cur && !cur.cancelled && cur.start && cur.title){
+        const base = { uid: cur.uid || ("ics_" + events.length), title: cur.title.slice(0, ICS_TITLE_MAX),
+          allDay: !!cur.allDay, location: cur.location || "", desc: (cur.desc || "").slice(0, 500) };
+        const end = cur.end || (cur.allDay ? null : new Date(cur.start.getTime() + 3600e3));
+        for(const st of _icsExpandRule(cur.start, cur.rrule, 100)){
+          const ev = Object.assign({}, base, { start: st, end: end ? new Date(end.getTime() + (st - cur.start)) : null });
+          events.push(ev);
+          if(events.length >= ICS_MAX_EVENTS) return events;   /* 真正截断：后续 VEVENT 一律不再收 */
+        }
+      }
+      cur = null;
+      continue;
+    }
+    if(!cur) continue;
+    const i = line.indexOf(":");
+    if(i < 0) continue;
+    const name = line.slice(0, i).split(";")[0].trim().toUpperCase();
+    const val = line.slice(i + 1);
+    if(name === "SUMMARY") cur.title = _icsUnescape(val);
+    else if(name === "LOCATION") cur.location = _icsUnescape(val);
+    else if(name === "DESCRIPTION") cur.desc = _icsUnescape(val);
+    else if(name === "UID") cur.uid = val.trim();
+    else if(name === "RRULE") cur.rrule = val;
+    else if(name === "DTSTART"){ cur.start = _icsDate(val); cur.allDay = /VALUE=DATE/i.test(line.slice(0, i)) || /^\d{8}$/.test(val.trim()); }
+    else if(name === "DTEND") cur.end = _icsDate(val);
+    else if(name === "STATUS" && /CANCELLED/i.test(val)) cur.cancelled = true;
+  }
+  return events.filter(function(ev){ return ev.start && ev.title; });
+}
+/** 全部源的外部事件按日期分桶（YYYY-MM-DD → events[]） */
+function _icsEventsByDate(){
+  const byDate = {};
+  for(const sub of getIcsSubs()){
+    const evs = Array.isArray(sub.evs) ? sub.evs : [];
+    for(const raw of evs){
+      const st = raw.start ? new Date(raw.start) : null;
+      if(!st) continue;
+      const key = st.getFullYear() + "-" + String(st.getMonth() + 1).padStart(2, "0") + "-" + String(st.getDate()).padStart(2, "0");
+      (byDate[key] = byDate[key] || []).push(Object.assign({ subName: sub.name || "" }, raw));
+    }
+  }
+  return byDate;
+}
+/**
+ * 拉取/刷新一个订阅源。桌面走主进程只读中继，浏览器直连（多数站 CORS 会拦 → 如实失败）。
+ * 304（If-None-Match）保留原事件只更新时间戳。永不抛错。
+ */
+async function icsRefreshSub(sub){
+  if(!sub || !sub.url) return { ok: false, error: "no_url" };
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  try{
+    let r;
+    if(api && typeof api.icsFetch === "function"){
+      r = await api.icsFetch({ url: sub.url, etag: sub.etag || "", lastModified: sub.lastModified || "", timeoutMs: 15000 });
+    } else {
+      const headers = {};
+      if(sub.etag) headers["If-None-Match"] = sub.etag;
+      if(sub.lastModified) headers["If-Modified-Since"] = sub.lastModified;
+      const resp = await fetch(sub.url, { headers: headers, redirect: "error" });
+      const et = resp.headers && resp.headers.get ? resp.headers.get("etag") : "";
+      const lm = resp.headers && resp.headers.get ? resp.headers.get("last-modified") : "";
+      r = resp.status === 304
+        ? { ok: true, status: 304, notModified: true, etag: et, lastModified: lm }
+        : { ok: resp.ok, status: resp.status, etag: et, lastModified: lm, text: resp.ok ? await resp.text() : "" };
+    }
+    if(!r || !r.ok) return { ok: false, error: "HTTP " + ((r && r.status) || 0) };
+    sub.ts = Date.now();
+    if(r.status === 304 || r.notModified){ sub.lastCheckedAt = Date.now(); _icsPersistSub(sub); return { ok: true, notModified: true }; }
+    sub.evs = icsParseEvents(r.text).slice(0, ICS_MAX_EVENTS);
+    sub.etag = (r.etag || "").toString();
+    sub.lastModified = (r.lastModified || "").toString();
+    sub.lastCheckedAt = Date.now();
+    _icsPersistSub(sub);
+    return { ok: true, count: sub.evs.length };
+  }catch(e){
+    return { ok: false, error: (e && e.message) ? e.message : String(e) };
+  }
+}
+/** 把刷新后的 sub 对象回写到存储（getIcsSubs 每次直读 localStorage，不持有同一引用） */
+function _icsPersistSub(sub){
+  const all = getIcsSubs().map(function(s){ return s.id === sub.id ? sub : s; });
+  saveIcsSubs(all);
+}
+/** 刷新全部订阅源（本地导入源跳过） */
+async function icsRefreshAll(){
+  const subs = getIcsSubs().filter(function(s){ return !!s.url; });
+  let okN = 0, failN = 0;
+  for(const sub of subs){
+    const r = await icsRefreshSub(sub);
+    if(r.ok) okN++; else failN++;
+  }
+  saveIcsSubs(getIcsSubs().map(function(s){
+    const src = subs.find(function(x){ return x.id === s.id; });
+    return src ? src : s;
+  }));
+  return { ok: okN, fail: failN, total: subs.length };
+}
+/** 添加订阅源（仅 https） */
+function icsAddSub(name, url){
+  const u = String(url || "").trim();
+  if(!/^https:\/\//i.test(u)) return null;
+  const subs = getIcsSubs();
+  subs.push({ id: "ics_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    name: String(name || u).trim().slice(0, 60), url: u, evs: [], ts: Date.now() });
+  saveIcsSubs(subs);
+  return subs[subs.length - 1];
+}
+/** 导入本地 .ics（纯本地，无网络） */
+function icsImportLocal(name, text){
+  const evs = icsParseEvents(text).slice(0, ICS_MAX_EVENTS);
+  if(!evs.length) return null;
+  const subs = getIcsSubs();
+  subs.push({ id: "ics_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    name: String(name || "导入日历").trim().slice(0, 60), url: "", local: true, evs: evs, ts: Date.now() });
+  saveIcsSubs(subs);
+  return { count: evs.length };
+}
+/** 删除日历源（其事件随之从日历视图移除） */
+function icsRemoveSub(id){
+  const kept = getIcsSubs().filter(function(s){ return s.id !== id; });
+  saveIcsSubs(kept);
+}
+/** 订阅面板（在日历容器内渲染，不新增静态弹窗） */
+function renderIcsPanel(){
+  const subs = getIcsSubs();
+  let html = '<div class="ics-panel">';
+  html += '<div class="cal-header"><span class="cal-title">' + esc(t("p5.icsTitle", "订阅日历源")) + '</span>'
+    + '<button type="button" class="cal-nav" data-ics-back title="' + esc(t("p5.back", "返回")) + '">‹</button></div>';
+  html += '<div class="ics-add"><label class="u-block u-fs-xs u-m-2h-0-1">' + esc(t("p5.icsName", "名称")) + '</label>'
+    + '<input id="icsName" class="u-w-full" placeholder="' + esc(t("p5.icsNamePh", "我的订阅")) + '">'
+    + '<label class="u-block u-fs-xs u-m-2h-0-1">' + esc(t("p5.icsUrl", "ICS 订阅链接（https）")) + '</label>'
+    + '<input id="icsUrl" class="u-w-full" placeholder="https://…/basic.ics">'
+    + '<div class="u-flex u-mt-2 u-gap-2"><label class="addbtn sm" for="icsFile" style="cursor:pointer">' + esc(t("p5.icsImport", "导入 .ics 文件")) + '</label>'
+    + '<input type="file" id="icsFile" accept=".ics,text/calendar" style="display:none">'
+    + '<button type="button" class="addbtn sm btn-primary" id="icsAdd">' + esc(t("p5.icsAdd", "添加订阅")) + '</button>'
+    + '<button type="button" class="addbtn sm" id="icsRefreshAll">' + esc(t("p5.icsRefreshAll", "刷新全部")) + '</button></div></div>';
+  if(!subs.length){
+    html += '<p class="empty-hint">' + esc(t("p5.icsEmpty", "尚未添加日历源：支持公开只读 ICS 订阅链接（QQ日历 / 网易日历 等，无需账号授权）或本地 .ics 文件导入。")) + '</p>';
+  } else {
+    html += '<div class="ics-list">';
+    subs.forEach(function(s){
+      const evN = (Array.isArray(s.evs) ? s.evs.length : 0);
+      const when = s.lastCheckedAt ? new Date(s.lastCheckedAt).toLocaleString() : t("p5.icsNever", "未刷新");
+      html += '<div class="ics-item" data-ics-id="' + esc(s.id) + '">'
+        + '<div class="ics-info"><div class="ics-item-name">' + esc(s.name) + (s.local ? " (" + esc(t("p5.icsLocalTag", "本地")) + ")" : "") + '</div>'
+        + '<div class="ics-item-meta">' + evN + " " + esc(t("p5.icsEventUnit", "个事件")) + " · " + esc(when) + (s.url ? " · " + esc(s.url.slice(0, 48)) : "") + '</div></div>'
+        + '<div class="ics-actions">'
+        + (s.url ? '<button type="button" class="addbtn sm" data-ics-refresh="' + esc(s.id) + '">' + esc(t("p5.icsRefresh", "刷新")) + '</button>' : "")
+        + '<button type="button" class="addbtn sm" data-ics-del="' + esc(s.id) + '">' + esc(t("p5.icsDelete", "删除")) + '</button>'
+        + '</div></div>';
+    });
+    html += '</div>';
+  }
+  if(!icsHasRelay()) html += '<p class="sub u-fs-2xs u-m-2-0-0">' + esc(t("p5.icsRelayHint", "提示：多数日历站不返回 CORS 头，浏览器形态直接拉取会被拦——订阅拉取建议用桌面版。")) + '</p>';
+  html += '</div>';
+  return html;
+}
+/** 打开订阅面板（替换日历容器内容；容器由调用方传入 —— 日历可能在场景内嵌视图或弹窗体内） */
+function openIcsPanel(container){
+  const c = container || $("#calendarView") || $("#calendarModalBody");
+  if(!c) return;
+  c.innerHTML = sanitizeHtml(renderIcsPanel());
+  bindIcsPanel(c);
+}
+/** 订阅面板事件绑定 */
+function bindIcsPanel(c){
+  const back = c.querySelector("[data-ics-back]");
+  if(back && !back._icsBound){
+    back._icsBound = true;
+    back.onclick = function(){   /* 回到月历：按当前偏移重渲染并重新绑定 */
+      const off = parseInt(c.dataset.offset || "0", 10) || 0;
+      c.innerHTML = sanitizeHtml(renderCalendarView(off));
+      bindCalendarEvents(c);
+    };
+  }
+  const add = c.querySelector("#icsAdd");
+  if(add && !add._icsBound){
+    add._icsBound = true;
+    add.onclick = async function(){
+      const name = (c.querySelector("#icsName") || {}).value || "";
+      const url = (c.querySelector("#icsUrl") || {}).value || "";
+      const sub = icsAddSub(name, url);
+      if(!sub){ toast(t("p5.icsUrlRequired", "请填写 https:// 开头的 ICS 订阅链接"), "warn"); return; }
+      const r = await icsRefreshSub(getIcsSubs().find(function(s){ return s.id === sub.id; }));
+      const subs = getIcsSubs();
+      saveIcsSubs(subs);
+      toast(r.ok ? t("p5.icsAdded", "已添加，载入 {n} 个事件").replace("{n}", String((r.count || 0))) : t("p5.icsAddFail", "已添加但拉取失败（稍后可刷新重试）"), r.ok ? "ok" : "warn");
+      openIcsPanel(c);
+    };
+  }
+  const file = c.querySelector("#icsFile");
+  if(file && !file._icsBound){
+    file._icsBound = true;
+    file.onchange = async function(){
+      const f = file.files && file.files[0];
+      file.value = "";
+      if(!f) return;
+      const text = await new Promise(function(res){
+        try{ const fr = new FileReader(); fr.onload = function(){ res(String(fr.result || "")); }; fr.onerror = function(){ res(""); }; fr.readAsText(f); }
+        catch(e){ res(""); }
+      });
+      const r = icsImportLocal(f.name, text);
+      toast(r ? t("p5.icsImported", "已导入 {n} 个事件").replace("{n}", String(r.count)) : t("p5.icsImportFail", "未在该文件里找到事件"), r ? "ok" : "warn");
+      openIcsPanel(c);
+    };
+  }
+  const refreshAll = c.querySelector("#icsRefreshAll");
+  if(refreshAll && !refreshAll._icsBound){
+    refreshAll._icsBound = true;
+    refreshAll.onclick = async function(){
+      const r = await icsRefreshAll();
+      toast(t("p5.icsRefreshed", "刷新完成：{ok} 成功 / {fail} 失败").replace("{ok}", String(r.ok)).replace("{fail}", String(r.fail)), r.fail ? "warn" : "ok");
+      openIcsPanel(c);
+    };
+  }
+  c.querySelectorAll("[data-ics-refresh]").forEach(function(b){
+    if(b._icsBound) return; b._icsBound = true;
+    b.onclick = async function(){
+      const id = b.getAttribute("data-ics-refresh");
+      const sub = getIcsSubs().find(function(s){ return s.id === id; });
+      if(!sub) return;
+      const r = await icsRefreshSub(sub);
+      const subs = getIcsSubs();
+      saveIcsSubs(subs);
+      toast(r.ok ? (r.notModified ? t("p5.icsUnchanged", "内容未变化") : t("p5.icsRefreshedOne", "已刷新：{n} 个事件").replace("{n}", String(r.count || 0))) : t("p5.icsRefreshFail", "刷新失败"), r.ok ? "ok" : "warn");
+      openIcsPanel(c);
+    };
+  });
+  c.querySelectorAll("[data-ics-del]").forEach(function(b){
+    if(b._icsBound) return; b._icsBound = true;
+    b.onclick = function(){
+      if(!confirm(t("p5.icsDeleteConfirm", "删除该日历源？其事件将不再出现在日历里（不会改动任何本地任务）。"))) return;
+      icsRemoveSub(b.getAttribute("data-ics-del"));
+      openIcsPanel(c);
+    };
+  });
+}
 /*SRC:ui-ge-calendar:END*/
 /*SRC:ui-ge-notes:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·笔记与知识库) =====
