@@ -6204,10 +6204,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.86"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.87"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261003g";
+const BUILD_TAG = "20261003h";
 
 
 
@@ -10693,6 +10693,11 @@ const MESSAGES = {
     "p5.icsExport": "导出本地日程 .ics",
     "p5.icsExported": "已导出 .ics（可导入/订阅到任意日历 App）",
     "p5.icsExportFail": "当前环境不支持文件下载，请用桌面版",
+    /* v3.7.87 D：ICS 增强 */
+    "p5.icsRename": "重命名",
+    "p5.icsRenamePrompt": "新的日历源名称",
+    "p5.icsRenameFail": "重命名失败",
+    "p5.icsDiagWarn": "解析异常 {n} 条（缺标题或开始时间）",
     "p5.back": "返回",
     /* v3.7.86 B4：GitHub 设备授权 */
     "gh.title": "GitHub 设备授权（Gist 云同步载体）",
@@ -10716,6 +10721,24 @@ const MESSAGES = {
     "gh.pollFail": "授权未完成",
     "gh.clearConfirm": "清除本机保存的 GitHub token（下次同步需重新授权）？",
     "gh.cleared": "已清除",
+    /* v3.7.87 C：WebDAV 云同步 */
+    "wd.title": "WebDAV 云同步（坚果云等 · 仅桌面版）",
+    "wd.noRelay": "WebDAV 服务不返回 CORS 头，浏览器形态发不出去——请用桌面版（Electron）配置。",
+    "wd.noCfg": "未配置：填 WebDAV 地址（坚果云在「安全选项 → 应用密码」生成），密码与 AI Key 同款设备密钥加密存储。",
+    "wd.cfgNoPass": "已填地址与应用账号，还差应用密码。",
+    "wd.on": "已配置。文件：",
+    "wd.urlPh": "https://dav.jianguoyun.com/dav",
+    "wd.userPh": "账号邮箱",
+    "wd.passPh": "应用密码",
+    "wd.save": "保存",
+    "wd.probe": "测试连接",
+    "wd.clear": "清除",
+    "wd.saved": "已保存（应用密码加密存储）",
+    "wd.saveFail": "保存失败",
+    "wd.probeOk": "连接成功（应用密码有效）",
+    "wd.probeFail": "连接失败",
+    "wd.clearConfirm": "清除本机 WebDAV 配置与密码？云端文件不受影响。",
+    "wd.cleared": "已清除",
     /* v3.7.86 B1：日历事件详情浮层 */
     "p5.evDetailTitle": "日程详情",
     "p5.evClose": "关闭",
@@ -14481,6 +14504,11 @@ const MESSAGES = {
     "p5.icsExport": "Export local schedule (.ics)",
     "p5.icsExported": "Exported .ics (import or subscribe it in any calendar app)",
     "p5.icsExportFail": "File download unavailable in this environment - use the desktop app",
+    /* v3.7.87 D: ICS enhancements */
+    "p5.icsRename": "Rename",
+    "p5.icsRenamePrompt": "New calendar source name",
+    "p5.icsRenameFail": "Rename failed",
+    "p5.icsDiagWarn": "{n} event(s) failed to parse (missing title or start time)",
     "p5.back": "Back",
     /* v3.7.86 B4: GitHub device authorization */
     "gh.title": "GitHub device authorization (Gist sync carrier)",
@@ -14504,6 +14532,24 @@ const MESSAGES = {
     "gh.pollFail": "Authorization not completed",
     "gh.clearConfirm": "Clear the stored GitHub token (you will re-authorize before the next sync)?",
     "gh.cleared": "Cleared",
+    /* v3.7.87 C: WebDAV cloud sync */
+    "wd.title": "WebDAV cloud sync (Nutstore etc. - desktop only)",
+    "wd.noRelay": "WebDAV servers send no CORS headers, so browsers are blocked - configure it in the desktop (Electron) app.",
+    "wd.noCfg": "Not configured: enter the WebDAV URL (Nutstore: Security options -> App password); the password is stored device-encrypted like AI keys.",
+    "wd.cfgNoPass": "URL and account set, still missing the app password.",
+    "wd.on": "Configured. File: ",
+    "wd.urlPh": "https://dav.jianguoyun.com/dav",
+    "wd.userPh": "Account email",
+    "wd.passPh": "App password",
+    "wd.save": "Save",
+    "wd.probe": "Test connection",
+    "wd.clear": "Clear",
+    "wd.saved": "Saved (app password stored encrypted)",
+    "wd.saveFail": "Save failed",
+    "wd.probeOk": "Connected (app password works)",
+    "wd.probeFail": "Connection failed",
+    "wd.clearConfirm": "Clear the WebDAV config and password on this machine? The cloud file is untouched.",
+    "wd.cleared": "Cleared",
     /* v3.7.86 B1: calendar event details popup */
     "p5.evDetailTitle": "Event details",
     "p5.evClose": "Close",
@@ -38225,7 +38271,32 @@ function renderIntegrationPanel(){
   }
   ghHtml += '</div>';
   ghHtml += '<div id="ghDevInfo" class="int-desc"></div></div>';
-  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + ghHtml);
+  /* v3.7.87 C：WebDAV 云同步段（坚果云等；仅桌面版可达 —— 无 CORS 头）。
+     诚实门控：未配置只给说明+输入框；桌面版无中继时提示「仅桌面版」；浏览器形态无动作按钮。 */
+  const wdCfg0 = (typeof webdavCfg === "function") ? webdavCfg() : null;
+  const wdOn = (typeof webdavConfigured === "function") ? webdavConfigured() : false;
+  const wdRelay = (typeof webdavHasRelay === "function") ? webdavHasRelay() : false;
+  let wdHtml = '<div class="int-gh"><div class="int-label">' + esc(t("wd.title", "WebDAV 云同步（坚果云等 · 仅桌面版）")) + '</div>';
+  if(!wdRelay){
+    wdHtml += '<p class="int-desc">' + esc(t("wd.noRelay", "WebDAV 服务不返回 CORS 头，浏览器形态发不出去——请用桌面版（Electron）配置。")) + '</p>';
+  } else if(!wdCfg0){
+    wdHtml += '<p class="int-desc">' + esc(t("wd.noCfg", "未配置：填 WebDAV 地址（坚果云在「安全选项 → 应用密码」生成），密码与 AI Key 同款设备密钥加密存储。")) + '</p>';
+  } else if(!wdOn){
+    wdHtml += '<p class="int-desc">' + esc(t("wd.cfgNoPass", "已填地址与应用账号，还差应用密码。")) + '</p>';
+  } else {
+    wdHtml += '<p class="int-desc">' + esc(t("wd.on", "已配置。文件：")) + esc((wdCfg0.path || "/agent-workshop-snapshot.json")) + '</p>';
+  }
+  wdHtml += '<div class="int-gh-row">'
+    + '<input id="wdUrl" class="u-w-full" placeholder="' + esc(t("wd.urlPh", "https://dav.jianguoyun.com/dav")) + '" value="' + esc(wdCfg0 ? wdCfg0.url : "") + '">'
+    + '<input id="wdUser" class="u-w-full" placeholder="' + esc(t("wd.userPh", "账号邮箱")) + '" value="' + esc(wdCfg0 ? wdCfg0.user : "") + '">'
+    + '<input id="wdPass" class="u-w-full" type="password" placeholder="' + esc(t("wd.passPh", "应用密码")) + '">'
+    + '<button type="button" class="addbtn sm" id="wdSave">' + esc(t("wd.save", "保存")) + '</button>';
+  if(wdRelay && wdCfg0){
+    wdHtml += '<button type="button" class="addbtn sm" id="wdProbe">' + esc(t("wd.probe", "测试连接")) + '</button>';
+    wdHtml += '<button type="button" class="addbtn sm" id="wdClear">' + esc(t("wd.clear", "清除")) + '</button>';
+  }
+  wdHtml += '</div><div id="wdInfo" class="int-desc"></div></div>';
+  panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + ghHtml + wdHtml);
   // 绑定连接/断开按钮
   // v3.1.1 修复：原实现直接以空 config 调 connectFn → 所有 connect 函数因缺凭据返回 null，
   // 却仍弹「已连接」假成功 toast；现改为先弹配置弹窗收集凭据（openIntegrationConfig），
@@ -38307,6 +38378,38 @@ function renderIntegrationPanel(){
       if(!confirm(t("gh.clearConfirm", "清除本机保存的 GitHub token（下次同步需重新授权）？"))) return;
       githubTokenClear();
       toast(t("gh.cleared", "已清除"), "ok");
+      renderIntegrationPanel();
+    };
+  }
+  /* v3.7.87 C：WebDAV 段事件 */
+  const wdInfo = panel.querySelector("#wdInfo");
+  const wdUrl = panel.querySelector("#wdUrl");
+  const wdUser = panel.querySelector("#wdUser");
+  const wdPassIn = panel.querySelector("#wdPass");
+  const wdSave = panel.querySelector("#wdSave");
+  const wdProbe = panel.querySelector("#wdProbe");
+  const wdClear = panel.querySelector("#wdClear");
+  if(wdSave && !wdSave._wdBound){
+    wdSave._wdBound = true;
+    wdSave.onclick = async function(){
+      const r = await webdavSaveCfg({ url: String(wdUrl.value || "").trim(), user: String(wdUser.value || "").trim(), pass: String(wdPassIn.value || "") });
+      toast(r ? t("wd.saved", "已保存（应用密码加密存储）") : t("wd.saveFail", "保存失败"), r ? "ok" : "warn");
+      if(r) renderIntegrationPanel();
+    };
+  }
+  if(wdProbe && !wdProbe._wdBound){
+    wdProbe._wdBound = true;
+    wdProbe.onclick = async function(){
+      const r = await webdavProbe();
+      if(wdInfo) wdInfo.textContent = r.ok ? t("wd.probeOk", "连接成功（应用密码有效）") : (t("wd.probeFail", "连接失败") + "（" + (r.error || "") + "）");
+    };
+  }
+  if(wdClear && !wdClear._wdBound){
+    wdClear._wdBound = true;
+    wdClear.onclick = function(){
+      if(!confirm(t("wd.clearConfirm", "清除本机 WebDAV 配置与密码？云端文件不受影响。"))) return;
+      webdavClearCfg();
+      toast(t("wd.cleared", "已清除"), "ok");
       renderIntegrationPanel();
     };
   }
@@ -43661,7 +43764,7 @@ async function icsRefreshSub(sub){
     if(!r || !r.ok) return { ok: false, error: "HTTP " + ((r && r.status) || 0) };
     sub.ts = Date.now();
     if(r.status === 304 || r.notModified){ sub.lastCheckedAt = Date.now(); _icsPersistSub(sub); return { ok: true, notModified: true }; }
-    sub.evs = icsParseEvents(r.text).slice(0, ICS_MAX_EVENTS);
+    _icsParseIntoSub(sub, r.text);
     sub.etag = (r.etag || "").toString();
     sub.lastModified = (r.lastModified || "").toString();
     sub.lastCheckedAt = Date.now();
@@ -43702,13 +43805,14 @@ function icsAddSub(name, url){
 }
 /** 导入本地 .ics（纯本地，无网络） */
 function icsImportLocal(name, text){
-  const evs = icsParseEvents(text).slice(0, ICS_MAX_EVENTS);
-  if(!evs.length) return null;
+  const probe = { evs: [], id: "probe", url: "", name: "" };
+  _icsParseIntoSub(probe, text);
+  if(!probe.evs.length) return null;
   const subs = getIcsSubs();
   subs.push({ id: "ics_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-    name: String(name || "导入日历").trim().slice(0, 60), url: "", local: true, evs: evs, ts: Date.now() });
+    name: String(name || "导入日历").trim().slice(0, 60), url: "", local: true, evs: probe.evs, diag: probe.diag, parsedAt: Date.now(), ts: Date.now() });
   saveIcsSubs(subs);
-  return { count: evs.length };
+  return { count: probe.evs.length, diag: probe.diag };
 }
 /** 删除日历源（其事件随之从日历视图移除） */
 function icsRemoveSub(id){
@@ -43739,9 +43843,11 @@ function renderIcsPanel(){
       const when = s.lastCheckedAt ? new Date(s.lastCheckedAt).toLocaleString() : t("p5.icsNever", "未刷新");
       html += '<div class="ics-item" data-ics-id="' + esc(s.id) + '">'
         + '<div class="ics-info"><div class="ics-item-name">' + esc(s.name) + (s.local ? " (" + esc(t("p5.icsLocalTag", "本地")) + ")" : "") + '</div>'
-        + '<div class="ics-item-meta">' + evN + " " + esc(t("p5.icsEventUnit", "个事件")) + " · " + esc(when) + (s.url ? " · " + esc(s.url.slice(0, 48)) : "") + '</div></div>'
+        + '<div class="ics-item-meta">' + evN + " " + esc(t("p5.icsEventUnit", "个事件")) + " · " + esc(when) + (s.url ? " · " + esc(s.url.slice(0, 48)) : "")
+        + ((s.diag && s.diag.count > 0) ? " · " + esc(t("p5.icsDiagWarn", "解析异常 {n} 条（缺标题或开始时间）").replace("{n}", String(s.diag.count))) : "") + '</div></div>'
         + '<div class="ics-actions">'
         + (s.url ? '<button type="button" class="addbtn sm" data-ics-refresh="' + esc(s.id) + '">' + esc(t("p5.icsRefresh", "刷新")) + '</button>' : "")
+        + '<button type="button" class="addbtn sm" data-ics-rename="' + esc(s.id) + '">' + esc(t("p5.icsRename", "重命名")) + '</button>'
         + '<button type="button" class="addbtn sm" data-ics-del="' + esc(s.id) + '">' + esc(t("p5.icsDelete", "删除")) + '</button>'
         + '</div></div>';
     });
@@ -43814,6 +43920,19 @@ function bindIcsPanel(c){
     exp._icsBound = true;
     exp.onclick = function(){ icsExportLocal(); };   /* 零凭据双向的另一半：本地 → 对方 */
   }
+  /* v3.7.87 D：重命名（id 不变 → chunk docId 稳定 → 零重嵌） */
+  c.querySelectorAll("[data-ics-rename]").forEach(function(b){
+    if(b._icsBound) return; b._icsBound = true;
+    b.onclick = function(){
+      const id = b.getAttribute("data-ics-rename");
+      const cur = getIcsSubs().find(function(x){ return x.id === id; });
+      if(!cur) return;
+      const nn = (typeof window !== "undefined" && typeof window.prompt === "function") ? window.prompt(t("p5.icsRenamePrompt", "新的日历源名称"), cur.name) : null;
+      if(nn === null || nn === undefined) return;
+      if(!icsRenameSub(id, nn)){ try{ toast(t("p5.icsRenameFail", "重命名失败"), "warn"); }catch(e){} return; }
+      openIcsPanel(c);
+    };
+  });
   c.querySelectorAll("[data-ics-refresh]").forEach(function(b){
     if(b._icsBound) return; b._icsBound = true;
     b.onclick = async function(){
@@ -44022,6 +44141,47 @@ function openEventDetail(dateKey, focusIdx){
 function closeEventDetail(){
   const old = document.getElementById("evDetailOverlay");
   if(old) old.remove();
+}
+
+/* ============================================================
+ * ICS 增强（v3.7.87 D）
+ * ① 重命名订阅源（此前只能删了重加，id/chunk docId 会全变）。
+ * ② 解析行级诊断：订阅源文件里坏掉的 VEVENT（缺 DTSTART/SUMMARY 等）此前静默丢弃，
+ *    用户只见"事件变少了"却不知原因；现在按源记录异常计数与首条原因，面板直接显示。
+ * ============================================================ */
+/** 重命名订阅源（id 不变 → chunk docId 稳定 → 零重嵌） */
+function icsRenameSub(id, name){
+  const nm = String(name || "").trim().slice(0, 60);
+  if(!id || !nm) return false;
+  const subs = getIcsSubs();
+  const hit = subs.find(function(s){ return s.id === id; });
+  if(!hit) return false;
+  hit.name = nm;
+  return saveIcsSubs(subs);
+}
+/**
+ * 带诊断的解析（v3.7.87）：与 icsParseEvents 同语义，另给每源异常计数
+ * @returns {{events:Array, diag:{count:number, first:string}}}
+ */
+function icsParseWithDiag(text){
+  const events = icsParseEvents(text);
+  /* 粗粒度诊断：总 VEVENT 数 vs 成功解析数 —— 差额即被丢弃的坏事件 */
+  const src = String(text || "");
+  const total = (src.match(/BEGIN:VEVENT/gi) || []).length;
+  const bad = Math.max(0, total - events.length);
+  let first = "";
+  if(!src.trim()) first = "empty";
+  else if(total === 0) first = "no_vevent";
+  else if(bad > 0) first = "missing_title_or_start";
+  return { events: events, diag: { count: bad, first: first } };
+}
+/** 解析源文本并把诊断写回源记录（导入与刷新共用） */
+function _icsParseIntoSub(sub, text){
+  const r = icsParseWithDiag(text);
+  sub.evs = r.events.slice(0, ICS_MAX_EVENTS);
+  sub.diag = r.diag;
+  sub.parsedAt = Date.now();
+  return sub;
 }
 /*SRC:ui-ge-calendar:END*/
 /*SRC:ui-ge-notes:BEGIN*/
@@ -47232,6 +47392,130 @@ async function gistSyncGet(filename){
   /* 大文件 content 可能为空（>1MB 时 API 只给 truncated + raw_url）——如实失败，不假装成功 */
   if(file.truncated) return { ok: false, error: "file_truncated" };
   return { ok: true, text: file.content };
+}
+
+/* ============================================================
+ * WebDAV 云同步载体（v3.7.87）
+ * 为什么是它（用户 2026-10-03：「不出国、GitHub 不方便」）：坚果云等国内网盘提供
+ * 标准 WebDAV + **应用密码** —— 凭据门槛最低（无 OAuth/企业资质），国内直连可达。
+ * 实测无 ACAO → 桌面版经主进程 webdav-fetch 中转（与 ics-fetch 同一套防线）。
+ * **ETag 冲突检测**：上传用 If-None-Match（首次）/ If-Match（续传）—— 云端被其他设备
+ * 改过（412）就如实报"冲突"，不静默覆盖。这是云同步全量契约（见
+ * docs/cloud-sync-incremental-contract.md）落地前的**第一个真冲突信号**。
+ * 诚实边界：本版只做载体（存/取一个快照文件），**未接同步主流程**；无 WebDAV 配
+ * 置时（app 无后端、云同步面板本就无入口）零影响。
+ * ============================================================ */
+const WD_CFG_KEY = "webdav_cfg";        /* { url, user } 公共部分 */
+const WD_PASS_KEY = "webdav_pass";      /* 应用密码（设备密钥加密） */
+const WD_META_KEY = "webdav_meta";      /* { etag, lastModified, path, ts } */
+const WD_DEF_PATH = "/agent-workshop-snapshot.json";
+/** WebDAV 中继是否可用（桌面版） */
+function webdavHasRelay(){
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return !!(api && typeof api.webdavFetch === "function");
+}
+/** 公共配置（url/user/path），无则 null */
+function webdavCfg(){
+  try{
+    const c = load(PREFIX + WD_CFG_KEY, null);
+    if(!c || !c.url) return null;
+    return { url: String(c.url || "").replace(/\/+$/, ""), user: String(c.user || ""), path: String(c.path || WD_DEF_PATH) };
+  }catch(e){ return null; }
+}
+/** 是否已配置（含密码） */
+function webdavConfigured(){
+  if(!webdavCfg()) return false;
+  try{ return !!load(PREFIX + WD_PASS_KEY, ""); }catch(e){ return false; }
+}
+/** 取解密后的应用密码 */
+async function webdavPass(){
+  try{
+    const raw = load(PREFIX + WD_PASS_KEY, "");
+    if(!raw) return "";
+    if(typeof isEncKey === "function" && isEncKey(raw)) return String((await decryptKey(raw)) || "");
+    return String(raw);
+  }catch(e){ return ""; }
+}
+/** 保存配置（密码加密落盘；失败如实返回 false） */
+async function webdavSaveCfg(cfg){
+  try{
+    if(!cfg || !cfg.url) return false;
+    save(PREFIX + WD_CFG_KEY, { url: String(cfg.url).replace(/\/+$/, ""), user: String(cfg.user || ""), path: String(cfg.path || WD_DEF_PATH) });
+    const pass = String(cfg.pass || "");
+    if(pass){
+      const enc = (typeof encryptKey === "function") ? await encryptKey(pass) : pass;
+      save(PREFIX + WD_PASS_KEY, enc);
+    }
+    return true;
+  }catch(e){ return false; }
+}
+/** 清除配置与元信息 */
+function webdavClearCfg(){
+  try{
+    ["webdav_cfg", "webdav_pass", "webdav_meta"].forEach(function(k){ try{ localStorage.removeItem(PREFIX + k); }catch(e){} });
+  }catch(e){}
+  return true;
+}
+/** Basic 认证头（应用密码只在这里拼一次，不落日志） */
+async function _wdAuth(c, pass){
+  return "Basic " + btoa(c.user + ":" + pass);
+}
+/**
+ * 探活：PROPFIND Depth:0（207=可达；401/403=凭据问题）
+ * @returns {Promise<{ok:boolean, error?:string}>}
+ */
+async function webdavProbe(){
+  const c = webdavCfg();
+  if(!c) return { ok: false, error: "not_configured" };
+  if(!webdavHasRelay()) return { ok: false, error: "no_relay" };
+  const pass = await webdavPass();
+  if(!pass) return { ok: false, error: "no_password" };
+  const api = window.electronAPI;
+  const r = await api.webdavFetch({ url: c.url + "/", method: "PROPFIND", depth: "0", auth: await _wdAuth(c, pass) });
+  return r.ok ? { ok: true } : { ok: false, error: r.error || ("HTTP " + r.status) };
+}
+/**
+ * 快照上行 → WebDAV（首次 If-None-Match:*；续传 If-Match:<上次 etag>）
+ * 云端 412 → 如实报冲突（不覆盖）。
+ * @param {string} text - 云快照 JSON
+ * @returns {Promise<{ok:boolean, conflict?:boolean, error?:string}>}
+ */
+async function webdavPut(text){
+  const c = webdavCfg();
+  if(!c) return { ok: false, error: "not_configured" };
+  if(!webdavHasRelay()) return { ok: false, error: "no_relay" };
+  const pass = await webdavPass();
+  if(!pass) return { ok: false, error: "no_password" };
+  let meta = null;
+  try{ meta = load(PREFIX + WD_META_KEY, null); }catch(e){}
+  const arg = {
+    url: c.url + (c.path.charAt(0) === "/" ? c.path : ("/" + c.path)),
+    method: "PUT", body: String(text || ""), auth: await _wdAuth(c, pass),
+  };
+  if(meta && meta.etag) arg.ifMatch = meta.etag; else arg.ifNoneMatch = "*";
+  const r = await window.electronAPI.webdavFetch(arg);
+  if(r && r.conflict) return { ok: false, conflict: true, error: "etag_conflict" };
+  if(!r || !r.ok) return { ok: false, error: (r && r.error) || "upload_failed" };
+  try{ save(PREFIX + WD_META_KEY, { etag: r.etag || "", lastModified: r.lastModified || "", path: c.path, ts: Date.now() }); }catch(e){}
+  return { ok: true, etag: r.etag || "" };
+}
+/**
+ * 快照下行（取回云端快照；404 = 云端还没有 → ok:false, missing，不算错误）
+ * @returns {Promise<{ok:boolean, text?:string, missing?:boolean, error?:string}>}
+ */
+async function webdavGet(){
+  const c = webdavCfg();
+  if(!c) return { ok: false, error: "not_configured" };
+  if(!webdavHasRelay()) return { ok: false, error: "no_relay" };
+  const pass = await webdavPass();
+  if(!pass) return { ok: false, error: "no_password" };
+  const r = await window.electronAPI.webdavFetch({
+    url: c.url + (c.path.charAt(0) === "/" ? c.path : ("/" + c.path)),
+    method: "GET", auth: await _wdAuth(c, pass),
+  });
+  if(r && r.status === 404) return { ok: false, missing: true };
+  if(!r || !r.ok) return { ok: false, error: (r && r.error) || "download_failed" };
+  return { ok: true, text: r.text || "", etag: r.etag || "" };
 }
 /*SRC:ui-ge-integrations:END*/
 </script>
