@@ -59,6 +59,14 @@ jobs:
       # 背景透明/描边丢失/字号回默认，无任何其他手段能发现），并按基线棘轮只拦新增。
       # 裸 px 收敛提示部分仍为非阻断，与本步骤的阻断语义分开。
       - run: npm run lint:tokens
+      # v3.7.87 接入：此前 scripts/lint-empty-catch.mjs 与 lib/ 只存在于仓库里、零引用。
+      # 门禁对象是 `catch(_){}` —— 静默失败的唯一温床：用户遇到「点了没反应 / 数据没保存 /
+      # 面板空白」，控制台干净、日志为空、无人报警，因为异常被吞了。浏览器根本不报错，
+      # 与 lint-tokens 的悬空令牌同构（都是「不报错但静默降级」），只能构建期静态扫描。
+      # 存量 493 处不能一刀切删（含大量有意保留的降级路径），故分级 P0/P1/P2 后按基线棘轮
+      # **只拦新增 P0**（沿用 lint-tokens / module-graph 口径）。本步只读 src/，两态结果一致，
+      # 不依赖 pre 钩子是否已拼回。
+      - run: npm run lint:empty-catch
       - run: npm run check:pwa-icons
       - run: npm run pet:check
 
