@@ -4444,6 +4444,16 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   75%{transform:rotateX(calc(-5deg * var(--pet-act-scale,1)))}
 }
 .pet-art-img.act-bob{animation:petBobK 1s ease-in-out}
+/* v3.7.82 摇尾巴：单张立绘没有独立尾巴部件，用「整图绕尾根摆动」造出身体跟着甩的惯性错觉。
+   旋转轴 = --pet-wag-origin（JS 按角色尾根坐标下发，如 dog 74% 60% / cat 30% 68%），
+   比绕图心转更像摇尾巴；幅度小、频率高（0.82s 三个来回）。仅由「点尾巴」触发，不进随机动作池。 */
+@keyframes petWagK{
+  0%,100%{transform:rotate(0)}
+  20%{transform:rotate(calc(3.4deg * var(--pet-act-scale,1)))}
+  50%{transform:rotate(calc(-3.4deg * var(--pet-act-scale,1)))}
+  78%{transform:rotate(calc(1.8deg * var(--pet-act-scale,1)))}
+}
+.pet-art-img.act-wag{animation:petWagK .82s ease-in-out;transform-origin:var(--pet-wag-origin,50% 78%)}
 /* ===== v3.6.7 立绘表情浮层：无多帧素材也能眨眼 / 张嘴 =====
    单张平面立绘没有可分部件，故用「按角色标定的坐标 + 运行时按图片实际显示矩形换算为 px」的浮层实现：
    · .pet-art 为定位上下文。.pet-art-img 用 object-fit:contain 渲染，四周可能有留白，
@@ -4470,6 +4480,13 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
    ⚑ 类名必须带 pet 前缀语义：曾用 `.mini`，与 UI 的小徽章类 `.mini{background:var(--accent)}` 撞名 ——
    结果整个 72×72 浮层被染成 accent 蓝方块盖住宠物（探针 DOM dump 抓出，截图只看到"一个蓝方块"）。 */
 .pet-art-lids.no-lash i b{display:none}
+/* v3.7.82 部位命中层（头/身/尾）：透明铺在立绘之上，坐标来自 _PET_PARTS（归一化）。
+   关键性质：它们是 .pet-art 的子元素，**与图一起被 transform**（1.5 倍缩放 / 3D 转体 / 转台摇摆）
+   → 点到的位置与用户看到的完全一致，无需任何 JS 坐标反算。
+   顺序：body 铺满兜底 → head/tail 叠在其上；透明但可点（不用 opacity:0，否则不产生命中盒）。 */
+.pet-hit{position:absolute;pointer-events:auto;background:transparent}
+.pet-hit-body{inset:0}
+.pet-hit-head,.pet-hit-tail{border-radius:50%}
 .pet-art-mouth{opacity:0;transition:opacity .07s linear}
 .pet-art-mouth.on{opacity:.92}
 .pet-art-mouth i{position:absolute;background:#5a2233;border-radius:50%;
@@ -4481,7 +4498,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 @media(prefers-reduced-motion:reduce){
   .pet-art-img.act-nod,.pet-art-img.act-dance,.pet-art-img.act-tilt,.pet-art-img.act-hop,
   .pet-art-img.act-sway,.pet-art-img.act-ruffle,.pet-art-img.act-squash,
-  .pet-art-img.act-turn,.pet-art-img.act-bob,.pet-art-img.talking{animation:none}
+  .pet-art-img.act-turn,.pet-art-img.act-bob,.pet-art-img.act-wag,.pet-art-img.talking{animation:none}
   .pet-art-lids,.pet-art-mouth{display:none}
 }
 /* ===== v3.7.0：3D 立体风格 =====
@@ -6170,10 +6187,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.81"; /* v3.7.81 宠物全档位架构改良：动作集按风格分流（2D 禁一切 rotateX/rotateY · 3D 专属转体俯仰）+ 尺寸调参表（幅度/特效/透视随档缩放）+ 打盹真实空闲 90s + 特效频率下调 + 浮层定位加固 + 类名冲突教训 */
+const VERSION = "3.7.82"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261003b";
+const BUILD_TAG = "20261003c";
 
 
 
@@ -23240,13 +23257,52 @@ const _PET_FACE = {
   lady: { l:[0.4,0.163], r:[0.55,0.163], ew:0.085, eh:0.022, m:[0.478,0.205], skin:"#f7e8de", lash:"#3a2c2e" },
   boy: { l:[0.404,0.158], r:[0.563,0.158], ew:0.078, eh:0.021, m:[0.479,0.195], skin:"#f8ede1", lash:"#2b2622" }
 };
+/* v3.7.82 部位命中区（归一化椭圆 [cx,cy,rx,ry]，与 _PET_FACE 同口径：原点=图片显示矩形左上角）。
+   标定方法：_probe/pet-grid.html 出带 10% 坐标网格的立绘图，逐只目视标定（凭印象估坐标必然错位）。
+   head = 头部（全身人物只占顶部一小块，故半径小、中心靠上）；tail = 尾巴/尾鳍。
+   tail: null = 该角色无可视尾巴 → 点尾区回落身体反应，不假装有尾巴：
+     · panda 短尾被身体/后腿完全挡住（Q 版坐姿）
+     · girl/boyq/lady/boy 四只人物本就没有尾巴
+   wag  = 摇尾巴动作的旋转轴（尾根位置，写进 CSS 变量 --pet-wag-origin）。单张立绘没有独立尾巴部件，
+          整图**绕尾根**摆动产生"身体跟着甩"的惯性错觉，比绕图心转更像摇尾巴。 */
+const _PET_PARTS = {
+  dog:     { head: [0.50, 0.32, 0.34, 0.26], tail: [0.83, 0.60, 0.17, 0.14], wag: [0.74, 0.60] },
+  cat:     { head: [0.49, 0.32, 0.36, 0.30], tail: [0.19, 0.72, 0.17, 0.15], wag: [0.30, 0.68] },
+  panda:   { head: [0.50, 0.24, 0.34, 0.24], tail: null },
+  rabbit:  { head: [0.50, 0.34, 0.34, 0.32], tail: [0.50, 0.90, 0.12, 0.09], wag: [0.50, 0.86] },
+  dolphin: { head: [0.50, 0.30, 0.36, 0.28], tail: [0.20, 0.83, 0.20, 0.14], wag: [0.34, 0.78] },
+  girl:    { head: [0.50, 0.45, 0.16, 0.13] },
+  boyq:    { head: [0.46, 0.42, 0.24, 0.19] },
+  lady:    { head: [0.50, 0.17, 0.12, 0.09] },
+  boy:     { head: [0.48, 0.16, 0.12, 0.09] }
+};
+/* v3.7.82 部位命中层：头/身/尾三块透明区域铺在立绘之上，点击按 data-pet-part 分发反应。
+   为什么用 DOM 命中层而不是 JS 反算坐标：
+     ① .pet-art 上有 transform —— 全身立绘按 _PET_ART_SCALE 1.5 放大、3D 档还有 rotateX/rotateY，
+        getBoundingClientRect() 返回的是**变换后**矩形，与 placeFace 用的 clientWidth（未变换）口径不一致，
+        反算必然系统性偏移（实测 lady/boy 点头落到身体反应上）；
+     ② 3D 档摇摆/倾斜时矩形本身就是错的。
+   命中层是 .pet-art 的子元素，**与图一起变换** —— 点哪儿就是图上的哪儿，天然对齐、零换算。 */
+function _petHitMarkup(kind){
+  const p = _PET_PARTS[kind]; if(!p) return "";
+  const ell = function(cls, e){
+    if(!e) return "";
+    return '<span class="pet-hit pet-hit-' + cls + '" data-pet-part="' + cls + '" style="left:' + (e[0] * 100).toFixed(2)
+      + '%;top:' + (e[1] * 100).toFixed(2) + '%;width:' + (e[2] * 200).toFixed(2)
+      + '%;height:' + (e[3] * 200).toFixed(2) + '%"></span>';
+  };
+  /* 身体层铺满兜底（点在留白/未标注处也算摸身体）；头/尾在后 → 叠在其上优先命中 */
+  return '<span class="pet-hit pet-hit-body" data-pet-part="body"></span>'
+    + ell("head", p.head) + ell("tail", p.tail);
+}
 function _petArtMarkup(kind, use3d){
   /* v3.7.2：3D 风格不再用另生成的稿（img2img 重渲染细节发糊、白毛/浅色还会糊成一团），
      改为**同一张清晰立绘 + 2.5D 渲染**：厚度挤出 + 方向光明暗 + 镜面扫光 + 接地影，
      再由 CSS 做转台摇摆 / 指针倾斜。细节零损失，造型一模一样。
      因为底图相同，眨眼/张嘴浮层两档都能用（同一套 _PET_FACE 坐标）。 */
   const lids = '<span class="pet-art-lids" aria-hidden="true"><i><b></b></i><i><b></b></i></span>'
-    + '<span class="pet-art-mouth" aria-hidden="true"><i></i></span>';
+    + '<span class="pet-art-mouth" aria-hidden="true"><i></i></span>'
+    + _petHitMarkup(kind);
   const src = _PET_ART[kind];
   if(use3d && src) return '<div class="pet-art pet-3d" data-pet-3d="1">'
     + '<span class="pet-3d-shadow" aria-hidden="true"></span>'
@@ -23647,11 +23703,15 @@ function mountPet(kind){
   const _psz = _petSizePx();
   el.style.setProperty("--pet-size", _psz + "px");
   el.style.setProperty("--pet-art-scale", _petArtScale(kind));
+  /* v3.7.82：摇尾巴的旋转轴 = 尾根位置（CSS transform-origin），随角色不同；
+     无尾角色（人物 4 只 + 熊猫）不设此变量，act-wag 也不会被触发（wagAct 先判 wag 存在）。 */
+  const _wagAt = (_PET_PARTS[kind] || {}).wag;
+  if(_wagAt) el.style.setProperty("--pet-wag-origin", (_wagAt[0] * 100).toFixed(1) + "% " + (_wagAt[1] * 100).toFixed(1) + "%");
   /* v3.7.81：尺寸档调参表 —— 动作幅度与特效尺寸随档位缩放（CSS 里统一乘 var(--pet-act-scale) / var(--pet-fx-scale)）。
      理由：小图细节不可见，同幅度动作"看不见"，需放大；大图同幅度会晃眼且透视过强，需收敛。
      表驱动而非散落在 CSS 里写死三套断点：换档时只改这一张表。 */
   const _PET_SIZE_TUNING = {
-    72:  { act: 1.25, fx: 0.80 },   /* 小：动作放大、特效缩小、睫毛线隐藏（见 .pet-art-lids.mini） */
+    72:  { act: 1.25, fx: 0.80 },   /* 小：动作放大、特效缩小、睫毛线隐藏（见 .pet-art-lids.no-lash） */
     96:  { act: 1.00, fx: 1.00 },   /* 中：基准 */
     128: { act: 0.80, fx: 1.15 }    /* 大：动作收敛、特效放大 */
   };
@@ -23714,18 +23774,7 @@ function mountPet(kind){
     try{ return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
     catch(_){ return false; }
   };
-  el.addEventListener("click", function(e){
-    if(e.target.closest(".pet-close")) return;
-    el.classList.remove("pet-jumping");
-    void el.offsetWidth; /* 重置动画 */
-    el.classList.add("pet-jumping");
-    /* v3.7.81：跳跃与眨眼互斥（同 act/talking 守卫思路）—— 先收起正在显示的眨眼遮罩，
-       否则跳跃位移期间遮罩留在原地，又是一次"眯眼跑位"。 */
-    if(artLids && artLids.classList.contains("on")) artLids.classList.remove("on");
-    fx("pet-fx-heart", "♥");
-    if(Math.random() < .30) fx("pet-fx-star");      /* v3.7.81：点击星光 55%→30%（原来几乎必出） */
-    _markActive();
-  });
+  /* v3.7.82：click 统一到下方「按部位分发」那一个 handler（此处原有的跳+爱心+星光 handler 已并入）。 */
   /* v3.6.6 立绘动作：整图骨骼变换（摇头 / 点头 / 手舞足蹈 / 歪头），由心跳 tick 随机播放。
      手绘 SVG 兜底风格仍走 blink()（.pet-eye 缩放）；立绘没有可分部件，故用整图变换表达动作。 */
   const artImg = el.querySelector(".pet-art-img");
@@ -23742,6 +23791,8 @@ function mountPet(kind){
   const ACTS_2D = ACTS_COMMON.concat(["act-squash"]);              /* Q 版压扁拉伸，2D 专属 */
   const ACTS_3D = ACTS_COMMON.concat(["act-turn", "act-bob"]);      /* 小幅转体/俯仰，3D 专属 */
   const ACTS = is3dArt ? ACTS_3D : ACTS_2D;
+  /* act-wag 不进随机池（只由「点尾巴」触发），但必须参与互斥清理，否则会与其它动作叠加 */
+  const ACT_ALL = ACTS.concat(["act-wag"]);
   /* ---------- v3.6.7 立绘眨眼 / 张嘴：按标定坐标贴浮层 ----------
      .pet-art-img 是 object-fit:contain，四周可能留白，所以坐标必须基于「图片实际显示矩形」：
      由 naturalWidth/Height 与容器盒子算出缩放与偏移，再换算成容器内 px。 */
@@ -23754,14 +23805,23 @@ function mountPet(kind){
      类名带语义前缀：`.mini` 会撞 UI 小徽章类（accent 蓝底），曾把整个浮层染成蓝方块。 */
   if(artLids && _psz <= 80) artLids.classList.add("no-lash");
   const _face = _PET_FACE[kind];
-  const placeFace = function(){
-    if(!artImg || !_face || !lidEls.length) return true;      /* 无需定位，视为完成 */
-    const box = el.querySelector(".pet-art"); if(!box) return false;
+  /* v3.7.82：图片实际显示矩形换算抽成公共函数（placeFace 用它定位浮层）。
+     注意口径：这里必须用 **clientWidth/clientHeight（未变换的布局值）**，
+     不可用 getBoundingClientRect（它返回 transform 后的矩形 —— 全身立绘 1.5 倍缩放、
+     3D 档还有 rotate，量出来是变形的）。命中判定已改为 DOM 命中层，不依赖坐标反算。 */
+  const imgRect = function(){
+    const box = el.querySelector(".pet-art"); if(!box || !artImg) return null;
     const iw = artImg.naturalWidth, ih = artImg.naturalHeight;
     const bw = box.clientWidth, bh = box.clientHeight;
-    if(!iw || !ih || !bw || !bh) return false;                /* 立绘未解码 / 元素未进入布局，交给重试 */
+    if(!iw || !ih || !bw || !bh) return null;
     const s  = Math.min(bw / iw, bh / ih);
     const dw = iw * s, dh = ih * s, ox = (bw - dw) / 2, oy = (bh - dh) / 2;
+    return { box: box, ox: ox, oy: oy, dw: dw, dh: dh };
+  };
+  const placeFace = function(){
+    if(!artImg || !_face || !lidEls.length) return true;      /* 无需定位，视为完成 */
+    const r = imgRect(); if(!r) return false;                 /* 立绘未解码 / 元素未进入布局，交给重试 */
+    const { ox: ox, oy: oy, dw: dw, dh: dh } = r;
     const PX = u => ox + u * dw, PY = v => oy + v * dh;
     /* 闭眼遮罩椭圆：略小于眼睛外框，好让原图的睫毛轮廓留在外面，观感更自然 */
     const lidW = Math.max(3, _face.ew * dw * 0.94), lidH = Math.max(2, _face.eh * dh * 0.88);
@@ -23816,7 +23876,7 @@ function mountPet(kind){
      此前只有 tick 抽签层互斥（同一次 tick 二选一），但 talkArt（聊天说话 1.4s）、
      连眨第二下（+250ms）、点击反馈等入口仍可与 act 动画并发 → 这里在各入口统一防御。 */
   const ACT_CLS = ["act-nod", "act-tilt", "act-hop", "act-sway", "act-ruffle", "act-dance",
-                   "act-squash", "act-turn", "act-bob", "talking"];
+                   "act-squash", "act-turn", "act-bob", "act-wag", "talking"];
   const _imgInAct = function(){
     if(!artImg) return false;
     for(var _i = 0; _i < ACT_CLS.length; _i++){ if(artImg.classList.contains(ACT_CLS[_i])) return true; }
@@ -23851,14 +23911,20 @@ function mountPet(kind){
     };
     beat();
   };
-  const playAct = function(){
+  /* v3.7.82：动作播放拆成「指定动作」与「随机动作」两层 —— 部位点击需要指定具体动作
+     （头=歪头、尾=摇尾巴），心跳仍走随机。统一用一个计时器管理移除，叠动作不再互相打架。 */
+  let _actTimer = null;
+  const playActCls = function(a){
     if(!artImg) return;
     if(artLids && artLids.classList.contains("on")) artLids.classList.remove("on");  /* 先收起眨眼遮罩再动作 */
-    const a = ACTS[Math.floor(Math.random() * ACTS.length)];
-    ACTS.forEach(function(x){ artImg.classList.remove(x); });
+    ACT_ALL.forEach(function(x){ artImg.classList.remove(x); });
     void artImg.offsetWidth;                     /* 重置动画进度 */
     artImg.classList.add(a);
-    setTimeout(function(){ artImg.classList.remove(a); }, 1500);
+    clearTimeout(_actTimer);
+    _actTimer = setTimeout(function(){ if(artImg) artImg.classList.remove(a); }, 1500);
+  };
+  const playAct = function(){
+    playActCls(ACTS[Math.floor(Math.random() * ACTS.length)]);
   };
   let _tickN = 0;
   const tick = setInterval(function(){
@@ -23947,15 +24013,50 @@ function mountPet(kind){
     el.addEventListener("mousemove", onTilt, { signal: el._petAC.signal });
     el.addEventListener("mouseleave", resetTilt, { signal: el._petAC.signal });
   }
-  // 点击说话
-  el.addEventListener("click", function(e){
-    if(e.target.closest(".pet-close")) return;
+  /* v3.7.82 点击按部位分发（此前两个 click handler 并存：跳+爱心+星光 与 气泡+张嘴，点一下全触发，
+     语义糊在一起）。现按命中层的 data-pet-part 给不同反应：
+       头 → 歪头 + 眨眼 + 爱心（摸头最舒服的反馈）
+       身 → 跳跃 + 爱心（保留 v3.6.5 原行为）
+       尾 → 摇尾巴（整图绕尾根摆动）+ 欢喜气泡；无尾角色自动回落身体反应
+     命中判定 = DOM 命中层（见 _petHitMarkup 注释：变换下 getBoundingClientRect 不可用）。
+     气泡文案仍走 def.bubbles（i18n 词条，英文模式下不出现中文常量）。 */
+  const wagAct = function(){
+    if(!artImg || !(_PET_PARTS[kind] || {}).wag) return false;
+    playActCls("act-wag");            /* 动画 0.82s，playActCls 统一在 1.5s 后摘 class */
+    return true;
+  };
+  const showBubble = function(){
     const b = document.createElement("div");
     b.className = "pet-bubble";
     b.textContent = def.bubbles[Math.floor(Math.random()*def.bubbles.length)];
     el.appendChild(b);
     talkArt();                     /* v3.6.7：说气泡时同步张嘴 */
     setTimeout(function(){ if(b && b.parentNode) b.parentNode.removeChild(b); }, 1300);
+  };
+  el.addEventListener("click", function(e){
+    if(e.target.closest(".pet-close")) return;
+    _markActive();
+    const hitEl = e.target && e.target.closest ? e.target.closest("[data-pet-part]") : null;
+    const part = (hitEl && hitEl.dataset && hitEl.dataset.petPart) || "body";
+    if(artLids && artLids.classList.contains("on")) artLids.classList.remove("on");
+    if(part === "tail" && wagAct()){
+      showBubble();
+      return;
+    }
+    if(part === "head"){
+      playActCls("act-tilt");
+      blinkArt();
+      fx("pet-fx-heart", "♥");
+      showBubble();
+      return;
+    }
+    /* 身体：跳跃 + 爱心 + 低概率星光（保持 v3.6.5 原行为） */
+    el.classList.remove("pet-jumping");
+    void el.offsetWidth; /* 重置动画 */
+    el.classList.add("pet-jumping");
+    fx("pet-fx-heart", "♥");
+    if(Math.random() < .30) fx("pet-fx-star");
+    showBubble();
   });
   stage.appendChild(el);
 }
