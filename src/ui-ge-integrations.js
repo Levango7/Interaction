@@ -1893,6 +1893,8 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
   _guardGenericJsonKeys, _brokenBackup,
     getTasks, setTasks, getRec, setRec, getLinks,
     _buildCloudSnapshot, // v3.7.58：render-overview 的云快照构造（安全排除键的单测入口）
+    /* v3.7.88：WebDAV 同步主流程（上传/下载/412 冲突 UX） */
+    webdavSyncUpload, webdavSyncDownload,
     SCENARIOS, ORDER, TOOLS, DEFAULT_LINKS, PREFIX, MVP_SCOPE,
     // v3.7.12（解耦 S0）：暴露核心层数据表与跨层通道，供测试驱动钩子与断言"谁注册了实现"
     SCENE_FEATURE_BIND, AppBridge,
@@ -2402,4 +2404,48 @@ async function webdavGet(){
   if(r && r.status === 404) return { ok: false, missing: true };
   if(!r || !r.ok) return { ok: false, error: (r && r.error) || "download_failed" };
   return { ok: true, text: r.text || "", etag: r.etag || "" };
+}
+
+/* ============================================================
+ * WebDAV 接入云快照主流程（v3.7.88）
+ * v3.7.87 只做了载体（存/取一个文件）；本版把它接上真正的快照链路：
+ *   上传 = _buildCloudSnapshot()（经 AppBridge 桥）→ webdavPut；下载反之。
+ * 冲突 UX：412（云端已被其他设备改过）→ 弹确认让用户选「用云端覆盖本机」或「放弃」，
+ * **不自动覆盖**（与 v3.7.87 的不静默覆盖一致）。无 WebDAV 配置/无中继 → 如实不可用。
+ * ============================================================ */
+/** 上传本机快照到 WebDAV（按钮入口） */
+async function webdavSyncUpload(){
+  if(!webdavConfigured()) return toast(t("wd.syncNoCfg", "未配置 WebDAV，无法上传"), "warn");
+  if(!webdavHasRelay()) return toast(t("wd.syncDesktopOnly", "WebDAV 仅桌面版可用"), "warn");
+  const build = AppBridge.buildCloudSnapshot;
+  if(typeof build !== "function") return toast(t("wd.syncUnavailable", "快照构建不可用"), "warn");
+  let snap;
+  try{ snap = build(); }catch(e){ return toast(t("wd.syncBuildFail", "快照构建失败"), "warn"); }
+  const r = await webdavPut(JSON.stringify(snap));
+  if(r.conflict){
+    const go = confirm(t("wd.syncConflict", "云端版本已被其他设备修改（上传被拒，避免覆盖）。要用云端版本覆盖本机吗？"));
+    if(go) await webdavSyncDownload(true);
+    return;
+  }
+  if(!r.ok) return toast(t("wd.syncUploadFail", "上传失败") + "（" + (r.error || "") + "）", "warn");
+  const n = snap && typeof snap === "object" ? Object.keys(snap).length : 0;
+  toast(t("wd.syncUploadOk", "已上传快照（{n} 键）").replace("{n}", String(n)), "ok");
+}
+/**
+ * 下载云端快照并应用（覆盖本机同名键 —— 覆盖前 render-overview 侧的 pre_restore_backup 兜底仍在）
+ * @param {boolean} [silent] - 冲突流里调用时不再二次确认
+ */
+async function webdavSyncDownload(silent){
+  if(!webdavConfigured()) return toast(t("wd.syncNoCfg", "未配置 WebDAV，无法下载"), "warn");
+  if(!webdavHasRelay()) return toast(t("wd.syncDesktopOnly", "WebDAV 仅桌面版可用"), "warn");
+  const apply = AppBridge.applyCloudSnapshot;
+  if(typeof apply !== "function") return toast(t("wd.syncUnavailable", "快照应用不可用"), "warn");
+  const g = await webdavGet();
+  if(g.missing) return toast(t("wd.syncNoCloudFile", "云端还没有快照文件"), "info");
+  if(!g.ok) return toast(t("wd.syncDownloadFail", "下载失败") + "（" + (g.error || "") + "）", "warn");
+  if(!silent && !confirm(t("wd.syncApplyConfirm", "用云端快照覆盖本机同名数据？只覆盖云端包含的键，本机独有键不动。"))) return;
+  let data;
+  try{ data = JSON.parse(g.text); }catch(e){ return toast(t("wd.syncBadJson", "云端快照不是合法 JSON，未应用"), "warn"); }
+  try{ apply(data); }catch(e){ return toast(t("wd.syncApplyFail", "应用失败"), "warn"); }
+  toast(t("wd.syncDownloadOk", "已应用云端快照"), "ok");
 }

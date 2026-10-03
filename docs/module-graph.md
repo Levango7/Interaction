@@ -49,7 +49,7 @@
 | 符号 | 定义于 | 被多少块使用 |
 |---|---|---|
 | `t` | `core` | 31 |
-| `toast` | `core` | 27 |
+| `toast` | `core` | 28 |
 | `AppBridge` | `core` | 22 |
 | `sanitizeHtml` | `util-markdown` | 21 |
 | `SCENARIOS` | `core` | 21 |

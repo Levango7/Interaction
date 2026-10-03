@@ -126,3 +126,90 @@ describe("集成页 WebDAV 段门控", () => {
     expect(win.localStorage.getItem(PREFIX + "webdav_pass")).toMatch(/__enc/);
   });
 });
+describe("WebDAV 同步主流程（v3.7.88）", () => {
+  /* render-overview 注册的快照桥替身：可控输入输出，记录是否被调用 */
+  function bridgeStub(win, snap, applied){
+    win.__test.AppBridge.buildCloudSnapshot = () => snap;
+    win.__test.AppBridge.applyCloudSnapshot = (data) => { applied.push(data); };
+  }
+
+  it("上传：经快照桥构建 → PUT 成功 → 如实回报键数", async () => {
+    const win = app();
+    win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 201, etag: '"v2"' }) };
+    const applied = [];
+    bridgeStub(win, { tasks: "[]", notes: "[]" }, applied);
+    await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u", pass: "p" });
+    const r = await win.webdavPut(JSON.stringify({ tasks: "[]", notes: "[]" }));
+    expect(r.ok).toBe(true);
+    expect(typeof win.__test.webdavSyncUpload).toBe("function");
+    /* 直接驱上传入口：快照来自桥，PUT body 即快照 JSON */
+    const toasts = [];
+    win.toast = (msg) => toasts.push(msg);
+    await win.__test.webdavSyncUpload();
+    expect(applied).toEqual([]);               /* 上传不应用 */
+  });
+
+  it("下载：确认后经桥应用云端快照；JSON 非法如实拒应用", async () => {
+    const win = app();
+    win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 200, text: JSON.stringify({ tasks: "[]" }), etag: '"v3"' }) };
+    const applied = [];
+    bridgeStub(win, { tasks: "[]" }, applied);
+    await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u", pass: "p" });
+    const confirms = [];
+    win.confirm = () => { confirms.push(1); return true; };
+    const toasts = [];
+    win.toast = (msg) => toasts.push(msg);
+    await win.__test.webdavSyncDownload(false);
+    expect(applied.length, "应经桥应用一次").toBe(1);
+    expect(applied[0]).toEqual({ tasks: "[]" });
+    expect(confirms.length, "非静默覆盖：应先确认").toBe(1);
+    /* 非法 JSON：不应用 */
+    applied.length = 0;
+    win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 200, text: "{不是 json" }) };
+    await win.__test.webdavSyncDownload(true);
+    expect(applied.length, "非法 JSON 不得应用").toBe(0);
+  });
+
+  it("上传遇 412：confirm 确认才下载覆盖；拒绝则两动都不做", async () => {
+    const win = app();
+    let phase = "conflict";
+    win.electronAPI = { webdavFetch: async (arg) => {
+      if (phase === "conflict" && arg.method === "PUT") return { ok: false, status: 412, conflict: true, error: "HTTP 412" };
+      return { ok: true, status: 200, text: JSON.stringify({ notes: "[]" }), etag: '"v4"' };
+    } };
+    const applied = [];
+    bridgeStub(win, { tasks: "[]" }, applied);
+    await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u", pass: "p" });
+    const confirms = [];
+    win.confirm = () => { confirms.push(1); return false; };   /* 用户拒绝覆盖 */
+    win.toast = () => {};
+    await win.__test.webdavSyncUpload();
+    expect(applied.length, "拒绝确认 → 不得下载覆盖").toBe(0);
+    /* 再来一次并同意确认 → 下载并应用 */
+    applied.length = 0;
+    win.confirm = () => true;
+    await win.__test.webdavSyncUpload();
+    expect(applied.length, "同意 → 下载并应用").toBe(1);
+  });
+
+  it("未配置 / 无中继：上传下载均拒且零请求", async () => {
+    const win = app();
+    const calls = [];
+    win.electronAPI = { webdavFetch: async (a) => { calls.push(a); return { ok: true, status: 200, text: "{}" }; } };
+    win.electronAPI = undefined;
+    win.toast = () => {};
+    await win.__test.webdavSyncUpload();
+    await win.__test.webdavSyncDownload(false);
+    expect(calls.length).toBe(0);
+  });
+
+  it("集成页：桌面 + 已配置 → 渲染上传/下载按钮", async () => {
+    const win = app();
+    win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 207 }) };
+    await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u@x", pass: "p" });
+    win.renderIntegrationPanel();
+    const panel = win.document.getElementById("integrationPanel");
+    expect(panel.querySelector("#wdUp"), "应有上传按钮").toBeTruthy();
+    expect(panel.querySelector("#wdDown"), "应有下载按钮").toBeTruthy();
+  });
+});

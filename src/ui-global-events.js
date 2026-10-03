@@ -405,6 +405,9 @@ function renderIntegrationPanel(){
   if(wdRelay && wdCfg0){
     wdHtml += '<button type="button" class="addbtn sm" id="wdProbe">' + esc(t("wd.probe", "测试连接")) + '</button>';
     wdHtml += '<button type="button" class="addbtn sm" id="wdClear">' + esc(t("wd.clear", "清除")) + '</button>';
+    /* v3.7.88：接入快照主流程（上传/下载）—— 仅桌面 + 已配置时渲染 */
+    wdHtml += '<button type="button" class="addbtn sm" id="wdUp">' + esc(t("wd.up", "上传快照")) + '</button>';
+    wdHtml += '<button type="button" class="addbtn sm" id="wdDown">' + esc(t("wd.down", "用云端覆盖本机")) + '</button>';
   }
   wdHtml += '</div><div id="wdInfo" class="int-desc"></div></div>';
   panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + ghHtml + wdHtml);
@@ -508,6 +511,11 @@ function renderIntegrationPanel(){
       if(r) renderIntegrationPanel();
     };
   }
+  /* v3.7.88：上传/下载绑定 */
+  const wdUp = panel.querySelector("#wdUp");
+  const wdDown = panel.querySelector("#wdDown");
+  if(wdUp && !wdUp._wdBound){ wdUp._wdBound = true; wdUp.onclick = async function(){ await webdavSyncUpload(); }; }
+  if(wdDown && !wdDown._wdBound){ wdDown._wdBound = true; wdDown.onclick = async function(){ await webdavSyncDownload(false); }; }
   if(wdProbe && !wdProbe._wdBound){
     wdProbe._wdBound = true;
     wdProbe.onclick = async function(){
