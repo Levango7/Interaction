@@ -1,5 +1,19 @@
 ## [v3.7.89] - 2026-10-04
 
+**发版后线上复核**：Pages 取回 **3,736,655 B · sha256:270dfe23160bea78c21e5af8…**，与本机干净产物
+`agent-workbench.prod.html` **逐字节相同**（未做任何行尾归一化）；页内 `const VERSION = "3.7.89"`、
+`const BUILD_TAG = "20261004a"`、`var __TEST_GATE__ = false` 三项逐一对上。
+**CI `37192820759`（10m54s）/ Deploy `37192820671`（9m10s）/ pages build and deployment `37193303594`
+三个 run 全绿**；线上地址 `https://levango7.github.io/Interaction/`，tag `v3.7.89` 已推。
+> 顺带查清一处会误导发版复核的工作区卫生问题：本机 prod 产物一度比线上**多 3,183 字节**，
+> 归一化行尾后逐字节相同 ⇒ 差异纯来自**工作区里 10 个 `src/*.js` 是 CRLF**（`ai-loop` / `chain` /
+> `crypto` / `data-migrate` / `ui-ge-pomodoro` / `ui-hotkeys` / `ui-select` / `ui-theme` /
+> `util-markdown` / `util-perf`，合计恰好 3,183 个 CR），而 HEAD 里的 blob 都是 LF（`.gitattributes`
+> 的 `eol=lf` 在提交时归一化、但不会回写既有工作副本）。**危害是"本机产物永远对不上 CI 指纹"** ——
+> 会让发版复核误判成漂移。已用「删文件 + `git checkout --`」强制重取修掉（`git checkout --` 单独用
+> 不生效：git 认为文件已是最新会跳过重写），修完 src 总 CRLF = 0、工作区仍干净、prod 指纹直接对上。
+> 注：这是**工作区状态**问题，不产生任何待提交内容（HEAD 内容未变）。
+
 **ICS 提醒闭环 + 时区口径修正。** 日历的 ICS 能力从「能导入 / 能订阅」补到「真的会提醒」：VALARM 解析提前
 分钟数、提醒窗口命中一次、per-source 启用停用、CATEGORIES 取色、事件详情显示类别与提醒。**本版由并行会话
 起草（时区三口径 + 提醒链路），由我接手收口并发版**；收口过程中修掉三处问题（见 ③），其中两处是新门禁抓出来的。
