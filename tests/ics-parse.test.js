@@ -357,3 +357,51 @@ describe("B3 收尾（v3.7.89）：VALARM 提醒 / 颜色 / 启用开关", () =>
     win.runNotifyCheck();   /* 不炸即可（到窗口的事件会 notifySystem） */
   });
 });
+
+/* v3.7.90：**落盘往返**这一环此前没有用例 —— 而 P0 就出在这一环。
+   夹具里的 start 一直是内存中的 Date，从没过一遍存储；真机上导入 .ics 会立刻 saveIcsSubs()，
+   JSON 把 Date 变成字符串，读回来消费方调 .getHours()/.getTime() 直接抛
+   `TypeError: e.start.getHours is not a function` —— 表现是「导入成功、紧接着日历页崩」。
+   下面两条把「过一遍存储再渲染」钉死。 */
+describe("ICS：落盘往返后仍可渲染（v3.7.90 回归）", () => {
+  /* 事件必须落在**当月**：下面第二条要调 renderCalendarView(0)（渲染当前月）。
+     写死月份会随日期推移失效 —— 我第一版写 2026-01，结果渲染的是 10 月、徽章断言假红。 */
+  const _d = new Date();
+  const _ymd = _d.getFullYear() + String(_d.getMonth() + 1).padStart(2, "0") + String(_d.getDate()).padStart(2, "0");
+  const SUB_ICS = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "BEGIN:VEVENT",
+    "UID:rr-1@example.com", "SUMMARY:往返用事件", "DTSTART:" + _ymd + "T090000", "DTEND:" + _ymd + "T100000",
+    "CATEGORIES:工作", "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR", ""
+  ].join("\r\n");
+
+  it("导入并落盘后，getIcsSubs() 读回的 start/end 必须是 Date", () => {
+    const win = loadApp();
+    const r = win.icsImportLocal("probe.ics", SUB_ICS);
+    expect(r && r.count, "前提：导入成功").toBeGreaterThan(0);
+
+    /* 前提取证：存储里确实是字符串（这正是 Date 被 JSON 化的证据） */
+    const stored = JSON.parse(win.localStorage.getItem(PREFIX + "cal_ics_subs") || "[]");
+    expect(typeof stored[0].evs[0].start, "存储里应是字符串（JSON 化后的形态）").toBe("string");
+
+    const back = win.getIcsSubs()[0].evs[0];
+    /* 判据要用 **win.Date**：start 是在 jsdom realm 里构造的，用 Node 的 Date 判 instanceof
+       恒为 false（跨 realm 的构造器不同一）——这一条我第一版就踩了，假红。 */
+    expect(back.start instanceof win.Date, "读回必须是 Date，否则消费方 .getHours() 会抛").toBe(true);
+    expect(back.end instanceof win.Date).toBe(true);
+    expect(back.start.getHours(), "且时间不能被解析歪").toBe(9);
+  });
+
+  it("落盘往返后渲染日历不抛，且当日出现 ICS 徽章（消费者侧真路径）", () => {
+    const win = loadApp();
+    win.icsImportLocal("probe.ics", SUB_ICS);
+    /* renderCalendarView 是崩溃现场：月视图徽章提示要用 e.start.getHours()。
+       这里用真实入口渲染 2026-01 那一屏（事件在 1/15）。 */
+    let html = "";
+    let threw = null;
+    try { html = win.renderCalendarView(0); } catch (e) { threw = e; }
+    expect(threw, "渲染不得抛：" + (threw && threw.message)).toBeNull();
+    expect(typeof html).toBe("string");
+    expect(html, "渲染结果里应带上 ICS 徽章容器类").toContain("cal-ics");
+  });
+});

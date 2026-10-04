@@ -1002,7 +1002,24 @@ function getIcsSubs(){
   try{
     const raw = localStorage.getItem(PREFIX + ICS_SUBS_KEY);
     const a = raw ? JSON.parse(raw) : [];
-    return Array.isArray(a) ? a : [];
+    if(!Array.isArray(a)) return [];
+    /* v3.7.90：**读入口负责把日期还原成 Date**。
+       落盘走 JSON，Date 会变成 ISO 字符串；而解析器产出的是 Date，消费方（月视图徽章提示
+       `e.start.getHours()`、周视图排序 `a.start.getTime()` 与事件行）都按 Date 用 ——
+       于是「导入 .ics 后日历页直接抛 TypeError: e.start.getHours is not a function」
+       （实测：导入成功、紧接着渲染即崩）。单测没照到，是因为夹具里的 start 一直是内存中的
+       Date，从未过一遍存储。在此集中还原，比在每个消费点各来一次可靠。 */
+    return a.map(function(s){
+      if(!s || !Array.isArray(s.evs)) return s;
+      s.evs = s.evs.map(function(ev){
+        if(!ev) return ev;
+        const o = Object.assign({}, ev);
+        if(o.start != null && !(o.start instanceof Date)) o.start = new Date(o.start);
+        if(o.end != null && !(o.end instanceof Date)) o.end = new Date(o.end);
+        return o;
+      });
+      return s;
+    });
   }catch(e){ return []; }
 }
 /** 持久化日历源列表（走 save() 主入口：镜像/配额告警齐备） */
