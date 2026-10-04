@@ -313,7 +313,7 @@ function renderIntegrationPanel(){
         : on ? (t("int.sessionOn","本会话已配置") + (hk.hasSecret ? t("int.signed"," · 加签") : "") + (hk.urlHint ? " · " + hk.urlHint : ""))
         : t("int.notConnected","未连接");
       const btn = !usable
-        ? '<button type="button" class="addbtn sm" disabled title="' + esc(notifyUnavailableHint(p.name)) + '">' + t("p4.html.intConnDisabled",">连接（当前形态不可用）</button>")
+        ? '<button type="button" class="addbtn sm" disabled title="' + esc(notifyUnavailableHint(p.name)) + t("p4.html.intConnDisabled",">连接（当前形态不可用）</button>")
         : on
         ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + t("p4.html.intDiscBtn","\">断开</button>")
         : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + t("p4.html.intConnBtn","\">连接</button>");
@@ -344,7 +344,7 @@ function renderIntegrationPanel(){
       ? '<button type="button" class="addbtn sm int-push" data-int-push="' + p.name + t("p4.html.intPushBtn",">推送任务</button>")
       : "";
     const actionBtn = pushBtn + (jiraLocked
-      ? '<button type="button" class="addbtn sm" disabled title="' + esc("仅桌面版（Electron）可用：Atlassian 的 REST 端点不回 CORS 头，任何浏览器形态都发不出去") + '">' + t("p4.html.intConnDisabled",">连接（当前形态不可用）</button>")
+      ? '<button type="button" class="addbtn sm" disabled title="' + esc("仅桌面版（Electron）可用：Atlassian 的 REST 端点不回 CORS 头，任何浏览器形态都发不出去") + t("p4.html.intConnDisabled",">连接（当前形态不可用）</button>")
       : enabled
       ? '<button type="button" class="addbtn sm int-disc" data-int-disc="' + p.name + t("p4.html.intDiscBtn","\">断开</button>")
       : '<button type="button" class="addbtn sm int-conn" data-int-conn="' + p.name + t("p4.html.intConnBtn","\">连接</button>"));

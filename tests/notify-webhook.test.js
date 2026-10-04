@@ -382,3 +382,25 @@ describe("⑥ 传输分流与渠道能力门", () => {
     expect(win.notifyHookGet("slack").configured, "验证不过不能留下死配置").toBe(false);
   });
 });
+
+/* ⑦ 面板禁用态的**渲染正确性**（v3.7.90）
+   起因：动态死接线普查（`_probe/audit-dead-wiring-dynamic.mjs`）在真浏览器里发现
+   浏览器形态下那几个「仅桌面版」的禁用按钮**标签里夹着 `">`** ——
+   因为 `p4.html.intConnDisabled` 这个 i18n 片段自带开头的 `">`（本仓老写法：片段负责补上
+   闭合引号与尖括号），而拼接处又写了一个 `'">' +`，于是标签变成 `">连接（当前形态不可用）`。
+   原有断言只查了"按钮被禁用 + title"，**没查标签文字**，所以一路绿着上了线。
+   这条把它钉住：禁用按钮的可见文字必须是干净的那句。 */
+describe("⑦ 禁用按钮的可见文字（拼接错位回归）", () => {
+  it("浏览器形态：禁用态「连接」按钮的文字不含多余的 \">", () => {
+    const win = freshWin();
+    win.renderIntegrationPanel();
+    const rows = [...win.document.querySelectorAll("#integrationPanel .int-row")];
+    const dings = rows.filter((r) => (r.querySelector(".int-label") || {}).textContent === "钉钉");
+    expect(dings.length, "前提：面板里有钉钉行").toBe(1);
+    const btn = dings[0].querySelector(".int-action button");
+    expect(btn.disabled, "前提：浏览器形态下钉钉的连接按钮是禁用的").toBe(true);
+    const label = (btn.textContent || "").trim();
+    expect(label, "标签里不得出现多余的 \">（拼接多写了一个引号+尖括号）：" + label).not.toContain('">');
+    expect(label, "应为干净的整句：" + label).toBe("连接（当前形态不可用）");
+  });
+});
