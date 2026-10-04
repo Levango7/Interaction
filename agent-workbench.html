@@ -38330,7 +38330,11 @@ function renderIntegrationPanel(){
   ghHtml += '</div>';
   ghHtml += '<div id="ghDevInfo" class="int-desc"></div></div>';
   /* v3.7.87 C：WebDAV 云同步段（坚果云等；仅桌面版可达 —— 无 CORS 头）。
-     诚实门控：未配置只给说明+输入框；桌面版无中继时提示「仅桌面版」；浏览器形态无动作按钮。 */
+     诚实门控：未配置只给说明+输入框；桌面版无中继时提示「仅桌面版」；浏览器形态无动作按钮。
+     v3.7.89 修正：原来只有「测试连接/清除/上传/下载」被 wdRelay 门控，**输入框与「保存」是无条件渲染的** ——
+     于是浏览器形态一边写着"请用桌面版配置"、一边照样给三个输入框和保存按钮，等于邀请用户配一个
+     永远不可能生效的东西（配置写在该 origin 的 localStorage，桌面版是另一个存储）。这与本仓
+     「stub + 活 UI = 虚假功能」的规矩冲突。现改为：无中继就只给说明，一个控件都不渲染。 */
   const wdCfg0 = (typeof webdavCfg === "function") ? webdavCfg() : null;
   const wdOn = (typeof webdavConfigured === "function") ? webdavConfigured() : false;
   const wdRelay = (typeof webdavHasRelay === "function") ? webdavHasRelay() : false;
@@ -38344,19 +38348,23 @@ function renderIntegrationPanel(){
   } else {
     wdHtml += '<p class="int-desc">' + esc(t("wd.on", "已配置。文件：")) + esc((wdCfg0.path || "/agent-workshop-snapshot.json")) + '</p>';
   }
-  wdHtml += '<div class="int-gh-row">'
-    + '<input id="wdUrl" class="u-w-full" placeholder="' + esc(t("wd.urlPh", "https://dav.jianguoyun.com/dav")) + '" value="' + esc(wdCfg0 ? wdCfg0.url : "") + '">'
-    + '<input id="wdUser" class="u-w-full" placeholder="' + esc(t("wd.userPh", "账号邮箱")) + '" value="' + esc(wdCfg0 ? wdCfg0.user : "") + '">'
-    + '<input id="wdPass" class="u-w-full" type="password" placeholder="' + esc(t("wd.passPh", "应用密码")) + '">'
-    + '<button type="button" class="addbtn sm" id="wdSave">' + esc(t("wd.save", "保存")) + '</button>';
-  if(wdRelay && wdCfg0){
-    wdHtml += '<button type="button" class="addbtn sm" id="wdProbe">' + esc(t("wd.probe", "测试连接")) + '</button>';
-    wdHtml += '<button type="button" class="addbtn sm" id="wdClear">' + esc(t("wd.clear", "清除")) + '</button>';
-    /* v3.7.88：接入快照主流程（上传/下载）—— 仅桌面 + 已配置时渲染 */
-    wdHtml += '<button type="button" class="addbtn sm" id="wdUp">' + esc(t("wd.up", "上传快照")) + '</button>';
-    wdHtml += '<button type="button" class="addbtn sm" id="wdDown">' + esc(t("wd.down", "用云端覆盖本机")) + '</button>';
+  /* 输入框与「保存」也必须在有中继时才渲染 —— 否则就是上面那条"能配不能用"的死 UI */
+  if(wdRelay){
+    wdHtml += '<div class="int-gh-row">'
+      + '<input id="wdUrl" class="u-w-full" placeholder="' + esc(t("wd.urlPh", "https://dav.jianguoyun.com/dav")) + '" value="' + esc(wdCfg0 ? wdCfg0.url : "") + '">'
+      + '<input id="wdUser" class="u-w-full" placeholder="' + esc(t("wd.userPh", "账号邮箱")) + '" value="' + esc(wdCfg0 ? wdCfg0.user : "") + '">'
+      + '<input id="wdPass" class="u-w-full" type="password" placeholder="' + esc(t("wd.passPh", "应用密码")) + '">'
+      + '<button type="button" class="addbtn sm" id="wdSave">' + esc(t("wd.save", "保存")) + '</button>';
+    if(wdCfg0){
+      wdHtml += '<button type="button" class="addbtn sm" id="wdProbe">' + esc(t("wd.probe", "测试连接")) + '</button>';
+      wdHtml += '<button type="button" class="addbtn sm" id="wdClear">' + esc(t("wd.clear", "清除")) + '</button>';
+      /* v3.7.88：接入快照主流程（上传/下载）—— 仅桌面 + 已配置时渲染 */
+      wdHtml += '<button type="button" class="addbtn sm" id="wdUp">' + esc(t("wd.up", "上传快照")) + '</button>';
+      wdHtml += '<button type="button" class="addbtn sm" id="wdDown">' + esc(t("wd.down", "用云端覆盖本机")) + '</button>';
+    }
+    wdHtml += '</div>';
   }
-  wdHtml += '</div><div id="wdInfo" class="int-desc"></div></div>';
+  wdHtml += '<div id="wdInfo" class="int-desc"></div></div>';
   panel.innerHTML = sanitizeHtml('<div class="int-list">' + rows.join("") + '</div>' + ghHtml + wdHtml);
   // 绑定连接/断开按钮
   // v3.1.1 修复：原实现直接以空 config 调 connectFn → 所有 connect 函数因缺凭据返回 null，
