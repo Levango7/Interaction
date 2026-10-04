@@ -297,3 +297,63 @@ describe("ICS 增强（v3.7.87 D）", () => {
     expect(c.querySelector("[data-ics-rename]"), "应有重命名按钮").toBeTruthy();
   });
 });
+
+describe("B3 收尾（v3.7.89）：VALARM 提醒 / 颜色 / 启用开关", () => {
+  it("TRIGGER 解析：-PT15M → 15；-P1D → 1440；无 VALARM → 0", () => {
+    const win = app();
+    expect(win._icsTriggerMin("-PT15M")).toBe(15);
+    expect(win._icsTriggerMin("-P1D")).toBe(1440);
+    expect(win._icsTriggerMin("-PT1H30M")).toBe(90);
+    expect(win._icsTriggerMin("PT15M")).toBe(0);   /* 事后型不提醒 */
+    const evs = win.icsParseEvents("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:alarm-1\r\nSUMMARY:健康检查会\r\nCATEGORIES:健康\r\nDTSTART:20260312T100000+0800\r\nBEGIN:VALARM\r\nTRIGGER:-PT15M\r\nEND:VALARM\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:noalarm-1\r\nSUMMARY:无提醒会\r\nDTSTART:20260312T140000+0800\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    expect(evs.find(e => e.uid === "alarm-1").reminderMin).toBe(15);
+    expect(evs.find(e => e.uid === "alarm-1").categories).toBe("健康");
+    expect(evs.find(e => e.uid === "noalarm-1").reminderMin).toBe(0);
+  });
+
+  it("提醒窗口：提前 15 分钟内命中 → 通知一次并去重；窗口外不通知", () => {
+    const win = app();
+    win.icsImportLocal("健康.ics", "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:alarm-1\r\nSUMMARY:健康检查会\r\nCATEGORIES:健康\r\nDTSTART:20260312T100000+0800\r\nBEGIN:VALARM\r\nTRIGGER:-PT15M\r\nEND:VALARM\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:noalarm-1\r\nSUMMARY:无提醒会\r\nDTSTART:20260312T140000+0800\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    /* 事件开始 = 2026-03-12T10:00+0800（本地时区视安装环境而定，用相对窗口测）：
+       把 now 设在 (start-15min) 与 start 之间 → 命中；再查一次 → 已去重 */
+    const st = new Date("2026-03-12T10:00:00+08:00");
+    const inWindow = st.getTime() - 10 * 60000;
+    const r1 = win.getDueIcsReminders(inWindow);
+    expect(r1.length, "窗口内应命中 1 条：" + JSON.stringify(r1)).toBe(1);
+    expect(r1[0].msg).toMatch(/健康检查会/);
+    expect(r1[0].color).toBe("var(--sc-health)");   /* CATEGORIES=健康 → 场景色 */
+    const r2 = win.getDueIcsReminders(inWindow + 60000);
+    expect(r2.length, "已提醒过（同事件）不得重复").toBe(0);
+    const r3 = win.getDueIcsReminders(st.getTime() - 30 * 60000);
+    expect(r3.length, "窗口外（提前太多）不通知").toBe(0);
+    const r4 = win.getDueIcsReminders(st.getTime() + 60000);
+    expect(r4.length, "已开始不通知").toBe(0);
+  });
+
+  it("停用的源：不进日历分桶、不提醒；启用恢复", () => {
+    const win = app();
+    win.icsImportLocal("健康.ics", "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:alarm-1\r\nSUMMARY:健康检查会\r\nCATEGORIES:健康\r\nDTSTART:20260312T100000+0800\r\nBEGIN:VALARM\r\nTRIGGER:-PT15M\r\nEND:VALARM\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:noalarm-1\r\nSUMMARY:无提醒会\r\nDTSTART:20260312T140000+0800\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    const id = win.getIcsSubs()[0].id;
+    win.icsSetSubEnabled(id, false);
+    expect(Object.keys(win._icsEventsByDate()).length, "停用后分桶为空").toBe(0);
+    const st = new Date("2026-03-12T10:00:00+08:00");
+    expect(win.getDueIcsReminders(st.getTime() - 10 * 60000).length, "停用后不提醒").toBe(0);
+    win.icsSetSubEnabled(id, true);
+    expect(Object.keys(win._icsEventsByDate()).length > 0, "启用恢复").toBe(true);
+  });
+
+  it("颜色映射：类别/标题关键字 → 场景色令牌；默认绿系", () => {
+    const win = app();
+    expect(win._icsColorOf({ categories: "会议" })).toBe("var(--sc-office)");
+    expect(win._icsColorOf({ title: "Weekly review" })).toBe("var(--sc-office)");
+    expect(win._icsColorOf({ categories: "健身" })).toBe("var(--sc-health)");
+    expect(win._icsColorOf({})).toBe("var(--ok-text)");
+  });
+
+  it("提醒循环接线：runNotifyCheck 经 AppBridge 消费（第 4 块存在且不炸）", () => {
+    const win = app();
+    win.icsImportLocal("健康.ics", "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:alarm-1\r\nSUMMARY:健康检查会\r\nCATEGORIES:健康\r\nDTSTART:20260312T100000+0800\r\nBEGIN:VALARM\r\nTRIGGER:-PT15M\r\nEND:VALARM\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:noalarm-1\r\nSUMMARY:无提醒会\r\nDTSTART:20260312T140000+0800\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    expect(typeof win.__test.AppBridge.getDueIcsReminders).toBe("function");
+    win.runNotifyCheck();   /* 不炸即可（到窗口的事件会 notifySystem） */
+  });
+});

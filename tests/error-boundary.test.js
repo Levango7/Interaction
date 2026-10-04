@@ -29,8 +29,22 @@ function freshWin() {
   return win;
 }
 
-/** 等待 startup 异步完成，避免破坏全局函数时触发 unhandled rejection */
-function waitForStartup(ms = 60) { return new Promise(r => setTimeout(r, ms)); }
+/** 等待 startup 异步完成，避免破坏全局函数时触发 unhandled rejection。
+ *
+ * v3.7.89：原来是无条件 `sleep(60ms)` —— 而启动链开头是 `await initCrypto()`（PBKDF2），
+ * 全量并行（本机 31 worker + 每个用例都要解析 3.5MB jsdom）下这一步能吃掉十几秒，
+ * 60ms 等于**没等**。实测代价：E3 在满载下被饿到 99497ms，越过 60s 的 testTimeout 判红，
+ * 而同文件的 E1/E2/F1 同时段分别被拉长到 7.1s/10.1s/4.7s（正常 0.5~1s）——是饿死，不是断言错。
+ * 改成等**真实信号**：启动链在 initCrypto 之后才 render()，而静态标记里 `<main id="main"></main>`
+ * 是空的，所以「#main 有内容」即「启动已跑到渲染」。
+ * 轮询 10ms、上限 30s；到点仍未渲染就返回，让用例失败在自己的断言上，而不是超时。 */
+async function waitForStartup(win, ms = 30000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    try { const m = win.document.getElementById("main"); if (m && m.innerHTML.trim()) return; } catch (e) { /* 继续等 */ }
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
 
 describe("T2.4 错误边界 · 用例 A：损坏 localStorage 不崩溃", () => {
   let win;
@@ -321,7 +335,7 @@ describe("T2.4 错误边界 · 用例 E：关键函数 try-catch 不崩溃", () 
   });
 
   it("E2: saveCfg 异常时 toast 提示「保存失败」+ 不抛", async () => {
-    await waitForStartup();
+    await waitForStartup(win);
     const toastSpy = vi.spyOn(win, "toast");
     // 删除 #cfgName 让 saveCfg 内部 $("#cfgName").value 抛 TypeError
     const cfgName = win.document.getElementById("cfgName");
@@ -346,7 +360,7 @@ describe("T2.4 错误边界 · 用例 E：关键函数 try-catch 不崩溃", () 
   });
 
   it("E3: migrate 异常时 toast 提示 + 不抛", async () => {
-    await waitForStartup();
+    await waitForStartup(win);
     const toastSpy = vi.spyOn(win, "toast");
     // 破坏全局 migrateProfiles 让 migrate 内部调用抛错
     const origMigrateProfiles = win.migrateProfiles;

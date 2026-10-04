@@ -281,6 +281,12 @@ function runNotifyCheck(){
       stats.sm2 = fresh.length;
     }
   }catch(e){ pushDiag("error", "sm2 notify: "+(e&&e.message||e), {where:"notify"}); }
+  // 4. ICS 日历事件提醒（v3.7.89：VALARM 窗口命中 → 通知一次；经 AppBridge 槽避免 ui-daily→ui-ge-calendar 逆层边）
+  try{
+    const icsDue = (typeof AppBridge !== "undefined" && typeof AppBridge.getDueIcsReminders === "function") ? AppBridge.getDueIcsReminders(now) : [];
+    icsDue.forEach(function(r2){ try{ notifySystem(r2.msg, "", "due"); }catch(e){ pushDiag("error", "notify ics: "+(e&&e.message||e), {where:"notify"}); } });
+    if(icsDue.length) stats.ics = icsDue.length;
+  }catch(e){ pushDiag("error", "ics notify block: "+(e&&e.message||e), {where:"notify"}); }
   // 注：每日播报（digest）统一由启动时的 dailyDigest() 负责（使用 last_open 去重），
   // 此处不再重复推送，避免与启动播报形成「双每日播报」（D6 修复）。
   return stats;

@@ -50,7 +50,7 @@
 |---|---|---|
 | `t` | `core` | 31 |
 | `toast` | `core` | 28 |
-| `AppBridge` | `core` | 22 |
+| `AppBridge` | `core` | 23 |
 | `sanitizeHtml` | `util-markdown` | 21 |
 | `SCENARIOS` | `core` | 21 |
 | `ORDER` | `core` | 17 |

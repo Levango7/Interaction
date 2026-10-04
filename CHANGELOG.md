@@ -1,3 +1,55 @@
+## [v3.7.89] - 2026-10-04
+
+**ICS 提醒闭环 + 时区口径修正。** 日历的 ICS 能力从「能导入 / 能订阅」补到「真的会提醒」：VALARM 解析提前
+分钟数、提醒窗口命中一次、per-source 启用停用、CATEGORIES 取色、事件详情显示类别与提醒。**本版由并行会话
+起草（时区三口径 + 提醒链路），由我接手收口并发版**；收口过程中修掉三处问题（见 ③），其中两处是新门禁抓出来的。
+全量 **120 文件 / 1384 用例**（v3.7.88 为 1379；+5 = ICS 用例）、e2e **82/82（5.5m）**。
+⚠️ 本机门禁 13 步里 12 步 exit 0；`npm test` 的**内容 120/120 全过**但退出码 1，红因是
+`[vitest-worker]: Timeout calling "onTaskUpdate"`（本机 31 worker × 3.5MB jsdom 的已知环境抖动，
+v3.7.43 / v3.7.65 都记过同款）——**退出码以 CI 为准**。
+
+### ① ICS 时区三口径（此前两版各错一次，测试双双抓出）
+
+`src/ui-ge-calendar.js` 的 DTSTART 解析此前把三种写法混在一起：floating 被加偏移（UTC+8 机器上双重套用
+错 8 小时）；修一版后又把 floating 一起塞进 UTC（导出往返 `getHours` 错 8 小时）。现在按 RFC5545 分开：
+
+| 写法 | 语义 | 实现 |
+|---|---|---|
+| 无偏移（floating） | **本地时区**解释 | `new Date(y,m,d,h,mi,s)` |
+| `Z` 结尾 | UTC | `Date.UTC(...)` |
+| `±HHMM` | 时区无关的绝对时刻 | `Date.UTC(...) - offset` |
+
+### ② VALARM 提醒链路（B3）
+
+- `_icsTriggerMin()`：`-PT15M → 15`、`-P1D → 1440`，正数（事后）不提醒；
+- 提醒窗口 = `(开始 − 提前) ≤ now < 开始`；去重键 `uid|yyyymmdd`（`wb_ics_notified`，只留 7 天）；
+- 经 core 的 `AppBridge` 槽接进 `ui-daily` 的 `runNotifyCheck` —— **刻意不直接调用**，否则新增
+  `ui-daily→ui-ge-calendar` 逆层边；
+- per-source 启用/停用（停用的源不进日历、不刷新、不提醒，不必删了重加）；停用态在列表里灰显 + 「已停用」标记；
+- CATEGORIES → 场景色令牌取色（走 `var(--sc-*)`，`lint:tokens` 安全）；事件详情浮层显示「类别」「提醒」。
+
+### ③ 收口时修掉的三处
+
+1. **缺字典键 `p5.evReminderEarly`**（`ui-ge-calendar.js:1528` 的「提前 {n} 分钟」有默认值却未进字典 →
+   英文界面显示中文）。v3.7.54 起这是硬门禁，`i18n-completeness` ③ 判红。补中英两键。
+2. **两处 P0 空 catch**（新增的 `lint:empty-catch` 门禁抓出）：ICS 去重标记的 `load/save` 被
+   `catch(e){ /* … */ }` 静默吞掉。后果具体——**写失败 ⇒ 下一轮还命中同一窗口 ⇒ 同一条日程反复通知**
+   （原注释自己都写了「标记失败会导致重复提醒」但只是记下来）。按门禁给的方案改为上报 `pushDiag`，
+   并加**本会话内存去重表 `_icsNotifiedMem`** 兜底：光报警不解决"反复打扰"。
+3. **`tests/error-boundary.test.js` 的假等待**：`waitForStartup` 原是无条件 `sleep(60ms)`，
+   而启动链开头是 `await initCrypto()`（PBKDF2），满载下这一步要十几秒 → 60ms 等于没等。
+   实测 E3 被饿到 **99497ms** 越过 60s `testTimeout` 判红（同文件 E1/E2/F1 同时段 7.1s/10.1s/4.7s，
+   正常 0.5~1s），**是饿死不是断言错**。改成等真实信号：启动链在 `initCrypto` 之后才 `render()`，
+   静态标记里 `<main id="main"></main>` 是空的 → 「`#main` 有内容」即「启动已跑到渲染」；轮询 10ms、上限 30s。
+
+### ④ 随版本提交 / 清理
+
+- 新增 `docs/webdav-verify.md`：WebDAV（坚果云）**人工验收指引**，10 分钟八步——单测与门禁都已绿，
+  但真实网盘的端到端（真实凭据 + 真实 PUT/GET）只有用户配一次才能确认。文中引用的按钮与文案已在
+  `src/` 里逐一核对存在。
+- 删掉工作区里的 `nul`：`> nul`（本意 `/dev/null`）在 Git Bash 下真建的文件，内容是 `[pet-art]` 的构建日志行。
+- `docs/module-graph.md` 随之重生成：`AppBridge` 引用数 22 → 23（来自新增的 `AppBridge.getDueIcsReminders` 槽）。
+
 ## [v3.7.88] - 2026-10-04
 
 **发版后线上复核**：Pages 取回 **3,727,177 B**、`VERSION="3.7.88"`、`BUILD_TAG="20261003i"`、`var __TEST_GATE__ = false`（锚定定义处），CI/Deploy 双绿。**WebDAV 接入云快照主流程（v3.7.87 只做了载体，本版接上真正的同步链路）+ 与并行会话零重叠（他们做 lint 门禁域，本版只碰 集成/日历/快照 文件）。全量 **120 文件 / 1379 用例**（v3.7.87 为 1364；+15 = WebDAV 同步主流程 5 例）、e2e **82/82（4.9m）**、七门禁全绿、逆层 18/13 未动。**
