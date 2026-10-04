@@ -106,13 +106,21 @@ describe("WebDAV 探活与快照（ETag 冲突检测）", () => {
 });
 
 describe("集成页 WebDAV 段门控", () => {
-  it("浏览器形态：显示「仅桌面版」说明，无测试连接按钮", () => {
+  it("浏览器形态：只给「仅桌面版」说明，一个控件都不渲染", () => {
     const win = app();
     win.renderIntegrationPanel();
     const panel = win.document.getElementById("integrationPanel");
     expect(panel.textContent).toMatch(/桌面版|desktop/);
     expect(panel.querySelector("#wdProbe"), "无中继不得渲染动作按钮").toBeFalsy();
-    expect(panel.querySelector("#wdSave")).toBeTruthy();
+    /* v3.7.89 修正：原来这里断言 `#wdSave` 存在（输入框与「保存」是无条件渲染的）。
+       但那个行为站不住 —— 桌面版加载 file:// 那棵树、浏览器站点是另一个 origin，
+       两边 localStorage 不通，**在这里保存的配置桌面版读不到**，等于让用户配一个
+       永远不可能生效的东西（本仓「stub + 活 UI = 虚假功能」）。现改为整段控件都不渲染；
+       这条断言跟着改成"一个控件都不许有"，别把旧行为继续钉住。
+       真机取证：_probe/verify-webdav-browser-gating.mjs（file:// 与 http:// 两形态各 5 项）。 */
+    expect(panel.querySelector("#wdUrl"), "无中继不得渲染输入框").toBeFalsy();
+    expect(panel.querySelector("#wdSave"), "无中继不得渲染「保存」").toBeFalsy();
+    expect(panel.querySelector("#wdClear")).toBeFalsy();
   });
 
   it("桌面形态：已配置后有「测试连接/清除」；保存走密文", async () => {
