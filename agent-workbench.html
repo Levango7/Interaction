@@ -4146,6 +4146,8 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .ics-panel{max-width:760px;margin:0 auto}
 .ics-add{margin:var(--space-3) 0}
 .ics-list{display:flex;flex-direction:column;gap:var(--space-2)}
+.ics-item.ics-off{opacity:.55}
+.ics-off-tag{font-size:var(--fs-3xs);color:var(--muted);border:1px solid var(--line);border-radius:var(--radius-full);padding:0 4px;margin-left:4px}
 .ics-item{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);
   border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
 .ics-info{flex:1;min-width:0}
@@ -6204,10 +6206,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.88"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.89"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261003i";
+const BUILD_TAG = "20261004a";
 
 
 
@@ -10698,6 +10700,15 @@ const MESSAGES = {
     "p5.icsRenamePrompt": "新的日历源名称",
     "p5.icsRenameFail": "重命名失败",
     "p5.icsDiagWarn": "解析异常 {n} 条（缺标题或开始时间）",
+    "notify.icsDue": "日程即将开始：",
+    "notify.icsIn": "（{n} 分钟后）",
+    "p5.icsEnable": "启用",
+    "p5.icsDisable": "停用",
+    "p5.icsDisabledTag": "已停用",
+    "p5.evCategories": "类别",
+    "p5.evReminder": "提醒",
+    "p5.evReminderEarly": "提前 {n} 分钟",
+    "p5.evReminderNone": "无",
     "p5.back": "返回",
     /* v3.7.86 B4：GitHub 设备授权 */
     "gh.title": "GitHub 设备授权（Gist 云同步载体）",
@@ -14525,6 +14536,15 @@ const MESSAGES = {
     "p5.icsRenamePrompt": "New calendar source name",
     "p5.icsRenameFail": "Rename failed",
     "p5.icsDiagWarn": "{n} event(s) failed to parse (missing title or start time)",
+    "notify.icsDue": "Event starting soon: ",
+    "notify.icsIn": " (in {n} min)",
+    "p5.icsEnable": "Enable",
+    "p5.icsDisable": "Disable",
+    "p5.icsDisabledTag": "disabled",
+    "p5.evCategories": "Categories",
+    "p5.evReminder": "Reminder",
+    "p5.evReminderEarly": "{n} min before",
+    "p5.evReminderNone": "none",
     "p5.back": "Back",
     /* v3.7.86 B4: GitHub device authorization */
     "gh.title": "GitHub device authorization (Gist sync carrier)",
@@ -33212,6 +33232,12 @@ function runNotifyCheck(){
       stats.sm2 = fresh.length;
     }
   }catch(e){ pushDiag("error", "sm2 notify: "+(e&&e.message||e), {where:"notify"}); }
+  // 4. ICS 日历事件提醒（v3.7.89：VALARM 窗口命中 → 通知一次；经 AppBridge 槽避免 ui-daily→ui-ge-calendar 逆层边）
+  try{
+    const icsDue = (typeof AppBridge !== "undefined" && typeof AppBridge.getDueIcsReminders === "function") ? AppBridge.getDueIcsReminders(now) : [];
+    icsDue.forEach(function(r2){ try{ notifySystem(r2.msg, "", "due"); }catch(e){ pushDiag("error", "notify ics: "+(e&&e.message||e), {where:"notify"}); } });
+    if(icsDue.length) stats.ics = icsDue.length;
+  }catch(e){ pushDiag("error", "ics notify block: "+(e&&e.message||e), {where:"notify"}); }
   // 注：每日播报（digest）统一由启动时的 dailyDigest() 负责（使用 last_open 去重），
   // 此处不再重复推送，避免与启动播报形成「双每日播报」（D6 修复）。
   return stats;
@@ -42745,7 +42771,8 @@ function renderCalendarView(monthOffset){
     const dayExt = extByDate[dateStr] || [];
     if(dayExt.length > 0){
       const tip2 = dayExt.slice(0, 4).map(function(e){ return ((e.start && (e.start.getHours() + ":" + String(e.start.getMinutes()).padStart(2, "0")) || "") + " " + (e.title || "")) + (e.subName ? "（" + e.subName + "）" : ""); }).join("\n");
-      html += '<span class="cal-ics" data-ics-day="' + esc(dateStr) + '" title="' + esc(tip2) + '">' + esc(t("p5.icsMark", "历")) + (dayExt.length > 1 ? "×" + dayExt.length : "") + '</span>';
+      const badgeColor = (typeof _icsColorOf === "function") ? _icsColorOf(dayExt[0]) : "var(--ok-text)";
+      html += '<span class="cal-ics" data-ics-day="' + esc(dateStr) + '" title="' + esc(tip2) + '" style="color:' + badgeColor + ';border-color:' + badgeColor + '">' + esc(t("p5.icsMark", "历")) + (dayExt.length > 1 ? "×" + dayExt.length : "") + '</span>';
     }
     html += '</div>';
   }
@@ -43680,13 +43707,15 @@ function _icsDate(v){
   if(m) return new Date(+m[1], +m[2] - 1, +m[3]);
   m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z|[+-]\d{2}:?\d{2})?$/.exec(s);
   if(m){
+    /* v3.7.89：三种口径分开 —— ① 无偏移（floating）= 本地时区解释（RFC5545 floating 语义）；
+       ② Z = UTC；③ 显式 ±HHMM = Date.UTC - offset（时区无关）。
+       此前两个 bug 都在这一行上：floating 被加偏移（UTC+8 机器双重套用错 8 小时）、
+       修复版又把 floating 一起塞进 UTC（导出往返 getHours 错 8 小时）——测试双双抓出。 */
+    if(!m[7]) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
     if(m[7] === "Z") return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
-    const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
-    if(m[7]){
-      const z = /^([+-])(\d{2}):?(\d{2})$/.exec(m[7]);
-      if(z) d.setMinutes(d.getMinutes() + (z[1] === "-" ? -1 : 1) * (Number(z[2]) * 60 + Number(z[3])));
-    }
-    return d;
+    const z = /^([+-])(\d{2}):?(\d{2})$/.exec(m[7]);
+    const offMin = z ? ((z[1] === "-" ? -1 : 1) * (Number(z[2]) * 60 + Number(z[3]))) : 0;
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) - offMin * 60000);
   }
   return null;
 }
@@ -43717,6 +43746,13 @@ function _icsExpandRule(start, rruleText, cap){
   }
   return out.length ? out : [start];
 }
+/** VALARM TRIGGER → 提前分钟数（-PT15M → 15；-P1D → 1440；正数/无 → 0） */
+function _icsTriggerMin(v){
+  const m = /^([+-])P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?/i.exec(String(v || "").trim());
+  if(!m) return 0;
+  const mins = (+(m[2] || 0)) * 1440 + (+(m[3] || 0)) * 60 + (+(m[4] || 0));
+  return m[1] === "-" ? mins : 0;   /* 负数=提前提醒；正数=事后，不提醒 */
+}
 /**
  * 解析 iCalendar 文本 → 事件数组。格式容忍度按主流日历导出（QQ/网易/Outlook/Google）。
  * @param {string} text
@@ -43738,7 +43774,8 @@ function icsParseEvents(text){
     if(e){
       if(cur && !cur.cancelled && cur.start && cur.title){
         const base = { uid: cur.uid || ("ics_" + events.length), title: cur.title.slice(0, ICS_TITLE_MAX),
-          allDay: !!cur.allDay, location: cur.location || "", desc: (cur.desc || "").slice(0, 500) };
+          allDay: !!cur.allDay, location: cur.location || "", desc: (cur.desc || "").slice(0, 500),
+          categories: cur.categories || "", reminderMin: (typeof cur.reminderMin === "number") ? cur.reminderMin : 0 };
         const end = cur.end || (cur.allDay ? null : new Date(cur.start.getTime() + 3600e3));
         for(const st of _icsExpandRule(cur.start, cur.rrule, 100)){
           const ev = Object.assign({}, base, { start: st, end: end ? new Date(end.getTime() + (st - cur.start)) : null });
@@ -43761,6 +43798,8 @@ function icsParseEvents(text){
     else if(name === "RRULE") cur.rrule = val;
     else if(name === "DTSTART"){ cur.start = _icsDate(val); cur.allDay = /VALUE=DATE/i.test(line.slice(0, i)) || /^\d{8}$/.test(val.trim()); }
     else if(name === "DTEND") cur.end = _icsDate(val);
+    else if(name === "TRIGGER") cur.reminderMin = _icsTriggerMin(val);
+    else if(name === "CATEGORIES") cur.categories = _icsUnescape(val);
     else if(name === "STATUS" && /CANCELLED/i.test(val)) cur.cancelled = true;
   }
   return events.filter(function(ev){ return ev.start && ev.title; });
@@ -43769,6 +43808,7 @@ function icsParseEvents(text){
 function _icsEventsByDate(){
   const byDate = {};
   for(const sub of getIcsSubs()){
+    if(sub.enabled === false) continue;   /* v3.7.89：per-source 启用开关（停用的源不进日历也不提醒） */
     const evs = Array.isArray(sub.evs) ? sub.evs : [];
     for(const raw of evs){
       const st = raw.start ? new Date(raw.start) : null;
@@ -43821,7 +43861,7 @@ function _icsPersistSub(sub){
 }
 /** 刷新全部订阅源（本地导入源跳过） */
 async function icsRefreshAll(){
-  const subs = getIcsSubs().filter(function(s){ return !!s.url; });
+  const subs = getIcsSubs().filter(function(s){ return !!s.url && s.enabled !== false; });   /* v3.7.89：停用的源不刷新 */
   let okN = 0, failN = 0;
   for(const sub of subs){
     const r = await icsRefreshSub(sub);
@@ -43881,13 +43921,14 @@ function renderIcsPanel(){
     subs.forEach(function(s){
       const evN = (Array.isArray(s.evs) ? s.evs.length : 0);
       const when = s.lastCheckedAt ? new Date(s.lastCheckedAt).toLocaleString() : t("p5.icsNever", "未刷新");
-      html += '<div class="ics-item" data-ics-id="' + esc(s.id) + '">'
-        + '<div class="ics-info"><div class="ics-item-name">' + esc(s.name) + (s.local ? " (" + esc(t("p5.icsLocalTag", "本地")) + ")" : "") + '</div>'
+      html += '<div class="ics-item' + (s.enabled === false ? " ics-off" : "") + '" data-ics-id="' + esc(s.id) + '">'
+        + '<div class="ics-info"><div class="ics-item-name">' + esc(s.name) + (s.local ? " (" + esc(t("p5.icsLocalTag", "本地")) + ")" : "") + (s.enabled === false ? " <span class='ics-off-tag'>" + esc(t("p5.icsDisabledTag", "已停用")) + "</span>" : "") + '</div>'
         + '<div class="ics-item-meta">' + evN + " " + esc(t("p5.icsEventUnit", "个事件")) + " · " + esc(when) + (s.url ? " · " + esc(s.url.slice(0, 48)) : "")
         + ((s.diag && s.diag.count > 0) ? " · " + esc(t("p5.icsDiagWarn", "解析异常 {n} 条（缺标题或开始时间）").replace("{n}", String(s.diag.count))) : "") + '</div></div>'
         + '<div class="ics-actions">'
         + (s.url ? '<button type="button" class="addbtn sm" data-ics-refresh="' + esc(s.id) + '">' + esc(t("p5.icsRefresh", "刷新")) + '</button>' : "")
         + '<button type="button" class="addbtn sm" data-ics-rename="' + esc(s.id) + '">' + esc(t("p5.icsRename", "重命名")) + '</button>'
+        + '<button type="button" class="addbtn sm" data-ics-toggle="' + esc(s.id) + '">' + esc(s.enabled === false ? t("p5.icsEnable", "启用") : t("p5.icsDisable", "停用")) + '</button>'
         + '<button type="button" class="addbtn sm" data-ics-del="' + esc(s.id) + '">' + esc(t("p5.icsDelete", "删除")) + '</button>'
         + '</div></div>';
     });
@@ -43970,6 +44011,17 @@ function bindIcsPanel(c){
       const nn = (typeof window !== "undefined" && typeof window.prompt === "function") ? window.prompt(t("p5.icsRenamePrompt", "新的日历源名称"), cur.name) : null;
       if(nn === null || nn === undefined) return;
       if(!icsRenameSub(id, nn)){ try{ toast(t("p5.icsRenameFail", "重命名失败"), "warn"); }catch(e){} return; }
+      openIcsPanel(c);
+    };
+  });
+  /* v3.7.89：启用/停用切换（停用不删，源可随时恢复） */
+  c.querySelectorAll("[data-ics-toggle]").forEach(function(b){
+    if(b._icsBound) return; b._icsBound = true;
+    b.onclick = function(){
+      const id = b.getAttribute("data-ics-toggle");
+      const cur = getIcsSubs().find(function(x2){ return x2.id === id; });
+      if(!cur) return;
+      icsSetSubEnabled(id, cur.enabled === false);
       openIcsPanel(c);
     };
   });
@@ -44128,6 +44180,7 @@ function _evCollectDay(dateKey){
   const exts = (typeof _icsEventsByDate === "function") ? (_icsEventsByDate()[dateKey] || []) : [];
   exts.forEach(function(e0){
     list.push({ title: e0.title || "", time: _evTimeText(e0), place: e0.location || "", desc: e0.desc || "",
+      categories: e0.categories || "", reminderMin: (typeof e0.reminderMin === "number") ? e0.reminderMin : 0,
       kind: t("p5.evKindExternal", "外部日历") + (e0.subName ? "（" + e0.subName + "）" : "") });
   });
   return list;
@@ -44154,6 +44207,8 @@ function openEventDetail(dateKey, focusIdx){
   html += _evDetailRow(t("p5.evTime", "时间"), (dateKey ? dateKey + " " : "") + cur.time);
   html += _evDetailRow(t("p5.evPlace", "地点"), cur.place);
   html += _evDetailRow(t("p5.evDesc", "详情"), cur.desc);
+  if(cur.categories) html += _evDetailRow(t("p5.evCategories", "类别"), cur.categories);
+  html += _evDetailRow(t("p5.evReminder", "提醒"), (typeof cur.reminderMin === "number" && cur.reminderMin > 0) ? t("p5.evReminderEarly", "提前 {n} 分钟").replace("{n}", String(cur.reminderMin)) : t("p5.evReminderNone", "无"));
   if(list.length > 1){
     html += '<div class="u-mt-2">' + t("p5.evMore", "当日共 {n} 条").replace("{n}", String(list.length)) + '</div>';
     html += '<div class="u-mt-2 u-flex u-gap-2">'
@@ -44223,6 +44278,94 @@ function _icsParseIntoSub(sub, text){
   sub.parsedAt = Date.now();
   return sub;
 }
+
+
+/* ============================================================
+ * ICS 增强（v3.7.89 B3 收尾）
+ * ① per-source 启用开关：停用的源不进日历、不刷新、不提醒（不必删了重加）。
+ * ② CATEGORIES → 颜色：按类别/标题关键字映射到场景色令牌（var(--sc-*)，lint-colors 安全）。
+ * ③ VALARM 提醒：TRIGGER 解析提前分钟数；提醒窗口 = (开始 - 提前) ≤ now < 开始；
+ *    去重键 "uid|yyyymmdd"（wb_ics_notified，只留 7 天）；经 core 的 AppBridge 槽
+ *    接进 ui-daily 的 runNotifyCheck（避免 ui-daily→ui-ge-calendar 逆层边）。
+ * ============================================================ */
+const ICS_NOTIFIED_KEY = "wb_ics_notified";
+/* v3.7.89：本会话内存去重表。持久化标记是主路径，但它**可能失败**（配额满 / 隐私模式），
+   而失败意味着下一轮 poll 又命中同一提醒窗口 → 同一条日程被反复通知。
+   内存表是兜底：至少同一会话内不重复打扰；跨会话的重复由 pushDiag 那条告警暴露出来。 */
+const _icsNotifiedMem = new Set();
+/** 设置源的启用开关 */
+function icsSetSubEnabled(id, on){
+  const subs = getIcsSubs();
+  const hit = subs.find(function(s){ return s.id === id; });
+  if(!hit) return false;
+  hit.enabled = !!on;
+  return saveIcsSubs(subs);
+}
+/** 事件 → 场景色令牌（类别/标题关键字映射；默认绿系 ok） */
+function _icsColorOf(ev){
+  const c = String((ev && ev.categories) || "") + " " + String((ev && ev.title) || "");
+  if(/会议|meeting|评审|review/i.test(c)) return "var(--sc-office)";
+  if(/健康|健身|health|锻炼|运动|fitness/i.test(c)) return "var(--sc-health)";
+  if(/学习|study|课程/i.test(c)) return "var(--sc-study)";
+  if(/开发|code|dev/i.test(c)) return "var(--sc-code)";
+  if(/设计|design/i.test(c)) return "var(--sc-design)";
+  if(/财务|finance|报销/i.test(c)) return "var(--sc-finance)";
+  if(/生活|life|私人/i.test(c)) return "var(--sc-life)";
+  return "var(--ok-text)";
+}
+/** 清理过期去重键（只留 7 天） */
+function _purgeIcsNotified(now){
+  try{
+    const cur = load(PREFIX + ICS_NOTIFIED_KEY, []);
+    const keep = cur.filter(function(k){ const d = new Date(String(k).split("|")[1] || ""); return !isNaN(d.getTime()) && (now - d.getTime()) < 8 * 24 * 3600e3; });
+    if(keep.length !== cur.length) save(PREFIX + ICS_NOTIFIED_KEY, keep);
+  }catch(e){
+    /* 清不掉不影响本次提醒，但**不能静默**：这是持久化路径，写失败（配额满/隐私模式）
+       会让过期去重键一直留着。lint:empty-catch 把它标为 P0 就是这个理由。 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "ICS 去重键清理失败：" + ((e && e.message) || e), { where: "ics-notify" }); }catch(_e){}
+  }
+}
+/**
+ * 到期 ICS 事件提醒（VALARM 窗口命中 → 通知一次；core 槽，由 ui-daily 的提醒循环消费）
+ * @param {number} [now]
+ * @returns {Array<{key:string,title:string,subName:string,color:string,msg:string}>}
+ */
+function getDueIcsReminders(now){
+  const ts = (now === undefined) ? Date.now() : now;
+  _purgeIcsNotified(ts);
+  const out = [];
+  for(const sub of getIcsSubs()){
+    if(sub.enabled === false) continue;
+    for(const raw of (Array.isArray(sub.evs) ? sub.evs : [])){
+      if(!raw.start || !raw.title) continue;
+      const st = new Date(raw.start);
+      const rem = (typeof raw.reminderMin === "number") ? raw.reminderMin : 0;
+      if(rem <= 0) continue;                       /* 无 VALARM（或非提前型）的事件不提醒 */
+      const due = st.getTime() - rem * 60000;
+      if(ts < due || ts >= st.getTime()) continue; /* 提醒窗口外 */
+      const key = String(raw.uid || st.getTime()) + "|" + st.toISOString().slice(0, 10);
+      if(_icsNotifiedMem.has(key)) continue;       /* 本会话内存去重（持久化失败时的兜底） */
+      const notified = load(PREFIX + ICS_NOTIFIED_KEY, []);
+      if(notified.indexOf(key) >= 0) continue;     /* 已提醒过（同日一次） */
+      out.push({ key: key, title: raw.title, subName: sub.name || "", color: _icsColorOf(raw),
+        msg: t("notify.icsDue", "日程即将开始：") + raw.title + (sub.name ? "（" + sub.name + "）" : "") + t("notify.icsIn", "（{n} 分钟后）").replace("{n}", String(rem)) });
+    }
+  }
+  if(out.length){
+    try{
+      const cur = load(PREFIX + ICS_NOTIFIED_KEY, []);
+      out.forEach(function(r){ if(cur.indexOf(r.key) < 0) cur.push(r.key); });
+      save(PREFIX + ICS_NOTIFIED_KEY, cur);
+    }catch(e){
+      /* 标记写失败必须浮出来：写不进去 ⇒ 下一轮还命中同一窗口 ⇒ 同一条日程被反复通知。
+         光报错不够，同时落进本会话内存表，至少这一会话内不再重复打扰。 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "ICS 提醒去重标记写入失败（本会话内改由内存去重）：" + ((e && e.message) || e), { where: "ics-notify" }); }catch(_e){}
+    }
+    out.forEach(function(r){ _icsNotifiedMem.add(r.key); });
+  }
+  return out;
+}
+try{ if(typeof AppBridge !== "undefined") AppBridge.getDueIcsReminders = getDueIcsReminders; }catch(e){ /* 桥未就绪：提醒不可用，日历不受影响 */ }
 /*SRC:ui-ge-calendar:END*/
 /*SRC:ui-ge-notes:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·笔记与知识库) =====
