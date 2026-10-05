@@ -46,11 +46,35 @@ jobs:
         run: npm ci
 
       # prebuild（拼回单文件 + 复制）→ electron-builder --win --x64 --publish=never
-      # 产物：electron/dist/Agent工坊-<version>-portable.exe
+      # electron-builder 的原始产物名：electron/dist/Agent工坊-<version>-portable.exe（含中文，
+      #   由 productName="Agent 工坊" 决定）→ 随即被下一步重命名为纯 ASCII 名再上传，见其注释。
       - name: 构建 portable exe
         working-directory: electron
         run: npm run dist
         timeout-minutes: 20
+
+      # 产物重命名为**纯 ASCII** 再上传（v3.7.90 修）：
+      #   electron-builder 按 productName="Agent 工坊" 产出 `Agent工坊-3.7.90-portable.exe`（含中文），
+      #   而 softprops/action-gh-release 上传时会净化非 ASCII 字符 —— 实测 Release 上的资产名
+      #   变成 `Agent.-3.7.90-portable.exe`（「工坊」→ `.`），与构建名、与本文档注释均不一致。
+      #   下载方会拿到一个来路不明的文件名，且不同工具/系统的净化规则可能不同。
+      #   故此处统一改为纯 ASCII 名，构建名与发布名自此一致。
+      - name: 重命名为纯 ASCII（避开 Release 上传时的非 ASCII 净化）
+        working-directory: electron
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for f in dist/*-portable.exe; do
+            base=$(basename "$f")
+            ver=$(sed -n 's/.*-\([0-9][0-9.]*\)-portable\.exe/\1/p' <<< "$base")
+            [ -n "$ver" ] || { echo "无法从 $base 解析版本号"; exit 1; }
+            new="AgentWorkbench-${ver}-portable.exe"
+            [ "$base" = "$new" ] && { echo "已是 ASCII 名：$base"; continue; }
+            mv "$f" "dist/$new"
+            echo "重命名：$base -> $new"
+          done
+          ls -la dist/*.exe
 
       - name: 列出产物
         working-directory: electron
