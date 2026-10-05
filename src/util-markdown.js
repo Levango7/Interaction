@@ -145,6 +145,40 @@ function _isDangerousUrlValue(raw){
   const v = _decodeUrlEntities(raw).replace(/[\u0000-\u0020]+/g, "");
   return /^(javascript|vbscript|data):/i.test(v);
 }
+/**
+ * 消毒 `style` 属性的**值**（v3.7.90 新增）。
+ *
+ * 背景：本消毒器此前只处理标签、`on*` 事件与 URL 类属性，**不看 style 的值**。
+ * 而全仓有约 25 处把动态值直接拼进内联 style（形如把 `s.color` 写进 style 的 color 值），
+ * 其中 `s.color` 来自场景定义 —— 自定义场景 / 插件 JSON / **导入的备份与云快照**都能写入任意值。
+ * 于是可注入 CSS。危害不是执行 JS（现代浏览器 CSS 里做不到），而是：
+ *   · `url(...)` → 渲染即向外部发起请求（信标/追踪，且能证明"某条数据被渲染过"）；
+ *   · `@import` / `behavior:` / `-moz-binding` → 加载外部样式或历史 JS 绑定；
+ *   · `position:fixed|absolute` + `inset` + `z-index` → 造出全屏覆盖层做界面伪装（钓鱼）。
+ *
+ * **刻意不拦 `top/left/right/bottom`**：全仓有合法内联用法
+ *   （`render-widgets.js:526` 画布卡片 `style="left:${it.x}px;top:${it.y}px;…"`、
+ *    `render-scene-main.js:47` 虚拟滚动 `style="top:${range.offsetY}px"`）。
+ *   而 `\btop\s*:` 这种写法还会误伤 `margin-top:` / `border-top:` —— 一并避免。
+ *   只拦 position/inset/z-index 三者，已足以阻断「从未定位元素造出全屏覆盖层」这条路
+ *   （z-index 对未定位元素无效）。
+ * 实测（2026-10-05）：src 与 HTML 骨架的内联 style 里 position / inset / z-index **零命中**，
+ * 故无副作用。
+ * @param {string} v
+ * @returns {string}
+ */
+function _sanitizeStyleValue(v){
+  let out = String(v == null ? "" : v);
+  out = out.replace(/url\s*\([^)]*\)/gi, "");        // 外部资源 / 信标
+  out = out.replace(/@import/gi, "");
+  out = out.replace(/-moz-binding\s*:/gi, "");
+  out = out.replace(/\bbehavior\s*:/gi, "");
+  out = out.replace(/\b(javascript|vbscript)\s*:/gi, "");
+  out = out.replace(/expression\s*\(/gi, "");        // 与步骤 5 双保险（此处针对 style 值）
+  // 定位/层级：以「声明起始或分号后」为界，避免误伤 background-position 之类
+  out = out.replace(/(^|;)([^;]*?)\b(position|inset|inset-[a-z]+|z-index)\s*:[^;]*/gi, "$1");
+  return out;
+}
 function sanitizeHtml(html){
   if (!html || typeof html !== "string") return "";
   let s = html;
@@ -198,6 +232,16 @@ function sanitizeHtml(html){
     // 4b. 无引号情况
     s = s.replace(/(href|src|xlink:href|formaction|action|poster|background|dynsrc|lowsrc)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
       return _isDangerousUrlValue(val) ? attr + '=""' : m;
+    });
+    // 4c. 消毒 style 属性的**值**（v3.7.90，见 _sanitizeStyleValue 的说明）。
+    //     此前的 URL 属性清单里没有 style —— 而全仓约 25 处把动态值拼进内联 style。
+    //     统一重写为双引号形式，顺带消除无引号写法带来的解析歧义。
+    s = s.replace(/\sstyle\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, _q, dq, sq){
+      const val = dq !== undefined ? dq : (sq !== undefined ? sq : "");
+      return ' style="' + _sanitizeStyleValue(val) + '"';
+    });
+    s = s.replace(/\sstyle\s*=\s*([^\s>"']+)/gi, function(m, val){
+      return ' style="' + _sanitizeStyleValue(val) + '"';
     });
     // 5. 移除 CSS expression() 及其编码变体（\28 / \x28 等编码括号）
     s = s.replace(/expression\s*\(/gi, "");

@@ -143,7 +143,28 @@ function _intIsSensitiveField(name){
   const n = String(name || "").toLowerCase();
   if(n === "key" || n === "password") return true;
   const parts = n.split(/[^a-z0-9]+/);
-  return parts.some(p => p === "secret" || p === "token" || p === "key" || p === "password" || p === "apikey");
+  if(parts.some(p => p === "secret" || p === "token" || p === "key" || p === "password" || p === "apikey")) return true;
+  /* v3.7.90 补漏（**潜在**脆弱性，非活跃泄漏 —— 已逐字段核实）：
+     上面的分词只按非字母数字切，**camelCase / 全连写不会被切开** ——
+     `appSecret` → parts=["appsecret"]、`accessToken` → ["accesstoken"]、`clientSecret` → ["clientsecret"]，
+     三者都成为**单个** token，于是 `=== "secret"` 等比较全部不成立 → 被判「非敏感」→ 明文落盘。
+     实测该函数：appSecret / accessToken / clientSecret / credential **四项全部漏判**
+     （而 app_secret / access_token / refresh_token 正常命中 —— 差别只在有没有分隔符）。
+     另：webhook 地址字段名 `url`（字段定义里标了 secret:true，URL 本身即凭据）同样判为 false。
+
+     当前是否已造成明文落盘？**没有** —— 逐项核实过：
+       · `appSecret` 全仓只出现在注释里（feishu/dingtalk 那套企业应用已整批删除）；
+       · `accessToken` 走的是 ui-ge-api.js 自己的密封链，不经本函数；
+       · `clientSecret` / `credential` 仅出现在 i18n 文案；
+       · `url` 的三个 webhook provider（slack/feishu/dingtalk）经核实**不落盘**
+         （slackConnect/feishuConnect/dingtalkConnect 均不调 integrationRegisterProvider / _intSaveProviders）。
+     即：**今天不漏，但下一个用 camelCase 命名凭据字段的 provider 会静默漏** —— 没有任何测试或门禁会拦。
+     故在此补一遍**子串**匹配（高置信词干），并排除少量常见误伤（计数/展示类字段）。
+     注意本函数只在**落盘密封**时被调用，判定偏严的后果是「该字段在不可加密环境被丢弃」，
+     方向是 fail-closed（丢字段而非漏明文），与 _intSealState 的 D4 约定一致。 */
+  const BENIGN = /^(?:token|key|secret|password)(?:count|name|label|type|len|size|ttl|expiry|prefix|suffix|list)$/;
+  if(BENIGN.test(n)) return false;
+  return /(secret|token|password|apikey|credential|passwd)/.test(n);
 }
 function _intIsSealed(v){ return v && typeof v === "object" && v.__enc === true && typeof v.iv === "string" && typeof v.data === "string"; }
 /**
@@ -2185,11 +2206,35 @@ async function githubToken(){
     return typeof raw === "string" ? raw : "";
   }catch(e){ return ""; }
 }
+/**
+ * 加密凭据；**加密不可用时返回 null（拒绝保存）**，绝不落明文。
+ *
+ * v3.7.90 安全修正：本文件原先把两处凭据写成
+ *     const enc = (typeof encryptKey === "function") ? await encryptKey(secret) : secret;
+ * 即「加密层没就绪就把凭据明文写进 localStorage」。这违反项目自己已确立的原则 ——
+ * `src/crypto.js:119-130` 对 AI Key 的处理是「加密失败则**丢弃**，不落明文」。
+ * 更糟的是 UI 文案仍显示「已保存（应用密码加密存储）」，属明文落盘 + 虚假提示双重问题。
+ *
+ * 触发条件（实测可达）：`encryptKey` 仅在 crypto 层初始化且 Web Crypto / 设备密钥可用时存在；
+ * `initCrypto()` 未跑或抛错时它就是 undefined，而这条分支不会报错、不会提示，只是悄悄写明文。
+ *
+ * 现改为：不可用 → null；调用方按失败处理（`githubTokenSet` 的调用点已能识别 `!saved`，
+ * `webdavSaveCfg` 的调用点会 toast「保存失败」）。**读回路径不变**，历史上已落明文的旧值仍可读，
+ * 不会造成数据丢失。
+ * @param {string} secret
+ * @returns {Promise<string|null>}
+ */
+async function _encryptSecretOrRefuse(secret){
+  if(typeof encryptKey !== "function") return null;
+  try{ return await encryptKey(secret); }
+  catch(e){ return null; }
+}
 /** 保存 device token（加密落盘；失败如实返回 false） */
 async function githubTokenSet(token){
   try{
     if(!token) return githubTokenClear();
-    const enc = (typeof encryptKey === "function") ? await encryptKey(token) : token;
+    const enc = await _encryptSecretOrRefuse(token);
+    if(enc === null) return false;   // 加密不可用：宁可存不下，也不落明文
     save(PREFIX + GH_TOKEN_KEY, enc);
     return true;
   }catch(e){ return false; }
@@ -2331,7 +2376,10 @@ async function webdavSaveCfg(cfg){
     save(PREFIX + WD_CFG_KEY, { url: String(cfg.url).replace(/\/+$/, ""), user: String(cfg.user || ""), path: String(cfg.path || WD_DEF_PATH) });
     const pass = String(cfg.pass || "");
     if(pass){
-      const enc = (typeof encryptKey === "function") ? await encryptKey(pass) : pass;
+      /* v3.7.90：加密不可用 → 拒绝保存（原实现 `: pass` 会静默落明文，
+         而调用点 toast 却写「已保存（应用密码加密存储）」）。详见 _encryptSecretOrRefuse。 */
+      const enc = await _encryptSecretOrRefuse(pass);
+      if(enc === null) return false;
       save(PREFIX + WD_PASS_KEY, enc);
     }
     return true;

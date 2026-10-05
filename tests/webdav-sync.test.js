@@ -135,8 +135,17 @@ describe("集成页 WebDAV 段门控", () => {
   });
 });
 describe("WebDAV 同步主流程（v3.7.88）", () => {
-  /* render-overview 注册的快照桥替身：可控输入输出，记录是否被调用 */
+  /* render-overview 注册的快照桥替身：可控输入输出，记录是否被调用。
+     ⚠️ v3.7.90：本函数此前**直接覆盖**这两个槽，而生产侧 render-overview 从未注册它们
+     （全仓只有读取、零赋值）→ webdavSyncUpload/Download 在生产里恒在
+     `typeof build/apply !== "function"` 处提前 return「快照构建/应用不可用」。
+     测试因为自己把槽桩上了，所以一直全绿 —— **测试掩盖了死路径**。
+     现在先断言「生产侧确实注册了」，再替换为替身：注册一旦再被删掉，这里立刻红。 */
   function bridgeStub(win, snap, applied){
+    expect(typeof win.__test.AppBridge.buildCloudSnapshot,
+      "生产侧必须注册 AppBridge.buildCloudSnapshot（否则 WebDAV 上传恒不可用）").toBe("function");
+    expect(typeof win.__test.AppBridge.applyCloudSnapshot,
+      "生产侧必须注册 AppBridge.applyCloudSnapshot（否则 WebDAV 下载恒不可用）").toBe("function");
     win.__test.AppBridge.buildCloudSnapshot = () => snap;
     win.__test.AppBridge.applyCloudSnapshot = (data) => { applied.push(data); };
   }

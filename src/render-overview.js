@@ -1343,6 +1343,30 @@ function _applyCloudSnapshot(data) {
   /* v3.7.67：云端恢复覆盖了本机键值，RAG 增量同步按哈希 diff 收敛（经 core 广播位，避免 Render→AI 逆层） */
   try { if (typeof emitDataMutate === "function") emitDataMutate("restore"); } catch (e) { /* 索引不阻塞恢复 */ }
 }
+
+/* ============================================================
+ * v3.7.90 修复（P0）：把云快照桥注册到 AppBridge —— 此前**从未注册过**，
+ * 导致 WebDAV 同步的上传与下载**两端在生产环境都是死的**。
+ *
+ * 取证：
+ *   · ui-ge-integrations.js:2468 `const build = AppBridge.buildCloudSnapshot;` → undefined
+ *   · ui-ge-integrations.js:2489 `const apply = AppBridge.applyCloudSnapshot;` → undefined
+ *   · 全仓对这两个名字**只有读取、零赋值**（`grep -rn 'AppBridge\.\(build\|apply\)CloudSnapshot' src/`
+ *     仅命中上面两处读取）。
+ *   · 于是 webdavSyncUpload 在 `if(typeof build !== "function")` 处 return
+ *     toast「快照构建不可用」；webdavSyncDownload 同样在 `if(typeof apply !== "function")` 处
+ *     return「快照应用不可用」—— 用户点了按钮只会看到一句「不可用」，永远发不出请求。
+ *
+ * 为什么测试没发现：`tests/webdav-sync.test.js:139-142` 的 `bridgeStub()` 自己把这两个槽**桩上了**
+ *   （`win.__test.AppBridge.applyCloudSnapshot = (data) => {...}`），且注释写的是
+ *   「render-overview 注册的快照桥**替身**」—— 即作者以为生产侧已注册。测试因此全绿，
+ *   而生产侧两个槽都是 undefined。**这正是本仓反复出现的「测试把缺失的依赖当成前提」形态。**
+ *
+ * 修复即补上注册（与 ui-ge-theme.js:933 的 `try{ AppBridge.X = fn; }catch(e){}` 同款写法）。
+ * ============================================================ */
+try{ AppBridge.buildCloudSnapshot = _buildCloudSnapshot; }catch(e){ /* 桥未就绪：不阻塞加载 */ }
+try{ AppBridge.applyCloudSnapshot = _applyCloudSnapshot; }catch(e){ /* 同上 */ }
+
 async function cloudCheckOnLogin() {
   if (!window.isApiLoggedIn()) return;
   try {

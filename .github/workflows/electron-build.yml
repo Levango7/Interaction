@@ -1,0 +1,74 @@
+name: Build Electron portable exe
+
+# 背景（2026-10-05 审计）：
+#   本仓的桌面分发形态是「portable exe」，但**本机打不出包** ——
+#   electron-builder 要从 github.com 拉 helper 二进制，本机 `github.com:443` 直连不通
+#   （实测 TLS 超时，退出码 1）。于是 `electron/dist/` 里最新产物一直是
+#   `Agent工坊-3.6.4-portable.exe`（2026-09-17），**与当前 v3.7.89 相差 36 个版本** ——
+#   桌面形态实际处于「有构建配置、无可用产物」的状态。
+#   根因是网络可达性，不是配置问题，所以正确解法是**把构建搬到 CI**（runner 在 GitHub 上，
+#   拉 helper 天然可达），而不是继续在本机折腾。
+#
+# 触发方式：
+#   · workflow_dispatch —— 手动出包（默认分支上点一下即可）
+#   · push tag `v*`     —— 发版打 tag 时自动出包，并附到对应 Release
+#
+# 说明：electron/package.json 的 `prebuild` 会先跑 `../scripts/src-split.mjs` + `pet-art.mjs`
+#   把 src/ 拼回单文件并复制到 electron/ —— 这两个脚本**零外部依赖**（只用 node 内置模块），
+#   所以本工作流不需要在仓库根跑 `npm ci`。
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 出包前先确认仓库处于源码态（与本仓其他工作流同口径）
+      - name: 源码态校验
+        run: node scripts/check-source-state.mjs
+
+      # electron 子目录的依赖（electron + electron-builder）
+      - name: 安装 electron 依赖
+        working-directory: electron
+        run: npm ci
+
+      # prebuild（拼回单文件 + 复制）→ electron-builder --win --x64 --publish=never
+      # 产物：electron/dist/Agent工坊-<version>-portable.exe
+      - name: 构建 portable exe
+        working-directory: electron
+        run: npm run dist
+        timeout-minutes: 20
+
+      - name: 列出产物
+        working-directory: electron
+        shell: bash
+        run: ls -la dist/*.exe
+
+      - name: 上传为构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-workbench-portable-exe
+          path: electron/dist/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      # 打 tag 触发时，附到对应 Release（若该 Release 尚不存在则创建）
+      - name: 附加到 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: electron/dist/*.exe
+          fail_on_unmatched_files: true
