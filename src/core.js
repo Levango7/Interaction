@@ -4040,6 +4040,7 @@ const MESSAGES = {
     "gh.pollFail": "授权未完成",
     "gh.clearConfirm": "清除本机保存的 GitHub token（下次同步需重新授权）？",
     "gh.cleared": "已清除",
+    "gh.clearFail": "清除失败：本地存储不可用，token 可能仍在本机",
     /* v3.7.87 C：WebDAV 云同步 */
     "wd.title": "WebDAV 云同步（坚果云等 · 仅桌面版）",
     "wd.noRelay": "WebDAV 服务不返回 CORS 头，浏览器形态发不出去——请用桌面版（Electron）配置。",
@@ -4058,6 +4059,7 @@ const MESSAGES = {
     "wd.probeFail": "连接失败",
     "wd.clearConfirm": "清除本机 WebDAV 配置与密码？云端文件不受影响。",
     "wd.cleared": "已清除",
+    "wd.clearFail": "清除失败：本地存储不可用，密码可能仍在本机",
     /* v3.7.88：WebDAV 同步主流程 */
     "wd.up": "上传快照",
     "wd.down": "用云端覆盖本机",
@@ -4068,6 +4070,7 @@ const MESSAGES = {
     "wd.syncConflict": "云端版本已被其他设备修改（上传被拒，避免覆盖）。要用云端版本覆盖本机吗？",
     "wd.syncUploadFail": "上传失败",
     "wd.syncUploadOk": "已上传快照（{n} 键）",
+    "wd.syncUploadOkNoMeta": "已上传快照（{n} 键），但本机未记住版本标记 —— 下次上传会被判为冲突，请检查本地存储是否可用。",
     "wd.syncNoCloudFile": "云端还没有快照文件",
     "wd.syncDownloadFail": "下载失败",
     "wd.syncApplyConfirm": "用云端快照覆盖本机同名数据？只覆盖云端包含的键，本机独有键不动。",
@@ -7877,6 +7880,7 @@ const MESSAGES = {
     "gh.pollFail": "Authorization not completed",
     "gh.clearConfirm": "Clear the stored GitHub token (you will re-authorize before the next sync)?",
     "gh.cleared": "Cleared",
+    "gh.clearFail": "Clear failed: local storage is unavailable; the token may still be on this device.",
     /* v3.7.87 C: WebDAV cloud sync */
     "wd.title": "WebDAV cloud sync (Nutstore etc. - desktop only)",
     "wd.noRelay": "WebDAV servers send no CORS headers, so browsers are blocked - configure it in the desktop (Electron) app.",
@@ -7895,6 +7899,7 @@ const MESSAGES = {
     "wd.probeFail": "Connection failed",
     "wd.clearConfirm": "Clear the WebDAV config and password on this machine? The cloud file is untouched.",
     "wd.cleared": "Cleared",
+    "wd.clearFail": "Clear failed: local storage is unavailable; the password may still be on this device.",
     /* v3.7.88: WebDAV sync main flow */
     "wd.up": "Upload snapshot",
     "wd.down": "Overwrite local with cloud",
@@ -7905,6 +7910,7 @@ const MESSAGES = {
     "wd.syncConflict": "The cloud copy was changed on another device (upload rejected to avoid overwriting). Overwrite local with the cloud copy?",
     "wd.syncUploadFail": "Upload failed",
     "wd.syncUploadOk": "Snapshot uploaded ({n} keys)",
+    "wd.syncUploadOkNoMeta": "Snapshot uploaded ({n} keys), but this device did not save the version marker — the next upload will be flagged as a conflict; check whether local storage is available.",
     "wd.syncNoCloudFile": "No snapshot on the cloud yet",
     "wd.syncDownloadFail": "Download failed",
     "wd.syncApplyConfirm": "Overwrite local keys with the cloud snapshot? Only keys present in the cloud copy are overwritten.",

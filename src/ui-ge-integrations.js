@@ -2239,13 +2239,19 @@ async function githubTokenSet(token){
     return true;
   }catch(e){ return false; }
 }
-/** 清除 device token 与 Gist 指针 */
+/** 清除 device token 与 Gist 指针
+ *  v3.7.90：此前**无条件 `return true`**，即使两次 `removeItem` 都抛异常 ——
+ *  而调用方（ui-global-events.js:501）拿到返回值后一律 toast「已清除」。
+ *  后果：localStorage 被禁用（隐私模式 / SecurityError）时，**加密后的 token 仍在磁盘上**，
+ *  用户却被明确告知已清除 —— 这是「声称已清除但实际没清」的安全类误导。
+ *  现按实际结果返回：任一键删除失败即 false（fail-closed，宁可报失败也不谎报已清）。 */
 function githubTokenClear(){
-  try{
-    try{ localStorage.removeItem(PREFIX + GH_TOKEN_KEY); }catch(e){}
-    try{ localStorage.removeItem(PREFIX + GH_GIST_ID_KEY); }catch(e){}
-  }catch(e){}
-  return true;
+  let ok = true;
+  [GH_TOKEN_KEY, GH_GIST_ID_KEY].forEach(function(k){
+    try{ localStorage.removeItem(PREFIX + k); }
+    catch(e){ ok = false; try{ pushDiag("error", "github 凭据清除失败：" + (e && e.message || e), { where: "github", op: "clear", key: k }); }catch(e2){} }
+  });
+  return ok;
 }
 /** 是否已授权（token 存在）；只查存储不解密，够 UI 用 */
 function githubHasToken(){ try{ return !!load(PREFIX + GH_TOKEN_KEY, ""); }catch(e){ return false; } }
@@ -2385,12 +2391,18 @@ async function webdavSaveCfg(cfg){
     return true;
   }catch(e){ return false; }
 }
-/** 清除配置与元信息 */
+/** 清除配置与元信息
+ *  v3.7.90：同 githubTokenClear —— 此前无条件 `return true`，而调用方（ui-global-events.js:538）
+ *  一律 toast「已清除」。三个键里任何一个删失败（localStorage 被禁用），
+ *  **加密后的应用密码仍留在磁盘**，用户却以为已清干净。
+ *  现按实际结果返回，任一键失败即 false。 */
 function webdavClearCfg(){
-  try{
-    ["webdav_cfg", "webdav_pass", "webdav_meta"].forEach(function(k){ try{ localStorage.removeItem(PREFIX + k); }catch(e){} });
-  }catch(e){}
-  return true;
+  let ok = true;
+  ["webdav_cfg", "webdav_pass", "webdav_meta"].forEach(function(k){
+    try{ localStorage.removeItem(PREFIX + k); }
+    catch(e){ ok = false; try{ pushDiag("error", "webdav 配置清除失败：" + (e && e.message || e), { where: "webdav", op: "clear", key: k }); }catch(e2){} }
+  });
+  return ok;
 }
 /** Basic 认证头（应用密码只在这里拼一次，不落日志） */
 async function _wdAuth(c, pass){
@@ -2432,8 +2444,22 @@ async function webdavPut(text){
   const r = await window.electronAPI.webdavFetch(arg);
   if(r && r.conflict) return { ok: false, conflict: true, error: "etag_conflict" };
   if(!r || !r.ok) return { ok: false, error: (r && r.error) || "upload_failed" };
-  try{ save(PREFIX + WD_META_KEY, { etag: r.etag || "", lastModified: r.lastModified || "", path: c.path, ts: Date.now() }); }catch(e){}
-  return { ok: true, etag: r.etag || "" };
+  /* v3.7.90：meta 落盘失败**必须可观测** —— 此前 `catch(e){}` 直接吞掉。
+     后果是链式的、且症状指向错误方向：本次仍报「已上传快照」成功，但 etag 没落盘 →
+     下次上传 `load(meta)=null` → 走 `If-None-Match:*` → 云端已有文件 → 412 →
+     弹「云端版本已被其他设备修改（上传被拒，避免覆盖）。要用云端版本覆盖本机吗？」。
+     用户从未用过其他设备，却被告知被别的设备改过，且**永远无法上传**（每次都是 412）。
+     注意 `save()` 自己已经 pushDiag + toast，外层再套 catch 只是把信号又抹掉一次。
+     改为：落盘失败时把 `metaSaved:false` 带回调用方，由调用方如实降级提示；不改变
+     PUT 本身的成功语义（文件确实已写进云端）。 */
+  let metaSaved = true;
+  try{
+    save(PREFIX + WD_META_KEY, { etag: r.etag || "", lastModified: r.lastModified || "", path: c.path, ts: Date.now() });
+  }catch(e){
+    metaSaved = false;
+    try{ pushDiag("error", "webdav meta 落盘失败：" + (e && e.message || e), { where: "webdav", op: "meta_save" }); }catch(e2){}
+  }
+  return { ok: true, etag: r.etag || "", metaSaved: metaSaved };
 }
 /**
  * 快照下行（取回云端快照；404 = 云端还没有 → ok:false, missing，不算错误）
@@ -2477,6 +2503,12 @@ async function webdavSyncUpload(){
   }
   if(!r.ok) return toast(t("wd.syncUploadFail", "上传失败") + "（" + (r.error || "") + "）", "warn");
   const n = snap && typeof snap === "object" ? Object.keys(snap).length : 0;
+  /* v3.7.90：meta 没落盘时**不能**只说「已上传」—— 那会让用户以为同步链路完全正常，
+     而下次上传必然 412 且归因错误（见 webdavPut 内注释）。如实告知并给出可执行动作。 */
+  if(r.metaSaved === false){
+    return toast(t("wd.syncUploadOkNoMeta", "已上传快照（{n} 键），但本机未记住版本标记 —— 下次上传会被判为冲突，请检查本地存储是否可用。")
+      .replace("{n}", String(n)), "warn");
+  }
   toast(t("wd.syncUploadOk", "已上传快照（{n} 键）").replace("{n}", String(n)), "ok");
 }
 /**

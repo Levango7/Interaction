@@ -49,6 +49,39 @@
 **收益**：`npm test` 从「4 个必然假失败（退出码恒 1）」变成 **122 文件 / 1407 用例 0 失败** ——
 本机退出码重新可读，真回归不再被环境噪声淹没。
 
+### ⑥ WebDAV / GitHub 凭据链的「谎报成功」三连（审查 `ui-ge-integrations.js` 增量时发现）
+
+对 `ui-ge-integrations.js`（+2,500 行）与 `ui-ge-calendar.js`（+1,702 行）逐项重审（XSS / 凭据落盘 /
+空 catch / i18n / 时区 / ICS），**XSS 面经排查为干净**（该模块**不产出任何 HTML 字符串**，
+UI 由 `ui-global-events.js` 渲染，14 处插值**全部** `esc()` 包裹且整体过 `sanitizeHtml`）。
+但凭据链上查到 **3 处同型缺陷：操作失败被吞，调用方一律报「成功」**。
+
+| 位置 | 缺陷 | 后果（可复现） |
+|---|---|---|
+| `ui-ge-integrations.js:2435` | `webdavPut` 把 `save(meta)` 包在 `catch(e){}` 里，而 `save()` **自己已 pushDiag+toast** —— 外层再吞一次 | 本次仍报「已上传快照」成功，但 etag 未落盘 → **下次上传 `load(meta)=null` → 走 `If-None-Match:*` → 云端已有文件 → 412** → 弹「云端版本已被其他设备修改……要用云端覆盖本机吗？」。用户从未用过其他设备，却被告知被别的设备改过，且**永远无法上传** |
+| `ui-ge-integrations.js:2243` | `githubTokenClear` **无条件 `return true`**，即使两次 `removeItem` 都抛异常 | localStorage 被禁用（隐私模式 / SecurityError）时，**加密后的 token 仍在磁盘**，UI 却 toast「已清除」 |
+| `ui-ge-integrations.js:2389` | `webdavClearCfg` 同上 | 同上，**加密后的应用密码仍在本机** |
+
+**修法（统一原则：fail-closed，宁可报失败也不谎报成功）**：
+
+- `webdavPut` 返回 `{ok:true, etag, metaSaved}`；落盘失败时 `metaSaved:false` 并 `pushDiag`。
+  `webdavSyncUpload` 据此改报「已上传快照（N 键），但**本机未记住版本标记** —— 下次上传会被判为冲突，
+  请检查本地存储是否可用。」（新增 i18n 键 `wd.syncUploadOkNoMeta`）。
+  **不改变 PUT 本身的成功语义** —— 文件确实已写进云端，改判失败反而是另一种谎报。
+- 两个 `Clear` 函数改为**按实际结果**返回：任一键删除失败即 `false` + `pushDiag`；
+  两个调用点（`ui-global-events.js:501/538`）据返回值分别 toast
+  「已清除」/「清除失败：本地存储不可用，token（密码）可能仍在本机」（新增 `gh.clearFail` / `wd.clearFail`）。
+
+**为什么没更早发现**：三处都落在这个仓反复出现的模式上 —— **「错误处理写在别处」被当成「已处理」**。
+`save()` 的可观测性做得很好（配额耗尽会 pushDiag + toast），恰恰是这个「做得好」让外层的
+`catch(e){}` 看起来无害；实际是**同一信号被抹了两次**，且外层抹的是「能不能信任返回值」这一层。
+
+**回归护栏（各 1 例，均已反向验证「无修复即失败」）**：
+`tests/webdav-sync.test.js` 两例钉住 `metaSaved` 标记与 `webdavClearCfg` 的 fail-closed 返回值。
+> 反向验证踩到一个 jsdom 陷阱并已记入测试注释：`window.localStorage` 是 **getter，每次访问返回新
+> Storage 对象** —— 在它上面给 `removeItem` 赋值不生效（首版这么写，测试假绿），必须整体
+> `Object.defineProperty` 替换该属性。
+
 ### ① `electron/main.js`：外发通道公共常量 + 新通道检查清单（**刻意的小重构**）
 
 文件里 5 条具备外发能力的 IPC（`chat` / `notify-send` / `jira-fetch` / `ics-fetch` / `webdav-fetch`）

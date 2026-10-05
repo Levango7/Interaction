@@ -42,6 +42,25 @@ describe("WebDAV 配置与凭据", () => {
     expect(await win.webdavPass()).toBe("");
   });
 
+  it("v3.7.90：清除失败必须返回 false，不得在密码仍留盘时谎报已清除", async () => {
+    /* 缺陷原型：webdavClearCfg 无条件 `return true`，而调用方一律 toast「已清除」。
+       localStorage 被禁用（隐私模式 / SecurityError）时 removeItem 抛异常 →
+       加密后的应用密码仍在磁盘，用户却被告知已清干净。 */
+    await win.webdavSaveCfg({ url: "https://dav.jianguoyun.com/dav/", user: "me@x.com", pass: "appPass_123" });
+    expect(win.webdavClearCfg(), "正常环境清除成功 → true").toBe(true);
+    /* 模拟 localStorage 被禁用（隐私模式 / SecurityError）。
+       注意 jsdom 的 `localStorage` 是 **getter，每次访问返回新 Storage 对象** ——
+       在它上面给 removeItem 赋值不会持久，必须整体替换该属性。 */
+    const realLS = win.localStorage;
+    const fakeLS = Object.create(realLS);
+    fakeLS.removeItem = () => { throw new Error("SecurityError"); };
+    Object.defineProperty(win, "localStorage", { value: fakeLS, configurable: true, writable: true });
+    await win.webdavSaveCfg({ url: "https://dav.jianguoyun.com/dav/", user: "me@x.com", pass: "appPass_123" });
+    expect(win.webdavClearCfg(), "删除抛异常 → 必须返回 false（fail-closed）").toBe(false);
+    Object.defineProperty(win, "localStorage", { value: realLS, configurable: true, writable: true });
+    win.webdavClearCfg();
+  });
+
   it("浏览器形态（无中继）：探活/上传/下行都拒且**零请求**", async () => {
     await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u", pass: "p" });
     const calls = [];
@@ -207,6 +226,39 @@ describe("WebDAV 同步主流程（v3.7.88）", () => {
     win.confirm = () => true;
     await win.__test.webdavSyncUpload();
     expect(applied.length, "同意 → 下载并应用").toBe(1);
+  });
+
+  it("v3.7.90：meta 落盘失败必须如实降级 —— 不得谎报「已上传」后下次莫名 412", async () => {
+    /* 缺陷原型：webdavPut 在 save(meta) 外套了 `catch(e){}`，写失败被吞 → 本次仍报成功，
+       但 etag 没落盘 → 下次上传走 If-None-Match:* → 云端已有文件 → 412 →
+       弹「云端版本已被其他设备修改」，归因错误且永远无法上传。 */
+    const win = app();
+    win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 201, etag: '"v9"' }) };
+    const applied = [];
+    bridgeStub(win, { tasks: "[]" }, applied);
+    await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u", pass: "p" });
+
+    /* webdavPut 返回值必须携带 metaSaved 标记 */
+    const rOk = await win.webdavPut("{}");
+    expect(rOk.ok).toBe(true);
+    expect(rOk.metaSaved, "meta 正常落盘时 metaSaved 应为 true").toBe(true);
+
+    /* 模拟落盘失败：让 save() 抛异常（配额耗尽 / 隐私模式禁用存储） */
+    const realSave = win.save;
+    win.save = () => { throw new Error("QuotaExceededError"); };
+    const rBad = await win.webdavPut("{}");
+    expect(rBad.ok, "PUT 本身确实成功了，不应改判为失败").toBe(true);
+    expect(rBad.metaSaved, "落盘失败必须被带出来，不能吞").toBe(false);
+    win.save = realSave;
+
+    /* 调用方据此降级提示：文案必须指出版本标记未记住，而非笼统的「已上传」 */
+    const toasts = [];
+    win.toast = (msg) => toasts.push(String(msg));
+    win.save = () => { throw new Error("QuotaExceededError"); };
+    await win.__test.webdavSyncUpload();
+    expect(toasts.length).toBe(1);
+    expect(toasts[0], "必须说明本机未记住版本标记").toContain("未记住版本标记");
+    expect(toasts[0]).not.toBe("已上传快照（1 键）");
   });
 
   it("未配置 / 无中继：上传下载均拒且零请求", async () => {

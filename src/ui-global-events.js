@@ -498,8 +498,9 @@ function renderIntegrationPanel(){
     ghClear._ghBound = true;
     ghClear.onclick = function(){
       if(!confirm(t("gh.clearConfirm", "清除本机保存的 GitHub token（下次同步需重新授权）？"))) return;
-      githubTokenClear();
-      toast(t("gh.cleared", "已清除"), "ok");
+      /* v3.7.90：清除失败必须如实报，不得在凭据仍留在磁盘时提示「已清除」 */
+      const okGh = githubTokenClear();
+      toast(okGh ? t("gh.cleared", "已清除") : t("gh.clearFail", "清除失败：本地存储不可用，token 可能仍在本机"), okGh ? "ok" : "warn");
       renderIntegrationPanel();
     };
   }
@@ -535,8 +536,9 @@ function renderIntegrationPanel(){
     wdClear._wdBound = true;
     wdClear.onclick = function(){
       if(!confirm(t("wd.clearConfirm", "清除本机 WebDAV 配置与密码？云端文件不受影响。"))) return;
-      webdavClearCfg();
-      toast(t("wd.cleared", "已清除"), "ok");
+      /* v3.7.90：同 GitHub —— 清不干净时不得谎报「已清除」 */
+      const okWd = webdavClearCfg();
+      toast(okWd ? t("wd.cleared", "已清除") : t("wd.clearFail", "清除失败：本地存储不可用，密码可能仍在本机"), okWd ? "ok" : "warn");
       renderIntegrationPanel();
     };
   }
