@@ -21,6 +21,21 @@
  *   src/ 是源码态真相源，HTML 源码态只有壳（617KB）、拼回态才是全量（3.5MB）。
  *   扫 src/ 则**两种状态下结果一致**，不依赖 pre 钩子是否已拼回（同 lint-layers.mjs 做法）。
  *
+ * ⚠️ 本门禁的已知覆盖缺口（2026-10-05 实测量化，勿以为它覆盖了全仓）：
+ *   `agent-workbench.html` 里有**不属于任何 SRC 块**的 HTML 骨架区 —— 实测为
+ *   行 1-6692（6,692 行 / 非空 6,465 行）+ 行 47931-47938（8 行）。这部分**不在 src/ 内**，
+ *   因此本门禁看不见它。该区实测含 **15 处空 catch**（P0 4 / P1 6 / P2 5，bare 5）。
+ *   这 4 处 P0 已**逐条人工核查，全部是误判**（分类器只按 `localStorage.setItem` 字样判级，
+ *   看不见外层意图）：
+ *     · L6326 `_sharedSafeLSSet` / L6335 `_sharedSafeLSRemove` —— 函数名与 JSDoc 明写
+ *       "吞掉 SecurityError / QuotaExceededError 等异常"，吞异常正是该安全包装器的设计目的；
+ *     · L6643 —— localStorage 探针失败后**故意**继续往下装兜底壳（注释已说明）；
+ *     · L6663 —— `setItem` 配额超/被拒后**故意**退到内存覆盖层（同函数内即置 `degraded = true`）。
+ *   故**未**把扫描范围扩到 HTML：naive 扩展会直接引入 4 个假 P0 失败，要消除它们必须改
+ *   `lib/empty-catch.mjs` 的识别模式（把"包装器 / 降级壳"列为不判 P0），而那会波及既有的
+ *   493 条基线分级，回归面大于收益。**当前以文档留痕替代扩展** —— 若日后要扩，
+ *   请连同上述 4 处一并写入基线，而非直接放宽判定。
+ *
  * 用法：
  *   node scripts/lint-empty-catch.mjs                # 检查：新增 P0 失败（阻断）
  *   node scripts/lint-empty-catch.mjs --report       # 只出分级报告，不判失败
@@ -86,7 +101,7 @@ if (REPORT) {
   for (const it of evalP0.slice(0, 20)) console.log(`  ${it.file}:${it.line}  ${it.why}\n      try{ ${it.snippet} }  catch{ ${it.note} }`);
   if (evalP0.length > 20) console.log(`  …… 余 ${evalP0.length - 20} 处同此型`);
 
-  console.log('\n—— 标准修法（改变蹊默，不改变控制流）——');
+  console.log('\n—— 标准修法（改变静默，不改变控制流）——');
   console.log('  catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "<发生了什么>: "+((e&&e.message)||e), {where:"<函数名>"}); }catch(_){} }');
   console.log('  说明：诊断自身必须二次保护；原本静默继续的逻辑，改后依然继续。');
   process.exit(0);

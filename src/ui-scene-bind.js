@@ -277,6 +277,7 @@ function openTaskEdit(id){
         </div>
       </form>
     </div></div>`;
+  // lint-xss-ok: 任务编辑弹窗；插值仅 esc(task.*) 与 t() 字典值；priSel/statusSel 由固定枚举生成；scCss(s.color) 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   const modal = $("#taskEditModal");
   modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));

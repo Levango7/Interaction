@@ -241,6 +241,7 @@ function openSharedTaskModal(task){
       <div class="share-task-body">${cardHtml}</div>
     </div>
   </div>`;
+  // lint-xss-ok: cardHtml 由 renderSharedTaskCard 生成，其全部字段（priority/due/note/tags/title/scMeta.name）均经 esc()；scCss 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   const closeBtn = $("#shareTaskClose");
   // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器

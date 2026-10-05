@@ -727,6 +727,7 @@ function openChainShareModal(){
       </div>
     </div>
   </div>`;
+  // lint-xss-ok: html 为本地模板字面量；链分享/导入/场景模板三处插值仅 t() 字典值 + numbers + esc(code) + 各子渲染内部已 esc()；插件详情页各字段均 esc()
   document.body.insertAdjacentHTML("beforeend", html);
   const close = ()=>{ const m = $("#chainShareModal"); if(m) m.remove(); };
   $("#chainShareClose").onclick = close;
@@ -761,6 +762,7 @@ function openChainImportModal(){
       </div>
     </div>
   </div>`;
+  // lint-xss-ok: 同文件同类弹窗；插值仅 t() 字典值、numbers、esc(...) 与内部已 esc 的子渲染；scCss 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   const close = ()=>{ const m = $("#chainImportModal"); if(m) m.remove(); };
   $("#chainImportClose").onclick = close;
@@ -930,6 +932,7 @@ function openTemplateModal(){
       </div>
     </div>
   </div>`;
+  // lint-xss-ok: 同文件同类弹窗；插值仅 t() 字典值、numbers、esc(...) 与内部已 esc 的子渲染；scCss 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器
   const _ac = new AbortController();
@@ -1063,6 +1066,7 @@ function openPluginDetailModal(id){
       + '</div>'
     + '</div>'
   + '</div>';
+  // lint-xss-ok: 同文件同类弹窗；插值仅 t() 字典值、numbers、esc(...) 与内部已 esc 的子渲染；scCss 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器
   const _ac = new AbortController();

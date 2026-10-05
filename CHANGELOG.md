@@ -2339,6 +2339,7 @@ v3.7.0 之后的 12 个子版本集中在看板表单栅格对齐与 datepicker 
 
 ### Changed
 - `window.__test` 测试钩子在运行时增加门控（仅 `file://` / `localhost` / `?__test=1`），线上部署不暴露内部 API。
+  > 后续变更（2026-10-05 补注）：`file://` 分支已在 v1.8.9 之后的"安全收紧"中移除——本地双击打开（最终用户最常见形态）不再挂载测试钩子，避免 devtools 可访问内部函数。现行门控仅 `localhost`/`127.0.0.1` 或 `?__test=1`。见 `src/ui-global-events.js` 的 `__TEST_GATE__` 注释块。
 
 ---
 
@@ -2375,6 +2376,7 @@ v3.7.0 之后的 12 个子版本集中在看板表单栅格对齐与 datepicker 
 - `electron/package.json` 的 `build.files` 误用 `"../"` 父路径（electron-builder 不支持工程目录外文件），改为打包 `prebuild` 复制进 `electron/` 的 `agent-workbench.html`，消除产物缺 HTML 导致空白窗口的风险。
 - 浏览器 `chatOnce` 与主进程 `chat` 重试语义对齐：429/5xx 退避重试（1s×attempt），网络错误退避基数统一；取消/超时/401 不重试。
 - `window.__test` 约 100 个内部函数导出增加门控：仅 file://、localhost/127.0.0.1 或 `?__test=1` 时挂载，线上部署不再暴露内部 API。
+  > 后续变更（2026-10-05 补注）：`file://` 分支已移除（同上条），现行门控为 `localhost`/`127.0.0.1` 或 `?__test=1`。**另需澄清一点**：`?__test=1` 在**注入态**下对任意 host 生效，但线上发布的始终是 `build.mjs --prod` 产物（`deploy.yml` 部署 `agent-workbench.prod.html`），其中整个 IIFE 被替换为 `var __TEST_GATE__ = false;`，故线上任何 host/参数组合都不会挂载 `window.__test`。本地调试用 `?__test=1` 属预期行为，不影响线上暴露面。
 - 仓库完整性：补交 `tests/`（167 测试 / 19 文件）、`scripts/lint-colors.mjs`、两个启动 `.bat`，新增 MIT `LICENSE`。
 
 ### Tests

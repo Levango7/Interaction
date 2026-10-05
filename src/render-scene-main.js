@@ -540,8 +540,14 @@ function bindCodeFrontendCard(){
       if(showing){ box.style.display = "none"; if(statusEl) statusEl.textContent = ""; return; } // 再点一次收起
       const doc = '<!doctype html><html><head><meta charset="utf-8"><style>' +
         String(rec.css || "") + '</style></head><body>' + String(rec.html || "") +
+        /* lint-xss-ok: **误报** —— 下面这行是拼给 iframe.srcdoc 的完整文档字符串，
+           其中的 insertAdjacentHTML 是字符串内容而非调用；用户代码 rec.js 被放进
+           <iframe sandbox="allow-scripts">（无 allow-same-origin），运行在不透明源，
+           无法触达宿主 DOM/localStorage。此处也确无外部数据进入宿主 DOM。
+           ⚠️ 本说明**必须**放在 eslint-disable 指令**之前** —— 放它俩中间会顶开
+           `next-line` 的作用目标，导致 no-useless-escape 三条误报（实测踩到）。 */
         // eslint-disable-next-line no-useless-escape -- <\/script> 的反斜杠是必需的：防止宿主 <script> 标签被内嵌文本提前闭合
-        '<script>try{' + String(rec.js || "") + '}catch(e){document.body.insertAdjacentHTML("beforeend","<pre class=\"u-p-2\" style=\\"color:#d83b3b;font:12px monospace\\">JS Error: "+(e&&e.message||e)+"</pre>")}<\/script></body></html>';
+        '<script>try{' + String(rec.js || "") + '}catch(e){document.body.insertAdjacentHTML("beforeend","<pre class=\"u-p-2\" style=\\"color:#d83b3b;font:12px monospace\\">JS Error: "+(e&&e.message||e)+"</pre>")}<\/script></body></html>'; // lint-xss-ok: 本行是 iframe.srcdoc 文档字符串，其中的 insertAdjacentHTML 是字符串内容非调用（sandbox allow-scripts，无 same-origin）
       box.innerHTML = "";
       const frame = document.createElement("iframe");
       frame.setAttribute("sandbox", "allow-scripts");

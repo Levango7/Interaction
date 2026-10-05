@@ -98,24 +98,33 @@ const info = Object.entries(byName).filter(([, n]) => n > 1).map(([name, n]) => 
 
 // 4) 关键分层必须存在（架构契约）
 const REQUIRED = ["Bootstrap", "Core Layer", "Data Layer", "AI Layer", "Render Layer", "UI Layer", "Util Layer", "Crypto Layer", "Chain Layer"];
-const missing = REQUIRED.filter((r) => !byName[r] && !byName[r.replace(" Layer", " Layer")]);
+/* v3.7.91：原写 `!byName[r] && !byName[r.replace(" Layer", " Layer")]` —— 第二个条件是
+   **替换成自身的 no-op**（看不出差别），恒等于 `!byName[r]`，属复制粘贴残留的死代码。
+   删掉它，语义不变、行为不变。 */
+const missing = REQUIRED.filter((r) => !byName[r]);
 if (missing.length) errors.push(`缺少关键分层：${missing.join(", ")}`);
 
 /* ── 5) v3.7.70：依赖方向校验 ──────────────────────────────────────────
    与 scripts/module-graph.baseline.json 比对：基线内既有项只报告，**新增**项失败。
    （口径、去重、排序全部与 module-graph.mjs 一致 —— 共用 lib/dep-graph.mjs。） */
 const BASELINE = join(__dirname, "module-graph.baseline.json");
-const depInfo = { checked: false, addedUpward: [], addedCycles: [], addedDup: [], baseUpward: 0, baseCycles: 0 };
+/* v3.7.91：字段名原为 baseUpward / baseCycles，但赋的是 `cur.upward.length`（**当前实测值**），
+   不是基线内既有项数 —— 输出里还写着「（基线内既有 → 仅报告）」，把当前总数当成了基线数，
+   新增发生时这行数字含新增项却标着「既有」，会把人带偏。改名为 cur*，并在输出里
+   显式给出「基线内既有」= 当前 − 新增，两者都可见。 */
+const depInfo = { checked: false, addedUpward: [], addedCycles: [], addedDup: [], curUpward: 0, curCycles: 0, baseUpward: 0, baseCycles: 0 };
 if (existsSync(join(__dirname, "..", "src", "order.json"))) {
   const cur = analyze(loadBlocks());
   depInfo.checked = true;
-  depInfo.baseUpward = cur.upward.length;
-  depInfo.baseCycles = cur.cycles.length;
+  depInfo.curUpward = cur.upward.length;
+  depInfo.curCycles = cur.cycles.length;
   depInfo.shared = cur.shared.length;
   const base = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, "utf8")) : { duplicates: [], cycles: [], upward: [] };
   depInfo.addedUpward = cur.upward.filter(x => !base.upward.includes(x));
   depInfo.addedCycles = cur.cycles.filter(x => !base.cycles.includes(x));
   depInfo.addedDup = cur.duplicates.filter(x => !base.duplicates.includes(x));
+  depInfo.baseUpward = depInfo.curUpward - depInfo.addedUpward.length;
+  depInfo.baseCycles = depInfo.curCycles - depInfo.addedCycles.length;
   if (depInfo.addedUpward.length) {
     errors.push(`新增逆层依赖 ${depInfo.addedUpward.length} 条（低层用高层符号）：${depInfo.addedUpward.slice(0, 6).join(", ")}${depInfo.addedUpward.length > 6 ? " …" : ""}`);
   }
@@ -138,7 +147,8 @@ if (process.argv.includes("--json")) {
     console.log(`  ${loc.padEnd(28)}  ${l.name}  (${l.detail})`);
   }
   if (depInfo.checked) {
-    console.log(`[lint-layers] 依赖方向：逆层 ${depInfo.baseUpward} 条 / 循环 ${depInfo.baseCycles} 条 / 共享符号豁免 ${depInfo.shared} 个（基线内既有 → 仅报告）`);
+    console.log(`[lint-layers] 依赖方向：当前 逆层 ${depInfo.curUpward} 条 / 循环 ${depInfo.curCycles} 条 / 共享符号豁免 ${depInfo.shared} 个`);
+    console.log(`[lint-layers] 其中基线内既有：逆层 ${depInfo.baseUpward} 条 / 循环 ${depInfo.baseCycles} 条（仅报告，不失败）`);
     console.log(`[lint-layers] 基线外新增：逆层 ${depInfo.addedUpward.length} · 循环 ${depInfo.addedCycles.length} · 重复定义 ${depInfo.addedDup.length}（新增 → 失败）`);
   }
   if (errors.length) {

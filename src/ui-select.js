@@ -119,6 +119,7 @@
     if (EDITABLE) {
       /* input 不能有子元素 → caret 作为兄弟节点绝对定位（见 .ds-select--edit .ds-caret） */
       wrap.appendChild(trigger);
+      // lint-xss-ok: CARET 是本文件顶部的 SVG 字符串常量，无外部数据
       wrap.insertAdjacentHTML("beforeend", CARET);
       wrap.classList.add("ds-select--edit");
     } else {

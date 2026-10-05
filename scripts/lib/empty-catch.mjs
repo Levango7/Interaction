@@ -233,5 +233,5 @@ export function scanSource(raw, file, occSeen = {}) {
   return items;
 }
 
-/** 条目标识 —— 必须含 occ，否则同文件相同 try 内容会<｜hy_place▁holder▁no▁813｜>撞车导致基数缩水。 */
+/** 条目标识 —— 必须含 occ，否则同文件相同 try 内容会撞车导致基数缩水。 */
 export const keyOf = (it) => it.file + ':' + it.sig + '#' + (it.occ || 1);

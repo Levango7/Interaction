@@ -31,13 +31,34 @@ BUILTIN_SC_KEYS.forEach(k => { SC_ORIGINALS[k] = { name: SCENARIOS[k].name, colo
  */
 /**
  * 场景色 hex → 可安全内联的 CSS 颜色（出厂值走主题令牌，自定义值原样返回）
+ *
+ * v3.7.91（纵深防御）：本函数的返回值被 3 处直接内联进 HTML 属性，**未经 esc()**：
+ *   · ui-scene-bind.js:276  `style="--sc:${scCss(s.color)}"`
+ *   · ui-drawer.js:909      `style="background:${scCss(s.color)};..."`
+ *   · ui-guide.js:214       `style="background:${scCss(sm.color)};..."`
+ * 现状**不可注入** —— 进入 SCENARIOS[].color 的三条路径都过了 `/^#[0-9a-fA-F]{6}$/`
+ *   · toScenarioEntry（自定义场景）
+ *   · pluginScenarioToEntry（插件场景）
+ *   · registerCustomScenarios 的内置覆盖（o.color）
+ * 兜底 scMeta() 也返回常量 var(--muted)。实测投毒 `color:'red" onmouseover="alert(1)'`
+ * 被回退成场景默认色 --scenario-default（真机 Chromium 验证，DOM 内 [onmouseover] 计数 0）。
+ * **但**这条安全性完全寄生于上面三处正则 —— 一旦有人放宽其中之一、或新增一条
+ * 绕过它们的场景来源（插件热加载/未来 API），这 3 处立成 XSS。
+ * 故在此加**出口白名单**：不认识的值一律回退 var(--accent)，不再原样返回。
+ * 这样调用点即使忘了 esc() 也不会破防（一处收紧，三处受益）。
+ * 注意：白名单只做「形状」校验（不含引号/尖括号/分号），HTML 属性上下文里安全；
+ * 不追求覆盖所有合法 CSS 颜色写法，遇到不认识的一律回退 —— 宁可退成主题强调色。
  * @param {string} hex
  * @returns {string}
  */
 function scCss(hex){
   const h = String(hex || "").toLowerCase();
   const key = Object.keys(SC_ORIGINALS).find(function(k){ return SC_ORIGINALS[k] && String(SC_ORIGINALS[k].color || "").toLowerCase() === h; });
-  return key ? "var(--sc-" + key + ", " + hex + ")" : (hex || "var(--accent)");
+  if(key) return "var(--sc-" + key + ", " + hex + ")";
+  /* 出口白名单：仅放行 #RGB(A) 系与 var()/color-mix()/纯字母色名；
+     显式排除引号、尖括号、分号、括号闭合（这些是属性逃逸的必要字符）。 */
+  const SAFE = /^(?:#[0-9a-f]{3,8}|var\(--[\w-]+(?:,\s*#[0-9a-f]{3,8})?\)|color-mix\([^"'<>;]*\)|[a-z]+)$/;
+  return SAFE.test(h) ? hex : "var(--accent)";
 }
 /**
  * 场景色的浅底写法（同源色按百分比叠加，兼容 var() 令牌）

@@ -68,6 +68,7 @@ function _onboardRenderStep(step){
   }else{
     return;
   }
+  // lint-xss-ok: html 为静态模板字面量，唯一插值是数字 step（1/2/3），无外部数据
   document.body.insertAdjacentHTML("beforeend", html);
   _onboardBindStep(step);
 }

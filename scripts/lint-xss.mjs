@@ -12,7 +12,7 @@
  * 本脚本把这件事变成构建期硬门禁。
  *
  * 判定规则（刻意保守，只拦「看起来真的会把外部数据拼进 HTML」的写法）：
- *   · 目标：`.innerHTML =` / `.outerHTML =` 赋值
+ *   · 目标：`.innerHTML =` / `.outerHTML =` 赋值，以及 `.insertAdjacentHTML(pos, html)`（v3.7.91 补）
  *   · 放过：右侧是空串字面量（`= ""`，清空元素）、或右侧含 `sanitizeHtml` / `esc(`
  *   · 拦下：右侧含插值（模板 `${…}` 或字符串拼接 `+` 且不是纯字面量拼接）
  *   · 豁免：该行或上一行带 `lint-xss-ok:` 注释（必须写明理由）
@@ -75,6 +75,16 @@ function stripI18n(rhs) {
  * 这类变量在赋值点已经消毒，后续 `x.innerHTML = thatVar` 是安全的。
  * 这是**启发式**：同名变量若在别处被赋成未消毒内容会漏判，但相比「所有间接引用都报」，
  * 它把噪声从十几处降到个位数，门禁才可能被真正执行（否则处处豁免 = 没有门禁）。
+ *
+ * v3.7.91 修一处**已被实测复现的漏判**：本函数只看 `const x = sanitizeHtml(...)` 的
+ * 首次赋值，不追后续覆写。于是
+ *     let safeHtml = sanitizeHtml("<i>x</i>");
+ *     safeHtml = evil;            // 覆写成未消毒内容
+ *     el.innerHTML = safeHtml;    // 门禁放过（因 safeHtml 在 names 里）→ 漏报
+ * 复现方式：把上面三行追加进任一 src 文件，`--check` 仍 exit 0（修前实测）。
+ * 现补一条：**任何非声明式重新赋值**（`x = ...`，排除 `x == / === / >=` 等比较）
+ * 都从 names 中移除 —— 覆写后不再可信。当前生产代码零实例（已全仓扫描确认），
+ * 属防未来回归的硬化，不改变今日判定结果。
  */
 function sanitizedNames(text) {
   const names = new Set();
@@ -84,6 +94,20 @@ function sanitizedNames(text) {
   const re = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*[^;\n]*?\b(sanitizeHtml|esc)\b/g;
   let m;
   while ((m = re.exec(text)) !== null) names.add(m[1]);
+  if (!names.size) return names;
+  /* 逐名检查是否在声明之外被重新赋值。用「声明语句之外出现 `x =`」判定，
+     并排除 `=>`（箭头）、`==`/`===`/`!=`/`!==`/`<=`/`>=`（比较）与对象字面量键（`{x: ...}` 不匹配 `=`）。 */
+  for (const n of [...names]) {
+    const esc = n.replace(/[$]/g, "\\$");
+    const reassign = new RegExp(
+      "(?:^|[^\\w$.])" + esc + "\\s*=(?!=|>)",
+      "gm"
+    );
+    const decl = new RegExp("(?:const|let|var)\\s+" + esc + "\\s*=(?!=|>)", "g");
+    const total = (text.match(reassign) || []).length;
+    const declCount = (text.match(decl) || []).length;
+    if (total > declCount) names.delete(n); // 有声明之外的赋值 → 不再可信
+  }
   return names;
 }
 
@@ -95,7 +119,12 @@ for (const f of files) {
   const text = readFileSync(join(SRC, f), "utf8");
   const lines = text.split("\n");
   const safeNames = sanitizedNames(text);
-  const re = /\.(inner|outer)HTML\s*=\s*/g;
+  /* v3.7.91：原只扫 `.innerHTML =` / `.outerHTML =`。补上 `insertAdjacentHTML(pos, html)`
+     —— 它把字符串**按 HTML 解析**，XSS 面与 innerHTML 完全相同，却不在门禁视野里
+     （全仓 11 处，其中 10 处在 src/；本仓是「约定式安全」：渲染函数由调用方负责包
+     sanitizeHtml，缺了这一道就没有第二层兜底）。
+     判定沿用同一套：取第二个实参为 rhs，同样放过 sanitizeHtml/esc/纯字面量/已消毒变量。 */
+  const re = /\.(inner|outer)HTML\s*=\s*|\.insertAdjacentHTML\s*\(\s*[^,)]*,\s*/g;
   let m;
   while ((m = re.exec(text)) !== null) {
     const rhsStart = m.index + m[0].length;

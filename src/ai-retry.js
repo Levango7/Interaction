@@ -369,6 +369,7 @@ function openConfirmModal(){
         </div>
       </div>
     </div></div>`;
+  // lint-xss-ok: html 为本地模板字面量，插值仅 t() 字典值、uniq(工具名常量数组，来自 pendingConfirm.toolCalls[].name) 与 esc(pendingConfirm.title)
   document.body.insertAdjacentHTML("beforeend", html);
   const modal=$("#aiConfirmModal");
   modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
