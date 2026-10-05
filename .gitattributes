@@ -7,3 +7,9 @@
 *.json text eol=lf
 *.css text eol=lf
 *.md text eol=lf
+# v3.7.90 补：workflow 与 yml 也锁 LF。原先未列 → 实测仓库内 4 个 yml 的 blob 均为 LF
+# （因 core.autocrlf=true 会自动归一化），故**当前零实际影响**；此处是防御性加固，
+# 防将来有人以 autocrlf=false 提交 CRLF 的 yml 混入（GitHub Actions 两种都能跑，
+# 但仓库内混行尾会污染 diff 与字节级比对）。
+*.yml text eol=lf
+*.yaml text eol=lf
