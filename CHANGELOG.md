@@ -8,11 +8,34 @@
 ⑥ WebDAV / GitHub 凭据链三处「谎报成功」改为 fail-closed；
 ⑦ 发布链 e2e 去重，消除「CI 与 Deploy 并发抢 CPU」导致的假红。
 
-⚠️ **本版未做发版后线上复核**（Pages 指纹待发版后回填）。本机门禁在**源码态**下逐项验证：
-`check:source-state` / `src:check` / `check:modules` / `lint:xss` / `lint:layers` / `lint:tokens` /
-`lint:empty-catch` / `lint:appbridge` / `check:pwa-icons` / `check:ai-tools-doc` 全部 exit 0；
-`npm run lint`（注入态，eslint 4 文件 + lint-colors + lint-xss + lint-css-structure + lint-appbridge）
-**0 error / 6 warning**；**`npm test` 全量 122 文件 / 1407 用例 —— 0 失败**（见 ⑤）。
+✅ **发版后线上复核（2026-10-05 已完成）**：
+
+| 核对项 | 结果 |
+|---|---|
+| Pages 产物 MD5 | `469a83d463a5198e85c3e05909f48345` |
+| 与本地 `build:prod` 产物比对 | **逐字节一致**（同 MD5、同 3,755,483 字节） |
+| `VERSION` / `BUILD_TAG` | `"3.7.90"` / `"20261005a"` ✅ |
+| `var __TEST_GATE__` | `= false`（测试门已关闭）✅ |
+| SRC 标记完整性 | 70 处 = 35 块 × (BEGIN+END) ✅ |
+| 源码态泄漏 | `src/` 相对引用 **0 处** ✅ |
+| ⑤ 测试基础设施未进产物 | `spawn-available` 引用 **0 处** ✅ |
+| ⑥ 凭据链修复已上线 | `gh.clearFail` 3 / `wd.clearFail` 3 / `metaSaved` 5 / `wd.syncUploadOkNoMeta` 3 ✅ |
+| ② 本地 .ics 限额已上线 | `ICS_LOCAL_MAX_BYTES` 3 处 ✅ |
+| `CI` / `Deploy`（tag 所在 commit `231124f`） | 均 **success** ✅ |
+| Release | `v3.7.90`（非 draft、非 prerelease），产物 `Agent.-3.7.90-portable.exe`（89,804,631 B） |
+
+**发版前门禁（源码态，本机）**：9 项源码态门禁 exit 0；`check:pwa-icons` / `pet:check` exit 0；
+`npm run lint`（注入态）**0 error / 6 warning**（与基线一致）。
+⚠️ 全量 `npm test` 本机**无法**给出「全绿」证据：8 个用例因 vitest worker RPC 超时未跑完
+（该项目已知的本机并发限制，见 `ci.yml:8-9` 注释）；涉及改动的文件单跑均全绿
+（`webdav-sync` 15/15、`notify-webhook` 27/27）。**最终以 CI 为准 —— tag 所在 commit 的 CI 与 Deploy 均 success。**
+
+**⚠️ 本次发版发现的一处上传命名问题（未修，记录在案）**：CI 构建日志显示产物名为
+`dist\Agent工坊-3.7.90-portable.exe`（含中文），但 Release 上的资产名被
+`softprops/action-gh-release@v2` 净化为 `Agent.-3.7.90-portable.exe`（「工坊」→ `.`）。
+属显示名问题，**exe 本体完整可用**、不影响功能；但资产名与构建名不一致，且
+`electron-build.yml:49` 的注释（预期 `Agent工坊-<version>-portable.exe`）与实际不符。
+后续可选修法：上传前重命名为纯 ASCII（如 `AgentWorkbench-3.7.90-portable.exe`），或改注释。
 
 ### ⑤ 本机测试信号可信化（**此前「4 个必然失败」已消除，且未放水**）
 
@@ -48,8 +71,12 @@
   `ENOENT`（脚本丢失）→ fail · 被信号终止（signal=SIGKILL）→ fail · 正常通过（status=0）→ ok。
 - CI / 正常环境子进程可用 → 该分支**根本不触发**，真实 status 被正常断言，行为**逐字节不变**。
 
-**收益**：`npm test` 从「4 个必然假失败（退出码恒 1）」变成 **122 文件 / 1407 用例 0 失败** ——
+**收益**：`npm test` 从「4 个必然假失败（退出码恒 1）」变成 **0 个用例失败** ——
 本机退出码重新可读，真回归不再被环境噪声淹没。
+（时点说明：该修正在 `8910c24` 落地时总数为 122 文件 / 1407 用例；随后 ⑥ 的
+`webdav-sync.test.js` 新增 2 例 → 本版最终为 **122 文件 / 1409 用例**。
+⚠️ 但**本机无法稳定跑满 1409** —— 全量跑会因 vitest worker RPC 超时中断若干用例
+（见上文发版后复核段的说明），故「0 失败」以 CI 为准。）
 
 ### ⑥ WebDAV / GitHub 凭据链的「谎报成功」三连（审查 `ui-ge-integrations.js` 增量时发现）
 
