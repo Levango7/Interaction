@@ -10685,6 +10685,7 @@ const MESSAGES = {
     "p5.icsAdded": "已添加，载入 {n} 个事件",
     "p5.icsAddFail": "已添加但拉取失败（稍后可刷新重试）",
     "p5.icsImported": "已导入 {n} 个事件",
+    "p5.icsTooLarge": "文件过大（上限 {n}MB），未导入",
     "p5.icsImportFail": "未在该文件里找到事件",
     "p5.icsRefreshed": "刷新完成：{ok} 成功 / {fail} 失败",
     "p5.icsRefreshedOne": "已刷新：{n} 个事件",
@@ -14521,6 +14522,7 @@ const MESSAGES = {
     "p5.icsAdded": "Added, loaded {n} events",
     "p5.icsAddFail": "Added but the fetch failed (retry by refreshing later)",
     "p5.icsImported": "Imported {n} events",
+    "p5.icsTooLarge": "File too large (limit {n}MB); nothing imported",
     "p5.icsImportFail": "No events found in that file",
     "p5.icsRefreshed": "Refresh done: {ok} ok / {fail} failed",
     "p5.icsRefreshedOne": "Refreshed: {n} events",
@@ -15537,6 +15539,40 @@ function _isDangerousUrlValue(raw){
   const v = _decodeUrlEntities(raw).replace(/[\u0000-\u0020]+/g, "");
   return /^(javascript|vbscript|data):/i.test(v);
 }
+/**
+ * 消毒 `style` 属性的**值**（v3.7.90 新增）。
+ *
+ * 背景：本消毒器此前只处理标签、`on*` 事件与 URL 类属性，**不看 style 的值**。
+ * 而全仓有约 25 处把动态值直接拼进内联 style（形如把 `s.color` 写进 style 的 color 值），
+ * 其中 `s.color` 来自场景定义 —— 自定义场景 / 插件 JSON / **导入的备份与云快照**都能写入任意值。
+ * 于是可注入 CSS。危害不是执行 JS（现代浏览器 CSS 里做不到），而是：
+ *   · `url(...)` → 渲染即向外部发起请求（信标/追踪，且能证明"某条数据被渲染过"）；
+ *   · `@import` / `behavior:` / `-moz-binding` → 加载外部样式或历史 JS 绑定；
+ *   · `position:fixed|absolute` + `inset` + `z-index` → 造出全屏覆盖层做界面伪装（钓鱼）。
+ *
+ * **刻意不拦 `top/left/right/bottom`**：全仓有合法内联用法
+ *   （`render-widgets.js:526` 画布卡片 `style="left:${it.x}px;top:${it.y}px;…"`、
+ *    `render-scene-main.js:47` 虚拟滚动 `style="top:${range.offsetY}px"`）。
+ *   而 `\btop\s*:` 这种写法还会误伤 `margin-top:` / `border-top:` —— 一并避免。
+ *   只拦 position/inset/z-index 三者，已足以阻断「从未定位元素造出全屏覆盖层」这条路
+ *   （z-index 对未定位元素无效）。
+ * 实测（2026-10-05）：src 与 HTML 骨架的内联 style 里 position / inset / z-index **零命中**，
+ * 故无副作用。
+ * @param {string} v
+ * @returns {string}
+ */
+function _sanitizeStyleValue(v){
+  let out = String(v == null ? "" : v);
+  out = out.replace(/url\s*\([^)]*\)/gi, "");        // 外部资源 / 信标
+  out = out.replace(/@import/gi, "");
+  out = out.replace(/-moz-binding\s*:/gi, "");
+  out = out.replace(/\bbehavior\s*:/gi, "");
+  out = out.replace(/\b(javascript|vbscript)\s*:/gi, "");
+  out = out.replace(/expression\s*\(/gi, "");        // 与步骤 5 双保险（此处针对 style 值）
+  // 定位/层级：以「声明起始或分号后」为界，避免误伤 background-position 之类
+  out = out.replace(/(^|;)([^;]*?)\b(position|inset|inset-[a-z]+|z-index)\s*:[^;]*/gi, "$1");
+  return out;
+}
 function sanitizeHtml(html){
   if (!html || typeof html !== "string") return "";
   let s = html;
@@ -15590,6 +15626,16 @@ function sanitizeHtml(html){
     // 4b. 无引号情况
     s = s.replace(/(href|src|xlink:href|formaction|action|poster|background|dynsrc|lowsrc)\s*=\s*([^\s>"']+)/gi, function(m, attr, val){
       return _isDangerousUrlValue(val) ? attr + '=""' : m;
+    });
+    // 4c. 消毒 style 属性的**值**（v3.7.90，见 _sanitizeStyleValue 的说明）。
+    //     此前的 URL 属性清单里没有 style —— 而全仓约 25 处把动态值拼进内联 style。
+    //     统一重写为双引号形式，顺带消除无引号写法带来的解析歧义。
+    s = s.replace(/\sstyle\s*=\s*("([^"]*)"|'([^']*)')/gi, function(m, _q, dq, sq){
+      const val = dq !== undefined ? dq : (sq !== undefined ? sq : "");
+      return ' style="' + _sanitizeStyleValue(val) + '"';
+    });
+    s = s.replace(/\sstyle\s*=\s*([^\s>"']+)/gi, function(m, val){
+      return ' style="' + _sanitizeStyleValue(val) + '"';
     });
     // 5. 移除 CSS expression() 及其编码变体（\28 / \x28 等编码括号）
     s = s.replace(/expression\s*\(/gi, "");
@@ -16075,13 +16121,34 @@ BUILTIN_SC_KEYS.forEach(k => { SC_ORIGINALS[k] = { name: SCENARIOS[k].name, colo
  */
 /**
  * 场景色 hex → 可安全内联的 CSS 颜色（出厂值走主题令牌，自定义值原样返回）
+ *
+ * v3.7.91（纵深防御）：本函数的返回值被 3 处直接内联进 HTML 属性，**未经 esc()**：
+ *   · ui-scene-bind.js:276  `style="--sc:${scCss(s.color)}"`
+ *   · ui-drawer.js:909      `style="background:${scCss(s.color)};..."`
+ *   · ui-guide.js:214       `style="background:${scCss(sm.color)};..."`
+ * 现状**不可注入** —— 进入 SCENARIOS[].color 的三条路径都过了 `/^#[0-9a-fA-F]{6}$/`
+ *   · toScenarioEntry（自定义场景）
+ *   · pluginScenarioToEntry（插件场景）
+ *   · registerCustomScenarios 的内置覆盖（o.color）
+ * 兜底 scMeta() 也返回常量 var(--muted)。实测投毒 `color:'red" onmouseover="alert(1)'`
+ * 被回退成场景默认色 --scenario-default（真机 Chromium 验证，DOM 内 [onmouseover] 计数 0）。
+ * **但**这条安全性完全寄生于上面三处正则 —— 一旦有人放宽其中之一、或新增一条
+ * 绕过它们的场景来源（插件热加载/未来 API），这 3 处立成 XSS。
+ * 故在此加**出口白名单**：不认识的值一律回退 var(--accent)，不再原样返回。
+ * 这样调用点即使忘了 esc() 也不会破防（一处收紧，三处受益）。
+ * 注意：白名单只做「形状」校验（不含引号/尖括号/分号），HTML 属性上下文里安全；
+ * 不追求覆盖所有合法 CSS 颜色写法，遇到不认识的一律回退 —— 宁可退成主题强调色。
  * @param {string} hex
  * @returns {string}
  */
 function scCss(hex){
   const h = String(hex || "").toLowerCase();
   const key = Object.keys(SC_ORIGINALS).find(function(k){ return SC_ORIGINALS[k] && String(SC_ORIGINALS[k].color || "").toLowerCase() === h; });
-  return key ? "var(--sc-" + key + ", " + hex + ")" : (hex || "var(--accent)");
+  if(key) return "var(--sc-" + key + ", " + hex + ")";
+  /* 出口白名单：仅放行 #RGB(A) 系与 var()/color-mix()/纯字母色名；
+     显式排除引号、尖括号、分号、括号闭合（这些是属性逃逸的必要字符）。 */
+  const SAFE = /^(?:#[0-9a-f]{3,8}|var\(--[\w-]+(?:,\s*#[0-9a-f]{3,8})?\)|color-mix\([^"'<>;]*\)|[a-z]+)$/;
+  return SAFE.test(h) ? hex : "var(--accent)";
 }
 /**
  * 场景色的浅底写法（同源色按百分比叠加，兼容 var() 令牌）
@@ -25079,6 +25146,7 @@ function _onboardRenderStep(step){
   }else{
     return;
   }
+  // lint-xss-ok: html 为静态模板字面量，唯一插值是数字 step（1/2/3），无外部数据
   document.body.insertAdjacentHTML("beforeend", html);
   _onboardBindStep(step);
 }
@@ -25382,6 +25450,7 @@ function openSharedTaskModal(task){
       <div class="share-task-body">${cardHtml}</div>
     </div>
   </div>`;
+  // lint-xss-ok: cardHtml 由 renderSharedTaskCard 生成，其全部字段（priority/due/note/tags/title/scMeta.name）均经 esc()；scCss 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   const closeBtn = $("#shareTaskClose");
   // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器
@@ -26967,6 +27036,30 @@ function _applyCloudSnapshot(data) {
   /* v3.7.67：云端恢复覆盖了本机键值，RAG 增量同步按哈希 diff 收敛（经 core 广播位，避免 Render→AI 逆层） */
   try { if (typeof emitDataMutate === "function") emitDataMutate("restore"); } catch (e) { /* 索引不阻塞恢复 */ }
 }
+
+/* ============================================================
+ * v3.7.90 修复（P0）：把云快照桥注册到 AppBridge —— 此前**从未注册过**，
+ * 导致 WebDAV 同步的上传与下载**两端在生产环境都是死的**。
+ *
+ * 取证：
+ *   · ui-ge-integrations.js:2468 `const build = AppBridge.buildCloudSnapshot;` → undefined
+ *   · ui-ge-integrations.js:2489 `const apply = AppBridge.applyCloudSnapshot;` → undefined
+ *   · 全仓对这两个名字**只有读取、零赋值**（`grep -rn 'AppBridge\.\(build\|apply\)CloudSnapshot' src/`
+ *     仅命中上面两处读取）。
+ *   · 于是 webdavSyncUpload 在 `if(typeof build !== "function")` 处 return
+ *     toast「快照构建不可用」；webdavSyncDownload 同样在 `if(typeof apply !== "function")` 处
+ *     return「快照应用不可用」—— 用户点了按钮只会看到一句「不可用」，永远发不出请求。
+ *
+ * 为什么测试没发现：`tests/webdav-sync.test.js:139-142` 的 `bridgeStub()` 自己把这两个槽**桩上了**
+ *   （`win.__test.AppBridge.applyCloudSnapshot = (data) => {...}`），且注释写的是
+ *   「render-overview 注册的快照桥**替身**」—— 即作者以为生产侧已注册。测试因此全绿，
+ *   而生产侧两个槽都是 undefined。**这正是本仓反复出现的「测试把缺失的依赖当成前提」形态。**
+ *
+ * 修复即补上注册（与 ui-ge-theme.js:933 的 `try{ AppBridge.X = fn; }catch(e){}` 同款写法）。
+ * ============================================================ */
+try{ AppBridge.buildCloudSnapshot = _buildCloudSnapshot; }catch(e){ /* 桥未就绪：不阻塞加载 */ }
+try{ AppBridge.applyCloudSnapshot = _applyCloudSnapshot; }catch(e){ /* 同上 */ }
+
 async function cloudCheckOnLogin() {
   if (!window.isApiLoggedIn()) return;
   try {
@@ -28747,8 +28840,14 @@ function bindCodeFrontendCard(){
       if(showing){ box.style.display = "none"; if(statusEl) statusEl.textContent = ""; return; } // 再点一次收起
       const doc = '<!doctype html><html><head><meta charset="utf-8"><style>' +
         String(rec.css || "") + '</style></head><body>' + String(rec.html || "") +
+        /* lint-xss-ok: **误报** —— 下面这行是拼给 iframe.srcdoc 的完整文档字符串，
+           其中的 insertAdjacentHTML 是字符串内容而非调用；用户代码 rec.js 被放进
+           <iframe sandbox="allow-scripts">（无 allow-same-origin），运行在不透明源，
+           无法触达宿主 DOM/localStorage。此处也确无外部数据进入宿主 DOM。
+           ⚠️ 本说明**必须**放在 eslint-disable 指令**之前** —— 放它俩中间会顶开
+           `next-line` 的作用目标，导致 no-useless-escape 三条误报（实测踩到）。 */
         // eslint-disable-next-line no-useless-escape -- <\/script> 的反斜杠是必需的：防止宿主 <script> 标签被内嵌文本提前闭合
-        '<script>try{' + String(rec.js || "") + '}catch(e){document.body.insertAdjacentHTML("beforeend","<pre class=\"u-p-2\" style=\\"color:#d83b3b;font:12px monospace\\">JS Error: "+(e&&e.message||e)+"</pre>")}<\/script></body></html>';
+        '<script>try{' + String(rec.js || "") + '}catch(e){document.body.insertAdjacentHTML("beforeend","<pre class=\"u-p-2\" style=\\"color:#d83b3b;font:12px monospace\\">JS Error: "+(e&&e.message||e)+"</pre>")}<\/script></body></html>'; // lint-xss-ok: 本行是 iframe.srcdoc 文档字符串，其中的 insertAdjacentHTML 是字符串内容非调用（sandbox allow-scripts，无 same-origin）
       box.innerHTML = "";
       const frame = document.createElement("iframe");
       frame.setAttribute("sandbox", "allow-scripts");
@@ -30630,6 +30729,7 @@ function openTaskEdit(id){
         </div>
       </form>
     </div></div>`;
+  // lint-xss-ok: 任务编辑弹窗；插值仅 esc(task.*) 与 t() 字典值；priSel/statusSel 由固定枚举生成；scCss(s.color) 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   const modal = $("#taskEditModal");
   modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
@@ -31975,6 +32075,7 @@ function openConfirmModal(){
         </div>
       </div>
     </div></div>`;
+  // lint-xss-ok: html 为本地模板字面量，插值仅 t() 字典值、uniq(工具名常量数组，来自 pendingConfirm.toolCalls[].name) 与 esc(pendingConfirm.title)
   document.body.insertAdjacentHTML("beforeend", html);
   const modal=$("#aiConfirmModal");
   modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
@@ -36803,6 +36904,7 @@ function openChainShareModal(){
       </div>
     </div>
   </div>`;
+  // lint-xss-ok: html 为本地模板字面量；链分享/导入/场景模板三处插值仅 t() 字典值 + numbers + esc(code) + 各子渲染内部已 esc()；插件详情页各字段均 esc()
   document.body.insertAdjacentHTML("beforeend", html);
   const close = ()=>{ const m = $("#chainShareModal"); if(m) m.remove(); };
   $("#chainShareClose").onclick = close;
@@ -36837,6 +36939,7 @@ function openChainImportModal(){
       </div>
     </div>
   </div>`;
+  // lint-xss-ok: 同文件同类弹窗；插值仅 t() 字典值、numbers、esc(...) 与内部已 esc 的子渲染；scCss 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   const close = ()=>{ const m = $("#chainImportModal"); if(m) m.remove(); };
   $("#chainImportClose").onclick = close;
@@ -37006,6 +37109,7 @@ function openTemplateModal(){
       </div>
     </div>
   </div>`;
+  // lint-xss-ok: 同文件同类弹窗；插值仅 t() 字典值、numbers、esc(...) 与内部已 esc 的子渲染；scCss 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器
   const _ac = new AbortController();
@@ -37139,6 +37243,7 @@ function openPluginDetailModal(id){
       + '</div>'
     + '</div>'
   + '</div>';
+  // lint-xss-ok: 同文件同类弹窗；插值仅 t() 字典值、numbers、esc(...) 与内部已 esc 的子渲染；scCss 已加出口白名单
   document.body.insertAdjacentHTML("beforeend", html);
   // M1：用 AbortController 管理模态框事件生命周期，任意方式关闭均统一清理 keydown 监听器
   const _ac = new AbortController();
@@ -37646,6 +37751,7 @@ document.addEventListener("keydown", e=>{
     if (EDITABLE) {
       /* input 不能有子元素 → caret 作为兄弟节点绝对定位（见 .ds-select--edit .ds-caret） */
       wrap.appendChild(trigger);
+      // lint-xss-ok: CARET 是本文件顶部的 SVG 字符串常量，无外部数据
       wrap.insertAdjacentHTML("beforeend", CARET);
       wrap.classList.add("ds-select--edit");
     } else {
@@ -45465,7 +45571,28 @@ function _intIsSensitiveField(name){
   const n = String(name || "").toLowerCase();
   if(n === "key" || n === "password") return true;
   const parts = n.split(/[^a-z0-9]+/);
-  return parts.some(p => p === "secret" || p === "token" || p === "key" || p === "password" || p === "apikey");
+  if(parts.some(p => p === "secret" || p === "token" || p === "key" || p === "password" || p === "apikey")) return true;
+  /* v3.7.90 补漏（**潜在**脆弱性，非活跃泄漏 —— 已逐字段核实）：
+     上面的分词只按非字母数字切，**camelCase / 全连写不会被切开** ——
+     `appSecret` → parts=["appsecret"]、`accessToken` → ["accesstoken"]、`clientSecret` → ["clientsecret"]，
+     三者都成为**单个** token，于是 `=== "secret"` 等比较全部不成立 → 被判「非敏感」→ 明文落盘。
+     实测该函数：appSecret / accessToken / clientSecret / credential **四项全部漏判**
+     （而 app_secret / access_token / refresh_token 正常命中 —— 差别只在有没有分隔符）。
+     另：webhook 地址字段名 `url`（字段定义里标了 secret:true，URL 本身即凭据）同样判为 false。
+
+     当前是否已造成明文落盘？**没有** —— 逐项核实过：
+       · `appSecret` 全仓只出现在注释里（feishu/dingtalk 那套企业应用已整批删除）；
+       · `accessToken` 走的是 ui-ge-api.js 自己的密封链，不经本函数；
+       · `clientSecret` / `credential` 仅出现在 i18n 文案；
+       · `url` 的三个 webhook provider（slack/feishu/dingtalk）经核实**不落盘**
+         （slackConnect/feishuConnect/dingtalkConnect 均不调 integrationRegisterProvider / _intSaveProviders）。
+     即：**今天不漏，但下一个用 camelCase 命名凭据字段的 provider 会静默漏** —— 没有任何测试或门禁会拦。
+     故在此补一遍**子串**匹配（高置信词干），并排除少量常见误伤（计数/展示类字段）。
+     注意本函数只在**落盘密封**时被调用，判定偏严的后果是「该字段在不可加密环境被丢弃」，
+     方向是 fail-closed（丢字段而非漏明文），与 _intSealState 的 D4 约定一致。 */
+  const BENIGN = /^(?:token|key|secret|password)(?:count|name|label|type|len|size|ttl|expiry|prefix|suffix|list)$/;
+  if(BENIGN.test(n)) return false;
+  return /(secret|token|password|apikey|credential|passwd)/.test(n);
 }
 function _intIsSealed(v){ return v && typeof v === "object" && v.__enc === true && typeof v.iv === "string" && typeof v.data === "string"; }
 /**
@@ -47507,11 +47634,35 @@ async function githubToken(){
     return typeof raw === "string" ? raw : "";
   }catch(e){ return ""; }
 }
+/**
+ * 加密凭据；**加密不可用时返回 null（拒绝保存）**，绝不落明文。
+ *
+ * v3.7.90 安全修正：本文件原先把两处凭据写成
+ *     const enc = (typeof encryptKey === "function") ? await encryptKey(secret) : secret;
+ * 即「加密层没就绪就把凭据明文写进 localStorage」。这违反项目自己已确立的原则 ——
+ * `src/crypto.js:119-130` 对 AI Key 的处理是「加密失败则**丢弃**，不落明文」。
+ * 更糟的是 UI 文案仍显示「已保存（应用密码加密存储）」，属明文落盘 + 虚假提示双重问题。
+ *
+ * 触发条件（实测可达）：`encryptKey` 仅在 crypto 层初始化且 Web Crypto / 设备密钥可用时存在；
+ * `initCrypto()` 未跑或抛错时它就是 undefined，而这条分支不会报错、不会提示，只是悄悄写明文。
+ *
+ * 现改为：不可用 → null；调用方按失败处理（`githubTokenSet` 的调用点已能识别 `!saved`，
+ * `webdavSaveCfg` 的调用点会 toast「保存失败」）。**读回路径不变**，历史上已落明文的旧值仍可读，
+ * 不会造成数据丢失。
+ * @param {string} secret
+ * @returns {Promise<string|null>}
+ */
+async function _encryptSecretOrRefuse(secret){
+  if(typeof encryptKey !== "function") return null;
+  try{ return await encryptKey(secret); }
+  catch(e){ return null; }
+}
 /** 保存 device token（加密落盘；失败如实返回 false） */
 async function githubTokenSet(token){
   try{
     if(!token) return githubTokenClear();
-    const enc = (typeof encryptKey === "function") ? await encryptKey(token) : token;
+    const enc = await _encryptSecretOrRefuse(token);
+    if(enc === null) return false;   // 加密不可用：宁可存不下，也不落明文
     save(PREFIX + GH_TOKEN_KEY, enc);
     return true;
   }catch(e){ return false; }
@@ -47653,7 +47804,10 @@ async function webdavSaveCfg(cfg){
     save(PREFIX + WD_CFG_KEY, { url: String(cfg.url).replace(/\/+$/, ""), user: String(cfg.user || ""), path: String(cfg.path || WD_DEF_PATH) });
     const pass = String(cfg.pass || "");
     if(pass){
-      const enc = (typeof encryptKey === "function") ? await encryptKey(pass) : pass;
+      /* v3.7.90：加密不可用 → 拒绝保存（原实现 `: pass` 会静默落明文，
+         而调用点 toast 却写「已保存（应用密码加密存储）」）。详见 _encryptSecretOrRefuse。 */
+      const enc = await _encryptSecretOrRefuse(pass);
+      if(enc === null) return false;
       save(PREFIX + WD_PASS_KEY, enc);
     }
     return true;
