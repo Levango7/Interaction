@@ -58,9 +58,45 @@
 本次**不删**（属重构范畴，且 `_calcTodayKpi()` 仍被 `ui-ge-calendar.js:717` 使用，删函数会连带受影响），
 仅在测试注释中标注「疑似入口实为死代码」，避免后来人再次误用。
 
+### ③ `electron-build.yml` 产物重命名步骤「零匹配即静默通过」（**继承自 v3.7.90 未验证的修复**）
+
+**发现路径**：核对 v3.7.91 发版前置状态时，回查 v3.7.90 的 Release —— 资产名**仍是** `Agent.-3.7.90-portable.exe`
+（「工坊」被净化为 `.`）。而 v3.7.90 的 electron-build run `37348499983` 的步骤列表里**根本没有「重命名为纯 ASCII」这一步**。
+
+**根因（时序，事实）**：`c15d84e`（加重命名步骤）提交于 `2026-10-06 01:50:35`，
+而 `v3.7.90` tag 指向 `231124f`（`01:13:42`）——**修复晚于 tag**，那次构建跑的是旧 workflow。
+即第七轮的 `c15d84e` 属于「已在 main、未在真实 tag 上验证」的状态。
+
+**顺带发现的真隐患（本地复刻实测）**：把 `c15d84e` 的脚本单独拉出来跑，在
+`dist/` 只有 `setup.exe`（无 `*-portable.exe`）时 —— `set -euo pipefail` + `shopt -s nullglob`
+下 for 循环**零次迭代**，脚本**EXIT=0 且无任何输出**。
+即：若 electron-builder 将来因配置变动改了产物名，重命名会「静默成功」、一个文件都没改却报绿，
+Release 会重新带出中文名，而**门禁不红**。这是本项目反复出现的「谎报成功」模式的又一例。
+
+**修复**（`electron-build.yml`）：
+- 先用 `files=(dist/*-portable.exe)` 收集，`${#files[@]} -eq 0` 时打 `::error::` 并 `exit 1`（附 `ls dist/` 便于定位）；
+- 维护 `renamed` 计数，末尾断言 `-ge 1`；
+- **终态复核**：`ls dist/*.exe` 经 `LC_ALL=C grep -q '[^ -~]'` 确认无残留非 ASCII 文件名 —— 这才是本步骤的真正目标。
+
+**新增回归护栏**（`tests/ci-workflow-guard.test.js`，7 条，读 YAML 文本的静态断言）：
+零匹配必红 / 解析失败必红 / 计数兜底 / 终态非 ASCII 复核 / 路径自洽 / 步骤顺序。
+**变异反向验证**（5 条，每条都让对应断言变红）：
+| 变异 | 被哪条断言抓住 |
+|---|---|
+| 删零匹配守卫 | 「零匹配时必须显式报红」 |
+| 删 `renamed >= 1` 兜底 | 「必须有计数兜底」 |
+| 删终态非 ASCII 复核 | 「终态复核」 |
+| 版本解析改 `continue`（静默跳过） | 「版本号解析失败必须显式报红」 |
+| 把重命名步骤移到上传之后 | 「重命名步骤排在上传之前」 |
+
+⚠️ 第 4 条变异**首版没被抓住**（断言 `toMatch(/...[\s\S]*?exit 1/)` 太宽松，`continue` 版仍匹配到别处的 `exit 1`），
+已改为精确锁 `[-n "$ver"]...exit 1` + 负向断言 `not.toMatch(...continue)`。**这正是变异验证的价值所在。**
+
 ### 验证
 
-**新增回归护栏**（`tests/electron-guard.test.js` 新增「④ CSP 响应头注入」4 条）：
+**新增回归护栏**（`tests/electron-guard.test.js`「④ CSP 响应头注入」4 条 + `tests/ci-workflow-guard.test.js` 7 条）：
+
+**CSP 响应头注入**（4 条）：
 1. `main.js` 真实调用 `session.defaultSession.webRequest.onHeadersReceived`；
 2. `installCsp()` 排在 `createWindow()` **之前**；
 3. `buildCspHeader()` 输出：保留 meta 全部指令 + 追加 `frame-ancestors 'none'`，
@@ -79,9 +115,14 @@
 
 **门禁**：`check:source-state` / `src:check` / `check:modules` / `check:ai-tools-doc` / `lint:xss` /
 `lint:layers` / `lint:tokens` / `lint:empty-catch` / `lint:appbridge` / `check:pwa-icons` **全部通过**；
-`electron-guard` + `electron-ipc` + `round4-batch4-electron` = **72 用例全绿**。
+`electron-guard` + `electron-ipc` + `round4-batch4-electron` + `ci-workflow-guard` = **79 用例全绿**。
 （`lint:appbridge` 报「core 声明 61 槽 · 赋值 65 槽 · 读取 55 槽 → 无死槽」，
 但 `_renderOvKpi` 这类**普通函数**死代码不在桥槽体系内，门禁抓不到 —— 需人工发现。）
+
+**CI/Deploy 实证**（`f1869ae`）：CI `37357871130` **success**；
+Deploy `37357871084` 四 job = `ci-e2e-status` success → `verify` success → **`e2e` skipped** → `deploy` success
+（v3.7.90 引入的发布链 e2e 去重**持续生效**）。
+其中 CI 的 `e2e` job `✓ Run E2E (full user flow)` 通过 —— 印证本轮「统计断言恢复真执行」在真实 CI 环境成立。
 
 ---
 

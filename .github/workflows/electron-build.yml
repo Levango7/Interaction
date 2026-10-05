@@ -65,15 +65,45 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          for f in dist/*-portable.exe; do
+
+          # v3.7.91 加固：原版 `for f in dist/*-portable.exe` 在**零匹配**时循环零次迭代，
+          # 配合 `set -e` 也不报错 → 重命名「静默成功」，一个文件都没改却报绿。
+          # （本机复刻实测：目录里只有 setup.exe 时 EXIT=0，无任何告警。）
+          # 若将来 electron-builder 因配置变动改了产物名，Release 会重新带出中文名且门禁不红。
+          # 故先**强制**要求存在匹配，并用计数兜底。
+          files=(dist/*-portable.exe)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::未找到 dist/*-portable.exe —— electron-builder 产物名可能已变动（检查 electron/package.json 的 productName/artifactName），拒绝静默通过"
+            echo "--- dist 实际内容 ---"
+            ls -la dist/ || true
+            exit 1
+          fi
+
+          renamed=0
+          for f in "${files[@]}"; do
             base=$(basename "$f")
             ver=$(sed -n 's/.*-\([0-9][0-9.]*\)-portable\.exe/\1/p' <<< "$base")
-            [ -n "$ver" ] || { echo "无法从 $base 解析版本号"; exit 1; }
+            [ -n "$ver" ] || { echo "::error::无法从 $base 解析版本号"; exit 1; }
             new="AgentWorkbench-${ver}-portable.exe"
-            [ "$base" = "$new" ] && { echo "已是 ASCII 名：$base"; continue; }
+            [ "$base" = "$new" ] && { echo "已是 ASCII 名：$base"; renamed=$((renamed+1)); continue; }
             mv "$f" "dist/$new"
             echo "重命名：$base -> $new"
+            renamed=$((renamed+1))
           done
+
+          # 兜底断言：至少处理了 1 个产物（防未来逻辑改动引入新的静默路径）
+          [ "$renamed" -ge 1 ] || { echo "::error::重命名步骤未处理任何产物"; exit 1; }
+
+          # 终态复核：dist 下**不得**残留非 ASCII 名字的 exe（这才是本步骤的真正目标）
+          shopt -u nullglob
+          if ls dist/*.exe 2>/dev/null | LC_ALL=C grep -q '[^ -~]'; then
+            echo "::error::dist 下仍存在非 ASCII 文件名的 exe："
+            ls -la dist/*.exe
+            exit 1
+          fi
+          shopt -s nullglob
+
+          echo "✅ 已处理 $renamed 个产物，且 dist 下无非 ASCII 文件名"
           ls -la dist/*.exe
 
       - name: 列出产物
