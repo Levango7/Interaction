@@ -1,10 +1,12 @@
 ## [v3.7.90] - 2026-10-05
 
-**主进程外发通道收口 + 两类入口限额对齐 + AppBridge 死槽门禁 + 第三方审计修复收口 + 本机测试信号可信化。**
-本版五块改动互不重叠：① `electron/main.js` 把 5 条外发 IPC 里**完全同构**的部分收成公共常量/助手；
+**主进程外发通道收口 + 两类入口限额对齐 + AppBridge 死槽门禁 + 第三方审计修复收口 + 本机测试信号可信化 + 凭据链谎报成功 + 发布链 e2e 去重。**
+本版七块改动互不重叠：① `electron/main.js` 把 5 条外发 IPC 里**完全同构**的部分收成公共常量/助手；
 ② 本地 `.ics` 导入补体积上限（与网络订阅同口径）；③ `lint-appbridge` 从「只查死赋值」扩到
 「**死读取**」并接入 `npm run lint`；④ 第三方审查发现的门禁/回归项收口；
-⑤ **消除「本机测试全量假失败」** —— 见下方 ⑤，这是本版最有价值的一项。
+⑤ **消除「本机测试全量假失败」** —— 这是本版最有价值的一项；
+⑥ WebDAV / GitHub 凭据链三处「谎报成功」改为 fail-closed；
+⑦ 发布链 e2e 去重，消除「CI 与 Deploy 并发抢 CPU」导致的假红。
 
 ⚠️ **本版未做发版后线上复核**（Pages 指纹待发版后回填）。本机门禁在**源码态**下逐项验证：
 `check:source-state` / `src:check` / `check:modules` / `lint:xss` / `lint:layers` / `lint:tokens` /
@@ -133,6 +135,54 @@ UI 由 `ui-global-events.js` 渲染，14 处插值**全部** `esc()` 包裹且�
   已在文档里把这段错误与更正过程**保留**，作为「照抄工具输出而不实测」的反面案例。
 - 工作区 `nul` 根因确认：`> nul`（本意 `/dev/null`）在 Git Bash 下会真建文件，内容是 `[pet-art]` 构建日志行。
   已不存在，无需处理。
+
+### ⑦ 发布链 e2e 去重：消除「并发抢 CPU」导致的假红
+
+**问题**：`ci.yml` 与 `deploy.yml` **各自独立跑一遍同一套 e2e**，且两者都由 `push: branches:[main]`
+触发 —— 每次 push 同时起两个 run，叠加 `ci.yml` 的 windows/ubuntu 双矩阵 `test` job，
+同一时刻有 **5 个重负载 job 抢 CPU**。`playwright.config.js` 恒 `workers:1`，
+单 chromium 实例对 CPU 饥饿极敏感，于是 e2e 偶发假红。
+
+**取证（决定性对照）**：run `37324421400`（commit `d2d11d4`）e2e **红**，而**同一 commit** 的
+`ci.yml` run `37324421579` e2e **全绿 82 passed**。代码同一、用例同一、runner 镜像逐字一致
+（ubuntu-24.04 / image 20260927.320.1 / node 20.20.2）→ **一处红一处绿，只能是环境抖动，不是回归**。
+饥饿指纹另见：该次 `i18n.spec.js:95` 首跑 **16.7s**，CI 同用例仅 **2.6s**（慢 6.4 倍），
+重试即回到 **2.7s**；`workflow.spec.js:41` 同型（10.7s → retry 3.0s）。
+
+**处置**：`deploy.yml` 新增前置 job `ci-e2e-status`，用 `gh api` 探测「**该 commit 的 `ci.yml` e2e
+是否已 success**」，据结果决定本 workflow 的 e2e 跑不跑：
+
+| 探测结果 | 行为 |
+|---|---|
+| `ci.yml` 的 e2e 已 success | 本 workflow 的 e2e **跳过**（`skip=true`）—— 不重复、不抢 CPU |
+| 该 e2e 为 failure/cancelled | 本 workflow **自己全量跑** —— 兜住门禁 |
+| 查不到 / 403 / 网络异常 / 轮询超时（12 分钟） | 同上，**自己跑** |
+
+**为什么不是「删掉一侧」**：`deploy.yml` 的 `verify` job 内联了全套门禁（与 `ci.yml` 逐条对齐），
+**e2e 是它唯一缺口** —— 删了就等于「上线产物可能没过 e2e」，与该项目
+`deploy.yml:22-26` 明确写下的「『CI 全绿才上线』不能只做一半」直接冲突。故保留并去重，而非删除。
+
+**两处必须显式处理的坑（均已按官方语义验证）**：
+
+1. **`needs` 遇 `skipped` 会连带跳过依赖者**。官方文档（「Defining prerequisite jobs」）：
+   「If a job **fails or is skipped**, all jobs that need it are **skipped**」。
+   故 `deploy` job 加
+   `if: always() && needs.verify.result == 'success' && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')`。
+   **不能用 `always()` 了事** —— 那会连 `verify` 失败也放行，等于撤掉门禁。
+2. **`permissions` 需补 `actions: read`**，否则 `gh api` 查 run 返回 403；
+   403 时脚本保守回退为「自己跑」（不漏门禁，只失去去重收益）。
+
+**验证**（均为本机实测，非推断）：
+- 穷举 `skip × verify × e2e` 的 **12 个可达组合**，deploy 放行语义 **0 处不一致**；
+  7 个关键场景（push 正常 / CI e2e 红 / 探测超时 / verify 红 / verify 取消 / 手动发布）逐条 OK。
+- 从 YAML **抽出的实际脚本**用真实 API 跑三个 sha：
+  `d2d11d4`（CI e2e success）→ `skip=true`；
+  `176ba0f`（verify 红但 e2e 绿）→ `skip=true`（正确：e2e 确实过了）；
+  `e4fa1a9`（**e2e 真失败**）→ **`skip=false`** ← 最关键的正向验证：CI 真红时 Deploy 不会偷懒跳过。
+
+**已知残余代价（记录在案）**：若 `ci.yml` 的 e2e 被 `cancel-in-progress` 取消得很早、
+以致其 run 里查不到 e2e job，探测会一直等到 12 分钟超时才回退为「自己跑」。
+该场景罕见，且回退方向是 fail-safe；若将来频繁出现，可下调超时上限。
 
 ## [v3.7.89] - 2026-10-04
 

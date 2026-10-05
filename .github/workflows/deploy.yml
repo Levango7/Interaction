@@ -8,6 +8,9 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  # v3.7.90：新增——ci-e2e-status job 需读 Actions API（查询同一 commit 的 ci.yml 结论）。
+  # 缺此权限时 gh api 返回 403，该 job 会保守回退为「自己跑 e2e」（不会漏门禁，但失去去重收益）。
+  actions: read
 
 # v3.7.52：连续 push 时取消上一次未完成的部署（否则两个 run 会并发写 gh-pages 互踩）
 concurrency:
@@ -15,6 +18,64 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # v3.7.90 —— 去重守卫：查同一 commit 的 ci.yml 是否已跑过 e2e，是则本 workflow 不再重复跑。
+  #   背景（见下方 e2e job 的注释）：ci.yml 与 deploy.yml 的 e2e 都由 push: [main] 触发，
+  #   此前每次 push 重复跑两遍，叠加 ci.yml 的双矩阵 test 共 5 个重负载 job 抢 CPU，
+  #   导致 e2e 偶发假红（2026-10-05 run 37324421400 红 / 同 commit run 37324421579 绿）。
+  #
+  #   判据：该 sha 上名为 "CI" 的 run 里，job 名为 "e2e" 的 conclusion == success
+  #     → skip=true（Deploy 不重复跑）；否则 skip=false（自己全量跑，兜底）。
+  #
+  #   ⚠️ 竞态：CI 与本 workflow 由同一次 push 同时触发，查询时 CI 的 e2e 往往仍在 running。
+  #     故必须**轮询等待到终态**，不能见到 running 就当「未覆盖」直接跑（那等于没去重），
+  #     也不能当「已覆盖」直接跳过（可能最后是红的）。超时（12 分钟）则保守回退为「自己跑」。
+  #   ⚠️ 任何失败（403 / 网络 / 解析）一律 skip=false —— fail-open 到「跑」，
+  #     宁可重复执行，绝不漏掉 e2e 门禁。
+  ci-e2e-status:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.probe.outputs.skip }}
+    steps:
+      - name: Probe ci.yml e2e conclusion for this commit
+        id: probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          echo "查 $SHA 的 ci.yml e2e 结论（最长轮询 12 分钟）"
+          deadline=$(( $(date +%s) + 720 ))
+          skip="false"
+          while :; do
+            # 列出该 sha 的 run，取 name==CI 的那条（若有多条取最新）
+            runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${SHA}&per_page=100" \
+                     --jq '[.workflow_runs[] | select(.name=="CI")] | sort_by(.created_at) | last | .id' 2>/dev/null || echo "")
+            if [ -z "$runs" ] || [ "$runs" = "null" ]; then
+              echo "  未找到该 sha 的 CI run（可能尚未创建）→ 等待"
+            else
+              # 取该 run 里 job 名以 e2e 开头的 conclusion（矩阵 job 名为 "e2e"）
+              conc=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${runs}/jobs?per_page=100" \
+                       --jq '[.jobs[] | select(.name|startswith("e2e"))] | .[0].conclusion // "pending"' 2>/dev/null || echo "pending")
+              echo "  CI run ${runs} 的 e2e conclusion = ${conc}"
+              case "$conc" in
+                success)                 skip="true";  break ;;
+                failure|cancelled|timed_out|action_required|stale)
+                                         skip="false"; break ;;
+                *)                       : ;;   # pending / queued / in_progress / null → 继续等
+              esac
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "  轮询超时（12 分钟）→ 保守回退：本 workflow 自己跑 e2e"
+              skip="false"; break
+            fi
+            sleep 20
+          done
+          # 显式写出：任何异常路径也必须产出 skip（默认 false = 自己跑），
+          # 否则 outputs 为空串——虽然空串也会让 e2e 的 if 判真（fail-open 正确），
+          # 但显式值更可读、也免于将来 if 条件改成 == 判断时踩坑。
+          echo "skip=${skip}"
+          echo "skip=${skip}" >> "$GITHUB_OUTPUT"
+
   # v3.7.52：发布前必须过门禁。此前 deploy 是独立工作流、与 ci.yml 无任何依赖关系，
   # push main 直接 build:prod 就发线上 —— **CI 全红也照样上线**。
   # 现在把最小必要门禁内联成前置 job（不跨工作流耦合，同时保持「发出去的产物一定过了测试」）。
@@ -52,8 +113,30 @@ jobs:
       - run: npm run pet:check
 
   # v3.7.59：与 ci.yml 的 e2e job 对齐（同一套用例、同一 file:// 加载方式）。
-  # 与 verify 并行 → 发布总时长不增加；deploy 需两者都过。
+  # v3.7.90 前：与 verify 并行 → 发布总时长不增加。
+  # v3.7.90 起：改为需先等 ci-e2e-status 探测（见下），故不再是纯并行；
+  #   但探测通常很快返回（CI 的 e2e 与本 workflow 同时启动，约 3.5 分钟即出结论），
+  #   且此期间 verify 仍在并行跑 → 实际增量 ≈ 0（多数情况下探测先于 verify 完成）。
+  #   最坏情形（探测超时 12 分钟）会使总时长显著增加——该场景见下方 ci-e2e-status 注释。
+  #
+  # v3.7.90 —— 与 ci.yml 去重（消除并发抢 CPU 导致的假红）：
+  #   现象：2026-10-05 run 37324421400（commit d2d11d4）e2e job 红，而**同一 commit** 的
+  #     ci.yml run 37324421579 e2e job 全绿 82 passed。代码同一、用例同一、runner 镜像逐字一致
+  #     （ubuntu-24.04 / image 20260927.320.1 / node 20.20.2）→ 一处红一处绿，只能是环境抖动。
+  #   根因：两 workflow 都由 push: [main] 触发，各跑一遍同一套 e2e；叠加 ci.yml 的
+  #     windows/ubuntu 双矩阵 test，同一时刻 5 个重负载 job 抢 CPU。playwright.config.js
+  #     恒 workers:1，单 chromium 对 CPU 饥饿极敏感：该次 i18n.spec.js:95 首跑 16.7s，
+  #     CI 同用例仅 2.6s（慢 6.4 倍），重试即回到 2.7s —— 典型饥饿指纹。
+  #   处置：**不删此 job**（verify job 内联了全套门禁，e2e 是它唯一缺口，删了就丢「上线必过 e2e」），
+  #     而是先由 ci-e2e-status 探测「该 commit 的 ci.yml e2e 是否已 success」：
+  #       · 已 success → 本 job 跳过（skip=true），不再重复执行、不再抢 CPU
+  #       · 否则（红/取消/查不到/超时）→ 本 job 全量跑，兜住门禁
+  #     探测失败一律视为「未覆盖」→ 跑。宁可重复执行，绝不放行未验证的产物。
   e2e:
+    needs: [ci-e2e-status]
+    # ci-e2e-status 的 probe 步骤在任何情况下都 != failure（脚本自捕获异常），故无需 always()。
+    # 条件语义：仅当探测确认「CI 已跑过 e2e 且成功」时才跳过本 job。
+    if: needs.ci-e2e-status.outputs.skip != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +153,16 @@ jobs:
 
   deploy:
     needs: [verify, e2e]
+    # ⚠️ 必须显式放行 skipped —— e2e 在「CI 已跑过且成功」时会被上面的 if 跳过，
+    #   而 GitHub 官方语义（docs.github.com「Defining prerequisite jobs」）：
+    #   needs 的上游 job「fails or is skipped」时，依赖它的 job **默认被跳过**，
+    #   除非用条件表达式显式放行。少了这一行，push 时部署会静默不执行。
+    # 条件设计（fail-closed）：
+    #   · verify 必须 success（红/取消 → 不部署）
+    #   · e2e 允许 success 或 skipped（skipped = 已由 ci.yml 覆盖且成功）；
+    #     failure/cancelled → 不部署
+    #   不能用 always() 了事 —— 那会连 verify 失败也放行，等于撤掉门禁。
+    if: always() && needs.verify.result == 'success' && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
