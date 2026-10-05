@@ -1,3 +1,90 @@
+## [v3.7.91] - 2026-10-06
+
+**Electron 形态补齐 CSP 响应头（此前注释声称的「第二层防护」实际不存在）+ e2e 统计断言从「长期空转」恢复为真正执行。**
+
+本版两块改动，都是「把此前只写在注释里的声称落成真实实现」：
+
+### ① Electron 形态补齐 CSP 响应头 —— `frame-ancestors` 从零防护到 `'none'`
+
+**发现路径**：`agent-workbench.html` 顶部有一条 v3.7.54 留下的 SECURITY NOTE [M3]，自我披露：
+
+> 本注释曾声称"改由 Electron 主进程 `onHeadersReceived` 注入完整 CSP 实现双层防护"，
+> 但 `electron/main.js` 里根本没有 `webRequest/onHeadersReceived` 任何代码 —— 该"第二层"不存在。
+> 即 Electron 形态下 `frame-ancestors` 目前**无防护**。
+
+**核实（v3.7.91，事实）**：`wc -l electron/main.js` = 840 行；`grep -n "onHeadersReceived\|webRequest\|Content-Security-Policy\|frame-ancestors" electron/main.js`
+→ **零命中**。注释说的是真的，防护确实不存在。
+
+**为什么 meta CSP 挡不住**：HTML 顶部 `<meta http-equiv="Content-Security-Policy">` 是唯一 CSP 来源，
+但 meta 形式的 CSP 有三个规范级缺口：
+- `frame-ancestors` 在 meta 中**被 Chromium 完全忽略**（只有响应头生效）；
+- `report-uri` / `sandbox` 同理无效；
+- 无法为 Electron 外壳单独收紧。
+
+**修复**（`electron/main.js`）：
+- 新增 `buildCspHeader()`：从 HTML 的 meta **读取**指令串（**单一事实来源，两处永不漂移**），
+  追加 meta 中无效的 `frame-ancestors 'none'`；读取失败时回退保守策略。
+- 新增 `installCsp()`：经 `session.defaultSession.webRequest.onHeadersReceived` 下发给**响应头**。
+  保留原有响应头，只增/改 CSP（先按大小写不敏感删除同义键，避免出现两条 CSP 被浏览器忽略）。
+- 在 `app.whenReady()` 中**先于 `createWindow()`** 调用，保证首个请求即带 CSP 头。
+- 装能力守卫（`session` / `webRequest` / `onHeadersReceived` 任一缺失即静默返回 false），
+  不破坏 `electron-ipc.test.js` 等以 stub 替换 `require("electron")` 的既有测试。
+
+**差点踩的坑（记下来免得重犯）**：CSP 的 `content` 值**内部含单引号**（`'self'`、`'unsafe-inline'`），
+若用 `[^"']*` 匹配属性值，会在第一个 `'` 处截断 —— 实测输出退化成只有 `default-src; frame-ancestors 'none'`。
+改成按属性引号分两支（双引号取 group2 / 单引号取 group3）后正确。该退化**已写进测试断言**防回潮。
+
+**未触碰**：`script-src 'unsafe-inline'` 保持不动（单文件内联架构必需），
+故 SECURITY TODO [C3] 标记仍然有效 —— 真正移除 `unsafe-inline` 仍须先完成 H4 模块化拆分。
+
+### ② e2e 统计视图断言：从「永久静默跳过」恢复为真正执行
+
+**问题（事实）**：`tests/e2e/workflow.spec.js` 第 6 步只看 `#side .nav-item[data-sc="stats"]`，
+而 `src/render-widgets.js:76 _buildSideMenu()` 返回的节点里**根本没有 `sc:"stats"`**
+（总览组是 `overview / tasks / chainpage / timeline`）→ 该选择器**恒为 null** →
+每一轮 e2e 都走 `if(!statsEntry) return;` 静默跳过断言，注释里留了个 TODO 等"产品决策"。
+
+**核实（事实）**：统计页**从未下线，入口一直可达**，只是从侧栏搬到了主页：
+- `src/render-overview.js:562` `renderStats()` 仍在；
+- `src/render-entry.js:70` 路由 `if(active==="stats"){ renderStats(); return; }` 仍在；
+- **活入口** = 主页系统概况卡的「已完成」项 `.sys-ov-item[data-act="stats"]`
+  （`render-overview.js:316` 定义 → `:173` 绑 `setActive("stats")`）。
+
+**修复**：e2e 第 6 步改为「回主页 → 点系统概况卡「已完成」→ 断言 `.stats-cards` 渲染」，
+并把 `if(!statsExists) return` 的**静默跳过改成硬断言**（`expect(count).toBeGreaterThan(0)`）。
+
+**顺带查实一处死代码**：`_renderOvKpi()`（`render-overview.js:384`）全仓 **零调用**
+（src + tests + 注入态 HTML 均只有定义本身），即整条 KPI 卡分支（`.ov-kpi-item`）从不渲染。
+本次**不删**（属重构范畴，且 `_calcTodayKpi()` 仍被 `ui-ge-calendar.js:717` 使用，删函数会连带受影响），
+仅在测试注释中标注「疑似入口实为死代码」，避免后来人再次误用。
+
+### 验证
+
+**新增回归护栏**（`tests/electron-guard.test.js` 新增「④ CSP 响应头注入」4 条）：
+1. `main.js` 真实调用 `session.defaultSession.webRequest.onHeadersReceived`；
+2. `installCsp()` 排在 `createWindow()` **之前**；
+3. `buildCspHeader()` 输出：保留 meta 全部指令 + 追加 `frame-ancestors 'none'`，
+   **断言不得退化成 `default-src; frame-ancestors 'none'`**（单引号截断坑）；
+4. HTML meta 自身**不得**含 `frame-ancestors`（放了也无效，会造成误解）。
+
+**变异反向验证（证明护栏真能拦，不是空转）** —— 注入两个变异后测试变红：
+| 变异 | 被哪条断言抓住 | 结果 |
+|---|---|---|
+| 删掉 `whenReady` 里的 `installCsp()` 调用 | 「installCsp 在 createWindow 之前调用」 | ❌ 红（`expected -1 to be greater than -1`） |
+| 去掉 `frame-ancestors 'none'` 追加 | 「buildCspHeader 输出」 | ❌ 红（`toContain` 失败） |
+
+**e2e 实证**：`_probe/probe-stats-entry.cjs`（绕开 runner 的本机探针，见 `playwright.config.js` 注释）
+**8/8 全通过** —— 含「旧选择器不存在（印证此前空转）」「统计卡 count=10」「二次进入仍可达」。
+真实用例 `ok 1 ... 完整用户流程 (5.3s)` **通过**（本机 runner 收尾时 `browser.close()` 不返回是已知环境问题）。
+
+**门禁**：`check:source-state` / `src:check` / `check:modules` / `check:ai-tools-doc` / `lint:xss` /
+`lint:layers` / `lint:tokens` / `lint:empty-catch` / `lint:appbridge` / `check:pwa-icons` **全部通过**；
+`electron-guard` + `electron-ipc` + `round4-batch4-electron` = **72 用例全绿**。
+（`lint:appbridge` 报「core 声明 61 槽 · 赋值 65 槽 · 读取 55 槽 → 无死槽」，
+但 `_renderOvKpi` 这类**普通函数**死代码不在桥槽体系内，门禁抓不到 —— 需人工发现。）
+
+---
+
 ## [v3.7.90] - 2026-10-05
 
 **主进程外发通道收口 + 两类入口限额对齐 + AppBridge 死槽门禁 + 第三方审计修复收口 + 本机测试信号可信化 + 凭据链谎报成功 + 发布链 e2e 去重。**

@@ -110,26 +110,34 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 6. 查看统计 ----------
     await test.step("查看统计视图", async () => {
-      /* v3.6.6 IA 变更：侧栏撤掉了独立的「统计」入口（方向是仪表盘并入主页），
-         该页目前只能通过内部视图切换到达 —— e2e 走 file://，__test 钩子按安全策略不在 file:// 挂载，
-         因此这里保持「有入口就走入口」的写法；无入口时记录该 IA 变更并跳过断言，避免长期误报。
-         TODO(产品决策)：若要保留统计页，请在主页/总览给出可达入口后恢复断言。 */
-      const statsEntry = await page.$('#side .nav-item[data-sc="stats"]');
-      if (!statsEntry) {
-        console.log("[e2e] 侧栏无 stats 入口（v3.6.6 起的 IA 变更），跳过统计视图断言");
-        return;
-      }
+      /* v3.7.91 修复（此前长期空转）：
+         v3.6.6 的 IA 变更撤掉了侧栏的独立「统计」入口（方向是仪表盘并入主页），
+         旧写法只看 `#side .nav-item[data-sc="stats"]` → 永远为 null → 每轮静默跳过断言，
+         注释里留了个 TODO 等"产品决策"。但实测（v3.7.91，探针 _probe/probe-stats-entry.cjs）：
+         统计页**从未下线、入口一直可达**：
+           · src/render-overview.js:562  renderStats() 仍在；
+           · src/render-entry.js:70      路由 `if(active==="stats"){ renderStats(); return; }` 仍在；
+           · 活入口 = 主页系统概况卡的「已完成」项 `.sys-ov-item[data-act="stats"]`
+             （render-overview.js:316 定义 → :173 绑 setActive("stats")）。
+         ⚠️ 注意：另有一条疑似入口 `.ov-kpi-item[data-kpi-act="stats"]`（render-overview.js:388-390）
+         是**死代码** —— `_renderOvKpi()`（:384）全仓零调用，实测该选择器 count=0。故不作为入口。 */
+      // 回主页（总览）——系统概况卡在 overview
+      await page.click('#side .nav-item[data-sc="overview"]');
+      await page.waitForSelector(".sys-ov-item", { timeout: 10_000 });
+
+      const statsEntry = page.locator('.sys-ov-item[data-act="stats"]').first();
+      expect(await statsEntry.count(), "主页系统概况卡应有「已完成」统计入口").toBeGreaterThan(0);
       await statsEntry.click();
+
       // 统计视图：有任务时显示 .stats-cards，无任务时显示 .no-stats 空状态
-      // 我们已建并完成任务，应有 .stats-cards
+      // 我们已建并完成任务，应命中 .stats-cards
       await page.waitForSelector(".stats-cards, .no-stats", { timeout: 10_000 });
       const hasStatsCards = await page.$(".stats-cards");
-      if (hasStatsCards) {
-        // 验证关键指标卡片渲染（总任务数 / 已完成 等）
-        await expect(page.locator(".stats-card").first()).toBeVisible();
-        const cardCount = await page.locator(".stats-card").count();
-        expect(cardCount).toBeGreaterThanOrEqual(1);
-      }
+      expect(hasStatsCards, "已建任务，统计页应渲染 .stats-cards 而非空状态").not.toBeNull();
+      // 验证关键指标卡片渲染（总任务数 / 已完成 等）
+      await expect(page.locator(".stats-card").first()).toBeVisible();
+      const cardCount = await page.locator(".stats-card").count();
+      expect(cardCount).toBeGreaterThanOrEqual(1);
     });
 
     // ---------- 7. 打开设置 ----------
@@ -279,7 +287,9 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.click("#onboardSkip");
       await expect(page.locator(".onboard-modal"), "跳过后不应再弹下一步").toHaveCount(0);
     }
-    // 侧边栏应含 overview / stats / office / code / study / life 六个 nav-item
+    /* v3.7.91 更正注释：v3.6.6 起侧栏**不再**有独立的 stats 项（统计页入口已并入主页卡片，
+       见第 6 步），故此处不再把 stats 列为侧栏应有项——旧注释与实现不符会误导后来人。
+       仍断言：侧栏 nav-item 数量达标 + 四个场景项可见。 */
     const navCount = await page.locator("#side .nav-item").count();
     expect(navCount).toBeGreaterThanOrEqual(6);
     // 验证四个场景按钮存在

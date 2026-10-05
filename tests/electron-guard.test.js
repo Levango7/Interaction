@@ -71,3 +71,64 @@ describe("Electron ③ 外链必须过协议白名单", () => {
     expect([...nav.matchAll(/_openExternalSafe\(url\)/g)].length).toBe(2);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * ④ CSP 响应头注入（v3.7.91 新增）
+ * 背景：HTML 的 meta CSP 中 `frame-ancestors` **被 Chromium 忽略**（规范如此），
+ *   而 v3.7.54 的 HTML 注释曾声称「由 Electron 主进程 onHeadersReceived 注入第二层」——
+ *   实测 electron/main.js 里**从未**有 session/webRequest/onHeadersReceived，该层不存在。
+ *   本组断言：① 那一层现在真实存在；② 注入内容正确地追加了 frame-ancestors；
+ *   ③ 不引入新的 script-src 限制（单文件内联架构不能被误伤）。
+ * ------------------------------------------------------------------------- */
+describe("Electron ④ CSP 响应头注入（第二层防护）", () => {
+  it("main.js 真实调用 session.defaultSession.webRequest.onHeadersReceived", () => {
+    expect(mainSrc, "必须 require session").toMatch(/\bsession\b/);
+    expect(mainSrc, "必须注册 onHeadersReceived").toContain("onHeadersReceived");
+    expect(mainSrc, "必须用 defaultSession").toContain("session.defaultSession");
+    // 防回潮：HTML 注释里那条「声称有第二层」的历史，必须以真实实现落地
+    expect(mainSrc, "不得只写注释不实现").not.toMatch(/\/\*\s*TODO[^*]*onHeadersReceived[^*]*\*\//);
+  });
+
+  it("installCsp 在 createWindow 之前调用（否则首个请求不带 CSP 头）", () => {
+    const boot = mainSrc.slice(mainSrc.indexOf("app.whenReady().then"));
+    const iCsp = boot.indexOf("installCsp()");
+    const iWin = boot.indexOf("createWindow()");
+    expect(iCsp, "whenReady 内必须调用 installCsp()").toBeGreaterThan(-1);
+    expect(iWin).toBeGreaterThan(-1);
+    expect(iCsp, "installCsp 必须排在 createWindow 之前").toBeLessThan(iWin);
+  });
+
+  it("buildCspHeader 输出：保留 meta 全部指令 + 追加 frame-ancestors 'none'", () => {
+    // 提取真实函数体并在隔离作用域内执行（不启动 Electron）
+    const fnSrc = mainSrc.slice(mainSrc.indexOf("function buildCspHeader"));
+    const body = fnSrc.slice(0, fnSrc.indexOf("\n}\n") + 3);
+    const metaRe = mainSrc.match(/const _CSP_META_RE = (.+);/)[1];
+    const html = read("agent-workbench.html");
+    const shim = new Function("fs", "resolveHtml", "_CSP_META_RE",
+      metaRe.replace(/^/, "") + "\n" + body + "\nreturn buildCspHeader();"
+    );
+    const out = shim(
+      { readFileSync: () => html },
+      () => "agent-workbench.html",
+      eval(metaRe)
+    );
+
+    expect(out, "必须含 frame-ancestors 'none'（meta 中无效，只有响应头生效）").toContain("frame-ancestors 'none'");
+    expect(out, "必须保留 script-src").toContain("script-src");
+    expect(out, "必须保留 unsafe-inline（单文件内联架构不能误伤）").toContain("'unsafe-inline'");
+    expect(out, "必须保留 wasm-unsafe-eval").toContain("wasm-unsafe-eval");
+    expect(out, "必须保留回环 connect-src（本地模型/代理）").toMatch(/127\.0\.0\.1/);
+    expect(out, "不得出现空指令导致的双分号").not.toContain(";;");
+    // 关键回归：content 值内部含单引号，正则若用 [^"']* 会被截断成 "default-src"（v3.7.91 实测踩过）
+    expect(out, "不得被单引号截断（曾退化成只有 default-src）").not.toBe("default-src; frame-ancestors 'none'");
+    expect(out.length, "合理长度应 > 200 字符").toBeGreaterThan(200);
+  });
+
+  it("HTML meta CSP 本身不得包含 frame-ancestors（放了也无效，且会造成误解）", () => {
+    const html = read("agent-workbench.html");
+    const m = html.match(/<meta[^>]*http-equiv=["']Content-Security-Policy["'][^>]*content=("([^"]*)"|'([^']*)')/i);
+    expect(m, "HTML 必须保留 meta CSP（网页形态依赖它）").toBeTruthy();
+    const content = (m[2] !== undefined ? m[2] : m[3]) || "";
+    expect(content, "meta 中的 frame-ancestors 会被 Chromium 忽略，应只由响应头下发").not.toContain("frame-ancestors");
+  });
+});

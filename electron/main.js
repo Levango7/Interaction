@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, safeStorage, shell } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, safeStorage, shell, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const zlib = require("zlib");
@@ -106,6 +106,66 @@ function resolveHtml(){
   if (fs.existsSync(dev)) return dev;
   // 兜底：同目录（兼容自定义布局）
   return path.join(__dirname, "agent-workbench.html");
+}
+
+/* ---------- CSP 响应头注入（v3.7.91） ----------
+ * 背景：HTML 顶部 `<meta http-equiv="Content-Security-Policy">` 是**唯一**的 CSP 来源，
+ * 而 meta 形式的 CSP 有三个已知缺口：
+ *   ① `frame-ancestors` 在 meta 中**被浏览器/Chromium 完全忽略**（规范如此，非 bug）；
+ *   ② `report-uri` / `sandbox` 同样在 meta 中无效；
+ *   ③ 无法为 Electron 外壳单独收紧。
+ * 历史：v3.7.54 的 HTML 注释曾声称「改由 Electron 主进程 onHeadersReceived 注入完整 CSP 实现双层防护」，
+ * 但 `electron/main.js` 里**从未**出现过 webRequest/onHeadersReceived —— 那个「第二层」是**不存在的**。
+ * v3.7.91 把这一层真正实现出来：从 HTML 的 meta 读出指令串（保持单一事实来源，避免两处漂移），
+ * 追加 meta 中无效的 `frame-ancestors 'none'`，经 onHeadersReceived 作为**响应头**下发。
+ * 注意：不改动原 meta —— 网页形态（GitHub Pages）仍靠它；这里只做 Electron 侧的**增量加固**。
+ * 不引入新的 script-src 限制：单文件内联架构仍需 'unsafe-inline'（见 HTML [C3]），本函数不触碰它。
+ */
+/* 注意：CSP 的 content 值**内部含单引号**（如 'self'），故不能用 [^"']* 去匹配属性值
+ * —— 会在第一个 ' 处截断，只取到 "default-src"。这里按属性引号分两支：
+ * 双引号包裹取 group2，单引号包裹取 group3。v3.7.91 实测踩过这个坑（截断成 "default-src"）。 */
+const _CSP_META_RE = /<meta[^>]*http-equiv=["']Content-Security-Policy["'][^>]*content=("([^"]*)"|'([^']*)')/i;
+
+function buildCspHeader(){
+  // 单一事实来源：读 HTML 里那条 meta 的 content。读不到时退回一份保守的内联策略。
+  let base = "";
+  try {
+    const html = fs.readFileSync(resolveHtml(), "utf8");
+    const m = html.match(_CSP_META_RE);
+    if (m) base = (m[2] !== undefined ? m[2] : m[3] || "").trim();
+  } catch (e) { /* 读失败走兜底 */ }
+
+  if (!base){
+    base = "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+         + "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+         + "connect-src 'self' https: http://127.0.0.1:* http://localhost:*; "
+         + "object-src 'none'; base-uri 'self'; form-action 'self'";
+  }
+
+  // meta 中无效、只有响应头才生效的指令在此追加（frame-ancestors 是本次修复的核心目的）。
+  // 用 "; " 拼接，并去掉 base 末尾可能存在的分号，避免出现 ";;"。
+  return base.replace(/;\s*$/, "") + "; frame-ancestors 'none'";
+}
+
+function installCsp(){
+  // 只装一次；测试 stub 的 session 可能没有 defaultSession，做能力守卫。
+  if (typeof session === "undefined" || !session || !session.defaultSession) return false;
+  const ses = session.defaultSession;
+  if (typeof ses.webRequest !== "object" || !ses.webRequest) return false;
+  if (typeof ses.webRequest.onHeadersReceived !== "function") return false;
+
+  const csp = buildCspHeader();
+  ses.webRequest.onHeadersReceived((details, callback) => {
+    // 保留原有响应头，只增/改 Content-Security-Policy（增量，不覆盖服务器其它头）。
+    const headers = Object.assign({}, details.responseHeaders || {});
+    // 响应头名大小写不敏感，先删掉可能已存在的同义键，避免出现两条 CSP（后者可能被浏览器忽略）。
+    for (const k of Object.keys(headers)){
+      if (k.toLowerCase() === "content-security-policy") delete headers[k];
+    }
+    headers["Content-Security-Policy"] = [csp];
+    callback({ responseHeaders: headers });
+  });
+  return true;
 }
 
 function createWindow(){
@@ -416,6 +476,7 @@ if (!gotLock){
 } else {
   app.on("second-instance", () => { if (win){ win.show(); win.focus(); } });
   app.whenReady().then(() => {
+    installCsp(); // v3.7.91：必须在 createWindow/loadFile 之前装好，否则首个请求不带 CSP 头
     createWindow();
     createTray();
     applyAppMenu();
