@@ -80,7 +80,16 @@ if (CHECK) {
   try {
     const { spawnSync } = await import('node:child_process');
     const r = spawnSync(process.execPath, [join(root, 'scripts', 'lint-layers.mjs')], { encoding: 'utf8' });
-    if (r.status !== 0) fail('分层契约校验失败：\n' + (r.stderr || r.stdout || '').slice(-1200));
+    /* v3.7.90：本机沙箱禁止派生子进程时 spawnSync 返回 { status: null, error.code: "EBUSY",
+       stdout: "", stderr: "" } —— 此时 `r.status !== 0` 成立，会把**子进程压根没跑起来**
+       误报成「分层契约校验失败」，且报错内容为空串（看信息完全指向错误方向）。
+       判据刻意收窄到 EBUSY：真回归的形态是 status 非 0 且 stderr 有内容，不受影响。
+       CI / 正常环境下 spawn 可用，本分支不触发，行为**完全不变**。 */
+    if (r.error && r.error.code === 'EBUSY') {
+      console.log('[build] ⚠ 本机沙箱禁止派生进程，跳过 lint-layers 子进程校验（CI 上会执行）');
+    } else if (r.status !== 0) {
+      fail('分层契约校验失败：\n' + (r.stderr || r.stdout || '').slice(-1200));
+    }
   } catch (e) {
     fail('无法执行分层校验：' + (e && e.message));
   }

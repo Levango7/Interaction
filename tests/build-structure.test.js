@@ -17,6 +17,8 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { isSandboxSpawnResult } from "./helpers/spawn-available.js";
+import { SANDBOX_SKIP_REASON } from "./helpers/spawn-available.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = p => readFileSync(join(root, p), "utf8");
@@ -132,6 +134,8 @@ describe("构建结构守护 · 立绘外置", () => {
     const injected = Buffer.byteLength(html) > 1_200_000;
     const r = spawnSync(process.execPath, [join(root, "scripts", "check-source-state.mjs")], { encoding: "utf8", cwd: root });
     const out = (r.stdout || "") + (r.stderr || "");
+    // 本机沙箱禁派生（r.error.code === "EBUSY"）→ 跳过，避免把环境限制伪装成断言失败
+    if (isSandboxSpawnResult(r)) return void console.warn("[skip] " + SANDBOX_SKIP_REASON);
     if (injected) {
       expect(r.status, "拼回态下 check:source-state 必须非 0 退出").not.toBe(0);
       expect(out, "拦截信息必须给出可执行的还原指令").toContain("npm run src:extract");
