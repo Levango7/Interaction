@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,12 @@ permissions:
 
 # v3.7.52：连续 push 时取消上一次未完成的部署（否则两个 run 会并发写 gh-pages 互踩）
 concurrency:
-  group: pages-deploy
+  # v3.7.93：main-only 部署策略。workflow_dispatch 没有分支过滤，此前任意分支手动触发
+  # 可一路发布到 gh-pages（四个 job 均无 ref 守卫）；现由各 job 的 `if: github.ref` 统一拦截，
+  # 触发列表同步收敛为 [main]（远端实测仅 main 分支，master 系历史模板残留）。
+  # group 追加 ${{ github.ref }}：否则被守卫拦成「全 skipped」的分支 run 仍会进入同组，
+  # 把进行中的 main 部署**取消**掉 —— 守卫挡得住发布，挡不住 cancel（对齐 ci.yml:11 的写法）。
+  group: pages-deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -32,6 +37,9 @@ jobs:
   #   ⚠️ 任何失败（403 / 网络 / 解析）一律 skip=false —— fail-open 到「跑」，
   #     宁可重复执行，绝不漏掉 e2e 门禁。
   ci-e2e-status:
+    # v3.7.93：非 main 一律 skipped（含 workflow_dispatch 选错分支）→ 级联使 e2e 与 deploy
+    # 的既有条件全部不成立，fail-closed 不发布。
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       skip: ${{ steps.probe.outputs.skip }}
@@ -86,6 +94,9 @@ jobs:
   # 恰恰是单测覆盖不到、而 ci.yml 专门加了 e2e 来守的那一类。
   # 现按 ci.yml 的步骤与顺序对齐；e2e 另起一个并行 job，不增加发布总时长。
   verify:
+    # v3.7.93：同 ci-e2e-status —— 仅 main 可执行；非 main 时 skipped 会让 deploy 的
+    # `needs.verify.result == 'success'` 不成立，天然拦停发布。
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -109,6 +120,10 @@ jobs:
       - run: npm run lint
       - run: npm run lint:layers
       - run: npm run lint:tokens
+      # v3.7.93 修复：ci.yml:69 接入 lint-empty-catch 时只改了 ci.yml，本文件漏接 ——
+      # 新增 P0 空 catch 会被 CI 拦下而 deploy 链无人把守。防再犯见
+      # tests/ci-workflow-guard.test.js「verify 步骤集 ≡ ci.test」守护（缺步/换序即红）。
+      - run: npm run lint:empty-catch
       - run: npm run check:pwa-icons
       - run: npm run pet:check
 
@@ -146,7 +161,9 @@ jobs:
     #   修法：① 加 always()，让本 job 不再被上游取消连带跳过、必须自行判定条件；
     #        ② 条件收紧为「仅当上游 **确实成功** 且探测到 skip=true 时才跳过」，
     #           其余一切情形（取消/失败/输出缺失）一律**跑**——fail-closed。
-    if: always() && !(needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true')
+    # v3.7.93：前置 main-only 守卫 —— 本 job 带 always()（上游 skip 不连带保护它），
+    # 故 ref 条件必须写进它自己的 if 内。
+    if: always() && github.ref == 'refs/heads/main' && !(needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -178,6 +195,7 @@ jobs:
     #   不能用 always() 了事 —— 那会连 verify 失败也放行，等于撤掉门禁。
     if: >-
       always()
+      && github.ref == 'refs/heads/main'
       && needs.verify.result == 'success'
       && (
            needs.e2e.result == 'success'
