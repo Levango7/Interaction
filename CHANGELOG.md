@@ -1,3 +1,52 @@
+## [v3.7.93] - 2026-10-06
+
+**门禁/部署批次①（全维审计修复）：deploy 链补上 `lint:empty-catch` 并收敛为 main-only 发布；`build:prod` 增加「转换后编译自检」。**
+
+三项均出自 2026-10-06 全维审计（面—线—点）的批次①修复清单（P1-1a / P1-1b / P2-4），本版无功能性改动。
+
+### P1-1a `deploy.yml` 的 verify 漏接 `lint:empty-catch`（发布链与 CI 门禁不等价）
+
+**发现路径**：审计对账两份 workflow 的门禁步骤清单时发现 —— `af7b9f8`（v3.7.87）给
+`ci.yml:69` 接入 `lint:empty-catch` 时**只改了 ci.yml**，deploy.yml 漏接。后果：新增 P0 级
+空 catch 会被 CI 拦下，而 deploy 链（另一条通往线上的门禁路径）无人把守，可直接上线。
+与 v3.7.70 `src:check` 漏接同型 —— **两处清单靠人工同步，必有一次会漂**。
+
+**修复**（`b58130e`）：
+- deploy.yml `verify` 补 `npm run lint:empty-catch`，与 `ci.yml` 的 test 步骤集**逐项同序**；
+- `tests/ci-workflow-guard.test.js` 新增「verify 步骤集 ≡ ci.test」parity 断言：缺步 / 多步 /
+  换序即红，附**合成 YAML 变异自测**（缺步变异回放 P1-1a 缺口形态，点名 `npm run lint:empty-catch`，证明断言非装饰）。
+
+### P1-1b 非 main 分支可发布到 gh-pages（workflow_dispatch 任意分支触发）
+
+**发现路径**：审计触发条件时发现 —— `workflow_dispatch` 没有分支过滤 + 四个 job 均无 ref 守卫，
+在任意分支手动触发 Deploy 可一路 `build:prod` → `peaceiris/actions-gh-pages` 发布到线上。
+
+**修复**（`b58130e`）：
+- 触发列表收敛为 `[main]`（远端实测仅 main 分支，master 系为历史模板残留）；
+- 四个 job 各自 `if: github.ref == 'refs/heads/main'`（fail-closed：守卫不成立 → skipped →
+  deploy 的 `needs.verify.result == 'success'` 不成立 → 不发布）；
+- concurrency group 并入 `${{ github.ref }}`：否则被守卫拦成「全 skipped」的分支 run 仍会进入
+  同组，把在途 main 部署 **cancel** 掉（守卫挡得住发布，挡不住 cancel）；
+- 回归护栏：`tests/ci-workflow-guard.test.js`「deploy.yml ④」4 条（含 e2e 的 always() 与 ref 守卫并存断言）。
+
+### P2-4 `build:prod` 对转换结果零校验（截断类坏产物可静默落盘）
+
+**缺口机理**：`__TEST_GATE__` 置 false 用的替换正则**非贪心** —— 若块体内先出现 `})();`，
+替换会提前截断、留悬空尾部。坏形态只坏几个字节，**体积/标记类门禁全都照不到，只有解析器会拒绝**。
+
+**修复**（`d06d975`）：抽 `scripts/lib/prod-guards.mjs` 并被 `scripts/build.mjs --prod` 接入：
+- 转换前：定义数必须恰为 1、替换后不得再匹配、false 标记恰 1 处；
+- 转换后：按**浏览器语义**抽取真实 `<script>` 块并整体 `vm` 编译（本产物 `<script` 字样共 6 次，
+  其中 5 次是 JS 字符串字面量，朴素截取必踩坑）——**校验先于落盘**，任一不满足即拒绝写文件；
+- SW `CACHE_VERSION` bump 同批移入并自检；
+- 字节兼容已证：新旧逻辑输出逐字节一致（sha256 `0b4359c3…` = v3.7.92 线上产物）；
+- 回归护栏：`tests/prod-guards.test.js` 12 例（含「截断形态必须被编译校验拦下」、抽取器合成语料、
+  fixture CLI 冒烟正/负两例 —— 负例断言产物未落盘）。
+
+**本批验证（本机全门禁）**：`npm test` 124/124 文件 · `npm run e2e` 82 用例 ·
+`verify:ci` 三态（test job 12 步 / deploy `verify` 12 步 / 含 e2e 13 步；`npm ci` 默认被跳过、由 `--with-install` 控制）全绿 ·
+十项快门禁（src:check / check:modules / check:ai-tools-doc / build:check / lint / lint:layers / lint:tokens / lint:empty-catch / check:pwa-icons / pet:check）全 exit 0。
+
 ## [v3.7.92] - 2026-10-06
 
 **发布链 e2e 门禁补漏：`deploy.yml` 的 e2e 可被「上游 job 被取消」绕过（本轮真实触发）+ `electron-build.yml` 重命名步骤封堵「零匹配静默通过」。**
