@@ -172,13 +172,21 @@ UI 由 `ui-global-events.js` 渲染，14 处插值**全部** `esc()` 包裹且�
 2. **`permissions` 需补 `actions: read`**，否则 `gh api` 查 run 返回 403；
    403 时脚本保守回退为「自己跑」（不漏门禁，只失去去重收益）。
 
-**验证**（均为本机实测，非推断）：
+**验证**（均为本机实测 + 真实 CI 实测，非推断）：
 - 穷举 `skip × verify × e2e` 的 **12 个可达组合**，deploy 放行语义 **0 处不一致**；
   7 个关键场景（push 正常 / CI e2e 红 / 探测超时 / verify 红 / verify 取消 / 手动发布）逐条 OK。
 - 从 YAML **抽出的实际脚本**用真实 API 跑三个 sha：
   `d2d11d4`（CI e2e success）→ `skip=true`；
   `176ba0f`（verify 红但 e2e 绿）→ `skip=true`（正确：e2e 确实过了）；
   `e4fa1a9`（**e2e 真失败**）→ **`skip=false`** ← 最关键的正向验证：CI 真红时 Deploy 不会偷懒跳过。
+- **真实 CI 端到端**（本方案上线后首次 push，run `37338395078`）：`ci-e2e-status` success（轮询
+  15 次直到 CI 的 e2e 出 `success`）→ `e2e` **skipped** → `deploy` **success**。
+  即去重生效、且 `skipped` 未连带阻塞部署（两处官方语义坑均处理正确）。
+
+**时长实测（不粉饰）**：该次 Deploy 总时长 **10m49s**，旧方案历史区间 **6m28s ~ 10m21s** ——
+落在区间内、未见劣化。机制：`ci-e2e-status` 耗时 6m43s，而 `verify` 耗时 9m17s，
+**探测被 verify 覆盖、不在关键路径上**。⚠️ 但这不是必然：若 CI run 排队过久使探测反超 verify，
+总时长会增加；极端情形为 12 分钟超时。
 
 **已知残余代价（记录在案）**：若 `ci.yml` 的 e2e 被 `cancel-in-progress` 取消得很早、
 以致其 run 里查不到 e2e job，探测会一直等到 12 分钟超时才回退为「自己跑」。
