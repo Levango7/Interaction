@@ -1,8 +1,120 @@
+## [v3.7.92] - 2026-10-06
+
+**发布链 e2e 门禁补漏：`deploy.yml` 的 e2e 可被「上游 job 被取消」绕过（本轮真实触发）+ `electron-build.yml` 重命名步骤封堵「零匹配静默通过」。**
+
+本版两块改动都来自**发版核验**时发现的问题，且都属于「已提交但从未被真实验证」或「真实触发后才暴露」的类别：
+
+- ③ `electron-build.yml` 的重命名加固：继承自 v3.7.90 的修复（`c15d84e`）**提交晚于 tag**，
+  从未在真实构建上生效过 —— 本轮查 Release 资产名才发现，并顺带挖出更深的「零匹配静默通过」隐患；
+- ④ `deploy.yml` 的 e2e 门禁缺口：本轮核验时因 GitHub runner 故障**亲自触发**（非理论推演），
+  `ci-e2e-status` 被取消 → `e2e` 被动跳过 → `deploy` 却把 skipped 当有效覆盖而放行。
+
+### ③ `electron-build.yml` 产物重命名步骤「零匹配即静默通过」（**继承自 v3.7.90 未验证的修复**）
+
+**发现路径**：核对 v3.7.91 发版前置状态时，回查 v3.7.90 的 Release —— 资产名**仍是** `Agent.-3.7.90-portable.exe`
+（「工坊」被净化为 `.`）。而 v3.7.90 的 electron-build run `37348499983` 的步骤列表里**根本没有「重命名为纯 ASCII」这一步**。
+
+**根因（时序，事实）**：`c15d84e`（加重命名步骤）提交于 `2026-10-06 01:50:35`，
+而 `v3.7.90` tag 指向 `231124f`（`01:13:42`）——**修复晚于 tag**，那次构建跑的是旧 workflow。
+即第七轮的 `c15d84e` 属于「已在 main、未在真实 tag 上验证」的状态。
+
+**顺带发现的真隐患（本地复刻实测）**：把 `c15d84e` 的脚本单独拉出来跑，在
+`dist/` 只有 `setup.exe`（无 `*-portable.exe`）时 —— `set -euo pipefail` + `shopt -s nullglob`
+下 for 循环**零次迭代**，脚本**EXIT=0 且无任何输出**。
+即：若 electron-builder 将来因配置变动改了产物名，重命名会「静默成功」、一个文件都没改却报绿，
+Release 会重新带出中文名，而**门禁不红**。这是本项目反复出现的「谎报成功」模式的又一例。
+
+**修复**（`electron-build.yml`）：
+- 先用 `files=(dist/*-portable.exe)` 收集，`${#files[@]} -eq 0` 时打 `::error::` 并 `exit 1`（附 `ls dist/` 便于定位）；
+- 维护 `renamed` 计数，末尾断言 `-ge 1`；
+- **终态复核**：`ls dist/*.exe` 经 `LC_ALL=C grep -q '[^ -~]'` 确认无残留非 ASCII 文件名 —— 这才是本步骤的真正目标。
+
+**新增回归护栏**（`tests/ci-workflow-guard.test.js`，7 条，读 YAML 文本的静态断言）：
+零匹配必红 / 解析失败必红 / 计数兜底 / 终态非 ASCII 复核 / 路径自洽 / 步骤顺序。
+**变异反向验证**（5 条，每条都让对应断言变红）：
+| 变异 | 被哪条断言抓住 |
+|---|---|
+| 删零匹配守卫 | 「零匹配时必须显式报红」 |
+| 删 `renamed >= 1` 兜底 | 「必须有计数兜底」 |
+| 删终态非 ASCII 复核 | 「终态复核」 |
+| 版本解析改 `continue`（静默跳过） | 「版本号解析失败必须显式报红」 |
+| 把重命名步骤移到上传之后 | 「重命名步骤排在上传之前」 |
+
+⚠️ 第 4 条变异**首版没被抓住**（断言 `toMatch(/...[\s\S]*?exit 1/)` 太宽松，`continue` 版仍匹配到别处的 `exit 1`），
+已改为精确锁 `[-n "$ver"]...exit 1` + 负向断言 `not.toMatch(...continue)`。**这正是变异验证的价值所在。**
+
+### ④ `deploy.yml` 的 e2e 门禁可被「上游 job 被取消」绕过（**本轮真实触发，非推演**）
+
+**发现路径**：核验 v3.7.91 发版时，Deploy run `37361404028` 的 `deploy` job 反复
+`cancelled` + `steps=0`（GitHub 托管 runner 分配失败，连续 3 次 attempt 同一 annotation
+`The job was not acquired by Runner of type hosted`）。排查该现象时，发现 `ci-e2e-status`
+也被同样问题取消 —— 于是暴露出一条**独立于 runner 故障的门禁缺口**。
+
+**缺口机理**（`deploy.yml`）：
+
+```yaml
+e2e:
+  needs: [ci-e2e-status]
+  if: needs.ci-e2e-status.outputs.skip != 'true'        # v3.7.91 前，⚠️ 无 always()
+deploy:
+  needs: [verify, e2e]
+  if: always() && needs.verify.result == 'success'
+      && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
+```
+
+1. 原注释假设：「`ci-e2e-status` 的 probe 步骤自捕获异常，结论永远不会是 failure，故无需 `always()`」。
+   **该假设漏掉了「job 本身根本没启动」**——runner 分配失败时其 conclusion = `cancelled`、`steps = []`。
+2. GitHub 默认语义：**`needs` 上游 `cancelled` → 下游被默认跳过**。于是 `e2e` **被动 skipped**（未执行）。
+3. `deploy` 的条件把 `needs.e2e.result == 'skipped'` 一律当作「已由 CI 覆盖且成功」→ **放行**。
+
+→ 两种 `skipped` 在 `needs.e2e.result` 上**无法区分**：
+  (a) **主动跳过**（`ci-e2e-status` 成功产出 skip=true，CI 的 e2e 确已绿）——安全；
+  (b) **被动跳过**（上游被取消，e2e 根本没跑）——**若此刻 CI 的 e2e 恰好是红的，未验证产物照样上线**。
+
+**真值表验证**（7 场景，`_probe` 外独立脚本）：
+
+| 场景 | 旧 e2e | 旧 deploy | 新 e2e | 新 deploy | 旧安全 | 新安全 |
+|---|---|---|---|---|---|---|
+| A CI e2e 绿 + 探测 skip=true | skipped | DEPLOY | skipped | DEPLOY | OK | OK |
+| B CI e2e 红 | failure | NO_DEPLOY | failure | NO_DEPLOY | OK | OK |
+| C 探测超时 | success | DEPLOY | success | DEPLOY | OK | OK |
+| D 探测被取消 + CI e2e 绿 | skipped | DEPLOY | success | DEPLOY | OK | OK |
+| **E 探测被取消 + CI e2e 红** | skipped | **DEPLOY** | failure | **NO_DEPLOY** | **⚠️ 绕过** | **OK** |
+| F 探测 job 失败 | skipped | DEPLOY | success | DEPLOY | OK | OK |
+| G verify 失败 | skipped | NO_DEPLOY | skipped | NO_DEPLOY | OK | OK |
+| **合计** | | | | | **绕过 1 次** | **绕过 0 次** |
+
+**本次实际影响**：本轮遭遇的是场景 D（CI 的 e2e 恰为绿），**未造成危害** —— 但那是运气。
+
+**修复**：
+- `e2e` 加 `always()`，条件收紧为
+  `!(needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true')`
+  → 上游任何非「成功且确认已覆盖」的情形（取消/失败/输出缺失）**一律跑**；
+- `deploy` 的 `needs` 增加 `ci-e2e-status`，skipped 分支追加
+  `needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true'`
+  → 只有**主动跳过**才放行，被动跳过直接不放行（fail-closed）。
+
+**回归护栏**：`tests/ci-workflow-guard.test.js`「deploy.yml ②」5 条。
+**变异反向验证 4 条**（全部命中）：
+| 变异 | 被哪条断言抓住 |
+|---|---|
+| 去掉 e2e 的 `always()` | 「e2e job 必须有 always()」+「跳过条件绑定」 |
+| 去掉 deploy skipped 分支的上游校验 | 「放行 skipped 时必须校验上游」 |
+| 去掉 deploy 的 `needs: ci-e2e-status` | 「needs 必须包含 ci-e2e-status」 |
+| 去掉 deploy 的 `always()` | 「deploy job 仍有 always()」 |
+
+---
+
 ## [v3.7.91] - 2026-10-06
 
 **Electron 形态补齐 CSP 响应头（此前注释声称的「第二层防护」实际不存在）+ e2e 统计断言从「长期空转」恢复为真正执行。**
 
-本版两块改动，都是「把此前只写在注释里的声称落成真实实现」：
+两块改动都是「把此前只写在注释里的声称落成真实实现」。**已发布**（tag `v3.7.91` → `df0e48f`），
+CI `37357871130` success、线上 `https://levango7.github.io/Interaction/` 已生效。
+
+- ① Electron 形态此前**零 CSP 防护**（meta 中的 `frame-ancestors` 被 Chromium 忽略，
+  注释声称的 `onHeadersReceived` 第二层根本不存在）→ 本版补上响应头下发；
+- ② e2e 的统计视图断言因选择器恒 null 而**每轮静默跳过**（用 `statsEntry.count()>0` 硬断言替换）。
 
 ### ① Electron 形态补齐 CSP 响应头 —— `frame-ancestors` 从零防护到 `'none'`
 
@@ -58,43 +170,13 @@
 本次**不删**（属重构范畴，且 `_calcTodayKpi()` 仍被 `ui-ge-calendar.js:717` 使用，删函数会连带受影响），
 仅在测试注释中标注「疑似入口实为死代码」，避免后来人再次误用。
 
-### ③ `electron-build.yml` 产物重命名步骤「零匹配即静默通过」（**继承自 v3.7.90 未验证的修复**）
+---
 
-**发现路径**：核对 v3.7.91 发版前置状态时，回查 v3.7.90 的 Release —— 资产名**仍是** `Agent.-3.7.90-portable.exe`
-（「工坊」被净化为 `.`）。而 v3.7.90 的 electron-build run `37348499983` 的步骤列表里**根本没有「重命名为纯 ASCII」这一步**。
+---
 
-**根因（时序，事实）**：`c15d84e`（加重命名步骤）提交于 `2026-10-06 01:50:35`，
-而 `v3.7.90` tag 指向 `231124f`（`01:13:42`）——**修复晚于 tag**，那次构建跑的是旧 workflow。
-即第七轮的 `c15d84e` 属于「已在 main、未在真实 tag 上验证」的状态。
+### 验证（v3.7.91 ①② + v3.7.92 ③④）
 
-**顺带发现的真隐患（本地复刻实测）**：把 `c15d84e` 的脚本单独拉出来跑，在
-`dist/` 只有 `setup.exe`（无 `*-portable.exe`）时 —— `set -euo pipefail` + `shopt -s nullglob`
-下 for 循环**零次迭代**，脚本**EXIT=0 且无任何输出**。
-即：若 electron-builder 将来因配置变动改了产物名，重命名会「静默成功」、一个文件都没改却报绿，
-Release 会重新带出中文名，而**门禁不红**。这是本项目反复出现的「谎报成功」模式的又一例。
-
-**修复**（`electron-build.yml`）：
-- 先用 `files=(dist/*-portable.exe)` 收集，`${#files[@]} -eq 0` 时打 `::error::` 并 `exit 1`（附 `ls dist/` 便于定位）；
-- 维护 `renamed` 计数，末尾断言 `-ge 1`；
-- **终态复核**：`ls dist/*.exe` 经 `LC_ALL=C grep -q '[^ -~]'` 确认无残留非 ASCII 文件名 —— 这才是本步骤的真正目标。
-
-**新增回归护栏**（`tests/ci-workflow-guard.test.js`，7 条，读 YAML 文本的静态断言）：
-零匹配必红 / 解析失败必红 / 计数兜底 / 终态非 ASCII 复核 / 路径自洽 / 步骤顺序。
-**变异反向验证**（5 条，每条都让对应断言变红）：
-| 变异 | 被哪条断言抓住 |
-|---|---|
-| 删零匹配守卫 | 「零匹配时必须显式报红」 |
-| 删 `renamed >= 1` 兜底 | 「必须有计数兜底」 |
-| 删终态非 ASCII 复核 | 「终态复核」 |
-| 版本解析改 `continue`（静默跳过） | 「版本号解析失败必须显式报红」 |
-| 把重命名步骤移到上传之后 | 「重命名步骤排在上传之前」 |
-
-⚠️ 第 4 条变异**首版没被抓住**（断言 `toMatch(/...[\s\S]*?exit 1/)` 太宽松，`continue` 版仍匹配到别处的 `exit 1`），
-已改为精确锁 `[-n "$ver"]...exit 1` + 负向断言 `not.toMatch(...continue)`。**这正是变异验证的价值所在。**
-
-### 验证
-
-**新增回归护栏**（`tests/electron-guard.test.js`「④ CSP 响应头注入」4 条 + `tests/ci-workflow-guard.test.js` 7 条）：
+**新增回归护栏**（`tests/electron-guard.test.js`「④ CSP 响应头注入」4 条 + `tests/ci-workflow-guard.test.js` **12 条**）：
 
 **CSP 响应头注入**（4 条）：
 1. `main.js` 真实调用 `session.defaultSession.webRequest.onHeadersReceived`；
@@ -115,14 +197,31 @@ Release 会重新带出中文名，而**门禁不红**。这是本项目反复�
 
 **门禁**：`check:source-state` / `src:check` / `check:modules` / `check:ai-tools-doc` / `lint:xss` /
 `lint:layers` / `lint:tokens` / `lint:empty-catch` / `lint:appbridge` / `check:pwa-icons` **全部通过**；
-`electron-guard` + `electron-ipc` + `round4-batch4-electron` + `ci-workflow-guard` = **79 用例全绿**。
+`electron-guard` + `ci-workflow-guard` = **22 用例全绿**（前者 10 + 后者 12）。
 （`lint:appbridge` 报「core 声明 61 槽 · 赋值 65 槽 · 读取 55 槽 → 无死槽」，
 但 `_renderOvKpi` 这类**普通函数**死代码不在桥槽体系内，门禁抓不到 —— 需人工发现。）
+
+**v3.7.92 侧变异反向验证**（共 9 条，全部命中，逐条见 ③ ④ 段内表格）：
+`electron-build.yml` 5 条 + `deploy.yml` 4 条。其中 `electron-build.yml` 第 4 条
+（版本解析改 `continue`）**首版未被抓住**，已收紧断言——见 ③ 段。
 
 **CI/Deploy 实证**（`f1869ae`）：CI `37357871130` **success**；
 Deploy `37357871084` 四 job = `ci-e2e-status` success → `verify` success → **`e2e` skipped** → `deploy` success
 （v3.7.90 引入的发布链 e2e 去重**持续生效**）。
 其中 CI 的 `e2e` job `✓ Run E2E (full user flow)` 通过 —— 印证本轮「统计断言恢复真执行」在真实 CI 环境成立。
+
+**v3.7.91 发版实证**（tag `v3.7.91` → `df0e48f`）：
+- **Electron Build `37361421060` success** —— 首次在真实 tag 上跑「重命名为纯 ASCII」步骤，
+  Release 资产名 **`AgentWorkbench-3.7.91-portable.exe`**（对比 v3.7.90 的 `Agent.-3.7.90-portable.exe`）
+  → 上一轮 `c15d84e` 的修复**至此才真正验证通过**（它此前从未在 tag 上生效，见 ③ 段）。
+- **CI `37361404066` success**：`test (ubuntu)` + `test (windows)` + `e2e` 三 job 全绿。
+- Deploy `37361404028`：`verify` success / `ci-e2e-status` success / `e2e` skipped（去重生效）；
+  末位 `deploy` job 反复 `cancelled`（`steps` 为空 = 从未启动），官方 annotation 为
+  **`The job was not acquired by Runner of type hosted even after multiple attempts`**
+  —— GitHub 托管 runner 调度层故障（同期 CI / Electron Build 均正常），非代码或配置问题。
+- 改以 `workflow_dispatch` 重触发 `37368800195`：`verify` success、**`deploy` success（6 steps）**，
+  线上 `https://levango7.github.io/Interaction/agent-workbench.html` 实测 `VERSION = "3.7.91"` ✅
+  —— 该 run 的 `ci-e2e-status` 同样被 runner 故障取消，**并因此暴露出 ④ 段那条门禁缺口**。
 
 ---
 
@@ -2753,3 +2852,4 @@ v3.7.0 之后的 12 个子版本集中在看板表单栅格对齐与 datepicker 
 - 周报生成器（办公/编程）、SM-2 间隔复习（学习）。
 - 命令面板（Ctrl/Cmd+K）、暗色模式、每日播报、Toast 通知。
 - 57 个测试用例。
+

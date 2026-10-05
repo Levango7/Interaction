@@ -91,3 +91,83 @@ describe("electron-build.yml ② 上传/发布路径与本步骤自洽", () => {
     expect(iRelease).toBeGreaterThan(iRename, "重命名必须先于 Release 附加");
   });
 });
+
+/* ===========================================================================
+ * deploy.yml 守护（v3.7.92）
+ * 背景（2026-10-05 实测，本机无法复现、由真实 CI 触发）：
+ *   deploy.yml 的 e2e 门禁存在一个**被动跳过**缺口：
+ *     · 原 e2e job:  needs: [ci-e2e-status] + `if: ...skip != 'true'` 且**无 always()**
+ *       注释假设「ci-e2e-status 的 probe 自捕获异常，结论永远不会是 failure」。
+ *       但漏掉了「job 本身根本没启动」——GitHub 托管 runner 分配失败时，
+ *       ci-e2e-status 的 conclusion=cancelled、steps=[]（实测连续 4 次）。
+ *     · 此时 GitHub 默认语义「needs 上游 cancelled → 下游 skipped」会让 e2e **被动跳过**，
+ *       而 deploy 的条件 `needs.e2e.result == 'skipped'` 又把任何 skipped 当"已由 CI 覆盖"
+ *       → **e2e 门禁被静默绕过**（若此刻 CI 的 e2e 恰好是红的，未验证产物照样上线）。
+ *   真值表实测（7 场景）：旧逻辑绕过 1 次（探测被取消 + CI e2e 红），新逻辑 0 次。
+ * 本组断言锁住修复，防止回退。
+ * ======================================================================== */
+describe("deploy.yml ② e2e 门禁不得因上游 job 取消而被『被动跳过』绕过", () => {
+  const dep = readFileSync(join(root, ".github/workflows/deploy.yml"), "utf8");
+
+  /** 抽某个 job 的片段（从 `  <name>:` 到下一个同级 job 或文件尾）。
+   *  ⚠️ deploy.yml 是 **CRLF** 换行（实测 `dep.includes("\r\n") === true`），
+   *  故行尾必须写成 `\r?\n`，否则 job 名根本匹配不到（首版踩过，报「缺少 job: deploy」）。 */
+  function jobBlock(name) {
+    const re = new RegExp(`\r?\n  ${name}:\r?\n([\\s\\S]*?)(?=\r?\n  [a-z][\\w-]*:\r?\n|$)`);
+    const m = dep.match(re);
+    if (!m) throw new Error(`deploy.yml 缺少 job: ${name}`);
+    return m[1];
+  }
+
+  /** 抽某 job 里 `if:` 起、到下一个同级 key 之前的完整文本（处理 CRLF 与多行 `>-`）。
+   *  ⚠️ 必须锚定**行首缩进**的 `if:`，不能用裸 indexOf("if:")：
+   *  job 的注释里就写着「原实现 `if: ...skip != 'true'`」，裸 indexOf 会命中注释（本文件踩过）。 */
+  function ifBlockOf(name) {
+    const b = jobBlock(name).replace(/\r/g, "");
+    const m0 = b.match(/\n    if:/);
+    if (!m0) throw new Error(`${name} 无行首 if:`);
+    const rest = b.slice(m0.index + m0[0].length);
+    // 下一个缩进 4 空格的 key（如 runs-on:）即 if 区块结束
+    const m = rest.match(/\n    [a-z][\w-]*:/);
+    return m ? rest.slice(0, m.index) : rest;
+  }
+
+  it("e2e job 必须有 always()（否则上游 cancelled 会连带跳过它）", () => {
+    const ifBlock = ifBlockOf("e2e");
+    expect(ifBlock, "e2e 的 if 必须含 always()").toContain("always()");
+  });
+
+  it("e2e 跳过条件必须显式绑定『上游 success 且 skip=true』", () => {
+    const ifBlock = ifBlockOf("e2e");
+    expect(ifBlock, "必须检查 ci-e2e-status.result == 'success'").toMatch(/needs\.ci-e2e-status\.result\s*==\s*'success'/);
+    expect(ifBlock, "必须检查 outputs.skip == 'true'").toMatch(/outputs\.skip\s*==\s*'true'/);
+    // 负向：不得退回「只看 outputs.skip != 'true'」的旧写法
+    expect(ifBlock, "不得退回不检查上游结论的旧写法").not.toMatch(/needs\.ci-e2e-status\.outputs\.skip\s*!=\s*'true'/);
+  });
+
+  it("deploy job 的 needs 必须包含 ci-e2e-status（否则无法区分两种 skipped）", () => {
+    const b = jobBlock("deploy").replace(/\r/g, "");
+    // 注意：jobBlock 从 `deploy:\n` 之后起，首行即 `    needs: [...]`，无前导 \n → 用 (?:^|\n)
+    const needsLine = (b.match(/(?:^|\n)\s*needs:\s*(.+)/) || [])[1] || "";
+    expect(needsLine, "必须依赖 ci-e2e-status").toContain("ci-e2e-status");
+    expect(needsLine, "仍须依赖 verify").toContain("verify");
+    expect(needsLine, "仍须依赖 e2e").toContain("e2e");
+  });
+
+  it("deploy 放行 skipped 时必须同时校验上游 ci-e2e-status 成功且 skip=true", () => {
+    const ifBlock = ifBlockOf("deploy");
+    expect(ifBlock, "verify 必须 success").toMatch(/needs\.verify\.result\s*==\s*'success'/);
+    expect(ifBlock, "e2e 允许 success").toMatch(/needs\.e2e\.result\s*==\s*'success'/);
+    // 关键：skipped 分支必须附带 ci-e2e-status 的结论校验
+    expect(ifBlock, "skipped 分支必须校验 ci-e2e-status.result").toMatch(/needs\.ci-e2e-status\.result\s*==\s*'success'/);
+    expect(ifBlock, "skipped 分支必须校验 outputs.skip == 'true'").toMatch(/outputs\.skip\s*==\s*'true'/);
+    // 负向：不得是「裸的 e2e.result == 'skipped' 即放行」
+    const bareSkipRe = new RegExp("\\|\\|\\s*needs\\.e2e\\.result\\s*==\\s*'skipped'\\s*\\)");
+    expect(ifBlock, "不得裸用 e2e.result == 'skipped' 放行").not.toMatch(bareSkipRe);
+  });
+
+  it("deploy job 仍有 always()（上游 skipped 时不被默认跳过）", () => {
+    const ifBlock = ifBlockOf("deploy");
+    expect(ifBlock, "deploy 必须保留 always()").toContain("always()");
+  });
+});

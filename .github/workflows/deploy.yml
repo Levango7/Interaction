@@ -136,9 +136,17 @@ jobs:
   #     探测失败一律视为「未覆盖」→ 跑。宁可重复执行，绝不放行未验证的产物。
   e2e:
     needs: [ci-e2e-status]
-    # ci-e2e-status 的 probe 步骤在任何情况下都 != failure（脚本自捕获异常），故无需 always()。
-    # 条件语义：仅当探测确认「CI 已跑过 e2e 且成功」时才跳过本 job。
-    if: needs.ci-e2e-status.outputs.skip != 'true'
+    # v3.7.92 修复（真实触发的门禁缺口，见文件末注释）：
+    #   原实现 `if: needs.ci-e2e-status.outputs.skip != 'true'` + 无 always()，隐含假设
+    #   "ci-e2e-status 这个 job 总会跑完（probe 自捕获异常，结论不会是 failure）"。
+    #   **该假设漏掉了「job 本身根本没启动」**：GitHub 托管 runner 分配失败时
+    #   ci-e2e-status 的 conclusion = cancelled 且 steps=[]（2026-10-05 实测，连续 4 次）。
+    #   此时 GitHub 默认语义「needs 上游 cancelled → 下游 skipped」会让本 job **被动跳过**，
+    #   而 deploy 的条件又把任何 skipped 当作"已由 CI 覆盖" → **e2e 门禁被静默绕过**。
+    #   修法：① 加 always()，让本 job 不再被上游取消连带跳过、必须自行判定条件；
+    #        ② 条件收紧为「仅当上游 **确实成功** 且探测到 skip=true 时才跳过」，
+    #           其余一切情形（取消/失败/输出缺失）一律**跑**——fail-closed。
+    if: always() && !(needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -154,17 +162,29 @@ jobs:
         timeout-minutes: 10
 
   deploy:
-    needs: [verify, e2e]
+    needs: [verify, e2e, ci-e2e-status]
     # ⚠️ 必须显式放行 skipped —— e2e 在「CI 已跑过且成功」时会被上面的 if 跳过，
     #   而 GitHub 官方语义（docs.github.com「Defining prerequisite jobs」）：
     #   needs 的上游 job「fails or is skipped」时，依赖它的 job **默认被跳过**，
     #   除非用条件表达式显式放行。少了这一行，push 时部署会静默不执行。
-    # 条件设计（fail-closed）：
+    # 条件设计（fail-closed，v3.7.92 收紧）：
     #   · verify 必须 success（红/取消 → 不部署）
-    #   · e2e 允许 success 或 skipped（skipped = 已由 ci.yml 覆盖且成功）；
-    #     failure/cancelled → 不部署
+    #   · e2e 必须 success，**或**「skipped 且其 skipped 事出有因」——
+    #     即上游 ci-e2e-status 确实 success 且 skip='true'（= 该 commit 的 CI e2e 已绿）。
+    #     v3.7.92 前只判 `needs.e2e.result == 'skipped'`，无法区分：
+    #       (a) 主动跳过（CI 已覆盖，安全）
+    #       (b) **被动跳过**（ci-e2e-status 因 runner 分配失败被取消，e2e 未跑 → 不安全）
+    #     两者在 `needs.e2e.result` 上都是 'skipped'，故必须补查上游 ci-e2e-status 的结论。
     #   不能用 always() 了事 —— 那会连 verify 失败也放行，等于撤掉门禁。
-    if: always() && needs.verify.result == 'success' && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
+    if: >-
+      always()
+      && needs.verify.result == 'success'
+      && (
+           needs.e2e.result == 'success'
+           || (needs.e2e.result == 'skipped'
+               && needs.ci-e2e-status.result == 'success'
+               && needs.ci-e2e-status.outputs.skip == 'true')
+         )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
