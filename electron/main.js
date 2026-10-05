@@ -616,7 +616,7 @@ if (!gotLock){
       if(!isSafeNotifyWebhookUrl(url)) return { ok: false, status: 0, error: "unsafe_webhook_url" };
       if(!payload || typeof payload !== "object" || Array.isArray(payload)) return { ok: false, status: 0, error: "bad_payload" };
       const ctrl = new AbortController();
-      const tmo = Math.min(Math.max(Number(arg.timeoutMs) || 8000, 1000), 20000);
+      const tmo = _outboundTimeout(arg && arg.timeoutMs, 8000);
       const timer = setTimeout(() => ctrl.abort(), tmo);
       try{
         const r = await fetch(url, {
@@ -659,8 +659,8 @@ if (!gotLock){
       if(!/^\/rest\//.test(reqPath)) return { ok: false, status: 0, error: "bad_path" };
       if(["GET", "POST", "PUT", "DELETE"].indexOf(method) < 0) return { ok: false, status: 0, error: "bad_method" };
       if(!token) return { ok: false, status: 0, error: "no_token" };
-      if(body.length > 2 * 1024 * 1024) return { ok: false, status: 0, error: "body_too_large" };
-      const tmo = Math.min(Math.max(Number(arg && arg.timeoutMs) || 15000, 1000), 20000);
+      if(body.length > _OUTBOUND_MAX_BODY) return { ok: false, status: 0, error: "body_too_large" };
+      const tmo = _outboundTimeout(arg && arg.timeoutMs, 15000);
       const ctrl2 = new AbortController();
       const timer2 = setTimeout(() => ctrl2.abort(), tmo);
       try{
@@ -699,15 +699,54 @@ app.on("activate", () => {
 
 app.on("before-quit", () => { willQuit = true; });
 
-    /* ---------- v3.7.84：ICS 订阅只读中转（主机防线与 v3.7.87 的 webdav-fetch 共享） ----------
-       多数日历站不回 CORS 头（桌面特色体：sandbox + webSecurity 默认开），订阅拉取要走主进程。
-       与 jira-fetch 同为「用户自填 URL」类接口，安全面按开放 SSRF 取严：
-         · 只 https、拒 userinfo；
-         · 拒回环 / 私网 / 链路本地 / .local / localhost（防误扫内网与云元数据）；
-         · redirect:"error"（防 302 跳内网绕过校验）；
-         · 不携带任何认证头（ICS 为公开只读）；URL 只由用户自己填写；
-         · ≤2MB、12s 超时、日志只记主机与状态码。 */
-    function _netHostForbidden(host){
+/* ============================================================
+ * v3.7.90：主进程「外发通道」的公共常量与助手 + 新增通道检查清单
+ * ------------------------------------------------------------
+ * 本文件现有 5 条具备外发能力的 IPC：
+ *   chat · notify-send · jira-fetch · ics-fetch · webdav-fetch
+ * 其中 notify/jira/ics/webdav 是 v3.7.66 之后陆续加的，共同特征是
+ * 「目标站不回 CORS 头，渲染进程发不出去，只能由 Node 侧代发」。
+ * 每条各自的校验都是齐的，但**口径分散在各处**：将来再加第六条时，
+ * 很容易漏掉其中某一项 —— 而这类遗漏在测试里只覆盖被写到的那几条通道。
+ *
+ * 因此：① 把**完全同构**的部分（体积上限、超时钳制）收成公共常量与助手；
+ *      ② 把「新通道必须逐项声明」的检查清单固定在这里。
+ * **刻意不动**各通道的错误码与校验顺序 —— 它们被 57 条 IPC 测试逐字断言，
+ * 重构收益（可维护性）不值当用「改坏安全路径」的风险去换。
+ *
+ * ⚠️ 作用域坑（2026-10-05 实测踩到）：这几个助手**必须放在模块顶层**。
+ *    ics-fetch / webdav-fetch 的 handler 注册在 `app.on("before-quit")` 之后（模块顶层），
+ *    而 notify-send / jira-fetch 注册在 `app.whenReady()` 回调里。首版把常量放进 whenReady 内，
+ *    顶层那两个 handler 直接 ReferenceError —— 被 5 条既有 IPC 测试当场抓出。
+ *    （同理 `_netHostForbidden` 也必须在顶层：它被 ics/webdav 两个顶层 handler 使用。）
+ *
+ * 新增一条外发通道时，逐项确认：
+ *   □ 入口第一行 `assertTrustedSender(e)`（fail-closed）
+ *   □ 协议：https 必；如需放行本机（如 chat 的 localhost）要显式声明并说明理由
+ *   □ 拒 userinfo（`u.username || u.password`）—— 防 `https://trusted.com@evil`
+ *   □ 主机白名单或拒私网：`_netHostForbidden()` 挡回环/私网/链路本地/.local
+ *   □ `redirect: "error"` —— 防 302 跳内网绕过主机校验
+ *   □ 体积封顶：请求体与响应体都用 `_OUTBOUND_MAX_BODY`
+ *   □ 超时钳制：`_outboundTimeout(ms, 默认值)`
+ *   □ 方法白名单（若支持写操作）
+ *   □ 日志只记主机与状态码，**绝不记凭据与正文**
+ * ============================================================ */
+/** 外发请求体 / 响应体的统一体积上限（2MB） */
+const _OUTBOUND_MAX_BODY = 2 * 1024 * 1024;
+/** 超时钳制：下限 1s、上限 20s；未传时用调用方给的默认值 */
+function _outboundTimeout(ms, defMs){
+  return Math.min(Math.max(Number(ms) || defMs, 1000), 20000);
+}
+
+/* ---------- v3.7.84：ICS 订阅只读中转（主机防线与 v3.7.87 的 webdav-fetch 共享） ----------
+   多数日历站不回 CORS 头（桌面特色体：sandbox + webSecurity 默认开），订阅拉取要走主进程。
+   与 jira-fetch 同为「用户自填 URL」类接口，安全面按开放 SSRF 取严：
+     · 只 https、拒 userinfo；
+     · 拒回环 / 私网 / 链路本地 / .local / localhost（防误扫内网与云元数据）；
+     · redirect:"error"（防 302 跳内网绕过校验）；
+     · 不携带任何认证头（ICS 为公开只读）；URL 只由用户自己填写；
+     · ≤2MB、12s 超时、日志只记主机与状态码。 */
+function _netHostForbidden(host){
       const h = String(host || "").toLowerCase();
       if(!h) return true;
       if(h === "localhost" || /\.local$/.test(h) || /\.localhost$/.test(h) || /\.internal$/.test(h)) return true;
@@ -738,7 +777,7 @@ app.on("before-quit", () => { willQuit = true; });
         if(r3.status === 304) return { ok: true, status: 304, notModified: true, etag: et3, lastModified: lm3 };
         if(!r3.ok) return { ok: false, status: r3.status, error: "HTTP " + r3.status };
         const buf3 = Buffer.from(await r3.arrayBuffer());
-        if(buf3.length > 2 * 1024 * 1024) return { ok: false, status: r3.status, error: "too_large" };
+        if(buf3.length > _OUTBOUND_MAX_BODY) return { ok: false, status: r3.status, error: "too_large" };
         return { ok: true, status: r3.status, etag: et3, lastModified: lm3, text: buf3.toString("utf8") };
       }catch(err){
         clearTimeout(timer3);
@@ -766,7 +805,7 @@ app.on("before-quit", () => { willQuit = true; });
       const method = String((arg && arg.method) || "GET").toUpperCase();
       if(["PROPFIND", "GET", "PUT", "DELETE", "MKCOL"].indexOf(method) < 0) return { ok: false, status: 0, error: "bad_method" };
       const body = (arg && typeof arg.body === "string") ? arg.body : "";
-      if(body.length > 2 * 1024 * 1024) return { ok: false, status: 0, error: "body_too_large" };
+      if(body.length > _OUTBOUND_MAX_BODY) return { ok: false, status: 0, error: "body_too_large" };
       const headers = {};
       if(arg && arg.auth) headers["Authorization"] = String(arg.auth);      /* Basic 应用密码，仅本次调用传递 */
       if(arg && arg.depth) headers["Depth"] = String(arg.depth);

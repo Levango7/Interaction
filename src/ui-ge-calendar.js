@@ -997,6 +997,9 @@ try{ AppBridge.renderCalendarView = renderCalendarView; }catch(e){}
 const ICS_SUBS_KEY = "cal_ics_subs";
 const ICS_MAX_EVENTS = 2000;          // 单源事件上限（防恶意/超大订阅打爆 localStorage）
 const ICS_TITLE_MAX = 300;            // 标题截断
+/* v3.7.90：本地 .ics 导入的体积上限，与网络订阅同口径
+   （electron/main.js 的 ics-fetch 用 2MB 封顶；此处此前无限制，两条入口不对称） */
+const ICS_LOCAL_MAX_BYTES = 2 * 1024 * 1024;
 /** 读取全部日历源 */
 function getIcsSubs(){
   try{
@@ -1312,6 +1315,14 @@ function bindIcsPanel(c){
       const f = file.files && file.files[0];
       file.value = "";
       if(!f) return;
+      /* v3.7.90：本地导入补体积上限 —— 此前 readAsText 无任何限制，
+         而**订阅路径**（网络）在 ics-fetch 主进程中已有 2MB 封顶（见 electron/main.js）。
+         两条入口限额不对称：一个几百 MB 的 .ics 会被整串读进内存再跑正则，
+         表现为页面长时间卡死且没有任何提示。现按订阅同口径 2MB 前置拦截。 */
+      if(f.size > ICS_LOCAL_MAX_BYTES){
+        toast(t("p5.icsTooLarge", "文件过大（上限 {n}MB），未导入").replace("{n}", String(Math.round(ICS_LOCAL_MAX_BYTES / 1024 / 1024))), "warn");
+        return;
+      }
       const text = await new Promise(function(res){
         try{ const fr = new FileReader(); fr.onload = function(){ res(String(fr.result || "")); }; fr.onerror = function(){ res(""); }; fr.readAsText(f); }
         catch(e){ res(""); }

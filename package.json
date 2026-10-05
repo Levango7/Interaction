@@ -1,10 +1,11 @@
 {
   "name": "agent-workbench",
-  "version": "3.7.89",
+  "version": "3.7.90",
   "private": true,
   "description": "Agent 工坊 — 多场景任务 / 记录 / AI 助手单文件应用。单一交付物 agent-workbench.html 为真相源。",
   "scripts": {
     "test": "vitest run",
+    "test:local": "node scripts/run-tests.mjs",
     "posttest": "node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -15,8 +16,9 @@
     "make:icon": "node scripts/make-icon.mjs",
     "build:check": "node scripts/build.mjs --check",
     "release": "node scripts/release.mjs",
-    "lint": "npx eslint agent-workbench.html electron/main.js electron/preload.js service-worker.js && node scripts/lint-colors.mjs agent-workbench.html && node scripts/lint-xss.mjs --check && node scripts/lint-css-structure.mjs",
+    "lint": "npx eslint agent-workbench.html electron/main.js electron/preload.js service-worker.js && node scripts/lint-colors.mjs agent-workbench.html && node scripts/lint-xss.mjs --check && node scripts/lint-css-structure.mjs && node scripts/lint-appbridge.mjs --check",
     "lint:xss": "node scripts/lint-xss.mjs --check",
+    "lint:appbridge": "node scripts/lint-appbridge.mjs --check",
     "postlint": "node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup",
     "serve": "python -m http.server 8123",
     "lint:layers": "node scripts/lint-layers.mjs",

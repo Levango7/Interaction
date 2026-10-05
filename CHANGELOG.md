@@ -1,3 +1,68 @@
+## [v3.7.90] - 2026-10-05
+
+**主进程外发通道收口 + 两类入口限额对齐 + AppBridge 死槽门禁 + 第三方审计修复收口。**
+本版四块改动互不重叠：① `electron/main.js` 把 5 条外发 IPC 里**完全同构**的部分收成公共常量/助手；
+② 本地 `.ics` 导入补体积上限（与网络订阅同口径）；③ `lint-appbridge` 从「只查死赋值」扩到
+「**死读取**」并接入 `npm run lint`；④ 第三方审查发现的门禁/回归项收口。
+
+⚠️ **本版未做发版后线上复核**（Pages 指纹待发版后回填）。本机门禁在**源码态**下逐项验证：
+`check:source-state` / `src:check` / `check:modules` / `lint:xss` / `lint:layers` / `lint:tokens` /
+`lint:empty-catch` / `lint:appbridge` / `check:pwa-icons` 全部 exit 0；`npm run lint`（eslint 4 文件 +
+lint-colors + lint-xss + lint-css-structure + lint-appbridge）**0 error / 6 warning**；
+`tests/electron-ipc.test.js` **57/57 通过**（16.3s）—— 该文件正是本轮主进程重构的直接覆盖集。
+
+### ① `electron/main.js`：外发通道公共常量 + 新通道检查清单（**刻意的小重构**）
+
+文件里 5 条具备外发能力的 IPC（`chat` / `notify-send` / `jira-fetch` / `ics-fetch` / `webdav-fetch`）
+校验口径原本各写一遍。抽出两处**完全同构**的部分：
+
+- `const _OUTBOUND_MAX_BODY = 2 * 1024 * 1024` —— 替掉 `notify-send` / `jira-fetch` / `webdav-fetch`
+  请求体与 `ics-fetch` 响应体里**逐字重复**的 4 处 `2 * 1024 * 1024` 字面量；
+- `_outboundTimeout(ms, defMs)` = `Math.min(Math.max(Number(ms) || defMs, 1000), 20000)` ——
+  替掉 2 处重复的钳制表达式（下限 1s / 上限 20s，未传用调用方默认值）。
+
+**边界（故意不做的部分）**：各通道的**错误码与校验顺序一律未动** —— 它们被 `electron-ipc.test.js`
+57 条用例逐字断言，「可维护性收益」不值当用「改坏安全路径」的风险去换。
+
+**作用域坑（实测踩到并写进文件头注释）**：助手**必须放模块顶层**。`ics-fetch` / `webdav-fetch`
+的 handler 注册在 `app.on("before-quit")` 之后的模块顶层，而 `notify-send` / `jira-fetch` 注册在
+`app.whenReady()` 回调内。首版把常量放进 `whenReady` 内 → 顶层那两个 handler 直接 `ReferenceError`
+（被既有 IPC 测试当场抓出）。同理 `_netHostForbidden` 也必须在顶层。
+
+文件头新增**「新增一条外发通道时逐项确认」清单**（9 项：`assertTrustedSender` fail-closed、https 必、
+拒 userinfo、`_netHostForbidden` 拒私网、`redirect:"error"`、体积封顶、超时钳制、方法白名单、
+日志只记主机与状态码）—— 针对的是「将来加第六条时漏掉某一项」这类**只在被写到的那几条通道路径上
+被测到**的风险。
+
+### ② 本地 `.ics` 导入补体积上限（两类入口限额不对称）
+
+`src/ui-ge-calendar.js` 新增 `ICS_LOCAL_MAX_BYTES = 2MB` 并在 `bindIcsPanel` 的文件选择回调里前置拦截。
+
+- **此前的不对称**：网络订阅路径由主进程 `ics-fetch` 以 2MB 封顶，而**本地文件**路径经 `FileReader.readAsText`
+  **完全无限制** —— 一个几百 MB 的 `.ics` 会被整串读进内存再跑正则，表现为**页面长时间卡死且无任何提示**。
+- 现按订阅同口径 2MB 前置 `f.size` 拦截，超限 `toast` 提示并直接 `return`（不读文件）。
+- 新增 i18n 键 `p5.icsTooLarge`（中英已登记，`core.js` 两处）。
+
+### ③ `lint-appbridge` 扩到「死读取」并接入 `npm run lint`
+
+`scripts/lint-appbridge.mjs` 原本只查「core 声明了槽但**没有任何赋值**」（死槽）；现增加
+「**被读取但无实现**」的检测：把 core 的槽声明集与 `src/` 里各模块对 `AppBridge.<槽>` 的赋值/读取
+做交集比对。当前结果：**core 声明 61 槽 · 赋值 65 槽 · 读取 55 槽 · 所有被读取的槽都有实现（无死槽）**。
+
+接入 `package.json`：`lint` 链尾追加 `node scripts/lint-appbridge.mjs --check`，并加独立脚本
+`lint:appbridge`。**理由**：该门禁此前**不在任何 CI 链路里**（只在 `npm run lint` 之外被手动调用），
+等于「写了不跑」—— 这正是本轮审计反复命中的治理模式。
+
+### ④ 第三方审计项收口
+
+- `docs/architecture-layers.md` 修正一处**我自己写错的实测值**：原文说「想看全量边用 `--fanout=1`」，
+  **是错的**。`--fanout=N` 语义是「扇出 ≥N 不计边」，N 越小排除越多 —— `--fanout=1` 把所有符号都排除，
+  报 **0 循环 / 0 逆层**，是最**空**的图。实测 35 块：`1`→0/0 · `8`（默认门禁）→13/18 · `20`→20/21 ·
+  `999`→22/21。该错误值当年是从 `module-graph.mjs` 的 console 提示**照抄**来的（该提示已同步修正）。
+  已在文档里把这段错误与更正过程**保留**，作为「照抄工具输出而不实测」的反面案例。
+- 工作区 `nul` 根因确认：`> nul`（本意 `/dev/null`）在 Git Bash 下会真建文件，内容是 `[pet-art]` 构建日志行。
+  已不存在，无需处理。
+
 ## [v3.7.89] - 2026-10-04
 
 **发版后线上复核**：Pages 取回 **3,736,655 B · sha256:270dfe23160bea78c21e5af8…**，与本机干净产物
