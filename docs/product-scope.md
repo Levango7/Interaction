@@ -128,6 +128,10 @@
 >    Linear 工作区来把名字映射成 ID），issue 落到团队默认状态，文案如实写明；
 >    `LINEAR_STATUS_MAP` 因此继续冻结在废弃名单里 —— 它正好代表"没接的那部分"。
 > 名单 21 → **18**（Notion 2 个 + Linear 1 个），`DELETED` 增至 11 个。
+> ⚑ **2026-10-06 现况（数字以门禁为准）**：`DEPRECATED` = **10 项**、`DELETED` = **11 项**；
+> 上面那句「21 → 18」是 **v3.7.70 的快照**，之后各批次继续清偿但没回来更新这句。
+> 现测命令：`node -e "const t=require('fs').readFileSync('tests/integration-deprecated.test.js','utf8');const c=n=>{const m=t.match(new RegExp('const '+n+' = \`([\\\\s\\\\S]*?)\`'));return m?m[1].trim().split(/\\s+/).filter(Boolean).length:0};console.log(c('DEPRECATED'),c('DELETED'))"`
+> —— 台账只有一处真相：`tests/integration-deprecated.test.js`；**本文改数字必须跟着门禁改，别手写进度**。
 > 仍未接：Notion 笔记推送、Jira、日历；Linear 的状态映射与反向拉取。<br>
 > ⚑ 测试：`tests/notion-push.test.js` 9 条 · `tests/linear-push.test.js` 9 条
 > （逐条记账 / 部分失败如实报 / 未连接零外发 / 缺 database_id·teamId 不算成功 / 幂等 PATCH·issueUpdate /
