@@ -8,8 +8,8 @@
 ## 一、当前坐标
 
 - 版本 **v3.7.93**（数字快照：2026-10-07，HEAD `c0a0dfe`）；单测 **126 文件**（`git ls-files tests | grep -c '\.test\.js$'`）
-  + e2e **84 例 / 12 spec（跟踪态）** —— 现测 `npx playwright test --list` 报 **86 例 / 13 文件**，其中未跟踪的
-  `tests/e2e/idb-image-backup.spec.js`（2 例）是并行会话在飞改动，不计入本仓基线；逆层 18 / 循环 13（起点 53/50，`node scripts/lint-layers.mjs`）。
+  + e2e **86 例 / 13 spec（跟踪态）** —— 现测 `npx playwright test --list` 报 **90 例 / 14 文件**，多出的 2 例来自未跟踪的
+  `tests/e2e/idb-image-backup.spec.js`（并行会话在飞改动），不计入本仓基线；逆层 18 / 循环 13（起点 53/50，`node scripts/lint-layers.mjs`）。
   > ⚠️ **不再手写用例总数**（v3.7.93 之后到本版，"115 文件 / 1307+ 用例"漂了三处，见
   > `docs/audit-2026-10-06.md` R-3）：**契约型数字**（逆层/循环/块数）由门禁守着可以写；
   > **进度型数字**只写"截至某日某 commit 的实测"，并给出现测命令。

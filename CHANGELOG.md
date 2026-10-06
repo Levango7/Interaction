@@ -37,8 +37,18 @@
 - **新记账 R-8（本切片带来的）**：损坏 `tasks` 原值被保留后，导出/自动备份面经 `getTasks()` 看到的是**空列表**，
   用户可能把残缺备份当成完整备份 —— 修法是把"本次导出未包含损坏的 tasks 键"写进成功提示。
   现场在 `src/ui-backup-stats.js`，该文件正被并行会话按切片二改动，**本会话不抢改**，详见台账 R-8。
+- **切片一的新状态另有真浏览器证据** `tests/e2e/corrupt-data-boot.spec.js`：覆盖"存储里合法地留着一个非数组
+  `wb_agent_tasks`"下的启动不变量 —— ① 备份可用 → 原值进 `_broken_` 键 + 重置 `[]` + 零未捕获异常 + 界面照常渲染；
+  ② 备份写失败（`addInitScript` 掐 `_broken_` 键的 `setItem`）→ **原值仍在存储里**、`getTasks()/getActiveTasks()`
+  在真浏览器里退化成 `[]`、诊断缓冲点到"broken-data backup FAILED … tasks"、**没有 `.filter is not a function`**、
+  不落进「数据异常」兜底页。顺带验实了"原因见诊断日志"不是空话：`pushDiag → _diagLog → getDiag()` 被
+  `src/ui-backup-stats.js:476/507` 的诊断面板消费。变异验证（隔离树 `_probe/iso2`）：摘掉读者守卫 → 2 条红
+  （直报 `TypeError: _tasksForRead(...).filter is not a function`）；改成"备份失败照样重置" → **只**打死②那条；恢复后 2 passed。
+- **并行会话进展（不认领、仅记事实）**：`e672cc9` 交付第三片 `ui-ge-api.js` 并**重冻了 empty-catch 基线**
+  （502 处）。当前工作区现测 P0 = **107**、exit 1 只剩 1 处新增 P0 在 `src/ui-backup-stats.js`（其切片二在飞文件）。
 - **未做（决策，不推给别人）**：不切版本号、不打标（避开并行会话的 v3.7.94）；第二片 `ui-backup-stats`、第三片
-  `ui-ge-api` 由并行会话在做，本会话不动那两个文件；empty-catch 基线**未 `--freeze`**（会把他人未提交的 P0 冻成合法存量）。
+  `ui-ge-api` 由并行会话在做，本会话不动那两个文件（第三片他们已交付 `e672cc9`）；本片**不 `--freeze` 基线**
+  —— 由并行会话在他们那侧冻，避免把彼此未提交的 P0 冻成合法存量。
 
 ## [Unreleased] - 2026-10-06（审计批次③）
 
