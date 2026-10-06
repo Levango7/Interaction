@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-05",
-  "count": 500,
+  "count": 502,
   "items": [
     {
       "file": "ai-loop.js",
@@ -3448,19 +3448,30 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 855,
-      "sig": "cb83bf1b72",
+      "line": 862,
+      "sig": "42aa032264",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
-      "bare": true,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
       "note": "",
-      "snippet": "await apiDeleteDevice(d.id); }"
+      "snippet": "toast(t(\"recycle.purgeFail\", \"删除失败\"), \"warn\"); }"
     },
     {
       "file": "ui-ge-api.js",
-      "line": 862,
-      "sig": "918100a7fe",
+      "line": 863,
+      "sig": "8684b306b6",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"error\", \"delete device fa"
+    },
+    {
+      "file": "ui-ge-api.js",
+      "line": 871,
+      "sig": "ac14c511ce",
       "occ": 1,
       "level": "P0",
       "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
@@ -3470,7 +3481,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 879,
+      "line": 888,
       "sig": "3d2f824fdd",
       "occ": 1,
       "level": "P0",
@@ -3481,19 +3492,30 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 901,
-      "sig": "d5e1b19099",
-      "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
-      "bare": true,
+      "line": 914,
+      "sig": "42aa032264",
+      "occ": 2,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
       "note": "",
-      "snippet": "await apiDeleteSchedule(s.id); }"
+      "snippet": "toast(t(\"recycle.purgeFail\", \"删除失败\"), \"warn\"); }"
     },
     {
       "file": "ui-ge-api.js",
-      "line": 908,
-      "sig": "d130636c76",
+      "line": 915,
+      "sig": "8663d01017",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"error\", \"delete schedule "
+    },
+    {
+      "file": "ui-ge-api.js",
+      "line": 923,
+      "sig": "8b94347ddd",
       "occ": 1,
       "level": "P0",
       "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
@@ -3503,7 +3525,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 942,
+      "line": 957,
       "sig": "8e4736cd91",
       "occ": 1,
       "level": "P0",
@@ -3514,7 +3536,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 956,
+      "line": 971,
       "sig": "3720e7f23c",
       "occ": 1,
       "level": "P2",
@@ -3525,7 +3547,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 957,
+      "line": 972,
       "sig": "1505119780",
       "occ": 1,
       "level": "P0",
@@ -3536,7 +3558,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 981,
+      "line": 996,
       "sig": "98f918c249",
       "occ": 1,
       "level": "P2",
@@ -3547,7 +3569,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 982,
+      "line": 997,
       "sig": "7bfbae95d9",
       "occ": 1,
       "level": "P0",
@@ -3558,7 +3580,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 994,
+      "line": 1009,
       "sig": "afb10b2c21",
       "occ": 1,
       "level": "P2",
@@ -3569,7 +3591,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 995,
+      "line": 1010,
       "sig": "ba9da8df95",
       "occ": 1,
       "level": "P0",
@@ -3580,7 +3602,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1011,
+      "line": 1026,
       "sig": "d83c725ec4",
       "occ": 1,
       "level": "P2",
@@ -3591,7 +3613,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1012,
+      "line": 1027,
       "sig": "0e5504b898",
       "occ": 1,
       "level": "P0",
@@ -3602,7 +3624,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1027,
+      "line": 1042,
       "sig": "e171d503e5",
       "occ": 1,
       "level": "P2",
@@ -3613,7 +3635,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1028,
+      "line": 1043,
       "sig": "ca379581d2",
       "occ": 1,
       "level": "P0",
@@ -3624,7 +3646,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1042,
+      "line": 1057,
       "sig": "8653e3f6d2",
       "occ": 1,
       "level": "P2",
@@ -3635,7 +3657,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1100,
+      "line": 1115,
       "sig": "9fe3bc2226",
       "occ": 1,
       "level": "P0",
@@ -3646,7 +3668,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1120,
+      "line": 1135,
       "sig": "8ec1c83a40",
       "occ": 1,
       "level": "P0",
@@ -3657,7 +3679,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1126,
+      "line": 1141,
       "sig": "8ec4104abe",
       "occ": 1,
       "level": "P1",
@@ -3668,7 +3690,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1130,
+      "line": 1145,
       "sig": "68ceca0c65",
       "occ": 1,
       "level": "P2",
@@ -3679,7 +3701,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1161,
+      "line": 1176,
       "sig": "5c35be345b",
       "occ": 1,
       "level": "P0",
@@ -3690,7 +3712,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1167,
+      "line": 1182,
       "sig": "5fa5ab6f99",
       "occ": 1,
       "level": "P1",
@@ -5502,6 +5524,15 @@
       "bare": false,
       "note": "/* 配额超限/不可用时静默 */",
       "snippet": "store.setItem(k, pending[k]); }"
+    }
+  ],
+  "refreeze": [
+    {
+      "date": "2026-10-06",
+      "file": "ui-ge-api.js",
+      "reason": "R-2 第三片修复（apiDeleteDevice/apiDeleteSchedule 补反馈）；精确重冻避免牵连并行会话在途改动",
+      "before": 37,
+      "after": 39
     }
   ]
 }
