@@ -46,6 +46,13 @@
   （直报 `TypeError: _tasksForRead(...).filter is not a function`）；改成"备份失败照样重置" → **只**打死②那条；恢复后 2 passed。
 - **并行会话进展（不认领、仅记事实）**：`e672cc9` 交付第三片 `ui-ge-api.js` 并**重冻了 empty-catch 基线**
   （502 处）。当前工作区现测 P0 = **107**、exit 1 只剩 1 处新增 P0 在 `src/ui-backup-stats.js`（其切片二在飞文件）。
+- **CI 终验（tip `f0298bf`）**：run `37503057113` 三腿全绿（unit 127 文件 / 1472 例 × ubuntu+windows，e2e `Running 88 tests` → 87 passed），
+  `Deploy` run `37503057148` success。**但 e2e 有 1 条 flaky**（`rag-hybrid.spec.js:105`；上一跑 `c0a0dfe` 抖的是
+  `workflow.spec.js:41`）—— run 结论仍是 success，抖动被绿色吞掉，已记为 **R-9** 并列为下一批第一项。
+  另记一条协作事实：同分支连推会让**对方那个 commit 的 run 被 concurrency 取消**（`46216d8`、`e672cc9` 都被取消过），
+  所以判"有没有验证"只看 tip run。
+  ⚠️ 顺带更正我自己上一条计数口径：roadmap 的 e2e 从"减法推出 86"改为**干净检出实测 88 例 / 13 spec**
+  （一条 spec 在 desktop+tablet 两项目下算 4 例，减法推不出来）。
 - **未做（决策，不推给别人）**：不切版本号、不打标（避开并行会话的 v3.7.94）；第二片 `ui-backup-stats`、第三片
   `ui-ge-api` 由并行会话在做，本会话不动那两个文件（第三片他们已交付 `e672cc9`）；本片**不 `--freeze` 基线**
   —— 由并行会话在他们那侧冻，避免把彼此未提交的 P0 冻成合法存量。

@@ -8,8 +8,9 @@
 ## 一、当前坐标
 
 - 版本 **v3.7.93**（数字快照：2026-10-07，HEAD `c0a0dfe`）；单测 **126 文件**（`git ls-files tests | grep -c '\.test\.js$'`）
-  + e2e **86 例 / 13 spec（跟踪态）** —— 现测 `npx playwright test --list` 报 **90 例 / 14 文件**，多出的 2 例来自未跟踪的
-  `tests/e2e/idb-image-backup.spec.js`（并行会话在飞改动），不计入本仓基线；逆层 18 / 循环 13（起点 53/50，`node scripts/lint-layers.mjs`）。
+  + e2e **88 例 / 13 spec（跟踪态）** —— 口径 = **干净检出**后 `npx playwright test --list`（`git archive HEAD | tar -x` 抽副本再数，
+  本机工作区数出来是 90/14，多出的 2 例来自并行会话未跟踪的 `idb-image-backup.spec.js`）；
+  CI 的 e2e 腿打印 `Running 88 tests`，与此一致。**教训：这类数字要按口径数，减法推不出来（一条 spec 在 2 个项目下算 4 例）**；逆层 18 / 循环 13（起点 53/50，`node scripts/lint-layers.mjs`）。
   > ⚠️ **不再手写用例总数**（v3.7.93 之后到本版，"115 文件 / 1307+ 用例"漂了三处，见
   > `docs/audit-2026-10-06.md` R-3）：**契约型数字**（逆层/循环/块数）由门禁守着可以写；
   > **进度型数字**只写"截至某日某 commit 的实测"，并给出现测命令。
