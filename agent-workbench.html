@@ -7836,6 +7836,7 @@ const MESSAGES = {
     "agent.ctx.goalContinue": "\n请继续执行第{idx}步；完成后用 complete_step 标记，全部完成用 complete_goal 收尾。",
     "agent.ctx.goalAllDone": "\n所有步骤已完成，请调用 complete_goal 收尾并总结。",
     "migrate.tasksAbnormal": "任务数据格式异常，已备份原值并重置为空。",
+    "migrate.backupFailedKept": "数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。",
     "migrate.cfgAbnormal": "配置数据格式异常，已备份原值并重置。",
     "migrate.linksAbnormal": "联动规则数据格式异常，已备份原值并重置为默认。",
     "migrate.tasksDetail": "tasks: {count} 条缺少新字段",
@@ -11684,6 +11685,7 @@ const MESSAGES = {
     "agent.ctx.goalContinue": "\nPlease continue with step {idx}; use complete_step when done, and complete_goal when all complete.",
     "agent.ctx.goalAllDone": "\nAll steps completed; please call complete_goal to finish and summarize.",
     "migrate.tasksAbnormal": "Task data format abnormal; backed up original and reset to empty.",
+    "migrate.backupFailedKept": "Data format is abnormal and the backup failed: kept the original value instead of resetting (see diagnostics).",
     "migrate.cfgAbnormal": "Config data format abnormal; backed up original and reset.",
     "migrate.linksAbnormal": "Link rules data format abnormal; backed up original and reset to default.",
     "migrate.tasksDetail": "tasks: {count} items missing new fields",
@@ -19970,19 +19972,32 @@ function _pushMigrationLog(entry){
     const log = load(PREFIX + "migrationLog", []);
     log.push(Object.assign({ ts: Date.now() }, entry));
     if(log.length > 50) log.splice(0, log.length - 50);
-    save(PREFIX + "migrationLog", log);
-  }catch(e){ /* 静默，不阻塞迁移 */ }
+    /* save() 自己吞掉写失败并返回 false，所以只看 try/catch 等于没守 ——
+       这条日志是"这次迁移动过什么"的唯一凭据，写不进去必须留痕。 */
+    if(save(PREFIX + "migrationLog", log) !== true){
+      if(typeof pushDiag==="function") pushDiag("warn", "migration log write failed, this migration leaves no local trail", {where:"_pushMigrationLog:write-false"});
+    }
+  }catch(e){
+    /* 日志本身读/序列化就失败（配额、隐私模式、损坏）：不阻塞迁移，但要走诊断通道留痕 */
+    try{ if(typeof pushDiag==="function") pushDiag("warn", "migration log write failed, this migration leaves no local trail: "+(e&&e.message||e), {where:"_pushMigrationLog"}); }catch(_){}
+  }
 }
 /* v1.4-C 读取迁移日志（只读快照，供 UI/测试查看） */
 function getMigrationLog(){
   try { return load(PREFIX + "migrationLog", []); } catch(e){ return []; }
 }
-/* 损坏数据备份：把不可识别的原始串存到独立键，便于事后恢复（不丢用户数据） */
+/* 损坏数据备份：把不可识别的原始串存到独立键，便于事后恢复（不丢用户数据）。
+ * 返回是否真的落盘 —— 调用方**只有备份成功才允许重置**（P0：原来备份失败也照样把原值清空，
+ * 用户数据既坏又无处找回，而且没有任何痕迹）。 */
 function _backupBroken(kind, raw){
   try{
     const k = PREFIX + kind + "_broken_" + Date.now();
     localStorage.setItem(k, String(raw));
-  }catch(e){ /* 备份失败不阻塞重置 */ }
+    return true;
+  }catch(e){
+    try{ if(typeof pushDiag==="function") pushDiag("error", "broken-data backup FAILED for '" + kind + "' — reset is skipped so the original value survives: " + (e&&e.message||e), { where: "_backupBroken", bytes: String(raw).length }); }catch(_){}
+    return false;
+  }
 }
 /* v1.4-C 检测旧版本任务：缺少 updatedAt 字段、缺少 due/priority/note 等较新字段
  * 返回需要补全的字段列表（空数组表示已是新格式） */
@@ -20006,10 +20021,13 @@ function _validateAndMigrateTasks(){
     return;
   }
   if(!Array.isArray(tasks)){
-    // 合法 JSON 但非数组（schema 不对）：备份 + 重置
-    _backupBroken("tasks", raw);
-    save(PREFIX+"tasks", []);
-    try{ toast(t("migrate.tasksAbnormal", "任务数据格式异常，已备份原值并重置为空。"), "warn"); }catch(e2){}
+    // 合法 JSON 但非数组（schema 不对）：备份 + 重置。**备份失败就不重置** —— 原值是唯一还能救的东西。
+    if(_backupBroken("tasks", raw)){
+      save(PREFIX+"tasks", []);
+      try{ toast(t("migrate.tasksAbnormal", "任务数据格式异常，已备份原值并重置为空。"), "warn"); }catch(e2){}
+    } else {
+      try{ toast(t("migrate.backupFailedKept", "数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。"), "warn"); }catch(e2){}
+    }
     return;
   }
   // 数组：字段补全（id/sc/title/status/doneAt/tags）
@@ -20054,9 +20072,12 @@ function _validateCfg(){
     return;
   }
   if(typeof cfg !== "object" || Array.isArray(cfg)){
-    _backupBroken("cfg", raw);
-    save(PREFIX+"cfg", {});
-    try{ toast(t("migrate.cfgAbnormal", "配置数据格式异常，已备份原值并重置。"), "warn"); }catch(e2){}
+    if(_backupBroken("cfg", raw)){
+      save(PREFIX+"cfg", {});
+      try{ toast(t("migrate.cfgAbnormal", "配置数据格式异常，已备份原值并重置。"), "warn"); }catch(e2){}
+    } else {
+      try{ toast(t("migrate.backupFailedKept", "数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。"), "warn"); }catch(e2){}
+    }
   }
 }
 /* schema 校验：links 必须是数组 */
@@ -20070,9 +20091,12 @@ function _validateLinks(){
     return;
   }
   if(!Array.isArray(links)){
-    _backupBroken("links", raw);
-    save(PREFIX+"links", DEFAULT_LINKS.slice());
-    try{ toast(t("migrate.linksAbnormal", "联动规则数据格式异常，已备份原值并重置为默认。"), "warn"); }catch(e2){}
+    if(_backupBroken("links", raw)){
+      save(PREFIX+"links", DEFAULT_LINKS.slice());
+      try{ toast(t("migrate.linksAbnormal", "联动规则数据格式异常，已备份原值并重置为默认。"), "warn"); }catch(e2){}
+    } else {
+      try{ toast(t("migrate.backupFailedKept", "数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。"), "warn"); }catch(e2){}
+    }
   }
 }
 /* v1.4-C 检测旧版本数据：扫描全部 PREFIX 键，统计缺少 updatedAt 的任务数 / 缺字段的记录数
@@ -20089,7 +20113,11 @@ function detectLegacyData(){
         });
       }
     }
-  } catch(e){ /* 损坏由 _validateAndMigrateTasks 处理 */ }
+  } catch(e){
+    /* 语法损坏由 _validateAndMigrateTasks 走"登记不重置"路径，但扫描这一侧仍要留痕：
+       否则"迁移页显示 0 条旧任务"与"根本没读到"两种情况长得一模一样。 */
+    try{ if(typeof pushDiag==="function") pushDiag("warn", "legacy scan could not parse tasks key (counted as 0, validator will handle): "+(e&&e.message||e), {where:"detectLegacyData:tasks"}); }catch(_){}
+  }
   // 记录键扫描
   ORDER.forEach(sc => {
     try {
@@ -20102,7 +20130,11 @@ function detectLegacyData(){
           });
         }
       }
-    } catch(e){ /* 跳过损坏键 */ }
+    } catch(e){
+      /* 扫描阶段跳过损坏键，但**哪个键坏了要留痕**：这些 rec_ 键不在 tasks/cfg/links 三个校验器的
+         覆盖面里，跳过就是永久无声 —— 用户只会发现"某个场景的记录打不开"。 */
+      try{ if(typeof pushDiag==="function") pushDiag("warn", "scan skipped unparsable key " + PREFIX + "rec_" + sc + ": " + (e&&e.message||e), { where: "detectLegacyData" }); }catch(_){}
+    }
   });
   result.totalKeys = allKeys().length;
   if(result.legacyTasks > 0) result.details.push(t("migrate.tasksDetail", "tasks: {count} 条缺少新字段").replace("{count}", result.legacyTasks));
@@ -20230,17 +20262,30 @@ function seed(){
 // ===== Data Layer (数据层·读写) =====
 /* ---------- 数据读写 ---------- */
 /**
+ * tasks 键的**形状收口点**。
+ * 为什么需要：迁移侧的契约是"损坏数据先备份、备份失败就**不重置**"（见 data-migrate 的
+ * `_backupBroken`），所以 localStorage 里可能合法地留着一个非数组的 tasks 原值等着人工找回。
+ * 若各读者直接 `.filter`，会在启动的异步链里抛未捕获拒绝（实测两处：cleanupRecycle 与
+ * 引导渲染 _onboardRenderStep），而且**不经过错误边界** —— 用户只看到功能安静地少了。
+ * 这里退化成空表而不是崩溃：原值仍在存储里，诊断日志已由迁移侧记下是哪个键、为什么没重置。
+ * @returns {Task[]}
+ */
+function _tasksForRead(){
+  const a = (typeof taskStore !== "undefined" && typeof taskStore.get === "function") ? taskStore.get() : load(PREFIX + "tasks", []);
+  return Array.isArray(a) ? a : [];
+}
+/**
  * 读取全部任务（T2.3：经 taskStore 读取，保持向后兼容）
  * @returns {Task[]}
  */
-function getTasks(){ return taskStore.get(); }
+function getTasks(){ return _tasksForRead(); }
 /**
  * 读取未删除（活跃）任务列表：在 getTasks() 基础上过滤软删除标记 deletedAt。
  * 仅用于「读取 / 渲染」场景；写入路径（create/complete/update 等）仍须使用原始 getTasks()，
  * 否则 setTasks 回写会丢失软删除任务（D3 防护）。
  * @returns {Task[]}
  */
-function getActiveTasks(){ return taskStore.get().filter(t=>!t.deletedAt); }
+function getActiveTasks(){ return _tasksForRead().filter(t=>!t.deletedAt); }
 /**
  * 写入全部任务并触发自动备份（T2.3：先更新 taskStore 再持久化，store 变更会防抖触发 render）
  * @param {Task[]} a
@@ -20703,7 +20748,12 @@ async function _ensureDeviceKeyImpl(){
         try{
           _deviceKey = await crypto.subtle.importKey("raw", base64Decode(idbRaw), {name:"AES-GCM"}, false, ["encrypt","decrypt"]);
           return _deviceKey;
-        }catch(e){ /* 损坏则走重建 */ }
+        }catch(e){
+          /* 损坏则走重建 —— 但**必须上报**：重建意味着换新设备密钥，
+             此前用旧密钥加密的 AI Key 等一切密文都再也解不开（用户侧表现为"配置莫名其妙没了"）。
+             静默换键就是把数据损坏藏起来。 */
+          try{ if(typeof pushDiag==="function") pushDiag("warn", "device key in IDB unreadable, regenerating (previously encrypted data becomes undecryptable): "+(e&&e.message||e), {where:"getDeviceKey:idb"}); }catch(_){}
+        }
       }
     }
     const raw = localStorage.getItem(DK_KEY); // 旧路径迁移源
@@ -20713,11 +20763,17 @@ async function _ensureDeviceKeyImpl(){
         if(useIdb){
           const ok = await _dkIdbPut(DK_IDB_KEY, raw);           // 先写新家
           if(ok && (await _dkIdbGet(DK_IDB_KEY)) === raw){       // 回读一致才删旧键
-            try{ localStorage.removeItem(DK_KEY); }catch(e){}
+            try{ localStorage.removeItem(DK_KEY); }catch(e){
+              /* 旧键没删掉不影响正确性（新家已验证），但残留会让下次启动再走一遍迁移，值得记一笔 */
+              try{ if(typeof pushDiag==="function") pushDiag("warn", "legacy device key not cleared: "+(e&&e.message||e), {where:"getDeviceKey:clearLegacy"}); }catch(_){}
+            }
           }
         }
         return _deviceKey;
-      }catch(e){ /* 损坏则重建 */ }
+      }catch(e){
+        /* 损坏则重建 —— 同 IDB 分支：换新键即旧密文永久解不开，不许静默 */
+        try{ if(typeof pushDiag==="function") pushDiag("warn", "legacy device key unreadable, regenerating (previously encrypted data becomes undecryptable): "+(e&&e.message||e), {where:"getDeviceKey:legacy"}); }catch(_){}
+      }
     }
     _deviceKey = await crypto.subtle.generateKey({name:"AES-GCM", length:256}, true, ["encrypt","decrypt"]);
     const exported = await crypto.subtle.exportKey("raw", _deviceKey);
@@ -20760,9 +20816,23 @@ async function decryptKey(encrypted){
   return new TextDecoder().decode(plain);
 }
 /**
+ * cfg 落盘结果的统一出口：save() 返回 false（配额满 / 隐私模式 / 存储被禁用）时**必须留痕**。
+ * 此前 persistCfg 把 save() 的返回值丢掉，于是"配置没写进去"这件事在日志里完全不存在，
+ * 而调用方一律以为成功。
+ * @param {boolean} ok save() 的返回
+ * @param {string} where 分支标记（electron / no-crypto / encrypt）
+ * @returns {boolean} 原样回传，便于 persistCfg 直接 return
+ */
+function _cfgWrite(ok, where){
+  if(ok === true) return true;
+  try{ if(typeof pushDiag === "function") pushDiag("error", "cfg write to localStorage FAILED (settings are not persisted; AI Key may still sit in plaintext): where=" + where, { where: "persistCfg:" + where }); }catch(_){}
+  return false;
+}
+/**
  * 持久化 cfg：浏览器模式加密每个 profile 的 key 后写 localStorage；Electron 模式 Key 交主进程
  * @param {Cfg} cfg
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} 配置是否真的落盘成功（写失败必须让调用方知道：
+ *   旧明文迁移那一支，写失败意味着 **AI Key 继续以明文躺在 localStorage**，属隐私面，不能静默）
  */
 async function persistCfg(cfg){
   // Electron 模式：Key 由主进程保管，渲染进程只持久化非敏感配置（P0-3）
@@ -20771,8 +20841,7 @@ async function persistCfg(cfg){
     if(Array.isArray(rest.profiles)){
       rest.profiles = rest.profiles.map(p => Object.assign({}, p, { key: "" }));
     }
-    save(PREFIX+"cfg", rest);
-    return;
+    return _cfgWrite(save(PREFIX+"cfg", rest), "electron");
   }
   // D4 安全护栏：Web Crypto 不可用时，绝不写入明文 Key。
   // 仅持久化非敏感配置（profiles 元数据/启用状态等），丢弃 Key 并提示用户重新在安全上下文录入。
@@ -20782,9 +20851,9 @@ async function persistCfg(cfg){
       safe.profiles = safe.profiles.map(p => Object.assign({}, p, { key: "" }));
     }
     if(typeof safe.key === "string"){ delete safe.key; }
-    save(PREFIX+"cfg", safe);
+    const okD4 = save(PREFIX+"cfg", safe);
     try{ if(typeof toast === "function") toast(t("crypto.unsupportedToast", "⚠️ 当前环境不支持加密存储，AI Key 出于安全未保存（已丢弃）。请在 https:// 或本机应用中重新录入。"), "warn"); }catch(e){ /* noop */ }
-    return;
+    return _cfgWrite(okD4, "no-crypto");
   }
   const mem = Object.assign({}, cfg);
   // 多 Profile：遍历加密每个 profile 的 key
@@ -20809,7 +20878,7 @@ async function persistCfg(cfg){
     try{ mem.key = await encryptKey(mem.key); }
     catch(e){ delete mem.key; } // D4：加密失败则丢弃
   }
-  save(PREFIX+"cfg", mem);
+  return _cfgWrite(save(PREFIX+"cfg", mem), "encrypt");
 }
 /**
  * 初始化加密：检测 Web Crypto 可用性、生成/导入设备密钥、解密 cfg 中所有 profile 的 key 到内存
@@ -20854,7 +20923,11 @@ async function initCrypto(){
       save(PREFIX+"cfg", rest);
     }
     if(profilesOut.length){
-      try{ await window.electronAPI.setAiConfig({ enabled: !!raw.enabled, profiles: profilesOut }); }catch(e){ /* 忽略 */ }
+      try{ await window.electronAPI.setAiConfig({ enabled: !!raw.enabled, profiles: profilesOut }); }catch(e){
+        /* 镜像到主进程失败 = 桌面版的 chat 走的仍是主进程里的旧配置（或干脆没 Key）。
+           此前这里只有一句"忽略"，用户看到的是"改完配置不生效"且无从查证。 */
+        try{ if(typeof pushDiag==="function") pushDiag("error", "AI config mirror to main process failed (desktop chat may still use stale key): "+(e&&e.message||e), {where:"initCrypto:mirrorMain", profiles:profilesOut.length}); }catch(_){}
+      }
     }
     _cfgCache = Object.assign({}, raw, { key: "" });
     return _cfgCache;
@@ -20890,9 +20963,18 @@ async function initCrypto(){
   _cfgCache = Object.assign({}, raw, { key: plainKey });
   // 旧明文迁移：重新持久化为加密结构
   if(_cryptoReady && needRepersist){
-    try{ await persistCfg(_cfgCache); }catch(e){ /* 忽略 */ }
+    /* persistCfg 不 reject —— 写失败是它的**返回值**，只看 try/catch 就是装饰（第一版我就踩了）。
+       失败 = AI Key 继续以明文留在 localStorage，属隐私外泄面，必须点名。 */
+    try{
+      const okRepersist = await persistCfg(_cfgCache);
+      if(okRepersist === false) _repersistFailed(new Error("save() returned false"), "returned-false");
+    }catch(e){ _repersistFailed(e, "threw"); }
   }
   return _cfgCache;
+}
+/** 明文迁移没落盘的上报出口（与 persistCfg 内部的写失败分开记，便于定位是哪一层没写成） */
+function _repersistFailed(e, how){
+  try{ if(typeof pushDiag==="function") pushDiag("error", "plaintext AI key re-persist failed (" + how + "), key stays unencrypted in storage: "+(e&&e.message||e), {where:"initCrypto:repersist"}); }catch(_){}
 }
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
 /*SRC:crypto:END*/
@@ -21641,7 +21723,7 @@ function _toggleSideNode(nodeId){
 function _buildSideMenu(){
   const tasks = getActiveTasks();
   const totalOpen = tasks.filter(t=>t.status!=="done").length;
-  const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
+  const recycleCount = _tasksForRead().filter(t=>t.deletedAt).length;
   const _effActive = (uiView==="main") ? active : "";
 
   /* ---- 总览组：主页 / 任务 / 联动（v2.5 仪表盘合并至主页） ---- */
@@ -21955,7 +22037,7 @@ function setupMobNav(){
    保留 id=recycleModal 与 .recycle-card 以兼容 closeRecycleModal 与焦点陷阱。 */
 let _recycleCat = "全部"; // v3.1：回收站分类筛选：全部/任务/配置/文件/插件
 function openRecycle(){
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const del = all.filter(t=>t.deletedAt).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
   // v3.1：多类型回收站——任务走软删除，配置/文件/插件走 wb_recycle_bin
   const binItems = getRecycleBin();
@@ -22205,33 +22287,33 @@ function openChartStore(){
   renderShell();
 }
 function restoreRecycle(id){
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.map(t=> t.id===id ? Object.assign({}, t, { deletedAt: undefined }) : t);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast(t("recycle.restoredTask", "已恢复任务"), "ok"); render();
 }
 function restoreRecycleBatch(ids){
   const set = new Set(ids);
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.map(t=> set.has(t.id) ? Object.assign({}, t, { deletedAt: undefined }) : t);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast(t("recycle.restoredTasks", "已恢复 {count} 条任务").replace("{count}", ids.length), "ok"); render();
 }
 function purgeRecycle(id){
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.filter(t=>t.id!==id);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast(t("recycle.purged", "已永久删除"), "ok"); render();
 }
 function purgeRecycleBatch(ids){
   const set = new Set(ids);
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.filter(t=>!set.has(t.id));
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast(t("recycle.purgedTasks", "已永久删除 {count} 条任务").replace("{count}", ids.length), "ok"); render();
 }
 function clearRecycle(){
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.filter(t=>!t.deletedAt);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   // v3.1：同时清空回收站数据项（配置/文件/插件）
@@ -22267,7 +22349,7 @@ function restoreRecycleBatchMixed(checked){
   });
   if(taskIds.length){
     const set = new Set(taskIds);
-    const all = load(PREFIX+"tasks", []);
+    const all = _tasksForRead();
     const next = all.map(t=> set.has(t.id) ? Object.assign({}, t, { deletedAt: undefined }) : t);
     save(PREFIX+"tasks", next); scheduleAutoBackup();
   }
@@ -22291,7 +22373,7 @@ function purgeRecycleBatchMixed(checked){
   });
   if(taskIds.length){
     const set = new Set(taskIds);
-    const all = load(PREFIX+"tasks", []);
+    const all = _tasksForRead();
     const next = all.filter(t=>!set.has(t.id));
     save(PREFIX+"tasks", next); scheduleAutoBackup();
   }
@@ -22436,7 +22518,10 @@ function cleanupRecycle(){
   let count = 0;
   // v3.1.2：任务软删项与 wb_recycle_bin（配置/文件/插件）两路都清理——
   // 修复前只清任务，bin 类型永不自动清理，与 UI「自动清理：N 天后」承诺不符
-  const all = load(PREFIX+"tasks", []);
+  /* 形状守卫走 _tasksForRead() 收口点：tasks 键可能是"损坏但备份也没成功、因而被故意保留"的原值
+     （见 data-migrate 的 _backupBroken 契约），那种形态下它是对象而非数组，直接 .filter
+     会在启动的异步链里抛未捕获拒绝 —— 不经过错误边界，用户只看到"什么都没发生"。 */
+  const all = _tasksForRead();
   const expired = all.filter(t=>t.deletedAt && t.deletedAt < cutoff);
   if(expired.length){
     const next = all.filter(t=>!(t.deletedAt && t.deletedAt < cutoff));
