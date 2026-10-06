@@ -19,9 +19,12 @@
 - **R-3 修漂** `docs/roadmap-2026Q4.md`：「当前坐标」四项数字更正为 2026-10-06 实测（v3.7.93 / 125 单测文件 /
   e2e 85 例 / 废弃函数 10 名），并把"下一步建议"里 **已交付的 B1、B2** 摘掉（它们留在"待办"里就是误导排期）。
   教训写进文档：**进度型数字只写"截至某日某 commit + 现测命令"，契约型数字（逆层/循环/块数）才交给门禁守。**
-- **验证条件（如实）**：`ics-parse / ui-consistency / overlay-cmd-show` 3 文件 51 例绿；新 e2e 在
-  `desktop-1280x800` 与 `tablet-768x1024` 各 1 例绿。采集态工作区含另一会话未提交的批次②改动且处于
-  **注入态**，故本批**未跑**串行全量单测与 `verify:ci`（两者需源码态），由收口批次补。
+- **验证（本机 + CI 双份）**：本机 `ics-parse / ui-consistency / overlay-cmd-show` 3 文件 51 例绿；新 e2e 在
+  `desktop-1280x800` 与 `tablet-768x1024` 各 1 例绿。本机采集态工作区含另一会话未提交的批次②改动且处于
+  **注入态**，跑不了需源码态的 `verify:ci` —— 改由 **CI 在同一份源码态上跑全套并回填**：
+  run `37414169330` @ `47e707d` **completed/success**，三腿全绿（`test (ubuntu)` 12 步含 `npm test` 125 文件 /
+  `build:check` / `lint` / `lint:layers` / `lint:tokens` / `lint:empty-catch`；`e2e` 含本批新用例；`test (windows)`），
+  `Deploy to GitHub Pages` 同 sha 绿。⚠️ 前一 run `b253525` 显示 cancelled 是**同分支二次 push 撞 concurrency**，不是失败。
 
 ## [v3.7.93] - 2026-10-06
 
