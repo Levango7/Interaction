@@ -41292,7 +41292,16 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
           delBtn.className = "api-btn danger";
           delBtn.textContent = t("api.logout", "登出");
           delBtn.onclick = async function(){
-            try{ await apiDeleteDevice(d.id); }catch(e){}
+            try{ await apiDeleteDevice(d.id); }
+            catch(e){
+              /* v3.7.94：登出设备是**危险操作**，失败必须让用户看见。
+                 此前 `catch(e){}` 吞掉后紧跟 _loadDeviceList()，列表刷新后设备还在，
+                 表现为「点了没反应」；更糟的是用户以为该设备已登出、
+                 实际它仍能访问数据 —— 这是安全语义，不只是体验问题。
+                 同文件成功路径本就有 toast（api.loginSuccess 等），失败侧却完全静默，属不对称。 */
+              try{ toast(t("recycle.purgeFail", "删除失败"), "warn"); }catch(_){}
+              try{ if(typeof pushDiag === "function") pushDiag("error", "delete device failed: "+((e&&e.message)||e), {where:"apiDeleteDevice"}); }catch(_e2){}
+            }
             _loadDeviceList();
           };
           row.appendChild(delBtn);
@@ -41338,7 +41347,13 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
           delBtn.className = "api-btn danger";
           delBtn.textContent = t("common.delete", "删除");
           delBtn.onclick = async function(){
-            try{ await apiDeleteSchedule(s.id); }catch(e){}
+            try{ await apiDeleteSchedule(s.id); }
+            catch(e){
+              /* v3.7.94：同登出设备 —— 删除失败必须可见，否则用户以为提醒已删、
+                 实际它还会继续触发。失败侧此前完全静默，与成功路径的 toast 不对称。 */
+              try{ toast(t("recycle.purgeFail", "删除失败"), "warn"); }catch(_){}
+              try{ if(typeof pushDiag === "function") pushDiag("error", "delete schedule failed: "+((e&&e.message)||e), {where:"apiDeleteSchedule"}); }catch(_e2){}
+            }
             _loadSchedules();
           };
           row.appendChild(delBtn);
