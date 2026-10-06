@@ -24,8 +24,21 @@
   对照：HEAD 干净态 P0 = 117（台账里 118 那个数的采集态含他人 3 个未提交 src，已在 R-2 更正）。
   **本机现在跑 `lint-empty-catch` 是 exit 1，且与本片无关** —— 3 处新增 P0 全在 `ui-backup-stats.js`(1) / `ui-ge-api.js`(2)，
   即并行会话第二、三片的在飞文件；**基线未 `--freeze`**（冻进去会把别人未提交的 P0 一起冻成"合法存量"）。
+- **变异验证（证明用例不是装饰）**：在 HEAD 纯净副本 `_probe/slice1iso` 逐个摘掉本片的修复，每次重新注入后跑
+  `npx vitest run tests/empty-catch-slice1.test.js`：M1 备份失败仍照样重置 → ①+⑥ 红；M2 `_cfgWrite` 恒返回 true →
+  ③+⑤ 红；M3 `_tasksForRead` 不守形状 → ⑥ 红；M4 坏键扫描不点名 → ④ 红；恢复 HEAD 内容后复绿（exit 0，9 例）。
+  四条变异各只打死对应用例组 → 断言与修复一一对应。脚本 `_probe/mut-slice1.sh`。
+- **CI + 上线（`c0a0dfe`）**：run `37499350324` **completed/success**，三腿全绿（`test (ubuntu-latest, 20)` /
+  `test (windows-latest, 20)` / `e2e`）；`Deploy to GitHub Pages` run `37499350198` **success**。线上
+  `CACHE_VERSION = v3.7.93-20261006170356`，线上 `agent-workbench.html`（HTTP 200）内 `grep -c "_tasksForRead"` = **14**
+  → 读者收口点确实在交付产物里（`curl -s https://levango7.github.io/Interaction/agent-workbench.html | grep -c "_tasksForRead"`）。
+- **顺带修漂（R-3b 同类）**：`docs/roadmap-2026Q4.md`「当前坐标」现测更正为 **126 个跟踪单测文件 / e2e 84 例 12 spec（跟踪态）** ——
+  `npx playwright test --list` 本机报 86 例 / 13 文件，多出的 1 文件 2 例是并行会话未跟踪的 `idb-image-backup.spec.js`，不计入基线。
+- **新记账 R-8（本切片带来的）**：损坏 `tasks` 原值被保留后，导出/自动备份面经 `getTasks()` 看到的是**空列表**，
+  用户可能把残缺备份当成完整备份 —— 修法是把"本次导出未包含损坏的 tasks 键"写进成功提示。
+  现场在 `src/ui-backup-stats.js`，该文件正被并行会话按切片二改动，**本会话不抢改**，详见台账 R-8。
 - **未做（决策，不推给别人）**：不切版本号、不打标（避开并行会话的 v3.7.94）；第二片 `ui-backup-stats`、第三片
-  `ui-ge-api` 由并行会话在做，本会话不动那两个文件。
+  `ui-ge-api` 由并行会话在做，本会话不动那两个文件；empty-catch 基线**未 `--freeze`**（会把他人未提交的 P0 冻成合法存量）。
 
 ## [Unreleased] - 2026-10-06（审计批次③）
 
