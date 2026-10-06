@@ -1,3 +1,24 @@
+## [Unreleased] - 2026-10-06（审计批次③）
+
+**全维审计台账落盘 + 日历 ICS 链路首次进真浏览器门禁，并当场修掉一个「浮层建进 DOM 却完全不渲染」的 P1。**
+
+- **台账**：新增 `docs/audit-2026-10-06.md`。此前 2026-10-06 那次全维审计的**清单没有落盘**，仓库里只剩
+  已修项的编号（批次① = v3.7.93 的 P1-1a/P1-1b/P2-4），导致"还剩哪些项 / 批次③ 修什么"无从核对。
+  本文按可复现命令重跑一遍并记账（5 项 PASS 正面基线、R-1…R-7 共 7 条记账项、5 个需外部条件的维度如实挂起）。
+- **P1 修复** `src/ui-ge-calendar.js`：`openEventDetail` 只给外层 `.overlay` 加 `show`，而 `.cmd` 基类是
+  `display:none` → 点日历 ICS 徽章后详情浮层完全不出现。与 v3.7.66 修掉的 `openIntegrationConfig` **同型**
+  （成因注释当年就写在现场，但只修了那一处、没立这一类的账）。现同步给内层 `.cmd` 加 `show`。
+- **门禁 R-1（新增 e2e）** `tests/e2e/ics-import-render.spec.js`：真实 `filechooser` 导入 `.ics` → 真
+  localStorage 往返 → 刷新后渲染零未捕获异常 + 当日徽章 + 浮层可见 + 可翻页到外部事件。
+  **此前 12 个 spec / 83 例对「日历 / ICS」零覆盖**，而这条路出过 v3.7.90 的 P0。
+  变异回放（`_probe/mut-ics-e2e.mjs`，在 `_probe/` 的 HTML 副本上做）：摘掉 `getIcsSubs()` 的 hydrate →
+  `badge=0 / pageerror=1`；摘掉内层 `show` → `dialog可见=false`；对照态全绿 —— 断言非装饰。
+- **门禁 R-6（新增类守卫）** `tests/overlay-cmd-show.test.js`：凡"overlay 里动态挂 `.cmd`"的源文件，必须
+  给内层加 `show` 或存在 `.overlay.show .cmd` 后代规则；含合成变异自测 + 作用域自证（in-scope 恰为两处历史现场）。
+- **验证条件（如实）**：`ics-parse / ui-consistency / overlay-cmd-show` 3 文件 51 例绿；新 e2e 在
+  `desktop-1280x800` 与 `tablet-768x1024` 各 1 例绿。采集态工作区含另一会话未提交的批次②改动且处于
+  **注入态**，故本批**未跑**串行全量单测与 `verify:ci`（两者需源码态），由收口批次补。
+
 ## [v3.7.93] - 2026-10-06
 
 **门禁/部署批次①（全维审计修复）：deploy 链补上 `lint:empty-catch` 并收敛为 main-only 发布；`build:prod` 增加「转换后编译自检」。**
