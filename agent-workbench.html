@@ -44377,6 +44377,12 @@ function openEventDetail(dateKey, focusIdx){
   ov.id = "evDetailOverlay";
   ov.innerHTML = sanitizeHtml(html);
   document.body.appendChild(ov);
+  /* 与 v3.7.66 集成弹窗同型的缺陷：`.cmd` 基类 display:none，靠自身 `.show` 才现身，
+     而这里只给外层 .overlay 加了 show → 点日历徽章后详情浮层建进了 DOM 却完全不渲染。
+     jsdom 不应用样式表、且 v3.7.86 那轮没有 e2e 覆盖这条路，所以一直没人看见。
+     ⚠️ 必须同步加（塞进 rAF 在无合成帧的环境里永不触发）。 */
+  const _evCmdEl = ov.querySelector(".cmd");
+  if(_evCmdEl) _evCmdEl.classList.add("show");
   ov.addEventListener("click", function(e){
     if(e.target === ov){ closeEventDetail(); return; }
     if(e.target.closest("[data-ev-close]")){ closeEventDetail(); return; }
