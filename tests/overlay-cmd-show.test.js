@@ -18,8 +18,10 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(import.meta.dirname, "..");
+// 用仓内既有口径（不用 import.meta.dirname：CI 的 node-version:20 不保证 ≥20.11）
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC_DIR = path.join(ROOT, "src");
 
 /** 是否声明了「外层 show 带动内层」的 CSS 后代规则（合法写法 A） */
