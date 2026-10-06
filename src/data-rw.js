@@ -1,17 +1,30 @@
 // ===== Data Layer (数据层·读写) =====
 /* ---------- 数据读写 ---------- */
 /**
+ * tasks 键的**形状收口点**。
+ * 为什么需要：迁移侧的契约是"损坏数据先备份、备份失败就**不重置**"（见 data-migrate 的
+ * `_backupBroken`），所以 localStorage 里可能合法地留着一个非数组的 tasks 原值等着人工找回。
+ * 若各读者直接 `.filter`，会在启动的异步链里抛未捕获拒绝（实测两处：cleanupRecycle 与
+ * 引导渲染 _onboardRenderStep），而且**不经过错误边界** —— 用户只看到功能安静地少了。
+ * 这里退化成空表而不是崩溃：原值仍在存储里，诊断日志已由迁移侧记下是哪个键、为什么没重置。
+ * @returns {Task[]}
+ */
+function _tasksForRead(){
+  const a = (typeof taskStore !== "undefined" && typeof taskStore.get === "function") ? taskStore.get() : load(PREFIX + "tasks", []);
+  return Array.isArray(a) ? a : [];
+}
+/**
  * 读取全部任务（T2.3：经 taskStore 读取，保持向后兼容）
  * @returns {Task[]}
  */
-function getTasks(){ return taskStore.get(); }
+function getTasks(){ return _tasksForRead(); }
 /**
  * 读取未删除（活跃）任务列表：在 getTasks() 基础上过滤软删除标记 deletedAt。
  * 仅用于「读取 / 渲染」场景；写入路径（create/complete/update 等）仍须使用原始 getTasks()，
  * 否则 setTasks 回写会丢失软删除任务（D3 防护）。
  * @returns {Task[]}
  */
-function getActiveTasks(){ return taskStore.get().filter(t=>!t.deletedAt); }
+function getActiveTasks(){ return _tasksForRead().filter(t=>!t.deletedAt); }
 /**
  * 写入全部任务并触发自动备份（T2.3：先更新 taskStore 再持久化，store 变更会防抖触发 render）
  * @param {Task[]} a

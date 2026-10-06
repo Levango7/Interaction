@@ -6,19 +6,32 @@ function _pushMigrationLog(entry){
     const log = load(PREFIX + "migrationLog", []);
     log.push(Object.assign({ ts: Date.now() }, entry));
     if(log.length > 50) log.splice(0, log.length - 50);
-    save(PREFIX + "migrationLog", log);
-  }catch(e){ /* 静默，不阻塞迁移 */ }
+    /* save() 自己吞掉写失败并返回 false，所以只看 try/catch 等于没守 ——
+       这条日志是"这次迁移动过什么"的唯一凭据，写不进去必须留痕。 */
+    if(save(PREFIX + "migrationLog", log) !== true){
+      if(typeof pushDiag==="function") pushDiag("warn", "migration log write failed, this migration leaves no local trail", {where:"_pushMigrationLog:write-false"});
+    }
+  }catch(e){
+    /* 日志本身读/序列化就失败（配额、隐私模式、损坏）：不阻塞迁移，但要走诊断通道留痕 */
+    try{ if(typeof pushDiag==="function") pushDiag("warn", "migration log write failed, this migration leaves no local trail: "+(e&&e.message||e), {where:"_pushMigrationLog"}); }catch(_){}
+  }
 }
 /* v1.4-C 读取迁移日志（只读快照，供 UI/测试查看） */
 function getMigrationLog(){
   try { return load(PREFIX + "migrationLog", []); } catch(e){ return []; }
 }
-/* 损坏数据备份：把不可识别的原始串存到独立键，便于事后恢复（不丢用户数据） */
+/* 损坏数据备份：把不可识别的原始串存到独立键，便于事后恢复（不丢用户数据）。
+ * 返回是否真的落盘 —— 调用方**只有备份成功才允许重置**（P0：原来备份失败也照样把原值清空，
+ * 用户数据既坏又无处找回，而且没有任何痕迹）。 */
 function _backupBroken(kind, raw){
   try{
     const k = PREFIX + kind + "_broken_" + Date.now();
     localStorage.setItem(k, String(raw));
-  }catch(e){ /* 备份失败不阻塞重置 */ }
+    return true;
+  }catch(e){
+    try{ if(typeof pushDiag==="function") pushDiag("error", "broken-data backup FAILED for '" + kind + "' — reset is skipped so the original value survives: " + (e&&e.message||e), { where: "_backupBroken", bytes: String(raw).length }); }catch(_){}
+    return false;
+  }
 }
 /* v1.4-C 检测旧版本任务：缺少 updatedAt 字段、缺少 due/priority/note 等较新字段
  * 返回需要补全的字段列表（空数组表示已是新格式） */
@@ -42,10 +55,13 @@ function _validateAndMigrateTasks(){
     return;
   }
   if(!Array.isArray(tasks)){
-    // 合法 JSON 但非数组（schema 不对）：备份 + 重置
-    _backupBroken("tasks", raw);
-    save(PREFIX+"tasks", []);
-    try{ toast(t("migrate.tasksAbnormal", "任务数据格式异常，已备份原值并重置为空。"), "warn"); }catch(e2){}
+    // 合法 JSON 但非数组（schema 不对）：备份 + 重置。**备份失败就不重置** —— 原值是唯一还能救的东西。
+    if(_backupBroken("tasks", raw)){
+      save(PREFIX+"tasks", []);
+      try{ toast(t("migrate.tasksAbnormal", "任务数据格式异常，已备份原值并重置为空。"), "warn"); }catch(e2){}
+    } else {
+      try{ toast(t("migrate.backupFailedKept", "数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。"), "warn"); }catch(e2){}
+    }
     return;
   }
   // 数组：字段补全（id/sc/title/status/doneAt/tags）
@@ -90,9 +106,12 @@ function _validateCfg(){
     return;
   }
   if(typeof cfg !== "object" || Array.isArray(cfg)){
-    _backupBroken("cfg", raw);
-    save(PREFIX+"cfg", {});
-    try{ toast(t("migrate.cfgAbnormal", "配置数据格式异常，已备份原值并重置。"), "warn"); }catch(e2){}
+    if(_backupBroken("cfg", raw)){
+      save(PREFIX+"cfg", {});
+      try{ toast(t("migrate.cfgAbnormal", "配置数据格式异常，已备份原值并重置。"), "warn"); }catch(e2){}
+    } else {
+      try{ toast(t("migrate.backupFailedKept", "数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。"), "warn"); }catch(e2){}
+    }
   }
 }
 /* schema 校验：links 必须是数组 */
@@ -106,9 +125,12 @@ function _validateLinks(){
     return;
   }
   if(!Array.isArray(links)){
-    _backupBroken("links", raw);
-    save(PREFIX+"links", DEFAULT_LINKS.slice());
-    try{ toast(t("migrate.linksAbnormal", "联动规则数据格式异常，已备份原值并重置为默认。"), "warn"); }catch(e2){}
+    if(_backupBroken("links", raw)){
+      save(PREFIX+"links", DEFAULT_LINKS.slice());
+      try{ toast(t("migrate.linksAbnormal", "联动规则数据格式异常，已备份原值并重置为默认。"), "warn"); }catch(e2){}
+    } else {
+      try{ toast(t("migrate.backupFailedKept", "数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。"), "warn"); }catch(e2){}
+    }
   }
 }
 /* v1.4-C 检测旧版本数据：扫描全部 PREFIX 键，统计缺少 updatedAt 的任务数 / 缺字段的记录数
@@ -125,7 +147,11 @@ function detectLegacyData(){
         });
       }
     }
-  } catch(e){ /* 损坏由 _validateAndMigrateTasks 处理 */ }
+  } catch(e){
+    /* 语法损坏由 _validateAndMigrateTasks 走"登记不重置"路径，但扫描这一侧仍要留痕：
+       否则"迁移页显示 0 条旧任务"与"根本没读到"两种情况长得一模一样。 */
+    try{ if(typeof pushDiag==="function") pushDiag("warn", "legacy scan could not parse tasks key (counted as 0, validator will handle): "+(e&&e.message||e), {where:"detectLegacyData:tasks"}); }catch(_){}
+  }
   // 记录键扫描
   ORDER.forEach(sc => {
     try {
@@ -138,7 +164,11 @@ function detectLegacyData(){
           });
         }
       }
-    } catch(e){ /* 跳过损坏键 */ }
+    } catch(e){
+      /* 扫描阶段跳过损坏键，但**哪个键坏了要留痕**：这些 rec_ 键不在 tasks/cfg/links 三个校验器的
+         覆盖面里，跳过就是永久无声 —— 用户只会发现"某个场景的记录打不开"。 */
+      try{ if(typeof pushDiag==="function") pushDiag("warn", "scan skipped unparsable key " + PREFIX + "rec_" + sc + ": " + (e&&e.message||e), { where: "detectLegacyData" }); }catch(_){}
+    }
   });
   result.totalKeys = allKeys().length;
   if(result.legacyTasks > 0) result.details.push(t("migrate.tasksDetail", "tasks: {count} 条缺少新字段").replace("{count}", result.legacyTasks));

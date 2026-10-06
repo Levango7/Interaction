@@ -76,7 +76,7 @@ function _toggleSideNode(nodeId){
 function _buildSideMenu(){
   const tasks = getActiveTasks();
   const totalOpen = tasks.filter(t=>t.status!=="done").length;
-  const recycleCount = (load(PREFIX+"tasks",[])).filter(t=>t.deletedAt).length;
+  const recycleCount = _tasksForRead().filter(t=>t.deletedAt).length;
   const _effActive = (uiView==="main") ? active : "";
 
   /* ---- 总览组：主页 / 任务 / 联动（v2.5 仪表盘合并至主页） ---- */
@@ -390,7 +390,7 @@ function setupMobNav(){
    保留 id=recycleModal 与 .recycle-card 以兼容 closeRecycleModal 与焦点陷阱。 */
 let _recycleCat = "全部"; // v3.1：回收站分类筛选：全部/任务/配置/文件/插件
 function openRecycle(){
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const del = all.filter(t=>t.deletedAt).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
   // v3.1：多类型回收站——任务走软删除，配置/文件/插件走 wb_recycle_bin
   const binItems = getRecycleBin();
@@ -640,33 +640,33 @@ function openChartStore(){
   renderShell();
 }
 function restoreRecycle(id){
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.map(t=> t.id===id ? Object.assign({}, t, { deletedAt: undefined }) : t);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast(t("recycle.restoredTask", "已恢复任务"), "ok"); render();
 }
 function restoreRecycleBatch(ids){
   const set = new Set(ids);
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.map(t=> set.has(t.id) ? Object.assign({}, t, { deletedAt: undefined }) : t);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast(t("recycle.restoredTasks", "已恢复 {count} 条任务").replace("{count}", ids.length), "ok"); render();
 }
 function purgeRecycle(id){
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.filter(t=>t.id!==id);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast(t("recycle.purged", "已永久删除"), "ok"); render();
 }
 function purgeRecycleBatch(ids){
   const set = new Set(ids);
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.filter(t=>!set.has(t.id));
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   toast(t("recycle.purgedTasks", "已永久删除 {count} 条任务").replace("{count}", ids.length), "ok"); render();
 }
 function clearRecycle(){
-  const all = load(PREFIX+"tasks", []);
+  const all = _tasksForRead();
   const next = all.filter(t=>!t.deletedAt);
   save(PREFIX+"tasks", next); scheduleAutoBackup();
   // v3.1：同时清空回收站数据项（配置/文件/插件）
@@ -702,7 +702,7 @@ function restoreRecycleBatchMixed(checked){
   });
   if(taskIds.length){
     const set = new Set(taskIds);
-    const all = load(PREFIX+"tasks", []);
+    const all = _tasksForRead();
     const next = all.map(t=> set.has(t.id) ? Object.assign({}, t, { deletedAt: undefined }) : t);
     save(PREFIX+"tasks", next); scheduleAutoBackup();
   }
@@ -726,7 +726,7 @@ function purgeRecycleBatchMixed(checked){
   });
   if(taskIds.length){
     const set = new Set(taskIds);
-    const all = load(PREFIX+"tasks", []);
+    const all = _tasksForRead();
     const next = all.filter(t=>!set.has(t.id));
     save(PREFIX+"tasks", next); scheduleAutoBackup();
   }
@@ -871,7 +871,10 @@ function cleanupRecycle(){
   let count = 0;
   // v3.1.2：任务软删项与 wb_recycle_bin（配置/文件/插件）两路都清理——
   // 修复前只清任务，bin 类型永不自动清理，与 UI「自动清理：N 天后」承诺不符
-  const all = load(PREFIX+"tasks", []);
+  /* 形状守卫走 _tasksForRead() 收口点：tasks 键可能是"损坏但备份也没成功、因而被故意保留"的原值
+     （见 data-migrate 的 _backupBroken 契约），那种形态下它是对象而非数组，直接 .filter
+     会在启动的异步链里抛未捕获拒绝 —— 不经过错误边界，用户只看到"什么都没发生"。 */
+  const all = _tasksForRead();
   const expired = all.filter(t=>t.deletedAt && t.deletedAt < cutoff);
   if(expired.length){
     const next = all.filter(t=>!(t.deletedAt && t.deletedAt < cutoff));

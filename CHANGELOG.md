@@ -1,3 +1,32 @@
+## [Unreleased] - 2026-10-07（审计批次④ · R-2 第一片：密钥面 + 迁移面）
+
+**把 9 处「静默吞真实错误」的 P0 空 catch 换成可观测行为，并修掉它牵出的两个真问题：写失败被当成写成功、以及"保留损坏原值"之后读者会崩。**
+
+- `src/crypto.js`：**`save()` 自己吞掉写失败并返回 `false`，所以包一层 try/catch 等于没守** —— 旧代码正是这样，
+  AI Key 明文留存/写入失败对调用方显示为成功。现在 `persistCfg` 通过 `_cfgWrite()` 检查**返回值**并在三个分支
+  （electron / no-crypto / encrypt）落 `pushDiag("error", …)`；设备密钥 3 处（`getDeviceKey:idb` / `:legacy` / `:clearLegacy`）
+  与主进程镜像（`initCrypto:mirrorMain`）改为点名后果（"此前加密的数据将无法解密" / "镜像写失败"）。
+  重加密那一支第一版写的是 `try{ await persistCfg() }catch{ warn }` —— **装饰性 catch，warn 永不触发**，实测后才改成判返回值。
+- `src/data-migrate.js`：迁移日志写入判 `save(...) !== true`；`_backupBroken()` 返回布尔并在备份失败时 `pushDiag`。
+  **行为变更（安全侧）**：tasks/cfg/links 三处破坏性重置在**备份失败时保留原值不重置**并提示
+  `migrate.backupFailedKept`（zh + en 双语键已加进 `src/core.js`）—— 修前是"备份没写进去也照样清空"，等于唯一找回凭据直接没了。
+- `src/data-rw.js` + `src/render-widgets.js`：上一条把风险移给了读者 —— 实测 `cleanupRecycle` 与引导渲染
+  `_onboardRenderStep` 因 `tasks` 是非数组而抛**未捕获拒绝**（跑在启动异步链里，不过错误边界，用户只看到功能安静地少了）。
+  新增形状收口点 `_tasksForRead()`（非数组退化成空表，原值仍在存储里等人工找回），11 处直读 `load(PREFIX+"tasks")` 全部走它。
+  命名踩坑记录：第一版叫 `tasksRaw`，与 `data-migrate.js:141` 的局部 `const tasksRaw` 同名，被 dep-graph 读成一条
+  `block>owner` 反向边 → `lint-layers` / `module-graph` 双双红；改名后两门禁 exit 0。
+- **用例** `tests/empty-catch-slice1.test.js`（6 组）：备份失败→不销毁、备份成功→行为不变、密钥换新/明文留存留痕、
+  扫描点名坏键、**写失败是返回值不是异常**、保留损坏原值之后读路径必须扛住。本机 11 文件 134 例绿，无未捕获拒绝。
+- **验证归因（关键：本机工作区混着并行会话的在飞改动，不能直接算我的）**：用
+  `git archive HEAD | tar -x` 在仓外造副本、只替换本片 5 个 src 文件后现测 ——
+  `lint-empty-catch` **exit 0**，P0 **117 → 108**（正好 −9 = crypto 5 + data-migrate 4），P2 173 → 186（+13，门禁规定的
+  `pushDiag` 写法），`lint-layers` exit 0（基线外新增逆层/循环/重复定义 0），`module-graph --check` exit 0（块 35）。
+  对照：HEAD 干净态 P0 = 117（台账里 118 那个数的采集态含他人 3 个未提交 src，已在 R-2 更正）。
+  **本机现在跑 `lint-empty-catch` 是 exit 1，且与本片无关** —— 3 处新增 P0 全在 `ui-backup-stats.js`(1) / `ui-ge-api.js`(2)，
+  即并行会话第二、三片的在飞文件；**基线未 `--freeze`**（冻进去会把别人未提交的 P0 一起冻成"合法存量"）。
+- **未做（决策，不推给别人）**：不切版本号、不打标（避开并行会话的 v3.7.94）；第二片 `ui-backup-stats`、第三片
+  `ui-ge-api` 由并行会话在做，本会话不动那两个文件。
+
 ## [Unreleased] - 2026-10-06（审计批次③）
 
 

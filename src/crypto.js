@@ -55,7 +55,12 @@ async function _ensureDeviceKeyImpl(){
         try{
           _deviceKey = await crypto.subtle.importKey("raw", base64Decode(idbRaw), {name:"AES-GCM"}, false, ["encrypt","decrypt"]);
           return _deviceKey;
-        }catch(e){ /* 损坏则走重建 */ }
+        }catch(e){
+          /* 损坏则走重建 —— 但**必须上报**：重建意味着换新设备密钥，
+             此前用旧密钥加密的 AI Key 等一切密文都再也解不开（用户侧表现为"配置莫名其妙没了"）。
+             静默换键就是把数据损坏藏起来。 */
+          try{ if(typeof pushDiag==="function") pushDiag("warn", "device key in IDB unreadable, regenerating (previously encrypted data becomes undecryptable): "+(e&&e.message||e), {where:"getDeviceKey:idb"}); }catch(_){}
+        }
       }
     }
     const raw = localStorage.getItem(DK_KEY); // 旧路径迁移源
@@ -65,11 +70,17 @@ async function _ensureDeviceKeyImpl(){
         if(useIdb){
           const ok = await _dkIdbPut(DK_IDB_KEY, raw);           // 先写新家
           if(ok && (await _dkIdbGet(DK_IDB_KEY)) === raw){       // 回读一致才删旧键
-            try{ localStorage.removeItem(DK_KEY); }catch(e){}
+            try{ localStorage.removeItem(DK_KEY); }catch(e){
+              /* 旧键没删掉不影响正确性（新家已验证），但残留会让下次启动再走一遍迁移，值得记一笔 */
+              try{ if(typeof pushDiag==="function") pushDiag("warn", "legacy device key not cleared: "+(e&&e.message||e), {where:"getDeviceKey:clearLegacy"}); }catch(_){}
+            }
           }
         }
         return _deviceKey;
-      }catch(e){ /* 损坏则重建 */ }
+      }catch(e){
+        /* 损坏则重建 —— 同 IDB 分支：换新键即旧密文永久解不开，不许静默 */
+        try{ if(typeof pushDiag==="function") pushDiag("warn", "legacy device key unreadable, regenerating (previously encrypted data becomes undecryptable): "+(e&&e.message||e), {where:"getDeviceKey:legacy"}); }catch(_){}
+      }
     }
     _deviceKey = await crypto.subtle.generateKey({name:"AES-GCM", length:256}, true, ["encrypt","decrypt"]);
     const exported = await crypto.subtle.exportKey("raw", _deviceKey);
@@ -112,9 +123,23 @@ async function decryptKey(encrypted){
   return new TextDecoder().decode(plain);
 }
 /**
+ * cfg 落盘结果的统一出口：save() 返回 false（配额满 / 隐私模式 / 存储被禁用）时**必须留痕**。
+ * 此前 persistCfg 把 save() 的返回值丢掉，于是"配置没写进去"这件事在日志里完全不存在，
+ * 而调用方一律以为成功。
+ * @param {boolean} ok save() 的返回
+ * @param {string} where 分支标记（electron / no-crypto / encrypt）
+ * @returns {boolean} 原样回传，便于 persistCfg 直接 return
+ */
+function _cfgWrite(ok, where){
+  if(ok === true) return true;
+  try{ if(typeof pushDiag === "function") pushDiag("error", "cfg write to localStorage FAILED (settings are not persisted; AI Key may still sit in plaintext): where=" + where, { where: "persistCfg:" + where }); }catch(_){}
+  return false;
+}
+/**
  * 持久化 cfg：浏览器模式加密每个 profile 的 key 后写 localStorage；Electron 模式 Key 交主进程
  * @param {Cfg} cfg
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} 配置是否真的落盘成功（写失败必须让调用方知道：
+ *   旧明文迁移那一支，写失败意味着 **AI Key 继续以明文躺在 localStorage**，属隐私面，不能静默）
  */
 async function persistCfg(cfg){
   // Electron 模式：Key 由主进程保管，渲染进程只持久化非敏感配置（P0-3）
@@ -123,8 +148,7 @@ async function persistCfg(cfg){
     if(Array.isArray(rest.profiles)){
       rest.profiles = rest.profiles.map(p => Object.assign({}, p, { key: "" }));
     }
-    save(PREFIX+"cfg", rest);
-    return;
+    return _cfgWrite(save(PREFIX+"cfg", rest), "electron");
   }
   // D4 安全护栏：Web Crypto 不可用时，绝不写入明文 Key。
   // 仅持久化非敏感配置（profiles 元数据/启用状态等），丢弃 Key 并提示用户重新在安全上下文录入。
@@ -134,9 +158,9 @@ async function persistCfg(cfg){
       safe.profiles = safe.profiles.map(p => Object.assign({}, p, { key: "" }));
     }
     if(typeof safe.key === "string"){ delete safe.key; }
-    save(PREFIX+"cfg", safe);
+    const okD4 = save(PREFIX+"cfg", safe);
     try{ if(typeof toast === "function") toast(t("crypto.unsupportedToast", "⚠️ 当前环境不支持加密存储，AI Key 出于安全未保存（已丢弃）。请在 https:// 或本机应用中重新录入。"), "warn"); }catch(e){ /* noop */ }
-    return;
+    return _cfgWrite(okD4, "no-crypto");
   }
   const mem = Object.assign({}, cfg);
   // 多 Profile：遍历加密每个 profile 的 key
@@ -161,7 +185,7 @@ async function persistCfg(cfg){
     try{ mem.key = await encryptKey(mem.key); }
     catch(e){ delete mem.key; } // D4：加密失败则丢弃
   }
-  save(PREFIX+"cfg", mem);
+  return _cfgWrite(save(PREFIX+"cfg", mem), "encrypt");
 }
 /**
  * 初始化加密：检测 Web Crypto 可用性、生成/导入设备密钥、解密 cfg 中所有 profile 的 key 到内存
@@ -206,7 +230,11 @@ async function initCrypto(){
       save(PREFIX+"cfg", rest);
     }
     if(profilesOut.length){
-      try{ await window.electronAPI.setAiConfig({ enabled: !!raw.enabled, profiles: profilesOut }); }catch(e){ /* 忽略 */ }
+      try{ await window.electronAPI.setAiConfig({ enabled: !!raw.enabled, profiles: profilesOut }); }catch(e){
+        /* 镜像到主进程失败 = 桌面版的 chat 走的仍是主进程里的旧配置（或干脆没 Key）。
+           此前这里只有一句"忽略"，用户看到的是"改完配置不生效"且无从查证。 */
+        try{ if(typeof pushDiag==="function") pushDiag("error", "AI config mirror to main process failed (desktop chat may still use stale key): "+(e&&e.message||e), {where:"initCrypto:mirrorMain", profiles:profilesOut.length}); }catch(_){}
+      }
     }
     _cfgCache = Object.assign({}, raw, { key: "" });
     return _cfgCache;
@@ -242,8 +270,17 @@ async function initCrypto(){
   _cfgCache = Object.assign({}, raw, { key: plainKey });
   // 旧明文迁移：重新持久化为加密结构
   if(_cryptoReady && needRepersist){
-    try{ await persistCfg(_cfgCache); }catch(e){ /* 忽略 */ }
+    /* persistCfg 不 reject —— 写失败是它的**返回值**，只看 try/catch 就是装饰（第一版我就踩了）。
+       失败 = AI Key 继续以明文留在 localStorage，属隐私外泄面，必须点名。 */
+    try{
+      const okRepersist = await persistCfg(_cfgCache);
+      if(okRepersist === false) _repersistFailed(new Error("save() returned false"), "returned-false");
+    }catch(e){ _repersistFailed(e, "threw"); }
   }
   return _cfgCache;
+}
+/** 明文迁移没落盘的上报出口（与 persistCfg 内部的写失败分开记，便于定位是哪一层没写成） */
+function _repersistFailed(e, how){
+  try{ if(typeof pushDiag==="function") pushDiag("error", "plaintext AI key re-persist failed (" + how + "), key stays unencrypted in storage: "+(e&&e.message||e), {where:"initCrypto:repersist"}); }catch(_){}
 }
 function isElectron(){ return typeof window.electronAPI !== "undefined"; }
