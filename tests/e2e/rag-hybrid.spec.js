@@ -136,6 +136,21 @@ test.describe("知识库混合召回（真浏览器）", () => {
       try { out.vecKeys = (await idbKeys()).filter((k) => String(k).indexOf("ragvec:") === 0).length; } catch (e) { out.vecErr = String((e && e.message) || e); }
       try { out.navItems = document.querySelectorAll("#side .nav-item").length; } catch (e) { out.navErr = String((e && e.message) || e); }
       try { out.tasks = typeof getTasks === "function" ? getTasks().length : "no-fn"; } catch (e) { out.tasksErr = String((e && e.message) || e); }
+      /* v3.7.99 追加：v3.7.98 的现场显示失败时 embedCallsAfterReload=0 而 vecKeys=2 ——
+         即"数据在 IDB，但 ragVectorSearch 在 aiEmbedTexts 之前就 return 了"（ragVecLoadAll 返回了空缓存）。
+         这里把 ragVecLoadAll 的输入/输出全摊开：IDB 连接、内存缓存状态、期望模型 vs 记录模型。 */
+      try { out.idbDb = (await idbOpen()) ? "ok" : "null"; } catch (e) { out.idbDbErr = String((e && e.message) || e); }
+      try { out.wantModel = typeof _ragVecModel === "function" ? _ragVecModel() : "n/a"; } catch (e) { out.wantModelErr = String((e && e.message) || e); }
+      try {
+        const c = typeof _ragVecCache !== "undefined" ? _ragVecCache : null;
+        out.ragCache = c ? { model: c.model, size: c.map ? c.map.size : -1 } : null;
+      } catch (e) { out.ragCacheErr = String((e && e.message) || e); }
+      try {
+        const ks = (await idbKeys()).filter((k) => String(k).indexOf("ragvec:") === 0);
+        const r0 = ks.length ? await idbReadKey(ks[0]) : null;
+        out.recModel = r0 && r0.m;
+        out.recHasVec = !!(r0 && r0.v && r0.v.length > 0);
+      } catch (e) { out.recErr = String((e && e.message) || e); }
       return out;
     });
     const after = await page.evaluate(async () => {

@@ -1,3 +1,34 @@
+## [v3.7.99] - 2026-10-07
+
+**R-9 的 `rag-hybrid` flaky：v3.7.98 加的自证诊断第一次 CI 就命中根因 —— 刷新后 `ragVectorSearch` 根本没走到 embedding 调用。**
+
+- **现场对照**（CI run `37622549623`，同一用例的失败/通过两次）：
+
+  | 字段 | 失败（首跑 851ms） | 通过（retry #1 1.0s） |
+  |---|---|---|
+  | `vecKeys` | 2 | 2 |
+  | `navItems` | 17 | 17 |
+  | `tasks` | 4 | 4 |
+  | **`embedCallsAfterReload`** | **0** | **1** |
+  | `after` | **`[]`** | `[{id:"doc-auth",via:"vec"}]` |
+
+  即：向量在 IDB ✓、应用已就绪 ✓、数据已加载 ✓ —— **唯一差异是 embedding 请求根本没发出**。
+- **根因链（代码级）**：
+  1. `src/ai-tools.js:1859` `ragVectorSearch`：`const cache = await ragVecLoadAll(); if(!cache.size) return [];`
+     —— **缓存为空就直接返回**，根本走不到 `aiEmbedTexts`（故 embedding 调用数为 0）。
+  2. `src/ai-tools.js:1799` `ragVecLoadAll`：`_ragVecCache = { model: wantModel, map: m };`
+     —— **空 Map 也会被缓存**；此后 `:1785` 的 `if(_ragVecCache && _ragVecCache.model === wantModel) return _ragVecCache.map;`
+     直接命中空缓存 → **本页面内永久降级纯词法，且不再重试**。
+  3. `src/data-idb.js:135` `idbKeys`：`if(!db){ resolve([]); return; }` —— **IDB 未就绪时静默返回 `[]`**；
+     而 `idbOpen()`（`:26`）在 `onerror` / **`onblocked`** 时 `resolve(null)` 并**单例缓存该 null**。
+- **触发时序**：刷新后首次检索若撞上 IDB 尚未打开（或 `onblocked`），第 2 步就把空缓存钉死；
+  重试（新页面）时序不同即可成功 —— 这正是「首跑失败、重试通过」的机制。
+- **本批只加诊断，未改产品逻辑**：根因已定位，但改法需先想清「空缓存该不该钉死」
+  与「IDB 未就绪 vs IDB 里确实没有向量如何区分」；改错会让正常的空索引每次都重读 IDB。
+  下一批方向：`ragVecLoadAll` 区分「IDB 说没有」（可缓存）与「IDB 还没就绪」（不可缓存）。
+- **本机验证**：`npx playwright test rag-hybrid --project=desktop-1280x800` → 4 passed；
+  诊断输出 `{"vecKeys":2,"navItems":17,"tasks":4,"idbDb":"ok","wantModel":"bge-m3","ragCache":null,"recModel":"bge-m3","recHasVec":true,"embedCallsAfterReload":1,"after":[{"id":"doc-auth","via":"vec"}]}`
+
 ## [v3.7.98] - 2026-10-07
 
 **为台账 R-9 的两条 e2e flaky「造重现」：精确定位失败点 + 本机排除性实验 + 自证诊断（断言一字未改）。**
