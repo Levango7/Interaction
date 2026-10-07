@@ -6212,10 +6212,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.93"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.95"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261005e";
+const BUILD_TAG = "20261007b";
 
 
 
@@ -16877,6 +16877,23 @@ let _sideActive = null;
 /* v3.7.17（解耦 S4）：存储键枚举助手从 ui-backup-stats（UI）移到 Data 层 —— 它依赖本块的 CUSTOM_LINKS_KEY，
    且被 data-migrate / data-rw / render-overview 引用形成逆层依赖。纯搬迁。 */
 /* ---------- 备份 / 统计 ---------- */
+/* v3.7.94（数据连续性批次 ②/P1-2）：旁路键显式并集。
+   下列裸键（不带 wb_agent_ 前缀）由各模块有意按原名落盘（命名出处见 ui-ge-integrations.js:59），
+   此前不在枚举范围 → 导出 / 自动备份 / 云同步三通道整体漏掉：换机迁移丢通知设置与去重集、
+   降级环境的登录态（token 在无 WebCrypto 时为明文，本可随文件迁移）。
+   新增任何裸键必须同步登记在此；tests/backup-key-union.test.js 会扫描 src 全部裸 wb_ 字面量防再漏。 */
+const STORAGE_BYPASS_KEYS = [
+  "wb_access_token", "wb_refresh_token", "wb_token_expiry",                     // 登录态（ui-ge-api.js；正常设备密钥密封）
+  "wb_integration_providers", "wb_integration_sync_state",                     // 集成配置与同步状态（ui-ge-integrations.js）
+  "wb_integration_api_keys", "wb_integration_rate_limits",                     // 集成凭据表（密封）与限流状态
+  "wb_notify_enabled", "wb_notify_quiet",                                      // 通知总开关与免打扰（ui-daily.js）
+  "wb_notified_ids", "wb_notify_snooze",                                       // 任务提醒去重（data-rw.js）
+  "wb_chain_break_notified", "wb_digest_date"                                  // 断链提醒 / 每日播报去重（ui-daily.js）
+];
+/** 本应用拥有的存储键判定（前缀族 ∪ 显式旁路清单）。导出/导入/备份/云快照统一用它。 */
+function isAppStorageKey(k){
+  return !!k && (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY || STORAGE_BYPASS_KEYS.indexOf(k) !== -1);
+}
 /* v3.7.52：枚举本应用的存储键。
    原实现用 `Object.keys(localStorage)` —— 在「存储安全壳」接管时（localStorage 被浏览器禁用/配额耗尽），
    壳只实现了 getItem/setItem/removeItem/clear/key/length 六个成员，`Object.keys` 返回的是**这些方法名**，
@@ -16889,11 +16906,11 @@ function allKeys(){
     if(typeof ls.length === "number" && typeof ls.key === "function"){
       for(let i = 0; i < ls.length; i++){
         const k = ls.key(i);
-        if(k && (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY)) out.push(k);
+        if(isAppStorageKey(k)) out.push(k);
       }
       return out;
     }
-    return Object.keys(ls).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY);
+    return Object.keys(ls).filter(isAppStorageKey);
   }catch(e){ return []; }
 }
 
@@ -20711,6 +20728,23 @@ function registerDkIdbHelpers(getFn, putFn){
   if(typeof getFn === "function") _dkIdbGet = (k)=>Promise.resolve(getFn(k)).then(v=>(v===null?null:v));
   if(typeof putFn === "function") _dkIdbPut = (k,v)=>Promise.resolve(putFn(k,v)).then(()=>true).catch(()=>false);
 }
+/* v3.7.95 修复（P0 · 设备密钥从不持久化）：
+   上面 v3.7.75 的注释写着「data-idb 在层序上晚于 crypto，data-idb→crypto 是正向边」——
+   **与实际相反**。SRC 块序实测：`data-idb` 是第 2 块、`crypto` 是第 10 块，即 data-idb 先加载。
+   于是 data-idb 里那句 `if(typeof registerDkIdbHelpers === "function")` 必然为 false
+   → 接线从未发生 → `_dkIdbGet`/`_dkIdbPut` 恒为默认实现（返回 null / false）
+   → 设备密钥**既不写库也不读库**，每次页面加载重新生成一把新密钥
+   → 用旧密钥加密的密文（AI Key 等）永久解不开。
+   实测（真 Chromium，同 context 连续两次加载）：`ensureDeviceKey()` 导出的 raw 密钥两次不同。
+   修法：本块加载时 data-idb 已就绪，按相反方向补接一次。这里**刻意用 globalThis 动态取符号**
+   而非静态写 `idbReadKey`/`idbMirrorKey` —— 后者会重新引入 v3.7.75 刚消除的
+   crypto→data-idb 静态逆层边（module-graph 会红）。函数声明会挂到 globalThis，运行时取得到。 */
+try{
+  const _g = (typeof globalThis !== "undefined") ? globalThis : (typeof window !== "undefined" ? window : null);
+  if(_g && typeof _g.idbReadKey === "function" && typeof _g.idbMirrorKey === "function"){
+    registerDkIdbHelpers(_g.idbReadKey, _g.idbMirrorKey);
+  }
+}catch(e){ /* 接线失败不阻塞启动；_dkIdbGet/_dkIdbPut 保持默认（无 IDB 环境的既有行为） */ }
 
 function base64Encode(bytes){
   let s = "";
@@ -27062,7 +27096,18 @@ const SYNC_EXCLUDED_KEYS = [
   SYNC_META_KEY,
   PREFIX + "cfg",
   PREFIX + "__dk",
-  PREFIX + "pre_restore_backup"
+  PREFIX + "pre_restore_backup",
+  /* v3.7.94（数据连续性批次 ②/P1-2 对偶）：密封凭据类裸键不上云 —— 与 cfg 同构的论证：
+     用设备密钥密封，而设备密钥不出本机（换设备本就解不开），上云无跨端收益、纯增后端暴露面。
+     通知设置 / 去重集 / 限流状态等非凭据裸键不在此列，随快照同步（跨设备恢复即生效）。 */
+  "wb_access_token", "wb_refresh_token", "wb_token_expiry",
+  "wb_integration_api_keys", "wb_integration_providers",
+  /* v3.7.94（批次 ②/P2-1 嵌套副本对偶）：自动备份三代同样不得上云 ——
+     snapshotAutoBackup 的快照内容 = 除备份键自家外的全部键，即内嵌 cfg 密文 / __dk（降级环境）
+     / pre_restore_backup 的完整副本；上面三项顶层排除会被这些嵌套副本整体绕过（v3.7.58
+     「密文+钥匙不同交」失效），且每次上传平白多出 ≤4MB 的重复数据。另：autobackup 是本机
+     回滚档，上云无跨端收益，他机拉取还会覆盖其本地回滚历史。 */
+  AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1]
 ];
 function _buildCloudSnapshot() {
   const data = {};
@@ -35069,7 +35114,14 @@ async function doExport(){
     return {encrypted:true, iv:toBase64(iv), ciphertext:toBase64(cipherBuf), salt:toBase64(salt)};
   };
 
-  const data = {}; allKeys().forEach(k=>{ try{ data[k]=localStorage.getItem(k); }catch(e){ /* 静默降级 */ } });
+  /* v3.7.94（数据连续性批次 ②/P2-1）：导出排除「本机控制类」五键 ——
+     __dk 是设备密钥本体（「密钥不出本机」承诺）；autobackup 三代与 pre_restore_backup 是
+     **内嵌全部键值**的嵌套副本（自动备份快照内容 = 除备份键自家外的全部键），只排除顶层键
+     对它们无效：嵌套副本会把 __dk / cfg 密文整体带出。排除后导出内容 = 业务数据 + cfg 密文
+     + 可选 _portableKey 明文，换机迁移语义不变。导入侧刻意不对称（旧版文件回灌仍接受，
+     见 doImport）——同机恢复需取回 __dk 才能解密既有 cfg 密文。 */
+  const exportExcluded = [PREFIX + "__dk", AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1], PREFIX + "pre_restore_backup"];
+  const data = {}; allKeys().forEach(k=>{ if(exportExcluded.indexOf(k) !== -1) return; try{ data[k]=localStorage.getItem(k); }catch(e){ /* 静默降级 */ } });
   // v1.4-C 多设备同步：写入设备标识 + 导出时间戳 + 版本
   data["_deviceMeta"] = {
     deviceId: getDeviceId(),
@@ -35174,7 +35226,9 @@ function doImport(file){
       if (meta && !hasValidData) { toast(t("msg.importMissingData","导入文件缺少 tasks 或 records 数据"), "error"); return; }
 
       if(!confirm(t("confirm.importOverwrite","导入将覆盖当前同名数据（含自定义联动规则）。确定继续？"))) return;
-      Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
+      /* v3.7.94（P1-2 对偶）：过滤口径必须与导出 allKeys() 完全一致（isAppStorageKey 同一并集），
+         否则导出的旁路裸键（token/通知设置）在导入侧被再次丢回。 */
+      Object.keys(data).forEach(k=>{ if(isAppStorageKey(k)){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
       _cfgCache = null; _deviceKey = null;
       // v2.0.1：导入不 reload 页面，须复位会话层与场景聊天内存缓存，否则 UI 显示导入前旧数据
       try{ _resetSessions(); _reloadChatsFromStorage(); }catch(_){ /* noop */ }
@@ -35286,9 +35340,40 @@ function doIdbRestore(){
   }).catch(()=> toast(t("msg.idbUnavailable","本地库不可用"), "error"));
 }
 
+/* v3.7.94（数据连续性批次 ②/P2-8）：IDB kv 中的图片 blob（键 img_<uid>）纳入全量备份。
+   图片由记录图片字段直写 kv（ui-scene-bind.js:31-33：idbTxn put，不经 localStorage、
+   不进镜像过滤），此前所有备份通道（JSON 导出 / 自动备份 / 云快照 / IDB 全量备份）都不含它 ——
+   恢复记录后 img_<id> 引用还在、blob 却丢了，缩略图只剩占位图标。
+   通道选择（批次②决策 D3）：「IDB 全量备份」承载，只收 img_ 前缀 —— kv 里的 memvec:/ragvec:
+   是可重算的向量缓存、__dk_v2 是设备密钥，都不是用户数据，不入备份。
+   导入侧用同一严格白名单：防伪造备份借 idbImages 字段注入任意 kv 键（含 __dk_v2）。 */
+const IDB_IMG_KEY_RE = /^img_[a-z0-9]+$/;
+/** Blob → dataURL 字符串（FileReader 异步；转换失败返回 null，调用方跳过该键） */
+function _blobToDataURL(blob){
+  return new Promise(resolve => {
+    try{
+      const fr = new FileReader();
+      fr.onload = () => resolve(typeof fr.result === "string" ? fr.result : null);
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(blob);
+    }catch(e){ resolve(null); }
+  });
+}
+/** dataURL 字符串 → Blob（仅接受 base64 形态；非法输入返回 null，调用方跳过） */
+function _dataURLToBlob(dataURL){
+  try{
+    const m = /^data:([^;,]*);base64,([a-zA-Z0-9+/=\s]*)$/.exec(String(dataURL || ""));
+    if(!m) return null;
+    const bin = atob(m[2].replace(/\s/g, ""));
+    const bytes = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], {type: m[1] || "application/octet-stream"});
+  }catch(e){ return null; }
+}
+
 /**
- * IDB 全量导出：把 localStorage 镜像键 + IDB v2 存储全部打包为 JSON 文件
- * 格式：{ _type: "idb-backup", _version: "1.0", _exportedAt, localStorage, idbV2 }
+ * IDB 全量导出：把 localStorage 镜像键 + IDB v2 存储 + kv 图片 blob 全部打包为 JSON 文件
+ * 格式：{ _type: "idb-backup", _version: "1.1", _exportedAt, localStorage, idbV2, idbImages }
  */
 function doIdbExport(){
   return Promise.all([
@@ -35327,15 +35412,30 @@ function doIdbExport(){
           req.onerror = () => resolve(result);
         } catch(e){ resolve(result); }
       }).catch(() => resolve({}));
+    }),
+    // kv 商店图片 blob（img_<uid>；无 IDB 环境 idbKeys() 返回空集，自然降级为 {}）
+    new Promise(resolve => {
+      const out = {};
+      idbKeys().then(keys => {
+        const imgs = (keys || []).filter(k => IDB_IMG_KEY_RE.test(String(k)));
+        return Promise.all(imgs.map(k =>
+          idbReadKey(k).then(async v => {
+            if(!v) return;
+            const dataURL = await _blobToDataURL(v);
+            if(dataURL) out[k] = dataURL;
+          }).catch(() => { /* 单键失败不拖垮整体备份 */ })
+        ));
+      }).then(() => resolve(out), () => resolve(out));
     })
-  ]).then(([lsData, idbV2Data]) => {
+  ]).then(([lsData, idbV2Data, idbImagesData]) => {
     const backup = {
       _type: "idb-backup",
-      _version: "1.0",
+      _version: "1.1",
       _exportedAt: Date.now(),
       _versionApp: VERSION,
       localStorage: lsData,
-      idbV2: idbV2Data
+      idbV2: idbV2Data,
+      idbImages: idbImagesData
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type: "application/json"});
     const a = document.createElement("a");
@@ -35384,6 +35484,20 @@ function doIdbImport(file){
             await idbPut(store, val);
             restoredCount++;
           } catch(e){}
+        }
+      }
+      // 恢复 kv 商店图片 blob（严格白名单 img_<uid>：防伪造备份借 idbImages 注入 __dk_v2 等任意 kv 键）
+      if(backup.idbImages && typeof backup.idbImages === "object" && isIDBAvailable()){
+        for(const [k, v] of Object.entries(backup.idbImages)){
+          if(!IDB_IMG_KEY_RE.test(String(k))) continue;
+          const blob = _dataURLToBlob(v);
+          if(!blob) continue;
+          /* v3.7.94 收口（lint-empty-catch 新增 P0）：原为空 catch —— 图片 blob 写库失败
+             （QuotaExceeded / 事务中止 / 键名冲突）被静默吞掉，用户看到「已恢复 N 项数据」
+             却缺图，且诊断面板无任何线索。写法与同文件 diagPanel 两处（:613/:638）一致：
+             记诊断，但不中断其余键的恢复（单个图片失败不应拖垮整体导入）。 */
+          try{ await idbMirrorKey(k, blob); restoredCount++; }
+          catch(e){ try{ pushDiag("warn", "idbImages restore failed: " + ((e && e.message) || e), { where: "doIdbImport", key: k }); }catch(e2){} }
         }
       }
       if(!restoredCount){
