@@ -31,7 +31,13 @@ function registerDkIdbHelpers(getFn, putFn){
    crypto→data-idb 静态逆层边（module-graph 会红）。函数声明会挂到 globalThis，运行时取得到。 */
 try{
   const _g = (typeof globalThis !== "undefined") ? globalThis : (typeof window !== "undefined" ? window : null);
-  if(_g && typeof _g.idbReadKey === "function" && typeof _g.idbMirrorKey === "function"){
+  /* 只看函数存在是不够的：jsdom 里 idbReadKey/idbMirrorKey 有定义（函数声明会挂到 window），
+     但 indexedDB 不存在 —— 若此时接线，_dkIdbPut 会走进 idbTxn → idbOpen 的等待路径，
+     在无 IDB 环境挂起（CI 实测：backup-export-exclusion 用例 5 waitFor 超时 17s × 3 次重试）。
+     故必须同时确认 IDB **真的可用**；不可用则保持默认禁用态 —— 这正是上面 :16 注释
+     「无 IDB 环境本就该禁用」的原意，此前漏判了这一半条件。 */
+  const _idbOk = !!_g && (typeof _g.isIDBAvailable !== "function" || _g.isIDBAvailable() === true);
+  if(_idbOk && typeof _g.idbReadKey === "function" && typeof _g.idbMirrorKey === "function"){
     registerDkIdbHelpers(_g.idbReadKey, _g.idbMirrorKey);
   }
 }catch(e){ /* 接线失败不阻塞启动；_dkIdbGet/_dkIdbPut 保持默认（无 IDB 环境的既有行为） */ }

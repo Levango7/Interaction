@@ -1,3 +1,21 @@
+## [v3.7.96] - 2026-10-07
+
+**补 v3.7.95 的一处过修：接线必须同时确认 IDB「真的可用」—— 只看函数存在会把 jsdom 单测带崩。**
+
+- **v3.7.95 的漏判**：补接线时只检查了 `typeof idbReadKey === "function"`。但 **jsdom 里
+  `idbReadKey`/`idbMirrorKey` 是有定义的**（`function` 声明会挂到 `window`），只是 `indexedDB` 不存在
+  —— 于是接线照样发生，`_dkIdbPut` 走进 `idbTxn → idbOpen` 的等待路径并在无 IDB 环境挂起。
+  CI 实测：`tests/backup-export-exclusion.test.js` 用例 5 `waitFor` 超时（17.3s = 5.7s × 3 次重试），
+  `test (ubuntu-latest, 20)` 因此失败、windows 腿被连带取消。
+- **修复**：接线条件补上 `isIDBAvailable() === true`。这正是 `crypto.js:16` 注释原本的设计意图
+  ——「注册未发生时保持默认禁用态（**无 IDB 环境本就该禁用**）」，v3.7.95 只做了「函数存在」这一半。
+- **双向验证**：
+  · jsdom（`typeof indexedDB === "undefined"`、`isIDBAvailable() === false`、但 `idbReadKey` 是 function）
+    → 接线跳过，行为与 v3.7.94 完全一致（临时探针实测这三项取值）；
+  · 真 Chromium（`isIDBAvailable() === true`）→ 接线生效，IDB `__dk_v2` 跨两次加载一致（持久化仍成立）。
+- **回归**：`crypto` 10 / `p0-crossdevice-key` 4 / `idb-image-backup` 4 / `backup-export-exclusion` 5 全绿；
+  真浏览器探针 12 项全过。
+
 ## [v3.7.95] - 2026-10-07
 
 **修一个 P0：设备密钥从未持久化 —— 每次页面加载重新生成，用旧密钥加密的密文永久解不开。**
