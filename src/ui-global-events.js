@@ -1433,7 +1433,12 @@ if(_cfgThemeSel){
     if(!v) return;
     if(v === "system"){
       const cfg = getCfg(); cfg.theme = "system";
-      try{ save(PREFIX+"cfg", cfg); }catch(e){}
+      /* v3.7.102：cfg 写不进去 = 用户选了「跟随系统」但刷新后回退，且下面还照常弹
+         「已切换为跟随系统主题」—— 是**谎报成功**（与第三片 api 面同型），必须留痕。
+         改主题是低频操作，无需一次性标记。 */
+      try{ save(PREFIX+"cfg", cfg); }catch(e){
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "theme cfg persist failed: "+((e&&e.message)||e), {where:"cfgThemeSel.onchange"}); }catch(_e2){}
+      }
       try{ localStorage.setItem(PREFIX + "theme", "system"); }catch(e2){ /* 静默降级 */ }
       applyTheme();
       try{ toast(t("theme.switchedSystem","已切换为跟随系统主题"), "ok"); }catch(e){}

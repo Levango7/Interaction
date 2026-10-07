@@ -275,6 +275,9 @@ function openKnowledgePage(){
   _showDrawerPage("knowledge");
   renderSide(); // 同步侧栏高亮（uiView 已更新）
 }
+/* 同 render-entry.js 的 _recCountWarnedFoot：这里是**抽屉版尾栏**的一次性标记。
+   ⚠️ 变量名必须带 Drawer 后缀 —— 两块拼回后共享全局作用域，同名 let 会 SyntaxError。 */
+let _recCountWarnedDrawer = false;
 /* 往 #drawer 末尾追加尾栏（设置页面专用，与 appendFoot 结构一致——3列：应用信息+待办统计+AI状态） */
 function _appendDrawerFoot(){
   const drawer = $("#drawer"); if(!drawer) return;
@@ -287,7 +290,11 @@ function _appendDrawerFoot(){
   const model = (ap && ap.model) ? ap.model : "";
   const tasks = getTasks().filter(function(t){ return !t.deletedAt; });
   const openN = tasks.filter(function(t){ return t.status!=="done"; }).length;
-  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){}
+  /* v3.7.102：与 appendFoot 同一段逻辑的抽屉副本，同样会在失败时谎报「资料 0 条」。
+     两个副本各报各的（where 不同），便于定位是哪一侧渲染路径出的问题。 */
+  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){
+    try{ if(!_recCountWarnedDrawer && typeof pushDiag === "function"){ _recCountWarnedDrawer = true; pushDiag("warn", "recN count failed: "+((e&&e.message)||e), {where:"_appendDrawerFoot"}); } }catch(_e2){}
+  }
   const aiOn = !!(cfg && cfg.enabled);
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（与 appendFoot 同步）
   footEl.innerHTML = '<div class="foot-bar">' +
@@ -417,7 +424,7 @@ function _enforceDrawerWidth(){
     Array.prototype.forEach.call(dr.children, function(c){
       c.style.width = ""; c.style.maxWidth = ""; c.style.boxSizing = ""; c.style.flexShrink = "";
     });
-  }catch(_){}
+  }catch(_){ /* v3.7.102：这里清的是**旧版本残留的内联样式**，清不掉只是宽度仍由内联值决定（视觉偏差），不影响功能 —— 属预期降级，不登记诊断。说明只能写在 catch 体内：写在 try 块末尾会被算进 tryBody 而改变 sig，门禁会误判成新增 P0。 */ }
 }
 AppBridge._moveDrawerHome = _moveDrawerHome;
 function _moveDrawerHome(){

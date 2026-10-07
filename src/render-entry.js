@@ -9,6 +9,10 @@
  * 幂等：重复调用不会重复追加（先移除已有 foot 再追加）
  * @returns {void}
  */
+/* 尾栏「资料 N 条」统计失败的一次性标记（尾栏每次切页都渲染，重复报没有增量信息）。
+   ⚠️ 与 ui-drawer.js 的 _recCountWarnedDrawer 各用各的 —— 两个 src 块拼回后共享全局作用域，
+   同名 let 会直接 SyntaxError。 */
+let _recCountWarnedFoot = false;
 function appendFoot(){
   const main = $("#main"); if(!main) return;
   const existing = main.querySelector(":scope > .foot");
@@ -20,7 +24,12 @@ function appendFoot(){
   const model = (ap && ap.model) ? ap.model : "";
   const tasks = getTasks().filter(function(t){ return !t.deletedAt; });
   const openN = tasks.filter(function(t){ return t.status!=="done"; }).length;
-  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){}
+  /* v3.7.102：统计失败时 recN 停在 0，页脚于是显示「资料 0 条」—— 数据其实还在，
+     这是**谎报**而不是单纯的静默，比一般「没保存」更该留痕。
+     先补诊断；改显示文案（如显「-」）要动 i18n 与 e2e 断言，本片不动，只把问题暴露出来。 */
+  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){
+    try{ if(!_recCountWarnedFoot && typeof pushDiag === "function"){ _recCountWarnedFoot = true; pushDiag("warn", "recN count failed: "+((e&&e.message)||e), {where:"appendFoot"}); } }catch(_e2){}
+  }
   const aiOn = !!(cfg && cfg.enabled);
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（appendFoot 与 _appendDrawerFoot 两处同步）
   footEl.innerHTML = '<div class="foot-bar">' +
