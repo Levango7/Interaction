@@ -20,7 +20,14 @@ async function doExport(){
     return {encrypted:true, iv:toBase64(iv), ciphertext:toBase64(cipherBuf), salt:toBase64(salt)};
   };
 
-  const data = {}; allKeys().forEach(k=>{ try{ data[k]=localStorage.getItem(k); }catch(e){ /* 静默降级 */ } });
+  /* v3.7.94（数据连续性批次 ②/P2-1）：导出排除「本机控制类」五键 ——
+     __dk 是设备密钥本体（「密钥不出本机」承诺）；autobackup 三代与 pre_restore_backup 是
+     **内嵌全部键值**的嵌套副本（自动备份快照内容 = 除备份键自家外的全部键），只排除顶层键
+     对它们无效：嵌套副本会把 __dk / cfg 密文整体带出。排除后导出内容 = 业务数据 + cfg 密文
+     + 可选 _portableKey 明文，换机迁移语义不变。导入侧刻意不对称（旧版文件回灌仍接受，
+     见 doImport）——同机恢复需取回 __dk 才能解密既有 cfg 密文。 */
+  const exportExcluded = [PREFIX + "__dk", AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1], PREFIX + "pre_restore_backup"];
+  const data = {}; allKeys().forEach(k=>{ if(exportExcluded.indexOf(k) !== -1) return; try{ data[k]=localStorage.getItem(k); }catch(e){ /* 静默降级 */ } });
   // v1.4-C 多设备同步：写入设备标识 + 导出时间戳 + 版本
   data["_deviceMeta"] = {
     deviceId: getDeviceId(),
@@ -125,7 +132,9 @@ function doImport(file){
       if (meta && !hasValidData) { toast(t("msg.importMissingData","导入文件缺少 tasks 或 records 数据"), "error"); return; }
 
       if(!confirm(t("confirm.importOverwrite","导入将覆盖当前同名数据（含自定义联动规则）。确定继续？"))) return;
-      Object.keys(data).forEach(k=>{ if(k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
+      /* v3.7.94（P1-2 对偶）：过滤口径必须与导出 allKeys() 完全一致（isAppStorageKey 同一并集），
+         否则导出的旁路裸键（token/通知设置）在导入侧被再次丢回。 */
+      Object.keys(data).forEach(k=>{ if(isAppStorageKey(k)){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
       _cfgCache = null; _deviceKey = null;
       // v2.0.1：导入不 reload 页面，须复位会话层与场景聊天内存缓存，否则 UI 显示导入前旧数据
       try{ _resetSessions(); _reloadChatsFromStorage(); }catch(_){ /* noop */ }
@@ -237,9 +246,40 @@ function doIdbRestore(){
   }).catch(()=> toast(t("msg.idbUnavailable","本地库不可用"), "error"));
 }
 
+/* v3.7.94（数据连续性批次 ②/P2-8）：IDB kv 中的图片 blob（键 img_<uid>）纳入全量备份。
+   图片由记录图片字段直写 kv（ui-scene-bind.js:31-33：idbTxn put，不经 localStorage、
+   不进镜像过滤），此前所有备份通道（JSON 导出 / 自动备份 / 云快照 / IDB 全量备份）都不含它 ——
+   恢复记录后 img_<id> 引用还在、blob 却丢了，缩略图只剩占位图标。
+   通道选择（批次②决策 D3）：「IDB 全量备份」承载，只收 img_ 前缀 —— kv 里的 memvec:/ragvec:
+   是可重算的向量缓存、__dk_v2 是设备密钥，都不是用户数据，不入备份。
+   导入侧用同一严格白名单：防伪造备份借 idbImages 字段注入任意 kv 键（含 __dk_v2）。 */
+const IDB_IMG_KEY_RE = /^img_[a-z0-9]+$/;
+/** Blob → dataURL 字符串（FileReader 异步；转换失败返回 null，调用方跳过该键） */
+function _blobToDataURL(blob){
+  return new Promise(resolve => {
+    try{
+      const fr = new FileReader();
+      fr.onload = () => resolve(typeof fr.result === "string" ? fr.result : null);
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(blob);
+    }catch(e){ resolve(null); }
+  });
+}
+/** dataURL 字符串 → Blob（仅接受 base64 形态；非法输入返回 null，调用方跳过） */
+function _dataURLToBlob(dataURL){
+  try{
+    const m = /^data:([^;,]*);base64,([a-zA-Z0-9+/=\s]*)$/.exec(String(dataURL || ""));
+    if(!m) return null;
+    const bin = atob(m[2].replace(/\s/g, ""));
+    const bytes = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], {type: m[1] || "application/octet-stream"});
+  }catch(e){ return null; }
+}
+
 /**
- * IDB 全量导出：把 localStorage 镜像键 + IDB v2 存储全部打包为 JSON 文件
- * 格式：{ _type: "idb-backup", _version: "1.0", _exportedAt, localStorage, idbV2 }
+ * IDB 全量导出：把 localStorage 镜像键 + IDB v2 存储 + kv 图片 blob 全部打包为 JSON 文件
+ * 格式：{ _type: "idb-backup", _version: "1.1", _exportedAt, localStorage, idbV2, idbImages }
  */
 function doIdbExport(){
   return Promise.all([
@@ -278,15 +318,30 @@ function doIdbExport(){
           req.onerror = () => resolve(result);
         } catch(e){ resolve(result); }
       }).catch(() => resolve({}));
+    }),
+    // kv 商店图片 blob（img_<uid>；无 IDB 环境 idbKeys() 返回空集，自然降级为 {}）
+    new Promise(resolve => {
+      const out = {};
+      idbKeys().then(keys => {
+        const imgs = (keys || []).filter(k => IDB_IMG_KEY_RE.test(String(k)));
+        return Promise.all(imgs.map(k =>
+          idbReadKey(k).then(async v => {
+            if(!v) return;
+            const dataURL = await _blobToDataURL(v);
+            if(dataURL) out[k] = dataURL;
+          }).catch(() => { /* 单键失败不拖垮整体备份 */ })
+        ));
+      }).then(() => resolve(out), () => resolve(out));
     })
-  ]).then(([lsData, idbV2Data]) => {
+  ]).then(([lsData, idbV2Data, idbImagesData]) => {
     const backup = {
       _type: "idb-backup",
-      _version: "1.0",
+      _version: "1.1",
       _exportedAt: Date.now(),
       _versionApp: VERSION,
       localStorage: lsData,
-      idbV2: idbV2Data
+      idbV2: idbV2Data,
+      idbImages: idbImagesData
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type: "application/json"});
     const a = document.createElement("a");
@@ -335,6 +390,20 @@ function doIdbImport(file){
             await idbPut(store, val);
             restoredCount++;
           } catch(e){}
+        }
+      }
+      // 恢复 kv 商店图片 blob（严格白名单 img_<uid>：防伪造备份借 idbImages 注入 __dk_v2 等任意 kv 键）
+      if(backup.idbImages && typeof backup.idbImages === "object" && isIDBAvailable()){
+        for(const [k, v] of Object.entries(backup.idbImages)){
+          if(!IDB_IMG_KEY_RE.test(String(k))) continue;
+          const blob = _dataURLToBlob(v);
+          if(!blob) continue;
+          /* v3.7.94 收口（lint-empty-catch 新增 P0）：原为空 catch —— 图片 blob 写库失败
+             （QuotaExceeded / 事务中止 / 键名冲突）被静默吞掉，用户看到「已恢复 N 项数据」
+             却缺图，且诊断面板无任何线索。写法与同文件 diagPanel 两处（:613/:638）一致：
+             记诊断，但不中断其余键的恢复（单个图片失败不应拖垮整体导入）。 */
+          try{ await idbMirrorKey(k, blob); restoredCount++; }
+          catch(e){ try{ pushDiag("warn", "idbImages restore failed: " + ((e && e.message) || e), { where: "doIdbImport", key: k }); }catch(e2){} }
         }
       }
       if(!restoredCount){

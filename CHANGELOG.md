@@ -1,4 +1,50 @@
-## [Unreleased] - 2026-10-07（审计批次④ · R-2 第一片：密钥面 + 迁移面）
+## [v3.7.94] - 2026-10-07
+
+**本版归并 v3.7.93 之后的三个批次：数据连续性（批次② · 备份完整性）、密钥/迁移面切片（批次④ · R-2 第一片）、全维审计台账与日历链路（批次③）。**
+
+### 数据连续性批次②：备份完整性（导出排除 / 旁路键并集 / IDB 图片）
+
+**修三处「备份通道漏数据」的缺陷，并给装机验收补一个可隔离的产物。**
+
+- **P2-1 导出 / 云快照排除「本机控制类」五键**（`src/ui-backup-stats.js`）：`__dk`（设备密钥本体，兑现"密钥不出本机"）、
+  `autobackup` 最新代与 `.1`/`.2` 两代、`pre_restore_backup`。**关键在它们是"内嵌全部键值"的嵌套副本** ——
+  只做顶层排除无效：autobackup 快照内容 = 除备份键自身外的全部键（降级环境里含 `__dk` 明文），
+  `pre_restore_backup` 是内嵌全键值的回滚档。云快照（`_buildCloudSnapshot`）同步整键排除，堵住 v3.7.58
+  「密文 + 钥匙不同交」被嵌套副本绕过的路径，并省掉每次上传 ≤4MB × 嵌套重复的 payload。
+  导入侧**刻意不对称**（旧版文件含 `__dk`/autobackup 仍接受）：同机恢复必须能取回 `__dk` 才能解密既有 cfg 密文。
+- **P1-2 旁路裸键并集**（`src/data-links.js`）：13 个不带 `wb_agent_` 前缀的裸键（登录态 token×3、集成配置×4、
+  通知设置与去重集×6）此前不在 `allKeys()` 枚举范围 → **导出 / 自动备份 / 云同步三通道整体漏掉**：
+  换机迁移丢通知设置与去重集、降级环境的登录态（无 WebCrypto 时 token 为明文，本可随文件迁移）。
+  新增 `STORAGE_BYPASS_KEYS` 显式清单 + `isAppStorageKey()`（前缀族 ∪ 显式旁路 ∪ `CUSTOM_LINKS_KEY`），
+  导入过滤改同一口径（否则导出的裸键会在导入侧被再次丢回）。新增裸键必须同步登记，有结构守护兜底。
+- **P2-8 IDB 图片 blob 纳入全量备份**（`src/ui-backup-stats.js`）：记录图片由 `ui-scene-bind.js:31-33` 直写 IDB kv
+  （键 `img_<uid>`，不经 localStorage、不进镜像过滤），此前**所有**备份通道都不含它 ——
+  恢复记录后 `img_<id>` 引用还在、blob 却丢了，缩略图只剩占位图标。备份格式 `_version` 1.0 → 1.1 增 `idbImages` 段，
+  只收 `img_` 前缀（`memvec:`/`ragvec:` 是可重算的向量缓存、`__dk_v2` 是设备密钥，都不入备份）。
+  导入侧用**同一严格白名单**（`/^img_[a-z0-9]+$/`）：防伪造备份借 `idbImages` 字段注入任意 kv 键（含 `__dk_v2`）。
+- **`electron-build.yml`：新增 win-unpacked artifact（仅 `workflow_dispatch`）**（台账 R-10）。
+  **为什么这是装机验收的前置条件（实测）**：portable 外壳会**吞掉 `--user-data-dir`** —— 外壳只把
+  `--no-sandbox --remote-debugging-port=…` 转交给内层 `Agent 工坊.exe`，内层 Electron 于是按 Windows Known Folder
+  算出 `%APPDATA%\agent-workbench`（用户真实数据目录），且 Electron 也不看 `APPDATA` 环境变量。
+  ⇒ portable 形态在本机**没有任何隔离手段**，拿它做验收就是拿用户数据当测试场（第一版探针正是这样把真实 profile 的
+  tasks 重置成了 `[]`）。win-unpacked 是同一份 app.asar / prod bundle / 主进程，只差启动器那一层，
+  且 `--user-data-dir` 真生效 —— 装机验收第一次可以在隔离 profile 上重复跑。体积 ~250MB：只在 dispatch 出包时上传，
+  tag 发版路径不带（Release 资产不膨胀）。用 `tar` 而非 `Compress-Archive`：产物含中文名（`Agent 工坊.exe`），
+  PowerShell 的 zip 对非 ASCII 文件名编码不可靠，解出来名字会变。
+- **用例**：`tests/backup-key-union.test.js`（6 例：并集枚举 / 自动备份 / 云快照 / 导入对称 / 结构守护 / 变异自测）、
+  `tests/backup-export-exclusion.test.js`（5 例：五键排除 / 旁路键不受影响 / 精确名单不误伤近名键 / 机制自证嵌套副本 / 宽容导入）、
+  `tests/idb-image-backup.test.js`（4 例：Blob⇄dataURL 往返 / 非法输入守卫 / 无 IDB 降级形状 / 导入如实计数）、
+  `tests/e2e/idb-image-backup.spec.js`（真 Chromium：往返 + 伪造键白名单 + 设备密钥不被覆盖）。
+- **顺带收口**：`src/ui-backup-stats.js` 图片恢复路径原为空 catch（`await idbMirrorKey(...)` 的 reject 被吞，
+  用户看到"已恢复 N 项数据"却缺图，诊断面板也无线索）→ 改为 `pushDiag("warn", …)`，与同文件 diagPanel 两处
+  （`:613/:638`）写法一致；`lint:empty-catch` 由 exit 1 转 **exit 0**（P0 107 → 106）。
+- **验证（本机）**：3 个单测 **15 例全绿**（逐个单跑 —— `npx vitest run` 多文件在本机只收集第 1 个文件）；
+  全部门禁绿：`check:source-state` / `lint:layers`（逆层 18 · 循环 13 · 基线外新增 0）/ `check:modules`（块 35）/
+  `lint:xss` / `lint:tokens` / `lint:appbridge` / `check:ai-tools-doc` / `check:pwa-icons` / `build:check`（五源一致）。
+  真浏览器探针 `_probe/probe-idb-img.cjs` **12 项全过**（本机 e2e runner 报 `1 did not run`、给不出结论，
+  按纪律绕开 runner 直驱 playwright 库）。
+
+### 审计批次④ · R-2 第一片：密钥面 + 迁移面
 
 **把 9 处「静默吞真实错误」的 P0 空 catch 换成可观测行为，并修掉它牵出的两个真问题：写失败被当成写成功、以及"保留损坏原值"之后读者会崩。**
 
@@ -65,7 +111,7 @@
   **106 / exit 0**（切片一+切片三+重冻后的**干净 tip**，用 `git archive HEAD | tar -x` 抽净副本现测）。本机混合工作区是
   107 / exit 1，那 1 处新增 P0 在并行会话未提交的 `ui-backup-stats.js` 里。
 
-## [Unreleased] - 2026-10-06（审计批次③）
+### 审计批次③：全维审计台账 + 日历 ICS 链路（2026-10-06）
 
 
 **全维审计台账落盘 + 日历 ICS 链路首次进真浏览器门禁，并当场修掉一个「浮层建进 DOM 却完全不渲染」的 P1。**

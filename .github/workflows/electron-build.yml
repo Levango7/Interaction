@@ -106,6 +106,41 @@ jobs:
           echo "✅ 已处理 $renamed 个产物，且 dist 下无非 ASCII 文件名"
           ls -la dist/*.exe
 
+      # v3.7.94 新增：额外产出 **win-unpacked**（未套 NSIS 自解压壳的内层打包产物）作为 artifact。
+      #   为什么这是「装机验收」的前置条件（实测，2026-10-07）：
+      #     portable 外壳会**吞掉 --user-data-dir** —— 外壳只把 `--no-sandbox --remote-debugging-port=…`
+      #     转交给内层 `Agent 工坊.exe`，内层 Electron 于是按 Windows Known Folder 算出
+      #     `%APPDATA%\agent-workbench`（= 用户真实数据目录）。而 Electron 也**不看** APPDATA 环境变量。
+      #     ⇒ portable 形态在本机没有任何隔离手段；用它做验收就是在拿用户数据当测试场（第一版探针
+      #     正是这样把真实 profile 里的任务重置成了 []，见 docs/audit-2026-10-06.md R-10）。
+      #   win-unpacked 是同一份 app.asar、同一份 prod bundle、同一个主进程，只差启动器那一层，
+      #   且 `--user-data-dir` 真生效 —— 装机验收因此第一次可以在隔离 profile 上重复跑。
+      #   体积 ~250MB：只在 workflow_dispatch 出包时上传，tag 发版路径不带（Release 资产不膨胀）。
+      #   用 tar 而非 Compress-Archive：产物里有中文名（`Agent 工坊.exe`），PowerShell 的 zip
+      #   对非 ASCII 文件名的编码不可靠，解出来名字会变。
+      - name: 打包 win-unpacked（仅 dispatch：给装机验收一个能隔离的产物）
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: electron
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d dist/win-unpacked ]; then
+            echo "::error::未找到 dist/win-unpacked —— electron-builder 中间目录名可能已变动，拒绝静默通过"
+            ls -la dist/ || true
+            exit 1
+          fi
+          tar -czf dist/win-unpacked.tar.gz -C dist win-unpacked
+          echo "win-unpacked.tar.gz = $(du -h dist/win-unpacked.tar.gz | cut -f1)"
+
+      - name: 上传 win-unpacked artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-workbench-win-unpacked
+          path: electron/dist/win-unpacked.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
       - name: 列出产物
         working-directory: electron
         shell: bash

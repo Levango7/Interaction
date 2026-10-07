@@ -1272,7 +1272,18 @@ const SYNC_EXCLUDED_KEYS = [
   SYNC_META_KEY,
   PREFIX + "cfg",
   PREFIX + "__dk",
-  PREFIX + "pre_restore_backup"
+  PREFIX + "pre_restore_backup",
+  /* v3.7.94（数据连续性批次 ②/P1-2 对偶）：密封凭据类裸键不上云 —— 与 cfg 同构的论证：
+     用设备密钥密封，而设备密钥不出本机（换设备本就解不开），上云无跨端收益、纯增后端暴露面。
+     通知设置 / 去重集 / 限流状态等非凭据裸键不在此列，随快照同步（跨设备恢复即生效）。 */
+  "wb_access_token", "wb_refresh_token", "wb_token_expiry",
+  "wb_integration_api_keys", "wb_integration_providers",
+  /* v3.7.94（批次 ②/P2-1 嵌套副本对偶）：自动备份三代同样不得上云 ——
+     snapshotAutoBackup 的快照内容 = 除备份键自家外的全部键，即内嵌 cfg 密文 / __dk（降级环境）
+     / pre_restore_backup 的完整副本；上面三项顶层排除会被这些嵌套副本整体绕过（v3.7.58
+     「密文+钥匙不同交」失效），且每次上传平白多出 ≤4MB 的重复数据。另：autobackup 是本机
+     回滚档，上云无跨端收益，他机拉取还会覆盖其本地回滚历史。 */
+  AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1]
 ];
 function _buildCloudSnapshot() {
   const data = {};

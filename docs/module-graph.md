@@ -23,15 +23,15 @@
 | `render-entry` | Render | `ai-retry` `ai-tools` `core` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 60 |
 | `render-scene-sub` | Render | `core` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
-| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 39 |
-| `render-widgets` | Render | `chain` `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 23 |
+| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 41 |
+| `render-widgets` | Render | `chain` `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 24 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-daily` | 2 |
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `util-perf` | 9 |
 | `ui-scene-bind` | UI | `chain` `core` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` | 16 |
 | `ui-palette` | UI | `ai-retry` `ai-tools` `data-links` `render-entry` `render-widgets` `ui-backup-stats` `ui-global-events` | 12 |
 | `ui-daily` | UI | `chain` `core` `data-rw` | 5 |
-| `ui-backup-stats` | UI | `chain` `core` `crypto` `data-idb` `data-links` `data-rw` `render-entry` `render-widgets` | 21 |
+| `ui-backup-stats` | UI | `chain` `core` `crypto` `data-idb` `data-links` `data-rw` `render-entry` `render-widgets` | 27 |
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 46 |
 | `ui-hotkeys` | UI | `ai-retry` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-select` | UI | — | 0 |

@@ -773,6 +773,23 @@ let _sideActive = null;
 /* v3.7.17（解耦 S4）：存储键枚举助手从 ui-backup-stats（UI）移到 Data 层 —— 它依赖本块的 CUSTOM_LINKS_KEY，
    且被 data-migrate / data-rw / render-overview 引用形成逆层依赖。纯搬迁。 */
 /* ---------- 备份 / 统计 ---------- */
+/* v3.7.94（数据连续性批次 ②/P1-2）：旁路键显式并集。
+   下列裸键（不带 wb_agent_ 前缀）由各模块有意按原名落盘（命名出处见 ui-ge-integrations.js:59），
+   此前不在枚举范围 → 导出 / 自动备份 / 云同步三通道整体漏掉：换机迁移丢通知设置与去重集、
+   降级环境的登录态（token 在无 WebCrypto 时为明文，本可随文件迁移）。
+   新增任何裸键必须同步登记在此；tests/backup-key-union.test.js 会扫描 src 全部裸 wb_ 字面量防再漏。 */
+const STORAGE_BYPASS_KEYS = [
+  "wb_access_token", "wb_refresh_token", "wb_token_expiry",                     // 登录态（ui-ge-api.js；正常设备密钥密封）
+  "wb_integration_providers", "wb_integration_sync_state",                     // 集成配置与同步状态（ui-ge-integrations.js）
+  "wb_integration_api_keys", "wb_integration_rate_limits",                     // 集成凭据表（密封）与限流状态
+  "wb_notify_enabled", "wb_notify_quiet",                                      // 通知总开关与免打扰（ui-daily.js）
+  "wb_notified_ids", "wb_notify_snooze",                                       // 任务提醒去重（data-rw.js）
+  "wb_chain_break_notified", "wb_digest_date"                                  // 断链提醒 / 每日播报去重（ui-daily.js）
+];
+/** 本应用拥有的存储键判定（前缀族 ∪ 显式旁路清单）。导出/导入/备份/云快照统一用它。 */
+function isAppStorageKey(k){
+  return !!k && (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY || STORAGE_BYPASS_KEYS.indexOf(k) !== -1);
+}
 /* v3.7.52：枚举本应用的存储键。
    原实现用 `Object.keys(localStorage)` —— 在「存储安全壳」接管时（localStorage 被浏览器禁用/配额耗尽），
    壳只实现了 getItem/setItem/removeItem/clear/key/length 六个成员，`Object.keys` 返回的是**这些方法名**，
@@ -785,11 +802,11 @@ function allKeys(){
     if(typeof ls.length === "number" && typeof ls.key === "function"){
       for(let i = 0; i < ls.length; i++){
         const k = ls.key(i);
-        if(k && (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY)) out.push(k);
+        if(isAppStorageKey(k)) out.push(k);
       }
       return out;
     }
-    return Object.keys(ls).filter(k=>k.startsWith(PREFIX) || k===CUSTOM_LINKS_KEY);
+    return Object.keys(ls).filter(isAppStorageKey);
   }catch(e){ return []; }
 }
 
