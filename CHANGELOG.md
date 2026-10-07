@@ -1,3 +1,34 @@
+## [v3.7.98] - 2026-10-07
+
+**为台账 R-9 的两条 e2e flaky「造重现」：精确定位失败点 + 本机排除性实验 + 自证诊断（断言一字未改）。**
+
+- **R-9 背景**：`workflow.spec.js:41` 与 `rag-hybrid.spec.js:105` 在 CI 上偶发「首跑失败、重试通过」。
+  上批结论是「隔离态 30/30 不复现 —— 要修得先拿到能在隔离态复现的最小重现条件」。本批做的是那一步。
+- **失败点精确定位**（从 CI 日志取回，此前只记了「首跑失败」）：
+  · `workflow.spec.js:91`：`expect(page.locator(".kcard", { hasText: "E2E测试任务-编程" })).toBeVisible()`
+    → `element(s) not found`（`.kcard` 存在，但**没有目标卡片**）；失败耗时 10.7s。
+  · `rag-hybrid.spec.js:132`：`expect(after.en[0], "刷新后召不回 = 向量只是活在内存里").toMatchObject({ id: "doc-auth" })`
+    → `Received has value: undefined`（刷新后召回**空数组**）；失败耗时 1.1s。
+- **本机排除性实验**（`_probe/` 三个探针，真 Chromium，均可重跑）：
+  · `repro-workflow-91.cjs`：复刻 step 3-4（office 建任务 → 切 code 建任务）。
+    **RATE=1 / RATE=4（CDP `setCPUThrottlingRate`）+ LOOPS=6（同一 browser 内 6 个 context 累积压力）→ 0/6 复现**。
+  · `diag-rag-window.cjs`：刷新后**第一次** `evaluate` 就能召回（RATE=1 时 20~36ms；RATE=8 时 201~267ms）
+    → **不存在「应用未就绪」窗口**。
+  · `diag-rag-embed.cjs`：刷新后 embedding 调用**确有发生**（增量 1）、IDB `ragvec:` **仍有 2 条**、
+    召回 `via:"vec"` → **「向量没落 IDB」与「embedding 没调用」两种假设都被本机排除**。
+- **结论（如实）**：**本机（Windows + 本地文件 + 无并发）复现不出**；CI 的环境差异
+  （并发 worker / 冷文件缓存 / runner 负载）无法在本机推断。**故本批不假装造出了重现**，
+  改为加**自证诊断**，让下次 flaky 在 CI 日志里直接给出五个通道的现场。
+- **诊断内容**（`tests/e2e/rag-hybrid.spec.js`，**断言一字未改**）：刷新后、断言前打印一行 JSON
+  `{vecKeys, navItems, tasks, embedCallsAfterReload, after}` —— 覆盖
+  「向量是否在 IDB」/「应用是否就绪（`#side .nav-item` 数）」/「数据是否加载（`tasks` 数）」/
+  「embedding 是否被调用」/「实际召回结果」。
+- **验证**：本机 `npx playwright test rag-hybrid --project=desktop-1280x800` → **4 passed**；
+  诊断输出示例：`{"vecKeys":2,"navItems":17,"tasks":4,"embedCallsAfterReload":1,"after":[{"id":"doc-auth","via":"vec"}]}`。
+- **下一步（下次 flaky 时）**：CI 日志里搜 `[rag-hybrid diag]`，按现场三选一：
+  `vecKeys=0` → 持久化问题；`embedCallsAfterReload=0` → embedding 通道问题；`navItems=0` → 应用未就绪。
+  `workflow.spec.js:91` 同型处置（切场景后应等 `#side .nav-item` 而非只等 `#taskForm`）。
+
 ## [v3.7.97] - 2026-10-07
 
 **修 `backup-export-exclusion` 用例 5 与启动链的 check-then-act 竞态（v3.7.95/96 的 CI 单测红由此而来）。**

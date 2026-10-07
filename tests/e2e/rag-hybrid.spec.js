@@ -125,10 +125,24 @@ test.describe("知识库混合召回（真浏览器）", () => {
     /* 刷新：内存缓存清零，只剩 IDB —— 还能召回才证明"持久化"是真的 */
     await page.reload();
     await page.waitForSelector("#side", { timeout: 20000 });
+    /* v3.7.98 诊断：本用例历史上偶发 flaky（刷新后召不回，CI 上 1.1s 快速失败）。
+       失败时 after.en 为空，但**单看断言无法区分三种成因**：
+         ① 向量没落 IDB；② embedding 调用没发生/失败（只剩词法，而 "login bug" 是英文召不回中文）；
+         ③ IDB 或应用未就绪（#side 是静态 HTML，等它不等于等 startup 完成）。
+       在断言前打印现场，让下次 flaky 在 CI 日志里自证。**不影响任何断言**。 */
+    const callsAtReload = calls.n;
+    const diag = await page.evaluate(async () => {
+      const out = {};
+      try { out.vecKeys = (await idbKeys()).filter((k) => String(k).indexOf("ragvec:") === 0).length; } catch (e) { out.vecErr = String((e && e.message) || e); }
+      try { out.navItems = document.querySelectorAll("#side .nav-item").length; } catch (e) { out.navErr = String((e && e.message) || e); }
+      try { out.tasks = typeof getTasks === "function" ? getTasks().length : "no-fn"; } catch (e) { out.tasksErr = String((e && e.message) || e); }
+      return out;
+    });
     const after = await page.evaluate(async () => {
       const en = await ragSearch("login bug", 5);
       return { en: en.map(h => ({ id: h.docId, via: h.via })) };
     });
+    console.log("[rag-hybrid diag] " + JSON.stringify(Object.assign({}, diag, { embedCallsAfterReload: calls.n - callsAtReload, after: after.en })));
     expect(after.en[0], "刷新后召不回 = 向量只是活在内存里").toMatchObject({ id: "doc-auth" });
   });
 
