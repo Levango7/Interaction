@@ -1,3 +1,24 @@
+## [v3.7.100] - 2026-10-07
+
+**R-9 收口：`rag-hybrid` flaky 的「隔离态可复现的重现条件」已造出（3/3 复现），根因链写入台账。**
+
+- **重现条件**（`_probe/repro-rag-idb-unready.cjs`，真 Chromium）：
+  刷新前用 `addInitScript` 让 `window.indexedDB` 在启动窗口内不可用 → **3/3 复现**：
+  ```
+  IDB 不可用时长=0ms    -> after={"len":0} embedding增量=1  [REPRO]
+  IDB 不可用时长=1200ms -> after={"len":0} embedding增量=0  [REPRO]   <- 与 CI 失败现场一致
+  IDB 不可用时长=3000ms -> after={"len":0} embedding增量=1  [REPRO]
+  ```
+  其中 `embedding增量=0` 这一档与 CI 失败现场（`embedCallsAfterReload: 0`）**完全吻合**。
+- **根因链**（v3.7.99 已定位，此处固化）：`src/ai-tools.js:1859` `ragVectorSearch` 在 `!cache.size` 时
+  直接 `return []`（走不到 `aiEmbedTexts`）→ `src/ai-tools.js:1799` `ragVecLoadAll` **把空 Map 钉进
+  `_ragVecCache`**（此后本页面内永久降级纯词法）→ `src/data-idb.js:135` `idbKeys` 在 `!db` 时
+  **静默返回 `[]`**（`idbOpen()` 在 `onerror`/`onblocked` 时 `resolve(null)` 并单例缓存）。
+- **台账更新**：`docs/audit-2026-10-06.md` 的 R-9 条目补入「失败点 / 排除性实验 / 自证诊断现场 /
+  根因链 / 重现条件」五段，并把「未修 + 下一批改法方向」写清。
+- **本批仍不改产品逻辑**（同 v3.7.99：改法需先想清「空缓存该不该钉死」与
+  「IDB 未就绪 vs 确实没有向量如何区分」；改错会让正常的空索引每次都重读 IDB）。
+
 ## [v3.7.99] - 2026-10-07
 
 **R-9 的 `rag-hybrid` flaky：v3.7.98 加的自证诊断第一次 CI 就命中根因 —— 刷新后 `ragVectorSearch` 根本没走到 embedding 调用。**
