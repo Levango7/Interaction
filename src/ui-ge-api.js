@@ -969,7 +969,12 @@
         try{
           const r = await apiUpdateProfile({ name });
           if(r.ok){ try{ toast(t("api.profileUpdated", "用户信息已更新"), "ok"); }catch(_){} _loadApiPanels(); }
-        }catch(e){ /* 离线 */ }
+        }catch(e){
+          /* v3.7.102 第六片：成功侧有 toast、失败侧此前**完全静默** → 反馈不对称，
+             用户以为资料已改。与第三片 apiDeleteDevice 同型（谎报成功），故同标准处理。 */
+          try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}
+          try{ if(typeof pushDiag === "function") pushDiag("error", "update profile failed: "+((e&&e.message)||e), {where:"apiUpdateProfile"}); }catch(_e2){}
+        }
       };
     }
     // 登出
@@ -994,7 +999,11 @@
         try{
           const r = await apiUpdateNotifyPrefs(prefs);
           if(r.ok){ try{ toast(t("api.prefsSaved", "通知偏好已保存"), "ok"); }catch(_){} }
-        }catch(e){ /* 离线 */ }
+        }catch(e){
+          /* v3.7.102 第六片：同上 —— 成功弹「已保存」、失败无声 = 谎报。 */
+          try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}
+          try{ if(typeof pushDiag === "function") pushDiag("error", "update notify prefs failed: "+((e&&e.message)||e), {where:"apiUpdateNotifyPrefs"}); }catch(_e2){}
+        }
       };
     }
     // 新增定时提醒
@@ -1007,7 +1016,12 @@
         try{
           const r = await apiCreateSchedule({ type, cron, enabled: true });
           if(r.ok){ try{ toast(t("api.scheduleAdded", "提醒已添加"), "ok"); }catch(_){} _loadSchedules(); }
-        }catch(e){ /* 离线 */ }
+        }catch(e){
+          /* v3.7.102 第六片：加提醒失败静默 → 用户以为提醒设好了，实际根本不会触发。
+             这是「谎报」里后果最实在的一类（与第三片 apiDeleteSchedule 对称）。 */
+          try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}
+          try{ if(typeof pushDiag === "function") pushDiag("error", "create schedule failed: "+((e&&e.message)||e), {where:"apiCreateSchedule"}); }catch(_e2){}
+        }
       };
     }
     // 集成连接/断开按钮
@@ -1024,7 +1038,11 @@
             // OAuth：打开授权页（此处简化为直接调用回调端点）
             const r = await fn();
             if(r.ok){ try{ toast(t("api.integrationConnected", "集成已连接"), "ok"); }catch(_){} _loadIntegrations(); }
-          }catch(e){ /* 离线 */ }
+          }catch(e){
+            /* v3.7.102 第六片：连接失败静默 → 用户以为连上了。 */
+            try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}
+            try{ if(typeof pushDiag === "function") pushDiag("error", "connect integration failed: "+((e&&e.message)||e), {where:"integrationConnect"}); }catch(_e2){}
+          }
         };
       }
     });
@@ -1040,7 +1058,12 @@
           try{
             const r = await apiDisconnectIntegration(prov);
             if(r.ok){ try{ toast(t("api.integrationDisconnected", "集成已断开"), "ok"); }catch(_){} _loadIntegrations(); }
-          }catch(e){ /* 离线 */ }
+          }catch(e){
+            /* v3.7.102 第六片：**安全语义** —— 断开失败却静默，用户以为已断开，
+               而第三方集成仍持有访问授权。与第三片 apiDeleteDevice（登出设备）完全同型。 */
+            try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}
+            try{ if(typeof pushDiag === "function") pushDiag("error", "disconnect integration failed: "+((e&&e.message)||e), {where:"apiDisconnectIntegration"}); }catch(_e2){}
+          }
         };
       }
     });
