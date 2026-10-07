@@ -33558,6 +33558,10 @@ function stopNotifyScheduler(){
  * 幂等：重复调用不会重复追加（先移除已有 foot 再追加）
  * @returns {void}
  */
+/* 尾栏「资料 N 条」统计失败的一次性标记（尾栏每次切页都渲染，重复报没有增量信息）。
+   ⚠️ 与 ui-drawer.js 的 _recCountWarnedDrawer 各用各的 —— 两个 src 块拼回后共享全局作用域，
+   同名 let 会直接 SyntaxError。 */
+let _recCountWarnedFoot = false;
 function appendFoot(){
   const main = $("#main"); if(!main) return;
   const existing = main.querySelector(":scope > .foot");
@@ -33569,7 +33573,12 @@ function appendFoot(){
   const model = (ap && ap.model) ? ap.model : "";
   const tasks = getTasks().filter(function(t){ return !t.deletedAt; });
   const openN = tasks.filter(function(t){ return t.status!=="done"; }).length;
-  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){}
+  /* v3.7.102：统计失败时 recN 停在 0，页脚于是显示「资料 0 条」—— 数据其实还在，
+     这是**谎报**而不是单纯的静默，比一般「没保存」更该留痕。
+     先补诊断；改显示文案（如显「-」）要动 i18n 与 e2e 断言，本片不动，只把问题暴露出来。 */
+  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){
+    try{ if(!_recCountWarnedFoot && typeof pushDiag === "function"){ _recCountWarnedFoot = true; pushDiag("warn", "recN count failed: "+((e&&e.message)||e), {where:"appendFoot"}); } }catch(_e2){}
+  }
   const aiOn = !!(cfg && cfg.enabled);
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（appendFoot 与 _appendDrawerFoot 两处同步）
   footEl.innerHTML = '<div class="foot-bar">' +
@@ -36703,6 +36712,9 @@ function openKnowledgePage(){
   _showDrawerPage("knowledge");
   renderSide(); // 同步侧栏高亮（uiView 已更新）
 }
+/* 同 render-entry.js 的 _recCountWarnedFoot：这里是**抽屉版尾栏**的一次性标记。
+   ⚠️ 变量名必须带 Drawer 后缀 —— 两块拼回后共享全局作用域，同名 let 会 SyntaxError。 */
+let _recCountWarnedDrawer = false;
 /* 往 #drawer 末尾追加尾栏（设置页面专用，与 appendFoot 结构一致——3列：应用信息+待办统计+AI状态） */
 function _appendDrawerFoot(){
   const drawer = $("#drawer"); if(!drawer) return;
@@ -36715,7 +36727,11 @@ function _appendDrawerFoot(){
   const model = (ap && ap.model) ? ap.model : "";
   const tasks = getTasks().filter(function(t){ return !t.deletedAt; });
   const openN = tasks.filter(function(t){ return t.status!=="done"; }).length;
-  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){}
+  /* v3.7.102：与 appendFoot 同一段逻辑的抽屉副本，同样会在失败时谎报「资料 0 条」。
+     两个副本各报各的（where 不同），便于定位是哪一侧渲染路径出的问题。 */
+  let recN = 0; try{ Object.keys(SCENARIOS).forEach(function(sc){ recN += getRec(sc).length; }); }catch(e){
+    try{ if(!_recCountWarnedDrawer && typeof pushDiag === "function"){ _recCountWarnedDrawer = true; pushDiag("warn", "recN count failed: "+((e&&e.message)||e), {where:"_appendDrawerFoot"}); } }catch(_e2){}
+  }
   const aiOn = !!(cfg && cfg.enabled);
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（与 appendFoot 同步）
   footEl.innerHTML = '<div class="foot-bar">' +
@@ -36845,7 +36861,7 @@ function _enforceDrawerWidth(){
     Array.prototype.forEach.call(dr.children, function(c){
       c.style.width = ""; c.style.maxWidth = ""; c.style.boxSizing = ""; c.style.flexShrink = "";
     });
-  }catch(_){}
+  }catch(_){ /* v3.7.102：这里清的是**旧版本残留的内联样式**，清不掉只是宽度仍由内联值决定（视觉偏差），不影响功能 —— 属预期降级，不登记诊断。说明只能写在 catch 体内：写在 try 块末尾会被算进 tryBody 而改变 sig，门禁会误判成新增 P0。 */ }
 }
 AppBridge._moveDrawerHome = _moveDrawerHome;
 function _moveDrawerHome(){
@@ -39737,7 +39753,12 @@ if(_cfgThemeSel){
     if(!v) return;
     if(v === "system"){
       const cfg = getCfg(); cfg.theme = "system";
-      try{ save(PREFIX+"cfg", cfg); }catch(e){}
+      /* v3.7.102：cfg 写不进去 = 用户选了「跟随系统」但刷新后回退，且下面还照常弹
+         「已切换为跟随系统主题」—— 是**谎报成功**（与第三片 api 面同型），必须留痕。
+         改主题是低频操作，无需一次性标记。 */
+      try{ save(PREFIX+"cfg", cfg); }catch(e){
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "theme cfg persist failed: "+((e&&e.message)||e), {where:"cfgThemeSel.onchange"}); }catch(_e2){}
+      }
       try{ localStorage.setItem(PREFIX + "theme", "system"); }catch(e2){ /* 静默降级 */ }
       applyTheme();
       try{ toast(t("theme.switchedSystem","已切换为跟随系统主题"), "ok"); }catch(e){}
