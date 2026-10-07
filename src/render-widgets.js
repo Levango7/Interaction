@@ -553,7 +553,11 @@ function openChartStore(){
   }
 
   function persistCanvas(){
-    try{ localStorage.setItem(PREFIX+"chart_canvas", JSON.stringify(canvasItems)); }catch(_){}
+    /* v3.7.102：画布内容是用户自己摆的图表，写失败 = 刷新后整块布局丢失，且此前完全无声。
+       这里只登记诊断、不改控制流：写不进去依然继续（配额满时弹窗打扰反而更糟）。 */
+    try{ localStorage.setItem(PREFIX+"chart_canvas", JSON.stringify(canvasItems)); }catch(_){
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "canvas persist failed: "+((_&&_.message)||_), {where:"persistCanvas"}); }catch(_e2){}
+    }
   }
 
   function bindEvents(){
@@ -907,14 +911,26 @@ function closeRecycleModal(){
 }
 /* 侧边栏折叠：事件委托绑定在 #side 上（v1.9.9 折叠按钮回归侧栏顶部 #sideToggle 重新位于 #side 子树）。
    启动时恢复持久化状态。 */
+/* 折叠状态写失败（配额满/隐私模式）只是一项 UI 偏好，但它是**每次点击都走**的高频路径：
+   若次次登记诊断会把诊断面板刷满、反而盖住真问题，故只报**第一次**。 */
+let _sideFoldWarned = false;
 function setupSideToggle(){
   const side = $("#side");
   if(!side) return;
   side.addEventListener("click", (e)=>{
     if(!e.target || !e.target.closest || !e.target.closest("#sideToggle")) return;
     side.classList.toggle("collapsed");
-    try{ localStorage.setItem(PREFIX+"sideCollapsed", side.classList.contains("collapsed")?"1":"0"); }catch(_){}
+    try{ localStorage.setItem(PREFIX+"sideCollapsed", side.classList.contains("collapsed")?"1":"0"); }catch(_){
+      /* v3.7.102：写不进去的后果只是下次进来恢复展开，属可接受降级，但要留痕供排查。 */
+      try{
+        if(!_sideFoldWarned && typeof pushDiag === "function"){
+          _sideFoldWarned = true;
+          pushDiag("warn", "sideCollapsed persist failed: "+((_&&_.message)||_), {where:"setupSideToggle"});
+        }
+      }catch(_e2){}
+    }
   });
+  /* 读失败按「未持久化」处理（保持展开），是预期降级，不登记诊断。 */
   try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") side.classList.add("collapsed"); }catch(_){}
 }
 
@@ -1462,8 +1478,20 @@ function openToolStub(toolId, label){
 function _getPref(key, def){
   try{ const v = localStorage.getItem(PREFIX+key); if(v === null || v === undefined) return def; return v; }catch(_){ return def; }
 }
+/* 同 setupSideToggle：_setPref 是通用偏好写入口（天气/闹钟等多处复用），隐私模式下会被高频触发，
+   故同样只报第一次 —— 一次足矣定位「localStorage 整体不可用」，重复报没有增量信息。 */
+let _setPrefWarned = false;
 function _setPref(key, val){
-  try{ localStorage.setItem(PREFIX+key, val); }catch(_){}
+  try{ localStorage.setItem(PREFIX+key, val); }catch(_){
+    /* v3.7.102：偏好写失败不阻塞任何功能（读侧有 def 兜底），但此前连一句说明都没有，
+       排查「设置总是不保存」时无从下手，故补一条带 key 的归因。 */
+    try{
+      if(!_setPrefWarned && typeof pushDiag === "function"){
+        _setPrefWarned = true;
+        pushDiag("warn", "pref persist failed (key="+key+"): "+((_&&_.message)||_), {where:"_setPref"});
+      }
+    }catch(_e2){}
+  }
 }
 
 /* ---------- 1) 天气（今日 + 5 日预报·离线模拟数据） ----------
@@ -1581,7 +1609,12 @@ function _beepAlarm(){
       g.gain.linearRampToValueAtTime(0, t + off + .18);
       o.start(t + off); o.stop(t + off + .2);
     });
-  }catch(_){}
+  }catch(_){
+    /* v3.7.102：闹钟**响不出声**是用户能直接感知的失败（会错过提醒），不能无声吞掉。
+       注意「浏览器不支持 AudioContext」在上面已提前 return，能进到这里的是真实异常
+       （如自动播放策略拦截、音频设备异常），值得登记。不弹 toast：闹钟场景弹窗更打扰。 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "alarm beep failed: "+((_&&_.message)||_), {where:"_beepAlarm"}); }catch(_e2){}
+  }
 }
 function _stopAlarmBeep(){ try{ const c = _beepAlarm._ctx; if(c){ const t = c.currentTime; c.close().catch(function(){}); _beepAlarm._ctx = null; } }catch(_){} }
 function _renderAlarmList(){
@@ -3107,6 +3140,7 @@ function applyLandscapeFold(){
   } else if(isMobile()){
     // 竖屏移动端：仅当不是用户主动折叠时才恢复
     let userFolded = false;
+    /* 读失败按「用户没折叠过」处理 → 自动展开，是预期降级（隐私模式下首次进入的常态），不登记诊断。 */
     try{ userFolded = localStorage.getItem(PREFIX+"sideCollapsed") === "1"; }catch(_){}
     if(!userFolded) side.classList.remove("collapsed");
   }

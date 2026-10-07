@@ -2183,18 +2183,18 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 556,
-      "sig": "c31c5d1905",
+      "line": 559,
+      "sig": "765af61434",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.setItem(PREFIX+\"chart_canvas\", JSON.stringify(canvasItems"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"canvas persist fa"
     },
     {
       "file": "render-widgets.js",
-      "line": 898,
+      "line": 905,
       "sig": "338621b38e",
       "occ": 1,
       "level": "P1",
@@ -2205,29 +2205,29 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 913,
-      "sig": "a6377ae08a",
+      "line": 930,
+      "sig": "275bfc9bb7",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.setItem(PREFIX+\"sideCollapsed\", side.classList.contains(\""
+      "snippet": "if(!_sideFoldWarned && typeof pushDiag === \"function\"){ _sideFoldWarne"
     },
     {
       "file": "render-widgets.js",
-      "line": 915,
+      "line": 934,
       "sig": "7c39deaec7",
       "occ": 1,
       "level": "P0",
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": true,
+      "bare": false,
       "note": "",
       "snippet": "if(localStorage.getItem(PREFIX+\"sideCollapsed\")===\"1\") side.classList."
     },
     {
       "file": "render-widgets.js",
-      "line": 1316,
+      "line": 1335,
       "sig": "77abb6b04d",
       "occ": 1,
       "level": "P1",
@@ -2238,7 +2238,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1320,
+      "line": 1339,
       "sig": "a5d0c4b9b4",
       "occ": 1,
       "level": "P1",
@@ -2249,7 +2249,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1404,
+      "line": 1423,
       "sig": "a5d0c4b9b4",
       "occ": 2,
       "level": "P1",
@@ -2260,29 +2260,29 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1463,
-      "sig": "ade8ec531e",
+      "line": 1493,
+      "sig": "aa07fc88f4",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.setItem(PREFIX+key, val); }"
+      "snippet": "if(!_setPrefWarned && typeof pushDiag === \"function\"){ _setPrefWarned "
     },
     {
       "file": "render-widgets.js",
-      "line": 1581,
-      "sig": "85cb314bd7",
+      "line": 1616,
+      "sig": "ac3151ade7",
       "occ": 1,
-      "level": "P0",
-      "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
-      "bare": true,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
       "note": "",
-      "snippet": "const AC = window.AudioContext || window.webkitAudioContext; if(!AC) r"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"alarm beep failed"
     },
     {
       "file": "render-widgets.js",
-      "line": 1583,
+      "line": 1619,
       "sig": "8be05f89b5",
       "occ": 1,
       "level": "P1",
@@ -2293,7 +2293,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1677,
+      "line": 1713,
       "sig": "a1c0670512",
       "occ": 1,
       "level": "P2",
@@ -2304,7 +2304,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1684,
+      "line": 1720,
       "sig": "cfb5cd3291",
       "occ": 1,
       "level": "P2",
@@ -2315,7 +2315,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1814,
+      "line": 1850,
       "sig": "2b7f751a68",
       "occ": 1,
       "level": "P2",
@@ -2326,7 +2326,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1827,
+      "line": 1863,
       "sig": "e4e14b1b2f",
       "occ": 1,
       "level": "P2",
@@ -2337,7 +2337,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2038,
+      "line": 2074,
       "sig": "66ae794fb1",
       "occ": 1,
       "level": "P1",
@@ -2348,7 +2348,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2578,
+      "line": 2614,
       "sig": "5f186c36cb",
       "occ": 1,
       "level": "P1",
@@ -2359,7 +2359,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2590,
+      "line": 2626,
       "sig": "5f186c36cb",
       "occ": 2,
       "level": "P1",
@@ -2370,7 +2370,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2698,
+      "line": 2734,
       "sig": "a43aedf6ec",
       "occ": 1,
       "level": "P1",
@@ -2381,7 +2381,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2702,
+      "line": 2738,
       "sig": "f4ddeef40d",
       "occ": 1,
       "level": "P1",
@@ -2392,7 +2392,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2807,
+      "line": 2843,
       "sig": "d3db25a41b",
       "occ": 1,
       "level": "P2",
@@ -2403,7 +2403,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2827,
+      "line": 2863,
       "sig": "adf1ff242d",
       "occ": 1,
       "level": "P1",
@@ -2414,7 +2414,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2911,
+      "line": 2947,
       "sig": "f3ef0c6141",
       "occ": 1,
       "level": "P1",
@@ -2425,7 +2425,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2932,
+      "line": 2968,
       "sig": "af2cf7ed1f",
       "occ": 1,
       "level": "P2",
@@ -2436,7 +2436,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2967,
+      "line": 3003,
       "sig": "25b13a3a1e",
       "occ": 1,
       "level": "P1",
@@ -2447,7 +2447,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2979,
+      "line": 3015,
       "sig": "4ca4f12296",
       "occ": 1,
       "level": "P1",
@@ -2458,7 +2458,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2999,
+      "line": 3035,
       "sig": "3315d9d589",
       "occ": 1,
       "level": "P1",
@@ -2469,18 +2469,18 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3107,
+      "line": 3144,
       "sig": "b2afc80171",
       "occ": 1,
       "level": "P0",
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": true,
+      "bare": false,
       "note": "",
       "snippet": "userFolded = localStorage.getItem(PREFIX+\"sideCollapsed\") === \"1\"; }"
     },
     {
       "file": "render-widgets.js",
-      "line": 3513,
+      "line": 3550,
       "sig": "8c26b5f0d4",
       "occ": 1,
       "level": "P1",
@@ -2491,7 +2491,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3523,
+      "line": 3560,
       "sig": "4c14703af3",
       "occ": 1,
       "level": "P1",
@@ -5533,6 +5533,13 @@
       "reason": "R-2 第三片修复（apiDeleteDevice/apiDeleteSchedule 补反馈）；精确重冻避免牵连并行会话在途改动",
       "before": 37,
       "after": 39
+    },
+    {
+      "date": "2026-10-07",
+      "file": "render-widgets.js",
+      "reason": "R-2 第四片修复（render-widgets 6 处 UI 偏好持久化补可观测性）；精确重冻避免牵连并行会话在途改动",
+      "before": 30,
+      "after": 30
     }
   ]
 }
