@@ -28,9 +28,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HTML = path.resolve(__dirname, "..", "agent-workbench.html");
 
 function freshWin() {
-  const win = loadApp();
-  win.localStorage.clear();
-  return win;
+  /* v3.7.102：onboarded 标志必须**在脚本执行前**注入。
+     原写法是 loadApp() 之后再 setItem，等于赌「启动流程比随后的 120ms 硬等待快」——
+     windows CI 上赌输过两次（v3.7.96 的 run 37602769033、v3.7.102 的 run 37701045330），
+     现象是 nav-item 还没由 renderSide 注入，「应存在导航 SVG」直接 false。
+     改经 loadApp({storage}) 在 beforeParse 阶段注入（脚本执行前），配合下方轮询等待消除竞态。 */
+  return loadApp({ storage: { wb_agent_onboarded: "true" } });
 }
 
 describe("P1-c 可访问性", () => {
@@ -38,13 +41,15 @@ describe("P1-c 可访问性", () => {
   let doc;
   let htmlSrc;
   beforeEach(async () => {
-    win = freshWin();
+    win = freshWin();   // 已引导标志由 freshWin 经 storage 注入（见其注释）
     doc = win.document;
     htmlSrc = fs.readFileSync(HTML, "utf8");
-    // 标记已引导，让 startup 走正常 render 流程（本套件测的是已引导后的渲染状态）
-    win.localStorage.setItem("wb_agent_onboarded", "true");
-    // 等 startup 异步 render（nav-item 由 renderSide 注入）完成
-    await new Promise((r) => setTimeout(r, 120));
+    /* 等 startup 异步 render（nav-item 由 renderSide 注入）完成。
+       不用固定 120ms —— 那是「赌机器够快」，windows CI 已赌输两次。
+       轮询到 nav 真的出现即返回，上限 3s：快机器立即过、慢机器也不会假红。 */
+    for (let i = 0; i < 120 && !doc.querySelector("#side .nav-item"); i++) {
+      await new Promise((r) => setTimeout(r, 25));
+    }
   });
 
   it("#toasts 为 role=status 且 aria-live=polite（live region）", () => {
