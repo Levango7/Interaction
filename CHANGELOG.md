@@ -1,3 +1,25 @@
+## [v3.7.95] - 2026-10-07
+
+**修一个 P0：设备密钥从未持久化 —— 每次页面加载重新生成，用旧密钥加密的密文永久解不开。**
+
+- **根因（模块加载顺序 + 两处注释都写反了）**：v3.7.75 把 `crypto` 对 IDB 助手的引用改为
+  「`data-idb` 加载时反向注册」（`registerDkIdbHelpers`），`crypto.js:15` 与 `data-idb.js:85` 两处注释都写着
+  「data-idb 在层序上晚于 crypto」。**实测相反**：SRC 块序 `data-idb` 是第 2 块、`crypto` 是第 10 块。
+  于是 `data-idb.js:87` 的 `if(typeof registerDkIdbHelpers === "function")` 恒为 false
+  → 接线从未发生 → `_dkIdbGet`/`_dkIdbPut` 恒为默认实现（`() => Promise.resolve(null / false)`）
+  → 设备密钥**既不写库也不读库**。
+- **后果（实测）**：真 Chromium 同一 context 连续两次加载，`ensureDeviceKey()` 导出的 raw 密钥不同
+  → 每次启动新密钥 → 用旧密钥加密的 AI Key 等密文永久解不开（用户侧表现为"配置莫名其妙没了"）。
+  影响范围：**自 v3.7.75 起的所有版本**。
+- **修复**（`src/crypto.js`）：本块加载时 `data-idb` 已就绪，按相反方向补接一次。
+  **刻意用 `globalThis` 动态取符号**而非静态写 `idbReadKey`/`idbMirrorKey` —— 后者会重新引入
+  v3.7.75 刚消除的 crypto→data-idb 静态逆层边。`lint:layers` / `module-graph` 复测：基线外新增 0。
+- **暴露路径**：批次②新增的 `tests/e2e/idb-image-backup.spec.js` 在 CI 上 3 次重试全红（`__dk_v2` 等不到）
+  —— 它**第一次**把这条既有 P0 逼到台面上（台账 §三 R-9 曾记录这条红，但当时标注"无法归因"）。
+- **验证**：修复后 IDB `__dk_v2` 跨两次加载完全一致（`EaSvafLpjJM2SD5Unl0M…`）；真浏览器探针 12 项全过；
+  相关单测 **43 例全绿**（crypto 10 / p0-crossdevice-key 4 / api-token-crypto 7 / round5-loop1-idb 7 /
+  idb-image-backup 4 / backup-key-union 6 / backup-export-exclusion 5）；全门禁绿。
+
 ## [v3.7.94] - 2026-10-07
 
 **本版归并 v3.7.93 之后的三个批次：数据连续性（批次② · 备份完整性）、密钥/迁移面切片（批次④ · R-2 第一片）、全维审计台账与日历链路（批次③）。**

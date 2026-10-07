@@ -18,6 +18,23 @@ function registerDkIdbHelpers(getFn, putFn){
   if(typeof getFn === "function") _dkIdbGet = (k)=>Promise.resolve(getFn(k)).then(v=>(v===null?null:v));
   if(typeof putFn === "function") _dkIdbPut = (k,v)=>Promise.resolve(putFn(k,v)).then(()=>true).catch(()=>false);
 }
+/* v3.7.95 修复（P0 · 设备密钥从不持久化）：
+   上面 v3.7.75 的注释写着「data-idb 在层序上晚于 crypto，data-idb→crypto 是正向边」——
+   **与实际相反**。SRC 块序实测：`data-idb` 是第 2 块、`crypto` 是第 10 块，即 data-idb 先加载。
+   于是 data-idb 里那句 `if(typeof registerDkIdbHelpers === "function")` 必然为 false
+   → 接线从未发生 → `_dkIdbGet`/`_dkIdbPut` 恒为默认实现（返回 null / false）
+   → 设备密钥**既不写库也不读库**，每次页面加载重新生成一把新密钥
+   → 用旧密钥加密的密文（AI Key 等）永久解不开。
+   实测（真 Chromium，同 context 连续两次加载）：`ensureDeviceKey()` 导出的 raw 密钥两次不同。
+   修法：本块加载时 data-idb 已就绪，按相反方向补接一次。这里**刻意用 globalThis 动态取符号**
+   而非静态写 `idbReadKey`/`idbMirrorKey` —— 后者会重新引入 v3.7.75 刚消除的
+   crypto→data-idb 静态逆层边（module-graph 会红）。函数声明会挂到 globalThis，运行时取得到。 */
+try{
+  const _g = (typeof globalThis !== "undefined") ? globalThis : (typeof window !== "undefined" ? window : null);
+  if(_g && typeof _g.idbReadKey === "function" && typeof _g.idbMirrorKey === "function"){
+    registerDkIdbHelpers(_g.idbReadKey, _g.idbMirrorKey);
+  }
+}catch(e){ /* 接线失败不阻塞启动；_dkIdbGet/_dkIdbPut 保持默认（无 IDB 环境的既有行为） */ }
 
 function base64Encode(bytes){
   let s = "";
