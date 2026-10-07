@@ -167,17 +167,32 @@ describe("批次② P2-1 对偶 · 云快照排除 autobackup 三代（嵌套副
 
 describe("批次② P2-1 对偶 · 导入保持宽容（有意不对称）", { retry: 2 }, () => {
   it("5: 旧版导出文件（含 __dk/autobackup）回灌仍被接受——同机恢复需取回 __dk 解既有密文", async () => {
-    const win = freshWin();
+    /* v3.7.96：原实现是 `const win = freshWin()` 后立即 doImport，会撞上启动链的
+       check-then-act 竞态 —— `_ensureDeviceKeyImpl` 先读 DK_KEY（null）→
+       `await crypto.subtle.generateKey(...)` → 再 `setItem(DK_KEY, b64)`；
+       若 doImport 在这两步之间写入，就会被后写的 b64 覆盖 → waitFor 超时。
+       （v3.7.94 及更早没暴露，是脚本执行更快、竞态窗口恰好错过；v3.7.95 起 crypto.js
+        顶层多了接线块，执行时间略增，竞态在 CI 上稳定命中。实测轨迹：
+        裸 freshWin + 立即 doImport → __dk 全程是 44 字符 b64，导入值从未出现。）
+       修法两处：① 先等启动链把 DK_KEY 落盘；② 用**真实形态**的合法 base64 密钥
+       （32 字节 AES-256 raw），这样 doImport 重置 _deviceKey 后，下一次 ensureDeviceKey
+       能复用导入的密钥而不是重新生成。 */
+    const win = loadApp();
+    win.localStorage.clear();
+    await waitFor(() => win.localStorage.getItem(DK) !== null, 8000);
+    win.localStorage.clear();
+
+    const DK_RAW = win.btoa(String.fromCharCode(...new Uint8Array(32).fill(7)));
     const fileData = {
       _deviceMeta: { deviceId: "dev-old", exportedAt: 1, version: "test-1" },
       [PREFIX + "tasks"]: JSON.stringify([{ id: "t-legacy" }]),
-      [DK]: "DEVKEY-material",
+      [DK]: DK_RAW,
       [AUTO_BACKUP]: JSON.stringify({ _ts: 9 }),
     };
     stubImport(win, JSON.stringify(fileData));
     win.doImport({ name: "legacy.json" });
 
-    await waitFor(() => win.localStorage.getItem(DK) === "DEVKEY-material");
+    await waitFor(() => win.localStorage.getItem(DK) === DK_RAW);
     expect(win.localStorage.getItem(AUTO_BACKUP)).toBe(JSON.stringify({ _ts: 9 }));
     expect(win.getTasks().some((t) => t.id === "t-legacy")).toBe(true);
   });

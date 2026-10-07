@@ -1,3 +1,24 @@
+## [v3.7.97] - 2026-10-07
+
+**修 `backup-export-exclusion` 用例 5 与启动链的 check-then-act 竞态（v3.7.95/96 的 CI 单测红由此而来）。**
+
+- **现象**：v3.7.95 的 `test (ubuntu-latest, 20)`、v3.7.96 的 `test (windows-latest, 20)` 各红 1 条 ——
+  同为 `tests/backup-export-exclusion.test.js` 用例 5 的 `waitFor timeout`（17.3s = 5.7s × 3 次重试）。
+- **根因（产品侧既有竞态，测试未等启动链）**：`_ensureDeviceKeyImpl` 是 check-then-act ——
+  先读 `DK_KEY`（null）→ `await crypto.subtle.generateKey(...)` → 再 `setItem(DK_KEY, b64)`。
+  用例 5 原本 `freshWin()` 后**立即** `doImport`，写入若落在这两步之间就会被后写的 b64 覆盖。
+  实测轨迹（临时探针）：裸 `freshWin` + 立即 `doImport` → `__dk` 全程是 44 字符 b64，
+  **导入值从未出现**；等启动链落盘（163ms）+ 合法密钥 → `__dk` 全程保持导入值。
+- **为什么 v3.7.94 没暴露**：脚本执行更快，竞态窗口恰好错过；v3.7.95 起 `crypto.js` 顶层多了接线块，
+  执行时间略增，竞态在 CI（并发 + 慢）上稳定命中。
+- **修法（测试侧）**：① 先 `waitFor` 启动链把 `DK_KEY` 落盘；② 用**真实形态**的合法 base64 密钥
+  （32 字节 AES-256 raw），使 `doImport` 重置 `_deviceKey` 后，下一次 `ensureDeviceKey`
+  能**复用**导入的密钥而非重新生成 —— 原先的 `"DEVKEY-material"` 不是合法 base64，必然被覆盖。
+- **未改产品（如实记账，不掩盖）**：竞态本身保留 —— 它只在「启动瞬间外部写入 `__dk`」时发生，
+  真实用户场景（导入由用户点击触发，远晚于启动）不会触发；若改成「不覆盖」，反而会让损坏值永久卡住
+  （下次启动 `importKey` 失败 → 每次生成新密钥且永不落盘，比现在更糟）。
+- **验证**：用例 5 本机绿；探针轨迹对照（覆盖 → 保持）如上。
+
 ## [v3.7.96] - 2026-10-07
 
 **补 v3.7.95 的一处过修：接线必须同时确认 IDB「真的可用」—— 只看函数存在会把 jsdom 单测带崩。**
