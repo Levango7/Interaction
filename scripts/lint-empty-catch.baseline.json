@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
-  "updated": "2026-10-05",
-  "count": 508,
+  "updated": "2026-10-08",
+  "count": 511,
   "items": [
     {
       "file": "ai-loop.js",
@@ -2524,18 +2524,29 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 23,
-      "sig": "ce54c0bd51",
+      "line": 33,
+      "sig": "baa2d1b5fe",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"warn\", \"export read failed: \"+((e&&e.message)||e), {where:\"d"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 43,
+      "sig": "de1b1d3240",
       "occ": 1,
       "level": "P0",
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
-      "note": "/* 静默降级 */",
-      "snippet": "data[k]=localStorage.getItem(k); }"
+      "note": "/* 连存储都读不到：属配额满/隐私模式，已被上面的 _exportReadFailed 点名，此处不重复报 */",
+      "snippet": "const _rawTasks = localStorage.getItem(PREFIX + \"tasks\"); if(_rawTasks"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 111,
+      "line": 138,
       "sig": "bf092ccb13",
       "occ": 1,
       "level": "P0",
@@ -2546,7 +2557,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 128,
+      "line": 157,
       "sig": "483fda06f3",
       "occ": 1,
       "level": "P0",
@@ -2557,7 +2568,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 131,
+      "line": 160,
       "sig": "5387afc5c9",
       "occ": 1,
       "level": "P1",
@@ -2568,7 +2579,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 133,
+      "line": 162,
       "sig": "977a000457",
       "occ": 1,
       "level": "P0",
@@ -2579,7 +2590,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 205,
+      "line": 234,
       "sig": "831bccce72",
       "occ": 1,
       "level": "P2",
@@ -2590,7 +2601,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 224,
+      "line": 253,
       "sig": "95444e6af8",
       "occ": 1,
       "level": "P0",
@@ -2601,40 +2612,73 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 254,
-      "sig": "bd6f85ea65",
+      "line": 317,
+      "sig": "1adce61c53",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "for(let i = 0; i < localStorage.length; i++){ const k = localStorage.k"
+      "snippet": "pushDiag(\"warn\", \"idb export read failed: \"+((e&&e.message)||e), {wher"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 323,
-      "sig": "03b1e04031",
+      "line": 321,
+      "sig": "1da7862639",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.setItem(k, v); restoredCount++; }"
+      "snippet": "pushDiag(\"warn\", \"idb export localStorage enumeration failed: \"+((e&&e"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 337,
-      "sig": "cf52b069e3",
+      "line": 379,
+      "sig": "a98172b0ba",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "// 解析复合键 \"store:id\" → 恢复原始结构 const parts = key.split(\":\"); const store"
+      "snippet": "pushDiag(\"warn\", \"idb backup missing \"+lsFailed.length+\" localStorage "
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 388,
+      "line": 422,
+      "sig": "395bf95363",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"warn\", \"localStorage mirror restore failed: \"+((e&&e.message"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 438,
+      "sig": "3abd633333",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"warn\", \"idbV2 restore failed: \"+((e&&e.message)||e), {where:"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 453,
+      "sig": "5a8c3c88e9",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"warn\", \"idbImages restore failed: \" + ((e && e.message) || e"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 508,
       "sig": "06f5a7a5a3",
       "occ": 1,
       "level": "P2",
@@ -2645,7 +2689,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 397,
+      "line": 517,
       "sig": "ba6bb66018",
       "occ": 1,
       "level": "P2",
@@ -2656,18 +2700,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 404,
-      "sig": "8ccdba7d3f",
-      "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": true,
-      "note": "",
-      "snippet": "const v = localStorage.getItem(k); units += k.length + (v ? v.length :"
-    },
-    {
-      "file": "ui-backup-stats.js",
-      "line": 418,
+      "line": 540,
       "sig": "3ef0a9fd77",
       "occ": 1,
       "level": "P1",
@@ -2678,7 +2711,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 419,
+      "line": 541,
       "sig": "9ac257b256",
       "occ": 1,
       "level": "P1",
@@ -2689,7 +2722,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 478,
+      "line": 600,
       "sig": "49981ae49b",
       "occ": 1,
       "level": "P2",
@@ -2700,7 +2733,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 494,
+      "line": 616,
       "sig": "2f13daad28",
       "occ": 1,
       "level": "P2",
@@ -2711,7 +2744,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 518,
+      "line": 640,
       "sig": "5d1aa70c93",
       "occ": 1,
       "level": "P2",
@@ -2722,7 +2755,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 527,
+      "line": 649,
       "sig": "c8662d94d0",
       "occ": 1,
       "level": "P1",
@@ -2733,7 +2766,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 534,
+      "line": 656,
       "sig": "9112cc79b0",
       "occ": 1,
       "level": "P1",
@@ -2744,7 +2777,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 539,
+      "line": 661,
       "sig": "1aaf61fff3",
       "occ": 1,
       "level": "P1",
@@ -2755,7 +2788,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 549,
+      "line": 671,
       "sig": "886e8fb7be",
       "occ": 1,
       "level": "P2",
@@ -2766,7 +2799,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 556,
+      "line": 678,
       "sig": "72e856afa4",
       "occ": 1,
       "level": "P2",
@@ -2777,7 +2810,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 558,
+      "line": 680,
       "sig": "ab054c6484",
       "occ": 1,
       "level": "P2",
@@ -2788,7 +2821,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 562,
+      "line": 684,
       "sig": "4975210443",
       "occ": 1,
       "level": "P1",
@@ -2799,7 +2832,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 574,
+      "line": 696,
       "sig": "aca2aab403",
       "occ": 1,
       "level": "P2",
@@ -2810,18 +2843,18 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 601,
-      "sig": "42fe71f657",
+      "line": 726,
+      "sig": "51f32caa1a",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); i"
+      "snippet": "if(!_snapshotEnumWarned && typeof pushDiag === \"function\"){ _snapshotE"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 616,
+      "line": 741,
       "sig": "c42e404245",
       "occ": 1,
       "level": "P1",
@@ -2832,7 +2865,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 673,
+      "line": 798,
       "sig": "e7de94e1ef",
       "occ": 1,
       "level": "P0",
@@ -2843,7 +2876,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 762,
+      "line": 887,
       "sig": "64ce88348f",
       "occ": 1,
       "level": "P1",
@@ -2854,29 +2887,29 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 773,
-      "sig": "342480900c",
+      "line": 903,
+      "sig": "da2f602a5f",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.setItem(PREFIX+\"todobar_expanded\", expanded ? \"1\" : \"0\");"
+      "snippet": "if(!_todoBarPersistWarned && typeof pushDiag === \"function\"){ _todoBar"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 782,
+      "line": 912,
       "sig": "3f15abdee5",
       "occ": 1,
       "level": "P0",
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": true,
-      "note": "",
+      "bare": false,
+      "note": "/* 读失败按默认折叠态：这只是一条展开偏好，丢了不影响可用性，且下次用户展开会重写。属预期降级，刻意不报。 */",
       "snippet": "exp = localStorage.getItem(PREFIX+\"todobar_expanded\") === \"1\"; }"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1223,
+      "line": 1353,
       "sig": "fc2761bdd4",
       "occ": 1,
       "level": "P1",
