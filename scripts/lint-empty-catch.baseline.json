@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-08",
-  "count": 513,
+  "count": 516,
   "items": [
     {
       "file": "ai-loop.js",
@@ -709,7 +709,7 @@
     },
     {
       "file": "crypto.js",
-      "line": 172,
+      "line": 158,
       "sig": "1e8357b750",
       "occ": 1,
       "level": "P2",
@@ -720,7 +720,7 @@
     },
     {
       "file": "crypto.js",
-      "line": 199,
+      "line": 185,
       "sig": "48a2dc51e3",
       "occ": 1,
       "level": "P2",
@@ -731,7 +731,7 @@
     },
     {
       "file": "crypto.js",
-      "line": 214,
+      "line": 200,
       "sig": "a0c6c1be1d",
       "occ": 1,
       "level": "P2",
@@ -742,8 +742,8 @@
     },
     {
       "file": "crypto.js",
-      "line": 243,
-      "sig": "69c314aa8b",
+      "line": 229,
+      "sig": "4ef0e0e2de",
       "occ": 1,
       "level": "P2",
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
@@ -753,7 +753,7 @@
     },
     {
       "file": "crypto.js",
-      "line": 273,
+      "line": 259,
       "sig": "db7a6a0d40",
       "occ": 1,
       "level": "P2",
@@ -764,7 +764,7 @@
     },
     {
       "file": "crypto.js",
-      "line": 292,
+      "line": 278,
       "sig": "d4d734f3dd",
       "occ": 1,
       "level": "P2",
@@ -775,7 +775,7 @@
     },
     {
       "file": "crypto.js",
-      "line": 321,
+      "line": 307,
       "sig": "ce7235b462",
       "occ": 1,
       "level": "P2",
@@ -1127,29 +1127,29 @@
     },
     {
       "file": "data-migrate.js",
-      "line": 10,
-      "sig": "848adeb013",
+      "line": 16,
+      "sig": "2f45e287a7",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 静默，不阻塞迁移 */",
-      "snippet": "const log = load(PREFIX + \"migrationLog\", []); log.push(Object.assign("
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\", \"migration log write"
     },
     {
       "file": "data-migrate.js",
-      "line": 21,
-      "sig": "643be3db0f",
+      "line": 32,
+      "sig": "b64c499c59",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": false,
-      "note": "/* 备份失败不阻塞重置 */",
-      "snippet": "const k = PREFIX + kind + \"_broken_\" + Date.now(); localStorage.setIte"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"error\", \"broken-data backup"
     },
     {
       "file": "data-migrate.js",
-      "line": 41,
+      "line": 54,
       "sig": "e6e22e02cf",
       "occ": 1,
       "level": "P1",
@@ -1160,7 +1160,7 @@
     },
     {
       "file": "data-migrate.js",
-      "line": 48,
+      "line": 61,
       "sig": "2fa02d1d4a",
       "occ": 1,
       "level": "P2",
@@ -1171,7 +1171,18 @@
     },
     {
       "file": "data-migrate.js",
-      "line": 89,
+      "line": 63,
+      "sig": "936016f9ee",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "toast(t(\"migrate.backupFailedKept\", \"数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。\"),"
+    },
+    {
+      "file": "data-migrate.js",
+      "line": 105,
       "sig": "e7dcaaa9e4",
       "occ": 1,
       "level": "P1",
@@ -1182,7 +1193,7 @@
     },
     {
       "file": "data-migrate.js",
-      "line": 95,
+      "line": 111,
       "sig": "3ef7406ca2",
       "occ": 1,
       "level": "P2",
@@ -1193,7 +1204,18 @@
     },
     {
       "file": "data-migrate.js",
-      "line": 105,
+      "line": 113,
+      "sig": "936016f9ee",
+      "occ": 2,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "toast(t(\"migrate.backupFailedKept\", \"数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。\"),"
+    },
+    {
+      "file": "data-migrate.js",
+      "line": 124,
       "sig": "b4dd6876dc",
       "occ": 1,
       "level": "P1",
@@ -1204,7 +1226,7 @@
     },
     {
       "file": "data-migrate.js",
-      "line": 111,
+      "line": 130,
       "sig": "a48c6d6ecc",
       "occ": 1,
       "level": "P2",
@@ -1215,29 +1237,40 @@
     },
     {
       "file": "data-migrate.js",
-      "line": 128,
-      "sig": "e2c496bdd3",
-      "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": false,
-      "note": "/* 损坏由 _validateAndMigrateTasks 处理 */",
-      "snippet": "const tasksRaw = localStorage.getItem(PREFIX + \"tasks\"); if(tasksRaw){"
+      "line": 132,
+      "sig": "936016f9ee",
+      "occ": 3,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "toast(t(\"migrate.backupFailedKept\", \"数据格式异常且备份失败：已保留原值不重置（原因见诊断日志）。\"),"
     },
     {
       "file": "data-migrate.js",
-      "line": 141,
-      "sig": "e580a6559c",
+      "line": 153,
+      "sig": "4c2daf349c",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 跳过损坏键 */",
-      "snippet": "const recsRaw = localStorage.getItem(PREFIX + \"rec_\" + sc); if(recsRaw"
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\", \"legacy scan could n"
     },
     {
       "file": "data-migrate.js",
-      "line": 190,
+      "line": 170,
+      "sig": "03a4aa2f95",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\", \"scan skipped unpars"
+    },
+    {
+      "file": "data-migrate.js",
+      "line": 220,
       "sig": "7e3ed1f36b",
       "occ": 1,
       "level": "P2",
@@ -1248,7 +1281,7 @@
     },
     {
       "file": "data-migrate.js",
-      "line": 210,
+      "line": 240,
       "sig": "821a7cea40",
       "occ": 1,
       "level": "P2",
@@ -4020,7 +4053,18 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1358,
+      "line": 1361,
+      "sig": "e391ddfddf",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "toast(t(\"p5.icsBulkFail\", \"批量更新失败\"), \"warn\"); }"
+    },
+    {
+      "file": "ui-ge-calendar.js",
+      "line": 1375,
       "sig": "30795702b8",
       "occ": 1,
       "level": "P2",
@@ -4031,7 +4075,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1473,
+      "line": 1490,
       "sig": "8da10967ca",
       "occ": 1,
       "level": "P1",
@@ -4042,7 +4086,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1481,
+      "line": 1498,
       "sig": "ebfbb40557",
       "occ": 1,
       "level": "P2",
@@ -4053,7 +4097,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1513,
+      "line": 1530,
       "sig": "01682a34ea",
       "occ": 1,
       "level": "P0",
@@ -4064,7 +4108,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1524,
+      "line": 1541,
       "sig": "67f344fca5",
       "occ": 1,
       "level": "P0",
@@ -4075,7 +4119,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1543,
+      "line": 1560,
       "sig": "e191b6c2dd",
       "occ": 1,
       "level": "P2",
@@ -4086,7 +4130,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1670,
+      "line": 1705,
       "sig": "7e440efb04",
       "occ": 1,
       "level": "P2",
@@ -4097,7 +4141,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1707,
+      "line": 1742,
       "sig": "4a7b573180",
       "occ": 1,
       "level": "P2",
@@ -4108,7 +4152,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1713,
+      "line": 1748,
       "sig": "bcf228c46a",
       "occ": 1,
       "level": "P2",
@@ -4218,18 +4262,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2237,
-      "sig": "52ca41e906",
-      "occ": 1,
-      "level": "P2",
-      "why": "预期降级（仅能力探测），无需改动",
-      "bare": true,
-      "note": "",
-      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"error\", \"credential seal "
-    },
-    {
-      "file": "ui-ge-integrations.js",
-      "line": 2261,
+      "line": 2252,
       "sig": "604695095a",
       "occ": 1,
       "level": "P2",
@@ -4240,7 +4273,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2412,
+      "line": 2403,
       "sig": "79b5f7ff7d",
       "occ": 1,
       "level": "P2",
@@ -4251,7 +4284,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2447,
+      "line": 2438,
       "sig": "3ca678b71b",
       "occ": 1,
       "level": "P1",
@@ -4262,7 +4295,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2456,
+      "line": 2447,
       "sig": "200a62e7c0",
       "occ": 1,
       "level": "P1",
@@ -4273,7 +4306,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2469,
+      "line": 2460,
       "sig": "c77b8e42d1",
       "occ": 1,
       "level": "P2",
