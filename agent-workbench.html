@@ -18543,7 +18543,7 @@ async function executeAgentPlan(plan, opts){
         stepOk = !!(r && r.ok);
       } else {
         resultStr = execTool(step.tool, step.args); // 不传 force：需确认的工具已在上面拦掉
-        let rj = null; try{ rj = JSON.parse(resultStr); }catch(_){}
+        let rj = null; try{ rj = JSON.parse(resultStr); }catch(_){ /* 非 JSON → 按失败计：stepOk 要求 rj.ok !== false，解析不出来就拿不到 ok，故该步如实记为失败（并非把错误吞成成功）；resultStr 原文照旧回喂模型与 _execLine，信息不丢，所以这里不额外报诊断（判据④ 预期降级）。 */ }
         stepOk = !!(rj && rj.ok !== false);
       }
     }catch(e){
@@ -18621,7 +18621,7 @@ async function _execPlanStep(step, wl){
         stepOk = !!(r && r.ok);
       } else {
         resultStr = execTool(step.tool, step.args); // 不传 force：需确认的工具已在上面拦掉
-        let rj = null; try{ rj = JSON.parse(resultStr); }catch(_){}
+        let rj = null; try{ rj = JSON.parse(resultStr); }catch(_){ /* 非 JSON → 按失败计：stepOk 要求 rj.ok !== false，解析不出来就拿不到 ok，故该步如实记为失败（并非把错误吞成成功）；resultStr 原文照旧回喂模型与 _execLine，信息不丢，所以这里不额外报诊断（判据④ 预期降级）。 */ }
         stepOk = !!(rj && rj.ok !== false);
       }
     }catch(e){
