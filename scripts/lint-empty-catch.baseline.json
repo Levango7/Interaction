@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-08",
-  "count": 511,
+  "count": 513,
   "items": [
     {
       "file": "ai-loop.js",
@@ -1699,7 +1699,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1281,
+      "line": 1292,
       "sig": "c1b0ce4ee4",
       "occ": 1,
       "level": "P0",
@@ -1710,7 +1710,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1322,
+      "line": 1333,
       "sig": "67d49ea825",
       "occ": 1,
       "level": "P0",
@@ -1721,7 +1721,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1329,
+      "line": 1340,
       "sig": "b05ebfdd70",
       "occ": 1,
       "level": "P0",
@@ -1732,7 +1732,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1339,
+      "line": 1350,
       "sig": "306e082261",
       "occ": 1,
       "level": "P0",
@@ -1743,7 +1743,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1344,
+      "line": 1355,
       "sig": "b340dbb697",
       "occ": 1,
       "level": "P2",
@@ -1754,7 +1754,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1365,
+      "line": 1376,
       "sig": "6cbdd90465",
       "occ": 1,
       "level": "P1",
@@ -1765,7 +1765,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1367,
+      "line": 1378,
       "sig": "076265bb67",
       "occ": 1,
       "level": "P1",
@@ -1776,7 +1776,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1368,
+      "line": 1379,
       "sig": "05c42fd925",
       "occ": 1,
       "level": "P1",
@@ -1787,7 +1787,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1394,
+      "line": 1405,
       "sig": "ada6b6a72b",
       "occ": 1,
       "level": "P2",
@@ -1798,7 +1798,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1401,
+      "line": 1412,
       "sig": "b377164298",
       "occ": 1,
       "level": "P2",
@@ -1809,7 +1809,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1406,
+      "line": 1417,
       "sig": "b641f83fe7",
       "occ": 1,
       "level": "P0",
@@ -1820,7 +1820,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1453,
+      "line": 1464,
       "sig": "e9146843b9",
       "occ": 1,
       "level": "P2",
@@ -1831,7 +1831,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1456,
+      "line": 1467,
       "sig": "ada6b6a72b",
       "occ": 2,
       "level": "P2",
@@ -1842,7 +1842,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1458,
+      "line": 1469,
       "sig": "8ebeca95de",
       "occ": 1,
       "level": "P2",
@@ -1853,7 +1853,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1465,
+      "line": 1476,
       "sig": "c5f4e48894",
       "occ": 1,
       "level": "P1",
@@ -1864,7 +1864,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1470,
+      "line": 1481,
       "sig": "82a8bbf70d",
       "occ": 1,
       "level": "P1",
@@ -1875,18 +1875,18 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1482,
-      "sig": "e5edc68d08",
+      "line": 1498,
+      "sig": "002dc4a784",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.setItem(DIAGRAM_KEY, JSON.stringify(d)); }"
+      "snippet": "if(!_dgmSaveWarned && typeof pushDiag === \"function\"){ _dgmSaveWarned "
     },
     {
       "file": "render-overview.js",
-      "line": 1607,
+      "line": 1623,
       "sig": "ec84a59a8f",
       "occ": 1,
       "level": "P1",
@@ -1897,7 +1897,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1660,
+      "line": 1676,
       "sig": "3387716408",
       "occ": 1,
       "level": "P2",
@@ -1908,7 +1908,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1699,
+      "line": 1715,
       "sig": "e71d427a6a",
       "occ": 1,
       "level": "P2",
@@ -1919,7 +1919,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1703,
+      "line": 1719,
       "sig": "fa1b0bd661",
       "occ": 1,
       "level": "P2",
@@ -1930,7 +1930,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1768,
+      "line": 1784,
       "sig": "d61a0c114f",
       "occ": 1,
       "level": "P0",
@@ -1941,18 +1941,29 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1779,
-      "sig": "6815f7295b",
+      "line": 1798,
+      "sig": "462b633f59",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
-      "bare": true,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
       "note": "",
-      "snippet": "const saved = getAiConfig(\"workflow\") || {}; const flows = Array.isArr"
+      "snippet": "pushDiag(\"error\", \"workflow lastRun persist failed（该工作流可能被重复执行）\", {whe"
     },
     {
       "file": "render-overview.js",
-      "line": 1780,
+      "line": 1799,
+      "sig": "1fcc8cc2ca",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "toast(t(\"wf.lastRunSaveFailed\",\"工作流运行记录未保存，该工作流可能被重复执行\"), \"warn\"); }"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1801,
       "sig": "86a43ef20d",
       "occ": 1,
       "level": "P2",
@@ -1963,18 +1974,29 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1788,
-      "sig": "26c6a46e64",
+      "line": 1814,
+      "sig": "b756decc56",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"error\", \"workflow run failed: \"+((_e&&_e.message)||_e), {whe"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1820,
+      "sig": "359db5b6f6",
       "occ": 1,
       "level": "P0",
       "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
-      "bare": true,
-      "note": "",
+      "bare": false,
+      "note": "/* 读配置失败：这一轮无 flow 可跑，属预期降级（判据②） */",
       "snippet": "const saved = getAiConfig(\"workflow\") || {}; const flows = Array.isArr"
     },
     {
       "file": "render-overview.js",
-      "line": 1790,
+      "line": 1822,
       "sig": "5e3692e945",
       "occ": 1,
       "level": "P1",
@@ -1985,7 +2007,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1842,
+      "line": 1874,
       "sig": "b708929003",
       "occ": 1,
       "level": "P1",

@@ -1489,8 +1489,13 @@ var _dgmLinkMode = false;
 function _dgmLoad() {
   try { return JSON.parse(localStorage.getItem(DIAGRAM_KEY) || "null"); } catch (_) { return null; }
 }
+/* v3.7.102 第十片：图表画布每次改动都调 _dgmSave（高频），留痕必须节流 —— 只报第一次，
+   否则诊断面板被同一条刷满、反而盖住真问题（判据见 MEMORY.md §4b 分档③）。 */
+let _dgmSaveWarned = false;
 function _dgmSave(d) {
-  try { localStorage.setItem(DIAGRAM_KEY, JSON.stringify(d)); } catch (_) {}
+  /* 原为空 catch：画了半天的图，写不进去就悄悄没了 —— 用户下次打开是空的，全程无提示。 */
+  try { localStorage.setItem(DIAGRAM_KEY, JSON.stringify(d)); }
+  catch (_) { try{ if(!_dgmSaveWarned && typeof pushDiag === "function"){ _dgmSaveWarned = true; pushDiag("warn", "diagram save failed（本次改动可能未保留）", {where:"_dgmSave"}); } }catch(_e2){} }
 }
 function _dgmUid() { return "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
@@ -1787,7 +1792,12 @@ async function _wfRunFlow(idx, f){
     const saved = getAiConfig("workflow") || {};
     const flows = Array.isArray(saved.flows) ? saved.flows : [];
     if(flows[idx]){ flows[idx].lastRun = Date.now(); saved.flows = flows; saveAiConfig("workflow", saved); }
-  }catch(_){}
+  }catch(_){
+    /* v3.7.102 第十片：lastRun 没落盘 → 下次检查时这条**仍在到期窗口内** → 工作流被
+       **重复执行**（重复建待办 / 重复写笔记）。这不只是"少一条日志"，是会真污染用户数据。 */
+    try{ pushDiag("error", "workflow lastRun persist failed（该工作流可能被重复执行）", {where:"_wfRunFlow", flow:(f&&f.name)||idx}); }catch(_e2){}
+    try{ toast(t("wf.lastRunSaveFailed","工作流运行记录未保存，该工作流可能被重复执行"), "warn"); }catch(_e3){}
+  }
   try{ toast((savedAsNote ? t("wf.doneNote","定时工作流已完成并存入笔记：") : t("wf.doneTask","定时工作流已生成待办：")) + (f.name || ""), "ok"); }catch(_){}
 }
 function _wfCheckDue(){
@@ -1795,8 +1805,19 @@ function _wfCheckDue(){
     const saved = getAiConfig("workflow") || {};
     const flows = Array.isArray(saved.flows) ? saved.flows : [];
     const now = Date.now();
-    flows.forEach(function(f, i){ if(_wfDueAt(f, now)) _wfRunFlow(i, f); });
-  }catch(_){}
+    /* v3.7.102 第十片：原为整体 try —— 第一条 flow 抛异常会让**后面全部静默跳过**
+       （批量只做一半且不报错）。改为**逐个**处理：一条崩了不影响其余，并归因到具体工作流。
+       注意 `_wfRunFlow` 是 async：体内抛错只会让返回的 Promise 变 rejected（同步 try 抓不到），
+       所以**同步异常与 Promise 拒绝两条路都要接** —— 只接前者的话，真实失败会退化成
+       unhandled rejection，同样一声不吭。 */
+    flows.forEach(function(f, i){
+      const _wfFail = function(_e){ try{ pushDiag("error", "workflow run failed: "+((_e&&_e.message)||_e), {where:"_wfCheckDue", flow:(f&&f.name)||i}); }catch(_e2){} };
+      try{
+        const p = _wfDueAt(f, now) ? _wfRunFlow(i, f) : null;
+        if(p && typeof p.catch === "function") p.catch(_wfFail);
+      }catch(_e){ _wfFail(_e); }
+    });
+  }catch(_){ /* 读配置失败：这一轮无 flow 可跑，属预期降级（判据②） */ }
 }
 try{ setTimeout(_wfCheckDue, 3000); setInterval(_wfCheckDue, 60000); }catch(_){}
 
