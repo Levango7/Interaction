@@ -4724,29 +4724,29 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1080,
-      "sig": "1b3dd6332c",
+      "line": 1084,
+      "sig": "b0a3649b93",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"error\", \"tool whitelist p"
+    },
+    {
+      "file": "ui-global-events.js",
+      "line": 1161,
+      "sig": "a6e7f98fa8",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "",
-      "snippet": "save(PREFIX+\"cfg\", cfg); }"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"cfg.rag sync fail"
     },
     {
       "file": "ui-global-events.js",
-      "line": 1152,
-      "sig": "af5070c93b",
-      "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
-      "bare": false,
-      "note": "/* cfg 写失败不影响 ai_config_memory 已存——注入静默保持旧态 */",
-      "snippet": "const cfg = getCfg() || {}; cfg.rag = rg ? !!rg.checked : false; _cfgC"
-    },
-    {
-      "file": "ui-global-events.js",
-      "line": 1193,
+      "line": 1203,
       "sig": "668c982b58",
       "occ": 1,
       "level": "P1",
@@ -4757,7 +4757,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1212,
+      "line": 1222,
       "sig": "d3b992307a",
       "occ": 1,
       "level": "P1",
@@ -4768,7 +4768,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1239,
+      "line": 1249,
       "sig": "92767c382b",
       "occ": 1,
       "level": "P2",
@@ -4779,7 +4779,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1243,
+      "line": 1253,
       "sig": "f19ccdd999",
       "occ": 1,
       "level": "P1",
@@ -4790,7 +4790,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1257,
+      "line": 1267,
       "sig": "cad33eea0a",
       "occ": 1,
       "level": "P1",
@@ -4801,7 +4801,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1440,
+      "line": 1450,
       "sig": "60dcbf9c66",
       "occ": 1,
       "level": "P2",
@@ -4812,7 +4812,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1442,
+      "line": 1452,
       "sig": "772fbd7870",
       "occ": 1,
       "level": "P0",
@@ -4823,7 +4823,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1444,
+      "line": 1454,
       "sig": "3e50d4d96b",
       "occ": 1,
       "level": "P2",
@@ -4834,7 +4834,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1447,
+      "line": 1457,
       "sig": "2134ba4108",
       "occ": 1,
       "level": "P2",
@@ -4845,7 +4845,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1449,
+      "line": 1459,
       "sig": "81dea167e4",
       "occ": 1,
       "level": "P1",
@@ -4856,7 +4856,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1475,
+      "line": 1485,
       "sig": "0e7ae67851",
       "occ": 1,
       "level": "P1",
@@ -4867,7 +4867,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1478,
+      "line": 1488,
       "sig": "0e7ae67851",
       "occ": 2,
       "level": "P1",
@@ -4878,7 +4878,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1485,
+      "line": 1495,
       "sig": "8929a54ccd",
       "occ": 1,
       "level": "P1",
@@ -4889,18 +4889,18 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1508,
-      "sig": "4f162e1d04",
+      "line": 1523,
+      "sig": "b983d81221",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
-      "bare": false,
-      "note": "/* 静默 */",
-      "snippet": "save(SYNC_QUEUE_KEY, q); }"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(!_syncQueueWarned && typeof pushDiag === \"function\"){ _syncQueueWar"
     },
     {
       "file": "ui-global-events.js",
-      "line": 1644,
+      "line": 1660,
       "sig": "5c637105ab",
       "occ": 1,
       "level": "P2",
@@ -4911,7 +4911,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1645,
+      "line": 1661,
       "sig": "6c4b426682",
       "occ": 1,
       "level": "P2",
@@ -4922,7 +4922,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1647,
+      "line": 1663,
       "sig": "f42fbe84f8",
       "occ": 1,
       "level": "P2",
@@ -4933,7 +4933,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1651,
+      "line": 1667,
       "sig": "a67ea01c7d",
       "occ": 1,
       "level": "P2",
@@ -4944,7 +4944,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1658,
+      "line": 1674,
       "sig": "5f940d654b",
       "occ": 1,
       "level": "P2",
@@ -4955,7 +4955,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1733,
+      "line": 1749,
       "sig": "3c704d233e",
       "occ": 1,
       "level": "P2",
@@ -4966,7 +4966,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1755,
+      "line": 1771,
       "sig": "89760e2131",
       "occ": 1,
       "level": "P1",
@@ -4977,7 +4977,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1765,
+      "line": 1781,
       "sig": "53b79331ca",
       "occ": 1,
       "level": "P2",
@@ -4988,7 +4988,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1767,
+      "line": 1783,
       "sig": "0b7b0849ab",
       "occ": 1,
       "level": "P0",
@@ -4999,18 +4999,18 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1840,
-      "sig": "2a952f90fc",
+      "line": 1858,
+      "sig": "f334487c9b",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
-      "bare": false,
-      "note": "/* noop */",
-      "snippet": "save(PREFIX + \"push_subscription\", { endpoint: sub.endpoint, ts: Date."
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"push subscription"
     },
     {
       "file": "ui-global-events.js",
-      "line": 1857,
+      "line": 1876,
       "sig": "d01585b521",
       "occ": 1,
       "level": "P0",
@@ -5021,7 +5021,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1888,
+      "line": 1907,
       "sig": "ce7aad2a6d",
       "occ": 1,
       "level": "P0",
@@ -5032,7 +5032,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1944,
+      "line": 1963,
       "sig": "fae8f82014",
       "occ": 1,
       "level": "P2",
@@ -5043,7 +5043,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1946,
+      "line": 1965,
       "sig": "df3514aac5",
       "occ": 1,
       "level": "P2",
@@ -5054,7 +5054,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1953,
+      "line": 1972,
       "sig": "27a68d2cc3",
       "occ": 1,
       "level": "P2",
@@ -5065,7 +5065,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1955,
+      "line": 1974,
       "sig": "d29eef0175",
       "occ": 1,
       "level": "P2",
@@ -5076,7 +5076,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1962,
+      "line": 1981,
       "sig": "db1c5ee5a2",
       "occ": 1,
       "level": "P2",
@@ -5087,7 +5087,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1970,
+      "line": 1989,
       "sig": "df3514aac5",
       "occ": 2,
       "level": "P2",
@@ -5098,7 +5098,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1972,
+      "line": 1991,
       "sig": "fae8f82014",
       "occ": 2,
       "level": "P2",
@@ -5109,7 +5109,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1977,
+      "line": 1996,
       "sig": "d29eef0175",
       "occ": 2,
       "level": "P2",
@@ -5120,7 +5120,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1979,
+      "line": 1998,
       "sig": "27a68d2cc3",
       "occ": 2,
       "level": "P2",
@@ -5131,7 +5131,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2001,
+      "line": 2020,
       "sig": "6ce7734afa",
       "occ": 1,
       "level": "P2",
@@ -5142,7 +5142,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2024,
+      "line": 2043,
       "sig": "51dc4a7cf7",
       "occ": 1,
       "level": "P2",
@@ -5153,7 +5153,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2025,
+      "line": 2044,
       "sig": "b96f8fe998",
       "occ": 1,
       "level": "P2",
@@ -5164,7 +5164,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2027,
+      "line": 2046,
       "sig": "bbedba1ac4",
       "occ": 1,
       "level": "P2",
@@ -5175,7 +5175,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2050,
+      "line": 2069,
       "sig": "7c0dd4e3f2",
       "occ": 1,
       "level": "P2",
@@ -5186,7 +5186,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2082,
+      "line": 2101,
       "sig": "f19ccdd999",
       "occ": 2,
       "level": "P1",
@@ -5197,7 +5197,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2090,
+      "line": 2109,
       "sig": "43c568e817",
       "occ": 1,
       "level": "P1",
@@ -5208,7 +5208,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2120,
+      "line": 2139,
       "sig": "dc8375e738",
       "occ": 1,
       "level": "P1",
@@ -5219,7 +5219,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2125,
+      "line": 2144,
       "sig": "f19ccdd999",
       "occ": 3,
       "level": "P1",
@@ -5230,7 +5230,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2131,
+      "line": 2150,
       "sig": "b449a1c7f6",
       "occ": 1,
       "level": "P1",
@@ -5241,7 +5241,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2160,
+      "line": 2179,
       "sig": "15d88875b8",
       "occ": 1,
       "level": "P0",
@@ -5252,7 +5252,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2165,
+      "line": 2184,
       "sig": "dbd80d86be",
       "occ": 1,
       "level": "P2",
@@ -5263,7 +5263,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2183,
+      "line": 2202,
       "sig": "db72a13d18",
       "occ": 1,
       "level": "P2",
@@ -5274,7 +5274,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2192,
+      "line": 2211,
       "sig": "481f44034f",
       "occ": 1,
       "level": "P2",
@@ -5285,7 +5285,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2256,
+      "line": 2275,
       "sig": "1ef635fd42",
       "occ": 1,
       "level": "P2",
@@ -5296,7 +5296,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2262,
+      "line": 2281,
       "sig": "bbd6f90b9e",
       "occ": 1,
       "level": "P2",
@@ -5307,7 +5307,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2270,
+      "line": 2289,
       "sig": "267896e794",
       "occ": 1,
       "level": "P1",
@@ -5318,7 +5318,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2272,
+      "line": 2291,
       "sig": "267896e794",
       "occ": 2,
       "level": "P1",
@@ -5633,6 +5633,20 @@
           "file": "ui-ge-api.js",
           "before": 39,
           "after": 44
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "files": [
+        "ui-global-events.js"
+      ],
+      "reason": "R-2 第七片修复（设置面板 cfg 落盘谎报簇：白名单/记忆/离线队列/推送订阅）；精确重冻避免牵连并行会话在途改动",
+      "trace": [
+        {
+          "file": "ui-global-events.js",
+          "before": 69,
+          "after": 69
         }
       ]
     }
