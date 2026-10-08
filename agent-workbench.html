@@ -39399,7 +39399,12 @@ $("#aiSkillsSave").onclick = function(){
   }
   // cfg 通过 cfgSave 路径保存（确保回写一致）；此处直接 save 即可
   if(typeof saveCfg === "function"){ /* 走正常保存路径 */ }
-  try{ save(PREFIX+"cfg", cfg); }catch(_e){}
+  /* v3.7.102 第七片：这里存的是 cfg.toolWhitelist（**工具白名单**），而下面无条件 toast
+     「白名单已同步到允许调用的工具」—— 写失败即谎报，且是**安全语义**：用户以为限制住了
+     可调用的工具，实际是全放开。与第三/六片同型，补留痕；toast 文案不动（skills 主配置另存）。 */
+  try{ save(PREFIX+"cfg", cfg); }catch(_e){
+    try{ if(typeof pushDiag === "function") pushDiag("error", "tool whitelist persist failed: "+((_e&&_e.message)||_e), {where:"aiSkillsSave"}); }catch(_e2){}
+  }
   // 同步自定义技能 JSON 的保存
   const customTa = $("#aiSkillsCustom");
   saveAiConfig("skills", {builtin: AI_BUILTIN_SKILLS.map(function(s){ return {name:s.name,desc:s.desc,enabled: boxByName.get(s.name)===true}; }), custom: customTa ? customTa.value : ""});
@@ -39471,7 +39476,12 @@ $("#aiMemSave").onclick = function(){
     cfg.rag = rg ? !!rg.checked : false;
     _cfgCache = cfg; // 与 saveCfg 同款缓存更新（save 内部不含此逻辑）
     save(PREFIX + "cfg", cfg);
-  }catch(_e){ /* cfg 写失败不影响 ai_config_memory 已存——注入静默保持旧态 */ }
+  }catch(_e){
+    /* v3.7.102 第七片：主配置（ai_config_memory）确实已存，所以不算全谎报；但 cfg.rag 这个
+       镜像字段没同步 → 刷新后 RAG 开关回退，而用户刚看到「已保存」。属部分不一致，
+       留一条诊断便于定位「开关怎么不生效」。 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "cfg.rag sync failed: "+((_e&&_e.message)||_e), {where:"aiMemSave"}); }catch(_e2){}
+  }
   toast(t("ai.memoryConfigSaved","记忆配置已保存"));
 };
 $("#aiSessSave").onclick = function(){
@@ -39826,8 +39836,14 @@ function getSyncQueue(){
  * 持久化同步队列到 localStorage。
  * @param {Array} q - 队列数组
  */
+/* 离线队列落盘失败的一次性标记（每次离线操作入队都会调用，重复报没有增量信息）。 */
+let _syncQueueWarned = false;
 function _saveSyncQueue(q){
-  try { save(SYNC_QUEUE_KEY, q); } catch(e){ /* 静默 */ }
+  /* v3.7.102 第七片：这是**离线操作队列**的落盘，写失败 = 断网期间的操作在刷新后丢失。
+     原注释只写「静默」，等于没评估过。补留痕。 */
+  try { save(SYNC_QUEUE_KEY, q); } catch(e){
+    try{ if(!_syncQueueWarned && typeof pushDiag === "function"){ _syncQueueWarned = true; pushDiag("warn", "sync queue persist failed: "+((e&&e.message)||e), {where:"_saveSyncQueue"}); } }catch(_e2){}
+  }
 }
 
 /**
@@ -40159,7 +40175,10 @@ async function subscribePush(){
     });
     // 3. 真实部署应把 sub POST 到服务器 push-subscription endpoint
     // 框架模式：仅持久化订阅状态到 localStorage
-    try { save(PREFIX + "push_subscription", { endpoint: sub.endpoint, ts: Date.now() }); } catch(e){ /* noop */ }
+    /* v3.7.102 第七片：订阅状态落盘失败 → 下次启动显示「未订阅」，与用户直觉不符（订阅其实还在）。 */
+    try { save(PREFIX + "push_subscription", { endpoint: sub.endpoint, ts: Date.now() }); } catch(e){
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "push subscription persist failed: "+((e&&e.message)||e), {where:"subscribePush"}); }catch(_e2){}
+    }
     return { ok: true, subscription: sub };
   } catch(e){
     return { ok: false, err: (e && e.message) || String(e) };
