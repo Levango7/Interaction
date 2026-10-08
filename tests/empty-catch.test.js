@@ -253,14 +253,24 @@ describe("v3.7.88 bare 判据扩边（try 上方说明也算已评估）", () =>
     }
   });
 
-  it("🔴 反向守护：全仓不应出现「新增的无解释 P0」（判据过宽会掩盖新问题）", () => {
-    /* 判据扩边的风险是「把真有问题的也当成已评估」。此条反向兜底：
-     * 扩边只允许**减少** bare，不允许把 P0 从清单里藏起来。
-     * 具体口径：P0 总数与分级不因 bare 判据而变（下面按 level 统计），
-     * 且仍必须有相当比例的 P0 是 bare（否则判据宽到把所有 P0 都吞了）。 */
+  it("🔴 反向守护：判据必须仍有区分力（用受控样本，不依赖仓库脏数据）", () => {
+    /* 曾经的写法是 `expect(bareP0.length).toBeGreaterThan(0)`，本意是「判据别宽到把所有 P0 都吞了」。
+     * 但它把「判据是否有效」验成了「仓库是否还脏」：只要台账一清零，这条守护自己就成了拦路石，
+     * 而它拦住的恰恰是"把问题修干净"这件事 —— 又一次「看起来在守护 ≠ 真的在守护」。
+     * 2026-10-09 第十一片把最后 2 处 bare P0 补上理由说明后，如实撞上了这个自设陷阱。
+     *
+     * 改为**受控正/负样本**：区分力由样本证明，与仓库脏度解耦。
+     * 同时保留原意里真正有价值的部分 —— 下面按 level 统计（数的是 level 而非 bare），
+     * 故仍能拦住「把 P0 从清单里藏起来」。 */
+    const bareSample = scanSource("try{ localStorage.setItem('k','v'); }catch(_){}", "fixture.js")[0];
+    const notedSample = scanSource("/* 已评估：配额满属预期降级 */\ntry{ localStorage.setItem('k','v'); }catch(_){}", "fixture.js")[0];
+    expect(bareSample.level).toBe("P0");
+    expect(bareSample.bare, "没写说明的必须判 bare —— 否则判据失灵、真问题会被藏进「已评估」").toBe(true);
+    expect(notedSample.bare, "写了说明的必须判非 bare").toBe(false);
+
     const p0 = scanAll().filter((i) => i.level === "P0");
     const bareP0 = p0.filter((i) => i.bare);
-    expect(bareP0.length, "bare P0 不应为 0 —— 否则判据宽到把真问题也藏了").toBeGreaterThan(0);
-    expect(bareP0.length, "bare P0 不应等于全部 P0 —— 那说明判据失效").toBeLessThan(p0.length);
+    expect(p0.length, "P0 总数与分级不因 bare 判据而变").toBeGreaterThan(0);
+    expect(bareP0.length, "bare 只能是 P0 的子集").toBeLessThanOrEqual(p0.length);
   });
 });
