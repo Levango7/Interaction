@@ -593,7 +593,12 @@ async function saveCfg(){
       const removedIds = new Set((old.profiles || []).map(p => p.id));
       cfg.profiles.forEach(p => removedIds.delete(p.id));
       removedIds.forEach(id => profilesOut.push({ id, key: null }));
-      try{ await window.electronAPI.setAiConfig({ enabled: !!cfg.enabled, profiles: profilesOut }); }catch(e){ /* 忽略 */ }
+      try{ await window.electronAPI.setAiConfig({ enabled: !!cfg.enabled, profiles: profilesOut }); }catch(e){
+        /* v3.7.102 第八片：浏览器端没有 electronAPI（预期，不该报）；Electron 端真失败则是
+           主进程与渲染进程的 AI 配置不一致（可能沿用旧 Key/base）—— 值得留痕。
+           故**只在 electronAPI 存在时**登记，避免浏览器端每次保存配置都刷一条噪声。 */
+        try{ if(window.electronAPI && typeof pushDiag === "function") pushDiag("warn", "setAiConfig to main failed: "+((e&&e.message)||e), {where:"cfgSave"}); }catch(_e2){}
+      }
     }
     // v1.11.1 [L8]：首次启用 AI 时给出数据出境告知——AI 请求会把相关任务/资料上下文
     // 发送到用户配置的端点（默认 api.openai.com），此前无任何提示。
@@ -610,7 +615,7 @@ async function saveCfg(){
           const pending = JSON.parse(raw);
           /* 5 分钟内有效——避免陈旧意图被误触发 */
           if(pending && pending.sc && Date.now() - (pending.ts || 0) < 5 * 60 * 1000){
-            try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* noop */ }
+            try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */ }
             /* 延后执行——让 closeDrawer 先跑完（面板可见性更新需要帧） */
             setTimeout(function(){
               try{ if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); } }catch(e){ /* noop */ }
@@ -625,12 +630,12 @@ async function saveCfg(){
               }
             }, 50);
           } else {
-            try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* noop */ }
+            try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */ }
           }
         }
       }catch(e){ /* JSON 解析失败 / 读取失败都吞掉，不影响主保存流程 */ }
     } else {
-      try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* noop */ }
+      try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */ }
     }
     applyTheme(); // T4：主题变更（含跟随系统）立即生效
     // v1.5-C：新主题系统（特殊主题/自定义）即时生效（contrast 主题已于 v3.1.1 移除）

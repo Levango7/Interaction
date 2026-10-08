@@ -3074,18 +3074,18 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 596,
-      "sig": "507c45168c",
+      "line": 600,
+      "sig": "073cba898b",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 忽略 */",
-      "snippet": "await window.electronAPI.setAiConfig({ enabled: !!cfg.enabled, profile"
+      "note": "",
+      "snippet": "if(window.electronAPI && typeof pushDiag === \"function\") pushDiag(\"war"
     },
     {
       "file": "ui-drawer.js",
-      "line": 602,
+      "line": 607,
       "sig": "d71c3c8489",
       "occ": 1,
       "level": "P2",
@@ -3096,18 +3096,18 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 613,
+      "line": 618,
       "sig": "916d67a45a",
       "occ": 1,
       "level": "P0",
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
-      "note": "/* noop */",
+      "note": "/* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */",
       "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }"
     },
     {
       "file": "ui-drawer.js",
-      "line": 616,
+      "line": 621,
       "sig": "245317c8ea",
       "occ": 1,
       "level": "P2",
@@ -3118,7 +3118,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 624,
+      "line": 629,
       "sig": "9708392e21",
       "occ": 1,
       "level": "P1",
@@ -3129,19 +3129,19 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 628,
+      "line": 633,
       "sig": "916d67a45a",
       "occ": 2,
       "level": "P0",
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
-      "note": "/* noop */",
+      "note": "/* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */",
       "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }"
     },
     {
       "file": "ui-drawer.js",
-      "line": 631,
-      "sig": "5a1899415e",
+      "line": 636,
+      "sig": "e3f7c382be",
       "occ": 1,
       "level": "P0",
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
@@ -3151,18 +3151,18 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 633,
+      "line": 638,
       "sig": "916d67a45a",
       "occ": 3,
       "level": "P0",
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
-      "note": "/* noop */",
+      "note": "/* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */",
       "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }"
     },
     {
       "file": "ui-drawer.js",
-      "line": 645,
+      "line": 650,
       "sig": "48c3ed87f4",
       "occ": 1,
       "level": "P2",
@@ -3173,7 +3173,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 650,
+      "line": 655,
       "sig": "2f683ce220",
       "occ": 1,
       "level": "P2",
@@ -3184,7 +3184,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 959,
+      "line": 964,
       "sig": "3aac6439a6",
       "occ": 1,
       "level": "P1",
@@ -3195,7 +3195,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1176,
+      "line": 1181,
       "sig": "125c65b02a",
       "occ": 1,
       "level": "P2",
@@ -3206,7 +3206,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1192,
+      "line": 1197,
       "sig": "2d06ee4c9b",
       "occ": 1,
       "level": "P2",
@@ -3217,7 +3217,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1220,
+      "line": 1225,
       "sig": "1ce7dd46b2",
       "occ": 1,
       "level": "P2",
@@ -3228,7 +3228,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1230,
+      "line": 1235,
       "sig": "9b00f33c34",
       "occ": 1,
       "level": "P2",
@@ -3239,7 +3239,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1338,
+      "line": 1343,
       "sig": "19356863e0",
       "occ": 1,
       "level": "P2",
@@ -3250,7 +3250,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1355,
+      "line": 1360,
       "sig": "1debedf5bc",
       "occ": 1,
       "level": "P2",
@@ -3261,7 +3261,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1366,
+      "line": 1371,
       "sig": "c0f561962f",
       "occ": 1,
       "level": "P2",
@@ -3272,7 +3272,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1369,
+      "line": 1374,
       "sig": "9d154b2871",
       "occ": 1,
       "level": "P2",
@@ -3283,7 +3283,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1374,
+      "line": 1379,
       "sig": "5f96f167f0",
       "occ": 1,
       "level": "P2",
@@ -5647,6 +5647,20 @@
           "file": "ui-global-events.js",
           "before": 69,
           "after": 69
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "files": [
+        "ui-drawer.js"
+      ],
+      "reason": "R-2 第八片修复（ui-drawer：electronAPI 同步失败留痕 + 三处零信息注释升级）；精确重冻避免牵连并行会话在途改动",
+      "trace": [
+        {
+          "file": "ui-drawer.js",
+          "before": 34,
+          "after": 34
         }
       ]
     }
