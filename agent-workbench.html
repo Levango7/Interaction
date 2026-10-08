@@ -8877,6 +8877,12 @@ const MESSAGES = {
     "msg.deleted": "已删除",
     "msg.deletedRecoverable": "已删除（进入回收站，可恢复）：",
     "msg.exportCancelled": "加密导出需要密码，已取消导出。",
+    "msg.exportIssue": "导出完成，但有问题：",
+    "msg.exportPartial": "导出完成，但有 ",
+    "msg.exportPartialTail": " 个键读取失败、未写入备份（详见诊断面板）",
+    "msg.exportBrokenTasks": "tasks 数据损坏，本次导出未包含任何任务",
+    "msg.restorePartial": "另有 ",
+    "msg.restorePartialTail": " 项未能恢复，详见诊断面板",
     "msg.exportPassword": "请输入导出密码（用于加密）",
     "msg.exportedCsv": "已导出 CSV（",
     "msg.exportedMd": "已导出 Markdown（",
@@ -12732,6 +12738,12 @@ const MESSAGES = {
     "msg.deleted": "Deleted",
     "msg.deletedRecoverable": "Deleted (moved to Recycle Bin, recoverable): ",
     "msg.exportCancelled": "Encrypted export requires a password; export cancelled",
+    "msg.exportIssue": "Export finished, but with issues: ",
+    "msg.exportPartial": "Export finished, but ",
+    "msg.exportPartialTail": " key(s) failed to read and were not written to the backup (see diagnostics)",
+    "msg.exportBrokenTasks": "tasks data is corrupt; this export contains no tasks",
+    "msg.restorePartial": "Also ",
+    "msg.restorePartialTail": " item(s) could not be restored; see the diagnostics panel",
     "msg.exportPassword": "Enter an export password (used for encryption)",
     "msg.exportedCsv": "Exported CSV (",
     "msg.exportedMd": "Exported Markdown (",
@@ -35212,7 +35224,20 @@ async function doExport(){
      + 可选 _portableKey 明文，换机迁移语义不变。导入侧刻意不对称（旧版文件回灌仍接受，
      见 doImport）——同机恢复需取回 __dk 才能解密既有 cfg 密文。 */
   const exportExcluded = [PREFIX + "__dk", AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1], PREFIX + "pre_restore_backup"];
-  const data = {}; allKeys().forEach(k=>{ if(exportExcluded.indexOf(k) !== -1) return; try{ data[k]=localStorage.getItem(k); }catch(e){ /* 静默降级 */ } });
+  /* v3.7.102 第九片：原为「静默降级」—— 某个键读失败时不写进 data，而导出照样成功，
+     用户拿到的是一份**不自知残缺**的备份。备份面的谎报代价是"数据真的回不来"，故必须点名。 */
+  const _exportReadFailed = [];
+  const data = {}; allKeys().forEach(k=>{ if(exportExcluded.indexOf(k) !== -1) return; try{ data[k]=localStorage.getItem(k); }catch(e){ _exportReadFailed.push(k); try{ pushDiag("warn", "export read failed: "+((e&&e.message)||e), {where:"doExport", key:k}); }catch(_e2){} } });
+  /* R-8（台账 2026-10-06 挂账）：tasks 键若不是数组，读者侧收口点 `_tasksForRead()` 会
+     **刻意退化成 []**（启动链崩掉比少显示更糟），于是导出会「合法地」不含任何任务，
+     而用户看到的是导出成功 —— 残缺备份被当成完整备份。这里绕开收口点直接查原始值。 */
+  let _tasksBroken = false;
+  try{
+    const _rawTasks = localStorage.getItem(PREFIX + "tasks");
+    if(_rawTasks !== null){
+      try{ if(!Array.isArray(JSON.parse(_rawTasks))) _tasksBroken = true; }catch(_pe){ _tasksBroken = true; /* 连 JSON 都解析不了，同样是损坏 */ }
+    }
+  }catch(_e){ /* 连存储都读不到：属配额满/隐私模式，已被上面的 _exportReadFailed 点名，此处不重复报 */ }
   // v1.4-C 多设备同步：写入设备标识 + 导出时间戳 + 版本
   data["_deviceMeta"] = {
     deviceId: getDeviceId(),
@@ -35260,6 +35285,13 @@ async function doExport(){
     a.href = URL.createObjectURL(blob);
     a.download = "agent-workbench-backup-" + todayStr() + ".json";
     a.click(); URL.revokeObjectURL(a.href);
+  }
+  /* —— 导出完整性告知（第九片）：缺席不得静默 —— */
+  if(_exportReadFailed.length || _tasksBroken){
+    const _issues = [];
+    if(_exportReadFailed.length) _issues.push(t("msg.exportPartial","导出完成，但有 ")+_exportReadFailed.length+t("msg.exportPartialTail"," 个键读取失败、未写入备份（详见诊断面板）"));
+    if(_tasksBroken) _issues.push(t("msg.exportBrokenTasks","tasks 数据损坏，本次导出未包含任何任务"));
+    toast(t("msg.exportIssue","导出完成，但有问题：")+_issues.join("；"), "warn");
   }
 }
 function doImport(file){
@@ -35471,13 +35503,21 @@ function doIdbExport(){
     // localStorage 镜像数据
     new Promise(resolve => {
       const ls = {};
+      const failed = [];
       try {
         for(let i = 0; i < localStorage.length; i++){
           const k = localStorage.key(i);
-          if(k && idbShouldMirror(k)) ls[k] = localStorage.getItem(k);
+          if(k && idbShouldMirror(k)){
+            /* v3.7.102 第九片：逐键 try。整体 try 只知道"挂了"，点不出是哪些键没进备份 ——
+               而 IDB 全量备份是「保命通道」，缺了什么必须由文件自己说出来。 */
+            try{ ls[k] = localStorage.getItem(k); }
+            catch(e){ failed.push(k); try{ pushDiag("warn", "idb export read failed: "+((e&&e.message)||e), {where:"doIdbExport", key:k}); }catch(_e2){} }
+          }
         }
-      } catch(e){}
-      resolve(ls);
+      } catch(e){
+        try{ pushDiag("warn", "idb export localStorage enumeration failed: "+((e&&e.message)||e), {where:"doIdbExport"}); }catch(_e2){}
+      }
+      resolve({ data: ls, failed });
     }),
     // IDB v2 全量读取
     new Promise(resolve => {
@@ -35518,7 +35558,9 @@ function doIdbExport(){
         ));
       }).then(() => resolve(out), () => resolve(out));
     })
-  ]).then(([lsData, idbV2Data, idbImagesData]) => {
+  ]).then(([lsResult, idbV2Data, idbImagesData]) => {
+    const lsData = (lsResult && typeof lsResult === "object" && "data" in lsResult) ? lsResult.data : lsResult;
+    const lsFailed = (lsResult && lsResult.failed) ? lsResult.failed : [];
     const backup = {
       _type: "idb-backup",
       _version: "1.1",
@@ -35528,13 +35570,22 @@ function doIdbExport(){
       idbV2: idbV2Data,
       idbImages: idbImagesData
     };
+    /* 残缺必须**写进文件本身**：用户下一次恢复时得能看出这份少数据（光靠 toast，事后已无从查证）。 */
+    if(lsFailed.length){
+      backup._localStorageFailed = lsFailed;
+      try{ pushDiag("warn", "idb backup missing "+lsFailed.length+" localStorage key(s): "+lsFailed.slice(0,8).join(","), {where:"doIdbExport"}); }catch(_e2){}
+    }
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type: "application/json"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "agent-workbench-idb-backup-"+todayStr()+".json";
     a.click();
     URL.revokeObjectURL(a.href);
-    toast(t("msg.idbExported","IDB 全量备份已导出"), "ok");
+    if(lsFailed.length){
+      toast(t("msg.idbExported","IDB 全量备份已导出")+"（不完整："+lsFailed.length+" 个键读取失败，详见诊断面板）", "warn");
+    } else {
+      toast(t("msg.idbExported","IDB 全量备份已导出"), "ok");
+    }
     return backup;
   }).catch(err => {
     toast(t("err.backupFail","备份失败：")+(err&&err.message||t("tool.unknownErrorMsg", t("common.unknownError","未知错误"))), "error");
@@ -35557,10 +35608,15 @@ function doIdbImport(file){
       }
       // 恢复 localStorage 镜像键
       let restoredCount = 0;
+      const _restoreFailed = [];
       if(backup.localStorage && typeof backup.localStorage === "object"){
         for(const [k, v] of Object.entries(backup.localStorage)){
           if(idbShouldMirror(k) && v !== undefined){
-            try{ localStorage.setItem(k, v); restoredCount++; }catch(e){}
+            /* v3.7.102 第九片：原为空 catch —— 写失败时该键没恢复，而结尾依旧报
+               「已恢复 N 项数据」，用户无从知道缺的是哪几项。写法与同文件图片恢复一处
+               （:405）保持一致：记诊断，但不中断其余键（单项失败不该拖垮整体导入）。 */
+            try{ localStorage.setItem(k, v); restoredCount++; }
+            catch(e){ _restoreFailed.push(k); try{ pushDiag("warn", "localStorage mirror restore failed: "+((e&&e.message)||e), {where:"doIdbImport", key:k}); }catch(_e2){} }
           }
         }
       }
@@ -35574,7 +35630,10 @@ function doIdbImport(file){
             const val = Object.assign({}, value, { __store: store });
             await idbPut(store, val);
             restoredCount++;
-          } catch(e){}
+          } catch(e){
+            _restoreFailed.push(key);
+            try{ pushDiag("warn", "idbV2 restore failed: "+((e&&e.message)||e), {where:"doIdbImport", key}); }catch(_e2){}
+          }
         }
       }
       // 恢复 kv 商店图片 blob（严格白名单 img_<uid>：防伪造备份借 idbImages 注入 __dk_v2 等任意 kv 键）
@@ -35596,6 +35655,10 @@ function doIdbImport(file){
         return;
       }
       toast(t("msg.restored","已恢复 ")+restoredCount+t("msg.restoredRefresh"," 项数据，请刷新页面"), "ok");
+      /* 「已恢复 N 项」只讲成功的一半；失败的那一半若不说，用户会以为全回来了。 */
+      if(_restoreFailed.length){
+        toast(t("msg.restorePartial","另有 ")+_restoreFailed.length+t("msg.restorePartialTail"," 项未能恢复，详见诊断面板"), "warn");
+      }
       setTimeout(()=> location.reload(), 900);
     }catch(e){
       toast(t("err.importFail","导入失败：")+(e&&e.message||t("err.jsonParse","JSON 解析错误")), "error");
@@ -35654,9 +35717,11 @@ function _diagEnvLine(){
 function _diagStorageLine(){
   try{
     const keys = (typeof allKeys === "function") ? allKeys() : [];
-    let units = 0;
-    keys.forEach(function(k){ try{ const v = localStorage.getItem(k); units += k.length + (v ? v.length : 0); }catch(e){} });
-    return keys.length + " 个键 · 约 " + (units * 2 / 1024).toFixed(1) + " KB（localStorage，UTF-16 估算）";
+    let units = 0, unreadable = 0;
+    /* v3.7.102 第九片：读不到的键不计入 units，显示值会**偏低** —— 而这一行正是用来判断
+       "是不是快满了"的，偏低比偏高危险（用户据此以为还有余量）。故把不可读的数量一并说出。 */
+    keys.forEach(function(k){ try{ const v = localStorage.getItem(k); units += k.length + (v ? v.length : 0); }catch(e){ unreadable++; } });
+    return keys.length + " 个键 · 约 " + (units * 2 / 1024).toFixed(1) + " KB（localStorage，UTF-16 估算）" + (unreadable ? ("；" + unreadable + " 个键读取失败，实际占用更高") : "");
   }catch(e){ return "不可用"; }
 }
 /** 构造可复制的诊断报告（纯文本；环境信息 + 已脱敏日志，不含任务/笔记正文与凭据）
@@ -35845,6 +35910,9 @@ function openDiagIssue(){
   // v3.1.2：syncPush 渲染侧接线（修复断链——此前主进程 syncSnapshot 恒为 {}，
   // 「本机同步下载」导出空数据）。启动时 + 每次点击同步按钮时推送一次本机快照；
   // 快照键集合与 doExport 一致（allKeys 的 wb_agent_ 前缀 + wb_custom_links）。
+  /* v3.7.102 第九片：快照枚举失败时「只报第一次」的一次性标记 —— 该路径每 60s 走一次，
+     留痕不节流会把诊断面板刷满，反而盖住真问题（判据见 MEMORY.md §4b 分档③）。 */
+  let _snapshotEnumWarned = false;
   const pushSnapshot = async () => {
     try{
       const snap = {};
@@ -35852,7 +35920,7 @@ function openDiagIssue(){
          在存储安全壳接管时返回的是方法名，会枚举出空集。 */
       const keys = (typeof allKeys === "function")
         ? allKeys()
-        : (function(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && (k.indexOf(PREFIX)===0 || k==="wb_custom_links")) out.push(k); } }catch(e){} return out; })();
+        : (function(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && (k.indexOf(PREFIX)===0 || k==="wb_custom_links")) out.push(k); } }catch(e){ try{ if(!_snapshotEnumWarned && typeof pushDiag === "function"){ _snapshotEnumWarned = true; pushDiag("warn", "snapshot key enumeration failed (snapshot may be partial): "+((e&&e.message)||e), {where:"pushSnapshot"}); } }catch(_e2){} } return out; })();
       keys.forEach(function(k){
         const v = localStorage.getItem(k);
         if(typeof v === "string") snap[k] = v;
@@ -36018,13 +36086,18 @@ function renderTodoBarList(){
     list.appendChild(item);
   });
 }
+/* v3.7.102 第九片：下面那条写偏好是**每次点击展开/折叠都走**的高频路径，失败留痕必须节流
+   （一次性标记），否则诊断面板会被同一条噪声刷满、反而盖住真问题。 */
+let _todoBarPersistWarned = false;
 function setTodoBarExpanded(expanded){
   const bar = $("#todoBar"); if(!bar) return;
   bar.classList.toggle("todo-bar-collapsed", !expanded);
   bar.classList.toggle("todo-bar-expanded", expanded);
   const el = $("#todoBarToggle"); if(el) el.setAttribute("aria-expanded", expanded ? "true" : "false");
   if(expanded) renderTodoBarList();
-  try{ localStorage.setItem(PREFIX+"todobar_expanded", expanded ? "1" : "0"); }catch(_){}
+  /* 第九片：用户点了展开却写不进去 → 下次打开悄悄回退到折叠，全程无反馈（谎报）。 */
+  try{ localStorage.setItem(PREFIX+"todobar_expanded", expanded ? "1" : "0"); }
+  catch(_){ try{ if(!_todoBarPersistWarned && typeof pushDiag === "function"){ _todoBarPersistWarned = true; pushDiag("warn", "todobar_expanded persist failed（展开态下次会回退）", {where:"setTodoBarExpanded"}); } }catch(_e2){} }
 }
 function toggleTodoBar(){
   const bar = $("#todoBar"); if(!bar) return;
@@ -36033,7 +36106,7 @@ function toggleTodoBar(){
 function initTodoBar(){
   const bar = $("#todoBar"); if(!bar) return;
   let exp = false;
-  try{ exp = localStorage.getItem(PREFIX+"todobar_expanded") === "1"; }catch(_){}
+  try{ exp = localStorage.getItem(PREFIX+"todobar_expanded") === "1"; }catch(_){ /* 读失败按默认折叠态：这只是一条展开偏好，丢了不影响可用性，且下次用户展开会重写。属预期降级，刻意不报。 */ }
   setTodoBarExpanded(exp);
   const el = $("#todoBarToggle"); if(el) el.onclick = function(e){ e.stopPropagation(); toggleTodoBar(); };
   const p = $("#todoPreview"); if(p) p.onclick = function(e){ e.stopPropagation(); toggleTodoBar(); };
