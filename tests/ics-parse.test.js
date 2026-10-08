@@ -342,6 +342,21 @@ describe("B3 收尾（v3.7.89）：VALARM 提醒 / 颜色 / 启用开关", () =>
     expect(Object.keys(win._icsEventsByDate()).length > 0, "启用恢复").toBe(true);
   });
 
+  it("批量启用/停用：多源一次切换，计数正确；无变化返回 0", () => {
+    const win = app();
+    win.icsImportLocal("甲.ics", "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:b1\r\nSUMMARY:甲会\r\nDTSTART:20260312T100000+0800\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    win.icsImportLocal("乙.ics", "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:b2\r\nSUMMARY:乙会\r\nDTSTART:20260312T110000+0800\r\nEND:VEVENT\r\nEND:VCALENDAR");
+    expect(win.getIcsSubs().length, "前置：两个源").toBe(2);
+    expect(win.icsSetAllSubsEnabled(false), "全停=变更 2").toBe(2);
+    expect(win.getIcsSubs().every(function(s){ return s.enabled === false; }), "全部停用").toBe(true);
+    expect(Object.keys(win._icsEventsByDate()).length, "停用后分桶为空").toBe(0);
+    expect(win.icsSetAllSubsEnabled(false), "已全停再停=无变化").toBe(0);
+    expect(win.icsSetAllSubsEnabled(true), "全启=变更 2").toBe(2);
+    expect(win.getIcsSubs().every(function(s){ return s.enabled !== false; }), "全部启用").toBe(true);
+    expect(Object.keys(win._icsEventsByDate()).length > 0, "启用恢复").toBe(true);
+    expect(win.icsSetAllSubsEnabled(true), "已全启再启=无变化").toBe(0);
+  });
+
   it("颜色映射：类别/标题关键字 → 场景色令牌；默认绿系", () => {
     const win = app();
     expect(win._icsColorOf({ categories: "会议" })).toBe("var(--sc-office)");

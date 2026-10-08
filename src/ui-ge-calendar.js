@@ -1254,6 +1254,12 @@ function renderIcsPanel(){
   if(!subs.length){
     html += '<p class="empty-hint">' + esc(t("p5.icsEmpty", "尚未添加日历源：支持公开只读 ICS 订阅链接（QQ日历 / 网易日历 等，无需账号授权）或本地 .ics 文件导入。")) + '</p>';
   } else {
+    /* v3.7.101：批量启用/停用（≥2 源时显示；单源用每项自己的开关） */
+    if(subs.length > 1){
+      html += '<div class="ics-bulk u-flex u-gap-2 u-mt-1">'
+        + '<button type="button" class="addbtn sm" id="icsEnableAll">' + esc(t("p5.icsEnableAll", "全部启用")) + '</button>'
+        + '<button type="button" class="addbtn sm" id="icsDisableAll">' + esc(t("p5.icsDisableAll", "全部停用")) + '</button></div>';
+    }
     html += '<div class="ics-list">';
     subs.forEach(function(s){
       const evN = (Array.isArray(s.evs) ? s.evs.length : 0);
@@ -1346,6 +1352,17 @@ function bindIcsPanel(c){
     exp._icsBound = true;
     exp.onclick = function(){ icsExportLocal(); };   /* 零凭据双向的另一半：本地 → 对方 */
   }
+  /* v3.7.101：批量启用/停用（≥2 源才渲染；无变化不弹 toast，只重绘） */
+  c.querySelectorAll("#icsEnableAll,#icsDisableAll").forEach(function(b){
+    if(b._icsBound) return; b._icsBound = true;
+    b.onclick = function(){
+      const on = b.id === "icsEnableAll";
+      const n = icsSetAllSubsEnabled(on);
+      if(n < 0){ try{ toast(t("p5.icsBulkFail", "批量更新失败"), "warn"); }catch(e){} return; }
+      if(n > 0) toast(t(on ? "p5.icsEnabledN" : "p5.icsDisabledN", on ? "已启用 {n} 个日历源" : "已停用 {n} 个日历源").replace("{n}", String(n)), "ok");
+      openIcsPanel(c);
+    };
+  });
   /* v3.7.87 D：重命名（id 不变 → chunk docId 稳定 → 零重嵌） */
   c.querySelectorAll("[data-ics-rename]").forEach(function(b){
     if(b._icsBound) return; b._icsBound = true;
@@ -1651,6 +1668,18 @@ function icsSetSubEnabled(id, on){
   if(!hit) return false;
   hit.enabled = !!on;
   return saveIcsSubs(subs);
+}
+/** 批量启用/停用全部日历源（v3.7.101：非破坏性，与单源开关同语义；
+    返回值：>0 变更数 / 0 无变化 / -1 保存失败） */
+function icsSetAllSubsEnabled(on){
+  const subs = getIcsSubs();
+  if(!subs.length) return 0;
+  let n = 0;
+  /* 当前态口径与显示/分桶一致：enabled !== false 即启用（未设置 = 启用），
+     否则从「默认启用」到「显式停用」会被误判为无变化而漏掉真实变更 */
+  subs.forEach(function(s){ if((s.enabled !== false) !== !!on){ s.enabled = !!on; n++; } });
+  if(!n) return 0;
+  return saveIcsSubs(subs) ? n : -1;
 }
 /** 事件 → 场景色令牌（类别/标题关键字映射；默认绿系 ok） */
 function _icsColorOf(ev){
