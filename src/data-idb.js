@@ -35,6 +35,17 @@ function idbOpen(){
       req.onblocked = () => resolve(null);
     }catch(e){ resolve(null); }
   });
+  /* v3.7.101 修复（台账 R-9 flaky 根因的另一半）：**失败（null）不缓存单例**。
+     此前 null 也会被 `_idbDbPromise` 钉住 —— 于是 IDB 只要在启动窗口内不可用一次
+     （如刷新瞬间旧连接未释放触发 `onblocked`，或 `open` 与首屏渲染抢资源超时），
+     本页面内**所有** IDB 操作（idbKeys/idbReadKey/idbMirrorKey…）就永久失效、且再无重试机会。
+     配合 ai-tools.js:ragVecLoadAll 的"读到空不缓存"，这才是 R-9 的完整根因链。
+     代价：真正无 IDB 的环境（`typeof indexedDB === "undefined"`）每次调用都会重走一遍
+     这个廉价分支 —— 可接受，换的是"一次失败不再毁掉整页"。 */
+  _idbDbPromise = _idbDbPromise.then(db => {
+    if(!db) _idbDbPromise = null;
+    return db;
+  });
   return _idbDbPromise;
 }
 

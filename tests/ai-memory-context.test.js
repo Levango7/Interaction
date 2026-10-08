@@ -62,6 +62,9 @@ async function bootOurs({ rag = true, agent, budget, extraEmbedCalls } = {}) {
   win.idbReadKey = async (k) => store.get(k);
   win.idbMirrorKey = async (k, v) => { store.set(k, v); return true; };
   win.idbDeleteKey = async (k) => { store.delete(k); return true; };
+  /* v3.7.101：ragVecLoadAll 现在先用 idbOpen() 探「IDB 是否真的可用」（不可用则本次不缓存、下次重读）。
+     本用例是内存替身、无真实 IndexedDB → 必须一并 stub，否则探针恒为 null、向量通道被跳过。 */
+  win.idbOpen = async () => ({ __stub: true });
   win.__idbStore = store;
 
   const embedCalls = [];

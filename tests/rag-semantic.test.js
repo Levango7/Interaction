@@ -224,6 +224,9 @@ describe("向量落盘格式带模型号（换 embedModel 不能静默失灵）"
     win.idbReadKey = async (k) => records[k];
     win.idbMirrorKey = async (k, v) => { written[k] = v; };
     win.idbDeleteKey = async (k) => { delete records[k]; };
+    /* v3.7.101：ragVecLoadAll 现在先用 idbOpen() 探「IDB 是否真的可用」（不可用则本次不缓存、下次重读）。
+       本用例是内存桩、无真实 IndexedDB → 必须一并 stub，否则探针恒为 null、向量通道被跳过。 */
+    win.idbOpen = async () => ({ __stub: true });
     win.__written = written;
     return win;
   }

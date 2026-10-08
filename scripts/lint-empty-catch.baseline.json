@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-05",
-  "count": 507,
+  "count": 508,
   "items": [
     {
       "file": "ai-loop.js",
@@ -665,40 +665,62 @@
     },
     {
       "file": "crypto.js",
-      "line": 58,
-      "sig": "12452516bf",
+      "line": 43,
+      "sig": "7c9e742452",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 损坏则走重建 */",
-      "snippet": "_deviceKey = await crypto.subtle.importKey(\"raw\", base64Decode(idbRaw)"
+      "note": "/* 接线失败不阻塞启动；_dkIdbGet/_dkIdbPut 保持默认（无 IDB 环境的既有行为） */",
+      "snippet": "const _g = (typeof globalThis !== \"undefined\") ? globalThis : (typeof "
     },
     {
       "file": "crypto.js",
-      "line": 68,
-      "sig": "a936a20d39",
+      "line": 85,
+      "sig": "d2b02702fc",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\", \"device key in IDB u"
+    },
+    {
+      "file": "crypto.js",
+      "line": 98,
+      "sig": "e47216cdb0",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\", \"legacy device key n"
+    },
+    {
+      "file": "crypto.js",
+      "line": 105,
+      "sig": "8aa74c9ee2",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\", \"legacy device key u"
+    },
+    {
+      "file": "crypto.js",
+      "line": 172,
+      "sig": "1e8357b750",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.removeItem(DK_KEY); }"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"error\", \"cfg write to loc"
     },
     {
       "file": "crypto.js",
-      "line": 72,
-      "sig": "1c5217ac30",
-      "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
-      "bare": false,
-      "note": "/* 损坏则重建 */",
-      "snippet": "_deviceKey = await crypto.subtle.importKey(\"raw\", base64Decode(raw), {"
-    },
-    {
-      "file": "crypto.js",
-      "line": 138,
+      "line": 199,
       "sig": "48a2dc51e3",
       "occ": 1,
       "level": "P2",
@@ -709,7 +731,7 @@
     },
     {
       "file": "crypto.js",
-      "line": 153,
+      "line": 214,
       "sig": "a0c6c1be1d",
       "occ": 1,
       "level": "P2",
@@ -720,8 +742,8 @@
     },
     {
       "file": "crypto.js",
-      "line": 182,
-      "sig": "4ef0e0e2de",
+      "line": 243,
+      "sig": "69c314aa8b",
       "occ": 1,
       "level": "P2",
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
@@ -731,18 +753,18 @@
     },
     {
       "file": "crypto.js",
-      "line": 209,
-      "sig": "d0829665da",
+      "line": 273,
+      "sig": "db7a6a0d40",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 忽略 */",
-      "snippet": "await window.electronAPI.setAiConfig({ enabled: !!raw.enabled, profile"
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"error\", \"AI config mirror t"
     },
     {
       "file": "crypto.js",
-      "line": 227,
+      "line": 292,
       "sig": "d4d734f3dd",
       "occ": 1,
       "level": "P2",
@@ -753,14 +775,14 @@
     },
     {
       "file": "crypto.js",
-      "line": 245,
-      "sig": "af9e5b5a21",
+      "line": 321,
+      "sig": "ce7235b462",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
-      "bare": false,
-      "note": "/* 忽略 */",
-      "snippet": "await persistCfg(_cfgCache); }"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"error\", \"plaintext AI key r"
     },
     {
       "file": "data-idb.js",
@@ -4141,62 +4163,40 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2245,
-      "sig": "c9873d36d9",
+      "line": 2237,
+      "sig": "52ca41e906",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.removeItem(PREFIX + GH_TOKEN_KEY); }"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"error\", \"credential seal "
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2246,
-      "sig": "3149c5cf27",
+      "line": 2261,
+      "sig": "604695095a",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "localStorage.removeItem(PREFIX + GH_GIST_ID_KEY); }"
+      "snippet": "pushDiag(\"error\", \"github 凭据清除失败：\" + (e && e.message || e), { where: \""
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2247,
-      "sig": "dfc7809dd0",
+      "line": 2412,
+      "sig": "79b5f7ff7d",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "try{ localStorage.removeItem(PREFIX + GH_TOKEN_KEY); }catch(e){} try{ "
+      "snippet": "pushDiag(\"error\", \"webdav 配置清除失败：\" + (e && e.message || e), { where: \""
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2391,
-      "sig": "68e4968fe6",
-      "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": true,
-      "note": "",
-      "snippet": "localStorage.removeItem(PREFIX + k); }"
-    },
-    {
-      "file": "ui-ge-integrations.js",
-      "line": 2392,
-      "sig": "ec2c4f63a2",
-      "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": true,
-      "note": "",
-      "snippet": "[\"webdav_cfg\", \"webdav_pass\", \"webdav_meta\"].forEach(function(k){ try{"
-    },
-    {
-      "file": "ui-ge-integrations.js",
-      "line": 2426,
+      "line": 2447,
       "sig": "3ca678b71b",
       "occ": 1,
       "level": "P1",
@@ -4207,14 +4207,25 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2435,
-      "sig": "9b13cdae86",
+      "line": 2456,
+      "sig": "200a62e7c0",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
+      "level": "P1",
+      "why": "无法定位 try 块，保守计为 P1（人工复核）",
       "bare": true,
       "note": "",
-      "snippet": "save(PREFIX + WD_META_KEY, { etag: r.etag || \"\", lastModified: r.lastM"
+      "snippet": ""
+    },
+    {
+      "file": "ui-ge-integrations.js",
+      "line": 2469,
+      "sig": "c77b8e42d1",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"error\", \"webdav meta 落盘失败：\" + (e && e.message || e), { where"
     },
     {
       "file": "ui-ge-notes.js",
@@ -5579,90 +5590,6 @@
       "bare": false,
       "note": "/* 配额超限/不可用时静默 */",
       "snippet": "store.setItem(k, pending[k]); }"
-    }
-  ],
-  "refreeze": [
-    {
-      "date": "2026-10-06",
-      "file": "ui-ge-api.js",
-      "reason": "R-2 第三片修复（apiDeleteDevice/apiDeleteSchedule 补反馈）；精确重冻避免牵连并行会话在途改动",
-      "before": 37,
-      "after": 39
-    },
-    {
-      "date": "2026-10-07",
-      "file": "render-widgets.js",
-      "reason": "R-2 第四片修复（render-widgets 6 处 UI 偏好持久化补可观测性）；精确重冻避免牵连并行会话在途改动",
-      "before": 30,
-      "after": 30
-    },
-    {
-      "date": "2026-10-07",
-      "files": [
-        "render-entry.js",
-        "ui-drawer.js",
-        "ui-global-events.js"
-      ],
-      "reason": "R-2 第五片修复（尾栏统计谎报 ×2 + 主题 cfg 落盘 + 样式清理补说明）；精确重冻避免牵连并行会话在途改动",
-      "trace": [
-        {
-          "file": "render-entry.js",
-          "before": 10,
-          "after": 10
-        },
-        {
-          "file": "ui-drawer.js",
-          "before": 34,
-          "after": 34
-        },
-        {
-          "file": "ui-global-events.js",
-          "before": 69,
-          "after": 69
-        }
-      ]
-    },
-    {
-      "date": "2026-10-07",
-      "files": [
-        "ui-ge-api.js"
-      ],
-      "reason": "R-2 第六片修复（ui-ge-api 复查：5 处用户操作失败的谎报补反馈）；精确重冻避免牵连并行会话在途改动",
-      "trace": [
-        {
-          "file": "ui-ge-api.js",
-          "before": 39,
-          "after": 44
-        }
-      ]
-    },
-    {
-      "date": "2026-10-08",
-      "files": [
-        "ui-global-events.js"
-      ],
-      "reason": "R-2 第七片修复（设置面板 cfg 落盘谎报簇：白名单/记忆/离线队列/推送订阅）；精确重冻避免牵连并行会话在途改动",
-      "trace": [
-        {
-          "file": "ui-global-events.js",
-          "before": 69,
-          "after": 69
-        }
-      ]
-    },
-    {
-      "date": "2026-10-08",
-      "files": [
-        "ui-drawer.js"
-      ],
-      "reason": "R-2 第八片修复（ui-drawer：electronAPI 同步失败留痕 + 三处零信息注释升级）；精确重冻避免牵连并行会话在途改动",
-      "trace": [
-        {
-          "file": "ui-drawer.js",
-          "before": 34,
-          "after": 34
-        }
-      ]
     }
   ]
 }

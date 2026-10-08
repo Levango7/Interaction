@@ -1782,21 +1782,38 @@ async function ragVecLoadAll(){
   const wantModel = _ragVecModel();
   /* 缓存自带模型号：设置页改了 embedModel 之后无需任何显式通知，下一次用到就自动重载
      （不做成"保存时调一个失效函数"是因为那要新增一个跨块窄符号，模块图上会多一条真边）。 */
-  if(_ragVecCache && _ragVecCache.model === wantModel) return _ragVecCache.map;
-  const m = new Map();
+  if(_ragVecCache && _ragVecCache.model === wantModel && _ragVecCache.loaded) return _ragVecCache.map;
+  /* v3.7.101：Map **引用必须复用** —— `ragVecPut` 依赖 `ragVecLoadAll()` 返回同一个活 Map
+     （它 `cache.set(...)` 写内存缓存）。重建 Map 会让那次写入丢失。 */
+  const m = (_ragVecCache && _ragVecCache.model === wantModel) ? _ragVecCache.map : new Map();
   let skipped = 0;
+  let loaded = false;
   try{
-    const keys = await idbKeys();
-    for(const k of (keys || [])){
-      if(typeof k !== "string" || k.indexOf(RAG_VEC_PREFIX) !== 0) continue;
-      const rec = await idbReadKey(k);
-      if(!rec || !rec.v || !rec.m){ if(rec) skipped++; continue; }   // 旧格式（裸向量/无模型标记）→ 重算
-      if(String(rec.m) !== String(wantModel)){ skipped++; continue; }  // 换过模型 → 重算
-      m.set(k.slice(RAG_VEC_PREFIX.length), rec.v instanceof Float32Array ? rec.v : Float32Array.from(rec.v));
+    /* 先确认 IDB 真的可用 —— `idbKeys()` 在 `!db` 时静默返回 `[]`（data-idb.js:135），
+       与"确实没有向量"无法区分；`idbOpen()` 在不可用 / 被 blocked 时返回 null，可作判据。 */
+    const _db = await idbOpen().catch(() => null);
+    if(_db){
+      const keys = await idbKeys();
+      for(const k of (keys || [])){
+        if(typeof k !== "string" || k.indexOf(RAG_VEC_PREFIX) !== 0) continue;
+        const rec = await idbReadKey(k);
+        if(!rec || !rec.v || !rec.m){ if(rec) skipped++; continue; }   // 旧格式（裸向量/无模型标记）→ 重算
+        if(String(rec.m) !== String(wantModel)){ skipped++; continue; }  // 换过模型 → 重算
+        m.set(k.slice(RAG_VEC_PREFIX.length), rec.v instanceof Float32Array ? rec.v : Float32Array.from(rec.v));
+      }
+      loaded = true;
     }
     if(skipped) pushDiag("info", "rag vectors stale=" + skipped + " (embedModel=" + wantModel + ")，待重算", { where: "ragVecLoadAll" });
   }catch(e){ pushDiag("warn", "ragVecLoadAll error: " + ((e && e.message) || e), { where: "ragVecLoadAll" }); }
-  _ragVecCache = { model: wantModel, map: m };
+  /* v3.7.101 修复（台账 R-9 flaky 的根因）：`loaded` 标记，只在"确实读到 IDB"时置位。
+     此前无条件 `_ragVecCache = { model: wantModel, map: m }` —— 若这次读发生在 IDB 尚未就绪时，
+     空 Map 就被钉进缓存且**永不重试**，于是本页面内所有检索永久降级纯词法
+     （`ragVectorSearch` 在 `!cache.size` 时直接 return，连 embedding 都不发）。
+     实测（`_probe/repro-rag-idb-unready.cjs`）：刷新后 IDB 在启动窗口内不可用 →
+     `ragSearch` 返回 `[]` 且 embedding 调用数 0，与 CI 失败现场
+     （`embedCallsAfterReload=0` / `after=[]`）完全吻合；恢复 IDB 后重试即命中
+     （`_probe/verify-rag-fix.cjs` → 2/2）。 */
+  _ragVecCache = { model: wantModel, map: m, loaded: loaded };
   return m;
 }
 

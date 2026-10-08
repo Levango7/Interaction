@@ -1,3 +1,29 @@
+## [v3.7.101] - 2026-10-07
+
+**修 R-9 的根因（`rag-hybrid` flaky）：IDB 未就绪时的「空缓存钉死」与「连接失败被单例缓存」。**
+
+- **根因**（v3.7.99 定位 → v3.7.100 造出重现 → 本版修），两处叠加：
+  1. `src/ai-tools.js` `ragVecLoadAll` **无条件把 Map 写进 `_ragVecCache`** —— 若这次读发生在
+     IDB 尚未就绪时（`idbKeys()` 在 `!db` 时静默返回 `[]`，见 `data-idb.js:135`），
+     空 Map 被钉住且**永不重试** → 本页面内所有检索永久降级纯词法
+     （`ragVectorSearch` 在 `!cache.size` 时直接 return，连 embedding 都不发）。
+  2. `src/data-idb.js` `idbOpen` **把失败的 `null` 也单例缓存** —— IDB 只要在启动窗口内
+     不可用一次（刷新瞬间旧连接未释放触发 `onblocked`、或 `open` 与首屏抢资源），
+     本页面内**所有** IDB 操作就永久失效、再无重试机会。
+- **修复**：
+  · `ragVecLoadAll`：先用 `idbOpen()` 探「IDB 是否真的可用」，只有读到才置 `loaded = true`；
+    Map **引用复用**（`ragVecPut` 依赖它作为活引用，重建会让那次写入丢失）。
+  · `idbOpen`：失败（null）时**不缓存单例**，允许下次重试。
+- **验证（用 v3.7.100 造出的重现脚本反向验证）**：
+  · 修复前 `_probe/repro-rag-idb-unready.cjs` → **3/3 复现**（`after=[]`）。
+  · 修复后 `_probe/verify-rag-fix.cjs` → **2/2 FIXED**：IDB 不可用期间检索为空（合理，
+    确实读不到），**恢复后重试即命中** `{"len":1,"first":"doc-auth","via":"vec"}`。
+  · 单测：`rag-semantic` 22 / `ai-memory-context` 17 / `round5-loop1-idb` 7 全绿
+    （前两个用例的 IDB 替身补 stub `idbOpen` —— 产品新增了对它的依赖）。
+  · 门禁：`module-graph` 无新增边（`ai-tools → data-idb` 本就存在）、`lint:layers` 基线外新增 0。
+- **未做（另立一轮）**：`workflow.spec.js:91` 那条 flaky（切场景建任务后卡片找不到）**根因尚未定位** ——
+  本机用 CDP CPU 限流 + 同 browser 多 context 累积均 **0/6 复现**；它与本条（RAG 向量）机制不同。
+
 ## [v3.7.100] - 2026-10-07
 
 **R-9 收口：`rag-hybrid` flaky 的「隔离态可复现的重现条件」已造出（3/3 复现），根因链写入台账。**

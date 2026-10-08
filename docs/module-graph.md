@@ -17,7 +17,7 @@
 | `data-migrate` | Data | `data-links` | 2 |
 | `data-rw` | Data | `core` `crypto` `data-links` | 6 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
-| `ai-tools` | AI | `ai-retry` `chain` `core` `data-idb` `data-links` `data-rw` `util-markdown` | 21 |
+| `ai-tools` | AI | `ai-retry` `chain` `core` `data-idb` `data-links` `data-rw` `util-markdown` | 22 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-perf` | 29 |
 | `render-entry` | Render | `ai-retry` `ai-tools` `core` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 60 |
