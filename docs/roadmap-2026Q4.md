@@ -7,13 +7,16 @@
 
 ## 一、当前坐标
 
-- 版本 **v3.7.93**（数字快照：2026-10-07，HEAD `c0a0dfe`）；单测 **126 文件**（`git ls-files tests | grep -c '\.test\.js$'`）
-  + e2e **88 例 / 13 spec（跟踪态）** —— 口径 = **干净检出**后 `npx playwright test --list`（`git archive HEAD | tar -x` 抽副本再数，
-  本机工作区数出来是 90/14，多出的 2 例来自并行会话未跟踪的 `idb-image-backup.spec.js`）；
-  CI 的 e2e 腿打印 `Running 88 tests`，与此一致。**教训：这类数字要按口径数，减法推不出来（一条 spec 在 2 个项目下算 4 例）**；逆层 18 / 循环 13（起点 53/50，`node scripts/lint-layers.mjs`）。
+- 版本 **v3.7.105**（数字快照：2026-10-10，HEAD `aee81ed`，tag `v3.7.105` 已推；本版为**两条会话线合并发版**：
+  服务端线 4 提交 + 客户端阶段1 批 `b0a0fc7`）；单测 **140 文件**（`git ls-files tests | grep -c '\.test\.js$'`）
+  + e2e **90 例 / 14 spec**（`npx playwright test --list` 实测 —— v3.7.93 注里"本机多出的 2 例"
+  `idb-image-backup.spec.js` 已转跟踪态，两口径归一）；逆层 18 / 循环 13（`node scripts/lint-layers.mjs`）。
   > ⚠️ **不再手写用例总数**（v3.7.93 之后到本版，"115 文件 / 1307+ 用例"漂了三处，见
   > `docs/audit-2026-10-06.md` R-3）：**契约型数字**（逆层/循环/块数）由门禁守着可以写；
   > **进度型数字**只写"截至某日某 commit 的实测"，并给出现测命令。
+- 后端：`server/` 已从孤立提交 `ac1114a` **找回并加固**（v3.7.105 合并发版；审计口径
+  `docs/backend-recovery-assessment.md`）—— 但仍是**「可救的开发骨架」**，生产前缺口清单见该文 §七
+  （速率限制/审计日志/refresh token 明文落盘/tools-fetch 未实现等），且三个验证脚本**未接入 CI**。
 - 集成：七家 provider 主链路**全部接完**（Notion/Linear/Jira/飞书/钉钉/Slack + 本地日历），
   废弃函数 30 → **10**（截至 2026-10-06，台账见 `tests/integration-deprecated.test.js` 的 `DEPRECATED`
   名单；原写"9"已漂一名，`docs/audit-2026-10-06.md` R-3）。
@@ -60,8 +63,8 @@
 | 微信扫码登录 | 2026-10-03 用户裁定：**转商务阶段条件项** —— 硬前置为企业主体认证 + ICP 备案域名 + 认证费 + 回调服务端；主体功能先做出来，有企业客户时商务阶段再接（现有 `apiWechatQrcode/apiWechatStatus` 协议原样可用） | 挂起（商务触发） |
 | GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发） | 暂缓 / WebDAV 顶上 |
 | Notion/Linear **笔记**双向 | 无（能力已被判"个人场景不值当"）—— **建议永久不做** | — |
-| Electron **打包 portable exe** | electron-builder 要从 GitHub 拉 helper 二进制，本机 `github.com:443` 直连不通（实测 TLS 超时，退出码 1）。**改用 dev 模式跑桌面版验收**：`cd electron && npm run prebuild && npx electron .`（`resolveHtml()` 的 dev 分支加载仓库根那份 HTML，所以必须先注入）。要正式安装包得换能连通 github 的网络环境 | 换网络 / 走 CI 产物 |
-| 云同步增量 | 后端水位/变更清单/冲突策略 | 后端立项 |
+| Electron **打包 portable exe** | ✅ **已通车（走 CI 产物，2026-10-10 实测）**：推 tag `v3.7.105` 触发 `Build Electron portable exe`（run `37998236342`）success，产物 `agent-workbench-portable-exe` **85.7MB** 落袋。本机仍不能直连 github 拉 helper（TLS 超时），故本机验收继续走 dev 模式：`cd electron && npm run prebuild && npx electron .`（`resolveHtml()` 的 dev 分支加载仓库根那份 HTML，所以必须先注入） | 已解（产物从 CI 取） |
+| 云同步增量 | 客户端**阶段 1（C1/C2）✅ 已交付（v3.7.105）**；阶段 2 缺**后端水位 / 变更清单 / removed 列表 / 冲突策略**（服务端已明确"刻意不做增量"，需另行立项，口径见 `docs/cloud-sync-incremental-contract.md` §二） | 后端立项 |
 | Linear/Jira 反向拉取 | 无技术障碍，产品价值待判 | 用户拍板 |
 
 ### 批次 C（v3.7.87 起）：WebDAV 云同步载体（坚果云等）
@@ -82,7 +85,7 @@
 > 2026-10-06 更正：原列的 1「B1 日历详情浮层」与 3「B2 死接线普查」**均已交付于 v3.7.86**
 > （见本文 §二 批次 B），留在这里只会误导下一轮排期 —— 这本身也是 R-3 那类漂移。当前主线改为审计台账。
 
-1. **审计批次③续跑**：项与状态一律看 `docs/audit-2026-10-06.md`（R-1…R-7），不在本文重复记账；
+1. **审计批次③续跑**：项与状态一律看 `docs/audit-2026-10-06.md`（R-1…R-9 及续记），不在本文重复记账；
 2. **需要用户拍板的两件**：R-2 存量空 catch（P0 118 处）的消解切片与优先级；R-6 的类守卫是否升格进
    `lint:*` 清单（升格要同改 `ci.yml`/`deploy.yml`/`verify-ci-order` 三处，代价是门禁步数再 +1）；
 3. **卡在凭据的两件**：C1 Linear/Jira 真机验收、WebDAV 六步验收（`docs/webdav-verify.md`）——各约 10 分钟人工。
