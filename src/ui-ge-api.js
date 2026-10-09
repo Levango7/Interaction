@@ -271,6 +271,42 @@
 
   // ===== 认证 API =====
 
+  /**
+   * 账号后端可达性探测（v3.7.103）。
+   *
+   * 背景：本仓库只含客户端 —— 账号与云同步的后端需部署方另行实现
+   * （见 docs/product-scope.md 的「可选账号与云同步」一节）。默认 apiBase 是
+   * http://localhost:3001，未部署时该端口无人监听。
+   * 此前用户点「登录」、填完表单提交，拿到的只是笼统的「离线模式」，
+   * 无从分辨「我的网络断了」还是「这个环境根本没部署账号服务」——
+   * 这两者该给完全不同的指引（去查网络 vs 去看部署说明）。
+   *
+   * 判据：/api/health 拿不到 2xx 即视为「未检测到账号服务」。
+   * 超时、连接被拒、404、跨域被拒都合并成同一个结论 —— 它们对用户的行动
+   * 指引一致（去看部署说明），细分只会增加文案而不增加信息。
+   *
+   * 本函数不抛异常：探测不到是预期状态（未部署），不是异常。
+   * @returns {Promise<boolean>} true = 后端可达
+   */
+  async function probeAccountBackend(){
+    const url = apiBase() + "/api/health";
+    let timer = null;
+    try{
+      const ctl = (typeof AbortController === "function") ? new AbortController() : null;
+      /* abort() 按 WHATWG 规范不抛错（幂等），故不额外包裹一层 try —— 免得为一处
+         不会抛的调用新增一个空 catch 条目（本仓空 catch 有棘轮基线，能不加就不加）。
+         万一某实现真抛了，也由下方 fetch 那侧的 catch 把本次探测收敛为「不可达」。 */
+      if(ctl) timer = setTimeout(function(){ ctl.abort(); }, 3000);
+      const resp = await fetch(url, ctl ? { signal: ctl.signal } : {});
+      return !!(resp && resp.ok);
+    }catch(_e){
+      /* 未部署 / 端口无人监听 / 超时 / 跨域被拒 —— 合并为同一结论，理由见上方判据。 */
+      return false;
+    }finally{
+      if(timer) clearTimeout(timer);
+    }
+  }
+
   async function apiLogin(email, password){
     const r = await apiFetch("/api/auth/login", {
       method: "POST",
@@ -1099,11 +1135,13 @@
   // 暴露 UI 函数到 window
   window.closeAuthModal = closeAuthModal;
   window._initApiUI = _initApiUI;
+  window.probeAccountBackend = probeAccountBackend;
 
   // 追加 UI 函数到 window.__test
   if(typeof window !== "undefined" && window.__test){
     Object.assign(window.__test, {
       closeAuthModal, _initApiUI,
+      probeAccountBackend: probeAccountBackend,
       _updateUserButton: _updateUserButton,
       _loadApiPanels: _loadApiPanels,
       _showApiPanels: _showApiPanels,

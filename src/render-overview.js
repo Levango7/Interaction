@@ -1020,7 +1020,10 @@ async function _doAuthLogin(email, password) {
       _authErrTo("authPageLoginError", (r.data && r.data.error) || t("api.loginFailed", "登录失败"));
     }
   } catch (err) {
-    _authErrTo("authPageLoginError", (err && err.offline) ? t("api.syncOffline", "离线模式") : t("api.loginFailed", "登录失败"));
+    /* v3.7.103：网络层失败不等于「密码错」。后端未部署时 fetch 直接抛错，
+       此前只显示「离线模式」，用户会以为是自己断网 —— 改为明确指向账号服务，
+       与欢迎页的探测提示口径一致。 */
+    _authErrTo("authPageLoginError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.loginFailed", "登录失败"));
   } finally {
     _authBusy = false;
     if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
@@ -1056,7 +1059,8 @@ async function _doAuthRegister(name, email, password, confirm, code) {
       _authErrTo("authPageRegisterError", (r.data && r.data.error) || t("api.registerFailed", "注册失败"));
     }
   } catch (err) {
-    _authErrTo("authPageRegisterError", (err && err.offline) ? t("api.syncOffline", "离线模式") : t("api.registerFailed", "注册失败"));
+    /* v3.7.103：同 _doAuthLogin —— 网络层失败指向账号服务，而不是笼统的「离线模式」。 */
+    _authErrTo("authPageRegisterError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.registerFailed", "注册失败"));
   } finally {
     _authBusy = false;
     if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
@@ -1892,13 +1896,45 @@ function renderAuthWelcome(){
       '</div>' +
       '<div class="auth-sso-sep"><span>' + t("auth.ssoOr","或") + '</span></div>' +
       _authSsoButtons() +
-    '</div>';
+    '</div>' +
+    '<div class="card u-hidden" id="authBackendNotice"></div>';
   $("#main").innerHTML = sanitizeHtml(html);
   const goLogin = $("#authPageGoLogin");
   const goRegister = $("#authPageGoRegister");
   if(goLogin) goLogin.onclick = function(){ setActive("authlogin"); render(); };
   if(goRegister) goRegister.onclick = function(){ setActive("authregister"); render(); };
   _bindAuthSso();
+  _fillAuthBackendNotice();
+}
+
+/* v3.7.103：进入欢迎页时探测一次账号后端，不可达就如实说明。
+ *
+ * 动机：这个入口对用户是可见可点的，但本仓库不含后端（见 docs/product-scope.md）。
+ * SSO 两条路径（微信扫码 / GitHub）此前已有「当前环境无后端」的提示，唯独
+ * 邮箱登录与注册这条**主路径**没有 —— 用户会一路把表单填完、点提交，才拿到
+ * 一句笼统的「离线模式」，于是跑去检查自己的网络。同一个页面对同一个事实
+ * 给出两种口径，是这里此前最不一致的地方，本版补齐。
+ *
+ * 实现纪律：探测不阻塞渲染（先画页面、后填结论）；探测自身失败也不弹错，
+ * 因为「没有后端」是这个环境的预期状态，不是需要用户处理的异常。 */
+function _fillAuthBackendNotice(){
+  const box = document.getElementById("authBackendNotice");
+  if(!box) return;
+  if(typeof window.probeAccountBackend !== "function") return;
+  window.probeAccountBackend().then(function(reachable){
+    if(reachable) return; // 后端在，提示块保持隐藏（本函数只负责「没有」这一种情况）。
+    const el = document.getElementById("authBackendNotice");
+    if(!el) return; // 用户已离开欢迎页，DOM 已换，什么都不用做。
+    el.innerHTML = sanitizeHtml(
+      '<p class="sub u-fw-600">' + t("auth.backendMissingTitle", "当前环境未检测到账号服务") + '</p>' +
+      '<p class="sub" style="margin-top:var(--space-2)">' + t("auth.backendMissingBody", "账号与云同步需要另行部署后端服务；本地功能完全不受影响。") + '</p>' +
+      '<p class="sub" style="margin-top:var(--space-2)">' + t("auth.backendMissingHint", "可在「设置 → API 基址」指向你自己的服务，详见仓库 docs/product-scope.md。") + '</p>'
+    );
+    el.classList.remove("u-hidden");
+  }).catch(function(_e){
+    /* 探测函数自身约定的契约是「不抛」；此处是防御性兜底 —— 真抛了也只是少一条
+       提示，不该把欢迎页变成报错页，故静默。 */
+  });
 }
 
 function renderAuthLogin(){
