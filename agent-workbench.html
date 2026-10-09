@@ -5576,8 +5576,6 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <button type="button" class="addbtn min" id="btnIdbExport" data-i18n-aria="dataMgmt.idbExportAria" aria-label="导出 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullBackup">IDB 全量备份</button>
       <button type="button" class="addbtn min" id="btnIdbImport" data-i18n-aria="dataMgmt.idbImportAria" aria-label="导入 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullRestore">IDB 全量恢复</button>
       <input type="file" id="idbFileInput" accept=".idbbackup,.json" class="u-hidden">
-      <!-- P0-8：局域网同步按钮（仅 Electron 环境显示） -->
-      <button type="button" class="addbtn min u-hidden" id="btnSyncLocal" aria-label="局域网同步" data-i18n-aria="a11y.lanSync" data-sc="accent" data-i18n="dataMgmt.lanSync">局域网同步</button>
       <button type="button" class="addbtn min danger" id="btnClear" data-i18n-aria="dataMgmt.clearDataAria" aria-label="清空数据" data-i18n="dataMgmt.clearData">清空数据</button>
     </div>
     <div class="set-actions">
@@ -5788,6 +5786,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <button type="button" class="api-btn accent" id="btnApiSaveName" data-i18n="common.save">保存</button>
       <div class="api-panel-title u-mt-3" data-i18n="api.cloudSync">云同步</div>
       <div class="api-row"><span class="api-label" data-i18n="api.lastSync">上次同步</span><span class="api-value" id="apiLastSync">—</span></div>
+      <!-- v3.7.105（云同步契约 · 阶段1/C2 上行体积看板）：上次尝试上传的体积 / 键数，与诊断报告同源 -->
+      <div class="api-row"><span class="api-label" data-i18n="api.pushSize">上次上传体积</span><span class="api-value" id="apiPushSize">—</span></div>
       <div class="api-row"><span class="api-label" data-i18n="api.cloudState">云端快照</span><span class="api-value" id="apiCloudState">—</span></div>
       <div class="u-mt-2" style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="api-btn accent" id="btnApiSyncNow" data-i18n="api.syncNow">立即上传</button>
@@ -6338,7 +6338,14 @@ function _sharedSafeLSSet(key, val){
  * @returns {void}
  */
 function _sharedSafeLSRemove(key){
-  try{ localStorage.removeItem(key); }catch(e){ /* noop */ }
+  /* v3.7.105（云同步契约 · 阶段1/C1）：删除进变更日志（op:"del"）。
+     只在「删除前确实存在 且 删除未抛错」时记 —— 对不存在的键 removeItem 是静默 no-op，
+     记了就是假信号（阶段 2 的上行会照单全收）。_chlogRecord 契约上不抛异常。 */
+  let had = false;
+  try{ had = (localStorage.getItem(key) !== null); }catch(e){ had = true; /* 读不到就当存在：记不记最终仍以删除成功为准 */ }
+  let ok = false;
+  try{ localStorage.removeItem(key); ok = true; }catch(e){ /* noop */ }
+  if(had && ok) _chlogRecord(key, "del");
 }
 
 /* ---------- 时间戳 ---------- */
@@ -6564,10 +6571,15 @@ function save(k, v){
        && v && typeof v._sc === "string" && typeof ORDER !== "undefined" && ORDER.indexOf(v._sc) >= 0){
       k = PREFIX + "chat_" + v._sc;
     }
-    localStorage.setItem(k, JSON.stringify(v));
+    const _ser = JSON.stringify(v);
+    localStorage.setItem(k, _ser);
     idbQueueMirror(k, v); // 架构项①：异步镜像到 IndexedDB（去抖批量，不阻塞；jsdom/无 IDB 环境 no-op）
     // v2.0：会话层写穿镜像——场景聊天落盘时同步到对应 Session（仅 chat_ 键触发，无递归）
     try{ _mirrorChatToSession(k, v); }catch(_){ /* 会话层不可用时静默降级，不影响主存储 */ }
+    /* v3.7.105（云同步契约 · 阶段1/C1）：写路径的变更日志"原料"（门控 cfg.syncIncremental，
+       默认关 → 首行即返回，save() 行为与从前逐位相同）。序列化结果复用上面的 _ser，
+       避免二次 stringify；_chlogRecord 契约上**不抛异常**（save 的返回值不受日志影响）。 */
+    _chlogRecord(k, "set", _ser);
     return true;
   }
   catch(e){
@@ -7529,7 +7541,6 @@ const MESSAGES = {
     "dataMgmt.exportImport": "导出 / 导入",
     "dataMgmt.idbFullBackup": "IDB 全量备份",
     "dataMgmt.idbFullRestore": "IDB 全量恢复",
-    "dataMgmt.lanSync": "局域网同步",
     "dataMgmt.encryptExport": "加密导出（需密码）",
     "look.title": "外观",
     "look.desc": "主题、自定义配色与语言偏好。「跟随系统」随操作系统明暗自动切换，语言切换即时生效并记忆偏好。",
@@ -8734,17 +8745,12 @@ const MESSAGES = {
     "err.backupFail": "备份失败：",
     "err.chatException": "对话异常：",
     "err.chatRetryExhausted": "chatOnce: 重试耗尽",
-    "err.getLocalDataFail": "获取本机数据失败：",
     "err.importFail": "导入失败：",
     "err.jsonParse": "JSON 解析错误",
     "err.renderException": "渲染异常：",
     "err.requestTimeout": "请求超时（",
     "err.requestTimeoutSuffix": " 秒），请检查网络或上游服务",
     "err.serverError": "服务异常，请稍后重试",
-    "err.snapshotDownloadFail": "本机快照下载失败（HTTP ",
-    "err.snapshotPushFail": "本机快照推送失败：",
-    "err.snapshotRequestFail": "本机快照请求失败，请确认本机同步服务已启动",
-    "err.syncServiceStartFail": "本机同步服务启动失败：",
     "err.tooManyRequests": "请求过于频繁，稍后重试",
     "export.csvHeader": "| 标题 | 状态 | 优先级 | 截止日期 | 标签 |",
     "export.noTasks": "> 暂无任务。",
@@ -8927,7 +8933,6 @@ const MESSAGES = {
     "msg.scenarioDeleted": "场景已删除",
     "msg.scenarioUpdated": "场景已更新",
     "msg.selectTargetScenario": "请选择目标场景",
-    "msg.syncServiceRunning": "本机同步服务运行中（仅本机回环 127.0.0.1:8124）；跨设备迁移请用「设置 → 数据管理 → 导出/导入」",
     "msg.taskNotFound": "任务不存在或已删除",
     "msg.taskSaved": "已保存任务修改",
     "msg.today": "今日 ",
@@ -9936,7 +9941,6 @@ const MESSAGES = {
     "a11y.knowledge": "知识",
     "a11y.pluginStore": "插件商店",
     "a11y.dataMgmt": "数据管理",
-    "a11y.lanSync": "局域网同步",
     "a11y.appearance": "外观",
     "a11y.pointerFxToggle": "鼠标特效开关",
     "a11y.notifyReminder": "通知提醒",
@@ -10394,6 +10398,8 @@ const MESSAGES = {
     "api.lastSync": "上次同步",
     "api.neverSynced": "尚未同步",
     "api.passwordConfirm": "确认密码",
+    "api.pushSize": "上次上传体积",
+    "api.pushSizeVal": "{size} · {n} 键",
     "api.syncNow": "立即上传",
     "auth.back": "返回",
     "auth.goLogin": "直接登录",
@@ -11396,7 +11402,6 @@ const MESSAGES = {
     "dataMgmt.exportImport": "Export / Import",
     "dataMgmt.idbFullBackup": "IDB Full Backup",
     "dataMgmt.idbFullRestore": "IDB Full Restore",
-    "dataMgmt.lanSync": "LAN Sync",
     "dataMgmt.encryptExport": "Encrypted Export (password required)",
     "look.title": "Appearance",
     "look.desc": "Themes, custom colors and language. 'Follow System' auto-switches with OS; language switch is instant and persisted.",
@@ -12600,17 +12605,12 @@ const MESSAGES = {
     "err.backupFail": "Backup failed: ",
     "err.chatException": "Chat exception: ",
     "err.chatRetryExhausted": "chatOnce: retries exhausted",
-    "err.getLocalDataFail": "Failed to get local data: ",
     "err.importFail": "Import failed: ",
     "err.jsonParse": "JSON parse error",
     "err.renderException": "Render exception: ",
     "err.requestTimeout": "Request timed out (",
     "err.requestTimeoutSuffix": "s), check your network or the upstream service",
     "err.serverError": "Service error, try again later",
-    "err.snapshotDownloadFail": "Local snapshot download failed (HTTP ",
-    "err.snapshotPushFail": "Local snapshot push failed: ",
-    "err.snapshotRequestFail": "Local snapshot request failed; make sure the local sync service is running",
-    "err.syncServiceStartFail": "Local sync service failed to start: ",
     "err.tooManyRequests": "Too many requests, try again later",
     "export.csvHeader": "| Title | Status | Priority | Due Date | Tags |",
     "export.noTasks": "> No tasks yet",
@@ -12793,7 +12793,6 @@ const MESSAGES = {
     "msg.scenarioDeleted": "Scenario deleted",
     "msg.scenarioUpdated": "Scenario updated",
     "msg.selectTargetScenario": "Please select target scenario",
-    "msg.syncServiceRunning": "Local sync service running (loopback 127.0.0.1:8124 only); to migrate across devices use \"Settings → Data Management → Export / Import\"",
     "msg.taskNotFound": "Task not found or deleted",
     "msg.taskSaved": "Task saved",
     "msg.today": "Today ",
@@ -13403,6 +13402,8 @@ const MESSAGES = {
     "ov4.overdue": " overdue",
     "api.cloudSync": "Cloud sync",
     "api.lastSync": "Last sync",
+    "api.pushSize": "Last upload size",
+    "api.pushSizeVal": "{size} · {n} keys",
     "api.cloudState": "Cloud snapshot",
     "api.syncNow": "Upload now",
     "api.cloudRestore": "Restore from cloud",
@@ -13824,7 +13825,6 @@ const MESSAGES = {
     "a11y.knowledge": "Knowledge",
     "a11y.pluginStore": "Plugin store",
     "a11y.dataMgmt": "Data management",
-    "a11y.lanSync": "LAN sync",
     "a11y.appearance": "Appearance",
     "a11y.pointerFxToggle": "Pointer effect toggle",
     "a11y.notifyReminder": "Notification reminder",
@@ -16403,7 +16403,9 @@ function removeCustomScenario(key){
   saveCustomScenarios(loadCustomScenarios().filter(s => s.key !== key));
   if(getActive() === key) setActive("office"); // 当前场景被删 → 回退办公
   if(typeof chats === "object" && chats) delete chats[key];
-  try{ localStorage.removeItem(PREFIX+"rec_"+key); }catch(e){ /* 资料键清理失败不阻塞 */ }
+  /* v3.7.105（云同步契约 · 阶段1/C1）：改走共享安全删除 —— 语义逐位不变（同样吞异常、
+     失败不阻塞），但删除动作会进本地变更日志（门控 cfg.syncIncremental，开关关时零行为变化）。 */
+  _sharedSafeLSRemove(PREFIX+"rec_"+key);
   registerCustomScenarios();
   return {ok:true};
 }
@@ -20690,6 +20692,53 @@ function recoverAutoBackup(){
   toast(t("backup.recoveredToast", "已从自动备份恢复（{time}）").replace("{time}", new Date(snap._ts||Date.now()).toLocaleString()), "ok");
   markDirty();
   return true;
+}
+
+/* ---------- v3.7.105（云同步契约 · 阶段1/C1）：本地变更日志（增量的"原料"） ----------
+   依据 docs/cloud-sync-incremental-contract.md §三 C1：写/删路径记 {k, op, ts, h} 到本地有界
+   队列，后端增量契约（水位 / removed 列表）就绪后即可直连。**门控 C4 开关 cfg.syncIncremental
+   （默认关）**：关闭时首行即返回 —— save() / 删除路径行为与从前逐位相同（守护见
+   tests/cloud-sync-stage1.test.js）。h 是序列化内容的弱哈希（fnv1aHex，仅用于判"变没变"，
+   不承载安全语义）；队列**不上云**（已入 SYNC_EXCLUDED_KEYS），随导出/自动备份走。
+   覆盖范围：op:"set" = save() 主入口；op:"del" = _sharedSafeLSRemove（共享安全删除）。
+   本仓业务数据的"删除"多为数组重写（走 save），两条路径合起来即同步面变更的完整来源。 */
+const CHLOG_KEY = PREFIX + "sync_changelog";
+const CHLOG_MAX = 500;   // 有界队列：溢出丢最旧（增量消费者须在溢出前消费，否则降级全量）
+let _chlogFailWarned = false;
+
+/** C4 开关读取：cfg.syncIncremental === true 才开（字段未写入 = 关；getCfg 无默认对象）。 */
+function _chlogEnabled(){
+  try{
+    const c = (typeof getCfg === "function") ? getCfg() : null;
+    return !!(c && c.syncIncremental === true);
+  }catch(e){ return false; }
+}
+/** 读队列（测试 / 诊断 / 阶段 2 消费者用）。返回解析结果，调用方只读。 */
+function getSyncChangelog(){
+  const a = load(CHLOG_KEY, []);
+  return Array.isArray(a) ? a : [];
+}
+/**
+ * 记一条变更。**契约：本函数不抛异常**（save() 的返回值不得被日志影响）。
+ * @param {string} k 存储键（队列自身键被跳过，防递归）
+ * @param {string} op "set" | "del"
+ * @param {string} [payloadStr] set 时的序列化值（用于算 h）；del 缺省
+ */
+function _chlogRecord(k, op, payloadStr){
+  if(typeof k !== "string" || !k || k === CHLOG_KEY) return;
+  if(!_chlogEnabled()) return;
+  try{
+    const arr = getSyncChangelog();
+    arr.push({ k: k, op: op, ts: Date.now(), h: (op === "set" && typeof payloadStr === "string") ? fnv1aHex(payloadStr) : "" });
+    if(arr.length > CHLOG_MAX) arr.splice(0, arr.length - CHLOG_MAX);
+    localStorage.setItem(CHLOG_KEY, JSON.stringify(arr));
+  }catch(e){
+    /* 队列写失败不得影响业务写入；高频路径只留一次痕（判据同台账分档③） */
+    if(!_chlogFailWarned){
+      _chlogFailWarned = true;
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "changelog write failed: " + ((e && e.message) || e), { where: "_chlogRecord" }); }catch(_e2){ /* 诊断自身失败静默 */ }
+    }
+  }
 }
 
 /* ---------- v3.7.18（解耦 S5）：AI 配置读写归位到 Data 层 ----------
@@ -27215,7 +27264,10 @@ const SYNC_EXCLUDED_KEYS = [
      / pre_restore_backup 的完整副本；上面三项顶层排除会被这些嵌套副本整体绕过（v3.7.58
      「密文+钥匙不同交」失效），且每次上传平白多出 ≤4MB 的重复数据。另：autobackup 是本机
      回滚档，上云无跨端收益，他机拉取还会覆盖其本地回滚历史。 */
-  AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1]
+  AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1],
+  /* v3.7.105（云同步契约 · 阶段1/C1）：本地变更日志不上云 —— 它是本机增量"原料"
+     （逐键变更时间线），上云无跨端收益，且让本机操作时间线离开本机（隐私面）。 */
+  CHLOG_KEY
 ];
 function _buildCloudSnapshot() {
   const data = {};
@@ -27241,9 +27293,16 @@ async function apiGetSnapshot() {
  * @returns {Promise<boolean>} 是否推送成功（2xx 才算）
  */
 async function apiPutSnapshot(snapshot) {
+  const snap = snapshot || _buildCloudSnapshot();
+  /* v3.7.105（云同步契约 · 阶段1/C2）：先记上行体积再发 —— "尝试上传的体积"在失败时同样
+     有价值（413 / 弱网下用户要看的是"这次要传多大"）。字节口径与后端一致：只算 snapshot
+     的 UTF-8 字节（不含 updatedAt 包装），见 server/src/sync.js 的 MAX_SNAPSHOT_BYTES。 */
+  try {
+    _setSyncMeta({ lastPushBytes: _snapshotWireBytes(snap), lastPushKeys: Object.keys(snap).length });
+  } catch (e) { /* 看板记录失败不影响上传本身（下面照发） */ }
   const r = await window.apiFetch("/api/sync/snapshot", {
     method: "PUT",
-    body: JSON.stringify({ snapshot: snapshot || _buildCloudSnapshot(), updatedAt: Date.now() })
+    body: JSON.stringify({ snapshot: snap, updatedAt: Date.now() })
   });
   return !!(r && r.ok);
 }
@@ -27348,13 +27407,39 @@ async function cloudCheckOnLogin() {
     window.doSync();
   } catch (e) { /* 离线时静默，等下次数据变动再同步 */ }
 }
+/* v3.7.105（云同步契约 · 阶段1/C2 上行体积看板）：
+   · _snapshotWireBytes —— 快照的 UTF-8 字节数，口径与后端 2MB 上限一致
+     （server/src/sync.js 按 Buffer.byteLength(JSON.stringify(snapshot)) 判定）；
+   · _fmtPushSize —— 字节 → 人读文本。本块自持而不引 UI 层的 _fmtBytes：
+     那会多一条 Render→UI 逆层边（module-graph 门禁口径）。 */
+function _snapshotWireBytes(snap){
+  try{
+    const s = JSON.stringify(snap);
+    return (typeof _sharedUtf8Bytes === "function") ? _sharedUtf8Bytes(s).length : s.length;
+  }catch(e){ return 0; }
+}
+function _fmtPushSize(n){
+  if (!(n > 0)) return "—";
+  if (n >= 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + " MB";
+  if (n >= 1024) return (n / 1024).toFixed(1) + " KB";
+  return n + " B";
+}
 function _renderLastSync() {
   if (typeof document === "undefined") return;
   const el = document.getElementById("apiLastSync");
-  if (!el) return;
+  const sz = document.getElementById("apiPushSize");
+  if (!el && !sz) return;
   const meta = _getSyncMeta();
-  const ts = meta.lastPushAt || meta.lastPullAt;
-  el.textContent = ts ? new Date(ts).toLocaleString() : t("api.neverSynced", "尚未同步");
+  if (el) {
+    const ts = meta.lastPushAt || meta.lastPullAt;
+    el.textContent = ts ? new Date(ts).toLocaleString() : t("api.neverSynced", "尚未同步");
+  }
+  /* C2：上次尝试上传的体积（失败也记）——纯展示事实，不承诺任何同步语义 */
+  if (sz) {
+    sz.textContent = (typeof meta.lastPushBytes === "number" && meta.lastPushBytes > 0)
+      ? t("api.pushSizeVal", "{size} · {n} 键").replace("{size}", _fmtPushSize(meta.lastPushBytes)).replace("{n}", String(meta.lastPushKeys || 0))
+      : "—";
+  }
 }
 function _renderCloudState(rec) {
   if (typeof document === "undefined") return;
@@ -35804,6 +35889,12 @@ function buildDiagReport(opts){
   try{ L.push("浏览器: " + (navigator.userAgent || "未知")); }catch(e){}
   try{ L.push("语言: " + (navigator.language || "未知") + " · 时区: " + ((Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || "未知")); }catch(e){}
   L.push("存储: " + _diagStorageLine());
+  /* v3.7.105（云同步契约 · 阶段1/C2）：上行体积看板进诊断报告 —— 快照体积此前完全黑盒，
+     复现「413 快照过大」类反馈时这段是唯一的体积证据。 */
+  try {
+    const sm = load(PREFIX + "sync_meta", {});
+    L.push("云同步: " + ((sm && sm.lastPushBytes) ? ("上次上传快照 " + (sm.lastPushBytes / 1024).toFixed(1) + " KB / 含 " + (sm.lastPushKeys || 0) + " 键") : "尚未上传过快照"));
+  } catch (e) { L.push("云同步: 体积信息读取失败（" + ((e && e.message) || e) + "）"); }
   L.push("诊断条数: " + list.length);
   L.push("");
   L.push("—— 近期诊断（新→旧，入队时已脱敏）——");
@@ -35960,85 +36051,6 @@ function openDiagIssue(){
       catch(e){ try{ pushDiag("error", "openDiagIssue failed: " + ((e && e.message) || e), { where: "diagPanel" }); }catch(e2){} }
     };
   }
-})();
-
-/* ---------- P0-8：局域网同步（仅 Electron 环境） ---------- */
-(function bindSyncButtons(){
-  if(!isElectron()) return;
-  const btnSync = $("#btnSyncLocal");
-  if(!btnSync) return;
-  /* v3.7.52：本机同步服务（127.0.0.1:8124）与其 syncPush/syncGet 通道从未在 electron/main.js 实现
-     （实测 main.js 只有 chat / ai-config / auto-launch 三组通道，preload 也只暴露 6 个 API）。
-     原代码在此直接调用 → Electron 下启动即抛 TypeError 并每 60s 弹一次「本机快照推送失败」，
-     点按钮还提示「本机同步服务启动失败」。按 docs/product-scope.md §四.2「stub + 活 UI = 虚假功能」：
-     能力缺失时不显示入口、不启动定时器；待主进程侧真正落地后，此守卫会自动放行。 */
-  const _hasSyncApi = !!(window.electronAPI && typeof window.electronAPI.syncPush === "function" && typeof window.electronAPI.syncGet === "function");
-  if(!_hasSyncApi){ btnSync.style.display = "none"; return; }
-  // v3.1.2：syncPush 渲染侧接线（修复断链——此前主进程 syncSnapshot 恒为 {}，
-  // 「本机同步下载」导出空数据）。启动时 + 每次点击同步按钮时推送一次本机快照；
-  // 快照键集合与 doExport 一致（allKeys 的 wb_agent_ 前缀 + wb_custom_links）。
-  /* v3.7.102 第九片：快照枚举失败时「只报第一次」的一次性标记 —— 该路径每 60s 走一次，
-     留痕不节流会把诊断面板刷满，反而盖住真问题（判据见 MEMORY.md §4b 分档③）。 */
-  let _snapshotEnumWarned = false;
-  const pushSnapshot = async () => {
-    try{
-      const snap = {};
-      /* v3.7.52：兜底分支与 allKeys() 同口径（length + key(i)）——Object.keys(localStorage)
-         在存储安全壳接管时返回的是方法名，会枚举出空集。 */
-      const keys = (typeof allKeys === "function")
-        ? allKeys()
-        : (function(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && (k.indexOf(PREFIX)===0 || k==="wb_custom_links")) out.push(k); } }catch(e){ try{ if(!_snapshotEnumWarned && typeof pushDiag === "function"){ _snapshotEnumWarned = true; pushDiag("warn", "snapshot key enumeration failed (snapshot may be partial): "+((e&&e.message)||e), {where:"pushSnapshot"}); } }catch(_e2){} } return out; })();
-      keys.forEach(function(k){
-        const v = localStorage.getItem(k);
-        if(typeof v === "string") snap[k] = v;
-      });
-      const r = await window.electronAPI.syncPush(snap);
-      if(r && r.ok === false) toast(t("err.snapshotPushFail","本机快照推送失败：") + (r.error || ""), "warn");
-      return !!(r && r.ok);
-    }catch(e){
-      toast(t("err.snapshotPushFail","本机快照推送失败：") + ((e && e.message) || e), "warn");
-      return false;
-    }
-  };
-  pushSnapshot(); // 启动即推送一次（后续点击时再推，保证下载到的总是最新数据）
-  const _pushTimer = setInterval(pushSnapshot, 60000); // 周期推送（与 main.js 注释承诺一致：60s 一次）
-  if(_pushTimer && _pushTimer.unref){ try{ _pushTimer.unref(); }catch(_e){} } // jsdom 环境无 unref，静默容错
-  btnSync.style.display = ""; // 显示按钮
-  btnSync.onclick = async () => {
-    // 0. 先推送最新快照（下载入口读的是主进程内存快照，必须先推再下载）
-    await pushSnapshot();
-    // 1. 获取本机数据（A-1 修复：syncGet IPC 包裹 try-catch，异常时给出针对性提示并终止，
-    //    避免 unhandled rejection + 后续「运行中」成功语气提示自相矛盾）
-    let localData;
-    try{
-      localData = await window.electronAPI.syncGet();
-    }catch(err){
-      toast(t("err.syncServiceStartFail","本机同步服务启动失败：") + (err && err.message ? err.message : err), "error");
-      return;
-    }
-    if(localData && localData.error){ toast(t("err.getLocalDataFail","获取本机数据失败：") + localData.error, "error"); return; }
-    // 2. 通过 HTTP 提供下载入口（A-1 修复：Electron 以 file:// 加载页面，相对路径 fetch("/sync/download")
-    //    会解析为 file:///sync/download 必然失败，必须拼接 main.js 同步端点的绝对地址）。
-    //    安全边界（与 electron/main.js startSyncServer 注释一致）：同步服务仅绑定 127.0.0.1 回环且
-    //    拒绝非本机来源，不做跨设备局域网访问；跨设备数据迁移走「设置 → 数据管理」的导出/导入 JSON。
-    const syncBase = "http://127.0.0.1:8124";
-    toast(t("msg.syncServiceRunning","本机同步服务运行中（仅本机回环 127.0.0.1:8124）；跨设备迁移请用「设置 → 数据管理 → 导出/导入」"), "ok");
-    // 3. 打开本机快照下载（本机可访问）
-    try {
-      const resp = await fetch(syncBase + "/sync/download");
-      if(resp.ok){
-        const blob = await resp.blob();
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "agent-workbench-sync-"+todayStr()+".json";
-        a.click(); URL.revokeObjectURL(a.href);
-      } else {
-        toast(t("err.snapshotDownloadFail","本机快照下载失败（HTTP ") + resp.status + "）", "warn");
-      }
-    } catch(e) {
-      toast(t("err.snapshotRequestFail","本机快照请求失败，请确认本机同步服务已启动"), "warn");
-    }
-  };
 })();
 
 /* ---------- 系统级消息中心 ----------
@@ -40380,7 +40392,8 @@ async function unsubscribePush(){
     if (!state.subscription) return { ok: true }; // 本就未订阅
     const ok = await state.subscription.unsubscribe();
     if (ok) {
-      try { localStorage.removeItem(PREFIX + "push_subscription"); } catch(e){ /* noop */ }
+      /* v3.7.105（云同步契约 · 阶段1/C1）：改走共享安全删除，语义不变（同样吞异常）；删除进变更日志（门控）。 */
+      _sharedSafeLSRemove(PREFIX + "push_subscription");
     }
     return { ok: ok };
   } catch(e){
