@@ -26,7 +26,12 @@ function getMailer(cfg) {
 
 function makeTokens(cfg, userId) {
   const accessToken = jwt.sign({ sub: userId }, cfg.jwt.accessSecret, { expiresIn: cfg.jwt.accessTtlSec || 900 });
-  const refreshToken = jwt.sign({ sub: userId }, cfg.jwt.refreshSecret, { expiresIn: cfg.jwt.refreshTtlSec || 2592000 });
+  /* 2026-10-10：refreshToken 加 jti 随机数。此前载荷只有 {sub, iat, exp} —— **同一秒内两次签发
+     是同一个字符串**，而会话表（store.sessions）以 refreshToken 为主键 → 同秒两次登录 / 一台设备
+     快速重登会把前一个会话**覆盖**掉：设备列表少一台，「多设备」语义失真（刷新仍能用，故长期
+     无感）。实测判据：verify/incremental-check.cjs 的「同账号第二次登录拿到独立会话」用例。
+     accessToken 刻意不加：它只是 15 分钟的同一身份凭据，同串无害。 */
+  const refreshToken = jwt.sign({ sub: userId, jti: crypto.randomBytes(8).toString("hex") }, cfg.jwt.refreshSecret, { expiresIn: cfg.jwt.refreshTtlSec || 2592000 });
   return { accessToken, refreshToken, accessTtlSec: cfg.jwt.accessTtlSec || 900 };
 }
 

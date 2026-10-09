@@ -24,7 +24,8 @@ class Store {
       integrations: {}, // provider -> { connected, meta, createdAt }
       pushSubs: [],     // [ { endpoint, userId, createdAt } ]
       notifyPrefs: {},  // userId -> { ... }
-      snapshots: {}     // userId -> { snapshot, updatedAt, clientUpdatedAt }（云同步，LWW 全量快照）
+      snapshots: {},    // userId -> { snapshot, updatedAt, serverUpdatedAt }（云同步，LWW 全量快照）
+      syncIncr: {}      // userId -> { keys: {k:{v,ts,seq}}, tomb: {k:{ts,seq}}, watermark, prunedBelow }（增量视图，阶段 2）
     };
     this._load();
   }
@@ -167,8 +168,140 @@ class Store {
       serverUpdatedAt: Date.now(),
     };
     this._data.snapshots[userId] = rec;
+    /* 阶段 2：全量落盘 = 重建逐键视图（见 _rebuildIncr 注释）——两条路（全量/增量）必须同世界。 */
+    this._rebuildIncr(userId, snapshot, rec.updatedAt);
     this._save();
     return rec;
+  }
+
+  /* ============================================================
+   * 增量同步（阶段 2，2026-10-10）
+   * 设计（完整契约见 docs/cloud-sync-incremental-contract.md §二/§三）：
+   *   · 逐键视图 keys[k] = { v, ts, seq }：v=值、ts=**客户端自报**的变更时间（与全量
+   *     updatedAt 同一时钟口径；多客户端跨钟的 LWW 局限同全量路径，已文档化）、
+   *     seq=服务端分配的单调水位（逐键版本号）；
+   *   · tomb[k] = { ts, seq }：删除墓碑 —— 现行全量协议靠「键消失」表达删除，增量必须显式；
+   *   · watermark：服务端权威、单调递增；响应里的 token = 它（客户端下次带 since=token）；
+   *   · 剪枝：tomb 超过 TOMB_MAX 丢最旧，prunedBelow 记录已丢水位 —— 客户端 since 低于
+   *     它时无法重放历史 ⇒ 回 needsFull=true，客户端走全量回退（下行保留全量回退的口子）；
+   *   · 幂等：同 (k,v,ts) 重放不改状态、水位不动（移动端重试是常态）；
+   *   · LWW：ts 大者胜；ts 相等时**删除胜**（确定性平局规则，且防「重放已删键把它复活」）；
+   *   · `_` 前缀键（如 _deviceMeta）是快照级元数据，不进逐键视图。
+   * ============================================================ */
+  static _isMetaKey(k) { return typeof k !== "string" || !k || k.charAt(0) === "_"; }
+
+  /** 取（必要时惰性建/迁移）某用户的增量视图。首建时若已有全量快照则就地播种 ——
+   *  老库（只有 snapshots 没有 syncIncr）不能表现为「什么都没有」，那会让增量端漏掉全部既有键。 */
+  _incr(userId) {
+    if (!this._data.syncIncr) this._data.syncIncr = {};
+    let s = this._data.syncIncr[userId];
+    if (!s) {
+      s = { keys: {}, tomb: {}, watermark: 0, prunedBelow: 0 };
+      const rec = this._data.snapshots[userId];
+      if (rec && rec.snapshot && typeof rec.snapshot === "object") {
+        const ts = rec.updatedAt || Date.now();
+        for (const k of Object.keys(rec.snapshot)) {
+          if (!Store._isMetaKey(k)) s.keys[k] = { v: rec.snapshot[k], ts, seq: ++s.watermark };
+        }
+      }
+      this._data.syncIncr[userId] = s;
+    }
+    if (!s.keys || typeof s.keys !== "object") s.keys = {};
+    if (!s.tomb || typeof s.tomb !== "object") s.tomb = {};
+    if (typeof s.watermark !== "number") s.watermark = 0;
+    if (typeof s.prunedBelow !== "number") s.prunedBelow = 0;
+    return s;
+  }
+
+  /**
+   * 全量 PUT 后重建逐键视图：快照是权威 —— 每个键取新 seq（对增量端而言「全量重定义」
+   * 就是所有键都变了），快照里消失的键补 tombstone。保证「一台走全量、另一台走增量」同世界。
+   */
+  _rebuildIncr(userId, snapshot, ts) {
+    const s = this._incr(userId);
+    const next = {};
+    for (const k of Object.keys(snapshot || {})) {
+      if (!Store._isMetaKey(k)) next[k] = { v: snapshot[k], ts, seq: ++s.watermark };
+    }
+    for (const k of Object.keys(s.keys)) {
+      if (!(k in next)) s.tomb[k] = { ts, seq: ++s.watermark };
+    }
+    for (const k of Object.keys(next)) delete s.tomb[k];
+    s.keys = next;
+    this._pruneTomb(s);
+  }
+
+  _pruneTomb(s) {
+    const TOMB_MAX = 200;
+    const ks = Object.keys(s.tomb);
+    if (ks.length <= TOMB_MAX) return;
+    ks.sort((a, b) => (s.tomb[a].seq || 0) - (s.tomb[b].seq || 0));
+    let maxDropped = 0;
+    for (const k of ks.slice(0, ks.length - TOMB_MAX)) {
+      maxDropped = Math.max(maxDropped, s.tomb[k].seq || 0);
+      delete s.tomb[k];
+    }
+    s.prunedBelow = Math.max(s.prunedBelow, maxDropped);
+  }
+
+  /**
+   * 增量一轮：先应用上行（changes/removed），再返回 since 之后的下行。
+   * @returns {{token:number, changed:Array<{k,v,ts}>, removed:Array<{k,ts}>, needsFull:boolean}}
+   */
+  mergeIncremental(userId, payload) {
+    const s = this._incr(userId);
+    const since = Math.max(0, Number(payload && payload.since) || 0);
+    const inChanges = Array.isArray(payload && payload.changes) ? payload.changes : [];
+    const inRemoved = Array.isArray(payload && payload.removed) ? payload.removed : [];
+    const appliedSets = [], appliedDels = [];
+    let maxAppliedTs = 0;
+    for (const c of inChanges) {
+      const k = c && c.k, ts = Number(c && c.ts) || 0;
+      if (Store._isMetaKey(k)) continue;
+      const cur = s.keys[k], t = s.tomb[k];
+      if (cur && cur.ts > ts) continue;                        // 服务端已有更新 → LWW 保住它
+      if (cur && cur.ts === ts && cur.v === c.v) continue;     // 幂等重放（同值同刻）
+      if (t && t.ts >= ts) continue;                           // 删除胜平局（确定性）
+      s.keys[k] = { v: c.v, ts, seq: ++s.watermark };
+      delete s.tomb[k];
+      appliedSets.push(k);
+      if (ts > maxAppliedTs) maxAppliedTs = ts;
+    }
+    for (const r of inRemoved) {
+      const k = r && r.k, ts = Number(r && r.ts) || 0;
+      if (Store._isMetaKey(k)) continue;
+      const cur = s.keys[k], t = s.tomb[k];
+      if (cur && cur.ts > ts) continue;                        // 本地更新更晚 → 不删
+      if (t && t.ts >= ts) continue;                           // 已有同/更新墓碑 → 幂等
+      delete s.keys[k];
+      s.tomb[k] = { ts, seq: ++s.watermark };
+      appliedDels.push(k);
+      if (ts > maxAppliedTs) maxAppliedTs = ts;
+    }
+    const dirty = appliedSets.length > 0 || appliedDels.length > 0;
+    if (dirty) this._pruneTomb(s);
+    /* 快照记录随增量保持相干：逐键补丁（O(变更数)，不重写整快照）——
+       否则「增量客户端 UP 的键、全量客户端 GET 不到」。无快照记录时建一份（键由补丁填入）。 */
+    if (dirty) {
+      if (!this._data.snapshots[userId]) {
+        this._data.snapshots[userId] = { snapshot: {}, updatedAt: maxAppliedTs || Date.now(), serverUpdatedAt: Date.now() };
+      }
+      const rec = this._data.snapshots[userId];
+      if (rec.snapshot && typeof rec.snapshot === "object") {
+        for (const k of appliedSets) rec.snapshot[k] = s.keys[k].v;
+        for (const k of appliedDels) delete rec.snapshot[k];
+        if (maxAppliedTs > 0) rec.updatedAt = Math.max(rec.updatedAt || 0, maxAppliedTs);
+        rec.serverUpdatedAt = Date.now();
+      }
+      this._save();
+    }
+    const needsFull = since < s.prunedBelow;
+    const changed = [], removed = [];
+    if (!needsFull) {
+      for (const k of Object.keys(s.keys)) if (s.keys[k].seq > since) changed.push({ k, v: s.keys[k].v, ts: s.keys[k].ts });
+      for (const k of Object.keys(s.tomb)) if (s.tomb[k].seq > since) removed.push({ k, ts: s.tomb[k].ts });
+    }
+    return { token: s.watermark, changed, removed, needsFull };
   }
 }
 

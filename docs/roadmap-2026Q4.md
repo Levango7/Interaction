@@ -53,7 +53,7 @@
 ### 批次 C：需真实数据/工作区的接线（⛔ 或 🔄）
 - **C1 Linear/Jira 真机验收** → 🟡 待跑（`_probe/accept-linear-jira.mjs` 一条命令逐项 PASS/FAIL，差你给凭据）：
   代码侧已就绪（v3.7.85），只差一次人工验收。
-- **C2 云同步增量** → 🔄 客户端**阶段 1 已交付**（v3.7.105 批：C1 本地变更日志（门控，默认关=零行为变化）+ C2 上行体积看板，详见 `docs/cloud-sync-incremental-contract.md` §三 实施记录）；**阶段 2（增量上行）仍待后端增量契约** —— 服务端已从孤立提交找回并加固（`docs/backend-recovery-assessment.md`），但其 `server/src/sync.js` 明确"刻意不做增量/水位/冲突合并"，与本契约 §二 口径一致。
+- **C2 云同步增量** → ✅ **阶段 1+2 均已交付**（v3.7.105 批：C1 本地变更日志（门控）+ C2 上行体积看板；v3.7.106 批：**阶段 2 增量上行** —— 服务端 `POST /api/sync/changes`（权威水位 / tombstone 剪枝 / 幂等 / 逐键 LWW，`verify/incremental-check.cjs` 38/38）+ 客户端开关制分流（关=逐位全量；开=增量，不支持/落后自动全量回退）。详见 `docs/cloud-sync-incremental-contract.md` §二 定稿 + §三 实施记录。**冲突策略仍只有 lww**（`mv/三路合并` 属产品决策，未定不做）。
 
 ### 硬阻塞（前置条件清单）
 | 项 | 缺什么 | 谁能解 |
@@ -64,7 +64,7 @@
 | GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发） | 暂缓 / WebDAV 顶上 |
 | Notion/Linear **笔记**双向 | 无（能力已被判"个人场景不值当"）—— **建议永久不做** | — |
 | Electron **打包 portable exe** | ✅ **已通车（走 CI 产物，2026-10-10 实测）**：推 tag `v3.7.105` 触发 `Build Electron portable exe`（run `37998236342`）success，产物 `agent-workbench-portable-exe` **85.7MB** 落袋。本机仍不能直连 github 拉 helper（TLS 超时），故本机验收继续走 dev 模式：`cd electron && npm run prebuild && npx electron .`（`resolveHtml()` 的 dev 分支加载仓库根那份 HTML，所以必须先注入） | 已解（产物从 CI 取） |
-| 云同步增量 | 客户端**阶段 1（C1/C2）✅ 已交付（v3.7.105）**；阶段 2 缺**后端水位 / 变更清单 / removed 列表 / 冲突策略**（服务端已明确"刻意不做增量"，需另行立项，口径见 `docs/cloud-sync-incremental-contract.md` §二） | 后端立项 |
+| 云同步增量 | ✅ **已交付（v3.7.106：阶段 1+2）** —— 服务端水位/tombstone/显式删除信号/幂等 + 客户端开关制增量与全量回退（`verify/incremental-check.cjs` 38/38）。剩余**冲突策略**（`mv/三路合并`）属产品决策未定，不计入队列 | 已解 |
 | Linear/Jira 反向拉取 | 无技术障碍，产品价值待判 | 用户拍板 |
 
 ### 批次 C（v3.7.87 起）：WebDAV 云同步载体（坚果云等）

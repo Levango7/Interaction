@@ -374,6 +374,12 @@ function getSyncChangelog(){
   const a = load(CHLOG_KEY, []);
   return Array.isArray(a) ? a : [];
 }
+/** 清空队列（阶段 2：增量上行成功后调用 —— 全部当前值已上行、远端更新已应用，
+ *  两边收敛后清空是最简单且正确的游标；不必维护环形队列的位点）。
+ *  走共享安全删除：队列自身键在 _chlogRecord 里被防递归守卫跳过，不会产生日志条目。 */
+function clearSyncChangelog(){
+  _sharedSafeLSRemove(CHLOG_KEY);
+}
 /**
  * 记一条变更。**契约：本函数不抛异常**（save() 的返回值不得被日志影响）。
  * @param {string} k 存储键（队列自身键被跳过，防递归）

@@ -23,7 +23,7 @@
 | `render-entry` | Render | `ai-retry` `ai-tools` `core` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 60 |
 | `render-scene-sub` | Render | `core` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
-| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 42 |
+| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 44 |
 | `render-widgets` | Render | `chain` `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 24 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-daily` | 2 |

@@ -541,7 +541,9 @@
     if(typeof apiPutSnapshot !== "function"){ setSyncStatus("local"); return; }
     setSyncStatus("syncing");
     try{
-      const ok = await apiPutSnapshot(_buildCloudSnapshot());
+      /* v3.7.106（阶段 2）：有 syncRound（render-overview，开关制分流：增量 / 自动回退全量）就走它；
+         没有则维持原样直调全量 —— 与既有 typeof apiPutSnapshot 守卫同款防御。 */
+      const ok = (typeof syncRound === "function") ? await syncRound() : await apiPutSnapshot(_buildCloudSnapshot());
       if(ok){
         _setSyncMeta({ lastPushAt: Date.now() });
         setSyncStatus("idle");

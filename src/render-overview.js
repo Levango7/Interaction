@@ -1392,6 +1392,112 @@ function _applyCloudSnapshot(data) {
 try{ AppBridge.buildCloudSnapshot = _buildCloudSnapshot; }catch(e){ /* 桥未就绪：不阻塞加载 */ }
 try{ AppBridge.applyCloudSnapshot = _applyCloudSnapshot; }catch(e){ /* 同上 */ }
 
+/* ============================================================
+ * v3.7.106（云同步契约 · 阶段 2，2026-10-10）：增量一轮
+ * 契约：docs/cloud-sync-incremental-contract.md §二 —— 单端点往返 = 上行本机 delta +
+ * 下行远端 delta；服务端权威水位 / tombstone / 剪枝回退已由 server/verify/incremental-check.cjs
+ * 38 项钉死。分流纪律（同 C1/C2）：**开关 cfg.syncIncremental 关 → 逐位走现行全量路径**；
+ * 开关开 → 增量；「服务端不支持（404/405）」或「水位太旧（needsFull）」→ 自动回退全量，
+ * 而全量 PUT 在服务端会重建增量视图（两条路同世界）。
+ * ============================================================ */
+
+/** 同步面判定：与 _buildCloudSnapshot / _applyCloudSnapshot 的键集同口径（三处必须一致）。 */
+function _inSyncScope(k){
+  if (!k || k === SYNC_META_KEY || k === CHLOG_KEY) return false;
+  if (k.charAt(0) === "_") return false;
+  if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return false;
+  return k.indexOf(PREFIX) === 0 || k === CUSTOM_LINKS_KEY;
+}
+
+/** 把 C1 变更日志折叠成上行 delta：逐键取最新一条；set 的现值从 localStorage 读（键已不在 → 按删除）。 */
+function _buildSyncDelta(){
+  const log = (typeof getSyncChangelog === "function") ? getSyncChangelog() : [];
+  const newest = new Map();
+  for (const e of log){
+    if (!e || typeof e.k !== "string" || !_inSyncScope(e.k)) continue;
+    const prev = newest.get(e.k);
+    if (!prev || (e.ts || 0) >= (prev.ts || 0)) newest.set(e.k, e);
+  }
+  const changes = [], removed = [];
+  newest.forEach(function(e, k){
+    const ts = e.ts || Date.now();
+    if (e.op === "del"){ removed.push({ k: k, ts: ts }); return; }
+    let v = null;
+    try{ v = localStorage.getItem(k); }catch(_e){ v = null; }
+    if (typeof v !== "string"){ removed.push({ k: k, ts: ts }); return; }
+    changes.push({ k: k, v: v, ts: ts });
+  });
+  return { changes: changes, removed: removed };
+}
+
+/** 本机对该键的最新本地变更时刻（下行删除的 LWW 判据：本机有更晚的未上传变更 → 不删，下轮上行胜出）。 */
+function _newestLocalChangeTs(k){
+  const log = (typeof getSyncChangelog === "function") ? getSyncChangelog() : [];
+  let m = 0;
+  for (const e of log) if (e && e.k === k && (e.ts || 0) > m) m = e.ts || 0;
+  return m;
+}
+
+/** 增量一轮。返回：true=成功 / false=失败（网络、鉴权、服务端错误）/"full-fallback"=改走全量。 */
+async function _syncIncrementalRound(){
+  const meta = _getSyncMeta();
+  const since = Number(meta.syncToken) || 0;
+  const delta = _buildSyncDelta();
+  /* C2 看板：增量轮记的是 **delta 的体积**（与全量轮同栏，口径已在看板注释里写明） */
+  try {
+    _setSyncMeta({ lastPushBytes: _snapshotWireBytes({ changes: delta.changes, removed: delta.removed }), lastPushKeys: delta.changes.length + delta.removed.length });
+  } catch (e) { /* 看板记录失败不影响同步本身（下面照发） */ }
+  const r = await window.apiFetch("/api/sync/changes", {
+    method: "POST",
+    body: JSON.stringify({ since: since, changes: delta.changes, removed: delta.removed })
+  });
+  if (!r || !r.ok){
+    const st = r && r.status;
+    if (st === 404 || st === 405) return "full-fallback";   // 旧部署没有增量端点 → 回退全量
+    return false;                                            // 网络/鉴权/服务端错误：交给 doSync 的状态机
+  }
+  const d = (r.data && r.data.token !== undefined) ? r.data : null;
+  if (!d) return false;                                      // 响应形状不对：按失败处理，不猜
+  if (d.needsFull) return "full-fallback";                   // 水位太旧（服务端已剪枝）→ 回退全量
+  /* 下行 changed：包成对象走快照同一应用路径（任务按 updatedAt 合并 / 回滚档 / 范围过滤 / 数据广播全复用） */
+  const changedObj = {};
+  (d.changed || []).forEach(function(c){ if (c && _inSyncScope(c.k)) changedObj[c.k] = c.v; });
+  if (Object.keys(changedObj).length) _applyCloudSnapshot(changedObj);
+  /* 下行 removed：裸删除（远端删除不是本地变更，不入变更日志 —— 否则会把服务端的删除回传给服务端）；
+     本机有更晚未上传变更的键跳过（下轮以上行胜出，服务端 LWW 同规则） */
+  let removedAny = false;
+  (d.removed || []).forEach(function(rm){
+    if (!rm || !_inSyncScope(rm.k)) return;
+    if (_newestLocalChangeTs(rm.k) > (rm.ts || 0)) return;
+    try { localStorage.removeItem(rm.k); removedAny = true; }
+    catch (e) {
+      try { if (typeof pushDiag === "function") pushDiag("warn", "apply remote removal failed: " + ((e && e.message) || e), { where: "syncIncremental", key: rm.k }); }catch(_e2){ /* 诊断自身失败静默 */ }
+    }
+  });
+  if (removedAny) { try { emitDataMutate("restore"); } catch (e) { /* 索引不阻塞同步 */ } }
+  /* 游标与日志：token 落盘（服务端权威水位）；**成功即清日志** —— 所有当前值已上行、
+     远端更新已应用，两边收敛后清空是最简单且正确的游标（见 data-rw.clearSyncChangelog 注释）。 */
+  _setSyncMeta({ syncToken: Number(d.token) || 0, lastPushAt: Date.now(), lastPullAt: Date.now() });
+  if (typeof clearSyncChangelog === "function") clearSyncChangelog();
+  return true;
+}
+
+/** 同步一轮（开关制分流）。doSync 的入口：开关关 = 现行全量（逐位不变）。 */
+async function syncRound(){
+  let incrOn = false;
+  try {
+    const c = (typeof getCfg === "function") ? getCfg() : null;
+    incrOn = !!(c && c.syncIncremental === true);
+  } catch (e) { incrOn = false; }
+  if (incrOn){
+    const r = await _syncIncrementalRound();
+    if (r === true) return true;
+    if (r === false) return false;
+    /* r === "full-fallback"：落到下面走全量（全量 PUT 会重建服务端增量视图） */
+  }
+  return await apiPutSnapshot(_buildCloudSnapshot());
+}
+
 async function cloudCheckOnLogin() {
   if (!window.isApiLoggedIn()) return;
   try {

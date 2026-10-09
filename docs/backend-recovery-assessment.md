@@ -257,6 +257,11 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 - `store.saveSession`：为每个会话生成独立随机 `sid`，与 refreshToken 解耦 ——
   换 token 不影响设备标识，也不再暴露 token 片段。客户端只透传该 id（GET 拿、DELETE 送回），
   字段名不变，故对客户端**兼容**
+- **收口补修（2026-10-10，v3.7.106）**：`auth.js` `makeTokens` 的 refreshToken 此前无随机数 ——
+  **同一秒内两次签发是同一个字符串**，而会话表以 refreshToken 为主键 → 同秒两次登录 / 一台设备
+  快速重登会把前一个会话**覆盖**掉（设备列表少一台，多设备语义失真；刷新仍能用故长期无感）。
+  加 `jti` 随机数修复；accessToken 刻意不加（它是 15 分钟内有效的同一身份凭据，同串无害）。
+  判据：`verify/incremental-check.cjs` 的「同账号第二次登录拿到独立会话」用例。
 
 ### 验证（`verify/idor-check.cjs`）
 

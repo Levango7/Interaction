@@ -104,15 +104,16 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | GET | /wechat/status?scene= | 轮询扫码状态（pending→confirmed 带 token） |
 | GET | /wechat/confirm?scene=&email= | 开发用：模拟扫码确认 |
 
-### 云同步 `/api/sync`（v3.7.105 新增）
+### 云同步 `/api/sync`（v3.7.105 全量 + v3.7.106 增量）
 
-客户端 `src/render-overview.js` 一直在调这两个端点，而 `ac1114a` 那份后端**从未实现** ——
-即「即使把后端部署起来，云同步依然不工作」。现补齐：
+客户端 `src/render-overview.js` 一直在调全量两个端点，而 `ac1114a` 那份后端**从未实现** ——
+即「即使把后端部署起来，云同步依然不工作」。v3.7.105 补齐全量，v3.7.106 补齐**增量**：
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | /snapshot | 读本用户快照。无快照时返回 `{snapshot: null}`（**不是 `{}`** —— 客户端会把空对象当成真实快照应用下去） |
-| PUT | /snapshot | 写快照，body `{ snapshot, updatedAt }`。全量覆盖（LWW）；超过 `sync.maxSnapshotBytes`（默认 2 MB）返回 413 而非静默截断 |
+| PUT | /snapshot | 写快照，body `{ snapshot, updatedAt }`。全量覆盖（LWW）；超过 `sync.maxSnapshotBytes`（默认 2 MB）返回 413 而非静默截断。**落盘时会重建增量逐键视图**（两条路同世界） |
+| POST | /changes | **增量一轮**（v3.7.106）：body `{ since, changes:[{k,v,ts}], removed:[{k,ts}] }` → `{ token, changed, removed, needsFull }`。服务端权威水位 / tombstone（>200 条剪枝）/ 幂等重放 / 逐键 LWW（ts 大者胜、相等时删除胜）。`needsFull:true` = 客户端 too old（历史被剪枝）→ 回退全量 |
 
 `updatedAt` **原样回传客户端写入时自报的值**（与客户端时钟同源）：客户端推送成功后用本地 `Date.now()`
 记 `lastPushAt`，再拿它跟服务端返回的 `updatedAt` 比大小判断「云端是否有其他设备的更新」
@@ -120,10 +121,12 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 两边时钟不一致就会判错方向 —— 同机 localhost 两者同钟，本地联调看不出这个错，故有专门的守护用例
 （`verify/client-contract-check.cjs` 的「updatedAt 原样回传」）。服务端接收时刻另存 `serverUpdatedAt`
 **仅作诊断、不参与任何比较**。已知局限：多客户端各用自己时钟 → 它们之间的 LWW 比较本就不可靠，
-需两端一起改才能解，不在服务端单边处理。两个端点均需 Bearer 鉴权。
+需两端一起改才能解，不在服务端单边处理。三个端点均需 Bearer 鉴权。
 
-> 增量同步 / 冲突合并**未实现**，且不应只在服务端做 —— 需要客户端契约同步升级，
-> 否则会造成「后端以为在合并、客户端以为被覆盖」的错位。见 `docs/cloud-sync-incremental-contract.md`。
+增量同步（阶段 2）**已两端同步升级**：客户端 `cfg.syncIncremental` 开关制（默认关=全量；开=增量，
+不支持/落后自动回退全量）。契约定稿与实施记录见 `docs/cloud-sync-incremental-contract.md`；
+真机验证 `node verify/incremental-check.cjs`（38/38，含幂等/LWW/删除信号/快照相干/剪枝回退/跨用户隔离）。
+**冲突策略仍只有 `lww`**：`mv/三路合并` 是产品决策，未定不做。
 
 `POST /api/tools/fetch`（`web_fetch` 的 CORS 兜底代理）**仍未实现** —— 它是 SSRF 敏感面
 （服务端代抓任意 URL），需按 ics-fetch / notify-webhook 同款承重墙标准设计（主机白名单、

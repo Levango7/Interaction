@@ -13,9 +13,14 @@
  *   GET  响应 { ok: true, data: { snapshot: Object|null } }   ← 客户端读 r.data.snapshot
  *   均需 Bearer 鉴权（快照含该用户全部数据）
  *
- * 冲突策略：**全量快照 + last-write-wins**（与 docs/cloud-sync-incremental-contract.md 记载的现状一致）。
- * 这里刻意不发明「增量 / 水位 / 冲突合并」——那需要客户端契约同步升级，
- * 单方面在服务端做只会造成「后端以为在合并、客户端以为被覆盖」的错位。
+ * 冲突策略：**逐键 last-write-wins**（ts 大者胜；相等时删除胜）。全量路径与增量路径
+ * 共用同一份 snapshots 记录（增量落盘会逐键补丁它），两条路必须看到同一个世界。
+ *
+ * 增量（阶段 2，2026-10-10 落地）：POST /api/sync/changes —— 单次往返 = 上行本机 delta +
+ * 下行远端 delta；服务端权威水位 / tombstone / 剪枝触发全量回退，实现即口径（见 store.js
+ * 的「增量同步」段）。此前「刻意不做增量」的背景是客户端契约未升级：单方面在服务端做会造成
+ * 「后端以为在合并、客户端以为被覆盖」的错位 —— 现已两端同步升级（客户端开关制 + 全量回退），
+ * 该理由消失。契约：docs/cloud-sync-incremental-contract.md（§二 已按实现定稿）。
  */
 "use strict";
 
@@ -70,6 +75,21 @@ function syncRouter(cfg, store) {
     const clientUpdatedAt = Number(body.updatedAt) || null;
     const rec = store.setSnapshot(req.user.sub, snapshot, clientUpdatedAt);
     return ok(res, { updatedAt: rec.updatedAt, size });
+  });
+
+  // ---- 增量一轮（阶段 2）：上行本机 delta + 下行远端 delta，单次往返 ----
+  /* 契约（docs/cloud-sync-incremental-contract.md §二 · 字段名即文档）：
+       POST body { since: int≥0, changes: [{k,v,ts}], removed: [{k,ts}] }
+       响应 { ok:true, data:{ token, changed:[{k,v,ts}], removed:[{k,ts}], needsFull } }
+     · token 是**服务端权威水位**（单调递增，逐键 seq 的最大值），客户端下次带 since=token；
+     · needsFull=true = since 低于墓碑剪枝下限（历史不可重放）→ 客户端回退全量快照路径；
+     · 幂等 / LWW / 快照相干性全在 store.mergeIncremental（实现即口径，见其注释）。
+     护栏：express.json 全局 2mb 已封顶；客户端变更日志本身 ≤500 条（C1 上限）。 */
+  router.post("/changes", am, (req, res) => {
+    const body = req.body || {};
+    if (!Array.isArray(body.changes) || !Array.isArray(body.removed)) return fail(res, 400, "invalid_changes");
+    const since = Math.max(0, Number(body.since) || 0);
+    return ok(res, store.mergeIncremental(req.user.sub, { since, changes: body.changes, removed: body.removed }));
   });
 
   return router;
