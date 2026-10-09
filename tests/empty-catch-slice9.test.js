@@ -154,7 +154,10 @@ describe("② 恢复完整性：「已恢复 N 项」不许只讲成功的一半
     const restore = failWriteOn([key]);
     try {
       importBackup({ _type: "idb-backup", localStorage: { [key]: "1", [PREFIX + "slice9_ok"]: "2" } });
-      await wait(120);
+      /* v3.7.105：固定 120ms 在慢机/全量并行下不够 —— 实测本文件全量跑 45s vs 单跑 2s
+         （31 worker × jsdom 争抢），恢复还没走完断言就跑了（"expected 0 to be greater than 0"）。
+         改为带上限（≤5s）的轮询：正常路径毫秒级返回，慢机不再假红。 */
+      for (let i = 0; i < 100 && !toastOf(/项未能恢复/).length; i++) await wait(50);
     } finally {
       restore();
     }

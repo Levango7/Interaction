@@ -159,6 +159,11 @@ describe("③ _wfCheckDue：一条崩了不拖累其余", () => {
       return Promise.resolve();
     };
     win._wfCheckDue();
+    /* v3.7.105：应用启动自带 setTimeout(_wfCheckDue, 3000) / setInterval(_wfCheckDue, 60000)
+       （render-overview.js:1862）。慢机/全量并行下（本文件实测 2s → 48s）定时器会落进本测试
+       窗口再跑一轮，calls 变 [0,1,2,0,1,2]（实测假红）。显式跑完后立即把 _wfDueAt 归零：
+       后到的定时器无到期项可跑，断言只面对本测试触发的那一轮。 */
+    win._wfDueAt = function () { return 0; };
     expect(calls, "第一条崩了，后两条仍须执行（原整体 try 会全部跳过）").toEqual([0, 1, 2]);
     const d = diagOf("_wfCheckDue");
     expect(d).toHaveLength(1);
@@ -174,6 +179,7 @@ describe("③ _wfCheckDue：一条崩了不拖累其余", () => {
       return i === 1 ? Promise.reject(new Error("boom-async")) : Promise.resolve();
     };
     win._wfCheckDue();
+    win._wfDueAt = function () { return 0; }; // 同上：归零防启动定时器落进本窗口（实测全量跑假红）
     await wait(0); // 等拒绝处理器的微任务跑完
     expect(calls).toEqual([0, 1, 2]);
     const d = diagOf("_wfCheckDue");

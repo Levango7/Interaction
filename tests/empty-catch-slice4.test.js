@@ -67,6 +67,12 @@ const warnOf = (where) => diagCalls.filter((d) => d.ctx && d.ctx.where === where
 
 beforeEach(async () => {
   win = loadApp({ storage: {} });
+  /* v3.7.105：固定 300ms 在慢机/全量并行下不够 —— 实测本文件全量跑 113s（单跑秒级），
+     启动链没走完 #sideToggle 还不存在，断言 `side && toggle` 拿 null 假红（"expected null
+     to be truthy"）。改为轮询等元素出现（≤8s）+ 保留原 300ms 沉淀等待（等委托绑定装好）。 */
+  for (let i = 0; i < 160 && !win.document.querySelector("#sideToggle"); i++) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
   await new Promise((r) => setTimeout(r, 300));   // 等启动异步链（含 setupSideToggle 的委托绑定）
   installDiagProbe();
 });

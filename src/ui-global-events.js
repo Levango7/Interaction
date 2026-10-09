@@ -1873,7 +1873,8 @@ async function unsubscribePush(){
     if (!state.subscription) return { ok: true }; // 本就未订阅
     const ok = await state.subscription.unsubscribe();
     if (ok) {
-      try { localStorage.removeItem(PREFIX + "push_subscription"); } catch(e){ /* noop */ }
+      /* v3.7.105（云同步契约 · 阶段1/C1）：改走共享安全删除，语义不变（同样吞异常）；删除进变更日志（门控）。 */
+      _sharedSafeLSRemove(PREFIX + "push_subscription");
     }
     return { ok: ok };
   } catch(e){

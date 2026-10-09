@@ -43,4 +43,13 @@ describe("死接线门禁：静态可交互控件必须被代码引用", () => {
     /* 绑定不得再无参指向已删容器 */
     expect(srcBlob).not.toMatch(/\$\("#calendarView"\)/);
   });
+
+  it("局域网同步化石已随 v3.7.105 摘除（防止复活）", () => {
+    /* R-4：electron/main.js 从未实现 sync-push/sync-get 通道，这段「stub + 能显示」的
+       UI 分支是 WebDAV 之前的遗骸（台账 docs/audit-2026-10-06.md R-4，v3.7.105 批摘除）。
+       钉死三面：按钮、绑定 IIFE、16 条 i18n 键 —— 任一面单独复活都意味着半吊子状态回来了。 */
+    expect(html, "#btnSyncLocal 应已删除").not.toMatch(/id="btnSyncLocal"/);
+    expect(srcBlob).not.toMatch(/bindSyncButtons|electronAPI\.syncPush|electronAPI\.syncGet/);
+    expect(srcBlob).not.toMatch(/lanSync|snapshotPushFail|snapshotDownloadFail|snapshotRequestFail|syncServiceStartFail|syncServiceRunning|getLocalDataFail/);
+  });
 });

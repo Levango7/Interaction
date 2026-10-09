@@ -252,7 +252,9 @@ function removeCustomScenario(key){
   saveCustomScenarios(loadCustomScenarios().filter(s => s.key !== key));
   if(getActive() === key) setActive("office"); // 当前场景被删 → 回退办公
   if(typeof chats === "object" && chats) delete chats[key];
-  try{ localStorage.removeItem(PREFIX+"rec_"+key); }catch(e){ /* 资料键清理失败不阻塞 */ }
+  /* v3.7.105（云同步契约 · 阶段1/C1）：改走共享安全删除 —— 语义逐位不变（同样吞异常、
+     失败不阻塞），但删除动作会进本地变更日志（门控 cfg.syncIncremental，开关关时零行为变化）。 */
+  _sharedSafeLSRemove(PREFIX+"rec_"+key);
   registerCustomScenarios();
   return {ok:true};
 }

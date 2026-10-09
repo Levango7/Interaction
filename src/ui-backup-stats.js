@@ -540,6 +540,12 @@ function buildDiagReport(opts){
   try{ L.push("浏览器: " + (navigator.userAgent || "未知")); }catch(e){}
   try{ L.push("语言: " + (navigator.language || "未知") + " · 时区: " + ((Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || "未知")); }catch(e){}
   L.push("存储: " + _diagStorageLine());
+  /* v3.7.105（云同步契约 · 阶段1/C2）：上行体积看板进诊断报告 —— 快照体积此前完全黑盒，
+     复现「413 快照过大」类反馈时这段是唯一的体积证据。 */
+  try {
+    const sm = load(PREFIX + "sync_meta", {});
+    L.push("云同步: " + ((sm && sm.lastPushBytes) ? ("上次上传快照 " + (sm.lastPushBytes / 1024).toFixed(1) + " KB / 含 " + (sm.lastPushKeys || 0) + " 键") : "尚未上传过快照"));
+  } catch (e) { L.push("云同步: 体积信息读取失败（" + ((e && e.message) || e) + "）"); }
   L.push("诊断条数: " + list.length);
   L.push("");
   L.push("—— 近期诊断（新→旧，入队时已脱敏）——");
@@ -696,85 +702,6 @@ function openDiagIssue(){
       catch(e){ try{ pushDiag("error", "openDiagIssue failed: " + ((e && e.message) || e), { where: "diagPanel" }); }catch(e2){} }
     };
   }
-})();
-
-/* ---------- P0-8：局域网同步（仅 Electron 环境） ---------- */
-(function bindSyncButtons(){
-  if(!isElectron()) return;
-  const btnSync = $("#btnSyncLocal");
-  if(!btnSync) return;
-  /* v3.7.52：本机同步服务（127.0.0.1:8124）与其 syncPush/syncGet 通道从未在 electron/main.js 实现
-     （实测 main.js 只有 chat / ai-config / auto-launch 三组通道，preload 也只暴露 6 个 API）。
-     原代码在此直接调用 → Electron 下启动即抛 TypeError 并每 60s 弹一次「本机快照推送失败」，
-     点按钮还提示「本机同步服务启动失败」。按 docs/product-scope.md §四.2「stub + 活 UI = 虚假功能」：
-     能力缺失时不显示入口、不启动定时器；待主进程侧真正落地后，此守卫会自动放行。 */
-  const _hasSyncApi = !!(window.electronAPI && typeof window.electronAPI.syncPush === "function" && typeof window.electronAPI.syncGet === "function");
-  if(!_hasSyncApi){ btnSync.style.display = "none"; return; }
-  // v3.1.2：syncPush 渲染侧接线（修复断链——此前主进程 syncSnapshot 恒为 {}，
-  // 「本机同步下载」导出空数据）。启动时 + 每次点击同步按钮时推送一次本机快照；
-  // 快照键集合与 doExport 一致（allKeys 的 wb_agent_ 前缀 + wb_custom_links）。
-  /* v3.7.102 第九片：快照枚举失败时「只报第一次」的一次性标记 —— 该路径每 60s 走一次，
-     留痕不节流会把诊断面板刷满，反而盖住真问题（判据见 MEMORY.md §4b 分档③）。 */
-  let _snapshotEnumWarned = false;
-  const pushSnapshot = async () => {
-    try{
-      const snap = {};
-      /* v3.7.52：兜底分支与 allKeys() 同口径（length + key(i)）——Object.keys(localStorage)
-         在存储安全壳接管时返回的是方法名，会枚举出空集。 */
-      const keys = (typeof allKeys === "function")
-        ? allKeys()
-        : (function(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && (k.indexOf(PREFIX)===0 || k==="wb_custom_links")) out.push(k); } }catch(e){ try{ if(!_snapshotEnumWarned && typeof pushDiag === "function"){ _snapshotEnumWarned = true; pushDiag("warn", "snapshot key enumeration failed (snapshot may be partial): "+((e&&e.message)||e), {where:"pushSnapshot"}); } }catch(_e2){} } return out; })();
-      keys.forEach(function(k){
-        const v = localStorage.getItem(k);
-        if(typeof v === "string") snap[k] = v;
-      });
-      const r = await window.electronAPI.syncPush(snap);
-      if(r && r.ok === false) toast(t("err.snapshotPushFail","本机快照推送失败：") + (r.error || ""), "warn");
-      return !!(r && r.ok);
-    }catch(e){
-      toast(t("err.snapshotPushFail","本机快照推送失败：") + ((e && e.message) || e), "warn");
-      return false;
-    }
-  };
-  pushSnapshot(); // 启动即推送一次（后续点击时再推，保证下载到的总是最新数据）
-  const _pushTimer = setInterval(pushSnapshot, 60000); // 周期推送（与 main.js 注释承诺一致：60s 一次）
-  if(_pushTimer && _pushTimer.unref){ try{ _pushTimer.unref(); }catch(_e){} } // jsdom 环境无 unref，静默容错
-  btnSync.style.display = ""; // 显示按钮
-  btnSync.onclick = async () => {
-    // 0. 先推送最新快照（下载入口读的是主进程内存快照，必须先推再下载）
-    await pushSnapshot();
-    // 1. 获取本机数据（A-1 修复：syncGet IPC 包裹 try-catch，异常时给出针对性提示并终止，
-    //    避免 unhandled rejection + 后续「运行中」成功语气提示自相矛盾）
-    let localData;
-    try{
-      localData = await window.electronAPI.syncGet();
-    }catch(err){
-      toast(t("err.syncServiceStartFail","本机同步服务启动失败：") + (err && err.message ? err.message : err), "error");
-      return;
-    }
-    if(localData && localData.error){ toast(t("err.getLocalDataFail","获取本机数据失败：") + localData.error, "error"); return; }
-    // 2. 通过 HTTP 提供下载入口（A-1 修复：Electron 以 file:// 加载页面，相对路径 fetch("/sync/download")
-    //    会解析为 file:///sync/download 必然失败，必须拼接 main.js 同步端点的绝对地址）。
-    //    安全边界（与 electron/main.js startSyncServer 注释一致）：同步服务仅绑定 127.0.0.1 回环且
-    //    拒绝非本机来源，不做跨设备局域网访问；跨设备数据迁移走「设置 → 数据管理」的导出/导入 JSON。
-    const syncBase = "http://127.0.0.1:8124";
-    toast(t("msg.syncServiceRunning","本机同步服务运行中（仅本机回环 127.0.0.1:8124）；跨设备迁移请用「设置 → 数据管理 → 导出/导入」"), "ok");
-    // 3. 打开本机快照下载（本机可访问）
-    try {
-      const resp = await fetch(syncBase + "/sync/download");
-      if(resp.ok){
-        const blob = await resp.blob();
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "agent-workbench-sync-"+todayStr()+".json";
-        a.click(); URL.revokeObjectURL(a.href);
-      } else {
-        toast(t("err.snapshotDownloadFail","本机快照下载失败（HTTP ") + resp.status + "）", "warn");
-      }
-    } catch(e) {
-      toast(t("err.snapshotRequestFail","本机快照请求失败，请确认本机同步服务已启动"), "warn");
-    }
-  };
 })();
 
 /* ---------- 系统级消息中心 ----------

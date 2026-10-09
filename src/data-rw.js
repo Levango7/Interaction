@@ -350,6 +350,53 @@ function recoverAutoBackup(){
   return true;
 }
 
+/* ---------- v3.7.105（云同步契约 · 阶段1/C1）：本地变更日志（增量的"原料"） ----------
+   依据 docs/cloud-sync-incremental-contract.md §三 C1：写/删路径记 {k, op, ts, h} 到本地有界
+   队列，后端增量契约（水位 / removed 列表）就绪后即可直连。**门控 C4 开关 cfg.syncIncremental
+   （默认关）**：关闭时首行即返回 —— save() / 删除路径行为与从前逐位相同（守护见
+   tests/cloud-sync-stage1.test.js）。h 是序列化内容的弱哈希（fnv1aHex，仅用于判"变没变"，
+   不承载安全语义）；队列**不上云**（已入 SYNC_EXCLUDED_KEYS），随导出/自动备份走。
+   覆盖范围：op:"set" = save() 主入口；op:"del" = _sharedSafeLSRemove（共享安全删除）。
+   本仓业务数据的"删除"多为数组重写（走 save），两条路径合起来即同步面变更的完整来源。 */
+const CHLOG_KEY = PREFIX + "sync_changelog";
+const CHLOG_MAX = 500;   // 有界队列：溢出丢最旧（增量消费者须在溢出前消费，否则降级全量）
+let _chlogFailWarned = false;
+
+/** C4 开关读取：cfg.syncIncremental === true 才开（字段未写入 = 关；getCfg 无默认对象）。 */
+function _chlogEnabled(){
+  try{
+    const c = (typeof getCfg === "function") ? getCfg() : null;
+    return !!(c && c.syncIncremental === true);
+  }catch(e){ return false; }
+}
+/** 读队列（测试 / 诊断 / 阶段 2 消费者用）。返回解析结果，调用方只读。 */
+function getSyncChangelog(){
+  const a = load(CHLOG_KEY, []);
+  return Array.isArray(a) ? a : [];
+}
+/**
+ * 记一条变更。**契约：本函数不抛异常**（save() 的返回值不得被日志影响）。
+ * @param {string} k 存储键（队列自身键被跳过，防递归）
+ * @param {string} op "set" | "del"
+ * @param {string} [payloadStr] set 时的序列化值（用于算 h）；del 缺省
+ */
+function _chlogRecord(k, op, payloadStr){
+  if(typeof k !== "string" || !k || k === CHLOG_KEY) return;
+  if(!_chlogEnabled()) return;
+  try{
+    const arr = getSyncChangelog();
+    arr.push({ k: k, op: op, ts: Date.now(), h: (op === "set" && typeof payloadStr === "string") ? fnv1aHex(payloadStr) : "" });
+    if(arr.length > CHLOG_MAX) arr.splice(0, arr.length - CHLOG_MAX);
+    localStorage.setItem(CHLOG_KEY, JSON.stringify(arr));
+  }catch(e){
+    /* 队列写失败不得影响业务写入；高频路径只留一次痕（判据同台账分档③） */
+    if(!_chlogFailWarned){
+      _chlogFailWarned = true;
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "changelog write failed: " + ((e && e.message) || e), { where: "_chlogRecord" }); }catch(_e2){ /* 诊断自身失败静默 */ }
+    }
+  }
+}
+
 /* ---------- v3.7.18（解耦 S5）：AI 配置读写归位到 Data 层 ----------
    原先在 ui-global-events（UI），被 render-overview 引用 → 逆层依赖。它本质是**配置读写**，
    与 save() 主入口同层。纯搬迁，不改一行实现。

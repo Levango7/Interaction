@@ -1287,7 +1287,10 @@ const SYNC_EXCLUDED_KEYS = [
      / pre_restore_backup 的完整副本；上面三项顶层排除会被这些嵌套副本整体绕过（v3.7.58
      「密文+钥匙不同交」失效），且每次上传平白多出 ≤4MB 的重复数据。另：autobackup 是本机
      回滚档，上云无跨端收益，他机拉取还会覆盖其本地回滚历史。 */
-  AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1]
+  AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1],
+  /* v3.7.105（云同步契约 · 阶段1/C1）：本地变更日志不上云 —— 它是本机增量"原料"
+     （逐键变更时间线），上云无跨端收益，且让本机操作时间线离开本机（隐私面）。 */
+  CHLOG_KEY
 ];
 function _buildCloudSnapshot() {
   const data = {};
@@ -1313,9 +1316,16 @@ async function apiGetSnapshot() {
  * @returns {Promise<boolean>} 是否推送成功（2xx 才算）
  */
 async function apiPutSnapshot(snapshot) {
+  const snap = snapshot || _buildCloudSnapshot();
+  /* v3.7.105（云同步契约 · 阶段1/C2）：先记上行体积再发 —— "尝试上传的体积"在失败时同样
+     有价值（413 / 弱网下用户要看的是"这次要传多大"）。字节口径与后端一致：只算 snapshot
+     的 UTF-8 字节（不含 updatedAt 包装），见 server/src/sync.js 的 MAX_SNAPSHOT_BYTES。 */
+  try {
+    _setSyncMeta({ lastPushBytes: _snapshotWireBytes(snap), lastPushKeys: Object.keys(snap).length });
+  } catch (e) { /* 看板记录失败不影响上传本身（下面照发） */ }
   const r = await window.apiFetch("/api/sync/snapshot", {
     method: "PUT",
-    body: JSON.stringify({ snapshot: snapshot || _buildCloudSnapshot(), updatedAt: Date.now() })
+    body: JSON.stringify({ snapshot: snap, updatedAt: Date.now() })
   });
   return !!(r && r.ok);
 }
@@ -1420,13 +1430,39 @@ async function cloudCheckOnLogin() {
     window.doSync();
   } catch (e) { /* 离线时静默，等下次数据变动再同步 */ }
 }
+/* v3.7.105（云同步契约 · 阶段1/C2 上行体积看板）：
+   · _snapshotWireBytes —— 快照的 UTF-8 字节数，口径与后端 2MB 上限一致
+     （server/src/sync.js 按 Buffer.byteLength(JSON.stringify(snapshot)) 判定）；
+   · _fmtPushSize —— 字节 → 人读文本。本块自持而不引 UI 层的 _fmtBytes：
+     那会多一条 Render→UI 逆层边（module-graph 门禁口径）。 */
+function _snapshotWireBytes(snap){
+  try{
+    const s = JSON.stringify(snap);
+    return (typeof _sharedUtf8Bytes === "function") ? _sharedUtf8Bytes(s).length : s.length;
+  }catch(e){ return 0; }
+}
+function _fmtPushSize(n){
+  if (!(n > 0)) return "—";
+  if (n >= 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + " MB";
+  if (n >= 1024) return (n / 1024).toFixed(1) + " KB";
+  return n + " B";
+}
 function _renderLastSync() {
   if (typeof document === "undefined") return;
   const el = document.getElementById("apiLastSync");
-  if (!el) return;
+  const sz = document.getElementById("apiPushSize");
+  if (!el && !sz) return;
   const meta = _getSyncMeta();
-  const ts = meta.lastPushAt || meta.lastPullAt;
-  el.textContent = ts ? new Date(ts).toLocaleString() : t("api.neverSynced", "尚未同步");
+  if (el) {
+    const ts = meta.lastPushAt || meta.lastPullAt;
+    el.textContent = ts ? new Date(ts).toLocaleString() : t("api.neverSynced", "尚未同步");
+  }
+  /* C2：上次尝试上传的体积（失败也记）——纯展示事实，不承诺任何同步语义 */
+  if (sz) {
+    sz.textContent = (typeof meta.lastPushBytes === "number" && meta.lastPushBytes > 0)
+      ? t("api.pushSizeVal", "{size} · {n} 键").replace("{size}", _fmtPushSize(meta.lastPushBytes)).replace("{n}", String(meta.lastPushKeys || 0))
+      : "—";
+  }
 }
 function _renderCloudState(rec) {
   if (typeof document === "undefined") return;

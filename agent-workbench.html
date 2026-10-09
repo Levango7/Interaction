@@ -5576,8 +5576,6 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <button type="button" class="addbtn min" id="btnIdbExport" data-i18n-aria="dataMgmt.idbExportAria" aria-label="导出 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullBackup">IDB 全量备份</button>
       <button type="button" class="addbtn min" id="btnIdbImport" data-i18n-aria="dataMgmt.idbImportAria" aria-label="导入 IDB 备份" data-sc="accent" data-i18n="dataMgmt.idbFullRestore">IDB 全量恢复</button>
       <input type="file" id="idbFileInput" accept=".idbbackup,.json" class="u-hidden">
-      <!-- P0-8：局域网同步按钮（仅 Electron 环境显示） -->
-      <button type="button" class="addbtn min u-hidden" id="btnSyncLocal" aria-label="局域网同步" data-i18n-aria="a11y.lanSync" data-sc="accent" data-i18n="dataMgmt.lanSync">局域网同步</button>
       <button type="button" class="addbtn min danger" id="btnClear" data-i18n-aria="dataMgmt.clearDataAria" aria-label="清空数据" data-i18n="dataMgmt.clearData">清空数据</button>
     </div>
     <div class="set-actions">
@@ -5788,6 +5786,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <button type="button" class="api-btn accent" id="btnApiSaveName" data-i18n="common.save">保存</button>
       <div class="api-panel-title u-mt-3" data-i18n="api.cloudSync">云同步</div>
       <div class="api-row"><span class="api-label" data-i18n="api.lastSync">上次同步</span><span class="api-value" id="apiLastSync">—</span></div>
+      <!-- v3.7.105（云同步契约 · 阶段1/C2 上行体积看板）：上次尝试上传的体积 / 键数，与诊断报告同源 -->
+      <div class="api-row"><span class="api-label" data-i18n="api.pushSize">上次上传体积</span><span class="api-value" id="apiPushSize">—</span></div>
       <div class="api-row"><span class="api-label" data-i18n="api.cloudState">云端快照</span><span class="api-value" id="apiCloudState">—</span></div>
       <div class="u-mt-2" style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="api-btn accent" id="btnApiSyncNow" data-i18n="api.syncNow">立即上传</button>
@@ -6338,7 +6338,14 @@ function _sharedSafeLSSet(key, val){
  * @returns {void}
  */
 function _sharedSafeLSRemove(key){
-  try{ localStorage.removeItem(key); }catch(e){ /* noop */ }
+  /* v3.7.105（云同步契约 · 阶段1/C1）：删除进变更日志（op:"del"）。
+     只在「删除前确实存在 且 删除未抛错」时记 —— 对不存在的键 removeItem 是静默 no-op，
+     记了就是假信号（阶段 2 的上行会照单全收）。_chlogRecord 契约上不抛异常。 */
+  let had = false;
+  try{ had = (localStorage.getItem(key) !== null); }catch(e){ had = true; /* 读不到就当存在：记不记最终仍以删除成功为准 */ }
+  let ok = false;
+  try{ localStorage.removeItem(key); ok = true; }catch(e){ /* noop */ }
+  if(had && ok) _chlogRecord(key, "del");
 }
 
 /* ---------- 时间戳 ---------- */
@@ -6564,10 +6571,15 @@ function save(k, v){
        && v && typeof v._sc === "string" && typeof ORDER !== "undefined" && ORDER.indexOf(v._sc) >= 0){
       k = PREFIX + "chat_" + v._sc;
     }
-    localStorage.setItem(k, JSON.stringify(v));
+    const _ser = JSON.stringify(v);
+    localStorage.setItem(k, _ser);
     idbQueueMirror(k, v); // 架构项①：异步镜像到 IndexedDB（去抖批量，不阻塞；jsdom/无 IDB 环境 no-op）
     // v2.0：会话层写穿镜像——场景聊天落盘时同步到对应 Session（仅 chat_ 键触发，无递归）
     try{ _mirrorChatToSession(k, v); }catch(_){ /* 会话层不可用时静默降级，不影响主存储 */ }
+    /* v3.7.105（云同步契约 · 阶段1/C1）：写路径的变更日志"原料"（门控 cfg.syncIncremental，
+       默认关 → 首行即返回，save() 行为与从前逐位相同）。序列化结果复用上面的 _ser，
+       避免二次 stringify；_chlogRecord 契约上**不抛异常**（save 的返回值不受日志影响）。 */
+    _chlogRecord(k, "set", _ser);
     return true;
   }
   catch(e){

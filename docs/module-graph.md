@@ -15,7 +15,7 @@
 | `data-idb` | Data | `crypto` | 1 |
 | `data-links` | Data | `core` `crypto` | 6 |
 | `data-migrate` | Data | `data-links` | 2 |
-| `data-rw` | Data | `core` `crypto` `data-links` | 6 |
+| `data-rw` | Data | `core` `crypto` `data-links` | 7 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
 | `ai-tools` | AI | `ai-retry` `chain` `core` `data-idb` `data-links` `data-rw` `util-markdown` | 22 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
@@ -23,7 +23,7 @@
 | `render-entry` | Render | `ai-retry` `ai-tools` `core` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 60 |
 | `render-scene-sub` | Render | `core` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
-| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 41 |
+| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 42 |
 | `render-widgets` | Render | `chain` `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 24 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-daily` | 2 |
@@ -53,8 +53,8 @@
 | `AppBridge` | `core` | 23 |
 | `sanitizeHtml` | `util-markdown` | 21 |
 | `SCENARIOS` | `core` | 21 |
+| `getCfg` | `data-links` | 18 |
 | `ORDER` | `core` | 17 |
-| `getCfg` | `data-links` | 17 |
 | `render` | `render-entry` | 16 |
 | `getActiveTasks` | `data-rw` | 15 |
 | `getTasks` | `data-rw` | 15 |
