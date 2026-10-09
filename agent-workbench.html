@@ -6212,10 +6212,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.102"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.103"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261009a";
+const BUILD_TAG = "20261009b";
 
 
 
@@ -9487,6 +9487,10 @@ const MESSAGES = {
     "api.emailRequired": "请先填写邮箱",
     "api.sendCodeFail": "发送失败",
     "api.ssoNoBackend": "当前环境无后端，无法使用该登录方式",
+    "api.accountServiceUnreachable": "未检测到账号服务（后端未部署或网络不通）",
+    "auth.backendMissingTitle": "当前环境未检测到账号服务",
+    "auth.backendMissingBody": "账号与云同步需要另行部署后端服务；本地功能完全不受影响。",
+    "auth.backendMissingHint": "可在「设置 → API 基址」指向你自己的服务，详见仓库 docs/product-scope.md。",
     "auth.ssoOr": "或",
     "auth.wechatLogin": "微信扫码登录",
     "auth.githubLogin": "GitHub 快捷登录",
@@ -13347,6 +13351,10 @@ const MESSAGES = {
     "api.emailRequired": "Please enter your email first",
     "api.sendCodeFail": "Failed to send",
     "api.ssoNoBackend": "No backend in this environment, this login method is unavailable",
+    "api.accountServiceUnreachable": "Account service unreachable (backend not deployed or network down)",
+    "auth.backendMissingTitle": "No account service detected in this environment",
+    "auth.backendMissingBody": "Accounts and cloud sync require a separately deployed backend; local features are unaffected.",
+    "auth.backendMissingHint": "Point Settings → API base at your own service, or see docs/product-scope.md in the repository.",
     "auth.ssoOr": "or",
     "auth.wechatLogin": "WeChat QR login",
     "auth.githubLogin": "GitHub sign-in",
@@ -26940,7 +26948,10 @@ async function _doAuthLogin(email, password) {
       _authErrTo("authPageLoginError", (r.data && r.data.error) || t("api.loginFailed", "登录失败"));
     }
   } catch (err) {
-    _authErrTo("authPageLoginError", (err && err.offline) ? t("api.syncOffline", "离线模式") : t("api.loginFailed", "登录失败"));
+    /* v3.7.103：网络层失败不等于「密码错」。后端未部署时 fetch 直接抛错，
+       此前只显示「离线模式」，用户会以为是自己断网 —— 改为明确指向账号服务，
+       与欢迎页的探测提示口径一致。 */
+    _authErrTo("authPageLoginError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.loginFailed", "登录失败"));
   } finally {
     _authBusy = false;
     if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
@@ -26976,7 +26987,8 @@ async function _doAuthRegister(name, email, password, confirm, code) {
       _authErrTo("authPageRegisterError", (r.data && r.data.error) || t("api.registerFailed", "注册失败"));
     }
   } catch (err) {
-    _authErrTo("authPageRegisterError", (err && err.offline) ? t("api.syncOffline", "离线模式") : t("api.registerFailed", "注册失败"));
+    /* v3.7.103：同 _doAuthLogin —— 网络层失败指向账号服务，而不是笼统的「离线模式」。 */
+    _authErrTo("authPageRegisterError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.registerFailed", "注册失败"));
   } finally {
     _authBusy = false;
     if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
@@ -27812,13 +27824,45 @@ function renderAuthWelcome(){
       '</div>' +
       '<div class="auth-sso-sep"><span>' + t("auth.ssoOr","或") + '</span></div>' +
       _authSsoButtons() +
-    '</div>';
+    '</div>' +
+    '<div class="card u-hidden" id="authBackendNotice"></div>';
   $("#main").innerHTML = sanitizeHtml(html);
   const goLogin = $("#authPageGoLogin");
   const goRegister = $("#authPageGoRegister");
   if(goLogin) goLogin.onclick = function(){ setActive("authlogin"); render(); };
   if(goRegister) goRegister.onclick = function(){ setActive("authregister"); render(); };
   _bindAuthSso();
+  _fillAuthBackendNotice();
+}
+
+/* v3.7.103：进入欢迎页时探测一次账号后端，不可达就如实说明。
+ *
+ * 动机：这个入口对用户是可见可点的，但本仓库不含后端（见 docs/product-scope.md）。
+ * SSO 两条路径（微信扫码 / GitHub）此前已有「当前环境无后端」的提示，唯独
+ * 邮箱登录与注册这条**主路径**没有 —— 用户会一路把表单填完、点提交，才拿到
+ * 一句笼统的「离线模式」，于是跑去检查自己的网络。同一个页面对同一个事实
+ * 给出两种口径，是这里此前最不一致的地方，本版补齐。
+ *
+ * 实现纪律：探测不阻塞渲染（先画页面、后填结论）；探测自身失败也不弹错，
+ * 因为「没有后端」是这个环境的预期状态，不是需要用户处理的异常。 */
+function _fillAuthBackendNotice(){
+  const box = document.getElementById("authBackendNotice");
+  if(!box) return;
+  if(typeof window.probeAccountBackend !== "function") return;
+  window.probeAccountBackend().then(function(reachable){
+    if(reachable) return; // 后端在，提示块保持隐藏（本函数只负责「没有」这一种情况）。
+    const el = document.getElementById("authBackendNotice");
+    if(!el) return; // 用户已离开欢迎页，DOM 已换，什么都不用做。
+    el.innerHTML = sanitizeHtml(
+      '<p class="sub u-fw-600">' + t("auth.backendMissingTitle", "当前环境未检测到账号服务") + '</p>' +
+      '<p class="sub" style="margin-top:var(--space-2)">' + t("auth.backendMissingBody", "账号与云同步需要另行部署后端服务；本地功能完全不受影响。") + '</p>' +
+      '<p class="sub" style="margin-top:var(--space-2)">' + t("auth.backendMissingHint", "可在「设置 → API 基址」指向你自己的服务，详见仓库 docs/product-scope.md。") + '</p>'
+    );
+    el.classList.remove("u-hidden");
+  }).catch(function(_e){
+    /* 探测函数自身约定的契约是「不抛」；此处是防御性兜底 —— 真抛了也只是少一条
+       提示，不该把欢迎页变成报错页，故静默。 */
+  });
 }
 
 function renderAuthLogin(){
@@ -41048,6 +41092,42 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
 
   // ===== 认证 API =====
 
+  /**
+   * 账号后端可达性探测（v3.7.103）。
+   *
+   * 背景：本仓库只含客户端 —— 账号与云同步的后端需部署方另行实现
+   * （见 docs/product-scope.md 的「可选账号与云同步」一节）。默认 apiBase 是
+   * http://localhost:3001，未部署时该端口无人监听。
+   * 此前用户点「登录」、填完表单提交，拿到的只是笼统的「离线模式」，
+   * 无从分辨「我的网络断了」还是「这个环境根本没部署账号服务」——
+   * 这两者该给完全不同的指引（去查网络 vs 去看部署说明）。
+   *
+   * 判据：/api/health 拿不到 2xx 即视为「未检测到账号服务」。
+   * 超时、连接被拒、404、跨域被拒都合并成同一个结论 —— 它们对用户的行动
+   * 指引一致（去看部署说明），细分只会增加文案而不增加信息。
+   *
+   * 本函数不抛异常：探测不到是预期状态（未部署），不是异常。
+   * @returns {Promise<boolean>} true = 后端可达
+   */
+  async function probeAccountBackend(){
+    const url = apiBase() + "/api/health";
+    let timer = null;
+    try{
+      const ctl = (typeof AbortController === "function") ? new AbortController() : null;
+      /* abort() 按 WHATWG 规范不抛错（幂等），故不额外包裹一层 try —— 免得为一处
+         不会抛的调用新增一个空 catch 条目（本仓空 catch 有棘轮基线，能不加就不加）。
+         万一某实现真抛了，也由下方 fetch 那侧的 catch 把本次探测收敛为「不可达」。 */
+      if(ctl) timer = setTimeout(function(){ ctl.abort(); }, 3000);
+      const resp = await fetch(url, ctl ? { signal: ctl.signal } : {});
+      return !!(resp && resp.ok);
+    }catch(_e){
+      /* 未部署 / 端口无人监听 / 超时 / 跨域被拒 —— 合并为同一结论，理由见上方判据。 */
+      return false;
+    }finally{
+      if(timer) clearTimeout(timer);
+    }
+  }
+
   async function apiLogin(email, password){
     const r = await apiFetch("/api/auth/login", {
       method: "POST",
@@ -41876,11 +41956,13 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
   // 暴露 UI 函数到 window
   window.closeAuthModal = closeAuthModal;
   window._initApiUI = _initApiUI;
+  window.probeAccountBackend = probeAccountBackend;
 
   // 追加 UI 函数到 window.__test
   if(typeof window !== "undefined" && window.__test){
     Object.assign(window.__test, {
       closeAuthModal, _initApiUI,
+      probeAccountBackend: probeAccountBackend,
       _updateUserButton: _updateUserButton,
       _loadApiPanels: _loadApiPanels,
       _showApiPanels: _showApiPanels,
