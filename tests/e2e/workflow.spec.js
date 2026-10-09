@@ -24,6 +24,25 @@ const { test, expect } = require("@playwright/test");
 
 const APP_URL = "./agent-workbench.html";
 
+/* v3.7.104（台账 R-9 续二/续三）：切场景用「判别性等待 + 重试块」——
+   renderSide() 在 render() 里整体替换 #side 的 innerHTML（render-widgets.js 的 `$("#side").innerHTML = …`），
+   点击若落在正被替换的节点上会**静默丢失**（mousedown 与 mouseup 落在不同节点 → click 不派发）。
+   而原来切场景后等的是 `#taskForm` —— 它由 render-scene-main.js 生成、**每个场景都有**，
+   等待不具区分力：场景没切过去，等待照样通过，fill/submit 都发生在旧场景，
+   失败错位到两步之后（`.kcard` 文本断言超时，CI 实证：workflow.spec.js:91）。
+   现在断言场景 nav 拿到 `active` 令牌（_buildSideMenu 的 `active: !_sideActive && sc===_effActive`）；
+   瞬时丢失由重试块补点击自愈，真故障仍会如实超时。
+   ⚠️ 正则不能写 \bactive\b —— 会匹配上 has-active（连字符是非单词字符，词边界成立）。
+   对照实验（A 旧等待不具区分力 3/3 / B 如实报错 / E 出厂写法逐字复刻自愈 3/3 / F 永久注入仍如实失败）：
+   `_probe/repro-nav-click-race.cjs`（V1 原件级注入 3/3 复现）。 */
+async function switchScene(page, sc) {
+  const nav = `#side .nav-item[data-sc="${sc}"]`;
+  await expect(async () => {
+    await page.click(nav);
+    await expect(page.locator(nav)).toHaveClass(/(^|\s)active(\s|$)/, { timeout: 1500 });
+  }).toPass({ timeout: 10_000 });
+}
+
 test.describe("E2E tests (set E2E=1 to run)", () => {
   // 等价于 describe.skipIf(!process.env.E2E, ...)
   // 在 beforeAll 里 test.skip 会跳过整个 suite 的所有 test
@@ -67,8 +86,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 3. 创建任务 ----------
     await test.step("在办公场景创建任务", async () => {
-      // 确保在办公场景（点侧边栏 office）
-      await page.click('#side .nav-item[data-sc="office"]');
+      // 确保在办公场景（点侧边栏 office）—— 判别性等待 + 重试块（见 switchScene 注释）
+      await switchScene(page, "office");
       await page.waitForSelector("#taskForm", { timeout: 10_000 });
       // 填标题并提交
       await page.fill('#taskForm input[name="title"]', "E2E测试任务-办公");
@@ -82,7 +101,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 4. 切场景 ----------
     await test.step("切换到编程场景并创建任务", async () => {
-      await page.click('#side .nav-item[data-sc="code"]');
+      await switchScene(page, "code");
       await page.waitForSelector("#taskForm", { timeout: 10_000 });
       // 创建一个编程任务，便于后续完成
       await page.fill('#taskForm input[name="title"]', "E2E测试任务-编程");
@@ -122,7 +141,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
          ⚠️ 注意：另有一条疑似入口 `.ov-kpi-item[data-kpi-act="stats"]`（render-overview.js:388-390）
          是**死代码** —— `_renderOvKpi()`（:384）全仓零调用，实测该选择器 count=0。故不作为入口。 */
       // 回主页（总览）——系统概况卡在 overview
-      await page.click('#side .nav-item[data-sc="overview"]');
+      await switchScene(page, "overview");
       await page.waitForSelector(".sys-ov-item", { timeout: 10_000 });
 
       const statsEntry = page.locator('.sys-ov-item[data-act="stats"]').first();
@@ -187,7 +206,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.waitForTimeout(400);
 
       // 切到办公场景，应有聊天框
-      await page.click('#side .nav-item[data-sc="office"]');
+      await switchScene(page, "office");
       await page.waitForSelector("#chatForm", { timeout: 10_000 });
 
       /* 平板（768×1024）下聊天面板默认折叠：.chat-panel.collapsed{width:0;overflow:hidden}，

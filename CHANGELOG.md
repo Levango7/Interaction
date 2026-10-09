@@ -1,3 +1,30 @@
+## [v3.7.104] - 2026-10-09
+
+**R-9 续三收口：切场景的「等待姿势」缺陷修复 —— 先造重现（3/3），再改等待（判别性 + 重试块）。**
+
+- **重现（先造重现，改动才有对照 —— 台账 R-9 续二交接的起点）**：`_probe/repro-nav-click-race.cjs`
+  用 `addInitScript` 在 `mousedown` 捕获阶段同步调 `renderSide()`（`$("#side").innerHTML = …` 的整体替换），
+  **3/3 稳定复现「点击未生效」**（active 仍停在 office）。对照实验四项：
+  · **A 旧等待**（`waitForSelector("#taskForm")`）：**3/3「等待通过但场景未切换」**——不具区分力的运行时实证；
+  · **B 判别性等待**（等 nav 的 `active` 类）：3/3 如实超时失败（位置正确，不再错位两步之后）；
+  · **E 出厂 helper 逐字复刻**（`expect().toPass()` + `toHaveClass(active)`）：**3/3 自愈**（第 2 次点击补上，~1.7s）；
+  · **D/F 反例**（注入永不解除 = 真故障形态）：重试块**仍如实失败** —— 不掩盖真故障。
+- **修复**（两条 e2e spec；无产品代码改动）：
+  · `tests/e2e/workflow.spec.js` 新增 `switchScene(page, sc)`：点击 + 等 nav `active` 令牌
+    （`_buildSideMenu` 的 `active: !_sideActive && sc===_effActive` 驱动，正则 `/(^|\s)active(\s|$)/`
+    —— ⚠️ 不能写 `\bactive\b`，会匹配上 `has-active`），包在 `toPass({timeout:10_000})` 重试块里；
+    4 处切场景调用点（office→code→overview→office）全部替换。
+  · `tests/e2e/ics-import-render.spec.js` `gotoCalendarTab` 同类姿势：`page.reload()` 后
+    **不等渲染完成就点击**（`ics:76` 长期靠"跑得够快"），改为「点击 + 判别断言（`#tasksCalView` 可见）」重试块。
+- **验证**：两条 spec 本机跑 6/6 绿（desktop + tablet）；**全量 e2e 90/90 绿**（刷新 0 失败）；
+  单测与全部门禁不受影响（仅测试文件改动）。CI 三项目全量以下一轮 push 结果为准。
+- **为什么这是修复而不是掩盖**：①重现是原件级时序（真调 `renderSide()`），不是模拟断言；
+  ②出厂写法在重现下 3/3 自愈（瞬态丢失被重试补上）；③永久注入下仍失败（真故障不被掩盖）；
+  ④旧写法的失败位置与真实原因差两步（`.kcard` 断言），新写法把失败钉在切场景那一步。
+- **未做（如实记账）**：产品侧 `renderSide()` 整体替换 innerHTML 是既有实现（v3.2 起），
+  本轮不动它 —— 它是**性能与一致性的权衡**（整体替换最省心），竞态窗口极窄（测试才是放大器）；
+  若未来真机用户可感知，再评估增量更新侧栏。
+
 ## [v3.7.103] - 2026-10-09
 
 **账号入口的「如实说明」：把同一页面里两种口径补齐成一种。**

@@ -66,8 +66,14 @@ function icsForToday() {
 async function gotoCalendarTab(page) {
   await page.evaluate(() => localStorage.setItem("wb_agent_active", JSON.stringify("tasks")));
   await page.reload();
-  await page.locator('[data-tasks-view="calendar"]').click();
-  await expect(page.locator("#tasksCalView")).toBeVisible();
+  /* v3.7.104（台账 R-9 续二·同类姿势 ics:76）：reload 后启动渲染尚未完成，
+     `[data-tasks-view]` 标签可能尚未渲染、或正被 renderTasksPage() 整体替换 ——
+     直接 click 会静默丢失（同 workflow 的 renderSide 竞态），本条此前长期靠"跑得够快"。
+     改为「点击 + 判别断言（日历视图真的可见）」重试块：瞬态丢失自愈，真故障仍如实超时。 */
+  await expect(async () => {
+    await page.locator('[data-tasks-view="calendar"]').click({ timeout: 3000 });
+    await expect(page.locator("#tasksCalView")).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 10_000 });
 }
 
 test.describe("本地 .ics 导入 → 日历渲染（真浏览器不变量）", () => {
