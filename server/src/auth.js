@@ -160,11 +160,23 @@ function authRouter(cfg, store) {
     const sessions = Object.keys(store.data.sessions)
       .map(rt => store.data.sessions[rt])
       .filter(s => s.userId === req.user.sub)
-      .map(s => ({ id: s.refreshToken.slice(0, 8), deviceName: s.deviceName || "web", createdAt: s.createdAt, current: s.refreshToken === (req.header("x-refresh") || "") }));
+      /* v3.7.105：设备 id 原为 refreshToken.slice(0,8) —— 但 JWT 的 header 段
+         （{"alg":"HS256","typ":"JWT"}）在所有会话里完全相同，于是**每个设备的 id 都是同一个
+         前缀**，"按 id 删设备"实际退化成"删任意一个会话"。改为自增生成的 sid。
+         客户端只透传该 id（GET 拿到、DELETE 送回），字段名不变，故对客户端兼容。 */
+      .map(s => ({ id: s.sid || s.refreshToken.slice(0, 8), deviceName: s.deviceName || "web", createdAt: s.createdAt, current: s.refreshToken === (req.header("x-refresh") || "") }));
     return ok(res, { devices: sessions });
   });
   router.delete("/devices/:id", (req, res) => {
-    const rtKey = Object.keys(store.data.sessions).find(k => k.slice(0, 8) === String(req.params.id));
+    /* v3.7.105 越权修复：原实现按 id 在**全局** session 表里找，不看归属 ——
+       任何已登录用户都能踢掉别人的设备（强制他人下线，IDOR）。
+       现同时限定 sid 命中且属于当前用户；旧会话（无 sid）回退前缀匹配，但同样带归属校验。 */
+    const want = String(req.params.id);
+    const rtKey = Object.keys(store.data.sessions).find((k) => {
+      const s = store.data.sessions[k];
+      if (!s || s.userId !== req.user.sub) return false;
+      return s.sid ? s.sid === want : k.slice(0, 8) === want;
+    });
     if (!rtKey) return fail(res, 404, "device_not_found");
     store.deleteSession(rtKey);
     return ok(res, {});

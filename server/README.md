@@ -17,6 +17,7 @@
 | 与客户端（`agent-workbench.html`）联调 | 🟡 **已做契约级联调**（`verify/client-contract-check.cjs` 23/23）。但客户端默认仍指向不存在的 `localhost:3001`，未做过「真机 + 真 UI」联调 |
 | 自动化测试 | 🟡 两个自足验证脚本（`verify/hardening-check.cjs` 9/9、`verify/client-contract-check.cjs` 23/23），**但未接入 CI** |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
+| 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot`（此前客户端在调、后端没有） |
 | 生产可用 | ❌ 否 —— 缺速率限制、缺审计日志，且未做真机 UI 联调 |
 
@@ -24,8 +25,9 @@
 
 ```bash
 cd server && npm install
-node verify/hardening-check.cjs        # 期望 9/9
-node verify/client-contract-check.cjs  # 期望 23/23（tools/fetch 为已识别未做项）
+node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
+node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
+node verify/client-contract-check.cjs  # 期望 23/23 —— 客户端契约联调（tools/fetch 为已识别未做项）
 ```
 
 **加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败速率限制（可暴力破解）、

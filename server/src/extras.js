@@ -62,6 +62,12 @@ function extrasRouter(cfg, store) {
     return ok(res, { schedule: store.getSchedule(s.id) });
   });
   router.delete("/schedules/:id", am, (req, res) => {
+    /* v3.7.105 越权修复：原实现只按 id 从全局表删，**不看归属** ——
+       任何已登录用户都能删掉别人的定时提醒（IDOR）。
+       对比同文件的 PUT /schedules/:id 是有 s.userId !== req.user.sub 校验的，
+       说明这条 DELETE 是遗漏而非设计。 */
+    const s = store.getSchedule(String(req.params.id));
+    if (!s || s.userId !== req.user.sub) return fail(res, 404, "schedule_not_found");
     store.deleteSchedule(String(req.params.id));
     return ok(res, {});
   });

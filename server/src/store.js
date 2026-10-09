@@ -92,7 +92,15 @@ class Store {
   // 清理过期码（在发新码时顺带清同邮箱旧码）
 
   // ---- sessions ----
-  saveSession(s) { this._data.sessions[s.refreshToken] = s; this._save(); return s; }
+  /* v3.7.105：为每个会话生成独立 sid。此前设备 id 借用 refreshToken 前 8 字符，
+     而 JWT 的 header 段在所有会话里相同 → 所有设备 id 前缀一致，删设备退化成删任意会话。
+     sid 与 refreshToken 解耦：换 token 不影响设备标识，且不暴露 token 片段。 */
+  saveSession(s) {
+    if (!s.sid) s.sid = crypto.randomBytes(6).toString("hex");
+    this._data.sessions[s.refreshToken] = s;
+    this._save();
+    return s;
+  }
   getSession(rt) { return this._data.sessions[rt] || null; }
   deleteSession(rt) { if (this._data.sessions[rt]) { delete this._data.sessions[rt]; this._save(); } }
   deleteUserSessions(userId) {
