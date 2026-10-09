@@ -14,8 +14,8 @@
 
 | 项 | 状态 |
 |---|---|
-| 与客户端（`agent-workbench.html`）联调 | 🟡 **已做契约级联调**（`verify/client-contract-check.cjs` 23/23）。但客户端默认仍指向不存在的 `localhost:3001`，未做过「真机 + 真 UI」联调 |
-| 自动化测试 | 🟡 两个自足验证脚本（`verify/hardening-check.cjs` 9/9、`verify/client-contract-check.cjs` 23/23），**但未接入 CI** |
+| 与客户端（`agent-workbench.html`）联调 | 🟡 **已做契约级联调**（`verify/client-contract-check.cjs` 24/24）。但客户端默认仍指向不存在的 `localhost:3001`，未做过「真机 + 真 UI」联调 |
+| 自动化测试 | 🟡 三个自足验证脚本（`verify/hardening-check.cjs` 9/9、`verify/idor-check.cjs` 9/9、`verify/client-contract-check.cjs` 24/24），**但未接入 CI** |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
 | 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot`（此前客户端在调、后端没有） |
@@ -27,7 +27,7 @@
 cd server && npm install
 node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
 node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
-node verify/client-contract-check.cjs  # 期望 23/23 —— 客户端契约联调（tools/fetch 为已识别未做项）
+node verify/client-contract-check.cjs  # 期望 24/24 —— 客户端契约联调（tools/fetch 为已识别未做项）
 ```
 
 **加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败速率限制（可暴力破解）、
@@ -114,8 +114,13 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | GET | /snapshot | 读本用户快照。无快照时返回 `{snapshot: null}`（**不是 `{}`** —— 客户端会把空对象当成真实快照应用下去） |
 | PUT | /snapshot | 写快照，body `{ snapshot, updatedAt }`。全量覆盖（LWW）；超过 `sync.maxSnapshotBytes`（默认 2 MB）返回 413 而非静默截断 |
 
-`updatedAt` 用**服务端接收时刻**：客户端时钟不可信，而 LWW 的比较基准必须是同一时钟。
-客户端自报时间只作诊断字段保存，不参与比较。两个端点均需 Bearer 鉴权。
+`updatedAt` **原样回传客户端写入时自报的值**（与客户端时钟同源）：客户端推送成功后用本地 `Date.now()`
+记 `lastPushAt`，再拿它跟服务端返回的 `updatedAt` 比大小判断「云端是否有其他设备的更新」
+（`src/render-overview.js:1413`）并按本地时区展示（`:1428`）。若把它替换成服务端时间，跨设备部署
+两边时钟不一致就会判错方向 —— 同机 localhost 两者同钟，本地联调看不出这个错，故有专门的守护用例
+（`verify/client-contract-check.cjs` 的「updatedAt 原样回传」）。服务端接收时刻另存 `serverUpdatedAt`
+**仅作诊断、不参与任何比较**。已知局限：多客户端各用自己时钟 → 它们之间的 LWW 比较本就不可靠，
+需两端一起改才能解，不在服务端单边处理。两个端点均需 Bearer 鉴权。
 
 > 增量同步 / 冲突合并**未实现**，且不应只在服务端做 —— 需要客户端契约同步升级，
 > 否则会造成「后端以为在合并、客户端以为被覆盖」的错位。见 `docs/cloud-sync-incremental-contract.md`。

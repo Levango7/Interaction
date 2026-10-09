@@ -30,7 +30,10 @@ function startServer(extraEnv) {
     let out = "";
     p.stdout.on("data", (d) => { out += d.toString(); });
     p.stderr.on("data", (d) => { out += d.toString(); });
-    const timer = setTimeout(() => reject(new Error("启动超时\n" + out)), 8000);
+    /* 启动预算 8s → 20s（2026-10-10）：实测本机满载（并行全量测试）时首跑启动超时、
+       重跑 9/9 —— 固定预算遇满载机器的假红，与客户端测试批 slice4/9/10 同治理口径。
+       另两个脚本（idor/client-contract）本就是 10s，本次不动（无假红证据）。 */
+    const timer = setTimeout(() => reject(new Error("启动超时\n" + out)), 20000);
     const tick = setInterval(async () => {
       try {
         const r = await fetch(BASE + "/api/health");

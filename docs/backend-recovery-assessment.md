@@ -126,7 +126,7 @@ bcryptjs 哈希（rounds 10）不存明文、双 token + refresh 可吊销、邮
 （端点清单由 `grep -rhno '"/api/...*"' src/*.js` 提取，不在客户端源码里改任何东西），
 逐个比对「客户端调用的」vs「后端实现的」。独立端口 + Node fetch 直连（沿用 §四 的两个环境坑规避）。
 
-### 结果：修复前 17/20，修复后 23/23
+### 结果：修复前 17/20，修复后 24/24
 
 | 端点 | 修复前 | 处置 |
 |---|---|---|
@@ -147,12 +147,44 @@ bcryptjs 哈希（rounds 10）不存明文、双 token + refresh 可吊销、邮
 - `GET /api/sync/snapshot` → `{ ok:true, data:{ snapshot } }`；**空态必须是 `null` 而非 `{}`**
   —— 否则客户端会把空对象当成一份真实快照应用下去，覆盖掉本地数据
 - 两者均需 Bearer 鉴权（快照含该用户全部数据）
-- `updatedAt` 用**服务端接收时刻**：客户端时钟不可信，而 LWW 的比较基准必须同一时钟，
-  否则「客户端时钟快」就会让旧数据挤掉新数据；客户端自报时间仅作诊断字段
+- **`updatedAt` 必须原样回传客户端自报的值**（见下节，这是第一版实现踩的坑）
 
 **刻意不做增量 / 冲突合并**：那需要客户端契约同步升级，
 单方面在服务端做会造成「后端以为在合并、客户端以为被覆盖」的错位
 （见 `docs/cloud-sync-incremental-contract.md`）。
+
+### 踩的坑：我第一版把 `updatedAt` 换成了服务端时间（已纠正）
+
+第一版实现里我写了「`updatedAt` 用服务端接收时刻」，理由写在注释里：
+「客户端时钟不可信，而 LWW 的比较基准必须是同一时钟」。**听起来更严谨，但错了** ——
+它违背了客户端既有的契约：
+
+| 客户端行为 | 位置 |
+|---|---|
+| 推送成功后用**本地** `Date.now()` 记录 `lastPushAt` | `src/ui-ge-api.js:546` |
+| 拿服务端返回的 `updatedAt` 与 `lastPushAt` **比大小**，判断「云端是否有其他设备的更新」 | `src/render-overview.js:1413` |
+| 直接 `new Date(ts).toLocaleString()` 展示该时间 | `src/render-overview.js:1428` |
+
+即：客户端要求 `updatedAt` **与客户端本地时钟同源**。
+服务端一换成自己的时间，跨设备部署就会判错方向 —— 服务端快则每次误报「有其他设备更新」，
+慢则真的远端更新被忽略。**同机 localhost 两者同钟，所以本地联调根本看不出来**，
+是我读契约时漏了比大小那一处才误判的。
+
+已改为原样存回客户端传的 `updatedAt`，服务端接收时间另存 `serverUpdatedAt` 仅作诊断。
+并加了守护：PUT 一个固定时间戳，GET 回来必须**完全相等**（用服务端时间就会红）。
+故障注入（改回服务端时间）→ 23/24 转红，还原后 24/24。
+
+> 多客户端各用自己的时钟导致它们之间的 LWW 不可靠 —— 这个局限**本来就存在**，
+> 是客户端既有契约带来的，需客户端与服务端一起改才能解，不在服务端单边处理。
+
+### 调用方核对：契约确实对得上
+
+逐点核过，不是"看起来像"：
+
+- `apiGetSnapshot()` 返回 `r.data`（=`{snapshot, updatedAt}`），调用方传的是 `rec.snapshot`
+  （`render-overview.js:1408/1470`）→ `_applyCloudSnapshot(data)` 读 `data["wb_agent_tasks"]` 这类**顶层键** ✓
+- 另一处消费 `rec.updatedAt`（`:1413`）→ 与后端 `data.updatedAt` 对应 ✓
+- PUT 的 body 是 `{snapshot, updatedAt}`（`:1316-1318`）→ 后端按此解构 ✓
 
 ### 为什么不做 `/api/tools/fetch`
 
@@ -194,7 +226,7 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 | 空态：新账号读快照必须 `snapshot === null` | 通过（同时验证了跨用户隔离） |
 | 无 token 读写快照必须 401（GET + PUT 两条） | 通过 |
 | 注入：摘掉 `/api/sync` 的 `am` 中间件 | **两条 401 用例如期转红**（实测返回 500，因 `req.user.sub` 取不到） |
-| 精确字符串还原 + 复绿 | 23/23；`hardening-check` 回归仍 9/9 |
+| 精确字符串还原 + 复绿 | 24/24；`hardening-check` 回归仍 9/9 |
 
 ---
 
@@ -233,7 +265,7 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 | 修复前基线 | **7/9** —— 两条越权删除如实转红（HTTP 200） |
 | 修复后 | **9/9** —— 越权 404、本人操作 200、设备数不因他人调用而减少 |
 | 故障注入：摘掉两处 `userId` 归属校验 | **4/9** —— 两条越权例如期转红 |
-| 精确字符串还原 + 复绿 | 9/9；另两个脚本回归 **9/9** 与 **23/23** |
+| 精确字符串还原 + 复绿 | 9/9；另两个脚本回归 **9/9** 与 **24/24** |
 
 ---
 
@@ -241,8 +273,8 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 
 | 缺项 | 现状 | 说明 |
 |---|---|---|
-| **客户端联调** | 🟡 契约级已通 | `client-contract-check.cjs` 23/23。但客户端 `ui-ge-api.js` 默认 `apiBase()=http://localhost:3001` 该服务仍不存在；v3.7.103 已加 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**真机 UI 联调仍未做** |
-| **自动化测试** | 🟡 3 个脚本 | `hardening-check` 9/9 · `idor-check` 9/9 · `client-contract-check` 23/23，均自足可跑。**但未接入 CI** —— 要加 job，而 `ci.yml` 属发版必改文件，本轮未动 |
+| **客户端联调** | 🟡 契约级已通 | `client-contract-check.cjs` 24/24。但客户端 `ui-ge-api.js` 默认 `apiBase()=http://localhost:3001` 该服务仍不存在；v3.7.103 已加 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**真机 UI 联调仍未做** |
+| **自动化测试** | 🟡 3 个脚本 | `hardening-check` 9/9 · `idor-check` 9/9 · `client-contract-check` 24/24，均自足可跑。**但未接入 CI** —— 要加 job，而 `ci.yml` 属发版必改文件，本轮未动 |
 | **速率限制 / 审计日志** | ❌ 无 | 生产必需。可暴力破解登录、无操作审计 |
 | **真机 UI 联调** | ❌ 未做 | 需拼回 `src/` 后跑真实应用（拼回/抽回是仓库级操作，并行会话在场时风险高），本轮只做契约级 |
 | **许可与计费** | ❌ 全零 | `支付/套餐/许可/license/计费/订单/价格` 在 `src/*.js` 命中 **0 文件** |
@@ -251,7 +283,7 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 | **用户手册** | ❌ 无 | 仍未编写 |
 
 **判断（2026-10-10 更新）**：本轮把后端从「工作区里根本不存在」推进到
-**找回 + 修 3 条 P0 + 修 2 条越权 + 补上缺失的云同步端点 + 契约级联调 23/23**。
+**找回 + 修 3 条 P0 + 修 2 条越权 + 补上缺失的云同步端点 + 契约级联调 24/24**。
 后端本身**已不再是最大缺口** —— 现在拦在商业化前面的是：
 
 1. **产品决策**（不是技术问题）：MIT 许可与售卖冲突、无运营主体、计费零代码
@@ -271,7 +303,7 @@ git archive ac1114a server | tar -x
 cd server && npm install
 node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
 node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
-node verify/client-contract-check.cjs  # 期望 23/23 —— 客户端契约联调
+node verify/client-contract-check.cjs  # 期望 24/24 —— 客户端契约联调
 
 # 3. 启动（默认因占位密钥拒绝，需先给密钥）
 JWT__ACCESSSECRET="$(openssl rand -hex 32)" JWT__REFRESHSECRET="$(openssl rand -hex 32)" npm start

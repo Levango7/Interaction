@@ -157,6 +157,18 @@ function record(group, label, res, expectStatuses, known) {
   record("sync", "回读：PUT 后 GET 拿到同一份快照",
     { status: got && got.marker === probe.marker ? 200 : 0, json: null }, [200]);
 
+  /* updatedAt 必须**原样回传**客户端写入时自报的值：
+     客户端推送后用本地 Date.now() 记 lastPushAt（ui-ge-api.js:546），
+     再用它跟服务端返回的 updatedAt 比大小判断「云端是否有其他设备的更新」（render-overview.js:1413），
+     并按本地时区展示（:1428）。服务端若把它替换成自己的时间，跨设备部署就会判错方向。
+     同机 localhost 两者同钟，所以这个错在本地联调里看不出来 —— 必须显式钉住。 */
+  const stamp = 1700000000000;
+  await hit("PUT", "/api/sync/snapshot", { snapshot: { t: 1 }, updatedAt: stamp }, { auth: true });
+  const rt = await hit("GET", "/api/sync/snapshot", null);
+  const gotTs = rt.json && rt.json.data ? rt.json.data.updatedAt : null;
+  record("sync", "updatedAt 原样回传（不得替换为服务端时间）",
+    { status: gotTs === stamp ? 200 : 0, json: null }, [200]);
+
   // 契约要求空态是 snapshot:null（不能是 {}，否则客户端会把空对象当成真实快照应用下去）
   const freshMail = "empty" + Date.now() + "@example.com";
   const reg2 = await hit("POST", "/api/auth/register", { email: freshMail, password: "abcd12345" }, { auth: false });

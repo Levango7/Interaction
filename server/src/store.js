@@ -151,11 +151,21 @@ class Store {
 
   // ---- 云同步快照（全量 + LWW）----
   getSnapshot(userId) { return this._data.snapshots[userId] || null; }
-  /* updatedAt 用服务端接收时刻：客户端时钟不可信（可能快也可能慢），
-     而 LWW 的比较基准必须是同一时钟，否则「客户端时钟快」就会让旧数据挤掉新数据。
-     clientUpdatedAt 仅留作诊断（客户端自报时间），不参与比较。 */
+  /* updatedAt 必须**与客户端时钟同源**：客户端推送成功后用本地 Date.now() 记录 lastPushAt
+     （ui-ge-api.js:546），随后拿它跟服务端返回的 updatedAt 比大小判断「云端是否有其他设备的更新」
+     （render-overview.js:1413），并直接 new Date(ts).toLocaleString() 展示（:1428）。
+     若服务端换成自己的时间，跨设备部署时两边时钟不一致就会判错方向：
+     服务端快 → 每次都误报「有其他设备更新」；服务端慢 → 真的远端更新被忽略。
+     （同机 localhost 两者同钟，所以本地联调看不出这个错 —— 一度就是这么误判的。）
+     serverUpdatedAt 仅作诊断，不参与任何比较。
+     已知局限：多客户端各用自己的时钟 → 它们之间的 LWW 比较本就不可靠，
+     这是客户端既有契约带来的，需客户端与服务端一起改才能解，不在服务端单边处理。 */
   setSnapshot(userId, snapshot, clientUpdatedAt) {
-    const rec = { snapshot, updatedAt: Date.now(), clientUpdatedAt: clientUpdatedAt || null };
+    const rec = {
+      snapshot,
+      updatedAt: clientUpdatedAt || Date.now(),
+      serverUpdatedAt: Date.now(),
+    };
     this._data.snapshots[userId] = rec;
     this._save();
     return rec;

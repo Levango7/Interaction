@@ -43,8 +43,11 @@ function syncRouter(cfg, store) {
   // ---- 读快照 ----
   router.get("/snapshot", am, (req, res) => {
     const rec = store.getSnapshot(req.user.sub);
-    // 无快照时 snapshot 为 null，客户端据此判定「未同步过」——不能省成 {}，
-    // 否则客户端会把空对象当成一份真实快照应用下去。
+    /* updatedAt 回传的是**客户端写入时自报的时间**，不做服务端替换 ——
+       客户端拿它跟本地 lastPushAt 比大小（render-overview.js:1413）并按本地时区展示（:1428），
+       换成服务端时间会让跨设备场景的比较判错方向。详见 store.setSnapshot 的注释。
+       无快照时 snapshot 为 null，客户端据此判定「未同步过」——不能省成 {}，
+       否则客户端会把空对象当成一份真实快照应用下去。 */
     return ok(res, { snapshot: rec ? rec.snapshot : null, updatedAt: rec ? rec.updatedAt : null });
   });
 
