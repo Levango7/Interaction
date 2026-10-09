@@ -1,0 +1,111 @@
+# Agent 工坊 · 鉴权后端
+
+单文件 PWA 的鉴权与账号服务，为 **Electron .exe 安装版**与**网页版（gh-pages）**共用。
+纯 Node/Express，零原生编译依赖（bcryptjs 纯 JS，DB 用 JSON 文件持久化，对齐前端 localStorage 形态）。
+
+---
+
+## ⚠ 当前状态（必读，2026-10-10）
+
+本目录是 **2026-10-10 从孤立提交 `ac1114a` 找回**的资产（该提交因远端强推而非 HEAD 祖先，
+曾一度「代码还在仓库里、工作区里却不存在」）。找回后做过**一轮安全加固**，结论是：
+
+> **这是一份可救的开发骨架，不是可交付产品。加固后仍不建议直接面向真实用户部署。**
+
+| 项 | 状态 |
+|---|---|
+| 与客户端（`agent-workbench.html`）联调 | ❌ **从未联调**（客户端默认仍指向不存在的 `localhost:3001`） |
+| 自动化测试 | ❌ **零**。仅有一轮手工实证验证（见 `docs/backend-recovery-assessment.md`） |
+| 致命缺陷（P0） | ✅ 已修 3 条（见下） |
+| 生产可用 | ❌ 否 —— 缺联调、缺测试、缺速率限制、缺审计日志 |
+
+**加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败速率限制（可暴力破解）、
+无审计日志、refresh token 明文落盘、`corsOrigin` 默认全开放、JSON 文件存储在多实例下不安全。
+
+加固详情与缺陷清单：`docs/backend-recovery-assessment.md`。
+
+---
+
+## 快速启动
+
+> **v3.7.105 起：JWT 密钥仍是占位值时拒绝启动。** 这是刻意的 fail fast —— 原实现不校验，
+> 运维照旧文档跑起来却不改密钥，等于把签名密钥公开，任何人可自签 token 接管任意账号。
+
+```bash
+cd server
+npm install
+
+# 方式一（推荐）：复制配置并改成高强度随机值
+cp config.example.json config.json   # 然后改 jwt.accessSecret / jwt.refreshSecret
+npm start
+
+# 方式二：用环境变量覆盖
+JWT__ACCESSSECRET="<随机长串>" JWT__REFRESHSECRET="<另一个随机长串>" npm start
+
+# 仅本地联调、确需沿用占位密钥时（启动会打 WARN）
+ALLOW_PLACEHOLDER_SECRETS=true npm start
+```
+
+默认监听 `http://localhost:3001`，数据落在 `server/data/auth.json`。
+⚠ 本机 3001 常被 Docker Desktop 占用，冲突时改端口：`PORT=4571 npm start`。
+
+健康检查：`GET /api/health` → `{ok:true, version:"3.6.1"}`
+
+## 前端如何连上
+
+前端 `apiClientModule`（agent-workbench.html）默认 `API_BASE = "http://localhost:3001"`。
+- Electron .exe：把 `server/src` 打成后端模块随应用内嵌，启动时在 3001 起服务。
+- 网页版：把本后端部署到任意 Node 服务器/云函数，把页面 `设置 → API 基址` 指过去即可（CORS 默认放开）。
+
+## 配置（credentials 全部走配置，不硬编码）
+
+复制 `config.example.json` 为 `config.json`（或直接用环境变量覆盖，路径用 `__` 分隔 + 大写）：
+
+| 路径 | 环境变量示例 | 说明 |
+|---|---|---|
+| port | `SERVER__PORT=4000` | 监听端口 |
+| jwt.accessSecret / refreshSecret | `JWT__ACCESSSECRET` / `JWT__REFRESHSECRET` | JWT 签名密钥，生产必改 |
+| email.enabled | `EMAIL__ENABLED=true` | 开启后注册强制要求验证码并真发邮件 |
+| email.smtp.* | `EMAIL__SMTP__HOST` 等 | SMTP 发码通道（QQ/163/Gmail…） |
+| github.enabled / clientId / clientSecret / redirectUri | `GITHUB__ENABLED` 等 | GitHub OAuth App 凭据 |
+| github.postMessageOrigin | `GITHUB__POSTMESSAGEORIGIN` | OAuth 回调页回传 token 的 `targetOrigin`。**默认 `"*"`（任意站点可接收 token），生产必须改成自己的页面源** |
+| wechat.enabled / appid / secret | `WECHAT__ENABLED` 等 | 微信开放平台/公众号扫码凭据 |
+| dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行两个开发端点：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传。两者都是完整认证绕过，**生产必须为 false** |
+| （无配置项） | `ALLOW_PLACEHOLDER_SECRETS` | 允许沿用占位 JWT 密钥启动（默认拒绝）。仅本地联调 |
+| corsOrigin | `CORSORIGIN` | **默认 `"*"` = 反射任意 origin，生产必须改成白名单** |
+
+## 端点清单（对齐前端 apiClientModule）
+
+### 鉴权 `/api/auth`
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | /register | 邮箱+密码+验证码注册，返回 {accessToken, refreshToken, user}（注册后自动登录） |
+| POST | /login | 邮箱+密码登录，返回 token 三件套 + user |
+| POST | /refresh | 用 refreshToken 换新 accessToken |
+| POST | /logout | 注销当前 refreshToken |
+| GET/PUT | /me | 当前用户信息 |
+| GET/DELETE | /devices[/:id] | 登录设备管理 |
+| POST | /email-code | 发邮箱验证码（未配 SMTP 时返回 demoCode 供开发） |
+| GET | /github | 获取 GitHub 授权跳转 URL（{authorizeUrl, state}） |
+| GET | /github/callback | GitHub 授权回调：code→token→建/绑账号→postMessage 回传 |
+| POST | /wechat/qrcode | 取扫码二维码（{qr, scene, expireIn}；未配微信时给演示码） |
+| GET | /wechat/status?scene= | 轮询扫码状态（pending→confirmed 带 token） |
+| GET | /wechat/confirm?scene=&email= | 开发用：模拟扫码确认 |
+
+### 通知/集成 `/api/notifications`、`/api/integrations`
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET/PUT | /notifications/preferences | 通知偏好 |
+| POST | /notifications/push/subscribe · /notifications/push/unsubscribe | Web Push 订阅 |
+| GET/POST | /notifications/schedules[/:id] | 定时提醒 |
+| GET | /integrations/status | 集成列表 |
+| GET | /integrations/oauth/:provider/callback | 集成 OAuth 回调（占位连接） |
+| DELETE | /integrations/oauth/:provider | 断开集成 |
+
+## 未配置凭据时的降级行为（重要）
+
+- **邮箱验证码**：`email.enabled=false` 时，`/email-code` 在响应里带 `demoCode`（6 位码），方便开发联调；开启 SMTP 后才真发邮件，且注册强制要求验证码。
+- **微信扫码**：未配微信 appid 时，二维码是带说明的演示图（无法真扫码）；轮询可配 `/wechat/confirm` 模拟确认。
+- **GitHub 登录**：未配 clientId 时 `/github` 返回 503 + `github_not_configured`，前端 toast 提示。
+
+真实上线只需在微信开放平台 / GitHub OAuth App / 邮件服务商各注册拿凭据，填入配置即可，前端无需改动。

@@ -1,0 +1,8 @@
+# 运行时数据（不提交）
+data/*.json
+data/*.tmp
+data/app.db
+# 依赖（若在本地安装）
+node_modules/
+# 日志
+*.log
