@@ -14,10 +14,19 @@
 
 | 项 | 状态 |
 |---|---|
-| 与客户端（`agent-workbench.html`）联调 | ❌ **从未联调**（客户端默认仍指向不存在的 `localhost:3001`） |
-| 自动化测试 | ❌ **零**。仅有一轮手工实证验证（见 `docs/backend-recovery-assessment.md`） |
+| 与客户端（`agent-workbench.html`）联调 | 🟡 **已做契约级联调**（`verify/client-contract-check.cjs` 23/23）。但客户端默认仍指向不存在的 `localhost:3001`，未做过「真机 + 真 UI」联调 |
+| 自动化测试 | 🟡 两个自足验证脚本（`verify/hardening-check.cjs` 9/9、`verify/client-contract-check.cjs` 23/23），**但未接入 CI** |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
-| 生产可用 | ❌ 否 —— 缺联调、缺测试、缺速率限制、缺审计日志 |
+| 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot`（此前客户端在调、后端没有） |
+| 生产可用 | ❌ 否 —— 缺速率限制、缺审计日志，且未做真机 UI 联调 |
+
+**怎么跑验证**：
+
+```bash
+cd server && npm install
+node verify/hardening-check.cjs        # 期望 9/9
+node verify/client-contract-check.cjs  # 期望 23/23（tools/fetch 为已识别未做项）
+```
 
 **加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败速率限制（可暴力破解）、
 无审计日志、refresh token 明文落盘、`corsOrigin` 默认全开放、JSON 文件存储在多实例下不安全。
@@ -73,6 +82,7 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行两个开发端点：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传。两者都是完整认证绕过，**生产必须为 false** |
 | （无配置项） | `ALLOW_PLACEHOLDER_SECRETS` | 允许沿用占位 JWT 密钥启动（默认拒绝）。仅本地联调 |
 | corsOrigin | `CORSORIGIN` | **默认 `"*"` = 反射任意 origin，生产必须改成白名单** |
+| sync.maxSnapshotBytes | `SYNC__MAXSNAPSHOTBYTES` | 快照上限，默认 2 MB（与 `express.json` 限制一致）。超限返 413，不静默截断 |
 
 ## 端点清单（对齐前端 apiClientModule）
 
@@ -91,6 +101,26 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | POST | /wechat/qrcode | 取扫码二维码（{qr, scene, expireIn}；未配微信时给演示码） |
 | GET | /wechat/status?scene= | 轮询扫码状态（pending→confirmed 带 token） |
 | GET | /wechat/confirm?scene=&email= | 开发用：模拟扫码确认 |
+
+### 云同步 `/api/sync`（v3.7.105 新增）
+
+客户端 `src/render-overview.js` 一直在调这两个端点，而 `ac1114a` 那份后端**从未实现** ——
+即「即使把后端部署起来，云同步依然不工作」。现补齐：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /snapshot | 读本用户快照。无快照时返回 `{snapshot: null}`（**不是 `{}`** —— 客户端会把空对象当成真实快照应用下去） |
+| PUT | /snapshot | 写快照，body `{ snapshot, updatedAt }`。全量覆盖（LWW）；超过 `sync.maxSnapshotBytes`（默认 2 MB）返回 413 而非静默截断 |
+
+`updatedAt` 用**服务端接收时刻**：客户端时钟不可信，而 LWW 的比较基准必须是同一时钟。
+客户端自报时间只作诊断字段保存，不参与比较。两个端点均需 Bearer 鉴权。
+
+> 增量同步 / 冲突合并**未实现**，且不应只在服务端做 —— 需要客户端契约同步升级，
+> 否则会造成「后端以为在合并、客户端以为被覆盖」的错位。见 `docs/cloud-sync-incremental-contract.md`。
+
+`POST /api/tools/fetch`（`web_fetch` 的 CORS 兜底代理）**仍未实现** —— 它是 SSRF 敏感面
+（服务端代抓任意 URL），需按 ics-fetch / notify-webhook 同款承重墙标准设计（主机白名单、
+拒私网回环、限大小与超时），本轮未做。
 
 ### 通知/集成 `/api/notifications`、`/api/integrations`
 | 方法 | 路径 | 说明 |

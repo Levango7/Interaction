@@ -23,7 +23,8 @@ class Store {
       schedules: {},    // id -> { ... }
       integrations: {}, // provider -> { connected, meta, createdAt }
       pushSubs: [],     // [ { endpoint, userId, createdAt } ]
-      notifyPrefs: {}   // userId -> { ... }
+      notifyPrefs: {},  // userId -> { ... }
+      snapshots: {}     // userId -> { snapshot, updatedAt, clientUpdatedAt }（云同步，LWW 全量快照）
     };
     this._load();
   }
@@ -139,6 +140,18 @@ class Store {
   // ---- notify prefs ----
   getNotifyPrefs(userId) { return this._data.notifyPrefs[userId] || null; }
   setNotifyPrefs(userId, prefs) { this._data.notifyPrefs[userId] = prefs || {}; this._save(); }
+
+  // ---- 云同步快照（全量 + LWW）----
+  getSnapshot(userId) { return this._data.snapshots[userId] || null; }
+  /* updatedAt 用服务端接收时刻：客户端时钟不可信（可能快也可能慢），
+     而 LWW 的比较基准必须是同一时钟，否则「客户端时钟快」就会让旧数据挤掉新数据。
+     clientUpdatedAt 仅留作诊断（客户端自报时间），不参与比较。 */
+  setSnapshot(userId, snapshot, clientUpdatedAt) {
+    const rec = { snapshot, updatedAt: Date.now(), clientUpdatedAt: clientUpdatedAt || null };
+    this._data.snapshots[userId] = rec;
+    this._save();
+    return rec;
+  }
 }
 
 module.exports = Store;

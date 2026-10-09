@@ -35,5 +35,8 @@
   "dev": {
     "allowUnsafeDevEndpoints": false
   },
+  "sync": {
+    "maxSnapshotBytes": 2097152
+  },
   "dataFile": "data/auth.json"
 }

@@ -12,6 +12,7 @@ const cors = require("cors");
 const Store = require("./store");
 const authRouter = require("./auth");
 const extrasRouter = require("./extras");
+const syncRouter = require("./sync");
 
 function loadConfig() {
   const base = path.join(__dirname, "..", "config.example.json");
@@ -72,6 +73,9 @@ app.get("/api/health", (req, res) => res.json({ ok: true, name: "agent-workbench
 app.use("/api/auth", authRouter(cfg, store));
 app.use("/api/notifications", extrasRouter(cfg, store));
 app.use("/api/integrations", extrasRouter(cfg, store));
+/* v3.7.105：云同步端点。客户端 src/render-overview.js 一直在调 GET/PUT /api/sync/snapshot，
+   而 ac1114a 那份后端从未实现 —— 即「部署了后端云同步也不工作」。契约见 src/sync.js 头注释。 */
+app.use("/api/sync", syncRouter(cfg, store));
 
 // 未知端点
 app.use((req, res) => res.status(404).json({ ok: false, error: "not_found", path: req.path }));

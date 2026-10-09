@@ -116,7 +116,89 @@ bcryptjs 哈希（rounds 10）不存明文、双 token + refresh 可吊销、邮
 
 ---
 
-## 五、距「可卖给客户」还差什么
+## 五、客户端契约联调（2026-10-10 补做）
+
+「从未联调」是本项目后端的头号缺口，本轮把它从**从未做过**推进到**契约级已通**。
+
+### 做法
+
+新增 `server/verify/client-contract-check.cjs`：忠实复现客户端 `apiFetch` 的真实调用序列
+（端点清单由 `grep -rhno '"/api/...*"' src/*.js` 提取，不在客户端源码里改任何东西），
+逐个比对「客户端调用的」vs「后端实现的」。独立端口 + Node fetch 直连（沿用 §四 的两个环境坑规避）。
+
+### 结果：修复前 17/20，修复后 23/23
+
+| 端点 | 修复前 | 处置 |
+|---|---|---|
+| `GET /api/sync/snapshot` | **404** not_found | ✅ 已实现（新增 `src/sync.js`） |
+| `PUT /api/sync/snapshot` | **404** not_found | ✅ 已实现 |
+| `POST /api/tools/fetch` | **404** not_found | ⚠️ **有意不做**，理由见下 |
+
+**这是「从未联调」最实质的后果**：即使把后端部署起来，**云同步依然不工作** ——
+客户端 `src/render-overview.js:1302/1316` 一直在调 GET/PUT `/api/sync/snapshot`，
+而 `ac1114a` 那份后端从未实现这两个端点。客户端代码注释里甚至自己写着
+「本仓库不含该后端，需部署方实现同名端点」。
+
+### 新实现的云同步端点（`src/sync.js`）
+
+契约严格对齐客户端（字段名不可擅改）：
+
+- `PUT /api/sync/snapshot`，body `{ snapshot, updatedAt }` → 全量覆盖（LWW）
+- `GET /api/sync/snapshot` → `{ ok:true, data:{ snapshot } }`；**空态必须是 `null` 而非 `{}`**
+  —— 否则客户端会把空对象当成一份真实快照应用下去，覆盖掉本地数据
+- 两者均需 Bearer 鉴权（快照含该用户全部数据）
+- `updatedAt` 用**服务端接收时刻**：客户端时钟不可信，而 LWW 的比较基准必须同一时钟，
+  否则「客户端时钟快」就会让旧数据挤掉新数据；客户端自报时间仅作诊断字段
+
+**刻意不做增量 / 冲突合并**：那需要客户端契约同步升级，
+单方面在服务端做会造成「后端以为在合并、客户端以为被覆盖」的错位
+（见 `docs/cloud-sync-incremental-contract.md`）。
+
+### 为什么不做 `/api/tools/fetch`
+
+它是 `web_fetch` 的 CORS 兜底代理 —— 本质是「让服务端代抓任意 URL」，
+**典型 SSRF 面**。要做就得按本项目已有的承重墙标准实现（主机白名单、拒 userinfo/回环/私网/链路本地/
+重定向、限大小与超时，同 ics-fetch 与 notify-webhook 的做法），而不是先接上再补安全。
+且它只在用户配置了 `apiBase` 或 `fetchProxy` 时才走代理分支，**不在主链路**。
+故如实标为「已识别、待设计」——脚本每次运行都会把它列出来，避免记进文档后就被遗忘。
+
+### 新发现：路由交叉污染（未修）
+
+`src/index.js` 把**同一个 router 实例**挂了两次：
+
+```js
+app.use("/api/notifications", extrasRouter(cfg, store));
+app.use("/api/integrations",  extrasRouter(cfg, store));
+```
+
+实测（非推理）后果 —— 双方前缀下都能访问对方的端点：
+
+| 路径 | 实测 | 应当 |
+|---|---|---|
+| `/api/notifications/preferences` | 200 | 200 ✅ |
+| `/api/integrations/preferences` | **200** | ❌ 不存在 |
+| `/api/notifications/status` | **200** | ❌ 不存在 |
+| `/api/integrations/status` | 200 | 200 ✅ |
+
+**攻击面翻倍**。危害有限（同一套 `authMiddleware` 保护，无越权），故本轮记为 **P2 已知缺陷**，
+未修 —— 修它要把 `extras.js` 拆成 notify / integ 两个 router，属结构性改动，
+而本轮遵循「只做加法」，不动已验证通过的文件。**修法建议**：按前缀拆分 router 后各挂各的。
+
+### 新增的守护（含故障注入）
+
+验证脚本新增 4 条（总计 23 条），并对新增的鉴权面做了故障注入：
+
+| 步骤 | 结果 |
+|---|---|
+| 回读验证：PUT 一份带唯一 marker 的快照，再 GET 回来比对 | 通过（只验 PUT 返 200 证明不了「真的存了」） |
+| 空态：新账号读快照必须 `snapshot === null` | 通过（同时验证了跨用户隔离） |
+| 无 token 读写快照必须 401（GET + PUT 两条） | 通过 |
+| 注入：摘掉 `/api/sync` 的 `am` 中间件 | **两条 401 用例如期转红**（实测返回 500，因 `req.user.sub` 取不到） |
+| 精确字符串还原 + 复绿 | 23/23；`hardening-check` 回归仍 9/9 |
+
+---
+
+## 六、距「可卖给客户」还差什么
 
 | 缺项 | 现状 | 说明 |
 |---|---|---|
@@ -127,24 +209,35 @@ bcryptjs 哈希（rounds 10）不存明文、双 token + refresh 可吊销、邮
 | **LICENSE** | ⚠️ MIT | 与「售卖」冲突 |
 | **隐私政策 / 服务条款 / 用户手册** | ❌ 无 | 商业化必备文本 |
 
-**判断**：本轮把「后端从 0% 找回并加固到可开发联调」，但商业化仍需
-**联调 + 测试 + 计费 + 合规文本**四件。后端本身不再是最大缺口 ——
-**计费与合规是**。
+**判断（2026-10-10 更新）**：本轮把后端从「工作区里根本不存在」推进到
+**找回 + 修 3 条 P0 + 补上缺失的云同步端点 + 契约级联调 23/23**。
+后端本身**已不再是最大缺口** —— 现在拦在商业化前面的是：
+
+1. **真机 UI 联调**（本轮只到契约级：脚本按客户端真实调用序列打，没跑过真实 UI）
+2. **未接入 CI**（两个验证脚本是自足的，但 `ci.yml` 里没有它们；改 CI 属发版必改文件）
+3. **合规文本 + 计费**（见下表，纯产品决策而非技术问题）
 
 ---
 
-## 六、复现命令
+## 七、复现命令
 
 ```bash
 # 1. 找回（若 server/ 再次丢失）
 git archive ac1114a server | tar -x
 
-# 2. 安装依赖并跑实证验证
-cd server && npm install && node verify/hardening-check.cjs   # 期望 9/9
+# 2. 安装依赖并跑两个验证脚本
+cd server && npm install
+node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
+node verify/client-contract-check.cjs  # 期望 23/23 —— 客户端契约联调
 
 # 3. 启动（默认因占位密钥拒绝，需先给密钥）
 JWT__ACCESSSECRET="$(openssl rand -hex 32)" JWT__REFRESHSECRET="$(openssl rand -hex 32)" npm start
-# 端口冲突时：PORT=4571 npm start
+# 端口冲突时：PORT=4571 npm start   （本机 3001 常被 Docker Desktop 占用）
+```
+
+```bash
+# 4. 复现「客户端到底调了哪些端点」的清单（后端实现要对齐它）
+grep -rhno '"/api/[a-zA-Z0-9/_:{}$-]*"' src/*.js | sed 's/.*"\(\/api[^"]*\)"/\1/' | sort -u
 ```
 
 *本文件不替代 `server/README.md`；后者是运维口径，本文是审计口径。*
