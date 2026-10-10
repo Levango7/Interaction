@@ -227,3 +227,55 @@ describe("C3 冲突计数（下行覆盖数可见）", () => {
     expect(win.document.getElementById("apiPullCover").textContent).toBe("1 键");
   });
 });
+
+describe("阶段3 下行按需增量拉取（5 分钟定时，开关制）", () => {
+  /* 直接调 tick（_syncIncrementalPullTick），不用假时钟推进 setInterval —— 实测：vitest 的
+     假时钟只覆盖**测试 realm** 的计时器，页面脚本（jsdom realm）里建的 setInterval 收不到
+     推进（测侧自建间隔触发 360 次、页面里的 0 次）。tick 已抽成命名函数，覆盖它的全部
+     判断分支即可；间隔时长（5 分钟）是源码里的常量，由注释与文档钉住。 */
+  const tick = async (win) => {
+    win._syncIncrementalPullTick();
+    await new Promise((r) => setTimeout(r, 60));   // 等 tick 里 window.doSync 的 async 链跑完
+  };
+
+  it("开关关 + 已登录：tick 不产生任何请求（零行为变化）", async () => {
+    const win = await loadApp({ storage: {} });
+    win.apiSetTokens("t", "r", Date.now() + 3600 * 1000);
+    const calls = mockFetch(win, okSnapshot);
+    await tick(win);
+    await tick(win);
+    expect(calls.length).toBe(0);
+  });
+
+  it("未登录：即使开关开也不请求（tick 自带登录判断）", async () => {
+    const win = await loadApp({ storage: on() });
+    const calls = mockFetch(win, okChanges());
+    await tick(win);
+    expect(calls.length).toBe(0);
+  });
+
+  it("开关开 + 已登录：tick 触发一次「无上也拉」（日志清空后 changes 为空也发，只为拿远端变更）", async () => {
+    const win = await loadApp({ storage: on() });
+    win.apiSetTokens("t", "r", Date.now() + 3600 * 1000);
+    /* 启动期写入（演示数据种子等）在开关开时也会入日志 —— 那不是"用户编辑"，但确实是要上行的本地变更；
+       这里清空日志再 tick，验证"日志为空也照样拉"（阶段 2 的下行只捎带在上行时的缺口就在这里）。 */
+    win.clearSyncChangelog();
+    const calls = mockFetch(win, okChanges({ token: 9 }));
+    await tick(win);
+    expect(calls.length).toBe(1);
+    expect(calls[0].method + " " + calls[0].path).toBe("POST /api/sync/changes");
+    expect(calls[0].body.changes).toEqual([]);
+    expect(calls[0].body.since).toBe(0);
+  });
+
+  it("发生过「服务端不支持」回退后，后续 tick 不再打扰那个部署", async () => {
+    const win = await loadApp({ storage: on() });
+    win.apiSetTokens("t", "r", Date.now() + 3600 * 1000);
+    const calls = mockFetch(win, (path, body, n) => (n === 1 ? { ok: false, status: 404, data: null } : okSnapshot()));
+    await tick(win);
+    expect(calls.map((c) => c.path), "第一次 tick：增量 404 → 自动回退全量").toEqual(["/api/sync/changes", "/api/sync/snapshot"]);
+    await tick(win);
+    await tick(win);
+    expect(calls.length, "回退过一次就不再轮询（同一部署不会自己长出增量端点）").toBe(2);
+  });
+});

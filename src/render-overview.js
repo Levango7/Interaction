@@ -1499,18 +1499,53 @@ async function _syncIncrementalRound(){
   return true;
 }
 
-/** 同步一轮（开关制分流）。doSync 的入口：开关关 = 现行全量（逐位不变）。 */
-async function syncRound(){
-  let incrOn = false;
+/** C4 开关（与 C1 同一字段）：cfg.syncIncremental === true。关闭 = 逐位全量路径（零行为变化）。 */
+function _syncIncrementalEnabled(){
   try {
     const c = (typeof getCfg === "function") ? getCfg() : null;
-    incrOn = !!(c && c.syncIncremental === true);
-  } catch (e) { incrOn = false; }
-  if (incrOn){
+    return !!(c && c.syncIncremental === true);
+  } catch (e) { return false; }
+}
+/* 阶段3（v3.7.108 下行也切增量）：本会话是否仍可用增量路径。一旦发生过"服务端不支持 /
+   水位太旧"的回退，定时拉取就不再打扰那个部署（全量回退已经做过一次，同一部署不会自己
+   长出增量端点）；刷新页面或部署升级后自动重置。 */
+let _incrUnavailable = false;
+function _syncIncrementalAvailable(){ return !_incrUnavailable; }
+
+/* 阶段3（v3.7.108 下行也切增量）：定时「无上也拉」。
+   阶段 2 的下行变更只在上行时捎带回来（变更日志为空就不轮询）—— 跨设备的改动要等本机
+   下一次编辑才可见。这里补一个 5 分钟的定时拉取，**仅**在以下条件全部成立时才跑：
+     已登录 · 增量开关开 · 本会话未发生过「服务端不支持」回退。
+   开关关 / 未登录 / 不支持增量时一律不跑（开关关时逐位零行为变化）。
+   定时器建在本块（Render 层）：调用点走既有的 window.doSync / window.isApiLoggedIn 桥
+   （同 cloudCheckOnLogin 的用法），**刻意不碰 ui-ge-api.js** —— 那是另一条会话线在途的文件，
+   把本功能塞进去会让两个会话的改动混进同一文件（互踩）。
+   建在模块执行期：彼时 window.doSync 尚未挂载，故每次 tick 都做 typeof 判断。 */
+let _incrPullTimer = null;
+/** 阶段3 定时拉取的一次 tick。抽成命名函数（而非匿名回调）：生产里是 setInterval 的回调，
+ *  测试里直接调它即可覆盖全部判断分支（假时钟到不了页面 realm 的 setInterval，见测试注释）。 */
+function _syncIncrementalPullTick(){
+  try {
+    if (typeof window.isApiLoggedIn !== "function" || !window.isApiLoggedIn()) return;
+    if (!_syncIncrementalEnabled() || !_syncIncrementalAvailable()) return;
+    if (typeof window.doSync !== "function") return;
+    window.doSync();
+  } catch (e) { /* 定时器回调里任何异常都不许冒出去 */ }
+}
+function _startIncrementalPullTimer(){
+  if (_incrPullTimer) return;
+  _incrPullTimer = setInterval(_syncIncrementalPullTick, 5 * 60 * 1000);
+  if (_incrPullTimer && _incrPullTimer.unref) { try { _incrPullTimer.unref(); } catch (e) { /* jsdom 无 unref，静默 */ } }
+}
+_startIncrementalPullTimer();   // 阶段3：加载即挂定时拉取（每次 tick 自判登录 / 开关 / 可用性）
+
+/** 同步一轮（开关制分流）。doSync 的入口：开关关 = 现行全量（逐位不变）。 */
+async function syncRound(){
+  if (_syncIncrementalEnabled()){
     const r = await _syncIncrementalRound();
     if (r === true) return true;
     if (r === false) return false;
-    /* r === "full-fallback"：落到下面走全量（全量 PUT 会重建服务端增量视图） */
+    _incrUnavailable = true;   /* r === "full-fallback"：落到下面走全量；本会话不再定时轮询增量 */
   }
   return await apiPutSnapshot(_buildCloudSnapshot());
 }

@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
-  "updated": "2026-10-09",
-  "count": 517,
+  "updated": "2026-10-10",
+  "count": 519,
   "items": [
     {
       "file": "ai-loop.js",
@@ -1776,7 +1776,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1364,
+      "line": 1373,
       "sig": "306e082261",
       "occ": 1,
       "level": "P0",
@@ -1787,7 +1787,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1369,
+      "line": 1379,
       "sig": "b340dbb697",
       "occ": 1,
       "level": "P2",
@@ -1798,7 +1798,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1390,
+      "line": 1401,
       "sig": "6cbdd90465",
       "occ": 1,
       "level": "P1",
@@ -1809,7 +1809,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1392,
+      "line": 1403,
       "sig": "076265bb67",
       "occ": 1,
       "level": "P1",
@@ -1820,7 +1820,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1393,
+      "line": 1404,
       "sig": "05c42fd925",
       "occ": 1,
       "level": "P1",
@@ -1831,7 +1831,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1449,
+      "line": 1460,
       "sig": "e548a16f6d",
       "occ": 1,
       "level": "P1",
@@ -1842,7 +1842,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1474,
+      "line": 1487,
       "sig": "3147f0c8b3",
       "occ": 1,
       "level": "P2",
@@ -1853,7 +1853,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1477,
+      "line": 1491,
       "sig": "0756662861",
       "occ": 1,
       "level": "P1",
@@ -1864,7 +1864,29 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1525,
+      "line": 1533,
+      "sig": "ff5c5afebe",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 定时器回调里任何异常都不许冒出去 */",
+      "snippet": "if (typeof window.isApiLoggedIn !== \"function\" || !window.isApiLoggedI"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1538,
+      "sig": "39c3cdfd9c",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* jsdom 无 unref，静默 */",
+      "snippet": "_incrPullTimer.unref(); }"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1577,
       "sig": "ada6b6a72b",
       "occ": 1,
       "level": "P2",
@@ -1875,7 +1897,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1532,
+      "line": 1584,
       "sig": "b377164298",
       "occ": 1,
       "level": "P2",
@@ -1886,7 +1908,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1537,
+      "line": 1589,
       "sig": "b641f83fe7",
       "occ": 1,
       "level": "P0",
@@ -1897,7 +1919,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1610,
+      "line": 1671,
       "sig": "e9146843b9",
       "occ": 1,
       "level": "P2",
@@ -1908,7 +1930,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1613,
+      "line": 1674,
       "sig": "ada6b6a72b",
       "occ": 2,
       "level": "P2",
@@ -1919,7 +1941,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1615,
+      "line": 1676,
       "sig": "8ebeca95de",
       "occ": 1,
       "level": "P2",
@@ -1930,7 +1952,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1622,
+      "line": 1683,
       "sig": "c5f4e48894",
       "occ": 1,
       "level": "P1",
@@ -1941,7 +1963,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1627,
+      "line": 1688,
       "sig": "82a8bbf70d",
       "occ": 1,
       "level": "P1",
@@ -1952,7 +1974,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1644,
+      "line": 1705,
       "sig": "002dc4a784",
       "occ": 1,
       "level": "P2",
@@ -1963,7 +1985,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1769,
+      "line": 1830,
       "sig": "ec84a59a8f",
       "occ": 1,
       "level": "P1",
@@ -1974,7 +1996,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1822,
+      "line": 1883,
       "sig": "3387716408",
       "occ": 1,
       "level": "P2",
@@ -1985,7 +2007,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1861,
+      "line": 1922,
       "sig": "e71d427a6a",
       "occ": 1,
       "level": "P2",
@@ -1996,7 +2018,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1865,
+      "line": 1926,
       "sig": "fa1b0bd661",
       "occ": 1,
       "level": "P2",
@@ -2007,7 +2029,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1930,
+      "line": 1991,
       "sig": "d61a0c114f",
       "occ": 1,
       "level": "P0",
@@ -2018,7 +2040,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1944,
+      "line": 2005,
       "sig": "462b633f59",
       "occ": 1,
       "level": "P2",
@@ -2029,7 +2051,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1945,
+      "line": 2006,
       "sig": "1fcc8cc2ca",
       "occ": 1,
       "level": "P2",
@@ -2040,7 +2062,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1947,
+      "line": 2008,
       "sig": "86a43ef20d",
       "occ": 1,
       "level": "P2",
@@ -2051,7 +2073,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1960,
+      "line": 2021,
       "sig": "b756decc56",
       "occ": 1,
       "level": "P2",
@@ -2062,7 +2084,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1966,
+      "line": 2027,
       "sig": "359db5b6f6",
       "occ": 1,
       "level": "P0",
@@ -2073,7 +2095,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1968,
+      "line": 2029,
       "sig": "5e3692e945",
       "occ": 1,
       "level": "P1",
@@ -2084,7 +2106,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2020,
+      "line": 2081,
       "sig": "b708929003",
       "occ": 1,
       "level": "P1",
