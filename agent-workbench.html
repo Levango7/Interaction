@@ -6216,10 +6216,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.110"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.111"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261010d";
+const BUILD_TAG = "20261011a";
 
 
 
@@ -18899,19 +18899,22 @@ async function toolWebSearch(query, opts){
 }
 
 /**
- * 解析网页抓取代理基址（web_fetch 的 CORS 兜底）
- * 优先级：cfg.fetchProxy（独立代理）→ cfg.apiBase + /api/tools/fetch（复用自建后端）。
- * 两者都未配置时返回 "" —— 调用方回退为直连，行为与旧版一致。
- * @returns {string} 代理基址（不含 query），无代理时为空串
+ * 解析网页抓取代理（web_fetch 的 CORS 兜底）
+ * 优先级：cfg.fetchProxy（独立代理，裸 fetch）→ cfg.apiBase + /api/tools/fetch（自建后端）。
+ * 两者都未配置时返回 null —— 调用方回退为直连，行为与旧版一致。
+ * v3.7.111：自建后端已实现该端点且**必须 Bearer 鉴权**（不做开放代理），故 apiBase 这条路
+ * 改走 apiFetch（带 token、带 401 刷新）；fetchProxy 是用户自备的独立代理，鉴权方式未知，
+ * 保持裸 fetch。
+ * @returns {{url:string, authed:boolean}|null} url=代理地址（不含 query），无代理为 null
  */
-function _webFetchProxyBase(){
+function _webFetchProxy(){
   let cfg = {};
   try{ cfg = getCfg() || {}; }catch(_e){ cfg = {}; }
   const p = String(cfg.fetchProxy || "").trim();
-  if(p) return p.replace(/\/+$/, "");
+  if(p) return { url: p.replace(/\/+$/, ""), authed: false };
   const base = String(cfg.apiBase || "").trim();
-  if(base) return base.replace(/\/+$/, "") + "/api/tools/fetch";
-  return "";
+  if(base) return { url: base.replace(/\/+$/, "") + "/api/tools/fetch", authed: true };
+  return null;
 }
 
 /**
@@ -18932,22 +18935,36 @@ async function toolWebFetch(url, opts){
     /* CORS：浏览器直连绝大多数站点会被跨域策略拦截（file:// 与本地服务形态下必然失败）。
        有代理则优先走代理（cfg.fetchProxy → cfg.apiBase + /api/tools/fetch），
        两者都未配置时保持直连，行为与旧版一致；失败时给可操作提示而非裸 TypeError。 */
-    const proxy = _webFetchProxyBase();
-    let r = null;
+    const proxy = _webFetchProxy();
+    let html = null;
     if(proxy){
-      try{ r = await fetch(proxy + "?url=" + encodeURIComponent(u), { method:"GET" }); }
-      catch(_e){ r = null; } // 代理不可用 → 回退直连
+      /* v3.7.111：自建后端必须 Bearer（不做开放代理）→ apiBase 路走 apiFetch；
+         代理不可用 / 返回非 2xx 都不当失败，回退直连（旧实现把代理的 404 当成抓取结果，
+         既没回退也没说明原因）。独立 fetchProxy 保持裸 fetch。 */
+      const target = proxy.url + "?url=" + encodeURIComponent(u);
+      if(proxy.authed && typeof window.apiFetch === "function"){
+        try{
+          const ar = await window.apiFetch(target, { method: "GET" });
+          if(ar && ar.ok && ar.data && typeof ar.data.text === "string") html = ar.data.text;
+        }catch(_e){ html = null; }
+      }else{
+        try{
+          const rp = await fetch(target, { method:"GET" });
+          if(rp && rp.ok) html = await rp.text();
+        }catch(_e){ html = null; }
+      }
     }
-    if(!r){
-      try{ r = await fetch(u, { method:"GET" }); }
-      catch(e2){
+    if(html === null){
+      try{
+        const r = await fetch(u, { method:"GET" });
+        if(!r.ok) return { ok:false, error:t("aiagent.fetchFail","抓取失败：HTTP ")+r.status };
+        html = await r.text();
+      }catch(e2){
         return { ok:false, error: proxy
           ? t("aiagent.fetchBothFail","代理与直连均失败：") + String(e2&&e2.message||e2)
           : t("aiagent.fetchCorsHint","直连被浏览器跨域策略（CORS）拦截。请在设置中配置「抓取代理」，或配置自建后端 apiBase 后重试。") };
       }
     }
-    if(!r.ok) return { ok:false, error:t("aiagent.fetchFail","抓取失败：HTTP ")+r.status };
-    const html = await r.text();
     // 去标签：提取 <title> + body 纯文本（DOMParser 不可用时用正则兜底）
     let title = "";
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
