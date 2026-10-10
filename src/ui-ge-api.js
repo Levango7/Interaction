@@ -66,12 +66,16 @@
 
   /* 加密单个 token：不可加密或加密失败 → 返回明文原值（与改造前落盘行为一致，绝不丢登录）。
      ⚠️ 与 cfg 的 D4「不可加密即丢弃」策略有意不同：AI Key 是长期凭据，token 是短时凭据（15 分钟
-     access + refresh 轮换）；且改造前所有环境都落明文，回落明文不会比现状更差。 */
+     access + refresh 轮换）；且改造前所有环境都落明文，回落明文不会比现状更差。
+     凭据密封收口（批次③）：把「降级」与「意外」分开——降级（`_cryptoReady` 非 true）是 v3.7.62
+     钉死的有意契约，不打诊断（initCrypto 已一次性 warn）；意外（encryptKey 抛错或返回非密文形状，
+     如设备密钥不可得）必须留痕，否则静默退化无从查证。两种情况回落明文的行为不变。 */
   async function _sealTokenValue(plain){
+    if(typeof _cryptoReady === "undefined" || _cryptoReady !== true) return plain;
     try{
       const enc = await encryptKey(plain);
       if(enc && typeof enc === "object" && enc.__enc === true) return enc;
-      return plain;
+      throw new Error("non-cipher shape");
     }catch(e){
       try{ pushDiag("error", "token seal failed, plaintext kept: "+(e&&e.message||e), {where:"_sealTokenValue"}); }catch(_e2){}
       return plain;

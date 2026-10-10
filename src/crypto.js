@@ -119,12 +119,26 @@ async function _ensureDeviceKeyImpl(){
 /**
  * 用设备密钥 AES-GCM 加密明文 Key
  * @param {string} plaintext - 明文 API Key
- * @returns {Promise<Object|string>} 加密对象 {__enc,iv,data}；Web Crypto 不可用时回退原值
+ * @returns {Promise<Object>} 加密对象 {__enc,iv,data}
+ * @throws {Error} code=crypto-unavailable（Web Crypto 不可用）/ device-key-unavailable（设备密钥不可得）
+ *
+ * 凭据密封收口（批次③）：此前这两支**静默回退明文**，而调用方（persistCfg 之外还有
+ * GitHub token / WebDAV 密码 / 集成敏感字段）会把明文当"加密成功"写盘且 UI 仍称"已加密"。
+ * 现改 fail-closed 抛错——所有既有消费方的 catch 语义本就是「丢弃 / 拒绝保存」，自动收敛。
+ * 读路径（decryptKey 对非密文原样返回）不受影响，历史上已落明文的旧值仍可读。
  */
 async function encryptKey(plaintext){
-  if(!_cryptoReady) return plaintext;
+  if(!_cryptoReady){
+    const err = new Error("Web Crypto 不可用，拒绝明文落盘");
+    err.code = "crypto-unavailable";
+    throw err;
+  }
   const key = await ensureDeviceKey();
-  if(!key) return plaintext;
+  if(!key){
+    const err = new Error("设备密钥不可得，拒绝明文落盘");
+    err.code = "device-key-unavailable";
+    throw err;
+  }
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const enc = new TextEncoder().encode(String(plaintext));
   const cipher = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc);
@@ -223,10 +237,10 @@ async function initCrypto(){
     try{ await ensureDeviceKey(); }
     catch(e){ _cryptoReady = false; _deviceKey = null; }
   }
-  // T5.3 浏览器兼容：Web Crypto 不可用（file:// 降级 / 旧浏览器 / 不安全上下文）时 warn 一次，Key 将明文存储
+  // T5.3 浏览器兼容：Web Crypto 不可用（file:// 降级 / 旧浏览器 / 不安全上下文）时 warn 一次，Key 将被拒绝保存（fail-closed）
   if(!_cryptoReady && typeof console !== "undefined" && console.warn && !_cryptoWarned){
     _cryptoWarned = true;
-    try{ console.warn("[Agent Workshop] " + t("debug.cryptoUnavailable","Web Crypto API 不可用，AI Key 将明文存储于 localStorage")); }catch(e){ /* noop */ }
+    try{ console.warn("[Agent Workshop] " + t("debug.cryptoUnavailable","Web Crypto API 不可用，AI Key 将拒绝明文落盘（不会被保存）")); }catch(e){ /* noop */ }
   }
   const raw = load(PREFIX+"cfg", {});
 

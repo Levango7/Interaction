@@ -7,7 +7,7 @@
  *   a. Notification 不存在 → notifySystem fallback 到 toast（不抛错）
  *   b. Service Worker 不存在 → 启动跳过注册（不报错）
  *   c. AbortController 不存在 → createChatController 返回 null ac、showChatThinking 隐藏取消按钮
- *   d. crypto.subtle 不存在 → encryptKey/decryptKey 降级明文（返回原值）+ console.warn 提示
+ *   d. crypto.subtle 不存在 → encryptKey 拒绝明文（fail-closed 抛错）/ decryptKey 读路径降级原值 + console.warn 提示
  *   e. ReadableStream 不存在 → chatOnce 流式 fallback 到一次性 JSON 渲染
  *   f. AbortSignal.timeout 不存在 → chatOnce 不挂 signal（不崩，fetch 走默认无超时）
  *   g. 兼容性自检访问器：isAbortSupported / isReadableStreamSupported / isCryptoReady
@@ -242,7 +242,7 @@ describe("T5.3 浏览器兼容 · AbortController 不存在禁用取消", () => 
 // d. crypto.subtle 不存在
 // ============================================================================
 describe("T5.3 浏览器兼容 · crypto.subtle 不存在降级明文", () => {
-  it("d1: encryptKey 在 _cryptoReady=false 时返回原值", async () => {
+  it("d1: encryptKey 在 _cryptoReady=false 时拒绝明文（抛错，fail-closed）；decryptKey 读路径照旧", async () => {
     const win = await boot();
     const { encryptKey, decryptKey, initCrypto, _resetCrypto } = win.__test;
     _resetCrypto();
@@ -250,8 +250,9 @@ describe("T5.3 浏览器兼容 · crypto.subtle 不存在降级明文", () => {
     try {
       Object.defineProperty(win.crypto, "subtle", { value: undefined, configurable: true });
       await initCrypto();
-      const enc = await encryptKey("sk-plaintext-fallback");
-      expect(enc).toBe("sk-plaintext-fallback");
+      /* 凭据密封收口（批次③）：写路径 fail-closed —— 绝不让明文冒充密文交给调用方 */
+      await expect(encryptKey("sk-plaintext-fallback")).rejects.toThrow(/Web Crypto|不可用/);
+      /* 读路径保持兼容：非密文原样返回（历史明文数据仍可读，不丢数据） */
       const dec = await decryptKey("sk-plaintext-fallback");
       expect(dec).toBe("sk-plaintext-fallback");
     } finally {

@@ -2207,27 +2207,36 @@ async function githubToken(){
   }catch(e){ return ""; }
 }
 /**
- * 加密凭据；**加密不可用时返回 null（拒绝保存）**，绝不落明文。
+ * 加密凭据；**不可加密时返回 null（拒绝保存）**，绝不落明文。
  *
  * v3.7.90 安全修正：本文件原先把两处凭据写成
  *     const enc = (typeof encryptKey === "function") ? await encryptKey(secret) : secret;
  * 即「加密层没就绪就把凭据明文写进 localStorage」。这违反项目自己已确立的原则 ——
- * `src/crypto.js:119-130` 对 AI Key 的处理是「加密失败则**丢弃**，不落明文」。
+ * `src/crypto.js` 对 AI Key 的处理是「加密失败则**丢弃**，不落明文」。
  * 更糟的是 UI 文案仍显示「已保存（应用密码加密存储）」，属明文落盘 + 虚假提示双重问题。
  *
- * 触发条件（实测可达）：`encryptKey` 仅在 crypto 层初始化且 Web Crypto / 设备密钥可用时存在；
- * `initCrypto()` 未跑或抛错时它就是 undefined，而这条分支不会报错、不会提示，只是悄悄写明文。
+ * 凭据密封收口（批次③）勘误：v3.7.90 版守卫写作 `typeof encryptKey !== "function"`，
+ * 但函数声明块**加载即挂全局**，该条件恒为假、从未触发；而当时的 `encryptKey` 在
+ * Web Crypto / 设备密钥不可得时**静默返回明文** —— 明文照样被当"加密成功"写盘。
+ * 现在两道防线：① `encryptKey` 已改 fail-closed 抛错（见 crypto.js）；
+ * ② 本函数对返回值做密文形状校验（`isEncKey`），形状不符同样拒绝 ——
+ * 即便未来 encryptKey 退化，凭据链也不会写出明文。
  *
- * 现改为：不可用 → null；调用方按失败处理（`githubTokenSet` 的调用点已能识别 `!saved`，
+ * 拒绝语义：null；调用方按失败处理（`githubTokenSet` 的调用点已能识别 `!saved`，
  * `webdavSaveCfg` 的调用点会 toast「保存失败」）。**读回路径不变**，历史上已落明文的旧值仍可读，
  * 不会造成数据丢失。
  * @param {string} secret
- * @returns {Promise<string|null>}
+ * @returns {Promise<Object|null>} {__enc,iv,data} 或 null（拒绝保存）
  */
 async function _encryptSecretOrRefuse(secret){
-  if(typeof encryptKey !== "function") return null;
-  try{ return await encryptKey(secret); }
-  catch(e){ return null; }
+  try{
+    const enc = await encryptKey(secret);
+    if(typeof isEncKey === "function" && isEncKey(enc)) return enc;
+    throw new Error("encryptKey returned non-cipher (shape guard)");
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("error", "credential seal refused, plaintext never stored: " + (e && e.message || e), { where: "_encryptSecretOrRefuse" }); }catch(e2){}
+    return null;
+  }
 }
 /** 保存 device token（加密落盘；失败如实返回 false） */
 async function githubTokenSet(token){

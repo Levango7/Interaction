@@ -3671,7 +3671,7 @@ const MESSAGES = {
     "mvp.scope.exceptions.2": "execTool 的 force 已入 schema（v1.14.1 起 AI 可传 force=true 跳过二次确认；默认 false 仍走确认）",
     "mvp.scope.exceptions.3": "Electron 下 AI Key 由主进程保管，渲染进程 cfg 中 key 为空占位（P0-3）",
     // D. 调试输出
-    "debug.cryptoUnavailable": "Web Crypto API 不可用，AI Key 将明文存储于 localStorage",
+    "debug.cryptoUnavailable": "Web Crypto API 不可用，AI Key 将拒绝明文落盘（不会被保存）",
     /* v3.7.53：补齐「en 有、zh 没有」的 24 条（账号/云同步/引导页）。
        此前中文靠调用点默认值渲染、视觉无差异，但字典两侧 key 不对齐 —— 现在对齐，
        并由 tests/i18n-completeness.test.js 断言「两套 key 完全一致」。 */
@@ -7560,7 +7560,7 @@ const MESSAGES = {
     "mvp.scope.exceptions.2": "execTool force is in schema (since v1.14.1 AI can pass force=true to skip two-step confirmation; default false still confirms)",
     "mvp.scope.exceptions.3": "Under Electron AI Key is kept by main process, renderer cfg has empty key placeholder (P0-3)",
     // D. Debug output
-    "debug.cryptoUnavailable": "Web Crypto API unavailable, AI Key will be stored in plaintext in localStorage",
+    "debug.cryptoUnavailable": "Web Crypto API unavailable; AI Key will not be saved (plaintext refused)",
     /* v3.7.53：与 zh 同步补齐（255 条）；占位符与 HTML 结构已按 zh 校验一致。 */
     "agent.toolRunFail": "Tool execution failed: ",
     "aiagent.fetchBothFail": "Both proxy and direct connection failed: ",

@@ -162,7 +162,7 @@ describe("AI Key 加密存储", () => {
     expect(cfg.enabled).toBe(true);
   });
 
-  it("Web Crypto 不可用时降级明文不崩", async () => {
+  it("Web Crypto 不可用：读路径照常、写路径拒绝明文（不崩）", async () => {
     const win = await boot(loadApp());
     const { initCrypto, getCfg, PREFIX, encryptKey, decryptKey } = win.__test;
     win.__test._resetCrypto();
@@ -175,11 +175,11 @@ describe("AI Key 加密存储", () => {
     }
     win.localStorage.setItem(PREFIX + "cfg", JSON.stringify({ key: "sk-plain-fallback" }));
     await initCrypto();
+    /* 读路径兼容：历史明文 cfg 照常可读（不影响数据可用性） */
     const cfg = getCfg();
     expect(cfg.key).toBe("sk-plain-fallback");
-    // encryptKey 降级返回明文
-    const enc = await encryptKey("x");
-    expect(enc).toBe("x");
+    /* 写路径 fail-closed（凭据密封收口（批次③））：拒绝把明文当密文交给调用方 */
+    await expect(encryptKey("x")).rejects.toThrow();
     const dec = await decryptKey("x");
     expect(dec).toBe("x");
     // 还原
