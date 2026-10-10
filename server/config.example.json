@@ -35,6 +35,15 @@
   "dev": {
     "allowUnsafeDevEndpoints": false
   },
+  "security": {
+    "rateLimit": {
+      "enabled": true,
+      "windowMs": 60000,
+      "max": 30,
+      "loginMax": 10,
+      "emailCodeMax": 5
+    }
+  },
   "sync": {
     "maxSnapshotBytes": 2097152,
     "conflictPolicy": "lww"

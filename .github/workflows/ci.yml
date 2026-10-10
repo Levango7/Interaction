@@ -89,12 +89,13 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
         working-directory: server
-      - name: 服务端验证脚本（4 个自足脚本，各自 spawn 真服务 + 实测 HTTP）
+      - name: 服务端验证脚本（5 个自足脚本，各自 spawn 真服务 + 实测 HTTP）
         run: |
           node verify/hardening-check.cjs
           node verify/idor-check.cjs
           node verify/client-contract-check.cjs
           node verify/incremental-check.cjs
+          node verify/security-check.cjs
         working-directory: server
         timeout-minutes: 10
 

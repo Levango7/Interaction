@@ -15,11 +15,12 @@
 | 项 | 状态 |
 |---|---|
 | 与客户端（`agent-workbench.html`）联调 | 🟡 **已做契约级联调**（`verify/client-contract-check.cjs` 24/24）。但客户端默认仍指向不存在的 `localhost:3001`，未做过「真机 + 真 UI」联调 |
-| 自动化测试 | ✅ 四个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 24/24、`incremental-check` 38/38），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
+| 自动化测试 | ✅ 五个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 24/24、`incremental-check` 54/54、`security-check` 22/22），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
 | 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
-| 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot`（此前客户端在调、后端没有） |
-| 生产可用 | ❌ 否 —— 缺速率限制、缺审计日志，且未做真机 UI 联调 |
+| 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot` + **增量** `POST /api/sync/changes` / `/resolve`（全量 LWW / 增量含冲突策略，见 `docs/cloud-sync-incremental-contract.md`） |
+| 速率限制 / 审计日志 | ✅ 已有（v3.7.110）：登录/注册/发码按 IP + 同 email 限流（429 + `Retry-After`）；审计环有界、`GET /api/auth/audit` 只读本人 |
+| 生产可用 | ❌ 仍否 —— 未做真机 UI 联调；另见下方已知缺口（refresh token 明文、corsOrigin 默认全开、tools/fetch 未实现） |
 
 **怎么跑验证**：
 
@@ -28,7 +29,8 @@ cd server && npm install
 node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
 node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
 node verify/client-contract-check.cjs  # 期望 24/24 —— 客户端契约联调（tools/fetch 为已识别未做项）
-node verify/incremental-check.cjs      # 期望 38/38 —— 增量协议：幂等/LWW/删除信号/快照相干/剪枝回退/隔离
+node verify/incremental-check.cjs      # 期望 54/54 —— 增量协议：幂等/LWW/删除信号/快照相干/剪枝回退/冲突与解决
+node verify/security-check.cjs         # 期望 22/22 —— 速率限制（阈值内正常/超限 429/分桶/可关）+ 审计环（记录/隔离/有界）
 ```
 （四个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
 
@@ -84,6 +86,8 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | github.postMessageOrigin | `GITHUB__POSTMESSAGEORIGIN` | OAuth 回调页回传 token 的 `targetOrigin`。**默认 `"*"`（任意站点可接收 token），生产必须改成自己的页面源** |
 | wechat.enabled / appid / secret | `WECHAT__ENABLED` 等 | 微信开放平台/公众号扫码凭据 |
 | dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行两个开发端点：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传。两者都是完整认证绕过，**生产必须为 false** |
+| security.rateLimit.* | `SECURITY__RATELIMIT__*` | 速率限制（v3.7.110，默认开）：`enabled/windowMs/max`（每 IP 每窗口 30 次，覆盖 email-code/register/login）+ `loginMax`（同邮箱 10 次）+ `emailCodeMax`（同邮箱 5 次）。命中返 **429 + `rate_limited`**（带 `Retry-After`）；进程内计数，多实例各算各的 |
+| （无配置项） | `AUDIT_MAX` | 审计环上限，默认 200 条/用户（溢出丢最旧；是"近期活动"而非不可变归档） |
 | （无配置项） | `ALLOW_PLACEHOLDER_SECRETS` | 允许沿用占位 JWT 密钥启动（默认拒绝）。仅本地联调 |
 | corsOrigin | `CORSORIGIN` | **默认 `"*"` = 反射任意 origin，生产必须改成白名单** |
 | sync.maxSnapshotBytes | `SYNC__MAXSNAPSHOTBYTES` | 快照上限，默认 2 MB（与 `express.json` 限制一致）。超限返 413，不静默截断 |

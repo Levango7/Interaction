@@ -150,6 +150,30 @@ class Store {
   getNotifyPrefs(userId) { return this._data.notifyPrefs[userId] || null; }
   setNotifyPrefs(userId, prefs) { this._data.notifyPrefs[userId] = prefs || {}; this._save(); }
 
+  // ---- 审计日志（v3.7.110 生产化）----
+  /* 记「谁在什么时候做了什么」。**有界环形**（AUDIT_MAX，默认 200，溢出丢最旧）——
+     它是"近期活动"而不是合规归档（要不可变归档需外置存储，README 已写清单）。
+     仅记安全相关事件（register/login/logout/device_delete）；同步读写太高频，不进环
+     —— 同步量看服务端访问日志。 */
+  addAudit(userId, ev, ctx) {
+    if (!this._data.audit) this._data.audit = {};
+    const max = Number(process.env.AUDIT_MAX) || 200;
+    let list = this._data.audit[userId];
+    if (!Array.isArray(list)) list = [];
+    list.push({ at: Date.now(), ev: String(ev || "?"), ctx: (ctx && typeof ctx === "object") ? ctx : {} });
+    if (list.length > max) list = list.slice(list.length - max);
+    this._data.audit[userId] = list;
+    this._save();
+    return list[list.length - 1];
+  }
+  /** 只返回本人的（调用方必须传 req.user.sub —— 越权读取在这里就没有入口） */
+  getAudit(userId, since) {
+    const list = this._data.audit && this._data.audit[userId];
+    if (!Array.isArray(list)) return [];
+    const s = Number(since) || 0;
+    return list.filter((e) => !s || (e && e.at > s));
+  }
+
   // ---- 云同步快照（全量 + LWW）----
   getSnapshot(userId) { return this._data.snapshots[userId] || null; }
   /* updatedAt 必须**与客户端时钟同源**：客户端推送成功后用本地 Date.now() 记录 lastPushAt

@@ -45,6 +45,25 @@ function authRouter(cfg, store) {
   const ok = (res, data) => res.json({ ok: true, data: data || {} });
   const fail = (res, status, error, data) => res.status(status || 400).json({ ok: false, error: error, data: data || {} });
 
+  /* ---- v3.7.110 速率限制（生产必需：防暴力破解/撞库/滥发验证码）----
+     默认开、阈值取宽（正常使用不可能碰到）；要关或调阈值走 cfg.security.rateLimit。
+     维度：IP 总量一桶 + login/email-code 再按 email 各一桶（同一目标反复试才是攻击面）。 */
+  const rl = require("./rate-limit");
+  const rlCfg = (cfg.security && cfg.security.rateLimit) || {};
+  const _rlEnabled = rlCfg.enabled !== false;
+  function rlAuth(name, extra) {
+    if (!_rlEnabled) return function (_req, _res, next) { next(); };
+    const base = { windowMs: Number(rlCfg.windowMs) || 60000, max: Number(rlCfg.max) || 30 };
+    const ipLimit = rl.rateLimit(base);
+    if (!extra) return ipLimit;
+    const extraOpts = Object.assign({}, base, { max: Number(rlCfg[extra.maxKey]) || extra.max || 10, key: rl.byEmailField });
+    const extraLimit = rl.rateLimit(extraOpts);
+    return function (req, res, next) { ipLimit(req, res, function(){ extraLimit(req, res, next); }); };
+  }
+  router.use("/email-code", rlAuth("email-code", { maxKey: "emailCodeMax", max: 5 }));
+  router.use("/register", rlAuth("register"));
+  router.use("/login", rlAuth("login", { maxKey: "loginMax", max: 10 }));
+
   // ---- 发邮箱验证码 ----
   router.post("/email-code", async (req, res) => {
     try {
@@ -100,6 +119,7 @@ function authRouter(cfg, store) {
       }
       const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
       const user = store.createUser({ id: store.uid("u_"), email, name, passwordHash, provider: "email", providerId: null, createdAt: Date.now() });
+      store.addAudit(user.id, "register", { email: email });
       const t = makeTokens(cfg, user.id);
       const deviceName = String((req.body && req.body.deviceName) || "web");
       store.saveSession({ refreshToken: t.refreshToken, userId: user.id, createdAt: Date.now(), expiresAt: Date.now() + (cfg.jwt.refreshTtlSec || 2592000) * 1000, deviceName });
@@ -117,6 +137,7 @@ function authRouter(cfg, store) {
       const user = store.findUserByEmail(email);
       if (!user || user.provider !== "email") return fail(res, 401, "invalid_credentials");
       if (!bcrypt.compareSync(password, user.passwordHash || "")) return fail(res, 401, "invalid_credentials");
+      store.addAudit(user.id, "login", { device: String((req.body && req.body.deviceName) || "web") });
       const t = makeTokens(cfg, user.id);
       const deviceName = String((req.body && req.body.deviceName) || "web");
       store.saveSession({ refreshToken: t.refreshToken, userId: user.id, createdAt: Date.now(), expiresAt: Date.now() + (cfg.jwt.refreshTtlSec || 2592000) * 1000, deviceName });
@@ -145,6 +166,7 @@ function authRouter(cfg, store) {
   // ---- auth 中间件：解析 Bearer token -> req.user ----
   router.use("/me", authMiddleware(cfg));
   router.use("/devices", authMiddleware(cfg));
+  router.use("/audit", authMiddleware(cfg));
 
   router.get("/me", (req, res) => {
     const user = store.getUser(req.user.sub);
@@ -184,13 +206,23 @@ function authRouter(cfg, store) {
     });
     if (!rtKey) return fail(res, 404, "device_not_found");
     store.deleteSession(rtKey);
+    store.addAudit(req.user.sub, "device_delete", { id: want });
     return ok(res, {});
+  });
+
+  /* ---- 审计环只读（v3.7.110）：只能看本人的（userId 由中间件注入，越权读取没有入口）---- */
+  router.get("/audit", (req, res) => {
+    return ok(res, { events: store.getAudit(req.user.sub, Number(req.query && req.query.since) || 0) });
   });
 
   // ---- logout ----
   router.post("/logout", (req, res) => {
     const rt = String((req.body && req.body.refreshToken) || "");
-    if (rt) store.deleteSession(rt);
+    if (rt) {
+      const s = store.getSession(rt);
+      store.deleteSession(rt);
+      if (s && s.userId) store.addAudit(s.userId, "logout", {});
+    }
     return ok(res, {});
   });
 
