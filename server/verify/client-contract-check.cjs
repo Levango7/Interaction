@@ -22,7 +22,7 @@ function startServer() {
   return new Promise((resolve, reject) => {
     const p = spawn(process.execPath, ["src/index.js"], {
       cwd: SRV,
-      env: Object.assign({}, process.env, { PORT, ALLOW_PLACEHOLDER_SECRETS: "true" }),
+      env: Object.assign({}, process.env, { PORT, ALLOW_PLACEHOLDER_SECRETS: "true", TOOLS__FETCH__ALLOWHOSTS: "127.0.0.1" }),
       stdio: ["ignore", "pipe", "pipe"],
     });
     let out = "";
@@ -179,8 +179,15 @@ function record(group, label, res, expectStatuses, known) {
     { status: (empty.json && empty.json.data && empty.json.data.snapshot === null) ? 200 : 0, json: null }, [200]);
   TOKEN = savedTok;
 
-  r = await hit("POST", "/api/tools/fetch", { url: "https://example.com" }, { auth: true });
-  record("tools", "POST /api/tools/fetch   ← web_fetch 代理", r, [200], true);
+  /* v3.7.111：该端点已实现。按客户端的**真实调用**校验：GET + ?url=（此前这里记成 POST 是照
+     端点清单猜的，与实际调用不符）。目标取本机自己的 /api/health（allowHosts 已在 startServer
+     放开 127.0.0.1），断言它**真的把目标内容代回来** —— 不只是 200。 */
+  const proxyTarget = "http://127.0.0.1:" + PORT + "/api/health";
+  r = await hit("GET", "/api/tools/fetch?url=" + encodeURIComponent(proxyTarget), null, { auth: true });
+  const proxyOk = r.status === 200 && r.json && r.json.ok === true
+    && typeof (r.json.data && r.json.data.text) === "string"
+    && r.json.data.text.indexOf("agent-workbench-auth") !== -1;
+  record("tools", "GET /api/tools/fetch（把目标内容代回来）", { status: proxyOk ? 200 : (r.status || 0), json: null }, [200]);
 
   console.log("\n[4] 鉴权边界（未带 token 必须被拒）");
   const saved = TOKEN; TOKEN = null;

@@ -48,5 +48,14 @@
     "maxSnapshotBytes": 2097152,
     "conflictPolicy": "lww"
   },
+  "tools": {
+    "fetch": {
+      "enabled": true,
+      "maxBytes": 1048576,
+      "timeoutMs": 10000,
+      "maxRedirects": 3,
+      "allowHosts": []
+    }
+  },
   "dataFile": "data/auth.json"
 }

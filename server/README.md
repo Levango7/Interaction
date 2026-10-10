@@ -20,7 +20,7 @@
 | 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot` + **增量** `POST /api/sync/changes` / `/resolve`（全量 LWW / 增量含冲突策略，见 `docs/cloud-sync-incremental-contract.md`） |
 | 速率限制 / 审计日志 | ✅ 已有（v3.7.110）：登录/注册/发码按 IP + 同 email 限流（429 + `Retry-After`）；审计环有界、`GET /api/auth/audit` 只读本人 |
-| 生产可用 | ❌ 仍否 —— 未做真机 UI 联调；另见下方已知缺口（refresh token 明文、corsOrigin 默认全开、tools/fetch 未实现） |
+| 生产可用 | ❌ 仍否 —— 未做真机 UI 联调；另见下方已知缺口（refresh token 明文、corsOrigin 默认全开） |
 
 **怎么跑验证**：
 
@@ -28,9 +28,10 @@
 cd server && npm install
 node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
 node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
-node verify/client-contract-check.cjs  # 期望 24/24 —— 客户端契约联调（tools/fetch 为已识别未做项）
+node verify/client-contract-check.cjs  # 期望 25/25 —— 客户端契约联调（含 /api/tools/fetch 代回内容）
 node verify/incremental-check.cjs      # 期望 54/54 —— 增量协议：幂等/LWW/删除信号/快照相干/剪枝回退/冲突与解决
 node verify/security-check.cjs         # 期望 22/22 —— 速率限制（阈值内正常/超限 429/分桶/可关）+ 审计环（记录/隔离/有界）
+node verify/tools-fetch-check.cjs      # 期望 17/17 —— 抓取代理：代回原文/拒私网与云元数据/重定向每跳重校/体积与超时/401
 ```
 （四个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
 
@@ -92,6 +93,7 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | corsOrigin | `CORSORIGIN` | **默认 `"*"` = 反射任意 origin，生产必须改成白名单** |
 | sync.maxSnapshotBytes | `SYNC__MAXSNAPSHOTBYTES` | 快照上限，默认 2 MB（与 `express.json` 限制一致）。超限返 413，不静默截断 |
 | sync.conflictPolicy | `SYNC__CONFLICTPOLICY` | 增量冲突策略：`lww`（默认，输了的一方静默丢弃）· `mv`（输了的一方记进冲突清单下发，客户端结构化合并或让用户二选一，见 `POST /api/sync/resolve`） |
+| tools.fetch.* | `TOOLS__FETCH__*` | 抓取代理（`GET /api/tools/fetch`，v3.7.111）：`maxBytes`（默认 1MB，超限 413）/ `timeoutMs`（默认 10s，超时 504）/ `maxRedirects`（默认 3，**每跳重新校验主机**）/ `allowHosts`（默认空；列进去的主机才跳过私网检查，联调/内网部署的显式逃生舱） |
 
 ## 端点清单（对齐前端 apiClientModule）
 
@@ -136,9 +138,11 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 真机验证 `node verify/incremental-check.cjs`（38/38，含幂等/LWW/删除信号/快照相干/剪枝回退/跨用户隔离）。
 **冲突策略仍只有 `lww`**：`mv/三路合并` 是产品决策，未定不做。
 
-`POST /api/tools/fetch`（`web_fetch` 的 CORS 兜底代理）**仍未实现** —— 它是 SSRF 敏感面
-（服务端代抓任意 URL），需按 ics-fetch / notify-webhook 同款承重墙标准设计（主机白名单、
-拒私网回环、限大小与超时），本轮未做。
+`GET /api/tools/fetch?url=`（`web_fetch` 的 CORS 兜底代理）**已实现（v3.7.111）** —— 按 ics-fetch /
+notify-webhook 同款承重墙：必须 Bearer（不做开放代理）、拒 userinfo、拒回环/私网/链路本地/.local、
+**手动跟随重定向且每一跳重新校验**（`redirect:"follow"` 一个 302 就能绕开主机校验）、`cfg.tools.fetch`
+控制体积/超时/重定向次数，`allowHosts` 是显式白名单逃生舱（默认空）。断言见
+`node verify/tools-fetch-check.cjs`（17/17，含默认拒回环、302 跳私网被拒、413/504/401）。
 
 ### 通知/集成 `/api/notifications`、`/api/integrations`
 | 方法 | 路径 | 说明 |

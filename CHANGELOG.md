@@ -1,3 +1,28 @@
+## [v3.7.111] - 2026-10-10
+
+**`/api/tools/fetch`（web_fetch 的 CORS 兜底代理）按承重墙标准交付 —— 评估文档里最后一个「已识别、未做」的端点收口。**
+
+- **背景**：客户端的 `web_fetch` 直连被 CORS 拦断时会退到 `cfg.fetchProxy`（独立代理）或
+  `cfg.apiBase + /api/tools/fetch`（自建后端），而 `ac1114a` 那份后端**从未实现这个端点** ——
+  与 `/api/sync/snapshot` 同一形态（客户端一直在调、后端没有）。
+- **服务端**（`server/src/tools-fetch.js` 新件）：按客户端**真实调用**实现（`GET /api/tools/fetch?url=`，
+  返回原文、去标签仍是客户端的活）。承重墙口径同 ics-fetch / notify-webhook：
+  **必须 Bearer**（不做开放代理）· 拒 userinfo · 拒回环/私网/链路本地/.local ·
+  **手动跟随重定向且每一跳重新校验**（`redirect:"follow"` 一个 302 就能绕开主机校验，
+  `"error"` 又会让正常站点全废，取中间路）· `cfg.tools.fetch` 控体积（1MB→413）/ 超时（10s→504）/
+  重定向次数；`allowHosts` 是显式白名单逃生舱（默认空 —— 默认连云环都拒，含 169.254.169.254）。
+- **客户端**（`src/ai-tools.js`）：apiBase 路从裸 fetch 改走 **apiFetch**（带 token、带 401 刷新，
+  匹配后端的新鉴权要求）；自备 `fetchProxy` 仍是裸 fetch。**顺带修一个真 bug**：旧实现把代理返回的
+  404 当成抓取结果（既不回退直连也不说明原因），现在代理不可用/非 2xx 一律回退直连。
+- **验证**：`server/verify/tools-fetch-check.cjs`（新）**17/17** —— 代回原文 / 协议 / userinfo /
+  私网与云元数据默认拒 / 无白名单连回环都拒 / 白名单放行 / 302 跟随与跳私网被拒 / 413 / 504 / 401；
+  客户端 `tests/webfetch-proxy.test.js` **7/7**（新增守护：非 2xx 不当结果）；
+  契约联调 `client-contract-check.cjs` 24→**25/25**（该端点的断言从「猜的 POST」修正为按真实
+  调用的 GET + 断言代回内容）；六个服务端脚本全量重跑 **136/136** 全绿（9/9 · 9/9 · 25/25 · 54/54 · 22/22 · 17/17），已全部接入 CI 的
+  `server-verify` job。
+- 文档：`server/README.md`（端点 / 配置 / 状态表 / 命令）、`docs/backend-recovery-assessment.md`
+  §五 改写为「从待设计到承重墙交付」并附设计要点。
+
 ## [v3.7.110] - 2026-10-10
 
 **服务端生产化：速率限制 + 审计日志（评估文档 §七 点名的两项）—— 后端自身不再是最大缺口。**
