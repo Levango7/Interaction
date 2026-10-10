@@ -1357,16 +1357,27 @@ function _applyCloudSnapshot(data) {
      只要回传 wb_agent___dk（**设备密钥本体**），就会覆盖本机密钥；此后应用用攻击者已知的
      密钥加密 API Key，README 声称的「密钥不出本机」被实际打破。
      入站过滤同时挡掉 cfg（Key 密文）与 pre_restore_backup（内嵌全部本地键值的回滚档）。 */
+  /* v3.7.107（云同步契约 · C3 冲突计数）：统计「本机有值且被远端改成不同值」的键数 ——
+     即这次下行**真正改动了本机哪些数据**。口径边界（决定这个数字可不可解释）：
+       · 远端新增键（本机原本无值）→ 不计（那是新增，不是覆盖）；
+       · 远端值与本机相同 → 不计（没发生覆盖）；
+       · 本机更晚的未上传变更被"保护"跳过的键 → 不计（在本函数里它们本就没被写）。
+     数字落 sync_meta.lastPullCover，设置面板行 + 诊断报告可见（静默 LWW 的可解释出口）。 */
+  let _pullCover = 0;
   Object.keys(data).forEach(k => {
     if (k === SYNC_META_KEY || k === "_deviceMeta" || k === "_meta") return;
     if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
     if (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY) {
+      let _before = data[k];
+      try { _before = localStorage.getItem(k); } catch (e) { _before = data[k]; /* 读失败按「未变化」保守处理 */ }
       try { localStorage.setItem(k, data[k]); } catch (e) { /* 静默降级 */ }
+      if (typeof _before === "string" && _before !== data[k]) _pullCover++;
     }
   });
-  _setSyncMeta({ lastPullAt: Date.now() });
+  _setSyncMeta({ lastPullAt: Date.now(), lastPullCover: _pullCover });
   /* v3.7.67：云端恢复覆盖了本机键值，RAG 增量同步按哈希 diff 收敛（经 core 广播位，避免 Render→AI 逆层） */
   try { if (typeof emitDataMutate === "function") emitDataMutate("restore"); } catch (e) { /* 索引不阻塞恢复 */ }
+  return _pullCover;   // C3：调用方（增量轮）把它与 removed 侧的覆盖数相加
 }
 
 /* ============================================================
@@ -1462,19 +1473,25 @@ async function _syncIncrementalRound(){
   /* 下行 changed：包成对象走快照同一应用路径（任务按 updatedAt 合并 / 回滚档 / 范围过滤 / 数据广播全复用） */
   const changedObj = {};
   (d.changed || []).forEach(function(c){ if (c && _inSyncScope(c.k)) changedObj[c.k] = c.v; });
-  if (Object.keys(changedObj).length) _applyCloudSnapshot(changedObj);
+  const appliedCover = Object.keys(changedObj).length ? _applyCloudSnapshot(changedObj) : 0;
   /* 下行 removed：裸删除（远端删除不是本地变更，不入变更日志 —— 否则会把服务端的删除回传给服务端）；
      本机有更晚未上传变更的键跳过（下轮以上行胜出，服务端 LWW 同规则） */
-  let removedAny = false;
+  let removedAny = false, removedCover = 0;
   (d.removed || []).forEach(function(rm){
     if (!rm || !_inSyncScope(rm.k)) return;
-    if (_newestLocalChangeTs(rm.k) > (rm.ts || 0)) return;
+    if (_newestLocalChangeTs(rm.k) > (rm.ts || 0)) return;   // 被"本机更晚变更"保护跳过 → C3 不计（本就没动它）
+    let _had = null;
+    try { _had = localStorage.getItem(rm.k); } catch (e) { _had = null; }
     try { localStorage.removeItem(rm.k); removedAny = true; }
     catch (e) {
       try { if (typeof pushDiag === "function") pushDiag("warn", "apply remote removal failed: " + ((e && e.message) || e), { where: "syncIncremental", key: rm.k }); }catch(_e2){ /* 诊断自身失败静默 */ }
     }
+    if (typeof _had === "string") removedCover++;            // C3：本机原有值 → 这次删除真的动了本机数据
   });
   if (removedAny) { try { emitDataMutate("restore"); } catch (e) { /* 索引不阻塞同步 */ } }
+  /* C3：本轮下行覆盖数 = changed 侧（_applyCloudSnapshot 记的）+ removed 侧。每轮都写（无下行=0），
+     与「上次上传体积」同口径：永远是"最近一次"的实况（「上次云端覆盖: 无」= 这轮没覆盖任何东西）。 */
+  _setSyncMeta({ lastPullCover: (Number(appliedCover) || 0) + removedCover });
   /* 游标与日志：token 落盘（服务端权威水位）；**成功即清日志** —— 所有当前值已上行、
      远端更新已应用，两边收敛后清空是最简单且正确的游标（见 data-rw.clearSyncChangelog 注释）。 */
   _setSyncMeta({ syncToken: Number(d.token) || 0, lastPushAt: Date.now(), lastPullAt: Date.now() });
@@ -1557,7 +1574,8 @@ function _renderLastSync() {
   if (typeof document === "undefined") return;
   const el = document.getElementById("apiLastSync");
   const sz = document.getElementById("apiPushSize");
-  if (!el && !sz) return;
+  const cv = document.getElementById("apiPullCover");
+  if (!el && !sz && !cv) return;
   const meta = _getSyncMeta();
   if (el) {
     const ts = meta.lastPushAt || meta.lastPullAt;
@@ -1567,6 +1585,14 @@ function _renderLastSync() {
   if (sz) {
     sz.textContent = (typeof meta.lastPushBytes === "number" && meta.lastPushBytes > 0)
       ? t("api.pushSizeVal", "{size} · {n} 键").replace("{size}", _fmtPushSize(meta.lastPushBytes)).replace("{n}", String(meta.lastPushKeys || 0))
+      : "—";
+  }
+  /* C3：上次下行真正改动了本机多少个键 —— 0 显示「无」而不是留白（"没覆盖任何东西"也要说出来） */
+  if (cv) {
+    cv.textContent = (typeof meta.lastPullCover === "number")
+      ? (meta.lastPullCover > 0
+          ? t("api.pullCoverVal", "{n} 键").replace("{n}", String(meta.lastPullCover))
+          : t("api.pullCoverNone", "无"))
       : "—";
   }
 }

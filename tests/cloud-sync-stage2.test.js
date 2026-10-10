@@ -173,3 +173,57 @@ describe("阶段2/C2 回退与下行应用", () => {
     expect(meta.lastPushBytes).toBeGreaterThan(0);
   });
 });
+
+describe("C3 冲突计数（下行覆盖数可见）", () => {
+  it("全量应用口径：只统计「本机有值且被远端改成不同值」——远端新增不计、值相同不计", async () => {
+    const win = await loadApp({ storage: {} });
+    win.localStorage.setItem(PREFIX + "c3a", "old-a");   // 会被覆盖 → 计 1
+    win.localStorage.setItem(PREFIX + "c3b", "same");    // 值相同 → 不计
+    const n = win._applyCloudSnapshot({ [PREFIX + "c3a"]: "new-a", [PREFIX + "c3b"]: "same", [PREFIX + "c3c"]: "brand-new", _deviceMeta: { deviceId: "d" } });
+    expect(n).toBe(1);
+    expect(JSON.parse(win.localStorage.getItem(META)).lastPullCover).toBe(1);
+    expect(win.localStorage.getItem(PREFIX + "c3c"), "远端新增键要落地").toBe("brand-new");
+    expect(win.document.getElementById("apiPullCover").textContent).toBe("1 键");
+  });
+
+  it("无覆盖 → 0，面板显示「无」而非留白（「没覆盖任何东西」也要说出来）", async () => {
+    const win = await loadApp({ storage: {} });
+    win._applyCloudSnapshot({ [PREFIX + "c3x"]: "v" });  // 远端新增 → 0
+    expect(JSON.parse(win.localStorage.getItem(META)).lastPullCover).toBe(0);
+    expect(win.document.getElementById("apiPullCover").textContent).toBe("无");
+  });
+
+  it("增量轮：changed 侧 + removed 侧相加（removed 只算本机原本有值的）", async () => {
+    const win = await loadApp({ storage: on() });
+    win.localStorage.setItem(PREFIX + "c3z1", "old");
+    win.localStorage.setItem(PREFIX + "c3z2", "y");
+    const calls = mockFetch(win, okChanges({
+      changed: [{ k: PREFIX + "c3z1", v: "new", ts: 9 }],
+      removed: [{ k: PREFIX + "c3z2", ts: 9 }, { k: PREFIX + "c3absent", ts: 9 }]   // 后者本机无值 → 不计
+    }));
+    await win.syncRound();
+    expect(calls.length).toBe(1);
+    expect(win.localStorage.getItem(PREFIX + "c3z2")).toBeNull();
+    expect(JSON.parse(win.localStorage.getItem(META)).lastPullCover, "1（覆盖）+ 1（删了本机有值的键）= 2").toBe(2);
+  });
+
+  it("被「本机更晚变更」保护跳过的删除：不计入，也不删键", async () => {
+    const win = await loadApp({ storage: on() });
+    win.localStorage.setItem(PREFIX + "c3keep", "mine");
+    seedLog(win, [{ k: PREFIX + "c3keep", op: "set", ts: Date.now() + 100000, h: "" }]);   // 本机更晚
+    mockFetch(win, okChanges({ removed: [{ k: PREFIX + "c3keep", ts: 5 }] }));
+    await win.syncRound();
+    expect(win.localStorage.getItem(PREFIX + "c3keep")).toBe("mine");
+    expect(JSON.parse(win.localStorage.getItem(META)).lastPullCover).toBe(0);
+  });
+
+  it("诊断报告含覆盖行（0 也写出来，与面板同源）", async () => {
+    const win = await loadApp({ storage: {} });
+    win._applyCloudSnapshot({ [PREFIX + "c3n"]: "a" });   // 新增 → 0
+    expect(win.buildDiagReport()).toContain("云同步: 上次云端覆盖 0 键");
+    win.localStorage.setItem(PREFIX + "c3n", "old");
+    win._applyCloudSnapshot({ [PREFIX + "c3n"]: "b" });   // 覆盖 → 1
+    expect(win.buildDiagReport()).toContain("云同步: 上次云端覆盖 1 键");
+    expect(win.document.getElementById("apiPullCover").textContent).toBe("1 键");
+  });
+});

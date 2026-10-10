@@ -545,6 +545,8 @@ function buildDiagReport(opts){
   try {
     const sm = load(PREFIX + "sync_meta", {});
     L.push("云同步: " + ((sm && sm.lastPushBytes) ? ("上次上传快照 " + (sm.lastPushBytes / 1024).toFixed(1) + " KB / 含 " + (sm.lastPushKeys || 0) + " 键") : "尚未上传过快照"));
+    /* v3.7.107（C3）：上次下行覆盖数 —— 静默 LWW 的那个数字，现在可解释（0 也说出来） */
+    if (sm && typeof sm.lastPullCover === "number") L.push("云同步: 上次云端覆盖 " + sm.lastPullCover + " 键");
   } catch (e) { L.push("云同步: 体积信息读取失败（" + ((e && e.message) || e) + "）"); }
   L.push("诊断条数: " + list.length);
   L.push("");
