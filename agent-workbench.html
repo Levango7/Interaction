@@ -6214,10 +6214,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.107"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.108"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261010a";
+const BUILD_TAG = "20261010b";
 
 
 
@@ -10384,7 +10384,7 @@ const MESSAGES = {
     "mvp.scope.exceptions.2": "execTool 的 force 已入 schema（v1.14.1 起 AI 可传 force=true 跳过二次确认；默认 false 仍走确认）",
     "mvp.scope.exceptions.3": "Electron 下 AI Key 由主进程保管，渲染进程 cfg 中 key 为空占位（P0-3）",
     // D. 调试输出
-    "debug.cryptoUnavailable": "Web Crypto API 不可用，AI Key 将明文存储于 localStorage",
+    "debug.cryptoUnavailable": "Web Crypto API 不可用，AI Key 将拒绝明文落盘（不会被保存）",
     /* v3.7.53：补齐「en 有、zh 没有」的 24 条（账号/云同步/引导页）。
        此前中文靠调用点默认值渲染、视觉无差异，但字典两侧 key 不对齐 —— 现在对齐，
        并由 tests/i18n-completeness.test.js 断言「两套 key 完全一致」。 */
@@ -14273,7 +14273,7 @@ const MESSAGES = {
     "mvp.scope.exceptions.2": "execTool force is in schema (since v1.14.1 AI can pass force=true to skip two-step confirmation; default false still confirms)",
     "mvp.scope.exceptions.3": "Under Electron AI Key is kept by main process, renderer cfg has empty key placeholder (P0-3)",
     // D. Debug output
-    "debug.cryptoUnavailable": "Web Crypto API unavailable, AI Key will be stored in plaintext in localStorage",
+    "debug.cryptoUnavailable": "Web Crypto API unavailable; AI Key will not be saved (plaintext refused)",
     /* v3.7.53：与 zh 同步补齐（255 条）；占位符与 HTML 结构已按 zh 校验一致。 */
     "agent.toolRunFail": "Tool execution failed: ",
     "aiagent.fetchBothFail": "Both proxy and direct connection failed: ",
@@ -20956,12 +20956,26 @@ async function _ensureDeviceKeyImpl(){
 /**
  * 用设备密钥 AES-GCM 加密明文 Key
  * @param {string} plaintext - 明文 API Key
- * @returns {Promise<Object|string>} 加密对象 {__enc,iv,data}；Web Crypto 不可用时回退原值
+ * @returns {Promise<Object>} 加密对象 {__enc,iv,data}
+ * @throws {Error} code=crypto-unavailable（Web Crypto 不可用）/ device-key-unavailable（设备密钥不可得）
+ *
+ * 凭据密封收口（批次③）：此前这两支**静默回退明文**，而调用方（persistCfg 之外还有
+ * GitHub token / WebDAV 密码 / 集成敏感字段）会把明文当"加密成功"写盘且 UI 仍称"已加密"。
+ * 现改 fail-closed 抛错——所有既有消费方的 catch 语义本就是「丢弃 / 拒绝保存」，自动收敛。
+ * 读路径（decryptKey 对非密文原样返回）不受影响，历史上已落明文的旧值仍可读。
  */
 async function encryptKey(plaintext){
-  if(!_cryptoReady) return plaintext;
+  if(!_cryptoReady){
+    const err = new Error("Web Crypto 不可用，拒绝明文落盘");
+    err.code = "crypto-unavailable";
+    throw err;
+  }
   const key = await ensureDeviceKey();
-  if(!key) return plaintext;
+  if(!key){
+    const err = new Error("设备密钥不可得，拒绝明文落盘");
+    err.code = "device-key-unavailable";
+    throw err;
+  }
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const enc = new TextEncoder().encode(String(plaintext));
   const cipher = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc);
@@ -21060,10 +21074,10 @@ async function initCrypto(){
     try{ await ensureDeviceKey(); }
     catch(e){ _cryptoReady = false; _deviceKey = null; }
   }
-  // T5.3 浏览器兼容：Web Crypto 不可用（file:// 降级 / 旧浏览器 / 不安全上下文）时 warn 一次，Key 将明文存储
+  // T5.3 浏览器兼容：Web Crypto 不可用（file:// 降级 / 旧浏览器 / 不安全上下文）时 warn 一次，Key 将被拒绝保存（fail-closed）
   if(!_cryptoReady && typeof console !== "undefined" && console.warn && !_cryptoWarned){
     _cryptoWarned = true;
-    try{ console.warn("[Agent Workshop] " + t("debug.cryptoUnavailable","Web Crypto API 不可用，AI Key 将明文存储于 localStorage")); }catch(e){ /* noop */ }
+    try{ console.warn("[Agent Workshop] " + t("debug.cryptoUnavailable","Web Crypto API 不可用，AI Key 将拒绝明文落盘（不会被保存）")); }catch(e){ /* noop */ }
   }
   const raw = load(PREFIX+"cfg", {});
 
@@ -27490,18 +27504,53 @@ async function _syncIncrementalRound(){
   return true;
 }
 
-/** 同步一轮（开关制分流）。doSync 的入口：开关关 = 现行全量（逐位不变）。 */
-async function syncRound(){
-  let incrOn = false;
+/** C4 开关（与 C1 同一字段）：cfg.syncIncremental === true。关闭 = 逐位全量路径（零行为变化）。 */
+function _syncIncrementalEnabled(){
   try {
     const c = (typeof getCfg === "function") ? getCfg() : null;
-    incrOn = !!(c && c.syncIncremental === true);
-  } catch (e) { incrOn = false; }
-  if (incrOn){
+    return !!(c && c.syncIncremental === true);
+  } catch (e) { return false; }
+}
+/* 阶段3（v3.7.108 下行也切增量）：本会话是否仍可用增量路径。一旦发生过"服务端不支持 /
+   水位太旧"的回退，定时拉取就不再打扰那个部署（全量回退已经做过一次，同一部署不会自己
+   长出增量端点）；刷新页面或部署升级后自动重置。 */
+let _incrUnavailable = false;
+function _syncIncrementalAvailable(){ return !_incrUnavailable; }
+
+/* 阶段3（v3.7.108 下行也切增量）：定时「无上也拉」。
+   阶段 2 的下行变更只在上行时捎带回来（变更日志为空就不轮询）—— 跨设备的改动要等本机
+   下一次编辑才可见。这里补一个 5 分钟的定时拉取，**仅**在以下条件全部成立时才跑：
+     已登录 · 增量开关开 · 本会话未发生过「服务端不支持」回退。
+   开关关 / 未登录 / 不支持增量时一律不跑（开关关时逐位零行为变化）。
+   定时器建在本块（Render 层）：调用点走既有的 window.doSync / window.isApiLoggedIn 桥
+   （同 cloudCheckOnLogin 的用法），**刻意不碰 ui-ge-api.js** —— 那是另一条会话线在途的文件，
+   把本功能塞进去会让两个会话的改动混进同一文件（互踩）。
+   建在模块执行期：彼时 window.doSync 尚未挂载，故每次 tick 都做 typeof 判断。 */
+let _incrPullTimer = null;
+/** 阶段3 定时拉取的一次 tick。抽成命名函数（而非匿名回调）：生产里是 setInterval 的回调，
+ *  测试里直接调它即可覆盖全部判断分支（假时钟到不了页面 realm 的 setInterval，见测试注释）。 */
+function _syncIncrementalPullTick(){
+  try {
+    if (typeof window.isApiLoggedIn !== "function" || !window.isApiLoggedIn()) return;
+    if (!_syncIncrementalEnabled() || !_syncIncrementalAvailable()) return;
+    if (typeof window.doSync !== "function") return;
+    window.doSync();
+  } catch (e) { /* 定时器回调里任何异常都不许冒出去 */ }
+}
+function _startIncrementalPullTimer(){
+  if (_incrPullTimer) return;
+  _incrPullTimer = setInterval(_syncIncrementalPullTick, 5 * 60 * 1000);
+  if (_incrPullTimer && _incrPullTimer.unref) { try { _incrPullTimer.unref(); } catch (e) { /* jsdom 无 unref，静默 */ } }
+}
+_startIncrementalPullTimer();   // 阶段3：加载即挂定时拉取（每次 tick 自判登录 / 开关 / 可用性）
+
+/** 同步一轮（开关制分流）。doSync 的入口：开关关 = 现行全量（逐位不变）。 */
+async function syncRound(){
+  if (_syncIncrementalEnabled()){
     const r = await _syncIncrementalRound();
     if (r === true) return true;
     if (r === false) return false;
-    /* r === "full-fallback"：落到下面走全量（全量 PUT 会重建服务端增量视图） */
+    _incrUnavailable = true;   /* r === "full-fallback"：落到下面走全量；本会话不再定时轮询增量 */
   }
   return await apiPutSnapshot(_buildCloudSnapshot());
 }
@@ -41048,12 +41097,16 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
 
   /* 加密单个 token：不可加密或加密失败 → 返回明文原值（与改造前落盘行为一致，绝不丢登录）。
      ⚠️ 与 cfg 的 D4「不可加密即丢弃」策略有意不同：AI Key 是长期凭据，token 是短时凭据（15 分钟
-     access + refresh 轮换）；且改造前所有环境都落明文，回落明文不会比现状更差。 */
+     access + refresh 轮换）；且改造前所有环境都落明文，回落明文不会比现状更差。
+     凭据密封收口（批次③）：把「降级」与「意外」分开——降级（`_cryptoReady` 非 true）是 v3.7.62
+     钉死的有意契约，不打诊断（initCrypto 已一次性 warn）；意外（encryptKey 抛错或返回非密文形状，
+     如设备密钥不可得）必须留痕，否则静默退化无从查证。两种情况回落明文的行为不变。 */
   async function _sealTokenValue(plain){
+    if(typeof _cryptoReady === "undefined" || _cryptoReady !== true) return plain;
     try{
       const enc = await encryptKey(plain);
       if(enc && typeof enc === "object" && enc.__enc === true) return enc;
-      return plain;
+      throw new Error("non-cipher shape");
     }catch(e){
       try{ pushDiag("error", "token seal failed, plaintext kept: "+(e&&e.message||e), {where:"_sealTokenValue"}); }catch(_e2){}
       return plain;
@@ -48400,27 +48453,36 @@ async function githubToken(){
   }catch(e){ return ""; }
 }
 /**
- * 加密凭据；**加密不可用时返回 null（拒绝保存）**，绝不落明文。
+ * 加密凭据；**不可加密时返回 null（拒绝保存）**，绝不落明文。
  *
  * v3.7.90 安全修正：本文件原先把两处凭据写成
  *     const enc = (typeof encryptKey === "function") ? await encryptKey(secret) : secret;
  * 即「加密层没就绪就把凭据明文写进 localStorage」。这违反项目自己已确立的原则 ——
- * `src/crypto.js:119-130` 对 AI Key 的处理是「加密失败则**丢弃**，不落明文」。
+ * `src/crypto.js` 对 AI Key 的处理是「加密失败则**丢弃**，不落明文」。
  * 更糟的是 UI 文案仍显示「已保存（应用密码加密存储）」，属明文落盘 + 虚假提示双重问题。
  *
- * 触发条件（实测可达）：`encryptKey` 仅在 crypto 层初始化且 Web Crypto / 设备密钥可用时存在；
- * `initCrypto()` 未跑或抛错时它就是 undefined，而这条分支不会报错、不会提示，只是悄悄写明文。
+ * 凭据密封收口（批次③）勘误：v3.7.90 版守卫写作 `typeof encryptKey !== "function"`，
+ * 但函数声明块**加载即挂全局**，该条件恒为假、从未触发；而当时的 `encryptKey` 在
+ * Web Crypto / 设备密钥不可得时**静默返回明文** —— 明文照样被当"加密成功"写盘。
+ * 现在两道防线：① `encryptKey` 已改 fail-closed 抛错（见 crypto.js）；
+ * ② 本函数对返回值做密文形状校验（`isEncKey`），形状不符同样拒绝 ——
+ * 即便未来 encryptKey 退化，凭据链也不会写出明文。
  *
- * 现改为：不可用 → null；调用方按失败处理（`githubTokenSet` 的调用点已能识别 `!saved`，
+ * 拒绝语义：null；调用方按失败处理（`githubTokenSet` 的调用点已能识别 `!saved`，
  * `webdavSaveCfg` 的调用点会 toast「保存失败」）。**读回路径不变**，历史上已落明文的旧值仍可读，
  * 不会造成数据丢失。
  * @param {string} secret
- * @returns {Promise<string|null>}
+ * @returns {Promise<Object|null>} {__enc,iv,data} 或 null（拒绝保存）
  */
 async function _encryptSecretOrRefuse(secret){
-  if(typeof encryptKey !== "function") return null;
-  try{ return await encryptKey(secret); }
-  catch(e){ return null; }
+  try{
+    const enc = await encryptKey(secret);
+    if(typeof isEncKey === "function" && isEncKey(enc)) return enc;
+    throw new Error("encryptKey returned non-cipher (shape guard)");
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("error", "credential seal refused, plaintext never stored: " + (e && e.message || e), { where: "_encryptSecretOrRefuse" }); }catch(e2){}
+    return null;
+  }
 }
 /** 保存 device token（加密落盘；失败如实返回 false） */
 async function githubTokenSet(token){
