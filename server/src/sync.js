@@ -13,8 +13,10 @@
  *   GET  响应 { ok: true, data: { snapshot: Object|null } }   ← 客户端读 r.data.snapshot
  *   均需 Bearer 鉴权（快照含该用户全部数据）
  *
- * 冲突策略：**逐键 last-write-wins**（ts 大者胜；相等时删除胜）。全量路径与增量路径
- * 共用同一份 snapshots 记录（增量落盘会逐键补丁它），两条路必须看到同一个世界。
+ * 冲突策略：**逐键 last-write-wins**（ts 大者胜；相等时删除胜）为默认；`cfg.sync.conflictPolicy`
+ * 可切 "mv"（v3.7.109）—— 输了的一方不再静默丢弃，而是记进冲突清单随响应下发，客户端做结构化
+ * 合并（任务数组按 id×updatedAt）或让用户「保留本机 / 使用云端」二选一（`POST /api/sync/resolve`）。
+ * 服务端**不替客户端合并**：合并语义在客户端（单边做会造成「后端以为在合并、客户端以为被覆盖」）。
  *
  * 增量（阶段 2，2026-10-10 落地）：POST /api/sync/changes —— 单次往返 = 上行本机 delta +
  * 下行远端 delta；服务端权威水位 / tombstone / 剪枝触发全量回退，实现即口径（见 store.js
@@ -89,7 +91,21 @@ function syncRouter(cfg, store) {
     const body = req.body || {};
     if (!Array.isArray(body.changes) || !Array.isArray(body.removed)) return fail(res, 400, "invalid_changes");
     const since = Math.max(0, Number(body.since) || 0);
-    return ok(res, store.mergeIncremental(req.user.sub, { since, changes: body.changes, removed: body.removed }));
+    return ok(res, store.mergeIncremental(req.user.sub, {
+      since, changes: body.changes, removed: body.removed,
+      conflictPolicy: (cfg.sync && cfg.sync.conflictPolicy === "mv") ? "mv" : "lww"   // v3.7.109：策略由服务端下发
+    }));
+  });
+
+  // ---- 冲突解决（v3.7.109，mv+提示）：客户端选 local（本机值）或 remote（服务端值）----
+  /* 解决必须新于冲突双方，故 ts 由客户端提供（与全量路径同一时钟口径）；不传则按服务端时刻兜底。
+     choice 非法 / 冲突不存在 → 400 / 404。服务端不做任何合并（合并语义在客户端）。 */
+  router.post("/resolve", am, (req, res) => {
+    const body = req.body || {};
+    const k = typeof body.k === "string" ? body.k : null;
+    if (!k) return fail(res, 400, "invalid_key");
+    const r = store.resolveConflict(req.user.sub, k, body.choice, body.ts);
+    return r.ok ? ok(res, { token: r.token }) : fail(res, r.error === "not_found" ? 404 : 400, r.error);
   });
 
   return router;

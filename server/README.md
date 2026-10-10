@@ -87,6 +87,7 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | （无配置项） | `ALLOW_PLACEHOLDER_SECRETS` | 允许沿用占位 JWT 密钥启动（默认拒绝）。仅本地联调 |
 | corsOrigin | `CORSORIGIN` | **默认 `"*"` = 反射任意 origin，生产必须改成白名单** |
 | sync.maxSnapshotBytes | `SYNC__MAXSNAPSHOTBYTES` | 快照上限，默认 2 MB（与 `express.json` 限制一致）。超限返 413，不静默截断 |
+| sync.conflictPolicy | `SYNC__CONFLICTPOLICY` | 增量冲突策略：`lww`（默认，输了的一方静默丢弃）· `mv`（输了的一方记进冲突清单下发，客户端结构化合并或让用户二选一，见 `POST /api/sync/resolve`） |
 
 ## 端点清单（对齐前端 apiClientModule）
 
@@ -115,7 +116,8 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 |---|---|---|
 | GET | /snapshot | 读本用户快照。无快照时返回 `{snapshot: null}`（**不是 `{}`** —— 客户端会把空对象当成真实快照应用下去） |
 | PUT | /snapshot | 写快照，body `{ snapshot, updatedAt }`。全量覆盖（LWW）；超过 `sync.maxSnapshotBytes`（默认 2 MB）返回 413 而非静默截断。**落盘时会重建增量逐键视图**（两条路同世界） |
-| POST | /changes | **增量一轮**（v3.7.106）：body `{ since, changes:[{k,v,ts}], removed:[{k,ts}] }` → `{ token, changed, removed, needsFull }`。服务端权威水位 / tombstone（>200 条剪枝）/ 幂等重放 / 逐键 LWW（ts 大者胜、相等时删除胜）。`needsFull:true` = 客户端 too old（历史被剪枝）→ 回退全量 |
+| POST | /changes | **增量一轮**（v3.7.106）：body `{ since, changes:[{k,v,ts}], removed:[{k,ts}] }` → `{ token, changed, removed, needsFull }`。服务端权威水位 / tombstone（>200 条剪枝）/ 幂等重放 / 逐键 LWW（ts 大者胜、相等时删除胜）。`needsFull:true` = 客户端 too old（历史被剪枝）→ 回退全量。响应另带 `conflictPolicy`（`lww` 默认 / `mv`）与 `conflicts`（mv 下输了的一方的双方值清单） |
+| POST | /resolve | **冲突解决**（v3.7.109，仅 mv 策略有意义）：body `{ k, choice, ts }`（choice = `local` 本机值 / `remote` 服务端值；ts 由客户端给、必须新于冲突双方）。404 = 该键没有未解决的冲突；400 = choice 非法 |
 
 `updatedAt` **原样回传客户端写入时自报的值**（与客户端时钟同源）：客户端推送成功后用本地 `Date.now()`
 记 `lastPushAt`，再拿它跟服务端返回的 `updatedAt` 比大小判断「云端是否有其他设备的更新」

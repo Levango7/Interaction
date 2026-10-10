@@ -36,7 +36,8 @@
     "allowUnsafeDevEndpoints": false
   },
   "sync": {
-    "maxSnapshotBytes": 2097152
+    "maxSnapshotBytes": 2097152,
+    "conflictPolicy": "lww"
   },
   "dataFile": "data/auth.json"
 }

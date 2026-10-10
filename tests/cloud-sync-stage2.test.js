@@ -279,3 +279,69 @@ describe("阶段3 下行按需增量拉取（5 分钟定时，开关制）", () 
     expect(calls.length, "回退过一次就不再轮询（同一部署不会自己长出增量端点）").toBe(2);
   });
 });
+
+describe("mv+提示：冲突消费 / 任务自动合并 / 冲突面板", () => {
+  it("lww（默认）：响应无冲突 → 不写冲突键、面板保持隐藏（整段不触发）", async () => {
+    const win = await loadApp({ storage: on() });
+    mockFetch(win, okChanges({ token: 2, conflictPolicy: "lww", conflicts: [] }));
+    await win.syncRound();
+    expect(win.localStorage.getItem(PREFIX + "sync_conflicts")).toBeNull();
+    expect(win.document.getElementById("syncConflicts").classList.contains("u-hidden")).toBe(true);
+  });
+
+  it("mv：非任务键的冲突列进面板（含双方值预览），且不做自动合并上行", async () => {
+    const win = await loadApp({ storage: on() });
+    const calls = mockFetch(win, okChanges({ token: 3, conflictPolicy: "mv", conflicts: [{ k: PREFIX + "notes", local: { v: "[\"L\"]", ts: 5 }, remote: { v: "[\"R\"]", ts: 9 } }] }));
+    await win.syncRound();
+    expect(calls.length, "没有自动合并要上行，只有那一轮").toBe(1);
+    const stored = JSON.parse(win.localStorage.getItem(PREFIX + "sync_conflicts") || "[]");
+    expect(stored.length).toBe(1);
+    expect(stored[0].k).toBe(PREFIX + "notes");
+    const box = win.document.getElementById("syncConflicts");
+    expect(box.classList.contains("u-hidden")).toBe(false);
+    expect(box.textContent).toContain("本机");
+    expect(box.textContent).toContain("云端");
+    expect(box.textContent).toContain("保留本机");
+  });
+
+  it("mv：任务键自动合并（按 id×updatedAt）并上行合并值；合并后该键不再留在面板", async () => {
+    const win = await loadApp({ storage: on() });
+    const local = JSON.stringify([{ id: "t1", title: "L1", updatedAt: 100 }, { id: "t2", title: "L2", updatedAt: 50 }]);
+    const remote = JSON.stringify([{ id: "t2", title: "R2", updatedAt: 90 }, { id: "t3", title: "R3", updatedAt: 10 }]);
+    const calls = mockFetch(win, okChanges({ token: 4, conflictPolicy: "mv", conflicts: [{ k: PREFIX + "tasks", local: { v: local, ts: 5 }, remote: { v: remote, ts: 9 } }] }));
+    await win.syncRound();
+    expect(calls.length, "自动合并会多发一轮上行").toBe(2);
+    expect(calls[1].path).toBe("/api/sync/changes");
+    const merged = JSON.parse(calls[1].body.changes[0].v);
+    expect(merged.length, "三去重后的任务").toBe(3);
+    const m2 = merged.find((x) => x.id === "t2");
+    expect(m2.title, "t2 取 updatedAt 更大的远端值").toBe("R2");
+    expect(JSON.parse(win.localStorage.getItem(PREFIX + "tasks")).length).toBe(3);
+    expect(JSON.parse(win.localStorage.getItem(PREFIX + "sync_conflicts") || "[]").length).toBe(0);
+  });
+
+  it("mv：用户「保留本机」→ 调 /resolve(local) 且本机值落盘、面板移除该项", async () => {
+    const win = await loadApp({ storage: on() });
+    const calls = mockFetch(win, (path, body, n) => (n === 1
+      ? okChanges({ token: 5, conflictPolicy: "mv", conflicts: [{ k: PREFIX + "notes", local: { v: "[\"L\"]", ts: 5 }, remote: { v: "[\"R\"]", ts: 9 } }] })()
+      : { ok: true, status: 200, data: { token: 6 } }));
+    await win.syncRound();
+    await win._resolveSyncConflict(PREFIX + "notes", "local");
+    expect(calls[1].method + " " + calls[1].path).toBe("POST /api/sync/resolve");
+    expect(calls[1].body.choice).toBe("local");
+    expect(win.localStorage.getItem(PREFIX + "notes")).toBe("[\"L\"]");
+    expect(JSON.parse(win.localStorage.getItem(PREFIX + "sync_conflicts") || "[]").length).toBe(0);
+    expect(win.document.getElementById("syncConflicts").classList.contains("u-hidden")).toBe(true);
+  });
+
+  it("mv：用户「使用云端」→ /resolve(remote) 且云端值落盘", async () => {
+    const win = await loadApp({ storage: on() });
+    const calls = mockFetch(win, (path, body, n) => (n === 1
+      ? okChanges({ token: 7, conflictPolicy: "mv", conflicts: [{ k: PREFIX + "notes", local: { v: "[\"L\"]", ts: 5 }, remote: { v: "[\"R\"]", ts: 9 } }] })()
+      : { ok: true, status: 200, data: { token: 8 } }));
+    await win.syncRound();
+    await win._resolveSyncConflict(PREFIX + "notes", "remote");
+    expect(calls[1].body.choice).toBe("remote");
+    expect(win.localStorage.getItem(PREFIX + "notes")).toBe("[\"R\"]");
+  });
+});

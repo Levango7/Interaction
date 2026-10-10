@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-10",
-  "count": 519,
+  "count": 527,
   "items": [
     {
       "file": "ai-loop.js",
@@ -1732,7 +1732,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1299,
+      "line": 1302,
       "sig": "c1b0ce4ee4",
       "occ": 1,
       "level": "P0",
@@ -1743,7 +1743,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1325,
+      "line": 1328,
       "sig": "636665b26d",
       "occ": 1,
       "level": "P1",
@@ -1754,7 +1754,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1347,
+      "line": 1350,
       "sig": "67d49ea825",
       "occ": 1,
       "level": "P0",
@@ -1765,7 +1765,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1354,
+      "line": 1357,
       "sig": "b05ebfdd70",
       "occ": 1,
       "level": "P0",
@@ -1776,7 +1776,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1373,
+      "line": 1376,
       "sig": "306e082261",
       "occ": 1,
       "level": "P0",
@@ -1787,7 +1787,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1379,
+      "line": 1382,
       "sig": "b340dbb697",
       "occ": 1,
       "level": "P2",
@@ -1798,7 +1798,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1401,
+      "line": 1404,
       "sig": "6cbdd90465",
       "occ": 1,
       "level": "P1",
@@ -1809,7 +1809,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1403,
+      "line": 1406,
       "sig": "076265bb67",
       "occ": 1,
       "level": "P1",
@@ -1820,7 +1820,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1404,
+      "line": 1407,
       "sig": "05c42fd925",
       "occ": 1,
       "level": "P1",
@@ -1831,7 +1831,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1460,
+      "line": 1463,
       "sig": "e548a16f6d",
       "occ": 1,
       "level": "P1",
@@ -1842,7 +1842,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1487,
+      "line": 1490,
       "sig": "3147f0c8b3",
       "occ": 1,
       "level": "P2",
@@ -1853,7 +1853,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1491,
+      "line": 1494,
       "sig": "0756662861",
       "occ": 1,
       "level": "P1",
@@ -1864,7 +1864,95 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1533,
+      "line": 1517,
+      "sig": "b49bb31fd8",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": "/* toast 不可用 */",
+      "snippet": "toast(t(\"api.conflictToast\", \"发现 {n} 个同步冲突，请到「设置 → 账号 → 云同步」处理\").repla"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1565,
+      "sig": "4a59e80bfd",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 诊断自身失败静默 */",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"conflict list pe"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1582,
+      "sig": "20b75b10ae",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 诊断自身失败静默 */",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"auto-merge local"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1591,
+      "sig": "091879f317",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 诊断自身失败静默 */",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"auto-merge uploa"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1601,
+      "sig": "fb35e2929a",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": "/* toast 不可用 */",
+      "snippet": "toast(t(\"api.conflictFailToast\", \"冲突处理失败，请稍后重试\"), \"error\"); }"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1609,
+      "sig": "6a460b7232",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 诊断自身失败静默 */",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"apply conflict c"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1613,
+      "sig": "0756662861",
+      "occ": 2,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 索引不阻塞 */",
+      "snippet": "emitDataMutate(\"restore\"); }"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1644,
+      "sig": "fb35e2929a",
+      "occ": 2,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": "/* toast 不可用 */",
+      "snippet": "toast(t(\"api.conflictFailToast\", \"冲突处理失败，请稍后重试\"), \"error\"); }"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1673,
       "sig": "ff5c5afebe",
       "occ": 1,
       "level": "P2",
@@ -1875,7 +1963,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1538,
+      "line": 1678,
       "sig": "39c3cdfd9c",
       "occ": 1,
       "level": "P1",
@@ -1886,7 +1974,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1577,
+      "line": 1717,
       "sig": "ada6b6a72b",
       "occ": 1,
       "level": "P2",
@@ -1897,7 +1985,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1584,
+      "line": 1724,
       "sig": "b377164298",
       "occ": 1,
       "level": "P2",
@@ -1908,7 +1996,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1589,
+      "line": 1729,
       "sig": "b641f83fe7",
       "occ": 1,
       "level": "P0",
@@ -1919,7 +2007,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1671,
+      "line": 1811,
       "sig": "e9146843b9",
       "occ": 1,
       "level": "P2",
@@ -1930,7 +2018,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1674,
+      "line": 1814,
       "sig": "ada6b6a72b",
       "occ": 2,
       "level": "P2",
@@ -1941,7 +2029,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1676,
+      "line": 1816,
       "sig": "8ebeca95de",
       "occ": 1,
       "level": "P2",
@@ -1952,7 +2040,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1683,
+      "line": 1823,
       "sig": "c5f4e48894",
       "occ": 1,
       "level": "P1",
@@ -1963,7 +2051,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1688,
+      "line": 1828,
       "sig": "82a8bbf70d",
       "occ": 1,
       "level": "P1",
@@ -1974,7 +2062,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1705,
+      "line": 1845,
       "sig": "002dc4a784",
       "occ": 1,
       "level": "P2",
@@ -1985,7 +2073,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1830,
+      "line": 1970,
       "sig": "ec84a59a8f",
       "occ": 1,
       "level": "P1",
@@ -1996,7 +2084,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1883,
+      "line": 2023,
       "sig": "3387716408",
       "occ": 1,
       "level": "P2",
@@ -2007,7 +2095,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1922,
+      "line": 2062,
       "sig": "e71d427a6a",
       "occ": 1,
       "level": "P2",
@@ -2018,7 +2106,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1926,
+      "line": 2066,
       "sig": "fa1b0bd661",
       "occ": 1,
       "level": "P2",
@@ -2029,7 +2117,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1991,
+      "line": 2131,
       "sig": "d61a0c114f",
       "occ": 1,
       "level": "P0",
@@ -2040,7 +2128,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2005,
+      "line": 2145,
       "sig": "462b633f59",
       "occ": 1,
       "level": "P2",
@@ -2051,7 +2139,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2006,
+      "line": 2146,
       "sig": "1fcc8cc2ca",
       "occ": 1,
       "level": "P2",
@@ -2062,7 +2150,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2008,
+      "line": 2148,
       "sig": "86a43ef20d",
       "occ": 1,
       "level": "P2",
@@ -2073,7 +2161,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2021,
+      "line": 2161,
       "sig": "b756decc56",
       "occ": 1,
       "level": "P2",
@@ -2084,7 +2172,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2027,
+      "line": 2167,
       "sig": "359db5b6f6",
       "occ": 1,
       "level": "P0",
@@ -2095,7 +2183,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2029,
+      "line": 2169,
       "sig": "5e3692e945",
       "occ": 1,
       "level": "P1",
@@ -2106,7 +2194,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2081,
+      "line": 2221,
       "sig": "b708929003",
       "occ": 1,
       "level": "P1",

@@ -21,11 +21,11 @@ const SRV = path.join(__dirname, "..");
 const PORT = "4575";
 const BASE = "http://127.0.0.1:" + PORT;
 
-function startServer() {
+function startServer(extraEnv) {
   return new Promise((resolve, reject) => {
     const p = spawn(process.execPath, ["src/index.js"], {
       cwd: SRV,
-      env: Object.assign({}, process.env, { PORT, ALLOW_PLACEHOLDER_SECRETS: "true" }),
+      env: Object.assign({}, process.env, { PORT, ALLOW_PLACEHOLDER_SECRETS: "true" }, extraEnv || {}),
       stdio: ["ignore", "pipe", "pipe"],
     });
     let out = "";
@@ -80,7 +80,7 @@ function check(label, cond, detail) {
 function group(name) { console.log("\n" + name); }
 
 (async () => {
-  const proc = await startServer();
+  let proc = await startServer();
   const T0 = Date.now();
   const K_TASKS = "wb_agent_tasks", K_NOTES = "wb_agent_notes", K_NEW = "wb_agent_chat_office";
 
@@ -215,6 +215,61 @@ function group(name) { console.log("\n" + name); }
     const c1 = await round(0);
     check("新用户 C 看不到 A/B 的任何键", (c1.data.changed || []).length === 0 && (c1.data.removed || []).length === 0);
     check("C 的 token 独立从 0 起", c1.data.token === 0, "token=" + c1.data.token);
+
+    group("⑫ mv+提示：冲突检测 / 清单下发 / 解决（服务端声明策略）");
+    /* 策略是进程级配置 → 同端口同数据文件重启一台 mv 机（数据从磁盘重载，用户与 token 不变
+       —— JWT 密钥同源；端口需等旧进程退出后再绑）。前面所有组跑在默认 lww 上，行为零变化。 */
+    try { proc.kill(); } catch (e) { /* 已退出 */ }
+    await new Promise((r) => setTimeout(r, 800));
+    proc = await startServer({ SYNC__CONFLICTPOLICY: "mv" });
+    /* 重启后先各取一个新 token：⑩ 组的剪枝已把 prunedBelow 推高，旧 token 会触发 needsFull
+       （响应 changed/removed 为空 —— 本身是正确行为，但会让"值是否回显"的断言失真） */
+    TOKEN = tokA; const tokAF = (await round(0)).data.token;
+    TOKEN = tokB; const tokBF = (await round(0)).data.token;
+    const K_CONF = "wb_agent_conf_demo", K_CONF2 = "wb_agent_conf_demo2", K_CONF3 = "wb_agent_conf_demo3";
+    const aFirst = await round(tokAF, [{ k: K_CONF, v: "vA", ts: T0 + 5000 }]);
+    check("响应声明策略 = mv", aFirst.data.conflictPolicy === "mv", "policy=" + aFirst.data.conflictPolicy);
+    check("新写的值本身不产生冲突（清单为空）", (aFirst.data.conflicts || []).length === 0);
+    /* B 端用更新 ts 写同一键 → 正常落定 */
+    TOKEN = tokB;
+    const bNew = await round(tokBF, [{ k: K_CONF, v: "vB", ts: T0 + 9000 }]);
+    check("B 的新值正常落定", byKey(bNew.data.changed, K_CONF).some((x) => x.v === "vB"));
+    /* A 端再用更旧的 ts 写 → 输的一方进冲突清单；A 拿到的服务端值仍是 vB（旧值没应用上去） */
+    TOKEN = tokA;
+    const aOld = await round(tokAF, [{ k: K_CONF, v: "vA-old", ts: T0 + 100 }]);
+    const cf = (aOld.data.conflicts || []).find((c) => c.k === K_CONF);
+    check("旧 ts 的变更被记进冲突清单", !!cf);
+    check("清单含双方值与记录时刻", !!cf && cf.local.v === "vA-old" && cf.remote.v === "vB" && cf.at > 0);
+    check("服务端值未被旧值覆盖（A 拿到的仍是 vB）", byKey(aOld.data.changed, K_CONF).some((x) => x.v === "vB"));
+    /* resolve = local：本机值生效，清单清空 */
+    const resLocal = await hit("POST", "/api/sync/resolve", { k: K_CONF, choice: "local", ts: T0 + 12000 }, { auth: true });
+    check("resolve=local → 200", resLocal.status === 200 && resLocal.json && resLocal.json.ok === true, "HTTP " + resLocal.status);
+    const afterLocal = await round(aOld.data.token);
+    check("解决后本机值生效", byKey(afterLocal.data.changed, K_CONF).some((x) => x.v === "vA-old"));
+    check("冲突清单已清空", (afterLocal.data.conflicts || []).length === 0);
+    /* 再造一条 → resolve = remote：A 拿到的是服务端值 */
+    TOKEN = tokB;
+    const bNew2 = await round(tokBF, [{ k: K_CONF2, v: "vB2", ts: T0 + 13000 }]);
+    TOKEN = tokA;
+    const aOld2 = await round(tokAF, [{ k: K_CONF2, v: "vA2", ts: T0 + 200 }]);
+    check("第二条冲突被记录", (aOld2.data.conflicts || []).some((c) => c.k === K_CONF2));
+    const resRemote = await hit("POST", "/api/sync/resolve", { k: K_CONF2, choice: "remote", ts: T0 + 14000 }, { auth: true });
+    const afterRemote = await round(aOld2.data.token);
+    check("resolve=remote → A 拿到的是服务端值 vB2", byKey(afterRemote.data.changed, K_CONF2).some((x) => x.v === "vB2"));
+    check("两条冲突都已清", (afterRemote.data.conflicts || []).length === 0);
+    /* 坏 choice 要在**存在冲突**的键上验（已解决的键返回 404 也是正确语义，单独验） */
+    TOKEN = tokB;
+    await round(tokBF, [{ k: K_CONF3, v: "vB3", ts: T0 + 18000 }]);
+    TOKEN = tokA;
+    await round(tokAF, [{ k: K_CONF3, v: "vA3", ts: T0 + 300 }]);
+    const badChoice = await hit("POST", "/api/sync/resolve", { k: K_CONF3, choice: "bogus", ts: T0 + 15000 }, { auth: true });
+    check("对存在冲突的键传非法 choice → 400 invalid_choice", badChoice.status === 400 && badChoice.json && badChoice.json.error === "invalid_choice", "HTTP " + badChoice.status);
+    const solved = await hit("POST", "/api/sync/resolve", { k: K_CONF, choice: "local", ts: T0 + 16000 }, { auth: true });
+    check("已解决的键再解决 → 404（幂等收口）", solved.status === 404, "HTTP " + solved.status);
+    const noConf = await hit("POST", "/api/sync/resolve", { k: "wb_agent_never_conflicted", choice: "local", ts: T0 + 17000 }, { auth: true });
+    check("解决从未冲突的键 → 404", noConf.status === 404, "HTTP " + noConf.status);
+    const noTok = await hit("POST", "/api/sync/resolve", { k: K_CONF3, choice: "local", ts: T0 + 19000 }, { auth: false });
+    check("resolve 无 token → 401", noTok.status === 401, "HTTP " + noTok.status);
   } finally {
     try { proc.kill(); } catch (_e) { /* 已退出 */ }
   }

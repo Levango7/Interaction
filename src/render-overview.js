@@ -1290,7 +1290,10 @@ const SYNC_EXCLUDED_KEYS = [
   AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1],
   /* v3.7.105（云同步契约 · 阶段1/C1）：本地变更日志不上云 —— 它是本机增量"原料"
      （逐键变更时间线），上云无跨端收益，且让本机操作时间线离开本机（隐私面）。 */
-  CHLOG_KEY
+  CHLOG_KEY,
+  /* v3.7.109（mv+提示）：冲突清单同理 —— 服务端刚下发的证据，回传无意义、且会把两台设备的
+     历史纠葛带回服务端。 */
+  PREFIX + "sync_conflicts"
 ];
 function _buildCloudSnapshot() {
   const data = {};
@@ -1496,6 +1499,24 @@ async function _syncIncrementalRound(){
      远端更新已应用，两边收敛后清空是最简单且正确的游标（见 data-rw.clearSyncChangelog 注释）。 */
   _setSyncMeta({ syncToken: Number(d.token) || 0, lastPushAt: Date.now(), lastPullAt: Date.now() });
   if (typeof clearSyncChangelog === "function") clearSyncChangelog();
+  /* v3.7.109（mv+提示）：消费服务端下发的冲突清单。**lww（默认）下恒为空数组、整段不触发**；
+     任务键自动合并（结构化、按 id×updatedAt，见 _autoMergeTasksConflict），其余键列进面板等用户选择。 */
+  if (d.conflictPolicy === "mv") {
+    const conflicts = Array.isArray(d.conflicts) ? d.conflicts : [];
+    const before = _getSyncConflicts().length;
+    const manual = [];
+    for (const c of conflicts) {
+      if (c && c.k === PREFIX + "tasks" && typeof c.local.v === "string" && typeof c.remote.v === "string") {
+        await _autoMergeTasksConflict(c);   // 合并结果以新 ts 上行 → 服务端那条冲突自动作废
+      } else if (c && c.k) {
+        manual.push({ k: c.k, local: c.local, remote: c.remote, at: c.at || Date.now() });
+      }
+    }
+    _setSyncConflicts(manual);
+    if (manual.length && manual.length !== before) {
+      try { toast(t("api.conflictToast", "发现 {n} 个同步冲突，请到「设置 → 账号 → 云同步」处理").replace("{n}", manual.length), "warn"); } catch (e) { /* toast 不可用 */ }
+    }
+  }
   return true;
 }
 
@@ -1511,6 +1532,125 @@ function _syncIncrementalEnabled(){
    长出增量端点）；刷新页面或部署升级后自动重置。 */
 let _incrUnavailable = false;
 function _syncIncrementalAvailable(){ return !_incrUnavailable; }
+
+/* ---------- v3.7.109（mv+提示）：冲突消费 / 自动合并 / 面板 ----------
+   服务端在 `cfg.sync.conflictPolicy = "mv"` 时把「输了的一方」记进冲突清单随响应下发。
+   客户端分两路处理：**任务键可结构化自动合并**（按 id×updatedAt，与 _applyCloudSnapshot
+   同口径 —— 合并结果以新 ts 上行，服务端冲突即清）；其余键**不猜**，列在面板上让用户
+   「保留本机 / 使用云端」二选一。lww（默认）下清单恒为空，本段代码全程不触发。 */
+const SYNC_CONFLICTS_KEY = PREFIX + "sync_conflicts";
+function _getSyncConflicts(){
+  const a = load(SYNC_CONFLICTS_KEY, []);
+  return Array.isArray(a) ? a : [];
+}
+/** 冲突键 → 人话（任务有现成键；其余显示原始键名 —— 不猜） */
+function _syncConflictLabel(k){
+  if (k === PREFIX + "tasks") return t("nav.tasks", "任务");
+  return k;
+}
+function _syncConflictPreview(c){
+  const s = function(v){
+    if (v === null || v === undefined) return "（已删除）";
+    if (typeof v !== "string" || !v) return "（空）";
+    return v.length > 40 ? v.slice(0, 40) + "…" : v;
+  };
+  return t("api.conflictLocal", "本机") + ": " + s(c.local && c.local.v) +
+         " ／ " + t("api.conflictRemote", "云端") + ": " + s(c.remote && c.remote.v);
+}
+function _setSyncConflicts(list){
+  try {
+    if (!list || !list.length) localStorage.removeItem(SYNC_CONFLICTS_KEY);
+    else localStorage.setItem(SYNC_CONFLICTS_KEY, JSON.stringify(list));
+  } catch (e) {
+    try { if (typeof pushDiag === "function") pushDiag("warn", "conflict list persist failed (panel falls back to empty): " + ((e && e.message) || e), { where: "syncConflicts" }); }catch(_e2){ /* 诊断自身失败静默 */ }
+  }
+  _renderSyncConflicts();
+}
+/** 任务冲突的结构化自动合并：两版任务数组按 id 合并、updatedAt 大者胜；结果落本机并以新 ts 上行
+ *  （新 ts 必然胜出 → 服务端那条冲突自动作废，无需再走 resolve）。 */
+async function _autoMergeTasksConflict(c){
+  const one = function(v){ try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+  const a = one(c.local && c.local.v), b = one(c.remote && c.remote.v);
+  const map = new Map(a.filter(function(x){ return x && x.id; }).map(function(x){ return [x.id, x]; }));
+  b.forEach(function(rt){
+    if (!rt || !rt.id) return;
+    const lt = map.get(rt.id);
+    if (!lt || (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0)) map.set(rt.id, rt);
+  });
+  const merged = JSON.stringify(Array.from(map.values()));
+  try { localStorage.setItem(PREFIX + "tasks", merged); } catch (e) {
+    try { if (typeof pushDiag === "function") pushDiag("warn", "auto-merge local apply failed: " + ((e && e.message) || e), { where: "autoMergeTasks" }); }catch(_e2){ /* 诊断自身失败静默 */ }
+  }
+  try {
+    const r = await window.apiFetch("/api/sync/changes", {
+      method: "POST",
+      body: JSON.stringify({ since: Number(_getSyncMeta().syncToken) || 0, changes: [{ k: PREFIX + "tasks", v: merged, ts: Date.now() }], removed: [] })
+    });
+    if (r && r.ok && r.data && typeof r.data.token === "number") _setSyncMeta({ syncToken: r.data.token });
+  } catch (e) {
+    try { if (typeof pushDiag === "function") pushDiag("warn", "auto-merge upload failed (merged value kept locally, next round retries): " + ((e && e.message) || e), { where: "syncIncremental" }); }catch(_e2){ /* 诊断自身失败静默 */ }
+  }
+}
+/** 用户选择后：上报 resolve + 把选择落到本机 + 从面板移除该项 */
+async function _resolveSyncConflict(k, choice){
+  const list = _getSyncConflicts();
+  const c = list.find(function(x){ return x && x.k === k; });
+  if (!c) return;
+  const r = await window.apiFetch("/api/sync/resolve", { method: "POST", body: JSON.stringify({ k: k, choice: choice, ts: Date.now() }) });
+  if (!r || !r.ok) {
+    try { toast(t("api.conflictFailToast", "冲突处理失败，请稍后重试"), "error"); } catch (e) { /* toast 不可用 */ }
+    return;
+  }
+  const pick = choice === "local" ? c.local : c.remote;
+  try {
+    if (!pick || pick.v === null || pick.v === undefined) localStorage.removeItem(k);
+    else localStorage.setItem(k, pick.v);
+  } catch (e) {
+    try { if (typeof pushDiag === "function") pushDiag("warn", "apply conflict choice failed: " + ((e && e.message) || e), { where: "resolveSyncConflict", key: k }); }catch(_e2){ /* 诊断自身失败静默 */ }
+  }
+  if (r.data && typeof r.data.token === "number") _setSyncMeta({ syncToken: r.data.token });
+  _setSyncConflicts(list.filter(function(x){ return !x || x.k !== k; }));
+  try { emitDataMutate("restore"); } catch (e) { /* 索引不阻塞 */ }
+}
+function _renderSyncConflicts(){
+  if (typeof document === "undefined") return;
+  const box = document.getElementById("syncConflicts");
+  if (!box) return;
+  const list = _getSyncConflicts();
+  if (!list.length) { box.classList.add("u-hidden"); box.textContent = ""; return; }
+  box.classList.remove("u-hidden");
+  box.textContent = "";
+  const title = document.createElement("div");
+  title.className = "api-panel-title";
+  title.textContent = t("api.conflictTitle", "同步冲突");
+  box.appendChild(title);
+  list.forEach(function(c){
+    const row = document.createElement("div");
+    row.className = "api-row";
+    const label = document.createElement("span");
+    label.className = "api-label";
+    label.textContent = _syncConflictLabel(c.k);
+    const val = document.createElement("span");
+    val.className = "api-value";
+    val.textContent = _syncConflictPreview(c);
+    row.appendChild(label); row.appendChild(val);
+    const btns = document.createElement("div");
+    btns.className = "u-mt-2";
+    const mk = function(key, choice){
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "api-btn min"; b.textContent = t(key, "");
+      b.onclick = async function(){
+        try { await _resolveSyncConflict(c.k, choice); }
+        catch (e) { try { toast(t("api.conflictFailToast", "冲突处理失败，请稍后重试"), "error"); } catch (_e2) { /* toast 不可用 */ } }
+      };
+      return b;
+    };
+    btns.appendChild(mk("api.conflictKeepLocal", "local"));
+    btns.appendChild(mk("api.conflictUseRemote", "remote"));
+    box.appendChild(row);
+    box.appendChild(btns);
+  });
+}
 
 /* 阶段3（v3.7.108 下行也切增量）：定时「无上也拉」。
    阶段 2 的下行变更只在上行时捎带回来（变更日志为空就不轮询）—— 跨设备的改动要等本机

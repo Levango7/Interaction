@@ -208,9 +208,21 @@ class Store {
     }
     if (!s.keys || typeof s.keys !== "object") s.keys = {};
     if (!s.tomb || typeof s.tomb !== "object") s.tomb = {};
+    if (!s.conflicts || typeof s.conflicts !== "object") s.conflicts = {};   // v3.7.109 mv 冲突清单
     if (typeof s.watermark !== "number") s.watermark = 0;
     if (typeof s.prunedBelow !== "number") s.prunedBelow = 0;
     return s;
+  }
+
+  /** v3.7.109（mv+提示）：记一条冲突。同一键只留最新一条（旧证据没意义）；
+   *  上限 50 条，溢出丢最旧（超出的冲突在客户端表现为"下次全量再对"）。 */
+  _recordConflict(s, k, local, remote) {
+    s.conflicts[k] = { k: k, local: local, remote: remote, at: Date.now() };
+    const ks = Object.keys(s.conflicts);
+    if (ks.length > 50) {
+      ks.sort((a, b) => (s.conflicts[a].at || 0) - (s.conflicts[b].at || 0));
+      ks.slice(0, ks.length - 50).forEach((kk) => { delete s.conflicts[kk]; });
+    }
   }
 
   /**
@@ -255,15 +267,28 @@ class Store {
     const inRemoved = Array.isArray(payload && payload.removed) ? payload.removed : [];
     const appliedSets = [], appliedDels = [];
     let maxAppliedTs = 0;
+    /* v3.7.109（mv+提示）：冲突策略由**服务端下发**（cfg.sync.conflictPolicy，"lww" 默认）。
+       lww：输了的一方静默丢弃（现状，零行为变化）；mv：输了的一方记进冲突清单下发给客户端，
+       由客户端做结构化合并（如任务数组按 id×updatedAt）或让用户「保留本机 / 使用云端」二选一。
+       注意：服务端**不替客户端合并** —— 合并语义在客户端（单边做会"后端以为在合并、客户端以为被覆盖"）。 */
+    const mv = payload.conflictPolicy === "mv";
     for (const c of inChanges) {
       const k = c && c.k, ts = Number(c && c.ts) || 0;
       if (Store._isMetaKey(k)) continue;
       const cur = s.keys[k], t = s.tomb[k];
-      if (cur && cur.ts > ts) continue;                        // 服务端已有更新 → LWW 保住它
-      if (cur && cur.ts === ts && cur.v === c.v) continue;     // 幂等重放（同值同刻）
-      if (t && t.ts >= ts) continue;                           // 删除胜平局（确定性）
+      if (cur && cur.ts === ts && cur.v === c.v) continue;     // 幂等重放（同值同刻）—— 与策略无关
+      if (t && t.ts >= ts) continue;                           // 删除胜平局（确定性，与策略无关）
+      if (cur && cur.ts > ts) {                                // 服务端已有更新
+        if (mv) this._recordConflict(s, k, { v: c.v, ts }, { v: cur.v, ts: cur.ts });
+        continue;                                              // 两策略都不应用（mv 只是把它记下来）
+      }
+      if (cur && cur.ts === ts && cur.v !== c.v) {             // 同刻不同值 = 并发写
+        if (mv) this._recordConflict(s, k, { v: c.v, ts }, { v: cur.v, ts: cur.ts });
+        continue;                                              // mv：留住服务端值，交给客户端解决
+      }
       s.keys[k] = { v: c.v, ts, seq: ++s.watermark };
       delete s.tomb[k];
+      delete s.conflicts[k];                                   // 新值落定 → 该键旧冲突作废
       appliedSets.push(k);
       if (ts > maxAppliedTs) maxAppliedTs = ts;
     }
@@ -271,10 +296,14 @@ class Store {
       const k = r && r.k, ts = Number(r && r.ts) || 0;
       if (Store._isMetaKey(k)) continue;
       const cur = s.keys[k], t = s.tomb[k];
-      if (cur && cur.ts > ts) continue;                        // 本地更新更晚 → 不删
+      if (cur && cur.ts > ts) {                                // 本地更新更晚 → 不删
+        if (mv) this._recordConflict(s, k, { v: null, ts }, { v: cur.v, ts: cur.ts });   // v:null = 本机选择删除
+        continue;
+      }
       if (t && t.ts >= ts) continue;                           // 已有同/更新墓碑 → 幂等
       delete s.keys[k];
       s.tomb[k] = { ts, seq: ++s.watermark };
+      delete s.conflicts[k];
       appliedDels.push(k);
       if (ts > maxAppliedTs) maxAppliedTs = ts;
     }
@@ -301,7 +330,50 @@ class Store {
       for (const k of Object.keys(s.keys)) if (s.keys[k].seq > since) changed.push({ k, v: s.keys[k].v, ts: s.keys[k].ts });
       for (const k of Object.keys(s.tomb)) if (s.tomb[k].seq > since) removed.push({ k, ts: s.tomb[k].ts });
     }
-    return { token: s.watermark, changed, removed, needsFull };
+    /* v3.7.109：冲突清单随响应下发（lww 下恒为空数组）。local = 本机那个输了的值
+       （v:null 表示本机想删）、remote = 服务端当前值；at = 记录时刻。 */
+    const conflicts = [];
+    for (const k of Object.keys(s.conflicts)) {
+      const c = s.conflicts[k];
+      conflicts.push({ k: c.k, local: c.local, remote: c.remote, at: c.at });
+    }
+    return { token: s.watermark, changed, removed, needsFull, conflictPolicy: payload.conflictPolicy === "mv" ? "mv" : "lww", conflicts };
+  }
+
+  /**
+   * v3.7.109（mv+提示）：解决一条冲突。choice = "local"（本机值）/ "remote"（服务端值）。
+   * clientTs 由客户端提供（与全量路径同一时钟口径）；实际落定取 max(客户端 ts, 双方 ts)
+   * —— 解决必须新于双方，否则下一轮又被判成"输了"。
+   * 返回 { ok, token } 或 { ok:false, error }。
+   */
+  resolveConflict(userId, k, choice, clientTs) {
+    const s = this._incr(userId);
+    const c = s.conflicts && s.conflicts[k];
+    if (!c) return { ok: false, error: "not_found" };
+    if (choice !== "local" && choice !== "remote") return { ok: false, error: "invalid_choice" };
+    const pick = choice === "local" ? c.local : c.remote;
+    if (!pick) return { ok: false, error: "invalid_choice" };
+    const ts = Math.max(Number(clientTs) || 0, Number(c.local && c.local.ts) || 0, Number(c.remote && c.remote.ts) || 0);
+    if (pick.v === null || pick.v === undefined) {
+      delete s.keys[k];                       // 选"本机删除" → 落墓碑
+      s.tomb[k] = { ts, seq: ++s.watermark };
+    } else {
+      s.keys[k] = { v: pick.v, ts, seq: ++s.watermark };
+      delete s.tomb[k];
+    }
+    delete s.conflicts[k];
+    /* 快照记录逐键补丁（与 mergeIncremental 同口径：全量 GET 必须看得到解决结果） */
+    if (!this._data.snapshots[userId]) {
+      this._data.snapshots[userId] = { snapshot: {}, updatedAt: ts, serverUpdatedAt: Date.now() };
+    }
+    const rec = this._data.snapshots[userId];
+    if (rec.snapshot && typeof rec.snapshot === "object") {
+      if (pick.v === null || pick.v === undefined) delete rec.snapshot[k]; else rec.snapshot[k] = pick.v;
+      rec.updatedAt = Math.max(rec.updatedAt || 0, ts);
+      rec.serverUpdatedAt = Date.now();
+    }
+    this._save();
+    return { ok: true, token: s.watermark };
   }
 }
 
