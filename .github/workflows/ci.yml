@@ -70,6 +70,34 @@ jobs:
       - run: npm run check:pwa-icons
       - run: npm run pet:check
 
+  # v3.7.106：服务端验证脚本接入 CI（补上 server/ 文档里挂着的待办）。
+  # 背景：server/ 的四个自足脚本（hardening 9/9 · idor 9/9 · client-contract 24/24 ·
+  # incremental 38/38）此前**只在本机手动跑** —— 两处文档记为待办，当时理由是"ci.yml 属发版
+  # 必改文件，本轮未动"；发版已完成，该理由消失。
+  # 为什么单开一个 job：它们与 agent-workbench.html 的状态无关（各自 spawn 真服务 + Node fetch
+  # 直连，独立端口），所以不进 test job —— 既不扰动 verify-ci-order 的顺序预演，也不拖慢主矩阵。
+  # 覆盖的是**真实 HTTP 行为**（认证绕过 / 跨用户越权 / 客户端契约 / 增量协议与快照相干性），
+  # 静态扫描与 jsdom 单测都到不了这一层。
+  server-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+        working-directory: server
+      - name: 服务端验证脚本（4 个自足脚本，各自 spawn 真服务 + 实测 HTTP）
+        run: |
+          node verify/hardening-check.cjs
+          node verify/idor-check.cjs
+          node verify/client-contract-check.cjs
+          node verify/incremental-check.cjs
+        working-directory: server
+        timeout-minutes: 10
+
   # D6: E2E 完整用户流程（Playwright，file:// 直接加载单文件，无需服务器）
   # v3.7.53：改为 **push 与 PR 都运行**。原策略只在 main push 跑，理由是"PR 已由单测矩阵覆盖"——
   # 但渲染层的不变量（对比度硬断言、跨视口布局、表单等宽、按钮居中）单测覆盖不到，
