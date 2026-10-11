@@ -37,6 +37,9 @@ async function connected(win, respond) {
      拿不到对应节点会被判失败 —— 那不是被测代码的锅，是替身不真实。 */
   const defaultRespond = (r) => {
     if (r.query.indexOf("viewer") >= 0) return { status: 200, body: { data: { viewer: { id: "u1" } } } };
+    /* v3.7.119：issueCreate 的 teamId 只收 UUID —— 应用先把配置里的 key 解析成 UUID（多一次查询）。
+       替身不接这个分支，linearSyncIssue 会走 team_resolve_failed 且不发 issueCreate。 */
+    if (r.query.indexOf("team(id: $id) { id }") >= 0) return { status: 200, body: { data: { team: { id: "uuid-team-1" } } } };
     if (r.query.indexOf("issueUpdate") >= 0) return { status: 200, body: { data: { issueUpdate: { success: true, issue: { id: r.variables.id } } } } };
     return { status: 200, body: { data: { issueCreate: { success: true, issue: { id: "issue-1" } } } } };
   };
@@ -54,15 +57,16 @@ describe("Linear 单向推送", () => {
     const r = await win.linearPushTasks([T("t1", "写周报")]);
     expect(r.ok).toBe(true);
     expect(r.created).toBe(1);
-    expect(calls.length).toBe(1);
-    expect(calls[0].url).toBe("https://api.linear.app/graphql");
-    expect(calls[0].query).toMatch(/issueCreate/);
-    expect(calls[0].variables.input.teamId).toBe("team-1");
-    expect(calls[0].variables.input.title).toBe("写周报");
-    const inputKeys = Object.keys(calls[0].variables.input);
+    expect(calls.length, "解析 + 建 issue 共两次请求").toBe(2);
+    const create = calls.find((c) => c.query.indexOf("issueCreate") >= 0);
+    expect(create, "必须真发出 issueCreate").toBeTruthy();
+    expect(create.url).toBe("https://api.linear.app/graphql");
+    expect(create.variables.input.teamId, "配置填 key，mutation 必须带解析出的 UUID（v3.7.119）").toBe("uuid-team-1");
+    expect(create.variables.input.title).toBe("写周报");
+    const inputKeys = Object.keys(create.variables.input);
     expect(inputKeys, "不许再塞状态名（Linear 要的是 stateId，名字会被 schema 拒）：" + inputKeys.join(",")).not.toContain("state");
     expect(inputKeys).not.toContain("stateId");
-    expect(calls[0].headers.Authorization).toBe("Bearer lin_api_test");
+    expect(create.headers.Authorization).toBe("Bearer lin_api_test");
   });
 
   it("已推送过的再推 → issueUpdate(id)，按 updated 计数", async () => {
@@ -83,13 +87,15 @@ describe("Linear 单向推送", () => {
     const win = freshWin();
     const calls = await connected(win, (r) => (r.query.indexOf("viewer") >= 0
       ? { status: 200, body: { data: { viewer: { id: "u1" } } } }
-      : { status: 200, body: { errors: [{ message: "Argument 'state' is not defined by type IssueCreateInput." }] } }));
+      : r.query.indexOf("team(id: $id) { id }") >= 0
+        ? { status: 200, body: { data: { team: { id: "uuid-team-1" } } } }   /* v3.7.119：先解析 key→UUID */
+        : { status: 200, body: { errors: [{ message: "Argument 'state' is not defined by type IssueCreateInput." }] } }));
     const r = await win.linearPushTasks([T("t1", "写周报")]);
     expect(r.ok, "HTTP 200 但 GraphQL 报错，不能当成功").toBe(false);
     expect(r.created).toBe(0);
     expect(r.failed.length).toBe(1);
     expect(r.failed[0].error, "平台给的原因必须带出来：" + r.failed[0].error).toMatch(/not defined by type IssueCreateInput/);
-    expect(calls.length).toBe(1);
+    expect(calls.filter((c) => c.query.indexOf("issueCreate") >= 0).length, "创建只发一次（v3.7.119 起多一次解析查询，但创建不许重试）").toBe(1);
   });
 
   it("success=false（无 errors[]）同样判失败，不许静默成功", async () => {
@@ -106,10 +112,12 @@ describe("Linear 单向推送", () => {
     const win = freshWin();
     const calls = await connected(win, (r) => (r.query.indexOf("viewer") >= 0
       ? { status: 200, body: { data: { viewer: { id: "u1" } } } }
-      : { status: 401, body: { errors: [{ message: "Authentication required" }] } }));
+      : r.query.indexOf("team(id: $id) { id }") >= 0
+        ? { status: 200, body: { data: { team: { id: "uuid-team-1" } } } }   /* v3.7.119：先解析 key→UUID */
+        : { status: 401, body: { errors: [{ message: "Authentication required" }] } }));
     const r = await win.linearPushTasks([T("t1", "写周报")]);
     expect(r.ok).toBe(false);
-    expect(calls.length).toBe(1);
+    expect(calls.filter((c) => c.query.indexOf("issueCreate") >= 0).length, "401 后不许重试创建（v3.7.119 起多一次解析查询）").toBe(1);
     expect(r.failed[0].error).toMatch(/Authentication required|HTTP 401/);
   });
 
@@ -138,7 +146,8 @@ describe("Linear 单向推送", () => {
   it("部分失败如实报（与 Notion 共用 _intPushEach 骨架，这里锁 Linear 这一侧）", async () => {
     const win = freshWin();
     await connected(win, (r) => {
-      if (r.query.indexOf("viewer") >= 0) return { status: 200, body: { data: { viewer: { id: "u1" } } } };
+      if (r.query.indexOf("viewer") >= 0) return { status: 200, body: { data: { viewer: { id: "u1" } } } };      if (r.query.indexOf("viewer") >= 0) return { status: 200, body: { data: { viewer: { id: "u1" } } } };
+      if (r.query.indexOf("team(id: $id) { id }") >= 0) return { status: 200, body: { data: { team: { id: "uuid-team-1" } } } };
       const bad = r.variables.input && r.variables.input.title === "会被拒";
       return { status: 200, body: bad ? { errors: [{ message: "Title too long" }] } : { data: { issueCreate: { success: true, issue: { id: "ok-" + Math.random().toString(36).slice(2, 6) } } } } };
     });
