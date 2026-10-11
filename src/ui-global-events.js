@@ -2256,7 +2256,17 @@ function applyStartHash(){
   if(getNotifyEnabled() && typeof navigator !== "undefined" && !/jsdom/i.test(navigator.userAgent)){
     startNotifyScheduler();
   }
-})();
+})().catch(function(e){
+  /* v3.7.119：给这个「加载即启动」的 async IIFE 挂最外层兜底。它是启动链的终点，
+     没有任何调用方来接它的拒绝 —— 一旦内部抛出就升级为 unhandled rejection：
+     浏览器里只是一行报错，vitest 里却会被记成 "Vitest caught 1 unhandled error"，
+     于是出现「用例全绿、job exit 1」这种很难读的红（CI windows 腿的历史 flaky 就是它）。
+     applyTheme 内部已在 v3.7.113 补了 document 销毁的防御，但下面还有几十处 DOM 初始化，
+     任何一处将来写法不谨慎都会重演同一种红，所以在最外层统一收口。
+     只留痕、不重抛：startup 是「尽力而为」的初始化序列，走到这里能排的都已排完，
+     单项失败不该让整个进程判红。 */
+  if(typeof console !== "undefined" && console.error) console.error("startup:", (e && e.message) || e);
+});
 
 /* ---------- v1.8.3 性能优化：重模块懒初始化入口 ----------
  * 历史上此处列出 53-ai-deep 与 54~58、65~70 等重模块。其中 58/65~70 已在更早版本
