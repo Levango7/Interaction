@@ -2111,6 +2111,28 @@ async function ragInjectContext(userText, opts){
   return "\n\n" + lines.join("\n");
 }
 
+/** v3.7.115：语义召回状态 —— 让「悄悄退化成词法」对用户可见（迭代计划 v3.7.115）。
+ *  读的全部是**既有降级路径已经维护的标志**，不新造第二套状态、不发任何探测请求：
+ *   cfg.rag === false             → off         用户主动关（零行为变化）
+ *   _embedCfg() 为空              → unconfigured 没配嵌入通道（AI 设置里的 base/key/model）
+ *   Date.now() < _embedFailUntil  → channel      provider 无 /embeddings（404/401/403 后 10 分钟失败缓存）
+ *   _ragVecCache.loaded === false → idb          IDB 读不到（v3.7.101 起不钉死、可重试）
+ *   其余                           → vector
+ *  mode "unknown" + probed=false 表示本页还没走过一次向量加载 —— **不谎报可用**，
+ *  但也别把"没探测"画成"降级"（两者对用户的行动指引不同）。 */
+function semanticRecallStatus(){
+  try{
+    const cfg = getCfg() || {};
+    if(cfg.rag === false) return { mode:"off", probed:true };
+    if(!_embedCfg()) return { mode:"unconfigured", probed:true };
+    if(Date.now() < _embedFailUntil) return { mode:"channel", probed:true };
+    const c = _ragVecCache;
+    if(c && c.loaded === false) return { mode:"idb", probed:true };
+    if(!c) return { mode:"unknown", probed:false };
+    return { mode:"vector", probed:true };
+  }catch(e){ return { mode:"unknown", probed:false }; }
+}
+
 /**
  * 收集当前应当入索引的全部文档（任务/记录/笔记/对话历史）
  * —— ragReindex（全量重建）与 ragSyncIncremental（增量同步）共用同一份构建器，

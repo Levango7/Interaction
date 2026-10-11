@@ -548,6 +548,21 @@ function buildDiagReport(opts){
     /* v3.7.107（C3）：上次下行覆盖数 —— 静默 LWW 的那个数字，现在可解释（0 也说出来） */
     if (sm && typeof sm.lastPullCover === "number") L.push("云同步: 上次云端覆盖 " + sm.lastPullCover + " 键");
   } catch (e) { L.push("云同步: 体积信息读取失败（" + ((e && e.message) || e) + "）"); }
+  /* v3.7.115：语义召回状态进诊断报告 —— 「悄悄退化成词法」此前对用户完全不可见
+     （表现为"AI 好像找不到我写过的东西"，但没有任何线索指向原因）。
+     这里读的是既有降级路径的标志（ai-tools.semanticRecallStatus），不发探测请求。 */
+  try {
+    const st = (typeof semanticRecallStatus === "function") ? semanticRecallStatus() : null;
+    const map = {
+      vector: "向量检索可用",
+      off: "未启用（cfg.rag=false）",
+      unconfigured: "未配置 embedding 通道（AI 设置里的 基址/Key/嵌入模型）",
+      channel: "词法降级 — embedding 通道不可用（10 分钟内自动重试）",
+      idb: "词法降级 — IndexedDB 不可用（读不到向量；恢复后可重试）",
+      unknown: "尚未探测（本页首次检索后确定）"
+    };
+    L.push("语义召回: " + (st ? (map[st.mode] || st.mode) : "状态读取失败"));
+  } catch (e) { L.push("语义召回: 状态读取失败（" + ((e && e.message) || e) + "）"); }
   L.push("诊断条数: " + list.length);
   L.push("");
   L.push("—— 近期诊断（新→旧，入队时已脱敏）——");
