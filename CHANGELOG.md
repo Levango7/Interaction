@@ -1,3 +1,33 @@
+## [v3.7.112] - 2026-10-11
+
+**评估文档 §七 最后一项「真机 UI 联调」收口 —— 联调第一次跑真 UI 就抓到一条 P0（`{ok,data}` 信封不拆包：登录「假成功」）。**
+
+- **做了什么**：`_probe/ui-backend-integration.mjs`（本地探针，`_probe/` 按 v3.7.42 起的约定不入库）——
+  真 Chromium + 真起后端（独立端口 / 临时数据文件 / `DEV__ALLOWUNSAFEDEVENDPOINTS=true` 仅本地）+ 真表单，
+  双 context 模拟两台设备跑完：欢迎页探测 → 真实注册（验证码从响应里取）→ 登录态落到 UI →
+  「立即上传」后**回读后端数据文件**核对快照内容与审计环 → C2 体积看板 → 第二台设备登录同账号
+  → 不自动覆盖（诚实）→「恢复云端」→ C3 覆盖计数 → 错误密码给出凭据类错误。**19/19 通过**。
+- **抓到的 P0（`src/ui-ge-api.js` 信封拆包）**：本仓后端所有路由都经 `ok(res, payload)` /
+  `fail(...)` 返回 **`{ok, data}` 信封**，而客户端各 `api*` 读的是**载荷本体**（`r.data.accessToken` /
+  `r.data.snapshot` / `r.data.devices`）。不拆包时：登录 HTTP 200 且 `r.ok` 为真 → UI 提示「登录成功」，
+  但 token / user 一个都取不到，云同步的快照也读不出来 —— **一次彻头彻尾的假成功**。
+  修复口径（保守）：仅当响应体是 `{ok:true, data:...}`（**成功**信封）才拆；
+  错误体（`{ok:false, error}`，可能也带 data）**原样透传**——调用方要读 `r.data.error` 做错误提示，
+  拆了就只剩笼统文案；无信封的 mock 与第三方代理也原样透传。
+  ⚠️ 首版拆包写宽了（对 `{ok:false}` 也拆），真机负例当场失效：错误密码的提示从
+  「凭据无效」退回笼统「登录失败」，已收紧判据并复跑 19/19 复现正确文案。
+- **为什么契约联调没抓到**（这条比修 bug 更值得记）：`client-contract-check.cjs` 25/25
+  证明的是「客户端调用的序列后端都实现了」，但它自己**读的就是信封形状**（`r.json.data.accessToken`）——
+  只比 HTTP 状态与端点存在性，**两边各自安好**；客户端把整个信封当载荷用，这种事只有打开真 UI 才看得见。
+- **守护**：`tests/api-envelope.test.js`（新）**5/5** —— 成功信封被拆开 / 错误体**不**被拆开
+  （`r.data.error` 可读）/ 无信封直传 / `apiLogin` 落 token（密文或明文二态皆收）/
+  `apiGetSnapshot` 取回快照。
+- **顺带修两处过期注释**：`src/render-overview.js`（`apiPutSnapshot` JSDoc）与 `src/ui-ge-api.js`
+  （`probeAccountBackend` JSDoc）还写着「本仓库不含该后端」—— 后端 v3.7.105 已找回，注释已同步。
+- 文档：`docs/backend-recovery-assessment.md` §七 两行划掉（客户端联调 🟡→✅、真机 UI 联调 ❌→✅）、
+  §八 补探针前置；`server/README.md` 状态表刷新；`docs/product-scope.md` 两处「未与真实后端联调」更新；
+  `docs/audit-2026-10-06.md` 记 R-10。
+
 ## [v3.7.111] - 2026-10-10
 
 **`/api/tools/fetch`（web_fetch 的 CORS 兜底代理）按承重墙标准交付 —— 评估文档里最后一个「已识别、未做」的端点收口。**

@@ -1314,7 +1314,7 @@ async function apiGetSnapshot() {
  * 于是「立即上传」只能是空转（界面却显示「已同步」）。
  * 契约与 apiGetSnapshot 对称：`PUT /api/sync/snapshot`，body `{ snapshot, updatedAt }`；
  * 快照内含 `_deviceMeta`（deviceId / exportedAt / version），服务端原样存、GET 时回传。
- * ⚠️ 本仓库不含该后端，需部署方实现同名端点（见 docs/product-scope.md「可选账号与云同步」）。
+ * 后端在 `server/`（v3.7.105 找回并加固；v3.7.111 契约级联调断言含本端点，v3.7.112 真机 UI 联调实跑通过）。
  * @param {Object} [snapshot] 不传则现构（_buildCloudSnapshot）
  * @returns {Promise<boolean>} 是否推送成功（2xx 才算）
  */

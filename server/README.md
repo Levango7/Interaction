@@ -14,13 +14,13 @@
 
 | 项 | 状态 |
 |---|---|
-| 与客户端（`agent-workbench.html`）联调 | 🟡 **已做契约级联调**（`verify/client-contract-check.cjs` 24/24）。但客户端默认仍指向不存在的 `localhost:3001`，未做过「真机 + 真 UI」联调 |
-| 自动化测试 | ✅ 五个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 24/24、`incremental-check` 54/54、`security-check` 22/22），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
+| 与客户端（`agent-workbench.html`）联调 | ✅ **契约级 + 真机 UI 双通**：契约级 `verify/client-contract-check.cjs` 25/25；真机 UI `_probe/ui-backend-integration.mjs` 19/19（真 Chromium + 真后端 + 真表单，双 context 当两台设备，注册→上传→回读数据文件→跨设备拉取→错误密码负例）。客户端默认仍指向不存在的 `localhost:3001`，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」 |
+| 自动化测试 | ✅ 六个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 25/25、`incremental-check` 54/54、`security-check` 22/22、`tools-fetch-check` 17/17，合计 136/136），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
 | 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot` + **增量** `POST /api/sync/changes` / `/resolve`（全量 LWW / 增量含冲突策略，见 `docs/cloud-sync-incremental-contract.md`） |
 | 速率限制 / 审计日志 | ✅ 已有（v3.7.110）：登录/注册/发码按 IP + 同 email 限流（429 + `Retry-After`）；审计环有界、`GET /api/auth/audit` 只读本人 |
-| 生产可用 | ❌ 仍否 —— 未做真机 UI 联调；另见下方已知缺口（refresh token 明文、corsOrigin 默认全开） |
+| 生产可用 | 🟡 **骨架可用、直接上线仍否** —— 联调（契约级 + 真机 UI）已通；另见下方已知缺口：refresh token 明文、corsOrigin 默认全开 |
 
 **怎么跑验证**：
 
@@ -33,10 +33,12 @@ node verify/incremental-check.cjs      # 期望 54/54 —— 增量协议：幂�
 node verify/security-check.cjs         # 期望 22/22 —— 速率限制（阈值内正常/超限 429/分桶/可关）+ 审计环（记录/隔离/有界）
 node verify/tools-fetch-check.cjs      # 期望 17/17 —— 抓取代理：代回原文/拒私网与云元数据/重定向每跳重校/体积与超时/401
 ```
-（四个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
+（六个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
 
-**加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败速率限制（可暴力破解）、
-无审计日志、refresh token 明文落盘、`corsOrigin` 默认全开放、JSON 文件存储在多实例下不安全。
+**加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败**验证码/锁定**策略
+（已有速率限制，但无限次试错同一口令仍可在线慢速爆破 —— 要彻底堵需账号级失败计数与锁定）、
+refresh token 明文落盘、`corsOrigin` 默认全开放、JSON 文件存储在多实例下不安全、
+限流计数在进程内（多实例各算各的，与 JSON 存储的单实例假设同源）。
 
 加固详情与缺陷清单：`docs/backend-recovery-assessment.md`。
 
@@ -135,8 +137,9 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 
 增量同步（阶段 2）**已两端同步升级**：客户端 `cfg.syncIncremental` 开关制（默认关=全量；开=增量，
 不支持/落后自动回退全量）。契约定稿与实施记录见 `docs/cloud-sync-incremental-contract.md`；
-真机验证 `node verify/incremental-check.cjs`（38/38，含幂等/LWW/删除信号/快照相干/剪枝回退/跨用户隔离）。
-**冲突策略仍只有 `lww`**：`mv/三路合并` 是产品决策，未定不做。
+真机验证 `node verify/incremental-check.cjs`（54/54，含幂等/LWW/删除信号/快照相干/剪枝回退/跨用户隔离/
+**冲突策略声明与 `mv` 解决**）。**冲突策略默认 `lww`、可切 `mv`**（v3.7.109：输了的一方记进冲突清单
+随响应下发，`POST /api/sync/resolve {k, choice, ts}` 由客户端裁决；`mv/三路合并` 仍是产品决策，未定不做）。
 
 `GET /api/tools/fetch?url=`（`web_fetch` 的 CORS 兜底代理）**已实现（v3.7.111）** —— 按 ics-fetch /
 notify-webhook 同款承重墙：必须 Bearer（不做开放代理）、拒 userinfo、拒回环/私网/链路本地/.local、

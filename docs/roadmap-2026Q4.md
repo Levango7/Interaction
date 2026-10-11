@@ -15,8 +15,10 @@
   > `docs/audit-2026-10-06.md` R-3）：**契约型数字**（逆层/循环/块数）由门禁守着可以写；
   > **进度型数字**只写"截至某日某 commit 的实测"，并给出现测命令。
 - 后端：`server/` 已从孤立提交 `ac1114a` **找回并加固**（v3.7.105 合并发版；审计口径
-  `docs/backend-recovery-assessment.md`）—— 但仍是**「可救的开发骨架」**，生产前缺口清单见该文 §七
-  （速率限制/审计日志/refresh token 明文落盘/tools-fetch 未实现等），且三个验证脚本**未接入 CI**。
+  `docs/backend-recovery-assessment.md`）。**v3.7.112 起契约级联调 25/25 + 真机 UI 联调 19/19 双通**
+  （联调抓到并修复信封拆包 P0）；速率限制 / 审计日志（v3.7.110）/ `/api/tools/fetch`
+  （v3.7.111）已交付，六个验证脚本 **136/136** 且已接入 CI。剩余缺口见该文 §七：
+  refresh token 明文落盘、`corsOrigin` 默认全开、**第三方登录服务端端点未实现**（商务阶段项）。
 - 集成：七家 provider 主链路**全部接完**（Notion/Linear/Jira/飞书/钉钉/Slack + 本地日历），
   废弃函数 30 → **10**（截至 2026-10-06，台账见 `tests/integration-deprecated.test.js` 的 `DEPRECATED`
   名单；原写"9"已漂一名，`docs/audit-2026-10-06.md` R-3）。
@@ -60,11 +62,11 @@
 |---|---|---|
 | ~~Google/Outlook 日历双向~~ | **2026-10-03 用户裁定：永久不做**（暂不出国，只在国内用） | 已结案 |
 | HMS（华为）替代？ | 2026-10-03 评估：**形态不兼容** —— HMS Calendar Kit 是 Android 原生 SDK（AAR/AGP），本仓交付形态是 Web/PWA/Electron 单文件，浏览器与 Electron 都跑不了原生 SDK；要走 HMS 得新增 Android 构建轨 + 华为企业开发者账号 + 应用资质，是「换平台」不是「换渠道」。国内日历需求已由 ICS 路线（QQ/网易公开订阅链接，国内直连可达）满足 | 不做；未来若上 Android 轨再评估 |
-| 微信扫码登录 | 2026-10-03 用户裁定：**转商务阶段条件项** —— 硬前置为企业主体认证 + ICP 备案域名 + 认证费 + 回调服务端；主体功能先做出来，有企业客户时商务阶段再接（现有 `apiWechatQrcode/apiWechatStatus` 协议原样可用） | 挂起（商务触发） |
-| GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发） | 暂缓 / WebDAV 顶上 |
+| 微信扫码登录 | 2026-10-03 用户裁定：**转商务阶段条件项** —— 硬前置为企业主体认证 + ICP 备案域名 + 认证费 + 回调服务端；主体功能先做出来，有企业客户时商务阶段再接（现有 `apiWechatQrcode/apiWechatStatus` 协议原样可用）。⚠️ **补充（2026-10-11 现测）**：客户端协议在、**服务端三个端点一个都没有**（`/api/auth/wechat/qrcode`、`/api/auth/wechat/status`、`/api/auth/github`）—— 点击只会拿到 404 + UI 提示"无法第三方登录"。属已知缺口，已记入 `docs/product-scope.md` 与根 README；商务阶段接入时按"承重墙"标准（fail-closed + 可验证）一次做完 | 挂起（商务触发） |
+| GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发）。**同一裁定也覆盖账号侧的 `/api/auth/github`**（同为需要 client_id/secret 的 OAuth，服务端未实现） | 暂缓 / WebDAV 顶上 |
 | Notion/Linear **笔记**双向 | 无（能力已被判"个人场景不值当"）—— **建议永久不做** | — |
 | Electron **打包 portable exe** | ✅ **已通车（走 CI 产物，2026-10-10 实测）**：推 tag `v3.7.105` 触发 `Build Electron portable exe`（run `37998236342`）success，产物 `agent-workbench-portable-exe` **85.7MB** 落袋。本机仍不能直连 github 拉 helper（TLS 超时），故本机验收继续走 dev 模式：`cd electron && npm run prebuild && npx electron .`（`resolveHtml()` 的 dev 分支加载仓库根那份 HTML，所以必须先注入） | 已解（产物从 CI 取） |
-| 云同步增量 | ✅ **已交付（v3.7.106：阶段 1+2）** —— 服务端水位/tombstone/显式删除信号/幂等 + 客户端开关制增量与全量回退（`verify/incremental-check.cjs` 38/38）。剩余**冲突策略**（`mv/三路合并`）属产品决策未定，不计入队列 | 已解 |
+| 云同步增量 | ✅ **已交付（v3.7.106：阶段 1+2）** —— 服务端水位/tombstone/显式删除信号/幂等 + 客户端开关制增量与全量回退（`verify/incremental-check.cjs` 54/54，含 mv 冲突解决）。**冲突策略 `mv+提示` 亦已交付（v3.7.109）**；真机 UI 联调 **19/19** 通过（v3.7.112） | 已解 |
 | Linear/Jira 反向拉取 | 无技术障碍，产品价值待判 | 用户拍板 |
 
 ### 批次 C（v3.7.87 起）：WebDAV 云同步载体（坚果云等）

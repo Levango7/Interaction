@@ -36,7 +36,7 @@
 | `ui-hotkeys` | UI | `ai-retry` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-select` | UI | — | 0 |
 | `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 136 |
-| `ui-ge-api` | UI | `core` `render-overview` `ui-drawer` | 4 |
+| `ui-ge-api` | UI | `core` `crypto` `render-overview` `ui-drawer` | 5 |
 | `ui-ge-plugins` | UI | `data-links` `util-markdown` | 2 |
 | `ui-ge-theme` | UI | `chain` | 1 |
 | `ui-ge-pomodoro` | UI | `chain` | 1 |

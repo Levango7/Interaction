@@ -261,6 +261,19 @@
       }
       let data = null;
       try{ data = await resp.json(); }catch(e){ data = null; }
+      /* v3.7.112（信封拆包 —— 真机 UI 联调抓到的假成功）：本仓后端所有路由都经
+         ok(res, payload) / fail(...) 构造 **{ok, data} 信封**，而客户端各 api* 读的是
+         **载荷本体**（r.data.accessToken / r.data.snapshot / r.data.devices……）。
+         不拆包时：登录 HTTP 200 且 `r.ok` 为真 → UI 提示"登录成功"，但 token / user
+         一个都取不到（云同步同理：快照读不出来）。此前的契约联调只比了 HTTP 状态与端点
+         存在性，两边各自安好 —— 是 _probe/ui-backend-integration.mjs 第一次跑真 UI 才暴露。
+         拆包判据（保守）：仅当响应体是 `{ok:true, data:...}`（**成功**信封）才拆；
+         错误体（{ok:false, error}，可能也带 data）原样透传 —— 调用方要读 r.data.error
+         做错误提示，拆了就只剩笼统文案。无信封的 mock 与第三方代理也原样透传。 */
+      if (data && typeof data === "object" && !Array.isArray(data)
+          && data.ok === true && Object.prototype.hasOwnProperty.call(data, "data")) {
+        data = data.data;
+      }
       /* v3.7.71：errKind 细分错误（server/client），调用方可据此提示「稍后再试」vs「检查配置」 */
       const errKind = resp.status >= 500 ? "server" : (resp.status >= 400 ? "client" : null);
       return { ok: resp.ok, data: data, status: resp.status, errKind };
@@ -278,9 +291,9 @@
   /**
    * 账号后端可达性探测（v3.7.103）。
    *
-   * 背景：本仓库只含客户端 —— 账号与云同步的后端需部署方另行实现
-   * （见 docs/product-scope.md 的「可选账号与云同步」一节）。默认 apiBase 是
-   * http://localhost:3001，未部署时该端口无人监听。
+   * 背景：账号与云同步的后端在 `server/`（v3.7.105 从孤立提交找回并补齐；此前长期被记为
+   * "仓库不含后端"）。**默认 apiBase 仍指向不存在的 localhost:3001** —— 未部署时该端口
+   * 无人监听（本探测判的就是这个状态）。
    * 此前用户点「登录」、填完表单提交，拿到的只是笼统的「离线模式」，
    * 无从分辨「我的网络断了」还是「这个环境根本没部署账号服务」——
    * 这两者该给完全不同的指引（去查网络 vs 去看部署说明）。
