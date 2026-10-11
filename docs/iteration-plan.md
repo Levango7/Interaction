@@ -128,6 +128,7 @@
   CACHE_VERSION `v3.7.115-20261011094752`；Electron Release v3.7.115 已出。
   ⚠️ 过程注记：发版提交后紧跟的 module-graph 再生提交让前一跑被 concurrency 取消
   （已知形态）——**判据看最新 commit 那一跑**，不是首发那一跑。
+- ✅ v3.7.117（2026-10-11）：两套拆解机制合一 —— `>` 计划确认即写入与 `plan` 工具链同一 goals（src:"palette"），进度同步 markStep、完成 completeGoal、放弃 cancelGoal（两个视角一起清）；tests/agent-goal-unify.test.js 5/5；CI 四 job 全绿，线上 sha256 `b8bfb60e…` 逐字节一致，CACHE_VERSION `v3.7.117-20261011145533`；Electron Release v3.7.117 已出。
 - ✅ v3.7.116（2026-10-11）：自主执行断点续跑（天花板之首）—— `wb_agent_agent_run`
   落盘 + 每步进度 + **done 权威**（标记过的不重跑、blocked 不算完成）+ **onReplan
   重建下标**（重规划不断链）+ 三处发现入口（启动 toast / `>` 副标题 / 聊天
@@ -136,4 +137,4 @@
   `v3.7.116-20261011105355`；Electron Release v3.7.116 已出。
   过程修掉两个真 bug：盘上副本与活对象 `indexOf` 恒 -1（进度写不进）；空 catch 门禁
   拦下自写的两处 P0（save 在 try 体 + catch 只注释）。
-- ▶ 下一批：v3.7.117 两套拆解机制合一（`>` 计划确认后写入与 `plan` 工具链同一目标存储）。
+- ▶ 下一批：v3.7.118 上下文滚动摘要（长会话成本从线性涨转为有界；摘要失败回退既有截断）。
