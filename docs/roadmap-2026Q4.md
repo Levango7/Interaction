@@ -100,8 +100,8 @@
 | # | 事项 | 状态 | 前置 / 做法 |
 |---|---|---|---|
 | ① | **GitHub 登录真机验收** | 🟡 **待用户操作**（代码侧已全部就绪并假 provider 全链路验证 33/33；2026-10-11 用户拍板暂缓） | ① 打开 github.com/settings/developers → New OAuth App（个人免费，无需企业资质）② Authorization callback URL 填 `<后端 API origin>/api/auth/github/callback`（本机联调就填 `http://localhost:3001/api/auth/github/callback`）③ 把 clientId/secret 写进后端配置（`cfg.github.enabled=true`，或 env `GITHUB__ENABLED=true GITHUB__CLIENTID=… GITHUB__CLIENTSECRET=…`）④ 重启后端，在登录页点 GitHub 登录走一遍。**协议侧无需再改**；验收要点见 `server/README.md` 的 `/github` 行与 `docs/oauth-login-design.md` |
-| ② | **refresh token 明文落盘** | 🟡 **已有方案建议，待用户拍板（2026-10-11）** | 建议：**维持明文但加环境门槛 + 落盘路径收紧 + 文档告知**，暂不上口令派生/KMS。理由：自托管单用户场景下，攻击者拿到 JSON 文件 ≈ 已拿到整台机器，届时口令派生密钥也只是提高一档成本；真正的性价比在①文件权限 0600 ②`cfg.jwt.refreshSecret` 强制高强度随机（已实现 fail fast）③README 明示"数据文件即凭证"。要做"密文落盘"再单独立项（需设计密钥来源：开机口令/环境变量/OS keyring） |
-| ③ | **corsOrigin 默认全开** | 🟡 **已有方案建议，待用户拍板（2026-10-11）** | 建议：**默认保持 `*`，但在未显式配置时打 WARN + README 顶部警示**。理由：自托管用户的部署形态千差万别（file:// 打开、IP 直连、反代、跨端口），收紧默认值会把"开箱即通"变成"开箱报错"，违背本地优先定位；危险的是"配了却不警惕"，所以用启动 WARN + 文档补这一环。若要更严：`corsOrigins: []` 数组 + 空则回落 `*` 并 WARN，一行改动，可作 v3.7.114 小批 |
+| ② | **refresh token 明文落盘** | ✅ **已按建议落地（v3.7.114）** | 数据文件写盘时目录 0700 / 文件 0600（POSIX）；README 明示「`cfg.dataFile` 即凭证文件」；权限收紧失败打 WARN 不静默。口令派生/KMS 未做（独立课题：拿到文件 ≈ 拿到整机，性价比不成立） |
+| ③ | **corsOrigin 默认全开** | ✅ **已按建议落地（v3.7.114）** | 默认保持 `*`（开箱自通优先），值为 `*` 时启动打 WARN + README 警示；对外/过反代由运维收紧 |
 | ④ | 微信正式接入（扫码登录） | ⛔ 商务触发 | 企业主体认证 + ICP 备案域名 + 开放平台审核；协议已就绪，只换 provider 实现（`docs/oauth-login-design.md` 阶段④） |
 | ⑤ | Linear/Jira 真机验收 | 🟡 待凭据 | `node _probe/accept-linear-jira.mjs linear`（会真实建 issue） |
 | ⑥ | WebDAV 六步验收 | 🟡 待凭据 | `docs/webdav-verify.md`，坚果云应用密码 |

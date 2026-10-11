@@ -15,10 +15,21 @@
 "use strict";
 const { spawn } = require("node:child_process");
 const path = require("node:path");
+const fs = require("node:fs");
+const os = require("node:os");
 
 const SRV = path.join(__dirname, "..");
-const PORT = "4576";
-const BASE = "http://127.0.0.1:" + PORT;
+/* v3.7.114：端口改**动态分配**。写死 4576 实测被本机其它进程占（EACCES/EADDRINUSE），
+   而"端口被占"与"实现坏了"表现不同，会让本脚本假红。oauth-check 同因改过，这里统一。 */
+let PORT = null;
+let BASE = null;
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const s = require("node:http").createServer();
+    s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => resolve(String(p))); });
+    s.on("error", reject);
+  });
+}
 
 function startServer(extraEnv) {
   return new Promise((resolve, reject) => {
@@ -30,6 +41,7 @@ function startServer(extraEnv) {
     let out = "";
     p.stdout.on("data", (d) => { out += d.toString(); });
     p.stderr.on("data", (d) => { out += d.toString(); });
+    p._out = () => out;   // 供启动 WARN 类断言读取（就绪时启动日志已打完）
     let settled = false;
     const timer = setTimeout(() => {
       if (settled) return;
@@ -85,6 +97,8 @@ function startTight() {
 }
 
 (async () => {
+  PORT = await freePort();
+  BASE = "http://127.0.0.1:" + PORT;
   let proc = await startTight();
   const A = mail("secA"), B = mail("secB");
   try {
@@ -185,6 +199,34 @@ function startTight() {
     }
     check("守卫关闭时第 6 次也不再 429（注入生效 → ②的断言在真守护）", guardOff);
     try { procOff.kill(); } catch (e) { /* 已退出 */ }
+
+    /* ⑨⑩ v3.7.114 安全告知两项。⑨ 的「反向」用例（收紧后无 WARN）才是防回归的那一半：
+       若把 WARN 写成无条件打印，正向断言照样绿，所以必须两条都钉。 */
+    group("⑨ corsOrigin=\"*\" 启动打 WARN（收紧后不再打）");
+    const defOut = proc._out();
+    check("默认实例输出含 corsOrigin WARN", defOut.indexOf('corsOrigin 为 "*"') !== -1);
+    await new Promise((r) => setTimeout(r, 500));
+    const procTight = await startServer({ CORSORIGIN: "https://app.example.com" });
+    check("收紧为具体源的实例**不**打该 WARN", procTight._out().indexOf("corsOrigin") === -1,
+      "输出含 corsOrigin = " + (procTight._out().indexOf("corsOrigin") !== -1));
+    try { procTight.kill(); } catch (e) { /* 已退出 */ }
+
+    group("⑩ 数据文件权限收紧（POSIX 真断言；Windows 记录不断言）");
+    const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "sec-perm-")), "data.json");
+    const procPerm = await startServer({ DATAFILE: f });
+    try {
+      await hit("POST", "/api/auth/register", { email: mail("perm"), password: "abcd12345" }, { auth: false });
+    } catch (e) { /* 注册失败也照样会写盘（至少 _load/_save 路径已走过） */ }
+    await new Promise((r) => setTimeout(r, 300));
+    let mode = null;
+    try { mode = fs.statSync(f).mode & 0o777; } catch (e) { mode = null; }
+    if (process.platform === "win32") {
+      console.log("  PASS  Windows：chmod 近乎空操作，仅记录（mode=" + mode + "）；POSIX 断言由 CI ubuntu 腿执行");
+      passN++;
+    } else {
+      check("数据文件权限为 0600（内含 refresh token 与全部用户数据）", mode === 0o600, "mode=" + (mode === null ? "不存在" : mode.toString(8)));
+    }
+    try { procPerm.kill(); } catch (e) { /* 已退出 */ }
   } finally {
     try { proc.kill(); } catch (e) { /* 已退出 */ }
   }

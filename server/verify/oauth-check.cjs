@@ -20,11 +20,9 @@ const path = require("node:path");
 
 const SRV = path.join(__dirname, "..");
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "oauth-check-"));
-const P_MAIN = 4576;   // 已配置 GitHub（tokenUrl/userUrl → 假 provider）
-const P_FAKE = 4577;   // 假 GitHub
-const P_BARE = 4578;   // 未配置 GitHub
-const P_NODEV = 4579;  // tokenUrl 指 loopback 但 dev 开关不开
-const P_RL = 4580;     // 限流（MAX=3）
+/* v3.7.114：全部端口动态分配（本批实测 4571/4572/4574/4575/4576/4577 相继被本机占用，
+   "端口被占"与"实现坏了"表现不同，会让本脚本假红 —— 5 个单端口脚本同因一并改动态）。 */
+let P_MAIN = null, P_FAKE = null, P_BARE = null, P_NODEV = null, P_RL = null;
 /* ⑥b 的清扫实例用**动态空闲端口**：写死的端口可能被本机其它服务占（4581 实测 EADDRINUSE），
    而"端口被占"与"实现坏了"表现不同，会让清扫用例假红。 */
 
@@ -143,6 +141,11 @@ function extractPayload(html) {
 }
 
 (async () => {
+  P_MAIN = await freePort();
+  P_FAKE = await freePort();
+  P_BARE = await freePort();
+  P_NODEV = await freePort();
+  P_RL = await freePort();
   const fakeSrv = await startFakeGithub(P_FAKE);
   const mainEnv = {
     [envKey("dev.allowUnsafeDevEndpoints")]: "true",

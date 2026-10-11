@@ -65,6 +65,14 @@ if (_secretsArePlaceholder) {
 const store = new Store(cfg.dataFile);
 
 const app = express();
+/* v3.7.114：corsOrigin 默认 "*" 是刻意为之（自托管部署形态千差万别：file:// 直开、IP 访问、
+   反代、跨端口 —— 收紧默认值会把「开箱即通」变成「开箱报错」，违背本地优先定位）。
+   但「默认宽松」不能是「静默宽松」：与占位密钥同款口径，启动时打一次 WARN，
+   运维收紧了自然不再出现；配了却没看日志的人至少有一次被提醒的机会。 */
+if (cfg.corsOrigin === "*") {
+  console.warn("[agent-workbench-auth][WARN] corsOrigin 为 \"*\"（任何源都可带凭据跨站调用本 API）。" +
+    " 本地/个人使用可忽略；对外或过反代请设 corsOrigin 为具体源（如 https://app.example.com）。");
+}
 app.use(cors({ origin: cfg.corsOrigin === "*" ? true : cfg.corsOrigin }));
 app.use(express.json({ limit: "2mb" }));
 

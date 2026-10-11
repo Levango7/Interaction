@@ -16,10 +16,19 @@ const http = require("node:http");
 const path = require("node:path");
 
 const SRV = path.join(__dirname, "..");
-const PORT = "4577";
-const TARGET_PORT = 4599;
-const BASE = "http://127.0.0.1:" + PORT;
-const TARGET = "http://127.0.0.1:" + TARGET_PORT;
+/* v3.7.114：两个端口都改动态分配（4577/4599 实测被本机占用会让本脚本假红）。
+   target 是脚本自起的假目标站，主服务经代理抓它 —— 两者都不该写死。 */
+let PORT = null;
+let TARGET_PORT = null;
+let BASE = null;
+let TARGET = null;
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const s2 = require("node:http").createServer();
+    s2.listen(0, "127.0.0.1", () => { const p2 = s2.address().port; s2.close(() => resolve(p2)); });
+    s2.on("error", reject);
+  });
+}
 
 /* ---- 目标服务（被代理抓的那一端）---- */
 const BIG = "x".repeat(2 * 1024 * 1024);
@@ -92,6 +101,10 @@ function check(label, cond, detail) {
 function group(name) { console.log("\n" + name); }
 
 (async () => {
+  PORT = await freePort();
+  TARGET_PORT = await freePort();
+  BASE = "http://127.0.0.1:" + PORT;
+  TARGET = "http://127.0.0.1:" + TARGET_PORT;
   await new Promise((r) => target.listen(TARGET_PORT, "127.0.0.1", r));
   const mail = "tools" + Date.now() + "@example.com";
   let proc = await startServer();

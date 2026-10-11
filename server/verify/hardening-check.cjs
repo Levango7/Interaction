@@ -17,8 +17,17 @@ const { spawn } = require("node:child_process");
 const path = require("node:path");
 
 const SRV = path.join(__dirname, "..");
-const PORT = "4571";
-const BASE = "http://127.0.0.1:" + PORT;
+/* v3.7.114：端口改**动态分配**。写死 4571 实测被本机占用（Windows Hyper-V 保留段会让 listen 报 EACCES，
+   而"端口被占"与"实现坏了"表现不同，会让本脚本假红 —— 今天连栽三次）。security-check/oauth-check 同因改过。 */
+let PORT = null;
+let BASE = null;
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const s = require("node:http").createServer();
+    s.listen(0, "127.0.0.1", () => { const p2 = s.address().port; s.close(() => resolve(String(p2))); });
+    s.on("error", reject);
+  });
+}
 
 function startServer(extraEnv) {
   return new Promise((resolve, reject) => {
@@ -65,6 +74,8 @@ function check(name, cond, detail) {
 }
 
 (async () => {
+  PORT = await freePort();
+  BASE = "http://127.0.0.1:" + PORT;
   // ---------- [1] 关闭态（默认 dev.allowUnsafeDevEndpoints=false）----------
   console.log("\n[1] 关闭态：两个不安全端点必须拦住");
   let s = await startServer({});

@@ -47,13 +47,24 @@ class Store {
     try {
       const dir = path.dirname(this.file);
       if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      /* v3.7.114：数据文件内含 refresh token 与全部用户数据，等同凭证文件 ——
+         目录 0700 / 文件 0600（POSIX；Windows 的 chmod 近乎空操作，不报错也不假装生效，
+         权限收紧失败不影响写盘本身，只留一次 WARN）。权限判断见 security-check.cjs。 */
+      try { if (dir) fs.chmodSync(dir, 0o700); } catch (e) { this._warnPermOnce("目录"); }
       const tmp = this.file + ".tmp";
       fs.writeFileSync(tmp, JSON.stringify(this._data, null, 2), "utf8");
+      try { fs.chmodSync(tmp, 0o600); } catch (e) { this._warnPermOnce("文件"); }
       fs.renameSync(tmp, this.file);
     } catch (e) {
       console.error("[agent-workbench-auth][ERROR] 数据落盘失败，内存态与磁盘已不一致：" +
         ((e && e.message) || String(e)) + " | file=" + this.file);
     }
+  }
+  _warnPermOnce(what) {
+    if (this._permWarned) return;
+    this._permWarned = true;
+    console.warn("[agent-workbench-auth][WARN] 数据" + what + "权限收紧失败（不影响写盘）：" +
+      this.file + " —— 请自行确认该文件只有服务账户可读（内含 refresh token 与全部用户数据）。");
   }
 
   get data() { return this._data; }
