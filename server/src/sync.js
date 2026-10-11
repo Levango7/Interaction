@@ -5,8 +5,8 @@
  *   src/render-overview.js:1302  GET  （读快照）
  *   src/render-overview.js:1316  PUT  （写快照，body { snapshot, updatedAt }）
  * 但 ac1114a 那份后端**从未实现这两个端点**，于是「即使把后端部署起来，云同步依然不工作」。
- * 客户端代码注释里自己写着「本仓库不含该后端，需部署方实现同名端点」——
- * 现在仓库含了，这句注释就成了历史陈述（客户端在 src/ 下，本轮不动）。
+ * 客户端代码注释里曾写着「本仓库不含该后端，需部署方实现同名端点」——
+ * 现在仓库含了，那句注释已于 v3.7.112 更正（apiPutSnapshot JSDoc）。
  *
  * 契约严格对齐客户端（勿擅改字段名）：
  *   PUT  body { snapshot: Object, updatedAt: Number }

@@ -15,10 +15,12 @@
   > `docs/audit-2026-10-06.md` R-3）：**契约型数字**（逆层/循环/块数）由门禁守着可以写；
   > **进度型数字**只写"截至某日某 commit 的实测"，并给出现测命令。
 - 后端：`server/` 已从孤立提交 `ac1114a` **找回并加固**（v3.7.105 合并发版；审计口径
-  `docs/backend-recovery-assessment.md`）。**v3.7.112 起契约级联调 25/25 + 真机 UI 联调 19/19 双通**
+  `docs/backend-recovery-assessment.md`）。**v3.7.112 起契约级联调 29/29 + 真机 UI 联调 19/19 双通**
   （联调抓到并修复信封拆包 P0）；速率限制 / 审计日志（v3.7.110）/ `/api/tools/fetch`
-  （v3.7.111）已交付，六个验证脚本 **136/136** 且已接入 CI。剩余缺口见该文 §七：
-  refresh token 明文落盘、`corsOrigin` 默认全开、**第三方登录服务端端点未实现**（商务阶段项）。
+  （v3.7.111）/ 第三方登录加固（v3.7.113，`verify/oauth-check.cjs` 33/33）已交付，七个验证脚本
+  **合计 173** 且已接入 CI。剩余缺口见该文 §七：
+  refresh token 明文落盘、`corsOrigin` 默认全开、**GitHub 登录真机验收**（差用户注册一次
+  免费 OAuth App，见文末「待办」）、微信正式接入（商务阶段项）。
 - 集成：七家 provider 主链路**全部接完**（Notion/Linear/Jira/飞书/钉钉/Slack + 本地日历），
   废弃函数 30 → **10**（截至 2026-10-06，台账见 `tests/integration-deprecated.test.js` 的 `DEPRECATED`
   名单；原写"9"已漂一名，`docs/audit-2026-10-06.md` R-3）。
@@ -63,7 +65,7 @@
 | ~~Google/Outlook 日历双向~~ | **2026-10-03 用户裁定：永久不做**（暂不出国，只在国内用） | 已结案 |
 | HMS（华为）替代？ | 2026-10-03 评估：**形态不兼容** —— HMS Calendar Kit 是 Android 原生 SDK（AAR/AGP），本仓交付形态是 Web/PWA/Electron 单文件，浏览器与 Electron 都跑不了原生 SDK；要走 HMS 得新增 Android 构建轨 + 华为企业开发者账号 + 应用资质，是「换平台」不是「换渠道」。国内日历需求已由 ICS 路线（QQ/网易公开订阅链接，国内直连可达）满足 | 不做；未来若上 Android 轨再评估 |
 | 微信扫码登录 | 2026-10-03 用户裁定：**转商务阶段条件项** —— 硬前置为企业主体认证 + ICP 备案域名 + 认证费 + 回调服务端；主体功能先做出来，有企业客户时商务阶段再接（现有 `apiWechatQrcode/apiWechatStatus` 协议原样可用）。**2026-10-11 更正 + 已交付（v3.7.113）**：先更正一处我自己的误判——端点**本来就在**（`ac1114a` 骨架自带演示模式），我先前据不完整的 grep 说成"后端 404"是错的，实为**演示模式 + 两处真 bug**。v3.7.113 加固：scene 一次性消费（原来可反复领 token）、超 TTL 即清、confirm 仍默认 404 不暴露、审计落 login 事件；`verify/oauth-check.cjs` 33/33 全链路（取码→pending→dev 确认→confirmed→一次性→过期）。正式微信授权仍等商务触发 | ✅ 演示模式已加固；正式接入商务触发 |
-| GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发）。**账号侧 `/api/auth/github` 2026-10-11 已加固（v3.7.113）**：修两处真 bug（兑换打 JSON body 会被 GitHub 拒 → 改 form-urlencoded；回调页漏传 state → 客户端校验拒收、链路本是断的）＋ fail-closed（未配凭据 503 `github_not_configured` 而非 404）＋ state TTL/一次性/origin 记录/审计。**真机验收只差用户注册一次免费 OAuth App**（github.com/settings/developers，callback 填 API origin） | ✅ 已加固；真机验收待用户注册 App |
+| GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发）。**账号侧 `/api/auth/github` 2026-10-11 已加固（v3.7.113）**：修两处真 bug（兑换打 JSON body 会被 GitHub 拒 → 改 form-urlencoded；回调页漏传 state → 客户端校验拒收、链路本是断的）＋ fail-closed（未配凭据 503 `github_not_configured` 而非 404）＋ state TTL/一次性/origin 记录/审计。**真机验收只差用户注册一次免费 OAuth App**（github.com/settings/developers，callback 填 API origin）——**操作步骤见本文 §五 待办 ①** | ✅ 已加固；真机验收待办 §五 ① |
 | Notion/Linear **笔记**双向 | 无（能力已被判"个人场景不值当"）—— **建议永久不做** | — |
 | Electron **打包 portable exe** | ✅ **已通车（走 CI 产物，2026-10-10 实测）**：推 tag `v3.7.105` 触发 `Build Electron portable exe`（run `37998236342`）success，产物 `agent-workbench-portable-exe` **85.7MB** 落袋。本机仍不能直连 github 拉 helper（TLS 超时），故本机验收继续走 dev 模式：`cd electron && npm run prebuild && npx electron .`（`resolveHtml()` 的 dev 分支加载仓库根那份 HTML，所以必须先注入） | 已解（产物从 CI 取） |
 | 云同步增量 | ✅ **已交付（v3.7.106：阶段 1+2）** —— 服务端水位/tombstone/显式删除信号/幂等 + 客户端开关制增量与全量回退（`verify/incremental-check.cjs` 54/54，含 mv 冲突解决）。**冲突策略 `mv+提示` 亦已交付（v3.7.109）**；真机 UI 联调 **19/19** 通过（v3.7.112） | 已解 |
@@ -87,9 +89,22 @@
 > 2026-10-06 更正：原列的 1「B1 日历详情浮层」与 3「B2 死接线普查」**均已交付于 v3.7.86**
 > （见本文 §二 批次 B），留在这里只会误导下一轮排期 —— 这本身也是 R-3 那类漂移。当前主线改为审计台账。
 
-1. **审计批次③续跑**：项与状态一律看 `docs/audit-2026-10-06.md`（R-1…R-9 及续记），不在本文重复记账；
+1. **审计批次③续跑**：项与状态一律看 `docs/audit-2026-10-06.md`（R-1…R-11 及续记），不在本文重复记账；
 2. **需要用户拍板的两件**：R-2 存量空 catch（P0 118 处）的消解切片与优先级；R-6 的类守卫是否升格进
    `lint:*` 清单（升格要同改 `ci.yml`/`deploy.yml`/`verify-ci-order` 三处，代价是门禁步数再 +1）；
-3. **卡在凭据的两件**：C1 Linear/Jira 真机验收、WebDAV 六步验收（`docs/webdav-verify.md`）——各约 10 分钟人工。
+3. **卡在凭据的几件**：C1 Linear/Jira 真机验收、WebDAV 六步验收（`docs/webdav-verify.md`）、
+   **GitHub 登录真机验收（见 §五 待办 ①）**——各约 10 分钟人工。
+
+## 五、待办清单（截至 2026-10-11 · 逐条带前置条件）
+
+| # | 事项 | 状态 | 前置 / 做法 |
+|---|---|---|---|
+| ① | **GitHub 登录真机验收** | 🟡 **待用户操作**（代码侧已全部就绪并假 provider 全链路验证 33/33） | ① 打开 github.com/settings/developers → New OAuth App（个人免费，无需企业资质）② Authorization callback URL 填 `<后端 API origin>/api/auth/github/callback`（本机联调就填 `http://localhost:3001/api/auth/github/callback`）③ 把 clientId/secret 写进后端配置（`cfg.github.enabled=true`，或 env `GITHUB__ENABLED=true GITHUB__CLIENTID=… GITHUB__CLIENTSECRET=…`）④ 重启后端，在登录页点 GitHub 登录走一遍。**协议侧无需再改**；验收要点见 `server/README.md` 的 `/github` 行与 `docs/oauth-login-design.md` |
+| ② | refresh token 明文落盘 | ⛔ 待设计 | 要 KMS/HSM 或口令派生密钥，属存储架构决策（评估文档 §七） |
+| ③ | corsOrigin 默认全开 | ⛔ 待设计 | 收紧需要默认值策略 + 已有部署的兼容路径 |
+| ④ | 微信正式接入（扫码登录） | ⛔ 商务触发 | 企业主体认证 + ICP 备案域名 + 开放平台审核；协议已就绪，只换 provider 实现（`docs/oauth-login-design.md` 阶段④） |
+| ⑤ | Linear/Jira 真机验收 | 🟡 待凭据 | `node _probe/accept-linear-jira.mjs linear`（会真实建 issue） |
+| ⑥ | WebDAV 六步验收 | 🟡 待凭据 | `docs/webdav-verify.md`，坚果云应用密码 |
+| ⑦ | 用户手册 | ❌ 未开始 | 面向最终用户的文档（区别于本目录的工程文档） |
 
 *本文件每版收尾时更新状态；"没解决"的一律带前置条件，不做隐式承诺。*

@@ -25,8 +25,9 @@
   users 表的 `provider` / `providerId` 字段；
 - `config.example.json` 已有完整 `github`（`clientId/clientSecret/redirectUri/postMessageOrigin`）
   与 `wechat`（`appid/secret/qrcodeTicketTtlSec/pollIntervalMs`）段；
-- `auth.js` 文件头注释承诺了 "github / wechat" 路由，但函数体从未实现。
-  即：**地基全在，只缺地上三层**。
+- `auth.js` 文件头注释承诺了 "github / wechat" 路由，函数体在文件**后半部分**实现了
+  （当时只看前半部分就下了"从未实现"的错误结论，见文首更正）。
+  即：**地基全在，地上也有，缺的是承重墙级别的加固**（v3.7.113 已补）。
 
 **两个 provider 的可行性不同（关键评估结论）**：
 - **GitHub：可以做全量。** OAuth App 个人可免费自注册（github.com/settings/developers），

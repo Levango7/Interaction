@@ -149,9 +149,11 @@ bcryptjs 哈希（rounds 10）不存明文、双 token + refresh 可吊销、邮
 - 两者均需 Bearer 鉴权（快照含该用户全部数据）
 - **`updatedAt` 必须原样回传客户端自报的值**（见下节，这是第一版实现踩的坑）
 
-**刻意不做增量 / 冲突合并**：那需要客户端契约同步升级，
+**刻意不做增量 / 冲突合并**（**此处为 v3.7.105 时点的历史陈述，已被后续推翻**）：那需要客户端契约同步升级，
 单方面在服务端做会造成「后端以为在合并、客户端以为被覆盖」的错位
-（见 `docs/cloud-sync-incremental-contract.md`）。
+（见 `docs/cloud-sync-incremental-contract.md`）。**2026-10-10 当天即按该契约两端同步升级**：
+阶段 2 增量上行（v3.7.106 `/api/sync/changes`）→ 下行定时拉取（v3.7.108）→ 冲突策略
+`mv+提示`（v3.7.109），`verify/incremental-check.cjs` 54/54。
 
 ### 踩的坑：我第一版把 `updatedAt` 换成了服务端时间（已纠正）
 
@@ -289,8 +291,8 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 
 | 缺项 | 现状 | 说明 |
 |---|---|---|
-| **客户端联调** | ✅ **已完成（v3.7.112）** | `client-contract-check.cjs` 25/25 + **真机 UI 联调 19/19**（`_probe/ui-backend-integration.mjs`：真 Chromium + 真后端 + 真表单，双 context 当两台设备）。客户端 `ui-ge-api.js` 默认 `apiBase()=http://localhost:3001` 仍未部署，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**联调抓到一条契约级验证结构上抓不到的 P0（`{ok,data}` 信封不拆包 → 登录假成功），已修并配 `tests/api-envelope.test.js` 5/5，见 CHANGELOG v3.7.112 与审计台账 R-10** |
-| **自动化测试** | ✅ 6 个脚本 · 已接入 CI | `hardening-check` 9/9 · `idor-check` 9/9 · `client-contract-check` 25/25 · `incremental-check` 54/54（v3.7.106 新增）· `security-check` 22/22（v3.7.110 新增）· `tools-fetch-check` 17/17（v3.7.111 新增），均自足可跑，合计 **136/136**。**已接入 `ci.yml` 的 `server-verify` job**（2026-10-10 收尾：此前的待办理由是"ci.yml 属发版必改文件"，发版完成后补上） |
+| **客户端联调** | ✅ **已完成（v3.7.112）** | `client-contract-check.cjs` **29/29** + **真机 UI 联调 19/19**（`_probe/ui-backend-integration.mjs`：真 Chromium + 真后端 + 真表单，双 context 当两台设备）。客户端 `ui-ge-api.js` 默认 `apiBase()=http://localhost:3001` 仍未部署，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**联调抓到一条契约级验证结构上抓不到的 P0（`{ok,data}` 信封不拆包 → 登录假成功），已修并配 `tests/api-envelope.test.js` 5/5，见 CHANGELOG v3.7.112 与审计台账 R-10** |
+| **自动化测试** | ✅ 7 个脚本 · 已接入 CI | `hardening-check` 9/9 · `idor-check` 9/9 · `client-contract-check` 29/29 · `incremental-check` 54/54（v3.7.106 新增）· `security-check` 22/22（v3.7.110 新增）· `tools-fetch-check` 17/17（v3.7.111 新增）· `oauth-check` 33/33（v3.7.113 新增，假 provider 全链路），均自足可跑，合计 **173**。**已接入 `ci.yml` 的 `server-verify` job**（2026-10-10 收尾：此前的待办理由是"ci.yml 属发版必改文件"，发版完成后补上） |
 | ~~速率限制 / 审计日志~~ | ✅ **已交付（v3.7.110）** | 速率限制：`security.rateLimit`（默认开；IP + 同 email 双桶，命中 429 + `rate_limited` + `Retry-After`；进程内计数，多实例各算各的）。审计：有界环形（`AUDIT_MAX` 默认 200 条/用户，溢出丢最旧），仅记安全事件（register/login/logout/device_delete），`GET /api/auth/audit` 只准看本人 |
 | ~~真机 UI 联调~~ | ✅ **已完成（v3.7.112）** | `_probe/ui-backend-integration.mjs` **19/19**。此前只到契约级的理由（"拼回/抽回是仓库级操作，并行会话在场时风险高"）已随发版链常态化消解：`release.mjs` 每次发版都会抽回源码态，而 `posttest` 在每次 `vitest run` 后自动抽回——**拼回态只是测试窗口的临时态，不再是风险**。**它的第一次运行就抓到 P0（信封不拆包），证明"只到契约级"这件事本身就是缺口** —— 契约联调只比 HTTP 状态与端点存在性，两边各自安好，接缝处的形状错误只有真 UI 能暴露 |
 | **许可与计费** | ❌ 全零 | `支付/套餐/许可/license/计费/订单/价格` 在 `src/*.js` 命中 **0 文件** |
@@ -298,11 +300,13 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 | **隐私政策 / 服务条款** | 🟡 草案已有 | 已产出 `docs/privacy-policy.md` / `docs/terms-of-service.md`，但**无运营主体，不可对外发布** |
 | **用户手册** | ❌ 无 | 仍未编写 |
 
-**判断（2026-10-11 更新）**：本轮把后端从「工作区里根本不存在」推进到
-**找回 + 修 3 条 P0 + 修 2 条越权 + 补上缺失的云同步端点 + 契约级联调 25/25
-+ 六个验证脚本（136/136）接入 CI + 速率限制与审计日志（v3.7.110）
+**判断（2026-10-11 二次更新）**：本轮把后端从「工作区里根本不存在」推进到
+**找回 + 修 3 条 P0 + 修 2 条越权 + 补上缺失的云同步端点 + 契约级联调 29/29
++ 七个验证脚本（合计 173）接入 CI + 速率限制与审计日志（v3.7.110）
 + `/api/tools/fetch` 承重墙交付（v3.7.111）+ 增量协议含冲突策略两端落地（v3.7.106/109，
-见 `docs/cloud-sync-incremental-contract.md` §三）+ 真机 UI 联调 19/19 并修复其抓到的信封 P0（v3.7.112）**。
+见 `docs/cloud-sync-incremental-contract.md` §三）+ 真机 UI 联调 19/19 并修复其抓到的信封 P0（v3.7.112）
++ 第三方登录按承重墙标准加固（v3.7.113，GitHub 两处真 bug + fail-closed + 一次性 state/审计/限流，
+`verify/oauth-check.cjs` 33/33；真实机验收待用户注册 OAuth App）**。
 后端与客户端两侧**均已不再是最大缺口** —— 现在拦在商业化前面的只剩：
 
 1. **产品决策**（不是技术问题）：无运营主体、计费零代码；MIT 仅在与「转卖」冲突时有意义，
@@ -316,14 +320,15 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 # 1. 找回（若 server/ 再次丢失）
 git archive ac1114a server | tar -x
 
-# 2. 安装依赖并跑六个验证脚本（合计 136/136）
+# 2. 安装依赖并跑七个验证脚本（合计 173）
 cd server && npm install
 node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
 node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
-node verify/client-contract-check.cjs  # 期望 25/25 —— 客户端契约联调
+node verify/client-contract-check.cjs  # 期望 29/29 —— 客户端契约联调（含 OAuth fail-closed 契约）
 node verify/incremental-check.cjs      # 期望 54/54 —— 增量协议 + mv 冲突解决
 node verify/security-check.cjs         # 期望 22/22 —— 速率限制 + 审计环
 node verify/tools-fetch-check.cjs      # 期望 17/17 —— 抓取代理承重墙
+node verify/oauth-check.cjs            # 期望 33/33 —— 第三方登录：假 GitHub 全链路 + 微信演示模式全链路
 
 # 3. 启动（默认因占位密钥拒绝，需先给密钥）
 JWT__ACCESSSECRET="$(openssl rand -hex 32)" JWT__REFRESHSECRET="$(openssl rand -hex 32)" npm start
