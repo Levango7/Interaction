@@ -1,3 +1,39 @@
+## [v3.7.113] - 2026-10-11
+
+**第三方登录按承重墙标准加固（GitHub 修两处真 bug + fail-closed；微信演示模式补一次性/过期/审计）——先更正一处自己的误判。**
+
+- **误判更正（当天自查发现）**：v3.7.112 收口时我说「三个第三方登录端点后端一个都没有」是**错的**——
+  `ac1114a` 骨架的 `server/src/auth.js` 本来就实现了它们（GitHub 授权/回调 + 微信**演示模式**）。
+  错因：只 grep 了文件前半部分就下结论。真实问题不是端点缺失，而是：
+- **GitHub 两处真 bug（已修）**：① **code 兑换打 JSON body**（GitHub 令牌端点要
+  form-urlencoded）→ 真配了 client_id 也登录不了；② **回调页 postMessage 漏传 state**
+  → 客户端校验 `d.state === session.state` 会直接拒收，**授权链路本是断的**（且静默）。
+- **服务端加固**（`server/src/auth.js`）：state 随机 16 字节 + **TTL 600s + 一次性消费**
+  （重放 → `state_invalid` 错误页）+ 记录 opener origin 作 postMessage targetOrigin
+  （`cfg.github.postMessageOrigin` 可收紧）+ 按 GitHub id 建/找账号（email=null 不进邮箱命名域）
+  + 复用既有签发/会话/审计（register + login 带 `ctx.provider`）+ IP 限流 +
+  **未配凭据 → 503 `github_not_configured`**（fail-closed，永不 404；客户端据此显示"未配置"而不是
+  笼统"没有后端"）+ `tokenUrl/userUrl` 可配但**指向 loopback 仅 `dev.allowUnsafeDevEndpoints`
+  放行**（防配置静默开 SSRF，loopback 目标 → `forbidden_host`）+ state 惰性清扫（`store.sweepOAuthStates`）。
+  微信：scene **一次性消费**（原来可反复领 token）+ 超 `qrcodeTicketTtlSec` 即清 + confirm 仍
+  **默认 404 不暴露**（仅 dev 开关放行）+ 审计 `login{provider:"wechat_demo"}`；演示码 `demo:true` 自证。
+  **旧版实现整体删除**（同路径双注册 = 旧版永远命中，双份维护比没有更坏）。
+- **客户端**：`_ssoErrText` 文案细分——只有 `github_not_configured` 映射到
+  `api.ssoNotConfigured`（"后端未配置该第三方登录方式（详见部署文档）"），**其余错误码一律不映射**
+  （限流/网络异常仍走原文案，写宽会造成新的误导）；i18n 双语补键。
+- **验证**：`server/verify/oauth-check.cjs`（新）**33/33** —— 本地**假 GitHub provider**
+  （loopback，仅 dev 开关下合法）走**真服务端代码路径**全链路：授权形状 → 兑换 → 签发 →
+  /me 与 refresh 真能用 → 设备列表 → 重放拒 → 兑换失败 → 取消 → 过期 → 关 dev 开关 forbidden_host →
+  同 id 幂等 → 审计双事件 → state 清扫 → 限流 429+Retry-After；微信演示模式全链路
+  （取码→pending→确认→confirmed→一次性→过期）。`client-contract-check` 25→**29/29**（4 条真断言，
+  微信从"已识别缺口"转为真断言）；服务端七脚本合计 **173** 全绿；`tests/auth-ui-lifecycle.test.js` +3 例。
+- **文档**：`docs/oauth-login-design.md`（评估/方案/四期 + **当日误判更正**置顶）、
+  `docs/audit-2026-10-06.md` R-11、roadmap 硬阻塞两行（改为"已加固/真机验收差注册 OAuth App"）、
+  product-scope、root README、`server/README.md` 端点表/状态表/配置表；`ci.yml` server-verify 接入第七个脚本。
+- **GitHub 真机验收只差一步**：去 github.com/settings/developers 免费注册 OAuth App
+  （个人即可），callback 填 `<API origin>/api/auth/github/callback`，把 clientId/secret 配进
+  `cfg.github` 即可——**协议侧无需再改**。
+
 ## [v3.7.112] - 2026-10-11
 
 **评估文档 §七 最后一项「真机 UI 联调」收口 —— 联调第一次跑真 UI 就抓到一条 P0（`{ok,data}` 信封不拆包：登录「假成功」）。**

@@ -188,6 +188,29 @@ function record(group, label, res, expectStatuses, known) {
     && typeof (r.json.data && r.json.data.text) === "string"
     && r.json.data.text.indexOf("agent-workbench-auth") !== -1;
   record("tools", "GET /api/tools/fetch（把目标内容代回来）", { status: proxyOk ? 200 : (r.status || 0), json: null }, [200]);
+  console.log("\n[3b] 第三方登录（v3.7.113 fail-closed 契约；全链路见 oauth-check.cjs）");
+  /* 契约形状：客户端 _doGithubLogin / _wechatPollStart（src/render-overview.js）在
+     authorize 成功时依赖 {authorizeUrl, state} 都在。本实例未配 github → 这里断言
+     **fail-closed 必须是 503 + 明确错误码**而不是 404/500 —— 404 会让客户端把
+     "没配置 OAuth"显示成"没有后端"（v3.7.112 真机联调记下的误导形态）。 */
+  r = await hit("GET", "/api/auth/github", null, { auth: false });
+  const ghUnconf = r.status === 503 && r.json && r.json.error === "github_not_configured";
+  record("oauth", "GET /api/auth/github（未配置→503+github_not_configured）", { status: ghUnconf ? 200 : 0, json: null }, [200]);
+  /* 微信两个端点（v3.7.113 起为真断言）：演示模式本来就存在（config.example.json 自带 wechat 段
+     → qrcode 返回带 scene 的 SVG data-URI + demo:true），status 对未知 scene 必须 404。
+     真实微信授权（扫码后由微信回调确认）需企业资质 = roadmap 阶段④，协议不变、只换 provider。 */
+  r = await hit("POST", "/api/auth/wechat/qrcode", {}, { auth: false });
+  const wxOk = r.status === 200 && r.json && r.json.data
+    && typeof r.json.data.qr === "string" && r.json.data.qr.indexOf("data:image/svg+xml") === 0
+    && typeof r.json.data.scene === "string" && r.json.data.scene
+    && r.json.data.demo === true;
+  record("oauth", "POST /api/auth/wechat/qrcode（演示码：{qr,scene,demo:true}）", { status: wxOk ? 200 : 0, json: null }, [200]);
+  r = await hit("GET", "/api/auth/wechat/status?scene=probe-unknown-" + Date.now(), null, { auth: false });
+  record("oauth", "GET /api/auth/wechat/status（未知 scene 应 404）", r, [404]);
+  /* confirm 是「凭 email 直接签发 token」的完整认证绕过：默认 404 不暴露存在，
+     仅 dev.allowUnsafeDevEndpoints 放行（本实例未开 → 404）。 */
+  r = await hit("GET", "/api/auth/wechat/confirm?scene=x&email=probe@example.com", null, { auth: false });
+  record("oauth", "GET /api/auth/wechat/confirm（默认 404 不暴露）", r, [404]);
 
   console.log("\n[4] 鉴权边界（未带 token 必须被拒）");
   const saved = TOKEN; TOKEN = null;

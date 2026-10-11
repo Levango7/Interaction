@@ -119,6 +119,22 @@ class Store {
   }
   getOAuthState(state) { return this._data.oauthStates[state] || null; }
   deleteOAuthState(state) { if (this._data.oauthStates[state]) { delete this._data.oauthStates[state]; this._save(); } }
+  /* 惰性清扫：state 只由回调消费删除，"授权中途放弃"的 state 会无限堆积（JSON 数据文件缓慢膨胀）。
+     maxAgeMs 之外的判定不归 store 管（TTL 是 auth.js 的策略），store 只按年龄删。
+     返回删掉的条数（仅日志用）；任何异常都不许影响主流程。 */
+  sweepOAuthStates(maxAgeMs) {
+    try {
+      const now = Date.now();
+      const max = Number(maxAgeMs) || 600000;
+      let n = 0;
+      for (const s of Object.keys(this._data.oauthStates)) {
+        const rec = this._data.oauthStates[s];
+        if (rec && rec.createdAt && now - rec.createdAt > max) { delete this._data.oauthStates[s]; n++; }
+      }
+      if (n) this._save();
+      return n;
+    } catch (e) { return 0; }
+  }
 
   // ---- schedules ----
   listSchedules(userId) {

@@ -163,6 +163,199 @@ function authRouter(cfg, store) {
     }
   });
 
+  /* ---- GitHub OAuth 登录（v3.7.113，评估+方案：docs/oauth-login-design.md）----
+     契约来自客户端 _doGithubLogin()（src/render-overview.js）：
+       GET  /api/auth/github            → {authorizeUrl, state}
+       弹窗打开 authorizeUrl → GitHub 回跳 GET /api/auth/github/callback?code&state
+       → 服务端 code 兑换 + 签发 → 内联页 postMessage
+         {type:"agent-github-oauth", state, accessToken, refreshToken} 给 opener
+       客户端校验 e.source===弹窗 / e.origin===API_BASE origin / state 一次性消费。
+     未配置（cfg.github.enabled≠true 或缺 clientId/clientSecret/redirectUri）→
+     **503 + github_not_configured**（fail-closed；客户端据此显示"未配置"而不是笼统"无后端"）。 */
+  router.use("/github", rlAuth("github"));
+  const gh = cfg.github || {};
+  const GH_STATE_TTL = (Number(gh.stateTtlSec) || 600) * 1000;
+  const GH_AUTHORIZE = gh.authorizeBase || "https://github.com/login/oauth/authorize";
+  const GH_TOKEN = gh.tokenUrl || "https://github.com/login/oauth/access_token";
+  const GH_USER = gh.userUrl || "https://api.github.com/user";
+  function ghConfigured() {
+    return gh.enabled === true && !!gh.clientId && !!gh.clientSecret && !!gh.redirectUri;
+  }
+  /* tokenUrl/userUrl 默认真端点；覆盖它们只服务两种合法场景：假 provider 联调、自建网关。
+     loopback/私网目标**仅当 cfg.dev.allowUnsafeDevEndpoints===true 放行**（与 demoCode 同款显式逃生舱），
+     否则服务端发起 SSRF 的口子由配置静默打开（tools-fetch.js 同口径的另一半）。 */
+  function ghEndpointAllowed(urlStr, errorOut) {
+    let u;
+    try { u = new URL(String(urlStr || "")); } catch (err) { errorOut.bad_url = true; return false; }
+    if (u.protocol !== "https:" && u.protocol !== "http:") { errorOut.bad_proto = true; return false; }
+    if (u.username || u.password) { errorOut.userinfo = true; return false; }
+    const h = String(u.hostname || "").toLowerCase();
+    const loopback = h === "localhost" || h === "127.0.0.1" || h === "::1" || /^127\./.test(h);
+    if (loopback && !(cfg.dev && cfg.dev.allowUnsafeDevEndpoints === true)) { errorOut.forbidden_host = true; return false; }
+    return true;
+  }
+  /* oauthStates 表无消费即残留（授权中途放弃）→ JSON 数据文件会缓慢增长。
+     清扫逻辑放 store（表是它的私有结构），这里只在签发入口惰性调一次。 */
+  router.get("/github", (req, res) => {
+    try {
+      if (!ghConfigured()) return fail(res, 503, "github_not_configured");
+      store.sweepOAuthStates(GH_STATE_TTL);
+      const state = crypto.randomBytes(16).toString("hex");
+      /* 记录 opener 的 origin 作 postMessage targetOrigin：浏览器跨源 fetch 会带 Origin 头；
+         同源部署可能不带 → 回落 cfg.github.postMessageOrigin（config 默认 "*" 只发给 opener 本身）。 */
+      const origin = req.header("origin") || null;
+      store.setOAuthState(state, "github", { origin: origin, createdAt: Date.now() });
+      const u = new URL(GH_AUTHORIZE);
+      u.searchParams.set("client_id", gh.clientId);
+      u.searchParams.set("redirect_uri", gh.redirectUri);
+      u.searchParams.set("state", state);
+      u.searchParams.set("scope", gh.scope || "read:user");
+      return ok(res, { authorizeUrl: u.toString(), state: state });
+    } catch (e) {
+      return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
+    }
+  });
+
+  /* 回调页：浏览器直开（非 apiFetch），因此不带 token、不发 JSON。token 只出现在
+     postMessage 的 script 串里 —— 序列化时把 < > & 转义成 \uXXXX，堵掉任何 </script> 逃逸。 */
+  function ghCallbackPage(code, accessToken, refreshToken, targetOrigin) {
+    const payload = JSON.stringify({ type: "agent-github-oauth", state: code, accessToken: accessToken, refreshToken: refreshToken })
+      .replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
+    const target = JSON.stringify(String(targetOrigin || "*"));
+    return "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><title>登录成功</title></head>"
+      + "<body style=\"font:14px/1.6 system-ui,sans-serif;text-align:center;padding-top:48px\">"
+      + "<p>登录成功，正在返回应用…</p><p><a href=\"#\" onclick=\"window.close();return false\">如未自动返回，点击关闭</a></p>"
+      + "<script>(function(){try{if(window.opener)window.opener.postMessage(" + payload + "," + target + ");}catch(e){}"
+      + "setTimeout(function(){try{window.close();}catch(e){}},800);})();</script></body></html>";
+  }
+  function ghErrorPage(errCode) {
+    return "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><title>登录失败</title></head>"
+      + "<body style=\"font:14px/1.6 system-ui,sans-serif;text-align:center;padding-top:48px\">"
+      + "<p>登录失败：" + errCode + "</p><p><a href=\"#\" onclick=\"window.close();return false\">关闭窗口</a></p></body></html>";
+  }
+
+  router.get("/github/callback", async (req, res) => {
+    try {
+      if (!ghConfigured()) return fail(res, 503, "github_not_configured");
+      /* 拒绝路径也先消费 state：用户按了「取消」，这个 state 已是死的，
+         不消费就留一条永不清理的记录（oauthStates 表无自然回收）。 */
+      const deniedState = String(req.query.state || "");
+      if (req.query.error) {
+        if (deniedState) { const d = store.getOAuthState(deniedState); if (d) store.deleteOAuthState(deniedState); }
+        return res.type("html").send(ghErrorPage("denied"));
+      }
+      const state = String(req.query.state || "");
+      const code = String(req.query.code || "");
+      const st = store.getOAuthState(state);
+      if (!state || !st || st.provider !== "github") return res.type("html").send(ghErrorPage("state_invalid"));
+      /* 一次性消费**先于**任何网络调用：重放窗口哪怕兑换失败也留不下可再用 state */
+      store.deleteOAuthState(state);
+      if (!code) return res.type("html").send(ghErrorPage("code_missing"));
+      if (Date.now() - (st.createdAt || 0) > GH_STATE_TTL) return res.type("html").send(ghErrorPage("state_expired"));
+      const bad = {};
+      if (!ghEndpointAllowed(GH_TOKEN, bad) || !ghEndpointAllowed(GH_USER, bad)) {
+        console.warn("[auth] github 端点被拒：" + Object.keys(bad)[0]);
+        return res.type("html").send(ghErrorPage("forbidden_host"));
+      }
+      /* 兑换 code → access_token（form 编码 + Accept: json；旧默认是 XML） */
+      const tr = await fetch(GH_TOKEN, {
+        method: "POST",
+        headers: { "Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ client_id: gh.clientId, client_secret: gh.clientSecret, code: code, redirect_uri: gh.redirectUri }).toString()
+      });
+      if (!tr.ok) { console.warn("[auth] github 兑换失败 HTTP " + tr.status); return res.type("html").send(ghErrorPage("exchange_failed")); }
+      const tbody = await tr.json().catch(() => null);
+      if (!tbody || !tbody.access_token) return res.type("html").send(ghErrorPage("exchange_failed"));
+      /* 拉资料：providerId 只认 GitHub 的 id（login 可改，id 不可改） */
+      const ur = await fetch(GH_USER, { headers: { "Authorization": "Bearer " + tbody.access_token, "Accept": "application/vnd.github+json", "User-Agent": "agent-workbench-oauth" } });
+      if (!ur.ok) { console.warn("[auth] github 资料拉取失败 HTTP " + ur.status); return res.type("html").send(ghErrorPage("profile_failed")); }
+      const profile = await ur.json().catch(() => null);
+      const pid = profile && profile.id ? String(profile.id) : "";
+      if (!pid) return res.type("html").send(ghErrorPage("profile_failed"));
+      let user = store.findUserByProvider("github", pid);
+      if (!user) {
+        user = store.createUser({ id: store.uid("u_"), email: null, name: String((profile.login || profile.name) || "github"), passwordHash: null, provider: "github", providerId: pid, createdAt: Date.now() });
+        store.addAudit(user.id, "register", { provider: "github" });
+      }
+      store.addAudit(user.id, "login", { provider: "github", device: "github-oauth" });
+      const t = makeTokens(cfg, user.id);
+      store.saveSession({ refreshToken: t.refreshToken, userId: user.id, createdAt: Date.now(), expiresAt: Date.now() + (cfg.jwt.refreshTtlSec || 2592000) * 1000, deviceName: "github-oauth" });
+      console.log("[auth] github 登录完成 providerId=" + pid + " user=" + user.id);
+      const target = (st.data && st.data.origin) || gh.postMessageOrigin || "*";
+      return res.type("html").send(ghCallbackPage(state, t.accessToken, t.refreshToken, target));
+    } catch (e) {
+      /* 只记消息不记堆栈敏感面；错误页同样不含细节 */
+      console.error("[auth] github 回调异常：" + (e && e.message));
+      return res.type("html").send(ghErrorPage("server_error"));
+    }
+  });
+
+  /* ---- 微信扫码登录（v3.7.113 重写）----
+     契约来自客户端 _wechatPollStart()（src/render-overview.js）：
+       POST /wechat/qrcode            → {qr, scene, expireIn}（qr 为图片 URL/data-URI）
+       GET  /wechat/status?scene=     → {status:"pending"|"confirmed"|"expired", accessToken?, refreshToken?}
+     客户端每 2.5s 轮询一次；confirmed 且带 accessToken 即登录。
+     **演示模式（本来就有的形态，非 v3.7.113 新增）**：无微信开放平台凭据时 qrcode 返回标注了
+     scene 的 SVG data-URI（响应带 demo:true 让 UI 可自证是演示），确认入口是 /wechat/confirm
+     （凭 email 直签 token = 完整认证绕过，**默认 404，仅 dev.allowUnsafeDevEndpoints 放行**）。
+     真正的微信授权（扫码后由微信回调确认）需企业资质，见 roadmap 阶段④ —— 协议不变、只换 provider。 */
+  router.use("/wechat", rlAuth("wechat"));
+  const W = cfg.wechat || {};
+  const W_TTL = (Number(W.qrcodeTicketTtlSec) || 300) * 1000;
+  router.post("/wechat/qrcode", (req, res) => {
+    try {
+      /* 未配置对象整体缺失才 503；config.example.json 自带 wechat 段 → 默认走演示。
+         演示码必须让调用方消费端看得出是演示（demo:true），不能伪装成真二维码。 */
+      if (!W || typeof W !== "object") return fail(res, 503, "wechat_not_configured");
+      store.sweepOAuthStates(W_TTL);
+      const scene = store.uid("wx_");
+      store.setOAuthState(scene, "wechat", {});
+      return ok(res, { qr: makeDemoWechatQr(W, scene), scene, expireIn: Math.round(W_TTL / 1000), demo: true });
+    } catch (e) {
+      return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
+    }
+  });
+  router.get("/wechat/status", (req, res) => {
+    try {
+      const scene = String((req.query && req.query.scene) || "");
+      const st = store.getOAuthState(scene);
+      if (!scene || !st || st.provider !== "wechat") return fail(res, 404, "scene_not_found");
+      if (st.data && st.data.confirmed && st.data.userId) {
+        const user = store.getUser(st.data.userId);
+        if (!user) return fail(res, 404, "scene_not_found");
+        /* 一次性消费：token 只给一次，防止 scene 被反复轮询出多枚 token */
+        store.deleteOAuthState(scene);
+        store.addAudit(user.id, "login", { provider: "wechat_demo" });
+        const t = makeTokens(cfg, user.id);
+        store.saveSession({ refreshToken: t.refreshToken, userId: user.id, createdAt: Date.now(), expiresAt: Date.now() + (cfg.jwt.refreshTtlSec || 2592000) * 1000, deviceName: "wechat-demo" });
+        return ok(res, { status: "confirmed", accessToken: t.accessToken, refreshToken: t.refreshToken, expiresIn: t.accessTtlSec, user: publicUser(user) });
+      }
+      const elapsed = Date.now() - (st.createdAt || 0);
+      if (elapsed > W_TTL) { store.deleteOAuthState(scene); return ok(res, { status: "expired" }); }
+      return ok(res, { status: "pending", expireIn: w_expire(cfg, st) });
+    } catch (e) {
+      return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
+    }
+  });
+  /* 开发确认入口：等价于「凭一个 email 直接签发 accessToken + refreshToken」——完整认证绕过。
+     默认 404（不暴露端点存在）；仅显式 dev.allowUnsafeDevEndpoints 放行（v3.7.105 加固口径）。 */
+  router.get("/wechat/confirm", (req, res) => {
+    try {
+      if (!cfg.dev || cfg.dev.allowUnsafeDevEndpoints !== true) return fail(res, 404, "not_found");
+      const scene = String((req.query && req.query.scene) || "");
+      const st = store.getOAuthState(scene);
+      if (!st || st.provider !== "wechat") return fail(res, 404, "scene_not_found");
+      const email = String((req.query && req.query.email) || "").trim().toLowerCase();
+      if (!email) return fail(res, 400, "email_invalid");
+      let user = store.findUserByEmail(email);
+      if (!user) user = store.createUser({ id: store.uid("u_"), email, name: email, passwordHash: null, provider: "wechat", providerId: "wx_demo_" + scene, createdAt: Date.now() });
+      store.setOAuthState(scene, "wechat", Object.assign({}, st.data, { confirmed: true, userId: user.id }));
+      return ok(res, {});
+    } catch (e) {
+      return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
+    }
+  });
+
   // ---- auth 中间件：解析 Bearer token -> req.user ----
   router.use("/me", authMiddleware(cfg));
   router.use("/devices", authMiddleware(cfg));
@@ -227,94 +420,11 @@ function authRouter(cfg, store) {
   });
 
   // ---- GitHub OAuth：获取授权 URL ----
-  router.get("/github", (req, res) => {
-    const g = cfg.github;
-    if (!g || !g.enabled || !g.clientId) return fail(res, 503, "github_not_configured");
-    const state = store.uid("st_");
-    store.setOAuthState(state, "github", {});
-    const params = new URLSearchParams({ client_id: g.clientId, redirect_uri: g.redirectUri, scope: "read:user user:email", state, allow_signup: "true" });
-    return ok(res, { authorizeUrl: "https://github.com/login/oauth/authorize?" + params.toString(), state });
-  });
-
-  // GitHub 回调：code -> access_token -> 用户信息 -> 建/绑本地账号 -> 签发 token
-  router.get("/github/callback", async (req, res) => {
-    try {
-      const code = String((req.query && req.query.code) || "");
-      const state = String((req.query && req.query.state) || "");
-      const st = store.getOAuthState(state);
-      if (!st || st.provider !== "github") return res.status(400).send("invalid oauth state");
-      store.deleteOAuthState(state);
-      const g = cfg.github;
-      if (!code) return res.status(400).send("missing code");
-      const tokenResp = await fetch("https://github.com/login/oauth/access_token", {
-        method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ client_id: g.clientId, client_secret: g.clientSecret, code, redirect_uri: g.redirectUri })
-      });
-      const tokenData = await tokenResp.json();
-      const access = tokenData.access_token;
-      if (!access) return res.status(502).send("github token exchange failed");
-      const uResp = await fetch("https://api.github.com/user", { headers: { "Authorization": "Bearer " + access, "User-Agent": "agent-workbench" } });
-      const ghUser = await uResp.json();
-      let user = store.findUserByProvider("github", ghUser.id);
-      if (!user) {
-        const email = (ghUser.email || "").toLowerCase() || (ghUser.login + "@github.local").toLowerCase();
-        const existing = store.findUserByEmail(email);
-        if (existing) user = store.updateUser(existing.id, { provider: "github", providerId: String(ghUser.id) });
-        else user = store.createUser({ id: store.uid("u_"), email, name: ghUser.name || ghUser.login, passwordHash: null, provider: "github", providerId: String(ghUser.id), createdAt: Date.now() });
-      }
-      const t = makeTokens(cfg, user.id);
-      store.saveSession({ refreshToken: t.refreshToken, userId: user.id, createdAt: Date.now(), expiresAt: Date.now() + (cfg.jwt.refreshTtlSec || 2592000) * 1000, deviceName: "github-oauth" });
-      // 前端监听 postMessage{type:'agent-github-oauth'} 收 token
-      return sendAuthResult(res, t);
-    } catch (e) {
-      return res.status(500).send("github oauth error: " + ((e && e.message) || String(e)));
-    }
-  });
-
-  // ---- 微信扫码：取二维码 ----
-  router.post("/wechat/qrcode", (req, res) => {
-    const w = cfg.wechat;
-    // 未配置微信凭据时给演示码（真实接入需微信开放平台网页授权，骨架先演示）。
-    // 仅当 wechat 配置对象整体缺失时才算"未支持"。
-    if (!w || typeof w !== "object") return fail(res, 503, "wechat_not_configured");
-    const scene = store.uid("wx_");
-    const qr = makeDemoWechatQr(w, scene);
-    store.setOAuthState(scene, "wechat", {});
-    return ok(res, { qr, scene, expireIn: (w.qrcodeTicketTtlSec) || 300, demo: true });
-  });
-
-  // ---- 微信扫码：轮询状态 ----
-  router.get("/wechat/status", (req, res) => {
-    const scene = String((req.query && req.query.scene) || "");
-    const st = store.getOAuthState(scene);
-    if (!st || st.provider !== "wechat") return fail(res, 404, "scene_not_found");
-    if (st.data && st.data.confirmed && st.data.userId) {
-      const user = store.getUser(st.data.userId);
-      const t = makeTokens(cfg, user.id);
-      return ok(res, { status: "confirmed", accessToken: t.accessToken, refreshToken: t.refreshToken, expiresIn: t.accessTtlSec, user: publicUser(user) });
-    }
-    return ok(res, { status: "pending", expireIn: w_expire(cfg, st) });
-  });
-
-  // 微信扫码模拟确认（开发用，无真实微信凭据时）：GET /api/auth/wechat/confirm?scene=xxx&email=yyy
-  router.get("/wechat/confirm", (req, res) => {
-    /* v3.7.105 加固：本端点等价于「凭一个 email 直接签发 accessToken + refreshToken」，
-       是完整的认证绕过 —— 任何人 GET 一次即可创建或接管任意邮箱的账号，
-       再用 /wechat/status 把 token 取走。原实现虽然被 README 标为「开发用」，
-       但代码里没有任何环境判断（不看 NODE_ENV、不看配置开关），部署即失守。
-       现要求显式开启 cfg.dev.allowUnsafeDevEndpoints 才放行，默认关闭。
-       未开启时返回 404 而非 403 —— 不向外暴露该端点存在。 */
-    if (!cfg.dev || cfg.dev.allowUnsafeDevEndpoints !== true) return fail(res, 404, "not_found");
-    const scene = String((req.query && req.query.scene) || "");
-    const st = store.getOAuthState(scene);
-    if (!st || st.provider !== "wechat") return fail(res, 404, "scene_not_found");
-    const email = String((req.query && req.query.email) || "").trim().toLowerCase();
-    let user = email ? store.findUserByEmail(email) : null;
-    if (email && !user) user = store.createUser({ id: store.uid("u_"), email, name: email, passwordHash: null, provider: "wechat", providerId: "wx_demo_" + scene, createdAt: Date.now() });
-    store.setOAuthState(scene, "wechat", { confirmed: true, userId: user.id });
-    return ok(res, {});
-  });
+  /* v3.7.113：以下约 90 行是 ac1114a 骨架自带的旧版 github/wechat 实现，已被本文件上半部分
+     的加固实现取代（同路径双注册 = 前者永远命中、后者成死码，比没有更坏）。旧版的三处实质问题：
+     ① 回调兑换用 JSON body 打 GitHub 令牌端点（GitHub 要 form-urlencoded，JSON 会被拒）；
+     ② postMessage 载荷不带 state —— 客户端校验 d.state===session.state 会直接拒收，登录链路本是断的；
+     ③ state 无 TTL / 无一次性之外的保护、无 origin 记录、无审计。删除而非保留两份。 */
 
   return router;
 
@@ -333,22 +443,6 @@ function authRouter(cfg, store) {
         return res.status(401).json({ ok: false, error: "invalid_token" });
       }
     };
-  }
-
-  function sendAuthResult(res, t) {
-    /* 返回授权页能直接读的 JSON + 一段 postMessage 脚本（在无后端回调页时由前端 window 打开授权窗接收）。
-       v3.7.105 加固两处：
-       ① targetOrigin 原为硬编码 '*'（任何 origin 的 opener 都能收到 token），
-          改为读 cfg.github.postMessageOrigin，生产必须配成自己的页面源；
-       ② token 原样字符串拼进 <script>，改为 JSON.stringify 后再把 '<' 转义成 \u003c，
-          杜绝提前闭合 script 标签。 */
-    const target = (cfg.github && cfg.github.postMessageOrigin) || "*";
-    const payloadJson = JSON.stringify({
-      type: "agent-github-oauth", accessToken: t.accessToken, refreshToken: t.refreshToken
-    }).replace(/</g, "\\u003c");
-    const originJson = JSON.stringify(target);
-    const html = "<!doctype html><html><body><script>try{opener.postMessage(" + payloadJson + "," + originJson + ");}catch(e){}window.close();</script></body></html>";
-    res.type("html").send(html);
   }
 
   function w_expire(cfg, st) {

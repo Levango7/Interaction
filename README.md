@@ -1,4 +1,4 @@
-# Agent 工坊（v3.7.112）
+# Agent 工坊（v3.7.113）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活 / 健康七类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -183,16 +183,16 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 - **可选账号与云同步**：客户端包含登录、注册、邮箱验证码与同步接口，依赖自建后端（`server/`，Express，含速率限制 / 审计环 / 云同步增量协议）；API 基址取 `cfg.apiBase`，默认 `http://localhost:3001` —— **未启动后端时该端口无人监听**，UI 会如实提示「未检测到账号服务」（v3.7.103），不能把打开静态页面或 Electron 外壳等同于后端已运行。未配置后端时用导出 / 导入迁移数据。
   - **同步端点契约（v3.7.53 补齐推送侧）**：`GET /api/sync/snapshot` 取快照、`PUT /api/sync/snapshot` 上传快照（body `{snapshot, updatedAt}`，快照内含 `_deviceMeta.deviceId`）。**v3.7.112 已完成契约级联调（25/25）+ 真机 UI 联调（19/19）**，并修复联调抓到的信封拆包 P0（见 CHANGELOG v3.7.112）；同步状态如实显示：推成功才显示「已同步」，失败/离线显示「同步失败 / 离线模式」，能力缺失显示「仅本机（云同步未接入）」。
   - **快照范围（v3.7.58 修订）**：快照包含业务数据（任务 / 记录 / 笔记 / 记忆 / AI 会话历史等 `wb_agent_*` 键）；**排除** AI 配置（`wb_agent_cfg`，内含 Key 密文）、设备密钥（`wb_agent___dk`）、密封凭据裸键、同步元数据与本机回滚备份（`wb_agent_pre_restore_backup`）。
-- **第三方登录回调契约**：GitHub 授权接口需返回 `authorizeUrl` 和 `state`；回调页面必须位于配置的 API 同源，在本次打开的登录窗口内发送 `{type:"agent-github-oauth", state, accessToken, refreshToken}`。客户端校验来源、窗口及一次性 state。⚠️ **`/api/auth/github` 与 `/api/auth/wechat/*` 服务端尚未实现**（客户端在调、后端 404， UI 会提示无法第三方登录）—— 属已知待补项，邮箱注册登录与云同步不受影响。
+- **第三方登录回调契约**：GitHub 授权接口需返回 `authorizeUrl` 和 `state`；回调页面必须位于配置的 API 同源，在本次打开的登录窗口内发送 `{type:"agent-github-oauth", state, accessToken, refreshToken}`。客户端校验来源、窗口及一次性 state。**v3.7.113 已按承重墙标准加固**（未配凭据 → 503 `github_not_configured` 而非 404；兑换改 form-urlencoded——旧实现打 JSON body 会被 GitHub 拒；回调页补传 state——旧实现漏传，客户端校验 `d.state===session.state` 会直接拒收，链路本是断的）；GitHub 真机验收只差用户注册一次免费的 OAuth App（callback 填 API origin）。微信侧当前为**演示模式**（无开放平台凭据也能跑通取码→确认→签发，响应带 `demo:true` 自证是演示），正式微信授权需企业资质（商务阶段，协议不变、只换 provider）。
 - **Electron 本机同步入口会自动隐藏（v3.7.52 起）**：页面侧曾调用 preload 未暴露的 `electronAPI.syncPush/syncGet`，而主进程从未实现 127.0.0.1:8124 同步服务，导致每 60s 弹一次失败告警。现按「stub + 活 UI = 虚假功能」原则：检测到能力缺失时直接隐藏「本机同步下载」按钮并停掉定时器。恢复方式（补 IPC + 同步服务）见 [docs/product-scope.md](docs/product-scope.md)。
 
 ---
 
 ## 八、版本
 
-当前版本 **v3.7.112**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量、本文件共五处保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.7.113**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量、本文件共五处保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.112 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.113 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 九、相关文件
 

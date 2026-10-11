@@ -1158,6 +1158,16 @@ function _openWechatModal(){
 }
 var _wechatTimer = null;
 var _wechatGeneration = 0;
+/* v3.7.113（第三方登录文案细分）：后端未配置 GitHub 时返回 503 + github_not_configured，
+   客户端能分清「没配置这个登录方式」—— 此前的笼统文案「当前环境无后端」在**后端明明在跑**时
+   是误导（v3.7.112 真机联调观察到的形态）。其余错误码一律不映射（写宽会把限流等也显示成
+   "未配置"，同样误导），保持原文案。 */
+function _ssoErrText(r){
+  if(r && r.data && r.data.error === "github_not_configured"){
+    return t("api.ssoNotConfigured", "后端未配置该第三方登录方式（详见部署文档）");
+  }
+  return null;
+}
 function _wechatPollStop(){
   _wechatGeneration++; // 关闭或重开时，使在途二维码/确认响应失效。
   if(_wechatTimer){ clearInterval(_wechatTimer); _wechatTimer = null; }
@@ -1170,7 +1180,7 @@ function _wechatPollStart(){
   if(typeof window.apiWechatQrcode !== "function"){ if(body) body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>'; return; }
   window.apiWechatQrcode().then(function(r){
     if(!current()) return;
-    if(!r || !r.ok || !r.data){ if(body) body.innerHTML = '<div class="empty">' + t("api.ssoNoBackend", "当前环境无后端，无法扫码登录") + '</div>'; return; }
+    if(!r || !r.ok || !r.data){ if(body) body.innerHTML = '<div class="empty">' + esc(_ssoErrText(r) || t("api.ssoNoBackend", "当前环境无后端，无法扫码登录")) + '</div>'; return; }
     var d = r.data;
     var qr = d.qr || "";
     var scene = d.scene || "";
@@ -1218,7 +1228,9 @@ function _doGithubLogin(){
   window.apiGithubOauthUrl().then(function(r){
     if(request !== _githubAuthRequest) return;
     if(!r || !r.ok || !r.data || !r.data.authorizeUrl || typeof r.data.state !== "string" || !r.data.state){
-      try{ toast(t("api.ssoNoBackend", "当前环境无后端，无法 GitHub 登录"), "warn"); }catch(_e){}
+      /* 未配置 OAuth 时给准确文案（后端在跑但没配 GitHub），不要笼统说成「无后端」 */
+      var txt = _ssoErrText(r) || t("api.ssoNoBackend", "当前环境无后端，无法 GitHub 登录");
+      try{ toast(txt, "warn"); }catch(_e){}
       return;
     }
     var authorize = new URL(r.data.authorizeUrl, location.href);

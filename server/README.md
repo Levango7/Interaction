@@ -14,8 +14,8 @@
 
 | 项 | 状态 |
 |---|---|
-| 与客户端（`agent-workbench.html`）联调 | ✅ **契约级 + 真机 UI 双通**：契约级 `verify/client-contract-check.cjs` 25/25；真机 UI `_probe/ui-backend-integration.mjs` 19/19（真 Chromium + 真后端 + 真表单，双 context 当两台设备，注册→上传→回读数据文件→跨设备拉取→错误密码负例）。客户端默认仍指向不存在的 `localhost:3001`，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」 |
-| 自动化测试 | ✅ 六个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 25/25、`incremental-check` 54/54、`security-check` 22/22、`tools-fetch-check` 17/17，合计 136/136），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
+| 与客户端（`agent-workbench.html`）联调 | ✅ **契约级 + 真机 UI 双通**：契约级 `verify/client-contract-check.cjs` 29/29；真机 UI `_probe/ui-backend-integration.mjs` 19/19（真 Chromium + 真后端 + 真表单，双 context 当两台设备，注册→上传→回读数据文件→跨设备拉取→错误密码负例）。客户端默认仍指向不存在的 `localhost:3001`，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**第三方登录另见 `verify/oauth-check.cjs` 33/33**（假 GitHub provider 全链路 + 微信演示模式全链路；v3.7.113 起 GitHub 未配凭据 → 503 `github_not_configured`，不再 404） |
+| 自动化测试 | ✅ 七个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 29/29、`incremental-check` 54/54、`security-check` 22/22、`tools-fetch-check` 17/17、`oauth-check` 33/33，合计 **173**），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
 | 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot` + **增量** `POST /api/sync/changes` / `/resolve`（全量 LWW / 增量含冲突策略，见 `docs/cloud-sync-incremental-contract.md`） |
@@ -28,12 +28,13 @@
 cd server && npm install
 node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
 node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
-node verify/client-contract-check.cjs  # 期望 25/25 —— 客户端契约联调（含 /api/tools/fetch 代回内容）
+node verify/client-contract-check.cjs  # 期望 29/29 —— 客户端契约联调（含 OAuth fail-closed 契约）
 node verify/incremental-check.cjs      # 期望 54/54 —— 增量协议：幂等/LWW/删除信号/快照相干/剪枝回退/冲突与解决
 node verify/security-check.cjs         # 期望 22/22 —— 速率限制（阈值内正常/超限 429/分桶/可关）+ 审计环（记录/隔离/有界）
 node verify/tools-fetch-check.cjs      # 期望 17/17 —— 抓取代理：代回原文/拒私网与云元数据/重定向每跳重校/体积与超时/401
+node verify/oauth-check.cjs            # 期望 33/33 —— 第三方登录：假 GitHub 全链路（授权/兑换/签发/审计/负例/限流）+ 微信演示模式全链路
 ```
-（六个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
+（七个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
 
 **加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败**验证码/锁定**策略
 （已有速率限制，但无限次试错同一口令仍可在线慢速爆破 —— 要彻底堵需账号级失败计数与锁定）、
@@ -88,7 +89,9 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | github.enabled / clientId / clientSecret / redirectUri | `GITHUB__ENABLED` 等 | GitHub OAuth App 凭据 |
 | github.postMessageOrigin | `GITHUB__POSTMESSAGEORIGIN` | OAuth 回调页回传 token 的 `targetOrigin`。**默认 `"*"`（任意站点可接收 token），生产必须改成自己的页面源** |
 | wechat.enabled / appid / secret | `WECHAT__ENABLED` 等 | 微信开放平台/公众号扫码凭据 |
-| dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行两个开发端点：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传。两者都是完整认证绕过，**生产必须为 false** |
+| dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传（两者都是完整认证绕过），以及 **GitHub 兑换端点指向 loopback/私网**（`verify/oauth-check.cjs` 的假 provider 联调用）。**生产必须为 false** |
+| github.* | `GITHUB__*` | GitHub 登录（v3.7.113）：`enabled/clientId/clientSecret/redirectUri/postMessageOrigin`（targetOrigin 默认 `*`，生产应收紧成应用源）+ `scope`（默认 `read:user`，只读身份）。`authorizeBase/tokenUrl/userUrl` 默认真端点，**仅联调/自建网关才覆盖**；指向 loopback 需另开上面的 dev 开关，否则回调返 `forbidden_host`。`stateTtlSec` 授权票据有效期（默认 600s，一次性消费+过期惰性清扫） |
+| wechat.* | `WECHAT__*` | 微信扫码登录：当前为**演示模式**（无开放平台凭据也可跑通取码→确认→签发全链路；响应带 `demo:true` 自证）。`qrcodeTicketTtlSec` 票据有效期（默认 300s，过期即清）。正式接入见 roadmap 阶段④ |
 | security.rateLimit.* | `SECURITY__RATELIMIT__*` | 速率限制（v3.7.110，默认开）：`enabled/windowMs/max`（每 IP 每窗口 30 次，覆盖 email-code/register/login）+ `loginMax`（同邮箱 10 次）+ `emailCodeMax`（同邮箱 5 次）。命中返 **429 + `rate_limited`**（带 `Retry-After`）；进程内计数，多实例各算各的 |
 | （无配置项） | `AUDIT_MAX` | 审计环上限，默认 200 条/用户（溢出丢最旧；是"近期活动"而非不可变归档） |
 | （无配置项） | `ALLOW_PLACEHOLDER_SECRETS` | 允许沿用占位 JWT 密钥启动（默认拒绝）。仅本地联调 |
@@ -109,11 +112,11 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | GET/PUT | /me | 当前用户信息 |
 | GET/DELETE | /devices[/:id] | 登录设备管理 |
 | POST | /email-code | 发邮箱验证码（未配 SMTP 时返回 demoCode 供开发） |
-| GET | /github | 获取 GitHub 授权跳转 URL（{authorizeUrl, state}） |
-| GET | /github/callback | GitHub 授权回调：code→token→建/绑账号→postMessage 回传 |
-| POST | /wechat/qrcode | 取扫码二维码（{qr, scene, expireIn}；未配微信时给演示码） |
-| GET | /wechat/status?scene= | 轮询扫码状态（pending→confirmed 带 token） |
-| GET | /wechat/confirm?scene=&email= | 开发用：模拟扫码确认 |
+| GET | /github | GitHub 登录：返回 `{authorizeUrl, state}`（v3.7.113 加固）。**未配置凭据 → 503 `github_not_configured`**（fail-closed，永不 404） |
+| GET | /github/callback | GitHub 授权回调（浏览器直开，非 apiFetch）：state 一次性消费+TTL → code 以 **form-urlencoded** 兑换（旧实现打 JSON body，GitHub 会拒）→ 按 GitHub id 建/找账号 → 签发 token → postMessage 页**回传 state + token**（旧实现漏传 state，客户端校验 `d.state===session.state` 会直接拒收，链路本是断的） |
+| POST | /wechat/qrcode | 微信扫码登录取码（v3.7.113 加固）。**演示模式**：无微信开放平台凭据时返回带 scene 的 SVG data-URI + `demo:true`；真受权需企业资质（roadmap 阶段④），协议不变只换 provider |
+| GET | /wechat/status?scene= | 轮询扫码状态：`pending` →（dev 确认后）`confirmed` 带 token（**scene 一次性消费**，不能反复领 token）→ `expired`（超 `qrcodeTicketTtlSec` 即清） |
+| GET | /wechat/confirm?scene=&email= | 开发用模拟扫码确认（等价"凭 email 直签 token"）——**默认 404 不暴露**，仅 `dev.allowUnsafeDevEndpoints` 放行 |
 
 ### 云同步 `/api/sync`（v3.7.105 全量 + v3.7.106 增量）
 

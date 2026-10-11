@@ -143,3 +143,37 @@ describe("账号 UI 请求失败与关闭生命周期", () => {
     expect(doc.getElementById("authSsoWechatBody").textContent).toContain("过期");
   });
 });
+
+/* v3.7.113：第三方登录文案细分（后端 503 + github_not_configured）。
+   守护点：**不得**把"没配置 OAuth"说成"无后端"（后端明明在跑），也不得把映射写宽到
+   其他错误码上（限流/网络异常仍走原文案）。 */
+describe("第三方登录文案细分（v3.7.113）", () => {
+  it("GitHub 未配置（503+github_not_configured）→ 提示未配置而非「无后端」", async () => {
+    const doc = await startPage("authwelcome");
+    const toasts = [];
+    win.toast = (msg) => { toasts.push(String(msg)); };
+    win.apiGithubOauthUrl = vi.fn().mockResolvedValue({ ok: false, status: 503, data: { error: "github_not_configured" } });
+    doc.getElementById("authSsoGithub").click();
+    await vi.waitFor(() => expect(toasts.length).toBe(1));
+    expect(toasts[0]).toContain("未配置");
+    expect(toasts[0]).not.toContain("无后端");
+  });
+
+  it("其他错误码（限流）仍回退原文案——映射不写宽", async () => {
+    const doc = await startPage("authwelcome");
+    const toasts = [];
+    win.toast = (msg) => { toasts.push(String(msg)); };
+    win.apiGithubOauthUrl = vi.fn().mockResolvedValue({ ok: false, status: 429, data: { error: "rate_limited" } });
+    doc.getElementById("authSsoGithub").click();
+    await vi.waitFor(() => expect(toasts.length).toBe(1));
+    expect(toasts[0]).toContain("无后端");
+  });
+
+  it("微信取码网络异常 → 面板仍显示「无后端」原文案（catch 路径不细分）", async () => {
+    const doc = await startPage("authwelcome");
+    win.apiWechatQrcode = vi.fn().mockRejectedValue(new Error("offline"));
+    doc.getElementById("authSsoWechat").click();
+    /* 面板先显示"正在获取二维码…"（中间态），catch 才落到文案 —— 断言用终态自等 */
+    await vi.waitFor(() => expect(doc.getElementById("authSsoWechatBody").textContent).toContain("无后端"));
+  });
+});

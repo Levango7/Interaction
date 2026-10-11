@@ -22,7 +22,12 @@
     "clientId": "",
     "clientSecret": "",
     "redirectUri": "http://localhost:3001/api/auth/github/callback",
-    "postMessageOrigin": "*"
+    "postMessageOrigin": "*",
+    "scope": "read:user",
+    "authorizeBase": "https://github.com/login/oauth/authorize",
+    "tokenUrl": "https://github.com/login/oauth/access_token",
+    "userUrl": "https://api.github.com/user",
+    "stateTtlSec": 600
   },
   "wechat": {
     "enabled": false,
