@@ -564,6 +564,14 @@ function buildDiagReport(opts){
     L.push("语义召回: " + (st ? (map[st.mode] || st.mode) : "状态读取失败"));
   } catch (e) { L.push("语义召回: 状态读取失败（" + ((e && e.message) || e) + "）"); }
   L.push("诊断条数: " + list.length);
+  /* v3.7.118：上下文摘要状态 —— 折叠了几条、还是没启用。摘要只影响"发送时发什么"，
+     本机历史不动；用户在这里能确认折叠确实在发生（而不是以为历史被删了）。 */
+  try {
+    const cs = (typeof ctxSummaryState === "function") ? ctxSummaryState() : { covered: 0, chars: 0 };
+    L.push("上下文摘要: " + (cs.covered > 0
+      ? t("ctx.sumDiagOn", "已折叠 ") + cs.covered + t("ctx.sumDiagOnMid", " 条早段对话为摘要（发送时折叠，本机历史不动）")
+      : t("ctx.sumDiagOff", "未启用或未触发（cfg.histSummary）")));
+  } catch (e) { L.push("上下文摘要: 状态读取失败（" + ((e && e.message) || e) + "）"); }
   L.push("");
   L.push("—— 近期诊断（新→旧，入队时已脱敏）——");
   if(!list.length) L.push("（无诊断记录）");

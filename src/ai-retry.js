@@ -335,6 +335,82 @@ async function continueAgentRun(){
   }
 }
 
+/* ===== v3.7.118：上下文滚动摘要 =====
+ * 问题：每轮把整段历史全量发送，token 成本随会话轮数**线性涨**（架构评估的第三块天花板）。
+ * 解法：超过阈值时把最旧一段折成一次摘要（**一次额外请求**），摘要拼进 system 提示、
+ * 只发「摘要 + 最近 KEEP 条」。三条纪律：
+ *   ① 阈值内零额外请求 —— 短会话行为与改动前完全一致；
+ *   ② 摘要请求失败/超时 → 保持原 covered（可能为 0）→ 回退既有全量路径，不报错不阻塞
+ *      （降级路径优先于新功能）；
+ *   ③ **不静默改历史**：chats[sc] 原样不动，摘要只是"发送时的投影"；按**会话**隔离
+ *      （存进 session 对象 —— 切会话不串味，删会话随它一起消失，无需额外清理键）。
+ * 配置：cfg.histSummary===false 关；cfg.histSummaryAt（默认 40 条触发）、
+ *      cfg.histSummaryKeep（默认留最近 20 条）、cfg.histSummaryStep（默认每多 10 条重折一次
+ *      —— 不是每条都重摘要，那会把节省的 token 又花回去）。 */
+function _sumCfg(){
+  const c = (typeof getCfg === "function") ? (getCfg() || {}) : {};
+  return {
+    on: c.histSummary !== false,
+    at: Math.max(8, Number(c.histSummaryAt) || 40),
+    keep: Math.max(4, Number(c.histSummaryKeep) || 20),
+    step: Math.max(2, Number(c.histSummaryStep) || 10)
+  };
+}
+function _sessSumGet(){
+  try{
+    if(typeof getActiveSessionObj !== "function") return null;
+    const s = getActiveSessionObj();
+    return (s && s.sum && typeof s.sum.text === "string" && Number(s.sum.covered) > 0) ? s.sum : null;
+  }catch(e){ return null; }
+}
+function _sessSumPut(text, covered){
+  try{
+    if(typeof getActiveSessionObj !== "function") return;
+    const s = getActiveSessionObj();
+    if(!s) return;
+    s.sum = { text: String(text || "").slice(0, 1200), covered: covered };
+    if(typeof _saveSessions === "function") _saveSessions();
+  }catch(e){ /* 写不进只是不能续用摘要，不影响当轮 */ }
+}
+/** 取「本会话已折叠条数」（无摘要返回 0）—— 诊断行与发送投影共用 */
+function ctxSummaryState(){
+  const s = _sessSumGet();
+  return s ? { covered: s.covered, chars: (s.sum ? s.text.length : 0) } : { covered: 0, chars: 0 };
+}
+async function maybeSummarizeHistory(hist, sc){
+  const cfg = _sumCfg();
+  const st = _sessSumGet();
+  const covered0 = st ? Number(st.covered) || 0 : 0;
+  if(!cfg.on) return null;
+  if(!Array.isArray(hist) || hist.length <= cfg.at) return null;
+  const want = hist.length - cfg.keep;             // 想折叠到第 want 条
+  if(want <= covered0) return null;                // 已在覆盖范围内（或更短）
+  if(covered0 > 0 && want - covered0 < cfg.step) {
+    /* 增长不足一步：沿用旧摘要（省一次摘要请求）。注意此时**已折叠的部分**用旧摘要、
+       covered0..want 之间这些没折进去的消息仍要发 —— 所以返回 covered0 而非 want。 */
+    return { covered: covered0, block: _sumBlock(st.text) };
+  }
+  /* 生成新摘要（覆盖前 want 条）*/
+  const folded = hist.slice(0, want).map(function(m){
+    return (m.role === "user" ? "用户" : (m.role === "assistant" ? "助手" : m.role)) + "：" + String(m.content || "").slice(0, 200);
+  }).join("\n");
+  let text = "";
+  try{
+    const resp = await chatOnce([
+      { role: "system", content: "把下面的对话历史压缩成要点摘要（保留：已决定的事项、关键事实、未完成的问题；去掉寒暄与重复）。不超过 300 字，直接给摘要正文。" },
+      { role: "user", content: folded }
+    ], {});
+    const c = (resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content) || "";
+    text = String(c || "").trim();
+  }catch(e){ return null; }     // 摘要失败 → 回退全量（covered=0 或旧值由调用方按 null 处理）
+  if(!text) return null;
+  _sessSumPut(text, want);
+  return { covered: want, block: _sumBlock(text) };
+}
+function _sumBlock(text){
+  return t("ctx.sumHeader", "【较早对话摘要】（更早的对话已折叠为摘要，以下为要点）：\n") + String(text || "");
+}
+
 /** 把计划渲染成人能读的评审文本（聊天里显示，也用作确认提示的正文） */
 function agentPlanReviewText(plan){
   const lines = plan.steps.map(function(s, i){
@@ -745,11 +821,15 @@ async function onChatSubmit(e){
      否则「技能：X」触发时 key 对不上、语义召回静默失效。失败一律降级，绝不拦对话。 */
   await memPrimeQueryVector(outbound).catch(()=> false);
   const ragCtx = await ragInjectContext(text).catch(()=> "");
+  /* v3.7.118：上下文滚动摘要 —— 超阈值时把最旧一段折成一次摘要（拼进 system），
+     只发「摘要 + 最近 N 条」，token 成本从随轮数线性涨转为有界。
+     失败/超时一律回退全量（降级路径优先于新功能）；本机历史不动（摘要只是发送投影）。 */
+  const ctxSum = await maybeSummarizeHistory(hist, sc).catch(()=> null);
   /* v3.7.59：chatSysPrompt 收 outbound —— 「技能：X」时系统提示里的技能段会因整名命中把它排到第一条。
      未触发技能时 outbound === text，行为与改动前一致。 */
-  const messages=[{role:"system", content:chatSysPrompt(outbound) + ragCtx}]
+  const messages=[{role:"system", content:chatSysPrompt(outbound) + ragCtx + (ctxSum ? "\n\n" + ctxSum.block : "")}]
     // B1 修复：保留完整结构（含 tool_calls / tool_call_id），否则含工具调用的会话第二轮会缺 id 触发 400
-    .concat(hist.map(m=>({...m})));
+    .concat(hist.slice(ctxSum ? ctxSum.covered : 0).map(m=>({...m})));
   /* v3.7.59：触发技能时，把**发出去**的最后一条 user 消息换成展开版（附上该技能的做法与建议工具）。
      hist 里仍存用户原话 —— 界面与历史记录不被一大段指令污染，模型也确实收到"按这个流程做"。 */
   if(outbound !== text){
