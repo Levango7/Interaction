@@ -6261,7 +6261,7 @@ const MVP_SCOPE = {
  * 后续随 JSDoc 细化逐步收紧。
  * @type {(s:string, r?:ParentNode)=>any}
  */
-const $ = (s, r=document) => r.querySelector(s);
+const $ = (s, r) => (r || (typeof document !== "undefined" && document) || { querySelector: () => null }).querySelector(s);
 /** @type {(s:string, r?:ParentNode)=>any[]} */
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
