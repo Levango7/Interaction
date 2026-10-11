@@ -2199,6 +2199,14 @@ function applyStartHash(){
   setupSideToggle(); // 侧边栏折叠按钮事件委托 + 恢复持久化折叠状态
   setupSideMenu();   // v2.1.0：侧栏两级菜单点击分发（事件委托，跨 renderSide 重渲染有效）
   setupMobNav();     // v2.1.0：移动端底栏 + 底部抽屉事件（委托绑定，幂等）
+  /* v3.7.116：刷新恢复提示 —— 上次未完成的自主执行（v3.7.116 前它只在内存，刷新即丢）。
+     放在启动尾段、DOM 就绪之后；迟 1.2s 弹（避开启动瞬时的 toast 竞争），只提示一次。
+     真正的续跑在聊天里发「继续执行」（onChatSubmit 拦截）或命令面板「>」触发同一提示。 */
+  try{
+    if(typeof agentRunPending === "function" && agentRunPending()){
+      setTimeout(function(){ try{ toast(agentRunNotice(), "warn"); }catch(_e){} }, 1200);
+    }
+  }catch(_e){ /* 提示失败不影响启动 */ }
   // v1.10.0b：正文顶部消息通知栏展开/收起（默认收起，点击预览/下拉按钮可展开前 3 条 + footer）
   try{ if(typeof initTodoBar === "function") initTodoBar(); }catch(_){ }
   // v1.10.0：应用 popover 三模态的关闭按钮 + 初始恢复用户偏好（指针特效/萌宠）

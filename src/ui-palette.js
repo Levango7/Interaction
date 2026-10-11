@@ -202,9 +202,14 @@ function buildCmds(q){
        风险由三段兜住：先出计划要用户回「确认执行」、破坏性步骤被 executeAgentPlan 拦掉、步数有上限。 */
     if(qRaw.charAt(0) === ">" && typeof proposeAgentPlan === "function" && getCfg().agent !== false){
       const task = qRaw.slice(1).trim();
+      /* v3.7.116：有未完成的执行时，`>` 的副标题先说明现状（点下去也会被 proposeAgentPlan
+         拦住并提示）—— 用户在该看见的地方先看见，而不是点了才被告知。 */
+      const runSub = (typeof agentRunPending === "function" && agentRunPending())
+        ? agentRunNotice()
+        : t("cmd.agentRunSub","先出计划，回「确认执行」才落地；删除/修改类步骤不会自主执行");
       if(task.length >= 2){
         matched.unshift({ label: t("cmd.agentRun","让 AI 自主完成：")+task, icon: UI_ICONS.brain,
-          sub: t("cmd.agentRunSub","先出计划，回「确认执行」才落地；删除/修改类步骤不会自主执行"),
+          sub: runSub,
           group: t("cmd.command","命令"), trackRecent: false,
           run: function(){ proposeAgentPlan(task); } });
       }

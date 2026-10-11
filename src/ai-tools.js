@@ -1300,7 +1300,7 @@ async function executeAgentPlanReactive(plan, opts){
       executedLines.push(_execLine(r.stepOk, step, r.resultStr));
       consecFail = r.stepOk ? 0 : consecFail + 1;
       if(typeof o.onProgress === "function"){
-        try{ o.onProgress(results.length, results.length + remaining.length, step, r.resultStr); }catch(_){}
+        try{ o.onProgress(results.length, results.length + remaining.length, step, r.resultStr, r); }catch(_){}
       }
     }
     if(!remaining.length) break;
@@ -1310,6 +1310,12 @@ async function executeAgentPlanReactive(plan, opts){
       if(cal && cal.action === "replan" && Array.isArray(cal.steps) && cal.steps.length){
         remaining = cal.steps.slice(0, STEP_CAP).filter(s => s && s.tool);
         replans++; consecFail = 0;
+        /* v3.7.116：重规划后剩余步骤是**新对象**，与 plan.steps 对不上号 —— 断点续跑的
+           done 用原清单下标就会漏标/错标。这里把「已执行的步骤 + 新剩余」交出去，
+           由调用方把盘上记录重建成同一套下标（done 始终指向当前 steps）。 */
+        if(typeof o.onReplan === "function"){
+          try{ o.onReplan(remaining, results.filter(function(x){ return !x.blocked; }).map(function(x){ return x.step; })); }catch(_){}
+        }
       }
       /* cal 为 null 或 continue → 按原剩余计划继续 */
     }

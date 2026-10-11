@@ -229,6 +229,106 @@ function cancelPendingDanger(userText){
  */
 let pendingAgentPlan = null; // { plan, text, sc }
 
+/* ===== v3.7.116：自主执行断点续跑 =====
+ * 此前 `>` 自主计划的评审态与执行进度**只在内存**（pendingAgentPlan 是 let），
+ * 执行到一半刷新页面，进度就地丢失、从头再来（已跑过的步骤会不会重跑全凭运气）。
+ * 现在把"未完成的执行"落成一份盘上记录（容量 1 份），刷新后可原地续跑：
+ *   wb_agent_agent_run = { goal, text, sc, steps, done:[{i,tool,ok,resultStr}], at }
+ * 三条口径（对应迭代计划的验收）：
+ *   ① 全程落盘：确认即写、每步完成更新 done、全部完成/用户放弃清档；
+ *      取消（abort）与异常**不清档** —— 那是续跑的前提；
+ *   ② **done 权威**：done 里标记过的步骤不重跑（它记录的是"确实执行过"）；
+ *      缓存的 resultStr 只用于展示，不据此推断或重建数据现状（与 mv 冲突同口径）；
+ *   ③ 容量 1 份：有待续运行时 `>` 不静默开新计划（先提示），放弃后才能开新的。 */
+const AGENT_RUN_KEY = PREFIX + "agent_run";
+/* v3.7.116：写不进的后果只是"不能续跑"（当轮执行不受影响），但**不能不留下痕迹** ——
+   配额满/隐私模式下用户会以为进度存住了，刷新后才发现没了。一次性 WARN（同 v3.7.102
+   sideCollapsed 的做法）：不刷屏，但排查时有据可查。 */
+let _agentRunWriteWarned = false;
+function _agentRunWriteWarn(op, e){
+  if(_agentRunWriteWarned) return;
+  _agentRunWriteWarned = true;
+  try{ pushDiag("warn", "agent_run " + op + " failed: " + ((e && e.message) || e), { where: "agentRun" }); }catch(_e2){}
+}
+function loadAgentRun(){
+  try{ const r = load(AGENT_RUN_KEY, null); return (r && Array.isArray(r.steps)) ? r : null; }
+  catch(e){ return null; }
+}
+function saveAgentRun(rec){ try{ save(AGENT_RUN_KEY, rec); }catch(e){ _agentRunWriteWarn("save", e); } }
+function clearAgentRun(){ try{ save(AGENT_RUN_KEY, null); }catch(e){ _agentRunWriteWarn("clear", e); } }
+/** 有未完成步骤时返回 {done,total,goal,sc}，否则 null（含记录损坏/已对齐两种） */
+function agentRunPending(){
+  const r = loadAgentRun();
+  if(!r) return null;
+  const done = Array.isArray(r.done) ? r.done.length : 0;
+  if(done >= r.steps.length) return null;
+  return { done: done, total: r.steps.length, goal: r.goal || "", sc: r.sc || "", rec: r };
+}
+/** 给人看的恢复提示（命令面板入口与启动提示共用同一份文案） */
+function agentRunNotice(){
+  const p = agentRunPending();
+  if(!p) return "";
+  return t("aiagent.runResumeHint","有一个未完成的执行（第 ")+ (p.done+1) + t("aiagent.runResumeHintMid","/共 ")+p.total
+    + t("aiagent.runResumeHintEnd"," 步）—— 发送「继续执行」续跑，或「放弃执行」取消。");
+}
+/** 放弃：清档（与"取消"不同 —— 取消是中断当轮，放弃是连盘上记录也不要了） */
+function discardAgentRun(){ clearAgentRun(); }
+/**
+ * 续跑：从 done 之后的下一步开始，不重跑已完成步骤。
+ * @returns {Promise<{ok:boolean, executed:number, results:Array, summary?:string, cancelled?:boolean}>}
+ */
+async function continueAgentRun(){
+  const p = agentRunPending();
+  if(!p) return { ok:false, executed:0, results:[] };
+  const rec = p.rec;
+  const remaining = rec.steps.slice(p.done);
+  chatController = createChatController();
+  showChatThinking(true);
+  const signal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
+  try{
+    const r = await executeAgentPlanReactive(
+      { goal: rec.goal || "", steps: remaining },
+      {
+        signal: signal, goal: rec.goal || "",
+        onProgress: function(finished, _total, step, resultStr, stepRes){
+          /* 每步落一次盘：done 追加的是"刚跑完的那一步"（用原始 steps 的索引）。
+             **被拦下的步骤不算完成**（needsConfirm/不在白名单 → blocked）：它没跑，
+             标成 done 会让续跑永远跳过它 —— 那就把"需确认的步骤"悄悄吞掉了。 */
+          if(stepRes && stepRes.blocked) return;
+          const cur = loadAgentRun() || rec;
+          const idx = rec.steps.indexOf(step);
+          if(idx < 0) return;    // 重规划产生的新步骤不在原清单里 → 由 onReplan 重建
+          if((cur.done || []).some(function(d){ return d.i === idx; })) return;
+          saveAgentRun(Object.assign({}, cur, {
+            done: (cur.done || []).concat([{ i: idx, tool: step.tool, ok: !!(stepRes && stepRes.stepOk), resultStr: String(resultStr || "").slice(0, 400) }])
+          }));
+        },
+        onReplan: function(newRemaining, executedSteps){
+          /* 重规划后剩余步骤是新对象，与原 steps 对不上号 —— 按「已执行 + 新剩余」重建盘上记录，
+             保证 done 的下标始终指向当前 steps（否则续跑会漏跑或重跑）。 */
+          const cur = loadAgentRun() || rec;
+          if(!Array.isArray(newRemaining)) return;
+          const executed = Array.isArray(executedSteps) ? executedSteps : [];
+          saveAgentRun(Object.assign({}, cur, {
+            steps: executed.concat(newRemaining),
+            done: executed.map(function(_s, i){ return { i: i, tool: (_s && _s.tool) || "", ok: true }; })
+          }));
+        }
+      }
+    );
+    const executed = r.results ? r.results.length : 0;
+    if(r.ok) clearAgentRun();     // 全部完成 → 清档
+    /* r.ok=false（取消）→ 保留盘上记录：用户随时可再次续跑 */
+    return { ok: !!r.ok, executed: executed, results: r.results || [], summary: r.summary || "", cancelled: !r.ok };
+  }catch(e){
+    return { ok:false, executed:0, results:[], summary: String((e && e.message) || e) };
+  }finally{
+    showChatThinking(false);
+    if(chatController && chatController.timer) clearTimeout(chatController.timer);
+    chatController = null;
+  }
+}
+
 /** 把计划渲染成人能读的评审文本（聊天里显示，也用作确认提示的正文） */
 function agentPlanReviewText(plan){
   const lines = plan.steps.map(function(s, i){
@@ -251,6 +351,16 @@ async function proposeAgentPlan(text){
   const hist = getChat(sc);
   if(getCfg().agent === false){
     toast(t("aiagent.offWarn","Agent 模式已关闭（设置 → AI → Agent 模式），无法自主规划执行。"), "warn");
+    return false;
+  }
+  /* v3.7.116：有未完成的执行时先提示再决定 —— 容量 1 份，静默开新计划会**无声吞掉**
+     旧进度（用户以为旧任务还在跑）。提示里给两条明确出路。 */
+  if(agentRunPending()){
+    hist.push({ role:"user", content: raw });
+    hist.push({ role:"assistant", content: agentRunNotice() });
+    trimChatHist(hist);
+    save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
+    toast(agentRunNotice(), "warn");
     return false;
   }
   hist.push({ role:"user", content: raw });
@@ -300,10 +410,40 @@ async function confirmAgentPlan(){
   chatController = createChatController();
   showChatThinking(true);
   const signal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
+  /* v3.7.116：确认即落盘（刷新/崩溃后可续跑）。done 由 onProgress 逐步追加；
+     容量 1 份 —— 有待续运行时 proposeAgentPlan 会先提示，不会静默覆盖到这里。 */
+  saveAgentRun({ goal: p.plan.goal || "", text: p.text || "", sc: sc, steps: p.plan.steps, done: [], at: Date.now() });
+  /* v3.7.116：进度回执两个 —— onProgress（每步完成）与 onReplan（重规划后重建下标）。
+     done 的 i 始终指向**当前盘上 steps** 的下标；重规划时 steps 被替换，done 跟着重建。 */
+  const runProgress = function(_finished, _total, step, resultStr, stepRes){
+    if(stepRes && stepRes.blocked) return;    // 被拦下的步骤没跑，不算完成（续跑不能跳过它）
+    const cur = loadAgentRun();
+    if(!cur) return;
+    /* ⚠️ 必须用**活的** p.plan.steps 找下标：cur 是盘上 JSON 解析出的副本，
+       副本与 step 不是同一个对象，indexOf 恒为 -1（进度永远写不进去 —— 实测踩到）。 */
+    const idx = p.plan.steps.indexOf(step);
+    if(idx < 0) return;
+    if((cur.done || []).some(function(d){ return d.i === idx; })) return;
+    saveAgentRun(Object.assign({}, cur, {
+      done: (cur.done || []).concat([{ i: idx, tool: step.tool, ok: !!(stepRes && stepRes.stepOk), resultStr: String(resultStr || "").slice(0, 400) }])
+    }));
+  };
+  const runReplan = function(newRemaining, executedSteps){
+    const cur = loadAgentRun();
+    if(!cur || !Array.isArray(newRemaining)) return;
+    const executed = Array.isArray(executedSteps) ? executedSteps : [];
+    /* 重建：steps = 已执行 + 新剩余；done = 已执行的那些下标（0..n-1）。
+       只有这样续跑时才不会把「重规划后已经跑过的新步骤」再跑一遍。 */
+    saveAgentRun(Object.assign({}, cur, {
+      steps: executed.concat(newRemaining),
+      done: executed.map(function(_s, i){ return { i: i, tool: (_s && _s.tool) || "", ok: true }; })
+    }));
+  };
   try{
     // v3.7.72：换自适应执行（分段 + 结果回喂校准），盲跑版 executeAgentPlan 保留作降级
-    const r = await executeAgentPlanReactive(p.plan, { signal: signal, goal: p.goal || "" });
+    const r = await executeAgentPlanReactive(p.plan, { signal: signal, goal: p.goal || "", onProgress: runProgress, onReplan: runReplan });
     hist.push({ role:"assistant", content: r.summary });
+    if(r.ok) clearAgentRun();   // 全部完成 → 清档；取消/失败 → 留着（continueAgentRun 可续）
     /* 自主执行跑通的流程 = 一条现成的可复用技能候选（与对话路径同一套机制、同一个门槛） */
     const trace = r.results.filter(function(x){ return !x.blocked; }).map(function(x){
       return { name: x.step.tool, args: Object.keys(x.step.args || {}).slice(0, 8), ok: x.ok };
@@ -457,6 +597,32 @@ async function onChatSubmit(e){
     else {
       const yes = /^(确认执行|确认|确定|执行|yes|confirm|run|y)$/i.test(text.trim());
       if(yes){ await confirmAgentPlan(); } else { cancelAgentPlan(text); }
+      return;
+    }
+  }
+  /* v3.7.116：未完成执行的续跑指令（盘上有 agent_run 时才拦）。
+     「继续执行」从下一步接着跑（done 里的不重跑）；「放弃执行」连盘上记录一起清。
+     放在记忆指令之前：这两个指令与待续运行一一对应，不该被别的拦截抢走。 */
+  if(agentRunPending()){
+    const contHit = /^(继续执行|继续|接着执行|续跑|resume|continue)$/i.test(text.trim());
+    const dropHit = /^(放弃执行|放弃|取消执行|discard|abort\s*run)$/i.test(text.trim());
+    if(contHit || dropHit){
+      hist.push({ role:"user", content:text });
+      if(dropHit){
+        const p = agentRunPending();
+        discardAgentRun();
+        hist.push({ role:"assistant", content: t("aiagent.runDiscarded","已放弃未完成的执行（第 ")+(p.done+1)+t("aiagent.runDiscardedMid","/共 ")+p.total+t("aiagent.runDiscardedEnd"," 步）；已完成的步骤保留，随时可以用「>」重新开始。") });
+      }else{
+        showChatThinking(true);
+        let r = null;
+        try{ r = await continueAgentRun(); }catch(e){ r = { ok:false, executed:0, summary:String((e && e.message) || e) }; }
+        showChatThinking(false);
+        hist.push({ role:"assistant", content: r.cancelled
+          ? t("aiagent.runCancelled","已暂停。")+agentRunNotice()
+          : (r.summary || t("aiagent.runDone","续跑完成")) });
+      }
+      trimChatHist(hist);
+      save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat(); AppBridge.render();
       return;
     }
   }
