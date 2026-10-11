@@ -99,12 +99,12 @@
 
 | # | 事项 | 状态 | 前置 / 做法 |
 |---|---|---|---|
-| ① | **GitHub 登录真机验收** | 🟡 **待用户操作**（代码侧已全部就绪并假 provider 全链路验证 33/33；2026-10-11 用户拍板暂缓） | ① 打开 github.com/settings/developers → New OAuth App（个人免费，无需企业资质）② Authorization callback URL 填 `<后端 API origin>/api/auth/github/callback`（本机联调就填 `http://localhost:3001/api/auth/github/callback`）③ 把 clientId/secret 写进后端配置（`cfg.github.enabled=true`，或 env `GITHUB__ENABLED=true GITHUB__CLIENTID=… GITHUB__CLIENTSECRET=…`）④ 重启后端，在登录页点 GitHub 登录走一遍。**协议侧无需再改**；验收要点见 `server/README.md` 的 `/github` 行与 `docs/oauth-login-design.md` |
+| ① | **GitHub 登录真机验收** | 🟡 **待用户注册 OAuth App（约 2 分钟，个人免费，无需企业资质）** —— 代码侧已就绪（v3.7.113 加固 + 假 provider 全链路 33/33 + 真机探针） | **你做**：github.com/settings/developers → New OAuth App → 名字/主页随意 → **Authorization callback URL 填 `http://localhost:3001/api/auth/github/callback`**（3001 被占则换端口，URL 须逐字一致）→ 注册后复制 **Client ID / Client Secret** 两项给我。**我做**：生成 JWT 随机密钥、写 server/config.json（或 env `GITHUB__ENABLED=true GITHUB__CLIENTID=… GITHUB__CLIENTSECRET=… GITHUB__REDIRECTURI=…`）、起后端、起页面、开真浏览器；**唯一必须你手点的一步**是弹出授权页后点「Authorize」（那是你的 GitHub 账号授权）。然后我核验：登录态落盘、/me 返回 GitHub 身份、设备列表有 github-oauth 会话、审计环有 login{provider:github}，回填本行为 ✅ |
 | ② | **refresh token 明文落盘** | ✅ **已按建议落地（v3.7.114）** | 数据文件写盘时目录 0700 / 文件 0600（POSIX）；README 明示「`cfg.dataFile` 即凭证文件」；权限收紧失败打 WARN 不静默。口令派生/KMS 未做（独立课题：拿到文件 ≈ 拿到整机，性价比不成立） |
 | ③ | **corsOrigin 默认全开** | ✅ **已按建议落地（v3.7.114）** | 默认保持 `*`（开箱自通优先），值为 `*` 时启动打 WARN + README 警示；对外/过反代由运维收紧 |
 | ④ | 微信正式接入（扫码登录） | ⛔ 商务触发 | 企业主体认证 + ICP 备案域名 + 开放平台审核；协议已就绪，只换 provider 实现（`docs/oauth-login-design.md` 阶段④） |
-| ⑤ | Linear/Jira 真机验收 | 🟡 待凭据 | `node _probe/accept-linear-jira.mjs linear`（会真实建 issue） |
-| ⑥ | WebDAV 六步验收 | 🟡 待凭据 | `docs/webdav-verify.md`，坚果云应用密码 |
+| ⑤ | Linear/Jira 真机验收 | 🟡 **待凭据（注册免费，但需你的邮箱/验证码——无法代注册）** | **分工：注册你做（约 5 分钟），凭据贴上后验证/定位/修复/复跑我全包。** Linear（免费档够）：Settings → API → Personal API key（`lin_api_…`）+ 团队 ID → 我跑 `node _probe/accept-linear-jira.mjs linear`（**会真建 issue，这正是验收的意义**）。Jira Cloud（免费 10 人内）：建站点 `xxx.atlassian.net` → id.atlassian.com → Security → Create API token → 备 `JIRA_DOMAIN / JIRA_AUTH(base64 of email:token) / JIRA_PROJECT` → 跑同脚本 `jira` 分支 |
+| ⑥ | WebDAV 六步验收 | 🟡 **待凭据（坚果云免费档；注册需你的手机号——无法代注册）** | 分两层：**协议层我可全自动**（Node 直连 dav.jianguoyun.com 验上传/下载/ETag 续传/412 冲突）；**UI 六步必须 Electron**（浏览器形态被 CORS 拦，是刻意设计），要开窗口动静大。建议先做协议层拿结论，UI 层你想看了再一起走。应用密码：坚果云 → 设置 → 安全 → 应用密码 |
 | ⑦ | 用户手册 | ✅ **已交付（2026-10-11）** | `docs/user-manual.md`：面向最终用户，覆盖三种形态/界面骨架/任务资料/AI 助手 26+7 工具/记忆与知识库/目标与自主执行/ICS 日历/集成与 WebDAV 边界/账号云同步/数据安全/主题萌宠/排障表/常见疑问；只承诺界面真能做到的 |
 
 *本文件每版收尾时更新状态；"没解决"的一律带前置条件，不做隐式承诺。*
