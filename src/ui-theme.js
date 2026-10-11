@@ -10,7 +10,12 @@ function _systemPrefersDark(){
 function applyTheme(){
   const cfg=getCfg();
   const pref = cfg.theme || "system";
-  const el = document.documentElement;
+  /* v3.7.113：document 已销毁时直接返回。startup() 里 applyTheme 排在 await initCrypto()
+     之后 —— 若这期间窗口被关掉（测试 teardown / 用户关标签页），这里读到 undefined document
+     抛 TypeError（CI 实测把它报成 Unhandled Rejection 判红：143 文件/1636 例全过、红在这一行）。
+     无 DOM 时本函数无事可做，提前返回即正确语义，不是掩盖。 */
+  const el = (typeof document !== "undefined" && document) ? document.documentElement : null;
+  if(!el) return;
   el.removeAttribute("data-theme");
   let th;
   if(pref==="dark") th="dark";

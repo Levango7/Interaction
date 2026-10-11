@@ -33,6 +33,11 @@
 - **GitHub 真机验收只差一步**：去 github.com/settings/developers 免费注册 OAuth App
   （个人即可），callback 填 `<API origin>/api/auth/github/callback`，把 clientId/secret 配进
   `cfg.github` 即可——**协议侧无需再改**。
+- **CI 首跑抓到并修复一条真健壮性问题**：`applyTheme()` 在 `startup()` 里排在
+  `await initCrypto()` 之后——这期间窗口若被销毁（CI 的测试 teardown / 用户关标签页），
+  读到已销毁的 `document` 抛 TypeError。表现为 143 文件/1636 例**全过**、只红一行
+  Unhandled Rejection。已加守卫（无 DOM 时本无事可做，提前返回是正确语义）；
+  本机跑不出该形态（时序窗口在 CI 环境才命中），**判据以 CI 为准**。
 
 ## [v3.7.112] - 2026-10-11
 
