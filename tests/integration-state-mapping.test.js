@@ -33,6 +33,7 @@ describe("Linear：connect 建 stateMap + 推送带 stateId", () => {
       calls.push({ query: String(b.query || ""), variables: b.variables || null });
       if (/viewer/.test(b.query || "")) return gqlOK({ viewer: { id: "u1" } });
       if (/states/.test(b.query || "")) return gqlOK({ team: { states: STATES } });
+      if (String(b.query||"").indexOf("team(id: $id) { id }") !== -1) return gqlOK({ team: { id: "uuid-team-1" } });   /* v3.7.119：key→UUID 解析（纯串匹配，别用正则——括号花括号全是元字符） */
       if (/issueCreate/.test(b.query || "")) return gqlOK({ issueCreate: { success: true, issue: { id: "li_1" } } });
       if (/issueUpdate/.test(b.query || "")) return gqlOK({ issueUpdate: { success: true, issue: { id: "li_1" } } });
       return { ok: false, status: 500, json: async () => ({}) };
@@ -71,12 +72,77 @@ describe("Linear：connect 建 stateMap + 推送带 stateId", () => {
       const b = opts && opts.body ? JSON.parse(opts.body) : {};
       if (/viewer/.test(b.query || "")) return gqlOK({ viewer: { id: "u1" } });
       if (/states/.test(b.query || "")) return { ok: true, status: 200, json: async () => ({ data: { errors: [{ message: "no team" }] } }) };
+      if (String(b.query||"").indexOf("team(id: $id) { id }") !== -1) return gqlOK({ team: { id: "uuid-team-1" } });   /* states 失败也不该连带团队解析失败（两件事） */
       return gqlOK({ issueCreate: { success: true, issue: { id: "li_9" } } });
     });
     await win.linearConnect({ token: "TK", teamId: "team_1" });
     expect(win.integrationGetProvider("linear").config.stateMap, "拉失败不该留半张表").toBeUndefined();
     const r = await win.linearSyncIssue({ id: "t3", title: "Y", status: "in_progress" });
     expect(r.success).toBe(true);
+  });
+});
+
+/* v3.7.119：teamId key→UUID 解析（真机验收 accept-linear-jira.mjs 抓到的真 bug）——
+   issueCreate 的 teamId **只收 UUID**，而配置里填的是团队 key（如 VAN）。不解析 =
+   首次推送 100% 被拒（"teamId must be a UUID"，且错误藏在 HTTP 200 的 errors[] 里）。 */
+describe("Linear：issueCreate 的 teamId key→UUID 解析（v3.7.119）", () => {
+  let win, calls;
+  beforeEach(() => {
+    win = app();
+    calls = [];
+    win.integrationSetHttpClient(async (url, opts) => {
+      const b = opts && opts.body ? JSON.parse(opts.body) : {};
+      calls.push({ query: String(b.query || ""), variables: b.variables || null });
+      if (/viewer/.test(b.query || "")) return gqlOK({ viewer: { id: "u1" } });
+      if (/states/.test(b.query || "")) return gqlOK({ team: { states: STATES } });
+      if (String(b.query || "").indexOf("team(id: $id) { id }") !== -1) return gqlOK({ team: { id: "uuid-team-VAN" } });
+      if (/issueCreate/.test(b.query || "")) return gqlOK({ issueCreate: { success: true, issue: { id: "li_1" } } });
+      return { ok: false, status: 500, json: async () => ({}) };
+    });
+  });
+
+  it("配置里填 key（VAN）→ mutation 带的必须是解析出的 UUID，不是 key", async () => {
+    await win.linearConnect({ token: "TK", teamId: "VAN" });
+    const r = await win.linearSyncIssue({ id: "k1", title: "X", status: "todo" });
+    expect(r.success).toBe(true);
+    const mut = calls.find((c) => /issueCreate/.test(c.query));
+    expect(mut.variables.input.teamId, "issueCreate 只认 UUID —— 传 key 会被 Linear 拒").toBe("uuid-team-VAN");
+    expect(mut.variables.input.teamId).not.toBe("VAN");
+    expect(calls.some((c) => c.query.indexOf("team(id: $id) { id }") !== -1), "解析查询确实发过").toBe(true);
+  });
+
+  it("配置里已是 UUID → 直通，不多打一次解析请求", async () => {
+    const uuid = "37670e66-76ab-4cdc-9e6d-255088cdcbe6";
+    await win.linearConnect({ token: "TK", teamId: uuid });
+    const r = await win.linearSyncIssue({ id: "k2", title: "X", status: "todo" });
+    expect(r.success).toBe(true);
+    expect(calls.some((c) => c.query.indexOf("team(id: $id) { id }") !== -1), "UUID 不该再查一次").toBe(false);
+    expect(calls.find((c) => /issueCreate/.test(c.query)).variables.input.teamId).toBe(uuid);
+  });
+
+  it("解析失败 → 如实报错 team_resolve_failed，且**不能**发出 issueCreate（不许假成功）", async () => {
+    win.integrationSetHttpClient(async (url, opts) => {
+      const b = opts && opts.body ? JSON.parse(opts.body) : {};
+      calls.push({ query: String(b.query || ""), variables: b.variables || null });
+      if (/viewer/.test(b.query || "")) return gqlOK({ viewer: { id: "u1" } });
+      if (/states/.test(b.query || "")) return gqlOK({ team: { states: STATES } });
+      if (String(b.query || "").indexOf("team(id: $id) { id }") !== -1) return { ok: true, status: 200, json: async () => ({ data: { team: null } }) };
+      if (/issueCreate/.test(b.query || "")) return gqlOK({ issueCreate: { success: true, issue: { id: "li_bad" } } });
+      return { ok: false, status: 500, json: async () => ({}) };
+    });
+    await win.linearConnect({ token: "TK", teamId: "NOSUCH" });
+    const r = await win.linearSyncIssue({ id: "k3", title: "X", status: "todo" });
+    expect(r.success).toBe(false);
+    expect(r.error).toBe("team_resolve_failed");
+    expect(calls.some((c) => /issueCreate/.test(c.query)), "解析失败还去建 issue = 假成功").toBe(false);
+  });
+
+  it("第二次创建复用缓存（同一 token+team 只解析一次）", async () => {
+    await win.linearConnect({ token: "TK", teamId: "VAN" });
+    await win.linearSyncIssue({ id: "k4", title: "A", status: "todo" });
+    await win.linearSyncIssue({ id: "k5", title: "B", status: "todo" });
+    const n = calls.filter((c) => c.query.indexOf("team(id: $id) { id }") !== -1).length;
+    expect(n, "解析结果要缓存（一个 token 通常一个团队）").toBe(1);
   });
 });
 

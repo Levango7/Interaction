@@ -1,3 +1,35 @@
+## [v3.7.119] - 2026-10-11
+
+**Linear 真机验收抓到一个必现 bug 并修复：`issueCreate` 的 teamId 只收 UUID，应用传的是团队 key——首次推送 100% 被拒。**
+
+- **验收怎么跑的**：用户配了真 Linear workspace（VanguardLea / key=VAN）+ personal API key，
+  跑 `_probe/accept-linear-jira.mjs linear`。前两步直接过（token 有效、7 个状态拉下来、
+  候选名匹配 `in_progress→In Progress` 命中）；**第三步真建 issue 时被 Linear 拒**。
+- **根因**：`issueCreate` 的 `teamId` 参数是 **UUID 类型**（`teamId must be a UUID`），
+  而 `linearSyncIssue` 把用户配置里的团队 key（VAN）原样传进去。Linear 的 `team(id:)`
+  **查询**两种都收，所以"连接 + 拉状态"一路绿灯，直到**真正建 issue 才炸**——
+  而且错误藏在 HTTP 200 的 `errors[]` 里，不是网络层能看见的失败。
+  影响面：**从未真机推送过的用户，第一次推送必败**（这正是「契约对、真机败」的又一例：
+  单测桩不回错、契约检查不覆盖 mutation 参数类型）。
+- **修复**（`src/ui-ge-integrations.js`）：新增 `_linearResolveTeamId(token, team)`——
+  已是 UUID 直通（老配置不多打请求）；是 key 则查一次 `team(id:){id}` 解析并缓存
+  （键含 token 防串账号）；解析失败返回 null → `linearSyncIssue` 如实报
+  `team_resolve_failed` 且**不发** issueCreate（不许假成功）。
+  探针同步改为与应用同款（先解析再建）。
+- **e2e 的正确变红**：`integration-push.spec.js` ④ 原断言 `input.teamId === "team-e2e"`
+  （编码的正是旧行为）。修复后它如实变红——已更新为断言解析出的 UUID，并给路由桩补上
+  解析查询分支。**这次是「测试守旧行为」的正面案例**：若为了绿灯去改断言而不是改产品，
+  就把真 bug 放过去了。
+- **验收结果**：重跑全过——viewer / 7 状态 / key→UUID 解析 / **真建 VAN-5**（带 stateId）
+  / issueUpdate 更新路径。验收结论：Linear 全链路通过。
+- **测试**：`tests/integration-state-mapping.test.js` +4 例（key→UUID / UUID 直通不多查 /
+  解析失败不发创建 / 缓存只解析一次），该文件 8/8；全量单测 146 文件 + e2e **90/90**；
+  门禁链与七脚本（176）全绿。
+- **过程记账（方法论）**：① `npm run e2e 2>&1 | tail -2` 的 exit 0 是**管道 mask**
+  （tail 的退出码），真实是有 2 失败——**带管道的命令不能用来判退出码**，此后 e2e 一律
+  落盘看 `passed/failed` 两行；② 写测试桩时正则又把 `(id: $id)` 当成分组、`{ id }` 的
+  花括号性质的坑再踩一次，改纯字符串包含判断（这条已第二次栽，见 audit R-11 的 env 键名）。
+
 ## [v3.7.118] - 2026-10-11
 
 **上下文滚动摘要（迭代计划第五批 · 收官）：长会话 token 成本从线性涨转为有界。**

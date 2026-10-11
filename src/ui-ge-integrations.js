@@ -759,6 +759,36 @@ async function linearConnect(config){
  * 拉取 Linear 团队的工作流状态 → {小写状态名: stateId}（v3.7.85）
  * @returns {Promise<{ok:boolean, map:Object|null, error?:string}>}
  */
+/** v3.7.119：把「团队 key 或 UUID」解析成 issueCreate 认的 **UUID**。
+ *  背景：`team(id:)` 查询两种都收，但 `issueCreate` 的 teamId **只收 UUID**（真机验收抓到：
+ *  传 key 得到 "teamId must be a UUID"，且错误藏在 HTTP 200 的 errors[] 里）。
+ *  已在配置里填 UUID 的老用户直通（不多打一次请求）；填 key 的查一次并缓存
+ *  （一个 token 通常对应一个 workspace/团队，缓存键含 token 防串账号）。
+ * @returns {Promise<string|null>} UUID；解析失败返回 null（调用方如实报错，不静默降级） */
+const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+let _linearTeamIdCache = null;   // { token, team, id }
+async function _linearResolveTeamId(token, team){
+  const t = String(team || "").trim();
+  if(!t || !token) return null;
+  if(_UUID_RE.test(t)) return t;
+  if(_linearTeamIdCache && _linearTeamIdCache.token === token && _linearTeamIdCache.team === t) return _linearTeamIdCache.id;
+  try{
+    const resp = await _intDoRequest("https://api.linear.app/graphql", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: "query($id: String!) { team(id: $id) { id } }",
+        variables: { id: t }
+      })
+    });
+    const err0 = resp.body && resp.body.errors && resp.body.errors[0];
+    const id = resp.body && resp.body.data && resp.body.data.team && resp.body.data.team.id;
+    if(err0 || !id) return null;
+    _linearTeamIdCache = { token: token, team: t, id: String(id) };
+    return String(id);
+  }catch(e){ return null; }
+}
+
 async function _linearFetchStates(token, teamId){
   try{
     const resp = await _intDoRequest("https://api.linear.app/graphql", {
@@ -816,9 +846,18 @@ async function linearSyncIssue(issue){
     : "mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id } } }";
   const inputBase = { title: issue.title, description: desc };
   if(stateId) inputBase.stateId = stateId;
+  /* v3.7.119：**issueCreate 的 teamId 必须是 UUID**，而配置里填的是团队 key（VAN）——
+     Linear 的 `team(id:)` 查询两种都收，但 mutation 只收 UUID。不解析的后果：首次推送
+     100% 被拒（"teamId must be a UUID"），且错误藏在 HTTP 200 的 errors[] 里。
+     （真机验收 accept-linear-jira.mjs 抓到的，此前从未真机推送过。） */
+  let createTeamId = teamId;
+  if(!syncInfo){
+    createTeamId = await _linearResolveTeamId(provider.config.token, teamId);
+    if(!createTeamId) return { success: false, error: "team_resolve_failed" };
+  }
   const variables = syncInfo
     ? { id: syncInfo.remoteId, input: inputBase }
-    : { input: Object.assign({ teamId: teamId }, inputBase) };
+    : { input: Object.assign({ teamId: createTeamId }, inputBase) };
 
   const resp = await _intDoRequest("https://api.linear.app/graphql", {
     method: "POST", headers: headers, body: JSON.stringify({ query: query, variables: variables })

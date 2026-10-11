@@ -103,7 +103,7 @@
 | ② | **refresh token 明文落盘** | ✅ **已按建议落地（v3.7.114）** | 数据文件写盘时目录 0700 / 文件 0600（POSIX）；README 明示「`cfg.dataFile` 即凭证文件」；权限收紧失败打 WARN 不静默。口令派生/KMS 未做（独立课题：拿到文件 ≈ 拿到整机，性价比不成立） |
 | ③ | **corsOrigin 默认全开** | ✅ **已按建议落地（v3.7.114）** | 默认保持 `*`（开箱自通优先），值为 `*` 时启动打 WARN + README 警示；对外/过反代由运维收紧 |
 | ④ | 微信正式接入（扫码登录） | ⛔ 商务触发 | 企业主体认证 + ICP 备案域名 + 开放平台审核；协议已就绪，只换 provider 实现（`docs/oauth-login-design.md` 阶段④） |
-| ⑤ | Linear/Jira 真机验收 | 🟡 **待凭据（注册免费，但需你的邮箱/验证码——无法代注册）** | **分工：注册你做（约 5 分钟），凭据贴上后验证/定位/修复/复跑我全包。** Linear（免费档够）：Settings → API → Personal API key（`lin_api_…`）+ 团队 ID → 我跑 `node _probe/accept-linear-jira.mjs linear`（**会真建 issue，这正是验收的意义**）。Jira Cloud（免费 10 人内）：建站点 `xxx.atlassian.net` → id.atlassian.com → Security → Create API token → 备 `JIRA_DOMAIN / JIRA_AUTH(base64 of email:token) / JIRA_PROJECT` → 跑同脚本 `jira` 分支 |
+| ⑤ | **Linear** 真机验收 | ✅ **已通过（2026-10-11）** | 用户配了真 workspace（VanguardLea/key=VAN）+ personal API key，跑 `_probe/accept-linear-jira.mjs linear` 全过：viewer / 7 状态 / key→UUID 解析 / **真建 VAN-5**（带 stateId）/ 更新路径。**验收当场抓到一个必现 bug**（issueCreate 只收 UUID、应用传 key → 首次推送必败）已修（v3.7.119）。**Jira 仍待凭据**（建 Atlassian 站点 + API token，脚本同款可跑） |
 | ⑥ | WebDAV 六步验收 | 🟡 **待凭据（坚果云免费档；注册需你的手机号——无法代注册）** | 分两层：**协议层我可全自动**（Node 直连 dav.jianguoyun.com 验上传/下载/ETag 续传/412 冲突）；**UI 六步必须 Electron**（浏览器形态被 CORS 拦，是刻意设计），要开窗口动静大。建议先做协议层拿结论，UI 层你想看了再一起走。应用密码：坚果云 → 设置 → 安全 → 应用密码 |
 | ⑦ | 用户手册 | ✅ **已交付（2026-10-11）** | `docs/user-manual.md`：面向最终用户，覆盖三种形态/界面骨架/任务资料/AI 助手 26+7 工具/记忆与知识库/目标与自主执行/ICS 日历/集成与 WebDAV 边界/账号云同步/数据安全/主题萌宠/排障表/常见疑问；只承诺界面真能做到的 |
 

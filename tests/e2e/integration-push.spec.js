@@ -153,13 +153,20 @@ test.describe("集成中心 · Notion 任务推送入口", () => {
       const body = JSON.parse(req.postData() || "{}");
       seen.push({ query: body.query || "", variables: body.variables || {} });
       const isViewer = /viewer/.test(body.query || "");
+      /* v3.7.119：issueCreate 的 teamId 只收 UUID —— 应用现在先把配置里的 key 解析成 UUID
+         （issueCreate 因此多一次 team(id:){id} 查询）。这条 stub 不接，应用会走
+         team_resolve_failed 且**不发** issueCreate，于是下面「必须真发出」必红 —— 这次修复
+         本来就是被真机验收的同类失败逼出来的（accept-linear-jira.mjs）。 */
+      const isTeamResolve = String(body.query || "").indexOf("team(id: $id) { id }") !== -1;
       await route.fulfill({
         status: 200,                       /* 关键：业务失败也回 200 */
         contentType: "application/json",
         headers: { "access-control-allow-origin": "*" },
         body: JSON.stringify(isViewer
           ? { data: { viewer: { id: "e2e-user" } } }
-          : { errors: [{ message: "Argument 'state' is not defined by type IssueCreateInput." }] })
+          : isTeamResolve
+            ? { data: { team: { id: "uuid-team-e2e" } } }
+            : { errors: [{ message: "Argument 'state' is not defined by type IssueCreateInput." }] })
       });
     });
 
@@ -186,7 +193,7 @@ test.describe("集成中心 · Notion 任务推送入口", () => {
 
     const creates = seen.filter((x) => /issueCreate/.test(x.query));
     expect(creates.length, "必须真发出 issueCreate").toBe(1);
-    expect(creates[0].variables.input.teamId).toBe("team-e2e");
+    expect(creates[0].variables.input.teamId, "配置填 key，mutation 必须带解析出的 UUID（v3.7.119）").toBe("uuid-team-e2e");
     expect(creates[0].variables.input.title).toBe("Linear 推送任务");
     expect(Object.keys(creates[0].variables.input), "状态映射未接线，请求里不许出现 state/stateId")
       .not.toContain("state");
