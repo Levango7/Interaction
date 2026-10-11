@@ -126,13 +126,18 @@ bcryptjs 哈希（rounds 10）不存明文、双 token + refresh 可吊销、邮
 （端点清单由 `grep -rhno '"/api/...*"' src/*.js` 提取，不在客户端源码里改任何东西），
 逐个比对「客户端调用的」vs「后端实现的」。独立端口 + Node fetch 直连（沿用 §四 的两个环境坑规避）。
 
-### 结果：修复前 17/20，修复后 24/24
+### 结果：首轮联调（v3.7.105）修复前 17/20 → 修复后 24/24；当前口径为 29/29
+
+> 下表是**首轮联调**（v3.7.105）的缺口与处置。此后端点继续扩充
+> （`/api/tools/fetch` v3.7.111、第三方登录 v3.7.113 等），当前用例数见 §七 的
+> 「客户端联调」行（`client-contract-check.cjs` 29/29）。此处保留首轮记录作为
+> 「当时到底缺什么」的凭据，不作为现状。
 
 | 端点 | 修复前 | 处置 |
 |---|---|---|
 | `GET /api/sync/snapshot` | **404** not_found | ✅ 已实现（新增 `src/sync.js`） |
 | `PUT /api/sync/snapshot` | **404** not_found | ✅ 已实现 |
-| `POST /api/tools/fetch` | **404** not_found | ⚠️ **有意不做**，理由见下 |
+| `POST /api/tools/fetch` | **404** not_found | ✅ 已交付（v3.7.111 收口，见下方专节） |
 
 **这是「从未联调」最实质的后果**：即使把后端部署起来，**云同步依然不工作** ——
 客户端 `src/render-overview.js:1302/1316` 一直在调 GET/PUT `/api/sync/snapshot`，
