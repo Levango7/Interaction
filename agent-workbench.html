@@ -6216,10 +6216,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.114"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.115"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261011c";
+const BUILD_TAG = "20261011d";
 
 
 
@@ -19559,6 +19559,28 @@ async function ragInjectContext(userText, opts){
     lines.push(note + "）");
   }
   return "\n\n" + lines.join("\n");
+}
+
+/** v3.7.115：语义召回状态 —— 让「悄悄退化成词法」对用户可见（迭代计划 v3.7.115）。
+ *  读的全部是**既有降级路径已经维护的标志**，不新造第二套状态、不发任何探测请求：
+ *   cfg.rag === false             → off         用户主动关（零行为变化）
+ *   _embedCfg() 为空              → unconfigured 没配嵌入通道（AI 设置里的 base/key/model）
+ *   Date.now() < _embedFailUntil  → channel      provider 无 /embeddings（404/401/403 后 10 分钟失败缓存）
+ *   _ragVecCache.loaded === false → idb          IDB 读不到（v3.7.101 起不钉死、可重试）
+ *   其余                           → vector
+ *  mode "unknown" + probed=false 表示本页还没走过一次向量加载 —— **不谎报可用**，
+ *  但也别把"没探测"画成"降级"（两者对用户的行动指引不同）。 */
+function semanticRecallStatus(){
+  try{
+    const cfg = getCfg() || {};
+    if(cfg.rag === false) return { mode:"off", probed:true };
+    if(!_embedCfg()) return { mode:"unconfigured", probed:true };
+    if(Date.now() < _embedFailUntil) return { mode:"channel", probed:true };
+    const c = _ragVecCache;
+    if(c && c.loaded === false) return { mode:"idb", probed:true };
+    if(!c) return { mode:"unknown", probed:false };
+    return { mode:"vector", probed:true };
+  }catch(e){ return { mode:"unknown", probed:false }; }
 }
 
 /**
@@ -36285,6 +36307,21 @@ function buildDiagReport(opts){
     /* v3.7.107（C3）：上次下行覆盖数 —— 静默 LWW 的那个数字，现在可解释（0 也说出来） */
     if (sm && typeof sm.lastPullCover === "number") L.push("云同步: 上次云端覆盖 " + sm.lastPullCover + " 键");
   } catch (e) { L.push("云同步: 体积信息读取失败（" + ((e && e.message) || e) + "）"); }
+  /* v3.7.115：语义召回状态进诊断报告 —— 「悄悄退化成词法」此前对用户完全不可见
+     （表现为"AI 好像找不到我写过的东西"，但没有任何线索指向原因）。
+     这里读的是既有降级路径的标志（ai-tools.semanticRecallStatus），不发探测请求。 */
+  try {
+    const st = (typeof semanticRecallStatus === "function") ? semanticRecallStatus() : null;
+    const map = {
+      vector: "向量检索可用",
+      off: "未启用（cfg.rag=false）",
+      unconfigured: "未配置 embedding 通道（AI 设置里的 基址/Key/嵌入模型）",
+      channel: "词法降级 — embedding 通道不可用（10 分钟内自动重试）",
+      idb: "词法降级 — IndexedDB 不可用（读不到向量；恢复后可重试）",
+      unknown: "尚未探测（本页首次检索后确定）"
+    };
+    L.push("语义召回: " + (st ? (map[st.mode] || st.mode) : "状态读取失败"));
+  } catch (e) { L.push("语义召回: 状态读取失败（" + ((e && e.message) || e) + "）"); }
   L.push("诊断条数: " + list.length);
   L.push("");
   L.push("—— 近期诊断（新→旧，入队时已脱敏）——");
@@ -48604,6 +48641,8 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
     ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,
+    // v3.7.115：语义召回状态（诊断面板「语义召回」行读它；不发探测请求，只读既有降级标志）
+    semanticRecallStatus,
     // v3.7.67：RAG 增量同步（哈希 diff + 防抖）——测试直接驱动 ragSyncIncremental 免等定时器
     ragSyncIncremental, ragScheduleSync, _ragCurrentDocs, _ragDocHash,
     get RAG_SYNC_DEBOUNCE_MS(){ return RAG_SYNC_DEBOUNCE_MS; },
