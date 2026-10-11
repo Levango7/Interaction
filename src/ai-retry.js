@@ -302,6 +302,9 @@ async function continueAgentRun(){
           saveAgentRun(Object.assign({}, cur, {
             done: (cur.done || []).concat([{ i: idx, tool: step.tool, ok: !!(stepRes && stepRes.stepOk), resultStr: String(resultStr || "").slice(0, 400) }])
           }));
+          /* v3.7.117：续跑同样勾 goals（goals 的 steps 与 rec.steps 同序 —— 建目标时
+             就是按计划步骤逐条写的；重规划进来的新步骤越界，markStep 自己返回 null）。 */
+          try{ markStep(idx); }catch(_e){}
         },
         onReplan: function(newRemaining, executedSteps){
           /* 重规划后剩余步骤是新对象，与原 steps 对不上号 —— 按「已执行 + 新剩余」重建盘上记录，
@@ -317,7 +320,10 @@ async function continueAgentRun(){
       }
     );
     const executed = r.results ? r.results.length : 0;
-    if(r.ok) clearAgentRun();     // 全部完成 → 清档
+    if(r.ok){
+      clearAgentRun();     // 全部完成 → 清档
+      try{ completeGoal(r.summary || ""); }catch(_e){}   // v3.7.117：goals 那份同步收尾
+    }
     /* r.ok=false（取消）→ 保留盘上记录：用户随时可再次续跑 */
     return { ok: !!r.ok, executed: executed, results: r.results || [], summary: r.summary || "", cancelled: !r.ok };
   }catch(e){
@@ -413,6 +419,14 @@ async function confirmAgentPlan(){
   /* v3.7.116：确认即落盘（刷新/崩溃后可续跑）。done 由 onProgress 逐步追加；
      容量 1 份 —— 有待续运行时 proposeAgentPlan 会先提示，不会静默覆盖到这里。 */
   saveAgentRun({ goal: p.plan.goal || "", text: p.text || "", sc: sc, steps: p.plan.steps, done: [], at: Date.now() });
+  /* v3.7.117：写入与 `plan` 工具链**同一个** goals 存储 —— 消灭"两套互不相认"。
+     入口保留（`>` 的评审体验更好），状态只有一份：agentContextPrompt 的
+     「进行中目标 / 请继续执行第 N 步」从此对两套机制同时生效。
+     · steps 的 text 取 desc（人读的）；工具信息在 agent_run 里（执行用）。
+     · src:"palette" 是来源标记（旧数据无此字段；读取方不依赖它，只作排查线索）。
+     · createGoal 会把旧 active 置 done —— 单目标聚焦，与 plan 工具同一语义。 */
+  const goalRec = createGoal(p.plan.goal, p.plan.steps.map(function(s){ return s.desc || s.tool; }), sc);
+  if(goalRec){ goalRec.src = "palette"; _updateGoal(goalRec); }
   /* v3.7.116：进度回执两个 —— onProgress（每步完成）与 onReplan（重规划后重建下标）。
      done 的 i 始终指向**当前盘上 steps** 的下标；重规划时 steps 被替换，done 跟着重建。 */
   const runProgress = function(_finished, _total, step, resultStr, stepRes){
@@ -427,6 +441,10 @@ async function confirmAgentPlan(){
     saveAgentRun(Object.assign({}, cur, {
       done: (cur.done || []).concat([{ i: idx, tool: step.tool, ok: !!(stepRes && stepRes.stepOk), resultStr: String(resultStr || "").slice(0, 400) }])
     }));
+    /* v3.7.117：同步勾选 goals 的同一步（用户看得见的那份清单）。
+       重规划产生的新步骤不在 goals 里（goals 是用户面检查清单，agent_run 是执行记录）——
+       下标越界时 markStep 自己返回 null，不写坏数据。 */
+    try{ markStep(idx); }catch(_e){}
   };
   const runReplan = function(newRemaining, executedSteps){
     const cur = loadAgentRun();
@@ -443,7 +461,12 @@ async function confirmAgentPlan(){
     // v3.7.72：换自适应执行（分段 + 结果回喂校准），盲跑版 executeAgentPlan 保留作降级
     const r = await executeAgentPlanReactive(p.plan, { signal: signal, goal: p.goal || "", onProgress: runProgress, onReplan: runReplan });
     hist.push({ role:"assistant", content: r.summary });
-    if(r.ok) clearAgentRun();   // 全部完成 → 清档；取消/失败 → 留着（continueAgentRun 可续）
+    if(r.ok){
+      clearAgentRun();   // 全部完成 → 清档；取消/失败 → 留着（continueAgentRun 可续）
+      /* v3.7.117：跑完就把 goals 里那份也收尾（complete_goal 的同一语义）——
+         否则刷新后 agentContextPrompt 会永远显示"请继续执行"，而实际早已跑完。 */
+      try{ completeGoal(r.summary || ""); }catch(_e){}
+    }
     /* 自主执行跑通的流程 = 一条现成的可复用技能候选（与对话路径同一套机制、同一个门槛） */
     const trace = r.results.filter(function(x){ return !x.blocked; }).map(function(x){
       return { name: x.step.tool, args: Object.keys(x.step.args || {}).slice(0, 8), ok: x.ok };
@@ -611,6 +634,10 @@ async function onChatSubmit(e){
       if(dropHit){
         const p = agentRunPending();
         discardAgentRun();
+        /* v3.7.117：放弃执行 = goals 里那份也作废（cancel_goal 语义）——
+           否则它会以 active 挂在存储里，每轮对话都注入"请继续执行第 N 步"，
+           而用户早就放弃了。agent_run 与 goals 是同一目标的两个视角，放弃要两个一起清。 */
+        try{ cancelGoal(); }catch(_e){}
         hist.push({ role:"assistant", content: t("aiagent.runDiscarded","已放弃未完成的执行（第 ")+(p.done+1)+t("aiagent.runDiscardedMid","/共 ")+p.total+t("aiagent.runDiscardedEnd"," 步）；已完成的步骤保留，随时可以用「>」重新开始。") });
       }else{
         showChatThinking(true);
