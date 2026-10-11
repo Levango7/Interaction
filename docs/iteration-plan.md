@@ -105,3 +105,21 @@
   摘要先写 token 计数断言（当前必红），红了再修。
 - 任一批 CI 红且根因在本次改动：就地修 + 复跑；根因是环境抖动（本机/runner 瞬时）：
   按 audit 台账既有口径记「同 commit 重跑」再判，不靠加超时掩盖。
+
+## 已知 CI 形态（v3.7.114 实证，后续批次直接对照）
+
+**「全过只红一行」的 Unhandled Rejection = 启动 teardown 竞态**，不是用例失败：
+`startup()` 是 `async`，`applyTheme`/`setupSideToggle` 等排在 `await initCrypto()`
+之后；测试在这个 await 期间关窗，恢复执行时 `document` 已销毁 → TypeError。
+判据：Test Files 143 passed + Tests 1636 passed，红的是 Unhandled 块而非 `✕/×` 用例。
+**修的是根因不是单点**（v3.7.113 修了 applyTheme；v3.7.114 顺藤摸到壳层 `$` 助手
+一次性修掉整族）。本机复现不出该时序窗口（CI 专属），**判据以 CI 为准**——
+本机全绿不能作为该形态已修的证明，必须等 CI 复跑。
+同理已根治的还有「端口被占」（七个验证脚本全动态化，见 v3.7.114 交付记录）。
+
+## 进度
+
+- ✅ v3.7.114（2026-10-11）：安全告知两项 + 端口全动态化；追加 `0f1afbb` 修 $ 守卫；
+  CI 四 job 全绿，线上 sha256 `28bd797a…` 与 build:prod 逐字节一致，CACHE_VERSION
+  `v3.7.114-20261011084908`。
+- ▶ 下一批：v3.7.115 检索降级可见性。

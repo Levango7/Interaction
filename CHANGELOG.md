@@ -2,6 +2,11 @@
 
 **安全告知项（产品决策①：维持默认宽松但不再静默）+ 根治验证脚本写死端口假红。**
 
+> **发布后追加（`0f1afbb`）**：CI windows 腿抓到第二例 startup teardown 竞态
+> （`setupSideToggle` 经壳层 `$` 读已销毁的 document —— 143 文件/1636 例全过、
+> 只红一行 Unhandled Rejection）。根因修在壳层 `$` 助手（默认参数 `r=document`
+> 不兜底），一处修掉整族；复跑 CI 四 job 全绿，线上 sha256 `28bd797a…` 逐字节一致。
+
 - **corsOrigin 不再静默宽松**（roadmap 待办③）：`cfg.corsOrigin === "*"` 时启动打一次
   WARN（与占位 JWT 密钥同款显式警示口径），README/状态表补「默认 `*` 是为开箱自通；
   对外或过反代应收紧」。**不收紧默认值**——自托管部署形态千差万别（file:// 直开、IP 访问、
