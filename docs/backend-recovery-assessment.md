@@ -333,7 +333,8 @@ JWT__ACCESSSECRET="$(openssl rand -hex 32)" JWT__REFRESHSECRET="$(openssl rand -
 ```bash
 # 4. 复现「客户端到底调了哪些端点」的清单（后端实现要对齐它）
 grep -rhno '"/api/[a-zA-Z0-9/_:{}$-]*"' src/*.js | sed 's/.*"\(\/api[^"]*\)"/\1/' | sort -u
-# ⚠️ 该清单含 /api/auth/github、/api/auth/wechat/qrcode、/api/auth/wechat/status —— 后端尚未实现（待补）
+# ⚠️ 该清单含 /api/auth/github、/api/auth/wechat/qrcode、/api/auth/wechat/status —— 后端尚未实现
+#    （已评估并设计：docs/oauth-login-design.md，四期排期，阶段 1/2 已入 roadmap）
 ```
 
 ```bash
