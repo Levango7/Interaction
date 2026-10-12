@@ -20,20 +20,11 @@
  * 守护策略同其它 e2e：默认跳过，E2E=1 才跑。
  */
 const { test, expect } = require("./_fixture");
-const fs = require("node:fs");
-const path = require("node:path");
+
+/* v3.7.122：核心逻辑抽到 visual-kit（跨项目复用），本文件只保留项目特定配置与断言 */
+const { CONTRAST_INJECT, ABS_FLOOR, TOLERANCE, applyTheme, readTokens, readPairs, checkOverflow, dumpReport } = require("./visual-kit/index.js");
 
 const APP_URL = "./agent-workbench.html";
-
-/* 实测值落盘：Playwright 默认吞掉 console.log，把数据写文件更可靠，
-   既便于人工复核，也为将来调阈值留下依据（不纳入 git —— 属临时产物）。 */
-const REPORT_FILE = path.join(__dirname, "..", "..", "_probe", "theme-contrast-actual.txt");
-function dumpReport(lines) {
-  try {
-    fs.mkdirSync(path.dirname(REPORT_FILE), { recursive: true });
-    fs.writeFileSync(REPORT_FILE, lines.join("\n") + "\n", "utf8");
-  } catch (e) { /* 落盘失败不影响断言 */ }
-}
 
 /* 10 套主题：light 是默认态（无 data-theme 属性），其余 9 套走属性。
    口径来源（2026-09-27 复核）：CSS 里 `[data-theme="…"]` 去重 9 个 + light 默认态 = 10；
@@ -41,66 +32,21 @@ function dumpReport(lines) {
    此前注释与 describe 标题写「11 套」，与数组和实际 CSS 都不符 —— 已按实况更正。 */
 const THEMES = ["light", "dark", "sepia", "elegant", "aurora", "matrix", "forest", "ocean", "mist", "ink"];
 
-/* 亮度/对比度计算：注入页面上下文（sRGB 相对亮度，WCAG 2.x 口径）
-   ⚠️ 关键：`getPropertyValue('--text')` 返回的是**声明原文**（本项目为 hex 如 #111111），
-   不是 rgba() —— 只按 rgba 解析会全部返回 null（踩过）。
-   因此这里同时支持 #rgb / #rrggbb / rgb() / rgba() 四种写法。 */
-const CONTRAST_HELPERS = `(() => {
-  window.__lum = function(rgb){
-    const f = rgb.map(v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); });
-    return 0.2126*f[0]+0.7152*f[1]+0.0722*f[2];
-  };
-  window.__parse = function(s){
-    s = String(s).trim();
-    /* hex：#rgb / #rrggbb */
-    let m = s.match(/^#([0-9a-f]{3})$/i);
-    if (m) return m[1].split("").map(c => parseInt(c + c, 16));
-    m = s.match(/^#([0-9a-f]{6})$/i);
-    if (m) return [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16));
-    /* rgb()/rgba() */
-    m = s.match(/rgba?\\(([^)]+)\\)/);
-    if (m) { const p = m[1].split(",").map(x => parseFloat(x)); return [p[0], p[1], p[2]]; }
-    return null;   /* 其它表示法（color-mix / var 未解析等）→ 返回 null，调用方跳过 */
-  };
-  window.__contrast = function(a, b){
-    const pa = window.__parse(a), pb = window.__parse(b);
-    if(!pa || !pb) return null;
-    const la = window.__lum(pa), lb = window.__lum(pb);
-    const hi = Math.max(la, lb), lo = Math.min(la, lb);
-    return (hi + 0.05) / (lo + 0.05);
-  };
-  return true;
-})()`;
+/* 关键前景/背景令牌配对（项目特定） */
+const CONTRAST_PAIRS = {
+  "text/panel": ["--text", "--panel"],
+  "text/bg": ["--text", "--bg"],
+  "muted/panel": ["--muted", "--panel"],
+  "on-accent/accent": ["--on-accent", "--accent"],
+  "danger/panel": ["--danger", "--panel"],
+  "accent/panel": ["--accent", "--panel"]
+};
 
-/** 切到指定主题（light 用移除属性） */
-async function applyTheme(page, th) {
-  await page.evaluate((t) => {
-    const el = document.documentElement;
-    if (t === "light") el.removeAttribute("data-theme");
-    else el.setAttribute("data-theme", t);
-  }, th);
-}
-
-/** 取当前主题下若干令牌的真实计算值 + 配对对比度 */
+/** 取当前主题下的配对对比度 + 单令牌值（panel/bg/text 单独取，供主题生效断言） */
 async function readTheme(page) {
-  return page.evaluate(() => {
-    const cs = getComputedStyle(document.documentElement);
-    const g = (k) => cs.getPropertyValue(k).trim();
-    const pairs = {
-      "text/panel": [g("--text"), g("--panel")],
-      "text/bg": [g("--text"), g("--bg")],
-      "muted/panel": [g("--muted"), g("--panel")],
-      "on-accent/accent": [g("--on-accent"), g("--accent")],
-      "danger/panel": [g("--danger"), g("--panel")],
-      "accent/panel": [g("--accent"), g("--panel")]
-    };
-    const out = {};
-    for (const k in pairs) {
-      const fg = pairs[k][0], bg = pairs[k][1];
-      out[k] = { fg: fg, bg: bg, c: window.__contrast(fg, bg) };
-    }
-    return { panel: g("--panel"), bg: g("--bg"), text: g("--text"), pairs: out };
-  });
+  const pairs = await readPairs(page, CONTRAST_PAIRS);
+  const single = await readTokens(page, ["--panel", "--bg", "--text"]);
+  return { panel: single["--panel"], bg: single["--bg"], text: single["--text"], pairs };
 }
 
 test.describe("10 套主题渲染层不变量", () => {
@@ -112,7 +58,7 @@ test.describe("10 套主题渲染层不变量", () => {
     page.on("dialog", async (d) => { try { await d.accept(); } catch (e) { /* ignore */ } });
     await page.goto(APP_URL);
     await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
-    await page.evaluate(CONTRAST_HELPERS);
+    await page.evaluate(CONTRAST_INJECT);
   });
 
   test("每套主题都真正生效（令牌随主题变化，不是静默无效）", async ({ page }) => {
@@ -200,7 +146,7 @@ test.describe("10 套主题渲染层不变量", () => {
         /* -text 的实际落点多半是各自的 -soft 浅底（徽章），一并钉住；
            注意 --ok-soft 全仓未定义（ok 语义色没有浅底配对），故只查有配对的三组 */
         for (const k of ["accent", "danger", "warn"]) out.push({ name: "--" + k + "-text/" + k + "-soft", fg: g("--" + k + "-text"), bg: g("--" + k + "-soft") });
-        return out.map((x) => Object.assign(x, { c: window.__contrast(x.fg, x.bg) }));
+        return out.map((x) => Object.assign(x, { c: window.__vk.contrast(x.fg, x.bg) }));
       }, { SCENES, SEM });
       for (const r of rows) {
         if (r.c === null) { fails.push(th + " " + r.name + " 无法解析（" + r.fg + "）"); continue; }
@@ -237,8 +183,7 @@ test.describe("10 套主题渲染层不变量", () => {
       await applyTheme(page, th);
 
       /* ① 无横向溢出 */
-      const overflow = await page.evaluate(() =>
-        document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      const overflow = await checkOverflow(page);
       expect(overflow, "主题 " + th + " 出现横向溢出 " + overflow + "px").toBeLessThanOrEqual(0);
 
       /* ② 顶栏 / 侧栏 / 主内容都存在且可见 */
