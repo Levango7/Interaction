@@ -124,6 +124,7 @@ jobs:
       # 新增 P0 空 catch 会被 CI 拦下而 deploy 链无人把守。防再犯见
       # tests/ci-workflow-guard.test.js「verify 步骤集 ≡ ci.test」守护（缺步/换序即红）。
       - run: npm run lint:empty-catch
+      - run: npm run lint:icons
       - run: npm run check:pwa-icons
       - run: npm run pet:check
 
