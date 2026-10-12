@@ -1042,7 +1042,7 @@ function agentPlanSysPrompt(userText){
   return String(t("aiagent.sysPrompt",
     "你是任务规划助手。收到用户请求后，请先拆解为可执行步骤，输出 JSON 格式的计划：\n"+
     "```json\n{\"goal\":\"目标标题\",\"steps\":[{\"tool\":\"工具名\",\"args\":{},\"desc\":\"步骤说明\"}]}\n```\n"+
-    "可用工具：{tools}。\n只输出 JSON，不要额外解释。")).replace("{tools}", names.join("/"));
+    "可用工具：{tools}。\n若某一步要用到上一步的产出（例如新建后拿到的 id），在该步 args 的字符串值里写 ${prev.字段名}，执行时会替换成上一步的真实结果。\n只输出 JSON，不要额外解释。")).replace("{tools}", names.join("/"));
 }
 
 /**
@@ -1193,8 +1193,62 @@ function summarizeAgentPlan(plan, results){
 /* 读操作集合：失败自动重试一次是安全的（无副作用）；写操作不自动重试（可能已生效） */
 const AGENT_READ_TOOLS = new Set(["search","list_tasks","list_records","query_overview","recall","note_search","web_search","web_fetch","sql_query"]);
 
-/* 单步执行（从 executeAgentPlan 抽出的公共体）：确认拦截 → 白名单 → 执行 → 读失败重试 1 次 */
-async function _execPlanStep(step, wl){
+/* v3.7.120：写操作集合 —— 有持久化副作用的工具。供幂等去重使用。
+   为什么需要：重规划 / 断点续跑 / 读失败重试都可能让同一步骤再跑一遍，而写工具没有幂等键
+   （create_task 是 tasks.push、add_record 是 unshift）→ 会写出重复数据，用户看到两条一样的任务。
+   划分口径：能改变 localStorage 里用户数据的都算写。export_data / render_chart / generate_report
+   只产出内容，code_run / sql_query 跑在沙箱与内存库里 —— 都不改用户数据，算读。 */
+const AGENT_WRITE_TOOLS = new Set([
+  "create_task","update_task","delete_task","complete_task",
+  "add_record","add_feature_record","note_add","generate_doc",
+  "remember","forget","plan","complete_step","complete_goal"
+]);
+
+/* 步骤去重键。序列化失败（循环引用等极端情况）返回空串 —— 宁可不幂等，也不要让计划抛错中断。 */
+function _stepKey(step){
+  try{ return String(step.tool) + "|" + JSON.stringify(step.args || {}); }catch(_){ return ""; }
+}
+
+/* 取 "a.b.c" 形式的路径值（供 ${prev.xxx} 占位符使用） */
+function _digPath(obj, path){
+  let cur = obj;
+  const segs = String(path).split(".");
+  for(let i=0; i<segs.length; i++){
+    if(cur === null || cur === undefined) return undefined;
+    cur = cur[segs[i]];
+  }
+  return cur;
+}
+
+/* v3.7.120：把 step.args 里的 ${prev.xxx} 换成**上一步真实结果**里的字段值。
+   为什么需要：规划发生在执行之前，模型无法预知「新建出来的 id 是多少」——
+   于是「先 create_task 拿到 id、再用这个 id add_record」这类**有数据依赖的多步任务**
+   在自主计划链里根本做不了，只能退回对话链（评估点名的两个 P0 之一）。
+   让占位符在**执行时**解析、规划期只写意图，依赖才真正可表达。
+   未命中（上一步失败 / 字段不存在）时替换为空串 —— 让下游工具如实报参数错误，
+   而不是把 "${prev.id}" 这个字面量写进用户数据。 */
+function _resolvePrevRefs(value, prev){
+  if(typeof value === "string"){
+    return value.replace(/\$\{prev\.([A-Za-z0-9_.]+)\}/g, function(_, p){
+      const v = _digPath(prev, p);
+      return (v === undefined || v === null) ? "" : String(v);
+    });
+  }
+  if(Array.isArray(value)) return value.map(function(x){ return _resolvePrevRefs(x, prev); });
+  if(value && typeof value === "object"){
+    const out = {};
+    for(const k in value){
+      if(Object.prototype.hasOwnProperty.call(value, k)) out[k] = _resolvePrevRefs(value[k], prev);
+    }
+    return out;
+  }
+  return value;
+}
+
+/* 单步执行（从 executeAgentPlan 抽出的公共体）：
+   幂等去重 → 确认拦截 → 白名单 → 解析依赖 → 执行 → 读失败重试 1 次。
+   v3.7.120：新增 prev（上一步结果，供 ${prev.xxx}）与 seen（写操作幂等表，同一计划内共享）。 */
+async function _execPlanStep(step, wl, prev, seen){
   if(DANGER_CONFIRM_TOOLS.has(step.tool)){
     return { blocked:true, stepOk:false,
       resultStr: JSON.stringify({ ok:false, confirm:true, msg:t("aiagent.needConfirm","该步骤需用户确认，自主执行已跳过：请到对话里直接要求执行（会弹出确认）") }) };
@@ -1203,15 +1257,23 @@ async function _execPlanStep(step, wl){
     return { blocked:true, stepOk:false,
       resultStr: JSON.stringify({ ok:false, msg:t("aiagent.notWhitelisted","该工具不在允许列表中，已跳过：")+step.tool }) };
   }
+  /* 幂等：同一计划内同一个写步骤只真正执行一次，之后复用首次结果。
+     必须用**规划时的原 args**算键（所以放在占位符解析之前）—— 若先用上一步产出替换，
+     同一逻辑步骤在重规划前后会算出不同的键，幂等就形同虚设。
+     返回 stepOk:true：对进度回执与汇总而言「这步的意图已达成」是事实。 */
+  const idemKey = (seen && AGENT_WRITE_TOOLS.has(step.tool)) ? _stepKey(step) : "";
+  if(idemKey && seen.has(idemKey)) return { resultStr: seen.get(idemKey), stepOk: true, idem: true };
+
+  const args = prev ? _resolvePrevRefs(step.args, prev) : step.args;
   let resultStr = "", stepOk = false;
   for(let attempt=0; attempt<2; attempt++){
     try{
       if(ASYNC_TOOL_NAMES.has(step.tool)){
-        const r = await agentExecAsync(step.tool, step.args);
+        const r = await agentExecAsync(step.tool, args);
         resultStr = JSON.stringify(r);
         stepOk = !!(r && r.ok);
       } else {
-        resultStr = execTool(step.tool, step.args); // 不传 force：需确认的工具已在上面拦掉
+        resultStr = execTool(step.tool, args); // 不传 force：需确认的工具已在上面拦掉
         let rj = null; try{ rj = JSON.parse(resultStr); }catch(_){ /* 非 JSON → 按失败计：stepOk 要求 rj.ok !== false，解析不出来就拿不到 ok，故该步如实记为失败（并非把错误吞成成功）；resultStr 原文照旧回喂模型与 _execLine，信息不丢，所以这里不额外报诊断（判据④ 预期降级）。 */ }
         stepOk = !!(rj && rj.ok !== false);
       }
@@ -1221,6 +1283,7 @@ async function _execPlanStep(step, wl){
     }
     if(stepOk || attempt === 1 || !AGENT_READ_TOOLS.has(step.tool)) break; // 仅读操作重试
   }
+  if(idemKey && stepOk) seen.set(idemKey, resultStr);
   return { resultStr, stepOk };
 }
 
@@ -1286,6 +1349,11 @@ async function executeAgentPlanReactive(plan, opts){
   let executedLines = [];
   let replans = 0, consecFail = 0;
   const goalText = o.goal || plan.goal || "";
+  /* v3.7.120：写操作幂等表（整个计划共享）与「上一步结果」（供 ${prev.xxx} 解析）。
+     二者都必须在 while 之外 —— 段末重规划会换掉 remaining，但幂等与依赖上下文要跨段延续，
+     否则重规划后重复的写步骤会被再执行一遍（那正是本次要修的 P0）。 */
+  const seenWrites = new Map();
+  let prevResult = null;
 
   while(remaining.length){
     if(o.signal && o.signal.aborted){
@@ -1293,12 +1361,15 @@ async function executeAgentPlanReactive(plan, opts){
     }
     const seg = remaining.splice(0, SEG);
     for(const step of seg){
-      const r = await _execPlanStep(step, wl);
+      const r = await _execPlanStep(step, wl, prevResult, seenWrites);
       const blocked = !!r.blocked;
       if(blocked) needsConfirm.push(step);
       results.push({ step, result:r.resultStr, ok:r.stepOk, blocked });
       executedLines.push(_execLine(r.stepOk, step, r.resultStr));
       consecFail = r.stepOk ? 0 : consecFail + 1;
+      /* 本步结果成为下一步的 prev。解析不出 JSON 就置 null ——
+         保持旧值会让 ${prev.id} 悄悄取到更早一步的 id，那是错值，比取到空串更危险。 */
+      try{ prevResult = JSON.parse(r.resultStr); }catch(_){ prevResult = null; }
       if(typeof o.onProgress === "function"){
         try{ o.onProgress(results.length, results.length + remaining.length, step, r.resultStr, r); }catch(_){}
       }

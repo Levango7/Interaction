@@ -45,6 +45,10 @@ const UI_ICONS = {
   ocr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/><path d="M9 14c0 1.5 1.5 3 3 3s3-1.5 3-3"/></svg>',
   cad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6l-12.8 12.8"/></svg>',
   filter:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3c-2.5 2-4 5-4 9s1.5 7 4 9c2.5-2 4-5 4-9s-1.5-7-4-9z"/><path d="M3 12h18"/></svg>',
+  /* v3.7.120：清单/源列表（☰ 的矢量化替代）。此前日历「订阅日历源」按钮直接写字形 ☰ ——
+     字符图标的字号随字体走、跨平台渲染宽度不一致，且不可参与描边/对齐规范。
+     尺寸由 `.cal-nav svg` 规则统一给（图标档位 16px），不会裸 px。 */
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>',
   imggen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>',
   vidgen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',
   searchWeb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M2 11h20"/><path d="M12 2v9"/></svg>',
@@ -1899,8 +1903,8 @@ const MESSAGES = {
     "statsPage.editTitle": "编辑仪表盘",
     "statsPage.editSub": "拖拽排列组件、增删调整，完成后点击「完成编辑」",
     "statsPage.sub": "可自定义仪表盘——拖拽排列组件，布局自动保存",
-    "statsPage.doneEdit": "✓ 完成编辑",
-    "statsPage.editLayout": "⚙ 编辑布局",
+    "statsPage.doneEdit": "完成编辑",
+    "statsPage.editLayout": "编辑布局",
     "chartStore.canvasEmpty2": "点击左侧图表库的 + 按钮，把图表添加到画布<br><small>在画布上可拖拽位置 · 拖右下角调整大小</small>",
     "chartStore.title2": "图表",
     "chartStore.sub2": "从左侧图表库挑选，放到画布自由布局（可拖拽位置 / 调整大小）",
@@ -2566,7 +2570,7 @@ const MESSAGES = {
     "p5.categoryPlaceholder": "分类（如：知识库/工作笔记/学习笔记）",
     "p5.chainHeader": "<h2>联动表现</h2><table><tr><th>规则</th><th>触发次数</th></tr>",
     // ===== AI 能力增强（任务 232）i18n 键值 =====
-    "aiagent.sysPrompt": "你是任务规划助手。收到用户请求后，请先拆解为可执行步骤，输出 JSON 格式的计划：\n```json\n{\"goal\":\"目标标题\",\"steps\":[{\"tool\":\"工具名\",\"args\":{},\"desc\":\"步骤说明\"}]}\n```\n可用工具：{tools}。\n注意：删除/修改类操作不在可用清单里（它们需要用户在对话中逐项确认，自主执行不会做）。只输出 JSON，不要额外解释。",
+    "aiagent.sysPrompt": "你是任务规划助手。收到用户请求后，请先拆解为可执行步骤，输出 JSON 格式的计划：\n```json\n{\"goal\":\"目标标题\",\"steps\":[{\"tool\":\"工具名\",\"args\":{},\"desc\":\"步骤说明\"}]}\n```\n可用工具：{tools}。\n注意：删除/修改类操作不在可用清单里（它们需要用户在对话中逐项确认，自主执行不会做）。若某一步要用到上一步的产出（例如新建后拿到的 id），在该步 args 的字符串值里写 ${prev.字段名}，执行时会替换成上一步的真实结果。只输出 JSON，不要额外解释。",
     "aiagent.unnamedGoal": "未命名目标",
     "aiagent.cancelled": "已取消",
     "aiagent.summaryHeader": "【任务汇总】目标：",
@@ -5783,8 +5787,8 @@ const MESSAGES = {
     "statsPage.editTitle": "Edit Dashboard",
     "statsPage.editSub": "Drag to arrange, add/remove, then click \"Done Editing\"",
     "statsPage.sub": "Customizable dashboard — drag to arrange, layout auto-saves",
-    "statsPage.doneEdit": "✓ Done Editing",
-    "statsPage.editLayout": "⚙ Edit Layout",
+    "statsPage.doneEdit": "Done Editing",
+    "statsPage.editLayout": "Edit Layout",
     "chartStore.canvasEmpty2": "Click the + button on the left chart library to add charts to canvas<br><small>Drag to position · drag bottom-right to resize</small>",
     "chartStore.title2": "Charts",
     "chartStore.sub2": "Pick from left chart library, place on canvas freely (drag / resize)",
@@ -6449,7 +6453,7 @@ const MESSAGES = {
     "p5.categoryPlaceholder": "Category (e.g.: Knowledge/Work/Study)",
     "p5.chainHeader": "<h2>Habit Chain Performance</h2><table><tr><th>Chain</th><th>Triggers</th></tr>",
     // ===== AI capability enhancement (task 232) i18n keys =====
-    "aiagent.sysPrompt": "You are a task planning assistant. After receiving a user request, decompose it into executable steps and output a JSON plan:\n```json\n{\"goal\":\"Goal title\",\"steps\":[{\"tool\":\"tool_name\",\"args\":{},\"desc\":\"step description\"}]}\n```\nAvailable tools: {tools}.\nNote: delete/update operations are not in this list (they require the user to confirm each time; autonomous execution never does them). Output JSON only, no extra explanation.",
+    "aiagent.sysPrompt": "You are a task planning assistant. After receiving a user request, decompose it into executable steps and output a JSON plan:\n```json\n{\"goal\":\"Goal title\",\"steps\":[{\"tool\":\"tool_name\",\"args\":{},\"desc\":\"step description\"}]}\n```\nAvailable tools: {tools}.\nNote: delete/update operations are not in this list (they require the user to confirm each time; autonomous execution never does them). If a step needs the previous step's output (e.g. an id returned by a create), write ${prev.field} inside that step's args string values; it is substituted with the real result at execution time. Output JSON only, no extra explanation.",
     "aiagent.unnamedGoal": "Unnamed goal",
     "aiagent.cancelled": "Cancelled",
     "aiagent.summaryHeader": "[Task Summary] Goal: ",

@@ -314,11 +314,16 @@ test.describe("提示带 · 加号 · 面板高亮不变量", () => {
     const SCENES = ["design", "study", "data", "life", "health", "finance", "office"];
     for (const vw of [375, 521, 768, 1023, 1440]) {
       await page.setViewportSize({ width: vw, height: 900 });
-      const rows = await page.evaluate(async (scenes) => {
+      const { rows, errors } = await page.evaluate(async (scenes) => {
         const out = [];
+        const errs = [];
         for (const s of scenes) {
-          try { setActive(s); render(); } catch (e) { continue; }
-          await new Promise((r) => setTimeout(r, 120));
+          try { setActive(s); render(); } catch (e) { errs.push(s + ": " + String((e && e.message) || e)); continue; }
+          /* v3.7.120：固定 120ms 改为轮询。固定 sleep 是本仓 flaky 的共性根因 ——
+             渲染是异步的，慢机器上 120ms 不够、快机器上白等；轮询上限 1s，通常第一轮即命中。 */
+          for (let i = 0; i < 20 && !document.querySelector("#recForm"); i++) {
+            await new Promise((r) => setTimeout(r, 50));
+          }
           const f = document.querySelector("#recForm");
           if (!f) continue;
           const aw = f.querySelector(".add-wrap");
@@ -332,8 +337,11 @@ test.describe("提示带 · 加号 · 面板高亮不变量", () => {
             距右: Math.round(fr.right - r.right),
           });
         }
-        return out;
+        return { rows: out, errors: errs };
       }, SCENES);
+      /* v3.7.120：渲染抛错必须让用例红。此前 catch 后 continue 会把真实错误静默吞掉 ——
+         某个场景 render 挂了、本用例照样绿（假守护，与「只查 status 码」那类弱断言同族）。 */
+      expect(errors, `视口 ${vw}px：以下场景渲染抛错 —— ${errors.join(" / ")}`).toEqual([]);
       expect(rows.length, `视口 ${vw}px：一个 #recForm 都没渲染出来，测试失效`).toBeGreaterThan(0);
       for (const row of rows) {
         expect(row.距右,

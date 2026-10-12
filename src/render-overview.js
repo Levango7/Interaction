@@ -582,7 +582,7 @@ function renderStats(){
     <div class="ph-tx"><h2>${_dashEditMode ? t("statsPage.editTitle", "编辑仪表盘") : t("nav.dash", "仪表盘")}</h2><p class="sub">${_dashEditMode ? t("statsPage.editSub", "拖拽排列组件、增删调整，完成后点击「完成编辑」") : t("statsPage.sub", "可自定义仪表盘——拖拽排列组件，布局自动保存")}</p></div>
     <div class="ph-actions">
       <button type="button" class="${_dashEditMode ? "btn-primary" : "addbtn sm"}" id="btnDashToggleEdit" data-sc="accent">
-        ${_dashEditMode ? t("statsPage.doneEdit", "✓ 完成编辑") : t("statsPage.editLayout", "⚙ 编辑布局")}
+        ${_dashEditMode ? UI_ICONS.check + t("statsPage.doneEdit", "完成编辑") : UI_ICONS.gear + t("statsPage.editLayout", "编辑布局")}
       </button>
     </div>
   </header></div>

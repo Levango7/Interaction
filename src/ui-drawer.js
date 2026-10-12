@@ -23,7 +23,7 @@ function _renderChainEditRow(l){
     <input class="chain-edit-kw" value="${esc(l.kw||"")}" placeholder="${t("field.keyword","关键词")}">
     <span class="chain-arr">→</span>
     <select class="chain-edit-dst">${opts}</select>
-    <button type="button" class="chain-save" data-save="${esc(l.id)}" aria-label="${t("common.save","保存")}">✓</button>
+    <button type="button" class="chain-save" data-save="${esc(l.id)}" aria-label="${t("common.save","保存")}">${UI_ICONS.check}</button>
     <button type="button" class="chain-cancel" data-cancel="${esc(l.id)}" aria-label="${t("common.cancel","取消")}">✕</button>
   </div>`;
 }
@@ -59,7 +59,7 @@ function renderScBox(){
       <span class="chain-ic" style="color:${scCss(s.color)}">${s.icon||""}</span>
       <input class="sc-edit-name" value="${esc(s.name)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" class="u-max-w-90">
       <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(s.color)?s.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
-      <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label="${t("action.saveRenameColor","保存改名换色")}">✓</button>
+      <button type="button" class="chain-save sc-save" data-scsave="${esc(k)}" aria-label="${t("action.saveRenameColor","保存改名换色")}">${UI_ICONS.check}</button>
       ${overridden?`<button type="button" class="chain-cancel sc-reset" data-screset="${esc(k)}" aria-label="${t("action.restoreDefault","恢复默认")}">${t("common.restore","恢复")}</button>`:""}
     </div>`;
   }).join("");
@@ -70,7 +70,7 @@ function renderScBox(){
       <input class="sc-edit-name" value="${esc(cs.name)}" maxlength="12" aria-label="${t("field.scenarioName","场景名称")}" class="u-max-w-90">
       <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
       <span class="chain-arr u-fs-2xs u-text-muted">${t("scene.customLabel","自定义")}</span>
-      <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="${t("common.save","保存")}">✓</button>
+      <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="${t("common.save","保存")}">${UI_ICONS.check}</button>
       <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="${t("action.deleteScenario","删除场景")}">✕</button>
     </div>`;
   }).join("");

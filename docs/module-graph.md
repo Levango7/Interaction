@@ -60,7 +60,7 @@
 | `getTasks` | `data-rw` | 15 |
 | `active` | `data-links` | 12 |
 | `getRec` | `data-rw` | 12 |
-| `UI_ICONS` | `core` | 10 |
+| `UI_ICONS` | `core` | 11 |
 | `setTasks` | `data-rw` | 10 |
 | `setActive` | `data-links` | 10 |
 | `getLinks` | `data-links` | 9 |

@@ -56,7 +56,7 @@ function renderCalendarView(monthOffset){
   const extByDate = (typeof _icsEventsByDate === "function") ? _icsEventsByDate() : {};
 
   let html = '<div class="cal-header">';
-  html += '<button type="button" class="cal-nav" data-ics-open title="' + esc(t("p5.icsTitle", "订阅日历源")) + '">☰</button>';
+  html += '<button type="button" class="cal-nav" data-ics-open title="' + esc(t("p5.icsTitle", "订阅日历源")) + '">' + UI_ICONS.list + '</button>';
   html += '<button type="button" class="cal-nav" data-cal-prev title="' + t("p5.prevMonth", "上一月") + '">‹</button>';
   html += '<span class="cal-title">' + year + t("p5.yearSuffix", "年") + (month + 1) + t("p5.monthSuffix", "月</span>");
   html += '<button type="button" class="cal-nav" data-cal-next title="' + t("p5.nextMonth", "下一月") + '">›</button>';
@@ -135,7 +135,7 @@ function renderWeekView(weekOffset){
   const todayKey = _ymd(new Date());
   const extByDate2 = (typeof _icsEventsByDate === "function") ? _icsEventsByDate() : {};
   let html = '<div class="cal-header">';
-  html += '<button type="button" class="cal-nav" data-ics-open title="' + esc(t("p5.icsTitle", "订阅日历源")) + '">☰</button>';
+  html += '<button type="button" class="cal-nav" data-ics-open title="' + esc(t("p5.icsTitle", "订阅日历源")) + '">' + UI_ICONS.list + '</button>';
   html += '<button type="button" class="cal-nav" data-cal-prev-week title="' + t("p5.prevWeek", "上一周") + '">‹</button>';
   html += '<span class="cal-title">' + t("p5.weekView", "周视图") + '</span>';
   html += '<button type="button" class="cal-nav" data-cal-next-week title="' + t("p5.nextWeek", "下一周") + '">›</button>';

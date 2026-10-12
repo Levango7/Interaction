@@ -1,0 +1,232 @@
+{
+  "_note": "字符图标基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
+  "updated": "2026-10-12",
+  "count": 25,
+  "items": [
+    {
+      "file": "core.js",
+      "line": 2506,
+      "sig": "✕",
+      "occ": 1,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "core.js",
+      "line": 6389,
+      "sig": "✕",
+      "occ": 2,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "render-entry.js",
+      "line": 462,
+      "sig": "▶ 放映",
+      "occ": 1,
+      "level": "P1",
+      "why": "按钮内容以符号字形开头 —— 文字可兜底，仍建议换成 SVG 图标",
+      "text": "▶ 放映"
+    },
+    {
+      "file": "render-entry.js",
+      "line": 468,
+      "sig": "← 上一页",
+      "occ": 1,
+      "level": "P1",
+      "why": "按钮内容以符号字形开头 —— 文字可兜底，仍建议换成 SVG 图标",
+      "text": "← 上一页"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 2460,
+      "sig": "✕",
+      "occ": 1,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "render-scene-main.js",
+      "line": 677,
+      "sig": "✕",
+      "occ": 1,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "render-scene-main.js",
+      "line": 1801,
+      "sig": "▶ 运行",
+      "occ": 1,
+      "level": "P1",
+      "why": "按钮内容以符号字形开头 —— 文字可兜底，仍建议换成 SVG 图标",
+      "text": "▶ 运行"
+    },
+    {
+      "file": "render-scene-main.js",
+      "line": 1864,
+      "sig": "▶ 运行",
+      "occ": 2,
+      "level": "P1",
+      "why": "按钮内容以符号字形开头 —— 文字可兜底，仍建议换成 SVG 图标",
+      "text": "▶ 运行"
+    },
+    {
+      "file": "render-scene-main.js",
+      "line": 1890,
+      "sig": "▶ 运行",
+      "occ": 3,
+      "level": "P1",
+      "why": "按钮内容以符号字形开头 —— 文字可兜底，仍建议换成 SVG 图标",
+      "text": "▶ 运行"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 527,
+      "sig": "✕",
+      "occ": 1,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 1065,
+      "sig": "✕",
+      "occ": 2,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 2595,
+      "sig": "✕",
+      "occ": 3,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 3507,
+      "sig": "▾展开全部 ${top5.length} 项",
+      "occ": 1,
+      "level": "P1",
+      "why": "按钮内容以符号字形开头 —— 文字可兜底，仍建议换成 SVG 图标",
+      "text": "▾展开全部 ${top5.length} 项"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 15,
+      "sig": "✕",
+      "occ": 1,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 27,
+      "sig": "✕",
+      "occ": 2,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 74,
+      "sig": "✕",
+      "occ": 3,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 731,
+      "sig": "✕",
+      "occ": 4,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 764,
+      "sig": "✕",
+      "occ": 5,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 939,
+      "sig": "✕",
+      "occ": 6,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 1062,
+      "sig": "✕",
+      "occ": 7,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-ge-calendar.js",
+      "line": 769,
+      "sig": "✕",
+      "occ": 1,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-ge-calendar.js",
+      "line": 1567,
+      "sig": "✕",
+      "occ": 2,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-guide.js",
+      "line": 27,
+      "sig": "← 返回",
+      "occ": 1,
+      "level": "P1",
+      "why": "按钮内容以符号字形开头 —— 文字可兜底，仍建议换成 SVG 图标",
+      "text": "← 返回"
+    },
+    {
+      "file": "ui-guide.js",
+      "line": 239,
+      "sig": "✕",
+      "occ": 1,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    },
+    {
+      "file": "ui-scene-bind.js",
+      "line": 264,
+      "sig": "✕",
+      "occ": 1,
+      "level": "P0",
+      "why": "按钮内容只有符号字形 —— 用户只能靠字形猜功能，应换成 UI_ICONS 的 SVG",
+      "text": "✕"
+    }
+  ]
+}

@@ -67,6 +67,7 @@ jobs:
       # **只拦新增 P0**（沿用 lint-tokens / module-graph 口径）。本步只读 src/，两态结果一致，
       # 不依赖 pre 钩子是否已拼回。
       - run: npm run lint:empty-catch
+      - run: npm run lint:icons
       - run: npm run check:pwa-icons
       - run: npm run pet:check
 
