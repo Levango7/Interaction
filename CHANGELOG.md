@@ -1,3 +1,32 @@
+## [v3.7.121] - 2026-10-12
+
+**验证可靠性改造（用户拍板「不要造成信息丢失，导致答复出问题」）：把「静默失真」变成「显式判据」。**
+
+- **背景**：2026-10-11~12 一天连抓四个真 bug 证明「契约全绿 ≠ 能跑」；但同一天验证链自身
+  连踩五类坑——管道吞退出码（`npm run e2e | tail -2` 报 exit 0 实际 2 失败）、harness
+  卡死只吐三行「did not run」、误杀 Playwright 浏览器二进制、探针不带响应体连猜三轮、
+  `src:extract` 把我的 src 编辑静默冲掉。共同结构：**信息在链条某一环被静默吞掉。
+  总原则：每一环都必须把「我不知道」变成显式输出。**
+- **三个机械化守卫**（`docs/verification-reliability.md` 完整设计与五条规则）：
+  ① `scripts/verify-run.mjs` 验证命令统一入口——输出落盘 `verify-out/`、打印单行判据
+     `✓|✗|? <标签> exit=N · passed=X · failed=Y · did-not-run=Z`、自带看门狗（默认 20 分钟，
+     超时 kill 并打尾部输出，exit 79 = **未判定，不是通过**）；
+  ② `scripts/check-browser.mjs` 环境预检——chromium 起不来直接 exit 78 + 人话
+     「本机判定通道不可用，判据以 CI 为准」，不再让测试挂 600 分钟；
+  ③ **`playwright.config.js` 的 `globalSetup`**（`tests/e2e/global-setup.cjs`）——
+     e2e 跑之前把 HTML 拼回交付态。**这道是当天二次修正才放对的位置**：初版放在
+     `run-e2e.mjs` 里，经包装器/裸 npx 调用就被绕过 → HTML 停源码态 → 57~70 个
+     `setActive is not defined` 假红（定位花两轮 20 分钟）。globalSetup 是 Playwright
+     每次运行都走的入口，**绕过任何 runner 都仍然生效**。
+- **判据自验（全过）**：`✓ exit=0` / `✗ exit=1` / `? exit=79` 未判定三种 verdict 各实测一次；
+  「全 skipped ≠ 通过」也纳入判据（ranNothing → 79，不当成绿）；预检可用/不可用两条路径。
+- **本机 e2e 通道由此修复**：源码态下经包装器跑 e2e → globalSetup 自动拼回 → **96/96 全绿**
+  （5 分钟）。此前本机所有「挂起 / 全 skipped / 57 失败」全是双态未拼回的假象，**没有一个是
+  真缺陷**——这印证了改造的价值：失真比失败更贵。
+- 文档：`docs/verification-reliability.md`（设计+规则+守卫+实证）、CHANGELOG。
+  ⚠️ 本批**无产品代码改动**（只动验证层 + 文档），CI 的 e2e 腿行为不变（CI 上本就是交付态，
+  globalSetup 是 no-op）。
+
 ## [v3.7.120] - 2026-10-11
 
 **坚果云真机验收（协议层 11/11）抓到第二个真 bug：PUT 响应无 ETag → 每次续传都误报「云端冲突」。**

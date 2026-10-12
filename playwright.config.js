@@ -24,6 +24,13 @@ const appDir = path.resolve(__dirname).replace(/\\/g, "/");
 const appFileUrl = "file:///" + appDir + "/";
 
 module.exports = defineConfig({
+  /* v3.7.121 验证可靠性改造：globalSetup 保证**任何入口**（npm run e2e / 裸 npx / verify-run 包装）
+     都在跑之前把 HTML 拼回交付态。此前拼回只挂在 npm 的 pre/post 钩子上 —— 直接
+     `node scripts/run-e2e.mjs` 或经包装器调用时钩子不触发，HTML 停在源码态，
+     e2e 走 file:// 直加载 → 应用 JS 不在页面里 → 57~70 个 `setActive/AppBridge is not
+     defined` 假红（2026-10-12 实测两次，每次都要花 10 分钟才定位到「只是没拼回」）。
+     放这里 = 绕过任何 runner 都仍然生效。CI 上本就是交付态，这一步是 no-op。 */
+  globalSetup: require.resolve("./tests/e2e/global-setup.cjs"),
   testDir: "./tests/e2e",
   fullyParallel: false,
   forbidOnly: true,
