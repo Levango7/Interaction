@@ -840,6 +840,42 @@ describe("Electron IPC: webdav-fetch 云同步中转", () => {
     expect(r.conflict).toBe(true);
   });
 
+  /* v3.7.119：坚果云 PUT 响应**不回 ETag**（只 GET 回）—— 真机验收 dav.jianguoyun.com 实测。
+     不补取会让渲染层把 meta.etag 存空 → 下次上传退回 If-None-Match:* → 文件已存在 →
+     412 **假冲突**（每次续传都误报"云端被改过"）。 */
+  it("PUT 2xx 但响应无 etag → 补一次同路径 GET 取权威 etag（坚果云形态）", async () => {
+    const calls = [];
+    const fn = vi.fn((url, opts) => {
+      calls.push({ url, method: opts.method });
+      if (opts.method === "GET") return Promise.resolve({ ok: true, status: 200, headers: new Map([["etag", "gh-etag"]]), text: async () => "{}" });
+      return Promise.resolve({ ok: true, status: 201, headers: new Map(), text: async () => "" });   /* 坚果云：PUT 无 etag 头 */
+    });
+    vi.stubGlobal("fetch", fn);
+    const r = await ipcHandlers["webdav-fetch"](trustedEv(), WD_OK);
+    expect(r.ok).toBe(true);
+    expect(r.etag, "补取到的 GET etag 必须回给渲染层（否则下次续传假冲突）").toBe("gh-etag");
+    expect(calls.map((c) => c.method)).toEqual(["PUT", "GET"]);
+    expect(calls[1].url).toBe(WD_OK.url);
+  });
+
+  it("PUT 已有 etag 头时不补 GET（标准服务不多打请求）", async () => {
+    const { calls } = installWd();   /* 默认替身 PUT 回 "v1" */
+    const r = await ipcHandlers["webdav-fetch"](trustedEv(), WD_OK);
+    expect(r.etag).toBe('"v1"');   /* 替身给的带引号值原样回传（HTTP etag 头语义） */
+    expect(calls.length, "有 etag 就不要再 GET 一次").toBe(1);
+  });
+
+  it("补取 GET 失败不影响本次上传成功（只让下次续传降级）", async () => {
+    const fn = vi.fn((url, opts) => {
+      if (opts.method === "GET") return Promise.reject(new Error("boom"));
+      return Promise.resolve({ ok: true, status: 201, headers: new Map(), text: async () => "" });
+    });
+    vi.stubGlobal("fetch", fn);
+    const r = await ipcHandlers["webdav-fetch"](trustedEv(), WD_OK);
+    expect(r.ok, "上传本身是成功的").toBe(true);
+    expect(r.etag, "补取失败就留空（渲染层届时按首次上传语义走）").toBe("");
+  });
+
   it("🔴 http / userinfo / 私网·回环 / 非法方法 / 超大 body：拒且零请求", async () => {
     const { calls } = installWd();
     const bad = [

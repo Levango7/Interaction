@@ -1,3 +1,31 @@
+## [v3.7.120] - 2026-10-11
+
+**坚果云真机验收（协议层 11/11）抓到第二个真 bug：PUT 响应无 ETag → 每次续传都误报「云端冲突」。**
+
+- **验收前置修正（两个都是探针错、不是产品错，仍记账）**：
+  ① 坚果云 WebDAV 的 **`/dav/` 根不允许建子目录**（MKCOL 400 / PUT 409），测试目录必须建到
+     既有同步集合里（用户的坚果云根 = 「我的坚果云」）——探针改为先 PROPFIND 探集合再建；
+  ② **ETag 头值自带引号**（RFC 7232），探针把引号剥了又加一层 → 双重引号 → 412「ETag doesn't
+     match」。应用用的是原样值（正确），错的是探针。
+- **抓到的真 bug（影响面：用坚果云的用户，第二次起每次上传都误报冲突）**：
+  `electron/main.js` 的 webdav-fetch 把 **PUT 响应头**的 etag 交渲染层存进 `wd_meta`；
+  而坚果云 **PUT 成功（201）不回 ETag 头**（只有 GET 回）→ meta.etag 存成空 →
+  渲染层下次上传退回 `If-None-Match: *` → 文件已存在 → **412** → 应用报 `etag_conflict`
+  （「云端已被其他设备修改」）—— 而云端根本没被改过。首传成功、续传全假冲突。
+- **修复**：PUT 2xx 且响应无 etag 时，补一次**同路径 GET** 取权威 etag 再回传
+  （URL 已过白名单校验，不新开攻击面；补取失败不影响本次上传成功，只让下次续传降级）。
+- **验收结果（真实坚果云账号 + 应用密码，`_probe/webdav-nutstore-accept.mjs`）11/11**：
+  Basic 鉴权 207 / 定位同步集合 / MKCOL 201 / PUT 201 / GET 读回内容一致 / 取到 ETag /
+  **If-Match 续传 204** / **坏 ETag → 412 且内容未被改写**（冲突检测是真语义）/ 清理无痕。
+- **测试**：`tests/electron-ipc.test.js` +3 例（PUT 无 etag 补 GET / 有 etag 不补 /
+  补取失败不影响上传），该文件 60/60；全量单测 **149 文件/1696 例**全绿。
+- **未做（如实记账）**：本机 e2e **环境阻断**（我在清理残留浏览器时误杀 headless_shell，
+  之后 `chromium.launch()` 直接挂起，最小 about:blank 都起不来）——本批改的是
+  `electron/main.js`（Electron 主进程，Playwright 不加载），e2e 腿判据以 CI 为准；
+  本地环境待修（`npx playwright install chromium`）。
+- 文档：`docs/webdav-verify.md` 记协议层验收结论，roadmap §五 ⑥ 更新（协议层 ✅ / UI 六步仍待
+  Electron），audit R-14。
+
 ## [v3.7.119] - 2026-10-11
 
 **Linear 真机验收抓到一个必现 bug 并修复：`issueCreate` 的 teamId 只收 UUID，应用传的是团队 key——首次推送 100% 被拒。**

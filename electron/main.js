@@ -886,12 +886,24 @@ function _netHostForbidden(host){
           if(r4.status === 207 || r4.status === 200) return { ok: true, status: r4.status, etag: et4, lastModified: lm4 };
           return { ok: false, status: r4.status, error: "HTTP " + r4.status };
         }
+        /* v3.7.119：坚果云（dav.jianguoyun.com）的 PUT 响应**不回 ETag**，只有 GET 回 ——
+           真机验收实测：PUT 201 无 etag 头、同路径 GET 有。渲染层拿不到 etag 会把 meta 存成空，
+           下次上传退回 If-None-Match:*，而文件已存在 → 412 → **每次续传都误报"云端被改过"**。
+           故 2xx 且无 etag 时补一次同路径 GET 取权威 etag（URL 已过白名单校验，不新开攻击面；
+           补取失败不影响本次上传成功，只让下次续传降级为 If-None-Match）。 */
+        let et5 = et4;
+        if(method === "PUT" && (r4.status === 201 || r4.status === 204) && !et5){
+          try{
+            const rg = await fetch(u.href, { method: "GET", headers: { Authorization: headers["Authorization"] || "" }, redirect: "error", signal: ctrl4.signal });
+            if(rg && rg.ok){ const g = rg.headers.get("etag"); if(g) et5 = g; }
+          }catch(err5){ /* 补取失败：etag 留空，渲染层按首次上传语义降级 */ }
+        }
         let text = "";
         if(method === "GET" && r4.status === 200){ try{ text = await r4.text(); }catch(err4){ text = ""; } }
         /* 412 = ETag 冲突：早返回也要带 conflict 标记（渲染层据此不覆盖他人文件） */
-        if(!r4.ok && r4.status !== 204 && r4.status !== 207) return { ok: false, status: r4.status, error: "HTTP " + r4.status, etag: et4, lastModified: lm4, conflict: r4.status === 412 };
+        if(!r4.ok && r4.status !== 204 && r4.status !== 207) return { ok: false, status: r4.status, error: "HTTP " + r4.status, etag: et5, lastModified: lm4, conflict: r4.status === 412 };
         /* 412 = ETag 冲突（云端已被别处改过）：如实回传，交渲染层决策，不静默覆盖 */
-        return { ok: true, status: r4.status, etag: et4, lastModified: lm4, text: text, conflict: r4.status === 412 };
+        return { ok: true, status: r4.status, etag: et5, lastModified: lm4, text: text, conflict: r4.status === 412 };
       }catch(err){
         clearTimeout(timer4);
         const msg4 = (err && err.name === "AbortError") ? "请求超时（15000ms）" : ((err && err.message) || String(err));
