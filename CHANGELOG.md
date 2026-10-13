@@ -1,3 +1,47 @@
+## [v3.7.122] - 2026-10-13
+
+**三线收官（用户拍板「前五个做吧」的 4/5 项）：server 路由交叉污染修复 + 跨项目视觉回归模板落地 + 18 处字符字形图标全量 SVG 化。**
+
+- **server/ 路由交叉污染（审计遗留 P2，唯一未修 server 缺陷）**（`35b4c73`）：
+  `index.js` 原把**同一个 extrasRouter 实例**挂到 `/api/notifications` 与 `/api/integrations`
+  两个前缀——实测 `/api/integrations/preferences`、`/api/notifications/status` 等 6 条交叉路径
+  全部可达（攻击面翻倍）。修复：`extras.js` 按客户端真实端点清单拆为 `notifications.js` /
+  `integrations.js` 两个独立 router（handler 逐字迁移，行为/响应形状/错误码不变）；
+  新增 `verify/router-isolation-check.cjs`（17 条双向断言：交叉路径必须 404+`not_found` 钉
+  错误指纹、合法路由必须仍 200、无 token 401）并接入 `ci.yml` server-verify job（七脚本→八脚本，
+  合计 **176→193 条**）。故障注入（改回同实例）10/17 转红、还原复绿 17/17；七脚本回归 176/176。
+- **跨项目视觉回归模板 `visual-regression-template/`**（`7bd405d` + `eb9ef2d` + `c2fcaba`）：
+  承接 v3.7.121 抽取的 visual-kit 内核（`e623188`），把设计方案落成可复制到 7 个项目的模板包
+  （README 接入指南 + 独立 `playwright.config.visual.cjs` + contrast-matrix spec + helpers
+  适配层 + 像素基线 CI-only 可选插件文档 + 惰性 CI 示例）。核心设计：**渲染层不变量是主力**
+  （对比度/可见性/溢出，不依赖像素基线，本机与 CI 结果一致），像素基线仅 CI-only 可选。
+  模板自带 globalSetup/globalTeardown 对称桥——双态项目跑完自动抽回源码态（标记文件协议
+  `verify-out/.visual-injected`），堵住「跑完工作区滞留拼回态」的缺陷（该缺陷在总监复核中
+  实测复现后才修，含反证轮）。pilot 3/3 + 隔离目录干跑 3/3（非双态路径零配置空转）双绿；
+  Interaction 主题口径按实测为 **10 套**（第 11 项 system 跟随 OS 偏好，无法确定性强断言）。
+- **18 处 ✕ 字符字形关闭按钮 → `UI_ICONS.close` SVG**（`5ab8b76`）：
+  `src/core.js` 注册表新增 `close` 键（标准 X 形，与注册表同款 viewBox/stroke 属性），
+  9 文件 18 处按钮全部替换；尺寸一律 `var(--icon-sm/set/md/lg)` 四档令牌经内联 span，零裸 px；
+  全部 aria-label/title 保留，**两处原本无可及名的按钮（taskEditClose/evDetailClose）补上
+  aria-label**；点击行为零变化（探针 84/84 断言：可见/含 SVG/尺寸命中预期档/点击关闭/
+  无溢出/居中 dx=dy=0）。`lint-icons.baseline.json` 精确重冻 **25→7**（仅移除 18 条 sig=✕，
+  7 条 P1 一个字节未动）；故障注入（一处改回 ✕）→ 门禁 exit 1 → 还原复绿。
+  theme-matrix 渲染层不变量 5/5 不回退。
+  ⚠️ **如实披露**：因图标改走令牌档位，部分按钮高度有 1~3px 微变
+  （chain-share 35→32、chainCancel 24→22、gvDel 19→18、taskEdit 19→18、
+  chainDel/scDel 22→24，其余持平；全部 ≥18px、墨水盒匹配率 90%~105%）——
+  24px 档家族需 27px 才能零差，四档令牌内无法进一步逼近，属规范化代价。
+- **协调项**：`.gitignore` 补 `verify-out/`（对齐 verification-reliability.md 的日志落盘约定）
+  与 `!visual-regression-template/baselines/` 例外；`backend-recovery-assessment.md` §五、
+  `oauth-login-design.md` §六 两处 extras.js 相关文档漂移同步修正。
+- **验证**：CI run `38360691143`（sha `5ab8b76`）四 job 全绿（e2e / windows / ubuntu /
+  server-verify 八脚本 193 条）；本批发版链 `release.mjs` bump 六源（BUILD_TAG=20261013a），
+  build:check 版本一致（3866076 B，sha256 `82a6a57f…`）。
+- **明确不做（本批）**：测试覆盖阶段 2 + flaky 清理（QA 成员因模型用量限额中断、零残留，
+  顺延至次日限额重置后派员，工单已备）；`render-entry.js:343`「✕格式」为 JS 数组组装的
+  P1 潜在漏网点（lint-icons BUTTON_RE 扫不到），列后续批次评估；HTML 骨架区 1 处 ✕
+  （649a0e3 已知不做项）维持原判。
+
 ## [v3.7.121] - 2026-10-12
 
 **验证可靠性改造（用户拍板「不要造成信息丢失，导致答复出问题」）：把「静默失真」变成「显式判据」。**
