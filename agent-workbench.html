@@ -6729,6 +6729,11 @@ const UI_ICONS = {
   overview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V3m0 18h18M7 17l4-5 3 3 5-7"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
+  /* v3.7.122：关闭（✕ 的矢量化替代）。存量 18 处关闭按钮此前直接写字形 ✕（字符图标门禁
+     lint-icons 的 P0 基线主体）—— 字形随字体走、跨平台渲染宽度不一致，且不可参与
+     stroke-width / currentColor 描边与对齐规范（同 v3.7.120 list 的整改理由）。
+     尺寸由各调用点的内联 span 按图标档位令牌给（var(--icon-sm/set/md/lg)），不写裸 px。 */
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1.2 13.5h8.6L17.5 7M10 11v6M14 11v6"/></svg>',
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>',
   chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg>',
@@ -9220,7 +9225,7 @@ const MESSAGES = {
     "p4.html.pluginCardSection": "<div class=\"plugin-section\"><b>提供的卡片：</b><ul>",
     "p4.html.pluginConfigSection": "<div class=\"plugin-section\"><b>配置（JSON）：</b>",
     "p4.html.pluginDetailBtn": "\" data-sc=\"muted\">详情</button>",
-    "p4.html.pluginDetailClose": "<button type=\"button\" class=\"chain-share-close\" id=\"pluginDetailClose\" aria-label=\"关闭\">✕</button>",
+    "p4.html.pluginDetailClose": "<button type=\"button\" class=\"chain-share-close\" id=\"pluginDetailClose\" aria-label=\"关闭\"><span style=\"display:flex;width:var(--icon-lg);height:var(--icon-lg)\">{close}</span></button>",
     "p4.html.pluginNone": "<div class=\"hint\" class=\"u-p2-text-muted\">暂无已注册插件</div>",
     "p4.html.pluginRuleSection": "<div class=\"plugin-section\"><b>提供的链规则：</b><ul>",
     "p4.html.pluginSaveConfigBtn": "<button type=\"button\" class=\"addbtn sm\" id=\"pluginConfigSave\" data-sc=\"accent\" class=\"u-mt-1\">保存配置</button>",
@@ -13103,7 +13108,7 @@ const MESSAGES = {
     "p4.html.pluginCardSection": "<div class=\"plugin-section\"><b>Cards provided:</b><ul>",
     "p4.html.pluginConfigSection": "<div class=\"plugin-section\"><b>Configuration (JSON):</b>",
     "p4.html.pluginDetailBtn": "\" data-sc=\"muted\">Details</button>",
-    "p4.html.pluginDetailClose": "<button type=\"button\" class=\"chain-share-close\" id=\"pluginDetailClose\" aria-label=\"Close\">✕</button>",
+    "p4.html.pluginDetailClose": "<button type=\"button\" class=\"chain-share-close\" id=\"pluginDetailClose\" aria-label=\"Close\"><span style=\"display:flex;width:var(--icon-lg);height:var(--icon-lg)\">{close}</span></button>",
     "p4.html.pluginNone": "<div class=\"hint\" class=\"u-p2-text-muted\">No plugins registered</div>",
     "p4.html.pluginRuleSection": "<div class=\"plugin-section\"><b>Chain rules provided:</b><ul>",
     "p4.html.pluginSaveConfigBtn": "<button type=\"button\" class=\"addbtn sm\" id=\"pluginConfigSave\" data-sc=\"accent\" class=\"u-mt-1\">Save configuration</button>",
@@ -22521,7 +22526,7 @@ function openChartStore(){
       ? canvasItems.map(function(it){
           const lib = chartLibs.find(function(x){ return x.id === it.lib; }) || chartLibs[0];
           return `<div class="cs-canvas-item" data-cs-item="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px">
-            <div class="cs-canvas-head"><span>${esc(lib.name)}</span><button type="button" class="cs-canvas-del" data-cs-del="${it.id}" title="${t("a11y.del", "删除")}" aria-label="${t("a11y.deleteChart", "删除图表")}">✕</button></div>
+            <div class="cs-canvas-head"><span>${esc(lib.name)}</span><button type="button" class="cs-canvas-del" data-cs-del="${it.id}" title="${t("a11y.del", "删除")}" aria-label="${t("a11y.deleteChart", "删除图表")}"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">${UI_ICONS.close}</span></button></div>
             <div class="cs-canvas-body">${lib.render()}</div>
             <div class="cs-resize-handle" data-cs-resize="${it.id}"></div>
           </div>`;
@@ -23059,7 +23064,7 @@ function _recordToolHtml(cfg, records){
       return "<td>" + v + "</td>";
     }).join("");
     return '<tr data-rec-row="' + r.id + '"' + (overdue ? ' style="color:var(--danger)"' : "") + ">" +
-      '<td><button type="button" class="addbtn xs danger" data-rec-del="' + r.id + '" aria-label="'+t("a11y.del", "删除")+'">✕</button></td>' + tds + "</tr>";
+      '<td><button type="button" class="addbtn xs danger" data-rec-del="' + r.id + '" aria-label="'+t("a11y.del", "删除")+'"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">' + UI_ICONS.close + '</span></button></td>' + tds + "</tr>";
   }).join("");
   let summary = "";
   if(typeof cfg.sum === "function"){
@@ -24589,7 +24594,7 @@ function mountPet(kind){
   el.style.top  = y + "px";
   el.innerHTML = sanitizeHtml(
     '<div class="pet-art-box" data-pet-svg="1"></div>' +
-    '<button type="button" class="pet-close" aria-label="' + t("pet.remove", "收回萌宠") + '">✕</button>'
+    '<button type="button" class="pet-close" aria-label="' + t("pet.remove", "收回萌宠") + '"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm);margin:auto">' + UI_ICONS.close + '</span></button>'
   );
   /* v3.6.5：立绘原始注入（不经 sanitizeHtml，data:img 会被 sanitizer 剥除） */
   const petSvgBox = el.querySelector("[data-pet-svg]");
@@ -25926,7 +25931,7 @@ function openSharedTaskModal(task){
     <div class="share-task-dialog">
       <div class="share-task-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>分享的任务</h2>
-        <button type="button" class="share-task-close" id="shareTaskClose" aria-label="关闭" data-i18n-aria="a11y.closeBtn">✕</button>
+        <button type="button" class="share-task-close" id="shareTaskClose" aria-label="关闭" data-i18n-aria="a11y.closeBtn"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">${UI_ICONS.close}</span></button>
       </div>
       <div class="share-task-body">${cardHtml}</div>
     </div>
@@ -28631,7 +28636,7 @@ function renderGlobViews(){
   const box=$("#globViews"); if(!box) return;
   const views=getGlobViews();
   box.innerHTML = sanitizeHtml((views.length
-    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="${t("globView.apply", "应用视图")}">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="${t("globView.del", "删除视图")}">✕</button></span>`).join("")
+    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="${t("globView.apply", "应用视图")}">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="${t("globView.del", "删除视图")}"><span style="display:flex;width:var(--icon-set);height:var(--icon-set)">${UI_ICONS.close}</span></button></span>`).join("")
     : "") + `<button type="button" class="glob-view-save" id="globViewSave" title="${t("globView.save", "保存当前筛选为视图")}">${t("globView.saveBtn", "＋ 保存视图")}</button>`);
   $$("#globViews [data-view]").forEach(ch=>{
     ch.onclick = e=>{
@@ -29879,7 +29884,7 @@ function _featureCardHtml(cfg){
       const extraInner = cfg.rowAfter(r);
       if(extraInner) extra = '<tr class="f-row-extra"><td colspan="' + colSpan + '">' + extraInner + '</td></tr>';
     }
-    return '<tr data-f-row="' + r.id + '"><td><button type="button" class="addbtn xs danger" data-f-del="' + r.id + '" aria-label="'+t("a11y.del", "删除")+'">✕</button></td>' + tds + '</tr>' + extra;
+    return '<tr data-f-row="' + r.id + '"><td><button type="button" class="addbtn xs danger" data-f-del="' + r.id + '" aria-label="'+t("a11y.del", "删除")+'"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">' + UI_ICONS.close + '</span></button></td>' + tds + '</tr>' + extra;
   }).join("");
   const list = records.length
     ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + '</th>'; }).join("") + '</tr></thead><tbody>' + rows + '</tbody></table>'
@@ -31618,7 +31623,7 @@ function openTaskEdit(id){
     `<option value="${v}" ${task.priority===v?"selected":""}>${v||"-"}</option>`).join("");
   const html = `<div class="recycle-modal" id="taskEditModal">
     <div class="recycle-card u-max-w-560">
-      <div class="recycle-header"><h2>${t("task.editTitle","编辑任务")}</h2><button type="button" class="recycle-close" id="taskEditClose">✕</button></div>
+      <div class="recycle-header"><h2>${t("task.editTitle","编辑任务")}</h2><button type="button" class="recycle-close" id="taskEditClose" aria-label="${t("common.close","关闭")}"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">${UI_ICONS.close}</span></button></div>
       <form id="taskEditForm" class="u-flex u-flex-col u-pad-5-6 u-gap-4">
         <div class="fld"><label>${t("field.taskTitle","任务标题")}</label><input name="title" value="${esc(task.title)}" maxlength="200" required></div>
         <div class="form-row form-row--grid u-mb-0">
@@ -37463,7 +37468,7 @@ function _renderChainRow(l){
     <span class="chain-arr">→</span>
     <span class="chain-ic" style="color:var(--sc-${esc(l.toSc)},var(--accent))" data-edit-dst="${esc(l.id)}" title="${t("aria.editTargetScene","点击编辑目标场景")}">${dc.icon||""}</span>
     <span class="chain-dst">${esc(dc.name)}</span>
-    <button type="button" class="chain-del" data-del="${esc(l.id)}" aria-label="${t("action.deleteChain","删除链")}">✕</button>
+    <button type="button" class="chain-del" data-del="${esc(l.id)}" aria-label="${t("action.deleteChain","删除链")}"><span style="display:flex;width:var(--icon-md);height:var(--icon-md)">${UI_ICONS.close}</span></button>
   </div>`;
 }
 /* 渲染链编辑行（inline edit：关键词 input + 目标场景 select + 保存/取消） */
@@ -37475,7 +37480,7 @@ function _renderChainEditRow(l){
     <span class="chain-arr">→</span>
     <select class="chain-edit-dst">${opts}</select>
     <button type="button" class="chain-save" data-save="${esc(l.id)}" aria-label="${t("common.save","保存")}">${UI_ICONS.check}</button>
-    <button type="button" class="chain-cancel" data-cancel="${esc(l.id)}" aria-label="${t("common.cancel","取消")}">✕</button>
+    <button type="button" class="chain-cancel" data-cancel="${esc(l.id)}" aria-label="${t("common.cancel","取消")}"><span style="display:flex;width:var(--icon-set);height:var(--icon-set)">${UI_ICONS.close}</span></button>
   </div>`;
 }
 /**
@@ -37522,7 +37527,7 @@ function renderScBox(){
       <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
       <span class="chain-arr u-fs-2xs u-text-muted">${t("scene.customLabel","自定义")}</span>
       <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="${t("common.save","保存")}">${UI_ICONS.check}</button>
-      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="${t("action.deleteScenario","删除场景")}">✕</button>
+      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="${t("action.deleteScenario","删除场景")}"><span style="display:flex;width:var(--icon-md);height:var(--icon-md)">${UI_ICONS.close}</span></button>
     </div>`;
   }).join("");
   /* v2.0.3：插件场景行——与侧栏 ORDER 对齐（此前只渲染内置+自定义，启用笃行/阅读等
@@ -38179,7 +38184,7 @@ function openChainShareModal(){
     <div class="chain-share-dialog">
       <div class="chain-share-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>${t("chainShare.title","分享我的联动规则")}</h2>
-        <button type="button" class="chain-share-close" id="chainShareClose" aria-label="${t("common.close","关闭")}">✕</button>
+        <button type="button" class="chain-share-close" id="chainShareClose" aria-label="${t("common.close","关闭")}"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">${UI_ICONS.close}</span></button>
       </div>
       <div class="chain-share-body">
         <p class="hint">${t("chainShare.hintPrefix","将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ")}${links.length}${t("chainShare.hintSuffix"," 条联动规则。")}</p>
@@ -38212,7 +38217,7 @@ function openChainImportModal(){
     <div class="chain-share-dialog">
       <div class="chain-share-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>${t("chainShare.importTitle","导入联动规则")}</h2>
-        <button type="button" class="chain-share-close" id="chainImportClose" aria-label="${t("common.close","关闭")}">✕</button>
+        <button type="button" class="chain-share-close" id="chainImportClose" aria-label="${t("common.close","关闭")}"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">${UI_ICONS.close}</span></button>
       </div>
       <div class="chain-share-body">
         <p class="hint">${t("chainShare.importHint","粘贴他人分享的联动规则分享码，点「预览」查看将导入的链，确认后点「导入」。")}</p>
@@ -38387,7 +38392,7 @@ function openTemplateModal(){
     <div class="scene-template-dialog">
       <div class="scene-template-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>${t("tpl.title", "场景模板")}</h2>
-        <button type="button" class="scene-template-close" id="sceneTemplateClose" aria-label="${t("common.close", "关闭")}">✕</button>
+        <button type="button" class="scene-template-close" id="sceneTemplateClose" aria-label="${t("common.close", "关闭")}"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">${UI_ICONS.close}</span></button>
       </div>
       <div class="scene-template-body">
         <p class="hint u-m-0-0-3">${t("tpl.hint", "选择一个模板一键导入对应任务集，到期日按 today + offset 自动计算。")}</p>
@@ -38510,7 +38515,7 @@ function openPluginDetailModal(id){
     + '<div class="chain-share-dialog u-max-w-520">'
       + '<div class="chain-share-header">'
         + '<h2>'+ic("puzzle")+esc(p.name)+'</h2>'
-        + t("p4.html.pluginDetailClose",'<button type="button" class="chain-share-close" id="pluginDetailClose" aria-label="关闭">✕</button>')
+        + t("p4.html.pluginDetailClose",'<button type="button" class="chain-share-close" id="pluginDetailClose" aria-label="关闭"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">{close}</span></button>').replace("{close}", UI_ICONS.close)
       + '</div>'
       + '<div class="chain-share-body">'
         + '<div class="plugin-meta">'
@@ -44989,7 +44994,7 @@ function renderCustomDashboard(editMode){
     html += '<div class="dashboard-widget' + (edit ? ' editing' : '') + '" draggable="' + (edit ? 'true' : 'false') + '" data-widget="' + esc(item.id) + '" style="grid-column:' + p.x + ' / span ' + p.w + ';grid-row:' + p.y + ' / span ' + p.h + '">';
     html += '<div class="widget-header"><span class="widget-name">' + esc(widget.name) + '</span>' +
       (edit ? '<span class="widget-ops"><button type="button" class="widget-drag" title="' + t('p5.dragMove', '拖拽移动') + '" aria-label="' + t('p5.dragMove', '拖拽移动 ') + esc(widget.name) + '">⋮⋮</button>' +
-       '<button type="button" class="widget-del" title="' + t('p5.removeWidget', '移除组件') + '" aria-label="' + t('p5.remove', '移除 ') + esc(widget.name) + '">✕</button></span>' : '') + '</div>';
+       '<button type="button" class="widget-del" title="' + t('p5.removeWidget', '移除组件') + '" aria-label="' + t('p5.remove', '移除 ') + esc(widget.name) + '"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">' + UI_ICONS.close + '</span></button></span>' : '') + '</div>';
     html += '<div class="widget-body">' + _renderDashboardWidget(item.id) + '</div>';
     html += '</div>';
   });
@@ -45787,7 +45792,7 @@ function openEventDetail(dateKey, focusIdx){
   const cur = list[idx];
   let html = '<div class="cmd u-max-w-520 u-p-5" role="dialog" aria-modal="true" aria-label="' + esc(t("p5.evDetailTitle", "日程详情")) + '">';
   html += '<div class="u-flex u-jc-between u-ai-center u-m-0-0-3"><h3 class="u-m-0 u-fs-md">' + esc(cur.title) + '</h3>';
-  html += '<button type="button" class="addbtn sm" data-ev-close title="' + esc(t("p5.evClose", "关闭")) + '">✕</button></div>';
+  html += '<button type="button" class="addbtn sm" data-ev-close title="' + esc(t("p5.evClose", "关闭")) + '" aria-label="' + esc(t("p5.evClose", "关闭")) + '"><span style="display:flex;width:var(--icon-set);height:var(--icon-set)">' + UI_ICONS.close + '</span></button></div>';
   html += _evDetailRow(t("p5.evKind", "类型"), cur.kind);
   html += _evDetailRow(t("p5.evTime", "时间"), (dateKey ? dateKey + " " : "") + cur.time);
   html += _evDetailRow(t("p5.evPlace", "地点"), cur.place);
