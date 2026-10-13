@@ -4,7 +4,7 @@
  * 期望：全绿（exit 0）。
  *
  * 背景（2026-10-10 审查发现）：
- *   extras.js 的 DELETE /schedules/:id 与 auth.js 的 DELETE /devices/:id
+ *   notifications.js（v3.7.122 前为 extras.js）的 DELETE /schedules/:id 与 auth.js 的 DELETE /devices/:id
  *   只按 id 查找全局集合，**不校验该资源属不属于当前登录用户** →
  *   任何已登录用户都能删掉别人的定时提醒、或踢掉别人的登录设备（强制下线）。
  *   对比同文件的 PUT /schedules/:id 是有归属校验的（s.userId !== req.user.sub），

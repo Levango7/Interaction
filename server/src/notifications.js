@@ -1,11 +1,21 @@
-/* server/src/extras.js
- * 非鉴权辅助端点：通知偏好 / Web Push / 定时提醒 / 第三方集成。
- * 契约对齐前端 apiClientModule（/api/notifications/*、/api/integrations/*）。
- * 这些端点多数是账号数据 CRUD，走 authMiddleware 鉴权。
+/* server/src/notifications.js
+ * 通知辅助端点：偏好 / Web Push / 定时提醒（挂载于 /api/notifications）。
+ *
+ * v3.7.122 从 extras.js 拆出。原因（审计遗留 P2，docs/backend-recovery-assessment.md §五）：
+ * 原 index.js 把**同一个 extrasRouter 实例**挂到两个前缀下——
+ *   app.use("/api/notifications", extrasRouter(cfg, store));
+ *   app.use("/api/integrations",  extrasRouter(cfg, store));
+ * 导致交叉路径（/api/integrations/preferences、/api/notifications/status 等）全部可达，
+ * 攻击面翻倍（同一套 authMiddleware 保护、无越权，故定为 P2）。现按前缀拆成两个独立
+ * router 工厂各挂各的；路由集合以客户端真实调用为准（grep -rhno '"/api/...' src/*.js：
+ * notifications 侧 preferences/push/schedules，integrations 侧 status/oauth）。
+ * 守护：verify/router-isolation-check.cjs（交叉路径必须 404 + not_found，合法路由必须仍 200）。
+ *
+ * 契约对齐前端 apiClientModule（/api/notifications/*）；账号数据 CRUD，走 authMiddleware 鉴权。
  */
 "use strict";
 
-function extrasRouter(cfg, store) {
+function notificationsRouter(cfg, store) {
   const express = require("express");
   const router = express.Router();
   const jwt = require("jsonwebtoken");
@@ -72,22 +82,7 @@ function extrasRouter(cfg, store) {
     return ok(res, {});
   });
 
-  // ===== 第三方集成 =====
-  router.get("/status", am, (req, res) => {
-    return ok(res, { integrations: store.listIntegrations() });
-  });
-  // OAuth 回调：code -> token -> 保存（未配置凭据时降级为占位连接）
-  router.get("/oauth/:provider/callback", am, (req, res) => {
-    const provider = String(req.params.provider || "");
-    store.setIntegration(provider, { code: req.query.code || null, connected: true });
-    return ok(res, { connected: true, provider });
-  });
-  router.delete("/oauth/:provider", am, (req, res) => {
-    store.removeIntegration(String(req.params.provider));
-    return ok(res, {});
-  });
-
   return router;
 }
 
-module.exports = extrasRouter;
+module.exports = notificationsRouter;

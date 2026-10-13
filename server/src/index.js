@@ -11,7 +11,11 @@ const express = require("express");
 const cors = require("cors");
 const Store = require("./store");
 const authRouter = require("./auth");
-const extrasRouter = require("./extras");
+/* v3.7.122：原 extrasRouter 同一个实例挂两个前缀（/api/notifications 与 /api/integrations），
+   交叉路径全部可达、攻击面翻倍（审计遗留 P2）。现按前缀拆成两个独立工厂各挂各的，
+   路由集合以客户端真实调用为准；守护见 verify/router-isolation-check.cjs。 */
+const notificationsRouter = require("./notifications");
+const integrationsRouter = require("./integrations");
 const syncRouter = require("./sync");
 const toolsFetchRouter = require("./tools-fetch");
 
@@ -80,8 +84,8 @@ app.use(express.json({ limit: "2mb" }));
 app.get("/api/health", (req, res) => res.json({ ok: true, name: "agent-workbench-auth", version: "3.6.1", time: Date.now() }));
 
 app.use("/api/auth", authRouter(cfg, store));
-app.use("/api/notifications", extrasRouter(cfg, store));
-app.use("/api/integrations", extrasRouter(cfg, store));
+app.use("/api/notifications", notificationsRouter(cfg, store));
+app.use("/api/integrations", integrationsRouter(cfg, store));
 /* v3.7.105：云同步端点。客户端 src/render-overview.js 一直在调 GET/PUT /api/sync/snapshot，
    而 ac1114a 那份后端从未实现 —— 即「部署了后端云同步也不工作」。契约见 src/sync.js 头注释。 */
 app.use("/api/sync", syncRouter(cfg, store));

@@ -34,9 +34,9 @@ function syncRouter(cfg, store) {
   const ok = (res, data) => res.json({ ok: true, data: data || {} });
   const fail = (res, status, error, data) => res.status(status || 400).json({ ok: false, error: error, data: data || {} });
 
-  /* 鉴权中间件：与 auth.js / extras.js 同款。
-     已知重复（第三处）—— 抽公共模块会改动那两个已验证的文件，
-     本轮遵循「只做加法」不动它们；后续如需抽取，注意三处行为必须保持等价。 */
+  /* 鉴权中间件：与 auth.js / notifications.js / integrations.js 同款。
+     已知重复（第四处）—— 抽公共模块会改动那些已验证的文件，
+     本轮遵循「只做加法」不动它们；后续如需抽取，注意各处行为必须保持等价。 */
   const am = (req, res, next) => {
     const h = req.header("authorization") || "";
     const token = h.startsWith("Bearer ") ? h.slice(7) : null;

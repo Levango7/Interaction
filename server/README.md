@@ -15,7 +15,7 @@
 | 项 | 状态 |
 |---|---|
 | 与客户端（`agent-workbench.html`）联调 | ✅ **契约级 + 真机 UI 双通**：契约级 `verify/client-contract-check.cjs` 29/29；真机 UI `_probe/ui-backend-integration.mjs` 19/19（真 Chromium + 真后端 + 真表单，双 context 当两台设备，注册→上传→回读数据文件→跨设备拉取→错误密码负例）。客户端默认仍指向不存在的 `localhost:3001`，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**第三方登录另见 `verify/oauth-check.cjs` 33/33**（假 GitHub provider 全链路 + 微信演示模式全链路；v3.7.113 起 GitHub 未配凭据 → 503 `github_not_configured`，不再 404） |
-| 自动化测试 | ✅ 七个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 29/29、`incremental-check` 54/54、`security-check` 22/22、`tools-fetch-check` 17/17、`oauth-check` 33/33，合计 **173**），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
+| 自动化测试 | ✅ 八个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 29/29、`incremental-check` 54/54、`security-check` 25/25、`tools-fetch-check` 17/17、`oauth-check` 33/33、`router-isolation-check` 17/17，合计 **193**），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
 | 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot` + **增量** `POST /api/sync/changes` / `/resolve`（全量 LWW / 增量含冲突策略，见 `docs/cloud-sync-incremental-contract.md`） |
@@ -33,8 +33,9 @@ node verify/incremental-check.cjs      # 期望 54/54 —— 增量协议：幂�
 node verify/security-check.cjs         # 期望 22/22 —— 速率限制（阈值内正常/超限 429/分桶/可关）+ 审计环（记录/隔离/有界）
 node verify/tools-fetch-check.cjs      # 期望 17/17 —— 抓取代理：代回原文/拒私网与云元数据/重定向每跳重校/体积与超时/401
 node verify/oauth-check.cjs            # 期望 33/33 —— 第三方登录：假 GitHub 全链路（授权/兑换/签发/审计/负例/限流）+ 微信演示模式全链路
+node verify/router-isolation-check.cjs # 期望 17/17 —— 路由隔离：/api/notifications 与 /api/integrations 各挂各的（交叉路径必须 404 + not_found，合法路由必须仍 200，无 token 必须 401）
 ```
-（七个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
+（八个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
 
 **加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败**验证码/锁定**策略
 （已有速率限制，但无限次试错同一口令仍可在线慢速爆破 —— 要彻底堵需账号级失败计数与锁定）、
