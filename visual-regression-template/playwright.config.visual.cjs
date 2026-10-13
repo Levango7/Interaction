@@ -11,10 +11,15 @@
  *   CI 重试 2 次 / 本地 0 次，均与 tests/e2e 主配置同口径 —— 渲染层不变量不该因
  *   配置差异而结果不同。
  *
- * 双态架构适配（Interaction 专属；其他项目自动跳过）：
- *   若项目根存在 tests/e2e/global-setup.cjs（HTML 处于源码态时先拼回交付态），
- *   自动挂为 globalSetup；文件不存在时 globalSetup 为 undefined。
- *   这样模板复制到没有双态架构的项目也能直接跑，无需改配置。
+ * 双态架构适配（Interaction 专属；其他项目自动空转）：
+ *   globalSetup 指向模板桥 helpers/visual-global-setup.cjs —— 它做存在性守卫：
+ *   项目根有 tests/e2e/global-setup.cjs（HTML 源码态时先拼回交付态）就调用它，并在
+ *   **本轮真的拼回过**时写标记文件 verify-out/.visual-injected；没有则该文件的项目
+ *   （非双态架构）整体空转，无需改配置。
+ *   globalTeardown 指向 helpers/visual-global-teardown.cjs —— 与 setup 完全对称：
+ *   读到标记才按文档链顺序抽回（pet-art --extract && src-split --extract --no-backup），
+ *   读完即删；无标记静默跳过。**跑完自动还原源码态，使用者无需手动抽回**，
+ *   「提交前工作区必须源码态」这条铁律不依赖使用者记性。
  *
  * 环境变量：
  *   CI                        —— 重试次数切换（CI=2，本地=0）
@@ -29,13 +34,16 @@ const path = require("path");
 const PROJECT_ROOT = path.resolve(__dirname, "..").replace(/\\/g, "/");
 const appFileUrl = "file:///" + PROJECT_ROOT + "/";
 
-/* Interaction 双态架构：HTML 源码态时先拼回再跑（与主 e2e 同一 globalSetup）。
-   该文件不存在（其他项目）时不挂 globalSetup。 */
-const injectSetup = path.join(PROJECT_ROOT, "tests", "e2e", "global-setup.cjs");
-const globalSetup = fs.existsSync(injectSetup) ? injectSetup : undefined;
+/* 双态架构桥：setup 拼回（仅本轮真拼回时写标记）+ teardown 对称抽回（有标记才抽）。
+   两个桥内部各自做存在性守卫，模板复制到非双态项目时自动空转。 */
+const setupBridge = path.join(__dirname, "helpers", "visual-global-setup.cjs");
+const teardownBridge = path.join(__dirname, "helpers", "visual-global-teardown.cjs");
+const globalSetup = fs.existsSync(setupBridge) ? setupBridge : undefined;
+const globalTeardown = fs.existsSync(teardownBridge) ? teardownBridge : undefined;
 
 module.exports = defineConfig({
   globalSetup,
+  globalTeardown,
   testDir: "./specs",
   testMatch: "**/*.visual.spec.js",
   fullyParallel: false,

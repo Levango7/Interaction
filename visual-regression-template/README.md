@@ -45,6 +45,10 @@ npx playwright test --config=visual-regression-template/playwright.config.visual
 实测值落 `_probe/contrast-matrix.txt` —— 请确保该目录不入库（Interaction 的
 `.gitignore` 已含 `_probe/`；其他项目自行加一行，或改 spec 里 `dumpReport` 的 dir）。
 
+双态架构项目（HTML 分源码态/交付态，如 Interaction）：跑完**自动抽回源码态，无需任何
+手动操作**（globalTeardown 桥只抽回本轮自己拼回的状态；标记文件在 `verify-out/`，
+机制见决策记录 6）。
+
 **首轮定基线**（新项目，第 3 步 c 留空 {} 时）：第 5 步会失败，但失败信息里带每项的
 实测值与建议基线（实测值 × 0.9），同时 `_probe/contrast-matrix.txt` 有全量数据
 （用例先落盘后断言，失败也有数据）。抄进去，重跑至全绿。
@@ -65,6 +69,8 @@ visual-regression-template/
 │   ├── contrast-pairs.cjs         # 【适配层】关键前景/背景配对
 │   ├── contrast-baseline.cjs      # 【适配层】对比度阈值表（实测定基线）
 │   ├── measure.cjs                # 统一测量出口（薄封装，spec 只 require 它）
+│   ├── visual-global-setup.cjs    # globalSetup 桥：拼回 + 写标记（非双态项目空转）
+│   ├── visual-global-teardown.cjs # globalTeardown 桥：有标记才抽回，失败大声报
 │   └── visual-kit/                # 内置内核副本（4 文件，见「内核同步」）
 │       ├── contrast.js            #   WCAG 对比度计算（页面上下文注入）
 │       ├── measure.js             #   applyTheme / readTokens / readPairs / checkOverflow / checkVisible
@@ -120,6 +126,24 @@ Interaction 自己的 `tests/e2e/theme-matrix.spec.js` **不改**（总监确认
 因为主 config 会被 `npm run e2e` 整批跑。本模板有独立 config、只会被显式调用，
 加守卫反而让「跑了一次全 skip」被误读为通过。若把本模板 spec 并入某项目的整批
 e2e 跑，请自行加回守卫。
+
+### 6. 双态项目的拼回/抽回由模板内置闭环（标记文件协议）
+
+双态架构项目（HTML 分源码态/交付态，如 Interaction）跑 e2e 前必须拼回，否则应用 JS
+不在页面里、用例批量假红；跑完若不抽回，工作区停留在拼回态，违反「提交前必须源码态」
+「拼回态禁跑 npm test / lint」两条铁律。模板把这件事做成闭环，不靠使用者记性：
+
+- setup 桥（`helpers/visual-global-setup.cjs`）：调用项目自己的拼回钩子，
+  **仅当本轮真的发生「源码态 → 交付态」跃迁时**写标记文件 `verify-out/.visual-injected`；
+- teardown 桥（`helpers/visual-global-teardown.cjs`）：读到标记才按仓库文档链顺序抽回
+  （`pet-art --extract` 然后 `src-split --extract --no-backup`），读完即删；
+  无标记静默跳过（非双态项目 / 用户本就交付态 / 上轮已抽回）；
+- 只用标记文件、不用模块级变量：Playwright 的 globalSetup/globalTeardown 不保证同进程；
+- 只还原自己改的状态：用户本就停留在交付态时不写标记，teardown 不动他的工作区；
+- 抽回失败大声 `console.error` 并给出人话指引（「请手动 npm run src:extract」），禁止静默；
+- 陈旧标记（上轮 teardown 没跑成，如被 globalTimeout 杀掉）在下一轮被消费并抽回 ——
+  有意的恢复语义，源码态是仓库的提交常态；
+- 非双态项目两个桥整体空转，零配置。
 
 ## 五、项目适配层怎么改
 
@@ -177,7 +201,10 @@ v3.7.121 / `e623188` 起接入 theme-matrix）落地验证：
   同时验证位置无关性与 globalSetup 回退分支；
 - 主题清单 / 配对 / 基线表与 `tests/e2e/theme-matrix.spec.js` 同源同值；
 - 实测对比度与基线逐位一致；pilot 实跑输出与判定过程见当次交付的质量报告
-  （测试工程师「严过关」产出，证据存本地 `verify-out/visual-template/`，不入库）。
+  （测试工程师「严过关」产出，证据存本地 `verify-out/visual-template/`，不入库）；
+- 双态闭环（拼回 + 跑完自动抽回）已实测：跑完不执行任何手动命令，
+  `check-source-state` 即 exit 0、`git status` 无 `M agent-workbench.html`；
+  并做过 teardown 判反的缺陷复现反证（判反后重跑确实滞留拼回态，还原后恢复全绿）。
 
 ## 九、边界与纪律
 
