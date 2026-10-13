@@ -169,11 +169,15 @@ node -e "require('./visual-regression-template/helpers/measure.cjs'); console.lo
 
 ## 八、Pilot 记录（Interaction）
 
-本模板已在 Interaction（v3.7.121+，HEAD `e623188` 之后）落地验证：
+本模板已在 Interaction（版本基线 v3.7.122；内核上游 `tests/e2e/visual-kit/` 自
+v3.7.121 / `e623188` 起接入 theme-matrix）落地验证：
 
-- 用模板自带 config 实跑 `specs/contrast-matrix.visual.spec.js`，3 条用例全 ok；
+- 用模板自带 config 实跑 `specs/contrast-matrix.visual.spec.js`，3 条用例全 ok
+  （exit=0，18.7s）；隔离目录按本 README 步骤干跑同样 3 ok（exit=0，17.5s），
+  同时验证位置无关性与 globalSetup 回退分支；
 - 主题清单 / 配对 / 基线表与 `tests/e2e/theme-matrix.spec.js` 同源同值；
-- 实跑输出与判定过程见当次交付的质量报告（测试工程师「严过关」产出）。
+- 实测对比度与基线逐位一致；pilot 实跑输出与判定过程见当次交付的质量报告
+  （测试工程师「严过关」产出，证据存本地 `verify-out/visual-template/`，不入库）。
 
 ## 九、边界与纪律
 
