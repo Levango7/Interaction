@@ -1,0 +1,40 @@
+# visual-regression.yml.example —— 视觉回归独立 CI job 示例
+# ----------------------------------------------------------------------------
+# 为什么是 .example 后缀（惰性，不激活）：GitHub 只执行 .github/workflows/*.yml，
+# 本文件放在模板 ci/ 下且带 .example 后缀，复制到任何项目都不会自动触发。原因：
+#   ① Interaction 的主 e2e job（.github/workflows/ci.yml 的 e2e）已覆盖 theme-matrix
+#      的渲染层守护，再开一个 visual job 是重复跑同一批 chromium 用例、白烧 CI 分钟；
+#   ② 模板要复制到其余项目，由各项目自行决定激活时机与触发路径；
+#   ③ 视觉回归的合理触发节奏是「可能影响视觉的改动才跑」（见下方 paths），与功能
+#      e2e 的全量触发不同，独立 job 便于单独收敛成本。
+#
+# 激活方式（在目标项目）：复制为 .github/workflows/visual-regression.yml，按需调整：
+#   · paths：默认只在模板自身 / 源码 / 样式改动时触发，可按项目目录增删；
+#   · 若项目没有双态架构（无 tests/e2e/global-setup.cjs），config 会自动跳过拼回，
+#     无需任何改动；「提交物必须是源码态」这类门禁归各自主 CI 管，本 job 不重复；
+#   · 若接入了像素基线插件（baselines/README.md），把下方 run 改成对应的 spec 过滤，
+#     并确认基线 PNG 已入库。
+name: Visual Regression
+
+on:
+  push:
+    branches: [main, master]
+    paths: ['visual-regression-template/**', 'src/**', '**/*.css']
+  pull_request:
+    branches: [main, master]
+    paths: ['visual-regression-template/**', 'src/**', '**/*.css']
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Render-layer invariants (contrast / visibility / overflow)
+        run: npx playwright test --config=visual-regression-template/playwright.config.visual.cjs
