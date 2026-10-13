@@ -104,8 +104,9 @@
 ## 六、明确不做
 
 - `/api/auth/github/status` 轮询端点（客户端不用）；
-- 账号绑定（`extras.js` 的 `/oauth/:provider/callback` 是"已登录用户绑定第三方身份"，
-  与登录是两件事；本轮不动，"GitHub 登录账号 ↔ 已有邮箱账号合并"列为余量）;
+- 账号绑定（`integrations.js` 的 `/oauth/:provider/callback` 是"已登录用户绑定第三方身份"——
+  该路由 2026-10-13 随 `extras.js` 拆分迁入 `integrations.js`（`35b4c73`），行为不变；
+  与登录是两件事，本轮不动，"GitHub 登录账号 ↔ 已有邮箱账号合并"列为余量）;
 - 任何对客户端契约的改动（只细分错误文案）。
 
 ## 七、操作纪律

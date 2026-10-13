@@ -74,3 +74,6 @@ _srcbackup/
 
 # v3.7.42：本地探针/临时分析产物（主题对比度实测数据等）
 _probe/
+
+# v3.7.122：verify-run.mjs 验证日志落盘目录（docs/verification-reliability.md 约定，不进版本库）
+verify-out/

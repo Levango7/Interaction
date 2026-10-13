@@ -212,7 +212,12 @@ userinfo/回环/私网/链路本地/重定向、限大小与超时，同 ics-fet
   默认拒 / 无白名单连回环都拒 / 白名单放行 / 302 跟随与跳私网被拒 / 413 / 504 / 401）；
   客户端 `tests/webfetch-proxy.test.js` **7/7**（含新守护：非 2xx 不当结果）。
 
-### 新发现：路由交叉污染（未修）
+### 新发现：路由交叉污染（✅ 已修 · v3.7.122 / `35b4c73`）
+
+> **状态更新（2026-10-13）**：本条原记「未修 P2」，已由本批修复——`extras.js` 拆为
+> `notifications.js` / `integrations.js` 两个独立 router 工厂，`index.js` 两处挂载各用各的；
+> 新增 `server/verify/router-isolation-check.cjs`（17 条双向断言）并接入 `ci.yml` 的
+> server-verify job（七脚本 → 八脚本，合计 176 → 193 条）。以下为历史发现记录，保留作证据。
 
 `src/index.js` 把**同一个 router 实例**挂了两次：
 
@@ -230,9 +235,13 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 | `/api/notifications/status` | **200** | ❌ 不存在 |
 | `/api/integrations/status` | 200 | 200 ✅ |
 
-**攻击面翻倍**。危害有限（同一套 `authMiddleware` 保护，无越权），故本轮记为 **P2 已知缺陷**，
-未修 —— 修它要把 `extras.js` 拆成 notify / integ 两个 router，属结构性改动，
-而本轮遵循「只做加法」，不动已验证通过的文件。**修法建议**：按前缀拆分 router 后各挂各的。
+**攻击面翻倍**。危害有限（同一套 `authMiddleware` 保护，无越权）。修复时按「客户端真实端点清单」
+（`grep -rhno '"/api/...' src/*.js`，只读）判定两侧路由集合：notifications 侧 5 类
+（preferences / push subscribe+unsubscribe / schedules CRUD）、integrations 侧 2 类
+（status / oauth callback+disconnect），handler 逐字迁移，行为/响应形状/错误码不变
+（client-contract 29/29 回归为证）。新断言双向：交叉路径必须 404+`not_found`（钉错误指纹，
+「被守卫拦下」与「对象不存在」形状不同）、合法路由必须仍 200、无 token 必须 401；
+故障注入（改回同实例挂两处）10/17 转红、精确还原后 17/17 复绿。
 
 ### 新增的守护（含故障注入）
 
