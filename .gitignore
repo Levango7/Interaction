@@ -20,6 +20,7 @@ _syntax_check.js
 _fix_deploy.py
 _scratch/
 baseline*
+!visual-regression-template/baselines/
 test-*.txt
 test-safe.js
 test-onb.txt
