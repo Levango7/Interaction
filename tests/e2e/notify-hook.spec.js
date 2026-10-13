@@ -80,7 +80,10 @@ test.describe("通知通道 · http 源形态（本地服务 / 线上站点）",
     await page.goto(mock.url + "/agent-workbench.html");
     await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
     await page.evaluate(() => { setActive("office"); render(); });
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => {
+      try { const m = document.querySelector("#main"); return !!m && m.children.length > 0 && (m.textContent || "").trim().length > 0; }
+      catch (e) { return false; }
+    }, null, { timeout: 15_000 });
     const proto = await page.evaluate(() => location.protocol);
     expect(proto, "前提：这组必须跑在 http 源上，否则证明的不是这个形态").toBe("http:");
   });
@@ -107,7 +110,9 @@ test.describe("通知通道 · http 源形态（本地服务 / 线上站点）",
     await page.locator("#intcfg_url").fill(FEISHU_HOOK);
     await page.locator("#intcfg_secret").fill("e2e-not-a-real-secret");
     await page.locator("#btnIntCfgGo").click();
-    await page.waitForTimeout(800);
+    /* v3.7.123：原为 waitForTimeout(800)。等的是「验证请求真的发出去了」这个真实条件
+       （seen 是 Node 侧收集的请求数组），不是等一段时长 —— 慢机上 800ms 不够就偶发红。 */
+    await expect.poll(() => seen.length, { timeout: 8_000, message: "点击保存后始终没有发出验证请求" }).toBeGreaterThanOrEqual(1);
     expect(seen.length, "连接应当发出过一次验证请求（说明链路真的接到底）").toBeGreaterThanOrEqual(1);
     expect(seen[0]).toMatch(/^https:\/\/open\.feishu\.cn\/open-apis\/bot\/v2\/hook\//);
     const got = await statusOf(page, "飞书");
@@ -125,7 +130,9 @@ test.describe("通知通道 · http 源形态（本地服务 / 线上站点）",
     expect(await page.evaluate(() => notifyHookGet("feishu").configured), "前提：已连接").toBe(true);
     const before = seen.length;
     await page.evaluate(() => { notifySystem("每日播报", "今日待处理 2 项", "daily"); });
-    await page.waitForTimeout(700);
+    /* v3.7.123：原为 waitForTimeout(700)。等的是「fan-out 的那条请求被观察到」这个真实条件，
+       不是等一段时长。 */
+    await expect.poll(() => seen.length, { timeout: 8_000, message: "notifySystem 始终没有扇出请求" }).toBeGreaterThan(before);
     expect(seen.length, "notifySystem 必须经通道扇出一条").toBeGreaterThan(before);
     const body = await page.evaluate(() => JSON.stringify(notifyHookState()));
     expect(body, "事件类别开关要在内存态里").toMatch(/daily/);
@@ -137,9 +144,14 @@ test.describe("通知通道 · http 源形态（本地服务 / 线上站点）",
     await page.evaluate(async (u) => { await notifyHookConnect("feishu", { url: u, secret: "" }); }, FEISHU_HOOK);
     expect(await page.evaluate(() => notifyHookGet("feishu").configured)).toBe(true);
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(1200);
+    await page.waitForFunction(() => {
+      try { return document.querySelectorAll("#side .nav-item").length >= 17; } catch (e) { return false; }
+    }, null, { timeout: 15_000 });
     await page.evaluate(() => { setActive("office"); render(); });
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => {
+      try { const m = document.querySelector("#main"); return !!m && m.children.length > 0 && (m.textContent || "").trim().length > 0; }
+      catch (e) { return false; }
+    }, null, { timeout: 15_000 });
     const got = await (async () => {
       await page.evaluate(() => document.querySelector('[data-set-tab="set-integration"]').click());
       return { s: await statusOf(page, "飞书"), configured: await page.evaluate(() => notifyHookGet("feishu").configured), leak: await leakKeys(page) };
@@ -154,6 +166,9 @@ test.describe("通知通道 · http 源形态（本地服务 / 线上站点）",
     await openConfigDialog(page, "飞书");
     await page.locator("#intcfg_url").fill("http://evil.example.com/hook/x");   /* 非 https */
     await page.locator("#btnIntCfgGo").click();
+    /* 保留固定 sleep（v3.7.123 复核）：**反向断言**（「一个请求都不该发出」）
+       必须留一个真实观察窗口，否则「还没来得及发」会被误判成「没发」。
+       反向断言不能改判别式等待 —— 判别式等的是「某条件成立」，而这里要证明的是「始终不成立」。 */
     await page.waitForTimeout(600);
     expect(seen, "非 https 地址一个请求都不该发出").toEqual([]);
     expect(await leakKeys(page)).toEqual([]);
@@ -193,7 +208,10 @@ test.describe("通知通道 · file:// 形态（双击本地文件）", () => {
     await page.goto(FILE_URL);
     await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
     await page.evaluate(() => { setActive("office"); render(); });
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => {
+      try { const m = document.querySelector("#main"); return !!m && m.children.length > 0 && (m.textContent || "").trim().length > 0; }
+      catch (e) { return false; }
+    }, null, { timeout: 15_000 });
     const proto = await page.evaluate(() => location.protocol);
     expect(proto, "前提：这组必须真的跑在 file:// 上").toBe("file:");
   });

@@ -659,7 +659,13 @@ function renderTasksPage(){
     $$("#main [data-tasks-done]").forEach(chk=>{
       chk.onchange = ()=>{
         const id = chk.getAttribute("data-tasks-done");
-        if(chk.checked && typeof completeTask==="function"){ completeTask(id); }
+        /* v3.7.123 修：勾完只写数据、不刷新 —— 完成的任务仍挂在「待办」列表里，
+           要切走再切回来才消失（与 v3.1.2「死按钮」同族：操作生效了但界面没跟上）。
+           补一次重渲染。注意必须**先** completeTask 再渲染：
+           completeTask 内部会 runLinks()，可能按联动规则生成新任务，先渲染会漏掉它们。 */
+        if(chk.checked && typeof completeTask==="function"){
+          if(completeTask(id)) renderTasksPage();
+        }
       };
     });
     $$("#main .todo-row .todo-title").forEach(el=>{

@@ -44,7 +44,15 @@ async function openApp(page, { apiBase, appBase, fakeLogin = false } = {}) {
   }, [apiBase, fakeLogin]);
   await page.goto((appBase || mock.url) + "/agent-workbench.html");
   await page.waitForSelector("#side", { timeout: 15_000 });
-  await page.waitForTimeout(600);
+  /* v3.7.123：原为 waitForTimeout(600)。等的是「侧栏 nav-item 异步注入完成」这个真实条件
+     （renderSide 实测 0 → ~30ms → 17），不是等一段时长 —— 固定 sleep 慢机不够、快机白等。 */
+  await page.waitForFunction(
+    () => {
+      try { return document.querySelectorAll("#side .nav-item").length >= 17; } catch (e) { return false; }
+    },
+    null,
+    { timeout: 15_000 }
+  );
 }
 
 const login = (page) => page.evaluate(() => window.apiLogin("sync-test@example.com", "pw12345"));

@@ -58,9 +58,9 @@
 | `render` | `render-entry` | 16 |
 | `getActiveTasks` | `data-rw` | 15 |
 | `getTasks` | `data-rw` | 15 |
+| `UI_ICONS` | `core` | 13 |
 | `active` | `data-links` | 12 |
 | `getRec` | `data-rw` | 12 |
-| `UI_ICONS` | `core` | 11 |
 | `setTasks` | `data-rw` | 10 |
 | `setActive` | `data-links` | 10 |
 | `getLinks` | `data-links` | 9 |

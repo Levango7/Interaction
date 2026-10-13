@@ -2,7 +2,12 @@
 /* ---------- 渲染：使用指南 modal ---------- */
 // helpSection(id, title, content) — 生成一个可折叠章节；id==="快速上手" 时默认展开
 function helpSection(id, title, content){
-  return `<details class="help-section"${id==="快速上手"?" open":""}><summary>${title}</summary><div class="help-content">${content}</div></details>`;
+  /* v3.7.123 修：默认展开的判据原先写的是 `id==="快速上手"`，而这里的第一参数是 **id**
+     （"quickStart"），不是标题 —— 于是条件恒假，**没有任何章节默认展开**，与函数上方
+     「3 步开始使用」的设计意图相反（新用户打开说明页看到的是 11 个全折叠的抽屉）。
+     判据改为比对 id。注意：t() 在切到英文时标题会变成 "Quick Start"，
+     所以**只能**比对 id，不能比对 title —— 这正是原写法踩的坑。 */
+  return `<details class="help-section"${id==="quickStart"?" open":""}><summary>${title}</summary><div class="help-content">${content}</div></details>`;
 }
 
 // renderHelp() — 渲染使用指南页面（10 章节，内联内容，details 原生折叠）
@@ -37,13 +42,16 @@ function renderHelp(){
           </ol>
         `)}
         ${helpSection("scenes", t("help.scenes", "场景说明"), `
-          <p><b data-i18n="help.scenesTitle">6 场景</b>：办公 / 数据 / 设计 / 学习 / 编程 / 生活</p>
+          <p><b data-i18n="help.scenesTitle">7 场景</b>：办公 / 数据 / 设计 / 学习 / 编程 / 生活 / 健康</p>
           <p><b data-i18n="help.sceneOffice">办公</b>（蓝色）：会议纪要、工作任务、周报。AI 帮你梳理任务、润色邮件。</p>
           <p><b data-i18n="help.sceneData">数据</b>（青色）：数据记录、指标快照、分析结论。AI 帮数据清洗与洞察提炼。</p>
           <p><b data-i18n="help.sceneDesign">设计</b>（粉色）：作品记录、灵感板、视觉设计。AI 帮配色构图与创意激发。</p>
           <p><b data-i18n="help.sceneLearning">学习</b>（橙色）：学习资料 + SM-2 间隔复习。AI 帮制定学习计划。</p>
           <p><b data-i18n="help.sceneCoding">编程</b>（绿色）：代码片段、工程任务。AI 给可运行代码和架构建议。</p>
           <p><b data-i18n="help.sceneLife">生活</b>（紫色）：日常事务、运动/体重/睡眠/喝水记录。AI 帮打理健康与琐事。</p>
+          <!-- v3.7.123：补「健康」——v3.5.2 起内置场景已是 7 个（补 health），
+               但说明页的文案仍停在 6 个，属文档漂移（与「场景清单三处硬编码」同源）。 -->
+          <p><b data-i18n="help.sceneHealth">健康</b>（绿色）：体检指标、用药与作息记录。AI 帮看趋势与提醒复查。</p>
         `)}
         ${helpSection("chain", t("help.chain", "场景联动"), `
           <p data-i18n="help.chainIntro">完成任务可以自动触发跨场景的奖励/后续任务，形成正反馈闭环：</p>

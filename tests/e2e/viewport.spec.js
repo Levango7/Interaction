@@ -17,6 +17,11 @@
  * 守护策略同其它 e2e：默认跳过，E2E=1 才跑。
  */
 const { test, expect } = require("./_fixture");
+/* v3.7.123：场景清单统一消费 helpers/scene-list.cjs。
+   改造前本文件 :314 与 :373 各写死 7 个场景，分别漏掉 code 与 design ——
+   即「表单加号贴右缘」从未在 code 场景验过、「窄屏触控等高」从未在 design 场景验过。
+   换成 ALL_SCENES 后两处都补齐到 8 个（含 finance），只增不减。 */
+const { ALL_SCENES } = require("./helpers/scene-list.cjs");
 
 const APP_URL = "./agent-workbench.html";
 
@@ -109,7 +114,7 @@ test.describe("窄屏表单与卡片不变量", () => {
     for (const vw of [375, 768, 1280]) {
       await page.setViewportSize({ width: vw, height: 900 });
       await page.evaluate(() => { setActive("office"); render(); });
-      await page.waitForTimeout(350);
+      await page.waitForFunction(() => { try { return !!document.querySelector("#taskForm"); } catch (e) { return false; } }, null, { timeout: 15_000 });
       /* 造一条任务，让看板卡片出现（按钮才可测） */
       await page.evaluate(() => {
         const f = document.querySelector("#taskForm");
@@ -119,7 +124,9 @@ test.describe("窄屏表单与卡片不变量", () => {
         const b = f.querySelector('button[type="submit"], .addbtn');
         if (b) b.click();
       });
-      await page.waitForTimeout(500);
+      /* v3.7.123：原为 waitForTimeout(500)。等的是看板真的出现这张卡片（不是空列表），
+         不是等一段时长。 */
+      await page.waitForFunction(() => { try { return document.body.textContent.indexOf("e2e-响应式检查") >= 0; } catch (e) { return false; } }, null, { timeout: 15_000 });
 
       const r = await page.evaluate((width) => {
         const out = { vw: width };
@@ -168,7 +175,8 @@ test.describe("窄屏表单与卡片不变量", () => {
 
       /* streak 徽章在总览页 */
       await page.evaluate(() => { setActive("overview"); render(); });
-      await page.waitForTimeout(900);
+      /* v3.7.123：原为 waitForTimeout(900)。等的是 streak 徽章真的渲染出来。 */
+      await page.waitForFunction(() => { try { return document.querySelectorAll(".streak-badge").length > 0 || !!document.querySelector(".hc-streak-inner"); } catch (e) { return false; } }, null, { timeout: 15_000 });
       const st = await page.evaluate(() => {
         const badges = [...document.querySelectorAll(".streak-badge")];
         const inner = document.querySelector(".hc-streak-inner");
@@ -251,7 +259,7 @@ test.describe("提示带 · 加号 · 面板高亮不变量", () => {
     for (const vw of [375, 768, 1280]) {
       await page.setViewportSize({ width: vw, height: 900 });
       await page.evaluate(() => { setActive("office"); render(); });
-      await page.waitForTimeout(350);
+      await page.waitForFunction(() => { try { return !!document.querySelector("#taskForm"); } catch (e) { return false; } }, null, { timeout: 15_000 });
 
       /* ① toast 带 vs 常驻工具行 */
       const t = await page.evaluate(() => {
@@ -311,7 +319,7 @@ test.describe("提示带 · 加号 · 面板高亮不变量", () => {
   test("资料库表单的加号在奇偶字段数与全断点下都贴表单右缘", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
-    const SCENES = ["design", "study", "data", "life", "health", "finance", "office"];
+    const SCENES = ALL_SCENES;
     for (const vw of [375, 521, 768, 1023, 1440]) {
       await page.setViewportSize({ width: vw, height: 900 });
       const { rows, errors } = await page.evaluate(async (scenes) => {
@@ -370,7 +378,7 @@ test.describe("窄屏同一行控件必须等高", () => {
   });
 
   const GRID = ".tool-form-grid, .form-row, .set-field, .tool-filter-bar, .chain-add-row, .btn-row";
-  const SCENES = ["data", "office", "study", "life", "health", "finance", "code"];
+  const SCENES = ALL_SCENES;
 
   for (const vw of [375, 767]) {
     test(`≤767 触控规则覆盖所有表单可见控件（${vw}px 全场景扫描）`, async ({ page }) => {

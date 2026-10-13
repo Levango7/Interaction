@@ -17,6 +17,10 @@
  * 默认跳过，E2E=1 才跑。只在 desktop 项目跑（窄屏那条在用例内部自己改视口）。
  */
 const { test, expect } = require("./_fixture");
+/* v3.7.123：原先这里 5 处 `waitForTimeout(1200/600/1000/900/1000)` 等启动 ——
+   固定 sleep 是本仓 flaky 的共性根因（慢机不够、快机白等）。等的是同一件事：
+   renderSide 把侧栏 nav-item 异步注入完（实测 0 → ~30ms → 17）。改成判别式等待。 */
+const { waitSideNav } = require("./helpers/wait-settled.cjs");
 
 const APP_URL = "./agent-workbench.html";
 
@@ -30,7 +34,7 @@ test.describe("工具箱 23 页冒烟", () => {
 
     await page.goto(APP_URL);
     await page.waitForSelector("#side", { timeout: 15_000 });
-    await page.waitForTimeout(1200);
+    await waitSideNav(page);
 
     const ids = await page.evaluate(() => Object.keys(TOOL_APPS));
     /* 覆盖面的守门员：清单为空说明取数方式坏了，此时"全绿"毫无意义 */
@@ -87,7 +91,7 @@ test.describe("工具箱 23 页冒烟", () => {
     await page.goto(APP_URL);
     await page.waitForSelector("#side", { timeout: 15_000 });
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.waitForTimeout(600);
+    await waitSideNav(page);
 
     const ids = await page.evaluate(() => Object.keys(TOOL_APPS));
     const overflow = [];
@@ -107,7 +111,7 @@ test.describe("工具箱 23 页冒烟", () => {
     page.on("pageerror", (e) => errors.push(e.message.split("\n")[0].slice(0, 140)));
     await page.goto(APP_URL);
     await page.waitForSelector("#side", { timeout: 15_000 });
-    await page.waitForTimeout(1000);
+    await waitSideNav(page);
 
     const ids = await page.evaluate(() => Object.keys(TOOL_APPS));
     await page.evaluate(async (list) => {
@@ -116,7 +120,7 @@ test.describe("工具箱 23 页冒烟", () => {
       const back = document.getElementById("toolStubBack");
       if (back) back.click();
     }, ids);
-    await page.waitForTimeout(900);
+    await waitSideNav(page);
 
     expect(errors, "连续切换 23 个工具页出现报错：" + errors.join(" | ")).toEqual([]);
     const stillTool = await page.evaluate(() => ({
@@ -134,7 +138,7 @@ test.describe("工具箱 23 页冒烟", () => {
        不含末表达式值 —— 别按"返回值"写断言（第一版就把 console 输出误读成了返回值）。 */
     await page.goto(APP_URL);
     await page.waitForSelector("#side", { timeout: 15_000 });
-    await page.waitForTimeout(1000);
+    await waitSideNav(page);
 
     const ok = await page.evaluate(async () => JSON.parse(await execToolAuto("code_run", { code: "console.log(6*7); console.log('hi');" })));
     expect(ok.ok, "code_run 应执行成功，实际：" + JSON.stringify(ok)).toBe(true);

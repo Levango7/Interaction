@@ -1,3 +1,65 @@
+## [v3.7.123] - 2026-10-13
+
+**补上 v3.7.122 明确延后的两项：测试覆盖阶段 2（四个薄页面的业务级断言）+ flaky 清理（固定 sleep → 判别式等待）。**
+
+- **测试覆盖阶段 2：新增 `tests/e2e/thin-pages.spec.js`（5 条 · 业务级）**
+  与 `nav-pages-smoke` 的分工：后者守 17 页的**渲染级**不变量（能打开/有文本/有控件/无报错/
+  无残渣/不溢出）；本 spec 守**页面显示 == 数据源、操作真的改变状态**——
+  一个页面可以渲染得漂漂亮亮而业务是错的，那四类缺陷在渲染级断言下全绿。
+  · **商店**：卡片数与 `BUILTIN_PLUGINS` 对账；切「场景」分类后**每张卡都必须带「提供场景」**
+    （`_pluginCategory` 的判据正是有无 scenarios，分类与内容必须自洽——只断言"数量变了"是弱断言）；
+    **启用/禁用往返**都验（点启用 → `getPlugin(id).enabled===true` 且卡片出现「● 启用中」，
+    再点禁用 → 回到 false）；「← 主页」真跳转（v3.1.2 死按钮同族回归）。
+  · **场景联动**：4 个 tab 逐一切且内容对应；核心是「联动状态」页的**总规则/启用规则 KPI
+    必须等于 `getLinks()` 真值**——历史上这里调用了一个不存在的函数、被 typeof 守卫兜成空数组，
+    页面恒显示 0 条而渲染完全正常，只有这种对账抓得到。
+  · **时间轴**：14 天列 / 恰好 1 个 `.today` / 泳道数 = 内置场景数 / 图例 3 类点；
+    `completeTask()` 后事件流 +1 且页头「N 条事件」同步。
+  · **说明**：11 章节、首章默认展开、场景段覆盖 ORDER 全部内置场景（文档漂移守卫）。
+  · **任务**：看板三列计数之和 = 数据源条数、卡片数 = 列头计数之和；待办视图行数 = 未完成数；
+    勾选完成后**真的写回** `status==="done"` 且行数 -1。
+  **故障注入双证**：撤掉「勾选后重渲染」修复 → 任务页红（"行数没减一，仍 3"）；
+  撤掉「首章默认展开」修复 → 说明页红（"11 个章节全折叠"）；还原后 5/5 复绿。
+- **本轮由新覆盖抓出并修掉的 3 个真实缺陷**
+  1. `src/ui-guide.js` `helpSection()`：默认展开判据写的是 `id==="快速上手"`，而第一参数是 **id**
+     （`"quickStart"`）不是标题 → 条件恒假，**11 个章节全部折叠**，与「3 步开始使用」意图相反。
+     改为比对 id（且**只能**比对 id——切英文后标题会变 "Quick Start"，这正是原写法踩的坑）。
+  2. `src/render-overview.js` 待办视图：勾选完成只写数据、**不重渲染** → 完成的任务仍挂在
+     「待办」列表里，要切走再回来才消失（与 v3.1.2 死按钮同族）。补 `completeTask(id)` 成功后
+     `renderTasksPage()`；顺序必须是**先 completeTask 再渲染**——它内部 `runLinks()`
+     可能按联动规则生成新任务，先渲染会漏掉。
+  3. 说明页「场景说明」段停在 **6 场景**且漏掉「健康」——v3.5.2 起内置场景已是 7 个。
+     补文案 + 中英 i18n（`help.scenesTitle` 6→7、新增 `help.sceneHealth`）。
+- **flaky 清理：21 处固定 `waitForTimeout` → 判别式等待**
+  新增 `tests/e2e/helpers/wait-settled.cjs`（`waitSideNav` / `waitMainRendered`）。
+  根因是同一个：**渲染是异步的**（侧栏 nav-item 由 `renderSide` 异步注入，实测 0→~30ms→17；
+  场景页在 `setActive+render` 之后才挂内容），等"一段时间"两头不讨好——慢机不够（偶发红）、
+  快机白等。覆盖：`toolbox` 5 处、`notify-hook` 5 处（其中 2 处改 `expect.poll` 等"请求被观察到"）、
+  `viewport` 4 处、`sync-contract` 1 处、上一批已改的 `i18n` 6 处。
+  **保留 26 处并写明理由**：`form-controls`（日期浮层/焦点/滚动等动画绑定）、
+  `integration-push`（抽屉自动收起动画）、`workflow`（微小兜底）。
+  **反向断言（"不得发请求"/"不得写存储"）必须保留观察窗口**——判别式等的是"某条件成立"，
+  而要证明的是"始终不成立"，改判别式会把"还没来得及发生"误判成"没发生"（已在 notify-hook ⑤
+  就地写明这条方法论）。
+- **场景清单三处硬编码 → 单一事实来源**（新增 `tests/e2e/helpers/scene-list.cjs`）
+  改造前 `theme-matrix` 8 项 / `viewport:314` 7 项（漏 `code`）/ `viewport:373` 7 项（漏 `design`）
+  三份互不一致——**漏掉的场景在对应断言组里永远不被检查**。现统一消费 `ALL_SCENES`（7 内置 +
+  预置 `finance`），两处 viewport 各补回 1 个场景（只增不减）。
+  新增 `tests/e2e/scene-contract.spec.js`（3 条机械对账）：运行时 `ORDER` 与快照**逐项同序**一致
+  （顺序=侧栏显示序与滑动手势序，是契约）；`SCENARIOS` **每一个**键都必须有 `--sc-<k>` 令牌
+  （反向查运行时全集，新增场景漏配令牌即红）；预置场景 `finance` 定义与令牌在、但默认不进 `ORDER`。
+  **踩坑记录**：`file://` **已不再挂载 `window.__test` 桥**（安全收紧，避免本地双击打开时
+  devtools 能摸到内部函数），e2e 只能靠**顶层裸标识符**（`ORDER` / `SCENARIOS`）取值——
+  这正是现存 spec 全都直接写 `setActive()` / `_buildSideMenu()` 的原因。首次按桥取值时三条全红
+  （"读不到就判失败"的设计生效），改裸标识符后 3/3 绿。
+  **故障注入双证**：把 `ORDER` 换序 → ①红（精确打出"运行时 office>design>data… vs 快照…"）；
+  给 `SCENARIOS` 塞一个无令牌的键 → ②红（点名 `driftprobe`）；还原后 3/3 复绿，
+  且 `src/` 与 `agent-workbench.html` 均回到 HEAD（`git diff` 为空）。
+- **验证**：门禁链 12 项全绿（含 `lint` 四合一、`lint:layers/tokens/empty-catch/icons`、
+  `check:modules` 无新增、`pet:check`）；`theme-matrix` 5/5、`viewport` 6/6、`thin-pages` 5/5、
+  `scene-contract` 3/3、`notify-hook`+`toolbox`+`sync-contract` 18/18；
+  多数用例因判别式等待**比原来更快**（toolbox 2.3s vs 原 7s 级）。
+
 ## [v3.7.122] - 2026-10-13
 
 **三线收官（用户拍板「前五个做吧」的 4/5 项）：server 路由交叉污染修复 + 跨项目视觉回归模板落地 + 18 处字符字形图标全量 SVG 化。**

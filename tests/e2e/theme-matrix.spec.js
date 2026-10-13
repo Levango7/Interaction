@@ -23,6 +23,10 @@ const { test, expect } = require("./_fixture");
 
 /* v3.7.122：核心逻辑抽到 visual-kit（跨项目复用），本文件只保留项目特定配置与断言 */
 const { CONTRAST_INJECT, ABS_FLOOR, TOLERANCE, applyTheme, readTokens, readPairs, checkOverflow, dumpReport } = require("./visual-kit/index.js");
+/* v3.7.123：场景清单不再本文件写死 —— 原先 theme-matrix / viewport(:314) / viewport(:373)
+   三处各写一份且互不一致（viewport 两处各漏一个场景）。统一消费 helpers/scene-list.cjs，
+   清单漂移由 scene-contract.spec.js 与运行时 ORDER 对账兜住。 */
+const { ALL_SCENES } = require("./helpers/scene-list.cjs");
 
 const APP_URL = "./agent-workbench.html";
 
@@ -131,7 +135,8 @@ test.describe("10 套主题渲染层不变量", () => {
      修复后：--sc-<场景> 每套主题各有一份达标值，-text 系列专供「色当字」的场景。
      这条断言把它们钉死在 4.5（新增主题 / 改配色漏配一处即红）。 */
   test("场景色与 -text 系列令牌每套主题都达标（≥4.5）", async ({ page }) => {
-    const SCENES = ["office", "design", "study", "data", "code", "life", "health", "finance"];
+    /* ALL_SCENES = 7 内置 + finance（预置插件场景，令牌无条件存在，故一并钉住） */
+    const SCENES = ALL_SCENES;
     const SEM = ["accent", "danger", "warn", "ok"];
     const fails = [];
     for (const th of THEMES) {

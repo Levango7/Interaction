@@ -100,7 +100,10 @@ module.exports = defineConfig({
     {
       name: "tablet-768x1024",
       use: { ...devices["Desktop Chrome"], channel: undefined, viewport: { width: 768, height: 1024 } },
-      testIgnore: /mobile\.spec\.js|theme-matrix\.spec\.js|i18n\.spec\.js|sync-contract\.spec\.js|toolbox\.spec\.js|rag-hybrid\.spec\.js/,
+      /* v3.7.123：scene-contract 与视口无关（查的是场景清单与令牌契约），同 theme-matrix 只在 desktop 跑一次 */
+      /* v3.7.123：scene-contract / thin-pages 与视口无关（前者查场景清单契约，后者查页面与数据源对账），
+         同 theme-matrix 只在 desktop 跑一次 */
+      testIgnore: /mobile\.spec\.js|theme-matrix\.spec\.js|scene-contract\.spec\.js|thin-pages\.spec\.js|i18n\.spec\.js|sync-contract\.spec\.js|toolbox\.spec\.js|rag-hybrid\.spec\.js/,
     },
     {
       name: "mobile-375x667",

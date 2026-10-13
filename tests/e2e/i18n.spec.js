@@ -47,7 +47,14 @@ test.describe("i18n 端到端", () => {
     await page.evaluate(() => localStorage.setItem("wb_agent_lang", "en"));
     await page.reload();
     await page.waitForSelector("#side", { timeout: 15_000 });
-    await page.waitForTimeout(1500);
+    /* v3.7.122：原为 waitForTimeout(1500)，属「固定睡眠」flaky 共性根因。
+       它真正等的是「应用启动完成」：语言字典已求值 + renderSide 把侧栏注入完
+       （MEMORY §10：nav-item 由 renderSide 异步注入，loadApp 后 0 个 → 约 30ms 才 17 个）。
+       改成判别式等待这个真实条件：不等固定时间，条件成立即走。 */
+    await page.waitForFunction(
+      () => { try { return typeof _currentLang !== "undefined" && _currentLang === "en" && document.querySelectorAll("#side .nav-item").length > 0; } catch (e) { return false; } },
+      null, { timeout: 15_000 },
+    );
 
     const st = await page.evaluate(() => ({
       cur: _currentLang,
@@ -74,12 +81,22 @@ test.describe("i18n 端到端", () => {
     await page.evaluate(() => localStorage.setItem("wb_agent_lang", "en"));
     await page.reload();
     await page.waitForSelector("#side", { timeout: 15_000 });
-    await page.waitForTimeout(1200);
+    /* v3.7.122：原 waitForTimeout(1200) → 判别式等待「启动完成」（同用例①的理由） */
+    await page.waitForFunction(
+      () => { try { return typeof _currentLang !== "undefined" && _currentLang === "en" && document.querySelectorAll("#side .nav-item").length > 0; } catch (e) { return false; } },
+      null, { timeout: 15_000 },
+    );
     /* render() 有 12 条提前 return 的路由：收口钩子若被挪回 try 尾部，只有场景页会幸免 */
     const routes = ["overview", "stats", "tasks", "toolbox", "store", "timeline", "recycle", "chainpage", "office", "data", "design", "code"];
     for (const r of routes) {
       await page.evaluate((vv) => { try { setActive(vv); render(); } catch (e) { /* 未知路由忽略 */ } }, r);
-      await page.waitForTimeout(300);
+      /* v3.7.122：原 waitForTimeout(300) → 判别式等待「该路由已把内容渲染进主区」。
+         判据只验「#main 有子节点」（路由渲染完成），不断言翻译质量——
+         翻译质量由下方 expect 负责，避免等待条件与断言同语反复（假绿）。 */
+      await page.waitForFunction(
+        () => { try { return (document.querySelector("#main")?.children.length || 0) > 0; } catch (e) { return false; } },
+        null, { timeout: 5_000 },
+      );
       const bad = await page.evaluate(() => {
         const R = /[一-鿿]/;
         const n = [...document.querySelectorAll("[data-i18n]")];
@@ -97,7 +114,11 @@ test.describe("i18n 端到端", () => {
     await page.evaluate(() => localStorage.setItem("wb_agent_lang", "zh"));
     await page.reload();
     await page.waitForSelector("#side", { timeout: 15_000 });
-    await page.waitForTimeout(1200);
+    /* v3.7.122：原 waitForTimeout(1200) → 判别式等待「启动完成 + 中文常量已求值」 */
+    await page.waitForFunction(
+      () => { try { return typeof SCENARIOS !== "undefined" && SCENARIOS.office && /[一-鿿]/.test(SCENARIOS.office.name) && document.querySelectorAll("#side .nav-item").length > 0; } catch (e) { return false; } },
+      null, { timeout: 15_000 },
+    );
     expect(await page.evaluate(() => SCENARIOS.office.name)).toBe("办公");
 
     const found = await page.evaluate(() => !!document.querySelector("#cfgLang"));
@@ -109,7 +130,12 @@ test.describe("i18n 端到端", () => {
     });
     /* 切换应触发整页重载；重载后常量才是新语言 */
     await page.waitForFunction(() => { try { return typeof _currentLang !== "undefined" && _currentLang === "en"; } catch (e) { return false; } }, null, { timeout: 15_000 });
-    await page.waitForTimeout(800);
+    /* v3.7.122：原 waitForTimeout(800) —— 它等的是「切换触发的整页重载后侧栏重新注入完」
+       （上面那条 waitForFunction 只验到 _currentLang 已切，此时 renderSide 可能还没跑完）。 */
+    await page.waitForFunction(
+      () => { try { return document.querySelectorAll("#side .nav-item").length > 0; } catch (e) { return false; } },
+      null, { timeout: 15_000 },
+    );
     const after = await page.evaluate(() => ({ cur: _currentLang, scene: SCENARIOS.office.name, stored: localStorage.getItem("wb_agent_lang") }));
     expect(after.stored).toBe("en");
     expect(after.cur).toBe("en");
@@ -121,7 +147,11 @@ test.describe("i18n 端到端", () => {
     await page.evaluate(() => localStorage.setItem("wb_agent_lang", "zh"));
     await page.reload();
     await page.waitForSelector("#side", { timeout: 15_000 });
-    await page.waitForTimeout(1200);
+    /* v3.7.122：原 waitForTimeout(1200) → 判别式等待「启动完成」（同用例②的理由） */
+    await page.waitForFunction(
+      () => { try { return typeof SCENARIOS !== "undefined" && SCENARIOS.office && /[一-鿿]/.test(SCENARIOS.office.name) && document.querySelectorAll("#side .nav-item").length > 0; } catch (e) { return false; } },
+      null, { timeout: 15_000 },
+    );
     const st = await page.evaluate(() => ({ scene: SCENARIOS.office.name, feat: (SCENE_FEATURES.office || [])[0].label }));
     expect(/[一-鿿]/.test(st.scene), `中文模式下场景名反而出英文了：${st.scene}`).toBe(true);
     expect(/[一-鿿]/.test(st.feat), `中文模式下功能 tab 名出英文了：${st.feat}`).toBe(true);
