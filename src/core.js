@@ -12,6 +12,11 @@ const UI_ICONS = {
   overview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V3m0 18h18M7 17l4-5 3 3 5-7"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
+  /* v3.7.122：关闭（✕ 的矢量化替代）。存量 18 处关闭按钮此前直接写字形 ✕（字符图标门禁
+     lint-icons 的 P0 基线主体）—— 字形随字体走、跨平台渲染宽度不一致，且不可参与
+     stroke-width / currentColor 描边与对齐规范（同 v3.7.120 list 的整改理由）。
+     尺寸由各调用点的内联 span 按图标档位令牌给（var(--icon-sm/set/md/lg)），不写裸 px。 */
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1.2 13.5h8.6L17.5 7M10 11v6M14 11v6"/></svg>',
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>',
   chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg>',
@@ -2503,7 +2508,7 @@ const MESSAGES = {
     "p4.html.pluginCardSection": "<div class=\"plugin-section\"><b>提供的卡片：</b><ul>",
     "p4.html.pluginConfigSection": "<div class=\"plugin-section\"><b>配置（JSON）：</b>",
     "p4.html.pluginDetailBtn": "\" data-sc=\"muted\">详情</button>",
-    "p4.html.pluginDetailClose": "<button type=\"button\" class=\"chain-share-close\" id=\"pluginDetailClose\" aria-label=\"关闭\">✕</button>",
+    "p4.html.pluginDetailClose": "<button type=\"button\" class=\"chain-share-close\" id=\"pluginDetailClose\" aria-label=\"关闭\"><span style=\"display:flex;width:var(--icon-lg);height:var(--icon-lg)\">{close}</span></button>",
     "p4.html.pluginNone": "<div class=\"hint\" class=\"u-p2-text-muted\">暂无已注册插件</div>",
     "p4.html.pluginRuleSection": "<div class=\"plugin-section\"><b>提供的链规则：</b><ul>",
     "p4.html.pluginSaveConfigBtn": "<button type=\"button\" class=\"addbtn sm\" id=\"pluginConfigSave\" data-sc=\"accent\" class=\"u-mt-1\">保存配置</button>",
@@ -6386,7 +6391,7 @@ const MESSAGES = {
     "p4.html.pluginCardSection": "<div class=\"plugin-section\"><b>Cards provided:</b><ul>",
     "p4.html.pluginConfigSection": "<div class=\"plugin-section\"><b>Configuration (JSON):</b>",
     "p4.html.pluginDetailBtn": "\" data-sc=\"muted\">Details</button>",
-    "p4.html.pluginDetailClose": "<button type=\"button\" class=\"chain-share-close\" id=\"pluginDetailClose\" aria-label=\"Close\">✕</button>",
+    "p4.html.pluginDetailClose": "<button type=\"button\" class=\"chain-share-close\" id=\"pluginDetailClose\" aria-label=\"Close\"><span style=\"display:flex;width:var(--icon-lg);height:var(--icon-lg)\">{close}</span></button>",
     "p4.html.pluginNone": "<div class=\"hint\" class=\"u-p2-text-muted\">No plugins registered</div>",
     "p4.html.pluginRuleSection": "<div class=\"plugin-section\"><b>Chain rules provided:</b><ul>",
     "p4.html.pluginSaveConfigBtn": "<button type=\"button\" class=\"addbtn sm\" id=\"pluginConfigSave\" data-sc=\"accent\" class=\"u-mt-1\">Save configuration</button>",

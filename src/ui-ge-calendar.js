@@ -766,7 +766,7 @@ function renderCustomDashboard(editMode){
     html += '<div class="dashboard-widget' + (edit ? ' editing' : '') + '" draggable="' + (edit ? 'true' : 'false') + '" data-widget="' + esc(item.id) + '" style="grid-column:' + p.x + ' / span ' + p.w + ';grid-row:' + p.y + ' / span ' + p.h + '">';
     html += '<div class="widget-header"><span class="widget-name">' + esc(widget.name) + '</span>' +
       (edit ? '<span class="widget-ops"><button type="button" class="widget-drag" title="' + t('p5.dragMove', '拖拽移动') + '" aria-label="' + t('p5.dragMove', '拖拽移动 ') + esc(widget.name) + '">⋮⋮</button>' +
-       '<button type="button" class="widget-del" title="' + t('p5.removeWidget', '移除组件') + '" aria-label="' + t('p5.remove', '移除 ') + esc(widget.name) + '">✕</button></span>' : '') + '</div>';
+       '<button type="button" class="widget-del" title="' + t('p5.removeWidget', '移除组件') + '" aria-label="' + t('p5.remove', '移除 ') + esc(widget.name) + '"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">' + UI_ICONS.close + '</span></button></span>' : '') + '</div>';
     html += '<div class="widget-body">' + _renderDashboardWidget(item.id) + '</div>';
     html += '</div>';
   });
@@ -1564,7 +1564,7 @@ function openEventDetail(dateKey, focusIdx){
   const cur = list[idx];
   let html = '<div class="cmd u-max-w-520 u-p-5" role="dialog" aria-modal="true" aria-label="' + esc(t("p5.evDetailTitle", "日程详情")) + '">';
   html += '<div class="u-flex u-jc-between u-ai-center u-m-0-0-3"><h3 class="u-m-0 u-fs-md">' + esc(cur.title) + '</h3>';
-  html += '<button type="button" class="addbtn sm" data-ev-close title="' + esc(t("p5.evClose", "关闭")) + '">✕</button></div>';
+  html += '<button type="button" class="addbtn sm" data-ev-close title="' + esc(t("p5.evClose", "关闭")) + '" aria-label="' + esc(t("p5.evClose", "关闭")) + '"><span style="display:flex;width:var(--icon-set);height:var(--icon-set)">' + UI_ICONS.close + '</span></button></div>';
   html += _evDetailRow(t("p5.evKind", "类型"), cur.kind);
   html += _evDetailRow(t("p5.evTime", "时间"), (dateKey ? dateKey + " " : "") + cur.time);
   html += _evDetailRow(t("p5.evPlace", "地点"), cur.place);

@@ -674,7 +674,7 @@ function _featureCardHtml(cfg){
       const extraInner = cfg.rowAfter(r);
       if(extraInner) extra = '<tr class="f-row-extra"><td colspan="' + colSpan + '">' + extraInner + '</td></tr>';
     }
-    return '<tr data-f-row="' + r.id + '"><td><button type="button" class="addbtn xs danger" data-f-del="' + r.id + '" aria-label="'+t("a11y.del", "删除")+'">✕</button></td>' + tds + '</tr>' + extra;
+    return '<tr data-f-row="' + r.id + '"><td><button type="button" class="addbtn xs danger" data-f-del="' + r.id + '" aria-label="'+t("a11y.del", "删除")+'"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">' + UI_ICONS.close + '</span></button></td>' + tds + '</tr>' + extra;
   }).join("");
   const list = records.length
     ? '<table class="tool-table"><thead><tr><th></th>' + cfg.cols.map(function(c){ return '<th>' + esc(c.label) + '</th>'; }).join("") + '</tr></thead><tbody>' + rows + '</tbody></table>'

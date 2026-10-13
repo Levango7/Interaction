@@ -2457,7 +2457,7 @@ function renderGlobViews(){
   const box=$("#globViews"); if(!box) return;
   const views=getGlobViews();
   box.innerHTML = sanitizeHtml((views.length
-    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="${t("globView.apply", "应用视图")}">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="${t("globView.del", "删除视图")}">✕</button></span>`).join("")
+    ? views.map(v=>`<span class="glob-view-chip" data-view="${esc(v.name)}" title="${t("globView.apply", "应用视图")}">${esc(v.name)}<button type="button" class="gv-del" data-view-del="${esc(v.name)}" aria-label="${t("globView.del", "删除视图")}"><span style="display:flex;width:var(--icon-set);height:var(--icon-set)">${UI_ICONS.close}</span></button></span>`).join("")
     : "") + `<button type="button" class="glob-view-save" id="globViewSave" title="${t("globView.save", "保存当前筛选为视图")}">${t("globView.saveBtn", "＋ 保存视图")}</button>`);
   $$("#globViews [data-view]").forEach(ch=>{
     ch.onclick = e=>{

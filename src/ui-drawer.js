@@ -12,7 +12,7 @@ function _renderChainRow(l){
     <span class="chain-arr">→</span>
     <span class="chain-ic" style="color:var(--sc-${esc(l.toSc)},var(--accent))" data-edit-dst="${esc(l.id)}" title="${t("aria.editTargetScene","点击编辑目标场景")}">${dc.icon||""}</span>
     <span class="chain-dst">${esc(dc.name)}</span>
-    <button type="button" class="chain-del" data-del="${esc(l.id)}" aria-label="${t("action.deleteChain","删除链")}">✕</button>
+    <button type="button" class="chain-del" data-del="${esc(l.id)}" aria-label="${t("action.deleteChain","删除链")}"><span style="display:flex;width:var(--icon-md);height:var(--icon-md)">${UI_ICONS.close}</span></button>
   </div>`;
 }
 /* 渲染链编辑行（inline edit：关键词 input + 目标场景 select + 保存/取消） */
@@ -24,7 +24,7 @@ function _renderChainEditRow(l){
     <span class="chain-arr">→</span>
     <select class="chain-edit-dst">${opts}</select>
     <button type="button" class="chain-save" data-save="${esc(l.id)}" aria-label="${t("common.save","保存")}">${UI_ICONS.check}</button>
-    <button type="button" class="chain-cancel" data-cancel="${esc(l.id)}" aria-label="${t("common.cancel","取消")}">✕</button>
+    <button type="button" class="chain-cancel" data-cancel="${esc(l.id)}" aria-label="${t("common.cancel","取消")}"><span style="display:flex;width:var(--icon-set);height:var(--icon-set)">${UI_ICONS.close}</span></button>
   </div>`;
 }
 /**
@@ -71,7 +71,7 @@ function renderScBox(){
       <input class="sc-edit-color" type="color" value="${esc(/^#[0-9a-fA-F]{6}$/.test(cs.color)?cs.color:scenarioDefaultColor())}" aria-label="${t("field.scenarioColor","场景颜色")}">
       <span class="chain-arr u-fs-2xs u-text-muted">${t("scene.customLabel","自定义")}</span>
       <button type="button" class="chain-save sc-save" data-scsave="${esc(cs.key)}" aria-label="${t("common.save","保存")}">${UI_ICONS.check}</button>
-      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="${t("action.deleteScenario","删除场景")}">✕</button>
+      <button type="button" class="chain-del sc-del" data-scdel="${esc(cs.key)}" aria-label="${t("action.deleteScenario","删除场景")}"><span style="display:flex;width:var(--icon-md);height:var(--icon-md)">${UI_ICONS.close}</span></button>
     </div>`;
   }).join("");
   /* v2.0.3：插件场景行——与侧栏 ORDER 对齐（此前只渲染内置+自定义，启用笃行/阅读等
@@ -728,7 +728,7 @@ function openChainShareModal(){
     <div class="chain-share-dialog">
       <div class="chain-share-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>${t("chainShare.title","分享我的联动规则")}</h2>
-        <button type="button" class="chain-share-close" id="chainShareClose" aria-label="${t("common.close","关闭")}">✕</button>
+        <button type="button" class="chain-share-close" id="chainShareClose" aria-label="${t("common.close","关闭")}"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">${UI_ICONS.close}</span></button>
       </div>
       <div class="chain-share-body">
         <p class="hint">${t("chainShare.hintPrefix","将下方分享码发给他人，对方在设置中点「导入链」粘贴即可导入你的 ")}${links.length}${t("chainShare.hintSuffix"," 条联动规则。")}</p>
@@ -761,7 +761,7 @@ function openChainImportModal(){
     <div class="chain-share-dialog">
       <div class="chain-share-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span>${t("chainShare.importTitle","导入联动规则")}</h2>
-        <button type="button" class="chain-share-close" id="chainImportClose" aria-label="${t("common.close","关闭")}">✕</button>
+        <button type="button" class="chain-share-close" id="chainImportClose" aria-label="${t("common.close","关闭")}"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">${UI_ICONS.close}</span></button>
       </div>
       <div class="chain-share-body">
         <p class="hint">${t("chainShare.importHint","粘贴他人分享的联动规则分享码，点「预览」查看将导入的链，确认后点「导入」。")}</p>
@@ -936,7 +936,7 @@ function openTemplateModal(){
     <div class="scene-template-dialog">
       <div class="scene-template-header">
         <h2><span class="ic-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 9h6M9 13h6M9 17h4"/></svg></span>${t("tpl.title", "场景模板")}</h2>
-        <button type="button" class="scene-template-close" id="sceneTemplateClose" aria-label="${t("common.close", "关闭")}">✕</button>
+        <button type="button" class="scene-template-close" id="sceneTemplateClose" aria-label="${t("common.close", "关闭")}"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">${UI_ICONS.close}</span></button>
       </div>
       <div class="scene-template-body">
         <p class="hint u-m-0-0-3">${t("tpl.hint", "选择一个模板一键导入对应任务集，到期日按 today + offset 自动计算。")}</p>
@@ -1059,7 +1059,7 @@ function openPluginDetailModal(id){
     + '<div class="chain-share-dialog u-max-w-520">'
       + '<div class="chain-share-header">'
         + '<h2>'+ic("puzzle")+esc(p.name)+'</h2>'
-        + t("p4.html.pluginDetailClose",'<button type="button" class="chain-share-close" id="pluginDetailClose" aria-label="关闭">✕</button>')
+        + t("p4.html.pluginDetailClose",'<button type="button" class="chain-share-close" id="pluginDetailClose" aria-label="关闭"><span style="display:flex;width:var(--icon-lg);height:var(--icon-lg)">{close}</span></button>').replace("{close}", UI_ICONS.close)
       + '</div>'
       + '<div class="chain-share-body">'
         + '<div class="plugin-meta">'

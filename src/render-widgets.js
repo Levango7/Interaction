@@ -524,7 +524,7 @@ function openChartStore(){
       ? canvasItems.map(function(it){
           const lib = chartLibs.find(function(x){ return x.id === it.lib; }) || chartLibs[0];
           return `<div class="cs-canvas-item" data-cs-item="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px">
-            <div class="cs-canvas-head"><span>${esc(lib.name)}</span><button type="button" class="cs-canvas-del" data-cs-del="${it.id}" title="${t("a11y.del", "删除")}" aria-label="${t("a11y.deleteChart", "删除图表")}">✕</button></div>
+            <div class="cs-canvas-head"><span>${esc(lib.name)}</span><button type="button" class="cs-canvas-del" data-cs-del="${it.id}" title="${t("a11y.del", "删除")}" aria-label="${t("a11y.deleteChart", "删除图表")}"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">${UI_ICONS.close}</span></button></div>
             <div class="cs-canvas-body">${lib.render()}</div>
             <div class="cs-resize-handle" data-cs-resize="${it.id}"></div>
           </div>`;
@@ -1062,7 +1062,7 @@ function _recordToolHtml(cfg, records){
       return "<td>" + v + "</td>";
     }).join("");
     return '<tr data-rec-row="' + r.id + '"' + (overdue ? ' style="color:var(--danger)"' : "") + ">" +
-      '<td><button type="button" class="addbtn xs danger" data-rec-del="' + r.id + '" aria-label="'+t("a11y.del", "删除")+'">✕</button></td>' + tds + "</tr>";
+      '<td><button type="button" class="addbtn xs danger" data-rec-del="' + r.id + '" aria-label="'+t("a11y.del", "删除")+'"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">' + UI_ICONS.close + '</span></button></td>' + tds + "</tr>";
   }).join("");
   let summary = "";
   if(typeof cfg.sum === "function"){
@@ -2592,7 +2592,7 @@ function mountPet(kind){
   el.style.top  = y + "px";
   el.innerHTML = sanitizeHtml(
     '<div class="pet-art-box" data-pet-svg="1"></div>' +
-    '<button type="button" class="pet-close" aria-label="' + t("pet.remove", "收回萌宠") + '">✕</button>'
+    '<button type="button" class="pet-close" aria-label="' + t("pet.remove", "收回萌宠") + '"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm);margin:auto">' + UI_ICONS.close + '</span></button>'
   );
   /* v3.6.5：立绘原始注入（不经 sanitizeHtml，data:img 会被 sanitizer 剥除） */
   const petSvgBox = el.querySelector("[data-pet-svg]");

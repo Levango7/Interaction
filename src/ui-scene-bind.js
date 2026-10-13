@@ -261,7 +261,7 @@ function openTaskEdit(id){
     `<option value="${v}" ${task.priority===v?"selected":""}>${v||"-"}</option>`).join("");
   const html = `<div class="recycle-modal" id="taskEditModal">
     <div class="recycle-card u-max-w-560">
-      <div class="recycle-header"><h2>${t("task.editTitle","编辑任务")}</h2><button type="button" class="recycle-close" id="taskEditClose">✕</button></div>
+      <div class="recycle-header"><h2>${t("task.editTitle","编辑任务")}</h2><button type="button" class="recycle-close" id="taskEditClose" aria-label="${t("common.close","关闭")}"><span style="display:flex;width:var(--icon-sm);height:var(--icon-sm)">${UI_ICONS.close}</span></button></div>
       <form id="taskEditForm" class="u-flex u-flex-col u-pad-5-6 u-gap-4">
         <div class="fld"><label>${t("field.taskTitle","任务标题")}</label><input name="title" value="${esc(task.title)}" maxlength="200" required></div>
         <div class="form-row form-row--grid u-mb-0">
