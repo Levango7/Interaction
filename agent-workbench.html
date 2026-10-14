@@ -6218,10 +6218,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.123"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.125"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261013b";
+const BUILD_TAG = "20261014c";
 
 
 
@@ -9167,6 +9167,9 @@ const MESSAGES = {
     "int.jiraDesc": "验证 Token 并推送任务到项目（仅桌面版可用：Atlassian 不回 CORS 头，浏览器形态请求发不出去）；凭据随应用数据加密落盘",
     "int.jiraProjectKey": "项目 Key（推送任务用，如 PROJ）",
     "int.jiraDomain": "站点域名",
+    "int.jiraEmail": "账号邮箱（Atlassian Cloud 必填；Server/DC 留空）",
+    "int.jiraToken": "API Token",
+    "int.jiraTokenPh": "Cloud 配邮箱走 Basic；Server/DC 的 PAT 单独走 Bearer",
     "int.linearDesc": "验证 Linear API Key（已连接后可把未完成任务单向推送为 issue；状态按团队工作流运行时匹配；反向拉取尚未接入）",
     "int.linearTeamIdPh": "可选，用于 issue 同步",
     "int.sessionOn": "本会话已配置",
@@ -13051,6 +13054,9 @@ const MESSAGES = {
     "int.jiraDesc": "Verify the token and push tasks to a project (desktop app only - Atlassian returns no CORS headers, so no browser form can send requests); credentials are encrypted at rest with app data",
     "int.jiraProjectKey": "Project key (for task push, e.g. PROJ)",
     "int.jiraDomain": "Site domain",
+    "int.jiraEmail": "Account email (required for Atlassian Cloud; leave empty for Server/DC)",
+    "int.jiraToken": "API Token",
+    "int.jiraTokenPh": "With email = Cloud Basic auth; a Server/DC PAT alone = Bearer",
     "int.linearDesc": "Verify Linear API key (once connected, open tasks can be pushed one-way as issues; state is matched against the team workflow at runtime; pull is not implemented)",
     "int.linearTeamIdPh": "Optional, for issue sync",
     "int.sessionOn": "Configured for this session",
@@ -16643,7 +16649,14 @@ function toggleCustomLink(id, enabled){
  * @returns {void}
  */
 function resetCustomLinks(){
-  localStorage.removeItem(CUSTOM_LINKS_KEY);
+  /* v3.7.124 收口云同步契约 §三 遗留边界：这里原先是裸 `localStorage.removeItem`，删除**不进变更日志**。
+     wb_custom_links 在同步键集合内（render-overview 的 allKeys 判定），于是增量模式下服务端留着旧值，
+     下一次下行 `changed` 就把用户删掉的自定义链接**原样复活** —— 症状是"重置后又回来了"，
+     且只在开关 syncIncremental 打开时才发生，最难复现的那类静默失效。
+     改走共享安全删除即可让它记上 op:"del"（`_sharedSafeLSRemove` 只在"删除前存在且删除未抛错"时记，
+     不会给不存在的键造假信号）。语义差别只有一处：存储异常不再向上抛 —— 调用方
+     （设置页的重置按钮）本来就不接这个异常。 */
+  _sharedSafeLSRemove(CUSTOM_LINKS_KEY);
 }
 
 let active = load(PREFIX+"active","office");
@@ -21111,6 +21124,12 @@ async function _ensureDeviceKeyImpl(){
               try{ if(typeof pushDiag==="function") pushDiag("warn", "legacy device key not cleared: "+(e&&e.message||e), {where:"getDeviceKey:clearLegacy"}); }catch(_){}
             }
           }
+          /* v3.7.124 可观测性：写入没成功 / 回读不一致时，此前**什么都不说** —— 表现是
+             「密钥一直待在 localStorage 里」，而 H3 的安全意图（密钥优先进 IDB 以缩小 XSS 泄露面）
+             静默落空。装机探针正是靠这条才被引到正确定性上（见台账 R-19）。 */
+          else{
+            try{ if(typeof pushDiag==="function") pushDiag("warn", "device key migration to IndexedDB did not persist - key stays in legacy localStorage (H3 XSS-surface goal not met): put=" + (ok ? "ok" : "failed"), {where:"getDeviceKey:migrate"}); }catch(_){}
+          }
         }
         return _deviceKey;
       }catch(e){
@@ -21121,7 +21140,15 @@ async function _ensureDeviceKeyImpl(){
     _deviceKey = await crypto.subtle.generateKey({name:"AES-GCM", length:256}, true, ["encrypt","decrypt"]);
     const exported = await crypto.subtle.exportKey("raw", _deviceKey);
     const b64 = base64Encode(new Uint8Array(exported));
-    if(useIdb) await _dkIdbPut(DK_IDB_KEY, b64);
+    if(useIdb){
+      const putNew = await _dkIdbPut(DK_IDB_KEY, b64);
+      /* v3.7.124 可观测性：这里是**最贵的一次静默** —— 新键没落住，下次启动就再生成一把新的，
+         此前用旧键加密的一切（AI Key 等）当场解不开，而用户只会看到「配置莫名其妙没了」。
+         刻意**不**回退 localStorage：那会把 H3 特意换来的安全姿态又输回去，属产品决策不是兜底。 */
+      if(!(putNew && (await _dkIdbGet(DK_IDB_KEY)) === b64)){
+        try{ if(typeof pushDiag==="function") pushDiag("error", "newly generated device key FAILED to persist in IndexedDB - next launch will generate a different key and previously encrypted data becomes undecryptable", {where:"getDeviceKey:persistNew"}); }catch(_){}
+      }
+    }
     else localStorage.setItem(DK_KEY, b64); // 无 IDB 环境维持旧行为
     return _deviceKey;
   }catch(e){
@@ -40022,8 +40049,12 @@ const INTEGRATION_CONFIG_FIELDS = {
              { k:"notesDatabaseId", label:t("int.notionNotesDbId","笔记数据库 ID"), ph:t("int.notionNotesDbIdPh","可选，用于笔记同步") }],
   linear:   [{ k:"token", label:"API Key", ph:"lin_api_…", required:true, secret:true },
              { k:"teamId", label:"Team ID", ph:t("int.linearTeamIdPh","可选，用于 issue 同步") }],
+  /* v3.7.94：补上 **email** 字段。Atlassian Cloud 的凭据是 `Basic base64(email:apiToken)`，
+     缺了 email 就没有任何正确形态可填（此前占位符还写着 "Bearer token"，等于把用户往错方向引）；
+     Jira Server/DC 的 PAT 才走 Bearer，那种站点留空即可 —— 有没有 email 就是这两种形态的分界。 */
   jira:     [{ k:"domain", label:t("int.jiraDomain","站点域名"), ph:"your-domain.atlassian.net", required:true },
-             { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true },
+             { k:"email", label:t("int.jiraEmail","账号邮箱（Atlassian Cloud 必填；Server/DC 留空）"), ph:"you@example.com", required:false },
+             { k:"token", label:t("int.jiraToken","API Token"), ph:t("int.jiraTokenPh","Cloud 配邮箱走 Basic；Server/DC 的 PAT 单独走 Bearer"), required:true, secret:true },
              { k:"projectKey", label:t("int.jiraProjectKey","项目 Key（推送任务用，如 PROJ）"), ph:"PROJ" }],
   /* v3.7.69：Slack 改成「群机器人 Incoming Webhook」—— URL 本身即凭据、无加签；
      hooks.slack.com 不回 CORS 头（实测），仅桌面版可发。填了**不会保存**（会话内存）。 */
@@ -47273,6 +47304,34 @@ function jiraHasRelay(){
   const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
   return !!(api && typeof api.jiraFetch === "function");
 }
+/* ---------- 凭据形态（v3.7.94 修，两家各一种，发错就 401） ----------
+ * 这两条不是"风格选择"，是服务商硬规定，实测过：
+ *   · Linear 个人 API Key 要**原样**发 —— 官方 curl 写法是 `-H "Authorization: <你的 API Key>"`，
+ *     `Bearer` 前缀只属于 OAuth access token。本仓此前 5 处都发 `Bearer lin_api_…`，
+ *     打到 api.linear.app 恒 401 AUTHENTICATION_ERROR（凭据本身有效）。
+ *   · Atlassian Cloud 要 `Basic base64(email:apiToken)`；`Bearer <PAT>` 只有 Jira Server/DC 认。
+ *     「有没有 email」就是这两种形态的分界 —— 所以配置面板必须有 email 字段（此前没有）。
+ * ⚠️ 主进程（electron/main.js jira-fetch）有一份**同语义实现**（跨进程不能共享函数），
+ *    改这里必须同步改那边，tests/integration-auth-form.test.js 会把两侧对齐钉死。
+ */
+/** UTF-8 安全的 base64（email 里出现非 ASCII 时 btoa 会抛，这里不让它抛） */
+function _b64utf8(s){
+  const bytes = new TextEncoder().encode(String(s));
+  let bin = "";
+  for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+/** Linear：原样发；用户从文档连 `Bearer ` 一起粘进来时剥掉（粘错前缀是最常见的手滑） */
+function _linearAuthHeader(token){
+  return String(token || "").trim().replace(/^Bearer\s+/i, "");
+}
+/** Jira：有 email → Cloud 的 Basic(email:token)；无 email → Server/DC 的 Bearer(PAT) */
+function _jiraAuthHeader(token, email){
+  const tk = String(token || "").trim();
+  const em = String(email || "").trim();
+  return em ? ("Basic " + _b64utf8(em + ":" + tk)) : ("Bearer " + tk);
+}
+
 /**
  * Jira 统一请求：有中继走主进程（无 CORS 约束），否则回落渲染进程直连
  * （浏览器形态会被 Atlassian 的 CORS 拦下 —— 如实失败，不假装成功）。
@@ -47287,7 +47346,7 @@ async function _jiraRequest(domain, path, opts){
   if(api && typeof api.jiraFetch === "function"){
     try{
       const host = new URL(base).hostname;
-      const r = await api.jiraFetch({ domain: host, path: String(path), method: opts.method || "GET", body: opts.body || "", token: opts.token || "", timeoutMs: opts.timeoutMs });
+      const r = await api.jiraFetch({ domain: host, path: String(path), method: opts.method || "GET", body: opts.body || "", token: opts.token || "", email: opts.email || "", timeoutMs: opts.timeoutMs });
       return r ? { ok: !!r.ok, status: r.status || 0, body: r.body || null, error: r.error || "" } : { ok: false, status: 0, body: null, error: "no_response" };
     }catch(e){
       return { ok: false, status: 0, body: null, error: (e && e.message) ? e.message : String(e) };
@@ -47295,7 +47354,7 @@ async function _jiraRequest(domain, path, opts){
   }
   return await _intDoRequest(base + path, {
     method: opts.method || "GET",
-    headers: Object.assign({ "Authorization": "Bearer " + (opts.token || ""), "Content-Type": "application/json" }, opts.headers || {}),
+    headers: Object.assign({ "Authorization": _jiraAuthHeader(opts.token, opts.email), "Content-Type": "application/json" }, opts.headers || {}),
     body: opts.body
   });
 }
@@ -47660,7 +47719,7 @@ async function linearConnect(config){
   const resp = await _intDoRequest("https://api.linear.app/graphql", {
     method: "POST",
     headers: {
-      "Authorization": "Bearer " + config.token,
+      "Authorization": _linearAuthHeader(config.token),
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ query: "{ viewer { id email } }" })
@@ -47696,7 +47755,7 @@ async function _linearResolveTeamId(token, team){
   try{
     const resp = await _intDoRequest("https://api.linear.app/graphql", {
       method: "POST",
-      headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      headers: { "Authorization": _linearAuthHeader(token), "Content-Type": "application/json" },
       body: JSON.stringify({
         query: "query($id: String!) { team(id: $id) { id } }",
         variables: { id: t }
@@ -47714,7 +47773,7 @@ async function _linearFetchStates(token, teamId){
   try{
     const resp = await _intDoRequest("https://api.linear.app/graphql", {
       method: "POST",
-      headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      headers: { "Authorization": _linearAuthHeader(token), "Content-Type": "application/json" },
       body: JSON.stringify({
         query: "query($id: String!) { team(id: $id) { states { nodes { id name } } } }",
         variables: { id: teamId }
@@ -47756,7 +47815,7 @@ async function linearSyncIssue(issue){
   if(!syncInfo && !teamId) return { success: false, error: "missing_team_id" };
 
   const headers = {
-    "Authorization": "Bearer " + provider.config.token,
+    "Authorization": _linearAuthHeader(provider.config.token),
     "Content-Type": "application/json"
   };
   const desc = issue.note || issue.description || "";
@@ -47826,7 +47885,7 @@ async function linearListIssues(filter){
   const query = "query($teamId: String!) { team(id: $teamId) { issues { nodes { id title description state { name } } } } }";
   const resp = await _intDoRequest("https://api.linear.app/graphql", {
     method: "POST",
-    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+    headers: { "Authorization": _linearAuthHeader(token), "Content-Type": "application/json" },
     body: JSON.stringify({ query: query, variables: { teamId: teamId } })
   });
   if(!resp.ok || !resp.body || !resp.body.data) return [];
@@ -47867,7 +47926,7 @@ async function jiraConnect(config){
   const provider = integrationRegisterProvider("jira", INTEGRATION_TYPES.JIRA, config);
   if(!provider) return null;
   // 验证 token（经主进程中继）
-  const resp = await _jiraRequest(config.domain, "/rest/api/3/myself", { method: "GET", token: config.token });
+  const resp = await _jiraRequest(config.domain, "/rest/api/3/myself", { method: "GET", token: config.token, email: config.email });
   provider.config._verified = !!resp.ok;
   provider.config._lastVerifiedAt = _intNow();
   _intSaveProviders();
@@ -47885,9 +47944,9 @@ async function jiraConnect(config){
  * 拉取某个 Jira issue 的可用流转 → [{id,name}]（v3.7.85，运行时解析，不预置映射表）
  * @returns {Promise<{ok:boolean, list:Array<{id:string,name:string}>}>}
  */
-async function _jiraFetchTransitions(domain, token, issueKey){
+async function _jiraFetchTransitions(domain, token, email, issueKey){
   try{
-    const r = await _jiraRequest(domain, "/rest/api/3/issue/" + issueKey + "/transitions", { method: "GET", token: token });
+    const r = await _jiraRequest(domain, "/rest/api/3/issue/" + issueKey + "/transitions", { method: "GET", token: token, email: email });
     const list = r && r.body && Array.isArray(r.body.transitions) ? r.body.transitions : [];
     return { ok: !!(r && r.ok), list: list };
   }catch(e){
@@ -47913,6 +47972,7 @@ async function jiraSyncIssue(issue, direction){
   const state = _intGetSyncState("jira");
   const syncInfo = state.syncedItems[issue.id];
   const token = provider.config.token;
+  const email = provider.config.email;
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   if(!_intJiraBase(domain)) return { success: false, error: "invalid_domain" };
@@ -47927,6 +47987,7 @@ async function jiraSyncIssue(issue, direction){
       resp = await _jiraRequest(domain, "/rest/api/3/issue/" + syncInfo.remoteId, {
         method: "PUT",
         token: token,
+        email: email,
         body: JSON.stringify({
           fields: { summary: issue.title, description: issue.description }
         })
@@ -47935,11 +47996,11 @@ async function jiraSyncIssue(issue, direction){
         /* v3.7.85：状态变换 —— 拉该 issue 的 transitions，本地状态名按候选匹配，命中才 POST */
         let transitioned = false;
         if(issue.status){
-          const tr = await _jiraFetchTransitions(domain, token, syncInfo.remoteId);
+          const tr = await _jiraFetchTransitions(domain, token, email, syncInfo.remoteId);
           const tName = _matchTransitionName(tr.list, issue.status);
           if(tName){
             const trr = await _jiraRequest(domain, "/rest/api/3/issue/" + syncInfo.remoteId + "/transitions", {
-              method: "POST", token: token, body: JSON.stringify({ transition: { id: tName } })
+              method: "POST", token: token, email: email, body: JSON.stringify({ transition: { id: tName } })
             });
             transitioned = !!trr.ok;
           }
@@ -47954,6 +48015,7 @@ async function jiraSyncIssue(issue, direction){
       resp = await _jiraRequest(domain, "/rest/api/3/issue", {
         method: "POST",
         token: token,
+        email: email,
         body: JSON.stringify({
           fields: {
             project: { key: projectKey },
@@ -47985,13 +48047,15 @@ async function jiraListIssues(filter){
   if(!provider) return [];
   filter = filter || {};
   const token = provider.config.token;
+  const email = provider.config.email;
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   const jql = filter.jql || ("project = " + projectKey);
   if(!_intJiraBase(domain)) return [];
   const resp = await _jiraRequest(domain, "/rest/api/3/search?jql=" + encodeURIComponent(jql) + "&maxResults=" + (filter.limit || 50), {
     method: "GET",
-    token: token
+    token: token,
+    email: email
   });
   if(!resp.ok || !resp.body || !resp.body.issues) return [];
   return resp.body.issues;
