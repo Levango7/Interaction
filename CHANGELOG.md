@@ -1,4 +1,4 @@
-## [Unreleased] - 2026-10-14（批次⑤ · 集成凭据形态 + 装机验收前置条件 + C2 收口）
+## [v3.7.124] - 2026-10-14（批次⑤ · 集成凭据形态 + 装机验收前置条件 + C2 收口）
 
 **把台账里三条"等外部条件"的项逐条实测：两条其实是自家缺陷，一条的前置条件真的缺、已在 CI 补上。**
 
@@ -52,7 +52,10 @@
   改走 `_sharedSafeLSRemove(CUSTOM_LINKS_KEY)`（它本就负责记 `op:"del"`；语义唯一差别是存储异常不再上抛，
   而调用方不接异常）。新 `tests/cloud-sync-chlog-custom-links.test.js` 3 例：开态须有 del 条目、
   关态零行为变化、不存在的键不得造假信号；变异（改回裸 removeItem）红在第一条。
-  仍开着的只有 `mv+提示` 冲突策略档位 —— 那是产品决策，不该再记成"等后端立项"。
+  ~~仍开着的只有 `mv+提示` 冲突策略档位~~ **这句当时就过时了**：`mv+提示` 已于 **v3.7.109 两端交付**
+  （服务端冲突账本 `server/src/store.js:262-391` + 客户端 `src/render-overview.js:1520`，
+  由 `server/verify/incremental-check.cjs:242` 断言"响应声明策略 = mv"钉住）。C2 至此**无工程缺口**，
+  剩下的只是部署时要不要把服务端 `cfg.sync.conflictPolicy` 从默认 `lww` 切成 `mv`。
 - **R-19 设备密钥的可观测性（+ ⑧ 定性）**：装机探针 ⑧「打包态 `getDeviceKey()` 有值、`__dk_v2` 不在 IndexedDB」
   查清了 —— 是真缺陷，且**根因已由并行会话在 v3.7.95 修**（SRC 块序里 `data-idb` 先于 `crypto` 加载，
   `registerDkIdbHelpers` 从未被调用 ⇒ 密钥每次加载重新生成）；我的探针跑的是 **3.7.93 的产物**，
@@ -68,6 +71,16 @@
   `cloud-sync-chlog-custom-links` / `device-key-idb-persistence`），既有 `chain-edit` 第 6 例（重置恢复默认）仍绿 ⇒ 用户可见行为未变；
   全量单测在 `git archive HEAD` 净副本里 1697 passed / 1 failed，那 1 条即上述"门禁钉住错误形态"的旧断言，
   已随本批改正。台账 `docs/audit-2026-10-06.md` 追加 R-16 / R-17 / R-18 并更正 §五 三行。
+
+- **收口补充（同日）· 桌面 profile 恢复已执行**：`_probe/restore-profile-tasks.mjs --seed` 在真实 profile 上跑通并
+  从**副本**回读确认（对用户目录零写入的读法）——4 条演示任务回来、IDB 镜像同为 4、探针痕迹键（marker + 两个 `_broken_`）清零、
+  四个 `rec_*` 全判 `churn`（只变 id/created）⇒ **用户的记录类数据本就是演示内容，无个性化数据丢失**；
+  恢复后该目录的**三代 autobackup 均为 tasks=4**，自愈能力一并恢复。机制与"我先前那句可恢复是错的"见 R-17 更正段。
+- **发布状态（务必如实）**：版本已切 **v3.7.124**（`scripts/release.mjs` 五源一致，`build:check` 在净副本里绿：
+  真相源 3,872,777 B / sha256 `a0e68fae…`），但**尚未 push、未打 tag、线上未发布** —— 卡在托管 runner 积压（R-20：
+  tip run 排队 2h10m、四 job 只 windows 被调度）。tag 必须等 CI 全绿后打在**发版提交**上（`release.mjs` 会自行撤回错位的 tag）。
+- **发版 HEAD 的本机最终证据**：净副本 `git archive` + `npm test` / `npm run e2e` ⇒ **单测 1720/1720、e2e 104/104（5.5m）**；
+  `server-verify` 腿按 diff 归属不必复现（`d1d18e5..HEAD` 对 `server/` 为空）。
 
 ## [v3.7.123] - 2026-10-13
 
