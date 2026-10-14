@@ -66,7 +66,11 @@ describe("Linear 单向推送", () => {
     const inputKeys = Object.keys(create.variables.input);
     expect(inputKeys, "不许再塞状态名（Linear 要的是 stateId，名字会被 schema 拒）：" + inputKeys.join(",")).not.toContain("state");
     expect(inputKeys).not.toContain("stateId");
-    expect(create.headers.Authorization).toBe("Bearer lin_api_test");
+    /* 这条断言原先写的是 "Bearer lin_api_test" —— 即**门禁把错的凭据形态钉成了期望值**（R-16）：
+       Linear 个人 API Key 必须原样发，Bearer 只属于 OAuth token，所以真机一直 401 而门禁一直绿。
+       改断言的同时在 tests/integration-auth-form.test.js 里把"所有调用点都过 _linearAuthHeader"锁住，
+       否则下次又会有人就地手写一个前缀。 */
+    expect(create.headers.Authorization, "Linear 个人 API Key 原样发，不许叠 Bearer").toBe("lin_api_test");
   });
 
   it("已推送过的再推 → issueUpdate(id)，按 updated 计数", async () => {

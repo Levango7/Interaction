@@ -635,7 +635,8 @@ describe("Electron IPC: notify-send 主进程 webhook 外发", () => {
  * jira-fetch：Jira REST 请求主进程中转（v3.7.79）
  * 为什么必须中转：Atlassian 的 REST 端点不回 CORS 头（真网络实测 file:// 与 http(s)
  * 双双被拦、主进程 Node fetch 可达）—— 浏览器形态连验证都发不出去。
- * 这条 IPC = 让渲染进程驱动主进程带 Bearer token 访问网站，域名/路径/方法白名单是承重墙：
+ * 这条 IPC = 让渲染进程驱动主进程带**凭据**访问网站（Server/DC 是 Bearer PAT，Cloud 是
+ * Basic(email:token) —— 见 R-16），域名/路径/方法白名单是承重墙：
  * 下面每条拒绝路径都必须断言 fetch 一次都没发生（否则就是 SSRF / 凭据外泄出口）。
  * ============================================================ */
 describe("Electron IPC: jira-fetch 主进程中转", () => {
@@ -662,6 +663,25 @@ describe("Electron IPC: jira-fetch 主进程中转", () => {
     expect(calls[0].opts.method).toBe("GET");
     expect(calls[0].opts.headers.Authorization).toBe("Bearer TK-secret");
     expect(calls[0].opts.body).toBeUndefined();
+  });
+
+  /* R-16（凭据形态）：Atlassian Cloud 是 Basic base64(email:apiToken)，`Bearer <PAT>` 只有 Server/DC 认。
+     上面那条正是 Server/DC 的形态（不带 email）；下面两条把 Cloud 形态与编码一起钉住 ——
+     中继是"桌面版能不能连上"的唯一出口，这里漏了 email 就等于桌面版恒 401。 */
+  it("带 email（Cloud）：发 Basic base64(email:token)，而不是 Bearer", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { email: "dev@acme.com" }));
+    expect(r.ok).toBe(true);
+    expect(calls.length).toBe(1);
+    expect(calls[0].opts.headers.Authorization, "有 email 就必须走 Basic")
+      .toBe("Basic " + Buffer.from("dev@acme.com:TK-secret", "utf8").toString("base64"));
+  });
+
+  it("email/token 含非 ASCII：base64 必须按 UTF-8 编（latin1 会悄悄换字节，两侧对不上）", async () => {
+    const { calls } = installFetch();
+    await ipcHandlers["jira-fetch"](trustedEv(), Object.assign({}, OK_ARG, { token: "TK-ünicode", email: "d@acme.com" }));
+    expect(calls[0].opts.headers.Authorization)
+      .toBe("Basic " + Buffer.from("d@acme.com:TK-ünicode", "utf8").toString("base64"));
   });
 
   it("POST 带 body 原样透传；PUT/DELETE 在白名单内", async () => {
