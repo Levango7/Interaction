@@ -164,7 +164,18 @@ jobs:
     #           其余一切情形（取消/失败/输出缺失）一律**跑**——fail-closed。
     # v3.7.93：前置 main-only 守卫 —— 本 job 带 always()（上游 skip 不连带保护它），
     # 故 ref 条件必须写进它自己的 if 内。
-    if: always() && github.ref == 'refs/heads/main' && !(needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true')
+    # v3.7.124+（R-21）：**`always()` 换成 `!cancelled()`** —— 它同样满足 v3.7.93 那条"ref 条件必须写进
+    #   自己的 if"的要求（`!cancelled()` 只是前置合取项），但把"整条 run 已被取消"这个事实交还给 GitHub：
+    #   `always()` 让本 job **对取消免疫**，于是被取代的 run 仍会去抢一个 runner、把 5 分钟的 e2e 跑完，
+    #   而它所在的 `pages-deploy-main` 并发组在此期间不放行 ⇒ 下一条 deploy 拿到 `jobs=0`，干等。
+    #   实测两次（2026-10-14）：run 38506125600 的 verify/ci-e2e-status 被取消成功，
+    #   而它的 `e2e` 在队列里躺了 **6h31m**（03:24→09:56）才被调度、跑成功、再让 deploy 被取消
+    #   —— 全程没发布一个字节，却把我那条 deploy run（38510227135）压到 `jobs=0`；
+    #   我推送 213e980 后同一现象**立刻复现**（旧 run 的 e2e 再次 queued 不动、新 deploy jobs=0，
+    #   且 `gh run cancel` 连发两次都取不到那个 queued job）。
+    #   同条 run 里"没带 always() 的两个 job 被取消成功、带 always() 的那个没有"就是判据本身。
+    #   失败闭锁不降级：verify **失败**（非取消）时 run 未被取消 ⇒ `!cancelled()` 仍为 true ⇒ 照旧自行判定。
+    if: "!cancelled() && github.ref == 'refs/heads/main' && !(needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -194,8 +205,10 @@ jobs:
     #       (b) **被动跳过**（ci-e2e-status 因 runner 分配失败被取消，e2e 未跑 → 不安全）
     #     两者在 `needs.e2e.result` 上都是 'skipped'，故必须补查上游 ci-e2e-status 的结论。
     #   不能用 always() 了事 —— 那会连 verify 失败也放行，等于撤掉门禁。
+    #   v3.7.124+（R-21）同 e2e：`always()` → `!cancelled()`。这里原本靠 `needs.verify.result == 'success'`
+    #   兜住"不能发布"，所以 always() 对安全性没有贡献，只贡献了一个"被取消的 run 仍要占 runner"的副作用。
     if: >-
-      always()
+      !cancelled()
       && github.ref == 'refs/heads/main'
       && needs.verify.result == 'success'
       && (
