@@ -39,8 +39,12 @@
     持久性验收必须按用户的退出路径测）、⑪ 递归 mtime 扫描确认真实 profile 本次 0 文件被改。
     另修探针自身两处：顶层异常也要收尾杀进程（`main().catch` 直接 exit 会把实例留在机器上）、
     `ConvertTo-Json` 的 DateTime 须在 PS 侧转字符串（否则 Node 解成 NaN，把自己的目标判成不存在）。
-  · **恢复未擅自执行**：被重置的 4 条演示任务原文仍在该 profile 自己的 `wb_agent_autobackup*` 快照里
-    （只读扫描命中 `提交本周周报 / 修复登录页 / Raft`）；这是用户的个人数据目录，回灌或应用内恢复都等他点头。
+  · **恢复未擅自执行，且我先前那句「能从 autobackup 恢复」是错的（已更正）**：三代 `wb_agent_autobackup*` 的
+    tasks **全 = 0** 且时间戳都晚于损坏时刻（快照三代滚动，探针自己的写入把带数据的代次轮出去了）；
+    IDB 镜像同样 0 条，`_broken_*` 键存的是我注入的损坏载荷。之前「只读扫描命中种子标题」是对 `.ldb/.log`
+    原始字节的 `indexOf` —— 命中旧字节 ≠ 该键现值。且 `seed()` 守卫是 `getItem(tasks) !== null`，
+    现值为 `"[]"` ⇒ 应用不会自行重播。剩下唯一可行路径是用应用自己的 `seed()` 再生演示数据（id/created 会变），
+    这属于用户的个人数据目录，等他点头。
 - **R-18 C2「后端立项」是过时账 + 顺出的真缺陷**：后端早已在本仓 `server/` 落地（`POST /api/sync/changes`，
   `server/verify/incremental-check.cjs` 38 项），C1–C4 全标 ✅；台账 §五 那行没跟着契约文档更新。
   顺着查出的缺陷：契约 §三「已知边界」遗留的 `resetCustomLinks()` 裸 `removeItem` **一直没收**，
