@@ -352,6 +352,34 @@ function jiraHasRelay(){
   const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
   return !!(api && typeof api.jiraFetch === "function");
 }
+/* ---------- 凭据形态（v3.7.94 修，两家各一种，发错就 401） ----------
+ * 这两条不是"风格选择"，是服务商硬规定，实测过：
+ *   · Linear 个人 API Key 要**原样**发 —— 官方 curl 写法是 `-H "Authorization: <你的 API Key>"`，
+ *     `Bearer` 前缀只属于 OAuth access token。本仓此前 5 处都发 `Bearer lin_api_…`，
+ *     打到 api.linear.app 恒 401 AUTHENTICATION_ERROR（凭据本身有效）。
+ *   · Atlassian Cloud 要 `Basic base64(email:apiToken)`；`Bearer <PAT>` 只有 Jira Server/DC 认。
+ *     「有没有 email」就是这两种形态的分界 —— 所以配置面板必须有 email 字段（此前没有）。
+ * ⚠️ 主进程（electron/main.js jira-fetch）有一份**同语义实现**（跨进程不能共享函数），
+ *    改这里必须同步改那边，tests/integration-auth-form.test.js 会把两侧对齐钉死。
+ */
+/** UTF-8 安全的 base64（email 里出现非 ASCII 时 btoa 会抛，这里不让它抛） */
+function _b64utf8(s){
+  const bytes = new TextEncoder().encode(String(s));
+  let bin = "";
+  for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+/** Linear：原样发；用户从文档连 `Bearer ` 一起粘进来时剥掉（粘错前缀是最常见的手滑） */
+function _linearAuthHeader(token){
+  return String(token || "").trim().replace(/^Bearer\s+/i, "");
+}
+/** Jira：有 email → Cloud 的 Basic(email:token)；无 email → Server/DC 的 Bearer(PAT) */
+function _jiraAuthHeader(token, email){
+  const tk = String(token || "").trim();
+  const em = String(email || "").trim();
+  return em ? ("Basic " + _b64utf8(em + ":" + tk)) : ("Bearer " + tk);
+}
+
 /**
  * Jira 统一请求：有中继走主进程（无 CORS 约束），否则回落渲染进程直连
  * （浏览器形态会被 Atlassian 的 CORS 拦下 —— 如实失败，不假装成功）。
@@ -366,7 +394,7 @@ async function _jiraRequest(domain, path, opts){
   if(api && typeof api.jiraFetch === "function"){
     try{
       const host = new URL(base).hostname;
-      const r = await api.jiraFetch({ domain: host, path: String(path), method: opts.method || "GET", body: opts.body || "", token: opts.token || "", timeoutMs: opts.timeoutMs });
+      const r = await api.jiraFetch({ domain: host, path: String(path), method: opts.method || "GET", body: opts.body || "", token: opts.token || "", email: opts.email || "", timeoutMs: opts.timeoutMs });
       return r ? { ok: !!r.ok, status: r.status || 0, body: r.body || null, error: r.error || "" } : { ok: false, status: 0, body: null, error: "no_response" };
     }catch(e){
       return { ok: false, status: 0, body: null, error: (e && e.message) ? e.message : String(e) };
@@ -374,7 +402,7 @@ async function _jiraRequest(domain, path, opts){
   }
   return await _intDoRequest(base + path, {
     method: opts.method || "GET",
-    headers: Object.assign({ "Authorization": "Bearer " + (opts.token || ""), "Content-Type": "application/json" }, opts.headers || {}),
+    headers: Object.assign({ "Authorization": _jiraAuthHeader(opts.token, opts.email), "Content-Type": "application/json" }, opts.headers || {}),
     body: opts.body
   });
 }
@@ -739,7 +767,7 @@ async function linearConnect(config){
   const resp = await _intDoRequest("https://api.linear.app/graphql", {
     method: "POST",
     headers: {
-      "Authorization": "Bearer " + config.token,
+      "Authorization": _linearAuthHeader(config.token),
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ query: "{ viewer { id email } }" })
@@ -775,7 +803,7 @@ async function _linearResolveTeamId(token, team){
   try{
     const resp = await _intDoRequest("https://api.linear.app/graphql", {
       method: "POST",
-      headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      headers: { "Authorization": _linearAuthHeader(token), "Content-Type": "application/json" },
       body: JSON.stringify({
         query: "query($id: String!) { team(id: $id) { id } }",
         variables: { id: t }
@@ -793,7 +821,7 @@ async function _linearFetchStates(token, teamId){
   try{
     const resp = await _intDoRequest("https://api.linear.app/graphql", {
       method: "POST",
-      headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      headers: { "Authorization": _linearAuthHeader(token), "Content-Type": "application/json" },
       body: JSON.stringify({
         query: "query($id: String!) { team(id: $id) { states { nodes { id name } } } }",
         variables: { id: teamId }
@@ -835,7 +863,7 @@ async function linearSyncIssue(issue){
   if(!syncInfo && !teamId) return { success: false, error: "missing_team_id" };
 
   const headers = {
-    "Authorization": "Bearer " + provider.config.token,
+    "Authorization": _linearAuthHeader(provider.config.token),
     "Content-Type": "application/json"
   };
   const desc = issue.note || issue.description || "";
@@ -905,7 +933,7 @@ async function linearListIssues(filter){
   const query = "query($teamId: String!) { team(id: $teamId) { issues { nodes { id title description state { name } } } } }";
   const resp = await _intDoRequest("https://api.linear.app/graphql", {
     method: "POST",
-    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+    headers: { "Authorization": _linearAuthHeader(token), "Content-Type": "application/json" },
     body: JSON.stringify({ query: query, variables: { teamId: teamId } })
   });
   if(!resp.ok || !resp.body || !resp.body.data) return [];
@@ -946,7 +974,7 @@ async function jiraConnect(config){
   const provider = integrationRegisterProvider("jira", INTEGRATION_TYPES.JIRA, config);
   if(!provider) return null;
   // 验证 token（经主进程中继）
-  const resp = await _jiraRequest(config.domain, "/rest/api/3/myself", { method: "GET", token: config.token });
+  const resp = await _jiraRequest(config.domain, "/rest/api/3/myself", { method: "GET", token: config.token, email: config.email });
   provider.config._verified = !!resp.ok;
   provider.config._lastVerifiedAt = _intNow();
   _intSaveProviders();
@@ -964,9 +992,9 @@ async function jiraConnect(config){
  * 拉取某个 Jira issue 的可用流转 → [{id,name}]（v3.7.85，运行时解析，不预置映射表）
  * @returns {Promise<{ok:boolean, list:Array<{id:string,name:string}>}>}
  */
-async function _jiraFetchTransitions(domain, token, issueKey){
+async function _jiraFetchTransitions(domain, token, email, issueKey){
   try{
-    const r = await _jiraRequest(domain, "/rest/api/3/issue/" + issueKey + "/transitions", { method: "GET", token: token });
+    const r = await _jiraRequest(domain, "/rest/api/3/issue/" + issueKey + "/transitions", { method: "GET", token: token, email: email });
     const list = r && r.body && Array.isArray(r.body.transitions) ? r.body.transitions : [];
     return { ok: !!(r && r.ok), list: list };
   }catch(e){
@@ -992,6 +1020,7 @@ async function jiraSyncIssue(issue, direction){
   const state = _intGetSyncState("jira");
   const syncInfo = state.syncedItems[issue.id];
   const token = provider.config.token;
+  const email = provider.config.email;
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   if(!_intJiraBase(domain)) return { success: false, error: "invalid_domain" };
@@ -1006,6 +1035,7 @@ async function jiraSyncIssue(issue, direction){
       resp = await _jiraRequest(domain, "/rest/api/3/issue/" + syncInfo.remoteId, {
         method: "PUT",
         token: token,
+        email: email,
         body: JSON.stringify({
           fields: { summary: issue.title, description: issue.description }
         })
@@ -1014,11 +1044,11 @@ async function jiraSyncIssue(issue, direction){
         /* v3.7.85：状态变换 —— 拉该 issue 的 transitions，本地状态名按候选匹配，命中才 POST */
         let transitioned = false;
         if(issue.status){
-          const tr = await _jiraFetchTransitions(domain, token, syncInfo.remoteId);
+          const tr = await _jiraFetchTransitions(domain, token, email, syncInfo.remoteId);
           const tName = _matchTransitionName(tr.list, issue.status);
           if(tName){
             const trr = await _jiraRequest(domain, "/rest/api/3/issue/" + syncInfo.remoteId + "/transitions", {
-              method: "POST", token: token, body: JSON.stringify({ transition: { id: tName } })
+              method: "POST", token: token, email: email, body: JSON.stringify({ transition: { id: tName } })
             });
             transitioned = !!trr.ok;
           }
@@ -1033,6 +1063,7 @@ async function jiraSyncIssue(issue, direction){
       resp = await _jiraRequest(domain, "/rest/api/3/issue", {
         method: "POST",
         token: token,
+        email: email,
         body: JSON.stringify({
           fields: {
             project: { key: projectKey },
@@ -1064,13 +1095,15 @@ async function jiraListIssues(filter){
   if(!provider) return [];
   filter = filter || {};
   const token = provider.config.token;
+  const email = provider.config.email;
   const domain = provider.config.domain;
   const projectKey = provider.config.projectKey;
   const jql = filter.jql || ("project = " + projectKey);
   if(!_intJiraBase(domain)) return [];
   const resp = await _jiraRequest(domain, "/rest/api/3/search?jql=" + encodeURIComponent(jql) + "&maxResults=" + (filter.limit || 50), {
     method: "GET",
-    token: token
+    token: token,
+    email: email
   });
   if(!resp.ok || !resp.body || !resp.body.issues) return [];
   return resp.body.issues;

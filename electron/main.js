@@ -709,12 +709,22 @@ if (!gotLock){
          · 日志只记主机与状态码，**绝不记 token 与正文**；
          · assertTrustedSender 与 chat / notify-send 同一道门。 */
     const JIRA_DOMAIN_RE = /^[a-z0-9][a-z0-9-]*\.atlassian\.net$/;
+    /* 凭据形态与渲染进程 src/ui-ge-integrations.js 的 _jiraAuthHeader **同语义两份实现**
+       （跨进程不能共享函数）：有 email = Atlassian Cloud 的 Basic base64(email:apiToken)，
+       无 email = Jira Server/DC 的 Bearer PAT。两侧不一致就等于「桌面版配不上、浏览器版配得上」
+       这类假象，所以 tests/integration-auth-form.test.js 把两侧输出逐条对齐钉死。 */
+    const jiraAuthHeader = (token, email) => {
+      const tk = String(token || "").trim();
+      const em = String(email || "").trim();
+      return em ? ("Basic " + Buffer.from(em + ":" + tk, "utf8").toString("base64")) : ("Bearer " + tk);
+    };
     ipcMain.handle("jira-fetch", async (e, arg) => {
       assertTrustedSender(e);
       const domain = String((arg && arg.domain) || "").toLowerCase();
       const reqPath = String((arg && arg.path) || "");
       const method = String((arg && arg.method) || "GET").toUpperCase();
       const token = String((arg && arg.token) || "");
+      const email = String((arg && arg.email) || "");
       const body = (arg && typeof arg.body === "string") ? arg.body : "";
       if(!JIRA_DOMAIN_RE.test(domain)) return { ok: false, status: 0, error: "bad_domain" };
       if(!/^\/rest\//.test(reqPath)) return { ok: false, status: 0, error: "bad_path" };
@@ -727,7 +737,7 @@ if (!gotLock){
       try{
         const r2 = await fetch("https://" + domain + reqPath, {
           method: method,
-          headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json", "Accept": "application/json" },
+          headers: { "Authorization": jiraAuthHeader(token, email), "Content-Type": "application/json", "Accept": "application/json" },
           body: method === "GET" ? undefined : body,
           signal: ctrl2.signal
         });

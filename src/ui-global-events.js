@@ -662,8 +662,12 @@ const INTEGRATION_CONFIG_FIELDS = {
              { k:"notesDatabaseId", label:t("int.notionNotesDbId","笔记数据库 ID"), ph:t("int.notionNotesDbIdPh","可选，用于笔记同步") }],
   linear:   [{ k:"token", label:"API Key", ph:"lin_api_…", required:true, secret:true },
              { k:"teamId", label:"Team ID", ph:t("int.linearTeamIdPh","可选，用于 issue 同步") }],
+  /* v3.7.94：补上 **email** 字段。Atlassian Cloud 的凭据是 `Basic base64(email:apiToken)`，
+     缺了 email 就没有任何正确形态可填（此前占位符还写着 "Bearer token"，等于把用户往错方向引）；
+     Jira Server/DC 的 PAT 才走 Bearer，那种站点留空即可 —— 有没有 email 就是这两种形态的分界。 */
   jira:     [{ k:"domain", label:t("int.jiraDomain","站点域名"), ph:"your-domain.atlassian.net", required:true },
-             { k:"token", label:"API Token", ph:"Bearer token", required:true, secret:true },
+             { k:"email", label:t("int.jiraEmail","账号邮箱（Atlassian Cloud 必填；Server/DC 留空）"), ph:"you@example.com", required:false },
+             { k:"token", label:t("int.jiraToken","API Token"), ph:t("int.jiraTokenPh","Cloud 配邮箱走 Basic；Server/DC 的 PAT 单独走 Bearer"), required:true, secret:true },
              { k:"projectKey", label:t("int.jiraProjectKey","项目 Key（推送任务用，如 PROJ）"), ph:"PROJ" }],
   /* v3.7.69：Slack 改成「群机器人 Incoming Webhook」—— URL 本身即凭据、无加签；
      hooks.slack.com 不回 CORS 头（实测），仅桌面版可发。填了**不会保存**（会话内存）。 */
