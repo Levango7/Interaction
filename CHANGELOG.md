@@ -1,3 +1,53 @@
+## [Unreleased] - 2026-10-14（批次⑤ · 集成凭据形态 + 装机验收前置条件 + C2 收口）
+
+**把台账里三条"等外部条件"的项逐条实测：两条其实是自家缺陷，一条的前置条件真的缺、已在 CI 补上。**
+
+- **R-16 凭据形态（`f0f56dd`）**：Linear 5 个调用点此前全发 `Authorization: Bearer lin_api_…`，
+  而 Linear 个人 API Key 要**原样**发（Bearer 只属于 OAuth token）；Atlassian Cloud 是
+  `Basic base64(email:apiToken)`，本仓发 Bearer 且**配置面板根本没有 email 字段** —— Basic 形态在 UI 上
+  无法表达，用户没有任何正确形状可填。改为两个唯一构造点 `_linearAuthHeader()` / `_jiraAuthHeader()`
+  （顺带剥掉用户连前缀一起粘进来的 `Bearer `），面板补 email（zh/en i18n 同步），
+  `_jiraRequest` 与 6 个调用点逐条把 email 传下去，主进程 `jira-fetch` 中继按同语义实现。
+  · 新门禁 `tests/integration-auth-form.test.js`（15 例）：锁渲染进程实际 header、中继**每一跳**的 email、
+    以及**跨进程逐条同值**（两侧分叉的症状是"浏览器版能连、桌面版连不上"）。主进程那份实现用文本抽取求值
+    参与对比，不在测试里抄一份等价断言。
+  · 变异验证 4/4 全红（M1 Linear 退回 Bearer / M2 渲染侧丢 Basic / M3 只漏 transitions 一跳的 email /
+    M4 主进程丢 Basic）。**M3 第一版是绿的**，暴露的是用例自己的覆盖盲区（新 issue 只走 create，
+    PUT+transitions 路径压根没跑）→ 补 `_intRecordSync` 造出 syncInfo 后才红在正确那一跳上。
+  · `tests/linear-push.test.js` 有一条例内断言写的是 `"Bearer lin_api_test"` —— **门禁把错的形态钉成了期望值**，
+    所以真机一直 401 而门禁一直绿；已改为原样发并注记原因。
+  · `tests/electron-ipc.test.js` 补 2 例：中继带 email 必须发 Basic、非 ASCII 必须按 UTF-8 编 base64。
+  · **诚实口径**：无凭据实测**区分不出**形态（Linear 三种写法都回同一个 401；Atlassian 匿名只给
+    `WWW-Authenticate: OAuth realm=`）。"该发哪一种"的判据来自服务商文档；能由代码结构证实的是
+    "Jira 没有 email 输入 = Basic 无法表达"。新增 `docs/integrations-verify.md` 写清拿到 key 后怎么一步验穿、
+    以及 401 该先怀疑 key 而不是形状。
+- **R-17 装机验收的前置条件（CI 侧）+ 一条自伤记账**：`_probe/verify-installed-portable.mjs` 前两版都写进了
+  用户真实 profile `%APPDATA%\agent-workbench`（把任务重置成 `[]`）。三条根因：① Electron 在 Windows 上
+  **不读** `APPDATA`/`LOCALAPPDATA` 环境变量（取 Known Folder）；② **portable 的 NSIS 外壳会吞掉
+  `--user-data-dir`**，内层子进程拿到的是 Electron 自算的真实目录 ⇒ portable 形态本机无隔离手段；
+  ③ 应用有 `requestSingleInstanceLock()`，上一版进程没杀干净时新实例立刻退出、CDP 连到了**残留 7 天的旧实例**，
+  于是那一轮"21/23 通过"全是假数（`⑨ 重启存活` 根本没发生过重启）。
+  · 前置条件补齐：`electron-build.yml` 增加 `win-unpacked.tar.gz` artifact（仅 `workflow_dispatch`；
+    用 tar 而非 Compress-Archive，因产物含中文名）。同一份 app.asar/prod bundle/主进程，只差启动器那一层，
+    而 `--user-data-dir` 在它身上真生效 ⇒ 装机验收第一次可在隔离 profile 上重复跑。
+  · 探针改为**三关自证 + 任一不过就 abort**：开跑前端口须空闲 → 启动后按 CIM 回查「创建时间晚于 T0 **且**
+    `--user-data-dir` 等于隔离目录」→ 收尾递归 mtime 扫描真实 profile 不许有任何文件在本次开跑后被改。
+    基线值改为跑前实测（第一版硬编码期望值会把这次结论套上次的数）。
+  · **恢复未擅自执行**：被重置的 4 条演示任务原文仍在该 profile 自己的 `wb_agent_autobackup*` 快照里
+    （只读扫描命中 `提交本周周报 / 修复登录页 / Raft`）；这是用户的个人数据目录，回灌或应用内恢复都等他点头。
+- **R-18 C2「后端立项」是过时账 + 顺出的真缺陷**：后端早已在本仓 `server/` 落地（`POST /api/sync/changes`，
+  `server/verify/incremental-check.cjs` 38 项），C1–C4 全标 ✅；台账 §五 那行没跟着契约文档更新。
+  顺着查出的缺陷：契约 §三「已知边界」遗留的 `resetCustomLinks()` 裸 `removeItem` **一直没收**，
+  而 `wb_custom_links` 在同步键集合内 ⇒ 增量模式下服务端留旧值，下一次下行把用户删掉的自定义链接**原样复活**。
+  改走 `_sharedSafeLSRemove(CUSTOM_LINKS_KEY)`（它本就负责记 `op:"del"`；语义唯一差别是存储异常不再上抛，
+  而调用方不接异常）。新 `tests/cloud-sync-chlog-custom-links.test.js` 3 例：开态须有 del 条目、
+  关态零行为变化、不存在的键不得造假信号；变异（改回裸 removeItem）红在第一条。
+  仍开着的只有 `mv+提示` 冲突策略档位 —— 那是产品决策，不该再记成"等后端立项"。
+- **验证与归属**：本机 4 个受影响套件 89 例全绿（`integration-auth-form` / `linear-push` / `electron-ipc` /
+  `cloud-sync-chlog-custom-links`），既有 `chain-edit` 第 6 例（重置恢复默认）仍绿 ⇒ 用户可见行为未变；
+  全量单测在 `git archive HEAD` 净副本里 1697 passed / 1 failed，那 1 条即上述"门禁钉住错误形态"的旧断言，
+  已随本批改正。台账 `docs/audit-2026-10-06.md` 追加 R-16 / R-17 / R-18 并更正 §五 三行。
+
 ## [v3.7.123] - 2026-10-13
 
 **补上 v3.7.122 明确延后的两项：测试覆盖阶段 2（四个薄页面的业务级断言）+ flaky 清理（固定 sleep → 判别式等待）。**
