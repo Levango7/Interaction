@@ -78,6 +78,12 @@
 - `op:"del"` 覆盖 = 经 `_sharedSafeLSRemove` 的删除（集成配置摘除 / `rec_` 资料键 / `push_subscription`）；
   `src/data-links.js` 的 `resetCustomLinks()` 是**裸 `removeItem`**，其既有语义是"存储异常仍抛出"，
   改走安全删除会引入与本批无关的行为变化 —— 为守"零行为变化"纪律**未接**，留阶段 2 与协议一并收口。
+  **✅ 2026-10-14 已收口（本批）**：该口径当时判反了 —— `wb_custom_links` 在同步键集合内
+  （`render-overview.js` 的 `allKeys()` 判定），删除不进日志就意味着**增量模式下服务端留着旧值，
+  下一次下行 `changed` 把用户删掉的自定义链接原样复活**。已改走 `_sharedSafeLSRemove(CUSTOM_LINKS_KEY)`，
+  并由新增的 `tests/cloud-sync-chlog-custom-links.test.js` 钉住（开态须有 `op:"del"`、
+  关态零变化、对不存在的键不得造假信号）。语义唯一差别：存储异常不再向上抛，而调用方（设置页重置按钮）
+  本来就不接这个异常。
 - 队列是"原料"不是增量协议：**阶段 2 落地前，任何上行仍是全量**（防"看似增量、实则丢数据"）。
 
 ### 阶段 2 实施记录（2026-10-10 · v3.7.106 批）—— 增量上行 + 下行增量，开关制 + 全量回退

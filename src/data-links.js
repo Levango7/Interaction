@@ -424,7 +424,14 @@ function toggleCustomLink(id, enabled){
  * @returns {void}
  */
 function resetCustomLinks(){
-  localStorage.removeItem(CUSTOM_LINKS_KEY);
+  /* v3.7.124 收口云同步契约 §三 遗留边界：这里原先是裸 `localStorage.removeItem`，删除**不进变更日志**。
+     wb_custom_links 在同步键集合内（render-overview 的 allKeys 判定），于是增量模式下服务端留着旧值，
+     下一次下行 `changed` 就把用户删掉的自定义链接**原样复活** —— 症状是"重置后又回来了"，
+     且只在开关 syncIncremental 打开时才发生，最难复现的那类静默失效。
+     改走共享安全删除即可让它记上 op:"del"（`_sharedSafeLSRemove` 只在"删除前存在且删除未抛错"时记，
+     不会给不存在的键造假信号）。语义差别只有一处：存储异常不再向上抛 —— 调用方
+     （设置页的重置按钮）本来就不接这个异常。 */
+  _sharedSafeLSRemove(CUSTOM_LINKS_KEY);
 }
 
 let active = load(PREFIX+"active","office");
