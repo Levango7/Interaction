@@ -75,10 +75,12 @@ jobs:
   # 背景：server/ 的四个自足脚本（hardening 9/9 · idor 9/9 · client-contract 24/24 ·
   # incremental 38/38）此前**只在本机手动跑** —— 两处文档记为待办，当时理由是"ci.yml 属发版
   # 必改文件，本轮未动"；发版已完成，该理由消失。
+  # 后续扩容：security / tools-fetch / oauth / router-isolation（v3.7.122）、
+  # config-check（v3.7.124）逐个接入，现共 **9 个自足脚本**。
   # 为什么单开一个 job：它们与 agent-workbench.html 的状态无关（各自 spawn 真服务 + Node fetch
   # 直连，独立端口），所以不进 test job —— 既不扰动 verify-ci-order 的顺序预演，也不拖慢主矩阵。
-  # 覆盖的是**真实 HTTP 行为**（认证绕过 / 跨用户越权 / 客户端契约 / 增量协议与快照相干性），
-  # 静态扫描与 jsdom 单测都到不了这一层。
+  # 覆盖的是**真实 HTTP 行为**（认证绕过 / 跨用户越权 / 客户端契约 / 增量协议与快照相干性 /
+  # OAuth 全链路 / 路由隔离 / 配置加载语义），静态扫描与 jsdom 单测都到不了这一层。
   server-verify:
     runs-on: ubuntu-latest
     steps:
@@ -90,7 +92,7 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
         working-directory: server
-      - name: 服务端验证脚本（8 个自足脚本，各自 spawn 真服务 + 实测 HTTP）
+      - name: 服务端验证脚本（9 个自足脚本，各自 spawn 真服务 + 实测 HTTP）
         run: |
           node verify/hardening-check.cjs
           node verify/idor-check.cjs
@@ -100,6 +102,7 @@ jobs:
           node verify/tools-fetch-check.cjs
           node verify/oauth-check.cjs
           node verify/router-isolation-check.cjs
+          node verify/config-check.cjs
         working-directory: server
         timeout-minutes: 10
 

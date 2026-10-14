@@ -1,3 +1,44 @@
+## [v3.7.125] - 2026-10-14
+
+> **版本号说明**：本批原按 v3.7.124 发版，与并行会话同批次发布的 v3.7.124（BUILD_TAG `20261014a`，集成凭据形态 + 装机验收前置条件）**撞号**。为避免两个不同内容共用同一版本号，本批改发 v3.7.125。
+
+**修掉一个"文档教了但代码没做"的配置缺陷：`server/config.json` 此前根本不会被读取。**
+
+- **根因**（实测确认，非推断）：`loadConfig()`（原 `server/src/index.js:22-25`）只 `readFileSync`
+  了 **`config.example.json`**，而 `server/README.md` §快速启动 与启动报错文案（`index.js:62`）
+  都在教用户「复制 `config.example.json` 为 `config.json` 后改密钥」——**该步骤完全空转**。
+  反证：往 `config.json` 写入非占位 JWT 密钥后不带任何环境变量启动，仍被
+  「jwt…仍是占位值」拒绝启动（那份文件的密钥压根没被读到）。
+  影响面：照文档操作的运维会陷入「改了配置却不生效、且没有任何提示」的不可诊断状态。
+- **修法**（`server/src/config.js`，v3.7.124 新建；`index.js` 只做装配）
+  - 三层优先级：`config.example.json`（基线，含全部安全默认值）→ **深合并** `config.json`
+    → 环境变量覆盖。`config.json` 不存在则静默跳过，不破坏既有部署。
+  - **深合并而非整体替换**：只配 `github` 一节时，`security.rateLimit` / `wechat.*` / `sync.*`
+    等安全默认值仍在。若实现成整体替换，限流与同步上限会**静默失效且无任何报错**——
+    这类"静默丢失安全默认值"比"读不到配置"更危险。
+  - **坏配置 fail loud**：`config.json` JSON 语法错误直接抛错并指向该文件，不再静默按默认启动
+    （"改了配置却没生效"这类问题宁可开箱报错）。
+  - `config.json` 加进 `.gitignore`（此前**没有任何规则忽略它**，用户照 README 手建极易把
+    JWT 密钥与 clientSecret 误提交）。
+  - 启动日志新增一行 `config: example + config.json + env 覆盖`，配置来源一眼可见。
+  - 顺手把 `loadConfig` 从入口文件抽出：原实现在 `index.js` 里，`require("../src/index")`
+    会把整个 express 应用拉起来，导致**配置合并语义无法被单测**——而它恰恰是本仓摔过跤的地方。
+- **新守护** `server/verify/config-check.cjs`（**19/19**，已接入 CI，服务端脚本 8 → 9 个，
+  合计断言 **193 → 212**）：config.json 生效 / 深合并保默认（4 条：未写节、未写节内键、
+  新键可进、base 不被改）/ env 优先级最高 / 数组整份替换不逐元素合并 / 坏 JSON fail loud，
+  外加一条 **HTTP 层差分对照**（同一实例下基线回显请求源、配了之后固定回显，
+  证明配置值真的流到了 express）。
+  口径踩坑已写进脚本注释：express 的 `cors` 包对**字符串** origin 是"固定回显、不按请求源过滤"
+  （`node_modules/cors/lib/index.js:47-56`），第一版按"非匹配源拿不到 ACAO"写断言直接假红；
+  而 `index.js:62` 的 `corsOrigin === "*" ? true : corsOrigin` 让基线形态变成**回显请求源**——
+  两版都写错过才把真实语义钉住。
+- **验收（用户视角）**：只写 `config.json`、**零环境变量**启动 → 服务端正常起来（旧行为直接
+  拒绝启动）、`GET /api/auth/github` 返回 **200** 且 authorizeUrl 带 config.json 里的 client_id。
+  即 README「方式一」现在真的可用了。
+- **验证**：9 个服务端脚本全绿 212/212；门禁链与单测不受影响（本批未触碰客户端与 HTML 逻辑，
+  仅 VERSION/BUILD_TAG 随发版链 bump）；故障注入反证——把 config.json 分支短路成旧行为，
+  6 条转红（含 HTTP 层那条），还原后 19/19 复绿。
+
 ## [v3.7.124] - 2026-10-14（批次⑤ · 集成凭据形态 + 装机验收前置条件 + C2 收口）
 
 **把台账里三条"等外部条件"的项逐条实测：两条其实是自家缺陷，一条的前置条件真的缺、已在 CI 补上。**

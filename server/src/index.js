@@ -1,16 +1,21 @@
 /* server/src/index.js
  * Agent 工坊鉴权后端入口（供 .exe 安装版内嵌、或独立部署供网页版共用）。
  * 启动：node src/index.js   （或 npm start）
- * 配置：读 config.example.json；同名 env（SERVER__PORT / AUTH__EMAIL__SMTP__HOST 等）可覆盖。
+ * 配置：见 src/config.js —— 三层优先级 config.example.json < config.json < 环境变量。
  * 依赖：仅 express / cors / bcryptjs / jsonwebtoken / nodemailer（均已在 server/node_modules）。
  */
 "use strict";
-const path = require("path");
 const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
 const Store = require("./store");
 const authRouter = require("./auth");
+/* v3.7.124：loadConfig 从本文件抽到 src/config.js（入口文件只装配零业务）。
+   连带修掉一个真实缺陷：原实现只读 config.example.json，README 与启动报错里
+   「复制 config.example.json 为 config.json」那一步**从来没有效果**——
+   已实测确认（在 config.json 写入非占位密钥后启动，仍被判定"占位值"拒绝启动）。
+   现在 config.json 真正生效，且与基线做**深合并**（不整体替换，保住安全默认值）。 */
+const { loadConfig, USER_PATH } = require("./config");
 /* v3.7.122：原 extrasRouter 同一个实例挂两个前缀（/api/notifications 与 /api/integrations），
    交叉路径全部可达、攻击面翻倍（审计遗留 P2）。现按前缀拆成两个独立工厂各挂各的，
    路由集合以客户端真实调用为准；守护见 verify/router-isolation-check.cjs。 */
@@ -18,29 +23,6 @@ const notificationsRouter = require("./notifications");
 const integrationsRouter = require("./integrations");
 const syncRouter = require("./sync");
 const toolsFetchRouter = require("./tools-fetch");
-
-function loadConfig() {
-  const base = path.join(__dirname, "..", "config.example.json");
-  let cfg = {};
-  try { cfg = JSON.parse(fs.readFileSync(base, "utf8")); } catch (e) { /* 用默认 */ }
-  // 环境变量覆盖（点号路径 -> 大写双下划线）：SERVER__PORT、AUTH__EMAIL__SMTP__HOST ...
-  const applyEnv = (obj, prefix) => {
-    Object.keys(obj).forEach(k => {
-      const envKey = (prefix + k).toUpperCase().replace(/\./g, "__");
-      const envVal = process.env[envKey];
-      if (envVal !== undefined) {
-        if (typeof obj[k] === "number") obj[k] = Number(envVal);
-        else if (typeof obj[k] === "boolean") obj[k] = envVal === "true" || envVal === "1";
-        else obj[k] = envVal;
-      }
-      if (obj[k] && typeof obj[k] === "object" && !Array.isArray(obj[k])) applyEnv(obj[k], prefix + k + ".");
-    });
-  };
-  applyEnv(cfg, "");
-  // 数据文件相对 server 根
-  if (!path.isAbsolute(cfg.dataFile)) cfg.dataFile = path.join(__dirname, "..", cfg.dataFile || "data/auth.json");
-  return cfg;
-}
 
 const cfg = loadConfig();
 
@@ -100,5 +82,10 @@ const port = Number(process.env.PORT) || Number(cfg.port) || 3001;
 app.listen(port, () => {
   console.log("[agent-workbench-auth] listening on http://localhost:" + port);
   console.log("[agent-workbench-auth] data file: " + cfg.dataFile);
+  /* v3.7.124：把「配置到底从哪来」打进启动日志。这一行的存在本身就是为了防那类
+     「我改了 config.json 但没生效」的不可诊断问题——现在启动时就能看到有没有读到它。 */
+  console.log("[agent-workbench-auth] config: example"
+    + (fs.existsSync(USER_PATH) ? " + config.json" : "（无 config.json，用基线默认）")
+    + " + env 覆盖");
   console.log("[agent-workbench-auth] email:" + (cfg.email && cfg.email.enabled ? "on" : "off") + " github:" + (cfg.github && cfg.github.enabled ? "on" : "off") + " wechat:" + (cfg.wechat && cfg.wechat.enabled ? "on" : "off"));
 });

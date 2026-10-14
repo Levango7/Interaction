@@ -78,3 +78,8 @@ _probe/
 
 # v3.7.122：verify-run.mjs 验证日志落盘目录（docs/verification-reliability.md 约定，不进版本库）
 verify-out/
+
+# v3.7.124：服务端用户配置（含 JWT 密钥与 clientSecret，绝不可进版本库）。
+# 基线 config.example.json 随仓库分发；本机复制成 config.json 后由 loadConfig 深合并读取。
+# 在修复前该文件**没有任何规则忽略**——用户照 README 建它极易把密钥误提交。
+server/config.json

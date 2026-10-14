@@ -15,7 +15,7 @@
 | 项 | 状态 |
 |---|---|
 | 与客户端（`agent-workbench.html`）联调 | ✅ **契约级 + 真机 UI 双通**：契约级 `verify/client-contract-check.cjs` 29/29；真机 UI `_probe/ui-backend-integration.mjs` 19/19（真 Chromium + 真后端 + 真表单，双 context 当两台设备，注册→上传→回读数据文件→跨设备拉取→错误密码负例）。客户端默认仍指向不存在的 `localhost:3001`，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**第三方登录另见 `verify/oauth-check.cjs` 33/33**（假 GitHub provider 全链路 + 微信演示模式全链路；v3.7.113 起 GitHub 未配凭据 → 503 `github_not_configured`，不再 404） |
-| 自动化测试 | ✅ 八个自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 29/29、`incremental-check` 54/54、`security-check` 25/25、`tools-fetch-check` 17/17、`oauth-check` 33/33、`router-isolation-check` 17/17，合计 **193**），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
+| 自动化测试 | ✅ **九个**自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 29/29、`incremental-check` 54/54、`security-check` 25/25、`tools-fetch-check` 17/17、`oauth-check` 33/33、`router-isolation-check` 17/17、`config-check` 19/19，合计 **212**），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
 | 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot` + **增量** `POST /api/sync/changes` / `/resolve`（全量 LWW / 增量含冲突策略，见 `docs/cloud-sync-incremental-contract.md`） |
@@ -34,8 +34,9 @@ node verify/security-check.cjs         # 期望 22/22 —— 速率限制（阈�
 node verify/tools-fetch-check.cjs      # 期望 17/17 —— 抓取代理：代回原文/拒私网与云元数据/重定向每跳重校/体积与超时/401
 node verify/oauth-check.cjs            # 期望 33/33 —— 第三方登录：假 GitHub 全链路（授权/兑换/签发/审计/负例/限流）+ 微信演示模式全链路
 node verify/router-isolation-check.cjs # 期望 17/17 —— 路由隔离：/api/notifications 与 /api/integrations 各挂各的（交叉路径必须 404 + not_found，合法路由必须仍 200，无 token 必须 401）
+node verify/config-check.cjs           # 期望 19/19 —— 配置加载：config.json 生效/深合并保默认/env 优先级/坏 JSON fail loud
 ```
-（八个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
+（九个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
 
 **加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败**验证码/锁定**策略
 （已有速率限制，但无限次试错同一口令仍可在线慢速爆破 —— 要彻底堵需账号级失败计数与锁定）、
@@ -87,6 +88,25 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 
 ## 配置（credentials 全部走配置，不硬编码）
 
+**三层优先级（后者覆盖前者）**，由 `src/config.js` 的 `loadConfig()` 统一处理：
+
+```
+config.example.json（仓库基线，含全部安全默认值）
+      ↓  深合并（不是整体替换！只写一节不会丢其它默认值）
+config.json（本机用户配置，已在 .gitignore，勿提交）
+      ↓  环境变量覆盖（点号路径 → 大写双下划线，如 GITHUB__CLIENTID）
+最终配置
+```
+
+> **⚠️ v3.7.124 修掉的历史坑**：在此之前 `config.json` **根本不会被读取**（实现只读
+> `config.example.json`），而本节与启动报错都在教「复制成 config.json」——那一步是空转的。
+> 已实测确认（往 config.json 写入非占位密钥后启动，仍被判定"占位值"拒绝启动）。
+> 现在三种方式都真实生效，启动日志会打一行 `config: example + config.json + env 覆盖`
+> 让你一眼看出配置到底从哪来。
+>
+> 合并是**深合并**：只配 `github` 一节时，`security.rateLimit` / `wechat.*` / `sync.*`
+> 等安全默认值仍然在。若实现成整体替换，限流与同步上限会静默失效且无任何报错。
+
 复制 `config.example.json` 为 `config.json`（或直接用环境变量覆盖，路径用 `__` 分隔 + 大写）：
 
 | 路径 | 环境变量示例 | 说明 |
@@ -98,6 +118,16 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 | github.enabled / clientId / clientSecret / redirectUri | `GITHUB__ENABLED` 等 | GitHub OAuth App 凭据 |
 | github.postMessageOrigin | `GITHUB__POSTMESSAGEORIGIN` | OAuth 回调页回传 token 的 `targetOrigin`。**默认 `"*"`（任意站点可接收 token），生产必须改成自己的页面源** |
 | wechat.enabled / appid / secret | `WECHAT__ENABLED` 等 | 微信开放平台/公众号扫码凭据 |
+
+> `config.json` 里 JSON 语法错误会**直接拒绝启动并指向该文件**（不静默按默认值跑）——
+> 「改了配置却没生效」这类不可诊断问题，宁可开箱报错也不放过。
+
+## 配置加载的守护
+
+`verify/config-check.cjs`（v3.7.124 新增，已接入 CI，共 9 个服务端脚本）把上述语义钉成断言：
+config.json 生效 / 深合并保默认 / env 优先级最高 / 数组整份替换 / 坏 JSON fail loud，
+外加一条 HTTP 层差分对照（同一实例下基线回显请求源、配了之后固定回显，证明配置值真到了 express）。
+故障注入反证：把 config.json 分支短路成旧行为 → 6 条转红。
 | dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传（两者都是完整认证绕过），以及 **GitHub 兑换端点指向 loopback/私网**（`verify/oauth-check.cjs` 的假 provider 联调用）。**生产必须为 false** |
 | github.* | `GITHUB__*` | GitHub 登录（v3.7.113）：`enabled/clientId/clientSecret/redirectUri/postMessageOrigin`（targetOrigin 默认 `*`，生产应收紧成应用源）+ `scope`（默认 `read:user`，只读身份）。`authorizeBase/tokenUrl/userUrl` 默认真端点，**仅联调/自建网关才覆盖**；指向 loopback 需另开上面的 dev 开关，否则回调返 `forbidden_host`。`stateTtlSec` 授权票据有效期（默认 600s，一次性消费+过期惰性清扫） |
 | wechat.* | `WECHAT__*` | 微信扫码登录：当前为**演示模式**（无开放平台凭据也可跑通取码→确认→签发全链路；响应带 `demo:true` 自证）。`qrcodeTicketTtlSec` 票据有效期（默认 300s，过期即清）。正式接入见 roadmap 阶段④ |
