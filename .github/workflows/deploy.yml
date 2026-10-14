@@ -153,18 +153,27 @@ jobs:
   e2e:
     needs: [ci-e2e-status]
     # v3.7.92 修复（真实触发的门禁缺口，见文件末注释）：
-    #   原实现 `if: needs.ci-e2e-status.outputs.skip != 'true'` + 无 always()，隐含假设
+    #   原实现 `if: needs.ci-e2e-status.outputs.skip != 'true'` + **无取消门**，隐含假设
     #   "ci-e2e-status 这个 job 总会跑完（probe 自捕获异常，结论不会是 failure）"。
     #   **该假设漏掉了「job 本身根本没启动」**：GitHub 托管 runner 分配失败时
     #   ci-e2e-status 的 conclusion = cancelled 且 steps=[]（2026-10-05 实测，连续 4 次）。
-    #   此时 GitHub 默认语义「needs 上游 cancelled → 下游 skipped」会让本 job **被动跳过**，
+    #   此时 GitHub 默认语义「needs 上游 cancelled → 下游 skipped」会让本 job **被动跳过**
+    #   （即 `if:` 里一个取消函数都不写的那个形状 —— 2026-10-15 探针 run 38625571067 实测：
+    #   上游 boom2=cancelled 时，无条件的 after_boom2_default 结论就是 **skipped**），
     #   而 deploy 的条件又把任何 skipped 当作"已由 CI 覆盖" → **e2e 门禁被静默绕过**。
-    #   修法：① 加 always()，让本 job 不再被上游取消连带跳过、必须自行判定条件；
+    #   修法：① 给本 job 一个**非取消门**，让上游取消不再连带跳过它、必须由它自行判定条件；
     #        ② 条件收紧为「仅当上游 **确实成功** 且探测到 skip=true 时才跳过」，
     #           其余一切情形（取消/失败/输出缺失）一律**跑**——fail-closed。
-    # v3.7.93：前置 main-only 守卫 —— 本 job 带 always()（上游 skip 不连带保护它），
+    # v3.7.93：前置 main-only 守卫 —— 本 job 带取消门（上游 skip 不连带保护它），
     # 故 ref 条件必须写进它自己的 if 内。
-    if: always() && github.ref == 'refs/heads/main' && !(needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true')
+    # R-21（2026-10-15 本片）：**取消门由 always() 换成 !cancelled()**，两格都是实测的（分支 r21-cancel-probe）：
+    #   · run 38625571067（上游 job 被取消、run 当时仍在进行）⇒ `!cancelled()` 的本 job **照样派发并跑成 success**
+    #     ⇒ v3.7.92 那条"防被动跳过"的保护**没有被降级**（同 run 里无取消门的对照 job = skipped，正是事故形状）。
+    #   · run 38623888632（整条 run 被取消、needs 刚转终态）⇒ `always()` 的本 job 被**照常调度并跑完**
+    #     （这就是僵尸：占 runner、又占住 pages-deploy-main 组，2026-10-14 实测把下一次发布堵了 6h31m），
+    #     而 `!cancelled()` 的对照 job **0 步都没派发** ⇒ 组立刻释放。
+    #   ⚠️ YAML 必须加引号：裸写 `!cancelled()` 会被解析成 local tag（js-yaml: unknown tag）。
+    if: "!cancelled() && github.ref == 'refs/heads/main' && !(needs.ci-e2e-status.result == 'success' && needs.ci-e2e-status.outputs.skip == 'true')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -193,9 +202,14 @@ jobs:
     #       (a) 主动跳过（CI 已覆盖，安全）
     #       (b) **被动跳过**（ci-e2e-status 因 runner 分配失败被取消，e2e 未跑 → 不安全）
     #     两者在 `needs.e2e.result` 上都是 'skipped'，故必须补查上游 ci-e2e-status 的结论。
-    #   不能用 always() 了事 —— 那会连 verify 失败也放行，等于撤掉门禁。
+    #   不能只挂一个取消函数了事 —— 那会连 verify 失败也放行，等于撤掉门禁。
+    # R-21（2026-10-15 本片）：`always()` → `!cancelled()`。本 job 的安全性本来就不靠 always()：
+    #   真正闭锁的是下面的 `needs.verify.result == 'success'` 与「skipped 必须事出有因」两道判据；
+    #   always() 在这里唯一多做的事，是让一条**已被取代、注定发不出去**的 run 继续占着
+    #   `pages-deploy-main` 组（2026-10-14 实测：6h31m 零字节发布 + 下一条 deploy 被压成 jobs=0）。
+    #   写在 `>-` 折叠块里所以 `!cancelled()` 不必加引号（块标量内容是字面文本，不解析 tag）。
     if: >-
-      always()
+      !cancelled()
       && github.ref == 'refs/heads/main'
       && needs.verify.result == 'success'
       && (

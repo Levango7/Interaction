@@ -1,3 +1,28 @@
+## [Unreleased]
+
+### 发布链（R-21）：被取代的 deploy run 不再当僵尸 —— 取消门由 `always()` 换成 `!cancelled()`
+
+`pages-deploy-main` 组配了 `cancel-in-progress: true`，但被取代的那条 run 不会整体死掉：
+`e2e` 带着 `if: always()` 照样被调度（2026-10-14 实测 `run 38506125600`：`queued` 从 03:24Z 躺到 09:56Z，
+**6h31m**、零字节发布，还把下一条 deploy 压成 `jobs=0`；`gh run cancel` 连发四次取不走一个未分配 runner 的 job）。
+本版把 `e2e.if` / `deploy.if` 的取消门换成 `!cancelled()`，并把 `tests/ci-workflow-guard.test.js`
+里三条**钉字符串** `always()` 的断言改成**按语义**断言（要求 `!cancelled()` 且禁止 `always()` 回归）。
+
+判据全部来自一次性分支 `r21-cancel-probe` 的实测（三条 run 号已写进 workflow 注释与 `docs/audit-2026-10-06.md` R-21）：
+
+| 格 | 实测 run | 观察 |
+|---|---|---|
+| 整条 run 被取消、needs 刚转终态 | `38623888632` | `always()` 的 job **被照常调度并跑成 success**（僵尸原形）；`!cancelled()` 的 job `completed/cancelled` **0 步**（立刻放组） |
+| 上游 job 被取消、run 未取消（= 2026-10-05 事故 `37368800195` 的形状） | `38625571067` | `!cancelled()` 的下游 **success（照样派发）**；无取消门的对照 **skipped（事故形状重现）** |
+| 上游 job 失败、run 未取消 | `38625180454` | `!cancelled()` 的下游 success，job 内 step 级 `cancelled()=false` |
+
+⇒ **v3.7.92 那条「防被动跳过」的保护没有降级**（保护来自"存在一个取消门"，不来自 `always()` 这个具体函数），
+而僵尸与发布组被占死这两件事一起消失。变异验证：`e2e.if` 换回 `always()` ⇒ 2 条断言红；
+`deploy.if` 换回 `always()` ⇒ 1 条红；把取消门整个删掉 ⇒ 同样 2 条红（证明它守的是"有没有取消门"）。
+YAML 细节：`e2e` 那行必须加引号（裸写 `!cancelled()` 会被解析成 local tag），`deploy` 写在 `>-` 折叠块里则不必。
+
+不涉产品代码。仍待的自然观察：下一次 push 覆盖在飞 run 时，那条 run 的 `e2e` 应是 **0 步不派发**、组立刻放行。
+
 ## [v3.7.125] - 2026-10-14
 
 > **版本号说明**：本批原按 v3.7.124 发版，与并行会话同批次发布的 v3.7.124（BUILD_TAG `20261014a`，集成凭据形态 + 装机验收前置条件）**撞号**。为避免两个不同内容共用同一版本号，本批改发 v3.7.125。

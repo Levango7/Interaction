@@ -196,12 +196,25 @@ function compareJobs(ciText, ciJob, depText, depJob) {
  *       而 deploy 的条件 `needs.e2e.result == 'skipped'` 又把任何 skipped 当"已由 CI 覆盖"
  *       → **e2e 门禁被静默绕过**（若此刻 CI 的 e2e 恰好是红的，未验证产物照样上线）。
  *   真值表实测（7 场景）：旧逻辑绕过 1 次（探测被取消 + CI e2e 红），新逻辑 0 次。
+ *   修法：① 给 e2e 加取消门，使其不被上游取消连带默认跳过、必须自行判定条件；
+ *        ② deploy 的 skipped 分支必须同时校验上游 ci-e2e-status **确实 success 且 skip='true'**。
+ *   R-21（2026-10-15 本片）把取消门从 `always()` 换成 `!cancelled()`：保护等价（实测 run 38625571067 仍派发），
+ *   但被取代的 run 不再占 runner/发布组（实测 run 38623888632：always() 的对照 job 照样跑完）。
  * 本组断言锁住修复，防止回退。
  * ======================================================================== */
 describe("deploy.yml ② e2e 门禁不得因上游 job 取消而被『被动跳过』绕过", () => {
-  it("e2e job 必须有 always()（否则上游 cancelled 会连带跳过它）", () => {
+  /* R-21（2026-10-15 本片）：断言对象从「有没有 always() 这个词」换成「取消门是哪种」。
+   * 三条判据都来自一次性分支探针 r21-cancel-probe 的实测，不是文档推理：
+   *   run 38625571067 —— 上游 job=cancelled 而 run 未被取消：
+   *     有 `!cancelled()` 的 job = **success（照样派发）**；无取消门的对照 job = **skipped（被动跳过，即事故形状）**
+   *   run 38623888632 —— 整条 run 被取消且 needs 刚转终态：
+   *     有 `always()` 的 job = **被调度并跑完**（僵尸：占 runner、占住 pages-deploy-main 组）
+   *     有 `!cancelled()` 的 job = **completed/cancelled、0 步**（立刻放组）
+   * ⇒ 保护来自"存在一个取消门"，而 `always()` 额外贡献的只有僵尸，所以这里锁 `!cancelled()` 并禁 `always()`。 */
+  it("e2e 必须带 !cancelled() 取消门（防上游 job 取消导致的被动跳过），且不得用 always()", () => {
     const ifBlock = ifBlockOf(dep, "e2e");
-    expect(ifBlock, "e2e 的 if 必须含 always()").toContain("always()");
+    expect(ifBlock, "e2e 的 if 必须含 !cancelled() 作为取消门").toContain("!cancelled()");
+    expect(ifBlock, "e2e 不得退回 always()（实测 run 38623888632：被取代的 run 里它照样派发并跑完，占住发布组 6h+）").not.toContain("always()");
   });
 
   it("e2e 跳过条件必须显式绑定『上游 success 且 skip=true』", () => {
@@ -233,9 +246,10 @@ describe("deploy.yml ② e2e 门禁不得因上游 job 取消而被『被动跳�
     expect(ifBlock, "不得裸用 e2e.result == 'skipped' 放行").not.toMatch(bareSkipRe);
   });
 
-  it("deploy job 仍有 always()（上游 skipped 时不被默认跳过）", () => {
+  it("deploy 的取消门也必须是 !cancelled()（上游 skipped 时不被默认跳过，但被取代的 run 不再当僵尸）", () => {
     const ifBlock = ifBlockOf(dep, "deploy");
-    expect(ifBlock, "deploy 必须保留 always()").toContain("always()");
+    expect(ifBlock, "deploy 的 if 必须含 !cancelled() 作为取消门").toContain("!cancelled()");
+    expect(ifBlock, "deploy 不得用 always()（它的安全闭锁由 verify/skipped 判据提供，always() 只贡献僵尸）").not.toContain("always()");
   });
 });
 
@@ -387,9 +401,9 @@ describe("deploy.yml ④ 非 main 分支不得发布（ref 守卫 + 触发收敛
     }
   });
 
-  it("e2e 的 ref 守卫必须与 always() 并存（v3.7.92 防被动跳过 + 本版防非 main）", () => {
+  it("e2e 的 ref 守卫必须与取消门并存（v3.7.92 防被动跳过 + v3.7.93 防非 main + R-21 禁僵尸）", () => {
     const ifBlock = ifBlockOf(dep, "e2e");
-    expect(ifBlock).toContain("always()");
+    expect(ifBlock).toContain("!cancelled()");
     expect(ifBlock).toContain("github.ref == 'refs/heads/main'");
   });
 
