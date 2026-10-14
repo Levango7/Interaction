@@ -33,6 +33,12 @@
   · 探针改为**三关自证 + 任一不过就 abort**：开跑前端口须空闲 → 启动后按 CIM 回查「创建时间晚于 T0 **且**
     `--user-data-dir` 等于隔离目录」→ 收尾递归 mtime 扫描真实 profile 不许有任何文件在本次开跑后被改。
     基线值改为跑前实测（第一版硬编码期望值会把这次结论套上次的数）。
+  · **收口实测（10-14）：23 条全绿**。产物 = run 38504326589 的 `win-unpacked` @ `d1d18e5`（v3.7.123）：
+    ⑧ `__dk_v2` 真落进打包态 IndexedDB（顺带证实 R-19 的旧现场已被 v3.7.95 修好）、
+    ⑨ 优雅关闭+重启后任务与 marker 都还在（此前那次红是**我用 `taskkill /F` 强杀**造成的未 flush 丢写 ——
+    持久性验收必须按用户的退出路径测）、⑪ 递归 mtime 扫描确认真实 profile 本次 0 文件被改。
+    另修探针自身两处：顶层异常也要收尾杀进程（`main().catch` 直接 exit 会把实例留在机器上）、
+    `ConvertTo-Json` 的 DateTime 须在 PS 侧转字符串（否则 Node 解成 NaN，把自己的目标判成不存在）。
   · **恢复未擅自执行**：被重置的 4 条演示任务原文仍在该 profile 自己的 `wb_agent_autobackup*` 快照里
     （只读扫描命中 `提交本周周报 / 修复登录页 / Raft`）；这是用户的个人数据目录，回灌或应用内恢复都等他点头。
 - **R-18 C2「后端立项」是过时账 + 顺出的真缺陷**：后端早已在本仓 `server/` 落地（`POST /api/sync/changes`，
@@ -43,8 +49,19 @@
   而调用方不接异常）。新 `tests/cloud-sync-chlog-custom-links.test.js` 3 例：开态须有 del 条目、
   关态零行为变化、不存在的键不得造假信号；变异（改回裸 removeItem）红在第一条。
   仍开着的只有 `mv+提示` 冲突策略档位 —— 那是产品决策，不该再记成"等后端立项"。
-- **验证与归属**：本机 4 个受影响套件 89 例全绿（`integration-auth-form` / `linear-push` / `electron-ipc` /
-  `cloud-sync-chlog-custom-links`），既有 `chain-edit` 第 6 例（重置恢复默认）仍绿 ⇒ 用户可见行为未变；
+- **R-19 设备密钥的可观测性（+ ⑧ 定性）**：装机探针 ⑧「打包态 `getDeviceKey()` 有值、`__dk_v2` 不在 IndexedDB」
+  查清了 —— 是真缺陷，且**根因已由并行会话在 v3.7.95 修**（SRC 块序里 `data-idb` 先于 `crypto` 加载，
+  `registerDkIdbHelpers` 从未被调用 ⇒ 密钥每次加载重新生成）；我的探针跑的是 **3.7.93 的产物**，
+  检出的是已修缺陷的旧现场 ⇒ ⑧ 必须在 CI 新出的 `win-unpacked` artifact 上复验才算关。
+  本批补的是剩下那半条命：**两处「写了但没落住」的 else 此前完全不说**（新生成分支不验证、
+  旧键迁移分支不报告），现各留一条诊断（`getDeviceKey:persistNew`=error、`getDeviceKey:migrate`=warn），
+  并刻意不加自动兜底（回退 localStorage 会把 H3 换来的安全姿态又输回去，那是产品决策）。
+  新 `tests/device-key-idb-persistence.test.js` 4 例；变异 2/2 各打红一条、还原复绿。
+  两条实现事实顺手钉住：`_dkIdbPut` 被包装成 `.then(()=>true)` ⇒ **返回值不可信，判据只能是回读**；
+  `initCrypto()` 自己会调 `ensureDeviceKey()`，密钥一旦缓存就短路 ⇒ 用例必须按 reset→装接缝→initCrypto 装配
+  （我第一版顺序错，四条断言全以「没诊断」的形式假失败）。
+- **验证与归属**：本机 5 个受影响套件 93 例全绿（`integration-auth-form` / `linear-push` / `electron-ipc` /
+  `cloud-sync-chlog-custom-links` / `device-key-idb-persistence`），既有 `chain-edit` 第 6 例（重置恢复默认）仍绿 ⇒ 用户可见行为未变；
   全量单测在 `git archive HEAD` 净副本里 1697 passed / 1 failed，那 1 条即上述"门禁钉住错误形态"的旧断言，
   已随本批改正。台账 `docs/audit-2026-10-06.md` 追加 R-16 / R-17 / R-18 并更正 §五 三行。
 

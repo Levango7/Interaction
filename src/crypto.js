@@ -98,6 +98,12 @@ async function _ensureDeviceKeyImpl(){
               try{ if(typeof pushDiag==="function") pushDiag("warn", "legacy device key not cleared: "+(e&&e.message||e), {where:"getDeviceKey:clearLegacy"}); }catch(_){}
             }
           }
+          /* v3.7.124 可观测性：写入没成功 / 回读不一致时，此前**什么都不说** —— 表现是
+             「密钥一直待在 localStorage 里」，而 H3 的安全意图（密钥优先进 IDB 以缩小 XSS 泄露面）
+             静默落空。装机探针正是靠这条才被引到正确定性上（见台账 R-19）。 */
+          else{
+            try{ if(typeof pushDiag==="function") pushDiag("warn", "device key migration to IndexedDB did not persist - key stays in legacy localStorage (H3 XSS-surface goal not met): put=" + (ok ? "ok" : "failed"), {where:"getDeviceKey:migrate"}); }catch(_){}
+          }
         }
         return _deviceKey;
       }catch(e){
@@ -108,7 +114,15 @@ async function _ensureDeviceKeyImpl(){
     _deviceKey = await crypto.subtle.generateKey({name:"AES-GCM", length:256}, true, ["encrypt","decrypt"]);
     const exported = await crypto.subtle.exportKey("raw", _deviceKey);
     const b64 = base64Encode(new Uint8Array(exported));
-    if(useIdb) await _dkIdbPut(DK_IDB_KEY, b64);
+    if(useIdb){
+      const putNew = await _dkIdbPut(DK_IDB_KEY, b64);
+      /* v3.7.124 可观测性：这里是**最贵的一次静默** —— 新键没落住，下次启动就再生成一把新的，
+         此前用旧键加密的一切（AI Key 等）当场解不开，而用户只会看到「配置莫名其妙没了」。
+         刻意**不**回退 localStorage：那会把 H3 特意换来的安全姿态又输回去，属产品决策不是兜底。 */
+      if(!(putNew && (await _dkIdbGet(DK_IDB_KEY)) === b64)){
+        try{ if(typeof pushDiag==="function") pushDiag("error", "newly generated device key FAILED to persist in IndexedDB - next launch will generate a different key and previously encrypted data becomes undecryptable", {where:"getDeviceKey:persistNew"}); }catch(_){}
+      }
+    }
     else localStorage.setItem(DK_KEY, b64); // 无 IDB 环境维持旧行为
     return _deviceKey;
   }catch(e){
