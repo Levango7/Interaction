@@ -42,6 +42,21 @@
 
 ## 条目
 
+### [2026-10-15 17:15 UTC+8] WorkBuddy 主会话（释放）
+- 状态：**已收工（释放）** —— 14:30 条目的「conflictPolicy 裁定」环节完成并闭环：v3.7.127（`c865fb0`）已推，tag 已推。
+- 本环节交付：① 用户裁定 **mv**（15:31），默认值 `config.example.json` 已改，契约/README 口径同步（历史定稿加后注保留原文）；② **现场捕获并修掉 `config.js` 空文件缺陷**（0 字节 config.json 误报「语法有误」→ 静默跳过；坏 JSON 仍 fail loud），守护 +3 先红后绿，本机真实故障复验通过。
+- 验证：config-check 22/22、incremental-check 54/54、cloud-sync-stage2 25/25、lint 0 errors。
+- 在跑的重活：无。
+- 准备推的范围：仅本条目（14:30 登记条目随本条一并提交）。
+- 提醒对方：mv 默认已生效——**你若有未发的 sync 相关批次，注意基线已切 mv**（lww 需显式配置）；下一个可用版本号仍空闲（3.7.128）。
+
+### [2026-10-15 14:30 UTC+8] WorkBuddy 主会话
+- 状态：进行中 —— 开工「sync.conflictPolicy 默认值裁定」环节（qoder 12:48 交接口子第 2 条，用户已选）
+- 占用路径：调研中（预计 `server/config.example.json`、`docs/cloud-sync-incremental-contract.md`、`README.md`、相关测试与客户端冲突面板代码；定稿后按实际清单更新本条）
+- 在跑的重活：无（全量验证如需，自建净副本，不碰共享树 `node_modules/`）
+- 准备推的范围：发版预登记 **3.7.127**（待裁定后写入 `AGENTS.md` §二）
+- 提醒对方：`CHANGELOG.md` 的 `[Unreleased]` 段若仍归属未结批次，我只追加自己的 `[3.7.127]` 段；会动 `tests/` 下 sync 相关文件前若与你冲突，在此追加一行错开
+
 ### [2026-10-15 12:40 UTC+8] WorkBuddy 主会话（释放）
 - 状态：**已收工（释放）** —— 释放 11:58 条目声明的全部占用：`AGENTS.md` 建册+与本板合并定位（`5e6a2ab`、`a554b1f` 已推）、`docs/decisions/OPEN-DECISIONS.md`（随 `7f3b1b4` 入库）、`CHANGELOG.md` 的 `[v3.7.126]` 段（已收口）。本会话当前**无在飞占用**。
 - 收尾核验：v3.7.126 CI run success / Pages completed / 线上指纹 `3.7.126 / 20261015a`（看守器与人工双重核验一致）。
