@@ -177,3 +177,38 @@ describe("第三方登录文案细分（v3.7.113）", () => {
     await vi.waitFor(() => expect(doc.getElementById("authSsoWechatBody").textContent).toContain("无后端"));
   });
 });
+
+/* v3.7.126（OD-002 · docs/decisions/OPEN-DECISIONS.md）：微信演示模式必须诚实呈现。
+   后端 /wechat/qrcode 在真 provider 未接入时返回 demo:true + 演示 SVG（server/src/auth.js
+   注释明确要求「必须让消费端看得出是演示」），但前端此前不消费该标志：把演示码当真二维码
+   渲染 + 提示「打开微信扫一扫」，再 2.5s 轮询一个永远不会 confirmed 的 scene → 5 分钟后
+   报「二维码已过期」。看起来能用，实际是死循环。
+   守护点：① demo 态 → 演示文案、无「扫一扫」误导、**不启动轮询**（apiWechatStatus 零调用
+   是反向断言——证明始终不成立，不得改判别式等待）；② demo 缺省（将来真 provider）→
+   原路径不受影响（合法路径不误杀）。 */
+describe("微信演示模式诚实呈现（v3.7.126 · OD-002）", () => {
+  it("demo:true → 显示演示提示而非「扫一扫」文案，且不启动轮询", async () => {
+    const doc = await startPage("authwelcome");
+    /* qr 特意给真形状的 data-URI（与后端 makeDemoWechatQr 同形态）：
+       证明修复靠的是消费 demo 标志，而不是碰巧 qr 为空。 */
+    win.apiWechatQrcode = vi.fn().mockResolvedValue({
+      ok: true,
+      data: { qr: "data:image/svg+xml;charset=utf-8,%3Csvg%3E%3C/svg%3E", scene: "wx_demo_od2", demo: true, expireIn: 300 }
+    });
+    win.apiWechatStatus = vi.fn();
+    doc.getElementById("authSsoWechat").click();
+    await vi.waitFor(() => expect(doc.getElementById("authSsoWechatBody").textContent).toContain("演示"));
+    expect(doc.getElementById("authSsoWechatBody").textContent).not.toContain("扫一扫");
+    expect(intervals.size).toBe(0);
+    expect(win.apiWechatStatus).not.toHaveBeenCalled();
+  });
+
+  it("demo 缺省（真 provider）→ 原路径不变：渲染二维码并启动轮询", async () => {
+    const doc = await startPage("authwelcome");
+    win.apiWechatQrcode = vi.fn().mockResolvedValue({ ok: true, data: { qr: "https://example.com/qr.png", scene: "scene-real" } });
+    win.apiWechatStatus = vi.fn();
+    doc.getElementById("authSsoWechat").click();
+    await vi.waitFor(() => expect(intervals.size).toBe(1));
+    expect(doc.getElementById("authSsoWechatBody").textContent).toContain("扫一扫");
+  });
+});

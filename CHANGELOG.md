@@ -1,3 +1,25 @@
+## [v3.7.126] - 2026-10-15
+
+**修掉 OD-002：微信扫码登录「看起来能用，实际是死循环」的演示态误导（P1 用户可见缺陷）。**
+
+- **缺陷**（`docs/decisions/OPEN-DECISIONS.md` OD-002）：真微信 provider 未接入时，后端
+  `POST /api/auth/wechat/qrcode` 返回 `demo: true` + 演示 SVG（`server/src/auth.js` 注释明确
+  要求「演示码必须让调用方消费端看得出是演示，不能伪装成真二维码」），但前端
+  `_wechatPollStart()`（`src/render-overview.js`）**不消费该标志**：把演示码当真二维码渲染，
+  配上「打开微信「扫一扫」完成登录」提示，再每 2.5s 轮询一个永远不会 confirmed 的 scene
+  → 5 分钟后报「二维码已过期，请关闭后重新扫码」。用户视角：功能看起来能用，实际是死循环。
+  非安全缺陷（`/wechat/confirm` 默认 404，无认证绕过），但属用户可见的功能不可用 + 误导性文案。
+- **修法**（协议不变）：响应带 `demo` 时渲染诚实说明（新 i18n 键 `auth.wechatDemo`，中英双语：
+  微信登录暂未接入、扫码无法登录、可用邮箱注册或 GitHub 快捷登录），并**不启动轮询**；
+  响应不带 `demo`（将来真 provider 接入）自动走原路径——客户端对后端的契约一字未改。
+- **守护**（`tests/auth-ui-lifecycle.test.js` +2，先红后绿——红时抓到的正是缺陷本体）：
+  ① demo 态 → 显示演示文案、无「扫一扫」误导、`apiWechatStatus` **零调用**。反向断言
+  （证明始终不成立）刻意不用判别式等待；qr 特意用与后端 `makeDemoWechatQr` 同形态的
+  data-URI——证明修复靠的是消费 `demo` 标志，而不是碰巧 `qr` 为空。
+  ② demo 缺省 → 原路径不变（渲染二维码 + 启动轮询），合法路径不误杀。
+- **账**：OD-002 就地关闭（OPEN → RESOLVED）；OD-001（第三方登录 provider 选型）仍 OPEN，
+  本修复不预设其方向——做不做第三方登录、走哪家，仍等用户画像确定后再定。
+
 ## [Unreleased]
 
 ### 发布链（R-21）：被取代的 deploy run 不再当僵尸 —— 取消门由 `always()` 换成 `!cancelled()`

@@ -1190,6 +1190,17 @@ function _wechatPollStart(){
     var d = r.data;
     var qr = d.qr || "";
     var scene = d.scene || "";
+    if(d.demo){
+      /* v3.7.126（OD-002 · docs/decisions/OPEN-DECISIONS.md）：后端明示演示模式时必须诚实呈现。
+         此前前端不消费 demo 标志：把演示 SVG（后端注释明确要求「必须让消费端看得出是演示」）
+         当真二维码渲染 + 提示「打开微信扫一扫」，再每 2.5s 轮询一个永远不会 confirmed 的 scene
+         → 5 分钟后报「二维码已过期」——看起来能用，实际是死循环（P1 用户可见缺陷）。
+         现改为演示说明空态 + **不启动轮询**（tests/auth-ui-lifecycle.test.js 反向断言：
+         demo 态 apiWechatStatus 不得被调用）。真 provider 接入后响应不带 demo → 自动走下方
+         原路径，协议不变。 */
+      if(body) body.innerHTML = '<div class="empty">' + esc(t("auth.wechatDemo", "微信扫码登录暂未接入（演示模式）——服务端未配置微信凭据，扫码无法登录。可用邮箱注册或 GitHub 快捷登录。")) + '</div>';
+      return;
+    }
     if(body){
       if(qr){
         /* v3.7.58（安全）：qr 来自后端响应，原样拼进 src 属性 —— 后端被攻破/返回恶意串
