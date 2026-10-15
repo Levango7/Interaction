@@ -65,16 +65,26 @@ function loadConfig() {
 
   let cfg = base;
   if (fs.existsSync(USER_PATH)) {
-    const user = readJson(USER_PATH);
-    if (user === null) {
-      /* v3.7.124：用户配置解析失败必须 fail loud。config.example.json 解析失败可以容忍
-         （仓库随附文件，坏不了），但用户手写的 config.json 解析失败**绝不能静默跳过** ——
-         那会让「改了配置却没生效」重新变成不可诊断问题（本轮修的正是这类静默）。 */
-      throw new Error(
-        "[config] 无法解析 " + USER_PATH + " —— JSON 语法有误（常见：尾随逗号、单引号、注释）。"
-        + "修正它，或先改名备份后重启；服务端不会在配置不可读时按默认值启动。");
+    /* v3.7.127：**空文件**（0 字节或纯空白）视为「未写任何配置」，与「文件不存在」同口径
+       静默跳过。这个形态不是理论——README 教的「复制 config.example.json 为 config.json
+       后编辑」中断一下就是空文件（2026-10-15 本机实测：0 字节 config.json 让服务端拒绝
+       启动，报错还写成「JSON 语法有误」——把「没来得及写」误报成「写错了」，而用户面对
+       这个报错会去找一个并不存在的语法错误）。
+       边界：非空但语法有误仍然 fail loud（那是真的写错了，v3.7.125 的口径不变，
+       verify/config-check.cjs ⑥ 组守护）。 */
+    const raw = fs.readFileSync(USER_PATH, "utf8");
+    if (raw.trim() !== "") {
+      const user = readJson(USER_PATH);
+      if (user === null) {
+        /* v3.7.124：用户配置解析失败必须 fail loud。config.example.json 解析失败可以容忍
+           （仓库随附文件，坏不了），但用户手写的 config.json 解析失败**绝不能静默跳过** ——
+           那会让「改了配置却没生效」重新变成不可诊断问题（本轮修的正是这类静默）。 */
+        throw new Error(
+          "[config] 无法解析 " + USER_PATH + " —— JSON 语法有误（常见：尾随逗号、单引号、注释）。"
+          + "修正它，或先改名备份后重启；服务端不会在配置不可读时按默认值启动。");
+      }
+      cfg = deepMerge(base, user);
     }
-    cfg = deepMerge(base, user);
   }
 
   applyEnv(cfg, "");

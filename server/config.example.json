@@ -51,7 +51,7 @@
   },
   "sync": {
     "maxSnapshotBytes": 2097152,
-    "conflictPolicy": "lww"
+    "conflictPolicy": "mv"
   },
   "tools": {
     "fetch": {

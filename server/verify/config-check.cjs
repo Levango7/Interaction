@@ -163,6 +163,25 @@ function startServer(port, extraEnv) {
   check("坏 JSON 抛错", threw, msg.slice(0, 60));
   check("报错信息指向 config.json 本身", msg.indexOf("config.json") !== -1);
 
+  /* ---------- ⑥b 空文件 = 未写配置（v3.7.127：把「没来得及写」与「写错了」分开） ---------- */
+  group("⑥b config.json 空文件（0 字节 / 纯空白）：静默跳过，不按坏 JSON 炸");
+  /* 这个形态不是理论：README 教的「复制 config.example.json 为 config.json 后编辑」中断一下
+     就是空文件（2026-10-15 本机实测：0 字节 config.json 让服务端拒绝启动，报错还是
+     「语法有误」——把没来得及写误报成写错了）。空 = 无配置，与「文件不存在」同口径；
+     非空但语法坏仍然 fail loud（⑥ 的用例不变）。 */
+  writeUserCfg("");
+  let emptyThrew = "", emptyCfg = null;
+  try { emptyCfg = loadConfig(); } catch (e) { emptyThrew = e.message; }
+  check("空文件不抛错", !emptyThrew, emptyThrew.slice(0, 60));
+  check("空文件时基线安全默认值在（loginMax=10）",
+    !!emptyCfg && emptyCfg.security.rateLimit.loginMax === 10,
+    emptyCfg ? "loginMax=" + emptyCfg.security.rateLimit.loginMax : "(loadConfig 失败)");
+  writeUserCfg("  \n\t\n  ");
+  let blankThrew = "";
+  try { loadConfig(); } catch (e) { blankThrew = e.message; }
+  check("纯空白文件同样静默跳过（trim 后为空）", !blankThrew, blankThrew.slice(0, 60));
+  clearUserCfg();
+
   /* ---------- ⑦ HTTP 层：loadConfig 的结果真的接到了 app 上 ---------- */
   group("⑦ 端到端：loadConfig 的产出真的接到 express（否则单测全绿也没意义）");
   /* 口径说明（两版都写错过，才把真实语义钉在这里）：
