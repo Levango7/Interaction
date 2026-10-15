@@ -31,6 +31,7 @@
 | R8 | **提交前抽回源码态**：`node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup`，确认 `agent-workbench.html` ≈ 635KB 再 add。git 里存的是**源码态**，把 3.87MB 拼回态提交进 git = 污染仓库 | 双态纪律（`docs/architecture-layers.md`） |
 | R9 | **判据以 CI 为准**：本机全绿不能证明 CI 形态已修（teardown 竞态本机复现不出）；本机 worker 噪声（少数文件未完成 + Unhandled 但 0 FAIL）不阻塞发版 | `docs/iteration-plan.md`「已知 CI 形态」 |
 | R10 | **push 前在 agent-board 声明一行**（照最新条目的样子），紧急时刻用板内列出的实时喊话通道：① 我即将 push；② 我即将动你正在改的文件 | agent-board 2026-10-15 11:48 立的先例 |
+| R11 | **发版 commit 之后，禁止立刻 push 无关提交**（如板条目、文档收尾）——后一条 push 会用 `cancel-in-progress` 取消发版 commit 自己的验证 run，绿判只能落在后一条上（2026-10-15 实测：`c865fb0` 的两条 run 被我自己的 `2d1d407` 取消）。正确顺序：发版 commit 推 → **等它的 run 出终态** → 再推板条目等收尾 | agent-board 2026-10-15 17:55 事实通告 |
 
 ## 二、版本号预登记表（防撞号——登记了才算数）
 
