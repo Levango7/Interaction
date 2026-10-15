@@ -1,0 +1,68 @@
+# Agent Board（并行会话占用公告板 · 只追加）
+
+> **这块板子只记「意图与占用」，不记「事实」。** 版本状态、测试是否绿、某条修复在不在 —— 一律以
+> `git log` / CI 结论 / 代码现身为准，引用板上任何一条之前先自己复核。
+> 这块板子**一定会腐烂**，所以它只对你"接下来 30 分钟要动什么"有效，过期就当没看见。
+
+## 铁律
+
+1. **只追加，永不修改或删除别人的条目。** 自己写错了，就在下面追加一条「更正 XXX」。
+2. 每条必填：`谁` / `时间(UTC+8)` / `我占用哪些路径` / `我在跑什么重活` / `我准备推的范围`。
+3. 收工时**追加**一条「释放」，不要删历史 —— 别人需要知道你那段时间动过什么。
+4. 不互派活、不替对方授权；对方的结论自己重跑后才采信。合并权与发布权在用户手里。
+5. 下列是**高共写/高破坏面**，动之前必须先在这里声明一行：
+   - `CHANGELOG.md`（顶部 `[Unreleased]` 段落，两边都会写）
+   - `.github/workflows/*`（被 `tests/ci-workflow-guard.test.js` 当被测对象钉住；**改 workflow = 改断言，必须同提交**）
+   - `package-lock.json` / `electron/package.json` 的依赖与版本段
+   - **`node_modules/`**：见下条
+6. ⚠️ **别在共享树上跑 `npm ci`**（哪怕只是"顺手装一下"）。中断的 `npm ci` 会把整棵 `node_modules/` 清成
+   **空目录**，而 `_probe/*` 的验证副本是用 junction 指向它的 —— 一次中断会同时废掉所有会话的本机门禁
+   （2026-10-15 实际发生过，恢复要重装 + 重建副本）。要跑全量验证请自建净副本：
+   `git archive HEAD | tar -x -C _probe/<你的副本> && cd _probe/<你的副本> && npm ci`。
+   另：注入钩子会改 `agent-workbench.html`，`post*` 的 `--extract` 在共享树上可能**静默销毁别人的 src 编辑**。
+
+## 条目模板（复制这段往上加，最新的放最上面）
+
+```
+### [YYYY-MM-DD HH:MM UTC+8] <会话标识>
+- 状态：进行中 / 已收工（释放）
+- 占用路径：（精确到文件；写"无"也要写）
+- 在跑的重活：npm ci / 全量 test / playwright / electron / 无
+- 准备推的范围：<commit 区间> 或 暂无待推
+- 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
+```
+
+## 实时喊话通道（板子之外的紧急一行）
+
+- Qoder 会话之间：内置会话工具可直接给另一个活会话发消息（`list_chat_sessions` → `send_message_to_chat_session`）。
+- OpenCode 侧：`opencode run -s <ses_id> "<消息>"` —— **会真的起一轮 turn**，所以消息要写成事实通告，不要写成提问。
+- 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
+
+---
+
+## 条目
+
+### [2026-10-15 11:42 UTC+8] qoder · 账本会话（`docs/audit-2026-10-06.md` 维护者，最近提交 `b24bb65`）
+- 状态：进行中（R-21 已收口，暂无下一条要动的东西）
+- 占用路径：**无在飞的未提交改动**。本轮已落地并交回的四件（不再动，除非要修新缺陷）：
+  `.github/workflows/deploy.yml`、`tests/ci-workflow-guard.test.js`、`docs/audit-2026-10-06.md`、`CHANGELOG.md`
+- 在跑的重活：本机**无**（远端 CI/Deploy 两跑已 completed/success）。验证副本 `_probe/isoI/`（86M，含独立
+  `node_modules`）常驻，**请不要删 `_probe/iso*` 任何目录**；后续我的验证一律走 isoI，不在共享树跑 test。
+- 准备推的范围：暂无待推。注意 main 已被前推到 `7f3b1b4`（v3.7.126 那批），我下次推之前会先
+  `git fetch` 并把改动 rebase 到当时 HEAD 上，只推自己那一段。
+- 提醒对方：
+  1. 我可能会动 **`CHANGELOG.md` 顶部 `[Unreleased]`** 与 **`.github/workflows/deploy.yml`**；
+     若你也要动这两处，先在这里追加一行，我们错开。
+  2. 工作树里现存两个**未跟踪**文件 `scripts/lint-server-idor.mjs`、`scripts/lint-server-ssrf.mjs`
+     —— 不是我创建的，我没动也不会提交；归属请它们的主人自认。
+  3. 本地留了一个分支 ref `r21-cancel-probe`（远端分支已删）：那是 R-21 三格探针的 YAML 存档，
+     `git show r21-cancel-probe` 可取回，**别顺手清 ref**。
+  4. `deploy.yml` 的门禁断言现在是**语义的**：取消门必须是 `!cancelled()`，出现 `always()` 即判红。
+     想"退回 always 更保险"会被守卫拦，必须同提交一起改断言。
+
+### [2026-10-15 11:48 UTC+8] qoder · 账本会话（同上）
+- 状态：进行中 —— **更正上一条末项**：上一条写"暂无待推"，实际本条就是要推 `docs/agent-board.md` 一个新提交。
+- 占用路径：`docs/agent-board.md`（本文件，只此一件）
+- 在跑的重活：无
+- 准备推的范围：`7f3b1b4..+1`（仅本文档，不碰产品代码、不碰 CHANGELOG/deploy.yml）
+- 提醒对方：**别人 push 时请照这条的样子先声明一行再推** —— 这正是这块板子要立的第一个先例。
