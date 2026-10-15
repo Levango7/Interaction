@@ -1786,6 +1786,10 @@ async function ragIndexRemove(docId){
  * ============================================================ */
 const RAG_VEC_PREFIX = "ragvec:";
 let _ragVecCache = null;   // {model:string, map:Map<docId, Float32Array>} | null（null = 尚未加载）
+/* v3.7.130（R-26）：检索侧等待「有界回填」的上限（ms）。为什么需要等、以及为什么必须有界，
+   见 ragVectorSearch 里的注释；3s 是对「首轮对话最多多等多久」与「embedding 通道一次批量
+   请求的典型耗时」之间的取舍。 */
+const RAG_BACKFILL_WAIT_MS = 3000;
 let _ragEnsuring = null;   // 进行中的回填 Promise（防同一批缺失向量被并发重复 embedding）
 
 /** embedding 通道配置；不可用时返回 null（调用方负责降级） */
@@ -1968,7 +1972,23 @@ async function ragEnsureVectors(max){
  * @returns {Promise<Array<{docId:string, sim:number}>>}
  */
 async function ragVectorSearch(query, topK){
-  const cache = await ragVecLoadAll();
+  let cache = await ragVecLoadAll();
+  /* v3.7.130（R-26）：`cache` 空**不等于**没有向量 —— 很可能是**有界回填正在飞**
+     （IDB 未就绪/慢时尤其常见：`ragVecLoadAll` 读不到 → 空 Map 且 loaded=false，
+     而 ragInit 的 `ragEnsureVectors(20)` 是**发起即走、未 await**）。
+     原实现此时抢跑 `return []`，这次检索就白丢了 —— CI 上 `rag-hybrid.spec.js:132` /
+     `workflow.spec.js:91` 的「首跑红、同 commit 重跑绿」正是这个：CI 机器 IDB 偶发慢
+     → 回填没跑完 → 断言拿到空 → 红。
+     修法：只在**确实有回填在飞**（`_ragEnsuring` 非空）时等它，且**有界**（RAG_BACKFILL_WAIT_MS）。
+     为什么有界：真无文档时 `ragEnsureVectors` 取 `getRagDocs()` 后立即返回，不会让正常的空索引
+     每次都白等 —— 这正是 R-9 当初担心的「改错会让空索引每次重读 IDB」。
+     为什么复用 `_ragEnsuring` 而不是新造标志：它本来就是「回填进行中」的单一真相源
+     （`ragEnsureVectors` 内部的单趟去重就是靠它），新造一个会多一份可能不同步的状态。
+     回填的文档来源是 `getRagDocs()`（localStorage），**不依赖 IDB** —— 所以等它确实能救回来。 */
+  if(!cache.size && _ragEnsuring){
+    await Promise.race([_ragEnsuring.catch(() => {}), new Promise(r => setTimeout(r, RAG_BACKFILL_WAIT_MS))]);
+    cache = await ragVecLoadAll();
+  }
   if(!cache.size) return [];
   const qv = await aiEmbedTexts([String(query || "")]);
   if(!qv || !qv.length) return [];

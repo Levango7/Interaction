@@ -87,6 +87,22 @@ describe("semanticRecallStatus：读既有降级标志（不另造状态）", ()
     expect(st.mode, "IDB 不可用必须报 idb").toBe("idb");
   });
 
+  /* v3.7.130（R-26）：上面那条只验了「状态如实」，**没验检索结果**——缺口正在这里。
+     raInit 的有界回填是「发起即走、未 await」，于是 IDB 未就绪时：回填还在飞、cache 还空，
+     ragVectorSearch 的 `!cache.size` 直接 return []，这次检索白丢（CI 上 rag-hybrid:132 /
+     workflow:91 首跑红、同 commit 重跑绿就是它）。下面这条把它钉住。 */
+  it("v3.7.130（R-26）：IDB 不可用时检索必须**等有界回填**，而不是抢跑返回空", async () => {
+    const win = withAi();
+    stubEmbeddings(win);
+    win.idbOpen = async () => null;                 // IDB 不可用（jsdom 默认也没有）
+    /* skipEmbed：只入库不建向量 —— 于是「cache 空、文档在 localStorage」，
+       与刷新后「IDB 未就绪 + 回填在飞」同形（回填的文档来源是 getRagDocs()，不依赖 IDB）。 */
+    await win.ragIndexAdd("d-auth", "修复登录页 500 报错", "工作记录", { skipEmbed: true });
+    const hits = await win.ragSearch("登录", 5);
+    expect(hits.length, "回填完成后必须能召回（原实现抢跑 → 结果为空）").toBeGreaterThan(0);
+    expect(hits[0].via, "必须走到向量路径，而不是只靠词法兜底").toMatch(/vec|both/);
+  });
+
   it("本页没走过一次向量加载：unknown 且 probed=false（不谎报可用，也不画成降级）", () => {
     const win = withAi();
     const st = win.semanticRecallStatus();

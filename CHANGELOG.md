@@ -148,6 +148,42 @@
 两份脚本进 `package.json`（`lint:server-ssrf` / `lint:server-idor`）并**接进 `ci.yml` 的 `server-verify` job**
 （扫 `server/src/*.js` + `electron/main.js`）。至此"加强版规则只在无主文件里"的第四天状态结束。
 
+## [v3.7.130] - 2026-10-16
+
+### R-26 收口：检索不再抢跑「有界回填」—— 消除 `rag-hybrid` / `workflow` 两条「首跑红、重跑绿」
+
+**背景**：R-9 那条明写「未修（留待下一批）」的账，本轮去收。**核实后发现它已是过时账** ——
+原缺陷「空缓存钉死」**v3.7.101 已修**（`_ragVecCache.loaded` 只在确实读到 IDB 时置位，
+空 Map 不再被钉死、可重试），v3.7.115 又加 `semanticRecallStatus()` 让降级对用户可见。
+台账里那两个「待想清」的问题（空缓存该不该钉死 / IDB 未就绪 vs 确实没有向量如何区分），
+**代码里已各自有答案**（答案就是这个 `loaded` 标志）。但顺着这笔账，查出了**另一层真缺陷**。
+
+**缺陷**：`ragInit()` 里的有界回填 `ragEnsureVectors(20).catch(...)` 是**发起即走、没有 `await`**，
+而 `ragSearch` 是 `await ragInit()` **紧接着**就检索 → 回填还在飞、`cache` 还是空的 →
+`ragVectorSearch` 的 `if(!cache.size) return []` 直接返回空（**连 query 的 embedding 都不发**）。
+于是 IDB 不可用/慢时，这一次检索白丢。CI 上表现为 `rag-hybrid.spec.js:132` /
+`workflow.spec.js:91` 的「首跑红、同 commit 重跑绿」：CI 机器 IDB 偶发慢 → 回填没跑完 →
+断言拿到空 → 红。**不是玄学抖动，是有机制、可复现的。**
+
+**修法（不新增符号）**：复用 `ragEnsureVectors` 内部早已存在的 `_ragEnsuring` —— 它本来就是
+「回填进行中」的单一真相源（单趟去重就靠它）。`ragVectorSearch` 在 **`!cache.size && _ragEnsuring`**
+时 `Promise.race` 等它，**有界 3s**（常量 `RAG_BACKFILL_WAIT_MS`）。
+- **为什么只在「确实有回填在飞」时才等**：真无文档时 `ragEnsureVectors` 取 `getRagDocs()`
+  后立即返回，不会让正常的空索引每次都白等 —— 这正是 R-9 当初担心的
+  「改错会让正常的空索引每次都重读 IDB」。
+- **为什么等它确实有效**：回填的文档来源是 `getRagDocs()`（localStorage），**不依赖 IDB**。
+
+**守护**（`tests/rag-degradation.test.js` +1，先红后绿）：IDB 不可用 + 文档只入库不建向量
+（`{skipEmbed:true}`，即「cache 空但文档在」）→ 断言检索必须召回**且走向量路径**（`via` 含 `vec`）。
+红时 `via` 是 `lex`（词法兜底），正是缺陷形态；绿时 `both`。
+
+**真机复验**（qoder 的 `_probe/repro-rag-idb-unready.cjs`，注入 IDB 不可用）：
+修前 **3/3 `len=0`**，修后 **3/3 全部召回**（`len=1, first=doc-auth`）。
+
+**顺带**（本轮新造 `_probe/rag-reload-window.cjs`）：正常刷新 → **立即**检索 **5/5 召回**，
+对照「等 2s」「连检两次」同样全绿 —— 证书「本机不存在刷新后就绪窗口」，把缺陷范围收窄到 IDB 窗口。
+两个探针按 `_probe/` 惯例不入库。
+
 ## [Unreleased]
 
 ### 发布链（R-21）：被取代的 deploy run 不再当僵尸 —— 取消门由 `always()` 换成 `!cancelled()`
