@@ -6218,10 +6218,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.127"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.129"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261015b";
+const BUILD_TAG = "20261015d";
 
 
 
@@ -10836,6 +10836,7 @@ const MESSAGES = {
     "wd.syncBuildFail": "快照构建失败",
     "wd.syncConflict": "云端版本已被其他设备修改（上传被拒，避免覆盖）。要用云端版本覆盖本机吗？",
     "wd.syncUploadFail": "上传失败",
+    "wd.syncUpload404": "上传失败：目标路径不存在（404）—— 请确认地址里的文件夹已在服务端建好。注意坚果云等服务的根目录不允许直接放文件，必须指定一个已存在的子文件夹。",
     "wd.syncUploadOk": "已上传快照（{n} 键）",
     "wd.syncUploadOkNoMeta": "已上传快照（{n} 键），但本机未记住版本标记 —— 下次上传会被判为冲突，请检查本地存储是否可用。",
     "wd.syncNoCloudFile": "云端还没有快照文件",
@@ -14717,6 +14718,7 @@ const MESSAGES = {
     "wd.syncBuildFail": "Failed to build the snapshot",
     "wd.syncConflict": "The cloud copy was changed on another device (upload rejected to avoid overwriting). Overwrite local with the cloud copy?",
     "wd.syncUploadFail": "Upload failed",
+    "wd.syncUpload404": "Upload failed: target path not found (404) — make sure the folder in the address already exists on the server. Note: services like Nutstore do not allow files directly in the root; specify an existing subfolder.",
     "wd.syncUploadOk": "Snapshot uploaded ({n} keys)",
     "wd.syncUploadOkNoMeta": "Snapshot uploaded ({n} keys), but this device did not save the version marker — the next upload will be flagged as a conflict; check whether local storage is available.",
     "wd.syncNoCloudFile": "No snapshot on the cloud yet",
@@ -27540,7 +27542,16 @@ const SYNC_EXCLUDED_KEYS = [
   CHLOG_KEY,
   /* v3.7.109（mv+提示）：冲突清单同理 —— 服务端刚下发的证据，回传无意义、且会把两台设备的
      历史纠葛带回服务端。 */
-  PREFIX + "sync_conflicts"
+  PREFIX + "sync_conflicts",
+  /* v3.7.128（WebDAV 真机验收现场抓到的漏网）：v3.7.120 引入 WebDAV 时新增了三个键，
+     当时没同步进这份清单 —— 而它们**全都**落在上面 v3.7.94 那条原则的射程内：
+       · webdav_pass —— 用设备密钥密封的凭据，正是"上云无跨端收益、纯增后端暴露面"；
+       · webdav_cfg  —— 与 PREFIX+"cfg" 同构，且内含**明文**账号邮箱（隐私面）；
+       · webdav_meta —— 与 SYNC_META_KEY 同构的本机同步元数据。
+     不是纯推理：真机跑完整 8 步后把云端快照文件拉下来看，三个键确实都在里面 —— 等于
+     用户的网盘上存着一份设备密钥密封的密码密文 + 明文邮箱。补进清单与既有原则对齐；
+     入站侧（_applyCloudSnapshot）用同一份清单对称过滤，故无需另改。 */
+  PREFIX + "webdav_pass", PREFIX + "webdav_cfg", PREFIX + "webdav_meta"
 ];
 function _buildCloudSnapshot() {
   const data = {};
@@ -49491,7 +49502,9 @@ async function webdavPut(text){
   if(meta && meta.etag) arg.ifMatch = meta.etag; else arg.ifNoneMatch = "*";
   const r = await window.electronAPI.webdavFetch(arg);
   if(r && r.conflict) return { ok: false, conflict: true, error: "etag_conflict" };
-  if(!r || !r.ok) return { ok: false, error: (r && r.error) || "upload_failed" };
+  /* v3.7.128：把状态码一并带回 —— 调用方要能区分"路径不存在(404)"这类**可修**的失败，
+     只给一个笼统 error 文案就没法给出可执行的修复动作（见 webdavSyncUpload）。 */
+  if(!r || !r.ok) return { ok: false, status: (r && r.status) || 0, error: (r && r.error) || "upload_failed" };
   /* v3.7.90：meta 落盘失败**必须可观测** —— 此前 `catch(e){}` 直接吞掉。
      后果是链式的、且症状指向错误方向：本次仍报「已上传快照」成功，但 etag 没落盘 →
      下次上传 `load(meta)=null` → 走 `If-None-Match:*` → 云端已有文件 → 412 →
@@ -49548,6 +49561,13 @@ async function webdavSyncUpload(){
     const go = confirm(t("wd.syncConflict", "云端版本已被其他设备修改（上传被拒，避免覆盖）。要用云端版本覆盖本机吗？"));
     if(go) await webdavSyncDownload(true);
     return;
+  }
+  /* v3.7.128：404 单独给一条**带修复动作**的提示 —— 真机上这是最容易踩且最难自查的一类：
+     坚果云 WebDAV **根目录不可写**（PUT /dav/x.json 一律 404；MKCOL 子目录后再 PUT 才 201），
+     而默认 WD_URL 恰好就是这个根目录，用户照默认值填 → 点上传必然 404。此时只说
+     「上传失败（HTTP 404）」等于把用户丢在半路：他不知道要改成一个已存在的子文件夹。 */
+  if(!r.ok && r.status === 404){
+    return toast(t("wd.syncUpload404", "上传失败：目标路径不存在（404）—— 请确认地址里的文件夹已在服务端建好。"), "warn");
   }
   if(!r.ok) return toast(t("wd.syncUploadFail", "上传失败") + "（" + (r.error || "") + "）", "warn");
   const n = snap && typeof snap === "object" ? Object.keys(snap).length : 0;
