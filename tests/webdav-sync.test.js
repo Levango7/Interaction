@@ -185,6 +185,25 @@ describe("WebDAV 同步主流程（v3.7.88）", () => {
     expect(applied).toEqual([]);               /* 上传不应用 */
   });
 
+  /* v3.7.128（真机抓到）：坚果云 WebDAV **根目录不可写** —— PUT /dav/x.json 一律 404，
+     必须先 MKCOL 子目录再 PUT 才 201（本机实测三组：根目录 404 / 子目录 201 / 子目录内文件 201）。
+     而默认 WD_URL 就是这个根目录，用户照填 → 点上传必然 404；此时只说「上传失败（HTTP 404）」
+     用户无从下手（不知道要建/改子文件夹）。要求：404 必须给出**可执行的修复动作**。 */
+  it("v3.7.128：上传 404 必须给出可执行修复动作（不能只说「上传失败」）", async () => {
+    const win = app();
+    win.electronAPI = { webdavFetch: async () => ({ ok: false, status: 404, error: "HTTP 404" }) };
+    const applied = [];
+    bridgeStub(win, { tasks: "[]" }, applied);
+    await win.webdavSaveCfg({ url: "https://dav.jianguoyun.com/dav", user: "u", pass: "p" });
+    const toasts = [];
+    win.toast = (msg) => toasts.push(msg);
+    await win.__test.webdavSyncUpload();
+    expect(applied, "失败不应应用任何东西").toEqual([]);
+    expect(toasts.length, "必须有一条失败提示").toBe(1);
+    expect(toasts[0], "提示要点出 404").toMatch(/404/);
+    expect(toasts[0], "提示要给出可执行的修复动作（子文件夹）").toMatch(/子文件夹|文件夹|folder/i);
+  });
+
   it("下载：确认后经桥应用云端快照；JSON 非法如实拒应用", async () => {
     const win = app();
     win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 200, text: JSON.stringify({ tasks: "[]" }), etag: '"v3"' }) };

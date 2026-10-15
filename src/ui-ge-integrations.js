@@ -2526,7 +2526,9 @@ async function webdavPut(text){
   if(meta && meta.etag) arg.ifMatch = meta.etag; else arg.ifNoneMatch = "*";
   const r = await window.electronAPI.webdavFetch(arg);
   if(r && r.conflict) return { ok: false, conflict: true, error: "etag_conflict" };
-  if(!r || !r.ok) return { ok: false, error: (r && r.error) || "upload_failed" };
+  /* v3.7.128：把状态码一并带回 —— 调用方要能区分"路径不存在(404)"这类**可修**的失败，
+     只给一个笼统 error 文案就没法给出可执行的修复动作（见 webdavSyncUpload）。 */
+  if(!r || !r.ok) return { ok: false, status: (r && r.status) || 0, error: (r && r.error) || "upload_failed" };
   /* v3.7.90：meta 落盘失败**必须可观测** —— 此前 `catch(e){}` 直接吞掉。
      后果是链式的、且症状指向错误方向：本次仍报「已上传快照」成功，但 etag 没落盘 →
      下次上传 `load(meta)=null` → 走 `If-None-Match:*` → 云端已有文件 → 412 →
@@ -2583,6 +2585,13 @@ async function webdavSyncUpload(){
     const go = confirm(t("wd.syncConflict", "云端版本已被其他设备修改（上传被拒，避免覆盖）。要用云端版本覆盖本机吗？"));
     if(go) await webdavSyncDownload(true);
     return;
+  }
+  /* v3.7.128：404 单独给一条**带修复动作**的提示 —— 真机上这是最容易踩且最难自查的一类：
+     坚果云 WebDAV **根目录不可写**（PUT /dav/x.json 一律 404；MKCOL 子目录后再 PUT 才 201），
+     而默认 WD_URL 恰好就是这个根目录，用户照默认值填 → 点上传必然 404。此时只说
+     「上传失败（HTTP 404）」等于把用户丢在半路：他不知道要改成一个已存在的子文件夹。 */
+  if(!r.ok && r.status === 404){
+    return toast(t("wd.syncUpload404", "上传失败：目标路径不存在（404）—— 请确认地址里的文件夹已在服务端建好。"), "warn");
   }
   if(!r.ok) return toast(t("wd.syncUploadFail", "上传失败") + "（" + (r.error || "") + "）", "warn");
   const n = snap && typeof snap === "object" ? Object.keys(snap).length : 0;

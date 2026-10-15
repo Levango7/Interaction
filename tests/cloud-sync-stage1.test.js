@@ -124,6 +124,33 @@ describe("阶段1/C1 本地变更日志（门控）", () => {
     expect(snap[CHLOG]).toBeUndefined();
     expect(Object.keys(snap)).toContain(PREFIX + "probe_snap");
   });
+
+  /* 真机抓到的漏网（2026-10-16 WebDAV 完整 8 步验收现场）：v3.7.120 引入 WebDAV 时新增了
+     三个键，没同步进 SYNC_EXCLUDED_KEYS。这三个全都落在 v3.7.94 已立的原则射程内：
+       · webdav_pass —— **设备密钥密封**的凭据，正是那条"用设备密钥密封、设备密钥不出本机
+         （换设备本就解不开）、上云无跨端收益、纯增后端暴露面"要挡的东西；
+       · webdav_cfg  —— 内含**明文**账号邮箱（隐私面），且与已排除的 PREFIX+"cfg" 同构；
+       · webdav_meta —— 本机同步元数据（etag/path），与已排除的 SYNC_META_KEY 同构。
+     证据不止于推理：真机跑完把云端快照文件拉下来看，三个键都在里头。 */
+  it("云快照排除：WebDAV 凭据/配置/元数据三个键不上云（v3.7.94 密封凭据原则的漏网）", async () => {
+    const WD_PASS = PREFIX + "webdav_pass";
+    const WD_CFG = PREFIX + "webdav_cfg";
+    const WD_META = PREFIX + "webdav_meta";
+    const win = await loadApp({
+      storage: Object.assign(on(), {
+        [WD_PASS]: JSON.stringify({ __enc: true, iv: "iv-x", data: "cipher-y" }),
+        [WD_CFG]: JSON.stringify({ url: "https://dav.example.com/dav", user: "someone@example.com" }),
+        [WD_META]: JSON.stringify({ etag: "e1", path: "/agent-workshop-snapshot.json" }),
+        [PREFIX + "probe_snap"]: JSON.stringify({ c: 3 }),
+      }),
+    });
+    const snap = win._buildCloudSnapshot();
+    expect(snap[WD_PASS]).toBeUndefined();
+    expect(snap[WD_CFG]).toBeUndefined();
+    expect(snap[WD_META]).toBeUndefined();
+    /* 别把"排除"做成"误伤"：业务键照常在 */
+    expect(Object.keys(snap)).toContain(PREFIX + "probe_snap");
+  });
 });
 
 describe("阶段1/C2 上行体积看板", () => {

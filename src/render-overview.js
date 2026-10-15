@@ -1322,7 +1322,16 @@ const SYNC_EXCLUDED_KEYS = [
   CHLOG_KEY,
   /* v3.7.109（mv+提示）：冲突清单同理 —— 服务端刚下发的证据，回传无意义、且会把两台设备的
      历史纠葛带回服务端。 */
-  PREFIX + "sync_conflicts"
+  PREFIX + "sync_conflicts",
+  /* v3.7.128（WebDAV 真机验收现场抓到的漏网）：v3.7.120 引入 WebDAV 时新增了三个键，
+     当时没同步进这份清单 —— 而它们**全都**落在上面 v3.7.94 那条原则的射程内：
+       · webdav_pass —— 用设备密钥密封的凭据，正是"上云无跨端收益、纯增后端暴露面"；
+       · webdav_cfg  —— 与 PREFIX+"cfg" 同构，且内含**明文**账号邮箱（隐私面）；
+       · webdav_meta —— 与 SYNC_META_KEY 同构的本机同步元数据。
+     不是纯推理：真机跑完整 8 步后把云端快照文件拉下来看，三个键确实都在里面 —— 等于
+     用户的网盘上存着一份设备密钥密封的密码密文 + 明文邮箱。补进清单与既有原则对齐；
+     入站侧（_applyCloudSnapshot）用同一份清单对称过滤，故无需另改。 */
+  PREFIX + "webdav_pass", PREFIX + "webdav_cfg", PREFIX + "webdav_meta"
 ];
 function _buildCloudSnapshot() {
   const data = {};
