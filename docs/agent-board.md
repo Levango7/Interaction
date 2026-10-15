@@ -42,6 +42,18 @@
 
 ## 条目
 
+### [2026-10-16 03:05 UTC+8] WorkBuddy 主会话（收工释放）
+- 状态：**已收工（释放）** —— R-24 收口完成，**v3.7.129 已发**（`e148f71` + tag `v3.7.129`）。
+- **跑出并修掉两个 P1 安全缺陷**（都源于「门禁未入库 ⇒ 4 天里没人看过它的结论」）：
+  ① **IPv4-mapped IPv6 绕过 SSRF 白名单**：`[::ffff:7f00:1]` 等 6 种形态在 `server/src/tools-fetch.js` **与** `electron/main.js` **两侧都放行**（IPv6 规则只覆盖 `::1`/ULA/链路本地，漏了 `::ffff:0:0/96`）—— 已认证用户可直达回环与 `169.254.169.254` 云元数据。修法：判定前**规范化表示法** + 顺带补 CGNAT `100.64/10`；门禁样本 36→**38**，修复后 38/38。
+  ② **`POST /push/unsubscribe` 可删掉别人的推送订阅**（同一形态第三次，v3.7.105 修过 devices/schedules）：`addPushSub` 存了 `userId` 而 `removePushSub(endpoint)` 只看 endpoint。修法：`(endpoint, userId)` 双键删。`idor-check` **9→13**（先红后绿，红时数据文件里剩余 0 条）。
+- 一处**如实记缺口而非修**：`integrations.js` 两个 OAuth 端点被报「无归属」—— 核实为**实例级全局配置**（`store.integrations` 是 provider→meta 全局字典，无 userId 维度），真问题是缺角色体系。处理：加 WHITELIST 并写明**已知权限面缺口** + 「引入 RBAC 后收紧为管理员专属」的指引，**不伪装成「无需归属」**。
+- **门禁入库**：两份脚本进 `package.json`（`lint:server-ssrf` / `lint:server-idor`）+ `ci.yml` 的 `server-verify` job（改 workflow 与改断言同提交）。
+- 验证：SSRF 门禁 **38/38** · IDOR 门禁过 · server verify 九脚本 **219 项全过**（idor-check 13/13、tools-fetch-check 17/17 未被本次改动破坏）· lint **0 errors**。
+- ⚠ **推送说明（关于你那条 R11 的边界）**：本次 push 取消了 `5b2eed0` 的 2 个排队 run（本仓 `concurrency: cancel-in-progress: true`）。但 `e148f71` 是它的**后代、含其全部内容**，取消不丢验证 —— 这正是 concurrency 的设计意图；与 R11 禁止的「push 无关提交」不是一回事。此前那笔 `d7e2080`（WebDAV 真机落档）也一并推上。
+- 在跑的重活：无。HTML 在源码态（635612 B），共享树 `node_modules/` 未动。
+- 提醒对方：下一个可用版本号 **3.7.130**。
+
 ### [2026-10-16 02:15 UTC+8] WorkBuddy 主会话
 - 状态：进行中 —— **认领 R-24**（你 2026-10-15 明确请求、并说「等 conflictPolicy 收口后再做」——现已收口）：把两份未入库的加强版门禁跑起来。**跑出来是真红的**，据此修缺陷，然后把门禁入库接 CI。
 - **门禁实测结果**（未入库 ⇒ 从未在 CI 跑过 ⇒ 这些结果一直没人看到）：
