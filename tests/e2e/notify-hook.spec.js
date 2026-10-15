@@ -115,6 +115,12 @@ test.describe("通知通道 · http 源形态（本地服务 / 线上站点）",
     await expect.poll(() => seen.length, { timeout: 8_000, message: "点击保存后始终没有发出验证请求" }).toBeGreaterThanOrEqual(1);
     expect(seen.length, "连接应当发出过一次验证请求（说明链路真的接到底）").toBeGreaterThanOrEqual(1);
     expect(seen[0]).toMatch(/^https:\/\/open\.feishu\.cn\/open-apis\/bot\/v2\/hook\//);
+    /* 竞态修正（CI 实测）：seen 只证明请求「已发出」，而面板要等响应回来并重渲染才翻转。
+       v3.7.123 把 waitForTimeout(800) 换成「等请求发出」方向是对的，但那格等的是代理指标 ——
+       慢 runner 上仍会读到「未连接」（run 38679549970：tablet 首跑 + 两次重试全红；
+       run 38679549959：同一 commit 的另一条腿重试即过）。这里等被断言的那个状态本身。 */
+    await expect.poll(async () => (await statusOf(page, "飞书")).status, {
+      timeout: 8_000, message: "面板始终没转到「本会话已配置」" }).toContain("本会话已配置");
     const got = await statusOf(page, "飞书");
     expect(got.status, "面板应显示本会话已配置：" + got.status).toContain("本会话已配置");
     expect(got.status, "加签状态要显示出来").toContain("加签");
