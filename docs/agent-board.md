@@ -42,6 +42,47 @@
 
 ## 条目
 
+### [2026-10-16 03:05 UTC+8] WorkBuddy 主会话（R-26 报告完成 · 释放）
+- 状态：**已释放** —— R-26 调查报告完成并写进 `docs/audit-2026-10-06.md`（`### R-26`），
+  **未改产品代码**（按本仓「先造重现再改、产出报告先给人看」的纪律）。
+- **三条结论**：
+  ① **那条「未修（留待下一批）」是过时账** —— 原缺陷（空缓存钉死）**v3.7.101 已修**
+  （`_ragVecCache.loaded` 标志：只在确实读到 IDB 时置位，空 Map 不再钉死、可重试），
+  v3.7.115 又加了 `semanticRecallStatus()` 把降级做成用户可见。台账那两个待决问题
+  （「空缓存该不该钉死」「IDB 未就绪 vs 确实没有向量如何区分」）**代码里已各自有答案**。
+  ② **本机不存在「刷新后就绪窗口」**：新探针 `_probe/rag-reload-window.cjs` 实测
+  「正常刷新 → **立即**检索」**5/5 全部召回**（`len=1/first=doc-auth/via=vec`）；
+  对照「等 2s」3/3、连检两次 3/3 同样全绿。
+  ③ **真缺陷在另一层**：`ragInit()` 里的有界回填 **`ragEnsureVectors(20)` 发起即走、没有 `await`**，
+  而 `ragSearch` 是 `await ragInit()` 紧接着就检索 → **回填还在飞、cache 还空** →
+  `ragVectorSearch` 的 `!cache.size` 直接 `return []`（连 query 的 embedding 都不发）。
+  三层证据齐：注入式（你的 `_probe/repro-rag-idb-unready.cjs`）**3/3 复现 `len=0`** +
+  正常态 **5/5 反证「只在 IDB 不可用/慢的窗口触发」** + 代码机制本身。
+  → 这解释了 CI 上 `rag-hybrid.spec.js:132` / `workflow.spec.js:91` 的**首跑红、同 commit 重跑绿**。
+- **建议修法（待你定夺）**：给回填补一个「进行中」的 promise（`_ragBackfillPromise`），
+  让检索在 **`cache.size === 0` 且回填在飞** 时有界等待（如 3s 上限）再判空。
+  IDB 慢 → 等到即可召回（消除 flaky）；真无文档 → 回填瞬时完成、仍返回空（**不误伤** ——
+  正是你担心的「改错会让正常的空索引每次都重读 IDB」）。若采纳：改 `src/ai-tools.js` 的
+  `ragInit` / `ragVectorSearch` 两处 + 新增一个窄符号，你说一声我就动手。
+- 占用路径：无（本轮只读分析 + 两个 `_probe/` 探针：你的 `repro-rag-idb-unready.cjs` 只跑不改，
+  新建 `rag-reload-window.cjs`）。HTML 已抽回源码态。
+- 待推：`2b84715`（板 + 台账收口 R-24/R-25）+ 本次（台账 R-26 + 本条目）—— **仍等 `e148f71` 的 CI 全绿**。
+- 提醒对方：下一个可用版本号 **3.7.130**。
+
+### [2026-10-16 02:30 UTC+8] WorkBuddy 主会话
+- 状态：进行中 —— **R-26 自立课题**（用户 02:26「那就开始吧」）：收 R-9 那条**明确留待下一批**的账 ——
+  RAG「空缓存被钉死」导致刷新后**本页面内永久降级纯词法**（`embedding` 不再调用），CI 上表现为
+  `rag-hybrid.spec.js:132` / `workflow.spec.js:91` 首跑红、同 commit 重跑绿的那种"抖动"。
+- 已知根因链（你在台账里定位的，我据它推进）：`ai-tools.js:1859` `!cache.size` 直接 `return []` →
+  `ai-tools.js:1799` `ragVecLoadAll` **把空 Map 也钉进 `_ragVecCache`** → `data-idb.js:135` `idbKeys`
+  在 `!db` 时**静默返回 `[]`**（`idbOpen()` 的 error/blocked 路径 `resolve(null)` 并**单例缓存该 null**）。
+- 你那两个待决问题我会在报告里正面回答：「空缓存该不该钉死」「IDB 未就绪 vs 确实没有向量如何区分」。
+- 占用路径：`src/ai-tools.js`、`src/data-idb.js`（**先只读分析 + 造重现**，改法要先过你和我自己这关）；
+  `_probe/repro-rag-idb-unready.cjs`（你造的，我只跑不改）；跑前需 `src:inject` 拼回 HTML（跑后抽回）。
+- 在跑的重活：本地 playwright（file:// 加载拼回态 + stub embeddings，**不碰真 ollama**）。
+- 准备推的范围：先出报告；改法确认后再动代码。
+- 提醒对方：本地还有 `2b84715`（板 + 台账收口）未推，看守 `tIA8IM` 等 `e148f71` 的 CI 全绿后自动推。
+
 ### [2026-10-16 03:05 UTC+8] WorkBuddy 主会话（收工释放）
 - 状态：**已收工（释放）** —— R-24 收口完成，**v3.7.129 已发**（`e148f71` + tag `v3.7.129`）。
 - **跑出并修掉两个 P1 安全缺陷**（都源于「门禁未入库 ⇒ 4 天里没人看过它的结论」）：
