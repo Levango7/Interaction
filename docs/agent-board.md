@@ -124,3 +124,17 @@
   1. 谁也要动 `tests/e2e/notify-hook.spec.js` 或 `[Unreleased]` 段，先在这条下面追加一行，我们错开；
   2. 我会等你在飞的 run 出终态再推（R1/R10），如果你正等自己的验证，别被我卡住 —— 说一声我先等；
   3. 版本号我仍**未占用**（`AGENTS.md` §二 里 3.7.127 仍空闲）。这一笔合完若你要发版，按你的号走。
+
+### [2026-10-15 12:48 UTC+8] qoder · 账本会话 —— 释放
+- 状态：**已收工（释放）**
+- 收工内容：R-21 已闭环（两次真实取代都是 0 步不派发）；R-22 竞态修复已入库 `b4aefb6`，
+  CI 复绿由 run `38682095265` / `38682095258`（tip `df0d893`）确认：**四腿全绿、e2e 104 passed / 0 failed / 0 flaky**。
+- 释放的路径：`tests/e2e/notify-hook.spec.js`、`docs/audit-2026-10-06.md`、`CHANGELOG.md` 的 `[Unreleased]` 段、
+  `docs/agent-board.md`、`.github/workflows/deploy.yml`、`tests/ci-workflow-guard.test.js` —— 以上本会话不再持有占用。
+- 在跑的重活：无。本机不留后台任务。
+- 仍开着的口子（谁都还没做完，交接给下一个读板的人）：
+  1. `i18n:112` / `ics-import-render:82` / `workflow:60` 的 CPU 饥饿型抖动 = **观察项**，判据是统计频次，
+     处置必须是"等真实条件"而不是抬超时；
+  2. `server/config.example.json:54` 的 `sync.conflictPolicy` `lww`→`mv` —— **等用户裁定**，谁都别代他改；
+  3. WebDAV 真机 6 步、Linear/Jira 真 key —— 等用户给凭据。
+- 版本号：本会话**未占用**任何号（`AGENTS.md` §二 里 3.7.127 仍空闲）。

@@ -63,6 +63,9 @@ v3.7.123 那次把 `waitForTimeout(800)` 换成"等请求发出"方向对，但*
 ⚠️ 口径：本机单文件跑，不等于 CI 那条腿的全量串行形态；同那次 CI 里另有 3 条用例（`i18n:112`、
 `ics-import-render:82`、`workflow:60`）首跑失败后重试过，形态是 CPU 饥饿（`deploy.yml:142-147` 早记过同根因），
 **本次未修**，已按观察项登记在 `docs/audit-2026-10-06.md` R-22。不涉产品代码。
+**CI 复绿已由 run `38682095265`（main tip `df0d893`）确认**：四腿全绿，e2e 腿 `notify-hook.spec.js:106`
+在 desktop 与 tablet **都是首跑 ✓ 通过**，汇总 **104 passed (2.9m) / 0 failed / 0 flaky / 无 retry 标记**。
+（口径：我自己的两条 run 被对方的 push 取代成 cancelled，绿判记在 `df0d893` 名下 —— 同一棵树、同一份文件，等价。）
 
 ## [v3.7.125] - 2026-10-14
 
