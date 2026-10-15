@@ -15,6 +15,7 @@
  */
 "use strict";
 const { spawn } = require("node:child_process");
+const { readFileSync } = require("node:fs");
 const path = require("node:path");
 
 const SRV = path.join(__dirname, "..");
@@ -122,6 +123,32 @@ function check(name, cond, detail) {
   const after = (await req("GET", "/api/auth/devices", null, aToken2 || A.accessToken)).json.data.devices.length;
   check("B 删 A 的设备应 404（越权踢人 = 强制他人下线）", r.status === 404, "HTTP " + r.status + " " + JSON.stringify(r.json));
   check("且 A 的设备数不得因 B 的调用而减少", after === before, "before=" + before + " after=" + after);
+
+  // ---------- 推送订阅（同一形态第三次：v3.7.105 修过 devices/schedules，这条一直漏着） ----------
+  /* 判据设计：push 没有「列出我的订阅」端点，所以**直读服务端数据文件**判定 ——
+     不让被测对象给自己出成绩单（同本仓 R-22 的口径）。 */
+  console.log("\n[3] 推送订阅：B 不得删掉 A 的订阅");
+  const EP = "https://push.example.com/ep-" + Date.now();
+  const DATA = path.join(SRV, "data", "auth.json");
+  const subsOf = (ep) => {
+    try {
+      const j = JSON.parse(readFileSync(DATA, "utf8"));
+      return (j.pushSubs || []).filter((s) => s && s.endpoint === ep);
+    } catch (_e) { return []; }
+  };
+
+  let r3 = await req("POST", "/api/notifications/push/subscribe", { endpoint: EP, keys: { auth: "k1", p256dh: "k2" } }, A.accessToken);
+  check("前置：A 订阅推送成功", r3.status === 200, "HTTP " + r3.status);
+  const pre = subsOf(EP);
+  check("前置：数据文件里确实有 A 的这条订阅（否则下面的断言是空转）", pre.length === 1 && pre[0].userId === A.user.id, JSON.stringify(pre));
+
+  await req("POST", "/api/notifications/push/unsubscribe", { endpoint: EP }, B.accessToken);
+  const afterB = subsOf(EP);
+  check("B 调 unsubscribe 后 A 的订阅**必须还在**（endpoint 是资源标识，不是凭据）", afterB.length === 1, "剩余 " + afterB.length + " 条：" + JSON.stringify(afterB));
+
+  await req("POST", "/api/notifications/push/unsubscribe", { endpoint: EP }, A.accessToken);
+  const afterA = subsOf(EP);
+  check("对照：A 删自己的订阅应生效（缺此条则「把端点改死」也会绿）", afterA.length === 0, "剩余 " + afterA.length + " 条");
 
   proc.kill();
 

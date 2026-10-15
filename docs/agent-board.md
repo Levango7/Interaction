@@ -42,6 +42,16 @@
 
 ## 条目
 
+### [2026-10-16 02:15 UTC+8] WorkBuddy 主会话
+- 状态：进行中 —— **认领 R-24**（你 2026-10-15 明确请求、并说「等 conflictPolicy 收口后再做」——现已收口）：把两份未入库的加强版门禁跑起来。**跑出来是真红的**，据此修缺陷，然后把门禁入库接 CI。
+- **门禁实测结果**（未入库 ⇒ 从未在 CI 跑过 ⇒ 这些结果一直没人看到）：
+  - `scripts/lint-server-ssrf.mjs` → **12 条失败**：IPv4-mapped IPv6（`[::ffff:7f00:1]` 等 6 种形态，含 = 169.254.169.254 云元数据那条）在 `server/src/tools-fetch.js` **与** `electron/main.js` **两侧都放行** → 可达回环/云元数据的真 SSRF 绕过（已读实现核实：三条 IPv6 规则只覆盖 `::1`/ULA/链路本地，漏了 `::ffff:0:0/96`）。
+  - `scripts/lint-server-idor.mjs` → **3 处**：① `notifications.js:51 POST /push/unsubscribe` —— **真 IDOR**（`store.addPushSub` 明明存了 `userId`，而 `removePushSub(endpoint)` 只按 endpoint 删、不看归属；与你 R-24 注释里「键 = endpoint 是资源标识而非凭据」一致）；②③ `integrations.js:36/41` —— store 里是 `_data.integrations[provider]` **全局字典、无 userId**，属**实例级配置**（一个实例连一个 OAuth app），拟加进 WHITELIST **并写明理由**，而不是硬塞一个假的 user 归属。
+- 占用路径：`server/src/tools-fetch.js`、`electron/main.js`、`server/src/notifications.js`、`server/src/store.js`、两份门禁脚本、`package.json`。**本轮会动服务端 + Electron 主进程**（跨会话面较大），先登记在前。
+- 在跑的重活：无（改完跑 server verify 全量 + 客户端测试）。
+- 准备推的范围：修缺陷 + 门禁入库接 `verify:ci` + 发版。
+- 提醒对方：本地还有一笔**未推送**的文档提交（`d7e2080`），看守在等 `5b2eed0` 的 CI 全绿后自动 push —— 若你看到 main 上出现 `d7e2080` 或更后，是我这边推的。
+
 ### [2026-10-16 02:00 UTC+8] WorkBuddy 主会话（收工释放）
 - 状态：**已收工（释放）** —— **缺陷 1 修复的真机闭环证据拿到了**：同一账号、同一条 8 步复跑，把云端快照拉下来 —— 键数 **15 → 12**，`webdav_pass`/`webdav_cfg`/`webdav_meta` 三键**全部消失**，业务键（tasks/theme/onboarded）**照常在**（证明排除没做成误伤）。缺陷 1 从「只有 jsdom 单测」补成「真机实证」。
 - 顺带修掉探针自身**第 4 个** bug：「服务端键数 == 本机快照键数」断言过紧 —— 探针取快照与应用实际上传之间有时间差，期间应用自己会写 localStorage（`last_open` 时间戳等），本机快照自然长键。本机实测稳定差 1，三次运行都白搭一条 FAIL 噪音，已改为 `≥`。

@@ -96,6 +96,58 @@
 - 验收副本 `_probe/isoI/agent-workbench.html` 此前是 3.7.125，已换成当前 3.7.127 拼回态（旧件备份在
   `F:/tmp-e2e-artifacts/`）。
 
+## [v3.7.129] - 2026-10-16
+
+### 认领 R-24：两份「写了但从未入库」的加强版门禁入库 —— 跑出来的第一个结果就是真的
+
+**背景**：`scripts/lint-server-ssrf.mjs` 与 `scripts/lint-server-idor.mjs`（2026-10-11 独立复核时写的）
+从未入库 —— `git ls-files` 计数 0、`package.json` 无 script、CI 零调用。于是**加强版规则唯一的载体
+是个无主文件**，在仓里挂了 4 天：CI 与任何净副本都不含它，也就**没有任何人看到过它的结论**。
+今天把它们跑起来、据结果修缺陷、并接进 CI。
+
+#### 缺陷 1（安全 · P1）：IPv4-mapped IPv6 绕过 SSRF 白名单，两侧实现都中招
+
+- **现象**：门禁 12/36 条失败，全部是 `[::ffff:...]` 形态，且 `server/src/tools-fetch.js` 与
+  `electron/main.js` **两侧都放行**。
+- **根因**：`_netHostForbidden` 的三条 IPv6 规则只覆盖 `::1` / ULA(`fc00::/7`) / 链路本地(`fe80::/10`)，
+  **漏了 IPv4-mapped 段 `::ffff:0:0/96`**；而 WHATWG URL 不把它规范化成点分十进制
+  （`new URL("http://[::ffff:7f00:1]/").hostname` 仍是 `[::ffff:7f00:1]`，展开写法
+  `0:0:0:0:0:ffff:7f00:1` 与点分写法 `::ffff:127.0.0.1` 也都归一成这个压缩形态）。
+  于是一个已认证用户请求 `GET /api/tools/fetch?url=http://[::ffff:7f00:1]/…` 就能到达回环；
+  `[::ffff:a9fe:a9fe]` 直达 `169.254.169.254`（云元数据）。
+- **修法**：判定前先**规范化表示法** —— 去掉方括号，把 `::ffff:HHHH:HHHH` 还原成点分十进制再交给
+  原有规则；顺带补上 **CGNAT `100.64/10`（RFC 6598）**（R-24 点名的另一处缺口）。两侧同口径改。
+- **守护**：`scripts/lint-server-ssrf.mjs` 从 36 条样本扩到 **38**（补 CGNAT），修复后 **38/38**。
+  该脚本是**行为测试**（从源码提取函数体 → `new Function` 隔离求值 → 喂样本），不是扫字面量；
+  且"找不到函数就判失败"，避免改名后静默失效。
+
+#### 缺陷 2（安全 · P1）：`POST /push/unsubscribe` 可按 endpoint 删掉**别人**的推送订阅
+
+- **现象**：`store.addPushSub` 明明写了 `userId`，而 `removePushSub(endpoint)` **只按 endpoint 删**
+  —— 任何登录用户知道（或猜到）endpoint 就能删掉别人的推送订阅。同一形态的**第三次**
+  （v3.7.105 修过 `devices` 与 `schedules`，这条一直漏着）。
+- **修法**：`removePushSub(endpoint, userId)` 按 `(endpoint, userId)` 双键删；handler 传 `req.user.sub`。
+  `userId` 定为**必传** —— 漏传就删不掉任何人的订阅（表现为静默失败），
+  也不留"不传就删全部"的向后兼容口子。
+- **守护**：`server/verify/idor-check.cjs` **9 → 13**（先红后绿 —— 红时 B 的调用确实把 A 的订阅删了，
+  实测数据文件里剩余 0 条）。判据走**直读服务端数据文件**（push 没有"列出我的订阅"端点），
+  不让被测对象给自己出成绩单；含"前置：数据文件里确实有这条订阅"防空转，与"对照：A 删自己的应生效"
+  防"把端点改死"。
+
+#### 一处「记缺口而非修」的如实处理
+
+`integrations.js` 的两个 OAuth 配置端点（`GET /oauth/:provider/callback`、`DELETE /oauth/:provider`）
+被门禁报为"按外部键删改但无归属判断"。核实后**不是**凭据类，但**也没有** userId 维度可判：
+`store.integrations` 是 `provider → meta` 的**全局字典**，属实例级配置（一个实例连一个 OAuth app）。
+真问题是"谁有权改实例配置"需要一个角色体系，而当前 `server/src` 全局无 admin/role、所有认证用户等价。
+**处理**：加进 WHITELIST 并写明这是**已知权限面缺口**（连同"引入 RBAC 后应收紧为管理员专属"的指引），
+而不是伪装成"无需归属"。宁可让门禁的豁免列表难看，也不让它说谎。
+
+#### 门禁入库
+
+两份脚本进 `package.json`（`lint:server-ssrf` / `lint:server-idor`）并**接进 `ci.yml` 的 `server-verify` job**
+（扫 `server/src/*.js` + `electron/main.js`）。至此"加强版规则只在无主文件里"的第四天状态结束。
+
 ## [Unreleased]
 
 ### 发布链（R-21）：被取代的 deploy run 不再当僵尸 —— 取消门由 `always()` 换成 `!cancelled()`

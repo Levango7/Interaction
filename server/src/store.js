@@ -171,7 +171,15 @@ class Store {
   // ---- push subs ----
   listPushSubs(userId) { return this._data.pushSubs.filter(s => s.userId === userId); }
   addPushSub(sub) { this._data.pushSubs = this._data.pushSubs.filter(s => s.endpoint !== sub.endpoint); this._data.pushSubs.push(sub); this._save(); }
-  removePushSub(endpoint) { const before = this._data.pushSubs.length; this._data.pushSubs = this._data.pushSubs.filter(s => s.endpoint !== endpoint); if (this._data.pushSubs.length !== before) this._save(); }
+  /* v3.7.129（R-24）：按外部键删改**必须判归属** —— endpoint 是资源标识而非凭据
+     （知道 endpoint ≠ 有权删它）。此前只按 endpoint 删，任何登录用户都能删掉别人的推送订阅；
+     同一形态的第三次（v3.7.105 修过 devices 与 schedules）。userId 为必传参数：漏传就删不掉
+     任何人的订阅，表现为静默失败 —— 宁可这样，也不留「不传就删全部」的向后兼容口子。 */
+  removePushSub(endpoint, userId) {
+    const before = this._data.pushSubs.length;
+    this._data.pushSubs = this._data.pushSubs.filter(s => !(s.endpoint === endpoint && s.userId === userId));
+    if (this._data.pushSubs.length !== before) this._save();
+  }
 
   // ---- notify prefs ----
   getNotifyPrefs(userId) { return this._data.notifyPrefs[userId] || null; }

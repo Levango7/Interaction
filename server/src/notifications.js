@@ -50,7 +50,9 @@ function notificationsRouter(cfg, store) {
   });
   router.post("/push/unsubscribe", am, (req, res) => {
     const endpoint = String((req.body && req.body.endpoint) || "");
-    if (endpoint) store.removePushSub(endpoint);
+    /* v3.7.129（R-24）：必须带 req.user.sub —— endpoint 只是资源标识、不是凭据，
+       此前只按 endpoint 删，任何登录用户都能删掉别人的推送订阅（idor-check 实测红）。 */
+    if (endpoint) store.removePushSub(endpoint, req.user.sub);
     return ok(res, {});
   });
 

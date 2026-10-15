@@ -1,6 +1,6 @@
 {
   "name": "agent-workbench",
-  "version": "3.7.128",
+  "version": "3.7.129",
   "private": true,
   "description": "Agent 工坊 — 多场景任务 / 记录 / AI 助手单文件应用。单一交付物 agent-workbench.html 为真相源。",
   "scripts": {
@@ -30,6 +30,8 @@
     "lint:empty-catch:report": "node scripts/lint-empty-catch.mjs --report",
     "lint:empty-catch:freeze": "node scripts/lint-empty-catch.mjs --freeze",
     "lint:icons": "node scripts/lint-icons.mjs",
+    "lint:server-ssrf": "node scripts/lint-server-ssrf.mjs",
+    "lint:server-idor": "node scripts/lint-server-idor.mjs",
     "lint:icons:report": "node scripts/lint-icons.mjs --report",
     "lint:icons:freeze": "node scripts/lint-icons.mjs --freeze",
     "pet:inject": "node scripts/pet-art.mjs",

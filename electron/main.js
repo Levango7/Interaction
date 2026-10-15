@@ -818,10 +818,27 @@ function _outboundTimeout(ms, defMs){
      · 不携带任何认证头（ICS 为公开只读）；URL 只由用户自己填写；
      · ≤2MB、12s 超时、日志只记主机与状态码。 */
 function _netHostForbidden(host){
-      const h = String(host || "").toLowerCase();
+      let h = String(host || "").toLowerCase();
       if(!h) return true;
+      /* v3.7.129（R-24 收口）：判定前先**规范化表示法** —— 与 server/src/tools-fetch.js 那份同口径。
+         WHATWG URL 不把 IPv4-mapped IPv6 折成点分（hostname 保持 `[::ffff:7f00:1]`），
+         而下面规则只认点分/单冒号，于是 `[::ffff:7f00:1]`(=127.0.0.1)、
+         `[::ffff:a9fe:a9fe]`(=169.254.169.254 云元数据) 能绕过全部规则。
+         门禁 scripts/lint-server-ssrf.mjs 两侧都要过。 */
+      h = h.replace(/^\[|\]$/g, "");
+      const mapped = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(h);
+      if(mapped){
+        const hi = parseInt(mapped[1], 16), lo = parseInt(mapped[2], 16);
+        h = ((hi >> 8) & 255) + "." + (hi & 255) + "." + ((lo >> 8) & 255) + "." + (lo & 255);
+      } else {
+        const dotted = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(h);
+        if(dotted) h = dotted[1];
+      }
       if(h === "localhost" || /\.local$/.test(h) || /\.localhost$/.test(h) || /\.internal$/.test(h)) return true;
       if(/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^169\.254\./.test(h) || /^0\./.test(h)) return true;
+      /* CGNAT 100.64/10（RFC 6598） */
+      const cg = /^100\.(\d+)\./.exec(h);
+      if(cg && +cg[1] >= 64 && +cg[1] <= 127) return true;
       const p2 = /^172\.(\d+)\./.exec(h);
       if(p2 && +p2[1] >= 16 && +p2[1] <= 31) return true;
       if(/^\[?::1\]?$/.test(h) || /^f[cd][0-9a-f]{2}:/i.test(h) || /^fe[89ab][0-9a-f]:/i.test(h)) return true;

@@ -105,6 +105,14 @@ jobs:
           node verify/config-check.cjs
         working-directory: server
         timeout-minutes: 10
+      # v3.7.129（R-24 收口）：这两份门禁此前**写了但从未入库**，于是 CI 与任何净副本都不含它们
+      # —— 加强版规则（IPv4-mapped IPv6 / CGNAT、归属判断）唯一的载体是个无主文件，挂了 4 天。
+      # 入库当天跑出来的就是真红的：12 条 SSRF 绕过 + 1 处真 IDOR，均已修（见 CHANGELOG v3.7.129）。
+      # 扫 server/src/*.js 与 electron/main.js，故不指定 working-directory（默认仓库根）。
+      - name: 地址表示法 / 归属门禁（扫 server/src + electron/main.js）
+        run: |
+          node scripts/lint-server-ssrf.mjs
+          node scripts/lint-server-idor.mjs
 
   # D6: E2E 完整用户流程（Playwright，file:// 直接加载单文件，无需服务器）
   # v3.7.53：改为 **push 与 PR 都运行**。原策略只在 main push 跑，理由是"PR 已由单测矩阵覆盖"——
