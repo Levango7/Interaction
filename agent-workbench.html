@@ -6218,10 +6218,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.125"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.126"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261014c";
+const BUILD_TAG = "20261015a";
 
 
 
@@ -9533,6 +9533,7 @@ const MESSAGES = {
     "auth.wechatLoading": "正在获取二维码…",
     "auth.wechatTip": "打开微信「扫一扫」完成登录",
     "auth.wechatScan": "请用微信扫描二维码登录",
+    "auth.wechatDemo": "微信扫码登录暂未接入（演示模式）——服务端未配置微信凭据，扫码无法登录。可用邮箱注册或 GitHub 快捷登录。",
     "api.logout": "登出",
     "api.email": "邮箱",
     "api.password": "密码",
@@ -13418,6 +13419,7 @@ const MESSAGES = {
     "auth.wechatLoading": "Fetching QR code…",
     "auth.wechatTip": "Open WeChat and scan to log in",
     "auth.wechatScan": "Scan the QR code with WeChat to log in",
+    "auth.wechatDemo": "WeChat sign-in is not set up yet (demo mode): the server has no WeChat credentials, scanning will not work. Use email sign-up or GitHub sign-in instead.",
     "api.logout": "Log out",
     "api.email": "Email",
     "api.password": "Password",
@@ -27406,6 +27408,17 @@ function _wechatPollStart(){
     var d = r.data;
     var qr = d.qr || "";
     var scene = d.scene || "";
+    if(d.demo){
+      /* v3.7.126（OD-002 · docs/decisions/OPEN-DECISIONS.md）：后端明示演示模式时必须诚实呈现。
+         此前前端不消费 demo 标志：把演示 SVG（后端注释明确要求「必须让消费端看得出是演示」）
+         当真二维码渲染 + 提示「打开微信扫一扫」，再每 2.5s 轮询一个永远不会 confirmed 的 scene
+         → 5 分钟后报「二维码已过期」——看起来能用，实际是死循环（P1 用户可见缺陷）。
+         现改为演示说明空态 + **不启动轮询**（tests/auth-ui-lifecycle.test.js 反向断言：
+         demo 态 apiWechatStatus 不得被调用）。真 provider 接入后响应不带 demo → 自动走下方
+         原路径，协议不变。 */
+      if(body) body.innerHTML = '<div class="empty">' + esc(t("auth.wechatDemo", "微信扫码登录暂未接入（演示模式）——服务端未配置微信凭据，扫码无法登录。可用邮箱注册或 GitHub 快捷登录。")) + '</div>';
+      return;
+    }
     if(body){
       if(qr){
         /* v3.7.58（安全）：qr 来自后端响应，原样拼进 src 属性 —— 后端被攻破/返回恶意串
