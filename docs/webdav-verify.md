@@ -38,6 +38,33 @@ GET 读回内容一致 / 取到 ETag / **If-Match 续传 204** / **坏 ETag → 
 > （真窗口点按钮、toast 文案、冲突确认弹窗、清除抹净）—— 那要 Electron 窗口。
 
 
+## 现在只剩"给一次应用密码"这一步（2026-10-15 补）
+
+下面 8 步里的 UI 段已做成一条命令：`_probe/webdav-ui-accept.mjs`（本地探针，不入库）。
+它起**真 Electron**（独立 `--user-data-dir`，不碰你正式安装的 profile），按顺序点
+保存 → 测试连接 → 上传快照 → 再上传（续传）→ 改数据再上传 → 清除，
+并且**每一步的成败由探针自己直连坚果云读回来判**（不经应用主进程中转 —— 不让被测对象给自己打分），
+断言包括：远端 `GET` 回来的 JSON 键数 == 本机快照键数、本机快照的键名逐个在远端存在、
+`webdav_meta.etag` 非空（v3.7.120 那条 bug 的回归点）、清除后**远端文件仍在**、`app.log` 里不含凭据。
+
+```bash
+# 一次性准备（本机 electron 没装的话；npm 11 默认拦 install 脚本，两步都要跑）
+cd _probe/isoI/electron && npm ci && node node_modules/electron/install.js
+cd _probe/isoI && npm run src:inject          # 把 src 拼回交付态 HTML
+
+# 跑验收（应用密码只在环境变量里，脚本不打印、不落盘）
+WD_ROOT=<_probe/isoI 的绝对路径> WD_USER=你的坚果云邮箱 WD_PASS=应用密码 \
+  node _probe/webdav-ui-accept.mjs
+```
+
+- **已实测到的**：不给 `WD_PASS` 时它自动降级成"错凭据演练模式"，**8/8 通过、退出码 0**
+  （门控诚实、保存链路、存储里搜不到明文密码、状态行如实显示「连接失败（HTTP 401）」、日志脱敏）。
+  这一段证明判定不是橡皮图章：凭据不对它就是红的。
+- **还没跑过的**：成功路径那 6 步的代码写好了但**一次没执行**，要等真应用密码。
+  服务端不返 207 时脚本会**前置 abort（退出码 3）**而不是继续判绿；第 4 步找不到任务行/复选框时
+  报 `SKIPPED` 而不猜选择器 —— 宁可少一项，不要一项假的。
+- 用完记得 `cd _probe/isoI && npm run src:extract` 把副本抽回源码态。
+
 ## 前置（5 分钟）
 
 1. 登录坚果云网页版 → **账户信息 → 安全选项 → 添加应用密码**（名称随意，如 `agent-workshop`）；
