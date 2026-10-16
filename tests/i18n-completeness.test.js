@@ -14,6 +14,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+/* v3.7.132：core.js 拆成 4 块后，"字典排在消费常量之前"改按**拼回顺序（= 求值顺序）**判。 */
+import { srcBlocks, blockOf } from "./helpers/src-blocks.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 /* v3.7.53：字典原本在 src/ui-global-events.js（UI 层）里，被 i18n-hoist 移进了 core。
@@ -121,18 +123,27 @@ describe("④ 加载顺序（v3.7.53 根因锁）", () => {
      SCENARIOS / SCENE_FEATURES / TOOL_APPS 都写成 name:t("scenario.office","办公")，
      一旦 MESSAGES 或 _currentLang 排在它们之后求值，t() 只会拿到中文兜底，
      英文模式下这些文案被永久冻结成中文（v3.7.52 实测：SCENARIOS 105/219、TOOL_APPS 45/69、
-     SCENE_FEATURES 30/111 条）。字典曾被放在最末层的 ui-global-events 里，正是这个 bug。 */
-  const dictSrc = src;
-  const coreSrc = readFileSync(join(root, "src", "core.js"), "utf8");
+     SCENE_FEATURES 30/111 条）。字典曾被放在最末层的 ui-global-events 里，正是这个 bug。
 
-  it("MESSAGES 与 _currentLang 必须和消费它们的常量同块、且更早", () => {
-    const at = (re) => coreSrc.search(re);
+     v3.7.132：core.js 拆成 4 块后，这条判据**升级**为按「拼回顺序」判，而不再要求「同一个文件里」——
+     求值顺序才是真正的病因（当初就是因为字典排在末尾），文件边界只是它的旧实现细节。
+     按文件判会在符号搬家时误报（拆块当天实测：红的是路径，不是契约）。 */
+  const dictSrc = src;
+  const allBlocks = srcBlocks();
+  const allSrc = allBlocks.map((b) => b.text).join("\n");
+  const where = (snippet) => {
+    const b = blockOf(snippet);
+    return b ? `${b.name}（块序 ${b.idx}）` : "全块搜索不到";
+  };
+
+  it("MESSAGES 与 _currentLang 必须先于消费它们的常量求值（按拼回顺序判）", () => {
+    const at = (re) => allSrc.search(re);
     const dictAt = at(/^const MESSAGES = \{/m);
-    expect(dictAt, "core.js 里找不到 const MESSAGES（被搬走了？）").toBeGreaterThan(-1);
+    expect(dictAt, "全部 src 块里都找不到 const MESSAGES（被搬走了？）").toBeGreaterThan(-1);
     for (const [name, re] of [["SCENARIOS", /^const SCENARIOS = \{/m], ["SCENE_FEATURES", /^const SCENE_FEATURES = \{/m], ["ORDER", /^const ORDER = \[/m]]) {
       const useAt = at(re);
-      expect(useAt, `core.js 里找不到 const ${name}`).toBeGreaterThan(-1);
-      expect(dictAt, `const MESSAGES 必须排在 ${name} 之前`).toBeLessThan(useAt);
+      expect(useAt, `全部 src 块里都找不到 const ${name}`).toBeGreaterThan(-1);
+      expect(dictAt, `const MESSAGES 必须排在 ${name} 之前：MESSAGES 在 ${where("const MESSAGES = {")}，${name} 在 ${where("const " + name)}`).toBeLessThan(useAt);
     }
     expect(at(/^let _currentLang/m), "_currentLang 也必须先于这些常量").toBeLessThan(at(/^const SCENARIOS = \{/m));
   });

@@ -25,12 +25,14 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
+/* v3.7.132：i18n 字典已从 core.js 拆到 core-i18n.js —— 本片只关心"键在不在"，
+   故按 Core 层整体读（`readLayer` 按 src/order.json 的求值顺序拼接）。 */
+import { readLayer } from "./helpers/src-blocks.js";
 import fs from "node:fs";
 import path from "node:path";
 import { scanSource, keyOf } from "../scripts/lib/empty-catch.mjs";
 
 const SRC = path.resolve(process.cwd(), "src", "render-overview.js");
-const CORE = path.resolve(process.cwd(), "src", "core.js");
 const BASE_PATH = path.resolve(process.cwd(), "scripts", "lint-empty-catch.baseline.json");
 
 let win, toasts, diagCalls, DIAGRAM_KEY;
@@ -204,7 +206,7 @@ describe("④ 静态契约", () => {
   });
 
   it("i18n：lastRun 失败文案中英双份齐备，且实现经 t() 取值", () => {
-    const core = fs.readFileSync(CORE, "utf8");
+    const core = readLayer("Core");
     const n = (core.match(/"wf\.lastRunSaveFailed"/g) || []).length;
     expect(n, "zh / en 两份字典都要有").toBe(2);
     expect(fs.readFileSync(SRC, "utf8")).toMatch(/toast\(t\("wf\.lastRunSaveFailed"/);

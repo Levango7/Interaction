@@ -3,8 +3,9 @@
  * src-split.mjs — 把单文件里的「分层源块」外置到 src/，构建期再拼回单文件
  * --------------------------------------------------
  * 背景（任务 4 · 模块化第一步）：`agent-workbench.html` 曾是 2.3MB 单文件，分层契约
- * （`scripts/lint-layers.mjs` + `docs/architecture-layers.md`）把 JS 划成 8 大层、35 块
- * （v3.7.63：原 28 块，其中 369KB 的「全局事件绑定」按 section 拆成 8 块 → 28+7=35）。
+ * （`scripts/lint-layers.mjs` + `docs/architecture-layers.md`）把 JS 划成 8 大层、若干块
+ * （**块数以本文件下面的 `BLOCKS` 为唯一权威**：v3.7.63 拆「全局事件绑定」为 8 块后 35 块，
+ *  v3.7.132 拆 core 为 4 块后 38 块；文档里写的数字属快照，别据此推逻辑）。
  * 本脚本把这些层块抽到 `src/<name>.js`，让代码可以用编辑器/工具单独处理；
  * 交付物仍是**单个 HTML**（file:// 直开 / PWA 离线 / Electron 打包都不变）。
  *
@@ -43,6 +44,17 @@ const BACKUP_DIR = join(root, '_srcbackup');
 const BLOCKS = [
   /* v3.7.9：核心层 —— 全局助手与基础数据。摆在最前：它必须零外部依赖，且被上层普遍引用 */
   { name: 'core', layer: 'Core', title: '核心层·全局助手与基础数据' },
+  /* v3.7.132：把 8,522 行的 core 按自然边界切成 4 块（**纯切分、零重排**：核心层最先被求值，
+     且引用顺序 UI_ICONS → t → toast → SCENARIOS 在切分后仍逐条保持）。
+     ① core-i18n：i18n 词典占原 core 的 68%（5,800 行纯数据），`t`/`fnv1aHex` 必须随 `MESSAGES`
+        一起走 —— 留在 core 的话 core 会**反向引用**自己的下半段，属新增逆层边。
+     ② core-shared：toast / 跨层注册钩子（通知通道、数据变更广播）/ SCENARIOS 场景配置。
+     ③ core-commands：命令注册表（P0-4），零外部引用。
+     切两段不够：本工具按层注释行划**连续区间**，只切中段的话尾段会无处安放。
+     新增块的 TITLE 必须与源码里那条层注释**逐字一致**（findLayerLine 靠它定位）。 */
+  { name: 'core-i18n', layer: 'Core', title: '核心层·i18n 词典与翻译函数' },
+  { name: 'core-shared', layer: 'Core', title: '核心层·跨层共享设施（toast 钩子 场景配置）' },
+  { name: 'core-commands', layer: 'Core', title: '核心层·命令注册表' },
   { name: 'util-markdown', layer: 'Util', title: 'Markdown 解析·T3.5' },
   { name: 'util-perf', layer: 'Util', title: '性能优化工具·v1.4-B' },
   { name: 'crypto', layer: 'Crypto', title: '加密层' },
@@ -107,13 +119,28 @@ const mkEnd = n => '/*SRC:' + n + ':END*/';
    ⇒ 表现是「本次拼回生效、下次构建就丢」。
    实测现场：新增 `src/cmd-registry.js` + 改 `order.json` + HTML 插标记对 → 拼回能出 36 块，
    但 `--extract` 只列 35 块且 order.json 被写回 35 条（新块凭空消失，且无任何报错）。
-   本门禁把那次的「静默忽略」变成「响亮失败」，并直接印出三步曲。 */
+   本门禁把那次的「静默忽略」变成「响亮失败」，并直接印出三步曲。
+
+   v3.7.132 补（`extract` 方向的**首创豁免**）：上一条 Gotcha 的记录本身没错，但本门禁上线后
+   第一次真用就踩了自己 —— 「新增块」的标准路径是「HTML 里插层注释 + BLOCKS 加条目 → 跑 --extract
+   **生成** src/<name>.js」，而 `missing` 分支会在这第一步就硬失败（文件按定义还没生成），
+   把唯一合法的施工路径堵死。**判据缺口：文件缺失 ≠ 尚未生成**。现按方向区分：
+     · `extract`：BLOCKS 声明了但 src 无文件 → 若 HTML 里能找到该块的层注释 ⇒ 内容还在 HTML 里、
+       本次就是要把它抽出来，放行并显式打印「待生成」（找不到层注释则仍硬失败）；
+     · `inject`/`check`：src 无文件就是真缺口（拼不回来），保持硬失败。 */
 function assertBlocksInSync(){
   if(!existsSync(SRC_DIR)) return true;    // 无 src：交给后续逻辑报错，这里不抢
   const declared = new Set(BLOCKS.map(b => b.name));
   const onDisk = new Set(readdirSync(SRC_DIR).filter(f => f.endsWith('.js')).map(f => f.replace(/\.js$/, '')));
   const undeclared = [...onDisk].filter(n => !declared.has(n));
   const missing = [...declared].filter(n => !onDisk.has(n));
+  /* 抽出方向的首创豁免：HTML 里能定位到层注释 ⇒ 块内容尚在 HTML 里、文件随后生成 */
+  const pending = missing.filter(n => {
+    if(!EXTRACT) return false;
+    const b = BLOCKS.find(x => x.name === n);
+    return !!(b && findLayerLine(b.layer, b.title).length);
+  });
+  const reallyMissing = missing.filter(n => !pending.includes(n));
   let ok = true;
   if(undeclared.length){
     ok = false;
@@ -124,17 +151,23 @@ function assertBlocksInSync(){
     console.error('      ③ 在 agent-workbench.html 对应位置插 /*SRC:<name>:BEGIN*/ 与 /*SRC:<name>:END*/');
     console.error('    ⚠ 只改 src/order.json 是**无效**的：它是抽出的产物，会被本脚本覆盖回原样。');
   }
-  if(missing.length){
+  if(pending.length){
+    console.log('[src-split] ℹ 待生成的新块（HTML 里已找到层注释，本次抽出后写入 src/）：' + pending.join(', '));
+  }
+  if(reallyMissing.length){
     ok = false;
-    console.error('[src-split] ✗ BLOCKS 声明了 src/ 下不存在的块：' + missing.join(', '));
+    console.error('[src-split] ✗ BLOCKS 声明了 src/ 下不存在、且 HTML 里也定位不到层注释的块：' + reallyMissing.join(', '));
     console.error('    若刚删掉一个块：请同步从 BLOCKS 移除，并清掉 HTML 里的标记对。');
+    console.error('    若是新增块：必须在 agent-workbench.html 的对应位置插入层注释行，标题要与 BLOCKS 里的 title 逐字一致。');
   }
   return ok;
 }
-if(!assertBlocksInSync()) process.exit(1);
 
 let html = readFileSync(HTML, 'utf8');
 const lines = html.split('\n');
+/* 门禁调用必须排在 `lines` 之后：它的 extract 豁免要用 findLayerLine() 读 HTML 行
+   （函数声明会提升，但 `const lines` 不会 —— 放在前面会踩 TDZ）。 */
+if(!assertBlocksInSync()) process.exit(1);
 
 /* ---------- 工具：找到某个层标记行的下标 ---------- */
 function findLayerLine(layer, title) {
@@ -193,6 +226,23 @@ if (EXTRACT) {
     } catch (_e) { /* 旧文件不可解析：按无历史处理 */ }
   }
 
+  /* v3.7.132：**拆块前先摘掉旧标记对**。
+     实测缺陷（本次拆 core 时首次触发）：注入态的 HTML 里每个块外面**仍留着** BEGIN/END 标记
+     （注入只替换标记之间的区间）。此时若把一个块切成 N 个新块，第 1 段结束在「第 2 段的层注释」
+     而不是自己的 END ⇒ `inOldPair` 判 false ⇒ 那条旧的 END 标记**没被一并摘掉**，
+     留在最后一段之后 —— 抽出后 HTML 里出现 **2 组 core 标记**（实测 `grep -c` = 2/2），
+     下一次注入立刻被「标记不唯一」拦住。在「一个旧块的中间再插入 N 个新标题」的情形下，
+     循环内部逐段去识别那条孤儿 END 并不可靠（它前面隔着新插入的标题行），
+     所以在循环**之前**统一摘：凡是「层注释还在 HTML 里」（= 内容还没被抽走）的块，
+     它外面的旧标记对此刻必定要被下面的循环重造 ⇒ 先摘掉，再由循环重新插。
+     内容已抽走（只剩标记）的块**不能摘**：它们走「跳过」分支，标记是它们唯一的占位。 */
+  for (const b of BLOCKS) {
+    if (!findLayerLine(b.layer, b.title).length) continue;
+    const bi = lines.findIndex(l => l.trim() === mk(b.name));
+    const ei = lines.findIndex(l => l.trim() === mkEnd(b.name));
+    if (bi >= 0 && ei > bi) { lines.splice(ei, 1); lines.splice(bi, 1); }
+  }
+
   let extracted = 0;
   const order = [];
   const meta = [];
@@ -240,9 +290,30 @@ if (EXTRACT) {
     console.error(`[src-split] 只抽出 ${extracted} 块（预期 ≥ ${MIN_EXPECTED}）→ 不写盘，请检查层标记`);
     process.exit(1);
   }
+  /* v3.7.132：**写盘前的标记自检**。上面的 MECE 遗漏曾导致抽出后 HTML 里同一块出现 2 组标记
+     （详见循环前那段注释的实测），而**当时抽出是"成功"的** —— 报错被推迟到下一次注入
+     （「标记不唯一」），此时半成品已经写进 src/ 和 order.json，排查成本高一档且不直观。
+     判据：每个块必须恰好 BEGIN 1 / END 1，且全文件 BEGIN 总数 === 顺序表长度（无野标记）。
+     不通过就**一字节都不写**（不写 src、不写 order.json、不写 HTML）。 */
+  const out = lines.join('\n');
+  {
+    let bad = [];
+    for (const n of order) {
+      const nb = out.split(mk(n)).length - 1;
+      const ne = out.split(mkEnd(n)).length - 1;
+      if (nb !== 1 || ne !== 1) bad.push(`${n}（BEGIN ${nb} / END ${ne}）`);
+    }
+    const totalBegin = (out.match(/\/\*SRC:[\w-]+:BEGIN\*\//g) || []).length;
+    if (totalBegin !== order.length) bad.push(`全文件 BEGIN 共 ${totalBegin} 个 ≠ 块数 ${order.length}（有野标记）`);
+    if (bad.length) {
+      console.error('[src-split] ✗ 抽出后的标记自检失败 → 不写盘：');
+      bad.forEach(x => console.error('     ' + x));
+      console.error('    修好后重跑 --extract（当前 HTML 与 src/ 均未被改写）；若已写坏，可用 _srcbackup/ 里的最近快照回退。');
+      process.exit(1);
+    }
+  }
   for (const w of pendingWrites) writeFileSync(w.file, w.data, 'utf8');
   writeFileSync(join(SRC_DIR, 'order.json'), JSON.stringify(meta, null, 1) + '\n', 'utf8');
-  const out = lines.join('\n');
   writeFileSync(HTML, out, 'utf8');
   console.log(`[src-split] 抽出 ${extracted} 块（${order.join(', ')}）；HTML ${(Buffer.byteLength(html) / 1024).toFixed(1)}KB → ${(Buffer.byteLength(out) / 1024).toFixed(1)}KB`);
   console.log('[src-split] HTML 内已留标记占位，构建/测试前会自动拼回（由 scripts/with-injected.mjs 包装）');

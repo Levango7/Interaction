@@ -24,14 +24,16 @@
  * 只跑 ORDER 会漏掉 finance 的令牌与渲染；只写死 7 个内置同样漏。
  *
  * ── 顺序 ────────────────────────────────────────────────────────────────────
- * BUILTIN_SCENES 的顺序**是契约**：它等于 src/core.js 的 ORDER 常量
+ * BUILTIN_SCENES 的顺序**是契约**：它等于 `src/core-shared.js` 的 ORDER 常量
+ * （v3.7.132 起；此前在 core.js —— 拆块是纯位移，常量本身没动）
  * （侧栏场景组显示序 + 左右滑动手势序），所以对账按 `toEqual`（含顺序），
  * 不用集合比较 —— 顺序被改也是回归。
  */
 "use strict";
 
 /**
- * 内置场景契约快照 —— 对应 src/core.js:8232 `const ORDER = [...]`
+ * 内置场景契约快照 —— 对应 `src/core-shared.js` 的 `const ORDER = [...]`
+ * （v3.7.132 起；原在 core.js:8232，拆块后行号不再稳定，故只记块名不记行号）
  * 与 src/data-links.js 的 BUILTIN_SC_KEYS（同一组，顺序不同；本快照取 ORDER 序）。
  * 改动这里之前先改源码，再跑 tests/e2e/scene-contract.spec.js 对账。
  */

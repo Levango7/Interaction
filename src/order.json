@@ -3,6 +3,24 @@
   "name": "core",
   "layer": "Core",
   "title": "核心层·全局助手与基础数据",
+  "tailBlanks": 1
+ },
+ {
+  "name": "core-i18n",
+  "layer": "Core",
+  "title": "核心层·i18n 词典与翻译函数",
+  "tailBlanks": 1
+ },
+ {
+  "name": "core-shared",
+  "layer": "Core",
+  "title": "核心层·跨层共享设施（toast 钩子 场景配置）",
+  "tailBlanks": 1
+ },
+ {
+  "name": "core-commands",
+  "layer": "Core",
+  "title": "核心层·命令注册表",
   "tailBlanks": 0
  },
  {

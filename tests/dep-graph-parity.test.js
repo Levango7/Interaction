@@ -35,7 +35,7 @@ describe("依赖分析等价性：analyze() 必须与 module-graph.baseline.json
   const res = analyze(blocks);
   const base = JSON.parse(readFileSync(BASELINE, "utf8"));
 
-  it("块数与 src/order.json 一致（35 块）", () => {
+  it(`块数与 src/order.json 一致（现 ${res.blockCount} 块）`, () => {
     const order = JSON.parse(readFileSync(join(ROOT, "src", "order.json"), "utf8"));
     expect(res.blockCount).toBe(order.length);
   });

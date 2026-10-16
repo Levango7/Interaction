@@ -15,6 +15,9 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadApp } from "./helpers/loadApp.js";
+/* v3.7.132：`SCENE_FEATURE_BIND` 随 core 拆块搬进了 core-shared —— 本文件断言的是
+   「Core 层里的采集白名单 vs 渲染层里的输入框」，与"哪个文件"无关，故改按层读。 */
+import { readLayer } from "./helpers/src-blocks.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
@@ -23,7 +26,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 describe("功能卡：表单字段必须都进采集白名单", () => {
   it("fields ⊆ fieldKeys（否则录入的值保存即丢）", () => {
     const main = read("src/render-scene-main.js");
-    const core = read("src/core.js");
+    const core = readLayer("Core");
     const bind = {};
     for (const m of core.matchAll(/(\w+):\s*\{\s*key:\s*"([a-z_]+)",\s*fieldKeys:\s*\[([^\]]*)\]/g)) {
       bind[m[1]] = m[3].split(",").map((s) => s.trim().replace(/^"|"$/g, "")).filter(Boolean);
@@ -43,7 +46,7 @@ describe("功能卡：表单字段必须都进采集白名单", () => {
   });
 
   it("会议卡的白名单含 startTime / who（v3.7.43 只补了输入框那一半）", () => {
-    const core = read("src/core.js");
+    const core = readLayer("Core");
     const m = core.match(/meeting:\s*\{\s*key:"meetings",\s*fieldKeys:\[([^\]]*)\]/);
     expect(m).toBeTruthy();
     expect(m[1]).toMatch(/startTime/);

@@ -2,59 +2,62 @@
 
 > 由 `scripts/module-graph.mjs` 从 `src/*.js` 的**符号级引用**分析得出：
 > 定义 = 块内顶格书写的 function/const/let/var/class；依赖 = 某块引用了恰好由另一块定义的符号。
-> 块数 35（本文件由脚本生成；不含时间戳，避免每日无意义 diff）
+> 块数 38（本文件由脚本生成；不含时间戳，避免每日无意义 diff）
 
 ## 1. 依赖矩阵（行依赖列）
 
 | 块 \ 依赖 | 层 | 依赖的块 | 依赖符号数 |
 |---|---|---|---|
 | `core` | Core | — | 0 |
+| `core-i18n` | Core | — | 0 |
+| `core-shared` | Core | `core` | 1 |
+| `core-commands` | Core | — | 0 |
 | `util-markdown` | Util | — | 0 |
 | `util-perf` | Util | — | 0 |
 | `crypto` | Crypto | — | 0 |
 | `data-idb` | Data | `crypto` | 1 |
-| `data-links` | Data | `core` `crypto` | 6 |
+| `data-links` | Data | `core` `core-shared` `crypto` | 6 |
 | `data-migrate` | Data | `data-links` | 2 |
-| `data-rw` | Data | `core` `crypto` `data-links` | 7 |
+| `data-rw` | Data | `core` `core-i18n` `core-shared` `crypto` `data-links` | 7 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
-| `ai-tools` | AI | `ai-retry` `chain` `core` `data-idb` `data-links` `data-rw` `util-markdown` | 22 |
+| `ai-tools` | AI | `ai-retry` `chain` `core` `core-i18n` `core-shared` `data-idb` `data-links` `data-rw` `util-markdown` | 22 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
-| `ai-retry` | AI | `ai-loop` `ai-tools` `core` `data-links` `util-perf` | 36 |
-| `render-entry` | Render | `ai-retry` `ai-tools` `core` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 60 |
-| `render-scene-sub` | Render | `core` `render-entry` `util-markdown` `util-perf` | 9 |
-| `render-scene-main` | Render | `ai-retry` `ai-tools` `core` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
-| `render-overview` | Render | `ai-retry` `chain` `core` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 44 |
-| `render-widgets` | Render | `chain` `core` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 24 |
+| `ai-retry` | AI | `ai-loop` `ai-tools` `core-shared` `data-links` `util-perf` | 36 |
+| `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 60 |
+| `render-scene-sub` | Render | `core-shared` `render-entry` `util-markdown` `util-perf` | 9 |
+| `render-scene-main` | Render | `ai-retry` `ai-tools` `core-shared` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
+| `render-overview` | Render | `ai-retry` `chain` `core-shared` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 44 |
+| `render-widgets` | Render | `chain` `core` `core-shared` `crypto` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 24 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-daily` | 2 |
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `util-perf` | 9 |
-| `ui-scene-bind` | UI | `chain` `core` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` | 16 |
-| `ui-palette` | UI | `ai-retry` `ai-tools` `data-links` `render-entry` `render-widgets` `ui-backup-stats` `ui-global-events` | 14 |
-| `ui-daily` | UI | `chain` `core` `data-rw` | 5 |
-| `ui-backup-stats` | UI | `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-rw` `render-entry` `render-widgets` | 29 |
+| `ui-scene-bind` | UI | `chain` `core-shared` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` | 16 |
+| `ui-palette` | UI | `ai-retry` `ai-tools` `core-commands` `data-links` `render-entry` `render-widgets` `ui-backup-stats` `ui-global-events` | 16 |
+| `ui-daily` | UI | `chain` `core-shared` `data-rw` | 5 |
+| `ui-backup-stats` | UI | `ai-retry` `ai-tools` `chain` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `render-entry` `render-widgets` | 29 |
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 46 |
 | `ui-hotkeys` | UI | `ai-retry` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 8 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 138 |
-| `ui-ge-api` | UI | `core` `crypto` `render-overview` `ui-drawer` | 5 |
+| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 138 |
+| `ui-ge-api` | UI | `core-i18n` `crypto` `render-overview` `ui-drawer` | 5 |
 | `ui-ge-plugins` | UI | `data-links` `util-markdown` | 2 |
 | `ui-ge-theme` | UI | `chain` | 1 |
 | `ui-ge-pomodoro` | UI | `chain` | 1 |
 | `ui-ge-calendar` | UI | `chain` `render-overview` `ui-ge-theme` `ui-guide` | 21 |
-| `ui-ge-notes` | UI | `core` `data-rw` `render-entry` `render-widgets` `util-markdown` | 14 |
-| `ui-ge-integrations` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `util-markdown` | 474 |
+| `ui-ge-notes` | UI | `core-i18n` `core-shared` `data-rw` `render-entry` `render-widgets` `util-markdown` | 14 |
+| `ui-ge-integrations` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `util-markdown` | 474 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
 
 | 符号 | 定义于 | 被多少块使用 |
 |---|---|---|
-| `t` | `core` | 31 |
-| `toast` | `core` | 28 |
-| `AppBridge` | `core` | 23 |
+| `t` | `core-i18n` | 32 |
+| `toast` | `core-shared` | 28 |
+| `AppBridge` | `core` | 24 |
 | `sanitizeHtml` | `util-markdown` | 21 |
-| `SCENARIOS` | `core` | 21 |
+| `SCENARIOS` | `core-shared` | 21 |
 | `getCfg` | `data-links` | 18 |
-| `ORDER` | `core` | 17 |
+| `ORDER` | `core-shared` | 17 |
 | `render` | `render-entry` | 16 |
 | `getActiveTasks` | `data-rw` | 15 |
 | `getTasks` | `data-rw` | 15 |

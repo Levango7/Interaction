@@ -14,6 +14,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadApp } from "./helpers/loadApp.js";
+/* v3.7.132：i18n 字典随 core 拆块搬进了 core-i18n —— 下面这组断言查的是"字典里这两条在不在"，
+   与"哪个文件"无关，故改按层读（`readLayer("Core")` = 按求值顺序拼 core/core-i18n/...）。 */
+import { readLayer } from "./helpers/src-blocks.js";
 
 /* 读源码文件一律用绝对字符串路径：本机沙箱的 fs shim 不接受 file:// URL
    （实测 TypeError: The URL must be of scheme file），与其它测试的写法一致。 */
@@ -167,7 +170,7 @@ describe("邮箱登录 / 注册遇网络失败：口径与欢迎页一致", () =
 });
 
 describe("i18n：新增文案中英双份且英文不留中文", () => {
-  const core = readFileSync(join(ROOT, "src", "core.js"), "utf8");
+  const core = readLayer("Core");
   const keys = [
     "api.accountServiceUnreachable",
     "auth.backendMissingTitle",

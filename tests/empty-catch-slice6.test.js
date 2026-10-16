@@ -28,6 +28,8 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
+/* v3.7.132：字典搬进了 core-i18n，按层读（本片只关心"键在不在"，不关心在哪个文件）。 */
+import { readLayer } from "./helpers/src-blocks.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -182,7 +184,7 @@ describe("③ 契约守卫：这 5 处不得复辟成裸 catch", () => {
   });
 
   it("新增的 i18n 键 api.opFailed 中英双语都在位", () => {
-    const core = fs.readFileSync(path.resolve(process.cwd(), "src", "core.js"), "utf8");
+    const core = readLayer("Core");
     expect(core).toMatch(/"api\.opFailed": "操作失败/);
     expect(core).toMatch(/"api\.opFailed": "Operation failed/);
   });
