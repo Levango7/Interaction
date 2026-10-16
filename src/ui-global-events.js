@@ -109,6 +109,67 @@ $("#drawerClose").onclick = closeDrawer;
 $$("#drawer .drawer-close").forEach(b=>{ b.onclick = closeDrawer; });
 $("#overlay").onclick = closeDrawer;
 $("#cfgSave").onclick = saveCfg;
+/* v3.7.32：把「填完 base+key 一键拉可用模型」暴露成交互 —— 评审 P0-3
+   （docs/evaluation-product-2026-10-16.md 第五节）。
+   服务端拉取能力**早就在测试连接里**（下面那段 `GET {base}/v1/models`，还拿列表校验
+   「用户填的模型名在不在列表里」），但那条链路只服务于**校验**：填错了才告诉你错了。
+   这里把它反过来用：点一下「扫描模型」→ 拉列表 → 填进 `<datalist>`。
+   用 datalist 而不是把 input 换成 select：用户既能下拉挑、**也能继续手输**
+   （有些代理的 /models 不全、或模型名带后缀），不锁死输入。
+   按钮按 `wdProbe` 的既有模式 **JS 注入**，不碰静态 HTML 真相源。 */
+function injectModelScanner(){
+  const input = $("#cfgModel");
+  if(!input || $("#cfgScanModels")) return;          // 没有输入框 / 已注入过 → 不重复
+  const dl = document.createElement("datalist");
+  dl.id = "cfgModelList";
+  input.insertAdjacentElement("afterend", dl);
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "cfgScanModels";
+  btn.className = "addbtn sm";
+  btn.textContent = t("settings.scanModels", "扫描模型");
+  dl.insertAdjacentElement("afterend", btn);
+  input.setAttribute("list", "cfgModelList");
+  btn.onclick = async function(){
+    if(btn.disabled) return;
+    const ap = (typeof getActiveProfile === "function") ? getActiveProfile() : null;
+    /* base/key 优先取表单当前值（用户可能改了还没保存），回退到 active profile */
+    const base = String((($("#cfgBase") && $("#cfgBase").value) || (ap && ap.base) || "")).trim().replace(/\/+$/, "");
+    const key = String((($("#cfgKey") && $("#cfgKey").value) || (ap && ap.key) || "")).trim();
+    if(!base){ toast(t("settings.scan.noBase", "先填 Base URL 再扫描"), "warn"); return; }
+    if(!key){ toast(t("settings.scan.noKey", "先填 API Key 再扫描（拉模型列表也要鉴权）"), "warn"); return; }
+    await withLoading(btn, (async function(){
+      let r;
+      try{
+        r = await fetch(base + "/v1/models", { method: "GET", headers: { "Authorization": "Bearer " + key } });
+      }catch(e){ r = { ok: false, status: 0, error: (e && e.message) || "" }; }
+      /* 失败**分情形**给可执行提示 —— 评审里"把 hint 做成可执行"的要求 */
+      if(!r || !r.ok){
+        const s = r ? r.status : 0;
+        const msg = (s === 401 || s === 403)
+          ? t("settings.scan.badKey", "Key 无效或没有权限（HTTP {s}）—— 检查 Key 后重试").replace("{s}", String(s))
+          : (s === 404
+              ? t("settings.scan.noEndpoint", "该 Base 没有 /v1/models（HTTP 404）—— 可先手填模型名，再用「测试连接」校验")
+              : t("settings.scan.fail", "拉取失败（HTTP {s}）—— 稍后重试，或先手填模型名").replace("{s}", String(s || 0)));
+        toast(msg, "warn", 6000);
+        return;
+      }
+      let j = {};
+      try{ j = await r.json(); }catch(_e){}
+      const ids = (j && Array.isArray(j.data)) ? j.data.map(function(x){ return x && x.id; }).filter(Boolean) : [];
+      if(!ids.length){ toast(t("settings.scan.empty", "Base 可达，但 /v1/models 没返回模型列表 —— 可先手填模型名"), "warn"); return; }
+      dl.innerHTML = sanitizeHtml(ids.map(function(id){ return '<option value="' + esc(id) + '"></option>'; }).join(""));
+      /* 当前值不在列表里 → 自动选第一个（用户可改）；**已在列表里则保持原值**，不替用户做主 */
+      const cur = String(input.value || "").trim();
+      if(!cur || ids.indexOf(cur) === -1) input.value = ids[0];
+      toast(t("settings.scan.ok", "拉到 {n} 个可用模型，已填入下拉；当前选中 {m}")
+        .replace("{n}", String(ids.length)).replace("{m}", input.value), "ok");
+    })());
+  };
+}
+/* DOM 就绪后注入一次（drawer 的静态 HTML 在 agent-workbench.html，这里只加按钮） */
+injectModelScanner();
+
 // v3.1.2 A-档：测试连接按钮——发 1-token 探测请求同时验证 base+key+model 三要素
 $("#cfgTestConn").onclick = async function(){
   const btn = this;
