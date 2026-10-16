@@ -1,0 +1,23 @@
+#!/bin/sh
+# pre-commit —— 源码态提交门禁（见 scripts/check-source-state.mjs --staged）
+#
+# 拦什么：把**注入态/拼回态**的 agent-workbench.html（约 3.88MB，立绘内联 base64）提交进仓库。
+#   真实事故：`npm test` 失败时 npm 不跑 posttest，工作树停在注入态，随后一次 git add 就把它提交了；
+#   CI 的 check:source-state 要到 push 之后才跑，那时坏 blob 已进历史（只能改写）。
+#
+# 为什么只查**暂存区**：工作树可能正处在别人测试链的注入瞬时态（pretest 拼回、posttest 才抽回），
+#   拿工作树当判据会误拦与之无关的正常提交（例如只提交一份 docs/）。判据 = index，不是工作树。
+#
+# 安装：npm run hooks:install（`npm install` 后的 prepare 钩子会自动设置 core.hooksPath=.githooks）
+# 绕过（不推荐）：git commit --no-verify
+if ! command -v node >/dev/null 2>&1; then
+  echo "[pre-commit] 未找到 node，跳过源码态门禁"
+  exit 0
+fi
+if node scripts/check-source-state.mjs --staged; then
+  exit 0
+fi
+echo ""
+echo "[pre-commit] 已阻止提交：暂存区里的 agent-workbench.html 不是源码态。"
+echo "  修复：npm run src:extract && git add agent-workbench.html"
+exit 1

@@ -13,3 +13,7 @@
 # 但仓库内混行尾会污染 diff 与字节级比对）。
 *.yml text eol=lf
 *.yaml text eol=lf
+
+# v3.7.131 补：.githooks/ 下的钩子必须 LF —— shebang 遇 CRLF 会 "bad interpreter: No such file or directory"
+# （本仓 autocrlf=true，不锁的话 Windows 检出后钩子直接跑不起来）
+.githooks/** text eol=lf
