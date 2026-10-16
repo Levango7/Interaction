@@ -42,6 +42,34 @@
 
 ## 条目
 
+### [2026-10-17 03:20 UTC+8] WorkBuddy 主会话（P0-4 第二步 + 修掉四处「聚焦新建任务」静默失效 · 待推）
+- 前提：`f39d03b`（搬家门禁修复）的 CI 已 **全绿 2/2**。
+- **本笔两件事**：
+  1. **P0-4 第二步：hotkeys 改按注册表分发**。`ui-hotkeys.js` 里写死的 `e.key==="n"`/`"g"` 删掉，
+     改为 `CMD.findByKeys(e.key)` → `CMD.get(id).run()`；键位此后只住在命令定义里，面板提示与键盘触发同源。
+     顺带给 `view.overview` 补 `keys:["g"]`（本来就是真快捷键，只是从没在面板上露过面）。
+     仍手写的只剩数字键 1-6 与带修饰键的组合（Ctrl+K/Z/Y、Esc、?）—— 注册表目前只表达单键，已在注释写明。
+     `task.new` 的行为也与 hotkeys 对齐（原先面板那条只认 overview ⇒ 在统计页点它等于没反应）。
+  2. **抓到并修掉一处四处复制的静默失效（今天最值钱的一条）**：四处「聚焦新建任务标题输入框」都写
+     `const f=$("#taskForm"); f.title.focus()`，而 `#taskForm` 是 **`<form>`** —— `form.title` 命中的是
+     **`HTMLElement.title`（字符串）**，遮蔽了同名控件的命名访问（真 input 在 `f.elements.title`）。
+     于是 `.focus()` 每次必然抛 TypeError：按 N / 空态「新建任务」按钮 / 日历选日期 —— 三处没包 try
+     ⇒ handler 被打断（表现"按了没反应"）；仪表盘快捷「新建」—— 包了 try ⇒ **静默吞掉**（那处空 catch
+     正是基线里的一条）。修法：`focusTaskTitleInput()`（放 `core-shared`，必须早于四个调用方）+ 四处改用它。
+     **发现路径值得记：是行为断言抓到的** —— 我先写"按注册键位 → run 被调用"（过），再加"焦点应落在
+     标题输入框"就红了；静态扫描（lint-icons/empty-catch 之类）看不见这类"代码能跑但取错对象"的坑。
+- **回归守护**（`tests/cmd-registry.test.js` ⑧–⑫）：按注册表里的键位触发（**不写死 n/g**，免得测试自己变成
+  第二份真相源）、N 从统计也切回并按预期聚焦、未注册字母键不得吞事件、输入态豁免、
+  全仓禁止再出现 `form.title.focus(`（**先剥注释再匹配** —— 否则解释这个坑的注释本身会被判违规）、
+  四个调用点必须真的用了助手（防"删掉失效写法"退化成"直接删掉功能"）。
+- **验收**：`check:modules` ✓ 无新增 ｜ `lint:layers` ✓ ｜ `lint:empty-catch` ✓ 0 新增 / **1 处消失**
+  （就是被修掉的那处）⇒ 基线重冻 541 → **540**、**P0 79 不变**（棘轮真往下走了一格：留着那条会让同一个坑
+  复发时被容忍）｜ `lint` 0 errors ｜ **`vitest` 154/154 文件 · 1749/1749 用例全绿**（今天第一次本机零噪声）。
+- 占用路径（本笔）：`src/core-shared.js`、`src/ui-hotkeys.js`、`src/ui-palette.js`、`src/ui-scene-bind.js`、
+  `src/ui-global-events.js`、`src/ui-ge-calendar.js`、`scripts/lint-empty-catch.baseline.json`、
+  `tests/cmd-registry.test.js`、本板。**仍未碰** `CHANGELOG.md` / workflows / lock / `node_modules/`。
+- 版本号 **3.7.132** 仍空闲（攒批：P0-3 扫描模型 + CI 红修复 + P0-4 注册表与第二步 + 构建链门禁 + 拆 core + 本笔）。
+
 ### [2026-10-17 02:55 UTC+8] WorkBuddy 主会话（CI 红根因「搬家被当成新增」· 已修 · 待推）
 - 现象：`1bc9c09` 两条 run 全红，但**只有一处**根因 —— `lint:empty-catch` 判出 1 处新 P0
   （`core-i18n.js:10`），而它其实是 `core.js:232` 那处 **搬家**过去的（同一段 localStorage 读取的 try，

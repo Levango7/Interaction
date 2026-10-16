@@ -25,11 +25,16 @@ document.addEventListener("keydown", e=>{
   if(target && (target.tagName==="INPUT"||target.tagName==="TEXTAREA"||target.tagName==="SELECT")) return;
   if(target && target.isContentEditable) return;
   if(e.key==="?" || (e.shiftKey && e.key==="/")){ e.preventDefault(); openShortcutHelp(); return; }
-  if(e.key>="1" && e.key<="6"){ const sc=ORDER[+e.key-1]; if(sc){ setActive(sc); render(); } }
-  else if(e.key==="g"||e.key==="G"){ active="overview"; render(); } // 总览为瞬态视图，不持久化（契约已知例外）
-  // M6：N 在总览/统计等无表单视图也能跳到场景并聚焦新建任务
-  else if(e.key==="n"||e.key==="N"){
-    if(active==="overview"||active==="stats"){ setActive("office"); }
-    render(); const f=$("#taskForm"); if(f) f.title.focus();
+  if(e.key>="1" && e.key<="6"){ const sc=ORDER[+e.key-1]; if(sc){ setActive(sc); render(); } return; }
+  /* v3.7.132（P0-4 第二步）：单键命令改由**命令注册表**分发 —— 键位定义只此一处。
+     原先这里写 `e.key==="n"` / `e.key==="g"`，而面板里另有一份手写的 `sub:"N"`：
+     两套东西改一处忘一处，用户看到的就是错的提示（这正是 P0-4 的立项理由）。
+     现在键位住在 `ui-palette.js` 的命令定义里，`keys` 同时生成面板提示与这里的触发。
+     **本文件仍手写**的只有两类：数字键 1-6（切场景，不作为命令出现在面板里）与带修饰键的组合
+     （Ctrl+K / Ctrl+Z / Ctrl+Y / Esc / ?）—— 注册表目前只表达单键，扩展它属另一笔。 */
+  const cmdId = CMD.findByKeys(e.key);
+  if(cmdId){
+    const c = CMD.get(cmdId);
+    if(c && typeof c.run === "function") c.run();
   }
 });

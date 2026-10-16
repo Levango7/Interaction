@@ -88,7 +88,7 @@ function bindScenario(){
     AppBridge.bindCalendarEvents(calInline);
     calInline.addEventListener("cal:date-select", function(e){
       const f = $("#taskForm");
-      if(f && f.due){ f.due.value = e.detail.date; f.title.focus(); }
+      if(f && f.due){ f.due.value = e.detail.date; focusTaskTitleInput(); }
     });
   }
   // v2.1.0：待办视图状态筛选（按 data-status 显隐行）

@@ -948,8 +948,9 @@ function _bindDashToolbar(container, editMode){
   if(actNew) actNew.onclick = function(){
     if(typeof setActive === "function"){ setActive("office"); }
     if(typeof render === "function"){ try{ render(); }catch(e){} }
-    const f = document.querySelector("#taskForm");
-    if(f && f.title){ try{ f.title.focus(); }catch(e){} }
+    /* v3.7.132：原 `f.title.focus()` 必然抛 TypeError，这里还包了 try 吞掉 ⇒ 静默无效。
+       改走共用助手（同一处修复覆盖四个调用点）。 */
+    if(typeof focusTaskTitleInput === "function") focusTaskTitleInput();
   };
   const actSearch = container.querySelector("#dashActSearch");
   if(actSearch) actSearch.onclick = function(){

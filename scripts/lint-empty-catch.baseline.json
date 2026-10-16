@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-16",
-  "count": 541,
+  "count": 540,
   "items": [
     {
       "file": "ai-loop.js",
@@ -4553,19 +4553,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 952,
-      "sig": "7d719d1f8e",
-      "bhash": "5b3681bea9",
-      "occ": 1,
-      "level": "P1",
-      "why": "try 块含业务逻辑，需人工判断是否该上报",
-      "bare": true,
-      "note": "",
-      "snippet": "f.title.focus(); }"
-    },
-    {
-      "file": "ui-ge-calendar.js",
-      "line": 957,
+      "line": 958,
       "sig": "7f1e5bb08c",
       "bhash": "4bfda35591",
       "occ": 3,
@@ -4577,7 +4565,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 959,
+      "line": 960,
       "sig": "86e2bc986f",
       "bhash": "0bc4977949",
       "occ": 1,
@@ -4589,7 +4577,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 967,
+      "line": 968,
       "sig": "b05505bb16",
       "bhash": "cceaa26c02",
       "occ": 1,
@@ -4601,7 +4589,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 973,
+      "line": 974,
       "sig": "7ca02111ed",
       "bhash": "02ddc8e9ab",
       "occ": 1,
@@ -4613,7 +4601,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 974,
+      "line": 975,
       "sig": "564f58c45c",
       "bhash": "ea9638ab33",
       "occ": 1,
@@ -4625,7 +4613,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 975,
+      "line": 976,
       "sig": "798722bab8",
       "bhash": "d105a36c1c",
       "occ": 1,
@@ -4637,7 +4625,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 976,
+      "line": 977,
       "sig": "60dc09d303",
       "bhash": "5196734235",
       "occ": 1,
@@ -4649,7 +4637,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 977,
+      "line": 978,
       "sig": "8f34b07604",
       "bhash": "fead27ab8f",
       "occ": 1,
@@ -4661,7 +4649,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 978,
+      "line": 979,
       "sig": "a073c2388c",
       "bhash": "f33d7186d1",
       "occ": 1,
@@ -4673,7 +4661,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 979,
+      "line": 980,
       "sig": "d6636b6ed3",
       "bhash": "8f2b22c9e4",
       "occ": 1,
@@ -4685,7 +4673,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1361,
+      "line": 1362,
       "sig": "e391ddfddf",
       "bhash": "26624854e0",
       "occ": 1,
@@ -4697,7 +4685,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1375,
+      "line": 1376,
       "sig": "30795702b8",
       "bhash": "bbb08f7e54",
       "occ": 1,
@@ -4709,7 +4697,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1490,
+      "line": 1491,
       "sig": "8da10967ca",
       "bhash": "ba3e37734c",
       "occ": 1,
@@ -4721,7 +4709,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1498,
+      "line": 1499,
       "sig": "ebfbb40557",
       "bhash": "0f994d180f",
       "occ": 1,
@@ -4733,7 +4721,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1530,
+      "line": 1531,
       "sig": "01682a34ea",
       "bhash": "0fb10deb70",
       "occ": 1,
@@ -4745,7 +4733,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1541,
+      "line": 1542,
       "sig": "67f344fca5",
       "bhash": "6646f076c4",
       "occ": 1,
@@ -4757,7 +4745,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1560,
+      "line": 1561,
       "sig": "e191b6c2dd",
       "bhash": "acaa3c959d",
       "occ": 1,
@@ -4769,7 +4757,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1705,
+      "line": 1706,
       "sig": "7e440efb04",
       "bhash": "5a6ab83a4d",
       "occ": 1,
@@ -4781,7 +4769,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1742,
+      "line": 1743,
       "sig": "4a7b573180",
       "bhash": "510e04e1ea",
       "occ": 1,
@@ -4793,7 +4781,7 @@
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1748,
+      "line": 1749,
       "sig": "bcf228c46a",
       "bhash": "1587edbc51",
       "occ": 1,
@@ -6305,7 +6293,7 @@
     },
     {
       "file": "ui-palette.js",
-      "line": 210,
+      "line": 214,
       "sig": "ad3d01981d",
       "bhash": "a4977851f6",
       "occ": 1,

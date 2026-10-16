@@ -70,7 +70,7 @@ document.addEventListener("click", function(e){
   const action = act.getAttribute("data-empty-action");
   if(action === "new-task"){
     if(active==="overview"||active==="stats"||active==="recycle"){ setActive("office"); }
-    render(); const f=$("#taskForm"); if(f) f.title.focus();
+    render(); focusTaskTitleInput();
   }
 });
 // 全部已读 / 清空

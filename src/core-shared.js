@@ -334,6 +334,28 @@ const SCENE_FEATURES = {
 };
 
 /* v3.7.17（解耦 S4）：对话内容转文本助手下移核心层（原在 ai-retry，被 data-links 引用 → 逆层依赖；仅依赖 t）。纯搬迁。 */
+/* ---------- 聚焦「新建任务」的标题输入框（v3.7.132） ----------
+ * 为什么放在核心层：四个上层块都要用（ui-scene-bind / ui-palette / ui-global-events / ui-ge-calendar），
+ * 而它必须排在**所有调用方之前**才不产生逆层边 —— 位置由层序决定，不由"它看起来像 UI 代码"决定
+ * （同 v3.7.66 那组钩子位放 core 的理由）。
+ *
+ * **它修的是一处长期静默失效**（2026-10-17 由 cmd-registry 的行为用例抓到）：
+ *    四处的原写法都是 `const f=$("#taskForm"); f.title.focus()`，而 `#taskForm` 是
+ *    **`<form>` 元素** —— `form.title` 命中的是 **HTMLElement.title（字符串）**，
+ *    它**遮蔽**了同名控件的命名访问（真正那个 input 在 `f.elements.title`）。
+ *    于是 `.focus()` 每次都抛 `TypeError: f.title.focus is not a function`：
+ *      · 三处没包 try（按 N / 空态「新建任务」按钮 / 日历选日期）⇒ 整个 handler 被打断，
+ *        用户看到的是"按了没反应"；
+ *      · 一处包了 try（仪表盘快捷「新建」）⇒ 被静默吞掉，连报错都看不见。
+ *    ⇒ 这不只是"没用"，是**四处功能存在但从未生效**。判据：不要靠 `form.xxx` 拿同名控件，
+ *      用 `form.querySelector('[name="xxx"]')` 或 `form.elements.xxx`。 */
+function focusTaskTitleInput(){
+  const f = document.getElementById("taskForm");
+  const inp = f && f.querySelector('[name="title"]');
+  if(inp && typeof inp.focus === "function") inp.focus();
+  return inp || null;
+}
+
 /* ---------- 历史消息 content 兼容（v1.14 前多模态可能遗留数组格式，渲染时兜底转文本） ---------- */
 function _chatContentToText(c){
   if(Array.isArray(c)){
