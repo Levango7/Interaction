@@ -131,28 +131,53 @@ function highlightHits(text, positions){
  * @param {string} [q] - 查询词
  * @returns {Array<{label:string,group?:string,icon?:string,sub?:string,run:Function}>}
  */
+/* P0-4：命令注册（幂等）。放这里而不是 cmd-registry.js 的原因：这些命令的 run 与 icon
+   依赖 UI 层符号（toggleTheme / doExport / UI_ICONS…），而注册表本身留在 Core 层只提供机制。
+   ⚠️ label 用 labelKey 惰性求值，**不能**在注册时 t() 立即取值 —— 否则用户切成英文后命令名还是中文。 */
+let _appCmdsRegistered = false;
+function registerAppCmds(){
+  if(_appCmdsRegistered) return;
+  _appCmdsRegistered = true;
+  const G = { groupKey: "cmd.command", groupFallback: "命令" };
+  [
+    { id:"task.new", labelKey:"cmd.newTask", labelFallback:"新建任务", icon:UI_ICONS.plus, keys:["n"], run:()=>{ if(getActive()==="overview"){setActive("office");render();} const f=$("#taskForm"); if(f) f.title.focus(); } },
+    { id:"theme.toggle", labelKey:"cmd.toggleTheme", labelFallback:"切换明暗主题", icon:UI_ICONS.theme, run:toggleTheme },
+    { id:"data.exportJson", labelKey:"cmd.exportJson", labelFallback:"导出 JSON 备份", icon:UI_ICONS.download, run:doExport },
+    { id:"data.exportCsv", labelKey:"cmd.exportCsv", labelFallback:"导出任务 CSV", icon:UI_ICONS.download, run:doExportCSV },
+    { id:"data.exportMd", labelKey:"cmd.exportMd", labelFallback:"导出任务 Markdown", icon:UI_ICONS.download, run:doExportMD },
+    { id:"data.importRestore", labelKey:"cmd.importRestore", labelFallback:"导入恢复", icon:UI_ICONS.upload, run:()=> $("#fileInput").click() },
+    { id:"data.clear", labelKey:"cmd.clearAll", labelFallback:"清空全部数据", icon:UI_ICONS.trash, keys:[], run:doClear },
+    { id:"ui.openSettings", labelKey:"cmd.openSettings", labelFallback:"打开设置", icon:UI_ICONS.gear, run:()=>{ AppBridge.openDrawer(); } },
+    { id:"memory.view", labelKey:"cmd.viewMemory", labelFallback:"查看工作记忆", icon:UI_ICONS.chat, run:showMemories },
+    { id:"memory.clear", labelKey:"cmd.clearMemory", labelFallback:"清空工作记忆", icon:UI_ICONS.trash, run:()=>{ save(PREFIX+"memory",[]); toast(t("msg.memoryCleared","已清空工作记忆"),"ok"); } },
+    { id:"goal.cancel", labelKey:"cmd.cancelGoal", labelFallback:"取消当前目标", icon:UI_ICONS.trash, run:()=>{ const g=cancelGoal(); toast(g?(t("msg.goalCancelled","已取消目标「")+g.title+"」"):t("msg.noActiveGoal","当前无进行中目标"),"ok"); } },
+    { id:"view.overview", labelKey:"cmd.viewOverview", labelFallback:"查看总览", icon:UI_ICONS.overview, run:()=>{active="overview";render();} },
+    { id:"view.stats", labelKey:"cmd.viewStats", labelFallback:"查看统计", icon:UI_ICONS.grid, run:()=>{ setActive("stats"); render(); } },
+    { id:"ui.openAi", labelKey:"cmd.openAi", labelFallback:"打开 AI 配置", icon:UI_ICONS.robot, run:()=>{ AppBridge.openAiPage(); } },
+    { id:"ui.openRecycle", labelKey:"cmd.openRecycle", labelFallback:"打开回收站", icon:UI_ICONS.trash, run:()=>{ if(typeof openRecycle==="function") openRecycle(); } }
+  ].forEach(function(c){ registerCmd(Object.assign({}, G, c)); });
+}
+
+/** 从注册表生成面板条目：label/group **实时求值**（跟随语言切换），sub 由 keys 生成（与 hotkeys 同源） */
+function registeredActs(){
+  registerAppCmds();
+  return CMD.all().map(function(c){
+    return {
+      label: c.labelKey ? t(c.labelKey, c.labelFallback) : c.label,
+      icon: c.icon,
+      sub: (typeof keyHint === "function") ? keyHint(c.keys) : "",
+      group: (c.groupKey !== undefined && c.groupKey !== null) ? t(c.groupKey, c.groupFallback) : c.group,
+      run: c.run,
+      trackRecent: c.trackRecent,
+      __id: c.id
+    };
+  });
+}
+
 function buildCmds(q){
   const qRaw = String(q||"").trim();   // 原文：喂给 Agent 的诉求不能是小写化之后的
   q=(q||"").toLowerCase();
-  const acts=[
-    {label:t("cmd.newTask","新建任务"), icon:UI_ICONS.plus, sub:"N", group:t("cmd.command","命令"), run:()=>{ if(getActive()==="overview"){setActive("office");render();} const f=$("#taskForm"); if(f) f.title.focus(); }},
-    {label:t("cmd.toggleTheme","切换明暗主题"), icon:UI_ICONS.theme, group:t("cmd.command","命令"), run:toggleTheme},
-    {label:t("cmd.exportJson","导出 JSON 备份"), icon:UI_ICONS.download, group:t("cmd.command","命令"), run:doExport},
-    {label:t("cmd.exportCsv","导出任务 CSV"), icon:UI_ICONS.download, group:t("cmd.command","命令"), run:doExportCSV},
-    {label:t("cmd.exportMd","导出任务 Markdown"), icon:UI_ICONS.download, group:t("cmd.command","命令"), run:doExportMD},
-    {label:t("cmd.importRestore","导入恢复"), icon:UI_ICONS.upload, group:t("cmd.command","命令"), run:()=> $("#fileInput").click()},
-    {label:t("cmd.clearAll","清空全部数据"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:doClear},
-    {label:t("cmd.openSettings","打开设置"), icon:UI_ICONS.gear, group:t("cmd.command","命令"), run:()=>{ AppBridge.openDrawer(); }},
-    {label:t("cmd.viewMemory","查看工作记忆"), icon:UI_ICONS.chat, group:t("cmd.command","命令"), run:showMemories},
-    {label:t("cmd.clearMemory","清空工作记忆"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ save(PREFIX+"memory",[]); toast(t("msg.memoryCleared","已清空工作记忆"),"ok"); }},
-    {label:t("cmd.cancelGoal","取消当前目标"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ const g=cancelGoal(); toast(g?(t("msg.goalCancelled","已取消目标「")+g.title+"」"):t("msg.noActiveGoal","当前无进行中目标"),"ok"); }},
-    {label:t("cmd.viewOverview","查看总览"), icon:UI_ICONS.overview, group:t("cmd.command","命令"), run:()=>{active="overview";render();}},
-    /* v3.7.8：补三条"此前只能靠内部路由到达"的入口 —— 统计页在 v3.6.6 撤掉了侧栏入口后一直是孤岛，
-       这里给它一个真实可达的入口（同时也是命令面板该有的能力：所有主视图都能一条命令直达）。 */
-    {label:t("cmd.viewStats","查看统计"), icon:UI_ICONS.grid, group:t("cmd.command","命令"), run:()=>{ setActive("stats"); render(); }},
-    {label:t("cmd.openAi","打开 AI 配置"), icon:UI_ICONS.robot, group:t("cmd.command","命令"), run:()=>{ AppBridge.openAiPage(); }},
-    {label:t("cmd.openRecycle","打开回收站"), icon:UI_ICONS.trash, group:t("cmd.command","命令"), run:()=>{ if(typeof openRecycle==="function") openRecycle(); }}
-  ];
+  const acts = registeredActs();
   const scs=ORDER.map(sc=>({label:t("cmd.switchTo","切到 ")+SCENARIOS[sc].name, icon:SCENARIOS[sc].icon || "", group:t("cmd.scenario","场景"), run:()=>{setActive(sc);render();}}));
   const tasks=getActiveTasks().filter(t=>t.status!=="done").slice(0,12)
     .map(task=>({label:task.title, icon:SCENARIOS[task.sc].icon || "", sub:SCENARIOS[task.sc].name, group:t("cmd.task","任务"), trackRecent:false, run:()=>{setActive(task.sc);render();}}));

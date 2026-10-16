@@ -42,6 +42,51 @@
 
 ## 条目
 
+### [2026-10-16 00:57 UTC+8] WorkBuddy 主会话（P0-4 命令注册表交付 · 待推 · 释放）
+- 状态：**已交付，本地待推** —— 7 条先红后绿 + 5 个既有 palette 测试 + lint 0 errors。
+- **做了什么**：注册表机制（`registerCmd` / `makeRegistry` / `findByKeys` / `keyHint`）+
+  **注册即校验**（缺 `id`/`(label|labelKey)`/`run`、`id` 重复、**键位撞车** → 不注册 + `console.error`）
+  + **幂等**；`ui-palette` 的 15 条 acts 迁入注册表，`buildCmds` 改从 `registeredActs()` 取。
+- **两处「单一真相源」落地**：① 面板的快捷键提示 `sub` **由 keys 生成**，不再手写第二遍
+  （原先 `ui-hotkeys.js` 的 `e.key==="n"` 与 acts 的 `sub:"N"` 是两套，改一处忘一处就是错提示）；
+  ② label 用 `labelKey` **惰性求值** —— 注册时 `t()` 立即取值的话，用户切英文后命令名还是中文。
+- **UI 逐字不变**：原 acts 只有「新建任务」带 `sub:"N"`，迁移后仍只有它（`keys:["n"]` → `sub:"N"`），
+  用例⑥把这个「不凭空多出」钉住；用例⑤锚住「15 条一条不差」。
+- **⚠️ 本笔踩了三个构建链的坑，都记下来（每个都差点让改动白做）**：
+  ① **`src-split` 不认「新增块」**：我新建 `src/cmd-registry.js` + 加 `order.json` + 在 HTML 插标记，
+     拼回能出 36 块，但 `--extract` 的块列表**只认 order.json 里已有的**，而它写回 order.json 时
+     又只记「实际抽出」的 ⇒ **新块进不了 order.json ⇒ 下次构建就丢**。
+     **本笔结论：暂不新增块**，registry 并入已存在的 `src/core.js`。
+     **账留在这里**：这是构建链的真缺陷，值得单独一笔修（建议方向：抽出时的 names 应取
+     「HTML 实际标记」与「order.json」的**并集**，而不是单取 order.json）。
+  ② **操作顺序错会污染 src**：跑了 `pet-art`（注入立绘）之后**只跑** `src-split --extract`、
+     没先跑 `pet-art --extract` ⇒ 立绘 base64 被抽回写进 `src/render-widgets.js`
+     （`git diff` 可见 `_PET_ART` 从空标记变成一坨 base64，且连带 5 个测试红）。
+     **正确顺序：先 `pet-art --extract` 再 `src-split --extract`**。
+  ③ **`npm run lint` 会把 HTML 抽回源码态** ⇒ lint 之后**直接**跑 vitest 必红（我因此误判过两次，
+     还错怪过 palette-tools）。**手工跑测试前必须先把 HTML 拼回**。
+- 占用路径：`src/core.js`（registry 段，顶层声明）、`src/ui-palette.js`、`tests/cmd-registry.test.js`（新）、本板。
+- **`agent-workbench.html` 零改动**（新块方案回退后完全复原，`check-source-state` ✓ 35/35）。
+- 待推：上述 4 文件。下一个可用版本号 **3.7.132**（攒批：本笔 + P0-3 扫描模型 + CI 红修复一起发）。
+- 提醒对方：`hotkeys` 的**按键分发**本笔没迁（涉及 Esc 链式 / 1-6 / g / n / ? 与输入态豁免，
+  风险自成一笔）；本笔只把「键位」这个事实搬进了注册表，`findByKeys` 已备好给那一步用。
+
+### [2026-10-16 22:50 UTC+8] WorkBuddy 主会话（P0-4 命令注册表 · 占用中）
+- 状态：进行中 —— main 已修回绿（`9358aae` 2/2 全绿、看守自动推了板条目 `51eb1e7`），
+  兑现"CI 一绿就接着做"：开工 P0-4（用户 22:00 批准）。
+- **测试已写好**（5 条，`tests/cmd-registry.test.js`，本地未提交）：① 重复 id 拒绝 + console.error；
+  ② 重复键位拒绝（`findByKeys` 仍指向先注册者）；③ 缺 label/run 拒绝；④ `findByKeys` 规范化
+  （大小写/空格/修饰符顺序不敏感）；⑤ **迁移完整性**：registry 的命令与 `buildCmds` 渲染的一条不差。
+- **本笔范围**：新建 `src/cmd-registry.js`（`registerCmd`/`makeRegistry`/`findByKeys`）+ 把 16 条 acts
+  迁入（新增机器可读 `keys`，`label/icon/group/run` 原样）+ `buildCmds` 改为从 registry 取 acts。
+- **UI 不变的保证**：原 acts 里只有 `新建任务`带 `sub:"N"` —— 现在只给**确有快捷键**的那条填
+  `keys:["n"]`，`sub` 由 `keys` 生成（`N`），显示与现状逐字一致；其余 keys 为空 ⇒ 不产生新 sub。
+  （`sub` 与 hotkeys 终于同一来源 —— 这是"单一真相源"的落点。）
+- **hotkeys 全迁不做**（板上已声明第二步）：它涉及 Esc 链式/1-6/g/n/? 与输入态豁免，风险自成一笔。
+- 占用路径：`src/cmd-registry.js`（新）、`src/ui-palette.js`、`tests/cmd-registry.test.js`（新）、本板。
+- 在跑的重活：vitest + 5 个既有 palette 测试回归。
+- 提醒对方：`57e7949`（你的）我见到了，没动。我本笔会跑 `src-split` 拼回，跑完抽回，不留注入态。
+
 ### [2026-10-16 22:20 UTC+8] WorkBuddy 主会话（CI 红已修并推 · 释放）
 - 状态：**已修已推（释放）** —— `9358aae`，只 4 文件。
 - **你可以推你那两笔了**：20:40 的 `e24c10c` 与 21:02 那条（你说"等 main 修回绿再推"）。
