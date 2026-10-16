@@ -28,7 +28,7 @@
 | R5 | **⚠️ 别在共享树上跑 `npm ci`**——中断的 `npm ci` 会把整棵 `node_modules/` 清成空目录，`_probe/*` 验证副本的 junction 全废（**2026-10-15 实际发生**）。要装依赖/跑全量验证，自建净副本：`git archive HEAD \| tar -x -C _probe/<你的副本> && cd _probe/<你的副本> && npm ci`。同理：`post*` 钩子的 `--extract` 会改 `agent-workbench.html`，在共享树上可能**静默销毁别人的 src 编辑** | `docs/agent-board.md` 铁律 6 |
 | R6 | **不碰别人的东西**：他人占用的文件（看 agent-board 最新条目）、`_probe/iso*` 净副本、本地 ref `r21-cancel-probe`（R-21 探针 YAML 存档，远端已删，`git show` 可取回）、工作区里归属不明的未跟踪文件（主人自认前谁都别动） | agent-board 2026-10-15 条目 |
 | R7 | **撞车/分歧 → 停手**：agent-board 追加「冲突说明」，等用户裁决。不许抢先推；`--force` 绝对禁止 | v3.7.124 处置过程 |
-| R8 | **提交前抽回源码态**：`node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup`，确认 `agent-workbench.html` ≈ 635KB 再 add。git 里存的是**源码态**，把 3.87MB 拼回态提交进 git = 污染仓库 | 双态纪律（`docs/architecture-layers.md`） |
+| R8 | **开工先看 diff 归属，提交前才抽回源码态**：开工第一件事是 `git status`，判据是**diff 归属**而不是 HTML 形态——链在跑时树天然呈注入态，若写成"开工时 HTML 不得是注入态"，每次开工都误报，几次之后就没人看了。① **`src/` 有非本人 diff ⇒ 有在飞会话，此时绝不 `--extract`**（会用 HTML 旧内容整体覆盖对方在飞编辑；2026-10-15/16 两个会话各踩过一侧：先改 `src/` 再跑 extract = 白改一轮）；② **`src/` 零 diff 而 HTML 是注入态 ⇒ 只是形态遗留**（2026-10-16 08:53 实测：链已停、板已释放、无在飞 run，树却留着 3.87MB —— 这个时间窗原先没人检查），可安全抽回。要提交时：`node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup`，再用 `node scripts/check-source-state.mjs` 复核到 ≈635KB 源码态才 add。git 里存的是**源码态**，把 3.87MB 拼回态提交进 git = 污染仓库 | 双态纪律（`docs/architecture-layers.md`）+ agent-board 2026-10-16 09:17 通告、19:00 措辞修订 |
 | R9 | **判据以 CI 为准**：本机全绿不能证明 CI 形态已修（teardown 竞态本机复现不出）；本机 worker 噪声（少数文件未完成 + Unhandled 但 0 FAIL）不阻塞发版 | `docs/iteration-plan.md`「已知 CI 形态」 |
 | R10 | **push 前在 agent-board 声明一行**（照最新条目的样子），紧急时刻用板内列出的实时喊话通道：① 我即将 push；② 我即将动你正在改的文件 | agent-board 2026-10-15 11:48 立的先例 |
 | R11 | **发版 commit 之后，禁止立刻 push 无关提交**（如板条目、文档收尾）——后一条 push 会用 `cancel-in-progress` 取消发版 commit 自己的验证 run，绿判只能落在后一条上（2026-10-15 实测：`c865fb0` 的两条 run 被我自己的 `2d1d407` 取消）。正确顺序：发版 commit 推 → **等它的 run 出终态** → 再推板条目等收尾 | agent-board 2026-10-15 17:55 事实通告 |
@@ -42,7 +42,8 @@
 | 3.7.127 | WorkBuddy 主会话 | ✅ 已发（2026-10-15，`c865fb0`，线上已核） |
 | 3.7.128 | WorkBuddy 主会话 | ✅ 已发（2026-10-16，`5b2eed0`；CI 排队较久） |
 | 3.7.129 | WorkBuddy 主会话 | ✅ 已发（2026-10-16，`e148f71`；CI 排队较久） |
-| **3.7.130** | WorkBuddy 主会话 | 🔄 已登记（2026-10-16；R-26 检索不等有界回填 → 消除 rag-hybrid/workflow 首跑红） |
+| 3.7.130 | WorkBuddy 主会话 | ✅ 已发（2026-10-16，`abe7fde`；R-26 检索等有界回填 + 台账 R-24/R-25 收口） |
+| **3.7.131** | WorkBuddy 主会话 | 🔄 已登记（2026-10-16；接手 qoder 在飞的 R-27 `with-injected` 包装 + 补回 R-21 标题） |
 
 **用号流程**：发版前把号写进本表（含会话名）→ 提交 → 再跑 `release.mjs`。
 两个会话同时想发 → 表上必然暴露 → 按 R7 停手。
@@ -72,3 +73,4 @@
 |------|------|------|
 | 2026-10-15 | 建册（R1-R8 + 登记表 + 预登记 + 销账 + 升级路径） | WorkBuddy 主会话 |
 | 2026-10-15 | 与 `docs/agent-board.md` 合并定位：吸收 npm ci 禁令/净副本/高共写面/喊话通道（R4-R6、R10），登记职责归 agent-board 条目流，本文件留版本预登记 | WorkBuddy 主会话 |
+| 2026-10-16 | **R8 扩写**：从"只管提交前"扩到"开工先看 `git status` 的 diff 归属"——`src/` 有非本人 diff 时绝不 extract（覆盖在飞编辑），零 diff 而 HTML 是注入态才属形态遗留可抽；判据按 WorkBuddy 19:00 通告钉在**归属**而非 HTML 形态，避免告警疲劳。本会话名下无待推版本号 | Qoder 主会话（用户批准"做吧"，措辞采纳 WorkBuddy 提议） |

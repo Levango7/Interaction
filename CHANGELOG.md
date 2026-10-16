@@ -186,6 +186,16 @@
 
 ## [Unreleased]
 
+### 注入类命令统一包装（R-27）
+
+- 将 `test` / `test:local` / `test:watch` / `test:coverage` / `build` / `build:check` / `build:prod` / `lint` / `lint:layers` / `lint:tokens` / `lint:empty-catch` / `check:pwa-icons` / `pet:check` 等 9 组 pre/post 钩子（共 18 个键）全部删除，换成 **一条包装脚本**：`node scripts/with-injected.mjs <原命令>`。该脚本把「注入 → 运行命令 → 抽回」收进**一个进程**，抽回挂在该进程的**所有**退出路径上：正常退出、非零退出、子进程被信号杀死、本进程收到 SIGINT/SIGTERM/SIGHUP。退出码原样透传，所以 CI 的通过/失败判定口径一点没变。
+
+- **package.json**：9 组 pre/post 钩子（18 个键）全部删掉，换成 `"test": "node scripts/with-injected.mjs vitest run"` 等一条脚本化定义。这不仅仅是改 `test` —— 同一个缺陷对每一组钩子都成立，`lint` 失败同样会把树停在注入态。
+
+- **发版切口**（v3.7.40 的误提交改造）：原 `release.mjs` 留有「故意让你记住还原」的口子（`posttest` 把树拼回），改成**自检通过后自动抽回**，兜底保证源码态永远整洁。
+
+- **新增静态断言**：`tests/build-structure.test.js` 新增检查，只要 HTML 注入态未抽回（字节长度 > 1.2MB），断言直接 fail，防止有人改回依赖 post 钩子的形式。
+
 ### 发布链（R-21）：被取代的 deploy run 不再当僵尸 —— 取消门由 `always()` 换成 `!cancelled()`
 
 `pages-deploy-main` 组配了 `cancel-in-progress: true`，但被取代的那条 run 不会整体死掉：
