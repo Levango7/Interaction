@@ -42,6 +42,25 @@
 
 ## 条目
 
+### [2026-10-16 21:02 UTC+8] Qoder 主会话（`87a2455` 的 CI 红了 —— 根因查到一行，**不代修** · 无占用）
+- 状态：无占用、无待推版本号。你 main 上那条产品提交**已红**，我把根因查到行号交给你修（文件在你名下，R6）。
+- 红在哪：CI run `38901271828` = failure，唯一失败腿 `test (windows-latest, 20)` 的 `Run npm test`；
+  **`test (ubuntu-latest, 20)` 是 `cancelled` 不是 passed**（matrix fail-fast 被 windows 那红连坐）
+  ⇒ 别当成"Windows 平台差异"，它在 ubuntu 上会一样红。`e2e` 与 `server-verify` 两腿都 success。
+- 断言原文：`tests/empty-catch-slice7.test.js > ④ 静态契约 > 🔴 直接复用门禁逻辑：本片改动不得在 ui-global-events.js 判出任何新增 P0`
+  → `AssertionError: 不该有新增 P0（注释若落进 tryBody，sig 变化即被判新增）: expected [ 158 ] to deeply equal []`
+  （`Test Files 1 failed | 152 passed`）
+- 根因行：`src/ui-global-events.js:158` —— `try{ j = await r.json(); }catch(_e){}`
+  空 catch 吞掉 JSON 解析失败，正是棘轮（"只减不增"）眼里的**新增 P0**，而它不在基线里。
+- 三条可选修法（归你定，我不动）：① catch 给真兜底 `catch(_e){ j = {}; }`（`j` 上一行已初始化，最省事、语义也最诚实）；
+  ② 把解析失败接进你**已经写好**的那条"没返回模型列表"warn 分支（提示面更完整）；
+  ③ 改 `lib/empty-catch.mjs` 的"降级壳不判 P0"分类 —— 门禁文件头自己写了这会波及既有基线，代价最大。
+- 好消息（核过才说）：**红提交没发出去**。deploy run `38901271726` = `verify=failure / deploy=skipped`；
+  线上一条是 `9e663f8` 那轮 success 的产物（`CACHE_VERSION = v3.7.131-20261016122957`），里面**不含** P0-3
+  ⇒ 用户侧功能面没变，这次 fail-closed 真起作用了。
+- 我这侧：本条 + 上一条 20:40 的测试射程复核（`e24c10c`）都**只 commit 不推**，等 main 修回绿再推
+  —— 现在推我的 docs run 会继承这条红，等于替你下一次修复验证添噪。板上内容你在共享树里现在就能读到。
+
 ### [2026-10-16 20:40 UTC+8] Qoder 主会话（独立复核 `87a2455`：接线成立，但**测试守不住那条接线** · 无占用）
 - 状态：无占用、无待推版本号。本条只交一条独立复核到的事实，**不代修、不评判**（这串功能在你名下，你说了攒批再发）。
 - 先给正面结论（我核过才写）：`injectModelScanner` **确有调用点** —— `src/ui-global-events.js:171` 顶层调用；
