@@ -11,6 +11,11 @@
  *      P0 真危险（localStorage / setItem / save 系 / JSON.parse / await 等）/ P1 待判断 / P2 规范写法
  *      再叠加第二根轴 `bare`：catch 体连注释都没有 = 作者未评估，同风险下优先处理
  *   ② **基线棘轮**：存量记为基线只报告，**新增 P0 才失败**（沿用 lint-tokens / module-graph 口径）
+ *      ②b **搬家不算新增**（v3.7.132 补）：键是 `file:sig#occ` 而 `sig` 含文件名，于是**任何"
+ *      把块拆开/把函数挪走"的重构**都会让已基线的条目在新文件里变成"新增"——连 P0 也会，
+ *      实测拆 core.js 时 `core.js:232`(P0) → `core-i18n.js:10` 直接把 CI 判红，而**代码一行没改**。
+ *      现按 `bhash`（不含文件名的 body 指纹）做**成对多重集配对**：旧位置消失 + 新位置出现且 body
+ *      相同 ⇒ 记为"搬家"，不计新增；**纯复制**（旧的还在）依旧报新增（否则就是一条洗白通道）。
  *   ③ **给标准修法**：`catch(e){ try{ if(typeof pushDiag==="function") pushDiag("warn", ...); }catch(_){} }`
  *      —— 上报但不改变原控制流：原本静默继续的，改后依然继续。
  *
@@ -45,7 +50,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scanSource, keyOf } from './lib/empty-catch.mjs';
+import { scanSource, keyOf, classifyDelta } from './lib/empty-catch.mjs';
 
 const _dir = dirname(fileURLToPath(import.meta.url));
 const _root = join(_dir, '..');
@@ -115,14 +120,26 @@ if (!existsSync(BASELINE)) {
 const prev = JSON.parse(readFileSync(BASELINE, 'utf8'));
 /* 注意 prevKeys 是 Set —— 取规模用 .size；写 Object.keys(prevKeys).length 恒为 0（項是内部槽位不是自有属性），
    表现为"基线 0 处"，判定虽不受影响但读数骗人，排查时会带偏方向。 */
-const prevKeys = new Set((prev.items || []).map(keyOf));
-const added = items.filter((it) => !prevKeys.has(keyOf(it)));
-const removed = (prev.items || []).filter((p) => !items.some((it) => keyOf(it) === keyOf(p)));
+const prevItems = prev.items || [];
+const prevKeys = new Set(prevItems.map(keyOf));
+/* v3.7.132：差集拆出"搬家"一类 —— 键里含文件名，块一拆就把存量条目（含 P0）报成新增（实测 CI 红）。
+   判据见 lib/empty-catch.mjs::classifyDelta（成对 + 多重集配对，纯复制不删除仍报新增）。 */
+const { added, removed, movedTo, movedFrom, addedReal, removedReal } = classifyDelta(items, prevItems);
 
-console.log(`[lint-empty-catch] 基线 ${prevKeys.size} 处 · 新增 ${added.length} 处 · 消失 ${removed.length} 处`);
-for (const it of added) console.log(`  新 增 ${it.level}  ${it.file}:${it.line}  ${it.why}\n      try{ ${it.snippet} }`);
+console.log(`[lint-empty-catch] 基线 ${prevKeys.size} 处 · 新增 ${addedReal.length} 处 · 消失 ${removedReal.length} 处`
+  + (movedTo.size ? ` · 搬家 ${movedTo.size} 处（旧位置消失+新位置出现，body 一致 ⇒ 不计新增）` : ''));
+if (movedTo.size) {
+  const from = new Map();
+  for (const p of movedFrom) if (p.bhash) from.set(p.bhash, p);
+  for (const it of added) {
+    if (!movedTo.has(keyOf(it))) continue;
+    const p = from.get(it.bhash);
+    console.log(`  搬 家 ${it.level}  ${p ? p.file + ':' + p.line : '(?)'} → ${it.file}:${it.line}`);
+  }
+}
+for (const it of addedReal) console.log(`  新 增 ${it.level}  ${it.file}:${it.line}  ${it.why}\n      try{ ${it.snippet} }`);
 
-const newP0 = added.filter((it) => it.level === 'P0');
+const newP0 = addedReal.filter((it) => it.level === 'P0');
 if (newP0.length) {
   console.error(`\n[lint-empty-catch] FAIL：新增 ${newP0.length} 处 P0 级空 catch（静默吞真实错误）。`);
   console.error('  三选一：');
@@ -131,5 +148,5 @@ if (newP0.length) {
   console.error('   (c) 确实 unavoidable —— node scripts/lint-empty-catch.mjs --freeze 重冻基线（须在 commit message 说明理由）');
   process.exit(1);
 }
-console.log('[lint-empty-catch] ✓ 无新增 P0 级空 catch' + (added.length ? `（新增 ${added.length} 处为 P1/P2，仅提示）` : ''));
+console.log('[lint-empty-catch] ✓ 无新增 P0 级空 catch' + (addedReal.length ? `（新增 ${addedReal.length} 处为 P1/P2，仅提示）` : ''));
 process.exit(0);

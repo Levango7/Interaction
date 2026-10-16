@@ -23,7 +23,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { scanSource, findEmptyCatches, tryBlockBefore, classify, stripFeedbackCalls, keyOf, P0_PATTERNS } from "../scripts/lib/empty-catch.mjs";
+import { scanSource, findEmptyCatches, tryBlockBefore, classify, stripFeedbackCalls, keyOf, classifyDelta, P0_PATTERNS } from "../scripts/lib/empty-catch.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = join(ROOT, "src");
@@ -272,5 +272,74 @@ describe("v3.7.88 bare 判据扩边（try 上方说明也算已评估）", () =>
     const bareP0 = p0.filter((i) => i.bare);
     expect(p0.length, "P0 总数与分级不因 bare 判据而变").toBeGreaterThan(0);
     expect(bareP0.length, "bare 只能是 P0 的子集").toBeLessThanOrEqual(p0.length);
+  });
+});
+
+describe("v3.7.132 搬家不算新增（拆块重构不得触发假红）", () => {
+  /* 背景：键是 `file:sig#occ`，而 `sig` 把文件名混进了哈希 ⇒ 把一个大块拆成多块（或把函数挪走）时，
+     同一条目在新文件里的键与基线**完全不同** ⇒ 门禁把它报成"新增"，连**已基线的 P0** 也会重新变红。
+     实测现场：拆 core.js 时 `core.js:232`(P0) → `core-i18n.js:10`，CI 直接红 —— 而代码一行没改。
+     这套用例把新判据钉死，同时证明它**不是**一条洗白通道。 */
+  const body = "try{ doX(); }catch(_){}";
+  const inFile = (file) => scanSource(body, file, {})[0];
+
+  it("⑨ bhash 不含文件名：同一 body 在两处 → bhash 相同、sig 不同", () => {
+    const a = inFile("a.js"), b = inFile("b.js");
+    expect(a.bhash, "body 指纹必须与文件无关（否则识别不了搬家）").toBe(b.bhash);
+    expect(a.sig, "sig 仍需含文件名 —— 它是键的一部分，跨文件不得撞车").not.toBe(b.sig);
+  });
+
+  it("⑩ 成对出现（旧位置消失 + 新位置出现）判为搬家，不计新增", () => {
+    const prev = [inFile("old.js")];
+    const cur = [inFile("new.js")];
+    const d = classifyDelta(cur, prev);
+    expect(d.added.length).toBe(1);
+    expect(d.addedReal.length, "搬家不是新增").toBe(0);
+    expect(d.removedReal.length, "搬家也不是消失").toBe(0);
+    expect(d.movedTo.size).toBe(1);
+    expect(d.movedFrom.length).toBe(1);
+  });
+
+  it("⑪ 纯复制（原地的还在）仍报新增 —— 搬家判据不得成为洗白通道", () => {
+    const prev = [inFile("old.js")];
+    const cur = [inFile("old.js"), inFile("copy.js")];
+    const d = classifyDelta(cur, prev);
+    expect(d.addedReal.length, "复制一份 = 真新增（没有配对的消失）").toBe(1);
+    expect(d.movedTo.size).toBe(0);
+  });
+
+  it("⑫ 多重集配对按 body 计数：2 处变 3 处 → 净增的那处必须报出来", () => {
+    /* ⚠️ 初版这里写错了期望（"只搬走一处、另一处仍是新增"）—— 那是对 key 的直觉，不是对 **body 计数** 的直觉。
+       真实判据是「同一 body 的条数净增才叫新增」：old.js 里本来就有两处同 body，
+       搬走一处、原地留一处（old#1 / old#2 → old#1 / new#1）时总数仍是 2 ⇒ **不算新增**（这才是对的）。 */
+    const o1 = {}, o2 = {};
+    const prev = [scanSource(body, "old.js", o1)[0], scanSource(body, "old.js", o1)[0]];   // old#1 old#2
+    const cur3 = [scanSource(body, "old.js", o2)[0], scanSource(body, "old.js", o2)[0], scanSource(body, "new.js", o2)[0]];
+    const d3 = classifyDelta(cur3, prev);
+    expect(d3.added.length).toBe(1);
+    expect(d3.addedReal.length, "body 计数 2 → 3：净增一处，必须报").toBe(1);
+    expect(d3.movedTo.size).toBe(0);
+
+    const o3 = {};
+    const cur2 = [scanSource(body, "old.js", o3)[0], scanSource(body, "new.js", o3)[0]];    // 仍是两处
+    const d2 = classifyDelta(cur2, prev);
+    expect(d2.added.length).toBe(1);
+    expect(d2.addedReal.length, "body 计数 2 → 2：只是换了位置，不算新增").toBe(0);
+    expect(d2.movedTo.size).toBe(1);
+  });
+
+  it("⑬ 旧基线没有 bhash 时降级为「不作数」—— 宁可假红，也不凭空放过", () => {
+    const prev = [{ ...inFile("old.js"), bhash: undefined }];
+    const cur = [inFile("new.js")];
+    const d = classifyDelta(cur, prev);
+    expect(d.addedReal.length, "判不了搬家就按新增处理").toBe(1);
+    expect(d.movedTo.size).toBe(0);
+  });
+
+  it("⑭ 现有基线必须自带 bhash（否则上面那条降级路径会静默生效）", () => {
+    const base = JSON.parse(readFileSync(BASELINE, "utf8"));
+    const noHash = base.items.filter((i) => !i.bhash);
+    expect(noHash.length, "缺 bhash 的基线条目：" + noHash.slice(0, 3).map((i) => i.file + ":" + i.line).join(", ")
+      + " —— 跑 node scripts/lint-empty-catch.mjs --freeze 重冻").toBe(0);
   });
 });

@@ -42,6 +42,32 @@
 
 ## 条目
 
+### [2026-10-17 02:55 UTC+8] WorkBuddy 主会话（CI 红根因「搬家被当成新增」· 已修 · 待推）
+- 现象：`1bc9c09` 两条 run 全红，但**只有一处**根因 —— `lint:empty-catch` 判出 1 处新 P0
+  （`core-i18n.js:10`），而它其实是 `core.js:232` 那处 **搬家**过去的（同一段 localStorage 读取的 try，
+  body 一字未改）。CI 的 verify job 其余 12 步（含 `npm test` / `check:modules` / `lint` / `lint:layers` /
+  `build:check` / `check:ai-tools-doc`）**全绿**，Pages 部署的红是同一个门禁的同一处。
+- **根因在工具，不在这次重构**：键是 `file:sig#occ`，而 `sig = sha1(file + body)` —— **文件名被混进了哈希**。
+  于是任何「把块拆开 / 把函数挪走」的重构，都会让已基线的条目在新文件里变成"新增"，**连 P0 也会**。
+  这是**结构性假红**：下一次拆块（ui-global-events 再拆 / CSS 分区）必然复发，所以必须就地修掉而不是绕过。
+- **修法**（`lib/empty-catch.mjs` + `lint-empty-catch.mjs`）：
+  ① 新增 `bhash` = **不含文件名**的 body 指纹；
+  ② 新增 `classifyDelta()` —— **成对多重集配对**：某 body 的条目在旧位置消失、又在新位置出现 ⇒ 记「搬家」，
+     不计新增；**纯复制**（原来的还在）**仍然报新增** ⇒ 不是洗白通道；
+  ③ 旧基线没有 `bhash` 时**降级为「不作数」**（宁可假红一次，也不凭空放过一条真新增）。
+- **反例验证（三选一缺一不可，全部实跑）**：
+  ① 文件改名（纯搬家 13 处）→ **PASS**，并打印 `搬家 13 处`；
+  ② `append` 一处新的 `localStorage.setItem` 空 catch → **FAIL**（新增 1 处 P0）；
+  ③ 复制 `core-i18n.js` 却不删原件 → **FAIL**（新增 1 处 P0，证明复制没被当成搬家）。
+- **基线重冻**：527 → 541 处，`P0 79 → 79`（**P0 一个没多**），多出的全是**先于本次提交**就存在的
+  P1/P2 漂移（R-2 系列 / P0-3 修复留下的行号与 body 漂移，共 17 处，已在 commit message 逐条列出）。
+- 单测：`tests/empty-catch.test.js` 增 6 例（⑨–⑭）。**其中⑫我自己先写错了期望** ——
+  判据是「同一 body 的**条数净增**才算新增」，不是「key 变了就算」；错的那版把"总数不变、只是换了位置"
+  也当成新增。已改正并把这条辨析写进用例注释。
+- 占用路径（本笔）：`scripts/lib/empty-catch.mjs`、`scripts/lint-empty-catch.mjs`、
+  `scripts/lint-empty-catch.baseline.json`、`tests/empty-catch.test.js`、本板。
+- 下一个可用版本号仍是 **3.7.132**；**仍未碰** `CHANGELOG.md` / workflows / lock / `node_modules/`。
+
 ### [2026-10-17 02:05 UTC+8] WorkBuddy 主会话（拆 core.js 完成 · 待推 · 释放）
 - 状态：**已完成（本地待推）** —— `core.js` 8,522 行 → **4 块**，仓库块数 **35 → 38**。
 - **怎么切的（纯切分、零重排）**：`core`(232 行：UI_ICONS/AppBridge/小工具) ｜ `core-i18n`(7,846 行：

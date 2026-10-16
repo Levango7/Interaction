@@ -221,17 +221,75 @@ export function scanSource(raw, file, occSeen = {}) {
   for (const c of findEmptyCatches(raw, file)) {
     const tryBody = tryBlockBefore(raw, c.idx) || '';
     const { level, why } = classify(stripCommentsAndStrings(tryBody));
-    const sig = createHash('sha1').update((file + '|' + tryBody).replace(/\s+/g, ' ')).digest('hex').slice(0, 10);
+    const normBody = tryBody.replace(/\s+/g, ' ');
+    const sig = createHash('sha1').update(file + '|' + normBody).digest('hex').slice(0, 10);
+    /* v3.7.132：`bhash` = **不含文件名**的 body 指纹。用途单一：识别「同一处 try 只是搬了家」。
+       为什么需要它：`sig` 把文件名混进哈希 ⇒ 把一个大块拆成多块（或把函数挪到别的模块）时，
+       同一条目在新文件里的 key 与基线完全不同 ⇒ 门禁把它当成"新增"，连**已基线的 P0** 也会
+       重新变红（v3.7.132 拆 core.js 实测：`core.js:232` P0 → `core-i18n.js:10`，CI 红）。
+       那是"假红"，且每次重构都会复发。判据见 classifyDelta()。 */
+    const bhash = createHash('sha1').update(normBody).digest('hex').slice(0, 10);
     const line = raw.slice(0, c.idx).split('\n').length;
     /* occ：同一文件内相同内容的出现序号。没有它，两条 tryBody 相同的空 catch
        会被 keyOf 去重成一条（实测 493 被吞成 452）——修掉一处，另一处也跟着"消失"。 */
     const k = file + '|' + sig;
     const occ = (occSeen[k] = (occSeen[k] || 0) + 1);
-    items.push({ file, line, sig, occ, level, why, bare: c.bare, note: c.note,
-      snippet: tryBody.replace(/\s+/g, ' ').slice(0, 70) });
+    items.push({ file, line, sig, bhash, occ, level, why, bare: c.bare, note: c.note,
+      snippet: normBody.slice(0, 70) });
   }
   return items;
 }
 
 /** 条目标识 —— 必须含 occ，否则同文件相同 try 内容会撞车导致基数缩水。 */
 export const keyOf = (it) => it.file + ':' + it.sig + '#' + (it.occ || 1);
+
+/**
+ * 棘轮差集：把「新增 / 消失」再拆出**搬家**那一类（v3.7.132）。
+ *
+ * @param {Array} cur   当前扫描结果（scanSource 的产物，带 bhash）
+ * @param {Array} prev  基线条目（**需带 bhash**；旧基线没有该字段时，搬家判定自动降级为"不作数"）
+ * @returns {{added:Array, removed:Array, movedTo:Set<string>, movedFrom:Array, addedReal:Array, removedReal:Array}}
+ *   · added / removed = 原始差集（键级）
+ *   · movedTo  = added 里被判定为"搬家落点"的条目 key 集合
+ *   · movedFrom= removed 里被判定为"搬家原点"的条目
+ *   · addedReal / removedReal = 扣掉搬家之后的真·新增 / 真·消失
+ *
+ * 判据（**必须成对**，否则会变成洗白通道）：
+ *   一条 added 与一条 removed 的 `bhash` 相同 ⇒ 判为搬家（同一处 try 换了位置）。
+ *   用**多重集配对**而不是集合包含：同 body 出现多次时，各配对各的（否则一处真新增会被
+ *   另一处的消失"盖住"）。**只复制不删除**（原地的还在）⇒ removed 里没有可配对的 ⇒ 仍报新增。
+ */
+export function classifyDelta(cur, prev) {
+  const prevKeys = new Set(prev.map(keyOf));
+  const curKeys = new Set(cur.map(keyOf));
+  const added = cur.filter((it) => !prevKeys.has(keyOf(it)));
+  const removed = prev.filter((p) => !curKeys.has(keyOf(p)));
+
+  /* 旧基线没有 bhash ⇒ 搬家判定降级（宁可假红一次，也不能凭空放过一条真新增） */
+  const gone = new Map();
+  for (const p of removed) if (p.bhash) gone.set(p.bhash, (gone.get(p.bhash) || 0) + 1);
+
+  const movedTo = new Set();
+  const movedFromKey = new Set();
+  for (const it of added) {
+    if (!it.bhash) continue;
+    const left = gone.get(it.bhash) || 0;
+    if (left > 0) { gone.set(it.bhash, left - 1); movedTo.add(keyOf(it)); }
+  }
+  /* 反向配对：先从 removed 侧标出被"用掉"的原点（与上面同一套多重集语义） */
+  const back = new Map();
+  for (const it of added) if (it.bhash && movedTo.has(keyOf(it))) back.set(it.bhash, (back.get(it.bhash) || 0) + 1);
+  for (const p of removed) {
+    const left = back.get(p.bhash) || 0;
+    if (left > 0) { back.set(p.bhash, left - 1); movedFromKey.add(keyOf(p)); }
+  }
+
+  return {
+    added,
+    removed,
+    movedTo,
+    movedFrom: removed.filter((p) => movedFromKey.has(keyOf(p))),
+    addedReal: added.filter((it) => !movedTo.has(keyOf(it))),
+    removedReal: removed.filter((p) => !movedFromKey.has(keyOf(p))),
+  };
+}
