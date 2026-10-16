@@ -155,7 +155,15 @@ function injectModelScanner(){
         return;
       }
       let j = {};
-      try{ j = await r.json(); }catch(_e){}
+      /* 解析失败 ≠ 没有模型：**必须让用户看见**。v3.7.132：原写法 `catch(_e){}` 是空 catch，
+         被 empty-catch 棘轮判为新增 P0（CI 红的那条）—— 但病因不是"语法上空"，
+         而是"失败不可见"：Base 返回登录页 / 被代理拦截时，用户只会看到
+         "没返回模型列表"，完全不知该往哪查。所以接进 warn 分支，而不是吞掉。 */
+      try{ j = await r.json(); }
+      catch(_e){
+        toast(t("settings.scan.badJson", "Base 返回的不是合法 JSON（可能是登录页或代理拦截）—— 检查 Base，或用「测试连接」看更细的判定"), "warn", 6000);
+        return;
+      }
       const ids = (j && Array.isArray(j.data)) ? j.data.map(function(x){ return x && x.id; }).filter(Boolean) : [];
       if(!ids.length){ toast(t("settings.scan.empty", "Base 可达，但 /v1/models 没返回模型列表 —— 可先手填模型名"), "warn"); return; }
       dl.innerHTML = sanitizeHtml(ids.map(function(id){ return '<option value="' + esc(id) + '"></option>'; }).join(""));

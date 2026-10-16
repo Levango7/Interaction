@@ -119,4 +119,19 @@ describe("扫描模型：把 /v1/models 从「校验用」暴露成「挑选用�
     await w401.document.getElementById("cfgScanModels").click(); await tick();
     expect(t401.join(" "), "401 必须点出 Key").toMatch(/Key|密钥/i);
   });
+
+  /* ⑤ CI 红的那条（empty-catch 棘轮判 P0）的用例化：解析失败必须**可见**，
+     不能吞掉后混进"没返回模型列表"—— 用户看到后者完全不知该往哪查。 */
+  it("⑤ 响应不是合法 JSON 时必须明说（不能吞进「没返回模型列表」）", async () => {
+    const w = withProfile();
+    seedModelInput(w, "m");
+    w.fetch = async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError("Unexpected token < in JSON"); } });
+    const toasts = [];
+    w.toast = (m) => toasts.push(m);
+    w.injectModelScanner();
+    await w.document.getElementById("cfgScanModels").click();
+    await tick();
+    expect(toasts.join(" "), "必须点出不是合法 JSON").toMatch(/JSON/i);
+    expect(toasts.join(" "), "且给出下一步（检查 Base / 测试连接）").toMatch(/Base|测试连接/);
+  });
 });
