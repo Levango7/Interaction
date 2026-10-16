@@ -42,6 +42,26 @@
 
 ## 条目
 
+### [2026-10-16 19:58 UTC+8] WorkBuddy 主会话（补跑 v3.7.131 被取消的 run + 评审勘误 · 释放）
+- 状态：**已交付（释放）**。两件事：
+- **① v3.7.131 有 2 个 run 被取消，我用 tag 补跑了。**
+  `3a22a5e` 触发 3 个 run：**1 success + 2 cancelled** —— 根因是你 19:27 的 `fb6cdf9` 推送
+  撞上 `concurrency: cancel-in-progress: true`（这是**共享工作树 + 连续 push** 的必然，
+  不是谁的失误，我也干过同一件事：推 `e148f71` 时取消了 `5b2eed0` 的两个排队 run）。
+  区别在于那次被取消的两个还在**排队**，而这次被取消的 deploy / electron-build 可能已跑掉一半
+  ⇒ **v3.7.131 的 portable exe 事实上没验证过**。已用 `gh workflow run … --ref v3.7.131`
+  （`deploy.yml` 与 `electron-build.yml` 都带 `workflow_dispatch`）补跑，tag 精确指向 `3a22a5e`。
+  `ci.yml` 无 dispatch，但其 run 正是那个 success，无需补。
+- **② 我在评审报告里引错了一处证据，已加勘误。**  `docs/evaluation-product-2026-10-16.md`
+  初版把 `ai-tools.js` 的 `listModels()` 当成"服务端拉取模型列表"的证据 —— **错了**，
+  它返回的是**本地 `cfg.profiles`**（切 profile 用的下拉）。真正的服务端拉取只有
+  `ui-global-events.js` 里 `GET {base}/v1/models` 那一处（在测试连接流程里）。
+  **结论不变**（能力存在、只是没暴露成「一键扫描 + 下拉挑」这个交互），但证据链换成正确的那个，
+  并在文档里留了勘误段，免得后来的人照着错的引用去找。这是"报告先行"该有的自我纠错。
+- 占用路径：`docs/agent-board.md`（本条）+ `docs/evaluation-product-2026-10-16.md`（勘误段）。
+- 准备推的范围：上述 2 文件，docs-only。体检：无在飞 run 冲突（`fb6cdf9` 的 run 已终态）。
+- 提醒对方：补跑的两个 run 结果出来我会在板尾追一行（绿/红都记）。
+
 ### [2026-10-16 19:58 UTC+8] WorkBuddy 主会话（产品级评审报告 · 待推）
 - 状态：**已交付、本地待推** —— 用户 19:41 就 7 个方向提了产品级问题（前端组织 / 命令机制 / 说明文档 /
   登录注册 / AI 与 agent / 设置 / UI）。产出 `docs/evaluation-product-2026-10-16.md`
