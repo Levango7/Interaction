@@ -86,7 +86,10 @@ const BLOCKS = [
   { name: 'ui-ge-notes', layer: 'UI', title: '交互层·全局事件绑定·笔记与知识库' },
   { name: 'ui-ge-integrations', layer: 'UI', title: '交互层·全局事件绑定·集成框架与废弃簇' }
 ];
-const MIN_EXPECTED = 35;   // v3.7.26 引入（28）→ v3.7.63 拆块后 35：至少应解析出这么多块，否则判定解析失败
+/* v3.7.26 引入（28）→ v3.7.63 拆块后 35。v3.7.132 起**与 BLOCKS.length 绑定** ——
+   原来手写常量，加块时容易只改 BLOCKS 忘了这里（两处不同步 = 抽出的块数校验失真）。
+   语义不变：至少应解析出这么多块，否则判定解析失败。 */
+const MIN_EXPECTED = BLOCKS.length;
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');
@@ -95,6 +98,40 @@ const CHECK = process.argv.includes('--check');
 const NO_BACKUP = process.argv.includes('--no-backup');
 const mk = n => '/*SRC:' + n + ':BEGIN*/';
 const mkEnd = n => '/*SRC:' + n + ':END*/';
+
+/* ---------- v3.7.132：块清单**双向一致性门禁** ----------
+   根因（2026-10-16 实测定位）：`BLOCKS` 是本脚本硬编码的**权威块清单**，抽出主循环
+   `for (const b of BLOCKS)`（下方 163 行附近）**完全不读 `order.json`** —— 后者只是抽出的
+   **产物**（由 meta 写出）。于是新增块时若只建了 `src/x.js`、或只改了 `order.json`，
+   而漏了 `BLOCKS`，抽出会**静默忽略**它、并顺手把 `order.json` 覆盖回去
+   ⇒ 表现是「本次拼回生效、下次构建就丢」。
+   实测现场：新增 `src/cmd-registry.js` + 改 `order.json` + HTML 插标记对 → 拼回能出 36 块，
+   但 `--extract` 只列 35 块且 order.json 被写回 35 条（新块凭空消失，且无任何报错）。
+   本门禁把那次的「静默忽略」变成「响亮失败」，并直接印出三步曲。 */
+function assertBlocksInSync(){
+  if(!existsSync(SRC_DIR)) return true;    // 无 src：交给后续逻辑报错，这里不抢
+  const declared = new Set(BLOCKS.map(b => b.name));
+  const onDisk = new Set(readdirSync(SRC_DIR).filter(f => f.endsWith('.js')).map(f => f.replace(/\.js$/, '')));
+  const undeclared = [...onDisk].filter(n => !declared.has(n));
+  const missing = [...declared].filter(n => !onDisk.has(n));
+  let ok = true;
+  if(undeclared.length){
+    ok = false;
+    console.error('[src-split] ✗ src/ 下有文件未被 BLOCKS 声明：' + undeclared.join(', '));
+    console.error('    新增一个块要走**三步**，缺一不可：');
+    console.error('      ① 建 src/<name>.js（首行写层注释 // ===== <Layer> Layer (<title>) ===== ）');
+    console.error('      ② 在 scripts/src-split.mjs 的 BLOCKS 里加 { name, layer, title } —— **这步不能省**');
+    console.error('      ③ 在 agent-workbench.html 对应位置插 /*SRC:<name>:BEGIN*/ 与 /*SRC:<name>:END*/');
+    console.error('    ⚠ 只改 src/order.json 是**无效**的：它是抽出的产物，会被本脚本覆盖回原样。');
+  }
+  if(missing.length){
+    ok = false;
+    console.error('[src-split] ✗ BLOCKS 声明了 src/ 下不存在的块：' + missing.join(', '));
+    console.error('    若刚删掉一个块：请同步从 BLOCKS 移除，并清掉 HTML 里的标记对。');
+  }
+  return ok;
+}
+if(!assertBlocksInSync()) process.exit(1);
 
 let html = readFileSync(HTML, 'utf8');
 const lines = html.split('\n');

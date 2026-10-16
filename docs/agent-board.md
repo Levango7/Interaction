@@ -42,6 +42,55 @@
 
 ## 条目
 
+### [2026-10-17 00:29 UTC+8] WorkBuddy 主会话（构建链门禁交付 · 待推 · 释放）
+- 状态：**已交付（本地待推）** —— 根因定位到行 + 门禁落地 + **接进 lint（CI 生效）** + 造重现红绿验证。
+- **根因（代码级）**：`scripts/src-split.mjs:43` 的 `const BLOCKS = [...]` 是**硬编码权威块清单**，
+  抽出主循环 `for (const b of BLOCKS)`（163 行）**完全不读 `order.json`** —— 后者只是抽出的**产物**
+  （208 行由 meta 写出）。⇒ 新块漏声明 `BLOCKS` 就被**静默忽略**，且 order.json 被**覆盖回去**，
+  表现就是「本次拼回生效、下次构建就丢」。这正是我上笔踩的坑。
+- **修法（不动拼回/抽出核心逻辑，零重构风险）**：新增 `assertBlocksInSync()` **双向一致性门禁**：
+  ① `src/*.js` 有文件未被 BLOCKS 声明 → 硬失败；② BLOCKS 声明了但 src 无文件 → 硬失败。
+  报错里直接印**三步曲**（建 `src/<name>.js` 含层注释 → 加 `BLOCKS` 的 `{name,layer,title}` →
+  HTML 插 `/*SRC:<name>:BEGIN*/…:END*/` 标记对），并点明**「只改 order.json 是无效的」**——
+  上笔我就是栽在这句话上。顺带 `MIN_EXPECTED = BLOCKS.length`（原来手写 35，两处易不同步）。
+- **接进 lint**：`package.json` 的 lint 串末尾加 `&& node scripts/src-split.mjs --check`
+  ⇒ **CI 的 lint 步骤自动守**。此前 `src:check` 只存在于人工脚本（`npm run src:check`），CI 从没跑过它。
+- **造重现红绿（先红后绿，可复算）**：
+  ① 正常：lint `0 errors` + `[src-split] check：HTML 标记 35 / src 文件 35 —— 齐全 ✓`；
+  ② 临时建 `src/_probe-block.js` → `✗ src/ 下有文件未被 BLOCKS 声明：_probe-block`
+     → `[with-injected] ✗ 注入失败（src-split exit 1），命令未执行` → **lint 退出码 2（红）**；
+  ③ 删掉后 → 退出码 **0**（绿）。
+- **顺带收获**：门禁跑在 `with-injected` 的**注入之前** ⇒ 出问题时**快速失败**（lint 命令根本不执行），
+  不会把树留在注入态。这比"跑完再发现"好。
+- **未做（留账，两条）**：
+  ① **不做「BLOCKS 自动发现」的重构** —— 那是构建核心的架构改动，深夜风险不成比例；
+     本次只把「静默忽略」变成「响亮失败」。想彻底单一化可另起一笔（方向：BLOCKS 由 order.json
+     或一个 blocks.json 单一维护，抽出时按它 + HTML 标记的并集处理）。
+  ② **「按三步真能加块」的端到端验证留到「拆 core.js」那一笔** —— 那时必然要用到，能在真实场景里验。
+- 待推：`scripts/src-split.mjs` + `package.json` + 本板条目。
+- 下一个可用版本号 **3.7.132**；攒批内容：P0-3 扫描模型 + CI 红修复 + P0-4 注册表 + 本笔门禁。
+
+### [2026-10-16 23:58 UTC+8] WorkBuddy 主会话（修构建链：新增块被静默忽略 · 占用中）
+- 状态：进行中 —— 用户 23:54「可以」批准，先修上笔踩到的构建链缺陷再谈拆 `core.js`。
+- **根因（代码级，已定位到行）**：`scripts/src-split.mjs:43` 的 `const BLOCKS = [...]` 是**硬编码的
+  权威块清单**（35 条，含 name/layer/title）；抽出的主循环是 `for (const b of BLOCKS)`
+  （第 163 行）—— **它完全不读 `order.json`**，`order.json` 只是 `meta` 的**产物**（第 208 行写出）。
+  所以新块只加 `order.json` 是无效的：抽出时被静默忽略，且顺手把 order.json **覆盖回** 35 条
+  —— 表现就是「本次拼回生效、下次构建就丢」。
+- **修法（不动拼回/抽出的核心逻辑，零重构风险）**：加**双向一致性门禁** `assertBlocksInSync()`，
+  在 main 里拼回/抽出之前跑：
+  ① `src/*.js` 里有文件未被 `BLOCKS` 声明 → 硬失败，并打印「必须同时加进 BLOCKS（name/layer/title）
+     且 HTML 插标记对；只加 order.json 无效」；
+  ② `BLOCKS` 声明了但 `src/` 无对应文件 → 硬失败。
+  顺带把 `MIN_EXPECTED = 35` 改为 `BLOCKS.length`（防手改块数时两处不同步）。
+- **为什么不做"重构让 BLOCKS 自动发现"**：那是构建核心的架构改动，深夜风险不成比例；
+  而**把静默变响亮**已经消除了最坏的部分（块悄悄丢失）。重构方向在下面留账。
+- 占用路径：`scripts/src-split.mjs`、`tests/`（新增门禁用例）、本板。
+- 验证方式：**造重现** —— 临时建 `src/_probe-block.js` → 门禁必须报错并指出该文件；
+  删掉后必须通过。（先红后绿）
+- 提醒对方：这是你也在用的发布链脚本，改动只加校验、不改行为；`BLOCKS` 的注释我会补上
+  "新增块三步曲"。**下一个可用版本号 3.7.132**（本笔若修好，可与 P0-4/P0-3 一起攒批发）。
+
 ### [2026-10-16 00:57 UTC+8] WorkBuddy 主会话（P0-4 命令注册表交付 · 待推 · 释放）
 - 状态：**已交付，本地待推** —— 7 条先红后绿 + 5 个既有 palette 测试 + lint 0 errors。
 - **做了什么**：注册表机制（`registerCmd` / `makeRegistry` / `findByKeys` / `keyHint`）+
