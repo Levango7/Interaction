@@ -5,7 +5,7 @@
  * 仓库约定（v3.7.5+ 任务 4）：提交进 git 的应是**源码态** ——
  *   · HTML 内只有层块占位标记（形如 SRC-xxx-BEGIN 的注释对）与立绘占位（_PET_ART 空对象）
  *   · 具体代码在 src/，立绘在 assets/pet/（HTML 与 src/ 两份文本都不得内联 base64；v3.7.64 起 src 侧也纳入本门禁）
- *   · 拼回/注入由 pre 钩子在构建、测试、e2e、部署前自动完成（交付态仍是单个 HTML）
+ *   · 拼回/注入由 scripts/with-injected.mjs 在构建、测试、e2e、部署前自动完成（交付态仍是单个 HTML）
  *   （注：本注释刻意不写完整的标记字面量，否则其中的注释结束符会提前闭合块注释 —— 踩过两次）
  *
  * 为什么需要这个门禁：开发者为了调试常先跑 `src-split`/`pet-art`（变成 3MB+ 拼回态），
@@ -13,17 +13,20 @@
  *   （本脚本就是因为真实发生过一次误提交而加的。）
  *
  * 两种模式：
- *   · 默认（无参数）：检查**工作树**。CI 在跑 pre 钩子之前调用（ci.yml / deploy.yml / electron-build.yml）。
+ *   · 默认（无参数）：检查**工作树**。CI 在跑注入步骤之前调用（ci.yml / deploy.yml / electron-build.yml）。
  *   · `--staged`：只检查**暂存区（index）**里被改动的文件 —— 供 .githooks/pre-commit 使用。
- *     为什么按 index 而非工作树：工作树可能正处在**别人测试链**的注入瞬时态（pretest 拼回、
- *     posttest 才抽回），拿工作树当判据会误拦与源码态无关的正常提交。真正要拦的是
+ *     为什么按 index 而非工作树：工作树可能正处在**别人测试链**的注入瞬时态（拼回之后、
+ *     抽回之前），拿工作树当判据会误拦与源码态无关的正常提交。真正要拦的是
  *     「注入态被 git add 进了 index」，所以判据必须是 index。
  *
- * ⚠️ 这条门禁的存在理由（真实事故）：`npm test`（= vitest run）**失败时 npm 不跑 posttest**
- *   （npm v8+ 语义；本机 npm 12.2.0 实测），工作树会**停在注入态**。此后任何 `git add -A` /
- *   显式 `git add agent-workbench.html` 都会把 3.88MB 拼回态提交进仓库，而 CI 的
+ * ⚠️ 这条门禁的存在理由（真实事故）：npm 不保证「跑完必还原」—— `npm test` 失败时它**不执行
+ *   posttest**（npm v8+ 语义；本机 npm 12.2.0 实测），工作树会**停在注入态**。此后任何
+ *   `git add -A` / 显式 `git add agent-workbench.html` 都会把 3.88MB 拼回态提交进仓库，而 CI 的
  *   `check:source-state` 要到 push 之后才跑 —— 那时坏 blob 已进历史，只能改写。
- *   本门禁把判据前移到**提交前**，且只看 index，不误伤别人在跑的测试链。
+ *   v3.7.131 治因：所有注入类命令改经 `scripts/with-injected.mjs` 包装，**无论成功、失败还是
+ *   被 Ctrl-C 中断都抽回源码态**（package.json 里原先 9 组 pre/post 钩子已随之删除）。
+ *   本门禁保留为**最后一道**兜底，覆盖包装器管不到的两种情形：进程被强杀（Windows 上
+ *   无法投递可捕获的信号）、以及 `git commit --no-verify` 绕过钩子。故判据仍是 index。
  *
  * 用法：
  *   node scripts/check-source-state.mjs            # 工作树（CI）
@@ -97,7 +100,7 @@ if (html !== null) {
 }
 
 /* ②b v3.7.64：src/ 侧同断言 —— 立绘数据在仓库里只允许以 assets/pet/*.png 存在，两份文本都不得内联 base64。
-   历史坑（v3.7.58~v3.7.63，本断言就是为它而加）：post 钩子按「src-split --extract → pet-art --extract」顺序时，
+   历史坑（v3.7.58~v3.7.63，本断言就是为它而加）：抽回按「src-split --extract → pet-art --extract」顺序时，
    base64 会随 render-widgets 层块被抽回 src/render-widgets.js —— 仓库双存 ~849KB，且当时 HTML 侧检查恒绿。
    正确顺序 = 与注入严格逆序：pet-art --extract 先跑（数据搬回 assets），再 src-split --extract。 */
 const BASE64_RE = /data:image\/[a-z0-9.+-]+;base64,/i;
@@ -121,7 +124,7 @@ if (problems.length) {
     ? '[check-source-state] ✗ 暂存区里的 agent-workbench.html 不是源码态：'
     : '[check-source-state] ✗ 当前不是源码态：');
   for (const p of problems) console.error('  · ' + p);
-  console.error('\n回到源码态：npm run src:extract   （链内顺序 = post 钩子：pet-art --extract → src-split --extract）');
+  console.error('\n回到源码态：npm run src:extract   （链内顺序同 with-injected：pet-art --extract → src-split --extract）');
   if (STAGED) console.error('  抽回源码态后重新 `git add agent-workbench.html`。');
   console.error('  若报的是「src/ 内联 base64」（历史遗留态）：先拼回再按上述顺序抽一遍即可迁出 —— 直接跑一次 npm test 会自动完成。');
   process.exit(1);

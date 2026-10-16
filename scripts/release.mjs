@@ -13,7 +13,7 @@
  *   3. service-worker.js 的 CACHE_VERSION = v{版本}-{tag}（保证 SW activate 清旧缓存）
  *   3b. README.md 的标题 /「当前版本」/ 页脚示例三处版本号（第五个版本源）
  *   4. 两份 package-lock.json 的 version 字段（仅版本字段；依赖变更请另行 npm install 后提交）
- *   5. 收尾自动跑 build:check 自检，失败即退出非零
+ *   5. 收尾自动跑 build:check 自检，失败即退出非零；自检后**自动抽回源码态**
  *
  * 注意：发版后请更新 CHANGELOG.md，测试通过再提交。
  */
@@ -103,7 +103,7 @@ for (const p of ['package-lock.json', 'electron/package-lock.json']) {
 /* 5) 自检
    ⚠️ 必须先注入再 check：build.mjs --check 要的是**拼回态** HTML（它在文件里找
    __TEST_GATE__ / window.__test / sanitizeHtml 这些关键标记，而源码态的块位置只剩 SRC 占位注释）。
-   平时 `npm run build:check` 有 prebuild:check 钩子负责注入，而这里是 spawn 直接调
+   平时 `npm run build:check` 由 scripts/with-injected.mjs 负责注入，而这里是 spawn 直接调
    build.mjs，绕过了钩子 —— 于是"源码态下发版"必然以「真相源缺少关键标记」失败，
    且此时版本已写完、tag 未打，留下半截发版状态。 */
 for (const step of ['src-split.mjs', 'pet-art.mjs']) {
@@ -113,11 +113,17 @@ for (const step of ['src-split.mjs', 'pet-art.mjs']) {
 const r = spawnSync(process.execPath, [join(__dirname, 'build.mjs'), '--check'], { stdio: 'inherit' });
 if (r.status !== 0) fail('build:check 自检未通过，请检查上方输出');
 
+/* 5b) 还原源码态（v3.7.131 起）
+   自检必须在拼回态下做，所以本脚本此前**故意把 HTML 留在拼回态**、只在提示里让人记得还原 ——
+   而「记得」不是机制（v3.7.40 那次误提交就是这么发生的）。改为自检通过后自动抽回，
+   与 scripts/with-injected.mjs 同序（pet-art --extract → src-split --extract）。 */
+for (const [step, extra] of [['pet-art.mjs', ['--extract']], ['src-split.mjs', ['--extract', '--no-backup']]]) {
+  const e = spawnSync(process.execPath, [join(__dirname, step), ...extra], { stdio: 'ignore' });
+  if (e.status !== 0) fail(`${step} 抽回源码态失败 —— 提交前请先手动 npm run src:extract（否则 check:source-state 会拦住提交）`);
+}
+
 console.log(`[release] OK 已统一 bump 至 v${newVer}（BUILD_TAG=${buildTag}）`);
-console.log('[release] 提醒：请更新 CHANGELOG.md，测试通过后提交。');
-console.log('[release] 提醒：本脚本已把 HTML 留在拼回态；提交前记得 '
-  + 'node scripts/pet-art.mjs --extract && node scripts/src-split.mjs --extract --no-backup'
-  + '（顺序即 post 钩子：先抽立绘再抽层块；或跑一次 npm test 由 posttest 自动还原）。');
+console.log('[release] 提醒：请更新 CHANGELOG.md，测试通过后提交（工作区已自动还原源码态）。');
 
 /* 6) 自动打 release tag（v3.7.58 起）
    此前 53 个版本全部无 tag 可回溯（仓库仅有重构过程快照 tag）。从本版起，

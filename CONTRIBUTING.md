@@ -19,7 +19,7 @@ npm install
 
 | 命令 | 作用 |
 |---|---|
-| `npm test` | 运行全部测试（vitest）；结束自动还原源码态 HTML（posttest） |
+| `npm test` | 运行全部测试（vitest）；**无论成败都自动还原源码态 HTML**（`with-injected` 包装） |
 | `npm run test:watch` | 监听模式，文件改动自动重跑 |
 | `npm run lint` | ESLint + 颜色令牌检查 |
 | `npm run serve` | 本地预览（<http://localhost:8123>） |
@@ -185,10 +185,10 @@ vitest.config.js       # 测试配置
 
 历史上"跑完测试工作区必脏（HTML 变拼回态）"靠人肉记得还原，曾导致一次误提交拼回态（v3.7.40）。现已自动化：
 
-- **`npm test` 结束后 posttest 自动还原源码态**（先 `pet:extract` 再 `src:extract --no-backup`，顺序与注入严格逆序），测试循环后 `git status` 只剩真正的手工改动；
+- **`npm test` 无论成功、失败还是被 Ctrl-C 中断，结束后都自动还原源码态**（`scripts/with-injected.mjs` 把「注入 → 跑命令 → 抽回」收在一个进程里；抽回顺序与注入严格逆序：先 `pet:extract` 再 `src:extract --no-backup`）。此前依赖 npm 的 `post*` 钩子，而 npm 在脚本非 0 时**根本不执行** `post*` —— v3.7.131 起同一包装覆盖 `test` / `test:local` / `test:watch` / `test:coverage` / `build*` / `lint` / `lint:layers` / `pet:check` / `e2e`。测试循环后 `git status` 只剩真正的手工改动；
 - **`启动Agent工坊.bat` 自愈**：双击时检测到源码态会先自动拼回再打开，日常双击体验不变；
 - 手动还原仍可用 `npm run src:extract`（排查场景，默认带备份到 `_srcbackup/`，只保留最近 10 份）；
-- CI 侧防御不变：`check:source-state` 在一切 pre 钩子之前执行，提交拼回态会在门禁直接红。
+- CI 侧防御不变：`check:source-state` 在一切注入步骤之前执行，提交拼回态会在门禁直接红；本地另有 `.githooks/pre-commit`（判据是 index）兜住 `--no-verify` 之外的提交路径。
 
 ### 分层块搬迁工具（scripts/src-move.mjs）
 

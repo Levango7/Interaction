@@ -52,7 +52,7 @@
   （两份 md5 同值，`_probe/` 不入库）；② 确认 `src/` 干净（这是历史那个「extract 静默覆盖 src 在飞编辑」坑的前置条件）；
   ③ `npm run src:extract` → HTML 2938.2KB→620.7KB、抽出 35 块，`check-source-state` 复核 **✓ 源码态（35 标记 / 35 文件）**，当时 `git status` 全净。
 - **之后又变回注入态了，这次是正常瞬时态**：09:05 与 09:14:54 HTML 两次回到 3.87MB、且 `src/*.js` 同时被重写
-  （重写结果与 HEAD **零 diff**）⇒ 判为某条测试链在跑（`pretest`/`pree2e` 拼回、`posttest`/`poste2e` 抽回）。
+  （重写结果与 HEAD **零 diff**）⇒ 判为某条测试链在跑（`with-injected` 包装器跑前拼回、跑完抽回）。
   **我没有再抽** —— 那种状态下抽会打断链自己的 post 钩子。终态留给链自己收。
 - 一条 R8 边界观察（事实，不是派活）：R8 约束的是「**提交前**抽回」，而链在跑时树天然呈注入态，
   所以「HTML 是 M」本身不等于地雷；真正的地雷是 `git add -A` / `git commit -a`。本条通告也照 R3 只 add 显式路径。

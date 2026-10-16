@@ -32,9 +32,11 @@
 - **同文件隔离单跑**（`npx vitest run tests/cloud-sync-stage1.test.js`）：**13/13 通过，exit 0**。
 - **结论**：全量跑的 11 个「未通过」是本机 worker 噪声（`AGENTS.md` R9 已登记的现象），不是产品回归；
   测试套本身可跑、可验，只是不适合在共享树上做无隔离的全量判据。
-- 边界提醒：`npm test` 失败时 **`posttest` 不会抽回源码态**（npm v8+ 语义，本机 npm 12.2.0 实测）——
-  跑完全量后必须手动 `npm run src:extract` 并过 `check:source-state`，否则工作树停在注入态（3.88MB）。
-- 已加**提交前门禁**兜底：`.githooks/pre-commit` 调 `check-source-state.mjs --staged`，注入态一旦被
+- ~~边界提醒：`npm test` 失败时 `posttest` 不会抽回源码态~~ → **已治因（v3.7.131）**：那条边界来自
+  npm 语义（脚本非 0 就不执行 `post*` 钩子，本机 npm 12.2.0 实测），现已把注入类命令全部改经
+  `scripts/with-injected.mjs` 包装，**成功 / 失败 / Ctrl-C 中断都抽回**，工作树不再停在注入态。
+  未覆盖的只剩「进程被强杀」（Windows 上无法投递可捕获信号）—— 交给下一道的提交门禁。
+- **提交前门禁**（最后一道兜底）：`.githooks/pre-commit` 调 `check-source-state.mjs --staged`，注入态一旦被
   `git add` 进 **index** 就拦下提交（判据是 index 而非工作树，故不误拦别人测试链的瞬时注入态）。
   安装：`npm run hooks:install`（`npm install` 后的 `prepare` 会自动设置 `core.hooksPath=.githooks`）。
   实测：注入态 staged → 提交 exit 1、git log 不动；工作树注入但 index 干净 → 放行（无误拦）。

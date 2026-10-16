@@ -19,7 +19,7 @@
  *
  * 为什么扫 `src/*.js` 而不是 `agent-workbench.html`：
  *   src/ 是源码态真相源，HTML 源码态只有壳（617KB）、拼回态才是全量（3.5MB）。
- *   扫 src/ 则**两种状态下结果一致**，不依赖 pre 钩子是否已拼回（同 lint-layers.mjs 做法）。
+ *   扫 src/ 则**两种状态下结果一致**，不依赖注入步骤是否已拼回（同 lint-layers.mjs 做法）。
  *
  * ⚠️ 本门禁的已知覆盖缺口（2026-10-05 实测量化，勿以为它覆盖了全仓）：
  *   `agent-workbench.html` 里有**不属于任何 SRC 块**的 HTML 骨架区 —— 实测为

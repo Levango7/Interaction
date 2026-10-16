@@ -154,7 +154,7 @@ grep -rl "toHaveScreenshot\|toMatchSnapshot" tests/ | wc -l   # 0
 → 都是**按功能主题**切，**不是按页面**切；唯一例外是 **`toolbox.spec.js`（对 23 个工具页做逐页冒烟）** —— 它是本仓「页面级批量测试」的**现成范式**，可直接复用到边栏 17 项（见 §8）。
 
 ### 5.1 CI 门禁清单（`.github/workflows/ci.yml`）
-- `test` job：`check:source-state` → `src:check` → `check:modules`（循环/逆层依赖）→ `check:ai-tools-doc` → `npm test`（vitest + posttest 抽回）→ `build:check` → `lint`（eslint + lint-colors + lint-xss + lint-css-structure）→ `lint:layers` → `lint:tokens`（悬空令牌）→ `lint:empty-catch`（静默失败）→ `check:pwa-icons` → `pet:check`。
+- `test` job：`check:source-state` → `src:check` → `check:modules`（循环/逆层依赖）→ `check:ai-tools-doc` → `npm test`（vitest；经 with-injected 包装，跑前拼回、跑完必抽回）→ `build:check` → `lint`（eslint + lint-colors + lint-xss + lint-css-structure）→ `lint:layers` → `lint:tokens`（悬空令牌）→ `lint:empty-catch`（静默失败）→ `check:pwa-icons` → `pet:check`。
 - `server-verify` job：7 个真实 HTTP 验证脚本（认证绕过 / 越权 / 契约 / 增量协议）。
 - `e2e` job：`npm run e2e`（timeout 10 min）。
 

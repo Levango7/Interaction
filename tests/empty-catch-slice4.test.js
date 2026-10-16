@@ -29,7 +29,7 @@
  *      或 `Object.defineProperty(win.localStorage, …)` 都**静默失效**（jsdom 的 Storage 是
  *      Proxy，实例层赋值不生效）—— 表现为「替换明明成功了、调用却不抛」，
  *      用例于是退化成一条都收不到的空转绿。只有打到 prototype 上才生效。
- *   ③ 本文件刻意用直跑 vitest 而非 npm test —— 避免 posttest 把工作区抽回源码态，
+ *   ③ 本文件刻意用直跑 vitest 而非 npm test —— 避免它结束时把工作区抽回源码态，
  *      干扰并行会话（它们可能正依赖拼回态）。
  *
  * 运行：npx vitest run tests/empty-catch-slice4.test.js   （需拼回态）

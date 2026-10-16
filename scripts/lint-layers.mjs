@@ -44,7 +44,7 @@ lines.forEach((l, i) => {
 /* v3.7.70：双态寻源（项目铁律，见 README「解析型脚本的头号陷阱」）。
    分层注释住在**块内容**里，而源码态 HTML 的块内容已被抽到 src 目录、只剩
    SRC 占位标记 → 旧版直接跑本脚本会误报「缺少关键分层」
-   （CI 靠 prelint:layers 先拼回才侥幸不红）。
+   （CI 里 lint:layers 经 with-injected 先拼回才不红）。
    判据：HTML 含 SRC:BEGIN 标记即为源码态 → 从 src 目录下的 js 补齐分层注释。 */
 const IS_SOURCE_STATE = /\/\*SRC:[\w-]+:BEGIN\*\//.test(HTML);
 /* 源码态下每个 src 文件的行号都从 1 起算，跨文件不可直接比大小 →

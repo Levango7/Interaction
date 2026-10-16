@@ -90,7 +90,7 @@ const MIN_EXPECTED = 35;   // v3.7.26 引入（28）→ v3.7.63 拆块后 35：�
 
 const EXTRACT = process.argv.includes('--extract');
 const CHECK = process.argv.includes('--check');
-/* v3.7.58：--no-backup 供 posttest 自动还原使用 —— 自动化路径高频触发，不为每次
+/* v3.7.58：--no-backup 供 with-injected 自动还原使用 —— 自动化路径高频触发，不为每次
    还原都留 3MB 整页快照（人工排查时的 --extract 仍默认备份）。 */
 const NO_BACKUP = process.argv.includes('--no-backup');
 const mk = n => '/*SRC:' + n + ':BEGIN*/';
@@ -208,7 +208,7 @@ if (EXTRACT) {
   const out = lines.join('\n');
   writeFileSync(HTML, out, 'utf8');
   console.log(`[src-split] 抽出 ${extracted} 块（${order.join(', ')}）；HTML ${(Buffer.byteLength(html) / 1024).toFixed(1)}KB → ${(Buffer.byteLength(out) / 1024).toFixed(1)}KB`);
-  console.log('[src-split] HTML 内已留标记占位，构建/测试前会自动拼回（见 package.json 的 pre* 钩子）');
+  console.log('[src-split] HTML 内已留标记占位，构建/测试前会自动拼回（由 scripts/with-injected.mjs 包装）');
   process.exit(0);
 }
 
@@ -224,7 +224,7 @@ const names = meta.length ? meta.map(m => m.name) : files.map(f => f.replace(/\.
 let injected = 0, missing = [];
 /* v3.7.59：--check 增加**内容比对**（此前只查「标记在不在、数量对不对」，不比对内容）。
    缺口实测：HTML 已改、src 未同步抽取时，check 仍打印「齐全 ✓」并退 0 —— 而
-   pretest / prebuild / pree2e / prelint 都会跑默认的**注入**方向（src → HTML），
+   test / build / e2e / lint 等命令经 with-injected 包装后都会跑默认的**注入**方向（src → HTML），
    于是「直接改 HTML」的编辑会在下一次跑测试或构建时被 src 静默覆盖回滚。
    （本次审计开始时工作区正处该状态：HTML 已删 AI_BUILTIN_PLUGINS，src/ui-global-events.js 未同步。）
    比对口径与注入方向严格对齐：注入写的是 `'\n' + body + '\n'`（body 已按 tailBlanks 补齐）。 */
@@ -301,7 +301,7 @@ if (CHECK) {
     console.error(`[src-split] check ✗ ${mismatched.length} 个块的 HTML 内容与 src/ 不一致：${mismatched.join(', ')}`);
     console.error('  说明：HTML 被直接编辑但未同步到 src/。若这些改动是要保留的，先跑');
     console.error('        node scripts/src-split.mjs --extract   （把 HTML 的内容抽回 src/）');
-    console.error('        否则下一次注入（pretest/prebuild/pree2e 都会跑）会把它们覆盖回 src 的旧内容。');
+    console.error('        否则下一次注入（凡经 with-injected 包装的命令都会跑）会把它们覆盖回 src 的旧内容。');
     process.exit(1);
   }
   const stateNote = placeholderBlocks === names.length

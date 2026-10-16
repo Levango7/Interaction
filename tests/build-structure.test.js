@@ -10,7 +10,7 @@
  * 因此这里断言的是「结构不变量」，与具体业务无关，任何一次外置/拼回改动都要过这一关。
  *
  * 注意：本测试读磁盘文件（HTML + src/ + assets/pet），不通过 loadApp 加载应用。
- *   CI 的 npm test 会先跑 pretest（src-split 拼回 → pet-art 注入），所以断言的是**交付态**。
+ *   npm test 经 scripts/with-injected.mjs 包装（先 src-split 拼回 → pet-art 注入），所以断言的是**交付态**。
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
@@ -126,9 +126,11 @@ describe("构建结构守护 · 立绘外置", () => {
     expect(dup, "发现重复 class 属性：" + dup.join(" ;; ")).toEqual([]);
   });
 
-  it("拼回态下 check:source-state 必须拦住并说出还原指令（npm 失败不跑 posttest 的兜底）", () => {
-    /* npm 的语义是 test 脚本非 0 → posttest 不执行，工作区会留在拼回态（v3.7.64 记为「仅观察」）。
-       本版把兜底核实并钉住：门禁必须①拒绝退出、②给出可执行指令；且实测该指令幂等安全
+  it("拼回态下 check:source-state 必须拦住并说出还原指令（提交前最后一道兜底）", () => {
+    /* v3.7.131 起治因：注入类命令全部经 scripts/with-injected.mjs 包装、跑完必抽回，
+       拼回态因此只应存在于「命令执行中」这个窗口里。本门禁保留为最后一道兜底，
+       覆盖包装器管不到的情形：进程被强杀（收不到信号）、`git commit --no-verify` 绕过钩子。
+       门禁必须①拒绝退出、②给出可执行指令；且实测该指令幂等安全
        （源码态重复跑 `src:extract` 走「跳过」分支，src 与 HTML 逐字节不变，不会抽空源码）。
        断言按当前状态分支：npm test 下是拼回态 → 要求拦住；源码态手跑 → 要求放行。 */
     const injected = Buffer.byteLength(html) > 1_200_000;
@@ -142,5 +144,24 @@ describe("构建结构守护 · 立绘外置", () => {
     } else {
       expect(r.status, "源码态下 check:source-state 应放行：" + out).toBe(0);
     }
+  });
+});
+
+describe("构建结构守护 · 注入生命周期接线", () => {
+  it("package.json：注入类脚本必须经 with-injected 包装，且不得再依赖 npm 的 pre/post 钩子", () => {
+    /* v3.7.131：npm 的语义是「脚本非 0 → 不执行 post 钩子」，所以靠 post* 还原源码态
+       在失败与 Ctrl-C 场景必然失效（v3.7.40 的误提交即此）。改为 with-injected 包装：
+       注入 → 跑命令 → 无论成败都抽回。本断言把这条接线钉住，防止改回钩子形式。
+       纯静态断言（不 spawn、不碰工作区），也不去跑包装器 —— 那会把本测试自己脚下的
+       HTML 在 vitest 运行途中抽走，殃及同批其它测试文件。 */
+    const s = JSON.parse(read("package.json")).scripts || {};
+    const INJECTING = ["test", "test:local", "test:watch", "test:coverage", "e2e",
+      "build", "build:prod", "build:check", "lint", "lint:layers", "pet:check"];
+    for (const k of INJECTING) {
+      expect(s[k], `${k} 必须经 scripts/with-injected.mjs 包装`).toContain("with-injected.mjs");
+    }
+    /* 反例守门：这些钩子一旦回来，失败 / 中断就不再抽回源码态 */
+    const legacy = Object.keys(s).filter(k => /^(pre|post)(test|build|lint|e2e|pet)/.test(k));
+    expect(legacy, "不得再用 pre/post 钩子做「注入-抽回」（npm 失败时不跑 post）").toEqual([]);
   });
 });

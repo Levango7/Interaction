@@ -12,7 +12,7 @@
  *   node scripts/pet-art.mjs --check      # 只校验：assets 齐全、HTML 已注入、两侧一致
  *
  * 顺序（抽取方向必须在 src-split.mjs --extract **之前**跑，与注入方向严格逆序）：
- *   post 钩子 = pet-art --extract → src-split --extract（先把数据搬回 assets/pet/，再抽层块）；
+ *   抽回 = pet-art --extract → src-split --extract（先把数据搬回 assets/pet/，再抽层块）；
  *   pre  钩子 = src-split → pet-art（pet-art 依赖拼回后的 HTML 里有可替换的字面量）。
  *   反过来（先抽层块）会把 base64 随 render-widgets 抽回 src/render-widgets.js —— v3.7.58~v3.7.63
  *   即此状态（仓库双存 ~849KB），现由 check-source-state 的 src 侧断言与 build-structure 用例兜底。
@@ -24,7 +24,7 @@
  *
  * 与构建的关系：交付物仍必须是**单个 HTML**（file:// 直开 / PWA 离线 / Electron 打包），
  *   所以回注是构建期的必要一步：
- *     · npm test / test:coverage / build / build:check / build:prod → 都挂了 pre 钩子自动回注
+ *     · npm test / test:coverage / build / build:check / build:prod → 都由 with-injected 自动回注
  *   只有本地直接双击打开源码 HTML 时才需要手工 `npm run pet:inject`。
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
@@ -52,7 +52,7 @@ function fail(msg) { console.error('[pet-art] ' + msg); process.exit(1); }
 let html = readFileSync(HTML, 'utf8');
 if (!RE_ANY.test(html)) {
   /* 分层外置后，源码态 HTML 里没有该字面量（占位与代码一起在 src/render-widgets.js，且占位是**空**的）——
-     属正常情形：--extract 视为无操作成功；注入方向由 pre 钩子先跑 src-split 拼回后再执行。
+     属正常情形：--extract 视为无操作成功；注入方向由 with-injected 先跑 src-split 拼回后再执行。
      抽取方向必须在 src-split --extract 之前跑（见文件头「顺序」），否则 base64 会被抽进 src（双存坑）。 */
   if (process.argv.includes('--extract')) {
     console.log('[pet-art] HTML 内无 _PET_ART（占位符位于 src/）→ 已是源码态，无需抽取');

@@ -10,7 +10,7 @@ if not exist "%~dp0agent-workbench.html" (
   exit /b 1
 )
 rem v3.7.58：源码态自愈 —— v3.7.0 起仓库内 HTML 是骨架（应用 JS 外置于 src/），
-rem npm test 结束时 posttest 会自动还原为源码态。此处检测「拼回态特有符号」，
+rem 测试/构建命令结束时 with-injected 包装器会自动还原为源码态。此处检测「拼回态特有符号」，
 rem 缺失即说明当前是源码态，先用构建脚本拼回再启动，双击体验保持不变。
 findstr /c:"function dsEnhance" "%~dp0agent-workbench.html" >nul 2>&1
 if errorlevel 1 (

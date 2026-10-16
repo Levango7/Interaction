@@ -10,8 +10,8 @@ const HTML_PATH = path.resolve(__dirname, "..", "..", "agent-workbench.html");
 
 /* v3.7.59：源码态守卫。
    本仓库是「双态」架构：提交进 git 的是**源码态**（HTML 里只有 SRC 块占位标记、代码在 src/，
-   约 607KB），交付态（约 3.5MB）由 pre 钩子拼回。`posttest` 会在每次 `npm test` 结束后
-   **自动抽回源码态** —— 于是此后任何不经 npm 生命周期的直跑（`npx vitest run`）都会拿到
+   约 607KB），交付态（约 3.5MB）由 with-injected 包装器拼回。包装器在每次 `npm test` 结束后
+   **自动抽回源码态** —— 于是此后任何不经包装器的直跑（`npx vitest run`）都会拿到
    一个「没有应用 JS」的 HTML：脚本执行中断 → 末尾的 `window.__test` 从未挂载 →
    每个用例都以 `TypeError: Cannot read properties of undefined` 或
    `ReferenceError: t is not defined` 报错。实测 3 个文件会因此产生 37 个**假失败**，
@@ -26,8 +26,8 @@ function assertDeliveredState(html) {
     throw new Error(
       `[loadApp] agent-workbench.html 处于**源码态**（${(bytes / 1024).toFixed(0)}KB < 1200KB），` +
       "应用 JS 不在 HTML 里 —— 测试会全量假失败（ReferenceError: t is not defined）。\n" +
-      "  修复：npm run src:inject   （或直接用 npm test，它的 pretest 会自动拼回）\n" +
-      "  说明：npm test 的 posttest 每次都会把 HTML 抽回源码态，故直跑 vitest 前必须重新拼回。"
+      "  修复：npm run src:inject   （或直接用 npm test，它会自动拼回）\n" +
+      "  说明：npm test 结束后总会把 HTML 抽回源码态，故直跑 vitest 前必须重新拼回。"
     );
   }
 }

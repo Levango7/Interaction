@@ -10,7 +10,7 @@
 > npm run src:inject     # 把 src/ 拼回单文件 HTML
 > ```
 >
-> 线上体验与 Electron 打包产物由构建自动组装（`pretest` / `prebuild*` / `pree2e` 均会先跑 `src-split.mjs`），不受此影响。
+> 线上体验与 Electron 打包产物由构建自动组装（`npm test` / `npm run build*` / `npm run e2e` 等均经 `scripts/with-injected.mjs` 包装：跑前拼回、**无论成败都抽回**源码态），不受此影响。
 
 > **线上体验**：<https://levango7.github.io/Interaction/>（PWA，可安装到桌面/手机，离线可用）
 

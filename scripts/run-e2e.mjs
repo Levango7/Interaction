@@ -13,7 +13,7 @@
  *   ① **双态预检**：HTML 处于源码态时，e2e 走 file:// 直加载，应用 JS 根本不在页面里 ——
  *      57 个失败全是 `setActive/AppBridge is not defined`，看起来像天塌了，实际只是没拼回。
  *      loadApp 的单测侧早有守卫（`assertDeliveredState`），e2e 侧一直没有 → 现在补上，
- *      先 `src-split.mjs` 拼回再跑（与 package.json 的 pre* 钩子同源，但**不依赖 npm 钩子**，
+ *      先 `src-split.mjs` 拼回再跑（与 package.json 的 with-injected 包装同源，但**不依赖 npm**，
  *      因为直接 `node scripts/run-e2e.mjs` 时钩子不触发）。
  *   ② **环境预检**（scripts/check-browser.mjs）：chromium 起不来就直接以 78 退出并
  *      告诉用户「本机判定通道不可用、判据以 CI 为准」——不再让测试挂 600 分钟。

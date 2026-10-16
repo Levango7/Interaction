@@ -18,8 +18,8 @@
  * 的 EBUSY 指纹识别沙箱并跳过——在 CI / 正常环境真实执行。
  *
  * 真产物集成用例（恰 1 个 JS 块、2.8MB 整体编译）在**拼回态**才运行：
- *   · CI 的 npm test：pretest 已拼回 → 执行；
- *   · 本机 `npm run test:local` 若处于源码态 → 显示 skipped（可见，不伪装成绿色通过）。
+ *   · CI 的 npm test：with-injected 已拼回 → 执行；
+ *   · 本机直跑 vitest（不经包装器）且处于源码态 → 显示 skipped（可见，不伪装成绿色通过）。
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, mkdtempSync, cpSync, rmSync } from "node:fs";

@@ -29,7 +29,7 @@
  *
  * 运行：npx vitest run tests/empty-catch-slice3.test.js
  *   ⚠️ 需拼回态（loadApp 要求 HTML ≥1.2MB）。若报「源码态」先 npm run src:inject。
- *   本文件刻意用直跑 vitest 而非 npm test —— 避免 posttest 把工作区抽回源码态，
+ *   本文件刻意用直跑 vitest 而非 npm test —— 避免它结束时把工作区抽回源码态，
  *   干扰并行会话（它们可能正依赖拼回态）。
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
