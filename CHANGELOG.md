@@ -1,3 +1,8 @@
+## [Unreleased]
+
+> 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
+> 未上表的号不写版本号、写日期或引入它的 commit 锚。
+
 ## [v3.7.132] - 2026-10-17
 
 **结构批次：拆 `core.js`（35→38 块）+ 四道新门禁 + 两处"口号比事实大"的产品修复 + 十分钟上手。**
@@ -67,193 +72,8 @@
 - `release.mjs` 发版切口改为「自检通过后自动抽回」（"记得还原"不是机制）。
 - `tests/build-structure.test.js` 新增：HTML > 1.2MB 直接 fail。
 
-## [v3.7.126] - 2026-10-15
-
-**修掉 OD-002：微信扫码登录「看起来能用，实际是死循环」的演示态误导（P1 用户可见缺陷）。**
-
-- **缺陷**（`docs/decisions/OPEN-DECISIONS.md` OD-002）：真微信 provider 未接入时，后端
-  `POST /api/auth/wechat/qrcode` 返回 `demo: true` + 演示 SVG（`server/src/auth.js` 注释明确
-  要求「演示码必须让调用方消费端看得出是演示，不能伪装成真二维码」），但前端
-  `_wechatPollStart()`（`src/render-overview.js`）**不消费该标志**：把演示码当真二维码渲染，
-  配上「打开微信「扫一扫」完成登录」提示，再每 2.5s 轮询一个永远不会 confirmed 的 scene
-  → 5 分钟后报「二维码已过期，请关闭后重新扫码」。用户视角：功能看起来能用，实际是死循环。
-  非安全缺陷（`/wechat/confirm` 默认 404，无认证绕过），但属用户可见的功能不可用 + 误导性文案。
-- **修法**（协议不变）：响应带 `demo` 时渲染诚实说明（新 i18n 键 `auth.wechatDemo`，中英双语：
-  微信登录暂未接入、扫码无法登录、可用邮箱注册或 GitHub 快捷登录），并**不启动轮询**；
-  响应不带 `demo`（将来真 provider 接入）自动走原路径——客户端对后端的契约一字未改。
-- **守护**（`tests/auth-ui-lifecycle.test.js` +2，先红后绿——红时抓到的正是缺陷本体）：
-  ① demo 态 → 显示演示文案、无「扫一扫」误导、`apiWechatStatus` **零调用**。反向断言
-  （证明始终不成立）刻意不用判别式等待；qr 特意用与后端 `makeDemoWechatQr` 同形态的
-  data-URI——证明修复靠的是消费 `demo` 标志，而不是碰巧 `qr` 为空。
-  ② demo 缺省 → 原路径不变（渲染二维码 + 启动轮询），合法路径不误杀。
-- **账**：OD-002 就地关闭（OPEN → RESOLVED）；OD-001（第三方登录 provider 选型）仍 OPEN，
-  本修复不预设其方向——做不做第三方登录、走哪家，仍等用户画像确定后再定。
-
-## [v3.7.127] - 2026-10-15
-
-**用户裁定 `sync.conflictPolicy` 默认值：`lww` → `mv`（知情权优先）；顺带修掉验证时暴露的 `config.js` 空文件缺陷。**
-
-### 冲突策略默认值改为 `mv`（qoder 12:48 交接口子第 2 条，用户 15:31 裁定）
-
-- **决策**：默认 `lww`（输了的一方**静默丢弃**）→ 默认 `mv`（输了的一方记进冲突清单随
-  `/api/sync/changes` 响应下发：任务键按 id×updatedAt 结构化自动合并，其余键列进
-  「设置 → 账号 → 云同步」冲突面板让用户「保留本机 / 使用云端」二选一）。
-- **理由**：① 打扰只发生在真实冲突时——不冲突的用户零感知，冲突那一刻正是最该有知情权的；
-  ② 与 v3.7.114（corsOrigin WARN）/ v3.7.115（检索降级可见性）/ v3.7.126（demo 诚实化）
-  同族——都是「把静默变诚实」；③ 逃生舱保留：想安静的用户显式配 `"lww"`。
-- **成熟度核实**（裁定前做的功课）：客户端面板完整（双方值预览 + 二选一 + toast 引导）、
-  `tests/cloud-sync-stage2.test.js` 5 条专项用例、服务端 `incremental-check.cjs` ⑫ 组
-  15 项守护、v3.7.109 交付后零修复提交。**诚实披露**：mv 从未在双设备真机上跑过——
-  本版只是把默认流量切过去，不引入新代码路径。
-- 改动面：`server/config.example.json` 默认值、契约文档两处历史定稿加后注（原文保留）、
-  `server/README.md` 两处口径。**客户端与服务端代码零改动。**
-
-### 修 `config.js`：空 `config.json` 被误报成「JSON 语法有误」（验证本版时现场捕获）
-
-- **缺陷**：`loadConfig()` 对 `config.json` **存在但 0 字节/纯空白**的形态 fail loud，
-  报错写「JSON 语法有误（常见：尾随逗号、单引号、注释）」——用户会去找一个并不存在的
-  语法错误。而这个形态不是理论：README 教的「复制 `config.example.json` 为 `config.json`
-  后编辑」中断一下就是空文件（2026-10-15 本机实测：0 字节 config.json 让服务端拒绝启动）。
-- **修法**：空文件 trim 后为空 → 与「文件不存在」同口径静默跳过；**非空但语法有误仍然
-  fail loud**（v3.7.125 的口径不变——把「没来得及写」与「写错了」分开）。
-- **守护**（`server/verify/config-check.cjs` +3，先红后绿——红时抓到的正是缺陷本体）：
-  空文件不抛错且基线安全默认值在 / 纯空白文件同样静默跳过；⑥ 组坏 JSON fail loud 用例不变。
-- **真实故障复验**：本机那个 0 字节 `config.json` 还原样在位，修复后服务端正常启动、
-  `/api/health` 200。config-check 19→22/22；incremental-check 54/54；
-  cloud-sync-stage2 25/25。
-
-## [v3.7.128] - 2026-10-16
-
-### 云快照漏出排除清单：WebDAV 密码密文 + 明文账号邮箱跟着快照上云（安全 · 真机抓到）
-
-- **缺陷**：`SYNC_EXCLUDED_KEYS`（`src/render-overview.js`）在 v3.7.94 立下原则——「用设备密钥密封、
-  设备密钥不出本机（换设备本就解不开）、**上云无跨端收益、纯增后端暴露面**」，据此排除了
-  `wb_access_token` / `wb_integration_api_keys` 等密封凭据与 `PREFIX + "__dk"` 设备密钥本身。
-  但 **v3.7.120 引入 WebDAV 时新增的三个键没同步进这份清单**，而它们全都落在那条原则射程内：
-  - `wb_agent_webdav_pass` —— 用设备密钥密封的应用密码密文；
-  - `wb_agent_webdav_cfg` —— 与已排除的 `PREFIX+"cfg"` 同构，且内含**明文**账号邮箱；
-  - `wb_agent_webdav_meta` —— 与已排除的 `SYNC_META_KEY` 同构的本机同步元数据（etag/path）。
-- **不是推理，是真机证据**：用真实坚果云账号跑完 WebDAV 完整 8 步后，把云端快照文件直连拉下来看，
-  15 个键里这三个全在（cfg 里就是明文邮箱，pass 是 `{"__enc":true,...}` 密文）。等价于用户网盘上
-  存着一份设备密钥密封的密码 + 明文邮箱，也与 `docs/webdav-verify.md` §已知边界 的
-  「密码只存本机……**密钥不出本机**」声明直接冲突。
-- **修法**：三个键补进 `SYNC_EXCLUDED_KEYS`。入站侧 `_applyCloudSnapshot` 用同一份清单对称过滤，无需另改。
-- **守护**（`tests/cloud-sync-stage1.test.js` +1，先红后绿——红时收到的正是 `{"__enc":true,...}`）：
-  三个键均不得出现在 `_buildCloudSnapshot()` 结果里；同时断言业务键照常在内，防止把「排除」做成「误伤」。
-
-### 上传 404 只说「上传失败」，用户无从下手
-
-- **缺陷**：坚果云 WebDAV **根目录不可写**——本机实测三组：`PUT /dav/x.json` → **404**；
-  `MKCOL /dav/sub/` → **201**；`PUT /dav/sub/x.json` → **201**。而默认 `WD_URL` 恰好就是这个根目录，
-  **用户照默认值填 → 点上传必然 404**。此时应用只 toast「上传失败（HTTP 404）」，
-  用户不知道要改成一个已存在的子文件夹。
-- **修法**：① `webdavPut` 把状态码一并带回（此前只回传笼统 error 文案，调用方无从区分）；
-  ② 404 单独走一条带**可执行修复动作**的 i18n 文案（`wd.syncUpload404`，中英双语），其余失败保持原样。
-- **守护**（`tests/webdav-sync.test.js` +1，先红后绿）：404 时提示必须点出 404 **且**给出「子文件夹」
-  指引，不能停在笼统失败。
-- **真机复验**：修好的版本在默认根目录下跑，提示已如实上屏——「上传失败：目标路径不存在（404）——
-  请确认地址里的文件夹已在服务端建好。注意坚果云等服务的根目录不允许直接放文件，必须指定一个已存在的子文件夹。」
-
-### 顺带（不改产品行为）
-
-- WebDAV UI 验收探针 `_probe/webdav-ui-accept.mjs`（本地资产，按 `_probe/` 惯例不入库）此前从未在本机
-  跑通过，本轮跑通并修掉它**自身**三个 bug：Playwright 默认 dismiss 原生 `confirm`（等于每次点「取消」，
-  表现为「点了清除本机键还在」的假失败）、toast 等 7 秒再抓早已消失（表现为「失败却看不到提示」的假静默）、
-  `rmSync` 被删除守卫拦（改同盘改名）。另修环境级坑 `ELECTRON_RUN_AS_NODE=1`（详见 `docs/webdav-verify.md`）。
-- 完整 8 步在**可写子目录**下：门控 / 保存 / 连接 / 上传 / 续传不报假冲突 / 清除抹净 / 云端仍在 /
-  日志卫生全通；唯一未跑的是「改一条任务再上传」——探针未定位到任务行选择器，**如实跳过不计通过**。
-- 验收副本 `_probe/isoI/agent-workbench.html` 此前是 3.7.125，已换成当前 3.7.127 拼回态（旧件备份在
-  `F:/tmp-e2e-artifacts/`）。
-
-## [v3.7.129] - 2026-10-16
-
-### 认领 R-24：两份「写了但从未入库」的加强版门禁入库 —— 跑出来的第一个结果就是真的
-
-**背景**：`scripts/lint-server-ssrf.mjs` 与 `scripts/lint-server-idor.mjs`（2026-10-11 独立复核时写的）
-从未入库 —— `git ls-files` 计数 0、`package.json` 无 script、CI 零调用。于是**加强版规则唯一的载体
-是个无主文件**，在仓里挂了 4 天：CI 与任何净副本都不含它，也就**没有任何人看到过它的结论**。
-今天把它们跑起来、据结果修缺陷、并接进 CI。
-
-#### 缺陷 1（安全 · P1）：IPv4-mapped IPv6 绕过 SSRF 白名单，两侧实现都中招
-
-- **现象**：门禁 12/36 条失败，全部是 `[::ffff:...]` 形态，且 `server/src/tools-fetch.js` 与
-  `electron/main.js` **两侧都放行**。
-- **根因**：`_netHostForbidden` 的三条 IPv6 规则只覆盖 `::1` / ULA(`fc00::/7`) / 链路本地(`fe80::/10`)，
-  **漏了 IPv4-mapped 段 `::ffff:0:0/96`**；而 WHATWG URL 不把它规范化成点分十进制
-  （`new URL("http://[::ffff:7f00:1]/").hostname` 仍是 `[::ffff:7f00:1]`，展开写法
-  `0:0:0:0:0:ffff:7f00:1` 与点分写法 `::ffff:127.0.0.1` 也都归一成这个压缩形态）。
-  于是一个已认证用户请求 `GET /api/tools/fetch?url=http://[::ffff:7f00:1]/…` 就能到达回环；
-  `[::ffff:a9fe:a9fe]` 直达 `169.254.169.254`（云元数据）。
-- **修法**：判定前先**规范化表示法** —— 去掉方括号，把 `::ffff:HHHH:HHHH` 还原成点分十进制再交给
-  原有规则；顺带补上 **CGNAT `100.64/10`（RFC 6598）**（R-24 点名的另一处缺口）。两侧同口径改。
-- **守护**：`scripts/lint-server-ssrf.mjs` 从 36 条样本扩到 **38**（补 CGNAT），修复后 **38/38**。
-  该脚本是**行为测试**（从源码提取函数体 → `new Function` 隔离求值 → 喂样本），不是扫字面量；
-  且"找不到函数就判失败"，避免改名后静默失效。
-
-#### 缺陷 2（安全 · P1）：`POST /push/unsubscribe` 可按 endpoint 删掉**别人**的推送订阅
-
-- **现象**：`store.addPushSub` 明明写了 `userId`，而 `removePushSub(endpoint)` **只按 endpoint 删**
-  —— 任何登录用户知道（或猜到）endpoint 就能删掉别人的推送订阅。同一形态的**第三次**
-  （v3.7.105 修过 `devices` 与 `schedules`，这条一直漏着）。
-- **修法**：`removePushSub(endpoint, userId)` 按 `(endpoint, userId)` 双键删；handler 传 `req.user.sub`。
-  `userId` 定为**必传** —— 漏传就删不掉任何人的订阅（表现为静默失败），
-  也不留"不传就删全部"的向后兼容口子。
-- **守护**：`server/verify/idor-check.cjs` **9 → 13**（先红后绿 —— 红时 B 的调用确实把 A 的订阅删了，
-  实测数据文件里剩余 0 条）。判据走**直读服务端数据文件**（push 没有"列出我的订阅"端点），
-  不让被测对象给自己出成绩单；含"前置：数据文件里确实有这条订阅"防空转，与"对照：A 删自己的应生效"
-  防"把端点改死"。
-
-#### 一处「记缺口而非修」的如实处理
-
-`integrations.js` 的两个 OAuth 配置端点（`GET /oauth/:provider/callback`、`DELETE /oauth/:provider`）
-被门禁报为"按外部键删改但无归属判断"。核实后**不是**凭据类，但**也没有** userId 维度可判：
-`store.integrations` 是 `provider → meta` 的**全局字典**，属实例级配置（一个实例连一个 OAuth app）。
-真问题是"谁有权改实例配置"需要一个角色体系，而当前 `server/src` 全局无 admin/role、所有认证用户等价。
-**处理**：加进 WHITELIST 并写明这是**已知权限面缺口**（连同"引入 RBAC 后应收紧为管理员专属"的指引），
-而不是伪装成"无需归属"。宁可让门禁的豁免列表难看，也不让它说谎。
-
-#### 门禁入库
-
-两份脚本进 `package.json`（`lint:server-ssrf` / `lint:server-idor`）并**接进 `ci.yml` 的 `server-verify` job**
-（扫 `server/src/*.js` + `electron/main.js`）。至此"加强版规则只在无主文件里"的第四天状态结束。
-
-## [v3.7.130] - 2026-10-16
-
-### R-26 收口：检索不再抢跑「有界回填」—— 消除 `rag-hybrid` / `workflow` 两条「首跑红、重跑绿」
-
-**背景**：R-9 那条明写「未修（留待下一批）」的账，本轮去收。**核实后发现它已是过时账** ——
-原缺陷「空缓存钉死」**v3.7.101 已修**（`_ragVecCache.loaded` 只在确实读到 IDB 时置位，
-空 Map 不再被钉死、可重试），v3.7.115 又加 `semanticRecallStatus()` 让降级对用户可见。
-台账里那两个「待想清」的问题（空缓存该不该钉死 / IDB 未就绪 vs 确实没有向量如何区分），
-**代码里已各自有答案**（答案就是这个 `loaded` 标志）。但顺着这笔账，查出了**另一层真缺陷**。
-
-**缺陷**：`ragInit()` 里的有界回填 `ragEnsureVectors(20).catch(...)` 是**发起即走、没有 `await`**，
-而 `ragSearch` 是 `await ragInit()` **紧接着**就检索 → 回填还在飞、`cache` 还是空的 →
-`ragVectorSearch` 的 `if(!cache.size) return []` 直接返回空（**连 query 的 embedding 都不发**）。
-于是 IDB 不可用/慢时，这一次检索白丢。CI 上表现为 `rag-hybrid.spec.js:132` /
-`workflow.spec.js:91` 的「首跑红、同 commit 重跑绿」：CI 机器 IDB 偶发慢 → 回填没跑完 →
-断言拿到空 → 红。**不是玄学抖动，是有机制、可复现的。**
-
-**修法（不新增符号）**：复用 `ragEnsureVectors` 内部早已存在的 `_ragEnsuring` —— 它本来就是
-「回填进行中」的单一真相源（单趟去重就靠它）。`ragVectorSearch` 在 **`!cache.size && _ragEnsuring`**
-时 `Promise.race` 等它，**有界 3s**（常量 `RAG_BACKFILL_WAIT_MS`）。
-- **为什么只在「确实有回填在飞」时才等**：真无文档时 `ragEnsureVectors` 取 `getRagDocs()`
-  后立即返回，不会让正常的空索引每次都白等 —— 这正是 R-9 当初担心的
-  「改错会让正常的空索引每次都重读 IDB」。
-- **为什么等它确实有效**：回填的文档来源是 `getRagDocs()`（localStorage），**不依赖 IDB**。
-
-**守护**（`tests/rag-degradation.test.js` +1，先红后绿）：IDB 不可用 + 文档只入库不建向量
-（`{skipEmbed:true}`，即「cache 空但文档在」）→ 断言检索必须召回**且走向量路径**（`via` 含 `vec`）。
-红时 `via` 是 `lex`（词法兜底），正是缺陷形态；绿时 `both`。
-
-**真机复验**（qoder 的 `_probe/repro-rag-idb-unready.cjs`，注入 IDB 不可用）：
-修前 **3/3 `len=0`**，修后 **3/3 全部召回**（`len=1, first=doc-auth`）。
-
-**顺带**（本轮新造 `_probe/rag-reload-window.cjs`）：正常刷新 → **立即**检索 **5/5 召回**，
-对照「等 2s」「连检两次」同样全绿 —— 证书「本机不存在刷新后就绪窗口」，把缺陷范围收窄到 IDB 窗口。
-两个探针按 `_probe/` 惯例不入库。
-
-## [Unreleased]
+> **合并说明（2026-10-17 清理）**：以下四节是本版**原始记录全文** —— v3.7.131 发版时内容写进了当时
+> 文件里的 `[Unreleased]` 段、漏写版本条目（v3.7.132 发版时补了摘要于上，此处两段合一）；不是新增内容。
 
 ### 注入类命令统一包装（R-27）
 
@@ -309,6 +129,192 @@ v3.7.123 那次把 `waitForTimeout(800)` 换成"等请求发出"方向对，但*
 **CI 复绿已由 run `38682095265`（main tip `df0d893`）确认**：四腿全绿，e2e 腿 `notify-hook.spec.js:106`
 在 desktop 与 tablet **都是首跑 ✓ 通过**，汇总 **104 passed (2.9m) / 0 failed / 0 flaky / 无 retry 标记**。
 （口径：我自己的两条 run 被对方的 push 取代成 cancelled，绿判记在 `df0d893` 名下 —— 同一棵树、同一份文件，等价。）
+
+## [v3.7.130] - 2026-10-16
+
+### R-26 收口：检索不再抢跑「有界回填」—— 消除 `rag-hybrid` / `workflow` 两条「首跑红、重跑绿」
+
+**背景**：R-9 那条明写「未修（留待下一批）」的账，本轮去收。**核实后发现它已是过时账** ——
+原缺陷「空缓存钉死」**v3.7.101 已修**（`_ragVecCache.loaded` 只在确实读到 IDB 时置位，
+空 Map 不再被钉死、可重试），v3.7.115 又加 `semanticRecallStatus()` 让降级对用户可见。
+台账里那两个「待想清」的问题（空缓存该不该钉死 / IDB 未就绪 vs 确实没有向量如何区分），
+**代码里已各自有答案**（答案就是这个 `loaded` 标志）。但顺着这笔账，查出了**另一层真缺陷**。
+
+**缺陷**：`ragInit()` 里的有界回填 `ragEnsureVectors(20).catch(...)` 是**发起即走、没有 `await`**，
+而 `ragSearch` 是 `await ragInit()` **紧接着**就检索 → 回填还在飞、`cache` 还是空的 →
+`ragVectorSearch` 的 `if(!cache.size) return []` 直接返回空（**连 query 的 embedding 都不发**）。
+于是 IDB 不可用/慢时，这一次检索白丢。CI 上表现为 `rag-hybrid.spec.js:132` /
+`workflow.spec.js:91` 的「首跑红、同 commit 重跑绿」：CI 机器 IDB 偶发慢 → 回填没跑完 →
+断言拿到空 → 红。**不是玄学抖动，是有机制、可复现的。**
+
+**修法（不新增符号）**：复用 `ragEnsureVectors` 内部早已存在的 `_ragEnsuring` —— 它本来就是
+「回填进行中」的单一真相源（单趟去重就靠它）。`ragVectorSearch` 在 **`!cache.size && _ragEnsuring`**
+时 `Promise.race` 等它，**有界 3s**（常量 `RAG_BACKFILL_WAIT_MS`）。
+- **为什么只在「确实有回填在飞」时才等**：真无文档时 `ragEnsureVectors` 取 `getRagDocs()`
+  后立即返回，不会让正常的空索引每次都白等 —— 这正是 R-9 当初担心的
+  「改错会让正常的空索引每次都重读 IDB」。
+- **为什么等它确实有效**：回填的文档来源是 `getRagDocs()`（localStorage），**不依赖 IDB**。
+
+**守护**（`tests/rag-degradation.test.js` +1，先红后绿）：IDB 不可用 + 文档只入库不建向量
+（`{skipEmbed:true}`，即「cache 空但文档在」）→ 断言检索必须召回**且走向量路径**（`via` 含 `vec`）。
+红时 `via` 是 `lex`（词法兜底），正是缺陷形态；绿时 `both`。
+
+**真机复验**（qoder 的 `_probe/repro-rag-idb-unready.cjs`，注入 IDB 不可用）：
+修前 **3/3 `len=0`**，修后 **3/3 全部召回**（`len=1, first=doc-auth`）。
+
+**顺带**（本轮新造 `_probe/rag-reload-window.cjs`）：正常刷新 → **立即**检索 **5/5 召回**，
+对照「等 2s」「连检两次」同样全绿 —— 证书「本机不存在刷新后就绪窗口」，把缺陷范围收窄到 IDB 窗口。
+两个探针按 `_probe/` 惯例不入库。
+
+## [v3.7.129] - 2026-10-16
+
+### 认领 R-24：两份「写了但从未入库」的加强版门禁入库 —— 跑出来的第一个结果就是真的
+
+**背景**：`scripts/lint-server-ssrf.mjs` 与 `scripts/lint-server-idor.mjs`（2026-10-11 独立复核时写的）
+从未入库 —— `git ls-files` 计数 0、`package.json` 无 script、CI 零调用。于是**加强版规则唯一的载体
+是个无主文件**，在仓里挂了 4 天：CI 与任何净副本都不含它，也就**没有任何人看到过它的结论**。
+今天把它们跑起来、据结果修缺陷、并接进 CI。
+
+#### 缺陷 1（安全 · P1）：IPv4-mapped IPv6 绕过 SSRF 白名单，两侧实现都中招
+
+- **现象**：门禁 12/36 条失败，全部是 `[::ffff:...]` 形态，且 `server/src/tools-fetch.js` 与
+  `electron/main.js` **两侧都放行**。
+- **根因**：`_netHostForbidden` 的三条 IPv6 规则只覆盖 `::1` / ULA(`fc00::/7`) / 链路本地(`fe80::/10`)，
+  **漏了 IPv4-mapped 段 `::ffff:0:0/96`**；而 WHATWG URL 不把它规范化成点分十进制
+  （`new URL("http://[::ffff:7f00:1]/").hostname` 仍是 `[::ffff:7f00:1]`，展开写法
+  `0:0:0:0:0:ffff:7f00:1` 与点分写法 `::ffff:127.0.0.1` 也都归一成这个压缩形态）。
+  于是一个已认证用户请求 `GET /api/tools/fetch?url=http://[::ffff:7f00:1]/…` 就能到达回环；
+  `[::ffff:a9fe:a9fe]` 直达 `169.254.169.254`（云元数据）。
+- **修法**：判定前先**规范化表示法** —— 去掉方括号，把 `::ffff:HHHH:HHHH` 还原成点分十进制再交给
+  原有规则；顺带补上 **CGNAT `100.64/10`（RFC 6598）**（R-24 点名的另一处缺口）。两侧同口径改。
+- **守护**：`scripts/lint-server-ssrf.mjs` 从 36 条样本扩到 **38**（补 CGNAT），修复后 **38/38**。
+  该脚本是**行为测试**（从源码提取函数体 → `new Function` 隔离求值 → 喂样本），不是扫字面量；
+  且"找不到函数就判失败"，避免改名后静默失效。
+
+#### 缺陷 2（安全 · P1）：`POST /push/unsubscribe` 可按 endpoint 删掉**别人**的推送订阅
+
+- **现象**：`store.addPushSub` 明明写了 `userId`，而 `removePushSub(endpoint)` **只按 endpoint 删**
+  —— 任何登录用户知道（或猜到）endpoint 就能删掉别人的推送订阅。同一形态的**第三次**
+  （v3.7.105 修过 `devices` 与 `schedules`，这条一直漏着）。
+- **修法**：`removePushSub(endpoint, userId)` 按 `(endpoint, userId)` 双键删；handler 传 `req.user.sub`。
+  `userId` 定为**必传** —— 漏传就删不掉任何人的订阅（表现为静默失败），
+  也不留"不传就删全部"的向后兼容口子。
+- **守护**：`server/verify/idor-check.cjs` **9 → 13**（先红后绿 —— 红时 B 的调用确实把 A 的订阅删了，
+  实测数据文件里剩余 0 条）。判据走**直读服务端数据文件**（push 没有"列出我的订阅"端点），
+  不让被测对象给自己出成绩单；含"前置：数据文件里确实有这条订阅"防空转，与"对照：A 删自己的应生效"
+  防"把端点改死"。
+
+#### 一处「记缺口而非修」的如实处理
+
+`integrations.js` 的两个 OAuth 配置端点（`GET /oauth/:provider/callback`、`DELETE /oauth/:provider`）
+被门禁报为"按外部键删改但无归属判断"。核实后**不是**凭据类，但**也没有** userId 维度可判：
+`store.integrations` 是 `provider → meta` 的**全局字典**，属实例级配置（一个实例连一个 OAuth app）。
+真问题是"谁有权改实例配置"需要一个角色体系，而当前 `server/src` 全局无 admin/role、所有认证用户等价。
+**处理**：加进 WHITELIST 并写明这是**已知权限面缺口**（连同"引入 RBAC 后应收紧为管理员专属"的指引），
+而不是伪装成"无需归属"。宁可让门禁的豁免列表难看，也不让它说谎。
+
+#### 门禁入库
+
+两份脚本进 `package.json`（`lint:server-ssrf` / `lint:server-idor`）并**接进 `ci.yml` 的 `server-verify` job**
+（扫 `server/src/*.js` + `electron/main.js`）。至此"加强版规则只在无主文件里"的第四天状态结束。
+
+## [v3.7.128] - 2026-10-16
+
+### 云快照漏出排除清单：WebDAV 密码密文 + 明文账号邮箱跟着快照上云（安全 · 真机抓到）
+
+- **缺陷**：`SYNC_EXCLUDED_KEYS`（`src/render-overview.js`）在 v3.7.94 立下原则——「用设备密钥密封、
+  设备密钥不出本机（换设备本就解不开）、**上云无跨端收益、纯增后端暴露面**」，据此排除了
+  `wb_access_token` / `wb_integration_api_keys` 等密封凭据与 `PREFIX + "__dk"` 设备密钥本身。
+  但 **v3.7.120 引入 WebDAV 时新增的三个键没同步进这份清单**，而它们全都落在那条原则射程内：
+  - `wb_agent_webdav_pass` —— 用设备密钥密封的应用密码密文；
+  - `wb_agent_webdav_cfg` —— 与已排除的 `PREFIX+"cfg"` 同构，且内含**明文**账号邮箱；
+  - `wb_agent_webdav_meta` —— 与已排除的 `SYNC_META_KEY` 同构的本机同步元数据（etag/path）。
+- **不是推理，是真机证据**：用真实坚果云账号跑完 WebDAV 完整 8 步后，把云端快照文件直连拉下来看，
+  15 个键里这三个全在（cfg 里就是明文邮箱，pass 是 `{"__enc":true,...}` 密文）。等价于用户网盘上
+  存着一份设备密钥密封的密码 + 明文邮箱，也与 `docs/webdav-verify.md` §已知边界 的
+  「密码只存本机……**密钥不出本机**」声明直接冲突。
+- **修法**：三个键补进 `SYNC_EXCLUDED_KEYS`。入站侧 `_applyCloudSnapshot` 用同一份清单对称过滤，无需另改。
+- **守护**（`tests/cloud-sync-stage1.test.js` +1，先红后绿——红时收到的正是 `{"__enc":true,...}`）：
+  三个键均不得出现在 `_buildCloudSnapshot()` 结果里；同时断言业务键照常在内，防止把「排除」做成「误伤」。
+
+### 上传 404 只说「上传失败」，用户无从下手
+
+- **缺陷**：坚果云 WebDAV **根目录不可写**——本机实测三组：`PUT /dav/x.json` → **404**；
+  `MKCOL /dav/sub/` → **201**；`PUT /dav/sub/x.json` → **201**。而默认 `WD_URL` 恰好就是这个根目录，
+  **用户照默认值填 → 点上传必然 404**。此时应用只 toast「上传失败（HTTP 404）」，
+  用户不知道要改成一个已存在的子文件夹。
+- **修法**：① `webdavPut` 把状态码一并带回（此前只回传笼统 error 文案，调用方无从区分）；
+  ② 404 单独走一条带**可执行修复动作**的 i18n 文案（`wd.syncUpload404`，中英双语），其余失败保持原样。
+- **守护**（`tests/webdav-sync.test.js` +1，先红后绿）：404 时提示必须点出 404 **且**给出「子文件夹」
+  指引，不能停在笼统失败。
+- **真机复验**：修好的版本在默认根目录下跑，提示已如实上屏——「上传失败：目标路径不存在（404）——
+  请确认地址里的文件夹已在服务端建好。注意坚果云等服务的根目录不允许直接放文件，必须指定一个已存在的子文件夹。」
+
+### 顺带（不改产品行为）
+
+- WebDAV UI 验收探针 `_probe/webdav-ui-accept.mjs`（本地资产，按 `_probe/` 惯例不入库）此前从未在本机
+  跑通过，本轮跑通并修掉它**自身**三个 bug：Playwright 默认 dismiss 原生 `confirm`（等于每次点「取消」，
+  表现为「点了清除本机键还在」的假失败）、toast 等 7 秒再抓早已消失（表现为「失败却看不到提示」的假静默）、
+  `rmSync` 被删除守卫拦（改同盘改名）。另修环境级坑 `ELECTRON_RUN_AS_NODE=1`（详见 `docs/webdav-verify.md`）。
+- 完整 8 步在**可写子目录**下：门控 / 保存 / 连接 / 上传 / 续传不报假冲突 / 清除抹净 / 云端仍在 /
+  日志卫生全通；唯一未跑的是「改一条任务再上传」——探针未定位到任务行选择器，**如实跳过不计通过**。
+- 验收副本 `_probe/isoI/agent-workbench.html` 此前是 3.7.125，已换成当前 3.7.127 拼回态（旧件备份在
+  `F:/tmp-e2e-artifacts/`）。
+
+## [v3.7.127] - 2026-10-15
+
+**用户裁定 `sync.conflictPolicy` 默认值：`lww` → `mv`（知情权优先）；顺带修掉验证时暴露的 `config.js` 空文件缺陷。**
+
+### 冲突策略默认值改为 `mv`（qoder 12:48 交接口子第 2 条，用户 15:31 裁定）
+
+- **决策**：默认 `lww`（输了的一方**静默丢弃**）→ 默认 `mv`（输了的一方记进冲突清单随
+  `/api/sync/changes` 响应下发：任务键按 id×updatedAt 结构化自动合并，其余键列进
+  「设置 → 账号 → 云同步」冲突面板让用户「保留本机 / 使用云端」二选一）。
+- **理由**：① 打扰只发生在真实冲突时——不冲突的用户零感知，冲突那一刻正是最该有知情权的；
+  ② 与 v3.7.114（corsOrigin WARN）/ v3.7.115（检索降级可见性）/ v3.7.126（demo 诚实化）
+  同族——都是「把静默变诚实」；③ 逃生舱保留：想安静的用户显式配 `"lww"`。
+- **成熟度核实**（裁定前做的功课）：客户端面板完整（双方值预览 + 二选一 + toast 引导）、
+  `tests/cloud-sync-stage2.test.js` 5 条专项用例、服务端 `incremental-check.cjs` ⑫ 组
+  15 项守护、v3.7.109 交付后零修复提交。**诚实披露**：mv 从未在双设备真机上跑过——
+  本版只是把默认流量切过去，不引入新代码路径。
+- 改动面：`server/config.example.json` 默认值、契约文档两处历史定稿加后注（原文保留）、
+  `server/README.md` 两处口径。**客户端与服务端代码零改动。**
+
+### 修 `config.js`：空 `config.json` 被误报成「JSON 语法有误」（验证本版时现场捕获）
+
+- **缺陷**：`loadConfig()` 对 `config.json` **存在但 0 字节/纯空白**的形态 fail loud，
+  报错写「JSON 语法有误（常见：尾随逗号、单引号、注释）」——用户会去找一个并不存在的
+  语法错误。而这个形态不是理论：README 教的「复制 `config.example.json` 为 `config.json`
+  后编辑」中断一下就是空文件（2026-10-15 本机实测：0 字节 config.json 让服务端拒绝启动）。
+- **修法**：空文件 trim 后为空 → 与「文件不存在」同口径静默跳过；**非空但语法有误仍然
+  fail loud**（v3.7.125 的口径不变——把「没来得及写」与「写错了」分开）。
+- **守护**（`server/verify/config-check.cjs` +3，先红后绿——红时抓到的正是缺陷本体）：
+  空文件不抛错且基线安全默认值在 / 纯空白文件同样静默跳过；⑥ 组坏 JSON fail loud 用例不变。
+- **真实故障复验**：本机那个 0 字节 `config.json` 还原样在位，修复后服务端正常启动、
+  `/api/health` 200。config-check 19→22/22；incremental-check 54/54；
+  cloud-sync-stage2 25/25。
+
+## [v3.7.126] - 2026-10-15
+
+**修掉 OD-002：微信扫码登录「看起来能用，实际是死循环」的演示态误导（P1 用户可见缺陷）。**
+
+- **缺陷**（`docs/decisions/OPEN-DECISIONS.md` OD-002）：真微信 provider 未接入时，后端
+  `POST /api/auth/wechat/qrcode` 返回 `demo: true` + 演示 SVG（`server/src/auth.js` 注释明确
+  要求「演示码必须让调用方消费端看得出是演示，不能伪装成真二维码」），但前端
+  `_wechatPollStart()`（`src/render-overview.js`）**不消费该标志**：把演示码当真二维码渲染，
+  配上「打开微信「扫一扫」完成登录」提示，再每 2.5s 轮询一个永远不会 confirmed 的 scene
+  → 5 分钟后报「二维码已过期，请关闭后重新扫码」。用户视角：功能看起来能用，实际是死循环。
+  非安全缺陷（`/wechat/confirm` 默认 404，无认证绕过），但属用户可见的功能不可用 + 误导性文案。
+- **修法**（协议不变）：响应带 `demo` 时渲染诚实说明（新 i18n 键 `auth.wechatDemo`，中英双语：
+  微信登录暂未接入、扫码无法登录、可用邮箱注册或 GitHub 快捷登录），并**不启动轮询**；
+  响应不带 `demo`（将来真 provider 接入）自动走原路径——客户端对后端的契约一字未改。
+- **守护**（`tests/auth-ui-lifecycle.test.js` +2，先红后绿——红时抓到的正是缺陷本体）：
+  ① demo 态 → 显示演示文案、无「扫一扫」误导、`apiWechatStatus` **零调用**。反向断言
+  （证明始终不成立）刻意不用判别式等待；qr 特意用与后端 `makeDemoWechatQr` 同形态的
+  data-URI——证明修复靠的是消费 `demo` 标志，而不是碰巧 `qr` 为空。
+  ② demo 缺省 → 原路径不变（渲染二维码 + 启动轮询），合法路径不误杀。
+- **账**：OD-002 就地关闭（OPEN → RESOLVED）；OD-001（第三方登录 provider 选型）仍 OPEN，
+  本修复不预设其方向——做不做第三方登录、走哪家，仍等用户画像确定后再定。
 
 ## [v3.7.125] - 2026-10-14
 
