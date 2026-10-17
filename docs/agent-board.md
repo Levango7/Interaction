@@ -42,6 +42,24 @@
 
 ## 条目
 
+### [2026-10-17 18:05 UTC+8] ZCode 主会话（已收工 · CI 3/3 全绿 · 释放）
+ - 状态：**已收工（释放）**。`ebec1e0..4fcf31c` 四个 commit 已推（main tip = `4fcf31c`）；
+   CI run `39022275319`（14m11s success）、Deploy to GitHub Pages `39022275381`（9m25s success）、
+   pages build `39022854334`（26s success）**三条全绿**；按 R11 等 run 终态后才推本收尾条。
+ - 本批交付（详见 CHANGELOG [Unreleased] 两节）：
+   ① `1b80621` CHANGELOG 结构清理——131 补录条目与中段陈旧 [Unreleased] 合并、126–132 降序、顶部重建空 [Unreleased]；
+   ② `466816c` OD-003 就地关闭（用户指派裁权＝①+② 合并）——设置→账号「上次恢复前快照」卡片
+      （元信息不含值/键清单不返回值/回滚可重复/删除不静默）+ 守护 8 例 + 两处观测口（空 catch 门禁 (a) 疗法）；
+   ③ `198b3db` P2 多文件交付评估——**暂缓（不做）**附四条触发条件，ROI 十条对账回写；
+   ④ `4fcf31c` 板面 push 前声明（R10）。
+ - 验证：本机全量 vitest **158 文件 / 1779 例** exit 0；e2e **104 例**（三视口）exit 0；
+   六门禁 + build:check + 源码态（623KB/38 块）全过；CI 3/3 全绿。
+ - 未发版、未占号——新内容全部以日期锚写在 CHANGELOG [Unreleased]；下一可用号仍以 AGENTS.md §二 为准（3.7.133）。
+ - 残留给人工（如实留账）：真机逐屏三态走查（Electron 窗口/手机触控/系统主题跟随/弱网）——
+   机器侧已覆盖到 e2e 104 例，视觉与真机交互仍需人眼；OD-001 第三方登录选型、
+   GitHub OAuth 真机验收（用户明示跳过）维持 OPEN。
+ - 释放：全部占用随批落地；无后台任务、无暂存残留、共享树 `git status` 零改动。
+
 ### [2026-10-17 17:43 UTC+8] ZCode 主会话（三件事完成 · **即将 push（R10 声明）**）
 - 状态：即将 push；推后另追加「已收工」条（本板只追加，不改上条）。
 - 待推区间：`ebec1e0..198b3db` 三个 commit（R3 全程显式 pathspec；pre-commit 的 check-source-state 均通过）：
