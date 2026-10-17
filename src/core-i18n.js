@@ -2937,6 +2937,9 @@ const MESSAGES = {
     "settings.testConn.noKey": "未配置 API Key",
     "settings.testConn.noModel": "未配置 Model",
     "settings.testConn.ok": "✓ 连接成功：base 可达、Key 有效、模型 {model} 可访问",
+    /* v3.7.132：服务端 /v1/models 返回 2xx 但**没给模型列表**时，只说 base+Key 通过 ——
+       原实现复用上一条文案，等于宣称"模型可访问"却从未校验过它（口号比事实大）。 */
+    "settings.testConn.okNoList": "✓ 连接成功：base 可达、Key 有效（服务端未返回模型列表，模型名未校验）",
     "settings.scanModels": "扫描模型",
     "settings.scan.noBase": "先填 Base URL 再扫描",
     "settings.scan.noKey": "先填 API Key 再扫描（拉模型列表也要鉴权）",
@@ -6869,6 +6872,7 @@ const MESSAGES = {
     "settings.testConn.noKey": "API Key not configured",
     "settings.testConn.noModel": "Model not configured",
     "settings.testConn.ok": "✓ Connected: base reachable, Key valid, model {model} accessible",
+    "settings.testConn.okNoList": "✓ Connected: base reachable, Key valid (server returned no model list — model name not verified)",
     "settings.scanModels": "Scan models",
     "settings.scan.noBase": "Fill in Base URL first",
     "settings.scan.noKey": "Fill in API Key first (listing models also needs auth)",

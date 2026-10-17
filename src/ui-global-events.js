@@ -200,6 +200,10 @@ $("#cfgTestConn").onclick = async function(){
     let msg = "";
     let status = r ? r.status : 0;
     let modelOk = true;
+    /* v3.7.132：区分「连接本身没通」与「连接通了、只是模型名不对」——
+       此前二者共用 ok=false，导致 modelMissing 那条文案**永远显示不出来**（被兜底分支覆盖），
+       用户看到的永远是笼统的「连接失败：HTTP xxx」。 */
+    let modelFailed = false;
     if(!ok){
       // 降级用 chat/completions max_tokens:1 探（验证 key 真能落到模型）
       try{
@@ -230,19 +234,32 @@ $("#cfgTestConn").onclick = async function(){
               method: "POST", headers: Object.assign({}, headers, { "Content-Type": "application/json" }),
               body: JSON.stringify({ model: ap.model, messages: [{ role: "user", content: "hi" }], max_tokens: 1, stream: false })
             });
-            if(r2.ok){ ok = true; modelOk = true; }
-            else { ok = false; status = r2.status; }
-          }catch(_e){ ok = false; }
+            if(r2.ok){
+              ok = true; modelOk = true;
+              /* 走的是 chat 探测 → 文案也必须说"模型响应"，别冒充"列表里核过" */
+              msg = t("settings.testConn.okViaChat", "✓ 连接成功（模型响应：{model}）").replace("{model}", ap.model);
+            }
+            else { ok = false; status = r2.status; modelFailed = true; }
+          }catch(_e){ ok = false; modelFailed = true; }
         } else if(list.indexOf(ap.model) >= 0){
           modelOk = true;
         }
-        msg = ok ? t("settings.testConn.ok", "✓ 连接成功：base 可达、Key 有效、模型 {model} 可访问").replace("{model}", ap.model)
-                 : t("settings.testConn.modelMissing", "Base + Key 通过，但模型 {model} 不在 /v1/models 列表中（HTTP {status}）").replace("{model}", ap.model).replace("{status}", String(status));
+        /* v3.7.132：**列表为空 ≠ 模型可访问**。原实现在 list 为空时落到同一个"模型可访问"文案，
+           等于宣称一件从未校验的事（口号比事实大）。空列表单独说清楚，别让用户以为验过了。
+           已经由 chat 探测写过 msg 的（`okViaChat`）不再覆盖 —— 否则又是"文案与验证方式不符"。 */
+        if(!msg){
+          msg = (list.length === 0)
+            ? t("settings.testConn.okNoList", "✓ 连接成功：base 可达、Key 有效（服务端未返回模型列表，模型名未校验）")
+            : t("settings.testConn.ok", "✓ 连接成功：base 可达、Key 有效、模型 {model} 可访问").replace("{model}", ap.model);
+        }
       }catch(_e){
-        msg = t("settings.testConn.ok", "✓ 连接成功").replace(": ", "：");
+        msg = t("settings.testConn.okNoList", "✓ 连接成功：base 可达、Key 有效（服务端未返回模型列表，模型名未校验）");
       }
     }
     if(ok && modelOk){ toast(msg, "ok", 4000); }
+    /* 黄色＝base 与 Key 都通过了、只差模型名；红色才是"连接本身没通"。
+       这两档的区分正是本按钮的价值所在（用户该改 Key 还是该改模型名，一目了然）。 */
+    else if(modelFailed){ toast(t("settings.testConn.modelMissing", "Base + Key 通过，但模型 {model} 不在 /v1/models 列表中（HTTP {status}）").replace("{model}", ap.model).replace("{status}", String(status)), "warn", 5000); }
     else if(!ok){ toast(t("settings.testConn.fail", "连接失败：") + " HTTP " + status, "error", 6000); }
     else { toast(msg, "warn", 5000); }
   })());
