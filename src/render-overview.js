@@ -654,7 +654,10 @@ function renderTasksPage(){
       </li>`;
     }).join("");
     body = `<div class="card"><h2>${ic("target")}${t("tasksPage.todo", "待办清单")} <span class="cnt-pill">${pending.length}</span></h2>` +
-      (pending.length ? `<ul class="todo-list">${rows}</ul>` : renderEmpty("no-today")) + `</div>`;
+      /* 本次（2026-10-18）：分两种空 —— 一条任务都没有（引导新建）vs 全都做完了（no-today）。
+         此前一律传 "no-today"，而该类型未登记 ⇒ 返回空串，两种空都渲染成一张空卡。 */
+      (pending.length ? `<ul class="todo-list">${rows}</ul>`
+        : tasks.length ? renderEmpty("no-today") : renderEmpty("no-tasks")) + `</div>`;
     $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
     $$("#main [data-tasks-done]").forEach(chk=>{
       chk.onchange = ()=>{
@@ -702,7 +705,12 @@ function renderTasksPage(){
     }).join("");
     return `<div class="kcol"><h4>${c.label}<span class="n">${list.length}</span></h4>${cards || ""}</div>`;
   }).join("");
-  body = `<div class="card"><h2>${ic("grid")}${t("tasksPage.kanban", "任务看板")} <span class="sub u-m-0">${t("tasksPage.kanban.sub", "点击卡片编辑 · 全场景")}</span></h2><div class="kanban">${colHtml}</div></div>`;
+  /* 本次（2026-10-18）修：整块看板为空时给空态 —— 此前三列都是 `${cards || ""}`，
+     连个"待办 0"的提示都没有，用户看到的是三条空栏，与场景页口径不一致
+     （render-scene-main.js 早有 `if(!tasks.length) return renderEmpty("no-tasks")`）。
+     只在**整块为空**时给：单列为空是常态（"进行中"常年 0），逐列塞空态是噪音。 */
+  const board = tasks.length ? `<div class="kanban">${colHtml}</div>` : renderEmpty("no-tasks");
+  body = `<div class="card"><h2>${ic("grid")}${t("tasksPage.kanban", "任务看板")} <span class="sub u-m-0">${t("tasksPage.kanban.sub", "点击卡片编辑 · 全场景")}</span></h2>${board}</div>`;
   $("#main").innerHTML = sanitizeHtml(_tasksHeadHtml() + body);
   $$("#main [data-tasks-card]").forEach(card=>{
     card.onclick = ()=>{ const id = card.getAttribute("data-tasks-card"); AppBridge.openTaskEdit(id); };

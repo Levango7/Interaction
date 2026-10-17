@@ -69,7 +69,9 @@ document.addEventListener("click", function(e){
   if(!act) return;
   const action = act.getAttribute("data-empty-action");
   if(action === "new-task"){
-    if(active==="overview"||active==="stats"||active==="recycle"){ setActive("office"); }
+    /* 本次（2026-10-18）补 "tasks"：任务中心（看板/待办）页没有内联新建表单，
+       #taskForm 只存在于场景页 —— 不切场景的话这个按钮点了只是重渲染一次，看着像没反应。 */
+    if(active==="overview"||active==="stats"||active==="recycle"||active==="tasks"){ setActive("office"); }
     render(); focusTaskTitleInput();
   }
 });

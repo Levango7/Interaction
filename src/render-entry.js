@@ -207,6 +207,18 @@ function renderEmpty(type){
       '<div class="empty-action"><button class="btn-primary" type="button" data-empty-action="new-task">' + t("empty.noTasksAction", "+ 新建任务") + '</button></div>' +
       '</div>';
   }
+  /* 本次（2026-10-18）登记：任务中心「待办清单」页此前调用 renderEmpty("no-today")，
+     而这个类型从未在下面的分支里登记 ⇒ 落到末尾 `return ""`，待办清空后渲染出的是
+     一张只有标题和「0」计数胶囊的空卡（同"死按钮"一族：看着像渲染了，其实什么都没有）。
+     文案与 no-tasks 分开：这里是"全都做完了"，不是"还没有任务"。 */
+  if(type === "no-today"){
+    return '<div class="empty-state">' +
+      '<div class="empty-icon">'+icon+'</div>' +
+      '<p class="empty-text"><strong>' + t("empty.noTodayTitle", "待办已清空") + '</strong></p>' +
+      '<p class="empty-text">' + t("empty.noTodayHint", "当前没有未完成的任务——都做完了，或都在「已完成」里") + '</p>' +
+      '<div class="empty-action"><button class="btn-primary" type="button" data-empty-action="new-task">' + t("empty.noTasksAction", "+ 新建任务") + '</button></div>' +
+      '</div>';
+  }
   if(type === "no-records"){
     return '<div class="empty-state">' +
       '<div class="empty-icon">'+icon+'</div>' +
@@ -264,6 +276,9 @@ function renderEmpty(type){
       '<p class="empty-text">操作后会在此显示历史</p>' +
       '</div>';
   }
+  /* 本次（2026-10-18）：未知类型不再静默返回空串 —— "漏登记"和"这里本就该空白"在调用方
+     看来一模一样，而前者正是 no-today 那一处的成因。留一条控制台警告让下一次现形。 */
+  if(type) console.warn("[renderEmpty] 未登记的空态类型：", type);
   return "";
 }
 
@@ -1588,5 +1603,7 @@ const EMPTY_ICONS = {
   "no-search-result": UI_ICONS.search,
   "no-notes": UI_ICONS.book,
   "no-backup": UI_ICONS.download,
-  "no-history": UI_ICONS.stats
+  "no-history": UI_ICONS.stats,
+  // 本次（2026-10-18）：待办清单清空（与 no-tasks 区分：这里是"做完了"）
+  "no-today": UI_ICONS.check
 };
