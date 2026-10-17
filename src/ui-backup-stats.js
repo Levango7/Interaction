@@ -563,6 +563,20 @@ function buildDiagReport(opts){
     };
     L.push("语义召回: " + (st ? (map[st.mode] || st.mode) : "状态读取失败"));
   } catch (e) { L.push("语义召回: 状态读取失败（" + ((e && e.message) || e) + "）"); }
+  /* v3.7.132：AI 用量 + 上次发送估算 —— usage 落盘（ai_tokens）自 v3.5.0 就在写、
+     发送估算（_estTokens）也早就存在，但都"落了盘/算了数却查不了"。这里是它们的展示口。 */
+  try {
+    const u = (typeof aiTokensUsage === "function") ? aiTokensUsage() : null;
+    L.push("AI 用量: " + (u && (u.total > 0 || u.today > 0)
+      ? ("今日 " + u.today + " · 累计 " + u.total + " tokens（近 " + u.days + " 天有记录）")
+      : "暂无记录（还没成功调用过 AI，或浏览器存储不可用）"));
+  } catch (e) { L.push("AI 用量: 读取失败（" + ((e && e.message) || e) + "）"); }
+  try {
+    const se = (typeof lastSendEstimate === "function") ? lastSendEstimate() : null;
+    L.push("上次发送: " + (se
+      ? (se.n + " 条 / 估算 ~" + se.tokens + " tokens（预算 " + se.budget + "）")
+      : "本页尚未发送过对话"));
+  } catch (e) { L.push("上次发送: 读取失败（" + ((e && e.message) || e) + "）"); }
   L.push("诊断条数: " + list.length);
   /* v3.7.118：上下文摘要状态 —— 折叠了几条、还是没启用。摘要只影响"发送时发什么"，
      本机历史不动；用户在这里能确认折叠确实在发生（而不是以为历史被删了）。 */

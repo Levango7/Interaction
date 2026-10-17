@@ -847,6 +847,8 @@ async function runChatLoop(messages, hist, sc){
   // T3.1：创建控制器 + 记录上次请求（重试用）+ 显示思考中
   chatController=createChatController();
   lastChatRequest={ messages:messages, hist:hist, sc:sc };
+  /* v3.7.132：发送前估算入账（估算/策略早已在，这里补「可观测」；向下调用 ai-tools，方向合法） */
+  if(typeof recordSendEstimate === "function") recordSendEstimate(messages);
   showChatThinking(true);
   try{
     let guard=0;

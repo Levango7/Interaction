@@ -2168,6 +2168,41 @@ function ctxBudgetTokens(){
   return Math.min(4000, Math.max(200, Math.round(n)));
 }
 
+/* ---------- v3.7.132：三件套之「可观测」—— 最近一次发送的上下文估算 ----------
+ * 估算（_estTokens）与策略（trimChatHist 裁剪 / ragInjectContext 装配预算 / 滚动摘要）早已存在，
+ * 缺的是"用户看得见"：上一轮到底发了多少条、估了多少 token、预算是多少。
+ * 记录点在 runChatLoop 入口（ai-retry 向下调用本函数，方向合法）；
+ * 展示点在诊断报告（ui-backup-stats → lastSendEstimate / aiTokensUsage）。 */
+let _lastSendEst = null;
+function recordSendEstimate(messages){
+  try{
+    _lastSendEst = {
+      n: Array.isArray(messages) ? messages.length : 0,
+      tokens: Array.isArray(messages) ? messages.reduce(function(s, m){
+        const c = m && m.content;
+        if(typeof c === "string") return s + _estTokens(c);
+        if(Array.isArray(c)) return s + c.reduce(function(n2, p){ return n2 + _estTokens(p && p.text); }, 0);
+        return s + _estTokens((m && m.title) || "");
+      }, 0) : 0,
+      budget: ctxBudgetTokens(),
+      at: Date.now(),
+    };
+  }catch(_e){ _lastSendEst = null; }
+  return _lastSendEst;
+}
+function lastSendEstimate(){ return _lastSendEst; }
+
+/** AI 用量（addTokensUsage 落盘的 ai_tokens 键）：今日 / 累计 / 有记录的天数。
+ *  该键自 v3.5.0 就在写，但全仓没有第二个读者 —— "落了盘却查不了"，这是它的第一个消费方。 */
+function aiTokensUsage(){
+  try{
+    const d = JSON.parse(localStorage.getItem(PREFIX + "ai_tokens") || '{"total":0,"days":{}}') || {};
+    const now = new Date();
+    const k = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+    return { today: (d.days && d.days[k]) || 0, total: d.total || 0, days: d.days ? Object.keys(d.days).length : 0 };
+  }catch(_e){ return { today: 0, total: 0, days: 0 }; }
+}
+
 /** 检索结果的引用标签：[序号·来源·召回方式] —— 用户能据此回查到原始条目 */
 function ragCiteLabel(h, n){
   const via = h.via === "both" ? t("rag.viaBoth","词法+语义")

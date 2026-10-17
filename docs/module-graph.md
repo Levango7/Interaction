@@ -22,7 +22,7 @@
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
 | `ai-tools` | AI | `ai-retry` `chain` `core` `core-i18n` `core-shared` `data-idb` `data-links` `data-rw` `util-markdown` | 22 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
-| `ai-retry` | AI | `ai-loop` `ai-tools` `core-shared` `data-links` `util-perf` | 36 |
+| `ai-retry` | AI | `ai-loop` `ai-tools` `core-shared` `data-links` `util-perf` | 37 |
 | `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 60 |
 | `render-scene-sub` | Render | `core-shared` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core-shared` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
@@ -34,7 +34,7 @@
 | `ui-scene-bind` | UI | `chain` `core-shared` `data-idb` `data-links` `data-rw` `render-scene-main` `render-scene-sub` | 17 |
 | `ui-palette` | UI | `ai-retry` `ai-tools` `core-commands` `core-shared` `data-links` `render-entry` `render-widgets` `ui-backup-stats` `ui-global-events` | 17 |
 | `ui-daily` | UI | `chain` `core-shared` `data-rw` | 5 |
-| `ui-backup-stats` | UI | `ai-retry` `ai-tools` `chain` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `render-entry` `render-widgets` | 29 |
+| `ui-backup-stats` | UI | `ai-retry` `ai-tools` `chain` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `render-entry` `render-widgets` | 31 |
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 46 |
 | `ui-hotkeys` | UI | `ai-retry` `core-commands` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 9 |
 | `ui-select` | UI | — | 0 |

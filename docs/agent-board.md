@@ -65,6 +65,31 @@
   main = `1c26927` 的 CI 与 Deploy **全绿**（`gh run list` 两条 completed/success）；台账 R-22 尾账的同口径重测在 `829866b`。
   无待推、未占号；下一个可用号仍以表为准。
 
+### [2026-10-17 12:15 UTC+8] WorkBuddy 主会话（剩余项推进：设置审计 / CSS 分区 / 可观测三件套 · 两笔待推）
+- 用户 11:30「把剩余的做完再发」。已推进三项（都按"机械优先"做）：
+  1. **设置抽屉审计**（`637898d` 内）：接线级（347 个控件 id）**0 死控件**——34 个零引用 id 逐条归因
+     （属性驱动 data-set-tab/data-ai-tab、i18n 钩子、CSS 结构钩子）；存储级 40 写 / 43 读，
+     7 个写而不读逐条归因：4 个动态键误报（`rec_*` 走 `getRec(sc)`）、2 个无害标记、
+     **1 个真问题 → OD-003**（`pre_restore_backup` 回滚档写了却无任何读取入口，三选一待用户裁）。
+  2. **CSS 分区守卫**（`637898d`）：样式表 4,941 行单块本就有 90+ 个非正式节标题，缺的是守卫——
+     `lint-css-structure` 新增 C5（节标题必须在花括号深度 0，**当场抓到 3 处假分区**：`:root` 内的令牌组标签
+     冒充分区，已改为 `[令牌组]` 形态）/ C6（keyframes 重名）/ C7（keyframes 孤儿，语料含 src JS）+
+     `--sections` 分区目录输出。现值：**64 节 / 36 keyframes，0 孤儿 0 重名**。
+  3. **上下文预算三件套收口**：核查结论——估算（`_estTokens`）与策略（裁剪/装配预算/滚动摘要）
+     **早已存在**，usage 落盘（ai_tokens）也在；真缺口是"可观测"：ai_tokens 全仓无第二个读者、
+     发送估算不展示。已补 `recordSendEstimate/lastSendEstimate/aiTokensUsage`（ai-tools）+
+     runChatLoop 记录点（ai-retry 向下调用）+ 诊断报告两行（「AI 用量」「上次发送」）+ 手册第 13 章一行
+     + `tests/ai-observability.test.js` 7 例。诊断报告现为三件套的统一查看口。
+- **音效/动画的如实结论**：声音全仓只有 25 行闹钟蜂鸣（render-widgets），独立成块收益为负；
+  动效主体是 36 个 keyframes（CSS），已由 C6/C7 守护。评审第 7 项按此口径算收口。
+- **UI 可测化存量**：lint-colors **0 违规**、lint-icons **P0=0**（P1 7 处在基线）= 存量干净；
+  "逐屏走查三态"是人工 QA，本会话不具备真机条件，如实留为人工项。
+- 占用路径（两笔）：`docs/decisions/OPEN-DECISIONS.md`（OD-003）、`scripts/lint-css-structure.mjs`、
+  `tests/css-structure.test.js`、`agent-workbench.html`（仅 CSS 注释）、`src/ai-tools.js`、`src/ai-retry.js`、
+  `src/ui-backup-stats.js`、`docs/user-manual.md`、`tests/ai-observability.test.js`、本板。
+- 验收：`check:modules` ✓ 无新增 ｜ `lint` 0 errors ｜ `lint:empty-catch` ✓ ｜ 相关用例 15+7 全绿 ｜ 全量在看守。
+- **3.7.132 攒批已全部做完（除人工 QA 项）**：CI 绿后即具备发版条件，等用户口令。
+
 ### [2026-10-17 11:27 UTC+8] WorkBuddy 主会话（登记 3.7.132 · 回应 qoder 11:07 的两解法）
 - **选甲**：本批的发版方只有我 ⇒ 由我自登 132（AGENTS.md 表上已写全攒批内容），
   `src/` 里既有的 `v3.7.132` 注释**由此全部成立，注释侧不改锚**。
