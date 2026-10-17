@@ -105,7 +105,8 @@
   /* ===== 层级令牌体系（替代魔法数字，后层级必高于先层级） =====
      base→sticky→sidebar(移动底栏) →overlay→drawer→popover(命令面板) →modal(全屏弹窗) →toast(最顶) →max(skip-link 跳链) */
   --z-under:2; --z-sticky:20; --z-sidebar:40; --z-overlay:50; --z-drawer:60; --z-popover:70; --z-modal:80; --z-toast:90; --z-max:100;
-  /* ===== T4.1 设计令牌体系（系统化间距/字号/圆角/阴影/过渡） ===== */
+  /* [令牌组] T4.1 设计令牌体系（系统化间距/字号/圆角/阴影/过渡）。v3.7.132：由 ===== 形态改为 [令牌组] ——
+   它是 :root **内部**的分组标签，不是样式表顶层分区；===== 形态保留给真分区（css-structure 门禁 C5） */
 /* 间距体系（4px 基线网格；v3.1.2 补半档 --space-1h:6px / --space-2h:10px——
 6px 是徽标/标签条微间隙、10px 是按钮与输入框横向留白的高频设计值，正式收编避免散落） */
 --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
@@ -133,7 +134,7 @@
   --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
   /* 圆角体系（v2.1.1：补 --radius-full 胶囊圆角，此前 9 处引用靠回退兜底） */
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
-  /* ===== B2 布局宽度体系（统一内容宽度，宽屏防卡片无限拉伸） ===== */
+  /* [令牌组] B2 布局宽度体系（统一内容宽度，宽屏防卡片无限拉伸）。同上：:root 内组标签，非顶层分区 */
   --content-max:1240px;  /* 主内容区最大宽度：≥1440 视口抬升到 --content-max-wide */
   --content-max-wide:1440px;
 
@@ -2987,7 +2988,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   /* 顶栏第二行暗色层次：表面比亮色更平（暗色下层次差异要更克制） */
   --tb-row2-bg:transparent;
   --canvas-glow:radial-gradient(ellipse 70% 40% at 50% -10%,rgba(91,155,245,.2),transparent 55%),radial-gradient(ellipse 40% 30% at 90% 0%,rgba(181,122,232,.16),transparent 50%);
-  /* ===== T4.1 设计令牌体系（暗色覆盖：间距/字号/圆角/过渡与亮色一致，阴影加深以保持可见性） ===== */
+  /* [令牌组] T4.1 设计令牌体系（暗色覆盖：间距/字号/圆角/过渡与亮色一致，阴影加深以保持可见性）。同上 */
   --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
   --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
