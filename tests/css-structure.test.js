@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { scanCssStructure } from "../scripts/lint-css-structure.mjs";
+import { scanCssStructure, findOrphanKeyframes } from "../scripts/lint-css-structure.mjs";
 
 /**
  * css-structure.test.js —— 样式表**结构**门禁的契约与自证
@@ -113,5 +113,46 @@ describe("CSS 契约（防静默回退）", () => {
     expect(rule[0]).toMatch(/top:calc\(var\(--chrome-h\) \+ var\(--space-3\)\)/);
     expect(rule[0]).not.toMatch(/top:calc\(var\(--topbar-h\)/);
     expect(SRC).toMatch(/--chrome-h:110px/);
+  });
+});
+
+describe("v3.7.132 CSS 分区守卫（节标题 / keyframes 台账）", () => {
+  /* 背景：样式表里有 90+ 个 `/* ===== 标题 ===== *∕` 注释，是事实上的分区目录，
+     但没有任何门禁管它们 —— 嵌进规则肚子的"节标题"会骗按标题导航的人。
+     另外新增了 keyframes 台账三查：嵌套节标题 / 重名 / 孤儿（定义了没人引用）。 */
+
+  it("C5 顶层节标题被台账收录（title + line）", () => {
+    const r = scanCssStructure("<style>/* ===== 布局 ===== */\n.a{color:red}\n</style>");
+    expect(r.errors).toEqual([]);
+    expect(r.sections.map((x) => x.title)).toEqual(["布局"]);
+  });
+
+  it("C5 嵌进规则内部的节标题 = 假分区，必须报错", () => {
+    const r = scanCssStructure("<style>.a{\n  /* ===== 假分区 ===== */\n  color:red;\n}\n</style>");
+    const hit = r.errors.filter((e) => e.code === "C5 SECTION_NESTED");
+    expect(hit.length, "嵌套节标题必须被抓到").toBe(1);
+    expect(hit[0].msg).toMatch(/深度 1/);
+  });
+
+  it("C6 同名 @keyframes 后者静默覆盖前者，必须报错", () => {
+    const r = scanCssStructure("<style>@keyframes spin{from{}}@keyframes spin{to{}}</style>");
+    const hit = r.errors.filter((e) => e.code === "C6 KEYFRAMES_DUP");
+    expect(hit.length).toBe(1);
+    expect(hit[0].msg).toMatch(/spin/);
+  });
+
+  it("C7 定义了没人引用的 keyframes = 孤儿（含 JS 语料一起判）", () => {
+    const css = "<style>@keyframes spin{from{}}\n.b{animation:spin 1s}\n@keyframes ghost{from{}}</style>";
+    const kfs = scanCssStructure(css).keyframes;
+    expect(kfs.map((k) => k.name).sort()).toEqual(["ghost", "spin"]);
+    /* 语料必须**含定义本身**（CLI 传的就是整份文件）：判据是"出现次数 > 定义次数" */
+    const orphans = findOrphanKeyframes(kfs, css);
+    expect(orphans.map((o) => o.name)).toEqual(["ghost"]);
+  });
+
+  it("C7 反例：animation 简写里时长在前（1s spin）也算引用 —— 误报孤儿比漏报贵", () => {
+    const css = "<style>@keyframes spin{from{}}\n.b{animation:1s spin infinite}</style>";
+    const kfs = scanCssStructure(css).keyframes;
+    expect(findOrphanKeyframes(kfs, css)).toEqual([]);
   });
 });

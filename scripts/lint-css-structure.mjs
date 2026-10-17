@@ -68,6 +68,13 @@ export function findStyleBlocks(text) {
 export function scanCssStructure(src) {
   const errors = [];
   let totalRules = 0, totalAt = 0;
+  /* v3.7.132（CSS 分区守卫）：分区注释与 keyframes 台账。
+     · sections：`/* ===== 标题 ===== *／` 形态的注释 —— 它们是样式表**事实上的分区目录**
+       （当前 90+ 个）。守两条：必须在花括号深度 0（嵌在规则里的"节标题"是假分区，会骗导航）；
+       重复标题不拦（历史确实有同名节），由 --sections 报告暴露给人看。
+     · keyframes：`@keyframes` 台账 —— 守重复名（后者静默覆盖前者）与孤儿（定义了没人引用）。 */
+  const sections = [];        /* { title, line, depth } */
+  const keyframes = [];       /* { name, line } */
   const blocks = findStyleBlocks(src).map((s) => ({
     css: src.slice(s.bodyStart, s.bodyEnd),
     startLine: src.slice(0, s.bodyStart).split("\n").length,
@@ -78,6 +85,7 @@ export function scanCssStructure(src) {
     let buf = "";
     let line = startLine;
     let inComment = false, inStr = null, paren = 0;
+    let commentBuf = "";
     const flushDecl = () => {
       const t = buf.trim();
       buf = "";
@@ -89,13 +97,22 @@ export function scanCssStructure(src) {
     for (let i = 0; i < css.length; i++) {
       const c = css[i], n = css[i + 1];
       if (c === "\n") line++;
-      if (inComment) { if (c === "*" && n === "/") { inComment = false; i++; } continue; }
+      if (inComment) {
+        if (c === "*" && n === "/") {
+          inComment = false; i++;
+          /* 分区注释台账（注释体结束的那一刻才完整） */
+          const m = /^\s*=====\s*(.+?)\s*=====\s*$/.exec(commentBuf);
+          if (m) sections.push({ title: m[1], line, depth: stack.length });
+          commentBuf = "";
+        } else commentBuf += c;
+        continue;
+      }
       if (inStr) {
         if (c === "\\") { i++; continue; }
         if (c === inStr) inStr = null;
         continue;
       }
-      if (c === "/" && n === "*") { inComment = true; i++; continue; }
+      if (c === "/" && n === "*") { inComment = true; commentBuf = ""; i++; continue; }
       if (c === '"' || c === "'") { inStr = c; buf += c; continue; }
       if (c === "(") { paren++; buf += c; continue; }
       if (c === ")") { paren = Math.max(0, paren - 1); buf += c; continue; }
@@ -105,7 +122,11 @@ export function scanCssStructure(src) {
         const prelude = buf.trim();
         buf = "";
         const kind = prelude.startsWith("@") ? "at" : "rule";
-        if (kind === "at") totalAt++; else totalRules++;
+        if (kind === "at") {
+          totalAt++;
+          const kf = /^@keyframes\s+([\w-]+)/.exec(prelude);
+          if (kf) keyframes.push({ name: kf[1], line });
+        } else totalRules++;
         const top = stack[stack.length - 1];
         if (top && top.kind === "rule") {
           errors.push({ code: "E3 NESTED_RULE", line, msg:
@@ -143,8 +164,43 @@ export function scanCssStructure(src) {
     for (const open of stack) {
       errors.push({ code: "E2 UNCLOSED", line: open.line, msg: `\`${open.prelude}\` 的 \`{\` 直到样式块结束都没闭合` });
     }
+
+    /* ---- C5 SECTION_NESTED：分区注释必须落在花括号深度 0 ----
+       嵌在规则内部的"节标题"会让按标题导航的人直接跳进某条规则的肚子 —— 假分区比没有分区更误导。 */
+    for (const sec of sections) {
+      if (sec.depth > 0) {
+        errors.push({ code: "C5 SECTION_NESTED", line: sec.line, msg:
+          `分区注释「===== ${sec.title} =====」出现在花括号深度 ${sec.depth}（嵌在某条规则的内部）`
+          + ` —— 分区标题必须落在顶层，否则按标题导航会跳进规则的肚子` });
+      }
+    }
+    /* ---- C6 KEYFRAMES_DUP：同名 @keyframes 后者静默覆盖前者 ---- */
+    const seen = new Map();
+    for (const kf of keyframes) {
+      if (seen.has(kf.name)) {
+        errors.push({ code: "C6 KEYFRAMES_DUP", line: kf.line, msg:
+          `@keyframes \`${kf.name}\` 重复定义（首次在第 ${seen.get(kf.name)} 行）—— `
+          + `后者会静默覆盖前者，两处动画实际只有一份生效` });
+      } else seen.set(kf.name, kf.line);
+    }
   }
-  return { errors, blocks, totalRules, totalAt };
+  return { errors, blocks, totalRules, totalAt, sections, keyframes };
+}
+
+/* ---------- 2b. 孤儿 @keyframes（需要"引用语料"才能判，故独立成纯函数） ----------
+   判据刻意放宽：`animation: 1s spin ...` 这类「时长在前」的合法简写、CSS 变量间接引用、
+   甚至 JS 里 style.animation = "..." —— 只要名字在语料里以整词出现过**超过定义次数**，就不算孤儿。
+   误报孤儿比漏报孤儿贵：前者会逼人删掉活代码。 */
+export function findOrphanKeyframes(keyframes, corpus) {
+  const names = new Map();
+  for (const kf of keyframes) names.set(kf.name, (names.get(kf.name) || 0) + 1);
+  const orphans = [];
+  for (const [name, defCount] of names) {
+    const re = new RegExp("(?<![\\w$-])" + name.replace(/\$/g, "\\$") + "(?![\\w$-])", "g");
+    const uses = (corpus.match(re) || []).length;
+    if (uses <= defCount) orphans.push({ name, defCount, uses, line: keyframes.find((k) => k.name === name).line });
+  }
+  return orphans;
 }
 
 /* ---------- 3. CLI（被 import 时不执行） ---------- */
@@ -157,17 +213,43 @@ if (isMain) {
     ? path.resolve(process.argv[2])
     : path.resolve(__dirname, "..", "agent-workbench.html");
   if (!fs.existsSync(file)) { console.error(`ERR: 找不到目标文件 ${file}`); process.exit(2); }
-  const { errors, blocks, totalRules, totalAt } = scanCssStructure(fs.readFileSync(file, "utf8"));
+  const text = fs.readFileSync(file, "utf8");
+  const { errors, blocks, totalRules, totalAt, sections, keyframes } = scanCssStructure(text);
   if (!blocks.length) { console.error("ERR: 目标文件里没有 <style> 块"); process.exit(2); }
   const rel = path.relative(process.cwd(), file) || file;
+
+  /* --sections：输出分区目录（给人看的导航，不判失败） */
+  if (process.argv.includes("--sections")) {
+    console.log(`[lint-css-structure] ${rel} 分区目录：${sections.length} 节 / ${keyframes.length} 个 @keyframes`);
+    const lines = text.split("\n");
+    for (let i = 0; i < sections.length; i++) {
+      const end = i + 1 < sections.length ? sections[i + 1].line - 1 : (text.split("\n").length);
+      console.log(`  L${String(sections[i].line).padStart(5)}-L${String(end).padStart(5)}  ${sections[i].title}`);
+    }
+    console.log(`  （@keyframes：${keyframes.map((k) => k.name).join(", ")}）`);
+  }
+
+  /* ---- C7 KEYFRAMES_ORPHAN：定义了却没人引用（语料 = 本文件 + src/*.js，防漏 JS 侧内联动画） ---- */
+  let corpus = text;
+  const srcDir = path.join(__dirname, "..", "src");
+  if (fs.existsSync(srcDir)) {
+    for (const f of fs.readdirSync(srcDir).filter((x) => x.endsWith(".js"))) {
+      corpus += "\n" + fs.readFileSync(path.join(srcDir, f), "utf8");
+    }
+  }
+  for (const o of findOrphanKeyframes(keyframes, corpus)) {
+    errors.push({ code: "C7 KEYFRAMES_ORPHAN", line: o.line, msg:
+      `@keyframes \`${o.name}\` 定义了但全仓（样式表 + src JS）没有任何整词引用 —— 死动画，删掉或补引用` });
+  }
+
   if (errors.length) {
     console.error(`[lint-css-structure] ✗ ${rel}：${errors.length} 处结构问题`);
     for (const e of errors) console.error(`  ${e.code}  第 ${e.line} 行  ${e.msg}`);
     process.exit(1);
   }
   if (process.argv.includes("--verbose")) {
-    console.log(`[lint-css-structure] ✓ ${rel}：${blocks.length} 个 style 块 / ${totalRules} 条规则 / ${totalAt} 个 at-rule —— 括号配平、无意外嵌套`);
+    console.log(`[lint-css-structure] ✓ ${rel}：${blocks.length} 个 style 块 / ${totalRules} 条规则 / ${totalAt} 个 at-rule / ${sections.length} 节 —— 括号配平、无意外嵌套、分区与 keyframes 台账干净`);
   } else {
-    console.log(`[lint-css-structure] ✓ ${totalRules} 条规则括号配平、无意外嵌套`);
+    console.log(`[lint-css-structure] ✓ ${totalRules} 条规则括号配平、无意外嵌套（${sections.length} 节 / keyframes 无孤儿）`);
   }
 }
