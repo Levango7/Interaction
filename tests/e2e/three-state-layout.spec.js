@@ -96,33 +96,36 @@ for (const [stateName, tasks] of STATES) {
       await waitMainRendered(page);
 
       /* ---- 反向对照：先证明这把尺子量得出东西 ---- */
-      const controlHit = await page.evaluate((collectSrc) => {
-        const collect = eval("(" + collectSrc + ")");
+      /* 三步分开（注入 → 用同一个探测器量 → 移除），不把探测器源码 eval 进页面：
+         页面内 eval 受 CSP 约束，而 CDP 的 evaluate 不受 —— 两者混用会出现
+         "本机能过、换了 CSP 就红"的隐性耦合，没必要。 */
+      await page.evaluate(() => {
         const box = document.createElement("div");
         box.id = "overflow-control";
         box.style.cssText = "width:120px;white-space:nowrap;overflow:visible";
         box.textContent = "对照用超长文本".repeat(12);
         document.getElementById("main").appendChild(box);
-        const hit = collect().filter((x) => x.id === "overflow-control");
-        box.remove();
-        return hit.length ? hit[0].over : 0;
-      }, collectOverflow.toString());
-      expect(controlHit, "探测器失效：人为注入的溢出都没抓到 ⇒ 本 spec 的『零溢出』不可信").toBeGreaterThan(2);
+      });
+      const controlHit = await page.evaluate(collectOverflow);
+      await page.evaluate(() => {
+        const el = document.getElementById("overflow-control");
+        if (el) el.remove();
+      });
+      const hit = controlHit.filter((x) => x.id === "overflow-control");
+      expect(hit.length, "探测器失效：人为注入的溢出都没抓到 ⇒ 本 spec 的『零溢出』不可信").toBe(1);
+      expect(hit[0].over, "对照块的溢出量应显著大于阈值").toBeGreaterThan(2);
 
       /* ---- 全视图逐个量 ---- */
       const bad = [];
       for (const view of VIEWS) {
         await page.evaluate((v) => { window.setActive(v); window.render(); }, view);
         await waitMainRendered(page);
-        const r = await page.evaluate((collectSrc) => {
-          const collect = eval("(" + collectSrc + ")");
-          return {
-            docOver: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-            els: collect(),
-          };
-        }, collectOverflow.toString());
-        if (r.docOver > 1) bad.push(`${view}：文档横向溢出 ${r.docOver}px`);
-        for (const e of r.els) bad.push(`${view}：<${e.sel}${e.id ? "#" + e.id : ""}> 溢出 ${e.over}px · "${e.text}"`);
+        const docOver = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+        );
+        if (docOver > 1) bad.push(`${view}：文档横向溢出 ${docOver}px`);
+        const els = await page.evaluate(collectOverflow);
+        for (const e of els) bad.push(`${view}：<${e.sel}${e.id ? "#" + e.id : ""}> 溢出 ${e.over}px · "${e.text}"`);
       }
 
       expect(bad, `[${stateName}] 内容画到盒子外面（视口 ${page.viewportSize().width}px）：\n  ` + bad.join("\n  ")).toEqual([]);
