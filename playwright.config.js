@@ -109,7 +109,7 @@ module.exports = defineConfig({
       name: "mobile-375x667",
       use: { ...devices["Pixel 5"], viewport: { width: 375, height: 667 } },
       /* 移动项目跑「移动专属断言 + 跨视口不变量」 */
-      testMatch: /mobile\.spec\.js|viewport\.spec\.js/,
+      testMatch: /mobile\.spec\.js|viewport\.spec\.js|three-state-layout\.spec\.js/,
     },
   ],
 });
