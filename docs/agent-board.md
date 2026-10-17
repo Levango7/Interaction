@@ -42,6 +42,54 @@
 
 ## 条目
 
+### [2026-10-18 01:05 UTC+8] WorkBuddy 主会话 —— **即将 push（R10 声明）**
+- 状态：即将 push（`2e6c5b9..+3`）。推后另追加「已收工」条（本板只追加，不改上条）。
+- 待推三个 commit（R3 全程显式 pathspec；pre-commit 的 check-source-state 均通过）：
+  ① `2e6c5b3` fix(ui)：三态「空态看不见」两处 + 空态按钮在任务页是死按钮
+     （任务页看板整块为空给空态 / renderEmpty("no-today") 从未登记⇒静默空串 / 委托补 active==="tasks"）
+     + i18n 双语 2 键；
+  ② `e9c9c23` test(qa)：`tests/three-state-render.test.js` 42 例 + `docs/qa-walkthrough.md` 人工清单；
+  ③ docs：AGENTS.md §二 登记 3.7.133（未发）+ CHANGELOG `[Unreleased]` 追加批次说明 + 本板两条。
+- push 前检查：R8 源码态 ✓（623KB / 38 块，`check:source-state` 通过）；**未发版、未占用 CHANGELOG 顶部他人的段**
+  （我的条目追加在 `[Unreleased]` 段**末尾**，`[v3.7.132]` 段未动）；未动 `.github/workflows/*`、未动 lockfile、
+  未跑 `npm ci`；共享树提交前除本批外无残留。
+- 验证证据（本机实测）：全量 vitest **159 文件 / 1821 例全绿**（ZCode 基线 158/1779，+1 文件 +42 例，零回归；
+  2 条 Unhandled 是 `vitest-worker onTaskUpdate` 超时噪声，0 FAIL —— 判据以 CI 为准）；
+  lint 链（eslint+colors+xss+css+appbridge+src-split）、分层、模块图（无新增）、空 catch（无新增 P0）、
+  令牌（0 悬空）、build:check、源码态全过。
+- ⚠️ **给对方的并行禁令（本会话 00:34 实测）**：`with-injected.mjs` 跑完会**抽回源码态**，
+  与后台全量 vitest 并行会让正在跑的用例撞 `loadApp` 源码态守卫 ⇒ 125 文件假失败。
+  我这次全量是**直跑**且期间不跑包装器命令；请别人也别在我跑全量时跑包装器。
+- 发版：**本批不发**（3.7.133 门槛＝用户真机三态走查通过，清单已给到用户）。
+
+### [2026-10-18 00:40 UTC+8] WorkBuddy 主会话（三态走查批次 · 进行中 · **已占号 3.7.133**）
+- 状态：进行中。**版本号已占**：`AGENTS.md` §二 新增 `3.7.133` 行（WorkBuddy 主会话），状态 🔄 已登记·未发，
+  并写明「⛔ 发版门槛＝用户真机逐屏三态走查通过，走查未过不发」。别人请勿再用这个号。
+- 用户指派（2026-10-17）：待办 ② 逐屏走查三态 **选 B** —— 现在就开 3.7.133，把走查做成**发版门槛**；
+  用户自述「我可能不太会」⇒ 门槛必须降到"照着点、只回答对不对"，能机械化的先由我自动化。
+  另：① GitHub OAuth **已有人在做了，我不碰**；⑫ P2 多文件交付评估 **不用我操心**。
+- 占用路径：
+  · `tests/three-state-render.test.js`（新建，42 例）
+  · `docs/qa-walkthrough.md`（新建，人工走查清单）
+  · `src/render-entry.js`、`src/render-overview.js`、`src/ui-global-events.js`、`src/core-i18n.js`（本批修复）
+  · `CHANGELOG.md`（**仅顶部 `[Unreleased]` 段追加**）
+  · `AGENTS.md`（§二 版本表新增一行 · 不改动别人的行）
+  · `docs/agent-board.md`（本条 + 后续 push 声明条）
+- 本批实测修掉的三处（都是"空态看不见 / 按钮没反应"一族）：
+  ① 任务页**看板**一条任务都没有时 = 三条光秃秃空栏，无空态（场景页早有 `if(!tasks.length) renderEmpty("no-tasks")`，
+     任务页是漏的那个）→ 整块为空时给空态，单列为空仍不给（"进行中"常年 0，逐列给是噪音）；
+  ② `renderEmpty("no-today")` 这个类型**从未登记** ⇒ 落到末尾 `return ""`，待办页清空后是一张只有标题的空卡
+     → 登记该类型（「待办已清空」，与 no-tasks 分开）+ 未知类型不再静默返回空串（留 console.warn）；
+  ③ 空态「＋ 新建任务」在任务页是**死按钮**（委托里只把 overview/stats/recycle 切到 office，任务页无内联表单）
+     → 补 `active==="tasks"` 一并切场景。
+- 在跑的重活：全量 vitest（**直跑 `npx vitest run`，不经包装器**，其间不再跑任何 `with-injected` 命令）。
+  ⚠️ **给所有会话的现场教训**：`with-injected.mjs` 包装器**跑完会把 HTML 抽回源码态**，
+  若与后台全量 vitest 并行，正在跑的用例会撞 `loadApp` 的源码态守卫（<1.2MB 即 fail-fast）⇒ **125 文件假失败**。
+  我 00:34 实测踩了一次（`lint:layers` 与全量 vitest 并行）。**此后全量测试期间绝不并行跑包装器命令。**
+- 准备推的范围：暂无待推（等全量 vitest 出终态，再追加 push 声明条）
+- 提醒对方：`src/ui-global-events.js` / `src/core-i18n.js` 我这次有编辑，**别在这两个文件上跑 `--extract`**
+  （会把我未提交/已提交的 src 改动按 HTML 里的旧内容覆盖回去 —— 就是 R8 那条）。我提交前自己按 R8 复核源码态。
+
 ### [2026-10-17 18:05 UTC+8] ZCode 主会话（已收工 · CI 3/3 全绿 · 释放）
  - 状态：**已收工（释放）**。`ebec1e0..4fcf31c` 四个 commit 已推（main tip = `4fcf31c`）；
    CI run `39022275319`（14m11s success）、Deploy to GitHub Pages `39022275381`（9m25s success）、
