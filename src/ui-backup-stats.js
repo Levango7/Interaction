@@ -484,6 +484,147 @@ function doIdbImport(file){
   }
 })();
 
+/* ---------- OD-003（2026-10-17 批次）：云恢复前回滚档的消费入口 ----------
+   v3.7.52 起，_applyCloudSnapshot（render-overview.js）在云端快照覆盖本机前，会把本机全部键值
+   写进 wb_agent_pre_restore_backup；但它被同步/导出双双排除后，**全仓没有任何读取路径** ——
+   写了就永远躺在 localStorage 里，注释自述的「至少能人工比对/回滚」只对开 devtools 的人成立。
+   R-24 同型原则：保护语义必须可被消费，否则是假保护。本块补上消费四件套 + 卡片渲染。
+   安全口径与 doImport 对称：键名与体积可见、**值绝不渲染**（values 只进回滚写回）；
+   回滚是破坏性操作，按钮流二次确认 + 完成后 toast + 延时 reload。 */
+const PRE_RESTORE_BACKUP_KEY = PREFIX + "pre_restore_backup";
+/** 读回滚档；无档 / JSON 损坏 / 形状不符 → null（损坏按「没有」处理：卡片隐藏比显示乱码诚实） */
+function _preRestoreRead(){
+  try{
+    const raw = localStorage.getItem(PRE_RESTORE_BACKUP_KEY);
+    if(!raw) return null;
+    const snap = JSON.parse(raw);
+    if(!snap || typeof snap !== "object" || !snap.keys || typeof snap.keys !== "object") return null;
+    return snap;
+  }catch(e){ return null; }
+}
+/** 元信息（不含任何键值）：{ at, keyCount, bytes }；无档/损坏返回 null */
+function preRestoreInfo(){
+  const snap = _preRestoreRead();
+  if(!snap) return null;
+  const keys = snap.keys || {};
+  return { at: Number(snap.at) || 0, keyCount: Object.keys(keys).length, bytes: JSON.stringify(keys).length * 2 };
+}
+/** 键清单：只含键名与体积（UTF-16 估算），绝不返回值 —— 值只进回滚写回、不进任何展示面 */
+function preRestoreKeyList(){
+  const snap = _preRestoreRead();
+  if(!snap) return null;
+  return Object.keys(snap.keys).map(k => ({ key: k, bytes: (String(k).length + String(snap.keys[k]).length) * 2 }));
+}
+/**
+ * 回滚：把回滚档的键值写回本机（回滚档自身除外——它保持原样，可重复使用）。
+ * 会话层/缓存复位与 doImport 同序（cfg 缓存、设备密钥、会话内存、撤销栈），
+ * 再 emitDataMutate 让 RAG/同步按 diff 收敛；单键写失败不中断其余键、进诊断面板。
+ * @returns {{ok:true, restored:number, failed:string[]} | {ok:false, err:string}}
+ */
+function rollbackPreRestore(){
+  const snap = _preRestoreRead();
+  if(!snap) return { ok: false, err: "no-snapshot" };
+  let restored = 0; const failed = [];
+  Object.keys(snap.keys).forEach(k => {
+    if(k === PRE_RESTORE_BACKUP_KEY) return;
+    try{ localStorage.setItem(k, snap.keys[k]); restored++; }
+    catch(e){ failed.push(k); try{ pushDiag("warn", "pre-restore rollback write failed: "+((e&&e.message)||e), {where:"rollbackPreRestore", key:k}); }catch(_e2){} }
+  });
+  _cfgCache = null; _deviceKey = null;
+  try{ _resetSessions(); _reloadChatsFromStorage(); }catch(_){ /* noop */ }
+  clearUndoStack();
+  try{ initCrypto(); }catch(e){ /* 降级明文：与 doImport 同口径 */ }
+  try{ if(typeof emitDataMutate === "function") emitDataMutate("rollback"); }catch(e){ /* 索引不阻塞回滚 */ }
+  try{ render(); }catch(e){ /* noop */ }
+  return { ok: true, restored, failed };
+}
+/** 删除回滚档。返回是否删除成功 —— 配额满/隐私模式下 removeItem 会抛，
+    「以为删了其实还在」比不删更糟（与自动备份失败告知同纪律）。 */
+function deletePreRestoreBackup(){
+  try{ localStorage.removeItem(PRE_RESTORE_BACKUP_KEY); return true; }
+  catch(e){ try{ if(typeof pushDiag==="function") pushDiag("warn", "pre-restore backup delete failed: "+((e&&e.message)||e), {where:"deletePreRestoreBackup"}); }catch(_){} return false; }
+}
+/** 渲染卡片：无档 → 标题与整块一并隐藏（诚实态：没有就说没有）；有档 → 元信息三行，全部 textContent 写入 */
+function renderPreRestoreCard(){
+  if(typeof document === "undefined") return;
+  const title = document.getElementById("preRestoreTitle");
+  const box = document.getElementById("preRestoreBox");
+  if(!title && !box) return;
+  const info = preRestoreInfo();
+  if(!info){
+    if(title) title.classList.add("u-hidden");
+    if(box) box.classList.add("u-hidden");
+    return;
+  }
+  if(title) title.classList.remove("u-hidden");
+  if(box) box.classList.remove("u-hidden");
+  const at = document.getElementById("preRestoreAt");
+  const kn = document.getElementById("preRestoreKeys");
+  const sz = document.getElementById("preRestoreSize");
+  if(at) at.textContent = info.at ? new Date(info.at).toLocaleString() : "—";
+  if(kn) kn.textContent = info.keyCount + " " + t("unit.keys", "键");
+  if(sz) sz.textContent = (info.bytes / 1024).toFixed(1) + " KB";
+}
+/** 键清单展开/收起（按钮文字随之切换；清单行只含键名+体积） */
+function _preRestoreListToggle(){
+  const box = document.getElementById("preRestoreKeyList");
+  if(!box) return;
+  const btn = document.getElementById("btnPreRestoreList");
+  if(!box.classList.contains("u-hidden")){
+    box.classList.add("u-hidden");
+    if(btn) btn.textContent = t("api.preRestoreList", "查看键清单");
+    return;
+  }
+  const list = preRestoreKeyList();
+  box.textContent = "";
+  if(!list || !list.length){
+    const p = document.createElement("p");
+    p.textContent = t("api.preRestoreNone", "暂无（云端恢复后自动留存）");
+    box.appendChild(p);
+  }else{
+    list.forEach(it => {
+      const row = document.createElement("div");
+      const name = document.createElement("span");
+      name.textContent = it.key;
+      const size = document.createElement("span");
+      size.className = "u-text-dim";
+      size.textContent = " · " + (it.bytes / 1024).toFixed(1) + " KB";
+      row.appendChild(name); row.appendChild(size); box.appendChild(row);
+    });
+  }
+  box.classList.remove("u-hidden");
+  if(btn) btn.textContent = t("api.preRestoreHideList", "收起键清单");
+}
+function _preRestoreRollbackFlow(){
+  if(!preRestoreInfo()){ toast(t("api.preRestoreNone", "暂无（云端恢复后自动留存）"), "warn"); return; }
+  if(!confirm(t("api.preRestoreRollbackConfirm", "将用此快照覆盖本机当前数据（无法撤销，建议先导出备份）。确定继续？"))) return;
+  const r = rollbackPreRestore();
+  if(!r.ok){ toast(t("err.rollbackFail", "回滚失败：没有可用的恢复前快照"), "error"); return; }
+  /* 失败数与成功数分开说（第九片纪律：「已回滚」只讲成功的一半，没写进去的必须在场） */
+  toast(t("api.preRestoreRolled", "已回滚到恢复前快照，页面即将刷新")
+    + (r.failed.length ? ("（" + t("msg.restorePartial", "另有 ") + r.failed.length + t("msg.restorePartialTail", " 项未能恢复，详见诊断面板") + "）") : ""),
+    r.failed.length ? "warn" : "ok");
+  setTimeout(() => location.reload(), 1200);
+}
+function _preRestoreDeleteFlow(){
+  if(!preRestoreInfo()){ toast(t("api.preRestoreNone", "暂无（云端恢复后自动留存）"), "warn"); return; }
+  if(!confirm(t("confirm.deletePreRestore", "删除这份恢复前快照？删除后无法再用它回滚。"))) return;
+  if(!deletePreRestoreBackup()){ toast(t("msg.deleteFailed", "删除失败"), "error"); return; }
+  renderPreRestoreCard();
+  toast(t("api.preRestoreDeleted", "已删除恢复前快照"), "ok");
+}
+// 卡片按钮委托：与 render-overview 的云同步按钮同模式（面板动态渲染，document 级委托更稳，
+// 这里因本块先于面板渲染执行，用直接绑定即可；两处并存不冲突——id 唯一）
+(function bindPreRestoreButtons(){
+  const list = document.getElementById("btnPreRestoreList");
+  const rb = document.getElementById("btnPreRestoreRollback");
+  const del = document.getElementById("btnPreRestoreDelete");
+  if(list) list.onclick = _preRestoreListToggle;
+  if(rb) rb.onclick = _preRestoreRollbackFlow;
+  if(del) del.onclick = _preRestoreDeleteFlow;
+})();
+try{ if(typeof AppBridge !== "undefined") AppBridge.renderPreRestoreCard = renderPreRestoreCard; }catch(e){ /* noop */ }
+
 // v3.1.2 B-档：快捷键帮助按钮绑定（此前快捷键只能按 ? 唤起，用户找不到）
 // v3.7.80：移除关于卡版本行（#aboutVersion，与尾栏重复，用户裁定版本号只保留尾栏一处）
 (function bindAboutCard(){

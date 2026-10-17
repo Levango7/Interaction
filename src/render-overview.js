@@ -1287,6 +1287,9 @@ try{
 /* ---------- 云同步快照（来自 v3.5.0 包，含 async 修正 + 调用点接线）---------- */
 const SYNC_META_KEY = PREFIX + "sync_meta";
 let _cloudConflictNotified = false;
+/* OD-003 顺带补的观测口（2026-10-17 批次）：登录后拉快照失败时，离线仍是正常态、不打扰用户，
+   但 await 的 reject 被完全吞掉会让「同步正常」成为假象。每会话只记一条 WARN，不刷屏。 */
+let _cloudPullWarned = false;
 
 function _getSyncMeta() {
   try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || "{}") || {}; } catch (e) { return {}; }
@@ -1387,7 +1390,10 @@ function _applyCloudSnapshot(data) {
     }
   } catch (e) { /* 合并失败时按覆盖处理 */ }
   /* v3.7.52：覆盖前先给本机留一份回滚档。下面这段是「快照里有啥就覆盖啥」，
-     而云端 push 端尚未实现（本机改动不会上传）时，覆盖即不可逆 —— 留档后至少能人工比对/回滚。 */
+     而云端 push 端尚未实现（本机改动不会上传）时，覆盖即不可逆。
+     OD-003（2026-10-17 批次）：本档自此有了消费入口 —— 设置 → 账号设置 →「上次恢复前快照」
+     可查看键清单 / 回滚 / 删除（ui-backup-stats.js 的 preRestore* 四件套 + renderPreRestoreCard，
+     经 AppBridge 挂到 _showApiPanels）。「写了没人读」的状态到此为止。 */
   try {
     const pre = {};
     if (typeof allKeys === "function") allKeys().forEach(function (k) { const v = localStorage.getItem(k); if (typeof v === "string") pre[k] = v; });
@@ -1752,7 +1758,7 @@ async function cloudCheckOnLogin() {
     } catch (e) { hasLocal = true; }
     if (!hasLocal && fromOther) {
       _applyCloudSnapshot(rec.snapshot);
-      try { toast(t("api.cloudRestored", "已从云端恢复数据，页面即将刷新"), "ok"); } catch (_) {}
+      try { toast(t("api.cloudRestoredWithRollback", "已从云端恢复数据；覆盖前的本机快照已留存（设置 → 账号设置 → 上次恢复前快照，可查看或回滚）"), "ok"); } catch (_) {}
       setTimeout(() => location.reload(), 1200);
       return;
     }
@@ -1764,7 +1770,13 @@ async function cloudCheckOnLogin() {
       return;
     }
     window.doSync();
-  } catch (e) { /* 离线时静默，等下次数据变动再同步 */ }
+  } catch (e) {
+    /* 离线时静默（不弹 toast、不阻断）；但 reject 不能无痕 —— 每会话一条诊断 WARN（见 _cloudPullWarned） */
+    if(!_cloudPullWarned){
+      _cloudPullWarned = true;
+      try{ if(typeof pushDiag==="function") pushDiag("warn", "cloud snapshot fetch failed: "+((e&&e.message)||e), {where:"cloudCheckOnLogin"}); }catch(_){ /* 诊断自身不可用也不阻断 */ }
+    }
+  }
 }
 /* v3.7.105（云同步契约 · 阶段1/C2 上行体积看板）：
    · _snapshotWireBytes —— 快照的 UTF-8 字节数，口径与后端 2MB 上限一致
@@ -1849,7 +1861,7 @@ async function _restoreFromCloud() {
     if (!rec || !rec.snapshot) { try { toast(t("api.cloudEmptyShort", "暂无快照"), "warn"); } catch (_) {} return; }
     if (!confirm(t("api.cloudRestoreConfirm", "将用云端数据覆盖本机数据，确定继续？"))) return;
     _applyCloudSnapshot(rec.snapshot);
-    try { toast(t("api.cloudRestored", "已从云端恢复数据，页面即将刷新"), "ok"); } catch (_) {}
+    try { toast(t("api.cloudRestoredWithRollback", "已从云端恢复数据；覆盖前的本机快照已留存（设置 → 账号设置 → 上次恢复前快照，可查看或回滚）"), "ok"); } catch (_) {}
     setTimeout(() => location.reload(), 1200);
   } catch (e) { try { toast(t("api.syncError", "同步失败"), "warn"); } catch (_) {} }
 }

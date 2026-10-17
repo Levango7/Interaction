@@ -885,6 +885,9 @@
       const el = document.getElementById(id);
       if(el){ if(loggedIn) el.classList.add("u-hidden"); else el.classList.remove("u-hidden"); }
     });
+    /* OD-003（2026-10-17 批次）：每次显隐都刷新「上次恢复前快照」卡片 —— 云恢复/回滚都以
+       reload 收尾，用户回到设置页时卡片必须反映最新档（AppBridge 槽位，Render→UI 方向的既有模式） */
+    try{ if(typeof AppBridge !== "undefined" && AppBridge.renderPreRestoreCard) AppBridge.renderPreRestoreCard(); }catch(e){ /* noop */ }
   }
 
   // 加载设备列表

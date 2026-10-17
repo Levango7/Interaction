@@ -1988,6 +1988,8 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     _buildCloudSnapshot, // v3.7.58：render-overview 的云快照构造（安全排除键的单测入口）
     /* v3.7.88：WebDAV 同步主流程（上传/下载/412 冲突 UX） */
     webdavSyncUpload, webdavSyncDownload,
+    /* OD-003（2026-10-17 批次）：恢复前回滚档消费入口（ui-backup-stats）—— 元信息/键清单/回滚/删除/卡片渲染 */
+    preRestoreInfo, preRestoreKeyList, rollbackPreRestore, deletePreRestoreBackup, renderPreRestoreCard,
     SCENARIOS, ORDER, TOOLS, DEFAULT_LINKS, PREFIX, MVP_SCOPE,
     // v3.7.12（解耦 S0）：暴露核心层数据表与跨层通道，供测试驱动钩子与断言"谁注册了实现"
     SCENE_FEATURE_BIND, AppBridge,
