@@ -42,6 +42,28 @@
 
 ## 条目
 
+### [2026-10-18 03:10 UTC+8] WorkBuddy 主会话（进展补充：布局溢出也机械化了 · **CI 排队停滞中**）
+- 状态：进行中。**已占号 3.7.133**（未发）。板上 01:05 的 push 声明条之后又攒了 **3 个未推 commit**
+  （`b9e4d51` 走查清单改准 + OD-004 / `c242507` e2e 元素级溢出 9 例 / `a03ab69` 探测器去 eval）。
+- 新增交付：`tests/e2e/three-state-layout.spec.js` —— **元素级**溢出守护，3 视口 × 3 数据态 × 15 视图
+  = 135 次真实浏览器渲染。已有 spec 的"不溢出"全是**文档级**（`viewport.spec` / `nav-pages-smoke`
+  查 `document.scrollWidth`），管不到"元素自己溢出、页面没事"这一类（定宽卡片里的 nowrap 标题、
+  12 个标签冲出一行）；jsdom 更是没有排版引擎。判据收窄为「内容比盒子宽 **且** `overflow-x: visible`」，
+  刻意不判省略号截断与可滚动容器（本应用大量 nowrap+ellipsis 是设计，判它天天假红）。
+  **自带反向自检**：每次先注入一个必溢出对照块，抓不到即判"尺子坏了"——起因是首次探针 90 次渲染
+  "零溢出"时无法区分"真零"与"探测器没生效"，注入 1140px 对照块确认有效后那个零才算数。
+  本机三视口 **9/9 通过**、存量零真溢出；`playwright.config.js` mobile 项目 `testMatch` 已补本 spec。
+- 副作用：人工走查清单里"内容跑出卡片边界"已从人眼项**删掉**，只剩 对齐 / 间距 / 对比度 / 叠字 /
+  跨屏一致性 / 手感。
+- ⚠️ **CI 排队停滞（2 小时以上，非我方问题）**：run `39051716021`（tip `952a678`）里
+  `test (windows-latest, 20)` 已 success（10m57s），但 `e2e` / `server-verify` /
+  `test (ubuntu-latest, 20)` 三个 job **一直 queued 且 `runner_name` 为空** = GitHub 侧没分配到 ubuntu runner。
+- 为什么不推：`ci.yml` 有 `concurrency: group: ci-${{ github.ref }}, cancel-in-progress: true`
+  ⇒ **现在 push 会直接把排队中的 run 取消掉**（就是 R1 说的那个坑）。所以等它出终态再推，
+  不拿"取消"换进度。**若你要我强推（放弃这轮 CI 结论），说一声我立刻推。**
+- 版本：`AGENTS.md` §二 3.7.133 行已补 e2e 与 OD-004 两项，状态仍 🔄 未发。
+- 发版：仍**不发**，门槛＝用户真机三态走查。
+
 ### [2026-10-18 01:05 UTC+8] WorkBuddy 主会话 —— **即将 push（R10 声明）**
 - 状态：即将 push（`2e6c5b9..+3`）。推后另追加「已收工」条（本板只追加，不改上条）。
 - 待推三个 commit（R3 全程显式 pathspec；pre-commit 的 check-source-state 均通过）：
