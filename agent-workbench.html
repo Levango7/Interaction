@@ -1034,6 +1034,14 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    窄屏视口 < max-width 时数学上无效果（宽度本就 100%），故全断点安全；
    宽屏（≥1440）抬升至 --content-max-wide，消除卡片横跨整屏的阅读过宽问题。 */
 .main > *{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
+
+/* 2026-10-18：待办栏必须与主内容用**同一把尺子**。
+   它是 .toolbar-row 里唯一的子级，而 .toolbar-row 是 .main-wrap 的满宽兄弟 —— **不在 #main 里**，
+   吃不到上面这条 `.main > *` 的宽度上限。于是当 .main-wrap 的内容宽超过 --content-max 时
+   （1920 宽 + 侧栏折叠实测：wrap 内容宽 1687），卡片被收窄到 1440 并居中，待办栏却横到边，
+   两侧各差 91.5px —— 与 1024–1439 档那 12px 是同一个病灶：两者必须是同一宽度。
+   两处内边距已同值（见 @media(1024–1439) 处注释），这里再把宽度上限补齐就完全重合。 */
+.toolbar-row > .todo-bar{max-width:var(--content-max);width:100%;margin-left:auto;margin-right:auto}
 @media(min-width:1440px){
   :root{--content-max:var(--content-max-wide)}
 }
@@ -3278,8 +3286,15 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 @media(min-width:1024px) and (max-width:1439px){
   .side{width:210px}
   .side-toggle{display:flex}
-  /* 工具行铺满 main-wrap，统一左右 padding */
-  .toolbar-row{padding:var(--space-1) var(--space-7) var(--space-2)}
+  /* 工具行铺满 main-wrap，统一左右 padding。
+     2026-10-18 修：这里原为 var(--space-7)=28px，而同一断点下 .main 的横向内边距是
+     var(--space-4)=16px（基础规则 .main{padding:var(--space-3) var(--space-4)}，本断点未覆写）
+     —— 两个元素是 .main-wrap 里并排的两个满宽子级，内边距必须同值才会左右对齐。
+     28 vs 16 的结果是待办栏比卡片两侧各内缩 12px（1280 宽实测：待办栏 238→942，
+     卡片 226→954），用户一眼能看出"上面那条比下面窄一圈"。
+     只发生在 1024–1439 这一档：<768 与 768–1023 两处都是 space-4、>=1440 是 space-8 与
+     .main 的 space-8 一致，只有这一档写岔了。改成 space-4 与 .main 同值。 */
+  .toolbar-row{padding:var(--space-1) var(--space-4) var(--space-2)}
 }
 
 /* 大屏 PC >=1440px：主内容放宽，卡片间距加大，图表尺寸同步放大

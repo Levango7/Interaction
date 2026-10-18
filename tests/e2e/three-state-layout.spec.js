@@ -74,8 +74,7 @@ const collectOverflow = () => {
   return out;
 };
 
-for (const [stateName, tasks] of STATES) {
-  test.describe(`元素级溢出 · ${stateName}数据`, () => {
+for (const [stateName, tasks] of STATES) {  test.describe(`元素级溢出 · ${stateName}数据`, () => {
     test.beforeAll(() => {
       test.skip(!process.env.E2E, "set E2E=1 to run");
     });
@@ -132,3 +131,62 @@ for (const [stateName, tasks] of STATES) {
     });
   });
 }
+
+/* ============================================================
+ * 「待办栏」与「卡片」左右边界必须一致（2026-10-18 用户走查发现）
+ * ------------------------------------------------------------
+ * 现场：1280 宽下待办栏 238→942、卡片 226→954 —— 上面那条比下面窄一圈，左右各内缩 12px。
+ * 根因：两者都是 .main-wrap 里的满宽兄弟，横向内边距必须同值才对得齐；
+ *   基础规则 .main 用 var(--space-4)=16px，而 @media(1024–1439) 里 .toolbar-row 写了
+ *   var(--space-7)=28px。只有这一档写岔（<768 与 768–1023 是 16/16、>=1440 是 32/32 都对齐），
+ *   偏偏 1024–1439 是最主流的桌面宽度。
+ *
+ * 为什么用**多个宽度档**而不是吃三个 project 的视口：断点错位是"某一档写岔"，
+ * 只测 1280 会漏掉 1440 那档、只测 375 会漏掉桌面档。这里在一条用例里扫 11 个宽度。
+ * ============================================================ */
+test.describe("布局不变量 · 待办栏与卡片左右边界一致", () => {
+  test.beforeAll(() => {
+    test.skip(!process.env.E2E, "set E2E=1 to run");
+  });
+
+  test("12 个宽度档 + 折叠态下左右边界偏差均 ≤1px", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#main", { timeout: 15_000 });
+    await page.evaluate(() => { window.setActive("study"); window.render(); });
+
+    const WIDTHS = [375, 520, 767, 768, 900, 1023, 1024, 1280, 1439, 1440, 1680, 1920];
+    const bad = [];
+    const check = async (tag) => {
+      const r = await page.evaluate(() => {
+        const bar = document.querySelector("#todoBar");
+        const card = document.querySelector("#main .card");
+        if (!bar || !card) return null;
+        const b = bar.getBoundingClientRect(), c = card.getBoundingClientRect();
+        return { dl: b.left - c.left, dr: b.right - c.right };
+      });
+      if (!r) { bad.push(`${tag}：取不到待办栏或卡片（守护失效，别当通过）`); return; }
+      if (Math.abs(r.dl) > 1) bad.push(`${tag}：左边界差 ${r.dl.toFixed(1)}px`);
+      if (Math.abs(r.dr) > 1) bad.push(`${tag}：右边界差 ${r.dr.toFixed(1)}px`);
+    };
+
+    /* ① 每个宽度单独打开（侧栏默认态） */
+    for (const w of WIDTHS) {
+      await page.setViewportSize({ width: w, height: 900 });
+      await waitMainRendered(page);
+      await check(`${w}px`);
+    }
+
+    /* ② 侧栏折叠 + 宽屏：这是本 bug 真正发生的形态，光测默认态会漏掉。
+       复现方式：从 768 打开（窄屏 IA）再拉宽 —— 与用户折叠侧栏/把窗口拉宽看到的一致。
+       现场：1920 下卡片被 --content-max 收窄到 1440 并居中，待办栏却横到边，两侧各差 91.5px。 */
+    await page.setViewportSize({ width: 768, height: 900 });
+    await waitMainRendered(page);
+    for (const w of [1440, 1680, 1920]) {
+      await page.setViewportSize({ width: w, height: 900 });
+      await page.waitForTimeout(260); // 折叠态的宽度切换不是同步重排，等一帧稳定
+      await check(`${w}px 折叠态`);
+    }
+
+    expect(bad, "待办栏与卡片没对齐（两者都应是 .main-wrap 内容宽 + 同一 --content-max 上限）：\n  " + bad.join("\n  ")).toEqual([]);
+  });
+});
