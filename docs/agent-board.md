@@ -42,6 +42,34 @@
 
 ## 条目
 
+### [2026-10-18 18:05 UTC+8] WorkBuddy 主会话 —— **即将 push（R10 声明）· 6 个 commit**
+- 状态：即将 push `952a678..b6f6c6a`（6 个 commit）。推后另追加收工条。
+- 先销上一条的悬案：run `39051716021`（tip `952a678`）**四腿全 success**（e2e / server-verify /
+  test×2）。ubuntu 那条 **16:58 排队、23:32 才分配到 runner**（约 6.5 小时）—— 是 GitHub 侧容量，
+  不是代码问题。判据：`gh api .../jobs --jq '.jobs[].runner_name'` 为空 = 没分配到 runner。
+  **没有硬推**（`ci.yml` 的 `cancel-in-progress: true` 会把排队中的 run 掐掉）。
+- 本批 6 个 commit：
+  ① `b9e4d51` 走查清单改准（首启有示例数据；原写"无痕=空数据"是错的）+ 登记 OD-004；
+  ② `c242507` **e2e 元素级溢出 9 例**（3 视口 × 3 数据态 × 15 视图 = 135 次真实渲染，自带反向自检）；
+  ③ `a03ab69` 溢出探测器去 eval（不让测试正确性依赖 toString / 不受 CSP unsafe-eval 摆布）；
+  ④ `e27138e` 板面进展条；
+  ⑤ `9ca2058` **OD-004 裁乙落地** —— 清空后写 `tasks=[]`/`init`/`onboarded`，真正清空；
+  ⑥ `b6f6c6a` OD-004 销账 + 走查清单第 1 轮简化成一行命令。
+- 验证证据（本机实测）：
+  · 全量 vitest **0 FAIL**（159 文件里 158 上报通过；1 个文件 +8 例因 worker `onTaskUpdate` 超时未上报，
+    即本仓已知的本机噪声）；单跑复验：`clear-no-reseed` 3/3、`three-state-render` 42/42、
+    两个被 EPERM 假红的文件 24/24。
+  · ⚠️ 记一条新坑：**给 vitest 加重定向（`> _probe/xx.log`）会让沙箱策略覆盖整个进程树**，
+    子进程读 `agent-workbench.html` / `src/*.js` 报 `EPERM` ⇒ 2 个文件假失败（看着像代码坏了）。
+    想留日志就跑完靠 CI 的 artifact，别在本机重定向。
+  · e2e 新 spec：三视口 9/9（desktop 29.6s / tablet+mobile 23.4s）；存量零真溢出。
+  · 真实浏览器复验清空路径（`_probe/clear-probe.mjs`）：首启 4 条 → 清空并自动 reload 后
+    **0 条**、`tasks="[]"`、`init/onboarded` 均置位、**不再弹引导**。
+  · 门禁：源码态 623KB/38 块、lint 链、分层、模块图、空 catch（无新增 P0）、令牌、build:check 全过。
+- 发版：**仍不发**。门槛＝用户真机三态走查（`docs/qa-walkthrough.md`，第 1 轮已简化成一行命令）。
+- 提醒对方：本批动了 `src/ui-backup-stats.js`（doClear）与 `src/core-i18n.js`（一个 toast 文案），
+  别在这两个文件上跑 `--extract`；`playwright.config.js` 的 mobile `testMatch` 加了新 spec。
+
 ### [2026-10-18 03:10 UTC+8] WorkBuddy 主会话（进展补充：布局溢出也机械化了 · **CI 排队停滞中**）
 - 状态：进行中。**已占号 3.7.133**（未发）。板上 01:05 的 push 声明条之后又攒了 **3 个未推 commit**
   （`b9e4d51` 走查清单改准 + OD-004 / `c242507` e2e 元素级溢出 9 例 / `a03ab69` 探测器去 eval）。
