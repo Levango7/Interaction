@@ -42,6 +42,37 @@
 
 ## 条目
 
+### [2026-10-19 03:00 UTC+8] WorkBuddy 主会话（走查第 3 批：属性行参差 + 任务页丢标签 · **即将 push**）
+- 状态：即将 push `704a6e8..+1`（1 commit）。
+- **先销上一条的悬案**：run `39141005889`（tip `704a6e8`）**failure** —— 不是代码逻辑，
+  是 `npm run lint` 里的 `lint-xss`：`src/render-entry.js:38` / `src/ui-drawer.js:301` 两处
+  "疑似未消毒的动态 innerHTML"。根因是我上批（`9d758f8`）去尾栏产品名时**把唯一的 `esc()` 一起删了**，
+  而 `esc(` 出现在 RHS 正是该门禁的放行依据。**本批已改回并写明"删文案别删 esc"**，本机全链复跑绿。
+  （教训记在这：上批只跑了 vitest 与 e2e，没跑 lint 就提交了；推前跑 lint 才是这条的护栏。）
+- 用户「解决一下」指的两处，都落地：
+  ① **任务页看板卡片补 `tags`**（`render-overview.js`）：场景页卡片一直画标签、任务页那张
+     只画"场景徽标 + 优先级 + 截止日期"，换一个页面标签就消失。现两处同口径（标签排在截止日期后，
+     同一个 `<span class="tag">`）。顺带把两处渲染器的 `x.tags && x.tags.length` 改成
+     `Array.isArray(x.tags)` —— `tags` 若是**字符串**（导入/手改存储都可能）会走进 `.map` 抛错、
+     **整页渲染中断**（与 `ui-guide.js` 的 share-tags 同口径）。
+  ② **属性行折行不参差**（`agent-workbench.html` CSS）：`.kcard .m` 的 `space-between` 是**按行**
+     生效的，折行后每行各自两端对齐、行内留空洞（实测首行末项被顶到 `x=447`、次行三枚挤在左端）。
+     改：chips ≤3 枚保留 `space-between`（v3.7.46 的"铺满整行"观感），**第 4 枚起一律左对齐 + 等距 gap**。
+     用 `:has(> *:nth-child(4))` 做数量查询，基础规则不动 ⇒ 不支持 `:has()` 的旧浏览器退回今天行为。
+     另加 chip 超长兜底（`max-width:100%` + ellipsis），不再把整行顶破。
+- 验证（本机）：`three-state-render` **45/45**（+3 例）；`three-state-layout` 三视口 **15/15**（+1 例）；
+  `ui-consistency` 22/22；lint 链（eslint+colors+xss+css+appbridge+src-split）、分层、模块图、
+  空 catch、令牌、`build:check`、源码态（628KB/38 块）全过。
+- **两条新守护都做了反向对照**（别删）：撤掉 tags 修复 ⇒ vitest ⑪ 变红；把 CSS 新规则置空 ⇒
+  e2e 变红（15 枚 chip 折 5 行、最大间距 17px > 声明 gap 4px）。
+- 真机截图与坐标：`_probe/verify-attr-row.mjs`（1280/375 × 场景页/任务页 × 2/6/0 个标签），
+  改后每行同起点、间距恒 8px；截图 `_probe/attrrow-*.png`。
+- ⚠️ **本机新坑（值得记）**：CSS 规则改在 HTML 的 `<style>` 里时，`npm run src:inject`
+  **还原不回来** —— 它只拼 `src/*.js` 的 38 块。我这次用临时脚本置空规则做反向对照，之后
+  `src:inject` + 构建，生产件是按"置空态"构建的（白查了一轮计算样式）。
+  教训：在 HTML 里做临时改动，还原要自己反向写回并 `grep` 复核（如 `grep TEMP-OFF`）。
+- 发版：仍**不发**，等用户继续走查（对照单按本批重新生成 60 张）。
+
 ### [2026-10-18 23:30 UTC+8] WorkBuddy 主会话（走查第 2 轮反馈三条已修 · **即将 push**）
 - 状态：即将 push `56d6637..9d758f8`（1 commit）。上一批 `56d6637` 的 CI 与 pages 均已 success。
 - 用户在对照单上提了三条，全部落地：

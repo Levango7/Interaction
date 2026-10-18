@@ -3,6 +3,37 @@
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 
+### 走查反馈收口：属性行折行参差 + 任务页卡片丢标签（2026-10-19 批次）
+
+两处都是「同一条任务换个页面/换种数据就不对」的一致性缺陷，来自本轮逐屏走查：
+
+- **任务页看板卡片不画 `tags`**（`render-overview.js`）：场景页卡片
+  （`render-scene-main.js` 的 `_renderKanbanCard`）一直画标签，任务页看板那张
+  （`data-tasks-card`）只画"场景徽标 + 优先级 + 截止日期" —— 用户打上的标签切一个页面就消失。
+  现两处同口径：标签排在截止日期之后，同一个 `<span class="tag">`。
+- **顺带把 `tags` 的脏数据兜住**：两处渲染器都用 `x.tags && x.tags.length` 判存在，随后就
+  `x.tags.map(...)` —— `tags` 若是**字符串**（导入/手改存储都可能出现）会走进 `.map` 抛错，
+  **整页渲染中断**。统一改成 `Array.isArray(x.tags)`（与 `ui-guide.js` 的 share-tags 同口径）。
+- **属性行（`.kcard .m`）标签一多就参差**：该行是 `space-between + flex-wrap:wrap`，而
+  `space-between` 是**按行**生效的 —— 折行后每行各自"两端对齐"，行内留下宽窄不一的空洞
+  （实测 4 枚 chip 折两行时：首行末项被顶到最右 `x=447`、次行三枚挤在左端）。规则改为
+  chips ≤3 枚时保留 `space-between`（v3.7.46 要的"铺满整行"观感），**第 4 枚起一律左对齐 +
+  等距 gap**（`gap: 6/8`），实测每行同起点、间距恒为 8px。用 `:has(> *:nth-child(4))` 做数量查询，
+  基础规则仍是 `space-between` ⇒ 不支持 `:has()` 的旧浏览器退回今天的行为（不劣化）。
+- **兜底**：单枚 chip 文字过长时（`nowrap + flex:0 0 auto` 会把它撑出卡片）改用
+  `max-width:100% + overflow:hidden + text-overflow:ellipsis` 在自身宽度内截断，不再顶破整行。
+- **顺手补一个上批回归**：尾栏去掉产品名时把唯一的 `esc()` 一起删了 —— 那行同时是
+  `lint-xss` 的放行依据（`esc(` 出现在 RHS 即放行）。已把计数插值 `esc(openN)`/`esc(recN)`
+  转义回来并写明"删文案别删 esc"。
+- **守护**：`three-state-render` +3 例（⑪ 两处都画标签 / ⑪b 无标签不画空 chip /
+  ⑪c `tags` 非数组不崩，42→45 例）；`three-state-layout.spec` +1 例（属性行折行后
+  行内间距必须等于声明 gap，**自带反向对照**，10→15 例）。两条新守护都做过反向对照：
+  撤掉修复后 ⑪ 变红、把 CSS 规则置空后 e2e 变红（15 枚 chip 折 5 行、最大间距 17px > gap 4px）。
+- **验证**：`three-state-render` 45/45；`three-state-layout` 三视口 15/15；lint 链
+  （eslint+colors+xss+css+appbridge+src-split）、分层、模块图、空 catch、令牌、
+  `build:check`、源码态（628KB/38 块）全过；真机截图与坐标实测见
+  `_probe/verify-attr-row.mjs`（1280/375 × 场景页/任务页 × 2/6/0 个标签）。
+
 ### OD-003：云恢复前回滚档可消费（2026-10-17 批次 · 用户指派收尾）
 
 - **背景**：v3.7.52 起 `_applyCloudSnapshot` 在云端快照覆盖本机前写 `wb_agent_pre_restore_backup`

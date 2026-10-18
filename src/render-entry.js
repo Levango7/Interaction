@@ -34,10 +34,12 @@ function appendFoot(){
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（appendFoot 与 _appendDrawerFoot 两处同步）
   /* 2026-10-18（用户走查意见）：尾栏去掉产品名，只留版本号 ——
      窄屏时尾栏本来只有一行，"Agent工坊 · v3.7.x · bxxxx" 三个信息挤在一起，
-     而产品名在顶栏/标题/关于页已经出现多次，尾栏再放一遍纯属噪音；版本号才是这里有用的东西。 */
+     而产品名在顶栏/标题/关于页已经出现多次，尾栏再放一遍纯属噪音；版本号才是这里有用的东西。
+     注：删产品名时别把 `esc()` 一起删掉 —— 它同时是 lint-xss 的**唯一**放行依据
+     （openN/recN 是计数，正常是数字，但存储被写坏时可能是别的东西，转义一遍不吃亏）。 */
   footEl.innerHTML = '<div class="foot-bar">' +
     '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
-    t("p3.html.footTodo","<span class=\"foot-stat\">待办 ") + openN + t("stat.recordsMid"," · 资料 ") + recN + t("stat.footStatSuffix"," 条</span>") +
+    t("p3.html.footTodo","<span class=\"foot-stat\">待办 ") + esc(openN) + t("stat.recordsMid"," · 资料 ") + esc(recN) + t("stat.footStatSuffix"," 条</span>") +
     '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>' +
     '</div>';
   main.appendChild(footEl);

@@ -11,7 +11,9 @@ function _renderKanbanCard(x, st, colName){
   const od = x.due && x.due < todayStr();
   const pri = x.priority? `<span class="pri ${x.priority}">${x.priority}</span>`:"";
   const due = x.due? `<span class="due ${od?"od":""}">${od?t("label.overduePrefix","逾期 "):""}${x.due}</span>`:"";
-  const tags=(x.tags&&x.tags.length)?` <span class="tag">${x.tags.map(t=>esc(t)).join('</span> <span class="tag">')}</span>`:"";
+  /* 2026-10-18：与任务页看板卡同一口径 —— 先用 Array.isArray 兜脏数据（tags 是字符串时
+     原写法会走进 .map 抛错、整页渲染中断），再谈渲染。 */
+  const tags=(Array.isArray(x.tags)&&x.tags.length)?` <span class="tag">${x.tags.map(v=>esc(v)).join('</span> <span class="tag">')}</span>`:"";
   let btns="";
   if(st==="todo") btns=`<button type="button" data-move="${x.id}:doing">${t("kanban.toDoing","→ 进行中")}</button>`;
   if(st==="doing") btns=`<button type="button" data-move="${x.id}:todo">${t("kanban.toTodo","← 待办")}</button><button type="button" data-move="${x.id}:done">${t("kanban.toDone","→ 完成")}</button>`;

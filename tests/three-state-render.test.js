@@ -192,3 +192,45 @@ describe("三态 · 体量与极端长度", () => {
     }
   });
 });
+
+describe("三态 · 同一条任务在两个页面的卡片上口径一致", () => {
+  /** 一条"该有标签"的任务：场景页与任务页看板都会画它 */
+  const tagged = () => ({
+    id: "g1", sc: "office", title: "带标签的任务", status: "todo", priority: "P1",
+    due: "2026-12-31", tags: ["周报", "重点客户"], createdAt: Date.now(),
+  });
+
+  it("⑪ 任务页看板卡片也画 tags（此前只有场景页画，切过去标签就没了）", async () => {
+    /* 实测缺陷（2026-10-18 修）：render-overview.js 的看板卡只画"场景徽标 + 优先级 +
+       截止日期"，render-scene-main.js 的卡片才画 tags —— 同一条任务换个页面，用户打上的
+       标签凭空消失。这里钉住"两处同口径"，不是钉某一处的实现。 */
+    const win = load({ [PREFIX + "tasks"]: JSON.stringify([tagged()]) });
+    const scene = await renderView(win, "office");
+    for (const tag of ["周报", "重点客户"]) {
+      expect(scene.html, `场景页卡片应显示标签「${tag}」`).toContain(tag);
+    }
+    const tasks = await renderView(win, "tasks");
+    for (const tag of ["周报", "重点客户"]) {
+      expect(tasks.html, `任务页看板卡片应显示标签「${tag}」（换个页面标签不该消失）`).toContain(tag);
+    }
+  });
+
+  it("⑪b 无标签的任务不画空 chip（既不漏 undefined，也不留空 span）", async () => {
+    const win = load({
+      [PREFIX + "tasks"]: JSON.stringify([{ id: "g2", sc: "office", title: "无标签", status: "todo", createdAt: Date.now() }]),
+    });
+    const { html } = await renderView(win, "tasks");
+    expect(html).not.toMatch(/undefined/);
+    expect(html, "无标签时属性行不该出现空 chip").not.toMatch(/<span class="tag"><\/span>/);
+  });
+
+  it("⑪c tags 非数组（脏数据）不得让卡片渲染出 [object Object] 或 undefined", async () => {
+    const win = load({
+      [PREFIX + "tasks"]: JSON.stringify([{ id: "g3", sc: "office", title: "脏标签", status: "todo", tags: "周报", createdAt: Date.now() }]),
+    });
+    const { text } = await renderView(win, "tasks");
+    for (const re of GARBAGE) {
+      expect(re.test(text), `tags 非数组时任务页出现 ${re}`).toBe(false);
+    }
+  });
+});

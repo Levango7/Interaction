@@ -694,12 +694,21 @@ function renderTasksPage(){
     const cards = list.map(x=>{
       const s = scMeta(x.sc);
       const overdue = x.due && x.due<t && x.status!=="done";
+      /* 2026-10-18：这里原来只画"场景徽标 + 优先级 + 截止日期"，**不画 tags** ——
+         同一条任务在场景页卡片上明明有标签、切到任务页看板就消失（用户的标签白打了）。
+         两处同口径：标签一律排在截止日期之后，用与场景页相同的 `<span class="tag">`。 */
+      /* Array.isArray 而不是 `x.tags && x.tags.length`：后者碰到 tags 是个**字符串**的脏数据
+         会走进 `.map` 直接抛错（整页渲染中断）。仓库既有口径见 ui-guide.js 的 share-tags。 */
+      const tags = (Array.isArray(x.tags) && x.tags.length)
+        ? x.tags.map(v=>`<span class="tag">${esc(v)}</span>`).join("")
+        : "";
       return `<div class="kcard" data-tasks-card="${esc(x.id)}" tabindex="0" role="button" aria-label="${esc(x.title)}">
         <div class="t">${esc(x.title)}</div>
         <div class="m">
           <span class="tag" style="background:${scSoft(s.color)};color:${scCss(s.color)}">${esc(s.name)}</span>
           ${x.priority&&x.priority!=="none"?`<span class="pri ${x.priority}">${esc(x.priority)}</span>`:""}
           ${x.due?`<span class="due${overdue?" od":""}">${esc(x.due)}</span>`:""}
+          ${tags}
         </div>
       </div>`;
     }).join("");

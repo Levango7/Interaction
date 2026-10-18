@@ -190,3 +190,107 @@ test.describe("布局不变量 · 待办栏与卡片左右边界一致", () => {
     expect(bad, "待办栏与卡片没对齐（两者都应是 .main-wrap 内容宽 + 同一 --content-max 上限）：\n  " + bad.join("\n  ")).toEqual([]);
   });
 });
+
+/* ============================================================
+ * 卡片属性行（.kcard .m）折行后不得"参差"（2026-10-18 走查发现）
+ * ------------------------------------------------------------
+ * 现场：属性行是 `space-between` + `flex-wrap:wrap`。而 space-between **按行生效** ——
+ *   折行后每一行各自做"两端对齐"，行内留下宽窄不一的空洞（4 枚 chip 折成两行时，首行末项
+ *   被顶到最右、次行几枚却挤在左端），看上去就是"不齐"。
+ * 判据只针对**结果**，不钉实现方式：
+ *   · 单行：允许铺满整行（v3.7.46 要的观感，space-between 的设计意图）；
+ *   · 折行：行内间距必须均匀 —— 最大间距 ≤ 最小间距 + 8px。
+ *     一旦出现"某行被撑开、另一行正常"，就是这条守护要抓的缺陷。
+ * ============================================================ */
+/** 收集折行的属性行：按行归组后算行内间距（只报折行的，单行不报） */
+const collectAttrRows = () => {
+  const out = [];
+  for (const m of document.querySelectorAll(".kcard .m")) {
+    const kids = Array.from(m.children).filter((k) => k.getBoundingClientRect().width > 0);
+    if (kids.length < 2) continue;
+    const lines = new Map();
+    for (const k of kids) {
+      const r = k.getBoundingClientRect();
+      /* 按**垂直中心**归行（不按 top）：chip 高度不一（.pri 有 2px padding、.tag 没有），
+         用 top 会把同一行的 chip 拆成两行。6px 容差吃掉亚像素差。 */
+      const key = Math.round((r.top + r.height / 2) / 6);
+      if (!lines.has(key)) lines.set(key, []);
+      lines.get(key).push(r);
+    }
+    if (lines.size < 2) continue;                       // 单行：允许铺满整行
+    const gaps = [];
+    for (const rs of lines.values()) {
+      const sorted = rs.slice().sort((a, b) => a.left - b.left);
+      for (let i = 1; i < sorted.length; i++) gaps.push(sorted[i].left - sorted[i - 1].right);
+    }
+    if (!gaps.length) continue;                          // 每行都只有一枚 ⇒ 不存在行内间距
+    /* 判据：行内间距**不得超过 CSS 声明的 gap**。flex-start 下每个间距都**恒等于** gap；
+       space-between 是在 gap 之上再摊一份剩余空间，所以只要有一行被撑开，maxGap 必然 > gap。
+       用"实测 vs 声明"比，不写死 8px —— 令牌改了这条守护不会假红。 */
+    const colGap = parseFloat(getComputedStyle(m).columnGap) || 0;
+    out.push({
+      chips: kids.length,
+      lines: lines.size,
+      colGap: Math.round(colGap),
+      maxGap: Math.round(Math.max.apply(null, gaps)),
+      text: ((m.parentElement && m.parentElement.querySelector(".t") || {}).textContent || "").trim().slice(0, 24),
+    });
+  }
+  return out;
+};
+
+test.describe("布局不变量 · 卡片属性行折行不参差", () => {
+  test.beforeAll(() => {
+    test.skip(!process.env.E2E, "set E2E=1 to run");
+  });
+
+  test("折行的属性行行内间距均匀（探测器自带反向对照）", async ({ page }) => {
+    /* 极端态数据：12 个标签 + 优先级 + 截止日期 ⇒ 属性行必然折行（本 bug 只在折行时现形） */
+    const tasks = [task(1, { title: LONG_TITLE, tags: Array.from({ length: 12 }, (_, k) => "标签" + k) })];
+    await page.addInitScript((t) => {
+      try {
+        localStorage.setItem("wb_agent_init", "true");
+        localStorage.setItem("wb_agent_tasks", JSON.stringify(t));
+      } catch (e) { /* 存储不可用时保持原行为 */ }
+    }, tasks);
+
+    await page.goto(APP_URL);
+    await page.waitForSelector("#main", { timeout: 15_000 });
+    await waitMainRendered(page);
+
+    /* ---- 反向对照：人为造一个"折行 + space-between"的行，探测器必须抓到 ---- */
+    await page.evaluate(() => {
+      const wrap = document.createElement("div");
+      wrap.id = "attr-control";
+      wrap.className = "kcard";
+      wrap.style.width = "200px";
+      const m = document.createElement("div");
+      m.className = "m";
+      m.style.justifyContent = "space-between";   // 行内会留出巨大空洞
+      m.innerHTML = Array.from({ length: 5 }, (_, i) => `<span class="tag">对照${i}</span>`).join("");
+      wrap.appendChild(m);
+      document.getElementById("main").appendChild(wrap);
+    });
+    const controlRows = await page.evaluate(collectAttrRows);
+    await page.evaluate(() => {
+      const el = document.getElementById("attr-control");
+      if (el) el.remove();
+    });
+    const ctl = controlRows.filter((r) => r.chips === 5);   // 真实卡是 14/15 枚，5 枚只可能是对照块
+    expect(ctl.length, "探测器失效：人为造的『折行 + 撑开』属性行都没抓到 ⇒ 本用例的『零参差』不可信").toBe(1);
+    expect(ctl[0].maxGap - ctl[0].colGap, "对照行应被 space-between 撑出远大于 gap 的间距").toBeGreaterThan(4);
+
+    /* ---- 真实渲染：场景页卡片 + 任务页看板卡片（两处都画属性行） ---- */
+    const bad = [];
+    for (const view of ["office", "tasks"]) {
+      await page.evaluate((v) => { window.setActive(v); window.render(); }, view);
+      await waitMainRendered(page);
+      for (const r of await page.evaluate(collectAttrRows)) {
+        if (r.maxGap - r.colGap > 4) {
+          bad.push(`${view}：「${r.text}」${r.chips} 枚 chip 折成 ${r.lines} 行，行内最大间距 ${r.maxGap}px > 声明 gap ${r.colGap}px（有行被撑开 = 参差）`);
+        }
+      }
+    }
+    expect(bad, `属性行折行后参差（视口 ${page.viewportSize().width}px）：\n  ` + bad.join("\n  ")).toEqual([]);
+  });
+});

@@ -1924,6 +1924,17 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .kcard .m>*{flex:0 0 auto;min-width:0;white-space:nowrap}
 /* v3.7.46：卡片属性 chips 左右均匀分布（原来全部左聚拢，看着偏左） */
 .kcard .m{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1);margin-top:var(--space-2)}
+/* 2026-10-18 修「标签一多就不齐」：`space-between` 是**按行**生效的 —— 一旦折行，
+   每一行都各自做"两端对齐"，行内留下宽窄不一的空洞（实测 4 枚 chip 折成两行时，
+   首行末项被顶到最右、次行三枚却挤在左端，看上去就是"参差"）。
+   规则：chips ≤3 枚时保留 space-between（铺满整行，v3.7.46 要的观感）；
+   从第 4 枚起一律左对齐 + 等距 gap —— 折行后每行同起点、同间距，最稳。
+   写法上用 `:has(> *:nth-child(4))` 做"数量查询"，基础规则仍是 space-between：
+   不支持 :has() 的旧浏览器退回今天的行为（不回退，只是没修到）。 */
+.kcard .m:has(> *:nth-child(4)){justify-content:flex-start;gap:var(--space-1h) var(--space-2)}
+/* 兜底：单枚 chip 文字过长时（nowrap + flex:0 0 auto 会把它撑出卡片）在自身宽度内截断，
+   而不是把整行顶破。`min-width:0` 只放开下限，超限还得靠 max-width + ellipsis。 */
+.kcard .m>*{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .kcard .m .due.od{background:var(--danger-soft);color:var(--danger-text,var(--danger));font-weight:600}
 .kbtns{display:flex;gap:1px;margin-top:var(--space-2);flex-wrap:wrap;
   /* v3.7.31 分类：卡片内部分三层 —— 标题(.t) / 属性(.m，只读 chip) / 操作(.kbtns，可点按钮)。
