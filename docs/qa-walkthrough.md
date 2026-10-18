@@ -22,7 +22,7 @@
 
 1. **双击打开仓库根目录的 `agent-workbench.prod.html`**（Chrome / Edge 都行）。
    > ⚠️ **别打开 `agent-workbench.html`** —— 那是"源码态"（623KB），应用代码被抽到 `src/*.js` 里了，
-   > 双击它打开是**跑不起来的空壳**。`.prod.html` 才是拼好的可运行单文件（3.9MB，已在 .gitignore 里，
+   > 双击它打开是**跑不起来的空壳**。`.prod.html` 才是拼好的可运行单文件（≈3.7MB，已在 .gitignore 里，
    > 由 `node scripts/with-injected.mjs "node scripts/build.mjs --prod"` 生成）。
    > 每次我改完代码会重新生成一次，走查前你不用自己做什么。
 2. **打开后你会先看到 4 条示例任务**（提交本周周报 / 修复登录页 500 报错 / 复习分布式事务 / 缴水电费）
