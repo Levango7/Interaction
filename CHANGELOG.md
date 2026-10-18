@@ -22,17 +22,31 @@
   基础规则仍是 `space-between` ⇒ 不支持 `:has()` 的旧浏览器退回今天的行为（不劣化）。
 - **兜底**：单枚 chip 文字过长时（`nowrap + flex:0 0 auto` 会把它撑出卡片）改用
   `max-width:100% + overflow:hidden + text-overflow:ellipsis` 在自身宽度内截断，不再顶破整行。
+- **同族第三种形态（全应用扫描顺带查出）**：时间轴图例 `.tl-legend-hint` 用 `margin-left:auto`
+  把说明推到最右 —— 单行时是"点左、说明右"的好排版，一旦折行它就独占第二行还被顶到最右
+  （375 下实测末行左缩进 **96px**，看着像缩进错了）。按实测定断点：中文 ≤768、英文 ≤1024
+  仍会折（英文文案约 1.6 倍长），≥1100 两种语言都放得下 ⇒ 只在 `max-width:1099px` 取消 auto
+  （塞得下仍紧随"删除"之后，塞不下自然落行首），宽屏观感不变。改后 20 个"语言 × 宽度"组合
+  末行缩进全部 **0px**。
+- **扫描方法记一笔**（避免下次重复踩坑）：机械找"参差"要同时处理 ① 文本节点（`Range.getClientRects`，
+  否则"● 新建"会按元素子级量出假间距）② 按**垂直区间重叠**归行（圆点 9px vs 行高文字，按中心点
+  会把一行拆成两行）③ 扣掉容器 `padding-left` ④ 别用 `/wrap/` 匹配 `flexWrap`（`nowrap` 也命中）。
+  前三版探针都栽在这上面，最后可靠的结论来自**静态扫 CSS**：46 个可折行 flex 容器里，
+  只有 3 个声明了 `justify-content: space-between`（`.foot-bar` 中间段自动撑满、`.kbtns` 按钮
+  `flex:1 1 0` 撑满，都不出洞），`.kcard .m` 与 `.tl-legend` 才是真缺陷，均已修。
 - **顺手补一个上批回归**：尾栏去掉产品名时把唯一的 `esc()` 一起删了 —— 那行同时是
   `lint-xss` 的放行依据（`esc(` 出现在 RHS 即放行）。已把计数插值 `esc(openN)`/`esc(recN)`
   转义回来并写明"删文案别删 esc"。
 - **守护**：`three-state-render` +3 例（⑪ 两处都画标签 / ⑪b 无标签不画空 chip /
-  ⑪c `tags` 非数组不崩，42→45 例）；`three-state-layout.spec` +1 例（属性行折行后
-  行内间距必须等于声明 gap，**自带反向对照**，10→15 例）。两条新守护都做过反向对照：
-  撤掉修复后 ⑪ 变红、把 CSS 规则置空后 e2e 变红（15 枚 chip 折 5 行、最大间距 17px > gap 4px）。
-- **验证**：`three-state-render` 45/45；`three-state-layout` 三视口 15/15；lint 链
+  ⑪c `tags` 非数组不崩，42→45 例）；`three-state-layout.spec` +2 例（属性行折行后
+  行内间距必须等于声明 gap；折行后**末行不得被推开**（时间轴图例），两条都自带反向对照，
+  10→18 例）。两条新守护都做过反向对照：撤掉修复后 ⑪ 变红、把 CSS 规则置空后 e2e 变红
+  （属性行：15 枚 chip 折 5 行、最大间距 17px > gap 4px；图例：末行缩进 106px > 4px）。
+- **验证**：`three-state-render` 45/45；`three-state-layout` 三视口 18/18；lint 链
   （eslint+colors+xss+css+appbridge+src-split）、分层、模块图、空 catch、令牌、
   `build:check`、源码态（628KB/38 块）全过；真机截图与坐标实测见
-  `_probe/verify-attr-row.mjs`（1280/375 × 场景页/任务页 × 2/6/0 个标签）。
+  `_probe/verify-attr-row.mjs`（1280/375 × 场景页/任务页 × 2/6/0 个标签）与
+  `_probe/tl-legend-en-measure.mjs`（中英 × 10 个宽度档）。
 
 ### OD-003：云恢复前回滚档可消费（2026-10-17 批次 · 用户指派收尾）
 

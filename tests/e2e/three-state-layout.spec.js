@@ -294,3 +294,97 @@ test.describe("布局不变量 · 卡片属性行折行不参差", () => {
     expect(bad, `属性行折行后参差（视口 ${page.viewportSize().width}px）：\n  ` + bad.join("\n  ")).toEqual([]);
   });
 });
+
+/* ============================================================
+ * 「折行后被推到最右」守护 —— 时间轴图例（2026-10-19 全应用扫描发现）
+ * ------------------------------------------------------------
+ * 同族缺陷的第二种形态：不是 `space-between` 在行内摊开，而是 `margin-left:auto`
+ * 把一个"本该守在右边"的元素推走 —— 单行时是"左一右一"的好排版，一旦折行，
+ * 它会独占第二行并被顶到最右（375 下实测末行左缩进 96px，看着像缩进错了）。
+ *
+ * 判据（只判结果）：折行（≥2 行）时，末行首个元素的左边界必须贴着内容左沿（≤4px）。
+ * 单行不管 —— 单行时右对齐正是设计意图。
+ *
+ * 为什么探测器要"文本节点 + 垂直区间重叠"两件事：
+ *   图例是「● 新建」交替排列，圆点是元素、文字是文本节点。只量元素子级会把
+ *   「点→下一个点」的距离误当行内间距；按中心点归行又会把 9px 的圆点和行高文字拆成两行。
+ *   两处坑都踩过（2026-10-19），这里一并钉住。
+ * ============================================================ */
+/** 量某个 flex 容器「折行后末行是否被推开」；返回 null = 取不到 */
+const collectWrapIndent = (sel) => {
+  const box = document.querySelector(sel);
+  if (!box) return null;
+  const items = [];
+  const push = (r) => { if (r.width) items.push({ x0: r.left, y0: r.top, y1: r.bottom }); };
+  for (const n of box.childNodes) {
+    if (n.nodeType === 3) {
+      const rg = document.createRange();
+      rg.selectNodeContents(n);
+      for (const rc of rg.getClientRects()) push(rc);
+    } else if (n.nodeType === 1) {
+      push(n.getBoundingClientRect());
+    }
+  }
+  const lines = [];
+  for (const it of items.sort((a, b) => a.y0 - b.y0)) {
+    const ln = lines.find((l) => Math.min(l.y1, it.y1) - Math.max(l.y0, it.y0) > 2);
+    if (ln) { ln.items.push(it); ln.y0 = Math.min(ln.y0, it.y0); ln.y1 = Math.max(ln.y1, it.y1); }
+    else lines.push({ y0: it.y0, y1: it.y1, items: [it] });
+  }
+  if (!lines.length) return null;
+  const br = box.getBoundingClientRect();
+  const padL = parseFloat(getComputedStyle(box).paddingLeft) || 0;   // 别把容器内边距当缩进
+  const last = lines[lines.length - 1].items.sort((a, b) => a.x0 - b.x0)[0];
+  return { rows: lines.length, indent: Math.round(last.x0 - (br.left + padL)) };
+};
+
+test.describe("布局不变量 · 折行后末行不得被推开（时间轴图例）", () => {
+  test.beforeAll(() => {
+    test.skip(!process.env.E2E, "set E2E=1 to run");
+  });
+
+  test("图例折行时末行贴左（探测器自带反向对照）", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#main", { timeout: 15_000 });
+    await page.evaluate(() => { window.setActive("timeline"); window.render(); });
+    await waitMainRendered(page);
+
+    /* ---- 反向对照：造一个「必然折行 + 末行被 auto 推到最右」的最小容器 ----
+       不用克隆真实图例：真图例的 hint 很长，压窄后它会自己撑满一行、auto 边距反而没有
+       余量可推（实测对照块缩进 0，白跑一轮）。这里用"第一枚占满整行 + 一枚短说明"，
+       让"折行 + 被推开"成为确定性结果，专门检验探测器本身。 */
+    await page.evaluate(() => {
+      const box = document.createElement("div");
+      box.id = "tl-control";
+      box.className = "tl-legend";
+      box.style.width = "220px";
+      const wide = document.createElement("span");
+      wide.textContent = "占满整行";
+      wide.style.cssText = "display:inline-block;width:200px";
+      const hint = document.createElement("span");
+      hint.className = "tl-legend-hint";
+      hint.textContent = "说明";
+      hint.style.marginLeft = "auto";            // 2026-10-19 之前的写法
+      box.appendChild(wide);
+      box.appendChild(hint);
+      document.getElementById("main").appendChild(box);
+    });
+    const ctl = await page.evaluate(collectWrapIndent, "#tl-control");
+    await page.evaluate(() => {
+      const el = document.getElementById("tl-control");
+      if (el) el.remove();
+    });
+    if (!ctl) {
+      throw new Error("反向对照没造出来（找不到 .tl-legend 或克隆失败）—— 本用例的『零缩进』不可信");
+    }
+    expect(ctl.rows, "对照块应被压窄成折行，否则测不到这个缺陷").toBeGreaterThan(1);
+    expect(ctl.indent, "探测器失效：旧的 margin-left:auto 写法都没抓到").toBeGreaterThan(4);
+
+    /* ---- 真实渲染 ---- */
+    const real = await page.evaluate(collectWrapIndent, ".tl-legend");
+    expect(real, "时间轴应渲染出图例（取不到说明视图变了，别当通过）").toBeTruthy();
+    if (real.rows > 1) {
+      expect(real.indent, `图例折成 ${real.rows} 行后末行左缩进 ${real.indent}px（应贴左）`).toBeLessThanOrEqual(4);
+    }
+  });
+});

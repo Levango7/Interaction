@@ -2452,6 +2452,14 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   font-size:var(--fs-2xs);color:var(--muted);flex-wrap:wrap}
 .tl-legend .tl-dot{flex:0 0 auto}
 .tl-legend-hint{margin-left:auto;color:var(--text-faint)}
+/* 2026-10-19：`margin-left:auto` 在**单行**时是"点左、说明右"的好排版，但一旦折行，
+   它会把这句说明推到最右 —— 375 下实测末行左缩进 96px（看着像缩进错了）。
+   实测折行区间：中文 ≤768、英文 ≤1024 仍会折（英文文案约 1.6 倍长），≥1100 两种语言都放得下。
+   所以只在 ≤1099 取消 auto（能塞进一行时仍紧随"删除"之后，塞不下就自然落到行首），
+   ≥1100 保持原有右对齐观感。 */
+@media (max-width:1099px){
+  .tl-legend-hint{margin-left:0}
+}
 .heatmap-legend .sw.l0{background:var(--heat-0)}.heatmap-legend .sw.l1{background:var(--heat-1)}
 .heatmap-legend .sw.l2{background:var(--heat-2)}.heatmap-legend .sw.l3{background:var(--heat-3)}
 .heatmap-legend .sw.l4{background:var(--heat-4)}
