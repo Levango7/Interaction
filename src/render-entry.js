@@ -32,8 +32,11 @@ function appendFoot(){
   }
   const aiOn = !!(cfg && cfg.enabled);
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（appendFoot 与 _appendDrawerFoot 两处同步）
+  /* 2026-10-18（用户走查意见）：尾栏去掉产品名，只留版本号 ——
+     窄屏时尾栏本来只有一行，"Agent工坊 · v3.7.x · bxxxx" 三个信息挤在一起，
+     而产品名在顶栏/标题/关于页已经出现多次，尾栏再放一遍纯属噪音；版本号才是这里有用的东西。 */
   footEl.innerHTML = '<div class="foot-bar">' +
-    '<span class="foot-id">' + esc(t("app.name")) + ' · v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
+    '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
     t("p3.html.footTodo","<span class=\"foot-stat\">待办 ") + openN + t("stat.recordsMid"," · 资料 ") + recN + t("stat.footStatSuffix"," 条</span>") +
     '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>' +
     '</div>';
@@ -1594,7 +1597,11 @@ const TOOL_APPS = {
 
 /* v3.7.78 解耦：自别处下沉 */
 const EMPTY_ICONS = {
-  "no-tasks":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11h6M9 15h4M5 4h14a2 2 0 0 1 2 2v14l-3-2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>',
+  /* 2026-10-18（用户走查意见）：no-tasks 原来用的是**对话气泡**图标（M9 11h6M9 15h4…），
+     和"任务"语义对不上 —— 用户一眼看出来的。改用 SIDE_MENU_ICONS.tasks（剪贴板 + 勾），
+     与侧栏"任务"入口、任务页标题图标同一个图形，空态才算"说到做到"。
+     no-today 保留 check（它是"做完了"，不是"没有任务"）。 */
+  "no-tasks": SIDE_MENU_ICONS.tasks,
   "no-records":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4zM4 12h16v8H4z"/><path d="M8 16h8"/></svg>',
   "no-search": UI_ICONS.search,
   "no-stats": UI_ICONS.stats,

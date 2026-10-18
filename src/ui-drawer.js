@@ -297,8 +297,9 @@ function _appendDrawerFoot(){
   }
   const aiOn = !!(cfg && cfg.enabled);
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（与 appendFoot 同步）
+  /* 2026-10-18（用户走查意见）：同 render-entry.js 的 appendFoot —— 尾栏只留版本号，去掉产品名 */
   footEl.innerHTML = '<div class="foot-bar">' +
-    '<span class="foot-id">' + esc(t("app.name")) + ' · v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
+    '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
     t("p4.html.footStatTodo","<span class=\"foot-stat\">待办 ") + openN + t("stat.recordsMid"," · 资料 ") + recN + t("p4.html.footStatSuffix"," 条</span>") +
     '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>' +
     '</div>';

@@ -2198,6 +2198,41 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .ds-select:has(>#chatModelSelect){align-self:flex-end}
 .ds-select:has(>#chatModelSelect)>.ds-trigger .ds-caret{transform:rotate(180deg)}
 .ds-select:has(>#chatModelSelect)>.ds-trigger[aria-expanded="true"] .ds-caret{transform:rotate(0)}
+/* ===== 2026-10-18：聊天输入区「去厚重」（用户走查意见） =====
+   原状：附件 / 模型 / 发送三件套并排**全部带边框 + panel2 底**，上拉框 .ds-list 还用 shadow-3
+   —— 一行里三个盒子，视觉重量全压在底部这一条上；点模型选择时弹出的框又重又突然。
+   用户原话：「感觉点击的时候上拉框让人很不舒服，非常厚重，能不能做的自然一点」。
+
+   做法：三个控件里只保留**发送**一个实心（它是这行唯一的主操作，需要一个视觉锚点），
+   附件与模型改成 ghost —— 无边框、透明底，hover/focus 才出浅底。
+   重量靠"留白与对比"给，不靠"每样东西都画个框"。
+   ⚠️ 触控尺寸一个不缩：仍是 42×42（v3.7.27 / 29 / 30 用户三次要求加大并对齐，不能倒退）；
+   轻的是"描边与底色"，不是"大小"。
+   ⚠️ "未配置"的告警原本靠 `.chat-model-empty` 的**虚线边框**，而它加在原生 select 上
+   （被 dsEnhance 覆盖成 opacity:0）⇒ 那条虚线其实从来没显示过。顺手把告警转到可见的
+   触发器上（用强调色文字，而不是重新给它加框 —— 与 ghost 原则一致）。 */
+.chat-input-right .ds-select{flex:0 0 auto;min-width:150px;max-width:220px}
+.chat-input-right .ds-select>.ds-trigger{
+  background:transparent;border-color:transparent;box-shadow:none;
+  color:var(--text-dim);font-weight:400}
+.chat-input-right .ds-select>.ds-trigger:hover,
+.chat-input-right .ds-select>.ds-trigger[aria-expanded="true"]{
+  background:var(--surface-hover);border-color:transparent;color:var(--text)}
+.chat-input-right .ds-select>select:focus-visible+.ds-trigger{
+  border-color:transparent;box-shadow:0 0 0 2px var(--accent-soft)}
+/* 未配置：用强调色文字而不是虚线框（ghost 无框可虚） */
+.chat-input-right .ds-select:has(>select.chat-model-empty)>.ds-trigger{color:var(--accent-text,var(--accent))}
+.chat-input-right .ds-select:has(>select.chat-model-empty)>.ds-trigger:hover{color:var(--accent-text,var(--accent))}
+/* 附件按钮同款 ghost（v3.7.30 给过它 42×42 与加粗边框，现在把描边收掉） */
+.chat-attach-btn{background:transparent;border-color:transparent;box-shadow:none}
+.chat-attach-btn:hover{background:var(--surface-hover);border-color:transparent}
+/* 上拉框本身降一档：边框 45%、shadow-3 → shadow-1、圆角 control-r → radius-md */
+.chat-input-right .ds-list{
+  border-color:color-mix(in srgb,var(--line) 45%,transparent);
+  box-shadow:var(--shadow-1);border-radius:var(--radius-md);padding:var(--space-1)}
+.chat-input-right .ds-opt{padding:var(--space-1h) var(--space-2);text-align:center}
+/* 未配置时模型选择器仍然给得出"可点"的提示：hover 出浅底即可，不加框 */
+.chat-input-right .ds-trigger{border-radius:var(--radius-sm)}
 .chat-input-right .chat-send-btn{width:42px;height:42px}
 .chat-model-inline:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .chat-model-inline:hover{border-color:var(--accent-soft)}
