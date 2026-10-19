@@ -7,10 +7,11 @@
 
 ## 一、当前坐标
 
-- 版本 **v3.7.105**（数字快照：2026-10-10，HEAD `aee81ed`，tag `v3.7.105` 已推；本版为**两条会话线合并发版**：
-  服务端线 4 提交 + 客户端阶段1 批 `b0a0fc7`）；单测 **140 文件**（`git ls-files tests | grep -c '\.test\.js$'`）
-  + e2e **90 例 / 14 spec**（`npx playwright test --list` 实测 —— v3.7.93 注里"本机多出的 2 例"
-  `idb-image-backup.spec.js` 已转跟踪态，两口径归一）；逆层 18 / 循环 13（`node scripts/lint-layers.mjs`）。
+- 版本 **v3.7.133**（数字快照：2026-10-19，HEAD `a05799a`，tag `v3.7.133` 已推；本版为
+  **三态走查收口批次**——机械化守护 + 用户走查反馈六处修复，CHANGELOG `[v3.7.133]`）；
+  单测 **160 文件**（`git ls-files tests | grep -c '\.test\.js$'`）
+  + e2e **122 例 / 18 spec**（`npx playwright test --list` 实测）；逆层 18 / 循环 13
+  （`node scripts/module-graph.mjs --check` —— 两个契约型数字与 v3.7.105 时点一致，未变）。
   > ⚠️ **不再手写用例总数**（v3.7.93 之后到本版，"115 文件 / 1307+ 用例"漂了三处，见
   > `docs/audit-2026-10-06.md` R-3）：**契约型数字**（逆层/循环/块数）由门禁守着可以写；
   > **进度型数字**只写"截至某日某 commit 的实测"，并给出现测命令。
@@ -19,11 +20,13 @@
   （联调抓到并修复信封拆包 P0）；速率限制 / 审计日志（v3.7.110）/ `/api/tools/fetch`
   （v3.7.111）/ 第三方登录加固（v3.7.113，`verify/oauth-check.cjs` 33/33）已交付，七个验证脚本
   **合计 173** 且已接入 CI。剩余缺口见该文 §七：
-  refresh token 明文落盘、`corsOrigin` 默认全开、**GitHub 登录真机验收**（差用户注册一次
+  ~~refresh token 明文落盘~~（v3.7.114 已落地：数据目录 0700 / 文件 0600，README 明示
+  「`cfg.dataFile` 即凭证文件」）、~~`corsOrigin` 默认全开~~（v3.7.114：默认保持 `*`
+  开箱即通，值为 `*` 时启动 WARN + README 警示）、**GitHub 登录真机验收**（差用户注册一次
   免费 OAuth App，见文末「待办」）、微信正式接入（商务阶段项）。
 - 集成：七家 provider 主链路**全部接完**（Notion/Linear/Jira/飞书/钉钉/Slack + 本地日历），
-  废弃函数 30 → **10**（截至 2026-10-06，台账见 `tests/integration-deprecated.test.js` 的 `DEPRECATED`
-  名单；原写"9"已漂一名，`docs/audit-2026-10-06.md` R-3）。
+  废弃函数 30 → **10**（截至 2026-10-19 现测，`tests/integration-deprecated.test.js` 的 `DEPRECATED`
+  名单共 10 行；该数字 9↔10 曾漂过一次，属 R-3 同族，每次收尾按命令重数）。
 - 集成状态映射改为**运行时解析**（v3.7.85）：Linear 连接即拉团队工作流 states，Jira 更新后按
   transitions 匹配 —— 此前"需真实工作区才能接"的冻结项就地解冻。
 
