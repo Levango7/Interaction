@@ -1924,6 +1924,17 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .kcard .m>*{flex:0 0 auto;min-width:0;white-space:nowrap}
 /* v3.7.46：卡片属性 chips 左右均匀分布（原来全部左聚拢，看着偏左） */
 .kcard .m{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1);margin-top:var(--space-2)}
+/* 2026-10-18 修「标签一多就不齐」：`space-between` 是**按行**生效的 —— 一旦折行，
+   每一行都各自做"两端对齐"，行内留下宽窄不一的空洞（实测 4 枚 chip 折成两行时，
+   首行末项被顶到最右、次行三枚却挤在左端，看上去就是"参差"）。
+   规则：chips ≤3 枚时保留 space-between（铺满整行，v3.7.46 要的观感）；
+   从第 4 枚起一律左对齐 + 等距 gap —— 折行后每行同起点、同间距，最稳。
+   写法上用 `:has(> *:nth-child(4))` 做"数量查询"，基础规则仍是 space-between：
+   不支持 :has() 的旧浏览器退回今天的行为（不回退，只是没修到）。 */
+.kcard .m:has(> *:nth-child(4)){justify-content:flex-start;gap:var(--space-1h) var(--space-2)}
+/* 兜底：单枚 chip 文字过长时（nowrap + flex:0 0 auto 会把它撑出卡片）在自身宽度内截断，
+   而不是把整行顶破。`min-width:0` 只放开下限，超限还得靠 max-width + ellipsis。 */
+.kcard .m>*{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .kcard .m .due.od{background:var(--danger-soft);color:var(--danger-text,var(--danger));font-weight:600}
 .kbtns{display:flex;gap:1px;margin-top:var(--space-2);flex-wrap:wrap;
   /* v3.7.31 分类：卡片内部分三层 —— 标题(.t) / 属性(.m，只读 chip) / 操作(.kbtns，可点按钮)。
@@ -2198,6 +2209,41 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .ds-select:has(>#chatModelSelect){align-self:flex-end}
 .ds-select:has(>#chatModelSelect)>.ds-trigger .ds-caret{transform:rotate(180deg)}
 .ds-select:has(>#chatModelSelect)>.ds-trigger[aria-expanded="true"] .ds-caret{transform:rotate(0)}
+/* ===== 2026-10-18：聊天输入区「去厚重」（用户走查意见） =====
+   原状：附件 / 模型 / 发送三件套并排**全部带边框 + panel2 底**，上拉框 .ds-list 还用 shadow-3
+   —— 一行里三个盒子，视觉重量全压在底部这一条上；点模型选择时弹出的框又重又突然。
+   用户原话：「感觉点击的时候上拉框让人很不舒服，非常厚重，能不能做的自然一点」。
+
+   做法：三个控件里只保留**发送**一个实心（它是这行唯一的主操作，需要一个视觉锚点），
+   附件与模型改成 ghost —— 无边框、透明底，hover/focus 才出浅底。
+   重量靠"留白与对比"给，不靠"每样东西都画个框"。
+   ⚠️ 触控尺寸一个不缩：仍是 42×42（v3.7.27 / 29 / 30 用户三次要求加大并对齐，不能倒退）；
+   轻的是"描边与底色"，不是"大小"。
+   ⚠️ "未配置"的告警原本靠 `.chat-model-empty` 的**虚线边框**，而它加在原生 select 上
+   （被 dsEnhance 覆盖成 opacity:0）⇒ 那条虚线其实从来没显示过。顺手把告警转到可见的
+   触发器上（用强调色文字，而不是重新给它加框 —— 与 ghost 原则一致）。 */
+.chat-input-right .ds-select{flex:0 0 auto;min-width:150px;max-width:220px}
+.chat-input-right .ds-select>.ds-trigger{
+  background:transparent;border-color:transparent;box-shadow:none;
+  color:var(--text-dim);font-weight:400}
+.chat-input-right .ds-select>.ds-trigger:hover,
+.chat-input-right .ds-select>.ds-trigger[aria-expanded="true"]{
+  background:var(--surface-hover);border-color:transparent;color:var(--text)}
+.chat-input-right .ds-select>select:focus-visible+.ds-trigger{
+  border-color:transparent;box-shadow:0 0 0 2px var(--accent-soft)}
+/* 未配置：用强调色文字而不是虚线框（ghost 无框可虚） */
+.chat-input-right .ds-select:has(>select.chat-model-empty)>.ds-trigger{color:var(--accent-text,var(--accent))}
+.chat-input-right .ds-select:has(>select.chat-model-empty)>.ds-trigger:hover{color:var(--accent-text,var(--accent))}
+/* 附件按钮同款 ghost（v3.7.30 给过它 42×42 与加粗边框，现在把描边收掉） */
+.chat-attach-btn{background:transparent;border-color:transparent;box-shadow:none}
+.chat-attach-btn:hover{background:var(--surface-hover);border-color:transparent}
+/* 上拉框本身降一档：边框 45%、shadow-3 → shadow-1、圆角 control-r → radius-md */
+.chat-input-right .ds-list{
+  border-color:color-mix(in srgb,var(--line) 45%,transparent);
+  box-shadow:var(--shadow-1);border-radius:var(--radius-md);padding:var(--space-1)}
+.chat-input-right .ds-opt{padding:var(--space-1h) var(--space-2);text-align:center}
+/* 未配置时模型选择器仍然给得出"可点"的提示：hover 出浅底即可，不加框 */
+.chat-input-right .ds-trigger{border-radius:var(--radius-sm)}
 .chat-input-right .chat-send-btn{width:42px;height:42px}
 .chat-model-inline:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .chat-model-inline:hover{border-color:var(--accent-soft)}
@@ -2406,6 +2452,16 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   font-size:var(--fs-2xs);color:var(--muted);flex-wrap:wrap}
 .tl-legend .tl-dot{flex:0 0 auto}
 .tl-legend-hint{margin-left:auto;color:var(--text-faint)}
+/* 2026-10-19：`margin-left:auto` 在**单行**时是"点左、说明右"的好排版，但一旦折行，
+   它会把这句说明推到最右 —— 375 下实测末行左缩进 96px（看着像缩进错了）。
+   断点用**既有的 1023**（本应用"非桌面"边界，规范 §8.1 四档制禁止新增档位 ——
+   第一版写 1099 被 ui-spec-guards 当场拦下，CI 红了一天，就是这里）：
+   实测中文 ≤768 折行、英文 ≤1024 折行，≥1100 两种语言都放得下 ⇒
+   ≤1023 取消 auto 后中文全修、英文只剩"恰好 1024 宽 + 英文界面"一个已知残留；
+   桌面档（≥1024）的"说明右对齐"观感一分不动。 */
+@media (max-width:1023px){
+  .tl-legend-hint{margin-left:0}
+}
 .heatmap-legend .sw.l0{background:var(--heat-0)}.heatmap-legend .sw.l1{background:var(--heat-1)}
 .heatmap-legend .sw.l2{background:var(--heat-2)}.heatmap-legend .sw.l3{background:var(--heat-3)}
 .heatmap-legend .sw.l4{background:var(--heat-4)}
@@ -27180,12 +27236,21 @@ function renderTasksPage(){
     const cards = list.map(x=>{
       const s = scMeta(x.sc);
       const overdue = x.due && x.due<t && x.status!=="done";
+      /* 2026-10-18：这里原来只画"场景徽标 + 优先级 + 截止日期"，**不画 tags** ——
+         同一条任务在场景页卡片上明明有标签、切到任务页看板就消失（用户的标签白打了）。
+         两处同口径：标签一律排在截止日期之后，用与场景页相同的 `<span class="tag">`。 */
+      /* Array.isArray 而不是 `x.tags && x.tags.length`：后者碰到 tags 是个**字符串**的脏数据
+         会走进 `.map` 直接抛错（整页渲染中断）。仓库既有口径见 ui-guide.js 的 share-tags。 */
+      const tags = (Array.isArray(x.tags) && x.tags.length)
+        ? x.tags.map(v=>`<span class="tag">${esc(v)}</span>`).join("")
+        : "";
       return `<div class="kcard" data-tasks-card="${esc(x.id)}" tabindex="0" role="button" aria-label="${esc(x.title)}">
         <div class="t">${esc(x.title)}</div>
         <div class="m">
           <span class="tag" style="background:${scSoft(s.color)};color:${scCss(s.color)}">${esc(s.name)}</span>
           ${x.priority&&x.priority!=="none"?`<span class="pri ${x.priority}">${esc(x.priority)}</span>`:""}
           ${x.due?`<span class="due${overdue?" od":""}">${esc(x.due)}</span>`:""}
+          ${tags}
         </div>
       </div>`;
     }).join("");
@@ -29574,7 +29639,9 @@ function _renderKanbanCard(x, st, colName){
   const od = x.due && x.due < todayStr();
   const pri = x.priority? `<span class="pri ${x.priority}">${x.priority}</span>`:"";
   const due = x.due? `<span class="due ${od?"od":""}">${od?t("label.overduePrefix","逾期 "):""}${x.due}</span>`:"";
-  const tags=(x.tags&&x.tags.length)?` <span class="tag">${x.tags.map(t=>esc(t)).join('</span> <span class="tag">')}</span>`:"";
+  /* 2026-10-18：与任务页看板卡同一口径 —— 先用 Array.isArray 兜脏数据（tags 是字符串时
+     原写法会走进 .map 抛错、整页渲染中断），再谈渲染。 */
+  const tags=(Array.isArray(x.tags)&&x.tags.length)?` <span class="tag">${x.tags.map(v=>esc(v)).join('</span> <span class="tag">')}</span>`:"";
   let btns="";
   if(st==="todo") btns=`<button type="button" data-move="${x.id}:doing">${t("kanban.toDoing","→ 进行中")}</button>`;
   if(st==="doing") btns=`<button type="button" data-move="${x.id}:todo">${t("kanban.toTodo","← 待办")}</button><button type="button" data-move="${x.id}:done">${t("kanban.toDone","→ 完成")}</button>`;
@@ -34971,9 +35038,14 @@ function appendFoot(){
   }
   const aiOn = !!(cfg && cfg.enabled);
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（appendFoot 与 _appendDrawerFoot 两处同步）
+  /* 2026-10-18（用户走查意见）：尾栏去掉产品名，只留版本号 ——
+     窄屏时尾栏本来只有一行，"Agent工坊 · v3.7.x · bxxxx" 三个信息挤在一起，
+     而产品名在顶栏/标题/关于页已经出现多次，尾栏再放一遍纯属噪音；版本号才是这里有用的东西。
+     注：删产品名时别把 `esc()` 一起删掉 —— 它同时是 lint-xss 的**唯一**放行依据
+     （openN/recN 是计数，正常是数字，但存储被写坏时可能是别的东西，转义一遍不吃亏）。 */
   footEl.innerHTML = '<div class="foot-bar">' +
-    '<span class="foot-id">' + esc(t("app.name")) + ' · v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
-    t("p3.html.footTodo","<span class=\"foot-stat\">待办 ") + openN + t("stat.recordsMid"," · 资料 ") + recN + t("stat.footStatSuffix"," 条</span>") +
+    '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
+    t("p3.html.footTodo","<span class=\"foot-stat\">待办 ") + esc(openN) + t("stat.recordsMid"," · 资料 ") + esc(recN) + t("stat.footStatSuffix"," 条</span>") +
     '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>' +
     '</div>';
   main.appendChild(footEl);
@@ -36533,7 +36605,11 @@ const TOOL_APPS = {
 
 /* v3.7.78 解耦：自别处下沉 */
 const EMPTY_ICONS = {
-  "no-tasks":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11h6M9 15h4M5 4h14a2 2 0 0 1 2 2v14l-3-2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>',
+  /* 2026-10-18（用户走查意见）：no-tasks 原来用的是**对话气泡**图标（M9 11h6M9 15h4…），
+     和"任务"语义对不上 —— 用户一眼看出来的。改用 SIDE_MENU_ICONS.tasks（剪贴板 + 勾），
+     与侧栏"任务"入口、任务页标题图标同一个图形，空态才算"说到做到"。
+     no-today 保留 check（它是"做完了"，不是"没有任务"）。 */
+  "no-tasks": SIDE_MENU_ICONS.tasks,
   "no-records":'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4zM4 12h16v8H4z"/><path d="M8 16h8"/></svg>',
   "no-search": UI_ICONS.search,
   "no-stats": UI_ICONS.stats,
@@ -38323,9 +38399,11 @@ function _appendDrawerFoot(){
   }
   const aiOn = !!(cfg && cfg.enabled);
   const aiTxt = aiOn ? (model ? (t("status.aiConnectedDot","AI 已连接 · ") + esc(model)) : t("status.aiConnected","AI 已连接")) : t("status.aiDisabled","AI 未启用"); // v3.1.2：model 为用户输入，esc 防注入（与 appendFoot 同步）
+  /* 2026-10-18（用户走查意见）：同 render-entry.js 的 appendFoot —— 尾栏只留版本号，去掉产品名。
+     注：`esc()` 是 lint-xss 的放行依据（见该文件同处注释），删文案时别顺手删掉。 */
   footEl.innerHTML = '<div class="foot-bar">' +
-    '<span class="foot-id">' + esc(t("app.name")) + ' · v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
-    t("p4.html.footStatTodo","<span class=\"foot-stat\">待办 ") + openN + t("stat.recordsMid"," · 资料 ") + recN + t("p4.html.footStatSuffix"," 条</span>") +
+    '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
+    t("p4.html.footStatTodo","<span class=\"foot-stat\">待办 ") + esc(openN) + t("stat.recordsMid"," · 资料 ") + esc(recN) + t("p4.html.footStatSuffix"," 条</span>") +
     '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>' +
     '</div>';
   drawer.appendChild(footEl);
