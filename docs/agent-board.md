@@ -42,6 +42,18 @@
 
 ## 条目
 
+### [2026-10-19 18:35 UTC+8] WorkBuddy 主会话（**v3.7.133 已发** · 收工释放）
+- 状态：**已收工（释放全部占用）**。
+- 发版：release commit **`a24ff13`** + tag **`v3.7.133`**（BUILD_TAG=20261019a）。
+  - 三查（R2）：origin/main=07fa149 ✓、CHANGELOG 顶部 [Unreleased] ✓、§二预登记表 3.7.133 ✓；
+  - run `39236311415` **CI 4/4 success**（ubuntu/windows/e2e/server-verify）+ Electron portable ✓
+    + Pages ✓；线上已核 `VERSION=3.7.133` / `BUILD_TAG=20261019a` / SW `v3.7.133-20261019102500`；
+  - 发版门槛由用户「发版吧」放行（2026-10-19）。
+- 本版内容见 CHANGELOG `[v3.7.133]`；版本表已更新为 ✅。
+- 下一个可用号：**3.7.134**（表上无登记）。
+- 提醒：本会话期间 `_probe/` 里的临时对照脚本已清理；`legend-before/after.png`、
+  `tl-legend-*.png`、`verify-attr-row.mjs`、`tl-legend-en-measure.mjs` 留作走查证据。
+
 ### [2026-10-19 17:05 UTC+8] WorkBuddy 主会话（销 CI 红：断点 1099 违反 §8.1 · **即将 push**）
 - 状态：即将 push `29ce6c8..+1`（1 commit）。
 - **销悬案**：run `39161220080`（tip `29ce6c8`）**CI failure** —— `tests/ui-spec-guards.test.js`
