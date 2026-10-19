@@ -42,6 +42,21 @@
 
 ## 条目
 
+### [2026-10-20 02:10 UTC+8] ZCode 主会话（GitHub OAuth 真机验收 ✅ · 本机临时服务 · 不改仓库代码）
+- 状态：进行中（准备推文档回填）。**用户指派**：注册 OAuth App 后的真机验收（此前一直挂在 roadmap §五 ①）。
+- 占用路径：`docs/roadmap-2026Q4.md`、`README.md`（仅把「差用户注册一次 OAuth App」的旧表述改成已通过 + 证据）、本板。
+  **未动** `agent-workbench.html` / `src/` / `server/` 代码；`server/config.json` 与 `server/data/auth.json` 均在 .gitignore，凭据不入库。
+- 在跑的重活：本机临时服务 `node server/src/index.js`（:3001）+ `python -m http.server 8123`（127.0.0.1）——真机授权用，结束后可关。
+- 结果：**四件套全绿** —— `/me` 200（name=Levango7 / provider=github / providerId=53509847）；`/devices` 含 `github-oauth`（sid 063bfff8e66c）；
+  审计 `register{provider:github}` + `login{provider:github, device:github-oauth}`；refresh 200 且会话已持久化。服务端日志有 `[auth] github 登录完成 providerId=53509847`。
+- 踩坑（已写进 roadmap §五 ① 供后来者）：① **Client Secret 必须 40 位**（粘贴过来是 120 字符 = 同一串重复三遍）,
+  症状为兑换端点回 `incorrect_client_credentials`；② **`github.com` 网页端本机间歇性阻断**（同时刻 `api.github.com` 200 / `raw.githubusercontent` 不通，
+  系统代理关闭、无 env proxy）⇒ 授权页 `ERR_CONNECTION_RESET`，需等网络窗口；③ `cfg.github.stateTtlSec` 600→1800（首次登录要在 GitHub 侧登录+授权，
+  10 分钟不够，过期表现 `state_invalid`，与「票没签」同形，我一度误判为冒名服务——教训：先比时间戳再怀疑进程）。
+- 附带发现：共享树曾处于**源码态但浏览器仍被访问**（`agent-workbench.html` 629KB，页内无 `apiGithubOauthUrl`）⇒「GitHub 按钮点了没反应」；
+  已 `src:inject` 拼回交付态验证，验证后已抽回源码态（`check-source-state` ✓ 38/38）。
+- 准备推的范围：`docs/roadmap-2026Q4.md` + `README.md` + 本板（纯文档，不碰代码，不发版、不占号）。
+
 ### [2026-10-20 00:25 UTC+8] WorkBuddy 主会话（R-6 断点守卫升格 · 动 workflow · **即将 push**）
 - 状态：即将 push `c6d27fb..+1`（1 commit）。
 - **声明（R4，动高共写面前）**：本批动 `.github/workflows/ci.yml` 与 `deploy.yml`

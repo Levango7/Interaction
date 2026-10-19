@@ -22,8 +22,7 @@
   **合计 173** 且已接入 CI。剩余缺口见该文 §七：
   ~~refresh token 明文落盘~~（v3.7.114 已落地：数据目录 0700 / 文件 0600，README 明示
   「`cfg.dataFile` 即凭证文件」）、~~`corsOrigin` 默认全开~~（v3.7.114：默认保持 `*`
-  开箱即通，值为 `*` 时启动 WARN + README 警示）、**GitHub 登录真机验收**（差用户注册一次
-  免费 OAuth App，见文末「待办」）、微信正式接入（商务阶段项）。
+  开箱即通，值为 `*` 时启动 WARN + README 警示）、**GitHub 登录真机验收**（✅ 2026-10-19 真机通过，四件套核验见 §五 ①）、微信正式接入（商务阶段项）。
 - 集成：七家 provider 主链路**全部接完**（Notion/Linear/Jira/飞书/钉钉/Slack + 本地日历），
   废弃函数 30 → **10**（截至 2026-10-19 现测，`tests/integration-deprecated.test.js` 的 `DEPRECATED`
   名单共 10 行；该数字 9↔10 曾漂过一次，属 R-3 同族，每次收尾按命令重数）。
@@ -68,7 +67,7 @@
 | ~~Google/Outlook 日历双向~~ | **2026-10-03 用户裁定：永久不做**（暂不出国，只在国内用） | 已结案 |
 | HMS（华为）替代？ | 2026-10-03 评估：**形态不兼容** —— HMS Calendar Kit 是 Android 原生 SDK（AAR/AGP），本仓交付形态是 Web/PWA/Electron 单文件，浏览器与 Electron 都跑不了原生 SDK；要走 HMS 得新增 Android 构建轨 + 华为企业开发者账号 + 应用资质，是「换平台」不是「换渠道」。国内日历需求已由 ICS 路线（QQ/网易公开订阅链接，国内直连可达）满足 | 不做；未来若上 Android 轨再评估 |
 | 微信扫码登录 | 2026-10-03 用户裁定：**转商务阶段条件项** —— 硬前置为企业主体认证 + ICP 备案域名 + 认证费 + 回调服务端；主体功能先做出来，有企业客户时商务阶段再接（现有 `apiWechatQrcode/apiWechatStatus` 协议原样可用）。**2026-10-11 更正 + 已交付（v3.7.113）**：先更正一处我自己的误判——端点**本来就在**（`ac1114a` 骨架自带演示模式），我先前据不完整的 grep 说成"后端 404"是错的，实为**演示模式 + 两处真 bug**。v3.7.113 加固：scene 一次性消费（原来可反复领 token）、超 TTL 即清、confirm 仍默认 404 不暴露、审计落 login 事件；`verify/oauth-check.cjs` 33/33 全链路（取码→pending→dev 确认→confirmed→一次性→过期）。正式微信授权仍等商务触发 | ✅ 演示模式已加固；正式接入商务触发 |
-| GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发）。**账号侧 `/api/auth/github` 2026-10-11 已加固（v3.7.113）**：修两处真 bug（兑换打 JSON body 会被 GitHub 拒 → 改 form-urlencoded；回调页漏传 state → 客户端校验拒收、链路本是断的）＋ fail-closed（未配凭据 503 `github_not_configured` 而非 404）＋ state TTL/一次性/origin 记录/审计。**真机验收只差用户注册一次免费 OAuth App**（github.com/settings/developers，callback 填 API origin）——**操作步骤见本文 §五 待办 ①** | ✅ 已加固；真机验收待办 §五 ① |
+| GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发）。**账号侧 `/api/auth/github` 2026-10-11 已加固（v3.7.113）**：修两处真 bug（兑换打 JSON body 会被 GitHub 拒 → 改 form-urlencoded；回调页漏传 state → 客户端校验拒收、链路本是断的）＋ fail-closed（未配凭据 503 `github_not_configured` 而非 404）＋ state TTL/一次性/origin 记录/审计。**真机验收 2026-10-19 已通过**（用户已注册 OAuth App，凭据写入本机 `server/config.json`；四件套核验见 §五 ①） | ✅ 已加固 + 真机验收已通过 |
 | Notion/Linear **笔记**双向 | 无（能力已被判"个人场景不值当"）—— **建议永久不做** | — |
 | Electron **打包 portable exe** | ✅ **已通车（走 CI 产物，2026-10-10 实测）**：推 tag `v3.7.105` 触发 `Build Electron portable exe`（run `37998236342`）success，产物 `agent-workbench-portable-exe` **85.7MB** 落袋。本机仍不能直连 github 拉 helper（TLS 超时），故本机验收继续走 dev 模式：`cd electron && npm run prebuild && npx electron .`（`resolveHtml()` 的 dev 分支加载仓库根那份 HTML，所以必须先注入） | 已解（产物从 CI 取） |
 | 云同步增量 | ✅ **已交付（v3.7.106：阶段 1+2）** —— 服务端水位/tombstone/显式删除信号/幂等 + 客户端开关制增量与全量回退（`verify/incremental-check.cjs` 54/54，含 mv 冲突解决）。**冲突策略 `mv+提示` 亦已交付（v3.7.109）**；真机 UI 联调 **19/19** 通过（v3.7.112） | 已解 |
@@ -96,13 +95,13 @@
 2. **需要用户拍板的两件**：R-2 存量空 catch（P0 118 处）的消解切片与优先级；R-6 的类守卫是否升格进
    `lint:*` 清单（升格要同改 `ci.yml`/`deploy.yml`/`verify-ci-order` 三处，代价是门禁步数再 +1）；
 3. **卡在凭据的几件**：C1 Linear/Jira 真机验收、WebDAV 六步验收（`docs/webdav-verify.md`）、
-   **GitHub 登录真机验收（见 §五 待办 ①）**——各约 10 分钟人工。
+   **GitHub 登录真机验收（✅ 2026-10-19 已完成，见 §五 ①）**——其余各约 10 分钟人工。
 
 ## 五、待办清单（截至 2026-10-11 · 逐条带前置条件）
 
 | # | 事项 | 状态 | 前置 / 做法 |
 |---|---|---|---|
-| ① | **GitHub 登录真机验收** | 🟡 **待用户注册 OAuth App（约 2 分钟，个人免费，无需企业资质）** —— 代码侧已就绪（v3.7.113 加固 + 假 provider 全链路 33/33 + 真机探针） | **你做**：github.com/settings/developers → New OAuth App → 名字/主页随意 → **Authorization callback URL 填 `http://localhost:3001/api/auth/github/callback`**（3001 被占则换端口，URL 须逐字一致）→ 注册后复制 **Client ID / Client Secret** 两项给我。**我做**：生成 JWT 随机密钥、写 server/config.json（或 env `GITHUB__ENABLED=true GITHUB__CLIENTID=… GITHUB__CLIENTSECRET=… GITHUB__REDIRECTURI=…`）、起后端、起页面、开真浏览器；**唯一必须你手点的一步**是弹出授权页后点「Authorize」（那是你的 GitHub 账号授权）。然后我核验：登录态落盘、/me 返回 GitHub 身份、设备列表有 github-oauth 会话、审计环有 login{provider:github}，回填本行为 ✅ |
+| ① | **GitHub 登录真机验收** | ✅ **已通过（2026-10-19 真机）** —— 唯一真实 provider 完成端到端：`GET /api/auth/github` 签发 authorizeUrl → GitHub 授权回调 → code 兑换 → find-or-create → 签发 → 设备与审计落库。核验四件套全绿：`/me` 200 返回 `name=Levango7 provider=github providerId=53509847`；`/devices` 含 `github-oauth`（sid `063bfff8e66c`）；审计 `register{provider:github}` + `login{provider:github, device:github-oauth}`；refresh 200 且会话已持久化 |**已完成**。踩到并解决的三处（供后来者少走弯路）：① **Client Secret 必须是 40 位**——粘贴时被重复三遍（120 字符），GitHub 兑换端点直接回 `incorrect_client_credentials`；截取前 40 位后同一探针返回 `bad_verification_code`（凭据有效、仅 code 假），这才是正确判据形态。② **`github.com` 网页端在本机是间歇性阻断**（同时刻 `api.github.com` 200、`codeload` 301、`raw.githubusercontent` 不通），授权页因此多次 `ERR_CONNECTION_RESET`；不是代理问题（系统代理关闭、无 env proxy），需等网络窗口。③ `cfg.github.stateTtlSec` 由默认 600s 放宽到 **1800s**（`server/config.json`，不入库）——首次真机登录要在 GitHub 侧登录+授权，10 分钟窗口不够，过期会表现为 `state_invalid`，与「票没签」同形，极易误判为冒名服务。另：应用用 `window.open` 开授权窗，弹窗被拦时走 `location.href` 兜底（当前页跳转），此时回调页无 opener、`postMessage` 无处可达，登录态由后端会话承担——真机验收即在此形态下通过 |
 | ② | **refresh token 明文落盘** | ✅ **已按建议落地（v3.7.114）** | 数据文件写盘时目录 0700 / 文件 0600（POSIX）；README 明示「`cfg.dataFile` 即凭证文件」；权限收紧失败打 WARN 不静默。口令派生/KMS 未做（独立课题：拿到文件 ≈ 拿到整机，性价比不成立） |
 | ③ | **corsOrigin 默认全开** | ✅ **已按建议落地（v3.7.114）** | 默认保持 `*`（开箱自通优先），值为 `*` 时启动打 WARN + README 警示；对外/过反代由运维收紧 |
 | ④ | 微信正式接入（扫码登录） | ⛔ 商务触发 | 企业主体认证 + ICP 备案域名 + 开放平台审核；协议已就绪，只换 provider 实现（`docs/oauth-login-design.md` 阶段④） |
