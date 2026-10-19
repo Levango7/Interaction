@@ -42,6 +42,14 @@
 
 ## 条目
 
+### [2026-10-20 02:35 UTC+8] ZCode 主会话（GitHub OAuth 真机验收 ✅ 收工 · 已推 21aa46e）
+- 状态：**已收工（释放）**。文档回填 commit `21aa46e` 已推（roadmap §五① ✅ + §一/§四/硬阻塞表 + README 同步）。
+- 释放：全部占用归还（`docs/roadmap-2026Q4.md` / `README.md` / 本板）；未动代码、未占版本号。
+- 遗留（本机环境，不属于仓库）：`server/config.json` 含真凭据 + `stateTtlSec=1800`（gitignored，已核）；
+  临时服务 :3001（auth）与 :8123（静态页）仍在跑，供随时复验，用户可随时关。
+- 备注：本次真机验收在此前无 e2e 覆盖的 GitHub SSO 路径上完成；`oauth-check.cjs` 现在本机会是 31/33——那 2 条 FAIL 是「未配置应 503」负例，
+  被真凭据消解（返回 200 才是对的），非回归。
+
 ### [2026-10-20 02:10 UTC+8] ZCode 主会话（GitHub OAuth 真机验收 ✅ · 本机临时服务 · 不改仓库代码）
 - 状态：进行中（准备推文档回填）。**用户指派**：注册 OAuth App 后的真机验收（此前一直挂在 roadmap §五 ①）。
 - 占用路径：`docs/roadmap-2026Q4.md`、`README.md`（仅把「差用户注册一次 OAuth App」的旧表述改成已通过 + 证据）、本板。
