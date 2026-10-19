@@ -269,6 +269,8 @@ describe("deploy.yml ③ verify 步骤集 ≡ ci.yml test（缺步/多步/换序
   it("解析器哨兵：两边的关键步骤必须被解析出来（防解析失灵引起的假绿）", () => {
     expect(r.ciSteps, "ci.test 必须解析出 lint:empty-catch").toContain("npm run lint:empty-catch");
     expect(r.depSteps, "deploy.verify 必须解析出 lint:empty-catch（P1-1a 的修复本体）").toContain("npm run lint:empty-catch");
+    expect(r.ciSteps, "ci.test 必须解析出 lint:breakpoints（v3.7.134 断点守卫）").toContain("npm run lint:breakpoints");
+    expect(r.depSteps, "deploy.verify 必须解析出 lint:breakpoints（parity 同一条）").toContain("npm run lint:breakpoints");
     expect(r.ciSteps.length, "步骤数明显不足说明解析器漏抽").toBeGreaterThanOrEqual(10);
     expect(r.depSteps.length, "步骤数明显不足说明解析器漏抽").toBeGreaterThanOrEqual(10);
   });

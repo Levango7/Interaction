@@ -20,6 +20,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mediaBlocks } from "./helpers/media-blocks.js";
+/* 断点允许集的唯一真相源：scripts/lint-breakpoints.mjs（npm run lint:breakpoints）。
+   本文件从那里 import，改一侧 = 两边同时跟着变，不存在"改了测试忘了脚本"。 */
+import { MAIN_BREAKPOINTS, SEGMENT_BREAKPOINTS, DEBT_FORBIDDEN, MAIN_REQUIRED } from "../scripts/lint-breakpoints.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const HTML = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
@@ -317,6 +320,11 @@ describe("字号阶梯：十四档钉死 + 全站点一致性", () => {
 
 /* ═══════════════════════════════════════════════════════════════════════
    ⑤ 断点体系（ui-standards §8.1）—— 四档 + 不新增
+   ---------------------------------------------------------------------
+   v3.7.134：这条断言**同时**由 `scripts/lint-breakpoints.mjs`（`npm run
+   lint:breakpoints`，已接入 ci.yml/deploy.yml）把守 —— 未来写 CSS 的人在
+   `npm run lint` 就会撞上，不必等全量单测。两处共用同一份常量（见文件头
+   的 import），不存在「改了测试忘了脚本」的漂移面。
    ═══════════════════════════════════════════════════════════════════════ */
 describe("断点体系：四档制，不得新增", () => {
   /** 收集全部媒体查询里的宽度值 */
@@ -324,7 +332,7 @@ describe("断点体系：四档制，不得新增", () => {
   for (const m of HTML.matchAll(/@media[^{]*?\((?:max|min)-width\s*:\s*(\d+)px\)/g)) widths.add(m[1]);
 
   it("四个主档齐备：1440 / 1023 / 1024 / 767", () => {
-    ["1440", "1023", "1024", "767"].forEach(w => {
+    MAIN_REQUIRED.forEach(w => {
       expect(widths.has(w), "主断点 " + w + "px 应存在（规范 §8.1）").toBe(true);
     });
   });
@@ -333,16 +341,22 @@ describe("断点体系：四档制，不得新增", () => {
      它们是「同一档内的细分」，不算新增档位 —— 规范 §8.1 明确允许。
      v3.7.48 收敛：历史 879 → 1023、519 → 520（见规范附录 C4 与源码注释）。 */
   it("细分档只有 520 / 600 / 479 / 359", () => {
-    const KNOWN_SEGMENTS = new Set(["520", "600", "479", "359"]);
-    const MAIN = new Set(["1440", "1439", "1024", "1023", "768", "767"]);
-    const unknown = [...widths].filter(w => !KNOWN_SEGMENTS.has(w) && !MAIN.has(w));
+    const allowed = new Set([...MAIN_BREAKPOINTS, ...SEGMENT_BREAKPOINTS]);
+    const unknown = [...widths].filter(w => !allowed.has(w));
     expect(unknown, "出现未登记的断点值（规范 §8.1：不得引入新断点；历史债务见附录 C4）")
       .toEqual([]);
   });
 
   it("历史债务断点 879 / 519 已收敛（不得回潮）", () => {
-    expect(widths.has("879"), "879px 应已并入 1023（规范附录 C4）").toBe(false);
-    expect(widths.has("519"), "519px 应已并入 520（规范附录 C4）").toBe(false);
+    DEBT_FORBIDDEN.forEach(w => {
+      expect(widths.has(w), w + "px 应已并入 1023 / 520（规范附录 C4）").toBe(false);
+    });
+  });
+
+  it("与 lint:breakpoints 共用同一份允许集（防两处漂移）", () => {
+    /* 若有人只改了一侧，这条先红；lint 链与单测链谁先跑都能抓到 */
+    expect(new Set(MAIN_BREAKPOINTS)).toEqual(new Set(["1440", "1439", "1024", "1023", "768", "767"]));
+    expect(new Set(SEGMENT_BREAKPOINTS)).toEqual(new Set(["520", "600", "479", "359"]));
   });
 
   /* 🔴 v3.7.48 实测揪出的真缺陷：断点收敛后 #recForm 在窄屏列宽塌成 0px。

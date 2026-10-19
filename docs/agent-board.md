@@ -42,6 +42,23 @@
 
 ## 条目
 
+### [2026-10-20 00:25 UTC+8] WorkBuddy 主会话（R-6 断点守卫升格 · 动 workflow · **即将 push**）
+- 状态：即将 push `c6d27fb..+1`（1 commit）。
+- **声明（R4，动高共写面前）**：本批动 `.github/workflows/ci.yml` 与 `deploy.yml`
+  （各加一步 `npm run lint:breakpoints`，位置紧跟 `npm run lint`，两边同序）+
+  `package.json`（lint 链尾接入 + 新 script）+ `tests/ci-workflow-guard.test.js`
+  （parity 哨兵加两条，**同提交**）。
+- 用户「确定有益就做」⇒ R-6 判有益（判据纯静态、零 IO、零误报；正是 `29ce6c8` 红一夜的家族）。
+  新增 `scripts/lint-breakpoints.mjs`：允许集/债务清单（879/519 不得回潮）/主档必备三组断言。
+- 防漂移：允许集改为**单一真相源**（脚本 export 常量，`ui-spec-guards.test.js` 改 import
+  + 新增「共用同一份允许集」断言），改一侧两边同时变。
+- 验证：正向 9 值全过；**反向**（注入 1099）立即 exit 1 + 还原复绿；`npm run lint` 全链过；
+  `ui-spec-guards`+`ci-workflow-guard` 62/62（with-injected 姿势）；`verify:ci --list` 第 9 步即新守卫。
+- 顺带：GitHub OAuth 凭据已进 `server/config.json`（gitignored），真机验收探针
+  `_probe/github-login-accept.mjs` v2 **正在等你点 Authorize**（持久档案 `_probe/.gh-profile/`，
+  已加 .gitignore）。v1 教训：一次性档案落在 GitHub 登录页、5 分钟窗口不够。
+- 提醒对方：本批不动 `agent-workbench.html` 的源码态内容（lint 只读）、不动 `src/`。
+
 ### [2026-10-19 23:40 UTC+8] WorkBuddy 主会话（用户问「真的没事做了?」→ 有：R-3 坐标刷新 · **即将 push**）
 - 状态：即将 push `a05799a..+1`（1 commit，仅 docs + CHANGELOG）。
 - 答案分三类，本条只动第一类（我能单方面推进的）：

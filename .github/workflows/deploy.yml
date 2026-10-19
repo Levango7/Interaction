@@ -118,6 +118,9 @@ jobs:
       - run: npm test
       - run: npm run build:check
       - run: npm run lint
+      # v3.7.134 同步接入断点守卫（与 ci.yml test job 同序同文；parity 由
+      # tests/ci-workflow-guard.test.js「缺步/多步/换序即红」守着，别只改一处）
+      - run: npm run lint:breakpoints
       - run: npm run lint:layers
       - run: npm run lint:tokens
       # v3.7.93 修复：ci.yml:69 接入 lint-empty-catch 时只改了 ci.yml，本文件漏接 ——

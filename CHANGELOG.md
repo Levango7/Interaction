@@ -3,6 +3,25 @@
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 
+### R-6：断点纪律守卫升格进 lint 链（v3.7.134 批次 · 用户「确定有益就做」）
+
+- 背景（roadmap §四 需要拍板的第 2 件）：断点纪律此前只活在 `tests/ui-spec-guards.test.js`
+  ——**全量单测才跑到**。2026-10-19 实测学费：`29ce6c8` 给时间轴图例写了
+  `@media (max-width:1099px)`，开发者只跑受影响用例 ⇒ run `39161220080`
+  windows 腿红 + ubuntu cancel + Pages failure，红一夜。判据纯静态、零 IO、零误报
+  （把 `@media` 宽度值与允许集对一遍），是最该前置的门禁。
+- 落地：新增 `scripts/lint-breakpoints.mjs`（允许集/债务清单/主档必备三组断言，
+  未登记/债务回潮/主档缺失分别报红）；`npm run lint` 链尾接入（每个碰 CSS 的人、
+  每次 lint 都撞上）+ `ci.yml` test job 与 `deploy.yml` verify job 同序接入
+  （parity 由 `tests/ci-workflow-guard.test.js` 缺步/多步/换序即红守着）。
+- **防漂移**：断点允许集改为**单一真相源**——`MAIN_BREAKPOINTS` / `SEGMENT_BREAKPOINTS` /
+  `DEBT_FORBIDDEN` / `MAIN_REQUIRED` 由脚本 export，`ui-spec-guards.test.js` 改为 import
+  并新增一条「与 lint:breakpoints 共用同一份允许集」断言；改一侧即两边同时变，
+  不存在「改了测试忘了脚本」。
+- 验证：正向 9 个值全登记通过；**反向**（往 HTML 注入 1099）立即 exit 1 并给出允许集提示，
+  还原后复绿；`npm run lint` 全链过；`ui-spec-guards` + `ci-workflow-guard` 62/62
+  （with-injected 姿势）；`verify:ci --list` 第 9 步即新守卫。
+
 ### docs：路线图坐标刷新（R-3 数字漂移家族 · 2026-10-19 批次）
 
 - `docs/roadmap-2026Q4.md` §一「当前坐标」从 v3.7.105（2026-10-10 快照）刷到 v3.7.133：

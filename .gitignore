@@ -83,3 +83,4 @@ verify-out/
 # 基线 config.example.json 随仓库分发；本机复制成 config.json 后由 loadConfig 深合并读取。
 # 在修复前该文件**没有任何规则忽略**——用户照 README 建它极易把密钥误提交。
 server/config.json
+_probe/.gh-profile/

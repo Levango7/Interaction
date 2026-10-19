@@ -52,6 +52,13 @@ jobs:
       # .cmd-group 漏一个 `}` 使 .cmd-hit 被解析成 CSS 嵌套选择器而永不命中，
       # 命令面板命中高亮静默失效 6 个版本——浏览器对残缺样式表只做错误恢复，不会报任何错。
       - run: npm run lint
+      # v3.7.134 接入（断点纪律升格进 lint 链）：此前「不得新增断点」只活在
+      # tests/ui-spec-guards.test.js —— 全量单测才跑到。2026-10-19 实测教训：
+      # 29ce6c8 给时间轴图例写了 @media (max-width:1099px)，开发者漏跑全量 ⇒
+      # run 39161220080 windows 腿红 + ubuntu 被 cancel + Pages failure，红了一夜。
+      # 判据纯静态、零 IO、零误报（把 @media 宽度值与允许集对一遍），故提进本链：
+      # 每次 lint / 提交前都能撞上。允许集与 vitest 断言共用同一份常量（防两处漂移）。
+      - run: npm run lint:breakpoints
       # v3.7.52：补齐三处「写了但没接」的门禁（此前仅本机手动跑）
       - run: npm run lint:layers
       # v3.7.70 接入：此前 scripts/lint-tokens.mjs 零引用（package.json 与所有 workflow 均无）。
