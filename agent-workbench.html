@@ -2454,10 +2454,12 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .tl-legend-hint{margin-left:auto;color:var(--text-faint)}
 /* 2026-10-19：`margin-left:auto` 在**单行**时是"点左、说明右"的好排版，但一旦折行，
    它会把这句说明推到最右 —— 375 下实测末行左缩进 96px（看着像缩进错了）。
-   实测折行区间：中文 ≤768、英文 ≤1024 仍会折（英文文案约 1.6 倍长），≥1100 两种语言都放得下。
-   所以只在 ≤1099 取消 auto（能塞进一行时仍紧随"删除"之后，塞不下就自然落到行首），
-   ≥1100 保持原有右对齐观感。 */
-@media (max-width:1099px){
+   断点用**既有的 1023**（本应用"非桌面"边界，规范 §8.1 四档制禁止新增档位 ——
+   第一版写 1099 被 ui-spec-guards 当场拦下，CI 红了一天，就是这里）：
+   实测中文 ≤768 折行、英文 ≤1024 折行，≥1100 两种语言都放得下 ⇒
+   ≤1023 取消 auto 后中文全修、英文只剩"恰好 1024 宽 + 英文界面"一个已知残留；
+   桌面档（≥1024）的"说明右对齐"观感一分不动。 */
+@media (max-width:1023px){
   .tl-legend-hint{margin-left:0}
 }
 .heatmap-legend .sw.l0{background:var(--heat-0)}.heatmap-legend .sw.l1{background:var(--heat-1)}
