@@ -5688,15 +5688,17 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <option value="light" data-i18n="look.theme.light">浅色</option>
           <option value="dark" data-i18n="look.theme.dark">暗色</option>
           <option value="system" data-i18n="look.theme.system">跟随系统</option>
-          <option value="sepia" data-i18n="look.theme.sepia">温和护眼</option>
-          <option value="elegant" data-i18n="look.theme.elegant">见静初雪</option>
-          <option value="aurora" data-i18n="look.theme.aurora">幻夜极光</option>
-          <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
-          <option value="forest" data-i18n="look.theme.forest">秘境森林</option>
-          <option value="ocean" data-i18n="look.theme.ocean">微蓝浅海</option>
-          <option value="mist" data-i18n="look.theme.mist">晓光晨雾</option>
-          <option value="ink" data-i18n="look.theme.ink">墨底鎏金</option>
+          <!-- 2026-10-20 P1-3：默认只暴露 亮/暗/跟随系统；8 套实验主题默认隐藏，勾选后出现 -->
+          <option value="sepia" data-lab="1" hidden data-i18n="look.theme.sepia">温和护眼</option>
+          <option value="elegant" data-lab="1" hidden data-i18n="look.theme.elegant">见静初雪</option>
+          <option value="aurora" data-lab="1" hidden data-i18n="look.theme.aurora">幻夜极光</option>
+          <option value="matrix" data-lab="1" hidden data-i18n="look.theme.matrix">黑客帝国</option>
+          <option value="forest" data-lab="1" hidden data-i18n="look.theme.forest">秘境森林</option>
+          <option value="ocean" data-lab="1" hidden data-i18n="look.theme.ocean">微蓝浅海</option>
+          <option value="mist" data-lab="1" hidden data-i18n="look.theme.mist">晓光晨雾</option>
+          <option value="ink" data-lab="1" hidden data-i18n="look.theme.ink">墨底鎏金</option>
         </select>
+        <label class="u-mt-1 u-fs-2xs"><input type="checkbox" id="cfgThemeShowLab"> <span data-i18n="look.theme.showLab">显示实验主题</span></label>
       </div>
     </div>
     <div class="set-field">

@@ -1530,6 +1530,9 @@ const _btnThemeImportCancel = $("#btnThemeImportCancel"); if(_btnThemeImportCanc
    统一路由：system → cfg+applyTheme（保留跟随系统语义）；其余 → setTheme（内部持久化+同步双状态源） */
 const _cfgThemeSel = $("#cfgTheme");
 if(_cfgThemeSel){
+  /* 2026-10-20 P1-3：8 套实验主题默认隐藏；勾选后出现，选中实验主题时保持可见 */
+  const _themeLabChk = $("#cfgThemeShowLab");
+  if(_themeLabChk) _themeLabChk.onchange = ()=>{ try{ syncThemeLabOption(); }catch(e){ /* 忽略 */ } };
   _cfgThemeSel.onchange = ()=>{
     const v = _cfgThemeSel.value;
     if(!v) return;

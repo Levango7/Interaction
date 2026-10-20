@@ -51,11 +51,27 @@ function applyTheme(){
     }catch(e){ /* matchMedia 异常：保持当前主题 */ }
   }
 }
+/* 2026-10-20 P1-3：默认只暴露 亮/暗/跟随系统；8 套实验主题用 option[hidden] 收起。
+   当前选中的若是实验主题（老用户/导入恢复），自动勾上"显示实验主题"并让该 option 可见，
+   避免下拉显示空白（v3.6.3 mist 那种"选了又没了"的观感问题不重演）。 */
+function syncThemeLabOption(){
+  const sel=$("#cfgTheme"); if(!sel) return;
+  const chk=$("#cfgThemeShowLab");
+  const cur=sel.value;
+  const curOpt=Array.from(sel.options).find(function(o){ return o.value===cur; });
+  if(chk && curOpt && curOpt.hasAttribute("data-lab") && !chk.checked) chk.checked=true;
+  const show=!!(chk && chk.checked);
+  Array.from(sel.options).forEach(function(o){
+    if(!o.hasAttribute("data-lab")) return;
+    if(show || o.value===cur) o.removeAttribute("hidden"); else o.setAttribute("hidden","");
+  });
+}
 async function toggleTheme(){
   const cfg=getCfg(); const cur=document.documentElement.getAttribute("data-theme");
   const next = cur==="dark"?"light":"dark";
   cfg.theme=next; try{ await persistCfg(cfg); }catch(e){ save(PREFIX+"cfg", cfg); } applyTheme();
   const sel=$("#cfgTheme"); if(sel) sel.value=next;
+  try{ syncThemeLabOption(); }catch(e){ /* 下拉不存在时忽略 */ }
   toast(next==="dark"?t("theme.switch.dark", "已切换为暗色主题"):t("theme.switch.light", "已切换为亮色主题"), "ok");
 }
 /**

@@ -176,6 +176,8 @@ function openDrawer(){ const cfg=getCfg();
     // v1.5-C：主题选择支持 light/dark/system/aurora/sepia/elegant/matrix + 自定义主题（contrast 已于 v3.1.1 移除）
     const curTheme = (typeof getCurrentTheme === "function") ? getCurrentTheme() : (cfg.theme || "system");
     thSel.value = curTheme;
+    /* 2026-10-20 P1-3：选中的若是实验主题（老用户/导入恢复），自动展开可见，避免下拉空白 */
+    try{ syncThemeLabOption(); }catch(e){ /* 主题下拉异常不阻断设置页 */ }
   }
   const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
   // v1.5-A：语言切换回填（从 i18n 模块读取当前语言）
@@ -1178,7 +1180,7 @@ function renderThemeEditor(){
         btn.onclick = () => {
           const id = btn.getAttribute("data-theme-apply");
           AppBridge.setTheme(id);
-          const thSel = $("#cfgTheme"); if(thSel) thSel.value = id;
+          const thSel = $("#cfgTheme"); if(thSel){ thSel.value = id; try{ syncThemeLabOption(); }catch(e){ /* 同上 */ } }
           renderThemeEditor();
           try{ toast(t("theme.applied", "已应用主题「")+(customs[id]&&customs[id].name||id)+t("theme.nameSuffix", "」"), "ok"); }catch(e){}
         };
