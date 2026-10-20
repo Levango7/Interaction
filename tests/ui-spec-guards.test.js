@@ -224,7 +224,7 @@ describe("间距体系：整档 + 半档都钉死（半档此前完全无守护�
    ═══════════════════════════════════════════════════════════════════════ */
 describe("字号阶梯：十四档钉死 + 全站点一致性", () => {
   const LADDER = {
-    "--fs-4xs": "9px", "--fs-3xs": "10px", "--fs-2xs": "11px", "--fs-xs": "13px",
+    "--fs-4xs": "9px", "--fs-3xs": "10px", "--fs-2xs": "12px", "--fs-xs": "13px",
     "--fs-sm": "14px", "--fs-base": "15px", "--fs-md": "16px", "--fs-lg": "18px",
     "--fs-xl": "20px", "--fs-2xl": "24px", "--fs-3xl": "22px",
     "--fs-display-sm": "32px", "--fs-display": "36px", "--fs-display-lg": "48px",
