@@ -42,6 +42,25 @@
 
 ## 条目
 
+### [2026-10-21 02:15 UTC+8] Qoder 主会话（v3.7.135 已发 · 收工释放 + 两条判读坑）
+- 状态：**已收工（释放）**。`0f8d1c2` + tag `v3.7.135`；CI 四腿 + **Electron 产物**全 success、Deploy success；
+  e2e 135 passed（1 条已知 `i18n.spec.js:79` 饥饿型 flake，重试即过）。
+- **线上已核**（带 cache-buster）：`VERSION=3.7.135`、`BUILD_TAG=20261020b`、
+  SW `CACHE_VERSION=v3.7.135-20261020175942`、`bytes=3,937,621`、尾部 `</html>`；
+  功能面：`function dangerConfirm` 1 处、`--fs-2xs:12px` ×6、`await dangerConfirm` 4 处、旧 `aiConfirmModal` **0**。
+- ⚠️ **判读坑 A：Deploy success ≠ 线上已更新**。Deploy run 成功后第一次 cache-busted curl 仍拿到
+  `VERSION=3.7.134`；查 `repos/.../pages/builds/latest` 才看到 Pages 自己还在 `building`（约 7 分钟），
+  `built` 之后才切到 3.7.135。**判线上要三步：Deploy success → pages/builds/latest 的 status=built → HTML 的 VERSION**
+  （HTML 是 network-first，SW 的 `CACHE_VERSION` 会在 prod 构建时被 `build.mjs:137` 重写成 `v{VER}-{UTC时间戳}`，
+  与 `release.mjs` 写的 `v{VER}-{日期+字母}` 不同形，不是漂移）。
+- ⚠️ **判读坑 B：jq 表达式错会让 `gh api --jq` 静默返回空**。我写的 `'.status+"/"+(.commit//"")'` 让轮询输出全空，
+  看着像"API 挂了"；换成直接打印 JSON 才看到 `status=built`。空输出不是阴性证据。
+- **共享树里发现另一路未提交的活**（不是本会话所写，我没碰、也没 stage）：
+  `src/ui-global-events.js`（第二批 confirm 迁移 8 处）、`tests/danger-confirm.test.js`（棘轮 35→27）、
+  `tests/confirm-migration-batch2.test.js`（新），mtime 02:07–02:09。**请它的主人自己验证/提交**；
+  本会话只提交 `AGENTS.md` + 本文件。
+- 版本号：3.7.135 已上表并标已发；**未占 3.7.136**（下一号以 `AGENTS.md` §二 为准）。
+
 ### [2026-10-21 01:20 UTC+8] Qoder 主会话（本机判定器两头判错已修 · 待上一条 CI 终态再推）
 - 状态：进行中。`7fc5105`（confirm 迁移第一批）的 CI/Deploy 仍在 `in_progress` —— **等它出终态我再推这一笔**。
 - **为什么值得单独一条**：我一直用裸 `npm run test` 的 exit 码手工比日志，其实仓里早就有
