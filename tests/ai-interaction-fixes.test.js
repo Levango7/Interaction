@@ -122,8 +122,14 @@ describe("③④ 确认语义（v3.7.52）", () => {
     stubOneToolRound(win, [toolCall("delete_task", { task_id: created.id })]);
     const hist = win.getChat("office");
     await win.runChatLoop([{ role: "system", content: "s" }], hist);
-    /* 走确认 → 出现确认模态框；且任务**没有**被删 */
-    expect(win.document.getElementById("aiConfirmModal")).toBeTruthy();
+    /* 走确认 → 出现确认模态框；且任务**没有**被删。
+       ⚠️ 光"元素存在"是代理指标：旧实现用 .recycle-modal（position:static）插到 body 末端，
+       jsdom 里永远"存在"，真浏览器里却整块在视口外、按钮被底部导航压住。
+       所以这里必须钉住**浮层契约**（.viz-modal + aria-modal），可见性另有 e2e 命中测试。 */
+    const confirmModal = win.document.getElementById("dangerConfirmModal");
+    expect(confirmModal, "应出现危险操作确认框").toBeTruthy();
+    expect(confirmModal.classList.contains("viz-modal"), "确认框必须用真浮层骨架 .viz-modal").toBe(true);
+    expect(confirmModal.getAttribute("aria-modal"), "确认框必须声明 aria-modal").toBe("true");
     const after = win.__test.getTasks().find((x) => x.id === created.id);
     expect(after && after.deletedAt ? true : false).toBe(false);
     expect(hist.some((m) => m._disp && String(m._disp).indexOf("已删除") >= 0)).toBe(false);
@@ -141,7 +147,7 @@ describe("③④ 确认语义（v3.7.52）", () => {
     stubOneToolRound(win, [toolCall("create_task", { title: "直接创建", scenario: "office" })]);
     const hist = win.getChat("office");
     await win.runChatLoop([{ role: "system", content: "s" }], hist);
-    expect(win.document.getElementById("aiConfirmModal")).toBeFalsy();
+    expect(win.document.getElementById("dangerConfirmModal")).toBeFalsy();
     expect(win.__test.getTasks().some((x) => x.title === "直接创建")).toBe(true);
   });
 
@@ -156,7 +162,7 @@ describe("③④ 确认语义（v3.7.52）", () => {
     stubOneToolRound(win, [toolCall("create_task", { title: "需确认创建", scenario: "office" })]);
     const hist = win.getChat("office");
     await win.runChatLoop([{ role: "system", content: "s" }], hist);
-    expect(win.document.getElementById("aiConfirmModal")).toBeTruthy();
+    expect(win.document.getElementById("dangerConfirmModal")).toBeTruthy();
     expect(win.__test.getTasks().some((x) => x.title === "需确认创建")).toBe(false);
   });
 });

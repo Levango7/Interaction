@@ -15,6 +15,24 @@
 - 新增门禁 `tests/ui-scale-floor.test.js`：字号 12px（6 处声明齐备）+ 窄屏高度 ≥40 + 粗指针 ≥44 的静态棘轮，
   自带射程自检（违规样本必须被判红）。
 
+### 2026-10-21 · P1-4 余项（危险操作确认：从"点不到"改成真浮层）
+
+- **修掉一条 P1 缺陷**：AI 的「危险操作确认」外壳用的是 `.recycle-modal`（`position:static` 的页面内卡片）。
+  真浏览器实测：插到 body 末端时 `rect.top` 正好等于视口高度（整块在视口外），`trapFocus` 的自动 focus
+  只把文档滚下 138px；**375×667 下「确认执行」按钮 y=632–651，被固定底部导航（top=610，`--z-sidebar:40`）压住**，
+  `elementFromPoint` 命中 `mob-bar-btn` —— 想确认删除，点下去却是切走场景。
+  旧单测只断言"元素存在"，jsdom 没有排版引擎，所以这条一直是绿的。
+- **新增通用组件 `dangerConfirm()`**（核心层，`.viz-modal` 真浮层 `z-index:80`）：`role="dialog"` + `aria-modal`、
+  Esc 取消、焦点陷阱与归还、**确认类不吃遮罩点击**、消息全量转义、连开不叠层、`dismissDangerConfirm()` 幂等。
+  `openConfirmModal()` / `closeConfirmModal()` 改为委托它 —— `ui-hotkeys` 的 Esc 链与场景切换清理语义不变；
+  打字确认路径不会被误记成"已取消"。
+- 新增守护：`tests/danger-confirm.test.js` 9 例（契约 / XSS / 不叠层 / dismiss 幂等 /
+  **原生 confirm 39 处债务棘轮**，棘轮的计数器自带阳性与阴性对照）、
+  `tests/e2e/danger-confirm.spec.js` 4 例（窄屏命中 + **旧骨架反向对照**，证明判据有射程）。
+  变异验证：把骨架改回 `.recycle-modal` ⇒ 单测 1 红、窄屏 e2e 2 红。
+- 台账新增 `docs/audit-2026-10-06.md` **R-29**；`docs/DESIGN-SYSTEM.md` §4 补"浮层骨架只认哪几个类名"
+  与"看得见不许用 jsdom 证明"两条契约。
+
 ## [3.7.134] - 2026-10-20
 
 ### P0：把「看得见点不动」清零，并让能力说真话

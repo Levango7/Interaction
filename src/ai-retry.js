@@ -579,42 +579,33 @@ function cancelAgentPlan(userText){
 /**
  * A2：关闭危险操作确认模态框（若存在）
  * @returns {boolean} 是否关闭了模态框（供 ESC 链式关闭判断）
+ * 2026-10-20：确认框本体已交回通用组件 dangerConfirm（真浮层 .viz-modal），
+ * 这里只剩转发 —— 调用方（ui-hotkeys 的 Esc 链、场景切换清理）语义不变。
  */
 function closeConfirmModal(){
-  const m=$("#aiConfirmModal"); if(!m) return false;
-  if(m._releaseTrap) m._releaseTrap();
-  m.remove();
-  return true;
+  return dismissDangerConfirm();
 }
 /**
  * A2：打开危险操作确认模态框（替代纯打字确认；打字确认保留一个版本兼容）
  */
 function openConfirmModal(){
   if(!pendingConfirm) return;
-  closeConfirmModal();
   /* v3.7.52：op 标签覆盖非危险工具（关闭「自动确认非危险操作」时，批次里可能是任意工具） */
   const ops = pendingConfirm.toolCalls.map(c=> c.name==="delete_task"?t("ai.deleteTask","删除任务"):(c.name==="update_task"?t("ai.editTask","修改任务"):c.name));
   const uniq = [...new Set(ops)];
-  const html = `<div class="recycle-modal" id="aiConfirmModal">
-    <div class="recycle-card u-max-w-440">
-      <div class="recycle-header"><h2>${t("ai.confirmDangerTitle","危险操作确认")}</h2></div>
-      <div class="u-pad-5-6">
-        <p class="u-m-0-0-2">${t("ai.confirmDangerPrefix","AI 助手请求执行")}<strong>${uniq.join(t("ai.confirmJoinSep","、"))}</strong>${t("ai.confirmDangerColon","：")}</p>
-        <p class="u-fw-600 u-m-0-0-4">${esc(pendingConfirm.title)}</p>
-        <p class="sub u-m-0-0-4">${t("ai.confirmDangerHint","确认后不可撤销（删除会进入回收站）。也可以在聊天框发送「确认」继续。")}</p>
-        <div class="u-flex u-gap-2 u-jc-end">
-          <button type="button" class="btn-ghost" id="aiConfirmNo">${t("common.cancel","取消")}</button>
-          <button type="button" class="btn-danger" id="aiConfirmYes">${t("ai.confirmExecute","确认执行")}</button>
-        </div>
-      </div>
-    </div></div>`;
-  // lint-xss-ok: html 为本地模板字面量，插值仅 t() 字典值、uniq(工具名常量数组，来自 pendingConfirm.toolCalls[].name) 与 esc(pendingConfirm.title)
-  document.body.insertAdjacentHTML("beforeend", html);
-  const modal=$("#aiConfirmModal");
-  modal._releaseTrap = trapFocus(modal.querySelector(".recycle-card"));
-  $("#aiConfirmYes").onclick = ()=> confirmPendingDanger();
-  $("#aiConfirmNo").onclick = ()=> cancelPendingDanger(t("common.cancel","取消"));
-  modal.onclick = e=>{ if(e.target===modal) cancelPendingDanger(t("common.cancel","取消")); };
+  const title = pendingConfirm.title;
+  dangerConfirm({
+    title: t("ai.confirmDangerTitle","危险操作确认"),
+    message: t("ai.confirmDangerPrefix","AI 助手请求执行")
+      + uniq.join(t("ai.confirmJoinSep","、")) + t("ai.confirmDangerColon","：") + title,
+    detail: t("ai.confirmDangerHint","确认后不可撤销（删除会进入回收站）。也可以在聊天框发送「确认」继续。"),
+    confirmText: t("ai.confirmExecute","确认执行"),
+  }).then(ok=>{
+    /* dismiss(false) 也会由「打字确认」路径的 closeConfirmModal() 触发 —— 那时 pendingConfirm
+       已被消费，绝不能再补一条「已取消」，否则确认成功后又冒出取消回执。 */
+    if(ok) return confirmPendingDanger();
+    if(pendingConfirm) cancelPendingDanger(t("common.cancel","取消"));
+  });
 }
 /* ---------- 场景 sysprompt 可编辑（v1.15：默认取 SCENARIOS 常量，可被用户覆盖） ----------
  * 存储：localStorage 键 wb_agent_sysprompts = { sc: "自定义提示词" }，空值回退 SCENARIOS 默认。

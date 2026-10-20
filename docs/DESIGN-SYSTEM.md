@@ -38,6 +38,17 @@
 - 每个浮层必须：`role="dialog"` + `aria-modal="true"` + 标题关联；**Esc 关闭**；
   **焦点陷阱**（打开时聚焦首个可操作元素，关闭时焦点归还触发元素）；点遮罩关闭（确认类除外）。
 - 同一时刻最多一层浮层（Sheet 覆盖在 Modal 上必须显式允许）。
+- **浮层骨架只认这几个类名**：`.viz-modal` / `.report-modal` / `.overlay`（都是 `position:fixed` +
+  `z-index:var(--z-modal)`）。⚠️ `.recycle-modal` **不是浮层** —— 它是页面内卡片（`position:static`），
+  2026-10-21 实测它曾被当"危险操作确认"的外壳用：插到 body 末端时整块在视口外，窄屏下「确认执行」按钮
+  被固定底部导航（`--z-sidebar:40`）压住，`elementFromPoint` 命中的是 `mob-bar-btn`。
+  详见 `docs/audit-2026-10-06.md` R-29。
+- **危险操作确认一律走** `dangerConfirm({title,message,detail,confirmText}) → Promise<boolean>`
+  （核心层，`.viz-modal` 真浮层 + Esc 取消 + 焦点陷阱 + **不吃遮罩点击** + 全量转义）。
+  原生 `confirm()` 由债务棘轮钉住只准减少（`tests/danger-confirm.test.js`，当前 39 处）。
+- **"看得见、点得到"不许用 jsdom 证明** —— 它没有排版引擎，`getElementById` 恒真。浮层的可见性判据
+  必须落 Playwright：盒子在视口内 + `elementFromPoint(中心)` 命中的就是自己，并配**反向对照**
+  （拿旧骨架跑同一条判据必须判红），见 `tests/e2e/danger-confirm.spec.js`。
 
 ## 5. 状态
 

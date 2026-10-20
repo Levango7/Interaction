@@ -42,6 +42,38 @@
 
 ## 条目
 
+### [2026-10-21 00:20 UTC+8] Qoder 主会话（dangerConfirm 组件 + 一条 P1 实修 · **即将 push**）
+- 状态：进行中。上一条（可读性/触控）已 **CI 四腿全绿 + Deploy success**（run `39451735219` / `39451735325`，
+  e2e 127 passed、1 条已知 `i18n` 饥饿型 flake），**线上已核**：`--fs-2xs:12px` ×6、`bytes=3,934,612`。
+  ⚠️ 顺带一条观测坑：**第一次 curl 拿到的是 CDN 缓存的旧件**（`3,934,086 B`、仍是 `11px`），
+  判线上必须带 cache-buster（`?cb=<ts>` + `Cache-Control: no-cache`），否则"线上还是旧的"是假阴性。
+- **本批实修（台账 R-29，P1）**：AI「危险操作确认」的外壳是 `.recycle-modal`（`position:static`，页面内卡片）。
+  真浏览器实测：插到 body 末端时 `rect.top == 视口高度`（整块在视口外）；375×667 下「确认执行」按钮
+  `y=632–651` 被固定底部导航（`top=610`，`--z-sidebar:40`）压住，`elementFromPoint` 命中 `mob-bar-btn`
+  ⇒ **手机上确认删除按不动，点下去是切走场景**。旧单测只断言 `getElementById` 存在，jsdom 无排版引擎 ⇒ 恒绿。
+- **处置**：核心层新增通用 `dangerConfirm()`（`.viz-modal` 真浮层 + Esc 取消 + 焦点陷阱 + 不吃遮罩 + 全量转义 +
+  不叠层 + `dismissDangerConfirm()` 幂等）；`openConfirmModal/closeConfirmModal` 改为委托它
+  （`ui-hotkeys` Esc 链与场景切换清理语义不变；打字确认路径不会被误记成"已取消"）。
+- **占用路径**：`src/core-shared.js`、`src/core-i18n.js`（新增 `confirm.dangerTitle/dangerExecute` 中英）、
+  `src/ai-retry.js`、`tests/danger-confirm.test.js`（新）、`tests/e2e/danger-confirm.spec.js`（新）、
+  `tests/ai-interaction-fixes.test.js`（断言随组件改）、`docs/DESIGN-SYSTEM.md` §4、`docs/audit-2026-10-06.md`（R-29）、
+  `CHANGELOG.md`（**仅 `[Unreleased]` 段**）、`docs/agent-board.md`（本条）。
+- **在跑的重活**：本机已跑完 `lint`(0) / 定向 7 文件(0) / 全量 `npm test` / e2e 4 文件(0)。
+  全量那条 **不是代码红**：`three-state-render.js` 撞 60s 单例超时（该文件单独跑 **110s/45 例**，
+  本来就贴着上限），另 3 文件是 worker `onTaskUpdate` RPC 超时；**没有抬任何超时**。CI 是终判（R9）。
+- **准备推的范围**：`47c96cf..+1`（一个提交：组件 + 委托 + 两处守护 + 三份文档）。**本批不发版**，
+  攒进 `[Unreleased]`；要切 3.7.135 我会先上 `AGENTS.md` §二 再说。
+- 提醒对方三件事：
+  1. **浮层骨架只认 `.viz-modal` / `.report-modal` / `.overlay`**（`position:fixed` + `--z-modal:80`）。
+     `.recycle-modal` 是页面内卡片，拿它当浮层 = 窄屏被底部导航压住。契约已写进 `DESIGN-SYSTEM.md` §4。
+  2. **原生 `confirm()` 上了棘轮**：`tests/danger-confirm.test.js` 里 `NATIVE_CONFIRM_TOTAL = 39`（去注释后实测），
+     判据是"与实际**相等**"。新增原生确认要红；迁掉一处也要把常量一起调低。计数器会先剥注释 ——
+     文档注释里写字面量 `confirm()` 不该被数进来（我这条就踩过，39→40）。
+  3. **剩余 39 处按文件分批迁，别一律加 `await`**：`src/ui-scene-bind.js:500 batchDelete()`、
+     `src/ui-ge-integrations.js:2578/2612 webdavSyncUpload/Download` 的函数**自身有返回值**，
+     改成 async 会让调用方拿到 Promise ⇒ 确认必须前置到调用点。判据脚本 `_probe/confirm-audit.mjs`（粗口径，不作结论）。
+- 版本号：本会话**未占用**任何号。
+
 ### [2026-10-20 23:55 UTC+8] Qoder 主会话（P1-4 余项：可读性/触控下限 · **即将 push**）
 - 状态：进行中 —— 用户 14:4x「按照你的顺序来吧」+ 19:5x「继续做吧」授权的 P1-4 收尾片。
 - **占用路径**：`agent-workbench.html`（仅 CSS：`--fs-2xs` 11→12px 共 6 处 + 两条媒体查询）、

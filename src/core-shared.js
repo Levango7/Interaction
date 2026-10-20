@@ -57,6 +57,68 @@ function toast(msg, type){
   return d; // v1.9.3g：返回元素，供调用方挂点击（如 SW 更新提示「点击刷新」）
 }
 
+/* ---------- 通用危险操作确认（2026-10-20 P1-4） ----------
+ * 为什么不用原生 confirm()：原生框在浏览器里不可控（无样式、文案只有 message、
+ * 窄屏下系统会把它渲染成页面顶部一条横幅），且无法通过 i18n / 无障碍 / 视觉契约门禁。
+ * 为什么不复用 AI 那个旧壳：`.recycle-modal` 是**页面内卡片**（position:static），
+ * 实测插到 body 末端时 top 正好等于视口高度（完全在视口外），只有 trapFocus 的 focus()
+ * 把文档滚下 138px 才露出来；375×667 下「确认执行」按钮落在 y=632–651，而固定底部导航
+ * 从 y=610 开始 —— 实测 elementFromPoint 命中的是 mob-bar-btn，即按钮被导航栏压住点不到。
+ * 本组件用真浮层骨架 `.viz-modal`（position:fixed;inset:0;z-index:var(--z-modal)=80 > 底部导航 40）。
+ *
+ * 契约（docs/DESIGN-SYSTEM.md §4）：确认类**不吃遮罩点击**，必须显式二选一；Esc = 取消。 */
+let _dangerConfirmHandle = null;
+
+function dangerConfirm(opts){
+  const o = opts || {};
+  const ID = "dangerConfirmModal";
+  if(_dangerConfirmHandle) _dangerConfirmHandle.dismiss();  /* 同一时刻最多一层确认 */
+  return new Promise(resolve=>{
+    const wrap = document.createElement("div");
+    wrap.className = "viz-modal show";
+    wrap.id = ID;
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-labelledby", ID + "Title");
+    wrap.innerHTML = '<div class="viz-modal-card u-max-w-440">'
+      + '<div class="viz-modal-header"><h2 id="' + ID + 'Title">'
+      + esc(o.title || t("confirm.dangerTitle", "危险操作确认")) + '</h2></div>'
+      + '<div class="u-pad-5-6">'
+      + '<p class="u-m-0-0-2 u-fw-600">' + esc(o.message || "") + '</p>'
+      + (o.detail ? '<p class="sub u-m-0-0-4">' + esc(o.detail) + '</p>' : '')
+      + '<div class="u-flex u-gap-2 u-jc-end">'
+      + '<button type="button" class="btn-ghost" id="' + ID + 'No">'
+      + esc(o.cancelText || t("common.cancel", "取消")) + '</button>'
+      + '<button type="button" class="btn-danger" id="' + ID + 'Yes">'
+      + esc(o.confirmText || t("confirm.dangerExecute", "确认执行")) + '</button>'
+      + '</div></div></div>';
+    document.body.appendChild(wrap);
+    let settled = false;
+    const dismiss = (value)=>{
+      if(settled) return;
+      settled = true;
+      _dangerConfirmHandle = null;
+      /* trapFocus 的 release 负责把焦点还给触发元素，这里不重复抢 */
+      if(release) release();
+      wrap.remove();
+      resolve(value);
+    };
+    wrap.querySelector("#" + ID + "Yes").onclick = ()=> dismiss(true);
+    wrap.querySelector("#" + ID + "No").onclick = ()=> dismiss(false);
+    wrap.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ e.preventDefault(); dismiss(false); } });
+    /* 刻意不监听遮罩点击：确认类必须显式选择（DESIGN-SYSTEM §4） */
+    const release = trapFocus(wrap.querySelector(".viz-modal-card"));
+    _dangerConfirmHandle = { dismiss: ()=> dismiss(false) };
+  });
+}
+
+/** 外部（Esc 热键、场景切换、AI 打字确认）关掉当前确认框；返回是否真的关掉了 */
+function dismissDangerConfirm(){
+  if(!_dangerConfirmHandle) return false;
+  _dangerConfirmHandle.dismiss();
+  return true;
+}
+
 /* ---------- 场景配置（单一真相源：A-P2-7 收编 icon / sysprompt / extraCard） ---------- */
 const SCENARIOS = {
   office:{ name:t("scenario.office", "办公"), color:"#0a6cbd",
