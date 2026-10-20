@@ -5076,6 +5076,103 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .topbar{gap:2px}
   #btnHelp{display:none}
 }
+/* ===== 布局 v2（2026-10-21）：主列底部对话坞 + 右栏今日任务 =====
+   依据 PRODUCT.md：用户是桌面为主的知识工作者；闭环是「捕获 → AI 落手 → 复核」，
+   所以对话要随手可用（贴底、单行可收），任务要始终可见（右栏常驻）。
+   实现取向：不搬第三栏 DOM，只把聊天面板移进主列并用 sticky 贴底 —— 绑定/滚动/测试契约不变。 */
+@media(min-width:768px){
+  /* 对话坞：主列底部，滚内容时贴在视口底，不遮挡正文 */
+  .chat-panel{
+    position:sticky;bottom:0;z-index:var(--z-sticky);
+    width:auto;max-height:46vh;flex:0 0 auto;
+    border-left:none;border-top:1px solid var(--line);
+    background:color-mix(in srgb,var(--panel) 86%,transparent);
+    backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
+  }
+  .chat-panel:hover,.chat-panel:focus-within{box-shadow:inset 0 2px 0 var(--accent-soft)}
+  .chat-panel .chat{max-height:30vh;min-height:0}
+  .chat-panel .chat-panel-header{padding:var(--space-1) var(--space-4)}
+  .chat-panel .chat-input-area{padding:var(--space-2) var(--space-3)}
+  /* 折叠态 = 只留输入行（历史与标题都收起），展开用同一个按钮 */
+  .chat-panel.collapsed{width:auto;max-height:none;overflow:visible;transform:none}
+  .chat-panel.collapsed .chat,
+  .chat-panel.collapsed .chat-toolbar{display:none}
+  .chat-panel-rail{display:none!important}
+  .main{flex:1 0 auto}
+  /* 坞头：标题占满，动作靠右；折叠键在坞里用「上/下」表达展开/收起（原左右箭头是侧栏语义） */
+  .chat-panel .chat-panel-header{display:flex;align-items:center;gap:var(--space-1h)}
+  .chat-panel .chat-panel-header .chat-panel-title{flex:1;min-width:0}
+  .chat-panel #chatPanelCollapse{justify-self:auto}
+  .chat-panel.collapsed #chatPanelCollapse svg{transform:rotate(-90deg)}
+  .chat-panel:not(.collapsed) #chatPanelCollapse svg{transform:rotate(90deg)}
+  /* 沉浸页（设置/回收站等整页工作区）隐藏对话坞：这些页面要全高，
+     且用户此时在做配置/清理，AI 仍可从命令面板进入。 */
+  .main-wrap:has(#drawer.drawer-page) .chat-panel,
+  .main-wrap:has(.main.page-recycle) .chat-panel{display:none}
+}
+
+/* 右栏「今日任务」：≥1024 常驻；以下为共享视觉 */
+.task-rail{
+  display:flex;flex-direction:column;gap:var(--space-1);min-height:0;
+  background:color-mix(in srgb,var(--panel) 72%,transparent);
+  border-left:1px solid var(--line);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.task-rail-head{display:flex;align-items:center;gap:var(--space-1h);
+  padding:var(--space-2) var(--space-2) var(--space-1)}
+.task-rail-title{font-size:var(--fs-sm);font-weight:600}
+.task-rail-count{font-size:var(--fs-2xs);line-height:1.4;padding:0 var(--space-1h);
+  border-radius:var(--radius-full);background:var(--panel2);color:var(--muted)}
+.task-rail-add,.task-rail-collapse{margin-left:auto;width:26px;height:26px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;border:0;padding:0;
+  background:transparent;color:var(--muted);border-radius:var(--radius-sm);cursor:pointer;
+  font-size:var(--fs-lg);line-height:1}
+.task-rail-add:hover,.task-rail-collapse:hover{background:var(--surface-hover);color:var(--text)}
+.task-rail-collapse{margin-left:0}
+.task-rail-list{list-style:none;margin:0;padding:0 var(--space-1);overflow-y:auto;
+  flex:1;min-height:0;display:flex;flex-direction:column;gap:1px}
+.task-rail-item{display:flex;align-items:flex-start;gap:var(--space-1h);
+  padding:var(--space-1h) var(--space-1);border-radius:var(--radius-md);cursor:pointer}
+.task-rail-item:hover{background:var(--surface-hover)}
+.task-rail-item input[type="checkbox"]{width:16px;height:16px;margin:2px 0 0;flex-shrink:0;
+  accent-color:var(--accent);cursor:pointer}
+.task-rail-item .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
+.task-rail-item .t{flex:1;min-width:0;font-size:var(--fs-xs);line-height:1.35;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.task-rail-item .due{font-size:var(--fs-2xs);color:var(--muted);flex-shrink:0;white-space:nowrap}
+.task-rail-item .due.over{color:var(--danger)}
+.task-rail-empty{padding:var(--space-3) var(--space-2);font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
+.task-rail-more{margin:0 var(--space-1) var(--space-1);padding:var(--space-2);
+  border:0;background:transparent;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;
+  border-radius:var(--radius-md);text-align:left}
+.task-rail-more:hover{background:var(--surface-hover);color:var(--text)}
+
+@media(min-width:1024px){
+  .task-rail{width:280px;flex:0 0 280px}
+  .task-rail-toggle{display:none!important}
+  .task-rail-backdrop{display:none!important}
+  /* 折叠 = 整栏收起，顶栏出现「今日」按钮可再展开 */
+  .body.rail-collapsed .task-rail{display:none}
+  .body.rail-collapsed .task-rail-toggle,
+  .app.rail-collapsed .task-rail-toggle{display:inline-flex!important}
+}
+@media(max-width:1023px){
+  .task-rail{position:fixed;top:0;right:0;bottom:0;z-index:var(--z-popover);
+    width:min(320px,86vw);transform:translateX(102%);transition:transform var(--transition-base);
+    box-shadow:0 0 48px var(--shadow-overlay, rgba(0,0,0,.25))}
+  .task-rail.open{transform:none}
+  .task-rail-backdrop{position:fixed;inset:0;z-index:var(--z-overlay);
+    background:var(--overlay);border:0}
+  .task-rail-backdrop.show{display:block}
+}
+@media(max-width:767px){
+  .task-rail{padding-bottom:72px}
+  .task-rail-toggle .lbl{display:none}
+}
+@media(max-width:479px){
+  /* 低频按钮收口（指南→侧栏底部 #sideBtnHelp；导出→设置·数据管理），避免与「今日」入口抢宽 */
+  #btnHelp,#btnDownload{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -5095,6 +5192,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <button type="button" class="tbtn" id="btnCmd" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
     <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
+    <button type="button" class="tbtn task-rail-toggle" id="btnTaskRail" data-i18n-title="taskRail.open" title="今日任务" data-i18n-aria="taskRail.open" aria-label="今日任务">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+      <span class="badge u-hidden" id="taskRailBadge"></span><span class="lbl" data-i18n="taskRail.title">今日</span></button>
     <button class="tbtn" id="btnMessages" type="button" data-i18n-aria="a11y.messages" aria-label="消息">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="badge u-hidden" id="msgBadge"></span><span class="lbl" data-i18n="top.messages">消息</span></button>
@@ -5160,11 +5260,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       </div>
       <!-- v1.15：更多工具菜单已移除（功能迁移：甘特/导图/仪表盘→图表页，笔记→知识页，协作/分享删除） -->
       <main class="main" id="main"></main>
-    </div>
-    <!-- 右侧 AI 聊天面板（三栏布局第三栏）：常驻显示，复用 #chat/#chatForm/#chatThinking/#chatCancel
-         数据源仍为 getChat(active)（保留跟随场景切换以兼容现有测试契约，未来可切换为全局 panelChat）
-         窄屏默认隐藏，加 .show 滑入；折叠按钮在 header -->
-    <aside class="chat-panel" id="chatPanel" data-i18n-aria="a11y.aiPanel" aria-label="AI 助手面板">
+    <aside class="chat-panel collapsed" id="chatPanel" data-i18n-aria="a11y.aiPanel" aria-label="AI 助手面板">
       <div class="chat-panel-header">
         <span class="chat-panel-title">
           <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
@@ -5204,6 +5300,22 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         </div>
       </form>
     </aside>
+    </div>
+    <!-- 右栏：今日任务轨（2026-10-21 布局 v2；≥1024 常驻，<1024 由顶栏按钮滑出） -->
+    <aside class="task-rail" id="taskRail" data-i18n-aria="a11y.taskRail" aria-label="今日任务">
+      <div class="task-rail-head">
+        <span class="task-rail-title" data-i18n="taskRail.title">今日</span>
+        <span class="task-rail-count" id="taskRailCount">0</span>
+        <button type="button" class="task-rail-add" id="taskRailAdd" data-i18n-title="taskRail.add" title="新建任务" data-i18n-aria="taskRail.add" aria-label="新建任务">+</button>
+        <button type="button" class="task-rail-collapse" id="taskRailCollapse" data-i18n-title="taskRail.collapse" title="收起任务栏" data-i18n-aria="taskRail.collapse" aria-label="收起任务栏">›</button>
+      </div>
+      <ul class="task-rail-list" id="taskRailList"></ul>
+      <button type="button" class="task-rail-more" id="taskRailMore" data-i18n="taskRail.more">全部任务</button>
+    </aside>
+    <div class="task-rail-backdrop" id="taskRailBackdrop" hidden></div>
+    <!-- 右侧 AI 聊天面板（三栏布局第三栏）：常驻显示，复用 #chat/#chatForm/#chatThinking/#chatCancel
+         数据源仍为 getChat(active)（保留跟随场景切换以兼容现有测试契约，未来可切换为全局 panelChat）
+         窄屏默认隐藏，加 .show 滑入；折叠按钮在 header -->
     <!-- 折叠后的侧边条：点击展开聊天面板（窄屏/折叠态显示） -->
     <div class="chat-panel-rail" id="chatPanelRail" data-i18n-title="a11y.expandAi" title="展开 AI 助手" data-i18n-aria="a11y.expandAiPanel" aria-label="展开 AI 助手面板" role="button" tabindex="0">
   <button type="button" class="rail-btn rail-expand" id="chatRailExpand" data-i18n-title="a11y.expandAi" title="展开 AI 助手" aria-label="展开 AI 助手"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
@@ -8070,6 +8182,16 @@ const MESSAGES = {
     "side.group.apps": "应用",
     "side.group.system": "系统",
     "side.group.today": "今日",
+    "taskRail.title": "今日",
+    "taskRail.add": "新建任务",
+    "taskRail.collapse": "收起任务栏",
+    "taskRail.more": "全部任务",
+    "taskRail.open": "今日任务",
+    "taskRail.empty": "今天没有待办。点 + 记一件事。",
+    "taskRail.done": "完成：{title}",
+    "taskRail.today": "今天",
+    "taskRail.overdue": "逾期",
+    "a11y.taskRail": "今日任务",
     "side.group.work": "工作台",
     "side.group.assistant": "助手",
     "side.group.more": "更多",
@@ -12005,6 +12127,16 @@ const MESSAGES = {
     "side.group.apps": "Apps",
     "side.group.system": "System",
     "side.group.today": "Today",
+    "taskRail.title": "Today",
+    "taskRail.add": "New task",
+    "taskRail.collapse": "Collapse task rail",
+    "taskRail.more": "All tasks",
+    "taskRail.open": "Today's tasks",
+    "taskRail.empty": "Nothing due today. Tap + to capture one.",
+    "taskRail.done": "Complete: {title}",
+    "taskRail.today": "Today",
+    "taskRail.overdue": "Overdue",
+    "a11y.taskRail": "Today's tasks",
     "side.group.work": "Workbench",
     "side.group.assistant": "Assistant",
     "side.group.more": "More",
@@ -22690,7 +22822,118 @@ function renderSide(){
      不依赖异步 startup() 时序 */
   setupSideMenu();
   setupMobNav();
+  /* 右栏今日任务随侧栏同批更新：挂在 renderSide 里而不是 render() 直调，
+     否则 render-entry → render-widgets 会新增一条静态边，改变依赖基线的环集合。 */
+  renderTaskRail();
 }
+
+/* ---------- 右栏「今日任务」任务轨（2026-10-21 布局 v2） ----------
+ * 定位依据 PRODUCT.md §5：Today 是三个入口区之一；但"看今天该做什么"不该要求先切页面。
+ * 所以把它做成常驻右栏：逾期 → 今天 → 有日期的 → 无边界的，最多 8 条；
+ * 勾选即完成（completeTask 会跑联动规则，随后整体 render），点标题开编辑，+ 走首屏同一个新建入口。
+ * 不做第二套 CRUD：任务页仍是主入口，这里只做"看和勾"。 */
+function _taskRailItems(){
+  const today = todayStr();
+  const rank = (x)=> (x.due && x.due < today) ? 0 : (x.due === today ? 1 : (x.due ? 2 : 3));
+  return getActiveTasks().filter(x=>x.status!=="done").slice().sort((a,b)=>{
+    const ra = rank(a), rb = rank(b);
+    if(ra !== rb) return ra - rb;
+    if(a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
+    return _priWeight(a.priority) - _priWeight(b.priority);
+  });
+}
+
+function renderTaskRail(){
+  const rail = $("#taskRail");
+  if(!rail || !$("#taskRailList")) return;
+  const today = todayStr();
+  const pending = getActiveTasks().filter(x=>x.status!=="done");
+  const todayCount = pending.filter(x=>x.due && x.due <= today).length;
+  const cnt = $("#taskRailCount");
+  if(cnt) cnt.textContent = String(todayCount);
+  const badge = $("#taskRailBadge");
+  if(badge){ badge.textContent = todayCount ? String(todayCount) : ""; badge.classList.toggle("u-hidden", !todayCount); }
+
+  const items = _taskRailItems().slice(0, 8);
+  const html = items.length ? items.map(x=>{
+    const s = scMeta(x.sc);
+    const over = !!(x.due && x.due < today);
+    const due = x.due ? (over ? t("taskRail.overdue", "逾期")
+      : (x.due === today ? t("taskRail.today", "今天") : x.due.slice(5))) : "";
+    return `<li class="task-rail-item" data-rail-task="${esc(x.id)}">
+      <input type="checkbox" data-rail-done="${esc(x.id)}" aria-label="${esc(t("taskRail.done", "完成：{title}").replace("{title}", x.title || ""))}">
+      <span class="dot" style="background:${scCss(s.color)}"></span>
+      <span class="t">${esc(x.title || "")}</span>
+      ${due ? `<span class="due${over ? " over" : ""}">${esc(due)}</span>` : ""}
+    </li>`;
+  }).join("") : `<li class="task-rail-empty">${esc(t("taskRail.empty", "今天没有待办。点 + 记一件事。"))}</li>`;
+  // lint-xss-ok: 每个插值都过了 esc()/t() 字典值；scCss() 只产出颜色令牌或十六进制
+  $("#taskRailList").innerHTML = html;
+  _bindTaskRail();
+}
+
+function _bindTaskRail(){
+  const rail = $("#taskRail");
+  if(!rail || rail._bound) return;
+  rail._bound = true;
+  const body = document.querySelector(".body");
+  const app = document.querySelector(".app");
+  const setOpen = (open)=>{
+    rail.classList.toggle("open", open);
+    const bd = $("#taskRailBackdrop");
+    if(bd){ bd.hidden = !open; bd.classList.toggle("show", open); }
+  };
+  const collapseDesktop = ()=>{
+    if(body) body.classList.add("rail-collapsed");
+    if(app) app.classList.add("rail-collapsed");
+    save(PREFIX + "task_rail_collapsed", "1");
+  };
+  const expandDesktop = ()=>{
+    if(body) body.classList.remove("rail-collapsed");
+    if(app) app.classList.remove("rail-collapsed");
+    save(PREFIX + "task_rail_collapsed", "0");
+  };
+  const isWide = ()=> (window.innerWidth || 0) >= 1024;
+
+  const toggleBtn = $("#btnTaskRail");
+  if(toggleBtn) toggleBtn.onclick = ()=>{
+    if(isWide()){ if(body && body.classList.contains("rail-collapsed")) expandDesktop(); else collapseDesktop(); }
+    else setOpen(!rail.classList.contains("open"));
+  };
+  const colBtn = $("#taskRailCollapse");
+  if(colBtn) colBtn.onclick = ()=>{ if(isWide()) collapseDesktop(); else setOpen(false); };
+  const bd = $("#taskRailBackdrop");
+  if(bd) bd.onclick = ()=> setOpen(false);
+  document.addEventListener("keydown", (e)=>{
+    if(e.key === "Escape" && rail.classList.contains("open")) setOpen(false);
+  });
+
+  rail.addEventListener("change", (e)=>{
+    const cb = e.target && e.target.closest ? e.target.closest("[data-rail-done]") : null;
+    if(!cb) return;
+    const id = cb.getAttribute("data-rail-done");
+    if(typeof completeTask === "function" && completeTask(id)) render();
+    else renderTaskRail();
+  });
+  rail.addEventListener("click", (e)=>{
+    if(e.target.closest("[data-rail-done]")) return;
+    if(e.target.closest("#taskRailAdd")){
+      setActive("office"); render();
+      if(typeof focusTaskTitleInput === "function") focusTaskTitleInput();
+      return;
+    }
+    if(e.target.closest("#taskRailMore")){ setActive("tasks"); render(); return; }
+    const row = e.target.closest("[data-rail-task]");
+    if(row && typeof AppBridge.openTaskEdit === "function") AppBridge.openTaskEdit(row.getAttribute("data-rail-task"));
+  });
+
+  /* load() 自带损坏兜底，不会抛 —— 不再用空 catch 包一层 */
+  if(load(PREFIX + "task_rail_collapsed", "0") === "1"){
+    if(body) body.classList.add("rail-collapsed");
+    if(app) app.classList.add("rail-collapsed");
+  }
+}
+
 /* v2.1.0：侧栏两级菜单点击分发（事件委托，renderSide 重渲染后依然有效）。
    caret → 展开/收起；场景父项 → 切场景；纯父项 → 展开/收起；子项 → 执行动作。 */
 function setupSideMenu(){
@@ -34416,6 +34659,12 @@ function bindChatPanel(){
       if(rail) rail.classList.add("show");
     }
   }catch(e){ /* noop */ }
+  /* 布局 v2（2026-10-21）：默认收起由 HTML 的 .collapsed 兜底；仅当用户显式选过「展开」时移除。
+     load() 自带损坏兜底不会抛，这里不需要 try/catch。 */
+  if(load(PREFIX+"chat_panel_collapsed", null) === "0"){
+    panel.classList.remove("collapsed");
+    if(rail) rail.classList.remove("show");
+  }
   // 窄屏默认隐藏：监听窗口宽度，<768px 时加 .show 才显示（与 .collapsed 区分）
   if(typeof window !== "undefined"){
     const applyResponsive=()=>{
