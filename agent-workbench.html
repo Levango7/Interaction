@@ -5099,6 +5099,12 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .chat-panel.collapsed .chat-toolbar{display:none}
   .chat-panel-rail{display:none!important}
   .main{flex:1 0 auto}
+  /* 坞头：标题占满，动作靠右；折叠键在坞里用「上/下」表达展开/收起（原左右箭头是侧栏语义） */
+  .chat-panel .chat-panel-header{display:flex;align-items:center;gap:var(--space-1h)}
+  .chat-panel .chat-panel-header .chat-panel-title{flex:1;min-width:0}
+  .chat-panel #chatPanelCollapse{justify-self:auto}
+  .chat-panel.collapsed #chatPanelCollapse svg{transform:rotate(-90deg)}
+  .chat-panel:not(.collapsed) #chatPanelCollapse svg{transform:rotate(90deg)}
   /* 沉浸页（设置/回收站等整页工作区）隐藏对话坞：这些页面要全高，
      且用户此时在做配置/清理，AI 仍可从命令面板进入。 */
   .main-wrap:has(#drawer.drawer-page) .chat-panel,
