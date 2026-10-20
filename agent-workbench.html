@@ -8058,6 +8058,10 @@ const MESSAGES = {
     "side.group.scenario": "场景",
     "side.group.apps": "应用",
     "side.group.system": "系统",
+    "side.group.today": "今日",
+    "side.group.work": "工作台",
+    "side.group.assistant": "助手",
+    "side.group.more": "更多",
     "side.sub.wordDoc": "Word 文档",
     "side.sub.sheet": "表格",
     "side.sub.ocr": "截图 OCR",
@@ -8616,6 +8620,11 @@ const MESSAGES = {
     "toolbox.aria": "工具箱分类",
     "toolbox.title": "工具箱",
     "toolbox.sub": "文档 · 设计 · 编程 · 生活 · 检索 · 效率工具——所有工具与应用的统一入口（Ctrl+K 可直达）",
+    "toolbox.coreTitle": "常用",
+    "toolbox.labsTitle": "实验 · 默认收起",
+    "toolbox.labTag": "实验",
+    "toolbox.expandLabs": "展开实验工具（{n}）",
+    "toolbox.collapseLabs": "收起实验工具",
     "toolbox.backHome": "← 主页",
     "toolbox.searchPlaceholder": "搜索工具…",
     "toolbox.searchAria": "搜索工具",
@@ -11981,6 +11990,10 @@ const MESSAGES = {
     "side.group.scenario": "Scenarios",
     "side.group.apps": "Apps",
     "side.group.system": "System",
+    "side.group.today": "Today",
+    "side.group.work": "Workbench",
+    "side.group.assistant": "Assistant",
+    "side.group.more": "More",
     "side.sub.wordDoc": "Word Document",
     "side.sub.sheet": "Spreadsheet",
     "side.sub.ocr": "Screenshot OCR",
@@ -12538,6 +12551,11 @@ const MESSAGES = {
     "tasksPage.doneAria": "Complete",
     "toolbox.aria": "Toolbox Categories",
     "toolbox.title": "Toolbox",
+    "toolbox.coreTitle": "Essentials",
+    "toolbox.labsTitle": "Labs · collapsed by default",
+    "toolbox.labTag": "Lab",
+    "toolbox.expandLabs": "Show lab tools ({n})",
+    "toolbox.collapseLabs": "Hide lab tools",
     "toolbox.sub": "Docs · Design · Coding · Life · Search · Productivity — unified entry for all tools and apps (Ctrl+K)",
     "toolbox.backHome": "← Home",
     "toolbox.searchPlaceholder": "Search tools…",
@@ -22511,11 +22529,14 @@ function _buildSideMenu(){
   };
 
   return [
-    {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode, timelineNode]},
-    {gid:"scenario", name:t("side.group.scenario", "场景"), nodes:sceneNodes},
-    {gid:"ai", name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
-    {gid:"tools", name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
-    {gid:"system", name:t("side.group.system", "系统"), nodes:[recycleNode, gearNode, helpNode]}
+    /* 2026-10-20 P1-1a：五组 → 四组（今日 / 工作台 / 助手 / 更多）。
+       只换分组位置，17 个入口一个不丢：主页+任务+时间轴=今日；7 场景+场景联动=工作台；
+       AI=助手；工具箱+商店+回收站+设置+说明=更多。旧 gid（overview/scenario/ai/tools/system）
+       不再出现在菜单里，移动端底栏与抽屉随 gid 自动变成 4 组。 */
+    {gid:"today", name:t("side.group.today", "今日"), nodes:[overviewNode, tasksNode, timelineNode]},
+    {gid:"work", name:t("side.group.work", "工作台"), nodes:[...sceneNodes, chainPageNode]},
+    {gid:"assistant", name:t("side.group.assistant", "助手"), nodes:[aiNode]},
+    {gid:"more", name:t("side.group.more", "更多"), nodes:[toolboxNode, storeNode, recycleNode, gearNode, helpNode]}
   ];
 }
 /**
@@ -22635,11 +22656,10 @@ function _findSideMenuItem(menuId){
    v3.4.5 i18n 修复：键从中文组名改为稳定 gid——中文组名经 t() 翻译后（英文模式）
    MOB_GROUP_ICONS 查不到图标、_mobCurrentGroup 高亮兜底失配。gid 与语言无关。 */
 const MOB_GROUP_ICONS = {
-  overview: UI_ICONS.overview,
-  scenario: UI_ICONS.grid,
-  ai: UI_ICONS.robot,
-  tools: UI_ICONS.puzzle,
-  system: UI_ICONS.gear
+  today: UI_ICONS.overview,
+  work: UI_ICONS.grid,
+  assistant: UI_ICONS.robot,
+  more: UI_ICONS.puzzle
 };
 /**
  * 渲染移动端底部 5 组按钮（总览/场景/AI/工具/系统）。
@@ -26615,6 +26635,13 @@ function renderOverview(){
       <div class="ph-actions"><button type="button" class="addbtn sm" id="btnNewTask" data-sc="accent" data-i18n="top.addTask">新建任务</button><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent" data-i18n="overview.advReport">高级报表</button></div>
     </header></div>
     ${overviewNav}
+    <!-- 2026-10-20 P1-1b：待办卡从「系统数据」之后提到 KPI 之前 —— 首屏先给"要做的事"，再给"已发生的事" -->
+    <div class="ov-sec-h" data-i18n="overview.bizData">业务数据</div>
+    <div class="card ov-today-card"><h2>${ic("check")} ${todayTitle}</h2>
+      <p class="sub">${todaySub}</p>
+      ${todayHtml}
+      <h3 data-i18n="overview.sceneProgress">各场景进度</h3><div class="bars">${bars}</div>
+    </div>
     ${overview4}
     ${renderSystemOverviewCard()}
     <div class="overview-grid">
@@ -26633,12 +26660,6 @@ function renderOverview(){
         </div>
         <div class="glob-views" id="globViews"></div>
         <div id="globRes" class="u-mt-2h"></div></div>
-     <div class="ov-sec-h" data-i18n="overview.bizData">业务数据</div>
-     <div class="card"><h2>${ic("check")} ${todayTitle}</h2>
-       <p class="sub">${todaySub}</p>
-       ${todayHtml}
-       <h3 data-i18n="overview.sceneProgress">各场景进度</h3><div class="bars">${bars}</div>
-     </div>
 	     <div class="card"><h2>${ic("grid")} ${t("overview.dataGlance","数据速览")}</h2>
 	       <p class="sub" data-i18n="overview.trendSub">完成趋势与本月密度</p>
 	       <h3 data-i18n="overview.trendTitle">完成趋势（近 14 天）</h3>${lineChart}
@@ -27331,14 +27352,28 @@ function renderToolboxPage(){
     (!q || (a.name+" "+a.desc).toLowerCase().includes(q)));
   // v3.0：工具箱分类菜单复用设置页菜单栏样式（.set-nav + .set-nav-btn），求同：与设置页一致
   const chips = `<nav class="set-nav" aria-label="${t("toolbox.aria", "工具箱分类")}">` + cats.map(c=>`<button type="button" class="set-nav-btn${_toolboxCat===c?" active":""}" data-toolbox-cat="${c}">${t("tool.cat."+catKeyMap[c], c)}</button>`).join("") + `</nav>`;
-  const cards = list.map(a=>{
+  /* 2026-10-20 P1-2：工具箱降为「实验室」——
+     只有 5 个高频工具进"常用"，其余默认收进"实验"折叠区；搜索时自动展开全部（搜到了不能藏起来）。
+     白名单是 id 判据：TOOL_APPS 的 cod-json / cod-time + TOOLBOX_EXTRAS 的 x-kb / x-notes / x-cal。 */
+  const CORE_TOOL_IDS = new Set(["cod-json", "cod-time", "x-kb", "x-notes", "x-cal"]);
+  const isLab = (a) => !CORE_TOOL_IDS.has(a.toolId || a.id);
+  const cardHtml = (a, lab) => {
     const attrs = a.pop ? ` data-menu="${a.menuAttr}"` : "";
-    return `<button type="button" class="card app-card toolbox-card"${attrs} data-toolbox="${esc(a.toolId||a.id)}" role="button" tabindex="0" aria-label="${esc(a.name)}">
-      <span class="app-card-ic" aria-hidden="true">${a.icon||""}</span>
-      <span class="toolbox-cat-tag">${esc(t("tool.cat."+catKeyMap[a.cat], a.cat))}</span>
+    const catLabel = t("tool.cat." + catKeyMap[a.cat], a.cat) + (lab ? " · " + t("toolbox.labTag", "实验") : "");
+    return `<button type="button" class="card app-card toolbox-card"${attrs} data-toolbox="${esc(a.toolId || a.id)}" role="button" tabindex="0" aria-label="${esc(a.name)}">
+      <span class="app-card-ic" aria-hidden="true">${a.icon || ""}</span>
+      <span class="toolbox-cat-tag">${esc(catLabel)}</span>
       <div class="app-card-tx"><div class="app-card-name">${esc(a.name)}</div><div class="app-card-desc">${esc(a.desc)}</div></div>
     </button>`;
-  }).join("");
+  };
+  const coreList = list.filter((a) => !isLab(a));
+  const labList = list.filter(isLab);
+  const showLabs = !!q;
+  const coreCards = coreList.map((a) => cardHtml(a, false)).join("");
+  const labCards = labList.map((a) => cardHtml(a, true)).join("");
+  const labsToggle = (!q && labList.length)
+    ? `<div class="u-mt-2"><button type="button" class="addbtn sm" id="toolboxLabsToggle" aria-expanded="false">${t("toolbox.expandLabs", "展开实验工具（{n}）").replace("{n}", String(labList.length))}</button></div>`
+    : "";
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.toolbox||""}</span>
@@ -27347,7 +27382,12 @@ function renderToolboxPage(){
     </header></div>
     ${chips}
     <div class="tool-filter-bar u-mb-2"><input type="text" id="toolboxQ" placeholder="${t("toolbox.searchPlaceholder", "搜索工具…")}" value="${esc(_toolboxQ)}" class="u-flex-1" aria-label="${t("toolbox.searchAria", "搜索工具")}"></div>
-    <div class="app-grid">${cards || ""}</div>`);
+    ${coreCards ? `<div class="ov-sec-h">${t("toolbox.coreTitle", "常用")}</div><div class="app-grid">${coreCards}</div>` : ""}
+    ${labsToggle}
+    ${labList.length ? `<div id="toolboxLabs" class="u-mt-1"${showLabs ? "" : " hidden"}>
+      <div class="ov-sec-h">${t("toolbox.labsTitle", "实验 · 默认收起")}</div>
+      <div class="app-grid">${labCards}</div>
+    </div>` : ""}`);
   const backHome = $("#btnBackHome");
   if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
   const qi = $("#toolboxQ");
@@ -27367,6 +27407,16 @@ function renderToolboxPage(){
       if(extra.run){ extra.run(); }
     };
   });
+  const lt = $("#toolboxLabsToggle");
+  if(lt) lt.onclick = function(){
+    const box = $("#toolboxLabs"); if(!box) return;
+    const willShow = box.hasAttribute("hidden");
+    if(willShow) box.removeAttribute("hidden"); else box.setAttribute("hidden", "");
+    lt.setAttribute("aria-expanded", willShow ? "true" : "false");
+    lt.textContent = willShow
+      ? t("toolbox.collapseLabs", "收起实验工具")
+      : t("toolbox.expandLabs", "展开实验工具（{n}）").replace("{n}", String(labList.length));
+  };
   appendFoot();
 }
 
