@@ -28,7 +28,7 @@ test.describe("移动端（竖屏 375×667）", () => {
     page.on("dialog", async (d) => { try { await d.accept(); } catch (e) { /* ignore */ } });
   });
 
-  test("启动：无横向溢出 + 底部 5 组导航可见 + 侧栏隐藏", async ({ page }) => {
+  test("启动：无横向溢出 + 底部 4 组导航可见 + 侧栏隐藏", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#mobBar", { timeout: 15_000 });
 
@@ -37,20 +37,21 @@ test.describe("移动端（竖屏 375×667）", () => {
     );
     expect(overflow, "文档横向溢出应为 0（v3.7.6 修过窄屏顶栏溢出 8px）").toBeLessThanOrEqual(0);
 
+    /* 2026-10-20 P1-1a：五组 → 四组（今日/工作台/助手/更多） */
     const groups = await page.locator("#mobBar [data-mob-group]").count();
-    expect(groups, "底部导航应有 5 组").toBeGreaterThanOrEqual(5);
+    expect(groups, "底部导航应有 4 组").toBeGreaterThanOrEqual(4);
 
     const visible = await page.locator("#mobBar [data-mob-group]:visible").count();
-    expect(visible, "5 组都应可见").toBeGreaterThanOrEqual(5);
+    expect(visible, "4 组都应可见").toBeGreaterThanOrEqual(4);
 
     await expect(page.locator("#side"), "移动端侧栏应隐藏").toBeHidden();
   });
 
-  test("底部导航切换场景：场景组 → 抽屉 → 办公", async ({ page }) => {
+  test("底部导航切换场景：工作台组 → 抽屉 → 办公", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#mobBar", { timeout: 15_000 });
 
-    await page.click('#mobBar [data-mob-group="scenario"]');
+    await page.click('#mobBar [data-mob-group="work"]');
     await page.waitForSelector("#sideSheet.open", { timeout: 10_000 });
 
     const office = page.locator('#sideSheetBody [data-sc="office"]').first();
@@ -62,11 +63,11 @@ test.describe("移动端（竖屏 375×667）", () => {
       .toBe("office");
   });
 
-  test("底部导航进 AI 配置页：AI 组 → 抽屉 → AI 页", async ({ page }) => {
+  test("底部导航进 AI 配置页：助手组 → 抽屉 → AI 页", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#mobBar", { timeout: 15_000 });
 
-    await page.click('#mobBar [data-mob-group="ai"]');
+    await page.click('#mobBar [data-mob-group="assistant"]');
     await page.waitForSelector("#sideSheet.open", { timeout: 10_000 });
 
     await page.click('#sideSheetBody [data-menu="feat-ai"]');

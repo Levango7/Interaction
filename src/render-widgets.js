@@ -150,11 +150,14 @@ function _buildSideMenu(){
   };
 
   return [
-    {gid:"overview", name:t("side.group.overview", "总览"), nodes:[overviewNode, tasksNode, chainPageNode, timelineNode]},
-    {gid:"scenario", name:t("side.group.scenario", "场景"), nodes:sceneNodes},
-    {gid:"ai", name:t("side.group.ai", "AI"), nodes:[aiNode]},  /* v3.2 IA: AI 提级为独立组 */
-    {gid:"tools", name:t("side.group.tools", "工具"), nodes:[toolboxNode, storeNode]},
-    {gid:"system", name:t("side.group.system", "系统"), nodes:[recycleNode, gearNode, helpNode]}
+    /* 2026-10-20 P1-1a：五组 → 四组（今日 / 工作台 / 助手 / 更多）。
+       只换分组位置，17 个入口一个不丢：主页+任务+时间轴=今日；7 场景+场景联动=工作台；
+       AI=助手；工具箱+商店+回收站+设置+说明=更多。旧 gid（overview/scenario/ai/tools/system）
+       不再出现在菜单里，移动端底栏与抽屉随 gid 自动变成 4 组。 */
+    {gid:"today", name:t("side.group.today", "今日"), nodes:[overviewNode, tasksNode, timelineNode]},
+    {gid:"work", name:t("side.group.work", "工作台"), nodes:[...sceneNodes, chainPageNode]},
+    {gid:"assistant", name:t("side.group.assistant", "助手"), nodes:[aiNode]},
+    {gid:"more", name:t("side.group.more", "更多"), nodes:[toolboxNode, storeNode, recycleNode, gearNode, helpNode]}
   ];
 }
 /**
@@ -274,11 +277,10 @@ function _findSideMenuItem(menuId){
    v3.4.5 i18n 修复：键从中文组名改为稳定 gid——中文组名经 t() 翻译后（英文模式）
    MOB_GROUP_ICONS 查不到图标、_mobCurrentGroup 高亮兜底失配。gid 与语言无关。 */
 const MOB_GROUP_ICONS = {
-  overview: UI_ICONS.overview,
-  scenario: UI_ICONS.grid,
-  ai: UI_ICONS.robot,
-  tools: UI_ICONS.puzzle,
-  system: UI_ICONS.gear
+  today: UI_ICONS.overview,
+  work: UI_ICONS.grid,
+  assistant: UI_ICONS.robot,
+  more: UI_ICONS.puzzle
 };
 /**
  * 渲染移动端底部 5 组按钮（总览/场景/AI/工具/系统）。
