@@ -3176,6 +3176,10 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   display:inline-flex;align-items:center;justify-content:flex-start}
 .toast.warn{background:var(--warn)}
 .toast.ok{background:var(--ok)}
+/* 2026-10-20：error / info 两类此前没有独立视觉（29 处 error、12 处 info 调用都显示成普通 toast，
+   用户分不出"出错了"和"知道了"）。补语义色，其余样式沿用 .toast。 */
+.toast.error{background:var(--danger)}
+.toast.info{background:var(--accent)}
 
 /* ===== 使用指南 modal ===== */
 .help-modal{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;
