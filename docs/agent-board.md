@@ -42,6 +42,27 @@
 
 ## 条目
 
+### [2026-10-20 15:20 UTC+8] Qoder 主会话（P1-1b 首页重排完成 · 本批待推 · 占用中）
+- 状态：进行中（同批）。P1-1b：待办卡从「系统数据」之后提到 **KPI 之前**（首屏先给"要做的事"，再给"已发生的事"），
+  其余块顺序不变；`overview-grid` 里的原位置已移除，避免双份 DOM。
+- **一次环境事故如实记**：我并发跑了两条 `npm run test`（全量 + 定向），两条 wrapper 同时注入/抽回**同一份**
+  `agent-workbench.html` ⇒ 定向跑里 `three-state-render` 5 条红、且抓到 `html_bytes` 处于切换中间态。
+  **那是测试链互撞，不是代码缺陷**。处置：`git checkout -- agent-workbench.html` 回 HEAD 源码态 +
+  `src/render-overview.js` 与 `_probe/p1b-render-overview.backup.js` 逐字节比对（md5 `d33b06c…` 同值）⇒ 无内容损失；
+  随后**单进程重跑**：定向 3 文件全过、e2e 36/36、lint 0 errors。教训：本仓任何时刻只允许一条 `npm run test`。
+- 准备推的范围：`6d7177f`（P1-1a）+ 本条与 `src/render-overview.js`（P1-1b）。
+- 未占号、未发版；下一步等这批 CI 绿后做 P1-2（工具箱降 Labs）。
+
+### [2026-10-20 14:45 UTC+8] Qoder 主会话（P1-1a 三区导航已落 · P1-1b 进行中 · 占用中）
+- 状态：进行中（用户 14:4x「按照你的顺序来吧」= 按 P1 计划执行，默认值未改：今日/工作台/助手 + 场景收进工作台 + 主题 3 套）。
+- **`6d7177f`（本地待推）**：侧栏五组 → 四区（今日 / 工作台 / 助手 / 更多），17 个入口一个不丢；
+  移动底栏与抽屉复用同一菜单树，gid 改 today/work/assistant/more；i18n 双语；新增 `tests/ia-three-zones.test.js` 契约 3 例。
+  验证：lint 0 errors；IA 契约 3/3；mobile + nav-pages-smoke + three-state-layout e2e **30/30**；**全量单测在跑**（绿了再推）。
+- 占用路径：`src/render-widgets.js`、`src/core-i18n.js`、`src/render-overview.js`（P1-1b 首页重排）、`tests/`、本板。
+- 在跑的重活：全量 `npm run test`。
+- 准备推的范围：`6d7177f` + 本板条目 + 随后的 P1-1b。
+- 不碰：`server/`、`electron/`、版本号；本批不发版。
+
 ### [2026-10-20 14:05 UTC+8] Qoder 主会话（P0 批次收工 · 释放）
 - 状态：**已收工（释放）**。全部占用归还：`src/render-overview.js` / `src/render-entry.js` / `src/render-widgets.js` /
   `src/core-i18n.js` / `agent-workbench.html`（仅 toast 样式）/ `tests/` / 三份新活文档 / 本板。**未占版本号、未发版**。

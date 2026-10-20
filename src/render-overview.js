@@ -69,6 +69,13 @@ function renderOverview(){
       <div class="ph-actions"><button type="button" class="addbtn sm" id="btnNewTask" data-sc="accent" data-i18n="top.addTask">新建任务</button><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent" data-i18n="overview.advReport">高级报表</button></div>
     </header></div>
     ${overviewNav}
+    <!-- 2026-10-20 P1-1b：待办卡从「系统数据」之后提到 KPI 之前 —— 首屏先给"要做的事"，再给"已发生的事" -->
+    <div class="ov-sec-h" data-i18n="overview.bizData">业务数据</div>
+    <div class="card ov-today-card"><h2>${ic("check")} ${todayTitle}</h2>
+      <p class="sub">${todaySub}</p>
+      ${todayHtml}
+      <h3 data-i18n="overview.sceneProgress">各场景进度</h3><div class="bars">${bars}</div>
+    </div>
     ${overview4}
     ${renderSystemOverviewCard()}
     <div class="overview-grid">
@@ -87,12 +94,6 @@ function renderOverview(){
         </div>
         <div class="glob-views" id="globViews"></div>
         <div id="globRes" class="u-mt-2h"></div></div>
-     <div class="ov-sec-h" data-i18n="overview.bizData">业务数据</div>
-     <div class="card"><h2>${ic("check")} ${todayTitle}</h2>
-       <p class="sub">${todaySub}</p>
-       ${todayHtml}
-       <h3 data-i18n="overview.sceneProgress">各场景进度</h3><div class="bars">${bars}</div>
-     </div>
 	     <div class="card"><h2>${ic("grid")} ${t("overview.dataGlance","数据速览")}</h2>
 	       <p class="sub" data-i18n="overview.trendSub">完成趋势与本月密度</p>
 	       <h3 data-i18n="overview.trendTitle">完成趋势（近 14 天）</h3>${lineChart}
