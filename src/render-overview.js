@@ -786,14 +786,28 @@ function renderToolboxPage(){
     (!q || (a.name+" "+a.desc).toLowerCase().includes(q)));
   // v3.0：工具箱分类菜单复用设置页菜单栏样式（.set-nav + .set-nav-btn），求同：与设置页一致
   const chips = `<nav class="set-nav" aria-label="${t("toolbox.aria", "工具箱分类")}">` + cats.map(c=>`<button type="button" class="set-nav-btn${_toolboxCat===c?" active":""}" data-toolbox-cat="${c}">${t("tool.cat."+catKeyMap[c], c)}</button>`).join("") + `</nav>`;
-  const cards = list.map(a=>{
+  /* 2026-10-20 P1-2：工具箱降为「实验室」——
+     只有 5 个高频工具进"常用"，其余默认收进"实验"折叠区；搜索时自动展开全部（搜到了不能藏起来）。
+     白名单是 id 判据：TOOL_APPS 的 cod-json / cod-time + TOOLBOX_EXTRAS 的 x-kb / x-notes / x-cal。 */
+  const CORE_TOOL_IDS = new Set(["cod-json", "cod-time", "x-kb", "x-notes", "x-cal"]);
+  const isLab = (a) => !CORE_TOOL_IDS.has(a.toolId || a.id);
+  const cardHtml = (a, lab) => {
     const attrs = a.pop ? ` data-menu="${a.menuAttr}"` : "";
-    return `<button type="button" class="card app-card toolbox-card"${attrs} data-toolbox="${esc(a.toolId||a.id)}" role="button" tabindex="0" aria-label="${esc(a.name)}">
-      <span class="app-card-ic" aria-hidden="true">${a.icon||""}</span>
-      <span class="toolbox-cat-tag">${esc(t("tool.cat."+catKeyMap[a.cat], a.cat))}</span>
+    const catLabel = t("tool.cat." + catKeyMap[a.cat], a.cat) + (lab ? " · " + t("toolbox.labTag", "实验") : "");
+    return `<button type="button" class="card app-card toolbox-card"${attrs} data-toolbox="${esc(a.toolId || a.id)}" role="button" tabindex="0" aria-label="${esc(a.name)}">
+      <span class="app-card-ic" aria-hidden="true">${a.icon || ""}</span>
+      <span class="toolbox-cat-tag">${esc(catLabel)}</span>
       <div class="app-card-tx"><div class="app-card-name">${esc(a.name)}</div><div class="app-card-desc">${esc(a.desc)}</div></div>
     </button>`;
-  }).join("");
+  };
+  const coreList = list.filter((a) => !isLab(a));
+  const labList = list.filter(isLab);
+  const showLabs = !!q;
+  const coreCards = coreList.map((a) => cardHtml(a, false)).join("");
+  const labCards = labList.map((a) => cardHtml(a, true)).join("");
+  const labsToggle = (!q && labList.length)
+    ? `<div class="u-mt-2"><button type="button" class="addbtn sm" id="toolboxLabsToggle" aria-expanded="false">${t("toolbox.expandLabs", "展开实验工具（{n}）").replace("{n}", String(labList.length))}</button></div>`
+    : "";
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.toolbox||""}</span>
@@ -802,7 +816,12 @@ function renderToolboxPage(){
     </header></div>
     ${chips}
     <div class="tool-filter-bar u-mb-2"><input type="text" id="toolboxQ" placeholder="${t("toolbox.searchPlaceholder", "搜索工具…")}" value="${esc(_toolboxQ)}" class="u-flex-1" aria-label="${t("toolbox.searchAria", "搜索工具")}"></div>
-    <div class="app-grid">${cards || ""}</div>`);
+    ${coreCards ? `<div class="ov-sec-h">${t("toolbox.coreTitle", "常用")}</div><div class="app-grid">${coreCards}</div>` : ""}
+    ${labsToggle}
+    ${labList.length ? `<div id="toolboxLabs" class="u-mt-1"${showLabs ? "" : " hidden"}>
+      <div class="ov-sec-h">${t("toolbox.labsTitle", "实验 · 默认收起")}</div>
+      <div class="app-grid">${labCards}</div>
+    </div>` : ""}`);
   const backHome = $("#btnBackHome");
   if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
   const qi = $("#toolboxQ");
@@ -822,6 +841,16 @@ function renderToolboxPage(){
       if(extra.run){ extra.run(); }
     };
   });
+  const lt = $("#toolboxLabsToggle");
+  if(lt) lt.onclick = function(){
+    const box = $("#toolboxLabs"); if(!box) return;
+    const willShow = box.hasAttribute("hidden");
+    if(willShow) box.removeAttribute("hidden"); else box.setAttribute("hidden", "");
+    lt.setAttribute("aria-expanded", willShow ? "true" : "false");
+    lt.textContent = willShow
+      ? t("toolbox.collapseLabs", "收起实验工具")
+      : t("toolbox.expandLabs", "展开实验工具（{n}）").replace("{n}", String(labList.length));
+  };
   appendFoot();
 }
 
