@@ -131,7 +131,7 @@
 --control-r:12px;       /* v3.2 控制元素统一圆角（替代原 radius-md 散落） */
   /* 字号体系（v3.1.2：补 --fs-3xs/--fs-2xs 收编历史 10/11px 幽灵值——
      顶栏徽标/时间戳/迷你图表标签等密集场景元素，25+25 处硬编码正式纳入阶梯，不再游离） */
-  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
+  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:12px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
   /* 圆角体系（v2.1.1：补 --radius-full 胶囊圆角，此前 9 处引用靠回退兜底） */
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   /* [令牌组] B2 布局宽度体系（统一内容宽度，宽屏防卡片无限拉伸）。同上：:root 内组标签，非顶层分区 */
@@ -877,8 +877,16 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 }
 @media(max-width:479px){
   .topbar{gap:1px;padding-left:var(--space-1)}
-  .topbar .tbtn{min-width:26px;padding:var(--space-1) 0}
+  /* 2026-10-20 P1-4：触控下限先落到**高度**（宽度仍 26px）——
+     实测把宽度抬到 40px 会让 375px 视口产生 103px 横向溢出（顶栏图标按钮数量多）。
+     正确解法是"窄屏把低频按钮收进溢出菜单"，属独立设计项，未在本批做；见板上 P1-4 余项。 */
+  .topbar .tbtn{min-width:26px;min-height:40px;padding:var(--space-1) 0}
   .topbar .tbtn .lbl{display:none}   /* 极窄屏：纯图标 */
+}
+/* 2026-10-20 P1-4：触屏设备放宽命中区（桌面鼠标布局不受影响） */
+@media(pointer:coarse){
+  .topbar .tbtn{min-height:44px}
+  .toolbar-row .tbtn{min-height:40px}
 }
 .tbtn .badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;
   padding:0 var(--space-1);border-radius:var(--radius-md);background:var(--danger);color:var(--on-accent);
@@ -3055,7 +3063,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   /* [令牌组] T4.1 设计令牌体系（暗色覆盖：间距/字号/圆角/过渡与亮色一致，阴影加深以保持可见性）。同上 */
   --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
+  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:12px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   /* v3.2 阶段三：暗色主题阴影 5 档同步（暗色下阴影加深以保持可见性） */
   --shadow-0:none;
@@ -4004,7 +4012,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --heat-0:#e0d4b8; --heat-1:#d4d8a8; --heat-2:#b8c890; --heat-3:#9ab870; --heat-4:#7aa850;
   --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
+  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:12px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(91,70,54,.1);
   --shadow-2:0 2px 8px rgba(91,70,54,.12);
@@ -4040,7 +4048,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --heat-0:#dce8df; --heat-1:#c2e0cc; --heat-2:#98ccac; --heat-3:#6eb88c; --heat-4:#48a06c;
   --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
+  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:12px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(52,64,56,.06);
   --shadow-2:0 2px 8px rgba(52,64,56,.08);
@@ -4073,7 +4081,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --heat-0:#1a2a1a; --heat-1:#1a3a1a; --heat-2:#1a4a1a; --heat-3:#1a5a1a; --heat-4:#4ade80;
   --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
+  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:12px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
   --shadow-1:0 1px 2px rgba(0,0,0,.4);
   --shadow-2:0 2px 8px rgba(0,0,0,.5);
@@ -4116,7 +4124,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --heat-0:#1a1a20; --heat-1:#3a3418; --heat-2:#6a5c1f; --heat-3:#a08a2a; --heat-4:#d4af37;
   --space-1:4px; --space-1h:6px; --space-2:8px; --space-2h:10px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-7:28px; --space-8:32px;
-  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:11px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
+  --fs-4xs:9px; --fs-3xs:10px; --fs-2xs:12px; --fs-xs:13px; --fs-sm:14px; --fs-base:15px; --fs-md:16px; --fs-lg:18px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:22px; --fs-display-sm:32px; --fs-display:36px; --fs-display-lg:48px;
   --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:22px; --radius-full:999px;
 }
 
