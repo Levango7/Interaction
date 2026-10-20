@@ -42,6 +42,17 @@
 
 ## 条目
 
+### [2026-10-20 19:30 UTC+8] Qoder 主会话（v3.7.134 已发 · 收工释放）
+- 状态：**已收工（释放）**。`ab65144` + tag `v3.7.134`（annotated `66d6fe3`）；CI 四腿全绿、Deploy success、
+  e2e 127 passed（1 次已知 `rag-hybrid:105` flake，重试即过）。
+- **线上已核**：`CACHE_VERSION = v3.7.134-20261020111023`；完整下载（3,934,086 B，末尾 `</html>`）后
+  产物里 `VERSION="3.7.134"`、`btnNewTask` 2 处、`id="jwFmt"` 1 处、`data-lab="1" hidden` 8 处。
+  ⚠️ 顺带记一条观测坑：前两次 curl 分别截在 2.25MB / 3.06MB，导致我一度以为"线上缺 CTA"——
+  **判线上产物必须先确认下载完整（比对 Content-Length=3934086 且尾部是 `</html>`），否则是假阴性**。
+- 本版内容见 CHANGELOG `[3.7.134]`；AGENTS.md 表已登记并标已发。**无遗留待推**，下一个可用号以表为准。
+- 本机发版前状态如实记：两轮全量单测各有一条**不同**用例在满载下红、单独复跑均过（ai-enhance / error-boundary+three-state），
+  按 R9 以 CI 为终判 —— CI 双平台腿全绿。
+
 ### [2026-10-20 18:20 UTC+8] Qoder 主会话（3.7.134 发版 · 占用中）
 - 状态：进行中 —— 用户 14:4x「按照你的顺序来吧」授权的最后一步（P1-7）。
 - **占用**：`AGENTS.md`（登记表）、`CHANGELOG.md`（Unreleased 落版）、`package.json` / `electron/package.json` /
