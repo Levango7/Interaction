@@ -40730,8 +40730,8 @@ function renderIntegrationPanel(){
   }
   if(ghClear && !ghClear._ghBound){
     ghClear._ghBound = true;
-    ghClear.onclick = function(){
-      if(!confirm(t("gh.clearConfirm", "清除本机保存的 GitHub token（下次同步需重新授权）？"))) return;
+    ghClear.onclick = async function(){
+      if(!await dangerConfirm({ message: t("gh.clearConfirm", "清除本机保存的 GitHub token（下次同步需重新授权）？") })) return;
       /* v3.7.90：清除失败必须如实报，不得在凭据仍留在磁盘时提示「已清除」 */
       const okGh = githubTokenClear();
       toast(okGh ? t("gh.cleared", "已清除") : t("gh.clearFail", "清除失败：本地存储不可用，token 可能仍在本机"), okGh ? "ok" : "warn");
@@ -40768,8 +40768,8 @@ function renderIntegrationPanel(){
   }
   if(wdClear && !wdClear._wdBound){
     wdClear._wdBound = true;
-    wdClear.onclick = function(){
-      if(!confirm(t("wd.clearConfirm", "清除本机 WebDAV 配置与密码？云端文件不受影响。"))) return;
+    wdClear.onclick = async function(){
+      if(!await dangerConfirm({ message: t("wd.clearConfirm", "清除本机保存的 WebDAV 配置与密码？云端文件不受影响。") })) return;
       /* v3.7.90：同 GitHub —— 清不干净时不得谎报「已清除」 */
       const okWd = webdavClearCfg();
       toast(okWd ? t("wd.cleared", "已清除") : t("wd.clearFail", "清除失败：本地存储不可用，密码可能仍在本机"), okWd ? "ok" : "warn");
@@ -40820,9 +40820,9 @@ function renderIntegrationPanel(){
       return '<div class="int-key-row"><span class="int-key-name">' + esc(k.name || k.id) + '</span><span class="int-key-status ' + (k.revokedAt ? "int-off" : "int-on") + '">' + (k.revokedAt ? t("int.revoked","已吊销") : t("int.valid","有效")) + '</span><button type="button" class="addbtn xs int-revoke" data-revoke="' + esc(k.id) + t("p4.html.intRevokeBtn","\">吊销</button></div>");
     }).join("") : t("p4.html.intNoApiKey","<p class=\"hint\">暂无 API Key</p>"));
     keyList.querySelectorAll("[data-revoke]").forEach(function(btn){
-      btn.onclick = function(){
+      btn.onclick = async function(){
         const kid = btn.getAttribute("data-revoke");
-        if(!confirm(t("int.confirmRevoke","确定吊销此 API Key？"))) return;
+        if(!await dangerConfirm({ message: t("int.confirmRevoke","确定吊销此 API Key？") })) return;
         try{ if(typeof openApiRevokeApiKey === "function") openApiRevokeApiKey(kid); }catch(e){}
         renderIntegrationPanel();
         toast(t("api.keyRevoked", "Key 已吊销"), "ok");
@@ -40857,9 +40857,9 @@ function renderOpenApiKeyPanel(){
       return '<div class="int-key-row"><span class="int-key-name">' + esc(k.name || k.id) + '</span><span class="int-key-status ' + (k.revokedAt ? "int-off" : "int-on") + '">' + (k.revokedAt ? t("int.revoked","已吊销") : t("int.valid","有效")) + '</span><button type="button" class="addbtn xs int-revoke" data-revoke="' + esc(k.id) + t("p4.html.intRevokeBtn","\">吊销</button></div>");
     }).join("") : t("p4.html.intNoApiKey","<p class=\"hint\">暂无 API Key</p>"));
     keyList.querySelectorAll("[data-revoke]").forEach(function(btn){
-      btn.onclick = function(){
+      btn.onclick = async function(){
         const kid = btn.getAttribute("data-revoke");
-        if(!confirm(t("int.confirmRevoke","确定吊销此 API Key？"))) return;
+        if(!await dangerConfirm({ message: t("int.confirmRevoke","确定吊销此 API Key？") })) return;
         try{ if(typeof openApiRevokeApiKey === "function") openApiRevokeApiKey(kid); }catch(e){}
         renderOpenApiKeyPanel();
         toast(t("api.keyRevoked", "Key 已吊销"), "ok");
@@ -41411,8 +41411,8 @@ $("#aiSessSave").onclick = function(){
   });
   toast(t("ai.sessConfigSaved", "会话配置已保存"));
 };
-$("#aiSessClear").onclick = function(){
-  if(!confirm(t("ai.confirmClearSessHistory","确定清除所有 AI 会话历史？此操作不可撤销。"))) return;
+$("#aiSessClear").onclick = async function(){
+  if(!await dangerConfirm({ message: t("ai.confirmClearSessHistory","确定清除所有 AI 会话历史？此操作不可撤销。") })) return;
   const saved = getAiConfig("session") || {};
   saved.history = [];
   saveAiConfig("session", saved);
@@ -41492,7 +41492,7 @@ if(_cfgLangSel){
     }
   };
 }
-$("#btnClearMem").onclick = ()=>{ if(!confirm(t("mem.confirmClear","确定清空全部工作记忆？此操作不可恢复。"))) return; save(PREFIX+"memory",[]); updateAgentStatus(); toast(t("msg.memoryCleared","已清空工作记忆"),"ok"); };
+$("#btnClearMem").onclick = async ()=>{ if(!await dangerConfirm({ message: t("mem.confirmClear","确定清空全部工作记忆？此操作不可恢复。") })) return; save(PREFIX+"memory",[]); updateAgentStatus(); toast(t("msg.memoryCleared","已清空工作记忆"),"ok"); };
 $("#btnCancelGoal").onclick = ()=>{ const g=cancelGoal(); updateAgentStatus(); toast(g?(t("msg.goalCancelled","已取消目标「")+g.title+"」"):t("msg.noActiveGoal","当前无进行中目标"),"ok"); };
 
 /* ---------- T3.4 通知提醒开关绑定 ---------- */
@@ -41543,17 +41543,17 @@ $("#chainAddBtn").onclick = ()=>{
   toast(t("chain.addedPrefix","已添加链：")+(SCENARIOS[src]&&SCENARIOS[src].name||src)+"→"+(SCENARIOS[dst]&&SCENARIOS[dst].name||dst), "ok");
 };
 /* 重置为默认按钮 */
-$("#chainResetBtn").onclick = ()=>{
-  if(!confirm(t("chain.confirmReset","确定重置为默认联动规则？自定义规则将被清除。"))) return;
+$("#chainResetBtn").onclick = async ()=>{
+  if(!await dangerConfirm({ message: t("chain.confirmReset","确定重置为默认联动规则？自定义规则将被清除。") })) return;
   resetCustomLinks();
   renderLinksBox();
   toast(t("chain.resetDone","已重置为默认联动规则"), "ok");
 };
 /* linksBox 事件委托：删除 / 编辑关键词 / 编辑目标场景 / 启用切换 */
-$("#linksBox").addEventListener("click", e=>{
+$("#linksBox").addEventListener("click", async e=>{
   const target = e.target;
   const delBtn = target.closest("[data-del]");
-  if(delBtn){ const id = delBtn.getAttribute("data-del"); if(!confirm(t("chain.confirmDelete", "确定删除这条联动规则？"))) return; removeCustomLink(id); renderLinksBox(); return; }
+  if(delBtn){ const id = delBtn.getAttribute("data-del"); if(!await dangerConfirm({ message: t("chain.confirmDelete", "确定删除这条联动规则？") })) return; removeCustomLink(id); renderLinksBox(); return; }
   const saveBtn = target.closest("[data-save]");
   if(saveBtn){
     const id = saveBtn.getAttribute("data-save");
