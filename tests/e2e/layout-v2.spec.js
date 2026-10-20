@@ -11,6 +11,11 @@ const { waitMainRendered } = require("./helpers/wait-settled.cjs");
 
 const APP_URL = "./agent-workbench.html";
 
+const ensureExpanded = async (page) => {
+  const collapsed = await page.evaluate(() => document.getElementById("chatPanel").classList.contains("collapsed"));
+  if (collapsed) await page.click("#chatPanelCollapse");
+};
+
 const geom = (page) => page.evaluate(() => {
   const r = (sel) => {
     const el = document.querySelector(sel);
@@ -36,6 +41,8 @@ test.describe("桌面 1440", () => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main");
     await waitMainRendered(page);
+    /* 布局 v2 默认只留输入行（历史收起）；本用例量的是展开态几何 */
+    await ensureExpanded(page);
     const g = await geom(page);
     expect(g.chat.position, "对话面板必须是贴底坞（sticky）").toBe("sticky");
     expect(g.chat.left, "坞左缘应与主列左缘对齐").toBe(g.wrap.left);
@@ -70,6 +77,7 @@ test.describe("桌面 1440", () => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main");
     await waitMainRendered(page);
+    await ensureExpanded(page);
     const before = await geom(page);
     await page.click("#chatPanelCollapse");
     await page.waitForFunction(() => document.getElementById("chatPanel").classList.contains("collapsed"));
@@ -125,6 +133,7 @@ test.describe("平板 800（任务轨滑出）", () => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main");
     await waitMainRendered(page);
+    await ensureExpanded(page);
     const g = await geom(page);
     expect(g.chat.position).toBe("sticky");
     expect(g.chat.left).toBe(g.wrap.left);

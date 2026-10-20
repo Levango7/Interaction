@@ -8,9 +8,11 @@
 依据 `docs/PRODUCT.md` 的定位（桌面为主的知识工作者；闭环=捕获→AI 落手→复核）与大方向
 「对话区放到正下方、右侧边栏变任务列表、整体更简洁」：
 
-- **对话坞**：`#chatPanel` 移入主列并以 `sticky` 贴底（不再占第三栏）。上限 46vh，历史区自己滚动；
-  **折叠=只收起历史与工具条，标题栏与输入行保留**（首版把标题栏一起藏了，唯一的展开按钮随之消失，
-  被 e2e 当场判红——已修）。折叠状态照旧持久化。
+- **对话坞**：`#chatPanel` 移入主列并以 `sticky` 贴底（不再占第三栏）。**默认收起（只留标题栏+输入行）**，
+  点开才显示历史（上限 46vh，历史区自己滚动）；**折叠=只收起历史与工具条，标题栏与输入行保留**
+  （首版把标题栏一起藏了，唯一的展开按钮随之消失，被 e2e 当场判红——已修）。折叠状态照旧持久化。
+  **沉浸页隐藏对话坞**（设置抽屉/回收站等整页工作区）——常驻坞曾把集成面板的 Linear 按钮挤出视口、
+  让场景表单的时间下拉被裁切，CI 两条 e2e 连红三次；改为默认收起 + 沉浸页隐藏后 30 条 e2e 全绿。
 - **右栏今日任务轨**（≥1024 常驻 280px）：逾期 → 今天 → 有日期 → 无日期，最多 8 条；
   勾选走 `completeTask`（含联动），点标题开编辑，`+` 走首屏同一个新建入口；**不做第二套 CRUD**。
   计数同步顶栏徽标；可折叠（折叠后顶栏出现「今日」按钮）。
@@ -21,6 +23,33 @@
   `tests/e2e/layout-v2.spec.js`（7 例 × 2 项目：坞与主列同宽贴底、轨道在右栏、折叠后主列变宽、
   无横向溢出，含**反向对照**：偏移 40px 必须判红）。
 - 契约写入 `docs/DESIGN-SYSTEM.md` §2.1；`docs/PRODUCT.md` §5 同步助手面板与右栏的新职责。
+
+### 2026-10-21 · P1-4 余项：原生 confirm 迁移第三批（27 → 24）
+
+- 3 处调用点改走 `dangerConfirm()`，全在 `src/ui-backup-stats.js`：**导入覆盖确认**
+  （`doImport` 的 `reader.onload`，154 —— 宿主本就是 async 闭包，只添一个 `await`）、
+  **恢复前快照回滚**（`_preRestoreRollbackFlow`，613）、**恢复前快照删除**
+  （`_preRestoreDeleteFlow`，623）。两个 flow 的宿主是按钮 `onclick`（`bindPreRestoreButtons`
+  绑定），返回值无人消费，故改 `async` 无副作用。
+- 债务棘轮同步下调：`tests/danger-confirm.test.js` 的 `NATIVE_CONFIRM_TOTAL` 27 → **24**（去注释后实测）。
+- 新增真路径覆盖 `tests/confirm-migration-batch3.test.js` **8 例**：走真实入口
+  （`#fileInput` 的 `onchange` / `#btnPreRestoreRollback` / `#btnPreRestoreDelete`），
+  判据仍是「确认框出现时动作还没发生 → 点确认后动作才发生」，含取消、Esc、
+  以及「没有快照时不弹确认框、直接如实告知」这条不进死路的路径。
+- 本批实测踩到并修掉两个**测试自身**的坑（写进文件注释，避免后来者重犯）：
+  ① FileReader 回调在 jsdom 负载下远超 `vi.waitFor` 默认 1000ms —— 对导入路径改用
+  显式 30s / 50ms 间隔（等的是"文件读完并解析"这个真实条件，不是给慢测试打马虎眼）；
+  ② 只断言"数据已落盘"就结束用例，会让其后 `initCrypto()` / toast 的尾巴跑到
+  `afterEach` 关窗之后，变成 `Unhandled Rejection` —— 改为等终端 toast（"导入成功"）上屏。
+- **变异验证**：把 `_preRestoreDeleteFlow` 退回原生 `confirm()` ⇒ **恰好 4 例红**
+  （删除 2 例 + 导入"取消"/"Esc" 2 例——后者红的原因见下），还原后 md5 一致。
+  导入那 2 例在变异下红不是误差：`loadApp` 把 `win.confirm` 打成 `() => true`，
+  一旦退回原生确认就是「真取消也拦不住」，判据本来就该红。
+- 未覆盖登记（写在测试文件文末）：`doClear` 迁移需连两个直接调用方一起改 ——
+  `ui-palette.js:153`（`run:doClear`，被 `it.run()` 调）、`ui-global-events.js:34`
+  （`onclick = doClear`）、以及 `tests/clear-no-reseed.test.js:26` 与
+  `tests/round4-batch1.test.js:113`（**均不带 await**，且 OD-004 的守护就在这里）——
+  改 async 会红到守护本身，作为独立一批做。
 
 ### 2026-10-21 · P1-4 余项：原生 confirm 迁移第二批（35 → 27）
 

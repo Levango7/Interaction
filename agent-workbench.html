@@ -5099,6 +5099,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .chat-panel.collapsed .chat-toolbar{display:none}
   .chat-panel-rail{display:none!important}
   .main{flex:1 0 auto}
+  /* 沉浸页（设置/回收站等整页工作区）隐藏对话坞：这些页面要全高，
+     且用户此时在做配置/清理，AI 仍可从命令面板进入。 */
+  .main-wrap:has(#drawer.drawer-page) .chat-panel,
+  .main-wrap:has(.main.page-recycle) .chat-panel{display:none}
 }
 
 /* 右栏「今日任务」：≥1024 常驻；以下为共享视觉 */

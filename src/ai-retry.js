@@ -1222,7 +1222,9 @@ function bindChatPanel(){
   //       （768px 下不折叠时主区仅 288px，看板会被挤溢出）
   try{
     const hasPref = localStorage.getItem(PREFIX+"chat_panel_collapsed") !== null;
-    const collapseByDefault = !hasPref && (window.innerWidth||1024) < 1280;
+    /* 布局 v2（2026-10-21）：对话坞在主列底部，常驻会占掉工作区高度 —— 默认只留输入行，
+       有显式偏好才恢复用户选择。首次想看历史点标题栏的折叠按钮即可。 */
+    const collapseByDefault = !hasPref;
     if(load(PREFIX+"chat_panel_collapsed","0")==="1" || collapseByDefault){
       panel.classList.add("collapsed");
       // 保留按钮 SVG；恢复折叠态不替换按钮内容。
