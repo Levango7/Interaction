@@ -3,6 +3,24 @@
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 
+### 2026-10-21 · P1-4 余项：原生 confirm 迁移第二批（35 → 27）
+
+- 8 处调用点改走 `dangerConfirm()`，全在 `src/ui-global-events.js`：GitHub token 清除
+  （`#ghClear`，588）、WebDAV 配置清除（`#wdClear`，626）、API Key 吊销 ×2
+  （`[data-revoke]`，集成面板 679 / AI 面板 716）、AI 会话历史清除（`#aiSessClear`，1269）、
+  工作记忆清空（`#btnClearMem`，1349）、联动规则重置（`#chainResetBtn`，1401）
+  与单条删除（`#linksBox` 委托，1410）。宿主无返回值者改 `async` + `await`；
+  `batchDelete()` / `webdavSyncUpload|Download` 这类**有返回值**的仍留原生确认 ——
+  改 async 会让调用方拿到 Promise，确认必须前置到调用点，已登记为下一批。
+- 债务棘轮同步下调：`tests/danger-confirm.test.js` 的 `NATIVE_CONFIRM_TOTAL` 35 → **27**（去注释后实测）。
+- 新增真路径覆盖 `tests/confirm-migration-batch2.test.js` **9 例**：AI 会话历史清除 / 工作记忆清空 /
+  联动规则重置 / 联动规则委托删除，判据都是「确认框出现时动作还没发生 → 点确认后动作才发生」，
+  并含取消与 Esc 两条不动的路径。
+  **变异验证**：把 `#aiSessClear` 退回原生 `confirm()` ⇒ **恰好 3 例红**（其余 6 例不受影响），
+  证明判据有射程且定位准确；还原后 `md5 = 677d538f8e319dd2df53673f220847b5` 与备份一致。
+- 未覆盖登记（写在测试文件文末，不是"已验证"）：`#ghClear` / `#wdClear` / 两个 `[data-revoke]`
+  需真实凭据或 electronAPI 才进入可点状态，本批只做了静态替换与语法校验。
+
 ## [3.7.135] - 2026-10-21
 
 > 用户 2026-10-20 14:4x「按照你的顺序来吧」+ 19:5x「继续做吧」授权下的 P1-4 收尾；

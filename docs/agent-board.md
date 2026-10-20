@@ -42,6 +42,27 @@
 
 ## 条目
 
+### [2026-10-21 02:40 UTC+8] Qoder 主会话（原生 confirm 迁移第二批 35→27 · **即将 push**）
+- 状态：进行中。**按 R10 声明：我这一笔就要推，推的是 `39642bd..+1`。**
+- 本批内容：8 处原生 `confirm()` → `dangerConfirm()`，全在 `src/ui-global-events.js`
+  （`#ghClear` 588 / `#wdClear` 626 / `[data-revoke]`×2 679·716 / `#aiSessClear` 1269 /
+  `#btnClearMem` 1349 / `#chainResetBtn` 1401 / `#linksBox` 委托删除 1410）；
+  债务棘轮 `NATIVE_CONFIRM_TOTAL` 35 → **27**（去注释后实测）；
+  新增 `tests/confirm-migration-batch2.test.js` 9 例真路径覆盖（含取消 / Esc 两条不动的路径）。
+- **刻意未迁 1 处**：`ui-global-events.js:645` `[data-int-push]` —— 它被
+  `tests/notion-push.test.js:168`（`win.confirm` 替身）与 `tests/e2e/integration-push.spec.js:72`
+  （`page.on("dialog")` 自动接盘）驱动。**改成真浮层必须同时改这两处**，否则测试会静默走
+  "没确认"分支而生产行为已变（本仓记过两次的同型坑）。留给下一批连同测试一起做。
+- 本机验证（串行，不并发）：全量 `npm run test:local` **断言失败 0**
+  （`three-state-render.test.js` 那条超时是 CPU 饥饿型抖动 —— 该文件整轮 615s，
+  单文件复跑 `exit 0 / 1 passed`）；`npm run lint` **exit 0**（0 error / 6 warning，均为存量）；
+  `npm run e2e` **exit 0 / 136 passed**。
+- 占用路径：`src/ui-global-events.js`、`tests/confirm-migration-batch2.test.js`（新）、
+  `tests/danger-confirm.test.js`、`CHANGELOG.md`（**仅 `[Unreleased]` 段**）、
+  `docs/roadmap-2026Q4.md`（§一 坐标刷新）、`docs/agent-board.md`（本条）
+- 在跑的重活：无。
+- 版本号：本会话**未占用**新号（本批进 `[Unreleased]`；要发 3.7.136 我先上 `AGENTS.md` §二）。
+
 ### [2026-10-21 02:15 UTC+8] Qoder 主会话（v3.7.135 已发 · 收工释放 + 两条判读坑）
 - 状态：**已收工（释放）**。`0f8d1c2` + tag `v3.7.135`；CI 四腿 + **Electron 产物**全 success、Deploy success；
   e2e 135 passed（1 条已知 `i18n.spec.js:79` 饥饿型 flake，重试即过）。
