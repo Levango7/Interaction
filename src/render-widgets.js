@@ -217,7 +217,119 @@ function renderSide(){
      不依赖异步 startup() 时序 */
   setupSideMenu();
   setupMobNav();
+  /* 右栏今日任务随侧栏同批更新：挂在 renderSide 里而不是 render() 直调，
+     否则 render-entry → render-widgets 会新增一条静态边，改变依赖基线的环集合。 */
+  renderTaskRail();
 }
+
+/* ---------- 右栏「今日任务」任务轨（2026-10-21 布局 v2） ----------
+ * 定位依据 PRODUCT.md §5：Today 是三个入口区之一；但"看今天该做什么"不该要求先切页面。
+ * 所以把它做成常驻右栏：逾期 → 今天 → 有日期的 → 无边界的，最多 8 条；
+ * 勾选即完成（completeTask 会跑联动规则，随后整体 render），点标题开编辑，+ 走首屏同一个新建入口。
+ * 不做第二套 CRUD：任务页仍是主入口，这里只做"看和勾"。 */
+function _taskRailItems(){
+  const today = todayStr();
+  const rank = (x)=> (x.due && x.due < today) ? 0 : (x.due === today ? 1 : (x.due ? 2 : 3));
+  return getActiveTasks().filter(x=>x.status!=="done").slice().sort((a,b)=>{
+    const ra = rank(a), rb = rank(b);
+    if(ra !== rb) return ra - rb;
+    if(a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
+    return _priWeight(a.priority) - _priWeight(b.priority);
+  });
+}
+
+function renderTaskRail(){
+  const rail = $("#taskRail");
+  if(!rail || !$("#taskRailList")) return;
+  const today = todayStr();
+  const pending = getActiveTasks().filter(x=>x.status!=="done");
+  const todayCount = pending.filter(x=>x.due && x.due <= today).length;
+  const cnt = $("#taskRailCount");
+  if(cnt) cnt.textContent = String(todayCount);
+  const badge = $("#taskRailBadge");
+  if(badge){ badge.textContent = todayCount ? String(todayCount) : ""; badge.classList.toggle("u-hidden", !todayCount); }
+
+  const items = _taskRailItems().slice(0, 8);
+  const html = items.length ? items.map(x=>{
+    const s = scMeta(x.sc);
+    const over = !!(x.due && x.due < today);
+    const due = x.due ? (over ? t("taskRail.overdue", "逾期")
+      : (x.due === today ? t("taskRail.today", "今天") : x.due.slice(5))) : "";
+    return `<li class="task-rail-item" data-rail-task="${esc(x.id)}">
+      <input type="checkbox" data-rail-done="${esc(x.id)}" aria-label="${esc(t("taskRail.done", "完成：{title}").replace("{title}", x.title || ""))}">
+      <span class="dot" style="background:${scCss(s.color)}"></span>
+      <span class="t">${esc(x.title || "")}</span>
+      ${due ? `<span class="due${over ? " over" : ""}">${esc(due)}</span>` : ""}
+    </li>`;
+  }).join("") : `<li class="task-rail-empty">${esc(t("taskRail.empty", "今天没有待办。点 + 记一件事。"))}</li>`;
+  // lint-xss-ok: 每个插值都过了 esc()/t() 字典值；scCss() 只产出颜色令牌或十六进制
+  $("#taskRailList").innerHTML = html;
+  _bindTaskRail();
+}
+
+function _bindTaskRail(){
+  const rail = $("#taskRail");
+  if(!rail || rail._bound) return;
+  rail._bound = true;
+  const body = document.querySelector(".body");
+  const app = document.querySelector(".app");
+  const setOpen = (open)=>{
+    rail.classList.toggle("open", open);
+    const bd = $("#taskRailBackdrop");
+    if(bd){ bd.hidden = !open; bd.classList.toggle("show", open); }
+  };
+  const collapseDesktop = ()=>{
+    if(body) body.classList.add("rail-collapsed");
+    if(app) app.classList.add("rail-collapsed");
+    try{ save(PREFIX + "task_rail_collapsed", "1"); }catch(_e){ /* noop */ }
+  };
+  const expandDesktop = ()=>{
+    if(body) body.classList.remove("rail-collapsed");
+    if(app) app.classList.remove("rail-collapsed");
+    try{ save(PREFIX + "task_rail_collapsed", "0"); }catch(_e){ /* noop */ }
+  };
+  const isWide = ()=> (window.innerWidth || 0) >= 1024;
+
+  const toggleBtn = $("#btnTaskRail");
+  if(toggleBtn) toggleBtn.onclick = ()=>{
+    if(isWide()){ if(body && body.classList.contains("rail-collapsed")) expandDesktop(); else collapseDesktop(); }
+    else setOpen(!rail.classList.contains("open"));
+  };
+  const colBtn = $("#taskRailCollapse");
+  if(colBtn) colBtn.onclick = ()=>{ if(isWide()) collapseDesktop(); else setOpen(false); };
+  const bd = $("#taskRailBackdrop");
+  if(bd) bd.onclick = ()=> setOpen(false);
+  document.addEventListener("keydown", (e)=>{
+    if(e.key === "Escape" && rail.classList.contains("open")) setOpen(false);
+  });
+
+  rail.addEventListener("change", (e)=>{
+    const cb = e.target && e.target.closest ? e.target.closest("[data-rail-done]") : null;
+    if(!cb) return;
+    const id = cb.getAttribute("data-rail-done");
+    if(typeof completeTask === "function" && completeTask(id)) render();
+    else renderTaskRail();
+  });
+  rail.addEventListener("click", (e)=>{
+    if(e.target.closest("[data-rail-done]")) return;
+    if(e.target.closest("#taskRailAdd")){
+      setActive("office"); render();
+      if(typeof focusTaskTitleInput === "function") focusTaskTitleInput();
+      return;
+    }
+    if(e.target.closest("#taskRailMore")){ setActive("tasks"); render(); return; }
+    const row = e.target.closest("[data-rail-task]");
+    if(row && typeof AppBridge.openTaskEdit === "function") AppBridge.openTaskEdit(row.getAttribute("data-rail-task"));
+  });
+
+  try{
+    if(load(PREFIX + "task_rail_collapsed", "0") === "1"){
+      if(body) body.classList.add("rail-collapsed");
+      if(app) app.classList.add("rail-collapsed");
+    }
+  }catch(_e){ /* noop */ }
+}
+
 /* v2.1.0：侧栏两级菜单点击分发（事件委托，renderSide 重渲染后依然有效）。
    caret → 展开/收起；场景父项 → 切场景；纯父项 → 展开/收起；子项 → 执行动作。 */
 function setupSideMenu(){

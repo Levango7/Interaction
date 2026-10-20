@@ -42,6 +42,23 @@
 
 ## 条目
 
+### [2026-10-21 03:40 UTC+8] Qoder 主会话（布局 v2：对话下沉 + 右栏今日任务 · 占用中）
+- 状态：进行中 —— 用户 03:0x「你自己用最合理的方式来做，最符合产品定位的用户的使用习惯来设计就行」授权。
+- **改了哪些**：`agent-workbench.html`（DOM：把 `#chatPanel` 移进 `.main-wrap`；新增 `#taskRail` 与顶栏 `#btnTaskRail`；
+  CSS：布局 v2 段）、`src/render-widgets.js`（`renderTaskRail()/_bindTaskRail()`）、`src/render-entry.js`
+  （render 时同步右栏）、`src/core-i18n.js`（taskRail.* 中英 10 键）、`tests/task-rail.test.js`（新，6 例）、
+  `tests/e2e/layout-v2.spec.js`（新，7 例）、`docs/DESIGN-SYSTEM.md` §2.1、`docs/PRODUCT.md` §5、`CHANGELOG.md`。
+- **设计取舍**（依据 PRODUCT.md：桌面为主的知识工作者，闭环=捕获→AI 落手→复核）：
+  ① 对话坞 = `sticky` 贴主列底（不是第三栏，也不是全宽常驻）；上限 46vh，折叠只收历史、保留标题+输入行；
+  ② 右栏 = 今日任务轨（逾期→今天→有日期→无日期，≤8 条；只做"看和勾"，CRUD 仍只在任务页）；
+  ③ ≥1024 三栏、768–1023 轨滑出、≤767 聊天保持右抽屉；④ ≤479 收起「指南/下载」两个低频按钮，修 375px 下 6px 溢出。
+- **实测几何**（Playwright）：1440 下 wrap 230–1160、chat 230–1150（右差 10=scrollbar-gutter）、rail 1160–1440；
+  800 下 chat 180–790；375 下 sw=375（修复前 381）。**14 passed**（layout-v2），连同 viewport/mobile/three-state-layout/main-cta 共 **62 passed**。
+- **在跑**：全量单测限并发复跑（`--maxWorkers=8 --minWorkers=1`）。首次全量是**进程被杀**（日志停在 2 个文件），不是断言红；
+  `--maxWorkers=8` 单独用会撞 min/max 冲突，必须成对给。
+- **占用路径**：上述文件 + 本文件。**准备推**：一个提交，无版本号（3.7.136 未占）。
+- 提醒对方：布局 v2 之后聊天面板在主列内（sticky），不再有右侧第三栏；「按右侧抽屉定位面板」只在 ≤767 成立。
+
 ### [2026-10-21 02:40 UTC+8] Qoder 主会话（原生 confirm 迁移第二批 35→27 · **即将 push**）
 - 状态：进行中。**按 R10 声明：我这一笔就要推，推的是 `39642bd..+1`。**
 - 本批内容：8 处原生 `confirm()` → `dangerConfirm()`，全在 `src/ui-global-events.js`
