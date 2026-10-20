@@ -17322,7 +17322,7 @@ function renderSessionList(filter){
   }).join("") : '<div class="sess-preview-empty">' + t("sess.noMatch", "没有匹配的会话") + '</div>');
   // 点击会话项 → 激活 + 预览（行内操作按钮除外）
   $$("#sessList .sess-item").forEach(function(el){
-    el.onclick = function(e){
+    el.onclick = async function(e){
       const actBtn = e.target && e.target.closest ? e.target.closest("[data-act]") : null;
       if(actBtn){
         const sid = actBtn.getAttribute("data-sid");
@@ -17331,7 +17331,7 @@ function renderSessionList(filter){
           const nv = window.prompt(t("sess.renamePrompt", "重命名会话"), cur);
           if(nv !== null && nv.trim()){ renameSession(sid, nv.trim()); renderSessionList($("#sessSearch") ? $("#sessSearch").value : ""); renderSessionPreview(getActiveSession()); }
         } else if(actBtn.getAttribute("data-act") === "delete"){
-          if(window.confirm(t("sess.deleteConfirm", "删除该会话及其全部消息？此操作不可撤销。"))){
+          if(await dangerConfirm({ message: t("sess.deleteConfirm", "删除该会话及其全部消息？此操作不可撤销。") })){
             deleteSession(sid);
             renderSessionList($("#sessSearch") ? $("#sessSearch").value : "");
             renderSessionPreview(getActiveSession());
@@ -46573,8 +46573,8 @@ function bindIcsPanel(c){
   });
   c.querySelectorAll("[data-ics-del]").forEach(function(b){
     if(b._icsBound) return; b._icsBound = true;
-    b.onclick = function(){
-      if(!confirm(t("p5.icsDeleteConfirm", "删除该日历源？其事件将不再出现在日历里（不会改动任何本地任务）。"))) return;
+    b.onclick = async function(){
+      if(!await dangerConfirm({ message: t("p5.icsDeleteConfirm", "删除该日历源？其事件将不再出现在日历里（不会改动任何本地任务）。") })) return;
       icsRemoveSub(b.getAttribute("data-ics-del"));
       openIcsPanel(c);
     };
@@ -47306,8 +47306,8 @@ function _bindNoteEditorEvents(note){
   }
   const delBtn = $("#btnNoteDelete");
   if(delBtn && note && note.id){
-    delBtn.onclick = function(){
-      if(!confirm(t("p5.confirmDeleteNote", "确定删除此笔记？"))) return;
+    delBtn.onclick = async function(){
+      if(!await dangerConfirm({ message: t("p5.confirmDeleteNote", "确定删除此笔记？") })) return;
       deleteNote(note.id);
       try{ toast(t("p5.noteDeleted", "笔记已删除"), "ok"); }catch(e){}
       closeNoteEditorModal();
@@ -47432,7 +47432,7 @@ function closeKnowledgeBaseModal(){
 function _bindKnowledgeBaseEvents(){
   const container = $(".kb-container");
   if(!container) return;
-  container.addEventListener("click", function(e){
+  container.addEventListener("click", async function(e){
     const noteItem = e.target.closest(".kb-note-item");
     if(noteItem){
       const id = noteItem.getAttribute("data-note-id");
@@ -47444,7 +47444,7 @@ function _bindKnowledgeBaseEvents(){
     const delBtn = e.target.closest(".kb-file-del");
     if(delBtn){
       const fid = delBtn.getAttribute("data-file-del");
-      if(fid && confirm(t('p5.kbFilesConfirmDelete', '删除该文件？其已建立的检索索引块会一并移除。'))){
+      if(fid && await dangerConfirm({ message: t('p5.kbFilesConfirmDelete', '删除该文件？其已建立的检索索引块会一并移除。') })){
         ragDeleteFile(fid);
         try{ toast(t('p5.kbFilesDeleted', '文件已删除，其索引块将随之移除'), "ok"); }catch(e2){}
         openKnowledgeBaseModal();   /* 重渲染列表 */
