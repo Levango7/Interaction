@@ -46,6 +46,19 @@
 - 债务棘轮同步下调：`tests/danger-confirm.test.js` 的 `NATIVE_CONFIRM_TOTAL` 39 → **35**（实测去注释后计数）。
   未覆盖登记在同一文件文末：日历源删除、知识库文件删除两处只做了静态替换，行为路径要补播种。
 
+### 2026-10-21 · P1·工具链：本机全量判定器两头都判错，已修（台账 R-30）
+
+- **假红**：`scripts/test-verdict.mjs` 只从 `Unhandled Error` 块抽未处理错误，而 worker 的 RPC 超时有
+  **9/15 条报在 `Unhandled Rejection` 块**里 ⇒ 同签名的已知抖动被算成"未知错误"，
+  一次**零断言失败**的运行被判「❌ 失败」。修法：抽取正则并集 `Unhandled (?:Error|Rejection)(?!s)`。
+- **假绿（更贵）**：`Test Files 163 passed (166)` 这种"文件数对不上"旧版看不见 —— worker 掉线的文件
+  既不计 passed 也不计 failed，那 3 个文件（`cloud-sync-stage1` / `cloud-sync-stage2` / `quickwins`，25 条用例）
+  **一条都没跑过**却被判"通过"。新增 `testFilesMissing = total - passed - failed`，"没报结果"显式判失败，
+  并提示"要定性请单独复跑那几个文件"（已照做：三个文件单独复跑 `exit 0`、判定「✅ 通过、无未处理错误」）。
+- `tests/test-verdict.test.js` 9 → 11 例（夹具与真实日志同形）。两处新规则**各做一次变异归因**：
+  正则退回只认 Error ⇒ 恰好 1 例红（`expected 1 to be 3`）；缺文件分支短路 ⇒ 恰好 1 例红（`'pass' to be 'fail'`）。
+- 用法提示：本机全量请走 **`npm run test:local`**（带判定与退出码归因），不要再用裸 `npm run test` 的 exit 码下结论。
+
 ## [3.7.134] - 2026-10-20
 
 ### P0：把「看得见点不动」清零，并让能力说真话

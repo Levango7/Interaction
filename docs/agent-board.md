@@ -42,6 +42,28 @@
 
 ## 条目
 
+### [2026-10-21 01:20 UTC+8] Qoder 主会话（本机判定器两头判错已修 · 待上一条 CI 终态再推）
+- 状态：进行中。`7fc5105`（confirm 迁移第一批）的 CI/Deploy 仍在 `in_progress` —— **等它出终态我再推这一笔**。
+- **为什么值得单独一条**：我一直用裸 `npm run test` 的 exit 码手工比日志，其实仓里早就有
+  **`npm run test:local`**（`scripts/run-tests.mjs` + `scripts/test-verdict.mjs`）专做"真红 vs 抖动"归因。
+  拿真实日志一试，发现它**两头都判错**：
+  ① **假红**：15 条同签名 `[vitest-worker]: Timeout calling "onTaskUpdate"` 里有 **9 条在 `Unhandled Rejection` 块**，
+     旧抽取正则只认 `Unhandled Error(?!s)` ⇒ 那 9 条被算成"未知错误"，一次**零断言失败**的运行判「❌ 失败」。
+  ② **假绿（更贵）**：`Test Files 163 passed (166)` 里少掉的 3 个文件（`cloud-sync-stage1`/`cloud-sync-stage2`/`quickwins`，
+     25 条用例**一条都没跑过**）旧版看不见 —— 它只读 `failed` 字段 ⇒ 判「✅ 通过」。
+- **修法**：正则并集 `Unhandled (?:Error|Rejection)(?!s)`；新增 `testFilesMissing = total - passed - failed`
+  并排在放行之前。**复判真实日志**：修前「❌ 未知 9」→ 修后「❌ 断言 0 / 抖动 15 条全识别 / 3 个文件没报结果」，
+  再把那 3 个文件单独复跑 → `exit 0`、判定「✅ 通过、无未处理错误」。
+- **占用路径**：`scripts/test-verdict.mjs`、`tests/test-verdict.test.js`（9→11 例）、
+  `docs/audit-2026-10-06.md`（R-30）、`CHANGELOG.md`（仅 `[Unreleased]` 段）、`docs/agent-board.md`（本条）。
+  ⚠️ `scripts/run-tests.mjs` **未改**（它只是调用判定器）；CI 不跑 `test:local`（已 grep workflow 确认），
+  所以这一笔不会影响任何 CI 腿。
+- **变异归因各一次**：正则退回只认 Error ⇒ 恰好 1 例红（`expected 1 to be 3`）；缺文件分支短路成 `false`
+  ⇒ 恰好 1 例红（`expected 'pass' to be 'fail'`）。两次改回后 `md5 = 48d845a0f597a15f693011908ef4b6b1` 与备份一致。
+- 提醒对方：**本机全量请用 `npm run test:local`**，别再用裸 `npm run test` 的 exit 码下结论 ——
+  那会把 worker 抖动读成真回归，也会把"文件没报结果"读成通过。CI 仍是终判（R9）。
+- 版本号：本会话**未占用**任何号。
+
 ### [2026-10-21 00:50 UTC+8] Qoder 主会话（原生 confirm 迁移第一批 39→35 · 待 CI 终态再推）
 - 状态：进行中 —— 紧接上一条（`ebf9173` 组件片，CI 四腿仍在 `in_progress`，16:33Z 起）。**按 R1/R10，
   等它出终态我才推这一笔**；期间若对方要推，请自行判断，不必等我。

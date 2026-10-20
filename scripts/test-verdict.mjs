@@ -9,8 +9,12 @@
  *
  * 本模块把两类信号分开，判定规则刻意保守：
  *   · 断言失败（`Tests N failed` 的 N>0，或 `Failed Tests` 段）→ **真失败**
- *   · 未处理错误若**全部**匹配已知抖动特征（vitest worker 的 onTaskUpdate 超时、
- *     沙箱/系统临时目录写入被拒）→ 视为抖动，**不改变结论**，但如实打印条数
+ *   · **文件数对不上**（`Test Files X passed (T)` 且 X 加 failed 小于 T）→ **真失败**：
+ *     worker 掉线时文件既不计 passed 也不计 failed，那些文件里的用例**一条都没跑过**，
+ *     "没报结果"绝不等于"通过"（2026-10-21 本机全量就是这么被旧版判成通过的）
+ *   · 未处理错误若**全部**匹配已知抖动特征（vitest worker 的 RPC 超时、
+ *     沙箱/系统临时目录写入被拒）→ 视为抖动，**不改变结论**，但如实打印条数；
+ *     Error 块与 Rejection 块**都要抽**（同一签名两种形状，漏一种会把抖动算成未知）
  *   · 未处理错误里有**任何不匹配**已知特征的 → 仍判为**真失败**（不放过未知错误）
  * 即：只对「已被反复确认是环境噪声」的两类特征放行，其余一律按失败处理。
  *
@@ -26,7 +30,8 @@ const BENIGN_PATTERNS = [
 /**
  * 解析 vitest 输出，给出判定。
  * @param {string} raw vitest 的完整 stdout+stderr
- * @returns {{assertionFailed:number, testFilesFailed:number, unhandledTotal:number,
+ * @returns {{assertionFailed:number, testFilesFailed:number, testFilesMissing:number,
+ *            unhandledTotal:number,
  *            unhandledBenign:number, unhandledUnknown:number, verdict:"pass"|"fail",
  *            reason:string, benignSamples:string[]}}
  */
@@ -44,14 +49,29 @@ export function verdictOf(raw) {
   }
 
   let testFilesFailed = 0;
+  let testFilesMissing = 0;
   const f = out.match(/^\s*Test Files\s+(?:(\d+)\s+failed\s*\|\s*)?(\d+)\s+passed\s*\((\d+)\)/m);
-  if (f) testFilesFailed = f[1] ? Number(f[1]) : 0;
+  if (f) {
+    testFilesFailed = f[1] ? Number(f[1]) : 0;
+    /* ⚠️ 另一个方向的错更贵：worker 掉线时文件既不算 passed 也不算 failed，
+       于是 `Test Files 163 passed (166)` 里少了 3 个 —— 旧版看不见这 3 个，判"通过"。
+       "没报结果"≠"通过"：这 3 个文件里的用例一条都没跑过。 */
+    const passed = Number(f[2]);
+    const total = Number(f[3]);
+    testFilesMissing = Math.max(0, total - passed - testFilesFailed);
+  }
 
-  // 未处理错误：先看汇总计数，再逐条抽取 `Unhandled Error` 块的首行做特征匹配。
+  // 未处理错误：先看汇总计数，再逐条抽取错误块的首行做特征匹配。
+  // ⚠️ 必须**同时**抽 `Unhandled Error` 与 `Unhandled Rejection` 两种块：vitest 把
+  //    worker 的 RPC 超时既可能报成 Error 也可能报成 Rejection（取决于它从哪条路径抛出来）。
+  //    2026-10-21 实测：本机全量一次跑出 15 条同签名 `[vitest-worker]: Timeout calling
+  //    "onTaskUpdate"`，其中 **9 条在 Rejection 块** —— 旧版只抽 Error 块，于是 declared(15)
+  //    减掉抽到的 6 条后，那 9 条被当成"未知错误"，判定器对一次**零断言失败**的运行判了"失败"。
+  //    放行规则本身没错，错在把已知抖动的**形状**认漏了 —— 这正是"门禁假阳性比没门禁更糟"。
   // 注意 `(?!s)`：vitest 的**小节标题**是复数 `──── Unhandled Errors ────`，
   // 若不加这个负向断言，它会被当成一条错误块，把计数多算 1（首版即栽在这里，被单测抓到）。
   const errCount = out.match(/^\s*Errors\s+(\d+)\s+error/m);
-  const blocks = [...out.matchAll(/Unhandled Error(?!s)[^\n]*\n([\s\S]{0,400}?)(?=\n\s*\n|$)/g)]
+  const blocks = [...out.matchAll(/Unhandled (?:Error|Rejection)(?!s)[^\n]*\n([\s\S]{0,400}?)(?=\n\s*\n|$)/g)]
     .map((m) => m[1].trim());
 
   let benign = 0, unknown = 0;
@@ -70,6 +90,10 @@ export function verdictOf(raw) {
   if (assertionFailed > 0) {
     verdict = "fail";
     reason = `断言失败 ${assertionFailed} 条（${testFilesFailed} 个文件）—— 这是真失败，需修。`;
+  } else if (testFilesMissing > 0) {
+    verdict = "fail";
+    reason = `无断言失败，但有 ${testFilesMissing} 个测试文件**没报结果**（worker 掉线/被中断）—— `
+      + "这些文件里的用例一条都没跑过，不能算通过；要定性请单独复跑那几个文件。";
   } else if (unknown > 0) {
     verdict = "fail";
     reason = `无断言失败，但有 ${unknown} 条**未知**未处理错误 —— 不放过未识别的错误，按失败处理。`;
@@ -81,7 +105,7 @@ export function verdictOf(raw) {
     reason = "全部断言通过，且无未处理错误。";
   }
 
-  return { assertionFailed, testFilesFailed, unhandledTotal, unhandledBenign: benign,
+  return { assertionFailed, testFilesFailed, testFilesMissing, unhandledTotal, unhandledBenign: benign,
            unhandledUnknown: unknown, verdict, reason, benignSamples };
 }
 
@@ -90,7 +114,8 @@ export function formatVerdict(v) {
   const lines = [];
   lines.push("");
   lines.push("──────────────── 判定 ────────────────");
-  lines.push(`  断言失败     ${v.assertionFailed} 条` + (v.testFilesFailed ? `（${v.testFilesFailed} 个文件）` : ""));
+  lines.push(`  断言失败     ${v.assertionFailed} 条` + (v.testFilesFailed ? `（${v.testFilesFailed} 个文件）` : "")
+    + (v.testFilesMissing ? `；另有 ${v.testFilesMissing} 个文件没报结果` : ""));
   lines.push(`  未处理错误   ${v.unhandledTotal} 条（已知抖动 ${v.unhandledBenign} · 未知 ${v.unhandledUnknown}）`);
   lines.push(`  结论         ${v.verdict === "pass" ? "✅ 通过" : "❌ 失败"}`);
   lines.push(`  依据         ${v.reason}`);

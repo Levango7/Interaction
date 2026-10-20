@@ -77,6 +77,63 @@ const CLEAN = `
       Tests  3 passed (3)
 `;
 
+/** 2026-10-21 实测形态：同一条 worker 超时**同时**出现在 Error 块与 Rejection 块里。
+ *  旧版只抽 Error 块 ⇒ 3 条已知抖动里有 2 条被算成"未知"，一次零断言失败的运行被判"失败"。 */
+const JITTER_MIXED_BLOCKS = `
+ RUN  v2.1.9 F:/Nexus/Interaction
+
+ \u2713 tests/three-state-render.test.js (45 tests) 110217ms
+
+\u2500\u2500\u2500\u2500 Unhandled Errors \u2500\u2500\u2500\u2500
+
+Vitest caught 3 unhandled errors during the test run.
+
+\u2500\u2500\u2500\u2500 Unhandled Error \u2500\u2500\u2500\u2500
+Error: [vitest-worker]: Timeout calling "onTaskUpdate"
+ \u276f Object.onTimeoutError node_modules/vitest/dist/chunks/rpc.js:69:17
+
+\u2500\u2500\u2500\u2500 Unhandled Rejection \u2500\u2500\u2500\u2500
+Error: [vitest-worker]: Timeout calling "onTaskUpdate"
+ \u276f Object.onTimeoutError node_modules/vitest/dist/chunks/rpc.js:69:17
+
+\u2500\u2500\u2500\u2500 Unhandled Rejection \u2500\u2500\u2500\u2500
+Error: [vitest-worker]: Timeout calling "waitFor"
+ \u276f Object.onTimeoutError node_modules/vitest/dist/chunks/rpc.js:69:17
+
+ Test Files  1 passed (1)
+      Tests  45 passed (45)
+     Errors  3 errors
+`;
+
+/** Rejection 块里的**未知**错误 —— 补形状不许顺手放宽放行规则 */
+const UNKNOWN_REJECTION = `
+ RUN  v2.1.9 F:/Nexus/Interaction
+
+ \u2713 tests/a.test.js (3 tests) 100ms
+
+\u2500\u2500\u2500\u2500 Unhandled Rejection \u2500\u2500\u2500\u2500
+Error: RangeError: Maximum call stack size exceeded
+    at recursiveThing (src/data-migrate.js:88:3)
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+     Errors  1 error
+`;
+
+/** 全绿但**文件数对不上**：worker 掉线导致 3 个文件既没 passed 也没 failed */
+const FILES_MISSING = `
+ RUN  v2.1.9 F:/Nexus/Interaction
+
+ \u2713 tests/a.test.js (3 tests) 100ms
+
+\u2500\u2500\u2500\u2500 Unhandled Rejection \u2500\u2500\u2500\u2500
+Error: [vitest-worker]: Timeout calling "onTaskUpdate"
+
+ Test Files  163 passed (166)
+      Tests  1839 passed (1859)
+     Errors  1 error
+`;
+
 describe("test-verdict：判定器", () => {
   it("全绿 + 已知抖动（worker 超时 / 临时目录 EPERM）→ 判通过，并如实报出抖动条数", () => {
     const v = verdictOf(JITTER_ONLY);
@@ -103,6 +160,38 @@ describe("test-verdict：判定器", () => {
     expect(v.unhandledBenign).toBe(0);
     expect(v.verdict, "未知错误不得被当成抖动放过").toBe("fail");
     expect(v.reason).toContain("未知");
+  });
+
+  it("同一条 worker 超时写在 Rejection 块里也要认出来（2026-10-21 漏认的形状）", () => {
+    const v = verdictOf(JITTER_MIXED_BLOCKS);
+    expect(v.assertionFailed).toBe(0);
+    expect(v.unhandledTotal, "声明 3 条就应抽到 3 条，不许有抽不到的差额").toBe(3);
+    expect(v.unhandledBenign, "Error 块与 Rejection 块都要按签名匹配").toBe(3);
+    expect(v.unhandledUnknown, "已知抖动被算成未知 = 假阳性，会让人们不再信这个判定器").toBe(0);
+    expect(v.verdict).toBe("pass");
+  });
+
+  it("Rejection 块里的未知错误照样判失败（补形状不等于放宽放行）", () => {
+    const v = verdictOf(UNKNOWN_REJECTION);
+    expect(v.unhandledBenign, "栈溢出不是已知的抖动特征").toBe(0);
+    expect(v.unhandledUnknown).toBe(1);
+    expect(v.verdict).toBe("fail");
+  });
+
+  it("文件数对不上 ⇒ 判失败：没报结果不等于通过", () => {
+    const v = verdictOf(FILES_MISSING);
+    expect(v.assertionFailed, "该夹具确实无断言失败").toBe(0);
+    expect(v.testFilesMissing).toBe(3);
+    expect(v.verdict, "163/166 ⇒ 3 个文件的用例一条都没跑过").toBe("fail");
+    expect(v.reason).toContain("没报结果");
+  });
+
+  it("其余夹具的文件数都自洽（新规则不得误伤）", () => {
+    for (const [name, raw] of [["JITTER_ONLY", JITTER_ONLY], ["REAL_FAILURE", REAL_FAILURE],
+      ["UNKNOWN_ERROR", UNKNOWN_ERROR], ["CLEAN", CLEAN],
+      ["JITTER_MIXED_BLOCKS", JITTER_MIXED_BLOCKS], ["UNKNOWN_REJECTION", UNKNOWN_REJECTION]]) {
+      expect(verdictOf(raw).testFilesMissing, name + " 的文件数应自洽").toBe(0);
+    }
   });
 
   it("全绿且无未处理错误 → 判通过", () => {
