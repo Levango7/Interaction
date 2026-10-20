@@ -1403,8 +1403,8 @@ function bindIcsPanel(c){
   });
   c.querySelectorAll("[data-ics-del]").forEach(function(b){
     if(b._icsBound) return; b._icsBound = true;
-    b.onclick = function(){
-      if(!confirm(t("p5.icsDeleteConfirm", "删除该日历源？其事件将不再出现在日历里（不会改动任何本地任务）。"))) return;
+    b.onclick = async function(){
+      if(!await dangerConfirm({ message: t("p5.icsDeleteConfirm", "删除该日历源？其事件将不再出现在日历里（不会改动任何本地任务）。") })) return;
       icsRemoveSub(b.getAttribute("data-ics-del"));
       openIcsPanel(c);
     };

@@ -385,8 +385,8 @@ function _bindNoteEditorEvents(note){
   }
   const delBtn = $("#btnNoteDelete");
   if(delBtn && note && note.id){
-    delBtn.onclick = function(){
-      if(!confirm(t("p5.confirmDeleteNote", "确定删除此笔记？"))) return;
+    delBtn.onclick = async function(){
+      if(!await dangerConfirm({ message: t("p5.confirmDeleteNote", "确定删除此笔记？") })) return;
       deleteNote(note.id);
       try{ toast(t("p5.noteDeleted", "笔记已删除"), "ok"); }catch(e){}
       closeNoteEditorModal();
@@ -511,7 +511,7 @@ function closeKnowledgeBaseModal(){
 function _bindKnowledgeBaseEvents(){
   const container = $(".kb-container");
   if(!container) return;
-  container.addEventListener("click", function(e){
+  container.addEventListener("click", async function(e){
     const noteItem = e.target.closest(".kb-note-item");
     if(noteItem){
       const id = noteItem.getAttribute("data-note-id");
@@ -523,7 +523,7 @@ function _bindKnowledgeBaseEvents(){
     const delBtn = e.target.closest(".kb-file-del");
     if(delBtn){
       const fid = delBtn.getAttribute("data-file-del");
-      if(fid && confirm(t('p5.kbFilesConfirmDelete', '删除该文件？其已建立的检索索引块会一并移除。'))){
+      if(fid && await dangerConfirm({ message: t('p5.kbFilesConfirmDelete', '删除该文件？其已建立的检索索引块会一并移除。') })){
         ragDeleteFile(fid);
         try{ toast(t('p5.kbFilesDeleted', '文件已删除，其索引块将随之移除'), "ok"); }catch(e2){}
         openKnowledgeBaseModal();   /* 重渲染列表 */

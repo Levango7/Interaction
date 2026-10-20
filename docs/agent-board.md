@@ -42,6 +42,28 @@
 
 ## 条目
 
+### [2026-10-21 00:50 UTC+8] Qoder 主会话（原生 confirm 迁移第一批 39→35 · 待 CI 终态再推）
+- 状态：进行中 —— 紧接上一条（`ebf9173` 组件片，CI 四腿仍在 `in_progress`，16:33Z 起）。**按 R1/R10，
+  等它出终态我才推这一笔**；期间若对方要推，请自行判断，不必等我。
+- **本批内容**：4 处原生 `confirm()` → `dangerConfirm()`（`data-links.js` 会话删除 / `ui-ge-calendar.js`
+  日历源删除 / `ui-ge-notes.js` 笔记删除 + 知识库文件删除）；棘轮 `NATIVE_CONFIRM_TOTAL` 39 → **35**（实测）。
+- **占用路径**：`src/data-links.js`、`src/ui-ge-calendar.js`、`src/ui-ge-notes.js`、
+  `tests/confirm-migration-batch1.test.js`（新）、`tests/danger-confirm.test.js`（常量下调）、
+  `CHANGELOG.md`（仅 `[Unreleased]` 段）、`docs/agent-board.md`（本条）。
+- **在跑的重活**：本机 `npm run lint` / 全量 `npm test` / `npm run build:check` 一条链（不并发第二条，
+  共享树的注入态会互相踩）。
+- **给下一位迁移者的判据（我踩过的）**：
+  1. **别一律加 `await`** —— `src/ui-scene-bind.js:500 batchDelete()`、`src/ui-ge-integrations.js:2578/2612
+     webdavSyncUpload/Download` 的函数**自身有返回值**，改 async 会让调用方拿到 Promise ⇒ 确认要前置到调用点。
+  2. **有几处测试把 `win.confirm` 打了桩**：`tests/ai-profile.test.js:218/232/259`、`tests/notion-push.test.js:168`、
+     `tests/webdav-sync.test.js:214/239/245`。迁到那些控件时**必须同时改测试**（点浮层按钮而不是替身），
+     否则测试会静默走"没确认"分支而行为已变。e2e 侧还有 `page.on("dialog", …accept())` 的自动接盘
+     （`form-controls/mobile/viewport/theme-matrix/integration-push` 五个 spec），迁到它们覆盖的控件时同理。
+  3. **本机全量请用 `npm run test:local`** —— `scripts/run-tests.mjs` + `test-verdict.mjs` 早就把
+     "断言真红 vs worker 抖动"分开了，我这次用手比对日志是重复劳动（`npm run test` 的 exit 1 不含这层判定）。
+- 版本号：本会话**未占用**任何号（`[Unreleased]` 已累计三片：可读性/触控、dangerConfirm、confirm 迁移第一批；
+  要切 3.7.135 我先上 `AGENTS.md` §二）。
+
 ### [2026-10-21 00:20 UTC+8] Qoder 主会话（dangerConfirm 组件 + 一条 P1 实修 · **即将 push**）
 - 状态：进行中。上一条（可读性/触控）已 **CI 四腿全绿 + Deploy success**（run `39451735219` / `39451735325`，
   e2e 127 passed、1 条已知 `i18n` 饥饿型 flake），**线上已核**：`--fs-2xs:12px` ×6、`bytes=3,934,612`。

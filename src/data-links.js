@@ -710,7 +710,7 @@ function renderSessionList(filter){
   }).join("") : '<div class="sess-preview-empty">' + t("sess.noMatch", "没有匹配的会话") + '</div>');
   // 点击会话项 → 激活 + 预览（行内操作按钮除外）
   $$("#sessList .sess-item").forEach(function(el){
-    el.onclick = function(e){
+    el.onclick = async function(e){
       const actBtn = e.target && e.target.closest ? e.target.closest("[data-act]") : null;
       if(actBtn){
         const sid = actBtn.getAttribute("data-sid");
@@ -719,7 +719,7 @@ function renderSessionList(filter){
           const nv = window.prompt(t("sess.renamePrompt", "重命名会话"), cur);
           if(nv !== null && nv.trim()){ renameSession(sid, nv.trim()); renderSessionList($("#sessSearch") ? $("#sessSearch").value : ""); renderSessionPreview(getActiveSession()); }
         } else if(actBtn.getAttribute("data-act") === "delete"){
-          if(window.confirm(t("sess.deleteConfirm", "删除该会话及其全部消息？此操作不可撤销。"))){
+          if(await dangerConfirm({ message: t("sess.deleteConfirm", "删除该会话及其全部消息？此操作不可撤销。") })){
             deleteSession(sid);
             renderSessionList($("#sessSearch") ? $("#sessSearch").value : "");
             renderSessionPreview(getActiveSession());

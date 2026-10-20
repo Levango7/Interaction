@@ -33,6 +33,19 @@
 - 台账新增 `docs/audit-2026-10-06.md` **R-29**；`docs/DESIGN-SYSTEM.md` §4 补"浮层骨架只认哪几个类名"
   与"看得见不许用 jsdom 证明"两条契约。
 
+### 2026-10-21 · P1-4 余项（原生 confirm 迁移第一批：39 → 35）
+
+- 4 处调用点改走 `dangerConfirm()`：会话删除（`src/data-links.js`）、日历源删除（`src/ui-ge-calendar.js`）、
+  笔记删除 + 知识库文件删除（`src/ui-ge-notes.js`）。三处宿主函数因 `await` 改为 `async`（事件处理器返回值
+  无人消费，已逐处看过；**有返回值的函数不在此批** —— `batchDelete()` / `webdavSyncUpload|Download` 一律加
+  `await` 会让调用方拿到 Promise，确认必须前置到调用点，已登记）。
+- 新增 `tests/confirm-migration-batch1.test.js` 4 例：走**真实入口**（`#chatSessionBtn` → 会话列表；工具箱
+  笔记卡 → 编辑已有笔记 → 删除键），判据是"确认框出现时动作还没发生 / 点确认执行后动作才发生"，
+  并含取消与 Esc 两条不删的路径。此前这几个控件**零测试覆盖**。
+  变异验证：把会话删除那处改回原生 `confirm()` ⇒ 该文件 **2 红**（确认框没出现）；恢复后 md5 与备份一致。
+- 债务棘轮同步下调：`tests/danger-confirm.test.js` 的 `NATIVE_CONFIRM_TOTAL` 39 → **35**（实测去注释后计数）。
+  未覆盖登记在同一文件文末：日历源删除、知识库文件删除两处只做了静态替换，行为路径要补播种。
+
 ## [3.7.134] - 2026-10-20
 
 ### P0：把「看得见点不动」清零，并让能力说真话
