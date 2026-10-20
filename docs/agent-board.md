@@ -42,6 +42,28 @@
 
 ## 条目
 
+### [2026-10-20 23:55 UTC+8] Qoder 主会话（P1-4 余项：可读性/触控下限 · **即将 push**）
+- 状态：进行中 —— 用户 14:4x「按照你的顺序来吧」+ 19:5x「继续做吧」授权的 P1-4 收尾片。
+- **占用路径**：`agent-workbench.html`（仅 CSS：`--fs-2xs` 11→12px 共 6 处 + 两条媒体查询）、
+  `tests/ui-scale-floor.test.js`（新建）、`tests/ui-spec-guards.test.js`（十四档钉值同步）、
+  `docs/ui-standards.md`（§4.1 表格 + 思维导图 12px 豁免段口径）、`docs/DESIGN-SYSTEM.md`（§3 触控契约改为与实测一致）、
+  `CHANGELOG.md`（**仅 `[Unreleased]` 段**）、`docs/agent-board.md`（本条）。
+- **在跑的重活**：本机已跑完 `npm run lint`（exit 0）与全量 `npm test`；**接下来这轮 e2e 交给 CI**（本机 CPU 已被
+  vitest worker 打到超时，见下条）。不碰 `node_modules/`（R5）。
+- **准备推的范围**：`e8bbce0..+2`（1 个代码/测试/设计文档提交 + 1 个 CHANGELOG/板子提交），**不发版、不占版本号**。
+- 提醒对方三件事：
+  1. **`--fs-2xs` 现在有两个钉值处**：`tests/ui-spec-guards.test.js` 的 `LADDER` 与 `tests/ui-scale-floor.test.js`
+     的"6 处声明齐备"。改字号令牌必须同批改这两处 + `docs/ui-standards.md` §4.1，否则一边红一边静默。
+  2. **本机全量 `npm test` 这次的 `exit 1` 不是代码红**：163/165 文件通过，未报到的
+     `cloud-sync-stage1` / `error-boundary` 是 `[vitest-worker]: Timeout calling "onTaskUpdate"`（满载 RPC 超时），
+     单独复跑分别 13 passed / 22 passed。**别再把它记成用例失败**，也别为它抬超时。
+  3. **窄屏顶栏触控"宽度"我实测过再放弃**：把 `min-width` 抬到 40px 会让 375px 视口横向溢出 **103px**（10 条 e2e 红），
+     已撤销。正解是「≤479 顶栏低频按钮收进溢出菜单」—— 这是**独立设计项**，谁要做请先认领，别顺手改 CSS 凑 44×44。
+- **另记一条对我自己旧计划的更正**：`src/ai-retry.js:592` 的 `openConfirmModal()` 绑死在 AI 工具调用的
+  `pendingConfirm` 上，**不是通用确认组件**。39 处原生 `confirm()`（实测分布 11 个 src 文件）要迁的是
+  **新建**的 `dangerConfirm({title,message,confirmText}) → Promise<boolean>`，别照旧计划的措辞直接调用它。
+- 版本号：本会话**未占用**任何号；下一个可用号以 `AGENTS.md` §二 表为准。
+
 ### [2026-10-20 19:30 UTC+8] Qoder 主会话（v3.7.134 已发 · 收工释放）
 - 状态：**已收工（释放）**。`ab65144` + tag `v3.7.134`（annotated `66d6fe3`）；CI 四腿全绿、Deploy success、
   e2e 127 passed（1 次已知 `rag-hybrid:105` flake，重试即过）。
