@@ -8364,7 +8364,7 @@ const MESSAGES = {
     "tool.imgGen.enterDesc": "请输入图片描述",
     "tool.imgGen.generating": "生成中…（约 10–30 秒）",
     "tool.imgGen.svgPrompt": "为以下描述生成一张图片的 SVG 简笔示意（仅返回 SVG 代码）：\n{desc}",
-    "tool.imgGen.failResult": "生成失败：当前 AI 接口未支持图片输出。<br><small>可在设置中切换支持的模型，或稍后再试。</small>",
+    "tool.imgGen.failResult": "生成失败：模型没有返回可用的 SVG。<br><small>可换个模型再试；本工具是文本模型画 SVG 示意，不是文生图模型。</small>",
     "tool.vidGen.name": "AI 视频生成",
     "tool.vidGen.desc": "文本描述 → AI 视频生成",
     "tool.vidGen.descLabel": "视频描述",
@@ -10219,7 +10219,7 @@ const MESSAGES = {
     "stats.material": "资料",
     "stats.notes": "笔记",
     "tool.weather.name": "天气",
-    "tool.weather.desc": "今日 + 未来几日预报",
+    "tool.weather.desc": "示例数据 · 演示用（不联网）",
     "tool.alarm.name": "闹钟",
     "tool.alarm.desc": "多任务 · 循环 · 贪睡",
     "tool.pomo.name": "笃行",
@@ -12287,7 +12287,7 @@ const MESSAGES = {
     "tool.imgGen.enterDesc": "Please enter image description",
     "tool.imgGen.generating": "Generating… (about 10–30 seconds)",
     "tool.imgGen.svgPrompt": "Generate an SVG sketch for this description (return SVG code only):\n{desc}",
-    "tool.imgGen.failResult": "Generation failed: current AI API doesn't support image output.<br><small>Switch to a supported model in Settings, or retry later.</small>",
+    "tool.imgGen.failResult": "Generation failed: the model returned no usable SVG.<br><small>Try another model; this tool draws SVG sketches with a text model, not a text-to-image model.</small>",
     "tool.vidGen.name": "AI Video Generation",
     "tool.vidGen.desc": "Text description → AI video generation",
     "tool.vidGen.descLabel": "Video Description",
@@ -14188,7 +14188,7 @@ const MESSAGES = {
     "stats.material": "Materials",
     "stats.notes": "Notes",
     "tool.weather.name": "Weather",
-    "tool.weather.desc": "Today + forecast for next few days",
+    "tool.weather.desc": "Sample data · demo only (offline)",
     "tool.alarm.name": "Alarm",
     "tool.alarm.desc": "Multi-task · Repeat · Snooze",
     "tool.pomo.name": "Focus",
@@ -22397,7 +22397,7 @@ const SC_SUBMENU = {
   data:[
     {id:"dat-stats", label:t("side.sub.dataAnalysis", "数据分析"), run:()=>{ setActive("stats"); render(); }},
     {id:"dat-chart", label:t("side.sub.edit", "编辑"), run:()=>{ _sideActive=null; setActive("stats"); _dashEditMode=true; render(); }},
-    {id:"dat-report", label:t("side.sub.report", "报告"), run:()=>{ AppBridge.openReportModal(); }}
+    {id:"dat-report", label:t("side.sub.report", "报告"), run:()=>{ AppBridge.openReportModal("week", 0); AppBridge.bindReportModal(); }}
   ],
   code:[
     {id:"cod-compile", label:t("side.sub.compile", "脚本编译")},
@@ -23320,7 +23320,7 @@ function openAppPage(){
   $$("#main [data-app]").forEach(function(c){
     c.onclick = function(){
       const id = c.getAttribute("data-app");
-      if(id==="calview"){ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } }
+      if(id==="calview"){ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b){ b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); AppBridge.bindCalendarEvents(b); } } }
       else if(id==="weather"){ if(typeof openWeatherModal === "function") openWeatherModal(); }
       else if(id==="alarm"){ if(typeof openAlarmModal === "function") openAlarmModal(); }
       else if(id==="pet"){ if(typeof openPetModal === "function") openPetModal(); }
@@ -26608,7 +26608,7 @@ function renderOverview(){
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
       <div class="ph-tx"><h2 data-i18n="overview.homeTitle">主页</h2><p class="sub" data-i18n="overview.homeSub">系统概况 · 全局搜索 · 数据速览</p></div>
-      <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent" data-i18n="overview.advReport">高级报表</button></div>
+      <div class="ph-actions"><button type="button" class="addbtn sm" id="btnNewTask" data-sc="accent" data-i18n="top.addTask">新建任务</button><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent" data-i18n="overview.advReport">高级报表</button></div>
     </header></div>
     ${overviewNav}
     ${overview4}
@@ -26751,6 +26751,9 @@ function renderOverview(){
   // v1.5-D 高级报表：绑定入口按钮 + 弹窗内事件
   const rBtn=$("#btnOpenReport");
   if(rBtn) rBtn.onclick=()=>{ AppBridge.openReportModal("week", 0); AppBridge.bindReportModal(); };
+  // 首屏主 CTA：直接进任务场景并聚焦标题输入（原先首屏唯一 CTA 是「高级报表」，主操作要翻两层）
+  const nBtn=$("#btnNewTask");
+  if(nBtn) nBtn.onclick=()=>{ setActive("office"); render(); focusTaskTitleInput(); };
 }
 
 /* ---------- v1.4-D AI 每日报告卡片 ---------- */
@@ -27290,7 +27293,7 @@ function _bindTasksTabs(){
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
-  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } } },
+  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b){ b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); AppBridge.bindCalendarEvents(b); } } } },
   { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ AppBridge.openWeatherModal(); } },
   { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.bell, run:()=>{ AppBridge.openAlarmModal(); } },
   { id:"x-pomo",    name:t("tool.pomo.name","笃行"),     desc:t("tool.pomo.desc","25 分钟专注 + 5 分钟休息"), cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
@@ -27304,7 +27307,7 @@ const TOOLBOX_EXTRAS = [
   { id:"x-dashboard", name:t("tool.dashboard.name","自定义仪表盘"), desc:t("tool.dashboard.desc","拖拽编排 15 个组件"), cat:"功能", icon:UI_ICONS.gauge, run:()=>{ AppBridge.openDashboardModal(); } },
   { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ AppBridge.openKnowledgeBaseModal(); } },
   { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ AppBridge.openNotesModal(); } },
-  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ AppBridge.openReportModal(); } },
+  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ AppBridge.openReportModal("week", 0); AppBridge.bindReportModal(); } },
   { id:"x-tpl",     name:t("tool.tpl.name","场景模板"), desc:t("tool.tpl.desc","一键导入预设任务集"), cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ AppBridge.openTemplateModal(); } }
 ];
 let _toolboxCat = "全部";
@@ -35117,7 +35120,12 @@ function render(){
     if(sceneFeatureMode !== "overview"){
       const bcfg = (SCENE_FEATURE_BIND[active] || {})[sceneFeatureMode];
       // v3.2 任务四：第三参数 onSave 钩子（如练习错题自动入 SM-2）——查找 bcfg.onSave 透传
-      if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys, bcfg.onSave);
+      // 2026-10-20：SCENE_FEATURE_BIND 的条目有两种形状 —— 通用功能卡是 {key,fieldKeys,onSave}，
+      // 而编程场景四个 TOOL_APPS tab（JSON/时间戳/编解码/UUID）存的是 **bind 函数本身**
+      // （ui-global-events.js 里 `SCENE_FEATURE_BIND.code[id] = w.bind`）。此前一律按对象取 .key，
+      // 于是那四个 tab 的「格式化/运行」按钮永远不绑定（渲染正常、点击无反应）。
+      if(typeof bcfg === "function"){ try{ bcfg(); }catch(e){ /* 绑定异常不阻断渲染 */ } }
+      else if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys, bcfg.onSave);
       // v3.0.1 B-3：代码运行器「▶ 运行」按钮绑定（通用 CRUD 绑定之外的特化扩展）
       if(active === "code" && sceneFeatureMode === "runner") bindCodeRunnerCard();
       // v3.1：SQL Playground「▶ 运行」按钮绑定（sql.js WASM 沙箱）
