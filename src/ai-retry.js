@@ -1222,15 +1222,19 @@ function bindChatPanel(){
   //       （768px 下不折叠时主区仅 288px，看板会被挤溢出）
   try{
     const hasPref = localStorage.getItem(PREFIX+"chat_panel_collapsed") !== null;
-    /* 布局 v2（2026-10-21）：对话坞在主列底部，常驻会占掉工作区高度 —— 默认只留输入行，
-       有显式偏好才恢复用户选择。首次想看历史点标题栏的折叠按钮即可。 */
-    const collapseByDefault = !hasPref;
+    const collapseByDefault = !hasPref && (window.innerWidth||1024) < 1280;
     if(load(PREFIX+"chat_panel_collapsed","0")==="1" || collapseByDefault){
       panel.classList.add("collapsed");
       // 保留按钮 SVG；恢复折叠态不替换按钮内容。
       if(rail) rail.classList.add("show");
     }
   }catch(e){ /* noop */ }
+  /* 布局 v2（2026-10-21）：默认收起由 HTML 的 .collapsed 兜底；仅当用户显式选过「展开」时移除。
+     load() 自带损坏兜底不会抛，这里不需要 try/catch。 */
+  if(load(PREFIX+"chat_panel_collapsed", null) === "0"){
+    panel.classList.remove("collapsed");
+    if(rail) rail.classList.remove("show");
+  }
   // 窄屏默认隐藏：监听窗口宽度，<768px 时加 .show 才显示（与 .collapsed 区分）
   if(typeof window !== "undefined"){
     const applyResponsive=()=>{

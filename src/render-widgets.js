@@ -281,12 +281,12 @@ function _bindTaskRail(){
   const collapseDesktop = ()=>{
     if(body) body.classList.add("rail-collapsed");
     if(app) app.classList.add("rail-collapsed");
-    try{ save(PREFIX + "task_rail_collapsed", "1"); }catch(_e){ /* noop */ }
+    save(PREFIX + "task_rail_collapsed", "1");
   };
   const expandDesktop = ()=>{
     if(body) body.classList.remove("rail-collapsed");
     if(app) app.classList.remove("rail-collapsed");
-    try{ save(PREFIX + "task_rail_collapsed", "0"); }catch(_e){ /* noop */ }
+    save(PREFIX + "task_rail_collapsed", "0");
   };
   const isWide = ()=> (window.innerWidth || 0) >= 1024;
 
@@ -322,12 +322,11 @@ function _bindTaskRail(){
     if(row && typeof AppBridge.openTaskEdit === "function") AppBridge.openTaskEdit(row.getAttribute("data-rail-task"));
   });
 
-  try{
-    if(load(PREFIX + "task_rail_collapsed", "0") === "1"){
-      if(body) body.classList.add("rail-collapsed");
-      if(app) app.classList.add("rail-collapsed");
-    }
-  }catch(_e){ /* noop */ }
+  /* load() 自带损坏兜底，不会抛 —— 不再用空 catch 包一层 */
+  if(load(PREFIX + "task_rail_collapsed", "0") === "1"){
+    if(body) body.classList.add("rail-collapsed");
+    if(app) app.classList.add("rail-collapsed");
+  }
 }
 
 /* v2.1.0：侧栏两级菜单点击分发（事件委托，renderSide 重渲染后依然有效）。
