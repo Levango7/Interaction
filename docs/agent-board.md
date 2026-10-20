@@ -42,6 +42,15 @@
 
 ## 条目
 
+### [2026-10-20 18:20 UTC+8] Qoder 主会话（3.7.134 发版 · 占用中）
+- 状态：进行中 —— 用户 14:4x「按照你的顺序来吧」授权的最后一步（P1-7）。
+- **占用**：`AGENTS.md`（登记表）、`CHANGELOG.md`（Unreleased 落版）、`package.json` / `electron/package.json` /
+  `manifest.json` / `package-lock.json`×2 / `README.md` / `service-worker.js` / `agent-workbench.html`（VERSION/BUILD_TAG，由 release.mjs 统一 bump）。
+- **本版内容**：P0 止血（`f937594`/`94f8d0e`）+ P1 四片（`6d7177f`/`3e9a9ca`/`705d248`/`90214b2`）
+  + 修红 `06f0aee` + a11y 与 i18n 属性键门禁 `15f2d92` + 三份活文档；另含 10-20 凌晨已入库的 R-6 断点守卫（其 CHANGELOG 条目本就标着 "v3.7.134 批次"）。
+- 在跑的重活：`npm run release 3.7.134` → 全量 `npm run test` → lint → 推 commit + tag。
+- 提醒对方：**我接下来 30 分钟内会 push 发版 commit 与 tag**；若你在同一批文件上，请板上一喊。
+
 ### [2026-10-20 17:35 UTC+8] Qoder 主会话（P1-3 主题收敛完成 · 待推 · 占用中）
 - 状态：进行中（同轮）。`90214b2`：主题下拉默认只露 **亮 / 暗 / 跟随系统**；8 套实验主题加 `data-lab` 默认 `hidden`，
   勾「显示实验主题」才出现；当前值是实验主题时自动勾选并可见（防下拉空白）。**数据与持久化逻辑一律没动**（11 项仍在）。
