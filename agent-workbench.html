@@ -5688,15 +5688,17 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <option value="light" data-i18n="look.theme.light">浅色</option>
           <option value="dark" data-i18n="look.theme.dark">暗色</option>
           <option value="system" data-i18n="look.theme.system">跟随系统</option>
-          <option value="sepia" data-i18n="look.theme.sepia">温和护眼</option>
-          <option value="elegant" data-i18n="look.theme.elegant">见静初雪</option>
-          <option value="aurora" data-i18n="look.theme.aurora">幻夜极光</option>
-          <option value="matrix" data-i18n="look.theme.matrix">黑客帝国</option>
-          <option value="forest" data-i18n="look.theme.forest">秘境森林</option>
-          <option value="ocean" data-i18n="look.theme.ocean">微蓝浅海</option>
-          <option value="mist" data-i18n="look.theme.mist">晓光晨雾</option>
-          <option value="ink" data-i18n="look.theme.ink">墨底鎏金</option>
+          <!-- 2026-10-20 P1-3：默认只暴露 亮/暗/跟随系统；8 套实验主题默认隐藏，勾选后出现 -->
+          <option value="sepia" data-lab="1" hidden data-i18n="look.theme.sepia">温和护眼</option>
+          <option value="elegant" data-lab="1" hidden data-i18n="look.theme.elegant">见静初雪</option>
+          <option value="aurora" data-lab="1" hidden data-i18n="look.theme.aurora">幻夜极光</option>
+          <option value="matrix" data-lab="1" hidden data-i18n="look.theme.matrix">黑客帝国</option>
+          <option value="forest" data-lab="1" hidden data-i18n="look.theme.forest">秘境森林</option>
+          <option value="ocean" data-lab="1" hidden data-i18n="look.theme.ocean">微蓝浅海</option>
+          <option value="mist" data-lab="1" hidden data-i18n="look.theme.mist">晓光晨雾</option>
+          <option value="ink" data-lab="1" hidden data-i18n="look.theme.ink">墨底鎏金</option>
         </select>
+        <label class="u-mt-1 u-fs-2xs"><input type="checkbox" id="cfgThemeShowLab"> <span data-i18n="look.theme.showLab">显示实验主题</span></label>
       </div>
     </div>
     <div class="set-field">
@@ -7656,6 +7658,7 @@ const MESSAGES = {
     "look.theme.light": "浅色",
     "look.theme.dark": "暗色",
     "look.theme.system": "跟随系统",
+    "look.theme.showLab": "显示实验主题",
     "look.theme.sepia": "温和护眼",
     "look.theme.elegant": "见静初雪",
     "look.theme.aurora": "幻夜极光",
@@ -11588,6 +11591,7 @@ const MESSAGES = {
     "look.theme.light": "Light",
     "look.theme.dark": "Dark",
     "look.theme.system": "Follow System",
+    "look.theme.showLab": "Show experimental themes",
     "look.theme.sepia": "Sepia",
     "look.theme.elegant": "Silent First Snow",
     "look.theme.aurora": "Aurora Night",
@@ -16495,11 +16499,27 @@ function applyTheme(){
     }catch(e){ /* matchMedia 异常：保持当前主题 */ }
   }
 }
+/* 2026-10-20 P1-3：默认只暴露 亮/暗/跟随系统；8 套实验主题用 option[hidden] 收起。
+   当前选中的若是实验主题（老用户/导入恢复），自动勾上"显示实验主题"并让该 option 可见，
+   避免下拉显示空白（v3.6.3 mist 那种"选了又没了"的观感问题不重演）。 */
+function syncThemeLabOption(){
+  const sel=$("#cfgTheme"); if(!sel) return;
+  const chk=$("#cfgThemeShowLab");
+  const cur=sel.value;
+  const curOpt=Array.from(sel.options).find(function(o){ return o.value===cur; });
+  if(chk && curOpt && curOpt.hasAttribute("data-lab") && !chk.checked) chk.checked=true;
+  const show=!!(chk && chk.checked);
+  Array.from(sel.options).forEach(function(o){
+    if(!o.hasAttribute("data-lab")) return;
+    if(show || o.value===cur) o.removeAttribute("hidden"); else o.setAttribute("hidden","");
+  });
+}
 async function toggleTheme(){
   const cfg=getCfg(); const cur=document.documentElement.getAttribute("data-theme");
   const next = cur==="dark"?"light":"dark";
   cfg.theme=next; try{ await persistCfg(cfg); }catch(e){ save(PREFIX+"cfg", cfg); } applyTheme();
   const sel=$("#cfgTheme"); if(sel) sel.value=next;
+  try{ syncThemeLabOption(); }catch(e){ /* 下拉不存在时忽略 */ }
   toast(next==="dark"?t("theme.switch.dark", "已切换为暗色主题"):t("theme.switch.light", "已切换为亮色主题"), "ok");
 }
 /**
@@ -38340,6 +38360,8 @@ function openDrawer(){ const cfg=getCfg();
     // v1.5-C：主题选择支持 light/dark/system/aurora/sepia/elegant/matrix + 自定义主题（contrast 已于 v3.1.1 移除）
     const curTheme = (typeof getCurrentTheme === "function") ? getCurrentTheme() : (cfg.theme || "system");
     thSel.value = curTheme;
+    /* 2026-10-20 P1-3：选中的若是实验主题（老用户/导入恢复），自动展开可见，避免下拉空白 */
+    try{ syncThemeLabOption(); }catch(e){ /* 主题下拉异常不阻断设置页 */ }
   }
   const rpSel=$("#cfgRecyclePolicy"); if(rpSel) rpSel.value = getRecyclePolicy();
   // v1.5-A：语言切换回填（从 i18n 模块读取当前语言）
@@ -39342,7 +39364,7 @@ function renderThemeEditor(){
         btn.onclick = () => {
           const id = btn.getAttribute("data-theme-apply");
           AppBridge.setTheme(id);
-          const thSel = $("#cfgTheme"); if(thSel) thSel.value = id;
+          const thSel = $("#cfgTheme"); if(thSel){ thSel.value = id; try{ syncThemeLabOption(); }catch(e){ /* 同上 */ } }
           renderThemeEditor();
           try{ toast(t("theme.applied", "已应用主题「")+(customs[id]&&customs[id].name||id)+t("theme.nameSuffix", "」"), "ok"); }catch(e){}
         };
@@ -41589,6 +41611,9 @@ const _btnThemeImportCancel = $("#btnThemeImportCancel"); if(_btnThemeImportCanc
    统一路由：system → cfg+applyTheme（保留跟随系统语义）；其余 → setTheme（内部持久化+同步双状态源） */
 const _cfgThemeSel = $("#cfgTheme");
 if(_cfgThemeSel){
+  /* 2026-10-20 P1-3：8 套实验主题默认隐藏；勾选后出现，选中实验主题时保持可见 */
+  const _themeLabChk = $("#cfgThemeShowLab");
+  if(_themeLabChk) _themeLabChk.onchange = ()=>{ try{ syncThemeLabOption(); }catch(e){ /* 忽略 */ } };
   _cfgThemeSel.onchange = ()=>{
     const v = _cfgThemeSel.value;
     if(!v) return;
