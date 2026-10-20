@@ -54,3 +54,68 @@ describe("工具箱入口 · 死入口回归守卫", () => {
     expect(body.innerHTML).toContain("关键指标");
   });
 });
+
+/* ===== 2026-10-20 P0 死入口收口 =====
+   四类"渲染正常、点击无反应"的入口，全部用真实点击 + 可观察结果断言，
+   不用"函数存在"替代接线验证。 */
+describe("P0 死入口收口", () => {
+  it("首屏主 CTA：有「新建任务」，点击进 office 场景并聚焦标题输入", async () => {
+    const win = await startApp();
+    win.localStorage.clear();
+    win.__test.setActive("overview");
+    win.__test.render();
+    const btn = win.document.getElementById("btnNewTask");
+    expect(btn, "首屏必须有主 CTA").toBeTruthy();
+    expect(btn.disabled).toBe(false);
+    btn.click();
+    expect(win.__test.getActive()).toBe("office");
+    const inp = win.document.querySelector('#taskForm [name="title"]');
+    expect(inp, "office 场景应有标题输入").toBeTruthy();
+    expect(win.document.activeElement, "点击 CTA 后焦点应落在标题输入").toBe(inp);
+  });
+
+  it("工具箱「高级报表」打开后翻页/对比按钮真的绑定（此前只有入口按钮绑了）", async () => {
+    const win = await startApp();
+    win.localStorage.clear();
+    win.__test.setActive("toolbox");
+    win.__test.render();
+    const entry = win.document.querySelector('[data-toolbox="x-report"]');
+    expect(entry).not.toBeNull();
+    entry.click();
+    expect(win.document.getElementById("reportModal").classList.contains("show")).toBe(true);
+    const next = win.document.getElementById("btnReportNext");
+    expect(next, "报表应有「下一期」按钮").toBeTruthy();
+    expect(typeof next.onclick, "翻页按钮必须被 bindReportModal 绑定").toBe("function");
+    const cmp = win.document.getElementById("btnReportCompare");
+    expect(typeof cmp.onclick, "对比按钮必须被绑定").toBe("function");
+  });
+
+  it("工具箱「日历」打开后月份切换可用（此前 render 了但没 bind）", async () => {
+    const win = await startApp();
+    win.localStorage.clear();
+    win.__test.setActive("toolbox");
+    win.__test.render();
+    win.document.querySelector('[data-toolbox="x-cal"]').click();
+    const body = win.document.getElementById("calendarModalBody");
+    expect(body.innerHTML.length).toBeGreaterThan(0);
+    const prev = body.querySelector("[data-cal-prev]");
+    expect(prev, "日历应有「上一月」按钮").toBeTruthy();
+    expect(typeof prev.onclick, "月份切换必须被 bindCalendarEvents 绑定").toBe("function");
+    prev.click();
+    expect(body.dataset.offset, "点击后偏移应变为 -1").toBe("-1");
+  });
+
+  it("编程场景 JSON tab 的「格式化」真的绑定（SCENE_FEATURE_BIND 里存的是函数）", async () => {
+    const win = await startApp();
+    win.localStorage.clear();
+    win.__test.setActive("code");
+    win.setSceneFeature("json");
+    win.__test.render();
+    const fmt = win.document.getElementById("jwFmt");
+    expect(fmt, "JSON tab 应有「格式化」按钮").toBeTruthy();
+    expect(typeof fmt.onclick, "格式化按钮必须被绑定").toBe("function");
+    win.document.getElementById("jwIn").value = '{"b":2,"a":1}';
+    fmt.click();
+    expect(win.document.getElementById("jwOut").value).toContain("\n");
+  });
+});

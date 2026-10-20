@@ -111,7 +111,12 @@ function render(){
     if(sceneFeatureMode !== "overview"){
       const bcfg = (SCENE_FEATURE_BIND[active] || {})[sceneFeatureMode];
       // v3.2 任务四：第三参数 onSave 钩子（如练习错题自动入 SM-2）——查找 bcfg.onSave 透传
-      if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys, bcfg.onSave);
+      // 2026-10-20：SCENE_FEATURE_BIND 的条目有两种形状 —— 通用功能卡是 {key,fieldKeys,onSave}，
+      // 而编程场景四个 TOOL_APPS tab（JSON/时间戳/编解码/UUID）存的是 **bind 函数本身**
+      // （ui-global-events.js 里 `SCENE_FEATURE_BIND.code[id] = w.bind`）。此前一律按对象取 .key，
+      // 于是那四个 tab 的「格式化/运行」按钮永远不绑定（渲染正常、点击无反应）。
+      if(typeof bcfg === "function"){ try{ bcfg(); }catch(e){ /* 绑定异常不阻断渲染 */ } }
+      else if(bcfg) _featureCardBind(bcfg.key, bcfg.fieldKeys, bcfg.onSave);
       // v3.0.1 B-3：代码运行器「▶ 运行」按钮绑定（通用 CRUD 绑定之外的特化扩展）
       if(active === "code" && sceneFeatureMode === "runner") bindCodeRunnerCard();
       // v3.1：SQL Playground「▶ 运行」按钮绑定（sql.js WASM 沙箱）

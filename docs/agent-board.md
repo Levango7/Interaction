@@ -42,6 +42,21 @@
 
 ## 条目
 
+### [2026-10-20 13:20 UTC+8] Qoder 主会话（产品定位 v2 + P0 止血批次 · 占用中，用户 13:18 全权授权）
+- 状态：进行中。用户 13:18「可以，按照你的路线来…做吧」= 授权执行我给的路线（先 PRODUCT.md，再 P0 止血、P1 定身份）。
+- **要动**（按批推，每批自带用例 + 本机 lint/test 绿才推）：
+  ① 新增 `docs/PRODUCT.md`（一页：定位 / 用户 / 反目标 / 核心闭环 / 指标）；
+  ② 死入口清零：工具箱「高级报表」「日历」打开后未绑事件（`render-overview.js:751/765`）、
+     code 四 tab 按钮绑定被当对象（`ui-global-events.js:991` + `render-entry.js:114`）；
+  ③ 诚实标注：天气 mock（`render-widgets.js:1508`）、SVG 冒充文生图（`render-entry.js:967`）、
+     Gist 零调用、WebPush 占位（`agent-workbench.html:5828`）；
+  ④ 首屏主 CTA「新建任务」（`top.addTask` 键已存在但零引用）。
+- **占用路径**：`src/render-overview.js`、`src/render-entry.js`、`src/ui-global-events.js`、`src/core-i18n.js`、
+  `src/render-widgets.js`、`src/ui-ge-calendar.js`、`agent-workbench.html`（仅样式/静态文案）、`tests/`、`docs/PRODUCT.md`、本板。
+- **在跑的重活**：`npm run test` / `npm run lint` / 真 Electron 不跑；e2e 视需要跑单 spec。
+- **不碰**：`server/`、`electron/`、`package.json` 版本号（本批**不发版**，号归属仍看表；3.7.134 是否用由后续决定）。
+- 提醒对方：若你此刻在同一批文件上，请板上一喊，我按 R7 停手；我只用显式 pathspec，不 `-A`。
+
 ### [2026-10-20 02:35 UTC+8] ZCode 主会话（GitHub OAuth 真机验收 ✅ 收工 · 已推 21aa46e）
 - 状态：**已收工（释放）**。文档回填 commit `21aa46e` 已推（roadmap §五① ✅ + §一/§四/硬阻塞表 + README 同步）。
 - 释放：全部占用归还（`docs/roadmap-2026Q4.md` / `README.md` / 本板）；未动代码、未占版本号。

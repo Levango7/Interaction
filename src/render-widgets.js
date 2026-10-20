@@ -40,7 +40,7 @@ const SC_SUBMENU = {
   data:[
     {id:"dat-stats", label:t("side.sub.dataAnalysis", "数据分析"), run:()=>{ setActive("stats"); render(); }},
     {id:"dat-chart", label:t("side.sub.edit", "编辑"), run:()=>{ _sideActive=null; setActive("stats"); _dashEditMode=true; render(); }},
-    {id:"dat-report", label:t("side.sub.report", "报告"), run:()=>{ AppBridge.openReportModal(); }}
+    {id:"dat-report", label:t("side.sub.report", "报告"), run:()=>{ AppBridge.openReportModal("week", 0); AppBridge.bindReportModal(); }}
   ],
   code:[
     {id:"cod-compile", label:t("side.sub.compile", "脚本编译")},
@@ -963,7 +963,7 @@ function openAppPage(){
   $$("#main [data-app]").forEach(function(c){
     c.onclick = function(){
       const id = c.getAttribute("data-app");
-      if(id==="calview"){ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } }
+      if(id==="calview"){ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b){ b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); AppBridge.bindCalendarEvents(b); } } }
       else if(id==="weather"){ if(typeof openWeatherModal === "function") openWeatherModal(); }
       else if(id==="alarm"){ if(typeof openAlarmModal === "function") openAlarmModal(); }
       else if(id==="pet"){ if(typeof openPetModal === "function") openPetModal(); }

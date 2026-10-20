@@ -66,7 +66,7 @@ function renderOverview(){
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.overview}</span>
       <div class="ph-tx"><h2 data-i18n="overview.homeTitle">主页</h2><p class="sub" data-i18n="overview.homeSub">系统概况 · 全局搜索 · 数据速览</p></div>
-      <div class="ph-actions"><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent" data-i18n="overview.advReport">高级报表</button></div>
+      <div class="ph-actions"><button type="button" class="addbtn sm" id="btnNewTask" data-sc="accent" data-i18n="top.addTask">新建任务</button><button type="button" class="addbtn sm" id="btnOpenReport" data-sc="accent" data-i18n="overview.advReport">高级报表</button></div>
     </header></div>
     ${overviewNav}
     ${overview4}
@@ -209,6 +209,9 @@ function renderOverview(){
   // v1.5-D 高级报表：绑定入口按钮 + 弹窗内事件
   const rBtn=$("#btnOpenReport");
   if(rBtn) rBtn.onclick=()=>{ AppBridge.openReportModal("week", 0); AppBridge.bindReportModal(); };
+  // 首屏主 CTA：直接进任务场景并聚焦标题输入（原先首屏唯一 CTA 是「高级报表」，主操作要翻两层）
+  const nBtn=$("#btnNewTask");
+  if(nBtn) nBtn.onclick=()=>{ setActive("office"); render(); focusTaskTitleInput(); };
 }
 
 /* ---------- v1.4-D AI 每日报告卡片 ---------- */
@@ -748,7 +751,7 @@ function _bindTasksTabs(){
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
 const TOOLBOX_EXTRAS = [
-  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b) b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); } } },
+  { id:"x-cal",     name:t("tool.cal.name","日历"),     desc:t("tool.cal.desc","按月查看任务分布"), cat:"效率工具", icon:UI_ICONS.calendar, run:()=>{ const m=$("#calendarModal"); if(m){ const b=$("#calendarModalBody"); if(b){ b.innerHTML=sanitizeHtml(AppBridge.renderCalendarView(0)); m.classList.add("show"); AppBridge.bindCalendarEvents(b); } } } },
   { id:"x-weather", name:t("tool.weather.name","天气"),     desc:t("tool.weather.desc","今日 + 未来几日预报"), cat:"效率工具", icon:UI_ICONS.sun, run:()=>{ AppBridge.openWeatherModal(); } },
   { id:"x-alarm",   name:t("tool.alarm.name","闹钟"),     desc:t("tool.alarm.desc","多任务 · 循环 · 贪睡"), cat:"效率工具", icon:UI_ICONS.bell, run:()=>{ AppBridge.openAlarmModal(); } },
   { id:"x-pomo",    name:t("tool.pomo.name","笃行"),     desc:t("tool.pomo.desc","25 分钟专注 + 5 分钟休息"), cat:"效率工具", icon:UI_ICONS.flame, pop:"pomoPop", menuAttr:"plug-pomo" },
@@ -762,7 +765,7 @@ const TOOLBOX_EXTRAS = [
   { id:"x-dashboard", name:t("tool.dashboard.name","自定义仪表盘"), desc:t("tool.dashboard.desc","拖拽编排 15 个组件"), cat:"功能", icon:UI_ICONS.gauge, run:()=>{ AppBridge.openDashboardModal(); } },
   { id:"x-kb",      name:t("tool.kb.name","知识库"),   desc:t("tool.kb.desc","资料卡片与全文检索"), cat:"功能", icon:UI_ICONS.kb, run:()=>{ AppBridge.openKnowledgeBaseModal(); } },
   { id:"x-notes",   name:t("tool.notes.name","笔记"),     desc:t("tool.notes.desc","标签 / 分类 / 任务关联"), cat:"功能", icon:UI_ICONS.book, run:()=>{ AppBridge.openNotesModal(); } },
-  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ AppBridge.openReportModal(); } },
+  { id:"x-report",  name:t("tool.report.toolboxName","高级报表"), desc:t("tool.report.desc","周 / 月 / 年报与对比"), cat:"功能", icon:UI_ICONS.stats, run:()=>{ AppBridge.openReportModal("week", 0); AppBridge.bindReportModal(); } },
   { id:"x-tpl",     name:t("tool.tpl.name","场景模板"), desc:t("tool.tpl.desc","一键导入预设任务集"), cat:"功能", icon:UI_ICONS.puzzle, run:()=>{ AppBridge.openTemplateModal(); } }
 ];
 let _toolboxCat = "全部";
