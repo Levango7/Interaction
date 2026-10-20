@@ -163,3 +163,29 @@ describe("④ 加载顺序（v3.7.53 根因锁）", () => {
     expect(renderSrc.slice(0, i), "applyI18n 必须位于 }finally{ 之后").toContain("}finally{");
   });
 });
+
+/* ---------- ④ HTML 静态属性里的键（2026-10-20 P1-6 门禁） ----------
+   此前只守了 `t("字面量")` 的调用点；`data-i18n` / `data-i18n-placeholder` / `data-i18n-aria` /
+   `data-i18n-title` 这些**属性里的键**没人守。属性键写错时界面直接显示 key 或中文兜底，
+   而单测/构建全绿 —— 与本节开头说的"半截翻译"同型。 */
+const HTML_SRC = readFileSync(join(root, "agent-workbench.html"), "utf8");
+const ATTR_RE = /data-i18n(?:-placeholder|-aria|-title)?="([^"]+)"/g;
+const attrKeys = [...HTML_SRC.matchAll(ATTR_RE)].map((m) => m[1]).filter((k) => !k.includes("${"));
+
+describe("④ HTML 属性键必须双语存在", () => {
+  it("每个 data-i18n* 键都在 zh 与 en 里", () => {
+    /* 先证明尺子量到了东西：扫到 0 条时下面的"全部存在"是假绿（R-28 的同一个坑） */
+    expect(attrKeys.length, "HTML 里应扫到数百条 data-i18n 属性，扫到太少说明正则坏了").toBeGreaterThan(300);
+    const missing = [...new Set(attrKeys)]
+      .filter((k) => !zhKeys.has(k) || !enKeys.has(k))
+      .sort();
+    expect(missing, "以下属性键缺翻译（界面会显示 key 或中文兜底）：" + missing.join(", ")).toEqual([]);
+  });
+
+  it("检查器有射程：故意造的假键必须被同一套规则抓出", () => {
+    const fake = '<span data-i18n="no.such.key"></span><input data-i18n-placeholder="also.missing">';
+    const keys = [...fake.matchAll(ATTR_RE)].map((m) => m[1]);
+    expect(keys.length, "正则必须能命中两种属性").toBe(2);
+    expect(keys.some((k) => !zhKeys.has(k) || !enKeys.has(k)), "假键必须被判缺").toBe(true);
+  });
+});

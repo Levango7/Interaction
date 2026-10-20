@@ -2422,6 +2422,48 @@ var __TEST_GATE__ = (function(){
     return /[?&]__test=1/.test(location.search || "");
   }catch(e){ return false; }
 })();
+/* 2026-10-20 P1-4：高频只读浮层的键盘可达性（报表 / 日历 / 甘特 / 仪表盘 / 天气 / 萌宠）。
+   - Esc 关闭最上层已打开的浮层（走它自己的关闭按钮，复用既有清理逻辑）；
+   - Tab 在浮层内循环（焦点不会跑到背后页面）。
+   只处理这六个已知安全的浮层；带未保存表单的弹窗不在此列，避免误关丢输入。 */
+(function setupModalKeyboardA11y(){
+  const MODALS = [
+    ["reportModal", "btnReportClose"],
+    ["calendarModal", "btnCalendarClose"],
+    ["ganttModal", "btnGanttClose"],
+    ["dashboardModal", "btnDashboardClose"],
+    ["weatherModal", "btnWeatherClose"],
+    ["petModal", "btnPetClose"]
+  ];
+  const focusables = function(el){
+    return Array.prototype.slice.call(el.querySelectorAll(
+      'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+    )).filter(function(n){ return !n.hasAttribute("hidden") && n.getAttribute("aria-hidden") !== "true"; });
+  };
+  document.addEventListener("keydown", function(e){
+    let open = null, closeId = null;
+    for(let i = 0; i < MODALS.length; i++){
+      const m = document.getElementById(MODALS[i][0]);
+      if(m && m.classList.contains("show")){ open = m; closeId = MODALS[i][1]; break; }
+    }
+    if(!open) return;
+    if(e.key === "Escape"){
+      const btn = closeId ? document.getElementById(closeId) : null;
+      if(btn){ btn.click(); } else { open.classList.remove("show"); }
+      e.preventDefault(); e.stopPropagation();
+      return;
+    }
+    if(e.key === "Tab"){
+      const list = focusables(open);
+      if(!list.length) return;
+      const first = list[0], last = list[list.length - 1];
+      const a = document.activeElement;
+      if(!open.contains(a)){ e.preventDefault(); (e.shiftKey ? last : first).focus(); return; }
+      if(!e.shiftKey && a === last){ e.preventDefault(); first.focus(); }
+      else if(e.shiftKey && a === first){ e.preventDefault(); last.focus(); }
+    }
+  });
+})();
 /* v3.7.78：桥对象在本块先行建空（真正的键由最后一个块的 Object.assign 汇入）——
    中间块（如 ui-ge-api）的守卫式 Object.assign(window.__test,…) 依赖它已存在。 */
 if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
