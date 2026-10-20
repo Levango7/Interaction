@@ -74,7 +74,8 @@ test.describe("跨视口布局不变量", () => {
     /* ⑤ 移动端触控目标 */
     if (isNarrow) {
       const boxes = await page.locator("#mobBar [data-mob-group]").evaluateAll(els => els.map(e => e.getBoundingClientRect()));
-      expect(boxes.length, "底部导航应有 5 组").toBeGreaterThanOrEqual(5);
+      /* 2026-10-20 P1-1a：底部导航五组 → 四组（今日/工作台/助手/更多） */
+      expect(boxes.length, "底部导航应有 4 组").toBeGreaterThanOrEqual(4);
       for (const b of boxes) {
         expect(b.height, `底部导航触控目标过小：${Math.round(b.height)}px`).toBeGreaterThanOrEqual(32);
         expect(b.width, `底部导航触控目标过窄：${Math.round(b.width)}px`).toBeGreaterThanOrEqual(40);
