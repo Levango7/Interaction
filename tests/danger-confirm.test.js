@@ -118,7 +118,14 @@ describe("dangerConfirm 组件契约", () => {
    第二批迁掉 8 处（GitHub token 清除 / WebDAV 配置清除 / API Key 吊销 ×2 / AI 会话历史清除 /
    工作记忆清空 / 联动规则重置 / 联动规则删除）⇒ 27；
    第三批迁掉 3 处（导入覆盖确认 / 恢复前快照回滚 / 恢复前快照删除）⇒ 27→24；
-   第四批迁掉 2 处（清空全部数据 doClear / 集成任务推送 [data-int-push]）⇒ 现值 22。
+   第四批迁掉 2 处（清空全部数据 doClear / 集成任务推送 [data-int-push]）⇒ 27→24→22；
+   第五批迁掉 10 处（ui-drawer 5：场景删除 / Profile 删除 / 模板导入 / 插件卸载 /
+   自定义主题删除；ui-scene-bind 5：删除任务 ×3 / 删除记录 / 批量删除）⇒ 现值 12。
+   第五批最值得记的一处：`batchDelete()` 有返回值（`return n`），改 async 后返回的是
+   **Promise<number>** —— 它唯一的调用方 `ui-scene-bind.js` 里原本写的是
+   `batchDelete(); render();`，不 await 的话 `render()` 会抢在确认框之前执行，
+   而用户点完确认、删除真正发生之后反倒**没人刷新界面**（batchDelete 内部只
+   `_renderBatchUI()`，不做整体 render）。已改为 `await batchDelete(); render();`。
    第四批的两个特殊点，改之前值得先看一眼：
      · `doClear` 改 async 后，两个调用方（`ui-global-events.js:34` 的 `onclick = doClear`、
        `ui-palette.js:153` 命令面板 `run:doClear`）**刻意不 await** —— 清空是"点了就走"的
@@ -132,7 +139,7 @@ describe("dangerConfirm 组件契约", () => {
    不剥会把 39 数成 40（实测踩过）。
    ═══════════════════════════════════════════════════════════════════════ */
 describe("原生 confirm() 债务棘轮", () => {
-  const NATIVE_CONFIRM_TOTAL = 22;
+  const NATIVE_CONFIRM_TOTAL = 12;
   const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 
   const stripComments = (code) => code

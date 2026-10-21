@@ -111,8 +111,12 @@ describe("B5 · 看板卡片键盘操作", () => {
     expect(win.document.getElementById("taskEditModal")).not.toBeNull();
   });
 
-  it("Delete 软删任务（进回收站）", () => {
+  it("Delete 软删任务（进回收站）", async () => {
     pressKey(card(), "Delete");
+    /* 删除确认已换成 dangerConfirm 浮层，键盘处理器是 async —— 同步断言会撞在 await 上
+       （实测 `expected undefined not to be undefined`）。点掉确认框再等一个宏任务。 */
+    win.document.getElementById("dangerConfirmModalYes").click();
+    await new Promise((r) => setTimeout(r, 0));
     const t = __test.getTasks().find(x => x.id === taskId);
     expect(t.deletedAt).not.toBeUndefined();
     expect(t.deletedAt).not.toBeNull();

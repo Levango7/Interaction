@@ -32,13 +32,18 @@ describe("v1.1.2 Quick Wins", () => {
 
   // ===== T1 · UI 删除改软删 =====
   describe("T1 · UI 删除进入回收站（软删除）", () => {
-    it("点击任务卡「删除」后任务置 deletedAt（软删），且从看板消失", () => {
+    it("点击任务卡「删除」后任务置 deletedAt（软删），且从看板消失", async () => {
       __test.setTasks([mkTask("t1", "office", "待删除的任务")]);
       __test.setActive("office");
       __test.render();
       const btn = win.document.querySelector('[data-del="t1"]');
       expect(btn, "看板应渲染删除按钮").toBeTruthy();
-      btn.click(); // confirm 在 jsdom 中已 stub 为 true
+      btn.click();
+      /* 删除确认已从原生 confirm 换成 dangerConfirm 浮层，处理器是 async ——
+         同步断言会撞在 await 上（此时 deletedAt 还没落上，实测报
+         `expected undefined to be truthy`）。点掉「确认执行」再等一个宏任务即可。 */
+      win.document.getElementById("dangerConfirmModalYes").click();
+      await new Promise((r) => setTimeout(r, 0));
       const all = win.getTasks();
       expect(all.length).toBe(1); // 未硬删：长度不变
       expect(all[0].deletedAt, "应置软删标记").toBeTruthy();

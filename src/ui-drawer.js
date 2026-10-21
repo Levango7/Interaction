@@ -108,9 +108,9 @@ function renderScBox(){
     const key = b.closest(".chain-row").getAttribute("data-sc");
     resetBuiltinOverride(key); toast(t("msg.restoredDefault","已恢复默认"),"ok"); openDrawerRefresh();
   });
-  box.querySelectorAll(".sc-del").forEach(b=> b.onclick=()=>{
+  box.querySelectorAll(".sc-del").forEach(b=> b.onclick=async ()=>{
     const key = b.closest(".chain-row").getAttribute("data-sc");
-    if(!confirm(t("confirm.deleteScenario","确定删除该场景？（场景下有任务时不可删除）"))) return;
+    if(!await dangerConfirm({ message: t("confirm.deleteScenario","确定删除该场景？（场景下有任务时不可删除）") })) return;
     const r = removeCustomScenario(key);
     if(!r.ok){ toast(r.err||t("msg.deleteFailed","删除失败"),"warn"); return; }
     toast(t("msg.scenarioDeleted","场景已删除"),"ok"); openDrawerRefresh();
@@ -489,12 +489,12 @@ function dupProfile(){
   renderProfileSelect();
 }
 /* 删除当前 active profile（至少保留 1 个） */
-function delProfile(){
+async function delProfile(){
   const cfg = getCfg();
   if(!cfg || !Array.isArray(cfg.profiles) || cfg.profiles.length <= 1) return;
   const ap = getActiveProfile();
   if(!ap) return;
-  if(!confirm(t("profile.confirmDelete","确定删除 Profile「")+(ap.name||t("common.unnamed","未命名"))+t("profile.confirmDeleteSuffix","」？此操作点「保存设置」后生效。"))) return;
+  if(!await dangerConfirm({ message: t("profile.confirmDelete","确定删除 Profile「")+(ap.name||t("common.unnamed","未命名"))+t("profile.confirmDeleteSuffix","」？此操作点「保存设置」后生效。") })) return;
   // v3.1：接入回收站——保存被删除的 profile 快照
   try{
     addToRecycleBin("config",
@@ -957,11 +957,11 @@ function openTemplateModal(){
   $("#sceneTemplateModal").onclick = (e)=>{ if(e.target === $("#sceneTemplateModal")) close(); };
   document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") close(); }, { signal: _ac.signal });
   $$("#sceneTemplateModal [data-tpl-import]").forEach(btn => {
-    btn.onclick = ()=>{
+    btn.onclick = async ()=>{
       const idx = parseInt(btn.getAttribute("data-tpl-import"), 10);
       const tpl = SCENE_TEMPLATES[idx];
       if(!tpl) return;
-      if(!confirm(t("tpl.confirmImport", "确定导入模板「")+tpl.name+t("tpl.confirmImportMid", "」？将创建 ")+tpl.tasks.length+t("tpl.confirmImportSuffix", " 个任务。"))) return;
+      if(!await dangerConfirm({ message: t("tpl.confirmImport", "确定导入模板「")+tpl.name+t("tpl.confirmImportMid", "」？将创建 ")+tpl.tasks.length+t("tpl.confirmImportSuffix", " 个任务。") })) return;
       const r = applyTemplate(tpl);
       if(!r.ok){ toast(r.err||t("tpl.importFailed", "导入失败"), "warn"); return; }
       close();
@@ -1026,11 +1026,11 @@ function renderPluginBox(){
   });
   // 卸载按钮
   box.querySelectorAll(".plugin-unload-btn").forEach(btn => {
-    btn.onclick = () => {
+    btn.onclick = async () => {
       const id = btn.getAttribute("data-plugin-unload");
       const p = getPlugin(id);
       if(!p) return;
-      if(!confirm(t("plugin.confirmUnload","确定卸载插件「")+p.name+t("plugin.confirmUnloadSuffix","」？"))) return;
+      if(!await dangerConfirm({ message: t("plugin.confirmUnload","确定卸载插件「")+p.name+t("plugin.confirmUnloadSuffix","」？") })) return;
       const ok = unloadPlugin(id);
       if(!ok){ toast(t("plugin.unloadFailed","卸载失败"), "warn"); return; }
       toast(t("plugin.unloadedPrefix","已卸载插件「")+p.name+t("plugin.unloadedSuffix","」"), "ok");
@@ -1192,10 +1192,10 @@ function renderThemeEditor(){
         };
       });
       listEl.querySelectorAll("[data-theme-delete]").forEach(btn => {
-        btn.onclick = () => {
+        btn.onclick = async () => {
           const id = btn.getAttribute("data-theme-delete");
           const theme = customs[id];
-          if(!confirm(t("theme.confirmDelete", "确定删除自定义主题「")+(theme&&theme.name||id)+t("theme.confirmDeleteSuffix", "」？"))) return;
+          if(!await dangerConfirm({ message: t("theme.confirmDelete", "确定删除自定义主题「")+(theme&&theme.name||id)+t("theme.confirmDeleteSuffix", "」？") })) return;
           AppBridge.deleteCustomTheme(id);
           renderThemeEditor();
           try{ toast(t("theme.deleted", "已删除主题"), "ok"); }catch(e){}

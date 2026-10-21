@@ -45,8 +45,8 @@ function bindScenario(){
     if(_tryMoveKanbanCardLocal(id, fromSt, st)) return;
     render();
   });
-  $$("[data-del]").forEach(b=> b.onclick=()=>{
-    if(!confirm(t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）"))) return;
+  $$("[data-del]").forEach(b=> b.onclick=async ()=>{
+    if(!await dangerConfirm({ message: t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）") })) return;
     const tasks=getTasks();
     const task =tasks.find(x=>x.id===b.dataset.del);
     if(task && !task.deletedAt){
@@ -57,8 +57,8 @@ function bindScenario(){
     render();
   });
   $$("[data-edit]").forEach(b=> b.onclick=()=> openTaskEdit(b.dataset.edit)); // A1：任务编辑弹窗
-  $$("[data-rdel]").forEach(b=> b.onclick=()=>{
-    if(!confirm(t("confirm.deleteRecord","删除这条记录？"))) return;
+  $$("[data-rdel]").forEach(b=> b.onclick=async ()=>{
+    if(!await dangerConfirm({ message: t("confirm.deleteRecord","删除这条记录？") })) return;
     const recId = b.dataset.rdel;
     const target = getRec(active).find(r=>r.id===recId);
     // v3.4.5 G1 修复：记录删除时同步清理 IDB 中的图片 blob（img_<recId>）——
@@ -207,7 +207,7 @@ function setupKanbanKeyboard(){
   const main = $("#main");
   if(!main || main._kbdBound) return;
   main._kbdBound = true;
-  main.addEventListener("keydown", e=>{
+  main.addEventListener("keydown", async e=>{
     const card = e.target.closest(".kcard[data-drag]");
     if(!card) return;
     // 焦点在卡片内的按钮/输入上时不劫持（保留原生行为）
@@ -217,7 +217,7 @@ function setupKanbanKeyboard(){
     if(e.key === "Enter"){ e.preventDefault(); openTaskEdit(id); }
     else if(e.key === "Delete"){
       e.preventDefault();
-      if(!confirm(t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）"))) return;
+      if(!await dangerConfirm({ message: t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）") })) return;
       const tasks = getTasks();
       const tk = tasks.find(x=>x.id===id);
       if(tk && !tk.deletedAt){ tk.deletedAt = Date.now(); setTasks(tasks); } // 与 UI 删除按钮同语义
@@ -373,8 +373,8 @@ function _bindCardButtons(card){
   });
   card.querySelectorAll("[data-del]").forEach(b => {
     if(b._bound) return; b._bound = true;
-    b.onclick = () => {
-      if(!confirm(t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）"))) return;
+    b.onclick = async () => {
+      if(!await dangerConfirm({ message: t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）") })) return;
       const tasks = getTasks();
       const task = tasks.find(x => x.id === b.dataset.del);
       if(task && !task.deletedAt){ task.deletedAt = Date.now(); setTasks(tasks); }
@@ -492,12 +492,17 @@ function batchComplete(){
 }
 /**
  * 批量软删除选中任务。返回成功删除数。
- * @returns {number}
+ * ⚠️ 本函数是 async（要等 dangerConfirm 浮层），所以**返回的是 Promise<number>**。
+ * 调用方（下方 `bindBatchToolbar`）写的是 `await batchDelete(); render();`。
+ * 变异验证实测：**不 await 其实也能最终刷新界面** —— 删除走 `setTasks`，其数据广播会
+ * 触发整体 render。所以 await 不是"必须"，保留它的理由是：刷新发生在删除之后、语义
+ * 清晰，且不把正确性押在"setTasks 一定会广播"这个隐式副作用上。
+ * @returns {Promise<number>}
  */
-function batchDelete(){
+async function batchDelete(){
   const ids = getBatchSelected();
   if(ids.length === 0) return 0;
-  if(!confirm(t("confirm.batchDelete","确认删除 ") + ids.length + t("confirm.batchDeleteSuffix"," 个任务？（将进入回收站，可恢复）"))) return 0;
+  if(!await dangerConfirm({ message: t("confirm.batchDelete","确认删除 ") + ids.length + t("confirm.batchDeleteSuffix"," 个任务？（将进入回收站，可恢复）") })) return 0;
   const tasks = getTasks();
   let n = 0;
   ids.forEach(function(id){
@@ -606,7 +611,10 @@ function bindBatchToolbar(){
   const btnCancel = $("#btnBatchCancel");
   const btnSelectAll = $("#btnBatchSelectAll");
   if(btnComplete) btnComplete.onclick = function(){ batchComplete(); render(); };
-  if(btnDelete) btnDelete.onclick = function(){ batchDelete(); render(); };
+  /* batchDelete 是 async：await 完再 render，让刷新发生在删除之后、语义更清晰，
+     且不依赖"setTasks 一定会广播"这个隐式副作用。
+     实测不 await 也能最终刷新（广播会补上），但会多跑一次多余的 render。 */
+  if(btnDelete) btnDelete.onclick = async function(){ await batchDelete(); render(); };
   if(btnMove) btnMove.onclick = function(){
     const sel = $("#batchMoveTarget");
     if(sel && sel.value){ batchMoveScenario(sel.value); render(); }

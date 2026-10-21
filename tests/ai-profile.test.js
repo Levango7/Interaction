@@ -214,10 +214,13 @@ describe("多 AI Profile · 切换 / 新建 / 删除 / 复制", () => {
     const win = await boot();
     setupTwoProfiles(win);
     const { delProfile, getCfg, getActiveProfile } = win.__test;
-    // 屏蔽 confirm
-    win.confirm = () => true;
     const before = getCfg().profiles.length;
-    delProfile();
+    /* 确认已从原生 confirm 换成 dangerConfirm 浮层，`win.confirm = () => true` 对它**无效**。
+       浮层在 Promise executor 里同步挂进 DOM，所以直接「同步点掉确认按钮 + await」即可
+       —— 不需要轮询，也不必用 autoDangerConfirm 接盘器。 */
+    const p = delProfile();
+    win.document.getElementById("dangerConfirmModalYes").click();
+    await p;
     const cfg = getCfg();
     expect(cfg.profiles.length).toBe(before - 1);
     // activeId 切到剩余 profile
@@ -229,12 +232,17 @@ describe("多 AI Profile · 切换 / 新建 / 删除 / 复制", () => {
     const win = await boot();
     setupTwoProfiles(win);
     const { delProfile, getCfg } = win.__test;
-    win.confirm = () => true;
     // 删 1 个剩 1 个
-    delProfile();
+    const p1 = delProfile();
+    win.document.getElementById("dangerConfirmModalYes").click();
+    await p1;
     expect(getCfg().profiles.length).toBe(1);
-    // 再删不应生效
-    delProfile();
+    /* 再删不应生效。注意这里的分寸：只剩 1 个时 delProfile 是**提前 return**，
+       根本不会弹确认框 —— 所以下面断言"没有浮层"而不是"点掉浮层"，
+       否则会拿一个 null 去 .click()，而失败原因又会被误读成"删除生效了"。 */
+    const p2 = delProfile();
+    expect(win.document.getElementById("dangerConfirmModal"), "只剩 1 个时不该再弹确认框").toBeFalsy();
+    await p2;
     expect(getCfg().profiles.length).toBe(1);
   });
 
@@ -256,9 +264,12 @@ describe("多 AI Profile · 切换 / 新建 / 删除 / 复制", () => {
     const win = await boot();
     setupTwoProfiles(win);
     const { delProfile, getCfg } = win.__test;
-    win.confirm = () => false;
     const before = getCfg().profiles.length;
-    delProfile();
+    /* 这条测的正是"取消"，所以**不能**装 autoDangerConfirm 接盘器（那会无条件确认，
+       把这条判据变成永远绿）。必须显式点「取消」，才真的走了一遍用户拒绝的路径。 */
+    const p = delProfile();
+    win.document.getElementById("dangerConfirmModalNo").click();
+    await p;
     expect(getCfg().profiles.length).toBe(before);
   });
 });

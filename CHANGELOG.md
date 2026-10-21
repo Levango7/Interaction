@@ -3,6 +3,50 @@
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 
+### 2026-10-22 · P1-4 余项：原生 confirm 迁移第五批（22 → 12）
+
+- 10 处调用点改走 `dangerConfirm()`：
+  - `src/ui-drawer.js` 5 处 —— 场景删除（113）、**Profile 删除**（497）、
+    模板导入（964）、插件卸载（1033）、自定义主题删除（1198）；
+  - `src/ui-scene-bind.js` 5 处 —— 删除任务 ×3（49 / 220 键盘 Delete / 377）、
+    删除记录（61）、**批量删除**（500）。
+- 债务棘轮同步下调：`NATIVE_CONFIRM_TOTAL` 22 → **12**（去注释后实测，剩的全在
+  `render-entry` 3 / `render-overview` 4 / `render-widgets` 3 / `ui-ge-integrations` 2）。
+- 新增真路径覆盖 `tests/confirm-migration-batch5.test.js` **9 例**：删除任务 3
+  （确认才进回收站 / 取消不清 / Esc 不清）+ 批量删除 3 + Profile 删除 2，
+  另加 1 条缺陷登记。全部走真实入口，用「用户看得见的条目数」判，不读内部变量。
+- **本批顺带查出一条未接线缺陷**（已登记审计项，**本批不修** —— 修它要动布局，
+  超出 confirm 迁移的职责）：批量删除整条链在 UI 上**没有入口** ——
+  `bindBatchToolbar()`（`src/ui-scene-bind.js:601`）在整个仓库里**没有任何调用点**，
+  `#batchToolbar` / `#btnBatchDelete` 也不在静态 HTML 里。即用户在界面上没有任何路径
+  能触发批量删除。已用一条断言把这个缺陷钉在测试里（接上线后它会红，提示可改走真路径）。
+  为了仍能测到调用方，batch5 **自造最小载体**（补两个节点 + 调 `bindBatchToolbar()`
+  走真实绑定），使被测的是源码那一句本身、而不是测试里抄的一份。
+- **一处如实更正**（宁可写进 CHANGELOG 也不留错注释）：`batchDelete()` 有返回值，改 async
+  后返回 `Promise<number>`，调用方改为 `await batchDelete(); render();`。我最初的判断是
+  「不 await 的话删除后没人刷新界面」——**变异验证证明这是错的**：不 await 也能最终刷新，
+  因为删除走 `setTasks`，其数据广播会触发整体 render。保留 await 的真实理由是语义
+  （刷新发生在删除之后）与不押注在"setTasks 一定广播"这个隐式副作用上。
+  测试里对应那条的射程也已改注明：它守的是「界面最终刷新」这个**用户可见**性质，
+  **不区分**上面两种写法。
+- **变异验证**：`batchDelete` 退回原生 `confirm()` ⇒ **恰好 2 例红**（"先出确认框"与
+  "取消"两条，其余 7 条不受影响），还原后 md5 一致。
+- 未覆盖登记：ui-drawer 的场景删除 / 模板导入 / 插件卸载 / 自定义主题删除（分别要先打开
+  抽屉对应分区、装插件、建自定义主题，驱动成本高）；ui-scene-bind 的键盘 Delete 路径与
+  删除记录（`[data-rdel]`）。它们与已覆盖的调用点走同一个 dangerConfirm 组件，
+  差异只在触发方式。
+- **本批红过一次，两个既有测试漏改（教训复验，写下来免得第六批再犯）**：全量首跑
+  `5 failed | 163 passed (170)`。其中 **2 个是真回归** —— `tests/quickwins.test.js:44`
+  「应置软删标记」与 `tests/round4-batch2.test.js:117`「Delete 软删任务」，
+  都是**同步点击后立即断言**，而处理器改成 async 后断言撞在 `await dangerConfirm` 上
+  （`expected undefined to be truthy`）。修法：点掉「确认执行」+ 等一个宏任务，`it` 改 async。
+  另 **3 个是超时**（`ai-skills` 60s / `three-state-render` 60s / `batch3` 180s）——
+  **单独复跑 5 个文件共 107 例全过**，定性为 CPU 争抢型抖动（这三个都是已知慢文件）。
+  🔴 第四批的教训是「`grep 'confirm('` 只是第一层，必须再 grep 依赖自动确认的测试」；
+  本批证明**第二层也要分层**：还要 grep「**点下去之后同步断言**」的测试 ——
+  替身型（`win.confirm = …`）只是其中一种，另一种是 `btn.click(); expect(...)` 直接读状态。
+  两类合起来才是完整清单。
+
 ### 2026-10-22 · P1-4 余项：原生 confirm 迁移第四批（24 → 22）
 
 - 2 处调用点改走 `dangerConfirm()`：**清空全部数据**（`src/ui-backup-stats.js` `doClear`，252）
