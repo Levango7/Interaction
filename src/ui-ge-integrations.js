@@ -2584,7 +2584,7 @@ async function webdavSyncUpload(){
   try{ snap = build(); }catch(e){ return toast(t("wd.syncBuildFail", "快照构建失败"), "warn"); }
   const r = await webdavPut(JSON.stringify(snap));
   if(r.conflict){
-    const go = confirm(t("wd.syncConflict", "云端版本已被其他设备修改（上传被拒，避免覆盖）。要用云端版本覆盖本机吗？"));
+    const go = await dangerConfirm({ message: t("wd.syncConflict", "云端版本已被其他设备修改（上传被拒，避免覆盖）。要用云端版本覆盖本机吗？") });
     if(go) await webdavSyncDownload(true);
     return;
   }
@@ -2617,7 +2617,7 @@ async function webdavSyncDownload(silent){
   const g = await webdavGet();
   if(g.missing) return toast(t("wd.syncNoCloudFile", "云端还没有快照文件"), "info");
   if(!g.ok) return toast(t("wd.syncDownloadFail", "下载失败") + "（" + (g.error || "") + "）", "warn");
-  if(!silent && !confirm(t("wd.syncApplyConfirm", "用云端快照覆盖本机同名数据？只覆盖云端包含的键，本机独有键不动。"))) return;
+  if(!silent && !await dangerConfirm({ message: t("wd.syncApplyConfirm", "用云端快照覆盖本机同名数据？只覆盖云端包含的键，本机独有键不动。") })) return;
   let data;
   try{ data = JSON.parse(g.text); }catch(e){ return toast(t("wd.syncBadJson", "云端快照不是合法 JSON，未应用"), "warn"); }
   try{ apply(data); }catch(e){ return toast(t("wd.syncApplyFail", "应用失败"), "warn"); }

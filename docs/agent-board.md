@@ -42,6 +42,32 @@
 
 ## 条目
 
+### [2026-10-22 06:05 UTC+8] Qoder 主会话（原生 confirm 迁移第六批 12→0 · 开工声明）
+- 状态：进行中（v3.7.136 已由对方会话发布为 `91d64c0`，我的第二~五批均并入；tag /
+  CHANGELOG / VERSION 三要素我已核实无误。我推 `433f5a9` 触发的 CI run 被 `91d64c0` 的
+  并发组取消（queued 42min 后 cancelled），**非失败**，已改看 91d64c0 的 run。）
+- 占用路径（第六批，目标把棘轮清零）：
+  - `src/render-entry.js`（3：`#fbClearBtn` / `#mdClear` / `#cadClear`）
+  - `src/render-overview.js`（4：商店卸载 / `_restoreFromCloud` / `#dgmPresetSel` onchange / `#dgmClearAll`）
+  - `src/render-widgets.js`（3：`#recycleClear` / `#recycleBatchPurge` / `#csClear`）
+  - `src/ui-ge-integrations.js`（2：`webdavSyncUpload` 冲突分支 / `webdavSyncDownload`）
+  - `tests/webdav-sync.test.js`（3 处 `win.confirm` 替身，214/239/245）
+  - `tests/danger-confirm.test.js`（棘轮 12 → 0）
+  - 新增 `tests/confirm-migration-batch6.test.js`
+  - `CHANGELOG.md` 顶部 `[Unreleased]`
+- **风险摸底结论（动手前已做完，比预想低）**：
+  · `_restoreFromCloud` / `webdavSyncUpload` / `webdavSyncDownload` **3 处宿主本就是 async**，只加 await；
+  · 且 `ui-global-events.js:614-615` 的 WebDAV 上/下载按钮**本就写成 `await webdavSyncXxx()`**
+    ⇒ 那 2 处改 await 后**调用方零改动**；
+  · 其余 9 处都是 `onclick` / `onchange` / `addEventListener` 事件处理器，无外部调用方；
+  · 按第五批教训分两类 grep 受影响测试：**替身型**只有 webdav-sync 3 处；
+    **同步断言型**（recycleClear/csClear/dgmClearAll/mdClear/cadClear/store-uninstall/
+    cloudRestore）在测试里**零匹配** ⇒ 无此类风险。
+- 在跑的重活：全量 `npm run test:local` + 全量 `npm run e2e`（分阶段）
+- 准备推的范围：暂无待推（做完再说）。下一个可用版本号 **3.7.137**（AGENTS.md §二 未登记，
+  发版前按纪律先登记再跑号）。
+- 提醒对方：这一批会动 `render-*` 三个文件与 `ui-ge-integrations.js`；若你在改请先喊一声。
+
 ### [2026-10-22 04:10 UTC+8] Qoder 主会话（原生 confirm 迁移第五批 22→12 · **门禁已过，即将 push**）
 - 状态：进行中 —— **按 R10 声明：这一笔就要推**（1 个 commit，`c7b42f6..+1`）
 - 本机门禁结论（供你复核，别直接采信）：

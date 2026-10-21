@@ -120,7 +120,14 @@ describe("dangerConfirm 组件契约", () => {
    第三批迁掉 3 处（导入覆盖确认 / 恢复前快照回滚 / 恢复前快照删除）⇒ 27→24；
    第四批迁掉 2 处（清空全部数据 doClear / 集成任务推送 [data-int-push]）⇒ 27→24→22；
    第五批迁掉 10 处（ui-drawer 5：场景删除 / Profile 删除 / 模板导入 / 插件卸载 /
-   自定义主题删除；ui-scene-bind 5：删除任务 ×3 / 删除记录 / 批量删除）⇒ 现值 12。
+   自定义主题删除；ui-scene-bind 5：删除任务 ×3 / 删除记录 / 批量删除）⇒ 22→12；
+   第六批迁掉最后 12 处（render-entry 3 / render-overview 4 / render-widgets 3 /
+   ui-ge-integrations 2）⇒ **现值 0，原生 confirm 全部迁完**。
+   第六批的风险比预想低，两条结论值得留：`_restoreFromCloud` / `webdavSyncUpload` /
+   `webdavSyncDownload` 三处宿主**本就是 async**，只加 await；且 `ui-global-events.js:614-615`
+   的 WebDAV 上/下载按钮**本就写成 `await webdavSyncXxx()`**，故那两处改 await 后调用方零改动。
+   **现值 0 之后本棘轮的语义变得比之前更强**：任何新增原生 confirm 都会让总数变成 1 ≠ 0 而当场红，
+   不再依赖"调低常量"这个容易忘的动作。
    第五批最值得记的一处：`batchDelete()` 有返回值（`return n`），改 async 后返回的是
    **Promise<number>** —— 它唯一的调用方 `ui-scene-bind.js` 里原本写的是
    `batchDelete(); render();`，不 await 的话 `render()` 会抢在确认框之前执行，
@@ -139,7 +146,7 @@ describe("dangerConfirm 组件契约", () => {
    不剥会把 39 数成 40（实测踩过）。
    ═══════════════════════════════════════════════════════════════════════ */
 describe("原生 confirm() 债务棘轮", () => {
-  const NATIVE_CONFIRM_TOTAL = 12;
+  const NATIVE_CONFIRM_TOTAL = 0;
   const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 
   const stripComments = (code) => code

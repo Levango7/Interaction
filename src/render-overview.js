@@ -930,9 +930,10 @@ function renderStorePage(){
     };
   });
   $$("#main [data-store-uninstall]").forEach(b=>{
-    b.onclick = ()=>{
+    b.onclick = async ()=>{
       const id = b.getAttribute("data-store-uninstall");
-      if(confirm(t("storePage.uninstallConfirm", "卸载该插件？其数据将保留但功能移除。"))){ unloadPlugin(id); toast(t("storePage.uninstalledToast", "已卸载"),"ok"); renderStorePage(); }
+      if(!await dangerConfirm({ message: t("storePage.uninstallConfirm", "卸载该插件？其数据将保留但功能移除。") })) return;
+      unloadPlugin(id); toast(t("storePage.uninstalledToast", "已卸载"),"ok"); renderStorePage();
     };
   });
   const imp = $("#storeImportBtn");
@@ -1909,7 +1910,7 @@ async function _restoreFromCloud() {
   try {
     const rec = await apiGetSnapshot();
     if (!rec || !rec.snapshot) { try { toast(t("api.cloudEmptyShort", "暂无快照"), "warn"); } catch (_) {} return; }
-    if (!confirm(t("api.cloudRestoreConfirm", "将用云端数据覆盖本机数据，确定继续？"))) return;
+    if(!await dangerConfirm({ message: t("api.cloudRestoreConfirm", "将用云端数据覆盖本机数据，确定继续？") })) return;
     _applyCloudSnapshot(rec.snapshot);
     try { toast(t("api.cloudRestoredWithRollback", "已从云端恢复数据；覆盖前的本机快照已留存（设置 → 账号设置 → 上次恢复前快照，可查看或回滚）"), "ok"); } catch (_) {}
     setTimeout(() => location.reload(), 1200);
@@ -2144,8 +2145,8 @@ function _dgmBind() {
   });
   // 工具栏
   var sel = $("#dgmPresetSel");
-  if (sel) sel.onchange = function () {
-    if (!confirm(t("dgm.presetConfirm","切换模板会替换当前画布内容，确定？"))) { sel.value = ""; return; }
+  if (sel) sel.onchange = async function () {
+    if(!await dangerConfirm({ message: t("dgm.presetConfirm","切换模板会替换当前画布内容，确定？") })) { sel.value = ""; return; }
     _dgmSave(_dgmPreset(sel.value));
     _dgmSel = null; _dgmLinkFrom = null;
     render();
@@ -2200,8 +2201,8 @@ function _dgmBind() {
     img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(src);
   };
   var clr = $("#dgmClearAll");
-  if (clr) clr.onclick = function () {
-    if (!confirm(t("dgm.clearConfirm","清空画布？"))) return;
+  if (clr) clr.onclick = async function () {
+    if(!await dangerConfirm({ message: t("dgm.clearConfirm","清空画布？") })) return;
     _dgmSave({ nodes: [], edges: [] }); _dgmSel = null; _dgmLinkFrom = null; render();
   };
 }

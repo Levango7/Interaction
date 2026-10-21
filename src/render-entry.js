@@ -166,7 +166,7 @@ function render(){
       const _fbExportBtn = document.getElementById("fallbackBtnExport");
       if(_fbExportBtn) _fbExportBtn.addEventListener("click", function(){ try{ doExport(); }catch(e2){ /* 静默降级 */ } });
       const _fbClearBtn = document.getElementById("fallbackBtnClear");
-      if(_fbClearBtn) _fbClearBtn.addEventListener("click", function(){ if(confirm(t("confirm.clear","确定清空？"))){ try{ localStorage.clear(); }catch(e2){ /* 静默降级 */ } location.reload(); } });
+      if(_fbClearBtn) _fbClearBtn.addEventListener("click", async function(){ if(!await dangerConfirm({ message: t("confirm.clear","确定清空？") })) return; try{ localStorage.clear(); }catch(e2){ /* 静默降级 */ } location.reload(); });
     }
     try{ toast(t("err.renderException","渲染异常：")+(e&&e.message||t("tool.unknownErrorMsg", t("common.unknownError","未知错误"))), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
   }finally{
@@ -357,7 +357,7 @@ const TOOL_APPS = {
       $("#mdExportHtml").onclick = function(){
         _toolDownload("note.html", '<!DOCTYPE html><meta charset="utf-8"><title>note</title>' + mdToHtml(src.value), "text/html;charset=utf-8");
       };
-      $("#mdClear").onclick = function(){ if(confirm(t("tool.md.clearConfirm", "清空当前文档？"))){ src.value = ""; clearTimeout(_mdDebT); sync(); } };
+      $("#mdClear").onclick = async function(){ if(!await dangerConfirm({ message: t("tool.md.clearConfirm", "清空当前文档？") })) return; src.value = ""; clearTimeout(_mdDebT); sync(); };
       sync();
     }
   },
@@ -702,7 +702,7 @@ const TOOL_APPS = {
         polyPts = []; redraw();
       });
       $("#cadUndo").onclick = function(){ shapes.pop(); polyPts = []; redraw(); };
-      $("#cadClear").onclick = function(){ if(confirm(t("tool.cad.clearConfirm", "清空画布？"))){ shapes = []; polyPts = []; redraw(); } };
+      $("#cadClear").onclick = async function(){ if(!await dangerConfirm({ message: t("tool.cad.clearConfirm", "清空画布？") })) return; shapes = []; polyPts = []; redraw(); };
       $("#cadSvg").onclick = function(){
         const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480"><rect width="800" height="480" fill="#fff"/>' +
           shapes.map(function(s){

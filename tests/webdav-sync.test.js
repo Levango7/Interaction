@@ -204,20 +204,43 @@ describe("WebDAV 同步主流程（v3.7.88）", () => {
     expect(toasts[0], "提示要给出可执行的修复动作（子文件夹）").toMatch(/子文件夹|文件夹|folder/i);
   });
 
+/**
+ * 等 dangerConfirm 浮层出现并点掉指定按钮，返回是否真的点到了。
+ *
+ * ⚠️ 为什么这里**不能**用前几批那种「同步点按钮」手法：`webdavSyncDownload` /
+ * `webdavSyncUpload` 在 confirm **之前还有多个 await**（`await webdavGet()` 等），
+ * 调用后代码会让出、浮层尚未挂上 —— 同步 `getElementById` 拿到的是 null
+ * （实测 `expected null to be truthy`）。只有 confirm 位于函数入口（前面没有 await）
+ * 时才能同步点。这里改用轮询等浮层，且**只点一次指定的按钮**（不是无条件确认的接盘器），
+ * 这样才能分别表达「用户同意」与「用户拒绝」两条路径。
+ */
+async function answerConfirm(win, which = "Yes", { timeout = 5000, interval = 10 } = {}) {
+  const id = "dangerConfirmModal" + which;
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeout) {
+    const btn = win.document.getElementById(id);
+    if (btn) { btn.click(); return true; }
+    await new Promise((r) => setTimeout(r, interval));
+  }
+  return false;
+}
+
   it("下载：确认后经桥应用云端快照；JSON 非法如实拒应用", async () => {
     const win = app();
     win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 200, text: JSON.stringify({ tasks: "[]" }), etag: '"v3"' }) };
     const applied = [];
     bridgeStub(win, { tasks: "[]" }, applied);
     await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u", pass: "p" });
-    const confirms = [];
-    win.confirm = () => { confirms.push(1); return true; };
     const toasts = [];
     win.toast = (msg) => toasts.push(msg);
-    await win.__test.webdavSyncDownload(false);
+    /* 覆盖确认已换成 dangerConfirm 浮层，`win.confirm` 替身对它无效（实测会永远挂在
+       await 上）。本函数在 confirm 之前还有 await，浮层不是同步出现的，所以用轮询等它
+       再点「确认执行」（见 answerConfirm 注释）。 */
+    const p = win.__test.webdavSyncDownload(false);
+    expect(await answerConfirm(win, "Yes"), "非静默覆盖：应先弹确认框").toBe(true);
+    await p;
     expect(applied.length, "应经桥应用一次").toBe(1);
     expect(applied[0]).toEqual({ tasks: "[]" });
-    expect(confirms.length, "非静默覆盖：应先确认").toBe(1);
     /* 非法 JSON：不应用 */
     applied.length = 0;
     win.electronAPI = { webdavFetch: async () => ({ ok: true, status: 200, text: "{不是 json" }) };
@@ -235,15 +258,20 @@ describe("WebDAV 同步主流程（v3.7.88）", () => {
     const applied = [];
     bridgeStub(win, { tasks: "[]" }, applied);
     await win.webdavSaveCfg({ url: "https://dav.example.com/dav", user: "u", pass: "p" });
-    const confirms = [];
-    win.confirm = () => { confirms.push(1); return false; };   /* 用户拒绝覆盖 */
-    win.toast = () => {};
-    await win.__test.webdavSyncUpload();
+    const toasts2 = [];
+    win.toast = () => toasts2.push(1);
+    /* 覆盖确认已换成 dangerConfirm 浮层（win.confirm 替身对它无效）。
+       第一次点「取消」→ 不得下载覆盖；第二次点「确认执行」→ 下载并应用。
+       同样因为 confirm 前有 await，用轮询等浮层。 */
+    let p = win.__test.webdavSyncUpload();
+    expect(await answerConfirm(win, "No"), "412 冲突时应先弹确认框").toBe(true);
+    await p;
     expect(applied.length, "拒绝确认 → 不得下载覆盖").toBe(0);
     /* 再来一次并同意确认 → 下载并应用 */
     applied.length = 0;
-    win.confirm = () => true;
-    await win.__test.webdavSyncUpload();
+    p = win.__test.webdavSyncUpload();
+    expect(await answerConfirm(win, "Yes"), "第二次应再弹确认框").toBe(true);
+    await p;
     expect(applied.length, "同意 → 下载并应用").toBe(1);
   });
 

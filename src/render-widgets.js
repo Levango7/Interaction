@@ -581,17 +581,18 @@ function openRecycle(){
   // v3.1：回收站数据项（配置/文件/插件）的恢复与彻底删除
   $$("#recycleModal [data-restore-bin]").forEach(b=> b.onclick=()=>{ restoreRecycleBin(b.dataset.restoreBin); });
   $$("#recycleModal [data-purge-bin]").forEach(b=> b.onclick=()=>{ purgeRecycleBin(b.dataset.purgeBin); });
-  const clr=$("#recycleClear"); if(clr) clr.onclick=()=>{ if(confirm(t("recycle.clearConfirm", "确定清空回收站？其中的内容将永久删除，不可恢复。"))){ clearRecycle(); } };
+  const clr=$("#recycleClear"); if(clr) clr.onclick=async ()=>{ if(!await dangerConfirm({ message: t("recycle.clearConfirm", "确定清空回收站？其中的内容将永久删除，不可恢复。") })) return; clearRecycle(); };
   const selAll=$("#recycleSelAll"); if(selAll) selAll.onchange=()=> $$("#recycleModal .recycle-chk").forEach(c=>{ c.checked=selAll.checked; });
   const bRestore=$("#recycleBatchRestore"); if(bRestore) bRestore.onclick=()=>{
     const checked=$$("#recycleModal .recycle-chk:checked");
     if(!checked.length){ toast(t("recycle.selectRestore", "请先勾选要恢复的项"),"warn"); return; }
     restoreRecycleBatchMixed(checked);
   };
-  const bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=()=>{
+  const bPurge=$("#recycleBatchPurge"); if(bPurge) bPurge.onclick=async ()=>{
     const checked=$$("#recycleModal .recycle-chk:checked");
     if(!checked.length){ toast(t("recycle.selectPurge", "请先勾选要删除的项"),"warn"); return; }
-    if(confirm(t("recycle.batchPurgeConfirm", "确定彻底删除选中的 {count} 项？不可恢复。").replace("{count}", checked.length))){ purgeRecycleBatchMixed(checked); }
+    if(!await dangerConfirm({ message: t("recycle.batchPurgeConfirm", "确定彻底删除选中的 {count} 项？不可恢复。").replace("{count}", checked.length) })) return;
+    purgeRecycleBatchMixed(checked);
   };
   // v3.1：回收站分类菜单切换
   $$("#recycleModal .recycle-cat-nav .set-nav-btn").forEach(b=>{
@@ -694,8 +695,8 @@ function openChartStore(){
       };
     });
     // 清空
-    const clr = $("#csClear"); if(clr) clr.onclick = function(){
-      if(canvasItems.length && !confirm(t("chartStore.clearConfirm", "清空画布上所有图表？"))) return;
+    const clr = $("#csClear"); if(clr) clr.onclick = async function(){
+      if(canvasItems.length && !await dangerConfirm({ message: t("chartStore.clearConfirm", "清空画布上所有图表？") })) return;
       canvasItems = [];
       persistCanvas();
       renderShell();

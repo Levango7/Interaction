@@ -8,6 +8,35 @@
 > 本版含：布局 v2（对话下沉 + 右栏今日任务）、原生 confirm 迁移第二~五批（35→12）、
 > 以及布局批次暴露的两条 e2e 回归与空 catch 门禁的修复。
 
+### 2026-10-22 · P1-4 余项：原生 confirm 迁移第六批（12 → **0**，棘轮清零）
+
+- 迁移最后 12 处，`src/` 里的原生 `confirm()` **至此全部迁完**：
+  - `src/render-entry.js` 3 处 —— `#fbClearBtn`（首屏清空）/ `#mdClear`（Markdown 清空）/ `#cadClear`（CAD 画布清空）；
+  - `src/render-overview.js` 4 处 —— 商店插件卸载 / `_restoreFromCloud`（云端恢复）/ `#dgmPresetSel` onchange / `#dgmClearAll`；
+  - `src/render-widgets.js` 3 处 —— `#recycleClear`（清空回收站）/ `#recycleBatchPurge` / `#csClear`；
+  - `src/ui-ge-integrations.js` 2 处 —— `webdavSyncUpload` 412 冲突分支 / `webdavSyncDownload` 覆盖确认。
+- 棘轮 `NATIVE_CONFIRM_TOTAL` 12 → **0**。现值 0 之后语义反而更强：任何新增原生 confirm
+  都会让总数变成 1 ≠ 0 而当场红，不再依赖"记得调低常量"这个容易忘的动作。
+- 新增真路径覆盖 `tests/confirm-migration-batch6.test.js` **4 例**（回收站清空：确认才清 /
+  取消不清 / Esc 不清 / 空站无入口）。`webdavSync*` 两处由 `tests/webdav-sync.test.js` 覆盖，
+  不重复造。
+- 本批两个新坑（已写进文件注释）：
+  ① **confirm 之前还有 await 时，「同步点按钮」手法失效** —— `webdavSyncDownload` /
+     `webdavSyncUpload` 在 confirm 前有 `await webdavGet()` 等，调用后代码让出、浮层尚未挂上，
+     同步 `getElementById` 拿到 null（实测 `expected null to be truthy`）。改用轮询等浮层，
+     且**只点一次指定按钮**（不是无条件确认的接盘器），才能分别表达同意/拒绝两条路径。
+     只有 confirm 位于函数入口（前面没有 await）时才能同步点。
+  ② `AppBridge` 是模块顶层的 `const`，**不会挂成 window 属性**（jsdom 全局词法环境里才有）——
+     `win.AppBridge.xxx` 拿到的是 undefined；`addToRecycleBin` 走 `__test` 导出，
+     `openRecycle` 用 `win.eval("AppBridge.openRecycle()")`。
+- **一处实测更正预期**：原以为"空回收站点清空也会给确认框"，实测按钮**根本不渲染** ——
+  这其实是更合理的设计（没东西可清就不给入口），已改为如实钉住现状。
+- **变异验证**：`#recycleClear` 退回原生 `confirm()` ⇒ **恰好 3 例红**（第 4 例不涉确认框故仍绿），
+  还原后 md5 一致。
+- 未覆盖登记：其余 11 处（`#mdClear`/`#cadClear`/`#fbClearBtn` 需先进对应工具页；商店卸载 /
+  `#dgmPresetSel`/`#dgmClearAll`/`_restoreFromCloud` 需已装插件或打通云端链路；
+  `#recycleBatchPurge`/`#csClear` 需先进批量勾选态/图表画布）—— 与已覆盖处同一组件，差异只在触发方式。
+
 ### 2026-10-22 · P1-4 余项：原生 confirm 迁移第五批（22 → 12）
 
 - 10 处调用点改走 `dangerConfirm()`：
