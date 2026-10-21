@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
-  "updated": "2026-10-16",
-  "count": 540,
+  "updated": "2026-10-21",
+  "count": 551,
   "items": [
     {
       "file": "ai-loop.js",
@@ -1637,7 +1637,7 @@
     },
     {
       "file": "render-entry.js",
-      "line": 48,
+      "line": 53,
       "sig": "b75faf363b",
       "bhash": "f2bd0cca22",
       "occ": 1,
@@ -1649,7 +1649,7 @@
     },
     {
       "file": "render-entry.js",
-      "line": 64,
+      "line": 69,
       "sig": "9d8faf4cf3",
       "bhash": "a9f9de1f88",
       "occ": 1,
@@ -1661,7 +1661,19 @@
     },
     {
       "file": "render-entry.js",
-      "line": 157,
+      "line": 118,
+      "sig": "65d9c56f44",
+      "bhash": "47704cc929",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 绑定异常不阻断渲染 */",
+      "snippet": "bcfg(); }"
+    },
+    {
+      "file": "render-entry.js",
+      "line": 167,
       "sig": "e468a65861",
       "bhash": "cceaa26c02",
       "occ": 1,
@@ -1673,7 +1685,7 @@
     },
     {
       "file": "render-entry.js",
-      "line": 159,
+      "line": 169,
       "sig": "069ab27b5e",
       "bhash": "c99fd966ef",
       "occ": 1,
@@ -1685,7 +1697,7 @@
     },
     {
       "file": "render-entry.js",
-      "line": 161,
+      "line": 171,
       "sig": "89c64cdffe",
       "bhash": "91d8db05b6",
       "occ": 1,
@@ -1697,7 +1709,7 @@
     },
     {
       "file": "render-entry.js",
-      "line": 164,
+      "line": 174,
       "sig": "8c8415e170",
       "bhash": "bc73b2ec62",
       "occ": 1,
@@ -1709,7 +1721,7 @@
     },
     {
       "file": "render-entry.js",
-      "line": 1003,
+      "line": 1028,
       "sig": "5063a7b723",
       "bhash": "640d11bff4",
       "occ": 1,
@@ -1721,7 +1733,7 @@
     },
     {
       "file": "render-entry.js",
-      "line": 1132,
+      "line": 1157,
       "sig": "083c78ab68",
       "bhash": "f0470be937",
       "occ": 1,
@@ -1733,7 +1745,7 @@
     },
     {
       "file": "render-entry.js",
-      "line": 1272,
+      "line": 1297,
       "sig": "083c78ab68",
       "bhash": "f0470be937",
       "occ": 2,
@@ -1745,7 +1757,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 152,
+      "line": 153,
       "sig": "4f04b7edab",
       "bhash": "5e19285b44",
       "occ": 1,
@@ -1757,7 +1769,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 190,
+      "line": 191,
       "sig": "31f44662de",
       "bhash": "82ea4d90f6",
       "occ": 1,
@@ -1769,7 +1781,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1020,
+      "line": 1071,
       "sig": "0062bb82bb",
       "bhash": "7ab1925e3a",
       "occ": 1,
@@ -1781,7 +1793,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1021,
+      "line": 1072,
       "sig": "850538eaf1",
       "bhash": "c187ac18da",
       "occ": 1,
@@ -1793,7 +1805,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1022,
+      "line": 1073,
       "sig": "0c35f6ea98",
       "bhash": "7a77ded627",
       "occ": 1,
@@ -1805,7 +1817,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1023,
+      "line": 1074,
       "sig": "093d9a8935",
       "bhash": "e4484c9364",
       "occ": 1,
@@ -1817,7 +1829,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1056,
+      "line": 1107,
       "sig": "b3d813d9fc",
       "bhash": "a2b040f0f8",
       "occ": 1,
@@ -1829,7 +1841,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1057,
+      "line": 1108,
       "sig": "850538eaf1",
       "bhash": "c187ac18da",
       "occ": 2,
@@ -1841,7 +1853,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1058,
+      "line": 1109,
       "sig": "0c35f6ea98",
       "bhash": "7a77ded627",
       "occ": 2,
@@ -1853,7 +1865,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1059,
+      "line": 1110,
       "sig": "093d9a8935",
       "bhash": "e4484c9364",
       "occ": 2,
@@ -1865,7 +1877,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1163,
+      "line": 1214,
       "sig": "dda51b2b00",
       "bhash": "fb6fbb78db",
       "occ": 1,
@@ -1877,7 +1889,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1225,
+      "line": 1276,
       "sig": "969b37d0e5",
       "bhash": "af35f0e63d",
       "occ": 1,
@@ -1889,7 +1901,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1227,
+      "line": 1278,
       "sig": "0062bb82bb",
       "bhash": "7ab1925e3a",
       "occ": 2,
@@ -1901,7 +1913,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1228,
+      "line": 1279,
       "sig": "0c35f6ea98",
       "bhash": "7a77ded627",
       "occ": 3,
@@ -1913,7 +1925,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1242,
+      "line": 1293,
       "sig": "bb0f875345",
       "bhash": "b939b24adf",
       "occ": 1,
@@ -1925,7 +1937,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1250,
+      "line": 1301,
       "sig": "985fb1ffef",
       "bhash": "3704c2c8e7",
       "occ": 1,
@@ -1937,7 +1949,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1261,
+      "line": 1312,
       "sig": "bb0f875345",
       "bhash": "b939b24adf",
       "occ": 2,
@@ -1949,7 +1961,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1280,
+      "line": 1331,
       "sig": "c1c7892432",
       "bhash": "1fdc94dba2",
       "occ": 1,
@@ -1961,7 +1973,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1281,
+      "line": 1332,
       "sig": "0062bb82bb",
       "bhash": "7ab1925e3a",
       "occ": 3,
@@ -1973,7 +1985,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1282,
+      "line": 1333,
       "sig": "0c35f6ea98",
       "bhash": "7a77ded627",
       "occ": 4,
@@ -1985,7 +1997,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1285,
+      "line": 1336,
       "sig": "c4e8facd49",
       "bhash": "acfd5d6cfb",
       "occ": 1,
@@ -1997,7 +2009,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1295,
+      "line": 1349,
       "sig": "11764baa6f",
       "bhash": "6eb04bc9fb",
       "occ": 1,
@@ -2009,7 +2021,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1340,
+      "line": 1394,
       "sig": "c1b0ce4ee4",
       "bhash": "d38889eb9c",
       "occ": 1,
@@ -2021,7 +2033,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1366,
+      "line": 1420,
       "sig": "636665b26d",
       "bhash": "a9d0802fdb",
       "occ": 1,
@@ -2033,7 +2045,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1388,
+      "line": 1442,
       "sig": "67d49ea825",
       "bhash": "b233acaf18",
       "occ": 1,
@@ -2045,7 +2057,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1395,
+      "line": 1452,
       "sig": "b05ebfdd70",
       "bhash": "b2f9b6b666",
       "occ": 1,
@@ -2057,7 +2069,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1414,
+      "line": 1471,
       "sig": "306e082261",
       "bhash": "71a673ce96",
       "occ": 1,
@@ -2069,7 +2081,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1420,
+      "line": 1477,
       "sig": "b340dbb697",
       "bhash": "57fa3e1d5f",
       "occ": 1,
@@ -2081,7 +2093,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1442,
+      "line": 1499,
       "sig": "6cbdd90465",
       "bhash": "474ad1e383",
       "occ": 1,
@@ -2093,7 +2105,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1444,
+      "line": 1501,
       "sig": "076265bb67",
       "bhash": "6a6802e115",
       "occ": 1,
@@ -2105,7 +2117,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1445,
+      "line": 1502,
       "sig": "05c42fd925",
       "bhash": "d5e0c55951",
       "occ": 1,
@@ -2117,7 +2129,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1501,
+      "line": 1558,
       "sig": "e548a16f6d",
       "bhash": "135fd655c1",
       "occ": 1,
@@ -2129,7 +2141,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1528,
+      "line": 1585,
       "sig": "3147f0c8b3",
       "bhash": "37f7e70769",
       "occ": 1,
@@ -2141,7 +2153,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1532,
+      "line": 1589,
       "sig": "0756662861",
       "bhash": "e75073f466",
       "occ": 1,
@@ -2153,7 +2165,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1555,
+      "line": 1612,
       "sig": "b49bb31fd8",
       "bhash": "f578f3101e",
       "occ": 1,
@@ -2165,7 +2177,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1603,
+      "line": 1660,
       "sig": "4a59e80bfd",
       "bhash": "a951f2f827",
       "occ": 1,
@@ -2177,7 +2189,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1620,
+      "line": 1677,
       "sig": "20b75b10ae",
       "bhash": "3368a59b49",
       "occ": 1,
@@ -2189,7 +2201,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1629,
+      "line": 1686,
       "sig": "091879f317",
       "bhash": "6bb1548ef0",
       "occ": 1,
@@ -2201,7 +2213,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1639,
+      "line": 1696,
       "sig": "fb35e2929a",
       "bhash": "8d0fc647a6",
       "occ": 1,
@@ -2213,7 +2225,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1647,
+      "line": 1704,
       "sig": "6a460b7232",
       "bhash": "17a3761be5",
       "occ": 1,
@@ -2225,7 +2237,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1651,
+      "line": 1708,
       "sig": "0756662861",
       "bhash": "e75073f466",
       "occ": 2,
@@ -2237,7 +2249,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1682,
+      "line": 1739,
       "sig": "fb35e2929a",
       "bhash": "8d0fc647a6",
       "occ": 2,
@@ -2249,7 +2261,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1711,
+      "line": 1768,
       "sig": "ff5c5afebe",
       "bhash": "4a103b7b75",
       "occ": 1,
@@ -2261,7 +2273,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1716,
+      "line": 1773,
       "sig": "39c3cdfd9c",
       "bhash": "2ea78de664",
       "occ": 1,
@@ -2273,19 +2285,19 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1755,
-      "sig": "ada6b6a72b",
-      "bhash": "09032f82b8",
+      "line": 1812,
+      "sig": "816c1a169a",
+      "bhash": "0061a3d663",
       "occ": 1,
       "level": "P2",
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"api.cloudRestored\", \"已从云端恢复数据，页面即将刷新\"), \"ok\"); }"
+      "snippet": "toast(t(\"api.cloudRestoredWithRollback\", \"已从云端恢复数据；覆盖前的本机快照已留存（设置 → 账号"
     },
     {
       "file": "render-overview.js",
-      "line": 1762,
+      "line": 1819,
       "sig": "b377164298",
       "bhash": "aa4b54e192",
       "occ": 1,
@@ -2297,19 +2309,19 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1767,
-      "sig": "b641f83fe7",
-      "bhash": "2ad38f4afa",
+      "line": 1828,
+      "sig": "c62dbd0ec5",
+      "bhash": "ded75956c5",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 离线时静默，等下次数据变动再同步 */",
-      "snippet": "const rec = await apiGetSnapshot(); _renderCloudState(rec); if (!rec) "
+      "note": "/* 诊断自身不可用也不阻断 */",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\", \"cloud snapshot fetc"
     },
     {
       "file": "render-overview.js",
-      "line": 1849,
+      "line": 1912,
       "sig": "e9146843b9",
       "bhash": "7087f8338f",
       "occ": 1,
@@ -2321,19 +2333,19 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1852,
-      "sig": "ada6b6a72b",
-      "bhash": "09032f82b8",
+      "line": 1915,
+      "sig": "816c1a169a",
+      "bhash": "0061a3d663",
       "occ": 2,
       "level": "P2",
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"api.cloudRestored\", \"已从云端恢复数据，页面即将刷新\"), \"ok\"); }"
+      "snippet": "toast(t(\"api.cloudRestoredWithRollback\", \"已从云端恢复数据；覆盖前的本机快照已留存（设置 → 账号"
     },
     {
       "file": "render-overview.js",
-      "line": 1854,
+      "line": 1917,
       "sig": "8ebeca95de",
       "bhash": "b1b4ddedb8",
       "occ": 1,
@@ -2345,7 +2357,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1861,
+      "line": 1924,
       "sig": "c5f4e48894",
       "bhash": "628326ef9b",
       "occ": 1,
@@ -2357,7 +2369,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1866,
+      "line": 1929,
       "sig": "82a8bbf70d",
       "bhash": "4c20878710",
       "occ": 1,
@@ -2369,7 +2381,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1883,
+      "line": 1946,
       "sig": "002dc4a784",
       "bhash": "62a2dcb929",
       "occ": 1,
@@ -2381,7 +2393,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2008,
+      "line": 2071,
       "sig": "ec84a59a8f",
       "bhash": "4d9ec12e27",
       "occ": 1,
@@ -2393,7 +2405,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2061,
+      "line": 2124,
       "sig": "3387716408",
       "bhash": "3968a6cc06",
       "occ": 1,
@@ -2405,7 +2417,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2100,
+      "line": 2163,
       "sig": "e71d427a6a",
       "bhash": "d38bab1ed3",
       "occ": 1,
@@ -2417,7 +2429,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2104,
+      "line": 2167,
       "sig": "fa1b0bd661",
       "bhash": "7007aa03d1",
       "occ": 1,
@@ -2429,7 +2441,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2169,
+      "line": 2232,
       "sig": "d61a0c114f",
       "bhash": "344841035e",
       "occ": 1,
@@ -2441,7 +2453,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2183,
+      "line": 2246,
       "sig": "462b633f59",
       "bhash": "d4ab3f2514",
       "occ": 1,
@@ -2453,7 +2465,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2184,
+      "line": 2247,
       "sig": "1fcc8cc2ca",
       "bhash": "3157951edd",
       "occ": 1,
@@ -2465,7 +2477,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2186,
+      "line": 2249,
       "sig": "86a43ef20d",
       "bhash": "69732d4ab9",
       "occ": 1,
@@ -2477,7 +2489,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2199,
+      "line": 2262,
       "sig": "b756decc56",
       "bhash": "6d870aafc1",
       "occ": 1,
@@ -2489,7 +2501,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2205,
+      "line": 2268,
       "sig": "359db5b6f6",
       "bhash": "e49af69a03",
       "occ": 1,
@@ -2501,7 +2513,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2207,
+      "line": 2270,
       "sig": "5e3692e945",
       "bhash": "eec1c2c1a9",
       "occ": 1,
@@ -2513,7 +2525,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2259,
+      "line": 2322,
       "sig": "b708929003",
       "bhash": "13fa2952dd",
       "occ": 1,
@@ -3185,7 +3197,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 253,
+      "line": 256,
       "sig": "95444e6af8",
       "bhash": "d5ce2c8259",
       "occ": 1,
@@ -3197,7 +3209,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 317,
+      "line": 334,
       "sig": "1adce61c53",
       "bhash": "c7a1dab007",
       "occ": 1,
@@ -3209,7 +3221,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 321,
+      "line": 338,
       "sig": "1da7862639",
       "bhash": "ebd6fc622d",
       "occ": 1,
@@ -3221,7 +3233,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 379,
+      "line": 396,
       "sig": "a98172b0ba",
       "bhash": "2227e29885",
       "occ": 1,
@@ -3233,7 +3245,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 422,
+      "line": 439,
       "sig": "395bf95363",
       "bhash": "8f133e2a41",
       "occ": 1,
@@ -3245,7 +3257,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 438,
+      "line": 455,
       "sig": "3abd633333",
       "bhash": "2444bcd2dc",
       "occ": 1,
@@ -3257,7 +3269,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 453,
+      "line": 470,
       "sig": "5a8c3c88e9",
       "bhash": "6df323e009",
       "occ": 1,
@@ -3269,7 +3281,91 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 508,
+      "line": 548,
+      "sig": "e9cb4b29cd",
+      "bhash": "4d72834c05",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"warn\", \"pre-restore rollback write failed: \"+((e&&e.message)"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 551,
+      "sig": "5387afc5c9",
+      "bhash": "8888d8f469",
+      "occ": 2,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "_resetSessions(); _reloadChatsFromStorage(); }"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 553,
+      "sig": "69ddd0d237",
+      "bhash": "0768d04e77",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 降级明文：与 doImport 同口径 */",
+      "snippet": "initCrypto(); }"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 554,
+      "sig": "4d16a93912",
+      "bhash": "0699ce2f52",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 索引不阻塞回滚 */",
+      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"rollback\"); }"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 555,
+      "sig": "e140307bb8",
+      "bhash": "4bfda35591",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "render(); }"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 562,
+      "sig": "ae6dd0d4db",
+      "bhash": "81f44f892d",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\", \"pre-restore backup "
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 643,
+      "sig": "5e4fe664bc",
+      "bhash": "129632790a",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "if(typeof AppBridge !== \"undefined\") AppBridge.renderPreRestoreCard = "
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 666,
       "sig": "06f5a7a5a3",
       "bhash": "7689d6b1a2",
       "occ": 1,
@@ -3281,7 +3377,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 517,
+      "line": 675,
       "sig": "ba6bb66018",
       "bhash": "19d8ba8e7a",
       "occ": 1,
@@ -3293,7 +3389,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 540,
+      "line": 698,
       "sig": "3ef0a9fd77",
       "bhash": "2361419c4a",
       "occ": 1,
@@ -3305,7 +3401,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 541,
+      "line": 699,
       "sig": "9ac257b256",
       "bhash": "49e67d595c",
       "occ": 1,
@@ -3317,7 +3413,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 631,
+      "line": 803,
       "sig": "49981ae49b",
       "bhash": "706ea0ecb3",
       "occ": 1,
@@ -3329,7 +3425,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 647,
+      "line": 819,
       "sig": "2f13daad28",
       "bhash": "4695aedc88",
       "occ": 1,
@@ -3341,7 +3437,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 671,
+      "line": 843,
       "sig": "5d1aa70c93",
       "bhash": "caa8e35c4f",
       "occ": 1,
@@ -3353,7 +3449,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 680,
+      "line": 852,
       "sig": "c8662d94d0",
       "bhash": "7cc98a5935",
       "occ": 1,
@@ -3365,7 +3461,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 687,
+      "line": 859,
       "sig": "9112cc79b0",
       "bhash": "551d0cbf31",
       "occ": 1,
@@ -3377,7 +3473,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 692,
+      "line": 864,
       "sig": "1aaf61fff3",
       "bhash": "c0bfcd11db",
       "occ": 1,
@@ -3389,7 +3485,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 702,
+      "line": 874,
       "sig": "886e8fb7be",
       "bhash": "ec9f800d3f",
       "occ": 1,
@@ -3401,7 +3497,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 709,
+      "line": 881,
       "sig": "72e856afa4",
       "bhash": "022ed52e7e",
       "occ": 1,
@@ -3413,7 +3509,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 711,
+      "line": 883,
       "sig": "ab054c6484",
       "bhash": "80a240c2aa",
       "occ": 1,
@@ -3425,7 +3521,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 715,
+      "line": 887,
       "sig": "4975210443",
       "bhash": "2626bc2a4a",
       "occ": 1,
@@ -3437,7 +3533,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 727,
+      "line": 899,
       "sig": "aca2aab403",
       "bhash": "b968736787",
       "occ": 1,
@@ -3449,7 +3545,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 750,
+      "line": 922,
       "sig": "e7de94e1ef",
       "bhash": "bd77758488",
       "occ": 1,
@@ -3461,7 +3557,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 839,
+      "line": 1011,
       "sig": "64ce88348f",
       "bhash": "b0b736d62a",
       "occ": 1,
@@ -3473,7 +3569,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 855,
+      "line": 1027,
       "sig": "da2f602a5f",
       "bhash": "6c72866d54",
       "occ": 1,
@@ -3485,7 +3581,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 864,
+      "line": 1036,
       "sig": "3f15abdee5",
       "bhash": "d8e19fadc7",
       "occ": 1,
@@ -3497,7 +3593,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1305,
+      "line": 1477,
       "sig": "fc2761bdd4",
       "bhash": "d023f9a974",
       "occ": 1,
@@ -3581,7 +3677,19 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 212,
+      "line": 180,
+      "sig": "b735a4fcf0",
+      "bhash": "09d12b0a0c",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 主题下拉异常不阻断设置页 */",
+      "snippet": "syncThemeLabOption(); }"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 214,
       "sig": "46ae1528c1",
       "bhash": "eeb1c664a4",
       "occ": 1,
@@ -3593,7 +3701,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 220,
+      "line": 222,
       "sig": "8993a9404d",
       "bhash": "0191d0d47a",
       "occ": 1,
@@ -3605,7 +3713,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 222,
+      "line": 224,
       "sig": "62c809b4af",
       "bhash": "87453c175d",
       "occ": 1,
@@ -3617,7 +3725,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 268,
+      "line": 270,
       "sig": "8993a9404d",
       "bhash": "0191d0d47a",
       "occ": 2,
@@ -3629,7 +3737,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 296,
+      "line": 298,
       "sig": "3a29a8c7f9",
       "bhash": "5dc5eccb14",
       "occ": 1,
@@ -3641,7 +3749,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 343,
+      "line": 347,
       "sig": "09fca0726c",
       "bhash": "ba3e37734c",
       "occ": 1,
@@ -3653,7 +3761,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 355,
+      "line": 359,
       "sig": "923ce36f79",
       "bhash": "6ab8fd3440",
       "occ": 1,
@@ -3665,7 +3773,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 360,
+      "line": 364,
       "sig": "980d50d2e8",
       "bhash": "9a1bd003e0",
       "occ": 1,
@@ -3677,7 +3785,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 373,
+      "line": 377,
       "sig": "6603d1f38e",
       "bhash": "dce4caf9e7",
       "occ": 1,
@@ -3689,7 +3797,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 415,
+      "line": 419,
       "sig": "7108231004",
       "bhash": "de534b60c0",
       "occ": 1,
@@ -3701,7 +3809,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 427,
+      "line": 431,
       "sig": "43c715d28b",
       "bhash": "1b4ac9108a",
       "occ": 1,
@@ -3713,7 +3821,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 501,
+      "line": 505,
       "sig": "ef2a5c33e4",
       "bhash": "c61c5a8423",
       "occ": 1,
@@ -3725,7 +3833,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 569,
+      "line": 573,
       "sig": "429958c0fe",
       "bhash": "6b69a63f0f",
       "occ": 1,
@@ -3737,7 +3845,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 600,
+      "line": 604,
       "sig": "073cba898b",
       "bhash": "795f00dd66",
       "occ": 1,
@@ -3749,7 +3857,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 607,
+      "line": 611,
       "sig": "d71c3c8489",
       "bhash": "0bc4192736",
       "occ": 1,
@@ -3761,7 +3869,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 618,
+      "line": 622,
       "sig": "916d67a45a",
       "bhash": "24d79c1e16",
       "occ": 1,
@@ -3773,7 +3881,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 621,
+      "line": 625,
       "sig": "245317c8ea",
       "bhash": "c0c1fdc3a0",
       "occ": 1,
@@ -3785,7 +3893,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 629,
+      "line": 633,
       "sig": "9708392e21",
       "bhash": "c71f8d9944",
       "occ": 1,
@@ -3797,7 +3905,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 633,
+      "line": 637,
       "sig": "916d67a45a",
       "bhash": "24d79c1e16",
       "occ": 2,
@@ -3809,7 +3917,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 636,
+      "line": 640,
       "sig": "e3f7c382be",
       "bhash": "fbe763f2c9",
       "occ": 1,
@@ -3821,7 +3929,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 638,
+      "line": 642,
       "sig": "916d67a45a",
       "bhash": "24d79c1e16",
       "occ": 3,
@@ -3833,7 +3941,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 650,
+      "line": 654,
       "sig": "48c3ed87f4",
       "bhash": "82d682f4e2",
       "occ": 1,
@@ -3845,7 +3953,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 655,
+      "line": 659,
       "sig": "2f683ce220",
       "bhash": "0feecf64a0",
       "occ": 1,
@@ -3857,7 +3965,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 964,
+      "line": 968,
       "sig": "3aac6439a6",
       "bhash": "15c6a324bd",
       "occ": 1,
@@ -3869,7 +3977,19 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1181,
+      "line": 1183,
+      "sig": "b735a4fcf0",
+      "bhash": "09d12b0a0c",
+      "occ": 2,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 同上 */",
+      "snippet": "syncThemeLabOption(); }"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 1185,
       "sig": "125c65b02a",
       "bhash": "5f8322dd84",
       "occ": 1,
@@ -3881,7 +4001,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1197,
+      "line": 1201,
       "sig": "2d06ee4c9b",
       "bhash": "3b39f542ac",
       "occ": 1,
@@ -3893,7 +4013,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1225,
+      "line": 1229,
       "sig": "1ce7dd46b2",
       "bhash": "8a479365f5",
       "occ": 1,
@@ -3905,7 +4025,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1235,
+      "line": 1239,
       "sig": "9b00f33c34",
       "bhash": "fc061ec263",
       "occ": 1,
@@ -3917,7 +4037,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1343,
+      "line": 1347,
       "sig": "19356863e0",
       "bhash": "e82baf31f9",
       "occ": 1,
@@ -3929,7 +4049,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1360,
+      "line": 1364,
       "sig": "1debedf5bc",
       "bhash": "65a28050ac",
       "occ": 1,
@@ -3941,7 +4061,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1371,
+      "line": 1375,
       "sig": "c0f561962f",
       "bhash": "f04185731a",
       "occ": 1,
@@ -3953,7 +4073,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1374,
+      "line": 1378,
       "sig": "9d154b2871",
       "bhash": "e980698187",
       "occ": 1,
@@ -3965,7 +4085,7 @@
     },
     {
       "file": "ui-drawer.js",
-      "line": 1379,
+      "line": 1383,
       "sig": "5f96f167f0",
       "bhash": "d543da19f3",
       "occ": 1,
@@ -5357,7 +5477,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 86,
+      "line": 88,
       "sig": "de8ba86334",
       "bhash": "02e5e26e8d",
       "occ": 1,
@@ -5369,7 +5489,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 158,
+      "line": 160,
       "sig": "19ef0ea764",
       "bhash": "da39a3ee5e",
       "occ": 1,
@@ -5381,7 +5501,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 270,
+      "line": 289,
       "sig": "3900204d11",
       "bhash": "7e0cf8188a",
       "occ": 1,
@@ -5393,7 +5513,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 326,
+      "line": 345,
       "sig": "7d06b771e3",
       "bhash": "4999f15dee",
       "occ": 1,
@@ -5405,7 +5525,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 356,
+      "line": 375,
       "sig": "dbba370a7c",
       "bhash": "30a8d16930",
       "occ": 1,
@@ -5417,7 +5537,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 507,
+      "line": 526,
       "sig": "e8849f66b7",
       "bhash": "42ed1c7750",
       "occ": 1,
@@ -5429,7 +5549,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 511,
+      "line": 530,
       "sig": "5a69b8fff4",
       "bhash": "ec2e64d035",
       "occ": 1,
@@ -5441,7 +5561,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 645,
+      "line": 664,
       "sig": "d7f9aa0a29",
       "bhash": "4b606cdac2",
       "occ": 1,
@@ -5453,7 +5573,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 653,
+      "line": 672,
       "sig": "01e66c9da5",
       "bhash": "fdf716d015",
       "occ": 1,
@@ -5465,7 +5585,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 661,
+      "line": 680,
       "sig": "df1553cd17",
       "bhash": "a6f71a05d0",
       "occ": 1,
@@ -5477,7 +5597,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 690,
+      "line": 709,
       "sig": "01e66c9da5",
       "bhash": "fdf716d015",
       "occ": 2,
@@ -5489,7 +5609,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 698,
+      "line": 717,
       "sig": "df1553cd17",
       "bhash": "a6f71a05d0",
       "occ": 2,
@@ -5501,7 +5621,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 820,
+      "line": 839,
       "sig": "917d9fccce",
       "bhash": "1e7b95ac86",
       "occ": 1,
@@ -5513,7 +5633,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 825,
+      "line": 844,
       "sig": "4544faf383",
       "bhash": "f91e530572",
       "occ": 1,
@@ -5525,7 +5645,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 964,
+      "line": 983,
       "sig": "4cd4aa0b30",
       "bhash": "5f36e249ad",
       "occ": 1,
@@ -5537,7 +5657,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1157,
+      "line": 1176,
       "sig": "b0a3649b93",
       "bhash": "f29ad03177",
       "occ": 1,
@@ -5549,7 +5669,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1234,
+      "line": 1253,
       "sig": "a6e7f98fa8",
       "bhash": "9da94b4e4f",
       "occ": 1,
@@ -5561,7 +5681,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1276,
+      "line": 1295,
       "sig": "668c982b58",
       "bhash": "3b5f4dd8cf",
       "occ": 1,
@@ -5573,7 +5693,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1295,
+      "line": 1314,
       "sig": "d3b992307a",
       "bhash": "d511951f5e",
       "occ": 1,
@@ -5585,7 +5705,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1322,
+      "line": 1341,
       "sig": "92767c382b",
       "bhash": "82b68cd217",
       "occ": 1,
@@ -5597,7 +5717,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1326,
+      "line": 1345,
       "sig": "f19ccdd999",
       "bhash": "7d04f66f29",
       "occ": 1,
@@ -5609,7 +5729,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1340,
+      "line": 1359,
       "sig": "cad33eea0a",
       "bhash": "7eea1cd71b",
       "occ": 1,
@@ -5621,7 +5741,19 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1523,
+      "line": 1535,
+      "sig": "9be733b8cd",
+      "bhash": "09d12b0a0c",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 忽略 */",
+      "snippet": "syncThemeLabOption(); }"
+    },
+    {
+      "file": "ui-global-events.js",
+      "line": 1545,
       "sig": "60dcbf9c66",
       "bhash": "2f51400871",
       "occ": 1,
@@ -5633,7 +5765,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1525,
+      "line": 1547,
       "sig": "772fbd7870",
       "bhash": "66701907a4",
       "occ": 1,
@@ -5645,7 +5777,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1527,
+      "line": 1549,
       "sig": "3e50d4d96b",
       "bhash": "f04241228b",
       "occ": 1,
@@ -5657,7 +5789,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1530,
+      "line": 1552,
       "sig": "2134ba4108",
       "bhash": "89fbe5caba",
       "occ": 1,
@@ -5669,7 +5801,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1532,
+      "line": 1554,
       "sig": "81dea167e4",
       "bhash": "24fdeea07c",
       "occ": 1,
@@ -5681,7 +5813,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1558,
+      "line": 1580,
       "sig": "0e7ae67851",
       "bhash": "e1e1803f65",
       "occ": 1,
@@ -5693,7 +5825,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1561,
+      "line": 1583,
       "sig": "0e7ae67851",
       "bhash": "e1e1803f65",
       "occ": 2,
@@ -5705,7 +5837,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1568,
+      "line": 1590,
       "sig": "8929a54ccd",
       "bhash": "c1a2128747",
       "occ": 1,
@@ -5717,7 +5849,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1596,
+      "line": 1618,
       "sig": "b983d81221",
       "bhash": "f41b2f50ce",
       "occ": 1,
@@ -5729,7 +5861,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1733,
+      "line": 1755,
       "sig": "5c637105ab",
       "bhash": "d66c84ed92",
       "occ": 1,
@@ -5741,7 +5873,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1734,
+      "line": 1756,
       "sig": "6c4b426682",
       "bhash": "f7dfd74422",
       "occ": 1,
@@ -5753,7 +5885,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1736,
+      "line": 1758,
       "sig": "f42fbe84f8",
       "bhash": "15594d8c62",
       "occ": 1,
@@ -5765,7 +5897,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1740,
+      "line": 1762,
       "sig": "a67ea01c7d",
       "bhash": "a12c636324",
       "occ": 1,
@@ -5777,7 +5909,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1747,
+      "line": 1769,
       "sig": "5f940d654b",
       "bhash": "753e96b1fb",
       "occ": 1,
@@ -5789,7 +5921,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1822,
+      "line": 1844,
       "sig": "3c704d233e",
       "bhash": "df5b4581d6",
       "occ": 1,
@@ -5801,7 +5933,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1844,
+      "line": 1866,
       "sig": "89760e2131",
       "bhash": "96b7a50571",
       "occ": 1,
@@ -5813,7 +5945,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1854,
+      "line": 1876,
       "sig": "53b79331ca",
       "bhash": "3e4df44d6d",
       "occ": 1,
@@ -5825,7 +5957,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1856,
+      "line": 1878,
       "sig": "0b7b0849ab",
       "bhash": "c8da7b3109",
       "occ": 1,
@@ -5837,7 +5969,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1931,
+      "line": 1953,
       "sig": "f334487c9b",
       "bhash": "ccf6b5f6b0",
       "occ": 1,
@@ -5849,7 +5981,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 1981,
+      "line": 2003,
       "sig": "ce7aad2a6d",
       "bhash": "95db3f8f5b",
       "occ": 1,
@@ -5861,7 +5993,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2037,
+      "line": 2059,
       "sig": "fae8f82014",
       "bhash": "a4a53225ba",
       "occ": 1,
@@ -5873,7 +6005,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2039,
+      "line": 2061,
       "sig": "df3514aac5",
       "bhash": "ac96897ade",
       "occ": 1,
@@ -5885,7 +6017,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2046,
+      "line": 2068,
       "sig": "27a68d2cc3",
       "bhash": "b5e4d68fae",
       "occ": 1,
@@ -5897,7 +6029,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2048,
+      "line": 2070,
       "sig": "d29eef0175",
       "bhash": "417b1f511b",
       "occ": 1,
@@ -5909,7 +6041,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2055,
+      "line": 2077,
       "sig": "db1c5ee5a2",
       "bhash": "19a04f68ad",
       "occ": 1,
@@ -5921,7 +6053,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2063,
+      "line": 2085,
       "sig": "df3514aac5",
       "bhash": "ac96897ade",
       "occ": 2,
@@ -5933,7 +6065,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2065,
+      "line": 2087,
       "sig": "fae8f82014",
       "bhash": "a4a53225ba",
       "occ": 2,
@@ -5945,7 +6077,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2070,
+      "line": 2092,
       "sig": "d29eef0175",
       "bhash": "417b1f511b",
       "occ": 2,
@@ -5957,7 +6089,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2072,
+      "line": 2094,
       "sig": "27a68d2cc3",
       "bhash": "b5e4d68fae",
       "occ": 2,
@@ -5969,7 +6101,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2094,
+      "line": 2116,
       "sig": "6ce7734afa",
       "bhash": "24b3b059a4",
       "occ": 1,
@@ -5981,7 +6113,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2117,
+      "line": 2139,
       "sig": "51dc4a7cf7",
       "bhash": "6d7a11c1db",
       "occ": 1,
@@ -5993,7 +6125,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2118,
+      "line": 2140,
       "sig": "b96f8fe998",
       "bhash": "8252cd2113",
       "occ": 1,
@@ -6005,7 +6137,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2120,
+      "line": 2142,
       "sig": "bbedba1ac4",
       "bhash": "09e2abc7bf",
       "occ": 1,
@@ -6017,7 +6149,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2143,
+      "line": 2165,
       "sig": "7c0dd4e3f2",
       "bhash": "2ae5c88a5c",
       "occ": 1,
@@ -6029,7 +6161,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2175,
+      "line": 2197,
       "sig": "f19ccdd999",
       "bhash": "7d04f66f29",
       "occ": 2,
@@ -6041,7 +6173,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2183,
+      "line": 2205,
       "sig": "43c568e817",
       "bhash": "89c6712ce2",
       "occ": 1,
@@ -6053,7 +6185,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2213,
+      "line": 2235,
       "sig": "dc8375e738",
       "bhash": "a08c5e617c",
       "occ": 1,
@@ -6065,7 +6197,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2218,
+      "line": 2240,
       "sig": "f19ccdd999",
       "bhash": "7d04f66f29",
       "occ": 3,
@@ -6077,7 +6209,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2224,
+      "line": 2246,
       "sig": "b449a1c7f6",
       "bhash": "0604e8c1a5",
       "occ": 1,
@@ -6089,7 +6221,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2253,
+      "line": 2275,
       "sig": "15d88875b8",
       "bhash": "01aa220423",
       "occ": 1,
@@ -6101,7 +6233,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2258,
+      "line": 2280,
       "sig": "dbd80d86be",
       "bhash": "e485079ca6",
       "occ": 1,
@@ -6113,7 +6245,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2280,
+      "line": 2302,
       "sig": "892cbcc8b5",
       "bhash": "3e70139267",
       "occ": 1,
@@ -6125,7 +6257,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2282,
+      "line": 2304,
       "sig": "db93b04247",
       "bhash": "1170d5689a",
       "occ": 1,
@@ -6137,7 +6269,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2284,
+      "line": 2306,
       "sig": "db72a13d18",
       "bhash": "ada86c714c",
       "occ": 1,
@@ -6149,7 +6281,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2293,
+      "line": 2315,
       "sig": "481f44034f",
       "bhash": "8355bb386e",
       "occ": 1,
@@ -6161,7 +6293,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2367,
+      "line": 2389,
       "sig": "1ef635fd42",
       "bhash": "1903f6f6a9",
       "occ": 1,
@@ -6173,7 +6305,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2373,
+      "line": 2395,
       "sig": "bbd6f90b9e",
       "bhash": "d294f1265b",
       "occ": 1,
@@ -6185,7 +6317,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2381,
+      "line": 2403,
       "sig": "267896e794",
       "bhash": "8475ebebad",
       "occ": 1,
@@ -6197,7 +6329,7 @@
     },
     {
       "file": "ui-global-events.js",
-      "line": 2383,
+      "line": 2405,
       "sig": "267896e794",
       "bhash": "8475ebebad",
       "occ": 2,

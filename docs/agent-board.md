@@ -60,6 +60,18 @@
   confirm 仍 12 处（其中 `batchDelete` / `webdavSyncUpload|Download` 有返回值，确认须前置到调用点）。
 - 版本号：**未占 3.7.137**（下一号以 `AGENTS.md` §二 为准）。
 
+### [2026-10-22 07:30 UTC+8] Qoder 主会话（R-2 空 catch 基线精确重冻 · 已改完，待随下一笔一起推）
+- 状态：进行中 —— **这一笔动了 `scripts/lint-empty-catch.baseline.json`，按 R4 声明**。
+- 做了什么：confirm 迁移第二~六批让基线漂出 16 处「新增 P1/P2」噪声（会稀释「无新增 P0」的结论）。
+  已按 R-2 纪律做**逐文件精确重冻**（`_probe/refreeze-file.mjs`，只替换指定文件条目），
+  噪声 **16 → 2 处**；基线 540 → 551；P0 78（无注释仍为 **0**）。
+  ⚠️ 特意没用 `--scan <file> --freeze`：那个组合会拿单文件结果覆盖整个 baseline。
+- 🔴 **要对方处理的两处**（我按 R6 没动，因为不是我改的文件）：
+  · `ui-ge-api.js:890`（P2，预期降级）
+  · `ui-theme.js:74`（P1，`try{ syncThemeLabOption(); }`）
+  请改动方跑一次 `node _probe/refreeze-file.mjs ui-ge-api.js ui-theme.js` 即可销声。
+- 下一个可用版本号 **3.7.137**（AGENTS.md §二 尚未登记，发版前先登记再跑号）。
+
 ### [2026-10-22 06:05 UTC+8] Qoder 主会话（原生 confirm 迁移第六批 12→0 · 开工声明）
 - 状态：进行中（v3.7.136 已由对方会话发布为 `91d64c0`，我的第二~五批均并入；tag /
   CHANGELOG / VERSION 三要素我已核实无误。我推 `433f5a9` 触发的 CI run 被 `91d64c0` 的
