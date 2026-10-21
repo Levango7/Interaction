@@ -3,6 +3,38 @@
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 
+### 2026-10-22 · P1-4 余项：原生 confirm 迁移第四批（24 → 22）
+
+- 2 处调用点改走 `dangerConfirm()`：**清空全部数据**（`src/ui-backup-stats.js` `doClear`，252）
+  与**集成任务推送**（`src/ui-global-events.js` `[data-int-push]`，645）。
+- `doClear` 改 `async` 后，两个调用方（`ui-global-events.js:34` 的 `onclick = doClear`、
+  `ui-palette.js:153` 命令面板 `run:doClear`）**刻意不 await**：清空是"点了就走"的一次性动作，
+  调用方不关心结果，且 `doClear` 内部不抛 ⇒ 不会引入新的失败模式（已在 `danger-confirm.test.js`
+  棘轮注释里写明，免得后人当漏改补上 await）。
+- 债务棘轮同步下调：`NATIVE_CONFIRM_TOTAL` 24 → **22**（去注释后实测）。
+- 新增真路径覆盖 `tests/confirm-migration-batch4.test.js` **7 例**：清空 3 例（确认才清 /
+  取消不清 / Esc 不清）+ 推送 4 例（确认才发请求 / 取消不发 / Esc 不发 / 文案带条数与目标名）。
+- 本批踩到两个**前三批都没遇到**的坑，写法已固化进文件注释：
+  ① `doClear` 结尾有 `setTimeout(() => location.reload(), 900)` —— 真实计时器下这条尾巴会
+     在断言之后落到已关闭的窗口上，变成与改动无关的 Unhandled 噪声（第三批 batch3 因此红过一次）。
+     故清空路径一律**切假计时器**；而假计时器下 `autoDangerConfirm` 接盘器**失效**（它靠
+     `setTimeout` 轮询找按钮），正解是「同步点掉确认按钮 + 微任务 flush」—— 浮层在 Promise
+     executor 里同步挂 DOM，点掉之后的后续走微任务，**微任务不受 fake timers 影响**。
+     同一手法也用在了既有的 `clear-no-reseed` / `round4-batch1` 两处 `doClear` 用例上。
+  ② **e2e 的 `page.on("dialog", …)` 只对原生 alert/confirm/prompt 生效**，对真浮层毫无作用。
+     `tests/e2e/integration-push.spec.js` 的原 dialog handler 已换成 `addInitScript` 注入的
+     MutationObserver（浮层一挂上就点「确认执行」），且必须在 `goto` **之前**注入。
+     ⚠️ 更深的坑（第一版就栽在这里，一次红了 6 例）：init script 跑在**文档创建之前** ——
+     实测此刻 `document.readyState === "loading"`、`document.documentElement` 仍是 **null**，
+     直接 `observe(null, …)` 会**静默失败**（错误不出现在测试输出里），现象是
+     "浮层确实弹出来了、但没人点它"，快照里能看到确认框还开着而请求数为 0。
+     正解是**等文档建起来再挂**：先试一次挂上，不成就交给 `readystatechange` 重试。
+- **变异验证**（两条独立做，各还原后核对 md5）：`doClear` 退回原生 `confirm()` ⇒ **恰好 3 例红**
+  （清空那三条，推送四条不受影响）；`[data-int-push]` 退回 ⇒ **恰好 4 例红**（推送那四条，
+  清空三条不受影响）—— 说明两组判据各自有射程且不互相"借光"。
+- 未覆盖登记：`[data-int-push]` 是所有 provider 共用的同一处委托绑定，本批只驱动 notion 一个
+  按钮；Linear / Jira 走同一段确认代码，不复测。
+
 ### 2026-10-21 · 布局 v2：对话下沉 + 右栏「今日任务」
 
 依据 `docs/PRODUCT.md` 的定位（桌面为主的知识工作者；闭环=捕获→AI 落手→复核）与大方向

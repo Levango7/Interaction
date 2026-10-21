@@ -19,11 +19,23 @@ import { loadApp } from "./helpers/loadApp.js";
 
 const PREFIX = "wb_agent_";
 
-/** 在假计时器下调用 doClear（900ms 后的 location.reload 不会真的触发） */
-function clearWithFakeTimers(win) {
+/**
+ * 在假计时器下调用 doClear（900ms 后的 location.reload 不会真的触发）
+ *
+ * ⚠️ 这里**不能**用 `autoDangerConfirm` 接盘器：它靠 `setTimeout` 轮询找按钮，而
+ * `vi.useFakeTimers()` 把 setTimeout 一并假掉了 ⇒ 轮询永不推进、浮层没人点、清空永不发生。
+ * 好在 dangerConfirm 是**同步**把浮层挂进 DOM 的（Promise executor 同步执行），
+ * 于是可以「先拿到 Promise → 同步点掉确认按钮 → 再 await」：点掉之后的代码走微任务队列，
+ * 而**微任务不受 fake timers 影响**，所以 await 能正常推进。
+ */
+async function clearWithFakeTimers(win) {
   vi.useFakeTimers();
   try {
-    win.__test.doClear();
+    const p = win.__test.doClear();
+    const yes = win.document.getElementById("dangerConfirmModalYes");
+    if (!yes) throw new Error("doClear 必须先弹确认浮层，再动手清空");
+    yes.click();
+    await p;
   } finally {
     vi.useRealTimers();
   }
@@ -43,10 +55,10 @@ function snapshot(win) {
 describe("清空全部数据 = 真的清空（OD-004 · 乙）", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
-  it("① doClear 之后留下「已初始化 + 0 条任务 + 已过引导」，而不是把键删干净", () => {
+  it("① doClear 之后留下「已初始化 + 0 条任务 + 已过引导」，而不是把键删干净", async () => {
     const win = loadApp();
     expect(win.__test.getTasks().length, "前置：首启应有示例任务").toBeGreaterThan(0);
-    clearWithFakeTimers(win);
+    await clearWithFakeTimers(win);
 
     expect(win.localStorage.getItem(PREFIX + "tasks"), "tasks 应是空数组而不是键为 null").toBe("[]");
     expect(win.localStorage.getItem(PREFIX + "init"), "init 应置位（seed 的第一道闸）").toBe("true");
@@ -57,7 +69,7 @@ describe("清空全部数据 = 真的清空（OD-004 · 乙）", () => {
 
   it("② 用清空后的存储重启：0 条任务，且任务页看板出现空态（空态真的可达）", async () => {
     const win1 = loadApp();
-    clearWithFakeTimers(win1);
+    await clearWithFakeTimers(win1);
     const carried = snapshot(win1);
 
     const win2 = loadApp({ storage: carried });

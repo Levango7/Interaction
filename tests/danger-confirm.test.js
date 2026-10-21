@@ -117,13 +117,22 @@ describe("dangerConfirm 组件契约", () => {
    2026-10-21 首批迁掉 4 处（会话删除 / 日历源删除 / 笔记删除 / 知识库文件删除）⇒ 35；
    第二批迁掉 8 处（GitHub token 清除 / WebDAV 配置清除 / API Key 吊销 ×2 / AI 会话历史清除 /
    工作记忆清空 / 联动规则重置 / 联动规则删除）⇒ 27；
-   第三批迁掉 3 处（导入覆盖确认 / 恢复前快照回滚 / 恢复前快照删除）⇒ 现值 24。
+   第三批迁掉 3 处（导入覆盖确认 / 恢复前快照回滚 / 恢复前快照删除）⇒ 27→24；
+   第四批迁掉 2 处（清空全部数据 doClear / 集成任务推送 [data-int-push]）⇒ 现值 22。
+   第四批的两个特殊点，改之前值得先看一眼：
+     · `doClear` 改 async 后，两个调用方（`ui-global-events.js:34` 的 `onclick = doClear`、
+       `ui-palette.js:153` 命令面板 `run:doClear`）**刻意不 await** —— 清空是"点了就走"的
+       一次性动作，调用方不关心结果，且 doClear 内部不抛，不会引入新的失败模式；
+     · 两个既有用例在 `vi.useFakeTimers()` 下调 doClear，`autoDangerConfirm` 接盘器在那里
+       **失效**（它靠 setTimeout 轮询，而 fake timers 把 setTimeout 也假掉了）。
+       正解是"先拿 Promise → 同步点掉确认按钮 → 再 await"：浮层在 Promise executor 里
+       同步挂 DOM，点掉之后的后续走微任务，而微任务不受 fake timers 影响。
    上限钉成**相等**而不是"≤"：新增原生确认要红，迁移掉一处不 lowering 常量也要红。
    计数前必须剥注释 —— 组件自己的文档注释里就写着"原生 confirm()"，
    不剥会把 39 数成 40（实测踩过）。
    ═══════════════════════════════════════════════════════════════════════ */
 describe("原生 confirm() 债务棘轮", () => {
-  const NATIVE_CONFIRM_TOTAL = 24;
+  const NATIVE_CONFIRM_TOTAL = 22;
   const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 
   const stripComments = (code) => code

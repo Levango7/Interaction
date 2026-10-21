@@ -642,8 +642,8 @@ function renderIntegrationPanel(){
          而且是不可逆的（对方那边只增不删）。 */
       const tasks = getTasks().filter(function(x){ return x && x.status !== "done"; });
       if(!tasks.length){ toast(t("integration.pushNoTasks", "没有未完成的任务可推送"), "warn"); return; }
-      if(!confirm(t("integration.pushConfirm", "把 {n} 条未完成任务推送到 {name}？只推不拉，不会改动本地数据。")
-        .replace("{n}", String(tasks.length)).replace("{name}", label))) return;
+      if(!await dangerConfirm({ message: t("integration.pushConfirm", "把 {n} 条未完成任务推送到 {name}？只推不拉，不会改动本地数据。")
+        .replace("{n}", String(tasks.length)).replace("{name}", label) })) return;
       btn.disabled = true;
       const oldText = btn.textContent;
       btn.textContent = t("integration.pushing", "推送中…");

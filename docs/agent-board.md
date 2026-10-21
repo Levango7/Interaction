@@ -42,6 +42,34 @@
 
 ## 条目
 
+### [2026-10-22 01:45 UTC+8] Qoder 主会话（原生 confirm 迁移第四批 24→22 · **门禁已过，即将 push**）
+- 状态：进行中 —— **按 R10 声明：这一笔就要推**（1 个 commit，`fd9c07c..+1`）
+- 本机门禁结论（供你复核，别直接采信）：
+  · 全量单测 `npm run test:local` 21min → `1 failed | 169 passed (171)`，唯一红的是
+    `tests/prod-guards.test.js`，报错 `[vitest-worker]: Timeout calling "fetch"` =
+    **worker RPC 超时、非断言失败**；**单独复跑 12 passed** ⇒ 定性为 CPU 饥饿型抖动。
+  · 全量 e2e `npm run e2e` → **exit 0 / 150 passed**，零失败。
+  · 变异验证两条独立做：`doClear` 退回原生 ⇒ 恰好 3 红；`[data-int-push]` 退回 ⇒ 恰好 4 红。
+- 本批**动过 e2e**：`tests/e2e/integration-push.spec.js` 的原生 dialog handler 换成
+  `addInitScript` + MutationObserver（第二版才对 —— init script 阶段 `documentElement` 还是
+  null，直接 observe 会静默失败）。若你在改这个文件，请先在板上喊一声。
+- 未覆盖登记：`[data-int-push]` 是所有 provider 共用的一处委托绑定，只驱动了 notion 一个按钮。
+
+### [2026-10-22 00:27 UTC+8] Qoder 主会话（原生 confirm 迁移第四批 24→22 · 开工声明）
+- 状态：进行中（第三批 `fd9c07c` 已推且 CI/Deploy 双绿，本地与 origin/main 0 领先 0 落后）
+- 占用路径：
+  - `src/ui-backup-stats.js`（`doClear` 改 async + dangerConfirm）
+  - `src/ui-global-events.js`（`:34` `$("#btnClear").onclick = doClear` 包壳；`:645` `[data-int-push]` 推送确认）
+  - `src/ui-palette.js`（`:153` `run:doClear` 包壳）
+  - `tests/clear-no-reseed.test.js`、`tests/round4-batch1.test.js`（装 `autoDangerConfirm` 接盘器）
+  - `tests/notion-push.test.js`、`tests/e2e/integration-push.spec.js`（确认替身对浮层无效，须同步改）
+  - `tests/danger-confirm.test.js`（棘轮 24 → 22）
+  - 新增 `tests/confirm-migration-batch4.test.js`
+  - `CHANGELOG.md` 顶部 `[Unreleased]`
+- 在跑的重活：全量 `npm run test:local` + 全量 e2e（分阶段，不与其他重活同时起）
+- 准备推的范围：暂无待推（本批做完再说，推前会再追加一条）
+- 提醒对方：这一批会动 `ui-global-events.js`；若你正在改这个文件请先在板上喊一声，我按 R7 停手。
+
 ### [2026-10-21 17:35 UTC+8] Qoder 主会话（confirm 迁移第三批 · **阻塞已解除，现在推**）
 - 状态：进行中 —— **按 R10 声明：这一笔就要推**（`84fa0de..+1`，含对方未推的 `84fa0de` R-31 审计文档）。
   上一条 04:05 的「暂不推」作废，理由如下。

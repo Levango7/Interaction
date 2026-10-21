@@ -66,10 +66,30 @@ test.describe("集成中心 · Notion 任务推送入口", () => {
   test.beforeAll(() => { test.skip(!process.env.E2E, "set E2E=1 to run"); });
 
   test.beforeEach(async ({ page }) => {
+    /* 推送确认已从原生 confirm 换成 dangerConfirm 真浮层 —— Playwright 的 dialog 事件
+       **只对原生 alert/confirm/prompt 生效**，对这个浮层毫无作用（点击会永远停在
+       `await dangerConfirm(...)` 上，收不到任何请求）。这里改成注入一个 MutationObserver：
+       浮层一挂上就点「确认执行」，语义等价于旧的 dialog.accept()。
+       必须在 goto **之前**注入，否则首屏脚本已经跑完、观察器挂晚了。 */
+    await page.addInitScript(() => {
+      /* ⚠️ init script 跑在**文档创建之前**：实测此刻 `document.readyState === "loading"`、
+         `document.documentElement` 还是 null —— 直接 observe(null) 会静默失败，
+         浮层出现时没有任何人点它（实测：请求数 0，快照里能看到确认框还开着）。
+         所以要等文档建起来再挂：先试一次，不成就交给 readystatechange 重试。 */
+      let attached = false;
+      const attach = () => {
+        if (attached || !document.documentElement) return;
+        attached = true;
+        new MutationObserver(() => {
+          const yes = document.getElementById("dangerConfirmModalYes");
+          if (yes) yes.click();
+        }).observe(document.documentElement, { childList: true, subtree: true });
+      };
+      attach();
+      document.addEventListener("readystatechange", attach);
+    });
     await page.goto(APP_URL);
     await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
-    /* 原生 confirm 要接受掉，否则点击会卡在弹窗上 */
-    page.on("dialog", (d) => d.accept());
     await openPanel(page);
   });
 

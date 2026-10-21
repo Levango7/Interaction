@@ -248,8 +248,11 @@ function getLastMergeLog(){
     return log.filter(e => e.type === "multi-device-merge").slice(-1)[0] || null;
   } catch(e){ return null; }
 }
-function doClear(){
-  if(!confirm(t("confirm.clearAll","确定清空全部数据？此操作不可恢复！"))) return;
+/* 调用方（`ui-global-events.js:34` 的 `#btnClear.onclick`、`ui-palette.js:153` 命令面板
+   `run:doClear`）刻意**不 await**：清空是"点了就走"的一次性动作，调用方不关心结果，
+   且本函数内部不抛 —— 改成 async 不会给这两个调用点引入新的失败模式。 */
+async function doClear(){
+  if(!await dangerConfirm({ message: t("confirm.clearAll","确定清空全部数据？此操作不可恢复！") })) return;
   allKeys().forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){ /* 静默降级 */ } });
   idbClearAll().catch(() => {}); // 架构项①：同步清 IDB 镜像，避免恢复出僵尸数据
   /* OD-004 裁定乙（2026-10-18，用户「乙 吧」）：清空后**不再重新播种示例**。

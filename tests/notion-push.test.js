@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
+import { autoDangerConfirm } from "./helpers/autoDangerConfirm.js";
 
 /**
  * notion-push.test.js —— Notion「任务单向推送」消费点（v3.7.70）
@@ -164,10 +165,13 @@ describe("Notion 单向推送：面板真的有入口（函数正确 ≠ 被接�
     win.renderIntegrationPanel();
     const btn = win.document.querySelector('[data-int-push="notion"]');
     expect(btn, "前提：入口在").toBeTruthy();
-    /* 直接驱动按钮：它自己会取 getTasks() 里的未完成项 */
-    win.confirm = () => true;
+    /* 直接驱动按钮：它自己会取 getTasks() 里的未完成项。
+       推送确认已换成 dangerConfirm 浮层，`win.confirm = () => true` 对它无效 ——
+       改用接盘器（与旧替身同为"无条件确认"，本例测的是推送范围、与确认 UX 无关）。 */
+    const stopConfirm = autoDangerConfirm(win);
     btn.onclick();
     await new Promise((r) => setTimeout(r, 120));
+    stopConfirm();
     expect(calls.length, "只该推那一条未完成的").toBe(1);
     expect(calls[0].body.properties.Title.title[0].text.content).toBe("未完成 A");
   });

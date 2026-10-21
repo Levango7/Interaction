@@ -105,12 +105,17 @@ describe("B3 · alert 替换为 toast", () => {
     alertSpy.mockRestore();
   });
 
-  it("doClear 不再调用 alert（改用 toast + 延迟重载）", () => {
+  it("doClear 不再调用 alert（改用 toast + 延迟重载）", async () => {
     vi.useFakeTimers();
     try {
       const alertSpy = vi.spyOn(win, "alert").mockImplementation(() => {});
       // fake timers 下 setTimeout 不触发，location.reload 不会执行
-      __test.doClear();
+      const p = __test.doClear();
+      /* 确认浮层是同步挂进 DOM 的，这里同步点掉「确认执行」；点掉之后走微任务，
+         不受 fake timers 影响，所以下面的 await 能正常推进。 */
+      const yes = win.document.getElementById("dangerConfirmModalYes");
+      if (yes) yes.click();
+      await p;
       expect(alertSpy).not.toHaveBeenCalled();
       alertSpy.mockRestore();
     } finally {
