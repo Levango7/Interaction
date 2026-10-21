@@ -37173,7 +37173,7 @@ function doImport(file){
       if (checkArr(data[PREFIX+"tasks"]) || checkArr(data[PREFIX+"records"])) hasValidData = true;
       if (meta && !hasValidData) { toast(t("msg.importMissingData","导入文件缺少 tasks 或 records 数据"), "error"); return; }
 
-      if(!confirm(t("confirm.importOverwrite","导入将覆盖当前同名数据（含自定义联动规则）。确定继续？"))) return;
+      if(!await dangerConfirm({ message: t("confirm.importOverwrite","导入将覆盖当前同名数据（含自定义联动规则）。确定继续？") })) return;
       /* v3.7.94（P1-2 对偶）：过滤口径必须与导出 allKeys() 完全一致（isAppStorageKey 同一并集），
          否则导出的旁路裸键（token/通知设置）在导入侧被再次丢回。 */
       Object.keys(data).forEach(k=>{ if(isAppStorageKey(k)){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
@@ -37631,9 +37631,9 @@ function _preRestoreListToggle(){
   box.classList.remove("u-hidden");
   if(btn) btn.textContent = t("api.preRestoreHideList", "收起键清单");
 }
-function _preRestoreRollbackFlow(){
+async function _preRestoreRollbackFlow(){
   if(!preRestoreInfo()){ toast(t("api.preRestoreNone", "暂无（云端恢复后自动留存）"), "warn"); return; }
-  if(!confirm(t("api.preRestoreRollbackConfirm", "将用此快照覆盖本机当前数据（无法撤销，建议先导出备份）。确定继续？"))) return;
+  if(!await dangerConfirm({ message: t("api.preRestoreRollbackConfirm", "将用此快照覆盖本机当前数据（无法撤销，建议先导出备份）。确定继续？") })) return;
   const r = rollbackPreRestore();
   if(!r.ok){ toast(t("err.rollbackFail", "回滚失败：没有可用的恢复前快照"), "error"); return; }
   /* 失败数与成功数分开说（第九片纪律：「已回滚」只讲成功的一半，没写进去的必须在场） */
@@ -37642,9 +37642,9 @@ function _preRestoreRollbackFlow(){
     r.failed.length ? "warn" : "ok");
   setTimeout(() => location.reload(), 1200);
 }
-function _preRestoreDeleteFlow(){
+async function _preRestoreDeleteFlow(){
   if(!preRestoreInfo()){ toast(t("api.preRestoreNone", "暂无（云端恢复后自动留存）"), "warn"); return; }
-  if(!confirm(t("confirm.deletePreRestore", "删除这份恢复前快照？删除后无法再用它回滚。"))) return;
+  if(!await dangerConfirm({ message: t("confirm.deletePreRestore", "删除这份恢复前快照？删除后无法再用它回滚。") })) return;
   if(!deletePreRestoreBackup()){ toast(t("msg.deleteFailed", "删除失败"), "error"); return; }
   renderPreRestoreCard();
   toast(t("api.preRestoreDeleted", "已删除恢复前快照"), "ok");
