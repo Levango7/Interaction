@@ -42,6 +42,62 @@
 
 ## 条目
 
+### [2026-10-21 17:35 UTC+8] Qoder 主会话（confirm 迁移第三批 · **阻塞已解除，现在推**）
+- 状态：进行中 —— **按 R10 声明：这一笔就要推**（`84fa0de..+1`，含对方未推的 `84fa0de` R-31 审计文档）。
+  上一条 04:05 的「暂不推」作废，理由如下。
+- **阻塞解除的依据**（三条独立证据）：
+  ① 布局 v2 的回归已由 `7997e22` / `b5e40f5` 修掉，`b5e40f5` **CI success**；
+  ② 我在本机重跑全量 e2e：**0 failed / 145 passed**（上一轮那两例 `form-controls` 下拉裁切
+     与 `integration-push` ④ Linear 入口**现已 ok**；`notify-hook` ③ 也 ok）——
+     "与本批无关"的定性得到证实，不是甩锅；
+  ③ 5 例 "did not run" 是**套件级 600s 超时未跑完**，不是失败。
+- **本批补了一处真回归的修复**（这是上一条没做的）：第一版把 `doImport` 改成 `await dangerConfirm`
+  之后，`loadApp` 那句 `window.confirm = () => true` 对浮层无效 ⇒ 导入链上 **4 个文件 8 处**
+  调用点（`p0-storage` / `backup-key-union` / `backup-export-exclusion` / `p0-crossdevice-key`）
+  永远停在 await 上，调用方以异常收场（`P0-4 用例 C` 的 `threw` 翻真、T1–T4 全红）。
+  修法：新增 `tests/helpers/autoDangerConfirm.js` —— 浮层一出现就点「确认执行」，
+  **语义与旧 confirm 替身完全等价**（旧替身同样是无条件确认），只给"与确认 UX 无关"的用例用。
+  **测确认框本身行为的用例不许用它**（那些必须显式点 Yes/No/Esc）。
+- 变异验证：把 `_preRestoreDeleteFlow` 退回原生 `confirm()` ⇒ **恰好 4 例红**（删除 2 + 导入取消/Esc 2），
+  还原后 md5 一致。
+- 本机最终结论：`npm run test:local` **断言失败 0**（唯一红是 `three-state-render` ③ 的
+  CPU 饥饿型超时 —— 该文件整轮 500s+，**单跑复现 exit 0 / 1 passed**，属已知抖动项）；
+  `npm run lint` **exit 0**（0 error / 6 warning 均存量）；`npm run e2e` **0 failed / 145 passed**。
+- 占用路径：`src/ui-backup-stats.js`、`tests/confirm-migration-batch3.test.js`（新）、
+  `tests/helpers/autoDangerConfirm.js`（新）、`tests/danger-confirm.test.js`、
+  `tests/p0-storage.test.js`、`tests/backup-key-union.test.js`、
+  `tests/backup-export-exclusion.test.js`、`tests/p0-crossdevice-key.test.js`、
+  `CHANGELOG.md`（仅 `[Unreleased]` 段）、`docs/agent-board.md`（本条）
+- 在跑的重活：无。版本号：未占用新号（本批进 `[Unreleased]`）。
+
+### [2026-10-21 04:05 UTC+8] Qoder 主会话（原生 confirm 迁移第三批 27→24 · 工作树已备好，**暂不推**）
+- 状态：**暂停推送，等布局 v2 的 e2e 回归处置结论**（见下）。按 R7（不抢先推）与 R9（判据以 CI 为准）。
+- 本批内容：3 处原生 `confirm()` → `dangerConfirm()`，全在 `src/ui-backup-stats.js`（导入覆盖确认 154 /
+  恢复前快照回滚 613 / 恢复前快照删除 623）；棘轮 `NATIVE_CONFIRM_TOTAL` 27 → **24**；
+  新增真路径覆盖 `tests/confirm-migration-batch3.test.js` **8 例**。
+- 本机验证（串行）：batch3 新文件 **8/8**；`npm run lint` **exit 0**（0 error / 6 warning 均存量）；
+  **变异验证**：把 `_preRestoreDeleteFlow` 退回原生 `confirm()` ⇒ **恰好 4 例红**（删除 2 例 +
+  导入「取消」「Esc」2 例），还原后 md5 一致 —— 判据有射程。
+- 本批实测修掉两个**测试自身**的坑（已写进文件注释，供后来者）：① FileReader 回调在 jsdom 负载下
+  远超 `vi.waitFor` 默认 1000ms（改用显式 30s/50ms，等的是「文件读完并解析」这个真实条件，不是打马虎眼）；
+  ② 只断言「数据已落盘」就结束，会让 `initCrypto()`/toast 的尾巴跑到 `afterEach` 关窗之后变成
+  `Unhandled Rejection`（改为等终端 toast 上屏）。
+- ⚠️ **本批未跑全量 e2e 到绿**：全量 `npm run e2e` = 3 failed / 45 passed / **102 did not run**。
+  - `notify-hook` ③ 是本地 mock 服务 `page.goto 127.0.0.1:12409` 15s 打不开 ⇒ **级联 102 例未跑**，
+    确认为本机/沙箱环境问题，非代码回归。
+  - 另 2 例（`form-controls`「下拉列表不得被祖先滚动容器裁切」、`integration-push`「Linear 入口落在视口内」）
+    **已定性为布局 v2 的回归，与本批无关**，四条依据：① 本批 diff 不含 `ui-select.js`/布局/`integration-push`
+    任何一行；② 失败页快照含新右栏 `complementary "今日任务"`、版本 `v3.7.135 · b20261020b`；
+    ③ 用例注释自述「列表 `position:absolute` 定位于 `.ds-select`，与触发框同容器」——布局一改该假设即不成立；
+    ④ **远端 CI 独立佐证**：`bc2f0db` = **failure**，`20c75bf`（第二批）= **success**。
+- 占用路径：`src/ui-backup-stats.js`、`tests/confirm-migration-batch3.test.js`（新）、
+  `tests/danger-confirm.test.js`、`CHANGELOG.md`（仅 `[Unreleased]` 段）、`docs/agent-board.md`（本条）
+- 在跑的重活：无。**不会在你修回归期间推任何东西。**
+- 版本号：未占用新号（本批进 `[Unreleased]`）。
+- 给布局 v2 的主人（不代改，等你裁定）：裁切判据的祖先链已变 —— `.ds-list` 的
+  `overflowY !== visible` 祖先现在可能命中新右栏/新主列容器。建议要么按新几何重定判据，
+  要么把 `.ds-list` 改成 `position:fixed` 脱离滚动容器（后者对触屏与窄屏也更有意义）。
+
 ### [2026-10-21 03:40 UTC+8] Qoder 主会话（布局 v2：对话下沉 + 右栏今日任务 · 占用中）
 - 状态：进行中 —— 用户 03:0x「你自己用最合理的方式来做，最符合产品定位的用户的使用习惯来设计就行」授权。
 - **改了哪些**：`agent-workbench.html`（DOM：把 `#chatPanel` 移进 `.main-wrap`；新增 `#taskRail` 与顶栏 `#btnTaskRail`；

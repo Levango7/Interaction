@@ -15,6 +15,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadApp } from "./helpers/loadApp.js";
+import { autoDangerConfirm } from "./helpers/autoDangerConfirm.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PREFIX = "wb_agent_";
@@ -90,6 +91,10 @@ function stubImport(win, content) {
     }
   }
   win.FileReader = FakeFileReader;
+  /* 生产侧已改走 dangerConfirm 真浮层（原生 confirm 的替身对它无效）。
+     本文件测的是"键并集/旁路宽容度"，与确认 UX 无关 ⇒ 装自动接盘器，
+     语义与旧替身等价。返回停止句柄，调用方用完必须停（否则跨窗口泄漏计时器）。 */
+  return autoDangerConfirm(win);
 }
 
 describe("P1-2 · allKeys/isAppStorageKey 并集（jsdom 行为）", () => {
@@ -154,9 +159,10 @@ describe("P1-2 · allKeys/isAppStorageKey 并集（jsdom 行为）", () => {
       "wb_notified_ids": JSON.stringify(["a"]),
       "unrelated_key": "should-be-ignored",
     };
-    stubImport(win, JSON.stringify(payload));
+    const stopConfirm = stubImport(win, JSON.stringify(payload));
     win.doImport({ name: "b.json" });
     await waitFor(() => win.localStorage.getItem("wb_notify_enabled") !== null);
+    stopConfirm();
 
     expect(win.localStorage.getItem("wb_notify_enabled")).toBe("true");
     expect(win.localStorage.getItem("wb_notified_ids")).toBe(JSON.stringify(["a"]));

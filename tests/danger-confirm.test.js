@@ -116,13 +116,14 @@ describe("dangerConfirm 组件契约", () => {
    39 处调用点正分批迁到 dangerConfirm（原生框不可样式化、无 i18n、窄屏由系统渲染）。
    2026-10-21 首批迁掉 4 处（会话删除 / 日历源删除 / 笔记删除 / 知识库文件删除）⇒ 35；
    第二批迁掉 8 处（GitHub token 清除 / WebDAV 配置清除 / API Key 吊销 ×2 / AI 会话历史清除 /
-   工作记忆清空 / 联动规则重置 / 联动规则删除）⇒ 现值 27。
+   工作记忆清空 / 联动规则重置 / 联动规则删除）⇒ 27；
+   第三批迁掉 3 处（导入覆盖确认 / 恢复前快照回滚 / 恢复前快照删除）⇒ 现值 24。
    上限钉成**相等**而不是"≤"：新增原生确认要红，迁移掉一处不 lowering 常量也要红。
    计数前必须剥注释 —— 组件自己的文档注释里就写着"原生 confirm()"，
    不剥会把 39 数成 40（实测踩过）。
    ═══════════════════════════════════════════════════════════════════════ */
 describe("原生 confirm() 债务棘轮", () => {
-  const NATIVE_CONFIRM_TOTAL = 27;
+  const NATIVE_CONFIRM_TOTAL = 24;
   const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 
   const stripComments = (code) => code

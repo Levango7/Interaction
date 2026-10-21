@@ -45,6 +45,18 @@
   （删除 2 例 + 导入"取消"/"Esc" 2 例——后者红的原因见下），还原后 md5 一致。
   导入那 2 例在变异下红不是误差：`loadApp` 把 `win.confirm` 打成 `() => true`，
   一旦退回原生确认就是「真取消也拦不住」，判据本来就该红。
+- ⚠️ **本批第一版漏改了一批既有测试，已修**（教训写进 `tests/helpers/autoDangerConfirm.js`）：
+  `import` 这条链上有 **4 个文件 8 处**调用点（`p0-storage` / `backup-key-union` /
+  `backup-export-exclusion` / `p0-crossdevice-key`）一直依赖 `loadApp.js` 里那句
+  `window.confirm = () => true` 自动确认。那句只对**原生** confirm 生效，对
+  `dangerConfirm` 毫无作用 ⇒ 流程永远停在 `await` 上，调用方以异常收场
+  （`P0-4 用例 C` 的 `threw` 翻真、T1–T4 全红）。此前只在板上记了
+  `ai-profile` / `notion-push` / `webdav-sync` 三个文件，**漏了导入链这一批**。
+  修法不是给浮层开后门，而是新增 `tests/helpers/autoDangerConfirm.js`：
+  让浮层一出现就点「确认执行」，**语义与旧替身完全等价**（旧替身同样是无条件确认），
+  从而让"测的是导入宽容度 / 错误告警 / 跨设备 Key 迁移"的用例继续测它们真正要测的东西。
+  三条约束：窗口关掉必须自停（否则跨窗口泄漏计时器、产出无关噪声）、点完即停、超时兜底。
+  **测确认框本身行为的用例不许用它** —— 那些必须显式点 Yes/No/Esc。
 - 未覆盖登记（写在测试文件文末）：`doClear` 迁移需连两个直接调用方一起改 ——
   `ui-palette.js:153`（`run:doClear`，被 `it.run()` 调）、`ui-global-events.js:34`
   （`onclick = doClear`）、以及 `tests/clear-no-reseed.test.js:26` 与

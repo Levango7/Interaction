@@ -15,6 +15,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
+import { autoDangerConfirm } from "./helpers/autoDangerConfirm.js";
 
 const PREFIX = "wb_agent_";
 
@@ -61,6 +62,10 @@ function stubImport(win, content) {
     }
   }
   win.FileReader = FakeFileReader;
+  /* 生产侧已改走 dangerConfirm 真浮层（原生 confirm 的替身对它无效）。
+     本文件测的是"跨设备 Key 迁移口径"，与确认 UX 无关 ⇒ 装自动接盘器，
+     语义与旧替身等价。返回停止句柄，调用方用完必须停（否则跨窗口泄漏计时器）。 */
+  return autoDangerConfirm(win);
 }
 
 function toastMsgs(spy) {
@@ -112,10 +117,11 @@ describe("P0-5 跨设备 · T1 浏览器态未勾选", { retry: 2 }, () => {
     // 新设备：全新窗口导入；剔除设备专属密钥 wb_agent___dk，模拟「device key 不相同」的跨设备场景
     delete data[PREFIX + "__dk"];
     const winB = freshWin();
-    stubImport(winB, JSON.stringify(data));
+    const stopConfirm = stubImport(winB, JSON.stringify(data));
     const toastSpy = vi.spyOn(winB, "toast");
     winB.doImport({ name: "b.json" });
     await waitFor(() => toastSpy.mock.calls.length > 0);
+    stopConfirm();
 
     expect(winB.getCfg().key).toBe("");
     expect(toastMsgs(toastSpy)).toContain("本机无 AI Key");
@@ -138,10 +144,11 @@ describe("P0-5 跨设备 · T2 浏览器态勾选（opt-in 明文携带）", { r
     // 新设备：剔除 wb_agent___dk，模拟跨设备（device key 不相同，旧密文无法解密）
     delete data[PREFIX + "__dk"];
     const winB = freshWin();
-    stubImport(winB, JSON.stringify(data));
+    const stopConfirm = stubImport(winB, JSON.stringify(data));
     const toastSpy = vi.spyOn(winB, "toast");
     winB.doImport({ name: "b.json" });
     await waitFor(() => toastSpy.mock.calls.length > 0);
+    stopConfirm();
 
     expect(winB.getCfg().key).toBe("sk-portable-bbb");
     expect(toastMsgs(toastSpy)).toContain("AI Key 已就绪");
@@ -167,10 +174,11 @@ describe("P0-5 跨设备 · T3 Electron 态", { retry: 2 }, () => {
 
     const winB = freshWin();
     winB.electronAPI = { getAiConfig: async () => ({ keySet: false }), setAiConfig: async () => {} };
-    stubImport(winB, JSON.stringify(data));
+    const stopConfirm = stubImport(winB, JSON.stringify(data));
     const importSpy = vi.spyOn(winB, "toast");
     winB.doImport({ name: "b.json" });
     await waitFor(() => importSpy.mock.calls.length > 0);
+    stopConfirm();
 
     expect(winB.getCfg().enabled).toBe(true);
     expect(winB.getCfg().key).toBe("");
@@ -190,10 +198,11 @@ describe("P0-5 跨设备 · T4 未启用 AI 护栏（向后兼容）", { retry: 
     expect(data._portableKey).toBeUndefined();
 
     const winB = freshWin();
-    stubImport(winB, JSON.stringify(data));
+    const stopConfirm = stubImport(winB, JSON.stringify(data));
     const importSpy = vi.spyOn(winB, "toast");
     winB.doImport({ name: "b.json" });
     await waitFor(() => importSpy.mock.calls.length > 0);
+    stopConfirm();
 
     const all = toastMsgs(exportSpy) + " || " + toastMsgs(importSpy);
     expect(all).not.toContain("本机无 AI Key");

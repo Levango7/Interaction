@@ -19,6 +19,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
+import { autoDangerConfirm } from "./helpers/autoDangerConfirm.js";
 
 /** 取全新 window 并清空 storage，获得干净状态（active 仍为默认 "office"） */
 function freshWin() {
@@ -228,11 +229,15 @@ describe("P0-4 导入损坏 · 用例 C：doImport 文件损坏不崩溃 + 错�
 
     let threw = false;
     try {
+      /* 本用例测的是"合法文件能正常恢复、成功 toast"，与确认 UX 无关 ⇒ 装自动接盘器
+         （生产侧已改走 dangerConfirm 真浮层，loadApp 的 confirm 替身对它无效）。 */
+      const stopConfirm = autoDangerConfirm(win);
       win.doImport({ name: "good.json" });
       // 同上：轮询等待异步 onload 完成（最多 2s），根治全量并发下的 30ms 竞态
       await vi.waitFor(() => {
         expect(toastSpy).toHaveBeenCalledWith("导入成功，数据已恢复", "ok");
       }, { timeout: 2000, interval: 20 });
+      stopConfirm();
     } catch (e) {
       threw = true;
     }

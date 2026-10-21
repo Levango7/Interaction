@@ -24,6 +24,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
+import { autoDangerConfirm } from "./helpers/autoDangerConfirm.js";
 
 const PREFIX = "wb_agent_";
 const AUTO_BACKUP = PREFIX + "autobackup";
@@ -65,6 +66,10 @@ function stubImport(win, content) {
     }
   }
   win.FileReader = FakeFileReader;
+  /* 生产侧已改走 dangerConfirm 真浮层（原生 confirm 的替身对它无效）。
+     本文件测的是"导入保持宽容/对称性"，与确认 UX 无关 ⇒ 装自动接盘器，
+     语义与旧替身等价。返回停止句柄，调用方用完必须停（否则跨窗口泄漏计时器）。 */
+  return autoDangerConfirm(win);
 }
 
 function waitFor(predicate, timeout = 5000, interval = 20) {
@@ -189,10 +194,11 @@ describe("批次② P2-1 对偶 · 导入保持宽容（有意不对称）", { r
       [DK]: DK_RAW,
       [AUTO_BACKUP]: JSON.stringify({ _ts: 9 }),
     };
-    stubImport(win, JSON.stringify(fileData));
+    const stopConfirm = stubImport(win, JSON.stringify(fileData));
     win.doImport({ name: "legacy.json" });
 
     await waitFor(() => win.localStorage.getItem(DK) === DK_RAW);
+    stopConfirm();
     expect(win.localStorage.getItem(AUTO_BACKUP)).toBe(JSON.stringify({ _ts: 9 }));
     expect(win.getTasks().some((t) => t.id === "t-legacy")).toBe(true);
   });
