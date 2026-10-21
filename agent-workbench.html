@@ -6431,10 +6431,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.135"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.136"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261020b";
+const BUILD_TAG = "20261021a";
 
 
 
@@ -32221,8 +32221,8 @@ function bindScenario(){
     if(_tryMoveKanbanCardLocal(id, fromSt, st)) return;
     render();
   });
-  $$("[data-del]").forEach(b=> b.onclick=()=>{
-    if(!confirm(t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）"))) return;
+  $$("[data-del]").forEach(b=> b.onclick=async ()=>{
+    if(!await dangerConfirm({ message: t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）") })) return;
     const tasks=getTasks();
     const task =tasks.find(x=>x.id===b.dataset.del);
     if(task && !task.deletedAt){
@@ -32233,8 +32233,8 @@ function bindScenario(){
     render();
   });
   $$("[data-edit]").forEach(b=> b.onclick=()=> openTaskEdit(b.dataset.edit)); // A1：任务编辑弹窗
-  $$("[data-rdel]").forEach(b=> b.onclick=()=>{
-    if(!confirm(t("confirm.deleteRecord","删除这条记录？"))) return;
+  $$("[data-rdel]").forEach(b=> b.onclick=async ()=>{
+    if(!await dangerConfirm({ message: t("confirm.deleteRecord","删除这条记录？") })) return;
     const recId = b.dataset.rdel;
     const target = getRec(active).find(r=>r.id===recId);
     // v3.4.5 G1 修复：记录删除时同步清理 IDB 中的图片 blob（img_<recId>）——
@@ -32383,7 +32383,7 @@ function setupKanbanKeyboard(){
   const main = $("#main");
   if(!main || main._kbdBound) return;
   main._kbdBound = true;
-  main.addEventListener("keydown", e=>{
+  main.addEventListener("keydown", async e=>{
     const card = e.target.closest(".kcard[data-drag]");
     if(!card) return;
     // 焦点在卡片内的按钮/输入上时不劫持（保留原生行为）
@@ -32393,7 +32393,7 @@ function setupKanbanKeyboard(){
     if(e.key === "Enter"){ e.preventDefault(); openTaskEdit(id); }
     else if(e.key === "Delete"){
       e.preventDefault();
-      if(!confirm(t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）"))) return;
+      if(!await dangerConfirm({ message: t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）") })) return;
       const tasks = getTasks();
       const tk = tasks.find(x=>x.id===id);
       if(tk && !tk.deletedAt){ tk.deletedAt = Date.now(); setTasks(tasks); } // 与 UI 删除按钮同语义
@@ -32549,8 +32549,8 @@ function _bindCardButtons(card){
   });
   card.querySelectorAll("[data-del]").forEach(b => {
     if(b._bound) return; b._bound = true;
-    b.onclick = () => {
-      if(!confirm(t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）"))) return;
+    b.onclick = async () => {
+      if(!await dangerConfirm({ message: t("confirm.deleteTask","删除这条任务？（将进入回收站，可恢复）") })) return;
       const tasks = getTasks();
       const task = tasks.find(x => x.id === b.dataset.del);
       if(task && !task.deletedAt){ task.deletedAt = Date.now(); setTasks(tasks); }
@@ -32668,12 +32668,17 @@ function batchComplete(){
 }
 /**
  * 批量软删除选中任务。返回成功删除数。
- * @returns {number}
+ * ⚠️ 本函数是 async（要等 dangerConfirm 浮层），所以**返回的是 Promise<number>**。
+ * 调用方（下方 `bindBatchToolbar`）写的是 `await batchDelete(); render();`。
+ * 变异验证实测：**不 await 其实也能最终刷新界面** —— 删除走 `setTasks`，其数据广播会
+ * 触发整体 render。所以 await 不是"必须"，保留它的理由是：刷新发生在删除之后、语义
+ * 清晰，且不把正确性押在"setTasks 一定会广播"这个隐式副作用上。
+ * @returns {Promise<number>}
  */
-function batchDelete(){
+async function batchDelete(){
   const ids = getBatchSelected();
   if(ids.length === 0) return 0;
-  if(!confirm(t("confirm.batchDelete","确认删除 ") + ids.length + t("confirm.batchDeleteSuffix"," 个任务？（将进入回收站，可恢复）"))) return 0;
+  if(!await dangerConfirm({ message: t("confirm.batchDelete","确认删除 ") + ids.length + t("confirm.batchDeleteSuffix"," 个任务？（将进入回收站，可恢复）") })) return 0;
   const tasks = getTasks();
   let n = 0;
   ids.forEach(function(id){
@@ -32782,7 +32787,10 @@ function bindBatchToolbar(){
   const btnCancel = $("#btnBatchCancel");
   const btnSelectAll = $("#btnBatchSelectAll");
   if(btnComplete) btnComplete.onclick = function(){ batchComplete(); render(); };
-  if(btnDelete) btnDelete.onclick = function(){ batchDelete(); render(); };
+  /* batchDelete 是 async：await 完再 render，让刷新发生在删除之后、语义更清晰，
+     且不依赖"setTasks 一定会广播"这个隐式副作用。
+     实测不 await 也能最终刷新（广播会补上），但会多跑一次多余的 render。 */
+  if(btnDelete) btnDelete.onclick = async function(){ await batchDelete(); render(); };
   if(btnMove) btnMove.onclick = function(){
     const sel = $("#batchMoveTarget");
     if(sel && sel.value){ batchMoveScenario(sel.value); render(); }
@@ -38609,9 +38617,9 @@ function renderScBox(){
     const key = b.closest(".chain-row").getAttribute("data-sc");
     resetBuiltinOverride(key); toast(t("msg.restoredDefault","已恢复默认"),"ok"); openDrawerRefresh();
   });
-  box.querySelectorAll(".sc-del").forEach(b=> b.onclick=()=>{
+  box.querySelectorAll(".sc-del").forEach(b=> b.onclick=async ()=>{
     const key = b.closest(".chain-row").getAttribute("data-sc");
-    if(!confirm(t("confirm.deleteScenario","确定删除该场景？（场景下有任务时不可删除）"))) return;
+    if(!await dangerConfirm({ message: t("confirm.deleteScenario","确定删除该场景？（场景下有任务时不可删除）") })) return;
     const r = removeCustomScenario(key);
     if(!r.ok){ toast(r.err||t("msg.deleteFailed","删除失败"),"warn"); return; }
     toast(t("msg.scenarioDeleted","场景已删除"),"ok"); openDrawerRefresh();
@@ -38990,12 +38998,12 @@ function dupProfile(){
   renderProfileSelect();
 }
 /* 删除当前 active profile（至少保留 1 个） */
-function delProfile(){
+async function delProfile(){
   const cfg = getCfg();
   if(!cfg || !Array.isArray(cfg.profiles) || cfg.profiles.length <= 1) return;
   const ap = getActiveProfile();
   if(!ap) return;
-  if(!confirm(t("profile.confirmDelete","确定删除 Profile「")+(ap.name||t("common.unnamed","未命名"))+t("profile.confirmDeleteSuffix","」？此操作点「保存设置」后生效。"))) return;
+  if(!await dangerConfirm({ message: t("profile.confirmDelete","确定删除 Profile「")+(ap.name||t("common.unnamed","未命名"))+t("profile.confirmDeleteSuffix","」？此操作点「保存设置」后生效。") })) return;
   // v3.1：接入回收站——保存被删除的 profile 快照
   try{
     addToRecycleBin("config",
@@ -39458,11 +39466,11 @@ function openTemplateModal(){
   $("#sceneTemplateModal").onclick = (e)=>{ if(e.target === $("#sceneTemplateModal")) close(); };
   document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") close(); }, { signal: _ac.signal });
   $$("#sceneTemplateModal [data-tpl-import]").forEach(btn => {
-    btn.onclick = ()=>{
+    btn.onclick = async ()=>{
       const idx = parseInt(btn.getAttribute("data-tpl-import"), 10);
       const tpl = SCENE_TEMPLATES[idx];
       if(!tpl) return;
-      if(!confirm(t("tpl.confirmImport", "确定导入模板「")+tpl.name+t("tpl.confirmImportMid", "」？将创建 ")+tpl.tasks.length+t("tpl.confirmImportSuffix", " 个任务。"))) return;
+      if(!await dangerConfirm({ message: t("tpl.confirmImport", "确定导入模板「")+tpl.name+t("tpl.confirmImportMid", "」？将创建 ")+tpl.tasks.length+t("tpl.confirmImportSuffix", " 个任务。") })) return;
       const r = applyTemplate(tpl);
       if(!r.ok){ toast(r.err||t("tpl.importFailed", "导入失败"), "warn"); return; }
       close();
@@ -39527,11 +39535,11 @@ function renderPluginBox(){
   });
   // 卸载按钮
   box.querySelectorAll(".plugin-unload-btn").forEach(btn => {
-    btn.onclick = () => {
+    btn.onclick = async () => {
       const id = btn.getAttribute("data-plugin-unload");
       const p = getPlugin(id);
       if(!p) return;
-      if(!confirm(t("plugin.confirmUnload","确定卸载插件「")+p.name+t("plugin.confirmUnloadSuffix","」？"))) return;
+      if(!await dangerConfirm({ message: t("plugin.confirmUnload","确定卸载插件「")+p.name+t("plugin.confirmUnloadSuffix","」？") })) return;
       const ok = unloadPlugin(id);
       if(!ok){ toast(t("plugin.unloadFailed","卸载失败"), "warn"); return; }
       toast(t("plugin.unloadedPrefix","已卸载插件「")+p.name+t("plugin.unloadedSuffix","」"), "ok");
@@ -39693,10 +39701,10 @@ function renderThemeEditor(){
         };
       });
       listEl.querySelectorAll("[data-theme-delete]").forEach(btn => {
-        btn.onclick = () => {
+        btn.onclick = async () => {
           const id = btn.getAttribute("data-theme-delete");
           const theme = customs[id];
-          if(!confirm(t("theme.confirmDelete", "确定删除自定义主题「")+(theme&&theme.name||id)+t("theme.confirmDeleteSuffix", "」？"))) return;
+          if(!await dangerConfirm({ message: t("theme.confirmDelete", "确定删除自定义主题「")+(theme&&theme.name||id)+t("theme.confirmDeleteSuffix", "」？") })) return;
           AppBridge.deleteCustomTheme(id);
           renderThemeEditor();
           try{ toast(t("theme.deleted", "已删除主题"), "ok"); }catch(e){}
