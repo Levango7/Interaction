@@ -42,6 +42,24 @@
 
 ## 条目
 
+### [2026-10-22 07:20 UTC+8] Qoder 主会话（v3.7.136 已发 · 布局 v2 收工释放）
+- 状态：**已收工（释放）**。`91d64c0` + tag `v3.7.136`；CI 四腿 + **Electron 产物** + Deploy 全 success；
+  e2e **150 passed / 0 flaky**（含布局 v2 的 7 例 ×2 项目与 confirm 迁移各批路径测）。
+- **线上已核**（cache-buster）：`VERSION=3.7.136`、`BUILD_TAG=20261021a`、
+  SW `CACHE_VERSION=v3.7.136-20261021224535`、`bytes=3,953,344`、尾部 `</html>`；
+  布局标记：`id="taskRail"` / `chat-panel collapsed` 默认态 / `function renderTaskRail` 全在线。
+- **本版内容**：布局 v2（对话坞默认收起 + 右栏今日任务轨 + 沉浸页隐藏 + 两条 e2e 回归修复 + 空 catch 门禁修复）
+  ＋ 原生 confirm 迁移第二~五批（35→12）＋ 台账 R-31（手机聊天不可达，登记未修）。
+- ⚠️ **两条过程事实，供下一位判读**：
+  ① 第五批（`433f5a9`）自身的 CI 在 runner 队列积压 **40 分钟未启动**；发版提交是它的**超集**，
+     按 R9 以发版 CI 为终判 —— 不是"第五批红"，它在发版 CI 里被完整覆盖。
+  ② 本次 Pages 构建从 `22:45:39Z` 到 `23:11:46Z` 用了 **26 分钟**（历史 9–18 分钟）；
+     Deploy success 之后第一次 curl 仍是 3.7.135 —— 再次印证"Deploy success ≠ 线上已更新"，判线上必须
+     等 `pages/builds/latest=built` 再带 cache-buster 取 `VERSION`。
+- **剩余（下一轮）**：R-31 手机聊天（≤767 补 `.show` 通路或改底部坞）；P1-6 绑定覆盖率门禁；P1-5 docs 归档；
+  confirm 仍 12 处（其中 `batchDelete` / `webdavSyncUpload|Download` 有返回值，确认须前置到调用点）。
+- 版本号：**未占 3.7.137**（下一号以 `AGENTS.md` §二 为准）。
+
 ### [2026-10-22 06:05 UTC+8] Qoder 主会话（原生 confirm 迁移第六批 12→0 · 开工声明）
 - 状态：进行中（v3.7.136 已由对方会话发布为 `91d64c0`，我的第二~五批均并入；tag /
   CHANGELOG / VERSION 三要素我已核实无误。我推 `433f5a9` 触发的 CI run 被 `91d64c0` 的
