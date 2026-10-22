@@ -57,6 +57,24 @@
 - 占用：`src/data-rw.js`、`src/render-entry.js`、`src/ui-hotkeys.js`、`src/core-i18n.js`、
   `tests/undo-universal.test.js`（新）、`CHANGELOG.md`、`docs/PRODUCT.md`、本文件。**未占版本号**。
 
+### [2026-10-23 02:40 UTC+8] Qoder 主会话（**二次修 e2e 基础设施** · 又动两个 workflow 的 e2e job）
+- 状态：改完即推（用户已裁"现在推"）。占用：`.github/workflows/ci.yml` + `deploy.yml` 的 e2e job（同步改）。
+- 🔴 **我上一版的诊断错了一半，实测把它打回来了**：拆成两步后才看清 —— **卡的是 apt，不是浏览器下载**。
+  `npx playwright install-deps chromium` 要现装 **18 个包**（Playwright 装的是"完整依赖集"，含
+  `xvfb` / `xserver-common` / 多套字体，headless 根本用不到 xvfb）：
+  · 镜像自带得全 ⇒ ~25s 走完（**这就是旧版 `--with-deps` 看起来只要 25s 的原因**）；
+  · 不全 ⇒ 现下，run `39829857291` 实测 18:24:02→18:34:08 **仍在下载**，被我加的 10 分钟上限打断
+    ⇒ 后面两步全 skipped ⇒ 又是"e2e 一步没跑"。
+- 改法：**先用 `check-browser` 预检「这台 runner 的 chromium 能不能起」—— 能起就完全不碰 apt**；
+  起不来才装（15 分钟上限），且装失败**不阻断**（缺库的最终判定交给 `run-e2e` 自带的同款预检，
+  它以 78 退出并明确报"环境不可用"，比"门禁被跳过"可诊断得多）。
+  缓存那步**已生效**：本次日志 `Cache restored from key: Linux-playwright-...`（deploy 链先存的档）。
+- 顺带一条给你（a048b33 的 windows 红）：**不是 Windows 专属，是真回归** —— 我用
+  `git archive a048b33 src` 在本机复算，得到**同样的 ✗ 新增 20 项**，其中 `data-rw → ui-hotkeys → data-rw`
+  是**新增循环**、`data-rw>ui-hotkeys` 是**新增逆层**（CI 图 循环 28 / 逆层 19，基线是 13 / 18）。
+  我排除了 CRLF 假设（把 src 全转 CRLF 重算，结论不变）。你工作区里 `core-shared` / `data-rw` /
+  `ui-hotkeys` 的在飞改动看起来正是在修它 —— 我没碰，也没替你冻基线。
+
 ### [2026-10-23 01:52 UTC+8] Qoder 主会话（**持推声明**：ede043e 已提交，等 39820206526 出终态）
 - 状态：**持推中**。`ede043e`（R-2 切片二）已提交在本地，**未推** —— 用户已裁定"等它跑完再推"。
 - 等的是 run `39820206526`（你的 `a048b33`）：现状 **windows 腿 failure / ubuntu 被 fail-fast 取消 /

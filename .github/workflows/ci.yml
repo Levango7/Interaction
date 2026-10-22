@@ -144,21 +144,37 @@ jobs:
       #   处置：浏览器目录进缓存（键随 package-lock 变，即随 @playwright/test 版本变），
       #   并把「装系统依赖」与「下浏览器」拆成两步、各给 10 分钟上限；缓存命中时**完全不走下载**。
       #   ⚠️ 与 deploy.yml 的 e2e job 必须同步改：`tests/ci-workflow-guard.test.js` 逐项比对两边的 run 步骤。
+      #
+      # v3.7.138 第二次修（实测 run 39829857291 打脸上一版）：把 `--with-deps` 拆成两步后**才看清**
+      #   卡的是 **apt 而不是浏览器下载** —— `install-deps` 要现装 18 个包（Playwright 装的是
+      #   "完整依赖集"，含 xvfb / xserver / 多套字体，headless 根本用不到 xvfb）：
+      #     · 镜像自带得全 ⇒ ~25s 走完（这也是旧版 `--with-deps` 看起来只要 25s 的原因）；
+      #     · 不全 ⇒ 现下，实测 18:24:02 → 18:34:08 **仍在下载**，被 10 分钟上限打断，
+      #       后面两步全 skipped ⇒ 又是"e2e 一步没跑"（正是本轮要消灭的形状）。
+      #   改法：先用 `check-browser` 判「这台 runner 的 chromium 能不能起」——**能起就完全不碰 apt**；
+      #   起不来才装，且装失败也**不阻断**（缺库的最终判定交给 `run-e2e` 自带的同款预检：
+      #   它以 78 退出并明确报"环境不可用"，比"门禁被跳过"可诊断得多）。
       - name: 缓存 Playwright 浏览器
         uses: actions/cache@v4
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-      # ⚠️ 下面两步**必须写成同行 `- run:`**：`tests/ci-workflow-guard.test.js` 与
+      # ⚠️ 下面三步**必须写成同行 `- run:`**：`tests/ci-workflow-guard.test.js` 与
       #   `scripts/verify-ci-order.mjs` 的解析器都只认「`- run:` 同行」，写成 `- name:` 换行式
       #   会让这一步从两边的比对里**静默消失**（守卫因此恒真 = 空 check 判绿，本仓有前科）。
-      #   故 `if` / `timeout-minutes` 一律放在 `run:` 之后。
-      - run: npx playwright install-deps chromium
-        timeout-minutes: 10
+      #   故 `if` / `timeout-minutes` / `continue-on-error` 一律放在 `run:` 之后。
       - run: npx playwright install chromium
         if: steps.pw-cache.outputs.cache-hit != 'true'
         timeout-minutes: 10
+      - run: node scripts/check-browser.mjs
+        id: cb
+        timeout-minutes: 5
+        continue-on-error: true
+      - run: npx playwright install-deps chromium
+        if: steps.cb.outcome == 'failure'
+        timeout-minutes: 15
+        continue-on-error: true
       - name: Run E2E (full user flow)
         run: npm run e2e
         timeout-minutes: 10

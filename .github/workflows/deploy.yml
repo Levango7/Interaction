@@ -191,19 +191,29 @@ jobs:
       #   依据（实测，2026-10-22）：run 39801024862 attempt 1 的这一步跑了 58m50s 仍未结束，
       #   其后的 `Run E2E` 被 skipped ⇒ 那一次 e2e 一步没跑；正常 run 里同一 step 只要 25s。
       #   病灶：① 每次现拉 ~301MB 浏览器；② 该 step 无 timeout-minutes，stall 时一直挂到 job 上限。
+      # v3.7.138 第二次修（实测 run 39829857291）：**卡的是 apt 不是下载** —— install-deps 要现装
+      #   18 个包（含 xvfb / xserver / 字体），镜像自带得全时 25s、不全时实测跑了 10 分钟仍在下载。
+      #   故改为「先预检 chromium 能不能起，能起就完全不碰 apt」；装失败也不阻断（最终由 run-e2e
+      #   自带的同款预检以 78 明确报"环境不可用"，比"门禁被跳过"可诊断）。见 ci.yml 同段完整注释。
       - name: 缓存 Playwright 浏览器
         uses: actions/cache@v4
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-      # ⚠️ 下面两步**必须写成同行 `- run:`**（理由同 ci.yml）：两个解析器都只认这种写法，
-      #   换行式会让步骤从比对里静默消失。故 `if` / `timeout-minutes` 放在 `run:` 之后。
-      - run: npx playwright install-deps chromium
-        timeout-minutes: 10
+      # ⚠️ 下面三步**必须写成同行 `- run:`**（理由同 ci.yml）：两个解析器都只认这种写法，
+      #   换行式会让步骤从比对里静默消失。故 `if` / `timeout-minutes` / `continue-on-error` 一律放在 `run:` 之后。
       - run: npx playwright install chromium
         if: steps.pw-cache.outputs.cache-hit != 'true'
         timeout-minutes: 10
+      - run: node scripts/check-browser.mjs
+        id: cb
+        timeout-minutes: 5
+        continue-on-error: true
+      - run: npx playwright install-deps chromium
+        if: steps.cb.outcome == 'failure'
+        timeout-minutes: 15
+        continue-on-error: true
       - name: Run E2E (full user flow)
         run: npm run e2e
         timeout-minutes: 10
