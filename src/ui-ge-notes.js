@@ -668,7 +668,7 @@ function openKbPasteImport(){
   // lint-xss-ok: 模板里的插值全部经 esc(t())；用户输入只在读取端使用
   wrap.innerHTML = '<div class="viz-modal-card u-max-w-560">'
     + '<div class="viz-modal-header"><h2 id="kbPasteTitle">' + esc(t("p5.kbPasteTitle", "粘贴文本导入")) + '</h2>'
-    + '<button type="button" class="btn-ghost" id="kbPasteClose" aria-label="' + esc(t("common.close", "关闭")) + '">✕</button></div>'
+    + '<button type="button" class="btn-ghost" id="kbPasteClose" aria-label="' + esc(t("common.close", "关闭")) + '"><span style="display:flex;width:var(--icon-set);height:var(--icon-set)">' + UI_ICONS.close + '</span></button></div>'
     + '<div class="u-pad-5-6">'
     + '<label for="kbPasteName">' + esc(t("p5.kbPasteName", "文件名（显示在知识库列表）")) + '</label>'
     + '<input type="text" id="kbPasteName" maxlength="120" placeholder="合同-2026-10.txt">'
