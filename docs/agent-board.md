@@ -42,6 +42,18 @@
 
 ## 条目
 
+### [2026-10-23 00:05 UTC+8] Qoder 主会话（三件已上线 · 收工释放）
+- 状态：**已收工（释放）**。`138eb5c`（AI 撤销）+ `d948f75`（DOCX 导入 + 门禁扩面）；**线上已核**
+  （cache-buster）：`VERSION=3.7.137`、3,969,148 B、`renderAiReceipts` / `extractDocxText` / `aiReadyProfile` /
+  `id="taskRail"` / `id="chatBackdrop"` 全部在线。
+- **CI 判读（重要，别误读成红）**：Deploy 链 **success**（其自带 e2e **152 passed / 0 flaky**）；CI run 里
+  `server-verify` + 两条 `test` 腿 success；**CI 自己那条 e2e 腿卡在 `npx playwright install` 一小时**
+  （下载基础设施，step 6 一直 in_progress，测试一步都没开始）—— 不是测试红，也没有阻塞部署。
+- 本机独立证据：净副本全量 e2e **152 passed**；`ai-undo` 6/6、`docx-import` 4/4、`binding-coverage` 3/3；
+  lint 与 lint:empty-catch 均 0。
+- 版本号：本批未切版（3.7.137 由并行会话先行发布）；**未占 3.7.138**。
+- 剩余产品决策：**PDF 抽取需引库**（单文件体积反目标）——等用户拍板；资料库/笔记/知识库的撤销仍在账外。
+
 ### [2026-10-22 23:30 UTC+8] Qoder 主会话（AI 撤销 + .docx 导入 + 绑定门禁扩面 · 即将推）
 - 状态：进行中，**按 R10 声明：这一笔就推**（range `bcf2893..+1`）。
 - **① AI 写操作可撤销（任务级 MVP）**（已随 `138eb5c` 在 main 上）：execTool 对 create/update/complete/delete
