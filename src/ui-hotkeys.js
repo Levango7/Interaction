@@ -60,7 +60,7 @@ function showUndoToast(domain){
   const old = document.getElementById("undoToast");
   if(old) old.remove();
   if(_undoToastTimer) clearTimeout(_undoToastTimer);
-  const WHAT = { task:t("undo.what.task", "任务"), rec:t("undo.what.rec", "资料"), note:t("undo.what.note", "笔记") };
+  const WHAT = { task:t("undo.what.task", "任务"), rec:t("undo.what.rec", "资料"), note:t("undo.what.note", "笔记"), rag:t("undo.what.rag", "文件知识") };
   const el = document.createElement("div");
   el.className = "toast info";
   el.id = "undoToast";

@@ -560,13 +560,14 @@ function _bindKnowledgeBaseEvents(){
  * 内容哈希 fnv1aHex 在 core —— 全部正向边。导入只写存储 + emitDataMutate 广播，
  * 建索引由 ai-tools 的 ragSyncIncremental（4s 防抖）完成：本块不发网络请求。
  * ============================================================ */
-const RAG_FILE_TEXT_EXT = ["txt", "md", "markdown", "html", "htm", "csv", "json", "log", "docx"];
+const RAG_FILE_TEXT_EXT = ["txt", "md", "markdown", "html", "htm", "csv", "json", "log", "docx", "pdf"];
 /** 按扩展名准入并预清洗（html 剥 script/style/标签取正文）；不支持返回 null */
 function _ragFileText(name, raw, preExtracted){
   const ext = (String(name || "").split(".").pop() || "").toLowerCase();
   if(!preExtracted && RAG_FILE_TEXT_EXT.indexOf(ext) < 0) return null;
-  /* .docx 必须先经 extractDocxText 解出文本（ZIP 二进制不能直接当文本读） */
+  /* .docx / .pdf 必须先经各自抽取器解出文本（二进制不能直接当文本读） */
   if(ext === "docx" && !preExtracted) return null;
+  if(ext === "pdf" && !preExtracted) return null;
   let text = String(raw || "");
   if(ext === "html" || ext === "htm"){
     try{
@@ -602,10 +603,74 @@ function _ragChunkText(text){
   flush();
   return chunks;
 }
+
+/* ---------- PDF 文本抽取（pdfjs-dist 3.11 UMD，随 vendor 交付、按需加载） ----------
+ * 为什么钉 3.11：4.x 起只发 ESM，file:// 形态会被 CORS 拦；3.11 是最后的 UMD 经典脚本线，
+ * 单文件本地打开与线上/Electron 两种形态都能用。只抽文本、不渲染页面；
+ * isEvalSupported:false 规避 CVE-2024-4367 的字体脚本执行路径。扫描件没有文本层 → 返回空串，
+ * 由调用方提示改用 OCR/粘贴导入。 */
+let _pdfjsPromise = null;
+function _pdfjsUrl(name){
+  try{ return new URL("vendor/pdfjs/" + name, document.baseURI).href; }catch(_e){ return "vendor/pdfjs/" + name; }
+}
+function _loadPdfjs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsPromise) return _pdfjsPromise;
+  _pdfjsPromise = new Promise(function(resolve, reject){
+    const s = document.createElement("script");
+    s.src = _pdfjsUrl("pdf.min.js");
+    s.async = true;
+    s.onload = function(){
+      if(!window.pdfjsLib){ reject(new Error("pdfjs not found")); return; }
+      try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = _pdfjsUrl("pdf.worker.min.js"); }catch(_e){ /* 配置失败仍可走主线程回退 */ }
+      resolve(window.pdfjsLib);
+    };
+    s.onerror = function(){ reject(new Error("pdfjs load failed")); };
+    document.head.appendChild(s);
+  }).catch(function(e){ _pdfjsPromise = null; throw e; });
+  return _pdfjsPromise;
+}
+/** textContent.items → 可读文本：hasEOL 断行；仅在「拉丁/数字接拉丁/数字」时补空格，避免中文块间被插入空格 */
+function _pdfItemsToText(items){
+  let out = "";
+  (items || []).forEach(function(it){
+    if(!it || typeof it.str !== "string") return;
+    /* 空格要补在**当前词前**：若补在词后，带 hasEOL 的末词会先走进换行分支而丢掉空格（单测抓到） */
+    if(/[A-Za-z0-9]$/.test(out) && /^[A-Za-z0-9]/.test(it.str)) out += " ";
+    out += it.str;
+    if(it.hasEOL) out += "\n";
+  });
+  return out.replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+}
+/**
+ * 抽取 PDF 正文文本（最多 300 页；扫描件返回空串）
+ * @param {ArrayBuffer} arrayBuffer
+ * @returns {Promise<string>}
+ */
+async function extractPdfText(arrayBuffer){
+  const lib = await _loadPdfjs();
+  const task = lib.getDocument({ data: new Uint8Array(arrayBuffer), isEvalSupported: false, useSystemFonts: true });
+  const doc = await task.promise;
+  try{
+    const pages = [];
+    const total = Math.min(doc.numPages || 0, 300);
+    for(let i = 1; i <= total; i++){
+      const page = await doc.getPage(i);
+      const tc = await page.getTextContent();
+      const txt = _pdfItemsToText(tc && tc.items);
+      if(txt) pages.push(txt);
+      try{ page.cleanup(); }catch(_e){ /* 单页清理失败不阻塞结果 */ }
+    }
+    return pages.join("\n\n").trim();
+  }finally{
+    try{ doc.destroy(); }catch(_e){ /* 关闭失败不阻塞结果 */ }
+  }
+}
+
 /** 导入纯文本（File 选择与测试共用的核心路径）。返回 {added, replaced} 或 null（被拒） */
 async function ragImportText(name, rawText, opts){
   const text = _ragFileText(name, rawText, !!(opts && opts.preExtracted));
-  if(text === null){ try{ toast(t('p5.kbFilesUnsupported', '暂不支持该类型（二进制如 PDF/DOCX 请先转成纯文本）'), "warn"); }catch(e){} return null; }
+  if(text === null){ try{ toast(t('p5.kbFilesUnsupported', '暂不支持该类型（支持纯文本、.docx、.pdf；扫描件请先做文字识别或粘贴文本）'), "warn"); }catch(e){} return null; }
   if(text.length > RAG_FILE_MAX_CHARS){ try{ toast(t('p5.kbFilesTooBig', '文件过大（上限 256KB 文本），请拆分后导入'), "warn"); }catch(e){} return null; }
   const files = getRagFiles();
   const replaced = files.some(function(f){ return f.name === name; });
@@ -627,7 +692,9 @@ async function ragImportFiles(fileList){
   const arr = Array.prototype.slice.call(fileList || []);
   let ok = 0, total = 0, replaced = false;
   for(const f of arr){
-    const isDocx = /.docx$/i.test(String(f.name || ""));
+    const nm = String(f.name || "");
+    const isDocx = /\.docx$/i.test(nm);
+    const isPdf = /\.pdf$/i.test(nm);
     let text = "", pre = false;
     if(isDocx){
       try{
@@ -636,6 +703,19 @@ async function ragImportFiles(fileList){
         pre = true;
       }catch(e){
         try{ toast(t("p5.docxExtractFail", "无法解析该 .docx（") + ((e && e.message) || e) + t("p5.docxExtractHint", "）。可先在 Word 里另存为 .txt 再导入"), "warn"); }catch(_e){ /* noop */ }
+        continue;
+      }
+    } else if(isPdf){
+      try{
+        const buf = await f.arrayBuffer();
+        text = await extractPdfText(buf);
+        pre = true;
+        if(!text.trim()){
+          try{ toast(t("p5.pdfEmpty", "PDF 中没有可提取的文字（可能是扫描件）；请先做文字识别，或改用「粘贴导入」"), "warn"); }catch(_e){ /* noop */ }
+          continue;
+        }
+      }catch(e){
+        try{ toast(t("p5.pdfExtractFail", "无法解析该 PDF（") + ((e && e.message) || e) + t("p5.pdfExtractHint", "）。若是扫描件，请先做文字识别，或改用「粘贴导入」"), "warn"); }catch(_e){ /* noop */ }
         continue;
       }
     } else {

@@ -265,6 +265,8 @@ jobs:
           cp service-worker.prod.js _deploy/service-worker.js
           # sql.js 本地副本（离线可用；缺失时前端会回退 CDN）
           mkdir -p _deploy/assets && cp -r assets/sql _deploy/assets/
+          # pdf.js 本地副本（PDF 导入；单文件拷贝形态没有 vendor/ 时导入会如实提示）
+          mkdir -p _deploy/vendor && cp -r vendor/pdfjs _deploy/vendor/
           # 创建 index.html 跳转
           echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=agent-workbench.html"></head></html>' > _deploy/index.html
       - name: Deploy to gh-pages

@@ -42,6 +42,28 @@
 
 ## 条目
 
+### [2026-10-23 05:20 UTC+8] Qoder 主会话（3.7.139：PDF 真解析 + 知识库文件撤销 · **按 R10：这一笔就推**）
+- 3.7.138 已上线核验：CI/Deploy/Electron 全 success；线上 `VERSION=3.7.138` / `BUILD_TAG=20261022b`
+  （Pages built `b240d4d`）。
+- 本笔（净副本 `wb-138`，基于 `bbc1159`）：
+  ① **PDF 真解析**：`pdfjs-dist@3.11.174`（最后一条 UMD 线，`file://` 可用；4.x 起 ESM 会被 CORS 拦）
+     的 `pdf.min.js` + worker + LICENSE 落 `vendor/pdfjs/`（~1.4MB，按需加载、不进主 HTML）；
+     `isEvalSupported:false` 规避 CVE-2024-4367，只抽文本不渲染；扫描件无文本层如实提示。
+     部署链（`_deploy/vendor`）与 Electron 打包（prebuild 复制 + `build.files`）都已带 vendor。
+  ② **通用撤销新增 rag 域**：知识库文件导入/同名替换/删除可撤销/重做；恢复后广播 `import`
+     让索引按 diff 重收敛；写失败（配额）不留假撤销步。
+  ③ i18n 中英齐备（`p5.pdf*`、`undo.what.rag`），accept/空态/粘贴提示同步。
+- ⚠️ **你正在改 `src/core-i18n.js`**：我在净副本也加了上述键（不同区域）。你要推之前先
+  `git pull --rebase`；**别用工作区版本整文件覆盖**，否则会丢这些键。
+- 证据：全量单测 **1957 passed / 0 断言失败**（唯一未报结果的 `notify-webhook` 单跑 27/27）；
+  全量 e2e **154 passed / 0 failed**（含新增 PDF spec：file:// 真 pdf.js + 坏 PDF 反向对照）；
+  `check:modules` / `lint` / `lint:icons` / `lint:empty-catch` / `lint:layers` / `lint:breakpoints` /
+  `lint:tokens` / `vendor:pdfjs:check` / `build:check` / `src:check` / `check:source-state` 全绿。
+- 版本：3.7.139（AGENTS 已登记、release.mjs 五源 bump、tag `v3.7.139`）。
+- 占用：`src/ui-ge-notes.js`、`src/data-rw.js`、`src/ui-hotkeys.js`、`src/core-i18n.js`（仅新增键）、
+  `vendor/pdfjs/*`、`scripts/vendor-pdfjs.mjs`、`package.json`/锁、`electron/package.json`、
+  `service-worker.js`、`.github/workflows/deploy.yml`、`.gitignore`、tests、文档。
+
 ### [2026-10-23 04:25 UTC+8] Qoder 主会话（发 3.7.138 稳定检查点 · **按 R10：这一笔就推**）
 - 状态：仓外净副本 `wb-138`（基于 `c0ba21c`）发版。共享树里你有在飞改动（`core-i18n` / `render-scene-main` /
   `ui-scene-bind` / batch-ops 测试），**我不动、也不在共享树 inject/extract**。你板上说 3.7.138 空闲，我占。

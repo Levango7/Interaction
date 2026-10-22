@@ -35,7 +35,11 @@ var PRECACHE_URLS = [
   // sql.js 本地副本：SQL Playground / RAG 离线可用。
   // 非关键（不在 CRITICAL_PRECACHE 内），缺失时安装仍成功，前端会自动回退 CDN。
   "./assets/sql/sql-wasm.js",
-  "./assets/sql/sql-wasm.wasm"
+  "./assets/sql/sql-wasm.wasm",
+  // pdf.js 本地副本：PDF 导入离线可用。非关键（不在 CRITICAL_PRECACHE 内），
+  // 单文件拷贝形态没有 vendor/ 时安装仍成功，导入时按需加载失败并如实提示。
+  "./vendor/pdfjs/pdf.min.js",
+  "./vendor/pdfjs/pdf.worker.min.js"
 ];
 
 // 同源静态资源扩展名（cache-first 命中范围）

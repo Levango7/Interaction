@@ -67,6 +67,9 @@ docs/archive/
 # 本地会话/工具目录
 .zcode/
 
+# Electron prebuild 复制过去的 vendor 产物（源头在仓库根 vendor/）
+electron/vendor/
+
 # 源块抽取的自动备份（本地用）
 _srcbackup/
 

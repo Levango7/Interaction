@@ -58,9 +58,9 @@ AppBridge.onExerciseSave = function(rec){
   }
 };
 
-/* 撤销/重做：按**域**快照（任务 / 资料库记录 / 笔记），上限 50 步。
- * 2026-10-23：从"任务专用"泛化为通用单步栈 —— 三类写入口（setTasks / setRec / saveNotes）在写前记快照；
- * 恢复时 _undoGuard 防重入，不会把"撤销"再记成一次新操作。
+/* 撤销/重做：按**域**快照（任务 / 资料库记录 / 笔记 / 知识库文件），上限 50 步。
+ * 2026-10-23：从"任务专用"泛化为通用单步栈 —— 写入口（setTasks / setRec / saveNotes / saveRagFiles）
+ * 在写前记快照；恢复时 _undoGuard 防重入，不会把"撤销"再记成一次新操作。
  * 边界：不做跨会话持久化、不做跨域事务（一次撤销只回退一个域的最后一次写）。 */
 let _undoStack = [];   // [{domain, sc, data(JSON), ts}]
 let _redoStack = [];
@@ -72,6 +72,7 @@ function _domainSnapshot(domain, sc){
   if(domain === "task") return JSON.stringify(getTasks());
   if(domain === "rec") return JSON.stringify(getRec(sc));
   if(domain === "note") return JSON.stringify(getNotes());
+  if(domain === "rag") return JSON.stringify(getRagFiles());
   return null;
 }
 
@@ -112,6 +113,11 @@ function _restoreEntry(e){
     if(e.domain === "task") setTasks(val);
     else if(e.domain === "rec") setRec(e.sc, val);
     else if(e.domain === "note") saveNotes(val);
+    else if(e.domain === "rag"){
+      saveRagFiles(val);
+      /* 文件列表变了，检索索引要按 diff 重新收敛（与导入/删除同一条广播） */
+      try{ emitDataMutate("import"); }catch(_e){ /* 索引失败不阻塞撤销 */ }
+    }
   }finally{ _undoGuard = false; }
 }
 /**
@@ -299,7 +305,10 @@ function getRagFiles(){
  * @returns {boolean} 是否保存成功
  */
 function saveRagFiles(files){
-  return save(PREFIX + RAG_FILES_KEY, files || []);
+  const prev = getRagFiles(); /* 写前快照：撤销要把整个文件列表（含块）恢复回去 */
+  const ok = save(PREFIX + RAG_FILES_KEY, files || []);
+  if(ok) _pushUndoEntry("rag", "", prev); /* 写失败不留假撤销步 */
+  return ok;
 }
 
 /* ---------- P1-b 自动备份（防抖快照，独立于手动导出） ---------- */
