@@ -342,7 +342,7 @@ function renderStorageUsage(){
       totalBytes += bytes;
       sizes.push({ k, bytes });
     }
-  }catch(_e){ /* 遍历失败时显示空态 */ }
+  }catch(e){ /* R-2 消解：原为全静默「遍历失败时显示空态」。这条更危险 —— 空态会让用户以为**存储是空的**，而实际可能是「有数据但读不出来」，占用进度条还停在 0%，与「快满了」正好相反。控制流不变（照旧按已累加的部分算百分比），只把失败留痕。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","storage usage scan failed（占用百分比可能偏低）: "+((e&&e.message)||e),{where:"_renderStorageBar"}); }catch(_){} }
   const pct = Math.min(100, Math.round(totalBytes / LS_LIMIT * 100));
   // 阈值三档：<70% 正常 / ≥70% warn / ≥85% danger
   fillEl.style.width = pct + "%";
@@ -2272,7 +2272,7 @@ function applyStartHash(){
 }
 
 (async function startup(){
-  try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
+  try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 —— 控制流不变，但**必须留痕**：加密不可用 = 此后写入的是明文，而用户会以为数据受设备密钥保护。这是安全面的静默降级，属 R-2 最该上报的一类。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","启动时 initCrypto 失败，将以明文运行: "+((e&&e.message)||e),{where:"startup"}); }catch(_){} }
   /* v3.7.66：飞书 / 钉钉凭据策略改为「仅会话内存、绝不落盘」——
      历史版本可能已把 appSecret / accessSecret（甚至当时不算敏感字段的 appId / accessKey）
      写进 wb_integration_providers，启动时一次性抹掉。放在 initCrypto 之后是因为

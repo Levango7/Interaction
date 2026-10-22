@@ -1346,7 +1346,7 @@ function _getSyncMeta() {
   try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || "{}") || {}; } catch (e) { return {}; }
 }
 function _setSyncMeta(patch) {
-  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(_getSyncMeta(), patch))); } catch (e) { /* 配额等：静默 */ }
+  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(_getSyncMeta(), patch))); } catch (e) { /* R-2 消解：原为全静默。写失败会让下次 _getSyncMeta() 回落 {}，把「上次同步时间 / etag」当成没有 —— 表现为重复全量同步或冲突误判，用户只觉得「同步怪怪的」。控制流不变（照旧继续并渲染），只把失败留痕到诊断面板。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","sync meta persist failed（下次可能重复全量同步 / 冲突误判）: "+((e&&e.message)||e),{where:"_setSyncMeta"}); }catch(_){} }
   _renderLastSync();
 }
 /* v3.7.58（安全）：云快照排除"密钥/本机控制类"键。
@@ -1449,7 +1449,7 @@ function _applyCloudSnapshot(data) {
     const pre = {};
     if (typeof allKeys === "function") allKeys().forEach(function (k) { const v = localStorage.getItem(k); if (typeof v === "string") pre[k] = v; });
     if (Object.keys(pre).length) save(PREFIX + "pre_restore_backup", { at: Date.now(), keys: pre });
-  } catch (e) { /* 备份失败不阻塞恢复 */ }
+  } catch (e) { /* 备份失败不阻塞恢复 —— 控制流保持（照旧继续恢复），但**必须留痕**：R-2/OD-003 的核心是「保护语义必须可被消费」，静默失败会让用户以为有回滚档而实际没有，是典型的假保护。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","pre-restore 备份写入失败（本次恢复将没有回滚档）: "+((e&&e.message)||e),{where:"_applyCloudSnapshot"}); }catch(_){} }
   /* v3.7.59 安全修正：入站必须与出站（_buildCloudSnapshot）对称地排除密钥/本机控制类键。
      此前只有出站排除，入站是「快照里有啥就写啥」——于是服务端（或被篡改/被劫持的链路）
      只要回传 wb_agent___dk（**设备密钥本体**），就会覆盖本机密钥；此后应用用攻击者已知的

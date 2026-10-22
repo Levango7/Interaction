@@ -9,6 +9,41 @@
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 
+### 2026-10-22 · R-2 存量 P0 空 catch 消解 · 切片一（78 → 71）
+
+- **范围**：只做本会话亲自改过、上下文最熟的 6 个文件 ——
+  `ui-backup-stats`(7) / `render-overview`(9) / `ui-drawer`(5) / `ui-global-events`(5) /
+  `ui-ge-integrations`(3) / `render-widgets`(3) 中的 P0。`ui-ge-api`(12) / `ai-tools`(9) /
+  `data-links`(5) / `ai-retry`(4) 及其余 11 文件共 46 处**不在本切片**（别人的地盘或我没碰过的
+  上下文，按 R6 不动）。
+- **改法**：严格限定为 R-2 标准式「**加观测、不改控制流**」—— 原静默继续的，改后依然继续，
+  只把失败留痕到诊断面板。跟随仓库既有约定
+  `try{ if(typeof pushDiag==="function") pushDiag(...); }catch(_){}`（`crypto.js` / `ai-tools.js`
+  已用几百次），**不为局部最优引入第二种风格**。
+- **实际只改了 7 处**（不是这 6 个文件的 32 处都改 —— 这是本片最重要的结论）：
+
+  | 位置 | 为什么值得上报 |
+  |---|---|
+  | `render-overview` `_setSyncMeta` | 写失败 → 下次把「上次同步时间 / etag」当成没有 → 重复全量同步或冲突误判 |
+  | `render-overview` `_applyCloudSnapshot` 恢复前备份 | 失败 = 用户以为有回滚档而实际没有（OD-003 的假保护） |
+  | `ui-backup-stats` `doImport` 的 `initCrypto` | 失败 = 此后写入明文，而用户以为仍受设备密钥保护 |
+  | `ui-backup-stats` `saveMessages` | 消息写失败 = 直接丢失且无痕迹 |
+  | `ui-global-events` 存储占用统计遍历 | 空态让用户以为「存储是空的」，而实际可能是「有数据读不出来」，占用条停在 0% 与「快满了」正好相反 |
+  | `ui-global-events` 启动 `initCrypto` | 同上那条，安全面静默降级 |
+  | `ui-ge-integrations` 旧集成凭据清理 | 清理失败 = `appSecret` / `accessSecret` 仍留在本机，v3.7.66「绝不落盘」的承诺悄悄失效 |
+
+- **明确判定「不改」的 25 处**（逐条看过注释与语义，都成立）：
+  · `ui-drawer` 全 5 处 —— 清旧版内联样式残留（视觉偏差）、清 `__pendingAiAsk`（5 分钟窗口自动作废）；
+  · `render-widgets` 全 3 处 —— 侧栏折叠偏好，丢了下次重写；
+  · `ui-ge-integrations` 两处 `await resp.json()` —— API 返回非 JSON（204 / 纯文本错误页）是常见情况，
+    按状态码判定本就是设计；
+  · 其余如 `render-overview:153` 删缓存、`ui-backup-stats:43`（已被 `_exportReadFailed` 点名，
+    防重复上报）、`:1036`（展开偏好，注释明写「刻意不报」）等。
+- **基线**：P0 **78 → 71**；空 catch 总数仍 553（消解 7 处 P0 的同时新增 7 处 P2 ——
+  标准修法里的 `catch(_){}` 本身就是「诊断不可用」的预期降级，属既有约定的一部分），
+  基线 551 不变，门禁 `exit 0`。余下 71 处分布仍头部集中：`ui-ge-api` 12 / `ai-tools` 9 /
+  `render-overview` 7 / `ui-backup-stats` 5 / `data-links` 5 / `ui-drawer` 5 等。
+
 ### 2026-10-22 · P1-5 文档索引（三级）+ README 派生数字校正
 
 - 新增 `docs/README.md`：权威活文档 / 流程台账 / 规范契约 / 历史快照四级索引 + 冲突优先级

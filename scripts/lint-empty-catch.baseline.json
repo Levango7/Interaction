@@ -1,6 +1,6 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
-  "updated": "2026-10-21",
+  "updated": "2026-10-22",
   "count": 551,
   "items": [
     {
@@ -2010,14 +2010,14 @@
     {
       "file": "render-overview.js",
       "line": 1349,
-      "sig": "11764baa6f",
-      "bhash": "6eb04bc9fb",
+      "sig": "6bfe5add3b",
+      "bhash": "b46423acac",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": false,
-      "note": "/* 配额等：静默 */",
-      "snippet": "localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(_getS"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"sync meta persist fa"
     },
     {
       "file": "render-overview.js",
@@ -2058,14 +2058,14 @@
     {
       "file": "render-overview.js",
       "line": 1452,
-      "sig": "b05ebfdd70",
-      "bhash": "b2f9b6b666",
+      "sig": "99e2ff222c",
+      "bhash": "f6740ec63a",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": false,
-      "note": "/* 备份失败不阻塞恢复 */",
-      "snippet": "const pre = {}; if (typeof allKeys === \"function\") allKeys().forEach(f"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"pre-restore 备份写入失败（本"
     },
     {
       "file": "render-overview.js",
@@ -3174,14 +3174,14 @@
     {
       "file": "ui-backup-stats.js",
       "line": 162,
-      "sig": "977a000457",
-      "bhash": "01aa220423",
+      "sig": "6ef02b6999",
+      "bhash": "7a8bf89008",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
-      "bare": false,
-      "note": "/* 忽略，降级明文 */",
-      "snippet": "await initCrypto(); }"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"initCrypto 失败，导入后将以明"
     },
     {
       "file": "ui-backup-stats.js",
@@ -3545,19 +3545,19 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 922,
-      "sig": "e7de94e1ef",
-      "bhash": "bd77758488",
+      "line": 923,
+      "sig": "ee20ac7eb1",
+      "bhash": "440219f65e",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* noop */",
-      "snippet": "localStorage.setItem(MSG_KEY, JSON.stringify(list)); }"
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"messages persist fai"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1011,
+      "line": 1012,
       "sig": "64ce88348f",
       "bhash": "b0b736d62a",
       "occ": 1,
@@ -3569,7 +3569,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1027,
+      "line": 1028,
       "sig": "da2f602a5f",
       "bhash": "6c72866d54",
       "occ": 1,
@@ -3581,7 +3581,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1036,
+      "line": 1037,
       "sig": "3f15abdee5",
       "bhash": "d8e19fadc7",
       "occ": 1,
@@ -3593,7 +3593,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1477,
+      "line": 1478,
       "sig": "fc2761bdd4",
       "bhash": "d023f9a974",
       "occ": 1,
@@ -4974,14 +4974,14 @@
     {
       "file": "ui-ge-integrations.js",
       "line": 1411,
-      "sig": "37a46c30d5",
-      "bhash": "73712b575e",
+      "sig": "bdeb190959",
+      "bhash": "367a33a3a5",
       "occ": 1,
-      "level": "P0",
-      "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
-      "bare": false,
-      "note": "/* 清不动也不能挡住启动 */",
-      "snippet": "_intLoadProviders(); /* v3.7.69 + slack：旧 slackConnect 把 botToken 持久化在"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"旧集成凭据清理失败（敏感字段可能仍留在本"
     },
     {
       "file": "ui-ge-integrations.js",
@@ -5009,7 +5009,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2265,
+      "line": 2267,
       "sig": "97f6c69dc7",
       "bhash": "20c69376b8",
       "occ": 1,
@@ -5021,7 +5021,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2311,
+      "line": 2313,
       "sig": "52ca41e906",
       "bhash": "436cbe59ae",
       "occ": 1,
@@ -5033,7 +5033,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2335,
+      "line": 2337,
       "sig": "604695095a",
       "bhash": "b143df9b66",
       "occ": 1,
@@ -5045,7 +5045,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2486,
+      "line": 2488,
       "sig": "79b5f7ff7d",
       "bhash": "e277b54a93",
       "occ": 1,
@@ -5057,7 +5057,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2521,
+      "line": 2523,
       "sig": "3ca678b71b",
       "bhash": "4acddee344",
       "occ": 1,
@@ -5069,7 +5069,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2532,
+      "line": 2534,
       "sig": "200a62e7c0",
       "bhash": "da39a3ee5e",
       "occ": 1,
@@ -5081,7 +5081,7 @@
     },
     {
       "file": "ui-ge-integrations.js",
-      "line": 2545,
+      "line": 2547,
       "sig": "c77b8e42d1",
       "bhash": "c886c32294",
       "occ": 1,
@@ -5514,14 +5514,14 @@
     {
       "file": "ui-global-events.js",
       "line": 345,
-      "sig": "7d06b771e3",
-      "bhash": "4999f15dee",
+      "sig": "659795e2ea",
+      "bhash": "5cf3060ccb",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": false,
-      "note": "/* 遍历失败时显示空态 */",
-      "snippet": "for(let i = 0; i < localStorage.length; i++){ const k = localStorage.k"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"storage usage scan f"
     },
     {
       "file": "ui-global-events.js",
@@ -6222,14 +6222,14 @@
     {
       "file": "ui-global-events.js",
       "line": 2275,
-      "sig": "15d88875b8",
-      "bhash": "01aa220423",
+      "sig": "09be9c78e7",
+      "bhash": "fb0cb8869c",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
-      "bare": false,
-      "note": "/* 降级明文，不阻塞启动 */",
-      "snippet": "await initCrypto(); }"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"启动时 initCrypto 失败，将以"
     },
     {
       "file": "ui-global-events.js",

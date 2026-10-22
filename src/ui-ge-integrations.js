@@ -1408,7 +1408,7 @@ function _notifyScrubPersisted(){
       }
     });
     if(n) _intSaveProviders();
-  }catch(e){ /* 清不动也不能挡住启动 */ }
+  }catch(e){ /* 清不动也不能挡住启动 —— 控制流不变，但**必须留痕**：这一步清的是历史版本误持久化的 appSecret / accessSecret / accessKey。清理失败 = 敏感凭据仍留在 localStorage 盘上，而 v3.7.66 起的承诺是「仅会话内存、绝不落盘」，静默失败等于承诺悄悄失效。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","旧集成凭据清理失败（敏感字段可能仍留在本机）: "+((e&&e.message)||e),{where:"_notifyScrubPersisted"}); }catch(_){} }
   return n;
 }
 

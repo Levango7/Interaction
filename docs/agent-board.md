@@ -96,6 +96,41 @@
   confirm 仍 12 处（其中 `batchDelete` / `webdavSyncUpload|Download` 有返回值，确认须前置到调用点）。
 - 版本号：**未占 3.7.137**（下一号以 `AGENTS.md` §二 为准）。
 
+### [2026-10-22 22:35 UTC+8] Qoder 主会话（R-2 切片一 · **门禁过了就推**）
+- 状态：进行中 —— **按 R10 声明：这一笔就要推**。
+- 结论（比预期更值得记）：**这 6 个文件的 32 处 P0，实际只改了 7 处**。
+  逐条看过注释与语义后，25 处的"静默"是**真合理的**：`ui-drawer` 5 处（清旧版内联样式残留、
+  清 `__pendingAiAsk` 靠 5 分钟窗口自动作废）、`render-widgets` 3 处（侧栏折叠偏好）、
+  `ui-ge-integrations` 两处 `await resp.json()`（API 返非 JSON 本就是常见路径）等。
+  ⇒ **P0 不等于"必须改"，这条以后别再靠数字驱动**。
+- 改了 7 处，全是「静默会让用户得到与事实相反结论」的：同步元信息写失败（→重复全量同步/冲突误判）、
+  恢复前备份失败（→假保护，OD-003 同型）、`initCrypto` 失败两处（→用户以为加密实则明文）、
+  消息写失败（→直接丢失）、存储占用遍历失败（→空态停在 0%，与"快满了"正好相反）、
+  旧集成凭据清理失败（→`appSecret` 仍在盘上，v3.7.66「绝不落盘」承诺悄悄失效）。
+- 基线：P0 **78 → 71**；总数仍 553（消解 7 处 P0 同时新增 7 处 P2 —— 标准修法的
+  `catch(_){}` 本身就是"诊断不可用"的预期降级）；基线 551 不变、门禁 `exit 0`。
+- **动过的路径**：`render-overview.js` / `ui-backup-stats.js` / `ui-global-events.js` /
+  `ui-ge-integrations.js` / `scripts/lint-empty-catch.baseline.json` / `CHANGELOG.md`。
+- 余下 71 处 P0 仍头部集中：`ui-ge-api` 12 / `ai-tools` 9 / `render-overview` 7 /
+  `ui-backup-stats` 5 / `data-links` 5 / `ui-drawer` 5 —— 其中 `ui-ge-api` / `ai-tools` / `data-links`
+  我**不碰**（别人的地盘），留给对应会话或主人指派。
+
+### [2026-10-22 22:05 UTC+8] Qoder 主会话（R-2 P0 空 catch 消解 · 切片一 · 开工声明）
+- 状态：进行中（v3.7.137 已发且 CI/Deploy/Electron 全绿、线上已核；本轮起做 R-2 存量 P0）
+- **本机基线现状**：空 catch 551 处 —— P0 **78**（**无注释 0**，即 P0-a 台账仍清零）/ P1 226 / P2 249。
+  78 处 P0 分布在 21 个文件，头部集中：`ui-ge-api` 12 / `ai-tools` 9 / `render-overview` 9 /
+  `ui-backup-stats` 7 / `data-links` 5 / `ui-drawer` 5 / `ui-global-events` 5 / `ai-retry` 4。
+  **全部 0 处无注释** ⇒ 都是 P0-b（作者带说明权衡过），必须**逐条判断注释是否成立**，不能机械批量改。
+- **本切片（切片一）占用**：只做**我这几批亲自改过、上下文最熟**的 6 个文件的 P0，共 32 处 ——
+  `ui-backup-stats.js`(7) / `render-overview.js`(9) / `ui-drawer.js`(5) / `ui-global-events.js`(5) /
+  `ui-ge-integrations.js`(3) / `render-widgets.js`(3)。
+  改法严格限定为 R-2 标准式「**加观测、不改控制流**」：原静默继续的，改后依然继续。
+- **不在本切片**：`ui-ge-api`(12) / `ai-tools`(9) / `data-links`(5) / `ai-retry`(4) 及其余 11 文件共 46 处 ——
+  这些是别的会话的地盘或我没碰过的上下文，按 R6 不动，后续单独切片或由改动方处理。
+- ⚠️ 另：`ui-ge-api.js:890`(P2) 与 `ui-theme.js:74`(P1) 两处基线漂移**仍未被重冻**（非我改动），
+  噪声还在。要我顺手销声请说一声。
+- 准备推的范围：暂无待推（做完再说）。
+
 ### [2026-10-22 08:05 UTC+8] Qoder 主会话（发版 v3.7.137 · 即将动高共写面）
 - 状态：进行中 —— **按 R4/R10 声明：这一笔要动 `package-lock.json` 与 `electron/package.json`
   的版本段**（板面铁律 5 列的高共写面），并会推 release commit + tag。

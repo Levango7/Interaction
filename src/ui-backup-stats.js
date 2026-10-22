@@ -159,7 +159,7 @@ function doImport(file){
       // v2.0.1：导入不 reload 页面，须复位会话层与场景聊天内存缓存，否则 UI 显示导入前旧数据
       try{ _resetSessions(); _reloadChatsFromStorage(); }catch(_){ /* noop */ }
       clearUndoStack(); // B6：导入后清空撤销栈，避免跨数据状态误撤销
-      try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 */ }
+      try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 —— 控制流不变，但**必须留痕**：加密不可用意味着此后写入的是明文，用户会以为数据仍受设备密钥保护。这是安全面的静默降级，属 R-2 最该上报的一类。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","initCrypto 失败，导入后将以明文写入: "+((e&&e.message)||e),{where:"doImport"}); }catch(_){} }
 
       // P0-5：解析「有效 Key」——跨设备后原密文/OS 存储可能已失效
       // 多 Profile：优先用 _portableKeys 数组恢复每个 profile 的明文 key
@@ -919,7 +919,8 @@ function getMessages(){
   try{ return JSON.parse(localStorage.getItem(MSG_KEY)) || []; }catch(e){ return []; }
 }
 function saveMessages(list){
-  try{ localStorage.setItem(MSG_KEY, JSON.stringify(list)); }catch(e){ /* noop */ }
+  /* R-2 消解：原为 noop。消息（含未读提醒）写失败 = 直接丢失且无痕迹，控制流不变，只留痕。 */
+  try{ localStorage.setItem(MSG_KEY, JSON.stringify(list)); }catch(e){ try{ if(typeof pushDiag==="function") pushDiag("warn","messages persist failed（本次消息写入丢失）: "+((e&&e.message)||e),{where:"saveMessages"}); }catch(_){} }
 }
 function addMessage(type, title, body, action){
   let list = getMessages();
