@@ -14,7 +14,7 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
-var CACHE_VERSION = "v3.7.138-20261022203153"; /* [prod build] auto-bumped */
+var CACHE_VERSION = "v3.7.139-20261022210830"; /* [prod build] auto-bumped */
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -35,7 +35,11 @@ var PRECACHE_URLS = [
   // sql.js 本地副本：SQL Playground / RAG 离线可用。
   // 非关键（不在 CRITICAL_PRECACHE 内），缺失时安装仍成功，前端会自动回退 CDN。
   "./assets/sql/sql-wasm.js",
-  "./assets/sql/sql-wasm.wasm"
+  "./assets/sql/sql-wasm.wasm",
+  // pdf.js 本地副本：PDF 导入离线可用。非关键（不在 CRITICAL_PRECACHE 内），
+  // 单文件拷贝形态没有 vendor/ 时安装仍成功，导入时按需加载失败并如实提示。
+  "./vendor/pdfjs/pdf.min.js",
+  "./vendor/pdfjs/pdf.worker.min.js"
 ];
 
 // 同源静态资源扩展名（cache-first 命中范围）
