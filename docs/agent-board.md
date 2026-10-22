@@ -60,6 +60,20 @@
   confirm 仍 12 处（其中 `batchDelete` / `webdavSyncUpload|Download` 有返回值，确认须前置到调用点）。
 - 版本号：**未占 3.7.137**（下一号以 `AGENTS.md` §二 为准）。
 
+### [2026-10-22 08:05 UTC+8] Qoder 主会话（发版 v3.7.137 · 即将动高共写面）
+- 状态：进行中 —— **按 R4/R10 声明：这一笔要动 `package-lock.json` 与 `electron/package.json`
+  的版本段**（板面铁律 5 列的高共写面），并会推 release commit + tag。
+- 依据：`e2d1c2a` 的 CI `39692898223` **四腿 success**（ubuntu / windows / e2e / server-verify）、
+  Deploy success。v3.7.136（`91d64c0`，对方会话）也已 CI/Deploy/Electron 全绿并含我的第二~五批。
+- 本版内容：原生 confirm 迁移第五批（22→12）+ 第六批（**12→0 棘轮清零**）+
+  R-2 空 catch 基线逐文件精确重冻（16 处漂移 → 2 处）+ OD-001 复核（降为"回一个字母可裁"）。
+- 版本号落点（照 v3.7.136 的十文件模式）：AGENTS.md 预登记表、CHANGELOG `[Unreleased]`→`[3.7.137]`、
+  README ×3、agent-workbench.html（VERSION + BUILD_TAG `20261022a`）、manifest.json、
+  package.json、electron/package.json、package-lock.json ×2、electron/package-lock.json ×2、
+  service-worker.js（CACHE_VERSION `v3.7.137-20261022a`）。
+- 未随本版修、需主人裁的两件事：① 批量删除 UI **未接线**（`bindBatchToolbar()` 全仓无调用点，
+  修它要动布局）；② OD-001 第三方登录选型（A 暂不动 / B GitHub OAuth / C CloudBase 短信 OTP）。
+
 ### [2026-10-22 07:30 UTC+8] Qoder 主会话（R-2 空 catch 基线精确重冻 · 已改完，待随下一笔一起推）
 - 状态：进行中 —— **这一笔动了 `scripts/lint-empty-catch.baseline.json`，按 R4 声明**。
 - 做了什么：confirm 迁移第二~六批让基线漂出 16 处「新增 P1/P2」噪声（会稀释「无新增 P0」的结论）。
