@@ -5165,6 +5165,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     background:var(--overlay);border:0}
   .task-rail-backdrop.show{display:block}
 }
+/* 窄屏聊天抽屉遮罩：桌面坞不使用 */
+.chat-backdrop{position:fixed;inset:0;z-index:calc(var(--z-popover) - 1);background:var(--overlay)}
+@media(min-width:768px){.chat-backdrop{display:none!important}}
 @media(max-width:767px){
   .task-rail{padding-bottom:72px}
   .task-rail-toggle .lbl{display:none}
@@ -5300,6 +5303,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         </div>
       </form>
     </aside>
+    <!-- 窄屏聊天抽屉的遮罩（桌面坞不使用；点它关闭抽屉） -->
+    <div class="chat-backdrop" id="chatBackdrop" hidden></div>
     </div>
     <!-- 右栏：今日任务轨（2026-10-21 布局 v2；≥1024 常驻，<1024 由顶栏按钮滑出） -->
     <aside class="task-rail" id="taskRail" data-i18n-aria="a11y.taskRail" aria-label="今日任务">

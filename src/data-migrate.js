@@ -272,6 +272,19 @@ function getActiveProfile(){
   return null;
 }
 /**
+ * AI 就绪判定（单一真相源）：`enabled` × 当前激活 Profile 的 `base/key`。
+ * 为什么要它：配置迁到 `profiles[]` 后，三处闸门仍读顶层 `cfg.base/cfg.key` ⇒ 永远判"未配置"，
+ * 「问 AI 助手」与 AI Hub 卡片点了只会跳设置页（2026-10-22 实测，台账 R-32）。
+ * @returns {{cfg:object, profile:object}|null}
+ */
+function aiReadyProfile(){
+  const cfg = (typeof getCfg === "function") ? getCfg() : null;
+  if(!cfg || !cfg.enabled) return null;
+  const p = getActiveProfile();
+  if(!p || !p.base || !p.key) return null;
+  return { cfg: cfg, profile: p };
+}
+/**
  * 首次启动播种示例数据（仅在从未初始化且无既有 tasks 时执行）
  * @returns {void}
  */

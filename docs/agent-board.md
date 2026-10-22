@@ -42,6 +42,23 @@
 
 ## 条目
 
+### [2026-10-22 08:40 UTC+8] Qoder 主会话（R-31 手机聊天抽屉 + R-32 AI 就绪闸门 · 占用中）
+- 状态：进行中，本批完成后直接推（CI 当前无在飞 run）。
+- **R-31（P2·可达性）已修**：≤767 聊天面板靠 `.chat-panel.show` 滑入但全仓无代码添加 ⇒ 手机不可达。
+  现在场景头「问 AI 助手」/ `__aiPanelExpand()` 在窄屏打开抽屉（移除 `.collapsed` + 显示 `#chatBackdrop`），
+  折叠键/遮罩/Esc 三条关闭；桌面坞语义不变。
+- **R-32（P1·接线）新发现并已修**：配置迁到 `profiles[]` 后，`askAiAboutScene` / `discussInAi` / 设置"续上意图"
+  仍读顶层 `cfg.base/cfg.key` ⇒ 永远判"未配置"（**桌面上「问 AI 助手」也只跳设置页**）。新增单一判定
+  `aiReadyProfile()`（data-migrate，启用 × 激活 profile，兼容旧形态），三处统一接管。
+- **占用路径**：`src/ai-retry.js`、`src/data-migrate.js`、`src/ui-drawer.js`、`agent-workbench.html`（遮罩 DOM/CSS）、
+  `tests/mobile-chat-drawer.test.js`（新）、`tests/ai-readiness-profile.test.js`（新）、
+  `tests/e2e/layout-v2.spec.js`（+375 抽屉几何）、`docs/audit-2026-10-06.md`（R-31 已修 + R-32）、
+  `docs/DESIGN-SYSTEM.md` §2.1、`CHANGELOG.md`、本文件。
+- **证据**：`npm run lint` 0；`node scripts/lint-empty-catch.mjs` 0 新 P0；相关 7 个测试文件 0；
+  `layout-v2` **16 passed**（含 375 抽屉：打开可见、遮罩显示、点遮罩关闭）。
+- **准备推**：一个提交，无版本号（3.7.137 未占）。
+- 提醒：这批给 `.chat-panel.show` 补了唯一通路；**别再加"CSS 要求某状态类、代码却不添加"的组件**（R-31 病根）。
+
 ### [2026-10-22 07:20 UTC+8] Qoder 主会话（v3.7.136 已发 · 布局 v2 收工释放）
 - 状态：**已收工（释放）**。`91d64c0` + tag `v3.7.136`；CI 四腿 + **Electron 产物** + Deploy 全 success；
   e2e **150 passed / 0 flaky**（含布局 v2 的 7 例 ×2 项目与 confirm 迁移各批路径测）。

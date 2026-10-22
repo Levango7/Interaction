@@ -612,7 +612,7 @@ async function saveCfg(){
     }
     toast(t("msg.saved","已保存")+(cfg.enabled?t("msg.savedAiEnabled","，AI 助手已启用（可调用工具）"):t("msg.savedAiDisabled","（AI 未启用）")), "ok"); // B3：alert 改 toast，不阻塞交互
     /* v3.2.1 修复 UX 闭环：检查是否有待续的「问 AI」意图，配置成功后自动展开 + 重试 */
-    if(cfg.enabled && cfg.base && cfg.key){
+    if(typeof aiReadyProfile === "function" && aiReadyProfile()){
       try{
         const raw = load(PREFIX + "__pendingAiAsk", null);
         if(raw){

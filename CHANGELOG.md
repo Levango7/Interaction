@@ -9,6 +9,17 @@
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 
+### 2026-10-22 · R-31 / R-32：手机聊天抽屉可达 + AI 就绪判定改走 profiles
+
+- **R-31**：≤767 的聊天面板靠 `.chat-panel.show` 滑入，但全仓没有任何代码添加它 ⇒ 手机上聊天**不可达**。
+  补：场景头「问 AI 助手」/ `__aiPanelExpand()` 在窄屏打开抽屉（移除 `.collapsed` + 显示遮罩），
+  折叠键/遮罩/Esc 三条关闭；桌面坞语义不变。
+- **R-32**：AI 配置迁到 `profiles[]` 后，三处就绪闸门仍读顶层 `cfg.base/cfg.key` ⇒ 永远判"未配置"，
+  「问 AI 助手」在**桌面也**只跳设置页、AI Hub 三卡片与"配置后续上"同样失效。新增单一判定
+  `aiReadyProfile()`（启用 × 激活 profile 的 base/key，兼容旧形态），三处闸门统一接管。
+- 守护：`tests/mobile-chat-drawer.test.js`（3 例）+ `tests/ai-readiness-profile.test.js`（4 例）+
+  `layout-v2` 375 抽屉几何用例；`lint` 与 `lint:empty-catch` 均 0。
+
 ## [3.7.136] - 2026-10-21
 
 > 本版含：布局 v2（对话下沉 + 右栏今日任务）、原生 confirm 迁移第二~五批（35→12）、

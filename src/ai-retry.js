@@ -1186,7 +1186,15 @@ function bindChatPanel(){
   // 折叠/展开按钮：切换 .collapsed 类，同步显示侧边条
   const collapseBtn=$("#chatPanelCollapse");
   const rail=$("#chatPanelRail");
+  /* 窄屏（≤767）面板是右抽屉：#chatPanelCollapse 与外部 AI 入口都走「打开/关闭抽屉」，不是折叠历史 */
+  const setChatDrawer=(open)=>{
+    panel.classList.toggle("show", open);
+    if(open) panel.classList.remove("collapsed");
+    const bd=$("#chatBackdrop");
+    if(bd){ bd.hidden=!open; bd.classList.toggle("show", open); }
+  };
   const toggleCollapse=()=>{
+    if((window.innerWidth||0) < 768){ setChatDrawer(!panel.classList.contains("show")); return; }
     panel.classList.toggle("collapsed");
     const collapsed=panel.classList.contains("collapsed");
     /* v3.5.1：不再替换 textContent（会摧毁 SVG）；箭头方向由 CSS 固定为指右 */
@@ -1198,8 +1206,15 @@ function bindChatPanel(){
   /* v3.2.1 修复：暴露强制展开函数——给 #phAiAskBtn / data-ai-hint-for 等外部入口调用。
      AI 入口不应受聊天面板折叠态阻挡（用户在窄屏默认折叠时也要能用 AI）。 */
   window.__aiPanelExpand = function(){
+    if((window.innerWidth||0) < 768){ setChatDrawer(true); return; }
     if(panel.classList.contains("collapsed")){ toggleCollapse(); }
   };
+  /* 抽屉的关闭路径：点遮罩 / Esc（仅窄屏生效；桌面坞不受影响） */
+  const _chatBd=$("#chatBackdrop");
+  if(_chatBd) _chatBd.onclick=()=> setChatDrawer(false);
+  document.addEventListener("keydown",(e)=>{
+    if(e.key==="Escape" && (window.innerWidth||0) < 768 && panel.classList.contains("show")) setChatDrawer(false);
+  });
   /* v3.5.4：箭头=展开面板；AI 图标=展开并跳转 AI 页面 */
   const railExpand = $("#chatRailExpand");
   if(railExpand) railExpand.onclick = function(e){ e.stopPropagation(); if(panel.classList.contains("collapsed")) toggleCollapse(); };
@@ -1245,6 +1260,7 @@ function bindChatPanel(){
       }else{
         panel.classList.remove("narrow");
         panel.classList.remove("show");
+        const _bd=$("#chatBackdrop"); if(_bd){ _bd.hidden=true; _bd.classList.remove("show"); }
       }
     };
     applyResponsive();
@@ -1260,8 +1276,8 @@ function askAiAboutScene(sc, hintKey){
   /* v3.2.1 修复：sc 可空（系统概况卡 / 命令面板等入口）——"无场景"模式只展开面板 + 焦点，不预填场景提示
      v3.2.1 兼容：sc 传非法 key（不在 SCENARIOS 中）也走"无场景"模式，不直接 return，避免静默无响应 */
   const s = sc ? SCENARIOS[sc] : null;
-  const cfg = (typeof getCfg === "function") ? getCfg() : null;
-  if(!cfg || !cfg.enabled || !cfg.base || !cfg.key){
+  /* 就绪判定走 profiles（R-32）：顶层 base/key 在迁移后已不存在 */
+  if(!(typeof aiReadyProfile === "function" && aiReadyProfile())){
     /* v3.2.1 修复 UX 闭环：未启用 AI 时记下意图，配置完成保存后自动续上 */
     try{
       save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: sc, hintKey: hintKey || "", ts: Date.now() }));
@@ -1316,8 +1332,8 @@ function discussInAi(type){
     return;
   }
   /* AI 启用状态检查 + pending 闭环 */
-  const cfg = (typeof getCfg === "function") ? getCfg() : null;
-  if(!cfg || !cfg.enabled || !cfg.base || !cfg.key){
+  /* 就绪判定走 profiles（R-32） */
+  if(!(typeof aiReadyProfile === "function" && aiReadyProfile())){
     try{
       save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: "", hintKey: "discuss." + type, prompt: prompt, ts: Date.now() }));
     }catch(e){ /* noop */ }

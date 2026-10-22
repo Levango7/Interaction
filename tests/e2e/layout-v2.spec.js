@@ -159,4 +159,29 @@ test.describe("手机 375（聊天保持右抽屉）", () => {
     await page.waitForFunction(() => !document.getElementById("taskRail").classList.contains("open"));
     expect((await geom(page)).sw).toBeLessThanOrEqual(g.vw + 1);
   });
+
+  test("聊天抽屉：从场景头打开可见，点遮罩关闭（R-31/R-32）", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("wb_agent_cfg", JSON.stringify({
+        enabled: true, activeId: "p",
+        profiles: [{ id: "p", name: "默认", base: "https://example.invalid/v1", key: "k", model: "" }],
+      }));
+    });
+    await page.goto(APP_URL);
+    await page.waitForSelector("#main");
+    await waitMainRendered(page);
+    await page.click("#phAiAskBtn");
+    await page.waitForFunction(() => document.getElementById("chatPanel").classList.contains("show"));
+    const g = await page.evaluate(() => {
+      const p = document.getElementById("chatPanel");
+      const r = p.getBoundingClientRect();
+      return { left: Math.round(r.left), right: Math.round(r.right), vw: innerWidth,
+        backdrop: !!document.querySelector("#chatBackdrop.show") };
+    });
+    expect(g.left, "抽屉左缘应在视口内").toBeLessThan(g.vw);
+    expect(g.vw - g.right, "抽屉右缘应贴视口").toBeLessThanOrEqual(1);
+    expect(g.backdrop, "遮罩应显示").toBe(true);
+    await page.mouse.click(6, 300);
+    await page.waitForFunction(() => !document.getElementById("chatPanel").classList.contains("show"));
+  });
 });
