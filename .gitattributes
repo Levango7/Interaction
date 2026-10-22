@@ -17,3 +17,9 @@
 # v3.7.131 补：.githooks/ 下的钩子必须 LF —— shebang 遇 CRLF 会 "bad interpreter: No such file or directory"
 # （本仓 autocrlf=true，不锁的话 Windows 检出后钩子直接跑不起来）
 .githooks/** text eol=lf
+
+# v3.7.139：第三方产物按字节分发。pdf.js 的 LICENSE 无扩展名，默认 text=auto 会在 Windows
+# 检出时转 CRLF，导致 pdf-vendor 的逐字节校验失真（node_modules 里是 LF）。
+vendor/pdfjs/LICENSE -text
+# .cjs 此前未锁；测试辅助文件也走 LF，避免本地/CI 行尾差异
+*.cjs text eol=lf
