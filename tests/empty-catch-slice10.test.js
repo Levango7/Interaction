@@ -131,7 +131,9 @@ describe("② 工作流 lastRun 落盘：写不进去 = 会被重复执行", () 
 
     await win._wfRunFlow(0, { name: "T" });
 
-    const d = diagOf("_wfRunFlow");
+    /* 2026-10-23：ede043e 给「AI 调用失败 → 降级待办」补了 warn 留痕（本用例的 chatOnce
+       必然抛错，故 warn 也必然出现）。本用例只钉 lastRun 落盘这条 error，按 level 精确取。 */
+    const d = diagOf("_wfRunFlow").filter((x) => x.level === "error");
     expect(d, "落盘失败必须留痕：否则这条工作流下次仍到期 → 重复执行").toHaveLength(1);
     expect(d[0].level).toBe("error");
     expect(d[0].ctx.flow).toBe("T");
@@ -140,7 +142,9 @@ describe("② 工作流 lastRun 落盘：写不进去 = 会被重复执行", () 
 
   it("反向守护：lastRun 正常落盘 → 零诊断", async () => {
     win.saveAiConfig("workflow", { flows: [{ name: "T" }] });
-    win.chatOnce = async function () { throw new Error("no-ai-in-test"); };
+    /* 「正常」必须包括 AI 正常返回：chatOnce 抛错会走降级 warn（ede043e 的有意留痕），
+       那样测的是降级路径，不是本用例要守的「全程无异常」基线。 */
+    win.chatOnce = async function () { return { choices: [{ message: { content: "测试产出" } }] }; };
     await win._wfRunFlow(0, { name: "T" });
     expect(diagOf("_wfRunFlow"), "正常路径不该留痕").toHaveLength(0);
   });

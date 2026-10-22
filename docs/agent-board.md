@@ -42,6 +42,26 @@
 
 ## 条目
 
+### [2026-10-23 03:00 UTC+8] Qoder 主会话（修 `a048b33` 的三处 CI 红 · **按 R10：这一笔就推**）
+- 状态：在 `adc89c3` 之上 3 个提交，**即将推**；不占版本号。
+- 红①（我引入）`check:modules`：`data-rw → ui-hotkeys`（撤销提示在数据层直接调了 UI 的 `showUndoToast`）。
+  按仓库既有模式修：core-shared 增 `registerUndoNoticeListener/emitUndoNotice`，data-rw 只 emit，ui-hotkeys 注册实现。
+  仓外净副本（`adc89c3`+本笔）实测回到基线：循环 **13** / 逆层 **18**（与 `784e8ac` 逐字同）。
+- 红②（我引入）`lint:icons`：粘贴导入浮层的关闭钮内容只有 `✕`（P0 字符图标）⇒ 换 `UI_ICONS.close` 的 SVG。
+- 红③（**非我引入**，已定位到 `ede043e`）：`tests/empty-catch-slice10.test.js` 2 例期望漂移 ——
+  `ede043e` 给「AI 调用失败 → 降级待办」补了 warn 留痕，旧用例仍断言 `_wfRunFlow` 只有 1 条诊断 / 正常路径 0 条。
+  对照：同一用例跑**不含我改动**的 `adc89c3` 同样 2 红 ⇒ 与本笔无关。
+  处置只动判据不动实现：②按 level 取 `error`（warn 是该提交的有意留痕）；「正常路径」用例让 `chatOnce` 真返回内容
+  （原来让它抛错，实际测的是降级路径）。slice10 **9/9**。
+- 证据（仓外净副本 wb-g3 = `adc89c3` + 本笔）：`check:modules` ✓、`lint`（0 error）✓、`lint:icons` ✓、
+  `lint:empty-catch` ✓、`lint:layers` ✓、`pet:check` ✓、`build:check` ✓、`src:check`/`check:source-state` ✓、
+  slice10 9/9、受影响 6 套 31/31；全量 **1916 passed / 2 failed**（`auth-ui-lifecycle`、`three-state-render`）——
+  两例单文件复跑 **56/56 全绿**，属全量并发下的饥饿抖动（与撤销改动无交集），不靠加大超时硬凑绿。
+- 生产构建浏览器复验（Chromium）：撤销提示/撤销、粘贴导入、DOCX 导入、375 抽屉与布局全部通过（`_probe/live-shots/`）。
+- 占用：`src/core-shared.js`、`src/data-rw.js`、`src/ui-hotkeys.js`、`src/ui-ge-notes.js`、
+  `tests/empty-catch-slice10.test.js`、`docs/module-graph.md`、本文件。
+- 给并行会话：`ede043e` 的 warn 留痕我按「有意行为」对齐了用例；若本意不是每条降级都报，请改实现，勿回滚用例。
+
 ### [2026-10-23 01:10 UTC+8] Qoder 主会话（单步通用撤销落地 · 已推 `a048b33`）
 - 状态：已推送 `a048b33`（父 `fcc7a3d`），CI `39820206526` 与 Deploy `39820206492` 均卡在 runner 队列；
   线上复核待 `pages/builds/latest=built` 后做。本机生产构建（仓外净副本）预演已过：布局/撤销/粘贴导入/375 抽屉全绿。
