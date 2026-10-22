@@ -481,3 +481,89 @@ function getDeviceId(){
   }
   return id;
 }
+
+/* ---------- .docx 文本抽取（2026-10-22，零依赖） ----------
+ * .docx = ZIP，正文在 word/document.xml；浏览器原生 DecompressionStream('deflate-raw') 足以解压，
+ * 不需要引库。PDF **不走**此路：抽取需要字体/CMap 解析，必须引库（未做，见台账 R-33 的边界说明）。 */
+function _zipFindEntry(buf, wantName){
+  const dv = new DataView(buf);
+  const len = buf.byteLength;
+  let eocd = -1;
+  for(let i = len - 22; i >= Math.max(0, len - 66000); i--){
+    if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new Error("不是有效的 ZIP/DOCX（找不到目录结尾）");
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const dec = new TextDecoder("utf-8");
+  for(let n = 0; n < count; n++){
+    if(dv.getUint32(p, true) !== 0x02014b50) throw new Error("ZIP 目录损坏");
+    const method = dv.getUint16(p + 10, true);
+    const csize = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const cmtLen = dv.getUint16(p + 32, true);
+    const localOff = dv.getUint32(p + 42, true);
+    const name = dec.decode(new Uint8Array(buf, p + 46, nameLen));
+    if(name === wantName){
+      if(dv.getUint32(localOff, true) !== 0x04034b50) throw new Error("ZIP 本地头损坏");
+      const lNameLen = dv.getUint16(localOff + 26, true);
+      const lExtraLen = dv.getUint16(localOff + 28, true);
+      const start = localOff + 30 + lNameLen + lExtraLen;
+      if(start + csize > len) throw new Error("ZIP 数据越界");
+      return { method, bytes: new Uint8Array(buf, start, csize) };
+    }
+    p += 46 + nameLen + extraLen + cmtLen;
+  }
+  return null;
+}
+
+async function _inflateRawDocx(bytes){
+  if(typeof DecompressionStream !== "function" || typeof ReadableStream !== "function"){
+    throw new Error("当前环境不支持解压 .docx（请升级浏览器）");
+  }
+  /* 不用 Blob.stream()（老 jsdom 没实现）：手工造一条单块 ReadableStream，浏览器/Node 都支持 */
+  const src = new ReadableStream({
+    start: function(c){ c.enqueue(bytes); c.close(); }
+  });
+  const stream = src.pipeThrough(new DecompressionStream("deflate-raw"));
+  const reader = stream.getReader();
+  const chunks = [];
+  let total = 0;
+  for(;;){
+    const r = await reader.read();
+    if(r.done) break;
+    chunks.push(r.value);
+    total += r.value.length;
+  }
+  const out = new Uint8Array(total);
+  let off = 0;
+  for(const c of chunks){ out.set(c, off); off += c.length; }
+  return out;
+}
+
+function _docxXmlToText(xml){
+  return String(xml || "")
+    .replace(/<w:tab\b[^>]*\/>/g, "\t")
+    .replace(/<w:br\b[^>]*\/>/g, "\n")
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'").replace(/&amp;/g, "&")
+    .replace(/&#(\d+);/g, function(_m, d){ return String.fromCodePoint(Number(d)); })
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** .docx 的 ArrayBuffer → 纯文本；失败抛出可读错误，由调用方提示。 */
+async function extractDocxText(arrayBuffer){
+  const buf = (arrayBuffer instanceof ArrayBuffer) ? arrayBuffer
+    : (arrayBuffer && arrayBuffer.buffer) || arrayBuffer;
+  const ent = _zipFindEntry(buf, "word/document.xml");
+  if(!ent) throw new Error("DOCX 里找不到 word/document.xml");
+  let xmlBytes;
+  if(ent.method === 0) xmlBytes = ent.bytes;
+  else if(ent.method === 8) xmlBytes = await _inflateRawDocx(ent.bytes);
+  else throw new Error("不支持的 DOCX 压缩方式：" + ent.method);
+  return _docxXmlToText(new TextDecoder("utf-8").decode(xmlBytes));
+}

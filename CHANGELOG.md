@@ -6,6 +6,28 @@
 
 ## [Unreleased]
 
+### 2026-10-22 · AI 写操作可撤销（任务级 MVP）
+
+- 产品原则 §7.3「没有 undo 的写操作不允许上线」的第一片：`execTool`（AI/Agent 唯一执行入口）在
+  `create_task / update_task / complete_task / delete_task` 成功后落一条**回执**（含反演快照，最多 30 条）。
+  `undoAiAction(id)` 按类型反演：创建→软删除 / 更新→恢复快照 / 完成→回 status+doneAt / 删除→清 deletedAt。
+- 聊天面板动态挂载「AI 改动 · 撤销」回执条（最近 3 条），不依赖 HTML 骨架。
+- 边界如实：完成操作触发的联动规则新任务**不连带撤销**；资料库/笔记/知识库的写暂不在账。
+- 守护：`tests/ai-undo.test.js` 6 例（四种反演 + 二次撤销/未知回执如实拒绝 + UI 点击路径）。
+
+### 2026-10-22 · .docx 导入（零依赖）+ 绑定门禁扩面
+
+- 知识库新增 **.docx 导入**：.docx 是 ZIP，正文在 `word/document.xml`；用原生
+  `DecompressionStream(deflate-raw)` 解压后剥 XML 取文本（段落/制表/实体都处理），**不引任何依赖**。
+  支持 deflate 与 store 两种压缩；非 ZIP/缺 document.xml 抛可读错误并提示另存 .txt。
+- **PDF 仍不支持**且提示如实：抽取需字体/CMap 解析，必须引库（单文件交付的体积反目标，需用户拍板）。
+- 绑定覆盖率门禁扩面：从 `<button>` 扩到 `[role=button] / select / checkbox / radio / textarea`，
+  并补「表单内控件随 submit 生效」规则；实测 **271 个控件（196 按钮 + 75 表单控件）、0 未覆盖**，
+  射程自检新增「表单内 textarea 判绿 / 无绑定 select 判红」。
+- 测试夹具补 `DecompressionStream` polyfill（jsdom 未实现，浏览器 Chrome 103+ 原生有）。
+
+
+
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 

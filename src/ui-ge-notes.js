@@ -557,11 +557,13 @@ function _bindKnowledgeBaseEvents(){
  * 内容哈希 fnv1aHex 在 core —— 全部正向边。导入只写存储 + emitDataMutate 广播，
  * 建索引由 ai-tools 的 ragSyncIncremental（4s 防抖）完成：本块不发网络请求。
  * ============================================================ */
-const RAG_FILE_TEXT_EXT = ["txt", "md", "markdown", "html", "htm", "csv", "json", "log"];
+const RAG_FILE_TEXT_EXT = ["txt", "md", "markdown", "html", "htm", "csv", "json", "log", "docx"];
 /** 按扩展名准入并预清洗（html 剥 script/style/标签取正文）；不支持返回 null */
-function _ragFileText(name, raw){
+function _ragFileText(name, raw, preExtracted){
   const ext = (String(name || "").split(".").pop() || "").toLowerCase();
   if(RAG_FILE_TEXT_EXT.indexOf(ext) < 0) return null;
+  /* .docx 必须先经 extractDocxText 解出文本（ZIP 二进制不能直接当文本读） */
+  if(ext === "docx" && !preExtracted) return null;
   let text = String(raw || "");
   if(ext === "html" || ext === "htm"){
     try{
@@ -598,8 +600,8 @@ function _ragChunkText(text){
   return chunks;
 }
 /** 导入纯文本（File 选择与测试共用的核心路径）。返回 {added, replaced} 或 null（被拒） */
-async function ragImportText(name, rawText){
-  const text = _ragFileText(name, rawText);
+async function ragImportText(name, rawText, opts){
+  const text = _ragFileText(name, rawText, !!(opts && opts.preExtracted));
   if(text === null){ try{ toast(t('p5.kbFilesUnsupported', '暂不支持该类型（二进制如 PDF/DOCX 请先转成纯文本）'), "warn"); }catch(e){} return null; }
   if(text.length > RAG_FILE_MAX_CHARS){ try{ toast(t('p5.kbFilesTooBig', '文件过大（上限 256KB 文本），请拆分后导入'), "warn"); }catch(e){} return null; }
   const files = getRagFiles();
@@ -622,15 +624,28 @@ async function ragImportFiles(fileList){
   const arr = Array.prototype.slice.call(fileList || []);
   let ok = 0, total = 0, replaced = false;
   for(const f of arr){
-    const text = await new Promise(function(res){
+    const isDocx = /.docx$/i.test(String(f.name || ""));
+    let text = "", pre = false;
+    if(isDocx){
       try{
-        const fr = new FileReader();
-        fr.onload = function(){ res(String(fr.result || "")); };
-        fr.onerror = function(){ res(""); };
-        fr.readAsText(f);
-      }catch(e){ res(""); }
-    });
-    const r = await ragImportText(f.name, text);
+        const buf = await f.arrayBuffer();
+        text = await extractDocxText(buf);
+        pre = true;
+      }catch(e){
+        try{ toast(t("p5.docxExtractFail", "无法解析该 .docx（") + ((e && e.message) || e) + t("p5.docxExtractHint", "）。可先在 Word 里另存为 .txt 再导入"), "warn"); }catch(_e){ /* noop */ }
+        continue;
+      }
+    } else {
+      text = await new Promise(function(res){
+        try{
+          const fr = new FileReader();
+          fr.onload = function(){ res(String(fr.result || "")); };
+          fr.onerror = function(){ res(""); };
+          fr.readAsText(f);
+        }catch(e){ res(""); }
+      });
+    }
+    const r = await ragImportText(f.name, text, { preExtracted: pre });
     if(r){ ok++; total += r.added; if(r.replaced) replaced = true; }
   }
   if(ok){

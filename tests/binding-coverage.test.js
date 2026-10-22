@@ -9,11 +9,12 @@
  *   ① 元素自身 `onclick/onchange/oninput/onsubmit/onkeydown` 属性处理器；
  *   ② 元素自身收到过 `addEventListener`（`loadApp({instrument:true})` 记录）；
  *   ③ 3 层以内的祖先收到了 click/change/input 委托；或
- *   ④ `type=submit` 且所在 form 有 submit 处理器；或
+ *   ④ 位于有 submit 处理器的 form 内（控件随表单提交生效）；或
  *   ⑤ 携带**已登记的委托动作属性**（ACTION_ATTRS：消费方在 src 里必须真实存在）。
  *
- * 棘轮：`#main` 内 15 个视图渲染出的按钮，未覆盖数必须为 **0**；新增一个没绑的按钮会立刻红。
- * 射程自检：合成「无绑定按钮」必须被判红；三种合法形态各有一个合成样本必须判绿。
+ * 棘轮：`#main` 内 15 个视图渲染出的控件（button / role=button / select / checkbox / radio / textarea），
+ * 未覆盖数必须为 **0**；新增一个没绑的控件会立刻红。
+ * 射程自检：合成「无绑定控件」必须被判红；四种合法形态各有一个合成样本必须判绿。
  *
  * ⚠️ 已知口径边界：不检查"点了有反应"，只检查"有处理器"。点了没反应（handler 空转）
  * 仍需 e2e / 真浏览器判据，本门禁不冒充。
@@ -53,13 +54,12 @@ function makeCovered(win) {
       const l = log && log.get(p);
       if (l && (l.includes("click") || l.includes("change") || l.includes("input"))) return "deleg:" + (p.id || p.className || p.tagName);
     }
-    if ((el.getAttribute("type") || "").toLowerCase() === "submit") {
-      const form = el.closest("form");
-      if (form) {
-        if (typeof form.onsubmit === "function") return "form:onsubmit";
-        const fl = log && log.get(form);
-        if (fl && fl.includes("submit")) return "form:submit";
-      }
+    /* 表单内控件（submit 按钮、input、select、textarea）随表单 submit 生效 —— 不要求逐个绑事件 */
+    const form = el.closest("form");
+    if (form) {
+      if (typeof form.onsubmit === "function") return "form:onsubmit";
+      const fl = log && log.get(form);
+      if (fl && fl.includes("submit")) return "form:submit";
     }
     const act = ACTION_ATTRS.find((a) => el.hasAttribute(a));
     if (act) return "action:" + act;
@@ -81,7 +81,7 @@ describe("动态控件处理器覆盖", () => {
     expect(provable("data-no-such-action"), "对照：未登记属性必须判否（否则判据没射程）").toBe(false);
   });
 
-  it("15 个视图渲染出的按钮：未覆盖数必须为 0", async () => {
+  it("15 个视图渲染出的控件：未覆盖数必须为 0", async () => {
     const win = loadApp({ instrument: true });
     windows.push(win);
     await vi.waitFor(() => expect(win.document.getElementById("chatPanel")._bound).toBe(true));
@@ -92,16 +92,18 @@ describe("动态控件处理器覆盖", () => {
       win.__test.setActive(v);
       win.__test.render();
       await new Promise((r) => setTimeout(r, 0));
-      for (const b of win.document.querySelectorAll("#main button")) {
+      /* 按钮 + 非按钮控件（role=button / select / checkbox / radio / textarea）都算 */
+      const SEL = "#main button, #main [role=button], #main select, #main input[type=checkbox], #main input[type=radio], #main textarea";
+      for (const b of win.document.querySelectorAll(SEL)) {
         total++;
-        if (!covered(b)) uncovered.push(`${v} | ${b.id || "(no-id)"} | ${(b.textContent || "").trim().slice(0, 20)}`);
+        if (!covered(b)) uncovered.push(`${v} | ${b.tagName}#${b.id || "-"} | ${(b.textContent || b.getAttribute("placeholder") || "").trim().slice(0, 20)}`);
       }
     }
-    expect(total, "视图没有渲染出按钮，说明探针本身失效").toBeGreaterThan(100);
-    expect(uncovered, "这些按钮渲染出来但没有任何处理器（死按钮）：\n  " + uncovered.join("\n  ")).toEqual([]);
+    expect(total, "视图没有渲染出控件，说明探针本身失效").toBeGreaterThan(200);
+    expect(uncovered, "这些控件渲染出来但没有任何处理器（死控件）：\n  " + uncovered.join("\n  ")).toEqual([]);
   });
 
-  it("射程自检：无绑定按钮必须判红，三种合法形态必须判绿", async () => {
+  it("射程自检：无绑定控件必须判红，四种合法形态必须判绿", async () => {
     const win = loadApp({ instrument: true });
     windows.push(win);
     await vi.waitFor(() => expect(win.document.getElementById("chatPanel")._bound).toBe(true));
@@ -129,5 +131,12 @@ describe("动态控件处理器覆盖", () => {
 
     const act = mk('<button type="button" data-share="x">分享</button>').querySelector("button");
     expect(covered(act)).toBeTruthy();
+
+    const formField = mk('<form><textarea></textarea></form>').querySelector("form");
+    formField.onsubmit = () => {};
+    expect(covered(formField.querySelector("textarea")), "表单内控件随 submit 生效").toBeTruthy();
+
+    const orphanSelect = mk('<select><option>x</option></select>').querySelector("select");
+    expect(covered(orphanSelect), "不在表单里、又没绑定的 select 必须判红").toBeNull();
   });
 });

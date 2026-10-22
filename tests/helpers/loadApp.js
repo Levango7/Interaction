@@ -74,6 +74,10 @@ export function loadApp({ storage = {}, noCrypto = false, instrument = false } =
       if (typeof window.TextDecoder === "undefined") { window.TextDecoder = TextDecoder; }
       // T5.3 浏览器兼容：jsdom 不暴露 ReadableStream（Node 全局有），注入 polyfill
       // 真实浏览器（Chrome/Firefox）都有 ReadableStream，此处仅补齐 jsdom 测试环境
+      /* jsdom 不暴露 DecompressionStream（浏览器 Chrome 103+ 原生有）——.docx 抽取要它 */
+      if (typeof window.DecompressionStream === "undefined" && typeof DecompressionStream !== "undefined") {
+        Object.defineProperty(window, "DecompressionStream", { value: DecompressionStream, writable: true, configurable: true });
+      }
       if (typeof window.ReadableStream === "undefined" && typeof ReadableStream !== "undefined") {
         Object.defineProperty(window, "ReadableStream", { value: ReadableStream, writable: true, configurable: true });
       }

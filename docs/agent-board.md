@@ -42,6 +42,24 @@
 
 ## 条目
 
+### [2026-10-22 23:30 UTC+8] Qoder 主会话（AI 撤销 + .docx 导入 + 绑定门禁扩面 · 即将推）
+- 状态：进行中，**按 R10 声明：这一笔就推**（range `bcf2893..+1`）。
+- **① AI 写操作可撤销（任务级 MVP）**（已随 `138eb5c` 在 main 上）：execTool 对 create/update/complete/delete
+  落回执（反演快照，最多 30 条），`undoAiAction(id)` 四类反演；聊天面板动态挂「AI 改动 · 撤销」条。
+  边界：联动规则新建任务不连带；资料库/笔记/知识库的写暂不在账。`tests/ai-undo.test.js` 6/6。
+- **② .docx 导入（零依赖）**：.docx=ZIP，用原生 `DecompressionStream(deflate-raw)` 解 `word/document.xml`
+  再剥 XML 取文本（段落/制表/实体）；支持 deflate+store；非 ZIP 抛可读错误。**PDF 明确不支持**（需引库，待拍板）。
+  `tests/docx-import.test.js` 4/4（夹具是 Node zlib 现造的真 ZIP）。
+- **③ 绑定门禁扩面**：`button` → 加 `[role=button]/select/checkbox/radio/textarea`，补「表单内控件随 submit
+  生效」规则；实测 **271 控件（196+75）、0 未覆盖**；射程自检加「表单 textarea 判绿 / 无绑定 select 判红」。
+- ⚠️ **并发事故（已恢复）**：我编辑期间对方的测试链 **extract 把我的 src 编辑静默覆盖**
+  （`renderAiReceipts` 从工作树消失，同台账第 12/65 条族）。因我先落了本地提交 `138eb5c`，已从该提交恢复。
+  教训照旧：**并行期先提交再验证**，跑完复验自己的文件还在。
+- **占用**：`src/data-rw.js`、`src/ui-ge-notes.js`、`src/core-i18n.js`、`tests/docx-import.test.js`（新）、
+  `tests/binding-coverage.test.js`、`tests/helpers/loadApp.js`、`CHANGELOG.md`、`docs/PRODUCT.md`、
+  `docs/ARCHITECTURE.md`、本文件。
+- 证据：净副本里 6/6、4/4、3/3 全绿；共享树 lint 待提交前跑。
+
 ### [2026-10-22 09:50 UTC+8] Qoder 主会话（P1-5 文档索引 · 与 P1-6 同批推）
 - 新增 `docs/README.md`：四级索引（权威活文档 / 流程台账 / 规范契约 / 历史快照）+ 冲突优先级；
   **不移动历史文件**（README/台账有交叉引用，移动会断链），理由写在索引末尾。
