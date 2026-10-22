@@ -42,6 +42,18 @@
 
 ## 条目
 
+### [2026-10-22 09:20 UTC+8] Qoder 主会话（P1-6 绑定覆盖率门禁 · 已备好，等 R-31/R-32 的 CI 终态再推）
+- 状态：进行中；**不抢推**（`60e6c45` 的 CI 仍在跑）。
+- 新增 `tests/binding-coverage.test.js`：15 视图 × 渲染 → 收集 `#main button` → 五种合法绑定形态判定
+  （自身 `on*` / 自身 listener / ≤3 层祖先委托 / form submit / 已登记动作属性），**未覆盖必须为 0**；
+  实测 **196 按钮 / 0 未覆盖**。委托动作注册表 23 个 `data-*`，每个必须有**可证明的消费方**
+  （getAttribute/dataset/closest/hasAttribute），并带"未登记属性判否"的对照。
+- **射程**：合成"无绑定按钮"必须判红；三种合法形态各一合成样本必须判绿。
+- 夹具：`loadApp({instrument:true})` 在 `beforeParse` 包装 `addEventListener` 记录绑定（默认关闭，生产无影响）。
+- **占用路径**：`tests/binding-coverage.test.js`（新）、`tests/helpers/loadApp.js`（instrument）、
+  `docs/ARCHITECTURE.md`（§3 标"已落地"+ 口径边界）、`CHANGELOG.md`、本文件。
+- 准备推：一个提交，无版本号（3.7.137 未占）。
+
 ### [2026-10-22 08:40 UTC+8] Qoder 主会话（R-31 手机聊天抽屉 + R-32 AI 就绪闸门 · 占用中）
 - 状态：进行中，本批完成后直接推（CI 当前无在飞 run）。
 - **R-31（P2·可达性）已修**：≤767 聊天面板靠 `.chat-panel.show` 滑入但全仓无代码添加 ⇒ 手机不可达。

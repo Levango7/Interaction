@@ -46,7 +46,7 @@ function makeQuietVirtualConsole() {
   return vc;
 }
 
-export function loadApp({ storage = {}, noCrypto = false } = {}) {
+export function loadApp({ storage = {}, noCrypto = false, instrument = false } = {}) {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   assertDeliveredState(html);
   const dom = new JSDOM(html, {
@@ -80,6 +80,18 @@ export function loadApp({ storage = {}, noCrypto = false } = {}) {
       // 测试环境：jsdom 未实现 confirm/alert（默认返回 false / 抛 Not implemented）。
       // 注入默认「确认」与空实现，使依赖确认框的交互（导入覆盖、清空记忆、删除习惯链等）
       // 在测试中可继续推进；真实浏览器行为不受影响。
+      /* instrument:true —— 记录 addEventListener 的绑定，供「处理器覆盖率」门禁用（生产无影响） */
+      if (instrument) {
+        window.__bindLog = new WeakMap();
+        const proto = window.EventTarget.prototype;
+        const origAdd = proto.addEventListener;
+        proto.addEventListener = function (type, fn, opts) {
+          const prev = window.__bindLog.get(this) || [];
+          prev.push(type);
+          window.__bindLog.set(this, prev);
+          return origAdd.call(this, type, fn, opts);
+        };
+      }
       window.confirm = function () { return true; };
       window.alert = function () {};
     },

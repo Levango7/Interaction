@@ -9,6 +9,17 @@
 > 新攒的活写进本段；发版时把本段标题改为版本号（AGENTS.md §二 预登记为准），
 > 未上表的号不写版本号、写日期或引入它的 commit 锚。
 
+### 2026-10-22 · P1-6 绑定覆盖率门禁（动态控件面）
+
+- 静态控件面已有 `dead-wiring-guard`；真正没人守的是**模板动态渲染**的按钮。新增
+  `tests/binding-coverage.test.js`：15 个视图各渲染一次，收集 `#main button`，按五种合法绑定形态判定
+  （自身 `on*` / 自身 listener / ≤3 层祖先委托 / 表单 submit / 已登记委托动作属性），**未覆盖必须为 0**。
+- 实测 **196 个按钮、0 未覆盖**；委托动作注册表（23 个 `data-*`）另有"必须有可证明消费方
+  （getAttribute/dataset/closest/hasAttribute）"断言，并带反向对照。
+- 射程自检：合成的"无绑定按钮"必须判红；三种合法形态各一个样本必须判绿。
+  口径边界已写进 `docs/ARCHITECTURE.md`：只证明"有处理器"，不证明"点了有反应"。
+- 测试夹具 `loadApp({instrument:true})`：在 `beforeParse` 包装 `addEventListener` 记录绑定（生产无影响）。
+
 ### 2026-10-22 · R-31 / R-32：手机聊天抽屉可达 + AI 就绪判定改走 profiles
 
 - **R-31**：≤767 的聊天面板靠 `.chat-panel.show` 滑入，但全仓没有任何代码添加它 ⇒ 手机上聊天**不可达**。
