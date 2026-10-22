@@ -105,6 +105,26 @@
 - 守护：`tests/mobile-chat-drawer.test.js`（3 例）+ `tests/ai-readiness-profile.test.js`（4 例）+
   `layout-v2` 375 抽屉几何用例；`lint` 与 `lint:empty-catch` 均 0。
 
+### 2026-10-23 · CI：e2e 的浏览器安装改为「缓存 + 显式超时」（门禁可靠性）
+
+- **症状（实测，不是推测）**：run `39801024862` 第一次尝试的 e2e job，卡在
+  `npx playwright install --with-deps chromium` 这一步 **58m50s 仍未结束**（15:04:12Z→16:03:02Z），
+  其后的 `Run E2E` 被 `skipped` ⇒ 那一次 e2e **一步都没跑**；且因收尾方式是"被并发取消"，
+  run 不显示为红（其余三腿都是 success）—— 这类"门禁没跑却看着没事"正是最难发现的形状。
+- **不是慢性病**：同一 step 在正常 run 只要 **25 秒**（`39810885525`：16:06:46→16:07:11，
+  apt ~12s + 下载 184.3 / 2.3 / 114.7 MiB）。所以是**偶发长 stall**，被两个放大器放大成事故：
+  ① 无缓存 ⇒ 每跑一次就现拉 ~301MB；② 该 step 无 `timeout-minutes` ⇒ stall 时能一直挂到 job 上限。
+- **修法**（`ci.yml` 与 `deploy.yml` 的 e2e job **同步改**，两边 run 步骤被
+  `tests/ci-workflow-guard.test.js` 逐项比对）：① 浏览器目录 `~/.cache/ms-playwright` 进
+  `actions/cache`（键 = `runner.os` + `hashFiles('package-lock.json')`，随 Playwright 版本失效）；
+  ② 拆成 `install-deps`（apt，幂等）与 `install chromium`（**仅缓存未命中时才下载**）两步，各给 10 分钟上限。
+  缓存命中时完全不走下载，stall 窗口从"无上限"压到 10 分钟且必然显红。
+- 顺带修 `scripts/verify-ci-order.mjs` 的**静默丢步**：它的解析器只认 `- run:` 同行式，
+  `- name:` 换行式步骤会被跳过（`--job=e2e --list` 因此少列一步）。已对齐 `runStepsOf` 的两种写法口径；
+  已核 `test` job 里没有任何 `- name:` 步骤 ⇒ 默认门禁序列**逐字不变**（`--list` 前后 diff 为空）。
+- 变异验证：故意让 `deploy.yml` 与 `ci.yml` 差一个字符 ⇒ 守卫**恰好 1 条红**（"e2e job 两边也逐项一致"），
+  还原即 26/26 全绿；`js-yaml` 严格解析两份 workflow 无告警。
+
 ## [3.7.136] - 2026-10-21
 
 > 本版含：布局 v2（对话下沉 + 右栏今日任务）、原生 confirm 迁移第二~五批（35→12）、

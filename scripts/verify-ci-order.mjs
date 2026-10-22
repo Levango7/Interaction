@@ -54,12 +54,24 @@ if (jobStart < 0) {
   console.error(`ERR: ${path.basename(CI)} 里没有 job "${JOB}"；现有 job：${names.join(", ")}（用 --job=<name> 指定）`);
   process.exit(2);
 }
+/* v3.7.138 补：旧解析器**只认 `- run:` 同行式**，于是 `- name:` 换行后写 `run:` 的步骤会
+   **静默消失** —— `--job=e2e --list` 少列一步（Run E2E），且将来谁给 test job 写一个换行式步骤，
+   verify:ci 也会悄悄跳过它（典型的"空 check 判绿"）。口径对齐 `tests/ci-workflow-guard.test.js`
+   的 runStepsOf（它早就支持两种写法）。
+   ⚠️ 已核 ci.yml 的 test job 里**没有任何** `- name:` 步骤 ⇒ 本修复不改变默认门禁序列。 */
 const steps = [];
+let afterName = false;
 for (let i = jobStart + 1; i < lines.length; i++) {
   const l = lines[i];
   if (/^ {2}\w[\w-]*:\s*$/.test(l)) break;              // 下一个 job
   const m = /^\s*-\s+run:\s*(.+?)\s*$/.exec(l);
-  if (m) steps.push(m[1]);
+  if (m) { steps.push(m[1]); afterName = false; continue; }
+  if (/^\s*-\s+name:/.test(l)) { afterName = true; continue; }
+  if (afterName) {
+    const m2 = /^\s+run:\s*(.+?)\s*$/.exec(l);
+    if (m2) { steps.push(m2[1]); afterName = false; continue; }
+    if (/^\s+uses:/.test(l)) afterName = false;         // 步骤二选一：出现 uses 即不再等 run
+  }
 }
 if (!steps.length) { console.error("ERR: 没解析出任何 run 步骤"); process.exit(2); }
 

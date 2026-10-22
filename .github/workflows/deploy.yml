@@ -186,7 +186,24 @@ jobs:
           cache: 'npm'
       - run: npm run check:source-state
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # v3.7.138：与 ci.yml 的 e2e job 同步改为「缓存 + 两步各带超时」（两边 run 步骤被
+      #   tests/ci-workflow-guard.test.js 逐项比对，必须一致）。
+      #   依据（实测，2026-10-22）：run 39801024862 attempt 1 的这一步跑了 58m50s 仍未结束，
+      #   其后的 `Run E2E` 被 skipped ⇒ 那一次 e2e 一步没跑；正常 run 里同一 step 只要 25s。
+      #   病灶：① 每次现拉 ~301MB 浏览器；② 该 step 无 timeout-minutes，stall 时一直挂到 job 上限。
+      - name: 缓存 Playwright 浏览器
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+      # ⚠️ 下面两步**必须写成同行 `- run:`**（理由同 ci.yml）：两个解析器都只认这种写法，
+      #   换行式会让步骤从比对里静默消失。故 `if` / `timeout-minutes` 放在 `run:` 之后。
+      - run: npx playwright install-deps chromium
+        timeout-minutes: 10
+      - run: npx playwright install chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
       - name: Run E2E (full user flow)
         run: npm run e2e
         timeout-minutes: 10

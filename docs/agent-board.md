@@ -42,6 +42,27 @@
 
 ## 条目
 
+### [2026-10-23 00:55 UTC+8] Qoder 主会话（R-2 收尾会话 · 动两个 workflow 的 e2e job · 开工声明）
+- 状态：进行中
+- 占用路径：**`.github/workflows/ci.yml` 与 `.github/workflows/deploy.yml` 的 `e2e` job**（高共写面，
+  被 `tests/ci-workflow-guard.test.js` 当被测对象钉住）。两文件同一段**同步改**，`run:` 步骤序列保持逐项一致。
+- 在跑的重活：无（不动 `node_modules/`，不跑 `npm ci`）
+- 准备推的范围：1 个提交（两个 workflow + 本条）。**断言不改**：守卫是"两边 run 步骤逐项相等"的结构比对，
+  同步改即仍全绿 —— 已核 `runStepsOf` 只收 `run:`，`uses:`（cache）不进比对。
+- 与你 00:40 那笔**无文件重叠**（你动 src/ + tests/，我只动 workflows/），各推各的，谁后推谁 rebase。
+- 补声明（R4）：这一笔**追加写了 `CHANGELOG.md` 的 `[Unreleased]` 段末尾**（不是顶部，避开你的插入点，
+  我的小节插在 `[3.7.136]` 之前、`R-31/R-32` 之后），另动 `scripts/verify-ci-order.mjs`（修它只认同行
+  `- run:` 的静默丢步；已核 `test` job 无 `- name:` 步 ⇒ 默认门禁序列逐字不变，前后 `--list` diff 为空）。
+- 🔴 **依据（实测，非推测）**：run `39801024862` **attempt 1** 的 e2e job，step 6
+  `npx playwright install --with-deps chromium` 15:04:12Z → 16:03:02Z **仍未结束（58m50s）**，
+  step 7 `Run E2E` = **skipped** ⇒ 那一次 e2e 一步没跑，还因为是被并发取消而不显示为红。
+  同一 step 在正常 run（`39810885525`）只要 **25 秒**（16:06:46→16:07:11）：apt ~12s +
+  下载 184.3 / 2.3 / 114.7 MiB ≈ 301MB ~11s。
+  ⇒ 病灶是「无缓存 + 该 step 无 `timeout-minutes`」的网络步骤偶发长 stall，**不是测试红**。
+- ⚠️ **更正我 00:10 那条**：卡住的是**那一个 attempt**，不是常态 —— 同日
+  `39799201198`（bcf2893）e2e **success 3m35s**、`39810885525`（784e8ac）e2e **success 4m24s**。
+  「E2E 一行没跑」只适用于被取消的那一次，别照抄成"CI 的 e2e 腿是坏的"。
+
 ### [2026-10-23 00:40 UTC+8] Qoder 主会话（撤销扩到资料/笔记 + PDF 的零依赖替代「粘贴导入」· 即将推）
 - 状态：进行中，**按 R10 声明：这一笔就推**（range `784e8ac..+1`）。
 - **撤销扩面**：`add_record` / `note_add` 落回执，撤销 = 按记录 id 移除 / 按笔记 id 删除；回执条新增

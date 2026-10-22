@@ -135,7 +135,30 @@ jobs:
           cache: 'npm'
       - run: npm run check:source-state
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # v3.7.138：浏览器安装由「一条 --with-deps」改成「缓存 + 两步各带超时」。
+      #   依据（实测，2026-10-22）：run 39801024862 attempt 1 的这一步从 15:04:12Z 跑到
+      #   16:03:02Z **仍未结束（58m50s）**，其后的 `Run E2E` 被 skipped —— 那一次 e2e 一步没跑，
+      #   并且因为是被并发取消收尾，**不显示为红**（其余三腿都是 success，run 看着"还好"）。
+      #   同一 step 在正常 run（39810885525）只要 25s：apt ~12s + 下载 184.3/2.3/114.7 MiB ≈ 301MB。
+      #   两个病灶：① 每次冷启动都现拉 301MB；② 该 step 没有 timeout-minutes，stall 时能一直挂到 job 上限。
+      #   处置：浏览器目录进缓存（键随 package-lock 变，即随 @playwright/test 版本变），
+      #   并把「装系统依赖」与「下浏览器」拆成两步、各给 10 分钟上限；缓存命中时**完全不走下载**。
+      #   ⚠️ 与 deploy.yml 的 e2e job 必须同步改：`tests/ci-workflow-guard.test.js` 逐项比对两边的 run 步骤。
+      - name: 缓存 Playwright 浏览器
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+      # ⚠️ 下面两步**必须写成同行 `- run:`**：`tests/ci-workflow-guard.test.js` 与
+      #   `scripts/verify-ci-order.mjs` 的解析器都只认「`- run:` 同行」，写成 `- name:` 换行式
+      #   会让这一步从两边的比对里**静默消失**（守卫因此恒真 = 空 check 判绿，本仓有前科）。
+      #   故 `if` / `timeout-minutes` 一律放在 `run:` 之后。
+      - run: npx playwright install-deps chromium
+        timeout-minutes: 10
+      - run: npx playwright install chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
       - name: Run E2E (full user flow)
         run: npm run e2e
         timeout-minutes: 10
