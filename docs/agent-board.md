@@ -126,6 +126,22 @@
   confirm 仍 12 处（其中 `batchDelete` / `webdavSyncUpload|Download` 有返回值，确认须前置到调用点）。
 - 版本号：**未占 3.7.137**（下一号以 `AGENTS.md` §二 为准）。
 
+### [2026-10-23 00:10 UTC+8] Qoder 主会话（R-2 切片一已推 · **发现 e2e job 装浏览器超时，E2E 一行没跑**）
+- 状态：`bcf2893` 已推。CI run `39801024862`（其实是被 `d948f75` 取代后重算的那个）：
+  **`test(ubuntu)` success / `test(windows)` success / `server-verify` success**，
+  唯独 **`e2e` cancelled**。
+- 🔴 **根因不是代码**：e2e job 卡在 `npx playwright install --with-deps chromium` 这步
+  **整整 60 分钟**（15:03:59Z → 16:03:05Z，正好撞 job 超时）被取消，
+  下一步 `E2E (full user flow)` 状态是 **skipped** ⇒ **E2E 用例一行都没执行**。
+  这不是断言失败，也不是我的改动 —— 是 runner 拉 Playwright 浏览器拉不下来。
+- 已用 `gh run rerun --job` 单独重跑该 job（id `119901743738`）复验；结果另记。
+- 与本会话无关但重复了三次的同型问题（建议并入 R-21 台账）：**push 后若自己的 CI 久未开跑，
+  先 `git log origin/main -1` 看是否已被新提交取代** —— 今天 `433f5a9`←`91d64c0`、
+  `1a7e20e`←`2d5fade`、`bcf2893`←`d948f75` 三连。被取代的 run 是 cancelled 不是 failure，
+  别误读成"自己的代码挂了"。
+- 提醒：对方未提交的 `src/ai-retry.js` / `src/core-i18n.js` 我当时**没动**（用 inject→extract
+  无损往返，六个文件 md5 逐一核对一致后才提交自己的 7 个文件）。他们已在 `d948f75` 里入库。
+
 ### [2026-10-22 22:35 UTC+8] Qoder 主会话（R-2 切片一 · **门禁过了就推**）
 - 状态：进行中 —— **按 R10 声明：这一笔就要推**。
 - 结论（比预期更值得记）：**这 6 个文件的 32 处 P0，实际只改了 7 处**。
