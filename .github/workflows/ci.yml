@@ -135,7 +135,7 @@ jobs:
           cache: 'npm'
       - run: npm run check:source-state
       - run: npm ci
-      # v3.7.138：浏览器安装由「一条 --with-deps」改成「缓存 + 两步各带超时」。
+      # 2026-10-23：浏览器安装由「一条 --with-deps」改成「缓存 + 两步各带超时」。
       #   依据（实测，2026-10-22）：run 39801024862 attempt 1 的这一步从 15:04:12Z 跑到
       #   16:03:02Z **仍未结束（58m50s）**，其后的 `Run E2E` 被 skipped —— 那一次 e2e 一步没跑，
       #   并且因为是被并发取消收尾，**不显示为红**（其余三腿都是 success，run 看着"还好"）。
@@ -145,7 +145,7 @@ jobs:
       #   并把「装系统依赖」与「下浏览器」拆成两步、各给 10 分钟上限；缓存命中时**完全不走下载**。
       #   ⚠️ 与 deploy.yml 的 e2e job 必须同步改：`tests/ci-workflow-guard.test.js` 逐项比对两边的 run 步骤。
       #
-      # v3.7.138 第二次修（实测 run 39829857291 打脸上一版）：把 `--with-deps` 拆成两步后**才看清**
+      # 2026-10-23 第二次修（实测 run 39829857291 打脸上一版）：把 `--with-deps` 拆成两步后**才看清**
       #   卡的是 **apt 而不是浏览器下载** —— `install-deps` 要现装 18 个包（Playwright 装的是
       #   "完整依赖集"，含 xvfb / xserver / 多套字体，headless 根本用不到 xvfb）：
       #     · 镜像自带得全 ⇒ ~25s 走完（这也是旧版 `--with-deps` 看起来只要 25s 的原因）；
