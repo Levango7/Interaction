@@ -8197,6 +8197,17 @@ const MESSAGES = {
     "taskRail.today": "今天",
     "taskRail.overdue": "逾期",
     "a11y.taskRail": "今日任务",
+    "ai.receipt.title": "AI 改动",
+    "ai.receipt.undo": "撤销",
+    "ai.receipt.create": "创建",
+    "ai.receipt.update": "更新",
+    "ai.receipt.complete": "完成",
+    "ai.receipt.delete": "删除",
+    "ai.undo.ok": "已撤销",
+    "ai.undo.fail": "撤销失败",
+    "ai.undo.notFound": "这条回执已不存在",
+    "ai.undo.already": "这条改动已经撤销过",
+    "ai.undo.unsupported": "这类改动暂不支持撤销",
     "side.group.work": "工作台",
     "side.group.assistant": "助手",
     "side.group.more": "更多",
@@ -12142,6 +12153,17 @@ const MESSAGES = {
     "taskRail.today": "Today",
     "taskRail.overdue": "Overdue",
     "a11y.taskRail": "Today's tasks",
+    "ai.receipt.title": "AI change",
+    "ai.receipt.undo": "Undo",
+    "ai.receipt.create": "Create",
+    "ai.receipt.update": "Update",
+    "ai.receipt.complete": "Complete",
+    "ai.receipt.delete": "Delete",
+    "ai.undo.ok": "Undone",
+    "ai.undo.fail": "Undo failed",
+    "ai.undo.notFound": "This receipt no longer exists",
+    "ai.undo.already": "This change was already undone",
+    "ai.undo.unsupported": "This kind of change cannot be undone yet",
     "side.group.work": "Workbench",
     "side.group.assistant": "Assistant",
     "side.group.more": "More",
@@ -18052,6 +18074,7 @@ function execTool(name, args, force){
       tasks.push(nt);
       setTasks(tasks);
       _emitTaskEvent("task_create", nt); // v1.12 [1a]：AI/Agent 创建任务也发事件
+      _aiUndoPush({ kind:"create", taskId:nt.id, title:nt.title, sc:sc });
       return JSON.stringify({ok:true, id:nt.id, msg:t("tool.createdPrefix", "已在")+SCENARIOS[sc].name+t("tool.createdInfix", "创建任务：")+args.title});
     }
     if(name==="list_tasks"){
@@ -18063,7 +18086,9 @@ function execTool(name, args, force){
     if(name==="complete_task"){
       const ft = findTask(args.task_id);
       if(!ft) return JSON.stringify({ok:false,msg:t("tool.notFoundPrefix", "未找到匹配任务：")+args.task_id});
+      const _cb = { status:ft.task.status, doneAt:ft.task.doneAt || null };
       completeTask(ft.task.id);
+      _aiUndoPush({ kind:"complete", taskId:ft.task.id, title:ft.task.title, before:_cb });
       return JSON.stringify({ok:true, msg:t("tool.completedPrefix", "已完成：")+ft.task.title});
     }
     if(name==="update_task"){
@@ -18073,6 +18098,7 @@ function execTool(name, args, force){
         pendingConfirm={op:"update_task", task_id:ft.task.id, title:ft.task.title};
         return JSON.stringify({ok:false, confirm:t("tool.updateConfirmPrefix", "将修改：「")+ft.task.title+t("tool.updateConfirmInfix", "」（id ")+ft.task.id+t("tool.updateConfirmSuffix", "）。发送「确认」以继续，其他内容取消。"), op:"update_task", task_id:ft.task.id, title:ft.task.title});
       }
+      const _ub = { status:ft.task.status, doneAt:ft.task.doneAt || null, priority:ft.task.priority, due:ft.task.due, tags:(ft.task.tags||[]).slice() };
       const ch={};
       /* v3.7.52：写序修复。原实现先调 completeTask()（其内部会重新读数组并回写），之后仍在旧对象
          ft.task 上改优先级/截止，再 setTasks(ft.tasks) —— 实测「完成 + 改其他字段」时后者被静默丢弃，
@@ -18086,6 +18112,7 @@ function execTool(name, args, force){
       if(Array.isArray(args.tags)){ ft.task.tags=args.tags.map(String).filter(Boolean); ch.tags=ft.task.tags; }
       if(Object.keys(ch).length) setTasks(ft.tasks);
       if(args.status==="done"){ completeTask(ft.task.id); ch.status="done"; }
+      if(Object.keys(ch).length) _aiUndoPush({ kind:"update", taskId:ft.task.id, title:ft.task.title, before:_ub });
       return JSON.stringify({ok:true, msg:t("tool.updatedPrefix", "已更新「")+ft.task.title+t("tool.updatedInfix", "」：")+JSON.stringify(ch)});
     }
     if(name==="delete_task"){
@@ -18097,6 +18124,7 @@ function execTool(name, args, force){
       }
       ft.task.deletedAt=Date.now(); setTasks(ft.tasks); // ③ 软删除：进回收站，可恢复
       _emitTaskEvent("task_delete", ft.task); // v1.12 [1a]：AI 删除任务发事件
+      _aiUndoPush({ kind:"delete", taskId:ft.task.id, title:ft.task.title });
       return JSON.stringify({ok:true, msg:t("tool.deletedPrefix", "已删除（进入左侧「回收站」，可恢复）：")+ft.task.title});
     }
     if(name==="add_record"){
@@ -18200,6 +18228,57 @@ function execTool(name, args, force){
     try{ toast(t("tool.execErrorPrefix", "工具执行异常：")+(e&&e.message||t("tool.unknownErrorMsg", "未知错误")), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
     return JSON.stringify({ok:false, error:String(e)});
   }
+}
+
+/* ---------- AI 改动回执与撤销（2026-10-22，PRODUCT §7.3） ----------
+ * 为什么：原则是"没有 undo 的写操作不允许上线"。本版先覆盖**任务级**四种可逆写
+ * （创建 / 更新 / 完成 / 删除），每次由 execTool（AI/Agent 的唯一执行入口）成功后落一条回执。
+ * 边界（如实）：① 完成操作触发的联动规则新生成的任务，撤销不会连带撤销；
+ * ② 只覆盖任务工具；资料库 / 笔记 / 知识库的写暂不在本账。 */
+const AI_UNDO_KEY = PREFIX + "ai_undo";
+const AI_UNDO_MAX = 30;
+
+function aiUndoList(){
+  const a = load(AI_UNDO_KEY, []);
+  return Array.isArray(a) ? a : [];
+}
+
+function _aiUndoPush(entry){
+  const a = aiUndoList();
+  a.unshift(Object.assign({ id: uid(), ts: Date.now(), undone: false }, entry));
+  save(AI_UNDO_KEY, a.slice(0, AI_UNDO_MAX));
+  if(typeof renderAiReceipts === "function") renderAiReceipts();
+}
+
+/** 撤销一条 AI 改动。@returns {{ok:boolean, msg?:string}} */
+function undoAiAction(id){
+  const a = aiUndoList();
+  const e = a.find(x => x.id === id);
+  if(!e) return { ok:false, msg:t("ai.undo.notFound", "这条回执已不存在") };
+  if(e.undone) return { ok:false, msg:t("ai.undo.already", "这条改动已经撤销过") };
+  const tasks = getTasks();
+  const tk = tasks.find(x => x.id === e.taskId);
+  if(e.kind === "create"){
+    if(tk && !tk.deletedAt) tk.deletedAt = Date.now();
+  } else if(e.kind === "delete"){
+    if(tk) tk.deletedAt = null;
+  } else if(e.kind === "complete"){
+    if(tk){
+      tk.status = (e.before && e.before.status) || "todo";
+      tk.doneAt = (e.before && e.before.doneAt) || null;
+    }
+  } else if(e.kind === "update"){
+    if(tk) Object.assign(tk, e.before || {});
+  } else {
+    return { ok:false, msg:t("ai.undo.unsupported", "这类改动暂不支持撤销") };
+  }
+  setTasks(tasks);
+  e.undone = true;
+  e.undoneAt = Date.now();
+  save(AI_UNDO_KEY, a);
+  if(typeof AppBridge !== "undefined" && AppBridge && typeof AppBridge.render === "function") AppBridge.render();
+  if(typeof renderAiReceipts === "function") renderAiReceipts();
+  return { ok:true };
 }
 
 /* v1.14.1：从 SCENARIOS 派生 add_record.fields 的场景子 schema（单一真相源，避免 fields 契约漂移） */
@@ -28268,7 +28347,7 @@ function _getSyncMeta() {
   try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || "{}") || {}; } catch (e) { return {}; }
 }
 function _setSyncMeta(patch) {
-  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(_getSyncMeta(), patch))); } catch (e) { /* 配额等：静默 */ }
+  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(_getSyncMeta(), patch))); } catch (e) { /* R-2 消解：原为全静默。写失败会让下次 _getSyncMeta() 回落 {}，把「上次同步时间 / etag」当成没有 —— 表现为重复全量同步或冲突误判，用户只觉得「同步怪怪的」。控制流不变（照旧继续并渲染），只把失败留痕到诊断面板。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","sync meta persist failed（下次可能重复全量同步 / 冲突误判）: "+((e&&e.message)||e),{where:"_setSyncMeta"}); }catch(_){} }
   _renderLastSync();
 }
 /* v3.7.58（安全）：云快照排除"密钥/本机控制类"键。
@@ -28371,7 +28450,7 @@ function _applyCloudSnapshot(data) {
     const pre = {};
     if (typeof allKeys === "function") allKeys().forEach(function (k) { const v = localStorage.getItem(k); if (typeof v === "string") pre[k] = v; });
     if (Object.keys(pre).length) save(PREFIX + "pre_restore_backup", { at: Date.now(), keys: pre });
-  } catch (e) { /* 备份失败不阻塞恢复 */ }
+  } catch (e) { /* 备份失败不阻塞恢复 —— 控制流保持（照旧继续恢复），但**必须留痕**：R-2/OD-003 的核心是「保护语义必须可被消费」，静默失败会让用户以为有回滚档而实际没有，是典型的假保护。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","pre-restore 备份写入失败（本次恢复将没有回滚档）: "+((e&&e.message)||e),{where:"_applyCloudSnapshot"}); }catch(_){} }
   /* v3.7.59 安全修正：入站必须与出站（_buildCloudSnapshot）对称地排除密钥/本机控制类键。
      此前只有出站排除，入站是「快照里有啥就写啥」——于是服务端（或被篡改/被劫持的链路）
      只要回传 wb_agent___dk（**设备密钥本体**），就会覆盖本机密钥；此后应用用攻击者已知的
@@ -34725,6 +34804,7 @@ function bindChatPanel(){
     const debouncedResize=(typeof debounce==="function") ? debounce(applyResponsive,200) : applyResponsive;
     window.addEventListener("resize", debouncedResize);
   }
+  renderAiReceipts();
   return true;
 }
 /* v3.2 IA：场景内"问 AI 助手"入口
@@ -34766,6 +34846,41 @@ function askAiAboutScene(sc, hintKey){
   }
   ta.focus();
 }
+/* ---------- AI 改动回执条（PRODUCT §7.3：改动可见、可撤销） ----------
+ * 动态挂载进 #chatPanel（不改 HTML 骨架），最多展示最近 3 条未撤销的 AI 写操作。 */
+function renderAiReceipts(){
+  const panel = document.getElementById("chatPanel");
+  if(!panel) return;
+  let box = document.getElementById("aiReceipts");
+  const list = (typeof aiUndoList === "function") ? aiUndoList().filter(x=>!x.undone).slice(0,3) : [];
+  if(!list.length){ if(box) box.remove(); return; }
+  if(!box){
+    box = document.createElement("div");
+    box.id = "aiReceipts";
+    box.setAttribute("role","status");
+    box.style.cssText = "display:flex;flex-direction:column;gap:2px;padding:6px 12px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--panel2) 70%,transparent)";
+    const inputArea = panel.querySelector(".chat-input-area");
+    panel.insertBefore(box, inputArea || null);
+    box.addEventListener("click", (e)=>{
+      const b = e.target.closest ? e.target.closest("[data-ai-undo]") : null;
+      if(!b) return;
+      const r = undoAiAction(b.getAttribute("data-ai-undo"));
+      toast(r.ok ? t("ai.undo.ok", "已撤销") : (r.msg || t("ai.undo.fail", "撤销失败")), r.ok ? "ok" : "warn");
+    });
+  }
+  const KIND = { create:t("ai.receipt.create", "创建"), update:t("ai.receipt.update", "更新"),
+    complete:t("ai.receipt.complete", "完成"), delete:t("ai.receipt.delete", "删除") };
+  // lint-xss-ok: 插值全部经 esc()/t()；kind 走白名单字典，id 来自本地 uid()
+  box.innerHTML = list.map(x=>{
+    const label = KIND[x.kind] || t("ai.receipt.update", "更新");
+    return '<span class="u-flex u-ai-center u-gap-1 u-fs-2xs">'
+      + '<span class="u-text-muted">' + esc(t("ai.receipt.title", "AI 改动") + " · " + label) + '</span>'
+      + '<b class="u-nowrap u-overflow-hidden u-ellipsis" style="max-width:160px">' + esc(x.title || "") + '</b>'
+      + '<button type="button" class="btn-ghost u-fs-2xs" data-ai-undo="' + esc(x.id) + '">' + esc(t("ai.receipt.undo", "撤销")) + '</button>'
+      + '</span>';
+  }).join("");
+}
+
 /* 全局委托：点击 phAiAskBtn 触发（renderSceneHead 重渲染后依然有效，幂等） */
 /* v3.2.1：AI Hub 三卡片（教练/每日报告/智能推荐）的"在 AI 助手中讨论"出口
  * 内容存 _aiHubContent（按 type 索引：coach/daily/recommend）。
@@ -37225,7 +37340,7 @@ function doImport(file){
       // v2.0.1：导入不 reload 页面，须复位会话层与场景聊天内存缓存，否则 UI 显示导入前旧数据
       try{ _resetSessions(); _reloadChatsFromStorage(); }catch(_){ /* noop */ }
       clearUndoStack(); // B6：导入后清空撤销栈，避免跨数据状态误撤销
-      try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 */ }
+      try{ await initCrypto(); }catch(e){ /* 忽略，降级明文 —— 控制流不变，但**必须留痕**：加密不可用意味着此后写入的是明文，用户会以为数据仍受设备密钥保护。这是安全面的静默降级，属 R-2 最该上报的一类。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","initCrypto 失败，导入后将以明文写入: "+((e&&e.message)||e),{where:"doImport"}); }catch(_){} }
 
       // P0-5：解析「有效 Key」——跨设备后原密文/OS 存储可能已失效
       // 多 Profile：优先用 _portableKeys 数组恢复每个 profile 的明文 key
@@ -37985,7 +38100,8 @@ function getMessages(){
   try{ return JSON.parse(localStorage.getItem(MSG_KEY)) || []; }catch(e){ return []; }
 }
 function saveMessages(list){
-  try{ localStorage.setItem(MSG_KEY, JSON.stringify(list)); }catch(e){ /* noop */ }
+  /* R-2 消解：原为 noop。消息（含未读提醒）写失败 = 直接丢失且无痕迹，控制流不变，只留痕。 */
+  try{ localStorage.setItem(MSG_KEY, JSON.stringify(list)); }catch(e){ try{ if(typeof pushDiag==="function") pushDiag("warn","messages persist failed（本次消息写入丢失）: "+((e&&e.message)||e),{where:"saveMessages"}); }catch(_){} }
 }
 function addMessage(type, title, body, action){
   let list = getMessages();
@@ -40784,7 +40900,7 @@ function renderStorageUsage(){
       totalBytes += bytes;
       sizes.push({ k, bytes });
     }
-  }catch(_e){ /* 遍历失败时显示空态 */ }
+  }catch(e){ /* R-2 消解：原为全静默「遍历失败时显示空态」。这条更危险 —— 空态会让用户以为**存储是空的**，而实际可能是「有数据但读不出来」，占用进度条还停在 0%，与「快满了」正好相反。控制流不变（照旧按已累加的部分算百分比），只把失败留痕。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","storage usage scan failed（占用百分比可能偏低）: "+((e&&e.message)||e),{where:"_renderStorageBar"}); }catch(_){} }
   const pct = Math.min(100, Math.round(totalBytes / LS_LIMIT * 100));
   // 阈值三档：<70% 正常 / ≥70% warn / ≥85% danger
   fillEl.style.width = pct + "%";
@@ -42714,7 +42830,7 @@ function applyStartHash(){
 }
 
 (async function startup(){
-  try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 */ }
+  try{ await initCrypto(); }catch(e){ /* 降级明文，不阻塞启动 —— 控制流不变，但**必须留痕**：加密不可用 = 此后写入的是明文，而用户会以为数据受设备密钥保护。这是安全面的静默降级，属 R-2 最该上报的一类。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","启动时 initCrypto 失败，将以明文运行: "+((e&&e.message)||e),{where:"startup"}); }catch(_){} }
   /* v3.7.66：飞书 / 钉钉凭据策略改为「仅会话内存、绝不落盘」——
      历史版本可能已把 appSecret / accessSecret（甚至当时不算敏感字段的 appId / accessKey）
      写进 wb_integration_providers，启动时一次性抹掉。放在 initCrypto 之后是因为
@@ -49552,7 +49668,7 @@ function _notifyScrubPersisted(){
       }
     });
     if(n) _intSaveProviders();
-  }catch(e){ /* 清不动也不能挡住启动 */ }
+  }catch(e){ /* 清不动也不能挡住启动 —— 控制流不变，但**必须留痕**：这一步清的是历史版本误持久化的 appSecret / accessSecret / accessKey。清理失败 = 敏感凭据仍留在 localStorage 盘上，而 v3.7.66 起的承诺是「仅会话内存、绝不落盘」，静默失败等于承诺悄悄失效。 */ try{ if(typeof pushDiag==="function") pushDiag("warn","旧集成凭据清理失败（敏感字段可能仍留在本机）: "+((e&&e.message)||e),{where:"_notifyScrubPersisted"}); }catch(_){} }
   return n;
 }
 
