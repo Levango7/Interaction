@@ -28,6 +28,7 @@ function execTool(name, args, force){
       tasks.push(nt);
       setTasks(tasks);
       _emitTaskEvent("task_create", nt); // v1.12 [1a]：AI/Agent 创建任务也发事件
+      _aiUndoPush({ kind:"create", taskId:nt.id, title:nt.title, sc:sc });
       return JSON.stringify({ok:true, id:nt.id, msg:t("tool.createdPrefix", "已在")+SCENARIOS[sc].name+t("tool.createdInfix", "创建任务：")+args.title});
     }
     if(name==="list_tasks"){
@@ -39,7 +40,9 @@ function execTool(name, args, force){
     if(name==="complete_task"){
       const ft = findTask(args.task_id);
       if(!ft) return JSON.stringify({ok:false,msg:t("tool.notFoundPrefix", "未找到匹配任务：")+args.task_id});
+      const _cb = { status:ft.task.status, doneAt:ft.task.doneAt || null };
       completeTask(ft.task.id);
+      _aiUndoPush({ kind:"complete", taskId:ft.task.id, title:ft.task.title, before:_cb });
       return JSON.stringify({ok:true, msg:t("tool.completedPrefix", "已完成：")+ft.task.title});
     }
     if(name==="update_task"){
@@ -49,6 +52,7 @@ function execTool(name, args, force){
         pendingConfirm={op:"update_task", task_id:ft.task.id, title:ft.task.title};
         return JSON.stringify({ok:false, confirm:t("tool.updateConfirmPrefix", "将修改：「")+ft.task.title+t("tool.updateConfirmInfix", "」（id ")+ft.task.id+t("tool.updateConfirmSuffix", "）。发送「确认」以继续，其他内容取消。"), op:"update_task", task_id:ft.task.id, title:ft.task.title});
       }
+      const _ub = { status:ft.task.status, doneAt:ft.task.doneAt || null, priority:ft.task.priority, due:ft.task.due, tags:(ft.task.tags||[]).slice() };
       const ch={};
       /* v3.7.52：写序修复。原实现先调 completeTask()（其内部会重新读数组并回写），之后仍在旧对象
          ft.task 上改优先级/截止，再 setTasks(ft.tasks) —— 实测「完成 + 改其他字段」时后者被静默丢弃，
@@ -62,6 +66,7 @@ function execTool(name, args, force){
       if(Array.isArray(args.tags)){ ft.task.tags=args.tags.map(String).filter(Boolean); ch.tags=ft.task.tags; }
       if(Object.keys(ch).length) setTasks(ft.tasks);
       if(args.status==="done"){ completeTask(ft.task.id); ch.status="done"; }
+      if(Object.keys(ch).length) _aiUndoPush({ kind:"update", taskId:ft.task.id, title:ft.task.title, before:_ub });
       return JSON.stringify({ok:true, msg:t("tool.updatedPrefix", "已更新「")+ft.task.title+t("tool.updatedInfix", "」：")+JSON.stringify(ch)});
     }
     if(name==="delete_task"){
@@ -73,6 +78,7 @@ function execTool(name, args, force){
       }
       ft.task.deletedAt=Date.now(); setTasks(ft.tasks); // ③ 软删除：进回收站，可恢复
       _emitTaskEvent("task_delete", ft.task); // v1.12 [1a]：AI 删除任务发事件
+      _aiUndoPush({ kind:"delete", taskId:ft.task.id, title:ft.task.title });
       return JSON.stringify({ok:true, msg:t("tool.deletedPrefix", "已删除（进入左侧「回收站」，可恢复）：")+ft.task.title});
     }
     if(name==="add_record"){
@@ -176,6 +182,57 @@ function execTool(name, args, force){
     try{ toast(t("tool.execErrorPrefix", "工具执行异常：")+(e&&e.message||t("tool.unknownErrorMsg", "未知错误")), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
     return JSON.stringify({ok:false, error:String(e)});
   }
+}
+
+/* ---------- AI 改动回执与撤销（2026-10-22，PRODUCT §7.3） ----------
+ * 为什么：原则是"没有 undo 的写操作不允许上线"。本版先覆盖**任务级**四种可逆写
+ * （创建 / 更新 / 完成 / 删除），每次由 execTool（AI/Agent 的唯一执行入口）成功后落一条回执。
+ * 边界（如实）：① 完成操作触发的联动规则新生成的任务，撤销不会连带撤销；
+ * ② 只覆盖任务工具；资料库 / 笔记 / 知识库的写暂不在本账。 */
+const AI_UNDO_KEY = PREFIX + "ai_undo";
+const AI_UNDO_MAX = 30;
+
+function aiUndoList(){
+  const a = load(AI_UNDO_KEY, []);
+  return Array.isArray(a) ? a : [];
+}
+
+function _aiUndoPush(entry){
+  const a = aiUndoList();
+  a.unshift(Object.assign({ id: uid(), ts: Date.now(), undone: false }, entry));
+  save(AI_UNDO_KEY, a.slice(0, AI_UNDO_MAX));
+  if(typeof renderAiReceipts === "function") renderAiReceipts();
+}
+
+/** 撤销一条 AI 改动。@returns {{ok:boolean, msg?:string}} */
+function undoAiAction(id){
+  const a = aiUndoList();
+  const e = a.find(x => x.id === id);
+  if(!e) return { ok:false, msg:t("ai.undo.notFound", "这条回执已不存在") };
+  if(e.undone) return { ok:false, msg:t("ai.undo.already", "这条改动已经撤销过") };
+  const tasks = getTasks();
+  const tk = tasks.find(x => x.id === e.taskId);
+  if(e.kind === "create"){
+    if(tk && !tk.deletedAt) tk.deletedAt = Date.now();
+  } else if(e.kind === "delete"){
+    if(tk) tk.deletedAt = null;
+  } else if(e.kind === "complete"){
+    if(tk){
+      tk.status = (e.before && e.before.status) || "todo";
+      tk.doneAt = (e.before && e.before.doneAt) || null;
+    }
+  } else if(e.kind === "update"){
+    if(tk) Object.assign(tk, e.before || {});
+  } else {
+    return { ok:false, msg:t("ai.undo.unsupported", "这类改动暂不支持撤销") };
+  }
+  setTasks(tasks);
+  e.undone = true;
+  e.undoneAt = Date.now();
+  save(AI_UNDO_KEY, a);
+  if(typeof AppBridge !== "undefined" && AppBridge && typeof AppBridge.render === "function") AppBridge.render();
+  if(typeof renderAiReceipts === "function") renderAiReceipts();
+  return { ok:true };
 }
 
 /* v1.14.1：从 SCENARIOS 派生 add_record.fields 的场景子 schema（单一真相源，避免 fields 契约漂移） */

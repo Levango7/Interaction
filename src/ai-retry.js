@@ -1267,6 +1267,7 @@ function bindChatPanel(){
     const debouncedResize=(typeof debounce==="function") ? debounce(applyResponsive,200) : applyResponsive;
     window.addEventListener("resize", debouncedResize);
   }
+  renderAiReceipts();
   return true;
 }
 /* v3.2 IA：场景内"问 AI 助手"入口
@@ -1308,6 +1309,41 @@ function askAiAboutScene(sc, hintKey){
   }
   ta.focus();
 }
+/* ---------- AI 改动回执条（PRODUCT §7.3：改动可见、可撤销） ----------
+ * 动态挂载进 #chatPanel（不改 HTML 骨架），最多展示最近 3 条未撤销的 AI 写操作。 */
+function renderAiReceipts(){
+  const panel = document.getElementById("chatPanel");
+  if(!panel) return;
+  let box = document.getElementById("aiReceipts");
+  const list = (typeof aiUndoList === "function") ? aiUndoList().filter(x=>!x.undone).slice(0,3) : [];
+  if(!list.length){ if(box) box.remove(); return; }
+  if(!box){
+    box = document.createElement("div");
+    box.id = "aiReceipts";
+    box.setAttribute("role","status");
+    box.style.cssText = "display:flex;flex-direction:column;gap:2px;padding:6px 12px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--panel2) 70%,transparent)";
+    const inputArea = panel.querySelector(".chat-input-area");
+    panel.insertBefore(box, inputArea || null);
+    box.addEventListener("click", (e)=>{
+      const b = e.target.closest ? e.target.closest("[data-ai-undo]") : null;
+      if(!b) return;
+      const r = undoAiAction(b.getAttribute("data-ai-undo"));
+      toast(r.ok ? t("ai.undo.ok", "已撤销") : (r.msg || t("ai.undo.fail", "撤销失败")), r.ok ? "ok" : "warn");
+    });
+  }
+  const KIND = { create:t("ai.receipt.create", "创建"), update:t("ai.receipt.update", "更新"),
+    complete:t("ai.receipt.complete", "完成"), delete:t("ai.receipt.delete", "删除") };
+  // lint-xss-ok: 插值全部经 esc()/t()；kind 走白名单字典，id 来自本地 uid()
+  box.innerHTML = list.map(x=>{
+    const label = KIND[x.kind] || t("ai.receipt.update", "更新");
+    return '<span class="u-flex u-ai-center u-gap-1 u-fs-2xs">'
+      + '<span class="u-text-muted">' + esc(t("ai.receipt.title", "AI 改动") + " · " + label) + '</span>'
+      + '<b class="u-nowrap u-overflow-hidden u-ellipsis" style="max-width:160px">' + esc(x.title || "") + '</b>'
+      + '<button type="button" class="btn-ghost u-fs-2xs" data-ai-undo="' + esc(x.id) + '">' + esc(t("ai.receipt.undo", "撤销")) + '</button>'
+      + '</span>';
+  }).join("");
+}
+
 /* 全局委托：点击 phAiAskBtn 触发（renderSceneHead 重渲染后依然有效，幂等） */
 /* v3.2.1：AI Hub 三卡片（教练/每日报告/智能推荐）的"在 AI 助手中讨论"出口
  * 内容存 _aiHubContent（按 type 索引：coach/daily/recommend）。
