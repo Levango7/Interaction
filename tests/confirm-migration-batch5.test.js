@@ -140,15 +140,14 @@ describe("批量删除（src/ui-scene-bind.js batchDelete）", () => {
      `await p; render()` 去模拟调用方，把源码改回 `batchDelete(); render();` 后
      **一条都没红**，即判据无射程）。 */
 
-  /** 造最小入口载体并点一次「批量删除」，走 bindBatchToolbar 的真实绑定 */
+  /* 2026-10-23：批量删除的 UI 入口**已接上线**（多选按钮 + `#batchToolbar` DOM +
+     `bindScenario()` 里调 `bindBatchToolbar()`，见 render-scene-main.js 的考古结论），
+     所以这里不再自造最小载体 —— 直接点场景页里真实的 `#btnBatchDelete`。
+     保留 `typeof btn.onclick === "function"` 这条：它守的是"bindBatchToolbar 真的把
+     批量删除绑到了按钮上"，防止将来有人只加 DOM 不接线（那正是本缺陷的原始形状）。 */
   function clickBatchDelete(win) {
-    const bar = win.document.createElement("div");
-    bar.id = "batchToolbar";
-    win.document.body.appendChild(bar);
-    const btn = win.document.createElement("button");
-    btn.id = "btnBatchDelete";
-    win.document.body.appendChild(btn);
-    win.__test.bindBatchToolbar();
+    const btn = win.document.getElementById("btnBatchDelete");
+    expect(btn, "批量删除按钮必须真的在场景页 DOM 里（bindBatchToolbar 已由 bindScenario 调用）").toBeTruthy();
     expect(typeof btn.onclick, "bindBatchToolbar 必须真的把批量删除绑到按钮上").toBe("function");
     btn.click();
   }
@@ -195,20 +194,30 @@ describe("批量删除（src/ui-scene-bind.js batchDelete）", () => {
     expect(isOpen(win), "没有选中项时不该弹确认框（batchDelete 内部提前 return 0）").toBe(false);
   });
 
-  it("登记：批量删除的 UI 入口当前**不存在**（缺陷钉住，防遗忘）", async () => {
+  /* 2026-10-23：这条从"缺陷登记"翻成了"缺陷已修"的正向断言。
+     原状：`bindBatchToolbar()` 全仓无调用点、`#batchToolbar` 不在 DOM 里 ⇒ 用户界面上
+     没有任何路径能触发批量删除。当时用一条"按钮必须为 null"把它钉住，并注明
+     "接上线后这条会红，请改走真实入口"。现在入口接上了，按当初的约定改写。 */
+  it("批量删除的 UI 入口**已接上线**（多选按钮 + 工具栏 DOM + bindBatchToolbar 调用）", async () => {
     const win = await boot();
     await withTasks(win, ["登记用"]);
+
+    expect(win.document.getElementById("btnBatchMode"), "筛选行应有多选入口按钮").toBeTruthy();
+    const bar = win.document.getElementById("batchToolbar");
+    expect(bar, "工具栏 DOM 必须存在").toBeTruthy();
+    expect(bar.style.display, "没进多选模式时工具栏应隐藏").toBe("none");
+    expect(win.document.getElementById("btnBatchDelete"), "工具栏里应有批量删除按钮").toBeTruthy();
+    expect(win.document.getElementById("btnBatchComplete"), "工具栏里应有批量完成按钮").toBeTruthy();
+    expect(win.document.getElementById("batchMoveTarget"), "工具栏里应有移动目标下拉").toBeTruthy();
+    expect(win.document.getElementById("batchPriorityTarget"), "工具栏里应有优先级下拉").toBeTruthy();
+    expect(win.document.querySelectorAll(".kcard .batch-chk").length, "没进多选模式时不该有 checkbox").toBe(0);
+
     win.__test.toggleBatchMode(true);
     win.render();
-    await tick();
-
-    /* 这不是"期望状态"，而是**缺陷登记**：bindBatchToolbar() 全仓无调用点、
-       `#batchToolbar` 也不在静态 HTML 里 ⇒ 用户界面上没有任何路径能触发批量删除。
-       这条断言的作用是把缺陷钉在测试里，让它不至于被遗忘；将来有人把工具栏接上线，
-       这条会红 —— 那时就该把它删掉，并把上面三条改成走真实入口 `#btnBatchDelete` 的真路径验证。 */
-    expect(win.document.getElementById("btnBatchDelete"),
-      "登记：批量删除按钮当前缺失（bindBatchToolbar 无人调用）。接上线后这条会红，请改走真实入口")
-      .toBeNull();
+    await vi.waitFor(() => expect(win.document.getElementById("batchToolbar").style.display).toBe("flex"));
+    expect(win.document.querySelectorAll(".kcard .batch-chk").length, "多选模式下每张卡片都应有 checkbox")
+      .toBeGreaterThan(0);
+    expect(win.document.getElementById("btnBatchDelete").onclick, "进模式后按钮必须已接线").toBeTypeOf("function");
   });
 });
 

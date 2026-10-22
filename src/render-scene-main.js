@@ -180,6 +180,32 @@ function renderMainHTML(){
     <div class="fld fld-lg"><label>${t("field.linkedRecord","联动记录")}</label>
       <select id="boardStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
     <div class="fld fld-lg fld-fill"><label for="tagFilter">${t("field.tagFilterAll","标签（留空=全部）")}</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
+    <div class="fld fld-sm"><button type="button" class="tbtn" id="btnBatchMode">${t("batch.multiSelect","多选")}</button></div>
+  </div>`;
+
+  /* 2026-10-23：v1.6-B 批量操作工具栏 —— 补上**唯一缺失的那块 DOM**。
+     背景（考古结论）：这套功能在 v1.6-B 就写全了 —— 状态/选择/完成/删除/移动/优先级/全选、
+     卡片 checkbox 注入、`.batch-toolbar` 与 `.batch-mode` 两套 CSS、i18n 文案**全都在**，
+     甚至 `_renderBatchUI()` 连"工具栏显隐 + 选中计数 + 卡片 checkbox 显隐"都写好了。
+     唯独三样从来没有：① `#batchToolbar` 这个 DOM；② 进入多选模式的入口按钮；③ `bindBatchToolbar()` 的调用点
+     ⇒ 整条链在 UI 上零入口（`bindBatchToolbar()` 全仓无调用点），用户没有任何路径能触发批量删除。
+     不是冗余（回收站的批量恢复/彻底删除是另一回事，管的是已删除项；任务多选此处独一份），是残缺，故补完而不是删。
+     ⚠️ 显隐不用改 CSS：`.batch-toolbar{display:none}` + `_renderBatchUI()` 写 inline `display` 即可。 */
+  const _moveOpts = '<option value="">' + t("batch.pickScenario","选择场景") + "</option>"
+    + Object.keys(SCENARIOS).filter(k => k !== active)
+        .map(k => '<option value="' + k + '">' + esc(SCENARIOS[k].name) + "</option>").join("");
+  const _priOpts = '<option value="">' + t("common.none","无") + "</option>"
+    + ["P0","P1","P2"].map(v => '<option value="' + v + '">' + v + "</option>").join("");
+  const batchToolbarHTML = `<div class="batch-toolbar" id="batchToolbar" style="display:none">
+    <span class="batch-info">${t("batch.selected","已选")} <b id="batchSelCount">0</b> ${t("unit.tasks"," 个任务")}</span>
+    <button type="button" class="primary" id="btnBatchComplete">${t("batch.complete","批量完成")}</button>
+    <button type="button" class="danger" id="btnBatchDelete">${t("batch.delete","批量删除")}</button>
+    <select id="batchMoveTarget" aria-label="${t("batch.moveTo","移动到场景")}">${_moveOpts}</select>
+    <button type="button" id="btnBatchMove">${t("batch.move","移动")}</button>
+    <select id="batchPriorityTarget" aria-label="${t("task.priority","优先级")}">${_priOpts}</select>
+    <button type="button" id="btnBatchPriority">${t("batch.setPriority","改优先级")}</button>
+    <label class="batch-selall"><input type="checkbox" id="btnBatchSelectAll" aria-label="${t("batch.selectAll","全选")}">${t("batch.selectAll","全选")}</label>
+    <button type="button" class="batch-cancel" id="btnBatchCancel">${t("common.cancel","取消")}</button>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
@@ -205,7 +231,7 @@ function renderMainHTML(){
       const list = tasks.filter(x => x.status === st);
       return _renderKanbanCol(st, list, colName);
     }).join("") + `</div>`;
-    filterHtml = tagFilterHTML;
+    filterHtml = tagFilterHTML + batchToolbarHTML;
   }
 
   const recFields = rec.fields.map(f=>{

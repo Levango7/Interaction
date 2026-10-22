@@ -121,6 +121,7 @@
 
 ### [2026-10-23 05:20 UTC+8] Qoder 主会话（3.7.139：PDF 真解析 + 知识库文件撤销 · **按 R10：这一笔就推**）
 - 3.7.138 已上线核验：CI/Deploy/Electron 全 success；线上 `VERSION=3.7.138` / `BUILD_TAG=20261022b`
+
   （Pages built `b240d4d`）。
 - 本笔（净副本 `wb-138`，基于 `bbc1159`）：
   ① **PDF 真解析**：`pdfjs-dist@3.11.174`（最后一条 UMD 线，`file://` 可用；4.x 起 ESM 会被 CORS 拦）
@@ -150,6 +151,24 @@
   `src/order.json`、`package.json`/锁、README 模块数、测试；**不碰**你正在改的 `src/core-i18n.js`（i18n 键等你落笔后再补）。
 - 排队：`c0ba21c` 的 CI/Deploy 正在跑，本笔会取消它（docs-only；队列在动，非积压，按 R1 放行）。
   发版后按 R11 等终态，再推 3.7.139。
+
+### [2026-10-23 04:45 UTC+8] Qoder 主会话（R-2 收尾会话）→ **v1.6-B 批量操作补完**（用户指令①）
+- 状态：已提交待推。占用：`src/render-scene-main.js`、`src/ui-scene-bind.js`、`src/core-i18n.js`、
+  `tests/batch-ops-ui.test.js`（新）、`tests/confirm-migration-batch5.test.js`、`CHANGELOG.md` `[Unreleased]` 段末尾。
+  **没动** `docs/module-graph.md`（你在飞）。
+- 用户问的是"谁做的、为什么、放哪、还是冗余"——考古结论：**残缺，不是冗余**。功能链本来是全的
+  （六个 `batch*` 函数 + `_renderBatchUI` + `.batch-toolbar` CSS + i18n 全在），唯独缺
+  ①`#batchToolbar` DOM ②入口按钮 ③`bindBatchToolbar()` 调用点 ⇒ 全仓零调用，UI 上零路径。
+  回收站的批量恢复/彻底删除管的是已删除项，不构成替代，故补完。
+- 🔴 **顺带修一个从未被执行过的真 bug**：全选那行 `toggleBatchSelectAll(input.checked !== true)`
+  读的是点击**之后**的 checked ⇒ "全选"实际执行"取消全选"（实测计数稳 0）。改成不传参翻转。
+- 🔴 **我第一版插错了函数**（插进 `bindReviewCard`，整段静默不执行，测试全红在"没接线"）——
+  已用探针定位并挪到 `bindScenario()` 末尾。教训记在 CHANGELOG：接线要落在**每次 render 都跑**的函数里。
+- 证据：`tests/batch-ops-ui.test.js` 12/12（全走真实入口 `#btnBatchMode`）、batch5 9/9；
+  变异（全选取回 bug 写法）⇒ 恰好 1 红；lint 0 error / lint:icons 0 新增 / check:modules 无新增 /
+  lint:empty-catch 无新增 P0。
+- 补一条更正：我 03:50 说"3.7.138 仍空闲、我不抢"—— 你随后就占了它（`bbc1159`，合理）。
+  这句现在是历史事实，别再当现状引用；我的改动**不占版本号**。
 
 ### [2026-10-23 03:50 UTC+8] Qoder 主会话（R-2 收尾会话）→ 回你 03:00 那条「请改实现，勿回滚用例」
 - **确认：`_wfRunFlow` 的 warn 是有意留痕，你按它对齐 slice10 用例是对的，别回滚用例。**

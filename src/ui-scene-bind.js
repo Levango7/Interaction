@@ -101,6 +101,22 @@ function bindScenario(){
   _bindVirtualScrolls(active);
   bindExtra(active);
   bindSceneSections(active);
+  /* ---------- v1.6-B 批量操作：入口 + 工具栏（2026-10-23 补齐，见 render-scene-main.js 的考古结论） ----------
+     补齐前 `bindBatchToolbar()` **全仓零调用点**、`#batchToolbar` 也不在 DOM 里 ⇒ 整条批量链没有 UI 入口。
+     ⚠️ 三件事必须都在 **bindScenario 末尾**（不是 bindReviewCard 之类 —— 第一版就插错了函数，
+     整段静默不执行，只有探针日志能发现）：bindScenario 每次 render 场景页都会跑（render-entry.js:102）。
+       ① 绑"多选"入口按钮 —— DOM 每次 render 重建，onclick 必须跟着重绑；
+       ② 调 bindBatchToolbar() 把六个工具钮接到 batch* 函数（它自带 _bound 幂等）；
+       ③ 调 _renderBatchUI() 做渲染后同步 —— 否则"模式还开着时发生了一次 render"会把
+          checkbox 和工具栏打回隐藏态，而 _batchState 仍是 true（状态与界面不一致）。 */
+  const bm = $("#btnBatchMode");
+  if(bm) bm.onclick = function(){
+    toggleBatchMode();   // 翻转模式；内部那次 _renderBatchUI 作用在**旧** DOM 上
+    render();            // 重建场景页（新 DOM 里没有 checkbox、工具栏带着 display:none）
+    _renderBatchUI();    // 在新 DOM 上注入 checkbox / 显隐工具栏 / 更新选中计数
+  };
+  bindBatchToolbar();
+  _renderBatchUI();
   // 右侧 AI 聊天面板的 #chatForm/#chatCancel 已移到静态 HTML（三栏布局第三栏），
   // 由 bindChatPanel() 在启动时一次性绑定，不再随 render() 重建，故此处移除原绑定。
 }
@@ -567,6 +583,15 @@ function _renderBatchUI(){
   if(toolbar) toolbar.style.display = _batchState.mode ? "flex" : "none";
   const selCount = $("#batchSelCount");
   if(selCount) selCount.textContent = String(_batchState.selected.size);
+  /* 全选 checkbox 的**视觉态**与数据态对齐。不做的后果：中途发生一次 render（模式仍开着）后，
+     checkbox 回到未勾，而 _batchState 里其实全选着 —— 用户看到"没全选"，再点一下变成"取消全选"，
+     与直觉相反。判据是"界面必须等于数据"，不是"看起来像个复选框"。 */
+  const selAll = $("#btnBatchSelectAll");
+  if(selAll){
+    const _n = (typeof getActiveTasks === "function")
+      ? getActiveTasks().filter(function(t){ return t.sc === active; }).length : 0;
+    selAll.checked = _batchState.mode && _n > 0 && _batchState.selected.size >= _n;
+  }
   // 卡片 checkbox 显隐 + 选中高亮
   $$(".kcard[data-drag]").forEach(function(card){
     const id = card.getAttribute("data-drag");
@@ -625,9 +650,14 @@ function bindBatchToolbar(){
     if(sel){ batchSetPriority(sel.value); render(); }
   };
   if(btnCancel) btnCancel.onclick = function(){ toggleBatchMode(false); render(); };
+  /* ⚠️ 2026-10-23 修一个**从未被执行过**的 bug（这条链整个没有 UI 入口，所以从没红过）：
+     原写法 `toggleBatchSelectAll(input.checked !== true)` 读的是**点击之后**的 checked ——
+     浏览器/jsdom 都是先把 checkbox 翻好、再派发 click。于是"勾上全选"这个动作读到的
+     checked 恒为 true ⇒ 实际执行的是 `toggleBatchSelectAll(false)` = **取消全选**
+     （实测：点全选，计数稳在 0）。改成**不传参**的翻转语义：
+     `toggleBatchSelectAll()` 自己按"是否已全选"判断，与 checkbox 的视觉态解耦。 */
   if(btnSelectAll) btnSelectAll.onclick = function(){
-    const input = btnSelectAll.querySelector("input") || btnSelectAll;
-    toggleBatchSelectAll(input.checked !== true);
+    toggleBatchSelectAll();
     render();
   };
 }

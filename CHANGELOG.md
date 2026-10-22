@@ -247,6 +247,32 @@
   剩余 5 处噪声全在他人文件（`ui-ge-notes` ×3 新增 docx 代码、`ui-ge-api:890`、`ui-theme:74` 两处已知漂移）
   —— 按 R6 未动；其中 `ui-theme:74` 门禁自己标的是 P1「需人工判断」，**没判过就不该冻**。
 
+### 2026-10-23 · v1.6-B 批量操作补完：多选入口 + 工具栏接线（一条从上线起就没有 UI 入口的链）
+
+- **考古结论（先答"谁做的、为了什么"）**：v1.6-B 规划，代码随 `31c0551`（v1.8.9，2026-08-11）进入 HTML。
+  **功能链其实是全的** —— `_batchState` / 选择 / 全选 / 完成 / 删除 / 移动场景 / 改优先级、
+  卡片 checkbox 注入、`_renderBatchUI()`（连"工具栏显隐 + 选中计数 + checkbox 显隐"都写好了）、
+  `.batch-toolbar` 与 `.batch-mode` 两套 CSS、全部 i18n 文案。
+  **唯独三样从来没有**：① `#batchToolbar` 这个 DOM；② 进入多选模式的入口按钮；③ `bindBatchToolbar()` 的调用点
+  ⇒ `bindBatchToolbar()` 全仓零调用点，用户在界面上**没有任何路径**触发批量删除/完成/移动/改优先级。
+  （`tests/confirm-migration-batch5.test.js` 里那条"按钮必须为 null"的缺陷登记断言，钉的就是这件事。）
+- **不是冗余，是残缺**（所以补完而不是删）：回收站的「批量恢复 / 彻底删除」管的是**已删除项**，
+  与任务多选不是一回事，任务侧没有任何其它多选能力。仓库"真死就删"有先例（v1.6-B 的 `#calModal`），
+  但那条判据是"全仓零引用且无消费方"—— 这里六个 `batch*` 函数 + i18n + CSS 俱全，缺的只是入口。
+- **补的三样**：筛选行末尾加「多选」入口钮（复用既有 `.tbtn`）；看板分支渲染 `#batchToolbar`
+  （复用既有 `.batch-toolbar` CSS，**零新增 CSS**）；`bindScenario()` 末尾接 `bindBatchToolbar()` + `_renderBatchUI()`。
+- 🔴 **顺手修掉一个从未被执行过的真 bug**：`bindBatchToolbar` 的全选写法
+  `toggleBatchSelectAll(input.checked !== true)` 读的是**点击之后**的 checked（浏览器先翻 checkbox、再派发 click）
+  ⇒ "勾上全选"实际执行的是"取消全选"（实测点全选，计数稳在 0）。改成不传参的翻转语义，
+  并让 `_renderBatchUI()` 把全选框的视觉态与数据态对齐（否则中途 render 后会"看着没勾、其实全选着"）。
+- 🔴 **一个只靠探针才发现的坑**：第一版把接线代码插进了 `bindReviewCard()`（按函数名认错了），
+  整段静默不执行，测试全红在"按钮没接线"。教训：**接线必须落在每次 render 都会跑的那个函数里**
+  （这里是 `bindScenario()`，见 `render-entry.js:102`），且要用"点真实按钮"而不是"直接调内部函数"来验证。
+- 守护：`tests/batch-ops-ui.test.js` **12 例**，全部走**真实入口**（点 `#btnBatchMode`，不直接调 `toggleBatchMode`）；
+  `tests/confirm-migration-batch5.test.js` 的"缺陷登记"条按当初约定翻成正向断言。
+  变异验证：把全选改回 bug 写法 ⇒ 恰好 1 条红。回归：batch5 9/9；门禁链全绿
+  （lint 0 error / lint:icons 0 新增 / check:modules 无新增 / lint:empty-catch 无新增 P0）。
+
 ## [3.7.136] - 2026-10-21
 
 > 本版含：布局 v2（对话下沉 + 右栏今日任务）、原生 confirm 迁移第二~五批（35→12）、
