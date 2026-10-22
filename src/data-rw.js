@@ -58,19 +58,45 @@ AppBridge.onExerciseSave = function(rec){
   }
 };
 
-let _undoStack = [];   // 历史快照（变更前的任务数组深拷贝）
-let _redoStack = [];   // 重做栈
-let _undoGuard = false; // 防重入：undo/redo 恢复时不再记录历史
+/* 撤销/重做：按**域**快照（任务 / 资料库记录 / 笔记），上限 50 步。
+ * 2026-10-23：从"任务专用"泛化为通用单步栈 —— 三类写入口（setTasks / setRec / saveNotes）在写前记快照；
+ * 恢复时 _undoGuard 防重入，不会把"撤销"再记成一次新操作。
+ * 边界：不做跨会话持久化、不做跨域事务（一次撤销只回退一个域的最后一次写）。 */
+let _undoStack = [];   // [{domain, sc, data(JSON), ts}]
+let _redoStack = [];
+let _undoGuard = false;
+let _undoArmed = false;
 const UNDO_LIMIT = 50;
-/**
- * 记录一次任务变更前的快照（setTasks 调用方在写入前调用；内部自动防重入）
- * @param {Task[]} prev - 变更前的任务数组
- */
-function _pushUndo(prev){
+
+function _domainSnapshot(domain, sc){
+  if(domain === "task") return JSON.stringify(getTasks());
+  if(domain === "rec") return JSON.stringify(getRec(sc));
+  if(domain === "note") return JSON.stringify(getNotes());
+  return null;
+}
+
+function _pushUndoEntry(domain, sc, prev){
   if(_undoGuard) return;
-  try{ _undoStack.push(JSON.stringify(prev)); }catch(e){ return; } // 序列化失败不阻塞业务
+  let data = null;
+  try{ data = JSON.stringify(prev); }catch(e){ return; } /* 序列化失败不阻塞业务 */
+  const now = Date.now();
+  const key = sc || "";
+  /* 每次写都是一步（与 B6 既有 50 步语义一致）：不做时间合并，否则"创建+编辑"会被并成一步 */
+  _undoStack.push({ domain: domain, sc: key, data: data, ts: now });
   if(_undoStack.length > UNDO_LIMIT) _undoStack.shift();
-  _redoStack = []; // 新操作清空重做栈
+  _redoStack = [];
+  if(_undoArmed && typeof showUndoToast === "function") showUndoToast(domain);
+  return true;
+}
+
+/** 记录一次任务变更前的快照（兼容旧调用点；域=task） */
+function _pushUndo(prev){ _pushUndoEntry("task", "", prev); }
+/** 首次渲染后调用：此后才提示"可撤销"，并清掉初始化期间（seed/迁移）产生的快照 */
+function armUndo(){
+  if(_undoArmed) return;
+  _undoArmed = true;
+  _undoStack = [];
+  _redoStack = [];
 }
 /** 清空撤销/重做栈（导入/恢复/清空数据后调用，避免跨数据状态误撤销） */
 function clearUndoStack(){ _undoStack = []; _redoStack = []; }
@@ -78,38 +104,45 @@ function clearUndoStack(){ _undoStack = []; _redoStack = []; }
 function canUndo(){ return _undoStack.length > 0; }
 /** @returns {boolean} 是否可重做 */
 function canRedo(){ return _redoStack.length > 0; }
+
+function _restoreEntry(e){
+  const val = JSON.parse(e.data);
+  _undoGuard = true;
+  try{
+    if(e.domain === "task") setTasks(val);
+    else if(e.domain === "rec") setRec(e.sc, val);
+    else if(e.domain === "note") saveNotes(val);
+  }finally{ _undoGuard = false; }
+}
 /**
- * 撤销上一步任务操作：恢复最近的快照，当前状态入重做栈
+ * 撤销最近一次写操作（任务 / 资料库记录 / 笔记）
  * @returns {boolean} 是否执行了撤销
  */
-function undoTasks(){
+function undoLast(){
   if(!_undoStack.length) return false;
-  const snap = _undoStack.pop();
-  let prev = null;
-  try{ prev = JSON.parse(snap); }catch(e){ return false; }
-  _undoGuard = true;
-  try{
-    _redoStack.push(JSON.stringify(getTasks()));
-    setTasks(prev);
-  }finally{ _undoGuard = false; }
+  const e = _undoStack.pop();
+  let cur = null;
+  try{ cur = _domainSnapshot(e.domain, e.sc); }catch(_err){ return false; }
+  try{ _restoreEntry(e); }catch(_err){ return false; }
+  if(cur !== null) _redoStack.push({ domain: e.domain, sc: e.sc, data: cur, ts: Date.now() });
   return true;
 }
 /**
- * 重做被撤销的任务操作
+ * 重做最近一次撤销
  * @returns {boolean} 是否执行了重做
  */
-function redoTasks(){
+function redoLast(){
   if(!_redoStack.length) return false;
-  const snap = _redoStack.pop();
-  let next = null;
-  try{ next = JSON.parse(snap); }catch(e){ return false; }
-  _undoGuard = true;
-  try{
-    _undoStack.push(JSON.stringify(getTasks()));
-    setTasks(next);
-  }finally{ _undoGuard = false; }
+  const e = _redoStack.pop();
+  let cur = null;
+  try{ cur = _domainSnapshot(e.domain, e.sc); }catch(_err){ return false; }
+  try{ _restoreEntry(e); }catch(_err){ return false; }
+  if(cur !== null) _undoStack.push({ domain: e.domain, sc: e.sc, data: cur, ts: Date.now() });
   return true;
 }
+/** 兼容旧 API（B6 的任务撤销入口） */
+function undoTasks(){ return undoLast(); }
+function redoTasks(){ return redoLast(); }
 /**
  * 更新指定任务的字段（A1：UI 编辑与 AI update_task 共用的存储入口）。
  * 仅允许白名单字段；title 为空串视为无效；status 走 completeTask 语义。
@@ -177,6 +210,7 @@ function getRec(sc){ return load(PREFIX+"rec_"+sc, []); }
  * @returns {void}
  */
 function setRec(sc, a){
+  _pushUndoEntry("rec", sc, getRec(sc)); /* 写前快照：与本函数读取的存储值同源 */
   save(PREFIX+"rec_"+sc, a); scheduleAutoBackup();
   /* v3.7.67：广播数据变更（RAG 增量同步消费） */
   try{ if(typeof emitDataMutate === "function") emitDataMutate("rec"); }catch(e){ /* 索引不阻塞写路径 */ }
@@ -207,6 +241,7 @@ function getNotes(){
  * @returns {boolean} 是否保存成功
  */
 function saveNotes(notes){
+  _pushUndoEntry("note", "", getNotes());
   // v3.4.7 批次三（G5）：收编进 save() 主入口（此前裸 setItem 绕过镜像/告警/登记）
   const ok = save(PREFIX + NOTES_STORAGE_KEY, notes || []);
   /* v3.7.67：广播数据变更（RAG 增量同步经 core 注册位消费；创建/更新/删除全走本函数） */

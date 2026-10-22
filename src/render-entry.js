@@ -73,6 +73,8 @@ function render(){
     const _help = $("#helpPage"); if(_help) _help.remove();
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     AppBridge.renderSide();
+    /* 首次渲染后武装通用撤销：此前（seed/迁移）的快照清掉，也不弹「可撤销」提示 */
+    if(typeof armUndo === "function") armUndo();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
     /* v3.6.6 修复：此前这里写的是 `setActive("overview"); renderOverview();`——把 stats 重定向回主页，
        导致统计页（15 个仪表盘组件 + 周/月/年筛选 + Grafana 式编辑态）**完全不可达**：

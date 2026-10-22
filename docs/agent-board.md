@@ -42,6 +42,20 @@
 
 ## 条目
 
+### [2026-10-23 01:10 UTC+8] Qoder 主会话（单步通用撤销落地 · 即将推）
+- 状态：进行中，**按 R10 声明：这一笔就推**（range `6fd74ba..+1`；`6fd74ba` 仍在 CI 队列里）。
+- **做法**：把既有 B6 的**任务专用** undo/redo 栈按域泛化（`setTasks` / `setRec` / `saveNotes` 写前快照，
+  域+场景+JSON），`undoTasks/redoTasks` 保留兼容；**粒度与 B6 一致：每写一步、上限 50**（我先试了 400ms 合并，
+  会把「创建+编辑」并成一步、50 步并成 1 步，直接打红 B6 旧测 —— 已撤掉）。恢复用 `_undoGuard` 防重入。
+- **可发现性**：写入后 10 秒「已修改：任务/资料/笔记 · 撤销」提示；Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y 照旧。
+- **顺手修一个既有缺陷**：Ctrl+Z 在输入框里也被 `preventDefault`，吃掉了浏览器原生文本撤销；现按焦点放行。
+- **初始化不吵**：首屏渲染后 `armUndo()` 清掉 seed/迁移留下的快照，首屏不弹提示。
+- 证据（净副本）：`undo-universal` **9/9**、B6 旧套件 **9/9**、`ai-undo` 8/8、`kb-paste-import` 4/4；
+  共享树 lint 与 lint:empty-catch 均 0。
+- 边界：不做跨会话持久化、不做跨域事务、不做无限栈/跨设备撤销。
+- 占用：`src/data-rw.js`、`src/render-entry.js`、`src/ui-hotkeys.js`、`src/core-i18n.js`、
+  `tests/undo-universal.test.js`（新）、`CHANGELOG.md`、`docs/PRODUCT.md`、本文件。**未占版本号**。
+
 ### [2026-10-23 00:55 UTC+8] Qoder 主会话（R-2 收尾会话 · 动两个 workflow 的 e2e job · 开工声明）
 - 状态：进行中
 - 占用路径：**`.github/workflows/ci.yml` 与 `.github/workflows/deploy.yml` 的 `e2e` job**（高共写面，

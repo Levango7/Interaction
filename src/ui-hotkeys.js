@@ -11,15 +11,18 @@ document.addEventListener("keydown", e=>{
     return;
   }
   if((e.ctrlKey||e.metaKey) && (e.key==="k"||e.key==="K")){ e.preventDefault(); openCmd(); return; }
-  // B6：撤销/重做任务操作（Ctrl+Z / Ctrl+Y；macOS 的 Cmd+Shift+Z 重做）
-  if((e.ctrlKey||e.metaKey) && !e.altKey && (e.key==="z"||e.key==="Z")){
+  // 撤销/重做（任务 / 资料库记录 / 笔记）：Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
+  // ⚠️ 焦点在输入控件里时**不拦**：那是原生文本撤销，抢了会让用户以为"撤销坏了"
+  const _undoTgt = /** @type {HTMLElement} */(e.target);
+  const _inField = !!(_undoTgt && (_undoTgt.tagName==="INPUT" || _undoTgt.tagName==="TEXTAREA" || _undoTgt.isContentEditable));
+  if(!_inField && (e.ctrlKey||e.metaKey) && !e.altKey && (e.key==="z"||e.key==="Z")){
     e.preventDefault();
-    if(e.shiftKey){ if(redoTasks()){ render(); toast(t("msg.redo", "已重做"),"ok"); } }
-    else { if(undoTasks()){ render(); toast(t("msg.undo", "已撤销"),"ok"); } }
+    if(e.shiftKey){ if(redoLast()){ render(); toast(t("msg.redo", "已重做"),"ok"); } }
+    else { if(undoLast()){ render(); toast(t("msg.undo", "已撤销"),"ok"); } }
     return;
   }
-  if((e.ctrlKey||e.metaKey) && (e.key==="y"||e.key==="Y")){
-    e.preventDefault(); if(redoTasks()){ render(); toast(t("msg.redo", "已重做"),"ok"); } return;
+  if(!_inField && (e.ctrlKey||e.metaKey) && (e.key==="y"||e.key==="Y")){
+    e.preventDefault(); if(redoLast()){ render(); toast(t("msg.redo", "已重做"),"ok"); } return;
   }
   const target=/** @type {HTMLElement} */(e.target);
   if(target && (target.tagName==="INPUT"||target.tagName==="TEXTAREA"||target.tagName==="SELECT")) return;
@@ -38,3 +41,43 @@ document.addEventListener("keydown", e=>{
     if(c && typeof c.run === "function") c.run();
   }
 });
+
+
+/* ---------- 通用撤销提示（2026-10-23） ----------
+ * 写入成功后的 10 秒内给一次可见的撤销入口；400ms 合并期内的连续写**不重复弹**（由 data-rw 决定）。
+ * 这是键盘 Ctrl+Z 之外的**可发现性**入口 —— 此前撤销只有快捷键，多数用户不知道它存在。 */
+let _undoToastTimer = null;
+function showUndoToast(domain){
+  let host = document.getElementById("toasts");
+  if(!host){
+    host = document.createElement("div");
+    host.id = "toasts";
+    host.setAttribute("role", "status");
+    host.setAttribute("aria-live", "polite");
+    document.body.appendChild(host);
+  }
+  const old = document.getElementById("undoToast");
+  if(old) old.remove();
+  if(_undoToastTimer) clearTimeout(_undoToastTimer);
+  const WHAT = { task:t("undo.what.task", "任务"), rec:t("undo.what.rec", "资料"), note:t("undo.what.note", "笔记") };
+  const el = document.createElement("div");
+  el.className = "toast info";
+  el.id = "undoToast";
+  el.setAttribute("role", "status");
+  el.appendChild(document.createTextNode(t("undo.changed", "已修改：") + (WHAT[domain] || domain) + " "));
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "btn-ghost u-fs-2xs";
+  b.textContent = t("undo.action", "撤销");
+  b.onclick = function(){
+    if(typeof undoLast === "function" && undoLast()){
+      render();
+      toast(t("msg.undo", "已撤销"), "ok");
+    }
+    el.remove();
+  };
+  el.appendChild(b);
+  host.appendChild(el);
+  requestAnimationFrame(function(){ el.style.opacity = "1"; });
+  _undoToastTimer = setTimeout(function(){ el.remove(); }, 10000);
+}
