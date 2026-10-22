@@ -85,7 +85,7 @@ function _pushUndoEntry(domain, sc, prev){
   _undoStack.push({ domain: domain, sc: key, data: data, ts: now });
   if(_undoStack.length > UNDO_LIMIT) _undoStack.shift();
   _redoStack = [];
-  if(_undoArmed && typeof showUndoToast === "function") showUndoToast(domain);
+  if(_undoArmed) emitUndoNotice(domain); /* 走 core 钩子：数据层不直接依赖 UI */
   return true;
 }
 

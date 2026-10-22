@@ -38,6 +38,23 @@ function emitDataMutate(domain){
   }
 }
 
+/* ---------- v3.7.138 撤销提示钩子 ----------
+ * 数据层每次写前快照后要通知 UI 弹「可撤销」提示，但 data-rw 直接调 ui-hotkeys 的
+ * showUndoToast 会新增逆层依赖（check:modules 实测 data-rw>ui-hotkeys）。与上方同款：
+ * 低层只 emit，UI 层注册实现；提示失败不得冒回数据写路径。 */
+const _undoNoticeListeners = [];
+function registerUndoNoticeListener(fn){
+  if(typeof fn !== "function") return false;
+  if(_undoNoticeListeners.indexOf(fn) < 0) _undoNoticeListeners.push(fn);
+  return true;
+}
+function emitUndoNotice(domain){
+  for(let i = 0; i < _undoNoticeListeners.length; i++){
+    try{ _undoNoticeListeners[i](String(domain || "")); }
+    catch(e){ /* 提示失败不该冒回数据写路径 */ }
+  }
+}
+
 function toast(msg, type){
   let c=$("#toasts"); if(!c){ c=document.createElement("div"); c.id="toasts"; c.setAttribute("role","status"); c.setAttribute("aria-live","polite"); document.body.appendChild(c); }
   const d=document.createElement("div"); d.className="toast"+(type?" "+type:"");

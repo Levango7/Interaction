@@ -44,7 +44,8 @@ document.addEventListener("keydown", e=>{
 
 
 /* ---------- 通用撤销提示（2026-10-23） ----------
- * 写入成功后的 10 秒内给一次可见的撤销入口；400ms 合并期内的连续写**不重复弹**（由 data-rw 决定）。
+ * 写入成功后的 10 秒内给一次可见的撤销入口（同一次写入的新提示替换旧提示）。
+ * 由 data-rw 通过 core 的 emitUndoNotice 通知，本块负责注册实现（避免逆层依赖）。
  * 这是键盘 Ctrl+Z 之外的**可发现性**入口 —— 此前撤销只有快捷键，多数用户不知道它存在。 */
 let _undoToastTimer = null;
 function showUndoToast(domain){
@@ -81,3 +82,4 @@ function showUndoToast(domain){
   requestAnimationFrame(function(){ el.style.opacity = "1"; });
   _undoToastTimer = setTimeout(function(){ el.remove(); }, 10000);
 }
+registerUndoNoticeListener(showUndoToast);
