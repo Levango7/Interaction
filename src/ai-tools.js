@@ -87,6 +87,7 @@ function execTool(name, args, force){
       const flds = (SCENARIOS[sc]&&SCENARIOS[sc].record.fields)||[];
       flds.forEach(f=> obj[f.k] = (args.fields&&args.fields[f.k]!==null&&args.fields[f.k]!==undefined)? String(args.fields[f.k]) : "");
       const arr = getRec(sc); arr.unshift(obj); setRec(sc, arr);
+      _aiUndoPush({ kind:"record_add", recId:obj.id, sc:sc, title:(obj.title || obj.name || "") });
       return JSON.stringify({ok:true, msg:t("tool.recordAddedPrefix", "已向")+SCENARIOS[sc].name+t("tool.recordAddedInfix", "资料库添加记录")});
     }
     if(name==="search"){
@@ -126,6 +127,7 @@ function execTool(name, args, force){
     // ===== AI 能力增强：新工具分发（同步工具直接执行；异步工具经 agentExecAsync 分发） =====
     if(name==="note_add"){
       const r=createNote(args.title||"", args.content||"", Array.isArray(args.tags)?args.tags:[], args.category||"");
+      _aiUndoPush({ kind:"note_add", noteId:r.id, title:(r.title || "") });
       return JSON.stringify({ok:true, id:r.id, msg:t("agent.noteAdded","已添加笔记：")+(r.title||"")});
     }
     if(name==="note_search"){
@@ -223,6 +225,11 @@ function undoAiAction(id){
     }
   } else if(e.kind === "update"){
     if(tk) Object.assign(tk, e.before || {});
+  } else if(e.kind === "record_add"){
+    const arr = getRec(e.sc) || [];
+    setRec(e.sc, arr.filter(x => x.id !== e.recId));
+  } else if(e.kind === "note_add"){
+    saveNotes(getNotes().filter(n => n.id !== e.noteId));
   } else {
     return { ok:false, msg:t("ai.undo.unsupported", "这类改动暂不支持撤销") };
   }

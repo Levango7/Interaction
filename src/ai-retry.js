@@ -1332,7 +1332,8 @@ function renderAiReceipts(){
     });
   }
   const KIND = { create:t("ai.receipt.create", "创建"), update:t("ai.receipt.update", "更新"),
-    complete:t("ai.receipt.complete", "完成"), delete:t("ai.receipt.delete", "删除") };
+    complete:t("ai.receipt.complete", "完成"), delete:t("ai.receipt.delete", "删除"),
+    record_add:t("ai.receipt.record", "资料"), note_add:t("ai.receipt.note", "笔记") };
   // lint-xss-ok: 插值全部经 esc()/t()；kind 走白名单字典，id 来自本地 uid()
   box.innerHTML = list.map(x=>{
     const label = KIND[x.kind] || t("ai.receipt.update", "更新");

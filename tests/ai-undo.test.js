@@ -105,4 +105,24 @@ describe("AI 改动回执与撤销", () => {
       expect(win.document.getElementById("aiReceipts"), "没有未撤销回执时应移除回执条").toBeFalsy();
     });
   });
+
+  it("资料库：add_record → 撤销后从该场景移除", async () => {
+    const win = await boot();
+    const before = win.getRec("office").length;
+    const r = run(win, "add_record", { scenario: "office", fields: { title: "AI 写的会议" } });
+    expect(r.ok).toBe(true);
+    expect(win.getRec("office").length).toBe(before + 1);
+    expect(win.undoAiAction(lastId(win)).ok).toBe(true);
+    expect(win.getRec("office").length, "撤销后应回到原数量").toBe(before);
+  });
+
+  it("笔记：note_add → 撤销后笔记消失", async () => {
+    const win = await boot();
+    const before = win.getNotes().length;
+    const r = run(win, "note_add", { title: "AI 笔记", content: "正文" });
+    expect(r.ok).toBe(true);
+    expect(win.getNotes().length).toBe(before + 1);
+    expect(win.undoAiAction(lastId(win)).ok).toBe(true);
+    expect(win.getNotes().length, "撤销后应回到原数量").toBe(before);
+  });
 });

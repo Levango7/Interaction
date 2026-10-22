@@ -42,6 +42,18 @@
 
 ## 条目
 
+### [2026-10-23 00:40 UTC+8] Qoder 主会话（撤销扩到资料/笔记 + PDF 的零依赖替代「粘贴导入」· 即将推）
+- 状态：进行中，**按 R10 声明：这一笔就推**（range `784e8ac..+1`）。
+- **撤销扩面**：`add_record` / `note_add` 落回执，撤销 = 按记录 id 移除 / 按笔记 id 删除；回执条新增
+  「资料」「笔记」标签。至此 AI 写账覆盖：任务四种 + 资料库记录 + 笔记。
+- **PDF 决策（风险/收益）**：真抽取需引 pdf.js 级别依赖（1.5MB+，与单文件/离线反目标冲突，
+  CI 无网也覆盖不了真实解析）⇒ **本版不引**；给零风险替代：知识库「粘贴导入」——
+  系统阅读器全选复制 → 粘到浮层 → 入库进检索索引。对任何 PDF 有效、不联网、零依赖。
+- 证据（净副本）：`ai-undo` **8/8**、`kb-paste-import` **4/4**、`docx-import` 4/4、`binding-coverage` 3/3。
+- 占用：`src/ai-tools.js`、`src/ai-retry.js`、`src/ui-ge-notes.js`、`src/core-i18n.js`、`tests/ai-undo.test.js`、
+  `tests/kb-paste-import.test.js`（新）、`CHANGELOG.md`、`docs/PRODUCT.md`、本文件。
+- 版本：**未占 3.7.138**。
+
 ### [2026-10-23 00:05 UTC+8] Qoder 主会话（三件已上线 · 收工释放）
 - 状态：**已收工（释放）**。`138eb5c`（AI 撤销）+ `d948f75`（DOCX 导入 + 门禁扩面）；**线上已核**
   （cache-buster）：`VERSION=3.7.137`、3,969,148 B、`renderAiReceipts` / `extractDocxText` / `aiReadyProfile` /

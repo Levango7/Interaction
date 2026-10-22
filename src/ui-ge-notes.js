@@ -428,7 +428,8 @@ function renderKnowledgeBase(){
   html += '<div class="kb-files" id="kbFiles">';
   html += '<div class="kb-files-head"><h3 class="kb-cloud-title">' + esc(t('p5.kbFilesTitle', '文件知识（进 AI 检索索引）')) + '</h3>'
     + '<label class="addbtn sm" for="kbFileInput" style="cursor:pointer">' + esc(t('p5.kbFilesImport', '导入文件'))
-    + '<input type="file" id="kbFileInput" multiple accept="' + esc(t('p5.kbFilesAccept', '.txt,.md,.markdown,.html,.htm,.csv,.json,.log')) + '" style="display:none"></label></div>';
+    + '<input type="file" id="kbFileInput" multiple accept="' + esc(t('p5.kbFilesAccept', '.txt,.md,.markdown,.html,.htm,.csv,.json,.log')) + '" style="display:none"></label>'
+    + '<button type="button" class="addbtn sm" id="kbPasteBtn">' + esc(t('p5.kbPasteBtn', '粘贴导入')) + '</button></div>';
   if(!ragFiles.length){
     html += '<p class="empty-hint">' + esc(t('p5.kbFilesEmpty', '尚未导入文件。支持 .txt / .md / .html 等纯文本，导入后按段落切块进检索索引，可随时删除。')) + '</p>';
   } else {
@@ -538,6 +539,8 @@ function _bindKnowledgeBaseEvents(){
     }
   });
   /* v3.7.76：文件选择器 —— 选完即导入并重渲染列表 */
+  const pasteBtn = $("#kbPasteBtn");
+  if(pasteBtn && !pasteBtn._bound){ pasteBtn._bound = true; pasteBtn.onclick = openKbPasteImport; }
   const fileInput = $("#kbFileInput");
   if(fileInput){
     fileInput.addEventListener("change", async function(){
@@ -561,7 +564,7 @@ const RAG_FILE_TEXT_EXT = ["txt", "md", "markdown", "html", "htm", "csv", "json"
 /** 按扩展名准入并预清洗（html 剥 script/style/标签取正文）；不支持返回 null */
 function _ragFileText(name, raw, preExtracted){
   const ext = (String(name || "").split(".").pop() || "").toLowerCase();
-  if(RAG_FILE_TEXT_EXT.indexOf(ext) < 0) return null;
+  if(!preExtracted && RAG_FILE_TEXT_EXT.indexOf(ext) < 0) return null;
   /* .docx 必须先经 extractDocxText 解出文本（ZIP 二进制不能直接当文本读） */
   if(ext === "docx" && !preExtracted) return null;
   let text = String(raw || "");
@@ -653,6 +656,52 @@ async function ragImportFiles(fileList){
   }
   return { files: ok, chunks: total };
 }
+/** 粘贴文本导入（PDF/Word 的零依赖替代：系统阅读器里复制 → 粘到这里进检索索引） */
+function openKbPasteImport(){
+  if(document.getElementById("kbPasteModal")) return;
+  const wrap = document.createElement("div");
+  wrap.className = "viz-modal show";
+  wrap.id = "kbPasteModal";
+  wrap.setAttribute("role", "dialog");
+  wrap.setAttribute("aria-modal", "true");
+  wrap.setAttribute("aria-labelledby", "kbPasteTitle");
+  // lint-xss-ok: 模板里的插值全部经 esc(t())；用户输入只在读取端使用
+  wrap.innerHTML = '<div class="viz-modal-card u-max-w-560">'
+    + '<div class="viz-modal-header"><h2 id="kbPasteTitle">' + esc(t("p5.kbPasteTitle", "粘贴文本导入")) + '</h2>'
+    + '<button type="button" class="btn-ghost" id="kbPasteClose" aria-label="' + esc(t("common.close", "关闭")) + '">✕</button></div>'
+    + '<div class="u-pad-5-6">'
+    + '<label for="kbPasteName">' + esc(t("p5.kbPasteName", "文件名（显示在知识库列表）")) + '</label>'
+    + '<input type="text" id="kbPasteName" maxlength="120" placeholder="合同-2026-10.txt">'
+    + '<label class="u-mt-2" for="kbPasteText">' + esc(t("p5.kbPasteText", "把文本粘贴到这里")) + '</label>'
+    + '<textarea id="kbPasteText" class="u-min-h-240"></textarea>'
+    + '<p class="sub">' + esc(t("p5.kbPasteHint", "PDF/Word 里全选复制即可；本功能不解析二进制文件，也不联网。")) + '</p>'
+    + '<div class="u-flex u-gap-2 u-jc-end u-mt-2"><button type="button" class="btn-ghost" id="kbPasteCancel">' + esc(t("common.cancel", "取消")) + '</button>'
+    + '<button type="button" class="addbtn" id="kbPasteOk">' + esc(t("p5.kbPasteOk", "导入")) + '</button></div>'
+    + '</div></div>';
+  document.body.appendChild(wrap);
+  let release = null;
+  const close = function(){ if(release) release(); wrap.remove(); };
+  release = trapFocus(wrap.querySelector(".viz-modal-card"));
+  wrap.querySelector("#kbPasteClose").onclick = close;
+  wrap.querySelector("#kbPasteCancel").onclick = close;
+  wrap.addEventListener("keydown", function(e){ if(e.key === "Escape"){ e.preventDefault(); close(); } });
+  wrap.addEventListener("click", function(e){ if(e.target === wrap) close(); });
+  wrap.querySelector("#kbPasteOk").onclick = async function(){
+    const nameEl = wrap.querySelector("#kbPasteName");
+    const textEl = wrap.querySelector("#kbPasteText");
+    const nm = String(nameEl.value || "").trim() || ("粘贴文本-" + new Date().toISOString().slice(0, 10) + ".txt");
+    const tx = String(textEl.value || "");
+    if(!tx.trim()){ try{ toast(t("p5.kbPasteEmpty", "请先粘贴正文"), "warn"); }catch(_e){} return; }
+    const r = await ragImportText(nm, tx, { preExtracted: true });
+    if(!r) return;
+    try{ toast(t("p5.kbPasteDone", "已导入：") + nm, "ok"); }catch(_e){}
+    close();
+    openKnowledgeBaseModal();
+  };
+  const nmEl = wrap.querySelector("#kbPasteName");
+  if(nmEl && typeof nmEl.focus === "function") nmEl.focus();
+}
+
 /** 删除文件条目（其索引块由增量同步随 diff 移除） */
 function ragDeleteFile(id){
   const kept = getRagFiles().filter(function(f){ return f.id !== id; });
