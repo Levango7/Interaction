@@ -42,8 +42,9 @@
 
 ## 条目
 
-### [2026-10-23 01:10 UTC+8] Qoder 主会话（单步通用撤销落地 · 即将推）
-- 状态：进行中，**按 R10 声明：这一笔就推**（range `6fd74ba..+1`；`6fd74ba` 仍在 CI 队列里）。
+### [2026-10-23 01:10 UTC+8] Qoder 主会话（单步通用撤销落地 · 已推 `a048b33`）
+- 状态：已推送 `a048b33`（父 `fcc7a3d`），CI `39820206526` 与 Deploy `39820206492` 均卡在 runner 队列；
+  线上复核待 `pages/builds/latest=built` 后做。本机生产构建（仓外净副本）预演已过：布局/撤销/粘贴导入/375 抽屉全绿。
 - **做法**：把既有 B6 的**任务专用** undo/redo 栈按域泛化（`setTasks` / `setRec` / `saveNotes` 写前快照，
   域+场景+JSON），`undoTasks/redoTasks` 保留兼容；**粒度与 B6 一致：每写一步、上限 50**（我先试了 400ms 合并，
   会把「创建+编辑」并成一步、50 步并成 1 步，直接打红 B6 旧测 —— 已撤掉）。恢复用 `_undoGuard` 防重入。
@@ -55,6 +56,18 @@
 - 边界：不做跨会话持久化、不做跨域事务、不做无限栈/跨设备撤销。
 - 占用：`src/data-rw.js`、`src/render-entry.js`、`src/ui-hotkeys.js`、`src/core-i18n.js`、
   `tests/undo-universal.test.js`（新）、`CHANGELOG.md`、`docs/PRODUCT.md`、本文件。**未占版本号**。
+
+### [2026-10-23 01:35 UTC+8] Qoder 主会话（R-2 切片二已改完 · **按 R1 等 CI 窗口再推**）
+- 状态：改完待推（**R1：远端有排队/在飞的 run 时不 push**。已推的 `fcc7a3d` = e2e 基础设施修复）
+- 占用路径：`src/render-overview.js`、`src/ui-backup-stats.js`、`scripts/lint-empty-catch.baseline.json`
+  （**逐文件精确重冻**，不是全量 `--freeze`）、`tests/empty-catch-slice12.test.js`（新）、
+  `CHANGELOG.md` 的 `[Unreleased]` 段末尾（插在 `[3.7.136]` 之前）
+- 在跑的重活：无。HTML 已抽回源码态（653KB），src 往返 md5 一致 ⇒ 不会覆盖任何人的编辑。
+- 内容：R-2 切片二 —— **12 处审视只改 8 处、判不改 4 处**，P0 **71 → 63**；新用例 6 例 + 变异验证
+  一一对应；受影响面 10 文件 96 passed / 0 failed。判据与逐条理由见 CHANGELOG 同名小节。
+- 提醒对方：我只碰上面这些；你要动 `render-overview` / `ui-backup-stats` / `baseline.json` 先说一声。
+  另：基线里还剩 5 处噪声在你的文件里（`ui-ge-notes` ×3、`ui-ge-api:890`、`ui-theme:74`），
+  **我没冻** —— `ui-theme:74` 门禁标的是 P1「需人工判断」，没判过不该冻成合法存量。
 
 ### [2026-10-23 00:55 UTC+8] Qoder 主会话（R-2 收尾会话 · 动两个 workflow 的 e2e job · 开工声明）
 - 状态：进行中

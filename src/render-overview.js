@@ -150,7 +150,11 @@ function renderOverview(){
   });
   // A4 AI 教练：异步加载建议 + 绑定刷新按钮
   const cr=$("#coachRefresh");
-  if(cr) cr.onclick=()=>{ try{ localStorage.removeItem(COACH_CACHE_KEY); }catch(e){ /* noop */ } renderOverview(); };
+  /* R-2 消解：原为零信息标注式注释（noop）。清缓存失败不是无害的 ——
+     下面 renderOverview() → renderCoachCard() 仍会 load 到旧缓存（chain.js:429，TTL 内直接渲染缓存建议），
+     于是用户点了「刷新」、拿到的却是同一批旧建议，且**以为是新的**（谎报）。
+     判据：静默给出一个与事实相反的结论。控制流不变（照旧渲染），只把失败留痕到诊断面板。 */
+  if(cr) cr.onclick=()=>{ try{ localStorage.removeItem(COACH_CACHE_KEY); }catch(e){ try{ if(typeof pushDiag==="function") pushDiag("warn","coach 缓存未能清除（刷新后仍是旧建议）: "+((e&&e.message)||e),{where:"renderOverview:coachRefresh"}); }catch(_){} } renderOverview(); };
   const cl=$("#coachLoading");
   if(cl){
     fetchCoachAdvice().then(r => {
@@ -188,7 +192,11 @@ function renderOverview(){
       e.preventDefault();
       try{
         save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: "", hintKey: "overview-setup", ts: Date.now() }));
-      }catch(_){ /* noop */ }
+      }catch(_){ /* R-2 评估（**不改**，仅把零信息标注换成理由）：这只是「AI 配置完成后自动展开聊天面板
+         并聚焦」的一个瞬时 UI 标志位。写失败 ⇒ 用户照样进得了配置页、照样能聊天，只是少一次自动展开；
+         没有数据丢失，界面也不曾承诺"会自动展开" ⇒ 不构成谎报，按判据④（回落默认 = 预期降级）不报。
+         ⚠️ 顺带留个坑给后来人：`save()` 自己吞掉写失败并回 false，所以这个 catch 通常压根不会触发
+         （data-migrate.js:9 记的是同一个坑）—— 真要守返回值，得看 `save(...) !== true`。 */ }
       if(typeof AppBridge.openAiPage==="function"){ AppBridge.openAiPage(); }
     };
   });
@@ -1391,7 +1399,13 @@ function _buildCloudSnapshot() {
   const data = {};
   allKeys().forEach(k => {
     if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
-    try { const v = localStorage.getItem(k); if (v !== null) data[k] = v; } catch (e) { /* 静默降级 */ }
+    /* R-2 消解：原为静默。读不到 ⇒ 该键**悄悄从快照里消失**，而上传照发、同步面板照显成功
+       ⇒ 用户拿到一份"不自知残缺"的云快照，等真要恢复时才发现这个键从未上去过（谎报，且不可补救）。
+       与导出面同一类（ui-backup-stats.js 第九片已按同一理由上报）。控制流不变（照旧跳过该键）。 */
+    /* ⚠️ 键名必须进 **msg 正文**：诊断面板 renderDiagList() 只渲染 `e.msg`，
+       pushDiag 的第三参（元数据）**不在界面上显示**（只在导出的诊断报告里）。
+       只写 {key:k} 等于"点对机器说了、没对用户说"。 */
+    try { const v = localStorage.getItem(k); if (v !== null) data[k] = v; } catch (e) { try { if (typeof pushDiag === "function") pushDiag("warn", "snapshot read failed（该键不会进云快照）key=" + k + ": " + ((e && e.message) || e), { where: "_buildCloudSnapshot", key: k }); } catch (_e2) {} }
   });
   data["_deviceMeta"] = { deviceId: getDeviceId(), exportedAt: Date.now(), version: VERSION };
   return data;
@@ -1439,7 +1453,12 @@ function _applyCloudSnapshot(data) {
       });
       data[PREFIX + "tasks"] = JSON.stringify(Array.from(map.values()));
     }
-  } catch (e) { /* 合并失败时按覆盖处理 */ }
+  } catch (e) { /* R-2 消解：原为静默，但这条**不是"少做一点"，而是会换算法** ——
+      合并失败 ⇒ `data[tasks]` 保持为云端原值 ⇒ 下面的写入循环退化成**纯覆盖**：
+      本机比云端更新的任务被云端旧值整体盖掉，而界面只显示"已从云端恢复"。
+      用户以为"恢复完成"，实际丢了一批本地数据 ⇒ 谎报 + 不可恢复，故按 error 级上报。
+      控制流不变（照旧按覆盖处理，不擅自改成"中止恢复"——那要产品拍板，不是消解该做的事）。 */
+    try { if (typeof pushDiag === "function") pushDiag("error", "云端合并失败 → 本次退化为覆盖（本地较新的任务可能被盖掉）: " + ((e && e.message) || e), { where: "_applyCloudSnapshot:merge" }); } catch (_e2) {} }
   /* v3.7.52：覆盖前先给本机留一份回滚档。下面这段是「快照里有啥就覆盖啥」，
      而云端 push 端尚未实现（本机改动不会上传）时，覆盖即不可逆。
      OD-003（2026-10-17 批次）：本档自此有了消费入口 —— 设置 → 账号设置 →「上次恢复前快照」
@@ -1468,7 +1487,11 @@ function _applyCloudSnapshot(data) {
     if (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY) {
       let _before = data[k];
       try { _before = localStorage.getItem(k); } catch (e) { _before = data[k]; /* 读失败按「未变化」保守处理 */ }
-      try { localStorage.setItem(k, data[k]); } catch (e) { /* 静默降级 */ }
+      /* R-2 消解：原为静默。写不进去 ⇒ 这个键其实没恢复，但函数照常走到
+         `_setSyncMeta({ lastPullAt: ... })`，界面显示"刚刚从云端恢复完成" ⇒ 谎报。
+         并且它还会让上面的 `_pullCover` 少计一次覆盖（那个计数是"静默 LWW 的可解释出口"）。
+         控制流不变（照旧继续处理下一个键），只留痕。 */
+      try { localStorage.setItem(k, data[k]); } catch (e) { try { if (typeof pushDiag === "function") pushDiag("error", "云端恢复写入失败（该键实际未恢复）key=" + k + ": " + ((e && e.message) || e), { where: "_applyCloudSnapshot:write", key: k }); } catch (_e2) {} }
       if (typeof _before === "string" && _before !== data[k]) _pullCover++;
     }
   });
@@ -2229,7 +2252,11 @@ async function _wfRunFlow(idx, f){
       const txt = (resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content) || "";
       if(txt){ createNote(t("wf.notePrefix","[定时] ") + (f.name || t("wf.unnamed","工作流")), txt, ["定时工作流"], t("wf.noteCategory","自动化")); savedAsNote = true; }
     }
-  }catch(e){ /* AI 未配置或失败 → 降级为待办提醒 */ }
+  }catch(e){ /* R-2 消解：原为静默。降级本身是对的（AI 没跑出来就给个待办提醒，`if(!savedAsNote)` 照走），
+      但**不说为什么**：用户只看到多了一条「⏰ 执行工作流」的待办，无法区分"AI 没配置"、"额度/网络挂了"、
+      "模型返回了空"。三种处置完全不同，界面却长得一样 ⇒ 静默让人得出错误结论。
+      低频（仅在 flow 到点时跑，不是每轮）⇒ 不会刷屏，故可以上报。控制流不变。 */
+    try{ if(typeof pushDiag==="function") pushDiag("warn","工作流 AI 调用失败 → 已降级为待办提醒: "+((e&&e.message)||e),{where:"_wfRunFlow", flow:(f&&f.name)||idx}); }catch(_e2){} }
   if(!savedAsNote){
     const tasks = getTasks();
     tasks.push({ id: uid(), sc: active, title: t("wf.taskPrefix","⏰ 执行工作流：") + (f.name || ""), due: todayStr(),
@@ -2265,7 +2292,10 @@ function _wfCheckDue(){
         if(p && typeof p.catch === "function") p.catch(_wfFail);
       }catch(_e){ _wfFail(_e); }
     });
-  }catch(_){ /* 读配置失败：这一轮无 flow 可跑，属预期降级（判据②） */ }
+  }catch(_){ /* 读配置失败：这一轮无 flow 可跑，属预期降级（判据②）。
+     R-2 评估（**不改**，把理由补全）：这里若加 pushDiag，会因为 **_wfCheckDue 每 60 秒跑一轮**
+     而在持续故障时每 60 秒刷一条诊断（判据③ 高频路径）—— 淹没真问题。且"没有 flow 可跑"是
+     **不做事**，不会丢数据、不会谎报"已执行"（真执行失败由 _wfFail 单独上报），故维持静默。 */ }
 }
 try{ setTimeout(_wfCheckDue, 3000); setInterval(_wfCheckDue, 60000); }catch(_){}
 

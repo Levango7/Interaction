@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-22",
-  "count": 551,
+  "count": 552,
   "items": [
     {
       "file": "ai-loop.js",
@@ -1757,31 +1757,31 @@
     },
     {
       "file": "render-overview.js",
-      "line": 153,
-      "sig": "4f04b7edab",
-      "bhash": "5e19285b44",
+      "line": 157,
+      "sig": "8bff10f6e7",
+      "bhash": "4d18018f2c",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* noop */",
-      "snippet": "localStorage.removeItem(COACH_CACHE_KEY); }"
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"coach 缓存未能清除（刷新后仍是旧建"
     },
     {
       "file": "render-overview.js",
-      "line": 191,
+      "line": 195,
       "sig": "31f44662de",
       "bhash": "82ea4d90f6",
       "occ": 1,
       "level": "P0",
       "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
       "bare": false,
-      "note": "/* noop */",
+      "note": "/* R-2 评估（**不改**，仅把零信息标注换成理由）：这只是「AI 配置完成后自动展开聊天面板 并聚焦」的一个瞬时",
       "snippet": "save(PREFIX + \"__pendingAiAsk\", JSON.stringify({ sc: \"\", hintKey: \"ove"
     },
     {
       "file": "render-overview.js",
-      "line": 1071,
+      "line": 1079,
       "sig": "0062bb82bb",
       "bhash": "7ab1925e3a",
       "occ": 1,
@@ -1793,7 +1793,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1072,
+      "line": 1080,
       "sig": "850538eaf1",
       "bhash": "c187ac18da",
       "occ": 1,
@@ -1805,7 +1805,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1073,
+      "line": 1081,
       "sig": "0c35f6ea98",
       "bhash": "7a77ded627",
       "occ": 1,
@@ -1817,7 +1817,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1074,
+      "line": 1082,
       "sig": "093d9a8935",
       "bhash": "e4484c9364",
       "occ": 1,
@@ -1829,7 +1829,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1107,
+      "line": 1115,
       "sig": "b3d813d9fc",
       "bhash": "a2b040f0f8",
       "occ": 1,
@@ -1841,7 +1841,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1108,
+      "line": 1116,
       "sig": "850538eaf1",
       "bhash": "c187ac18da",
       "occ": 2,
@@ -1853,7 +1853,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1109,
+      "line": 1117,
       "sig": "0c35f6ea98",
       "bhash": "7a77ded627",
       "occ": 2,
@@ -1865,7 +1865,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1110,
+      "line": 1118,
       "sig": "093d9a8935",
       "bhash": "e4484c9364",
       "occ": 2,
@@ -1877,7 +1877,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1214,
+      "line": 1222,
       "sig": "dda51b2b00",
       "bhash": "fb6fbb78db",
       "occ": 1,
@@ -1889,7 +1889,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1276,
+      "line": 1284,
       "sig": "969b37d0e5",
       "bhash": "af35f0e63d",
       "occ": 1,
@@ -1901,7 +1901,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1278,
+      "line": 1286,
       "sig": "0062bb82bb",
       "bhash": "7ab1925e3a",
       "occ": 2,
@@ -1913,7 +1913,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1279,
+      "line": 1287,
       "sig": "0c35f6ea98",
       "bhash": "7a77ded627",
       "occ": 3,
@@ -1925,7 +1925,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1293,
+      "line": 1301,
       "sig": "bb0f875345",
       "bhash": "b939b24adf",
       "occ": 1,
@@ -1937,7 +1937,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1301,
+      "line": 1309,
       "sig": "985fb1ffef",
       "bhash": "3704c2c8e7",
       "occ": 1,
@@ -1949,7 +1949,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1312,
+      "line": 1320,
       "sig": "bb0f875345",
       "bhash": "b939b24adf",
       "occ": 2,
@@ -1961,7 +1961,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1331,
+      "line": 1339,
       "sig": "c1c7892432",
       "bhash": "1fdc94dba2",
       "occ": 1,
@@ -1973,7 +1973,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1332,
+      "line": 1340,
       "sig": "0062bb82bb",
       "bhash": "7ab1925e3a",
       "occ": 3,
@@ -1985,7 +1985,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1333,
+      "line": 1341,
       "sig": "0c35f6ea98",
       "bhash": "7a77ded627",
       "occ": 4,
@@ -1997,7 +1997,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1336,
+      "line": 1344,
       "sig": "c4e8facd49",
       "bhash": "acfd5d6cfb",
       "occ": 1,
@@ -2009,7 +2009,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1349,
+      "line": 1357,
       "sig": "6bfe5add3b",
       "bhash": "b46423acac",
       "occ": 1,
@@ -2021,19 +2021,19 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1394,
-      "sig": "c1b0ce4ee4",
-      "bhash": "d38889eb9c",
+      "line": 1408,
+      "sig": "82f4f68ca2",
+      "bhash": "8bf0adc591",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 静默降级 */",
-      "snippet": "const v = localStorage.getItem(k); if (v !== null) data[k] = v; }"
+      "note": "",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"snapshot read fa"
     },
     {
       "file": "render-overview.js",
-      "line": 1420,
+      "line": 1434,
       "sig": "636665b26d",
       "bhash": "a9d0802fdb",
       "occ": 1,
@@ -2045,19 +2045,19 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1442,
-      "sig": "67d49ea825",
-      "bhash": "b233acaf18",
+      "line": 1461,
+      "sig": "4792a1aa08",
+      "bhash": "6f37ab06bf",
       "occ": 1,
-      "level": "P0",
-      "why": "JSON.parse：脏数据/截断数据解析失败，配置静默回落默认值",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 合并失败时按覆盖处理 */",
-      "snippet": "const remoteRaw = data[PREFIX + \"tasks\"]; let remoteTasks = []; try { "
+      "note": "",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"error\", \"云端合并失败 → 本次退化为覆"
     },
     {
       "file": "render-overview.js",
-      "line": 1452,
+      "line": 1471,
       "sig": "99e2ff222c",
       "bhash": "f6740ec63a",
       "occ": 1,
@@ -2069,19 +2069,19 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1471,
-      "sig": "306e082261",
-      "bhash": "71a673ce96",
+      "line": 1494,
+      "sig": "6191dc1199",
+      "bhash": "11279ac0c6",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 静默降级 */",
-      "snippet": "localStorage.setItem(k, data[k]); }"
+      "note": "",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"error\", \"云端恢复写入失败（该键实际未恢"
     },
     {
       "file": "render-overview.js",
-      "line": 1477,
+      "line": 1500,
       "sig": "b340dbb697",
       "bhash": "57fa3e1d5f",
       "occ": 1,
@@ -2093,7 +2093,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1499,
+      "line": 1522,
       "sig": "6cbdd90465",
       "bhash": "474ad1e383",
       "occ": 1,
@@ -2105,7 +2105,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1501,
+      "line": 1524,
       "sig": "076265bb67",
       "bhash": "6a6802e115",
       "occ": 1,
@@ -2117,7 +2117,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1502,
+      "line": 1525,
       "sig": "05c42fd925",
       "bhash": "d5e0c55951",
       "occ": 1,
@@ -2129,7 +2129,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1558,
+      "line": 1581,
       "sig": "e548a16f6d",
       "bhash": "135fd655c1",
       "occ": 1,
@@ -2141,7 +2141,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1585,
+      "line": 1608,
       "sig": "3147f0c8b3",
       "bhash": "37f7e70769",
       "occ": 1,
@@ -2153,7 +2153,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1589,
+      "line": 1612,
       "sig": "0756662861",
       "bhash": "e75073f466",
       "occ": 1,
@@ -2165,7 +2165,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1612,
+      "line": 1635,
       "sig": "b49bb31fd8",
       "bhash": "f578f3101e",
       "occ": 1,
@@ -2177,7 +2177,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1660,
+      "line": 1683,
       "sig": "4a59e80bfd",
       "bhash": "a951f2f827",
       "occ": 1,
@@ -2189,7 +2189,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1677,
+      "line": 1700,
       "sig": "20b75b10ae",
       "bhash": "3368a59b49",
       "occ": 1,
@@ -2201,7 +2201,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1686,
+      "line": 1709,
       "sig": "091879f317",
       "bhash": "6bb1548ef0",
       "occ": 1,
@@ -2213,7 +2213,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1696,
+      "line": 1719,
       "sig": "fb35e2929a",
       "bhash": "8d0fc647a6",
       "occ": 1,
@@ -2225,7 +2225,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1704,
+      "line": 1727,
       "sig": "6a460b7232",
       "bhash": "17a3761be5",
       "occ": 1,
@@ -2237,7 +2237,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1708,
+      "line": 1731,
       "sig": "0756662861",
       "bhash": "e75073f466",
       "occ": 2,
@@ -2249,7 +2249,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1739,
+      "line": 1762,
       "sig": "fb35e2929a",
       "bhash": "8d0fc647a6",
       "occ": 2,
@@ -2261,7 +2261,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1768,
+      "line": 1791,
       "sig": "ff5c5afebe",
       "bhash": "4a103b7b75",
       "occ": 1,
@@ -2273,7 +2273,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1773,
+      "line": 1796,
       "sig": "39c3cdfd9c",
       "bhash": "2ea78de664",
       "occ": 1,
@@ -2285,7 +2285,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1812,
+      "line": 1835,
       "sig": "816c1a169a",
       "bhash": "0061a3d663",
       "occ": 1,
@@ -2297,7 +2297,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1819,
+      "line": 1842,
       "sig": "b377164298",
       "bhash": "aa4b54e192",
       "occ": 1,
@@ -2309,7 +2309,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1828,
+      "line": 1851,
       "sig": "c62dbd0ec5",
       "bhash": "ded75956c5",
       "occ": 1,
@@ -2321,7 +2321,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1912,
+      "line": 1935,
       "sig": "e9146843b9",
       "bhash": "7087f8338f",
       "occ": 1,
@@ -2333,7 +2333,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1915,
+      "line": 1938,
       "sig": "816c1a169a",
       "bhash": "0061a3d663",
       "occ": 2,
@@ -2345,7 +2345,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1917,
+      "line": 1940,
       "sig": "8ebeca95de",
       "bhash": "b1b4ddedb8",
       "occ": 1,
@@ -2357,7 +2357,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1924,
+      "line": 1947,
       "sig": "c5f4e48894",
       "bhash": "628326ef9b",
       "occ": 1,
@@ -2369,7 +2369,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1929,
+      "line": 1952,
       "sig": "82a8bbf70d",
       "bhash": "4c20878710",
       "occ": 1,
@@ -2381,7 +2381,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 1946,
+      "line": 1969,
       "sig": "002dc4a784",
       "bhash": "62a2dcb929",
       "occ": 1,
@@ -2393,7 +2393,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2071,
+      "line": 2094,
       "sig": "ec84a59a8f",
       "bhash": "4d9ec12e27",
       "occ": 1,
@@ -2405,7 +2405,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2124,
+      "line": 2147,
       "sig": "3387716408",
       "bhash": "3968a6cc06",
       "occ": 1,
@@ -2417,7 +2417,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2163,
+      "line": 2186,
       "sig": "e71d427a6a",
       "bhash": "d38bab1ed3",
       "occ": 1,
@@ -2429,7 +2429,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2167,
+      "line": 2190,
       "sig": "fa1b0bd661",
       "bhash": "7007aa03d1",
       "occ": 1,
@@ -2441,19 +2441,19 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2232,
-      "sig": "d61a0c114f",
-      "bhash": "344841035e",
+      "line": 2259,
+      "sig": "5f950a056d",
+      "bhash": "40f57ea127",
       "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* AI 未配置或失败 → 降级为待办提醒 */",
-      "snippet": "if(typeof chatOnce === \"function\"){ const resp = await chatOnce([ { ro"
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"工作流 AI 调用失败 → 已降级为待办"
     },
     {
       "file": "render-overview.js",
-      "line": 2246,
+      "line": 2273,
       "sig": "462b633f59",
       "bhash": "d4ab3f2514",
       "occ": 1,
@@ -2465,7 +2465,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2247,
+      "line": 2274,
       "sig": "1fcc8cc2ca",
       "bhash": "3157951edd",
       "occ": 1,
@@ -2477,7 +2477,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2249,
+      "line": 2276,
       "sig": "86a43ef20d",
       "bhash": "69732d4ab9",
       "occ": 1,
@@ -2489,7 +2489,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2262,
+      "line": 2289,
       "sig": "b756decc56",
       "bhash": "6d870aafc1",
       "occ": 1,
@@ -2501,19 +2501,19 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2268,
+      "line": 2295,
       "sig": "359db5b6f6",
       "bhash": "e49af69a03",
       "occ": 1,
       "level": "P0",
       "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
       "bare": false,
-      "note": "/* 读配置失败：这一轮无 flow 可跑，属预期降级（判据②） */",
+      "note": "/* 读配置失败：这一轮无 flow 可跑，属预期降级（判据②）。 R-2 评估（**不改**，把理由补全）：这里若加 ",
       "snippet": "const saved = getAiConfig(\"workflow\") || {}; const flows = Array.isArr"
     },
     {
       "file": "render-overview.js",
-      "line": 2270,
+      "line": 2300,
       "sig": "5e3692e945",
       "bhash": "eec1c2c1a9",
       "occ": 1,
@@ -2525,7 +2525,7 @@
     },
     {
       "file": "render-overview.js",
-      "line": 2322,
+      "line": 2352,
       "sig": "b708929003",
       "bhash": "13fa2952dd",
       "occ": 1,
@@ -3137,31 +3137,43 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 138,
-      "sig": "bf092ccb13",
-      "bhash": "1e69658824",
+      "line": 140,
+      "sig": "575d39a92d",
+      "bhash": "fe2e871dfe",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
-      "bare": false,
-      "note": "/* 静默 */",
-      "snippet": "const log = load(PREFIX + \"migrationLog\", []); log.push({ ts: Date.now"
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"多设备合并日志写入失败（save 返回 "
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 157,
-      "sig": "483fda06f3",
-      "bhash": "71a673ce96",
+      "line": 145,
+      "sig": "8bdf1dbcd3",
+      "bhash": "f5c7a665f6",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 静默降级 */",
-      "snippet": "localStorage.setItem(k, data[k]); }"
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"多设备合并日志写入失败：这次合并此后没有"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 160,
+      "line": 170,
+      "sig": "752d86de1c",
+      "bhash": "d5a2067cb2",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"error\",\"导入写入失败（该键实际未导入）key="
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 173,
       "sig": "5387afc5c9",
       "bhash": "8888d8f469",
       "occ": 1,
@@ -3173,7 +3185,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 162,
+      "line": 175,
       "sig": "6ef02b6999",
       "bhash": "7a8bf89008",
       "occ": 1,
@@ -3185,7 +3197,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 234,
+      "line": 247,
       "sig": "831bccce72",
       "bhash": "1064bdae57",
       "occ": 1,
@@ -3197,19 +3209,19 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 256,
-      "sig": "95444e6af8",
-      "bhash": "d5ce2c8259",
+      "line": 273,
+      "sig": "d68bc0fd04",
+      "bhash": "533a5fba6b",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 静默降级 */",
-      "snippet": "localStorage.removeItem(k); }"
+      "note": "",
+      "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"error\",\"清空删除失败（该键实际仍在本机）key"
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 334,
+      "line": 351,
       "sig": "1adce61c53",
       "bhash": "c7a1dab007",
       "occ": 1,
@@ -3221,7 +3233,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 338,
+      "line": 355,
       "sig": "1da7862639",
       "bhash": "ebd6fc622d",
       "occ": 1,
@@ -3233,7 +3245,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 396,
+      "line": 413,
       "sig": "a98172b0ba",
       "bhash": "2227e29885",
       "occ": 1,
@@ -3245,7 +3257,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 439,
+      "line": 456,
       "sig": "395bf95363",
       "bhash": "8f133e2a41",
       "occ": 1,
@@ -3257,7 +3269,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 455,
+      "line": 472,
       "sig": "3abd633333",
       "bhash": "2444bcd2dc",
       "occ": 1,
@@ -3269,7 +3281,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 470,
+      "line": 487,
       "sig": "5a8c3c88e9",
       "bhash": "6df323e009",
       "occ": 1,
@@ -3281,7 +3293,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 548,
+      "line": 565,
       "sig": "e9cb4b29cd",
       "bhash": "4d72834c05",
       "occ": 1,
@@ -3293,7 +3305,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 551,
+      "line": 568,
       "sig": "5387afc5c9",
       "bhash": "8888d8f469",
       "occ": 2,
@@ -3305,7 +3317,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 553,
+      "line": 570,
       "sig": "69ddd0d237",
       "bhash": "0768d04e77",
       "occ": 1,
@@ -3317,7 +3329,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 554,
+      "line": 571,
       "sig": "4d16a93912",
       "bhash": "0699ce2f52",
       "occ": 1,
@@ -3329,7 +3341,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 555,
+      "line": 572,
       "sig": "e140307bb8",
       "bhash": "4bfda35591",
       "occ": 1,
@@ -3341,7 +3353,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 562,
+      "line": 579,
       "sig": "ae6dd0d4db",
       "bhash": "81f44f892d",
       "occ": 1,
@@ -3353,7 +3365,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 643,
+      "line": 660,
       "sig": "5e4fe664bc",
       "bhash": "129632790a",
       "occ": 1,
@@ -3365,7 +3377,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 666,
+      "line": 683,
       "sig": "06f5a7a5a3",
       "bhash": "7689d6b1a2",
       "occ": 1,
@@ -3377,7 +3389,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 675,
+      "line": 692,
       "sig": "ba6bb66018",
       "bhash": "19d8ba8e7a",
       "occ": 1,
@@ -3389,7 +3401,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 698,
+      "line": 715,
       "sig": "3ef0a9fd77",
       "bhash": "2361419c4a",
       "occ": 1,
@@ -3401,7 +3413,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 699,
+      "line": 716,
       "sig": "9ac257b256",
       "bhash": "49e67d595c",
       "occ": 1,
@@ -3413,7 +3425,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 803,
+      "line": 820,
       "sig": "49981ae49b",
       "bhash": "706ea0ecb3",
       "occ": 1,
@@ -3425,7 +3437,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 819,
+      "line": 836,
       "sig": "2f13daad28",
       "bhash": "4695aedc88",
       "occ": 1,
@@ -3437,7 +3449,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 843,
+      "line": 860,
       "sig": "5d1aa70c93",
       "bhash": "caa8e35c4f",
       "occ": 1,
@@ -3449,7 +3461,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 852,
+      "line": 869,
       "sig": "c8662d94d0",
       "bhash": "7cc98a5935",
       "occ": 1,
@@ -3461,7 +3473,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 859,
+      "line": 876,
       "sig": "9112cc79b0",
       "bhash": "551d0cbf31",
       "occ": 1,
@@ -3473,7 +3485,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 864,
+      "line": 881,
       "sig": "1aaf61fff3",
       "bhash": "c0bfcd11db",
       "occ": 1,
@@ -3485,7 +3497,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 874,
+      "line": 891,
       "sig": "886e8fb7be",
       "bhash": "ec9f800d3f",
       "occ": 1,
@@ -3497,7 +3509,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 881,
+      "line": 898,
       "sig": "72e856afa4",
       "bhash": "022ed52e7e",
       "occ": 1,
@@ -3509,7 +3521,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 883,
+      "line": 900,
       "sig": "ab054c6484",
       "bhash": "80a240c2aa",
       "occ": 1,
@@ -3521,7 +3533,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 887,
+      "line": 904,
       "sig": "4975210443",
       "bhash": "2626bc2a4a",
       "occ": 1,
@@ -3533,7 +3545,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 899,
+      "line": 916,
       "sig": "aca2aab403",
       "bhash": "b968736787",
       "occ": 1,
@@ -3545,7 +3557,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 923,
+      "line": 940,
       "sig": "ee20ac7eb1",
       "bhash": "440219f65e",
       "occ": 1,
@@ -3557,7 +3569,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1012,
+      "line": 1029,
       "sig": "64ce88348f",
       "bhash": "b0b736d62a",
       "occ": 1,
@@ -3569,7 +3581,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1028,
+      "line": 1045,
       "sig": "da2f602a5f",
       "bhash": "6c72866d54",
       "occ": 1,
@@ -3581,7 +3593,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1037,
+      "line": 1054,
       "sig": "3f15abdee5",
       "bhash": "d8e19fadc7",
       "occ": 1,
@@ -3593,7 +3605,7 @@
     },
     {
       "file": "ui-backup-stats.js",
-      "line": 1478,
+      "line": 1495,
       "sig": "fc2761bdd4",
       "bhash": "d023f9a974",
       "occ": 1,

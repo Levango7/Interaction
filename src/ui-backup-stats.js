@@ -134,8 +134,16 @@ function doImport(file){
           const log = load(PREFIX + "migrationLog", []);
           log.push({ ts: Date.now(), type: "multi-device-merge", from: data._deviceMeta.deviceId, to: getDeviceId(), added: addedCount, conflictsResolved, merged: mergedCount });
           if(log.length > 50) log.splice(0, log.length - 50);
-          save(PREFIX + "migrationLog", log);
-        } catch(e){ /* 静默 */ }
+          /* ⚠️ `save()` 自己吞掉写失败并**回 false**，所以只 catch 异常等于没守
+             （data-migrate.js:9 记的是同一个坑）—— 必须同时看返回值，否则观测是假的。 */
+          if(save(PREFIX + "migrationLog", log) !== true){
+            try{ if(typeof pushDiag==="function") pushDiag("warn","多设备合并日志写入失败（save 返回 false）：这次合并此后没有本地凭据",{where:"doImport:migrationLog"}); }catch(_e2){}
+          }
+        } catch(e){ /* R-2 消解：原为静默。这份日志是「这次多设备合并动过什么」的唯一本地凭据
+            （`getLastMergeLog()` 供 UI 读）—— 写不进去 ⇒ 界面显示"从来没有合并过"，
+            **而合并确实发生了** ⇒ 与事实相反。控制流不变：日志成不成都继续导入。 */
+          try{ if(typeof pushDiag==="function") pushDiag("warn","多设备合并日志写入失败：这次合并此后没有本地凭据: "+((e&&e.message)||e),{where:"doImport:migrationLog"}); }catch(_e2){}
+        }
       }
 
       // 导入校验：必需字段 + 数据类型（兼容旧格式无 _deviceMeta 的数据）
@@ -154,7 +162,12 @@ function doImport(file){
       if(!await dangerConfirm({ message: t("confirm.importOverwrite","导入将覆盖当前同名数据（含自定义联动规则）。确定继续？") })) return;
       /* v3.7.94（P1-2 对偶）：过滤口径必须与导出 allKeys() 完全一致（isAppStorageKey 同一并集），
          否则导出的旁路裸键（token/通知设置）在导入侧被再次丢回。 */
-      Object.keys(data).forEach(k=>{ if(isAppStorageKey(k)){ try{ localStorage.setItem(k, data[k]); }catch(e){ /* 静默降级 */ } } });
+      /* R-2 消解：原为静默。写不进去 ⇒ 这个键**实际没导入**，但导入流程照常往下走并提示成功，
+         用户以为数据回来了，其实缺了一块（谎报，且原数据已被覆盖、不可回头）。
+         注意这里是 `localStorage.setItem`（不是 `save()`），写失败会真抛异常 ⇒ catch 能接到。
+         控制流不变（照旧继续下一个键，不改成"整单回滚"——那要产品拍板）。 */
+      /* ⚠️ 键名进 msg 正文而非只进元数据：诊断面板只渲染 msg（见 renderDiagList）。 */
+      Object.keys(data).forEach(k=>{ if(isAppStorageKey(k)){ try{ localStorage.setItem(k, data[k]); }catch(e){ try{ if(typeof pushDiag==="function") pushDiag("error","导入写入失败（该键实际未导入）key="+k+": "+((e&&e.message)||e),{where:"doImport:write",key:k}); }catch(_e2){} } } });
       _cfgCache = null; _deviceKey = null;
       // v2.0.1：导入不 reload 页面，须复位会话层与场景聊天内存缓存，否则 UI 显示导入前旧数据
       try{ _resetSessions(); _reloadChatsFromStorage(); }catch(_){ /* noop */ }
@@ -253,7 +266,11 @@ function getLastMergeLog(){
    且本函数内部不抛 —— 改成 async 不会给这两个调用点引入新的失败模式。 */
 async function doClear(){
   if(!await dangerConfirm({ message: t("confirm.clearAll","确定清空全部数据？此操作不可恢复！") })) return;
-  allKeys().forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){ /* 静默降级 */ } });
+  /* R-2 消解：原为静默。删不掉 ⇒ 这个键**实际还在**，但函数照常往下走、UI 显示已清空；
+     而用户刚刚在确认框里读过「此操作不可恢复」并点了确定 ⇒ 谎报 + 与承诺相反，故按 error 级上报。
+     控制流不变（照旧继续删下一个键）。 */
+  /* ⚠️ 键名进 msg 正文而非只进元数据：诊断面板只渲染 msg（见 renderDiagList）。 */
+  allKeys().forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){ try{ if(typeof pushDiag==="function") pushDiag("error","清空删除失败（该键实际仍在本机）key="+k+": "+((e&&e.message)||e),{where:"doClear",key:k}); }catch(_e2){} } });
   idbClearAll().catch(() => {}); // 架构项①：同步清 IDB 镜像，避免恢复出僵尸数据
   /* OD-004 裁定乙（2026-10-18，用户「乙 吧」）：清空后**不再重新播种示例**。
      此前这里只删不写：allKeys() 把 `wb_agent_init` 一起删掉，而 seed() 的触发条件是
