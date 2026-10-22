@@ -4,7 +4,7 @@
 
 零安装、单文件、纯本地；数据存本机浏览器，**默认不依赖任何后端服务器**（可选开启账号云同步与联网工具）。
 
-> **源码态说明（v3.7.0 起）**：仓库内的 `agent-workbench.html` 是约 607 KB 的**骨架**——应用 JS 已外置到 `src/`（35 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
+> **源码态说明（v3.7.0 起）**：仓库内的 `agent-workbench.html` 是约 640 KB 的**骨架**（v3.7.136 实测 638 KB）——应用 JS 已外置到 `src/`（38 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
 >
 > ```bash
 > npm run src:inject     # 把 src/ 拼回单文件 HTML
@@ -197,7 +197,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 ## 九、相关文件
 
 - `agent-workbench.html` — 工坊本体（核心交付物；**源码态是骨架**：不含立绘 base64，且应用 JS 已外置到 `src/`，构建时由 `src-split.mjs` 拼回 + 回注立绘）
-- `src/` — 应用源码（35 个模块 + `order.json`），由 `src-split.mjs` 与单文件 HTML 双向同步（`src:extract` / `src:inject` / `src:check`）
+- `src/` — 应用源码（38 个模块 + `order.json`），由 `src-split.mjs` 与单文件 HTML 双向同步（`src:extract` / `src:inject` / `src:check`）
 - `assets/pet/` — 萌宠立绘 PNG + 注入顺序 `order.json`（见 [docs/pet-system.md](docs/pet-system.md)）
 - `启动Agent工坊.bat` — Edge 应用模式启动器
 - `启动本地服务.bat` — 本地服务模式启动器（解决 AI 跨域）
@@ -209,6 +209,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 | 文档 | 内容 |
 |---|---|
+| [docs/README.md](docs/README.md) | **文档索引**：权威 / 流程 / 历史三级，先看这里再翻具体文档 |
 | [docs/architecture-layers.md](docs/architecture-layers.md) | 单文件架构分层契约（改结构前必读） |
 | [docs/pet-system.md](docs/pet-system.md) | 萌宠系统：角色 / 立绘外置与回注 / 五官标定 / 双风格 / 加新角色 |
 | [docs/ai-tools.md](docs/ai-tools.md) | AI 工具（function-calling）接口与 Schema |
@@ -225,7 +226,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 **真相源分两处，各管一段**（顶部「源码态说明」是这一节的前提）：
 - **CSS 与内联 JS**（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html` —— 改这些就改 HTML。
-- **应用 JS**（35 个模块）在 `src/*.js` 里演进，由 `scripts/src-split.mjs` 在**构建期**拼回 HTML；
+- **应用 JS**（38 个模块）在 `src/*.js` 里演进，由 `scripts/src-split.mjs` 在**构建期**拼回 HTML；
   运行时仍是单个 `<script>`，不存在多文件加载（`file://` 下会失败）。
 - 推送前用 `npm run verify:ci` 按 **CI 的真实步骤顺序**在本机预演一遍（从 `.github/workflows/*.yml` 读序列，不写死清单；`-- --job=verify --ci=.github/workflows/deploy.yml` 可预演发布链）。🔴 **本脚本的标志必须写在 `--` 之后**：`npm run verify:ci --with-e2e` 会被 npm 自己收作配置项（只 warn 一句 `Unknown cli config`），脚本收到的 argv 是空的 → e2e 那步**静默不跑**而其余十步照样全绿退出 0；现在脚本会检查 `npm_config_*` 并直接 exit 2。单个门禁各自跑绿 ≠ CI 绿：验证命令会改写 `agent-workbench.html`（`pre*` 注入 / `post*` 抽回），**上一步把目录留在哪种状态直接决定下一步的结论**——v3.7.59 补齐 post* 自愈钩子后，`pet:check`（要在拼装态才读得到 `_PET_ART`）就被前一步抽回源码态而长期 exit 1，逐个命令手跑完全看不出来。
 - 提交的是**源码态**（HTML 只有标记、代码在 `src/`、立绘在 `assets/pet/` —— 两份文本都不含 base64）；本地要双击运行先跑 `npm run src:inject`，或直接双击 `启动Agent工坊.bat`（v3.7.58 起检测到源码态会自动拼回）。所有 `pre*` 注入钩子都配了自愈：`npm test` / `lint` / `lint:layers` / `test:coverage` / `build` / `build:check` / `build:prod` / `e2e` / `pet:check` 跑完由对应 `post*` 自动还原源码态，工作区不会因跑检查或跑发布构建而变脏。**v3.7.65 起不再有例外**：原先 `build` 与 `build:prod` 跑完故意留在拼回态（称其产物即完整交付物），但交付物实际落在独立的 `agent-workbench.prod.html` / `service-worker.prod.js` 里，真相源留在拼回态只会让工作区变脏并诱发误提交，故补齐两条 `post*` 钩子；需要完整单文件请用 `npm run src:inject` 显式获取。
