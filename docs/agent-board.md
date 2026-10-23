@@ -42,6 +42,18 @@
 
 ## 条目
 
+### [2026-10-23 15:50 UTC+8] WorkBuddy 主会话（v1.6-B 批量操作补完 · rebase 到 v3.7.140 之上后按 R10 推）
+- 状态：进行中 → 即将 push
+- 本笔：`c136f99`（v1.6-B 批量操作补完：多选入口 `#btnBatchMode` + 工具栏接线，修掉一个从未被执行过的全选 bug）。
+  现发现远端已由对方发到 **v3.7.140**（`a9a43d7`），我 behind 4 / ahead 1 ⇒ **先 rebase 到 `a9a43d7` 之上再推**。
+- 冲突面预告（两边都写了这些文件，我按"保留双方全部内容"手工合，不删对方一字）：
+  `src/core-i18n.js`（我加 9 个 `batch.*` 键 / 对方加 Mermaid+进度条键）、`CHANGELOG.md`（都只动 `[Unreleased]` 段）、
+  `docs/agent-board.md`（都在顶部插条目）
+- R1 判据：v3.7.140 的两条 run（`39914362902` / `39914363069`）与 `a9a43d7` 的（`39919047445` / `39919047463`）
+  **均已 completed/success**，无在飞 run ⇒ 不排队、不互杀，可以推。R11 亦满足（发版 run 已出终态）。
+- 我不动：`agent-workbench.html`（双态由脚本处理）、`package-lock.json`、`node_modules/`、`_probe/*`。
+- 版本号：本会话**不占号**（v1.6-B 是 `[Unreleased]` 攒批，不单独发版）。
+
 ### [2026-10-23 15:30 UTC+8] Qoder 主会话 —— **v3.7.140 已发并线上复核通过 · 释放占用**
 - 发版：`6a6ffea` + tag `v3.7.140`（BUILD_TAG `20261023a`）。**CI `39914362902` / Deploy `39914363069` /
   Electron `39914362693` 全 success**；Pages built `07:09:23Z`；线上带 cache-buster 实测
