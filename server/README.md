@@ -153,6 +153,10 @@ config.json 生效 / 深合并保默认 / env 优先级最高 / 数组整份替�
 | GET/PUT | /me | 当前用户信息 |
 | GET/DELETE | /devices[/:id] | 登录设备管理 |
 | POST | /email-code | 发邮箱验证码（未配 SMTP 时返回 demoCode 供开发） |
+| POST | /sms-code | 发短信验证码（2026-10-23，OD-001 选型 C）。腾讯云 SendSms，服务端自算 TC3-HMAC-SHA256、**零新依赖**；未配置 → 503 `sms_not_configured`（fail-closed）；重发冷却 `sms.resendIntervalSec`（默认 60s，**按条计费**所以用码的真实签发时刻判据，不用固定窗口）；**不查该号是否已注册**（否则接口本身成了"这个号注册过没有"的枚举器） |
+| POST | /sms-login | 短信码登录 / 首次即建号（find-or-create）。码**一次性消费**先于建号 |
+| POST | /password-reset-code | 发**密码重置**验证码（2026-10-24）。⚠️ 与 `/email-code` 的差别是刻意的：注册那条用 `email_exists` 拒绝已存在的邮箱（产品必需，否则用户填完整个表单才被拒），所以**枚举面收敛在注册这一处**；重置这条对「邮箱是否注册过」一个字都不漏 —— 存在与不存在返回**同一状态码、同一响应体**，且**发信失败也返回 200**（回 502 的话，"这个地址偶尔 502"本身就是存在性信号，失败详情只进服务端日志）。不做 per-address 冷却：冷却判据"这个地址刚发过码"本身就是存在性状态，给它对齐得给不存在的地址也写码，而 `security.rateLimit.resetCodeMax`（默认 5/分钟）已经覆盖。**只有 `provider==="email"` 的账号会真收到信** |
+| POST | /password-reset | 凭码改密（2026-10-24）。三步合一：校验并**一次性消费**码 → 重算 bcrypt → **吊销该用户全部 refreshToken**（`sessionsRevoked` 如实回给客户端）。最后一步不是可选项：忘记密码的真实场景里有一半是"密码可能已泄露"，只改 hash 不踢会话，攻击者手上的 refreshToken 还能续 30 天。**不自动登录**（不签发 token，少一处「重置即接管」窗口）。⚠️ 已知边界：accessToken（15 分钟）**无法吊销**，只能靠短 TTL 兜着 |
 | GET | /github | GitHub 登录：返回 `{authorizeUrl, state}`（v3.7.113 加固）。**未配置凭据 → 503 `github_not_configured`**（fail-closed，永不 404） |
 | GET | /github/callback | GitHub 授权回调（浏览器直开，非 apiFetch）：state 一次性消费+TTL → code 以 **form-urlencoded** 兑换（旧实现打 JSON body，GitHub 会拒）→ 按 GitHub id 建/找账号 → 签发 token → postMessage 页**回传 state + token**（旧实现漏传 state，客户端校验 `d.state===session.state` 会直接拒收，链路本是断的） |
 | POST | /wechat/qrcode | 微信扫码登录取码（v3.7.113 加固）。**演示模式**：无微信开放平台凭据时返回带 scene 的 SVG data-URI + `demo:true`；真受权需企业资质（roadmap 阶段④），协议不变只换 provider |

@@ -134,11 +134,11 @@ function authRouter(cfg, store) {
       if (password.length < 8) return fail(res, 400, "password_too_short");
       if (store.findUserByEmail(email)) return fail(res, 409, "email_exists");
       // 验证码校验：仅当后端启用了发码（config.email.enabled）或已发过码时强校验
-      const saved = store.getCode(email);
+      const saved = store.getCode(email, "register");
       if (code) {
         if (!saved || saved.used || saved.expiresAt < Date.now()) return fail(res, 400, "code_expired_or_invalid");
         if (saved.code !== code) return fail(res, 400, "code_invalid");
-        store.markCodeUsed(email);
+        store.markCodeUsed(email, "register");
       } else if (cfg.email && cfg.email.enabled) {
         // 强制注册必须带验证码（邮件通道启用时）
         return fail(res, 400, "code_required");
@@ -168,6 +168,104 @@ function authRouter(cfg, store) {
       const deviceName = String((req.body && req.body.deviceName) || "web");
       store.saveSession({ refreshToken: t.refreshToken, userId: user.id, createdAt: Date.now(), expiresAt: Date.now() + (cfg.jwt.refreshTtlSec || 2592000) * 1000, deviceName });
       return ok(res, { accessToken: t.accessToken, refreshToken: t.refreshToken, expiresIn: t.accessTtlSec, user: publicUser(user) });
+    } catch (e) {
+      return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
+    }
+  });
+
+  /* ---- 密码重置（忘记密码）2026-10-24 ----
+     为什么必须有：注册要 邮箱+密码+验证码，但**没有任何找回路径** —— `/register` 与 `/email-code`
+     都以 `email_exists` 拒绝已存在的邮箱，于是邮箱密码用户一旦忘密码，账号就永久锁死，
+     只能换个邮箱重来（原账号里的任务/快照全部留在里面）。这不是"缺个便利功能"，是账号体系缺一条闭环。
+
+     三条口径（改之前先读）：
+     ① `/password-reset-code` **不泄露该邮箱是否注册过** —— 存在与不存在返回同一个状态码、同一个响应体。
+        与 `/sms-code` 同一条理由，但这里更硬：邮箱是唯一账号标识，能被枚举就等于交出了全站用户名单。
+        注册接口的 409 `email_exists` 是**产品必需**（否则用户填完整个表单才被拒，还以为是系统坏了），
+        所以枚举面就收敛在注册那一处；重置这条路一滴都不能漏。
+        它带来的连带取舍：**发信失败也返回 200**（只 `console.warn` + 审计留痕）。若失败时回 502，
+        "这个地址偶尔 502"本身就是存在性信号。用户收不到就点重发，运维去日志里看。
+        时序侧信道做了粗略对齐（不存在时也等一小段），但**没有**声称消除 —— SMTP 时延本身随机，
+        300ms vs 420ms 之间仍有统计差异，这一点写进 README，不假装解决了。
+     ② 只有 `provider === "email"` 的账号能重置：github / phone 账号的 `passwordHash` 是 null，
+        允许给它们"设个密码"等于凭空开一条**绕开 OAuth 的登录旁路**（而这类账号的 email 未经验证、
+        甚至为 null）。那是提权，不是找回。
+     ③ 改密成功 = **吊销该用户全部 refresh token**：忘记密码的真实场景里有一半是"密码可能已经泄露"。
+        只改 hash 不踢会话，攻击者手上的 refreshToken 还能续 30 天 —— 那次改密等于没改。
+        accessToken（15 分钟）无法吊销，只能靠短 TTL 兜着，README 里如实写。 */
+  const RESET_TTL = 600;                 // 10 分钟，与注册码同口径
+  const RESET_PAD_MS = 300;              // 不存在地址的假延时（时序对齐，见 ①）
+  router.use("/password-reset-code", rlAuth("password-reset-code", { maxKey: "resetCodeMax", max: 5 }));
+  router.use("/password-reset", rlAuth("password-reset", { maxKey: "resetMax", max: 10 }));
+
+  // ---- 发密码重置码 ----
+  router.post("/password-reset-code", async (req, res) => {
+    try {
+      const email = String((req.body && req.body.email) || "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 400, "email_invalid");
+      /* 未配置邮件通道：503 是**全局**配置状态，与"这个邮箱存不存在"无关，因此不泄露。
+         与 `/email-code` 同款 fail-closed —— 通道没配就明确说没配，绝不静默当作已发送。 */
+      const mailer = getMailer(cfg);
+      if (!mailer) return fail(res, 503, "email_not_configured");
+
+      /* 不做 per-address 重发冷却，这是刻意的：冷却的判据是"这个地址刚发过码"，
+         而"这个地址发过码"本身就是存在性状态 —— 要给不存在的地址也写码才能对齐响应，
+         代价是垃圾码堆积 + 清扫逻辑，换来的只是"同一地址 60 秒一次"，而 rlAuth 已经给了
+         每地址 5 次/分钟。**多一层错的口径，不如不做。** */
+      const user = store.findUserByEmail(email);
+      const eligible = !!user && user.provider === "email";
+      if (eligible) {
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        store.setCode(email, code, RESET_TTL, "password-reset");
+        try {
+          await mailer.sendMail({
+            from: cfg.email.from, to: email,
+            subject: "Agent 工坊 · 密码重置验证码",
+            text: "您的密码重置验证码是：" + code + "，10 分钟内有效。\n如果这不是您本人操作，请忽略本邮件 —— 您的密码不会被改动。"
+          });
+        } catch (e) {
+          /* 见 ①：失败也不能让响应与"地址不存在"有任何差别。码留在 store 里无害（TTL 到点自然失效），
+             但用户没收到信就永远用不上它 —— 所以这一条必须留痕，否则用户报"收不到邮件"时无从查起。 */
+          console.warn("[auth] 重置邮件发送失败：" + ((e && e.message) || String(e)));
+          try { store.addAudit(user.id, "password_reset_mail_failed", { email: email }); } catch (e2) { /* 审计失败不影响主流程 */ }
+        }
+      } else {
+        await new Promise(function (r) { setTimeout(r, RESET_PAD_MS); });
+      }
+      return ok(res, { expireIn: RESET_TTL });
+    } catch (e) {
+      return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
+    }
+  });
+
+  // ---- 凭码改密 ----
+  router.post("/password-reset", async (req, res) => {
+    try {
+      const email = String((req.body && req.body.email) || "").trim().toLowerCase();
+      const code = String((req.body && req.body.code) || "").trim();
+      const newPassword = String((req.body && req.body.newPassword) || "");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 400, "email_invalid");
+      if (newPassword.length < 8) return fail(res, 400, "password_too_short");
+      /* 格式先行：码不是 6 位就直接拒，省一次 store 查找。注意这条与"码错"分开是对的 ——
+         它只取决于请求体本身的形状，不涉及任何账号状态，无从枚举。 */
+      if (!/^\d{6}$/.test(code)) return fail(res, 400, "code_invalid");
+      const user = store.findUserByEmail(email);
+      /* 账号不存在 / 不是 email 账号 ⇒ 与"码过期"同一个错误码。两者分开写会把这里变成枚举器，
+         而且 `provider` 也能被区分出来（"这个邮箱是 GitHub 登录的"同样是敏感信息）。 */
+      if (!user || user.provider !== "email") return fail(res, 400, "code_expired_or_invalid");
+      const saved = store.getCode(email, "password-reset");
+      if (!saved || saved.used || saved.expiresAt < Date.now()) return fail(res, 400, "code_expired_or_invalid");
+      if (saved.code !== code) return fail(res, 400, "code_invalid");
+      /* 一次性消费**先于**改密：与 sms-login 同序 —— 哪怕写盘失败，这个码也留不下来第二次用 */
+      store.markCodeUsed(email, "password-reset");
+      const passwordHash = bcrypt.hashSync(newPassword, BCRYPT_ROUNDS);
+      store.updateUser(user.id, { passwordHash: passwordHash, passwordChangedAt: Date.now() });
+      /* ③ 吊销全部会话：返回条数额如实回给用户（"连带 3 台设备下线"比"已重置"有用得多） */
+      const revoked = store.deleteUserSessions(user.id);
+      store.deleteCode(email, "password-reset");
+      store.addAudit(user.id, "password_reset", { email: email, sessionsRevoked: revoked, device: String((req.body && req.body.deviceName) || "web") });
+      /* 不自动登录：让用户用新密码走一次 /login。少发一对 token 就少一处"重置即接管"的窗口。 */
+      return ok(res, { changed: true, sessionsRevoked: revoked });
     } catch (e) {
       return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
     }
@@ -489,7 +587,7 @@ function authRouter(cfg, store) {
       /* 重发冷却：短信按条计费，"同一号码 60 秒内再来一次"就是白花钱（也可能是有人在刷）。
          固定窗口限流挡不住窗口边界的突刺（窗口末尾 + 新窗口开头 = 2×max），所以这里用
          码的**真实签发时刻**（store.setCode 的 issuedAt）做精确判据。 */
-      const prev = store.getCode(phone);
+      const prev = store.getCode(phone, "sms-login");
       if (prev && !prev.used) {
         const issuedAt = prev.issuedAt || (prev.expiresAt - SMS_TTL * 1000);
         if (Date.now() - issuedAt < SMS_RESEND) {
@@ -517,11 +615,11 @@ function authRouter(cfg, store) {
       if (!phone) return fail(res, 400, "phone_invalid");
       const code = String((req.body && req.body.code) || "").trim();
       if (!/^\d{6}$/.test(code)) return fail(res, 400, "code_invalid");
-      const saved = store.getCode(phone);
+      const saved = store.getCode(phone, "sms-login");
       if (!saved || saved.used || saved.expiresAt < Date.now()) return fail(res, 400, "code_expired_or_invalid");
       if (saved.code !== code) return fail(res, 400, "code_invalid");
       /* 一次性消费**先于**建号：哪怕后面建号失败，这个码也留不下来第二次用 */
-      store.markCodeUsed(phone);
+      store.markCodeUsed(phone, "sms-login");
       let user = store.findUserByProvider("phone", phone);
       if (!user) {
         const name = String((req.body && req.body.name) || "").trim() || ("手机用户" + phone.slice(-4));

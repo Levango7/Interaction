@@ -83,10 +83,15 @@ jobs:
   # incremental 38/38）此前**只在本机手动跑** —— 两处文档记为待办，当时理由是"ci.yml 属发版
   # 必改文件，本轮未动"；发版已完成，该理由消失。
   # 后续扩容：security / tools-fetch / oauth / router-isolation（v3.7.122）、
-  # config-check（v3.7.124）、sms-check（2026-10-23 短信验证码登录，OD-001 选型 C）
-  # 逐个接入，现共 **10 个自足脚本**。
+  # config-check（v3.7.124）、sms-check（2026-10-23 短信验证码登录，OD-001 选型 C）、
+  # password-reset-check（2026-10-24 密码重置，补上"能注册不能找回"）
+  # 逐个接入，现共 **11 个自足脚本**。
   # sms-check 里有**独立实现的 TC3 验签**（不复用被测函数），所以签名算法错了会在这里红，
   # 而不是等到真机发不出去短信才发现 —— 真短信按条计费，负例在真机上跑不了。
+  # password-reset-check 的白盒部分是**故意的**：验证码按 purpose 分桶、两种码互不可见，
+  # 黑盒看不到"注册码在重置桶里是否可见"，而那正是最危险的缺陷形态（串用 = 一种用途的码在
+  # 另一种用途被接受）。它同时钉住"改密必须吊销全部 refreshToken"，只改 hash 的话
+  # 攻击者手上的会话还能续 30 天，改密等于没改。
   # 为什么单开一个 job：它们与 agent-workbench.html 的状态无关（各自 spawn 真服务 + Node fetch
   # 直连，独立端口），所以不进 test job —— 既不扰动 verify-ci-order 的顺序预演，也不拖慢主矩阵。
   # 覆盖的是**真实 HTTP 行为**（认证绕过 / 跨用户越权 / 客户端契约 / 增量协议与快照相干性 /
@@ -102,7 +107,7 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
         working-directory: server
-      - name: 服务端验证脚本（10 个自足脚本，各自 spawn 真服务 + 实测 HTTP）
+      - name: 服务端验证脚本（11 个自足脚本，各自 spawn 真服务 + 实测 HTTP）
         run: |
           node verify/hardening-check.cjs
           node verify/idor-check.cjs
@@ -114,6 +119,7 @@ jobs:
           node verify/router-isolation-check.cjs
           node verify/config-check.cjs
           node verify/sms-check.cjs
+          node verify/password-reset-check.cjs
         working-directory: server
         timeout-minutes: 10
       # v3.7.129（R-24 收口）：这两份门禁此前**写了但从未入库**，于是 CI 与任何净副本都不含它们

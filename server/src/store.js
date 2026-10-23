@@ -17,7 +17,7 @@ class Store {
     this.file = file;
     this._data = {
       users: {},        // id -> { id, email, name, passwordHash, provider, providerId, createdAt }
-      codes: {},        // email -> { code, expiresAt, used, purpose }
+      codes: {},        // "purpose:address" -> { code, expiresAt, issuedAt, used, purpose }（2026-10-24 起分桶，见 setCode 注释）
       sessions: {},     // refreshToken -> { userId, createdAt, expiresAt, deviceName }
       oauthStates: {},  // state -> { provider, createdAt, data }
       schedules: {},    // id -> { ... }
@@ -94,18 +94,47 @@ class Store {
   /* issuedAt（2026-10-23 短信验证码）：此前只有 expiresAt，"这个码是什么时候发的"只能靠
      expiresAt - ttl 反推，一旦 ttl 在两次请求之间被改过就推错。短信通道是按条计费的，
      「同一号码 60 秒内重发」要么靠限流器的固定窗口（窗口边界会放过 2×max），要么靠
-     这个真实签发时刻——后者才是精确判据。邮箱路径只是多一个字段，行为不变。 */
-  setCode(email, code, ttlSec, purpose) {
-    this._data.codes[String(email).toLowerCase()] = {
-      code, purpose: purpose || "register",
+     这个真实签发时刻——后者才是精确判据。邮箱路径只是多一个字段，行为不变。
+
+     🔴 2026-10-24 分桶（密码重置批次）：此前 key **只有地址**（`codes[email]`），而 setCode
+     收到的 purpose 只被**写进记录、从未被读取** —— 代码看起来分了用途，实际没有任何一处校验它。
+     后果不是"理论上可能串用"，而是**一处覆盖即失效**：同一邮箱先发注册码（purpose=register）、
+     再发重置码（purpose=reset）时，后者直接盖掉前者 ⇒ 回到注册页输原来那个码，报的是
+     `code_invalid`，而用户手里那张邮件明明是对的。
+     现在 key = `purpose:address`，两种码各占一格可并存；读侧**同时校验 purpose**：
+     记录里的 purpose 与本次要用的不符一律当作没有这个码（拿注册码去重置、拿重置码去注册都被拒）。
+
+     `getCode` 保留对**老 key**（裸地址）的回退，否则升级瞬间所有在跑的注册/登录会一起失配；
+     回退分支同样过 purpose 校验，所以兼容不等于放水。 */
+  _codeKey(addr, purpose) { return String(purpose || "register") + ":" + String(addr || "").toLowerCase(); }
+  _findCode(addr, purpose) {
+    const p = purpose || "register";
+    const key = this._codeKey(addr, p);
+    const rec = this._data.codes[key];
+    if (rec) return { key: key, rec: rec };
+    const legacyKey = String(addr || "").toLowerCase();
+    const legacy = this._data.codes[legacyKey];
+    // 老数据：purpose 在记录里写着（setCode 一直有存），对不上就不认
+    if (legacy && (legacy.purpose || "register") === p) return { key: legacyKey, rec: legacy };
+    return null;
+  }
+  setCode(addr, code, ttlSec, purpose) {
+    const p = purpose || "register";
+    this._data.codes[this._codeKey(addr, p)] = {
+      code, purpose: p,
       expiresAt: Date.now() + (ttlSec || 600) * 1000,
       issuedAt: Date.now(),
       used: false
     };
     this._save();
   }
-  getCode(email) { return this._data.codes[String(email).toLowerCase()] || null; }
-  markCodeUsed(email) { const c = this._data.codes[String(email).toLowerCase()]; if (c) { c.used = true; this._save(); } }
+  getCode(addr, purpose) { const f = this._findCode(addr, purpose); return f ? f.rec : null; }
+  markCodeUsed(addr, purpose) { const f = this._findCode(addr, purpose); if (f) { f.rec.used = true; this._save(); } }
+  /* 清掉某地址某用途的码（重置成功后立刻作废，别等 TTL；也让"改完密码再点一次"必然失败） */
+  deleteCode(addr, purpose) {
+    const f = this._findCode(addr || "", purpose);
+    if (f) { delete this._data.codes[f.key]; this._save(); }
+  }
   // 清理过期码（在发新码时顺带清同邮箱旧码）
 
   // ---- sessions ----
@@ -120,12 +149,16 @@ class Store {
   }
   getSession(rt) { return this._data.sessions[rt] || null; }
   deleteSession(rt) { if (this._data.sessions[rt]) { delete this._data.sessions[rt]; this._save(); } }
+  /* 返回删掉的会话数：改密（2026-10-24）要把「踢掉了几台设备」如实回给用户与审计，
+     返回 void 的话只能写「已吊销」，而用户想知道的是"是不是连我办公室那台也断了"。 */
   deleteUserSessions(userId) {
     let changed = false;
+    let n = 0;
     Object.keys(this._data.sessions).forEach(rt => {
-      if (this._data.sessions[rt].userId === userId) { delete this._data.sessions[rt]; changed = true; }
+      if (this._data.sessions[rt].userId === userId) { delete this._data.sessions[rt]; changed = true; n++; }
     });
     if (changed) this._save();
+    return n;
   }
 
   // ---- oauth states ----
