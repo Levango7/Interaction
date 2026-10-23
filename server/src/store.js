@@ -91,7 +91,7 @@ class Store {
   getUser(id) { return this._data.users[id] || null; }
 
   // ---- codes ----
-  /* issuedAt（v3.7.141 短信验证码）：此前只有 expiresAt，"这个码是什么时候发的"只能靠
+  /* issuedAt（2026-10-23 短信验证码）：此前只有 expiresAt，"这个码是什么时候发的"只能靠
      expiresAt - ttl 反推，一旦 ttl 在两次请求之间被改过就推错。短信通道是按条计费的，
      「同一号码 60 秒内重发」要么靠限流器的固定窗口（窗口边界会放过 2×max），要么靠
      这个真实签发时刻——后者才是精确判据。邮箱路径只是多一个字段，行为不变。 */

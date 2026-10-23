@@ -3622,7 +3622,7 @@ const MESSAGES = {
     "auth.haveAccount": "已有账号？",
     "auth.loginSub": "已有账号，直接登录",
     "auth.noAccount": "还没有账号？",
-    /* v3.7.141（OD-001 选型 C）：手机号验证码登录。服务端是 find-or-create，
+    /* 2026-10-23（OD-001 选型 C）：手机号验证码登录。服务端是 find-or-create，
        所以给用户的动词是「登录 / 注册」而不是单一个「登录」。 */
     "auth.phone": "手机号",
     "auth.phonePh": "11 位中国大陆手机号",

@@ -24,7 +24,7 @@ function getMailer(cfg) {
   return _mailer;
 }
 
-/* ---- 腾讯云 API 3.0 的 TC3-HMAC-SHA256 签名（v3.7.141 短信验证码）----
+/* ---- 腾讯云 API 3.0 的 TC3-HMAC-SHA256 签名（2026-10-23 短信验证码）----
    为什么自己算：服务端至今零 HTTP 客户端依赖，为一个 POST 拉 SDK 不划算；
    算法是公开的（见腾讯云「签名方法 v3」文档），四步：规范请求串 → 待签串 → 派生密钥 → 签名。
    两个最容易写错、且错了只在真机才暴露的点（verify/sms-check.cjs 用**独立实现**验签，不复用本函数）：
@@ -80,7 +80,7 @@ function authRouter(cfg, store) {
     const base = { windowMs: Number(rlCfg.windowMs) || 60000, max: Number(rlCfg.max) || 30 };
     const ipLimit = rl.rateLimit(base);
     if (!extra) return ipLimit;
-    /* extra.key（v3.7.141 短信）：分桶维度可指定，默认仍是 email。短信按号码分桶
+    /* extra.key（2026-10-23 短信）：分桶维度可指定，默认仍是 email。短信按号码分桶
        （rl.byPhoneField），否则同一号码换个写法就是一只新桶 —— 见 rate-limit.js 注释。 */
     const extraOpts = Object.assign({}, base, { max: Number(rlCfg[extra.maxKey]) || extra.max || 10, key: extra.key || rl.byEmailField });
     const extraLimit = rl.rateLimit(extraOpts);
@@ -382,7 +382,7 @@ function authRouter(cfg, store) {
     }
   });
 
-  /* ---- 短信验证码登录（v3.7.141 · OD-001 选型 C，见 docs/decisions/OPEN-DECISIONS.md）----
+  /* ---- 短信验证码登录（2026-10-23 · OD-001 选型 C，见 docs/decisions/OPEN-DECISIONS.md）----
      为什么是「腾讯云 SMS 直签」而不是引 CloudBase SDK：
        · 服务端依赖至今只有 bcryptjs/cors/express/jsonwebtoken/nodemailer，**没有 HTTP 客户端库**，
          全局 fetch（Node 18+）已经够用；

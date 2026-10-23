@@ -1184,7 +1184,7 @@ function _sendEmailCode(){
   }
   return promise;
 }
-/* 发短信验证码（v3.7.141）。与 _sendEmailCode 同构，差别只在错误文案的细分：
+/* 发短信验证码（2026-10-23）。与 _sendEmailCode 同构，差别只在错误文案的细分：
    短信通道未配置 / 冷却中 / 限流，三种失败在用户侧是三种不同的处境，
    都显示「发送失败」等于让用户自己猜。 */
 function _sendSmsCode(){
@@ -2502,7 +2502,7 @@ function _fillAuthBackendNotice(){
 
 /* 登录页的两种方式：邮箱密码 / 手机号验证码。
    状态放模块级变量而不是 DOM：切换就是 render() 重建，没有"半套 DOM"的中间态。
-   v3.7.141（OD-001 选型 C）加短信；默认仍是邮箱，不改变任何既有路径。 */
+   2026-10-23（OD-001 选型 C）加短信；默认仍是邮箱，不改变任何既有路径。 */
 var _authLoginMethod = "email";
 function renderAuthLogin(){
   const sms = _authLoginMethod === "sms";

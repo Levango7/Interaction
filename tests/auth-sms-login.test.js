@@ -1,5 +1,5 @@
 /* tests/auth-sms-login.test.js
- * 手机号验证码登录（v3.7.141 · OD-001 选型 C）。
+ * 手机号验证码登录（2026-10-23 · OD-001 选型 C）。
  *
  * 全部走**真实入口**：点「用短信验证码登录」切换、点「发送验证码」、提交表单 ——
  * 不直接调 toggle/do 函数。理由与 confirm 迁移批次一致：只断言"函数存在"的话，
@@ -37,7 +37,7 @@ function switchToSms(doc) {
   return doc.getElementById("authPageLoginPhone");
 }
 
-describe("手机号验证码登录（v3.7.141 · OD-001 选型 C）", () => {
+describe("手机号验证码登录（2026-10-23 · OD-001 选型 C）", () => {
   it("默认仍是邮箱密码——加短信不动既有路径", async () => {
     const doc = await startLogin();
     expect(doc.getElementById("authPageLoginEmail")).toBeTruthy();
