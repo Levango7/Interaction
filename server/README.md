@@ -118,6 +118,7 @@ config.json（本机用户配置，已在 .gitignore，勿提交）
 | github.enabled / clientId / clientSecret / redirectUri | `GITHUB__ENABLED` 等 | GitHub OAuth App 凭据 |
 | github.postMessageOrigin | `GITHUB__POSTMESSAGEORIGIN` | OAuth 回调页回传 token 的 `targetOrigin`。**默认 `"*"`（任意站点可接收 token），生产必须改成自己的页面源** |
 | wechat.enabled / appid / secret | `WECHAT__ENABLED` 等 | 微信开放平台/公众号扫码凭据 |
+| sms.enabled / secretId / secretKey / sdkAppId / signName / templateId | `SMS__ENABLED` 等 | **短信验证码登录**（OD-001 选型 C）：腾讯云短信服务凭据 + 已审核的签名与模板。**六项缺一即 503 `sms_not_configured`**（fail-closed）；`countryCode` 默认 `+86`，**只认中国大陆号码**（1[3-9] 开头 11 位）——国际号段规则不同，不猜正则假装支持，发错号是按条计费的 |
 
 > `config.json` 里 JSON 语法错误会**直接拒绝启动并指向该文件**（不静默按默认值跑）——
 > 「改了配置却没生效」这类不可诊断问题，宁可开箱报错也不放过。
@@ -131,7 +132,8 @@ config.json 生效 / 深合并保默认 / env 优先级最高 / 数组整份替�
 | dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传（两者都是完整认证绕过），以及 **GitHub 兑换端点指向 loopback/私网**（`verify/oauth-check.cjs` 的假 provider 联调用）。**生产必须为 false** |
 | github.* | `GITHUB__*` | GitHub 登录（v3.7.113）：`enabled/clientId/clientSecret/redirectUri/postMessageOrigin`（targetOrigin 默认 `*`，生产应收紧成应用源）+ `scope`（默认 `read:user`，只读身份）。`authorizeBase/tokenUrl/userUrl` 默认真端点，**仅联调/自建网关才覆盖**；指向 loopback 需另开上面的 dev 开关，否则回调返 `forbidden_host`。`stateTtlSec` 授权票据有效期（默认 600s，一次性消费+过期惰性清扫） |
 | wechat.* | `WECHAT__*` | 微信扫码登录：当前为**演示模式**（无开放平台凭据也可跑通取码→确认→签发全链路；响应带 `demo:true` 自证）。`qrcodeTicketTtlSec` 票据有效期（默认 300s，过期即清）。正式接入见 roadmap 阶段④ |
-| security.rateLimit.* | `SECURITY__RATELIMIT__*` | 速率限制（v3.7.110，默认开）：`enabled/windowMs/max`（每 IP 每窗口 30 次，覆盖 email-code/register/login）+ `loginMax`（同邮箱 10 次）+ `emailCodeMax`（同邮箱 5 次）。命中返 **429 + `rate_limited`**（带 `Retry-After`）；进程内计数，多实例各算各的 |
+| sms.*（其余） | `SMS__*` | `region`（默认 `ap-guangzhou`）/ `endpoint`（默认 `https://sms.tencentcloudapi.com`，**指向 loopback 需开上面的 dev 开关**，否则 `sms_endpoint_forbidden`）/ `codeTtlSec`（验证码有效期，默认 600s，一次性消费）/ **`resendIntervalSec`（默认 60s：短信按条计费，同一号码冷却期内重发返 429 `sms_code_cooldown` 并带 `retryAfter`——固定窗口限流挡不住窗口边界的突刺，所以这道闸用码的真实签发时刻做判据）** / `timeoutMs`（默认 10000）/ `templateParamCount`（模板参数个数，2 时第二个参数是有效分钟数） |
+| security.rateLimit.* | `SECURITY__RATELIMIT__*` | 速率限制（v3.7.110，默认开）：`enabled/windowMs/max`（每 IP 每窗口 30 次，覆盖 email-code/register/login/sms-code/sms-login）+ `loginMax`（同邮箱或同号码 10 次）+ `emailCodeMax`（同邮箱 5 次）+ **`smsCodeMax`（同号码 5 次，按号码分桶：只留数字，故 `+86 138-0013-8000` 与 `13800138000` 是同一只桶）**。命中返 **429 + `rate_limited`**（带 `Retry-After`）；进程内计数，多实例各算各的 |
 | （无配置项） | `AUDIT_MAX` | 审计环上限，默认 200 条/用户（溢出丢最旧；是"近期活动"而非不可变归档） |
 | （无配置项） | `ALLOW_PLACEHOLDER_SECRETS` | 允许沿用占位 JWT 密钥启动（默认拒绝）。仅本地联调 |
 | corsOrigin | `CORSORIGIN` | **默认 `"*"` = 反射任意 origin，生产必须改成白名单** |

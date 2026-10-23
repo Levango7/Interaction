@@ -24,6 +24,30 @@ function getMailer(cfg) {
   return _mailer;
 }
 
+/* ---- 腾讯云 API 3.0 的 TC3-HMAC-SHA256 签名（v3.7.141 短信验证码）----
+   为什么自己算：服务端至今零 HTTP 客户端依赖，为一个 POST 拉 SDK 不划算；
+   算法是公开的（见腾讯云「签名方法 v3」文档），四步：规范请求串 → 待签串 → 派生密钥 → 签名。
+   两个最容易写错、且错了只在真机才暴露的点（verify/sms-check.cjs 用**独立实现**验签，不复用本函数）：
+     · date 必须是 **UTC 日期**（YYYY-MM-DD），与 X-TC-Timestamp 的秒级时间戳同源；
+       用本地时区会在 UTC+8 的 08:00 之前算成前一天 —— 表现为「签名错误」但代码看不出错；
+     · X-TC-* 头**不参与**签名，SignedHeaders 只有 content-type;host。多签一个头就是签名不匹配。 */
+function tc3sha256hex(s) { return crypto.createHash("sha256").update(s, "utf8").digest("hex"); }
+function tc3hmac(key, msg) { return crypto.createHmac("sha256", key).update(msg, "utf8").digest(); }
+function tc3Sign(o) {
+  const algorithm = "TC3-HMAC-SHA256";
+  const date = new Date(o.timestamp * 1000).toISOString().slice(0, 10); // UTC 日期
+  const canonicalHeaders = "content-type:application/json\nhost:" + o.host + "\n";
+  const signedHeaders = "content-type;host";
+  const canonicalRequest = ["POST", "/", "", canonicalHeaders, signedHeaders, tc3sha256hex(o.payload)].join("\n");
+  const scope = date + "/" + o.service + "/tc3_request";
+  const stringToSign = [algorithm, String(o.timestamp), scope, tc3sha256hex(canonicalRequest)].join("\n");
+  const kDate = tc3hmac("TC3" + o.secretKey, date);
+  const kService = tc3hmac(kDate, o.service);
+  const kSigning = tc3hmac(kService, "tc3_request");
+  const signature = crypto.createHmac("sha256", kSigning).update(stringToSign, "utf8").digest("hex");
+  return algorithm + " Credential=" + o.secretId + "/" + scope + ", SignedHeaders=" + signedHeaders + ", Signature=" + signature;
+}
+
 function makeTokens(cfg, userId) {
   const accessToken = jwt.sign({ sub: userId }, cfg.jwt.accessSecret, { expiresIn: cfg.jwt.accessTtlSec || 900 });
   /* 2026-10-10：refreshToken 加 jti 随机数。此前载荷只有 {sub, iat, exp} —— **同一秒内两次签发
@@ -56,7 +80,9 @@ function authRouter(cfg, store) {
     const base = { windowMs: Number(rlCfg.windowMs) || 60000, max: Number(rlCfg.max) || 30 };
     const ipLimit = rl.rateLimit(base);
     if (!extra) return ipLimit;
-    const extraOpts = Object.assign({}, base, { max: Number(rlCfg[extra.maxKey]) || extra.max || 10, key: rl.byEmailField });
+    /* extra.key（v3.7.141 短信）：分桶维度可指定，默认仍是 email。短信按号码分桶
+       （rl.byPhoneField），否则同一号码换个写法就是一只新桶 —— 见 rate-limit.js 注释。 */
+    const extraOpts = Object.assign({}, base, { max: Number(rlCfg[extra.maxKey]) || extra.max || 10, key: extra.key || rl.byEmailField });
     const extraLimit = rl.rateLimit(extraOpts);
     return function (req, res, next) { ipLimit(req, res, function(){ extraLimit(req, res, next); }); };
   }
@@ -351,6 +377,161 @@ function authRouter(cfg, store) {
       if (!user) user = store.createUser({ id: store.uid("u_"), email, name: email, passwordHash: null, provider: "wechat", providerId: "wx_demo_" + scene, createdAt: Date.now() });
       store.setOAuthState(scene, "wechat", Object.assign({}, st.data, { confirmed: true, userId: user.id }));
       return ok(res, {});
+    } catch (e) {
+      return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
+    }
+  });
+
+  /* ---- 短信验证码登录（v3.7.141 · OD-001 选型 C，见 docs/decisions/OPEN-DECISIONS.md）----
+     为什么是「腾讯云 SMS 直签」而不是引 CloudBase SDK：
+       · 服务端依赖至今只有 bcryptjs/cors/express/jsonwebtoken/nodemailer，**没有 HTTP 客户端库**，
+         全局 fetch（Node 18+）已经够用；
+       · 腾讯云 API 3.0 的 TC3-HMAC-SHA256 用 node:crypto 约 30 行就能算出来，
+         为一个「发一条短信」的动作拉一个 SDK，与本仓把 pdfjs / mermaid vendor 化的取舍相反；
+       · CloudBase 短信底层同样是腾讯云短信服务，差在封装层，不影响这里的安全口径。
+
+     契约：
+       POST /api/auth/sms-code  {phone}              → {expireIn}；未配置 → 503 sms_not_configured
+       POST /api/auth/sms-login {phone, code, name?} → {accessToken, refreshToken, user}
+
+     三条**设计决定**（不是待办，别当成"以后再补"，改之前先读）：
+       ① **只支持中国大陆号码**（countryCode 默认 +86，号段正则 1[3-9] 开头共 11 位）。
+          其它国家号段规则完全不同，与其猜一个宽松正则假装支持，不如明确不接受——
+          否则非法号码会走进发码流程，**按条计费**且查不出来。
+       ② **发码不查该号是否已注册**：一旦按存在性分支返回不同响应，/sms-code 本身就变成
+          「这个手机号有没有注册过」的枚举接口（比登录接口泄露得更直接）。
+       ③ **验证码即凭据**（无密码），所以三重兜底缺一不可：一次性消费 + 短 TTL + 按号码限流。 */
+  const S = cfg.sms || {};
+  /* `Number(x) || 默认` 会把**显式配置的 0** 也吞成默认值（0 是 falsy）——
+     resendIntervalSec:0 的语义是"不冷却"，被吞成 60 就变成一个改不动的默认值。
+     显式 0 与"没配"必须区分开，所以走 numOr 而不是 ||。 */
+  function numOr(v, d) { const n = Number(v); return (v === undefined || v === null || v === "" || !isFinite(n)) ? d : n; }
+  const SMS_TTL = numOr(S.codeTtlSec, 600);
+  const SMS_RESEND = numOr(S.resendIntervalSec, 60) * 1000;
+  const SMS_TIMEOUT = numOr(S.timeoutMs, 10000);
+  function smsConfigured() {
+    return S.enabled === true && !!S.secretId && !!S.secretKey && !!S.sdkAppId && !!S.signName && !!S.templateId;
+  }
+  /* 手机号归一：接受 "+86 138 0013 8000" / "8613800138000" / "13800138000" 三种写法，
+     输出**纯 11 位国内号码**；其它一律 ""（= phone_invalid）。
+     与 rate-limit 的 byPhoneField 取同一口径（只留数字），保证「分桶键 == 实际发码目标」。 */
+  function normalizePhone(raw, countryCode) {
+    const cc = String(countryCode || "+86").replace(/\D/g, "") || "86";
+    let digits = String(raw || "").replace(/\D/g, "");
+    if (digits.indexOf(cc) === 0 && digits.length === cc.length + 11) digits = digits.slice(cc.length);
+    if (cc !== "86") return ""; // 见决定①：非中国大陆号段不做猜测式支持
+    return /^1[3-9]\d{9}$/.test(digits) ? digits : "";
+  }
+  /* 发码：直调腾讯云短信 SendSms（API 版本 2021-01-11）。
+     端点白名单复用 github 那把尺子（ghEndpointAllowed —— 名字带 gh 是历史原因，
+     口径是通用的 HTTP 端点校验：协议 / userinfo / loopback 仅 dev 逃生舱放行）。
+     不新开第二把尺子：两把尺子各自演进就是 SSRF 的入口。 */
+  async function smsSend(phone, code) {
+    const endpoint = String(S.endpoint || "https://sms.tencentcloudapi.com");
+    let host = "";
+    try { host = new URL(endpoint).host; } catch (e) { return { ok: false, detail: "bad_endpoint" }; }
+    const timestamp = Math.floor(Date.now() / 1000);
+    const paramSet = Number(S.templateParamCount) === 1
+      ? [code]
+      : [code, String(Math.max(1, Math.round(SMS_TTL / 60)))];
+    const payload = JSON.stringify({
+      PhoneNumberSet: [String(S.countryCode || "+86") + phone],
+      SmsSdkAppId: String(S.sdkAppId),
+      SignName: S.signName,
+      TemplateId: String(S.templateId),
+      TemplateParamSet: paramSet
+    });
+    const authorization = tc3Sign({
+      secretId: S.secretId, secretKey: S.secretKey, service: "sms", host: host,
+      timestamp: timestamp, payload: payload
+    });
+    const r = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-TC-Action": "SendSms",
+        "X-TC-Version": "2021-01-11",
+        "X-TC-Timestamp": String(timestamp),
+        "X-TC-Region": S.region || "ap-guangzhou",
+        "Authorization": authorization
+      },
+      body: payload,
+      signal: AbortSignal.timeout(SMS_TIMEOUT)
+    });
+    const text = await r.text().catch(() => "");
+    let body = null;
+    try { body = JSON.parse(text); } catch (e) { body = null; }
+    const resp = body && body.Response;
+    /* 腾讯云的失败有两层：HTTP 非 2xx，或 2xx 里带 Response.Error（业务拒绝）。
+       只回 Code 不回整段 Message —— 响应体里可能出现的号码/签名等字段不该外泄给调用方。 */
+    if (!r.ok || (resp && resp.Error)) {
+      return { ok: false, detail: String((resp && resp.Error && resp.Error.Code) || ("HTTP " + r.status)) };
+    }
+    const st = resp && resp.SendStatusSet && resp.SendStatusSet[0];
+    if (!st || st.Code !== "Ok") return { ok: false, detail: String((st && st.Code) || "unknown") };
+    return { ok: true, requestId: (resp && resp.RequestId) || "" };
+  }
+  router.use("/sms-code", rlAuth("sms-code", { maxKey: "smsCodeMax", max: 5, key: rl.byPhoneField }));
+  router.post("/sms-code", async (req, res) => {
+    try {
+      const phone = normalizePhone(req.body && req.body.phone, S.countryCode);
+      if (!phone) return fail(res, 400, "phone_invalid");
+      if (!smsConfigured()) {
+        /* 与 email-code 同款 fail-closed：通道没配就中止注册/登录流程，绝不静默放行。
+           demoCode 只在显式 dev 逃生舱下出现（生产配置下这个分支返回 503）。 */
+        if (cfg.dev && cfg.dev.allowUnsafeDevEndpoints === true) {
+          const code = String(Math.floor(100000 + Math.random() * 900000));
+          store.setCode(phone, code, SMS_TTL, "sms-login");
+          return ok(res, { demo: true, demoCode: code, expireIn: SMS_TTL, message: "sms_not_configured_demo" });
+        }
+        return fail(res, 503, "sms_not_configured");
+      }
+      /* 重发冷却：短信按条计费，"同一号码 60 秒内再来一次"就是白花钱（也可能是有人在刷）。
+         固定窗口限流挡不住窗口边界的突刺（窗口末尾 + 新窗口开头 = 2×max），所以这里用
+         码的**真实签发时刻**（store.setCode 的 issuedAt）做精确判据。 */
+      const prev = store.getCode(phone);
+      if (prev && !prev.used) {
+        const issuedAt = prev.issuedAt || (prev.expiresAt - SMS_TTL * 1000);
+        if (Date.now() - issuedAt < SMS_RESEND) {
+          return fail(res, 429, "sms_code_cooldown", { retryAfter: Math.ceil((SMS_RESEND - (Date.now() - issuedAt)) / 1000) });
+        }
+      }
+      const bad = {};
+      if (!ghEndpointAllowed(S.endpoint, bad)) {
+        console.warn("[auth] sms 端点被拒：" + Object.keys(bad)[0]);
+        return fail(res, 500, "sms_endpoint_forbidden");
+      }
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const r = await smsSend(phone, code);
+      if (!r.ok) return fail(res, 502, "sms_send_failed", { detail: r.detail });
+      store.setCode(phone, code, SMS_TTL, "sms-login");
+      return ok(res, { expireIn: SMS_TTL });
+    } catch (e) {
+      return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
+    }
+  });
+  router.use("/sms-login", rlAuth("sms-login", { maxKey: "loginMax", max: 10, key: rl.byPhoneField }));
+  router.post("/sms-login", async (req, res) => {
+    try {
+      const phone = normalizePhone(req.body && req.body.phone, S.countryCode);
+      if (!phone) return fail(res, 400, "phone_invalid");
+      const code = String((req.body && req.body.code) || "").trim();
+      if (!/^\d{6}$/.test(code)) return fail(res, 400, "code_invalid");
+      const saved = store.getCode(phone);
+      if (!saved || saved.used || saved.expiresAt < Date.now()) return fail(res, 400, "code_expired_or_invalid");
+      if (saved.code !== code) return fail(res, 400, "code_invalid");
+      /* 一次性消费**先于**建号：哪怕后面建号失败，这个码也留不下来第二次用 */
+      store.markCodeUsed(phone);
+      let user = store.findUserByProvider("phone", phone);
+      if (!user) {
+        const name = String((req.body && req.body.name) || "").trim() || ("手机用户" + phone.slice(-4));
+        user = store.createUser({ id: store.uid("u_"), email: null, name: name, passwordHash: null, provider: "phone", providerId: phone, createdAt: Date.now() });
+        store.addAudit(user.id, "register", { provider: "phone" });
+      }
+      store.addAudit(user.id, "login", { provider: "phone", device: String((req.body && req.body.deviceName) || "sms") });
+      const t = makeTokens(cfg, user.id);
+      store.saveSession({ refreshToken: t.refreshToken, userId: user.id, createdAt: Date.now(), expiresAt: Date.now() + (cfg.jwt.refreshTtlSec || 2592000) * 1000, deviceName: String((req.body && req.body.deviceName) || "sms") });
+      return ok(res, { accessToken: t.accessToken, refreshToken: t.refreshToken, expiresIn: t.accessTtlSec, user: publicUser(user) });
     } catch (e) {
       return fail(res, 500, "server_error", { detail: (e && e.message) || String(e) });
     }

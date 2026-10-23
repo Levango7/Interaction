@@ -36,6 +36,22 @@
     "qrcodeTicketTtlSec": 300,
     "pollIntervalMs": 2500
   },
+  "sms": {
+    "enabled": false,
+    "provider": "tencent",
+    "secretId": "",
+    "secretKey": "",
+    "sdkAppId": "",
+    "signName": "",
+    "templateId": "",
+    "templateParamCount": 2,
+    "region": "ap-guangzhou",
+    "endpoint": "https://sms.tencentcloudapi.com",
+    "countryCode": "+86",
+    "codeTtlSec": 600,
+    "resendIntervalSec": 60,
+    "timeoutMs": 10000
+  },
   "corsOrigin": "*",
   "dev": {
     "allowUnsafeDevEndpoints": false
@@ -46,7 +62,8 @@
       "windowMs": 60000,
       "max": 30,
       "loginMax": 10,
-      "emailCodeMax": 5
+      "emailCodeMax": 5,
+      "smsCodeMax": 5
     }
   },
   "sync": {

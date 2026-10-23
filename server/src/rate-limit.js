@@ -47,4 +47,13 @@ function byEmailField(req) {
   return "email:" + (e || "?");
 }
 
-module.exports = { rateLimit, byEmailField };
+/* 按请求体里的 phone 字段分桶（短信验证码）。
+   **只留数字**："+86 138-0013-8000" 与 "13800138000" 是同一个号码，若按原串分桶，
+   加个空格/连字符就是一只新桶 —— 限流被绕过的方式恰恰是这种"看着不一样其实一样"。
+   与 auth.js 的 normalizePhone 取同一口径（数字），保证桶键与实际发码目标一致。 */
+function byPhoneField(req) {
+  const p = String((req.body && req.body.phone) || "").replace(/\D/g, "");
+  return "phone:" + (p || "?");
+}
+
+module.exports = { rateLimit, byEmailField, byPhoneField };
