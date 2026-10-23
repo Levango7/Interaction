@@ -2029,6 +2029,15 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .msg.tool{background:var(--banner-bg);border:1px dashed var(--banner-border-2);font-size:var(--fs-xs);color:var(--banner-ink)}
 /* T3.1 AI 增强：取消/重试/思考中/已取消/失败样式（全部令牌色） */
 .chat-toolbar{display:flex;align-items:center;gap:var(--space-3);margin:0 0 var(--space-2);min-height:20px}
+/* 2026-10-23：聊天运行进度条（真实流式/工具/计划状态；不确定态为滑动条） */
+.chat-progress{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1h) var(--space-4);
+  border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent);background:var(--panel2)}
+.chat-progress[hidden]{display:none}
+.chat-progress-track{flex:1;height:4px;border-radius:999px;background:var(--surface-muted);overflow:hidden}
+.chat-progress-track i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s ease}
+.chat-progress.indeterminate .chat-progress-track i{width:35%;animation:chat-progress-slide 1.1s ease-in-out infinite}
+@keyframes chat-progress-slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+.chat-progress-label{font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap}
 .chat-thinking{color:var(--muted);font-size:var(--fs-xs);font-style:italic;animation:wb-pulse 1.2s ease-in-out infinite}
 @keyframes wb-pulse{0%,100%{opacity:.5}50%{opacity:1}}
 .chat-cancel{font-size:var(--fs-xs);color:var(--muted);text-decoration:underline;padding:2px var(--space-2);
@@ -2328,6 +2337,15 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .md-body h3{font-size:var(--fs-base);margin:var(--space-2) 0 var(--space-1);color:var(--text);font-weight:600}
 .md-body ul,.md-body ol{margin:0 0 var(--space-2);padding-left:var(--space-6)}
 .md-body li{margin-bottom:2px}
+/* 2026-10-23：表格与引用块（手写解析器扩面，零依赖） */
+.md-body .md-table-wrap{max-width:100%;overflow-x:auto;margin:0 0 var(--space-2)}
+.md-body table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+.md-body th,.md-body td{border:1px solid var(--line);padding:var(--space-1h) var(--space-2);vertical-align:top}
+.md-body th{background:var(--panel2);font-weight:600;white-space:nowrap}
+.md-body .md-center{text-align:center}
+.md-body .md-right{text-align:right}
+.md-body blockquote{margin:0 0 var(--space-2);padding:var(--space-1h) var(--space-3);
+  border-left:3px solid var(--accent);background:var(--surface-muted);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
 .md-body a{color:var(--accent-text,var(--accent));text-decoration:underline}
 .md-body strong{font-weight:600;color:var(--text)}
 .md-body em{font-style:italic}
@@ -2338,6 +2356,11 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .md-body pre code{display:block;white-space:pre-wrap;background:transparent;color:var(--snip-fg);
   padding:0;border-radius:0;font-size:var(--fs-sm)}
 .md-body pre code.block{display:block}
+/* 2026-10-23：mermaid 图（懒加载 vendor；失败保留源码 + 提示） */
+.md-body .mermaid-figure{margin:0 0 var(--space-2);padding:var(--space-2);border:1px solid var(--line);
+  border-radius:var(--radius-md);background:var(--panel2);overflow-x:auto}
+.md-body .mermaid-figure svg{max-width:100%;height:auto}
+.mermaid-fail{margin:0 0 var(--space-2);font-size:var(--fs-2xs);color:var(--muted)}
 .md{margin-top:var(--space-2);line-height:1.6;color:var(--text-dim)}
 .msg.assistant.md-body{white-space:normal}
 
@@ -5146,6 +5169,21 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   border:0;background:transparent;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;
   border-radius:var(--radius-md);text-align:left}
 .task-rail-more:hover{background:var(--surface-hover);color:var(--text)}
+/* 2026-10-23：右栏分页（今日 / Agent / 文件）。MCP 暂不列：它仍未接线，不展示假能力。 */
+.task-rail-tabs{display:flex;gap:2px;flex:1;min-width:0}
+.task-rail-tab{border:0;background:transparent;color:var(--muted);font-size:var(--fs-2xs);
+  padding:var(--space-1) var(--space-1h);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap}
+.task-rail-tab:hover{background:var(--surface-hover);color:var(--text)}
+.task-rail-tab.is-on{background:var(--panel2);color:var(--text);font-weight:600}
+.task-rail-pane{display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
+.task-rail-pane.u-hidden{display:none!important}
+.rail-sec-title{display:flex;align-items:center;gap:var(--space-1);padding:var(--space-1h) var(--space-2);
+  font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em}
+.rail-list{list-style:none;margin:0;padding:0 var(--space-1);display:flex;flex-direction:column;gap:1px;overflow-y:auto}
+.rail-item{display:flex;align-items:center;gap:var(--space-1h);padding:var(--space-1h) var(--space-1);
+  border-radius:var(--radius-md);font-size:var(--fs-xs)}
+.rail-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail-item-meta{font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap}
 
 @media(min-width:1024px){
   .task-rail{width:280px;flex:0 0 280px}
@@ -5279,6 +5317,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
              勿再改回 M9 18l6-6-6-6 之类的另一套 path，否则形状会重新分叉。 -->
         <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       </div>
+      <!-- 运行进度（2026-10-23）：真实状态（流式字数 / 工具批次 / 计划步数），无任务时隐藏 -->
+      <div class="chat-progress" id="chatProgress" hidden aria-live="polite">
+        <div class="chat-progress-track" id="chatProgressBar"><i></i></div>
+        <span class="chat-progress-label" id="chatProgressLabel"></span>
+      </div>
       <!-- 消息区：复用 #chat id，renderChat() 渲染到此 -->
       <div class="chat" id="chat"></div>
       <!-- 工具栏：思考中指示 + 取消按钮（复用 #chatThinking / #chatCancel） -->
@@ -5309,13 +5352,21 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <!-- 右栏：今日任务轨（2026-10-21 布局 v2；≥1024 常驻，<1024 由顶栏按钮滑出） -->
     <aside class="task-rail" id="taskRail" data-i18n-aria="a11y.taskRail" aria-label="今日任务">
       <div class="task-rail-head">
-        <span class="task-rail-title" data-i18n="taskRail.title">今日</span>
+        <div class="task-rail-tabs" role="tablist" data-i18n-aria="rail.tabsAria" aria-label="右栏分页">
+          <button type="button" class="task-rail-tab is-on" data-rail-tab="today" role="tab" aria-selected="true" data-i18n="rail.tab.today">今日</button>
+          <button type="button" class="task-rail-tab" data-rail-tab="agent" role="tab" aria-selected="false" data-i18n="rail.tab.agent">Agent</button>
+          <button type="button" class="task-rail-tab" data-rail-tab="files" role="tab" aria-selected="false" data-i18n="rail.tab.files">文件</button>
+        </div>
         <span class="task-rail-count" id="taskRailCount">0</span>
         <button type="button" class="task-rail-add" id="taskRailAdd" data-i18n-title="taskRail.add" title="新建任务" data-i18n-aria="taskRail.add" aria-label="新建任务">+</button>
         <button type="button" class="task-rail-collapse" id="taskRailCollapse" data-i18n-title="taskRail.collapse" title="收起任务栏" data-i18n-aria="taskRail.collapse" aria-label="收起任务栏">›</button>
       </div>
-      <ul class="task-rail-list" id="taskRailList"></ul>
-      <button type="button" class="task-rail-more" id="taskRailMore" data-i18n="taskRail.more">全部任务</button>
+      <div class="task-rail-pane" data-rail-pane="today">
+        <ul class="task-rail-list" id="taskRailList"></ul>
+        <button type="button" class="task-rail-more" id="taskRailMore" data-i18n="taskRail.more">全部任务</button>
+      </div>
+      <div class="task-rail-pane u-hidden" data-rail-pane="agent" id="railAgentPane"></div>
+      <div class="task-rail-pane u-hidden" data-rail-pane="files" id="railFilesPane"></div>
     </aside>
     <div class="task-rail-backdrop" id="taskRailBackdrop" hidden></div>
     <!-- 右侧 AI 聊天面板（三栏布局第三栏）：常驻显示，复用 #chat/#chatForm/#chatThinking/#chatCancel
@@ -6436,10 +6487,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.139"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.140"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261022c";
+const BUILD_TAG = "20261023a";
 
 
 
@@ -7589,6 +7640,15 @@ const MESSAGES = {
     "msg.clear": "清空",
     "chat.aiAssistant": "AI 助手",
     "chat.thinking": "思考中…",
+    "chat.progress.running": "运行中…",
+    "chat.progress.chars": " 字",
+    "chat.progress.generating": "正在生成…",
+    "chat.progress.tool": "执行工具…",
+    "chat.progress.toolName": "执行工具：",
+    "chat.progress.plan": "执行计划…",
+    "chat.progress.step": "步骤：",
+    "mermaid.needVendor": "Mermaid 需要完整发行版（vendor/mermaid）才能渲染",
+    "mermaid.renderFail": "Mermaid 渲染失败，已保留源码",
     "chat.cancel": "取消",
     "chat.placeholder": "问点什么，或让它「建个任务」…",
     "pomo.title": "笃行",
@@ -8188,6 +8248,19 @@ const MESSAGES = {
     "side.group.system": "系统",
     "side.group.today": "今日",
     "taskRail.title": "今日",
+    "rail.tabsAria": "右栏分页",
+    "rail.tab.today": "今日",
+    "rail.tab.agent": "Agent",
+    "rail.tab.files": "文件",
+    "rail.agent.skills": "技能",
+    "rail.agent.none": "还没有技能。命令面板里可保存常用流程。",
+    "rail.agent.running": "正在运行",
+    "rail.agent.ready": "AI 状态",
+    "rail.agent.configured": "已配置",
+    "rail.agent.unconfigured": "未配置",
+    "rail.files.title": "文件知识",
+    "rail.files.empty": "还没有导入文件。知识库支持 PDF/DOCX/文本。",
+    "rail.files.open": "打开知识库",
     "taskRail.add": "新建任务",
     "taskRail.collapse": "收起任务栏",
     "taskRail.more": "全部任务",
@@ -11566,6 +11639,15 @@ const MESSAGES = {
     "msg.clear": "Clear",
     "chat.aiAssistant": "AI Assistant",
     "chat.thinking": "Thinking…",
+    "chat.progress.running": "Running…",
+    "chat.progress.chars": " chars",
+    "chat.progress.generating": "Generating…",
+    "chat.progress.tool": "Running tools…",
+    "chat.progress.toolName": "Tool: ",
+    "chat.progress.plan": "Running plan…",
+    "chat.progress.step": "Step: ",
+    "mermaid.needVendor": "Mermaid needs the full distribution (vendor/mermaid) to render",
+    "mermaid.renderFail": "Mermaid render failed; the source is kept",
     "chat.cancel": "Cancel",
     "chat.placeholder": "Ask anything, or let it \"create a task\"…",
     "pomo.title": "Focus",
@@ -12165,6 +12247,19 @@ const MESSAGES = {
     "side.group.system": "System",
     "side.group.today": "Today",
     "taskRail.title": "Today",
+    "rail.tabsAria": "Right rail tabs",
+    "rail.tab.today": "Today",
+    "rail.tab.agent": "Agent",
+    "rail.tab.files": "Files",
+    "rail.agent.skills": "Skills",
+    "rail.agent.none": "No skills yet. Save a flow from the command palette.",
+    "rail.agent.running": "Running",
+    "rail.agent.ready": "AI status",
+    "rail.agent.configured": "Configured",
+    "rail.agent.unconfigured": "Not configured",
+    "rail.files.title": "Knowledge files",
+    "rail.files.empty": "No files yet. Knowledge base supports PDF/DOCX/text.",
+    "rail.files.open": "Open knowledge base",
     "taskRail.add": "New task",
     "taskRail.collapse": "Collapse task rail",
     "taskRail.more": "All tasks",
@@ -16152,10 +16247,27 @@ function inlineMd(s){
   s = s.replace(/\uE000IC(\d+)\uE000/g, (m, idx) => codes[+idx]);
   return s;
 }
+/** 表格行切分（输入已过 esc）：支持 `\|` 字面竖线；去掉首尾管道 */
+function _mdSplitRow(line){
+  const s = String(line).trim().replace(/^\|/, "").replace(/\|$/, "");
+  const cells = [];
+  let cur = "", escp = false;
+  for(let k = 0; k < s.length; k++){
+    const ch = s[k];
+    if(escp){ cur += ch === "|" ? "|" : "\\" + ch; escp = false; continue; }
+    if(ch === "\\"){ escp = true; continue; }
+    if(ch === "|"){ cells.push(cur.trim()); cur = ""; continue; }
+    cur += ch;
+  }
+  if(escp) cur += "\\";
+  cells.push(cur.trim());
+  return cells;
+}
 /**
  * 简单 Markdown 解析器（手写，无外部依赖）。
  * 支持：标题(#/##/###)、粗体(**)、斜体(*)、行内代码(`)、代码块(```)、
- * 无序列表(-/*)、有序列表(1.)、链接([text](url))、换行（双换行=段落，单换行=<br>）。
+ * 无序列表(-/*)、有序列表(1.)、链接([text](url))、表格（含对齐）、引用块(>)、
+ * 换行（双换行=段落，单换行=<br>）。
  * XSS 防护：先 escapeHtml 再解析 Markdown，代码块内容原样显示不解析。
  * @param {string} str - 原始 Markdown 文本
  * @returns {string} 解析后的 HTML 字符串
@@ -16189,6 +16301,52 @@ function mdToHtml(str){
       }
       i++;
       blocks.push({type:"block", html:'<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+buf.join("\n")+'</code></pre>'});
+      continue;
+    }
+    /* 表格：当前行含 |，下一行是分隔行（--- / :---: / ---:）。必须在段落之前判。 */
+    if(line.indexOf("|") >= 0 && i + 1 < lines.length
+       && /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])){
+      flushPara();
+      const header = _mdSplitRow(line);
+      const aligns = _mdSplitRow(lines[i + 1]).map(function(c){
+        if(/^:-+:$/.test(c)) return "center";
+        if(/^-+:$/.test(c)) return "right";
+        return "left";
+      });
+      i += 2;
+      const rows = [];
+      while(i < lines.length && lines[i].indexOf("|") >= 0 && lines[i].trim() !== ""){
+        rows.push(_mdSplitRow(lines[i])); i++;
+      }
+      const pad = function(cells){
+        const out = cells.slice(0, header.length);
+        while(out.length < header.length) out.push("");
+        return out;
+      };
+      const th = header.map(function(c, idx){
+        return '<th class="md-' + (aligns[idx] || "left") + '">' + inlineMd(c) + "</th>";
+      }).join("");
+      const tb = rows.map(function(r){
+        return "<tr>" + pad(r).map(function(c, idx){
+          return '<td class="md-' + (aligns[idx] || "left") + '">' + inlineMd(c) + "</td>";
+        }).join("") + "</tr>";
+      }).join("");
+      blocks.push({type:"block", html:'<div class="md-table-wrap"><table><thead><tr>' + th + "</tr></thead>"
+        + (tb ? "<tbody>" + tb + "</tbody>" : "") + "</table></div>"});
+      continue;
+    }
+    /* 引用块：esc 之后 `>` 变成 `&gt;`，两种都认；连续行合并为一段 */
+    const bq = line.match(/^(?:&gt;|>)\s?(.*)$/);
+    if(bq){
+      flushPara();
+      const quoted = [];
+      while(i < lines.length){
+        const m = lines[i].match(/^(?:&gt;|>)\s?(.*)$/);
+        if(!m) break;
+        quoted.push(inlineMd(m[1]));
+        i++;
+      }
+      blocks.push({type:"block", html:"<blockquote>" + quoted.join("<br>") + "</blockquote>"});
       continue;
     }
     const h = line.match(/^(#{1,3})\s+(.*)$/);
@@ -16388,6 +16546,104 @@ function sanitizeHtml(html){
     if (s === prev) break; // 已收敛，提前退出
   }
   return s;
+}
+
+/* ---------- Mermaid（2026-10-23）：只在出现 ```mermaid 时按需加载 vendor ----------
+ * 10.x UMD（11.x 只发 ESM，file:// 会被 CORS 拦）；securityLevel:'strict' 只让标签走文本，
+ * 渲染后仍做一次 SVG 消毒（script/foreignObject/on-事件/外链），失败保留源码并提示。 */
+let _mermaidPromise = null;
+let _mermaidSeq = 0;
+let _mermaidQueue = Promise.resolve();
+function _mermaidUrl(){
+  try{ return new URL("vendor/mermaid/mermaid.min.js", document.baseURI).href; }catch(_e){ return "vendor/mermaid/mermaid.min.js"; }
+}
+function _loadMermaid(){
+  if(window.mermaid) return Promise.resolve(window.mermaid);
+  if(_mermaidPromise) return _mermaidPromise;
+  _mermaidPromise = new Promise(function(resolve, reject){
+    const s = document.createElement("script");
+    s.src = _mermaidUrl();
+    s.async = true;
+    s.onload = function(){
+      if(!window.mermaid){ reject(new Error("mermaid not found")); return; }
+      try{ window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "default" }); }catch(_e){ /* 配置失败交给 render 报错 */ }
+      resolve(window.mermaid);
+    };
+    s.onerror = function(){ reject(new Error("mermaid load failed")); };
+    document.head.appendChild(s);
+  }).catch(function(e){ _mermaidPromise = null; throw e; });
+  return _mermaidPromise;
+}
+/** 渲染产物二次消毒：script、foreignObject、on- 事件属性、javascript: 一律剥离；保留图表所需的内联 <style>，但去掉外链 */
+function _sanitizeMermaidSvg(svg){
+  let doc = null;
+  try{ doc = new DOMParser().parseFromString(String(svg || ""), "image/svg+xml"); }catch(_e){ return ""; }
+  const root = doc && doc.documentElement;
+  if(!root) return "";
+  Array.prototype.slice.call(root.querySelectorAll("script, foreignObject")).forEach(function(n){ n.remove(); });
+  Array.prototype.slice.call(root.querySelectorAll("*")).forEach(function(n){
+    Array.prototype.slice.call(n.attributes || []).forEach(function(a){
+      const name = String(a.name || "").toLowerCase();
+      if(name.indexOf("on") === 0) n.removeAttribute(a.name);
+      else if((name === "href" || name === "xlink:href") && /^\s*(javascript|data):/i.test(a.value)) n.removeAttribute(a.name);
+    });
+    if(String(n.tagName || "").toLowerCase() === "style"){
+      n.textContent = String(n.textContent || "")
+        .replace(/@import[^;]*;?/gi, "")
+        .replace(/url\(\s*["']?https?:[^)]*\)/gi, "none");
+    }
+  });
+  try{ return new XMLSerializer().serializeToString(root); }catch(_e){ return ""; }
+}
+function _mermaidFail(pre, msg){
+  if(!pre || !pre.parentNode) return;
+  if(!pre.nextSibling || !pre.nextSibling.classList || !pre.nextSibling.classList.contains("mermaid-fail")){
+    const hint = document.createElement("div");
+    hint.className = "mermaid-fail";
+    hint.textContent = msg;
+    pre.parentNode.insertBefore(hint, pre.nextSibling);
+  }
+}
+/**
+ * 把 root 里的 ```mermaid 代码块渲染为 SVG（异步、串行、幂等）。
+ * 跳过流式消息；失败保留源码 + 提示，不静默吞图。
+ * @param {HTMLElement} root
+ * @returns {Promise<void>}
+ */
+function renderMermaidBlocks(root){
+  if(!root) return Promise.resolve();
+  const codes = Array.prototype.slice.call(root.querySelectorAll("pre > code.lang-mermaid, pre > code.language-mermaid"))
+    .filter(function(c){ return !c.closest(".streaming") && !c.hasAttribute("data-mermaid-state"); });
+  if(!codes.length) return _mermaidQueue;
+  codes.forEach(function(c){ c.setAttribute("data-mermaid-state", "pending"); });
+  _mermaidQueue = _mermaidQueue.then(async function(){
+    let lib = null;
+    try{ lib = await _loadMermaid(); }
+    catch(e){
+      codes.forEach(function(c){ _mermaidFail(c.parentNode, t("mermaid.needVendor", "Mermaid 需要完整发行版（vendor/mermaid）才能渲染")); c.setAttribute("data-mermaid-state", "fail"); });
+      return;
+    }
+    for(const code of codes){
+      const pre = code.parentNode;
+      if(!pre || !pre.parentNode) continue;
+      try{
+        const out = await lib.render("mmd-" + (++_mermaidSeq), code.textContent || "");
+        const svg = _sanitizeMermaidSvg(out && out.svg);
+        if(!svg) throw new Error("empty svg");
+        const fig = document.createElement("div");
+        fig.className = "mermaid-figure";
+        fig.innerHTML = svg; // lint-xss-ok: 已过 _sanitizeMermaidSvg（script/事件/外链已剥离）
+        pre.parentNode.replaceChild(fig, pre);
+      }catch(e){
+        code.setAttribute("data-mermaid-state", "fail");
+        _mermaidFail(pre, t("mermaid.renderFail", "Mermaid 渲染失败，已保留源码"));
+        try{ pushDiag("warn", "mermaid render failed: " + ((e && e.message) || e), { where: "renderMermaidBlocks" }); }catch(_e){ /* 诊断不可用不影响回退 */ }
+      }
+    }
+  }).catch(function(e){
+    try{ pushDiag("error", "mermaid queue: " + ((e && e.message) || e), { where: "renderMermaidBlocks" }); }catch(_e){ /* 诊断不可用不影响主流程 */ }
+  });
+  return _mermaidQueue;
 }
 /*SRC:util-markdown:END*/
 /*SRC:util-perf:BEGIN*/
@@ -20651,48 +20907,54 @@ async function retryChatWithParams(params){
 }
 let _retryOverrides = null;
 
-/**
- * 流式输出进度跟踪：记录已接收字数 / 预估总字数 / 起始时间
- *   - onChunk 回调中调用 streamProgressUpdate 累加 received
- *   - UI 通过 getStreamProgress() 读取进度渲染进度条
- */
-let _streamProgress = null;
-/**
- * 初始化流式进度跟踪
- * @param {number} estimated - 预估总字数
- */
-function streamProgressStart(estimated){
-  _streamProgress = {
-    received: 0,
-    estimated: (typeof estimated === "number" && estimated > 0) ? estimated : 0,
-    startTime: Date.now(),
-    elapsed: 0
-  };
+/* ---------- 聊天运行进度（2026-10-23：真实状态，不做假进度） ----------
+ * 三类数据源：流式 onChunk（received 字数）、工具批次（current/total）、Agent 计划（步/总步）。
+ * total=0 时走不确定态（滑动条），有 total 时按百分比。UI 刷新入口是 _renderChatProgress，
+ * renderChat 与每次 update 都会调用它；结束/取消在 runChatLoop 的 finally 里兜底清除。 */
+let _chatProgress = null;
+function chatProgressStart(kind, label, total){
+  _chatProgress = { kind: kind || "run", label: label || "", current: 0,
+    total: (typeof total === "number" && total > 0) ? total : 0, received: 0, startedAt: Date.now() };
+  _renderChatProgress();
 }
-/**
- * 更新流式进度（onChunk 回调中调用）
- * @param {string} chunk - 新收到的文本块
- */
-function streamProgressUpdate(chunk){
-  if(!_streamProgress) return;
-  _streamProgress.received += String(chunk || "").length;
-  _streamProgress.elapsed = Date.now() - _streamProgress.startTime;
+function chatProgressUpdate(patch){
+  if(!_chatProgress || !patch) return;
+  if(typeof patch.label === "string") _chatProgress.label = patch.label;
+  if(typeof patch.current === "number") _chatProgress.current = patch.current;
+  if(typeof patch.total === "number") _chatProgress.total = patch.total > 0 ? patch.total : 0;
+  if(typeof patch.received === "number") _chatProgress.received = patch.received;
+  _renderChatProgress();
 }
-/**
- * 获取流式进度
- * @returns {{received:number, estimated:number, elapsed:number, percent:number}|null}
- */
-function getStreamProgress(){
-  if(!_streamProgress) return null;
-  const p = _streamProgress;
-  const percent = p.estimated > 0 ? Math.min(100, Math.round(p.received / p.estimated * 100)) : 0;
-  return { received:p.received, estimated:p.estimated, elapsed:p.elapsed, percent };
+function chatProgressEnd(){
+  if(!_chatProgress) return;
+  _chatProgress = null;
+  _renderChatProgress();
 }
-/**
- * 清除流式进度
- */
-function streamProgressClear(){
-  _streamProgress = null;
+function getChatProgress(){
+  if(!_chatProgress) return null;
+  const p = _chatProgress;
+  return { kind:p.kind, label:p.label, current:p.current, total:p.total, received:p.received,
+    elapsed: Date.now() - p.startedAt,
+    percent: p.total ? Math.min(100, Math.round(p.current / p.total * 100)) : 0 };
+}
+function _renderChatProgress(){
+  const box = document.getElementById("chatProgress");
+  if(!box) return;
+  const p = getChatProgress();
+  if(!p){ box.hidden = true; box.classList.remove("indeterminate"); return; }
+  box.hidden = false;
+  const label = document.getElementById("chatProgressLabel");
+  const fill = document.querySelector("#chatProgressBar > i");
+  const secs = Math.max(0, Math.round(p.elapsed / 1000));
+  let text = p.label || t("chat.progress.running", "运行中…");
+  if(p.total) text += " · " + p.current + "/" + p.total;
+  if(p.received) text += " · " + (p.received >= 1000 ? (p.received / 1000).toFixed(1) + "k" : String(p.received)) + t("chat.progress.chars", " 字");
+  if(secs) text += " · " + secs + "s";
+  if(label) label.textContent = text;
+  if(fill){
+    if(p.total){ box.classList.remove("indeterminate"); fill.style.width = p.percent + "%"; }
+    else { box.classList.add("indeterminate"); fill.style.width = "35%"; }
+  }
 }
 
 /* ---------- v3.7.13（解耦 S1）：AI 工具实现归位 ----------
@@ -20897,18 +21159,20 @@ function renderChat(){
       }
       return '<div class="msg tool">' + esc(_disp) + '</div>';
     }
+    /* 2026-10-23：assistant 消息记录本轮用户提示词，悬停可见（title 原生提示，不引浮层依赖） */
+    const promptTip = (m && m._prompt) ? ' title="' + esc(String(m._prompt).slice(0, 500)) + '" data-prompt="1"' : "";
     if(m.role==="assistant" && m.tool_calls && m.tool_calls.length){
       const s=m.tool_calls.map(tc=>t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
-      return `<div class="msg assistant toolcall">${s}</div>`;
+      return `<div class="msg assistant toolcall"${promptTip}>${s}</div>`;
     }
-    if(m.role==="assistant" && !m.content) return `<div class="msg assistant">${t("ai.toolCalling","（工具调用中…）")}</div>`;
+    if(m.role==="assistant" && !m.content) return `<div class="msg assistant"${promptTip}>${t("ai.toolCalling","（工具调用中…）")}</div>`;
     // T3.1 已取消提示（灰色斜体）
-    if(m.role==="assistant" && m._canceled) return `<div class="msg assistant canceled">${t("ai.cancelled","已取消")}</div>`;
+    if(m.role==="assistant" && m._canceled) return `<div class="msg assistant canceled"${promptTip}>${t("ai.cancelled","已取消")}</div>`;
     // T3.1 失败消息 + 重试按钮
-    if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">${t("ai.retry","重试")}</button></div>`;
+    if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body"${promptTip}>${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">${t("ai.retry","重试")}</button></div>`;
     // v3.2 C-档：流式打字机态（_streaming 标记的消息加 streaming class——半透明+光标动画）
-    if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming">${mdToHtml(m.content||"")}</div>`;
-    if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
+    if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming"${promptTip}>${mdToHtml(m.content||"")}</div>`;
+    if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}</div>`;
     // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
   }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + CHAT_SUGGEST_HTML);
@@ -20921,6 +21185,9 @@ function renderChat(){
       const ta = $("#chatTextInput"); if(ta) ta.focus();
     });
   }
+  _renderChatProgress();
+  /* 只渲染非流式消息里的 mermaid；异步队列在后台跑，不阻塞聊天渲染 */
+  if(typeof renderMermaidBlocks === "function") renderMermaidBlocks(el);
   scrollChat();
 
 }
@@ -23163,12 +23430,93 @@ function renderTaskRail(){
   // lint-xss-ok: 每个插值都过了 esc()/t() 字典值；scCss() 只产出颜色令牌或十六进制
   $("#taskRailList").innerHTML = html;
   _bindTaskRail();
+  _renderRailAgent();
+  _renderRailFiles();
+  _applyRailTab();
+}
+
+/* ---------- 右栏分页（2026-10-23）：今日 / Agent / 文件 ----------
+ * 只展示真实能力：技能来自 listEnabledSkills（真的注入提示词）、文件来自 getRagFiles；
+ * MCP 仍是配置壳（i18n 明写"不改变 AI 能力"），故**不列**，避免假能力入口。 */
+const RAIL_TABS = ["today", "agent", "files"];
+function _railTabGet(){
+  try{ const v = load(PREFIX + "rail_tab", "today"); return RAIL_TABS.indexOf(v) >= 0 ? v : "today"; }
+  catch(_e){ return "today"; }
+}
+function _railTabSet(tab){
+  if(RAIL_TABS.indexOf(tab) < 0) return;
+  save(PREFIX + "rail_tab", tab);
+  _applyRailTab();
+}
+function _applyRailTab(){
+  const rail = $("#taskRail");
+  if(!rail) return;
+  const tab = _railTabGet();
+  rail.querySelectorAll("[data-rail-tab]").forEach(function(b){
+    const on = b.getAttribute("data-rail-tab") === tab;
+    b.classList.toggle("is-on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  rail.querySelectorAll("[data-rail-pane]").forEach(function(p){
+    p.classList.toggle("u-hidden", p.getAttribute("data-rail-pane") !== tab);
+  });
+  const cnt = $("#taskRailCount"); if(cnt) cnt.classList.toggle("u-hidden", tab !== "today");
+  const add = $("#taskRailAdd"); if(add) add.classList.toggle("u-hidden", tab !== "today");
+}
+function _renderRailAgent(){
+  const el = $("#railAgentPane");
+  if(!el) return;
+  const skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : [];
+  const prog = (typeof getChatProgress === "function") ? getChatProgress() : null;
+  let html = '<div class="rail-sec-title">' + esc(t("rail.agent.skills", "技能"))
+    + ' <span class="task-rail-count">' + skills.length + "</span></div>";
+  html += skills.length
+    ? '<ul class="rail-list">' + skills.slice(0, 8).map(function(s){
+        const trig = (s.trigger || []).slice(0, 2).join(" / ");
+        return '<li class="rail-item"><span class="rail-item-name">' + esc(s.name || "") + "</span>"
+          + (trig ? '<span class="rail-item-meta">' + esc(trig) + "</span>" : "") + "</li>";
+      }).join("") + "</ul>"
+    : '<p class="task-rail-empty">' + esc(t("rail.agent.none", "还没有技能。命令面板里可保存常用流程。")) + "</p>";
+  if(prog){
+    html += '<div class="rail-sec-title">' + esc(t("rail.agent.running", "正在运行")) + "</div>"
+      + '<div class="rail-item"><span class="rail-item-name">' + esc(prog.label || "") + "</span>"
+      + '<span class="rail-item-meta">' + esc(prog.total ? (prog.current + "/" + prog.total) : (prog.received + t("chat.progress.chars", " 字"))) + "</span></div>";
+  }
+  const ready = (typeof aiReadyProfile === "function") ? !!aiReadyProfile() : false;
+  html += '<div class="rail-sec-title">' + esc(t("rail.agent.ready", "AI 状态")) + "</div>"
+    + '<div class="rail-item"><span class="rail-item-name">'
+    + esc(ready ? t("rail.agent.configured", "已配置") : t("rail.agent.unconfigured", "未配置")) + "</span></div>";
+  el.innerHTML = sanitizeHtml(html);
+}
+function _renderRailFiles(){
+  const el = $("#railFilesPane");
+  if(!el) return;
+  const files = (typeof getRagFiles === "function") ? getRagFiles() : [];
+  let html = '<div class="rail-sec-title">' + esc(t("rail.files.title", "文件知识"))
+    + ' <span class="task-rail-count">' + files.length + "</span></div>";
+  html += files.length
+    ? '<ul class="rail-list">' + files.slice(0, 8).map(function(f){
+        return '<li class="rail-item"><span class="rail-item-name">' + esc(f.name || "") + "</span>"
+          + '<span class="rail-item-meta">' + ((f.chunks || []).length) + esc(t("p5.kbFilesChunkCount", " 块")) + "</span></li>";
+      }).join("") + "</ul>"
+    : '<p class="task-rail-empty">' + esc(t("rail.files.empty", "还没有导入文件。知识库支持 PDF/DOCX/文本。")) + "</p>";
+  html += '<button type="button" class="task-rail-more" id="railOpenKb">' + esc(t("rail.files.open", "打开知识库")) + "</button>";
+  el.innerHTML = sanitizeHtml(html);
+  const b = $("#railOpenKb");
+  if(b) b.onclick = function(){ try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 打开失败不阻塞右栏 */ } };
 }
 
 function _bindTaskRail(){
   const rail = $("#taskRail");
   if(!rail || rail._bound) return;
   rail._bound = true;
+  const tabWrap = rail.querySelector(".task-rail-tabs");
+  if(tabWrap){
+    tabWrap.addEventListener("click", function(e){
+      const btn = e.target && e.target.closest ? e.target.closest("[data-rail-tab]") : null;
+      if(btn) _railTabSet(btn.getAttribute("data-rail-tab"));
+    });
+  }
   const body = document.querySelector(".body");
   const app = document.querySelector(".app");
   const setOpen = (open)=>{
@@ -34232,7 +34580,7 @@ async function proposeAgentPlan(text){
   }
   if(plan){
     pendingAgentPlan = { plan: plan, text: raw, sc: active };
-    hist.push({ role:"assistant", content: agentPlanReviewText(plan) });
+    hist.push({ role:"assistant", content: agentPlanReviewText(plan), _prompt: raw });
   }else{
     hist.push({ role:"assistant", content: errText, _failed: true });
   }
@@ -34269,6 +34617,7 @@ async function confirmAgentPlan(){
   /* v3.7.116：进度回执两个 —— onProgress（每步完成）与 onReplan（重规划后重建下标）。
      done 的 i 始终指向**当前盘上 steps** 的下标；重规划时 steps 被替换，done 跟着重建。 */
   const runProgress = function(_finished, _total, step, resultStr, stepRes){
+    chatProgressUpdate({ current: _finished, total: _total, label: t("chat.progress.step", "步骤：") + ((step && step.tool) || "") });
     if(stepRes && stepRes.blocked) return;    // 被拦下的步骤没跑，不算完成（续跑不能跳过它）
     const cur = loadAgentRun();
     if(!cur) return;
@@ -34298,8 +34647,10 @@ async function confirmAgentPlan(){
   };
   try{
     // v3.7.72：换自适应执行（分段 + 结果回喂校准），盲跑版 executeAgentPlan 保留作降级
+    chatProgressStart("plan", t("chat.progress.plan", "执行计划…"), p.plan.steps.length);
     const r = await executeAgentPlanReactive(p.plan, { signal: signal, goal: p.goal || "", onProgress: runProgress, onReplan: runReplan });
-    hist.push({ role:"assistant", content: r.summary });
+    chatProgressEnd();
+    hist.push({ role:"assistant", content: r.summary, _prompt: p.text || "" });
     if(r.ok){
       clearAgentRun();   // 全部完成 → 清档；取消/失败 → 留着（continueAgentRun 可续）
       /* v3.7.117：跑完就把 goals 里那份也收尾（complete_goal 的同一语义）——
@@ -34319,6 +34670,7 @@ async function confirmAgentPlan(){
   }catch(e){
     hist.push({ role:"assistant", content: String((e && e.message) || e), _failed: true });
   }finally{
+    chatProgressEnd();
     showChatThinking(false);
     if(chatController && chatController.timer) clearTimeout(chatController.timer);
     chatController = null;
@@ -34604,6 +34956,7 @@ async function runChatLoop(messages, hist, sc){
   /* v3.7.132：发送前估算入账（估算/策略早已在，这里补「可观测」；向下调用 ai-tools，方向合法） */
   if(typeof recordSendEstimate === "function") recordSendEstimate(messages);
   showChatThinking(true);
+  let turnUserText = ""; /* catch 分支也要写 _prompt，故声明在 try 外 */
   try{
     let guard=0;
     let maxLoops = activeGoal()? AGENT_GOAL_LOOP_MAX : 6; // 目标激活时放宽循环，支撑多步自主执行
@@ -34616,7 +34969,7 @@ async function runChatLoop(messages, hist, sc){
        turnUserText 取 messages 里最后一条 user —— 工具执行只追加 assistant/tool 角色，
        所以循环结束时它仍是本轮的用户输入（打字确认路径下会是「确认」，用户可自行命名）。 */
     const skillTrace = [];
-    let turnUserText = "";
+    turnUserText = "";
     for(let mi=messages.length-1; mi>=0; mi--){
       if(messages[mi] && messages[mi].role === "user"){ turnUserText = String(messages[mi].content || ""); break; }
     }
@@ -34628,20 +34981,25 @@ async function runChatLoop(messages, hist, sc){
       // v3.2 C-档：流式打字机——纯文本轮（无工具调用压力）边收边渲染：流式中先挂一条 _streaming 消息增量更新，
       // 完成后用真实结果替换。工具调用轮不启用（避免半截 tool_calls 状态污染 hist）。
       let streamMsg = null;
+      let streamReceived = 0;
       const canStream = !acfg.enabled; // 工具模式（tools 数组在）下走流式需拼 tool_calls delta，先保守关（v3.2 C-档）
+      if(canStream) chatProgressStart("stream", t("chat.progress.generating", "正在生成…"), 0);
       const j = await chatOnce(messages, {
         signal: chatSignal,
         onChunk: canStream ? function(chunkText){
           try{
             if(!streamMsg){
-              streamMsg = { role: "assistant", content: "", _streaming: true };
+              streamMsg = { role: "assistant", content: "", _streaming: true, _prompt: turnUserText };
               hist.push(streamMsg);
             }
             streamMsg.content += chunkText;
+            streamReceived += String(chunkText || "").length;
+            chatProgressUpdate({ received: streamReceived });
             AppBridge.render();
           }catch(_e){ /* 渲染异常不阻断流 */ }
         } : undefined
       });
+      if(canStream) chatProgressEnd();
       if(streamMsg){
         // 流式占位消息移除，由下方真实 hist.push 接管
         const idx = hist.indexOf(streamMsg);
@@ -34667,7 +35025,7 @@ async function runChatLoop(messages, hist, sc){
           pendingConfirm={ toolCalls:calls, title:titleText||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:sc };
           hist.push({role:"assistant", content: hasDanger
             ? t("ai.pendingConfirm","（待确认）将执行删除/修改操作：「")+(titleText||t("ai.unknown","未知"))+t("ai.pendingConfirmSuffix","」。发送「确认」以继续，其他内容取消。")
-            : t("ai.pendingConfirmTools","（待确认）将执行 ")+calls.length+t("ai.pendingConfirmToolsSuffix"," 个工具调用。发送「确认」以继续，其他内容取消。")});
+            : t("ai.pendingConfirmTools","（待确认）将执行 ")+calls.length+t("ai.pendingConfirmToolsSuffix"," 个工具调用。发送「确认」以继续，其他内容取消。"), _prompt: turnUserText});
           AppBridge.render(); openConfirmModal(); break; // A2：同时弹出确认模态框
         }
         // 工具白名单过滤
@@ -34709,6 +35067,7 @@ async function runChatLoop(messages, hist, sc){
         }
         // 无危险：完整 assistant + tool（含 tool_calls / tool_call_id）入 hist，B1 安全
         messages.push(msg); hist.push(msg);
+        chatProgressStart("tool", t("chat.progress.tool", "执行工具…"), msg.tool_calls.length);
         for(let ti=0; ti<msg.tool_calls.length; ti++){
           const tc = msg.tool_calls[ti];
           /* v3.7.59：取消即刻生效——剩余调用不再执行，补「已跳过」回执后退出循环 */
@@ -34728,12 +35087,14 @@ async function runChatLoop(messages, hist, sc){
              此前在 chat 路径只拿到「未知工具」，与 Agent 计划路径行为不一致 */
           const res=await execToolAuto(tc.function.name, args);
           skillTracePush(skillTrace, tc.function.name, args, res); // v3.7.59 Skills：记录本轮流程
+          chatProgressUpdate({ current: ti + 1, label: t("chat.progress.toolName", "执行工具：") + tc.function.name });
           const tm={role:"tool", tool_call_id:tc.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
           messages.push(tm); hist.push(tm);
         }
+        chatProgressEnd();
         AppBridge.render(); continue;
       }
-      hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)")});
+      hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)"), _prompt: turnUserText});
       break;
     }
     /* v3.7.59 Skills ③：本轮成功执行了 ≥2 个非破坏性工具 → 提示可把这条流程固化成技能。
@@ -34755,13 +35116,13 @@ async function runChatLoop(messages, hist, sc){
     const isAbort = (err && err.name === "AbortError") || cReason === "user" || cReason === "timeout";
     if(isAbort && cReason !== "timeout"){
       // T3.1 用户主动取消：显示「已取消」提示（灰色斜体），不报错
-      hist.push({role:"assistant", content:t("ai.cancelled","已取消"), _canceled:true});
+      hist.push({role:"assistant", content:t("ai.cancelled","已取消"), _canceled:true, _prompt: turnUserText});
     } else if(isAbort){
-      hist.push({role:"assistant", content:t("ai.timeout","请求超时（可在「设置 → AI」调大「请求超时」秒数）"), _failed:true});
+      hist.push({role:"assistant", content:t("ai.timeout","请求超时（可在「设置 → AI」调大「请求超时」秒数）"), _failed:true, _prompt: turnUserText});
       try{ pushDiag("error", "chat timeout", {where:"runChatLoop"}); }catch(_e){}
     } else {
       const m=(err&&err.message)?err.message:String(err);
-      hist.push({role:"assistant", content:m, _failed:true});
+      hist.push({role:"assistant", content:m, _failed:true, _prompt: turnUserText});
       pushDiag("error", m, {where:"runChatLoop"});
     }
   } finally {
@@ -34773,6 +35134,7 @@ async function runChatLoop(messages, hist, sc){
       else hist.splice(si, 1);
     }
     // T3.1 清理控制器 + 隐藏思考中指示
+    chatProgressEnd();
     if(chatController && chatController.timer){ clearTimeout(chatController.timer); }
     chatController=null;
     showChatThinking(false);
@@ -50928,13 +51290,13 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     get RAG_SYNC_DEBOUNCE_MS(){ return RAG_SYNC_DEBOUNCE_MS; },
     get RAG_SYNC_EMBED_CAP(){ return RAG_SYNC_EMBED_CAP; },
     switchModel, listModels, retryChatWithParams,
-    streamProgressStart, streamProgressUpdate, getStreamProgress, streamProgressClear,
+    chatProgressStart, chatProgressUpdate, getChatProgress, chatProgressEnd,
     get RAG_STORAGE_KEY(){ return RAG_STORAGE_KEY; },
     get _ragReady(){ return _ragReady; },
     set _ragReady(v){ _ragReady = !!v; },
     get _ragLex(){ return _ragLex; },
     get _retryOverrides(){ return _retryOverrides; },
-    get _streamProgress(){ return _streamProgress; }
+    get _chatProgress(){ return _chatProgress; }
   });
 }
 
