@@ -275,6 +275,7 @@ describe("MCP ③ 失败要如实", () => {
     const r = await win.__test.mcpRefreshServer("dead");
     expect(r.ok).toBe(false);
     expect(r.err).toMatch(/CORS/);
+    expect(r.err, "也要把本地网络权限这条路说清楚（https 页面连本机就是它）").toMatch(/本地网络访问/);
     expect(win.__test.mcpRuntimeInfo("dead").err).toMatch(/CORS/);
     await expect(win.__test.ensureMcpTools()).resolves.toBeTruthy();
     expect(win.__test.mcpToolDefs()).toEqual([]);
