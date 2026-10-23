@@ -38,14 +38,14 @@
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 48 |
 | `ui-hotkeys` | UI | `ai-retry` `core-commands` `core-shared` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 10 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 138 |
+| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 139 |
 | `ui-ge-api` | UI | `core-i18n` `crypto` `render-overview` `ui-drawer` | 5 |
 | `ui-ge-plugins` | UI | `data-links` `util-markdown` | 2 |
 | `ui-ge-theme` | UI | `chain` | 1 |
 | `ui-ge-pomodoro` | UI | `chain` | 1 |
 | `ui-ge-calendar` | UI | `chain` `core-shared` `render-overview` `ui-ge-theme` `ui-guide` | 22 |
 | `ui-ge-notes` | UI | `core-i18n` `core-shared` `data-rw` `render-entry` `render-widgets` `util-markdown` | 15 |
-| `ui-ge-integrations` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `util-markdown` | 476 |
+| `ui-ge-integrations` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `util-markdown` | 481 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
 
