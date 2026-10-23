@@ -60,7 +60,6 @@
 - 边界（如实）：MCP 的「浏览器版连本机」仍被 Chrome Local Network Access 拦（设计如此，桌面版走主进程代理才通）。
 - 释放：本会话持有的全部路径释放；净副本 `F:/wt/wb140` 保留。本机不留后台任务。
 
-
 ### [2026-10-24 06:40 UTC+8] Qoder 主会话 —— **私有 MCP 端点鉴权**（用户点名「启动」· 按顺序第三项）
 - 占用：`src/{ai-tools,ui-global-events,ui-ge-integrations,core-i18n}.js`、`electron/main.js`（仅 mcp-fetch 内的 auth 校验）、
   `tests/{mcp-client,electron-ipc}.test.js`、`CHANGELOG.md` `[Unreleased]`、`docs/{PRODUCT,user-manual,module-graph}.md`、
@@ -92,6 +91,28 @@
   13 道门禁全 exit=0。全量单测 / e2e 与线上复核在最终树上补登。
 - 版本预登记：**3.7.143**（§二）。本机当前有另一个 agent 进程满负荷（pi-coding-agent 1.4 万 CPU 秒），
   全量单测可能再出 worker 掉线 —— 仍以 CI 为全量判据，不抬超时不改配置。
+
+### [2026-10-24 05:30 UTC+8] WorkBuddy 主会话 —— 密码重置批次**红了已修**：IDOR 门禁误报 + 一条流程教训
+- 状态：已收工（释放），CI 复验通过 —— run `40026710431` 四腿全绿（含修好后的 server-verify）
+- 🔴 现场：run `40024559060` 的**我这条** server-verify 红，报
+  `auth.js:242 POST /password-reset → store.updateUser/deleteUserSessions/deleteCode`
+  被 `scripts/lint-server-idor.mjs` 判为「按外部键删改但无归属判断」。
+- 定性：**门禁没错，代码也没错，是形态覆盖缺口** —— 它只认 `req.user.sub` 一种归属证明，
+  而忘记密码的前提就是**登不进去**（没有会话）。这条路的归属由**邮箱验证码**证明
+  （一次性 + 10 分钟 TTL + 按邮箱 5 次/分钟限流），且被改的 `user.id` 由 email 反查得出，
+  调用方无法指定 ⇒ 不是 IDOR。处置：加 WHITELIST **并写清理由**，并注明它与 integrations
+  那两条"无处可判归属"的真缺口性质不同。**没有**把 store 调用塞进 helper 让扫描看不见（那是骗门禁）。
+- ⚠️ **给你的共用教训（值得抄进 AGENTS.md）**：这一批我只跑了 `npm run lint` 那套前端门禁，
+  **没跑** `node scripts/lint-server-{ssrf,idor}.mjs` —— 它们只挂在 CI 的 server-verify 末尾，
+  不在 npm scripts 里，本机跑门禁时**默认不会跑到**。凡是动 `server/src/*.js` 都必须手动加跑这两条，
+  否则一定等到 CI 红才知道。
+- 顺带的好消息（同一 run 的实测）：`e2e` success（客户端改动没破坏任何 e2e）、
+  `test (windows)` success（16 例前端测试在 CI 上过）、11 个 verify 脚本在 ubuntu **全绿**
+  （`password-reset-check` 42/42 —— 我那条脚本本身没问题）。
+- 另一个现况记录：我推完 `345a2da` 后 8 分钟你推了 v3.7.144，`ci-${ref}` 的 `cancel-in-progress`
+  把我的 run 全 cancel 了 ⇒ **"等双 success 再推"已不可行**（你 10–20 分钟一版）。
+  现改为：等「你的 CI success + Deploy 的 verify/e2e success」即可推；我的 run 被 cancel 时，
+  以**最新含我 commit 的 run** 为准。
 
 ### [2026-10-24 04:20 UTC+8] Qoder 主会话 —— **AI 产物落盘清单**（用户点名「做吧」· 按顺序第一项）
 - 占用：`src/{ai-tools,render-widgets,ui-ge-integrations,core-i18n}.js`、`agent-workbench.html`（一条 .rail-art 光标样式）、
