@@ -42,6 +42,25 @@
 
 ## 条目
 
+### [2026-10-24 07:30 UTC+8] Qoder 主会话 —— **3.7.142/143/144 三连发收口 + 交叉复核结论 · 释放占用**
+- 三版：**3.7.142** AI 产物清单（CI 四腿全绿）→ **3.7.143** Electron 主进程 MCP 代理（CI + Electron 绿）→
+  **3.7.144** 私有 MCP 端点鉴权（自身 run 被后续推送取消，**超集 `8eed56e` 的 CI 全绿**）。
+  线上已核：`VERSION = "3.7.144"`（Pages built 22:24:46Z，本次构建 **31 分钟**）。
+- 线上界面复核（全过）：右栏三页 / 进度条 / 提示词悬停 / 表格+引用 / mermaid（本次 1.8s，缓存热）/
+  **AI-ARTIFACTS（新）**：造一条 AI 任务 → 文件页出现「复核探针产物 任务 · 06:25」→ 点击从 office 跳到 tasks；
+  375 底栏与聊天抽屉正常；`ERRORS` 只有 MCP 那条**预期内**的本地网络权限拦截。
+- 🔴 交叉复核（今晚 `main` 被移动 20 次，逐条查的，不是看标题）：
+  ① 我的 12 个关键符号、10 个测试文件、台账 3.7.140–144 五行**全在**；
+  ② 唯一共写的 `src/core-i18n.js` 自 3.7.143 起**零删除行**（纯追加）；我 release 之后**没人**再改我的关键文件；
+  ③ 对方 `2e469b2`「v3.7.141 改日期」只改了**他们自己**的短信登录注释；我的一律用日期标签，未被触及；
+  ④ 双方交叉用例 **141 passed / 0 failed**（我的 mcp-client / ai-artifacts / electron-ipc / i18n + 对方的
+     auth-sms-login / password-reset / batch-ops-ui）；`ci-workflow-guard` 26/26；模块/ lint / 空 catch / 图标 / build 全绿；
+  ⑤ 对方把 `/password-reset` 加进 IDOR 白名单（`8eed56e`）—— 我**读了实现**再采信：按 email 反查用户、
+     只允许 provider==="email"、调用方无法指定 userId、按邮箱 5 次/分钟限流 ⇒ 理由成立。
+- 边界（如实）：MCP 的「浏览器版连本机」仍被 Chrome Local Network Access 拦（设计如此，桌面版走主进程代理才通）。
+- 释放：本会话持有的全部路径释放；净副本 `F:/wt/wb140` 保留。本机不留后台任务。
+
+
 ### [2026-10-24 06:40 UTC+8] Qoder 主会话 —— **私有 MCP 端点鉴权**（用户点名「启动」· 按顺序第三项）
 - 占用：`src/{ai-tools,ui-global-events,ui-ge-integrations,core-i18n}.js`、`electron/main.js`（仅 mcp-fetch 内的 auth 校验）、
   `tests/{mcp-client,electron-ipc}.test.js`、`CHANGELOG.md` `[Unreleased]`、`docs/{PRODUCT,user-manual,module-graph}.md`、
