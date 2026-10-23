@@ -28,5 +28,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // v3.7.87：WebDAV 云同步中转（坚果云等；无 ACAO，浏览器直连被拦）。
   // 参数 { url, method, body?, auth?(Basic 应用密码), depth?, ifMatch?, ifNoneMatch? }；
   // Authorization 仅本次调用传递，主进程不落盘，日志不记。
-  webdavFetch: (arg) => ipcRenderer.invoke("webdav-fetch", arg)
+  webdavFetch: (arg) => ipcRenderer.invoke("webdav-fetch", arg),
+  /* 2026-10-24：MCP 走主进程中转（绕 CORS 与本地网络权限） */
+  mcpFetch: (arg) => ipcRenderer.invoke("mcp-fetch", arg)
 });

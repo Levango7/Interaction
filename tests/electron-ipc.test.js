@@ -920,3 +920,72 @@ describe("Electron IPC: webdav-fetch 云同步中转", () => {
     await expect(ipcHandlers["webdav-fetch"](forgedEv(), WD_OK)).rejects.toThrow("IPC 拒绝");
   });
 });
+
+/* ============================================================
+ * mcp-fetch：MCP 中转（2026-10-24）
+ * 与 ics/webdav **有意不同**：回环与私网必须能过（本地 MCP 服务正是本通道的目的），
+ * 但链路本地/元数据段（169.254/16、fe80::/10）、未指定与组播必须拦 —— 防被 XSS 借道扫元数据。
+ * ============================================================ */
+describe("Electron IPC: mcp-fetch MCP 中转", () => {
+  const OK_ARG = { url: "http://127.0.0.1:31337/mcp",
+    headers: { "content-type": "application/json", authorization: "Bearer t", "x-evil": "1" },
+    body: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' };
+  const installFetch = () => {
+    const calls = [];
+    const fn = vi.fn((url, opts) => {
+      calls.push({ url, opts });
+      return Promise.resolve({ ok: true, status: 200,
+        headers: { get: (k) => (k === "content-type" ? "application/json" : (k === "mcp-session-id" ? "SID1" : null)) },
+        text: async () => '{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}' });
+    });
+    vi.stubGlobal("fetch", fn);
+    return { fn, calls };
+  };
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it("放行回环：POST + 头白名单 + 回传 sessionId 与正文", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["mcp-fetch"](trustedEv(), OK_ARG);
+    expect(r.ok).toBe(true);
+    expect(r.sessionId).toBe("SID1");
+    expect(r.text).toContain("tools");
+    expect(calls[0].opts.method).toBe("POST");
+    expect(calls[0].opts.redirect).toBe("error");
+    expect(calls[0].opts.headers["authorization"]).toBe("Bearer t");
+    expect(calls[0].opts.headers["x-evil"], "白名单外的头必须丢弃").toBeUndefined();
+  });
+
+  it("私网地址也放行（10 / 172.16 / 192.168 / ::1）", async () => {
+    for (const h of ["10.0.0.5", "172.16.0.9", "192.168.1.20", "[::1]"]) {
+      const { calls } = installFetch();
+      const r = await ipcHandlers["mcp-fetch"](trustedEv(), Object.assign({}, OK_ARG, { url: "http://" + h + "/mcp" }));
+      expect(r.ok, h).toBe(true);
+      expect(calls.length, h).toBe(1);
+    }
+  });
+
+  it("🔴 元数据 / 链路本地 / 未指定 / 组播：拒且零请求", async () => {
+    const { calls } = installFetch();
+    for (const h of ["169.254.169.254", "[fe80::1]", "0.0.0.0", "239.1.1.1"]) {
+      const r = await ipcHandlers["mcp-fetch"](trustedEv(), Object.assign({}, OK_ARG, { url: "http://" + h + "/mcp" }));
+      expect(r.error, h).toBe("forbidden_host");
+    }
+    expect(calls.length, "拒绝路径一条请求都不许发").toBe(0);
+  });
+
+  it("🔴 非 http(s) / userinfo / 超大请求体：拒且零请求", async () => {
+    const { calls } = installFetch();
+    for (const bad of ["ftp://127.0.0.1/x", "http://u:p@127.0.0.1/x", "not-a-url"]) {
+      const r = await ipcHandlers["mcp-fetch"](trustedEv(), Object.assign({}, OK_ARG, { url: bad }));
+      expect(r.ok, bad).toBe(false);
+    }
+    const big = await ipcHandlers["mcp-fetch"](trustedEv(), Object.assign({}, OK_ARG, { body: "x".repeat(2 * 1024 * 1024 + 1) }));
+    expect(big.error).toBe("body_too_large");
+    expect(calls.length).toBe(0);
+  });
+
+  it("未受信 sender：拒绝", async () => {
+    installFetch();
+    await expect(ipcHandlers["mcp-fetch"](forgedEv(), OK_ARG)).rejects.toThrow("IPC 拒绝");
+  });
+});

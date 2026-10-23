@@ -133,6 +133,35 @@ describe("MCP ② 执行路由与危险分类", () => {
   });
 });
 
+describe("MCP ⑤ Electron 主进程代发", () => {
+  it("有 electronAPI.mcpFetch 时走主进程（浏览器 fetch 一次都不发）", async () => {
+    const win = boot();
+    saveMcp(win, [{ name: "local", url: "http://127.0.0.1:9/mcp", enabled: true }]);
+    let proxied = 0;
+    win.electronAPI = { mcpFetch: async () => {
+      proxied++;
+      return { ok: true, status: 200, contentType: "application/json", sessionId: "S1",
+        text: JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: [TOOLS[0]] } }) };
+    } };
+    win.fetch = async () => { throw new Error("浏览器 fetch 不该被调用"); };
+    const r = await win.__test.mcpRefreshServer("local");
+    expect(r.ok, r.err).toBe(true);
+    expect(r.tools[0].name).toBe("echo");
+    expect(proxied, "initialize + initialized + tools/list 都走代理").toBe(3);
+  });
+
+  it("主进程中转失败 → 错误点名「主进程中转失败」，不再说 CORS", async () => {
+    const win = boot();
+    saveMcp(win, [{ name: "local", url: "http://127.0.0.1:9/mcp", enabled: true }]);
+    win.electronAPI = { mcpFetch: async () => ({ ok: false, error: "forbidden_host" }) };
+    win.fetch = async () => ({ ok: false, status: 0 });
+    const r = await win.__test.mcpRefreshServer("local");
+    expect(r.ok).toBe(false);
+    expect(r.err).toContain("主进程中转失败");
+    expect(r.err).not.toContain("CORS");
+  });
+});
+
 describe("MCP ④ 设置页接线", () => {
   it("刷新后列出工具复选框；勾选即时落盘 allow；点保存不会把勾选抹掉", async () => {
     const win = boot();

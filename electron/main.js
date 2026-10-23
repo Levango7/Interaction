@@ -773,8 +773,8 @@ app.on("before-quit", () => { willQuit = true; });
 /* ============================================================
  * v3.7.90：主进程「外发通道」的公共常量与助手 + 新增通道检查清单
  * ------------------------------------------------------------
- * 本文件现有 5 条具备外发能力的 IPC：
- *   chat · notify-send · jira-fetch · ics-fetch · webdav-fetch
+ * 本文件现有 6 条具备外发能力的 IPC：
+ *   chat · notify-send · jira-fetch · ics-fetch · webdav-fetch · mcp-fetch（唯一放行回环/私网的，理由见该 handler）
  * 其中 notify/jira/ics/webdav 是 v3.7.66 之后陆续加的，共同特征是
  * 「目标站不回 CORS 头，渲染进程发不出去，只能由 Node 侧代发」。
  * 每条各自的校验都是齐的，但**口径分散在各处**：将来再加第六条时，
@@ -807,6 +807,26 @@ const _OUTBOUND_MAX_BODY = 2 * 1024 * 1024;
 /** 超时钳制：下限 1s、上限 20s；未传时用调用方给的默认值 */
 function _outboundTimeout(ms, defMs){
   return Math.min(Math.max(Number(ms) || defMs, 1000), 20000);
+}
+
+/* ---------- 2026-10-24：MCP 中转（Streamable HTTP）的主机策略 ----------
+ * 与 ics/webdav 的差别是**有意**的：**放行回环与私网** —— 本地 MCP 服务正是本通道存在的理由
+ * （https 页面直连 127.0.0.1 会被 Chrome 的 Local Network Access 权限拦，补 PNA 头也没用）。
+ * 仍然拦：链路本地 169.254/16 与 fe80::/10（云元数据）、未指定、组播 —— 防被 XSS 借道扫元数据面。 */
+function _mcpHostForbidden(host){
+  let h = String(host || "").toLowerCase().replace(/^\[|\]$/g, "");
+  if(!h) return true;
+  const mapped = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(h);
+  if(mapped){
+    const a = parseInt(mapped[1], 16), b = parseInt(mapped[2], 16);
+    h = ((a >> 8) & 255) + "." + (a & 255) + "." + ((b >> 8) & 255) + "." + (b & 255);
+  }
+  if(h === "0.0.0.0" || h === "::") return true;          /* 未指定 */
+  if(/^169\.254\./.test(h)) return true;                 /* IPv4 link-local / 元数据 */
+  if(/^fe[89ab][0-9a-f]:/.test(h)) return true;            /* IPv6 link-local */
+  if(/^2[2-3][0-9]\./.test(h)) return true;               /* 224–239 组播 */
+  if(/^ff[0-9a-f]{2}:/.test(h)) return true;               /* IPv6 组播 */
+  return false;
 }
 
 /* ---------- v3.7.84：ICS 订阅只读中转（主机防线与 v3.7.87 的 webdav-fetch 共享） ----------
@@ -937,4 +957,42 @@ function _netHostForbidden(host){
         logLine("webdav", "host=" + u.hostname + " error=" + msg4);
         return { ok: false, status: 0, error: msg4 };
       }
+    });
+
+    /* ---------- 2026-10-24：MCP 中转（Streamable HTTP） ----------
+       renderer 直连本地/私网 MCP 服务会被 CORS 与 Chrome 本地网络权限双重拦下；主进程没有这两层。
+       策略见 _mcpHostForbidden（回环/私网放行，链路本地与元数据段拦截）。
+       头字段白名单（content-type / accept / mcp-session-id / authorization / last-event-id），
+       体 ≤2MB、超时钳 1–20s、redirect:error；日志只记主机与状态码，**绝不记 Authorization 与请求体**。 */
+    ipcMain.handle("mcp-fetch", async (e, arg) => {
+      assertTrustedSender(e);
+      let u;
+      try{ u = new URL(String((arg && arg.url) || "")); }catch(err){ return { ok: false, status: 0, error: "bad_url" }; }
+      if(u.protocol !== "https:" && u.protocol !== "http:") return { ok: false, status: 0, error: "http_https_only" };
+      if(u.username || u.password) return { ok: false, status: 0, error: "userinfo_forbidden" };
+      if(_mcpHostForbidden(u.hostname)) return { ok: false, status: 0, error: "forbidden_host" };
+      const body = (arg && typeof arg.body === "string") ? arg.body : "";
+      if(body.length > _OUTBOUND_MAX_BODY) return { ok: false, status: 0, error: "body_too_large" };
+      const ALLOW = ["content-type", "accept", "mcp-session-id", "authorization", "last-event-id"];
+      const headers = {};
+      const inH = (arg && arg.headers && typeof arg.headers === "object") ? arg.headers : {};
+      Object.keys(inH).forEach(function(k){
+        const lk = String(k).toLowerCase();
+        if(ALLOW.indexOf(lk) >= 0 && inH[k] !== undefined && inH[k] !== null) headers[lk] = String(inH[k]);
+      });
+      const ctrl = new AbortController();
+      const timer = setTimeout(function(){ ctrl.abort(); }, _outboundTimeout(arg && arg.timeoutMs, 15000));
+      const r = await fetch(u.href, { method: "POST", headers: headers, body: body, redirect: "error", signal: ctrl.signal })
+        .catch(function(err){
+          const msg = (err && err.name === "AbortError") ? "请求超时" : ((err && err.message) || String(err));
+          logLine("mcp", "host=" + u.hostname + " error=" + msg);
+          return { __err: msg };
+        });
+      clearTimeout(timer);
+      if(r && r.__err) return { ok: false, status: 0, error: r.__err };
+      const text = await r.text().catch(function(){ return ""; });
+      if(text.length > _OUTBOUND_MAX_BODY) return { ok: false, status: r.status, error: "resp_too_large" };
+      logLine("mcp", "host=" + u.hostname + " status=" + r.status);
+      return { ok: true, status: r.status, contentType: r.headers.get("content-type") || "",
+        sessionId: r.headers.get("mcp-session-id") || "", text: text };
     });

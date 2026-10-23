@@ -400,6 +400,26 @@ const MCP_NS = "mcp__";
 const MCP_MAX_TOOLS = 30;
 const MCP_RPC_TIMEOUT_MS = 15000;
 const _mcpRuntime = {};      /* name → {tools:[], at, err, sessionId, protocolVersion} —— 仅内存，不落盘 */
+/** Electron 下可用的主进程中转（没有就返回 null，走浏览器直连） */
+function _mcpProxy(){
+  if(typeof isElectron !== "function" || !isElectron()) return null;
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return (api && typeof api.mcpFetch === "function") ? api.mcpFetch : null;
+}
+/**
+ * 走主进程发一条 JSON-RPC，并包成与 fetch Response 同形的最小子集 ——
+ * 让 _mcpRpc 只有一处分支，成功/失败语义与直连保持一致。
+ */
+async function _mcpProxyPost(server, headers, payload){
+  const r = await _mcpProxy()({ url: server.url, headers: headers, body: JSON.stringify(payload), timeoutMs: MCP_RPC_TIMEOUT_MS });
+  if(!r || !r.ok){
+    throw new Error(t("mcp.proxyFail", "Electron 主进程中转失败：") + ((r && r.error) || "proxy_failed"));
+  }
+  const hs = { "content-type": r.contentType || "", "mcp-session-id": r.sessionId || "" };
+  return { ok: r.status >= 200 && r.status < 300, status: r.status,
+    headers: { get: function(k){ return hs[String(k).toLowerCase()] || null; } },
+    text: async function(){ return r.text || ""; } };
+}
 let _mcpSeq = 0;
 let _mcpEnsuring = null;
 
@@ -448,12 +468,19 @@ async function _mcpRpc(server, payload, opts){
   /* AbortController.abort() 对已结束的请求是 no-op，不需要兜 */
   const timer = ctl ? setTimeout(function(){ ctl.abort(); }, MCP_RPC_TIMEOUT_MS) : null;
   let res;
-  try{
-    res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
-      signal: ctl ? ctl.signal : undefined });
-  }catch(e){
-    throw new Error(t("mcp.netFail", "连不上（多半是浏览器 CORS 拦了跨域请求，或服务没起）") + "：" + ((e && e.message) || String(e)));
-  }finally{ if(timer) clearTimeout(timer); }
+  if(_mcpProxy()){
+    /* Electron：主进程代发 —— 只有这条路能同时绕开 CORS 与 Chrome 的本地网络权限 */
+    if(timer) clearTimeout(timer);
+    /* 错误已由 _mcpProxyPost 归类成「主进程中转失败」，不要再包成 CORS 话术 */
+    res = await _mcpProxyPost(server, headers, payload);
+  } else {
+    try{
+      res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
+        signal: ctl ? ctl.signal : undefined });
+    }catch(e){
+      throw new Error(t("mcp.netFail", "连不上（多半是浏览器 CORS 拦了跨域请求，或服务没起）") + "：" + ((e && e.message) || String(e)));
+    }finally{ if(timer) clearTimeout(timer); }
+  }
   if(res && res.headers && res.headers.get){
     const sid = res.headers.get("mcp-session-id");
     if(sid && _mcpRuntime[server.name]) _mcpRuntime[server.name].sessionId = sid;
