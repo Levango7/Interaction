@@ -44,6 +44,15 @@ const SCAN_DIR = scanIdx >= 0 && args[scanIdx + 1] ? args[scanIdx + 1] : join(RO
 /* 白名单：确属无需归属判断的 handler。每一条都必须有理由 —— 没有理由的白名单就是放水。 */
 const WHITELIST = [
   { file: 'auth.js', path: '/logout', reason: '以 refreshToken 本身为凭据，持有该 token 即有权删除该会话' },
+  /* 2026-10-24 密码重置：`/password-reset` 的归属由**邮箱验证码**证明，不是 `req.user.sub`。
+     调用方给的是 email，服务端据它反查 `user.id` 再去改 —— 代码里没有任何一处接受调用方
+     指定的 userId，所以这不是 IDOR。能过这一关的条件是持有该邮箱收到的 6 位码
+     （一次性消费 + 10 分钟 TTL + 按邮箱 5 次/分钟限流），等价于"证明自己拥有该邮箱"；
+     provider 还限定 `email`（不给 OAuth 账号凭空开密码旁路）。
+     为什么不能靠 `req.user.sub`：忘记密码的前提就是**登不进去**，此时没有可用会话。
+     这一条不是"无处可判归属"的缺口（与上面 integrations 那两条性质不同），而是
+     "归属由另一种凭据证明" —— 本门禁是文本级扫描，识别不了这种形态。 */
+  { file: 'auth.js', path: '/password-reset', reason: '归属由邮箱验证码证明（一次性/短 TTL/按邮箱限流），且被改的 user.id 由 email 反查得出，调用方无法指定' },
   /* 下面两条**不是**「无需归属」，而是「当前无处可判归属」—— 如实记缺口，勿当放水：
      实例级集成配置（OAuth app 凭据）语义上属实例而非用户，store 里也确实没有 userId 维度。
      真正的问题是「谁有权改实例配置」需要一个角色体系，而当前 `server/src` 全局无 admin/role，
