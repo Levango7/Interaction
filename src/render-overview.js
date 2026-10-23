@@ -1064,6 +1064,15 @@ function _authErrTo(elId, msg) {
   if (el) el.textContent = msg || "";
 }
 function _authValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+/* 手机号校验与服务端 normalizePhone **同口径**（只留数字、可带 86 前缀、最终 1[3-9] 开头 11 位）。
+   两处口径不一致的代价是真实的：客户端放行一个服务端拒收的号码 → 用户填完了才在「发送验证码」
+   那一步被拒，而在此之前界面一直显示"可以发"。
+   只支持中国大陆号码 —— 国际号段规则不同，不做猜测式支持（服务端同样只认 +86）。 */
+function _authValidPhone(s) {
+  var d = String(s || "").replace(/\D/g, "");
+  if(d.length === 13 && d.indexOf("86") === 0) d = d.slice(2);
+  return /^1[3-9]\d{9}$/.test(d);
+}
 
 async function _doAuthLogin(email, password) {
   if (_authBusy) return;
@@ -1137,10 +1146,16 @@ async function _doAuthRegister(name, email, password, confirm, code) {
  * 后端（Electron 版 / 自建服务）提供对应端点；浏览器纯静态形态后端不存在时降级为 toast 提示。
  * 邮箱验证码：注册页「发送验证码」按钮，成功后 60s 倒计时。 */
 var _authCodeCountdown = null;
+/* 两个「发送验证码」按钮（注册页邮箱 / 登录页短信）共用同一个倒计时句柄，
+   故复位时必须**都**恢复：只恢复 id 写死的那个，会让另一个永久停在「发送中…」且 disabled
+   —— 用户看到的是一个点了没反应、再也点不动的按钮。 */
 function _authCodeCountdownStop(){
   if(_authCodeCountdown){ clearInterval(_authCodeCountdown); _authCodeCountdown = null; }
-  var b = document.getElementById("authPageSendCode");
-  if(b){ b.disabled = false; b.textContent = t("api.sendCode", "发送验证码"); }
+  var ids = ["authPageSendCode", "authPageSendSmsCode"];
+  for(var i = 0; i < ids.length; i++){
+    var b = document.getElementById(ids[i]);
+    if(b){ b.disabled = false; b.textContent = t("api.sendCode", "发送验证码"); }
+  }
 }
 function _sendEmailCode(){
   var email = $("#authPageRegEmail");
@@ -1169,8 +1184,71 @@ function _sendEmailCode(){
   }
   return promise;
 }
+/* 发短信验证码（v3.7.141）。与 _sendEmailCode 同构，差别只在错误文案的细分：
+   短信通道未配置 / 冷却中 / 限流，三种失败在用户侧是三种不同的处境，
+   都显示「发送失败」等于让用户自己猜。 */
+function _sendSmsCode(){
+  var phone = $("#authPageLoginPhone");
+  var err = $("#authPageLoginError");
+  if(!phone || !phone.value){ if(err) err.textContent = t("api.phoneRequired", "请先填写手机号"); return; }
+  if(!_authValidPhone(phone.value)){ if(err) err.textContent = t("api.phoneInvalid", "手机号格式不正确"); return; }
+  var b = document.getElementById("authPageSendSmsCode");
+  if(b){ b.disabled = true; b.textContent = t("api.sendingCode", "发送中…"); }
+  var promise;
+  try{
+    if(typeof window.apiSendSmsCode === "function"){
+      promise = window.apiSendSmsCode(phone.value).then(function(r){
+        if(r && r.ok){ if(err) err.textContent = ""; if(b) b.textContent = t("api.codeSent", "已发送"); _authCodeCountdownStart(60, b); }
+        else{
+          _authCodeCountdownStop();
+          if(err) err.textContent = _ssoErrText(r) || ((r && r.data && r.data.error) || t("api.sendCodeFail", "发送失败"));
+        }
+      }).catch(function(){
+        // 同 _sendEmailCode：异步拒绝捕获不到，断网后必须恢复按钮允许重试。
+        _authCodeCountdownStop();
+        if(err) err.textContent = t("api.sendCodeFail", "发送失败");
+      });
+    }else{
+      throw new Error("no-api");
+    }
+  }catch(_e){
+    _authCodeCountdownStop();
+    if(err) err.textContent = t("api.ssoNoBackend", "当前环境无后端，无法发送验证码");
+  }
+  return promise;
+}
+async function _doAuthSmsLogin(phone, code){
+  if (_authBusy) return;
+  _authErrTo("authPageLoginError", "");
+  if (!_authValidPhone(phone)) { _authErrTo("authPageLoginError", t("api.phoneInvalid", "手机号格式不正确")); return; }
+  if (!/^\d{6}$/.test(code || "")) { _authErrTo("authPageLoginError", t("api.codeRequired6", "请输入 6 位短信验证码")); return; }
+  var btn = document.getElementById("authPageLoginSubmit");
+  if (btn) { btn.classList.add("loading"); btn.disabled = true; }
+  _authBusy = true;
+  try {
+    var r = await window.apiSmsLogin(phone, code);
+    if (r.ok) {
+      try { toast(t("api.loginSuccess", "登录成功"), "ok"); } catch (_) {}
+      try { window._updateUserButton(); } catch (_) {}
+      try { window._loadApiPanels(); } catch (_) {}
+      try { if (typeof cloudCheckOnLogin === "function") cloudCheckOnLogin(); } catch (_) {}
+      setActive("overview"); render();
+    } else {
+      _authErrTo("authPageLoginError", (r.data && r.data.error) || t("api.loginFailed", "登录失败"));
+    }
+  } catch (err) {
+    _authErrTo("authPageLoginError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.loginFailed", "登录失败"));
+  } finally {
+    _authBusy = false;
+    if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
+  }
+}
 function _authCodeCountdownStart(sec, btn){
   _authCodeCountdownStop();
+  /* 复位之后必须**再置一次**「已发送」：_authCodeCountdownStop() 会把文案刷回「发送验证码」，
+     不补这一刀的话，用户点完发送看到的是"按钮灰了、文案没变"，要等 1 秒倒计时 tick 才跳成
+     「重新发送 (59s)」——一秒内界面说的是"还能发"，实际已经进了冷却。 */
+  if(btn) btn.textContent = t("api.codeSent", "已发送");
   var left = sec;
   btn.disabled = true;
   _authCodeCountdown = setInterval(function(){
@@ -1228,8 +1306,18 @@ var _wechatGeneration = 0;
    是误导（v3.7.112 真机联调观察到的形态）。其余错误码一律不映射（写宽会把限流等也显示成
    "未配置"，同样误导），保持原文案。 */
 function _ssoErrText(r){
-  if(r && r.data && r.data.error === "github_not_configured"){
+  var code = r && r.data && r.data.error;
+  if(code === "github_not_configured"){
     return t("api.ssoNotConfigured", "后端未配置该第三方登录方式（详见部署文档）");
+  }
+  /* 短信是**按条计费**的通道，未配置与"配了但被限流"是两件完全不同的事，
+     笼统显示「发送失败」会让运维去查一个根本没配的通道。分开给准确文案。 */
+  if(code === "sms_not_configured"){
+    return t("api.smsNotConfigured", "后端未配置短信通道（详见部署文档）");
+  }
+  if(code === "sms_code_cooldown"){
+    var wait = r && r.data && r.data.retryAfter;
+    return t("api.smsCooldown", "验证码刚发过，请稍后再试") + (wait ? "（" + wait + "s）" : "");
   }
   return null;
 }
@@ -2412,18 +2500,35 @@ function _fillAuthBackendNotice(){
   });
 }
 
+/* 登录页的两种方式：邮箱密码 / 手机号验证码。
+   状态放模块级变量而不是 DOM：切换就是 render() 重建，没有"半套 DOM"的中间态。
+   v3.7.141（OD-001 选型 C）加短信；默认仍是邮箱，不改变任何既有路径。 */
+var _authLoginMethod = "email";
 function renderAuthLogin(){
+  const sms = _authLoginMethod === "sms";
+  const fields = sms
+    ? '<div class="auth-field"><label for="authPageLoginPhone">' + t("auth.phone","手机号") + '</label>' +
+        '<input type="tel" id="authPageLoginPhone" autocomplete="tel" inputmode="numeric" placeholder="' + t("auth.phonePh","11 位中国大陆手机号") + '" required></div>' +
+      /* 复用注册页验证码行那套 CSS（.auth-code-field/.auth-code-row/.auth-code-btn）——
+         零新增样式，也就不用动 HTML 里的 <style>（双态纪律：CSS 不在 src 分块里）。 */
+      '<div class="auth-field auth-code-field"><label for="authPageLoginSmsCode">' + t("auth.smsCode","短信验证码") + '</label>' +
+        '<div class="auth-code-row"><input type="text" id="authPageLoginSmsCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6" placeholder="' + t("api.codePh","6 位数字") + '">' +
+        '<button type="button" class="auth-code-btn" id="authPageSendSmsCode">' + t("api.sendCode","发送验证码") + '</button></div></div>'
+    : '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" required></div>' +
+      '<div class="auth-field"><label for="authPageLoginPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageLoginPassword" autocomplete="current-password" required></div>';
+  const tail = sms
+    ? '<a href="#" id="authPageSwitchEmail">' + t("auth.useEmailLogin","用邮箱密码登录") + '</a>'
+    : t("auth.noAccount","还没有账号？") + ' <a href="#" id="authPageToRegister">' + t("auth.goRegister","立即注册") + '</a>' +
+      '<br><a href="#" id="authPageSwitchSms">' + t("auth.useSmsLogin","用短信验证码登录") + '</a>';
   const html = _authPageHeader(t("api.login","登录"), true) +
     '<div class="card auth-form-card">' +
       '<form id="authPageLoginForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
-        '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" required></div>' +
-        '<div class="auth-field"><label for="authPageLoginPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageLoginPassword" autocomplete="current-password" required></div>' +
+        fields +
         '<p class="auth-error" id="authPageLoginError"></p>' +
-        '<button type="submit" class="auth-submit" id="authPageLoginSubmit">' + t("api.login","登录") + '</button>' +
-        '<p class="sub u-text-center" style="margin-top:var(--space-3)">' +
-          t("auth.noAccount","还没有账号？") +
-          ' <a href="#" id="authPageToRegister">' + t("auth.goRegister","立即注册") + '</a>' +
-        '</p>' +
+        /* 短信方式下按钮写「登录 / 注册」而不是「登录」：服务端是 find-or-create，
+           首次用手机号登录即建号。写「登录」会让新用户以为必须先去注册。 */
+        '<button type="submit" class="auth-submit" id="authPageLoginSubmit">' + (sms ? t("auth.smsLoginSubmit","登录 / 注册") : t("api.login","登录")) + '</button>' +
+        '<p class="sub u-text-center" style="margin-top:var(--space-3)">' + tail + '</p>' +
       '</form>' +
       '<div class="auth-sso-sep"><span>' + t("auth.ssoOr","或") + '</span></div>' +
       _authSsoButtons() +
@@ -2433,10 +2538,20 @@ function renderAuthLogin(){
   if(back) back.onclick = function(){ setActive("authwelcome"); render(); };
   const toReg = $("#authPageToRegister");
   if(toReg) toReg.onclick = function(e){ e.preventDefault(); setActive("authregister"); render(); };
+  const sw = $("#authPageSwitchSms");
+  if(sw) sw.onclick = function(e){ e.preventDefault(); _authLoginMethod = "sms"; render(); };
+  const swE = $("#authPageSwitchEmail");
+  if(swE) swE.onclick = function(e){ e.preventDefault(); _authLoginMethod = "email"; render(); };
+  const sendBtn = $("#authPageSendSmsCode");
+  if(sendBtn) sendBtn.onclick = function(){ _sendSmsCode(); };
   const form = $("#authPageLoginForm");
   if(form) form.onsubmit = function(e){
     e.preventDefault();
-    if(typeof _doAuthLogin === "function") _doAuthLogin($("#authPageLoginEmail").value, $("#authPageLoginPassword").value);
+    if(_authLoginMethod === "sms"){
+      if(typeof _doAuthSmsLogin === "function") _doAuthSmsLogin($("#authPageLoginPhone").value, $("#authPageLoginSmsCode").value);
+    }else if(typeof _doAuthLogin === "function"){
+      _doAuthLogin($("#authPageLoginEmail").value, $("#authPageLoginPassword").value);
+    }
   };
   _bindAuthSso();
 }

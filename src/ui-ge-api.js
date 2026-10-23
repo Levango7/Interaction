@@ -357,6 +357,31 @@
     });
   }
 
+  /* 短信验证码登录（v3.7.141 · OD-001 选型 C）：手机号 + 6 位码，无密码。
+     服务端语义：/sms-code **不校验该号是否已注册**（否则接口本身就成了"这个号注册过没有"
+     的枚举器），/sms-login 校验通过即 find-or-create —— 所以这里不区分"登录"和"注册"，
+     UI 上也不该给两个入口：对用户就是"用手机号登录"。 */
+  async function apiSendSmsCode(phone){
+    return apiFetch("/api/auth/sms-code", {
+      method: "POST",
+      body: JSON.stringify({ phone: phone }),
+    });
+  }
+
+  async function apiSmsLogin(phone, code, name){
+    const payload = { phone: phone, code: code, deviceName: _getDeviceLabel() };
+    if(name) payload.name = name;
+    const r = await apiFetch("/api/auth/sms-login", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if(r.ok && r.data && r.data.accessToken){
+      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + 15 * 60 * 1000);
+      _apiUser = r.data.user || null;
+    }
+    return r;
+  }
+
   // GitHub OAuth：获取授权跳转 URL（后端拼接 client_id / redirect_uri / state，返回 {authorizeUrl, state}）。
   // 回调由后端完成 code→token 后，通过 postMessage「agent-github-oauth」把 token 回传渲染层，或经 /api/auth/github/status 轮询。
   async function apiGithubOauthUrl(){
@@ -628,6 +653,8 @@
   window.apiLogin = apiLogin;
   window.apiRegister = apiRegister;
   window.apiSendEmailCode = apiSendEmailCode;
+  window.apiSendSmsCode = apiSendSmsCode;
+  window.apiSmsLogin = apiSmsLogin;
   window.apiGithubOauthUrl = apiGithubOauthUrl;
   window.apiWechatQrcode = apiWechatQrcode;
   window.apiWechatStatus = apiWechatStatus;
