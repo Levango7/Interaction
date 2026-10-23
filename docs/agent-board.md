@@ -42,6 +42,37 @@
 
 ## 条目
 
+### [2026-10-23 15:30 UTC+8] Qoder 主会话 —— **v3.7.140 已发并线上复核通过 · 释放占用**
+- 发版：`6a6ffea` + tag `v3.7.140`（BUILD_TAG `20261023a`）。**CI `39914362902` / Deploy `39914363069` /
+  Electron `39914362693` 全 success**；Pages built `07:09:23Z`；线上带 cache-buster 实测
+  `VERSION = "3.7.140"`。
+- 🔴 **首跑 e2e 腿红过一次，判为抖动而非回归**（红 3 次 ≠ 确定性，所以拿同 SHA 双跑定性）：
+  失败点是 `tests/e2e/ics-import-render.spec.js:82` 的 `gotoCalendarTab` —— `waiting for locator('[data-tasks-view="calendar"]')`
+  10s 未等到（tablet-768 腿）。三条定性证据：① **同 SHA `gh run rerun --failed` attempt2 四腿全绿**；
+  ② 本机净副本全量 e2e **156 passed / 0 failed**（同一 spec 同一视口）；③ 抽样 4 个历史绿 run 的 e2e 日志，
+  该 spec 的 `✘` 计数为 0 ⇒ 这条正是板上早就登记的 **CPU 饥饿型抖动**（`ics-import-render:82`），
+  近期第 1 次复发。**处置仍按登记：不改超时、不改断言。**
+- 线上复核（`_probe/live-ui-review.cjs`，五项都过）：右栏三页真内容、进度条 `执行工具：create_task · 2/3`+67%
+  与流式 `1.2k 字` 不确定态、悬停 title = 触发原话、表格 4 格 + 引用块、mermaid 真出 SVG 且产物内无 `script`、
+  `ERRORS []`。
+- 📐 **一个带条件的实测数字**（别当静态结论用）：线上**首次**出现 mermaid 代码块到出图 **13,573 ms**
+  （3.3MB 冷下载 + 解析；本机 `file://` 同一段是秒级）。第二次起由 SW 同源缓存接管就不再付这个钱。
+  复核脚本原先 `waitForTimeout(4000)` 写死等待，把这条判成过**假阴性**——已改成等条件成立
+  （`.mermaid-figure svg` 或 `.mermaid-fail`，上限 30s）。**等待条件本身也是判据。**
+- 顺手量的一个数（决定不优化）：新加的 `_renderRailFiles/_renderRailAgent` 挂在 `renderSide`→`renderTaskRail`
+  每次渲染都跑，最坏现实量（60 个 KB 文件 × 20 块）实测 **0.26 ms/次** ⇒ 不值得加脏标记缓存，留着简单路径。
+- 🔴 遗留（交接给下一个读板的人，含我自己下一批）：
+  ① **首图那 13.6s 界面上没有"正在加载图表引擎"的中间态**——用户只看到源码块，然后突然变图。
+     该补一个加载态（或给"点击渲染"的按需入口），这是产品体验问题不是工程债；
+  ② MCP 仍是配置壳（右栏故意不列它），引擎接线是后端级工程；
+  ③ "生成文件清单"要的是 AI 产物落盘账，现在文件页列的是知识库文件，名不副实的那半没做；
+  ④ 对方 `c136f99`（v1.6-B）**我替他保守没推**，仍在本地 main 上等他自己的窗口。
+- 释放：本会话持有的 `src/{util-markdown,ai-tools,ai-retry,render-widgets,core-i18n,ui-ge-integrations}.js`、
+  `agent-workbench.html`、`vendor/mermaid/**`、`package{.json,-lock.json}`、`deploy.yml`、`.gitattributes`、
+  `CHANGELOG.md` `[Unreleased]` 段首、`AGENTS.md` §二、`docs/agent-board.md` 全部释放，本机不留后台任务。
+- 净副本改在 **`F:/wt/wb140`**（含自己的 node_modules）；`F:\tmp` 已被外部清空过一次，不再往那儿放。
+
+
 ### [2026-10-23 14:40 UTC+8] Qoder 主会话（3.7.140：表格/引用 · 真进度 · 右栏三页 · Mermaid · **按 R10：这一笔就推**）
 - 🔴 **先播报一个环境事故**：`F:\tmp` 在 **13:34 前后被外部整目录清空**，`wb-138 / wb-g1 / wb-g2 / wb-g3`
   四个 worktree 的**目录已不存在**（`git worktree list` 里还剩 prunable 残留，我没动 metadata）。
