@@ -382,6 +382,27 @@
     return r;
   }
 
+  /* 密码重置 / 忘记密码（2026-10-24）。
+     客户端这边最重要的一条纪律是**不要试图猜"这个邮箱注册过没有"**：服务端刻意让存在与
+     不存在的响应逐字节相同（否则这个接口就是一台「查某邮箱是否注册过」的枚举器），
+     前端一旦加个"该邮箱未注册"的友好提示，就等于把服务端口径又漏回浏览器。
+     所以发码成功一律提示「如果该邮箱已注册，重置邮件已发送」—— 事实层面确实如此。 */
+  async function apiSendPasswordResetCode(email){
+    return apiFetch("/api/auth/password-reset-code", {
+      method: "POST",
+      body: JSON.stringify({ email: email }),
+    });
+  }
+
+  /* 服务端**不**在重置成功时签发 token（少一处「重置即接管」窗口），
+     所以这里刻意不调 apiSetTokens —— 用户必须用新密码走一次登录。 */
+  async function apiPasswordReset(email, code, newPassword){
+    return apiFetch("/api/auth/password-reset", {
+      method: "POST",
+      body: JSON.stringify({ email: email, code: code, newPassword: newPassword, deviceName: _getDeviceLabel() }),
+    });
+  }
+
   // GitHub OAuth：获取授权跳转 URL（后端拼接 client_id / redirect_uri / state，返回 {authorizeUrl, state}）。
   // 回调由后端完成 code→token 后，通过 postMessage「agent-github-oauth」把 token 回传渲染层，或经 /api/auth/github/status 轮询。
   async function apiGithubOauthUrl(){
@@ -655,6 +676,8 @@
   window.apiSendEmailCode = apiSendEmailCode;
   window.apiSendSmsCode = apiSendSmsCode;
   window.apiSmsLogin = apiSmsLogin;
+  window.apiSendPasswordResetCode = apiSendPasswordResetCode;
+  window.apiPasswordReset = apiPasswordReset;
   window.apiGithubOauthUrl = apiGithubOauthUrl;
   window.apiWechatQrcode = apiWechatQrcode;
   window.apiWechatStatus = apiWechatStatus;

@@ -153,3 +153,31 @@ test.describe("移动端引导 modal（375×667 布局不变量）", () => {
     await expect(page.locator("#taskForm")).toBeVisible();
   });
 });
+
+/* 2026-10-24（密码重置批次）：三个 auth 页在 375px 下的横向溢出守护。
+   此前**没有任何窄屏断言覆盖 auth 页** —— 它们不在场景导航里，mobile.spec 与 nav-pages-smoke
+   都只走 sc 页面。而登录 / 注册 / 重置共用 `.auth-form-card` + `.auth-field` 那套，
+   往里加一个字段就多一次溢出风险，且只有真机用户会发现。
+   重置页是本次新增，特意与注册页同构（同字段数、同验证码行），所以这一条同时保护三页。 */
+test.describe("auth 页窄屏不溢出（2026-10-24）", () => {
+  test.beforeAll(() => {
+    test.skip(!process.env.E2E, "set E2E=1 to run");
+  });
+
+  test("登录 / 注册 / 重置密码三页在 375px 下都不产生横向溢出", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#mobBar", { timeout: 15_000 });
+    for (const view of ["authlogin", "authregister", "authreset"]) {
+      await page.evaluate((v) => {
+        const setA = (window.__test && window.__test.setActive) || window.setActive;
+        const ren = (window.__test && window.__test.render) || window.render;
+        setA(v); ren();
+      }, view);
+      await page.waitForSelector("#main .auth-form-card", { timeout: 10_000 });
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+      expect(overflow, view + " 在 375px 下横向溢出").toBeLessThanOrEqual(0);
+    }
+  });
+});

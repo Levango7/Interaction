@@ -1146,12 +1146,12 @@ async function _doAuthRegister(name, email, password, confirm, code) {
  * 后端（Electron 版 / 自建服务）提供对应端点；浏览器纯静态形态后端不存在时降级为 toast 提示。
  * 邮箱验证码：注册页「发送验证码」按钮，成功后 60s 倒计时。 */
 var _authCodeCountdown = null;
-/* 两个「发送验证码」按钮（注册页邮箱 / 登录页短信）共用同一个倒计时句柄，
+/* 三个「发送验证码」按钮（注册页邮箱 / 登录页短信 / 重置页邮箱）共用同一个倒计时句柄，
    故复位时必须**都**恢复：只恢复 id 写死的那个，会让另一个永久停在「发送中…」且 disabled
    —— 用户看到的是一个点了没反应、再也点不动的按钮。 */
 function _authCodeCountdownStop(){
   if(_authCodeCountdown){ clearInterval(_authCodeCountdown); _authCodeCountdown = null; }
-  var ids = ["authPageSendCode", "authPageSendSmsCode"];
+  var ids = ["authPageSendCode", "authPageSendSmsCode", "authPageSendResetCode"];
   for(var i = 0; i < ids.length; i++){
     var b = document.getElementById(ids[i]);
     if(b){ b.disabled = false; b.textContent = t("api.sendCode", "发送验证码"); }
@@ -1238,6 +1238,93 @@ async function _doAuthSmsLogin(phone, code){
     }
   } catch (err) {
     _authErrTo("authPageLoginError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.loginFailed", "登录失败"));
+  } finally {
+    _authBusy = false;
+    if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
+  }
+}
+/* ---------- 密码重置 / 忘记密码（2026-10-24）----------
+ * 这套流程存在的理由很朴素：注册要邮箱+密码+验证码，但此前**没有任何找回路径** ——
+ * `/register` 与 `/email-code` 都以 `email_exists` 拒掉已存在的邮箱，于是忘密码 = 账号永久锁死。
+ *
+ * 界面侧有一条容易写错的地方：服务端对「该邮箱是否注册过」一个字都不漏（存在与不存在
+ * 返回逐字节相同的响应），所以**这里也不能出现"该邮箱未注册"的提示**。发码成功一律说
+ * 「已发送（如果该邮箱已注册）」，这不是含糊其辞，是这件事的真实形状。
+ */
+function _sendResetCode(){
+  var email = $("#authPageResetEmail");
+  var err = $("#authPageResetError");
+  if(!email || !email.value){ if(err) err.textContent = t("api.emailRequired", "请先填写邮箱"); return; }
+  if(!_authValidEmail(email.value)){ if(err) err.textContent = t("api.emailInvalid", "邮箱格式不正确"); return; }
+  var b = document.getElementById("authPageSendResetCode");
+  if(b){ b.disabled = true; b.textContent = t("api.sendingCode", "发送中…"); }
+  var promise;
+  try{
+    if(typeof window.apiSendPasswordResetCode === "function"){
+      promise = window.apiSendPasswordResetCode(email.value).then(function(r){
+        if(r && r.ok){
+          if(err) err.textContent = "";
+          if(b) b.textContent = t("auth.resetCodeSent", "已发送");
+          _authCodeCountdownStart(60, b);
+        }else{
+          _authCodeCountdownStop();
+          /* 只细分能公开的两类：通道没配（503，与邮箱无关）/ 太频繁（429）。
+             其余一律笼统 —— 其余分支的差异本来就是存在性信息。 */
+          var codeName = (r && r.data && r.data.error) || "";
+          var msg = t("api.sendCodeFail", "发送失败");
+          if(codeName === "email_not_configured") msg = t("auth.resetChannelMissing", "该服务未配置邮件通道，无法发送重置邮件");
+          else if(codeName === "rate_limited") msg = t("err.tooManyRequests", "操作太频繁，请稍后再试");
+          if(err) err.textContent = msg;
+        }
+      }).catch(function(){
+        _authCodeCountdownStop();
+        if(err) err.textContent = t("api.sendCodeFail", "发送失败");
+      });
+    }else{
+      throw new Error("no-api");
+    }
+  }catch(_e){
+    _authCodeCountdownStop();
+    if(err) err.textContent = t("api.ssoNoBackend", "当前环境无后端，无法发送验证码");
+  }
+  return promise;
+}
+/* 提交重置。四道本地校验与服务端**同口径**（邮箱形状 / 6 位码 / 8 位密码 / 两次一致）：
+   口径不一致的代价是用户填完才在服务端被拒，而界面一直显示"可以提交"。 */
+var _authPrefillEmail = "";   // 重置成功后回填到登录页，免得用户再把邮箱打一遍
+async function _doAuthPasswordReset(email, code, pw, pw2){
+  if (_authBusy) return;
+  _authErrTo("authPageResetError", "");
+  if (!_authValidEmail(String(email || ""))) { _authErrTo("authPageResetError", t("api.emailInvalid", "邮箱格式不正确")); return; }
+  if (!/^\d{6}$/.test(String(code || ""))) { _authErrTo("authPageResetError", t("api.resetCodeRequired6", "请输入 6 位验证码")); return; }
+  if (String(pw || "").length < 8) { _authErrTo("authPageResetError", t("api.passwordTooShort", "密码至少 8 位")); return; }
+  if (pw !== pw2) { _authErrTo("authPageResetError", t("api.passwordMismatch", "两次输入的密码不一致")); return; }
+  var btn = document.getElementById("authPageResetSubmit");
+  if (btn) { btn.classList.add("loading"); btn.disabled = true; }
+  _authBusy = true;
+  try {
+    var r = await window.apiPasswordReset(email, code, pw);
+    if (r && r.ok) {
+      var revoked = (r.data && r.data.sessionsRevoked) || 0;
+      _authPrefillEmail = String(email || "");
+      /* 把「连带几台设备下线」如实说出来：这既是结果的一部分，也是改密生效的证据。
+         用户如果发现多了一台自己不认识的设备，这条提示就是唯一的线索。 */
+      try {
+        toast(revoked > 0
+          ? t("auth.resetDoneRevoked", "密码已重置，并已退出 {n} 台设备的登录").replace("{n}", revoked)
+          : t("auth.resetDone", "密码已重置，请用新密码登录"), "ok");
+      } catch (_) {}
+      _authLoginMethod = "email";
+      setActive("authlogin"); render();
+    } else {
+      var cn = (r && r.data && r.data.error) || "";
+      var m = t("api.resetFailed", "重置失败，请检查验证码是否已过期");
+      if (cn === "password_too_short") m = t("api.passwordTooShort", "密码至少 8 位");
+      else if (cn === "code_invalid" || cn === "code_expired_or_invalid") m = t("api.resetCodeInvalid", "验证码错误或已过期，请重新获取");
+      _authErrTo("authPageResetError", m);
+    }
+  } catch (err) {
+    _authErrTo("authPageResetError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.resetFailed", "重置失败，请检查验证码是否已过期"));
   } finally {
     _authBusy = false;
     if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
@@ -2514,12 +2601,15 @@ function renderAuthLogin(){
       '<div class="auth-field auth-code-field"><label for="authPageLoginSmsCode">' + t("auth.smsCode","短信验证码") + '</label>' +
         '<div class="auth-code-row"><input type="text" id="authPageLoginSmsCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6" placeholder="' + t("api.codePh","6 位数字") + '">' +
         '<button type="button" class="auth-code-btn" id="authPageSendSmsCode">' + t("api.sendCode","发送验证码") + '</button></div></div>'
-    : '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" required></div>' +
+    : '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" value="' + esc(_authPrefillEmail || "") + '" required></div>' +
       '<div class="auth-field"><label for="authPageLoginPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageLoginPassword" autocomplete="current-password" required></div>';
   const tail = sms
     ? '<a href="#" id="authPageSwitchEmail">' + t("auth.useEmailLogin","用邮箱密码登录") + '</a>'
     : t("auth.noAccount","还没有账号？") + ' <a href="#" id="authPageToRegister">' + t("auth.goRegister","立即注册") + '</a>' +
-      '<br><a href="#" id="authPageSwitchSms">' + t("auth.useSmsLogin","用短信验证码登录") + '</a>';
+      '<br><a href="#" id="authPageSwitchSms">' + t("auth.useSmsLogin","用短信验证码登录") + '</a>' +
+      /* 「忘记密码」只挂在邮箱密码这一侧：短信方式的用户压根没有密码，给他们一个重置入口
+         才是真的困惑。 */
+      ' · <a href="#" id="authPageToReset">' + t("auth.forgotPassword","忘记密码？") + '</a>';
   const html = _authPageHeader(t("api.login","登录"), true) +
     '<div class="card auth-form-card">' +
       '<form id="authPageLoginForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
@@ -2542,6 +2632,8 @@ function renderAuthLogin(){
   if(sw) sw.onclick = function(e){ e.preventDefault(); _authLoginMethod = "sms"; render(); };
   const swE = $("#authPageSwitchEmail");
   if(swE) swE.onclick = function(e){ e.preventDefault(); _authLoginMethod = "email"; render(); };
+  const toReset = $("#authPageToReset");
+  if(toReset) toReset.onclick = function(e){ e.preventDefault(); setActive("authreset"); render(); };
   const sendBtn = $("#authPageSendSmsCode");
   if(sendBtn) sendBtn.onclick = function(){ _sendSmsCode(); };
   const form = $("#authPageLoginForm");
@@ -2554,6 +2646,47 @@ function renderAuthLogin(){
     }
   };
   _bindAuthSso();
+}
+
+/* 重置密码页（2026-10-24）。三件事与登录页刻意不同：
+   ① 没有 SSO 按钮 —— 忘记密码是密码体系内的事，混进"或，用微信登录"只会让人以为
+      重置是必选项；
+   ② 提示语不承诺"邮件已发到你的邮箱"，只承诺"如果该邮箱已注册，就会收到"（服务端口径一致）；
+   ③ 提交按钮下给一条回登录页的明确路径 —— 用户走到这一步常常是误点进来的。 */
+function renderAuthReset(){
+  const html = _authPageHeader(t("auth.resetTitle","重置密码"), true) +
+    '<div class="card auth-form-card">' +
+      '<form id="authPageResetForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
+        '<p class="sub">' + t("auth.resetHint","填写注册邮箱，我们会发送一条 6 位验证码。") + '</p>' +
+        '<div class="auth-field"><label for="authPageResetEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageResetEmail" autocomplete="email" value="' + esc(_authPrefillEmail || "") + '" required></div>' +
+        '<div class="auth-field auth-code-field"><label for="authPageResetCode">' + t("api.code","邮箱验证码") + '</label>' +
+          '<div class="auth-code-row"><input type="text" id="authPageResetCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6" placeholder="' + t("api.codePh","6 位数字") + '">' +
+          '<button type="button" class="auth-code-btn" id="authPageSendResetCode">' + t("api.sendCode","发送验证码") + '</button></div></div>' +
+        '<div class="auth-field"><label for="authPageResetPassword">' + t("auth.newPassword","新密码") + '</label><input type="password" id="authPageResetPassword" autocomplete="new-password" placeholder="' + t("auth.passwordPh","至少 8 位") + '" required></div>' +
+        '<div class="auth-field"><label for="authPageResetPassword2">' + t("api.passwordConfirm","确认密码") + '</label><input type="password" id="authPageResetPassword2" autocomplete="new-password" required></div>' +
+        '<p class="auth-error" id="authPageResetError"></p>' +
+        '<button type="submit" class="auth-submit" id="authPageResetSubmit">' + t("auth.resetSubmit","重置密码") + '</button>' +
+        '<p class="sub u-text-center" style="margin-top:var(--space-3)"><a href="#" id="authPageResetToLogin">' + t("auth.backToLogin","返回登录") + '</a></p>' +
+      '</form>' +
+    '</div>';
+  $("#main").innerHTML = sanitizeHtml(html);
+  /* 返回按钮回**登录页**而不是欢迎页：这一页是从登录页点进来的，退回去应当是上一步。 */
+  const back = $("#authPageBack");
+  if(back) back.onclick = function(){ setActive("authlogin"); render(); };
+  const toLogin = $("#authPageResetToLogin");
+  if(toLogin) toLogin.onclick = function(e){ e.preventDefault(); setActive("authlogin"); render(); };
+  const sendBtn = $("#authPageSendResetCode");
+  if(sendBtn) sendBtn.onclick = function(){ _sendResetCode(); };
+  const form = $("#authPageResetForm");
+  if(form) form.onsubmit = function(e){
+    e.preventDefault();
+    _doAuthPasswordReset(
+      ($("#authPageResetEmail") || {}).value,
+      ($("#authPageResetCode") || {}).value,
+      ($("#authPageResetPassword") || {}).value,
+      ($("#authPageResetPassword2") || {}).value
+    );
+  };
 }
 
 function renderAuthRegister(){

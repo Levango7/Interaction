@@ -93,6 +93,9 @@ function render(){
     if(active==="authwelcome"){ renderAuthWelcome(); appendFoot(); return; }
     if(active==="authlogin"){ renderAuthLogin(); appendFoot(); return; }
     if(active==="authregister"){ renderAuthRegister(); appendFoot(); return; }
+    /* 2026-10-24：忘记密码。此前只有 welcome/login/register 三个 auth 页 ——
+       而"忘密码"这件事在界面上根本无处可去（服务端也没有端点，见 auth.js 的注释）。 */
+    if(active==="authreset"){ renderAuthReset(); appendFoot(); return; }
     if(active==="timeline"){ renderTimelinePage(); appendFoot(); return; } // v3.4.7 批次五：任务时间轴页
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
