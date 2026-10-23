@@ -927,6 +927,7 @@ describe("Electron IPC: webdav-fetch 云同步中转", () => {
  * 但链路本地/元数据段（169.254/16、fe80::/10）、未指定与组播必须拦 —— 防被 XSS 借道扫元数据。
  * ============================================================ */
 describe("Electron IPC: mcp-fetch MCP 中转", () => {
+  const mcpLog = () => { try { return readFileSync(path.join(mockAppRef.current.getPath("userData"), "logs", "app.log"), "utf8"); } catch (e) { return ""; } };
   const OK_ARG = { url: "http://127.0.0.1:31337/mcp",
     headers: { "content-type": "application/json", authorization: "Bearer t", "x-evil": "1" },
     body: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' };
@@ -981,6 +982,25 @@ describe("Electron IPC: mcp-fetch MCP 中转", () => {
     }
     const big = await ipcHandlers["mcp-fetch"](trustedEv(), Object.assign({}, OK_ARG, { body: "x".repeat(2 * 1024 * 1024 + 1) }));
     expect(big.error).toBe("body_too_large");
+    expect(calls.length).toBe(0);
+  });
+
+  it("auth 参数：按指定头名注入，且密钥不进日志", async () => {
+    const { calls } = installFetch();
+    const r = await ipcHandlers["mcp-fetch"](trustedEv(), Object.assign({}, OK_ARG, { auth: { header: "Authorization", value: "Bearer s3cr3t" } }));
+    expect(r.ok).toBe(true);
+    expect(calls[0].opts.headers["authorization"]).toBe("Bearer s3cr3t");
+    expect(mcpLog(), "日志绝不许出现密钥").not.toContain("s3cr3t");
+  });
+
+  it("🔴 auth 头名非法或危险（host / 带空格 / 超长）：拒且零请求", async () => {
+    const { calls } = installFetch();
+    for (const h of ["host", "cookie", "bad name", "x".repeat(65)]) {
+      const r = await ipcHandlers["mcp-fetch"](trustedEv(), Object.assign({}, OK_ARG, { auth: { header: h, value: "v" } }));
+      expect(r.error, h).toBe("bad_auth_header");
+    }
+    const empty = await ipcHandlers["mcp-fetch"](trustedEv(), Object.assign({}, OK_ARG, { auth: { header: "x-key", value: "" } }));
+    expect(empty.error).toBe("bad_auth_value");
     expect(calls.length).toBe(0);
   });
 

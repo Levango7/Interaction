@@ -1033,6 +1033,7 @@ function renderAiMcpList(){
   servers.forEach(function(srv, i){
     const name = String((srv && srv.name) || "").trim();
     const rt = name ? mcpRuntimeInfo(name) : { tools: [], at: 0, err: "" };
+    const sec = (typeof mcpSecretState === "function") ? mcpSecretState(name) : { set: false, header: "" };
     const allow = (srv && Array.isArray(srv.allow)) ? srv.allow : [];
     let status = t("mcp.saveFirst", "先保存配置，再刷新工具");
     if(name){
@@ -1062,7 +1063,19 @@ function renderAiMcpList(){
       "<div class=\"btn-row u-mt-1\">"+
       "<button type=\"button\" class=\"addbtn sm u-nowrap\" data-mcp-refresh=\""+i+"\" data-sc=\"accent\">"+esc(t("mcp.refresh","连接并刷新"))+"</button>"+
       "<span class=\"set-tip\" data-mcp-status=\""+i+"\">"+esc(status)+"</span>"+
-      "</div>"+toolsHtml+
+      "</div>"+
+      /* 2026-10-24：私有端点认证 —— 只持久化"哪种认证 + 头名"，密钥值只在会话内存（不回填、不落盘） */
+      "<div class=\"btn-row u-mt-1\">"+
+      "<select data-mcp-auth-type=\""+i+"\" aria-label=\""+esc(t("mcp.authType","认证方式"))+"\">"+
+      "<option value=\"none\""+((srv.authType||"none")==="none"?" selected":"")+">"+esc(t("mcp.authNone","无认证"))+"</option>"+
+      "<option value=\"bearer\""+(srv.authType==="bearer"?" selected":"")+">Bearer Token</option>"+
+      "<option value=\"header\""+(srv.authType==="header"?" selected":"")+">"+esc(t("mcp.authHeaderMode","自定义头"))+"</option>"+
+      "</select>"+
+      (srv.authType==="header" ? "<input data-mcp-auth-header=\""+i+"\" placeholder=\"X-Api-Key\" value=\""+esc(srv.authHeader||"")+"\" class=\"u-min-w-120\">" : "")+
+      (srv.authType && srv.authType!=="none" ? "<input type=\"password\" data-mcp-auth-secret=\""+i+"\" placeholder=\""+esc(sec.set ? t("mcp.authSetPh","已设置（不显示；重填即覆盖）") : t("mcp.authPh","粘贴密钥（只存会话内存）"))+"\" class=\"u-flex-1\" autocomplete=\"off\">" : "")+
+      "</div>"+
+      (srv.authType && srv.authType!=="none" ? "<div class=\"set-tip\">"+esc(t("mcp.authHint","⚠ 密钥只保存在本次会话内存：不写入本地存储、不进备份与云同步，刷新或关闭页面即失效。"))+"</div>" : "")+
+      toolsHtml+
       "</div>";
     box.appendChild(row);
   });
@@ -1096,6 +1109,48 @@ function renderAiMcpList(){
     };
   });
   /* 2026-10-23：勾选即时落盘（allow 列表），勾上才注入 schema */
+  /* 2026-10-24：认证方式/头名只落配置；密钥值走 mcpSetSecret（会话内存），**绝不写进配置** */
+  $$("[data-mcp-auth-type]").forEach(function(sel){
+    sel.onchange = function(){
+      const idx = parseInt(sel.getAttribute("data-mcp-auth-type"), 10);
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      if(!list[idx]) return;
+      list[idx].authType = ["none","bearer","header"].indexOf(sel.value) >= 0 ? sel.value : "none";
+      saveAiConfig("mcp", saved2);
+      const nm = String(list[idx].name || "").trim();
+      if(nm) mcpSetSecret(nm, "");   /* 改认证方式即作废旧值，避免用错头 */
+      renderAiMcpList();
+    };
+  });
+  $$("[data-mcp-auth-header]").forEach(function(inp){
+    inp.onchange = function(){
+      const idx = parseInt(inp.getAttribute("data-mcp-auth-header"), 10);
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      if(!list[idx]) return;
+      list[idx].authHeader = String(inp.value || "").trim();
+      saveAiConfig("mcp", saved2);
+      const nm = String(list[idx].name || "").trim();
+      const st = mcpSetSecret(nm, "");  /* 头名变了，旧密钥作废 */
+      renderAiMcpList();
+      void st;
+    };
+  });
+  $$("[data-mcp-auth-secret]").forEach(function(inp){
+    inp.onchange = function(){
+      const idx = parseInt(inp.getAttribute("data-mcp-auth-secret"), 10);
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      if(!list[idx]) return;
+      const nm = String(list[idx].name || "").trim();
+      if(!nm){ toast(t("mcp.saveFirst", "先保存配置，再刷新工具")); return; }
+      const ok = mcpSetSecret(nm, inp.value || "");
+      inp.value = "";   /* 值不回显、不留在 DOM */
+      toast(ok ? t("mcp.authSaved", "密钥已存进本次会话内存") : t("mcp.authNeedHeader", "先填一个合法的头名（或改用 Bearer）"));
+      renderAiMcpList();
+    };
+  });
   $$("[data-mcp-tool]").forEach(function(cb){
     cb.onchange = function(){
       const raw = cb.getAttribute("data-mcp-tool") || "";

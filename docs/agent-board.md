@@ -42,6 +42,21 @@
 
 ## 条目
 
+### [2026-10-24 06:40 UTC+8] Qoder 主会话 —— **私有 MCP 端点鉴权**（用户点名「启动」· 按顺序第三项）
+- 占用：`src/{ai-tools,ui-global-events,ui-ge-integrations,core-i18n}.js`、`electron/main.js`（仅 mcp-fetch 内的 auth 校验）、
+  `tests/{mcp-client,electron-ipc}.test.js`、`CHANGELOG.md` `[Unreleased]`、`docs/{PRODUCT,user-manual,module-graph}.md`、
+  `AGENTS.md` §二、本板。
+- 核心取舍：**只持久化"用哪种认证 + 头名"，密钥值只活会话内存**（飞书/钉钉那条规矩），输入框 `type=password`、
+  设置后不回填、填完清空 DOM。改认证方式或头名即作废旧密钥。
+- 两道校验：渲染层 `mcpSetSecret` 与主进程 auth 参数各自按 `^[A-Za-z0-9-]{1,64}$` + 禁止名单（host/cookie/…）拒一次；
+  非法头名**零请求**。Electron 代理用独立 `auth:{header,value}`，不并进 headers 白名单；日志绝不记密钥。
+- 证据：`mcp-client` +6、`electron-ipc` +2；变异验证（`_mcpAuth` 掐成 null）⇒ 恰好 3 红；
+  13 道门禁全 exit=0（lint 0 error）。全量单测 / e2e 与线上复核在最终树补登。
+- 🔴 过程如实记：第一版补丁用 `split().join()` 注入 auth 校验，**打进了 chat / notify-send 两个无关 handler**
+  （同一行 `const ctrl = new AbortController();` 在三处出现）—— 被 `npm run lint` 的 no-undef 当场抓住，已删除多余两处。
+  教训：**整文件全局替换前先数命中次数**，只该改一处就按唯一上下文替换。
+- 版本预登记：**3.7.144**（§二）。
+
 ### [2026-10-24 05:30 UTC+8] Qoder 主会话 —— **MCP 走 Electron 主进程代理**（用户点名「开始实现」· 按顺序第二项）
 - 占用：`electron/{main,preload}.js`、`src/ai-tools.js`（_mcpRpc 一处分支 + 两个助手）、`src/core-i18n.js`（1 键）、
   `tests/{electron-ipc,mcp-client}.test.js`、`CHANGELOG.md` `[Unreleased]`、`docs/{PRODUCT,user-manual,module-graph}.md`、

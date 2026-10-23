@@ -410,8 +410,10 @@ function _mcpProxy(){
  * 走主进程发一条 JSON-RPC，并包成与 fetch Response 同形的最小子集 ——
  * 让 _mcpRpc 只有一处分支，成功/失败语义与直连保持一致。
  */
-async function _mcpProxyPost(server, headers, payload){
-  const r = await _mcpProxy()({ url: server.url, headers: headers, body: JSON.stringify(payload), timeoutMs: MCP_RPC_TIMEOUT_MS });
+async function _mcpProxyPost(server, headers, payload, auth){
+  const arg = { url: server.url, headers: headers, body: JSON.stringify(payload), timeoutMs: MCP_RPC_TIMEOUT_MS };
+  if(auth) arg.auth = { header: auth.header, value: auth.value };   /* 主进程单独校验头名并注入 */
+  const r = await _mcpProxy()(arg);
   if(!r || !r.ok){
     throw new Error(t("mcp.proxyFail", "Electron 主进程中转失败：") + ((r && r.error) || "proxy_failed"));
   }
@@ -431,9 +433,47 @@ function mcpServers(){
   const c = getAiConfig("mcp") || {};
   const list = Array.isArray(c.servers) ? c.servers : [];
   return list.map(function(s){
+    const at = String((s && s.authType) || "none");
     return { name: String((s && s.name) || "").trim(), url: String((s && s.url) || "").trim(),
-      enabled: !!(s && s.enabled), allow: (s && Array.isArray(s.allow)) ? s.allow.map(String) : [] };
+      enabled: !!(s && s.enabled), allow: (s && Array.isArray(s.allow)) ? s.allow.map(String) : [],
+      /* 只持久化"用哪种认证 + 自定义头名"，**密钥值不入配置**（见 _mcpSecrets） */
+      authType: (at === "bearer" || at === "header") ? at : "none",
+      authHeader: String((s && s.authHeader) || "").trim() };
   }).filter(function(s){ return s.enabled && s.name && /^https?:\/\//i.test(s.url); });
+}
+/* ---------- 私有端点鉴权（2026-10-24）：密钥只活会话内存 ----------
+ * 沿用飞书/钉钉那条规矩（用户 2026-09-29 定）：凭据不落盘、不进备份/云同步、刷新即失效。
+ * 因此**配置里只有 authType/authHeader**，值存在 _mcpSecrets（模块级，随页面刷新清空）。
+ * Bearer 模式发 Authorization: Bearer <value>；自定义模式原样发到指定头。 */
+const _mcpSecrets = {};
+const MCP_AUTH_HEADER_RE = /^[A-Za-z0-9-]{1,64}$/;
+const MCP_AUTH_HEADER_DENY = ["host", "content-length", "connection", "cookie", "origin", "referer",
+  "upgrade", "transfer-encoding", "te", "trailer", "proxy-authorization", "proxy-authenticate", "set-cookie"];
+/** 记录/清除某台服务器的认证密钥（value 为空即清除）。@returns {boolean} 是否已设置 */
+function mcpSetSecret(name, value){
+  const nm = String(name || "").trim();
+  if(!nm) return false;
+  const v = String(value == null ? "" : value);
+  if(!v){ delete _mcpSecrets[nm]; return false; }
+  const srv = _mcpServer(nm);
+  const header = (srv && srv.authType === "header") ? srv.authHeader : "authorization";
+  if(!MCP_AUTH_HEADER_RE.test(header) || MCP_AUTH_HEADER_DENY.indexOf(header.toLowerCase()) >= 0) return false;
+  _mcpSecrets[nm] = { header: header.toLowerCase(), value: v.slice(0, 4096) };
+  return true;
+}
+/** 会话内是否已设置（供 UI 显示，**不回传值**） */
+function mcpSecretState(name){
+  const s = _mcpSecrets[String(name || "").trim()];
+  return s ? { set: true, header: s.header } : { set: false, header: "" };
+}
+/** 清空所有会话密钥（切配置/登出时可调） */
+function mcpClearSecrets(){ Object.keys(_mcpSecrets).forEach(function(k){ delete _mcpSecrets[k]; }); }
+/** 取某台服务器要带的认证（没有就 null）——值只在这一刻被使用，不进日志 */
+function _mcpAuth(server){
+  const mem = _mcpSecrets[server.name];
+  if(!mem || !mem.value) return null;
+  const value = (server.authType === "bearer" && mem.header === "authorization") ? ("Bearer " + mem.value) : mem.value;
+  return { header: mem.header, value: value };
 }
 function _mcpServer(name){
   const hit = mcpServers().filter(function(s){ return s.name === name; });
@@ -464,6 +504,7 @@ async function _mcpRpc(server, payload, opts){
   const rt = _mcpRuntime[server.name];
   const headers = { "content-type": "application/json", "accept": "application/json, text/event-stream" };
   if(rt && rt.sessionId) headers["mcp-session-id"] = rt.sessionId;
+  const auth = _mcpAuth(server);   /* 会话内存凭据：只在这里被读一次 */
   const ctl = (typeof AbortController === "function") ? new AbortController() : null;
   /* AbortController.abort() 对已结束的请求是 no-op，不需要兜 */
   const timer = ctl ? setTimeout(function(){ ctl.abort(); }, MCP_RPC_TIMEOUT_MS) : null;
@@ -472,9 +513,10 @@ async function _mcpRpc(server, payload, opts){
     /* Electron：主进程代发 —— 只有这条路能同时绕开 CORS 与 Chrome 的本地网络权限 */
     if(timer) clearTimeout(timer);
     /* 错误已由 _mcpProxyPost 归类成「主进程中转失败」，不要再包成 CORS 话术 */
-    res = await _mcpProxyPost(server, headers, payload);
+    res = await _mcpProxyPost(server, headers, payload, auth);
   } else {
     try{
+      if(auth) headers[auth.header] = auth.value;
       res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
         signal: ctl ? ctl.signal : undefined });
     }catch(e){

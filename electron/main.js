@@ -974,12 +974,24 @@ function _netHostForbidden(host){
       const body = (arg && typeof arg.body === "string") ? arg.body : "";
       if(body.length > _OUTBOUND_MAX_BODY) return { ok: false, status: 0, error: "body_too_large" };
       const ALLOW = ["content-type", "accept", "mcp-session-id", "authorization", "last-event-id"];
+      const DENY_AUTH = ["host", "content-length", "connection", "cookie", "origin", "referer",
+        "upgrade", "transfer-encoding", "te", "trailer", "proxy-authorization", "proxy-authenticate", "set-cookie"];
       const headers = {};
       const inH = (arg && arg.headers && typeof arg.headers === "object") ? arg.headers : {};
       Object.keys(inH).forEach(function(k){
         const lk = String(k).toLowerCase();
         if(ALLOW.indexOf(lk) >= 0 && inH[k] !== undefined && inH[k] !== null) headers[lk] = String(inH[k]);
       });
+      /* 私有端点鉴权：密钥由渲染层以 auth:{header,value} 单独传（不进 headers 白名单），
+         这里校验头名形态与禁止名单，值 **绝不进日志**。 */
+      const authIn = (arg && arg.auth && typeof arg.auth === "object") ? arg.auth : null;
+      if(authIn){
+        const hk = String(authIn.header || "").toLowerCase();
+        if(!/^[a-z0-9-]{1,64}$/.test(hk) || DENY_AUTH.indexOf(hk) >= 0) return { ok: false, status: 0, error: "bad_auth_header" };
+        const hv = String(authIn.value == null ? "" : authIn.value);
+        if(!hv || hv.length > 4096) return { ok: false, status: 0, error: "bad_auth_value" };
+        headers[hk] = hv;
+      }
       const ctrl = new AbortController();
       const timer = setTimeout(function(){ ctrl.abort(); }, _outboundTimeout(arg && arg.timeoutMs, 15000));
       const r = await fetch(u.href, { method: "POST", headers: headers, body: body, redirect: "error", signal: ctrl.signal })

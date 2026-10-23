@@ -1998,6 +1998,8 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     mcpServers, mcpRefreshServer, mcpToolDefs, mcpCallTool, mcpToolMeta, isDangerTool, mcpRuntimeInfo, ensureMcpTools, execToolAuto,
     /* 2026-10-24：AI 产物账（清单/摘除/打开落点） */
     aiArtifacts, aiArtifactDrop, openAiArtifact,
+    /* 2026-10-24：私有端点鉴权的会话内存开关（测试用） */
+    mcpSetSecret, mcpSecretState, mcpClearSecrets,
     effectiveSysprompt, setCustomSysprompt, trimChatHist, // v1.15：sysprompt 可编辑 + 上下文 token 预算
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,

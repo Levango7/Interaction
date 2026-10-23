@@ -33,7 +33,7 @@ function installFetch(win, opts) {
   const calls = [];
   win.fetch = async (url, init) => {
     const body = init && init.body ? JSON.parse(init.body) : null;
-    calls.push({ url: url, method: body && body.method, body: body });
+    calls.push({ url: url, method: body && body.method, body: body, headers: (init && init.headers) || {} });
     if (opts.reject) throw new TypeError("Failed to fetch");
     if (body && body.method === "initialize") return rpcRes({ protocolVersion: "2025-03-26", capabilities: {} }, opts.initCtype);
     if (body && body.method === "notifications/initialized") return { ok: true, status: 202, headers: { get: () => null }, text: async () => "" };
@@ -130,6 +130,86 @@ describe("MCP ② 执行路由与危险分类", () => {
     expect(d("mcp__srv__wipe"), "标了破坏性 → 要确认").toBe(true);
     expect(d("mcp__srv__echo"), "没标 → 默认要确认").toBe(true);
     expect(d("mcp__nosuch__x"), "没发现过的远端名不当危险处理").toBe(false);
+  });
+});
+
+describe("MCP ⑥ 私有端点鉴权（密钥只活会话内存）", () => {
+  const SECRET = "tok-super-secret-123";
+  const scanStorage = (win) => {
+    let all = "";
+    for (let i = 0; i < win.localStorage.length; i++) {
+      const k = win.localStorage.key(i);
+      all += k + "=" + win.localStorage.getItem(k) + "\n";
+    }
+    return all;
+  };
+
+  it("Bearer：refresh 真的带上 Authorization（会话内设置后）", async () => {
+    const win = boot();
+    saveMcp(win, [{ name: "priv", url: "https://mcp.example.test/mcp", enabled: true, authType: "bearer" }]);
+    expect(win.__test.mcpSetSecret("priv", SECRET)).toBe(true);
+    const calls = installFetch(win, { tools: [TOOLS[0]] });
+    const r = await win.__test.mcpRefreshServer("priv");
+    expect(r.ok, r.err).toBe(true);
+    const init = calls.filter((c) => c.method === "initialize")[0];
+    expect(init.headers.authorization).toBe("Bearer " + SECRET);
+  });
+
+  it("自定义头：按配置的头名发原值", async () => {
+    const win = boot();
+    saveMcp(win, [{ name: "priv", url: "https://mcp.example.test/mcp", enabled: true, authType: "header", authHeader: "X-Api-Key" }]);
+    expect(win.__test.mcpSetSecret("priv", SECRET)).toBe(true);
+    const calls = installFetch(win, { tools: [TOOLS[0]] });
+    await win.__test.mcpRefreshServer("priv");
+    const init = calls.filter((c) => c.method === "initialize")[0];
+    expect(init.headers["x-api-key"]).toBe(SECRET);
+    expect(init.headers.authorization).toBeUndefined();
+  });
+
+  it("🔴 密钥不进任何本地存储：配置里只有 authType/头名", async () => {
+    const win = boot();
+    saveMcp(win, [{ name: "priv", url: "https://mcp.example.test/mcp", enabled: true, authType: "bearer" }]);
+    win.__test.mcpSetSecret("priv", SECRET);
+    expect(scanStorage(win), "整份 localStorage 都不许出现密钥").not.toContain(SECRET);
+    const cfg = JSON.stringify(win.__test.getAiConfig("mcp"));
+    expect(cfg).toContain("bearer");
+    expect(cfg).not.toContain(SECRET);
+  });
+
+  it("刷新/新窗口后密钥不在了（会话内存语义）", async () => {
+    const win1 = boot();
+    saveMcp(win1, [{ name: "priv", url: "https://mcp.example.test/mcp", enabled: true, authType: "bearer" }]);
+    win1.__test.mcpSetSecret("priv", SECRET);
+    const win2 = boot();   /* 新窗口：配置需要重新落一遍（jsdom 每个窗口独立存储），但**没有**会话内存里的密钥 */
+    saveMcp(win2, [{ name: "priv", url: "https://mcp.example.test/mcp", enabled: true, authType: "bearer" }]);
+    expect(win2.__test.mcpSecretState("priv").set).toBe(false);
+    const calls = installFetch(win2, { tools: [TOOLS[0]] });
+    await win2.__test.mcpRefreshServer("priv");
+    const init = calls.filter((c) => c.method === "initialize")[0];
+    expect(init.headers.authorization).toBeUndefined();
+  });
+
+  it("非法/危险头名：设置直接失败（不会把密钥发到 host/cookie 之类）", async () => {
+    const win = boot();
+    saveMcp(win, [{ name: "priv", url: "https://mcp.example.test/mcp", enabled: true, authType: "header", authHeader: "host" }]);
+    expect(win.__test.mcpSetSecret("priv", SECRET), "host 必须被拒").toBe(false);
+    expect(win.__test.mcpSecretState("priv").set).toBe(false);
+    saveMcp(win, [{ name: "priv", url: "https://mcp.example.test/mcp", enabled: true, authType: "header", authHeader: "bad name" }]);
+    expect(win.__test.mcpSetSecret("priv", SECRET), "含空格的头名必须被拒").toBe(false);
+  });
+
+  it("Electron：密钥以 auth 参数单独交给主进程（不混进 headers 白名单）", async () => {
+    const win = boot();
+    saveMcp(win, [{ name: "priv", url: "http://127.0.0.1:9/mcp", enabled: true, authType: "bearer" }]);
+    win.__test.mcpSetSecret("priv", SECRET);
+    const seen = [];
+    win.electronAPI = { mcpFetch: async (arg) => {
+      seen.push(arg);
+      return { ok: true, status: 200, contentType: "application/json", sessionId: "", text: JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: [] } }) };
+    } };
+    await win.__test.mcpRefreshServer("priv");
+    expect(seen[0].auth).toEqual({ header: "authorization", value: "Bearer " + SECRET });
+    expect(seen[0].headers.authorization, "headers 里不该再带一份").toBeUndefined();
   });
 });
 
