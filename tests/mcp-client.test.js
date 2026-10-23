@@ -133,6 +133,45 @@ describe("MCP ② 执行路由与危险分类", () => {
   });
 });
 
+describe("MCP ⑦ 浏览器版的本机地址引导", () => {
+  it("识别本机/私网/局域网名（正例与反例都要有）", () => {
+    const win = boot();
+    const f = win.__test.mcpIsLocalUrl;
+    for (const u of ["http://127.0.0.1:3000/mcp", "http://localhost:8080/mcp", "http://[::1]:9/mcp",
+      "http://10.1.2.3/mcp", "http://172.16.0.9/mcp", "http://192.168.1.20/mcp", "http://nas.local/mcp"]) {
+      expect(f(u), u).toBe(true);
+    }
+    for (const u of ["https://mcp.example.com/mcp", "http://172.32.0.9/mcp", "not-a-url", ""]) {
+      expect(f(u), u).toBe(false);
+    }
+  });
+
+  it("浏览器版 + 本机地址 → 设置页出现引导与「下载桌面版」链接", () => {
+    const win = boot();
+    saveMcp(win, [{ name: "local", url: "http://127.0.0.1:31337/mcp", enabled: true }]);
+    win.__test.renderAiMcpList();
+    const tip = win.document.querySelector("[data-mcp-local-hint]");
+    expect(tip, "必须给出引导").toBeTruthy();
+    expect(tip.textContent).toContain("本地网络访问");
+    const a = tip.querySelector("a");
+    expect(a.getAttribute("href")).toContain("github.com/Levango7/Interaction/releases");
+    expect(a.getAttribute("rel")).toBe("noopener");
+  });
+
+  it("桌面版不显示该引导；公网地址也不显示", () => {
+    const win = boot();
+    saveMcp(win, [{ name: "local", url: "http://127.0.0.1:31337/mcp", enabled: true }]);
+    win.electronAPI = { mcpFetch: async () => ({ ok: true, status: 200, text: "" }) };
+    win.__test.renderAiMcpList();
+    expect(win.document.querySelector("[data-mcp-local-hint]"), "桌面版不需要这条引导").toBeFalsy();
+
+    const win2 = boot();
+    saveMcp(win2, [{ name: "pub", url: "https://mcp.example.test/mcp", enabled: true }]);
+    win2.__test.renderAiMcpList();
+    expect(win2.document.querySelector("[data-mcp-local-hint]")).toBeFalsy();
+  });
+});
+
 describe("MCP ⑥ 私有端点鉴权（密钥只活会话内存）", () => {
   const SECRET = "tok-super-secret-123";
   const scanStorage = (win) => {

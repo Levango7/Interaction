@@ -1018,6 +1018,10 @@ function renderAiSkillsBuiltin(){
     box.appendChild(row);
   });
 }
+/* 浏览器版连本机/私网 MCP 会被 CORS 与 Local Network Access 权限双重拦（3.7.141 线上实测），
+   这不是配置错、也不是服务没起 —— 设置页要直接把「用桌面版」这条路摆出来，别让人反复试。
+   链接是仓库的 releases 页（与顶栏「下载」同源），固定常量、不接受用户输入。 */
+const MCP_DESKTOP_URL = "https://github.com/Levango7/Interaction/releases/latest";
 function renderAiMcpList(){
   const box = $("#aiMcpList"); if(!box) return;
   const saved = getAiConfig("mcp");
@@ -1029,6 +1033,15 @@ function renderAiMcpList(){
     empty.textContent = t("ai.noMcpServer","暂无 MCP 服务器，点击「添加服务器」新建。");
     box.appendChild(empty);
     return;
+  }
+  const localOnes = servers.filter(function(s){ return s && s.enabled && (typeof mcpIsLocalUrl === "function") && mcpIsLocalUrl(s.url); });
+  if(localOnes.length && !(typeof isElectron === "function" && isElectron())){
+    const tip = document.createElement("div");
+    tip.className = "set-tip";
+    tip.setAttribute("data-mcp-local-hint", "1");
+    tip.innerHTML = esc(t("mcp.localHint", "检测到本机/私网地址：浏览器版会被 CORS 与「本地网络访问」权限拦下（不是配置错）。用桌面版即可直连；或把这台服务放到公网 https。")) +
+      ' <a href="' + MCP_DESKTOP_URL + '" target="_blank" rel="noopener">' + esc(t("mcp.getDesktop", "下载桌面版")) + "</a>";
+    box.appendChild(tip);
   }
   servers.forEach(function(srv, i){
     const name = String((srv && srv.name) || "").trim();

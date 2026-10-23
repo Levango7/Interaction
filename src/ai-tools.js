@@ -475,6 +475,22 @@ function _mcpAuth(server){
   const value = (server.authType === "bearer" && mem.header === "authorization") ? ("Bearer " + mem.value) : mem.value;
   return { header: mem.header, value: value };
 }
+/**
+ * 判断 URL 是否指向本机/私网 —— 浏览器版连这类地址会被 CORS 与 Local Network Access 权限拦，
+ * 桌面版（主进程代发）可通。设置页据此给出「用桌面版」的引导。
+ * @param {string} url
+ * @returns {boolean}
+ */
+function mcpIsLocalUrl(url){
+  let h = "";
+  try{ h = new URL(String(url || "")).hostname.toLowerCase(); }catch(_e){ return false; }
+  h = h.replace(/^\[|\]$/g, "");
+  if(h === "localhost" || h === "::1" || /^127\./.test(h)) return true;
+  if(/^10\./.test(h) || /^192\.168\./.test(h)) return true;
+  const m = /^172\.(\d{1,3})\./.exec(h);
+  if(m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
+  return /\.local$/.test(h);
+}
 function _mcpServer(name){
   const hit = mcpServers().filter(function(s){ return s.name === name; });
   return hit.length ? hit[0] : null;

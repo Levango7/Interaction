@@ -1995,7 +1995,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     SCENE_FEATURE_BIND, AppBridge,
     effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
     /* 2026-10-23：MCP 接线（测试驱动 发现/注入/路由/危险分类/运行时快照） */
-    mcpServers, mcpRefreshServer, mcpToolDefs, mcpCallTool, mcpToolMeta, isDangerTool, mcpRuntimeInfo, ensureMcpTools, execToolAuto,
+    mcpServers, mcpIsLocalUrl, mcpRefreshServer, mcpToolDefs, mcpCallTool, mcpToolMeta, isDangerTool, mcpRuntimeInfo, ensureMcpTools, execToolAuto,
     /* 2026-10-24：AI 产物账（清单/摘除/打开落点） */
     aiArtifacts, aiArtifactDrop, openAiArtifact,
     /* 2026-10-24：私有端点鉴权的会话内存开关（测试用） */
