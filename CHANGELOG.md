@@ -42,6 +42,28 @@
 
 ## [Unreleased]
 
+### 2026-10-24 · MCP 走 Electron 主进程代理（解开 CORS + 本地网络权限的死结）
+
+3.7.141 的线上实测证明：从 `https://` 页面直连 `127.0.0.1` 会被 Chrome 的 **Local Network Access 权限**拦下，
+补 `Access-Control-Allow-Private-Network: true` 也没用（headless 授予不了）。主进程没有这两层限制 ⇒ 桌面版改走代理。
+
+- 新增 IPC 通道 **`mcp-fetch`**（preload 暴露 `electronAPI.mcpFetch`）：渲染层只发
+  `{url, headers, body, timeoutMs}`，主进程 POST 后回 `{ok, status, contentType, sessionId, text}`。
+- 主机策略与 ics/webdav **有意不同**：**放行回环与私网**（本地 MCP 服务正是本通道存在的理由），
+  仍然拦链路本地 `169.254/16` 与 `fe80::/10`（云元数据）、未指定与组播 —— 防被 XSS 借道扫元数据面。
+  另：`redirect:"error"`（防跳转绕过）、头字段白名单（content-type / accept / mcp-session-id /
+  authorization / last-event-id）、请求体 ≤2MB、超时钳 1–20s、
+  **日志只记主机与状态码，绝不记 Authorization 与请求体**。
+- 渲染层 `_mcpRpc` 只有**一处分支**：有 `electronAPI.mcpFetch` 就走代理，否则维持浏览器直连；
+  两条路的响应归一成同一形状（`headers.get` / `text()`），错误话术分开 ——
+  代理失败说「Electron 主进程中转失败」，直连失败才说 CORS。
+- 测试：`electron-ipc` 补 5 例（回环放行 / 私网放行 / 元数据与链路本地拒且**零请求** /
+  非 http(s) 与 userinfo 与超大体积 / 未受信 sender 拒绝），`mcp-client` 补 2 例
+  （走代理时浏览器 fetch 一次不发、三次 RPC 都走代理；代理失败不说 CORS）。
+  变异验证：摘掉 `169.254` 拦截 ⇒ 恰好 1 红。
+- 边界（如实）：浏览器版仍受 CORS 与本地网络权限约束（线上 https 页面连本机仍不可用）；
+  带鉴权的私有端点在本版**能力已备**（authorization 走白名单头 + 只存在会话内存），
+  但还没有专门的凭据输入 UI —— 那是下一项。
 ### 2026-10-24 · AI 产物落盘清单（右栏「文件」页做实）
 
 用户当初问的是"生成文件的列表"，而右栏第三页一直只列**导入的**知识库文件 —— 名不副实的那半补上了。

@@ -42,6 +42,23 @@
 
 ## 条目
 
+### [2026-10-24 05:30 UTC+8] Qoder 主会话 —— **MCP 走 Electron 主进程代理**（用户点名「开始实现」· 按顺序第二项）
+- 占用：`electron/{main,preload}.js`、`src/ai-tools.js`（_mcpRpc 一处分支 + 两个助手）、`src/core-i18n.js`（1 键）、
+  `tests/{electron-ipc,mcp-client}.test.js`、`CHANGELOG.md` `[Unreleased]`、`docs/{PRODUCT,user-manual,module-graph}.md`、
+  `AGENTS.md` §二、本板。**不碰**对方的批量/登录文件。
+- 背景：3.7.141 线上实测证明 https 页面 → 127.0.0.1 被 Chrome **Local Network Access 权限**拦（补 PNA 头无效）⇒
+  这两层限制只能由主进程绕过。
+- 新增 IPC **`mcp-fetch`**：渲染层发 {url,headers,body,timeoutMs}，主进程 POST 回 {ok,status,contentType,sessionId,text}。
+  主机策略与 ics/webdav **有意不同**：**放行回环与私网**（本地 MCP 正是目的），仍拦 169.254/16、fe80::/10（云元数据）、
+  未指定与组播；redirect:error；头白名单（content-type/accept/mcp-session-id/authorization/last-event-id）；
+  体 ≤2MB；超时钳 1–20s；日志只记主机与状态码，不记凭据与请求体。
+- 渲染层只加**一处分支**（有 electronAPI.mcpFetch 走代理，否则浏览器直连），响应归一成同形；错误话术分开：
+  代理失败「主进程中转失败」 / 直连失败才说 CORS。**变异验证**：摘掉 169.254 拦截 ⇒ 恰好 1 红。
+- 证据（提交前）：`electron-ipc` +5 例（含"拒绝路径零请求"）、`mcp-client` +2 例（走代理时浏览器 fetch 一次不发）；
+  13 道门禁全 exit=0。全量单测 / e2e 与线上复核在最终树上补登。
+- 版本预登记：**3.7.143**（§二）。本机当前有另一个 agent 进程满负荷（pi-coding-agent 1.4 万 CPU 秒），
+  全量单测可能再出 worker 掉线 —— 仍以 CI 为全量判据，不抬超时不改配置。
+
 ### [2026-10-24 04:20 UTC+8] Qoder 主会话 —— **AI 产物落盘清单**（用户点名「做吧」· 按顺序第一项）
 - 占用：`src/{ai-tools,render-widgets,ui-ge-integrations,core-i18n}.js`、`agent-workbench.html`（一条 .rail-art 光标样式）、
   `tests/ai-artifacts.test.js`、`CHANGELOG.md` `[Unreleased]`、`docs/{PRODUCT,user-manual,module-graph}.md`、

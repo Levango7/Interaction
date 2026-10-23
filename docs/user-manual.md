@@ -275,10 +275,11 @@ Electron 版由主进程保管，不写网页存储。所以换设备/换浏览�
 
 - **CORS 是硬门槛，不是我们能绕的**：页面是直连远端的，服务端必须回 `Access-Control-Allow-Origin`。
   浏览器版与 `file://` 单文件版都受这条约束。连不上时提示会直接点名 CORS，不会糊弄成一句"连接失败"。
-- ⚠️ **线上站点连本机服务会被额外拦**（2026-10-24 线上实测）：从 `https://` 页面直连 `127.0.0.1`，新版 Chrome 会按
-  **Local Network Access 权限**拦下（补 `Access-Control-Allow-Private-Network` 也不够，要用户授予站点权限）。
-  所以「线上网页 + 本机 MCP」这条组合目前不可用；**本机服务请用桌面版 / `file://` 单文件打开**，或把服务放到公网（https）。
-  Electron 主进程代理（绕掉 CORS 与本地网络权限）是下一阶段的事。
+- ✅ **桌面版（Electron）可以直接连本机 / 私网 MCP**：请求由**主进程代发**，绕开浏览器的 CORS 与
+  Local Network Access 权限 —— 这也是「线上网页连本机」那个死结的正解。
+- ⚠️ **浏览器版仍受这两层约束**：从 `https://` 页面直连 `127.0.0.1` 会被 Chrome 的 Local Network Access
+  权限拦下（补 `Access-Control-Allow-Private-Network` 也不够）。浏览器版请连公网 https 服务，
+  或改用桌面版 / `file://` 单文件。
 - **危险工具每次都要你确认**：只有服务端**显式标了只读**（`readOnlyHint`）的工具才免确认；没标的、标了破坏性的，
   调用前都会弹确认。没勾选的工具**即使模型自己报出名字也会被拒** —— "知道名字"不等于有权限。
 - **凭据**：本轮只接不需要鉴权的公开端点；带 `Authorization` 的私有服务是下一阶段（Electron 主进程代理同批做）。

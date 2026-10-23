@@ -20,7 +20,7 @@
 | `data-migrate` | Data | `data-links` | 2 |
 | `data-rw` | Data | `core` `core-i18n` `core-shared` `crypto` `data-links` | 8 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
-| `ai-tools` | AI | `ai-retry` `chain` `core` `core-i18n` `core-shared` `data-idb` `data-links` `data-rw` `util-markdown` | 24 |
+| `ai-tools` | AI | `ai-retry` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `util-markdown` | 25 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core-shared` `data-links` `data-migrate` `util-perf` | 43 |
 | `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 61 |
