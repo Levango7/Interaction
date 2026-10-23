@@ -1031,15 +1031,39 @@ function renderAiMcpList(){
     return;
   }
   servers.forEach(function(srv, i){
+    const name = String((srv && srv.name) || "").trim();
+    const rt = name ? mcpRuntimeInfo(name) : { tools: [], at: 0, err: "" };
+    const allow = (srv && Array.isArray(srv.allow)) ? srv.allow : [];
+    let status = t("mcp.saveFirst", "先保存配置，再刷新工具");
+    if(name){
+      if(rt.err) status = t("mcp.connectFailPrefix", "连接失败：") + rt.err;
+      else if(rt.tools.length) status = t("mcp.toolsCount", "已发现 {n} 个工具").replace("{n}", String(rt.tools.length));
+      else if(rt.at) status = t("mcp.noTools", "连上了，但这台服务器没有提供工具");
+    }
+    const toolsHtml = rt.tools.length ? (
+      '<div class="set-tip">' + esc(t("mcp.selectHint", "勾选要开放给 AI 的工具（默认全不选）")) + '</div>' +
+      rt.tools.map(function(tl){
+        const checked = allow.indexOf(tl.name) >= 0 ? " checked" : "";
+        const tag = tl.readOnly ? t("mcp.readOnlyTag", "只读") : t("mcp.needConfirmTag", "每次调用需你确认");
+        return '<label class="u-flex u-gap-1 u-mt-1"><input type="checkbox" data-mcp-tool="' + i + '|' + esc(tl.name) + '"' + checked + '>' +
+          '<span>' + esc(tl.name) + '</span><span class="set-tip">' + esc(tl.description || "") + '</span><span class="set-tip">[' + esc(tag) + ']</span></label>';
+      }).join("")
+    ) : "";
     const row = document.createElement("div");
     row.className = "set-field";
+    row.setAttribute("data-mcp-row", String(i));
     row.innerHTML = "<label for=\"aiMcpName_"+i+"\">"+t("ai.serverPrefix","服务器 ")+(i+1)+"</label>"+
       "<div class=\"ctl\"><div class=\"btn-row\">"+
-      "<input id=\"aiMcpName_"+i+"\" placeholder=\""+t("common.name","名称")+"\" value=\""+esc(srv.name||"")+'" class="u-flex-1 u-min-w-80">'+ // v3.1.2：esc 防属性截断注入
-      "<input id=\"aiMcpUrl_"+i+'" placeholder="https://..." value="'+esc(srv.url||"")+'" class="u-flex-2 u-min-w-120">'+
-      '<input type="checkbox" id="aiMcpEn_'+i+'"'+(srv.enabled?" checked":"")+' aria-label="'+t("common.enable","启用")+'">'+
-      '<button type="button" class="addbtn sm u-nowrap" data-mcp-del="'+i+'" data-sc="danger-muted">'+t("common.delete","删除")+'</button>'+
-      "</div></div>";
+      "<input id=\"aiMcpName_"+i+"\" placeholder=\""+t("common.name","名称")+"\" value=\""+esc(srv.name||"")+"\" class=\"u-flex-1 u-min-w-80\">"+
+      "<input id=\"aiMcpUrl_"+i+"\" placeholder=\"https://...\" value=\""+esc(srv.url||"")+"\" class=\"u-flex-2 u-min-w-120\">"+
+      "<input type=\"checkbox\" id=\"aiMcpEn_"+i+"\""+(srv.enabled?" checked":"")+" aria-label=\""+t("common.enable","启用")+"\">"+
+      "<button type=\"button\" class=\"addbtn sm u-nowrap\" data-mcp-del=\""+i+"\" data-sc=\"danger-muted\">"+t("common.delete","删除")+"</button>"+
+      "</div>"+
+      "<div class=\"btn-row u-mt-1\">"+
+      "<button type=\"button\" class=\"addbtn sm u-nowrap\" data-mcp-refresh=\""+i+"\" data-sc=\"accent\">"+esc(t("mcp.refresh","连接并刷新"))+"</button>"+
+      "<span class=\"set-tip\" data-mcp-status=\""+i+"\">"+esc(status)+"</span>"+
+      "</div>"+toolsHtml+
+      "</div>";
     box.appendChild(row);
   });
   $$("[data-mcp-del]").forEach(function(btn){
@@ -1053,6 +1077,62 @@ function renderAiMcpList(){
       renderAiMcpList();
     };
   });
+  /* 2026-10-23：连接并刷新 —— 先把当前输入落盘（名称/URL 可能刚改过），再发现远端工具 */
+  $$("[data-mcp-refresh]").forEach(function(btn){
+    btn.onclick = async function(){
+      const idx = parseInt(btn.getAttribute("data-mcp-refresh"), 10);
+      persistAiMcpRows();
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      const srv = list[idx];
+      if(!srv || !String(srv.name||"").trim()){ toast(t("mcp.saveFirst","先保存配置，再刷新工具")); return; }
+      const st = document.querySelector('[data-mcp-status="' + idx + '"]');
+      btn.disabled = true;
+      if(st) st.textContent = t("mcp.refreshing","连接中…");
+      const r = await mcpRefreshServer(String(srv.name).trim());
+      btn.disabled = false;
+      if(!r.ok) toast(t("mcp.connectFailPrefix","连接失败：") + r.err);
+      renderAiMcpList();
+    };
+  });
+  /* 2026-10-23：勾选即时落盘（allow 列表），勾上才注入 schema */
+  $$("[data-mcp-tool]").forEach(function(cb){
+    cb.onchange = function(){
+      const raw = cb.getAttribute("data-mcp-tool") || "";
+      const bar = raw.indexOf("|");
+      if(bar < 0) return;
+      const idx = parseInt(raw.slice(0, bar), 10);
+      const tool = raw.slice(bar + 1);
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      const srv = list[idx];
+      if(!srv) return;
+      const allow = Array.isArray(srv.allow) ? srv.allow.slice() : [];
+      const at = allow.indexOf(tool);
+      if(cb.checked && at < 0) allow.push(tool);
+      if(!cb.checked && at >= 0) allow.splice(at, 1);
+      srv.allow = allow;
+      saveAiConfig("mcp", saved2);
+    };
+  });
+}
+/** 把设置页当前输入落盘（名称/URL/启用 + 保留已勾选的 allow，按名称继承） */
+function persistAiMcpRows(){
+  const box = $("#aiMcpList");
+  if(!box) return false;
+  const prev = (getAiConfig("mcp") || {}).servers || [];
+  const byName = {};
+  (Array.isArray(prev) ? prev : []).forEach(function(s){ if(s && s.name) byName[String(s.name).trim()] = s.allow || []; });
+  const servers = [];
+  box.querySelectorAll("[data-mcp-row]").forEach(function(row, i){
+    const nameInp = row.querySelector("#aiMcpName_"+i);
+    const urlInp = row.querySelector("#aiMcpUrl_"+i);
+    const enInp = row.querySelector("#aiMcpEn_"+i);
+    const nm = nameInp ? String(nameInp.value || "").trim() : "";
+    servers.push({ name: nm, url: urlInp ? String(urlInp.value || "").trim() : "", enabled: !!(enInp && enInp.checked),
+      allow: byName[nm] || [] });
+  });
+  return saveAiConfig("mcp", { servers: servers });
 }
 function renderAiWorkflowList(){
   const box = $("#aiWorkflowList"); if(!box) return;
@@ -1191,16 +1271,9 @@ $("#aiMcpAdd").onclick = function(){
   renderAiMcpList();
 };
 $("#aiMcpSave").onclick = function(){
-  const servers = [];
-  const box = $("#aiMcpList");
-  const rows = box.querySelectorAll(".set-field");
-  rows.forEach(function(row, i){
-    const nameInp = row.querySelector("#aiMcpName_"+i);
-    const urlInp = row.querySelector("#aiMcpUrl_"+i);
-    const enInp = row.querySelector("#aiMcpEn_"+i);
-    servers.push({name: nameInp?nameInp.value:"", url: urlInp?urlInp.value:"", enabled: enInp?enInp.checked:false});
-  });
-  saveAiConfig("mcp", {servers: servers});
+  /* 2026-10-23：保留每台服务器已勾选的 allow（按名称继承）——旧实现在这里重建对象会把勾选抹掉 */
+  const ok = persistAiMcpRows();
+  if(!ok){ toast(t("common.saveFail","保存失败（可能是本地存储配额不足）")); return; }
   toast(t("ai.mcpConfigSaved","MCP 配置已保存"));
 };
 $("#aiWorkflowAdd").onclick = function(){

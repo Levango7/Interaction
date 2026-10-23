@@ -414,7 +414,7 @@ function _sumBlock(text){
 /** 把计划渲染成人能读的评审文本（聊天里显示，也用作确认提示的正文） */
 function agentPlanReviewText(plan){
   const lines = plan.steps.map(function(s, i){
-    return (i+1)+". "+s.desc+"  →  "+s.tool+(DANGER_CONFIRM_TOOLS.has(s.tool) ? t("aiagent.planDangerMark"," ⚠️ 需确认，不会自主执行") : "");
+    return (i+1)+". "+s.desc+"  →  "+s.tool+(isDangerTool(s.tool) ? t("aiagent.planDangerMark"," ⚠️ 需确认，不会自主执行") : "");
   });
   let out = t("aiagent.planHead","【执行计划】")+plan.goal+"\n"+lines.join("\n");
   if(plan.truncatedFrom) out += "\n"+t("aiagent.planTruncated","（原计划 ")+plan.truncatedFrom+t("aiagent.planTruncatedMid"," 步，已裁到 ")+plan.steps.length+t("aiagent.planTruncatedSuffix"," 步 —— 自主执行有步数上限）");
@@ -900,7 +900,7 @@ async function runChatLoop(messages, hist, sc){
         // v3.7.59：清单收口到 ai-tools.js 的 DANGER_CONFIRM_TOOLS（此前这里各写一份，Agent 计划路径没走它）
         // v3.7.59：args 走 _parseToolArgs —— 模型给的 JSON 可能非法，返回 null 由下方按「参数非法」回执
         const calls = msg.tool_calls.map(tc=>({name:tc.function.name, id:tc.id, args:_parseToolArgs(tc.function.arguments)}));
-        const hasDanger = calls.some(c=>DANGER_CONFIRM_TOOLS.has(c.name));
+        const hasDanger = calls.some(c=>isDangerTool(c.name));
         /* v3.7.52：危险操作**始终**需用户确认。原实现把这段挂在 `if(autoConfirm)` 上，而
            autoConfirm = !(cfg.agentAutoConfirm===false) —— 于是把设置里「自动确认非危险操作」
            关掉反而变成「危险操作免确认」（语义反向，且反向到**更不安全**的那侧；实测还有

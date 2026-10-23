@@ -42,6 +42,35 @@
 
 ## 条目
 
+### [2026-10-23 18:10 UTC+8] Qoder 主会话 —— **MCP 真接线 + Mermaid 首图加载态**（用户点名「真接吧」「做吧」· 开工声明）
+- 占用路径（R4/R6）：`src/{ai-tools,ai-loop,ai-retry,ui-global-events,core-i18n,util-markdown,render-widgets}.js`、
+  `agent-workbench.html`（MCP 段文案 + 一条 `.mermaid-loading` 样式）、`tests/{mcp-client.test.js, e2e/mcp-live.spec.js, mermaid.test.js}`、
+  `CHANGELOG.md` `[Unreleased]` 段首、`docs/{PRODUCT,user-manual,module-graph}.md`、`AGENTS.md` §二、本板。
+  **不碰**对方的批量文件（`render-scene-main.js` / `ui-scene-bind.js` / `batch-ops-ui.test.js` / `confirm-migration-batch5.test.js`）。
+- 版本预登记：**3.7.141**（§二）。
+- 🔴 先把结论说清楚：**MCP 之前确实是纯壳**——`src/` 与 `electron/` 里 `jsonrpc / tools/list / streamable` 零命中，
+  `tests/` 零提及，唯一"消费方"是测试桥；设置页那句「当前不会改变 AI 能力」是真的。
+- 接线只动两个既有收口点（不另起链路）：`effectiveTools()`（`chatOnce` 唯一 schema 出口）并入远端工具；
+  `execToolAuto()`（对话 / Agent 计划两条路径已合流）按 `mcp__<服务器>__<工具>` 路由。
+  客户端 = JSON-RPC 2.0 over Streamable HTTP 最小子集（initialize → initialized → tools/list → tools/call，
+  JSON 与 SSE 帧都解，15s 超时）。**没有新增模块块**（38 块 / 13 循环 / 18 逆层不变）。
+- 三条安全决定，请勿在别的批次里放松：
+  ① **默认零注入**——发现后必须在设置页逐个勾选（`allow` 落盘，上限 30），远端工具直接进每轮 schema，token 成本要可预期；
+  ② **危险判定动态化**——`isDangerTool(name)`：只有服务端显式 `readOnlyHint:true` 的远端工具才免确认，没标的一律先问；
+     三个调用点（对话 / 计划评审 / 计划执行）已统一；
+  ③ **执行前再查 allow**——schema 不注入不等于不能调（模型能自己编名字），`mcpCallTool` 对未勾选的直接拒、不发 `tools/call`。
+    变异验证：摘掉这条 ⇒ 恰好 1 条用例红。
+- 如实边界：CSP 早就放行 `https:` 与 `127.0.0.1`，真正门槛是 **CORS**（服务端要回 ACAO；`file://` 是 null origin 同样受制）。
+  连不上时错误**点名 CORS**；本轮只接无鉴权公开端点（Authorization 只走会话内存）；Electron 主进程代理留下一阶段。
+- 顺手修的坑：旧的「保存 MCP 配置」会重建 `{name,url,enabled}`，**把勾选整份抹掉** —— 现在按名称继承 `allow`，
+  并有用例走真实保存按钮钉住。
+- 另一件（用户「做吧」的其一）：**Mermaid 首图加载态**——线上首图实测 13,573ms（3.3MB 冷下载）期间界面只有源码块，
+  现在库未加载时同步挂「正在加载图表引擎…」，成功替换、失败接原提示；库已在内存时不出中间态。
+- 证据（提交前）：`mcp-client` 9 例、e2e `mcp-live` 1 例 × 2 视口（真起 127.0.0.1 的 MCP 服务 + ACAO:*，
+  在 `file://` 页面跑完整链）、`mermaid` 补 1 例；13 道门禁全 exit=0（`lint:empty-catch` 新增 P0 = 0，
+  19 条 P1/P2 是行位移噪声）。全量单测与 e2e 在最终树上重跑后补登。
+
+
 ### [2026-10-23 17:10 UTC+8] Qoder 主会话 —— **375px 回归修复（你已自推 v1.6-B，我撤销重复代推）**
 - 状态同步：你在我跑验证期间自己把 v1.6-B rebase 并推了（`65cb11c` + 声明 `8b2d5fb`）⇒ 我手上那份
   等价的 rebase（`c50227d`）**作废不推**，只保留这次修复（用户点名「推吧」，但既然你已经推了，重复推没有意义）。

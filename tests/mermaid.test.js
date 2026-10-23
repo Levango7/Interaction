@@ -53,6 +53,18 @@ describe("Mermaid 渲染", () => {
     expect(box.querySelector(".mermaid-fail")).toBeTruthy();
   });
 
+  it("库还没加载时同步出现加载态（线上首图 13.6s，不能只给源码块）", () => {
+    const win = loadApp({ storage: { wb_agent_onboarded: "true" } });
+    windows.push(win);
+    expect(win.mermaid, "本用例要求库未加载").toBeFalsy();
+    const box = mount(win, "graph TD;A-->B;");
+    /* 故意不 await：jsdom 不取外部资源，加载永远不完成 —— 要断言的是"同步那一瞬" */
+    win.renderMermaidBlocks(box);
+    const hint = box.querySelector(".mermaid-loading");
+    expect(hint, "调用返回前就要挂上加载态").toBeTruthy();
+    expect(String(hint.textContent)).toContain("加载");
+  });
+
   it("流式消息里的 mermaid 不渲染（避免半截代码反复渲染）", async () => {
     const win = loadApp({ storage: { wb_agent_onboarded: "true" } });
     windows.push(win);

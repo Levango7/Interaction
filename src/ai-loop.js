@@ -322,6 +322,10 @@ async function chatOnce(messages, opts){
     const ap=getActiveProfile();
     const model=(ap && ap.model) || "gpt-4o-mini";
     const aiParams=getAiParams(); // B8：超时/温度可配置（默认 30s / 0.7）
+    /* 2026-10-23：远端工具在会话内首次用到时补一次发现（缓存为空且用户已勾选才真的发请求）；
+       失败不阻断对话——远端连不上时退化成「只有本地工具」，错误由设置页/诊断如实展示。 */
+    /* 发现失败不阻断本轮：错误已在 mcpRefreshServer 落到 mcpRuntimeInfo + pushDiag，这里只降级 */
+    if(typeof ensureMcpTools === "function"){ await ensureMcpTools().catch(function(){}); }
     const body={ model, messages, temperature:aiParams.temperature };
     if(cfg.enabled){ body.tools=effectiveTools(); body.tool_choice="auto"; }
     // v3.2 C-档：流式请求标记（仅浏览器直连 + 调用方传 onChunk 时开启；Electron 主进程代理不支持透传，保持整包）

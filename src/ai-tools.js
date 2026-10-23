@@ -352,16 +352,222 @@ function toolWhitelistSet(cfgOverride){
   const wl = String(c.toolWhitelist || "").trim();
   return wl ? new Set(wl.split(/[,\s\u3000]+/).filter(Boolean)) : null;
 }
-/** 计算实际暴露给模型的工具集（cfg.agent=false 时剔除 Agent 工具） */
+/* ---------- MCP 客户端（2026-10-23）：把「配置壳」接成真能力 ----------
+ * 传输 = JSON-RPC 2.0 over Streamable HTTP 的最小可用子集：
+ *   initialize → notifications/initialized → tools/list → tools/call
+ * 响应既可能是 application/json，也可能是 text/event-stream 的 SSE 帧，两种都解。
+ * 能力边界（如实）：CSP 已放行 https 与 127.0.0.1（connect-src 'self' https: http://127.0.0.1:*），
+ *   卡点在 **CORS** —— 服务端必须回 Access-Control-Allow-Origin；file:// 是 null origin，同样受这条约束。
+ *   连不上时如实点名 CORS，不谎报一个笼统的"连接失败"。Electron 主进程代理是下一阶段的事。
+ * 安全：远端工具默认**一个都不注入**（必须在设置页显式勾选）；工具名带 `mcp__<服务器名>__<工具>` 命名空间；
+ *   危险判定见 isDangerTool —— 只有服务端显式标了 annotations.readOnlyHint 的才免确认。
+ * 凭据：本轮只接无鉴权的公开端点；Authorization 类 header 只存在会话内存（不落盘、不上云）。
+ * 服务器名在同一份配置里必须唯一 —— 运行时缓存与命名空间都以它作键。 */
+const MCP_NS = "mcp__";
+const MCP_MAX_TOOLS = 30;
+const MCP_RPC_TIMEOUT_MS = 15000;
+const _mcpRuntime = {};      /* name → {tools:[], at, err, sessionId, protocolVersion} —— 仅内存，不落盘 */
+let _mcpSeq = 0;
+let _mcpEnsuring = null;
+
+/**
+ * 已启用且 URL 合法的服务器（配置仍走 getAiConfig("mcp")，本函数只做形状归一）
+ * @returns {Array<{name:string,url:string,allow:string[]}>}
+ */
+function mcpServers(){
+  const c = getAiConfig("mcp") || {};
+  const list = Array.isArray(c.servers) ? c.servers : [];
+  return list.map(function(s){
+    return { name: String((s && s.name) || "").trim(), url: String((s && s.url) || "").trim(),
+      enabled: !!(s && s.enabled), allow: (s && Array.isArray(s.allow)) ? s.allow.map(String) : [] };
+  }).filter(function(s){ return s.enabled && s.name && /^https?:\/\//i.test(s.url); });
+}
+function _mcpServer(name){
+  const hit = mcpServers().filter(function(s){ return s.name === name; });
+  return hit.length ? hit[0] : null;
+}
+/** 取 SSE 流里最后一个带 result/error 的 JSON-RPC 帧（MCP 的 POST 响应可以是 SSE） */
+function _mcpSsePayload(text){
+  let last = null;
+  String(text || "").split(/\r?\n/).forEach(function(line){
+    /* MCP 的数据帧必是 JSON 对象；心跳/注释帧不是 data 帧或不是对象，直接跳过。
+       坏 JSON 不在这里吞 —— 让它冒到 mcpRefreshServer 按「连接失败」如实报。 */
+    const m = line.match(/^data:\s*(\{.*)$/);
+    if(!m) return;
+    const o = JSON.parse(m[1]);
+    if(o && (o.result !== undefined || o.error !== undefined)) last = o;
+  });
+  return last;
+}
+/**
+ * 发一条 JSON-RPC 请求并等结果。
+ * @param {{name:string,url:string}} server
+ * @param {Object} payload
+ * @param {{quiet?:boolean}} [opts] quiet=true 时不解析响应体（notifications）
+ * @returns {Promise<Object|undefined>}
+ */
+async function _mcpRpc(server, payload, opts){
+  opts = opts || {};
+  const rt = _mcpRuntime[server.name];
+  const headers = { "content-type": "application/json", "accept": "application/json, text/event-stream" };
+  if(rt && rt.sessionId) headers["mcp-session-id"] = rt.sessionId;
+  const ctl = (typeof AbortController === "function") ? new AbortController() : null;
+  /* AbortController.abort() 对已结束的请求是 no-op，不需要兜 */
+  const timer = ctl ? setTimeout(function(){ ctl.abort(); }, MCP_RPC_TIMEOUT_MS) : null;
+  let res;
+  try{
+    res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
+      signal: ctl ? ctl.signal : undefined });
+  }catch(e){
+    throw new Error(t("mcp.netFail", "连不上（多半是浏览器 CORS 拦了跨域请求，或服务没起）") + "：" + ((e && e.message) || String(e)));
+  }finally{ if(timer) clearTimeout(timer); }
+  if(res && res.headers && res.headers.get){
+    const sid = res.headers.get("mcp-session-id");
+    if(sid && _mcpRuntime[server.name]) _mcpRuntime[server.name].sessionId = sid;
+  }
+  if(!res || !res.ok) throw new Error(t("mcp.httpFail", "MCP 服务返回 HTTP ") + ((res && res.status) || "?"));
+  if(opts.quiet) return undefined;   /* notifications/initialized 是 202 空体，不解析 */
+  const ctype = String((res.headers && res.headers.get && res.headers.get("content-type")) || "").toLowerCase();
+  let body = null;
+  if(ctype.indexOf("text/event-stream") >= 0) body = _mcpSsePayload(await res.text());
+  else {
+    const txt = await res.text();
+    try{ body = JSON.parse(txt); }catch(_e){ body = _mcpSsePayload(txt); }
+  }
+  if(!body) throw new Error(t("mcp.badResponse", "MCP 响应不是可解析的 JSON-RPC"));
+  if(body.error) throw new Error(String((body.error && (body.error.message || body.error.code)) || t("mcp.rpcError", "MCP 服务报错")));
+  return body.result;
+}
+/**
+ * 刷新一台服务器的工具清单（initialize → initialized → tools/list），结果落内存缓存。
+ * @param {string} name - 服务器名（配置里的 name）
+ * @returns {Promise<{ok:boolean,tools:Object[],err:string}>}
+ */
+async function mcpRefreshServer(name){
+  const srv = _mcpServer(name);
+  if(!srv) return { ok: false, tools: [], err: t("mcp.notFound", "未找到该服务器（先保存配置）") };
+  _mcpRuntime[name] = _mcpRuntime[name] || { tools: [], at: 0, err: "", sessionId: "" };
+  try{
+    const init = await _mcpRpc(srv, { jsonrpc: "2.0", id: ++_mcpSeq, method: "initialize",
+      params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "agent-workbench",
+        version: (typeof VERSION !== "undefined" ? String(VERSION) : "") } } });
+    _mcpRuntime[name].protocolVersion = (init && init.protocolVersion) || "2025-03-26";
+    await _mcpRpc(srv, { jsonrpc: "2.0", method: "notifications/initialized" }, { quiet: true })
+      .catch(function(){ /* 有的实现不回这条；不影响 tools/list */ });
+    const r = await _mcpRpc(srv, { jsonrpc: "2.0", id: ++_mcpSeq, method: "tools/list", params: {} });
+    const tools = (r && Array.isArray(r.tools)) ? r.tools : [];
+    _mcpRuntime[name] = Object.assign(_mcpRuntime[name], { tools: tools, at: Date.now(), err: "" });
+    return { ok: true, tools: tools, err: "" };
+  }catch(e){
+    const msg = String((e && e.message) || e);
+    _mcpRuntime[name] = Object.assign(_mcpRuntime[name], { at: Date.now(), err: msg });
+    try{ pushDiag("warn", "mcp refresh failed: " + msg, { where: "mcpRefreshServer:" + name }); }catch(_e){ /* 诊断不可用不影响主流程 */ }
+    return { ok: false, tools: [], err: msg };
+  }
+}
+/** 会话内首次用到远端工具时补一次发现（缓存为空 + 已勾选工具 + 已启用） */
+async function ensureMcpTools(){
+  if(_mcpEnsuring) return _mcpEnsuring;
+  const need = mcpServers().filter(function(s){ return s.allow.length && !(_mcpRuntime[s.name] && _mcpRuntime[s.name].tools.length); });
+  if(!need.length) return null;
+  _mcpEnsuring = Promise.all(need.map(function(s){ return mcpRefreshServer(s.name); }))
+    .then(function(r){ _mcpEnsuring = null; return r; })
+    .catch(function(e){ _mcpEnsuring = null; throw e; });
+  return _mcpEnsuring;
+}
+/**
+ * 计算要合并进模型 schema 的远端工具定义（只带用户勾选的；上限 MCP_MAX_TOOLS）
+ * @returns {Array<Object>}
+ */
+function mcpToolDefs(){
+  const out = [];
+  mcpServers().forEach(function(srv){
+    const rt = _mcpRuntime[srv.name];
+    if(!rt || !Array.isArray(rt.tools) || !rt.tools.length) return;
+    rt.tools.forEach(function(tl){
+      if(out.length >= MCP_MAX_TOOLS) return;
+      if(!tl || !tl.name || srv.allow.indexOf(tl.name) < 0) return;
+      const schema = (tl.inputSchema && typeof tl.inputSchema === "object") ? tl.inputSchema : { type: "object", properties: {} };
+      out.push({ type: "function", function: { name: MCP_NS + srv.name + "__" + tl.name,
+        description: String(tl.description || tl.title || tl.name).slice(0, 400) || t("mcp.toolDesc", "远端工具"),
+        parameters: schema } });
+    });
+  });
+  return out.slice(0, MCP_MAX_TOOLS);
+}
+/**
+ * 解析 `mcp__<server>__<tool>`；不是 MCP 名字返回 null
+ * @param {string} nsName
+ * @returns {{server:string,tool:string,meta:Object|null}|null}
+ */
+function mcpToolMeta(nsName){
+  const s = String(nsName || "");
+  if(s.indexOf(MCP_NS) !== 0) return null;
+  const rest = s.slice(MCP_NS.length);
+  const i = rest.indexOf("__");
+  if(i <= 0) return null;
+  const server = rest.slice(0, i), tool = rest.slice(i + 2);
+  const rt = _mcpRuntime[server];
+  const meta = (rt && Array.isArray(rt.tools)) ? rt.tools.filter(function(x){ return x && x.name === tool; })[0] : null;
+  return { server: server, tool: tool, meta: meta || null };
+}
+/**
+ * 是否「危险到必须先问用户」。本地工具看 DANGER_CONFIRM_TOOLS；
+ * 远端工具**默认危险**，只有服务端显式声明 annotations.readOnlyHint=true 的才免确认。
+ * @param {string} name
+ * @returns {boolean}
+ */
+function isDangerTool(name){
+  if(DANGER_CONFIRM_TOOLS.has(name)) return true;
+  const m = mcpToolMeta(name);
+  if(!m || !m.meta) return false;   /* 没发现过的名字执行侧会直接拒绝，不必弹确认 */
+  const ann = (m.meta && m.meta.annotations) || {};
+  return ann.readOnlyHint !== true;
+}
+/**
+ * 调远端工具并归一成与本地异步工具同口径的 {ok, output} / {ok:false, msg}
+ * @param {string} nsName
+ * @param {Object} args
+ * @returns {Promise<{ok:boolean,output?:string,msg?:string}>}
+ */
+async function mcpCallTool(nsName, args){
+  const m = mcpToolMeta(nsName);
+  if(!m) return { ok: false, msg: t("mcp.badToolName", "工具名不是 mcp__服务器__工具 的格式") };
+  const srv = _mcpServer(m.server);
+  if(!srv) return { ok: false, msg: t("mcp.notFound", "未找到该服务器（可能刚被删除，先保存配置）") };
+  /* 纵深防御：schema 里没注入 ≠ 不能调（模型可以自己编名字）⇒ 执行前按勾选清单再拒一次 */
+  if(srv.allow.indexOf(m.tool) < 0) return { ok: false, msg: t("mcp.notAllowed", "该工具没有在设置里勾选，已拒绝执行") };
+  try{
+    const r = await _mcpRpc(srv, { jsonrpc: "2.0", id: ++_mcpSeq, method: "tools/call",
+      params: { name: m.tool, arguments: args || {} } });
+    const parts = (r && Array.isArray(r.content)) ? r.content : [];
+    const text = parts.map(function(p){
+      return (p && p.type === "text") ? String(p.text || "") : ("[" + ((p && p.type) || "item") + "]");
+    }).join("\n").slice(0, 8000);
+    return { ok: !(r && r.isError), output: text || t("mcp.emptyResult", "（远端没有返回文本内容）") };
+  }catch(e){
+    return { ok: false, msg: String((e && e.message) || e) };
+  }
+}
+/** 给设置页/诊断用的运行时快照（不含 header/凭据） */
+function mcpRuntimeInfo(name){
+  const rt = _mcpRuntime[name];
+  return rt ? { tools: (rt.tools || []).map(function(x){ return { name: x && x.name, description: (x && (x.description || x.title)) || "",
+    readOnly: !!(x && x.annotations && x.annotations.readOnlyHint === true) }; }),
+    at: rt.at || 0, err: rt.err || "" } : { tools: [], at: 0, err: "" };
+}
+/** 计算实际暴露给模型的工具集（cfg.agent=false 时剔除 Agent 工具；再并入用户勾选的 MCP 工具） */
 function effectiveTools(){
   const cfg = getCfg();
+  let base = TOOLS;
   if(cfg && cfg.agent === false){
-    return TOOLS.filter(function(t){
+    base = TOOLS.filter(function(t){
       const n = t && t.function && t.function.name;
       return n && AGENT_TOOL_NAMES.indexOf(n) === -1;
     });
   }
-  return TOOLS;
+  const extra = mcpToolDefs();
+  return extra.length ? base.concat(extra) : base;
 }
 
 /* ---------- Agent 引擎：记忆 / 目标 / 多步编排（A-P3：在既有 chatOnce + TOOLS 契约上扩展，不另起链路） ---------- */
@@ -1091,7 +1297,7 @@ function agentPlannableTools(){
   const all = (typeof effectiveTools === "function" ? effectiveTools() : TOOLS);
   return all
     .map(x => x && x.function && x.function.name)
-    .filter(n => n && !DANGER_CONFIRM_TOOLS.has(n) && (!wl || wl.has(n)));
+    .filter(n => n && !isDangerTool(n) && (!wl || wl.has(n)));
 }
 /**
  * Agent 模式系统提示：引导 AI 输出 JSON 格式的步骤计划
@@ -1171,7 +1377,7 @@ async function executeAgentPlan(plan, opts){
        于是"AI 自主规划"能在用户不知情的情况下删任务/改任务，同一个工具在对话路径却要弹窗。
        取向：自主执行只做可逆的写操作，破坏性那步标 needsConfirm 交回交互路径（那里正常确认）。
        不中断整个计划 —— 后面的非破坏步骤照常跑，避免"一步被拒全盘停摆"。 */
-    if(DANGER_CONFIRM_TOOLS.has(step.tool)){
+    if(isDangerTool(step.tool)){
       const msg = t("aiagent.needConfirm","该步骤需用户确认，自主执行已跳过：请到对话里直接要求执行（会弹出确认）");
       needsConfirm.push(step);
       results.push({ step, result: JSON.stringify({ ok:false, confirm:true, msg }), ok:false, blocked:true });
@@ -1313,7 +1519,7 @@ function _resolvePrevRefs(value, prev){
    幂等去重 → 确认拦截 → 白名单 → 解析依赖 → 执行 → 读失败重试 1 次。
    v3.7.120：新增 prev（上一步结果，供 ${prev.xxx}）与 seen（写操作幂等表，同一计划内共享）。 */
 async function _execPlanStep(step, wl, prev, seen){
-  if(DANGER_CONFIRM_TOOLS.has(step.tool)){
+  if(isDangerTool(step.tool)){
     return { blocked:true, stepOk:false,
       resultStr: JSON.stringify({ ok:false, confirm:true, msg:t("aiagent.needConfirm","该步骤需用户确认，自主执行已跳过：请到对话里直接要求执行（会弹出确认）") }) };
   }
@@ -1518,6 +1724,11 @@ const ASYNC_TOOL_NAMES = new Set(["web_search", "web_fetch", "code_run", "sql_qu
  * @returns {Promise<string>}
  */
 async function execToolAuto(name, args){
+  /* 2026-10-23：MCP 远端工具按命名空间路由（对话与 Agent 计划两条路径都从这里走） */
+  if(String(name || "").indexOf(MCP_NS) === 0){
+    try{ return JSON.stringify(await mcpCallTool(name, args)); }
+    catch(e){ return JSON.stringify({ ok: false, msg: t("agent.toolRunFail", "工具执行失败：") + ((e && e.message) || String(e)) }); }
+  }
   if(ASYNC_TOOL_NAMES.has(name)){
     try{ return JSON.stringify(await agentExecAsync(name, args)); }
     catch(e){ return JSON.stringify({ ok:false, msg:t("agent.toolRunFail","工具执行失败：")+((e&&e.message)||String(e)) }); }

@@ -272,7 +272,8 @@ function renderTaskRail(){
 
 /* ---------- 右栏分页（2026-10-23）：今日 / Agent / 文件 ----------
  * 只展示真实能力：技能来自 listEnabledSkills（真的注入提示词）、文件来自 getRagFiles；
- * MCP 仍是配置壳（i18n 明写"不改变 AI 能力"），故**不列**，避免假能力入口。 */
+ * MCP 自 2026-10-23 起是真能力（远端工具按勾选注入 + 命名空间路由），但它的发现/勾选/状态都在
+ * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。 */
 const RAIL_TABS = ["today", "agent", "files"];
 function _railTabGet(){
   try{ const v = load(PREFIX + "rail_tab", "today"); return RAIL_TABS.indexOf(v) >= 0 ? v : "today"; }

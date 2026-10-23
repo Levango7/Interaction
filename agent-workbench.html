@@ -2366,6 +2366,8 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   border-radius:var(--radius-md);background:var(--panel2);overflow-x:auto}
 .md-body .mermaid-figure svg{max-width:100%;height:auto}
 .mermaid-fail{margin:0 0 var(--space-2);font-size:var(--fs-2xs);color:var(--muted)}
+/* 2026-10-23：首图冷加载（3.3MB）期间先给中间态，避免对着源码块干等；与失败提示同款排版 */
+.mermaid-loading{margin:0 0 var(--space-2);font-size:var(--fs-2xs);color:var(--muted)}
 .md{margin-top:var(--space-2);line-height:1.6;color:var(--text-dim)}
 .msg.assistant.md-body{white-space:normal}
 
@@ -5589,7 +5591,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
       <div>
         <h3><span data-i18n="aiExt.title">AI 扩展</span> <span class="badge-experimental" data-i18n-aria="aiExt.badge" aria-label="实验性" data-i18n="aiExt.badge">实验性</span></h3>
-        <p class="set-desc" data-i18n="aiExt.desc">5 个扩展维度的统一管理：技能 / MCP / 工作流 / 记忆 / AI 插件。当前仅保存配置，AI 引擎的消费接线在路线图中。普通用户无需修改此处。</p>
+        <p class="set-desc" data-i18n="aiExt.desc">4 个扩展维度的统一管理：技能 / MCP / 工作流 / 记忆。技能与 MCP 已接入 AI（MCP 需在下面勾选工具，且服务端允许跨域）；工作流仍是冻结的草案。普通用户无需修改此处。</p>
       </div>
     </header>
 

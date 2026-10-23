@@ -387,6 +387,21 @@ function _sanitizeMermaidSvg(svg){
   });
   try{ return new XMLSerializer().serializeToString(root); }catch(_e){ return ""; }
 }
+/* 首图冷加载要十几秒（3.3MB）：先挂一个"正在加载"的中间态，别让人对着源码块干等。
+   成功/失败都会把它摘掉 —— 失败时接 _mermaidFail 的提示。 */
+function _mermaidLoading(pre){
+  if(!pre || !pre.parentNode) return null;
+  const next = pre.nextSibling;
+  if(next && next.classList && next.classList.contains("mermaid-loading")) return next;
+  const el = document.createElement("div");
+  el.className = "mermaid-loading";
+  el.textContent = t("mermaid.loading", "正在加载图表引擎（首次约需十余秒）…");
+  pre.parentNode.insertBefore(el, pre.nextSibling);
+  return el;
+}
+function _mermaidDropLoading(list){
+  (list || []).forEach(function(el){ if(el && el.parentNode) el.parentNode.removeChild(el); });
+}
 function _mermaidFail(pre, msg){
   if(!pre || !pre.parentNode) return;
   if(!pre.nextSibling || !pre.nextSibling.classList || !pre.nextSibling.classList.contains("mermaid-fail")){
@@ -408,13 +423,20 @@ function renderMermaidBlocks(root){
     .filter(function(c){ return !c.closest(".streaming") && !c.hasAttribute("data-mermaid-state"); });
   if(!codes.length) return _mermaidQueue;
   codes.forEach(function(c){ c.setAttribute("data-mermaid-state", "pending"); });
+  /* 只在真的要拉文件时才显示加载态（库已在内存里时是同步替换，不需要中间态） */
+  const loading = [];
+  if(!window.mermaid){
+    codes.forEach(function(c){ const el = _mermaidLoading(c.parentNode); if(el) loading.push(el); });
+  }
   _mermaidQueue = _mermaidQueue.then(async function(){
     let lib = null;
     try{ lib = await _loadMermaid(); }
     catch(e){
+      _mermaidDropLoading(loading);
       codes.forEach(function(c){ _mermaidFail(c.parentNode, t("mermaid.needVendor", "Mermaid 需要完整发行版（vendor/mermaid）才能渲染")); c.setAttribute("data-mermaid-state", "fail"); });
       return;
     }
+    _mermaidDropLoading(loading);
     for(const code of codes){
       const pre = code.parentNode;
       if(!pre || !pre.parentNode) continue;
