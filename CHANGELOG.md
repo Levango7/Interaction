@@ -70,6 +70,11 @@
 这期间界面只有源码块、没有任何信号。现在库未加载时**同步**挂一条「正在加载图表引擎（首次约需十余秒）…」，
 成功替换为图、失败接原来的"保留源码 + 提示"。库已在内存时不出中间态（同步替换，不闪）。
 
+- **线上实测补充（2026-10-24，3.7.141 发布当天）**：从 `https://levango7.github.io` 直连本机 `127.0.0.1` 的 MCP 服务
+  被 Chrome 的 **Local Network Access 权限**拦下（`Permission was denied for this request`；补
+  `Access-Control-Allow-Private-Network: true` 仍被拦，headless 无法授予站点权限）⇒ **https 网页 × 本机 MCP 目前不可用**。
+  可用组合：`file://` 单文件（e2e 已证）与同私网/公网 https 服务；彻底解法是 Electron 主进程代理（下一阶段）。
+  这条是「CSP 放行 ≠ 能用」的活例子：真正的门槛在浏览器权限模型，不在 CSP。
 - 测试：`mcp-client` **9 例**（发现/SSE 解析/未勾选不注入/命名空间路由/危险分类/allow 强制执行/上限 30/
   连不上点名 CORS/设置页勾选与保存不抹）、e2e `mcp-live` **1 例 × 2 视口**（真起一台 127.0.0.1 的
   Streamable HTTP MCP 服务 + ACAO:\*，在 `file://` 页面里跑完整条链）、`mermaid` 补 1 例守加载态。

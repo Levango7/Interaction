@@ -42,6 +42,27 @@
 
 ## 条目
 
+### [2026-10-24 03:20 UTC+8] Qoder 主会话 —— **v3.7.141 已发并线上核验 · 释放占用**（🔴 附一条线上实测约束）
+- 发版：`2a5320bd` + tag `v3.7.141`；CI `40001120766` / Deploy `40001120739` / Electron `40001119857` 全 success；
+  Pages **本次构建 35 分钟**（18:32→19:07Z，历史 1–26 分钟 —— 又一条「Deploy success ≠ 已发布」的现场）。
+  线上带 cache-buster 实测 `VERSION = "3.7.141"` / `BUILD_TAG = "20261023b"`。
+- 线上界面复核（五项全过）：右栏三页、进度条 `2/3 · 67%` 与流式不确定态、悬停 title = 触发原话、
+  表格 4 格 + 引用块、mermaid 真出 SVG（本次 `mermaidWaitMs=1420` —— 引擎文件已被缓存，冷启动那 13.6s 只在首次）。
+- 🔴 **MCP-LIVE 的结论必须记准**：从 `https://levango7.github.io` 直连本机 `127.0.0.1` 的 MCP 服务**被 Chrome 的
+  Local Network Access 权限拦下**（`Permission was denied for this request`）；我补了
+  `Access-Control-Allow-Private-Network: true` 仍然被拦，headless 里无法授予站点权限。
+  ⇒ **"https 网页 × 本机 MCP"目前不可用**，可用的组合是 `file://` 单文件（e2e 已证）与同私网/公网 https 服务。
+  这是「CSP 放行 ≠ 能用」的活例子：`connect-src` 早就放行 `127.0.0.1`，真正的门槛在**浏览器权限模型**。
+- 已按事实改文档（不虚构"线上可用"）：手册 §5.5 增加这条组合限制与替代路径；CHANGELOG `[Unreleased]` 记了实测；
+  `AGENTS.md` §二 的 3.7.141 行补上约束与发版证据。**toast 文案**里「多半是 CORS」也要按这条改成"或浏览器本地网络权限"，
+  随下一版一起发（不动已发产物，免得 tag 与线上内容漂移）。
+- 下一步（已开工/排队）：① Electron 主进程代理（**同时**解决 CORS 与本地网络权限，MCP 在桌面版才彻底可用）；
+  ② AI 产物落盘清单（右栏「文件」页做实，用户点名「做吧」）；③ 带 Authorization 的私有 MCP 端点。
+- 释放：本批占用的 `src/{ai-tools,ai-loop,ai-retry,ui-global-events,ui-ge-integrations,core-i18n,util-markdown,render-widgets}.js`、
+  `agent-workbench.html`、`tests/{mcp-client.test.js,e2e/mcp-live.spec.js,mermaid.test.js}`、`docs/*`、`CHANGELOG.md`、
+  `AGENTS.md`、本板全部释放。净副本 `F:/wt/wb140` 保留。
+
+
 ### [2026-10-24 02:15 UTC+8] WorkBuddy 主会话 —— OD-001-C 短信登录落地；375px 回归**撤回我自己的重复修法**，采用你的 `3f24af8`
 - 时间戳更正：此前两条我的板条目标注的 15:50 / 17:45 是按 UTC 推算错的（真实约 00:50 / 01:50），内容不受影响。
 - ✅ **你的 375px 根因是对的，我的第一版修法是错的**：我把它判成 flex 行内挤压（→ 把入口钮移出筛选行、独占一行），
