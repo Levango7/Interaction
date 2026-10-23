@@ -265,12 +265,93 @@ function renderTaskRail(){
   // lint-xss-ok: 每个插值都过了 esc()/t() 字典值；scCss() 只产出颜色令牌或十六进制
   $("#taskRailList").innerHTML = html;
   _bindTaskRail();
+  _renderRailAgent();
+  _renderRailFiles();
+  _applyRailTab();
+}
+
+/* ---------- 右栏分页（2026-10-23）：今日 / Agent / 文件 ----------
+ * 只展示真实能力：技能来自 listEnabledSkills（真的注入提示词）、文件来自 getRagFiles；
+ * MCP 仍是配置壳（i18n 明写"不改变 AI 能力"），故**不列**，避免假能力入口。 */
+const RAIL_TABS = ["today", "agent", "files"];
+function _railTabGet(){
+  try{ const v = load(PREFIX + "rail_tab", "today"); return RAIL_TABS.indexOf(v) >= 0 ? v : "today"; }
+  catch(_e){ return "today"; }
+}
+function _railTabSet(tab){
+  if(RAIL_TABS.indexOf(tab) < 0) return;
+  save(PREFIX + "rail_tab", tab);
+  _applyRailTab();
+}
+function _applyRailTab(){
+  const rail = $("#taskRail");
+  if(!rail) return;
+  const tab = _railTabGet();
+  rail.querySelectorAll("[data-rail-tab]").forEach(function(b){
+    const on = b.getAttribute("data-rail-tab") === tab;
+    b.classList.toggle("is-on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  rail.querySelectorAll("[data-rail-pane]").forEach(function(p){
+    p.classList.toggle("u-hidden", p.getAttribute("data-rail-pane") !== tab);
+  });
+  const cnt = $("#taskRailCount"); if(cnt) cnt.classList.toggle("u-hidden", tab !== "today");
+  const add = $("#taskRailAdd"); if(add) add.classList.toggle("u-hidden", tab !== "today");
+}
+function _renderRailAgent(){
+  const el = $("#railAgentPane");
+  if(!el) return;
+  const skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : [];
+  const prog = (typeof getChatProgress === "function") ? getChatProgress() : null;
+  let html = '<div class="rail-sec-title">' + esc(t("rail.agent.skills", "技能"))
+    + ' <span class="task-rail-count">' + skills.length + "</span></div>";
+  html += skills.length
+    ? '<ul class="rail-list">' + skills.slice(0, 8).map(function(s){
+        const trig = (s.trigger || []).slice(0, 2).join(" / ");
+        return '<li class="rail-item"><span class="rail-item-name">' + esc(s.name || "") + "</span>"
+          + (trig ? '<span class="rail-item-meta">' + esc(trig) + "</span>" : "") + "</li>";
+      }).join("") + "</ul>"
+    : '<p class="task-rail-empty">' + esc(t("rail.agent.none", "还没有技能。命令面板里可保存常用流程。")) + "</p>";
+  if(prog){
+    html += '<div class="rail-sec-title">' + esc(t("rail.agent.running", "正在运行")) + "</div>"
+      + '<div class="rail-item"><span class="rail-item-name">' + esc(prog.label || "") + "</span>"
+      + '<span class="rail-item-meta">' + esc(prog.total ? (prog.current + "/" + prog.total) : (prog.received + t("chat.progress.chars", " 字"))) + "</span></div>";
+  }
+  const ready = (typeof aiReadyProfile === "function") ? !!aiReadyProfile() : false;
+  html += '<div class="rail-sec-title">' + esc(t("rail.agent.ready", "AI 状态")) + "</div>"
+    + '<div class="rail-item"><span class="rail-item-name">'
+    + esc(ready ? t("rail.agent.configured", "已配置") : t("rail.agent.unconfigured", "未配置")) + "</span></div>";
+  el.innerHTML = sanitizeHtml(html);
+}
+function _renderRailFiles(){
+  const el = $("#railFilesPane");
+  if(!el) return;
+  const files = (typeof getRagFiles === "function") ? getRagFiles() : [];
+  let html = '<div class="rail-sec-title">' + esc(t("rail.files.title", "文件知识"))
+    + ' <span class="task-rail-count">' + files.length + "</span></div>";
+  html += files.length
+    ? '<ul class="rail-list">' + files.slice(0, 8).map(function(f){
+        return '<li class="rail-item"><span class="rail-item-name">' + esc(f.name || "") + "</span>"
+          + '<span class="rail-item-meta">' + ((f.chunks || []).length) + esc(t("p5.kbFilesChunkCount", " 块")) + "</span></li>";
+      }).join("") + "</ul>"
+    : '<p class="task-rail-empty">' + esc(t("rail.files.empty", "还没有导入文件。知识库支持 PDF/DOCX/文本。")) + "</p>";
+  html += '<button type="button" class="task-rail-more" id="railOpenKb">' + esc(t("rail.files.open", "打开知识库")) + "</button>";
+  el.innerHTML = sanitizeHtml(html);
+  const b = $("#railOpenKb");
+  if(b) b.onclick = function(){ try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 打开失败不阻塞右栏 */ } };
 }
 
 function _bindTaskRail(){
   const rail = $("#taskRail");
   if(!rail || rail._bound) return;
   rail._bound = true;
+  const tabWrap = rail.querySelector(".task-rail-tabs");
+  if(tabWrap){
+    tabWrap.addEventListener("click", function(e){
+      const btn = e.target && e.target.closest ? e.target.closest("[data-rail-tab]") : null;
+      if(btn) _railTabSet(btn.getAttribute("data-rail-tab"));
+    });
+  }
   const body = document.querySelector(".body");
   const app = document.querySelector(".app");
   const setOpen = (open)=>{

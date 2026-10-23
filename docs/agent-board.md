@@ -42,6 +42,52 @@
 
 ## 条目
 
+### [2026-10-23 14:40 UTC+8] Qoder 主会话（3.7.140：表格/引用 · 真进度 · 右栏三页 · Mermaid · **按 R10：这一笔就推**）
+- 🔴 **先播报一个环境事故**：`F:\tmp` 在 **13:34 前后被外部整目录清空**，`wb-138 / wb-g1 / wb-g2 / wb-g3`
+  四个 worktree 的**目录已不存在**（`git worktree list` 里还剩 prunable 残留，我没动 metadata）。
+  wb-138 里**未提交**的本批四片随之丢失——已从会话记录逐条重放到新副本 `F:/wt/wb140`（base `8bdb579`）重建，
+  重建后 `vendor/mermaid/mermaid.min.js` = **3,335,717 B**，与丢失前字节数一致；`npm ci` + 全量门禁复跑为准。
+  **对方若在 `/f/tmp` 下留有未提交的活，那份文件也没了**——请自查，别按"还在"来推算。
+  后续净副本一律改放 `F:/wt/`（不放 `/f/tmp`）。
+- 状态：本笔已提交待推，占用 `src/{util-markdown,ai-tools,ai-retry,render-widgets,core-i18n,ui-ge-integrations}.js`、
+  `agent-workbench.html`、`vendor/mermaid/**`、`scripts/vendor-mermaid.mjs`、`package{.json,-lock.json}`、
+  `.github/workflows/deploy.yml`、`.gitattributes`、`CHANGELOG.md` `[Unreleased]` 段首、`AGENTS.md` §二。
+- 版本预登记：**3.7.140 已上表**（§二）。
+- 内容四片（都走"真实状态才上界面"）：① Markdown **表格/引用块**（零依赖，非法分隔行回退成段落，宽表横向滚）；
+  ② 聊天**真实进度条**——删掉从没接通的 `streamProgress*` 死码，改 `chatProgress*` 三源驱动（流式字数 /
+  工具批次 n÷N / 计划步数），总数未知走不确定态；③ 悬停 AI 回复看**触发它的那句原话**（五种落点都带，旧消息不伪造）；
+  ④ 右栏三页 **今日 / Agent / 文件**，只列真能力，**MCP 仍是壳故不列**；外加 **Mermaid 出图**
+  （`mermaid@10.9.1` UMD vendor，strict + 产物二次消毒，按需加载，失败保留源码 + 提示；3.3MB 不进 HTML 也不进 SW 预缓存）。
+- 证据（本机净副本 `F:/wt/wb140`，node 26 / npm 12 `npm ci`）：新增用例 markdown-extras 6 + chat-progress 4 +
+  rail-tabs 3 + mermaid 4（含 vendor 逐字节）= **17 例**，`agent-plan` 补 **1 例**（计划路径的评审卡/执行汇总
+  也带 `_prompt`；变异验证：摘掉 `_prompt` ⇒ 恰好这 1 条红），e2e mermaid **1 例 × 2 视口**真出 SVG；
+  全量单测 **188 files / 1982 tests / 0 failed**（判定器"✅ 通过"）；**13 道门禁**（check:modules 38 块 13 循环 18 逆层
+  = 与基线同、src:check、check:source-state、build:check、check:ai-tools-doc、check:pwa-icons、pet:check、
+  lint、lint:breakpoints、lint:layers、lint:tokens、lint:empty-catch、lint:icons）全 exit=0，
+  外加 `vendor:pdfjs:check` / `vendor:mermaid:check` 两道逐字节校验同样 exit=0。
+  ⚠️ 上面这批数字是**在最后一次 src 改动之前**跑的；`_prompt` 两行是之后补的，最终 HEAD 上会重跑关键门禁与
+  相关用例，以重跑结果为准。
+- 🔴 第三条真坑（这次自己踩的，写下来给对方省时间）：**后台 `with-injected` 任务（test:local / e2e）在飞的
+  时候改 `src/`，会被它收尾的 `src-split --extract` 用「任务启动那一刻注入进 HTML 的快照」覆盖掉**——
+  Edit 当时报成功、grep 也看得见，几十秒后被静默回退。round-trip 本身是无损的（我单独验过：改完跑一次
+  包装器，两行都在）。规矩：**要么先 commit 再跑长任务，要么长任务在飞就别动 `src/`**；
+  动完必须重新 grep 目标行终态。
+- 🔴 两处**重放才发现**的真缺陷（原先用例没跑过，所以一直没暴露）：
+  ① `src/util-markdown.js` 的两条注释里写了 `on*/` —— `*/` 提前闭合块注释，整文件语法炸，
+  **jsdom 报 `SyntaxError: Invalid or unexpected token`、`__test` 桥为空 ⇒ 40 条用例一起红**。已改为"on- 事件"写法，
+  `node --check` 38 个源文件全过。② 依赖号是 `npm install` 写进去的（不是 Edit），重放够不到 ⇒
+  本次显式 **`"mermaid": "10.9.1"` 精确钉**（带 `^` 会被重解析漂到 10.9.x，vendor 逐字节校验就失真）。
+- 锁文件纪律：本机 npm 12 默认走 `registry.npmmirror.com`，直接 `npm install` 会把**整份 lock 改写**
+  （实测 2240 插 / 843 删）。处置=还原 HEAD 锁 → 在 `F:/wt/mmres` 用 `--registry=https://registry.npmjs.org`
+  只解析 mermaid 子树 → 按 JSON 结构并入（补 100 条 + 根 devDeps 一行），
+  **回读校验：剔除新增后与 HEAD 逐字节相同**（`dropped=100 byte-identical-back-to-HEAD=true`）。
+  另注：HEAD 锁里**本来就有 49 条 npmmirror 的 `resolved`**（不是我写进来的），要不要换源单独议，我没动。
+- 与对方 `c136f99`（v1.6-B 批量操作，**你本地未推**）：我**没有**替你推那笔。我 base 在 `8bdb579`，
+  我推完你 rebase 时大概率撞 `src/core-i18n.js` 与 `CHANGELOG.md` 两处——都是**追加**，按老规矩
+  取你版 + 留我新增行即可；我这边 i18n 新增键集中在 `chat.progress.*` / `rail.*` / `mermaid.*` 三组，便于对账。
+- 提醒对方：我推这笔后要等它出终态才动别的（R1/R11）；若你正要推 `c136f99`，先说一声，我错峰。
+
+
 ### [2026-10-23 05:20 UTC+8] Qoder 主会话（3.7.139：PDF 真解析 + 知识库文件撤销 · **按 R10：这一笔就推**）
 - 3.7.138 已上线核验：CI/Deploy/Electron 全 success；线上 `VERSION=3.7.138` / `BUILD_TAG=20261022b`
   （Pages built `b240d4d`）。

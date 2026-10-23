@@ -2546,48 +2546,54 @@ async function retryChatWithParams(params){
 }
 let _retryOverrides = null;
 
-/**
- * 流式输出进度跟踪：记录已接收字数 / 预估总字数 / 起始时间
- *   - onChunk 回调中调用 streamProgressUpdate 累加 received
- *   - UI 通过 getStreamProgress() 读取进度渲染进度条
- */
-let _streamProgress = null;
-/**
- * 初始化流式进度跟踪
- * @param {number} estimated - 预估总字数
- */
-function streamProgressStart(estimated){
-  _streamProgress = {
-    received: 0,
-    estimated: (typeof estimated === "number" && estimated > 0) ? estimated : 0,
-    startTime: Date.now(),
-    elapsed: 0
-  };
+/* ---------- 聊天运行进度（2026-10-23：真实状态，不做假进度） ----------
+ * 三类数据源：流式 onChunk（received 字数）、工具批次（current/total）、Agent 计划（步/总步）。
+ * total=0 时走不确定态（滑动条），有 total 时按百分比。UI 刷新入口是 _renderChatProgress，
+ * renderChat 与每次 update 都会调用它；结束/取消在 runChatLoop 的 finally 里兜底清除。 */
+let _chatProgress = null;
+function chatProgressStart(kind, label, total){
+  _chatProgress = { kind: kind || "run", label: label || "", current: 0,
+    total: (typeof total === "number" && total > 0) ? total : 0, received: 0, startedAt: Date.now() };
+  _renderChatProgress();
 }
-/**
- * 更新流式进度（onChunk 回调中调用）
- * @param {string} chunk - 新收到的文本块
- */
-function streamProgressUpdate(chunk){
-  if(!_streamProgress) return;
-  _streamProgress.received += String(chunk || "").length;
-  _streamProgress.elapsed = Date.now() - _streamProgress.startTime;
+function chatProgressUpdate(patch){
+  if(!_chatProgress || !patch) return;
+  if(typeof patch.label === "string") _chatProgress.label = patch.label;
+  if(typeof patch.current === "number") _chatProgress.current = patch.current;
+  if(typeof patch.total === "number") _chatProgress.total = patch.total > 0 ? patch.total : 0;
+  if(typeof patch.received === "number") _chatProgress.received = patch.received;
+  _renderChatProgress();
 }
-/**
- * 获取流式进度
- * @returns {{received:number, estimated:number, elapsed:number, percent:number}|null}
- */
-function getStreamProgress(){
-  if(!_streamProgress) return null;
-  const p = _streamProgress;
-  const percent = p.estimated > 0 ? Math.min(100, Math.round(p.received / p.estimated * 100)) : 0;
-  return { received:p.received, estimated:p.estimated, elapsed:p.elapsed, percent };
+function chatProgressEnd(){
+  if(!_chatProgress) return;
+  _chatProgress = null;
+  _renderChatProgress();
 }
-/**
- * 清除流式进度
- */
-function streamProgressClear(){
-  _streamProgress = null;
+function getChatProgress(){
+  if(!_chatProgress) return null;
+  const p = _chatProgress;
+  return { kind:p.kind, label:p.label, current:p.current, total:p.total, received:p.received,
+    elapsed: Date.now() - p.startedAt,
+    percent: p.total ? Math.min(100, Math.round(p.current / p.total * 100)) : 0 };
+}
+function _renderChatProgress(){
+  const box = document.getElementById("chatProgress");
+  if(!box) return;
+  const p = getChatProgress();
+  if(!p){ box.hidden = true; box.classList.remove("indeterminate"); return; }
+  box.hidden = false;
+  const label = document.getElementById("chatProgressLabel");
+  const fill = document.querySelector("#chatProgressBar > i");
+  const secs = Math.max(0, Math.round(p.elapsed / 1000));
+  let text = p.label || t("chat.progress.running", "运行中…");
+  if(p.total) text += " · " + p.current + "/" + p.total;
+  if(p.received) text += " · " + (p.received >= 1000 ? (p.received / 1000).toFixed(1) + "k" : String(p.received)) + t("chat.progress.chars", " 字");
+  if(secs) text += " · " + secs + "s";
+  if(label) label.textContent = text;
+  if(fill){
+    if(p.total){ box.classList.remove("indeterminate"); fill.style.width = p.percent + "%"; }
+    else { box.classList.add("indeterminate"); fill.style.width = "35%"; }
+  }
 }
 
 /* ---------- v3.7.13（解耦 S1）：AI 工具实现归位 ----------
@@ -2792,18 +2798,20 @@ function renderChat(){
       }
       return '<div class="msg tool">' + esc(_disp) + '</div>';
     }
+    /* 2026-10-23：assistant 消息记录本轮用户提示词，悬停可见（title 原生提示，不引浮层依赖） */
+    const promptTip = (m && m._prompt) ? ' title="' + esc(String(m._prompt).slice(0, 500)) + '" data-prompt="1"' : "";
     if(m.role==="assistant" && m.tool_calls && m.tool_calls.length){
       const s=m.tool_calls.map(tc=>t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
-      return `<div class="msg assistant toolcall">${s}</div>`;
+      return `<div class="msg assistant toolcall"${promptTip}>${s}</div>`;
     }
-    if(m.role==="assistant" && !m.content) return `<div class="msg assistant">${t("ai.toolCalling","（工具调用中…）")}</div>`;
+    if(m.role==="assistant" && !m.content) return `<div class="msg assistant"${promptTip}>${t("ai.toolCalling","（工具调用中…）")}</div>`;
     // T3.1 已取消提示（灰色斜体）
-    if(m.role==="assistant" && m._canceled) return `<div class="msg assistant canceled">${t("ai.cancelled","已取消")}</div>`;
+    if(m.role==="assistant" && m._canceled) return `<div class="msg assistant canceled"${promptTip}>${t("ai.cancelled","已取消")}</div>`;
     // T3.1 失败消息 + 重试按钮
-    if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body">${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">${t("ai.retry","重试")}</button></div>`;
+    if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body"${promptTip}>${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">${t("ai.retry","重试")}</button></div>`;
     // v3.2 C-档：流式打字机态（_streaming 标记的消息加 streaming class——半透明+光标动画）
-    if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming">${mdToHtml(m.content||"")}</div>`;
-    if(m.role==="assistant") return `<div class="msg assistant md-body">${mdToHtml(m.content||"")}</div>`;
+    if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming"${promptTip}>${mdToHtml(m.content||"")}</div>`;
+    if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}</div>`;
     // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
   }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + CHAT_SUGGEST_HTML);
@@ -2816,6 +2824,9 @@ function renderChat(){
       const ta = $("#chatTextInput"); if(ta) ta.focus();
     });
   }
+  _renderChatProgress();
+  /* 只渲染非流式消息里的 mermaid；异步队列在后台跑，不阻塞聊天渲染 */
+  if(typeof renderMermaidBlocks === "function") renderMermaidBlocks(el);
   scrollChat();
 
 }

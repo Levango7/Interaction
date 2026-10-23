@@ -21,5 +21,8 @@
 # v3.7.139：第三方产物按字节分发。pdf.js 的 LICENSE 无扩展名，默认 text=auto 会在 Windows
 # 检出时转 CRLF，导致 pdf-vendor 的逐字节校验失真（node_modules 里是 LF）。
 vendor/pdfjs/LICENSE -text
+# 同一坑对 mermaid 也成立（2026-10-23 批次）：vendor:mermaid:check 是逐字节比对，
+# LICENSE 无扩展名 → 不锁就会在 Windows 检出后与 node_modules 的 LF 副本不一致。
+vendor/mermaid/LICENSE -text
 # .cjs 此前未锁；测试辅助文件也走 LF，避免本地/CI 行尾差异
 *.cjs text eol=lf

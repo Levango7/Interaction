@@ -2233,13 +2233,13 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     get RAG_SYNC_DEBOUNCE_MS(){ return RAG_SYNC_DEBOUNCE_MS; },
     get RAG_SYNC_EMBED_CAP(){ return RAG_SYNC_EMBED_CAP; },
     switchModel, listModels, retryChatWithParams,
-    streamProgressStart, streamProgressUpdate, getStreamProgress, streamProgressClear,
+    chatProgressStart, chatProgressUpdate, getChatProgress, chatProgressEnd,
     get RAG_STORAGE_KEY(){ return RAG_STORAGE_KEY; },
     get _ragReady(){ return _ragReady; },
     set _ragReady(v){ _ragReady = !!v; },
     get _ragLex(){ return _ragLex; },
     get _retryOverrides(){ return _retryOverrides; },
-    get _streamProgress(){ return _streamProgress; }
+    get _chatProgress(){ return _chatProgress; }
   });
 }
 

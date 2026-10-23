@@ -20,6 +20,38 @@
 
 ## [Unreleased]
 
+### 2026-10-23 · AI 输出的可读性与运行可见性（表格/引用 · 真进度 · 右栏三页 · Mermaid）
+
+四片，都走「真实状态才上界面」这条线：
+
+- **Markdown 补齐表格与引用块**（零依赖，仍不改手写解析器）：表头/对齐行按列解析、缺列补空、
+  单元格里 `\|` 是字面竖线；连续 `>` 合并成一段且行内标记照常生效；分隔行不合法时**回退成普通段落**
+  （不误吞正文）。引用块内的 HTML 依旧先转义——XSS 面不因新功能回潮。宽表可横向滚，不撑破对话坞。
+- **聊天进度条换成真的**：原先 `streamProgress*` 那套是**死码**（预估总字数从没人给、UI 也没读它），
+  本笔删掉，改为 `chatProgress*` 三源驱动——流式 `onChunk` 累计字数、工具批次「第 n / 共 N 个 + 当前工具名」、
+  Agent 计划「第几步 / 共几步」；总数未知时走**不确定态滑动条**，不伪造百分比。取消/报错/超时在
+  `runChatLoop` 的 `finally` 兜底收起，进度不会挂在界面上。
+- **悬停 AI 回复看得到触发它的那句原话**（`title` + `data-prompt`）：最终回复、取消、超时、失败、
+  待确认五种落点都带；历史里的旧消息没有这个字段就**不伪造**。
+- **右栏任务轨分三页**：今日（原样）/ Agent（真启用的技能 + AI 就绪态 + 当前进度）/ 文件（知识库文件与
+  入口），选过的页记住。**MCP 不列**——它仍是配置壳，按 §6 诚实条款不给主界面入口。
+- **Mermaid 出图**：`vendor/mermaid`（`mermaid@10.9.1` UMD，3.3MB）按需注入——回复里出现 mermaid 代码块
+  才加载。钉 10.x 的理由与 pdf.js 同：11.x 起只发 ESM，`file://` 单文件形态会被 CORS 拦。
+  `securityLevel:'strict'` + 产物二次 DOM 消毒（删 script/foreignObject、`on*` 属性、`javascript:`/`data:` href，
+  `<style>` 里剥 `@import` 与外部 `url()`）；渲染串行、幂等、跳过流式中的半截代码；失败**保留源码 + 提示**，
+  不静默吞图。3.3MB 不进 HTML、也不进 SW 预缓存（首次使用时由同源静态资源缓存接管）。
+- 交付面：`deploy.yml` 复制整个 `vendor/`（原先只 pdfjs）、Electron 预打包同样带上、
+  `.gitattributes` 补 `vendor/mermaid/LICENSE -text`（无扩展名的 LICENSE 在 Windows 检出转 CRLF
+  会让逐字节校验失真）。依赖钉**精确版本**（`"mermaid": "10.9.1"`，不带 `^`）：caret 会让锁重解析时
+  漂到 10.9.x，vendor 字节校验随之失真。
+- 边界（如实）：不做图表点击交互/主题联动；单文件拷贝形态缺 `vendor/mermaid/` 时只提示不画；
+  「生成文件列表」仍是知识库文件，AI 产物落盘清单是另一件事（未做）。
+- 测试：新增 `markdown-extras` 6 例、`chat-progress` 4 例、`rail-tabs` 3 例、`mermaid` 4 例
+  （含 vendor 逐字节一致）**共 17 例**，另在 `agent-plan` 补 1 例守住「计划路径的评审卡与执行汇总也带
+  触发原话」（变异验证：摘掉 `_prompt` ⇒ 恰好这 1 条红）；e2e `mermaid` 1 例 × 2 视口
+  （`file://` 下真加载 vendor、真出 SVG、产物里无 `script`）。
+
+
 ### 2026-10-23 · PDF 真解析（pdfjs-dist 3.11）+ 知识库文件撤销
 
 - 知识库支持 **.pdf 真解析**：`vendor/pdfjs`（`pdfjs-dist@3.11.174`，UMD 经典脚本）按需加载，

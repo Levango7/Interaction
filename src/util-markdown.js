@@ -39,10 +39,27 @@ function inlineMd(s){
   s = s.replace(/\uE000IC(\d+)\uE000/g, (m, idx) => codes[+idx]);
   return s;
 }
+/** 表格行切分（输入已过 esc）：支持 `\|` 字面竖线；去掉首尾管道 */
+function _mdSplitRow(line){
+  const s = String(line).trim().replace(/^\|/, "").replace(/\|$/, "");
+  const cells = [];
+  let cur = "", escp = false;
+  for(let k = 0; k < s.length; k++){
+    const ch = s[k];
+    if(escp){ cur += ch === "|" ? "|" : "\\" + ch; escp = false; continue; }
+    if(ch === "\\"){ escp = true; continue; }
+    if(ch === "|"){ cells.push(cur.trim()); cur = ""; continue; }
+    cur += ch;
+  }
+  if(escp) cur += "\\";
+  cells.push(cur.trim());
+  return cells;
+}
 /**
  * 简单 Markdown 解析器（手写，无外部依赖）。
  * 支持：标题(#/##/###)、粗体(**)、斜体(*)、行内代码(`)、代码块(```)、
- * 无序列表(-/*)、有序列表(1.)、链接([text](url))、换行（双换行=段落，单换行=<br>）。
+ * 无序列表(-/*)、有序列表(1.)、链接([text](url))、表格（含对齐）、引用块(>)、
+ * 换行（双换行=段落，单换行=<br>）。
  * XSS 防护：先 escapeHtml 再解析 Markdown，代码块内容原样显示不解析。
  * @param {string} str - 原始 Markdown 文本
  * @returns {string} 解析后的 HTML 字符串
@@ -76,6 +93,52 @@ function mdToHtml(str){
       }
       i++;
       blocks.push({type:"block", html:'<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+buf.join("\n")+'</code></pre>'});
+      continue;
+    }
+    /* 表格：当前行含 |，下一行是分隔行（--- / :---: / ---:）。必须在段落之前判。 */
+    if(line.indexOf("|") >= 0 && i + 1 < lines.length
+       && /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])){
+      flushPara();
+      const header = _mdSplitRow(line);
+      const aligns = _mdSplitRow(lines[i + 1]).map(function(c){
+        if(/^:-+:$/.test(c)) return "center";
+        if(/^-+:$/.test(c)) return "right";
+        return "left";
+      });
+      i += 2;
+      const rows = [];
+      while(i < lines.length && lines[i].indexOf("|") >= 0 && lines[i].trim() !== ""){
+        rows.push(_mdSplitRow(lines[i])); i++;
+      }
+      const pad = function(cells){
+        const out = cells.slice(0, header.length);
+        while(out.length < header.length) out.push("");
+        return out;
+      };
+      const th = header.map(function(c, idx){
+        return '<th class="md-' + (aligns[idx] || "left") + '">' + inlineMd(c) + "</th>";
+      }).join("");
+      const tb = rows.map(function(r){
+        return "<tr>" + pad(r).map(function(c, idx){
+          return '<td class="md-' + (aligns[idx] || "left") + '">' + inlineMd(c) + "</td>";
+        }).join("") + "</tr>";
+      }).join("");
+      blocks.push({type:"block", html:'<div class="md-table-wrap"><table><thead><tr>' + th + "</tr></thead>"
+        + (tb ? "<tbody>" + tb + "</tbody>" : "") + "</table></div>"});
+      continue;
+    }
+    /* 引用块：esc 之后 `>` 变成 `&gt;`，两种都认；连续行合并为一段 */
+    const bq = line.match(/^(?:&gt;|>)\s?(.*)$/);
+    if(bq){
+      flushPara();
+      const quoted = [];
+      while(i < lines.length){
+        const m = lines[i].match(/^(?:&gt;|>)\s?(.*)$/);
+        if(!m) break;
+        quoted.push(inlineMd(m[1]));
+        i++;
+      }
+      blocks.push({type:"block", html:"<blockquote>" + quoted.join("<br>") + "</blockquote>"});
       continue;
     }
     const h = line.match(/^(#{1,3})\s+(.*)$/);
@@ -275,4 +338,102 @@ function sanitizeHtml(html){
     if (s === prev) break; // 已收敛，提前退出
   }
   return s;
+}
+
+/* ---------- Mermaid（2026-10-23）：只在出现 ```mermaid 时按需加载 vendor ----------
+ * 10.x UMD（11.x 只发 ESM，file:// 会被 CORS 拦）；securityLevel:'strict' 只让标签走文本，
+ * 渲染后仍做一次 SVG 消毒（script/foreignObject/on-事件/外链），失败保留源码并提示。 */
+let _mermaidPromise = null;
+let _mermaidSeq = 0;
+let _mermaidQueue = Promise.resolve();
+function _mermaidUrl(){
+  try{ return new URL("vendor/mermaid/mermaid.min.js", document.baseURI).href; }catch(_e){ return "vendor/mermaid/mermaid.min.js"; }
+}
+function _loadMermaid(){
+  if(window.mermaid) return Promise.resolve(window.mermaid);
+  if(_mermaidPromise) return _mermaidPromise;
+  _mermaidPromise = new Promise(function(resolve, reject){
+    const s = document.createElement("script");
+    s.src = _mermaidUrl();
+    s.async = true;
+    s.onload = function(){
+      if(!window.mermaid){ reject(new Error("mermaid not found")); return; }
+      try{ window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "default" }); }catch(_e){ /* 配置失败交给 render 报错 */ }
+      resolve(window.mermaid);
+    };
+    s.onerror = function(){ reject(new Error("mermaid load failed")); };
+    document.head.appendChild(s);
+  }).catch(function(e){ _mermaidPromise = null; throw e; });
+  return _mermaidPromise;
+}
+/** 渲染产物二次消毒：script、foreignObject、on- 事件属性、javascript: 一律剥离；保留图表所需的内联 <style>，但去掉外链 */
+function _sanitizeMermaidSvg(svg){
+  let doc = null;
+  try{ doc = new DOMParser().parseFromString(String(svg || ""), "image/svg+xml"); }catch(_e){ return ""; }
+  const root = doc && doc.documentElement;
+  if(!root) return "";
+  Array.prototype.slice.call(root.querySelectorAll("script, foreignObject")).forEach(function(n){ n.remove(); });
+  Array.prototype.slice.call(root.querySelectorAll("*")).forEach(function(n){
+    Array.prototype.slice.call(n.attributes || []).forEach(function(a){
+      const name = String(a.name || "").toLowerCase();
+      if(name.indexOf("on") === 0) n.removeAttribute(a.name);
+      else if((name === "href" || name === "xlink:href") && /^\s*(javascript|data):/i.test(a.value)) n.removeAttribute(a.name);
+    });
+    if(String(n.tagName || "").toLowerCase() === "style"){
+      n.textContent = String(n.textContent || "")
+        .replace(/@import[^;]*;?/gi, "")
+        .replace(/url\(\s*["']?https?:[^)]*\)/gi, "none");
+    }
+  });
+  try{ return new XMLSerializer().serializeToString(root); }catch(_e){ return ""; }
+}
+function _mermaidFail(pre, msg){
+  if(!pre || !pre.parentNode) return;
+  if(!pre.nextSibling || !pre.nextSibling.classList || !pre.nextSibling.classList.contains("mermaid-fail")){
+    const hint = document.createElement("div");
+    hint.className = "mermaid-fail";
+    hint.textContent = msg;
+    pre.parentNode.insertBefore(hint, pre.nextSibling);
+  }
+}
+/**
+ * 把 root 里的 ```mermaid 代码块渲染为 SVG（异步、串行、幂等）。
+ * 跳过流式消息；失败保留源码 + 提示，不静默吞图。
+ * @param {HTMLElement} root
+ * @returns {Promise<void>}
+ */
+function renderMermaidBlocks(root){
+  if(!root) return Promise.resolve();
+  const codes = Array.prototype.slice.call(root.querySelectorAll("pre > code.lang-mermaid, pre > code.language-mermaid"))
+    .filter(function(c){ return !c.closest(".streaming") && !c.hasAttribute("data-mermaid-state"); });
+  if(!codes.length) return _mermaidQueue;
+  codes.forEach(function(c){ c.setAttribute("data-mermaid-state", "pending"); });
+  _mermaidQueue = _mermaidQueue.then(async function(){
+    let lib = null;
+    try{ lib = await _loadMermaid(); }
+    catch(e){
+      codes.forEach(function(c){ _mermaidFail(c.parentNode, t("mermaid.needVendor", "Mermaid 需要完整发行版（vendor/mermaid）才能渲染")); c.setAttribute("data-mermaid-state", "fail"); });
+      return;
+    }
+    for(const code of codes){
+      const pre = code.parentNode;
+      if(!pre || !pre.parentNode) continue;
+      try{
+        const out = await lib.render("mmd-" + (++_mermaidSeq), code.textContent || "");
+        const svg = _sanitizeMermaidSvg(out && out.svg);
+        if(!svg) throw new Error("empty svg");
+        const fig = document.createElement("div");
+        fig.className = "mermaid-figure";
+        fig.innerHTML = svg; // lint-xss-ok: 已过 _sanitizeMermaidSvg（script/事件/外链已剥离）
+        pre.parentNode.replaceChild(fig, pre);
+      }catch(e){
+        code.setAttribute("data-mermaid-state", "fail");
+        _mermaidFail(pre, t("mermaid.renderFail", "Mermaid 渲染失败，已保留源码"));
+        try{ pushDiag("warn", "mermaid render failed: " + ((e && e.message) || e), { where: "renderMermaidBlocks" }); }catch(_e){ /* 诊断不可用不影响回退 */ }
+      }
+    }
+  }).catch(function(e){
+    try{ pushDiag("error", "mermaid queue: " + ((e && e.message) || e), { where: "renderMermaidBlocks" }); }catch(_e){ /* 诊断不可用不影响主流程 */ }
+  });
+  return _mermaidQueue;
 }

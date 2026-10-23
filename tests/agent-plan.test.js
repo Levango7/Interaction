@@ -159,6 +159,21 @@ describe("② Agent 自主执行 · 命令面板入口与确认闭环", () => {
     expect(last.content).toContain("确认执行");
   });
 
+  it("计划路径也带触发原话：评审卡与执行汇总的 _prompt 都是那句原文（悬停才看得到）", async () => {
+    const win = await boot();
+    seedTask(win, "del1", "旧任务");
+    mockPlan(win, PLAN_MIXED);
+    await win.proposeAgentPlan("整理本周并归档");
+    const review = win.getChat("office").slice(-1)[0];
+    expect(review.role).toBe("assistant");
+    expect(review._prompt, "评审卡必须记住触发它的那句原话").toBe("整理本周并归档");
+
+    await win.onChatSubmit({ preventDefault() {}, target: { msg: { value: "确认执行" } } });
+    const withPrompt = win.getChat("office").filter((m) => m.role === "assistant" && m._prompt);
+    expect(withPrompt.length, "评审卡 + 执行汇总都该带原话").toBeGreaterThanOrEqual(2);
+    expect(withPrompt.every((m) => m._prompt === "整理本周并归档"), "不许张冠李戴").toBe(true);
+  });
+
   it("回「确认执行」才真跑：非破坏步骤落地、破坏步骤仍不落地、汇总上屏、待确认清空", async () => {
     const win = await boot();
     seedTask(win, "del1", "旧任务");

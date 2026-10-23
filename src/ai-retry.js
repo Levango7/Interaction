@@ -469,7 +469,7 @@ async function proposeAgentPlan(text){
   }
   if(plan){
     pendingAgentPlan = { plan: plan, text: raw, sc: active };
-    hist.push({ role:"assistant", content: agentPlanReviewText(plan) });
+    hist.push({ role:"assistant", content: agentPlanReviewText(plan), _prompt: raw });
   }else{
     hist.push({ role:"assistant", content: errText, _failed: true });
   }
@@ -506,6 +506,7 @@ async function confirmAgentPlan(){
   /* v3.7.116：进度回执两个 —— onProgress（每步完成）与 onReplan（重规划后重建下标）。
      done 的 i 始终指向**当前盘上 steps** 的下标；重规划时 steps 被替换，done 跟着重建。 */
   const runProgress = function(_finished, _total, step, resultStr, stepRes){
+    chatProgressUpdate({ current: _finished, total: _total, label: t("chat.progress.step", "步骤：") + ((step && step.tool) || "") });
     if(stepRes && stepRes.blocked) return;    // 被拦下的步骤没跑，不算完成（续跑不能跳过它）
     const cur = loadAgentRun();
     if(!cur) return;
@@ -535,8 +536,10 @@ async function confirmAgentPlan(){
   };
   try{
     // v3.7.72：换自适应执行（分段 + 结果回喂校准），盲跑版 executeAgentPlan 保留作降级
+    chatProgressStart("plan", t("chat.progress.plan", "执行计划…"), p.plan.steps.length);
     const r = await executeAgentPlanReactive(p.plan, { signal: signal, goal: p.goal || "", onProgress: runProgress, onReplan: runReplan });
-    hist.push({ role:"assistant", content: r.summary });
+    chatProgressEnd();
+    hist.push({ role:"assistant", content: r.summary, _prompt: p.text || "" });
     if(r.ok){
       clearAgentRun();   // 全部完成 → 清档；取消/失败 → 留着（continueAgentRun 可续）
       /* v3.7.117：跑完就把 goals 里那份也收尾（complete_goal 的同一语义）——
@@ -556,6 +559,7 @@ async function confirmAgentPlan(){
   }catch(e){
     hist.push({ role:"assistant", content: String((e && e.message) || e), _failed: true });
   }finally{
+    chatProgressEnd();
     showChatThinking(false);
     if(chatController && chatController.timer) clearTimeout(chatController.timer);
     chatController = null;
@@ -841,6 +845,7 @@ async function runChatLoop(messages, hist, sc){
   /* v3.7.132：发送前估算入账（估算/策略早已在，这里补「可观测」；向下调用 ai-tools，方向合法） */
   if(typeof recordSendEstimate === "function") recordSendEstimate(messages);
   showChatThinking(true);
+  let turnUserText = ""; /* catch 分支也要写 _prompt，故声明在 try 外 */
   try{
     let guard=0;
     let maxLoops = activeGoal()? AGENT_GOAL_LOOP_MAX : 6; // 目标激活时放宽循环，支撑多步自主执行
@@ -853,7 +858,7 @@ async function runChatLoop(messages, hist, sc){
        turnUserText 取 messages 里最后一条 user —— 工具执行只追加 assistant/tool 角色，
        所以循环结束时它仍是本轮的用户输入（打字确认路径下会是「确认」，用户可自行命名）。 */
     const skillTrace = [];
-    let turnUserText = "";
+    turnUserText = "";
     for(let mi=messages.length-1; mi>=0; mi--){
       if(messages[mi] && messages[mi].role === "user"){ turnUserText = String(messages[mi].content || ""); break; }
     }
@@ -865,20 +870,25 @@ async function runChatLoop(messages, hist, sc){
       // v3.2 C-档：流式打字机——纯文本轮（无工具调用压力）边收边渲染：流式中先挂一条 _streaming 消息增量更新，
       // 完成后用真实结果替换。工具调用轮不启用（避免半截 tool_calls 状态污染 hist）。
       let streamMsg = null;
+      let streamReceived = 0;
       const canStream = !acfg.enabled; // 工具模式（tools 数组在）下走流式需拼 tool_calls delta，先保守关（v3.2 C-档）
+      if(canStream) chatProgressStart("stream", t("chat.progress.generating", "正在生成…"), 0);
       const j = await chatOnce(messages, {
         signal: chatSignal,
         onChunk: canStream ? function(chunkText){
           try{
             if(!streamMsg){
-              streamMsg = { role: "assistant", content: "", _streaming: true };
+              streamMsg = { role: "assistant", content: "", _streaming: true, _prompt: turnUserText };
               hist.push(streamMsg);
             }
             streamMsg.content += chunkText;
+            streamReceived += String(chunkText || "").length;
+            chatProgressUpdate({ received: streamReceived });
             AppBridge.render();
           }catch(_e){ /* 渲染异常不阻断流 */ }
         } : undefined
       });
+      if(canStream) chatProgressEnd();
       if(streamMsg){
         // 流式占位消息移除，由下方真实 hist.push 接管
         const idx = hist.indexOf(streamMsg);
@@ -904,7 +914,7 @@ async function runChatLoop(messages, hist, sc){
           pendingConfirm={ toolCalls:calls, title:titleText||t("ai.unknownTask","未知任务"), assistantMsg:msg, sc:sc };
           hist.push({role:"assistant", content: hasDanger
             ? t("ai.pendingConfirm","（待确认）将执行删除/修改操作：「")+(titleText||t("ai.unknown","未知"))+t("ai.pendingConfirmSuffix","」。发送「确认」以继续，其他内容取消。")
-            : t("ai.pendingConfirmTools","（待确认）将执行 ")+calls.length+t("ai.pendingConfirmToolsSuffix"," 个工具调用。发送「确认」以继续，其他内容取消。")});
+            : t("ai.pendingConfirmTools","（待确认）将执行 ")+calls.length+t("ai.pendingConfirmToolsSuffix"," 个工具调用。发送「确认」以继续，其他内容取消。"), _prompt: turnUserText});
           AppBridge.render(); openConfirmModal(); break; // A2：同时弹出确认模态框
         }
         // 工具白名单过滤
@@ -946,6 +956,7 @@ async function runChatLoop(messages, hist, sc){
         }
         // 无危险：完整 assistant + tool（含 tool_calls / tool_call_id）入 hist，B1 安全
         messages.push(msg); hist.push(msg);
+        chatProgressStart("tool", t("chat.progress.tool", "执行工具…"), msg.tool_calls.length);
         for(let ti=0; ti<msg.tool_calls.length; ti++){
           const tc = msg.tool_calls[ti];
           /* v3.7.59：取消即刻生效——剩余调用不再执行，补「已跳过」回执后退出循环 */
@@ -965,12 +976,14 @@ async function runChatLoop(messages, hist, sc){
              此前在 chat 路径只拿到「未知工具」，与 Agent 计划路径行为不一致 */
           const res=await execToolAuto(tc.function.name, args);
           skillTracePush(skillTrace, tc.function.name, args, res); // v3.7.59 Skills：记录本轮流程
+          chatProgressUpdate({ current: ti + 1, label: t("chat.progress.toolName", "执行工具：") + tc.function.name });
           const tm={role:"tool", tool_call_id:tc.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
           messages.push(tm); hist.push(tm);
         }
+        chatProgressEnd();
         AppBridge.render(); continue;
       }
-      hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)")});
+      hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)"), _prompt: turnUserText});
       break;
     }
     /* v3.7.59 Skills ③：本轮成功执行了 ≥2 个非破坏性工具 → 提示可把这条流程固化成技能。
@@ -992,13 +1005,13 @@ async function runChatLoop(messages, hist, sc){
     const isAbort = (err && err.name === "AbortError") || cReason === "user" || cReason === "timeout";
     if(isAbort && cReason !== "timeout"){
       // T3.1 用户主动取消：显示「已取消」提示（灰色斜体），不报错
-      hist.push({role:"assistant", content:t("ai.cancelled","已取消"), _canceled:true});
+      hist.push({role:"assistant", content:t("ai.cancelled","已取消"), _canceled:true, _prompt: turnUserText});
     } else if(isAbort){
-      hist.push({role:"assistant", content:t("ai.timeout","请求超时（可在「设置 → AI」调大「请求超时」秒数）"), _failed:true});
+      hist.push({role:"assistant", content:t("ai.timeout","请求超时（可在「设置 → AI」调大「请求超时」秒数）"), _failed:true, _prompt: turnUserText});
       try{ pushDiag("error", "chat timeout", {where:"runChatLoop"}); }catch(_e){}
     } else {
       const m=(err&&err.message)?err.message:String(err);
-      hist.push({role:"assistant", content:m, _failed:true});
+      hist.push({role:"assistant", content:m, _failed:true, _prompt: turnUserText});
       pushDiag("error", m, {where:"runChatLoop"});
     }
   } finally {
@@ -1010,6 +1023,7 @@ async function runChatLoop(messages, hist, sc){
       else hist.splice(si, 1);
     }
     // T3.1 清理控制器 + 隐藏思考中指示
+    chatProgressEnd();
     if(chatController && chatController.timer){ clearTimeout(chatController.timer); }
     chatController=null;
     showChatThinking(false);
