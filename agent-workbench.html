@@ -1264,6 +1264,11 @@ input[type="file"]:hover{border-color:var(--accent)}
      （实测 768px 下模板变成 0 0 47 47 38 五轨，两个字段宽 0）。 */
   #taskForm>.fld:nth-child(1),#taskForm>.fld:nth-child(2),#taskForm>.fld:nth-child(3),#taskForm>.fld:nth-child(4),#taskForm>.add-wrap,
   #taskFilterRow>.fld:nth-child(1),#taskFilterRow>.fld:nth-child(2),#taskFilterRow>.fld:nth-child(3){grid-column:auto;grid-row:auto}
+  /* 2026-10-23：2 列模板装不下 `.fld-sm` 的 span 3 —— 越界的 span 会造出**第三列隐式轨道**，
+     把两条 1fr 压成 6px（实测 375px 模板 `6px 6px 263px`，搜索框/联动记录内容各溢出 48/23px，
+     three-state-layout 两条红）。#taskForm 的窄字段此前靠上面的 nth-child 兜住，
+     任务筛选行新增的「多选」钮（第 4 个子项）没有 id 规则可依 ⇒ 在这里按类统一收口。 */
+  .form-row--board>.fld-sm{grid-column:auto}
   /* 加号恢复独立成列（不再叠加）—— 2 列布局里叠加会把 1/2 宽度的标签框盖掉大半 */
   #taskForm>.fld:nth-child(4)>input{padding-right:0}
   /* v3.7.53：给 ＋ 预留的 field 级 padding-right 也要撤（窄屏 ＋ 自成一行，无需让位）——
