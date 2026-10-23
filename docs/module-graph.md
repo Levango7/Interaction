@@ -23,7 +23,7 @@
 | `ai-tools` | AI | `ai-retry` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `util-markdown` | 25 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core-shared` `data-links` `data-migrate` `util-perf` | 43 |
-| `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 61 |
+| `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 62 |
 | `render-scene-sub` | Render | `core-shared` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core-shared` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
 | `render-overview` | Render | `ai-retry` `chain` `core-shared` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 45 |
@@ -81,12 +81,12 @@
 - 跨块重复定义：**0** 项
 - 循环依赖：**13** 条（ai-tools → ai-retry → ai-tools；ai-tools → ai-retry → ai-loop → ai-tools；render-entry → render-overview → render-scene-sub → render-entry；render-entry → render-overview → render-entry；render-overview → render-widgets → render-overview）
 - 逆层依赖（低层用高层符号）：**18** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**102** 个符号
+- 逆层依赖（按**符号**计，去重）：**103** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
 | `ai-tools`（AI） | `ai-retry`（AI） | `CHAT_SUGGEST_HTML` `_msgTokens` `renderAiReceipts` |
-| `render-entry`（Render） | `render-overview`（Render） | `renderAuthLogin` `renderAuthRegister` `renderAuthWelcome` `renderChainPage` `renderOverview` `renderStats` … |
+| `render-entry`（Render） | `render-overview`（Render） | `renderAuthLogin` `renderAuthRegister` `renderAuthReset` `renderAuthWelcome` `renderChainPage` `renderOverview` … |
 | `render-entry`（Render） | `render-scene-main`（Render） | `_featureCardBind` `_hydrateRecImgs` `_miniBarSVG` `_miniLineSVG` `_miniPieSVG` `bindCodeFrontendCard` … |
 | `render-entry`（Render） | `render-scene-sub`（Render） | `getHealthRecs` `parseNum` |
 | `render-entry`（Render） | `render-widgets`（Render） | `_addDaysStr` `_bindDropImport` `_bindRecordTool` `_bindRecordToolRedirect` `_cadSession` `_csvParse` … |
