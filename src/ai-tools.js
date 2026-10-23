@@ -29,6 +29,7 @@ function execTool(name, args, force){
       setTasks(tasks);
       _emitTaskEvent("task_create", nt); // v1.12 [1a]：AI/Agent 创建任务也发事件
       _aiUndoPush({ kind:"create", taskId:nt.id, title:nt.title, sc:sc });
+      _aiArtifactPush({ kind:"task", refId:nt.id, title:nt.title || "", sc:sc, tool:"create_task" });
       return JSON.stringify({ok:true, id:nt.id, msg:t("tool.createdPrefix", "已在")+SCENARIOS[sc].name+t("tool.createdInfix", "创建任务：")+args.title});
     }
     if(name==="list_tasks"){
@@ -88,6 +89,7 @@ function execTool(name, args, force){
       flds.forEach(f=> obj[f.k] = (args.fields&&args.fields[f.k]!==null&&args.fields[f.k]!==undefined)? String(args.fields[f.k]) : "");
       const arr = getRec(sc); arr.unshift(obj); setRec(sc, arr);
       _aiUndoPush({ kind:"record_add", recId:obj.id, sc:sc, title:(obj.title || obj.name || "") });
+      _aiArtifactPush({ kind:"record", refId:obj.id, title:(obj.title || obj.name || ""), sc:sc, tool:"add_record" });
       return JSON.stringify({ok:true, msg:t("tool.recordAddedPrefix", "已向")+SCENARIOS[sc].name+t("tool.recordAddedInfix", "资料库添加记录")});
     }
     if(name==="search"){
@@ -128,6 +130,7 @@ function execTool(name, args, force){
     if(name==="note_add"){
       const r=createNote(args.title||"", args.content||"", Array.isArray(args.tags)?args.tags:[], args.category||"");
       _aiUndoPush({ kind:"note_add", noteId:r.id, title:(r.title || "") });
+      _aiArtifactPush({ kind:"note", refId:r.id, title:(r.title || ""), sc:(typeof active === "string" ? active : ""), tool:"note_add" });
       return JSON.stringify({ok:true, id:r.id, msg:t("agent.noteAdded","已添加笔记：")+(r.title||"")});
     }
     if(name==="note_search"){
@@ -175,6 +178,7 @@ function execTool(name, args, force){
     if(name==="generate_doc"){
       const ttl = String(args.title||t("tool.unnamed","未命名"));
       const r = createNote(ttl, String(args.content||""), [], String(args.category||t("doc.categoryDefault","AI 文档")));
+      _aiArtifactPush({ kind:"note", refId:r.id, title:ttl, sc:(typeof active === "string" ? active : ""), tool:"generate_doc" });
       return JSON.stringify({ok:true, id:r.id, msg:t("tool.docSaved","文档已保存到笔记：")+ttl});
     }
     return agentExec(name, args); // A-P3：记忆/目标等 Agent 工具由此分发
@@ -234,12 +238,41 @@ function undoAiAction(id){
     return { ok:false, msg:t("ai.undo.unsupported", "这类改动暂不支持撤销") };
   }
   setTasks(tasks);
+  /* 产物账跟着回滚：撤销后清单里不留已被撤掉的"文件" */
+  if(e.taskId) aiArtifactDrop(e.taskId);
+  if(e.recId) aiArtifactDrop(e.recId);
+  if(e.noteId) aiArtifactDrop(e.noteId);
   e.undone = true;
   e.undoneAt = Date.now();
   save(AI_UNDO_KEY, a);
   if(typeof AppBridge !== "undefined" && AppBridge && typeof AppBridge.render === "function") AppBridge.render();
   if(typeof renderAiReceipts === "function") renderAiReceipts();
   return { ok:true };
+}
+
+/* ---------- AI 产物账（2026-10-24，右栏「文件」页那半"生成的东西"） ----------
+ * 只记 AI **新建**出来的东西（任务 / 资料库记录 / 笔记）；改与删属于回执账，不进这里。
+ * 只存引用（refId）+ 展示快照（title/kind/sc/at），**不复制内容** —— 不做第二套真相源。
+ * 撤销一条回执时同步摘掉对应产物（撤销后清单里不留幽灵条目）。上限 100。 */
+const AI_ARTIFACT_KEY = PREFIX + "ai_artifacts";
+const AI_ARTIFACT_MAX = 100;
+function aiArtifacts(){
+  const a = load(AI_ARTIFACT_KEY, []);
+  return Array.isArray(a) ? a : [];
+}
+function _aiArtifactPush(entry){
+  if(!entry || !entry.refId) return;
+  const list = aiArtifacts().filter(function(x){ return !(x && x.refId === entry.refId && x.kind === entry.kind); });
+  list.unshift(Object.assign({ id: uid(), at: Date.now() }, entry));
+  save(AI_ARTIFACT_KEY, list.slice(0, AI_ARTIFACT_MAX));
+}
+function aiArtifactDrop(refId){
+  if(!refId) return false;
+  const before = aiArtifacts();
+  const next = before.filter(function(x){ return !x || x.refId !== refId; });
+  if(next.length === before.length) return false;
+  save(AI_ARTIFACT_KEY, next);
+  return true;
 }
 
 /* v1.14.1：从 SCENARIOS 派生 add_record.fields 的场景子 schema（单一真相源，避免 fields 契约漂移） */

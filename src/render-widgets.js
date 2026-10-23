@@ -327,8 +327,23 @@ function _renderRailAgent(){
 function _renderRailFiles(){
   const el = $("#railFilesPane");
   if(!el) return;
+  /* 2026-10-24：这一页分两段 —— 上=AI 新建出来的东西（任务/记录/笔记），下=导入的知识库文件。
+     只列引用，不复制内容；撤销回执时对应条目已被摘掉（见 aiArtifactDrop）。 */
+  const arts = (typeof aiArtifacts === "function") ? aiArtifacts() : [];
+  const kindLabel = { task: t("rail.ai.kind.task", "任务"), record: t("rail.ai.kind.record", "记录"), note: t("rail.ai.kind.note", "笔记") };
+  let html = '<div class="rail-sec-title">' + esc(t("rail.ai.title", "AI 产出"))
+    + ' <span class="task-rail-count">' + arts.length + "</span></div>";
+  html += arts.length
+    ? '<ul class="rail-list">' + arts.slice(0, 8).map(function(a){
+        const d = new Date(a.at || Date.now());
+        const hh = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+        return '<li class="rail-item rail-art" data-rail-art="' + esc(a.id) + '" title="' + esc(t("rail.ai.open", "打开")) + '">'
+          + '<span class="rail-item-name">' + esc(a.title || t("rail.ai.untitled", "（未命名）")) + "</span>"
+          + '<span class="rail-item-meta">' + esc(kindLabel[a.kind] || a.kind || "") + " · " + esc(hh) + "</span></li>";
+      }).join("") + "</ul>"
+    : '<p class="task-rail-empty">' + esc(t("rail.ai.empty", "AI 还没有新建过任务 / 记录 / 笔记。")) + "</p>";
   const files = (typeof getRagFiles === "function") ? getRagFiles() : [];
-  let html = '<div class="rail-sec-title">' + esc(t("rail.files.title", "文件知识"))
+  html += '<div class="rail-sec-title">' + esc(t("rail.files.title", "文件知识"))
     + ' <span class="task-rail-count">' + files.length + "</span></div>";
   html += files.length
     ? '<ul class="rail-list">' + files.slice(0, 8).map(function(f){
@@ -340,6 +355,25 @@ function _renderRailFiles(){
   el.innerHTML = sanitizeHtml(html);
   const b = $("#railOpenKb");
   if(b) b.onclick = function(){ try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 打开失败不阻塞右栏 */ } };
+  $$("[data-rail-art]").forEach(function(li){
+    li.onclick = function(){ openAiArtifact(li.getAttribute("data-rail-art") || ""); };
+  });
+}
+/**
+ * 打开一条 AI 产出的落点：笔记 → 知识库；任务 → 任务页；记录 → 它的场景。
+ * 只做"带你去对的地方"，不伪造高亮（找不到就什么都不动）。
+ * @param {string} id - 产物账里的条目 id
+ * @returns {boolean}
+ */
+function openAiArtifact(id){
+  const a = (typeof aiArtifacts === "function" ? aiArtifacts() : []).filter(function(x){ return x && x.id === id; })[0];
+  if(!a) return false;
+  try{
+    if(a.kind === "note"){ AppBridge.openKnowledgeBaseModal(); return true; }
+    if(a.kind === "task"){ if(typeof setActive === "function"){ setActive("tasks"); } if(typeof render === "function") render(); return true; }
+    if(a.kind === "record" && a.sc){ if(typeof setActive === "function"){ setActive(a.sc); } if(typeof render === "function") render(); return true; }
+  }catch(_e){ /* 导航失败不阻塞右栏 */ }
+  return false;
 }
 
 function _bindTaskRail(){

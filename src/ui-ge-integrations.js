@@ -1996,6 +1996,8 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
     /* 2026-10-23：MCP 接线（测试驱动 发现/注入/路由/危险分类/运行时快照） */
     mcpServers, mcpRefreshServer, mcpToolDefs, mcpCallTool, mcpToolMeta, isDangerTool, mcpRuntimeInfo, ensureMcpTools, execToolAuto,
+    /* 2026-10-24：AI 产物账（清单/摘除/打开落点） */
+    aiArtifacts, aiArtifactDrop, openAiArtifact,
     effectiveSysprompt, setCustomSysprompt, trimChatHist, // v1.15：sysprompt 可编辑 + 上下文 token 预算
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
