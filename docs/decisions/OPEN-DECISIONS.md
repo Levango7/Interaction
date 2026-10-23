@@ -8,7 +8,7 @@
 
 | Date | Source | Open Item | Related Constraints | Current Leaning | Blocked By | Resolves When | Status |
 |------|--------|-----------|---------------------|-----------------|------------|---------------|--------|
-| 2026-10-15 | Phase 0（用户问「腾讯自己的平台可以做吗」） | **OD-001 第三方登录 provider 选型** | 见下方资质矩阵；项目现有 provider：`github`（真实现，未配置→503）、`wechat`（仅演示）、`email`（真实现） | 暂不做。若将来做，按用户画像分叉：开发者向→GitHub；国内大众向→CloudBase 短信 OTP；有备案域名→QQ 互联 | ①用户画像未定（自述「还没想好，先做出来看看」）②个人主体无企业资质 ③无自有 ICP 备案域名 | 用户确定目标用户群，或取得企业资质/备案域名 | OPEN |
+| 2026-10-15 | Phase 0（用户问「腾讯自己的平台可以做吗」） | **OD-001 第三方登录 provider 选型** | 见下方资质矩阵；项目现有 provider：`github`（真实现，未配置→503）、`wechat`（仅演示）、`email`（真实现） | 暂不做。若将来做，按用户画像分叉：开发者向→GitHub；国内大众向→CloudBase 短信 OTP；有备案域名→QQ 互联 | ①用户画像未定（自述「还没想好，先做出来看看」）②个人主体无企业资质 ③无自有 ICP 备案域名 | 用户确定目标用户群，或取得企业资质/备案域名 | **RESOLVED（2026-10-23，用户裁「B\C 确定的都做了吧」⇒ B+C 都做。工程侧已全交付，剩两步「去注册并填配置」，非工程阻塞）** |
 | 2026-10-15 | Phase 0 顺带发现 | **OD-002 微信演示二维码未标注，前端不消费 `demo` 标志** | `src/render-overview.js:1195` 只判 `if(qr)` 就渲染，`src/ui-ge-api.js:367` 透传响应但前端未读 `d.demo`；后端 `server/src/auth.js:313` 明确返回 `demo: true` 并注释「必须让消费端看得出是演示」 | 取决于 OD-001：若确定不做第三方登录 → **整个下线微信入口**优于改文案；若要保留 → 前端必须消费 `demo` 显示「演示模式，不可真扫」并停轮询 | OD-001 结论 | OD-001 关闭时一并裁定 | **RESOLVED (2026-10-15, v3.7.126)**<br>Resolution：选择了比 OPEN 时预想更小的第三条路——**不预设 OD-001 方向**，只把误导堵死。前端消费 `demo` 标志：演示态渲染诚实说明（`auth.wechatDemo` 双语）+ **不启动轮询**；真 provider（无 demo）自动走原路径，客户端契约不变。守护 `tests/auth-ui-lifecycle.test.js` +2（先红后绿，反向断言证明 demo 态 `apiWechatStatus` 恒零调用）。将来 OD-001 若裁「下线微信入口」，删入口即可，本修复无浪费。 |
 
 ---
@@ -76,6 +76,30 @@ CI 212 条断言全绿。所以选 B 时**要做的只是「注册真 provider +
 不是「实现登录」。
 
 **结论**：本条维持 OPEN，但已不需要你先回答三个问题 —— **回一个字母即可裁**。
+
+### 2026-10-23 裁定与落地：B + C 都要做
+
+用户裁定（原话）：「**B\C 确定的都做了吧**」。据此两条都做，**不裁画像**——
+B（开发者向）与 C（国内大众向）并存，用户自己选，产品不必替他赌。
+
+| 选项 | 工程侧状态 | 还剩什么（**只能用户做**） |
+|---|---|---|
+| **B · GitHub OAuth** | ✅ **v3.7.113 已全量交付**：服务端 `/github` + `/github/callback`（fail-closed 503 `github_not_configured`）、客户端 `#authSsoGithub` + postMessage 一次性 state、`docs/oauth-login-design.md`、`tests/github-device-flow.test.js` / `oauth-message.test.js`、CI `oauth-check` 31 例 | 去 GitHub 注册一个 OAuth App（**0 元 / 5 分钟**），把 `clientId` / `clientSecret` / `redirectUri` 填进 `server/config.json` 的 `github` 段 |
+| **C · 短信验证码** | ✅ **2026-10-23 本次全量交付**：`cfg.sms` 配置段（同 fail-closed 口径）、TC3-HMAC-SHA256 **零新依赖**直签腾讯云 `SendSms`、`POST /api/auth/sms-code` + `/api/auth/sms-login`、客户端登录页入口、`server/verify/sms-check.cjs` **37 例**（含**独立实现**验签 + 两条反向对照）、已接 CI | 去腾讯云开通短信服务：拿 `SecretId` / `SecretKey` / `SdkAppId`，并**申请签名与模板**（需审核，1–7 天），填进 `server/config.json` 的 `sms` 段 |
+
+**为什么 C 走「直签腾讯云」而不是「引 CloudBase SDK」**（写下来免得下次重新论证）：
+服务端依赖至今只有 bcryptjs / cors / express / jsonwebtoken / nodemailer，**没有 HTTP 客户端库**；
+TC3-HMAC-SHA256 用 node:crypto 约 30 行算得出来。为一个「发一条短信」拉一个 SDK，
+与本仓把 pdfjs / mermaid vendor 化的取舍相反。CloudBase 短信底层同样是腾讯云短信服务，
+差别只在封装层，不影响任何安全口径。
+
+**仍未做的：微信扫码（真）与 QQ 互联** —— 卡在硬门槛（企业资质 / ICP 备案域名），
+属 2026-10-15 资质矩阵里「个人主体不可达」那一类，本条不因为是"第三方登录"就顺手做掉：
+`wechat` 维持 OD-002 已裁的诚实演示态（前端消费 `demo` 标志、不启动轮询）。
+
+**真机验收的前提**：两条通道在没配置时都是 **fail-closed**（503 + `*_not_configured`），
+所以"没配"是安全的、界面上也会如实说明，不会退化成"看起来能登录其实登不上"。
+填入真实凭据后无需改代码 —— 这也是当初把未配置设计成 503 而不是返回假码的原因。
 
 ---
 
