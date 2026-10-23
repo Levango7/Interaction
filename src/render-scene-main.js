@@ -211,18 +211,24 @@ function renderMainHTML(){
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
   // v2.1.0：任务区按 sceneViewMode 分支——kanban（看板）/ calendar（日历）/ todo（待办列表）
   let taskArea, filterHtml;
+  /* batchToolbarHTML 在**每个分支**都要带上（哪怕没有进入多选的入口）：
+     工具栏默认 display:none，只在多选模式下由 _renderBatchUI() 打开；
+     若某个视图不带它，用户「进入多选 → 切到该视图」就会**退不出多选**
+     （工具栏没了、卡片 checkbox 还在）——补上入口反而造出一条死路。
+     这条与 375px 那个回归是两件事：那个是 CSS 层级修（`.form-row--board>.fld-sm{grid-column:auto}`，
+     2 列模板下 span 3 会造出第三列隐式轨道），入口钮留在筛选行内即可。 */
   if(sceneViewMode === "calendar"){
     taskArea = `<div class="cal-inline" id="calInlineView" data-offset="0">${AppBridge.renderCalendarView(0)}</div>`;
-    filterHtml = "";
+    filterHtml = batchToolbarHTML;
   } else if(sceneViewMode === "todo"){
     taskArea = renderTodoListView(tasks, s);
-    filterHtml = tasks.length ? `<div class="form-row">
+    filterHtml = (tasks.length ? `<div class="form-row">
       <div class="fld fld-lg"><label>${t("field.linkedRecord","联动记录")}</label>
         <select id="todoStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
-    </div>` : "";
+    </div>` : "") + batchToolbarHTML;
   } else if(tasksAll.length === 0){
     taskArea = renderEmpty("no-tasks");
-    filterHtml = "";
+    filterHtml = batchToolbarHTML;
   }else{
     const cols=["todo","doing","done"];
     const colName={todo:t("kanban.todo","待办"),doing:t("kanban.doing","进行中"),done:t("kanban.done","已完成")};
