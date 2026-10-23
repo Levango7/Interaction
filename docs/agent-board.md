@@ -42,6 +42,16 @@
 
 ## 条目
 
+### [2026-10-24 08:20 UTC+8] Qoder 主会话 —— **浏览器版本机 MCP 引导**（用户点名「开始实现」）
+- 占用：`src/{ai-tools,ui-global-events,ui-ge-integrations,core-i18n}.js`、`tests/mcp-client.test.js`、
+  `CHANGELOG.md` `[Unreleased]`、`docs/{user-manual,module-graph}.md`、`AGENTS.md` §二、本板。
+- 做了什么：设置页在**浏览器版 + 检测到本机/私网地址**时直接给引导（说明是浏览器权限模型，不是配置错），
+  并给「下载桌面版」（仓库 releases 页，固定常量 + `rel="noopener"`）。判定 `mcpIsLocalUrl` 覆盖
+  localhost / 127.x / ::1 / 10.x / 172.16–31.x / 192.168.x / *.local；桌面版、公网 https、未启用都不显示。
+- 证据：`mcp-client` +3 例（含 `::1`、`172.32` 属公网的反例）；变异验证（去掉 `!isElectron()` 守卫）⇒ 恰好 1 红；
+  13 道门禁全绿。全量单测 / e2e 与线上复核在最终树补登。
+- 版本预登记：**3.7.146**（§二）。
+
 ### [2026-10-24 07:30 UTC+8] Qoder 主会话 —— **3.7.142/143/144 三连发收口 + 交叉复核结论 · 释放占用**
 - 三版：**3.7.142** AI 产物清单（CI 四腿全绿）→ **3.7.143** Electron 主进程 MCP 代理（CI + Electron 绿）→
   **3.7.144** 私有 MCP 端点鉴权（自身 run 被后续推送取消，**超集 `8eed56e` 的 CI 全绿**）。
