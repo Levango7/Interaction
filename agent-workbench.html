@@ -2368,6 +2368,8 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .mermaid-fail{margin:0 0 var(--space-2);font-size:var(--fs-2xs);color:var(--muted)}
 /* 2026-10-23：首图冷加载（3.3MB）期间先给中间态，避免对着源码块干等；与失败提示同款排版 */
 .mermaid-loading{margin:0 0 var(--space-2);font-size:var(--fs-2xs);color:var(--muted)}
+/* 右栏「AI 产出」条目可点（打开对应落点） */
+.rail-art{cursor:pointer}
 .md{margin-top:var(--space-2);line-height:1.6;color:var(--text-dim)}
 .msg.assistant.md-body{white-space:normal}
 
@@ -6494,10 +6496,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.141"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.144"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261023b";
+const BUILD_TAG = "20261023e";
 
 
 
@@ -7768,6 +7770,15 @@ const MESSAGES = {
     "mcp.toolDesc": "远端工具",
     "mcp.saveFirst": "先保存配置，再刷新工具",
     "mcp.connectFailPrefix": "连接失败：",
+    "mcp.proxyFail": "Electron 主进程中转失败：",
+    "mcp.authType": "认证方式",
+    "mcp.authNone": "无认证",
+    "mcp.authHeaderMode": "自定义头",
+    "mcp.authSetPh": "已设置（不显示；重填即覆盖）",
+    "mcp.authPh": "粘贴密钥（只存会话内存）",
+    "mcp.authHint": "⚠ 密钥只保存在本次会话内存：不写入本地存储、不进备份与云同步，刷新或关闭页面即失效。",
+    "mcp.authSaved": "密钥已存进本次会话内存",
+    "mcp.authNeedHeader": "先填一个合法的头名（或改用 Bearer）",
     "common.saveFail": "保存失败（可能是本地存储配额不足）",
     "mcp.summaryNm": "MCP 服务器",
     "mcp.add": "添加服务器",
@@ -8280,6 +8291,13 @@ const MESSAGES = {
     "rail.tab.today": "今日",
     "rail.tab.agent": "Agent",
     "rail.tab.files": "文件",
+    "rail.ai.title": "AI 产出",
+    "rail.ai.empty": "AI 还没有新建过任务 / 记录 / 笔记。",
+    "rail.ai.untitled": "（未命名）",
+    "rail.ai.open": "打开",
+    "rail.ai.kind.task": "任务",
+    "rail.ai.kind.record": "记录",
+    "rail.ai.kind.note": "笔记",
     "rail.agent.skills": "技能",
     "rail.agent.none": "还没有技能。命令面板里可保存常用流程。",
     "rail.agent.running": "正在运行",
@@ -10862,6 +10880,22 @@ const MESSAGES = {
     "api.smsNotConfigured": "后端未配置短信通道（详见部署文档）",
     "api.smsCooldown": "验证码刚发过，请稍后再试",
     "api.codeRequired6": "请输入 6 位短信验证码",
+    /* 2026-10-24：密码重置（忘记密码）。界面上**刻意没有**「该邮箱未注册」这类文案 ——
+       服务端对存在性一个字都不漏，前端一旦去猜就等于把那个口径漏回浏览器。 */
+    "auth.forgotPassword": "忘记密码？",
+    "auth.resetTitle": "重置密码",
+    "auth.resetHint": "填写注册邮箱，我们会发送一条 6 位验证码。",
+    "auth.newPassword": "新密码",
+    "auth.passwordPh": "至少 8 位",
+    "auth.resetSubmit": "重置密码",
+    "auth.backToLogin": "返回登录",
+    "auth.resetCodeSent": "已发送",
+    "auth.resetChannelMissing": "该服务未配置邮件通道，无法发送重置邮件",
+    "auth.resetDone": "密码已重置，请用新密码登录",
+    "auth.resetDoneRevoked": "密码已重置，并已退出 {n} 台设备的登录",
+    "api.resetCodeRequired6": "请输入 6 位验证码",
+    "api.resetFailed": "重置失败，请检查验证码是否已过期",
+    "api.resetCodeInvalid": "验证码错误或已过期，请重新获取",
     "auth.registerSub": "没有账号，立即注册",
     "auth.welcome": "欢迎",
     "auth.welcomeIntro": "选择以下任一方式继续",
@@ -11810,6 +11844,15 @@ const MESSAGES = {
     "mcp.toolDesc": "remote tool",
     "mcp.saveFirst": "Save the config first, then refresh tools",
     "mcp.connectFailPrefix": "Connection failed: ",
+    "mcp.proxyFail": "Electron main-process relay failed: ",
+    "mcp.authType": "Auth",
+    "mcp.authNone": "None",
+    "mcp.authHeaderMode": "Custom header",
+    "mcp.authSetPh": "Set (hidden; type to replace)",
+    "mcp.authPh": "Paste the key (session memory only)",
+    "mcp.authHint": "⚠ The key lives in this session memory only: not written to local storage, not included in backups or cloud sync; it is gone after a reload.",
+    "mcp.authSaved": "Key stored in this session memory",
+    "mcp.authNeedHeader": "Fill in a valid header name first (or switch to Bearer)",
     "common.saveFail": "Save failed (local storage quota may be exhausted)",
     "mcp.summaryNm": "MCP Servers",
     "mcp.add": "Add Server",
@@ -12322,6 +12365,13 @@ const MESSAGES = {
     "rail.tab.today": "Today",
     "rail.tab.agent": "Agent",
     "rail.tab.files": "Files",
+    "rail.ai.title": "Created by AI",
+    "rail.ai.empty": "The AI has not created any task / record / note yet.",
+    "rail.ai.untitled": "(untitled)",
+    "rail.ai.open": "Open",
+    "rail.ai.kind.task": "Task",
+    "rail.ai.kind.record": "Record",
+    "rail.ai.kind.note": "Note",
     "rail.agent.skills": "Skills",
     "rail.agent.none": "No skills yet. Save a flow from the command palette.",
     "rail.agent.running": "Running",
@@ -14041,6 +14091,20 @@ const MESSAGES = {
     "api.smsNotConfigured": "The server has no SMS channel configured (see deployment docs)",
     "api.smsCooldown": "A code was just sent — try again shortly",
     "api.codeRequired6": "Enter the 6-digit SMS code",
+    "auth.forgotPassword": "Forgot your password?",
+    "auth.resetTitle": "Reset password",
+    "auth.resetHint": "Enter your account email and we'll send a 6-digit code.",
+    "auth.newPassword": "New password",
+    "auth.passwordPh": "At least 8 characters",
+    "auth.resetSubmit": "Reset password",
+    "auth.backToLogin": "Back to sign in",
+    "auth.resetCodeSent": "Sent",
+    "auth.resetChannelMissing": "Email isn't configured on this server, so reset mail can't be sent",
+    "auth.resetDone": "Password reset — sign in with your new password",
+    "auth.resetDoneRevoked": "Password reset, and signed out of {n} device(s)",
+    "api.resetCodeRequired6": "Enter the 6-digit code",
+    "api.resetFailed": "Reset failed — check whether the code has expired",
+    "api.resetCodeInvalid": "The code is wrong or has expired — request a new one",
     "auth.haveAccount": "Have an account?",
     "auth.goRegister": "Sign up now",
     "auth.goLogin": "Sign in directly",
@@ -18503,6 +18567,7 @@ function execTool(name, args, force){
       setTasks(tasks);
       _emitTaskEvent("task_create", nt); // v1.12 [1a]：AI/Agent 创建任务也发事件
       _aiUndoPush({ kind:"create", taskId:nt.id, title:nt.title, sc:sc });
+      _aiArtifactPush({ kind:"task", refId:nt.id, title:nt.title || "", sc:sc, tool:"create_task" });
       return JSON.stringify({ok:true, id:nt.id, msg:t("tool.createdPrefix", "已在")+SCENARIOS[sc].name+t("tool.createdInfix", "创建任务：")+args.title});
     }
     if(name==="list_tasks"){
@@ -18562,6 +18627,7 @@ function execTool(name, args, force){
       flds.forEach(f=> obj[f.k] = (args.fields&&args.fields[f.k]!==null&&args.fields[f.k]!==undefined)? String(args.fields[f.k]) : "");
       const arr = getRec(sc); arr.unshift(obj); setRec(sc, arr);
       _aiUndoPush({ kind:"record_add", recId:obj.id, sc:sc, title:(obj.title || obj.name || "") });
+      _aiArtifactPush({ kind:"record", refId:obj.id, title:(obj.title || obj.name || ""), sc:sc, tool:"add_record" });
       return JSON.stringify({ok:true, msg:t("tool.recordAddedPrefix", "已向")+SCENARIOS[sc].name+t("tool.recordAddedInfix", "资料库添加记录")});
     }
     if(name==="search"){
@@ -18602,6 +18668,7 @@ function execTool(name, args, force){
     if(name==="note_add"){
       const r=createNote(args.title||"", args.content||"", Array.isArray(args.tags)?args.tags:[], args.category||"");
       _aiUndoPush({ kind:"note_add", noteId:r.id, title:(r.title || "") });
+      _aiArtifactPush({ kind:"note", refId:r.id, title:(r.title || ""), sc:(typeof active === "string" ? active : ""), tool:"note_add" });
       return JSON.stringify({ok:true, id:r.id, msg:t("agent.noteAdded","已添加笔记：")+(r.title||"")});
     }
     if(name==="note_search"){
@@ -18649,6 +18716,7 @@ function execTool(name, args, force){
     if(name==="generate_doc"){
       const ttl = String(args.title||t("tool.unnamed","未命名"));
       const r = createNote(ttl, String(args.content||""), [], String(args.category||t("doc.categoryDefault","AI 文档")));
+      _aiArtifactPush({ kind:"note", refId:r.id, title:ttl, sc:(typeof active === "string" ? active : ""), tool:"generate_doc" });
       return JSON.stringify({ok:true, id:r.id, msg:t("tool.docSaved","文档已保存到笔记：")+ttl});
     }
     return agentExec(name, args); // A-P3：记忆/目标等 Agent 工具由此分发
@@ -18708,12 +18776,41 @@ function undoAiAction(id){
     return { ok:false, msg:t("ai.undo.unsupported", "这类改动暂不支持撤销") };
   }
   setTasks(tasks);
+  /* 产物账跟着回滚：撤销后清单里不留已被撤掉的"文件" */
+  if(e.taskId) aiArtifactDrop(e.taskId);
+  if(e.recId) aiArtifactDrop(e.recId);
+  if(e.noteId) aiArtifactDrop(e.noteId);
   e.undone = true;
   e.undoneAt = Date.now();
   save(AI_UNDO_KEY, a);
   if(typeof AppBridge !== "undefined" && AppBridge && typeof AppBridge.render === "function") AppBridge.render();
   if(typeof renderAiReceipts === "function") renderAiReceipts();
   return { ok:true };
+}
+
+/* ---------- AI 产物账（2026-10-24，右栏「文件」页那半"生成的东西"） ----------
+ * 只记 AI **新建**出来的东西（任务 / 资料库记录 / 笔记）；改与删属于回执账，不进这里。
+ * 只存引用（refId）+ 展示快照（title/kind/sc/at），**不复制内容** —— 不做第二套真相源。
+ * 撤销一条回执时同步摘掉对应产物（撤销后清单里不留幽灵条目）。上限 100。 */
+const AI_ARTIFACT_KEY = PREFIX + "ai_artifacts";
+const AI_ARTIFACT_MAX = 100;
+function aiArtifacts(){
+  const a = load(AI_ARTIFACT_KEY, []);
+  return Array.isArray(a) ? a : [];
+}
+function _aiArtifactPush(entry){
+  if(!entry || !entry.refId) return;
+  const list = aiArtifacts().filter(function(x){ return !(x && x.refId === entry.refId && x.kind === entry.kind); });
+  list.unshift(Object.assign({ id: uid(), at: Date.now() }, entry));
+  save(AI_ARTIFACT_KEY, list.slice(0, AI_ARTIFACT_MAX));
+}
+function aiArtifactDrop(refId){
+  if(!refId) return false;
+  const before = aiArtifacts();
+  const next = before.filter(function(x){ return !x || x.refId !== refId; });
+  if(next.length === before.length) return false;
+  save(AI_ARTIFACT_KEY, next);
+  return true;
 }
 
 /* v1.14.1：从 SCENARIOS 派生 add_record.fields 的场景子 schema（单一真相源，避免 fields 契约漂移） */
@@ -18841,6 +18938,28 @@ const MCP_NS = "mcp__";
 const MCP_MAX_TOOLS = 30;
 const MCP_RPC_TIMEOUT_MS = 15000;
 const _mcpRuntime = {};      /* name → {tools:[], at, err, sessionId, protocolVersion} —— 仅内存，不落盘 */
+/** Electron 下可用的主进程中转（没有就返回 null，走浏览器直连） */
+function _mcpProxy(){
+  if(typeof isElectron !== "function" || !isElectron()) return null;
+  const api = (typeof window !== "undefined" && window.electronAPI) ? window.electronAPI : null;
+  return (api && typeof api.mcpFetch === "function") ? api.mcpFetch : null;
+}
+/**
+ * 走主进程发一条 JSON-RPC，并包成与 fetch Response 同形的最小子集 ——
+ * 让 _mcpRpc 只有一处分支，成功/失败语义与直连保持一致。
+ */
+async function _mcpProxyPost(server, headers, payload, auth){
+  const arg = { url: server.url, headers: headers, body: JSON.stringify(payload), timeoutMs: MCP_RPC_TIMEOUT_MS };
+  if(auth) arg.auth = { header: auth.header, value: auth.value };   /* 主进程单独校验头名并注入 */
+  const r = await _mcpProxy()(arg);
+  if(!r || !r.ok){
+    throw new Error(t("mcp.proxyFail", "Electron 主进程中转失败：") + ((r && r.error) || "proxy_failed"));
+  }
+  const hs = { "content-type": r.contentType || "", "mcp-session-id": r.sessionId || "" };
+  return { ok: r.status >= 200 && r.status < 300, status: r.status,
+    headers: { get: function(k){ return hs[String(k).toLowerCase()] || null; } },
+    text: async function(){ return r.text || ""; } };
+}
 let _mcpSeq = 0;
 let _mcpEnsuring = null;
 
@@ -18852,9 +18971,47 @@ function mcpServers(){
   const c = getAiConfig("mcp") || {};
   const list = Array.isArray(c.servers) ? c.servers : [];
   return list.map(function(s){
+    const at = String((s && s.authType) || "none");
     return { name: String((s && s.name) || "").trim(), url: String((s && s.url) || "").trim(),
-      enabled: !!(s && s.enabled), allow: (s && Array.isArray(s.allow)) ? s.allow.map(String) : [] };
+      enabled: !!(s && s.enabled), allow: (s && Array.isArray(s.allow)) ? s.allow.map(String) : [],
+      /* 只持久化"用哪种认证 + 自定义头名"，**密钥值不入配置**（见 _mcpSecrets） */
+      authType: (at === "bearer" || at === "header") ? at : "none",
+      authHeader: String((s && s.authHeader) || "").trim() };
   }).filter(function(s){ return s.enabled && s.name && /^https?:\/\//i.test(s.url); });
+}
+/* ---------- 私有端点鉴权（2026-10-24）：密钥只活会话内存 ----------
+ * 沿用飞书/钉钉那条规矩（用户 2026-09-29 定）：凭据不落盘、不进备份/云同步、刷新即失效。
+ * 因此**配置里只有 authType/authHeader**，值存在 _mcpSecrets（模块级，随页面刷新清空）。
+ * Bearer 模式发 Authorization: Bearer <value>；自定义模式原样发到指定头。 */
+const _mcpSecrets = {};
+const MCP_AUTH_HEADER_RE = /^[A-Za-z0-9-]{1,64}$/;
+const MCP_AUTH_HEADER_DENY = ["host", "content-length", "connection", "cookie", "origin", "referer",
+  "upgrade", "transfer-encoding", "te", "trailer", "proxy-authorization", "proxy-authenticate", "set-cookie"];
+/** 记录/清除某台服务器的认证密钥（value 为空即清除）。@returns {boolean} 是否已设置 */
+function mcpSetSecret(name, value){
+  const nm = String(name || "").trim();
+  if(!nm) return false;
+  const v = String(value == null ? "" : value);
+  if(!v){ delete _mcpSecrets[nm]; return false; }
+  const srv = _mcpServer(nm);
+  const header = (srv && srv.authType === "header") ? srv.authHeader : "authorization";
+  if(!MCP_AUTH_HEADER_RE.test(header) || MCP_AUTH_HEADER_DENY.indexOf(header.toLowerCase()) >= 0) return false;
+  _mcpSecrets[nm] = { header: header.toLowerCase(), value: v.slice(0, 4096) };
+  return true;
+}
+/** 会话内是否已设置（供 UI 显示，**不回传值**） */
+function mcpSecretState(name){
+  const s = _mcpSecrets[String(name || "").trim()];
+  return s ? { set: true, header: s.header } : { set: false, header: "" };
+}
+/** 清空所有会话密钥（切配置/登出时可调） */
+function mcpClearSecrets(){ Object.keys(_mcpSecrets).forEach(function(k){ delete _mcpSecrets[k]; }); }
+/** 取某台服务器要带的认证（没有就 null）——值只在这一刻被使用，不进日志 */
+function _mcpAuth(server){
+  const mem = _mcpSecrets[server.name];
+  if(!mem || !mem.value) return null;
+  const value = (server.authType === "bearer" && mem.header === "authorization") ? ("Bearer " + mem.value) : mem.value;
+  return { header: mem.header, value: value };
 }
 function _mcpServer(name){
   const hit = mcpServers().filter(function(s){ return s.name === name; });
@@ -18885,16 +19042,25 @@ async function _mcpRpc(server, payload, opts){
   const rt = _mcpRuntime[server.name];
   const headers = { "content-type": "application/json", "accept": "application/json, text/event-stream" };
   if(rt && rt.sessionId) headers["mcp-session-id"] = rt.sessionId;
+  const auth = _mcpAuth(server);   /* 会话内存凭据：只在这里被读一次 */
   const ctl = (typeof AbortController === "function") ? new AbortController() : null;
   /* AbortController.abort() 对已结束的请求是 no-op，不需要兜 */
   const timer = ctl ? setTimeout(function(){ ctl.abort(); }, MCP_RPC_TIMEOUT_MS) : null;
   let res;
-  try{
-    res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
-      signal: ctl ? ctl.signal : undefined });
-  }catch(e){
-    throw new Error(t("mcp.netFail", "连不上（多半是浏览器 CORS 拦了跨域请求，或服务没起）") + "：" + ((e && e.message) || String(e)));
-  }finally{ if(timer) clearTimeout(timer); }
+  if(_mcpProxy()){
+    /* Electron：主进程代发 —— 只有这条路能同时绕开 CORS 与 Chrome 的本地网络权限 */
+    if(timer) clearTimeout(timer);
+    /* 错误已由 _mcpProxyPost 归类成「主进程中转失败」，不要再包成 CORS 话术 */
+    res = await _mcpProxyPost(server, headers, payload, auth);
+  } else {
+    try{
+      if(auth) headers[auth.header] = auth.value;
+      res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
+        signal: ctl ? ctl.signal : undefined });
+    }catch(e){
+      throw new Error(t("mcp.netFail", "连不上（多半是浏览器 CORS 拦了跨域请求，或服务没起）") + "：" + ((e && e.message) || String(e)));
+    }finally{ if(timer) clearTimeout(timer); }
+  }
   if(res && res.headers && res.headers.get){
     const sid = res.headers.get("mcp-session-id");
     if(sid && _mcpRuntime[server.name]) _mcpRuntime[server.name].sessionId = sid;
@@ -23816,8 +23982,23 @@ function _renderRailAgent(){
 function _renderRailFiles(){
   const el = $("#railFilesPane");
   if(!el) return;
+  /* 2026-10-24：这一页分两段 —— 上=AI 新建出来的东西（任务/记录/笔记），下=导入的知识库文件。
+     只列引用，不复制内容；撤销回执时对应条目已被摘掉（见 aiArtifactDrop）。 */
+  const arts = (typeof aiArtifacts === "function") ? aiArtifacts() : [];
+  const kindLabel = { task: t("rail.ai.kind.task", "任务"), record: t("rail.ai.kind.record", "记录"), note: t("rail.ai.kind.note", "笔记") };
+  let html = '<div class="rail-sec-title">' + esc(t("rail.ai.title", "AI 产出"))
+    + ' <span class="task-rail-count">' + arts.length + "</span></div>";
+  html += arts.length
+    ? '<ul class="rail-list">' + arts.slice(0, 8).map(function(a){
+        const d = new Date(a.at || Date.now());
+        const hh = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+        return '<li class="rail-item rail-art" data-rail-art="' + esc(a.id) + '" title="' + esc(t("rail.ai.open", "打开")) + '">'
+          + '<span class="rail-item-name">' + esc(a.title || t("rail.ai.untitled", "（未命名）")) + "</span>"
+          + '<span class="rail-item-meta">' + esc(kindLabel[a.kind] || a.kind || "") + " · " + esc(hh) + "</span></li>";
+      }).join("") + "</ul>"
+    : '<p class="task-rail-empty">' + esc(t("rail.ai.empty", "AI 还没有新建过任务 / 记录 / 笔记。")) + "</p>";
   const files = (typeof getRagFiles === "function") ? getRagFiles() : [];
-  let html = '<div class="rail-sec-title">' + esc(t("rail.files.title", "文件知识"))
+  html += '<div class="rail-sec-title">' + esc(t("rail.files.title", "文件知识"))
     + ' <span class="task-rail-count">' + files.length + "</span></div>";
   html += files.length
     ? '<ul class="rail-list">' + files.slice(0, 8).map(function(f){
@@ -23829,6 +24010,25 @@ function _renderRailFiles(){
   el.innerHTML = sanitizeHtml(html);
   const b = $("#railOpenKb");
   if(b) b.onclick = function(){ try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 打开失败不阻塞右栏 */ } };
+  $$("[data-rail-art]").forEach(function(li){
+    li.onclick = function(){ openAiArtifact(li.getAttribute("data-rail-art") || ""); };
+  });
+}
+/**
+ * 打开一条 AI 产出的落点：笔记 → 知识库；任务 → 任务页；记录 → 它的场景。
+ * 只做"带你去对的地方"，不伪造高亮（找不到就什么都不动）。
+ * @param {string} id - 产物账里的条目 id
+ * @returns {boolean}
+ */
+function openAiArtifact(id){
+  const a = (typeof aiArtifacts === "function" ? aiArtifacts() : []).filter(function(x){ return x && x.id === id; })[0];
+  if(!a) return false;
+  try{
+    if(a.kind === "note"){ AppBridge.openKnowledgeBaseModal(); return true; }
+    if(a.kind === "task"){ if(typeof setActive === "function"){ setActive("tasks"); } if(typeof render === "function") render(); return true; }
+    if(a.kind === "record" && a.sc){ if(typeof setActive === "function"){ setActive(a.sc); } if(typeof render === "function") render(); return true; }
+  }catch(_e){ /* 导航失败不阻塞右栏 */ }
+  return false;
 }
 
 function _bindTaskRail(){
@@ -29016,12 +29216,12 @@ async function _doAuthRegister(name, email, password, confirm, code) {
  * 后端（Electron 版 / 自建服务）提供对应端点；浏览器纯静态形态后端不存在时降级为 toast 提示。
  * 邮箱验证码：注册页「发送验证码」按钮，成功后 60s 倒计时。 */
 var _authCodeCountdown = null;
-/* 两个「发送验证码」按钮（注册页邮箱 / 登录页短信）共用同一个倒计时句柄，
+/* 三个「发送验证码」按钮（注册页邮箱 / 登录页短信 / 重置页邮箱）共用同一个倒计时句柄，
    故复位时必须**都**恢复：只恢复 id 写死的那个，会让另一个永久停在「发送中…」且 disabled
    —— 用户看到的是一个点了没反应、再也点不动的按钮。 */
 function _authCodeCountdownStop(){
   if(_authCodeCountdown){ clearInterval(_authCodeCountdown); _authCodeCountdown = null; }
-  var ids = ["authPageSendCode", "authPageSendSmsCode"];
+  var ids = ["authPageSendCode", "authPageSendSmsCode", "authPageSendResetCode"];
   for(var i = 0; i < ids.length; i++){
     var b = document.getElementById(ids[i]);
     if(b){ b.disabled = false; b.textContent = t("api.sendCode", "发送验证码"); }
@@ -29108,6 +29308,93 @@ async function _doAuthSmsLogin(phone, code){
     }
   } catch (err) {
     _authErrTo("authPageLoginError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.loginFailed", "登录失败"));
+  } finally {
+    _authBusy = false;
+    if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
+  }
+}
+/* ---------- 密码重置 / 忘记密码（2026-10-24）----------
+ * 这套流程存在的理由很朴素：注册要邮箱+密码+验证码，但此前**没有任何找回路径** ——
+ * `/register` 与 `/email-code` 都以 `email_exists` 拒掉已存在的邮箱，于是忘密码 = 账号永久锁死。
+ *
+ * 界面侧有一条容易写错的地方：服务端对「该邮箱是否注册过」一个字都不漏（存在与不存在
+ * 返回逐字节相同的响应），所以**这里也不能出现"该邮箱未注册"的提示**。发码成功一律说
+ * 「已发送（如果该邮箱已注册）」，这不是含糊其辞，是这件事的真实形状。
+ */
+function _sendResetCode(){
+  var email = $("#authPageResetEmail");
+  var err = $("#authPageResetError");
+  if(!email || !email.value){ if(err) err.textContent = t("api.emailRequired", "请先填写邮箱"); return; }
+  if(!_authValidEmail(email.value)){ if(err) err.textContent = t("api.emailInvalid", "邮箱格式不正确"); return; }
+  var b = document.getElementById("authPageSendResetCode");
+  if(b){ b.disabled = true; b.textContent = t("api.sendingCode", "发送中…"); }
+  var promise;
+  try{
+    if(typeof window.apiSendPasswordResetCode === "function"){
+      promise = window.apiSendPasswordResetCode(email.value).then(function(r){
+        if(r && r.ok){
+          if(err) err.textContent = "";
+          if(b) b.textContent = t("auth.resetCodeSent", "已发送");
+          _authCodeCountdownStart(60, b);
+        }else{
+          _authCodeCountdownStop();
+          /* 只细分能公开的两类：通道没配（503，与邮箱无关）/ 太频繁（429）。
+             其余一律笼统 —— 其余分支的差异本来就是存在性信息。 */
+          var codeName = (r && r.data && r.data.error) || "";
+          var msg = t("api.sendCodeFail", "发送失败");
+          if(codeName === "email_not_configured") msg = t("auth.resetChannelMissing", "该服务未配置邮件通道，无法发送重置邮件");
+          else if(codeName === "rate_limited") msg = t("err.tooManyRequests", "操作太频繁，请稍后再试");
+          if(err) err.textContent = msg;
+        }
+      }).catch(function(){
+        _authCodeCountdownStop();
+        if(err) err.textContent = t("api.sendCodeFail", "发送失败");
+      });
+    }else{
+      throw new Error("no-api");
+    }
+  }catch(_e){
+    _authCodeCountdownStop();
+    if(err) err.textContent = t("api.ssoNoBackend", "当前环境无后端，无法发送验证码");
+  }
+  return promise;
+}
+/* 提交重置。四道本地校验与服务端**同口径**（邮箱形状 / 6 位码 / 8 位密码 / 两次一致）：
+   口径不一致的代价是用户填完才在服务端被拒，而界面一直显示"可以提交"。 */
+var _authPrefillEmail = "";   // 重置成功后回填到登录页，免得用户再把邮箱打一遍
+async function _doAuthPasswordReset(email, code, pw, pw2){
+  if (_authBusy) return;
+  _authErrTo("authPageResetError", "");
+  if (!_authValidEmail(String(email || ""))) { _authErrTo("authPageResetError", t("api.emailInvalid", "邮箱格式不正确")); return; }
+  if (!/^\d{6}$/.test(String(code || ""))) { _authErrTo("authPageResetError", t("api.resetCodeRequired6", "请输入 6 位验证码")); return; }
+  if (String(pw || "").length < 8) { _authErrTo("authPageResetError", t("api.passwordTooShort", "密码至少 8 位")); return; }
+  if (pw !== pw2) { _authErrTo("authPageResetError", t("api.passwordMismatch", "两次输入的密码不一致")); return; }
+  var btn = document.getElementById("authPageResetSubmit");
+  if (btn) { btn.classList.add("loading"); btn.disabled = true; }
+  _authBusy = true;
+  try {
+    var r = await window.apiPasswordReset(email, code, pw);
+    if (r && r.ok) {
+      var revoked = (r.data && r.data.sessionsRevoked) || 0;
+      _authPrefillEmail = String(email || "");
+      /* 把「连带几台设备下线」如实说出来：这既是结果的一部分，也是改密生效的证据。
+         用户如果发现多了一台自己不认识的设备，这条提示就是唯一的线索。 */
+      try {
+        toast(revoked > 0
+          ? t("auth.resetDoneRevoked", "密码已重置，并已退出 {n} 台设备的登录").replace("{n}", revoked)
+          : t("auth.resetDone", "密码已重置，请用新密码登录"), "ok");
+      } catch (_) {}
+      _authLoginMethod = "email";
+      setActive("authlogin"); render();
+    } else {
+      var cn = (r && r.data && r.data.error) || "";
+      var m = t("api.resetFailed", "重置失败，请检查验证码是否已过期");
+      if (cn === "password_too_short") m = t("api.passwordTooShort", "密码至少 8 位");
+      else if (cn === "code_invalid" || cn === "code_expired_or_invalid") m = t("api.resetCodeInvalid", "验证码错误或已过期，请重新获取");
+      _authErrTo("authPageResetError", m);
+    }
+  } catch (err) {
+    _authErrTo("authPageResetError", (err && err.offline) ? t("api.accountServiceUnreachable", "未检测到账号服务（后端未部署或网络不通）") : t("api.resetFailed", "重置失败，请检查验证码是否已过期"));
   } finally {
     _authBusy = false;
     if (btn) { btn.classList.remove("loading"); btn.disabled = false; }
@@ -30384,12 +30671,15 @@ function renderAuthLogin(){
       '<div class="auth-field auth-code-field"><label for="authPageLoginSmsCode">' + t("auth.smsCode","短信验证码") + '</label>' +
         '<div class="auth-code-row"><input type="text" id="authPageLoginSmsCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6" placeholder="' + t("api.codePh","6 位数字") + '">' +
         '<button type="button" class="auth-code-btn" id="authPageSendSmsCode">' + t("api.sendCode","发送验证码") + '</button></div></div>'
-    : '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" required></div>' +
+    : '<div class="auth-field"><label for="authPageLoginEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageLoginEmail" autocomplete="email" value="' + esc(_authPrefillEmail || "") + '" required></div>' +
       '<div class="auth-field"><label for="authPageLoginPassword">' + t("api.password","密码") + '</label><input type="password" id="authPageLoginPassword" autocomplete="current-password" required></div>';
   const tail = sms
     ? '<a href="#" id="authPageSwitchEmail">' + t("auth.useEmailLogin","用邮箱密码登录") + '</a>'
     : t("auth.noAccount","还没有账号？") + ' <a href="#" id="authPageToRegister">' + t("auth.goRegister","立即注册") + '</a>' +
-      '<br><a href="#" id="authPageSwitchSms">' + t("auth.useSmsLogin","用短信验证码登录") + '</a>';
+      '<br><a href="#" id="authPageSwitchSms">' + t("auth.useSmsLogin","用短信验证码登录") + '</a>' +
+      /* 「忘记密码」只挂在邮箱密码这一侧：短信方式的用户压根没有密码，给他们一个重置入口
+         才是真的困惑。 */
+      ' · <a href="#" id="authPageToReset">' + t("auth.forgotPassword","忘记密码？") + '</a>';
   const html = _authPageHeader(t("api.login","登录"), true) +
     '<div class="card auth-form-card">' +
       '<form id="authPageLoginForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
@@ -30412,6 +30702,8 @@ function renderAuthLogin(){
   if(sw) sw.onclick = function(e){ e.preventDefault(); _authLoginMethod = "sms"; render(); };
   const swE = $("#authPageSwitchEmail");
   if(swE) swE.onclick = function(e){ e.preventDefault(); _authLoginMethod = "email"; render(); };
+  const toReset = $("#authPageToReset");
+  if(toReset) toReset.onclick = function(e){ e.preventDefault(); setActive("authreset"); render(); };
   const sendBtn = $("#authPageSendSmsCode");
   if(sendBtn) sendBtn.onclick = function(){ _sendSmsCode(); };
   const form = $("#authPageLoginForm");
@@ -30424,6 +30716,47 @@ function renderAuthLogin(){
     }
   };
   _bindAuthSso();
+}
+
+/* 重置密码页（2026-10-24）。三件事与登录页刻意不同：
+   ① 没有 SSO 按钮 —— 忘记密码是密码体系内的事，混进"或，用微信登录"只会让人以为
+      重置是必选项；
+   ② 提示语不承诺"邮件已发到你的邮箱"，只承诺"如果该邮箱已注册，就会收到"（服务端口径一致）；
+   ③ 提交按钮下给一条回登录页的明确路径 —— 用户走到这一步常常是误点进来的。 */
+function renderAuthReset(){
+  const html = _authPageHeader(t("auth.resetTitle","重置密码"), true) +
+    '<div class="card auth-form-card">' +
+      '<form id="authPageResetForm" class="u-flex u-flex-col u-gap-3" novalidate>' +
+        '<p class="sub">' + t("auth.resetHint","填写注册邮箱，我们会发送一条 6 位验证码。") + '</p>' +
+        '<div class="auth-field"><label for="authPageResetEmail">' + t("api.email","邮箱") + '</label><input type="email" id="authPageResetEmail" autocomplete="email" value="' + esc(_authPrefillEmail || "") + '" required></div>' +
+        '<div class="auth-field auth-code-field"><label for="authPageResetCode">' + t("api.code","邮箱验证码") + '</label>' +
+          '<div class="auth-code-row"><input type="text" id="authPageResetCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6" placeholder="' + t("api.codePh","6 位数字") + '">' +
+          '<button type="button" class="auth-code-btn" id="authPageSendResetCode">' + t("api.sendCode","发送验证码") + '</button></div></div>' +
+        '<div class="auth-field"><label for="authPageResetPassword">' + t("auth.newPassword","新密码") + '</label><input type="password" id="authPageResetPassword" autocomplete="new-password" placeholder="' + t("auth.passwordPh","至少 8 位") + '" required></div>' +
+        '<div class="auth-field"><label for="authPageResetPassword2">' + t("api.passwordConfirm","确认密码") + '</label><input type="password" id="authPageResetPassword2" autocomplete="new-password" required></div>' +
+        '<p class="auth-error" id="authPageResetError"></p>' +
+        '<button type="submit" class="auth-submit" id="authPageResetSubmit">' + t("auth.resetSubmit","重置密码") + '</button>' +
+        '<p class="sub u-text-center" style="margin-top:var(--space-3)"><a href="#" id="authPageResetToLogin">' + t("auth.backToLogin","返回登录") + '</a></p>' +
+      '</form>' +
+    '</div>';
+  $("#main").innerHTML = sanitizeHtml(html);
+  /* 返回按钮回**登录页**而不是欢迎页：这一页是从登录页点进来的，退回去应当是上一步。 */
+  const back = $("#authPageBack");
+  if(back) back.onclick = function(){ setActive("authlogin"); render(); };
+  const toLogin = $("#authPageResetToLogin");
+  if(toLogin) toLogin.onclick = function(e){ e.preventDefault(); setActive("authlogin"); render(); };
+  const sendBtn = $("#authPageSendResetCode");
+  if(sendBtn) sendBtn.onclick = function(){ _sendResetCode(); };
+  const form = $("#authPageResetForm");
+  if(form) form.onsubmit = function(e){
+    e.preventDefault();
+    _doAuthPasswordReset(
+      ($("#authPageResetEmail") || {}).value,
+      ($("#authPageResetCode") || {}).value,
+      ($("#authPageResetPassword") || {}).value,
+      ($("#authPageResetPassword2") || {}).value
+    );
+  };
 }
 
 function renderAuthRegister(){
@@ -36744,6 +37077,9 @@ function render(){
     if(active==="authwelcome"){ renderAuthWelcome(); appendFoot(); return; }
     if(active==="authlogin"){ renderAuthLogin(); appendFoot(); return; }
     if(active==="authregister"){ renderAuthRegister(); appendFoot(); return; }
+    /* 2026-10-24：忘记密码。此前只有 welcome/login/register 三个 auth 页 ——
+       而"忘密码"这件事在界面上根本无处可去（服务端也没有端点，见 auth.js 的注释）。 */
+    if(active==="authreset"){ renderAuthReset(); appendFoot(); return; }
     if(active==="timeline"){ renderTimelinePage(); appendFoot(); return; } // v3.4.7 批次五：任务时间轴页
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
@@ -42750,6 +43086,7 @@ function renderAiMcpList(){
   servers.forEach(function(srv, i){
     const name = String((srv && srv.name) || "").trim();
     const rt = name ? mcpRuntimeInfo(name) : { tools: [], at: 0, err: "" };
+    const sec = (typeof mcpSecretState === "function") ? mcpSecretState(name) : { set: false, header: "" };
     const allow = (srv && Array.isArray(srv.allow)) ? srv.allow : [];
     let status = t("mcp.saveFirst", "先保存配置，再刷新工具");
     if(name){
@@ -42779,7 +43116,19 @@ function renderAiMcpList(){
       "<div class=\"btn-row u-mt-1\">"+
       "<button type=\"button\" class=\"addbtn sm u-nowrap\" data-mcp-refresh=\""+i+"\" data-sc=\"accent\">"+esc(t("mcp.refresh","连接并刷新"))+"</button>"+
       "<span class=\"set-tip\" data-mcp-status=\""+i+"\">"+esc(status)+"</span>"+
-      "</div>"+toolsHtml+
+      "</div>"+
+      /* 2026-10-24：私有端点认证 —— 只持久化"哪种认证 + 头名"，密钥值只在会话内存（不回填、不落盘） */
+      "<div class=\"btn-row u-mt-1\">"+
+      "<select data-mcp-auth-type=\""+i+"\" aria-label=\""+esc(t("mcp.authType","认证方式"))+"\">"+
+      "<option value=\"none\""+((srv.authType||"none")==="none"?" selected":"")+">"+esc(t("mcp.authNone","无认证"))+"</option>"+
+      "<option value=\"bearer\""+(srv.authType==="bearer"?" selected":"")+">Bearer Token</option>"+
+      "<option value=\"header\""+(srv.authType==="header"?" selected":"")+">"+esc(t("mcp.authHeaderMode","自定义头"))+"</option>"+
+      "</select>"+
+      (srv.authType==="header" ? "<input data-mcp-auth-header=\""+i+"\" placeholder=\"X-Api-Key\" value=\""+esc(srv.authHeader||"")+"\" class=\"u-min-w-120\">" : "")+
+      (srv.authType && srv.authType!=="none" ? "<input type=\"password\" data-mcp-auth-secret=\""+i+"\" placeholder=\""+esc(sec.set ? t("mcp.authSetPh","已设置（不显示；重填即覆盖）") : t("mcp.authPh","粘贴密钥（只存会话内存）"))+"\" class=\"u-flex-1\" autocomplete=\"off\">" : "")+
+      "</div>"+
+      (srv.authType && srv.authType!=="none" ? "<div class=\"set-tip\">"+esc(t("mcp.authHint","⚠ 密钥只保存在本次会话内存：不写入本地存储、不进备份与云同步，刷新或关闭页面即失效。"))+"</div>" : "")+
+      toolsHtml+
       "</div>";
     box.appendChild(row);
   });
@@ -42813,6 +43162,48 @@ function renderAiMcpList(){
     };
   });
   /* 2026-10-23：勾选即时落盘（allow 列表），勾上才注入 schema */
+  /* 2026-10-24：认证方式/头名只落配置；密钥值走 mcpSetSecret（会话内存），**绝不写进配置** */
+  $$("[data-mcp-auth-type]").forEach(function(sel){
+    sel.onchange = function(){
+      const idx = parseInt(sel.getAttribute("data-mcp-auth-type"), 10);
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      if(!list[idx]) return;
+      list[idx].authType = ["none","bearer","header"].indexOf(sel.value) >= 0 ? sel.value : "none";
+      saveAiConfig("mcp", saved2);
+      const nm = String(list[idx].name || "").trim();
+      if(nm) mcpSetSecret(nm, "");   /* 改认证方式即作废旧值，避免用错头 */
+      renderAiMcpList();
+    };
+  });
+  $$("[data-mcp-auth-header]").forEach(function(inp){
+    inp.onchange = function(){
+      const idx = parseInt(inp.getAttribute("data-mcp-auth-header"), 10);
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      if(!list[idx]) return;
+      list[idx].authHeader = String(inp.value || "").trim();
+      saveAiConfig("mcp", saved2);
+      const nm = String(list[idx].name || "").trim();
+      const st = mcpSetSecret(nm, "");  /* 头名变了，旧密钥作废 */
+      renderAiMcpList();
+      void st;
+    };
+  });
+  $$("[data-mcp-auth-secret]").forEach(function(inp){
+    inp.onchange = function(){
+      const idx = parseInt(inp.getAttribute("data-mcp-auth-secret"), 10);
+      const saved2 = getAiConfig("mcp") || {};
+      const list = Array.isArray(saved2.servers) ? saved2.servers : [];
+      if(!list[idx]) return;
+      const nm = String(list[idx].name || "").trim();
+      if(!nm){ toast(t("mcp.saveFirst", "先保存配置，再刷新工具")); return; }
+      const ok = mcpSetSecret(nm, inp.value || "");
+      inp.value = "";   /* 值不回显、不留在 DOM */
+      toast(ok ? t("mcp.authSaved", "密钥已存进本次会话内存") : t("mcp.authNeedHeader", "先填一个合法的头名（或改用 Bearer）"));
+      renderAiMcpList();
+    };
+  });
   $$("[data-mcp-tool]").forEach(function(cb){
     cb.onchange = function(){
       const raw = cb.getAttribute("data-mcp-tool") || "";
@@ -44642,6 +45033,27 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
     return r;
   }
 
+  /* 密码重置 / 忘记密码（2026-10-24）。
+     客户端这边最重要的一条纪律是**不要试图猜"这个邮箱注册过没有"**：服务端刻意让存在与
+     不存在的响应逐字节相同（否则这个接口就是一台「查某邮箱是否注册过」的枚举器），
+     前端一旦加个"该邮箱未注册"的友好提示，就等于把服务端口径又漏回浏览器。
+     所以发码成功一律提示「如果该邮箱已注册，重置邮件已发送」—— 事实层面确实如此。 */
+  async function apiSendPasswordResetCode(email){
+    return apiFetch("/api/auth/password-reset-code", {
+      method: "POST",
+      body: JSON.stringify({ email: email }),
+    });
+  }
+
+  /* 服务端**不**在重置成功时签发 token（少一处「重置即接管」窗口），
+     所以这里刻意不调 apiSetTokens —— 用户必须用新密码走一次登录。 */
+  async function apiPasswordReset(email, code, newPassword){
+    return apiFetch("/api/auth/password-reset", {
+      method: "POST",
+      body: JSON.stringify({ email: email, code: code, newPassword: newPassword, deviceName: _getDeviceLabel() }),
+    });
+  }
+
   // GitHub OAuth：获取授权跳转 URL（后端拼接 client_id / redirect_uri / state，返回 {authorizeUrl, state}）。
   // 回调由后端完成 code→token 后，通过 postMessage「agent-github-oauth」把 token 回传渲染层，或经 /api/auth/github/status 轮询。
   async function apiGithubOauthUrl(){
@@ -44915,6 +45327,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
   window.apiSendEmailCode = apiSendEmailCode;
   window.apiSendSmsCode = apiSendSmsCode;
   window.apiSmsLogin = apiSmsLogin;
+  window.apiSendPasswordResetCode = apiSendPasswordResetCode;
+  window.apiPasswordReset = apiPasswordReset;
   window.apiGithubOauthUrl = apiGithubOauthUrl;
   window.apiWechatQrcode = apiWechatQrcode;
   window.apiWechatStatus = apiWechatStatus;
@@ -51659,6 +52073,10 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
     /* 2026-10-23：MCP 接线（测试驱动 发现/注入/路由/危险分类/运行时快照） */
     mcpServers, mcpRefreshServer, mcpToolDefs, mcpCallTool, mcpToolMeta, isDangerTool, mcpRuntimeInfo, ensureMcpTools, execToolAuto,
+    /* 2026-10-24：AI 产物账（清单/摘除/打开落点） */
+    aiArtifacts, aiArtifactDrop, openAiArtifact,
+    /* 2026-10-24：私有端点鉴权的会话内存开关（测试用） */
+    mcpSetSecret, mcpSecretState, mcpClearSecrets,
     effectiveSysprompt, setCustomSysprompt, trimChatHist, // v1.15：sysprompt 可编辑 + 上下文 token 预算
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,
