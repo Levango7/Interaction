@@ -1264,6 +1264,11 @@ input[type="file"]:hover{border-color:var(--accent)}
      （实测 768px 下模板变成 0 0 47 47 38 五轨，两个字段宽 0）。 */
   #taskForm>.fld:nth-child(1),#taskForm>.fld:nth-child(2),#taskForm>.fld:nth-child(3),#taskForm>.fld:nth-child(4),#taskForm>.add-wrap,
   #taskFilterRow>.fld:nth-child(1),#taskFilterRow>.fld:nth-child(2),#taskFilterRow>.fld:nth-child(3){grid-column:auto;grid-row:auto}
+  /* 2026-10-23：2 列模板装不下 `.fld-sm` 的 span 3 —— 越界的 span 会造出**第三列隐式轨道**，
+     把两条 1fr 压成 6px（实测 375px 模板 `6px 6px 263px`，搜索框/联动记录内容各溢出 48/23px，
+     three-state-layout 两条红）。#taskForm 的窄字段此前靠上面的 nth-child 兜住，
+     任务筛选行新增的「多选」钮（第 4 个子项）没有 id 规则可依 ⇒ 在这里按类统一收口。 */
+  .form-row--board>.fld-sm{grid-column:auto}
   /* 加号恢复独立成列（不再叠加）—— 2 列布局里叠加会把 1/2 宽度的标签框盖掉大半 */
   #taskForm>.fld:nth-child(4)>input{padding-right:0}
   /* v3.7.53：给 ＋ 预留的 field 级 padding-right 也要撤（窄屏 ＋ 自成一行，无需让位）——
@@ -9207,6 +9212,15 @@ const MESSAGES = {
     "msg.aiKeyEncrypted": "AI Key 已加密绑定本机，换机后无法解密。如需携带，请勾选「导出时包含 AI Key（明文）」后重试。",
     "msg.aiKeyNotExported": "AI Key 由本机安全存储保管，未随备份导出；换机后请在「设置」重新填写。",
     "msg.backupNoData": "备份中没有可恢复的数据",
+    "batch.multiSelect": "多选",
+    "batch.selected": "已选",
+    "batch.complete": "批量完成",
+    "batch.delete": "批量删除",
+    "batch.move": "移动",
+    "batch.moveTo": "移动到场景",
+    "batch.pickScenario": "选择场景",
+    "batch.setPriority": "改优先级",
+    "batch.selectAll": "全选",
     "msg.batchCompleted": "已批量完成 ",
     "msg.batchDeleted": "已批量删除 ",
     "msg.batchMoved": "已批量移动 ",
@@ -13205,6 +13219,15 @@ const MESSAGES = {
     "msg.aiKeyEncrypted": "The AI Key is encrypted and bound to this machine, so it cannot be decrypted after moving to another device. To carry it over, check \"Include AI Key in export (plaintext)\" and try again",
     "msg.aiKeyNotExported": "The AI Key is kept in local secure storage and was not exported with the backup; re-enter it in \"Settings\" on the new device",
     "msg.backupNoData": "No recoverable data in backup",
+    "batch.multiSelect": "Multi-select",
+    "batch.selected": "Selected",
+    "batch.complete": "Complete",
+    "batch.delete": "Delete",
+    "batch.move": "Move",
+    "batch.moveTo": "Move to scenario",
+    "batch.pickScenario": "Pick scenario",
+    "batch.setPriority": "Priority",
+    "batch.selectAll": "Select all",
     "msg.batchCompleted": "Batch completed ",
     "msg.batchDeleted": "Batch deleted ",
     "msg.batchMoved": "Batch moved ",
@@ -30875,6 +30898,32 @@ function renderMainHTML(){
     <div class="fld fld-lg"><label>${t("field.linkedRecord","联动记录")}</label>
       <select id="boardStatusFilter"><option value="">${t("common.all","全部")}</option><option value="todo">${t("kanban.todo","待办")}</option><option value="doing">${t("kanban.doing","进行中")}</option><option value="done">${t("kanban.done","已完成")}</option></select></div>
     <div class="fld fld-lg fld-fill"><label for="tagFilter">${t("field.tagFilterAll","标签（留空=全部）")}</label><input id="tagFilter" placeholder="${t("placeholder.tagExample","如 周报 / 紧急")}" maxlength="200"></div>
+    <div class="fld fld-sm"><button type="button" class="tbtn" id="btnBatchMode">${t("batch.multiSelect","多选")}</button></div>
+  </div>`;
+
+  /* 2026-10-23：v1.6-B 批量操作工具栏 —— 补上**唯一缺失的那块 DOM**。
+     背景（考古结论）：这套功能在 v1.6-B 就写全了 —— 状态/选择/完成/删除/移动/优先级/全选、
+     卡片 checkbox 注入、`.batch-toolbar` 与 `.batch-mode` 两套 CSS、i18n 文案**全都在**，
+     甚至 `_renderBatchUI()` 连"工具栏显隐 + 选中计数 + 卡片 checkbox 显隐"都写好了。
+     唯独三样从来没有：① `#batchToolbar` 这个 DOM；② 进入多选模式的入口按钮；③ `bindBatchToolbar()` 的调用点
+     ⇒ 整条链在 UI 上零入口（`bindBatchToolbar()` 全仓无调用点），用户没有任何路径能触发批量删除。
+     不是冗余（回收站的批量恢复/彻底删除是另一回事，管的是已删除项；任务多选此处独一份），是残缺，故补完而不是删。
+     ⚠️ 显隐不用改 CSS：`.batch-toolbar{display:none}` + `_renderBatchUI()` 写 inline `display` 即可。 */
+  const _moveOpts = '<option value="">' + t("batch.pickScenario","选择场景") + "</option>"
+    + Object.keys(SCENARIOS).filter(k => k !== active)
+        .map(k => '<option value="' + k + '">' + esc(SCENARIOS[k].name) + "</option>").join("");
+  const _priOpts = '<option value="">' + t("common.none","无") + "</option>"
+    + ["P0","P1","P2"].map(v => '<option value="' + v + '">' + v + "</option>").join("");
+  const batchToolbarHTML = `<div class="batch-toolbar" id="batchToolbar" style="display:none">
+    <span class="batch-info">${t("batch.selected","已选")} <b id="batchSelCount">0</b> ${t("unit.tasks"," 个任务")}</span>
+    <button type="button" class="primary" id="btnBatchComplete">${t("batch.complete","批量完成")}</button>
+    <button type="button" class="danger" id="btnBatchDelete">${t("batch.delete","批量删除")}</button>
+    <select id="batchMoveTarget" aria-label="${t("batch.moveTo","移动到场景")}">${_moveOpts}</select>
+    <button type="button" id="btnBatchMove">${t("batch.move","移动")}</button>
+    <select id="batchPriorityTarget" aria-label="${t("task.priority","优先级")}">${_priOpts}</select>
+    <button type="button" id="btnBatchPriority">${t("batch.setPriority","改优先级")}</button>
+    <label class="batch-selall"><input type="checkbox" id="btnBatchSelectAll" aria-label="${t("batch.selectAll","全选")}">${t("batch.selectAll","全选")}</label>
+    <button type="button" class="batch-cancel" id="btnBatchCancel">${t("common.cancel","取消")}</button>
   </div>`;
 
   // T4.2：看板无任务时显示 no-tasks 空状态（替代每列「空」提示），保留表单引导创建
@@ -30900,7 +30949,7 @@ function renderMainHTML(){
       const list = tasks.filter(x => x.status === st);
       return _renderKanbanCol(st, list, colName);
     }).join("") + `</div>`;
-    filterHtml = tagFilterHTML;
+    filterHtml = tagFilterHTML + batchToolbarHTML;
   }
 
   const recFields = rec.fields.map(f=>{
@@ -32950,6 +32999,22 @@ function bindScenario(){
   _bindVirtualScrolls(active);
   bindExtra(active);
   bindSceneSections(active);
+  /* ---------- v1.6-B 批量操作：入口 + 工具栏（2026-10-23 补齐，见 render-scene-main.js 的考古结论） ----------
+     补齐前 `bindBatchToolbar()` **全仓零调用点**、`#batchToolbar` 也不在 DOM 里 ⇒ 整条批量链没有 UI 入口。
+     ⚠️ 三件事必须都在 **bindScenario 末尾**（不是 bindReviewCard 之类 —— 第一版就插错了函数，
+     整段静默不执行，只有探针日志能发现）：bindScenario 每次 render 场景页都会跑（render-entry.js:102）。
+       ① 绑"多选"入口按钮 —— DOM 每次 render 重建，onclick 必须跟着重绑；
+       ② 调 bindBatchToolbar() 把六个工具钮接到 batch* 函数（它自带 _bound 幂等）；
+       ③ 调 _renderBatchUI() 做渲染后同步 —— 否则"模式还开着时发生了一次 render"会把
+          checkbox 和工具栏打回隐藏态，而 _batchState 仍是 true（状态与界面不一致）。 */
+  const bm = $("#btnBatchMode");
+  if(bm) bm.onclick = function(){
+    toggleBatchMode();   // 翻转模式；内部那次 _renderBatchUI 作用在**旧** DOM 上
+    render();            // 重建场景页（新 DOM 里没有 checkbox、工具栏带着 display:none）
+    _renderBatchUI();    // 在新 DOM 上注入 checkbox / 显隐工具栏 / 更新选中计数
+  };
+  bindBatchToolbar();
+  _renderBatchUI();
   // 右侧 AI 聊天面板的 #chatForm/#chatCancel 已移到静态 HTML（三栏布局第三栏），
   // 由 bindChatPanel() 在启动时一次性绑定，不再随 render() 重建，故此处移除原绑定。
 }
@@ -33416,6 +33481,15 @@ function _renderBatchUI(){
   if(toolbar) toolbar.style.display = _batchState.mode ? "flex" : "none";
   const selCount = $("#batchSelCount");
   if(selCount) selCount.textContent = String(_batchState.selected.size);
+  /* 全选 checkbox 的**视觉态**与数据态对齐。不做的后果：中途发生一次 render（模式仍开着）后，
+     checkbox 回到未勾，而 _batchState 里其实全选着 —— 用户看到"没全选"，再点一下变成"取消全选"，
+     与直觉相反。判据是"界面必须等于数据"，不是"看起来像个复选框"。 */
+  const selAll = $("#btnBatchSelectAll");
+  if(selAll){
+    const _n = (typeof getActiveTasks === "function")
+      ? getActiveTasks().filter(function(t){ return t.sc === active; }).length : 0;
+    selAll.checked = _batchState.mode && _n > 0 && _batchState.selected.size >= _n;
+  }
   // 卡片 checkbox 显隐 + 选中高亮
   $$(".kcard[data-drag]").forEach(function(card){
     const id = card.getAttribute("data-drag");
@@ -33474,9 +33548,14 @@ function bindBatchToolbar(){
     if(sel){ batchSetPriority(sel.value); render(); }
   };
   if(btnCancel) btnCancel.onclick = function(){ toggleBatchMode(false); render(); };
+  /* ⚠️ 2026-10-23 修一个**从未被执行过**的 bug（这条链整个没有 UI 入口，所以从没红过）：
+     原写法 `toggleBatchSelectAll(input.checked !== true)` 读的是**点击之后**的 checked ——
+     浏览器/jsdom 都是先把 checkbox 翻好、再派发 click。于是"勾上全选"这个动作读到的
+     checked 恒为 true ⇒ 实际执行的是 `toggleBatchSelectAll(false)` = **取消全选**
+     （实测：点全选，计数稳在 0）。改成**不传参**的翻转语义：
+     `toggleBatchSelectAll()` 自己按"是否已全选"判断，与 checkbox 的视觉态解耦。 */
   if(btnSelectAll) btnSelectAll.onclick = function(){
-    const input = btnSelectAll.querySelector("input") || btnSelectAll;
-    toggleBatchSelectAll(input.checked !== true);
+    toggleBatchSelectAll();
     render();
   };
 }
