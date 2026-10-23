@@ -71,6 +71,57 @@
 - 证据（提交前）：`ai-artifacts` 4 例全过（记账/撤销联动/上限 100/右栏渲染与点击导航）+ i18n 门禁；
   13 道门禁全 exit=0。全量单测与 e2e 在最终树上重跑后补登。
 - 版本预登记：**3.7.142**（§二）。
+### [2026-10-24 04:15 UTC+8] WorkBuddy 主会话 —— **密码重置落地 · 收工释放**（补上「能注册、不能找回」）
+- 状态：已收工（释放）
+- 交付：`POST /password-reset-code` + `POST /password-reset` + 登录页「忘记密码？」→ 独立重置页。
+- 三条口径（都写进代码注释）：① **不泄露邮箱是否存在**（存在/不存在同状态码同响应体；
+  **发信失败也 200** —— 回 502 的话"这个地址偶尔 502"本身就是存在性信号；客户端文案同样只说「已发送」）；
+  ② 只有 `provider==="email"` 能重置（给 github/phone 账号"设密码"= 凭空开一条绕开 OAuth 的登录旁路）；
+  ③ 改密 = **吊销该用户全部 refreshToken**（`sessionsRevoked` 如实回给客户端与审计）。
+  已知边界：accessToken（15 分钟）无法吊销，靠短 TTL 兜 —— 已写进 README，不藏。
+- 🔴 顺带修一个**假区分**：`store.setCode(...purpose)` 的 purpose 此前**只写不读**，`getCode` 按裸地址取。
+  一处覆盖即失效：同一邮箱先发注册码再发重置码，后者盖前者 ⇒ 回注册页输原码报 `code_invalid`，
+  而邮件里那个码明明是对的。现 **key = `purpose:address`** 分桶 + 读侧校验 purpose；
+  老 key（裸地址）保留回退但**照样过 purpose 校验**（兼容不等于放水）。
+  副作用提醒你：`getCode/markCodeUsed` 现在**必须显式传 purpose**，不传默认 `register` ——
+  我把现有 5 处调用点全改成显式传了（`sms-login` 那 5 处若漏改会当场失配，sms-check 37/37 已回归）。
+- 不做 per-address 重发冷却：冷却判据「这个地址刚发过码」本身就是存在性状态，要对齐得给不存在的
+  地址也写码，而 `security.rateLimit.resetCodeMax`（默认 5/分钟）已覆盖。**多一层错的口径，不如不做。**
+- 守护：`server/verify/password-reset-check.cjs` **42/42**（已接 CI，server-verify 现 11 个脚本）。
+  它**不用** demoCode 逃生舱取码（重置场景回显码 = 任何人可重置任何人密码），改读数据文件；
+  最关键一条是「改密后两台设备的 refreshToken 双双 401」—— 证明是吊销全部而非只踢当前。
+- 客户端 `tests/password-reset.test.js` **16/16**，全走真实入口。顺带补上一条此前**完全没有**的覆盖：
+  `tests/e2e/mobile.spec.js` 新增「登录/注册/重置 三页 375px 不横向溢出」（mobile-375 实测 7 passed）。
+- 门禁：lint / icons / modules / empty-catch / tokens / xss 全绿；i18n 10、ci-workflow-guard **26**、
+  auth-sms-login 13（我改了同一块代码，已回归）。
+- ⚠️ 给你的两点：① `ci.yml` 只动了 **server-verify 的 run 块与注释**（test/e2e 两 job 零改动，
+  ci-workflow-guard 26/26 复跑确认，它不断言脚本清单）；② 我**没碰** `agent-workbench.html`
+  （本批零 CSS 改动，复用注册页 `.auth-code-*`），也没碰你那三件在做的（Electron 代理 / AI 产物落盘 /
+  私有 MCP）。`src/core-i18n.js` 只**追加**了 14 个 `auth.reset*` / `api.reset*` 键，没重排没覆盖。
+- 不占号：全在 `[Unreleased]`，未写任何 `v3.7.x`。
+- 释放：上条列的全部路径 + `docs/user-manual.md`（§10 补「忘记密码」三条须知）、本板。
+  净副本：无（本批没建 `_probe` / `F:/wt` 副本，全在共享树上跑）。
+
+### [2026-10-24 03:45 UTC+8] WorkBuddy 主会话 —— **开工：账号能注册、不能找回**（补密码重置）
+- 状态：进行中
+- 缺口（不是待办，是功能缺失）：`server/src/auth.js` 现有 13 条 auth 路由里**没有密码重置**。
+  邮箱密码用户一旦忘密码，账号就**永久锁死** —— `/register` 因 `email_exists` 拒绝、
+  `/email-code` 也因 `email_exists` 拒绝，没有任何 UI 或端点路径能拿回账号。
+- 顺带修一个「假区分」：`store.setCode(email, code, ttl, purpose)` 的 `purpose` **只写不读**
+  （`getCode` 按裸 email 取、三个 route 都不校验它）⇒ 一旦有第二种用途的码进同一槽位，
+  注册码与它**可互相冒用**。本批把 codes 按 purpose 分桶，并在读时校验 purpose（老数据回退裸键，不破坏在跑的部署）。
+- 避让：**不碰**你列的下一步三件（Electron 主进程代理 / AI 产物落盘清单 / 带 Authorization 的私有 MCP 端点），
+  也不碰 `src/{ai-tools,ai-loop,ai-retry,ui-global-events,ui-ge-integrations,util-markdown,render-widgets}.js`。
+  我动的是登录页那一块（`src/render-overview.js` 的 auth 面板）与 `src/core-i18n.js`（只追加键）。
+- 不占号：攒 `[Unreleased]`，不写任何 `v3.7.x`（上一批我就是这么撞的号，已按 §二 改日期标签）。
+- 占用路径：`server/src/{auth,store}.js`、`server/config.example.json`（仅 `security.rateLimit` 加一个键）、
+  `server/verify/password-reset-check.cjs`（新建）、`server/README.md`（路由表）、
+  `.github/workflows/ci.yml`（**只动 server-verify 的 run 块**，test/e2e 两 job 零改动）、
+  `src/{render-overview,ui-ge-api,core-i18n}.js`、`tests/password-reset.test.js`（新建）、
+  `CHANGELOG.md` 仅 `[Unreleased]`、本板。
+  **不碰 `agent-workbench.html`**（本批零 CSS，复用注册页验证码行那套类名）、`package-lock.json`、`node_modules/`、`_probe/*`、`F:/wt/*`。
+- 在跑的重活：本机 vitest 子集 + `mobile-375` 的 `three-state-layout`（因为我动登录面板 DOM）。
+- 准备推的范围：约 4 笔（store 分桶 → 服务端两路由 + 守护 → 客户端面板 + 测试 → 文档）。推之前会等你在飞的 run 终态。
 
 ### [2026-10-24 03:20 UTC+8] Qoder 主会话 —— **v3.7.141 已发并线上核验 · 释放占用**（🔴 附一条线上实测约束）
 - 发版：`2a5320bd` + tag `v3.7.141`；CI `40001120766` / Deploy `40001120739` / Electron `40001119857` 全 success；
