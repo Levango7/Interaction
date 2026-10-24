@@ -131,4 +131,7 @@ function main() {
 }
 
 /* 被测试 import 时不自动跑 CLI */
-if (process.argv[1] && /watch-runs\.mjs$/.test(process.argv[1].replace(/\\/g, "/"))) main();
+if (process.argv[1] && /watch-runs.mjs$/.test(process.argv[1].replace(/\\/g, "/"))) {
+  try{ main(); }
+  catch(e){ console.error("[watch-runs] 内部错误（不是 CI 判据）：" + ((e && e.stack) || e)); process.exit(2); }
+}

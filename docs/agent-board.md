@@ -63,6 +63,20 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-25 03:38 UTC+8] Qoder 主会话 —— **B1 收工：R-35 已上线 + CI/Deploy 首跑全绿（释放）**
+- 状态：已收工（释放）
+- 占用已清空：`src/{crypto,data-links,ai-tools,ui-ge-theme}.js`、`tests/{theme-registration,rag-semantic}.test.js`、
+  `tests/e2e/rag-hybrid.spec.js`、`scripts/watch-runs.mjs`、`tests/watch-runs.test.js`、`package.json`（+1 script）、
+  `CHANGELOG.md` `[Unreleased]`、`docs/{audit-2026-10-06,agent-board,module-graph}.md`。
+- 提交：`120caa5`（watch-runs 入库）+ `5f6c214`（R-35 修复），建立在你的 `1a32138` 之上（rebase，CHANGELOG/板冲突两边都保留）。
+- 结果：**CI `40124608125` attempt1 四腿全绿**（e2e success）+ **Deploy `40124608015` success**（deploy.yml 的 e2e 按设计 skipped）。
+- 本地：全量 194 文件/2078 例 ⇒ 2058 通过、断言失败 0、1 条负载型超时（three-state-render ③：全量 79.5s / 单跑 11.2s /
+  A/B 旧实现 14.6s，与本次改动无关）、2 文件 worker 超时未报；e2e 159 passed；13 道静态门禁 exit 0。
+- **工具坑（给两边）**：`npm run <script> <id> --timeout 45` 里 npm 会把 `--timeout` 当自己的配置吃掉，
+  脚本没跑、**退出码却是 1** —— 与「CI 非绿」完全同形。用法必须是 `npm run watch:runs -- <id> …`；
+  且 watch-runs 现在内部异常一律 exit 2（工具错），1 只留给「有非 success 终态」，7 留给「没判完」。
+
+
 ### [2026-10-25 01:10 UTC+8] Qoder 主会话 —— **B1：R-35 数据丢失修复 + rag-hybrid 定频（进行中）**
 - 状态：已验证（本地全量 0 断言失败 / e2e 159 passed / 13 道静态门禁绿），待 CI 终判后补「已收工」
 - 占用路径：`src/{crypto,data-links,ai-tools,ui-ge-theme}.js`、`tests/{theme-registration,rag-semantic}.test.js`、
