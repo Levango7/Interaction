@@ -245,17 +245,19 @@ function setTheme(themeId){
  * @returns {void}
  */
 function _syncCfgTheme(themeId){
-  try{
-    if(typeof getCfg !== "function" || typeof save !== "function") return;
-    // v3.1.2：全部预置主题都写入 cfg.theme——修复前只认 light/dark，
-    // 选 aurora/sepia/elegant/matrix 后 cfg.theme 停留旧值，换设备迁移时主题回退。
-    // 自定义主题 id 仍不写入（由 setTheme 的 localStorage.theme 持久化）。
-    if(themeId && PRESET_THEMES[themeId]){
-      const cfg = getCfg() || {};
-      cfg.theme = themeId;
-      save(PREFIX + "cfg", cfg);
-    }
-  }catch(e){ /* 静默降级 */ }
+  if(!themeId || !PRESET_THEMES[themeId]) return;
+  if(typeof load !== "function" || typeof save !== "function") return;
+  // v3.1.2：全部预置主题都写入 cfg.theme——修复前只认 light/dark，
+  // 选 aurora/sepia/elegant/matrix 后 cfg.theme 停留旧值，换设备迁移时主题回退。
+  // 自定义主题 id 仍不写入（由 setTheme 的 localStorage.theme 持久化）。
+  /* ⚠️ 必须基于**存储里的原始 cfg** 合并：`getCfg()` 在启动竞态里可能返回空快照，
+     用它写回会把整份配置（含 profiles / 模型 / 端点）覆盖成 `{theme}` ——
+     2026-10-24 实测到的数据丢失路径（台账 R-35：rag-hybrid 刷红也是它）。 */
+  const cfg = load(PREFIX + "cfg", null);
+  if(!cfg || typeof cfg !== "object") return;   /* 没有配置就不发明一份 */
+  if(cfg.theme === themeId) return;             /* 值没变就别写（少一次覆盖机会） */
+  cfg.theme = themeId;
+  save(PREFIX + "cfg", cfg);   /* save() 失败会自己 pushDiag + toast，这里不重复上报 */
 }
 
 /**

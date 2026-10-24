@@ -95,3 +95,27 @@ describe("主题真的生效（漏注册时唯一的表象就是这里）", () =
     expect(["light", "dark", "ink", "matrix", null]).toContain(applied === null ? null : applied);
   });
 });
+
+/* v3.7.148（台账 R-35）：主题持久化**不许**用「读不到就当空对象」写回整份 cfg。
+   生产竞态：initCrypto 在配置可见之前读了一次 ⇒ 内存缓存是空快照；随后应用主题时
+   persistThemeToCfg 用 getCfg()（那份空快照）写回 ⇒ 整份 AI 配置被覆盖成 {theme}，
+   下一次刷新就永远「未配置」（语义召回静默退化成词法 —— rag-hybrid:105 在 CI 上就是这么红的）。 */
+describe("主题持久化不得覆盖整份 cfg（R-35）", () => {
+  it("空快照 + 存储里有配置 ⇒ 主题写入后 profiles/base 仍在", async () => {
+    const win = loadApp();
+    win.localStorage.clear();
+    /* 1) 让应用以**空配置**完成一次加密初始化（复现"缓存是空快照"那一刻） */
+    await win.__test.initCrypto();
+    /* 2) 配置在这之后才落进存储（另一标签页 / 种子数据 / 慢盘） */
+    const cfg = { enabled: true, base: "http://127.0.0.1:11434/v1", key: "sk-test", model: "qwen", rag: true,
+      profiles: [{ id: "p", name: "p", base: "http://127.0.0.1:11434/v1", key: "sk-test", model: "qwen", embedModel: "bge-m3" }],
+      activeId: "p" };
+    win.localStorage.setItem("wb_agent_cfg", JSON.stringify(cfg));
+    /* 3) 应用主题（启动时/用户切换时都会走这条） */
+    win.__test.setTheme("dark");
+    const after = JSON.parse(win.localStorage.getItem("wb_agent_cfg") || "{}");
+    expect(after.profiles, "主题写入把 profiles 抹掉了 = 配置丢失").toHaveLength(1);
+    expect(after.base).toBe(cfg.base);
+    expect(after.theme, "主题本身仍要持久化").toBe("dark");
+  });
+});

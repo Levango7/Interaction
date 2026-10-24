@@ -9,6 +9,7 @@ const DK_IDB_KEY = "__dk_v2";   // 设备密钥 IDB 键（不参与 idbQueueMirr
 let _dkIdbGet = () => Promise.resolve(null);  // 生产接线由 data-idb 块加载时 registerDkIdbHelpers 注册
 let _dkIdbPut = () => Promise.resolve(false);
 let _dkPromise = null;  // v3.7.62：ensureDeviceKey 在途去重（token 水合与 initCrypto 会并发调用）
+let _cryptoInitRetried = false;  // v3.7.148：initCrypto 读到空配置快照时只重跑一次
 /** 设备密钥的 IDB 存取接缝。
  *  v3.7.75 解耦：本块此前直接引用 idbReadKey/idbMirrorKey（data-idb 块的符号），
  *  构成一条 crypto→data-idb 逆层边；改为由 data-idb 加载时调用本函数反向注册
@@ -55,7 +56,7 @@ function base64Decode(str){
 }
 function getDeviceKey(){ return _deviceKey; }
 function isEncKey(v){ return v && typeof v === "object" && v.__enc === true; }
-function _resetCrypto(){ _deviceKey = null; _cfgCache = null; _cryptoReady = false; _dkPromise = null; }
+function _resetCrypto(){ _deviceKey = null; _cfgCache = null; _cryptoReady = false; _dkPromise = null; _cryptoInitRetried = false; }
 async function ensureDeviceKey(){
   if(_deviceKey) return _deviceKey;
   if(!_cryptoReady) return null;
@@ -317,6 +318,16 @@ async function initCrypto(){
     try{ plainKey = await decryptKey(raw.key); needRepersist = true; }catch(e){ plainKey = ""; }
   }else if(typeof raw.key === "string" && raw.key){
     needRepersist = true; // 旧明文，待迁移
+  }
+  /* 读到的是空快照，而此刻存储里已经有配置（启动顺序竞争 / 另一标签页刚写入）⇒
+     这一页不能就此永远判「未配置」。重跑一次（只一次，避免竞态里打转）。 */
+  if(!(raw && ((Array.isArray(raw.profiles) && raw.profiles.length) || raw.base || raw.key)) && !_cryptoInitRetried){
+    let later = {};
+    try{ later = load(PREFIX+"cfg", {}); }catch(_e){ later = {}; }
+    if(later && ((Array.isArray(later.profiles) && later.profiles.length) || later.base || later.key)){
+      _cryptoInitRetried = true;
+      return initCrypto();
+    }
   }
   _cfgCache = Object.assign({}, raw, { key: plainKey });
   // 旧明文迁移：重新持久化为加密结构

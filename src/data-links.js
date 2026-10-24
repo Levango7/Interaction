@@ -772,7 +772,15 @@ function bindSessionModal(){
  * 读取当前配置（含解密后的内存明文 cfg）
  * @returns {Cfg}
  */
-function getCfg(){ return _cfgCache || load(PREFIX+"cfg", {}); }
+function getCfg(){
+  /* 缓存是**空快照**（启动期在配置写入/解密之前读到的 {}）时，不许压住存储里的真配置：
+     否则整页会永远判「AI 未配置」，语义召回静默退化成词法（2026-10-24 台账 R-35 的现场）。
+     缓存非空时仍以缓存为准 —— 只有那里才有解密后的明文 Key。 */
+  const c = _cfgCache;
+  if(c && ((Array.isArray(c.profiles) && c.profiles.length) || c.base || c.key)) return c;
+  const raw = load(PREFIX+"cfg", {});
+  return (raw && ((Array.isArray(raw.profiles) && raw.profiles.length) || raw.base || raw.key)) ? raw : (c || raw);
+}
 
 /* v3.7.17（解耦 S4）：侧栏子项选中态从 render-widgets（Render）移到 Data 层 —— 它是**应用状态**，
    应与 active 同处；原先被 data-links 引用形成逆层依赖。纯搬迁，无依赖。 */

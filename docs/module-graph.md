@@ -56,8 +56,8 @@
 | `AppBridge` | `core` | 24 |
 | `sanitizeHtml` | `util-markdown` | 21 |
 | `SCENARIOS` | `core-shared` | 21 |
-| `getCfg` | `data-links` | 18 |
 | `ORDER` | `core-shared` | 17 |
+| `getCfg` | `data-links` | 17 |
 | `render` | `render-entry` | 16 |
 | `getActiveTasks` | `data-rw` | 15 |
 | `getTasks` | `data-rw` | 15 |

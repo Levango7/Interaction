@@ -2217,7 +2217,12 @@ function _embedCfg(){
     /* 优先取**当前 profile** 的 embedModel（换了 AI 配置就该连向量模型一起换），
        其次全局 cfg.embedModel，最后默认值。 */
     const model = String((ap && ap.embedModel) || cfg.embedModel || "").trim() || "bge-m3";
-    return { base: base, key: (ap && ap.key) || "", model: model };
+    /* 刚刷新时 initCrypto 还没解完：profile.key 是密文**对象** {__enc:true,…}。
+       当 Bearer 发出去就是 `[object Object]`（必然 401），而且 401 会把 10 分钟降级缓存点亮
+       ⇒ 之后同一页里的语义召回全部静默退化成词法。宁可不发，交给调用方按"通道不可用"降级。 */
+    const rawKey = (ap && ap.key) || "";
+    if(rawKey && typeof rawKey !== "string") return null;
+    return { base: base, key: String(rawKey || ""), model: model };
   }catch(e){ return null; }
 }
 

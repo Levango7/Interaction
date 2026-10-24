@@ -67,6 +67,22 @@ async function stubEmbeddings(page, opt = {}) {
   return calls;
 }
 
+/**
+ * 等「检索真的可用」，而不是等 `#side`。
+ * 为什么（2026-10-24，台账 R-35）：`#side` 是**静态 HTML**，它出现时不代表脚本跑完、
+ * initCrypto 解完、配置可见。CI 上本用例三次快失败（~850ms）的现场是 `wantModel:""` ——
+ * 即在配置不可见时就发起了检索；同 SHA 的 Deploy 腿与本机（更快）都绿，正是竞态的形状。
+ * 等待条件必须是被断言能力的**直接前置**：ragSearch 存在 + AI 就绪 + 期望模型非空。
+ */
+async function waitRagReady(page) {
+  await page.waitForFunction(() => {
+    try {
+      return typeof ragSearch === "function" && typeof _ragVecModel === "function"
+        && typeof aiReadyProfile === "function" && !!aiReadyProfile() && _ragVecModel() !== "";
+    } catch (_e) { return false; }
+  }, null, { timeout: 30000 });
+}
+
 /** 写入 AI 配置（profile 形态）并回载，使 getActiveProfile() 能拿到 base/key/embedModel */
 async function seedCfg(page) {
   await page.goto(APP_URL);
@@ -80,6 +96,7 @@ async function seedCfg(page) {
   }, [API_BASE]);
   await page.reload();
   await page.waitForSelector("#side", { timeout: 20000 });
+  await waitRagReady(page);
 }
 
 test.describe("知识库混合召回（真浏览器）", () => {
@@ -125,6 +142,7 @@ test.describe("知识库混合召回（真浏览器）", () => {
     /* 刷新：内存缓存清零，只剩 IDB —— 还能召回才证明"持久化"是真的 */
     await page.reload();
     await page.waitForSelector("#side", { timeout: 20000 });
+    await waitRagReady(page);   /* 与 seedCfg 同理：等配置可见，不等静态 DOM */
     /* v3.7.98 诊断：本用例历史上偶发 flaky（刷新后召不回，CI 上 1.1s 快速失败）。
        失败时 after.en 为空，但**单看断言无法区分三种成因**：
          ① 向量没落 IDB；② embedding 调用没发生/失败（只剩词法，而 "login bug" 是英文召不回中文）；
@@ -140,6 +158,14 @@ test.describe("知识库混合召回（真浏览器）", () => {
          即"数据在 IDB，但 ragVectorSearch 在 aiEmbedTexts 之前就 return 了"（ragVecLoadAll 返回了空缓存）。
          这里把 ragVecLoadAll 的输入/输出全摊开：IDB 连接、内存缓存状态、期望模型 vs 记录模型。 */
       try { out.idbDb = (await idbOpen()) ? "ok" : "null"; } catch (e) { out.idbDbErr = String((e && e.message) || e); }
+      try {
+        const cfg = typeof getCfg === "function" ? getCfg() : null;
+        out.cfgKeys = cfg ? Object.keys(cfg).join(",") : "null";
+        out.hasProfiles = !!(cfg && Array.isArray(cfg.profiles) && cfg.profiles.length);
+        const ap = typeof getActiveProfile === "function" ? getActiveProfile() : null;
+        out.base = ap ? String(ap.base || "") : "null";
+        out.keyKind = ap ? (typeof ap.key) : "null";
+      } catch (e) { out.cfgErr = String((e && e.message) || e); }
       try { out.wantModel = typeof _ragVecModel === "function" ? _ragVecModel() : "n/a"; } catch (e) { out.wantModelErr = String((e && e.message) || e); }
       try {
         const c = typeof _ragVecCache !== "undefined" ? _ragVecCache : null;

@@ -63,6 +63,16 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-25 01:10 UTC+8] Qoder 主会话 —— **B1：R-35 数据丢失修复 + rag-hybrid 定频（进行中）**
+- 状态：已验证（本地全量 0 断言失败 / e2e 159 passed / 13 道静态门禁绿），待 CI 终判后补「已收工」
+- 占用路径：`src/{crypto,data-links,ai-tools,ui-ge-theme}.js`、`tests/{theme-registration,rag-semantic}.test.js`、
+  `tests/e2e/rag-hybrid.spec.js`、`CHANGELOG.md` `[Unreleased]`、`docs/{audit-2026-10-06,agent-board}.md`。
+- 在跑的重活：全量单测 + e2e（本树 F:/wt/wb140，独立 node_modules）。
+- 准备推的范围：B0（watch-runs 入库）+ B1，合并推送。
+- 提醒对方：**动 `getCfg()` / `initCrypto()` 前先看台账 R-35** —— 这两个是全应用读配置的入口，
+  本次改动只加「空快照不压存储 / 读到空快照重跑一次」，语义上仍是「缓存优先、存储兜底」。
+  另：`_syncCfgTheme` 现在**不再吞异常**（`save()` 本身不抛且会 pushDiag），改它时别把 try/catch 加回来（会触发 lint:empty-catch P0）。
+
 ### [2026-10-25 00:29 UTC+8] Qoder 主会话 —— **工具链：`watch-runs` 入库（已收工）**
 - 状态：已收工（释放）
 - 占用路径：`scripts/watch-runs.mjs`（新增）、`tests/watch-runs.test.js`（新增）、`package.json`（只加一条 script）、

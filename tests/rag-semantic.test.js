@@ -293,3 +293,21 @@ describe("降级路径保持原行为", () => {
     expect(await win.ragSearch("随便查点什么", 5)).toEqual([]);
   });
 });
+
+/* v3.7.148（台账 R-35 同族）：刚刷新时 initCrypto 还没解完，profile.key 是密文**对象**。
+   把它当 Bearer 发出去就是 `[object Object]`（必然 401），而 401 会点亮 10 分钟降级缓存
+   ⇒ 同一页里之后所有语义召回都静默退化成词法。宁可不发。 */
+describe("aiEmbedTexts：密文 Key 不许当凭据发出去", () => {
+  it("key 是 {__enc:true} 对象时返回 null，且一次请求都不发", async () => {
+    const win = loadApp({
+      storage: { [PREFIX + "cfg"]: JSON.stringify({ enabled: true, model: "qwen",
+        profiles: [{ id: "p", name: "p", base: "http://127.0.0.1:11434/v1",
+          key: { __enc: true, iv: "aXY=", data: "ZGF0YQ==" }, model: "qwen", embedModel: "bge-m3" }],
+        activeId: "p" }) },
+    });
+    let calls = 0;
+    win.fetch = async () => { calls++; return { ok: true, status: 200, json: async () => ({ data: [] }) }; };
+    expect(await win.aiEmbedTexts(["登录报错"])).toBe(null);
+    expect(calls, "密文 Key 就不该发请求（发出去只会换来 401）").toBe(0);
+  });
+});
