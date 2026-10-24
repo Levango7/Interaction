@@ -1,8 +1,21 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
-  "updated": "2026-10-22",
-  "count": 552,
+  "updated": "2026-10-24",
+  "count": 585,
   "items": [
+    {
+      "file": "ai-loop.js",
+      "line": 328,
+      "sig": "9bb6ce289a",
+      "bhash": "9c197bd2de",
+      "occ": 1,
+      "level": "P0",
+      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "bare": true,
+      "note": ".catch(function(){}); } const body={ model, messages, te",
+      "snippet": "降级 */ if(typeof ensureMcpTools === \"function\"){ await ensureMcpTools()",
+      "kind": "reject"
+    },
     {
       "file": "ai-loop.js",
       "line": 343,
@@ -194,6 +207,19 @@
       "bare": false,
       "note": "/* 候选提示失败不影响已完成的执行 */",
       "snippet": "const offer = noteSkillOffer(trace, p.text); if(offer) toast(t(\"skills"
+    },
+    {
+      "file": "ai-retry.js",
+      "line": 611,
+      "sig": "0e580db3a7",
+      "bhash": "e98f500832",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".then(ok=>{ /* dismiss(false) 也会由「打字确认」路径的 closeConfirmM",
+      "snippet": "收站）。也可以在聊天框发送「确认」继续。\"), confirmText: t(\"ai.confirmExecute\",\"确认执行\"), })",
+      "kind": "reject"
     },
     {
       "file": "ai-retry.js",
@@ -410,6 +436,19 @@
       "bare": false,
       "note": "/* 删不掉也不影响召回 */",
       "snippet": "await idbDeleteKey(MEM_VEC_PREFIX + id); }"
+    },
+    {
+      "file": "ai-tools.js",
+      "line": 580,
+      "sig": "a5a2a29494",
+      "bhash": "5cad978ef4",
+      "occ": 1,
+      "level": "P0",
+      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "bare": false,
+      "note": ".catch(function(){ /* 有的实现不回这条；不影响 tools/list */ }); con",
+      "snippet": "onrpc: \"2.0\", method: \"notifications/initialized\" }, { quiet: true }) ",
+      "kind": "reject"
     },
     {
       "file": "ai-tools.js",
@@ -638,6 +677,19 @@
       "bare": false,
       "note": "",
       "snippet": "await ragEnsureVectors(Infinity); }"
+    },
+    {
+      "file": "ai-tools.js",
+      "line": 2408,
+      "sig": "5b9104f4b9",
+      "bhash": "4d728464fe",
+      "occ": 1,
+      "level": "P0",
+      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "bare": true,
+      "note": ".catch(() => {}), new Promise(r => setTimeout(r, RAG_BACKFIL",
+      "snippet": "。 */ if(!cache.size && _ragEnsuring){ await Promise.race([_ragEnsuring",
+      "kind": "reject"
     },
     {
       "file": "ai-tools.js",
@@ -989,6 +1041,19 @@
     },
     {
       "file": "data-idb.js",
+      "line": 54,
+      "sig": "4c9b435b17",
+      "bhash": "e51b7adc43",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(()=>{})` 兜着。 而 IDB 镜像正是 localStorage 的**恢复来源**（idb",
+      "snippet": "ndefined)` —— 谎报成功；调用方（`idbQueueMirror` 的 setTimeout、pagehide 钩子）还额外 `",
+      "kind": "reject"
+    },
+    {
+      "file": "data-idb.js",
       "line": 66,
       "sig": "3b5e2ce8f8",
       "bhash": "c89fa6ecff",
@@ -1010,6 +1075,19 @@
       "bare": false,
       "note": "/* 接线失败不影响 IDB 本身 */",
       "snippet": "if(typeof registerDkIdbHelpers === \"function\") registerDkIdbHelpers(id"
+    },
+    {
+      "file": "data-idb.js",
+      "line": 115,
+      "sig": "538b2525e1",
+      "bhash": "46980df7f4",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(() => {}); }, IDB_FLUSH_MS); } /** * 立即冲刷镜像队列（导出，供测",
+      "snippet": "learTimeout(_idbTimer); _idbTimer = setTimeout(() => { idbFlushQueue()",
+      "kind": "reject"
     },
     {
       "file": "data-idb.js",
@@ -1769,6 +1847,19 @@
     },
     {
       "file": "render-overview.js",
+      "line": 168,
+      "sig": "3acee17619",
+      "bhash": "756ea31efe",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(()=>{ /* 静默失败，保留 loading 文案 */ }); } // v2.2.0：AI",
+      "snippet": "lable\", \"暂无法获取建议（{reason}），请稍后重试\").replace(\"{reason}\", r.reason); } })",
+      "kind": "reject"
+    },
+    {
+      "file": "render-overview.js",
       "line": 195,
       "sig": "31f44662de",
       "bhash": "82ea4d90f6",
@@ -2066,6 +2157,19 @@
       "bare": true,
       "note": "",
       "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"pre-restore 备份写入失败（本"
+    },
+    {
+      "file": "render-overview.js",
+      "line": 1491,
+      "sig": "c6a41a6911",
+      "bhash": "9624217391",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(function(){}); }, 2500); } }).catch(funct",
+      "snippet": "w._loadApiPanels(); }catch(_e){} setActive(\"overview\"); render(); } })",
+      "kind": "reject"
     },
     {
       "file": "render-overview.js",
@@ -2536,6 +2640,19 @@
       "snippet": "el.style.height = \"auto\"; el.style.height = Math.min(el.scrollHeight +"
     },
     {
+      "file": "render-overview.js",
+      "line": 2612,
+      "sig": "18805a5120",
+      "bhash": "4f1ad8aa5a",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(function(_e){ /* 探测函数自身约定的契约是「不抛」；此处是防御性兜底 —— 真抛了",
+      "snippet": "cs/product-scope.md。\") + '</p>' ); el.classList.remove(\"u-hidden\"); })",
+      "kind": "reject"
+    },
+    {
       "file": "render-scene-main.js",
       "line": 724,
       "sig": "b31634f2b4",
@@ -2705,6 +2822,19 @@
     },
     {
       "file": "render-scene-main.js",
+      "line": 1206,
+      "sig": "1474adf6de",
+      "bhash": "79becc836d",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(()=>{}); }catch(_e){ /* IDB 不可用静默 */ } }",
+      "snippet": "记录删除同因——防孤儿累积） if(target && target.img){ try{ idbDeleteKey(target.img)",
+      "kind": "reject"
+    },
+    {
+      "file": "render-scene-main.js",
       "line": 2092,
       "sig": "c458ade830",
       "bhash": "a7226bda95",
@@ -2810,6 +2940,19 @@
       "bare": false,
       "note": "",
       "snippet": "if(localStorage.getItem(PREFIX+\"sideCollapsed\")===\"1\") side.classList."
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 1069,
+      "sig": "d4bb9693dd",
+      "bhash": "71b9f1692f",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(()=>{}); } }else if(d.kind === \"link\"){",
+      "snippet": "// 异步落盘（不阻塞恢复流程） if(typeof persistCfg === \"function\"){ persistCfg(cfg)",
+      "kind": "reject"
     },
     {
       "file": "render-widgets.js",
@@ -2933,6 +3076,19 @@
     },
     {
       "file": "render-widgets.js",
+      "line": 1867,
+      "sig": "27304e4085",
+      "bhash": "e3f274c6a2",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(function(){}); _beepAlarm._ctx = null; } }catch(_){}",
+      "snippet": "{ const c = _beepAlarm._ctx; if(c){ const t = c.currentTime; c.close()",
+      "kind": "reject"
+    },
+    {
+      "file": "render-widgets.js",
       "line": 2074,
       "sig": "66ae794fb1",
       "bhash": "751331cbfb",
@@ -3038,6 +3194,19 @@
       "bare": false,
       "note": "",
       "snippet": "toast(t(\"pet.rhythm.applied\", \"萌宠节奏已切换\"), \"info\"); }"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 2971,
+      "sig": "2e9428fd45",
+      "bhash": "47c74eb160",
+      "occ": 1,
+      "level": "P0",
+      "why": "decode()：资源解码失败，图片/音频静默不显示",
+      "bare": true,
+      "note": ".catch(function(){}); } /* v3.7.49：眨眼/张嘴浮层必须**随宠物尺寸变化重新定",
+      "snippet": "eof artImg.decode === \"function\") artImg.decode().then(placeFaceRetry)",
+      "kind": "reject"
     },
     {
       "file": "render-widgets.js",
@@ -3221,6 +3390,19 @@
     },
     {
       "file": "ui-backup-stats.js",
+      "line": 276,
+      "sig": "046974f1b4",
+      "bhash": "e62d8dd739",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": ".catch(() => {}); // 架构项①：同步清 IDB 镜像，避免恢复出僵尸数据 /* OD-004 裁",
+      "snippet": "ssage)||e),{where:\"doClear\",key:k}); }catch(_e2){} } }); idbClearAll()",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-backup-stats.js",
       "line": 351,
       "sig": "1adce61c53",
       "bhash": "c7a1dab007",
@@ -3242,6 +3424,19 @@
       "bare": true,
       "note": "",
       "snippet": "pushDiag(\"warn\", \"idb export localStorage enumeration failed: \"+((e&&e"
+    },
+    {
+      "file": "ui-backup-stats.js",
+      "line": 396,
+      "sig": "b87f7b90f7",
+      "bhash": "9a677a18b2",
+      "occ": 1,
+      "level": "P0",
+      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "bare": false,
+      "note": ".catch(() => { /* 单键失败不拖垮整体备份 */ }) )); }).the",
+      "snippet": "st dataURL = await _blobToDataURL(v); if(dataURL) out[k] = dataURL; })",
+      "kind": "reject"
     },
     {
       "file": "ui-backup-stats.js",
@@ -3461,6 +3656,19 @@
     },
     {
       "file": "ui-backup-stats.js",
+      "line": 868,
+      "sig": "4006c7128b",
+      "bhash": "047604caef",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".then(function(){}, function(){}); copied = true;",
+      "snippet": " navigator.clipboard.writeText){ navigator.clipboard.writeText(report)",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-backup-stats.js",
       "line": 869,
       "sig": "c8662d94d0",
       "bhash": "7cc98a5935",
@@ -3653,6 +3861,19 @@
     },
     {
       "file": "ui-daily.js",
+      "line": 104,
+      "sig": "48333755d9",
+      "bhash": "aceb129c16",
+      "occ": 1,
+      "level": "P0",
+      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
+      "bare": false,
+      "note": ".catch(function(){ /* 拒绝时静默降级到 toast */ }); }catch(e){ /",
+      "snippet": "fication.requestPermission(); if(p && typeof p.catch === \"function\") p",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-daily.js",
       "line": 105,
       "sig": "6abacc2ec4",
       "bhash": "7cdf67cb74",
@@ -3734,6 +3955,19 @@
       "bare": false,
       "note": "/* noop */",
       "snippet": "renderThemeEditor(); }"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 238,
+      "sig": "0ba339de33",
+      "bhash": "72b28853d9",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(()=>{}); } /* v1.9：设置从侧边栏抽屉改为正常页面——把 #drawer 移到 .",
+      "snippet": "\"; $(\"#cfgKey\").placeholder=t(\"cfg.keySavedInMain\",\"已保存（主进程保管）\"); } })",
+      "kind": "reject"
     },
     {
       "file": "ui-drawer.js",
@@ -4181,6 +4415,19 @@
     },
     {
       "file": "ui-ge-api.js",
+      "line": 141,
+      "sig": "908642f162",
+      "bhash": "1c6a8a3d44",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(() => {}); return _persistChain; } async func",
+      "snippet": " }; _persistChain = _persistChain.then(() => _persistTokensTask(snap))",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-ge-api.js",
       "line": 157,
       "sig": "50ff445329",
       "bhash": "df0f9f1bd4",
@@ -4238,6 +4485,32 @@
       "bare": true,
       "note": "",
       "snippet": "if(isApiLoggedIn()) _loadApiPanels(); }"
+    },
+    {
+      "file": "ui-ge-api.js",
+      "line": 658,
+      "sig": "2d7268e849",
+      "bhash": "ef12302fcf",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(() => {}); } try{ _updateUserButton(); }c",
+      "snippet": "gedIn()){ apiRefreshAccessToken().then(() => { _renderSyncStatus(); })",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-ge-api.js",
+      "line": 663,
+      "sig": "e6b1d0e436",
+      "bhash": "f57e610a6a",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(() => {}); } // 暴露到外层作用域（函数声明提升使 window.__test 可",
+      "snippet": " }catch(e){} try{ if(isApiLoggedIn()) _loadApiPanels(); }catch(e){} })",
+      "kind": "reject"
     },
     {
       "file": "ui-ge-api.js",
@@ -4937,6 +5210,19 @@
     },
     {
       "file": "ui-ge-integrations.js",
+      "line": 246,
+      "sig": "dd6b3319e0",
+      "bhash": "14346ac304",
+      "occ": 1,
+      "level": "P0",
+      "why": "JSON.stringify：循环引用会抛，整条记录静默丢",
+      "bare": true,
+      "note": ".catch(()=>{}); } /** 注水：把磁盘读入的密封态在内存中解开成明文真相源（异步，fire-and-f",
+      "snippet": "ist seal: \"+(e&&e.message||e), {op:\"persist_seal\"}); }catch(e2){} } })",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-ge-integrations.js",
       "line": 256,
       "sig": "776f2e456c",
       "bhash": "d22e97ae13",
@@ -4946,6 +5232,32 @@
       "bare": true,
       "note": "",
       "snippet": "delete target[k]; }"
+    },
+    {
+      "file": "ui-ge-integrations.js",
+      "line": 257,
+      "sig": "2ce6e0ea98",
+      "bhash": "b76bc310b6",
+      "occ": 1,
+      "level": "P0",
+      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "bare": true,
+      "note": ".catch(function(){}); } function _intAwaitHydrated(){ retu",
+      "snippet": "(target[k], io); } catch(e){ try{ delete target[k]; }catch(e2){} } }))",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-ge-integrations.js",
+      "line": 260,
+      "sig": "6446d93511",
+      "bhash": "cf788e06b5",
+      "occ": 1,
+      "level": "P0",
+      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "bare": true,
+      "note": ".catch(function(){}); } let _apiKeysLoaded = false; let _sy",
+      "snippet": "ction _intAwaitHydrated(){ return (_intHydrating || Promise.resolve())",
+      "kind": "reject"
     },
     {
       "file": "ui-ge-integrations.js",
@@ -5534,6 +5846,19 @@
       "bare": true,
       "note": "",
       "snippet": "if(typeof pushDiag===\"function\") pushDiag(\"warn\",\"storage usage scan f"
+    },
+    {
+      "file": "ui-global-events.js",
+      "line": 373,
+      "sig": "8577fb0dec",
+      "bhash": "841c3a967d",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(function(){ /* estimate 失败静默 */ }); } }catch(_e",
+      "snippet": "\" / \" + _fmtBytes(est.quota) + \"</span>\"; topEl.appendChild(ref); } })",
+      "kind": "reject"
     },
     {
       "file": "ui-global-events.js",
@@ -6305,6 +6630,19 @@
     },
     {
       "file": "ui-global-events.js",
+      "line": 2366,
+      "sig": "d8b5b006bf",
+      "bhash": "15f40ce898",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": ".catch(function () { /* 静默失败 */ }); /* v3.6.2 版本哨兵：SW 死锁自",
+      "snippet": "}); // 多标签页场景：另一标签已触发更新且新 SW 已就绪 if(reg.waiting) _promptSwReload(); })",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-global-events.js",
       "line": 2389,
       "sig": "1ef635fd42",
       "bhash": "1903f6f6a9",
@@ -6317,6 +6655,19 @@
     },
     {
       "file": "ui-global-events.js",
+      "line": 2393,
+      "sig": "d9665d7829",
+      "bhash": "bf96cfad75",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": true,
+      "note": ".catch(function(){}); } }) .catch(",
+      "snippet": "ener(\"click\", function(){ try{ location.reload(); }catch(e){} }); } })",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-global-events.js",
       "line": 2395,
       "sig": "bbd6f90b9e",
       "bhash": "d294f1265b",
@@ -6326,6 +6677,19 @@
       "bare": false,
       "note": "/* toast 不可用时静默降级 */",
       "snippet": "toast(t(\"msg.asyncError\",\"异步错误：\")+m, \"error\"); }"
+    },
+    {
+      "file": "ui-global-events.js",
+      "line": 2396,
+      "sig": "fa2d54d3a8",
+      "bhash": "626c7359a8",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(function(){ /* 离线/网络错误：静默，下次再查 */ }); }catch(e){",
+      "snippet": "ry{ location.reload(); }catch(e){} }); } }).catch(function(){}); } }) ",
+      "kind": "reject"
     },
     {
       "file": "ui-global-events.js",
@@ -6350,6 +6714,58 @@
       "bare": false,
       "note": "/* noop */",
       "snippet": "idbFlushQueue().catch(function(){}); }"
+    },
+    {
+      "file": "ui-global-events.js",
+      "line": 2434,
+      "sig": "8625aecee6",
+      "bhash": "45479cfd92",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(() => {}); cleanupRecycle(); // T2：启动时按策略清理回收站超期任务（",
+      "snippet": "久镜像——启动时把 localStorage 用户数据镜像到 IDB（异步，不阻塞；仅镜像不自动恢复，恢复入口在设置页） initIdb()",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-global-events.js",
+      "line": 2505,
+      "sig": "e23dcc1427",
+      "bhash": "4c8427db79",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": ".catch(function(e){ /* v3.7.119：给这个「加载即启动」的 async IIFE 挂最外",
+      "snippet": "& !/jsdom/i.test(navigator.userAgent)){ startNotifyScheduler(); } })()",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-global-events.js",
+      "line": 2554,
+      "sig": "e331480de1",
+      "bhash": "4eef123070",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(function(){}); }catch(e){ /* noop */ } }); document",
+      "snippet": "） window.addEventListener(\"pagehide\", function(){ try{ idbFlushQueue()",
+      "kind": "reject"
+    },
+    {
+      "file": "ui-global-events.js",
+      "line": 2556,
+      "sig": "4a068d93bc",
+      "bhash": "1f81f210b5",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(function(){}); }catch(e){ /* noop */ } } }); } //",
+      "snippet": "on(){ if (document.visibilityState === \"hidden\"){ try{ idbFlushQueue()",
+      "kind": "reject"
     },
     {
       "file": "ui-guide.js",
@@ -6458,6 +6874,19 @@
       "bare": false,
       "note": "/* IDB 不可用静默 */",
       "snippet": "idbDeleteKey(target.img).catch(()=>{}); }"
+    },
+    {
+      "file": "ui-scene-bind.js",
+      "line": 67,
+      "sig": "39a674819d",
+      "bhash": "1d8400947e",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(()=>{}); }catch(_e){ /* IDB 不可用静默 */ } } setR",
+      "snippet": "限 4MB，多删即泄漏累积） if(target && target.img){ try{ idbDeleteKey(target.img)",
+      "kind": "reject"
     },
     {
       "file": "ui-scene-bind.js",

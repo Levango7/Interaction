@@ -45,7 +45,9 @@
 - **窄屏聊天抽屉（R-31）**：≤767 面板是右抽屉，**打开 = 场景头「问 AI 助手」/ `__aiPanelExpand()`**
   （同时移除 `.collapsed` 并显示 `#chatBackdrop`），**关闭 = 折叠键 / 遮罩 / Esc**。
   ⚠️ 通则可复用：**CSS 要求某状态类才可见时，必须有一条代码真的添加它** —— R-31 的病根就是
-  `.chat-panel.show` 从无代码添加。守护：`tests/mobile-chat-drawer.test.js` + `layout-v2` 的 375 抽屉几何。
+  `.chat-panel.show` 从无代码添加。守护：`tests/mobile-chat-drawer.test.js` + `layout-v2` 的 375 抽屉几何
+  + `tests/e2e/chat-drawer-mobile.spec.js`（R-36 补：命中测试 `elementFromPoint` 必须命中输入框自己，
+  防止被固定底部导航 `#mobBar` 压住；带反向对照）。
 - **窄屏顶栏**：≤479 收起两个低频按钮（指南→侧栏底部 `#sideBtnHelp`；导出→设置·数据管理），
   为「今日」入口腾位置；这也是 2026-10-20 记的"低频按钮收口"设计项的第一刀。
 - **守护**：`tests/task-rail.test.js`（排序/计数/完成/空态/折叠持久化/滑出）+

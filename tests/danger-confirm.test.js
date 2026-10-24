@@ -262,8 +262,17 @@ describe("原生对话框债务棘轮（confirm / prompt / alert）", () => {
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/(^|[^:])\/\/[^\n]*/g, "$1"); /* 前缀排除 ":" → 不吃 http:// 里的 // */
 
-  /* window. 归一：window.prompt( 与 prompt( 是同一个调用 */
-  const normalize = (code) => code.replace(/\bwindow\./g, "");
+  /* window. 归一：window.prompt( 与 prompt( 是同一个调用。
+     R-36（2026-10-25）扩面：探针实测原来只归一**点号**形式，于是
+     `window["confirm"](x)` 与 `globalThis.confirm(x)` 两种写法**完全漏数** ——
+     门禁登记值是 0，谁用这两种写法就能绕过去。归一规则跟着加两条：
+       · `window["confirm"](` / `window['confirm'](` → 括号访问
+       · `globalThis.confirm(` / `globalThis["confirm"](` → globalThis 前缀
+     实现上统一折成"把 `window` / `globalThis` 前缀连同紧随的属性访问一起抹掉"，
+     比逐个补正则更稳（将来再加 `self.` / `frames.` 也只改这一处）。 */
+  const normalize = (code) => code
+    .replace(/\b(?:window|globalThis)\s*\.\s*/g, "")
+    .replace(/\b(?:window|globalThis)\s*\[\s*(["'])([^"']+)\1\s*\]\s*/g, "$2");
 
   const count = (code, name) => {
     const re = new RegExp("(?<![.\\w$])" + name + "\\s*\\(", "g");
@@ -286,6 +295,33 @@ describe("原生对话框债务棘轮（confirm / prompt / alert）", () => {
     expect(count(sample, "alert"), "真 alert 一处；注释里那处不能算").toBe(1);
     expect(count("function closeConfirmModal(){} openConfirmModal(); dismissDangerConfirm();", "confirm"),
       "大小写不同的 CloseConfirmModal / dismissDangerConfirm 不是原生调用").toBe(0);
+  });
+
+  /* R-36：规避面正向/负向对照。这一条单独成 it —— 它守的是"门禁自己的射程"，
+     与上面那条（样本里的常见形态）职责不同：将来若有人把 normalize 改窄，
+     这里立刻红，而不是等某个真用 `window["confirm"]` 的提交混进来才发现。 */
+  it("规避面：window[...] / globalThis. 的括号与点号写法都必须数到", () => {
+    const evasions = [
+      'window["confirm"](x);',
+      "window['confirm'](x);",
+      'globalThis.confirm(x);',
+      'globalThis["confirm"](x);',
+      'window.prompt(x);',
+      'globalThis.prompt(x);',
+      'window["prompt"](x);',
+    ].join("\n");
+    expect(count(evasions, "confirm"), "window[...] 与 globalThis 的点号/括号写法都要数到").toBe(4);
+    expect(count(evasions, "prompt"), "同上，prompt 三种前缀写法都要数到").toBe(3);
+    /* 负向对照：这些**不是**可直接识别的原生对话框调用，数进来就是假阳性。
+       注意这里期望是 **0 而不是 1** —— 别名与 Reflect 属于"静态不可判"的上限，
+       本门禁选择不猜（猜错就会把正确代码判红，比漏判更糟）。 */
+    const notNative = [
+      'const c = confirm; c(x);',           /* 取别名后调用：静态不可判 */
+      'Reflect.apply(confirm, null, [x]);', /* 同上 */
+      'mydocument.write(x);',               /* 词尾巧合 */
+      'obj.confirmModal(x);',               /* 同名方法 */
+    ].join("\n");
+    expect(count(notNative, "confirm"), "别名 / Reflect / 同名方法不算原生调用").toBe(0);
   });
 
   it("src/ 里的原生对话框调用点必须等于登记值（三个口径都只准减少）", () => {

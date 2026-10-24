@@ -211,6 +211,34 @@ export function tryBlockBefore(raw, catchStart) {
 }
 
 /**
+ * 找**空的 Promise rejection 处理器**（R-36 补，2026-10-25）。
+ * ----------------------------------------------------------------------------
+ * 为什么单开一类：`try{ await f() }catch(e){}` 有门禁盯着，但 `f().catch(()=>{})`
+ * 与 `f().then(ok, ()=>{})` **同样把失败路径静默吞掉**，却从来不在任何门禁视野里 ——
+ * 探针实测（`_probe/gatescope/`）原门禁对这两形状的判定是"非空 catch，不管"。
+ * 这不是理论风险：R-34「右栏复制产出在浏览器拒绝剪贴板时仍报成功」正是这一族
+ * （失败路径没有观测口，用户看到的是假回执）。
+ *
+ * 只认**空体**（`{}` 或只含注释）：非空的 rejection 处理器本仓一律要写观测，
+ * 由 lint:empty-catch 的 P0/P1/P2 分级在 try/catch 侧把关，这里不重复判。
+ *
+ * 形状覆盖：`.catch(fn)` / `.catch(()=>{})` / `.catch(function(e){})` /
+ *           `.then(ok, fn)` / `.then(a, b, ()=>{})`
+ * 用「整形状正则」而非括号计数：体为空 ⇒ 没有嵌套结构要处理，
+ * 反而比先定位再括号匹配更不容易误判（findEmptyCatches 里 `\{([^{}]*)\}` 的教训）。
+ *
+ * @param {string} raw 原始源码
+ * @returns {Array<{idx:number}>} 命中位置（供上层取上下文与行号）
+ */
+export function findEmptyRejectionHandlers(raw) {
+  const out = [];
+  const EMPTY_REJECT = /\.(?:catch|then)\s*\(\s*(?:[A-Za-z_$][\w$]*\s*,\s*)*(?:function\s*\([^)]*\)|(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>)\s*\{\s*(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)*\s*\}/g;
+  let m;
+  while ((m = EMPTY_REJECT.exec(raw)) !== null) out.push({ idx: m.index });
+  return out;
+}
+
+/**
  * 扫描一个源文件的全部空 catch。
  * @param {string} raw
  * @param {string} file 文件名（参与签名，使不同文件的同内容互不混淆）
@@ -235,7 +263,34 @@ export function scanSource(raw, file, occSeen = {}) {
     const k = file + '|' + sig;
     const occ = (occSeen[k] = (occSeen[k] || 0) + 1);
     items.push({ file, line, sig, bhash, occ, level, why, bare: c.bare, note: c.note,
-      snippet: normBody.slice(0, 70) });
+      snippet: normBody.slice(0, 70), kind: 'catch' });
+  }
+  /* R-36：空的 Promise rejection 处理器。kind='reject' 与 try/catch 分开记 ——
+     两者分级依据不同（这里看 `.catch` 前那条 promise 表达式，try/catch 看 try 体），
+     混在一类会让"修了一类、另一类不动"在基线里看不出来。 */
+  for (const r of findEmptyRejectionHandlers(raw)) {
+    const ctx = raw.slice(Math.max(0, r.idx - 200), r.idx).replace(/\s+/g, ' ');
+    const { level, why } = classify(stripCommentsAndStrings(ctx));
+    const sig = createHash('sha1').update(file + '|' + ctx).digest('hex').slice(0, 10);
+    const bhash = createHash('sha1').update(ctx).digest('hex').slice(0, 10);
+    const line = raw.slice(0, r.idx).split('\n').length;
+    const k = file + '|' + sig;
+    const occ = (occSeen[k] = (occSeen[k] || 0) + 1);
+    const handler = raw.slice(r.idx, r.idx + 60).replace(/\s+/g, ' ').trim();
+    /* bare 判据（只影响台账排序，不参与 P0/P1/P2 分级，见 findEmptyCatches 的同款说明）：
+       ① 处理器体里有注释；② 紧邻上方有注释（复用 try/catch 侧的 leadingCommentBefore）；
+       ③ **向上 1500 字符内出现过注释** —— 这一条是为 reject 形态专设的：说明常常写在
+          「包住这条 promise 的那个 if / 那个变量赋值」的上方（实测 ai-tools.js:2408 的说明
+          在 2406 行结束的块注释里，中间隔着 `if(!cache.size && _ragEnsuring){` 一行代码），
+          leadingCommentBefore 遇到那行代码就停了，会把**已经评估过**的判成"未评估"。
+          1500 字符是启发式上限（约 10~20 行），宁可宽一点：判错方向只会让排序失真，
+          不会让真危险溜过去（分级不受它影响）。 */
+    const hasBodyNote = /\/\*[\s\S]*?\*\/|\/\/[^\n]*/.test(handler);
+    const hasAboveNote = /\/\*[\s\S]*?\*\/|\/\/[^\n]*/.test(leadingCommentBefore(raw, r.idx))
+      || /\/\*[\s\S]*?\*\/|\/\/[^\n]*/.test(raw.slice(Math.max(0, r.idx - 1500), r.idx));
+    items.push({ file, line, sig, bhash, occ, level, why,
+      bare: !hasBodyNote && !hasAboveNote,
+      note: handler.slice(0, 60), snippet: ctx.slice(-70), kind: 'reject' });
   }
   return items;
 }

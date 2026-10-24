@@ -692,7 +692,7 @@ function exportReportPDF(report){
   w.document.write(":root{");
   let rootStyle = "";
   try{ rootStyle = window.getComputedStyle(document.documentElement).cssText; }catch(e){ /* noop */ }
-  if(rootStyle){ w.document.write(rootStyle); }
+  if(rootStyle){ w.document.write(rootStyle); } // lint-xss-ok: rootStyle = getComputedStyle(documentElement).cssText，由浏览器从本页样式表现场生成（只有 --space/--fs/--accent 等自有令牌），不含任何用户数据；写进的是刚 window.open 出来的空白新窗口
   w.document.write("}");
   w.document.write("body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:var(--space-5);color:var(--text)}");
   w.document.write("h1{color:var(--accent);font-size:var(--fs-3xl)}");

@@ -123,8 +123,23 @@ for (const f of files) {
      —— 它把字符串**按 HTML 解析**，XSS 面与 innerHTML 完全相同，却不在门禁视野里
      （全仓 11 处，其中 10 处在 src/；本仓是「约定式安全」：渲染函数由调用方负责包
      sanitizeHtml，缺了这一道就没有第二层兜底）。
-     判定沿用同一套：取第二个实参为 rhs，同样放过 sanitizeHtml/esc/纯字面量/已消毒变量。 */
-  const re = /\.(inner|outer)HTML\s*=\s*|\.insertAdjacentHTML\s*\(\s*[^,)]*,\s*/g;
+     判定沿用同一套：取第二个实参为 rhs，同样放过 sanitizeHtml/esc/纯字面量/已消毒变量。
+     R-36（2026-10-25 射程审计）：探针实测本门禁原来**只覆盖 10 类 HTML 注入 sink 中的 2 类** ——
+     名字叫"未消毒 innerHTML 门禁"，实际 `innerHTML +=` / `outerHTML +=` / `.srcdoc =` /
+     `document.write(` 全都从正则底下走过去。三处一起补：
+       ① `\+?=` —— `x.innerHTML += dirty` 与 `x.innerHTML = dirty` 的注入面**完全相同**
+          （都是把字符串按 HTML 解析后写进 DOM），却因为正则写死 `=` 而整类漏扫。
+          `+=` 还更隐蔽：它看起来像"只是追加一点"，审查时最容易被打扫过去。
+       ② `\.srcdoc =` —— iframe 的整份文档入口，注入面与 innerHTML 等价且**作用域是整篇文档**。
+         全仓 1 处（render-scene-main.js 的实时预览），此前靠作者自觉加 lint-xss-ok。
+       ③ `document.write(` —— 同样是"按 HTML 解析写入"。全仓 13 处，全在 ui-ge-theme.js
+         的报表打印（往新窗口写）。此前**没有任何门禁看得见它**。
+     判定沿用同一套 rhs 逻辑：sanitizeHtml/esc/纯字面量/已消毒变量一律放过，
+     剩下必须显式 `lint-xss-ok:` 豁免并写理由 —— 门禁的价值正是"逼人把理由写下来"。
+     仍未覆盖（写明上限，不假装全能）：`a.href=` / `style.cssText=` / `new Function(` / `eval` /
+     `globalThis` 前缀 / 取别名后再调用。前者在本仓均为 0 处且 `style.cssText` 会误伤大量合法的
+     字面量 CSS 赋值；后三类静态不可判（见 tests/danger-confirm.test.js 的同一条上限说明）。 */
+  const re = /\.(inner|outer)HTML\s*\+?=\s*|\.insertAdjacentHTML\s*\(\s*[^,)]*,\s*|\.srcdoc\s*\+?=\s*|\bdocument\s*\.\s*write\s*\(\s*|setAttribute\s*\(\s*["']on[a-zA-Z]*["']\s*,\s*/g;
   let m;
   while ((m = re.exec(text)) !== null) {
     const rhsStart = m.index + m[0].length;

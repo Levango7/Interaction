@@ -591,7 +591,7 @@ function bindCodeFrontendCard(){
       box.style.display = "";
       if(statusEl) statusEl.textContent = t("frontend.previewLive","✓ 实时预览中（再点一次收起）");
       try{
-        frame.srcdoc = doc;
+        frame.srcdoc = doc; // lint-xss-ok: doc 由 rec.css/html/js 拼成，注入面在 sandbox="allow-scripts" 且**无 allow-same-origin** 的 iframe 内（不透明源，触达不到宿主 DOM/localStorage）；完整理由见上方 577-582 行注释
       }catch(e){
         // 环境不支持 srcdoc（旧浏览器/jsdom）：显示源码降级
         box.innerHTML = sanitizeHtml('<pre class="code-input u-fs-2xs u-pre-wrap">' + esc(doc) + '</pre>');
