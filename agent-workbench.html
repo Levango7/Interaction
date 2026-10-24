@@ -6496,10 +6496,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.144"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.146"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261023e";
+const BUILD_TAG = "20261023g";
 
 
 
@@ -7760,7 +7760,7 @@ const MESSAGES = {
     "mcp.readOnlyTag": "只读",
     "mcp.needConfirmTag": "每次调用需你确认",
     "mcp.notAllowed": "该工具没有在设置里勾选，已拒绝执行",
-    "mcp.netFail": "连不上（多半是浏览器 CORS 拦了跨域请求，或服务没起）",
+    "mcp.netFail": "连不上：多半是服务没起、被 CORS 拦了跨域请求，或浏览器把「到本机/局域网的请求」按本地网络访问权限拦了（https 页面连本机就属这类，需用桌面版）",
     "mcp.httpFail": "MCP 服务返回 HTTP ",
     "mcp.badResponse": "MCP 响应不是可解析的 JSON-RPC",
     "mcp.rpcError": "MCP 服务报错",
@@ -7772,6 +7772,8 @@ const MESSAGES = {
     "mcp.connectFailPrefix": "连接失败：",
     "mcp.proxyFail": "Electron 主进程中转失败：",
     "mcp.authType": "认证方式",
+    "mcp.localHint": "检测到本机/私网地址：浏览器版会被 CORS 与「本地网络访问」权限拦下（不是配置错）。用桌面版即可直连；或把这台服务放到公网 https。",
+    "mcp.getDesktop": "下载桌面版",
     "mcp.authNone": "无认证",
     "mcp.authHeaderMode": "自定义头",
     "mcp.authSetPh": "已设置（不显示；重填即覆盖）",
@@ -11834,7 +11836,7 @@ const MESSAGES = {
     "mcp.readOnlyTag": "read-only",
     "mcp.needConfirmTag": "asks you before every call",
     "mcp.notAllowed": "This tool is not ticked in settings; execution refused",
-    "mcp.netFail": "Cannot connect (usually CORS blocking the cross-origin request, or the server is down)",
+    "mcp.netFail": "Cannot connect: the server may be down, CORS may be blocking the cross-origin request, or the browser blocked it as local-network access (an https page reaching localhost is this case; use the desktop app)",
     "mcp.httpFail": "MCP server returned HTTP ",
     "mcp.badResponse": "MCP response is not parseable JSON-RPC",
     "mcp.rpcError": "MCP server error",
@@ -11846,6 +11848,8 @@ const MESSAGES = {
     "mcp.connectFailPrefix": "Connection failed: ",
     "mcp.proxyFail": "Electron main-process relay failed: ",
     "mcp.authType": "Auth",
+    "mcp.localHint": "A local/private address is configured: the browser build will be blocked by CORS and the Local Network Access permission (this is not a config error). Use the desktop app to connect directly, or expose the server on public https.",
+    "mcp.getDesktop": "Get the desktop app",
     "mcp.authNone": "None",
     "mcp.authHeaderMode": "Custom header",
     "mcp.authSetPh": "Set (hidden; type to replace)",
@@ -19012,6 +19016,22 @@ function _mcpAuth(server){
   if(!mem || !mem.value) return null;
   const value = (server.authType === "bearer" && mem.header === "authorization") ? ("Bearer " + mem.value) : mem.value;
   return { header: mem.header, value: value };
+}
+/**
+ * 判断 URL 是否指向本机/私网 —— 浏览器版连这类地址会被 CORS 与 Local Network Access 权限拦，
+ * 桌面版（主进程代发）可通。设置页据此给出「用桌面版」的引导。
+ * @param {string} url
+ * @returns {boolean}
+ */
+function mcpIsLocalUrl(url){
+  let h = "";
+  try{ h = new URL(String(url || "")).hostname.toLowerCase(); }catch(_e){ return false; }
+  h = h.replace(/^\[|\]$/g, "");
+  if(h === "localhost" || h === "::1" || /^127\./.test(h)) return true;
+  if(/^10\./.test(h) || /^192\.168\./.test(h)) return true;
+  const m = /^172\.(\d{1,3})\./.exec(h);
+  if(m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
+  return /\.local$/.test(h);
 }
 function _mcpServer(name){
   const hit = mcpServers().filter(function(s){ return s.name === name; });
@@ -43071,6 +43091,10 @@ function renderAiSkillsBuiltin(){
     box.appendChild(row);
   });
 }
+/* 浏览器版连本机/私网 MCP 会被 CORS 与 Local Network Access 权限双重拦（3.7.141 线上实测），
+   这不是配置错、也不是服务没起 —— 设置页要直接把「用桌面版」这条路摆出来，别让人反复试。
+   链接是仓库的 releases 页（与顶栏「下载」同源），固定常量、不接受用户输入。 */
+const MCP_DESKTOP_URL = "https://github.com/Levango7/Interaction/releases/latest";
 function renderAiMcpList(){
   const box = $("#aiMcpList"); if(!box) return;
   const saved = getAiConfig("mcp");
@@ -43082,6 +43106,15 @@ function renderAiMcpList(){
     empty.textContent = t("ai.noMcpServer","暂无 MCP 服务器，点击「添加服务器」新建。");
     box.appendChild(empty);
     return;
+  }
+  const localOnes = servers.filter(function(s){ return s && s.enabled && (typeof mcpIsLocalUrl === "function") && mcpIsLocalUrl(s.url); });
+  if(localOnes.length && !(typeof isElectron === "function" && isElectron())){
+    const tip = document.createElement("div");
+    tip.className = "set-tip";
+    tip.setAttribute("data-mcp-local-hint", "1");
+    tip.innerHTML = esc(t("mcp.localHint", "检测到本机/私网地址：浏览器版会被 CORS 与「本地网络访问」权限拦下（不是配置错）。用桌面版即可直连；或把这台服务放到公网 https。")) +
+      ' <a href="' + MCP_DESKTOP_URL + '" target="_blank" rel="noopener">' + esc(t("mcp.getDesktop", "下载桌面版")) + "</a>";
+    box.appendChild(tip);
   }
   servers.forEach(function(srv, i){
     const name = String((srv && srv.name) || "").trim();
@@ -52072,7 +52105,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     SCENE_FEATURE_BIND, AppBridge,
     effectiveTools, chatSysPrompt, // v1.15：AI 层降级重定位（agent=false 过滤工具 + 话术降级）
     /* 2026-10-23：MCP 接线（测试驱动 发现/注入/路由/危险分类/运行时快照） */
-    mcpServers, mcpRefreshServer, mcpToolDefs, mcpCallTool, mcpToolMeta, isDangerTool, mcpRuntimeInfo, ensureMcpTools, execToolAuto,
+    mcpServers, mcpIsLocalUrl, mcpRefreshServer, mcpToolDefs, mcpCallTool, mcpToolMeta, isDangerTool, mcpRuntimeInfo, ensureMcpTools, execToolAuto,
     /* 2026-10-24：AI 产物账（清单/摘除/打开落点） */
     aiArtifacts, aiArtifactDrop, openAiArtifact,
     /* 2026-10-24：私有端点鉴权的会话内存开关（测试用） */
