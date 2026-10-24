@@ -6496,10 +6496,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.146"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.147"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261023g";
+const BUILD_TAG = "20261024a";
 
 
 
@@ -8300,6 +8300,11 @@ const MESSAGES = {
     "rail.ai.kind.task": "任务",
     "rail.ai.kind.record": "记录",
     "rail.ai.kind.note": "笔记",
+    "rail.ai.kind.run": "运行",
+    "rail.ai.kind.mcp": "远端",
+    "rail.ai.copied": "已复制这次产出",
+    "rail.ai.copyFail": "浏览器不允许写入剪贴板，没复制成功",
+    "rail.ai.runUntitled": "（代码运行）",
     "rail.agent.skills": "技能",
     "rail.agent.none": "还没有技能。命令面板里可保存常用流程。",
     "rail.agent.running": "正在运行",
@@ -8997,6 +9002,12 @@ const MESSAGES = {
     "report.empty": "本周暂无已完成任务。",
     "statsPage.aria": "统计时间筛选",
     "statsPage.week": "周",
+    "statsPage.aiTitle": "AI 行动（近 7 天）",
+    "statsPage.aiWrites": "AI 写操作",
+    "statsPage.aiUndoRate": "撤销率",
+    "statsPage.aiRuns": "代码运行",
+    "statsPage.aiRemote": "远端写",
+    "statsPage.aiNote": "口径：回执账只保留最近 30 条；撤销率 = 其中的已撤销比例。",
     "statsPage.month": "月",
     "statsPage.year": "年",
     "statsPage.editTitle": "编辑仪表盘",
@@ -12376,6 +12387,11 @@ const MESSAGES = {
     "rail.ai.kind.task": "Task",
     "rail.ai.kind.record": "Record",
     "rail.ai.kind.note": "Note",
+    "rail.ai.kind.run": "Run",
+    "rail.ai.kind.mcp": "Remote",
+    "rail.ai.copied": "Output copied",
+    "rail.ai.copyFail": "Clipboard access denied by the browser; nothing was copied",
+    "rail.ai.runUntitled": "(code run)",
     "rail.agent.skills": "Skills",
     "rail.agent.none": "No skills yet. Save a flow from the command palette.",
     "rail.agent.running": "Running",
@@ -13073,6 +13089,12 @@ const MESSAGES = {
     "report.empty": "No completed tasks this week.",
     "statsPage.aria": "Stats Time Filter",
     "statsPage.week": "Week",
+    "statsPage.aiTitle": "AI actions (last 7 days)",
+    "statsPage.aiWrites": "AI writes",
+    "statsPage.aiUndoRate": "Undo rate",
+    "statsPage.aiRuns": "Code runs",
+    "statsPage.aiRemote": "Remote writes",
+    "statsPage.aiNote": "Scope: the receipt ledger keeps the latest 30 entries; the undo rate is the share undone among them.",
     "statsPage.month": "Month",
     "statsPage.year": "Year",
     "statsPage.editTitle": "Edit Dashboard",
@@ -18793,7 +18815,10 @@ function undoAiAction(id){
 }
 
 /* ---------- AI 产物账（2026-10-24，右栏「文件」页那半"生成的东西"） ----------
- * 只记 AI **新建**出来的东西（任务 / 资料库记录 / 笔记）；改与删属于回执账，不进这里。
+ * 只记 AI **新建**出来的东西（任务 / 资料库记录 / 笔记），外加两类"跑出来的"：
+ *   · run —— code_run 的一次运行（没有本地落点，账本身就是它唯一的存档，preview ≤2000 字）；
+ *   · mcp —— 远端**写**工具的调用（同样没有本地落点；只读工具不记，见 mcpCallTool）；
+ * 改与删属于回执账，不进这里。
  * 只存引用（refId）+ 展示快照（title/kind/sc/at），**不复制内容** —— 不做第二套真相源。
  * 撤销一条回执时同步摘掉对应产物（撤销后清单里不留幽灵条目）。上限 100。 */
 const AI_ARTIFACT_KEY = PREFIX + "ai_artifacts";
@@ -18932,11 +18957,14 @@ function toolWhitelistSet(cfgOverride){
  *   initialize → notifications/initialized → tools/list → tools/call
  * 响应既可能是 application/json，也可能是 text/event-stream 的 SSE 帧，两种都解。
  * 能力边界（如实）：CSP 已放行 https 与 127.0.0.1（connect-src 'self' https: http://127.0.0.1:*），
- *   卡点在 **CORS** —— 服务端必须回 Access-Control-Allow-Origin；file:// 是 null origin，同样受这条约束。
- *   连不上时如实点名 CORS，不谎报一个笼统的"连接失败"。Electron 主进程代理是下一阶段的事。
+ *   卡点有**两道**，都不由我们的代码决定：① **CORS**（服务端必须回 Access-Control-Allow-Origin，
+ *     file:// 是 null origin 同样受限）；② 浏览器对 https 页面发往本机/私网的**本地网络访问权限**
+ *     （线上实测：补 Access-Control-Allow-Private-Network 也不够，headless 无法授予）。
+ *   连不上时如实点名这两道，不谎报一个笼统的"连接失败"。桌面版走主进程代理（3.7.143 `mcp-fetch`），两道都绕开。
  * 安全：远端工具默认**一个都不注入**（必须在设置页显式勾选）；工具名带 `mcp__<服务器名>__<工具>` 命名空间；
  *   危险判定见 isDangerTool —— 只有服务端显式标了 annotations.readOnlyHint 的才免确认。
- * 凭据：本轮只接无鉴权的公开端点；Authorization 类 header 只存在会话内存（不落盘、不上云）。
+ * 凭据（3.7.144）：可选 无 / Bearer / 自定义头 —— **只有"用哪种 + 头名"落盘**，密钥值只存会话内存
+ *   （不进备份、不进云同步、刷新即失效、输入框不回显），头名在渲染层与主进程各按白名单拒一次。
  * 服务器名在同一份配置里必须唯一 —— 运行时缓存与命名空间都以它作键。 */
 const MCP_NS = "mcp__";
 const MCP_MAX_TOOLS = 30;
@@ -19078,7 +19106,7 @@ async function _mcpRpc(server, payload, opts){
       res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
         signal: ctl ? ctl.signal : undefined });
     }catch(e){
-      throw new Error(t("mcp.netFail", "连不上（多半是浏览器 CORS 拦了跨域请求，或服务没起）") + "：" + ((e && e.message) || String(e)));
+      throw new Error(t("mcp.netFail", "连不上：多半是服务没起、被 CORS 拦了跨域请求，或浏览器把「到本机/局域网的请求」按本地网络访问权限拦了（https 页面连本机就属这类，需用桌面版）") + "：" + ((e && e.message) || String(e)));
     }finally{ if(timer) clearTimeout(timer); }
   }
   if(res && res.headers && res.headers.get){
@@ -19204,7 +19232,14 @@ async function mcpCallTool(nsName, args){
     const text = parts.map(function(p){
       return (p && p.type === "text") ? String(p.text || "") : ("[" + ((p && p.type) || "item") + "]");
     }).join("\n").slice(0, 8000);
-    return { ok: !(r && r.isError), output: text || t("mcp.emptyResult", "（远端没有返回文本内容）") };
+    const ok = !(r && r.isError);
+    /* 只有"非只读"的远端调用才算产物；只读查询不记账（否则清单会被查询刷屏） */
+    const ann = (m.meta && m.meta.annotations) || {};
+    if(ok && ann.readOnlyHint !== true){
+      _aiArtifactPush({ kind: "mcp", refId: "mcp:" + m.server + ":" + Date.now(), title: m.server + " / " + m.tool,
+        sc: (typeof active === "string" ? active : ""), tool: "mcp", preview: text.slice(0, 2000) });
+    }
+    return { ok: ok, output: text || t("mcp.emptyResult", "（远端没有返回文本内容）") };
   }catch(e){
     return { ok: false, msg: String((e && e.message) || e) };
   }
@@ -20410,7 +20445,15 @@ async function agentExecAsync(name, args){
     return await toolWebFetch(args.url || "", args);
   }
   if(name === "code_run"){
-    return await toolCodeRun(args.code || "", args);
+    const rr = await toolCodeRun(args.code || "", args);
+    /* 运行结果没有别的落点 ⇒ 账里存一份有界预览（≤2000 字），便于事后回看/复制 */
+    if(rr && rr.ok){
+      const firstLine = String(args.code || "").split(/\r?\n/)[0].trim().slice(0, 60);
+      _aiArtifactPush({ kind: "run", refId: "run:" + Date.now(), title: firstLine || t("rail.ai.runUntitled", "（代码运行）"),
+        sc: (typeof active === "string" ? active : ""), tool: "code_run",
+        preview: String(rr.output || "").slice(0, 2000) });
+    }
+    return rr;
   }
   if(name === "sql_query"){
     return await toolSqlQuery(args.sql || "", args.schema || "");
@@ -24005,7 +24048,8 @@ function _renderRailFiles(){
   /* 2026-10-24：这一页分两段 —— 上=AI 新建出来的东西（任务/记录/笔记），下=导入的知识库文件。
      只列引用，不复制内容；撤销回执时对应条目已被摘掉（见 aiArtifactDrop）。 */
   const arts = (typeof aiArtifacts === "function") ? aiArtifacts() : [];
-  const kindLabel = { task: t("rail.ai.kind.task", "任务"), record: t("rail.ai.kind.record", "记录"), note: t("rail.ai.kind.note", "笔记") };
+  const kindLabel = { task: t("rail.ai.kind.task", "任务"), record: t("rail.ai.kind.record", "记录"), note: t("rail.ai.kind.note", "笔记"),
+    run: t("rail.ai.kind.run", "运行"), mcp: t("rail.ai.kind.mcp", "远端") };
   let html = '<div class="rail-sec-title">' + esc(t("rail.ai.title", "AI 产出"))
     + ' <span class="task-rail-count">' + arts.length + "</span></div>";
   html += arts.length
@@ -24047,6 +24091,23 @@ function openAiArtifact(id){
     if(a.kind === "note"){ AppBridge.openKnowledgeBaseModal(); return true; }
     if(a.kind === "task"){ if(typeof setActive === "function"){ setActive("tasks"); } if(typeof render === "function") render(); return true; }
     if(a.kind === "record" && a.sc){ if(typeof setActive === "function"){ setActive(a.sc); } if(typeof render === "function") render(); return true; }
+    if(a.kind === "run" || a.kind === "mcp"){
+      /* 这两类没有本地落点：把账里存的预览复制走，比"点了没反应"有用。
+         ⚠️ writeText 返回 Promise ⇒ 成没成只能等它自己回答。同步 try/catch 抓不到 rejection，
+         真浏览器实测（2026-10-24）就是在这里被拦下剪贴板后仍然弹了「已复制」= 假回执。 */
+      const txt = String(a.preview || "");
+      const say = function(ok){ toast(ok ? t("rail.ai.copied", "已复制这次产出") : t("rail.ai.copyFail", "浏览器不允许写入剪贴板，没复制成功")); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        let p = null;
+        try{ p = navigator.clipboard.writeText(txt); }catch(_e){ say(false); return true; }
+        if(p && typeof p.then === "function") p.then(function(){ say(true); }, function(){ say(false); });
+        else say(true);
+      }else{
+        try{ const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); say(true); }
+        catch(_e){ say(false); }
+      }
+      return true;
+    }
   }catch(_e){ /* 导航失败不阻塞右栏 */ }
   return false;
 }
@@ -28661,6 +28722,30 @@ function renderHourDistGrid(grid){
 /* v2.2.0：统计页仪表盘编辑态（会话级；Grafana 式展示/配置两态） */
 let _dashEditMode = false;
 let _statsRange = "week"; // v3.1：统计页时间筛选：week | month | year
+/**
+ * 近 7 天的「AI 行动」指标卡（PRODUCT §8 的过程指标）。
+ * 数据只来自两份已有的账：回执账（ai_undo）与产物账（ai_artifacts）—— 不新开统计口径。
+ * ⚠️ 口径边界（如实写进卡片）：回执账只保留最近 30 条，所以「AI 写操作」是"最近 30 条内、近 7 天"的计数，
+ *    不是全量历史；撤销率 = 这些回执里已撤销的比例。
+ * @returns {string} HTML 片段
+ */
+function _aiActionsHtml(){
+  const since = Date.now() - 7 * 864e5;
+  const undos = (typeof aiUndoList === "function" ? aiUndoList() : []).filter(function(e){ return e && e.ts >= since; });
+  const undone = undos.filter(function(e){ return e.undone; }).length;
+  const rate = undos.length ? Math.round(undone / undos.length * 100) : 0;
+  const arts = (typeof aiArtifacts === "function" ? aiArtifacts() : []).filter(function(a){ return a && a.at >= since; });
+  const runs = arts.filter(function(a){ return a.kind === "run"; }).length;
+  const remotes = arts.filter(function(a){ return a.kind === "mcp"; }).length;
+  return '<div class="card"><h2>' + esc(t("statsPage.aiTitle", "AI 行动（近 7 天）")) + "</h2>" +
+    '<div class="kpi-grid">' +
+    '<div class="kpi"><div class="v">' + undos.length + '</div><div class="l">' + esc(t("statsPage.aiWrites", "AI 写操作")) + "</div></div>" +
+    '<div class="kpi"><div class="v">' + rate + '%</div><div class="l">' + esc(t("statsPage.aiUndoRate", "撤销率")) + "</div></div>" +
+    '<div class="kpi"><div class="v">' + runs + '</div><div class="l">' + esc(t("statsPage.aiRuns", "代码运行")) + "</div></div>" +
+    '<div class="kpi"><div class="v">' + remotes + '</div><div class="l">' + esc(t("statsPage.aiRemote", "远端写")) + "</div></div>" +
+    "</div>" +
+    '<p class="set-tip">' + esc(t("statsPage.aiNote", "口径：回执账只保留最近 30 条；撤销率 = 其中的已撤销比例。")) + "</p></div>";
+}
 function renderStats(){
   // v3.1：根据时间筛选设置趋势图天数
   if(_statsRange === "month"){ _statsTrendDays = 30; }
@@ -28670,7 +28755,8 @@ function renderStats(){
   // T4.2：无任何任务数据时显示 no-stats 空状态（替代空图表/空饼图）
   if(stats.total === 0){
     _dashEditMode = false;
-    $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>`);
+    /* 「AI 行动」卡读的是回执账/产物账，与任务条数无关 ⇒ 空任务态也要渲染（否则新用户的 AI 数据看不见） */
+    $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>` + _aiActionsHtml());
     appendFoot(); // v3.4.5：空数据分支补尾栏（此前直接 return 漏掉——与其他页面统一）
     return;
   }
@@ -28689,7 +28775,8 @@ function renderStats(){
     </div>
   </header></div>
   ${statsNav}
-  <div id="dashHost">${renderCustomDashboard(_dashEditMode)}</div>`;
+  <div id="dashHost">${renderCustomDashboard(_dashEditMode)}</div>
+  ${_aiActionsHtml()}`;
 
   $("#main").innerHTML = sanitizeHtml(headHtml);
 
@@ -35384,7 +35471,11 @@ function _sumBlock(text){
 /** 把计划渲染成人能读的评审文本（聊天里显示，也用作确认提示的正文） */
 function agentPlanReviewText(plan){
   const lines = plan.steps.map(function(s, i){
-    return (i+1)+". "+s.desc+"  →  "+s.tool+(isDangerTool(s.tool) ? t("aiagent.planDangerMark"," ⚠️ 需确认，不会自主执行") : "");
+    /* 2026-10-24：远端工具的名字是 mcp__<服务器>__<工具>，对人不友好 —— 评审卡里换成人话并点名服务器，
+       否则用户看不出这一步是在动哪台远端服务（尤其危险步骤要确认时，这一点必须一眼可见）。 */
+    const meta = (typeof mcpToolMeta === "function") ? mcpToolMeta(s.tool) : null;
+    const shown = meta ? ("「" + meta.tool + "」（MCP：" + meta.server + "）") : s.tool;
+    return (i+1)+". "+s.desc+"  →  "+shown+(isDangerTool(s.tool) ? t("aiagent.planDangerMark"," ⚠️ 需确认，不会自主执行") : "");
   });
   let out = t("aiagent.planHead","【执行计划】")+plan.goal+"\n"+lines.join("\n");
   if(plan.truncatedFrom) out += "\n"+t("aiagent.planTruncated","（原计划 ")+plan.truncatedFrom+t("aiagent.planTruncatedMid"," 步，已裁到 ")+plan.steps.length+t("aiagent.planTruncatedSuffix"," 步 —— 自主执行有步数上限）");
