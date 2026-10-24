@@ -18202,20 +18202,20 @@ const DATA_KEY_REGISTRY = [
   { key: "rec_office", kind: "d", sync: true, backup: true },   // 业务数据
   { key: "rec_study", kind: "d", sync: true, backup: true },   // 业务数据
   { key: "recycle_bin", kind: "d", sync: true, backup: true },   // 业务数据
-  { key: "active", kind: "c", sync: false, backup: true },   // 本机控制状态
+  { key: "active", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "init", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "onboarded", kind: "c", sync: false, backup: true },   // 本机控制状态
+  { key: "onboarded", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "lang", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "theme", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "rail_tab", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "sceneViewMode", kind: "c", sync: false, backup: true },   // 本机控制状态
+  { key: "rail_tab", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "sceneViewMode", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "cmd_recent", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "chat_panel_collapsed", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "task_rail_collapsed", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "sideCollapsed", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "sideExpanded", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "todobar_expanded", kind: "c", sync: false, backup: true },   // 本机控制状态
+  { key: "chat_panel_collapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "task_rail_collapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "sideCollapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "sideExpanded", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "todobar_expanded", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "pomo_count", kind: "d", sync: true, backup: true },   // 业务数据
   { key: "task_time", kind: "d", sync: true, backup: true },   // 业务数据
   { key: "dashboard_layout", kind: "m", sync: true, backup: true },   // 本机元数据
@@ -18225,33 +18225,33 @@ const DATA_KEY_REGISTRY = [
   { key: "recycle_policy", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "deviceId", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "migrationLog", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "pwa_installed", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "push_subscription", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "ai_privacy_ack", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "__pendingAiAsk", kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "schema", kind: "m", sync: true, backup: true },   // 本机元数据
+  { key: "pwa_installed", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "push_subscription", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "ai_privacy_ack", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "__pendingAiAsk", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "agent_run", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "cfg", kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "__dk", kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "webdav_pass", kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "webdav_cfg", kind: "s", sync: false, backup: true },   // 凭据/密钥
-  { key: "webdav_meta", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "ai_config_", kind: "s", sync: false, backup: true },   // 凭据/密钥
-  { key: "pre_restore_backup", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "autobackup", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "autobackup.1", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "autobackup.2", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "sync_meta", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "sync_conflicts", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "sync_changelog", kind: "m", sync: true, backup: true },   // 本机元数据
+  { key: "webdav_meta", kind: "m", sync: false, backup: true },   // 本机元数据
+  { key: "pre_restore_backup", kind: "m", sync: false, backup: true },   // 本机元数据
+  { key: "autobackup", kind: "m", sync: false, backup: false },   // 本机元数据
+  { key: "autobackup.1", kind: "m", sync: false, backup: false },   // 本机元数据
+  { key: "autobackup.2", kind: "m", sync: false, backup: false },   // 本机元数据
+  { key: "sync_meta", kind: "m", sync: false, backup: true },   // 本机元数据
+  { key: "sync_conflicts", kind: "m", sync: false, backup: true },   // 本机元数据
+  { key: "sync_changelog", kind: "m", sync: false, backup: true },   // 本机元数据
   { key: "syncQueue", kind: "m", sync: true, backup: true },   // 本机元数据
-  { key: "agent_run", kind: "m", sync: true, backup: true },   // 本机元数据
+  { key: "schema", kind: "m", sync: false, backup: true },   // 本机元数据
   { pattern: /^chat_/, kind: "d", sync: true, backup: true },   // 按场景分键（chat_<scene>）
   { pattern: /^rec_/, kind: "d", sync: true, backup: true },   // 按场景分键（rec_<scene>）
   { pattern: /^tool_/, kind: "d", sync: true, backup: true },   // 工具箱各页自己的键（tool_<x>）
+  { pattern: /^ai_config_/, kind: "m", sync: true, backup: true },   // AI 模块设置（skills/workflow/mcp；密钥仍在 cfg）
   { pattern: /^_broken_/, kind: "m", sync: true, backup: true },   // 损坏原值备份（<key>_broken_<ts>），由 _brokenBackup 写入
   { key: "wb_access_token", bare: true, kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "wb_refresh_token", bare: true, kind: "s", sync: false, backup: true },   // 凭据/密钥
-  { key: "wb_token_expiry", bare: true, kind: "m", sync: true, backup: true },   // 本机元数据
+  { key: "wb_token_expiry", bare: true, kind: "m", sync: false, backup: true },   // 本机元数据
   { key: "wb_integration_api_keys", bare: true, kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "wb_integration_providers", bare: true, kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "wb_integration_sync_state", bare: true, kind: "m", sync: true, backup: true },   // 本机元数据
@@ -18260,12 +18260,12 @@ const DATA_KEY_REGISTRY = [
   { key: "wb_long_term_memory", bare: true, kind: "d", sync: true, backup: true },   // 业务数据
   { key: "wb_conversations", bare: true, kind: "d", sync: true, backup: true },   // 业务数据
   { key: "wb_agent_sysprompts", bare: true, kind: "d", sync: true, backup: true },   // 业务数据
-  { key: "wb_agent_idb", bare: true, kind: "m", sync: false, backup: true },   // 本机元数据
-  { key: "wb_agent_idb_data", bare: true, kind: "m", sync: false, backup: true },   // 本机元数据
-  { key: "wb_notify_enabled", bare: true, kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "wb_notify_quiet", bare: true, kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "wb_notify_snooze", bare: true, kind: "c", sync: false, backup: true },   // 本机控制状态
-  { key: "wb_notified_ids", bare: true, kind: "c", sync: false, backup: true },   // 本机控制状态
+  { key: "wb_agent_idb", bare: true, kind: "m", sync: true, backup: true },   // 本机元数据
+  { key: "wb_agent_idb_data", bare: true, kind: "m", sync: true, backup: true },   // 本机元数据
+  { key: "wb_notify_enabled", bare: true, kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "wb_notify_quiet", bare: true, kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "wb_notify_snooze", bare: true, kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "wb_notified_ids", bare: true, kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "wb_digest_date", bare: true, kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "wb_chain_break_notified", bare: true, kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "wb_ics_notified", bare: true, kind: "m", sync: true, backup: true },   // 本机元数据
@@ -18284,7 +18284,36 @@ function bareKeyRegistered(name){
   const s = String(name || "");
   return DATA_KEY_REGISTRY.some(function(e){ return !!e.bare && e.key === s; });
 }
-
+/** 取某个**完整存储键**（含 PREFIX 或历史裸键）的注册条目；未登记返回 null。 */
+function dataKeyMeta(fullKey){
+  const k = String(fullKey || "");
+  if(!k) return null;
+  if(k.indexOf(PREFIX) === 0){
+    const suf = k.slice(PREFIX.length);
+    return DATA_KEY_REGISTRY.filter(function(e){
+      if(e.bare) return false;
+      return e.pattern ? e.pattern.test(suf) : e.key === suf;
+    })[0] || null;
+  }
+  return DATA_KEY_REGISTRY.filter(function(e){ return !!e.bare && e.key === k; })[0] || null;
+}
+/**
+ * 这个完整键是否允许进云快照。
+ * **未登记 ⇒ 不允许**（v3.7.148 把默认值从"上云"翻成"不上云"：漏登记最多是功能数据没同步，
+ *  而不是把凭据/本机状态传上云）。
+ */
+function dataKeySyncAllowed(fullKey){
+  const m = dataKeyMeta(fullKey);
+  return !!(m && m.sync !== false);
+}
+/** 自动备份快照要排除的完整键（注册表里 backup:false 的那些：快照载体自身）。 */
+function backupExcludedKeys(){
+  const out = [];
+  DATA_KEY_REGISTRY.forEach(function(e){
+    if(e.backup === false && !e.bare && e.key) out.push(PREFIX + e.key);
+  });
+  return out;
+}
 function getCfg(){
   /* 缓存是**空快照**（启动期在配置写入/解密之前读到的 {}）时，不许压住存储里的真配置：
      否则整页会永远判「AI 未配置」，语义召回静默退化成词法（2026-10-24 台账 R-35 的现场）。
@@ -22702,7 +22731,9 @@ function snapshotAutoBackup(){
     // 每次快照把上一份完整快照原样嵌入（JSON 转义使膨胀超线性），约二三十次写入
     // 即撞 5MB 配额，且 catch 静默吞错导致备份失效无感知、反噬主存储写入。
     const data = {};
-    allKeys().forEach(k=>{ if(k === AUTO_BACKUP_KEY || AUTO_BACKUP_GENS.indexOf(k) >= 0) return; data[k] = localStorage.getItem(k); });
+    /* v3.7.148：排除集合改为从键注册表派生（backup:false），不再散在手写条件里 */
+    const _backupExcluded = (typeof backupExcludedKeys === "function") ? backupExcludedKeys() : [AUTO_BACKUP_KEY].concat(AUTO_BACKUP_GENS);
+    allKeys().forEach(k=>{ if(_backupExcluded.indexOf(k) >= 0) return; data[k] = localStorage.getItem(k); });
     data._ts = Date.now();
     const serialized = JSON.stringify(data);
     if(serialized.length > AUTO_BACKUP_MAX_BYTES){
@@ -30006,7 +30037,10 @@ function _setSyncMeta(patch) {
    且 cfg 里的 Key 用**设备密钥**加密，换设备本就解不开（密钥不出本机），同步 cfg 无跨端收益、纯增泄露面。
    pre_restore_backup 是恢复前的本机回滚档（内嵌全部本地键值，含 cfg），同样不该上云。
    业务数据（任务/记录/笔记/记忆/AI 会话）保持原快照语义不变。 */
-const SYNC_EXCLUDED_KEYS = [
+/* v3.7.148（B2c）：运行时**不再读这份手写清单** —— 已改为从 DATA_KEY_REGISTRY 派生
+   （dataKeySyncAllowed：未登记即不上云）。下面这份保留为 SYNC_EXCLUDED_KEYS_LEGACY，
+   唯一用途是 tests/sync-key-policy.test.js 拿它做「派生集 ⊇ 旧集合」的对照，防止隐私回退。 */
+const SYNC_EXCLUDED_KEYS_LEGACY = [
   SYNC_META_KEY,
   PREFIX + "cfg",
   PREFIX + "__dk",
@@ -30044,7 +30078,7 @@ const SYNC_EXCLUDED_KEYS = [
 function _buildCloudSnapshot() {
   const data = {};
   allKeys().forEach(k => {
-    if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
+    if (!dataKeySyncAllowed(k)) return;   /* v3.7.148：从键注册表派生（未登记即不上云） */
     /* R-2 消解：原为静默。读不到 ⇒ 该键**悄悄从快照里消失**，而上传照发、同步面板照显成功
        ⇒ 用户拿到一份"不自知残缺"的云快照，等真要恢复时才发现这个键从未上去过（谎报，且不可补救）。
        与导出面同一类（ui-backup-stats.js 第九片已按同一理由上报）。控制流不变（照旧跳过该键）。 */
@@ -30129,7 +30163,7 @@ function _applyCloudSnapshot(data) {
   let _pullCover = 0;
   Object.keys(data).forEach(k => {
     if (k === SYNC_META_KEY || k === "_deviceMeta" || k === "_meta") return;
-    if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
+    if (!dataKeySyncAllowed(k)) return;   /* 入站与出站同一份判据（对称过滤） */
     if (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY) {
       let _before = data[k];
       try { _before = localStorage.getItem(k); } catch (e) { _before = data[k]; /* 读失败按「未变化」保守处理 */ }
@@ -30183,7 +30217,7 @@ try{ AppBridge.applyCloudSnapshot = _applyCloudSnapshot; }catch(e){ /* 同上 */
 function _inSyncScope(k){
   if (!k || k === SYNC_META_KEY || k === CHLOG_KEY) return false;
   if (k.charAt(0) === "_") return false;
-  if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return false;
+  if (!dataKeySyncAllowed(k)) return false;   /* v3.7.148：与快照出入站同一份判据（未登记即不上云） */
   return k.indexOf(PREFIX) === 0 || k === CUSTOM_LINKS_KEY;
 }
 
@@ -52747,6 +52781,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     agentPlanSysPrompt, parseAgentPlan, executeAgentPlan, summarizeAgentPlan, chatOnceAgent,
     agentExecAsync, toolWebSearch, toolWebFetch, toolCodeRun, toolSqlQuery,
     DataKeyRegistry: DATA_KEY_REGISTRY, dataKeyRegistered, bareKeyRegistered,   /* v3.7.148 键注册表（tests/data-keys-registry 用） */
+    dataKeyMeta, dataKeySyncAllowed, backupExcludedKeys,   /* v3.7.148：同步/备份的派生判据（tests/sync-key-policy 用） */
     ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
     ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,
