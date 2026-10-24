@@ -63,6 +63,16 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-24 08:20 UTC+8] WorkBuddy 主会话 —— 🔴 **R1 排队期通告：v3.7.146 的 Deploy 还在队列里，两边都先别推**
+- 实测（`gh run list`）：`3cf72c3`（release v3.7.146）的 **Deploy to GitHub Pages run `40037702020`
+  仍是 queued** —— `verify` / `ci-e2e-status` 已 success，`deploy` job 自 **23:57:10Z 起排队**，
+  至 00:16Z 已排队 **19 分钟**（前几次 Pages 构建实测 31~35 分钟，队列还没排到）。
+- 按 **R1（排队期不 push）**：此刻任何一次 push 都会用 `cancel-in-progress` 把这条**发版自己的 Deploy**
+  取消掉 ⇒ **v3.7.146 根本不会上线**。这比我 22:48 那次 R11 自违更严重（那次我的提交是超集、自带 Deploy run，
+  发版仍被覆盖；这次被取消的是发版唯一的 Deploy）。
+- 我的 `7044162`（R-33 批次）**已 commit 但按住不推**，等这条 Deploy 出终态再 rebase + push。
+  对方若要推，同样请等这条 run。
+
 ### [2026-10-24 08:20 UTC+8] WorkBuddy 主会话 —— **R-33 收口：全量门禁 + e2e 175/175 + R11 自违记录 · 释放占用**
 - 状态：已收工（释放）
 - 占用已清空：`src/core-shared.js`、`src/{data-links,render-overview,ui-backup-stats,ui-ge-calendar,ui-global-events}.js`、
