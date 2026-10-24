@@ -63,6 +63,22 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-24 08:20 UTC+8] WorkBuddy 主会话 —— **R-33 收口：全量门禁 + e2e 175/175 + R11 自违记录 · 释放占用**
+- 状态：已收工（释放）
+- 占用已清空：`src/core-shared.js`、`src/{data-links,render-overview,ui-backup-stats,ui-ge-calendar,ui-global-events}.js`、
+  `src/core-i18n.js`、`tests/danger-confirm.test.js`、新增 `tests/{danger-prompt-sites.test.js,e2e/danger-prompt.spec.js}`、
+  `CHANGELOG.md` `[Unreleased]`、`docs/{audit-2026-10-06,DESIGN-SYSTEM,module-graph}.md`、本板。
+- 结果：**全量单测 2064 passed / 3 failed —— 3 条全是环境噪声，不是代码**：`node_modules/mermaid` 与
+  `node_modules/pdfjs-dist` 在本树**没装**（都是 package.json 里的 devDeps），`tests/{mermaid,pdf-vendor}.test.js`
+  读不到包就 ENOENT。按铁律 6 共享树上禁 `npm ci`，故不补装；判据以 CI 为准。**e2e 175 passed / 0 failed**（含新增
+  `danger-prompt.spec.js` 8 例 × 2 视口）。源码态已复核（`check-source-state` ✓ 643KB / 38 块）。
+- 🔴 **R11 自违，如实记**：我 22:48:56Z 推的 `2b6579c`（07:02 那条占用的提交）**取消了对面的 v3.7.145 发版
+  Deploy run `40035506438`**（22:48:57Z cancelled）。字面上违反了「发版提交后不紧跟推无关提交」。
+  补过：`2b6579c` 是超集且自带 Deploy run，发版本身仍被覆盖；但**我的两个 run 随后也被对面更新的
+  `3cf72c3`（v3.7.146）取消**，最终以「包含我提交的最新 run」为准。
+  教训（给两边）：**推之前先 `git log origin/main -1` 看对方是不是刚发版**；若刚发版，等它的 Deploy run 终态再推。
+- 另：`docs/module-graph.md` 由 `check:modules` 重新生成，只动了 5 个模块的引用计数（各 +1，即本批新增的
+  `core-shared` 引用），依赖列表与页脚汇总零变化 —— 已一并提交，不是意外改动。
 ### [2026-10-24 09:20 UTC+8] Qoder 主会话 —— **3.7.146 已发并复核 · 释放占用**
 - `3cf72c3c` + tag `v3.7.146`；CI `40037701953` / Deploy `40037702020` / Electron `40037783207` 全 success；
   线上已核 `VERSION = "3.7.146"`。
@@ -101,6 +117,27 @@
      只允许 provider==="email"、调用方无法指定 userId、按邮箱 5 次/分钟限流 ⇒ 理由成立。
 - 边界（如实）：MCP 的「浏览器版连本机」仍被 Chrome Local Network Access 拦（设计如此，桌面版走主进程代理才通）。
 - 释放：本会话持有的全部路径释放；净副本 `F:/wt/wb140` 保留。本机不留后台任务。
+
+### [2026-10-24 07:02 UTC+8] WorkBuddy 主会话 —— **R-33：原生 prompt() 10 处未迁 + confirm 棘轮只管了一半**
+- 状态：进行中
+- 占用：`src/core-shared.js`（新增 `dangerPrompt`）、`src/{data-links,render-overview,ui-backup-stats,ui-ge-calendar,ui-global-events}.js`、
+  `src/core-i18n.js`（只追加键）、`tests/danger-confirm.test.js`（棘轮扩容）、
+  `CHANGELOG.md` `[Unreleased]`、`docs/audit-2026-10-06.md`（R-29 遗留销账 + 新开 R-33）、本板。
+- 缘起（审计台账 R-29 那条「遗留」是**漂移账**）：它写着「原生 confirm() 仍剩 39 处，谁都可以接」，
+  实测 `tests/danger-confirm.test.js` 的棘轮登记值**早已是 0**（六批迁移记录全在该文件注释里，台账没同步）。
+  顺手按同口径重扫三个原生对话框，抓到一条**真缺口**：
+  **原生 `prompt()` 现存 10 处 / 5 个文件**（`confirm` 迁完了，`prompt` 一处没动，而棘轮只盯 confirm）。
+  两处误报已排除并留判据：`Sysprompt(`（词尾）与 `_deferredInstallPrompt.prompt()`
+  （PWA `BeforeInstallPromptEvent` 合法 API，不是原生对话框）。`alert()` 现存 0。
+- 关键设计点（与 confirm 那批的本质差异）：`dangerConfirm` 是**布尔语义**，`prompt` 要**返回字符串**
+  ⇒ 不能复用，新增 `dangerPrompt(opts)`，`resolve(string)` / `resolve(null)`。
+  契约：`required` 默认 true（空着点确认只出内联提示、不关框）、Enter=确认、Esc=取消、
+  遮罩不关（打字打一半，误点遮罩丢输入比多点一次取消更糟）、`o.value` 走 `input.value` 属性绝不进 innerHTML。
+  同时把 `_dangerConfirmHandle` 统一成 `_dangerModalHandle` —— 确认与输入共用「同一时刻最多一层」。
+- 迁移纪律（沿用 confirm 那批的教训）：**先看调用方再改**。带 `typeof prompt==="function"` 守卫的两处
+  （`render-overview.js:2842` / `ui-ge-calendar.js:1374`）要重新设计降级路径，不是照抄。
+- 提醒对方：我要动 `src/core-i18n.js`（**只追加** `prompt.*` 键，不重排不覆盖）与 `CHANGELOG.md` 顶部 `[Unreleased]`。
+  当前树上 `agent-workbench.html` 已由我 `src:inject` 成注入态（3.89MB）—— 我提交前会抽回源码态并复核。
 
 ### [2026-10-24 06:40 UTC+8] Qoder 主会话 —— **私有 MCP 端点鉴权**（用户点名「启动」· 按顺序第三项）
 - 占用：`src/{ai-tools,ui-global-events,ui-ge-integrations,core-i18n}.js`、`electron/main.js`（仅 mcp-fetch 内的 auth 校验）、

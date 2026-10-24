@@ -77,10 +77,22 @@
   详见 `docs/audit-2026-10-06.md` R-29。
 - **危险操作确认一律走** `dangerConfirm({title,message,detail,confirmText}) → Promise<boolean>`
   （核心层，`.viz-modal` 真浮层 + Esc 取消 + 焦点陷阱 + **不吃遮罩点击** + 全量转义）。
-  原生 `confirm()` 由债务棘轮钉住只准减少（`tests/danger-confirm.test.js`，当前 39 处）。
+- **需要用户输入一行文字的，一律走** `dangerPrompt({title,label,message,value,placeholder,maxlength,required,secret,confirmText,cancelText}) → Promise<string|null>`
+  （同一骨架、同一焦点陷阱；确认 resolve 字符串、取消/Esc resolve `null`）。
+  与 `dangerConfirm` 的**本质差异是返回类型**，所以它不是"给确认框加个输入框"，而是独立契约：
+  `required` 默认 true（空值只出内联提示、不关框；确需放行空值的调用点显式传 `required:false`）、
+  Enter = 确认、`secret:true` 掩码输入、打开即全选（对齐原生 `prompt`，也让"摆出来让人复制"Ctrl+C 一步到位）。
+  遮罩同样不关 —— 输入框里可能已经打了不少字，误点遮罩丢输入比"多点一次取消"更糟。
+- **原生 `confirm()` / `prompt()` / `alert()` 由债务棘轮钉住，三个口径登记值都是 0**
+  （`tests/danger-confirm.test.js`）。2026-10-24 补记：`confirm` 的 39 处由六个批次迁完后，
+  按同口径重扫发现 **`prompt` 还漏了 10 处** —— 一条只覆盖三分之一的门禁和没有门禁差不多，
+  故棘轮扩到三个口径。计数必须先剥注释、归一 `window.` 前缀，并用负向预查排除
+  `Sysprompt(` 与 `_deferredInstallPrompt.prompt()`（PWA `BeforeInstallPromptEvent`，
+  是浏览器唯一合法的安装提示入口，动了它等于把 PWA 安装弄坏）。
 - **"看得见、点得到"不许用 jsdom 证明** —— 它没有排版引擎，`getElementById` 恒真。浮层的可见性判据
   必须落 Playwright：盒子在视口内 + `elementFromPoint(中心)` 命中的就是自己，并配**反向对照**
-  （拿旧骨架跑同一条判据必须判红），见 `tests/e2e/danger-confirm.spec.js`。
+  （拿旧骨架跑同一条判据必须判红），见 `tests/e2e/danger-confirm.spec.js` 与
+  `tests/e2e/danger-prompt.spec.js`（输入型同骨架，多钉「打开即全选」这条 jsdom 证不了的契约）。
 
 ## 5. 状态
 

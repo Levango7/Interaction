@@ -4109,7 +4109,10 @@ const MESSAGES = {
     "p5.evKindTaskDone": "任务（已完成）",
     "p5.evKindExternal": "外部日历",
     "p5.evAllDaySuffix": "（全天）",
-    "p5.evDetailEmpty": "当日没有日程事件"
+    "p5.evDetailEmpty": "当日没有日程事件",
+    "prompt.title": "请输入",
+    "prompt.required": "此项不能为空",
+    "prompt.ok": "确定"
   },
   en: {
     // Common
@@ -8182,7 +8185,10 @@ const MESSAGES = {
     "p5.evKindTaskDone": "Task (done)",
     "p5.evKindExternal": "External calendar",
     "p5.evAllDaySuffix": " (all day)",
-    "p5.evDetailEmpty": "No events that day"
+    "p5.evDetailEmpty": "No events that day",
+    "prompt.title": "Enter a value",
+    "prompt.required": "This field cannot be empty",
+    "prompt.ok": "OK"
   }
 };
 

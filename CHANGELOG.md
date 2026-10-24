@@ -73,6 +73,42 @@
 
 ## [Unreleased]
 
+### 2026-10-24 · 原生 `prompt()` 清户：新增 `dangerPrompt`，棘轮扩到三个口径（R-33）
+
+`confirm` 那 39 处六个批次迁完之后，按同口径重扫抓到一条真缺口：**`prompt` 一处没动，还剩 10 处**。
+同族缺陷（不可样式化、无 i18n、窄屏由系统渲染成页面顶部一条横幅）从眼皮底下走过去了 10 次 ——
+而门禁的名字叫"原生对话框债务棘轮"，射程却只有三分之一。本批清户 + 补射程。
+
+- 新增 **`dangerPrompt(opts) → Promise<string|null>`**（`src/core-shared.js`，紧贴 `dangerConfirm`）：
+  同一 `.viz-modal` 真浮层骨架、同一焦点陷阱与焦点归还。**关键判断：不能复用布尔语义的
+  `dangerConfirm`** —— `prompt` 要返回字符串，这是独立的 `resolve(string)` / `resolve(null)` 契约。
+- 组件契约：`required` 默认 true（空着点确认只出内联提示、**不关框**；本仓调用点没有一处接受空值，
+  有个别还在调用点自己判了一遍，收进组件）；Enter = 确认；Esc / 取消 resolve `null`；
+  遮罩同样不关（输入框里可能已经打了不少字，误点遮罩丢输入比"多点一次取消"更糟）；
+  `o.value` 一律走 `input.value` 属性，绝不进 innerHTML；`secret:true` 掩码输入；
+  打开即聚焦并全选（对齐原生 prompt，也让"把链接摆出来让人复制"Ctrl+C 一步到位）。
+  内联错误提示**按需创建**，不预渲染再切 `display` —— 避开 `[hidden]` 被类规则覆盖的坑。
+- 同时把 `_dangerConfirmHandle` 统一成 `_dangerModalHandle`：确认与输入共用「同一时刻最多一层」。
+- 迁移 10 处：会话重命名 / 插件 JSON 导入 / 导图节点改字 / 视图命名 / 导出密码 /
+  日历源重命名 / API Key 命名 ×2 / 分享链接回退 ×2。**两处特殊处置**：
+  ① 导图节点改字必须传 `required:false` —— 把节点文字清空是合法操作，默认 true 会把它堵死，
+     那等于悄悄改产品行为；② 分享链接回退不是"要用户输入"，只是把链接摆出来让人复制 ⇒
+     `required:false` + 确认键叫「关闭」，两处重复的 `prompt` 与两层给"原生可能抛异常"兜底的
+     try/catch 抽成一个 `showLinkForCopy()`。另有两处 `typeof prompt==="function"` 守卫随之删除
+     （本组件不依赖宿主有没有原生对话框）。
+- **棘轮扩容**：`tests/danger-confirm.test.js` 从"只管 confirm"扩到 **confirm / prompt / alert
+  三个口径，登记值都是 0** ⇒ 语义比之前更强，新增任何一个原生对话框都当场红。
+  计数口径三条都固化在阳性/阴性对照里：先剥注释（组件自己的文档注释里就写着"原生 confirm()"）、
+  归一 `window.` 前缀、负向预查排除 `Sysprompt(` 与 `_deferredInstallPrompt.prompt()`
+  （PWA `BeforeInstallPromptEvent` 是浏览器唯一合法的安装提示入口，动了它等于把 PWA 安装弄坏）。
+- 测试：组件契约 9 例 + `tests/danger-prompt-sites.test.js` **5 例真路径**（会话重命名的回填/改名/
+  取消/空值拒绝；分享链接回退的 else 与 `.catch` 两条分支都通）+ `tests/e2e/danger-prompt.spec.js`
+  **8 例 × 2 视口真浏览器**（窄屏 375×667 下输入框与按钮在视口内且 `elementFromPoint` 命中自己、
+  打开即全选、Enter 提交 / Esc 取消、`required:false` 放行空串、同一时刻最多一层）。
+  变异验证三发：改 `required` 默认 ⇒ 恰好 1 红；删 `window.` 归一 ⇒ 射程用例红；往 src 塞一个原生 `prompt()` ⇒ 棘轮红。
+- 顺带销一笔漂移账：`docs/audit-2026-10-06.md` R-29 的「遗留」写着"原生 confirm() 仍剩 39 处，
+  谁都可以接"，实际早已迁完（六个批次，台账没同步）—— 已就地销账并保留其方法论。
+
 ### 2026-10-24 · AI 行动可见性：产物账管到「跑出来的」+ 统计页 AI 行动卡 + 评审卡点名服务器
 
 上一版把右栏「文件」页做实了（AI 新建的任务/记录/笔记），但这批把**账管不到的两类**接上，
@@ -135,7 +171,6 @@ Pages built `12:57:14Z`；线上带 cache-buster 核到 `VERSION="3.7.147"` / `B
   桌面版、公网 https、未启用服务器**都不显示**这条引导。
 - 用例 3 例：正反例识别（含 `::1`、`172.32` 是公网不该误伤）、浏览器版出现引导且链接带 `noopener`、
   桌面版与公网地址不出现。变异验证：去掉 `!isElectron()` 守卫 ⇒ 恰好 1 红。
-
 
 ### 2026-10-24 · 连接失败话术按实测事实改写（CORS 之外还有本地网络权限）
 

@@ -71,7 +71,9 @@ async function doExport(){
   }
   // Export handling: optional encryption
   if (document.getElementById("exportEncryptOpt")?.checked) {
-    const pwd = prompt(t("msg.exportPassword","请输入导出密码（用于加密）"));
+    /* R-33：原生 prompt → dangerPrompt，并加 secret:true 掩码输入。
+       原生 prompt 输密码是**明摆着**的，那是它的缺陷不是契约；这是本批唯一一处敏感输入。 */
+    const pwd = await dangerPrompt({ title: t("msg.exportPassword","请输入导出密码（用于加密）"), secret: true });
     if (!pwd) {
       toast(t("msg.exportCancelled","加密导出需要密码，已取消导出。"), "error");
       return;

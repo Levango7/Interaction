@@ -971,8 +971,8 @@ function renderStorePage(){
     };
   });
   const imp = $("#storeImportBtn");
-  if(imp) imp.onclick = ()=>{ if(typeof prompt!=="function") return;
-    const json = prompt(t("storePage.importPrompt", "粘贴插件 JSON 定义："));
+  if(imp) imp.onclick = async ()=>{ /* R-33：原生 prompt → dangerPrompt（原 typeof 守卫随之失去意义） */
+    const json = await dangerPrompt({ title: t("storePage.importPrompt", "粘贴插件 JSON 定义：") });
     if(json===null) return;
     const r = AppBridge.registerPluginFromJson(json);
     if(r && r.ok){ toast(t("storePage.importOkToast", "插件导入成功"),"ok"); renderStorePage(); }
@@ -2358,13 +2358,15 @@ function _dgmBind() {
     }
     _dgmSel = id; redraw();
   });
-  svg.addEventListener("dblclick", function (e) {
+  svg.addEventListener("dblclick", async function (e) {
     var t2 = e.target.closest ? e.target.closest("[data-dgm]") : null;
     if (!t2) return;
     var id = t2.getAttribute("data-dgm");
     var d = _dgmLoad(); var n = (d.nodes || []).find(function (x) { return x.id === id; });
     if (!n) return;
-    var v = prompt(t("dgm.editText","修改节点文字"), n.text || "");
+    /* R-33：原生 prompt → dangerPrompt。**required:false 是必须的** —— 把节点文字清空
+       在这里是合法操作（默认 true 会把"清空"这条路堵死，那等于悄悄改产品行为）。 */
+    var v = await dangerPrompt({ title: t("dgm.editText","修改节点文字"), value: n.text || "", required: false });
     if (v !== null) { n.text = v; _dgmSave(d); redraw(); }
   });
   // 工具栏
@@ -2864,8 +2866,10 @@ function renderGlobViews(){
   $$("#globViews [data-view-del]").forEach(b=>{
     b.onclick=()=>{ removeGlobView(b.getAttribute("data-view-del")); renderGlobViews(); };
   });
-  const sv=$("#globViewSave"); if(sv) sv.onclick=()=>{
-    const name = (typeof prompt==="function") ? prompt(t("globView.namePrompt", "视图名称：")) : null;
+  const sv=$("#globViewSave"); if(sv) sv.onclick=async ()=>{
+    /* R-33：原生 prompt → dangerPrompt。原来那句 `typeof prompt==="function"` 守卫是给
+       "宿主可能没有原生对话框"兜底的，本组件不依赖宿主，守卫随之删除。 */
+    const name = await dangerPrompt({ title: t("globView.namePrompt", "视图名称：") });
     if(name===null) return;
     const r=saveGlobView(name);
     if(!r.ok){ toast(r.err||t("globView.saveFailToast", "保存失败"),"warn"); return; }

@@ -685,8 +685,10 @@ function renderIntegrationPanel(){
   }
   const newKeyBtn = panel.querySelector("#btnIntNewKey");
   if(newKeyBtn){
-    newKeyBtn.onclick = function(){
-      const name = prompt(t("api.keyNamePrompt", "输入 Key 名称："));
+    newKeyBtn.onclick = async function(){
+      /* R-33：原生 prompt → dangerPrompt。required:true 已保证非空，下面那句 !name 仍留着
+         当兜底（万一将来放开空值，也不会把空名字的 Key 建出来）。 */
+      const name = await dangerPrompt({ title: t("api.keyNamePrompt", "输入 Key 名称："), maxlength: 40 });
       if(!name) return;
       try{
         if(typeof openApiCreateApiKey === "function"){
@@ -723,8 +725,9 @@ function renderOpenApiKeyPanel(){
   const newKeyBtn = document.querySelector("#btnAiNewKey");
   if(newKeyBtn && !newKeyBtn._bound){
     newKeyBtn._bound = true;
-    newKeyBtn.onclick = function(){
-      const name = prompt(t("api.keyNamePrompt", "输入 Key 名称："));
+    newKeyBtn.onclick = async function(){
+      /* R-33：同上（原生 prompt → dangerPrompt） */
+      const name = await dangerPrompt({ title: t("api.keyNamePrompt", "输入 Key 名称："), maxlength: 40 });
       if(!name) return;
       try{
         if(typeof openApiCreateApiKey === "function"){
@@ -1711,6 +1714,13 @@ if(_cfgThemeSel){
     if(!task){ toast(t("msg.taskNotFound", "任务不存在"), "warn"); return; }
     const link = generateShareLink(task);
     if(!link){ toast(t("msg.shareLinkFail", "生成分享链接失败"), "warn"); return; }
+    /* R-33：原生 prompt → dangerPrompt。这一处不是"要用户输入"，只是**把链接摆出来让他复制**，
+       所以 required:false、确认键改「关闭」，且输入框打开即全选 —— Ctrl+C 一步到位。
+       原来那两层 try/catch 是给"原生 prompt 可能抛异常"兜底的，本组件不抛，随之删除。 */
+    const showLinkForCopy = async ()=>{
+      await dangerPrompt({ title: t("msg.copyShareLink", "复制此链接分享任务："), value: link,
+        required: false, confirmText: t("common.close", "关闭") });
+    };
     // 复制到剪贴板
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(link).then(()=>{
@@ -1718,10 +1728,10 @@ if(_cfgThemeSel){
       }).catch(()=>{
         // clipboard API 失败时回退到选中文本提示
         toast(t("msg.copyFailed", "复制失败，请手动复制链接"), "warn");
-        try{ window.prompt(t("msg.copyShareLink", "复制此链接分享任务："), link); }catch(e2){ /* noop */ }
+        showLinkForCopy();
       });
     }else{
-      try{ window.prompt(t("msg.copyShareLink", "复制此链接分享任务："), link); }catch(e2){ /* noop */ }
+      showLinkForCopy();
     }
   });
 })();

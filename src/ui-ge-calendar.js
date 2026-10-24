@@ -1367,11 +1367,14 @@ function bindIcsPanel(c){
   /* v3.7.87 D：重命名（id 不变 → chunk docId 稳定 → 零重嵌） */
   c.querySelectorAll("[data-ics-rename]").forEach(function(b){
     if(b._icsBound) return; b._icsBound = true;
-    b.onclick = function(){
+    b.onclick = async function(){
       const id = b.getAttribute("data-ics-rename");
       const cur = getIcsSubs().find(function(x){ return x.id === id; });
       if(!cur) return;
-      const nn = (typeof window !== "undefined" && typeof window.prompt === "function") ? window.prompt(t("p5.icsRenamePrompt", "新的日历源名称"), cur.name) : null;
+      /* R-33：原生 prompt → dangerPrompt。原守卫（typeof window.prompt==="function"）是给
+         "宿主可能没有原生对话框"兜底的，本组件不依赖宿主，守卫随之删除。
+         maxlength 60 与 icsRenameSub 自身的 slice(0,60) 对齐 —— 不让用户打完才发现被截断。 */
+      const nn = await dangerPrompt({ title: t("p5.icsRenamePrompt", "新的日历源名称"), value: cur.name, maxlength: 60 });
       if(nn === null || nn === undefined) return;
       if(!icsRenameSub(id, nn)){ try{ toast(t("p5.icsRenameFail", "重命名失败"), "warn"); }catch(e){} return; }
       openIcsPanel(c);

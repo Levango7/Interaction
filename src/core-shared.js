@@ -84,12 +84,12 @@ function toast(msg, type){
  * 本组件用真浮层骨架 `.viz-modal`（position:fixed;inset:0;z-index:var(--z-modal)=80 > 底部导航 40）。
  *
  * 契约（docs/DESIGN-SYSTEM.md §4）：确认类**不吃遮罩点击**，必须显式二选一；Esc = 取消。 */
-let _dangerConfirmHandle = null;
+let _dangerModalHandle = null;   /* 确认与输入共用：同一时刻最多一层（R-33 起） */
 
 function dangerConfirm(opts){
   const o = opts || {};
   const ID = "dangerConfirmModal";
-  if(_dangerConfirmHandle) _dangerConfirmHandle.dismiss();  /* 同一时刻最多一层确认 */
+  if(_dangerModalHandle) _dangerModalHandle.dismiss();  /* 同一时刻最多一层确认 */
   return new Promise(resolve=>{
     const wrap = document.createElement("div");
     wrap.className = "viz-modal show";
@@ -114,7 +114,7 @@ function dangerConfirm(opts){
     const dismiss = (value)=>{
       if(settled) return;
       settled = true;
-      _dangerConfirmHandle = null;
+      _dangerModalHandle = null;
       /* trapFocus 的 release 负责把焦点还给触发元素，这里不重复抢 */
       if(release) release();
       wrap.remove();
@@ -125,14 +125,99 @@ function dangerConfirm(opts){
     wrap.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ e.preventDefault(); dismiss(false); } });
     /* 刻意不监听遮罩点击：确认类必须显式选择（DESIGN-SYSTEM §4） */
     const release = trapFocus(wrap.querySelector(".viz-modal-card"));
-    _dangerConfirmHandle = { dismiss: ()=> dismiss(false) };
+    _dangerModalHandle = { dismiss: ()=> dismiss(false) };
   });
 }
 
-/** 外部（Esc 热键、场景切换、AI 打字确认）关掉当前确认框；返回是否真的关掉了 */
+/* ---------- 通用输入模态（2026-10-24 R-33） ----------
+ * 为什么不用原生 prompt()：与 confirm 同族 —— 不可样式化、窄屏由系统渲染成页面顶部一条横幅、
+ * 无法过 i18n / 无障碍 / 视觉契约门禁。另有一条 confirm 没有的硬差异：它**返回字符串**，
+ * 所以不能复用布尔语义的 dangerConfirm，必须是独立组件。
+ * 契约：resolve(字符串) = 确认；resolve(null) = 取消（Esc / 点取消 / 被后开的一层顶掉）。
+ *   · required 默认 true：空着点确认只出内联提示、**不关框**。原生 prompt 对空值是放行的，
+ *     但本仓调用点没有一处接受空值（有个别还在调用点自己判了一遍）—— 逐个判等于把同一件事写 N 遍。
+ *     确需放行空值的调用点显式传 `required:false`（当前只有导图节点改字：把文字清空是合法操作）。
+ *   · Enter = 确认（对齐原生 prompt 在桌面端的习惯），Esc = 取消。
+ *   · 遮罩不关：输入框里可能已经打了不少字，误点遮罩丢输入比"多点一次取消"更糟。
+ *   · o.value 一律走 input.value 属性，**绝不进 innerHTML**（默认值可能是用户数据）。
+ *   · secret:true → type=password（导出密码那一处；原生 prompt 不遮是它的缺陷，不是契约）。
+ *   · 打开即聚焦并全选输入内容 —— 对齐原生 prompt，也让"复制分享链接"那一处 Ctrl+C 一步到位。
+ *   · 内联错误提示**按需创建**（不预渲染再切 display）：避开 `[hidden]` 被类规则覆盖的坑，
+ *     且没有错误时 DOM 里不该有那个元素。 */
+function dangerPrompt(opts){
+  const o = opts || {};
+  const ID = "dangerPromptModal";
+  if(_dangerModalHandle) _dangerModalHandle.dismiss();  /* 同一时刻最多一层 */
+  return new Promise(resolve=>{
+    const wrap = document.createElement("div");
+    wrap.className = "viz-modal show";
+    wrap.id = ID;
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-labelledby", ID + "Title");
+    wrap.innerHTML = '<div class="viz-modal-card u-max-w-440">'
+      + '<div class="viz-modal-header"><h2 id="' + ID + 'Title">'
+      + esc(o.title || t("prompt.title", "请输入")) + '</h2></div>'
+      + '<div class="u-pad-5-6">'
+      + (o.message ? '<p class="u-m-0-0-2 u-fw-600">' + esc(o.message) + '</p>' : '')
+      + (o.label ? '<label class="sub u-m-0-0-2" for="' + ID + 'Input">' + esc(o.label) + '</label>' : '')
+      + '<input type="' + (o.secret ? "password" : "text") + '" id="' + ID + 'Input"'
+      + (o.placeholder ? ' placeholder="' + esc(o.placeholder) + '"' : '')
+      + (o.maxlength ? ' maxlength="' + Number(o.maxlength) + '"' : '')
+      + ' autocomplete="off">'
+      + '<div class="u-flex u-gap-2 u-jc-end u-mt-2">'
+      + '<button type="button" class="btn-ghost" id="' + ID + 'No">'
+      + esc(o.cancelText || t("common.cancel", "取消")) + '</button>'
+      + '<button type="button" class="addbtn" id="' + ID + 'Yes">'
+      + esc(o.confirmText || t("prompt.ok", "确定")) + '</button>'
+      + '</div></div></div>';
+    document.body.appendChild(wrap);
+    const input = wrap.querySelector("#" + ID + "Input");
+    const required = o.required !== false;
+    input.value = o.value == null ? "" : String(o.value);   /* 走属性，不进 innerHTML */
+    let settled = false;
+    const dismiss = (value)=>{
+      if(settled) return;
+      settled = true;
+      _dangerModalHandle = null;
+      /* trapFocus 的 release 负责把焦点还给触发元素，这里不重复抢 */
+      if(release) release();
+      wrap.remove();
+      resolve(value);
+    };
+    const showErr = (msg)=>{
+      let e = wrap.querySelector("#" + ID + "Err");
+      if(!e){
+        e = document.createElement("p");
+        e.id = ID + "Err";
+        e.className = "u-text-danger u-fs-2xs";
+        e.style.margin = "var(--space-1h) 0 0";
+        input.parentNode.insertBefore(e, input.nextSibling);
+      }
+      e.textContent = msg;
+    };
+    const submit = ()=>{
+      const v = String(input.value || "");
+      if(required && !v.trim()){ showErr(t("prompt.required", "此项不能为空")); try{ input.focus(); }catch(e){ /* noop */ } return; }
+      dismiss(v);
+    };
+    wrap.querySelector("#" + ID + "Yes").onclick = submit;
+    wrap.querySelector("#" + ID + "No").onclick = ()=> dismiss(null);
+    input.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); submit(); } });
+    wrap.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ e.preventDefault(); dismiss(null); } });
+    /* 刻意不监听遮罩点击：理由同 dangerConfirm —— 必须显式二选一，且这里还多一条"别丢已打好的字" */
+    const release = trapFocus(wrap.querySelector(".viz-modal-card"));
+    try{ input.focus(); input.select(); }catch(e){ /* noop */ }
+    _dangerModalHandle = { dismiss: ()=> dismiss(null) };
+  });
+}
+
+/**
+ * 外部（Esc 热键、场景切换、AI 打字确认）关掉当前危险模态；返回是否真的关掉了。
+ * R-33 起确认与输入共用同一层互斥，所以这里关的是「当前那一个」，不限确认框。 */
 function dismissDangerConfirm(){
-  if(!_dangerConfirmHandle) return false;
-  _dangerConfirmHandle.dismiss();
+  if(!_dangerModalHandle) return false;
+  _dangerModalHandle.dismiss();
   return true;
 }
 

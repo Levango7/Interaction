@@ -111,66 +111,191 @@ describe("dangerConfirm 组件契约", () => {
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
-   原生 confirm() 债务棘轮
+   dangerPrompt 组件契约（R-33）
    ---------------------------------------------------------------------
-   39 处调用点正分批迁到 dangerConfirm（原生框不可样式化、无 i18n、窄屏由系统渲染）。
-   2026-10-21 首批迁掉 4 处（会话删除 / 日历源删除 / 笔记删除 / 知识库文件删除）⇒ 35；
-   第二批迁掉 8 处（GitHub token 清除 / WebDAV 配置清除 / API Key 吊销 ×2 / AI 会话历史清除 /
-   工作记忆清空 / 联动规则重置 / 联动规则删除）⇒ 27；
-   第三批迁掉 3 处（导入覆盖确认 / 恢复前快照回滚 / 恢复前快照删除）⇒ 27→24；
-   第四批迁掉 2 处（清空全部数据 doClear / 集成任务推送 [data-int-push]）⇒ 27→24→22；
-   第五批迁掉 10 处（ui-drawer 5：场景删除 / Profile 删除 / 模板导入 / 插件卸载 /
-   自定义主题删除；ui-scene-bind 5：删除任务 ×3 / 删除记录 / 批量删除）⇒ 22→12；
-   第六批迁掉最后 12 处（render-entry 3 / render-overview 4 / render-widgets 3 /
-   ui-ge-integrations 2）⇒ **现值 0，原生 confirm 全部迁完**。
-   第六批的风险比预想低，两条结论值得留：`_restoreFromCloud` / `webdavSyncUpload` /
-   `webdavSyncDownload` 三处宿主**本就是 async**，只加 await；且 `ui-global-events.js:614-615`
-   的 WebDAV 上/下载按钮**本就写成 `await webdavSyncXxx()`**，故那两处改 await 后调用方零改动。
-   **现值 0 之后本棘轮的语义变得比之前更强**：任何新增原生 confirm 都会让总数变成 1 ≠ 0 而当场红，
-   不再依赖"调低常量"这个容易忘的动作。
-   第五批最值得记的一处：`batchDelete()` 有返回值（`return n`），改 async 后返回的是
-   **Promise<number>** —— 它唯一的调用方 `ui-scene-bind.js` 里原本写的是
-   `batchDelete(); render();`，不 await 的话 `render()` 会抢在确认框之前执行，
-   而用户点完确认、删除真正发生之后反倒**没人刷新界面**（batchDelete 内部只
-   `_renderBatchUI()`，不做整体 render）。已改为 `await batchDelete(); render();`。
-   第四批的两个特殊点，改之前值得先看一眼：
-     · `doClear` 改 async 后，两个调用方（`ui-global-events.js:34` 的 `onclick = doClear`、
-       `ui-palette.js:153` 命令面板 `run:doClear`）**刻意不 await** —— 清空是"点了就走"的
-       一次性动作，调用方不关心结果，且 doClear 内部不抛，不会引入新的失败模式；
-     · 两个既有用例在 `vi.useFakeTimers()` 下调 doClear，`autoDangerConfirm` 接盘器在那里
-       **失效**（它靠 setTimeout 轮询，而 fake timers 把 setTimeout 也假掉了）。
-       正解是"先拿 Promise → 同步点掉确认按钮 → 再 await"：浮层在 Promise executor 里
-       同步挂 DOM，点掉之后的后续走微任务，而微任务不受 fake timers 影响。
-   上限钉成**相等**而不是"≤"：新增原生确认要红，迁移掉一处不 lowering 常量也要红。
-   计数前必须剥注释 —— 组件自己的文档注释里就写着"原生 confirm()"，
-   不剥会把 39 数成 40（实测踩过）。
+   与 dangerConfirm 的**本质差异**：那个是布尔语义（确认/取消），这个要**返回字符串**。
+   所以它不是"给确认框加个输入框"，而是独立的 resolve(string)/resolve(null) 契约。
+   契约里最容易被做错的三条，各有用例钉住：
+     · required 默认 true —— 空值不关框、只出内联提示（本仓调用点没有一处接受空值）；
+       但 `required:false` 必须真的能放行空值（导图节点改字要把文字清空，是合法操作）；
+     · o.value 走 input.value 属性，绝不进 innerHTML（默认值可能是用户数据）；
+     · secret:true → type=password（导出密码；原生 prompt 不遮是缺陷不是契约）。
    ═══════════════════════════════════════════════════════════════════════ */
-describe("原生 confirm() 债务棘轮", () => {
-  const NATIVE_CONFIRM_TOTAL = 0;
+const PMODAL = "dangerPromptModal";
+
+describe("dangerPrompt 组件契约", () => {
+  it("确认 → resolve(输入的字符串)，节点移除，焦点归还触发元素", async () => {
+    const win = await boot();
+    const trigger = win.document.createElement("button");
+    win.document.body.appendChild(trigger);
+    trigger.focus();
+
+    const p = win.dangerPrompt({ title: "重命名会话" });
+    const modal = win.document.getElementById(PMODAL);
+    expect(modal, "输入框应已插入").toBeTruthy();
+    expect(modal.classList.contains("viz-modal"), "必须用真浮层骨架（fixed + 遮罩 + z-modal）").toBe(true);
+    expect(modal.getAttribute("role")).toBe("dialog");
+    expect(modal.getAttribute("aria-modal")).toBe("true");
+    expect(modal.contains(win.document.activeElement), "打开后焦点应进入浮层").toBe(true);
+
+    modal.querySelector("#" + PMODAL + "Input").value = "周会纪要";
+    modal.querySelector("#" + PMODAL + "Yes").click();
+    expect(await p).toBe("周会纪要");
+    expect(win.document.getElementById(PMODAL), "确认后应移除").toBeFalsy();
+    expect(win.document.activeElement, "焦点应归还触发元素").toBe(trigger);
+  });
+
+  it("取消 / Esc → resolve(null)（与原生 prompt 的取消同形）", async () => {
+    const win = await boot();
+    const p1 = win.dangerPrompt({ title: "视图名称：" });
+    win.document.getElementById(PMODAL).querySelector("#" + PMODAL + "No").click();
+    expect(await p1).toBe(null);
+
+    const p2 = win.dangerPrompt({ title: "视图名称：" });
+    win.document.getElementById(PMODAL).dispatchEvent(
+      new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(await p2).toBe(null);
+    expect(win.document.getElementById(PMODAL)).toBeFalsy();
+  });
+
+  it("Enter = 确认（对齐原生 prompt 在桌面端的习惯）", async () => {
+    const win = await boot();
+    const p = win.dangerPrompt({ title: "输入 Key 名称：" });
+    const input = win.document.getElementById(PMODAL).querySelector("#" + PMODAL + "Input");
+    input.value = "我的 Key";
+    input.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(await p).toBe("我的 Key");
+  });
+
+  it("空值默认不收：点确认只出内联提示、框不关（required 默认 true）", async () => {
+    const win = await boot();
+    const p = win.dangerPrompt({ title: "输入 Key 名称：" });
+    const modal = win.document.getElementById(PMODAL);
+    modal.querySelector("#" + PMODAL + "Yes").click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(win.document.getElementById(PMODAL), "空值不得关框").toBeTruthy();
+    const err = modal.querySelector("#" + PMODAL + "Err");
+    expect(err, "应有内联错误提示").toBeTruthy();
+    expect(err.textContent).toContain("空");
+    modal.querySelector("#" + PMODAL + "No").click();
+    expect(await p).toBe(null);
+  });
+
+  it("required:false 真的能放行空值（导图节点改字：清空文字是合法操作）", async () => {
+    const win = await boot();
+    const p = win.dangerPrompt({ title: "修改节点文字", value: "旧文字", required: false });
+    const modal = win.document.getElementById(PMODAL);
+    expect(modal.querySelector("#" + PMODAL + "Input").value, "o.value 必须回填").toBe("旧文字");
+    modal.querySelector("#" + PMODAL + "Input").value = "";
+    modal.querySelector("#" + PMODAL + "Yes").click();
+    expect(await p, "空字符串应被 resolve 出来，而不是 null").toBe("");
+  });
+
+  it("打开即全选输入内容（对齐原生 prompt；也让「复制分享链接」Ctrl+C 一步到位）", async () => {
+    const win = await boot();
+    const p = win.dangerPrompt({ title: "复制此链接分享任务：", value: "https://x/y#share=abc", required: false });
+    const input = win.document.getElementById(PMODAL).querySelector("#" + PMODAL + "Input");
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe("https://x/y#share=abc".length);
+    win.document.getElementById(PMODAL).querySelector("#" + PMODAL + "No").click();
+    expect(await p).toBe(null);
+  });
+
+  it("secret:true → type=password（导出密码那一处；原生 prompt 不遮是缺陷不是契约）", async () => {
+    const win = await boot();
+    const p = win.dangerPrompt({ title: "请输入导出密码（用于加密）", secret: true });
+    const input = win.document.getElementById(PMODAL).querySelector("#" + PMODAL + "Input");
+    expect(input.type).toBe("password");
+    expect(input.getAttribute("autocomplete")).toBe("off");
+    win.document.getElementById(PMODAL).querySelector("#" + PMODAL + "No").click();
+    expect(await p).toBe(null);
+  });
+
+  it("title/value 里的 HTML 不进 innerHTML（默认值可能是用户数据）", async () => {
+    const win = await boot();
+    const payload = '<img src=x onerror="window.__pwned2=1">';
+    const p = win.dangerPrompt({ title: payload, value: payload, required: false });
+    const modal = win.document.getElementById(PMODAL);
+    expect(modal.querySelector("img"), "注入的 img 不应存在").toBeFalsy();
+    expect(win.__pwned2, "onerror 不得执行").toBeUndefined();
+    expect(modal.querySelector("#" + PMODAL + "Input").value, "value 走属性，作为纯值存在").toBe(payload);
+    modal.querySelector("#" + PMODAL + "No").click();
+    expect(await p).toBe(null);
+  });
+
+  it("与 dangerConfirm 共用一层互斥：后开的一个把前一个顶掉", async () => {
+    const win = await boot();
+    const first = win.dangerPrompt({ title: "第一个" });
+    const second = win.dangerConfirm({ message: "第二个" });
+    expect(win.document.getElementById(PMODAL), "输入框应被后开的确认框顶掉").toBeFalsy();
+    expect(win.document.getElementById("dangerConfirmModal")).toBeTruthy();
+    win.document.getElementById("dangerConfirmModal").querySelector("#dangerConfirmModalNo").click();
+    expect(await first).toBe(null);
+    expect(await second).toBe(false);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   原生对话框债务棘轮（confirm / prompt / alert 三个口径）
+   ---------------------------------------------------------------------
+   confirm 的 39 处已由六个批次迁完（39→35→27→24→22→12→0，迁移记录见各批提交与
+   CHANGELOG），现值 0。R-33（2026-10-24）按同口径重扫时抓到一条**真缺口**：
+   **prompt 还剩下 10 处没迁**，而棘轮只盯 confirm —— 一条只覆盖三分之一的门禁，
+   和没有门禁差不多。本批把 prompt 10 处迁完，并把 alert 一并纳入登记（现值 0）。
+   三个口径登记值现在都是 0 ⇒ 语义比之前更强：新增任何一个原生对话框都当场红，
+   不再依赖"调低常量"这个容易忘的动作。
+
+   计数口径（踩过的坑都固化在下面的阳性/阴性对照里，改口径前先跑那条）：
+     ① 先剥注释 —— 组件自己的文档注释里就写着"原生 confirm()"，不剥会把 0 数成 1（实测踩过）；
+     ② 归一 window. 前缀 —— `window.prompt(` 与 `prompt(` 是同一个调用，漏了它就会漏数；
+     ③ 负向预查 (?<![.\w$]) —— 排除两类**不是原生对话框**的命中：
+        · `Sysprompt(` / `setCustomSysprompt(`：只是函数名以 prompt 结尾（第一版粗口径
+          把它们数成 16 处，实际只有 11，其中还有 1 处是下一条）；
+        · `_deferredInstallPrompt.prompt()`：PWA 的 BeforeInstallPromptEvent.prompt()，
+          是浏览器**唯一**合法的安装提示入口 —— 为了迎合计数器去动它，等于把 PWA 安装弄坏。
+   ═══════════════════════════════════════════════════════════════════════ */
+describe("原生对话框债务棘轮（confirm / prompt / alert）", () => {
+  const REGISTRY = { confirm: 0, prompt: 0, alert: 0 };
   const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 
   const stripComments = (code) => code
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/(^|[^:])\/\/[^\n]*/g, "$1"); /* 前缀排除 ":" → 不吃 http:// 里的 // */
 
-  const countNativeConfirm = (code) =>
-    [...stripComments(code).matchAll(/(?:window\.)?confirm\s*\(/g)].length;
+  /* window. 归一：window.prompt( 与 prompt( 是同一个调用 */
+  const normalize = (code) => code.replace(/\bwindow\./g, "");
 
-  it("计数函数有射程：调用要数到、注释里的字面量不能数进来", () => {
-    const sample = 'if(confirm("a")){}\nwindow.confirm("b");\n// 原生 confirm("c") 是坏的\n/* confirm("d") */\nconst u="http://x/y";';
-    expect(countNativeConfirm(sample), "两处真调用要数到，注释里那两处字面量不能数").toBe(2);
-    /* 已知粗口径：字符串字面量里真写了 "confirm(" 也会被数进来。
-       靠"常量与实际相等"兜住 —— 一旦误报就当场显形，不会静默累积。 */
-    expect(countNativeConfirm("function closeConfirmModal(){} openConfirmModal(); dismissDangerConfirm();"))
-      .toBe(0);
+  const count = (code, name) => {
+    const re = new RegExp("(?<![.\\w$])" + name + "\\s*\\(", "g");
+    return [...normalize(stripComments(code)).matchAll(re)].length;
+  };
+
+  it("计数函数有射程：真调用要数到，注释/词尾/PWA 安装提示不能数进来", () => {
+    const sample = [
+      'if(confirm("a")){}',
+      'window.prompt("b");',
+      'alert("c");',
+      '// 原生 confirm("d") 是坏的',
+      '/* prompt("e") */',
+      'setCustomSysprompt("f");',
+      'await _deferredInstallPrompt.prompt();',
+      'const u="http://x/y";'
+    ].join("\n");
+    expect(count(sample, "confirm"), "真 confirm 一处；注释里那处不能算").toBe(1);
+    expect(count(sample, "prompt"), "window.prompt 要数到；注释里、Sysprompt 词尾、.prompt() 都不能算").toBe(1);
+    expect(count(sample, "alert"), "真 alert 一处；注释里那处不能算").toBe(1);
+    expect(count("function closeConfirmModal(){} openConfirmModal(); dismissDangerConfirm();", "confirm"),
+      "大小写不同的 CloseConfirmModal / dismissDangerConfirm 不是原生调用").toBe(0);
   });
 
-  it("src/ 里的原生 confirm 调用点必须等于登记值（只准减少）", () => {
+  it("src/ 里的原生对话框调用点必须等于登记值（三个口径都只准减少）", () => {
     const files = readdirSync(SRC_DIR).filter((f) => f.endsWith(".js"));
-    let total = 0;
-    for (const f of files) total += countNativeConfirm(readFileSync(join(SRC_DIR, f), "utf8"));
-    expect(total, `原生 confirm 现存 ${total} 处 ≠ 登记值 ${NATIVE_CONFIRM_TOTAL}。`
-      + "变多了 = 新代码该用 dangerConfirm；变少了 = 把 NATIVE_CONFIRM_TOTAL 一起调低")
-      .toBe(NATIVE_CONFIRM_TOTAL);
+    for (const [name, registered] of Object.entries(REGISTRY)) {
+      let total = 0;
+      for (const f of files) total += count(readFileSync(join(SRC_DIR, f), "utf8"), name);
+      expect(total, `原生 ${name}() 现存 ${total} 处 ≠ 登记值 ${registered}。`
+        + "变多了 = 新代码该用 dangerConfirm / dangerPrompt；变少了 = 把登记值一起调低")
+        .toBe(registered);
+    }
   });
 });

@@ -716,7 +716,9 @@ function renderSessionList(filter){
         const sid = actBtn.getAttribute("data-sid");
         if(actBtn.getAttribute("data-act") === "rename"){
           const cur = (getSessions().find(function(s){ return s.id === sid; }) || {}).title || "";
-          const nv = window.prompt(t("sess.renamePrompt", "重命名会话"), cur);
+          /* R-33：原生 prompt → dangerPrompt。原 `typeof prompt==="function"` 守卫随之失去意义
+             （本组件是本仓自己的函数，不依赖宿主有没有原生对话框）。 */
+          const nv = await dangerPrompt({ title: t("sess.renamePrompt", "重命名会话"), value: cur, maxlength: 60 });
           if(nv !== null && nv.trim()){ renameSession(sid, nv.trim()); renderSessionList($("#sessSearch") ? $("#sessSearch").value : ""); renderSessionPreview(getActiveSession()); }
         } else if(actBtn.getAttribute("data-act") === "delete"){
           if(await dangerConfirm({ message: t("sess.deleteConfirm", "删除该会话及其全部消息？此操作不可撤销。") })){
