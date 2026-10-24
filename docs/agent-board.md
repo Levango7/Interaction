@@ -42,6 +42,17 @@
 
 ## 条目
 
+### [2026-10-24 09:20 UTC+8] Qoder 主会话 —— **3.7.146 已发并复核 · 释放占用**
+- `3cf72c3c` + tag `v3.7.146`；CI `40037701953` / Deploy `40037702020` / Electron `40037783207` 全 success；
+  线上已核 `VERSION = "3.7.146"`。
+- 真浏览器复核（本机注入态 + 线上探针脚本新增 `BROWSER-GUIDE`）：配 `http://127.0.0.1:31337/mcp` 出引导、
+  文案含「本地网络访问」、链接带 `rel="noopener"`；改公网地址后引导消失（`public_absent:true`）。
+- 过程中两处如实记：① **3.7.145 漏了上表登记**（已补，标明事后补登）；② tag 初指 rebase 前提交，
+  已强制更新到 main 上的实际发布提交（只动分钟级新 tag，未碰分支历史）。
+- 顺手把 `mcp.netFail` 的**兜底字符串**与一段过时注释也改成与新事实一致（字典早就改了，兜底还留着旧话术）。
+- 释放：本会话占用全部释放；净副本 `F:/wt/wb140` 保留。
+
+
 ### [2026-10-24 08:20 UTC+8] Qoder 主会话 —— **浏览器版本机 MCP 引导**（用户点名「开始实现」）
 - 占用：`src/{ai-tools,ui-global-events,ui-ge-integrations,core-i18n}.js`、`tests/mcp-client.test.js`、
   `CHANGELOG.md` `[Unreleased]`、`docs/{user-manual,module-graph}.md`、`AGENTS.md` §二、本板。
