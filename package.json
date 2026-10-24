@@ -34,6 +34,7 @@
     "pet:inject": "node scripts/pet-art.mjs",
     "pet:extract": "node scripts/pet-art.mjs --extract",
     "verify:ci": "node scripts/verify-ci-order.mjs",
+    "watch:runs": "node scripts/watch-runs.mjs",
     "pet:check": "node scripts/with-injected.mjs node scripts/pet-art.mjs --check",
     "vendor:pdfjs": "node scripts/vendor-pdfjs.mjs",
     "vendor:pdfjs:check": "node scripts/vendor-pdfjs.mjs --check",

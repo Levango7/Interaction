@@ -73,6 +73,18 @@
 
 ## [Unreleased]
 
+### 2026-10-24 · CI 守候脚本入库（`npm run watch:runs`）—— 度量器要能自证
+
+发版时守 CI 一直是手搓 bash：`gh run watch` 会被 TLS 抖动打断（打断 ≠ 红），而共享的
+`_probe/watch-run.sh` 实测**每轮 `parse-fail`**（node 内联脚本把环境变量写成了字面量 `"process.env.TMPF"`），
+它的沉默与「还在跑」完全同形 —— 正是台账 R-28 记的那类「度量器自己坏掉」。
+
+- 新增 `scripts/watch-runs.mjs`（+ `npm run watch:runs`）：按 run id 轮询，**只认 `status === "completed"`**。
+  判据写死四条：`queued` 不算完成、查询失败不算完成、空集不算成功、`conclusion` 缺失不算成功。
+- 退出码三分：**0 全绿 / 1 已终态但有非 success / 7 未终态（NOT_TERMINAL）** —— 「没等到」不许与「红」混用。
+  结束打印逐 job 结论；`--selftest <已完成的 run_id>` 用真实 run 自证解析器有射程。
+- 证据：`tests/watch-runs.test.js` 11 例（含 queued / 查询失败 / 空集 / 结论缺失四条负向）；
+  实测正向 `40094966124` ⇒ `ALL_DONE` + 4 个 job + exit 0，负向（不存在的 id）⇒ `NOT_TERMINAL` + exit 7。
 ### 2026-10-24 · 原生 `prompt()` 清户：新增 `dangerPrompt`，棘轮扩到三个口径（R-33）
 
 `confirm` 那 39 处六个批次迁完之后，按同口径重扫抓到一条真缺口：**`prompt` 一处没动，还剩 10 处**。
