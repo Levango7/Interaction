@@ -40,6 +40,42 @@
 
 ---
 
+### [2026-10-25 04:10 UTC+8] WorkBuddy 主会话 —— **R-31 销账 + 门禁射程审计批次**（用户「123 都做完，然后切一版发出去」）
+- 状态：进行中
+- 占用：`scripts/{lint-xss,lib/empty-catch}.mjs`、`scripts/lint-empty-catch.mjs`、新增 `scripts/lint-i18n-dead-keys.mjs`、
+  `src/core-i18n.js`（删 84 个死键）、`tests/danger-confirm.test.js`（棘轮归一扩面）、
+  新增 `tests/e2e/chat-drawer-mobile.spec.js`、`tests/empty-catch.test.js`、`tests/i18n-dead-keys.test.js`、
+  `docs/audit-2026-10-06.md`（R-31 销账 + 新开 R-36 射程审计）、`docs/DESIGN-SYSTEM.md`、`CHANGELOG.md` `[Unreleased]`、
+  `AGENTS.md` §二、`docs/module-graph.md`、本板。
+- 缘起（用户点单 1/2/3）：① R-31 台账说手机聊天面板打不开；② "门禁射程审计"（R-33 元规律再应用）；
+  ③ 棘轮再扩面。**先探针后动手**，全部结论有机械证据，不靠读代码猜。
+- 🔴 **预告一个可能反直觉的结论**：R-31 **其实早就修好了**（`src/ai-retry.js:1226 __aiPanelExpand` 在 <768 走
+  `setChatDrawer(true)`，`agent-workbench.html:5359` 有 `#chatBackdrop`，且 `tests/e2e/layout-v2.spec.js`
+  已有一条名为「聊天抽屉：从场景头打开可见，点遮罩关闭（R-31/R-32）」的用例）。台账 2026-10-21 的 grep
+  写的是 `panel.classList.add("show")`，而真实实现是 `classList.toggle("show", open)` —— **grep 射程比结论窄**，
+  于是"已修"被记成"未修"。这已是本仓第 5 次「待办其实已经办完」，我会在台账就地销账并留下这条教训。
+- 门禁射程审计（探针实测，`_probe/gatescope/` 隔离副本，未污染主树）：
+  · **`lint:xss` 只抓到 10 类 HTML 注入 sink 中的 2 类**。漏：`innerHTML +=` / `outerHTML +=`
+    （正则 `\s*=\s*` 匹配不到 `+=`）、`.srcdoc =`（仓里真有 1 处，靠 `lint-xss-ok` 豁免）、
+    `document.write(`（仓里真有 8 处，全在 `ui-ge-theme.js` 报表打印）、`setAttribute("on*")`、`a.href=`、`style.cssText=`、`new Function(`。
+  · **`lint:empty-catch` 漏 Promise rejection 吞错**：`.catch(()=>{})` 与 `.then(ok, ()=>{})` 都不算空 catch。
+    这正是 R-34「复制假回执」那一族（Promise 失败路径被静默吞）。当前 src 里 0 处，故扩射程**零基线 churn**。
+  · **`lint:colors` / `lint:icons` / `lint:breakpoints` 只扫 `agent-workbench.html` 或只认 `<button>` 内容**
+    —— `lint:icons` 的窄射程是**有意设计**（只把"按钮唯一内容是符号"算违规，排版符号不算，注释写明了），
+    不算缺口；`lint:colors` 不扫 src/ 是理论缺口，但实测 src 里 0 处活的内联硬编码色
+    （`render-overview.js:2402/2414` 那两处 `#fff/#333` 是**导出用独立 SVG 文件**，不能用 CSS 变量，属合法同形）。
+  · **84 个死 i18n 键**：`src/core-i18n.js` 有 21 个 `lint.*` 规则 × msg/sug × zh/en = 84 键，
+    静态消费 0、动态拼接消费 0（某次废弃的"应用内代码检查"面板残留）。`i18n-completeness`
+    只查 zh/en 对等、**不查使用率**，所以 84 个死键一直全绿。
+  · **原生对话框棘轮的规避面**：忠实复刻计数口径实测，`window["confirm"](x)` 与 `globalThis.confirm(x)`
+    **均漏数**（当前只归一 `window.` 点号形式）；`const c=confirm` 别名与 `Reflect.apply` 也漏
+    （静态不可判，属可接受上限，会写进注释而不是假装能抓）。
+- 🔴 **item 3 的原假设不成立，如实修正**：我原计划把 `window.open` / `window.print` 也纳入"原生对话框债务"。
+  实测 `window.open` 5 处**全是合法用途**（`render-overview.js:1410` OAuth 弹窗、`render-widgets.js:1446` /
+  `ui-backup-stats.js:797` / `ui-global-events.js:774` 外链新窗、`ui-ge-theme.js:533` 报表打印窗），
+  `window.print` 0 处。把它们纳入"对话框债务"只会制造假阳性、逼着把正确代码改错 —— 与 R-33 那条
+  "PWA `_deferredInstallPrompt.prompt()` 是合法 API"同族。**故不做**，理由写进台账。
+
 ### [2026-10-24 19:53 UTC+8] Qoder 主会话 —— **v3.7.147 AI 行动可见性**（用户「234 做吧，自己排序」）
 - 状态：进行中
 - 占用路径：`src/{ai-tools,ai-retry,render-widgets,render-overview,core-i18n}.js`、
