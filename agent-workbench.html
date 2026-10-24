@@ -6496,10 +6496,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.147"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.148"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261024a";
+const BUILD_TAG = "20261024b";
 
 
 
@@ -10766,49 +10766,6 @@ const MESSAGES = {
     "aitool.note_add.category.desc": "分类（如知识库/工作笔记）",
     "aitool.note_search.desc": "按关键词搜索笔记（标题+内容匹配）",
     "aitool.note_search.query.desc": "搜索关键词",
-    // B. LINT 规则 msg/sug
-    "lint.hardcoded_secret.msg": "疑似硬编码密钥/密码",
-    "lint.hardcoded_secret.sug": "使用环境变量或配置文件管理敏感信息",
-    "lint.sql_injection.msg": "疑似 SQL 注入（字符串拼接）",
-    "lint.sql_injection.sug": "使用参数化查询或预编译语句",
-    "lint.eval_usage.msg": "使用 eval() 可能导致代码注入",
-    "lint.eval_usage.sug": "避免使用 eval，改用 JSON.parse 或 Function 构造器",
-    "lint.xss_risk.msg": "直接赋值 innerHTML 可能存在 XSS 风险",
-    "lint.xss_risk.sug": "使用 sanitizeHtml 包裹或 textContent",
-    "lint.document_write.msg": "使用 document.write 可能导致 XSS",
-    "lint.document_write.sug": "使用 DOM API 或 innerHTML（已消毒）",
-    "lint.command_injection.msg": "疑似命令注入（字符串拼接）",
-    "lint.command_injection.sug": "使用 execFile 或传入参数数组",
-    "lint.redos_risk.msg": "疑似 ReDoS 风险的正则表达式",
-    "lint.redos_risk.sug": "简化正则或使用安全正则库",
-    "lint.insecure_http.msg": "使用明文 HTTP 传输",
-    "lint.insecure_http.sug": "使用 HTTPS 加密传输",
-    "lint.insecure_storage.msg": "在 localStorage 存储敏感数据",
-    "lint.insecure_storage.sug": "敏感数据应加密存储或使用 sessionStorage/IndexedDB",
-    "lint.prototype_pollution.msg": "疑似原型链污染",
-    "lint.prototype_pollution.sug": "避免直接操作 __proto__，使用 Object.create",
-    "lint.xss_user_input.msg": "innerHTML 赋值用户输入，XSS 风险高",
-    "lint.xss_user_input.sug": "必须对用户输入进行转义/消毒",
-    "lint.loop_length.msg": "循环条件中重复读取 length",
-    "lint.loop_length.sug": "缓存 length 到局部变量：for(let i=0, len=arr.length; i<len; i++)",
-    "lint.nested_loop.msg": "嵌套循环可能导致 O(n²) 复杂度",
-    "lint.nested_loop.sug": "考虑使用哈希表或优化算法降低复杂度",
-    "lint.sync_io.msg": "同步 IO 调用阻塞事件循环",
-    "lint.sync_io.sug": "使用异步版本 readFile/writeFile",
-    "lint.dom_loop.msg": "循环内 DOM 操作可能触发频繁重排",
-    "lint.dom_loop.sug": "使用 DocumentFragment 批量操作或 requestAnimationFrame",
-    "lint.no_debounce.msg": "高频事件未防抖",
-    "lint.no_debounce.sug": "使用 debounce/throttle 节流",
-    "lint.unsafe_parse.msg": "JSON.parse 建议包裹 try-catch",
-    "lint.unsafe_parse.sug": "包裹 try-catch 防止解析失败崩溃",
-    "lint.unhandled_promise.msg": "Promise 可能未处理 rejection",
-    "lint.unhandled_promise.sug": "添加 .catch() 或使用 async/await + try-catch",
-    "lint.regex_in_loop.msg": "循环内重复编译正则表达式",
-    "lint.regex_in_loop.sug": "将正则提到循环外编译一次",
-    "lint.console_log.msg": "残留 console.log 调试代码",
-    "lint.console_log.sug": "移除调试代码或使用条件日志",
-    "lint.var_decl.msg": "使用 var 声明（函数作用域，易出错）",
-    "lint.var_decl.sug": "使用 let/const 声明块作用域变量",
     // C. MVP_SCOPE
     "mvp.scope.in_scope.1": "多场景任务看板（office/data/design/study/code/life/overview）",
     "mvp.scope.in_scope.2": "任务 CRUD + 完成/软删（pendingConfirm 二次确认闸门）",
@@ -14928,49 +14885,6 @@ const MESSAGES = {
     "aitool.note_add.category.desc": "Category (e.g. knowledge base/work notes)",
     "aitool.note_search.desc": "Search notes by keyword (title + content match)",
     "aitool.note_search.query.desc": "Search keyword",
-    // B. LINT rule msg/sug
-    "lint.hardcoded_secret.msg": "Suspected hardcoded key/password",
-    "lint.hardcoded_secret.sug": "Use environment variables or config files to manage sensitive information",
-    "lint.sql_injection.msg": "Suspected SQL injection (string concatenation)",
-    "lint.sql_injection.sug": "Use parameterized queries or prepared statements",
-    "lint.eval_usage.msg": "Using eval() may cause code injection",
-    "lint.eval_usage.sug": "Avoid eval; use JSON.parse or Function constructor instead",
-    "lint.xss_risk.msg": "Direct innerHTML assignment may have XSS risk",
-    "lint.xss_risk.sug": "Wrap with sanitizeHtml or use textContent",
-    "lint.document_write.msg": "Using document.write may cause XSS",
-    "lint.document_write.sug": "Use DOM API or innerHTML (sanitized)",
-    "lint.command_injection.msg": "Suspected command injection (string concatenation)",
-    "lint.command_injection.sug": "Use execFile or pass an argument array",
-    "lint.redos_risk.msg": "Suspected ReDoS risk regex",
-    "lint.redos_risk.sug": "Simplify regex or use a safe regex library",
-    "lint.insecure_http.msg": "Using plaintext HTTP transport",
-    "lint.insecure_http.sug": "Use HTTPS encrypted transport",
-    "lint.insecure_storage.msg": "Storing sensitive data in localStorage",
-    "lint.insecure_storage.sug": "Sensitive data should be encrypted or use sessionStorage/IndexedDB",
-    "lint.prototype_pollution.msg": "Suspected prototype pollution",
-    "lint.prototype_pollution.sug": "Avoid direct __proto__ manipulation; use Object.create",
-    "lint.xss_user_input.msg": "innerHTML assigned with user input, high XSS risk",
-    "lint.xss_user_input.sug": "Must escape/sanitize user input",
-    "lint.loop_length.msg": "Repeated length read in loop condition",
-    "lint.loop_length.sug": "Cache length to a local variable: for(let i=0, len=arr.length; i<len; i++)",
-    "lint.nested_loop.msg": "Nested loops may cause O(n^2) complexity",
-    "lint.nested_loop.sug": "Consider hash tables or algorithm optimization to reduce complexity",
-    "lint.sync_io.msg": "Synchronous IO call blocks event loop",
-    "lint.sync_io.sug": "Use async versions readFile/writeFile",
-    "lint.dom_loop.msg": "DOM operations in loop may trigger frequent reflow",
-    "lint.dom_loop.sug": "Use DocumentFragment for batch operations or requestAnimationFrame",
-    "lint.no_debounce.msg": "High-frequency event not debounced",
-    "lint.no_debounce.sug": "Use debounce/throttle to limit rate",
-    "lint.unsafe_parse.msg": "JSON.parse should be wrapped in try-catch",
-    "lint.unsafe_parse.sug": "Wrap in try-catch to prevent crash on parse failure",
-    "lint.unhandled_promise.msg": "Promise may have unhandled rejection",
-    "lint.unhandled_promise.sug": "Add .catch() or use async/await + try-catch",
-    "lint.regex_in_loop.msg": "Repeated regex compilation in loop",
-    "lint.regex_in_loop.sug": "Move regex outside the loop and compile once",
-    "lint.console_log.msg": "Residual console.log debug code",
-    "lint.console_log.sug": "Remove debug code or use conditional logging",
-    "lint.var_decl.msg": "Using var declaration (function scope, error-prone)",
-    "lint.var_decl.sug": "Use let/const for block-scoped variables",
     // C. MVP_SCOPE
     "mvp.scope.in_scope.1": "Multi-scenario task board (office/data/design/study/code/life/overview)",
     "mvp.scope.in_scope.2": "Task CRUD + complete/soft-delete (pendingConfirm two-step gate)",
@@ -32498,7 +32412,7 @@ function bindCodeFrontendCard(){
       box.style.display = "";
       if(statusEl) statusEl.textContent = t("frontend.previewLive","✓ 实时预览中（再点一次收起）");
       try{
-        frame.srcdoc = doc;
+        frame.srcdoc = doc; // lint-xss-ok: doc 由 rec.css/html/js 拼成，注入面在 sandbox="allow-scripts" 且**无 allow-same-origin** 的 iframe 内（不透明源，触达不到宿主 DOM/localStorage）；完整理由见上方 577-582 行注释
       }catch(e){
         // 环境不支持 srcdoc（旧浏览器/jsdom）：显示源码降级
         box.innerHTML = sanitizeHtml('<pre class="code-input u-fs-2xs u-pre-wrap">' + esc(doc) + '</pre>');
@@ -47183,7 +47097,7 @@ function exportReportPDF(report){
   w.document.write(":root{");
   let rootStyle = "";
   try{ rootStyle = window.getComputedStyle(document.documentElement).cssText; }catch(e){ /* noop */ }
-  if(rootStyle){ w.document.write(rootStyle); }
+  if(rootStyle){ w.document.write(rootStyle); } // lint-xss-ok: rootStyle = getComputedStyle(documentElement).cssText，由浏览器从本页样式表现场生成（只有 --space/--fs/--accent 等自有令牌），不含任何用户数据；写进的是刚 window.open 出来的空白新窗口
   w.document.write("}");
   w.document.write("body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:var(--space-5);color:var(--text)}");
   w.document.write("h1{color:var(--accent);font-size:var(--fs-3xl)}");
