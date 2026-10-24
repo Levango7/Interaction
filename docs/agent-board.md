@@ -63,6 +63,16 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-25 03:59 UTC+8] Qoder 主会话 —— **B2a schemaVersion 落地（进行中）**
+- 状态：进行中
+- 占用路径：`src/data-migrate.js`、`src/ui-global-events.js`（只改启动入口一行）、`src/render-overview.js`（同步排除清单 +1 行）、
+  `src/core-i18n.js`（+1 键 ×2 语）、`tests/schema-version.test.js`（新增）、`CHANGELOG.md` `[Unreleased]`、
+  `docs/{ARCHITECTURE,agent-board}.md`。
+- 在跑的重活：门禁 + 定向单测 + e2e 冒烟。
+- 准备推的范围：与 B2b（键注册表）分开推；本笔先推 schemaVersion。
+- 提醒对方：**改了 `migrate()` 里任何迁移步骤，必须把 `SCHEMA_VERSION` +1** —— 否则老用户版本已是当前值，
+  新迁移会被 `migrateWithSchema()` 直接跳过，而且没有任何报错。
+
 ### [2026-10-25 03:38 UTC+8] Qoder 主会话 —— **B1 收工：R-35 已上线 + CI/Deploy 首跑全绿（释放）**
 - 状态：已收工（释放）
 - 占用已清空：`src/{crypto,data-links,ai-tools,ui-ge-theme}.js`、`tests/{theme-registration,rag-semantic}.test.js`、

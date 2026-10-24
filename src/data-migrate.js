@@ -235,10 +235,51 @@ function migrate(){
         before: { legacyTasks: before.legacyTasks, legacyRecs: before.legacyRecs, totalKeys: before.totalKeys }
       });
     }
+    return true;   /* v3.7.148：返回值供 migrateWithSchema 判断"能否推进版本号" */
   }catch(e){
     pushDiag("error", "migrate error: "+(e&&e.message||e), {where:"migrate"});
     try{ toast(t("migrate.errorToast", "数据迁移异常：{err}").replace("{err}", (e&&e.message||t("tool.unknownErrorMsg", "未知错误"))), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
+    return false;
   }
+}
+/* ---------- 数据模式版本（ARCHITECTURE 契约：schemaVersion，v3.7.148 落地） ----------
+ * 为什么要它：迁移一直是"每次启动全跑一遍、各自幂等"。在本应用内这没问题，但一旦
+ * **更新版本写过的数据被旧版本打开**（多设备 / 回滚 / 缓存里的旧 Service Worker），
+ * 旧版本没有任何办法知道"这堆数据不是我这一代的结构"，只会照常跑迁移去改它 —— 静默损坏。
+ * 现在的约定：
+ *   · 迁移**正常返回**后才把版本推进到当前；抛错则保持原版本，下次启动重试；
+ *   · 读到 v > 当前 ⇒ **只读告警 + 完全不跑迁移**（fail loud，不覆盖新版本写的数据）；
+ *   · v === 当前 ⇒ 直接跳过迁移（省掉每次启动的全量重跑）。 */
+const SCHEMA_KEY = PREFIX + "schema";
+/* ⚠️ 纪律：**任何**对 migrate() 里迁移步骤的增删改，都必须把这里 +1，否则老用户的版本已经是 1，
+   migrateWithSchema() 会直接跳过迁移 —— 新迁移永远不会在存量数据上跑过（且没有任何报错）。 */
+const SCHEMA_VERSION = 1;
+/** @returns {number} 已记录的模式版本（0 = 从未迁移过 / 无记录） */
+function schemaVersion(){
+  try{ const r = load(SCHEMA_KEY, null); return (r && typeof r.v === "number" && isFinite(r.v)) ? r.v : 0; }catch(_e){ return 0; }
+}
+/**
+ * 带版本门控的迁移入口（启动时调用）。
+ * @returns {{ok:boolean, reason?:string, from:number, to:number}}
+ */
+function migrateWithSchema(){
+  const v = schemaVersion();
+  if(v > SCHEMA_VERSION){
+    const msg = "data written by a newer version (schema v" + v + " > app v" + SCHEMA_VERSION + "), migrations skipped to avoid overwrite";
+    try{ pushDiag("error", msg, { where: "migrateWithSchema" }); }catch(_e){ /* 诊断失败不阻塞 */ }
+    try{ toast(t("migrate.newerSchema", "数据来自更新版本，本次不迁移（避免覆盖）。请升级到最新版后再操作。"), "warn"); }catch(_e2){ /* toast 不可用不阻塞 */ }
+    return { ok: false, reason: "newer", from: v, to: SCHEMA_VERSION };
+  }
+  /* ⚠️ 这里**不能**写成"v === 当前就跳过 migrate"：migrate() 里不只有一次性迁移，
+     还有每次启动都必须跑的损坏守卫（_guardGenericJsonKeys：语法错/非数组先备份再重置）。
+     跳过一次 = 把守卫也关掉（本次设计初稿就是这么写的，自查时否掉）。
+     schemaVersion 的职责因此收窄为：拒绝更高版本 + 成功记账。 */
+  const done = migrate();
+  if(done === false) return { ok: false, reason: "failed", from: v, to: SCHEMA_VERSION };
+  /* save() 自身不抛、失败会 pushDiag + toast 并返回 false —— 不包 try/catch，否则会被 lint:empty-catch 判新增 P0。
+     写失败的唯一后果是下次启动重跑一遍迁移（幂等）。 */
+  if(v !== SCHEMA_VERSION) save(SCHEMA_KEY, { v: SCHEMA_VERSION, at: Date.now(), from: v });
+  return { ok: true, from: v, to: SCHEMA_VERSION };
 }
 /* 生成 profile id（独立于 uid，避免与任务 id 混淆，且符合任务要求格式） */
 function genProfileId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }

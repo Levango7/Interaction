@@ -2397,7 +2397,8 @@ if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
     }catch(e){ /* 环境不支持：静默 */ }
   })();
 }
-migrate();
+/* v3.7.148：带模式版本门控 —— 旧版本打开新数据时只读告警、不跑迁移（见 data-migrate 的 migrateWithSchema） */
+migrateWithSchema();
 seed();
 
 /* v3.7.66：把 manifest.json 的三个 shortcuts 落到真实视图。

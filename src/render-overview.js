@@ -1594,7 +1594,10 @@ const SYNC_EXCLUDED_KEYS = [
      不是纯推理：真机跑完整 8 步后把云端快照文件拉下来看，三个键确实都在里面 —— 等于
      用户的网盘上存着一份设备密钥密封的密码密文 + 明文邮箱。补进清单与既有原则对齐；
      入站侧（_applyCloudSnapshot）用同一份清单对称过滤，故无需另改。 */
-  PREFIX + "webdav_pass", PREFIX + "webdav_cfg", PREFIX + "webdav_meta"
+  PREFIX + "webdav_pass", PREFIX + "webdav_cfg", PREFIX + "webdav_meta",
+  /* v3.7.148：数据模式版本是本机状态 —— 每台设备按自己装的版本迁移；同步它只会让旧设备
+     把"别人的版本号"当成"我的数据更新"，从而拒绝迁移自己的数据。 */
+  PREFIX + "schema"
 ];
 function _buildCloudSnapshot() {
   const data = {};

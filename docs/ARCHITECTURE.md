@@ -78,7 +78,7 @@
 | 上帝块 | `ui-ge-integrations`（依赖 32 块）、`ui-global-events`（25 块） | 按 scene / integration / assistant 三簇拆 |
 | Bootstrap 内联 | ~564 行不进 src 拆分 | 分批迁入 `src/bootstrap.js` |
 | 键空间 | 76 后缀 + 4 动态族 + 13 裸 `wb_*` | 建键注册表，逐批收编裸键 |
-| 迁移 | 无 `schemaVersion` | §4 引入版本与注册表 |
+| 迁移 | **已落地 `schemaVersion`（v3.7.148，`SCHEMA_VERSION=1`）**：成功才推进 / 更高版本只读告警 / 失败不推进；键注册表仍未建 | 键注册表（与上一行合并收口） |
 | 视图接线 | 无配对校验 | §3 覆盖率门禁 |
 
 每一行在 `docs/audit-2026-10-06.md` 有对应实测条目；改完一行，把台账对应项标闭环。
