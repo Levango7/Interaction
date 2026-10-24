@@ -47,6 +47,13 @@
   `AGENTS.md` §二、`docs/module-graph.md`（`check:modules` 再生成）、本板。
 - 在跑的重活：全量单测（`npm run test:local`）+ e2e（`npm run e2e`），均在本树 F:/wt/wb140（独立 node_modules）。
 - 准备推的范围：本批单提交（发版提交含 package.json/构建产物）⇒ 暂无待推。
+- 事实通告（发版完成，**释放占用**）：v3.7.147 已发 —— `fbd726d4` + tag `v3.7.147`；Deploy `40094966124` success
+  （Pages built 12:57:14Z）、Electron `40094972356` success、线上三面探针全过。⚠️ CI `40094966179` **首跑红**在
+  `tests/e2e/rag-hybrid.spec.js:105`（3 次全红、~850ms 快失败），同 SHA 的 Deploy e2e 与本机 e2e 均绿 ⇒
+  同 SHA 重跑 attempt2 全绿（未动 retries/timeout）。教训：**"同一 SHA 两条腿一红一绿"要先看红的那条重试了几次**
+  —— 重试即过是饥饿型；重试全红更像确定性，必须读现场再归因（这次现场是 ~850ms 快失败，与已登记的快失败族同形）。
+  另：`git push origin main` 在本 worktree 会推到**本地过期的 main 分支**并报 non-fast-forward（看着像别人抢先推），
+  正确写法 `git push origin HEAD:main`；共享 `_probe/watch-run.sh` 实测恒 parse-fail（环境变量写成字面量），别用。
 - 事实通告：本批发版前用真浏览器探针（`_probe/live-actions-147.cjs`）抓到并修掉了**自己刚写进去的**剪贴板假回执
   （`clipboard.writeText` 的 rejection 被同步 try/catch 漏掉 ⇒ 被浏览器拒绝时仍弹「已复制这次产出」）。
   教训对两边都成立：**jsdom 里"点了有反应"不等于真浏览器里有反应**，凡是走 Promise 的浏览器 API 都要等真结果。

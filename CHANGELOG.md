@@ -117,6 +117,13 @@
 真浏览器实测（`_probe/live-actions-147.cjs`，`LOCAL=1` 打本树、默认打线上）三面都过：
 统计页四项读数逐个可见、右栏「运行」标签与复制回执可见、评审卡出现 `「wipe」（MCP：srvprobe）` 且整行不含 `mcp__`。
 
+**发版证据（如实记红）**：v3.7.147 = `fbd726d4` + tag `v3.7.147`。CI `40094966179` **首跑红**，唯一失败用例是
+`tests/e2e/rag-hybrid.spec.js:105`（首跑 + 2 次重试全红，每次 ~850ms 快失败），同 SHA 的 Deploy e2e 腿与本机 e2e
+都是绿的 ⇒ 按既有纪律走**同 SHA 重跑**（`--failed`，不改 retries/timeout），attempt2 四腿全绿。
+这条不在本批改动面（检索/向量未动），归入已登记的 `rag-hybrid` 快失败族；它现在是**唯一还能把链打红的用例**，
+已排为下一批第一项（台账 §待办 B1）。Deploy `40094966124` success、Electron `40094972356` success、
+Pages built `12:57:14Z`；线上带 cache-buster 核到 `VERSION="3.7.147"` / `BUILD_TAG="20261024a"`。
+
 ### 2026-10-24 · 浏览器版的本机 MCP 引导（把「拦在哪」和「怎么办」直接摆出来）
 
 3.7.141 的线上实测：https 页面连本机 MCP 会被 Chrome 的 Local Network Access 权限拦。过去用户只能看到
