@@ -324,7 +324,9 @@ function snapshotAutoBackup(){
     // 每次快照把上一份完整快照原样嵌入（JSON 转义使膨胀超线性），约二三十次写入
     // 即撞 5MB 配额，且 catch 静默吞错导致备份失效无感知、反噬主存储写入。
     const data = {};
-    allKeys().forEach(k=>{ if(k === AUTO_BACKUP_KEY || AUTO_BACKUP_GENS.indexOf(k) >= 0) return; data[k] = localStorage.getItem(k); });
+    /* v3.7.148：排除集合改为从键注册表派生（backup:false），不再散在手写条件里 */
+    const _backupExcluded = (typeof backupExcludedKeys === "function") ? backupExcludedKeys() : [AUTO_BACKUP_KEY].concat(AUTO_BACKUP_GENS);
+    allKeys().forEach(k=>{ if(_backupExcluded.indexOf(k) >= 0) return; data[k] = localStorage.getItem(k); });
     data._ts = Date.now();
     const serialized = JSON.stringify(data);
     if(serialized.length > AUTO_BACKUP_MAX_BYTES){

@@ -95,22 +95,23 @@ describe("阶段2/C1 分流与增量上行", () => {
   it("折叠：逐键取最新一条 —— set→del 只发 removed；del→set 只发 changes；set 但键已不在 → removed", async () => {
     const win = await loadApp({ storage: on() });
     const T = Date.now();
-    win.localStorage.setItem(PREFIX + "revive", "[\"v\"]");
-    win.localStorage.setItem(PREFIX + "ghost", "x");
+    /* v3.7.148：改用**已登记的业务键**（未登记的键按新策略不上云，是设计而非缺陷）。 */
+    win.localStorage.setItem(PREFIX + "notes", "[\"v\"]");
+    win.localStorage.setItem(PREFIX + "links", "[]");
     seedLog(win, [
-      { k: PREFIX + "a", op: "set", ts: T, h: "" },
-      { k: PREFIX + "a", op: "del", ts: T + 1, h: "" },        // set→del ⇒ removed
-      { k: PREFIX + "revive", op: "del", ts: T, h: "" },
-      { k: PREFIX + "revive", op: "set", ts: T + 2, h: "" },   // del→set ⇒ changes
-      { k: PREFIX + "ghost", op: "set", ts: T + 3, h: "" }     // set 但 storage 没这个键 ⇒ removed
+      { k: PREFIX + "records", op: "set", ts: T, h: "" },
+      { k: PREFIX + "records", op: "del", ts: T + 1, h: "" },   // set→del ⇒ removed
+      { k: PREFIX + "notes", op: "del", ts: T, h: "" },
+      { k: PREFIX + "notes", op: "set", ts: T + 2, h: "" },   // del→set ⇒ changes
+      { k: PREFIX + "links", op: "set", ts: T + 3, h: "" }     // set 但 storage 没这个键 ⇒ removed
     ]);
-    win.localStorage.removeItem(PREFIX + "ghost");
+    win.localStorage.removeItem(PREFIX + "links");
     const calls = mockFetch(win, okChanges());
     await win.syncRound();
     const ch = calls[0].body.changes.map((c) => c.k).sort();
     const rm = calls[0].body.removed.map((r) => r.k).sort();
-    expect(ch).toEqual([PREFIX + "revive"]);
-    expect(rm).toEqual([PREFIX + "a", PREFIX + "ghost"]);
+    expect(ch).toEqual([PREFIX + "notes"]);
+    expect(rm).toEqual([PREFIX + "links", PREFIX + "records"]);   /* .sort() 是字典序，"links" < "records" */
   });
 });
 
@@ -152,13 +153,14 @@ describe("阶段2/C2 回退与下行应用", () => {
   it("下行 removed：本机键被删；但本机有更晚未上传变更的键不被删（下轮上行胜出）", async () => {
     const win = await loadApp({ storage: on() });
     const T = Date.now();
-    win.localStorage.setItem(PREFIX + "old", "x");
-    win.localStorage.setItem(PREFIX + "newer", "y");
-    seedLog(win, [{ k: PREFIX + "newer", op: "set", ts: T + 10, h: "" }]);   // 本机更晚的变更
-    mockFetch(win, okChanges({ removed: [{ k: PREFIX + "old", ts: T }, { k: PREFIX + "newer", ts: T }] }));
+    /* v3.7.148：改用已登记的业务键（未登记键按新策略不进同步面）。 */
+    win.localStorage.setItem(PREFIX + "records", "x");
+    win.localStorage.setItem(PREFIX + "notes", "y");
+    seedLog(win, [{ k: PREFIX + "notes", op: "set", ts: T + 10, h: "" }]);   // 本机更晚的变更
+    mockFetch(win, okChanges({ removed: [{ k: PREFIX + "records", ts: T }, { k: PREFIX + "notes", ts: T }] }));
     await win.syncRound();
-    expect(win.localStorage.getItem(PREFIX + "old")).toBeNull();
-    expect(win.localStorage.getItem(PREFIX + "newer"), "本机更晚变更优先").toBe("y");
+    expect(win.localStorage.getItem(PREFIX + "records")).toBeNull();
+    expect(win.localStorage.getItem(PREFIX + "notes"), "本机更晚变更优先").toBe("y");
   });
 
   it("C2 看板在增量轮记 delta 体积（而非全量快照体积）", async () => {
@@ -177,52 +179,53 @@ describe("阶段2/C2 回退与下行应用", () => {
 describe("C3 冲突计数（下行覆盖数可见）", () => {
   it("全量应用口径：只统计「本机有值且被远端改成不同值」——远端新增不计、值相同不计", async () => {
     const win = await loadApp({ storage: {} });
-    win.localStorage.setItem(PREFIX + "c3a", "old-a");   // 会被覆盖 → 计 1
-    win.localStorage.setItem(PREFIX + "c3b", "same");    // 值相同 → 不计
-    const n = win._applyCloudSnapshot({ [PREFIX + "c3a"]: "new-a", [PREFIX + "c3b"]: "same", [PREFIX + "c3c"]: "brand-new", _deviceMeta: { deviceId: "d" } });
+    win.localStorage.setItem(PREFIX + "records", "old-a");   // 会被覆盖 → 计 1
+    win.localStorage.setItem(PREFIX + "notes", "same");    // 值相同 → 不计
+    const n = win._applyCloudSnapshot({ [PREFIX + "records"]: "new-a", [PREFIX + "notes"]: "same", [PREFIX + "links"]: "brand-new", _deviceMeta: { deviceId: "d" } });
     expect(n).toBe(1);
     expect(JSON.parse(win.localStorage.getItem(META)).lastPullCover).toBe(1);
-    expect(win.localStorage.getItem(PREFIX + "c3c"), "远端新增键要落地").toBe("brand-new");
+    expect(win.localStorage.getItem(PREFIX + "links"), "远端新增键要落地").toBe("brand-new");
     expect(win.document.getElementById("apiPullCover").textContent).toBe("1 键");
   });
 
   it("无覆盖 → 0，面板显示「无」而非留白（「没覆盖任何东西」也要说出来）", async () => {
     const win = await loadApp({ storage: {} });
-    win._applyCloudSnapshot({ [PREFIX + "c3x"]: "v" });  // 远端新增 → 0
+    win._applyCloudSnapshot({ [PREFIX + "goals"]: "v" });  // 远端新增 → 0
     expect(JSON.parse(win.localStorage.getItem(META)).lastPullCover).toBe(0);
     expect(win.document.getElementById("apiPullCover").textContent).toBe("无");
   });
 
   it("增量轮：changed 侧 + removed 侧相加（removed 只算本机原本有值的）", async () => {
     const win = await loadApp({ storage: on() });
-    win.localStorage.setItem(PREFIX + "c3z1", "old");
-    win.localStorage.setItem(PREFIX + "c3z2", "y");
+    win.localStorage.setItem(PREFIX + "records", "old");
+    win.localStorage.setItem(PREFIX + "notes", "y");
     const calls = mockFetch(win, okChanges({
-      changed: [{ k: PREFIX + "c3z1", v: "new", ts: 9 }],
-      removed: [{ k: PREFIX + "c3z2", ts: 9 }, { k: PREFIX + "c3absent", ts: 9 }]   // 后者本机无值 → 不计
+      changed: [{ k: PREFIX + "records", v: "new", ts: 9 }],
+      removed: [{ k: PREFIX + "notes", ts: 9 }, { k: PREFIX + "links", ts: 9 }]   // 后者本机无值 → 不计
     }));
     await win.syncRound();
     expect(calls.length).toBe(1);
-    expect(win.localStorage.getItem(PREFIX + "c3z2")).toBeNull();
+    expect(win.localStorage.getItem(PREFIX + "notes")).toBeNull();
     expect(JSON.parse(win.localStorage.getItem(META)).lastPullCover, "1（覆盖）+ 1（删了本机有值的键）= 2").toBe(2);
   });
 
   it("被「本机更晚变更」保护跳过的删除：不计入，也不删键", async () => {
     const win = await loadApp({ storage: on() });
-    win.localStorage.setItem(PREFIX + "c3keep", "mine");
-    seedLog(win, [{ k: PREFIX + "c3keep", op: "set", ts: Date.now() + 100000, h: "" }]);   // 本机更晚
-    mockFetch(win, okChanges({ removed: [{ k: PREFIX + "c3keep", ts: 5 }] }));
+    win.localStorage.setItem(PREFIX + "memory", "mine");
+    seedLog(win, [{ k: PREFIX + "memory", op: "set", ts: Date.now() + 100000, h: "" }]);   // 本机更晚
+    mockFetch(win, okChanges({ removed: [{ k: PREFIX + "memory", ts: 5 }] }));
     await win.syncRound();
-    expect(win.localStorage.getItem(PREFIX + "c3keep")).toBe("mine");
+    expect(win.localStorage.getItem(PREFIX + "memory")).toBe("mine");
     expect(JSON.parse(win.localStorage.getItem(META)).lastPullCover).toBe(0);
   });
 
   it("诊断报告含覆盖行（0 也写出来，与面板同源）", async () => {
     const win = await loadApp({ storage: {} });
-    win._applyCloudSnapshot({ [PREFIX + "c3n"]: "a" });   // 新增 → 0
+    /* v3.7.148：改用启动时为空、且已登记的 diagram（tasks 启动即被示例数据播种，会让"新增→0"不成立）。 */
+    win._applyCloudSnapshot({ [PREFIX + "diagram"]: "a" });   // 新增 → 0
     expect(win.buildDiagReport()).toContain("云同步: 上次云端覆盖 0 键");
-    win.localStorage.setItem(PREFIX + "c3n", "old");
-    win._applyCloudSnapshot({ [PREFIX + "c3n"]: "b" });   // 覆盖 → 1
+    win.localStorage.setItem(PREFIX + "diagram", "old");
+    win._applyCloudSnapshot({ [PREFIX + "diagram"]: "b" });   // 覆盖 → 1
     expect(win.buildDiagReport()).toContain("云同步: 上次云端覆盖 1 键");
     expect(win.document.getElementById("apiPullCover").textContent).toBe("1 键");
   });

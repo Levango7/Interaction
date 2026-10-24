@@ -63,6 +63,16 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-25 05:34 UTC+8] Qoder 主会话 —— **B2c：同步/备份改派生（进行中）**
+- 状态：进行中
+- 占用路径：`src/{data-links,render-overview,data-rw,ui-ge-integrations}.js`、`tests/{sync-key-policy,cloud-sync-stage1,cloud-sync-stage2,data-keys-registry}.test.js`、
+  `CHANGELOG.md` `[Unreleased]`、`docs/{ARCHITECTURE,agent-board}.md`。
+- 在跑的重活：静态门禁 + 同步/备份 11 套件 + 全量。
+- 准备推的范围：单笔。
+- ⚠️ 提醒对方：**未登记的存储键现在默认不上云了**（原来默认上云）。新加键必须登记 `DATA_KEY_REGISTRY`；
+  如果某功能的数据突然不同步，先查它是不是漏登记（这条默认值是刻意翻的：漏登记最多功能不同步，
+  而不是把凭据传上云）。
+
 ### [2026-10-25 04:39 UTC+8] Qoder 主会话 —— **B2b：键注册表 + 登记门禁（进行中）**
 - 状态：进行中
 - 占用路径：`src/{data-links,ui-ge-integrations}.js`（后者只加桥导出）、`tests/data-keys-registry.test.js`（新增）、

@@ -83,9 +83,10 @@ describe("存储键注册表", () => {
     expect(T.DataKeyRegistry.length, "注册表本身不能是空的").toBeGreaterThanOrEqual(80);
   });
 
-  it("⑤ 凭据/控制类一律不上云（sync 只能是 false）；业务数据默认可上云", () => {
-    const bad = T.DataKeyRegistry.filter((e) => (e.kind === "s" || e.kind === "c") && e.sync !== false);
-    expect(bad.map((e) => e.key || String(e.pattern)), "凭据/控制状态不许标 sync:true").toEqual([]);
+  it("⑤ 凭据类一律不上云（sync 只能是 false）；其余键两类取值都要有（防一刀切）", () => {
+    /* 只对**凭据**做强约束：控制/元数据键（theme/lang/active…）本来就靠云同步跨设备生效。 */
+    const bad = T.DataKeyRegistry.filter((e) => e.kind === "s" && e.sync !== false);
+    expect(bad.map((e) => e.key || String(e.pattern)), "凭据类不许标 sync:true").toEqual([]);
     /* 反向自检：必须存在两种 sync 值，否则这条断言可能只是"全是 false" */
     expect(T.DataKeyRegistry.some((e) => e.sync === true)).toBe(true);
     expect(T.DataKeyRegistry.some((e) => e.sync === false)).toBe(true);

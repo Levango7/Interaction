@@ -1564,7 +1564,10 @@ function _setSyncMeta(patch) {
    且 cfg 里的 Key 用**设备密钥**加密，换设备本就解不开（密钥不出本机），同步 cfg 无跨端收益、纯增泄露面。
    pre_restore_backup 是恢复前的本机回滚档（内嵌全部本地键值，含 cfg），同样不该上云。
    业务数据（任务/记录/笔记/记忆/AI 会话）保持原快照语义不变。 */
-const SYNC_EXCLUDED_KEYS = [
+/* v3.7.148（B2c）：运行时**不再读这份手写清单** —— 已改为从 DATA_KEY_REGISTRY 派生
+   （dataKeySyncAllowed：未登记即不上云）。下面这份保留为 SYNC_EXCLUDED_KEYS_LEGACY，
+   唯一用途是 tests/sync-key-policy.test.js 拿它做「派生集 ⊇ 旧集合」的对照，防止隐私回退。 */
+const SYNC_EXCLUDED_KEYS_LEGACY = [
   SYNC_META_KEY,
   PREFIX + "cfg",
   PREFIX + "__dk",
@@ -1602,7 +1605,7 @@ const SYNC_EXCLUDED_KEYS = [
 function _buildCloudSnapshot() {
   const data = {};
   allKeys().forEach(k => {
-    if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
+    if (!dataKeySyncAllowed(k)) return;   /* v3.7.148：从键注册表派生（未登记即不上云） */
     /* R-2 消解：原为静默。读不到 ⇒ 该键**悄悄从快照里消失**，而上传照发、同步面板照显成功
        ⇒ 用户拿到一份"不自知残缺"的云快照，等真要恢复时才发现这个键从未上去过（谎报，且不可补救）。
        与导出面同一类（ui-backup-stats.js 第九片已按同一理由上报）。控制流不变（照旧跳过该键）。 */
@@ -1687,7 +1690,7 @@ function _applyCloudSnapshot(data) {
   let _pullCover = 0;
   Object.keys(data).forEach(k => {
     if (k === SYNC_META_KEY || k === "_deviceMeta" || k === "_meta") return;
-    if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return;
+    if (!dataKeySyncAllowed(k)) return;   /* 入站与出站同一份判据（对称过滤） */
     if (k.startsWith(PREFIX) || k === CUSTOM_LINKS_KEY) {
       let _before = data[k];
       try { _before = localStorage.getItem(k); } catch (e) { _before = data[k]; /* 读失败按「未变化」保守处理 */ }
@@ -1741,7 +1744,7 @@ try{ AppBridge.applyCloudSnapshot = _applyCloudSnapshot; }catch(e){ /* 同上 */
 function _inSyncScope(k){
   if (!k || k === SYNC_META_KEY || k === CHLOG_KEY) return false;
   if (k.charAt(0) === "_") return false;
-  if (SYNC_EXCLUDED_KEYS.indexOf(k) !== -1) return false;
+  if (!dataKeySyncAllowed(k)) return false;   /* v3.7.148：与快照出入站同一份判据（未登记即不上云） */
   return k.indexOf(PREFIX) === 0 || k === CUSTOM_LINKS_KEY;
 }
 

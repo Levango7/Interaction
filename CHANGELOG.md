@@ -73,6 +73,25 @@
 
 ## [Unreleased]
 
+### 2026-10-25 · 同步/备份的排除改为**从键注册表派生**（B2c，隐私默认值翻转）
+
+上一笔只登记不生效。这一笔把三个消费方全切了，并把「默认值」翻正：
+
+- **出站云快照**（`_buildCloudSnapshot`）、**入站应用**（`_applyCloudSnapshot`）、**增量面判定**（`_inSyncScope`）
+  统一改读 `dataKeySyncAllowed(k)`：**未登记的键一律不上云**（原默认是「上云」）。
+- **自动备份**的排除改读 `backupExcludedKeys()`（注册表里 `backup:false`，即 autobackup 三代），不再散在手写条件里。
+- 旧的手写清单冻结为 `SYNC_EXCLUDED_KEYS_LEGACY`，**运行时不再读**，只给回归用例做「派生集 ⊇ 旧集合」的对照。
+- 注册表的 `sync` 标志按**现状**重生成（初版按 kind 一刀切，把 autobackup/sync_meta/pre_restore_backup 误标成可上云 ——
+  这一步是被「⊇ 旧集合」那条判据逼出来的修正）；凭据类（`kind:"s"`）一律 `sync:false`。
+- 三处测试夹具用了合成键（`probe_snap`/`revive`/`a`/`ghost`/`c3*`）—— 它们现在按新策略确实不上云，
+  已改用**已登记的业务键**（notes/records/links/diagram…）；这是把夹具对齐新契约，不是放宽断言。
+  其中一条原有断言还借「启动时为空的新键」来测 0 覆盖，改用 `tasks` 后会撞上示例数据播种 ⇒ 换成 `diagram`。
+
+**证据**：`tests/sync-key-policy.test.js` 5 例 —— ① 旧清单 18 个键全部仍判不上云（不回退）；② 未登记键默认不上云；
+③ 业务键上云 + 凭据键不上云（两个方向都有阳性样本）；④ **实际快照产物**里 tasks 在、cfg/webdav_pass 不在；
+⑤ 备份排除仍覆盖 autobackup 三代且不含业务键。变异：`webdav_pass` 改回可上云 ⇒ ①③ 与注册表 ⑤ 红；
+`dataKeySyncAllowed` 对未登记键放行 ⇒ ②红。同步/备份相关的 11 个既有套件（94 例）全绿。
+
 ### 2026-10-25 · 存储键注册表 + 「新键必须登记」门禁（B2b，第一步：只登记不改行为）
 
 现状是一张「负名单」：云同步用 `SYNC_EXCLUDED_KEYS`（新键**默认上云**），备份靠字符串匹配排除备份键。

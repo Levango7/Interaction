@@ -118,11 +118,11 @@ describe("阶段1/C1 本地变更日志（门控）", () => {
 
   it("云快照排除：队列键不上云（_buildCloudSnapshot 不含它，业务键照常在内）", async () => {
     const win = await loadApp({ storage: on() });
-    win.save(PREFIX + "probe_snap", { c: 3 });
+    win.save(PREFIX + "notes", { c: 3 });
     expect(win.localStorage.getItem(CHLOG)).not.toBeNull();
     const snap = win._buildCloudSnapshot();
     expect(snap[CHLOG]).toBeUndefined();
-    expect(Object.keys(snap)).toContain(PREFIX + "probe_snap");
+    expect(Object.keys(snap)).toContain(PREFIX + "notes");
   });
 
   /* 真机抓到的漏网（2026-10-16 WebDAV 完整 8 步验收现场）：v3.7.120 引入 WebDAV 时新增了
@@ -141,7 +141,7 @@ describe("阶段1/C1 本地变更日志（门控）", () => {
         [WD_PASS]: JSON.stringify({ __enc: true, iv: "iv-x", data: "cipher-y" }),
         [WD_CFG]: JSON.stringify({ url: "https://dav.example.com/dav", user: "someone@example.com" }),
         [WD_META]: JSON.stringify({ etag: "e1", path: "/agent-workshop-snapshot.json" }),
-        [PREFIX + "probe_snap"]: JSON.stringify({ c: 3 }),
+        [PREFIX + "notes"]: JSON.stringify({ c: 3 }),
       }),
     });
     const snap = win._buildCloudSnapshot();
@@ -149,7 +149,7 @@ describe("阶段1/C1 本地变更日志（门控）", () => {
     expect(snap[WD_CFG]).toBeUndefined();
     expect(snap[WD_META]).toBeUndefined();
     /* 别把"排除"做成"误伤"：业务键照常在 */
-    expect(Object.keys(snap)).toContain(PREFIX + "probe_snap");
+    expect(Object.keys(snap)).toContain(PREFIX + "notes");
   });
 });
 
