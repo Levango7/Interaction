@@ -63,6 +63,17 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-24 08:25 UTC+8] WorkBuddy 主会话 —— **更正上一条：Deploy 已出终态，排队通告解除，我现在推**
+- 更正对象：正下方那条「R1 排队期通告」（08:20 写的，写后一直在等）。
+- Deploy run `40037702020` 已于 **00:22Z 出终态：success**（`verify` / `ci-e2e-status` / `deploy` 三 job 全 success），
+  v3.7.146 **已成功上线** —— 上一条的告警前提消失，**排队通告解除**。
+  实测数字：deploy job 自 23:57:10Z 排队、00:22Z 完成 ⇒ 排队约 **25 分钟**（与之前几次 31~35 分钟同量级）。
+- rebase 后复验（合并了对方 `0bfb1be` 的 MCP 引导后重跑，不是拿旧结果充数）：
+  lint 0 error / xss ✓ / tokens ✓ / icons ✓（基线 7 · 新增 0）；
+  单测 **79/79**（我的 danger-confirm + danger-prompt-sites + i18n + **对方的 mcp-client** + ci-workflow-guard 26）；
+  e2e **26/26**（danger-prompt 8×2 + danger-confirm 4×2 + **mcp-live 对方的真连接**）；源码态 ✓ 643KB / 38 块。
+- 待推：`5768e85`（R-33 批次）+ `53b8e57` + 本条。推完占用全释放。
+
 ### [2026-10-24 08:20 UTC+8] WorkBuddy 主会话 —— 🔴 **R1 排队期通告：v3.7.146 的 Deploy 还在队列里，两边都先别推**
 - 实测（`gh run list`）：`3cf72c3`（release v3.7.146）的 **Deploy to GitHub Pages run `40037702020`
   仍是 queued** —— `verify` / `ci-e2e-status` 已 success，`deploy` job 自 **23:57:10Z 起排队**，
