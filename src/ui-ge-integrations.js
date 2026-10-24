@@ -2229,6 +2229,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     // ===== AI 能力增强（任务 232）：Agent 自动化 + 新工具 + RAG + 流式增强 =====
     agentPlanSysPrompt, parseAgentPlan, executeAgentPlan, summarizeAgentPlan, chatOnceAgent,
     agentExecAsync, toolWebSearch, toolWebFetch, toolCodeRun, toolSqlQuery,
+    DataKeyRegistry: DATA_KEY_REGISTRY, dataKeyRegistered, bareKeyRegistered,   /* v3.7.148 键注册表（tests/data-keys-registry 用） */
     ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
     ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,

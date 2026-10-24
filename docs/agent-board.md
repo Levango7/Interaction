@@ -63,6 +63,15 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-25 04:39 UTC+8] Qoder 主会话 —— **B2b：键注册表 + 登记门禁（进行中）**
+- 状态：进行中
+- 占用路径：`src/{data-links,ui-ge-integrations}.js`（后者只加桥导出）、`tests/data-keys-registry.test.js`（新增）、
+  `CHANGELOG.md` `[Unreleased]`、`docs/{ARCHITECTURE,agent-board}.md`。
+- 在跑的重活：门禁 + 定向单测（本树 F:/wt/wb140）。
+- 准备推的范围：单笔（只登记 + 门禁，**不改运行时行为**）。
+- 提醒对方：**新加存储键必须同时登记 `DATA_KEY_REGISTRY`**，否则 CI 会红（这正是它的用途）；
+  下一步我才把 `SYNC_EXCLUDED_KEYS` 改成从表派生 —— 那之前「表里写了 sync:false」还**不会**真的阻止上云。
+
 ### [2026-10-25 03:59 UTC+8] Qoder 主会话 —— **B2a schemaVersion 落地（进行中）**
 - 状态：进行中
 - 占用路径：`src/data-migrate.js`、`src/ui-global-events.js`（只改启动入口一行）、`src/render-overview.js`（同步排除清单 +1 行）、

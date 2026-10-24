@@ -77,7 +77,7 @@
 | Core 出边 | `core-shared → data-rw`（getActiveTasks） | 下移或经桥注入；门禁覆盖全部 Core 块 |
 | 上帝块 | `ui-ge-integrations`（依赖 32 块）、`ui-global-events`（25 块） | 按 scene / integration / assistant 三簇拆 |
 | Bootstrap 内联 | ~564 行不进 src 拆分 | 分批迁入 `src/bootstrap.js` |
-| 键空间 | 76 后缀 + 4 动态族 + 13 裸 `wb_*` | 建键注册表，逐批收编裸键 |
+| 键空间 | **注册表已建**（v3.7.148：75 字面量 + 4 动态族 + 18 裸键 = 97 条，带 kind/sync/backup；门禁守「新键必须登记」）；**但消费方还没切**：`SYNC_EXCLUDED_KEYS` 仍是手写负名单 | 把同步/备份排除改成从注册表派生，并证明派生集 ⊇ 旧集合 |
 | 迁移 | **已落地 `schemaVersion`（v3.7.148，`SCHEMA_VERSION=1`）**：成功才推进 / 更高版本只读告警 / 失败不推进；键注册表仍未建 | 键注册表（与上一行合并收口） |
 | 视图接线 | 无配对校验 | §3 覆盖率门禁 |
 
