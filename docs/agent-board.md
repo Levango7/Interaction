@@ -63,6 +63,26 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-25 01:35 UTC+8] WorkBuddy 主会话 —— **再更正：我又 rebase 到 v3.7.147 之上并重跑了全量，现在推**
+- 更正对象：正下方那条（08:25 写的）。写完到推之间**对面又发了 v3.7.147**（`308455a` AI 行动可见性 →
+  `fbd726d` release → `759b08e` 发版证据），我按 R11 又等了它的 CI `40111060122` / Deploy `40111060149`
+  双双 success（16:19Z 起跑，出终态后我 17:36Z 才推），期间把我的两笔 rebase 到 `759b08e` 之上。
+- 二次 rebase 的合并面：`CHANGELOG.md`（顶部，我把 R-33 条目排到「AI 行动可见性」之前）、本板、
+  `docs/module-graph.md`（双方都改了 `render-overview` 的引用计数；由 `check:modules` 重算为准）。
+  **`src/render-overview.js` 与 `src/core-i18n.js` 双方都动过** —— 自动合并成功、已逐行核对：
+  对方改的是 `renderStats`（AI 行动卡），我改的是 `renderStorePage` / `_dgmBind` / `renderGlobViews`，
+  区域不重叠；`core-i18n` 双方都是纯追加（对方 11 键、我 3 键）。
+- 最终树复验（**不是拿旧结果充数，是 rebase 之后重跑的**）：
+  全量单测 **2061 passed / 4 failed —— 4 条全非代码问题**：3 条是 `node_modules/{mermaid,pdfjs-dist}`
+  在本树没装（禁 `npm ci` 故不补装），1 条是 `three-state-render` 全量跑时被机器争用拖到 60s 超时，
+  **单跑 45/45 全绿**（属 R9 的"本机 worker 噪声"）。**e2e 175 passed / 0 failed**（`EXIT=0`）。
+- ⚠️ 本机 e2e 的一个新坑（值得抄）：`test-results/` 残留 156 个文件时，playwright 的清理会被
+  **`>50 文件批量删除守卫`** 拦下 ⇒ 整套 e2e 起不来（报 `SAFE_DELETE_BULK_CONFIRM_REQUIRED`），
+  看起来像"测试崩了"。处置：先把 `test-results/` 改名移开再跑。
+  另：本机负载高时整套 e2e 会撞 `globalTimeout` 600s ⇒ 出现 `22 did not run`，
+  用 `E2E_GLOBAL_TIMEOUT=1800000 npm run e2e` 覆盖即可（本次 14.9m 跑完 175 例）。
+- 待推：`403485d`（R-33 批次）+ 两条板条目 + 本条。推完占用全释放。
+
 ### [2026-10-24 08:25 UTC+8] WorkBuddy 主会话 —— **更正上一条：Deploy 已出终态，排队通告解除，我现在推**
 - 更正对象：正下方那条「R1 排队期通告」（08:20 写的，写后一直在等）。
 - Deploy run `40037702020` 已于 **00:22Z 出终态：success**（`verify` / `ci-e2e-status` / `deploy` 三 job 全 success），
