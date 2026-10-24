@@ -18152,7 +18152,15 @@ function bindSessionModal(){
  * 读取当前配置（含解密后的内存明文 cfg）
  * @returns {Cfg}
  */
-function getCfg(){ return _cfgCache || load(PREFIX+"cfg", {}); }
+function getCfg(){
+  /* 缓存是**空快照**（启动期在配置写入/解密之前读到的 {}）时，不许压住存储里的真配置：
+     否则整页会永远判「AI 未配置」，语义召回静默退化成词法（2026-10-24 台账 R-35 的现场）。
+     缓存非空时仍以缓存为准 —— 只有那里才有解密后的明文 Key。 */
+  const c = _cfgCache;
+  if(c && ((Array.isArray(c.profiles) && c.profiles.length) || c.base || c.key)) return c;
+  const raw = load(PREFIX+"cfg", {});
+  return (raw && ((Array.isArray(raw.profiles) && raw.profiles.length) || raw.base || raw.key)) ? raw : (c || raw);
+}
 
 /* v3.7.17（解耦 S4）：侧栏子项选中态从 render-widgets（Render）移到 Data 层 —— 它是**应用状态**，
    应与 active 同处；原先被 data-links 引用形成逆层依赖。纯搬迁，无依赖。 */
@@ -20874,7 +20882,12 @@ function _embedCfg(){
     /* 优先取**当前 profile** 的 embedModel（换了 AI 配置就该连向量模型一起换），
        其次全局 cfg.embedModel，最后默认值。 */
     const model = String((ap && ap.embedModel) || cfg.embedModel || "").trim() || "bge-m3";
-    return { base: base, key: (ap && ap.key) || "", model: model };
+    /* 刚刷新时 initCrypto 还没解完：profile.key 是密文**对象** {__enc:true,…}。
+       当 Bearer 发出去就是 `[object Object]`（必然 401），而且 401 会把 10 分钟降级缓存点亮
+       ⇒ 之后同一页里的语义召回全部静默退化成词法。宁可不发，交给调用方按"通道不可用"降级。 */
+    const rawKey = (ap && ap.key) || "";
+    if(rawKey && typeof rawKey !== "string") return null;
+    return { base: base, key: String(rawKey || ""), model: model };
   }catch(e){ return null; }
 }
 
@@ -22815,6 +22828,7 @@ const DK_IDB_KEY = "__dk_v2";   // 设备密钥 IDB 键（不参与 idbQueueMirr
 let _dkIdbGet = () => Promise.resolve(null);  // 生产接线由 data-idb 块加载时 registerDkIdbHelpers 注册
 let _dkIdbPut = () => Promise.resolve(false);
 let _dkPromise = null;  // v3.7.62：ensureDeviceKey 在途去重（token 水合与 initCrypto 会并发调用）
+let _cryptoInitRetried = false;  // v3.7.148：initCrypto 读到空配置快照时只重跑一次
 /** 设备密钥的 IDB 存取接缝。
  *  v3.7.75 解耦：本块此前直接引用 idbReadKey/idbMirrorKey（data-idb 块的符号），
  *  构成一条 crypto→data-idb 逆层边；改为由 data-idb 加载时调用本函数反向注册
@@ -22861,7 +22875,7 @@ function base64Decode(str){
 }
 function getDeviceKey(){ return _deviceKey; }
 function isEncKey(v){ return v && typeof v === "object" && v.__enc === true; }
-function _resetCrypto(){ _deviceKey = null; _cfgCache = null; _cryptoReady = false; _dkPromise = null; }
+function _resetCrypto(){ _deviceKey = null; _cfgCache = null; _cryptoReady = false; _dkPromise = null; _cryptoInitRetried = false; }
 async function ensureDeviceKey(){
   if(_deviceKey) return _deviceKey;
   if(!_cryptoReady) return null;
@@ -23123,6 +23137,16 @@ async function initCrypto(){
     try{ plainKey = await decryptKey(raw.key); needRepersist = true; }catch(e){ plainKey = ""; }
   }else if(typeof raw.key === "string" && raw.key){
     needRepersist = true; // 旧明文，待迁移
+  }
+  /* 读到的是空快照，而此刻存储里已经有配置（启动顺序竞争 / 另一标签页刚写入）⇒
+     这一页不能就此永远判「未配置」。重跑一次（只一次，避免竞态里打转）。 */
+  if(!(raw && ((Array.isArray(raw.profiles) && raw.profiles.length) || raw.base || raw.key)) && !_cryptoInitRetried){
+    let later = {};
+    try{ later = load(PREFIX+"cfg", {}); }catch(_e){ later = {}; }
+    if(later && ((Array.isArray(later.profiles) && later.profiles.length) || later.base || later.key)){
+      _cryptoInitRetried = true;
+      return initCrypto();
+    }
   }
   _cfgCache = Object.assign({}, raw, { key: plainKey });
   // 旧明文迁移：重新持久化为加密结构
@@ -46500,17 +46524,19 @@ function setTheme(themeId){
  * @returns {void}
  */
 function _syncCfgTheme(themeId){
-  try{
-    if(typeof getCfg !== "function" || typeof save !== "function") return;
-    // v3.1.2：全部预置主题都写入 cfg.theme——修复前只认 light/dark，
-    // 选 aurora/sepia/elegant/matrix 后 cfg.theme 停留旧值，换设备迁移时主题回退。
-    // 自定义主题 id 仍不写入（由 setTheme 的 localStorage.theme 持久化）。
-    if(themeId && PRESET_THEMES[themeId]){
-      const cfg = getCfg() || {};
-      cfg.theme = themeId;
-      save(PREFIX + "cfg", cfg);
-    }
-  }catch(e){ /* 静默降级 */ }
+  if(!themeId || !PRESET_THEMES[themeId]) return;
+  if(typeof load !== "function" || typeof save !== "function") return;
+  // v3.1.2：全部预置主题都写入 cfg.theme——修复前只认 light/dark，
+  // 选 aurora/sepia/elegant/matrix 后 cfg.theme 停留旧值，换设备迁移时主题回退。
+  // 自定义主题 id 仍不写入（由 setTheme 的 localStorage.theme 持久化）。
+  /* ⚠️ 必须基于**存储里的原始 cfg** 合并：`getCfg()` 在启动竞态里可能返回空快照，
+     用它写回会把整份配置（含 profiles / 模型 / 端点）覆盖成 `{theme}` ——
+     2026-10-24 实测到的数据丢失路径（台账 R-35：rag-hybrid 刷红也是它）。 */
+  const cfg = load(PREFIX + "cfg", null);
+  if(!cfg || typeof cfg !== "object") return;   /* 没有配置就不发明一份 */
+  if(cfg.theme === themeId) return;             /* 值没变就别写（少一次覆盖机会） */
+  cfg.theme = themeId;
+  save(PREFIX + "cfg", cfg);   /* save() 失败会自己 pushDiag + toast，这里不重复上报 */
 }
 
 /**
