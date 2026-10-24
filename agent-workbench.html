@@ -11338,7 +11338,10 @@ const MESSAGES = {
     "p5.evKindTaskDone": "任务（已完成）",
     "p5.evKindExternal": "外部日历",
     "p5.evAllDaySuffix": "（全天）",
-    "p5.evDetailEmpty": "当日没有日程事件"
+    "p5.evDetailEmpty": "当日没有日程事件",
+    "prompt.title": "请输入",
+    "prompt.required": "此项不能为空",
+    "prompt.ok": "确定"
   },
   en: {
     // Common
@@ -15411,7 +15414,10 @@ const MESSAGES = {
     "p5.evKindTaskDone": "Task (done)",
     "p5.evKindExternal": "External calendar",
     "p5.evAllDaySuffix": " (all day)",
-    "p5.evDetailEmpty": "No events that day"
+    "p5.evDetailEmpty": "No events that day",
+    "prompt.title": "Enter a value",
+    "prompt.required": "This field cannot be empty",
+    "prompt.ok": "OK"
   }
 };
 
@@ -15531,12 +15537,12 @@ function toast(msg, type){
  * 本组件用真浮层骨架 `.viz-modal`（position:fixed;inset:0;z-index:var(--z-modal)=80 > 底部导航 40）。
  *
  * 契约（docs/DESIGN-SYSTEM.md §4）：确认类**不吃遮罩点击**，必须显式二选一；Esc = 取消。 */
-let _dangerConfirmHandle = null;
+let _dangerModalHandle = null;   /* 确认与输入共用：同一时刻最多一层（R-33 起） */
 
 function dangerConfirm(opts){
   const o = opts || {};
   const ID = "dangerConfirmModal";
-  if(_dangerConfirmHandle) _dangerConfirmHandle.dismiss();  /* 同一时刻最多一层确认 */
+  if(_dangerModalHandle) _dangerModalHandle.dismiss();  /* 同一时刻最多一层确认 */
   return new Promise(resolve=>{
     const wrap = document.createElement("div");
     wrap.className = "viz-modal show";
@@ -15561,7 +15567,7 @@ function dangerConfirm(opts){
     const dismiss = (value)=>{
       if(settled) return;
       settled = true;
-      _dangerConfirmHandle = null;
+      _dangerModalHandle = null;
       /* trapFocus 的 release 负责把焦点还给触发元素，这里不重复抢 */
       if(release) release();
       wrap.remove();
@@ -15572,14 +15578,99 @@ function dangerConfirm(opts){
     wrap.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ e.preventDefault(); dismiss(false); } });
     /* 刻意不监听遮罩点击：确认类必须显式选择（DESIGN-SYSTEM §4） */
     const release = trapFocus(wrap.querySelector(".viz-modal-card"));
-    _dangerConfirmHandle = { dismiss: ()=> dismiss(false) };
+    _dangerModalHandle = { dismiss: ()=> dismiss(false) };
   });
 }
 
-/** 外部（Esc 热键、场景切换、AI 打字确认）关掉当前确认框；返回是否真的关掉了 */
+/* ---------- 通用输入模态（2026-10-24 R-33） ----------
+ * 为什么不用原生 prompt()：与 confirm 同族 —— 不可样式化、窄屏由系统渲染成页面顶部一条横幅、
+ * 无法过 i18n / 无障碍 / 视觉契约门禁。另有一条 confirm 没有的硬差异：它**返回字符串**，
+ * 所以不能复用布尔语义的 dangerConfirm，必须是独立组件。
+ * 契约：resolve(字符串) = 确认；resolve(null) = 取消（Esc / 点取消 / 被后开的一层顶掉）。
+ *   · required 默认 true：空着点确认只出内联提示、**不关框**。原生 prompt 对空值是放行的，
+ *     但本仓调用点没有一处接受空值（有个别还在调用点自己判了一遍）—— 逐个判等于把同一件事写 N 遍。
+ *     确需放行空值的调用点显式传 `required:false`（当前只有导图节点改字：把文字清空是合法操作）。
+ *   · Enter = 确认（对齐原生 prompt 在桌面端的习惯），Esc = 取消。
+ *   · 遮罩不关：输入框里可能已经打了不少字，误点遮罩丢输入比"多点一次取消"更糟。
+ *   · o.value 一律走 input.value 属性，**绝不进 innerHTML**（默认值可能是用户数据）。
+ *   · secret:true → type=password（导出密码那一处；原生 prompt 不遮是它的缺陷，不是契约）。
+ *   · 打开即聚焦并全选输入内容 —— 对齐原生 prompt，也让"复制分享链接"那一处 Ctrl+C 一步到位。
+ *   · 内联错误提示**按需创建**（不预渲染再切 display）：避开 `[hidden]` 被类规则覆盖的坑，
+ *     且没有错误时 DOM 里不该有那个元素。 */
+function dangerPrompt(opts){
+  const o = opts || {};
+  const ID = "dangerPromptModal";
+  if(_dangerModalHandle) _dangerModalHandle.dismiss();  /* 同一时刻最多一层 */
+  return new Promise(resolve=>{
+    const wrap = document.createElement("div");
+    wrap.className = "viz-modal show";
+    wrap.id = ID;
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-labelledby", ID + "Title");
+    wrap.innerHTML = '<div class="viz-modal-card u-max-w-440">'
+      + '<div class="viz-modal-header"><h2 id="' + ID + 'Title">'
+      + esc(o.title || t("prompt.title", "请输入")) + '</h2></div>'
+      + '<div class="u-pad-5-6">'
+      + (o.message ? '<p class="u-m-0-0-2 u-fw-600">' + esc(o.message) + '</p>' : '')
+      + (o.label ? '<label class="sub u-m-0-0-2" for="' + ID + 'Input">' + esc(o.label) + '</label>' : '')
+      + '<input type="' + (o.secret ? "password" : "text") + '" id="' + ID + 'Input"'
+      + (o.placeholder ? ' placeholder="' + esc(o.placeholder) + '"' : '')
+      + (o.maxlength ? ' maxlength="' + Number(o.maxlength) + '"' : '')
+      + ' autocomplete="off">'
+      + '<div class="u-flex u-gap-2 u-jc-end u-mt-2">'
+      + '<button type="button" class="btn-ghost" id="' + ID + 'No">'
+      + esc(o.cancelText || t("common.cancel", "取消")) + '</button>'
+      + '<button type="button" class="addbtn" id="' + ID + 'Yes">'
+      + esc(o.confirmText || t("prompt.ok", "确定")) + '</button>'
+      + '</div></div></div>';
+    document.body.appendChild(wrap);
+    const input = wrap.querySelector("#" + ID + "Input");
+    const required = o.required !== false;
+    input.value = o.value == null ? "" : String(o.value);   /* 走属性，不进 innerHTML */
+    let settled = false;
+    const dismiss = (value)=>{
+      if(settled) return;
+      settled = true;
+      _dangerModalHandle = null;
+      /* trapFocus 的 release 负责把焦点还给触发元素，这里不重复抢 */
+      if(release) release();
+      wrap.remove();
+      resolve(value);
+    };
+    const showErr = (msg)=>{
+      let e = wrap.querySelector("#" + ID + "Err");
+      if(!e){
+        e = document.createElement("p");
+        e.id = ID + "Err";
+        e.className = "u-text-danger u-fs-2xs";
+        e.style.margin = "var(--space-1h) 0 0";
+        input.parentNode.insertBefore(e, input.nextSibling);
+      }
+      e.textContent = msg;
+    };
+    const submit = ()=>{
+      const v = String(input.value || "");
+      if(required && !v.trim()){ showErr(t("prompt.required", "此项不能为空")); try{ input.focus(); }catch(e){ /* noop */ } return; }
+      dismiss(v);
+    };
+    wrap.querySelector("#" + ID + "Yes").onclick = submit;
+    wrap.querySelector("#" + ID + "No").onclick = ()=> dismiss(null);
+    input.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); submit(); } });
+    wrap.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ e.preventDefault(); dismiss(null); } });
+    /* 刻意不监听遮罩点击：理由同 dangerConfirm —— 必须显式二选一，且这里还多一条"别丢已打好的字" */
+    const release = trapFocus(wrap.querySelector(".viz-modal-card"));
+    try{ input.focus(); input.select(); }catch(e){ /* noop */ }
+    _dangerModalHandle = { dismiss: ()=> dismiss(null) };
+  });
+}
+
+/**
+ * 外部（Esc 热键、场景切换、AI 打字确认）关掉当前危险模态；返回是否真的关掉了。
+ * R-33 起确认与输入共用同一层互斥，所以这里关的是「当前那一个」，不限确认框。 */
 function dismissDangerConfirm(){
-  if(!_dangerConfirmHandle) return false;
-  _dangerConfirmHandle.dismiss();
+  if(!_dangerModalHandle) return false;
+  _dangerModalHandle.dismiss();
   return true;
 }
 
@@ -18005,7 +18096,9 @@ function renderSessionList(filter){
         const sid = actBtn.getAttribute("data-sid");
         if(actBtn.getAttribute("data-act") === "rename"){
           const cur = (getSessions().find(function(s){ return s.id === sid; }) || {}).title || "";
-          const nv = window.prompt(t("sess.renamePrompt", "重命名会话"), cur);
+          /* R-33：原生 prompt → dangerPrompt。原 `typeof prompt==="function"` 守卫随之失去意义
+             （本组件是本仓自己的函数，不依赖宿主有没有原生对话框）。 */
+          const nv = await dangerPrompt({ title: t("sess.renamePrompt", "重命名会话"), value: cur, maxlength: 60 });
           if(nv !== null && nv.trim()){ renameSession(sid, nv.trim()); renderSessionList($("#sessSearch") ? $("#sessSearch").value : ""); renderSessionPreview(getActiveSession()); }
         } else if(actBtn.getAttribute("data-act") === "delete"){
           if(await dangerConfirm({ message: t("sess.deleteConfirm", "删除该会话及其全部消息？此操作不可撤销。") })){
@@ -29122,8 +29215,8 @@ function renderStorePage(){
     };
   });
   const imp = $("#storeImportBtn");
-  if(imp) imp.onclick = ()=>{ if(typeof prompt!=="function") return;
-    const json = prompt(t("storePage.importPrompt", "粘贴插件 JSON 定义："));
+  if(imp) imp.onclick = async ()=>{ /* R-33：原生 prompt → dangerPrompt（原 typeof 守卫随之失去意义） */
+    const json = await dangerPrompt({ title: t("storePage.importPrompt", "粘贴插件 JSON 定义：") });
     if(json===null) return;
     const r = AppBridge.registerPluginFromJson(json);
     if(r && r.ok){ toast(t("storePage.importOkToast", "插件导入成功"),"ok"); renderStorePage(); }
@@ -30509,13 +30602,15 @@ function _dgmBind() {
     }
     _dgmSel = id; redraw();
   });
-  svg.addEventListener("dblclick", function (e) {
+  svg.addEventListener("dblclick", async function (e) {
     var t2 = e.target.closest ? e.target.closest("[data-dgm]") : null;
     if (!t2) return;
     var id = t2.getAttribute("data-dgm");
     var d = _dgmLoad(); var n = (d.nodes || []).find(function (x) { return x.id === id; });
     if (!n) return;
-    var v = prompt(t("dgm.editText","修改节点文字"), n.text || "");
+    /* R-33：原生 prompt → dangerPrompt。**required:false 是必须的** —— 把节点文字清空
+       在这里是合法操作（默认 true 会把"清空"这条路堵死，那等于悄悄改产品行为）。 */
+    var v = await dangerPrompt({ title: t("dgm.editText","修改节点文字"), value: n.text || "", required: false });
     if (v !== null) { n.text = v; _dgmSave(d); redraw(); }
   });
   // 工具栏
@@ -31015,8 +31110,10 @@ function renderGlobViews(){
   $$("#globViews [data-view-del]").forEach(b=>{
     b.onclick=()=>{ removeGlobView(b.getAttribute("data-view-del")); renderGlobViews(); };
   });
-  const sv=$("#globViewSave"); if(sv) sv.onclick=()=>{
-    const name = (typeof prompt==="function") ? prompt(t("globView.namePrompt", "视图名称：")) : null;
+  const sv=$("#globViewSave"); if(sv) sv.onclick=async ()=>{
+    /* R-33：原生 prompt → dangerPrompt。原来那句 `typeof prompt==="function"` 守卫是给
+       "宿主可能没有原生对话框"兜底的，本组件不依赖宿主，守卫随之删除。 */
+    const name = await dangerPrompt({ title: t("globView.namePrompt", "视图名称：") });
     if(name===null) return;
     const r=saveGlobView(name);
     if(!r.ok){ toast(r.err||t("globView.saveFailToast", "保存失败"),"warn"); return; }
@@ -38796,7 +38893,9 @@ async function doExport(){
   }
   // Export handling: optional encryption
   if (document.getElementById("exportEncryptOpt")?.checked) {
-    const pwd = prompt(t("msg.exportPassword","请输入导出密码（用于加密）"));
+    /* R-33：原生 prompt → dangerPrompt，并加 secret:true 掩码输入。
+       原生 prompt 输密码是**明摆着**的，那是它的缺陷不是契约；这是本批唯一一处敏感输入。 */
+    const pwd = await dangerPrompt({ title: t("msg.exportPassword","请输入导出密码（用于加密）"), secret: true });
     if (!pwd) {
       toast(t("msg.exportCancelled","加密导出需要密码，已取消导出。"), "error");
       return;
@@ -42849,8 +42948,10 @@ function renderIntegrationPanel(){
   }
   const newKeyBtn = panel.querySelector("#btnIntNewKey");
   if(newKeyBtn){
-    newKeyBtn.onclick = function(){
-      const name = prompt(t("api.keyNamePrompt", "输入 Key 名称："));
+    newKeyBtn.onclick = async function(){
+      /* R-33：原生 prompt → dangerPrompt。required:true 已保证非空，下面那句 !name 仍留着
+         当兜底（万一将来放开空值，也不会把空名字的 Key 建出来）。 */
+      const name = await dangerPrompt({ title: t("api.keyNamePrompt", "输入 Key 名称："), maxlength: 40 });
       if(!name) return;
       try{
         if(typeof openApiCreateApiKey === "function"){
@@ -42887,8 +42988,9 @@ function renderOpenApiKeyPanel(){
   const newKeyBtn = document.querySelector("#btnAiNewKey");
   if(newKeyBtn && !newKeyBtn._bound){
     newKeyBtn._bound = true;
-    newKeyBtn.onclick = function(){
-      const name = prompt(t("api.keyNamePrompt", "输入 Key 名称："));
+    newKeyBtn.onclick = async function(){
+      /* R-33：同上（原生 prompt → dangerPrompt） */
+      const name = await dangerPrompt({ title: t("api.keyNamePrompt", "输入 Key 名称："), maxlength: 40 });
       if(!name) return;
       try{
         if(typeof openApiCreateApiKey === "function"){
@@ -43875,6 +43977,13 @@ if(_cfgThemeSel){
     if(!task){ toast(t("msg.taskNotFound", "任务不存在"), "warn"); return; }
     const link = generateShareLink(task);
     if(!link){ toast(t("msg.shareLinkFail", "生成分享链接失败"), "warn"); return; }
+    /* R-33：原生 prompt → dangerPrompt。这一处不是"要用户输入"，只是**把链接摆出来让他复制**，
+       所以 required:false、确认键改「关闭」，且输入框打开即全选 —— Ctrl+C 一步到位。
+       原来那两层 try/catch 是给"原生 prompt 可能抛异常"兜底的，本组件不抛，随之删除。 */
+    const showLinkForCopy = async ()=>{
+      await dangerPrompt({ title: t("msg.copyShareLink", "复制此链接分享任务："), value: link,
+        required: false, confirmText: t("common.close", "关闭") });
+    };
     // 复制到剪贴板
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(link).then(()=>{
@@ -43882,10 +43991,10 @@ if(_cfgThemeSel){
       }).catch(()=>{
         // clipboard API 失败时回退到选中文本提示
         toast(t("msg.copyFailed", "复制失败，请手动复制链接"), "warn");
-        try{ window.prompt(t("msg.copyShareLink", "复制此链接分享任务："), link); }catch(e2){ /* noop */ }
+        showLinkForCopy();
       });
     }else{
-      try{ window.prompt(t("msg.copyShareLink", "复制此链接分享任务："), link); }catch(e2){ /* noop */ }
+      showLinkForCopy();
     }
   });
 })();
@@ -48746,11 +48855,14 @@ function bindIcsPanel(c){
   /* v3.7.87 D：重命名（id 不变 → chunk docId 稳定 → 零重嵌） */
   c.querySelectorAll("[data-ics-rename]").forEach(function(b){
     if(b._icsBound) return; b._icsBound = true;
-    b.onclick = function(){
+    b.onclick = async function(){
       const id = b.getAttribute("data-ics-rename");
       const cur = getIcsSubs().find(function(x){ return x.id === id; });
       if(!cur) return;
-      const nn = (typeof window !== "undefined" && typeof window.prompt === "function") ? window.prompt(t("p5.icsRenamePrompt", "新的日历源名称"), cur.name) : null;
+      /* R-33：原生 prompt → dangerPrompt。原守卫（typeof window.prompt==="function"）是给
+         "宿主可能没有原生对话框"兜底的，本组件不依赖宿主，守卫随之删除。
+         maxlength 60 与 icsRenameSub 自身的 slice(0,60) 对齐 —— 不让用户打完才发现被截断。 */
+      const nn = await dangerPrompt({ title: t("p5.icsRenamePrompt", "新的日历源名称"), value: cur.name, maxlength: 60 });
       if(nn === null || nn === undefined) return;
       if(!icsRenameSub(id, nn)){ try{ toast(t("p5.icsRenameFail", "重命名失败"), "warn"); }catch(e){} return; }
       openIcsPanel(c);
