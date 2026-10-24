@@ -414,7 +414,11 @@ function _sumBlock(text){
 /** 把计划渲染成人能读的评审文本（聊天里显示，也用作确认提示的正文） */
 function agentPlanReviewText(plan){
   const lines = plan.steps.map(function(s, i){
-    return (i+1)+". "+s.desc+"  →  "+s.tool+(isDangerTool(s.tool) ? t("aiagent.planDangerMark"," ⚠️ 需确认，不会自主执行") : "");
+    /* 2026-10-24：远端工具的名字是 mcp__<服务器>__<工具>，对人不友好 —— 评审卡里换成人话并点名服务器，
+       否则用户看不出这一步是在动哪台远端服务（尤其危险步骤要确认时，这一点必须一眼可见）。 */
+    const meta = (typeof mcpToolMeta === "function") ? mcpToolMeta(s.tool) : null;
+    const shown = meta ? ("「" + meta.tool + "」（MCP：" + meta.server + "）") : s.tool;
+    return (i+1)+". "+s.desc+"  →  "+shown+(isDangerTool(s.tool) ? t("aiagent.planDangerMark"," ⚠️ 需确认，不会自主执行") : "");
   });
   let out = t("aiagent.planHead","【执行计划】")+plan.goal+"\n"+lines.join("\n");
   if(plan.truncatedFrom) out += "\n"+t("aiagent.planTruncated","（原计划 ")+plan.truncatedFrom+t("aiagent.planTruncatedMid"," 步，已裁到 ")+plan.steps.length+t("aiagent.planTruncatedSuffix"," 步 —— 自主执行有步数上限）");

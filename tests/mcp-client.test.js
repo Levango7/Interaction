@@ -7,6 +7,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
+import { readBlocks } from "./helpers/src-blocks.js";
 
 const PREFIX = "wb_agent_";
 const windows = [];
@@ -318,6 +319,18 @@ describe("MCP ③ 失败要如实", () => {
     expect(win.__test.mcpRuntimeInfo("dead").err).toMatch(/CORS/);
     await expect(win.__test.ensureMcpTools()).resolves.toBeTruthy();
     expect(win.__test.mcpToolDefs()).toEqual([]);
+  });
+
+  it("连不上话术两面同值：代码里 t() 的兜底 = 词典值（上一版只改了词典，兜底还停在旧话术）", () => {
+    const win = boot();
+    const dict = win.__test.t("mcp.netFail", "");
+    const src = readBlocks(["ai-tools"]);
+    const m = src.match(/t\("mcp\.netFail",\s*"((?:[^"\\]|\\.)*)"\)/);
+    expect(m, "兜底文案没匹配到 = 匹配器失效，别把下面的判据当结论").toBeTruthy();
+    const fallback = JSON.parse('"' + m[1] + '"');
+    expect(fallback).toBe(dict);
+    /* 三面都要在：只说 CORS 会让"服务根本没起"的人往错方向排查 */
+    for (const k of ["服务没起", "CORS", "本地网络"]) expect(dict).toContain(k);
   });
 
   it("没勾选的工具即使模型自己报出名字也拒绝执行（schema 不注入 ≠ 不能调）", async () => {

@@ -251,7 +251,10 @@ function undoAiAction(id){
 }
 
 /* ---------- AI 产物账（2026-10-24，右栏「文件」页那半"生成的东西"） ----------
- * 只记 AI **新建**出来的东西（任务 / 资料库记录 / 笔记）；改与删属于回执账，不进这里。
+ * 只记 AI **新建**出来的东西（任务 / 资料库记录 / 笔记），外加两类"跑出来的"：
+ *   · run —— code_run 的一次运行（没有本地落点，账本身就是它唯一的存档，preview ≤2000 字）；
+ *   · mcp —— 远端**写**工具的调用（同样没有本地落点；只读工具不记，见 mcpCallTool）；
+ * 改与删属于回执账，不进这里。
  * 只存引用（refId）+ 展示快照（title/kind/sc/at），**不复制内容** —— 不做第二套真相源。
  * 撤销一条回执时同步摘掉对应产物（撤销后清单里不留幽灵条目）。上限 100。 */
 const AI_ARTIFACT_KEY = PREFIX + "ai_artifacts";
@@ -390,11 +393,14 @@ function toolWhitelistSet(cfgOverride){
  *   initialize → notifications/initialized → tools/list → tools/call
  * 响应既可能是 application/json，也可能是 text/event-stream 的 SSE 帧，两种都解。
  * 能力边界（如实）：CSP 已放行 https 与 127.0.0.1（connect-src 'self' https: http://127.0.0.1:*），
- *   卡点在 **CORS** —— 服务端必须回 Access-Control-Allow-Origin；file:// 是 null origin，同样受这条约束。
- *   连不上时如实点名 CORS，不谎报一个笼统的"连接失败"。Electron 主进程代理是下一阶段的事。
+ *   卡点有**两道**，都不由我们的代码决定：① **CORS**（服务端必须回 Access-Control-Allow-Origin，
+ *     file:// 是 null origin 同样受限）；② 浏览器对 https 页面发往本机/私网的**本地网络访问权限**
+ *     （线上实测：补 Access-Control-Allow-Private-Network 也不够，headless 无法授予）。
+ *   连不上时如实点名这两道，不谎报一个笼统的"连接失败"。桌面版走主进程代理（3.7.143 `mcp-fetch`），两道都绕开。
  * 安全：远端工具默认**一个都不注入**（必须在设置页显式勾选）；工具名带 `mcp__<服务器名>__<工具>` 命名空间；
  *   危险判定见 isDangerTool —— 只有服务端显式标了 annotations.readOnlyHint 的才免确认。
- * 凭据：本轮只接无鉴权的公开端点；Authorization 类 header 只存在会话内存（不落盘、不上云）。
+ * 凭据（3.7.144）：可选 无 / Bearer / 自定义头 —— **只有"用哪种 + 头名"落盘**，密钥值只存会话内存
+ *   （不进备份、不进云同步、刷新即失效、输入框不回显），头名在渲染层与主进程各按白名单拒一次。
  * 服务器名在同一份配置里必须唯一 —— 运行时缓存与命名空间都以它作键。 */
 const MCP_NS = "mcp__";
 const MCP_MAX_TOOLS = 30;
@@ -536,7 +542,7 @@ async function _mcpRpc(server, payload, opts){
       res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
         signal: ctl ? ctl.signal : undefined });
     }catch(e){
-      throw new Error(t("mcp.netFail", "连不上（多半是浏览器 CORS 拦了跨域请求，或服务没起）") + "：" + ((e && e.message) || String(e)));
+      throw new Error(t("mcp.netFail", "连不上：多半是服务没起、被 CORS 拦了跨域请求，或浏览器把「到本机/局域网的请求」按本地网络访问权限拦了（https 页面连本机就属这类，需用桌面版）") + "：" + ((e && e.message) || String(e)));
     }finally{ if(timer) clearTimeout(timer); }
   }
   if(res && res.headers && res.headers.get){
@@ -662,7 +668,14 @@ async function mcpCallTool(nsName, args){
     const text = parts.map(function(p){
       return (p && p.type === "text") ? String(p.text || "") : ("[" + ((p && p.type) || "item") + "]");
     }).join("\n").slice(0, 8000);
-    return { ok: !(r && r.isError), output: text || t("mcp.emptyResult", "（远端没有返回文本内容）") };
+    const ok = !(r && r.isError);
+    /* 只有"非只读"的远端调用才算产物；只读查询不记账（否则清单会被查询刷屏） */
+    const ann = (m.meta && m.meta.annotations) || {};
+    if(ok && ann.readOnlyHint !== true){
+      _aiArtifactPush({ kind: "mcp", refId: "mcp:" + m.server + ":" + Date.now(), title: m.server + " / " + m.tool,
+        sc: (typeof active === "string" ? active : ""), tool: "mcp", preview: text.slice(0, 2000) });
+    }
+    return { ok: ok, output: text || t("mcp.emptyResult", "（远端没有返回文本内容）") };
   }catch(e){
     return { ok: false, msg: String((e && e.message) || e) };
   }
@@ -1868,7 +1881,15 @@ async function agentExecAsync(name, args){
     return await toolWebFetch(args.url || "", args);
   }
   if(name === "code_run"){
-    return await toolCodeRun(args.code || "", args);
+    const rr = await toolCodeRun(args.code || "", args);
+    /* 运行结果没有别的落点 ⇒ 账里存一份有界预览（≤2000 字），便于事后回看/复制 */
+    if(rr && rr.ok){
+      const firstLine = String(args.code || "").split(/\r?\n/)[0].trim().slice(0, 60);
+      _aiArtifactPush({ kind: "run", refId: "run:" + Date.now(), title: firstLine || t("rail.ai.runUntitled", "（代码运行）"),
+        sc: (typeof active === "string" ? active : ""), tool: "code_run",
+        preview: String(rr.output || "").slice(0, 2000) });
+    }
+    return rr;
   }
   if(name === "sql_query"){
     return await toolSqlQuery(args.sql || "", args.schema || "");

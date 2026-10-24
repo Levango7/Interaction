@@ -40,6 +40,20 @@
 
 ---
 
+### [2026-10-24 19:53 UTC+8] Qoder 主会话 —— **v3.7.147 AI 行动可见性**（用户「234 做吧，自己排序」）
+- 状态：进行中
+- 占用路径：`src/{ai-tools,ai-retry,render-widgets,render-overview,core-i18n}.js`、
+  `tests/{stats,ai-artifacts,agent-plan}.test.js`、`CHANGELOG.md` `[Unreleased]` + 顶部 `## [3.7.147]`、
+  `AGENTS.md` §二、`docs/module-graph.md`（`check:modules` 再生成）、本板。
+- 在跑的重活：全量单测（`npm run test:local`）+ e2e（`npm run e2e`），均在本树 F:/wt/wb140（独立 node_modules）。
+- 准备推的范围：本批单提交（发版提交含 package.json/构建产物）⇒ 暂无待推。
+- 事实通告：本批发版前用真浏览器探针（`_probe/live-actions-147.cjs`）抓到并修掉了**自己刚写进去的**剪贴板假回执
+  （`clipboard.writeText` 的 rejection 被同步 try/catch 漏掉 ⇒ 被浏览器拒绝时仍弹「已复制这次产出」）。
+  教训对两边都成立：**jsdom 里"点了有反应"不等于真浏览器里有反应**，凡是走 Promise 的浏览器 API 都要等真结果。
+- 提醒对方：**这批含统计页空态分支的行为改动**（`stats.total===0` 时也渲染「AI 行动」卡）——
+  若你在动 `render-overview.js` 的 `renderStats`，请先看这条，避免同名卡片两处写入。
+  另：`core-i18n.js` 我加了 11 个键（zh/en 各一份，共 22 行）；上一步我自己误删过 37 条 en 键（对重复行做 dedupe 的自伤），
+  已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
 ### [2026-10-24 09:20 UTC+8] Qoder 主会话 —— **3.7.146 已发并复核 · 释放占用**

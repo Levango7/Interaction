@@ -330,7 +330,8 @@ function _renderRailFiles(){
   /* 2026-10-24：这一页分两段 —— 上=AI 新建出来的东西（任务/记录/笔记），下=导入的知识库文件。
      只列引用，不复制内容；撤销回执时对应条目已被摘掉（见 aiArtifactDrop）。 */
   const arts = (typeof aiArtifacts === "function") ? aiArtifacts() : [];
-  const kindLabel = { task: t("rail.ai.kind.task", "任务"), record: t("rail.ai.kind.record", "记录"), note: t("rail.ai.kind.note", "笔记") };
+  const kindLabel = { task: t("rail.ai.kind.task", "任务"), record: t("rail.ai.kind.record", "记录"), note: t("rail.ai.kind.note", "笔记"),
+    run: t("rail.ai.kind.run", "运行"), mcp: t("rail.ai.kind.mcp", "远端") };
   let html = '<div class="rail-sec-title">' + esc(t("rail.ai.title", "AI 产出"))
     + ' <span class="task-rail-count">' + arts.length + "</span></div>";
   html += arts.length
@@ -372,6 +373,23 @@ function openAiArtifact(id){
     if(a.kind === "note"){ AppBridge.openKnowledgeBaseModal(); return true; }
     if(a.kind === "task"){ if(typeof setActive === "function"){ setActive("tasks"); } if(typeof render === "function") render(); return true; }
     if(a.kind === "record" && a.sc){ if(typeof setActive === "function"){ setActive(a.sc); } if(typeof render === "function") render(); return true; }
+    if(a.kind === "run" || a.kind === "mcp"){
+      /* 这两类没有本地落点：把账里存的预览复制走，比"点了没反应"有用。
+         ⚠️ writeText 返回 Promise ⇒ 成没成只能等它自己回答。同步 try/catch 抓不到 rejection，
+         真浏览器实测（2026-10-24）就是在这里被拦下剪贴板后仍然弹了「已复制」= 假回执。 */
+      const txt = String(a.preview || "");
+      const say = function(ok){ toast(ok ? t("rail.ai.copied", "已复制这次产出") : t("rail.ai.copyFail", "浏览器不允许写入剪贴板，没复制成功")); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        let p = null;
+        try{ p = navigator.clipboard.writeText(txt); }catch(_e){ say(false); return true; }
+        if(p && typeof p.then === "function") p.then(function(){ say(true); }, function(){ say(false); });
+        else say(true);
+      }else{
+        try{ const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); say(true); }
+        catch(_e){ say(false); }
+      }
+      return true;
+    }
   }catch(_e){ /* 导航失败不阻塞右栏 */ }
   return false;
 }

@@ -174,6 +174,28 @@ describe("② Agent 自主执行 · 命令面板入口与确认闭环", () => {
     expect(withPrompt.every((m) => m._prompt === "整理本周并归档"), "不许张冠李戴").toBe(true);
   });
 
+  it("评审卡把远端工具翻译成人话并点名服务器（mcp__srv__tool 不该原样糊在脸上）", async () => {
+    const win = await boot();
+    /* 先让远端工具被「发现」——只读与否来自服务端 annotations，没发现过的名字执行侧会直接拒绝 */
+    win.__test.saveAiConfig("mcp", { servers: [{ name: "srv", url: "http://127.0.0.1:9/mcp", enabled: true, allow: ["wipe"] }] });
+    win.fetch = async (_u, init) => {
+      const m = init && init.body ? JSON.parse(init.body) : {};
+      const ok = (result) => ({ ok: true, status: 200, headers: { get: (k) => (String(k).toLowerCase() === "content-type" ? "application/json" : null) }, text: async () => JSON.stringify({ jsonrpc: "2.0", id: 1, result }) });
+      if (m.method === "notifications/initialized") return { ok: true, status: 202, headers: { get: () => null }, text: async () => "" };
+      if (m.method === "tools/list") return ok({ tools: [{ name: "wipe", description: "清远端", inputSchema: { type: "object", properties: {} }, annotations: { destructiveHint: true } }] });
+      return ok({ protocolVersion: "2025-03-26" });
+    };
+    await win.__test.mcpRefreshServer("srv");
+    mockPlan(win, { goal: "整理本周并归档", steps: [
+      { tool: "mcp__srv__wipe", args: {}, desc: "清空远端草稿" }
+    ] });
+    await win.proposeAgentPlan("整理本周并归档");
+    const review = String(win.getChat("office").slice(-1)[0].content || "");
+    expect(review).toContain("「wipe」（MCP：srv）");
+    expect(review, "原始命名空间不该出现在评审卡里").not.toContain("mcp__srv__wipe");
+    expect(review, "远端未标只读 ⇒ 仍要提示需确认").toContain("需确认");
+  });
+
   it("回「确认执行」才真跑：非破坏步骤落地、破坏步骤仍不落地、汇总上屏、待确认清空", async () => {
     const win = await boot();
     seedTask(win, "del1", "旧任务");

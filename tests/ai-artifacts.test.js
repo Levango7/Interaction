@@ -67,3 +67,81 @@ describe("AI 产物账", () => {
     expect(win.getActive(), "点了就带你去任务页").toBe("tasks");
   });
 });
+
+describe("AI 产物账 · 运行与远端写", () => {
+  it("code_run 成功 → 落一条 run（账里有有界预览）；失败不落", async () => {
+    const win = boot();
+    win.toolCodeRun = async () => ({ ok: true, output: "计算结果 42" });
+    JSON.parse(await win.execToolAuto("code_run", { code: "1+1" }));
+    const arts = win.__test.aiArtifacts();
+    expect(arts.length).toBe(1);
+    expect(arts[0].kind).toBe("run");
+    expect(arts[0].tool).toBe("code_run");
+    expect(arts[0].preview).toContain("42");
+
+    win.toolCodeRun = async () => ({ ok: false, error: "boom" });
+    JSON.parse(await win.execToolAuto("code_run", { code: "x" }));
+    expect(win.__test.aiArtifacts().length, "失败不记账").toBe(1);
+  });
+
+  it("远端写工具 → 落一条 mcp；只读工具不记（否则清单被查询刷屏）", async () => {
+    const win = boot();
+    win.__test.saveAiConfig("mcp", { servers: [{ name: "srv", url: "https://mcp.example.test/mcp", enabled: true, allow: ["wipe", "peek"] }] });
+    win.fetch = async (_u, init) => {
+      const m = init && init.body ? JSON.parse(init.body) : {};
+      const ok = (result) => ({ ok: true, status: 200, headers: { get: (k) => (String(k).toLowerCase() === "content-type" ? "application/json" : null) }, text: async () => JSON.stringify({ jsonrpc: "2.0", id: 1, result }) });
+      if (m.method === "notifications/initialized") return { ok: true, status: 202, headers: { get: () => null }, text: async () => "" };
+      if (m.method === "tools/list") return ok({ tools: [
+        { name: "wipe", description: "写", inputSchema: { type: "object", properties: {} }, annotations: { destructiveHint: true } },
+        { name: "peek", description: "只读", inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } }
+      ] });
+      if (m.method === "tools/call") return ok({ content: [{ type: "text", text: "远端结果：" + m.params.name }] });
+      return ok({ protocolVersion: "2025-03-26" });
+    };
+    await win.__test.mcpRefreshServer("srv");
+
+    await win.execToolAuto("mcp__srv__wipe", {});
+    const a1 = win.__test.aiArtifacts();
+    expect(a1.length).toBe(1);
+    expect(a1[0].kind).toBe("mcp");
+    expect(a1[0].title).toBe("srv / wipe");
+    expect(a1[0].preview).toContain("远端结果");
+
+    await win.execToolAuto("mcp__srv__peek", {});
+    expect(win.__test.aiArtifacts().length, "只读不记账").toBe(1);
+  });
+
+  it("右栏把 run/mcp 标成「运行 / 远端」；点一条 run 复制预览并留在原页", async () => {
+    const win = boot();
+    win.toolCodeRun = async () => ({ ok: true, output: "输出 A" });
+    JSON.parse(await win.execToolAuto("code_run", { code: "console.log(1)" }));
+    let copied = "";
+    win.navigator.clipboard = { writeText: (v) => { copied = v; } };
+    const before = win.getActive();
+    win.renderTaskRail();
+    const items = Array.from(win.document.querySelectorAll("[data-rail-art]"));
+    expect(items.length).toBe(1);
+    expect(items[0].textContent).toContain("运行");
+    items[0].click();
+    expect(copied).toContain("输出 A");
+    expect(win.getActive(), "这类没有本地落点，不跳页").toBe(before);
+  });
+
+  it("剪贴板被浏览器拒绝时报「没复制成功」，不许报「已复制」", async () => {
+    const win = boot();
+    win.toolCodeRun = async () => ({ ok: true, output: "输出 B" });
+    JSON.parse(await win.execToolAuto("code_run", { code: "x" }));
+    /* 真浏览器（含线上 https 与本机 file://）会以 Promise rejection 的形式拒绝写入剪贴板；
+       旧实现用同步 try/catch 包 writeText ⇒ rejection 逃出去，用户照样看到「已复制这次产出」。 */
+    let unhandled = null;
+    win.addEventListener("unhandledrejection", (e) => { unhandled = e.reason || "rejection"; });
+    win.navigator.clipboard = { writeText: () => Promise.reject(new win.Error("NotAllowedError")) };
+    win.renderTaskRail();
+    win.document.querySelector("[data-rail-art]").click();
+    await new Promise((r) => setTimeout(r, 60));
+    const texts = Array.from(win.document.querySelectorAll(".toast")).map((x) => x.textContent);
+    expect(texts.some((s) => /没复制成功/.test(s)), "被拒时须给出「没复制成功」：" + JSON.stringify(texts)).toBe(true);
+    expect(texts.some((s) => /已复制/.test(s)), "同一屏不许出现「已复制」").toBe(false);
+    expect(unhandled, "rejection 必须被接住，不许冒到全局").toBe(null);
+  });
+});

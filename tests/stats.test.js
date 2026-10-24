@@ -349,3 +349,63 @@ describe("renderTrendChart / renderPieChart / renderStats 渲染", () => {
     expect(main.innerHTML).toContain("stats-cards");
   });
 });
+
+/* v3.7.147：统计页「AI 行动」卡（PRODUCT §8 过程指标）。
+ * 数据只来自两份已有的账（回执账 wb_agent_ai_undo / 产物账 wb_agent_ai_artifacts），
+ * 口径 = 近 7 天。这里钉的是「读卡的人实际看到什么数字」，不是「函数返回了哪个字符串」：
+ * 空账必须渲染成 0（缺卡与 NaN 都是回归），超窗条目必须被排除，撤销率必须是比例而非条数。 */
+describe("统计页 AI 行动卡（近 7 天口径）", () => {
+  const UNDO_KEY = "wb_agent_ai_undo";
+  const ART_KEY = "wb_agent_ai_artifacts";
+  const DAY = 864e5;
+  const seed = (win, undos, arts) => {
+    win.localStorage.clear();
+    win.localStorage.setItem(UNDO_KEY, JSON.stringify(undos));
+    win.localStorage.setItem(ART_KEY, JSON.stringify(arts));
+    return win;
+  };
+  function aiCard(win) {
+    win.__test.renderStats();
+    const html = win.document.getElementById("main").innerHTML;
+    const i = html.indexOf("AI 行动（近 7 天）");
+    expect(i, "统计页应渲染「AI 行动」卡").toBeGreaterThan(-1);
+    return html.slice(i);
+  }
+
+  it("AI-1: 两账为空 → 卡片仍渲染且四项读数全为 0（不是缺卡、不是 NaN/undefined）", () => {
+    const win = loadApp();
+    const card = aiCard(seed(win, [], []));
+    expect(card).toMatch(/<div class="v">0<\/div><div class="l">AI 写操作/);
+    expect(card).toMatch(/<div class="v">0%<\/div><div class="l">撤销率/);
+    expect(card).toMatch(/<div class="v">0<\/div><div class="l">代码运行/);
+    expect(card).toMatch(/<div class="v">0<\/div><div class="l">远端写/);
+    expect(card).not.toMatch(/NaN|undefined/);
+  });
+
+  it("AI-2: 只算近 7 天 —— 超窗的回执/产物不计入，撤销率按已撤销比例", () => {
+    const win = loadApp();
+    const now = Date.now();
+    seed(win, [
+      { id: "u1", ts: now - DAY, undone: false, kind: "create" },
+      { id: "u2", ts: now - 2 * DAY, undone: true, kind: "update" },
+      { id: "u3", ts: now - 9 * DAY, undone: false, kind: "create" }, // 8 天前：应被窗口排除
+    ], [
+      { id: "a1", at: now - DAY, kind: "run", title: "r1" },
+      { id: "a2", at: now - 3 * DAY, kind: "run", title: "r2" },
+      { id: "a3", at: now - 20 * DAY, kind: "run", title: "r3" }, // 超窗
+      { id: "a4", at: now - 2 * DAY, kind: "mcp", title: "m1" },
+      { id: "a5", at: now - 3 * DAY, kind: "task", title: "t1" }, // 同类不串项
+    ]);
+    const card = aiCard(win);
+    expect(card).toMatch(/<div class="v">2<\/div><div class="l">AI 写操作/);
+    expect(card).toMatch(/<div class="v">50%<\/div><div class="l">撤销率/);
+    expect(card).toMatch(/<div class="v">2<\/div><div class="l">代码运行/);
+    expect(card).toMatch(/<div class="v">1<\/div><div class="l">远端写/);
+  });
+
+  it("AI-3: 卡片自带口径说明（回执账 30 条上限），读数不会被当成全量历史", () => {
+    const win = loadApp();
+    const card = aiCard(seed(win, [], []));
+    expect(card).toContain("回执账只保留最近 30 条");
+  });
+});

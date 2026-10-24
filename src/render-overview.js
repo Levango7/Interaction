@@ -571,6 +571,30 @@ function renderHourDistGrid(grid){
 /* v2.2.0：统计页仪表盘编辑态（会话级；Grafana 式展示/配置两态） */
 let _dashEditMode = false;
 let _statsRange = "week"; // v3.1：统计页时间筛选：week | month | year
+/**
+ * 近 7 天的「AI 行动」指标卡（PRODUCT §8 的过程指标）。
+ * 数据只来自两份已有的账：回执账（ai_undo）与产物账（ai_artifacts）—— 不新开统计口径。
+ * ⚠️ 口径边界（如实写进卡片）：回执账只保留最近 30 条，所以「AI 写操作」是"最近 30 条内、近 7 天"的计数，
+ *    不是全量历史；撤销率 = 这些回执里已撤销的比例。
+ * @returns {string} HTML 片段
+ */
+function _aiActionsHtml(){
+  const since = Date.now() - 7 * 864e5;
+  const undos = (typeof aiUndoList === "function" ? aiUndoList() : []).filter(function(e){ return e && e.ts >= since; });
+  const undone = undos.filter(function(e){ return e.undone; }).length;
+  const rate = undos.length ? Math.round(undone / undos.length * 100) : 0;
+  const arts = (typeof aiArtifacts === "function" ? aiArtifacts() : []).filter(function(a){ return a && a.at >= since; });
+  const runs = arts.filter(function(a){ return a.kind === "run"; }).length;
+  const remotes = arts.filter(function(a){ return a.kind === "mcp"; }).length;
+  return '<div class="card"><h2>' + esc(t("statsPage.aiTitle", "AI 行动（近 7 天）")) + "</h2>" +
+    '<div class="kpi-grid">' +
+    '<div class="kpi"><div class="v">' + undos.length + '</div><div class="l">' + esc(t("statsPage.aiWrites", "AI 写操作")) + "</div></div>" +
+    '<div class="kpi"><div class="v">' + rate + '%</div><div class="l">' + esc(t("statsPage.aiUndoRate", "撤销率")) + "</div></div>" +
+    '<div class="kpi"><div class="v">' + runs + '</div><div class="l">' + esc(t("statsPage.aiRuns", "代码运行")) + "</div></div>" +
+    '<div class="kpi"><div class="v">' + remotes + '</div><div class="l">' + esc(t("statsPage.aiRemote", "远端写")) + "</div></div>" +
+    "</div>" +
+    '<p class="set-tip">' + esc(t("statsPage.aiNote", "口径：回执账只保留最近 30 条；撤销率 = 其中的已撤销比例。")) + "</p></div>";
+}
 function renderStats(){
   // v3.1：根据时间筛选设置趋势图天数
   if(_statsRange === "month"){ _statsTrendDays = 30; }
@@ -580,7 +604,8 @@ function renderStats(){
   // T4.2：无任何任务数据时显示 no-stats 空状态（替代空图表/空饼图）
   if(stats.total === 0){
     _dashEditMode = false;
-    $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>`);
+    /* 「AI 行动」卡读的是回执账/产物账，与任务条数无关 ⇒ 空任务态也要渲染（否则新用户的 AI 数据看不见） */
+    $("#main").innerHTML = sanitizeHtml(`<div class="card">` + renderEmpty("no-stats") + `</div>` + _aiActionsHtml());
     appendFoot(); // v3.4.5：空数据分支补尾栏（此前直接 return 漏掉——与其他页面统一）
     return;
   }
@@ -599,7 +624,8 @@ function renderStats(){
     </div>
   </header></div>
   ${statsNav}
-  <div id="dashHost">${renderCustomDashboard(_dashEditMode)}</div>`;
+  <div id="dashHost">${renderCustomDashboard(_dashEditMode)}</div>
+  ${_aiActionsHtml()}`;
 
   $("#main").innerHTML = sanitizeHtml(headHtml);
 
