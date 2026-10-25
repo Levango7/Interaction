@@ -64,6 +64,8 @@
 | **3.7.141** | Qoder 主会话 | ✅ **已发（2026-10-24，`2a5320bd` + tag `v3.7.141`；CI `40001120766` / Deploy `40001120739` / Electron `40001119857` 全 success；Pages built 19:07:35Z（本次构建 35 分钟）；线上已核 `VERSION = "3.7.141"` / `BUILD_TAG = "20261023b"`，界面五项 + MCP-LIVE 均实测）** —— **MCP 真接线**（JSON-RPC over Streamable HTTP：initialize/tools-list/tools-call、SSE 帧也解；两个插入点 = `effectiveTools` 并入 schema + `execToolAuto` 按 `mcp__服务器__工具` 路由；**默认零注入**、逐工具勾选、上限 30；`isDangerTool` 动态判定——只有服务端显式标 readOnly 的才免确认；执行前按 allow 再拒一次；连不上如实点名 CORS）+ **Mermaid 首图加载态**（线上首图 13.6s 冷加载无反馈 → 同步中间态）。**线上实测的关键约束**：MCP-LIVE 从 `https://levango7.github.io` 直连本机 127.0.0.1 服务被 Chrome 的 **Local Network Access 权限**拦下（补 `Access-Control-Allow-Private-Network: true` 也不行，headless 无法授予）⇒ https 页面连本机 MCP 不可用；`file://`（e2e）与同私网场景可用；要彻底解决走 Electron 主进程代理（下一阶段）。 |
 | **3.7.140** | Qoder 主会话 | ✅ **已发（2026-10-23，`6a6ffea` + tag `v3.7.140`；CI `39914362902` —— 首跑 e2e 腿红在 `ics-import-render:82`（已登记的 CPU 饥饿型抖动），**同 SHA rerun attempt2 四腿全绿**、Deploy `39914363069` success、Electron `39914362693` success；Pages built 07:09:23Z；线上已核 `VERSION = "3.7.140"` / `BUILD_TAG = "20261023a"`，复核脚本五项全过）** —— AI 输出的可读性与运行可见性四片：Markdown 表格/引用块、聊天**真实**进度条（流式字数 / 工具批次 / 计划步数，替换掉从没接通的 `streamProgress*` 死码）、悬停回复可见触发提示词、右栏三页（今日 / Agent / 文件，MCP 仍是壳故不列）、**Mermaid 出图**（`mermaid@10.9.1` UMD vendor + 严格安全模式 + 产物二次消毒，按需加载、失败保留源码；线上首图冷加载实测 13.6s，本机 file:// 秒级）。 |
 
+| **3.7.149** | ZCode 主会话 | 🔄 已登记（2026-10-26，B2d 收口批次：导出排除改派生 + ARCHITECTURE 契约补档；用户移交授权「都给你做」） |
+
 **用号流程**：发版前把号写进本表（含会话名）→ 提交 → 再跑 `release.mjs`。
 两个会话同时想发 → 表上必然暴露 → 按 R7 停手。
 **注释不许先跑号**：代码注释里也不得写**尚未上表**的版本号（2026-10-17 实测：`grep -rn "v3\.7\.132" src/` 命中 6 处，
