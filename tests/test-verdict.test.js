@@ -134,6 +134,23 @@ Error: [vitest-worker]: Timeout calling "onTaskUpdate"
      Errors  1 error
 `;
 
+/** 全挂时的汇总行形状：`Test Files  1 failed (1)` —— **没有** "N passed" 段。
+ *  2026-10-26 本机实测就是这个形状漏掉的：新测试文件写了个 `expect(x, "…"):toMatch(…)` 语法错，
+ *  rollup 解析失败 ⇒ 0 断言失败 ⇒ 旧版（正则写死必须有 passed）整行匹配不上 ⇒ 判"✅ 通过"、退出码 0。 */
+const ALL_FILES_FAILED = `
+ RUN  v2.1.9 F:/wt/wb140
+
+ FAIL  tests/mcp-resilience.test.js [ tests/mcp-resilience.test.js ]
+Error: Expected ';', '}' or <eof>
+ ❯ getRollupError node_modules/rollup/dist/es/shared/parseAst.js:317:41
+
+ Test Files  1 failed (1)
+      Tests  no tests
+`;
+
+/** 输出被截断 / 根本没跑到汇总（启动崩在 require 阶段） */
+const NO_SUMMARY = " RUN  v2.1.9\n\n \u2713 tests/a.test.js (3 tests) 100ms\n";
+
 describe("test-verdict：判定器", () => {
   it("全绿 + 已知抖动（worker 超时 / 临时目录 EPERM）→ 判通过，并如实报出抖动条数", () => {
     const v = verdictOf(JITTER_ONLY);
@@ -200,11 +217,36 @@ describe("test-verdict：判定器", () => {
     expect(v.unhandledTotal).toBe(0);
   });
 
-  it("输出被截断 / 无汇总行 → 不谎报通过", () => {
-    const v = verdictOf(" RUN  v2.1.9\n\n \u2713 tests/a.test.js (3 tests) 100ms\n");
-    // 无汇总行时 assertionFailed 取不到 → 但也不应凭空判 fail；此处只要求不崩且给出可解释结论
-    expect(["pass", "fail"]).toContain(v.verdict);
-    expect(typeof v.reason).toBe("string");
+  it("全挂形状（`1 failed (1)` + `Tests no tests`）⇒ 判失败：0 断言失败不等于跑过", () => {
+    const v = verdictOf(ALL_FILES_FAILED);
+    expect(v.assertionFailed, "该夹具确实一条断言都没报红（旧版正是被这骗过去的）").toBe(0);
+    expect(v.testFilesFailed).toBe(1);
+    expect(v.noTests).toBe(true);
+    expect(v.verdict, "文件级失败/零收集必须是红线 —— 这是本次修的假绿").toBe("fail");
+    expect(v.reason).toMatch(/整体失败/);
+  });
+
+  it("只有 `Tests no tests` 而没有文件级计数（启动就崩）⇒ 也判失败", () => {
+    const v = verdictOf("\n Test Files  no tests\n      Tests  no tests\n");
+    expect(v.noTests).toBe(true);
+    expect(v.verdict).toBe("fail");
+  });
+
+  it("新规则不得误伤既有形状：全绿/抖动/断言红 仍按原结论", () => {
+    expect(verdictOf(CLEAN).verdict).toBe("pass");
+    expect(verdictOf(JITTER_ONLY).verdict).toBe("pass");
+    expect(verdictOf(JITTER_MIXED_BLOCKS).verdict).toBe("pass");
+    expect(verdictOf(REAL_FAILURE).verdict).toBe("fail");
+    expect(verdictOf(UNKNOWN_ERROR).verdict).toBe("fail");
+    expect(verdictOf(UNKNOWN_REJECTION).verdict).toBe("fail");
+    expect(verdictOf(FILES_MISSING).verdict).toBe("fail");
+  });
+
+  it("输出被截断 / 无汇总行 ⇒ 不谎报通过（拿不到证据就是失败，不再「随便给个结论」）", () => {
+    const v = verdictOf(NO_SUMMARY);
+    expect(v.noSummary, "没有 Test Files 行 ⇒ 无法证明任何用例跑过").toBe(true);
+    expect(v.verdict, "旧版这条只断言『pass 或 fail 都行』，等于没守").toBe("fail");
+    expect(v.reason).toMatch(/汇总行/);
   });
 
   it("ANSI 转义码不影响解析（真实日志带颜色）", () => {

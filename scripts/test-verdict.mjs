@@ -9,6 +9,10 @@
  *
  * 本模块把两类信号分开，判定规则刻意保守：
  *   · 断言失败（`Tests N failed` 的 N>0，或 `Failed Tests` 段）→ **真失败**
+ *   · **文件级失败**（`Test Files  1 failed (1)` —— 全挂时没有"passed"段）、
+ *     `Tests  no tests`（收集阶段就炸）、**连 `Test Files` 汇总行都拿不到** → 同样 **真失败**：
+ *     这三种都意味着"用例根本没跑过"，旧版因为正则里写死了必须有"N passed"而整行匹配不上，
+ *     于是把一次零执行的运行判成通过（2026-10-26 实测：新测试文件的语法错就是这样漏掉的）
  *   · **文件数对不上**（`Test Files X passed (T)` 且 X 加 failed 小于 T）→ **真失败**：
  *     worker 掉线时文件既不计 passed 也不计 failed，那些文件里的用例**一条都没跑过**，
  *     "没报结果"绝不等于"通过"（2026-10-21 本机全量就是这么被旧版判成通过的）
@@ -59,7 +63,31 @@ export function verdictOf(raw) {
     const passed = Number(f[2]);
     const total = Number(f[3]);
     testFilesMissing = Math.max(0, total - passed - testFilesFailed);
+  } else {
+    /* 上面那条正则要求行里必须有"N passed"。但**全挂**时 vitest 打的是
+       `Test Files  1 failed (1)`、启动崩溃/语法错时打的是 `Test Files  no tests` ——
+       两种都没有"passed"，于是整行匹配不上，旧版把 testFilesFailed/missing 都留成 0，
+       对一次"一条用例都没跑过"的运行判了"通过"（2026-10-26 本机实测：新测试文件写了个
+       `expect(x, "…"):toMatch(…)` 语法错，rollup 解析失败 ⇒ 0 断言失败 ⇒ 判 ✅ 通过、退出码 0）。
+       所以这里按标签逐段抽数，抽不到汇总行本身也算红线。 */
+    const any = out.match(/^\s*Test Files\s+(.+)$/m);
+    if (any) {
+      const seg = any[1];
+      const g = (label) => { const m = seg.match(new RegExp("(\\d+)\\s+" + label)); return m ? Number(m[1]) : 0; };
+      testFilesFailed = g("failed");
+      const passed = g("passed");
+      const skipped = g("skipped");
+      const tot = seg.match(/\((\d+)\)/);
+      const total = tot ? Number(tot[1]) : (passed + testFilesFailed + skipped);
+      testFilesMissing = Math.max(0, total - passed - testFilesFailed - skipped);
+    } else {
+      testFilesMissing = -1;   // 连汇总行都没有 ⇒ 拿不到任何"跑过多少"的证据，按红线处理
+    }
   }
+  /* 收集阶段就炸（transform 失败 / 语法错 / 启动崩溃）时 vitest 打 `Tests  no tests` */
+  const noTests = /^\s*Tests\s+no tests\b/m.test(out);
+  const noSummary = testFilesMissing < 0;
+  if (noSummary) testFilesMissing = 0;
 
   // 未处理错误：先看汇总计数，再逐条抽取错误块的首行做特征匹配。
   // ⚠️ 必须**同时**抽 `Unhandled Error` 与 `Unhandled Rejection` 两种块：vitest 把
@@ -90,6 +118,16 @@ export function verdictOf(raw) {
   if (assertionFailed > 0) {
     verdict = "fail";
     reason = `断言失败 ${assertionFailed} 条（${testFilesFailed} 个文件）—— 这是真失败，需修。`;
+  } else if (testFilesFailed > 0) {
+    verdict = "fail";
+    reason = `${testFilesFailed} 个测试文件**整体失败**（加载/转换/语法错都会长成这样），`
+      + "即使一条断言都没报红也不能算通过 —— 这些文件里的用例没跑过。";
+  } else if (noTests) {
+    verdict = "fail";
+    reason = "vitest 报 `Tests no tests` —— 收集阶段就炸了（启动崩溃 / 解析失败），一条用例都没跑过，不能算通过。";
+  } else if (noSummary) {
+    verdict = "fail";
+    reason = "拿不到 `Test Files` 汇总行 —— 无法证明任何用例跑过，按失败处理（要定性请复跑并留原始输出）。";
   } else if (testFilesMissing > 0) {
     verdict = "fail";
     reason = `无断言失败，但有 ${testFilesMissing} 个测试文件**没报结果**（worker 掉线/被中断）—— `
@@ -105,8 +143,8 @@ export function verdictOf(raw) {
     reason = "全部断言通过，且无未处理错误。";
   }
 
-  return { assertionFailed, testFilesFailed, testFilesMissing, unhandledTotal, unhandledBenign: benign,
-           unhandledUnknown: unknown, verdict, reason, benignSamples };
+  return { assertionFailed, testFilesFailed, testFilesMissing, noTests, noSummary, unhandledTotal,
+           unhandledBenign: benign, unhandledUnknown: unknown, verdict, reason, benignSamples };
 }
 
 /** 供 CLI 打印的判定块 */
@@ -114,8 +152,10 @@ export function formatVerdict(v) {
   const lines = [];
   lines.push("");
   lines.push("──────────────── 判定 ────────────────");
-  lines.push(`  断言失败     ${v.assertionFailed} 条` + (v.testFilesFailed ? `（${v.testFilesFailed} 个文件）` : "")
-    + (v.testFilesMissing ? `；另有 ${v.testFilesMissing} 个文件没报结果` : ""));
+  lines.push(`  断言失败     ${v.assertionFailed} 条` + (v.testFilesFailed ? `；文件级失败 ${v.testFilesFailed} 个` : "")
+    + (v.testFilesMissing ? `；另有 ${v.testFilesMissing} 个文件没报结果` : "")
+    + (v.noTests ? "；Tests no tests（用例一条都没收集到）" : "")
+    + (v.noSummary ? "；无 Test Files 汇总行" : ""));
   lines.push(`  未处理错误   ${v.unhandledTotal} 条（已知抖动 ${v.unhandledBenign} · 未知 ${v.unhandledUnknown}）`);
   lines.push(`  结论         ${v.verdict === "pass" ? "✅ 通过" : "❌ 失败"}`);
   lines.push(`  依据         ${v.reason}`);
