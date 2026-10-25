@@ -70,17 +70,15 @@ async function gotoCalendarTab(page) {
      `[data-tasks-view]` 标签可能尚未渲染、或正被 renderTasksPage() 整体替换 ——
      直接 click 会静默丢失（同 workflow 的 renderSide 竞态），本条此前长期靠"跑得够快"。
      改为「点击 + 判别断言（日历视图真的可见）」重试块：瞬态丢失自愈，真故障仍如实超时。
-     2026-10-25 收紧：CI run `40142911599`（HEAD 8c071af）该用例桌面+平板连挂 4 次、
-     每次撞上 10s 预算墙（~10.5s）。同代码本机复跑 `2 passed / 13.7s` 全绿
-     ⇒ 那次是 runner 饥饿（与 10-08 台账 R-9 续同型），不是回归。但饥饿时单次渲染可慢约 7 倍，
-     10s 预算不够自愈，故：① 点击前先 `waitFor({visible})` 等标签进场，省掉无效尝试；
-     ② toPass 预算 10s → 20s。判据未放松：元素真不出现时仍如实超时报错。 */
-  const tabLoc = page.locator('[data-tasks-view="calendar"]');
+     2026-10-25 复核：CI run `40142911599`（HEAD `8c071af`）桌面+平板连挂 4 次、每次 ~10.5s
+     撞上 10s 预算墙；同代码本机复跑 `2 passed / 13.7s` ⇒ 判 runner 饥饿（非回归）。
+     曾尝试抬预算（toPass 10s→20s），**按台账 R-22 尾账口径撤回**——抬内部等待＝凑绿，
+     不改变"这台 runner 当时就是慢"；正确位置是等待挂结果，本三条均已挂。维持原判据，
+     抖动频次的复算见台账 R-22 尾账（`_probe/r22-flaky-freq.mjs`）。 */
   await expect(async () => {
-    await tabLoc.waitFor({ state: "visible", timeout: 3000 });
-    await tabLoc.click({ timeout: 3000 });
+    await page.locator('[data-tasks-view="calendar"]').click({ timeout: 3000 });
     await expect(page.locator("#tasksCalView")).toBeVisible({ timeout: 1500 });
-  }).toPass({ timeout: 20_000 });
+  }).toPass({ timeout: 10_000 });
 }
 
 test.describe("本地 .ics 导入 → 日历渲染（真浏览器不变量）", () => {

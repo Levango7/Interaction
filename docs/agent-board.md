@@ -137,6 +137,27 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-25 06:10 UTC+8] ZCode 主会话（自挑三件 · 用户「挑一些你自己能做的做一下」）
+- 状态：进行中。三件：① flake 家族归因 + 频次复算 + 预算抬升撤回（**按台账口径**，不抬内部等待）；
+  ② `_probe/` 假 Jira 验收预演（不依赖凭据，机器验证请求形状）；③ 下一版（149）发版预检：全量单测 + 门禁 + [Unreleased] 盘点（**只验不发**）。
+- 占用路径：`tests/e2e/ics-import-render.spec.js`（仅注释回正，逻辑撤回）、`docs/audit-2026-10-06.md`（R-9 续）、本板。
+  **不碰** Qoder 的 B2b/B2c 文件、`CHANGELOG.md [Unreleased]`（只读盘点）、`src/`、`server/`。
+- ① **归因**：CI run `40142911599`（HEAD `8c071af`，纯文档 commit）e2e 腿 failure —— `ics:82` 桌面 1 + 平板 3（含 CI retry）连挂，
+  每次 ~10.5s 撞 10s 预算墙。同代码本机复跑 **2 passed / 13.7s** ⇒ 判 **runner 饥饿**（与 10-08 台账 R-9 续同型），**非回归**。
+- ① **撤回与频次**：曾做 toPass 10s→20s + waitFor visible 的收紧（commit `285e5c0` 已推），**按台账 R-22 尾账口径撤回**——
+  抬内部等待＝凑绿；ics/i18n/workflow 三条等待本就挂在结果上，无测试侧可修处。频次复算（125 个 e2e job）：
+  饥饿族 **27%**（10-15 时 28%，持平）；ics:82 **22%** / i18n:112 **7%** / workflow:60 **2%** / notify-hook:106 **0%**（R-22 修复有效）。
+  维持观察项，判据＝统计频次（`_probe/r22-flaky-freq.mjs` 全量复算，数据已入台账）。
+- ② **假 Jira 预演**：`_probe/jira-fake-accept.mjs` 新建 —— 假 Atlassian REST + 复用 `jiraFlow` 同一份请求形状，
+  **5/5 流程 + 11/11 形状断言全绿**（Basic 鉴权 / REST v3 路径 / issue 字段 / transition id / PUT fields）。
+  真机只剩给凭据一步：`JIRA_DOMAIN` / `JIRA_AUTH`（email:token 的 Basic base64）/ `JIRA_PROJECT`。
+- ③ **预检发现（如实报）**：全量单测 2111 例 / 4 例失败 —— 2 例 vendor 同步测试失败是**本机 node_modules 漂移**
+  （缺 mermaid/pdfjs-dist），净副本 npm ci 后 **7/7 全过** ⇒ 非仓库缺陷；1 例三态空态渲染 60s 超时是**本机负载 flake**（单跑 45 passed）。
+  即：当前树的单测在净环境全绿；共享树的 4 例失败均为环境问题，**不构成发版阻塞**。
+- 在跑的重活：已完成（预检 + 预演 + 归因）。
+- 准备推的范围：三条 commit：① 测试注释回正 + 台账 R-9 续 + 板面（含撤回说明）；② 假 Jira 脚本说明入板面（脚本在 _probe 不入库）。
+- 提醒对方：我的改动零产品行为；vendor 测试请用净副本复核（本机 node_modules 与 package.json 已漂移）。
+
 ### [2026-10-25 05:52 UTC+8] ZCode 主会话（ICS e2e 竞态收紧 + C1/Jira 脚本核 · 即将 push）
 - 状态：即将 push；推后另追加收工条。用户指派：① CI 红归因与修；② C1/Jira 等凭据验收脚本准备。
 - 占用路径：`tests/e2e/ics-import-render.spec.js`、`docs/audit-2026-10-06.md`（台账 R-9 续）、本板。
