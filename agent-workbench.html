@@ -875,14 +875,32 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   .topbar .tbtn .lbl{font-size:var(--fs-3xs);max-width:46px}
   .topbar .tbtn svg{width:var(--icon-sm);height:var(--icon-sm)}
 }
+/* B5（2026-10-26）：溢出菜单入口在宽屏不出现（只有窄屏才需要收低频按钮） */
+.topbar .tbtn.topbar-more-btn{display:none}
 @media(max-width:479px){
   .topbar{gap:1px;padding-left:var(--space-1)}
-  /* 2026-10-20 P1-4：触控下限先落到**高度**（宽度仍 26px）——
-     实测把宽度抬到 40px 会让 375px 视口产生 103px 横向溢出（顶栏图标按钮数量多）。
-     正确解法是"窄屏把低频按钮收进溢出菜单"，属独立设计项，未在本批做；见板上 P1-4 余项。 */
-  .topbar .tbtn{min-width:26px;min-height:40px;padding:var(--space-1) 0}
+  /* P1-4 余项收口：低频按钮（命令/主题/下载/安装，靠 data-fold 声明）收进溢出菜单，
+     把**宽度**命中区从 26px 抬回 44px。2026-10-20 那版只能先保高度 ——
+     8 个按钮同时抬到 40px 会让 375px 视口横向溢出 103px；现在窄屏常驻 5 个（搜索/今日/消息/用户/更多）。
+     溢出=0 与 44px 都由 tests/e2e/topbar-overflow.spec.js 在真浏览器里钉住（jsdom 量不出布局）。 */
+  .topbar .tbtn[data-fold]{display:none}
+  .topbar .tbtn.topbar-more-btn{display:flex}
+  .topbar .tbtn{min-width:44px;min-height:44px;padding:var(--space-1) 0}
   .topbar .tbtn .lbl{display:none}   /* 极窄屏：纯图标 */
+  /* 命中区抬到 44px 后腾出来的钱从 logo 出：320px 实测 5×44+图标+品牌字 = 369（溢出 49px），
+     收掉品牌文字（保留标记图形）后 320/360/375 全部回到 scrollWidth == clientWidth。
+     基线对照实测：origin/main 在同样三个视口都是 0 溢出，所以这条是本批引入、本批负责。 */
+  .topbar .logo > span:not(.mark){display:none}
+  /* 同步状态文字让位给按钮（圆点仍在，状态由 aria-live 播报） */
+  .topbar .sync-text{display:none}
 }
+/* B5：溢出面板 —— 内联展开在顶栏下方（静态定位，不像消息中心那样悬浮遮挡正文） */
+.topbar-more-panel{display:none;flex-wrap:wrap;gap:var(--space-1);
+  padding:var(--space-2) var(--space-3);background:var(--panel2);border-bottom:1px solid var(--line)}
+.topbar-more-panel.is-open{display:flex}
+.topbar-more-item{min-height:44px;padding:var(--space-1) var(--space-3);background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius-md);color:var(--text);font-size:var(--fs-xs)}
+.topbar-more-item[hidden]{display:none}
 /* 2026-10-20 P1-4：触屏设备放宽命中区（桌面鼠标布局不受影响） */
 @media(pointer:coarse){
   .topbar .tbtn{min-height:44px}
@@ -2147,6 +2165,16 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 /* v3.7.27：align-items center → flex-end —— 用户："大模型选择框和右边的发送按钮水平方向对齐"。
    模型下拉 42 高、发送按钮 32 高，center 对齐必然差 5px；贴底则底线齐平。 */
 .chat-input-right{display:flex;align-items:flex-end;gap:var(--space-1)}
+/* ===== B4（2026-10-26）：对话面 token 可见性 ===== */
+/* 输入条常驻芯片：下一轮发送量估算 / 预算。warn=到软阈值，over=超预算。
+   只给"量级预览"，真账单在上一条气泡尾行（上游 usage 回执）。 */
+.ctx-budget-chip{flex:0 1 auto;align-self:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:var(--fs-2xs);line-height:1.4;color:var(--muted);background:var(--panel2);
+  border:1px solid var(--line);border-radius:var(--radius-md);padding:2px var(--space-2)}
+.ctx-budget-chip.is-warn{color:var(--warn);border-color:var(--warn)}
+.ctx-budget-chip.is-over{color:var(--danger);border-color:var(--danger);font-weight:600}
+/* 气泡尾行的实际用量：小号、弱化、独占一行，不与正文混排 */
+.msg-usage{display:block;margin-top:var(--space-1);font-size:var(--fs-2xs);color:var(--muted)}
 .chat-model-empty{border-style:dashed;color:var(--accent-text,var(--accent));cursor:pointer}
 /* v1.15：应用独立页网格（图标 + 名称 + 描述卡片） */
 .app-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3)}
@@ -5239,7 +5267,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <button type="button" class="tbtn" id="btnSearchTop" data-i18n-aria="a11y.fullSearch" aria-label="全文搜索">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
     <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
-    <button type="button" class="tbtn" id="btnCmd" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
+    <button type="button" class="tbtn" id="btnCmd" data-fold="1" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
     <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
     <button type="button" class="tbtn task-rail-toggle" id="btnTaskRail" data-i18n-title="taskRail.open" title="今日任务" data-i18n-aria="taskRail.open" aria-label="今日任务">
@@ -5248,21 +5276,36 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <button class="tbtn" id="btnMessages" type="button" data-i18n-aria="a11y.messages" aria-label="消息">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="badge u-hidden" id="msgBadge"></span><span class="lbl" data-i18n="top.messages">消息</span></button>
-    <button type="button" class="tbtn" id="btnTheme" data-i18n-aria="a11y.toggleTheme" aria-label="切换明暗主题">
+    <button type="button" class="tbtn" id="btnTheme" data-fold="1" data-i18n-aria="a11y.toggleTheme" aria-label="切换明暗主题">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl" data-i18n="top.theme">主题</span></button>
-    <button type="button" class="tbtn" id="btnDownload" data-i18n-aria="a11y.exportData" aria-label="导出数据">
+    <button type="button" class="tbtn" id="btnDownload" data-fold="1" data-i18n-aria="a11y.exportData" aria-label="导出数据">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
     <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
-    <button type="button" class="tbtn install-btn" id="btnInstall" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面">
+    <button type="button" class="tbtn install-btn" id="btnInstall" data-fold="1" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
     <!-- 任务235：同步状态指示器（登录后显示，同步中/已同步/离线/错误） -->
     <span class="sync-status u-hidden" id="syncStatus" role="status" aria-live="polite">
       <span class="sync-dot" aria-hidden="true"></span><span class="sync-text" data-i18n="api.syncIdle">已同步</span>
     </span>
+    <!-- B5（2026-10-26）：窄屏溢出菜单入口。≥480px 隐藏，≤479px 顶栏只留 搜索/今日/消息/用户 + 本按钮，
+         把每个可见按钮的命中宽度从 26px 抬回 44px（P1-4 余项，CSS:881 那条注释里自认的"正解"）。 -->
+    <button type="button" class="tbtn topbar-more-btn" id="btnMore" data-i18n-aria="top.moreAria" aria-label="更多操作" aria-expanded="false" aria-controls="topbarMorePanel">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      <span class="lbl" data-i18n="top.more">更多</span></button>
     <!-- 任务235：用户按钮（未登录显示「登录」，已登录显示头像首字母） -->
     <button type="button" class="tbtn user-btn" id="btnUser" data-i18n-aria="api.login" aria-label="登录">
       <span class="user-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="lbl" data-i18n="api.login">登录</span></button>
     <input type="file" id="fileInput" accept="application/json" class="u-hidden">
+  </div>
+  <!-- B5：窄屏顶栏溢出面板（内联展开，与 #msgPanel 同型 —— 静态定位、不进 flex 排布、不算坐标）。
+       行项只是"入口镜像"：点击转给原按钮，行为与快捷键完全同路，不在这里重写一遍逻辑。
+       目标按钮当前不可见（如 Electron 才有的安装、能力缺失即隐藏的入口）时，行项一起隐掉，
+       避免"点了没反应"。 -->
+  <div class="topbar-more-panel" id="topbarMorePanel" role="menu" data-i18n-aria="top.moreAria" aria-label="更多操作">
+    <button type="button" class="topbar-more-item" role="menuitem" data-fold-target="btnCmd" data-i18n="top.command">命令</button>
+    <button type="button" class="topbar-more-item" role="menuitem" data-fold-target="btnTheme" data-i18n="top.theme">主题</button>
+    <button type="button" class="topbar-more-item" role="menuitem" data-fold-target="btnDownload" data-i18n="top.download">下载</button>
+    <button type="button" class="topbar-more-item" role="menuitem" data-fold-target="btnInstall" data-i18n="top.install">安装</button>
   </div>
 
 
@@ -5345,6 +5388,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <button class="chat-attach-btn" id="chatAttachBtn" type="button" data-i18n-title="a11y.addAttachment" title="添加文本附件" data-i18n-aria="a11y.addAttachment" aria-label="添加文本附件">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
+          <span class="ctx-budget-chip" id="ctxBudgetChip" data-i18n-aria="chat.budget.aria" aria-label="上下文预算占用"></span>
           <div class="chat-input-right">
             <select id="chatModelSelect" class="chat-model-inline" data-i18n-aria="a11y.selectModel" aria-label="选择 AI 模型" data-i18n-title="a11y.switchProfile" title="切换大模型 Profile"></select>
             <button class="chat-send-btn" id="chatSendBtn" type="submit" data-mode="send" data-i18n-title="a11y.send" title="发送" data-i18n-aria="a11y.sendMsg" aria-label="发送消息">
@@ -5648,6 +5692,17 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <label for="aiMemWindow" data-i18n="mem.windowLabel">上下文窗口大小（条，1~50）</label>
           <div class="ctl"><input id="aiMemWindow" type="number" min="1" max="50" data-i18n-placeholder="mem.windowPlaceholder" placeholder="10（默认）"></div>
         </div>
+        <!-- B4（2026-10-26）：预算是"看得见"的前提——ctxBudgetTokens 早有默认值但全仓无 UI，
+             用户既改不了也看不见，所谓超预算只是内部数字。这两个字段把它接到对话面的芯片上。 -->
+        <div class="set-field">
+          <label for="aiCtxBudget" data-i18n="mem.ctxBudgetLabel">上下文预算（tokens，200~4000）</label>
+          <div class="ctl"><input id="aiCtxBudget" type="number" min="200" max="4000" step="100" data-i18n-placeholder="mem.ctxBudgetPlaceholder" placeholder="2000（默认）"></div>
+        </div>
+        <div class="set-field">
+          <label for="aiCtxWarnPct" data-i18n="mem.ctxWarnLabel">提醒阈值（预算的 %，50~150）</label>
+          <div class="ctl"><input id="aiCtxWarnPct" type="number" min="50" max="150" step="5" data-i18n-placeholder="mem.ctxWarnPlaceholder" placeholder="80（默认）"></div>
+        </div>
+        <p class="hint" data-i18n="mem.ctxHint">芯片显示的是「上一轮实际装配量 + 当前输入」的估算，不含历史裁剪；气泡尾行才是上游回执的真实用量。</p>
         <div class="set-switch">
           <input type="checkbox" id="aiMemLongTerm" data-i18n-aria="mem.longTermLabel" aria-label="长期记忆">
           <div><div class="sw-label" data-i18n="mem.longTermLabel">长期记忆</div><div class="sw-sub" data-i18n="mem.longTermSub">开启后 AI 可跨会话检索历史记忆</div></div>
@@ -7411,6 +7466,8 @@ const MESSAGES = {
     "top.command": "命令",
     "top.help": "帮助",
     "top.install": "安装应用",
+    "top.more": "更多",
+    "top.moreAria": "更多操作（窄屏收起的低频按钮）",
     "top.theme": "主题",
     "top.search": "搜索",
 
@@ -7652,6 +7709,16 @@ const MESSAGES = {
     "chat.progress.running": "运行中…",
     "chat.progress.chars": " 字",
     "chat.progress.generating": "正在生成…",
+    "chat.budget.short": "上下文 ~",
+    "chat.budget.mid": " / ",
+    "chat.budget.tip": "下一轮发送量估算（上一轮装配量 + 当前输入，不含历史裁剪与检索增减）；预算与阈值在「设置 → AI → 记忆」调整。当前软提醒阈值 ",
+    "chat.budget.aria": "上下文预算占用",
+    "chat.budget.over": "本轮上下文 ~",
+    "chat.budget.overMid": "，已超预算 ",
+    "chat.budget.near": "本轮上下文 ~",
+    "chat.budget.nearMid": "，已接近预算 ",
+    "chat.budget.tail": "（只提醒，不拦发送）",
+    "chat.usage.unit": " tok",
     "chat.progress.tool": "执行工具…",
     "chat.progress.toolName": "执行工具：",
     "chat.progress.plan": "执行计划…",
@@ -7797,6 +7864,11 @@ const MESSAGES = {
     "mem.summaryHint": "上下文窗口与检索策略",
     "mem.windowLabel": "上下文窗口大小（条，1~50）",
     "mem.windowPlaceholder": "10（默认）",
+    "mem.ctxBudgetLabel": "上下文预算（tokens，200~4000）",
+    "mem.ctxBudgetPlaceholder": "2000（默认）",
+    "mem.ctxWarnLabel": "提醒阈值（预算的 %，50~150）",
+    "mem.ctxWarnPlaceholder": "80（默认）",
+    "mem.ctxHint": "输入条上的芯片是「上一轮实际装配量 + 当前输入」的估算，不含历史裁剪；气泡尾行的数字才是上游回执的真实用量。",
     "mem.longTermLabel": "长期记忆",
     "mem.ragLabel": "上下文注入（实验性）",
     "mem.ragSub": "发送消息时自动检索任务/记录/笔记中的相关内容，并让工作记忆改用语义召回（换了说法也能命中），一起拼进 AI 上下文——提问更精准，但会多消耗一些 token 并调用一次 embedding 接口",
@@ -11459,6 +11531,8 @@ const MESSAGES = {
     "top.command": "Command",
     "top.help": "Help",
     "top.install": "Install App",
+    "top.more": "More",
+    "top.moreAria": "More actions (low-frequency buttons folded on narrow screens)",
     "top.theme": "Theme",
     "top.search": "Search scenario / command / task... (↑↓ select, Enter run, Esc close)",
 
@@ -11700,6 +11774,16 @@ const MESSAGES = {
     "chat.progress.running": "Running…",
     "chat.progress.chars": " chars",
     "chat.progress.generating": "Generating…",
+    "chat.budget.short": "Context ~",
+    "chat.budget.mid": " / ",
+    "chat.budget.tip": "Estimated payload for the next turn (last assembled + current input, excludes history trimming). Adjust budget and threshold in Settings → AI → Memory. Current soft warning threshold ",
+    "chat.budget.aria": "Context budget usage",
+    "chat.budget.over": "This turn ~",
+    "chat.budget.overMid": " tokens, over budget ",
+    "chat.budget.near": "This turn ~",
+    "chat.budget.nearMid": " tokens, near budget ",
+    "chat.budget.tail": " (warning only, sending is not blocked)",
+    "chat.usage.unit": " tok",
     "chat.progress.tool": "Running tools…",
     "chat.progress.toolName": "Tool: ",
     "chat.progress.plan": "Running plan…",
@@ -11845,6 +11929,11 @@ const MESSAGES = {
     "mem.summaryHint": "Context Window & Retrieval Strategy",
     "mem.windowLabel": "Context Window Size (items, 1~50)",
     "mem.windowPlaceholder": "10 (default)",
+    "mem.ctxBudgetLabel": "Context Budget (tokens, 200~4000)",
+    "mem.ctxBudgetPlaceholder": "2000 (default)",
+    "mem.ctxWarnLabel": "Warning Threshold (% of budget, 50~150)",
+    "mem.ctxWarnPlaceholder": "80 (default)",
+    "mem.ctxHint": "The chip next to the composer estimates \"last assembled + current input\" and ignores history trimming; the figure under a reply is the real usage from the provider.",
     "mem.longTermLabel": "Long-term Memory",
     "mem.ragLabel": "Context injection (experimental)",
     "mem.ragSub": "When sending a message, automatically retrieve related tasks/records/notes and switch working-memory recall to semantic matching (still hits when you rephrase), then inject both into the AI context — sharper answers, at the cost of some tokens and one embeddings call",
@@ -21378,6 +21467,53 @@ function aiTokensUsage(){
   }catch(_e){ return { today: 0, total: 0, days: 0 }; }
 }
 
+/* ---------- B4（2026-10-26）：把用量与预算从「诊断报告纯文本」提到对话面 ----------
+ * usageFromResp：上游 usage 三种给法都可能缺（只给 total / 只给 prompt+completion / 整个字段没有），
+ *   归一成 {in,out,total}；**拿不到就返回 null** —— 气泡上只写真数，绝不用估算冒充"实际用量"。
+ *   没有和 addTokensUsage 共用解析：那个函数的 try 体在 empty-catch 基线里，改它的块体会把存量条目
+ *   报成新增 P0（门禁按块体判级），一行没改也会红 —— 宁可留 5 行同形解析。 */
+function usageFromResp(resp){
+  const u = resp && resp.usage;
+  if(!u) return null;
+  const pin = Number(u.prompt_tokens) || 0;
+  const pout = Number(u.completion_tokens) || 0;
+  const total = (Number(u.total_tokens) || 0) || (pin + pout);
+  if(!(total > 0)) return null;
+  return { in: pin, out: pout, total: total };
+}
+
+/** 软提醒阈值（%）：cfg.ctxWarnPct，默认 80，钳在 50~150。只提醒，不拦发送。 */
+function ctxWarnPct(){
+  const cfg = getCfg() || {};
+  let n = Number(cfg.ctxWarnPct);
+  if(!isFinite(n) || n <= 0) n = 80;
+  return Math.min(150, Math.max(50, Math.round(n)));
+}
+
+/** 下一轮发送量的**估算**预览：上次实际发送的估算 + 当前输入框里的字。
+ *  ⚠️ 口径必须写清（tooltip 同款）：它不含 trimChatHist 的历史裁剪、也不含 RAG 注入的增减，
+ *  所以是"量级预览"而不是"账单"。真账单只有上一条的 usageFromResp（上游回执里的数）。 */
+function ctxBudgetPreview(inputText){
+  const budget = ctxBudgetTokens();
+  const base = (typeof lastSendEstimate === "function" && lastSendEstimate()) ? (lastSendEstimate().tokens || 0) : 0;
+  const est = base + _estTokens(inputText || "");
+  const pct = budget > 0 ? Math.round(est * 100 / budget) : 0;
+  const warn = ctxWarnPct();
+  return { est: est, budget: budget, pct: pct, level: (est > budget ? "over" : (est >= Math.round(budget * warn / 100) ? "warn" : "ok")) };
+}
+
+/** 输入条常驻芯片：下一轮估算 / 预算 + 占比；warn/over 变色。没有对话面板（沉浸页以外）就静默跳过。 */
+function renderCtxBudgetChip(){
+  const chip = $("#ctxBudgetChip");
+  if(!chip) return null;
+  const ta = $("#chatTextInput");
+  const p = ctxBudgetPreview(ta ? ta.value : "");
+  chip.textContent = t("chat.budget.short","上下文 ~")+p.est+t("chat.budget.mid"," / ")+p.budget;
+  chip.className = "ctx-budget-chip" + (p.level === "ok" ? "" : " is-" + p.level);
+  chip.setAttribute("title", t("chat.budget.tip","下一轮发送量估算（上次发送 + 当前输入，不含历史裁剪与检索增减）；预算可在「设置 → AI → 记忆」调整。软提醒阈值 ")+ctxWarnPct()+"%。");
+  return p;
+}
+
 /** 检索结果的引用标签：[序号·来源·召回方式] —— 用户能据此回查到原始条目 */
 function ragCiteLabel(h, n){
   const via = h.via === "both" ? t("rag.viaBoth","词法+语义")
@@ -21922,7 +22058,11 @@ function renderChat(){
     if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body"${promptTip}>${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">${t("ai.retry","重试")}</button></div>`;
     // v3.2 C-档：流式打字机态（_streaming 标记的消息加 streaming class——半透明+光标动画）
     if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming"${promptTip}>${mdToHtml(m.content||"")}</div>`;
-    if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}</div>`;
+    /* B4：真实用量挂在气泡尾行 —— 只有上游回了 usage 才显示，没回就一行都不出（估算不冒充账单）。 */
+    const usageHtml = (m && m._usage && m._usage.total > 0)
+      ? '<span class="msg-usage">' + esc(String(m._usage.total)) + t("chat.usage.unit"," tok") + '（' + esc(String(m._usage.in)) + '+ ' + esc(String(m._usage.out)) + '）</span>'
+      : "";
+    if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}${usageHtml}</div>`;
     // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
   }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + CHAT_SUGGEST_HTML);
@@ -21936,6 +22076,9 @@ function renderChat(){
     });
   }
   _renderChatProgress();
+  /* B4：每次渲染都刷一次预算芯片 —— 发送后 lastSendEstimate 变了、切场景后历史变了，
+     这两个时刻都要跟着变，只绑 input 会滞后一整轮。（⑧ 号用例守的就是这一行：删掉它测试红。） */
+  renderCtxBudgetChip();
   /* 只渲染非流式消息里的 mermaid；异步队列在后台跑，不阻塞聊天渲染 */
   if(typeof renderMermaidBlocks === "function") renderMermaidBlocks(el);
   scrollChat();
@@ -36159,6 +36302,9 @@ async function onChatSubmit(e){
 }
 /* v3.7.72 token 优化：超长工具结果截断（>2400 字符取头 + 注明全长），模型只需关键字段 */
 function _cutToolRes(r){ return (typeof r==="string" && r.length>2400) ? r.slice(0,2400)+"…(截断，共 "+r.length+" 字符)" : r; }
+/* B4：软预算提醒的去重档位 —— 同一 level 只说一次，回到 ok 时重置。
+   不做硬拦：用户可能就是要把长上下文发出去，拦下来只会逼人关功能。 */
+let _ctxWarnLevel = null;
 async function runChatLoop(messages, hist, sc){
   sc = sc || active; /* v3.7.71 竞态修复：长循环期间切场景不串写，数据键用定格场景 */
   // T3.1：创建控制器 + 记录上次请求（重试用）+ 显示思考中
@@ -36166,6 +36312,19 @@ async function runChatLoop(messages, hist, sc){
   lastChatRequest={ messages:messages, hist:hist, sc:sc };
   /* v3.7.132：发送前估算入账（估算/策略早已在，这里补「可观测」；向下调用 ai-tools，方向合法） */
   if(typeof recordSendEstimate === "function") recordSendEstimate(messages);
+  if(typeof ctxBudgetPreview === "function"){
+    const p = ctxBudgetPreview("");   /* 刚记过账 ⇒ est 就是本轮装配量，不叠输入框 */
+    if(p.level === "ok") _ctxWarnLevel = null;
+    else if(_ctxWarnLevel !== p.level){
+      _ctxWarnLevel = p.level;
+      try{
+        toast((p.level === "over"
+          ? t("chat.budget.over","本轮上下文 ~")+p.est+t("chat.budget.overMid","，已超预算 ")+p.budget
+          : t("chat.budget.near","本轮上下文 ~")+p.est+t("chat.budget.nearMid","，已接近预算 ")+p.budget)
+          + t("chat.budget.tail","（只提醒不拦发送；预算与提醒阈值在「设置 → AI → 记忆」）"), "warn");
+      }catch(_e){ /* toast 通道不可用时不能影响发送 */ }
+    }
+  }
   showChatThinking(true);
   let turnUserText = ""; /* catch 分支也要写 _prompt，故声明在 try 外 */
   try{
@@ -36305,7 +36464,7 @@ async function runChatLoop(messages, hist, sc){
         chatProgressEnd();
         AppBridge.render(); continue;
       }
-      hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)"), _prompt: turnUserText});
+      hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)"), _prompt: turnUserText, _usage: usageFromResp(j)});
       break;
     }
     /* v3.7.59 Skills ③：本轮成功执行了 ≥2 个非破坏性工具 → 提示可把这条流程固化成技能。
@@ -36457,6 +36616,19 @@ function bindChatPanel(){
   }
   // 表单提交：复用 onChatSubmit（其内部通过 f.msg.value 取值，兼容 textarea）
   const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
+  /* B4：输入条预算芯片 —— 打字时 250ms 防抖刷新（全量估算按字符扫，每键一次会白烧 CPU） */
+  const _chatTa=$("#chatTextInput");
+  if(_chatTa && typeof renderCtxBudgetChip === "function"){
+    renderCtxBudgetChip();
+    if(!_chatTa._ctxChipBound){
+      _chatTa._ctxChipBound = true;
+      let _chipTimer = null;
+      _chatTa.addEventListener("input", function(){
+        if(_chipTimer) clearTimeout(_chipTimer);
+        _chipTimer = setTimeout(function(){ _chipTimer = null; renderCtxBudgetChip(); }, 250);
+      });
+    }
+  }
   // 取消按钮：复用 abortChat
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
   // 附件按钮：文本文件追加到输入框（v1.14 多模态已移除，不再支持图片附件）
@@ -42495,6 +42667,71 @@ document.addEventListener("click", function(e){
     }
   }
 });
+/* ---------- B5（2026-10-26）：窄屏顶栏溢出菜单 ----------
+ * 行项**不重写行为**，只把点击转给原按钮 —— 快捷键、可见性判定、状态同步都只有那一份真源；
+ * 目标当前不可见（Electron 才有的安装、能力缺失即隐藏的入口）时行项一起隐掉，
+ * 否则就是本仓反复踩过的"点了没反应"。面板用 is-open 类开合（不用内联 style，窄屏基线由 CSS 决定）。 */
+function syncTopbarMoreItems(){
+  const panel = $("#topbarMorePanel");
+  if(!panel) return 0;
+  let shown = 0;
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-fold-target]"), function(row){
+    const id = row.getAttribute("data-fold-target");
+    const target = document.getElementById(id);
+    /* ⚠️ 不能用 getComputedStyle(target).display 判可见 —— 被收起的按钮在窄屏**本来**就是
+       display:none（那正是本功能在做的事），照 display 判会把每一行都标成隐藏，
+       于是"打开菜单却是空的"（真浏览器实测过这一步）。
+       这里只看应用层的"能力/状态"信号：hidden 属性、u-hidden 工具类、
+       以及安装入口专用的 .show（未捕获 beforeinstallprompt 时不给点）。 */
+    let vis = false;
+    if(target){
+      vis = !target.hidden
+        && !target.classList.contains("u-hidden")
+        && !(target.classList.contains("install-btn") && !target.classList.contains("show"));
+    }
+    if(vis){ row.removeAttribute("hidden"); shown++; }
+    else row.setAttribute("hidden", "");
+  });
+  return shown;
+}
+function setTopbarMoreOpen(open){
+  const panel = $("#topbarMorePanel");
+  const btn = $("#btnMore");
+  if(!panel || !btn) return false;
+  const on = !!open;
+  if(on) syncTopbarMoreItems();
+  if(on) panel.classList.add("is-open"); else panel.classList.remove("is-open");
+  btn.setAttribute("aria-expanded", on ? "true" : "false");
+  return on;
+}
+const _btnTopbarMore = $("#btnMore");
+if(_btnTopbarMore){
+  _btnTopbarMore.onclick = function(e){
+    e.stopPropagation();
+    const panel = $("#topbarMorePanel");
+    setTopbarMoreOpen(!(panel && panel.classList.contains("is-open")));
+  };
+}
+const _topbarMorePanel = $("#topbarMorePanel");
+if(_topbarMorePanel){
+  _topbarMorePanel.onclick = function(e){
+    const row = e.target && e.target.closest ? e.target.closest("[data-fold-target]") : null;
+    if(!row || row.hasAttribute("hidden")) return;
+    const target = document.getElementById(row.getAttribute("data-fold-target"));
+    setTopbarMoreOpen(false);
+    if(target) target.click();
+  };
+}
+document.addEventListener("click", function(e){
+  const panel = $("#topbarMorePanel");
+  const btn = $("#btnMore");
+  if(!panel || !panel.classList.contains("is-open")) return;
+  if(panel.contains(e.target) || (btn && btn.contains(e.target))) return;
+  setTopbarMoreOpen(false);
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape") setTopbarMoreOpen(false);
+});
 // 空态引导按钮委托（data-empty-action）：与快捷键 N 同款行为——切场景 + 聚焦新建表单
 document.addEventListener("click", function(e){
   const act = e.target && e.target.closest ? e.target.closest("[data-empty-action]") : null;
@@ -43710,6 +43947,11 @@ function renderAiSessHistory(){
   });
 }
 function restoreAiMemory(){
+  /* B4：预算/提醒阈值回填 —— 放在 saved 守卫**之前**：这两个字段的真身只在 cfg 里
+     （ai_config_memory 不另存一份，免得两处值打架），从没点过「记忆配置保存」的老用户也要看得见现值。 */
+  const cfgNow = (typeof getCfg === "function" ? (getCfg() || {}) : {});
+  const cbEl = $("#aiCtxBudget"); if(cbEl && cfgNow.ctxBudgetTokens) cbEl.value = cfgNow.ctxBudgetTokens;
+  const cwEl = $("#aiCtxWarnPct"); if(cwEl && cfgNow.ctxWarnPct) cwEl.value = cfgNow.ctxWarnPct;
   const saved = getAiConfig("memory"); if(!saved) return;
   const w = $("#aiMemWindow"); if(w && saved.windowSize) w.value = saved.windowSize;
   const lt = $("#aiMemLongTerm"); if(lt) lt.checked = !!saved.longTerm;
@@ -43820,8 +44062,15 @@ $("#aiMemSave").onclick = function(){
   try{
     const cfg = getCfg() || {};
     cfg.rag = rg ? !!rg.checked : false;
+    /* B4：预算与软提醒阈值也镜像进主配置 —— ctxBudgetTokens()/ctxWarnPct() 读的是 cfg，
+       同 cfg.rag 一个道理（ai_config_memory 那份只是设置页回填用）。 */
+    const cb = $("#aiCtxBudget");
+    const cw = $("#aiCtxWarnPct");
+    if(cb && cb.value !== "") cfg.ctxBudgetTokens = Number(cb.value);
+    if(cw && cw.value !== "") cfg.ctxWarnPct = Number(cw.value);
     _cfgCache = cfg; // 与 saveCfg 同款缓存更新（save 内部不含此逻辑）
     save(PREFIX + "cfg", cfg);
+    if(typeof renderCtxBudgetChip === "function") renderCtxBudgetChip();   // 改完立刻反映到输入条
   }catch(_e){
     /* v3.7.102 第七片：主配置（ai_config_memory）确实已存，所以不算全谎报；但 cfg.rag 这个
        镜像字段没同步 → 刷新后 RAG 开关回退，而用户刚看到「已保存」。属部分不一致，
