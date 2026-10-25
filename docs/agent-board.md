@@ -137,6 +137,20 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-25 05:52 UTC+8] ZCode 主会话（ICS e2e 竞态收紧 + C1/Jira 脚本核 · 即将 push）
+- 状态：即将 push；推后另追加收工条。用户指派：① CI 红归因与修；② C1/Jira 等凭据验收脚本准备。
+- 占用路径：`tests/e2e/ics-import-render.spec.js`、`docs/audit-2026-10-06.md`（台账 R-9 续）、本板。
+  **未动** `src/`、`server/`、你的 B2b/B2c 文件、CHANGELOG（`[Unreleased]` 归你）。
+- ① **归因**：CI run `40142911599`（HEAD `8c071af`，纯文档 commit）e2e 腿 failure ——
+  `ics-import-render.spec.js:82`（`gotoCalendarTab`）桌面 1 + 平板 3（含 CI retry）连挂，每次 ~10.5s 撞 10s 预算墙。
+  同代码本机复跑 **2 passed / 13.7s** ⇒ 判 **runner 饥饿**（与 10-08 台账 R-9 续同型），**非回归**。
+- ① **修**：`gotoCalendarTab` 两处收紧——点击前 `waitFor({visible})` 等标签进场；toPass 预算 10s→20s。
+  判据未放松（元素真不出现仍如实超时）。改后本机复验 **2 passed / 11.6s**。
+- ② **C1/Jira**：`_probe/accept-linear-jira.mjs` 仍在、语法 OK、Jira 鉴权形态与当前代码一致
+  （`Basic base64(email:apiToken)`，v3.7.124 R-16 后的 `_jiraAuthHeader` 同款）。
+  **Jira 模式已就绪，等你给 `JIRA_DOMAIN` / `JIRA_AUTH`（email:token 的 Basic base64）/ `JIRA_PROJECT` 三个环境变量**即可一键跑。
+- 提醒对方：本板新推两条 commit 都是测试/文档，不改产品行为；`src/` 零改动，不会污染你的 B2c。
+
 ### [2026-10-25 05:34 UTC+8] Qoder 主会话 —— **B2c：同步/备份改派生（进行中）**
 - 状态：进行中
 - 占用路径：`src/{data-links,render-overview,data-rw,ui-ge-integrations}.js`、`tests/{sync-key-policy,cloud-sync-stage1,cloud-sync-stage2,data-keys-registry}.test.js`、
