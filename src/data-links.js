@@ -849,14 +849,14 @@ const DATA_KEY_REGISTRY = [
   { key: "__pendingAiAsk", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "agent_run", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "cfg", kind: "s", sync: false, backup: true },   // 凭据/密钥
-  { key: "__dk", kind: "s", sync: false, backup: true },   // 凭据/密钥
+  { key: "__dk", kind: "s", sync: false, backup: true, export: false },   // 凭据/密钥（export:false —— 设备密钥本体不出本机，连导出文件也不进）
   { key: "webdav_pass", kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "webdav_cfg", kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "webdav_meta", kind: "m", sync: false, backup: true },   // 本机元数据
-  { key: "pre_restore_backup", kind: "m", sync: false, backup: true },   // 本机元数据
-  { key: "autobackup", kind: "m", sync: false, backup: false },   // 本机元数据
-  { key: "autobackup.1", kind: "m", sync: false, backup: false },   // 本机元数据
-  { key: "autobackup.2", kind: "m", sync: false, backup: false },   // 本机元数据
+  { key: "pre_restore_backup", kind: "m", sync: false, backup: true, export: false },   // 本机元数据（export:false —— 内嵌全部键值的嵌套副本）
+  { key: "autobackup", kind: "m", sync: false, backup: false, export: false },   // 本机元数据（export:false —— 嵌套副本）
+  { key: "autobackup.1", kind: "m", sync: false, backup: false, export: false },   // 本机元数据（export:false —— 嵌套副本）
+  { key: "autobackup.2", kind: "m", sync: false, backup: false, export: false },   // 本机元数据（export:false —— 嵌套副本）
   { key: "sync_meta", kind: "m", sync: false, backup: true },   // 本机元数据
   { key: "sync_conflicts", kind: "m", sync: false, backup: true },   // 本机元数据
   { key: "sync_changelog", kind: "m", sync: false, backup: true },   // 本机元数据
@@ -929,6 +929,21 @@ function backupExcludedKeys(){
   const out = [];
   DATA_KEY_REGISTRY.forEach(function(e){
     if(e.backup === false && !e.bare && e.key) out.push(PREFIX + e.key);
+  });
+  return out;
+}
+/**
+ * JSON 导出要排除的完整键（注册表里 export:false 的那些）。B2d（2026-10-26 批次）收口：
+ * B2c 派生了同步/备份两处，这里是第三处手写清单（doExport）的来源。
+ * 语义与 sync 的 fail-closed **刻意相反**：未登记键仍随导出走 —— 同步漏登记最多"功能数据没同步"，
+ * 导出漏带走却意味着"用户备份里少了一块数据"，备份是兜底，宁可多带不可少带。
+ * cfg 密文**随导出走**（P0-5 换机迁移语义，可选 _portableKeys 明文），所以只有
+ * "密钥本体（__dk）"与"内嵌全部键值的嵌套副本（autobackup 三代 / pre_restore_backup）"标 export:false。
+ */
+function exportExcludedKeys(){
+  const out = [];
+  DATA_KEY_REGISTRY.forEach(function(e){
+    if(e.export === false && !e.bare && e.key) out.push(PREFIX + e.key);
   });
   return out;
 }

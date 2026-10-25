@@ -25,8 +25,13 @@ async function doExport(){
      **内嵌全部键值**的嵌套副本（自动备份快照内容 = 除备份键自家外的全部键），只排除顶层键
      对它们无效：嵌套副本会把 __dk / cfg 密文整体带出。排除后导出内容 = 业务数据 + cfg 密文
      + 可选 _portableKey 明文，换机迁移语义不变。导入侧刻意不对称（旧版文件回灌仍接受，
-     见 doImport）——同机恢复需取回 __dk 才能解密既有 cfg 密文。 */
-  const exportExcluded = [PREFIX + "__dk", AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1], PREFIX + "pre_restore_backup"];
+     见 doImport）——同机恢复需取回 __dk 才能解密既有 cfg 密文。
+     B2d（2026-10-26 批次）：清单来源改从键注册表派生（exportExcludedKeys，data-links，
+     注册表 export:false 的五个键），三处手写排除清单（同步/备份/导出）至此全部收口；
+     派生集 = 旧手写集（回归钉在 tests/sync-key-policy.test.js），兜底保留旧写法防桥未挂。 */
+  const exportExcluded = (typeof exportExcludedKeys === "function")
+    ? exportExcludedKeys()
+    : [PREFIX + "__dk", AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1], PREFIX + "pre_restore_backup"];
   /* v3.7.102 第九片：原为「静默降级」—— 某个键读失败时不写进 data，而导出照样成功，
      用户拿到的是一份**不自知残缺**的备份。备份面的谎报代价是"数据真的回不来"，故必须点名。 */
   const _exportReadFailed = [];

@@ -76,3 +76,53 @@ describe("同步键策略：派生判据 vs 旧手写清单", () => {
     expect(ex).not.toContain(PREFIX + "sync_meta");
   });
 });
+
+/* ============================================================
+ * B2d（2026-10-26 批次）：导出排除也改从注册表派生 —— 第三处手写清单的收口。
+ * doExport（ui-backup-stats）的排除清单来源从手写数组改为 exportExcludedKeys()
+ * （注册表 export:false）。语义与 sync 的 fail-closed **刻意相反**：未登记键仍随导出走
+ * （备份是兜底，宁可多带不可少带）；cfg 密文随导出走（P0-5 换机迁移）。
+ * ============================================================ */
+describe("B2d 导出排除派生：第三处手写清单的收口", () => {
+  /* 旧手写清单（doExport 改造前逐条手抄；改它必须先改回归意图） */
+  const LEGACY_EXPORT_EXCLUDED = [
+    `${PREFIX}__dk`,
+    `${PREFIX}autobackup`, `${PREFIX}autobackup.1`, `${PREFIX}autobackup.2`,
+    `${PREFIX}pre_restore_backup`,
+  ];
+
+  it("⑥ 派生导出排除 = 旧手写集（集合相等：既不回退也不静默扩大）", () => {
+    const win = boot();
+    const ex = win.__test.exportExcludedKeys().sort();
+    expect(ex, "派生集与旧手写集必须相等").toEqual([...LEGACY_EXPORT_EXCLUDED].sort());
+  });
+
+  it("⑦ cfg 密文与未登记键都随导出走（与 sync 的 fail-closed 刻意相反，语义见注册表处注释）", () => {
+    const win = boot();
+    const ex = win.__test.exportExcludedKeys();
+    expect(ex).not.toContain(PREFIX + "cfg");
+    expect(ex).not.toContain(PREFIX + "webdav_pass");
+    expect(ex).not.toContain(PREFIX + "sync_meta");
+    /* 未登记键不在导出排除里：导出漏带 = 用户备份少一块数据，比"少同步"严重 */
+    expect(ex).not.toContain(PREFIX + "totally_new_feature");
+  });
+
+  it("⑧ 接线验证：doExport 真的用派生清单（防「函数在、导出还挂旧数组」的假接线）", () => {
+    const win = boot({
+      [PREFIX + "tasks"]: JSON.stringify([{ id: "t1", sc: "office", title: "x", status: "todo", tags: [], created: 1 }]),
+      [PREFIX + "cfg"]: JSON.stringify({ enabled: true, profiles: [] }),
+      [PREFIX + "__dk"]: "DEVKEY-material",
+      [PREFIX + "pre_restore_backup"]: JSON.stringify({ at: 1, keys: { [PREFIX + "__dk"]: "x" } }),
+    });
+    let captured = null;
+    win.Blob = class { constructor(parts) { captured = JSON.parse(parts[0]); } };
+    win.URL.createObjectURL = () => "blob:fake";
+    win.URL.revokeObjectURL = () => {};
+    win.HTMLAnchorElement.prototype.click = function () {};
+    win.doExport();
+    expect(captured[PREFIX + "__dk"], "设备密钥本体不得进导出文件").toBeUndefined();
+    expect(captured[PREFIX + "pre_restore_backup"], "内嵌全键值的回滚档不得进导出文件").toBeUndefined();
+    expect(captured[PREFIX + "cfg"], "cfg 密文随导出走（换机迁移）").toBeDefined();
+    expect(captured[PREFIX + "tasks"], "业务数据必须导出").toBeTruthy();
+  });
+});
