@@ -2000,6 +2000,8 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     aiArtifacts, aiArtifactDrop, openAiArtifact,
     /* 2026-10-24：私有端点鉴权的会话内存开关（测试用） */
     mcpSetSecret, mcpSecretState, mcpClearSecrets,
+    /* B6：MCP 延迟/重试读数与退避函数（单测入口；调用路径本身走 mcpRefreshServer / mcpCallTool 真接线） */
+    mcpLatencyStats, mcpLatencyAll, _mcpBackoffMs, _mcpRetryBaseMs,
     effectiveSysprompt, setCustomSysprompt, trimChatHist, // v1.15：sysprompt 可编辑 + 上下文 token 预算
     // T2.3 轻量 store 访问器（供测试驱动与断言）
     createStore, taskStore, cfgStore, linkStore,

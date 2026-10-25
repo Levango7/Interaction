@@ -405,7 +405,58 @@ function toolWhitelistSet(cfgOverride){
 const MCP_NS = "mcp__";
 const MCP_MAX_TOOLS = 30;
 const MCP_RPC_TIMEOUT_MS = 15000;
+/* ---------- B6 韧性与延迟可见（2026-10-26）----------
+ * 重试**只给幂等腿**：`tools/call` 可能是"发一封邮件 / 建一条 issue"，客户端无从判断服务端幂等性，
+ * 重放＝可能重复执行 ⇒ 写腿一次都不重试（有单测钉住"写腿失败恰好只发 1 次请求"）。
+ * 只重试**瞬态类**：网络抛错 / 超时 abort / HTTP 429 与 5xx / 主进程中转失败；
+ * 语义错（JSON-RPC error、非可解析响应）与 4xx 鉴权类**不重试** —— 重试只是把一次失败拖成三次。 */
+const MCP_RETRY_MAX = 2;              /* 幂等腿最多再试 2 次（含首发 ≤3 次请求） */
+const MCP_RETRY_BASE_MS = 400;        /* 指数退避底数；cfg.mcpRetryBaseMs 可调（单测置 0 免真等） */
+const MCP_RETRY_CAP_MS = 4000;        /* 单次退避上限，防止底数被配成天文数字 */
+const MCP_LATENCY_SAMPLES = 20;       /* 每台服务器保留最近 N 次调用样本（仅内存，不落盘） */
+const MCP_IDEMPOTENT_METHODS = { initialize: 1, "notifications/initialized": 1, "tools/list": 1 };
 const _mcpRuntime = {};      /* name → {tools:[], at, err, sessionId, protocolVersion} —— 仅内存，不落盘 */
+const _mcpLatency = {};      /* name → [{at, ms, ok, method, attempts, err?}] —— 仅内存，不落盘 */
+/** 退避底数（0..5000 可调，非法值回默认）—— 存在的理由只有一个：让单测不必真等 400ms×N */
+function _mcpRetryBaseMs(){
+  const cfg = (typeof getCfg === "function") ? (getCfg() || {}) : {};
+  const n = Number(cfg.mcpRetryBaseMs);
+  return (isFinite(n) && n >= 0 && n <= 5000) ? n : MCP_RETRY_BASE_MS;
+}
+/** 第 attempt 次失败后的等待：指数增长 + 半宽抖动，封顶 MCP_RETRY_CAP_MS */
+function _mcpBackoffMs(attempt){
+  const base = _mcpRetryBaseMs();
+  const span = Math.min(MCP_RETRY_CAP_MS, base * Math.pow(2, Math.max(0, attempt - 1)));
+  return Math.round(span / 2 + Math.random() * (span / 2));
+}
+function _mcpSleep(ms){
+  return ms > 0 ? new Promise(function(r){ setTimeout(r, ms); }) : Promise.resolve();
+}
+/** 调用样本记账（每台保留最近 MCP_LATENCY_SAMPLES 条，环形） */
+function _mcpLatencyPush(name, rec){
+  const a = _mcpLatency[name] = _mcpLatency[name] || [];
+  a.push(rec);
+  while(a.length > MCP_LATENCY_SAMPLES) a.shift();
+}
+/**
+ * 某台服务器的延迟/重试聚合。**样本少时取整位、不外推**（4 个样本的 p95 就是第 4 个，别装成统计量）。
+ * @returns {{n:number,median:number,p95:number,fail:number,attempts:number,last:Object|null}}
+ */
+function mcpLatencyStats(name){
+  const a = _mcpLatency[name] || [];
+  if(!a.length) return { n: 0, median: 0, p95: 0, fail: 0, attempts: 0, last: null };
+  const ms = a.map(function(x){ return x.ms; }).sort(function(x, y){ return x - y; });
+  const at = function(p){ return ms[Math.min(ms.length - 1, Math.floor(p * ms.length))]; };
+  return { n: a.length, median: at(0.5), p95: at(0.95),
+    fail: a.filter(function(x){ return !x.ok; }).length,
+    attempts: a.reduce(function(s, x){ return s + (x.attempts || 1); }, 0), last: a[a.length - 1] };
+}
+/** 所有"有过调用"的服务器（诊断报告的口径来源；没样本就不出现在清单里） */
+function mcpLatencyAll(){
+  return Object.keys(_mcpLatency).map(function(n){
+    const st = mcpLatencyStats(n); st.name = n; return st;
+  }).filter(function(x){ return x.n > 0; });
+}
 /** Electron 下可用的主进程中转（没有就返回 null，走浏览器直连） */
 function _mcpProxy(){
   if(typeof isElectron !== "function" || !isElectron()) return null;
@@ -421,7 +472,10 @@ async function _mcpProxyPost(server, headers, payload, auth){
   if(auth) arg.auth = { header: auth.header, value: auth.value };   /* 主进程单独校验头名并注入 */
   const r = await _mcpProxy()(arg);
   if(!r || !r.ok){
-    throw new Error(t("mcp.proxyFail", "Electron 主进程中转失败：") + ((r && r.error) || "proxy_failed"));
+    /* 中转层失败属传输类 ⇒ 打上可重试标记（是否真重试由 _mcpRpc 的幂等判定决定） */
+    const err = new Error(t("mcp.proxyFail", "Electron 主进程中转失败：") + ((r && r.error) || "proxy_failed"));
+    err.mcpRetriable = true;
+    throw err;
   }
   const hs = { "content-type": r.contentType || "", "mcp-session-id": r.sessionId || "" };
   return { ok: r.status >= 200 && r.status < 300, status: r.status,
@@ -515,13 +569,42 @@ function _mcpSsePayload(text){
   return last;
 }
 /**
- * 发一条 JSON-RPC 请求并等结果。
+ * 发一条 JSON-RPC —— **幂等腿带重试外壳**，`tools/call` 单次不重放（见 MCP_IDEMPOTENT_METHODS 处的取舍）。
+ * 重试沿用同一个 JSON-RPC id：服务端若按 id 去重，这正是我们想要的语义。
  * @param {{name:string,url:string}} server
  * @param {Object} payload
  * @param {{quiet?:boolean}} [opts] quiet=true 时不解析响应体（notifications）
  * @returns {Promise<Object|undefined>}
  */
 async function _mcpRpc(server, payload, opts){
+  const method = String((payload && payload.method) || "");
+  const maxRetry = MCP_IDEMPOTENT_METHODS[method] ? MCP_RETRY_MAX : 0;
+  const t0 = Date.now();
+  let attempts = 0, lastErr = null;
+  for(;;){
+    attempts++;
+    try{
+      const out = await _mcpRpcAttempt(server, payload, opts);
+      _mcpLatencyPush(server.name, { at: t0, ms: Date.now() - t0, ok: true, method: method, attempts: attempts });
+      if(attempts > 1 && typeof pushDiag === "function"){
+        pushDiag("info", "mcp " + method + " 第 " + attempts + " 次尝试才成功（前面是瞬态失败）", { where: "_mcpRpc:" + server.name });
+      }
+      return out;
+    }catch(e){
+      lastErr = e;
+      if(attempts > maxRetry || !(e && e.mcpRetriable)) break;
+      await _mcpSleep(_mcpBackoffMs(attempts));
+    }
+  }
+  _mcpLatencyPush(server.name, { at: t0, ms: Date.now() - t0, ok: false, method: method, attempts: attempts,
+    err: String((lastErr && lastErr.message) || lastErr) });
+  if(attempts > 1 && typeof pushDiag === "function"){
+    pushDiag("warn", "mcp " + method + " 重试 " + (attempts - 1) + " 次仍失败", { where: "_mcpRpc:" + server.name });
+  }
+  throw lastErr;
+}
+/** 单次 RPC 尝试；传输类失败带 e.mcpRetriable=true，语义类不带 ⇒ 重试外壳据此决定 */
+async function _mcpRpcAttempt(server, payload, opts){
   opts = opts || {};
   const rt = _mcpRuntime[server.name];
   const headers = { "content-type": "application/json", "accept": "application/json, text/event-stream" };
@@ -542,14 +625,23 @@ async function _mcpRpc(server, payload, opts){
       res = await fetch(server.url, { method: "POST", headers: headers, body: JSON.stringify(payload),
         signal: ctl ? ctl.signal : undefined });
     }catch(e){
-      throw new Error(t("mcp.netFail", "连不上：多半是服务没起、被 CORS 拦了跨域请求，或浏览器把「到本机/局域网的请求」按本地网络访问权限拦了（https 页面连本机就属这类，需用桌面版）") + "：" + ((e && e.message) || String(e)));
+      /* 网络抛错与超时 abort 同属传输类 ⇒ 可重试（重试与否最终仍由幂等判定把关） */
+      const err = new Error(t("mcp.netFail", "连不上：多半是服务没起、被 CORS 拦了跨域请求，或浏览器把「到本机/局域网的请求」按本地网络访问权限拦了（https 页面连本机就属这类，需用桌面版）") + "：" + ((e && e.message) || String(e)));
+      err.mcpRetriable = true;
+      throw err;
     }finally{ if(timer) clearTimeout(timer); }
   }
   if(res && res.headers && res.headers.get){
     const sid = res.headers.get("mcp-session-id");
     if(sid && _mcpRuntime[server.name]) _mcpRuntime[server.name].sessionId = sid;
   }
-  if(!res || !res.ok) throw new Error(t("mcp.httpFail", "MCP 服务返回 HTTP ") + ((res && res.status) || "?"));
+  if(!res || !res.ok){
+    /* 只有 429/5xx 算瞬态；4xx（鉴权、路径错）重试三次也只是把一次失败拖成三次 */
+    const st = (res && Number(res.status)) || 0;
+    const err = new Error(t("mcp.httpFail", "MCP 服务返回 HTTP ") + (st || "?"));
+    err.mcpRetriable = (st === 429 || st >= 500);
+    throw err;
+  }
   if(opts.quiet) return undefined;   /* notifications/initialized 是 202 空体，不解析 */
   const ctype = String((res.headers && res.headers.get && res.headers.get("content-type")) || "").toLowerCase();
   let body = null;
