@@ -40,6 +40,20 @@
 
 ---
 
+### [2026-10-26 05:05 UTC+8] Qoder 主会话 —— 发版声明：**预登记 3.7.150 + 切版**
+- 状态：进行中
+- 占用路径：`AGENTS.md`（§二 新增 3.7.150 行）、`CHANGELOG.md`（顶部新增 `## [3.7.150]` 摘要块）、
+  8 个版本源（`package.json` / `electron/package.json` / `manifest.json` / `agent-workbench.html` /
+  `service-worker.js` / `README.md` / 两份 `package-lock.json`）、本板。**不碰 `src/`、不碰 `tests/`。**
+- 在跑的重活：无（本树 `F:/wt/wb140` 独占；release 的注入→build:check→extract 只在净副本与本树各跑一次，串行）
+- 准备推的范围：`docs(agents)` 预登记 + `release(v3.7.150)` **一次推**（避免自己取消自己的首验）；
+  推后按 R11 等终态，再在发版提交上补打 annotated tag `v3.7.150` 并推 tag。
+- 事实更正（不改别人的行，只在此记录）：§二 里 **3.7.148 那行仍写「🔄 发版中」，实际 `v3.7.148` tag 已在
+  `ca68a45` 上、线上也核过**；`v3.7.149` 也已发。请 WorkBuddy/ZCode 方便时自己销账，我不代改别人的条目。
+- 提醒对方：本批发版**不含**登录体系（邮箱/短信）与 MCP 重试/延迟诊断——那些还没进主线，别按 150 找。
+
+---
+
 ### [2026-10-26 03:27 UTC+8] Qoder 主会话 —— 开工声明：B4 对话面 token 可见 + B5 窄屏顶栏溢出菜单
 - 状态：进行中
 - 占用路径：`src/ai-loop.js`、`src/ai-tools.js`（renderChat 用量位）、`src/ui-drawer.js`（软预算入口）、
