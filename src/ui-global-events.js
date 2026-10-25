@@ -63,6 +63,71 @@ document.addEventListener("click", function(e){
     }
   }
 });
+/* ---------- B5（2026-10-26）：窄屏顶栏溢出菜单 ----------
+ * 行项**不重写行为**，只把点击转给原按钮 —— 快捷键、可见性判定、状态同步都只有那一份真源；
+ * 目标当前不可见（Electron 才有的安装、能力缺失即隐藏的入口）时行项一起隐掉，
+ * 否则就是本仓反复踩过的"点了没反应"。面板用 is-open 类开合（不用内联 style，窄屏基线由 CSS 决定）。 */
+function syncTopbarMoreItems(){
+  const panel = $("#topbarMorePanel");
+  if(!panel) return 0;
+  let shown = 0;
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-fold-target]"), function(row){
+    const id = row.getAttribute("data-fold-target");
+    const target = document.getElementById(id);
+    /* ⚠️ 不能用 getComputedStyle(target).display 判可见 —— 被收起的按钮在窄屏**本来**就是
+       display:none（那正是本功能在做的事），照 display 判会把每一行都标成隐藏，
+       于是"打开菜单却是空的"（真浏览器实测过这一步）。
+       这里只看应用层的"能力/状态"信号：hidden 属性、u-hidden 工具类、
+       以及安装入口专用的 .show（未捕获 beforeinstallprompt 时不给点）。 */
+    let vis = false;
+    if(target){
+      vis = !target.hidden
+        && !target.classList.contains("u-hidden")
+        && !(target.classList.contains("install-btn") && !target.classList.contains("show"));
+    }
+    if(vis){ row.removeAttribute("hidden"); shown++; }
+    else row.setAttribute("hidden", "");
+  });
+  return shown;
+}
+function setTopbarMoreOpen(open){
+  const panel = $("#topbarMorePanel");
+  const btn = $("#btnMore");
+  if(!panel || !btn) return false;
+  const on = !!open;
+  if(on) syncTopbarMoreItems();
+  if(on) panel.classList.add("is-open"); else panel.classList.remove("is-open");
+  btn.setAttribute("aria-expanded", on ? "true" : "false");
+  return on;
+}
+const _btnTopbarMore = $("#btnMore");
+if(_btnTopbarMore){
+  _btnTopbarMore.onclick = function(e){
+    e.stopPropagation();
+    const panel = $("#topbarMorePanel");
+    setTopbarMoreOpen(!(panel && panel.classList.contains("is-open")));
+  };
+}
+const _topbarMorePanel = $("#topbarMorePanel");
+if(_topbarMorePanel){
+  _topbarMorePanel.onclick = function(e){
+    const row = e.target && e.target.closest ? e.target.closest("[data-fold-target]") : null;
+    if(!row || row.hasAttribute("hidden")) return;
+    const target = document.getElementById(row.getAttribute("data-fold-target"));
+    setTopbarMoreOpen(false);
+    if(target) target.click();
+  };
+}
+document.addEventListener("click", function(e){
+  const panel = $("#topbarMorePanel");
+  const btn = $("#btnMore");
+  if(!panel || !panel.classList.contains("is-open")) return;
+  if(panel.contains(e.target) || (btn && btn.contains(e.target))) return;
+  setTopbarMoreOpen(false);
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape") setTopbarMoreOpen(false);
+});
 // 空态引导按钮委托（data-empty-action）：与快捷键 N 同款行为——切场景 + 聚焦新建表单
 document.addEventListener("click", function(e){
   const act = e.target && e.target.closest ? e.target.closest("[data-empty-action]") : null;
@@ -1278,6 +1343,11 @@ function renderAiSessHistory(){
   });
 }
 function restoreAiMemory(){
+  /* B4：预算/提醒阈值回填 —— 放在 saved 守卫**之前**：这两个字段的真身只在 cfg 里
+     （ai_config_memory 不另存一份，免得两处值打架），从没点过「记忆配置保存」的老用户也要看得见现值。 */
+  const cfgNow = (typeof getCfg === "function" ? (getCfg() || {}) : {});
+  const cbEl = $("#aiCtxBudget"); if(cbEl && cfgNow.ctxBudgetTokens) cbEl.value = cfgNow.ctxBudgetTokens;
+  const cwEl = $("#aiCtxWarnPct"); if(cwEl && cfgNow.ctxWarnPct) cwEl.value = cfgNow.ctxWarnPct;
   const saved = getAiConfig("memory"); if(!saved) return;
   const w = $("#aiMemWindow"); if(w && saved.windowSize) w.value = saved.windowSize;
   const lt = $("#aiMemLongTerm"); if(lt) lt.checked = !!saved.longTerm;
@@ -1388,8 +1458,15 @@ $("#aiMemSave").onclick = function(){
   try{
     const cfg = getCfg() || {};
     cfg.rag = rg ? !!rg.checked : false;
+    /* B4：预算与软提醒阈值也镜像进主配置 —— ctxBudgetTokens()/ctxWarnPct() 读的是 cfg，
+       同 cfg.rag 一个道理（ai_config_memory 那份只是设置页回填用）。 */
+    const cb = $("#aiCtxBudget");
+    const cw = $("#aiCtxWarnPct");
+    if(cb && cb.value !== "") cfg.ctxBudgetTokens = Number(cb.value);
+    if(cw && cw.value !== "") cfg.ctxWarnPct = Number(cw.value);
     _cfgCache = cfg; // 与 saveCfg 同款缓存更新（save 内部不含此逻辑）
     save(PREFIX + "cfg", cfg);
+    if(typeof renderCtxBudgetChip === "function") renderCtxBudgetChip();   // 改完立刻反映到输入条
   }catch(_e){
     /* v3.7.102 第七片：主配置（ai_config_memory）确实已存，所以不算全谎报；但 cfg.rag 这个
        镜像字段没同步 → 刷新后 RAG 开关回退，而用户刚看到「已保存」。属部分不一致，

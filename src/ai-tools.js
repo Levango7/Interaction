@@ -2622,6 +2622,53 @@ function aiTokensUsage(){
   }catch(_e){ return { today: 0, total: 0, days: 0 }; }
 }
 
+/* ---------- B4（2026-10-26）：把用量与预算从「诊断报告纯文本」提到对话面 ----------
+ * usageFromResp：上游 usage 三种给法都可能缺（只给 total / 只给 prompt+completion / 整个字段没有），
+ *   归一成 {in,out,total}；**拿不到就返回 null** —— 气泡上只写真数，绝不用估算冒充"实际用量"。
+ *   没有和 addTokensUsage 共用解析：那个函数的 try 体在 empty-catch 基线里，改它的块体会把存量条目
+ *   报成新增 P0（门禁按块体判级），一行没改也会红 —— 宁可留 5 行同形解析。 */
+function usageFromResp(resp){
+  const u = resp && resp.usage;
+  if(!u) return null;
+  const pin = Number(u.prompt_tokens) || 0;
+  const pout = Number(u.completion_tokens) || 0;
+  const total = (Number(u.total_tokens) || 0) || (pin + pout);
+  if(!(total > 0)) return null;
+  return { in: pin, out: pout, total: total };
+}
+
+/** 软提醒阈值（%）：cfg.ctxWarnPct，默认 80，钳在 50~150。只提醒，不拦发送。 */
+function ctxWarnPct(){
+  const cfg = getCfg() || {};
+  let n = Number(cfg.ctxWarnPct);
+  if(!isFinite(n) || n <= 0) n = 80;
+  return Math.min(150, Math.max(50, Math.round(n)));
+}
+
+/** 下一轮发送量的**估算**预览：上次实际发送的估算 + 当前输入框里的字。
+ *  ⚠️ 口径必须写清（tooltip 同款）：它不含 trimChatHist 的历史裁剪、也不含 RAG 注入的增减，
+ *  所以是"量级预览"而不是"账单"。真账单只有上一条的 usageFromResp（上游回执里的数）。 */
+function ctxBudgetPreview(inputText){
+  const budget = ctxBudgetTokens();
+  const base = (typeof lastSendEstimate === "function" && lastSendEstimate()) ? (lastSendEstimate().tokens || 0) : 0;
+  const est = base + _estTokens(inputText || "");
+  const pct = budget > 0 ? Math.round(est * 100 / budget) : 0;
+  const warn = ctxWarnPct();
+  return { est: est, budget: budget, pct: pct, level: (est > budget ? "over" : (est >= Math.round(budget * warn / 100) ? "warn" : "ok")) };
+}
+
+/** 输入条常驻芯片：下一轮估算 / 预算 + 占比；warn/over 变色。没有对话面板（沉浸页以外）就静默跳过。 */
+function renderCtxBudgetChip(){
+  const chip = $("#ctxBudgetChip");
+  if(!chip) return null;
+  const ta = $("#chatTextInput");
+  const p = ctxBudgetPreview(ta ? ta.value : "");
+  chip.textContent = t("chat.budget.short","上下文 ~")+p.est+t("chat.budget.mid"," / ")+p.budget;
+  chip.className = "ctx-budget-chip" + (p.level === "ok" ? "" : " is-" + p.level);
+  chip.setAttribute("title", t("chat.budget.tip","下一轮发送量估算（上次发送 + 当前输入，不含历史裁剪与检索增减）；预算可在「设置 → AI → 记忆」调整。软提醒阈值 ")+ctxWarnPct()+"%。");
+  return p;
+}
+
 /** 检索结果的引用标签：[序号·来源·召回方式] —— 用户能据此回查到原始条目 */
 function ragCiteLabel(h, n){
   const via = h.via === "both" ? t("rag.viaBoth","词法+语义")
@@ -3166,7 +3213,11 @@ function renderChat(){
     if(m.role==="assistant" && m._failed) return `<div class="msg assistant failed md-body"${promptTip}>${mdToHtml(m.content||"")}<button class="chat-retry" id="chatRetry" type="button">${t("ai.retry","重试")}</button></div>`;
     // v3.2 C-档：流式打字机态（_streaming 标记的消息加 streaming class——半透明+光标动画）
     if(m.role==="assistant" && m._streaming) return `<div class="msg assistant md-body streaming"${promptTip}>${mdToHtml(m.content||"")}</div>`;
-    if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}</div>`;
+    /* B4：真实用量挂在气泡尾行 —— 只有上游回了 usage 才显示，没回就一行都不出（估算不冒充账单）。 */
+    const usageHtml = (m && m._usage && m._usage.total > 0)
+      ? '<span class="msg-usage">' + esc(String(m._usage.total)) + t("chat.usage.unit"," tok") + '（' + esc(String(m._usage.in)) + '+ ' + esc(String(m._usage.out)) + '）</span>'
+      : "";
+    if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}${usageHtml}</div>`;
     // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
   }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + CHAT_SUGGEST_HTML);
@@ -3180,6 +3231,9 @@ function renderChat(){
     });
   }
   _renderChatProgress();
+  /* B4：每次渲染都刷一次预算芯片 —— 发送后 lastSendEstimate 变了、切场景后历史变了，
+     这两个时刻都要跟着变，只绑 input 会滞后一整轮。（⑧ 号用例守的就是这一行：删掉它测试红。） */
+  renderCtxBudgetChip();
   /* 只渲染非流式消息里的 mermaid；异步队列在后台跑，不阻塞聊天渲染 */
   if(typeof renderMermaidBlocks === "function") renderMermaidBlocks(el);
   scrollChat();

@@ -841,6 +841,9 @@ async function onChatSubmit(e){
 }
 /* v3.7.72 token 优化：超长工具结果截断（>2400 字符取头 + 注明全长），模型只需关键字段 */
 function _cutToolRes(r){ return (typeof r==="string" && r.length>2400) ? r.slice(0,2400)+"…(截断，共 "+r.length+" 字符)" : r; }
+/* B4：软预算提醒的去重档位 —— 同一 level 只说一次，回到 ok 时重置。
+   不做硬拦：用户可能就是要把长上下文发出去，拦下来只会逼人关功能。 */
+let _ctxWarnLevel = null;
 async function runChatLoop(messages, hist, sc){
   sc = sc || active; /* v3.7.71 竞态修复：长循环期间切场景不串写，数据键用定格场景 */
   // T3.1：创建控制器 + 记录上次请求（重试用）+ 显示思考中
@@ -848,6 +851,19 @@ async function runChatLoop(messages, hist, sc){
   lastChatRequest={ messages:messages, hist:hist, sc:sc };
   /* v3.7.132：发送前估算入账（估算/策略早已在，这里补「可观测」；向下调用 ai-tools，方向合法） */
   if(typeof recordSendEstimate === "function") recordSendEstimate(messages);
+  if(typeof ctxBudgetPreview === "function"){
+    const p = ctxBudgetPreview("");   /* 刚记过账 ⇒ est 就是本轮装配量，不叠输入框 */
+    if(p.level === "ok") _ctxWarnLevel = null;
+    else if(_ctxWarnLevel !== p.level){
+      _ctxWarnLevel = p.level;
+      try{
+        toast((p.level === "over"
+          ? t("chat.budget.over","本轮上下文 ~")+p.est+t("chat.budget.overMid","，已超预算 ")+p.budget
+          : t("chat.budget.near","本轮上下文 ~")+p.est+t("chat.budget.nearMid","，已接近预算 ")+p.budget)
+          + t("chat.budget.tail","（只提醒不拦发送；预算与提醒阈值在「设置 → AI → 记忆」）"), "warn");
+      }catch(_e){ /* toast 通道不可用时不能影响发送 */ }
+    }
+  }
   showChatThinking(true);
   let turnUserText = ""; /* catch 分支也要写 _prompt，故声明在 try 外 */
   try{
@@ -987,7 +1003,7 @@ async function runChatLoop(messages, hist, sc){
         chatProgressEnd();
         AppBridge.render(); continue;
       }
-      hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)"), _prompt: turnUserText});
+      hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)"), _prompt: turnUserText, _usage: usageFromResp(j)});
       break;
     }
     /* v3.7.59 Skills ③：本轮成功执行了 ≥2 个非破坏性工具 → 提示可把这条流程固化成技能。
@@ -1139,6 +1155,19 @@ function bindChatPanel(){
   }
   // 表单提交：复用 onChatSubmit（其内部通过 f.msg.value 取值，兼容 textarea）
   const cf=$("#chatForm"); if(cf) cf.onsubmit = onChatSubmit;
+  /* B4：输入条预算芯片 —— 打字时 250ms 防抖刷新（全量估算按字符扫，每键一次会白烧 CPU） */
+  const _chatTa=$("#chatTextInput");
+  if(_chatTa && typeof renderCtxBudgetChip === "function"){
+    renderCtxBudgetChip();
+    if(!_chatTa._ctxChipBound){
+      _chatTa._ctxChipBound = true;
+      let _chipTimer = null;
+      _chatTa.addEventListener("input", function(){
+        if(_chipTimer) clearTimeout(_chipTimer);
+        _chipTimer = setTimeout(function(){ _chipTimer = null; renderCtxBudgetChip(); }, 250);
+      });
+    }
+  }
   // 取消按钮：复用 abortChat
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
   // 附件按钮：文本文件追加到输入框（v1.14 多模态已移除，不再支持图片附件）

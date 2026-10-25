@@ -92,6 +92,43 @@
 
 ## [Unreleased]
 
+### 2026-10-26 · B4 对话面 token 可见性 + B5 窄屏顶栏溢出菜单（P1-4 余项收口）
+
+- **B4 的起点是实测不是想象**：读码核对确认计数链**早就通了** —— `addTokensUsage` 挂在
+  `ai-loop.js` 的三个真出口（流式 :458 / 重试 :467 / 非流式 :473），`wb_ai_tokens` 已登记进键注册表，
+  `aiTokensUsage()` 与 `lastSendEstimate()` 也各有读者 —— 但两个读者都只在
+  「设置 → 关于 → 诊断与反馈」拼出的**纯文本**里。所以本批不是"加统计"，是把已有的数提到对话面。
+- **三片落地**：① 输入条常驻芯片（`#ctxBudgetChip`）显示「下一轮 ~估算 / 预算」，到软阈值变 warn、
+  超预算变 over，口径写进 tooltip（估算=上一轮装配量 + 当前输入，**不含**历史裁剪，不冒充账单）；
+  ② 助手气泡尾行显示**上游回执的真实 usage**（`usageFromResp` 归一，缺字段就一行都不出——
+  绝不用估算冒充用量）；③ 设置页 AI→记忆 补「上下文预算」「提醒阈值」两个字段
+  （`ctxBudgetTokens` 此前全仓无 UI：用户既看不见也改不了，所谓预算只是内部数字），
+  保存即写回 `cfg` 并立刻反映到芯片；发送时越档只提醒一次、不拦发送。
+- **B5 收的是 P1-4 留下的正解**：`@media(max-width:479px)` 那版把顶栏按钮宽度压到 26px 才勉强不溢出
+  （CSS:881 注释自认"正确解法是窄屏把低频按钮收进溢出菜单，属独立设计项，未在本批做"）。
+  本批补上：低频按钮用 **`data-fold` 声明**（命令/主题/下载/安装）→ 窄屏收起 → `#btnMore` +
+  内联面板 `#topbarMorePanel`；行项**只转发点击给原按钮**（不重写第二套逻辑），
+  目标当前不可用（如未捕获 `beforeinstallprompt` 的安装入口）时行项一起隐掉。
+  命中区从 26px 回到 **44×44**；320px 腾出的宽度从品牌文字出（窄屏只留标记图形）。
+- **实测证据（都带条件）**：`tests/e2e/topbar-overflow.spec.js` 在真浏览器 320/360/375/412 四个视口量得
+  `documentElement.scrollWidth == clientWidth` 且每个可见顶栏按钮 ≥44×44，外加"点「更多」→ 点「主题」行"
+  用 `elementFromPoint` 复核命中后**主题真的换了**；`viewport/mobile/three-state-layout/main-cta` 四个
+  既有布局 spec 同轮 **49 passed** 无回归。
+- **两次归因，都落在本批自己身上**：首轮 e2e 三条红（320/360/375 溢出）。用 `origin/main` 的
+  仓外净副本（`git archive` + `node_modules` junction）跑同一探针量得三个视口**全部 0 溢出**
+  ⇒ 溢出是本批 44px 引入的，不是既有缺陷，改由品牌文字让位。第二条红是面板打开却是空的 ——
+  根因在我自己的可见性判定用了 `getComputedStyle(target).display`，而被折叠的按钮在窄屏**本来**就是
+  `display:none`（那正是本功能在做的事）⇒ 改为只看应用层信号（`hidden` / `u-hidden` / 安装入口的 `.show`），
+  并补一条"折叠态行项必须还在"的用例钉住。
+- **变异验证 5 条**（每条只打判定维度、各自恰好红一条）：`usageFromResp` 缺字段返回零对象 ⇒ ① 红；
+  over 边界 `>` 改 `>=` ⇒ ③ 红；摘掉 `_usage` 挂载 ⇒ ⑥ 红；**摘掉 `renderChat` 里的芯片刷新 ⇒ 曾全绿**，
+  追出是启动期 `bindChatPanel` 的那一次刷新恰好发生在发送之后（假绿），把用例改成"先等芯片初始化再取样"
+  后才红 ⇒ 补上接线断言；行项可见性改回 computed display ⇒ ④ 红。
+- 新增测试：`tests/chat-usage-visibility.test.js` 11 例、`tests/topbar-overflow.test.js` 7 例；
+  `tests/ui-scale-floor.test.js` 的触控契约从「高度 ≥40、宽度仍 26」改成「窄屏 44×44 + data-fold 收起 +
+  宽屏收起「更多」」，并同步加宽了自带射程自检的违规样本。
+- 本机门禁：13 道静态门禁 exit 0（含 i18n 死键棘轮，新键全部有引用）。
+
 ### 2026-10-26 · 导出排除改从键注册表派生（B2d，第三处手写清单收口）+ 架构契约补档
 
 - **B2d**：`doExport`（`ui-backup-stats.js`）的导出排除清单从手写数组改为 `exportExcludedKeys()`
