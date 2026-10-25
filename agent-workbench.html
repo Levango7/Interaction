@@ -6496,10 +6496,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 /* ===== Bootstrap (启动与全局常量) ===== */
 const PREFIX = "wb_agent_";
-const VERSION = "3.7.148"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
+const VERSION = "3.7.149"; /* v3.7.82 部位点击反应：头=歪头+眨眼+爱心 / 身=跳跃 / 尾=摇尾巴（整图绕尾根摆动）· DOM 命中层（随图变换，避开 transform 后 rect 不可用）· 逐角色标定头/尾坐标（人物与熊猫无尾自动回落身体反应） */
 // 构建标记：随每次发布 bump（与 service-worker.js CACHE_VERSION 同步）。
 // 页脚显示「v{版本} · b{build}」，用于用户自证是否已加载最新版（PWA 缓存排查）。
-const BUILD_TAG = "20261024b";
+const BUILD_TAG = "20261025a";
 
 
 
@@ -18145,14 +18145,14 @@ const DATA_KEY_REGISTRY = [
   { key: "__pendingAiAsk", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "agent_run", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "cfg", kind: "s", sync: false, backup: true },   // 凭据/密钥
-  { key: "__dk", kind: "s", sync: false, backup: true },   // 凭据/密钥
+  { key: "__dk", kind: "s", sync: false, backup: true, export: false },   // 凭据/密钥（export:false —— 设备密钥本体不出本机，连导出文件也不进）
   { key: "webdav_pass", kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "webdav_cfg", kind: "s", sync: false, backup: true },   // 凭据/密钥
   { key: "webdav_meta", kind: "m", sync: false, backup: true },   // 本机元数据
-  { key: "pre_restore_backup", kind: "m", sync: false, backup: true },   // 本机元数据
-  { key: "autobackup", kind: "m", sync: false, backup: false },   // 本机元数据
-  { key: "autobackup.1", kind: "m", sync: false, backup: false },   // 本机元数据
-  { key: "autobackup.2", kind: "m", sync: false, backup: false },   // 本机元数据
+  { key: "pre_restore_backup", kind: "m", sync: false, backup: true, export: false },   // 本机元数据（export:false —— 内嵌全部键值的嵌套副本）
+  { key: "autobackup", kind: "m", sync: false, backup: false, export: false },   // 本机元数据（export:false —— 嵌套副本）
+  { key: "autobackup.1", kind: "m", sync: false, backup: false, export: false },   // 本机元数据（export:false —— 嵌套副本）
+  { key: "autobackup.2", kind: "m", sync: false, backup: false, export: false },   // 本机元数据（export:false —— 嵌套副本）
   { key: "sync_meta", kind: "m", sync: false, backup: true },   // 本机元数据
   { key: "sync_conflicts", kind: "m", sync: false, backup: true },   // 本机元数据
   { key: "sync_changelog", kind: "m", sync: false, backup: true },   // 本机元数据
@@ -18225,6 +18225,21 @@ function backupExcludedKeys(){
   const out = [];
   DATA_KEY_REGISTRY.forEach(function(e){
     if(e.backup === false && !e.bare && e.key) out.push(PREFIX + e.key);
+  });
+  return out;
+}
+/**
+ * JSON 导出要排除的完整键（注册表里 export:false 的那些）。B2d（2026-10-26 批次）收口：
+ * B2c 派生了同步/备份两处，这里是第三处手写清单（doExport）的来源。
+ * 语义与 sync 的 fail-closed **刻意相反**：未登记键仍随导出走 —— 同步漏登记最多"功能数据没同步"，
+ * 导出漏带走却意味着"用户备份里少了一块数据"，备份是兜底，宁可多带不可少带。
+ * cfg 密文**随导出走**（P0-5 换机迁移语义，可选 _portableKeys 明文），所以只有
+ * "密钥本体（__dk）"与"内嵌全部键值的嵌套副本（autobackup 三代 / pre_restore_backup）"标 export:false。
+ */
+function exportExcludedKeys(){
+  const out = [];
+  DATA_KEY_REGISTRY.forEach(function(e){
+    if(e.export === false && !e.bare && e.key) out.push(PREFIX + e.key);
   });
   return out;
 }
@@ -38996,8 +39011,13 @@ async function doExport(){
      **内嵌全部键值**的嵌套副本（自动备份快照内容 = 除备份键自家外的全部键），只排除顶层键
      对它们无效：嵌套副本会把 __dk / cfg 密文整体带出。排除后导出内容 = 业务数据 + cfg 密文
      + 可选 _portableKey 明文，换机迁移语义不变。导入侧刻意不对称（旧版文件回灌仍接受，
-     见 doImport）——同机恢复需取回 __dk 才能解密既有 cfg 密文。 */
-  const exportExcluded = [PREFIX + "__dk", AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1], PREFIX + "pre_restore_backup"];
+     见 doImport）——同机恢复需取回 __dk 才能解密既有 cfg 密文。
+     B2d（2026-10-26 批次）：清单来源改从键注册表派生（exportExcludedKeys，data-links，
+     注册表 export:false 的五个键），三处手写排除清单（同步/备份/导出）至此全部收口；
+     派生集 = 旧手写集（回归钉在 tests/sync-key-policy.test.js），兜底保留旧写法防桥未挂。 */
+  const exportExcluded = (typeof exportExcludedKeys === "function")
+    ? exportExcludedKeys()
+    : [PREFIX + "__dk", AUTO_BACKUP_KEY, AUTO_BACKUP_GENS[0], AUTO_BACKUP_GENS[1], PREFIX + "pre_restore_backup"];
   /* v3.7.102 第九片：原为「静默降级」—— 某个键读失败时不写进 data，而导出照样成功，
      用户拿到的是一份**不自知残缺**的备份。备份面的谎报代价是"数据真的回不来"，故必须点名。 */
   const _exportReadFailed = [];
@@ -52695,7 +52715,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     agentPlanSysPrompt, parseAgentPlan, executeAgentPlan, summarizeAgentPlan, chatOnceAgent,
     agentExecAsync, toolWebSearch, toolWebFetch, toolCodeRun, toolSqlQuery,
     DataKeyRegistry: DATA_KEY_REGISTRY, dataKeyRegistered, bareKeyRegistered,   /* v3.7.148 键注册表（tests/data-keys-registry 用） */
-    dataKeyMeta, dataKeySyncAllowed, backupExcludedKeys,   /* v3.7.148：同步/备份的派生判据（tests/sync-key-policy 用） */
+    dataKeyMeta, dataKeySyncAllowed, backupExcludedKeys, exportExcludedKeys,   /* v3.7.148：同步/备份派生判据；B2d（2026-10-26）：导出排除同源派生（tests/sync-key-policy 用） */
     ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
     ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,
