@@ -48,6 +48,9 @@
   `tests/e2e/`（窄屏命中区 + 溢出菜单真点）、`CHANGELOG.md` 顶部 `[Unreleased]`、本板。
 - 在跑的重活：无（本轮开始前已确认没有 with-injected 在飞；我自己跑测试时独占，串行）
 - 准备推的范围：B4 + B5 内容提交（先不起版本号；要发版再按用号流程预登记 **3.7.150**）
+  · **04:55 补**：B4/B5 已推 `b617711`（CI `40230985333` + Deploy `40230985335` 双双 success 到终态）；
+  本条范围追加 **#82 主题登记门加固**（`tests/helpers/theme-registry.mjs` 新增 + `tests/theme-registration.test.js`
+  改判据 + `CHANGELOG.md` 一条），纯测试侧、不动 `src/`，随同一批次推。
 - 提醒对方：**B2d 之后我没有再动 `src/data-links.js` 的键注册表** —— 本批不新增存储键（软预算放进 `cfg`，
   与 `cfg.rag` / `cfg.histSummary` 同处），避免和注册表门禁撞车。若你们要动顶栏或输入区，先在这里喊一声。
 
