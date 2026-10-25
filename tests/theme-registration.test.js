@@ -12,6 +12,13 @@
  *   ⑥ i18n 中文词典   look.theme.X / look.themeDesc.X
  *   ⑦ i18n 英文词典   同上
  * 本文件逐条断言 7 处齐全，并额外验证「选中后真的生效」——这正是漏注册时唯一的表象。
+ *
+ * v3.7.150（B3 残余 #82）补两块：
+ *   ▸ **反向核对**：正向 7 处以 PRESET_THEMES 为循环源，抓不到历史上真发生的 3 次
+ *     （注册表缺 id ⇒ 循环压根不检查它）。反向从 CSS / 下拉回到注册表，两边集合必须相等。
+ *   ▸ **解析器自检**：旧实现用 `slice(at, at+2000)` 硬窗口取 id，实测注册表块 1683 B
+ *     只剩 317 B 余量，再加一套主题就会把末尾 id 悄悄切掉。改为 helpers 里的配对取块，
+ *     并用一份超过窗口的合成注册表钉住它的射程。
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
@@ -28,12 +35,12 @@ const DICT = () => fs.readdirSync(path.join(ROOT, "src")).filter((x) => x.endsWi
   .map((x) => "src/" + x).find((p) => read(p).includes("const MESSAGES = {")) || "src/ui-global-events.js";
 const TH = () => read("src/ui-theme.js");
 
-/* 从注册表里取出全部主题 id（作为"应有主题"的唯一真相源） */
+/* 主题 id 的真相源与三个方向的集合，统一由 helpers/theme-registry.mjs 提供
+   （配对取块，不用旧版 slice(at,at+2000) 的硬窗口 —— 见该文件头部的两条理由）。 */
+import { presetThemeIds, cssThemeIds, selectThemeIds } from "./helpers/theme-registry.mjs";
+
 function registeredThemes() {
-  const src = GL();
-  const at = src.indexOf("const PRESET_THEMES = {");
-  const seg = src.slice(at, at + 2000);
-  return [...seg.matchAll(/^\s{2}([a-z][\w-]*):\s*\{/gm)].map((m) => m[1]);
+  return presetThemeIds(GL());
 }
 
 describe("主题注册一致性（7 处）", () => {
@@ -69,6 +76,54 @@ describe("主题注册一致性（7 处）", () => {
     const counts = (k) => gl.split(k).length - 1;
     expect(counts(key), key + " 应出现在中英两套词典").toBeGreaterThanOrEqual(2);
     expect(counts(desc), desc + " 应出现在中英两套词典").toBeGreaterThanOrEqual(2);
+  });
+});
+
+/* ============ 反向：从实现面回到注册表（历史那 3 次的形态，正向门抓不到） ============
+   正向 7 处断言以 PRESET_THEMES 为循环源 —— 注册表里少一个 id，循环就**根本不会**检查它，
+   于是"CSS 有、下拉有、注册表没有"（v3.1.2 / v3.4.0 / v3.6.3 的真实形态）一路绿灯。
+   这一组把方向反过来：实现面出现的每个主题 id，都必须能在注册表里找到。 */
+describe("主题登记的反向核对（漏注册的真形态）", () => {
+  it("CSS 里出现的每个 data-theme 都必须在注册表里（light 是默认态，刻意不设属性）", () => {
+    const reg = registeredThemes();
+    const orphans = cssThemeIds(HTML()).filter((id) => reg.indexOf(id) < 0);
+    expect(orphans, "有主题写了 CSS 却没进 PRESET_THEMES：" + orphans.join(",")).toEqual([]);
+  });
+
+  it("设置页下拉里的每个 option 都必须对应注册表条目（system 除外，它走 cfg.theme）", () => {
+    const reg = registeredThemes();
+    const orphans = selectThemeIds(HTML()).filter((id) => id !== "system" && reg.indexOf(id) < 0);
+    expect(orphans, "下拉里出现了未注册的主题：" + orphans.join(",")).toEqual([]);
+  });
+
+  it("实现面与注册表两个方向的集合必须相等（多一个少一个都算漂移）", () => {
+    const reg = registeredThemes().filter((id) => id !== "light").slice().sort();
+    expect(cssThemeIds(HTML()).slice().sort(), "CSS 块集合应等于注册表（去掉默认态 light）").toEqual(reg);
+  });
+
+  /* 解析器自身的射程自检：旧版是 slice(at, at+2000) 的硬窗口，注册表块实测已 1683 B，
+     再加一套主题就会把末尾 id 切在窗口外 ⇒ 门禁从此看不见它。这里用一份**超过窗口**的合成
+     注册表钉住"配对取块"这个修法 —— 窗口式解析在这份样本上会少读，用例即红。 */
+  it("注册表超过 2000 字节时仍要读全（挡死硬切片窗口的回归）", () => {
+    const many = [];
+    for (let i = 0; i < 20; i++) many.push('  t' + i + ': { name: "' + "补位".repeat(60) + '", desc: "x" }');
+    const synthetic = "const PRESET_THEMES = {\n" + many.join(",\n") + "\n};\n";
+    expect(synthetic.length, "合成样本必须超过旧的 2000 窗口才有射程").toBeGreaterThan(2000);
+    /* 自证"这条用例确实能抓到旧口径"：同一份样本按旧的窗口式解析会少读末尾 id。
+       没有这一句，"改成配对取块"这件事本身就没有证据 —— 样本撑不爆窗口的话用例恒绿。 */
+    const naive = [...synthetic.slice(0, 2000).matchAll(/^\s{2}([a-z][\w-]*)\s*:\s*\{/gm)].map((m) => m[1]);
+    expect(naive.includes("t19"), "样本撑不到窗口外 ⇒ 本用例没有射程").toBe(false);
+    const ids = presetThemeIds(synthetic);
+    expect(ids.length).toBe(20);
+    expect(ids, "末尾的 id 不许被切掉").toContain("t19");
+  });
+
+  it("当前真实注册表的最后一个键，必须真的被解析器读到（配对的现场自检）", () => {
+    const src = GL();
+    const blockEnd = src.indexOf("\n};", src.indexOf("const PRESET_THEMES = {"));
+    const lastLiteral = [...src.slice(src.indexOf("const PRESET_THEMES"), blockEnd)
+      .matchAll(/^\s{2}([a-z][\w-]*)\s*:\s*\{/gm)].pop();
+    expect(registeredThemes(), "解析结果必须含注册表里字面最后一个主题").toContain(lastLiteral[1]);
   });
 });
 
