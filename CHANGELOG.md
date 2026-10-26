@@ -108,6 +108,30 @@
 
 ## [Unreleased]
 
+### 2026-10-27 · 代修：Code 模式两处写盘 catch 静默吞错（`lint:empty-catch` 复绿）
+
+- **背景**：`e65dcf1`（并行会话的 Code 模式）CI + Deploy 双红，同一步 `Run npm run lint:empty-catch`：
+  新增 **2 处 P0 空 catch** —— `src/render-widgets.js:3846`（`toggleUIMode()` 写 `wb_agent_uimode`）
+  与 `:3939`（停靠栏 `el.onclick` 写 `wb_agent_agent_dock`），都是 `catch(e){ /* noop */ }`。
+  判 P0 的理由是这类**写盘失败被静默吞掉**：用户切了模式 / 折叠了停靠，下次打开就丢，且任何地方都没留下痕迹
+  （台账 R-35「主题写回抹掉 AI 配置」同族的数据丢失面，这里是"丢状态"）。
+- **改法**：照抄**同文件既有**写法（`src/render-widgets.js:818` 的 `canvas persist failed`），补一行 `pushDiag` warn，
+  `where` 分别标 `toggleUIMode` / `renderAgentDock`。**不改失败时的 UI 行为**，只让"丢了"这件事可追。
+  **没有** `--freeze` 重冻基线（那等于把这两处合法化），也没新增 helper。
+- **授权与协调**：该文件在并行会话的占用声明里，改动经用户 2026-10-27 明确口头授权（"代修吧，先把这两个红点补掉让 CI 复绿"）；
+  `docs/agent-board.md` 已写"若你们本地也改了同一处，冲突取本版"，除此之外不再碰该文件。
+- **验证**：`lint:empty-catch` **exit 1 → 0**（红/绿两态落在同一判定维度上）；`src:check` / `lint` / `build:check` /
+  `check:source-state` 全 exit 0；并行会话自己的 `tests/ui-mode.test.js` **5/5 通过**（证明改动没碰坏它的模式切换语义）。
+- **归因澄清**：上一笔 docs（`caf49b1`）的 CI/Deploy 红就是本红的重播 —— `e2e` 腿其实 **success**、
+  `deploy` 因 `verify` 失败被 **skip**，不是第二个故障。
+- **这一改又撞出一条陈旧判据（已一并修）**：CI 的 `npm test` 红在 `tests/empty-catch-slice4.test.js`
+  「二次保护：登记诊断自身也被 try 包住」——`expect(wrapped.length).toBe(4)`，现测 **6**（`expected 6 to be 4`）。
+  那条断言是**代理指标**：只要有人按本文件既有写法新增一处合规的"登记诊断 + 二次保护"，总数就会变，
+  于是**正确的扩展被判红**。真正要守的性质是**一一对应**（每处 `typeof pushDiag === "function"` 都自带 `catch(_e2){}` 兜底），
+  故改为 `expect(wrapped.length).toBe(guards.length)` + 保留 `>= 4` 的地板（只许涨不许降）。
+  **射程自证（窄变异）**：把**一处** `catch(_e2){}` 改成等价写法 `catch(_e2){void 0;}`（6→5）⇒ 恰好 1 条红、
+  报 `expected 5 to be 6`；还原后字节一致、复跑全绿。`tests/empty-catch-slice4.test.js` 单跑 10/10。
+
 ### 2026-10-26 · B7：文档陈旧行清零（roadmap / README / CONTRIBUTING / pet-system / webdav-verify / backend-recovery / iteration-plan）
 
 - **这一批只动文档**：不改 `src/*.js`、不改门禁、不改 workflow。判据来自一条老教训——**「未执行的操作项」不是未知缺陷**，

@@ -181,7 +181,13 @@ describe("③ 静态契约：另 3 处（画布 / 闹钟 / 读路径）按分档
   it("二次保护：登记诊断自身也被 try 包住（诊断坏了不能连累业务）", () => {
     const s = src();
     const guards = s.match(/typeof pushDiag === "function"/g) || [];
-    expect(guards.length).toBeGreaterThanOrEqual(4);
-    expect((s.match(/catch\(_e2\)\{\}/g) || []).length).toBe(4);
+    const wrapped = s.match(/catch\(_e2\)\{\}/g) || [];
+    expect(guards.length).toBeGreaterThanOrEqual(4);   // 地板：只许涨不许降
+    /* 2026-10-27 改判据：原写 `expect(wrapped.length).toBe(4)` 是**代理指标** —— 任何人按本文件既有写法
+       新增一处"登记诊断 + 二次保护"，总数就会变，测试却把这种**正确扩展**判红（当天就发生了：Code 模式的
+       两处写盘 catch 补 pushDiag，4→6，CI `npm test` 红在 `expected 6 to be 4`）。
+       真正要守的性质是**一一对应**：每处 `typeof pushDiag === "function"` 都必须自带 `catch(_e2){}` 兜底，
+       否则"诊断自身坏了"会连累业务。故改为等值断言（现测 6:6）+ 上面的地板。 */
+    expect(wrapped.length).toBe(guards.length);
   });
 });

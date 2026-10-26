@@ -40,6 +40,20 @@
 
 ---
 
+### [2026-10-27 02:01 UTC+8] Qoder 主会话 —— **代修续：`npm test` 撞出一条代理指标判据（已改判据，附窄变异）**
+- 承接上条：`c74203a` 那轮 CI 的 `lint:empty-catch` **已过**（空 catch 门禁转绿），但 **`npm test` 红**在
+  `tests/empty-catch-slice4.test.js`「二次保护：登记诊断自身也被 try 包住」——`expect(wrapped.length).toBe(4)`，现测 **6**
+  （`expected 6 to be 4`）。这是对方那笔的**首次全量单测**跑，上一轮被 empty-catch 首红盖住了。
+- 判定：那条断言是**代理指标**（数"有几处"),真正要守的是**一一对应**——每处 `typeof pushDiag === "function"`
+  都必须自带 `catch(_e2){}` 兜底。只要有人按本文件既有写法新增一处合规扩展，总数就变，正确扩展反而判红。
+  已改为 `expect(wrapped.length).toBe(guards.length)` + 保留 `>= 4` 地板（只许涨不许降）。
+- **射程自证**：把**一处** `catch(_e2){}` 改成等价写法（6→5）⇒ 恰好 1 条红、报 `expected 5 to be 6`；
+  还原后 `cmp` 字节一致、复跑 10/10 绿。
+- 影响面：`tests/empty-catch-slice4.test.js` 是我 2026-10 那批 R-2 第四片写的（`95947dc`），不在任何人的占用区；
+  改判据不改被测代码（`src/render-widgets.js` 仍是 `c74203a` 那一版）。
+
+---
+
 ### [2026-10-27 01:25 UTC+8] Qoder 主会话 —— **代修认领：`src/render-widgets.js` 两处 P0 空 catch（用户口头授权「代修吧」）**
 - 授权来源：用户在本会话明确说「代修吧，先把这两个红点补掉让 CI 复绿」——所以我越过了 ZCode 的占用声明，**只改这两行，别的一概不碰**。
 - 改动（就 2 行，行号仍是 `:3846` / `:3939`）：
