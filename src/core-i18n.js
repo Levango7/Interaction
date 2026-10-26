@@ -3666,6 +3666,23 @@ const MESSAGES = {
     "aiagent.fetchBothFail": "代理与直连均失败：",
     "aiagent.fetchCorsHint": "直连被浏览器跨域策略（CORS）拦截。请在设置中配置「抓取代理」，或配置自建后端 apiBase 后重试。",
     "aitool.generate_doc.category.desc": "分类，如 方案/复盘/工作文档",
+    "aitool.spawn_agent.desc": "派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把侦查/整理/汇总类工作委派出去",
+    "aitool.spawn_agent.name.desc": "子代理名（人读，如「资料整理员」）",
+    "aitool.spawn_agent.role.desc": "角色描述（注入子代理的系统提示）",
+    "aitool.spawn_agent.goal.desc": "子目标（一句话说清要做什么、产出什么报告）",
+    "aitool.spawn_agent.tools.desc": "工具白名单（默认只读集；写工具须显式列出）",
+    "aitool.spawn_agent.maxSteps.desc": "步数预算（默认 12，上限 24）",
+    "subagent.defaultRole": "你是一个被主代理委派的子代理，专注完成单一子目标。",
+    "subagent.sysTools": "你只能使用列出的工具；把精力全部用于完成目标，不要发散。",
+    "subagent.sysReport": "完成研究/操作后，用一段简洁的最终报告收尾（不再调用工具）——报告会交回主代理。",
+    "subagent.cancelled": "已取消",
+    "subagent.noReport": "（子代理未产出报告）",
+    "subagent.toolDenied": "该工具不在本子代理的授权清单内",
+    "subagent.needGoal": "缺少子目标 goal",
+    "subagent.defaultName": "子代理-",
+    "subagent.unavailable": "子代理运行时不可用",
+    "subagent.planDenied": "计划路径不允许派生子代理：请在对话里直接要求（由主循环委派并全程可见）",
+    "subagent.budgetExhausted": "步数预算耗尽：",
     "aitool.generate_doc.content.desc": "Markdown 正文",
     "aitool.generate_doc.desc": "生成一份文档（Markdown）并保存到笔记库",
     "aitool.generate_doc.title.desc": "文档标题",
@@ -4106,7 +4123,8 @@ const MESSAGES = {
     "dock.running": "执行中",
     "dock.none": "无",
     "dock.mcpNone": "未配置 MCP 服务器",
-    "dock.stepDone": "步骤"
+    "dock.stepDone": "步骤",
+    "dock.subHistory": "最近 {n} 个子代理"
   },
   en: {
     // Common
@@ -7736,6 +7754,23 @@ const MESSAGES = {
     "aiagent.fetchBothFail": "Both proxy and direct connection failed: ",
     "aiagent.fetchCorsHint": "Direct connection blocked by browser CORS policy. Configure a fetch proxy in Settings, or set up your own backend apiBase and retry.",
     "aitool.generate_doc.category.desc": "Category, e.g. proposal/retrospective/work doc",
+    "aitool.spawn_agent.desc": "Spawn a subagent to complete a single sub-goal (isolated context & tools; the report comes back to you). Good for delegating research/organizing/summarizing.",
+    "aitool.spawn_agent.name.desc": "Subagent name (human-readable, e.g. \"researcher\")",
+    "aitool.spawn_agent.role.desc": "Role description (injected into the subagent's system prompt)",
+    "aitool.spawn_agent.goal.desc": "Sub-goal (one sentence: what to do and what report to produce)",
+    "aitool.spawn_agent.tools.desc": "Tool whitelist (read-only set by default; grant write tools explicitly)",
+    "aitool.spawn_agent.maxSteps.desc": "Step budget (default 12, cap 24)",
+    "subagent.defaultRole": "You are a subagent delegated by the main agent, focused on a single sub-goal.",
+    "subagent.sysTools": "You may only use the listed tools; focus entirely on the goal, do not drift.",
+    "subagent.sysReport": "After finishing research/actions, wrap up with a concise final report (no more tool calls) — it goes back to the main agent.",
+    "subagent.cancelled": "Cancelled",
+    "subagent.noReport": "(subagent produced no report)",
+    "subagent.toolDenied": "That tool is not in this subagent's authorized list",
+    "subagent.needGoal": "Missing sub-goal (goal)",
+    "subagent.defaultName": "subagent-",
+    "subagent.unavailable": "Subagent runtime unavailable",
+    "subagent.planDenied": "The plan path cannot spawn subagents: ask directly in the conversation (delegated by the main loop, fully visible)",
+    "subagent.budgetExhausted": "Step budget exhausted: ",
     "aitool.generate_doc.content.desc": "Markdown content",
     "aitool.generate_doc.desc": "Generate a document (Markdown) and save it to the notes library",
     "aitool.generate_doc.title.desc": "Document title",
@@ -8176,7 +8211,8 @@ const MESSAGES = {
     "dock.running": "Running",
     "dock.none": "None",
     "dock.mcpNone": "No MCP servers configured",
-    "dock.stepDone": "Steps"
+    "dock.stepDone": "Steps",
+    "dock.subHistory": "{n} recent subagents"
   }
 };
 

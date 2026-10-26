@@ -90,6 +90,12 @@
   "tailBlanks": 0
  },
  {
+  "name": "ai-subagent",
+  "layer": "AI",
+  "title": "AI 层·子代理运行时",
+  "tailBlanks": 0
+ },
+ {
   "name": "render-entry",
   "layer": "Render",
   "title": "渲染层·入口",

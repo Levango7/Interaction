@@ -69,6 +69,7 @@ const BLOCKS = [
   { name: 'ai-tools', layer: 'AI', title: 'AI 层·工具调用' },
   { name: 'ai-loop', layer: 'AI', title: 'AI 层·对话循环' },
   { name: 'ai-retry', layer: 'AI', title: 'AI 层·取消/重试控制器' },
+  { name: 'ai-subagent', layer: 'AI', title: 'AI 层·子代理运行时' },
   /* 任务 4 第五步：Render Layer 五块（合计约 1,422KB：入口 / 场景细分 / 场景主区 / 概览 / 小工具） */
   { name: 'render-entry', layer: 'Render', title: '渲染层·入口' },
   { name: 'render-scene-sub', layer: 'Render', title: '渲染层·场景细分模块' },

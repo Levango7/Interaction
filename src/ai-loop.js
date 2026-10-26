@@ -327,7 +327,9 @@ async function chatOnce(messages, opts){
     /* 发现失败不阻断本轮：错误已在 mcpRefreshServer 落到 mcpRuntimeInfo + pushDiag，这里只降级 */
     if(typeof ensureMcpTools === "function"){ await ensureMcpTools().catch(function(){}); }
     const body={ model, messages, temperature:aiParams.temperature };
-    if(cfg.enabled){ body.tools=effectiveTools(); body.tool_choice="auto"; }
+    /* Multi-Agent Phase 1（2026-10-26）：opts.tools 覆盖——子代理传受限工具集。
+       向后兼容：既有调用方不传该参数，行为不变。 */
+    if(cfg.enabled){ body.tools=(Array.isArray(opts.tools) && opts.tools.length) ? opts.tools : effectiveTools(); body.tool_choice="auto"; }
     // v3.2 C-档：流式请求标记（仅浏览器直连 + 调用方传 onChunk 时开启；Electron 主进程代理不支持透传，保持整包）
     if(opts.onChunk && !isElectron()) body.stream = true;
 

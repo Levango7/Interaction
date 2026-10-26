@@ -356,7 +356,13 @@ const TOOLS = [
   {type:"function", function:{name:"generate_doc", description:t("aitool.generate_doc.desc","生成一份文档（Markdown）并保存到笔记库"), parameters:{type:"object", properties:{
     title:{type:"string", description:t("aitool.generate_doc.title.desc","文档标题")},
     content:{type:"string", description:t("aitool.generate_doc.content.desc","Markdown 正文")},
-    category:{type:"string", description:t("aitool.generate_doc.category.desc","分类，如 方案/复盘/工作文档")}}, required:["title","content"]}}}
+    category:{type:"string", description:t("aitool.generate_doc.category.desc","分类，如 方案/复盘/工作文档")}}, required:["title","content"]}}},
+  {type:"function", function:{name:"spawn_agent", description:t("aitool.spawn_agent.desc","派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把侦查/整理/汇总类工作委派出去"), parameters:{type:"object", properties:{
+    name:{type:"string", description:t("aitool.spawn_agent.name.desc","子代理名（人读，如「资料整理员」）")},
+    role:{type:"string", description:t("aitool.spawn_agent.role.desc","角色描述（注入子代理的系统提示）")},
+    goal:{type:"string", description:t("aitool.spawn_agent.goal.desc","子目标（一句话说清要做什么、产出什么报告）")},
+    tools:{type:"array", items:{type:"string"}, description:t("aitool.spawn_agent.tools.desc","工具白名单（默认只读集；写工具须显式列出）")},
+    maxSteps:{type:"number", description:t("aitool.spawn_agent.maxSteps.desc","步数预算（默认 12，上限 24）")}}, required:["goal"]}}}
 ];
 
 /* ---------- AI 层降级重定位（v1.15）：cfg.agent=false 时关闭 Agent 工具与话术 ----------
@@ -365,7 +371,7 @@ const TOOLS = [
  * 话术与能力不一致（AI 会被引导调用已"关闭"的能力）。
  * 修复：effectiveTools() 按 cfg.agent 过滤；chatSysPrompt 同步降级话术。
  */
-const AGENT_TOOL_NAMES = ["remember","recall","forget","plan","complete_step","complete_goal","list_records"];
+const AGENT_TOOL_NAMES = ["remember","recall","forget","plan","complete_step","complete_goal","list_records","spawn_agent"];
 /**
  * 「需要用户确认才允许落地」的工具 —— 唯一清单（v3.7.59 收口）。
  * 背景：runChatLoop 里写了一份 DANGER=["delete_task","update_task"]，而 executeAgentPlan 用
@@ -1618,6 +1624,16 @@ async function executeAgentPlan(plan, opts){
       }
       continue;
     }
+    /* Multi-Agent Phase 1（2026-10-26）：深度 1 守卫——计划路径显式拒绝派生子代理
+       （递归派生只能走对话协调路径；自主计划里派生子代理 = 不受用户监督的失控面）。 */
+    if(step.tool === "spawn_agent"){
+      const msg = t("subagent.planDenied","计划路径不允许派生子代理：请在对话里直接要求（由主循环委派并全程可见）");
+      results.push({ step, result: JSON.stringify({ ok:false, msg }), ok:false, blocked:true });
+      if(typeof o.onProgress === "function"){
+        try{ o.onProgress(i+1, plan.steps.length, step, msg); }catch(_){}
+      }
+      continue;
+    }
     let resultStr = "";
     let stepOk = false;
     try{
@@ -1936,7 +1952,7 @@ async function chatOnceAgent(messages, opts){
 
 /* ---------- 2. 新工具调用：web_search / web_fetch / code_run / sql_query ---------- */
 /** 需异步执行的工具名（单一来源：chat 路径与 Agent 计划路径共用，避免两处清单漂移） */
-const ASYNC_TOOL_NAMES = new Set(["web_search", "web_fetch", "code_run", "sql_query"]);
+const ASYNC_TOOL_NAMES = new Set(["web_search", "web_fetch", "code_run", "sql_query", "spawn_agent"]);
 /**
  * 同步/异步工具的统一执行入口。
  * v3.7.52：chat 路径原先只调 execTool —— 系统提示与 README 都告诉模型「可以联网检索 / 跑代码 / 跑 SQL」，
@@ -1966,6 +1982,14 @@ async function execToolAuto(name, args){
  */
 async function agentExecAsync(name, args){
   args = args || {};
+  /* Multi-Agent Phase 1（2026-10-26）：派生子代理（异步——内含 LLM 循环）。
+     实现在 ai-subagent（AppBridge.spawnAgentImpl，经桥调用避开静态环）。
+     深度 1 由两处共同保证：① 子代理白名单不含 spawn_agent；② 计划路径显式拒绝（executeAgentPlan）。 */
+  if(name === "spawn_agent"){
+    const impl = (typeof AppBridge !== "undefined") ? AppBridge.spawnAgentImpl : null;
+    if(typeof impl !== "function") return { ok: false, error: t("subagent.unavailable", "子代理运行时不可用") };
+    return await impl(args);
+  }
   if(name === "web_search"){
     return await toolWebSearch(args.query || "", args);
   }

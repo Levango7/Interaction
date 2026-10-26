@@ -2233,6 +2233,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     agentExecAsync, toolWebSearch, toolWebFetch, toolCodeRun, toolSqlQuery,
     DataKeyRegistry: DATA_KEY_REGISTRY, dataKeyRegistered, bareKeyRegistered,   /* v3.7.148 键注册表（tests/data-keys-registry 用） */
     dataKeyMeta, dataKeySyncAllowed, backupExcludedKeys, exportExcludedKeys,   /* v3.7.148：同步/备份派生判据；B2d（2026-10-26）：导出排除同源派生（tests/sync-key-policy 用） */
+    listSubAgents, getSubAgent, runSubAgent, spawnAgentImpl, _resetSubAgents,   /* Multi-Agent P1（2026-10-26）：子代理运行时（tests/subagent 用） */
     ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
     ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,

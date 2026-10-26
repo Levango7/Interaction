@@ -3905,13 +3905,27 @@ function renderAgentDock(){
       + (show[key] ? '<div class="adock-body">' + inner + '</div>' : '')
       + '</div>';
   };
-  /* 进程：agent 执行状态（agent_run：goal + steps/done） */
+  /* 进程：Multi-Agent P1（2026-10-26）——子代理注册表（运行中在上）+ agent 执行状态（agent_run） */
+  let subs = [];
+  try{ subs = (typeof listSubAgents === "function") ? listSubAgents() : []; }catch(e){ subs = []; }
+  const runSubs = subs.filter(function(s2){ return s2.status === "running"; });
+  let procInner = "";
+  if(runSubs.length){
+    procInner += runSubs.map(function(s2){
+      return '<div class="adock-row">▶ ' + esc(s2.name || s2.id) + ' <span class="u-text-dim">' + (s2.steps || 0) + ' ' + t("dock.stepDone", "步骤") + '</span></div>';
+    }).join("");
+  }else{
+    procInner += '<div class="adock-row u-text-dim">' + t("dock.idle", "空闲——没有进行中的 Agent 执行") + '</div>';
+  }
+  if(subs.length){
+    procInner += '<div class="adock-row u-text-dim">' + t("dock.subHistory", "最近 {n} 个子代理").replace("{n}", String(subs.length)) + '</div>';
+  }
   let run = null;
   try{ run = load(PREFIX + "agent_run", null); }catch(e){ run = null; }
-  const procInner = (run && Array.isArray(run.steps) && run.steps.length)
-    ? '<div class="adock-row">' + esc(run.goal || t("dock.running", "执行中")) + '</div>'
-      + '<div class="adock-row u-text-dim">' + t("dock.stepDone", "步骤") + ' ' + ((run.done || []).length) + '/' + run.steps.length + '</div>'
-    : '<div class="adock-row u-text-dim">' + t("dock.idle", "空闲——没有进行中的 Agent 执行") + '</div>';
+  if(run && Array.isArray(run.steps) && run.steps.length){
+    procInner += '<div class="adock-row">' + esc(run.goal || t("dock.running", "执行中")) + '</div>'
+      + '<div class="adock-row u-text-dim">' + t("dock.stepDone", "步骤") + ' ' + ((run.done || []).length) + '/' + run.steps.length + '</div>';
+  }
   /* 技能：与右栏 Agent 页同源（listEnabledSkills）——渲染两份、数据一份（无漂移面） */
   let skills = [];
   try{ skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : []; }catch(e){ skills = []; }

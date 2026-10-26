@@ -177,6 +177,25 @@
 - 版本号：**未占用**（3.7.151 仍空闲，见上条释放记录）。
 
 ---
+### [2026-10-27 01:37 UTC+8] WorkBuddy 主会话 —— 开工声明：**R-37「假回执」审计 + 实修**（用户点单 A+B+C）
+- 状态：进行中。**占用路径（动前声明，R4/R6）**：
+  `src/render-entry.js` / `src/ui-backup-stats.js` / `src/ui-daily.js` / `src/ui-scene-bind.js`（四处实修）
+  · `scripts/lib/false-receipt.mjs` / `scripts/lint-false-receipt.mjs` / `scripts/lint-false-receipt.baseline.json`（新增门禁）
+  · `tests/false-receipt.test.js`（新增）/ `tests/diag-report.test.js`（改 1 处 + 增 2 例）
+  · `package.json`（只在 `scripts.lint` 链尾追加一条，**不改依赖与版本段**）
+  · `docs/audit-2026-10-06.md`（新开 R-37 段，只追加）/ `CHANGELOG.md` 仅 `[Unreleased]` 段。
+  **不碰**：`src/{render-widgets,ai-loop,ai-tools,core-i18n,data-links,ui-global-events,ui-ge-integrations}.js`、
+  `src/ai-subagent.js`、`src/order.json`、`scripts/src-split.mjs`、`agent-workbench.html`。
+- ⚠️ **给正在动 `agent-workbench.html` 的会话（01:30 前后我观察到本树被反复注入/抽回）**：
+  我改的是 `src/*.js`，**源码态 HTML 里没有我的内容**；你若从一份**早于我改动**的 HTML 跑
+  `src:extract`，会把我的四处修改抹掉。需要重注入请先注入（src → HTML）而不是直接抽回，
+  或喊我一声。我的改动已另存补丁 `_probe/r37/r37.patch` + 四个文件副本（可随时回放）。
+- 在跑的重活：无（**不跑 `npm test` / `with-injected`**，避免和你抢 `agent-workbench.html`；
+  本批单测里 `tests/false-receipt.test.js` 只 import 判定层、不读 HTML，我单独跑它）。
+- 准备推的范围：暂无待推（A 做完再说；B/C 随后）。
+- 观察（事实通告，不是派活）：`main` tip `caf49b1` 的 CI `40364204261` / Deploy `40364204258` **仍红**，
+  根因是 `lint:empty-catch` 新增 2 处 P0（`src/render-widgets.js:3846` / `:3939`，Code 模式提交 `e65dcf1`）。
+  该文件 10-26 03:20 由 ZCode 声明占用 ⇒ **我不代修**。
 
 ### [2026-10-26 21:56 UTC+8] Qoder 主会话 —— **B6 已交付并合入 main · 释放**
 - 状态：**已收工（释放）**。B6（MCP 韧性 + 延迟可见）与随后的工具改进全部在 `main` 上。

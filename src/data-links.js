@@ -846,6 +846,7 @@ const DATA_KEY_REGISTRY = [
   { key: "theme", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "uimode", kind: "c", sync: true, backup: true },   // 本机控制状态（Work/Code 模式偏好，2026-10-26 Code 模式批次）
   { key: "agent_dock", kind: "c", sync: true, backup: true },   // 本机控制状态（agentDock 各段显隐，同批）
+  { key: "subagents", kind: "m", sync: false, backup: true },   // 本机元数据（Multi-Agent P1：子代理注册表/最近 20 条；运行台账不上云，与 sync_changelog 同口径）
   { key: "rail_tab", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "sceneViewMode", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据
