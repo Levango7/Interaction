@@ -40,6 +40,35 @@
 
 ---
 
+### [2026-10-27 05:43 UTC+8] Qoder 主会话 —— **第三方复跑 `085be27`（含 `3fa0443`）：代码可信、门禁 1 红、补丁已备好**
+- 目的与边界：用户让我"做能做的"。我在**仓外** `F:/tmp/verify-085be27`（node_modules 走 junction，没装依赖、没动共享树、没推任何东西）
+  独立复跑了他们那两笔，逐项自测而不是采信汇报。
+- **结论一：代码本身可信** —— 全量单测 **206 文件 / 2197 例全过**（比 main 多 3 个测试文件：
+  `false-receipt` / `flaky-freq` / `subagent`）。
+- **结论二：门禁 13 条里 12 绿，`check:ai-tools-doc` 红**，红点是 `3fa0443` 的遗漏：
+  ```
+  [ai-tools-doc] 解析到工具 27 个
+  [ai-tools-doc] 源码 27 个 / 文档 26 个
+    ✗ 文档缺：spawn_agent
+  ```
+  这条在 CI ubuntu 腿是第 4 步 ⇒ **原样推上去必红**。同类漂移还有两处不进门禁但同样是错的：
+  `README.md:55`「调用 26 个工具」、`docs/user-manual.md:103`「26 个工具…另有 7 个 agent 工具」（现应为 27 + 8）。
+- **结论三：合并面干净** —— `git merge-tree --write-tree origin/main 085be27` **exit 0 且无冲突**，
+  所以"能不能落"不是问题，**只有归属问题**（我不 rebase 别人的未推提交）。
+- **补丁已备好（可直接用）**：`F:/tmp/ai-tools-doc-spawn_agent.patch`，4 个文件：
+  `docs/ai-tools.md`（总数 26→27、异步清单加 `spawn_agent`、表格补第 27 行、补 `### 3.27 spawn_agent` 小节）、
+  `README.md`（26→27）、`docs/user-manual.md`（27 + 8）、`docs/module-graph.md`（38→39 重新生成）。
+  本机验证：`check:ai-tools-doc` **exit 0（27/27 一致）**、`build:check` **exit 0**。
+  应用方式：`git apply F:/tmp/ai-tools-doc-spawn_agent.patch`（在你们那棵树上，**先 `src:extract` 回源码态再 apply**）。
+- **两条给你们的坑**：
+  1. `scripts/module-graph.mjs` **即使带 `--check` 也会重写** `docs/module-graph.md`（写入在 check 分支之后），
+     所以块数漂移不会红、只会静默留在工作区 —— 别当它"没变过"。
+  2. 你们树里现在还有未提交的 `M agent-workbench.html`（注入态）。**下笔提交前必须 `src:extract`**，
+     并用精确路径 `git add`；01:58 那次的机制就是"注入 → 改 src → extract 回写"。
+- 我没动 `3fa0443` / `085be27` 的任何字节，也没推它们。谁推之前把上面补丁带上，就能一次绿。
+
+---
+
 ### [2026-10-27 02:29 UTC+8] Qoder 主会话 —— **B7 收工 + 代修收工 · main 已复绿（`9239248`）**
 - 终态（都是终值，不是"应该绿"）：CI `40374084130` **四腿全 success**（ubuntu 单测 **203 文件 / 2170 例全过**、
   windows 同腿 success、`e2e` success、`server-verify` success）；Deploy `40374084106` success
