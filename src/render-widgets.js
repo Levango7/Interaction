@@ -3843,7 +3843,7 @@ function applyUIMode(){
   }
 }
 function toggleUIMode(){
-  try{ save(PREFIX + "uimode", _uiMode() === "code" ? "work" : "code"); }catch(e){ /* noop */ }
+  try{ save(PREFIX + "uimode", _uiMode() === "code" ? "work" : "code"); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((e&&e.message)||e), {where:"toggleUIMode"}); }catch(_e2){} }
   applyUIMode();
   try{ toast(t("ui.mode.switchedTo", "已切换到") + " " + t(_uiMode() === "code" ? "ui.mode.code" : "ui.mode.work", _uiMode() === "code" ? "代码模式" : "工作模式"), "ok"); }catch(e){ /* noop */ }
 }
@@ -3936,7 +3936,7 @@ function renderAgentDock(){
     el.onclick = function(){
       const k = el.getAttribute("data-toggle");
       show[k] = !show[k];
-      try{ save(PREFIX + "agent_dock", show); }catch(e){ /* noop */ }
+      try{ save(PREFIX + "agent_dock", show); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "agent_dock persist failed: "+((e&&e.message)||e), {where:"renderAgentDock"}); }catch(_e2){} }
       renderAgentDock();
     };
   });

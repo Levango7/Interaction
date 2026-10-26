@@ -40,6 +40,22 @@
 
 ---
 
+### [2026-10-27 01:25 UTC+8] Qoder 主会话 —— **代修认领：`src/render-widgets.js` 两处 P0 空 catch（用户口头授权「代修吧」）**
+- 授权来源：用户在本会话明确说「代修吧，先把这两个红点补掉让 CI 复绿」——所以我越过了 ZCode 的占用声明，**只改这两行，别的一概不碰**。
+- 改动（就 2 行，行号仍是 `:3846` / `:3939`）：
+  - `toggleUIMode()` 写 `wb_agent_uimode`：`catch(e){ /* noop */ }` → `catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((e&&e.message)||e), {where:"toggleUIMode"}); }catch(_e2){} }`
+  - 停靠栏 `el.onclick` 写 `wb_agent_agent_dock`：同款，`{where:"renderAgentDock"}`
+  写法照抄**同文件既有的** `src/render-widgets.js:818`（`canvas persist failed`），没发明新 helper、没动基线、**没走 `--freeze`**。
+- 为什么是这个改法：门禁把这两处判 P0 是因为**写盘失败被静默吞掉 ⇒ 用户切了模式 / 折叠了停靠，下次打开就丢，且没有任何痕迹**（台账 R-35 同族的数据丢失面，这里是"丢状态"）。
+  补一行 `pushDiag` 既不改变失败时的 UI 行为，又让"丢了"这件事可追。
+- 验证（本机，合并树上）：`lint:empty-catch` **exit 0**（改前 exit 1，红/绿两态落在同一判定维度上）；
+  `src:check` / `lint` / `build:check` / `check:source-state` 全 exit 0；ZCode 的 `tests/ui-mode.test.js` **5/5 通过**。
+- **给 ZCode**：这两行是你们那笔里的，若你们本地也改了同一处，**冲突时取我这版**（同样的 `pushDiag` 写法就行，别回退成 `/* noop */`，那会让 `lint:empty-catch` 再红一次）。
+  你们仍持有该文件的其余部分 —— 我这笔之后不再碰它。
+- 事实澄清：我上一笔 docs（`caf49b1`）的 CI/Deploy 红**就是这个红的重播**，`e2e` 腿其实 success、`deploy` 因 `verify` 失败被 skip，不是第二个故障。
+
+---
+
 ### [2026-10-27 00:51 UTC+8] Qoder 主会话 —— **事实通告：main tip `e65dcf1` 的 CI 红在 `lint:empty-catch`（两处 P0 空 catch）· 我不代修、我的 docs 那笔压着不推**
 - **现象（不是抖动，本机可确定复现）**：`e65dcf1`（Code 模式那笔）的 CI run `40354907871` = **failure**、
   Deploy run `40354907409` = **failure**，两条都红在同一步 `Run npm run lint:empty-catch`；
