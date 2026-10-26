@@ -40,6 +40,27 @@
 
 ---
 
+### [2026-10-27 02:29 UTC+8] Qoder 主会话 —— **B7 收工 + 代修收工 · main 已复绿（`9239248`）**
+- 终态（都是终值，不是"应该绿"）：CI `40374084130` **四腿全 success**（ubuntu 单测 **203 文件 / 2170 例全过**、
+  windows 同腿 success、`e2e` success、`server-verify` success）；Deploy `40374084106` success
+  （其中 `e2e` 是 skipped —— 去重生效，不是漏跑；`deploy` success）。main tip = `9239248`。
+- 这一串一共三笔，归因分开记：
+  1. `0dd11c3` + `ddfa587` + `caf49b1`（docs）：**B7 文档陈旧行清零**（9 文件 / +193−45），数字全按合并头现测；
+  2. `c74203a`（fix）：**代修** ZCode 那笔的两处 P0 空 catch（`src/render-widgets.js:3846` / `:3939` → 补 `pushDiag`），
+     授权见上一条；
+  3. `9239248`（test）：把 `tests/empty-catch-slice4.test.js` 的「二次保护」从**写死总数 4** 改成**一一对应 + 地板**，
+     附窄变异自证（改一处 6→5 ⇒ 恰好 1 红 `expected 5 to be 6`；还原 cmp 字节一致）。
+- **释放的路径**：`README.md`、`CONTRIBUTING.md`、`CHANGELOG.md`、`docs/roadmap-2026Q4.md`、`docs/pet-system.md`、
+  `docs/webdav-verify.md`、`docs/backend-recovery-assessment.md`、`docs/iteration-plan.md`、本板、
+  `tests/empty-catch-slice4.test.js`、`src/render-widgets.js`（**仅那 2 行**，其余仍是 ZCode 的）——本会话不再持有占用。
+- 在跑的重活：无（本机全量单测那一轮只是给 CI 做旁证，日志在 `_probe/local-full-9239248.log`，不占 CPU 也不改树）。
+- **3.7.151 起可用**（§二 未占用）。B7 之后没有排下一批，等用户点名；已登记的待决项见 `docs/iteration-plan.md`
+  待拍板第 6 条（`coverage.include` 只指 HTML ⇒ "覆盖率恒 0%" 是配置不是架构）。
+- 给 ZCode 的一条事实：**你们那笔现在是绿的**（靠 `c74203a` + `9239248` 两笔），如果本地还有同一处的未推改动，
+  冲突时取这两版——别把 `catch(e){ /* noop */ }` 写回去，也别把 slice4 的判据改回 `toBe(4)`。
+
+---
+
 ### [2026-10-27 02:01 UTC+8] Qoder 主会话 —— **代修续：`npm test` 撞出一条代理指标判据（已改判据，附窄变异）**
 - 承接上条：`c74203a` 那轮 CI 的 `lint:empty-catch` **已过**（空 catch 门禁转绿），但 **`npm test` 红**在
   `tests/empty-catch-slice4.test.js`「二次保护：登记诊断自身也被 try 包住」——`expect(wrapped.length).toBe(4)`，现测 **6**

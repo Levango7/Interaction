@@ -131,6 +131,12 @@
   故改为 `expect(wrapped.length).toBe(guards.length)` + 保留 `>= 4` 的地板（只许涨不许降）。
   **射程自证（窄变异）**：把**一处** `catch(_e2){}` 改成等价写法 `catch(_e2){void 0;}`（6→5）⇒ 恰好 1 条红、
   报 `expected 5 to be 6`；还原后字节一致、复跑全绿。`tests/empty-catch-slice4.test.js` 单跑 10/10。
+- **终态（合并头 `9239248`）**：CI `40374084130` **四腿全 success**（ubuntu 单测 **203 文件 / 2170 例全过**、
+  windows 同腿 success、`e2e` success、`server-verify` success）；Deploy `40374084106` success
+  （其 `e2e` 为 skipped = 去重生效、非漏跑；`deploy` success）。
+- **一条自查**：本机全量单测第一次跑时我把输出接给了 `tail -40`，**判定行被截掉**只剩 `wrapper exit 0`。
+  判定器有"两头判错"前科，所以退出码 0 不能当计数证据 —— 改成**日志写文件不接管道**重跑，
+  并以 CI 的 `Test Files 203 passed (203)` / `Tests 2170 passed (2170)`（passed == total，无掉线文件）作为正式计数。
 
 ### 2026-10-26 · B7：文档陈旧行清零（roadmap / README / CONTRIBUTING / pet-system / webdav-verify / backend-recovery / iteration-plan）
 
