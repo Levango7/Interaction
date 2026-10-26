@@ -4,7 +4,7 @@
 
 零安装、单文件、纯本地；数据存本机浏览器，**默认不依赖任何后端服务器**（可选开启账号云同步与联网工具）。
 
-> **源码态说明（v3.7.0 起）**：仓库内的 `agent-workbench.html` 是约 648 KB 的**骨架**（2026-10-26 现测 663,782 B = 648.2 KB，命令 `npm run check:source-state` 打的是同一个口径）——应用 JS 已外置到 `src/`（38 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
+> **源码态说明（v3.7.0 起）**：仓库内的 `agent-workbench.html` 是约 654 KB 的**骨架**（2026-10-26 现测 669,894 B = 654.2 KB，树内含 `e65dcf1` Code 模式那笔；命令 `npm run check:source-state` 打的是同一个口径）——应用 JS 已外置到 `src/`（38 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
 >
 > ```bash
 > npm run src:inject     # 把 src/ 拼回单文件 HTML
@@ -252,12 +252,12 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
 | `npm run pet:extract` | 反向：从 HTML 抽出立绘到 `assets/pet/`，HTML 留标记占位 |
 | `npm run pet:check` | 校验 assets 与 HTML 注入是否一致 |
 
-- 源码态 HTML（约 648KB，2026-10-26 现测；无 base64、JS 与立绘均已外置）**不能直接当成品用**：立绘区会退化为 SVG 兜底 + 控制台告警。
+- 源码态 HTML（约 654KB，2026-10-26 现测；无 base64、JS 与立绘均已外置）**不能直接当成品用**：立绘区会退化为 SVG 兜底 + 控制台告警。
   本地预览前先 `npm run pet:inject`；`npm test` / `npm run build:check` / `npm run build:prod`
   都挂了 `pre` 钩子会自动回注，CI 无需额外步骤。
 - 改立绘 = 替换 `assets/pet/<kind>.png` → `npm run pet:inject`（顺序由 `assets/pet/order.json` 保持）。
 - **抽取方向顺序固定**：`pet-art --extract` → `src-split --extract`（`npm run src:extract` 与所有 `post*` 钩子都已按此链好）。顺序反了会把 base64 抽进 `src/render-widgets.js`（v3.7.58~v3.7.63 的历史双存坑，`check:source-state` 现已拦）。
-- 收益（**v3.7.0~v3.7.64 的历史量，不是现值**）：立绘外置让源码 HTML 3.50MB → 2.34MB，JS 分层外置后再降到约 607KB（当时 35 个模块），`src/render-widgets.js` 也不再内联 base64（v3.7.64：1,149,465 → 279,851 字节，-869KB），编辑器与 diff 恢复可用。**现值见本文开头：648.2 KB / 38 个模块**（2026-10-26 现测，`npm run check:source-state`）；交付产物仍是**单个 HTML**（拼回 + 立绘回注后 4,126,052 B ≈ 4.13 MB，2026-10-26 发 `v3.7.150` 时的两次独立构建同指纹值；早期文档写的"约 3.5MB"是立绘更少时的历史量）。
+- 收益（**v3.7.0~v3.7.64 的历史量，不是现值**）：立绘外置让源码 HTML 3.50MB → 2.34MB，JS 分层外置后再降到约 607KB（当时 35 个模块），`src/render-widgets.js` 也不再内联 base64（v3.7.64：1,149,465 → 279,851 字节，-869KB），编辑器与 diff 恢复可用。**现值见本文开头：654.2 KB / 38 个模块**（2026-10-26 现测，`npm run check:source-state`）；交付产物仍是**单个 HTML**（拼回 + 立绘回注后 4,126,052 B ≈ 4.13 MB，2026-10-26 发 `v3.7.150` 时的两次独立构建同指纹值；早期文档写的"约 3.5MB"是立绘更少时的历史量）。
 
 **分层源块已外置（v3.7.0 起 · 任务 4 第一步）**：`Util`（Markdown 解析、性能工具）与 `Crypto` 两个层块
 先行抽到 `src/*.js`（合计约 36KB），HTML 内留标记占位，构建/测试前由 `scripts/src-split.mjs` 拼回；

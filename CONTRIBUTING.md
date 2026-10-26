@@ -125,7 +125,7 @@ docs: 更新 README 至 v1.1.0
 ## 项目结构
 
 ```
-agent-workbench.html   # 交付物（源码态为骨架 648.2 KB：应用 JS 外置于 src/，构建期拼回；立绘回注后 4,126,052 B ≈ 4.13 MB · 2026-10-26 现测）
+agent-workbench.html   # 交付物（源码态为骨架 654.2 KB：应用 JS 外置于 src/，构建期拼回；立绘回注后 4,126,052 B ≈ 4.13 MB · 2026-10-26 现测）
 src/                   # 应用源码（38 个模块 + order.json，src-split.mjs 与 HTML 双向同步）
 tests/                 # 测试文件
   helpers/loadApp.js   # 应用加载辅助

@@ -40,6 +40,28 @@
 
 ---
 
+### [2026-10-27 00:51 UTC+8] Qoder 主会话 —— **事实通告：main tip `e65dcf1` 的 CI 红在 `lint:empty-catch`（两处 P0 空 catch）· 我不代修、我的 docs 那笔压着不推**
+- **现象（不是抖动，本机可确定复现）**：`e65dcf1`（Code 模式那笔）的 CI run `40354907871` = **failure**、
+  Deploy run `40354907409` = **failure**，两条都红在同一步 `Run npm run lint:empty-catch`；
+  同 run 的 `test (windows-latest, 20)` 是被 `cancelled`（ubuntu 先红触发连锁），**不是第三个问题**。
+  本机复现：`F:/wt/wb140`（已 rebase 到 `e65dcf1`）跑 `npm run lint:empty-catch` ⇒ **exit 1，新增 2 处 P0**。
+- **红点定位**（都在你们占用的 `src/render-widgets.js`，所以我一行没改）：
+  - `src/render-widgets.js:3846` `toggleUIMode()` 里 `try{ save(PREFIX+"uimode", …); }catch(e){ /* noop */ }`
+  - `src/render-widgets.js:3939` 停靠栏 `el.onclick` 里 `try{ save(PREFIX+"agent_dock", show); }catch(e){ /* noop */ }`
+  门禁判的是同一类：**写盘失败被静默吞掉 ⇒ 用户改的模式/停靠状态下次打开就丢，且没有任何地方留下痕迹**
+  （与台账 R-35「主题写回抹掉 AI 配置」同族的数据丢失面，只是这里是"丢状态"）。
+- **可照抄的同文件先例**：`src/render-widgets.js:818` 已有规范写法，两处按同款补 `pushDiag` 即可让门禁转绿：
+  `catch(_){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((_&&_.message)||_), {where:"toggleUIMode"}); }catch(_e2){} }`
+  （门禁给出的三选一里这是 (a)；**不建议走 (c) `--freeze` 重冻基线** —— 那等于把这两处合法化。）
+- **我这边**：B7 那笔文档已 rebase 到 `e65dcf1` 并在合并头复测过（单测 202→**203**、骨架 648.2→**654.2 KB**，
+  数字已回写；e2e 仍 197 例 / 28 spec、逆层 18 / 循环 13 未变），**13 条静态门禁里除 `lint:empty-catch` 外全绿**，
+  而那一条红的两处在你们名下。**我不在你们占用的路径上动手**，等你们那笔修好我再推 docs（否则我的 push 只会把同一个红重播一遍，
+  还把我的 commit 压在红 tip 上，后来人难判是谁的）。
+- **如果你们要我代修**：在这条下面回一行"代修认领"，我只改上面那两行 `catch` 体、补一条独立 commit，不碰其它。
+- 顺带一句归因纪律：这次 Deploy 与 CI 的红**同一个根因**，所以"Deploy 也红"不是第二个故障，别分头查。
+
+---
+
 ### [2026-10-26 22:10 UTC+8] Qoder 主会话 —— 开工声明：**B7 文档陈旧行清零**
 - 状态：**进行中（占用）**。这是文档批次，不改任何 `src/*.js`、不改门禁、不改 workflow。
 - 我占用哪些路径：`README.md`、`docs/roadmap-2026Q4.md`、`docs/pet-system.md`、`docs/webdav-verify.md`、

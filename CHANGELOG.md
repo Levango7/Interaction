@@ -114,7 +114,7 @@
   凡是写着"仍待 / 尚未 / 待拍板"的行，先 grep 实现 + 看门禁 + 看 CHANGELOG 有没有已完成记录，再决定销不销。
 - **改掉的错（每条都带 2026-10-26 现测值与数法）**：
   1. `docs/roadmap-2026Q4.md` §一「当前坐标」：v3.7.135 → **v3.7.150**（HEAD `03bd99f` + tag 已发并线上核过）；
-     单测 168 → **202 文件**（`git ls-files tests | grep -c '\.test\.js$'`）；e2e 136 例 / 20 spec →
+     单测 168 → **203 文件**（`git ls-files tests | grep -c '\.test\.js$'`）；e2e 136 例 / 20 spec →
      **197 例 / 28 spec / 3 视口**（`npm run e2e -- --list` 末行；projects 多出 `mobile-375x667`，所以例数 = 用例 × 3）；
      逆层 18 / 循环 13 / 块 38 **复核未变**（契约型，`node scripts/module-graph.mjs --check`）。
      **上一次"实测"距本次只有五天**——所以 §一 那条"进度型数字必须带截至日期 + 现测命令"的规则被原样保留并加了一句实况。
@@ -130,7 +130,7 @@
      而 `npm run release` 写的是**八处**（五源 + HTML `BUILD_TAG` + `service-worker.js` 的 `CACHE_VERSION` +
      两份 `package-lock.json` 根 `version`）。原句「自动同步五处 + 锁文件根字段 + **CHANGELOG**」是**错的**——
      脚本**不写 CHANGELOG**，只在结尾打一行提醒（`scripts/release.mjs:126`），照旧句理解就会漏记台账。
-  6. 体积/模块数：README 骨架 640 KB（"实测 638 KB"）→ **663,782 B = 648.2 KB**；交付态"约 3.5MB" →
+  6. 体积/模块数：README 骨架 640 KB（"实测 638 KB"）→ **669,894 B = 654.2 KB**（rebase 到 `e65dcf1` 后在最终头复测：单测 202→203、骨架 648.2→654.2 KB —— 数字取复测值，因为进文档的计数必须在最终头上量）；交付态"约 3.5MB" →
      **4,126,052 B ≈ 4.13 MB**（发 `v3.7.150` 时两次独立构建的同指纹值）；README/CONTRIBUTING 的「35 个模块」→
      **38**（历史段里保留"当时 35"并标出数法）。`docs/pet-system.md` 的「版本号五处漂移」同步改成五源/八落点口径。
   7. 「七个验证脚本（合计 173）」→ **11 个**（`ls server/verify/*.cjs | wc -l`），CI `server-verify` 腿逐条跑满
@@ -144,8 +144,11 @@
      **已登记进 `docs/iteration-plan.md` 待拍板清单**，不在本批顺手改；
   ② `_probe/r22-flaky-freq.mjs` 的 TARGETS 按行号锚（`ics…:82`，实测用例已漂到 `:87`）⇒ 漂移后的抖动被静默低估，
      已在台账 R-9 续二登记，工具改标题锚 + 入库 + 自带单测留作下一批。
-- 验证：`npm run build:check`（README 三处版本锚点必须仍解析得通）+ 13 条静态门禁 exit 0 + `npm run test:local` 抽样；
-  详见板与 `docs/agent-board.md` 的 B7 条目。
+- 验证：`npm run build:check`（README 三处版本锚点必须仍解析得通）exit 0 + `tests/csp.test.js` **5/5**（仓里唯一读 README 的测试）
+  + `check:source-state` 源码态；**改前**在 `03bd99f` 树上 13 条静态门禁全 exit 0。
+  ⚠️ **合并到 `e65dcf1`（并行会话的 Code 模式那笔）之后复跑，`lint:empty-catch` 转红** —— 新增 2 处 P0 空 catch
+  在 `src/render-widgets.js:3846` / `:3939`（对方板条声明仍在占用，故**我没代修**，事实通告已写进 `docs/agent-board.md`）。
+  其余 12 条在合并树上仍全绿。**本批不含任何 `src/*.js` 改动。**
 
 ### 2026-10-26 · 守候工具：`gh` 通路不可达时用 curl 兜底（用户拍板「同意，换成 curl 兜底」）
 

@@ -10,7 +10,125 @@
 
 - 版本 **v3.7.150**（数字快照：2026-10-26，HEAD `03bd99f`，tag `v3.7.150` 已推且线上三面核过；3.7.136 → 3.7.150 这 15 个版
   由本会话与两个并行会话交替交付，逐版内容看 `CHANGELOG.md` 顶部与 `AGENTS.md` §二 的销账表，本行不重复记账）；
-  单测 **202 文件**（`git ls-files tests | grep -c '\.test\.js$'` 现测）
+  单测 **203 文件**（`git ls-files tests | grep -c '\.test\.js
+  + e2e **197 例 / 28 spec / 3 视口**（`npm run e2e -- --list` 现测，末行 `Total: 197 tests in 28 files`；
+  projects 已从两腿加到三腿 —— 多出 `mobile-375x667`，所以"例数 = spec 内用例 × 3"）；逆层 18 / 循环 13 / 块 38
+  （`node scripts/module-graph.mjs --check` —— 三个**契约型**数字与 v3.7.105 时点一致，未变）。
+  > ⚠️ **不再手写用例总数**（v3.7.93 之后到 v3.7.135，"115 文件 / 1307+ 用例"漂了三处，见
+  > `docs/audit-2026-10-06.md` R-3）：**契约型数字**（逆层/循环/块数）由门禁守着可以写；
+  > **进度型数字**只写"截至某日某 commit 的实测"，并给出现测命令。
+  > 2026-10-26 本行又被漂了一次（168 文件 → 202、136 例 / 20 spec → 197 例 / 28 spec，**五天**），
+  > 这条规则不是洁癖：上一版"实测"日期离现在只有五天。
+- 后端：`server/` 已从孤立提交 `ac1114a` **找回并加固**（v3.7.105 合并发版；审计口径
+  `docs/backend-recovery-assessment.md`）。**v3.7.112 起契约级联调 29/29 + 真机 UI 联调 19/19 双通**
+  （联调抓到并修复信封拆包 P0）；速率限制 / 审计日志（v3.7.110）/ `/api/tools/fetch`
+  （v3.7.111）/ 第三方登录加固（v3.7.113，`verify/oauth-check.cjs` 33/33）已交付。**验证脚本现测 11 个**
+  （`ls server/verify/*.cjs | wc -l`），CI 的 `server-verify` 腿**逐条跑满这 11 条**（`.github/workflows/ci.yml:110-122`）；
+  各脚本的断言条数随功能增长，**合计值一律以该腿的输出为准**——旧写的"七个脚本合计 173"是 2026-10 中段的时点量，
+  脚本数已经变（属 R-3 同族的第二次漂，2026-10-26 更正）。剩余缺口见该文 §七：
+  ~~refresh token 明文落盘~~（v3.7.114 已落地：数据目录 0700 / 文件 0600，README 明示
+  「`cfg.dataFile` 即凭证文件」）、~~`corsOrigin` 默认全开~~（v3.7.114：默认保持 `*`
+  开箱即通，值为 `*` 时启动 WARN + README 警示）、**GitHub 登录真机验收**（✅ 2026-10-19 真机通过，四件套核验见 §五 ①）、微信正式接入（商务阶段项）。
+- 集成：七家 provider 主链路**全部接完**（Notion/Linear/Jira/飞书/钉钉/Slack + 本地日历）。
+  数法：`src/ui-ge-integrations.js:84-93` 的 `INTEGRATION_TYPES` 是 **8 个键**，其中
+  `google_calendar` / `outlook_calendar` 是**同一张本地日历卡的两个注册名**（`ui-global-events.js:480-484` 兜底查这两个名字），
+  不是两家远端 OAuth —— 双向 Google/Outlook 日历由用户 2026-10-03 裁定**永久不做**（见本文「硬阻塞」表首行），
+  国内日历需求走 ICS 订阅路线。所以"七家"数的是**能真发出去的目标**，不是键数。
+  废弃函数 30 → **10**（截至 2026-10-26 复测仍是 10，`tests/integration-deprecated.test.js` 的 `DEPRECATED`
+  名单现数：`node -e 'const s=require("fs").readFileSync("tests/integration-deprecated.test.js","utf8").match(/const DEPRECATED = `([\s\S]*?)`/)[1];console.log(s.trim().split(/\s+/).length)'`；
+  该数字 9↔10 曾漂过一次，属 R-3 同族，每次收尾按命令重数）。
+- 集成状态映射改为**运行时解析**（v3.7.85）：Linear 连接即拉团队工作流 states，Jira 更新后按
+  transitions 匹配 —— 此前"需真实工作区才能接"的冻结项就地解冻。
+
+## 二、Q4 批次（按"先易后难 / 有意义优先"排序）
+
+### 批次 A：收尾清偿（✅ 本批已交付）
+- A1 Linear/Jira 状态映射运行时化；A2 ICS 导出（本地日程 → .ics，零凭据双向的另一半）；
+  A3 纯死 lifecycle 函数删除（5 个）；A4 文案诚实化（Linear 描述随 A1 更新）。
+
+### 批次 B：体验补齐（✅ **已全部交付**，2026-10-26 归位：原标"📋 下一轮候选"但下面每一条都是 ✅）
+
+> ⚠️ 编号撞车提醒：本文的"批次 A/B/C"是 **2026-10-03 那套**（B1 日历联动 / B2 死接线普查 / B3 ICS 增强），
+> 与 `docs/iteration-plan.md` 的 **B0~B7**（B4 token 可见 / B5 窄屏溢出 / B6 MCP 韧性 / B7 文档清零）**不是同一套编号**。
+> 排期时先认文档，别把两边的"B5"当成同一件事。
+- **B1 日历联动** → ✅ 已交付（v3.7.86：月格徽章/周视图事件行 → 详情浮层，聚合会议+任务+外部三类，多条可翻页）。
+- **B2 死接线普查** → ✅ 已交付（v3.7.86：双向普查 → 幽灵读 0；真死 1 处 = 旧日历弹窗 #calModal 整块删除，并连带修好概况卡日历绑定到化石容器导致翻月按钮实死的 bug；口径覆盖三种绑定形态含事件委托；`tests/dead-wiring-guard.test.js` 门禁固化）；**B2 剩余** → ✅ 已交付（2026-10-04：「设置抽屉里非开关类的小面增量扫」做完，**结论 0 死接线**）。
+  - 新增 `_probe/audit-dead-wiring-dynamic.mjs`：**动态渲染**控件的普查口径 —— 静态门禁自己写着
+    「动态渲染出来的 id 不参与本门禁」，而第 7 例（`#aiMemRag` 恒不渲染）与第 8 例（旧日历弹窗
+    绑到化石容器）都出在这个盲区。做法：真浏览器逐页渲染设置抽屉 → 枚举可交互控件 → 判死三条
+    同时成立（`onclick` 为空 + 不在 `<form>` 内 + 标识符在 src 全块零出现）。标识符集合必须含
+    **class 名**（本仓有一类控件只有 class 没 id，如自研下拉的 `ds-trigger`）——探针第一版漏了这条，
+    报了 9 个假阳；另一处修正是只枚举 `.set-card.set-tab-active`（只写 `#drawer` 会把所有页签的
+    内容重复计入）。
+  - 实测结果：57 个控件里 13 个「onclick 为空且不在 form 内」，逐个查过**全部有绑定或本不该有**
+    （9 个自研下拉 `ds-trigger` 在 ui-select.js 内部绑定 / 3 个 `chain-del` 走全局 `data-del` 委托 /
+    1 个禁用按钮），**可疑死接线 0**。
+  - 该普查顺带抓到一处**线上可见的真缺陷**（v3.7.89 引入、当日修复）：浏览器形态下「仅桌面版」
+    那几个禁用按钮的标签夹着 `">` —— i18n 片段 `p4.html.intConnDisabled` 自带开头的 `">`，
+    拼接处又多写了一个 `'">' +`。原有断言只查「禁用 + title」不查文字，所以绿着上线。
+    修 + 补守护（`tests/notify-webhook.test.js` §⑦，已变异验证）+ 线上行为复核
+    （`_probe/verify-live-disabled-label.mjs`）。
+- **B3 ICS 增强** → ✅ **全部交付**（v3.7.87 D：订阅源重命名 + 解析失败行级诊断计数；v3.7.89：时区三口径 / VALARM 提醒链路 / CATEGORIES 取色（即原列"VEVENT 颜色映射"）/ 源级启用停用；v3.7.101：订阅源批量启用/停用（即原列"订阅源批量管理"）—— 原列"剩余"两项均已落地）。
+- **批次 C WebDAV 云同步载体** → ✅ 已交付（v3.7.87：主进程 webdav-fetch 中继 + 应用密码加密落盘 + ETag 冲突检测；**同步主流程 v3.7.88 已接入**：上传=快照桥→PUT、下载=GET→快照桥应用、412 弹确认不静默覆盖；待手动验证一轮。）。
+
+### 批次 C：需真实数据/工作区的接线（⛔ 或 🔄）
+- **C1 Linear/Jira 真机验收** → 🟡 待跑（`_probe/accept-linear-jira.mjs` 一条命令逐项 PASS/FAIL，差你给凭据）：
+  代码侧已就绪（v3.7.85），只差一次人工验收。
+- **C2 云同步增量** → ✅ **阶段 1+2 均已交付**（v3.7.105 批：C1 本地变更日志（门控）+ C2 上行体积看板；v3.7.106 批：**阶段 2 增量上行** —— 服务端 `POST /api/sync/changes`（权威水位 / tombstone 剪枝 / 幂等 / 逐键 LWW，`verify/incremental-check.cjs` 38/38）+ 客户端开关制分流（关=逐位全量；开=增量，不支持/落后自动全量回退）。详见 `docs/cloud-sync-incremental-contract.md` §二 定稿 + §三 实施记录。**C3 冲突计数已先行交付**（v3.7.107：面板「上次云端覆盖」+ 诊断行，口径=本机有值且被远端改成不同值才计）；**下行也切增量 ✅ 已交付（v3.7.108：登录+开关开时每 5 分钟一次「无上也拉」定时拉取）**；**冲突策略 ✅ 已交付（v3.7.109：`cfg.sync.conflictPolicy` 服务端声明 `lww`/`mv`，mv 下冲突清单下发 + 客户端任务自动合并 / 用户二选一面板，`verify/incremental-check` 54/54）**。
+
+### 硬阻塞（前置条件清单）
+| 项 | 缺什么 | 谁能解 |
+|---|---|---|
+| ~~Google/Outlook 日历双向~~ | **2026-10-03 用户裁定：永久不做**（暂不出国，只在国内用） | 已结案 |
+| HMS（华为）替代？ | 2026-10-03 评估：**形态不兼容** —— HMS Calendar Kit 是 Android 原生 SDK（AAR/AGP），本仓交付形态是 Web/PWA/Electron 单文件，浏览器与 Electron 都跑不了原生 SDK；要走 HMS 得新增 Android 构建轨 + 华为企业开发者账号 + 应用资质，是「换平台」不是「换渠道」。国内日历需求已由 ICS 路线（QQ/网易公开订阅链接，国内直连可达）满足 | 不做；未来若上 Android 轨再评估 |
+| 微信扫码登录 | 2026-10-03 用户裁定：**转商务阶段条件项** —— 硬前置为企业主体认证 + ICP 备案域名 + 认证费 + 回调服务端；主体功能先做出来，有企业客户时商务阶段再接（现有 `apiWechatQrcode/apiWechatStatus` 协议原样可用）。**2026-10-11 更正 + 已交付（v3.7.113）**：先更正一处我自己的误判——端点**本来就在**（`ac1114a` 骨架自带演示模式），我先前据不完整的 grep 说成"后端 404"是错的，实为**演示模式 + 两处真 bug**。v3.7.113 加固：scene 一次性消费（原来可反复领 token）、超 TTL 即清、confirm 仍默认 404 不暴露、审计落 login 事件；`verify/oauth-check.cjs` 33/33 全链路（取码→pending→dev 确认→confirmed→一次性→过期）。正式微信授权仍等商务触发 | ✅ 演示模式已加固；正式接入商务触发 |
+| GitHub（Gist 载体） | 2026-10-03 用户裁定：**暂不方便搞**（拿不到 client_id）。v3.7.86 设备流底座原样保留（无 client_id 时 UI 不渲染授权按钮）；国内同档零门槛替代改走 **WebDAV（坚果云等）** —— 应用密码即凭据、国内直连（实测无 ACAO → 桌面主进程代发）。**账号侧 `/api/auth/github` 2026-10-11 已加固（v3.7.113）**：修两处真 bug（兑换打 JSON body 会被 GitHub 拒 → 改 form-urlencoded；回调页漏传 state → 客户端校验拒收、链路本是断的）＋ fail-closed（未配凭据 503 `github_not_configured` 而非 404）＋ state TTL/一次性/origin 记录/审计。**真机验收 2026-10-19 已通过**（用户已注册 OAuth App，凭据写入本机 `server/config.json`；四件套核验见 §五 ①） | ✅ 已加固 + 真机验收已通过 |
+| Notion/Linear **笔记**双向 | 无（能力已被判"个人场景不值当"）—— **建议永久不做** | — |
+| Electron **打包 portable exe** | ✅ **已通车（走 CI 产物，2026-10-10 实测）**：推 tag `v3.7.105` 触发 `Build Electron portable exe`（run `37998236342`）success，产物 `agent-workbench-portable-exe` **85.7MB** 落袋。本机仍不能直连 github 拉 helper（TLS 超时），故本机验收继续走 dev 模式：`cd electron && npm run prebuild && npx electron .`（`resolveHtml()` 的 dev 分支加载仓库根那份 HTML，所以必须先注入） | 已解（产物从 CI 取） |
+| 云同步增量 | ✅ **已交付（v3.7.106：阶段 1+2）** —— 服务端水位/tombstone/显式删除信号/幂等 + 客户端开关制增量与全量回退（`verify/incremental-check.cjs` 54/54，含 mv 冲突解决）。**冲突策略 `mv+提示` 亦已交付（v3.7.109）**；真机 UI 联调 **19/19** 通过（v3.7.112） | 已解 |
+| Linear/Jira 反向拉取 | 无技术障碍，产品价值待判 | 用户拍板 |
+
+### 批次 C（v3.7.87 起）：WebDAV 云同步载体（坚果云等）
+
+国内个人云盘的现实答案：**标准 WebDAV + 应用密码**（坚果云/123云盘等支持；应用密码即凭据，
+无 OAuth、无企业资质）。实测（`_probe/webdav-probe.mjs`）：`dav.jianguoyun.com` 可达
+（401 + `WWW-Auth: Basic realm="nutstore"`）但**无 ACAO** → 浏览器直连被 CORS 拦，**桌面版经主进程
+代发**（安全面仿 ics-fetch：只 PROPFIND/GET/PUT/DELETE、URL 限 https 与用户自填、2MB 封顶、
+凭据仅本次调用传递不落盘主进程、日志只记主机与状态码）。
+## 三、质量基线（守门不退让）
+
+- 任何版本发布前：串行全量单测 → e2e → 六门禁 → **CI 独有门禁**（lint:tokens 等本地不含的，
+  v3.7.84 的悬空令牌就是 CI 抓出来的）→ 线上指纹复核 → 台账记账。
+- 分层纪律：新代码不许新增跨层逆层边；需要就开 AppBridge 槽位（core 留位、高层注册）。
+
+## 四、下一步建议（若继续）
+
+> 2026-10-06 更正：原列的 1「B1 日历详情浮层」与 3「B2 死接线普查」**均已交付于 v3.7.86**
+> （见本文 §二 批次 B），留在这里只会误导下一轮排期 —— 这本身也是 R-3 那类漂移。当前主线改为审计台账。
+
+1. **审计批次③续跑**：项与状态一律看 `docs/audit-2026-10-06.md`（R-1…R-11 及续记），不在本文重复记账；
+2. **需要用户拍板的两件**：R-2 存量空 catch（P0 118 处）的消解切片与优先级；R-6 的类守卫是否升格进
+   `lint:*` 清单（升格要同改 `ci.yml`/`deploy.yml`/`verify-ci-order` 三处，代价是门禁步数再 +1）；
+3. **卡在凭据/人工的几件**（2026-10-26 逐条重测，别再照旧清单捡）：
+   - C1 **Jira** 真机验收 🟡 待跑（`_probe/accept-linear-jira.mjs jira`，差站点 + API token）；**Linear 已于 2026-10-11 通过**（见 §五 ⑤，别重跑）；
+   - WebDAV：协议层 ✅、桌面 UI **7/8 步已跑通**（见 §五 ⑥ 与 `docs/webdav-verify.md`），**只剩「改一条任务再上传」一步**
+     —— 卡的不是凭据，是探针没定位到任务行选择器；
+   - **GitHub 登录真机验收**（✅ 2026-10-19 已完成，见 §五 ①）；
+   - 微信正式接入 ⛔ 商务触发（企业主体 + ICP 备案，见 §五 ④）。
+
+## 五、待办清单（截至 2026-10-26 逐条重测 · 逐条带前置条件）
+
+| # | 事项 | 状态 | 前置 / 做法 |
+|---|---|---|---|
+| ① | **GitHub 登录真机验收** | ✅ **已通过（2026-10-19 真机）** —— 唯一真实 provider 完成端到端：`GET /api/auth/github` 签发 authorizeUrl → GitHub 授权回调 → code 兑换 → find-or-create → 签发 → 设备与审计落库。核验四件套全绿：`/me` 200 返回 `name=Levango7 provider=github providerId=53509847`；`/devices` 含 `github-oauth`（sid `063bfff8e66c`）；审计 `register{provider:github}` + `login{provider:github, device:github-oauth}`；refresh 200 且会话已持久化 |**已完成**。踩到并解决的三处（供后来者少走弯路）：① **Client Secret 必须是 40 位**——粘贴时被重复三遍（120 字符），GitHub 兑换端点直接回 `incorrect_client_credentials`；截取前 40 位后同一探针返回 `bad_verification_code`（凭据有效、仅 code 假），这才是正确判据形态。② **`github.com` 网页端在本机是间歇性阻断**（同时刻 `api.github.com` 200、`codeload` 301、`raw.githubusercontent` 不通），授权页因此多次 `ERR_CONNECTION_RESET`；不是代理问题（系统代理关闭、无 env proxy），需等网络窗口。③ `cfg.github.stateTtlSec` 由默认 600s 放宽到 **1800s**（`server/config.json`，不入库）——首次真机登录要在 GitHub 侧登录+授权，10 分钟窗口不够，过期会表现为 `state_invalid`，与「票没签」同形，极易误判为冒名服务。另：应用用 `window.open` 开授权窗，弹窗被拦时走 `location.href` 兜底（当前页跳转），此时回调页无 opener、`postMessage` 无处可达，登录态由后端会话承担——真机验收即在此形态下通过 |
+| ② | **refresh token 明文落盘** | ✅ **已按建议落地（v3.7.114）** | 数据文件写盘时目录 0700 / 文件 0600（POSIX）；README 明示「`cfg.dataFile` 即凭证文件」；权限收紧失败打 WARN 不静默。口令派生/KMS 未做（独立课题：拿到文件 ≈ 拿到整机，性价比不成立） |
+| ③ | **corsOrigin 默认全开** | ✅ **已按建议落地（v3.7.114）** | 默认保持 `*`（开箱自通优先），值为 `*` 时启动打 WARN + README 警示；对外/过反代由运维收紧 |
+| ④ | 微信正式接入（扫码登录） | ⛔ 商务触发 | 企业主体认证 + ICP 备案域名 + 开放平台审核；协议已就绪，只换 provider 实现（`docs/oauth-login-design.md` 阶段④） |
+| ⑤ | **Linear** 真机验收 | ✅ **已通过（2026-10-11）** | 用户配了真 workspace（VanguardLea/key=VAN）+ personal API key，跑 `_probe/accept-linear-jira.mjs linear` 全过：viewer / 7 状态 / key→UUID 解析 / **真建 VAN-5**（带 stateId）/ 更新路径。**验收当场抓到一个必现 bug**（issueCreate 只收 UUID、应用传 key → 首次推送必败）已修（v3.7.119）。**Jira 仍待凭据**（建 Atlassian 站点 + API token，脚本同款可跑） |
+| ⑥ | WebDAV 验收 | ✅ **协议层 + 桌面 UI 均已跑通**（协议层 2026-10-11 · 11/11；UI 层 2026-10-16 · 8 步里 7 步通） | 真坚果云账号 + 应用密码跑 `_probe/webdav-nutstore-accept.mjs`：鉴权/建目录/上传/读回/If-Match 续传/坏 ETag→412 且不生效/清理 全过。**当场抓到一个真 bug 并修复（v3.7.120）**：坚果云 PUT 响应不回 ETag → 应用存空 → 每次续传假 412 误报冲突。**「UI 六步仍待 Electron 真窗口」这条已作废**（2026-10-26 按 CHANGELOG 更正）：`_probe/webdav-ui-accept.mjs` 于 v3.7.128 那批在本机真 Electron 窗口跑通，且当场修掉**探针自身**三个 bug（Playwright 默认 dismiss 原生 confirm＝每次点"取消"、toast 等 7 秒早消失→假静默、`rmSync` 被删除守卫拦）；完整 8 步在**可写子目录**下 7 步全通（门控/保存/连接/上传/续传不报假冲突/清除抹净/云端仍在/日志卫生），**唯一未跑的是「改一条任务再上传」——探针未定位到任务行选择器，如实跳过不计通过**（这一条仍开着）。浏览器形态被 CORS 拦是刻意设计，不是缺口 |
+| ⑦ | 用户手册 | ✅ **已交付（2026-10-11）** | `docs/user-manual.md`：面向最终用户，覆盖三种形态/界面骨架/任务资料/AI 助手 26+7 工具/记忆与知识库/目标与自主执行/ICS 日历/集成与 WebDAV 边界/账号云同步/数据安全/主题萌宠/排障表/常见疑问；只承诺界面真能做到的 |
+
+*本文件每版收尾时更新状态；"没解决"的一律带前置条件，不做隐式承诺。*` 现测；树内含 `e65dcf1` Code 模式那笔）
   + e2e **197 例 / 28 spec / 3 视口**（`npm run e2e -- --list` 现测，末行 `Total: 197 tests in 28 files`；
   projects 已从两腿加到三腿 —— 多出 `mobile-375x667`，所以"例数 = spec 内用例 × 3"）；逆层 18 / 循环 13 / 块 38
   （`node scripts/module-graph.mjs --check` —— 三个**契约型**数字与 v3.7.105 时点一致，未变）。
