@@ -40,6 +40,32 @@
 
 ---
 
+### [2026-10-26 21:56 UTC+8] Qoder 主会话 —— **B6 已交付并合入 main · 释放**
+- 状态：**已收工（释放）**。B6（MCP 韧性 + 延迟可见）与随后的工具改进全部在 `main` 上。
+- 提交：`eb8bfab`（B6 本体）+ `bc1dd6e`（判定器假绿修复）+ `e646e6f`（发版 3.7.150）+ `22c1a52`/`9dcc93e`/`1860770`/`c4dfbfe`
+  （文档与板）+ `a577265`（`watch-runs` curl 兜底，用户 2026-10-26 批准）。
+- 终态：CI `40327505460`（tip `a577265`）**attempt 2 四腿 success** · Deploy `40327505450` success。
+  ⚠️ attempt 1 的 e2e 腿红过一次，是 `ics-import-render` tablet 腿的 CPU 饥饿型抖动（**同 SHA 重跑绿 + 本机同码绿**），
+  未抬任何等待预算；三条判据与频次工具锚点漂移已记进 `docs/audit-2026-10-06.md` R-9 续二。
+- 释放的路径：`src/ai-tools.js`、`src/ui-backup-stats.js`、`src/ui-ge-integrations.js`、
+  `tests/mcp-resilience.test.js`、`tests/e2e/mcp-retry.spec.js`、`tests/test-verdict.test.js`、
+  `scripts/test-verdict.mjs`、`scripts/watch-runs.mjs`、`tests/watch-runs.test.js` —— 本会话不再持有占用。
+- 在跑的重活：无。本机不留后台任务（`watch-runs` 已随终态退出）。
+- 交接给下一个读板的人（都还开着）：
+  1. **B7 文档陈旧行清零**：`docs/roadmap-2026Q4.md:10-14`（写 v3.7.135 / 单测 168 文件 / e2e 136 例 20 spec，
+     2026-10-26 现测 = **v3.7.150 / 202 文件 / 197 例 28 spec / 3 视口**）；`README.md:193`·`:273`·`:283` 与
+     `docs/pet-system.md:228` 的「版本号**五**处」实为 **8 处**（`scripts/release.mjs:11-15` 自证）；
+     `docs/roadmap-2026Q4.md` §五 ⑥ 与 `docs/webdav-verify.md:37` 仍写「WebDAV UI 六步仍待」，
+     而 CHANGELOG 记 v3.7.127 前后已在本机跑通完整 8 步（仅「改一条任务再上传」未定位选择器、如实跳过）。
+     复核后**仍成立、别动**的两条：roadmap「废弃函数 10」、`docs/product-scope.md:88`「Electron 本机同步主进程侧从未实现」。
+  2. 频次工具 `_probe/r22-flaky-freq.mjs` 的 TARGETS 仍按**行号**锚（`ics…:82` 已漂到 `:87`）⇒ 逐条统计低估；
+     改标题锚 + 入库 + 自带单测，是下一批的候选。
+  3. 等用户拍板/给凭据的：`connect-src` 拦本机后端、云同步载体选型、邮箱 SMTP、短信资质墙、Linear/Jira/WebDAV 真机验收凭据。
+- 版本号：**3.7.151 起可用**（§二 未占用）。顺带更正：本会话今天 05:05 / 05:30 / 06:02 三条的**时间戳是错的**
+  （当时本机钟漂，把 UTC 读成了 UTC+8），内容与先后关系不受影响 —— 按本条的 21:56 为准。
+
+---
+
 ### [2026-10-26 06:02 UTC+8] Qoder 主会话 —— **v3.7.150 已发并线上核过 · 收工（B6 仍在跑）**
 - 状态：发版链闭环；**B6 仍占用 `src/ai-tools.js` / `src/ui-backup-stats.js` / `src/ui-ge-integrations.js`**（见 05:30 那条）。
 - 提交：`b617711`（B4+B5）+ `524c563`（#82）+ `275fcc8`/`f57e8e0`/`e646e6f`（发版）+ tag **`v3.7.150`**（annotated，落点 `e646e6f`）。
