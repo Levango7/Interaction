@@ -5251,6 +5251,64 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   /* 低频按钮收口（指南→侧栏底部 #sideBtnHelp；导出→设置·数据管理），避免与「今日」入口抢宽 */
   #btnHelp,#btnDownload{display:none!important}
 }
+
+/* ---------- Code 模式（2026-10-26）：agent-first 三栏（≥1024px；≤1023px 强制 Work 布局） ----------
+   左 = 机制导航（#side）+ 会话停靠（sessionDock）/ 中 = chatPanel 全高（DOM 零移动、接线零改动，
+   面板输入框即「底部正中聊天框」）/ 右 = taskRail（todo）+ agentDock（进程/技能/MCP/工作流，各段可折叠）。
+   机制导航点击打开工作视图（.code-tool-open：main-wrap 覆盖中栏，chat 隐藏；会话停靠点击返回）。
+   ⚠️ 本段必须保持在样式区末尾（首次实现误插到 JS 区 Bootstrap 段前，且注释里含样式闭合字面量会把样式块提前截断，4 个脚本块全挂） */
+.session-dock,.agent-dock{display:none}
+@media (min-width:1024px){
+  .body.code-mode{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;
+    grid-template-rows:minmax(0,1fr) auto;min-height:0}
+  .body.code-mode .side{grid-column:1;grid-row:1;width:auto;min-height:0}
+  .body.code-mode .session-dock{display:flex;flex-direction:column;min-height:0;max-height:38vh;
+    grid-column:1;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
+    background:color-mix(in srgb,var(--panel) 75%,transparent);padding:var(--space-2)}
+  /* 中栏 = main-wrap 本身（chatPanel 在它里面）：隐藏工具行与工作视图，聊天面板 flex 填满；
+     面板输入框即「底部正中聊天框」。DOM 零移动、接线零改动。
+     机制导航打开工作视图：.code-tool-open 隐藏聊天、显示 .main（会话停靠点击返回）。 */
+  .body.code-mode .main-wrap{grid-column:2;grid-row:1 / span 2;display:flex;overflow:hidden}
+  .body.code-mode .main-wrap>.toolbar-row{display:none}
+  .body.code-mode .main-wrap>.main{display:none}
+  .body.code-mode .chat-panel{width:auto;min-width:0;flex:1;min-height:0;border-left:none}
+  .body.code-mode .chat-panel.collapsed{width:auto;overflow:visible}
+  /* 面板保持 .collapsed 类（列宽由网格决定），但折叠态的「只留头+输入」规则（5130 行）会藏掉
+     消息区——Code 模式必须恢复：中栏是全高会话。同时解开坞块的 30vh max-height（5125 行），
+     消息区 flex 填满、输入框落在底部正中。 */
+  .body.code-mode .chat-panel.collapsed>.chat{display:block}
+  .body.code-mode .chat-panel.collapsed>.chat-toolbar{display:block}
+  .body.code-mode .chat-panel>.chat{max-height:none;flex:1 1 auto}
+  .body.code-mode .chat-panel-rail{display:none}
+  .body.code-mode.code-tool-open .main-wrap>.chat-panel{display:none}
+  .body.code-mode.code-tool-open .main-wrap>.main{display:block}
+  .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
+  .body.code-mode .agent-dock{display:flex;flex-direction:column;min-height:0;max-height:38vh;
+    grid-column:3;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
+    background:color-mix(in srgb,var(--panel) 72%,transparent);padding:var(--space-2)}
+  .body.code-mode .mob-bar,.body.code-mode .side-sheet,.body.code-mode .side-sheet-backdrop{display:none}
+}
+.session-dock-head,.adock-head{display:flex;align-items:center;gap:var(--space-1h)}
+.session-dock-head,.adock-title{font-size:var(--fs-sm);font-weight:600;flex:1}
+.sdock-head{margin-bottom:var(--space-1h)}
+.sdock-new{width:26px;height:26px;flex-shrink:0;border:1px solid var(--line);border-radius:var(--radius-sm,6px);
+  background:transparent;color:var(--text);cursor:pointer}
+.sdock-new:hover{background:var(--surface-hover)}
+.sdock-list{display:flex;flex-direction:column;gap:2px}
+.sdock-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;
+  padding:6px var(--space-2);border-radius:var(--radius-sm,6px);background:transparent;
+  border:1px solid transparent;color:var(--text);cursor:pointer;text-align:left}
+.sdock-item:hover{background:var(--surface-hover)}
+.sdock-item.active{background:color-mix(in srgb,var(--accent) 14%,transparent);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.sdock-item .tx{font-size:var(--fs-sm);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sdock-item .mt{font-size:var(--fs-2xs);color:var(--muted)}
+.sdock-empty{font-size:var(--fs-xs);color:var(--muted);padding:var(--space-1)}
+.adock-sec{margin-bottom:var(--space-1h)}
+.adock-head{width:100%;background:transparent;border:none;color:var(--text);cursor:pointer;
+  padding:4px 0;font-size:var(--fs-xs);font-weight:600}
+.adock-caret{margin-left:auto}
+.adock-body{display:flex;flex-direction:column;gap:2px;padding:2px 0 4px}
+.adock-row{font-size:var(--fs-xs);padding:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -5269,6 +5327,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
     <button type="button" class="tbtn" id="btnCmd" data-fold="1" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
+    <!-- Code 模式切换（2026-10-26）：工作/代码 双模式（≤1023px 强制工作；标签显示当前模式，点击切换） -->
+    <button type="button" class="tbtn" id="btnUIMode" aria-pressed="false" data-i18n-title="ui.mode.title" title="切换工作/代码模式" data-i18n-aria="ui.mode.title" aria-label="切换工作/代码模式">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><path d="M14 5h7M14 10h7M14 15h7"/></svg><span class="lbl" id="uiModeLbl">工作</span></button>
     <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
     <button type="button" class="tbtn task-rail-toggle" id="btnTaskRail" data-i18n-title="taskRail.open" title="今日任务" data-i18n-aria="taskRail.open" aria-label="今日任务">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
@@ -5318,6 +5379,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
   <div class="body">
     <nav class="side" id="side"></nav>
+    <!-- Code 模式（2026-10-26）：左栏下半 = 会话停靠栏（列表/切换/新建；重命名删除留在设置→会话管理，
+         不做第二套 CRUD。仅 .body.code-mode 且 ≥1024px 显示；切换 = 恢复该会话到工作缓冲，见 data-links.switchSession） -->
+    <div class="session-dock" id="sessionDock" data-i18n-aria="dock.sessions" aria-label="会话"></div>
     <!-- v2.1.0 移动端：底部 4 组导航栏 + 底部抽屉（≤767px 显示，桌面 display:none） -->
     <nav class="mob-bar" id="mobBar" data-i18n-aria="a11y.bottomNav" aria-label="底部导航"></nav>
     <div class="side-sheet-backdrop" id="sideSheetBackdrop"></div>
@@ -5422,6 +5486,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <div class="task-rail-pane u-hidden" data-rail-pane="files" id="railFilesPane"></div>
     </aside>
     <div class="task-rail-backdrop" id="taskRailBackdrop" hidden></div>
+    <!-- Code 模式（2026-10-26）：右栏下半 = 进程/技能/MCP/工作流 停靠栏（仅 .body.code-mode 且 ≥1024px 显示，
+         各段可折叠且显隐持久化；Work 模式 display:none）。数据与右栏 Agent 页同源，渲染两份、数据一份。 -->
+    <aside class="agent-dock" id="agentDock" data-i18n-aria="dock.agents" aria-label="运行与能力"></aside>
     <!-- 右侧 AI 聊天面板（三栏布局第三栏）：常驻显示，复用 #chat/#chatForm/#chatThinking/#chatCancel
          数据源仍为 getChat(active)（保留跟随场景切换以兼容现有测试契约，未来可切换为全局 panelChat）
          窄屏默认隐藏，加 .show 滑入；折叠按钮在 header -->
@@ -11371,7 +11438,26 @@ const MESSAGES = {
     "p5.evDetailEmpty": "当日没有日程事件",
     "prompt.title": "请输入",
     "prompt.required": "此项不能为空",
-    "prompt.ok": "确定"
+    "prompt.ok": "确定",
+    "ui.mode.work": "工作",
+    "ui.mode.code": "代码",
+    "ui.mode.title": "切换工作/代码模式",
+    "ui.mode.switchedTo": "已切换到",
+    "dock.sessions": "会话",
+    "dock.newSession": "新建会话",
+    "dock.noSessions": "暂无会话",
+    "dock.unitMsgs": " 条 · ",
+    "dock.agents": "运行与能力",
+    "dock.process": "进程",
+    "dock.skills": "技能",
+    "dock.mcp": "MCP",
+    "dock.flow": "工作流",
+    "dock.flowDraft": "草案（执行引擎冻结，接线在路线图）",
+    "dock.idle": "空闲——没有进行中的 Agent 执行",
+    "dock.running": "执行中",
+    "dock.none": "无",
+    "dock.mcpNone": "未配置 MCP 服务器",
+    "dock.stepDone": "步骤"
   },
   en: {
     // Common
@@ -15422,7 +15508,26 @@ const MESSAGES = {
     "p5.evDetailEmpty": "No events that day",
     "prompt.title": "Enter a value",
     "prompt.required": "This field cannot be empty",
-    "prompt.ok": "OK"
+    "prompt.ok": "OK",
+    "ui.mode.work": "Work",
+    "ui.mode.code": "Code",
+    "ui.mode.title": "Toggle work/code mode",
+    "ui.mode.switchedTo": "Switched to",
+    "dock.sessions": "Sessions",
+    "dock.newSession": "New session",
+    "dock.noSessions": "No sessions",
+    "dock.unitMsgs": " msgs · ",
+    "dock.agents": "Runtime & capabilities",
+    "dock.process": "Processes",
+    "dock.skills": "Skills",
+    "dock.mcp": "MCP",
+    "dock.flow": "Workflows",
+    "dock.flowDraft": "Draft (engine frozen; wiring on the roadmap)",
+    "dock.idle": "Idle — no agent run in progress",
+    "dock.running": "Running",
+    "dock.none": "None",
+    "dock.mcpNone": "No MCP servers configured",
+    "dock.stepDone": "Steps"
   }
 };
 
@@ -17948,6 +18053,25 @@ function setActiveSession(sid){
   _saveActiveSid();
 }
 function getActiveSession(){ getSessions(); return _activeSid; }
+/**
+ * 切换会话（2026-10-26 Code 模式会话停靠栏）：场景对齐 → 激活会话 →
+ * 把该会话的消息装回工作缓冲（chats[sc]，聊天面板的实时数据源），镜像落盘
+ * （此刻活动会话即它，写回内容相同 = 幂等）。
+ * 语义：会话切换 = 恢复该会话到工作上下文（主流 agent IDE 同款）；切换前
+ * 原缓冲已由 save() 写穿镜像同步进其会话，不丢失。
+ * @param {string} sid
+ * @returns {string|null} 会话所属场景 key（调用方负责 renderChat/render）
+ */
+function switchSession(sid){
+  getSessions();
+  const it = _sessions.find(function(s){ return s.id === sid; });
+  if(!it) return null;
+  if(active !== it.sc) setActive(it.sc);
+  setActiveSession(sid);
+  chats[it.sc] = _chatTag((it.msgs || []).slice(-50), it.sc);
+  save(PREFIX + "chat_" + it.sc, chats[it.sc]);
+  return it.sc;
+}
 function getActiveSessionObj(){
   getSessions();
   return _sessions.find(function(s){ return s.id === _activeSid; }) || _sessions[0] || null;
@@ -18210,6 +18334,8 @@ const DATA_KEY_REGISTRY = [
   { key: "onboarded", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "lang", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "theme", kind: "m", sync: true, backup: true },   // 本机元数据
+  { key: "uimode", kind: "c", sync: true, backup: true },   // 本机控制状态（Work/Code 模式偏好，2026-10-26 Code 模式批次）
+  { key: "agent_dock", kind: "c", sync: true, backup: true },   // 本机控制状态（agentDock 各段显隐，同批）
   { key: "rail_tab", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "sceneViewMode", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据
@@ -24424,6 +24550,8 @@ function renderSide(){
   /* 右栏今日任务随侧栏同批更新：挂在 renderSide 里而不是 render() 直调，
      否则 render-entry → render-widgets 会新增一条静态边，改变依赖基线的环集合。 */
   renderTaskRail();
+  /* Code 模式（2026-10-26）：同上理由挂在这里——每次渲染同步模式类与两个 dock（幂等）。 */
+  applyUIMode();
 }
 
 /* ---------- 右栏「今日任务」任务轨（2026-10-21 布局 v2） ----------
@@ -24677,6 +24805,15 @@ function setupSideMenu(){
     const btn = e.target && e.target.closest ? e.target.closest(".nav-item") : null;
     if(!btn) return;
     const _m = $("#main"); if(_m) _m.scrollTop = 0; const _mw = document.querySelector(".main-wrap"); if(_mw) _mw.scrollTop = 0;
+    /* Code 模式（2026-10-26）：页面型导航（场景/今日/任务/时间轴/联动）在中栏打开工作视图
+       （.code-tool-open：main-wrap 覆盖 chat）；AI 项 = 回到会话（chat 就是代码模式的 AI 面）。
+       抽屉/弹窗类（工具箱/商店/回收站/设置/说明）不动中栏。 */
+    const _cmBody = document.querySelector(".body");
+    if(_cmBody && _cmBody.classList.contains("code-mode") && typeof _uiMode === "function" && _uiMode() === "code"){
+      const _mid = btn.getAttribute("data-menu") || "";
+      if(btn.dataset.aipage) _cmBody.classList.remove("code-tool-open");
+      else if(btn.hasAttribute("data-sc") || ["overview","tasks","timeline","chain"].indexOf(_mid) >= 0) _cmBody.classList.add("code-tool-open");
+    }
     /* caret 点击：只切换展开态 */
     if(e.target && e.target.closest && e.target.closest("[data-caret]")){
       const nodeId = btn.getAttribute("data-menu") || (btn.getAttribute("data-sc") ? "sc-"+btn.getAttribute("data-sc") : null);
@@ -28010,6 +28147,135 @@ try{
   AppBridge.openWeatherModal = openWeatherModal;
   AppBridge.openPetModal = openPetModal;
 }catch(e){}
+
+/* ---------- Code 模式（2026-10-26）：双模式工作台 ----------
+ * Work 模式 = 现有布局（不动）；Code 模式 = agent-first 三栏（≥1024px，CSS 媒体查询外不生效）：
+ * 左 = 机制导航（#side）+ 会话停靠（sessionDock）/ 中 = chatPanel 全高（CSS 网格移位，DOM 零移动——
+ * 流式输出/工具调用/会话接线零改动，面板输入框即「底部正中聊天框」）/ 右 = taskRail（todo）+ agentDock。
+ * 状态持久化：wb_agent_uimode（work|code）、wb_agent_agent_dock（各段显隐）。
+ * ACP 在本仓无运行时概念（台账已评不适用），右下槽位由「进程/技能/MCP/工作流」承接。 */
+function _uiMode(){
+  try{ const m = load(PREFIX + "uimode", "work"); return m === "code" ? "code" : "work"; }
+  catch(e){ return "work"; }
+}
+/** 应用当前模式到壳（幂等）：切 .body.code-mode 类 + 顶栏标签 + 渲染/清空两个 dock */
+function applyUIMode(){
+  const body = document.querySelector(".body");
+  if(!body) return;
+  const code = _uiMode() === "code";
+  body.classList.toggle("code-mode", code);
+  const lbl = $("#uiModeLbl");
+  if(lbl) lbl.textContent = t(code ? "ui.mode.code" : "ui.mode.work", code ? "代码" : "工作");
+  if(code){ renderSessionDock(); renderAgentDock(); }
+  else {
+    const sd = $("#sessionDock"); if(sd) sd.innerHTML = "";
+    const ad = $("#agentDock"); if(ad) ad.innerHTML = "";
+  }
+}
+function toggleUIMode(){
+  try{ save(PREFIX + "uimode", _uiMode() === "code" ? "work" : "code"); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((e&&e.message)||e), {where:"toggleUIMode"}); }catch(_e2){} }
+  applyUIMode();
+  try{ toast(t("ui.mode.switchedTo", "已切换到") + " " + t(_uiMode() === "code" ? "ui.mode.code" : "ui.mode.work", _uiMode() === "code" ? "代码模式" : "工作模式"), "ok"); }catch(e){ /* noop */ }
+}
+/** 会话停靠栏（左栏下半）：列表 + 切换 + 新建。重命名/删除留在 设置→会话管理（不做第二套 CRUD）。 */
+function renderSessionDock(){
+  const dock = $("#sessionDock");
+  if(!dock) return;
+  if(_uiMode() !== "code"){ dock.innerHTML = ""; return; }
+  let list = [];
+  try{ list = getSessions() || []; }catch(e){ list = []; }
+  let act = "";
+  try{ act = getActiveSession() || ""; }catch(e){ act = ""; }
+  const items = list.map(function(s2){
+    const isAct = s2.id === act;
+    const dt = new Date(s2.updatedAt || s2.createdAt || Date.now());
+    const time = (dt.getMonth() + 1) + "/" + dt.getDate() + " " + pad(dt.getHours()) + ":" + pad(dt.getMinutes());
+    return '<button type="button" class="sdock-item' + (isAct ? " active" : "") + '" data-sid="' + esc(s2.id) + '" title="' + esc(s2.title || "") + '">'
+      + '<span class="tx">' + esc(s2.title || t("sess.new", "新会话")) + '</span>'
+      + '<span class="mt">' + ((s2.msgs || []).length) + t("dock.unitMsgs", " 条 · ") + time + '</span></button>';
+  }).join("");
+  dock.innerHTML = sanitizeHtml(
+    '<div class="sdock-head"><span class="sdock-title">' + t("dock.sessions", "会话") + '</span>'
+    + '<button type="button" class="sdock-new" id="sdockNew" data-i18n-title="dock.newSession" title="' + t("dock.newSession", "新建会话") + '" aria-label="' + t("dock.newSession", "新建会话") + '">＋</button></div>'
+    + '<div class="sdock-list">' + (items || '<div class="sdock-empty">' + t("dock.noSessions", "暂无会话") + '</div>') + '</div>');
+  const nb = $("#sdockNew");
+  if(nb) nb.onclick = function(){
+    let sc = "office";
+    try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(e){ /* noop */ }
+    const ns = createSession(sc, t("sess.new", "新会话"));
+    if(ns && ns.id){
+      const switched = switchSession(ns.id);
+      renderChat(); if(typeof scrollChat === "function") scrollChat();
+      renderSessionDock();
+      if(switched !== null && typeof render === "function") render();
+    }
+  };
+  $$("#sessionDock .sdock-item").forEach(function(el){
+    el.onclick = function(){
+      const sc = switchSession(el.getAttribute("data-sid"));
+      if(sc !== null){
+        renderChat(); if(typeof scrollChat === "function") scrollChat();
+        renderSessionDock();
+        if(typeof render === "function") render();
+      }
+    };
+  });
+}
+/** 能力停靠栏（右栏下半）：进程（agent 运行）/ 技能 / MCP / 工作流。各段可折叠（持久化）。 */
+function renderAgentDock(){
+  const dock = $("#agentDock");
+  if(!dock) return;
+  if(_uiMode() !== "code"){ dock.innerHTML = ""; return; }
+  let show = { proc: true, skills: true, mcp: true, flow: false };
+  try{ show = Object.assign(show, load(PREFIX + "agent_dock", {}) || {}); }catch(e){ /* noop */ }
+  const sec = function(key, label, inner){
+    return '<div class="adock-sec" data-sec="' + key + '">'
+      + '<button type="button" class="adock-head" data-toggle="' + key + '" aria-expanded="' + (show[key] ? "true" : "false") + '">'
+      + esc(label) + '<span class="adock-caret" aria-hidden="true">' + (show[key] ? "▾" : "▸") + '</span></button>'
+      + (show[key] ? '<div class="adock-body">' + inner + '</div>' : '')
+      + '</div>';
+  };
+  /* 进程：agent 执行状态（agent_run：goal + steps/done） */
+  let run = null;
+  try{ run = load(PREFIX + "agent_run", null); }catch(e){ run = null; }
+  const procInner = (run && Array.isArray(run.steps) && run.steps.length)
+    ? '<div class="adock-row">' + esc(run.goal || t("dock.running", "执行中")) + '</div>'
+      + '<div class="adock-row u-text-dim">' + t("dock.stepDone", "步骤") + ' ' + ((run.done || []).length) + '/' + run.steps.length + '</div>'
+    : '<div class="adock-row u-text-dim">' + t("dock.idle", "空闲——没有进行中的 Agent 执行") + '</div>';
+  /* 技能：与右栏 Agent 页同源（listEnabledSkills）——渲染两份、数据一份（无漂移面） */
+  let skills = [];
+  try{ skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : []; }catch(e){ skills = []; }
+  const skillsInner = skills.length
+    ? skills.map(function(sk){ return '<div class="adock-row">' + esc(sk.name || sk.id || "?") + '</div>'; }).join("")
+    : '<div class="adock-row u-text-dim">' + t("dock.none", "无") + '</div>';
+  /* MCP：与设置→扩展同源（mcpServers，2026-10-23 起真能力） */
+  let mcp = [];
+  try{ mcp = (typeof mcpServers === "function") ? mcpServers() : []; }catch(e){ mcp = []; }
+  const mcpInner = mcp.length
+    ? mcp.map(function(sv){ return '<div class="adock-row">' + esc(sv.name || "?") + '</div>'; }).join("")
+    : '<div class="adock-row u-text-dim">' + t("dock.mcpNone", "未配置 MCP 服务器") + '</div>';
+  /* 工作流：冻结草案（无执行引擎、无存储），如实显示 */
+  const flowInner = '<div class="adock-row u-text-dim">' + t("dock.flowDraft", "草案（执行引擎冻结，接线在路线图）") + '</div>';
+  dock.innerHTML = sanitizeHtml(
+    '<div class="adock-head"><span class="adock-title">' + t("dock.agents", "运行与能力") + '</span></div>'
+    + sec("proc", t("dock.process", "进程"), procInner)
+    + sec("skills", t("dock.skills", "技能"), skillsInner)
+    + sec("mcp", t("dock.mcp", "MCP"), mcpInner)
+    + sec("flow", t("dock.flow", "工作流"), flowInner));
+  $$("#agentDock [data-toggle]").forEach(function(el){
+    el.onclick = function(){
+      const k = el.getAttribute("data-toggle");
+      show[k] = !show[k];
+      try{ save(PREFIX + "agent_dock", show); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "agent_dock persist failed: "+((e&&e.message)||e), {where:"renderAgentDock"}); }catch(_e2){} }
+      renderAgentDock();
+    };
+  });
+}
+/* Code 模式切换按钮：与 btnTaskRail 同款——渲染层绑定自己的顶栏开关（幂等重绑无害） */
+(function _bindUIModeBtn(){
+  const b = $("#btnUIMode");
+  if(b) b.onclick = toggleUIMode;
+})();
 /*SRC:render-widgets:END*/
 /*SRC:ui-onboarding:BEGIN*/
 // ===== UI Layer (交互层·Onboarding 引导) =====
@@ -52881,7 +53147,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     abortChat, retryChat, createChatController, showChatThinking, runChatLoop,
     getChat, appendChat,
     // v2.0 多 Session 聊天存储层访问器（供测试驱动与断言）
-    getSessions, setActiveSession, getActiveSession, getActiveSessionObj,
+    getSessions, setActiveSession, getActiveSession, getActiveSessionObj, switchSession,
     createSession, renameSession, deleteSession,
     appendSessionMsg, getSessionMsgs, clearSessionMsgs,
     openSessionModal, closeSessionModal, renderSessionList, renderSessionPreview, bindSessionModal,
