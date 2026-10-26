@@ -108,6 +108,23 @@
 
 ## [Unreleased]
 
+### 2026-10-26 · 守候工具：`gh` 通路不可达时用 curl 兜底（用户拍板「同意，换成 curl 兜底」）
+
+- **触发点**：发版守候期间 `gh api` 持续报 `dial tcp 20.205.243.168:443 …`，而**同一个端点用 curl 正常**。
+  原因是 `api.github.com` 有多条 A 记录，其中一条从本机不可达 —— gh 与 node 的 fetch 都撞上它并整体失败，
+  curl 会换下一条。危险在于**"查不到"与"CI 红 / 还没跑完"三种状态完全同形**（台账 R-28 那一类：度量器自己坏掉）。
+- **改法**：`fetchRun` / `fetchJobs` 的取值规则抽成纯函数 `resolveWithFallback(gh值, curl 加载器, 名称, 提示)` ——
+  gh 有值就用、不碰兜底；gh 空才试 curl；**两头都空返回 null 且不打印提示**（那种情况多半是 run id 写错，
+  喊"传输问题"会把人从正确答案上引开）。判据、退出码（0/1/7/2）一个都没动。
+- **载荷归一**新增 `normalizeRun` / `normalizeJobs`：gh 的 `--jq` 投影把 `run_attempt` 改名叫 `attempt`，
+  REST 原样是 `run_attempt`；jobs 一边是裸数组、一边是 `{jobs:[…]}` —— 两种形状归一成同一个对象，
+  错误载荷（`{message:"Not Found"}`）一律 null，交给 `judge` 就是"查询失败 ⇒ 未终态 ⇒ 7"。
+- **验证**：`tests/watch-runs.test.js` 11 → 20 例（含"gh 有值时 curl 一次都不发"的计数断言、
+  "两头都空不打提示"、以及归一后判据不变）。窄变异：把 `if (v) announce(kind)` 改成无条件提示 ⇒
+  **恰好那一条红**（19 绿）。真机两头都验过：`--selftest 40238229943` 走 curl 兜底时打出
+  `{"run":{"status":"completed","conclusion":"success"},"jobs":4}` + 一行兜底提示；
+  `gh` 恢复后同一条命令**不再出现提示**（说明主路径优先，兜底没被滥用）。
+
 ### 2026-10-26 · B6：MCP 调用的韧性与延迟可见（含一条不许放宽的幂等边界）
 
 - **缺口是实测的**：`_mcpRpc` 只有 `MCP_RPC_TIMEOUT_MS` 一次性超时，**零重试、零耗时记录**；

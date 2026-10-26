@@ -16,6 +16,9 @@
  *   · done   = 每个 run 的 status 都 === "completed"（queued / in_progress / 查询失败 一律不算完成）
  *   · green  = 全部 completed 且 conclusion === "success"（结论缺失不当成功）
  *   · 退出码：0 全绿；1 有非 success 终态；7 超时未终态（NOT_TERMINAL，不许写成"通过"）；2 用法错误
+ *   · 传输：gh 优先，取不到时**用 curl 兜底**（2026-10-27 实测：api.github.com 多条 A 记录里有一条
+ *     从本机不可达，gh 与 node fetch 都撞上就整体失败，而 curl 会换下一条 —— 于是"gh 查不到"与
+ *     "CI 红/没跑完"同形）。兜底只在真取到东西时才打一行提示，两头都空按查询失败处理（多半是 id 写错）。
  */
 "use strict";
 import { spawnSync } from "node:child_process";
@@ -51,17 +54,79 @@ function ghApi(args) {
   if (r.status !== 0) return null;
   try { return JSON.parse(r.stdout); } catch (_e) { return null; }
 }
+/* ---------- curl 兜底（2026-10-27 加）----------
+ * 实测：`api.github.com` 有多条 A 记录，其中一条（本机遇到的是 20.205.243.168）不可达；
+ * `gh api` 与 node 的 fetch 都会直接 dial tcp 失败，而 **curl 会换下一条并成功**。
+ * 于是"gh 查不到"与"CI 红/没跑完"完全同形 —— 这正是台账 R-28 那类「度量器自己坏掉」。
+ * 兜底只在 gh 那条路拿不到东西时启用；**只有兜底真的取到了东西才打一行提示**，
+ * 免得 run id 写错（两头都 404）时被误读成"传输问题"。 */
+let _fellBack = false;
+function accessToken() {
+  const env = String(process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "").trim();
+  if (env) return env;
+  const r = spawnSync("gh", ["auth", "token"], { encoding: "utf8" });
+  return r && r.status === 0 ? String(r.stdout || "").trim() : "";
+}
+function curlJson(path) {
+  const tok = accessToken();
+  if (!tok) return null;
+  const r = spawnSync("curl", ["-s", "--max-time", "30", "-H", "Authorization: Bearer " + tok,
+    "-H", "Accept: application/vnd.github+json", "https://api.github.com" + path], { encoding: "utf8" });
+  if (r.status !== 0 || !r.stdout) return null;
+  try { return JSON.parse(r.stdout); } catch (_e) { return null; }
+}
+/** 只在**兜底真的取到了东西**时才打提示：两头都失败多半是 run id 写错，
+ *  那种情况下喊"传输问题"会把人从正确答案上引开。 */
+function announceFallback(kind) {
+  if (_fellBack) return;
+  _fellBack = true;
+  console.log("[watch-runs] gh 取不到 " + kind + "，本轮起改用 curl 兜底（同端点、同判据，不改结论口径）");
+}
+/** 给测试看的两个小口子（CLI 不用） */
+export function fellBack() { return _fellBack; }
+export function resetFallbackFlag() { _fellBack = false; }
+
+/**
+ * 纯函数：传输选择规则 —— gh 有值就用它；gh 没值才试兜底；**兜底也没值时不打提示**
+ * （两头都空通常是 run id 写错，喊"传输问题"会把人从正确答案上引开）。
+ * @param {*} ghValue gh 那条路归一后的值（null 表示没拿到）
+ * @param {()=>*} curlLoader 兜底加载器（只在需要时调用）
+ * @param {string} kind 提示里点名的对象
+ * @param {(kind:string)=>void} announce 提示函数
+ */
+export function resolveWithFallback(ghValue, curlLoader, kind, announce) {
+  if (ghValue) return ghValue;
+  const v = curlLoader();
+  if (v) announce(kind);
+  return v;
+}
+
+/** 纯函数：run 载荷归一。gh 的 --jq 投影把 attempt 改过名，curl 的原样是 run_attempt ⇒ 两种都认。 */
+export function normalizeRun(j) {
+  if (!j || typeof j !== "object" || Array.isArray(j) || !j.status) return null;
+  return { id: j.id, name: j.name, status: j.status, conclusion: j.conclusion || null,
+    attempt: j.attempt !== undefined ? j.attempt : j.run_attempt };
+}
+/** 纯函数：jobs 载荷归一（gh 投影是裸数组，REST 原样是 {jobs:[…]}；出错载荷一律 null） */
+export function normalizeJobs(j) {
+  const arr = Array.isArray(j) ? j : (j && Array.isArray(j.jobs) ? j.jobs : null);
+  if (!arr) return null;
+  return arr.map((x) => ({ name: (x && x.name) || "?", conclusion: (x && x.conclusion) || null }));
+}
 
 function fetchRun(repo, id) {
-  const j = ghApi(["api", "repos/" + repo + "/actions/runs/" + id,
-    "--jq", "{id: .id, name: .name, status: .status, conclusion: .conclusion, attempt: .run_attempt}"]);
-  return j && typeof j === "object" && j.status ? j : null;
+  const viaGh = normalizeRun(ghApi(["api", "repos/" + repo + "/actions/runs/" + id,
+    "--jq", "{id: .id, name: .name, status: .status, conclusion: .conclusion, attempt: .run_attempt}"]));
+  return resolveWithFallback(viaGh, () => normalizeRun(curlJson("/repos/" + repo + "/actions/runs/" + id)),
+    "run " + id, announceFallback);
 }
 
 function fetchJobs(repo, id) {
-  const j = ghApi(["api", "repos/" + repo + "/actions/runs/" + id + "/jobs",
-    "--jq", "[.jobs[] | {name: .name, conclusion: .conclusion}]"]);
-  return Array.isArray(j) ? j : null;
+  const viaGh = normalizeJobs(ghApi(["api", "repos/" + repo + "/actions/runs/" + id + "/jobs",
+    "--jq", "[.jobs[] | {name: .name, conclusion: .conclusion}]"]));
+  return resolveWithFallback(viaGh,
+    () => normalizeJobs(curlJson("/repos/" + repo + "/actions/runs/" + id + "/jobs?per_page=60")),
+    "run " + id + " 的 jobs", announceFallback);
 }
 
 function parseArgs(argv) {

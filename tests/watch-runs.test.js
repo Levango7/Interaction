@@ -7,7 +7,7 @@
  * 结论缺失不许当成功。
  */
 import { describe, expect, it } from "vitest";
-import { exitCodeFor, judge } from "../scripts/watch-runs.mjs";
+import { exitCodeFor, judge, normalizeJobs, normalizeRun, resolveWithFallback } from "../scripts/watch-runs.mjs";
 
 const run = (over) => Object.assign({ id: 1, name: "CI", status: "completed", conclusion: "success", attempt: 1 }, over || {});
 
@@ -75,5 +75,81 @@ describe("exitCodeFor()：判定 → 退出码", () => {
   it("空集/查询失败 ⇒ 7（判据缺失，不许当 0）", () => {
     expect(exitCodeFor(judge([]))).toBe(7);
     expect(exitCodeFor(judge([null]))).toBe(7);
+  });
+});
+
+describe("normalizeRun / normalizeJobs：curl 兜底的载荷归一（两种传输必须给出同一个对象）", () => {
+  it("gh 的 --jq 投影（键名 attempt）与 REST 原样（run_attempt）归一后逐字段相同", () => {
+    const fromGh = normalizeRun({ id: 7, name: "CI", status: "completed", conclusion: "success", attempt: 2 });
+    const fromCurl = normalizeRun({ id: 7, name: "CI", status: "completed", conclusion: "success", run_attempt: 2 });
+    expect(fromCurl).toEqual(fromGh);
+    expect(fromGh.attempt).toBe(2);
+  });
+
+  it("错误载荷一律 null —— 404 / 未认证不能被读成任何一种 CI 状态", () => {
+    expect(normalizeRun({ message: "Not Found" })).toBeNull();
+    expect(normalizeRun({ message: "Bad credentials" })).toBeNull();
+    expect(normalizeRun(null)).toBeNull();
+    expect(normalizeRun(undefined)).toBeNull();
+    expect(normalizeRun([])).toBeNull();
+    expect(normalizeRun({ id: 1 })).toBeNull();   /* 没有 status 就没有终态可言 */
+    expect(normalizeJobs({ message: "Not Found" })).toBeNull();
+    expect(normalizeJobs(null)).toBeNull();
+  });
+
+  it("jobs：裸数组（gh 投影）与 {jobs:[…]}（REST 原样）都认；结论缺失留 null", () => {
+    const bare = normalizeJobs([{ name: "test", conclusion: null }]);
+    const wrapped = normalizeJobs({ total_count: 1, jobs: [{ name: "test", conclusion: null }] });
+    expect(bare).toEqual([{ name: "test", conclusion: null }]);
+    expect(wrapped).toEqual(bare);
+    expect(normalizeJobs({ total_count: 0, jobs: [] })).toEqual([]);
+  });
+
+  it("归一之后判据不变：completed 但结论缺失 ⇒ done 且非绿（兜底不许顺手放宽）", () => {
+    const v = judge([normalizeRun({ id: 1, name: "CI", status: "completed", conclusion: null, run_attempt: 1 })]);
+    expect(v.done).toBe(true);
+    expect(v.green).toBe(false);
+    expect(exitCodeFor(v)).toBe(1);
+  });
+
+  it("归一失败（null）交给 judge 就是'查询失败'⇒ 未终态、退出码 7，不会被当成通过", () => {
+    const v = judge([normalizeRun({ message: "Not Found" })]);
+    expect(v.done).toBe(false);
+    expect(v.unknown).toBe(1);
+    expect(exitCodeFor(v)).toBe(7);
+    expect(v.line).toContain("query-failed");
+  });
+});
+
+describe("resolveWithFallback：gh 与 curl 的取舍规则（提示语不许骗人）", () => {
+  const boom = () => { throw new Error("curl 不该被调用"); };
+  it("gh 有值 ⇒ 直接用，不碰兜底加载器（curl 一次都不发）", () => {
+    const calls = [];
+    const v = resolveWithFallback({ status: "completed" }, () => { calls.push(1); return null; }, "run 1", () => {});
+    expect(v).toEqual({ status: "completed" });
+    expect(calls).toEqual([]);
+    expect(() => resolveWithFallback({ ok: 1 }, boom, "run 1", () => {})).not.toThrow();
+  });
+
+  it("gh 空 + 兜底有值 ⇒ 用兜底并打一次提示", () => {
+    const said = [];
+    const v = resolveWithFallback(null, () => ({ status: "queued" }), "run 9", (k) => said.push(k));
+    expect(v).toEqual({ status: "queued" });
+    expect(said).toEqual(["run 9"]);
+  });
+
+  it("两头都空 ⇒ 返回 null 且**不打提示**（多半是 run id 写错，喊'传输问题'会把人引开）", () => {
+    const said = [];
+    const v = resolveWithFallback(null, () => null, "run 404", (k) => said.push(k));
+    expect(v).toBeNull();
+    expect(said).toEqual([]);
+  });
+
+  it("jobs 也一样：gh 的裸数组空 ⇒ 兜底取 REST 的 {jobs:[…]} 后归一", () => {
+    const said = [];
+    const v = resolveWithFallback(null, () => normalizeJobs({ jobs: [{ name: "test", conclusion: "success" }] }),
+      "run 5 的 jobs", (k) => said.push(k));
+    expect(v).toEqual([{ name: "test", conclusion: "success" }]);
+    expect(said.length).toBe(1);
   });
 });
