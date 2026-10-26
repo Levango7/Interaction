@@ -40,6 +40,29 @@
 
 ---
 
+### [2026-10-26 22:10 UTC+8] Qoder 主会话 —— 开工声明：**B7 文档陈旧行清零**
+- 状态：**进行中（占用）**。这是文档批次，不改任何 `src/*.js`、不改门禁、不改 workflow。
+- 我占用哪些路径：`README.md`、`docs/roadmap-2026Q4.md`、`docs/pet-system.md`、`docs/webdav-verify.md`、
+  `docs/iteration-plan.md`、`CHANGELOG.md`（**仅 `[Unreleased]` 段顶部新增 `### 2026-10-26` 小节**）、本板。
+- 我在跑什么重活：只有本机有界实测（`check:source-state` / `e2e -- --list` / 单文件 coverage 探针），**不在共享树跑全量**。
+- 我准备推的范围：1 个 docs commit（上面那批文件）。**当前 main tip 是我自己的 `03bd99f`，它的 CI/Deploy 还在飞** ——
+  按 R1/R11 我等它出终态再推，不会用新 push 抢掉那轮验证。
+- 已现测的替换值（别人若要复核，命令就写在行里）：单测 **202** 文件（`git ls-files tests | grep -c '\.test\.js$'`）、
+  e2e **197 例 / 28 spec / 3 视口**（`npm run e2e -- --list` 末行）、源码态 HTML **663,782 B = 648.2 KB**
+  （`npm run check:source-state`）、`server/verify/*.cjs` **11 个**（CI `server-verify` 腿逐条跑满 11）、
+  逆层 **18** / 循环 **13** / 块 **38**（`node scripts/module-graph.mjs --check`，与 v3.7.105 时点一致）。
+- 提醒对方：
+  1. 谁也要改 `README.md` 的版本号那两节（`:193` / `:273-283`），先在这条下面追加一行，我们错开；
+  2. 本批**有意不动**两条（复核后仍成立，别当陈旧行清掉）：roadmap「废弃函数 10」、
+     `docs/product-scope.md:88`「Electron 本机同步主进程侧从未实现」；
+  3. 我发现但**没有顺手修**的一件事，留给拍板：`vitest.config.js:22` 的 `coverage.include` 仍指
+     `["agent-workbench.html"]` ⇒ 覆盖率恒 0% 是**配置造成的**，不是"架构无法插桩"。src/ 已外置成 38 个真 JS，
+     把 include 换成 `src/**/*.js` 就能量到真数（但会立刻暴露一个很低的百分比，需要同时定阈值策略）。
+     这不是文档错，是待决项，已在 `docs/iteration-plan.md` 待拍板清单里登记。
+- 版本号：**未占用**（3.7.151 仍空闲，见上条释放记录）。
+
+---
+
 ### [2026-10-26 21:56 UTC+8] Qoder 主会话 —— **B6 已交付并合入 main · 释放**
 - 状态：**已收工（释放）**。B6（MCP 韧性 + 延迟可见）与随后的工具改进全部在 `main` 上。
 - 提交：`eb8bfab`（B6 本体）+ `bc1dd6e`（判定器假绿修复）+ `e646e6f`（发版 3.7.150）+ `22c1a52`/`9dcc93e`/`1860770`/`c4dfbfe`

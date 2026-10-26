@@ -125,8 +125,8 @@ docs: 更新 README 至 v1.1.0
 ## 项目结构
 
 ```
-agent-workbench.html   # 交付物（源码态为骨架：应用 JS 外置于 src/，构建期拼回；立绘回注后约 3.5MB）
-src/                   # 应用源码（35 个模块 + order.json，src-split.mjs 与 HTML 双向同步）
+agent-workbench.html   # 交付物（源码态为骨架 648.2 KB：应用 JS 外置于 src/，构建期拼回；立绘回注后 4,126,052 B ≈ 4.13 MB · 2026-10-26 现测）
+src/                   # 应用源码（38 个模块 + order.json，src-split.mjs 与 HTML 双向同步）
 tests/                 # 测试文件
   helpers/loadApp.js   # 应用加载辅助
   e2e/                 # Playwright 三视口 e2e
@@ -146,7 +146,7 @@ vitest.config.js       # 测试配置
 
 ## 版本与发布
 
-**真相源分两处**（v3.7.0 起双态架构）：CSS 与内联 JS（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html`；应用 JS（35 个模块）在 `src/*.js` 里演进，构建期由 `scripts/src-split.mjs` 拼回单文件 HTML（`file://` 下多 `<script>` 会失败，交付物始终是单个文件）。
+**真相源分两处**（v3.7.0 起双态架构）：CSS 与内联 JS（`:root` 令牌、主题块、`save()` 等）直接演进于 `agent-workbench.html`；应用 JS（38 个模块，2026-10-26 现测；数法 `ls src/*.js | wc -l`）在 `src/*.js` 里演进，构建期由 `scripts/src-split.mjs` 拼回单文件 HTML（`file://` 下多 `<script>` 会失败，交付物始终是单个文件）。
 
 **版本号五处必须一致**（`npm run build:check` 会校验，不一致直接失败）：
 
@@ -158,7 +158,9 @@ vitest.config.js       # 测试配置
 | `manifest.json` | `version` |
 | `README.md` | 标题 / 「当前版本」/ 页脚示例 |
 
-- 发版用 `npm run release <版本号>`，**不要手工改五处**（易漂移；锁文件根字段也会被同步）。
+- 发版用 `npm run release <版本号>`，**不要手工改**（易漂移）。上表五处是 `build:check` 的**门禁面**，
+  而该脚本实际写 **8 个落点**（五源 + HTML `BUILD_TAG` + `service-worker.js` 的 `CACHE_VERSION` + 两份 `package-lock.json` 根 `version`）；
+  🔴 **`CHANGELOG.md` 不在自动面里** —— 脚本只打一行提醒（`scripts/release.mjs:126`），台账要手写后再提交。
 - 构建标记 `BUILD_TAG` 与 SW 的 `CACHE_VERSION` 每次改主文件都要 bump，否则 PWA 吃旧缓存。
 - 部署：push 到 `main` 后 `.github/workflows/deploy.yml` 自动 `build:prod` 并发布 GitHub Pages；`ci.yml` 跑测试 / 门禁 / lint。
 

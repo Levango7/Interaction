@@ -108,6 +108,45 @@
 
 ## [Unreleased]
 
+### 2026-10-26 · B7：文档陈旧行清零（roadmap / README / CONTRIBUTING / pet-system / webdav-verify / backend-recovery / iteration-plan）
+
+- **这一批只动文档**：不改 `src/*.js`、不改门禁、不改 workflow。判据来自一条老教训——**「未执行的操作项」不是未知缺陷**，
+  凡是写着"仍待 / 尚未 / 待拍板"的行，先 grep 实现 + 看门禁 + 看 CHANGELOG 有没有已完成记录，再决定销不销。
+- **改掉的错（每条都带 2026-10-26 现测值与数法）**：
+  1. `docs/roadmap-2026Q4.md` §一「当前坐标」：v3.7.135 → **v3.7.150**（HEAD `03bd99f` + tag 已发并线上核过）；
+     单测 168 → **202 文件**（`git ls-files tests | grep -c '\.test\.js$'`）；e2e 136 例 / 20 spec →
+     **197 例 / 28 spec / 3 视口**（`npm run e2e -- --list` 末行；projects 多出 `mobile-375x667`，所以例数 = 用例 × 3）；
+     逆层 18 / 循环 13 / 块 38 **复核未变**（契约型，`node scripts/module-graph.mjs --check`）。
+     **上一次"实测"距本次只有五天**——所以 §一 那条"进度型数字必须带截至日期 + 现测命令"的规则被原样保留并加了一句实况。
+  2. `docs/roadmap-2026Q4.md` §二 批次 B 标题写着「📋 下一轮候选」，而它下面 B1/B2/B3 **每一条都是 ✅** → 归位为已交付；
+     顺带补一条**编号撞车提醒**：本文的 A/B/C 是 2026-10-03 那套，与 `docs/iteration-plan.md` 的 B0~B7 不是同一套。
+  3. `docs/roadmap-2026Q4.md` §四/§五 的"仍待"逐条重测：**WebDAV 桌面 UI 已跑通**（协议层 ✅ + 8 步里 7 步通，
+     唯一未跑「改一条任务再上传」是探针没定位到任务行选择器，**卡的不是凭据**）；**Linear 真机验收 2026-10-11 已过**
+     （别再重跑），只剩 **Jira** 一条；GitHub 登录已完成。§五 表头"截至 2026-10-11"→ 2026-10-26。
+  4. `docs/webdav-verify.md`：写着「UI 六步仍要你亲自走」与「成功路径那 6 步一次没执行」—— **两条都已作废**，
+     按 `CHANGELOG.md` `[v3.7.128]` 的实跑记录改写为 7/8 步通 + 未跑那步如实 `SKIPPED`，并保留探针自身三个 bug
+     与环境级坑的记录（那是这段验收为什么可信的证据）。
+  5. **README / CONTRIBUTING 的版本号口径**（本批最实的一条）：`build:check` 校验的是**五源**，
+     而 `npm run release` 写的是**八处**（五源 + HTML `BUILD_TAG` + `service-worker.js` 的 `CACHE_VERSION` +
+     两份 `package-lock.json` 根 `version`）。原句「自动同步五处 + 锁文件根字段 + **CHANGELOG**」是**错的**——
+     脚本**不写 CHANGELOG**，只在结尾打一行提醒（`scripts/release.mjs:126`），照旧句理解就会漏记台账。
+  6. 体积/模块数：README 骨架 640 KB（"实测 638 KB"）→ **663,782 B = 648.2 KB**；交付态"约 3.5MB" →
+     **4,126,052 B ≈ 4.13 MB**（发 `v3.7.150` 时两次独立构建的同指纹值）；README/CONTRIBUTING 的「35 个模块」→
+     **38**（历史段里保留"当时 35"并标出数法）。`docs/pet-system.md` 的「版本号五处漂移」同步改成五源/八落点口径。
+  7. 「七个验证脚本（合计 173）」→ **11 个**（`ls server/verify/*.cjs | wc -l`），CI `server-verify` 腿逐条跑满
+     （`.github/workflows/ci.yml:110-122`）；`docs/backend-recovery-assessment.md` 的找回 runbook 补上新增 4 条脚本的名字，
+     并**明确没登记它们的期望条数**（没实测就不写数）；`docs/iteration-plan.md` 那条"端口全动态化"改为「当时 7 / 现 11 且 11/11 用 `freePort()`」。
+- **复核后仍成立、有意不动的两条**（写给下一轮，别当陈旧行清掉）：roadmap「废弃函数 30 → **10**」（现数仍是 10）；
+  `docs/product-scope.md:88`「Electron 本机同步主进程侧从未实现」（`grep -rn "sync-push\|sync-get\|8124" electron/*.js` **0 命中**）。
+- **发现但本批没做的两件**（一件待拍板、一件待入库）：
+  ① `vitest.config.js:22` 的 `coverage.include` 仍只指 `["agent-workbench.html"]` ⇒ 覆盖率恒 0% 是**配置造成的**，
+     不是"架构无法插桩"—— src/ 已外置成 38 个真 JS，换 include 就能量到真数，但会立刻暴露一个很低的百分比、需要同时定阈值策略，
+     **已登记进 `docs/iteration-plan.md` 待拍板清单**，不在本批顺手改；
+  ② `_probe/r22-flaky-freq.mjs` 的 TARGETS 按行号锚（`ics…:82`，实测用例已漂到 `:87`）⇒ 漂移后的抖动被静默低估，
+     已在台账 R-9 续二登记，工具改标题锚 + 入库 + 自带单测留作下一批。
+- 验证：`npm run build:check`（README 三处版本锚点必须仍解析得通）+ 13 条静态门禁 exit 0 + `npm run test:local` 抽样；
+  详见板与 `docs/agent-board.md` 的 B7 条目。
+
 ### 2026-10-26 · 守候工具：`gh` 通路不可达时用 curl 兜底（用户拍板「同意，换成 curl 兜底」）
 
 - **触发点**：发版守候期间 `gh api` 持续报 `dial tcp 20.205.243.168:443 …`，而**同一个端点用 curl 正常**。

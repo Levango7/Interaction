@@ -317,6 +317,7 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 **判断（2026-10-11 二次更新）**：本轮把后端从「工作区里根本不存在」推进到
 **找回 + 修 3 条 P0 + 修 2 条越权 + 补上缺失的云同步端点 + 契约级联调 29/29
 + 七个验证脚本（合计 173）接入 CI + 速率限制与审计日志（v3.7.110）
+  （**现况注记 2026-10-26**：脚本已从 7 个长到 **11 个**，"合计 173"随之失效 —— 计数以 CI 的 `server-verify` 腿为准，见本文 §找回 runbook）
 + `/api/tools/fetch` 承重墙交付（v3.7.111）+ 增量协议含冲突策略两端落地（v3.7.106/109，
 见 `docs/cloud-sync-incremental-contract.md` §三）+ 真机 UI 联调 19/19 并修复其抓到的信封 P0（v3.7.112）
 + 第三方登录按承重墙标准加固（v3.7.113，GitHub 两处真 bug + fail-closed + 一次性 state/审计/限流，
@@ -334,7 +335,8 @@ app.use("/api/integrations",  extrasRouter(cfg, store));
 # 1. 找回（若 server/ 再次丢失）
 git archive ac1114a server | tar -x
 
-# 2. 安装依赖并跑七个验证脚本（合计 173）
+# 2. 安装依赖并跑验证脚本（现测 **11 个**：`ls server/verify/*.cjs | wc -l`，2026-10-26；
+#    全部用 freePort() 动态端口，11/11 —— `grep -l freePort server/verify/*.cjs | wc -l`）
 cd server && npm install
 node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
 node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
@@ -343,6 +345,9 @@ node verify/incremental-check.cjs      # 期望 54/54 —— 增量协议 + mv �
 node verify/security-check.cjs         # 期望 22/22 —— 速率限制 + 审计环
 node verify/tools-fetch-check.cjs      # 期望 17/17 —— 抓取代理承重墙
 node verify/oauth-check.cjs            # 期望 33/33 —— 第三方登录：假 GitHub 全链路 + 微信演示模式全链路
+# ↑ 这 7 条的期望值是 2026-10-11 实登的（当时共 7 个脚本、合计 173）。此后新增的 4 条**没有在本节登记期望数**，
+#   别照抄旧合计：router-isolation-check.cjs / config-check.cjs / sms-check.cjs / password-reset-check.cjs
+#   —— 条数以脚本自身输出为准；CI 每次都会逐条跑满 11 条（`.github/workflows/ci.yml:110-122`），那里是活口径。
 
 # 3. 启动（默认因占位密钥拒绝，需先给密钥）
 JWT__ACCESSSECRET="$(openssl rand -hex 32)" JWT__REFRESHSECRET="$(openssl rand -hex 32)" npm start

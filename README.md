@@ -4,7 +4,7 @@
 
 零安装、单文件、纯本地；数据存本机浏览器，**默认不依赖任何后端服务器**（可选开启账号云同步与联网工具）。
 
-> **源码态说明（v3.7.0 起）**：仓库内的 `agent-workbench.html` 是约 640 KB 的**骨架**（v3.7.136 实测 638 KB）——应用 JS 已外置到 `src/`（38 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
+> **源码态说明（v3.7.0 起）**：仓库内的 `agent-workbench.html` 是约 648 KB 的**骨架**（2026-10-26 现测 663,782 B = 648.2 KB，命令 `npm run check:source-state` 打的是同一个口径）——应用 JS 已外置到 `src/`（38 个模块，由 `scripts/src-split.mjs` 拆分），文件中只保留 `/*SRC:xxx:BEGIN*/ … END*/` 标记。**直接双击打开仓库里的 HTML 不会得到可用应用**，需先组装：
 >
 > ```bash
 > npm run src:inject     # 把 src/ 拼回单文件 HTML
@@ -190,7 +190,7 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v3.7.150**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量、本文件共五处保持一致）。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.7.150**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量、本文件共五处保持一致 —— **这五处就是 `build:check` 的版本门禁面**，见下方「版本号五处必须一致」）。另有三处也带版本号但**不进这道门禁**：HTML 的 `BUILD_TAG`、`service-worker.js` 的 `CACHE_VERSION`、两份 `package-lock.json` 的根 `version` —— 它们由 `npm run release` 一起写，共 **8 个版本落点**。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 > **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.150 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
@@ -238,7 +238,11 @@ npm test                # vitest 单测
 npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod.js
 ```
 
-> **覆盖率口径**：`npm run test:coverage` 当前**恒为 0%**（单文件 HTML 无法插桩），已从 CI 移除，暂不纳入验收。
+> **覆盖率口径**：`npm run test:coverage` 当前**恒为 0%** —— 原因是配置：`vitest.config.js:22` 的
+> `coverage.include` 仍只指 `["agent-workbench.html"]`，而 v8 无法插桩 `.html`。这句"无法插桩"**只对 HTML 那一份成立**：
+> v3.7.0 之后应用 JS 已在 `src/*.js`（38 个真模块）里，把 include 换成 `["src/**/*.js"]` 当天就能出真数。
+> **换不换属待拍板**（会立刻暴露一个很低的百分比，须同时定阈值策略），见 `docs/iteration-plan.md` 待拍板第 6 条；
+> 在它定下来之前，覆盖率不进验收，CI 也不跑这一步（`ci.yml:44` 的移除注释是同一条历史理由，改它=改 workflow，需另行处置）。
 
 **立绘已外置（v3.7.0 起）**：9 张萌宠立绘移出 HTML，存在 `assets/pet/*.png`，由构建回注；v3.7.64 起 `src/` 侧也不再残留 base64（立绘数据在仓库里只以 PNG 存在）。
 
@@ -248,16 +252,16 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
 | `npm run pet:extract` | 反向：从 HTML 抽出立绘到 `assets/pet/`，HTML 留标记占位 |
 | `npm run pet:check` | 校验 assets 与 HTML 注入是否一致 |
 
-- 源码态 HTML（约 607KB，无 base64、JS 与立绘均已外置）**不能直接当成品用**：立绘区会退化为 SVG 兜底 + 控制台告警。
+- 源码态 HTML（约 648KB，2026-10-26 现测；无 base64、JS 与立绘均已外置）**不能直接当成品用**：立绘区会退化为 SVG 兜底 + 控制台告警。
   本地预览前先 `npm run pet:inject`；`npm test` / `npm run build:check` / `npm run build:prod`
   都挂了 `pre` 钩子会自动回注，CI 无需额外步骤。
 - 改立绘 = 替换 `assets/pet/<kind>.png` → `npm run pet:inject`（顺序由 `assets/pet/order.json` 保持）。
 - **抽取方向顺序固定**：`pet-art --extract` → `src-split --extract`（`npm run src:extract` 与所有 `post*` 钩子都已按此链好）。顺序反了会把 base64 抽进 `src/render-widgets.js`（v3.7.58~v3.7.63 的历史双存坑，`check:source-state` 现已拦）。
-- 收益：立绘外置让源码 HTML 3.50MB → 2.34MB，JS 分层外置后再降到**约 607KB（35 个模块）**，`src/render-widgets.js` 也不再内联 base64（v3.7.64：1,149,465 → 279,851 字节，-869KB），编辑器与 diff 恢复可用；交付产物仍是**单个 HTML**（拼回 + 立绘回注后约 3.5MB）。
+- 收益（**v3.7.0~v3.7.64 的历史量，不是现值**）：立绘外置让源码 HTML 3.50MB → 2.34MB，JS 分层外置后再降到约 607KB（当时 35 个模块），`src/render-widgets.js` 也不再内联 base64（v3.7.64：1,149,465 → 279,851 字节，-869KB），编辑器与 diff 恢复可用。**现值见本文开头：648.2 KB / 38 个模块**（2026-10-26 现测，`npm run check:source-state`）；交付产物仍是**单个 HTML**（拼回 + 立绘回注后 4,126,052 B ≈ 4.13 MB，2026-10-26 发 `v3.7.150` 时的两次独立构建同指纹值；早期文档写的"约 3.5MB"是立绘更少时的历史量）。
 
 **分层源块已外置（v3.7.0 起 · 任务 4 第一步）**：`Util`（Markdown 解析、性能工具）与 `Crypto` 两个层块
 先行抽到 `src/*.js`（合计约 36KB），HTML 内留标记占位，构建/测试前由 `scripts/src-split.mjs` 拼回；
-此后五层全部外置，共 **35 个模块**。
+此后五层全部外置（**v3.7.0 时点是 35 个模块**；2026-10-26 现测 **38 个**，数法：`ls src/*.js | wc -l` 或 `npm run check:source-state`）。
 
 | 命令 | 作用 |
 |---|---|
@@ -280,7 +284,7 @@ npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod
 | `manifest.json` | `version` |
 | `README.md` | 标题 / 「当前版本」/ 页脚示例 |
 
-发版请用 `npm run release <版本号>`（自动同步五处 + 锁文件根字段 + CHANGELOG）。
+发版请用 `npm run release <版本号>`（写 **8 个版本落点**：上表五源 + HTML 的 `BUILD_TAG` + `service-worker.js` 的 `CACHE_VERSION` + 两份 `package-lock.json` 的根 `version`；跑完自动还原源码态）。🔴 **`CHANGELOG.md` 不由该脚本写** —— 它只在结尾打一行提醒（`scripts/release.mjs:126`），台账要手写后再提交；过去按「+ CHANGELOG」的措辞理解会漏记。
 部署：`.github/workflows/deploy.yml` 在 push 到 `main` 时**先过门禁**（`verify` job：源码态 + 测试 + build:check + lint + 模块图）再执行 `build:prod` 发布到 GitHub Pages；`.github/workflows/ci.yml` 跑测试 / 门禁 / lint / 静态检查，**e2e 在 push 与 PR 都运行**（含渲染层对比度与跨视口布局硬断言），两个工作流都带 `concurrency`（连续 push 自动取消旧 run）。
 
 > **改完主文件的自检清单**：`npm run build:check` 通过 → 页面无控制台报错 → PWA 资源（manifest 图标等）无 404。
