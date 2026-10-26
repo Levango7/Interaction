@@ -171,7 +171,7 @@ function render(){
       const _fbExportBtn = document.getElementById("fallbackBtnExport");
       if(_fbExportBtn) _fbExportBtn.addEventListener("click", function(){ try{ doExport(); }catch(e2){ /* 静默降级 */ } });
       const _fbClearBtn = document.getElementById("fallbackBtnClear");
-      if(_fbClearBtn) _fbClearBtn.addEventListener("click", async function(){ if(!await dangerConfirm({ message: t("confirm.clear","确定清空？") })) return; try{ localStorage.clear(); }catch(e2){ /* 静默降级 */ } location.reload(); });
+      if(_fbClearBtn) _fbClearBtn.addEventListener("click", async function(){ if(!await dangerConfirm({ message: t("confirm.clear","确定清空？") })) return; try{ localStorage.clear(); }catch(e2){ /* R-2（2026-10-27）：clear 被拒（配额/隐私模式）时过去完全静默，而下面 location.reload() 照跑 ⇒ 用户以为清空了其实没清。加观测不改控制流。 */ try{ if(typeof pushDiag === "function") pushDiag("error", "清空数据失败（localStorage.clear 被拒）: "+((e2&&e2.message)||e2), { where: "fallbackClear" }); }catch(_e){} } location.reload(); });
     }
     try{ toast(t("err.renderException","渲染异常：")+(e&&e.message||t("tool.unknownErrorMsg", t("common.unknownError","未知错误"))), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
   }finally{
@@ -310,6 +310,24 @@ function renderMiniChart(chartType, dataArr){
   // line 类型自带布局容器，不再包 .mini-chart-wrap 的固定高度（避免双重滚动裁切）
   if(ct === "line") return '<div class="mini-chart-line-box u-h-120 u-bg-panel2 u-radius-sm u-overflow-hidden">' + inner + "</div>";
   return '<div class="mini-chart-wrap">' + inner + "</div>";
+}
+
+/* R-37（2026-10-27）：工具箱里「复制到剪贴板」的**唯一**写法 —— 回执必须等 Promise 落地。
+   `navigator.clipboard.writeText` 返回 Promise，同步 try/catch 抓不到 rejection；老写法在调用后
+   立刻 `toast("已复制")`，浏览器拒绝写入剪贴板时用户照样看到「已复制」（假回执，台账 R-34 同族）。
+   旧环境里 writeText 同步返回 undefined（非 Promise），那种情形按"已写入"处理。 */
+function _copyTextWithReceipt(txt){
+  if(!txt) return;
+  const ok = function(){ try{ toast(t("tool.copied", "已复制"), "ok"); }catch(_e){} };
+  const fail = function(){ try{ toast(t("msg.copyFailed", "复制失败"), "warn"); }catch(_e){} };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      const p = navigator.clipboard.writeText(String(txt));
+      if(p && typeof p.then === "function"){ p.then(ok, fail); return; }
+      ok(); return;
+    }
+    fail();
+  }catch(_e){ fail(); }
 }
 
 /* v3.7.78 解耦：自别处下沉 */
@@ -1030,7 +1048,7 @@ const TOOL_APPS = {
       const go = $("#vgGo"), out = $("#vgOut"), copy = $("#vgCopy");
       if(copy) copy.onclick = function(){
         const t2 = out && out.querySelector("textarea");
-        try{ if(t2 && t2.value){ navigator.clipboard.writeText(t2.value); toast(t("tool.copied", "已复制"), "ok"); } }catch(_e){}
+        _copyTextWithReceipt(t2 && t2.value);
       };
       if(!go) return;
       go.onclick = async function(){
@@ -1159,7 +1177,7 @@ const TOOL_APPS = {
       };
       const b1=$("#jwFmt"); if(b1) b1.onclick=function(){ run(false); };
       const b2=$("#jwCmp"); if(b2) b2.onclick=function(){ run(true); };
-      const b3=$("#jwCopy"); if(b3) b3.onclick=function(){ try{ if($o&&$o.value){ navigator.clipboard.writeText($o.value); toast(t("tool.copied","已复制"),"ok"); } }catch(_){} };
+      const b3=$("#jwCopy"); if(b3) b3.onclick=function(){ _copyTextWithReceipt($o && $o.value); };
       if($i) $i.oninput=function(){ run(false); };
     }
   },
@@ -1299,7 +1317,7 @@ const TOOL_APPS = {
         if($o) $o.value=lines.join("\n");
       };
       const b1=$("#uuGo"); if(b1) b1.onclick=gen;
-      const b2=$("#uuCopy"); if(b2) b2.onclick=function(){ try{ if($o&&$o.value){ navigator.clipboard.writeText($o.value); toast(t("tool.copied","已复制"),"ok"); } }catch(_){} };
+      const b2=$("#uuCopy"); if(b2) b2.onclick=function(){ _copyTextWithReceipt($o && $o.value); };
       gen();
     }
   },

@@ -177,6 +177,22 @@
 - 版本号：**未占用**（3.7.151 仍空闲，见上条释放记录）。
 
 ---
+### [2026-10-27 03:20 UTC+8] WorkBuddy 主会话 —— R-37 批次 **即将 push**（R10 声明）
+- 准备推的范围：**1 笔内容提交**，路径全部显式 add（R3）：
+  `scripts/lint-false-receipt.mjs` / `scripts/lib/false-receipt.mjs` / `scripts/lint-false-receipt.baseline.json` /
+  `scripts/flaky-freq.mjs` / `scripts/lib/flaky-freq.mjs` / `tests/false-receipt.test.js` / `tests/flaky-freq.test.js` /
+  `tests/diag-report.test.js` / `src/render-entry.js` / `src/ui-backup-stats.js` / `src/ui-daily.js` /
+  `src/ui-scene-bind.js` / `src/ai-retry.js` / `package.json`（只加 scripts，不动依赖与版本段）/
+  `CHANGELOG.md`（仅 `[Unreleased]` 新增一节）/ `docs/audit-2026-10-06.md`（新开 R-37 段）/ 本板。
+- **不动**：`src/render-widgets.js`、`src/ai-subagent.js`、`src/order.json`、`scripts/src-split.mjs`、
+  `docs/module-graph.md`（后者是你们 `3fa0443` 漏提的生成物，仍写 38 块而现测 39 —— 你们自己补，我不代提）。
+- 门禁实测（本树，刚跑）：`lint:false-receipt` **✓ 0 命中**（基线已冻结为空）、
+  `lint:empty-catch` **✓ 无新增 P0**（你们 `c74203a` 修好后我复跑确认）；新门禁 11 例 + 频次工具 9 例 +
+  诊断报告 3 例全绿；变异验证注入违规 exit 1 / 正确写法 exit 0 各一次。
+- **版本：不占号，本笔不切版** —— 等你们 `3fa0443` 的 CI 终态。发版另起一笔（会先在 `AGENTS.md` §二 上表）。
+- 提醒：我这一笔只动上面这些文件；**谁要再跑 `src:extract`，请先确认 HTML 是最新注入态** ——
+  01:58 那次抽回把我 3 处 src 编辑卷掉了（我已重做并注入，现 7 处标记全部在位）。
+
 ### [2026-10-27 01:37 UTC+8] WorkBuddy 主会话 —— 开工声明：**R-37「假回执」审计 + 实修**（用户点单 A+B+C）
 - 状态：进行中。**占用路径（动前声明，R4/R6）**：
   `src/render-entry.js` / `src/ui-backup-stats.js` / `src/ui-daily.js` / `src/ui-scene-bind.js`（四处实修）

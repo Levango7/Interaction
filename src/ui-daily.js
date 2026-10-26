@@ -18,7 +18,14 @@ function dailyDigest(){
   localStorage.setItem(PREFIX+"last_open", today);
   // 首次进入：请求通知权限（浏览器策略：仅用户手势后允许，这里静默尝试，失败无碍）
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-    try { Notification.requestPermission(); } catch (e) { /* 旧 API 回调式或拒绝，忽略 */ }
+    /* R-37：requestPermission 返回 Promise（旧实现回调式、返回 undefined）——
+       不接住就是一条无人处理的 rejection，失败时连诊断都没有。 */
+    try {
+      const p = Notification.requestPermission();
+      if(p && typeof p.then === "function"){
+        p.catch(function(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "通知权限请求失败: " + ((e && e.message) || e), { where: "dailyDigest" }); }catch(_e){} });
+      }
+    } catch (e) { /* 旧 API 回调式或拒绝，忽略 */ }
   }
   const items=getActiveTasks().filter(x=>x.status!=="done"&&x.due).sort((a,b)=>a.due<b.due?-1:1);
   const pending=items.filter(x=> x.due===today || x.due<today);

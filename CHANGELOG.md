@@ -108,6 +108,31 @@
 
 ## [Unreleased]
 
+### 2026-10-27 · 假回执门禁：异步没落地就报「成功」的 6 处全修 + 频次工具改标题锚
+
+- **新门禁 `lint:false-receipt`**（判定层 `scripts/lib/false-receipt.mjs`，接进 `npm run lint` 链，
+  **未改 workflow**）：抓「异步结果没等就报成功」。判两种形态 —— **丢弃**（没 await / 没赋值 / 没接
+  `.then|.catch|.finally`）与**吞掉**（`.then(空,空)` / `.catch(空)`，外面看着"处理过了"，比丢弃更隐蔽）。
+  棘轮口径：新增 P0 才失败；**修完已无存量，基线为空**。台账 **R-37**。
+- **实修 6 处（修前实测命中，不是按台账抄的）**：
+  · `render-entry.js:1033/1162/1302` —— 视频生成 / 简繁转换 / UUID 三个工具箱的「复制」在调用后立刻
+    `toast("已复制")`，剪贴板被拒也照报成功（**真缺陷 ×3**）；三处收口到一个 `_copyTextWithReceipt()`。
+  · `ui-backup-stats.js:884` —— `writeText(report).then(空,空); copied = true;` ⇒「完整报告已复制」是
+    **无条件**说的；`openDiagIssue` 改 async，等写盘落地才置真（`window.open` 仍留在 await **之前**，
+    免得用户手势失效被弹窗拦截）。
+  · `ui-daily.js:21`（`Notification.requestPermission` 的 rejection 无人接）、
+    `ui-scene-bind.js:125`（报表卡复制交给 onclick 等于无人接住）—— 补真实落地回调。
+  另新增 3 例守护，含反向对照（写入**成功**时 `copied` 必须为 true，否则"被拒时 false"那条是靠恒 false 蒙对的）。
+- **R-2 切片（同批，按标准式「加观测不改控制流」）**：`ai-retry.js` 4 处 `/* noop */`（折叠偏好、两处
+  `__pendingAiAsk` 写失败 ⇒ 配好 AI 后不会自动续上）、`render-entry.js` 1 处（兜底页「清空数据」失败却照
+  `location.reload()`）、`ui-backup-stats.js` 1 处（备份**少几张图**却报成功）。`ui-drawer.js` 那 5 处不动
+  （R-2 切片一已判"真合理"）。
+- **频次工具入库**：`_probe/r22-flaky-freq.mjs` 的 TARGETS 按**行号**锚，而 `ics-import-render:82` 已漂到 `:87`
+  ⇒ 该条统计**恒为 0**（看起来"不抖了"，其实没数到）。改**标题锚**并入 `scripts/flaky-freq.mjs` +
+  `scripts/lib/flaky-freq.mjs`，行号只用于报漂移；附 9 例单测。
+- **验证**：新门禁 11 例 + 频次工具 9 例 + 诊断报告 3 例全绿；变异验证（注入违规 ⇒ CLI exit 1，
+  正确写法 ⇒ exit 0）；`src/` 全量复扫 0 命中。
+
 ### 2026-10-27 · 代修：Code 模式两处写盘 catch 静默吞错（`lint:empty-catch` 复绿）
 
 - **背景**：`e65dcf1`（并行会话的 Code 模式）CI + Deploy 双红，同一步 `Run npm run lint:empty-catch`：

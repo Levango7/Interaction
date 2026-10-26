@@ -130,16 +130,43 @@ describe("诊断与反馈面板（关于卡 · v3.7.64）", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("⑤-2 clipboard 不可用：仍打开反馈页，copied 如实为 false", () => {
+  it("⑤-2 clipboard 不可用：仍打开反馈页，copied 如实为 false", async () => {
     const T = win.__test;
     Object.defineProperty(win.navigator, "clipboard", { value: undefined, configurable: true });
     T.pushDiag("warn", "nocopy-case");
     const open = vi.fn(() => null);
     win.open = open;
-    const res = T.openDiagIssue();
+    /* R-37：openDiagIssue 已改 async（要等写盘落地才敢说 copied）—— 同步取值拿到的是 Promise */
+    const res = await T.openDiagIssue();
     expect(open).toHaveBeenCalledTimes(1);
     expect(res.opened).toBe(true);
     expect(res.copied).toBe(false);
+  });
+
+  it("⑤-2b R-37 回归：clipboard 存在但**写入被拒**时 copied 必须 false（旧写法无条件置真）", async () => {
+    const T = win.__test;
+    const writeText = vi.fn(() => Promise.reject(new Error("denied")));
+    Object.defineProperty(win.navigator, "clipboard", { value: { writeText }, configurable: true });
+    T.pushDiag("warn", "denied-case");
+    const open = vi.fn(() => null);
+    win.open = open;
+    const res = await T.openDiagIssue();
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(res.opened).toBe(true);
+    expect(res.copied, "剪贴板被拒 ⇒ 不得谎报已复制").toBe(false);
+  });
+
+  it("⑤-2c R-37 反向对照：clipboard 写入**成功**时 copied 才为 true", async () => {
+    const T = win.__test;
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(win.navigator, "clipboard", { value: { writeText }, configurable: true });
+    T.pushDiag("warn", "ok-case");
+    const open = vi.fn(() => null);
+    win.open = open;
+    const res = await T.openDiagIssue();
+    expect(res.opened).toBe(true);
+    expect(res.copied, "写盘成功 ⇒ copied 必须为 true（否则 ⑤-2b 就是靠恒 false 蒙对的）").toBe(true);
   });
 
   it("⑥-1 诊断爆量：URL 不超预算，正文注明截断", () => {

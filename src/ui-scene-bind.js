@@ -122,7 +122,18 @@ function bindScenario(){
 }
 AppBridge.bindReportCard = bindReportCard;
 function bindReportCard(sc){
-  if((sc==="office"||sc==="code") && $("#copyRep")) $("#copyRep").onclick=()=> navigator.clipboard.writeText($("#repTxt").value);
+  /* R-37：writeText 返回 Promise —— 交给 onclick 就等于无人接住，复制被拒时用户毫无反馈。
+     写法与本文件 :79 的复制按钮同款（回执落在 promise 的落地回调里）。 */
+  if((sc==="office"||sc==="code") && $("#copyRep")) $("#copyRep").onclick=function(){
+    const txt = ($("#repTxt") || {}).value || "";
+    try{
+      const p = navigator.clipboard.writeText(txt);
+      if(p && typeof p.then === "function"){
+        p.then(function(){ try{ toast(t("msg.copied","已复制"), "ok"); }catch(_e){} },
+               function(){ try{ toast(t("msg.copyFailed","复制失败"), "warn"); }catch(_e){} });
+      }else{ try{ toast(t("msg.copied","已复制"), "ok"); }catch(_e){} }
+    }catch(e){ try{ toast(t("msg.copyFailed","复制失败"), "warn"); }catch(_e){} }
+  };
 }
 AppBridge.bindReviewCard = bindReviewCard;
 function bindReviewCard(sc){

@@ -1247,7 +1247,10 @@ function bindChatPanel(){
     /* v3.5.1：不再替换 textContent（会摧毁 SVG）；箭头方向由 CSS 固定为指右 */
     if(rail) rail.classList.toggle("show", collapsed);
     // 持久化折叠状态
-    try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }catch(e){ /* noop */ }
+    /* R-2 标准修法（2026-10-27）：写偏好失败过去静默 —— 用户以为记住了折叠态，下个会话就回默认。
+       加观测不改控制流：写失败照样继续，只是诊断里留一条。 */
+    try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }
+    catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "聊天面板折叠偏好写失败: "+((e&&e.message)||e), { where: "toggleCollapse" }); }catch(_e){} }
   };
   if(collapseBtn) collapseBtn.onclick=toggleCollapse;
   /* v3.2.1 修复：暴露强制展开函数——给 #phAiAskBtn / data-ai-hint-for 等外部入口调用。
@@ -1290,7 +1293,7 @@ function bindChatPanel(){
       // 保留按钮 SVG；恢复折叠态不替换按钮内容。
       if(rail) rail.classList.add("show");
     }
-  }catch(e){ /* noop */ }
+  }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "读聊天面板折叠偏好失败: "+((e&&e.message)||e), { where: "__aiPanelExpand" }); }catch(_e){} }
   /* 布局 v2（2026-10-21）：默认收起由 HTML 的 .collapsed 兜底；仅当用户显式选过「展开」时移除。
      load() 自带损坏兜底不会抛，这里不需要 try/catch。 */
   if(load(PREFIX+"chat_panel_collapsed", null) === "0"){
@@ -1329,7 +1332,7 @@ function askAiAboutScene(sc, hintKey){
     /* v3.2.1 修复 UX 闭环：未启用 AI 时记下意图，配置完成保存后自动续上 */
     try{
       save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: sc, hintKey: hintKey || "", ts: Date.now() }));
-    }catch(e){ /* noop */ }
+    }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "待问意图写失败（配好 AI 后不会自动续上）: "+((e&&e.message)||e), { where: "aiAsk.pending" }); }catch(_e){} }
     toast(t("ai.notEnabled","请先在设置 → AI 中启用并填写 API Key"), "warn");
     if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage();
     return;
@@ -1420,7 +1423,7 @@ function discussInAi(type){
   if(!(typeof aiReadyProfile === "function" && aiReadyProfile())){
     try{
       save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: "", hintKey: "discuss." + type, prompt: prompt, ts: Date.now() }));
-    }catch(e){ /* noop */ }
+    }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "待问意图写失败（配好 AI 后不会自动续上）: "+((e&&e.message)||e), { where: "aiDiscuss.pending" }); }catch(_e){} }
     toast(t("ai.notEnabled","请先在设置 → AI 中启用并填写 API Key"), "warn");
     if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage();
     return;

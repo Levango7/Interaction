@@ -398,7 +398,11 @@ function doIdbExport(){
             if(!v) return;
             const dataURL = await _blobToDataURL(v);
             if(dataURL) out[k] = dataURL;
-          }).catch(() => { /* 单键失败不拖垮整体备份 */ })
+          }).catch(function(e){
+            /* R-2（2026-10-27）：过去这里完全静默 —— 备份会**少几张图**却照报成功。
+               加观测不改控制流：单键依然跳过，但诊断里留一条，备份完整性才可被核查。 */
+            try{ if(typeof pushDiag === "function") pushDiag("warn", "备份：图片键读取失败（该图不在本次备份里）: "+k+" — "+((e&&e.message)||e), { where: "buildIdbBackup" }); }catch(_e){}
+          })
         ));
       }).then(() => resolve(out), () => resolve(out));
     })
@@ -869,8 +873,13 @@ function _diagIssueUrl(){
   }
   return q + "&body=" + encodeURIComponent("（诊断报告过长，请点「复制诊断报告」后粘贴到正文）");
 }
-/** 提交反馈：复制完整报告（尽力而为）+ 打开预填 Issue 页。全程不发起任何 fetch/XHR。 */
-function openDiagIssue(){
+/** 提交反馈：复制完整报告（尽力而为）+ 打开预填 Issue 页。全程不发起任何 fetch/XHR。
+ *  ⚠️ **async（R-37，2026-10-27）**：`copied` 过去是**无条件置真**的 ——
+ *    `writeText(report).then(function(){}, function(){}); copied = true;`
+ *  两个处理器都是空的，成败一律不区分，于是剪贴板被拒时返回值与 toast 都谎报「完整报告已复制」
+ *  （假回执，台账 R-34 同族）。现在**等写盘落地**才敢说复制成功。
+ *  顺序上有意为之：`window.open` 必须在 await 之前 —— 用户手势在 await 之后可能失效（弹窗被拦）。 */
+async function openDiagIssue(){
   let report = "";
   try{ report = buildDiagReport(); }catch(e){ report = ""; }
   let url = "";
@@ -878,13 +887,6 @@ function openDiagIssue(){
     try{ toast(t("about.diagIssueFail", "无法打开反馈页，请手动访问项目仓库新建 Issue"), "warn"); }catch(e2){}
     return { ok:false, opened:false, copied:false, url:"", error:String((e && e.message) || e) };
   }
-  let copied = false;
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(report).then(function(){}, function(){});
-      copied = true;
-    }
-  }catch(e){}
   let opened = false;
   try{
     /* Electron 下外链由主进程的协议白名单转交系统浏览器（见 electron/main.js _openExternalSafe），
@@ -892,6 +894,14 @@ function openDiagIssue(){
     window.open(url, "_blank", "noopener");
     opened = true;
   }catch(e){}
+  /* R-37：等到写盘真的落地才置真 —— 被拒/不支持时 copied 保持 false，回执不再说谎 */
+  let copied = false;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(report);
+      copied = true;
+    }
+  }catch(e){ copied = false; }
   try{
     if(opened && copied) toast(t("about.diagIssueOk", "反馈页已打开 · 完整报告已复制，可直接粘贴补全"), "ok");
     else if(opened) toast(t("about.diagIssueNoCopy", "反馈页已打开 · 请点「复制诊断报告」后粘贴正文"), "warn");
@@ -930,7 +940,13 @@ function openDiagIssue(){
   }
   if(btnIssue){
     btnIssue.onclick = function(){
-      try{ openDiagIssue(); }
+      /* R-37：openDiagIssue 现为 async —— 同步 try/catch 接不到它的 rejection，必须挂 .catch */
+      try{
+        const r = openDiagIssue();
+        if(r && typeof r.catch === "function"){
+          r.catch(function(e){ try{ pushDiag("error", "openDiagIssue failed: " + ((e && e.message) || e), { where: "diagPanel" }); }catch(e2){} });
+        }
+      }
       catch(e){ try{ pushDiag("error", "openDiagIssue failed: " + ((e && e.message) || e), { where: "diagPanel" }); }catch(e2){} }
     };
   }
