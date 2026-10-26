@@ -5251,6 +5251,64 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   /* 低频按钮收口（指南→侧栏底部 #sideBtnHelp；导出→设置·数据管理），避免与「今日」入口抢宽 */
   #btnHelp,#btnDownload{display:none!important}
 }
+
+/* ---------- Code 模式（2026-10-26）：agent-first 三栏（≥1024px；≤1023px 强制 Work 布局） ----------
+   左 = 机制导航（#side）+ 会话停靠（sessionDock）/ 中 = chatPanel 全高（DOM 零移动、接线零改动，
+   面板输入框即「底部正中聊天框」）/ 右 = taskRail（todo）+ agentDock（进程/技能/MCP/工作流，各段可折叠）。
+   机制导航点击打开工作视图（.code-tool-open：main-wrap 覆盖中栏，chat 隐藏；会话停靠点击返回）。
+   ⚠️ 本段必须保持在样式区末尾（首次实现误插到 JS 区 Bootstrap 段前，且注释里含样式闭合字面量会把样式块提前截断，4 个脚本块全挂） */
+.session-dock,.agent-dock{display:none}
+@media (min-width:1024px){
+  .body.code-mode{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;
+    grid-template-rows:minmax(0,1fr) auto;min-height:0}
+  .body.code-mode .side{grid-column:1;grid-row:1;width:auto;min-height:0}
+  .body.code-mode .session-dock{display:flex;flex-direction:column;min-height:0;max-height:38vh;
+    grid-column:1;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
+    background:color-mix(in srgb,var(--panel) 75%,transparent);padding:var(--space-2)}
+  /* 中栏 = main-wrap 本身（chatPanel 在它里面）：隐藏工具行与工作视图，聊天面板 flex 填满；
+     面板输入框即「底部正中聊天框」。DOM 零移动、接线零改动。
+     机制导航打开工作视图：.code-tool-open 隐藏聊天、显示 .main（会话停靠点击返回）。 */
+  .body.code-mode .main-wrap{grid-column:2;grid-row:1 / span 2;display:flex;overflow:hidden}
+  .body.code-mode .main-wrap>.toolbar-row{display:none}
+  .body.code-mode .main-wrap>.main{display:none}
+  .body.code-mode .chat-panel{width:auto;min-width:0;flex:1;min-height:0;border-left:none}
+  .body.code-mode .chat-panel.collapsed{width:auto;overflow:visible}
+  /* 面板保持 .collapsed 类（列宽由网格决定），但折叠态的「只留头+输入」规则（5130 行）会藏掉
+     消息区——Code 模式必须恢复：中栏是全高会话。同时解开坞块的 30vh max-height（5125 行），
+     消息区 flex 填满、输入框落在底部正中。 */
+  .body.code-mode .chat-panel.collapsed>.chat{display:block}
+  .body.code-mode .chat-panel.collapsed>.chat-toolbar{display:block}
+  .body.code-mode .chat-panel>.chat{max-height:none;flex:1 1 auto}
+  .body.code-mode .chat-panel-rail{display:none}
+  .body.code-mode.code-tool-open .main-wrap>.chat-panel{display:none}
+  .body.code-mode.code-tool-open .main-wrap>.main{display:block}
+  .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
+  .body.code-mode .agent-dock{display:flex;flex-direction:column;min-height:0;max-height:38vh;
+    grid-column:3;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
+    background:color-mix(in srgb,var(--panel) 72%,transparent);padding:var(--space-2)}
+  .body.code-mode .mob-bar,.body.code-mode .side-sheet,.body.code-mode .side-sheet-backdrop{display:none}
+}
+.session-dock-head,.adock-head{display:flex;align-items:center;gap:var(--space-1h)}
+.session-dock-head,.adock-title{font-size:var(--fs-sm);font-weight:600;flex:1}
+.sdock-head{margin-bottom:var(--space-1h)}
+.sdock-new{width:26px;height:26px;flex-shrink:0;border:1px solid var(--line);border-radius:var(--radius-sm,6px);
+  background:transparent;color:var(--text);cursor:pointer}
+.sdock-new:hover{background:var(--surface-hover)}
+.sdock-list{display:flex;flex-direction:column;gap:2px}
+.sdock-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;
+  padding:6px var(--space-2);border-radius:var(--radius-sm,6px);background:transparent;
+  border:1px solid transparent;color:var(--text);cursor:pointer;text-align:left}
+.sdock-item:hover{background:var(--surface-hover)}
+.sdock-item.active{background:color-mix(in srgb,var(--accent) 14%,transparent);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.sdock-item .tx{font-size:var(--fs-sm);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sdock-item .mt{font-size:var(--fs-2xs);color:var(--muted)}
+.sdock-empty{font-size:var(--fs-xs);color:var(--muted);padding:var(--space-1)}
+.adock-sec{margin-bottom:var(--space-1h)}
+.adock-head{width:100%;background:transparent;border:none;color:var(--text);cursor:pointer;
+  padding:4px 0;font-size:var(--fs-xs);font-weight:600}
+.adock-caret{margin-left:auto}
+.adock-body{display:flex;flex-direction:column;gap:2px;padding:2px 0 4px}
+.adock-row{font-size:var(--fs-xs);padding:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -5269,6 +5327,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
     <button type="button" class="tbtn" id="btnCmd" data-fold="1" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
+    <!-- Code 模式切换（2026-10-26）：工作/代码 双模式（≤1023px 强制工作；标签显示当前模式，点击切换） -->
+    <button type="button" class="tbtn" id="btnUIMode" aria-pressed="false" data-i18n-title="ui.mode.title" title="切换工作/代码模式" data-i18n-aria="ui.mode.title" aria-label="切换工作/代码模式">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><path d="M14 5h7M14 10h7M14 15h7"/></svg><span class="lbl" id="uiModeLbl">工作</span></button>
     <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
     <button type="button" class="tbtn task-rail-toggle" id="btnTaskRail" data-i18n-title="taskRail.open" title="今日任务" data-i18n-aria="taskRail.open" aria-label="今日任务">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
@@ -5318,6 +5379,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
   <div class="body">
     <nav class="side" id="side"></nav>
+    <!-- Code 模式（2026-10-26）：左栏下半 = 会话停靠栏（列表/切换/新建；重命名删除留在设置→会话管理，
+         不做第二套 CRUD。仅 .body.code-mode 且 ≥1024px 显示；切换 = 恢复该会话到工作缓冲，见 data-links.switchSession） -->
+    <div class="session-dock" id="sessionDock" data-i18n-aria="dock.sessions" aria-label="会话"></div>
     <!-- v2.1.0 移动端：底部 4 组导航栏 + 底部抽屉（≤767px 显示，桌面 display:none） -->
     <nav class="mob-bar" id="mobBar" data-i18n-aria="a11y.bottomNav" aria-label="底部导航"></nav>
     <div class="side-sheet-backdrop" id="sideSheetBackdrop"></div>
@@ -5422,6 +5486,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <div class="task-rail-pane u-hidden" data-rail-pane="files" id="railFilesPane"></div>
     </aside>
     <div class="task-rail-backdrop" id="taskRailBackdrop" hidden></div>
+    <!-- Code 模式（2026-10-26）：右栏下半 = 进程/技能/MCP/工作流 停靠栏（仅 .body.code-mode 且 ≥1024px 显示，
+         各段可折叠且显隐持久化；Work 模式 display:none）。数据与右栏 Agent 页同源，渲染两份、数据一份。 -->
+    <aside class="agent-dock" id="agentDock" data-i18n-aria="dock.agents" aria-label="运行与能力"></aside>
     <!-- 右侧 AI 聊天面板（三栏布局第三栏）：常驻显示，复用 #chat/#chatForm/#chatThinking/#chatCancel
          数据源仍为 getChat(active)（保留跟随场景切换以兼容现有测试契约，未来可切换为全局 panelChat）
          窄屏默认隐藏，加 .show 滑入；折叠按钮在 header -->

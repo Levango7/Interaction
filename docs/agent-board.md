@@ -219,6 +219,18 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-26 03:20 UTC+8] ZCode 主会话（**Code 模式布局骨架** · 用户点单 · P1 大批）
+- 状态：进行中。用户点单：双模式工作台——**Work 模式**=现有布局（原样保留）；**Code 模式**=对齐主流 agent IDE：
+  左栏上=机制（现有侧栏导航）下=Session 列表；中栏=AI 会话（现有 chatPanel 经 CSS 网格移至中栏，输入框即底部正中聊天框，
+  **DOM 零移动、聊天接线零改动**）；右栏上=todo（现有 taskRail）下=进程/技能/MCP/工作流 停靠栏（可显隐，持久化）。
+  ≤1023px 强制 Work（响应式不变）；ACP 在本仓无运行时概念（已评估不适用），该槽位由「集成运行状态」承接。
+- 占用路径：`agent-workbench.html`（顶栏切换按钮 + 两个 dock DOM + CSS）、`src/render-widgets.js`（renderSessionDock/
+  renderAgentDock/模式切换）、`src/ui-global-events.js`（仅切换按钮委托 +1 处）、`src/core-i18n.js`（新键 zh/en）、
+  `tests/ui-mode.test.js`（新增）、`CHANGELOG.md [Unreleased]`、`docs/ARCHITECTURE.md` §3（模式接线一行）、本板。
+- 在跑的重活：定向单测 + 布局 e2e（three-state/layout-v2 回归）+ 门禁。
+- 准备推的范围：单笔 feat + （用户点头后）3.7.150 切版。
+- 提醒对方：**不改聊天/会话的任何行为**——Code 模式是布局壳，数据流全部复用；Work 模式字节级不动。
+
 ### [2026-10-26 03:00 UTC+8] ZCode 主会话（登录体系盘点 · 用户「cloudbase/邮箱/github 都要做，飞书钉钉微信有必要也做」）
 - 状态：分析交付，等两样用户输入。**无代码占用**。
 - **盘点发现（代码比 OD-001 矩阵记录的更完整）**：① 邮箱登录（邮箱密码+验证码）服务端+客户端全链已实现

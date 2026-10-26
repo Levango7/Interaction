@@ -563,6 +563,25 @@ function setActiveSession(sid){
   _saveActiveSid();
 }
 function getActiveSession(){ getSessions(); return _activeSid; }
+/**
+ * 切换会话（2026-10-26 Code 模式会话停靠栏）：场景对齐 → 激活会话 →
+ * 把该会话的消息装回工作缓冲（chats[sc]，聊天面板的实时数据源），镜像落盘
+ * （此刻活动会话即它，写回内容相同 = 幂等）。
+ * 语义：会话切换 = 恢复该会话到工作上下文（主流 agent IDE 同款）；切换前
+ * 原缓冲已由 save() 写穿镜像同步进其会话，不丢失。
+ * @param {string} sid
+ * @returns {string|null} 会话所属场景 key（调用方负责 renderChat/render）
+ */
+function switchSession(sid){
+  getSessions();
+  const it = _sessions.find(function(s){ return s.id === sid; });
+  if(!it) return null;
+  if(active !== it.sc) setActive(it.sc);
+  setActiveSession(sid);
+  chats[it.sc] = _chatTag((it.msgs || []).slice(-50), it.sc);
+  save(PREFIX + "chat_" + it.sc, chats[it.sc]);
+  return it.sc;
+}
 function getActiveSessionObj(){
   getSessions();
   return _sessions.find(function(s){ return s.id === _activeSid; }) || _sessions[0] || null;
@@ -825,6 +844,8 @@ const DATA_KEY_REGISTRY = [
   { key: "onboarded", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "lang", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "theme", kind: "m", sync: true, backup: true },   // 本机元数据
+  { key: "uimode", kind: "c", sync: true, backup: true },   // 本机控制状态（Work/Code 模式偏好，2026-10-26 Code 模式批次）
+  { key: "agent_dock", kind: "c", sync: true, backup: true },   // 本机控制状态（agentDock 各段显隐，同批）
   { key: "rail_tab", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "sceneViewMode", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据

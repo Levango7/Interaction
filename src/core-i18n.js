@@ -4087,7 +4087,26 @@ const MESSAGES = {
     "p5.evDetailEmpty": "当日没有日程事件",
     "prompt.title": "请输入",
     "prompt.required": "此项不能为空",
-    "prompt.ok": "确定"
+    "prompt.ok": "确定",
+    "ui.mode.work": "工作",
+    "ui.mode.code": "代码",
+    "ui.mode.title": "切换工作/代码模式",
+    "ui.mode.switchedTo": "已切换到",
+    "dock.sessions": "会话",
+    "dock.newSession": "新建会话",
+    "dock.noSessions": "暂无会话",
+    "dock.unitMsgs": " 条 · ",
+    "dock.agents": "运行与能力",
+    "dock.process": "进程",
+    "dock.skills": "技能",
+    "dock.mcp": "MCP",
+    "dock.flow": "工作流",
+    "dock.flowDraft": "草案（执行引擎冻结，接线在路线图）",
+    "dock.idle": "空闲——没有进行中的 Agent 执行",
+    "dock.running": "执行中",
+    "dock.none": "无",
+    "dock.mcpNone": "未配置 MCP 服务器",
+    "dock.stepDone": "步骤"
   },
   en: {
     // Common
@@ -8138,7 +8157,26 @@ const MESSAGES = {
     "p5.evDetailEmpty": "No events that day",
     "prompt.title": "Enter a value",
     "prompt.required": "This field cannot be empty",
-    "prompt.ok": "OK"
+    "prompt.ok": "OK",
+    "ui.mode.work": "Work",
+    "ui.mode.code": "Code",
+    "ui.mode.title": "Toggle work/code mode",
+    "ui.mode.switchedTo": "Switched to",
+    "dock.sessions": "Sessions",
+    "dock.newSession": "New session",
+    "dock.noSessions": "No sessions",
+    "dock.unitMsgs": " msgs · ",
+    "dock.agents": "Runtime & capabilities",
+    "dock.process": "Processes",
+    "dock.skills": "Skills",
+    "dock.mcp": "MCP",
+    "dock.flow": "Workflows",
+    "dock.flowDraft": "Draft (engine frozen; wiring on the roadmap)",
+    "dock.idle": "Idle — no agent run in progress",
+    "dock.running": "Running",
+    "dock.none": "None",
+    "dock.mcpNone": "No MCP servers configured",
+    "dock.stepDone": "Steps"
   }
 };
 

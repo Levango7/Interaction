@@ -220,6 +220,8 @@ function renderSide(){
   /* 右栏今日任务随侧栏同批更新：挂在 renderSide 里而不是 render() 直调，
      否则 render-entry → render-widgets 会新增一条静态边，改变依赖基线的环集合。 */
   renderTaskRail();
+  /* Code 模式（2026-10-26）：同上理由挂在这里——每次渲染同步模式类与两个 dock（幂等）。 */
+  applyUIMode();
 }
 
 /* ---------- 右栏「今日任务」任务轨（2026-10-21 布局 v2） ----------
@@ -473,6 +475,15 @@ function setupSideMenu(){
     const btn = e.target && e.target.closest ? e.target.closest(".nav-item") : null;
     if(!btn) return;
     const _m = $("#main"); if(_m) _m.scrollTop = 0; const _mw = document.querySelector(".main-wrap"); if(_mw) _mw.scrollTop = 0;
+    /* Code 模式（2026-10-26）：页面型导航（场景/今日/任务/时间轴/联动）在中栏打开工作视图
+       （.code-tool-open：main-wrap 覆盖 chat）；AI 项 = 回到会话（chat 就是代码模式的 AI 面）。
+       抽屉/弹窗类（工具箱/商店/回收站/设置/说明）不动中栏。 */
+    const _cmBody = document.querySelector(".body");
+    if(_cmBody && _cmBody.classList.contains("code-mode") && typeof _uiMode === "function" && _uiMode() === "code"){
+      const _mid = btn.getAttribute("data-menu") || "";
+      if(btn.dataset.aipage) _cmBody.classList.remove("code-tool-open");
+      else if(btn.hasAttribute("data-sc") || ["overview","tasks","timeline","chain"].indexOf(_mid) >= 0) _cmBody.classList.add("code-tool-open");
+    }
     /* caret 点击：只切换展开态 */
     if(e.target && e.target.closest && e.target.closest("[data-caret]")){
       const nodeId = btn.getAttribute("data-menu") || (btn.getAttribute("data-sc") ? "sc-"+btn.getAttribute("data-sc") : null);
@@ -3806,3 +3817,132 @@ try{
   AppBridge.openWeatherModal = openWeatherModal;
   AppBridge.openPetModal = openPetModal;
 }catch(e){}
+
+/* ---------- Code 模式（2026-10-26）：双模式工作台 ----------
+ * Work 模式 = 现有布局（不动）；Code 模式 = agent-first 三栏（≥1024px，CSS 媒体查询外不生效）：
+ * 左 = 机制导航（#side）+ 会话停靠（sessionDock）/ 中 = chatPanel 全高（CSS 网格移位，DOM 零移动——
+ * 流式输出/工具调用/会话接线零改动，面板输入框即「底部正中聊天框」）/ 右 = taskRail（todo）+ agentDock。
+ * 状态持久化：wb_agent_uimode（work|code）、wb_agent_agent_dock（各段显隐）。
+ * ACP 在本仓无运行时概念（台账已评不适用），右下槽位由「进程/技能/MCP/工作流」承接。 */
+function _uiMode(){
+  try{ const m = load(PREFIX + "uimode", "work"); return m === "code" ? "code" : "work"; }
+  catch(e){ return "work"; }
+}
+/** 应用当前模式到壳（幂等）：切 .body.code-mode 类 + 顶栏标签 + 渲染/清空两个 dock */
+function applyUIMode(){
+  const body = document.querySelector(".body");
+  if(!body) return;
+  const code = _uiMode() === "code";
+  body.classList.toggle("code-mode", code);
+  const lbl = $("#uiModeLbl");
+  if(lbl) lbl.textContent = t(code ? "ui.mode.code" : "ui.mode.work", code ? "代码" : "工作");
+  if(code){ renderSessionDock(); renderAgentDock(); }
+  else {
+    const sd = $("#sessionDock"); if(sd) sd.innerHTML = "";
+    const ad = $("#agentDock"); if(ad) ad.innerHTML = "";
+  }
+}
+function toggleUIMode(){
+  try{ save(PREFIX + "uimode", _uiMode() === "code" ? "work" : "code"); }catch(e){ /* noop */ }
+  applyUIMode();
+  try{ toast(t("ui.mode.switchedTo", "已切换到") + " " + t(_uiMode() === "code" ? "ui.mode.code" : "ui.mode.work", _uiMode() === "code" ? "代码模式" : "工作模式"), "ok"); }catch(e){ /* noop */ }
+}
+/** 会话停靠栏（左栏下半）：列表 + 切换 + 新建。重命名/删除留在 设置→会话管理（不做第二套 CRUD）。 */
+function renderSessionDock(){
+  const dock = $("#sessionDock");
+  if(!dock) return;
+  if(_uiMode() !== "code"){ dock.innerHTML = ""; return; }
+  let list = [];
+  try{ list = getSessions() || []; }catch(e){ list = []; }
+  let act = "";
+  try{ act = getActiveSession() || ""; }catch(e){ act = ""; }
+  const items = list.map(function(s2){
+    const isAct = s2.id === act;
+    const dt = new Date(s2.updatedAt || s2.createdAt || Date.now());
+    const time = (dt.getMonth() + 1) + "/" + dt.getDate() + " " + pad(dt.getHours()) + ":" + pad(dt.getMinutes());
+    return '<button type="button" class="sdock-item' + (isAct ? " active" : "") + '" data-sid="' + esc(s2.id) + '" title="' + esc(s2.title || "") + '">'
+      + '<span class="tx">' + esc(s2.title || t("sess.new", "新会话")) + '</span>'
+      + '<span class="mt">' + ((s2.msgs || []).length) + t("dock.unitMsgs", " 条 · ") + time + '</span></button>';
+  }).join("");
+  dock.innerHTML = sanitizeHtml(
+    '<div class="sdock-head"><span class="sdock-title">' + t("dock.sessions", "会话") + '</span>'
+    + '<button type="button" class="sdock-new" id="sdockNew" data-i18n-title="dock.newSession" title="' + t("dock.newSession", "新建会话") + '" aria-label="' + t("dock.newSession", "新建会话") + '">＋</button></div>'
+    + '<div class="sdock-list">' + (items || '<div class="sdock-empty">' + t("dock.noSessions", "暂无会话") + '</div>') + '</div>');
+  const nb = $("#sdockNew");
+  if(nb) nb.onclick = function(){
+    let sc = "office";
+    try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(e){ /* noop */ }
+    const ns = createSession(sc, t("sess.new", "新会话"));
+    if(ns && ns.id){
+      const switched = switchSession(ns.id);
+      renderChat(); if(typeof scrollChat === "function") scrollChat();
+      renderSessionDock();
+      if(switched !== null && typeof render === "function") render();
+    }
+  };
+  $$("#sessionDock .sdock-item").forEach(function(el){
+    el.onclick = function(){
+      const sc = switchSession(el.getAttribute("data-sid"));
+      if(sc !== null){
+        renderChat(); if(typeof scrollChat === "function") scrollChat();
+        renderSessionDock();
+        if(typeof render === "function") render();
+      }
+    };
+  });
+}
+/** 能力停靠栏（右栏下半）：进程（agent 运行）/ 技能 / MCP / 工作流。各段可折叠（持久化）。 */
+function renderAgentDock(){
+  const dock = $("#agentDock");
+  if(!dock) return;
+  if(_uiMode() !== "code"){ dock.innerHTML = ""; return; }
+  let show = { proc: true, skills: true, mcp: true, flow: false };
+  try{ show = Object.assign(show, load(PREFIX + "agent_dock", {}) || {}); }catch(e){ /* noop */ }
+  const sec = function(key, label, inner){
+    return '<div class="adock-sec" data-sec="' + key + '">'
+      + '<button type="button" class="adock-head" data-toggle="' + key + '" aria-expanded="' + (show[key] ? "true" : "false") + '">'
+      + esc(label) + '<span class="adock-caret" aria-hidden="true">' + (show[key] ? "▾" : "▸") + '</span></button>'
+      + (show[key] ? '<div class="adock-body">' + inner + '</div>' : '')
+      + '</div>';
+  };
+  /* 进程：agent 执行状态（agent_run：goal + steps/done） */
+  let run = null;
+  try{ run = load(PREFIX + "agent_run", null); }catch(e){ run = null; }
+  const procInner = (run && Array.isArray(run.steps) && run.steps.length)
+    ? '<div class="adock-row">' + esc(run.goal || t("dock.running", "执行中")) + '</div>'
+      + '<div class="adock-row u-text-dim">' + t("dock.stepDone", "步骤") + ' ' + ((run.done || []).length) + '/' + run.steps.length + '</div>'
+    : '<div class="adock-row u-text-dim">' + t("dock.idle", "空闲——没有进行中的 Agent 执行") + '</div>';
+  /* 技能：与右栏 Agent 页同源（listEnabledSkills）——渲染两份、数据一份（无漂移面） */
+  let skills = [];
+  try{ skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : []; }catch(e){ skills = []; }
+  const skillsInner = skills.length
+    ? skills.map(function(sk){ return '<div class="adock-row">' + esc(sk.name || sk.id || "?") + '</div>'; }).join("")
+    : '<div class="adock-row u-text-dim">' + t("dock.none", "无") + '</div>';
+  /* MCP：与设置→扩展同源（mcpServers，2026-10-23 起真能力） */
+  let mcp = [];
+  try{ mcp = (typeof mcpServers === "function") ? mcpServers() : []; }catch(e){ mcp = []; }
+  const mcpInner = mcp.length
+    ? mcp.map(function(sv){ return '<div class="adock-row">' + esc(sv.name || "?") + '</div>'; }).join("")
+    : '<div class="adock-row u-text-dim">' + t("dock.mcpNone", "未配置 MCP 服务器") + '</div>';
+  /* 工作流：冻结草案（无执行引擎、无存储），如实显示 */
+  const flowInner = '<div class="adock-row u-text-dim">' + t("dock.flowDraft", "草案（执行引擎冻结，接线在路线图）") + '</div>';
+  dock.innerHTML = sanitizeHtml(
+    '<div class="adock-head"><span class="adock-title">' + t("dock.agents", "运行与能力") + '</span></div>'
+    + sec("proc", t("dock.process", "进程"), procInner)
+    + sec("skills", t("dock.skills", "技能"), skillsInner)
+    + sec("mcp", t("dock.mcp", "MCP"), mcpInner)
+    + sec("flow", t("dock.flow", "工作流"), flowInner));
+  $$("#agentDock [data-toggle]").forEach(function(el){
+    el.onclick = function(){
+      const k = el.getAttribute("data-toggle");
+      show[k] = !show[k];
+      try{ save(PREFIX + "agent_dock", show); }catch(e){ /* noop */ }
+      renderAgentDock();
+    };
+  });
+}
+/* Code 模式切换按钮：与 btnTaskRail 同款——渲染层绑定自己的顶栏开关（幂等重绑无害） */
+(function _bindUIModeBtn(){
+  const b = $("#btnUIMode");
+  if(b) b.onclick = toggleUIMode;
+})();

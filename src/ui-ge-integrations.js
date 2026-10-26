@@ -2044,7 +2044,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     abortChat, retryChat, createChatController, showChatThinking, runChatLoop,
     getChat, appendChat,
     // v2.0 多 Session 聊天存储层访问器（供测试驱动与断言）
-    getSessions, setActiveSession, getActiveSession, getActiveSessionObj,
+    getSessions, setActiveSession, getActiveSession, getActiveSessionObj, switchSession,
     createSession, renameSession, deleteSession,
     appendSessionMsg, getSessionMsgs, clearSessionMsgs,
     openSessionModal, closeSessionModal, renderSessionList, renderSessionPreview, bindSessionModal,
