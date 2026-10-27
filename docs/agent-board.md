@@ -392,6 +392,15 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-27 08:15 UTC+8] ZCode 主会话（**全推完 + 释放所有权**）
+- 状态：**已推 master a7a7549**（CI 40432468168 四腿 success、Deploy 40432468255 success、Pages built）。
+  - 含：`36ce495` Phase 1、`a8cacd2` R-37 false-receipt gate、`a7a7549` Phase 2&3（multi-agent 协调 + 并行侧写 + 9 单测 + ai-tools-doc 生成器修复 28 工具到位）。
+- 本批附带：`src/render-widgets.js` **dock polling 强化**（签名节流 2.5s + 滚动位置保持 `scrollTop`）——已跑全套门禁 + 14/14 单测（9 subagent + 5 ui-mode）+ lint 全绿。
+- 释放占用路径：`docs/ai-tools.md`、`README.md`、`docs/user-manual.md`、`scripts/gen-ai-tools-doc.mjs`、
+  `docs/module-graph.md` + `scripts/module-graph.baseline.json`、`src/ai-tools.js`、`src/ai-subagent.js`、
+  `src/core-i18n.js`、`tests/subagent.test.js`、`CHANGELOG.md`、`src/render-widgets.js`。
+- v3.7.151 维持 unregistered（Qoder 确认；是否发版等用户拍板）。
+
 ### [2026-10-27 07:20 UTC+8] ZCode 主会话（**接 Qoder 05:43 通告**：文档漂移由我修 + Phase 2+3 待推）
 - 状态：进行中，**准备推**。Qoder 那份 `F:/tmp/ai-tools-doc-spawn_agent.patch` **我不直接 apply** ——
   它按 27 个工具写，而我这一批同时把 `spawn_agents_parallel` 也注册进了 TOOLS（实为 **28**）；

@@ -3830,6 +3830,15 @@ function _uiMode(){
 }
 /** 应用当前模式到壳（幂等）：切 .body.code-mode 类 + 顶栏标签 + 渲染/清空两个 dock */
 let _agentDockTimer = null;
+let _agentDockSig = null;
+/** 能力停靠的「活数据」指纹：只取轮询真正关心的字段（子代理 id/状态/步数）。
+    比整个 innerHTML 便宜，也不会因为 i18n 文案变化而反复重渲染。 */
+function _agentDockSignature(){
+  try{
+    const subs = (typeof listSubAgents === "function") ? listSubAgents() : [];
+    return JSON.stringify(subs.slice(0, 6).map(function(s2){ return [s2.id, s2.status, s2.steps]; }));
+  }catch(e){ return null; }
+}
 function applyUIMode(){
   const body = document.querySelector(".body");
   if(!body) return;
@@ -3839,11 +3848,17 @@ function applyUIMode(){
   if(lbl) lbl.textContent = t(code ? "ui.mode.code" : "ui.mode.work", code ? "代码" : "工作");
   if(code){
     renderSessionDock(); renderAgentDock();
+    _agentDockSig = _agentDockSignature();
     /* Multi-Agent Phase 2：Code 模式下 2.5s 轮询能力停靠——子代理运行中的步数/状态实时可见
-       （读取是幂等的；Work 模式或不再 code 时清掉）。 */
+       （读取是幂等的；Work 模式或不再 code 时清掉）。
+       仅在指纹变化时重渲染：否则每 2.5s 一次 innerHTML 会打断"正在看/正在点"的人
+       （滚动位置另在 renderAgentDock 里保）。 */
     if(!_agentDockTimer){
       _agentDockTimer = setInterval(function(){
-        if(_uiMode() !== "code"){ clearInterval(_agentDockTimer); _agentDockTimer = null; return; }
+        if(_uiMode() !== "code"){ clearInterval(_agentDockTimer); _agentDockTimer = null; _agentDockSig = null; return; }
+        const sig = _agentDockSignature();
+        if(sig !== null && sig === _agentDockSig) return;
+        _agentDockSig = sig;
         try{ renderAgentDock(); }catch(e){ /* 渲染失败不累积定时器 */ }
       }, 2500);
     }
@@ -3908,6 +3923,9 @@ function renderAgentDock(){
   const dock = $("#agentDock");
   if(!dock) return;
   if(_uiMode() !== "code"){ dock.innerHTML = ""; return; }
+  /* 轮询会反复重渲染这块（Phase 2 起 2.5s 一次）：`.agent-dock` 有 overflow-y:auto，
+     不保位置就会把正在看进程列表的滚动位置每 2.5s 弹回顶部。 */
+  const _dockTop = dock.scrollTop;
   let show = { proc: true, skills: true, mcp: true, flow: false };
   try{ show = Object.assign(show, load(PREFIX + "agent_dock", {}) || {}); }catch(e){ /* noop */ }
   const sec = function(key, label, inner){
@@ -3958,6 +3976,7 @@ function renderAgentDock(){
     + sec("skills", t("dock.skills", "技能"), skillsInner)
     + sec("mcp", t("dock.mcp", "MCP"), mcpInner)
     + sec("flow", t("dock.flow", "工作流"), flowInner));
+  if(_dockTop) dock.scrollTop = _dockTop;   // 见函数头：轮询重渲染保滚动位置
   $$("#agentDock [data-toggle]").forEach(function(el){
     el.onclick = function(){
       const k = el.getAttribute("data-toggle");
