@@ -1,4 +1,4 @@
-# Agent 工坊（v3.7.150）
+# Agent 工坊（v3.7.151）
 
 一个跑在 Windows 上的**套壳 Agent 工坊**：把办公 / 数据 / 设计 / 学习 / 编程 / 生活 / 健康七类场景收拢进一个原生窗口，每个场景是一个 subagent 面板，可本地使用，也可接入 LLM 让 subagent 真正"动手"操作数据。
 
@@ -191,9 +191,9 @@ npm run dist         # 打包 Windows 便携版 exe（免安装）→ electron/d
 
 ## 八、版本
 
-当前版本 **v3.7.150**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量、本文件共五处保持一致 —— **这五处就是 `build:check` 的版本门禁面**，见下方「版本号五处必须一致」）。另有三处也带版本号但**不进这道门禁**：HTML 的 `BUILD_TAG`、`service-worker.js` 的 `CACHE_VERSION`、两份 `package-lock.json` 的根 `version` —— 它们由 `npm run release` 一起写，共 **8 个版本落点**。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **v3.7.151**（与 `electron/package.json`、`package.json`、`manifest.json`、代码内 `VERSION` 常量、本文件共五处保持一致 —— **这五处就是 `build:check` 的版本门禁面**，见下方「版本号五处必须一致」）。另有三处也带版本号但**不进这道门禁**：HTML 的 `BUILD_TAG`、`service-worker.js` 的 `CACHE_VERSION`、两份 `package-lock.json` 的根 `version` —— 它们由 `npm run release` 一起写，共 **8 个版本落点**。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.150 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
+> **更新提示**：以本地服务 / PWA 方式使用时，更新后首次打开会弹出「新版本已就绪，点击刷新」提示（点击即刷新）；页面底部页脚显示 `v3.7.151 · b{构建标记}`，若未显示构建标记则说明仍在旧缓存版本（可 Ctrl+Shift+R 强制刷新）。Electron 打包版需重新 `npm run dist`（构建时自动拷贝最新 HTML）。
 
 ## 九、相关文件
 
