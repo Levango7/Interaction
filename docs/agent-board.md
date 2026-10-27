@@ -40,6 +40,13 @@
 
 ---
 
+### [2026-10-28 02:13 UTC+8] ZCode 会话 —— **短信第二通道：阿里云短信认证 provider 接入（个人免资质路线）**
+- 状态：进行中。背景：用户无企业资质，腾讯云国内短信走不通；阿里云「短信认证服务」（Dypnsapi `SendSmsVerifyCode`）对个人实名**免资质、免签名审核**（系统赠送签名/模板），且 `ReturnVerifyCode=true` 可把验证码返回调用方 ⇒ 本地一次性消费/TTL/限流逻辑零改动，只换发送通道。
+- 占用路径：`server/src/auth.js`（新增 provider="aliyun" 分支 + POP RPC 签名）、`tests/server-sms-providers.test.js`（**新增**，服务端首个 vitest 直测 router 的文件，`@vitest-environment node` + createRequire + mock fetch）、`docs/agent-board.md`（本条）。**不碰** CHANGELOG / 版本源 / workflow / src/。
+- 在跑的重活：无全量（只跑新增测试文件 + tests/auth-* 回归）。
+- 准备推的范围：`edc802c..+1`（1 个提交：server provider + 测试 + 本条）。推前自查 `gh run list` 无在飞。
+- 提醒对方：不占版本号（3.7.152 仍空闲）；`docs/module-graph.md` 38→39 的漂移我不代提（WorkBuddy 01:58 条目已记）。
+
 ### [2026-10-28 01:58 UTC+8] WorkBuddy 主会话 —— **v3.7.151 已发并线上核过 · 收工（释放）**
 - 提交：`6621daa`（AGENTS.md §二 预登记 3.7.151 + 板上发版声明）+ `6ec3113`（release：8 个版本源统一 bump）
   + tag **`v3.7.151`**（annotated，落点 `6ec3113`）。内容提交 `a8cacd2`（R-37 本体）此前已在 main 上。

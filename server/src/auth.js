@@ -48,6 +48,28 @@ function tc3Sign(o) {
   return algorithm + " Credential=" + o.secretId + "/" + scope + ", SignedHeaders=" + signedHeaders + ", Signature=" + signature;
 }
 
+/* ---- 阿里云 POP（RPC 风格）签名（2026-10-28 短信认证服务 SendSmsVerifyCode）----
+   与腾讯云 TC3 并列的第二把签名尺子，**不共用代码**：两者规范串构造完全不同，强行抽公共层
+   只会让两把各自难读。Dypnsapi 2017-05-25 是旧版 POP API：GET + 按参数名排序拼规范串，
+   待签串 = "GET&%2F&" + popEncode(规范串)，HMAC-SHA1 的密钥是 secretKey+"&"（注意补 & ）。
+   ⚠️ HMAC-SHA1 是**协议规定**的（旧版 POP API 只认这一种），不可自行升级到 SHA-256 ——
+   换了服务端就报 SignatureDoesNotMatch。它做的是请求完整性签名（密钥只有调用方知道），
+   不是口令存储/数据加密，SHA-1 碰撞攻击在这里没有攻击面。
+   popEncode 与标准 encodeURIComponent 的差异只在五个保留字符（阿里云文档口径）：
+   + → %20（空格）、* → %2A、~ 不编码。错了只在真机才暴露（SignatureDoesNotMatch）。 */
+function popEncode(s) {
+  return encodeURIComponent(String(s))
+    .replace(/\+/g, "%20")
+    .replace(/\*/g, "%2A")
+    .replace(/%7E/g, "~");
+}
+function aliyunPopSign(params, accessKeySecret) {
+  const canonical = Object.keys(params).sort()
+    .map((k) => popEncode(k) + "=" + popEncode(params[k])).join("&");
+  const stringToSign = "GET&" + popEncode("/") + "&" + popEncode(canonical);
+  return crypto.createHmac("sha1", accessKeySecret + "&").update(stringToSign, "utf8").digest("base64");
+}
+
 function makeTokens(cfg, userId) {
   const accessToken = jwt.sign({ sub: userId }, cfg.jwt.accessSecret, { expiresIn: cfg.jwt.accessTtlSec || 900 });
   /* 2026-10-10：refreshToken 加 jti 随机数。此前载荷只有 {sub, iat, exp} —— **同一秒内两次签发
@@ -97,7 +119,7 @@ function authRouter(cfg, store) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 400, "email_invalid");
       const existing = store.findUserByEmail(email);
       if (existing) return fail(res, 409, "email_exists");
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const code = String(crypto.randomInt(100000, 1000000));
       store.setCode(email, code, 600, "register");
       const mailer = getMailer(cfg);
       if (!mailer) {
@@ -215,7 +237,7 @@ function authRouter(cfg, store) {
       const user = store.findUserByEmail(email);
       const eligible = !!user && user.provider === "email";
       if (eligible) {
-        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const code = String(crypto.randomInt(100000, 1000000));
         store.setCode(email, code, RESET_TTL, "password-reset");
         try {
           await mailer.sendMail({
@@ -498,7 +520,12 @@ function authRouter(cfg, store) {
           否则非法号码会走进发码流程，**按条计费**且查不出来。
        ② **发码不查该号是否已注册**：一旦按存在性分支返回不同响应，/sms-code 本身就变成
           「这个手机号有没有注册过」的枚举接口（比登录接口泄露得更直接）。
-       ③ **验证码即凭据**（无密码），所以三重兜底缺一不可：一次性消费 + 短 TTL + 按号码限流。 */
+       ③ **验证码即凭据**（无密码），所以三重兜底缺一不可：一次性消费 + 短 TTL + 按号码限流。
+
+     2026-10-28 增第二通道 provider:"aliyun"：个人无企业资质时腾讯云国内短信走不通（签名实名制
+     报备不收个人自用资质），阿里云「短信认证服务」（Dypnsapi.SendSmsVerifyCode）对个人实名
+     **免资质、免签名审核**（系统赠送签名/模板，控制台抄值进 signName/templateId）。验证码由
+     阿里云生成并经 ReturnVerifyCode=true 回传，落库/消费/TTL/冷却与腾讯云路径共用同一套。 */
   const S = cfg.sms || {};
   /* `Number(x) || 默认` 会把**显式配置的 0** 也吞成默认值（0 是 falsy）——
      resendIntervalSec:0 的语义是"不冷却"，被吞成 60 就变成一个改不动的默认值。
@@ -507,8 +534,12 @@ function authRouter(cfg, store) {
   const SMS_TTL = numOr(S.codeTtlSec, 600);
   const SMS_RESEND = numOr(S.resendIntervalSec, 60) * 1000;
   const SMS_TIMEOUT = numOr(S.timeoutMs, 10000);
+  /* 两家对齐值要求不同：腾讯云 SendSms 要 sdkAppId；阿里云短信认证（Dypnsapi）不要 ——
+     它用的是控制台**系统赠送**签名/模板（免资质免审核），signName/templateId 两个字段复用存
+     赠送值。provider 缺省按 tencent（历史配置不变）。 */
   function smsConfigured() {
-    return S.enabled === true && !!S.secretId && !!S.secretKey && !!S.sdkAppId && !!S.signName && !!S.templateId;
+    if (!S.enabled || !S.secretId || !S.secretKey || !S.signName || !S.templateId) return false;
+    return S.provider === "aliyun" ? true : !!S.sdkAppId;
   }
   /* 手机号归一：接受 "+86 138 0013 8000" / "8613800138000" / "13800138000" 三种写法，
      输出**纯 11 位国内号码**；其它一律 ""（= phone_invalid）。
@@ -569,6 +600,64 @@ function authRouter(cfg, store) {
     if (!st || st.Code !== "Ok") return { ok: false, detail: String((st && st.Code) || "unknown") };
     return { ok: true, requestId: (resp && resp.RequestId) || "" };
   }
+
+  /* 端点按 provider 兜底：config.example.json 的 endpoint 是腾讯云字面量，切 provider 的人
+     十有八九忘了改它 —— 对阿里云来说指向腾讯域名的 endpoint 只会得到驴唇不对马嘴的报错，
+     所以「provider=aliyun 且 endpoint 还是腾讯默认值」视为没改过，按阿里默认端点发；
+     显式配了其它值则原样尊重。 */
+  const SMS_ENDPOINT_DEFAULT = { tencent: "https://sms.tencentcloudapi.com", aliyun: "https://dypnsapi.aliyuncs.com" };
+  function smsEndpoint() {
+    const e = String(S.endpoint || "").trim();
+    if (e && !(S.provider === "aliyun" && e === SMS_ENDPOINT_DEFAULT.tencent)) return e;
+    return SMS_ENDPOINT_DEFAULT[S.provider === "aliyun" ? "aliyun" : "tencent"];
+  }
+
+  /* 阿里云短信认证发码（2026-10-28）：与腾讯云 SendSms 的本质差异是**验证码由阿里云生成**——
+     TemplateParam 用 "##code##" 占位 + ReturnVerifyCode=true，验证码随响应回给我们，之后落库、
+     一次性消费、TTL、冷却照旧走本地（与腾讯云路径同一套），只是"生成者"换人了。
+     三个必须显式传的参数（各自的默认值都会坑）：
+       CodeLength=6：默认 4 位，会被 /sms-login 的 ^\d{6}$ 拒掉；
+       CodeType=1：占位符方式必填，1=纯数字；
+       ValidTime=SMS_TTL：默认 300s，与本地 TTL 对齐。 */
+  async function smsSendAliyun(phone) {
+    const endpoint = smsEndpoint();
+    let host = "";
+    try { host = new URL(endpoint).host; } catch (e) { return { ok: false, detail: "bad_endpoint" }; }
+    const params = {
+      Action: "SendSmsVerifyCode",
+      Version: "2017-05-25",
+      Format: "JSON",
+      AccessKeyId: S.secretId,
+      SignatureMethod: "HMAC-SHA1",
+      SignatureVersion: "1.0",
+      SignatureNonce: crypto.randomBytes(16).toString("hex"),
+      Timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+      PhoneNumber: phone,
+      SignName: S.signName,
+      TemplateCode: S.templateId,
+      TemplateParam: JSON.stringify({ code: "##code##", min: String(Math.max(1, Math.round(SMS_TTL / 60))) }),
+      CodeLength: "6",
+      CodeType: "1",
+      ValidTime: String(SMS_TTL),
+      Interval: String(Math.floor(numOr(S.resendIntervalSec, 60))),
+      ReturnVerifyCode: "true"
+    };
+    params.Signature = aliyunPopSign(params, S.secretKey);
+    const query = Object.keys(params).sort()
+      .map((k) => popEncode(k) + "=" + popEncode(params[k])).join("&");
+    const r = await fetch(endpoint + "/?" + query, { signal: AbortSignal.timeout(SMS_TIMEOUT) });
+    const text = await r.text().catch(() => "");
+    let body = null;
+    try { body = JSON.parse(text); } catch (e) { body = null; }
+    /* POP 的失败也是两层：HTTP 非 2xx，或 2xx 里 Code!=="OK"（如 FUNCTION_NOT_OPENED 没开服务）。
+       只回 Code 不回 Message —— 响应体里的号码等字段不该外泄。 */
+    if (!r.ok || !body || body.Code !== "OK" || body.Success !== true) {
+      return { ok: false, detail: String((body && body.Code) || ("HTTP " + r.status)) };
+    }
+    const code = body.Model && body.Model.VerifyCode;
+    if (!code || !/^\d{6}$/.test(String(code))) return { ok: false, detail: "bad_verify_code" };
+    return { ok: true, code: String(code) };
+  }
   router.use("/sms-code", rlAuth("sms-code", { maxKey: "smsCodeMax", max: 5, key: rl.byPhoneField }));
   router.post("/sms-code", async (req, res) => {
     try {
@@ -578,7 +667,7 @@ function authRouter(cfg, store) {
         /* 与 email-code 同款 fail-closed：通道没配就中止注册/登录流程，绝不静默放行。
            demoCode 只在显式 dev 逃生舱下出现（生产配置下这个分支返回 503）。 */
         if (cfg.dev && cfg.dev.allowUnsafeDevEndpoints === true) {
-          const code = String(Math.floor(100000 + Math.random() * 900000));
+          const code = String(crypto.randomInt(100000, 1000000));
           store.setCode(phone, code, SMS_TTL, "sms-login");
           return ok(res, { demo: true, demoCode: code, expireIn: SMS_TTL, message: "sms_not_configured_demo" });
         }
@@ -595,13 +684,22 @@ function authRouter(cfg, store) {
         }
       }
       const bad = {};
-      if (!ghEndpointAllowed(S.endpoint, bad)) {
+      if (!ghEndpointAllowed(smsEndpoint(), bad)) {
         console.warn("[auth] sms 端点被拒：" + Object.keys(bad)[0]);
         return fail(res, 500, "sms_endpoint_forbidden");
       }
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      const r = await smsSend(phone, code);
-      if (!r.ok) return fail(res, 502, "sms_send_failed", { detail: r.detail });
+      /* 发码分叉：腾讯云由我们生成 6 位码再SendSms；阿里云验证码由阿里云生成、随响应返回。
+         两条路径的落库与之后的校验完全同构（store.setCode + 一次性消费）。 */
+      let code = "";
+      if (S.provider === "aliyun") {
+        const r = await smsSendAliyun(phone);
+        if (!r.ok) return fail(res, 502, "sms_send_failed", { detail: r.detail });
+        code = r.code;
+      } else {
+        code = String(crypto.randomInt(100000, 1000000));
+        const r = await smsSend(phone, code);
+        if (!r.ok) return fail(res, 502, "sms_send_failed", { detail: r.detail });
+      }
       store.setCode(phone, code, SMS_TTL, "sms-login");
       return ok(res, { expireIn: SMS_TTL });
     } catch (e) {
