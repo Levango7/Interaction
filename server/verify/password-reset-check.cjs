@@ -59,6 +59,7 @@ function startServer(port, env, datafile) {
         PORT: String(port),
         ALLOW_PLACEHOLDER_SECRETS: "true",
         DATAFILE: datafile || path.join(TMP, "data-" + port + ".json"),
+        AGENT_WORKBENCH_USER_CONFIG: path.join(SRV, "verify", ".no-user-config.json"), // 屏蔽本机 config.json（钩子见 src/config.js）
       }, env || {}),
       stdio: ["ignore", "pipe", "pipe"]
     });

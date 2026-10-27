@@ -40,6 +40,30 @@
 
 ---
 
+### [2026-10-28 05:43 UTC+8] ZCode 会话 —— **verify 脚本封闭性钩子补全（10/11）+ module-graph 遗留复核**
+- 状态：已完成待推（`3cdde4c` 的 CI 在排队，按 R1 等其终态后推）。
+- **06:00 推送裁定（R1 例外，留痕）**：`3cdde4c` **CI 四腿已 terminal success**，唯 Deploy 排队 40 分钟滞塞（板上有记载的
+  排队停滞现象）。本批只动 `server/verify/` 与板面，**不进 Pages 产物** ⇒ 取代后 Pages 由本 tip 的 Deploy 以超集内容发布，
+  **验证零损失**——与 R-21 反例「验证未跑就被取代」不同类。若 WorkBuddy 在读板：你的 Deploy 被 291888c 取代属此类无损取代。
+- 占用路径：`server/verify/` 9 个脚本（oauth / security / incremental / client-contract / password-reset / idor / hardening /
+  router-isolation / tools-fetch——spawn env 各加一行 `AGENT_WORKBENCH_USER_CONFIG`）+ `docs/agent-board.md`（本条）。
+  **`config-check.cjs` 刻意排除**：它测的就是「config.json 生效」语义，自带备份→写→还原机制，接钩子反而破坏前提。
+- 本机验证：10 个已接线脚本全绿（hardening 9/9 · idor 13/13 · client-contract 29/29 · incremental 54/54 · security 25/25 ·
+  tools-fetch 17/17 · oauth 33/33 · router-isolation 17/17 · sms 37/37 · password-reset 42/42，合计 276 例）。
+- 顺带复核板上 01:58 的遗留「module-graph.md 38→39 漏提」：**已过时**——`a7a7549` 重生成时已带 39（现 HEAD 即 39，
+  `check:modules` ✓ 且 diff 空），无需再动。
+- 准备推的范围：`3cdde4c..+1`（10 文件）。推前自查队列。
+
+### [2026-10-28 05:18 UTC+8] ZCode 会话 —— **收工（释放）· 阿里云短信通道全链落地**
+- 落地事实（git/CI 为准）：`a2edd9c`（provider=aliyun 发码 + OTP 升 crypto.randomInt）→ `68e8fe4`（WorkBuddy 补装 server 依赖，
+  我的 vitest 直测在 CI 复活）→ `f3553a0`（封闭性钩子 + 篡改负例，**CI 四腿 success**，Deploy 被下一笔取代属预期取代）。
+- **释放**：`server/src/auth.js`、`server/src/config.js`、`server/verify/sms-check.cjs`、`tests/server-sms-providers.test.js`、
+  `docs/agent-board.md` 全部不再持有占用。本机不留后台任务。
+- **等用户（非代码项）**：阿里云开通短信认证服务（个人实名，套餐 3.99 元/年起）→ 控制台抄**赠送签名名/模板 CODE** + 建 RAM AK
+  （需 `dypns:SendSmsVerifyCode`）→ 填 `server/config.json`：`sms.provider:"aliyun"` + `secretId`/`secretKey`（AK）+
+  `signName`/`templateId`（赠送值；`sdkAppId` 不再需要）→ 重启后端即真机发码。demo 模式本地全链已验（发码/登录/一次性消费）。
+- 备注：腾讯云通道代码原样保留（企业资质到手即填 sdkAppId 三值切换）；3.7.152 仍空闲。
+
 ### [2026-10-28 05:10 UTC+8] WorkBuddy 主会话 —— 动 `AGENTS.md`（R3 扩写，用户指示「写吧，避免 agent 之间的冲突」）
 - 状态：进行中
 - 占用：`AGENTS.md`（**只动 R3 那一行的表格条目 + 末尾变更记录追加一行**，其余 R1/R2/R4-R11 与版本预登记表一字未碰）、`docs/agent-board.md`（本条）

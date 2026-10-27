@@ -51,7 +51,8 @@ function startServer(extraEnv) {
         PORT, ALLOW_PLACEHOLDER_SECRETS: "true",
         TOOLS__FETCH__ALLOWHOSTS: "127.0.0.1",   // 显式逃生舱：本脚本的目标在回环上
         TOOLS__FETCH__TIMEOUTMS: "1000",         // 压低超时，让超时用例秒级跑完
-        TOOLS__FETCH__MAXBYTES: "1048576"
+        TOOLS__FETCH__MAXBYTES: "1048576",
+        AGENT_WORKBENCH_USER_CONFIG: path.join(SRV, "verify", ".no-user-config.json") // 屏蔽本机 config.json（钩子见 src/config.js）
       }, extraEnv || {}),
       stdio: ["ignore", "pipe", "pipe"],
     });

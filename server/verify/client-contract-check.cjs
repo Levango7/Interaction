@@ -31,7 +31,7 @@ function startServer() {
   return new Promise((resolve, reject) => {
     const p = spawn(process.execPath, ["src/index.js"], {
       cwd: SRV,
-      env: Object.assign({}, process.env, { PORT, ALLOW_PLACEHOLDER_SECRETS: "true", TOOLS__FETCH__ALLOWHOSTS: "127.0.0.1" }),
+      env: Object.assign({}, process.env, { PORT, ALLOW_PLACEHOLDER_SECRETS: "true", TOOLS__FETCH__ALLOWHOSTS: "127.0.0.1", AGENT_WORKBENCH_USER_CONFIG: path.join(SRV, "verify", ".no-user-config.json") /* 屏蔽本机 config.json（钩子见 src/config.js） */ }),
       stdio: ["ignore", "pipe", "pipe"],
     });
     let out = "";
