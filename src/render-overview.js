@@ -578,6 +578,26 @@ let _statsRange = "week"; // v3.1：统计页时间筛选：week | month | year
  *    不是全量历史；撤销率 = 这些回执里已撤销的比例。
  * @returns {string} HTML 片段
  */
+/* B8：MCP 调用延迟卡（B6 当时只落了「设置→关于→诊断与反馈」那一行，统计页这半被主动推迟）。
+   数据只来自 ai-tools.js 的内存样本账（mcpLatencyAll，与诊断报告同源同口径）；**没样本就如实说没有**，
+   不编数、不按 0ms 展示 —— 0ms 会被读成"很快"，而真相是"还没调用过"。 */
+function _mcpLatencyHtml(){
+  const lat = (typeof mcpLatencyAll === "function") ? mcpLatencyAll() : [];
+  const head = '<h3>' + esc(t("statsPage.mcpLatTitle", "MCP 延迟（本次会话内存样本）")) + "</h3>";
+  if(!lat.length){
+    return head + '<p class="set-tip">' +
+      esc(t("statsPage.mcpLatNone", "还没有远端工具调用样本 —— 调用过 MCP 工具后这里才有读数。样本只存在本次会话内存里，不落盘、也不跨刷新保留。")) +
+      "</p>";
+  }
+  const tpl = t("statsPage.mcpLatRow", "中位 {median}ms / p95 {p95}ms · 近 {n} 次调用 · 失败 {fail} · 实发 {attempts} 个请求");
+  const rows = lat.map(function(x){
+    return "<li>" + esc(x.name) + " — " + esc(tpl
+      .replace("{median}", x.median).replace("{p95}", x.p95)
+      .replace("{n}", x.n).replace("{fail}", x.fail).replace("{attempts}", x.attempts)) + "</li>";
+  }).join("");
+  return head + '<ul class="list">' + rows + "</ul>" +
+    '<p class="set-tip">' + esc(t("statsPage.mcpLatNote", "口径：每台服务器只保留最近 N 次调用样本，中位与 p95 从这些样本取；失败也计入次数（失败慢和失败快都要看得见）。")) + "</p>";
+}
 function _aiActionsHtml(){
   const since = Date.now() - 7 * 864e5;
   const undos = (typeof aiUndoList === "function" ? aiUndoList() : []).filter(function(e){ return e && e.ts >= since; });
@@ -593,7 +613,8 @@ function _aiActionsHtml(){
     '<div class="kpi"><div class="v">' + runs + '</div><div class="l">' + esc(t("statsPage.aiRuns", "代码运行")) + "</div></div>" +
     '<div class="kpi"><div class="v">' + remotes + '</div><div class="l">' + esc(t("statsPage.aiRemote", "远端写")) + "</div></div>" +
     "</div>" +
-    '<p class="set-tip">' + esc(t("statsPage.aiNote", "口径：回执账只保留最近 30 条；撤销率 = 其中的已撤销比例。")) + "</p></div>";
+    '<p class="set-tip">' + esc(t("statsPage.aiNote", "口径：回执账只保留最近 30 条；撤销率 = 其中的已撤销比例。")) + "</p>" +
+    _mcpLatencyHtml() + "</div>";
 }
 function renderStats(){
   // v3.1：根据时间筛选设置趋势图天数

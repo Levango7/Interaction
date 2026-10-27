@@ -120,4 +120,26 @@ test.describe("MCP 重试的幂等边界（真机）", () => {
       expect(last.attempts, "账上也得是 1 次").toBe(1);
     } finally { server.close(); }
   });
+
+  /* B8：延迟读数在统计页那张卡上也要看得见 —— 诊断报告里有一行不等于用户找得到。
+     这里验的是"真浏览器里可见且数值与账本同源"，不重复算一套。 */
+  test("③ 统计页的 MCP 延迟卡：可见，且数值与账本同源", async ({ page }) => {
+    test.setTimeout(90_000);
+    const { server, port } = await startFlakyMcpServer({ failListTimes: 0 });
+    try {
+      await page.addInitScript(seedPage, "http://127.0.0.1:" + port + "/mcp");
+      await page.goto("./agent-workbench.html");
+      await waitMainRendered(page);
+      expect((await page.evaluate(() => mcpRefreshServer("flaky"))).ok).toBe(true);
+
+      await page.evaluate(() => { setActive("stats"); render(); });
+      await expect(page.locator("#main h3", { hasText: "MCP 延迟" })).toBeVisible();
+      const row = page.locator("#main .list li", { hasText: "flaky" });
+      await expect(row).toBeVisible();
+      const st = await page.evaluate(() => mcpLatencyStats("flaky"));
+      await expect(row).toContainText("中位 " + st.median + "ms");
+      await expect(row).toContainText("p95 " + st.p95 + "ms");
+      await expect(row).toContainText("近 " + st.n + " 次调用");
+    } finally { server.close(); }
+  });
 });

@@ -27,7 +27,7 @@
 | `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 62 |
 | `render-scene-sub` | Render | `core-shared` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core-shared` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
-| `render-overview` | Render | `ai-retry` `ai-tools` `chain` `core-shared` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 49 |
+| `render-overview` | Render | `ai-retry` `ai-tools` `chain` `core-shared` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 50 |
 | `render-widgets` | Render | `ai-subagent` `ai-tools` `chain` `core` `core-shared` `crypto` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 40 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-daily` | 2 |

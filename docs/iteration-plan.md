@@ -221,6 +221,21 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
   ② `_probe/r22-flaky-freq.mjs` 的 TARGETS 行号锚漂移 —— 已在台账 R-9 续二登记，
   改标题锚 + 入库 + 自带单测留给下一批（它属"度量工具"，改它要连带证明它有射程，不该塞进文档批次）。
 
+### B8 · 可观测性收口（小~中，依赖：无）
+
+- **B8-b · MCP 延迟读数上统计页** —— ✅ **已交付（2026-10-28）**
+  - 交付实况：统计页「AI 行动」卡末尾加 MCP 延迟段（每台一行：中位 / p95 / 次数 / 失败 / 实发请求），
+    **只加 UI 消费、不改算法**（与诊断报告同源同值）；没样本时如实写"还没有样本"、不渲染 0ms
+    （0ms 会被读成"很快"，而真相是没调用过）；新增 4 个双语 i18n 键（`statsPage.mcpLat*`）。
+    完整证据（含窄变异与真浏览器两视口）见 `CHANGELOG.md` `[Unreleased]` 的 2026-10-28 B8-b 节。
+  - 顺带销掉 B7 列的"下一批"遗留：`_probe/r22-flaky-freq.mjs` 已由 R-37 批次换成 `scripts/flaky-freq.mjs`
+    （标题锚 + 自带单测 `tests/flaky-freq.test.js`），本条不再是待办。
+- **B8-a · R-2 续：P0 空 catch 切片** —— 待开工。实测基线（`scripts/lint-empty-catch.baseline.json`）：
+  共 585 处 = **P0 72** / P1 246 / P2 267；P0 集中在 `ui-ge-api` 12、`ai-tools` 11、`data-links` 5、
+  `ui-drawer` 5、`ui-ge-integrations` 5、`ai-retry` 4、`render-widgets` 4（共 23 个文件）。
+  切片口径：先取 15~20 处，优先写盘 / `save*()` / 网络 reject 路径；每处按门禁处方补 `pushDiag`（不是补注释）。
+  验收：基线 P0 **只降不增**、全量单测绿、窄变异证明判据有射程。
+
 ### 等你拍板（不进批次，动一句就开工）
 
 1. `connect-src` 拦死本地后端（CSP 面，#16 老账）。

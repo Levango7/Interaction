@@ -124,6 +124,32 @@
 
 ## [Unreleased]
 
+### 2026-10-28 · B8-b：MCP 延迟读数上统计页（B6 主动推迟的那半）
+
+- **缺口是实测的**：B6 把 MCP 的重试与延迟做成了真账（`mcpLatencyStats` / `mcpLatencyAll`），但只把读数接到
+  「设置 → 关于 → 诊断与反馈」那一行（`ui-backup-stats.js:769`）；统计页那张卡当时被明确推迟
+  （`docs/iteration-plan.md` B6 交付实况原句：原计划把延迟读数同时挂到统计页卡片，本版只落诊断那一行）。
+  结果是：用户得先知道"去点复制诊断报告"，才看得见延迟——统计页就在那儿，却没有它。
+- **做**：统计页常驻的「AI 行动」卡（`render-overview.js` 的 `_aiActionsHtml`）末尾加 MCP 延迟段，
+  每台服务器一行：`中位 Xms / p95 Yms · 近 N 次调用 · 失败 F · 实发 A 个请求`。
+  **只加 UI 消费，算法一字未动**（与诊断报告同源同值，不存在第二套算法）。
+- **两条如实**：① 没样本时写「还没有远端工具调用样本」，**不渲染 0ms**——0ms 会被读成"很快"，
+  而真相是还没调用过；② "样本只存会话内存、不落盘、不跨刷新"这句话直接印在卡上（口径写在用户看得见的地方）。
+- **新增 4 个 i18n 键**（`statsPage.mcpLatTitle/None/Row/Note`，zh/en 双份）。这条是被门禁拦下来补的：
+  `i18n-completeness` ③ 要求"带默认值的 `t()` 也必须进字典"（v3.7.53 积压已清零），
+  第一版只写了内联默认值，门禁当场红。
+- **验证**：
+  - 单测 `tests/mcp-latency-card.test.js` 4 例：有样本与账本同值 / 两台不串台 / 没样本不装 0ms / 零任务态也渲染。
+  - **窄变异**：在空态路径塞一条合成 `median:0` 假数据 ⇒ ②③ 精确判红、① 不受影响（撤掉后回绿）。
+  - e2e `tests/e2e/mcp-retry.spec.js` 追加第三条，复用 B6 已有的真 HTTP mock（不另起夹具）：
+    真浏览器里断言卡片**可见**且数值与 `mcpLatencyStats` 同源；desktop+tablet 两视口 6/6 绿
+    （mobile 项目 `testMatch` 只含 mobile/viewport/three-state，本 spec 按配置不在其射程内）。
+  - 静态门禁 12 条 exit 0（`lint` 内含 `lint:breakpoints`）；`docs/module-graph.md` 因新增一个函数符号，
+    `render-overview` 的依赖符号数 49→50，随本批重生成。
+  - 本机全量（**带 `server/node_modules`，与 CI 同款**）：208 文件 / 2212 例全过。
+    上一轮不带 server 依赖的跑法里 `tests/server-sms-providers.test.js` 恒 `Cannot find module 'bcryptjs'`
+    —— 与 2026-10-28 `68e8fe4` 修的 CI 缺陷同源，是本机环境缺口；已按 CI 同款 `npm ci --prefix server` 补齐。
+
 ### 2026-10-27 · Multi-Agent Phase 2+3：会话内子代理卡片 + 并行只读侦查（用户「那就做啊」）
 
 - **Phase 2（可见性）**：`renderChat` 对 spawn 系工具的调用与结果特殊渲染成**子代理卡片**
