@@ -40,6 +40,16 @@ jobs:
       # 静默 abort（且未接 CI）。修复为双态寻源后正式接入。
       - run: npm run check:ai-tools-doc
       - run: npm ci
+      # v3.7.152（2026-10-28 复绿）：tests/server-sms-providers.test.js 直测 server 路由，
+      # require 链会走到 server/src/auth.js 顶部的 bcryptjs / jsonwebtoken。根 `npm ci` 不装
+      # server 依赖，于是该文件在本腿恒红 `Cannot find module 'bcryptjs'`
+      # （实测 a2edd9c：test(windows) 红 → test(ubuntu) 被 fail-fast 取消 → Deploy 也红）。
+      # 本地之所以看不出来：工作树里恰好存在历史遗留的 server/node_modules/bcryptjs，
+      # 属「本地有、CI 无」的伪绿，不能当已验证。
+      # ⚠️ deploy.yml 的 verify 必须同改：tests/ci-workflow-guard.test.js 断言两边 run 步骤
+      #    逐项同序（含重复项按位置比对），只改一边会当场红。
+      - run: npm ci
+        working-directory: server
       - run: npm test
       # v3.7.52：移除 `npm run test:coverage`——单文件 HTML 架构下 v8 无法插桩，
       # 覆盖率恒为 0%（vitest.config.js 已注明），该步骤既无语义又让整套测试白跑第二遍。

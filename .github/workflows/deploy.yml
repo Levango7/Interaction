@@ -115,6 +115,12 @@ jobs:
       - run: npm run check:modules
       - run: npm run check:ai-tools-doc
       - run: npm ci
+      # v3.7.152（2026-10-28 复绿）：与 ci.yml test job 同步补装 server 依赖 ——
+      # tests/server-sms-providers.test.js 的 require 链会走到 server/src/auth.js 的
+      # bcryptjs / jsonwebtoken，根 `npm ci` 不装它们（实测 a2edd9c 的 test 腿即红在此）。
+      # 本步与 ci.yml 是**同一份清单**，由 tests/ci-workflow-guard.test.js 逐项比对，勿单边修改。
+      - run: npm ci
+        working-directory: server
       - run: npm test
       - run: npm run build:check
       - run: npm run lint
