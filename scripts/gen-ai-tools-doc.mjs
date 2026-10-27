@@ -132,11 +132,18 @@ if (IS_CHECK) {
   const inDoc = [...doc0.matchAll(/^###\s+[\d.]+\s+`([a-z_]+)`/gm)].map(m => m[1]);
   const missing = tools.map(t => t.name).filter(n => !inDoc.includes(n));
   const stale = inDoc.filter(n => !tools.some(t => t.name === n));
+  /* 追加一条：正文声明的总数必须等于实际工具数。
+     只比小节名是不够的 —— 小节齐全但正文写「工具总数：26」（实际 28）时旧版 check 仍是绿，
+     而那正是 2026-10-27 实际发生的漂移（README/user-manual 同步漂）。 */
+  const totalM = /工具总数\*{0,2}：\*{0,2}([0-9]+)/.exec(doc0);
+  const totalBad = !totalM || Number(totalM[1]) !== tools.length;
   console.log(`[ai-tools-doc] 源码 ${tools.length} 个 / 文档 ${inDoc.length} 个`);
   if (missing.length) console.log('  ✗ 文档缺：' + missing.join(', '));
   if (stale.length) console.log('  ✗ 文档多（源码已无）：' + stale.join(', '));
-  console.log(missing.length || stale.length ? '[ai-tools-doc] check 失败' : '[ai-tools-doc] check ✓ 一致');
-  process.exit(missing.length || stale.length ? 1 : 0);
+  if (totalBad) console.log('  ✗ 正文总数：' + (totalM ? totalM[1] : '（未找到声明）') + ' ≠ 源码 ' + tools.length);
+  const bad = missing.length || stale.length || totalBad;
+  console.log(bad ? '[ai-tools-doc] check 失败' : '[ai-tools-doc] check ✓ 一致');
+  process.exit(bad ? 1 : 0);
 }
 
 /* ---------- 生成（仅在非 --check 时执行） ---------- */
@@ -144,7 +151,7 @@ let doc = doc0;
 const agentExecSet = new Set(['remember', 'recall', 'forget', 'plan', 'complete_step', 'complete_goal', 'list_records']);
 /* v3.7.52：异步工具（需 await）单列一档 —— 它们在 chat 路径经 execToolAuto 转 agentExecAsync，
    在 Agent 计划路径直接走 agentExecAsync。此前表里一律标 execTool，与实现不符。 */
-const asyncToolSet = new Set(['web_search', 'web_fetch', 'code_run', 'sql_query']);
+const asyncToolSet = new Set(['web_search', 'web_fetch', 'code_run', 'sql_query', 'spawn_agent', 'spawn_agents_parallel']);
 const dispatchOf = (n) => asyncToolSet.has(n) ? 'agentExecAsync（经 execToolAuto）' : (agentExecSet.has(n) ? 'agentExec' : 'execTool');
 const reqText = r => (r === '[]' ? '—' : '`' + r.replace(/[[\]"]/g, '').replace(/,/g, '`,`') + '`');
 const table = [
@@ -174,7 +181,12 @@ let ver = '';
 const today = new Date().toISOString().slice(0, 10);
 doc = doc.replace(/适用版本：`VERSION = "[^"]*"`/, '适用版本：`VERSION = "' + (ver || '?') + '"`');
 doc = doc.replace(/最后核对：\d{4}-\d{2}-\d{2}/, '最后核对：' + today);
-doc = doc.replace(/工具总数：[0-9]+/, '工具总数：' + tools.length);
+/* 总览段两处派生文本也由源码驱动 —— 手写必然漂移，且 --check 只比「### 小节名」时红不了。
+   本次实测：加到 27/28 号工具后正文仍写「工具总数：26」，check 依旧绿。
+   注意 `工具总数` 外面包着 Markdown 加粗（`**工具总数**：26`），正则必须容忍 `**`，
+   否则 replace 静默不生效（第一版就栽在这）。 */
+doc = doc.replace(/异步工具（[^）]*，需 await）/, '异步工具（' + [...asyncToolSet].map(n => '`' + n + '`').join(' / ') + '，需 await）');
+doc = doc.replace(/(工具总数\*{0,2}：\*{0,2})[0-9]+/, '$1' + tools.length);
 
 const tableStart = doc.indexOf('| # | 工具名 | 所属分发器');
 if (tableStart < 0) { console.error('[abort] 未找到总览表'); process.exit(1); }

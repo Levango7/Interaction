@@ -11,10 +11,10 @@
 ## 1. 总览
 
 AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `TOOLS` 作为 `tools` 参数下发，模型返回 `tool_calls`，由前端分发执行，结果回灌下一轮对话：
-同步工具走 `execTool(name, args)`；异步工具（`web_search` / `web_fetch` / `code_run` / `sql_query`，需 await）
+同步工具走 `execTool(name, args)`；异步工具（`web_search` / `web_fetch` / `code_run` / `sql_query` / `spawn_agent` / `spawn_agents_parallel`，需 await）
 经 `execToolAuto(name, args)` 转 `agentExecAsync` —— chat 路径与 Agent 计划路径共用同一入口（v3.7.52 起）。
 
-**工具总数**：26。
+**工具总数**：28。
 
 | # | 工具名 | 所属分发器 | 必填参数 | 说明 |
 |---|--------|-----------|----------|------|
@@ -44,6 +44,8 @@ AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `T
 | 24 | `generate_report` | execTool | — | 生成指定周期的工作报表（Markdown 文本）：完成/逾期任务、各场景分布、周期内记录 |
 | 25 | `render_chart` | execTool | `label`,`value` | 在对话里渲染一张数据图表（bar/line/pie），数据由你根据已查到的数据整理 |
 | 26 | `generate_doc` | execTool | `title`,`content` | 生成一份文档（Markdown）并保存到笔记库 |
+| 27 | `spawn_agent` | agentExecAsync（经 execToolAuto） | `goal` | 派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把 |
+| 28 | `spawn_agents_parallel` | agentExecAsync（经 execToolAuto） | `goal` | 并行派生多个只读子代理做侦查（最多 3 个；工具强制与只读白名单取交集——写工具被剥离； |
 
 **分发边界**：
 - `execTool` 处理任务 / 资料库 / 搜索 / 概览 / 导出类。
@@ -292,6 +294,24 @@ const ORDER = ["office","code","study","life"];
   - `content` `{string}` — Markdown 正文
   - `category` `{string}` — 分类，如 方案/复盘/工作文档
 - **必填**：`["title","content"]`
+
+### 3.27 `spawn_agent`
+
+- **描述**：派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把侦查/整理/汇总类工作委派出去
+- **参数**：
+  - `name` `{string}` — 子代理名（人读，如「资料整理员」）
+  - `role` `{string}` — 角色描述（注入子代理的系统提示）
+  - `goal` `{string}` — 子目标（一句话说清要做什么、产出什么报告）
+  - `tools` `{array<string>}` — 工具白名单（默认只读集；写工具须显式列出）
+  - `teps` `{number}` — 步数预算（默认 12，上限 24）
+- **必填**：`["goal"]`
+
+### 3.28 `spawn_agents_parallel`
+
+- **描述**：并行派生多个只读子代理做侦查（最多 3 个；工具强制与只读白名单取交集——写工具被剥离；全部完成后合并报告交回）
+- **参数**：
+  - `agents` `{array<string>}` — 子代理名
+- **必填**：`["goal"]`
 
 ## 4. 调用契约与错误模型
 

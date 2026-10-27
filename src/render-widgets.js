@@ -3829,6 +3829,7 @@ function _uiMode(){
   catch(e){ return "work"; }
 }
 /** 应用当前模式到壳（幂等）：切 .body.code-mode 类 + 顶栏标签 + 渲染/清空两个 dock */
+let _agentDockTimer = null;
 function applyUIMode(){
   const body = document.querySelector(".body");
   if(!body) return;
@@ -3836,10 +3837,21 @@ function applyUIMode(){
   body.classList.toggle("code-mode", code);
   const lbl = $("#uiModeLbl");
   if(lbl) lbl.textContent = t(code ? "ui.mode.code" : "ui.mode.work", code ? "代码" : "工作");
-  if(code){ renderSessionDock(); renderAgentDock(); }
+  if(code){
+    renderSessionDock(); renderAgentDock();
+    /* Multi-Agent Phase 2：Code 模式下 2.5s 轮询能力停靠——子代理运行中的步数/状态实时可见
+       （读取是幂等的；Work 模式或不再 code 时清掉）。 */
+    if(!_agentDockTimer){
+      _agentDockTimer = setInterval(function(){
+        if(_uiMode() !== "code"){ clearInterval(_agentDockTimer); _agentDockTimer = null; return; }
+        try{ renderAgentDock(); }catch(e){ /* 渲染失败不累积定时器 */ }
+      }, 2500);
+    }
+  }
   else {
     const sd = $("#sessionDock"); if(sd) sd.innerHTML = "";
     const ad = $("#agentDock"); if(ad) ad.innerHTML = "";
+    if(_agentDockTimer){ clearInterval(_agentDockTimer); _agentDockTimer = null; }
   }
 }
 function toggleUIMode(){

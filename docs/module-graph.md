@@ -2,7 +2,7 @@
 
 > 由 `scripts/module-graph.mjs` 从 `src/*.js` 的**符号级引用**分析得出：
 > 定义 = 块内顶格书写的 function/const/let/var/class；依赖 = 某块引用了恰好由另一块定义的符号。
-> 块数 38（本文件由脚本生成；不含时间戳，避免每日无意义 diff）
+> 块数 39（本文件由脚本生成；不含时间戳，避免每日无意义 diff）
 
 ## 1. 依赖矩阵（行依赖列）
 
@@ -20,14 +20,15 @@
 | `data-migrate` | Data | `data-links` | 2 |
 | `data-rw` | Data | `core` `core-i18n` `core-shared` `crypto` `data-links` | 9 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
-| `ai-tools` | AI | `ai-retry` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `util-markdown` | 25 |
+| `ai-tools` | AI | `ai-retry` `ai-subagent` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `util-markdown` | 26 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core-shared` `data-links` `data-migrate` `util-perf` | 47 |
+| `ai-subagent` | AI | `ai-tools` `data-links` | 3 |
 | `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 62 |
 | `render-scene-sub` | Render | `core-shared` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core-shared` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
 | `render-overview` | Render | `ai-retry` `ai-tools` `chain` `core-shared` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 49 |
-| `render-widgets` | Render | `ai-tools` `chain` `core` `core-shared` `crypto` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 39 |
+| `render-widgets` | Render | `ai-subagent` `ai-tools` `chain` `core` `core-shared` `crypto` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` | 40 |
 | `ui-theme` | UI | — | 0 |
 | `ui-onboarding` | UI | `chain` `ui-daily` | 2 |
 | `ui-guide` | UI | `crypto` `data-links` `render-entry` `render-scene-sub` `render-widgets` `util-perf` | 9 |
@@ -45,15 +46,15 @@
 | `ui-ge-pomodoro` | UI | `chain` | 1 |
 | `ui-ge-calendar` | UI | `chain` `core-shared` `render-overview` `ui-ge-theme` `ui-guide` | 23 |
 | `ui-ge-notes` | UI | `core-i18n` `core-shared` `data-rw` `render-entry` `render-widgets` `util-markdown` | 15 |
-| `ui-ge-integrations` | UI | `ai-loop` `ai-retry` `ai-tools` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `util-markdown` | 500 |
+| `ui-ge-integrations` | UI | `ai-loop` `ai-retry` `ai-subagent` `ai-tools` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-notes` `ui-ge-plugins` `ui-ge-pomodoro` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-onboarding` `ui-palette` `ui-scene-bind` `util-markdown` | 502 |
 
 ## 2. 共享符号（扇出 ≥ 8 个块，不计入依赖边）
 
 | 符号 | 定义于 | 被多少块使用 |
 |---|---|---|
-| `t` | `core-i18n` | 33 |
+| `t` | `core-i18n` | 34 |
 | `toast` | `core-shared` | 28 |
-| `AppBridge` | `core` | 24 |
+| `AppBridge` | `core` | 25 |
 | `sanitizeHtml` | `util-markdown` | 21 |
 | `SCENARIOS` | `core-shared` | 21 |
 | `ORDER` | `core-shared` | 17 |
@@ -79,13 +80,14 @@
 ## 3. 校验结果
 
 - 跨块重复定义：**0** 项
-- 循环依赖：**13** 条（ai-tools → ai-retry → ai-tools；ai-tools → ai-retry → ai-loop → ai-tools；render-entry → render-overview → render-scene-sub → render-entry；render-entry → render-overview → render-entry；render-overview → render-widgets → render-overview）
-- 逆层依赖（低层用高层符号）：**18** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**103** 个符号
+- 循环依赖：**14** 条（ai-tools → ai-retry → ai-tools；ai-tools → ai-retry → ai-loop → ai-tools；ai-tools → ai-subagent → ai-tools；render-entry → render-overview → render-scene-sub → render-entry；render-entry → render-overview → render-entry）
+- 逆层依赖（低层用高层符号）：**19** 条（按「块对」计）
+- 逆层依赖（按**符号**计，去重）：**104** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
 | `ai-tools`（AI） | `ai-retry`（AI） | `CHAT_SUGGEST_HTML` `_msgTokens` `renderAiReceipts` |
+| `ai-tools`（AI） | `ai-subagent`（AI） | `getSubAgent` |
 | `render-entry`（Render） | `render-overview`（Render） | `renderAuthLogin` `renderAuthRegister` `renderAuthReset` `renderAuthWelcome` `renderChainPage` `renderOverview` … |
 | `render-entry`（Render） | `render-scene-main`（Render） | `_featureCardBind` `_hydrateRecImgs` `_miniBarSVG` `_miniLineSVG` `_miniPieSVG` `bindCodeFrontendCard` … |
 | `render-entry`（Render） | `render-scene-sub`（Render） | `getHealthRecs` `parseNum` |

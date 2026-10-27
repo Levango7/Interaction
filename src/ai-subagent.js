@@ -138,3 +138,46 @@ async function spawnAgentImpl(args){
 }
 /* AppBridge 槽位：execTool/AI 工具层经此调用（避免 ai-tools → ai-subagent → ai-loop → ai-tools 静态环） */
 try{ if(typeof AppBridge !== "undefined") AppBridge.spawnAgentImpl = spawnAgentImpl; }catch(e){ /* noop */ }
+/**
+ * Phase 3：并行只读侦查（2026-10-26）。多个子代理同时跑（Promise.all，上限 3），
+ * 工具**强制与只读集取交集**（写工具静默剥离——并行写入无协调，P3 铁律），
+ * 全部完成后合并报告交回 coordinator。
+ */
+async function spawnAgentsParallelImpl(args){
+  const raw = (Array.isArray(args && args.agents) ? args.agents : []);
+  if(!raw.length) return { ok: false, error: t("subagent.parallelNeed", "缺少 agents 数组（每个含 goal）") };
+  /* 如实报错，不静默截断/丢弃：调用方是模型，它会以为"全都跑了"。
+     超限与缺 goal 都必须让协调者看到真实原因，自己决定怎么拆批。 */
+  if(raw.length > 3){
+    return { ok: false, error: t("subagent.parallelTooMany", "一次最多 3 个并行子代理（收到 %N% 个）——请减少数量或拆成多批").replace("%N%", String(raw.length)) };
+  }
+  const badGoals = [];
+  raw.forEach(function(a, i){ if(!a || !String(a.goal || "").trim()) badGoals.push(i + 1); });
+  if(badGoals.length){
+    return { ok: false, error: t("subagent.parallelBadGoal", "第 %N% 项缺少 goal（并行清单里每项都必须有目标）").replace("%N%", badGoals.join(",")) };
+  }
+  const list = raw;
+  const specs = list.map(function(a, i){
+    const granted = (Array.isArray(a.tools) && a.tools.length)
+      ? a.tools.filter(function(x){ return SUBAGENT_TOOLS_READONLY.indexOf(x) >= 0; })
+      : SUBAGENT_TOOLS_READONLY.slice();
+    return {
+      id: "sa_" + Date.now().toString(36) + "_" + i + "_" + Math.random().toString(36).slice(2, 6),
+      name: String(a.name || t("subagent.defaultName", "子代理-") + (i + 1)),
+      role: String(a.role || t("subagent.defaultRole", "你是一个被主代理委派的子代理，专注完成单一子目标。")),
+      goal: String(a.goal).trim(),
+      tools: granted, maxSteps: a.maxSteps,
+      status: "queued", steps: 0, msgs: [], result: "",
+      createdAt: _nowIso(), updatedAt: _nowIso(), ms: 0
+    };
+  });
+  specs.slice().reverse().forEach(function(s2){ _loadSubAgents().unshift(s2); });
+  if(_loadSubAgents().length > 20) _loadSubAgents().length = 20;
+  _saveSubAgents();
+  const results = await Promise.all(specs.map(function(s2){ return runSubAgent(s2, {}); }));
+  return {
+    ok: results.every(function(r){ return r.ok; }),
+    agents: specs.map(function(s2, i){ return { name: s2.name, ok: results[i].ok, steps: results[i].steps, report: results[i].result }; })
+  };
+}
+try{ if(typeof AppBridge !== "undefined") AppBridge.spawnAgentsParallelImpl = spawnAgentsParallelImpl; }catch(e){ /* noop */ }

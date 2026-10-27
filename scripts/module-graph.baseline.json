@@ -3,6 +3,7 @@
   "cycles": [
     "ai-tools → ai-retry → ai-loop → ai-tools",
     "ai-tools → ai-retry → ai-tools",
+    "ai-tools → ai-subagent → ai-tools",
     "render-entry → render-overview → render-entry",
     "render-entry → render-overview → render-scene-sub → render-entry",
     "render-entry → render-overview → render-widgets → render-entry",
@@ -17,6 +18,7 @@
   ],
   "upward": [
     "ai-tools>ai-retry",
+    "ai-tools>ai-subagent",
     "render-entry>render-overview",
     "render-entry>render-scene-main",
     "render-entry>render-scene-sub",

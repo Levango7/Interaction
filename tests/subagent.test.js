@@ -109,4 +109,81 @@ describe("Multi-Agent P1：子代理运行时", () => {
     const reg = JSON.parse(win.localStorage.getItem(PREFIX + "subagents"));
     expect(reg[0].status).toBe("failed");
   });
+
+  it("6: 并行只读侦查（spawn_agents_parallel）——两个子代理同时跑、合并报告回 coordinator", async () => {
+    const win = boot({ [PREFIX + "tasks"]: JSON.stringify([{ id: "t1", sc: "office", title: "写周报", status: "todo", tags: [], created: 1 }]) });
+    /* 两个并行循环各消费一轮：回放顺序无所谓（内容同形、断言按集合） */
+    fakeLLM(win, [msg("侦查A：任务表 1 条。"), msg("侦查B：无异常。")]);
+    const r = await win.spawnAgentsParallelImpl({ agents: [
+      { name: "侦查A", goal: "盘点任务", tools: ["list_tasks"] },
+      { name: "侦查B", goal: "看看有没有异常", tools: ["list_tasks"] },
+    ]});
+    expect(r.ok).toBe(true);
+    expect(r.agents.length).toBe(2);
+    expect(r.agents.every((a) => a.ok)).toBe(true);
+    const reg = JSON.parse(win.localStorage.getItem(PREFIX + "subagents"));
+    expect(reg.filter((s2) => s2.status === "done").length).toBe(2);
+  });
+
+  it("7: 并行的写工具被强制剥离（只读交集铁律）——即使显式授予 delete_task 也不给", async () => {
+    const win = boot();
+    fakeLLM(win, [msg("ok"), msg("ok"), msg("ok")]);
+    const r = await win.spawnAgentsParallelImpl({ agents: [
+      { name: "a", goal: "试试写工具", tools: ["delete_task", "list_tasks"] },   // delete_task 被剥离
+      { name: "b", goal: "x", tools: ["list_tasks"] },
+      { name: "c", goal: "x", tools: ["list_tasks"] },
+    ]});
+    expect(r.ok).toBe(true);
+    expect(r.agents.length).toBe(3);
+    const reg = JSON.parse(win.localStorage.getItem(PREFIX + "subagents"));
+    const writer = reg.find((s2) => s2.name === "a");
+    expect(writer.tools).not.toContain("delete_task");   // 写工具被剥离（并行无协调，铁律）
+    expect(writer.tools).toContain("list_tasks");
+  });
+
+  it("9: 超限/缺 goal 如实报错，不静默截断——模型不会以为「全都跑了」", async () => {
+    const win = boot();
+    fakeLLM(win, [msg("ok")]);
+    const tooMany = await win.spawnAgentsParallelImpl({ agents: [
+      { name: "a", goal: "x" }, { name: "b", goal: "x" },
+      { name: "c", goal: "x" }, { name: "d", goal: "x" },
+    ]});
+    expect(tooMany.ok).toBe(false);
+    expect(tooMany.error).toContain("3");
+    expect(tooMany.agents).toBeUndefined();
+    // 一个都不该跑起来（拒绝要发生在派发之前）
+    const reg0 = JSON.parse(win.localStorage.getItem(PREFIX + "subagents") || "[]");
+    expect(reg0.length).toBe(0);
+
+    const badGoal = await win.spawnAgentsParallelImpl({ agents: [
+      { name: "a", goal: "x" }, { name: "b", goal: "   " },
+    ]});
+    expect(badGoal.ok).toBe(false);
+    expect(badGoal.error).toContain("2");   // 指明第 2 项缺 goal
+    expect(JSON.parse(win.localStorage.getItem(PREFIX + "subagents") || "[]").length).toBe(0);
+  });
+
+  it("8: 会话内子代理卡片——spawn 流渲染为卡片（状态徽章 + 报告），非子代理结果不受影响", () => {
+    const win = boot();
+    win.toggleUIMode(); win.toggleUIMode();   // 回 Work（卡片与模式无关，验证纯渲染）
+    const agentId = "sa_test1";
+    win.localStorage.setItem(PREFIX + "subagents", JSON.stringify([
+      { id: agentId, name: "盘点员", status: "done", steps: 2, result: "报告：3 条任务，1 条逾期。" },
+    ]));
+    win._resetSubAgents();   // 重置懒加载缓存，让 getSubAgent 从 localStorage 读到播种数据
+    win.__test.setTasks([]);   // 不需要任务数据
+    win.localStorage.setItem(PREFIX + "chat_office", JSON.stringify([
+      { role: "user", content: "盘点一下任务", createdAt: "2026-10-27T10:00:00.000Z" },
+      { role: "assistant", content: "", tool_calls: [{ id: "c1", type: "function", function: { name: "spawn_agent", arguments: JSON.stringify({ name: "盘点员", goal: "盘点" }) } }], createdAt: "2026-10-27T10:00:01.000Z" },
+      { role: "tool", tool_call_id: "c1", content: JSON.stringify({ ok: true, agent: "盘点员", agentId: agentId, steps: 2, report: "报告：3 条任务，1 条逾期。" }), createdAt: "2026-10-27T10:00:02.000Z" },
+      { role: "assistant", content: "盘点完成：3 条任务，1 条逾期。", createdAt: "2026-10-27T10:00:03.000Z" },
+    ]));
+    win._reloadChatsFromStorage();
+    win.renderChat();
+    const html = win.document.getElementById("chat").innerHTML;
+    expect(html).toContain("subagent-card");
+    expect(html).toContain("盘点员");
+    expect(html).toContain("报告：3 条任务，1 条逾期。");
+    expect(html).not.toContain("调用工具 spawn_agent");   // 卡片取代了通用工具行
+  });
 });

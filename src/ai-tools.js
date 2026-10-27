@@ -362,7 +362,9 @@ const TOOLS = [
     role:{type:"string", description:t("aitool.spawn_agent.role.desc","角色描述（注入子代理的系统提示）")},
     goal:{type:"string", description:t("aitool.spawn_agent.goal.desc","子目标（一句话说清要做什么、产出什么报告）")},
     tools:{type:"array", items:{type:"string"}, description:t("aitool.spawn_agent.tools.desc","工具白名单（默认只读集；写工具须显式列出）")},
-    maxSteps:{type:"number", description:t("aitool.spawn_agent.maxSteps.desc","步数预算（默认 12，上限 24）")}}, required:["goal"]}}}
+    maxSteps:{type:"number", description:t("aitool.spawn_agent.maxSteps.desc","步数预算（默认 12，上限 24）")}}, required:["goal"]}}},
+  {type:"function", function:{name:"spawn_agents_parallel", description:t("aitool.spawn_agents_parallel.desc","并行派生多个只读子代理做侦查（最多 3 个；工具强制与只读白名单取交集——写工具被剥离；全部完成后合并报告交回）"), parameters:{type:"object", properties:{
+    agents:{type:"array", items:{type:"object", properties:{name:{type:"string", description:t("aitool.spawn_agent.name.desc","子代理名")}, role:{type:"string", description:t("aitool.spawn_agent.role.desc","角色描述")}, goal:{type:"string", description:t("aitool.spawn_agent.goal.desc","子目标")}}, required:["goal"]}, description:t("aitool.spawn_agents_parallel.agents.desc","子代理数组（1~3 个）")}}, required:["agents"]}}}
 ];
 
 /* ---------- AI 层降级重定位（v1.15）：cfg.agent=false 时关闭 Agent 工具与话术 ----------
@@ -1624,9 +1626,9 @@ async function executeAgentPlan(plan, opts){
       }
       continue;
     }
-    /* Multi-Agent Phase 1（2026-10-26）：深度 1 守卫——计划路径显式拒绝派生子代理
+    /* Multi-Agent Phase 1/3（2026-10-26）：深度 1 守卫——计划路径显式拒绝派生子代理
        （递归派生只能走对话协调路径；自主计划里派生子代理 = 不受用户监督的失控面）。 */
-    if(step.tool === "spawn_agent"){
+    if(step.tool === "spawn_agent" || step.tool === "spawn_agents_parallel"){
       const msg = t("subagent.planDenied","计划路径不允许派生子代理：请在对话里直接要求（由主循环委派并全程可见）");
       results.push({ step, result: JSON.stringify({ ok:false, msg }), ok:false, blocked:true });
       if(typeof o.onProgress === "function"){
@@ -1952,7 +1954,7 @@ async function chatOnceAgent(messages, opts){
 
 /* ---------- 2. 新工具调用：web_search / web_fetch / code_run / sql_query ---------- */
 /** 需异步执行的工具名（单一来源：chat 路径与 Agent 计划路径共用，避免两处清单漂移） */
-const ASYNC_TOOL_NAMES = new Set(["web_search", "web_fetch", "code_run", "sql_query", "spawn_agent"]);
+const ASYNC_TOOL_NAMES = new Set(["web_search", "web_fetch", "code_run", "sql_query", "spawn_agent", "spawn_agents_parallel"]);
 /**
  * 同步/异步工具的统一执行入口。
  * v3.7.52：chat 路径原先只调 execTool —— 系统提示与 README 都告诉模型「可以联网检索 / 跑代码 / 跑 SQL」，
@@ -1989,6 +1991,11 @@ async function agentExecAsync(name, args){
     const impl = (typeof AppBridge !== "undefined") ? AppBridge.spawnAgentImpl : null;
     if(typeof impl !== "function") return { ok: false, error: t("subagent.unavailable", "子代理运行时不可用") };
     return await impl(args);
+  }
+  if(name === "spawn_agents_parallel"){
+    const implP = (typeof AppBridge !== "undefined") ? AppBridge.spawnAgentsParallelImpl : null;
+    if(typeof implP !== "function") return { ok: false, error: t("subagent.unavailable", "子代理运行时不可用") };
+    return await implP(args);
   }
   if(name === "web_search"){
     return await toolWebSearch(args.query || "", args);
@@ -3305,6 +3312,22 @@ function addTokensUsage(resp) {
 function renderChat(){
   const el=$("#chat"); if(!el) return;
   const hist=getChat(active);
+  /* Multi-Agent Phase 2（2026-10-26）：spawn_agent 系工具调用的会话内卡片。
+     识别形状：tool 结果 content 是含 agentId 的 JSON；assistant tool_calls 含 spawn_agent*。
+     状态/报告经注册表实时读取（getSubAgent），渲染两份、数据一份。 */
+  const _subagentCard = function(agentId, fallbackName){
+    try{
+      const live = (typeof getSubAgent === "function") ? getSubAgent(agentId) : null;
+      const name = esc((live && live.name) || fallbackName || agentId);
+      const st = live ? live.status : "done";
+      const stMap = { running: t("subagent.stRunning","运行中"), done: t("subagent.stDone","完成"), failed: t("subagent.stFailed","失败"), cancelled: t("subagent.stCancelled","已取消"), queued: t("subagent.stQueued","排队") };
+      const badge = '<span class="subagent-badge subagent-' + esc(st) + '">' + esc(stMap[st] || st) + '</span>';
+      const steps = live ? (' · ' + (live.steps || 0) + t("dock.stepDone", "步骤")) : "";
+      const report = esc(String((live && live.result) || "").slice(0, 600));
+      return '<div class="msg tool subagent-card"><div class="subagent-card-head">' + t("subagent.cardTitle","子代理") + '「' + name + '」' + badge + steps + '</div>'
+        + (report ? '<div class="subagent-report">' + report + '</div>' : '') + '</div>';
+    }catch(_e){ return null; }
+  };
   el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
     if(m.role==="tool"){
       var _disp = m._disp || _chatContentToText(m.content);
@@ -3314,12 +3337,32 @@ function renderChat(){
           return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + AppBridge.miniChart(_spec.type, _spec.data) + '</div>';
         }catch(_e){ /* 解析失败回退文本 */ }
       }
+      /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片 */
+      if(typeof _disp === "string" && _disp.indexOf("{") === 0){
+        var _sa = null;
+        try{ _sa = JSON.parse(_disp); }catch(_e){ _sa = null; }   // 非 JSON（普通工具结果文本）→ 走下方通用渲染
+        if(_sa && _sa.agentId){
+          var _card = _subagentCard(_sa.agentId, _sa.agent);
+          if(_card) return _card;
+        }
+        if(_sa && Array.isArray(_sa.agents)){
+          return '<div class="msg tool subagent-card"><div class="subagent-card-head">' + t("subagent.parallelDone","并行侦查完成：") + _sa.agents.length + '</div>'
+            + _sa.agents.map(function(a2){ return '<div class="subagent-report">「' + esc(a2.name) + '」' + (a2.ok ? "✓" : "✗") + ' ' + esc(String(a2.report || "").slice(0, 300)) + '</div>'; }).join("") + '</div>';
+        }
+      }
       return '<div class="msg tool">' + esc(_disp) + '</div>';
     }
     /* 2026-10-23：assistant 消息记录本轮用户提示词，悬停可见（title 原生提示，不引浮层依赖） */
     const promptTip = (m && m._prompt) ? ' title="' + esc(String(m._prompt).slice(0, 500)) + '" data-prompt="1"' : "";
     if(m.role==="assistant" && m.tool_calls && m.tool_calls.length){
-      const s=m.tool_calls.map(tc=>t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
+      const s=m.tool_calls.map(tc=>{
+        if(tc.function.name === "spawn_agent" || tc.function.name === "spawn_agents_parallel"){
+          let g = "";
+          try{ const _p = JSON.parse(tc.function.arguments || "{}"); g = _p.goal || (_p.agents ? _p.agents.length + " 个" : ""); }catch(_e){ g = ""; }
+          return t("subagent.spawnCall", "派生子代理") + (g ? "（" + esc(String(g).slice(0, 80)) + "）" : "");
+        }
+        return t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")";
+      }).join("；");
       return `<div class="msg assistant toolcall"${promptTip}>${s}</div>`;
     }
     if(m.role==="assistant" && !m.content) return `<div class="msg assistant"${promptTip}>${t("ai.toolCalling","（工具调用中…）")}</div>`;

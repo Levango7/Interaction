@@ -5309,6 +5309,16 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 .adock-caret{margin-left:auto}
 .adock-body{display:flex;flex-direction:column;gap:2px;padding:2px 0 4px}
 .adock-row{font-size:var(--fs-xs);padding:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- Multi-Agent Phase 2（2026-10-26）：会话内子代理卡片（Work/Code 两模式通用，随 #chat 渲染） ---------- */
+.subagent-card{border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:var(--radius-sm,6px);
+  padding:var(--space-2);background:color-mix(in srgb,var(--accent) 6%,transparent);margin:var(--space-1) 0}
+.subagent-card-head{font-weight:600;font-size:var(--fs-xs);margin-bottom:var(--space-1)}
+.subagent-badge{font-size:var(--fs-2xs);padding:1px 6px;border-radius:999px;border:1px solid var(--line);
+  margin-left:var(--space-1);color:var(--muted)}
+.subagent-running{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+.subagent-report{font-size:var(--fs-xs);line-height:1.5;white-space:pre-wrap;margin-top:var(--space-1);
+  overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>

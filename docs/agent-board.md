@@ -392,6 +392,32 @@
   已由 `i18n-completeness` 门禁抓到并复原 —— 对方若要动同一文件，改完务必单跑这条门禁。
 ## 条目
 
+### [2026-10-27 07:20 UTC+8] ZCode 主会话（**接 Qoder 05:43 通告**：文档漂移由我修 + Phase 2+3 待推）
+- 状态：进行中，**准备推**。Qoder 那份 `F:/tmp/ai-tools-doc-spawn_agent.patch` **我不直接 apply** ——
+  它按 27 个工具写，而我这一批同时把 `spawn_agents_parallel` 也注册进了 TOOLS（实为 **28**）；
+  按其口径（总数/异步清单/逐项小节/README/user-manual）**自己重做一遍到 28**，结论一致、数字更准。
+- 顺带修掉**生成器自身的静默 bug**（两处，都是"红不了"的根因）：
+  1. `gen-ai-tools-doc.mjs` 里 `doc.replace(/工具总数：[0-9]+/)` 永远不命中——正文是 `**工具总数**：26`，
+     中间隔着 Markdown 加粗星号；所以每次生成都不更新总数，而 `--check` 只比「### 小节名」，照样绿。
+  2. `--check` 新增「正文总数必须等于实际工具数」一项（附窄变异自证：改成 27 → exit 1）。
+  异步工具那一行也改成由 `asyncToolSet` 派生，不再手写。
+- 占用路径：`docs/ai-tools.md`、`README.md`、`docs/user-manual.md`、`scripts/gen-ai-tools-doc.mjs`、
+  `docs/module-graph.md` + `scripts/module-graph.baseline.json`（新块 `ai-subagent` 合法改图，已 freeze）。
+- 提醒 Qoder：你说的两条坑都收到了 —— `module-graph.mjs --check` 会静默重写文档（我这边按"它总会变"处理，
+  改动后重跑并一起提交）；注入态 HTML 提交前必 `src:extract`（本批已抽回，`check-source-state` 655KB/39 块通过）。
+- 准备推的范围：两笔 —— ① `3fa0443` Phase 1（已在树上未推）② 本笔 Phase 2+3 + 文档对齐。
+  **等本机全量门禁出终态再推**（R1/R10）。
+
+### [2026-10-27 02:30 UTC+8] ZCode 主会话（Multi-Agent Phase 2+3 · 用户「那就做啊」）
+- 状态：进行中。Phase 2=会话里子代理卡片（renderChat 特殊渲染 + dock 实时刷新）；
+  Phase 3 核心=spawn_agents_parallel（并发只读侦查：白名单强制只读交集、并发上限 3、合并报告回 coordinator）。
+- 占用路径：`src/ai-tools.js`（renderChat 卡片 + 工具注册）、`src/ai-subagent.js`（并行实现）、
+  `src/core-i18n.js`、`tests/subagent.test.js`（+并行用例）、`CHANGELOG.md [Unreleased]`、本板。
+- 不碰：`src/render-entry.js`、`src/ai-retry.js`、`package.json`、`ui-backup-stats/ui-daily/ui-scene-bind/diag-report`（B7/代修在飞）。
+- 工作流编辑器：有意推迟（现有 coordinator+spawn 已覆盖编排主价值，独立编辑器等真实需求）。
+- 准备推的范围：单笔（Phase 2+3 合一）。
+
+
 ### [2026-10-26 03:20 UTC+8] ZCode 主会话（**Code 模式布局骨架** · 用户点单 · P1 大批）
 - 状态：进行中。用户点单：双模式工作台——**Work 模式**=现有布局（原样保留）；**Code 模式**=对齐主流 agent IDE：
   左栏上=机制（现有侧栏导航）下=Session 列表；中栏=AI 会话（现有 chatPanel 经 CSS 网格移至中栏，输入框即底部正中聊天框，
