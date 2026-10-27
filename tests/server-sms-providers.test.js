@@ -157,6 +157,10 @@ describe("短信 provider=aliyun（短信认证服务 SendSmsVerifyCode）", () 
     const signed = {};
     for (const [k, v] of p) if (k !== "Signature") signed[k] = v;
     expect(p.get("Signature")).toBe(independentPopSign(signed, ALIYUN_SMS.secretKey));
+    /* 反向（有区分力）：篡改号码后按同一独立实现重签，必须对不上出站签名 ——
+       否则上一条可能是恒真断言（被测函数与测试实现同时错、错得一样时恒等）。 */
+    signed.PhoneNumber = "13800138099";
+    expect(p.get("Signature")).not.toBe(independentPopSign(signed, ALIYUN_SMS.secretKey));
   });
 
   it("回传的验证码落库、能完成登录，且一次性消费生效", async () => {

@@ -23,7 +23,13 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const EXAMPLE_PATH = path.join(ROOT, "config.example.json");
-const USER_PATH = path.join(ROOT, "config.json");
+/* 2026-10-28：verify/*.cjs 的隔离钩子。脚本 spawn 出来的服务端会深合并本机的 config.json
+   （个人密钥、dev 逃生舱开关都在里面），「未配置 / 拒 loopback」这类用例前提就被污染 ——
+   CI 上没有 config.json 恒绿，本机跑脚本却假红。verify 脚本 spawn 时设
+   AGENT_WORKBENCH_USER_CONFIG=<临时目录里不存在的路径> 即可屏蔽个人配置；不设则行为不变。 */
+const USER_PATH = process.env.AGENT_WORKBENCH_USER_CONFIG
+  ? path.resolve(process.env.AGENT_WORKBENCH_USER_CONFIG)
+  : path.join(ROOT, "config.json");
 
 function readJson(p) {
   try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch (e) { return null; }

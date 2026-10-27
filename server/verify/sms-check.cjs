@@ -13,6 +13,12 @@
  *    独立实现顺带覆盖两个只在真机才暴露的坑：UTC 日期（东八区 08:00 前会算成前一天）、
  *    SignedHeaders 只应有 content-type;host。
  *
+ * 2026-10-28 注：provider:"aliyun"（阿里云短信认证，个人免资质路线）的直测**不落在本脚本**，
+ * 落在根 `tests/server-sms-providers.test.js`（CI test 腿已补装 server 依赖，见 68e8fe4）——
+ * 避免同一套假阿里云在两处维护。本脚本 2026-10-28 起通过 AGENT_WORKBENCH_USER_CONFIG
+ * 屏蔽本机 config.json（个人密钥 / dev 开关会污染「未配置」类前提；CI 无此文件恒绿、
+ * 本机曾经假红），钩子实现见 src/config.js。
+ *
  * 运行：cd server && node verify/sms-check.cjs
  */
 "use strict";
@@ -117,6 +123,9 @@ function startServer(port, env) {
         PORT: String(port),
         ALLOW_PLACEHOLDER_SECRETS: "true",
         DATAFILE: path.join(TMP, "data-" + port + ".json"),
+        /* 屏蔽本机 config.json（个人密钥 / dev 开关会污染「未配置」类前提）——CI 无此文件恒绿，
+           本机必须同样封闭。钩子见 src/config.js 的 AGENT_WORKBENCH_USER_CONFIG。 */
+        AGENT_WORKBENCH_USER_CONFIG: path.join(TMP, "no-user-config.json"),
       }, env || {}),
       stdio: ["ignore", "pipe", "pipe"]
     });
