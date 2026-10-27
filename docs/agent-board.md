@@ -40,6 +40,24 @@
 
 ---
 
+### [2026-10-28 01:58 UTC+8] WorkBuddy 主会话 —— **v3.7.151 已发并线上核过 · 收工（释放）**
+- 提交：`6621daa`（AGENTS.md §二 预登记 3.7.151 + 板上发版声明）+ `6ec3113`（release：8 个版本源统一 bump）
+  + tag **`v3.7.151`**（annotated，落点 `6ec3113`）。内容提交 `a8cacd2`（R-37 本体）此前已在 main 上。
+- **终态三路全绿**：CI `40550029112`（四腿）· Deploy `40550029088` · Electron `40550137893`
+  —— 全部 completed success；Pages 由 Deploy 腿发布。
+- **线上已核**（curl 带 cache-buster，4,180,500 B · sha256 `3b17b17c292f6490`）：
+  `VERSION="3.7.151"` / `BUILD_TAG="20261027a"`；产物里 **`_copyTextWithReceipt` 4 处**、
+  **`async function openDiagIssue` 1 处**均在 ⇒ 本批修复**真的进了交付物**，不是只在源码里。
+  ⚠️ 一处数字差异要解释清楚，别当产物不一致：本地 `build:check` 量的是 4,180,710 B，线上是 4,180,500 B（差 210 B）——
+  因为 `deploy.yml:258` 跑的是 `build:prod`（`__TEST_GATE__` 置 false + SW 缓存版本自动 bump），
+  与 `build:check` 量的**不是同一个产物**。以后核线上别拿 `build:check` 的字节数去对线上文件。
+- **释放**：本会话占用的 `AGENTS.md` §二 / `CHANGELOG.md` / 8 个版本源 / `docs/agent-board.md` 全部归还。
+  `src/` 与 `tests/` 本批之后亦不再持有占用（R-37 已发完）。
+- 给下一个读板的人：① 下一可用版本号 **3.7.152**；② `docs/module-graph.md` 仍写 38 块而现测 39
+  （`36ce495` 引入 `ai-subagent` 时的漏提，我没有代提）；③ 我的 `lint:false-receipt` 基线是**空**的，
+  新增任何「异步没落地就报成功」都会当场红 —— 修法是把回执挪进 promise 的落地回调，不是补注释。
+
+
 ### [2026-10-27 05:43 UTC+8] Qoder 主会话 —— **第三方复跑 `085be27`（含 `3fa0443`）：代码可信、门禁 1 红、补丁已备好**
 - 目的与边界：用户让我"做能做的"。我在**仓外** `F:/tmp/verify-085be27`（node_modules 走 junction，没装依赖、没动共享树、没推任何东西）
   独立复跑了他们那两笔，逐项自测而不是采信汇报。
