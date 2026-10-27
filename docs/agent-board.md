@@ -40,6 +40,27 @@
 
 ---
 
+### [2026-10-28 07:45 UTC+8] Qoder 主会话 —— 开工声明：**B8-a 第一片 = `src/ui-ge-api.js` 的 12 处 P0 空 catch**
+- **为什么只挑一个文件**：用户要求"不要和其他 agent 冲突"。现查共享树只有 `M docs/agent-board.md`（WorkBuddy 的收工释放条，
+  他们自己说"故意不单独推"），`src/` 无人占用；ZCode 在 `server/verify`（`8b20942` 已落地）。本片**只动 `src/ui-ge-api.js`**
+  一个源文件 + 一个新测试文件 + 台账/排期，冲突面压到最小。
+- **占用路径**：`src/ui-ge-api.js`、`tests/empty-catch-slice13.test.js`（新增）、`CHANGELOG.md` `[Unreleased]`、
+  `docs/iteration-plan.md`（B8 节）、`scripts/lint-empty-catch.baseline.json`（**只减不增**）、本板。
+- **实测缺口**（`scripts/lint-empty-catch.baseline.json` 现测 P0 共 72，本文件占 12）：
+  - `:63` `JSON.parse` 失败 ⇒ 加密配置静默回落默认值；`:95` / `:1215` `localStorage` 读写失败 ⇒ **token 过期时间静默丢**；
+  - `:117` `await decryptKey` reject 被吞 ⇒ 调用方以为解出来了；
+  - `:863` / `:926` / `:943` / `:978` / `:1012` 五个面板加载 ⇒ **拉取失败渲染成空列表**（用户读成"没有数据"，实际是请求没成）；
+  - `:406` `logout` 后端未执行也当已登出；`:1256` `forEach` 内抛错 ⇒ 批量翻译做一半且不报错。
+- **做法边界**：只补可观测性（门禁处方 (a)：`pushDiag("warn", …, {where})`），**不改控制流**（原先静默继续的照旧继续）；
+  审视后判定"静默不产生相反结论"的，按 slice12 先例**只补说明理由的注释、不硬凑数**；
+  不动基线里 P1/P2 那 513 处（本批只管 P0）。
+- **验证计划**：`tests/empty-catch-slice13.test.js` 每条钉外部可见结果 + 控制流不变；`lint:empty-catch` 的 P0 计数**只降不增**；
+  窄变异（把某处 `pushDiag` 摘掉 ⇒ 对应用例必红）；13 门禁 + 全量 + 相关 e2e。
+- **推送纪律**：账号级 runner 现在堵（`Corps`/`Modulo`/`Levee` 同刻各有 queued），所以我做完先在本地攒着，
+  等 `origin/main` 无在飞/排队 run 且我父提交 == tip 时才推。不占版本号。
+
+---
+
 ### [2026-10-28 05:43 UTC+8] ZCode 会话 —— **verify 脚本封闭性钩子补全（10/11）+ module-graph 遗留复核**
 - 状态：已完成待推（`3cdde4c` 的 CI 在排队，按 R1 等其终态后推）。
 - **06:00 推送裁定（R1 例外，留痕）**：`3cdde4c` **CI 四腿已 terminal success**，唯 Deploy 排队 40 分钟滞塞（板上有记载的
