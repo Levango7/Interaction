@@ -5309,6 +5309,16 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 .adock-caret{margin-left:auto}
 .adock-body{display:flex;flex-direction:column;gap:2px;padding:2px 0 4px}
 .adock-row{font-size:var(--fs-xs);padding:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- Multi-Agent Phase 2（2026-10-26）：会话内子代理卡片（Work/Code 两模式通用，随 #chat 渲染） ---------- */
+.subagent-card{border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:var(--radius-sm,6px);
+  padding:var(--space-2);background:color-mix(in srgb,var(--accent) 6%,transparent);margin:var(--space-1) 0}
+.subagent-card-head{font-weight:600;font-size:var(--fs-xs);margin-bottom:var(--space-1)}
+.subagent-badge{font-size:var(--fs-2xs);padding:1px 6px;border-radius:999px;border:1px solid var(--line);
+  margin-left:var(--space-1);color:var(--muted)}
+.subagent-running{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+.subagent-report{font-size:var(--fs-xs);line-height:1.5;white-space:pre-wrap;margin-top:var(--space-1);
+  overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -11017,6 +11027,36 @@ const MESSAGES = {
     "aiagent.fetchBothFail": "代理与直连均失败：",
     "aiagent.fetchCorsHint": "直连被浏览器跨域策略（CORS）拦截。请在设置中配置「抓取代理」，或配置自建后端 apiBase 后重试。",
     "aitool.generate_doc.category.desc": "分类，如 方案/复盘/工作文档",
+    "aitool.spawn_agent.desc": "派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把侦查/整理/汇总类工作委派出去",
+    "aitool.spawn_agent.name.desc": "子代理名（人读，如「资料整理员」）",
+    "aitool.spawn_agent.role.desc": "角色描述（注入子代理的系统提示）",
+    "aitool.spawn_agent.goal.desc": "子目标（一句话说清要做什么、产出什么报告）",
+    "aitool.spawn_agent.tools.desc": "工具白名单（默认只读集；写工具须显式列出）",
+    "aitool.spawn_agent.maxSteps.desc": "步数预算（默认 12，上限 24）",
+    "aitool.spawn_agents_parallel.desc": "并行派生多个只读子代理做侦查（最多 3 个；工具强制与只读白名单取交集——写工具被剥离；全部完成后合并报告交回）",
+    "aitool.spawn_agents_parallel.agents.desc": "子代理数组（1~3 个）",
+    "subagent.stRunning": "运行中",
+    "subagent.stDone": "完成",
+    "subagent.stFailed": "失败",
+    "subagent.stCancelled": "已取消",
+    "subagent.stQueued": "排队",
+    "subagent.cardTitle": "子代理",
+    "subagent.spawnCall": "派生子代理",
+    "subagent.parallelDone": "并行侦查完成：",
+    "subagent.parallelNeed": "缺少 agents 数组（每个含 goal）",
+    "subagent.parallelTooMany": "一次最多 3 个并行子代理（收到 %N% 个）——请减少数量或拆成多批",
+    "subagent.parallelBadGoal": "第 %N% 项缺少 goal（并行清单里每项都必须有目标）",
+    "subagent.defaultRole": "你是一个被主代理委派的子代理，专注完成单一子目标。",
+    "subagent.sysTools": "你只能使用列出的工具；把精力全部用于完成目标，不要发散。",
+    "subagent.sysReport": "完成研究/操作后，用一段简洁的最终报告收尾（不再调用工具）——报告会交回主代理。",
+    "subagent.cancelled": "已取消",
+    "subagent.noReport": "（子代理未产出报告）",
+    "subagent.toolDenied": "该工具不在本子代理的授权清单内",
+    "subagent.needGoal": "缺少子目标 goal",
+    "subagent.defaultName": "子代理-",
+    "subagent.unavailable": "子代理运行时不可用",
+    "subagent.planDenied": "计划路径不允许派生子代理：请在对话里直接要求（由主循环委派并全程可见）",
+    "subagent.budgetExhausted": "步数预算耗尽：",
     "aitool.generate_doc.content.desc": "Markdown 正文",
     "aitool.generate_doc.desc": "生成一份文档（Markdown）并保存到笔记库",
     "aitool.generate_doc.title.desc": "文档标题",
@@ -11457,7 +11497,8 @@ const MESSAGES = {
     "dock.running": "执行中",
     "dock.none": "无",
     "dock.mcpNone": "未配置 MCP 服务器",
-    "dock.stepDone": "步骤"
+    "dock.stepDone": "步骤",
+    "dock.subHistory": "最近 {n} 个子代理"
   },
   en: {
     // Common
@@ -15087,6 +15128,36 @@ const MESSAGES = {
     "aiagent.fetchBothFail": "Both proxy and direct connection failed: ",
     "aiagent.fetchCorsHint": "Direct connection blocked by browser CORS policy. Configure a fetch proxy in Settings, or set up your own backend apiBase and retry.",
     "aitool.generate_doc.category.desc": "Category, e.g. proposal/retrospective/work doc",
+    "aitool.spawn_agent.desc": "Spawn a subagent to complete a single sub-goal (isolated context & tools; the report comes back to you). Good for delegating research/organizing/summarizing.",
+    "aitool.spawn_agent.name.desc": "Subagent name (human-readable, e.g. \"researcher\")",
+    "aitool.spawn_agent.role.desc": "Role description (injected into the subagent's system prompt)",
+    "aitool.spawn_agent.goal.desc": "Sub-goal (one sentence: what to do and what report to produce)",
+    "aitool.spawn_agent.tools.desc": "Tool whitelist (read-only set by default; grant write tools explicitly)",
+    "aitool.spawn_agent.maxSteps.desc": "Step budget (default 12, cap 24)",
+    "aitool.spawn_agents_parallel.desc": "Spawn multiple read-only subagents in parallel for recon (max 3; tools are force-intersected with the read-only whitelist — write tools are stripped; merged report returns when all finish)",
+    "aitool.spawn_agents_parallel.agents.desc": "Subagent array (1~3)",
+    "subagent.stRunning": "Running",
+    "subagent.stDone": "Done",
+    "subagent.stFailed": "Failed",
+    "subagent.stCancelled": "Cancelled",
+    "subagent.stQueued": "Queued",
+    "subagent.cardTitle": "Subagent",
+    "subagent.spawnCall": "Spawned subagent",
+    "subagent.parallelDone": "Parallel recon finished: ",
+    "subagent.parallelNeed": "Missing agents array (each with goal)",
+    "subagent.parallelTooMany": "At most 3 parallel subagents (got %N%) — reduce the count or split into batches",
+    "subagent.parallelBadGoal": "Item %N% has no goal (every entry in the parallel list needs one)",
+    "subagent.defaultRole": "You are a subagent delegated by the main agent, focused on a single sub-goal.",
+    "subagent.sysTools": "You may only use the listed tools; focus entirely on the goal, do not drift.",
+    "subagent.sysReport": "After finishing research/actions, wrap up with a concise final report (no more tool calls) — it goes back to the main agent.",
+    "subagent.cancelled": "Cancelled",
+    "subagent.noReport": "(subagent produced no report)",
+    "subagent.toolDenied": "That tool is not in this subagent's authorized list",
+    "subagent.needGoal": "Missing sub-goal (goal)",
+    "subagent.defaultName": "subagent-",
+    "subagent.unavailable": "Subagent runtime unavailable",
+    "subagent.planDenied": "The plan path cannot spawn subagents: ask directly in the conversation (delegated by the main loop, fully visible)",
+    "subagent.budgetExhausted": "Step budget exhausted: ",
     "aitool.generate_doc.content.desc": "Markdown content",
     "aitool.generate_doc.desc": "Generate a document (Markdown) and save it to the notes library",
     "aitool.generate_doc.title.desc": "Document title",
@@ -15527,7 +15598,8 @@ const MESSAGES = {
     "dock.running": "Running",
     "dock.none": "None",
     "dock.mcpNone": "No MCP servers configured",
-    "dock.stepDone": "Steps"
+    "dock.stepDone": "Steps",
+    "dock.subHistory": "{n} recent subagents"
   }
 };
 
@@ -18336,6 +18408,7 @@ const DATA_KEY_REGISTRY = [
   { key: "theme", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "uimode", kind: "c", sync: true, backup: true },   // 本机控制状态（Work/Code 模式偏好，2026-10-26 Code 模式批次）
   { key: "agent_dock", kind: "c", sync: true, backup: true },   // 本机控制状态（agentDock 各段显隐，同批）
+  { key: "subagents", kind: "m", sync: false, backup: true },   // 本机元数据（Multi-Agent P1：子代理注册表/最近 20 条；运行台账不上云，与 sync_changelog 同口径）
   { key: "rail_tab", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "sceneViewMode", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据
@@ -19327,7 +19400,15 @@ const TOOLS = [
   {type:"function", function:{name:"generate_doc", description:t("aitool.generate_doc.desc","生成一份文档（Markdown）并保存到笔记库"), parameters:{type:"object", properties:{
     title:{type:"string", description:t("aitool.generate_doc.title.desc","文档标题")},
     content:{type:"string", description:t("aitool.generate_doc.content.desc","Markdown 正文")},
-    category:{type:"string", description:t("aitool.generate_doc.category.desc","分类，如 方案/复盘/工作文档")}}, required:["title","content"]}}}
+    category:{type:"string", description:t("aitool.generate_doc.category.desc","分类，如 方案/复盘/工作文档")}}, required:["title","content"]}}},
+  {type:"function", function:{name:"spawn_agent", description:t("aitool.spawn_agent.desc","派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把侦查/整理/汇总类工作委派出去"), parameters:{type:"object", properties:{
+    name:{type:"string", description:t("aitool.spawn_agent.name.desc","子代理名（人读，如「资料整理员」）")},
+    role:{type:"string", description:t("aitool.spawn_agent.role.desc","角色描述（注入子代理的系统提示）")},
+    goal:{type:"string", description:t("aitool.spawn_agent.goal.desc","子目标（一句话说清要做什么、产出什么报告）")},
+    tools:{type:"array", items:{type:"string"}, description:t("aitool.spawn_agent.tools.desc","工具白名单（默认只读集；写工具须显式列出）")},
+    maxSteps:{type:"number", description:t("aitool.spawn_agent.maxSteps.desc","步数预算（默认 12，上限 24）")}}, required:["goal"]}}},
+  {type:"function", function:{name:"spawn_agents_parallel", description:t("aitool.spawn_agents_parallel.desc","并行派生多个只读子代理做侦查（最多 3 个；工具强制与只读白名单取交集——写工具被剥离；全部完成后合并报告交回）"), parameters:{type:"object", properties:{
+    agents:{type:"array", items:{type:"object", properties:{name:{type:"string", description:t("aitool.spawn_agent.name.desc","子代理名")}, role:{type:"string", description:t("aitool.spawn_agent.role.desc","角色描述")}, goal:{type:"string", description:t("aitool.spawn_agent.goal.desc","子目标")}}, required:["goal"]}, description:t("aitool.spawn_agents_parallel.agents.desc","子代理数组（1~3 个）")}}, required:["agents"]}}}
 ];
 
 /* ---------- AI 层降级重定位（v1.15）：cfg.agent=false 时关闭 Agent 工具与话术 ----------
@@ -19336,7 +19417,7 @@ const TOOLS = [
  * 话术与能力不一致（AI 会被引导调用已"关闭"的能力）。
  * 修复：effectiveTools() 按 cfg.agent 过滤；chatSysPrompt 同步降级话术。
  */
-const AGENT_TOOL_NAMES = ["remember","recall","forget","plan","complete_step","complete_goal","list_records"];
+const AGENT_TOOL_NAMES = ["remember","recall","forget","plan","complete_step","complete_goal","list_records","spawn_agent"];
 /**
  * 「需要用户确认才允许落地」的工具 —— 唯一清单（v3.7.59 收口）。
  * 背景：runChatLoop 里写了一份 DANGER=["delete_task","update_task"]，而 executeAgentPlan 用
@@ -20589,6 +20670,16 @@ async function executeAgentPlan(plan, opts){
       }
       continue;
     }
+    /* Multi-Agent Phase 1/3（2026-10-26）：深度 1 守卫——计划路径显式拒绝派生子代理
+       （递归派生只能走对话协调路径；自主计划里派生子代理 = 不受用户监督的失控面）。 */
+    if(step.tool === "spawn_agent" || step.tool === "spawn_agents_parallel"){
+      const msg = t("subagent.planDenied","计划路径不允许派生子代理：请在对话里直接要求（由主循环委派并全程可见）");
+      results.push({ step, result: JSON.stringify({ ok:false, msg }), ok:false, blocked:true });
+      if(typeof o.onProgress === "function"){
+        try{ o.onProgress(i+1, plan.steps.length, step, msg); }catch(_){}
+      }
+      continue;
+    }
     let resultStr = "";
     let stepOk = false;
     try{
@@ -20907,7 +20998,7 @@ async function chatOnceAgent(messages, opts){
 
 /* ---------- 2. 新工具调用：web_search / web_fetch / code_run / sql_query ---------- */
 /** 需异步执行的工具名（单一来源：chat 路径与 Agent 计划路径共用，避免两处清单漂移） */
-const ASYNC_TOOL_NAMES = new Set(["web_search", "web_fetch", "code_run", "sql_query"]);
+const ASYNC_TOOL_NAMES = new Set(["web_search", "web_fetch", "code_run", "sql_query", "spawn_agent", "spawn_agents_parallel"]);
 /**
  * 同步/异步工具的统一执行入口。
  * v3.7.52：chat 路径原先只调 execTool —— 系统提示与 README 都告诉模型「可以联网检索 / 跑代码 / 跑 SQL」，
@@ -20937,6 +21028,19 @@ async function execToolAuto(name, args){
  */
 async function agentExecAsync(name, args){
   args = args || {};
+  /* Multi-Agent Phase 1（2026-10-26）：派生子代理（异步——内含 LLM 循环）。
+     实现在 ai-subagent（AppBridge.spawnAgentImpl，经桥调用避开静态环）。
+     深度 1 由两处共同保证：① 子代理白名单不含 spawn_agent；② 计划路径显式拒绝（executeAgentPlan）。 */
+  if(name === "spawn_agent"){
+    const impl = (typeof AppBridge !== "undefined") ? AppBridge.spawnAgentImpl : null;
+    if(typeof impl !== "function") return { ok: false, error: t("subagent.unavailable", "子代理运行时不可用") };
+    return await impl(args);
+  }
+  if(name === "spawn_agents_parallel"){
+    const implP = (typeof AppBridge !== "undefined") ? AppBridge.spawnAgentsParallelImpl : null;
+    if(typeof implP !== "function") return { ok: false, error: t("subagent.unavailable", "子代理运行时不可用") };
+    return await implP(args);
+  }
   if(name === "web_search"){
     return await toolWebSearch(args.query || "", args);
   }
@@ -22252,6 +22356,22 @@ function addTokensUsage(resp) {
 function renderChat(){
   const el=$("#chat"); if(!el) return;
   const hist=getChat(active);
+  /* Multi-Agent Phase 2（2026-10-26）：spawn_agent 系工具调用的会话内卡片。
+     识别形状：tool 结果 content 是含 agentId 的 JSON；assistant tool_calls 含 spawn_agent*。
+     状态/报告经注册表实时读取（getSubAgent），渲染两份、数据一份。 */
+  const _subagentCard = function(agentId, fallbackName){
+    try{
+      const live = (typeof getSubAgent === "function") ? getSubAgent(agentId) : null;
+      const name = esc((live && live.name) || fallbackName || agentId);
+      const st = live ? live.status : "done";
+      const stMap = { running: t("subagent.stRunning","运行中"), done: t("subagent.stDone","完成"), failed: t("subagent.stFailed","失败"), cancelled: t("subagent.stCancelled","已取消"), queued: t("subagent.stQueued","排队") };
+      const badge = '<span class="subagent-badge subagent-' + esc(st) + '">' + esc(stMap[st] || st) + '</span>';
+      const steps = live ? (' · ' + (live.steps || 0) + t("dock.stepDone", "步骤")) : "";
+      const report = esc(String((live && live.result) || "").slice(0, 600));
+      return '<div class="msg tool subagent-card"><div class="subagent-card-head">' + t("subagent.cardTitle","子代理") + '「' + name + '」' + badge + steps + '</div>'
+        + (report ? '<div class="subagent-report">' + report + '</div>' : '') + '</div>';
+    }catch(_e){ return null; }
+  };
   el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
     if(m.role==="tool"){
       var _disp = m._disp || _chatContentToText(m.content);
@@ -22261,12 +22381,32 @@ function renderChat(){
           return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + AppBridge.miniChart(_spec.type, _spec.data) + '</div>';
         }catch(_e){ /* 解析失败回退文本 */ }
       }
+      /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片 */
+      if(typeof _disp === "string" && _disp.indexOf("{") === 0){
+        var _sa = null;
+        try{ _sa = JSON.parse(_disp); }catch(_e){ _sa = null; }   // 非 JSON（普通工具结果文本）→ 走下方通用渲染
+        if(_sa && _sa.agentId){
+          var _card = _subagentCard(_sa.agentId, _sa.agent);
+          if(_card) return _card;
+        }
+        if(_sa && Array.isArray(_sa.agents)){
+          return '<div class="msg tool subagent-card"><div class="subagent-card-head">' + t("subagent.parallelDone","并行侦查完成：") + _sa.agents.length + '</div>'
+            + _sa.agents.map(function(a2){ return '<div class="subagent-report">「' + esc(a2.name) + '」' + (a2.ok ? "✓" : "✗") + ' ' + esc(String(a2.report || "").slice(0, 300)) + '</div>'; }).join("") + '</div>';
+        }
+      }
       return '<div class="msg tool">' + esc(_disp) + '</div>';
     }
     /* 2026-10-23：assistant 消息记录本轮用户提示词，悬停可见（title 原生提示，不引浮层依赖） */
     const promptTip = (m && m._prompt) ? ' title="' + esc(String(m._prompt).slice(0, 500)) + '" data-prompt="1"' : "";
     if(m.role==="assistant" && m.tool_calls && m.tool_calls.length){
-      const s=m.tool_calls.map(tc=>t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")").join("；");
+      const s=m.tool_calls.map(tc=>{
+        if(tc.function.name === "spawn_agent" || tc.function.name === "spawn_agents_parallel"){
+          let g = "";
+          try{ const _p = JSON.parse(tc.function.arguments || "{}"); g = _p.goal || (_p.agents ? _p.agents.length + " 个" : ""); }catch(_e){ g = ""; }
+          return t("subagent.spawnCall", "派生子代理") + (g ? "（" + esc(String(g).slice(0, 80)) + "）" : "");
+        }
+        return t("cmd.callTool","调用工具 ")+esc(tc.function.name)+"("+esc(JSON.stringify(tc.function.arguments||"{}"))+")";
+      }).join("；");
       return `<div class="msg assistant toolcall"${promptTip}>${s}</div>`;
     }
     if(m.role==="assistant" && !m.content) return `<div class="msg assistant"${promptTip}>${t("ai.toolCalling","（工具调用中…）")}</div>`;
@@ -28159,6 +28299,7 @@ function _uiMode(){
   catch(e){ return "work"; }
 }
 /** 应用当前模式到壳（幂等）：切 .body.code-mode 类 + 顶栏标签 + 渲染/清空两个 dock */
+let _agentDockTimer = null;
 function applyUIMode(){
   const body = document.querySelector(".body");
   if(!body) return;
@@ -28166,10 +28307,21 @@ function applyUIMode(){
   body.classList.toggle("code-mode", code);
   const lbl = $("#uiModeLbl");
   if(lbl) lbl.textContent = t(code ? "ui.mode.code" : "ui.mode.work", code ? "代码" : "工作");
-  if(code){ renderSessionDock(); renderAgentDock(); }
+  if(code){
+    renderSessionDock(); renderAgentDock();
+    /* Multi-Agent Phase 2：Code 模式下 2.5s 轮询能力停靠——子代理运行中的步数/状态实时可见
+       （读取是幂等的；Work 模式或不再 code 时清掉）。 */
+    if(!_agentDockTimer){
+      _agentDockTimer = setInterval(function(){
+        if(_uiMode() !== "code"){ clearInterval(_agentDockTimer); _agentDockTimer = null; return; }
+        try{ renderAgentDock(); }catch(e){ /* 渲染失败不累积定时器 */ }
+      }, 2500);
+    }
+  }
   else {
     const sd = $("#sessionDock"); if(sd) sd.innerHTML = "";
     const ad = $("#agentDock"); if(ad) ad.innerHTML = "";
+    if(_agentDockTimer){ clearInterval(_agentDockTimer); _agentDockTimer = null; }
   }
 }
 function toggleUIMode(){
@@ -28235,13 +28387,27 @@ function renderAgentDock(){
       + (show[key] ? '<div class="adock-body">' + inner + '</div>' : '')
       + '</div>';
   };
-  /* 进程：agent 执行状态（agent_run：goal + steps/done） */
+  /* 进程：Multi-Agent P1（2026-10-26）——子代理注册表（运行中在上）+ agent 执行状态（agent_run） */
+  let subs = [];
+  try{ subs = (typeof listSubAgents === "function") ? listSubAgents() : []; }catch(e){ subs = []; }
+  const runSubs = subs.filter(function(s2){ return s2.status === "running"; });
+  let procInner = "";
+  if(runSubs.length){
+    procInner += runSubs.map(function(s2){
+      return '<div class="adock-row">▶ ' + esc(s2.name || s2.id) + ' <span class="u-text-dim">' + (s2.steps || 0) + ' ' + t("dock.stepDone", "步骤") + '</span></div>';
+    }).join("");
+  }else{
+    procInner += '<div class="adock-row u-text-dim">' + t("dock.idle", "空闲——没有进行中的 Agent 执行") + '</div>';
+  }
+  if(subs.length){
+    procInner += '<div class="adock-row u-text-dim">' + t("dock.subHistory", "最近 {n} 个子代理").replace("{n}", String(subs.length)) + '</div>';
+  }
   let run = null;
   try{ run = load(PREFIX + "agent_run", null); }catch(e){ run = null; }
-  const procInner = (run && Array.isArray(run.steps) && run.steps.length)
-    ? '<div class="adock-row">' + esc(run.goal || t("dock.running", "执行中")) + '</div>'
-      + '<div class="adock-row u-text-dim">' + t("dock.stepDone", "步骤") + ' ' + ((run.done || []).length) + '/' + run.steps.length + '</div>'
-    : '<div class="adock-row u-text-dim">' + t("dock.idle", "空闲——没有进行中的 Agent 执行") + '</div>';
+  if(run && Array.isArray(run.steps) && run.steps.length){
+    procInner += '<div class="adock-row">' + esc(run.goal || t("dock.running", "执行中")) + '</div>'
+      + '<div class="adock-row u-text-dim">' + t("dock.stepDone", "步骤") + ' ' + ((run.done || []).length) + '/' + run.steps.length + '</div>';
+  }
   /* 技能：与右栏 Agent 页同源（listEnabledSkills）——渲染两份、数据一份（无漂移面） */
   let skills = [];
   try{ skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : []; }catch(e){ skills = []; }
@@ -34645,7 +34811,18 @@ function bindScenario(){
 }
 AppBridge.bindReportCard = bindReportCard;
 function bindReportCard(sc){
-  if((sc==="office"||sc==="code") && $("#copyRep")) $("#copyRep").onclick=()=> navigator.clipboard.writeText($("#repTxt").value);
+  /* R-37：writeText 返回 Promise —— 交给 onclick 就等于无人接住，复制被拒时用户毫无反馈。
+     写法与本文件 :79 的复制按钮同款（回执落在 promise 的落地回调里）。 */
+  if((sc==="office"||sc==="code") && $("#copyRep")) $("#copyRep").onclick=function(){
+    const txt = ($("#repTxt") || {}).value || "";
+    try{
+      const p = navigator.clipboard.writeText(txt);
+      if(p && typeof p.then === "function"){
+        p.then(function(){ try{ toast(t("msg.copied","已复制"), "ok"); }catch(_e){} },
+               function(){ try{ toast(t("msg.copyFailed","复制失败"), "warn"); }catch(_e){} });
+      }else{ try{ toast(t("msg.copied","已复制"), "ok"); }catch(_e){} }
+    }catch(e){ try{ toast(t("msg.copyFailed","复制失败"), "warn"); }catch(_e){} }
+  };
 }
 AppBridge.bindReviewCard = bindReviewCard;
 function bindReviewCard(sc){
@@ -35515,7 +35692,9 @@ async function chatOnce(messages, opts){
     /* 发现失败不阻断本轮：错误已在 mcpRefreshServer 落到 mcpRuntimeInfo + pushDiag，这里只降级 */
     if(typeof ensureMcpTools === "function"){ await ensureMcpTools().catch(function(){}); }
     const body={ model, messages, temperature:aiParams.temperature };
-    if(cfg.enabled){ body.tools=effectiveTools(); body.tool_choice="auto"; }
+    /* Multi-Agent Phase 1（2026-10-26）：opts.tools 覆盖——子代理传受限工具集。
+       向后兼容：既有调用方不传该参数，行为不变。 */
+    if(cfg.enabled){ body.tools=(Array.isArray(opts.tools) && opts.tools.length) ? opts.tools : effectiveTools(); body.tool_choice="auto"; }
     // v3.2 C-档：流式请求标记（仅浏览器直连 + 调用方传 onChunk 时开启；Electron 主进程代理不支持透传，保持整包）
     if(opts.onChunk && !isElectron()) body.stream = true;
 
@@ -37066,7 +37245,10 @@ function bindChatPanel(){
     /* v3.5.1：不再替换 textContent（会摧毁 SVG）；箭头方向由 CSS 固定为指右 */
     if(rail) rail.classList.toggle("show", collapsed);
     // 持久化折叠状态
-    try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }catch(e){ /* noop */ }
+    /* R-2 标准修法（2026-10-27）：写偏好失败过去静默 —— 用户以为记住了折叠态，下个会话就回默认。
+       加观测不改控制流：写失败照样继续，只是诊断里留一条。 */
+    try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }
+    catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "聊天面板折叠偏好写失败: "+((e&&e.message)||e), { where: "toggleCollapse" }); }catch(_e){} }
   };
   if(collapseBtn) collapseBtn.onclick=toggleCollapse;
   /* v3.2.1 修复：暴露强制展开函数——给 #phAiAskBtn / data-ai-hint-for 等外部入口调用。
@@ -37109,7 +37291,7 @@ function bindChatPanel(){
       // 保留按钮 SVG；恢复折叠态不替换按钮内容。
       if(rail) rail.classList.add("show");
     }
-  }catch(e){ /* noop */ }
+  }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "读聊天面板折叠偏好失败: "+((e&&e.message)||e), { where: "__aiPanelExpand" }); }catch(_e){} }
   /* 布局 v2（2026-10-21）：默认收起由 HTML 的 .collapsed 兜底；仅当用户显式选过「展开」时移除。
      load() 自带损坏兜底不会抛，这里不需要 try/catch。 */
   if(load(PREFIX+"chat_panel_collapsed", null) === "0"){
@@ -37148,7 +37330,7 @@ function askAiAboutScene(sc, hintKey){
     /* v3.2.1 修复 UX 闭环：未启用 AI 时记下意图，配置完成保存后自动续上 */
     try{
       save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: sc, hintKey: hintKey || "", ts: Date.now() }));
-    }catch(e){ /* noop */ }
+    }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "待问意图写失败（配好 AI 后不会自动续上）: "+((e&&e.message)||e), { where: "aiAsk.pending" }); }catch(_e){} }
     toast(t("ai.notEnabled","请先在设置 → AI 中启用并填写 API Key"), "warn");
     if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage();
     return;
@@ -37239,7 +37421,7 @@ function discussInAi(type){
   if(!(typeof aiReadyProfile === "function" && aiReadyProfile())){
     try{
       save(PREFIX + "__pendingAiAsk", JSON.stringify({ sc: "", hintKey: "discuss." + type, prompt: prompt, ts: Date.now() }));
-    }catch(e){ /* noop */ }
+    }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "待问意图写失败（配好 AI 后不会自动续上）: "+((e&&e.message)||e), { where: "aiDiscuss.pending" }); }catch(_e){} }
     toast(t("ai.notEnabled","请先在设置 → AI 中启用并填写 API Key"), "warn");
     if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage();
     return;
@@ -37270,6 +37452,191 @@ document.addEventListener("click", function(e){
   }
 });
 /*SRC:ai-retry:END*/
+/*SRC:ai-subagent:BEGIN*/
+// ===== AI Layer (AI 层·子代理运行时) =====
+/* ---------- SubAgent 运行时（2026-10-26 · Multi-Agent Phase 1，设计见 docs/agent-multi-agent-design.md） ----------
+ * 协调模型：主对话循环是唯一协调者（Coordinator）；「派生子代理」对它只是一个工具（spawn_agent）。
+ * 子代理在**隔离上下文**里用受限工具白名单跑完子目标，把最终报告作为工具结果交回。
+ * 护栏：深度 1（白名单不含 spawn_agent——防递归）、步数预算（默认 12 / 硬顶 24）、
+ *       abort 传播、危险工具二次确认不豁免（分发不带 force）、全部入诊断。
+ * 持久化：wb_agent_subagents 注册表（键注册表已登记）；Code 模式 dock「进程」段实时消费。
+ * 顺序执行：P1 无并发（单事件循环无竞态）；并发只读侦查留给 Phase 3（见设计文档 §三）。 */
+const SUBAGENTS_KEY = PREFIX + "subagents";
+const SUBAGENT_STEPS_DEFAULT = 12;
+const SUBAGENT_STEPS_MAX = 24;
+/* 默认工具白名单：只读侦查集。写工具须 spawn 时显式授予（写 = coordinator 明确授权的语义）。 */
+const SUBAGENT_TOOLS_READONLY = ["list_tasks", "list_records", "list_notes", "search", "get_overview", "list_goals"];
+let _subagents = null;
+
+function _loadSubAgents(){
+  if(_subagents) return _subagents;
+  try{
+    const v = load(SUBAGENTS_KEY, null);
+    _subagents = (Array.isArray(v)) ? v : [];
+  }catch(e){ _subagents = []; }
+  return _subagents;
+}
+function _saveSubAgents(){ try{ _saveSubAgentsTick(); }catch(e){ try{ pushDiag("warn", "subagents save failed: "+((e&&e.message)||e), {where:"subagent"}); }catch(_e2){} } }
+function _saveSubAgentsTick(){ save(SUBAGENTS_KEY, _subagents); }
+function listSubAgents(){ return _loadSubAgents().slice(); }
+function getSubAgent(id){ return _loadSubAgents().find(function(s){ return s.id === id; }) || null; }
+function _touchSubAgent(id, patch){
+  const it = _loadSubAgents().find(function(s){ return s.id === id; });
+  if(!it) return;
+  Object.assign(it, patch, { updatedAt: _nowIso() });
+  _saveSubAgents();
+}
+/** 测试间复位内存态（__test 桥） */
+function _resetSubAgents(){ _subagents = null; }
+
+/**
+ * 子代理循环：隔离上下文 + 受限工具 + 步数预算。
+ * 工具分发与主循环同款（execTool），但**不带 force**——危险工具确认在子代理同样生效；
+ * 白名单默认只读，正常路径根本碰不到危险工具。
+ * @param {{id:string, name:string, role:string, goal:string, tools:string[], maxSteps:number}} spec
+ * @param {{signal?:AbortSignal}} [opts]
+ * @returns {Promise<{ok:boolean, result:string, steps:number}>}
+ */
+async function runSubAgent(spec, opts){
+  const o = opts || {};
+  const t0 = Date.now();
+  const tools = (Array.isArray(spec.tools) && spec.tools.length) ? spec.tools : SUBAGENT_TOOLS_READONLY;
+  const maxSteps = Math.min(Math.max(Number(spec.maxSteps) || SUBAGENT_STEPS_DEFAULT, 1), SUBAGENT_STEPS_MAX);
+  const defs = effectiveTools().filter(function(td){ return tools.indexOf(td.function.name) >= 0; });
+  _touchSubAgent(spec.id, { status: "running", steps: 0 });
+  /* 隔离上下文：系统提示（角色 + 工具说明 + 边界）+ 用户目标。coordinator 的历史不进来。 */
+  const sys = [
+    String(spec.role || t("subagent.defaultRole", "你是一个被主代理委派的子代理，专注完成单一子目标。")),
+    t("subagent.sysTools", "你只能使用列出的工具；把精力全部用于完成目标，不要发散。"),
+    t("subagent.sysReport", "完成研究/操作后，用一段简洁的最终报告收尾（不再调用工具）——报告会交回主代理。")
+  ].join("\n");
+  const msgs = [
+    { role: "system", content: sys },
+    { role: "user", content: String(spec.goal || "") }
+  ];
+  let steps = 0, lastErr = "";
+  try{
+    for(let i = 0; i < maxSteps; i++){
+      if(o.signal && o.signal.aborted){
+        _touchSubAgent(spec.id, { status: "cancelled", ms: Date.now() - t0 });
+        return { ok: false, result: t("subagent.cancelled", "已取消"), steps };
+      }
+      let resp;
+      try{
+        resp = await chatOnce(msgs, { tools: defs, signal: o.signal });
+      }catch(e){
+        lastErr = (e && e.message) || String(e);
+        _touchSubAgent(spec.id, { status: "failed", result: lastErr, ms: Date.now() - t0 });
+        return { ok: false, result: lastErr, steps };
+      }
+      const msg = (resp && resp.choices && resp.choices[0] && resp.choices[0].message) || null;
+      if(!msg){ lastErr = "empty response"; break; }
+      msgs.push(msg);
+      const calls = msg.tool_calls || [];
+      if(!calls.length){
+        const report = String(msg.content || "").trim() || t("subagent.noReport", "（子代理未产出报告）");
+        _touchSubAgent(spec.id, { status: "done", result: report, steps: steps, ms: Date.now() - t0 });
+        return { ok: true, result: report, steps: steps };
+      }
+      /* 工具分发：白名单外与 spawn_agent 一律拒绝（深度 1；白名单即授权边界） */
+      for(const c of calls){
+        const name = c && c.function && c.function.name;
+        let resultStr;
+        if(name === "spawn_agent" || tools.indexOf(name) < 0){
+          resultStr = JSON.stringify({ ok: false, msg: t("subagent.toolDenied", "该工具不在本子代理的授权清单内") });
+        }else{
+          let parsed = {};
+          try{ parsed = JSON.parse(c.function.arguments || "{}"); }catch(e){ parsed = {}; }
+          try{ resultStr = execTool(name, parsed); }
+          catch(e){ resultStr = JSON.stringify({ ok: false, msg: (e && e.message) || String(e) }); }
+        }
+        msgs.push({ role: "tool", tool_call_id: (c && c.id) || "", content: String(resultStr).slice(0, 2000) });
+        steps++;
+      }
+      _touchSubAgent(spec.id, { steps: steps });
+    }
+    /* 步数预算耗尽：拿最后一次模型输出当部分报告（如实标注截断） */
+    const partial = (msgs.filter(function(m){ return m.role === "assistant" && m.content; }).pop() || {}).content || "";
+    _touchSubAgent(spec.id, { status: "failed", result: t("subagent.budgetExhausted", "步数预算耗尽：") + String(partial).slice(0, 400), ms: Date.now() - t0 });
+    return { ok: false, result: t("subagent.budgetExhausted", "步数预算耗尽：") + String(partial).slice(0, 400), steps };
+  }catch(e){
+    lastErr = (e && e.message) || String(e);
+    _touchSubAgent(spec.id, { status: "failed", result: lastErr, ms: Date.now() - t0 });
+    return { ok: false, result: lastErr, steps };
+  }
+}
+/**
+ * spawn_agent 工具实现（execTool 经 AppBridge 槽位调用——避免 ai-tools → ai-subagent → ai-loop →
+ * ai-tools 的静态环）。校验参数 → runSubAgent → 返回报告字符串（coordinator 的工具结果）。
+ */
+async function spawnAgentImpl(args){
+  const a = args || {};
+  const goal = String(a.goal || "").trim();
+  if(!goal) return JSON.stringify({ ok: false, msg: t("subagent.needGoal", "缺少子目标 goal") });
+  const _loadSubAgents2 = _loadSubAgents();
+  const n = _loadSubAgents2.length + 1;
+  const spec = {
+    id: "sa_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
+    name: String(a.name || (t("subagent.defaultName", "子代理-") + n)),
+    role: String(a.role || t("subagent.defaultRole", "你是一个被主代理委派的子代理，专注完成单一子目标。")),
+    goal: goal,
+    tools: (Array.isArray(a.tools) && a.tools.length) ? a.tools.filter(function(x){ return typeof x === "string" && x !== "spawn_agent"; }) : SUBAGENT_TOOLS_READONLY.slice(),
+    maxSteps: a.maxSteps,
+    status: "queued", steps: 0, msgs: [], result: "",
+    createdAt: _nowIso(), updatedAt: _nowIso(), ms: 0
+  };
+  _loadSubAgents().unshift(spec);
+  if(_loadSubAgents().length > 20) _loadSubAgents().length = 20;   // 注册表只留最近 20 条（配额卫生）
+  _saveSubAgents();
+  const r = await runSubAgent(spec, {});
+  return { ok: r.ok, agent: spec.name, agentId: spec.id, steps: r.steps, report: r.result };
+}
+/* AppBridge 槽位：execTool/AI 工具层经此调用（避免 ai-tools → ai-subagent → ai-loop → ai-tools 静态环） */
+try{ if(typeof AppBridge !== "undefined") AppBridge.spawnAgentImpl = spawnAgentImpl; }catch(e){ /* noop */ }
+/**
+ * Phase 3：并行只读侦查（2026-10-26）。多个子代理同时跑（Promise.all，上限 3），
+ * 工具**强制与只读集取交集**（写工具静默剥离——并行写入无协调，P3 铁律），
+ * 全部完成后合并报告交回 coordinator。
+ */
+async function spawnAgentsParallelImpl(args){
+  const raw = (Array.isArray(args && args.agents) ? args.agents : []);
+  if(!raw.length) return { ok: false, error: t("subagent.parallelNeed", "缺少 agents 数组（每个含 goal）") };
+  /* 如实报错，不静默截断/丢弃：调用方是模型，它会以为"全都跑了"。
+     超限与缺 goal 都必须让协调者看到真实原因，自己决定怎么拆批。 */
+  if(raw.length > 3){
+    return { ok: false, error: t("subagent.parallelTooMany", "一次最多 3 个并行子代理（收到 %N% 个）——请减少数量或拆成多批").replace("%N%", String(raw.length)) };
+  }
+  const badGoals = [];
+  raw.forEach(function(a, i){ if(!a || !String(a.goal || "").trim()) badGoals.push(i + 1); });
+  if(badGoals.length){
+    return { ok: false, error: t("subagent.parallelBadGoal", "第 %N% 项缺少 goal（并行清单里每项都必须有目标）").replace("%N%", badGoals.join(",")) };
+  }
+  const list = raw;
+  const specs = list.map(function(a, i){
+    const granted = (Array.isArray(a.tools) && a.tools.length)
+      ? a.tools.filter(function(x){ return SUBAGENT_TOOLS_READONLY.indexOf(x) >= 0; })
+      : SUBAGENT_TOOLS_READONLY.slice();
+    return {
+      id: "sa_" + Date.now().toString(36) + "_" + i + "_" + Math.random().toString(36).slice(2, 6),
+      name: String(a.name || t("subagent.defaultName", "子代理-") + (i + 1)),
+      role: String(a.role || t("subagent.defaultRole", "你是一个被主代理委派的子代理，专注完成单一子目标。")),
+      goal: String(a.goal).trim(),
+      tools: granted, maxSteps: a.maxSteps,
+      status: "queued", steps: 0, msgs: [], result: "",
+      createdAt: _nowIso(), updatedAt: _nowIso(), ms: 0
+    };
+  });
+  specs.slice().reverse().forEach(function(s2){ _loadSubAgents().unshift(s2); });
+  if(_loadSubAgents().length > 20) _loadSubAgents().length = 20;
+  _saveSubAgents();
+  const results = await Promise.all(specs.map(function(s2){ return runSubAgent(s2, {}); }));
+  return {
+    ok: results.every(function(r){ return r.ok; }),
+    agents: specs.map(function(s2, i){ return { name: s2.name, ok: results[i].ok, steps: results[i].steps, report: results[i].result }; })
+  };
+}
+try{ if(typeof AppBridge !== "undefined") AppBridge.spawnAgentsParallelImpl = spawnAgentsParallelImpl; }catch(e){ /* noop */ }
+/*SRC:ai-subagent:END*/
 /*SRC:ui-palette:BEGIN*/
 // ===== UI Layer (交互层·命令面板) =====
 /* ---------- 命令面板（P5' 增强：模糊搜索 / 分组 / 最近使用） ---------- */
@@ -37589,7 +37956,14 @@ function dailyDigest(){
   localStorage.setItem(PREFIX+"last_open", today);
   // 首次进入：请求通知权限（浏览器策略：仅用户手势后允许，这里静默尝试，失败无碍）
   if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-    try { Notification.requestPermission(); } catch (e) { /* 旧 API 回调式或拒绝，忽略 */ }
+    /* R-37：requestPermission 返回 Promise（旧实现回调式、返回 undefined）——
+       不接住就是一条无人处理的 rejection，失败时连诊断都没有。 */
+    try {
+      const p = Notification.requestPermission();
+      if(p && typeof p.then === "function"){
+        p.catch(function(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "通知权限请求失败: " + ((e && e.message) || e), { where: "dailyDigest" }); }catch(_e){} });
+      }
+    } catch (e) { /* 旧 API 回调式或拒绝，忽略 */ }
   }
   const items=getActiveTasks().filter(x=>x.status!=="done"&&x.due).sort((a,b)=>a.due<b.due?-1:1);
   const pending=items.filter(x=> x.due===today || x.due<today);
@@ -38057,7 +38431,7 @@ function render(){
       const _fbExportBtn = document.getElementById("fallbackBtnExport");
       if(_fbExportBtn) _fbExportBtn.addEventListener("click", function(){ try{ doExport(); }catch(e2){ /* 静默降级 */ } });
       const _fbClearBtn = document.getElementById("fallbackBtnClear");
-      if(_fbClearBtn) _fbClearBtn.addEventListener("click", async function(){ if(!await dangerConfirm({ message: t("confirm.clear","确定清空？") })) return; try{ localStorage.clear(); }catch(e2){ /* 静默降级 */ } location.reload(); });
+      if(_fbClearBtn) _fbClearBtn.addEventListener("click", async function(){ if(!await dangerConfirm({ message: t("confirm.clear","确定清空？") })) return; try{ localStorage.clear(); }catch(e2){ /* R-2（2026-10-27）：clear 被拒（配额/隐私模式）时过去完全静默，而下面 location.reload() 照跑 ⇒ 用户以为清空了其实没清。加观测不改控制流。 */ try{ if(typeof pushDiag === "function") pushDiag("error", "清空数据失败（localStorage.clear 被拒）: "+((e2&&e2.message)||e2), { where: "fallbackClear" }); }catch(_e){} } location.reload(); });
     }
     try{ toast(t("err.renderException","渲染异常：")+(e&&e.message||t("tool.unknownErrorMsg", t("common.unknownError","未知错误"))), "error"); }catch(e2){ /* toast 不可用时静默降级 */ }
   }finally{
@@ -38196,6 +38570,24 @@ function renderMiniChart(chartType, dataArr){
   // line 类型自带布局容器，不再包 .mini-chart-wrap 的固定高度（避免双重滚动裁切）
   if(ct === "line") return '<div class="mini-chart-line-box u-h-120 u-bg-panel2 u-radius-sm u-overflow-hidden">' + inner + "</div>";
   return '<div class="mini-chart-wrap">' + inner + "</div>";
+}
+
+/* R-37（2026-10-27）：工具箱里「复制到剪贴板」的**唯一**写法 —— 回执必须等 Promise 落地。
+   `navigator.clipboard.writeText` 返回 Promise，同步 try/catch 抓不到 rejection；老写法在调用后
+   立刻 `toast("已复制")`，浏览器拒绝写入剪贴板时用户照样看到「已复制」（假回执，台账 R-34 同族）。
+   旧环境里 writeText 同步返回 undefined（非 Promise），那种情形按"已写入"处理。 */
+function _copyTextWithReceipt(txt){
+  if(!txt) return;
+  const ok = function(){ try{ toast(t("tool.copied", "已复制"), "ok"); }catch(_e){} };
+  const fail = function(){ try{ toast(t("msg.copyFailed", "复制失败"), "warn"); }catch(_e){} };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      const p = navigator.clipboard.writeText(String(txt));
+      if(p && typeof p.then === "function"){ p.then(ok, fail); return; }
+      ok(); return;
+    }
+    fail();
+  }catch(_e){ fail(); }
 }
 
 /* v3.7.78 解耦：自别处下沉 */
@@ -38916,7 +39308,7 @@ const TOOL_APPS = {
       const go = $("#vgGo"), out = $("#vgOut"), copy = $("#vgCopy");
       if(copy) copy.onclick = function(){
         const t2 = out && out.querySelector("textarea");
-        try{ if(t2 && t2.value){ navigator.clipboard.writeText(t2.value); toast(t("tool.copied", "已复制"), "ok"); } }catch(_e){}
+        _copyTextWithReceipt(t2 && t2.value);
       };
       if(!go) return;
       go.onclick = async function(){
@@ -39045,7 +39437,7 @@ const TOOL_APPS = {
       };
       const b1=$("#jwFmt"); if(b1) b1.onclick=function(){ run(false); };
       const b2=$("#jwCmp"); if(b2) b2.onclick=function(){ run(true); };
-      const b3=$("#jwCopy"); if(b3) b3.onclick=function(){ try{ if($o&&$o.value){ navigator.clipboard.writeText($o.value); toast(t("tool.copied","已复制"),"ok"); } }catch(_){} };
+      const b3=$("#jwCopy"); if(b3) b3.onclick=function(){ _copyTextWithReceipt($o && $o.value); };
       if($i) $i.oninput=function(){ run(false); };
     }
   },
@@ -39185,7 +39577,7 @@ const TOOL_APPS = {
         if($o) $o.value=lines.join("\n");
       };
       const b1=$("#uuGo"); if(b1) b1.onclick=gen;
-      const b2=$("#uuCopy"); if(b2) b2.onclick=function(){ try{ if($o&&$o.value){ navigator.clipboard.writeText($o.value); toast(t("tool.copied","已复制"),"ok"); } }catch(_){} };
+      const b2=$("#uuCopy"); if(b2) b2.onclick=function(){ _copyTextWithReceipt($o && $o.value); };
       gen();
     }
   },
@@ -39914,7 +40306,11 @@ function doIdbExport(){
             if(!v) return;
             const dataURL = await _blobToDataURL(v);
             if(dataURL) out[k] = dataURL;
-          }).catch(() => { /* 单键失败不拖垮整体备份 */ })
+          }).catch(function(e){
+            /* R-2（2026-10-27）：过去这里完全静默 —— 备份会**少几张图**却照报成功。
+               加观测不改控制流：单键依然跳过，但诊断里留一条，备份完整性才可被核查。 */
+            try{ if(typeof pushDiag === "function") pushDiag("warn", "备份：图片键读取失败（该图不在本次备份里）: "+k+" — "+((e&&e.message)||e), { where: "buildIdbBackup" }); }catch(_e){}
+          })
         ));
       }).then(() => resolve(out), () => resolve(out));
     })
@@ -40385,8 +40781,13 @@ function _diagIssueUrl(){
   }
   return q + "&body=" + encodeURIComponent("（诊断报告过长，请点「复制诊断报告」后粘贴到正文）");
 }
-/** 提交反馈：复制完整报告（尽力而为）+ 打开预填 Issue 页。全程不发起任何 fetch/XHR。 */
-function openDiagIssue(){
+/** 提交反馈：复制完整报告（尽力而为）+ 打开预填 Issue 页。全程不发起任何 fetch/XHR。
+ *  ⚠️ **async（R-37，2026-10-27）**：`copied` 过去是**无条件置真**的 ——
+ *    `writeText(report).then(function(){}, function(){}); copied = true;`
+ *  两个处理器都是空的，成败一律不区分，于是剪贴板被拒时返回值与 toast 都谎报「完整报告已复制」
+ *  （假回执，台账 R-34 同族）。现在**等写盘落地**才敢说复制成功。
+ *  顺序上有意为之：`window.open` 必须在 await 之前 —— 用户手势在 await 之后可能失效（弹窗被拦）。 */
+async function openDiagIssue(){
   let report = "";
   try{ report = buildDiagReport(); }catch(e){ report = ""; }
   let url = "";
@@ -40394,13 +40795,6 @@ function openDiagIssue(){
     try{ toast(t("about.diagIssueFail", "无法打开反馈页，请手动访问项目仓库新建 Issue"), "warn"); }catch(e2){}
     return { ok:false, opened:false, copied:false, url:"", error:String((e && e.message) || e) };
   }
-  let copied = false;
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(report).then(function(){}, function(){});
-      copied = true;
-    }
-  }catch(e){}
   let opened = false;
   try{
     /* Electron 下外链由主进程的协议白名单转交系统浏览器（见 electron/main.js _openExternalSafe），
@@ -40408,6 +40802,14 @@ function openDiagIssue(){
     window.open(url, "_blank", "noopener");
     opened = true;
   }catch(e){}
+  /* R-37：等到写盘真的落地才置真 —— 被拒/不支持时 copied 保持 false，回执不再说谎 */
+  let copied = false;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(report);
+      copied = true;
+    }
+  }catch(e){ copied = false; }
   try{
     if(opened && copied) toast(t("about.diagIssueOk", "反馈页已打开 · 完整报告已复制，可直接粘贴补全"), "ok");
     else if(opened) toast(t("about.diagIssueNoCopy", "反馈页已打开 · 请点「复制诊断报告」后粘贴正文"), "warn");
@@ -40446,7 +40848,13 @@ function openDiagIssue(){
   }
   if(btnIssue){
     btnIssue.onclick = function(){
-      try{ openDiagIssue(); }
+      /* R-37：openDiagIssue 现为 async —— 同步 try/catch 接不到它的 rejection，必须挂 .catch */
+      try{
+        const r = openDiagIssue();
+        if(r && typeof r.catch === "function"){
+          r.catch(function(e){ try{ pushDiag("error", "openDiagIssue failed: " + ((e && e.message) || e), { where: "diagPanel" }); }catch(e2){} });
+        }
+      }
       catch(e){ try{ pushDiag("error", "openDiagIssue failed: " + ((e && e.message) || e), { where: "diagPanel" }); }catch(e2){} }
     };
   }
@@ -53336,6 +53744,7 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     agentExecAsync, toolWebSearch, toolWebFetch, toolCodeRun, toolSqlQuery,
     DataKeyRegistry: DATA_KEY_REGISTRY, dataKeyRegistered, bareKeyRegistered,   /* v3.7.148 键注册表（tests/data-keys-registry 用） */
     dataKeyMeta, dataKeySyncAllowed, backupExcludedKeys, exportExcludedKeys,   /* v3.7.148：同步/备份派生判据；B2d（2026-10-26）：导出排除同源派生（tests/sync-key-policy 用） */
+    listSubAgents, getSubAgent, runSubAgent, spawnAgentImpl, _resetSubAgents,   /* Multi-Agent P1（2026-10-26）：子代理运行时（tests/subagent 用） */
     ragInit, getRagDocs, saveRagDocs, ragIndexAdd, ragIndexRemove, ragSearch,
     ragTokenize, ragLexicalTop, ragHybridSearch, ragVectorSearch, aiEmbedTexts, ragCosine,
     ragInjectContext, ragReindex,
