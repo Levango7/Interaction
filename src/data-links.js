@@ -516,8 +516,10 @@ let _sessions = null;   // 懒加载；getSessions() 才从 LS 读 + 迁移
 let _activeSid = null;  // 当前激活的 session id
 function _nowIso(){ return new Date().toISOString(); }
 function _genSid(){ return "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8); }
-function _saveSessions(){ try{ save(SESSIONS_KEY, _sessions); }catch(_){ /* noop */ } }
-function _saveActiveSid(){ try{ save(ACTIVE_SESS_KEY, _activeSid || ""); }catch(_){ /* noop */ } }
+function _saveSessions(){ try{ save(SESSIONS_KEY, _sessions); }catch(_){ /* noop —— 但会话列表没落盘：这段对话刷新后就没了，用户会误以为是「自己没保存」 */
+  try{ if(typeof pushDiag === "function") pushDiag("warn", "sessions persist failed: "+((_&&_.message)||_), {where:"_saveSessions"}); }catch(_e2){} } }
+function _saveActiveSid(){ try{ save(ACTIVE_SESS_KEY, _activeSid || ""); }catch(_){ /* noop —— 但「当前会话」没记住：刷新后落到别的会话，用户会以为聊天串了 */
+  try{ if(typeof pushDiag === "function") pushDiag("warn", "active session persist failed: "+((_&&_.message)||_), {where:"_saveActiveSid"}); }catch(_e2){} } }
 /**
  * 从 LocalStorage 读取 Session 列表；首次启动从旧 chats[sc] 迁移
  * @returns {Array<{id:string,title:string,sc:string,createdAt:string,updatedAt:string,msgs:Array}>}
@@ -689,7 +691,8 @@ function _resetSessions(){ _sessions = null; _activeSid = null; }
 function _reloadChatsFromStorage(){
   try{
     ORDER.forEach(function(sc){ chats[sc] = _chatTag(load(PREFIX+"chat_"+sc, []).slice(-50), sc); });
-  }catch(_){ /* noop */ }
+  }catch(_){ /* noop —— 但导入/恢复后内存仍是旧消息，界面显示的是导入前的对话：与真相相反 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "chats reload after import failed (UI may show stale msgs): "+((_&&_.message)||_), {where:"_reloadChatsFromStorage"}); }catch(_e2){} }
 }
 
 /* ---------- v2.0 会话管理 UI（sessionModal：左列表 + 右预览） ---------- */
@@ -1421,7 +1424,8 @@ function _savePluginsState(){
       };
     });
     localStorage.setItem(PREFIX + "plugins", JSON.stringify(state));
-  }catch(e){ /* localStorage 不可用或配额耗尽：静默降级 */ }
+  }catch(e){ /* localStorage 不可用或配额耗尽：静默降级 —— 但插件启用状态会回到默认，用户会以为「刚才的开关没生效」 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "plugins state persist failed: "+((e&&e.message)||e), {where:"_savePluginsState"}); }catch(_e2){} }
 }
 
 /**
@@ -1441,7 +1445,8 @@ function _loadPluginsState(){
         _plugins[id].config = (state[id] && state[id].config) || {};
       }
     });
-  }catch(e){ /* 解析失败：保持默认状态 */ }
+  }catch(e){ /* 解析失败：保持默认状态 —— 但用户看到的是「插件全被禁用」，与「配置读坏了」是两件事 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "plugins state load failed (defaults used): "+((e&&e.message)||e), {where:"_loadPluginsState"}); }catch(_e2){} }
 }
 
 /**
@@ -1478,3 +1483,14 @@ function _initPlugins(){
 
 // 模块加载时自动初始化
 _initPlugins();
+
+/* ===== 测试出口（R-2 批次二）：会话/插件持久化此前无法从外部驱动 =====
+   `_saveSessions` / `_saveActiveSid` / `_savePluginsState` 都由 UI 动作间接触发，
+   `_reloadChatsFromStorage` 只在导入/恢复后调用一次，`_loadPluginsState` 由初始化调用 ——
+   于是这几处的失败留痕写不了行为测试。只挂出口，不改调用链、不改生产路径；
+   `window.__test` 仅测试门控下存在（与 ui-ge-api / ui-ge-* 同一做法）。 */
+if(typeof window !== "undefined" && window.__test){
+  Object.assign(window.__test, {
+    _saveSessions, _saveActiveSid, _savePluginsState, _loadPluginsState, _reloadChatsFromStorage,
+  });
+}

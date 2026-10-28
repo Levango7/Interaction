@@ -124,6 +124,34 @@
 
 ## [Unreleased]
 
+### 2026-10-29 · R-2 续集第二批：`ui-global-events` 3 处 + `data-links` 5 处（全仓 47 → 39）
+
+- **范围**：`ui-global-events.js` 3（主题键持久化 / PWA 已安装状态 / sw.showNotification 回退）、
+  `data-links.js` 5（会话列表落盘 / 当前会话 id / 导入后重载 chats / 插件状态存 / 插件状态读）。
+- **共同性质仍是「失败被渲染成了没做过」**：会话没落盘 ⇒ 刷新后对话消失，用户以为「自己没保存」；
+  当前会话没记住 ⇒ 刷新后落到别的会话，以为「聊天串了」；导入后内存未刷新 ⇒ 界面显示导入**之前**的消息
+  （与真相相反）；插件开关没落盘 ⇒ 回默认，以为「刚开的那下没生效」；插件配置读坏 ⇒ 显示「全被禁用」，
+  与「读不出来」是两件事；PWA 状态没记住 ⇒ 下次启动再提示安装；主题键没写进去 ⇒ 刷新回退
+  （同一句谎报的另一半，`cfg` 那条此前已单独修过）。
+- **刻意不动的 3 处（这是本批的判断，不是遗漏）**：`ui-backup-stats.js` 的 `:48` / `:1088` / `:401`。
+  前两条是**作者写了充分理由的降级**（`:48` 注释明写「已被上游 `_exportReadFailed` 点名，此处不重复报」；
+  `:1088` 写「展开偏好丢了无害、下次会重写」）；`:401` 是**判定器误判** —— 它的形态是
+  `.then(async …).catch(有完整留痕)`，`classify()` 只看 try 块正文（含 `await` 即判 P0）、不判外层是否已处理，
+  所以修好的代码仍被计为 P0（R-37 台账已记）。⇒ **不为凑数改它们**；这一条也说明「全仓 P0」这个数是上界，
+  真实待修 ≤ 计数（当前 39 里至少含这 1 条误判）。
+- **补的出口**：`data-links.js` 加 `_saveSessions` / `_saveActiveSid` / `_savePluginsState` / `_loadPluginsState` /
+  `_reloadChatsFromStorage` 到 `window.__test`（同 slice14 的做法，只挂出口、不改生产路径）。
+- **测试 `tests/empty-catch-slice15.test.js`（10 例）**：1 条真行为（`_savePluginsState` 用 mock
+  `Storage.prototype.setItem` 抛错驱动 + 反向对照）、`_reloadChatsFromStorage` 正常路径反向对照、
+  8 处契约锁（消息 / where / 二次保护）、计数锁（这两文件 P0=0、全仓 ≤ 39）、边界锁
+  （`ui-backup-stats` 那 3 条**保持原样**且有断言守着、`ui-ge-api:63` 仍是刻意保留的 P0、没改串文件）。
+- ⚠️ **一个如实记的待查项**：`_saveSessions` / `_saveActiveSid` 在 `__test` 上取到的是 `undefined` ——
+  同一次 `Object.assign` 里的另外三个都是 function，`__test` 共 640 个 key，说明挂载块**确实执行了**。
+  原因未查明（疑似被后续块对 `__test` 的 assign 覆盖，但只是推测）。所以这两处**只有契约锁**，
+  没做行为驱动；不做「看起来查过了」的假收口，留到有空时单独查。
+- 基线：逐文件精确重冻 `ui-global-events`（80 → 78）与 `data-links`（25 → 25），
+  工具自校验「其它文件 488 → 488 相等」；总数 593 → 591。
+
 ### 2026-10-29 · R-2 续集第一批：4 个 `ui-ge-*` 文件 8 处 P0 消解（全仓 55 → 47）
 
 - **范围**：`ui-ge-pomodoro.js` 2 · `ui-ge-theme.js` 2 · `ui-ge-calendar.js` 2 · `ui-ge-notes.js` 2。

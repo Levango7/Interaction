@@ -40,6 +40,22 @@
 
 ---
 
+### [2026-10-29 05:20 UTC+8] WorkBuddy 主会话 —— R-2 续集第二批（`ui-global-events` 3 + `data-links` 5）· **收工（释放）**
+- 状态：**已收工（释放）**。两批合计：全仓 P0 **55 → 39**。
+- 占用（已释放）：`src/ui-global-events.js`、`src/data-links.js`、`scripts/lint-empty-catch.baseline.json`
+  （只重冻这 2 个文件，工具自校验「其它文件 488 → 488 相等」）、`CHANGELOG.md` 的 `[Unreleased]`、
+  新增 `tests/empty-catch-slice15.test.js`、本板。
+- **刻意不动的 3 处（判断，不是遗漏）**：`ui-backup-stats.js` 的 `:48` / `:1088` 是**作者写了充分理由的降级**
+  （分别注明「已被上游 `_exportReadFailed` 点名，此处不重复报」「展开偏好丢了无害、下次会重写」）；
+  `:401` 是**判定器误判**（`.then(async…).catch(有留痕)` 因 `classify()` 只看 try 正文而被计 P0，R-37 已记）。
+  ⇒ 按 R-2 的分寸不硬改。**推论：全仓 P0 这 39 是上界，真实待修 ≤ 39（至少含这 1 条误判）。**
+- 基线 593 → 591（`ui-global-events` 80→78、`data-links` 25→25）。
+- **如实记一个待查项**：`data-links` 的 `_saveSessions` / `_saveActiveSid` 在 `__test` 上取到 `undefined`，
+  而同一次 `Object.assign` 的另外三个都是 function（`__test` 共 640 key，挂载块确实执行了）。
+  原因未查明，疑似被后续块 assign 覆盖 —— 所以这两处**只有契约锁**，没做行为驱动。留待单独查。
+- 验证：`lint` exit 0（9 warnings / 0 errors，未新增）· `build:check` exit 0 · `lint:empty-catch` exit 0 ·
+  slice15 **10 例绿**（含 1 条真行为 + 1 条正常路径反向对照）+ slice14 13 例仍绿。
+
 ### [2026-10-29 03:58 UTC+8] WorkBuddy 主会话 —— R-2 续集第一批（4 文件 8 条）· **收工（释放）**
 - 状态：进行中
 - 占用：`src/ui-ge-pomodoro.js`、`src/ui-ge-theme.js`、`src/ui-ge-calendar.js`、`src/ui-ge-notes.js`

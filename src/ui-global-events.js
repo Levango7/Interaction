@@ -1765,7 +1765,8 @@ if(_cfgThemeSel){
       try{ save(PREFIX+"cfg", cfg); }catch(e){
         try{ if(typeof pushDiag === "function") pushDiag("warn", "theme cfg persist failed: "+((e&&e.message)||e), {where:"cfgThemeSel.onchange"}); }catch(_e2){}
       }
-      try{ localStorage.setItem(PREFIX + "theme", "system"); }catch(e2){ /* 静默降级 */ }
+      try{ localStorage.setItem(PREFIX + "theme", "system"); }catch(e2){ /* 静默降级 —— 上面那条只覆盖 cfg，主题键写不进去同样「刷新回退」，是同一句谎报的另一半 */
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "theme key persist failed: "+((e2&&e2.message)||e2), {where:"cfgThemeSel.onchange/themeKey"}); }catch(_e3){} }
       applyTheme();
       try{ toast(t("theme.switchedSystem","已切换为跟随系统主题"), "ok"); }catch(e){}
     }else{
@@ -2103,7 +2104,8 @@ function initInstallPrompt(){
     hideInstallModal();
     try { toast(t("pwa.installedToDesktop","已安装到桌面，可从桌面快捷启动"), "ok"); } catch(e){ /* noop */ }
     // 记录已安装状态（持久化，下次启动不再提示）
-    try { save(PREFIX + "pwa_installed", { ts: Date.now() }); } catch(e2){ /* noop */ }
+    try { save(PREFIX + "pwa_installed", { ts: Date.now() }); } catch(e2){ /* noop —— 但「已安装」没记住：下次启动还会再提示安装，用户会以为上次没装上 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "pwa_installed persist failed: "+((e2&&e2.message)||e2), {where:"appinstalled"}); }catch(_e3){} }
   });
 }
 
@@ -2228,7 +2230,8 @@ async function sendTestPushNotification(){
           });
           return { ok: true };
         }
-      } catch(e){ /* 降级 */ }
+      } catch(e){ /* 降级 —— 走下面的普通 Notification 回退；但回退也可能失败，失败时用户只看到「没弹通知」，原因要查得到 */
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "sw showNotification failed, falling back: "+((e&&e.message)||e), {where:"testNotification"}); }catch(_e3){} }
     }
     new Notification(t("app.name") + t("pwa.testNotifySuffix"," · 测试通知"), {
       body: t("pwa.testNotifyBody","如果你看到这条通知，说明 Web Push 框架工作正常。"),
