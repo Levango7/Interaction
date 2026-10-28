@@ -40,6 +40,19 @@
 
 ---
 
+### [2026-10-29 05:50 UTC+8] WorkBuddy 主会话 —— R-2 续集第三批（3 条）+ 「不该修」清单 · **收工（释放）**
+- 状态：**已收工（释放）**。三批合计：全仓 P0 **55 → 36**。
+- **本批重点不是那 3 条修，而是一份「不该修」清单**（7 组，逐条读过源码注释）：`ui-drawer` 5 ·
+  `ui-backup-stats` 3（含 1 条判定器误判）· `ui-ge-api:63` · `ui-onboarding:127` · `ui-daily:111` ·
+  `core-i18n:10` · `ai-loop:328`。⇒ **全仓 P0 是上界，真实待修 ≤ 36。**
+  这份清单已变成断言（slice16 ③ 的最后一条）—— 那 6 个文件的 P0 数一变就红，逼后来者先读理由。
+- 另：本轮把上一笔为 5 个文件补的 **14 个多余测试出口全部撤回**（顶层 `function` 本就在 window 上），
+  规矩落进 `AGENTS.md` **R12**。src 净减少 50 行，测试改用 `win.xxx` 后仍全绿。
+- 验证：`lint` exit 0（9 warnings / 0 errors，未新增）· `build:check` exit 0 ·
+  slice16 **6 例** + slice14 **13 例** + slice15 **11 例**全绿。
+- 释放：`data-rw.js` / `chain.js` / `ui-palette.js` / `scripts/lint-empty-catch.baseline.json` /
+  `CHANGELOG.md` / 新增 `tests/empty-catch-slice16.test.js` / 本板。
+
 ### [2026-10-29 05:20 UTC+8] WorkBuddy 主会话 —— R-2 续集第二批（`ui-global-events` 3 + `data-links` 5）· **收工（释放）**
 - 状态：**已收工（释放）**。两批合计：全仓 P0 **55 → 39**。
 - 占用（已释放）：`src/ui-global-events.js`、`src/data-links.js`、`scripts/lint-empty-catch.baseline.json`

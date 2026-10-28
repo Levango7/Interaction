@@ -523,7 +523,8 @@ function getDeviceId(){
   try { id = localStorage.getItem(PREFIX + "deviceId") || ""; } catch(e){ id = ""; }
   if(!id){
     id = "dev-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 */ }
+    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 —— 但设备 ID 存不住 ⇒ 每次启动重新生成，跨设备同步会把同一台机器认成「新设备」，去重与设备列表都会错乱 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "deviceId persist failed (regenerated next load): "+((e&&e.message)||e), {where:"getDeviceId"}); }catch(_e2){} }
   }
   return id;
 }

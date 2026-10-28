@@ -211,7 +211,8 @@ function buildCmds(q){
           sub: s.desc || s.prompt.slice(0,40), group:t("cmd.skill","技能"),
           run:function(){ if(typeof sendChatText === "function") sendChatText(t("cmd.skillInvoke","技能：")+s.name); } });
       });
-    }catch(_e){ /* 技能数据异常时命令面板照常工作，不连带拖垮 */ }
+    }catch(_e){ /* 技能数据异常时命令面板照常工作，不连带拖垮 —— 但技能区会整段消失，用户会以为「我没存过技能」 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "skills block skipped in palette: "+((_e&&_e.message)||_e), {where:"paletteSkills"}); }catch(_e2){} }
   }
   const items=acts.concat(scs, tasks, tools, skills);
   if(q){

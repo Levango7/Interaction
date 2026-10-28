@@ -23,7 +23,8 @@ function _emitTaskEvent(type, task){
     evs.push(ev);
     if(evs.length > TASK_EVENTS_MAX) evs.splice(0, evs.length - TASK_EVENTS_MAX);
     save(TASK_EVENTS_KEY, evs);
-  }catch(_e){ /* 事件日志写失败不阻塞业务 */ }
+  }catch(_e){ /* 事件日志写失败不阻塞业务 —— 但任务链的历史是这条日志撑起来的，丢了就是「看不见发生过什么」，与「没发生过」分不清 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "task event log persist failed: "+((_e&&_e.message)||_e), {where:"_emitTaskEvent"}); }catch(_e2){} }
 }
 /* v3.7.17（解耦 S4）：任务完成动作注册到桥接（整体赋值，保留签名与返回值），供低层受控调用 */
 AppBridge.completeTask = completeTask;

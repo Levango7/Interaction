@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-28",
-  "count": 591,
+  "count": 592,
   "items": [
     {
       "file": "ai-loop.js",
@@ -765,19 +765,20 @@
     },
     {
       "file": "chain.js",
-      "line": 26,
-      "sig": "2e7f500a5d",
-      "bhash": "01f4b9d5b4",
+      "line": 27,
+      "sig": "d5b3c869fe",
+      "bhash": "d7d870c3f1",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 事件日志写失败不阻塞业务 */",
-      "snippet": "if(!task || !task.id) return; const ev = { type: type, sc: task.sc || "
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"task event log pe",
+      "kind": "catch"
     },
     {
       "file": "chain.js",
-      "line": 66,
+      "line": 67,
       "sig": "7d13c1a882",
       "bhash": "bdcfb7441e",
       "occ": 1,
@@ -785,11 +786,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "const ts = $$(\"#toasts .toast\"); if(ts.length) ts[ts.length-1].classLi"
+      "snippet": "const ts = $$(\"#toasts .toast\"); if(ts.length) ts[ts.length-1].classLi",
+      "kind": "catch"
     },
     {
       "file": "chain.js",
-      "line": 352,
+      "line": 353,
       "sig": "04c8b9b6cc",
       "bhash": "e2327e8973",
       "occ": 1,
@@ -797,7 +799,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 忽略损坏缓存 */",
-      "snippet": "const cached = load(COACH_CACHE_KEY, null); if(cached && cached.ts && "
+      "snippet": "const cached = load(COACH_CACHE_KEY, null); if(cached && cached.ts && ",
+      "kind": "catch"
     },
     {
       "file": "core-i18n.js",
@@ -1628,11 +1631,25 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* 索引不阻塞写路径 */",
-      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"task\"); }"
+      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"task\"); }",
+      "kind": "catch"
     },
     {
       "file": "data-rw.js",
-      "line": 182,
+      "line": 119,
+      "sig": "f500ac7f2f",
+      "bhash": "3798ebfcf9",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 索引失败不阻塞撤销 */",
+      "snippet": "emitDataMutate(\"import\"); }",
+      "kind": "catch"
+    },
+    {
+      "file": "data-rw.js",
+      "line": 222,
       "sig": "34e507aaf2",
       "bhash": "2b7d82fdd9",
       "occ": 1,
@@ -1640,11 +1657,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* 索引不阻塞写路径 */",
-      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"rec\"); }"
+      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"rec\"); }",
+      "kind": "catch"
     },
     {
       "file": "data-rw.js",
-      "line": 213,
+      "line": 254,
       "sig": "358f373736",
       "bhash": "0714726fca",
       "occ": 1,
@@ -1652,11 +1670,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* 索引不阻塞写路径 */",
-      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"note\"); }"
+      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"note\"); }",
+      "kind": "catch"
     },
     {
       "file": "data-rw.js",
-      "line": 290,
+      "line": 336,
       "sig": "a3684d438c",
       "bhash": "00232aacf3",
       "occ": 1,
@@ -1664,11 +1683,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": false,
       "note": "/* toast 不可用时静默 */",
-      "snippet": "toast(t(\"backup.pausedToast\", \"自动备份已暂停：数据体积异常增大，请检查或导出清理\"), \"warn\"); }"
+      "snippet": "toast(t(\"backup.pausedToast\", \"自动备份已暂停：数据体积异常增大，请检查或导出清理\"), \"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "data-rw.js",
-      "line": 316,
+      "line": 362,
       "sig": "5d460b9251",
       "bhash": "65400bc228",
       "occ": 1,
@@ -1676,11 +1696,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": false,
       "note": "/* toast 不可用时静默 */",
-      "snippet": "toast(t(\"backup.failToast\", \"自动备份写入失败：{err}\").replace(\"{err}\", (e&&e.m"
+      "snippet": "toast(t(\"backup.failToast\", \"自动备份写入失败：{err}\").replace(\"{err}\", (e&&e.m",
+      "kind": "catch"
     },
     {
       "file": "data-rw.js",
-      "line": 342,
+      "line": 388,
       "sig": "e0cdb7167c",
       "bhash": "a16498f15f",
       "occ": 1,
@@ -1688,11 +1709,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "toast(t(\"backup.fallbackGenToast\", \"最新备份已损坏，已回退到第 {n} 上一代\").replace(\"{"
+      "snippet": "toast(t(\"backup.fallbackGenToast\", \"最新备份已损坏，已回退到第 {n} 上一代\").replace(\"{",
+      "kind": "catch"
     },
     {
       "file": "data-rw.js",
-      "line": 346,
+      "line": 392,
       "sig": "b55509c70b",
       "bhash": "0768d04e77",
       "occ": 1,
@@ -1700,11 +1722,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 降级明文 */",
-      "snippet": "initCrypto(); }"
+      "snippet": "initCrypto(); }",
+      "kind": "catch"
     },
     {
       "file": "data-rw.js",
-      "line": 401,
+      "line": 447,
       "sig": "bd7e760c54",
       "bhash": "d2e09e927d",
       "occ": 1,
@@ -1712,19 +1735,21 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* 诊断自身失败静默 */",
-      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"changelog write f"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"changelog write f",
+      "kind": "catch"
     },
     {
       "file": "data-rw.js",
-      "line": 480,
-      "sig": "815ae8ba09",
-      "bhash": "3c43ae74f0",
+      "line": 527,
+      "sig": "219c97d9be",
+      "bhash": "b7c710f692",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 静默降级 */",
-      "snippet": "localStorage.setItem(PREFIX + \"deviceId\", id); }"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"deviceId persist ",
+      "kind": "catch"
     },
     {
       "file": "render-entry.js",
@@ -7128,15 +7153,16 @@
     },
     {
       "file": "ui-palette.js",
-      "line": 214,
-      "sig": "ad3d01981d",
-      "bhash": "a4977851f6",
+      "line": 215,
+      "sig": "98ee311773",
+      "bhash": "973a309baf",
       "occ": 1,
-      "level": "P0",
-      "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 技能数据异常时命令面板照常工作，不连带拖垮 */",
-      "snippet": "if(typeof getPendingSkillOffer === \"function\" && getPendingSkillOffer("
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"skills block skip",
+      "kind": "catch"
     },
     {
       "file": "ui-scene-bind.js",
