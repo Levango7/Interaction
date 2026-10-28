@@ -22019,7 +22019,8 @@ async function ragSyncIncremental(){
         if(isNew) added++; else updated++;
       }
       /* 大批量走批量回填而非逐条网络往返；本轮没补到的缺失向量由检索侧按需再补。 */
-      if(bigBatch){ try{ await ragEnsureVectors(Math.min(64, changed.length)); }catch(_){} }
+      if(bigBatch){ try{ await ragEnsureVectors(Math.min(64, changed.length)); }catch(_){ /* 批量回填失败 ⇒ 这一轮的新文档没有向量，检索会「搜不到刚加的内容」，与「没写过」分不清 */
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "rag batch backfill failed: "+((_&&_.message)||_), {where:"ragIndexSync/bigBatch"}); }catch(_e2){} } }
     }
     return { added, updated, removed };
   }finally{
@@ -22071,7 +22072,8 @@ async function ragReindex(){
   }
   /* 一次批量补齐所有缺失向量（配了 embedding 通道才有；没配就直接返回）。
      上限传 Infinity：重建场景要覆盖全表，而不是像启动期那样只补 20 条。 */
-  try{ await ragEnsureVectors(Infinity); }catch(_){}
+  try{ await ragEnsureVectors(Infinity); }catch(_){ /* 全表重建失败 ⇒ 重建完却仍缺向量，检索质量低于预期且无从察觉 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "rag full rebuild backfill failed: "+((_&&_.message)||_), {where:"ragRebuildAll"}); }catch(_e2){} }
   return count;
 }
 
@@ -22362,7 +22364,8 @@ function addTokensUsage(resp) {
     const ks = Object.keys(d.days).sort();
     while (ks.length > 90) { delete d.days[ks.shift()]; }
     localStorage.setItem(PREFIX + "ai_tokens", JSON.stringify(d));
-  } catch (e) { /* localStorage 不可用/解析失败：静默，不阻塞 AI 调用 */ }
+  } catch (e) { /* localStorage 不可用/解析失败：静默，不阻塞 AI 调用 —— 但 token 用量统计会漏记，账单/成本视图随之偏低 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "token usage not recorded: "+((e&&e.message)||e), {where:"_addTokenUsage"}); }catch(_e2){} }
 }
 
 /* v3.7.78 解耦：自别处下沉 */
