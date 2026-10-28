@@ -239,9 +239,14 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
     除留痕外把容器写成「加载失败」（复用已有 `errorState.defaultTitle`，不新增 i18n 键）。
   - 本批自曝一个真缺陷：首版把 DOM 写入放在二次保护之外 ⇒ 失败上报自身抛错，把被吞的错**升级成未处理拒绝**
     （在 `slice3` 里造出 5 条，用例全过但 `npm test` 退 1）。已修并钉成用例 ⑦。
-  - 验证：`tests/empty-catch-slice13.test.js` 8 例 + 相关回归 30 例；窄变异 A/B/C 各打中一个维度；
+  - 验证：`tests/empty-catch-slice13.test.js` 8 例 + 相关回归 30 例；全量 `209 文件 / 2220 条`绿、0 unhandled；
+    窄变异在**最终 8 例版本**上重跑：A 短路设备诊断 ⇒ 2 例红（①⑦ 共同断言这一维）；B 把可见文案写向不存在的 id ⇒ 1 例红（①）；
+    C 退回未二次保护 ⇒ 8 例全过却冒 2 条 Unhandled Rejection、退出码 1。
     基线用仓里既有的 `scripts/refreeze-baseline.mjs` **逐文件**精确重冻（其它文件 538 条一字未动），全仓 P0 **66 → 55**。
-  - **余下 54 处**（`ai-tools` 11、`data-links` 5、`ui-drawer` 5、`ui-ge-integrations` 5、`render-widgets` 4……）按同法继续切；
+  - **余下 55 处 / 21 个文件**（`d48d220` 现测，`node scripts/lint-empty-catch.mjs --report`：
+    `ai-tools` 11、`data-links` 5、`ui-drawer` 5、`ui-ge-integrations` 5、`render-widgets` 4、`ui-backup-stats` 3、
+    `ui-global-events` 3，其余 14 个文件各 1–2）按同法继续切；
+    `ui-ge-integrations` 是 WorkBuddy 常动的簇，排片时避开。
     每片仍遵守"先 `--report` 现扫、不信基线行号"与"逐文件重冻"。
 
 ### 等你拍板（不进批次，动一句就开工）
