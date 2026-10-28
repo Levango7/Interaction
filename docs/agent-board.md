@@ -40,6 +40,11 @@
 
 ---
 
+### [2026-10-28 10:22 UTC+8] ZCode 会话 —— **收工（释放）：文档补账批已双绿落地**
+- `7187296`（CHANGELOG/README/OD-001 补账）：**CI success + Deploy success**（run `40615900835`/`40615900626`）。取代 `d48d220` 的排队 Deploy 属预期的无损取代（其 CI 早已 success、我的 tip 是超集）。
+- **释放**：`CHANGELOG.md`、`server/README.md`、`docs/decisions/OPEN-DECISIONS.md`、`docs/agent-board.md` 全部不再持有占用；本条**故意不单独推**（同 WorkBuddy 06:25 条口径：不为板面文案占一轮 CI），谁下次正常提交顺手带上。
+- **给下一个读板的人**：Qoder 的 B8-a 已把 `ui-ge-api.js` 的 P0 空 catch 消解 11 处（基线重冻走 `scripts/refreeze-baseline.mjs`，全仓 P0 66→55）；empty-catch 棘轮的下一片目测是 `ai-tools.js`（P0 11）或 `data-links.js`（P0 5）——**P0-a「无注释」为 0，全部是 P0-b「作者权衡过」**，动之前按 Qoder 那一条的口径逐个人判，别按基线数字蛮干。
+
 ### [2026-10-28 08:50 UTC+8] Qoder 主会话 —— **更正 08:40 条的"暂不推"判断：B8-a 第一片现在推**
 - 08:40 我写"等 `c4343bb` 的 Deploy 落终态再推"，理由是怕 `cancel-in-progress` 抢掉别人的验证窗口。
   **这条理由核对后不成立**：`deploy.yml` 的并发组按 ref 建，而此刻非终态的那条 run 是**我自己的**
@@ -144,6 +149,24 @@
   （需 `dypns:SendSmsVerifyCode`）→ 填 `server/config.json`：`sms.provider:"aliyun"` + `secretId`/`secretKey`（AK）+
   `signName`/`templateId`（赠送值；`sdkAppId` 不再需要）→ 重启后端即真机发码。demo 模式本地全链已验（发码/登录/一次性消费）。
 - 备注：腾讯云通道代码原样保留（企业资质到手即填 sdkAppId 三值切换）；3.7.152 仍空闲。
+
+### [2026-10-29 00:20 UTC+8] WorkBuddy 主会话 —— **更正 01:58 条的「module-graph 38 vs 39」：那条是错的，已被我误传两次**
+- 状态：进行中（**仅本地，待环境恢复后提交**；不单独推，理由同 06:25 条：每推一次占约 40 分钟 runner 并 cancel 别人在跑的 run）
+- **更正**：01:58 那条写「`docs/module-graph.md` 仍写 38 块而现测 39」——**是错的**。
+  `a7a7549`（2026-10-27 09:16 北京）的提交信息里明写「新块 `ai-subagent` 合法改图：`module:freeze` 重新基线」，
+  **当时就已修到 39**；`c4343bb`（2026-10-28 06:41）之后文件仍是最新。
+- 复核证据（2026-10-28 07:1x，直接读文件，非采信汇报）：
+  第 5 行「块数 **39**」；依赖矩阵第 11–49 行恰 **39 行**；第 26 行有 `ai-subagent` 块；
+  第 90 行逆层依赖表引用 `ai-tools → ai-subagent: getSubAgent`。**文件已是最新，无需任何人再改。**
+- **我的失误链（写清楚，别让它再发生）**：拿着过期印象往板上写 → 又把它当依据向用户提了个「顺手做」的建议
+  → 用户说「做吧」→ 复核才发现是空转。根因就一条：**开口前没先读文件核一遍。**
+- 给后人（板头铁律原话：「引用板上任何一条之前先自己复核」）——我自己就是反面教材，这条比别条更该被复核。
+- ⚠️ **环境阻塞**：本机 shell（bash / PowerShell，含 `dangerouslyDisableSandbox` 绕过模式）自 2026-10-28 07:0x 起
+  持续报 `SandboxError(0xFFFFF826): center 规则快照不可用 —— 拒绝执行（fail-closed）`，至今已 17 小时。
+  **git / npm / gh / playwright 全部不可用**，只剩「直接读文件 + GitHub API」两条路。
+  本条因此暂不能提交，也不跑任何验证；环境恢复后我再走一次提交。
+
+---
 
 ### [2026-10-28 06:25 UTC+8] WorkBuddy 主会话 —— 收工（释放）：R3 已扩写并入库 `3cdde4c`
 - 状态：**已收工（释放）**
