@@ -19053,17 +19053,6 @@ function _initPlugins(){
 
 // 模块加载时自动初始化
 _initPlugins();
-
-/* ===== 测试出口（R-2 批次二）：会话/插件持久化此前无法从外部驱动 =====
-   `_saveSessions` / `_saveActiveSid` / `_savePluginsState` 都由 UI 动作间接触发，
-   `_reloadChatsFromStorage` 只在导入/恢复后调用一次，`_loadPluginsState` 由初始化调用 ——
-   于是这几处的失败留痕写不了行为测试。只挂出口，不改调用链、不改生产路径；
-   `window.__test` 仅测试门控下存在（与 ui-ge-api / ui-ge-* 同一做法）。 */
-if(typeof window !== "undefined" && window.__test){
-  Object.assign(window.__test, {
-    _saveSessions, _saveActiveSid, _savePluginsState, _loadPluginsState, _reloadChatsFromStorage,
-  });
-}
 /*SRC:data-links:END*/
 /*SRC:ai-tools:BEGIN*/
 // ===== AI Layer (AI 层·工具调用) =====
@@ -23384,7 +23373,8 @@ function getDeviceId(){
   try { id = localStorage.getItem(PREFIX + "deviceId") || ""; } catch(e){ id = ""; }
   if(!id){
     id = "dev-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 */ }
+    try { localStorage.setItem(PREFIX + "deviceId", id); } catch(e){ /* 静默降级 —— 但设备 ID 存不住 ⇒ 每次启动重新生成，跨设备同步会把同一台机器认成「新设备」，去重与设备列表都会错乱 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "deviceId persist failed (regenerated next load): "+((e&&e.message)||e), {where:"getDeviceId"}); }catch(_e2){} }
   }
   return id;
 }
@@ -23851,7 +23841,8 @@ function _emitTaskEvent(type, task){
     evs.push(ev);
     if(evs.length > TASK_EVENTS_MAX) evs.splice(0, evs.length - TASK_EVENTS_MAX);
     save(TASK_EVENTS_KEY, evs);
-  }catch(_e){ /* 事件日志写失败不阻塞业务 */ }
+  }catch(_e){ /* 事件日志写失败不阻塞业务 —— 但任务链的历史是这条日志撑起来的，丢了就是「看不见发生过什么」，与「没发生过」分不清 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "task event log persist failed: "+((_e&&_e.message)||_e), {where:"_emitTaskEvent"}); }catch(_e2){} }
 }
 /* v3.7.17（解耦 S4）：任务完成动作注册到桥接（整体赋值，保留签名与返回值），供低层受控调用 */
 AppBridge.completeTask = completeTask;
@@ -37915,7 +37906,8 @@ function buildCmds(q){
           sub: s.desc || s.prompt.slice(0,40), group:t("cmd.skill","技能"),
           run:function(){ if(typeof sendChatText === "function") sendChatText(t("cmd.skillInvoke","技能：")+s.name); } });
       });
-    }catch(_e){ /* 技能数据异常时命令面板照常工作，不连带拖垮 */ }
+    }catch(_e){ /* 技能数据异常时命令面板照常工作，不连带拖垮 —— 但技能区会整段消失，用户会以为「我没存过技能」 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "skills block skipped in palette: "+((_e&&_e.message)||_e), {where:"paletteSkills"}); }catch(_e2){} }
   }
   const items=acts.concat(scs, tasks, tools, skills);
   if(q){
@@ -48487,16 +48479,6 @@ try{
   AppBridge.importTheme = importTheme; AppBridge.getScenarioColors = getScenarioColors;
   AppBridge.saveScenarioColors = saveScenarioColors;
 }catch(e){}
-
-/* ===== 测试出口（R-2 批次）：`setTheme` 此前只能经 AppBridge 触达 =====
-   而 `AppBridge` 是 core.js 里的 `const`（约 :94），**从未挂到 window** ——
-   外部因此完全拿不到它，`theme:231/406` 的失败留痕也就写不了行为测试
-   （首版测试按 `win.AppBridge.setTheme()` 写，报的是看似「被测代码坏了」的
-   `Cannot read properties of undefined (reading 'setTheme')`，其实是没出口）。
-   只补这一个出口，**不动 AppBridge 的既有暴露面**（那是跨层契约，不归测试改）。 */
-if(typeof window !== "undefined" && window.__test){
-  Object.assign(window.__test, { setTheme, _resetThemeSystem });
-}
 /*SRC:ui-ge-theme:END*/
 /*SRC:ui-ge-pomodoro:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·专注与时间追踪) =====
@@ -48784,19 +48766,6 @@ function getTrackerState(){
 function getTaskTime(taskId){
   return _getTaskElapsed(taskId);
 }// ===== Calendar View (v1.6-B) =====
-
-/* ===== 测试出口（R-2 批次）：本块有两个函数此前**没有任何外部入口** =====
-   背景：`_savePomoCount` / `_saveTaskElapsed` 的失败留痕（R-2 切片）写不了行为测试 ——
-   触发链在私有作用域里（`_pomoTick` 要等计时器 tick 到 0 才会计数落盘）。
-   这里只为测试挂出口，**不新增业务逻辑、不改任何生产路径**；
-   `window.__test` 仅测试门控下存在（与 ui-ge-api 的挂载方式一致，不另造通道）。 */
-if(typeof window !== "undefined" && window.__test){
-  Object.assign(window.__test, {
-    _pomoTick,          /* 推进一步；循环约 POMO_FOCUS_MIN*60 次即跨过「专注完成」边界，触发计数落盘 */
-    _saveTaskElapsed,   /* 直接驱动「任务耗村落盘」的失败路径（无需等追踪器） */
-    getTaskTime,        /* 读取侧对照：写入失败时不得谎报已保存 */
-  });
-}
 /*SRC:ui-ge-pomodoro:END*/
 /*SRC:ui-ge-calendar:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·日历与可视化) =====
@@ -50553,14 +50522,6 @@ function getDueIcsReminders(now){
   return out;
 }
 try{ if(typeof AppBridge !== "undefined") AppBridge.getDueIcsReminders = getDueIcsReminders; }catch(e){ /* 桥未就绪：提醒不可用，日历不受影响 */ }
-
-/* ===== 测试出口（R-2 批次）：日历的「某日条目收集」此前无法从外部驱动 =====
-   `_evCollectDay` 只在 `openEventDetail` 里被调用，后者又依赖渲染出的 DOM 与事件绑定；
-   于是 `:1534/:1545` 那两处「读失败被渲染成『这天没有会议/任务』」的留痕写不了行为测试。
-   只补出口，不改调用链。 */
-if(typeof window !== "undefined" && window.__test){
-  Object.assign(window.__test, { _evCollectDay, openEventDetail });
-}
 /*SRC:ui-ge-calendar:END*/
 /*SRC:ui-ge-notes:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·笔记与知识库) =====
@@ -51634,14 +51595,6 @@ try{
   AppBridge.openSearchModal = openSearchModal;
   AppBridge.executeSearch = executeSearch;
 }catch(e){}
-
-/* ===== 测试出口（R-2 批次）：搜索与文本抽取此前无法从外部驱动 =====
-   `searchAll` 由搜索框输入触发、`_ragFileText` 要过整套文件导入链路；
-   于是 `:929`（搜索异常→结果不完整被读成「没有匹配」）与 `:577`（HTML 抽取失败→标签混进切块）
-   两处留痕写不了行为测试。只补出口，不改调用链。 */
-if(typeof window !== "undefined" && window.__test){
-  Object.assign(window.__test, { searchAll, _ragFileText });
-}
 /*SRC:ui-ge-notes:END*/
 /*SRC:ui-ge-integrations:BEGIN*/
 // ===== UI Layer (交互层·全局事件绑定·集成框架与废弃簇) =====
