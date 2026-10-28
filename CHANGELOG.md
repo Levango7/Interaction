@@ -161,6 +161,28 @@
     （不新造工具）：`ui-ge-api.js` 47 → 48 条（P0 少 11、多出二次保护的 P2 条目），
     **其它文件 538 条一字未动**，全仓总数 585 → 586；门禁复跑「无新增 P0」✓。
   - 全仓 P0 现测 **66 → 55**。
+### 2026-10-28 · 短信第二通道（个人免资质路线）+ 服务端验证封闭性（`a2edd9c` / `f3553a0` / `8b20942`）
+
+- **腾讯云这条路走到了墙**：2025-09 起国内短信签名实名制报备不收个人自用资质（工信部口径，运营商审核流程
+  不再接纳；用户无企业主体）——不是「再等等」，是**此路不通**。改接**阿里云短信认证服务**
+  （`Dypnsapi 2017-05-25` `SendSmsVerifyCode`）：个人实名**免资质、免签名审核**（用系统赠送签名/模板，
+  控制台抄值）。`sms.provider:"aliyun"` 一键切换，腾讯云分支原样保留（企业资质到手填 `sdkAppId` 三值即回）。
+- **接口契约决定改动面**：`ReturnVerifyCode=true` 让**验证码由阿里云生成**并随响应回传 ⇒ 本地的一次性消费 /
+  TTL / 冷却 / 限流逻辑**零改动**，只换发送通道。三个默认值坑显式钉死：`CodeLength=6`（默认 4 位会被
+  `/sms-login` 的 `^\d{6}$` 拒）、`CodeType=1`（占位符方式必填）、`ValidTime`（默认 300s，与本地 TTL 不对齐）。
+  `endpoint` 按 provider 兜底——抄 example 只切 provider 的人，出站不再打到腾讯域名。
+- **顺手真修一处**：四类验证码（邮箱注册 / 邮箱重置 / 短信 demo / 腾讯通道）生成用 `Math.random()`——
+  V8 的 xorshift 观察几百次输出即可预测，攻击者拿自己号码刷码学状态、可预测发往受害者号码的码。
+  统一升 `crypto.randomInt(100000, 1000000)`，语义不变（均匀 6 位）。
+- **服务端首批 vitest 直测** `tests/server-sms-providers.test.js`（7 例）：真 express + 真 router + 内存 store
+  + mock 出站 fetch；POP 签名用**独立实现**复算（与 server/verify 口径一致），另带**篡改负例**（改号码重签
+  必须对不上出站签名——被测与测试实现同时错时恒等，这条是唯一防线）。为此 CI 的 test 腿补装 `server/` 依赖
+  （`68e8fe4`）：根 vitest 此前从不装 server 依赖，服务端直测进了 CI 就是 0-test 红。
+- **verify 封闭性钩子**（`f3553a0` + `8b20942`）：`AGENT_WORKBENCH_USER_CONFIG` 让 spawn 的服务端**屏蔽本机
+  config.json**——个人密钥 + dev 逃生舱开关此前会污染「未配置 / 拒 loopback」类用例前提（CI 无此文件恒绿、
+  本机假红）。10/11 脚本接线（`config-check` 自带备份→写→还原，刻意排除），本机 276 例全绿。
+- 守护：`tests/server-sms-providers.test.js` 7 例；CI 四腿 + Deploy 双绿（`8b20942`）。配套文档同批补齐：
+  `server/README.md` 短信段（两 provider 的必填项 / endpoint 兜底 / 脚本计数 9→11）与 OD-001 结局。
 
 ### 2026-10-28 · B8-b：MCP 延迟读数上统计页（B6 主动推迟的那半）
 

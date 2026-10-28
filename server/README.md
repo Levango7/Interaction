@@ -15,7 +15,7 @@
 | 项 | 状态 |
 |---|---|
 | 与客户端（`agent-workbench.html`）联调 | ✅ **契约级 + 真机 UI 双通**：契约级 `verify/client-contract-check.cjs` 29/29；真机 UI `_probe/ui-backend-integration.mjs` 19/19（真 Chromium + 真后端 + 真表单，双 context 当两台设备，注册→上传→回读数据文件→跨设备拉取→错误密码负例）。客户端默认仍指向不存在的 `localhost:3001`，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**第三方登录另见 `verify/oauth-check.cjs` 33/33**（假 GitHub provider 全链路 + 微信演示模式全链路；v3.7.113 起 GitHub 未配凭据 → 503 `github_not_configured`，不再 404） |
-| 自动化测试 | ✅ **九个**自足验证脚本（`hardening-check` 9/9、`idor-check` 9/9、`client-contract-check` 29/29、`incremental-check` 54/54、`security-check` 25/25、`tools-fetch-check` 17/17、`oauth-check` 33/33、`router-isolation-check` 17/17、`config-check` 19/19，合计 **212**），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
+| 自动化测试 | ✅ **十一个**自足验证脚本（`hardening-check` 9/9、`idor-check` 13/13、`client-contract-check` 29/29、`incremental-check` 54/54、`security-check` 25/25、`tools-fetch-check` 17/17、`oauth-check` 33/33、`router-isolation-check` 17/17、`config-check` 19/19、`sms-check` 37/37、`password-reset-check` 42/42，合计 **295**），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
 | 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot` + **增量** `POST /api/sync/changes` / `/resolve`（全量 LWW / 增量含冲突策略，见 `docs/cloud-sync-incremental-contract.md`） |
@@ -118,21 +118,21 @@ config.json（本机用户配置，已在 .gitignore，勿提交）
 | github.enabled / clientId / clientSecret / redirectUri | `GITHUB__ENABLED` 等 | GitHub OAuth App 凭据 |
 | github.postMessageOrigin | `GITHUB__POSTMESSAGEORIGIN` | OAuth 回调页回传 token 的 `targetOrigin`。**默认 `"*"`（任意站点可接收 token），生产必须改成自己的页面源** |
 | wechat.enabled / appid / secret | `WECHAT__ENABLED` 等 | 微信开放平台/公众号扫码凭据 |
-| sms.enabled / secretId / secretKey / sdkAppId / signName / templateId | `SMS__ENABLED` 等 | **短信验证码登录**（OD-001 选型 C）：腾讯云短信服务凭据 + 已审核的签名与模板。**六项缺一即 503 `sms_not_configured`**（fail-closed）；`countryCode` 默认 `+86`，**只认中国大陆号码**（1[3-9] 开头 11 位）——国际号段规则不同，不猜正则假装支持，发错号是按条计费的 |
+| sms.enabled / provider / secretId / secretKey / signName / templateId / sdkAppId | `SMS__ENABLED` 等 | **短信验证码登录**（OD-001 选型 C），两条 provider：`provider:"tencent"`（默认）——腾讯云 `SendSms`，凭据六项（含 `sdkAppId`）+ **已审核**的签名与模板；`provider:"aliyun"`——阿里云**短信认证服务**（`SendSmsVerifyCode`），**个人实名免资质、免签名审核**（用系统赠送签名/模板，控制台抄值，**不需要 `sdkAppId`**）。两者各自的必填项缺一即 503 `sms_not_configured`（fail-closed）；`countryCode` 默认 `+86`，**只认中国大陆号码**（1[3-9] 开头 11 位）——国际号段规则不同，不猜正则假装支持，发错号是按条计费的 |
 
 > `config.json` 里 JSON 语法错误会**直接拒绝启动并指向该文件**（不静默按默认值跑）——
 > 「改了配置却没生效」这类不可诊断问题，宁可开箱报错也不放过。
 
 ## 配置加载的守护
 
-`verify/config-check.cjs`（v3.7.124 新增，已接入 CI，共 9 个服务端脚本）把上述语义钉成断言：
+`verify/config-check.cjs`（v3.7.124 新增，已接入 CI，现共 11 个服务端脚本）把上述语义钉成断言：
 config.json 生效 / 深合并保默认 / env 优先级最高 / 数组整份替换 / 坏 JSON fail loud，
 外加一条 HTTP 层差分对照（同一实例下基线回显请求源、配了之后固定回显，证明配置值真到了 express）。
 故障注入反证：把 config.json 分支短路成旧行为 → 6 条转红。
 | dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传（两者都是完整认证绕过），以及 **GitHub 兑换端点指向 loopback/私网**（`verify/oauth-check.cjs` 的假 provider 联调用）。**生产必须为 false** |
 | github.* | `GITHUB__*` | GitHub 登录（v3.7.113）：`enabled/clientId/clientSecret/redirectUri/postMessageOrigin`（targetOrigin 默认 `*`，生产应收紧成应用源）+ `scope`（默认 `read:user`，只读身份）。`authorizeBase/tokenUrl/userUrl` 默认真端点，**仅联调/自建网关才覆盖**；指向 loopback 需另开上面的 dev 开关，否则回调返 `forbidden_host`。`stateTtlSec` 授权票据有效期（默认 600s，一次性消费+过期惰性清扫） |
 | wechat.* | `WECHAT__*` | 微信扫码登录：当前为**演示模式**（无开放平台凭据也可跑通取码→确认→签发全链路；响应带 `demo:true` 自证）。`qrcodeTicketTtlSec` 票据有效期（默认 300s，过期即清）。正式接入见 roadmap 阶段④ |
-| sms.*（其余） | `SMS__*` | `region`（默认 `ap-guangzhou`）/ `endpoint`（默认 `https://sms.tencentcloudapi.com`，**指向 loopback 需开上面的 dev 开关**，否则 `sms_endpoint_forbidden`）/ `codeTtlSec`（验证码有效期，默认 600s，一次性消费）/ **`resendIntervalSec`（默认 60s：短信按条计费，同一号码冷却期内重发返 429 `sms_code_cooldown` 并带 `retryAfter`——固定窗口限流挡不住窗口边界的突刺，所以这道闸用码的真实签发时刻做判据）** / `timeoutMs`（默认 10000）/ `templateParamCount`（模板参数个数，2 时第二个参数是有效分钟数） |
+| sms.*（其余） | `SMS__*` | `region`（默认 `ap-guangzhou`）/ `endpoint`（**按 provider 兜底**：留空或抄了 example 里的腾讯字面量都没事——`provider:"aliyun"` 时自动改用 `https://dypnsapi.aliyuncs.com`，显式配了别的值则原样尊重；**指向 loopback 需开上面的 dev 开关**，否则 `sms_endpoint_forbidden`）/ `codeTtlSec`（验证码有效期，默认 600s，一次性消费）/ **`resendIntervalSec`（默认 60s：短信按条计费，同一号码冷却期内重发返 429 `sms_code_cooldown` 并带 `retryAfter`——固定窗口限流挡不住窗口边界的突刺，所以这道闸用码的真实签发时刻做判据）** / `timeoutMs`（默认 10000）/ `templateParamCount`（模板参数个数，2 时第二个参数是有效分钟数） |
 | security.rateLimit.* | `SECURITY__RATELIMIT__*` | 速率限制（v3.7.110，默认开）：`enabled/windowMs/max`（每 IP 每窗口 30 次，覆盖 email-code/register/login/sms-code/sms-login）+ `loginMax`（同邮箱或同号码 10 次）+ `emailCodeMax`（同邮箱 5 次）+ **`smsCodeMax`（同号码 5 次，按号码分桶：只留数字，故 `+86 138-0013-8000` 与 `13800138000` 是同一只桶）**。命中返 **429 + `rate_limited`**（带 `Retry-After`）；进程内计数，多实例各算各的 |
 | （无配置项） | `AUDIT_MAX` | 审计环上限，默认 200 条/用户（溢出丢最旧；是"近期活动"而非不可变归档） |
 | （无配置项） | `ALLOW_PLACEHOLDER_SECRETS` | 允许沿用占位 JWT 密钥启动（默认拒绝）。仅本地联调 |
@@ -153,7 +153,7 @@ config.json 生效 / 深合并保默认 / env 优先级最高 / 数组整份替�
 | GET/PUT | /me | 当前用户信息 |
 | GET/DELETE | /devices[/:id] | 登录设备管理 |
 | POST | /email-code | 发邮箱验证码（未配 SMTP 时返回 demoCode 供开发） |
-| POST | /sms-code | 发短信验证码（2026-10-23，OD-001 选型 C）。腾讯云 SendSms，服务端自算 TC3-HMAC-SHA256、**零新依赖**；未配置 → 503 `sms_not_configured`（fail-closed）；重发冷却 `sms.resendIntervalSec`（默认 60s，**按条计费**所以用码的真实签发时刻判据，不用固定窗口）；**不查该号是否已注册**（否则接口本身成了"这个号注册过没有"的枚举器） |
+| POST | /sms-code | 发短信验证码（2026-10-23，OD-001 选型 C）。两条 provider 均**零新依赖**（服务端自算签名）：腾讯云 `SendSms` 走 TC3-HMAC-SHA256；阿里云 `SendSmsVerifyCode`（2026-10-28 新增，个人免资质路线）走 POP RPC HMAC-SHA1，且 `ReturnVerifyCode=true` 让**验证码由阿里云生成并随响应回传**——本地一次性消费 / TTL / 冷却逻辑两条通道完全同构。阿里云路径显式钉 `CodeLength=6`（默认 4 位会被下文 `^\d{6}$` 拒）、`CodeType=1`（占位符方式必填）、`ValidTime`（与本地 TTL 对齐）。未配置 → 503 `sms_not_configured`（fail-closed）；重发冷却 `sms.resendIntervalSec`（默认 60s，**按条计费**所以用码的真实签发时刻判据，不用固定窗口）；**不查该号是否已注册**（否则接口本身成了"这个号注册过没有"的枚举器） |
 | POST | /sms-login | 短信码登录 / 首次即建号（find-or-create）。码**一次性消费**先于建号 |
 | POST | /password-reset-code | 发**密码重置**验证码（2026-10-24）。⚠️ 与 `/email-code` 的差别是刻意的：注册那条用 `email_exists` 拒绝已存在的邮箱（产品必需，否则用户填完整个表单才被拒），所以**枚举面收敛在注册这一处**；重置这条对「邮箱是否注册过」一个字都不漏 —— 存在与不存在返回**同一状态码、同一响应体**，且**发信失败也返回 200**（回 502 的话，"这个地址偶尔 502"本身就是存在性信号，失败详情只进服务端日志）。不做 per-address 冷却：冷却判据"这个地址刚发过码"本身就是存在性状态，给它对齐得给不存在的地址也写码，而 `security.rateLimit.resetCodeMax`（默认 5/分钟）已经覆盖。**只有 `provider==="email"` 的账号会真收到信** |
 | POST | /password-reset | 凭码改密（2026-10-24）。三步合一：校验并**一次性消费**码 → 重算 bcrypt → **吊销该用户全部 refreshToken**（`sessionsRevoked` 如实回给客户端）。最后一步不是可选项：忘记密码的真实场景里有一半是"密码可能已泄露"，只改 hash 不踢会话，攻击者手上的 refreshToken 还能续 30 天。**不自动登录**（不签发 token，少一处「重置即接管」窗口）。⚠️ 已知边界：accessToken（15 分钟）**无法吊销**，只能靠短 TTL 兜着 |

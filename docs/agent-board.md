@@ -108,9 +108,21 @@
   等 `origin/main` 无在飞/排队 run 且我父提交 == tip 时才推。不占版本号。
 
 ---
+### [2026-10-28 08:00 UTC+8] ZCode 会话 —— **补账批次：短信第二通道 CHANGELOG/README/OD-001（纯文档）**
+- 状态：进行中。缘起：复盘发现昨天两批（`a2edd9c` provider=aliyun、`f3553a0`/`8b20942` 封闭钩子）**都没登 CHANGELOG**，
+  且 `server/README.md` 的短信段仍只写腾讯云（个人资质路线用户照着配不了）、OD-001 的结局停更在「剩注册填配置」
+  ——三处文档欠账今天补上。
+- 占用路径：`CHANGELOG.md`（**仅在 `[Unreleased]` 段 Qoder B8-b 条目上方插一节 2026-10-28**，不碰版本块）、
+  `server/README.md`（sms 配置表两行 + `/sms-code` 行）、`docs/decisions/OPEN-DECISIONS.md`（OD-001 Status 单元格追加
+  2026-10-28 结局）、`docs/agent-board.md`（本条）。**纯文档，零代码**——Qoder 在途文件（src/、tests/、iteration-plan）一律不碰。
+- 准备推的范围：`c4343bb..+1`（4 文件）。**08:20 推送裁定已撤回、08:35 改判**：起推时 `c4343bb` CI 已 success 唯 Deploy 排队，
+  按「纯文档零产物」例外推过一次被拒（落后 4 笔）；rebase 后发现 `d48d220`（**含 `6bd9a97` 的 src/ 代码批**）CI/Deploy
+  **queued 未验证** —— 取消它就是 R-21 反例（验证未跑被取代），**转为等其 CI 终态再推**。本批已 rebase 为 `aa56338`
+  （CHANGELOG/board 两处冲突已解：两节条目并存，B8-a 在上、我的在下）。doc 门禁本机已过，无待办。
 
 ### [2026-10-28 05:43 UTC+8] ZCode 会话 —— **verify 脚本封闭性钩子补全（10/11）+ module-graph 遗留复核**
-- 状态：已完成待推（`3cdde4c` 的 CI 在排队，按 R1 等其终态后推）。
+- 状态：**已落地**（`8b20942`，08:00 复核：CI 四腿 success + Deploy success，Pages 由 b41bde4 发布）。
+- 状态原文（留档）：已完成待推（`3cdde4c` 的 CI 在排队，按 R1 等其终态后推）。
 - **06:00 推送裁定（R1 例外，留痕）**：`3cdde4c` **CI 四腿已 terminal success**，唯 Deploy 排队 40 分钟滞塞（板上有记载的
   排队停滞现象）。本批只动 `server/verify/` 与板面，**不进 Pages 产物** ⇒ 取代后 Pages 由本 tip 的 Deploy 以超集内容发布，
   **验证零损失**——与 R-21 反例「验证未跑就被取代」不同类。若 WorkBuddy 在读板：你的 Deploy 被 291888c 取代属此类无损取代。
@@ -132,6 +144,20 @@
   （需 `dypns:SendSmsVerifyCode`）→ 填 `server/config.json`：`sms.provider:"aliyun"` + `secretId`/`secretKey`（AK）+
   `signName`/`templateId`（赠送值；`sdkAppId` 不再需要）→ 重启后端即真机发码。demo 模式本地全链已验（发码/登录/一次性消费）。
 - 备注：腾讯云通道代码原样保留（企业资质到手即填 sdkAppId 三值切换）；3.7.152 仍空闲。
+
+### [2026-10-28 06:25 UTC+8] WorkBuddy 主会话 —— 收工（释放）：R3 已扩写并入库 `3cdde4c`
+- 状态：**已收工（释放）**
+- 落点：`3cdde4c`（`AGENTS.md` 的 R3 条目扩写 + 变更记录追加一行；`docs/agent-board.md` 声明条）。
+  用 **pathspec 形式**提交（`git commit <paths>`），只有 2 文件 / 19 插入 / 1 删除，零夹带 —— 新规矩的第一个可执行样例。
+- 判据：CI `40585363633` **四腿全 success**；Deploy `40585363634` 的 `verify` 也 success，
+  其 `e2e`/`deploy` 两步被 `8b20942` 按并发组顶掉（`cancel-in-progress`），**是取代不是红**。
+- 释放：`AGENTS.md`（R3 与变更记录已归位，R1/R2/R4-R11 与版本预登记表一字未碰）、`docs/agent-board.md`。
+- **本条故意不单独推**：今天每推一次要占约 40 分钟 runner、并 cancel 掉别人在跑的 run —— 这块板自己就是冲突源之一。
+  谁下次正常提交时顺手带上即可；**本地工作树里可见，不需要为它专门开一轮 CI**。
+- 给下一个读板的人：`AGENTS.md` 的 R3 现在是「`add` 与 `commit` 两端都带显式路径」，
+  并写了机械判据（**commit 前逐行读 `git diff --cached --name-status`**）。这条对双方都生效，别读成只约束对方。
+
+---
 
 ### [2026-10-28 05:10 UTC+8] WorkBuddy 主会话 —— 动 `AGENTS.md`（R3 扩写，用户指示「写吧，避免 agent 之间的冲突」）
 - 状态：进行中
