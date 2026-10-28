@@ -139,13 +139,20 @@
 - **基线**：`refreeze-baseline.mjs` 逐文件精确重冻，只动这 4 个文件（工具自校验「其它文件 530 → 530 相等」）。
   顺手查清两处既有偏差：`ui-ge-theme` 基线多 1 条幽灵条目（源码 10 / 基线 11）、
   `ui-ge-notes` 少 8 条从未入库的 P1/P2（源码 27 / 基线 19）；重冻后与源码逐条对齐（586 → 593）。
-- **已知欠账（别把绿读成行为已验证）**：本批**没有行为测试**，`tests/empty-catch-slice14.test.js`
-  是纯源码契约回归锁（6 例，含变异验证：破坏一处留痕 ⇒ 2 条断言当场红，恢复后转绿）。原因是实测出来的：
-  这 4 个文件都没有测试出口 —— 唯一看似有出口的 theme 走 `AppBridge`，而 `AppBridge` 是 `core.js:94` 的 `const`、
-  **从未挂到 window**（`grep -rn "window.AppBridge" src/` 零命中；实测 `win.AppBridge === undefined`）。
-  其余触发点在私有闭包（`_pomoTick` 要等计时器 tick、`_evCollectDay` 要经 `openEventDetail` 渲染、
-  `_ragFileText` 要过文件导入链路）。⇒ 锁得住「留痕被删 / where 写错 / P0 回涨」，
-  **锁不住「失败时真的调用到了」**。要补行为证明得先给这些模块加 `__test` 出口，那是另一笔事。
+- **测试出口（本批顺手补的，长期价值高于修这 8 处本身）**：这 4 个文件原本**没有任何外部入口** ——
+  唯一看似有出口的 theme 走 `AppBridge`，而 `AppBridge` 是 `core.js:94` 的 `const`、**从未挂到 window**
+  （`grep -rn "window.AppBridge" src/` 零命中）。首版测试因此报 `Cannot read properties of undefined
+  (reading 'setTheme')` —— 看着像被测代码坏了，其实是没出口。⇒ 按 `ui-ge-api` 的既有做法补 9 个出口到
+  `window.__test`（`setTheme` / `_resetThemeSystem` / `_pomoTick` / `_saveTaskElapsed` / `getTaskTime` /
+  `_evCollectDay` / `openEventDetail` / `searchAll` / `_ragFileText`），**只挂出口、不新增业务逻辑、
+  不改生产路径**，且 **`AppBridge` 的既有暴露面一字未动**（有断言守着，防后人为了测试去动跨层契约）。
+  ⇒ `tests/empty-catch-slice14.test.js` 从 6 例纯契约升级为 **13 例**：6 条**真行为**（theme 与 pomodoro
+  的失败留痕是真调用真断言 —— mock `Storage.prototype.setItem` 抛错；含各自的反向对照）+ 7 条契约/计数锁。
+  ⚠️ 射程要说清：calendar / notes 的**失败路径**仍未做到行为驱动（依赖在闭包链更深处），
+  这两处只有「正常路径不许有诊断」的反向对照 + 契约锁 —— **别把 13 例读成「8 处都已行为验证」**。
+- **变异验证做了两次，证明两把锁互补而非重复**：① 破坏`theme reset incomplete` 的留痕字符串 ⇒ 契约锁红；
+  ② **短路 `pushDiag` 调用但保留消息字符串** ⇒ 契约锁 8 条全绿、**只有行为断言红**。
+  后者是「行为测试抓的是效果、契约锁抓的是文本」的直接证据 —— 少了行为测试，这类「调用了但被短路」的回归会漏。
 - ⚠️ 顺手记一条结构问题（**我没动，避免大改**）：这个 `## [Unreleased]` 段落在 `[3.7.137]` 之后（约第 125 行），
   不在文件顶部 —— 新条目会越埋越深。建议下次发版整理时整段挪到顶部。
 

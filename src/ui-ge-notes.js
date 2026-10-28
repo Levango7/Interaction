@@ -1069,3 +1069,11 @@ try{
   AppBridge.openSearchModal = openSearchModal;
   AppBridge.executeSearch = executeSearch;
 }catch(e){}
+
+/* ===== 测试出口（R-2 批次）：搜索与文本抽取此前无法从外部驱动 =====
+   `searchAll` 由搜索框输入触发、`_ragFileText` 要过整套文件导入链路；
+   于是 `:929`（搜索异常→结果不完整被读成「没有匹配」）与 `:577`（HTML 抽取失败→标签混进切块）
+   两处留痕写不了行为测试。只补出口，不改调用链。 */
+if(typeof window !== "undefined" && window.__test){
+  Object.assign(window.__test, { searchAll, _ragFileText });
+}

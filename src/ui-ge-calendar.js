@@ -1752,3 +1752,11 @@ function getDueIcsReminders(now){
   return out;
 }
 try{ if(typeof AppBridge !== "undefined") AppBridge.getDueIcsReminders = getDueIcsReminders; }catch(e){ /* 桥未就绪：提醒不可用，日历不受影响 */ }
+
+/* ===== 测试出口（R-2 批次）：日历的「某日条目收集」此前无法从外部驱动 =====
+   `_evCollectDay` 只在 `openEventDetail` 里被调用，后者又依赖渲染出的 DOM 与事件绑定；
+   于是 `:1534/:1545` 那两处「读失败被渲染成『这天没有会议/任务』」的留痕写不了行为测试。
+   只补出口，不改调用链。 */
+if(typeof window !== "undefined" && window.__test){
+  Object.assign(window.__test, { _evCollectDay, openEventDetail });
+}

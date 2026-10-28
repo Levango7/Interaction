@@ -56,12 +56,19 @@
   `npm run build:check` exit 0、`tests/empty-catch-slice14.test.js` **6 例绿**；
   变异验证：破坏一处留痕 ⇒ 2 条断言当场红，恢复后转绿（证明锁有区分力，不是装饰）。
   基线 586 → 593，**其它文件 530 → 530 相等**（`refreeze-baseline.mjs` 自校验）。
-- **如实记一条欠账**：本批**没有行为测试**，只有源码契约回归锁。原因是实测出来的，不是图省事 ——
-  这 4 个文件都没有测试出口；唯一看似有出口的 theme 走 `AppBridge`，而 `AppBridge` 是 `core.js:94` 的 `const`、
-  **从未挂到 window**（`grep window.AppBridge` 零命中；实测 `win.AppBridge === undefined`，首版测试因此报
-  `Cannot read properties of undefined (reading 'setTheme')` —— 看着像被测代码坏了，其实是没出口）；
-  其余触发点在私有闭包（`_pomoTick` / `_evCollectDay` / `_ragFileText`）。
-  ⇒ 锁得住「留痕被删 / where 写错 / P0 回涨」，**锁不住「失败时真的调用到了」**。要补行为证明得先加 `__test` 出口。
+- **欠账已还（本批顺手补了测试出口）**：原计划只修 8 处、测试只能写契约锁 —— 因为这 4 个文件都没有外部入口；
+  唯一看似有出口的 theme 走 `AppBridge`，而 `AppBridge` 是 `core.js:94` 的 `const`、**从未挂到 window**
+  （首版测试因此报 `Cannot read properties of undefined (reading 'setTheme')`，看着像被测代码坏了，其实是没出口）。
+  ⇒ 补了 **9 个 `__test` 出口**：`setTheme` / `_resetThemeSystem` / `_pomoTick` / `_saveTaskElapsed` / `getTaskTime` /
+  `_evCollectDay` / `openEventDetail` / `searchAll` / `_ragFileText`。**只挂出口、不新增业务逻辑、不改生产路径**，
+  且 **`AppBridge` 的暴露面一字未动**（有断言守着，防后人为了测试去动跨层契约）。
+  ⇒ 测试从 6 例纯契约升级为 **13 例**：6 条真行为（theme / pomodoro 的失败留痕是真调用真断言 —— mock
+  `Storage.prototype.setItem` 抛错；含各自反向对照） + 7 条契约/计数锁。
+  ⚠️ 射程要说清：calendar / notes 的**失败路径**仍未行为驱动（依赖在闭包链更深处），
+  这两处只有「正常路径不许有诊断」的反向对照 + 契约锁 —— **别把 13 例读成「8 处都已行为验证」**。
+- **变异验证两次，证明两把锁互补而非重复**：① 破坏 `theme reset incomplete` 的留痕字符串 ⇒ 契约锁红；
+  ② **短路 `pushDiag` 调用但保留消息字符串** ⇒ 契约锁 8 条**全绿**、只有行为断言红。
+  后者是「行为测试抓效果、契约锁抓文本」的直接证据：少了行为测试，这种「代码还在但被短路」的回归会漏。
 - **顺手记（我没动，避免大改）**：`CHANGELOG.md` 的 `## [Unreleased]` 段落在 `[3.7.137]` 之后（约第 125 行）、
   不在文件顶部，新条目会越埋越深。建议下次发版整理时整段挪到顶部。
 - 释放：4 个 `src/` 文件、`scripts/lint-empty-catch.baseline.json`（只重冻这 4 个，其它一字未动）、
