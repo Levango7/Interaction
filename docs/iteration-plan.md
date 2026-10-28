@@ -243,7 +243,7 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
     窄变异在**最终 8 例版本**上重跑：A 短路设备诊断 ⇒ 2 例红（①⑦ 共同断言这一维）；B 把可见文案写向不存在的 id ⇒ 1 例红（①）；
     C 退回未二次保护 ⇒ 8 例全过却冒 2 条 Unhandled Rejection、退出码 1。
     基线用仓里既有的 `scripts/refreeze-baseline.mjs` **逐文件**精确重冻（其它文件 538 条一字未动），全仓 P0 **66 → 55**。
-  - **第二片**（`src/ai-tools.js` 11 → 5；WorkBuddy 两批先行落地，合并后全仓 **39 → 33**）：消解 6 处 `addTokensUsage` / `ragReindex` /
+  - **第二片**（`src/ai-tools.js` 11 → 5；WorkBuddy 四批先行落地（第四批与我这 3 处重叠 ⇒ 按他们已推的 `where` 命名落地），合并后全仓 **33 → 30**）：消解 6 处 `addTokensUsage` / `ragReindex` /
     `ragSyncIncremental` / `ragVecDelete` / `ragVectorSearch` / `chatOnceAgent`；保留 5 处并写明理由
     （`:926` 记忆孤儿清扫的注释核对后**成立**，两处工具结果非 JSON 前批已按判据④ 评估，图表回退文本、
     `notifications/initialized` 各因"看得见差异 / 会淹真信号"不动）。
