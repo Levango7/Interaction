@@ -21,6 +21,29 @@
    `git archive HEAD | tar -x -C _probe/<你的副本> && cd _probe/<你的副本> && npm ci`。
    另：注入钩子会改 `agent-workbench.html`，`post*` 的 `--extract` 在共享树上可能**静默销毁别人的 src 编辑**。
 
+## 文件占用登记表（**机械判定 · 动手前必跑**）
+
+> 板子原来只有「动手前声明一行」，靠人读全文比对 —— 一读漏就撞车（2026-10-28 双向各踩过一次）。
+> 这张表把它变成**可执行检查**：动手前跑一次，被他人占用就退出非零，冲突在动手之前暴露，而不是在合并时。
+>
+> ```bash
+> node scripts/claim-check.mjs src/ai-tools.js tests/foo.test.js   # 我要动的路径（默认身份 WorkBuddy）
+> node scripts/claim-check.mjs --list                              # 看当前全部 ACTIVE 占用
+> node scripts/claim-check.mjs --as Qoder src/ai-tools.js          # 换身份检查（验证别人会不会撞到我）
+> ```
+>
+> **规矩（R13）**：
+> 1. **动手前先跑检查**。被他人占 → **换文件**，或在下面追加一行「申请让开（REQUEST）」等对方释放。**不许硬上。**
+> 2. **认领**：追加一行，状态 `ACTIVE`。路径可逗号分隔、支持 `*` 通配。
+> 3. **释放**：收工时把自己那行改成 `RELEASED`（**只改自己的行**，别人的行不许动）。
+> 4. **占得越窄越好**：别写 `src/*.js` 把整块占掉；占得越久越坏，收工当天就释放。
+> 5. 已 `RELEASED` 且超过一天的行可以删掉，省得表越拖越长。
+
+| 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
+|---|---|---|---|---|
+| `src/ai-tools.js`, `tests/empty-catch-slice17.test.js` | WorkBuddy | 2026-10-29 06:30 | 本批提交后 | ACTIVE |
+| `scripts/claim-check.mjs`, `docs/agent-board.md`, `AGENTS.md` | WorkBuddy | 2026-10-29 06:30 | 本条提交后 | ACTIVE |
+
 ## 条目模板（复制这段往上加，最新的放最上面）
 
 ```
