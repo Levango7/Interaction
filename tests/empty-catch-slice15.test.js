@@ -14,14 +14,12 @@
  *   · sw.showNotification 失败转普通通知 ⇒ 回退也可能失败，失败时只看到「没弹通知」。
  *
  * 射程（照 slice14 的教训，先写清）：
- *   ① 组是**真行为**：data-links 的落盘函数经 `__test` 出口直接驱动，mock `Storage.prototype.setItem` 抛错；
+ *   ① 组是**真行为**：data-links 的落盘函数**直接经 window 全局调用**驱动（顶层 `function` 声明会自动
+ *      成为 window 属性 —— 2026-10-29 实测：这批函数 12/12 都在 `win.xxx` 上，**不需要 __test 出口**。
+ *      我一度给它们补了 5 个出口，查明后整段移除：为测试改生产代码，是侵入而不是能力）。
  *   ② 组是**契约锁**：ui-global-events 那 3 处绑在事件处理器内部（`cfgThemeSel.onchange` / `appinstalled` /
- *      试验通知），现有 jsdom 骨架里没有稳定入口，只有源码契约 + 各自的反向对照无法覆盖的失败路径。
+ *      试验通知），现有 jsdom 骨架里没有稳定入口。
  *   ⇒ **别把本文件读成「8 处都已行为验证」**：真行为只覆盖 data-links 的落盘面。
- *   ⚠️ 且落盘面里只有 `_savePluginsState` 做到了行为驱动：`_saveSessions` / `_saveActiveSid` 在 `__test` 上
- *      取到的是 undefined（同一次 `Object.assign` 里的另外三个都是 function，`__test` 共 640 个 key，
- *      说明挂载块**执行了**）。原因未查明 —— 疑似被后续块对 `__test` 的 assign 覆盖，但那是推测。
- *      为不阻塞本批，这两处**只有契约锁**；已作为待查项记进 CHANGELOG，不做「看起来查过了」的假收口。
  *
  * 另：本批**刻意不动** `ui-backup-stats.js` 的 3 处，因为它们是「作者写了充分理由的降级」——
  *   `:48` 注释明写「已被上游 _exportReadFailed 点名，此处不重复报」，`:1088` 写「展开偏好丢了无害、下次会重写」；
@@ -68,10 +66,27 @@ const breakStorage = () => {
 };
 
 describe("① 真行为 · data-links：落盘失败必须留痕，且不抛给调用方", () => {
+  it("会话列表落盘失败 → 调用不抛（留痕路径待查，见下方注释）", () => {
+    /* 前提：`_saveSessions` 写的是内存里的 `_sessions`，为 null 时 `save()` 会提前 return、
+       压根不碰 setItem —— 于是「存储坏了」这条路径根本走不到（首版就这么假失败过）。
+       所以先 getSessions() 把内存态填上，再断存储。 */
+    try { if (typeof win.getSessions === "function") win.getSessions(); } catch (_e) { /* 读失败不影响本用例：下面只看写 */ }
+    breakStorage();
+    let threw;
+    try { win._saveSessions(); } catch (e) { threw = (e && e.message) || String(e); }
+    expect(threw, "落盘失败不得抛给调用方 —— 聊天不该因为存储满了而中断").toBeUndefined();
+    /* ⚠️ 留痕断言**故意不写**，而这不是省事：本环境里 `save()` 封装层没把错误传出来，
+       所以 `_saveSessions` 的 catch 走不到、诊断不产生（实测两次）。而 `save()` 的定义
+       不在 core-shared / core / data-links 里，需单独定位才能判断它是「内部已留痕」还是「吞错」。
+       ⇒ 与其写一条永远拿不到诊断的假断言（那是把假绿写进测试），不如只锁能验证的性质（不抛），
+         并把「save 是否吞错」列为待查 —— 若它真吞错，`_saveSessions` 这条留痕就是**死代码**，
+         那时该改的是 `save()` 而不是这里。 */
+  });
+
   it("插件状态落盘失败 → 诊断点名 _savePluginsState", () => {
     breakStorage();
     let threw;
-    try { win.__test._savePluginsState(); } catch (e) { threw = (e && e.message) || String(e); }
+    try { win._savePluginsState(); } catch (e) { threw = (e && e.message) || String(e); }
     expect(threw).toBeUndefined();
     const hit = hasDiag(/plugins state persist failed/i);
     expect(hit, "不报的话，开关会回到默认，用户以为「刚才开的那下没生效」").toBeTruthy();
@@ -79,13 +94,15 @@ describe("① 真行为 · data-links：落盘失败必须留痕，且不抛给�
   });
 
   it("反向对照：正常落盘时不许出现这两条诊断（否则上面两条可能是恒真）", () => {
-    win.__test._savePluginsState();
-    expect(hasDiag(/plugins state persist failed/i), "正常路径混进失败诊断 = 把「永远报失败」当可观测").toBeFalsy();
+    win._saveSessions();
+    win._savePluginsState();
+    expect(hasDiag(/sessions persist failed|plugins state persist failed/i),
+      "正常路径混进失败诊断 = 把「永远报失败」当可观测").toBeFalsy();
   });
 
   it("_reloadChatsFromStorage 正常路径不报「导入后仍是旧消息」", () => {
     let err;
-    try { win.__test._reloadChatsFromStorage(); } catch (e) { err = (e && e.message) || String(e); }
+    try { win._reloadChatsFromStorage(); } catch (e) { err = (e && e.message) || String(e); }
     expect(err).toBeUndefined();
     expect(hasDiag(/chats reload after import failed/i)).toBeFalsy();
   });

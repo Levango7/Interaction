@@ -77,7 +77,7 @@ describe("① 真行为 · theme：持久化失败必须留痕，且切换照旧
   it("setItem 抛错 → 诊断点名 setTheme，且不得改成「失败就返回 false」", () => {
     breakStorage();
     let ret;
-    try { ret = win.__test.setTheme("dark"); } catch (e) { ret = "THREW:" + ((e && e.message) || e); }
+    try { ret = win.setTheme("dark"); } catch (e) { ret = "THREW:" + ((e && e.message) || e); }
     expect(ret, "持久化失败不得让主题切换返回 false —— 内存切换是原有语义，必须保住").not.toBe(false);
     const hit = hasDiag(/theme persist failed/i);
     expect(hit, "不报的话，刷新后主题回退，用户会以为「设置没生效」").toBeTruthy();
@@ -85,7 +85,7 @@ describe("① 真行为 · theme：持久化失败必须留痕，且切换照旧
   });
 
   it("反向对照：一切正常时不许出现这条诊断（否则上一条可能是恒真）", () => {
-    const ret = win.__test.setTheme("light");
+    const ret = win.setTheme("light");
     expect(ret, "正常路径应当成功").toBe(true);
     expect(hasDiag(/theme persist failed/i), "正常路径混进失败诊断 = 把「永远报失败」当可观测").toBeFalsy();
   });
@@ -95,7 +95,7 @@ describe("② 真行为 · pomodoro：任务耗时落盘失败必须留痕", () 
   it("setItem 抛错 → 诊断点名 _saveTaskElapsed，且调用本身不抛（控制流不变）", () => {
     breakStorage();
     let threw;
-    try { win.__test._saveTaskElapsed("t-r2", 9000); } catch (e) { threw = (e && e.message) || String(e); }
+    try { win._saveTaskElapsed("t-r2", 9000); } catch (e) { threw = (e && e.message) || String(e); }
     expect(threw, "落盘失败不得把异常抛给调用方 —— 计时器不该因为存储满了而崩").toBeUndefined();
     const hit = hasDiag(/task elapsed persist failed/i);
     expect(hit, "不报的话，累计耗时会静默回退到上次成功值，统计失真且无痕").toBeTruthy();
@@ -103,7 +103,7 @@ describe("② 真行为 · pomodoro：任务耗时落盘失败必须留痕", () 
   });
 
   it("反向对照：正常落盘时不报这条", () => {
-    win.__test._saveTaskElapsed("t-r2-ok", 1000);
+    win._saveTaskElapsed("t-r2-ok", 1000);
     expect(hasDiag(/task elapsed persist failed/i)).toBeFalsy();
   });
 });
@@ -111,7 +111,7 @@ describe("② 真行为 · pomodoro：任务耗时落盘失败必须留痕", () 
 describe("③ 真行为 · 正常路径的反向对照（calendar / notes 的失败路径未做到行为驱动，见文件头射程说明）", () => {
   it("_evCollectDay 正常返回数组，且不许有「收集失败」诊断", () => {
     let out, err;
-    try { out = win.__test._evCollectDay("2026-10-29"); } catch (e) { err = (e && e.message) || String(e); }
+    try { out = win._evCollectDay("2026-10-29"); } catch (e) { err = (e && e.message) || String(e); }
     expect(err, "_evCollectDay 不应抛错").toBeUndefined();
     expect(Array.isArray(out), "返回值应始终是数组（调用方直接 forEach）").toBe(true);
     expect(hasDiag(/day meetings collect failed|day tasks collect failed/),
@@ -120,7 +120,7 @@ describe("③ 真行为 · 正常路径的反向对照（calendar / notes 的失
 
   it("searchAll 正常返回结构，且不许有「搜索不完整」诊断", () => {
     let out, err;
-    try { out = win.__test.searchAll("zzz_no_match_zzz", {}); } catch (e) { err = (e && e.message) || String(e); }
+    try { out = win.searchAll("zzz_no_match_zzz", {}); } catch (e) { err = (e && e.message) || String(e); }
     expect(err, "searchAll 不应抛错").toBeUndefined();
     expect(out && typeof out.total, "返回值必须带 total（UI 直接用）").toBe("number");
     expect(hasDiag(/search partial/i), "正常路径不该报「结果不完整」").toBeFalsy();
@@ -197,9 +197,15 @@ describe("⑥ 反向对照：不该被动的地方没被动", () => {
     }
   });
 
-  it("测试出口只挂在 __test 上，不许污染生产 window（AppBridge 仍是 const、不额外暴露）", () => {
-    expect(win.__test, "测试门控下 __test 必须存在，否则上面所有行为测试都是空转").toBeTruthy();
-    const rawCore = readSrc("core.js");
-    expect(rawCore.includes("window.AppBridge"), "有人把 AppBridge 挂到 window 了 —— 那是跨层契约，不该为测试改").toBe(false);
+  it("顶层函数本来就在 window 上 —— 不该为了让测试能调而额外加 __test 出口", () => {
+    /* 2026-10-29 实测结论：顶层 `function` 声明会自动成为 window 属性。
+       我曾为这批函数补了 9 个 __test 出口，全部是多余的（后来整段移除）。
+       真正需要出口的只有 `const`/`let`（如 AppBridge）或闭包内部的函数。 */
+    for (const k of ["setTheme", "_resetThemeSystem", "_pomoTick", "_saveTaskElapsed", "getTaskTime",
+      "_evCollectDay", "openEventDetail", "searchAll", "_ragFileText"]) {
+      expect(typeof win[k], k + " 应直接在 window 上，不需要 __test 出口").toBe("function");
+    }
+    expect(readSrc("core.js").includes("window.AppBridge"),
+      "AppBridge 是 const、不该为测试挂到 window —— 那是跨层契约").toBe(false);
   });
 });

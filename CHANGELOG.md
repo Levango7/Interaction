@@ -124,6 +124,26 @@
 
 ## [Unreleased]
 
+### 2026-10-29 · **撤销前两笔补的 14 个测试出口** —— 实测「顶层 function 已在 window 上」，那些出口全是多余的
+
+- **起因**：slice15 有一条行为测试报 `win.__test._saveSessions is not a function`，而同一批另外几个正常。
+- **查证链**（每条都由实测推翻上一个假设，不是推理）：
+  ① 不是「被后续块 assign 覆盖」—— 改为逐项 `typeof` 安全挂载后，它**仍然**是 undefined；
+  ② 不是「对象字面量里某项未定义拖垮整句」—— 同上，安全挂载也没救回来；
+  ③ 文件里**没有** IIFE 边界，`_saveSessions` 定义处花括号深度为 0（真顶层）；
+  ④ 决定性一步：`win._saveSessions` **本来就是 function**。随后全量核对 —— 这批 12 个目标函数
+     **12/12 都在 `win` 上**（顶层 `function` 声明自动成为 window 属性）。
+- **结论**：前两笔为 5 个文件补的 **14 个出口全部多余**，已整段撤回；测试改用 `win.xxx` 直接调用 ——
+  slice14 **13 例**、slice15 **11 例**仍全绿。**为测试改生产代码是侵入，不是能力。**
+- **留下的规矩**：写进 `AGENTS.md` **R12** —— 补出口前先查 `typeof win.xxx`；只有 `const`/`let`（如 `AppBridge`）
+  或闭包内部的函数才需要暴露；确实要补时必须逐项 `typeof` 判断再 `Object.assign`，**不能写字面量**
+  （一项不在作用域内会让整句抛 `ReferenceError`、`Object.assign` 一句都不执行，表现为「挂了一半」甚至全无）。
+- **一个仍未解的问题（如实留，不假装收口）**：`_saveSessions` 的留痕在本环境**触发不到** ——
+  `save()` 封装层没有把错误传出来，而 `save()` 的定义不在 `core-shared` / `core` / `data-links` 里，
+  需单独定位才知道它是「内部已留痕」还是「吞错」。**若它真吞错，`_saveSessions` / `_saveActiveSid`
+  这两处留痕就是死代码**，那时该改的是 `save()` 本身，而不是这两处。
+  故该用例只锁「不抛」，**不写「诊断必产生」的假断言** —— 那是把假绿写进测试。
+
 ### 2026-10-29 · R-2 续集第二批：`ui-global-events` 3 处 + `data-links` 5 处（全仓 47 → 39）
 
 - **范围**：`ui-global-events.js` 3（主题键持久化 / PWA 已安装状态 / sw.showNotification 回退）、

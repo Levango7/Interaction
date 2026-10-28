@@ -283,16 +283,3 @@ function getTrackerState(){
 function getTaskTime(taskId){
   return _getTaskElapsed(taskId);
 }// ===== Calendar View (v1.6-B) =====
-
-/* ===== 测试出口（R-2 批次）：本块有两个函数此前**没有任何外部入口** =====
-   背景：`_savePomoCount` / `_saveTaskElapsed` 的失败留痕（R-2 切片）写不了行为测试 ——
-   触发链在私有作用域里（`_pomoTick` 要等计时器 tick 到 0 才会计数落盘）。
-   这里只为测试挂出口，**不新增业务逻辑、不改任何生产路径**；
-   `window.__test` 仅测试门控下存在（与 ui-ge-api 的挂载方式一致，不另造通道）。 */
-if(typeof window !== "undefined" && window.__test){
-  Object.assign(window.__test, {
-    _pomoTick,          /* 推进一步；循环约 POMO_FOCUS_MIN*60 次即跨过「专注完成」边界，触发计数落盘 */
-    _saveTaskElapsed,   /* 直接驱动「任务耗村落盘」的失败路径（无需等追踪器） */
-    getTaskTime,        /* 读取侧对照：写入失败时不得谎报已保存 */
-  });
-}

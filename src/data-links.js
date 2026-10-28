@@ -1483,14 +1483,3 @@ function _initPlugins(){
 
 // 模块加载时自动初始化
 _initPlugins();
-
-/* ===== 测试出口（R-2 批次二）：会话/插件持久化此前无法从外部驱动 =====
-   `_saveSessions` / `_saveActiveSid` / `_savePluginsState` 都由 UI 动作间接触发，
-   `_reloadChatsFromStorage` 只在导入/恢复后调用一次，`_loadPluginsState` 由初始化调用 ——
-   于是这几处的失败留痕写不了行为测试。只挂出口，不改调用链、不改生产路径；
-   `window.__test` 仅测试门控下存在（与 ui-ge-api / ui-ge-* 同一做法）。 */
-if(typeof window !== "undefined" && window.__test){
-  Object.assign(window.__test, {
-    _saveSessions, _saveActiveSid, _savePluginsState, _loadPluginsState, _reloadChatsFromStorage,
-  });
-}

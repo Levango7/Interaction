@@ -948,13 +948,3 @@ try{
   AppBridge.importTheme = importTheme; AppBridge.getScenarioColors = getScenarioColors;
   AppBridge.saveScenarioColors = saveScenarioColors;
 }catch(e){}
-
-/* ===== 测试出口（R-2 批次）：`setTheme` 此前只能经 AppBridge 触达 =====
-   而 `AppBridge` 是 core.js 里的 `const`（约 :94），**从未挂到 window** ——
-   外部因此完全拿不到它，`theme:231/406` 的失败留痕也就写不了行为测试
-   （首版测试按 `win.AppBridge.setTheme()` 写，报的是看似「被测代码坏了」的
-   `Cannot read properties of undefined (reading 'setTheme')`，其实是没出口）。
-   只补这一个出口，**不动 AppBridge 的既有暴露面**（那是跨层契约，不归测试改）。 */
-if(typeof window !== "undefined" && window.__test){
-  Object.assign(window.__test, { setTheme, _resetThemeSystem });
-}
