@@ -1531,7 +1531,8 @@ function _evCollectDay(dateKey){
       list.push({ title: m0.title || "", time: (m0.startTime || "") + (m0.endTime ? "–" + m0.endTime : ""),
         place: m0.place || m0.location || "", desc: m0.note || "", kind: t("p5.evKindMeeting", "会议（本地记录）") });
     });
-  }catch(e){ /* 无办公记录则跳过 */ }
+  }catch(e){ /* 无办公记录则跳过 —— 但「读失败」与「这天没会议」在界面上长得一样，必须留痕 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "day meetings collect failed: "+((e&&e.message)||e), {where:"_evCollectDay"}); }catch(_e2){} }
   try{
     (typeof getActiveTasks === "function" ? getActiveTasks() : []).forEach(function(tk){
       /* v3.7.86：参数名不用 t —— t 是本项目的 i18n 函数，遮蔽后 t("…") 会当对象调用并抛错 */
@@ -1542,7 +1543,8 @@ function _evCollectDay(dateKey){
       list.push({ title: tk.title || "", time: tk.due, place: "", desc: tk.note || "",
         kind: tk.status === "done" ? t("p5.evKindTaskDone", "任务（已完成）") : t("p5.evKindTask", "任务（未完成）") });
     });
-  }catch(e){ /* 任务读取失败则跳过 */ }
+  }catch(e){ /* 任务读取失败则跳过 —— 同上：空 ≠ 没有，否则用户会以为这天没有任务到期 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "day tasks collect failed: "+((e&&e.message)||e), {where:"_evCollectDay"}); }catch(_e2){} }
   const exts = (typeof _icsEventsByDate === "function") ? (_icsEventsByDate()[dateKey] || []) : [];
   exts.forEach(function(e0){
     list.push({ title: e0.title || "", time: _evTimeText(e0), place: e0.location || "", desc: e0.desc || "",

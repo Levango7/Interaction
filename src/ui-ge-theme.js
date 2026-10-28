@@ -228,7 +228,8 @@ function setTheme(themeId){
     if(typeof localStorage !== "undefined"){
       localStorage.setItem(PREFIX + "theme", themeId);
     }
-  }catch(e){ /* 静默降级 */ }
+  }catch(e){ /* 静默降级 —— 但刷新后主题会回退到旧值，用户会以为「设置没生效」 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "theme persist failed (reverts on reload): "+((e&&e.message)||e), {where:"setTheme"}); }catch(_e2){} }
 
   // 应用场景配色个性化
   _applyScenarioColors();
@@ -403,7 +404,8 @@ function _resetThemeSystem(){
       localStorage.removeItem(PREFIX + "custom_themes");
       localStorage.removeItem(PREFIX + "sc_colors");
     }
-  }catch(e){ /* noop */ }
+  }catch(e){ /* noop —— 但旧主题 / 自定义配色会残留在存储里，重置不彻底（下次启动可能被读回来） */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "theme reset incomplete: "+((e&&e.message)||e), {where:"_resetThemeSystem"}); }catch(_e2){} }
   const el = document.documentElement;
   if(el){
     el.removeAttribute("data-theme");

@@ -97,7 +97,8 @@ function _savePomoCount(){
     const d = JSON.parse(localStorage.getItem(PREFIX+"pomo_count") || "{}");
     d[today] = _pomoState.count;
     localStorage.setItem(PREFIX+"pomo_count", JSON.stringify(d));
-  }catch(e){ /* localStorage 不可用时静默降级 */ }
+  }catch(e){ /* localStorage 不可用时静默降级 —— 但今日番茄计数会丢：界面上的数与实际不符，且用户看不到原因 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "pomo count persist failed: "+((e&&e.message)||e), {where:"_savePomoCount"}); }catch(_e2){} }
 }
 /**
  * 内部：渲染笃行显示区（#pomoDisplay）。无 DOM 时 no-op（测试环境）
@@ -264,7 +265,8 @@ function _saveTaskElapsed(taskId, ms){
     const d = JSON.parse(localStorage.getItem(PREFIX+"task_time") || "{}");
     d[taskId] = ms;
     localStorage.setItem(PREFIX+"task_time", JSON.stringify(d));
-  }catch(e){ /* localStorage 不可用时静默降级 */ }
+  }catch(e){ /* localStorage 不可用时静默降级 —— 但任务累计耗时会回退到上次成功写入的值，统计失真且无痕 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "task elapsed persist failed: "+((e&&e.message)||e), {where:"_saveTaskElapsed"}); }catch(_e2){} }
 }
 /**
  * 获取追踪器当前状态快照（不暴露 timer 内部句柄）

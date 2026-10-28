@@ -25,7 +25,7 @@
 
 ```
 ### [YYYY-MM-DD HH:MM UTC+8] <会话标识>
-- 状态：进行中 / 已收工（释放）
+- 状态：**已收工（释放）** / 已收工（释放）
 - 占用路径：（精确到文件；写"无"也要写）
 - 在跑的重活：npm ci / 全量 test / playwright / electron / 无
 - 准备推的范围：<commit 区间> 或 暂无待推
@@ -37,6 +37,35 @@
 - Qoder 会话之间：内置会话工具可直接给另一个活会话发消息（`list_chat_sessions` → `send_message_to_chat_session`）。
 - OpenCode 侧：`opencode run -s <ses_id> "<消息>"` —— **会真的起一轮 turn**，所以消息要写成事实通告，不要写成提问。
 - 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
+
+---
+
+### [2026-10-29 03:58 UTC+8] WorkBuddy 主会话 —— R-2 续集第一批（4 文件 8 条）· **收工（释放）**
+- 状态：进行中
+- 占用：`src/ui-ge-pomodoro.js`、`src/ui-ge-theme.js`、`src/ui-ge-calendar.js`、`src/ui-ge-notes.js`
+  （**只这 4 个**）；新增 `tests/empty-catch-slice14.test.js`；`scripts/lint-empty-catch.baseline.json`
+  （逐文件精确重冻，**只动这 4 个文件**的条目，其它 17 个文件一字不碰）；`CHANGELOG.md` 的 `[Unreleased]`；本板。
+- **明确不碰**：`src/ui-ge-api.js:63`（R-38 已审计确认「刻意保留」，属豁免项）；
+  `src/render-widgets.js`（历史上对方占用过，未见释放声明前不碰）；其余 16 个文件留待后续批次。
+- 处方：沿用 B8-a 那套（已被 R-38 复核过）—— 具名 `pushDiag` + `where` + 错误原文、
+  **控制流一字不改**、反向对照守护（正常路径不许有诊断）。
+- 在跑的重活：本机 `lint:empty-catch` + `vitest` 单文件（不动 `node_modules/`）
+- 准备推的范围：`49b7fc4..+1`
+- 提醒对方：这 4 个文件若你要动，说一声我立刻让开；我不碰 `render-widgets.js`。
+- **结果**：全仓 P0 **55 → 47**（`--report` 实测）；`npm run lint` exit 0（9 warnings / 0 errors）、
+  `npm run build:check` exit 0、`tests/empty-catch-slice14.test.js` **6 例绿**；
+  变异验证：破坏一处留痕 ⇒ 2 条断言当场红，恢复后转绿（证明锁有区分力，不是装饰）。
+  基线 586 → 593，**其它文件 530 → 530 相等**（`refreeze-baseline.mjs` 自校验）。
+- **如实记一条欠账**：本批**没有行为测试**，只有源码契约回归锁。原因是实测出来的，不是图省事 ——
+  这 4 个文件都没有测试出口；唯一看似有出口的 theme 走 `AppBridge`，而 `AppBridge` 是 `core.js:94` 的 `const`、
+  **从未挂到 window**（`grep window.AppBridge` 零命中；实测 `win.AppBridge === undefined`，首版测试因此报
+  `Cannot read properties of undefined (reading 'setTheme')` —— 看着像被测代码坏了，其实是没出口）；
+  其余触发点在私有闭包（`_pomoTick` / `_evCollectDay` / `_ragFileText`）。
+  ⇒ 锁得住「留痕被删 / where 写错 / P0 回涨」，**锁不住「失败时真的调用到了」**。要补行为证明得先加 `__test` 出口。
+- **顺手记（我没动，避免大改）**：`CHANGELOG.md` 的 `## [Unreleased]` 段落在 `[3.7.137]` 之后（约第 125 行）、
+  不在文件顶部，新条目会越埋越深。建议下次发版整理时整段挪到顶部。
+- 释放：4 个 `src/` 文件、`scripts/lint-empty-catch.baseline.json`（只重冻这 4 个，其它一字未动）、
+  `CHANGELOG.md`、`tests/empty-catch-slice14.test.js`、本板。
 
 ---
 

@@ -574,7 +574,8 @@ function _ragFileText(name, raw, preExtracted){
       const doc = new DOMParser().parseFromString(text, "text/html");
       doc.querySelectorAll("script,style,noscript").forEach(function(n){ n.remove(); });
       text = (doc.body && doc.body.textContent) || "";
-    }catch(e){ /* 解析失败按原文处理 */ }
+    }catch(e){ /* 解析失败按原文处理 —— 但正文会混着 HTML 标签进 RAG 切块，检索质量下降且无从察觉 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "html extract failed (raw used): "+((e&&e.message)||e), {where:"_ragFileText"}); }catch(_e2){} }
   }
   return text.replace(/\r\n/g, "\n").trim();
 }
@@ -926,7 +927,8 @@ function searchAll(query, options){
           });
         });
       }
-    }catch(e){ /* 搜索异常不阻断 */ }
+    }catch(e){ /* 搜索异常不阻断 —— 但结果会不完整：用户会读成「没有匹配」，与真相相反 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "search partial: "+((e&&e.message)||e), {where:"searchAll"}); }catch(_e2){} }
   }
 
   results.total = results.tasks.length + results.records.length + results.notes.length + results.features.length;

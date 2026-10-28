@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-28",
-  "count": 586,
+  "count": 593,
   "items": [
     {
       "file": "ai-loop.js",
@@ -4975,7 +4975,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* CustomEvent 不可用时 no-op */",
-      "snippet": "const ev = new CustomEvent(\"cal:date-select\", { detail: { date: date }"
+      "snippet": "const ev = new CustomEvent(\"cal:date-select\", { detail: { date: date }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -4987,7 +4988,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "e.dataTransfer.setData(\"text/plain\", dragId); e.dataTransfer.effectAll"
+      "snippet": "e.dataTransfer.setData(\"text/plain\", dragId); e.dataTransfer.effectAll",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -4999,7 +5001,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "render(); }"
+      "snippet": "render(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5011,7 +5014,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "render(); }"
+      "snippet": "render(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5023,7 +5027,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "render(); }"
+      "snippet": "render(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5035,7 +5040,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "gs.focus(); }"
+      "snippet": "gs.focus(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5047,7 +5053,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "doExport(); }"
+      "snippet": "doExport(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5059,7 +5066,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "",
-      "snippet": "AppBridge.openMindmapModal = openMindmapModal; }"
+      "snippet": "AppBridge.openMindmapModal = openMindmapModal; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5071,7 +5079,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.openGanttModal = openGanttModal; }"
+      "snippet": "AppBridge.openGanttModal = openGanttModal; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5083,7 +5092,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.openDashboardModal = openDashboardModal; }"
+      "snippet": "AppBridge.openDashboardModal = openDashboardModal; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5095,7 +5105,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.bindCalendarEvents = bindCalendarEvents; }"
+      "snippet": "AppBridge.bindCalendarEvents = bindCalendarEvents; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5107,7 +5118,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.bindDashboardDnD = bindDashboardDnD; }"
+      "snippet": "AppBridge.bindDashboardDnD = bindDashboardDnD; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5119,7 +5131,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge._bindDashToolbar = _bindDashToolbar; }"
+      "snippet": "AppBridge._bindDashToolbar = _bindDashToolbar; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5131,7 +5144,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.renderCalendarView = renderCalendarView; }"
+      "snippet": "AppBridge.renderCalendarView = renderCalendarView; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
@@ -5143,11 +5157,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"p5.icsBulkFail\", \"批量更新失败\"), \"warn\"); }"
+      "snippet": "toast(t(\"p5.icsBulkFail\", \"批量更新失败\"), \"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1376,
+      "line": 1379,
       "sig": "30795702b8",
       "bhash": "bbb08f7e54",
       "occ": 1,
@@ -5155,11 +5170,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"p5.icsRenameFail\", \"重命名失败\"), \"warn\"); }"
+      "snippet": "toast(t(\"p5.icsRenameFail\", \"重命名失败\"), \"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1491,
+      "line": 1494,
       "sig": "8da10967ca",
       "bhash": "ba3e37734c",
       "occ": 1,
@@ -5167,11 +5183,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "URL.revokeObjectURL(url); }"
+      "snippet": "URL.revokeObjectURL(url); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1499,
+      "line": 1502,
       "sig": "ebfbb40557",
       "bhash": "0f994d180f",
       "occ": 1,
@@ -5179,35 +5196,38 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(okDl ? t(\"p5.icsExported\", \"已导出 .ics（可导入/订阅到任意日历 App）\") : t(\"p5."
+      "snippet": "toast(okDl ? t(\"p5.icsExported\", \"已导出 .ics（可导入/订阅到任意日历 App）\") : t(\"p5.",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1531,
-      "sig": "01682a34ea",
-      "bhash": "0fb10deb70",
+      "line": 1535,
+      "sig": "64773fc38b",
+      "bhash": "5818328ae2",
       "occ": 1,
-      "level": "P0",
-      "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 无办公记录则跳过 */",
-      "snippet": "(_meetingsByDate()[dateKey] || []).forEach(function(m0){ list.push({ t"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"day meetings coll",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1542,
-      "sig": "67f344fca5",
-      "bhash": "6646f076c4",
+      "line": 1547,
+      "sig": "3d0a65eea9",
+      "bhash": "0b1b549264",
       "occ": 1,
-      "level": "P0",
-      "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 任务读取失败则跳过 */",
-      "snippet": "(typeof getActiveTasks === \"function\" ? getActiveTasks() : []).forEach"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"day tasks collect",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1561,
+      "line": 1566,
       "sig": "e191b6c2dd",
       "bhash": "acaa3c959d",
       "occ": 1,
@@ -5215,11 +5235,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"p5.evDetailEmpty\", \"当日没有日程事件\"), \"info\"); }"
+      "snippet": "toast(t(\"p5.evDetailEmpty\", \"当日没有日程事件\"), \"info\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1706,
+      "line": 1711,
       "sig": "7e440efb04",
       "bhash": "5a6ab83a4d",
       "occ": 1,
@@ -5227,11 +5248,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "",
-      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"ICS 去重键清理失败：\" + ("
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"ICS 去重键清理失败：\" + (",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1743,
+      "line": 1748,
       "sig": "4a7b573180",
       "bhash": "510e04e1ea",
       "occ": 1,
@@ -5239,11 +5261,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "",
-      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"ICS 提醒去重标记写入失败（本会"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"ICS 提醒去重标记写入失败（本会",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-calendar.js",
-      "line": 1749,
+      "line": 1754,
       "sig": "bcf228c46a",
       "bhash": "1587edbc51",
       "occ": 1,
@@ -5251,7 +5274,8 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* 桥未就绪：提醒不可用，日历不受影响 */",
-      "snippet": "if(typeof AppBridge !== \"undefined\") AppBridge.getDueIcsReminders = ge"
+      "snippet": "if(typeof AppBridge !== \"undefined\") AppBridge.getDueIcsReminders = ge",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-integrations.js",
@@ -5482,7 +5506,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 回收站写入失败不影响删除 */",
-      "snippet": "addToRecycleBin(\"file\", t(\"p5.recordPrefix\", \"记录：「\")+(removed.title||r"
+      "snippet": "addToRecycleBin(\"file\", t(\"p5.recordPrefix\", \"记录：「\")+(removed.title||r",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
@@ -5494,7 +5519,8 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"p5.noteTitleRequired\", \"请输入笔记标题\"), \"warn\"); }"
+      "snippet": "toast(t(\"p5.noteTitleRequired\", \"请输入笔记标题\"), \"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
@@ -5506,7 +5532,8 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"p5.noteUpdated\", \"笔记已更新\"), \"ok\"); }"
+      "snippet": "toast(t(\"p5.noteUpdated\", \"笔记已更新\"), \"ok\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
@@ -5518,7 +5545,8 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"p5.noteCreated\", \"笔记已创建\"), \"ok\"); }"
+      "snippet": "toast(t(\"p5.noteCreated\", \"笔记已创建\"), \"ok\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
@@ -5530,11 +5558,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"p5.noteDeleted\", \"笔记已删除\"), \"ok\"); }"
+      "snippet": "toast(t(\"p5.noteDeleted\", \"笔记已删除\"), \"ok\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 528,
+      "line": 529,
       "sig": "e884d60a7e",
       "bhash": "83bc18baaa",
       "occ": 1,
@@ -5542,11 +5571,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t('p5.kbFilesDeleted', '文件已删除，其索引块将随之移除'), \"ok\"); }"
+      "snippet": "toast(t('p5.kbFilesDeleted', '文件已删除，其索引块将随之移除'), \"ok\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 537,
+      "line": 538,
       "sig": "e4aeb91c47",
       "bhash": "f992475a07",
       "occ": 1,
@@ -5554,35 +5584,77 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"p5.tagPrefix\", \"标签「\") + tag + t(\"p5.tagCountMid\", \"」共 \") + ta"
+      "snippet": "toast(t(\"p5.tagPrefix\", \"标签「\") + tag + t(\"p5.tagCountMid\", \"」共 \") + ta",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 571,
-      "sig": "116bdf062e",
-      "bhash": "b9229e3ff7",
+      "line": 578,
+      "sig": "6502696e79",
+      "bhash": "6993269894",
       "occ": 1,
-      "level": "P0",
-      "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 解析失败按原文处理 */",
-      "snippet": "const doc = new DOMParser().parseFromString(text, \"text/html\"); doc.qu"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"html extract fail",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 603,
-      "sig": "ecd2284221",
-      "bhash": "2bbdba064c",
+      "line": 626,
+      "sig": "d683edb212",
+      "bhash": "b20ae2a6f3",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 配置失败仍可走主线程回退 */",
+      "snippet": "window.pdfjsLib.GlobalWorkerOptions.workerSrc = _pdfjsUrl(\"pdf.worker.",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-ge-notes.js",
+      "line": 663,
+      "sig": "2320164db3",
+      "bhash": "e64ce0e89a",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 单页清理失败不阻塞结果 */",
+      "snippet": "page.cleanup(); }",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-ge-notes.js",
+      "line": 667,
+      "sig": "1e93ee4a49",
+      "bhash": "6b814ce4c4",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 关闭失败不阻塞结果 */",
+      "snippet": "doc.destroy(); }",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-ge-notes.js",
+      "line": 674,
+      "sig": "8606989d18",
+      "bhash": "1f89873c73",
       "occ": 1,
       "level": "P2",
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t('p5.kbFilesUnsupported', '暂不支持该类型（二进制如 PDF/DOCX 请先转成纯文本）'), \"w"
+      "snippet": "toast(t('p5.kbFilesUnsupported', '暂不支持该类型（支持纯文本、.docx、.pdf；扫描件请先做文字识别或",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 604,
+      "line": 675,
       "sig": "c1b298f9c6",
       "bhash": "e338e4faa9",
       "occ": 1,
@@ -5590,11 +5662,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t('p5.kbFilesTooBig', '文件过大（上限 256KB 文本），请拆分后导入'), \"warn\"); }"
+      "snippet": "toast(t('p5.kbFilesTooBig', '文件过大（上限 256KB 文本），请拆分后导入'), \"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 608,
+      "line": 679,
       "sig": "bf439c8939",
       "bhash": "e528bb483b",
       "occ": 1,
@@ -5602,11 +5675,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t('p5.kbFilesTooBig', '文件数已达上限'), \"warn\"); }"
+      "snippet": "toast(t('p5.kbFilesTooBig', '文件数已达上限'), \"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 617,
+      "line": 688,
       "sig": "3264821dcf",
       "bhash": "1064bdae57",
       "occ": 1,
@@ -5614,11 +5688,51 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* 索引不阻塞导入 */",
-      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"import\"); }"
+      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"import\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 637,
+      "line": 706,
+      "sig": "8572cbaed8",
+      "bhash": "a302ec9ac3",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "toast(t(\"p5.docxExtractFail\", \"无法解析该 .docx（\") + ((e && e.message) || e",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-ge-notes.js",
+      "line": 715,
+      "sig": "ba85af2383",
+      "bhash": "92f5f98d15",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "toast(t(\"p5.pdfEmpty\", \"PDF 中没有可提取的文字（可能是扫描件）；请先做文字识别，或改用「粘贴导入」\"), \"wa",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-ge-notes.js",
+      "line": 719,
+      "sig": "bc2edbf6eb",
+      "bhash": "8048d5d8f8",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "toast(t(\"p5.pdfExtractFail\", \"无法解析该 PDF（\") + ((e && e.message) || e) +",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-ge-notes.js",
+      "line": 736,
       "sig": "e26dc74433",
       "bhash": "70f7ebfa87",
       "occ": 1,
@@ -5626,11 +5740,38 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t('p5.kbFilesImported', '已入库：') + ok + t('p5.kbFilesCount', '个文件"
+      "snippet": "toast(t('p5.kbFilesImported', '已入库：') + ok + t('p5.kbFilesCount', '个文件",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 645,
+      "line": 775,
+      "sig": "38d6e47d8e",
+      "bhash": "fa69c694bb",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "toast(t(\"p5.kbPasteEmpty\", \"请先粘贴正文\"), \"warn\"); }",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-ge-notes.js",
+      "line": 778,
+      "sig": "76a3acd04d",
+      "bhash": "e0a78fc0f3",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "toast(t(\"p5.kbPasteDone\", \"已导入：\") + nm, \"ok\"); }",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-ge-notes.js",
+      "line": 790,
       "sig": "3264821dcf",
       "bhash": "1064bdae57",
       "occ": 2,
@@ -5638,23 +5779,25 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* 索引不阻塞 */",
-      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"import\"); }"
+      "snippet": "if(typeof emitDataMutate === \"function\") emitDataMutate(\"import\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 785,
-      "sig": "de65b64432",
-      "bhash": "ba0ff4798d",
+      "line": 931,
+      "sig": "c39b1e0c74",
+      "bhash": "fcd93f1b22",
       "occ": 1,
-      "level": "P0",
-      "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 搜索异常不阻断 */",
-      "snippet": "Object.keys(SCENE_FEATURE_BIND).forEach(function(sc){ const feats = SC"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"search partial: \"",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 883,
+      "line": 1029,
       "sig": "d6db7feb3f",
       "bhash": "7442da334d",
       "occ": 1,
@@ -5662,11 +5805,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "input.focus(); }"
+      "snippet": "input.focus(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 914,
+      "line": 1060,
       "sig": "2274a71cc6",
       "bhash": "60ad0b8fdb",
       "occ": 1,
@@ -5674,11 +5818,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "",
-      "snippet": "AppBridge.openKnowledgeBaseModal = openKnowledgeBaseModal; }"
+      "snippet": "AppBridge.openKnowledgeBaseModal = openKnowledgeBaseModal; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 915,
+      "line": 1061,
       "sig": "bfb970642c",
       "bhash": "7973356a40",
       "occ": 1,
@@ -5686,11 +5831,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.openNotesModal = openNotesModal; }"
+      "snippet": "AppBridge.openNotesModal = openNotesModal; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-notes.js",
-      "line": 925,
+      "line": 1071,
       "sig": "a314b7b991",
       "bhash": "3781614819",
       "occ": 1,
@@ -5698,71 +5844,64 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.closeKnowledgeBaseModal = closeKnowledgeBaseModal; AppBridge"
+      "snippet": "AppBridge.closeKnowledgeBaseModal = closeKnowledgeBaseModal; AppBridge",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-pomodoro.js",
-      "line": 100,
-      "sig": "ecd856820a",
-      "bhash": "cafe438d99",
+      "line": 101,
+      "sig": "e30162c32b",
+      "bhash": "afd3bdc7e9",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* localStorage 不可用时静默降级 */",
-      "snippet": "const d = JSON.parse(localStorage.getItem(PREFIX+\"pomo_count\") || \"{}\""
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"pomo count persis",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-pomodoro.js",
-      "line": 267,
-      "sig": "dec2f4b7b1",
-      "bhash": "f855618bbd",
+      "line": 269,
+      "sig": "ce11cc96aa",
+      "bhash": "7ac224875e",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* localStorage 不可用时静默降级 */",
-      "snippet": "const d = JSON.parse(localStorage.getItem(PREFIX+\"task_time\") || \"{}\")"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"task elapsed pers",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 231,
-      "sig": "1d18cb8355",
-      "bhash": "3f84b6a3e0",
+      "line": 232,
+      "sig": "02d17618f4",
+      "bhash": "04287a5d75",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 静默降级 */",
-      "snippet": "if(typeof localStorage !== \"undefined\"){ localStorage.setItem(PREFIX +"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"theme persist fai",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 258,
-      "sig": "b4319df3d5",
-      "bhash": "1b366d63b3",
+      "line": 408,
+      "sig": "7e58616f8f",
+      "bhash": "f4c4629aaa",
       "occ": 1,
-      "level": "P0",
-      "why": "save*()：项目持久化封装（内部 localStorage.setItem），配额满/隐私模式时用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* 静默降级 */",
-      "snippet": "if(typeof getCfg !== \"function\" || typeof save !== \"function\") return;"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"theme reset incom",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 404,
-      "sig": "ba955aadcb",
-      "bhash": "e60af704f4",
-      "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
-      "bare": false,
-      "note": "/* noop */",
-      "snippet": "if(typeof localStorage !== \"undefined\"){ localStorage.removeItem(PREFI"
-    },
-    {
-      "file": "ui-ge-theme.js",
-      "line": 685,
+      "line": 689,
       "sig": "f041e9434c",
       "bhash": "0396ab4c75",
       "occ": 1,
@@ -5770,11 +5909,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "w = window.open(\"\", \"_blank\"); }"
+      "snippet": "w = window.open(\"\", \"_blank\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 692,
+      "line": 696,
       "sig": "0606a5e6a6",
       "bhash": "9ce0fdf648",
       "occ": 1,
@@ -5782,11 +5922,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "rootStyle = window.getComputedStyle(document.documentElement).cssText;"
+      "snippet": "rootStyle = window.getComputedStyle(document.documentElement).cssText;",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 706,
+      "line": 710,
       "sig": "a4ab3bf3b4",
       "bhash": "1f2be458d5",
       "occ": 1,
@@ -5794,11 +5935,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "w.print(); }"
+      "snippet": "w.print(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 933,
+      "line": 937,
       "sig": "7ed7dead63",
       "bhash": "9939a96495",
       "occ": 1,
@@ -5806,11 +5948,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "",
-      "snippet": "AppBridge.openReportModal = openReportModal; }"
+      "snippet": "AppBridge.openReportModal = openReportModal; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 934,
+      "line": 938,
       "sig": "3db09a6510",
       "bhash": "db450debc3",
       "occ": 1,
@@ -5818,11 +5961,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.bindReportModal = bindReportModal; }"
+      "snippet": "AppBridge.bindReportModal = bindReportModal; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 935,
+      "line": 939,
       "sig": "7699c51a5b",
       "bhash": "58c37fcf91",
       "occ": 1,
@@ -5830,11 +5974,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.aiSmartRecommend = aiSmartRecommend; }"
+      "snippet": "AppBridge.aiSmartRecommend = aiSmartRecommend; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 936,
+      "line": 940,
       "sig": "65b296071d",
       "bhash": "0268f9467d",
       "occ": 1,
@@ -5842,11 +5987,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge._aiChatText = _aiChatText; }"
+      "snippet": "AppBridge._aiChatText = _aiChatText; }",
+      "kind": "catch"
     },
     {
       "file": "ui-ge-theme.js",
-      "line": 946,
+      "line": 950,
       "sig": "b2314993df",
       "bhash": "4a0da219f5",
       "occ": 1,
@@ -5854,7 +6000,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.setTheme = setTheme; AppBridge.getCurrentTheme = getCurrentT"
+      "snippet": "AppBridge.setTheme = setTheme; AppBridge.getCurrentTheme = getCurrentT",
+      "kind": "catch"
     },
     {
       "file": "ui-global-events.js",
