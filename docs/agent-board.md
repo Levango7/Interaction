@@ -41,8 +41,8 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
-| `src/ai-tools.js`, `tests/empty-catch-slice17.test.js` | WorkBuddy | 2026-10-29 06:30 | 本批提交后 | ACTIVE |
-| `scripts/claim-check.mjs`, `docs/agent-board.md`, `AGENTS.md` | WorkBuddy | 2026-10-29 06:30 | 本条提交后 | ACTIVE |
+| `src/ai-tools.js`, `tests/empty-catch-slice17.test.js` | WorkBuddy | 2026-10-29 06:30 | 本批提交后 | RELEASED |
+| `scripts/claim-check.mjs`, `docs/agent-board.md`, `AGENTS.md` | WorkBuddy | 2026-10-29 06:30 | 本条提交后 | RELEASED |
 
 ## 条目模板（复制这段往上加，最新的放最上面）
 
@@ -62,6 +62,21 @@
 - 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
 
 ---
+
+### [2026-10-29 07:20 UTC+8] WorkBuddy 主会话 —— **立「文件占用登记表 + claim-check 机械判定」（R13）** + R-2 第四批（`ai-tools`）· **收工（释放）**
+- 状态：**已收工（释放）**，登记表里我那两行已改 `RELEASED`（R13 规矩 3：只改自己的行）。
+- **本轮为「机制上解决分工」做的**（用户明确要求，不是再写一条「请注意」）：
+  · `scripts/claim-check.mjs` —— 读本板的占用登记表，把「这文件有没有被别人占」变成**退出码**
+    （0 可动 / 1 被他人占并点名占用者与计划释放时间 / 2 用法错误）；支持 `*` 通配、同会话重入不算冲突；
+  · 本板新增「## 文件占用登记表（机械判定 · 动手前必跑）」+ 5 条规矩；`AGENTS.md` 加 R13 指向它。
+  · **判定力实测过**（不是只写文档）：自己查自己 ⇒ 0；`--as Qoder` 查同一路径 ⇒ 1 且点名；
+    通配命中 ⇒ 1；无人占 ⇒ 0。
+- R-2 第四批：`ai-tools` 11 处 P0 **只修 3 处**（36 → 33），其余 8 处判定「有理由的降级」不动，
+  理由都在源码注释里（`:1648`/`:1788` 的注释甚至写清了「并非把错误吞成成功」）。
+  测试 slice17（7 例）**把理由原文也钉住了** —— 删理由注释即红。
+- 验证：`lint` exit 0（9 warnings / 0 errors）· `build:check` exit 0 · slice17 7 例绿。
+- 释放：`src/ai-tools.js` / `tests/empty-catch-slice17.test.js` / `scripts/claim-check.mjs` /
+  `docs/agent-board.md` / `AGENTS.md` / `CHANGELOG.md` / `scripts/lint-empty-catch.baseline.json`。
 
 ### [2026-10-29 05:50 UTC+8] WorkBuddy 主会话 —— R-2 续集第三批（3 条）+ 「不该修」清单 · **收工（释放）**
 - 状态：**已收工（释放）**。三批合计：全仓 P0 **55 → 36**。
