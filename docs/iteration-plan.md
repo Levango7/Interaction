@@ -267,6 +267,15 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
     `render-widgets` 4、`ui-backup-stats` 3、`ui-global-events` 3、`render-overview` 2，其余各 1–2）按同法继续切；
     `ui-ge-integrations` 是 WorkBuddy 常动的簇，排片时避开。
     每片仍遵守"先 `--report` 现扫、不信基线行号"与"逐文件重冻"。
+  - **切片次序（已按射程预扫，未开工）**：
+    - **第三片 = `src/data-links.js`（5 处）** —— 这是余下 49 处里唯一"**吞掉的是用户数据写入**"的一簇：
+      `:519` / `:520` / `:692` 三处 `save(...)` 外包 `catch{ /* noop */ }`（配额满 / 隐私模式 ⇒ 会话表与分场景
+      聊天**静默丢失**，用户只会发现"聊过的没了"）；`:1424` / `:1444` 是默认状态读写。优先级高于抽屉/侧栏那类视觉态。
+    - 第四片候选 = `src/ui-drawer.js`（5 处，注释都写"清不掉多留一轮、5 分钟窗口自动作废" ⇒ 预判**多数保留**，
+      核对成本低但消解数也低）；`src/render-widgets.js`（4 处：2 处说明写在 `try` 上方、2 处 `localStorage` 读写，
+      外加 `artImg.decode()` 的裸 reject）。
+    - **避开** `src/ui-ge-integrations.js`（5 处）：WorkBuddy 常动的簇。
+    - **R-38 / R-39 的真修不排在切片里**（要改控制流与召回语义），等用户点头再单开一批。
 
 ### 等你拍板（不进批次，动一句就开工）
 
