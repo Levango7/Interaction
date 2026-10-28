@@ -257,6 +257,47 @@
   后者是「行为测试抓的是效果、契约锁抓的是文本」的直接证据 —— 少了行为测试，这类「调用了但被短路」的回归会漏。
 - ⚠️ 顺手记一条结构问题（**我没动，避免大改**）：这个 `## [Unreleased]` 段落在 `[3.7.137]` 之后（约第 125 行），
   不在文件顶部 —— 新条目会越埋越深。建议下次发版整理时整段挪到顶部。
+### 2026-10-28 · B8-a 第二片：`src/ai-tools.js` 的 P0 空 catch 消解 6 处（11 → 5），并推翻一条"安全注释"
+
+- **口径**：`node scripts/lint-empty-catch.mjs --report` 现测全仓 P0 **55 → 49**，本文件 11 → 5，**P0-a（无注释）仍为 0**。
+- **消解 6 处**（全部按处方 (a) 补 `pushDiag("warn", …, {where})`，**控制流一字未改**；每条都写成"静默会把坏了
+  伪装成没有"的形态才补，不是见 catch 就补）：
+  `addTokensUsage`（用量记不上 ⇒ 统计页把"没记上"呈现成"没花"）、`ragReindex`（丢弃 `{done,left}` ⇒
+  "正文全入库、向量一条没补"被 `return count` 呈现成"重建完成"）、`ragSyncIncremental`（回填整趟抛错）、
+  `ragVecDelete`（IDB 删除失败 ⇒ 孤儿向量）、`ragVectorSearch`（等待回填时吞掉的 rejection）、
+  `chatOnceAgent`（汇总降级 ⇒ "这次小结是拼的、不是模型写的"必须可查）。
+- **保留 5 处并写明理由**（不硬凑消解数）：`:926` 记忆孤儿向量清扫（载入侧确有 `live` 过滤，注释**成立**）、
+  `:1648` / `:1788` 工具结果非 JSON（如实记 step 失败、原文回喂，前批按判据④ 已评估）、
+  `:3377` 图表 spec 解析失败回退文本（界面看得见差异，不是相反结论）、
+  `:680` `notifications/initialized`（部分实现直接报错，每次连接刷 warn 会淹掉真信号）。
+- **🔴 核对时推翻了一条注释**：`ragVecDelete` 原注释「删不掉下次重载仍会清」**是错的** ——
+  `ragVecLoadAll` 读全部 `ragvec:` 键时不过 live 集合（记忆侧才有那道过滤），于是删除失败的向量下次重载会
+  **复活成一条 source/content 全空、score 非零的幽灵命中**，白占 topK 名额；同文件 `:2303` 自己的注释
+  （"向量必须同步删，否则已删文档仍会被语义召回"）才是对的。已登记 **R-40**（真修法=载入侧按 live 过滤，
+  属改控制流，不进本批），代码里把错注释换成带出处的正确说明 + 补 warn。
+- **另登记 R-41**：`aiEmbedTexts` 在「HTTP 200 但形状不可用 / 条数不符」两处 `return null` 一行都不留，
+  下游 `ragEnsureVectors` 裸 `break` ⇒ 用户侧只有"语义召回不命中"，与"根本没配通道"同形。
+  本片只把 **reindex 路径**的痕补上（读 `left`），**增量同步路径照旧静默**（那里的 `left` 是设计常态，不能当信号）。
+- **两条反假阳性判据**（这片的重点，比"加了多少诊断"更重要）：
+  ① `ragSyncIncremental` 的 cap 是 `min(64, changed)`，**没补完是设计如此** ⇒ 故意不按 `left` 报；
+  ② `ragReindex` 在**没配 embedding 通道**时 `left` 必然 >0 ⇒ 那是用户的选择不是故障，warn 条件里带 `_embedCfg()`。
+  两条都有反向对照用例守着（少了它们，"加诊断"等于"把常态刷成红"）。
+- **验证**：新增 `tests/empty-catch-slice15.test.js` **10 例**（6 正向 + 4 对照）；回归 12 文件 / **148 例**全绿
+  （`rag-semantic` / `rag-incremental` / `rag-degradation` / `rag-file-import` / `agent-plan` / `agent-reactive` /
+  `ai-observability` / `chat-usage-visibility` / `empty-catch` 本体 + slice9/13/14）；14 条静态门禁 exit 0。
+  - **8 次窄变异，每次恰好红 1 例（`1 failed | 9 passed`）**：M1 摘 orphaned warn→④红；M2 摘 backfill aborted→③红；
+    M3 摘 token 留痕→①红；M4 摘 summary degraded→⑥红；M5 摘 reindex short→②红；
+    **M6 只摘 `_embedCfg()` 守卫→②的反向对照红**（证明那条守卫不是装饰）；
+    M7 把 `ragVectorSearch` 的吞改成 re-throw→⑤红；M8 摘掉 ⑤ 的 warn→⑤红。
+  - **M7 第一次跑是绿的 —— 由此抓到我自己写的假用例**：首版 ⑤ 让 `aiEmbedTexts` **立即** reject，回填在同一
+    微任务批次就 settle、`_ragEnsuring` 已被 `.finally` 清成 null ⇒ 那条分支根本没进，断言对着空集合成立。
+    改成"通道延迟 80ms 才失败"让分支确定性进入后，M7/M8 各红 1 例。**测试的等待条件也是判据**，这条按 R-20 记法入档。
+  - 基线：`node scripts/refreeze-baseline.mjs src/ai-tools.js` ⇒ 本文件条目 30 → 33，**其它文件 556 → 556**，
+    总数 586 → 589；门禁复跑「无新增 P0」✓。
+  - **顺带量到一条既存事实**（非本批引入，已核对 HEAD）：基线与现扫在**其他文件**上恒差
+    「新增 53 / 消失 16」，且**其中 P0 为 0** ⇒ 棘轮判定不受影响，但说明 `refreeze` 从未做过全仓对齐。留作观察项。
+
+
 
 ### 2026-10-28 · B8-a 第一片：`src/ui-ge-api.js` 的 P0 空 catch 消解 11 处（12 → 1）
 

@@ -1943,7 +1943,10 @@ async function chatOnceAgent(messages, opts){
       const sumResp = await chatOnce(sumMessages, { signal:o.signal });
       const sumText = (sumResp.choices && sumResp.choices[0] && sumResp.choices[0].message && sumResp.choices[0].message.content);
       if(sumText) summary = sumText;
-    }catch(_){ /* 汇总失败用结构化 summary 兜底 */ }
+    }catch(e){ /* 兜底本身是对的（结构化 summary 仍交付，控制流不变），但"这次总结是降级产物"必须留痕：
+         否则用户看到一段像样的小结，无从知道它不是模型生成的、而是脚本拼的。 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "agent summary degraded to structured fallback: " + ((e && e.message) || e), { where: "chatOnceAgent" }); }catch(_e2){}
+    }
     return { ok:true, plan, results:execResult.results, summary, raw, ms:execResult.ms };
   }catch(e){
     if(e && e.name === "AbortError") throw e;
@@ -2468,7 +2471,18 @@ async function ragVecPut(docId, vec){
 async function ragVecDelete(docId){
   const cache = await ragVecLoadAll();
   cache.delete(String(docId));
-  try{ await idbDeleteKey(RAG_VEC_PREFIX + docId); }catch(e){ /* 删不掉下次重载仍会清 */ }
+  /* 原注释「删不掉下次重载仍会清」**核对后是错的**，别再按它放心：
+     `ragVecLoadAll`(:2437) 把所有 `ragvec:` 键读进缓存，只校验 embedModel，**不过 live 集合**
+     （记忆侧 `memEnsureVectors`(:923) 才有那道过滤）；`ragVectorSearch`(:2545) 对缓存全量算余弦，
+     `_ragDocMeta`(:2578) 对已删文档返回 `{source:"",content:""}` ⇒ 下次重载会冒出
+     **一条正文为空、score 非零的幽灵命中**，白占一个 topK 名额。同文件 `:2303` 自己写的
+     "向量必须同步删，否则已删文档仍会被语义召回"才是对的。真修法见台账 R-40。
+     射程说明：jsdom 无 `indexedDB`（`tests/empty-catch-slice9.test.js:169` 记过同一条），
+     这条 warn 只在真浏览器成立，单测进不去 —— 不为它造假用例。 */
+  try{ await idbDeleteKey(RAG_VEC_PREFIX + docId); }
+  catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "rag vector orphaned (IDB delete failed): " + ((e && e.message) || e), { where: "ragVecDelete", docId: String(docId) }); }catch(_){}
+  }
 }
 
 /** 给单篇文档建向量；embedding 通道不可用时静默返回 false（检索自会降级） */
@@ -2528,7 +2542,11 @@ async function ragVectorSearch(query, topK){
      （`ragEnsureVectors` 内部的单趟去重就是靠它），新造一个会多一份可能不同步的状态。
      回填的文档来源是 `getRagDocs()`（localStorage），**不依赖 IDB** —— 所以等它确实能救回来。 */
   if(!cache.size && _ragEnsuring){
-    await Promise.race([_ragEnsuring.catch(() => {}), new Promise(r => setTimeout(r, RAG_BACKFILL_WAIT_MS))]);
+    /* `.catch(() => {})` 原本是"别让回填的失败拖挂这次检索"——保留该语义（不改控制流），
+       但要把原因留下：这条 rejection 一丢，用户侧的症状只是"语义召回没命中"，与"没配通道"同形。 */
+    await Promise.race([_ragEnsuring.catch(e => {
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "in-flight backfill aborted: " + ((e && e.message) || e), { where: "ragVectorSearch" }); }catch(_){}
+    }), new Promise(r => setTimeout(r, RAG_BACKFILL_WAIT_MS))]);
     cache = await ragVecLoadAll();
   }
   if(!cache.size) return [];
@@ -2961,9 +2979,18 @@ async function ragSyncIncremental(){
         await ragIndexAdd(c.docId, c.content, c.source, OPT);
         if(isNew) added++; else updated++;
       }
-      /* 大批量走批量回填而非逐条网络往返；本轮没补到的缺失向量由检索侧按需再补。 */
-      if(bigBatch){ try{ await ragEnsureVectors(Math.min(64, changed.length)); }catch(_){ /* 批量回填失败 ⇒ 这一轮的新文档没有向量，检索会「搜不到刚加的内容」，与「没写过」分不清 */
-        try{ if(typeof pushDiag === "function") pushDiag("warn", "rag batch backfill failed: "+((_&&_.message)||_), {where:"ragIndexSync/bigBatch"}); }catch(_e2){} } }
+      /* 大批量走批量回填而非逐条网络往返；本轮没补到的缺失向量由检索侧按需再补。
+         这里**不**按 `left` 报诊断：cap 就是 `min(64, changed.length)`，比全表缺失数小是**设计如此**，
+         拿 `left>0` 当信号会在每次大批量同步后刷一条常态 warn（假阳性比没门禁更糟）。
+         真正的缺口在 `ragEnsureVectors` 内部 `vecs.length !== chunk.length` 那条裸 `break`（台账 R-41）。 */
+      if(bigBatch){
+        try{ await ragEnsureVectors(Math.min(64, changed.length)); }
+        catch(e){
+          /* 唯一能到这里的原因是 `getRagDocs()` / IDB 侧抛错（`aiEmbedTexts` 按契约返回 null 不抛，
+             通道不可用它自己已在 `:2377` 留痕）。到了就说明回填整趟没跑起来 ⇒ 留痕，控制流照旧。 */
+          try{ if(typeof pushDiag === "function") pushDiag("warn", "rag batch backfill failed: " + ((e && e.message) || e), { where: "ragIndexSync/bigBatch" }); }catch(_e2){}
+        }
+      }
     }
     return { added, updated, removed };
   }finally{
@@ -3014,9 +3041,17 @@ async function ragReindex(){
     count++;
   }
   /* 一次批量补齐所有缺失向量（配了 embedding 通道才有；没配就直接返回）。
-     上限传 Infinity：重建场景要覆盖全表，而不是像启动期那样只补 20 条。 */
-  try{ await ragEnsureVectors(Infinity); }catch(_){ /* 全表重建失败 ⇒ 重建完却仍缺向量，检索质量低于预期且无从察觉 */
-    try{ if(typeof pushDiag === "function") pushDiag("warn", "rag full rebuild backfill failed: "+((_&&_.message)||_), {where:"ragRebuildAll"}); }catch(_e2){} }
+     上限传 Infinity：重建场景要覆盖全表，而不是像启动期那样只补 20 条。
+     v3.7.x R-2 切片14：这一处 `left` **是**信号（cap=Infinity，不存在"本轮故意不补完"），
+     丢弃它 ⇒ `return count` 把"正文全入库、向量一条没补"呈现成"重建完成"，
+     而语义召回其实还关着（`ragVectorSearch` 在 cache 空时直接 return []）。
+     条件里带 `_embedCfg()`：**没配 embedding 通道是用户的选择，不是故障** ⇒ 不带它就会每次重建刷一条常态 warn。 */
+  try{
+    const r = await ragEnsureVectors(Infinity);
+    if(r && r.left > 0 && _embedCfg()) pushDiag("warn", "reindex vectors short: done=" + r.done + " left=" + r.left + "（重建报完成但语义召回未覆盖这些文档）", { where: "ragReindex" });
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "rag full rebuild backfill failed: " + ((e && e.message) || e), { where: "ragRebuildAll" }); }catch(_e2){}
+  }
   return count;
 }
 
@@ -3307,8 +3342,10 @@ function addTokensUsage(resp) {
     const ks = Object.keys(d.days).sort();
     while (ks.length > 90) { delete d.days[ks.shift()]; }
     localStorage.setItem(PREFIX + "ai_tokens", JSON.stringify(d));
-  } catch (e) { /* localStorage 不可用/解析失败：静默，不阻塞 AI 调用 —— 但 token 用量统计会漏记，账单/成本视图随之偏低 */
-    try{ if(typeof pushDiag === "function") pushDiag("warn", "token usage not recorded: "+((e&&e.message)||e), {where:"_addTokenUsage"}); }catch(_e2){} }
+  } catch (e) { /* 不阻塞 AI 调用，但必须留痕：这里吞掉的是一条真实用量，
+       吞了 ⇒ aiUsage(:2741) 读出来的「今日/累计」偏低，统计页会把"没记上"呈现成"没花"（相反结论） */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "token usage not recorded: " + ((e && e.message) || e), { where: "_addTokenUsage" }); }catch(_e2){}
+  }
 }
 
 /* v3.7.78 解耦：自别处下沉 */

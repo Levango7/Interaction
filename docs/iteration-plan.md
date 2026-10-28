@@ -230,7 +230,7 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
     完整证据（含窄变异与真浏览器两视口）见 `CHANGELOG.md` `[Unreleased]` 的 2026-10-28 B8-b 节。
   - 顺带销掉 B7 列的"下一批"遗留：`_probe/r22-flaky-freq.mjs` 已由 R-37 批次换成 `scripts/flaky-freq.mjs`
     （标题锚 + 自带单测 `tests/flaky-freq.test.js`），本条不再是待办。
-- **B8-a · R-2 续：P0 空 catch 切片** —— 🟡 **第一片已交付（2026-10-28，只动 `src/ui-ge-api.js`）**。
+- **B8-a · R-2 续：P0 空 catch 切片** —— 🟡 **第一片 + 第二片已交付（2026-10-28，分别只动 `src/ui-ge-api.js`、`src/ai-tools.js`）**。
   - **先重测再开工，基线读数被订正**：`scripts/lint-empty-catch.baseline.json` 写 P0 72，但 `--report` 现扫是
     **P0 66**，且**全部是 P0-b「作者写过说明」、P0-a「无任何注释」= 0**；基线里的行号也已漂移
     （门禁按签名 + body 哈希判，不按行号）—— 拿基线行号定位会指错地方。
@@ -243,9 +243,28 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
     窄变异在**最终 8 例版本**上重跑：A 短路设备诊断 ⇒ 2 例红（①⑦ 共同断言这一维）；B 把可见文案写向不存在的 id ⇒ 1 例红（①）；
     C 退回未二次保护 ⇒ 8 例全过却冒 2 条 Unhandled Rejection、退出码 1。
     基线用仓里既有的 `scripts/refreeze-baseline.mjs` **逐文件**精确重冻（其它文件 538 条一字未动），全仓 P0 **66 → 55**。
-  - **余下 55 处 / 21 个文件**（`d48d220` 现测，`node scripts/lint-empty-catch.mjs --report`：
-    `ai-tools` 11、`data-links` 5、`ui-drawer` 5、`ui-ge-integrations` 5、`render-widgets` 4、`ui-backup-stats` 3、
-    `ui-global-events` 3，其余 14 个文件各 1–2）按同法继续切；
+  - **第二片**（`src/ai-tools.js` 11 → 5，全仓 **55 → 49**）：消解 6 处 `addTokensUsage` / `ragReindex` /
+    `ragSyncIncremental` / `ragVecDelete` / `ragVectorSearch` / `chatOnceAgent`；保留 5 处并写明理由
+    （`:926` 记忆孤儿清扫的注释核对后**成立**，两处工具结果非 JSON 前批已按判据④ 评估，图表回退文本、
+    `notifications/initialized` 各因"看得见差异 / 会淹真信号"不动）。
+  - **第二片带出两条新台账**：**R-40**（`ragVecDelete` 原注释「删不掉下次重载仍会清」核对后**是错的** ——
+    RAG 载入侧没有记忆侧那道 `live` 过滤，删除失败的向量下次重载复活成**空正文幽灵命中**，白占 topK；
+    真修法=载入侧按 `getRagDocs()` 过滤，属改控制流，不在空 catch 批内）；
+    **R-41**（`aiEmbedTexts` 在「HTTP 200 但形状不可用 / 条数不符」两处 `return null` 零留痕 ⇒
+    "服务答得不对"与"根本没配通道"同形；本片只补上了 reindex 路径的痕，**增量同步路径照旧静默**）。
+  - **两条反假阳性判据**（写在这里是为了让下一批别把它们当"漏加诊断"）：`ragSyncIncremental` 的 cap 是
+    `min(64, changed)` ⇒ `left>0` 是设计常态，不许按它报；`ragReindex` 在没配通道时 `left` 必然 >0 ⇒
+    warn 条件带 `_embedCfg()`。`slice15` 用 4 个反向对照 + 变异 M6（只摘守卫 ⇒ 对照红）把这两条钉住。
+  - **第二片自曝一条假用例**：`slice15` ⑤ 首版让通道**立即** reject，回填同批次就 settle、`_ragEnsuring` 已清成 null ⇒
+    分支没进，M7 变异（把吞改成 re-throw）**照样全绿**。改成"延迟 80ms 才失败"后 M7/M8 各红 1 例。
+    教训同 R-20：**测试的等待条件本身也是判据**，绿≠有射程。
+  - 验证：`tests/empty-catch-slice15.test.js` 10 例；回归 12 文件 / 148 例绿；14 条静态门禁 exit 0；
+    **8 次窄变异每次恰好红 1 例**；基线逐文件重冻（本文件条目 30 → 33，其它文件 556 → 556）。
+  - **顺带量到一条既存事实**（已核对 HEAD，非本批引入）：基线与现扫在其他文件上恒差「新增 53 / 消失 16」，
+    其中 P0 为 0 ⇒ 棘轮判定不受影响，但说明 `refreeze` 从未做过全仓对齐。要不要做一次全仓对齐 + 把这条差异
+    变成门禁可见量，**等拍板**（属"度量口径"改动，不塞进切片）。
+  - **余下 49 处 / 21 个文件**（现测同法：`data-links` 5、`ui-drawer` 5、`ui-ge-integrations` 5、`ai-tools` 5（全是刻意保留）、
+    `render-widgets` 4、`ui-backup-stats` 3、`ui-global-events` 3、`render-overview` 2，其余各 1–2）按同法继续切；
     `ui-ge-integrations` 是 WorkBuddy 常动的簇，排片时避开。
     每片仍遵守"先 `--report` 现扫、不信基线行号"与"逐文件重冻"。
 
