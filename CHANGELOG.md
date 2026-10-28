@@ -259,7 +259,7 @@
   不在文件顶部 —— 新条目会越埋越深。建议下次发版整理时整段挪到顶部。
 ### 2026-10-28 · B8-a 第二片：`src/ai-tools.js` 的 P0 空 catch 消解 6 处（11 → 5），并推翻一条"安全注释"
 
-- **口径**：`node scripts/lint-empty-catch.mjs --report` 现测全仓 P0 **55 → 49**，本文件 11 → 5，**P0-a（无注释）仍为 0**。
+- **口径**：`node scripts/lint-empty-catch.mjs --report` 本文件 P0 **11 → 5**（我开工时点全仓 55 → 49；期间 WorkBuddy 的续集两批先落地，**合并后全仓 39 → 33**，`--report` 实测）。**P0-a（无注释）仍为 0**。
 - **消解 6 处**（全部按处方 (a) 补 `pushDiag("warn", …, {where})`，**控制流一字未改**；每条都写成"静默会把坏了
   伪装成没有"的形态才补，不是见 catch 就补）：
   `addTokensUsage`（用量记不上 ⇒ 统计页把"没记上"呈现成"没花"）、`ragReindex`（丢弃 `{done,left}` ⇒
@@ -282,7 +282,7 @@
   ① `ragSyncIncremental` 的 cap 是 `min(64, changed)`，**没补完是设计如此** ⇒ 故意不按 `left` 报；
   ② `ragReindex` 在**没配 embedding 通道**时 `left` 必然 >0 ⇒ 那是用户的选择不是故障，warn 条件里带 `_embedCfg()`。
   两条都有反向对照用例守着（少了它们，"加诊断"等于"把常态刷成红"）。
-- **验证**：新增 `tests/empty-catch-slice15.test.js` **10 例**（6 正向 + 4 对照）；回归 12 文件 / **148 例**全绿
+- **验证**：新增 `tests/empty-catch-ai-tools.test.js` **10 例**（6 正向 + 4 对照）；回归 12 文件 / **148 例**全绿
   （`rag-semantic` / `rag-incremental` / `rag-degradation` / `rag-file-import` / `agent-plan` / `agent-reactive` /
   `ai-observability` / `chat-usage-visibility` / `empty-catch` 本体 + slice9/13/14）；14 条静态门禁 exit 0。
   - **8 次窄变异，每次恰好红 1 例（`1 failed | 9 passed`）**：M1 摘 orphaned warn→④红；M2 摘 backfill aborted→③红；

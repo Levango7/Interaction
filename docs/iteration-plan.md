@@ -243,7 +243,7 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
     窄变异在**最终 8 例版本**上重跑：A 短路设备诊断 ⇒ 2 例红（①⑦ 共同断言这一维）；B 把可见文案写向不存在的 id ⇒ 1 例红（①）；
     C 退回未二次保护 ⇒ 8 例全过却冒 2 条 Unhandled Rejection、退出码 1。
     基线用仓里既有的 `scripts/refreeze-baseline.mjs` **逐文件**精确重冻（其它文件 538 条一字未动），全仓 P0 **66 → 55**。
-  - **第二片**（`src/ai-tools.js` 11 → 5，全仓 **55 → 49**）：消解 6 处 `addTokensUsage` / `ragReindex` /
+  - **第二片**（`src/ai-tools.js` 11 → 5；WorkBuddy 两批先行落地，合并后全仓 **39 → 33**）：消解 6 处 `addTokensUsage` / `ragReindex` /
     `ragSyncIncremental` / `ragVecDelete` / `ragVectorSearch` / `chatOnceAgent`；保留 5 处并写明理由
     （`:926` 记忆孤儿清扫的注释核对后**成立**，两处工具结果非 JSON 前批已按判据④ 评估，图表回退文本、
     `notifications/initialized` 各因"看得见差异 / 会淹真信号"不动）。
@@ -258,7 +258,7 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
   - **第二片自曝一条假用例**：`slice15` ⑤ 首版让通道**立即** reject，回填同批次就 settle、`_ragEnsuring` 已清成 null ⇒
     分支没进，M7 变异（把吞改成 re-throw）**照样全绿**。改成"延迟 80ms 才失败"后 M7/M8 各红 1 例。
     教训同 R-20：**测试的等待条件本身也是判据**，绿≠有射程。
-  - 验证：`tests/empty-catch-slice15.test.js` 10 例；回归 12 文件 / 148 例绿；14 条静态门禁 exit 0；
+  - 验证：`tests/empty-catch-ai-tools.test.js` 10 例；回归 12 文件 / 148 例绿；14 条静态门禁 exit 0；
     **8 次窄变异每次恰好红 1 例**；基线逐文件重冻（本文件条目 30 → 33，其它文件 556 → 556）。
   - **顺带量到一条既存事实**（已核对 HEAD，非本批引入）：基线与现扫在其他文件上恒差「新增 53 / 消失 16」，
     其中 P0 为 0 ⇒ 棘轮判定不受影响，但说明 `refreeze` 从未做过全仓对齐。要不要做一次全仓对齐 + 把这条差异
