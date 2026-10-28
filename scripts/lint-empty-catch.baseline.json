@@ -690,8 +690,8 @@
     {
       "file": "ai-tools.js",
       "line": 2991,
-      "sig": "b9fa4de856",
-      "bhash": "74a345482c",
+      "sig": "f32e2f3fa9",
+      "bhash": "22a7ca73e5",
       "occ": 1,
       "level": "P2",
       "why": "预期降级（仅能力探测），无需改动",
@@ -716,8 +716,8 @@
     {
       "file": "ai-tools.js",
       "line": 3053,
-      "sig": "bdbe4d74d4",
-      "bhash": "ceef81b81b",
+      "sig": "f593589a04",
+      "bhash": "dc3c3d9db8",
       "occ": 1,
       "level": "P2",
       "why": "预期降级（仅能力探测），无需改动",
@@ -781,8 +781,8 @@
     {
       "file": "ai-tools.js",
       "line": 3347,
-      "sig": "c0058663ee",
-      "bhash": "8e5ee44d38",
+      "sig": "3e428a1960",
+      "bhash": "35f55b3379",
       "occ": 1,
       "level": "P2",
       "why": "预期降级（仅能力探测），无需改动",

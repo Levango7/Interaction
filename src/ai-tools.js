@@ -1943,7 +1943,7 @@ async function chatOnceAgent(messages, opts){
       const sumResp = await chatOnce(sumMessages, { signal:o.signal });
       const sumText = (sumResp.choices && sumResp.choices[0] && sumResp.choices[0].message && sumResp.choices[0].message.content);
       if(sumText) summary = sumText;
-    }catch(e){ /* 兜底本身是对的（结构化 summary 仍交付，控制流不变），但"这次总结是降级产物"必须留痕：
+    }catch(e){ /* 汇总失败用结构化 summary 兜底（原判成立：结构化 summary 仍交付、控制流不变）；但"这次总结是降级产物"必须留痕：
          否则用户看到一段像样的小结，无从知道它不是模型生成的、而是脚本拼的。 */
       try{ if(typeof pushDiag === "function") pushDiag("warn", "agent summary degraded to structured fallback: " + ((e && e.message) || e), { where: "chatOnceAgent" }); }catch(_e2){}
     }
@@ -2988,7 +2988,7 @@ async function ragSyncIncremental(){
         catch(e){
           /* 唯一能到这里的原因是 `getRagDocs()` / IDB 侧抛错（`aiEmbedTexts` 按契约返回 null 不抛，
              通道不可用它自己已在 `:2377` 留痕）。到了就说明回填整趟没跑起来 ⇒ 留痕，控制流照旧。 */
-          try{ if(typeof pushDiag === "function") pushDiag("warn", "rag batch backfill failed: " + ((e && e.message) || e), { where: "ragIndexSync/bigBatch" }); }catch(_e2){}
+          try{ if(typeof pushDiag === "function") pushDiag("warn", "rag batch backfill failed: " + ((e && e.message) || e), { where:"ragIndexSync/bigBatch" }); }catch(_e2){}
         }
       }
     }
@@ -3050,7 +3050,7 @@ async function ragReindex(){
     const r = await ragEnsureVectors(Infinity);
     if(r && r.left > 0 && _embedCfg()) pushDiag("warn", "reindex vectors short: done=" + r.done + " left=" + r.left + "（重建报完成但语义召回未覆盖这些文档）", { where: "ragReindex" });
   }catch(e){
-    try{ if(typeof pushDiag === "function") pushDiag("warn", "rag full rebuild backfill failed: " + ((e && e.message) || e), { where: "ragRebuildAll" }); }catch(_e2){}
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "rag full rebuild backfill failed: " + ((e && e.message) || e), { where:"ragRebuildAll" }); }catch(_e2){}
   }
   return count;
 }
@@ -3344,7 +3344,7 @@ function addTokensUsage(resp) {
     localStorage.setItem(PREFIX + "ai_tokens", JSON.stringify(d));
   } catch (e) { /* 不阻塞 AI 调用，但必须留痕：这里吞掉的是一条真实用量，
        吞了 ⇒ aiUsage(:2741) 读出来的「今日/累计」偏低，统计页会把"没记上"呈现成"没花"（相反结论） */
-    try{ if(typeof pushDiag === "function") pushDiag("warn", "token usage not recorded: " + ((e && e.message) || e), { where: "_addTokenUsage" }); }catch(_e2){}
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "token usage not recorded: " + ((e && e.message) || e), { where:"_addTokenUsage" }); }catch(_e2){}
   }
 }
 

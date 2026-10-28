@@ -74,9 +74,9 @@ describe("② 计数锁：36 → 33，且 ai-tools 的 8 处「有理由的降�
     expect(n, "P0 回涨说明有人新增静默吞错，或把本批留痕删了").toBeLessThanOrEqual(32);
   });
 
-  it("ai-tools.js 必须恰好剩 8 处 P0（改它们之前请先读注释）", () => {
+  it("ai-tools.js 必须恰好剩 5 处 P0（改它们之前请先读注释；原 8 处里 3 处由 Qoder 批次修掉，见 R-40/CHANGELOG）", () => {
     const p0 = scanSource(readSrc("ai-tools.js"), "ai-tools.js").filter((i) => i.level === "P0");
-    expect(p0.length, "数量变了：要么有人硬改，要么有人新增（都该先读那 8 处注释里的理由）").toBe(8);
+    expect(p0.length, "数量变了：要么有人硬改，要么有人新增（都该先读那几处注释里的理由）").toBe(5);
   });
 
   it("那 8 处理由的原文必须还在（删理由注释 = 后人失去判断依据）", () => {
