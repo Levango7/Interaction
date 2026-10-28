@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-10-28",
-  "count": 594,
+  "count": 602,
   "items": [
     {
       "file": "ai-loop.js",
@@ -2987,19 +2987,46 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 63,
-      "sig": "8878f900a7",
-      "bhash": "d56813e4ab",
+      "line": 64,
+      "sig": "358f74b5c4",
+      "bhash": "1700124dd0",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* noop */",
-      "snippet": "localStorage.setItem(PREFIX+\"sideExpanded\", JSON.stringify(map)); }"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"sideExpanded pers",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 559,
+      "line": 361,
+      "sig": "f78da20106",
+      "bhash": "bd76c552a4",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 打开失败不阻塞右栏 */",
+      "snippet": "AppBridge.openKnowledgeBaseModal(); }",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 396,
+      "sig": "7092198194",
+      "bhash": "e3f0fc254c",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 导航失败不阻塞右栏 */",
+      "snippet": "if(a.kind === \"note\"){ AppBridge.openKnowledgeBaseModal(); return true",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 819,
       "sig": "765af61434",
       "bhash": "6bd4fdbc8f",
       "occ": 1,
@@ -3007,11 +3034,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"canvas persist fa"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"canvas persist fa",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 905,
+      "line": 1165,
       "sig": "338621b38e",
       "bhash": "815ebc98b8",
       "occ": 1,
@@ -3019,11 +3047,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "m._releaseTrap(); }"
+      "snippet": "m._releaseTrap(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 930,
+      "line": 1190,
       "sig": "275bfc9bb7",
       "bhash": "1933dc6b21",
       "occ": 1,
@@ -3031,11 +3060,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "if(!_sideFoldWarned && typeof pushDiag === \"function\"){ _sideFoldWarne"
+      "snippet": "if(!_sideFoldWarned && typeof pushDiag === \"function\"){ _sideFoldWarne",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 934,
+      "line": 1194,
       "sig": "7c39deaec7",
       "bhash": "bad4115f2f",
       "occ": 1,
@@ -3043,24 +3073,12 @@
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
       "note": "",
-      "snippet": "if(localStorage.getItem(PREFIX+\"sideCollapsed\")===\"1\") side.classList."
+      "snippet": "if(localStorage.getItem(PREFIX+\"sideCollapsed\")===\"1\") side.classList.",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1069,
-      "sig": "d4bb9693dd",
-      "bhash": "71b9f1692f",
-      "occ": 1,
-      "level": "P1",
-      "why": "try 块含业务逻辑，需人工判断是否该上报",
-      "bare": true,
-      "note": ".catch(()=>{}); } }else if(d.kind === \"link\"){",
-      "snippet": "// 异步落盘（不阻塞恢复流程） if(typeof persistCfg === \"function\"){ persistCfg(cfg)",
-      "kind": "reject"
-    },
-    {
-      "file": "render-widgets.js",
-      "line": 1335,
+      "line": 1595,
       "sig": "77abb6b04d",
       "bhash": "561efee72e",
       "occ": 1,
@@ -3068,11 +3086,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* ignore */",
-      "snippet": "inp.remove(); }"
+      "snippet": "inp.remove(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1339,
+      "line": 1599,
       "sig": "a5d0c4b9b4",
       "bhash": "d9b6ea1844",
       "occ": 1,
@@ -3080,11 +3099,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 回调异常不影响清理 */",
-      "snippet": "cb(String(fr.result || \"\"), f); }"
+      "snippet": "cb(String(fr.result || \"\"), f); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1423,
+      "line": 1683,
       "sig": "a5d0c4b9b4",
       "bhash": "d9b6ea1844",
       "occ": 2,
@@ -3092,11 +3112,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 回调异常不冒泡 */",
-      "snippet": "cb(String(fr.result || \"\"), f); }"
+      "snippet": "cb(String(fr.result || \"\"), f); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1493,
+      "line": 1753,
       "sig": "aa07fc88f4",
       "bhash": "9768edeb86",
       "occ": 1,
@@ -3104,11 +3125,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "if(!_setPrefWarned && typeof pushDiag === \"function\"){ _setPrefWarned "
+      "snippet": "if(!_setPrefWarned && typeof pushDiag === \"function\"){ _setPrefWarned ",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1616,
+      "line": 1876,
       "sig": "ac3151ade7",
       "bhash": "b79af7cd18",
       "occ": 1,
@@ -3116,11 +3138,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "",
-      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"alarm beep failed"
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"alarm beep failed",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1619,
+      "line": 1879,
       "sig": "8be05f89b5",
       "bhash": "f47de8eec1",
       "occ": 1,
@@ -3128,11 +3151,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "const c = _beepAlarm._ctx; if(c){ const t = c.currentTime; c.close().c"
+      "snippet": "const c = _beepAlarm._ctx; if(c){ const t = c.currentTime; c.close().c",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1713,
+      "line": 1973,
       "sig": "a1c0670512",
       "bhash": "9b00465945",
       "occ": 1,
@@ -3140,11 +3164,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"alarm.invalidTime\", \"请输入合法时间\"),\"warn\"); }"
+      "snippet": "toast(t(\"alarm.invalidTime\", \"请输入合法时间\"),\"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1720,
+      "line": 1980,
       "sig": "cfb5cd3291",
       "bhash": "8fc11cdb17",
       "occ": 1,
@@ -3152,11 +3177,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"alarm.addedToast\", \"已添加闹钟 {time}\").replace(\"{time}\", t), \"inf"
+      "snippet": "toast(t(\"alarm.addedToast\", \"已添加闹钟 {time}\").replace(\"{time}\", t), \"inf",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1850,
+      "line": 2110,
       "sig": "2b7f751a68",
       "bhash": "abfde9a875",
       "occ": 1,
@@ -3164,11 +3190,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"pointerFx.enabled\", \"指针特效已开启\"), \"info\"); }"
+      "snippet": "toast(t(\"pointerFx.enabled\", \"指针特效已开启\"), \"info\"); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1863,
+      "line": 2123,
       "sig": "e4e14b1b2f",
       "bhash": "ac21fd78ef",
       "occ": 1,
@@ -3176,24 +3203,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"pointerFx.disabled\", \"指针特效已关闭\"), \"info\"); }"
+      "snippet": "toast(t(\"pointerFx.disabled\", \"指针特效已关闭\"), \"info\"); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 1867,
-      "sig": "27304e4085",
-      "bhash": "e3f274c6a2",
-      "occ": 1,
-      "level": "P1",
-      "why": "try 块含业务逻辑，需人工判断是否该上报",
-      "bare": true,
-      "note": ".catch(function(){}); _beepAlarm._ctx = null; } }catch(_){}",
-      "snippet": "{ const c = _beepAlarm._ctx; if(c){ const t = c.currentTime; c.close()",
-      "kind": "reject"
-    },
-    {
-      "file": "render-widgets.js",
-      "line": 2074,
+      "line": 2334,
       "sig": "66ae794fb1",
       "bhash": "751331cbfb",
       "occ": 1,
@@ -3201,11 +3216,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "v = _getPref(\"petRhythm\", PET_RHYTHM_DEFAULT) || PET_RHYTHM_DEFAULT; }"
+      "snippet": "v = _getPref(\"petRhythm\", PET_RHYTHM_DEFAULT) || PET_RHYTHM_DEFAULT; }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2614,
+      "line": 2874,
       "sig": "5f186c36cb",
       "bhash": "9dccb6ac1b",
       "occ": 1,
@@ -3213,11 +3229,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "f.remove(); }"
+      "snippet": "f.remove(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2626,
+      "line": 2886,
       "sig": "5f186c36cb",
       "bhash": "9dccb6ac1b",
       "occ": 2,
@@ -3225,11 +3242,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "f.remove(); }"
+      "snippet": "f.remove(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2734,
+      "line": 2994,
       "sig": "a43aedf6ec",
       "bhash": "122c08ff81",
       "occ": 1,
@@ -3237,11 +3255,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "el._faceRO.disconnect(); }"
+      "snippet": "el._faceRO.disconnect(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2738,
+      "line": 2998,
       "sig": "f4ddeef40d",
       "bhash": "077abdfbb9",
       "occ": 1,
@@ -3249,11 +3268,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 不支持时忽略：至少原有的首次定位仍生效 */",
-      "snippet": "if(el._faceRO) el._faceRO.disconnect(); el._faceRO = new ResizeObserve"
+      "snippet": "if(el._faceRO) el._faceRO.disconnect(); el._faceRO = new ResizeObserve",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2843,
+      "line": 3103,
       "sig": "d3db25a41b",
       "bhash": "6710417070",
       "occ": 1,
@@ -3261,11 +3281,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"pet.removedToast\", \"萌宠已收回\"), \"info\"); }"
+      "snippet": "toast(t(\"pet.removedToast\", \"萌宠已收回\"), \"info\"); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2863,
+      "line": 3123,
       "sig": "adf1ff242d",
       "bhash": "41935ea1cb",
       "occ": 1,
@@ -3273,11 +3294,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "el._petAC.abort(); }"
+      "snippet": "el._petAC.abort(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2947,
+      "line": 3207,
       "sig": "f3ef0c6141",
       "bhash": "23e8214f66",
       "occ": 1,
@@ -3285,11 +3307,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "child._petAC.abort(); }"
+      "snippet": "child._petAC.abort(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2968,
+      "line": 3228,
       "sig": "af2cf7ed1f",
       "bhash": "cdac77adc9",
       "occ": 1,
@@ -3297,24 +3320,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": false,
       "note": "",
-      "snippet": "toast(t(\"pet.rhythm.applied\", \"萌宠节奏已切换\"), \"info\"); }"
+      "snippet": "toast(t(\"pet.rhythm.applied\", \"萌宠节奏已切换\"), \"info\"); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 2971,
-      "sig": "2e9428fd45",
-      "bhash": "47c74eb160",
-      "occ": 1,
-      "level": "P0",
-      "why": "decode()：资源解码失败，图片/音频静默不显示",
-      "bare": true,
-      "note": ".catch(function(){}); } /* v3.7.49：眨眼/张嘴浮层必须**随宠物尺寸变化重新定",
-      "snippet": "eof artImg.decode === \"function\") artImg.decode().then(placeFaceRetry)",
-      "kind": "reject"
-    },
-    {
-      "file": "render-widgets.js",
-      "line": 3003,
+      "line": 3263,
       "sig": "25b13a3a1e",
       "bhash": "4ca65bfc9c",
       "occ": 1,
@@ -3322,11 +3333,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "seen.get(m)(); }"
+      "snippet": "seen.get(m)(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 3015,
+      "line": 3275,
       "sig": "4ca4f12296",
       "bhash": "3228fc38ca",
       "occ": 1,
@@ -3334,11 +3346,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "const mo = new MutationObserver(function(muts){ for(const mu of muts){"
+      "snippet": "const mo = new MutationObserver(function(muts){ for(const mu of muts){",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 3035,
+      "line": 3295,
       "sig": "3315d9d589",
       "bhash": "37c7233bb0",
       "occ": 1,
@@ -3346,11 +3359,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "closeBtn.click(); }"
+      "snippet": "closeBtn.click(); }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 3144,
+      "line": 3404,
       "sig": "b2afc80171",
       "bhash": "e7b344a532",
       "occ": 1,
@@ -3358,11 +3372,12 @@
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
       "note": "",
-      "snippet": "userFolded = localStorage.getItem(PREFIX+\"sideCollapsed\") === \"1\"; }"
+      "snippet": "userFolded = localStorage.getItem(PREFIX+\"sideCollapsed\") === \"1\"; }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 3550,
+      "line": 3810,
       "sig": "8c26b5f0d4",
       "bhash": "3496d36476",
       "occ": 1,
@@ -3370,11 +3385,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 桥未就绪时静默，下一轮渲染自然补上 */",
-      "snippet": "AppBridge.renderSide = renderSide; }"
+      "snippet": "AppBridge.renderSide = renderSide; }",
+      "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 3560,
+      "line": 3820,
       "sig": "4c14703af3",
       "bhash": "98e938c7cc",
       "occ": 1,
@@ -3382,7 +3398,125 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "AppBridge.openRecycle = openRecycle; AppBridge.openToolStub = openTool"
+      "snippet": "AppBridge.openRecycle = openRecycle; AppBridge.openToolStub = openTool",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 3863,
+      "sig": "69b28538de",
+      "bhash": "57f658b28a",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* 渲染失败不累积定时器 */",
+      "snippet": "renderAgentDock(); }",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 3874,
+      "sig": "0175d5e3b7",
+      "bhash": "58f2d27cb2",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"uimode persist fa",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 3876,
+      "sig": "b5072ff13b",
+      "bhash": "588f392a96",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "toast(t(\"ui.mode.switchedTo\", \"已切换到\") + \" \" + t(_uiMode() === \"code\" ?",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 3902,
+      "sig": "8a413f85a0",
+      "bhash": "496893db28",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof get",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 3931,
+      "sig": "d2ea00c44f",
+      "bhash": "fe255c1881",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": "/* noop */",
+      "snippet": "show = Object.assign(show, load(PREFIX + \"agent_dock\", {}) || {}); }",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 3985,
+      "sig": "fac7a07df5",
+      "bhash": "a23d83eb9b",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": true,
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"agent_dock persis",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 1081,
+      "sig": "d4bb9693dd",
+      "bhash": "71b9f1692f",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(()=>{}); } }else if(d.kind === \"link\"){",
+      "snippet": "// 异步落盘（不阻塞恢复流程） if(typeof persistCfg === \"function\"){ persistCfg(cfg)",
+      "kind": "reject"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 1879,
+      "sig": "27304e4085",
+      "bhash": "e3f274c6a2",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(function(){}); _beepAlarm._ctx = null; } }catch(_){}",
+      "snippet": "{ const c = _beepAlarm._ctx; if(c){ const t = c.currentTime; c.close()",
+      "kind": "reject"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 2983,
+      "sig": "2e9428fd45",
+      "bhash": "47c74eb160",
+      "occ": 1,
+      "level": "P0",
+      "why": "decode()：资源解码失败，图片/音频静默不显示",
+      "bare": false,
+      "note": ".catch(function(){}); } /* v3.7.49：眨眼/张嘴浮层必须**随宠物尺寸变化重新定",
+      "snippet": "eof artImg.decode === \"function\") artImg.decode().then(placeFaceRetry)",
+      "kind": "reject"
     },
     {
       "file": "ui-backup-stats.js",

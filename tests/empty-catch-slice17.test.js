@@ -35,7 +35,8 @@ describe("① 源码契约：本批 3 处具名留痕不许被删、where 不许
   const EXPECT = [
     ["ai-tools.js", "rag batch backfill failed", "ragIndexSync/bigBatch"],
     ["ai-tools.js", "rag full rebuild backfill failed", "ragRebuildAll"],
-    ["ai-tools.js", "token usage not recorded", "_addTokenUsage"]
+    ["ai-tools.js", "token usage not recorded", "_addTokenUsage"],
+    ["render-widgets.js", "sideExpanded persist failed", "_saveSideExpanded"]
   ];
 
   it("每条都能找到 pushDiag + 正确 where + 二次保护（用 indexOf，不用正则）", () => {
@@ -65,12 +66,12 @@ describe("① 源码契约：本批 3 处具名留痕不许被删、where 不许
 });
 
 describe("② 计数锁：36 → 33，且 ai-tools 的 8 处「有理由的降级」不许被硬改", () => {
-  it("全仓 P0 总数 ≤ 33", () => {
+  it("全仓 P0 总数 ≤ 32", () => {
     let n = 0;
     for (const f of fs.readdirSync("src").filter((x) => x.endsWith(".js"))) {
       n += scanSource(readSrc(f), f).filter((i) => i.level === "P0").length;
     }
-    expect(n, "P0 回涨说明有人新增静默吞错，或把本批留痕删了").toBeLessThanOrEqual(33);
+    expect(n, "P0 回涨说明有人新增静默吞错，或把本批留痕删了").toBeLessThanOrEqual(32);
   });
 
   it("ai-tools.js 必须恰好剩 8 处 P0（改它们之前请先读注释）", () => {
