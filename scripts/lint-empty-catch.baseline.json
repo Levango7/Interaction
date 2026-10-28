@@ -4612,15 +4612,15 @@
       "bhash": "bcfa5801b9",
       "occ": 1,
       "level": "P0",
-      "why": "JSON.parse：脏数据/截断数据解析失败，配置静默回落默认值",
+      "why": "token 存储解析：非 JSON＝旧明文形态，属迁移探测（用异常做控制流），刻意豁免",
       "bare": false,
-      "note": "/* 非 JSON → 旧明文 */",
+      "note": "/* ⚠️ **豁免项，勿改**（R-38 复核 advisory①）：非 JSON＝旧明文形态，这是**迁移探测**，",
       "snippet": "const o = JSON.parse(raw); if(o && typeof o === \"object\" && o.__enc ==",
       "kind": "catch"
     },
     {
       "file": "ui-ge-api.js",
-      "line": 80,
+      "line": 82,
       "sig": "fe4f9523ad",
       "bhash": "ca705dbd7b",
       "occ": 1,
@@ -4633,7 +4633,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 96,
+      "line": 98,
       "sig": "1dbdfdb3f7",
       "bhash": "e98d72d495",
       "occ": 1,
@@ -4646,7 +4646,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 119,
+      "line": 121,
       "sig": "74cc2b2b02",
       "bhash": "7c4f6aff1b",
       "occ": 1,
@@ -4659,7 +4659,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 129,
+      "line": 131,
       "sig": "887151c12d",
       "bhash": "be2f99aad5",
       "occ": 1,
@@ -4672,7 +4672,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 159,
+      "line": 161,
       "sig": "50ff445329",
       "bhash": "df0f9f1bd4",
       "occ": 1,
@@ -4685,7 +4685,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 455,
+      "line": 457,
       "sig": "1f28dd6f24",
       "bhash": "b3080e2112",
       "occ": 1,
@@ -4698,7 +4698,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 663,
+      "line": 665,
       "sig": "c571e2e4fb",
       "bhash": "4661999e4d",
       "occ": 1,
@@ -4711,7 +4711,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 664,
+      "line": 666,
       "sig": "44069a306a",
       "bhash": "cb5bad6206",
       "occ": 1,
@@ -4724,7 +4724,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 665,
+      "line": 667,
       "sig": "faa4c085bd",
       "bhash": "3a692151d3",
       "occ": 1,
@@ -4737,7 +4737,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 802,
+      "line": 804,
       "sig": "de2c2f6f50",
       "bhash": "7ab1925e3a",
       "occ": 1,
@@ -4750,7 +4750,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 843,
+      "line": 845,
       "sig": "060398df02",
       "bhash": "a2b040f0f8",
       "occ": 1,
@@ -4763,7 +4763,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 917,
+      "line": 919,
       "sig": "87d55c523f",
       "bhash": "078560c134",
       "occ": 1,
@@ -4776,7 +4776,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 944,
+      "line": 946,
       "sig": "55ce529c11",
       "bhash": "37d5317628",
       "occ": 1,
@@ -4789,7 +4789,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 974,
+      "line": 976,
       "sig": "42aa032264",
       "bhash": "76fcc08e38",
       "occ": 1,
@@ -4802,7 +4802,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 975,
+      "line": 977,
       "sig": "8684b306b6",
       "bhash": "58ee6890b8",
       "occ": 1,
@@ -4815,7 +4815,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 988,
+      "line": 990,
       "sig": "c7f986c3b1",
       "bhash": "7703bd5140",
       "occ": 1,
@@ -4828,7 +4828,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1007,
+      "line": 1009,
       "sig": "22d61f68c2",
       "bhash": "cc04946f8e",
       "occ": 1,
@@ -4841,7 +4841,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1033,
+      "line": 1035,
       "sig": "42aa032264",
       "bhash": "76fcc08e38",
       "occ": 2,
@@ -4854,7 +4854,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1034,
+      "line": 1036,
       "sig": "8663d01017",
       "bhash": "4798451cbe",
       "occ": 1,
@@ -4867,7 +4867,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1047,
+      "line": 1049,
       "sig": "7648cbdd12",
       "bhash": "a1f9117bf2",
       "occ": 1,
@@ -4880,7 +4880,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1083,
+      "line": 1085,
       "sig": "6cd22d5d28",
       "bhash": "ed37e2a5c6",
       "occ": 1,
@@ -4893,7 +4893,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1097,
+      "line": 1099,
       "sig": "3720e7f23c",
       "bhash": "29da5a9944",
       "occ": 1,
@@ -4906,7 +4906,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1101,
+      "line": 1103,
       "sig": "b35621d159",
       "bhash": "1920ecdb8d",
       "occ": 1,
@@ -4919,7 +4919,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1102,
+      "line": 1104,
       "sig": "5445742324",
       "bhash": "12810ecab5",
       "occ": 1,
@@ -4932,7 +4932,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1127,
+      "line": 1129,
       "sig": "98f918c249",
       "bhash": "c16541877b",
       "occ": 1,
@@ -4945,7 +4945,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1130,
+      "line": 1132,
       "sig": "b35621d159",
       "bhash": "1920ecdb8d",
       "occ": 2,
@@ -4958,7 +4958,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1131,
+      "line": 1133,
       "sig": "70246ac64e",
       "bhash": "c29375bca7",
       "occ": 1,
@@ -4971,7 +4971,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1144,
+      "line": 1146,
       "sig": "afb10b2c21",
       "bhash": "f94a990c27",
       "occ": 1,
@@ -4984,7 +4984,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1148,
+      "line": 1150,
       "sig": "b35621d159",
       "bhash": "1920ecdb8d",
       "occ": 3,
@@ -4997,7 +4997,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1149,
+      "line": 1151,
       "sig": "efb10117d4",
       "bhash": "4b1749670a",
       "occ": 1,
@@ -5010,7 +5010,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1166,
+      "line": 1168,
       "sig": "d83c725ec4",
       "bhash": "d61813d4f2",
       "occ": 1,
@@ -5023,7 +5023,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1169,
+      "line": 1171,
       "sig": "b35621d159",
       "bhash": "1920ecdb8d",
       "occ": 4,
@@ -5036,7 +5036,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1170,
+      "line": 1172,
       "sig": "81a297f20d",
       "bhash": "0309e2b166",
       "occ": 1,
@@ -5049,7 +5049,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1186,
+      "line": 1188,
       "sig": "e171d503e5",
       "bhash": "a856677c36",
       "occ": 1,
@@ -5062,7 +5062,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1190,
+      "line": 1192,
       "sig": "b35621d159",
       "bhash": "1920ecdb8d",
       "occ": 5,
@@ -5075,7 +5075,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1191,
+      "line": 1193,
       "sig": "035f810d42",
       "bhash": "833a185761",
       "occ": 1,
@@ -5088,7 +5088,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1206,
+      "line": 1208,
       "sig": "8653e3f6d2",
       "bhash": "9031c79c52",
       "occ": 1,
@@ -5101,7 +5101,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1267,
+      "line": 1269,
       "sig": "d31aa8d159",
       "bhash": "17a671a9cf",
       "occ": 1,
@@ -5114,7 +5114,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1288,
+      "line": 1290,
       "sig": "798f31ee7f",
       "bhash": "18d0e30fad",
       "occ": 1,
@@ -5127,7 +5127,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1294,
+      "line": 1296,
       "sig": "8ec4104abe",
       "bhash": "7f2a38898c",
       "occ": 1,
@@ -5140,7 +5140,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1298,
+      "line": 1300,
       "sig": "68ceca0c65",
       "bhash": "99bd5cbc0c",
       "occ": 1,
@@ -5153,7 +5153,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1330,
+      "line": 1332,
       "sig": "6a69b71ab0",
       "bhash": "a6bc9c9f05",
       "occ": 1,
@@ -5166,7 +5166,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 1336,
+      "line": 1338,
       "sig": "5fa5ab6f99",
       "bhash": "9e7f57b55c",
       "occ": 1,
@@ -5179,7 +5179,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 143,
+      "line": 145,
       "sig": "908642f162",
       "bhash": "1c6a8a3d44",
       "occ": 1,
@@ -5192,7 +5192,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 661,
+      "line": 663,
       "sig": "2d7268e849",
       "bhash": "ef12302fcf",
       "occ": 1,
@@ -5205,7 +5205,7 @@
     },
     {
       "file": "ui-ge-api.js",
-      "line": 666,
+      "line": 668,
       "sig": "e6b1d0e436",
       "bhash": "f57e610a6a",
       "occ": 1,

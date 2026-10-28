@@ -60,7 +60,9 @@
       if(o && typeof o === "object" && o.__enc === true && typeof o.iv === "string" && typeof o.data === "string"){
         return { value: null, sealed: true, enc: o };
       }
-    }catch(e){ /* 非 JSON → 旧明文 */ }
+    }catch(e){ /* ⚠️ **豁免项，勿改**（R-38 复核 advisory①）：非 JSON＝旧明文形态，这是**迁移探测**，
+         即"用异常做控制流"，不是吞错；补诊断会在每次读 token 时刷屏。基线里这条的 `why` 写的是
+         "配置静默回落默认值"，属分类器误判（下一步：重冻时别照抄它，也别把它当漏改的 P0 修掉）。 */ }
     return { value: raw, sealed: false, enc: null };
   }
 
