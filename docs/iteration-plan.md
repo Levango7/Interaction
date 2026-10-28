@@ -230,11 +230,19 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
     完整证据（含窄变异与真浏览器两视口）见 `CHANGELOG.md` `[Unreleased]` 的 2026-10-28 B8-b 节。
   - 顺带销掉 B7 列的"下一批"遗留：`_probe/r22-flaky-freq.mjs` 已由 R-37 批次换成 `scripts/flaky-freq.mjs`
     （标题锚 + 自带单测 `tests/flaky-freq.test.js`），本条不再是待办。
-- **B8-a · R-2 续：P0 空 catch 切片** —— 待开工。实测基线（`scripts/lint-empty-catch.baseline.json`）：
-  共 585 处 = **P0 72** / P1 246 / P2 267；P0 集中在 `ui-ge-api` 12、`ai-tools` 11、`data-links` 5、
-  `ui-drawer` 5、`ui-ge-integrations` 5、`ai-retry` 4、`render-widgets` 4（共 23 个文件）。
-  切片口径：先取 15~20 处，优先写盘 / `save*()` / 网络 reject 路径；每处按门禁处方补 `pushDiag`（不是补注释）。
-  验收：基线 P0 **只降不增**、全量单测绿、窄变异证明判据有射程。
+- **B8-a · R-2 续：P0 空 catch 切片** —— 🟡 **第一片已交付（2026-10-28，只动 `src/ui-ge-api.js`）**。
+  - **先重测再开工，基线读数被订正**：`scripts/lint-empty-catch.baseline.json` 写 P0 72，但 `--report` 现扫是
+    **P0 66**，且**全部是 P0-b「作者写过说明」、P0-a「无任何注释」= 0**；基线里的行号也已漂移
+    （门禁按签名 + body 哈希判，不按行号）—— 拿基线行号定位会指错地方。
+  - 交付：消解 11 处（12 → 1），控制流一字未改；**保留 1 处**（`JSON.parse` 失败按旧明文读 token —— 那是迁移路径本身，不是吞错）。
+    两处（设备/提醒列表）**改判** slice3 当时"合理降级"的结论：空容器会被读成"没有设备"，而真相是"没连上" ⇒ 属相反结论，
+    除留痕外把容器写成「加载失败」（复用已有 `errorState.defaultTitle`，不新增 i18n 键）。
+  - 本批自曝一个真缺陷：首版把 DOM 写入放在二次保护之外 ⇒ 失败上报自身抛错，把被吞的错**升级成未处理拒绝**
+    （在 `slice3` 里造出 5 条，用例全过但 `npm test` 退 1）。已修并钉成用例 ⑦。
+  - 验证：`tests/empty-catch-slice13.test.js` 8 例 + 相关回归 30 例；窄变异 A/B/C 各打中一个维度；
+    基线用仓里既有的 `scripts/refreeze-baseline.mjs` **逐文件**精确重冻（其它文件 538 条一字未动），全仓 P0 **66 → 55**。
+  - **余下 54 处**（`ai-tools` 11、`data-links` 5、`ui-drawer` 5、`ui-ge-integrations` 5、`render-widgets` 4……）按同法继续切；
+    每片仍遵守"先 `--report` 现扫、不信基线行号"与"逐文件重冻"。
 
 ### 等你拍板（不进批次，动一句就开工）
 

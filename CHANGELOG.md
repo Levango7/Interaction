@@ -124,6 +124,44 @@
 
 ## [Unreleased]
 
+### 2026-10-28 · B8-a 第一片：`src/ui-ge-api.js` 的 P0 空 catch 消解 11 处（12 → 1）
+
+- **为什么只动一个文件**：用户要求"不要和其他 agent 冲突"。现查共享树只有 `M docs/agent-board.md`（WorkBuddy 的收工释放条），
+  `src/` 无人占用，ZCode 在 `server/verify`。所以本片的冲突面 = 一个源文件 + 一个新测试文件。
+- **口径订正（先看现测再看基线）**：`scripts/lint-empty-catch.baseline.json` 里写的是 P0 72 处，
+  但按 `node scripts/lint-empty-catch.mjs --report` 现扫是 **P0 66 处**，且**全部是 P0-b「作者写过说明」**、
+  **P0-a「无任何注释」为 0 处** —— 基线里的行号也已漂移（门禁按签名+body 哈希判，不按行号）。
+  所以"72 处待修"是基线的历史读数，不是当前事实；本片按当前事实开工。
+- **消解 11 处**（诊断按门禁处方 (a)：`pushDiag("warn", …, {where})`，**控制流一字未改**）：
+  `_restoreTokens` 存储读抛错 / 解密 reject、`apiLogout` 服务端未执行、`_loadApiPanels` 资料、
+  `_loadDeviceList`、`_loadNotifyPrefs`、`_loadSchedules`、`_loadIntegrations`、`initI18n` 语言读、
+  `setLang` 语言持久化、`applyI18n` 批量翻译半途。
+- **一处刻意保留**：`:63` 的 `JSON.parse` 失败 → 按旧明文读 token。这不是吞错，是**迁移路径本身**
+  （密文改造前所有环境都落明文）；报诊断只会在每次启动刷噪音。
+- **重新定性两处**（与 slice3 的分工写在这里，避免被读成"同一件事两种说法"）：slice3 当时把加载面的 17 处判为
+  "合理降级"。其中**设备列表 / 定时提醒**这两处本次改判：`catch` 后留空容器 ⇒ 用户读成"这个账号下没有设备"，
+  而真相是"没连上"—— **这是相反结论，不是体验瑕疵**。所以这两处除留痕外还把容器写成「加载失败」
+  （复用已存在的 `errorState.defaultTitle`，双语字典里本来就有，不新增键）。其余只补留痕。
+- **🔴 本批自曝一个真缺陷（是回归跑出来的，不是推出来的）**：首版把 `document.getElementById(...)` 写在
+  二次保护**之外**，于是"失败上报"自己再抛时，把原本被吞掉的错误**升级成未处理拒绝** ——
+  实测在 `tests/empty-catch-slice3.test.js` 造出 **5 条 Unhandled Rejection**：用例 68 例全过但 `npm test` 退 1。
+  修法是把"记账 + 写界面"整段包进二次保护，且顺序为先记账后写界面（界面写不动也不能丢痕）。
+- **验证**：
+  - 新增 `tests/empty-catch-slice13.test.js` **8 例**全过，钉的全是外部可见结果：
+    ①两个列表失败⇒可见「加载失败」+诊断点名；②资料/偏好/集成三条诊断齐全；③token 存储读抛错⇒留痕且照常降级为未登录；
+    ④语言持久化失败⇒内存切换**照旧生效**；⑤服务端登出 reject⇒本机仍登出但留痕；⑥happy path 零诊断噪音；
+    ⑦留痕动作自身抛错⇒被二次保护吸收、不冒出未处理拒绝。
+  - 回归 `tests/empty-catch-slice3.test.js` / `slice6` / `api-envelope` / `auth-ui-lifecycle` / `api-token-crypto` 同跑 30 例绿。
+  - **三次窄变异**（都在最终 8 例版本上重跑过，单跑 `slice13`，不是早期 7 例版本的读数）：
+    A 把 `_loadDeviceList` 的诊断短路成 `if(false)` ⇒ **恰好 2 例红**（① 和 ⑦ 都断言这条留痕）；
+    B 把可见文案写到不存在的元素 id 上（只让"界面写"失效、诊断照留）⇒ **恰好 1 例红（①），7 例绿**；
+    C 退回未二次保护的写法 ⇒ **8 例全过但冒 2 条 Unhandled Rejection、退出码 1**
+    （"用例过了不等于没坏"，判据只能取退出码）。
+  - `scripts/lint-empty-catch.baseline.json` 用仓里既有的 `scripts/refreeze-baseline.mjs` **逐文件精确重冻**
+    （不新造工具）：`ui-ge-api.js` 47 → 48 条（P0 少 11、多出二次保护的 P2 条目），
+    **其它文件 538 条一字未动**，全仓总数 585 → 586；门禁复跑「无新增 P0」✓。
+  - 全仓 P0 现测 **66 → 55**。
+
 ### 2026-10-28 · B8-b：MCP 延迟读数上统计页（B6 主动推迟的那半）
 
 - **缺口是实测的**：B6 把 MCP 的重试与延迟做成了真账（`mcpLatencyStats` / `mcpLatencyAll`），但只把读数接到

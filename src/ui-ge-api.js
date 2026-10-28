@@ -92,7 +92,8 @@
       _tokenExpiry = exp ? Number(exp) : 0;
       pa = _parseTokenRaw(localStorage.getItem(API_TOKEN_KEY));
       pr = _parseTokenRaw(localStorage.getItem(API_REFRESH_KEY));
-    }catch(e){ /* localStorage 不可用时静默降级 */ }
+    }catch(e){ /* localStorage 不可用时静默降级 —— 但「读不出来」与「真没登录」是两件事，必须留痕 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "token store unreadable: "+((e&&e.message)||e), {where:"_restoreTokens"}); }catch(_e2){} }
     /* 明文（含旧数据）：立即可用（无缝迁移）；密文：内存先不持有，等解密 */
     _accessToken = pa.sealed ? null : (pa.value || null);
     _refreshToken = pr.sealed ? null : (pr.value || null);
@@ -114,7 +115,8 @@
         try{
           const out = await decryptKey(p.enc);
           if(typeof out === "string") plain = out;
-        }catch(e){ /* 解不开：设备密钥换了 / 密文损坏 */ }
+        }catch(e){ /* 解不开：设备密钥换了 / 密文损坏 —— 后果是"要重新登录"，但原因必须查得到 */
+          try{ if(typeof pushDiag === "function") pushDiag("warn", k+" token decrypt failed: "+((e&&e.message)||e), {where:"_restoreTokens"}); }catch(_e2){} }
         if(plain === null) failed = true;
         dec[k] = plain;
       }
@@ -449,7 +451,8 @@
           method: "POST",
           body: JSON.stringify({ refreshToken: _refreshToken }),
         });
-      }catch(e){ /* 离线时静默 */ }
+      }catch(e){ /* 离线时静默 —— 本机凭据已清，服务端会话可能仍活着，这条不能无痕 */
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "server logout not executed: "+((e&&e.message)||e), {where:"apiLogout"}); }catch(_e2){} }
     }
     apiClearTokens();
   }
@@ -910,7 +913,8 @@
         const editName = document.getElementById("apiEditName");
         if(editName) editName.value = r.data.user.name || "";
       }
-    }catch(e){ /* 离线时静默 */ }
+    }catch(e){ /* 拉不到资料：面板留着旧值/空值，用户看不出是"没数据"还是"没连上" */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "profile load failed: "+((e&&e.message)||e), {where:"_loadApiPanels"}); }catch(_e2){} }
     // 加载设备列表
     _loadDeviceList();
     // 加载通知偏好
@@ -976,7 +980,13 @@
           list.appendChild(row);
         });
       }
-    }catch(e){ /* 离线时静默 */ }
+    }catch(e){ /* 拉不到设备：必须说"加载失败"——空列表会被读成"这个账号下没有设备"（相反结论） */
+      try{
+        if(typeof pushDiag === "function") pushDiag("warn", "device list load failed: "+((e&&e.message)||e), {where:"_loadDeviceList"});
+        const el = document.getElementById("apiDeviceList");
+        if(el) el.textContent = t("errorState.defaultTitle", "加载失败");
+      }catch(_e2){}
+    }
   }
 
   // 加载通知偏好
@@ -993,7 +1003,8 @@
         set("apiPrefDigestEmail", p.dailyDigest && p.dailyDigest.email);
         set("apiPrefDigestPush", p.dailyDigest && p.dailyDigest.push);
       }
-    }catch(e){ /* 离线时静默 */ }
+    }catch(e){ /* 拉不到偏好：勾选框停在 HTML 默认值，与账号真实偏好可能相反，此时保存会把默认值写回服务端 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "notify prefs load failed: "+((e&&e.message)||e), {where:"_loadNotifyPrefs"}); }catch(_e2){} }
   }
 
   // 加载定时提醒列表
@@ -1028,7 +1039,13 @@
           list.appendChild(row);
         });
       }
-    }catch(e){ /* 离线时静默 */ }
+    }catch(e){ /* 拉不到定时提醒：同设备列表，空列表≠没有提醒 */
+      try{
+        if(typeof pushDiag === "function") pushDiag("warn", "schedule list load failed: "+((e&&e.message)||e), {where:"_loadSchedules"});
+        const el = document.getElementById("apiScheduleList");
+        if(el) el.textContent = t("errorState.defaultTitle", "加载失败");
+      }catch(_e2){}
+    }
   }
 
   // 加载集成状态
@@ -1062,7 +1079,8 @@
           if(disconnectBtn) disconnectBtn.classList.toggle("u-hidden", !i.authorized);
         });
       }
-    }catch(e){ /* 离线时静默 */ }
+    }catch(e){ /* 拉不到集成状态：全部留在"未连接"，而真值可能是已授权（相反结论） */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "integrations load failed: "+((e&&e.message)||e), {where:"_loadIntegrations"}); }catch(_e2){} }
   }
 
   // 绑定设置面板按钮
@@ -1245,7 +1263,8 @@ function initI18n(){
     // HTML lang 属性需 BCP 47 格式（zh-CN / en）
     document.documentElement.lang = _currentLang === "zh" ? "zh-CN" : _currentLang;
     applyI18n(document);
-  }catch(e){ /* localStorage 不可用：保持默认 zh */ }
+  }catch(e){ /* localStorage 不可用：保持默认 zh —— 但英文用户会被静默变成中文，原因要留痕 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "lang read failed, fallback zh: "+((e&&e.message)||e), {where:"initI18n"}); }catch(_e2){} }
 }
 
 /**
@@ -1265,7 +1284,8 @@ function setLang(lang){
   _currentLang = lang;
   try{
     if(typeof localStorage !== "undefined") localStorage.setItem(PREFIX + "lang", lang);
-  }catch(e){ /* 持久化失败不影响内存切换 */ }
+  }catch(e){ /* 持久化失败不影响内存切换 —— 但刷新后会回到旧语言，用户会以为"切换没生效" */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "lang persist failed (reverts on reload): "+((e&&e.message)||e), {where:"setLang"}); }catch(_e2){} }
   // v2.2.0：名称类文案即时生效（document.title + data-i18n 静态节点）
   try{
     document.title = t("app.name");
@@ -1306,7 +1326,8 @@ function applyI18n(root){
       const key = el.getAttribute("data-i18n-placeholder");
       if(key) el.setAttribute("placeholder", t(key));
     });
-  }catch(e){ /* DOM 未就绪时静默跳过 */ }
+  }catch(e){ /* DOM 未就绪时静默跳过 —— 但这也会把"翻译做了一半"咽掉（前两组已译、后两组没译） */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "applyI18n partial: "+((e&&e.message)||e), {where:"applyI18n"}); }catch(_e2){} }
 }
 /* v3.7.53：暴露给 Render 层，供 render() 收口处翻译动态插入的 [data-i18n] 节点。
    走 AppBridge 而非直接调用，是为了不新增 Render→UI 的逆向依赖（见 check:modules）。 */
