@@ -47748,7 +47748,8 @@ function setTheme(themeId){
     if(typeof localStorage !== "undefined"){
       localStorage.setItem(PREFIX + "theme", themeId);
     }
-  }catch(e){ /* 静默降级 */ }
+  }catch(e){ /* 静默降级 —— 但刷新后主题会回退到旧值，用户会以为「设置没生效」 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "theme persist failed (reverts on reload): "+((e&&e.message)||e), {where:"setTheme"}); }catch(_e2){} }
 
   // 应用场景配色个性化
   _applyScenarioColors();
@@ -47923,7 +47924,8 @@ function _resetThemeSystem(){
       localStorage.removeItem(PREFIX + "custom_themes");
       localStorage.removeItem(PREFIX + "sc_colors");
     }
-  }catch(e){ /* noop */ }
+  }catch(e){ /* noop —— 但旧主题 / 自定义配色会残留在存储里，重置不彻底（下次启动可能被读回来） */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "theme reset incomplete: "+((e&&e.message)||e), {where:"_resetThemeSystem"}); }catch(_e2){} }
   const el = document.documentElement;
   if(el){
     el.removeAttribute("data-theme");
@@ -48567,7 +48569,8 @@ function _savePomoCount(){
     const d = JSON.parse(localStorage.getItem(PREFIX+"pomo_count") || "{}");
     d[today] = _pomoState.count;
     localStorage.setItem(PREFIX+"pomo_count", JSON.stringify(d));
-  }catch(e){ /* localStorage 不可用时静默降级 */ }
+  }catch(e){ /* localStorage 不可用时静默降级 —— 但今日番茄计数会丢：界面上的数与实际不符，且用户看不到原因 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "pomo count persist failed: "+((e&&e.message)||e), {where:"_savePomoCount"}); }catch(_e2){} }
 }
 /**
  * 内部：渲染笃行显示区（#pomoDisplay）。无 DOM 时 no-op（测试环境）
@@ -48734,7 +48737,8 @@ function _saveTaskElapsed(taskId, ms){
     const d = JSON.parse(localStorage.getItem(PREFIX+"task_time") || "{}");
     d[taskId] = ms;
     localStorage.setItem(PREFIX+"task_time", JSON.stringify(d));
-  }catch(e){ /* localStorage 不可用时静默降级 */ }
+  }catch(e){ /* localStorage 不可用时静默降级 —— 但任务累计耗时会回退到上次成功写入的值，统计失真且无痕 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "task elapsed persist failed: "+((e&&e.message)||e), {where:"_saveTaskElapsed"}); }catch(_e2){} }
 }
 /**
  * 获取追踪器当前状态快照（不暴露 timer 内部句柄）
@@ -50286,7 +50290,8 @@ function _evCollectDay(dateKey){
       list.push({ title: m0.title || "", time: (m0.startTime || "") + (m0.endTime ? "–" + m0.endTime : ""),
         place: m0.place || m0.location || "", desc: m0.note || "", kind: t("p5.evKindMeeting", "会议（本地记录）") });
     });
-  }catch(e){ /* 无办公记录则跳过 */ }
+  }catch(e){ /* 无办公记录则跳过 —— 但「读失败」与「这天没会议」在界面上长得一样，必须留痕 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "day meetings collect failed: "+((e&&e.message)||e), {where:"_evCollectDay"}); }catch(_e2){} }
   try{
     (typeof getActiveTasks === "function" ? getActiveTasks() : []).forEach(function(tk){
       /* v3.7.86：参数名不用 t —— t 是本项目的 i18n 函数，遮蔽后 t("…") 会当对象调用并抛错 */
@@ -50297,7 +50302,8 @@ function _evCollectDay(dateKey){
       list.push({ title: tk.title || "", time: tk.due, place: "", desc: tk.note || "",
         kind: tk.status === "done" ? t("p5.evKindTaskDone", "任务（已完成）") : t("p5.evKindTask", "任务（未完成）") });
     });
-  }catch(e){ /* 任务读取失败则跳过 */ }
+  }catch(e){ /* 任务读取失败则跳过 —— 同上：空 ≠ 没有，否则用户会以为这天没有任务到期 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "day tasks collect failed: "+((e&&e.message)||e), {where:"_evCollectDay"}); }catch(_e2){} }
   const exts = (typeof _icsEventsByDate === "function") ? (_icsEventsByDate()[dateKey] || []) : [];
   exts.forEach(function(e0){
     list.push({ title: e0.title || "", time: _evTimeText(e0), place: e0.location || "", desc: e0.desc || "",
@@ -51083,7 +51089,8 @@ function _ragFileText(name, raw, preExtracted){
       const doc = new DOMParser().parseFromString(text, "text/html");
       doc.querySelectorAll("script,style,noscript").forEach(function(n){ n.remove(); });
       text = (doc.body && doc.body.textContent) || "";
-    }catch(e){ /* 解析失败按原文处理 */ }
+    }catch(e){ /* 解析失败按原文处理 —— 但正文会混着 HTML 标签进 RAG 切块，检索质量下降且无从察觉 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "html extract failed (raw used): "+((e&&e.message)||e), {where:"_ragFileText"}); }catch(_e2){} }
   }
   return text.replace(/\r\n/g, "\n").trim();
 }
@@ -51435,7 +51442,8 @@ function searchAll(query, options){
           });
         });
       }
-    }catch(e){ /* 搜索异常不阻断 */ }
+    }catch(e){ /* 搜索异常不阻断 —— 但结果会不完整：用户会读成「没有匹配」，与真相相反 */
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "search partial: "+((e&&e.message)||e), {where:"searchAll"}); }catch(_e2){} }
   }
 
   results.total = results.tasks.length + results.records.length + results.notes.length + results.features.length;
