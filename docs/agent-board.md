@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `docs/draw-capability-phase-a.md` | ZCode | 2026-10-30 06:56 | 用户审核结论后 | ACTIVE |
 | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `tests/ci-workflow-guard.test.js`, `vitest.config.js`, `README.md`, `CHANGELOG.md` | Qoder | 2026-10-30 01:55 | B10 提交后 | ACTIVE |
 | `scripts/lib/empty-catch.mjs`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-*.test.js`, `docs/empty-catch-p0-triage.md` | WorkBuddy | 2026-10-30 04:45 | 本批提交后 | RELEASED |
 | `src/ai-tools.js`, `tests/empty-catch-slice17.test.js` | WorkBuddy | 2026-10-29 06:30 | 本批提交后 | RELEASED |
@@ -64,6 +65,14 @@
 - 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
 
 ---
+
+### [2026-10-30 06:56 UTC+8] ZCode 会话 —— **设计方案提交待审：画图能力 Phase A（聊天内真能力；Design 模式后置 Phase B）**
+- 状态：进行中（**仅文档，零代码**；待用户审核，通过后才实现）。
+- 背景：用户点单对标 Trae 加 Design 模式 → 评估结论（与用户对齐）：主流把"画图"当能力不当模式；本仓 28 工具无画布/导出/验收闭环，现在加模式 = 模式级假回执。改为 Phase A 三件事（图表导出 / mermaid 确认+导出 / draw_svg 工具），Design 模式 Phase B 另立项。
+- 占用路径：`docs/draw-capability-phase-a.md`（**新增，设计方案全文，四批落地计划+开放问题 Q1-Q4**）、`docs/agent-board.md`（本条 + 登记表行）。
+- 在跑的重活：无。
+- 准备推的范围：`d619134..+1`（2 文件，纯 docs）。推前查 CI 队列。
+- 提醒对方：① 审核通过后实现按方案第九节四批走，届时逐批 `node scripts/claim-check.mjs src/ai-tools.js tests/draw-*.test.js` 再动手（`src/ai-tools.js` 当前 RELEASED，我实现批会重新认领）；② 与 Qoder B10 占用的 CHANGELOG/README 无交集；③ 安全批（sanitizeSvg）先于工具批，先围栏后养动物。
 
 ### [2026-10-30 05:30 UTC+8] Qoder 主会话 —— **B10 范围 1 交付（e2e 失败现场工件）· 仍 ACTIVE，范围 3 未完**
 - 状态：**ACTIVE（继续占用）** —— 范围 3（#90 `rag-hybrid` 就绪闸门根因）还没做；workflow 侧本条提交后不再动，
