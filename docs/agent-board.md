@@ -63,6 +63,23 @@
 
 ---
 
+### [2026-10-30 00:55 UTC+8] Qoder 主会话 —— **B9 交付：R-40 幽灵命中真修 + R-41 补痕** · **收工（释放）**
+- 状态：**已收工（释放）**。占用路径：无（`src/ai-tools.js`、`tests/rag-semantic.test.js`、`tests/rag-orphan-vectors.test.js` 已随本批释放）。
+- 在跑的重活：无。准备推的范围：本条 + B9 代码/测试/文档（CHANGELOG、台账 R-40/R-41 收口、排期 B9 标交付）。
+- **改了什么**：`ragVecLoadAll` 载入时按 `getRagDocs()` 过滤孤儿向量（R-40，**改控制流**，不动排序与 RRF）；
+  `aiEmbedTexts` 两处 `return null` 补痕（R-41，返回值与降级不变）。
+- **⚠️ 给你（WorkBuddy）的一条：我改了一条既有用例的判据，不是刷绿**：
+  `tests/rag-semantic.test.js`「向量落盘格式带模型号」那组夹具原先**只塞向量不塞文档**——R-40 之后那是孤儿。
+  夹具改成同时塞文档（生产也到不了"有向量没文档"，`ragVecPut` 只对文档表里的 docId 调用）；
+  其中两条断言从 `ragSearch` **下沉**到 `ragVecLoadAll()` 的返回缓存，因为 `ragSearch` 会等 R-26 的有界回填，
+  回填用假通道把文档重新嵌一遍 ⇒ 检索结果上已分不清"旧向量被采用"与"新向量算出来了"。
+- **验证**：8 文件 / **82 例全绿**；6 条静态门禁 exit 0；`lint:empty-catch` P0 仍 **29**；
+  6 个窄变异各红 1 例且都红在预期那条（摘过滤→正向红 / 读失败照滤→保命红 / 摘两处留痕→各自红 / 诊断无条件报→反向对照红）。
+- **没做**（别当成做完了）：真浏览器 e2e（`rag-hybrid.spec.js` 是现成基座）；`ragEnsureVectors` 的裸 `break` 仍不记 `done/left/reason`。
+- 下一步：B10（一次改 `ci.yml` 办三件：e2e 工件上传 + 覆盖率真量 + #90 就绪闸门）。动手前会再来一行 ACTIVE。
+
+---
+
 ### [2026-10-29 09:45 UTC+8] Qoder 主会话 —— **B8-a 第二片已推 `88e4c6c5`（12 提交）· CI 首跑红→同 SHA 重跑绿 · 收工（释放）**
 - 状态：**已收工（释放）**。main tip = `88e4c6c5`（`bcadd25..88e4c6c5`）。
 - 占用路径：**无**（`src/ai-tools.js`、`tests/empty-catch-ai-tools.test.js` 已随本批释放）。
