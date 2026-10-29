@@ -14,6 +14,12 @@
  *   ③ `maskCommentsAndStrings()` 的**保位不变量**（长度相等、换行位置一致）——
  *      这条一旦破，行号就会漂，门禁报的位置全是错的。
  *
+ * v3.7.153 扩展：reject 类的**危险分级**改用 `promiseContext()`（整条 promise 表达式），
+ * 取代原先「`.catch` 前 200 字符窗口」的启发式。新增 ⑤ 钉死：
+ *   · 相邻语句里 200 字符内有 `save*`/`await`/`localStorage` 但**不在**被吞的链上 ⇒ 不再误判 P0；
+ *   · 链上真有 `await`/`persist*`/`decode` 的危险项 ⇒ **仍然**判 P0（修假阳性不许放掉真问题）；
+ *   · 回溯不能越过上一个代码块的 `}`（否则会把更早语句的 `await` 捞进来制造假 P0）。
+ *
  * 另有一条**实现过程中踩到的坑**也钉在这里：`() => resolve({})` 的第一个 `{` 是
  * **实参里的空对象字面量**，不是函数体 —— 按「取第一个 `{`」实现会把它误判成空处理器。
  */
@@ -136,10 +142,64 @@ describe("④ 真实源码上的契约：掉的是误判，留的是真空", () 
     expect(p0Lines("ui-ge-integrations.js")).toContain(246);
   });
 
-  it("全仓 reject 类 P0 共 7 处（28 处 P0 里 21 处是 try/catch）", () => {
+  it("全仓 reject 类 P0 共 5 处（26 处 P0 里 21 处是 try/catch）", () => {
     let total = 0;
     for (const f of ["ai-loop.js", "ai-tools.js", "render-widgets.js", "ui-backup-stats.js",
       "ui-daily.js", "ui-ge-integrations.js"]) total += p0Lines(f).length;
-    expect(total).toBe(7);
+    expect(total).toBe(5);
+  });
+});
+
+describe("⑤ reject 分级用整条 promise 表达式（v3.7.153）：消除 200 字符窗口的假 P0", () => {
+  /** 对一段合成代码取 reject 项的等级（没有则返回 null） */
+  const rejectLevel = (code) => {
+    const it = scanSource(code, "synthetic.js").find((i) => i.kind === "reject");
+    return it ? it.level : null;
+  };
+
+  it("链上真有 await ⇒ 仍判 P0（修假阳性不许放掉真问题）", () => {
+    expect(rejectLevel("async function f(){ await risky().catch(()=>{}); }")).toBe("P0");
+  });
+
+  it("链上真有 persist* ⇒ 仍判 P0", () => {
+    expect(rejectLevel("persistCfg().catch(()=>{});")).toBe("P0");
+  });
+
+  it("相邻语句 200 字符内有 save*，但不在被吞的链上 ⇒ 不再误判 P0", () => {
+    /* 旧 200 字符窗口会把上一句的 `save(NOTIFY_KEY)` 捞进来判成 P0；新逻辑只看 promise 链本身。 */
+    const code = 'save(NOTIFY_KEY, v);\nif(x){ p.catch(function(){ /* 良性降级 */ }); }';
+    expect(rejectLevel(code)).not.toBe("P0");
+  });
+
+  it("相邻语句有 await，不在链上 ⇒ 不再误判 P0（ui-daily.js:111 的实证形态）", () => {
+    const code = 'const r = await _mcpRpc(srv, {});\nif(p && typeof p.catch==="function") p.catch(function(){});';
+    expect(rejectLevel(code)).not.toBe("P0");
+  });
+
+  it("回溯不能越过上一代码块的 `}`（否则把更早语句的 await 捞成假 P0）", () => {
+    /* ui-global-events.js:2515 的实证形态：前面有 `try{ await initCrypto() }catch(e){}`，
+       块闭括号之后才是 `initIdb().catch()` —— 新逻辑必须在那个 `}` 处停住，不把 initCrypto 的 await 算进来。 */
+    const code = 'try{ await initCrypto(); }catch(e){}\ninitIdb().catch(()=>{});';
+    expect(rejectLevel(code)).not.toBe("P0");
+  });
+
+  it("真实源码契约：4 处窗口误捞的假 P0 已纠正，且真危险项一个未动", () => {
+    const lvl = (file, line) => {
+      const it = scanSource(readFileSync(join(SRC, file), "utf8"), file)
+        .find((i) => i.kind === "reject" && i.line === line);
+      return it ? it.level : null;
+    };
+    /* 这 3 处是 200 字符窗口从相邻语句捞来的假 P0 ⇒ 现在应降为 P2/P1 */
+    expect(lvl("ai-tools.js", 680)).not.toBe("P0");
+    expect(lvl("ui-daily.js", 111)).not.toBe("P0");
+    expect(lvl("ui-ge-integrations.js", 260)).not.toBe("P0");
+    /* 2515 是块边界 bug 的实证点：不能在修复中反而被误判 P0 */
+    expect(lvl("ui-global-events.js", 2515)).not.toBe("P0");
+    /* 这 5 处是链上真有 await / persist* / decode 的危险项 ⇒ 必须仍是 P0，一个都不能漏 */
+    expect(lvl("ai-loop.js", 328)).toBe("P0");
+    expect(lvl("render-widgets.js", 1081)).toBe("P0");
+    expect(lvl("render-widgets.js", 2983)).toBe("P0");
+    expect(lvl("ui-ge-integrations.js", 246)).toBe("P0");
+    expect(lvl("ui-ge-integrations.js", 257)).toBe("P0");
   });
 });

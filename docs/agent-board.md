@@ -46,6 +46,7 @@
 | `scripts/lib/empty-catch.mjs`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-*.test.js`, `docs/empty-catch-p0-triage.md` | WorkBuddy | 2026-10-30 04:45 | 本批提交后 | RELEASED |
 | `src/ai-tools.js`, `tests/empty-catch-slice17.test.js` | WorkBuddy | 2026-10-29 06:30 | 本批提交后 | RELEASED |
 | `scripts/claim-check.mjs`, `docs/agent-board.md`, `AGENTS.md` | WorkBuddy | 2026-10-29 06:30 | 本条提交后 | RELEASED |
+| `scripts/lib/empty-catch.mjs`, `tests/empty-catch-reject-v2.test.js`, `tests/empty-catch-slice16.test.js`, `tests/empty-catch-slice17.test.js`, `docs/empty-catch-p0-triage.md` | WorkBuddy | 2026-10-30 07:34 | 本批提交后 | RELEASED |
 
 ## 条目模板（复制这段往上加，最新的放最上面）
 
@@ -63,6 +64,20 @@
 - Qoder 会话之间：内置会话工具可直接给另一个活会话发消息（`list_chat_sessions` → `send_message_to_chat_session`）。
 - OpenCode 侧：`opencode run -s <ses_id> "<消息>"` —— **会真的起一轮 turn**，所以消息要写成事实通告，不要写成提问。
 - 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
+
+---
+
+### [2026-10-30 07:34 UTC+8] WorkBuddy 主会话 —— **B12 收工：空 catch 门禁尺子二次修正（reject 分级改整条 promise 表达式）+ save 吞错调查结案**
+
+- 状态：**已收工（释放）**
+- 占用路径：`scripts/lib/empty-catch.mjs`、`tests/empty-catch-reject-v2.test.js`、`tests/empty-catch-slice16.test.js`、`tests/empty-catch-slice17.test.js`、`docs/empty-catch-p0-triage.md`、`docs/agent-board.md`（本条）
+- 在跑的重活：无 —— 门禁 `lint:empty-catch` **EXIT=0**；`slice16` 6/6、`slice17` 7/7、`reject-v2` 26/26 均绿
+- 准备推的范围：B12 单提交（6 文件，纯门禁/测试/文档；**未碰 CHANGELOG/README/AGENTS 版本表/package.json**）
+- 做了什么：
+  1. **item ①（reject 分级窗口）**：新增 `promiseContext(raw, idx)`（**只用于分级**，绝不取 `sig`/`bhash`/`snippet`，保主键稳定、门禁不破），reject 类从「`.catch` 前 200 字符窗口」改为「整条 promise 表达式」。回溯时遇 depth 0 的 `}`/`{` 直接 `break`（块边界，否则会钻进上一代码块误捞 `await` 制造假 P0，实证 `ui-global-events.js:2515` 未误升）。实测 `ui-daily.js:111`、`ai-tools.js:680` 两条窗口误捞假 P0 降为 **P2**，`ui-ge-integrations:246/257`、`ai-loop.js:328`、`render-widgets.js:1081/2983` 5 条链上真危险项仍是 P0，全仓 P0 **28 → 26**，门禁 EXIT=0。计数锁已订到实测值并注明「尺子换了不是代码改了」。
+  2. **item ②（save 吞错）调查结案，无需改代码**：`save()`（`agent-workbench.html:6980`）内部 `catch` 后 `pushDiag("error")+toast+return false`，**永不向外抛异常**；`_saveSessions`/`_saveActiveSid`（`src/data-links.js:519-522`）外层 `pushDiag` 确为死代码，但可观测性已被 `save()` 自身兜底，故保留不改（避开高共写面）。
+- 版本决策：**不 bump**。Qoder B10 仍 ACTIVE 占用 `CHANGELOG.md`/`README.md`（登记表行 45），R13 不能碰；本次改动随下次发版走。文档以日期/commit 锚记，不写未上表的版本号（R7）。
+- ⚠️ **留给用户的提醒**：工作树里另有一批**与本次无关的 in-flight 改动 ——「画图能力 Phase A（SVG/PNG 导出）」**（`src/core-i18n.js`、`src/render-entry.js`、`src/util-markdown.js`、`tests/draw-export.test.js`，以及被 `src-split` 重新内联的 `agent-workbench.html` 47415 行差异）。那是 ZCode 会话的设计方案实现（行 69 待审），**我本轮刻意未提交、未触碰**，避免越权把别人的在途工作混进门禁修复提交。请用户或对应会话自行处理这批。
 
 ---
 

@@ -266,6 +266,54 @@ export function findEmptyRejectionHandlers(raw) {
   return out;
 }
 
+/**
+ * 取 `.catch` / `.then` 所属的**整条 promise 表达式**，用于 reject 类分级（v3.7.153）。
+ * ----------------------------------------------------------------------------
+ * 为什么需要它（背景）：reject 类的「危险等级」原本只看 `.catch` 前 **200 字符**窗口
+ * （scanSource 里 `raw.slice(idx-200, idx)`）。那是个会**误判**的启发式：
+ *   ① **误升 P0（最危险）**：相邻语句里恰好 200 字符内有 `await` / `save*()` /
+ *      `localStorage.`，窗口就把那条 promise 判成 P0 —— 可那个 `await`/`save` 根本
+ *      不在被吞的 promise 链上（实测 ai-tools.js:680 从上一句 `await _mcpRpc` 捞到、
+ *      ui-daily.js:111 从上一句 `save(NOTIFY_KEY)` 捞到、ui-ge-integrations.js:260
+ *      从 `Promise.all` 内的 `await _intUnsealState` 捞到）。门禁只拦新增 P0，
+ *      这类误判会**冤枉未来同类的新增空 catch**。
+ *   ② **漏判**：promise 链比 200 字符长时，真正的危险 API 反而没被窗口捕捉。
+ * 修法：用**保位掩码**抹掉注释/字符串后，从 `.catch` 反向走回这条 promise 链的真实起点
+ * —— 只认 `.ident` / `()` / `[]` / 标识符 / 空白，遇到**语句/块边界**即停：
+ *   `;` `=` `,`（depth 0）/ 行首关键字（return|await|if|…）/ 以及 **depth 0 的 `}` `}`**，
+ *   后者尤其关键：上一条代码块的闭括号意味着「进入了之前的语句」，必须停，否则会一路
+ *   回溯到更前面语句里的 `await`（ui-global-events.js:2515 实测——不拦 `}` 会把
+ *   `try{ await initCrypto() }` 的 `await` 捞进来，制造假 P0）。
+ *
+ * ⚠️ 重要约束：**本函数只用于「分级」，绝不用于「取 sig」**。sig（门禁棘轮主键）仍由
+ *   scanSource 的 200 字符 `ctx` 决定 —— 一旦改成基于本函数的表达式，27 条 reject 的 sig
+ *   全会变 ⇒ 在棘轮里全变成「新增」⇒ 门禁炸。故 sig / bhash / snippet 必须用原 `ctx`。
+ *
+ * @param {string} raw  原始源码（与 `idx` 同源；掩码只在内部临时生成，返回用 raw 切片）
+ * @param {number} idx  `.catch`/`.then` 中 `.` 的位置（findEmptyRejectionHandlers 的 `r.idx`，
+ *                       来自对掩码的匹配；掩码保位 ⇒ 该偏移在 raw 上也有效）
+ * @returns {string} 整条 promise 表达式（含 `.catch` 之前的调用链，止于语句/块边界）
+ */
+export function promiseContext(raw, idx) {
+  const masked = maskCommentsAndStrings(raw);
+  let i = idx, depth = 0;
+  for (; i >= 0; i--) {
+    const c = masked[i];
+    if (c === ')' || c === ']') { depth++; continue; }
+    if (c === '}') { if (depth === 0) break; depth++; continue; }   /* depth 0 的 `}` = 上一块的闭括号 = 边界，停 */
+    if (c === '(' || c === '[') { if (depth === 0) break; depth--; continue; }
+    if (c === '{') { if (depth === 0) break; depth--; continue; }   /* depth 0 的 `{` = 上一个块的开口，停 */
+    if (depth > 0) continue;                                        /* 仍处在链内嵌套里，继续 */
+    if (c === ';' || c === '=' || c === ',') break;                 /* 语句/表达式边界 */
+    if (c === '\n') {                                               /* 行首是控制关键字 ⇒ 该语句起点，停 */
+      const ls = masked.lastIndexOf('\n', i - 1) + 1;
+      const head = masked.slice(ls, i).trim();
+      if (/^(?:return|await|else|do|if|for|while|const|let|var|function|yield)\b/.test(head)) break;
+    }
+  }
+  return raw.slice(i + 1, idx);
+}
+
 /** 在实参区里挑出处理器：`.catch(h)` 取第一个；`.then(ok, h)` 取第二个。按**顶层逗号**切分。 */
 function _pickHandler(args, kind) {
   const parts = [];
@@ -346,7 +394,10 @@ export function scanSource(raw, file, occSeen = {}) {
      混在一类会让"修了一类、另一类不动"在基线里看不出来。 */
   for (const r of findEmptyRejectionHandlers(raw)) {
     const ctx = raw.slice(Math.max(0, r.idx - 200), r.idx).replace(/\s+/g, ' ');
-    const { level, why } = classify(stripCommentsAndStrings(ctx));
+    /* ⚠️ 分级用整条 promise 表达式（promiseContext），sig/bhash/snippet 仍用上面的 `ctx`：
+       sig 是门禁棘轮主键，一旦换源 27 条 reject 全会变成「新增」把门禁炸。
+       只动 `level` 不影响任何主键，门禁稳定性由 `ctx` 兜底（见 promiseContext 注释）。 */
+    const { level, why } = classify(stripCommentsAndStrings(promiseContext(raw, r.idx)));
     const sig = createHash('sha1').update(file + '|' + ctx).digest('hex').slice(0, 10);
     const bhash = createHash('sha1').update(ctx).digest('hex').slice(0, 10);
     const line = raw.slice(0, r.idx).split('\n').length;

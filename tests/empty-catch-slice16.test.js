@@ -121,7 +121,10 @@ describe("③ 计数锁：39 → 36，且「有理由的降级」不许被硬改
          体里有留痕，旧判定器的惰性跨段匹配把它误判成"空处理器"（v3.7.152 已修）。 */
       ["ui-backup-stats.js", 2],
       ["ui-onboarding.js", 1],
-      ["ui-daily.js", 1],
+      /* 1 → 0：**尺子换了**，不是代码改了 —— :111 那条 .catch 的 200 字符窗口从上一句
+         save(NOTIFY_KEY) 误捞到 save* 判成 P0；v3.7.153 改用整条 promise 表达式
+         （promiseContext）后降为 P2。它仍在基线里、只是不再是 P0，故此处锁改为 0。 */
+      ["ui-daily.js", 0],
       ["core-i18n.js", 1],
       ["ai-loop.js", 1]
     ];
