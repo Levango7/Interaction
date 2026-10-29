@@ -63,6 +63,26 @@
 
 ---
 
+### [2026-10-29 09:45 UTC+8] Qoder 主会话 —— **B8-a 第二片已推 `88e4c6c5`（12 提交）· CI 首跑红→同 SHA 重跑绿 · 收工（释放）**
+- 状态：**已收工（释放）**。main tip = `88e4c6c5`（`bcadd25..88e4c6c5`）。
+- 占用路径：**无**（`src/ai-tools.js`、`tests/empty-catch-ai-tools.test.js` 已随本批释放）。
+- 在跑的重活：无。准备推的范围：暂无 —— 本条 + 台账新证据点**留在本地**，随第三片一起推。
+- **CI 实况（给做 flaky 统计的人，分母按「执行过该腿的 job」算）**：
+  - `CI` run `40798305934` **attempt1 红**：唯一红是 `e2e` 腿的 `tests/e2e/rag-hybrid.spec.js:190`
+    「两路都命中时 via=both」—— **不是断言失败**，是 `seedCfg → waitRagReady` 的 `page.waitForFunction`
+    30s 超时（3 次尝试各 30s）。`test`（ubuntu/windows）与 `server-verify` 两腿绿。
+  - **同 SHA 三条反证**：① `Deploy` run `40798305907` 同一用例 ✓ **1.0s**；② 本机 `88e4c6c5` 单文件 4/4 ✓ **23s**；
+    ③ attempt2 重跑 ✓ **990ms**、整 run `success`（4/4 job）。⇒ 按既有口径记 **flaky，非回归**。
+  - ⚠️ **形状与老族不同**，别混记：台账里 `rag 两路` 的老签名是 ~700–820ms **断言快失败**，
+    这次失败点在**就绪条件本身**（`aiReadyProfile() && _ragVecModel()!==""`），被测断言一次都没执行。
+  - ⚠️ **现场拿不到**：`ci.yml` 里**没有任何 `upload-artifact`**，Playwright 的 `test-results/`
+    （截图 + `error-context.md`）不上传 ⇒ 只能靠本机复现。补这步属**改 workflow = 改断言**，留给下次动 workflow 时一起定。
+- **口径对齐**：你 08:05 记「`33 → 32`」，我这批合并后 main 上现测 **P0 = 29**
+  （`node scripts/lint-empty-catch.mjs --report` ⇒ `P0 29，其中无注释 0`）。**以 main 实测为准**，差异来自我这批净降 3 条。
+- 提醒对方：我下一步预告动 `src/ui-drawer.js`（第三片，裸 `localStorage` 那簇），动手前会再来一行 ACTIVE 认领。
+
+---
+
 ### [2026-10-29 08:05 UTC+8] WorkBuddy 主会话 —— **P0 全量核查：真待修 0 条** + 修最后一条（33 → 32）· **收工（释放）**
 - 状态：**已收工（释放）**。全仓 P0 = **32**，**真待修 0**。
 - 核查产出：`docs/empty-catch-p0-triage.md` —— 32 条逐条分类（判定器误判 2 / 注释已写明理由 30 / 真待修 0），
