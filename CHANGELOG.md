@@ -124,6 +124,32 @@
 
 ## [Unreleased]
 
+### 2026-10-30 · **B10 范围 3：`rag-hybrid` 就绪闸门超时现在能点名卡在哪一项**（只改可归因性）
+
+- **不改什么**：四个合取项（`ragSearch` / `_ragVecModel` / `aiReadyProfile` / `_ragVecModel()!==""`）
+  与 **30s 预算一字未动** —— 这不是"调超时凑绿"，改的是红的时候日志里有没有读数。
+- **起因**：run `40798305934` 的 `rag-hybrid.spec.js:190` 红在 `waitRagReady` 这一行（3 次尝试各顶满 30s），
+  而 Playwright 只说 `Timeout 30000ms exceeded` —— **四个合取项一个都没点名**。
+  于是这次抖动只能靠"同 SHA 的 Deploy 腿 1.0s 绿 + 本机 4/4 绿 + attempt2 990ms 绿"三条反证**间接**定性。
+- **现在**：超时把逐项现场（`polls / fns / ready / wantModel / base / keyKind / cfgEnabled / profiles / activeId / diag`）
+  连同读法打进错误消息 —— 进 CI 日志，也进范围 1 刚加的 `error-context.md`。两类根因靠 `polls` 一刀切开：
+  `polls` 大 + `ok:false` ⇒ 应用真没就绪（看哪个字段塌）；`polls≈0` 而 `ok:true` ⇒ 页是好的、
+  是 **rAF 轮询器没被驱动**（Playwright 默认用 rAF，主线程被 4MB 单文件的启动脚本压住时不产帧）。
+  此前这两类在日志里**完全同形**。
+- **射程已证（注入必然失败样本）**：把 profile 的 `key` 写成 `{__enc:true,data:"zzz"}` ⇒ 用例红，
+  消息点名 `ready:false` / `ok:false` / `polls:1779`（30s 内 ≈59 次/秒，同时否证"探针自己跑不动"），
+  并原样带出应用自己的诊断 `decryptKey failed, key unusable: Failed to execute 'atob'…`
+  —— 说明 `_ragVecModel()` **不是**唯一会塌的合取项，`aiReadyProfile()` 也会塌。
+  样本已还原，还原后正控 **4/4 绿（6.6s，本机 headless chromium / project `desktop-1280x800` / workers=1 / retries=0）**。
+- **两处"改坏了会当场失效"的坑写在注释里**：① `page.evaluate` / `waitForFunction` 只序列化函数字符串，
+  探针体必须自包含（本仓在 `addInitScript` 上踩过同一条）；② `waitForFunction` 认"返回值 truthy"，
+  而探针返回**对象**（恒真）⇒ 判定必须走 `.ok`，写成返回对象会让这道闸门**永远绿**（比没闸门更坏）。
+- ⚠️ **根因仍未定**：静态读码给出两条候选机制（`src/crypto.js:246–342`：`ensureDeviceKey()` throw 后
+  密文 key 被**判死**成 `""` 且不重排 ⇒ 该页 `aiReadyProfile()` 永远 falsy；以及 `_cryptoInitRetried`
+  是模块级标志、只有 reload 才复位），但 `88e4c6c5` 那一次的现场已经拿不到 ⇒
+  **归因停在这里**，由下一次红的探针快照判定。台账 R-22 同段已记全。
+
+
 ### 2026-10-30 · **B10 范围 1：e2e 失败现场现在会带出 CI**（可观测性，不改任何产品行为）
 
 - **起因（实测）**：run `40798305934` 的 e2e 腿红在 `rag-hybrid.spec.js:190`，但 CI 里**什么现场都没留下** ——

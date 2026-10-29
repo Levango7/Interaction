@@ -73,14 +73,78 @@ async function stubEmbeddings(page, opt = {}) {
  * initCrypto 解完、配置可见。CI 上本用例三次快失败（~850ms）的现场是 `wantModel:""` ——
  * 即在配置不可见时就发起了检索；同 SHA 的 Deploy 腿与本机（更快）都绿，正是竞态的形状。
  * 等待条件必须是被断言能力的**直接前置**：ragSearch 存在 + AI 就绪 + 期望模型非空。
+ *
+ * 2026-10-30（B10 范围 3 / 台账 #90）**只改可归因性，不改判据也不改 30s 预算**：
+ *   起因：run 40798305934 的 `rag-hybrid:190` 红在**这一行**（3 次尝试各 30s 顶满），
+ *   但 Playwright 只会说 "Timeout 30000ms exceeded" —— **四个合取项一个都没点名**，
+ *   于是这次抖动只能靠"同 SHA 的 Deploy 腿 1.0s 绿 + 本机 4/4 绿 + attempt2 990ms 绿"三条反证
+ *   间接定性。归因不到底就该停在"没查到"，而这里连"查什么"都没露出来。
+ *   现在超时会把**逐项现场**打在错误消息里（进 CI 日志，也进 B10 范围 1 刚加的 error-context）。
+ *   两类根因靠 `polls` 一刀切开：
+ *     · `polls` 很大 + `ok:false` ⇒ 应用**真没就绪**，看 `keyKind`（crypto 还没解出字符串 key）、
+ *       `wantModel`、`base`、`cfgEnabled` 哪一项塌了；
+ *     · `polls` ≈ 0 而快照里 `ok:true` ⇒ 页是好的、**条件当场成立**，是轮询器没被驱动
+ *       （Playwright 默认用 rAF 轮询，主线程被 4MB 单文件的启动脚本压住时不产帧）。
+ *   ⚠️ 探针函数体必须**自包含**：`page.evaluate` / `waitForFunction` 只序列化函数字符串，
+ *   引用外层变量到页面里就是 undefined（本仓在 `addInitScript` 上踩过同一条）。
+ *   ⚠️ `waitForFunction` 认"返回值 truthy"，而探针返回**对象**（恒真）⇒ 判定必须走 `.ok`，
+ *   写成返回对象会让这道闸门当场失效（比没闸门更坏：它永远绿）。
  */
-async function waitRagReady(page) {
-  await page.waitForFunction(() => {
+function installRagProbe() {
+  window.__ragProbe = function () {
+    window.__ragPolls = (window.__ragPolls || 0) + 1;
+    const s = { polls: window.__ragPolls };
+    const pick = (n) => { try { return typeof window[n]; } catch (e) { return "err"; } };
+    s.fns = {
+      ragSearch: pick("ragSearch"), _ragVecModel: pick("_ragVecModel"),
+      aiReadyProfile: pick("aiReadyProfile"), getActiveProfile: pick("getActiveProfile"),
+      getCfg: pick("getCfg"), getDiag: pick("getDiag"),
+    };
+    try { s.ready = typeof window.aiReadyProfile === "function" ? !!window.aiReadyProfile() : "no-fn"; } catch (e) { s.readyErr = String((e && e.message) || e); }
+    try { s.wantModel = typeof window._ragVecModel === "function" ? window._ragVecModel() : "no-fn"; } catch (e) { s.wantModelErr = String((e && e.message) || e); }
     try {
-      return typeof ragSearch === "function" && typeof _ragVecModel === "function"
-        && typeof aiReadyProfile === "function" && !!aiReadyProfile() && _ragVecModel() !== "";
-    } catch (_e) { return false; }
-  }, null, { timeout: 30000 });
+      const ap = typeof window.getActiveProfile === "function" ? window.getActiveProfile() : null;
+      s.base = ap ? String(ap.base || "") : "null";
+      /* keyKind 是这条探针存在的主要理由：刚 reload 时 profile.key 还是密文对象 {__enc:true,…}，
+         `_embedCfg()` 因此返回 null ⇒ `_ragVecModel()===""` ⇒ 闸门不成立。它是"string"才算真就绪。 */
+      s.keyKind = ap ? typeof ap.key : "null";
+    } catch (e) { s.apErr = String((e && e.message) || e); }
+    try {
+      const cfg = typeof window.getCfg === "function" ? window.getCfg() : null;
+      s.cfgEnabled = cfg ? String(cfg.enabled) : "null";
+      s.profiles = cfg && Array.isArray(cfg.profiles) ? cfg.profiles.length : "none";
+      s.activeId = cfg ? String(cfg.activeId) : "null";
+    } catch (e) { s.cfgErr = String((e && e.message) || e); }
+    try {
+      const d = typeof window.getDiag === "function" ? window.getDiag() : [];
+      s.diag = (d || []).slice(-6).map((x) => String((x && (x.level + ":" + x.msg)) || x).slice(0, 90));
+    } catch (e) { s.diagErr = String((e && e.message) || e); }
+    /* ↓ 与原 predicate 逐字等价的四个合取（只是把裸标识符换成 window.*，并保留"抛错即 false"）。 */
+    try {
+      s.ok = typeof window.ragSearch === "function"
+        && typeof window._ragVecModel === "function"
+        && typeof window.aiReadyProfile === "function"
+        && !!window.aiReadyProfile()
+        && window._ragVecModel() !== "";
+    } catch (e) { s.ok = false; }
+    return s;
+  };
+}
+
+async function waitRagReady(page) {
+  /* 每次导航后 window 上都是新文档，探针必须重装（reload 之后旧函数体不在了）。 */
+  await page.evaluate(installRagProbe);
+  try {
+    await page.waitForFunction(() => (window.__ragProbe ? window.__ragProbe().ok === true : false), null, { timeout: 30000 });
+  } catch (e) {
+    const snap = await page.evaluate(() => (window.__ragProbe ? window.__ragProbe() : "probe-missing"))
+      .catch((e2) => ({ evaluateFailed: String((e2 && e2.message) || e2) }));
+    throw new Error(
+      "waitRagReady 30s 未成立。逐项现场=" + JSON.stringify(snap)
+      + "　读法：polls 大 + ok:false ⇒ 应用真没就绪（看 keyKind/wantModel/base/cfgEnabled 哪项塌了）；"
+      + "polls≈0 而 ok:true ⇒ 条件当场成立但轮询器没被驱动（rAF 饿死），不是应用的问题。"
+    );
+  }
 }
 
 /** 写入 AI 配置（profile 形态）并回载，使 getActiveProfile() 能拿到 base/key/embedModel */
