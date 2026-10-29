@@ -157,12 +157,17 @@ describe("③ 计数锁：本批 47 → 39，不许回涨", () => {
 });
 
 describe("④ 反向对照：边界没越", () => {
-  it("ui-backup-stats 的 3 处**不该被本批改**（它们是写了理由的降级 + 1 处判定器误判）", () => {
+  it("ui-backup-stats 的 2 处**不该被本批改**（原判 3 处，其中 :401 是判定器误判，v3.7.152 修尺子后不再计入）", () => {
+    /* 数字从 3 变 2 的原因**不是代码被改**，是**尺子被换**：
+       :401 的 `.catch(function(e){ …pushDiag… })` 体里明明有留痕，
+       旧判定器的 `[\s\S]*?` 会惰性跨段匹配，把它判成"空处理器"。
+       详见 scripts/lib/empty-catch.mjs 里 findEmptyRejectionHandlers 的注释。 */
     const raw = readSrc("ui-backup-stats.js");
     expect(raw.includes("已被上面的 _exportReadFailed 点名"), ":48 的理由注释被删了 —— 有人没读理由就动它").toBe(true);
     expect(raw.includes("属预期降级，刻意不报"), ":1088 的理由注释被删了").toBe(true);
+    expect(raw.includes("备份：图片键读取失败"), ":401 的留痕被删了 —— 那是真留痕，不该删").toBe(true);
     const p0 = scanSource(raw, "ui-backup-stats.js").filter((i) => i.level === "P0");
-    expect(p0.length, "这 3 条按 R-2 口径属「合理降级」，保持原样；若数量变了说明有人硬改").toBe(3);
+    expect(p0.length, "这 2 条按 R-2 口径属「合理降级」，保持原样；若数量变了先看是代码变了还是尺子变了").toBe(2);
   });
 
   it("ui-ge-api.js:63 仍是被刻意保留的 P0（R-38）", () => {

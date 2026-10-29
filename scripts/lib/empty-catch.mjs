@@ -10,7 +10,7 @@
  * 职责边界：本文件只做「扫描 + 分级」，不含 CLI 参数解析 / 基线读写 / 输出格式。
  */
 import { createHash } from 'node:crypto';
-import { stripCommentsAndStrings } from './code-scan.mjs';
+import { stripCommentsAndStrings, maskCommentsAndStrings } from './code-scan.mjs';
 
 /* ---------------------------------------------------------------- 分级规则 */
 /**
@@ -223,19 +223,95 @@ export function tryBlockBefore(raw, catchStart) {
  * 由 lint:empty-catch 的 P0/P1/P2 分级在 try/catch 侧把关，这里不重复判。
  *
  * 形状覆盖：`.catch(fn)` / `.catch(()=>{})` / `.catch(function(e){})` /
- *           `.then(ok, fn)` / `.then(a, b, ()=>{})`
- * 用「整形状正则」而非括号计数：体为空 ⇒ 没有嵌套结构要处理，
- * 反而比先定位再括号匹配更不容易误判（findEmptyCatches 里 `\{([^{}]*)\}` 的教训）。
+ *           `.then(ok, fn)`
+ *   ⚠️ `.then(a, b, c)` 的**第三参不计**：标准 `Promise.then` 只接两个参数，第三参永远不会被调用，
+ *      计它只会产出一条永远无法复现的假条目（旧实现会计，属**有意**收窄，有用例钉住）。
+ * ⚠️ **v3.7.152 重写：原「整形状正则」实现有两个实证缺陷，已废弃**。（下面两条都实测过；
+ *    旧注释那句「体为空 ⇒ 没有嵌套结构要处理，反而比先定位再括号匹配更不容易误判」是错的，已删。）
+ *   ① **惰性跨段匹配**：`\{\s*(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)*\s*\}` 里的 `[\s\S]*?` 会一直往
+ *      文件后面扩张，直到找到某处块注释收尾符（星号紧跟斜杠）且其后只隔空白就紧跟 `}` ⇒ 整体匹配成功。
+ *      于是「处理器体首句是注释、后面跟着真实语句」被判成空。
+ *      实证 `ui-backup-stats.js:401`：处理器体以一段注释开头、注释之后紧跟 `try{ if(typeof pushDiag…`
+ *      —— 体里明明有留痕，仍被判成空。
+ *   ② **不判注释/字符串**：原实现在 raw 原文上跑 ⇒ 注释里**引用的旧代码**也计数
+ *      （`ui-backup-stats.js:878` 落在描述 R-34 假回执的块注释里，引的是修掉之前的旧写法）。
+ *   现实现：在**保位掩码**（`maskCommentsAndStrings`：注释/字符串→等长空格、换行保留）上定位
+ *   —— 天然免疫 ②，且偏移与原文 1:1 不丢行号；再括号计数取实参区、按形态取块体、剥注释判空
+ *   —— 天然免疫 ①。实测全仓 reject 类 **33 → 27**（−6，零新增假阳性），P0 29 → 28。
  *
  * @param {string} raw 原始源码
  * @returns {Array<{idx:number}>} 命中位置（供上层取上下文与行号）
  */
 export function findEmptyRejectionHandlers(raw) {
+  const masked = maskCommentsAndStrings(raw);
   const out = [];
-  const EMPTY_REJECT = /\.(?:catch|then)\s*\(\s*(?:[A-Za-z_$][\w$]*\s*,\s*)*(?:function\s*\([^)]*\)|(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>)\s*\{\s*(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)*\s*\}/g;
+  const CALL = /\.(catch|then)\s*\(/g;
   let m;
-  while ((m = EMPTY_REJECT.exec(raw)) !== null) out.push({ idx: m.index });
+  while ((m = CALL.exec(masked)) !== null) {
+    const open = m.index + m[0].length - 1;               /* '(' 的位置 */
+    /* 括号计数取整个实参区 —— 嵌套调用会骗过 `\(.*?\)`（见 findEmptyCatches 的同款教训） */
+    let depth = 0, end = -1;
+    for (let i = open; i < raw.length; i++) {
+      if (raw[i] === '(') depth++;
+      else if (raw[i] === ')') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    if (end < 0) continue;
+    const handler = _pickHandler(raw.slice(open + 1, end), m[1]);
+    if (!handler) continue;
+    const body = _handlerBlockBody(handler);
+    if (body === null) continue;                          /* 非块体形态（含表达式体箭头）⇒ 不是"空处理器" */
+    if (stripCommentsAndStrings(body).trim() !== '') continue;  /* 体里有真语句 ⇒ 不算空 */
+    out.push({ idx: m.index });
+  }
   return out;
+}
+
+/** 在实参区里挑出处理器：`.catch(h)` 取第一个；`.then(ok, h)` 取第二个。按**顶层逗号**切分。 */
+function _pickHandler(args, kind) {
+  const parts = [];
+  let d = 0, last = 0;
+  for (let i = 0; i < args.length; i++) {
+    const ch = args[i];
+    if (ch === '(' || ch === '[' || ch === '{') d++;
+    else if (ch === ')' || ch === ']' || ch === '}') d--;
+    else if (ch === ',' && d === 0) { parts.push(args.slice(last, i)); last = i + 1; }
+  }
+  parts.push(args.slice(last));
+  const h = (kind === 'catch' ? parts[0] : parts[1]);
+  return h ? h.trim() : '';
+}
+
+/**
+ * 取处理器的**块体**（不含外层花括号）；不是块体形态则返回 null。
+ * 形态：① `function (a) { … }` / `function name(a) { … }`；② `(a) => { … }` / `a => { … }`。
+ *
+ * ⚠️ **必须分形态定位，不能取"第一个 `{`"**：`() => resolve({})` 的第一个 `{` 是
+ *    **实参里的空对象字面量**，不是函数体 —— 这样会把一个语义完好的处理器判成"空"。
+ *    （这是本函数实现过程中踩到的第一版错误，故单独立函数并用用例钉死。）
+ */
+function _handlerBlockBody(h) {
+  let fnIdx = -1;
+  const fnKw = /^function\s*(?:[A-Za-z_$][\w$]*)?\s*\([^)]*\)/.exec(h);
+  if (fnKw) {
+    let p = fnKw[0].length;
+    while (p < h.length && /\s/.test(h[p])) p++;
+    if (h[p] === '{') fnIdx = p;
+  } else {
+    const ar = h.indexOf('=>');
+    if (ar >= 0) {
+      let p = ar + 2;
+      while (p < h.length && /\s/.test(h[p])) p++;
+      if (h[p] === '{') fnIdx = p;
+    }
+  }
+  if (fnIdx < 0) return null;
+  let bd = 0, be = -1;
+  for (let i = fnIdx; i < h.length; i++) {
+    if (h[i] === '{') bd++;
+    else if (h[i] === '}') { bd--; if (bd === 0) { be = i; break; } }
+  }
+  if (be < 0) return null;
+  return h.slice(fnIdx + 1, be);
 }
 
 /**

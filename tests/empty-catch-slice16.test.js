@@ -12,8 +12,9 @@
  *
  * **明确不动的（逐条看过，理由都在源码注释里）**：
  *   · `ui-drawer.js` 5 处 —— R-2 切片一已逐条判过「真合理」；
- *   · `ui-backup-stats.js` 3 处 —— `:48`「已被上游 _exportReadFailed 点名，不重复报」、
- *     `:1088`「展开偏好丢了无害、下次会重写」、`:401` 是**判定器误判**（R-37 台账已记）；
+ *   · `ui-backup-stats.js` 2 处 —— `:48`「已被上游 _exportReadFailed 点名，不重复报」、
+ *     `:1088`「展开偏好丢了无害、下次会重写」；（原列在这里的 `:401` 是**判定器误判**：
+ *     `.catch(function(e){ …pushDiag… })` 体里有留痕，v3.7.152 修尺子后已不再计入，故 3 → 2）；
  *   · `ui-ge-api.js:63` —— R-38 判定的「刻意保留」（用异常做控制流探测明文/密文）；
  *   · `ui-onboarding.js:127`「存储不可用就退回每次都弹，不阻塞功能」；
  *   · `ui-daily.js:111`「旧 API 回调式或无 Notification，忽略」；
@@ -116,7 +117,9 @@ describe("③ 计数锁：39 → 36，且「有理由的降级」不许被硬改
   it("被判定「有理由的降级」保持原样（改动它们前应该先读懂理由）", () => {
     const KEEP = [
       ["ui-drawer.js", 5],
-      ["ui-backup-stats.js", 3],
+      /* 3 → 2：**尺子换了**，不是代码改了 —— :401 那条 `.catch(function(e){ …pushDiag… })`
+         体里有留痕，旧判定器的惰性跨段匹配把它误判成"空处理器"（v3.7.152 已修）。 */
+      ["ui-backup-stats.js", 2],
       ["ui-onboarding.js", 1],
       ["ui-daily.js", 1],
       ["core-i18n.js", 1],
