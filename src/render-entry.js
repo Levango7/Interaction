@@ -307,9 +307,13 @@ function renderMiniChart(chartType, dataArr){
   if(ct === "pie") inner = _miniPieSVG(dataArr);
   else if(ct === "line") inner = _miniLineSVG(dataArr);
   else inner = _miniBarSVG(dataArr);
-  // line 类型自带布局容器，不再包 .mini-chart-wrap 的固定高度（避免双重滚动裁切）
-  if(ct === "line") return '<div class="mini-chart-line-box u-h-120 u-bg-panel2 u-radius-sm u-overflow-hidden">' + inner + "</div>";
-  return '<div class="mini-chart-wrap">' + inner + "</div>";
+  /* 画图能力 Phase A（docs/draw-capability-phase-a.md）：data-svgexport 容器 + 导出条，
+     点击由 util-markdown 的文档级委托（_bindSvgExport）接管 —— 渲染是 innerHTML 重建，不能逐个 bind。 */
+  const name = "chart-" + ct;
+  const bar = _svgExportBar(name);
+  // line 类型自带布局容器，不再包 .mini-chart-wrap 的固定高度（避免双重滚动裁切）；导出条放盒外
+  if(ct === "line") return '<div data-svgexport data-svgname="' + name + '"><div class="mini-chart-line-box u-h-120 u-bg-panel2 u-radius-sm u-overflow-hidden">' + inner + '</div>' + bar + '</div>';
+  return '<div class="mini-chart-wrap" data-svgexport data-svgname="' + name + '">' + inner + bar + '</div>';
 }
 
 /* R-37（2026-10-27）：工具箱里「复制到剪贴板」的**唯一**写法 —— 回执必须等 Promise 落地。
