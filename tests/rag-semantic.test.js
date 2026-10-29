@@ -217,8 +217,13 @@ describe("向量落盘格式带模型号（换 embedModel 不能静默失灵）"
      jsdom 没有 IndexedDB，所以这里直接把 IDB 三个原语换成内存桩来观察真实读写形状。 */
   const MODEL = "bge-m3";
 
-  function appWithIdbStub(records) {
+  function appWithIdbStub(records, docs = [{ docId: "doc-auth", source: "工作记录", content: "修复登录页 500 报错", ts: 1 }]) {
     const win = appWithAi();
+    /* B9（台账 R-40）：载入侧现在按 `getRagDocs()` 过滤孤儿向量 ⇒ 夹具必须**同时**有文档记录。
+       只塞向量不塞文档，在现语义里就是"已删文档留下的孤儿"，会被正确跳过 —— 那会让本组用例以
+       **错误的理由**通过（判"没命中"靠孤儿过滤，而不是靠模型号）。生产里也到不了这个状态：
+       `ragVecPut` 只对文档表里的 docId 调用。 */
+    win.saveRagDocs(docs);
     const written = {};
     win.idbKeys = async () => Object.keys(records);
     win.idbReadKey = async (k) => records[k];
@@ -247,9 +252,11 @@ describe("向量落盘格式带模型号（换 embedModel 不能静默失灵）"
       "ragvec:doc-auth": { m: "some-other-embedding", v: vec },
     });
     stubEmbeddings(win);
-    const hits = await win.ragSearch("login bug", 5);
-    expect(hits.some(h => h.docId === "doc-auth" && /vec|both/.test(String(h.via))),
-      "旧模型的向量仍被当成语义命中 = 模型号过滤没生效").toBe(false);
+    /* B9 起判据下沉到载入结果：`ragSearch` 在缓存空时会**等有界回填**（R-26），回填用夹具里的
+       假通道把 doc-auth 重新嵌一遍 ⇒ 检索命中与否已经分不清"旧向量被采用"还是"新向量算出来了"。
+       「载入时丢掉」这个断言的直接对象就是 `ragVecLoadAll()` 的返回缓存。 */
+    const map = await win.ragVecLoadAll();
+    expect(map.has("doc-auth"), "旧模型的向量仍进了载入缓存 = 模型号过滤没生效").toBe(false);
   });
 
   it("同模型的向量正常载入并命中", async () => {
@@ -264,8 +271,8 @@ describe("向量落盘格式带模型号（换 embedModel 不能静默失灵）"
   it("旧格式（裸向量、无模型号）一律重算，不猜它来自哪个模型", async () => {
     const win = appWithIdbStub({ "ragvec:doc-auth": Float32Array.from(fakeEmbed("修复登录页 500 报错")) });
     stubEmbeddings(win);
-    const hits = await win.ragSearch("login bug", 5);
-    expect(hits.some(h => /vec|both/.test(String(h.via))), "无模型号的旧向量仍被使用").toBe(false);
+    const map = await win.ragVecLoadAll();
+    expect(map.has("doc-auth"), "无模型号的旧向量仍被载入").toBe(false);
   });
 });
 

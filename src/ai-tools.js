@@ -2211,6 +2211,10 @@ async function toolSqlQuery(sql, schema){
 const RAG_STORAGE_KEY = "rag_docs";
 let _ragReady = false;    // 是否已初始化（向量缓存 + 回填已发起）
 let _ragDocs = null;      // 文档列表缓存（从 localStorage 加载）
+/* R-40：文档表"读坏了"与"确实没有文档"在 `getRagDocs()` 的返回值上同形（都是 `[]`），
+   但向量孤儿过滤对两者的处置**相反** —— 读坏了必须**不滤**（否则会把正常向量当孤儿全丢掉，
+   语义召回当场降级成纯词法），确实没有文档才该滤。所以这里单独记一个判据位。 */
+let _ragDocsBroken = false;
 let _ragLex = null;       // 词法倒排索引缓存（null = 待重建，见 ragLexBuild）
 
 /**
@@ -2222,8 +2226,10 @@ function getRagDocs(){
   try{
     const raw = localStorage.getItem(PREFIX + RAG_STORAGE_KEY);
     _ragDocs = raw ? JSON.parse(raw) : [];
+    /* 键不存在 ⇒ 确实没有文档表（空是事实）；键在但解析不出数组 ⇒ 是"读坏了"，两者必须分开记。 */
+    _ragDocsBroken = !Array.isArray(_ragDocs);
     if(!Array.isArray(_ragDocs)) _ragDocs = [];
-  }catch(e){ _ragDocs = []; }
+  }catch(e){ _ragDocs = []; _ragDocsBroken = true; }
   return _ragDocs;
 }
 
@@ -2233,6 +2239,7 @@ function getRagDocs(){
  */
 function saveRagDocs(docs){
   _ragDocs = docs || [];
+  _ragDocsBroken = false;   // 刚写进去的就是权威值，之前那次"读坏"的判据位作废
   _ragLex = null;   // v3.7.57：任何写路径都使词法倒排索引作废，下次检索惰性重建
   save(PREFIX + RAG_STORAGE_KEY, _ragDocs); // v3.4.7 批次三（G5）：收编进 save() 主入口（配额耗尽有告警，不再静默）
 }
@@ -2389,10 +2396,21 @@ async function aiEmbedTexts(texts){
     if(j && Array.isArray(j.data)) raw = j.data.map(d => d && d.embedding).filter(Boolean);
     else if(j && Array.isArray(j.embeddings)) raw = j.embeddings;
     else if(j && Array.isArray(j.embedding)) raw = [j.embedding];
-    if(!raw || !raw.length) return null;
+    /* R-41：下面两处 `return null` 与「根本没配通道」在调用方**完全同形**（返回都是 null、都不降级以外的动作），
+       于是"服务答了个不认识的形状"看起来和"你没开语义召回"一模一样。留痕，但不改返回值（降级行为照旧）。 */
+    if(!raw || !raw.length){
+      pushDiag("warn", "embeddings 200 但无可识别向量（期望 data[].embedding / embeddings / embedding 之一）："
+        + "keys=" + (j && typeof j === "object" ? Object.keys(j).slice(0, 6).join(",") : typeof j),
+        { where: "aiEmbedTexts", model: ec.model });
+      return null;
+    }
     const out = raw.map(v => Float32Array.from(v));
     // 单输入但服务返回多条（或反之）时不猜，直接判失败走降级
-    if(out.length !== list.length) return null;
+    if(out.length !== list.length){
+      pushDiag("warn", "embeddings 条数不符：期望 " + list.length + " 条、返回 " + out.length + " 条（不猜，按失败降级）",
+        { where: "aiEmbedTexts", model: ec.model });
+      return null;
+    }
     return out;
   }catch(e){
     pushDiag("warn", "embeddings error: " + ((e && e.message) || e), { where: "aiEmbedTexts" });
@@ -2430,6 +2448,17 @@ async function ragVecLoadAll(){
      （它 `cache.set(...)` 写内存缓存）。重建 Map 会让那次写入丢失。 */
   const m = (_ragVecCache && _ragVecCache.model === wantModel) ? _ragVecCache.map : new Map();
   let skipped = 0;
+  let orphaned = 0;
+  /* R-40：IDB 里可能留着**已删文档**的向量 —— `ragVecDelete` 先删内存缓存、再删 IDB，
+     后一步失败时只留一条 warn，IDB 里的那条就成了孤儿。载入侧此前只校验模型号、**不过 live 集合**
+     （记忆侧 `memEnsureVectors` 早就有这道过滤），于是一条已删文档下次重载会复活成
+     **正文为空、分数非零**的命中（`_ragDocMeta` 对找不到的 docId 返回 `{source:"",content:""}`），
+     白占一个 topK 名额，还会把别的真结果挤下去。
+     ⚠️ 过滤的输入本身会失败：文档表读坏时 `getRagDocs()` 返回 `[]`，此时若照滤，会把**所有**
+     正常向量当孤儿丢掉 ⇒ 语义召回当场降级成纯词法（且 `loaded` 已置位，本次会话不再重试）。
+     所以只在"文档表可信"时滤；不可信就退回旧行为并留痕。 */
+  const _liveDocs = _ragDocsBroken ? null : getRagDocs();
+  const _liveSet = _liveDocs ? new Set(_liveDocs.filter(x => x && x.docId).map(x => String(x.docId))) : null;
   let loaded = false;
   try{
     /* 先确认 IDB 真的可用 —— `idbKeys()` 在 `!db` 时静默返回 `[]`（data-idb.js:135），
@@ -2439,14 +2468,21 @@ async function ragVecLoadAll(){
       const keys = await idbKeys();
       for(const k of (keys || [])){
         if(typeof k !== "string" || k.indexOf(RAG_VEC_PREFIX) !== 0) continue;
+        const _docId = k.slice(RAG_VEC_PREFIX.length);
+        if(_liveSet && !_liveSet.has(String(_docId))){ orphaned++; continue; }  // R-40：文档已删，向量没删掉
         const rec = await idbReadKey(k);
         if(!rec || !rec.v || !rec.m){ if(rec) skipped++; continue; }   // 旧格式（裸向量/无模型标记）→ 重算
         if(String(rec.m) !== String(wantModel)){ skipped++; continue; }  // 换过模型 → 重算
-        m.set(k.slice(RAG_VEC_PREFIX.length), rec.v instanceof Float32Array ? rec.v : Float32Array.from(rec.v));
+        m.set(_docId, rec.v instanceof Float32Array ? rec.v : Float32Array.from(rec.v));
       }
       loaded = true;
     }
     if(skipped) pushDiag("info", "rag vectors stale=" + skipped + " (embedModel=" + wantModel + ")，待重算", { where: "ragVecLoadAll" });
+    /* 孤儿是"删除没删干净"的痕迹，不是常态：报 warn 但**只跳过、不代删**（读路径里做写操作会把
+       IDB 失败面扩大到加载阶段；重算路径 `ragEnsureVectors` 按 `!cache.has(docId)` 取缺失，
+       跳过孤儿不影响它给现存文档补向量）。 */
+    if(orphaned) pushDiag("warn", "rag vectors orphaned=" + orphaned + "（文档已删但向量仍在 IDB，已跳过，见台账 R-40）", { where: "ragVecLoadAll" });
+    if(!_liveSet) pushDiag("warn", "rag docs unreadable ⇒ 本次不做孤儿过滤（宁可留幽灵，也不误删真向量）", { where: "ragVecLoadAll" });
   }catch(e){ pushDiag("warn", "ragVecLoadAll error: " + ((e && e.message) || e), { where: "ragVecLoadAll" }); }
   /* v3.7.101 修复（台账 R-9 flaky 的根因）：`loaded` 标记，只在"确实读到 IDB"时置位。
      此前无条件 `_ragVecCache = { model: wantModel, map: m }` —— 若这次读发生在 IDB 尚未就绪时，
