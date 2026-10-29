@@ -24548,7 +24548,8 @@ const SC_SUBMENU = {
 function _loadSideExpanded(){
   try{ const v = JSON.parse(localStorage.getItem(PREFIX+"sideExpanded") || "{}"); return (v && typeof v==="object") ? v : {}; }catch(e){ return {}; }
 }
-function _saveSideExpanded(map){ try{ localStorage.setItem(PREFIX+"sideExpanded", JSON.stringify(map)); }catch(e){ /* noop */ } }
+function _saveSideExpanded(map){ try{ localStorage.setItem(PREFIX+"sideExpanded", JSON.stringify(map)); }catch(e){ /* noop —— 但侧栏的展开/折叠状态没记住：刷新后节点全回到默认态，用户会以为「我折过的怎么又开了」 */
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "sideExpanded persist failed: "+((e&&e.message)||e), {where:"_saveSideExpanded"}); }catch(_e2){} } }
 function _toggleSideNode(nodeId){
   const map = _loadSideExpanded();
   map[nodeId] = !map[nodeId];
