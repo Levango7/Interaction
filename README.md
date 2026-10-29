@@ -239,11 +239,20 @@ npm test                # vitest 单测
 npm run build:prod      # 产出 agent-workbench.prod.html + service-worker.prod.js
 ```
 
-> **覆盖率口径**：`npm run test:coverage` 当前**恒为 0%** —— 原因是配置：`vitest.config.js:22` 的
-> `coverage.include` 仍只指 `["agent-workbench.html"]`，而 v8 无法插桩 `.html`。这句"无法插桩"**只对 HTML 那一份成立**：
-> v3.7.0 之后应用 JS 已在 `src/*.js`（38 个真模块）里，把 include 换成 `["src/**/*.js"]` 当天就能出真数。
-> **换不换属待拍板**（会立刻暴露一个很低的百分比，须同时定阈值策略），见 `docs/iteration-plan.md` 待拍板第 6 条；
-> 在它定下来之前，覆盖率不进验收，CI 也不跑这一步（`ci.yml:44` 的移除注释是同一条历史理由，改它=改 workflow，需另行处置）。
+> **覆盖率口径（2026-10-30 实测订正，撤回一句旧结论）**：`npm run test:coverage` 恒为 0%，**而且短期内不会有真数**。
+> 两条独立原因，都不是以前写的"配置指错了"那么简单：
+> ① **架构**：单测用 JSDOM 执行的是**注入后的 HTML 字符串**，`src/*.js` 一次都没被 V8 加载。把
+>    `vitest.config.js` 的 `coverage.include` 从 `["agent-workbench.html"]` 换成 `["src/**/*.js"]` 后实测
+>    **仍全 0%**（40 个源文件逐个列在表里、覆盖 0）⇒ 原先那句"换 include 当天就能出真数"**不成立，已撤回**。
+> ② **本机采集本身没数据**：对照实验 —— `include` 指到**确实执行过**的 `tests/**/*.test.js` 时，覆盖率表里
+>    连行都不出现；完全不设 `include` 时全仓文件仍全 0%。本机 node 26.8.2 + `@vitest/coverage-v8` 2.1.9
+>    （与 `vitest` 同版本，非装错）取不到 V8 覆盖数据；CI 用 node 20，本机既不能证实也不能证伪。
+>
+> **定案**：不做真量，也不给 CI 加这一步。质量面用**现有**度量兜：14 条静态门禁（每条要自带"它有射程"的断言）
+> ＋ 单测/e2e 用例数 ＋ 关键改动做窄变异。将来若要真量，必须**同时**解决 ①（让被测代码真从 `src/*.js` 加载，
+> 或改用真浏览器的 JS 覆盖再按 SRC 块偏移映射回源文件）与 ②（换 node 或升 vitest 大版本 —— 属依赖变更，需拍板）。
+> `ci.yml:44` 的移除注释里带着同一条旧理由，但**改 workflow = 改断言**（被 `tests/ci-workflow-guard.test.js` 钉住），
+> 留待下次动 workflow 时一并订正。
 
 **立绘已外置（v3.7.0 起）**：9 张萌宠立绘移出 HTML，存在 `assets/pet/*.png`，由构建回注；v3.7.64 起 `src/` 侧也不再残留 base64（立绘数据在仓库里只以 PNG 存在）。
 
