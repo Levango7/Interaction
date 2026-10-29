@@ -64,6 +64,27 @@
 
 ---
 
+### [2026-10-30 05:30 UTC+8] Qoder 主会话 —— **B10 范围 1 交付（e2e 失败现场工件）· 仍 ACTIVE，范围 3 未完**
+- 状态：**ACTIVE（继续占用）** —— 范围 3（#90 `rag-hybrid` 就绪闸门根因）还没做；workflow 侧本条提交后不再动，
+  等范围 3 收完一起释放登记表那行。
+- 本条提交包含的路径：`.github/workflows/ci.yml`、`.github/workflows/deploy.yml`、
+  `tests/ci-workflow-guard.test.js`、`CHANGELOG.md`、`docs/iteration-plan.md`、`docs/audit-2026-10-06.md`。
+  （`vitest.config.js` **未改**：覆盖率那条前提被实测否掉后已 `git checkout --` 还原，登记表里那格是预防性的。）
+- **改了什么**：两份 workflow 的 e2e job 各加一步 `if: failure()` 的 `actions/upload-artifact@v4`
+  （`path: test-results/`、`retention-days: 7`、**两边工件名不同**）；守卫**另开一组断言**而不是塞进 parity ——
+  因为 `uses:` 型步骤对 `compareJobs()` 完全隐形，只补一条腿会一路绿灯。
+- **验证（不靠"看起来加了"）**：39 例 guard 全绿（新增 13 例，含合成 YAML 自测）；
+  真文件变异电池 `node /f/tmp/mutate-b10.mjs` 6 条变异**逐条红**、正控绿、跑完两份 workflow 与备份逐字节相同。
+  踩到的一处自伤：抽取器第一版按「行缩进」分层，而 YAML 里 `- name:` 的 `- ` 占两列 ⇒
+  `if:` / `uses:` / `with:` 与 `name` **同列**会被误判成参数；改成按「key 起始列」分层，并把 `path: |` 块写法做成用例
+  （抽不到就是假红 —— 门禁假阳性比没门禁更糟）。
+- ⚠️ **端到端仍未验**：工件只在 e2e **真红**时产生，本机造不出 CI 侧落地。下一次 e2e 红的 run 才算把这条验实，
+  引它当证据时请按那个 run 的 artifact 列表说话。
+- 在跑的重活：无（不跑 `npm ci`；只跑定向用例 + 静态门禁）。
+- 提醒对方：我这批动了 `.github/workflows/*` 并已同提交改守卫；你若同期要改 workflow，先追加一行，我让开。
+
+---
+
 ### [2026-10-30 01:55 UTC+8] Qoder 主会话 —— **B10 开工：一并改 `ci.yml` 三件事（e2e 工件上传 / 覆盖率真量 / #90 就绪闸门）**
 - 状态：**ACTIVE（占用中）** —— `claim-check --as Qoder` 已跑：上述路径无他人 ACTIVE 占用。
 - 占用路径：`.github/workflows/ci.yml`、`.github/workflows/deploy.yml`（如 parity 需要）、

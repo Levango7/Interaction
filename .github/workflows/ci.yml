@@ -198,3 +198,21 @@ jobs:
       - name: Run E2E (full user flow)
         run: npm run e2e
         timeout-minutes: 10
+      # B10（2026-10-30）：失败时把现场传出来。
+      #   起因（实测）：run 40798305934 的 e2e 腿红在 `rag-hybrid.spec.js:190`，但**什么都没留下** ——
+      #   此前两个 workflow 里 0 个 `upload-artifact`，Playwright 的 `test-results/`（失败截图 +
+      #   `error-context.md`）不上传，判红只能靠"本机复跑一遍"，而同一条用例在同 SHA 的 Deploy 腿是绿的，
+      #   等于每次抖动都要靠对侧腿和手动复现来定性。
+      #   只挂 `if: failure()` ⇒ 绿的时候不产工件（省存储）；`retention-days: 7` 够一次排查窗口。
+      #   ⚠️ 这一步是 `uses:` 型，**不进** `tests/ci-workflow-guard.test.js` 的 run 步骤比对
+      #     （那个解析器只抽 `- run:`），所以两边是否都有它，由守卫里新加的那条专项断言判 ——
+      #     断言自带"抽不到就红"的反向哨兵，不在空集上恒真。
+      #   ⚠️ 与 deploy.yml 的 e2e job 必须同步存在（同名工件会互相覆盖，故两边 name 不同）。
+      - name: 上传 e2e 失败现场（test-results）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results-ci
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7

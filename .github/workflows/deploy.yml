@@ -223,6 +223,16 @@ jobs:
       - name: Run E2E (full user flow)
         run: npm run e2e
         timeout-minutes: 10
+      # B10（2026-10-30）：与 ci.yml 的 e2e job 同步加"失败时上传 test-results"（原因与判据见 ci.yml 同段注释）。
+      #   工件名必须与 ci.yml 那条**不同**，否则同一次 push 的两条 run 里同名工件会让人分不清是哪条腿的现场。
+      - name: 上传 e2e 失败现场（test-results）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results-deploy
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7
 
   deploy:
     needs: [verify, e2e, ci-e2e-status]

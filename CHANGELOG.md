@@ -124,6 +124,30 @@
 
 ## [Unreleased]
 
+### 2026-10-30 · **B10 范围 1：e2e 失败现场现在会带出 CI**（可观测性，不改任何产品行为）
+
+- **起因（实测）**：run `40798305934` 的 e2e 腿红在 `rag-hybrid.spec.js:190`，但 CI 里**什么现场都没留下** ——
+  此前两个 workflow 里 `upload-artifact` 计数为 0，Playwright 的 `test-results/`（失败截图 + `error-context.md`）
+  不上传。结果是每次抖动都只能靠"本机复跑一遍 + 看对侧 Deploy 腿"来定性，而这条用例在同 SHA 的 Deploy 腿是绿的。
+- **改了什么**：`ci.yml` 与 `deploy.yml` 的 e2e job 各加一步 `上传 e2e 失败现场（test-results）`，
+  挂 `if: failure()`（绿时不产工件、省存储）、`retention-days: 7`、`if-no-files-found: warn`；
+  **两边 `with.name` 不同**（`e2e-test-results-ci` / `e2e-test-results-deploy`），否则同名工件跨腿会让人分不清现场来源。
+- **为什么必须动守卫**：`tests/ci-workflow-guard.test.js` 的 ③ 只比对 `- run:` 型步骤，
+  **`uses:` 型步骤对它完全隐形** ⇒ 只补 ci.yml、漏补 deploy.yml 会一路绿灯。故新增一组专项断言：
+  每条 negative 断言前面配一条"抽到了"的反向哨兵（本文件的既有教训就是空集让 `toEqual([])` 恒真），
+  并判 `path` 含 `test-results`、`if` 含 `failure()` 且不含 `always()`、两条腿工件名不同、
+  **上传步骤行号 > `run: npm run e2e` 行号**（挪到跑之前 ⇒ 上传的是空目录，而 `if-no-files-found: warn` 不报红）。
+- **抽取器踩到并修掉的一处自伤**：第一版按「行缩进」分步骤层与 `with:` 参数层 —— YAML 里 `- name:` 的 `- `
+  占两列，后续同级键（`if:` / `uses:` / `with:`）与 `name` **同列**，会被整层误判成参数（合成自测当场红出来）。
+  改成按「key 起始列」分层，并把两种 `path:` 写法（行内 / `|` 块）都做成用例 —— 块写法若抽不到就是**假红**，
+  门禁假阳性比没门禁更糟。
+- **验证（真文件变异电池，脚本 `/f/tmp/mutate-b10.mjs`）**：正控绿；6 条变异**逐条红**且红在对应判据上 ——
+  M1 删 deploy 整段、M2 两边同名、M3 去掉 `if`、M4 挪到 e2e 之前、M5 `path` 写成别的目录、M6 只删 `path` 行；
+  每条变异前先核对锚点命中数恰为 1（否则"没落进文件"的变异会伪装成"断言无射程"）。跑完两份 workflow 与备份**逐字节相同**。
+- **口径说明**：本批**不**改 Playwright 配置（`reporter` 仍是 `[["list"]]`、未开 `trace`/`video`，单文件 3.5MB 应用 trace 太重）。
+  工件要等**下一次 e2e 真红**才算端到端验过 —— 本机无法伪造 CI 侧的 artifact 落地，这里不提前声明"已生效"。
+
+
 ### 2026-10-30 · **撤回一句我自己写进排期的错话**：覆盖率"换 include 就能出真数"不成立
 
 - **原话出处**：`docs/iteration-plan.md` 待拍板第 6 条（2026-10-26 B7 登记时写的），以及 README 的「覆盖率口径」段。

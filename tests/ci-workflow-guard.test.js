@@ -170,6 +170,94 @@ function runStepsOf(text, job) {
   return runs;
 }
 
+/** 抽某 job 里所有 `actions/upload-artifact` 步骤的结构化视图
+ *  （B10 起用于判「e2e 失败现场有没有带出 CI」）。
+ *  ⚠️ 必须跳过注释行：ci.yml 的 e2e 注释里原话就写着「此前 0 个 upload-artifact」，
+ *  裸 `includes("upload-artifact")` 会命中注释 ⇒ 断言在**没有真步骤**的情况下也成立
+ *  （本文件对 `if:` 踩过同一次，见 `ifBlockOf` 的注释）。
+ *  ⚠️ 必须按**缩进分两层**：步骤级 `- name:` 与 `with:` 里的 `name:` 同名，
+ *  只按 key 匹配会把工件名当成步骤名（将来读 `artifact` 就会拿到 undefined 或错值）。
+ *  分层用「key 起始列」而非「行缩进」：YAML 里 `- name:` 的 `- ` 占两列，后续同级键
+ *  （`if:` / `uses:` / `with:`）与 `name` 同列 —— 若拿行缩进比，它们会被误判成 `with:` 参数
+ *  （这条是本文件第一版自测就红出来、写在这儿防回潮的）。
+ *  口径：`- ` 开新步骤并记下其 key 列；key 列更深的行归为该步骤的 `with:` 参数；
+ *  `path:` 支持行内值与 `|`/`>` 块（块写法是真能出现的 YAML，抽取器若因此返回空 ⇒ 假红，
+ *  故下面用合成样本把两种写法都验过，不在空集上恒真）。 */
+function uploadStepsOf(text, job) {
+  const steps = [];
+  let cur = null;
+  let stepKeyCol = 0;
+  let pathBlock = false;
+  let lineNo = -1;
+  const flush = () => {
+    if (cur && /actions\/upload-artifact/.test(cur.uses || "")) steps.push(cur);
+    cur = null;
+    pathBlock = false;
+  };
+  for (const raw of jobBlockOf(text, job).replace(/\r/g, "").split("\n")) {
+    lineNo++;
+    const t = raw.trim();
+    if (t === "" || t.startsWith("#")) continue;
+    const indent = raw.length - raw.replace(/^\s+/, "").length;
+    const dash = (t.match(/^-\s+/) || [""])[0].length;
+    const keyCol = indent + dash;
+    if (dash > 0) {
+      flush();
+      cur = { at: lineNo };
+      stepKeyCol = keyCol;
+      pathBlock = false;
+    }
+    if (!cur) continue;
+    const key = t.slice(dash);
+    const nested = keyCol > stepKeyCol;
+    if (nested) {
+      // `with:` 的参数层
+      if (pathBlock) {
+        if (/^[\w-]+:/.test(key)) {
+          pathBlock = false; // 新的 key ⇒ 块结束
+        } else {
+          cur.path = (cur.path ? cur.path + " " : "") + key;
+          continue;
+        }
+      }
+      let m = key.match(/^name:\s*(\S.*?)\s*$/);
+      if (m) { cur.artifact = m[1]; continue; }
+      m = key.match(/^path:\s*(.*)$/);
+      if (m) {
+        if (/^[|>]/.test(m[1].trim())) { pathBlock = true; cur.path = ""; }
+        else cur.path = m[1].trim();
+        continue;
+      }
+      continue;
+    }
+    let m = key.match(/^name:\s*(\S.*?)\s*$/);
+    if (m) { cur.name = m[1]; continue; }
+    m = key.match(/^uses:\s*(\S.*?)\s*$/);
+    if (m) { cur.uses = m[1]; continue; }
+    m = key.match(/^if:\s*(\S.*?)\s*$/);
+    if (m) { cur.ifLine = m[1]; continue; }
+  }
+  flush();
+  return steps;
+}
+
+/** 找某 job 里「path 覆盖 test-results」的那条上传步骤（没有就返回 undefined）。 */
+function evidenceStepOf(text, job) {
+  return uploadStepsOf(text, job).find((s) => /test-results/.test(s.path || ""));
+}
+
+/** 「run: npm run e2e」在 job 块里的行号（口径同 uploadStepsOf：跳过注释行）。找不到返回 -1。
+ *  用来判「上传步骤排在 e2e 之后」——顺序错了工件是空的，而 `if-no-files-found: warn` 不会报红。 */
+function runE2eLineOf(text, job) {
+  const lines = jobBlockOf(text, job).replace(/\r/g, "").split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (t === "" || t.startsWith("#")) continue;
+    if (/^(?:-\s*)?run:\s*"?npm run e2e"?\s*$/.test(t)) return i;
+  }
+  return -1;
+}
+
 /** 比较两个 job 的 run 步骤集（③ 与变异自测共用）。
  *  missing = 前者有后者无；extra = 后者有前者无；sameOrder = 逐项同序。 */
 function compareJobs(ciText, ciJob, depText, depJob) {
@@ -306,6 +394,129 @@ describe("deploy.yml ③ verify 步骤集 ≡ ci.yml test（缺步/多步/换序
     const b = runStepsOf(dep, "e2e");
     expect(a, "解析器必须抽到 name 换行式的 Run E2E 步骤（否则下面的等式恒真）").toContain("npm run e2e");
     expect(b).toEqual(a);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * B10（2026-10-30）：e2e 失败现场必须带出 CI。
+ * 起因（实测）：run 40798305934 的 e2e 腿红在 rag-hybrid.spec.js:190，但**什么都没留下** ——
+ * 此前两个 workflow 里 0 个 `upload-artifact`，Playwright 的 test-results/（失败截图 +
+ * error-context.md）不上传，判红只能靠本机复跑；而同一条用例在同 SHA 的 Deploy 腿是绿的，
+ * 等于每次抖动都要靠对侧腿 + 手动复现来定性。
+ * ⚠️ 为什么必须另开一条断言：`uses:` 型步骤**不进** runStepsOf 的比对集合（那个解析器只抽 `- run:`），
+ * 所以「两边都加了没」对 ③ 是完全隐形的 —— 只补 ci.yml、漏补 deploy.yml 会一路绿灯。
+ * ⚠️ 每条 negative 断言前面都有一条「抽到了」的正向哨兵：本文件的教训就是空集让 `toEqual([])` 恒真。
+ * ------------------------------------------------------------------------- */
+describe("B10 e2e 失败现场工件（两条腿都要有，且不得同名）", () => {
+  const SIDE = [
+    ["ci.yml", ci, "e2e"],
+    ["deploy.yml", dep, "e2e"],
+  ];
+
+  for (const [label, text, job] of SIDE) {
+    describe(label + " 的 e2e job", () => {
+      // —— 反向哨兵：抽取器必须真抽到东西，否则下面的断言全在空集上恒真 ——
+      it("哨兵：至少解析出一条 upload-artifact 步骤（0 条 = 抽取器失效，不是「没有」）", () => {
+        expect(uploadStepsOf(text, job).length, label + " 的 e2e job 必须解析出上传步骤").toBeGreaterThan(0);
+        expect(runE2eLineOf(text, job), label + " 必须解析出 run: npm run e2e 的行").toBeGreaterThanOrEqual(0);
+      });
+
+      it("必须有一条 path 覆盖 test-results 的上传步骤", () => {
+        const s = evidenceStepOf(text, job);
+        expect(s, label + " 缺「上传 e2e 失败现场」步骤 ⇒ 判红只能靠本机复跑，CI 现场留不下").toBeTruthy();
+        expect(s.artifact, label + " 的上传步骤必须显式写 with.name（否则同名工件跨腿互相覆盖）").toBeTruthy();
+        expect(s.path, "path 必须指向 Playwright 的 outputDir").toMatch(/test-results/);
+      });
+
+      it("必须挂在 failure() 上（绿时不产工件），且排在 npm run e2e 之后", () => {
+        const s = evidenceStepOf(text, job);
+        expect(s.ifLine, label + " 的上传步骤必须有 if（无条件上传会把每次绿 run 都塞满工件）").toMatch(/failure\(\)/);
+        // 防回潮：always() 会让绿 run 也上传空目录，与本条要省的存储正相反
+        expect(s.ifLine, label + " 不得写成 always()").not.toMatch(/always\(\)/);
+        expect(s.at, label + " 的上传步骤必须在 `run: npm run e2e` 之后，否则上传的是跑之前的空目录").toBeGreaterThan(
+          runE2eLineOf(text, job),
+        );
+      });
+    });
+  }
+
+  it("两条腿的工件名必须不同（同名会让人分不清现场来自哪条腿）", () => {
+    const a = evidenceStepOf(ci, "e2e");
+    const b = evidenceStepOf(dep, "e2e");
+    expect(a && a.artifact, "ci.yml 工件名未解析出").toBeTruthy();
+    expect(b && b.artifact, "deploy.yml 工件名未解析出").toBeTruthy();
+    expect(a.artifact).not.toEqual(b.artifact);
+  });
+
+  /* —— 变异自测：证明上面的判据有射程，不是对着真文件的装饰。 —— */
+  const mk = (stepsBlock, runFirst = true) =>
+    [
+      "jobs:",
+      "  e2e:",
+      "    steps:",
+      ...(runFirst ? ["      - name: Run E2E (full user flow)", "        run: npm run e2e"] : []),
+      ...stepsBlock,
+      ...(runFirst ? [] : ["      - name: Run E2E (full user flow)", "        run: npm run e2e"]),
+    ].join("\n");
+  const GOOD = [
+    "      # 注释里也写 upload-artifact，抽取器必须不把它当步骤",
+    "      - name: 上传 e2e 失败现场",
+    "        if: failure()",
+    "        uses: actions/upload-artifact@v4",
+    "        with:",
+    "          name: e2e-test-results-ci",
+    "          path: test-results/",
+    "          retention-days: 7",
+  ];
+
+  it("变异·删步：整段去掉上传步骤 → evidenceStepOf 返回 undefined（不是空集恒真）", () => {
+    const y = mk([]);
+    expect(uploadStepsOf(y, "e2e")).toEqual([]);
+    expect(evidenceStepOf(y, "e2e")).toBeUndefined();
+  });
+
+  it("变异·只命中注释：把步骤换成一行注释里的 upload-artifact → 仍判「没有」", () => {
+    const y = mk(["      # 以后可以加 upload-artifact 传 test-results"]);
+    expect(evidenceStepOf(y, "e2e"), "注释不得被当成真步骤（本文件对 if: 踩过同一次）").toBeUndefined();
+  });
+
+  it("变异·无条件：去掉 if: → failure() 判据红", () => {
+    const y = mk(GOOD.filter((l) => !/if: failure\(\)/.test(l)));
+    const s = evidenceStepOf(y, "e2e");
+    expect(s, "步骤本身还是要抽到的，否则这条变异没打在判定维度上").toBeTruthy();
+    expect(s.ifLine || "", "缺 if 时必须判红").not.toMatch(/failure\(\)/);
+  });
+
+  it("变异·换序：上传步骤挪到 npm run e2e 之前 → at 判据红", () => {
+    const y = mk(GOOD.filter((l) => !l.trim().startsWith("#")), false);
+    const s = evidenceStepOf(y, "e2e");
+    expect(s.at, "上传必须在跑之后，否则现场是空目录").toBeLessThan(runE2eLineOf(y, "e2e"));
+  });
+
+  it("变异·工件名落到 name 层：with.name 不得覆盖步骤名（两层缩进必须分开解析）", () => {
+    const y = mk(GOOD);
+    const s = evidenceStepOf(y, "e2e");
+    expect(s.name, "步骤级 name 应保持为标题").toBe("上传 e2e 失败现场");
+    expect(s.artifact, "with.name 才是工件名").toBe("e2e-test-results-ci");
+  });
+
+  it("正控·块写法：path: | 多行也必须被抽到（否则真文件改成块写法会假红）", () => {
+    const y = mk([
+      "      - name: 上传",
+      "        if: failure()",
+      "        uses: actions/upload-artifact@v4",
+      "        with:",
+      "          name: ev",
+      "          path: |",
+      "            test-results/",
+      "            playwright-report/",
+      "          retention-days: 7",
+    ]);
+    const s = evidenceStepOf(y, "e2e");
+    expect(s, "块写法 path 不得漏抽").toBeTruthy();
+    expect(s.path).toContain("test-results/");
+    expect(s.path).toContain("playwright-report/");
+    expect(s.artifact, "块续行不得把 retention-days 当成 path 的一部分").toBe("ev");
   });
 });
 
