@@ -348,9 +348,15 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
 
 ### B12 · B8-a 余片（小批 ×2–3，可穿插在 B9/B10 之间）
 
-- 第三片 `src/ui-drawer.js`（5 处，全是裸 `localStorage`；**预判多数保留**，真消解 1–3，这是预期结果）
-- 第四片 `src/render-widgets.js`（3 处）+ 第五片 `src/data-links.js`（实测只有 2 处值得动）
-- 避开 `src/ui-ge-integrations.js`（WorkBuddy 常动的簇）
+- ✅ **2026-10-30 已交付为「第五片」（三片并一批）**：`ui-drawer.js` 5 处 + `render-widgets.js` **实测 4 处**（计划写 3，少算了一处）
+  + `data-links.js` —— 共 9 处 P0 逐条读上下文，**真消解 2 处、其余 7 处判「理由成立」并用用例钉住理由原文**。
+  真修的两处共同后果都是「界面说成功、磁盘上没有」：`saveCfg()` 待续 AI 意图被静默丢弃、
+  回收站恢复 AI Profile 没落盘却显示成功。全仓 P0 **26 → 24**；基线按文件重冻（不替别人销账）。
+- ❌ **原「第五片 `src/data-links.js` 2 处」已不成立**：实测该文件 **P0 = 0**（B11 的 `save()` 不吞错结案之后）。
+  计数锁里钉住「0」，防止后人照旧排期去找不存在的条目。
+- ⚠️ **`ui-drawer:640` 的理由记错了，已订正**：坏 JSON 到不了这个 catch（`load()` 自己记 `where:"load"`）；
+  它真正覆盖的是「单重编码对象 ⇒ `JSON.parse` 对对象求值而抛」。详见 `docs/empty-catch-p0-triage.md` 4.2。
+- 仍**避开** `src/ui-ge-integrations.js`（WorkBuddy 常动的簇）。
 
 ### B13 · 切版 3.7.152（小批）
 

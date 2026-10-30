@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
-  "updated": "2026-10-29",
-  "count": 603,
+  "updated": "2026-10-30",
+  "count": 604,
   "items": [
     {
       "file": "ai-loop.js",
@@ -3052,7 +3052,33 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1165,
+      "line": 1086,
+      "sig": "c87e18b13c",
+      "bhash": "b069a1b05d",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"warn\", \"restored AI profile not persisted (save returned fal",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 1087,
+      "sig": "19305bdda1",
+      "bhash": "0f09109898",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": true,
+      "note": "",
+      "snippet": "pushDiag(\"warn\", \"restored AI profile not persisted: \"+((e && e.messag",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 1173,
       "sig": "338621b38e",
       "bhash": "815ebc98b8",
       "occ": 1,
@@ -3065,7 +3091,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1190,
+      "line": 1198,
       "sig": "275bfc9bb7",
       "bhash": "1933dc6b21",
       "occ": 1,
@@ -3078,7 +3104,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1194,
+      "line": 1202,
       "sig": "7c39deaec7",
       "bhash": "bad4115f2f",
       "occ": 1,
@@ -3091,7 +3117,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1595,
+      "line": 1603,
       "sig": "77abb6b04d",
       "bhash": "561efee72e",
       "occ": 1,
@@ -3104,7 +3130,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1599,
+      "line": 1607,
       "sig": "a5d0c4b9b4",
       "bhash": "d9b6ea1844",
       "occ": 1,
@@ -3117,7 +3143,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1683,
+      "line": 1691,
       "sig": "a5d0c4b9b4",
       "bhash": "d9b6ea1844",
       "occ": 2,
@@ -3130,7 +3156,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1753,
+      "line": 1761,
       "sig": "aa07fc88f4",
       "bhash": "9768edeb86",
       "occ": 1,
@@ -3143,7 +3169,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1876,
+      "line": 1884,
       "sig": "ac3151ade7",
       "bhash": "b79af7cd18",
       "occ": 1,
@@ -3156,7 +3182,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1879,
+      "line": 1887,
       "sig": "8be05f89b5",
       "bhash": "f47de8eec1",
       "occ": 1,
@@ -3169,7 +3195,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1973,
+      "line": 1981,
       "sig": "a1c0670512",
       "bhash": "9b00465945",
       "occ": 1,
@@ -3182,7 +3208,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1980,
+      "line": 1988,
       "sig": "cfb5cd3291",
       "bhash": "8fc11cdb17",
       "occ": 1,
@@ -3195,7 +3221,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2110,
+      "line": 2118,
       "sig": "2b7f751a68",
       "bhash": "abfde9a875",
       "occ": 1,
@@ -3208,7 +3234,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2123,
+      "line": 2131,
       "sig": "e4e14b1b2f",
       "bhash": "ac21fd78ef",
       "occ": 1,
@@ -3221,7 +3247,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2334,
+      "line": 2342,
       "sig": "66ae794fb1",
       "bhash": "751331cbfb",
       "occ": 1,
@@ -3234,7 +3260,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2874,
+      "line": 2882,
       "sig": "5f186c36cb",
       "bhash": "9dccb6ac1b",
       "occ": 1,
@@ -3247,7 +3273,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2886,
+      "line": 2894,
       "sig": "5f186c36cb",
       "bhash": "9dccb6ac1b",
       "occ": 2,
@@ -3260,7 +3286,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2994,
+      "line": 3002,
       "sig": "a43aedf6ec",
       "bhash": "122c08ff81",
       "occ": 1,
@@ -3273,7 +3299,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2998,
+      "line": 3006,
       "sig": "f4ddeef40d",
       "bhash": "077abdfbb9",
       "occ": 1,
@@ -3286,7 +3312,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3103,
+      "line": 3111,
       "sig": "d3db25a41b",
       "bhash": "6710417070",
       "occ": 1,
@@ -3299,7 +3325,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3123,
+      "line": 3131,
       "sig": "adf1ff242d",
       "bhash": "41935ea1cb",
       "occ": 1,
@@ -3312,7 +3338,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3207,
+      "line": 3215,
       "sig": "f3ef0c6141",
       "bhash": "23e8214f66",
       "occ": 1,
@@ -3325,7 +3351,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3228,
+      "line": 3236,
       "sig": "af2cf7ed1f",
       "bhash": "cdac77adc9",
       "occ": 1,
@@ -3338,7 +3364,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3263,
+      "line": 3271,
       "sig": "25b13a3a1e",
       "bhash": "4ca65bfc9c",
       "occ": 1,
@@ -3351,7 +3377,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3275,
+      "line": 3283,
       "sig": "4ca4f12296",
       "bhash": "3228fc38ca",
       "occ": 1,
@@ -3364,7 +3390,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3295,
+      "line": 3303,
       "sig": "3315d9d589",
       "bhash": "37c7233bb0",
       "occ": 1,
@@ -3377,7 +3403,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3404,
+      "line": 3412,
       "sig": "b2afc80171",
       "bhash": "e7b344a532",
       "occ": 1,
@@ -3390,7 +3416,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3810,
+      "line": 3818,
       "sig": "8c26b5f0d4",
       "bhash": "3496d36476",
       "occ": 1,
@@ -3403,7 +3429,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3820,
+      "line": 3828,
       "sig": "4c14703af3",
       "bhash": "98e938c7cc",
       "occ": 1,
@@ -3416,7 +3442,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3863,
+      "line": 3871,
       "sig": "69b28538de",
       "bhash": "57f658b28a",
       "occ": 1,
@@ -3429,7 +3455,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3874,
+      "line": 3882,
       "sig": "0175d5e3b7",
       "bhash": "58f2d27cb2",
       "occ": 1,
@@ -3442,7 +3468,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3876,
+      "line": 3884,
       "sig": "b5072ff13b",
       "bhash": "588f392a96",
       "occ": 1,
@@ -3455,7 +3481,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3902,
+      "line": 3910,
       "sig": "8a413f85a0",
       "bhash": "496893db28",
       "occ": 1,
@@ -3468,7 +3494,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3931,
+      "line": 3939,
       "sig": "d2ea00c44f",
       "bhash": "fe255c1881",
       "occ": 1,
@@ -3481,7 +3507,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3985,
+      "line": 3993,
       "sig": "fac7a07df5",
       "bhash": "a23d83eb9b",
       "occ": 1,
@@ -3494,20 +3520,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1081,
-      "sig": "d4bb9693dd",
-      "bhash": "71b9f1692f",
-      "occ": 1,
-      "level": "P1",
-      "why": "try 块含业务逻辑，需人工判断是否该上报",
-      "bare": false,
-      "note": ".catch(()=>{}); } }else if(d.kind === \"link\"){",
-      "snippet": "// 异步落盘（不阻塞恢复流程） if(typeof persistCfg === \"function\"){ persistCfg(cfg)",
-      "kind": "reject"
-    },
-    {
-      "file": "render-widgets.js",
-      "line": 1879,
+      "line": 1887,
       "sig": "27304e4085",
       "bhash": "e3f274c6a2",
       "occ": 1,
@@ -3520,7 +3533,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2983,
+      "line": 2991,
       "sig": "2e9428fd45",
       "bhash": "47c74eb160",
       "occ": 1,
@@ -4157,7 +4170,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "renderSide(); }"
+      "snippet": "renderSide(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4169,7 +4183,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 主题下拉异常不阻断设置页 */",
-      "snippet": "syncThemeLabOption(); }"
+      "snippet": "syncThemeLabOption(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4181,7 +4196,8 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"sysprompt.restoredPrefix\",\"已恢复「\")+(SCENARIOS[sc]?.name||sc)+t"
+      "snippet": "toast(t(\"sysprompt.restoredPrefix\",\"已恢复「\")+(SCENARIOS[sc]?.name||sc)+t",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4193,7 +4209,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "renderPluginBox(); }"
+      "snippet": "renderPluginBox(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4205,20 +4222,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "renderThemeEditor(); }"
-    },
-    {
-      "file": "ui-drawer.js",
-      "line": 238,
-      "sig": "0ba339de33",
-      "bhash": "72b28853d9",
-      "occ": 1,
-      "level": "P1",
-      "why": "try 块含业务逻辑，需人工判断是否该上报",
-      "bare": true,
-      "note": ".catch(()=>{}); } /* v1.9：设置从侧边栏抽屉改为正常页面——把 #drawer 移到 .",
-      "snippet": "\"; $(\"#cfgKey\").placeholder=t(\"cfg.keySavedInMain\",\"已保存（主进程保管）\"); } })",
-      "kind": "reject"
+      "snippet": "renderThemeEditor(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4230,7 +4235,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "renderPluginBox(); }"
+      "snippet": "renderPluginBox(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4242,7 +4248,8 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": true,
       "note": "",
-      "snippet": "if(!_recCountWarnedDrawer && typeof pushDiag === \"function\"){ _recCoun"
+      "snippet": "if(!_recCountWarnedDrawer && typeof pushDiag === \"function\"){ _recCoun",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4254,7 +4261,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "URL.revokeObjectURL(url); }"
+      "snippet": "URL.revokeObjectURL(url); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4266,7 +4274,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "var fr = new FileReader(); fr.onload = function () { _put(String(fr.re"
+      "snippet": "var fr = new FileReader(); fr.onload = function () { _put(String(fr.re",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4278,7 +4287,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "_selPanel.remove(); }"
+      "snippet": "_selPanel.remove(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4290,7 +4300,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "sel.dispatchEvent(new Event(\"change\", { bubbles: true })); }"
+      "snippet": "sel.dispatchEvent(new Event(\"change\", { bubbles: true })); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4302,7 +4313,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": true,
       "note": "",
-      "snippet": "window.addEventListener(\"resize\", _closeSelPanel); /* v3.6.4 修复：滚动时关闭面"
+      "snippet": "window.addEventListener(\"resize\", _closeSelPanel); /* v3.6.4 修复：滚动时关闭面",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4314,7 +4326,8 @@
       "why": "forEach：回调内抛异常被吞，批量操作只做一半且不报错",
       "bare": false,
       "note": "/* v3.7.102：这里清的是**旧版本残留的内联样式**，清不掉只是宽度仍由内联值决定（视觉偏差），不影响功能 —",
-      "snippet": "const dr = document.getElementById(\"drawer\"); if(!dr || !dr.classList."
+      "snippet": "const dr = document.getElementById(\"drawer\"); if(!dr || !dr.classList.",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4326,7 +4339,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 回收站写入失败不影响删除 */",
-      "snippet": "addToRecycleBin(\"config\", t(\"profile.recycleTitlePrefix\",\"AI Profile：「"
+      "snippet": "addToRecycleBin(\"config\", t(\"profile.recycleTitlePrefix\",\"AI Profile：「",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4338,7 +4352,8 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "toast(t(\"msg.encryptFailed\",\"⚠️ 加密持久化失败，AI Key 未保存（安全起见已丢弃）。\"), \"warn\""
+      "snippet": "toast(t(\"msg.encryptFailed\",\"⚠️ 加密持久化失败，AI Key 未保存（安全起见已丢弃）。\"), \"warn\"",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4350,7 +4365,8 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "",
-      "snippet": "if(window.electronAPI && typeof pushDiag === \"function\") pushDiag(\"war"
+      "snippet": "if(window.electronAPI && typeof pushDiag === \"function\") pushDiag(\"war",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4362,7 +4378,8 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "toast(t(\"msg.aiPrivacyNotice\",\"提示：启用 AI 后，相关任务/资料上下文将发送到你配置的 AI 端点（默认 "
+      "snippet": "toast(t(\"msg.aiPrivacyNotice\",\"提示：启用 AI 后，相关任务/资料上下文将发送到你配置的 AI 端点（默认 ",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4374,7 +4391,8 @@
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
       "note": "/* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */",
-      "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }"
+      "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4386,7 +4404,8 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "if(typeof window.__aiPanelExpand === \"function\"){ window.__aiPanelExpa"
+      "snippet": "if(typeof window.__aiPanelExpand === \"function\"){ window.__aiPanelExpa",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4398,7 +4417,8 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "askAiAboutScene(pending.sc, pending.hintKey); }"
+      "snippet": "askAiAboutScene(pending.sc, pending.hintKey); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
@@ -4410,23 +4430,25 @@
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
       "note": "/* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */",
-      "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }"
+      "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 640,
-      "sig": "e3f7c382be",
-      "bhash": "fbe763f2c9",
+      "line": 643,
+      "sig": "bd471a6bf6",
+      "bhash": "f07c847973",
       "occ": 1,
-      "level": "P0",
-      "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* JSON 解析失败 / 读取失败都吞掉，不影响主保存流程 */",
-      "snippet": "const raw = load(PREFIX + \"__pendingAiAsk\", null); if(raw){ const pend"
+      "note": "",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"pending AI ask un",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 642,
+      "line": 646,
       "sig": "916d67a45a",
       "bhash": "24d79c1e16",
       "occ": 3,
@@ -4434,11 +4456,12 @@
       "why": "localStorage：配额满 / 隐私模式读写出错，用户数据静默丢失",
       "bare": false,
       "note": "/* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */",
-      "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }"
+      "snippet": "localStorage.removeItem(PREFIX + \"__pendingAiAsk\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 654,
+      "line": 658,
       "sig": "48c3ed87f4",
       "bhash": "82d682f4e2",
       "occ": 1,
@@ -4446,11 +4469,12 @@
       "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "const thSel2 = $(\"#cfgTheme\"); if(thSel2 && typeof setTheme === \"funct"
+      "snippet": "const thSel2 = $(\"#cfgTheme\"); if(thSel2 && typeof setTheme === \"funct",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 659,
+      "line": 663,
       "sig": "2f683ce220",
       "bhash": "0feecf64a0",
       "occ": 1,
@@ -4458,11 +4482,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": false,
       "note": "/* toast 不可用时静默降级 */",
-      "snippet": "toast(t(\"msg.saveFailedPrefix\",\"保存失败：\")+(e&&e.message||t(\"tool.unknown"
+      "snippet": "toast(t(\"msg.saveFailedPrefix\",\"保存失败：\")+(e&&e.message||t(\"tool.unknown",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 968,
+      "line": 972,
       "sig": "3aac6439a6",
       "bhash": "15c6a324bd",
       "occ": 1,
@@ -4470,11 +4495,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* noop */",
-      "snippet": "closeDrawer(); }"
+      "snippet": "closeDrawer(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1183,
+      "line": 1187,
       "sig": "b735a4fcf0",
       "bhash": "09d12b0a0c",
       "occ": 2,
@@ -4482,11 +4508,12 @@
       "why": "try 块含业务逻辑，需人工判断是否该上报",
       "bare": false,
       "note": "/* 同上 */",
-      "snippet": "syncThemeLabOption(); }"
+      "snippet": "syncThemeLabOption(); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1185,
+      "line": 1189,
       "sig": "125c65b02a",
       "bhash": "5f8322dd84",
       "occ": 1,
@@ -4494,11 +4521,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"theme.applied\", \"已应用主题「\")+(customs[id]&&customs[id].name||id)"
+      "snippet": "toast(t(\"theme.applied\", \"已应用主题「\")+(customs[id]&&customs[id].name||id)",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1201,
+      "line": 1205,
       "sig": "2d06ee4c9b",
       "bhash": "3b39f542ac",
       "occ": 1,
@@ -4506,11 +4534,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"theme.deleted\", \"已删除主题\"), \"ok\"); }"
+      "snippet": "toast(t(\"theme.deleted\", \"已删除主题\"), \"ok\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1229,
+      "line": 1233,
       "sig": "1ce7dd46b2",
       "bhash": "8a479365f5",
       "occ": 1,
@@ -4518,11 +4547,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"theme.sceneColorUpdated\", \"已更新场景配色\"), \"ok\"); }"
+      "snippet": "toast(t(\"theme.sceneColorUpdated\", \"已更新场景配色\"), \"ok\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1239,
+      "line": 1243,
       "sig": "9b00f33c34",
       "bhash": "fc061ec263",
       "occ": 1,
@@ -4530,11 +4560,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"theme.sceneColorReset\", \"已重置场景配色\"), \"ok\"); }"
+      "snippet": "toast(t(\"theme.sceneColorReset\", \"已重置场景配色\"), \"ok\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1347,
+      "line": 1351,
       "sig": "19356863e0",
       "bhash": "e82baf31f9",
       "occ": 1,
@@ -4542,11 +4573,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"theme.customSaved\", \"已保存自定义主题「{name}」\").replace(\"{name}\", nam"
+      "snippet": "toast(t(\"theme.customSaved\", \"已保存自定义主题「{name}」\").replace(\"{name}\", nam",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1364,
+      "line": 1368,
       "sig": "1debedf5bc",
       "bhash": "65a28050ac",
       "occ": 1,
@@ -4554,11 +4586,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"theme.jsonGenerated\", \"当前主题 JSON 已生成，可复制分享\"), \"ok\"); }"
+      "snippet": "toast(t(\"theme.jsonGenerated\", \"当前主题 JSON 已生成，可复制分享\"), \"ok\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1375,
+      "line": 1379,
       "sig": "c0f561962f",
       "bhash": "f04185731a",
       "occ": 1,
@@ -4566,11 +4599,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"theme.pasteJsonFirst\", \"请先粘贴主题 JSON\"), \"warn\"); }"
+      "snippet": "toast(t(\"theme.pasteJsonFirst\", \"请先粘贴主题 JSON\"), \"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1378,
+      "line": 1382,
       "sig": "9d154b2871",
       "bhash": "e980698187",
       "occ": 1,
@@ -4578,11 +4612,12 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(r.err || t(\"import.failed\", \"导入失败\"), \"warn\"); }"
+      "snippet": "toast(r.err || t(\"import.failed\", \"导入失败\"), \"warn\"); }",
+      "kind": "catch"
     },
     {
       "file": "ui-drawer.js",
-      "line": 1383,
+      "line": 1387,
       "sig": "5f96f167f0",
       "bhash": "d543da19f3",
       "occ": 1,
@@ -4590,7 +4625,21 @@
       "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
       "bare": true,
       "note": "",
-      "snippet": "toast(t(\"theme.imported\", \"已导入主题「{id}」\").replace(\"{id}\", r.id), \"ok\");"
+      "snippet": "toast(t(\"theme.imported\", \"已导入主题「{id}」\").replace(\"{id}\", r.id), \"ok\");",
+      "kind": "catch"
+    },
+    {
+      "file": "ui-drawer.js",
+      "line": 238,
+      "sig": "0ba339de33",
+      "bhash": "72b28853d9",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(()=>{}); } /* v1.9：设置从侧边栏抽屉改为正常页面——把 #drawer 移到 .",
+      "snippet": "\"; $(\"#cfgKey\").placeholder=t(\"cfg.keySavedInMain\",\"已保存（主进程保管）\"); } })",
+      "kind": "reject"
     },
     {
       "file": "ui-ge-api.js",

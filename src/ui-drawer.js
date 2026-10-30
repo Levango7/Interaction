@@ -637,7 +637,11 @@ async function saveCfg(){
             try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */ }
           }
         }
-      }catch(e){ /* JSON 解析失败 / 读取失败都吞掉，不影响主保存流程 */ }
+      }catch(e){
+        /* B12：读坏/解析坏时，用户点过「在 AI 助手中讨论」的那句提示词就此丢失，而界面只表现为
+           「没自动续上」—— 与「用户压根没点过」完全同形。不影响主保存流程，故不改控制流，只留痕。 */
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "pending AI ask unreadable, prompt lost: "+((e && e.message) || e), { where: "saveCfg.pendingAiAsk" }); }catch(_e){}
+      }
     } else {
       try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */ }
     }

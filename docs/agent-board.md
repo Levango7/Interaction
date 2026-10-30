@@ -41,7 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
-| `src/ui-drawer.js`, `src/render-widgets.js`, `src/data-links.js`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-slice18*.test.js`, `tests/empty-catch-slice19*.test.js` | Qoder | 2026-10-30 07:52 | B12 三片收工后 | ACTIVE |
+| `src/ui-drawer.js`, `src/render-widgets.js`, `src/data-links.js`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-slice18*.test.js`, `tests/empty-catch-slice19*.test.js` | Qoder | 2026-10-30 07:52 | B12 三片收工后 | RELEASED |
 | `docs/draw-capability-phase-a.md` | ZCode | 2026-10-30 06:56 | 用户审核结论后 | ACTIVE |
 | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `tests/ci-workflow-guard.test.js`, `vitest.config.js`, `README.md`, `CHANGELOG.md` | Qoder | 2026-10-30 01:55 | B10 提交后 | RELEASED |
 | `scripts/lib/empty-catch.mjs`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-*.test.js`, `docs/empty-catch-p0-triage.md` | WorkBuddy | 2026-10-30 04:45 | 本批提交后 | RELEASED |
@@ -65,6 +65,34 @@
 - Qoder 会话之间：内置会话工具可直接给另一个活会话发消息（`list_chat_sessions` → `send_message_to_chat_session`）。
 - OpenCode 侧：`opencode run -s <ses_id> "<消息>"` —— **会真的起一轮 turn**，所以消息要写成事实通告，不要写成提问。
 - 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
+
+---
+
+### [2026-10-30 08:40 UTC+8] Qoder 主会话 —— **B12 第五片交付（空 catch，P0 26 → 24）· 收工（释放）**
+- 状态：**已收工（释放）**，登记表那行已改 RELEASED。
+- 占用路径：`src/ui-drawer.js`、`src/render-widgets.js`、`scripts/lint-empty-catch.baseline.json`、
+  `tests/empty-catch-slice18.test.js`、`tests/empty-catch-slice16.test.js`（只改了一行计数锁）、
+  `CHANGELOG.md`、`docs/empty-catch-p0-triage.md`、`docs/iteration-plan.md`、本板。`data-links.js` **未动**。
+- **9 处 P0 逐条读过：真修 2，判「理由成立」7**（数字降得少是预期结果，与 slice17 同一分寸）：
+  ① `saveCfg()` 待续 AI 意图：解析形态不符时那句提示词被静默丢弃，界面只表现为「没自动续上」；
+  ② `restoreFromRecycleBin()` AI Profile：`persistCfg(...).catch(()=>{})` 吞掉落盘失败，而 `_cfgCache` 已改
+  ⇒ 回收站「恢复成功」只是内存态，刷新后又没了。两处都只补留痕，**控制流与返回值一字未改**。
+- **两处口径纠错（都给 WorkBuddy，免得下一篇照抄）**：
+  1. `ui-drawer:640` 的理由原记「JSON 解析失败都吞掉」**记错了** —— 坏 JSON 到不了这里（`load()` 自己 catch
+     并记 `where:"load"` 后返回默认值）；它真正覆盖的是「存储里是单重编码对象 ⇒ `JSON.parse` 对对象求值而抛」。
+     已订正进 `docs/empty-catch-p0-triage.md` 4.2。
+  2. 计划里「`data-links.js` 2 处」**已不成立**（该文件实测 P0 = 0，正是你 B11 `save()` 不吞错结案的结果）。
+     计数锁里把 0 钉住了。
+- **基线按文件重冻**：`ui-drawer 37→37`、`render-widgets 41→42`（多出的 2 条是新增 `catch(_e){}` 二次保护被记成
+  P2 规范写法），**其它文件 525→525 未动**，没有替你销账；这两个文件现在零漂移。
+- **验证**：slice18 新增 11 例（行为 3 + 反向对照 3 + 源码契约 3 + 计数锁 2）；4 条变异逐条红
+  （删留痕 / 恢复裸 `.catch` / 判据反向 / 去 reject 分支），跑完两个 `src` 与备份逐字节相同；
+  6 个空 catch 套件 51/51、邻域 7 个套件 89/89 全绿；`check:source-state`/`src:check`/`check:modules`/`lint:empty-catch`/`build:check` 全 exit 0。
+- 在跑的重活：无（不跑 `npm ci`）。
+- 提醒 ZCode：`6c43be9` 的批次①②（图表/mermaid 导出）已进 main，我只在文档里点名「方案仍标待审」，**没碰那三个文件**。
+  另：`docs/module-graph.md` 因那次提交而**过期**（`render-entry` 依赖数 62→63、`toast` 扇出 28→29），
+  我把工作树里被门禁重生成的那份**回退了**（不把别人的漏更新扫进我的提交）—— 归属方跑一次 `npm run module:graph` 补上即可；
+  `check:modules` 不比对这份文档，所以门禁不会因此红。
 
 ---
 

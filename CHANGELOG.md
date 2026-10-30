@@ -124,6 +124,32 @@
 
 ## [Unreleased]
 
+### 2026-10-30 · **B12 第五片：9 处 P0 逐条读过，只真修 2 处**（空 catch，P0 26 → 24）
+
+- **规则同 slice17**：先读上下文再判，**不全改**。本片共 9 处（`ui-drawer` 5 / `render-widgets` 4），
+  消解 2、判定「理由成立、不动」7 —— 数字降得少是预期结果，不是没干完。
+- **修的 2 处，共同后果都是「界面说成功，磁盘上没有」**：
+  1. `ui-drawer.js` `saveCfg()` 的待续意图外层 catch：用户点过「在 AI 助手中讨论」，配置完应自动续上那句提示词；
+     解析形态不符时它被静默丢弃，界面只表现为「没自动续上」——与「用户压根没点过」完全同形。
+  2. `render-widgets.js` `restoreFromRecycleBin()` 的 AI Profile 分支：原 `persistCfg(...).catch(()=>{})`
+     吞掉落盘失败，而 `_cfgCache` 已改 ⇒ 回收站「恢复成功」只是内存态，刷新后那条 Profile 又没了。
+     改为 `.then(ok=>…, e=>…)`，**`save()` 返回 false 与 reject 两种形态都留痕**。
+  两处都**只补可观测性、不动控制流**（返回值与调用方分支一字未改）。
+- **一处口径纠错（重要，别照抄）**：原表把 `ui-drawer:640` 的理由记成「JSON 解析失败都吞掉」，
+  但实测**坏 JSON 到不了这里** —— `load()` 自己 `catch` 并记 `where:"load"` 后返回默认值；
+  该处真正覆盖的是「存储里是单重编码对象 ⇒ `JSON.parse` 对对象求值而抛」（生产写入是
+  `save(k, JSON.stringify(obj))` ⇒ 双重编码 ⇒ 正常）。两支都写成了用例，`load()` 的功劳不再记在它头上。
+- **不动的 7 处**（理由原文用用例钉住，防「顺手改掉」）：清旧内联样式（视觉偏差）、
+  三处 `removeItem(__pendingAiAsk)`（5 分钟窗口自愈、无副作用）、两处 `sideCollapsed` 读（写侧早已留痕）、
+  宠物浮层 `decode()`（180 帧重试窗口兜住）。
+- **计划更正**：`src/data-links.js` 那「2 处值得动」**已不成立**，实测该文件 **P0 = 0**
+  （B11 结案：`save()` 不吞错）。计数锁里把「0」钉住，免得后人再照排期去找。
+- **验证**：新增 `tests/empty-catch-slice18.test.js` **11 例**（3 条行为 + 3 条反向对照 + 3 条源码契约 + 2 条计数锁）；
+  4 条变异**逐条红**（删留痕 / 恢复裸 `.catch` / 判据反向 `ok===false→true` / 去掉 reject 分支），跑完两个 `src` 与备份逐字节相同。
+  相关 6 个空 catch 套件 51/51、邻域 7 个套件 89/89 全绿；`check:source-state` / `src:check` / `check:modules` /
+  `lint:empty-catch` / `build:check` 全 exit 0。基线**按文件**重冻（`ui-drawer 37→37`、`render-widgets 41→42`，
+  其它文件 525→525 未动，不替别人销账）。
+
 ### 2026-10-30 · **B10 范围 3：`rag-hybrid` 就绪闸门超时现在能点名卡在哪一项**（只改可归因性）
 
 - **不改什么**：四个合取项（`ragSearch` / `_ragVecModel` / `aiReadyProfile` / `_ragVecModel()!==""`）

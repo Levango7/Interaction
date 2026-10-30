@@ -1078,7 +1078,15 @@ function restoreFromRecycleBin(id){
         if(!cfg.activeId && profiles.length) cfg.activeId = profiles[0].id;
         _cfgCache = cfg;
         // 异步落盘（不阻塞恢复流程）
-        if(typeof persistCfg === "function"){ persistCfg(cfg).catch(()=>{}); }
+        if(typeof persistCfg === "function"){
+          /* B12：落盘失败时这次「恢复」只活在内存里（_cfgCache 已改），刷新后就没了 ——
+             而界面此刻已经表现为恢复成功。不改控制流，只让「没落盘」可查。
+             persistCfg 的失败有两种形态（返回 false / reject），两种都要留痕。 */
+          persistCfg(cfg).then(
+            (ok) => { if(ok === false){ try{ pushDiag("warn", "restored AI profile not persisted (save returned false), lost on reload", { where: "restoreRecycle.profileCfg" }); }catch(_e){} } },
+            (e) => { try{ pushDiag("warn", "restored AI profile not persisted: "+((e && e.message) || e), { where: "restoreRecycle.profileCfg" }); }catch(_e){} }
+          );
+        }
       }else if(d.kind === "link"){
         // 恢复联动规则：追加到自定义链
         const links = getLinks().slice();
