@@ -181,6 +181,15 @@ function execTool(name, args, force){
       _aiArtifactPush({ kind:"note", refId:r.id, title:ttl, sc:(typeof active === "string" ? active : ""), tool:"generate_doc" });
       return JSON.stringify({ok:true, id:r.id, msg:t("tool.docSaved","文档已保存到笔记：")+ttl});
     }
+    /* draw_svg（画图能力 Phase A 批次④）：AI 直接产出 SVG 源码。不可信输入 ⇒ 白名单重建
+       消毒（sanitizeSvg，util-markdown）；拒绝而非静默修正，失败让模型重试。
+       产物**不进 _aiArtifactPush 账**：账只收「可回访的持久产物」（task/record/note，带真实 refId），
+       草图随会话走、没有可回访的落点 —— 不留悬空引用。方案第九节的 AI 行动统计一句按此订正。 */
+    if(name==="draw_svg"){
+      const clean = sanitizeSvg(args.svg || "");
+      if(!clean) return JSON.stringify({ok:false, msg:t("draw.invalid","SVG 未通过安全检查（缺少根 <svg> 或解析失败），请重试")});
+      return "__SVG__" + JSON.stringify({ title:String(args.title || ""), svg:clean });
+    }
     return agentExec(name, args); // A-P3：记忆/目标等 Agent 工具由此分发
   }catch(e){
     // 工具执行异常：诊断 + 提示，仍返回结构化错误（保持 execTool 调用方契约）
@@ -357,6 +366,11 @@ const TOOLS = [
     title:{type:"string", description:t("aitool.generate_doc.title.desc","文档标题")},
     content:{type:"string", description:t("aitool.generate_doc.content.desc","Markdown 正文")},
     category:{type:"string", description:t("aitool.generate_doc.category.desc","分类，如 方案/复盘/工作文档")}}, required:["title","content"]}}},
+  /* draw_svg（画图能力 Phase A 批次④）：AI 直接写 SVG 源码画草图（图表/mermaid 之外的第三类图）。
+     产出经白名单消毒（script/外链/SMIL 不入）后内联渲染，可导出 SVG/PNG。 */
+  {type:"function", function:{name:"draw_svg", description:t("aitool.draw_svg.desc","画一张 SVG 矢量草图（图解/示意/海报/简笔画）——你直接写 SVG 源码（标准标签 + 表现属性，不用内嵌 <style> 与 class 样式），系统会安全消毒、内联渲染，用户可导出 SVG/PNG"), parameters:{type:"object", properties:{
+    svg:{type:"string", description:t("aitool.draw_svg.svg.desc","SVG 源码（必须以 <svg …> 为根，width/height 用数值像素）")},
+    title:{type:"string", description:t("aitool.draw_svg.title.desc","草图标题（可选，显示在卡片头部）")}}, required:["svg"]}}},
   {type:"function", function:{name:"spawn_agent", description:t("aitool.spawn_agent.desc","派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把侦查/整理/汇总类工作委派出去"), parameters:{type:"object", properties:{
     name:{type:"string", description:t("aitool.spawn_agent.name.desc","子代理名（人读，如「资料整理员」）")},
     role:{type:"string", description:t("aitool.spawn_agent.role.desc","角色描述（注入子代理的系统提示）")},
@@ -1379,7 +1393,7 @@ function skillTracePush(trace, name, args, res){
   if(!Array.isArray(trace)) return;
   let ok = false;
   const s = String(res === null || res === undefined ? "" : res);
-  if(s.indexOf("__CHART__") === 0){ ok = true; }
+  if(s.indexOf("__CHART__") === 0 || s.indexOf("__SVG__") === 0){ ok = true; }
   else {
     try{ const j = JSON.parse(s); ok = !!(j && j.ok !== false && !j.error); }
     catch(e){ ok = s.length > 0; }
@@ -3411,6 +3425,19 @@ function renderChat(){
         try{
           var _spec = JSON.parse(_disp.slice(9));
           return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + AppBridge.miniChart(_spec.type, _spec.data) + '</div>';
+        }catch(_e){ /* 解析失败回退文本 */ }
+      }
+      /* draw_svg（画图能力 Phase A 批次④）：消毒后的 SVG 在**渲染层再消毒一次**（防御纵深，
+         历史消息可能在消毒规则升级前进库），通过后内联 + 同一导出条（_bindSvgExport 接管）。 */
+      if(typeof _disp === "string" && _disp.indexOf("__SVG__") === 0){
+        try{
+          var _sp = JSON.parse(_disp.slice(7));
+          var _cleanSvg = sanitizeSvg(_sp.svg || "");
+          if(_cleanSvg){
+            return '<div class="msg tool svg-msg" data-svgexport data-svgname="' + esc(_sp.title || "draw") + '">'
+              + (_sp.title ? '<div class="chart-msg-title">' + esc(_sp.title) + '</div>' : '')
+              + _cleanSvg + _svgExportBar(_sp.title || "draw") + '</div>';
+          }
         }catch(_e){ /* 解析失败回退文本 */ }
       }
       /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片 */

@@ -124,57 +124,15 @@
 
 ## [Unreleased]
 
-### 2026-10-30 · **B12 第五片：9 处 P0 逐条读过，只真修 2 处**（空 catch，P0 26 → 24）
+### 2026-10-30 · **画图能力 Phase A：聊天里长出画图（设计模式后置 Phase B）**
 
-- **规则同 slice17**：先读上下文再判，**不全改**。本片共 9 处（`ui-drawer` 5 / `render-widgets` 4），
-  消解 2、判定「理由成立、不动」7 —— 数字降得少是预期结果，不是没干完。
-- **修的 2 处，共同后果都是「界面说成功，磁盘上没有」**：
-  1. `ui-drawer.js` `saveCfg()` 的待续意图外层 catch：用户点过「在 AI 助手中讨论」，配置完应自动续上那句提示词；
-     解析形态不符时它被静默丢弃，界面只表现为「没自动续上」——与「用户压根没点过」完全同形。
-  2. `render-widgets.js` `restoreFromRecycleBin()` 的 AI Profile 分支：原 `persistCfg(...).catch(()=>{})`
-     吞掉落盘失败，而 `_cfgCache` 已改 ⇒ 回收站「恢复成功」只是内存态，刷新后那条 Profile 又没了。
-     改为 `.then(ok=>…, e=>…)`，**`save()` 返回 false 与 reject 两种形态都留痕**。
-  两处都**只补可观测性、不动控制流**（返回值与调用方分支一字未改）。
-- **一处口径纠错（重要，别照抄）**：原表把 `ui-drawer:640` 的理由记成「JSON 解析失败都吞掉」，
-  但实测**坏 JSON 到不了这里** —— `load()` 自己 `catch` 并记 `where:"load"` 后返回默认值；
-  该处真正覆盖的是「存储里是单重编码对象 ⇒ `JSON.parse` 对对象求值而抛」（生产写入是
-  `save(k, JSON.stringify(obj))` ⇒ 双重编码 ⇒ 正常）。两支都写成了用例，`load()` 的功劳不再记在它头上。
-- **不动的 7 处**（理由原文用用例钉住，防「顺手改掉」）：清旧内联样式（视觉偏差）、
-  三处 `removeItem(__pendingAiAsk)`（5 分钟窗口自愈、无副作用）、两处 `sideCollapsed` 读（写侧早已留痕）、
-  宠物浮层 `decode()`（180 帧重试窗口兜住）。
-- **计划更正**：`src/data-links.js` 那「2 处值得动」**已不成立**，实测该文件 **P0 = 0**
-  （B11 结案：`save()` 不吞错）。计数锁里把「0」钉住，免得后人再照排期去找。
-- **验证**：新增 `tests/empty-catch-slice18.test.js` **11 例**（3 条行为 + 3 条反向对照 + 3 条源码契约 + 2 条计数锁）；
-  4 条变异**逐条红**（删留痕 / 恢复裸 `.catch` / 判据反向 `ok===false→true` / 去掉 reject 分支），跑完两个 `src` 与备份逐字节相同。
-  相关 6 个空 catch 套件 51/51、邻域 7 个套件 89/89 全绿；`check:source-state` / `src:check` / `check:modules` /
-  `lint:empty-catch` / `build:check` 全 exit 0。基线**按文件**重冻（`ui-drawer 37→37`、`render-widgets 41→42`，
-  其它文件 525→525 未动，不替别人销账）。
-
-### 2026-10-30 · **B10 范围 3：`rag-hybrid` 就绪闸门超时现在能点名卡在哪一项**（只改可归因性）
-
-- **不改什么**：四个合取项（`ragSearch` / `_ragVecModel` / `aiReadyProfile` / `_ragVecModel()!==""`）
-  与 **30s 预算一字未动** —— 这不是"调超时凑绿"，改的是红的时候日志里有没有读数。
-- **起因**：run `40798305934` 的 `rag-hybrid.spec.js:190` 红在 `waitRagReady` 这一行（3 次尝试各顶满 30s），
-  而 Playwright 只说 `Timeout 30000ms exceeded` —— **四个合取项一个都没点名**。
-  于是这次抖动只能靠"同 SHA 的 Deploy 腿 1.0s 绿 + 本机 4/4 绿 + attempt2 990ms 绿"三条反证**间接**定性。
-- **现在**：超时把逐项现场（`polls / fns / ready / wantModel / base / keyKind / cfgEnabled / profiles / activeId / diag`）
-  连同读法打进错误消息 —— 进 CI 日志，也进范围 1 刚加的 `error-context.md`。两类根因靠 `polls` 一刀切开：
-  `polls` 大 + `ok:false` ⇒ 应用真没就绪（看哪个字段塌）；`polls≈0` 而 `ok:true` ⇒ 页是好的、
-  是 **rAF 轮询器没被驱动**（Playwright 默认用 rAF，主线程被 4MB 单文件的启动脚本压住时不产帧）。
-  此前这两类在日志里**完全同形**。
-- **射程已证（注入必然失败样本）**：把 profile 的 `key` 写成 `{__enc:true,data:"zzz"}` ⇒ 用例红，
-  消息点名 `ready:false` / `ok:false` / `polls:1779`（30s 内 ≈59 次/秒，同时否证"探针自己跑不动"），
-  并原样带出应用自己的诊断 `decryptKey failed, key unusable: Failed to execute 'atob'…`
-  —— 说明 `_ragVecModel()` **不是**唯一会塌的合取项，`aiReadyProfile()` 也会塌。
-  样本已还原，还原后正控 **4/4 绿（6.6s，本机 headless chromium / project `desktop-1280x800` / workers=1 / retries=0）**。
-- **两处"改坏了会当场失效"的坑写在注释里**：① `page.evaluate` / `waitForFunction` 只序列化函数字符串，
-  探针体必须自包含（本仓在 `addInitScript` 上踩过同一条）；② `waitForFunction` 认"返回值 truthy"，
-  而探针返回**对象**（恒真）⇒ 判定必须走 `.ok`，写成返回对象会让这道闸门**永远绿**（比没闸门更坏）。
-- ⚠️ **根因仍未定**：静态读码给出两条候选机制（`src/crypto.js:246–342`：`ensureDeviceKey()` throw 后
-  密文 key 被**判死**成 `""` 且不重排 ⇒ 该页 `aiReadyProfile()` 永远 falsy；以及 `_cryptoInitRetried`
-  是模块级标志、只有 reload 才复位），但 `88e4c6c5` 那一次的现场已经拿不到 ⇒
-  **归因停在这里**，由下一次红的探针快照判定。台账 R-22 同段已记全。
-
+- **起因**：用户点单对标 Trae 加 Design 模式。评估结论（方案 `docs/draw-capability-phase-a.md`）：主流把"画图"当**能力**不当**模式**（Trae 三档切的是自主度，Claude/ChatGPT 的 Artifacts/Canvas 是产物类型，v0/Lovable 整个产品就是画布）；本仓 28 工具无画布/导出/验收闭环，此刻加模式 = 模式级假回执。定 **Phase A 三件事、模式后置**。
+- **做了**：① 图表导出——`render_chart` 产物（miniChart 本就是纯 SVG）加 SVG/PNG 导出，导出前克隆写回 computedStyle 解决 `var(--accent)`/外部类独立打开丢样式，补 xmlns；② mermaid 渲染路径确认（vendor 10.9.1 懒加载、strict + 二次消毒已在）+ 同款导出；③ **新工具 `draw_svg`**（第 29 个）——AI 直接写 SVG 源码，白名单重建消毒（script/foreignObject/on*/外链/SMIL 一律剥或拒，`<style>` 整体剥除），渲染层**再消毒一次**（防御纵深）。
+- **实现期订正**（设计→落地的一处偏差，如实记）：草图**不进** AI 产物账（`_aiArtifactPush`）——账只收带 `refId` 的可回访产物（task/record/note），草图随会话、没有可回访落点，**不留悬空引用**；将来做持久草稿（笔记/画廊）再回收。
+- **诚实的三条**：PNG 走 SVG→Image→canvas 2x 白底栅格化，**best-effort 如实失败**（foreignObject 污染/受限内核 → 降级"已下载 SVG"；SVG 也失败才报错，不假称成功——R-37 同款）；`svg/invalid` 拒绝而非输出半成品；`a`/`image`/SMIL 不在白名单（导航与内嵌栅格是追踪/膨胀面，Phase B 画布再评估）。
+- 落地三笔：`6c43be9`（批次①②导出基建+图表/mermaid 导出）、批次③（sanitizeSvg 白名单先于工具落地）、批次④（工具+产物卡+ai-tools-doc 28→29）。
+- 守护：`tests/draw-export.test.js` 7 例（含 jsdom PNG 降级；PNG 成功路径留真浏览器验收）、`tests/draw-svg.test.js` 14 例（10 恶意样本+良性+拒绝口径）。user-manual/AI 工具文档同步 29。
+- **验收判据**（Phase A 完成的定义）：周报配图（图表→PNG）、架构图（mermaid→SVG）、海报草图（draw_svg→导出）——全程不离开聊天。**Design 模式 Phase B 另行立项**（先有画布制品面）。
 
 ### 2026-10-30 · **B10 范围 1：e2e 失败现场现在会带出 CI**（可观测性，不改任何产品行为）
 

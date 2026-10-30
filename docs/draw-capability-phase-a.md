@@ -71,12 +71,15 @@ SVG 草图 + 导出）。三件事全部发生在**现有 Work / Code 模式内*
 **工具契约**（第 29 个工具）：
 ```
 draw_svg { svg: string, title?: string }
-→ AI 直接产出 SVG 源码（LLM 擅长）；服务端（其实都在前端管线）做**安全子集过滤**后
+→ AI 直接产出 SVG 源码（LLM 擅长）；做**安全子集过滤**后
   1) 内联渲染为聊天里的产物卡（.svg-msg，白底容器，固定 max-height 可滚动）；
-  2) _aiArtifactPush({kind:"svg", title, tool:"draw_svg"}) 进「AI 行动」统计；
-  3) 卡上「SVG / PNG」导出按钮 = A1 同一助手。
+  2) 卡上「SVG / PNG」导出按钮 = A1 同一助手。
 ```
 **不做**：存入笔记库（第一版产物随会话；持久化列开放问题 Q3）；尺寸/图层编辑（Phase B 画布的事）。
+
+> **实现期订正（2026-10-30，落地时如实改设计）**：原稿写「`_aiArtifactPush({kind:"svg"})` 进 AI 行动统计」是错的——
+> 该账只收带 `refId` 的**可回访产物**（task/record/note），草图随会话、无可回访落点，入账即悬空引用（产物卡点了没反应）。
+> 已订正为**不进账**；将来做持久草稿（笔记库/画廊）再回收此条。教训与 OD-002 同型：**承诺一个不存在的闭环**。
 
 **SVG 安全子集（关键，必须先于功能被测试钉住）**：
 - **标签白名单**：svg, g, defs, symbol, use(仅内部 #id), path, rect, circle, ellipse, line, polyline,

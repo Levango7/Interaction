@@ -14,7 +14,7 @@ AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `T
 同步工具走 `execTool(name, args)`；异步工具（`web_search` / `web_fetch` / `code_run` / `sql_query` / `spawn_agent` / `spawn_agents_parallel`，需 await）
 经 `execToolAuto(name, args)` 转 `agentExecAsync` —— chat 路径与 Agent 计划路径共用同一入口（v3.7.52 起）。
 
-**工具总数**：28。
+**工具总数**：29。
 
 | # | 工具名 | 所属分发器 | 必填参数 | 说明 |
 |---|--------|-----------|----------|------|
@@ -44,8 +44,9 @@ AI 通过 OpenAI 兼容的 function-calling 协议调用工具。运行时把 `T
 | 24 | `generate_report` | execTool | — | 生成指定周期的工作报表（Markdown 文本）：完成/逾期任务、各场景分布、周期内记录 |
 | 25 | `render_chart` | execTool | `label`,`value` | 在对话里渲染一张数据图表（bar/line/pie），数据由你根据已查到的数据整理 |
 | 26 | `generate_doc` | execTool | `title`,`content` | 生成一份文档（Markdown）并保存到笔记库 |
-| 27 | `spawn_agent` | agentExecAsync（经 execToolAuto） | `goal` | 派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把 |
-| 28 | `spawn_agents_parallel` | agentExecAsync（经 execToolAuto） | `goal` | 并行派生多个只读子代理做侦查（最多 3 个；工具强制与只读白名单取交集——写工具被剥离； |
+| 27 | `draw_svg` | execTool | `svg` | 画一张 SVG 矢量草图（图解/示意/海报/简笔画）——你直接写 SVG 源码（标准标签 |
+| 28 | `spawn_agent` | agentExecAsync（经 execToolAuto） | `goal` | 派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把 |
+| 29 | `spawn_agents_parallel` | agentExecAsync（经 execToolAuto） | `goal` | 并行派生多个只读子代理做侦查（最多 3 个；工具强制与只读白名单取交集——写工具被剥离； |
 
 **分发边界**：
 - `execTool` 处理任务 / 资料库 / 搜索 / 概览 / 导出类。
@@ -295,7 +296,15 @@ const ORDER = ["office","code","study","life"];
   - `category` `{string}` — 分类，如 方案/复盘/工作文档
 - **必填**：`["title","content"]`
 
-### 3.27 `spawn_agent`
+### 3.27 `draw_svg`
+
+- **描述**：画一张 SVG 矢量草图（图解/示意/海报/简笔画）——你直接写 SVG 源码（标准标签 + 表现属性，不用内嵌 <style> 与 class 样式），系统会安全消毒、内联渲染，用户可导出 SVG/PNG
+- **参数**：
+  - `svg` `{string}` — SVG 源码（必须以 <svg …> 为根，width/height 用数值像素）
+  - `title` `{string}` — 草图标题（可选，显示在卡片头部）
+- **必填**：`["svg"]`
+
+### 3.28 `spawn_agent`
 
 - **描述**：派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把侦查/整理/汇总类工作委派出去
 - **参数**：
@@ -306,7 +315,7 @@ const ORDER = ["office","code","study","life"];
   - `teps` `{number}` — 步数预算（默认 12，上限 24）
 - **必填**：`["goal"]`
 
-### 3.28 `spawn_agents_parallel`
+### 3.29 `spawn_agents_parallel`
 
 - **描述**：并行派生多个只读子代理做侦查（最多 3 个；工具强制与只读白名单取交集——写工具被剥离；全部完成后合并报告交回）
 - **参数**：

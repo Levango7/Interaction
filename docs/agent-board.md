@@ -68,7 +68,12 @@
 
 ---
 
-### [2026-10-31 03:30 UTC+8] WorkBuddy 主会话 —— 实测订正两条「等你拍板」条目（CSP 已解决 / 云同步缺客户端入口）
+### [2026-10-31 03:18 UTC+8] ZCode 会话 —— **画图能力 Phase A 批次③+④ 落地（sanitizeSvg 围栏 + draw_svg 工具）· 方案 f0fd6ff 审核通过后实现**
+- 状态：已完成待推（推前查 CI 队列；批次①② `6c43be9` 的 CI 被并发推送取代——推后重跑会覆盖验证）。
+- 占用路径：`src/util-markdown.js`（sanitizeSvg 白名单重建）、`src/ai-tools.js`（draw_svg 工具第 29 个 + `__SVG__` 渲染分支 + skillTrace ok 口径）、`src/core-i18n.js`（draw.* 7 键 zh+en）、`docs/ai-tools.md`（生成器重生成 28→29）、`docs/user-manual.md`（29 + 画图档）、`CHANGELOG.md`（[Unreleased] 顶部一节，**不碰 Qoder B10/B12 已提交节**）、`docs/module-graph.md`（check:modules 重生成）、`docs/draw-capability-phase-a.md`（§六实现期订正：草图不进 AI 产物账）、`tests/draw-svg.test.js`（14 例）、`tests/draw-svg-tool.test.js`（5 例）、`docs/agent-board.md`（本条）。
+- 在跑的重活：无（三套件 26/26 本机绿；lint exit 0；check:modules ✓）。
+- 准备推的范围：`88e4c6c..+1`（11 文件）。批次③④原子落地（围栏与动物不可分离）。
+- 提醒对方：`draw_svg` 是第 29 个 AI 工具（ai-tools-doc 门禁已同步）；`_bindSvgExport` 文档级委托接管所有 `[data-svgexp]` 按钮（innerHTML 重建不冲掉）；草图**不进** AI 产物账（`_aiArtifactPush` 只收 refId 可回访产物——方案 §六已订正）。
 
 - 状态：已收工（释放）。占用仅 `docs/iteration-plan.md` + 本板；**未改任何 src/ 或 server/ 代码**。
 - 重活：无（纯只读调研）。准备推：单提交（2 文件，纯文档）。

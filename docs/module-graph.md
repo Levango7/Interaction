@@ -20,11 +20,11 @@
 | `data-migrate` | Data | `data-links` | 2 |
 | `data-rw` | Data | `core` `core-i18n` `core-shared` `crypto` `data-links` | 9 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
-| `ai-tools` | AI | `ai-retry` `ai-subagent` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `util-markdown` | 26 |
+| `ai-tools` | AI | `ai-retry` `ai-subagent` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `util-markdown` | 28 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core-shared` `data-links` `data-migrate` `util-perf` | 47 |
 | `ai-subagent` | AI | `ai-tools` `data-links` | 3 |
-| `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 62 |
+| `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 63 |
 | `render-scene-sub` | Render | `core-shared` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core-shared` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
 | `render-overview` | Render | `ai-retry` `ai-tools` `chain` `core-shared` `data-links` `data-rw` `render-entry` `render-scene-sub` `render-widgets` `util-markdown` | 50 |
@@ -53,7 +53,7 @@
 | 符号 | 定义于 | 被多少块使用 |
 |---|---|---|
 | `t` | `core-i18n` | 34 |
-| `toast` | `core-shared` | 28 |
+| `toast` | `core-shared` | 29 |
 | `AppBridge` | `core` | 25 |
 | `sanitizeHtml` | `util-markdown` | 21 |
 | `SCENARIOS` | `core-shared` | 21 |

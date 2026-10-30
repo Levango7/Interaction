@@ -605,3 +605,58 @@ function _bindSvgExport(){
   });
 }
 _bindSvgExport();
+
+/* ---------- draw_svg 安全子集（批次③ · 先于工具落地：先有围栏再养动物）----------
+ * AI 产出的 SVG 属**不可信输入**，与 mermaid（可信库 + strict securityLevel + 二次消毒）不是一个
+ * 信任级：这里用**白名单重建**（DOMParser → 只保留名单内标签/属性），黑名单剥除必然漏。
+ * 拒绝而非静默修正：无根 <svg> / 解析失败 → 返回 ""，调用方让模型重试，不输出半成品。
+ * <style> 元素整体剥除：聊天渲染还要过 sanitizeHtml（它会剥 style 标签），两条路径口径一致 ——
+ * AI 草图一律用表现属性，不用内嵌样式表。 */
+const _SVG_KEEP_TAGS = [
+  "svg", "g", "defs", "symbol", "use", "path", "rect", "circle", "ellipse", "line", "polyline",
+  "polygon", "text", "tspan", "title", "desc", "marker", "lineargradient", "radialgradient", "stop",
+  "pattern", "clippath", "mask", "filter",
+  "fegaussianblur", "feoffset", "femerge", "feflood", "fecolormatrix"
+];
+const _SVG_KEEP_ATTRS = [
+  "id", "class", "d", "href", "xlink:href", "x", "y", "x1", "x2", "y1", "y2", "cx", "cy", "r", "rx", "ry", "width",
+  "height", "points", "transform", "viewbox", "preserveaspectratio", "version", "fill",
+  "fill-opacity", "fill-rule", "stroke", "stroke-width", "stroke-opacity", "stroke-dasharray",
+  "stroke-linecap", "stroke-linejoin", "opacity", "offset", "stop-color", "stop-opacity",
+  "gradientunits", "gradienttransform", "spreadmethod", "patternunits", "patterncontentunits",
+  "text-anchor", "font-family", "font-size", "font-weight", "font-style", "dominant-baseline",
+  "marker-start", "marker-mid", "marker-end", "mask", "clip-path", "filter", "dy", "dx", "rotate",
+  "textlength", "lengthadjust", "pathlength", "xmlns", "xmlns:xlink", "xml:space", "paint-order",
+  "stroke-miterlimit", "clip-rule", "color", "direction", "unicode-bidi", "word-spacing",
+  "letter-spacing", "text-decoration"
+];
+function _pruneSvgNode(node){
+  Array.prototype.slice.call(node.attributes || []).forEach(function(a){
+    const an = String(a.name || "").toLowerCase();
+    const av = String(a.value || "");
+    if(an.indexOf("on") === 0){ node.removeAttribute(a.name); return; }                 // 事件句柄
+    if((an === "href" || an === "xlink:href") && !/^\s*#/i.test(av)){ node.removeAttribute(a.name); return; } // 非内部锚点一律去（防外链/数据URI外呼）
+    if(an === "style" && /url\s*\(|expression|@import/i.test(av)){ node.removeAttribute(a.name); return; }
+    if(_SVG_KEEP_ATTRS.indexOf(an) === -1 && an.indexOf(":") === -1){ node.removeAttribute(a.name); return; }
+  });
+}
+function sanitizeSvg(svgStr){
+  let doc = null;
+  try{ doc = new DOMParser().parseFromString(String(svgStr || ""), "image/svg+xml"); }catch(_e){ return ""; }
+  if(!doc || doc.querySelector("parsererror")) return "";
+  const root = doc.documentElement;
+  if(!root || String(root.nodeName || "").toLowerCase() !== "svg") return "";
+  /* 深度优先重建：不在白名单的**元素连子树一起删**（script/foreignObject 里藏什么都没意义） */
+  (function prune(node){
+    Array.prototype.slice.call(node.childNodes || []).forEach(function(k){
+      if(k.nodeType === 1){
+        const nm = String(k.nodeName || "").toLowerCase();
+        if(_SVG_KEEP_TAGS.indexOf(nm) === -1){ if(k.parentNode) k.parentNode.removeChild(k); return; }
+        _pruneSvgNode(k);
+      }
+      prune(k);
+    });
+  })(root);
+  _pruneSvgNode(root);
+  try{ return new XMLSerializer().serializeToString(root); }catch(_e){ return ""; }
+}
