@@ -3428,7 +3428,9 @@ function renderChat(){
         }catch(_e){ /* 解析失败回退文本 */ }
       }
       /* draw_svg（画图能力 Phase A 批次④）：消毒后的 SVG 在**渲染层再消毒一次**（防御纵深，
-         历史消息可能在消毒规则升级前进库），通过后内联 + 同一导出条（_bindSvgExport 接管）。 */
+         历史消息可能在消毒规则升级前进库），通过后内联 + 同一导出条（_bindSvgExport 接管）。
+         catch 用 pushDiag 留痕而非裸注释——try 里有 JSON.parse，裸注释 catch = 新增 P0
+         （会撞 slice11/17/18 三把计数锁，079135a 实测）。 */
       if(typeof _disp === "string" && _disp.indexOf("__SVG__") === 0){
         try{
           var _sp = JSON.parse(_disp.slice(7));
@@ -3438,7 +3440,9 @@ function renderChat(){
               + (_sp.title ? '<div class="chart-msg-title">' + esc(_sp.title) + '</div>' : '')
               + _cleanSvg + _svgExportBar(_sp.title || "draw") + '</div>';
           }
-        }catch(_e){ /* 解析失败回退文本 */ }
+        }catch(e){
+          try{ if(typeof pushDiag === "function") pushDiag("warn", "svg msg render failed: " + ((e && e.message) || e), { where: "chatRender" }); }catch(_e2){ /* 诊断不可用不影响回退 */ }
+        }
       }
       /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片 */
       if(typeof _disp === "string" && _disp.indexOf("{") === 0){
