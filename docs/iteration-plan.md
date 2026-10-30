@@ -366,8 +366,15 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
 
 ### 等你拍板（不进批次，动一句就开工）
 
-1. `connect-src` 拦死本地后端（CSP 面，#16 老账）。
-2. 云同步后端选型（= CORS × 凭据模型两轴，已有 mock 端到端契约测试兜着）。
+1. ~~`connect-src` 拦死本地后端（CSP 面，#16 老账）~~ —— **条目作废：2026-10-31 实测已解决**。
+   `agent-workbench.html:21` 的 CSP 已含 `connect-src … http://127.0.0.1:* http://localhost:*`（引入于 `b6bbc47`，注释 `[C-CSP-connect]` 留档，v3.7.56 实测 file:// 跨源 200 且 CSP 零违规）。
+   残留的 `script-src 'unsafe-inline'` 是**已登记的有意暂缓**（注释 `[C3]`：依赖 H4 模块化），不是漏项。
+   ⚠️ 真限制不在 CSP：https 页面连 `http://127.0.0.1` 属 **mixed content**，浏览器层拦，只能靠 Electron 主进程代理（`mcp-fetch`，v3.7.143 已做）。
+2. 云同步后端选型 —— **工程侧齐备，缺的是客户端设置入口**（2026-10-31 实测）：
+   已具备 `server/src/sync.js` 四端点（snapshot GET/PUT、changes、resolve）+ Bearer 鉴权 + LWW/MV 冲突 + 增量与全量回退；CORS 已接（`server/src/index.js:62`，`*` 默认 + 启动 WARN，v3.7.114 有意为之）；契约测试 6 份在册。
+   **缺口**：`cfg.apiBase` / `cfg.syncIncremental` **只读不写** —— 设置抽屉的配置键里没有它们（`src/ui-drawer.js` 实测仅 activeId/agent*/ai*/base/key/memMax/model/profiles/rag/theme/toolWhitelist），
+   用户没有 UI 能填后端地址或开增量同步 ⇒ 后端跑起来也连不上。**待做**：抽屉加 `apiBase` 输入 + `syncIncremental` 开关 + i18n 双语 + 守卫。
+   ⚠️ 阻塞：文案在 `src/core-i18n.js`，该文件当前在 ZCode 手里（draw 批次在飞）。
 3. 邮箱登录：代码整链已实现（TC3/SMTP 路径都在），只差一份真实 SMTP 配置 —— 配不配、配哪家。
 4. 短信：腾讯云 2025-09 起对个人签名关死 + 要备案截图 ⇒ 资质墙，不是代码问题。
 5. 真机验收只剩 **Jira** 一条要你给凭据（站点 + API token，脚本同款可跑）。

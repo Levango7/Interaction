@@ -68,6 +68,15 @@
 
 ---
 
+### [2026-10-31 03:30 UTC+8] WorkBuddy 主会话 —— 实测订正两条「等你拍板」条目（CSP 已解决 / 云同步缺客户端入口）
+
+- 状态：已收工（释放）。占用仅 `docs/iteration-plan.md` + 本板；**未改任何 src/ 或 server/ 代码**。
+- 重活：无（纯只读调研）。准备推：单提交（2 文件，纯文档）。
+- ① **CSP 条目作废**：`agent-workbench.html:21` 早已放行 `http://127.0.0.1:*` / `localhost:*`（`b6bbc47`，注释 `[C-CSP-connect]`，v3.7.56 实测零违规）；残留 `unsafe-inline` 是 `[C3]` 已登记暂缓；真限制是 https→http 的 **mixed content**（浏览器层，已由 Electron `mcp-fetch` 代理解决）。
+- ② **云同步**：后端四端点 + Bearer + LWW/MV + CORS + 6 份契约测试齐备；**缺口 = `cfg.apiBase`/`cfg.syncIncremental` 只读不写**（设置抽屉配置键里没有）⇒ 用户无处填后端地址。待做：抽屉加输入 + 开关 + i18n；⚠️ 文案卡在 ZCode 手上的 `core-i18n.js`。
+
+---
+
 ### [2026-10-30 08:40 UTC+8] Qoder 主会话 —— **B12 第五片交付（空 catch，P0 26 → 24）· 收工（释放）**
 - 状态：**已收工（释放）**，登记表那行已改 RELEASED。
 - 占用路径：`src/ui-drawer.js`、`src/render-widgets.js`、`scripts/lint-empty-catch.baseline.json`、
