@@ -25797,7 +25797,15 @@ function restoreFromRecycleBin(id){
         if(!cfg.activeId && profiles.length) cfg.activeId = profiles[0].id;
         _cfgCache = cfg;
         // 异步落盘（不阻塞恢复流程）
-        if(typeof persistCfg === "function"){ persistCfg(cfg).catch(()=>{}); }
+        if(typeof persistCfg === "function"){
+          /* B12：落盘失败时这次「恢复」只活在内存里（_cfgCache 已改），刷新后就没了 ——
+             而界面此刻已经表现为恢复成功。不改控制流，只让「没落盘」可查。
+             persistCfg 的失败有两种形态（返回 false / reject），两种都要留痕。 */
+          persistCfg(cfg).then(
+            (ok) => { if(ok === false){ try{ pushDiag("warn", "restored AI profile not persisted (save returned false), lost on reload", { where: "restoreRecycle.profileCfg" }); }catch(_e){} } },
+            (e) => { try{ pushDiag("warn", "restored AI profile not persisted: "+((e && e.message) || e), { where: "restoreRecycle.profileCfg" }); }catch(_e){} }
+          );
+        }
       }else if(d.kind === "link"){
         // 恢复联动规则：追加到自定义链
         const links = getLinks().slice();
@@ -42371,7 +42379,11 @@ async function saveCfg(){
             try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */ }
           }
         }
-      }catch(e){ /* JSON 解析失败 / 读取失败都吞掉，不影响主保存流程 */ }
+      }catch(e){
+        /* B12：读坏/解析坏时，用户点过「在 AI 助手中讨论」的那句提示词就此丢失，而界面只表现为
+           「没自动续上」—— 与「用户压根没点过」完全同形。不影响主保存流程，故不改控制流，只留痕。 */
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "pending AI ask unreadable, prompt lost: "+((e && e.message) || e), { where: "saveCfg.pendingAiAsk" }); }catch(_e){}
+      }
     } else {
       try{ localStorage.removeItem(PREFIX + "__pendingAiAsk"); }catch(e){ /* 清不掉只会让过期意图多留一轮；下次保存时按 5 分钟窗口自动作废，无副作用 */ }
     }
