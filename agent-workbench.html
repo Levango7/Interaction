@@ -5643,6 +5643,27 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <div class="ctl"><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" data-i18n-placeholder="ai.config.tempPlaceholder" placeholder="0.7（默认）"></div>
     </div>
   </section>
+  <!-- ===== 自建后端 / 云同步（2026-10-31：此前 cfg.apiBase / cfg.syncIncremental 只读不写，用户无处配置） ===== -->
+  <section class="set-card" id="cloud-sync" aria-label="自建后端与云同步" data-i18n-aria="a11y.cloudSync">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01"/></svg></span>
+      <div>
+        <h3 data-i18n="cloud.title">自建后端与云同步</h3>
+        <p class="set-desc" data-i18n="cloud.desc">填后端地址后，云同步、抓取代理与 SQL 工具改走该后端；留空则全部走本机直连。</p>
+      </div>
+    </header>
+    <div class="set-field">
+      <label for="cfgApiBase" data-i18n="cloud.apiBase">后端地址（apiBase）</label>
+      <div class="ctl"><input id="cfgApiBase" placeholder="http://localhost:3001" maxlength="200" autocomplete="off" data-i18n-placeholder="cloud.apiBasePh"></div>
+    </div>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgSyncIncremental" aria-label="增量同步" data-i18n-aria="cloud.incrementalAria">
+      <div>
+        <div class="sw-label" data-i18n="cloud.incrementalLabel">增量同步（只传变更）</div>
+        <div class="sw-sub" data-i18n="cloud.incrementalSub">开启后按变更日志增量上传；关闭时走全量快照，行为与从前一致。</div>
+      </div>
+    </div>
+  </section>
   <!-- ===== Agent 能力（独立卡，v1.15 与 AI 配置分开） ===== -->
   <section class="set-card ai-section" id="ai-agent" data-ai-tab="ai-agent" aria-label="Agent 能力" data-i18n-aria="a11y.agentAbility">
     <header class="set-head">
@@ -7809,6 +7830,15 @@ const MESSAGES = {
     "draw.pngFallback": "PNG 导出不可用，已下载 SVG",
     "draw.exportNoSvg": "未找到可导出的图",
     "draw.exportFail": "导出失败",
+    "draw.invalid": "SVG 未通过安全检查（缺少根 <svg> 或解析失败），请重试",
+    "cloud.title": "自建后端与云同步",
+    "cloud.desc": "填后端地址后，云同步、抓取代理与 SQL 工具改走该后端；留空则全部走本机直连。",
+    "cloud.apiBase": "后端地址（apiBase）",
+    "cloud.apiBasePh": "http://localhost:3001",
+    "cloud.incrementalLabel": "增量同步（只传变更）",
+    "cloud.incrementalSub": "开启后按变更日志增量上传；关闭时走全量快照，行为与从前一致。",
+    "cloud.incrementalAria": "增量同步（只传变更）",
+    "a11y.cloudSync": "自建后端与云同步",
     "chat.cancel": "取消",
     "chat.placeholder": "问点什么，或让它「建个任务」…",
     "pomo.title": "笃行",
@@ -11073,6 +11103,9 @@ const MESSAGES = {
     "aitool.generate_report.desc": "生成指定周期的工作报表（Markdown 文本）：完成/逾期任务、各场景分布、周期内记录统计",
     "aitool.generate_report.period.desc": "统计周期，默认 week",
     "aitool.generate_report.scope.desc": "场景键（office/health/finance 等），留空为全部场景",
+    "aitool.draw_svg.desc": "画一张 SVG 矢量草图（图解/示意/海报/简笔画）——你直接写 SVG 源码（标准标签 + 表现属性，不用内嵌 <style> 与 class 样式），系统会安全消毒、内联渲染，用户可导出 SVG/PNG",
+    "aitool.draw_svg.svg.desc": "SVG 源码（必须以 <svg …> 为根，width/height 用数值像素）",
+    "aitool.draw_svg.title.desc": "草图标题（可选，显示在卡片头部）",
     "aitool.render_chart.data.desc": "数据点数组，如 [{label:'周一',value:3}]",
     "aitool.render_chart.desc": "在对话里渲染一张数据图表（bar/line/pie），数据由你根据已查到的数据整理",
     "aitool.render_chart.title.desc": "图表标题",
@@ -11934,6 +11967,15 @@ const MESSAGES = {
     "draw.pngFallback": "PNG export unavailable; the SVG was downloaded instead",
     "draw.exportNoSvg": "No exportable diagram found",
     "draw.exportFail": "Export failed",
+    "draw.invalid": "The SVG failed the safety check (missing root <svg> or unparsable); please retry",
+    "cloud.title": "Backend & Cloud Sync",
+    "cloud.desc": "When a backend URL is set, cloud sync, the fetch proxy and SQL tools go through it; leave empty to stay fully local.",
+    "cloud.apiBase": "Backend base URL (apiBase)",
+    "cloud.apiBasePh": "http://localhost:3001",
+    "cloud.incrementalLabel": "Incremental sync (changes only)",
+    "cloud.incrementalSub": "When on, only the change log is uploaded; when off, a full snapshot is sent — same as before.",
+    "cloud.incrementalAria": "Incremental sync (changes only)",
+    "a11y.cloudSync": "Backend and cloud sync",
     "chat.cancel": "Cancel",
     "chat.placeholder": "Ask anything, or let it \"create a task\"…",
     "pomo.title": "Focus",
@@ -15184,6 +15226,9 @@ const MESSAGES = {
     "aitool.generate_report.desc": "Generate a work report (Markdown) for the given period: completed/overdue tasks, distribution by scenario, records within the period",
     "aitool.generate_report.period.desc": "Statistics period, default week",
     "aitool.generate_report.scope.desc": "Scenario key (office/health/finance etc.), leave empty for all scenarios",
+    "aitool.draw_svg.desc": "Draw an SVG vector sketch (a diagram, illustration, poster, or simple doodle): write the SVG source directly (standard tags plus presentation attributes; no embedded <style> or class-based styles), the system sanitizes and renders it inline, and the user can export SVG/PNG",
+    "aitool.draw_svg.svg.desc": "SVG source (must have <svg …> as the root; use numeric pixel values for width/height)",
+    "aitool.draw_svg.title.desc": "Sketch title (optional, shown at the card head)",
     "aitool.render_chart.data.desc": "Array of data points, e.g. [{label:'Monday',value:3}]",
     "aitool.render_chart.desc": "Render a data chart (bar/line/pie) in the chat; prepare the data from what you have already retrieved",
     "aitool.render_chart.title.desc": "Chart title",
@@ -17287,6 +17332,61 @@ function _bindSvgExport(){
   });
 }
 _bindSvgExport();
+
+/* ---------- draw_svg 安全子集（批次③ · 先于工具落地：先有围栏再养动物）----------
+ * AI 产出的 SVG 属**不可信输入**，与 mermaid（可信库 + strict securityLevel + 二次消毒）不是一个
+ * 信任级：这里用**白名单重建**（DOMParser → 只保留名单内标签/属性），黑名单剥除必然漏。
+ * 拒绝而非静默修正：无根 <svg> / 解析失败 → 返回 ""，调用方让模型重试，不输出半成品。
+ * <style> 元素整体剥除：聊天渲染还要过 sanitizeHtml（它会剥 style 标签），两条路径口径一致 ——
+ * AI 草图一律用表现属性，不用内嵌样式表。 */
+const _SVG_KEEP_TAGS = [
+  "svg", "g", "defs", "symbol", "use", "path", "rect", "circle", "ellipse", "line", "polyline",
+  "polygon", "text", "tspan", "title", "desc", "marker", "lineargradient", "radialgradient", "stop",
+  "pattern", "clippath", "mask", "filter",
+  "fegaussianblur", "feoffset", "femerge", "feflood", "fecolormatrix"
+];
+const _SVG_KEEP_ATTRS = [
+  "id", "class", "d", "href", "xlink:href", "x", "y", "x1", "x2", "y1", "y2", "cx", "cy", "r", "rx", "ry", "width",
+  "height", "points", "transform", "viewbox", "preserveaspectratio", "version", "fill",
+  "fill-opacity", "fill-rule", "stroke", "stroke-width", "stroke-opacity", "stroke-dasharray",
+  "stroke-linecap", "stroke-linejoin", "opacity", "offset", "stop-color", "stop-opacity",
+  "gradientunits", "gradienttransform", "spreadmethod", "patternunits", "patterncontentunits",
+  "text-anchor", "font-family", "font-size", "font-weight", "font-style", "dominant-baseline",
+  "marker-start", "marker-mid", "marker-end", "mask", "clip-path", "filter", "dy", "dx", "rotate",
+  "textlength", "lengthadjust", "pathlength", "xmlns", "xmlns:xlink", "xml:space", "paint-order",
+  "stroke-miterlimit", "clip-rule", "color", "direction", "unicode-bidi", "word-spacing",
+  "letter-spacing", "text-decoration"
+];
+function _pruneSvgNode(node){
+  Array.prototype.slice.call(node.attributes || []).forEach(function(a){
+    const an = String(a.name || "").toLowerCase();
+    const av = String(a.value || "");
+    if(an.indexOf("on") === 0){ node.removeAttribute(a.name); return; }                 // 事件句柄
+    if((an === "href" || an === "xlink:href") && !/^\s*#/i.test(av)){ node.removeAttribute(a.name); return; } // 非内部锚点一律去（防外链/数据URI外呼）
+    if(an === "style" && /url\s*\(|expression|@import/i.test(av)){ node.removeAttribute(a.name); return; }
+    if(_SVG_KEEP_ATTRS.indexOf(an) === -1 && an.indexOf(":") === -1){ node.removeAttribute(a.name); return; }
+  });
+}
+function sanitizeSvg(svgStr){
+  let doc = null;
+  try{ doc = new DOMParser().parseFromString(String(svgStr || ""), "image/svg+xml"); }catch(_e){ return ""; }
+  if(!doc || doc.querySelector("parsererror")) return "";
+  const root = doc.documentElement;
+  if(!root || String(root.nodeName || "").toLowerCase() !== "svg") return "";
+  /* 深度优先重建：不在白名单的**元素连子树一起删**（script/foreignObject 里藏什么都没意义） */
+  (function prune(node){
+    Array.prototype.slice.call(node.childNodes || []).forEach(function(k){
+      if(k.nodeType === 1){
+        const nm = String(k.nodeName || "").toLowerCase();
+        if(_SVG_KEEP_TAGS.indexOf(nm) === -1){ if(k.parentNode) k.parentNode.removeChild(k); return; }
+        _pruneSvgNode(k);
+      }
+      prune(k);
+    });
+  })(root);
+  _pruneSvgNode(root);
+  try{ return new XMLSerializer().serializeToString(root); }catch(_e){ return ""; }
+}
 /*SRC:util-markdown:END*/
 /*SRC:util-perf:BEGIN*/
 // ===== Util Layer (性能优化工具·v1.4-B) =====
@@ -19396,6 +19496,15 @@ function execTool(name, args, force){
       _aiArtifactPush({ kind:"note", refId:r.id, title:ttl, sc:(typeof active === "string" ? active : ""), tool:"generate_doc" });
       return JSON.stringify({ok:true, id:r.id, msg:t("tool.docSaved","文档已保存到笔记：")+ttl});
     }
+    /* draw_svg（画图能力 Phase A 批次④）：AI 直接产出 SVG 源码。不可信输入 ⇒ 白名单重建
+       消毒（sanitizeSvg，util-markdown）；拒绝而非静默修正，失败让模型重试。
+       产物**不进 _aiArtifactPush 账**：账只收「可回访的持久产物」（task/record/note，带真实 refId），
+       草图随会话走、没有可回访的落点 —— 不留悬空引用。方案第九节的 AI 行动统计一句按此订正。 */
+    if(name==="draw_svg"){
+      const clean = sanitizeSvg(args.svg || "");
+      if(!clean) return JSON.stringify({ok:false, msg:t("draw.invalid","SVG 未通过安全检查（缺少根 <svg> 或解析失败），请重试")});
+      return "__SVG__" + JSON.stringify({ title:String(args.title || ""), svg:clean });
+    }
     return agentExec(name, args); // A-P3：记忆/目标等 Agent 工具由此分发
   }catch(e){
     // 工具执行异常：诊断 + 提示，仍返回结构化错误（保持 execTool 调用方契约）
@@ -19572,6 +19681,11 @@ const TOOLS = [
     title:{type:"string", description:t("aitool.generate_doc.title.desc","文档标题")},
     content:{type:"string", description:t("aitool.generate_doc.content.desc","Markdown 正文")},
     category:{type:"string", description:t("aitool.generate_doc.category.desc","分类，如 方案/复盘/工作文档")}}, required:["title","content"]}}},
+  /* draw_svg（画图能力 Phase A 批次④）：AI 直接写 SVG 源码画草图（图表/mermaid 之外的第三类图）。
+     产出经白名单消毒（script/外链/SMIL 不入）后内联渲染，可导出 SVG/PNG。 */
+  {type:"function", function:{name:"draw_svg", description:t("aitool.draw_svg.desc","画一张 SVG 矢量草图（图解/示意/海报/简笔画）——你直接写 SVG 源码（标准标签 + 表现属性，不用内嵌 <style> 与 class 样式），系统会安全消毒、内联渲染，用户可导出 SVG/PNG"), parameters:{type:"object", properties:{
+    svg:{type:"string", description:t("aitool.draw_svg.svg.desc","SVG 源码（必须以 <svg …> 为根，width/height 用数值像素）")},
+    title:{type:"string", description:t("aitool.draw_svg.title.desc","草图标题（可选，显示在卡片头部）")}}, required:["svg"]}}},
   {type:"function", function:{name:"spawn_agent", description:t("aitool.spawn_agent.desc","派生一个子代理去完成单一子目标（隔离开上下文与工具；子代理跑完后把报告交回给你）。适合把侦查/整理/汇总类工作委派出去"), parameters:{type:"object", properties:{
     name:{type:"string", description:t("aitool.spawn_agent.name.desc","子代理名（人读，如「资料整理员」）")},
     role:{type:"string", description:t("aitool.spawn_agent.role.desc","角色描述（注入子代理的系统提示）")},
@@ -20594,7 +20708,7 @@ function skillTracePush(trace, name, args, res){
   if(!Array.isArray(trace)) return;
   let ok = false;
   const s = String(res === null || res === undefined ? "" : res);
-  if(s.indexOf("__CHART__") === 0){ ok = true; }
+  if(s.indexOf("__CHART__") === 0 || s.indexOf("__SVG__") === 0){ ok = true; }
   else {
     try{ const j = JSON.parse(s); ok = !!(j && j.ok !== false && !j.error); }
     catch(e){ ok = s.length > 0; }
@@ -22627,6 +22741,23 @@ function renderChat(){
           var _spec = JSON.parse(_disp.slice(9));
           return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + AppBridge.miniChart(_spec.type, _spec.data) + '</div>';
         }catch(_e){ /* 解析失败回退文本 */ }
+      }
+      /* draw_svg（画图能力 Phase A 批次④）：消毒后的 SVG 在**渲染层再消毒一次**（防御纵深，
+         历史消息可能在消毒规则升级前进库），通过后内联 + 同一导出条（_bindSvgExport 接管）。
+         catch 用 pushDiag 留痕而非裸注释——try 里有 JSON.parse，裸注释 catch = 新增 P0
+         （会撞 slice11/17/18 三把计数锁，079135a 实测）。 */
+      if(typeof _disp === "string" && _disp.indexOf("__SVG__") === 0){
+        try{
+          var _sp = JSON.parse(_disp.slice(7));
+          var _cleanSvg = sanitizeSvg(_sp.svg || "");
+          if(_cleanSvg){
+            return '<div class="msg tool svg-msg" data-svgexport data-svgname="' + esc(_sp.title || "draw") + '">'
+              + (_sp.title ? '<div class="chart-msg-title">' + esc(_sp.title) + '</div>' : '')
+              + _cleanSvg + _svgExportBar(_sp.title || "draw") + '</div>';
+          }
+        }catch(e){
+          try{ if(typeof pushDiag === "function") pushDiag("warn", "svg msg render failed: " + ((e && e.message) || e), { where: "chatRender" }); }catch(_e2){ /* 诊断不可用不影响回退 */ }
+        }
       }
       /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片 */
       if(typeof _disp === "string" && _disp.indexOf("{") === 0){
@@ -41935,6 +42066,9 @@ function openDrawer(){ const cfg=getCfg();
   const ragChk=$("#cfgRagInject"); if(ragChk) ragChk.checked = cfg.rag !== false;
   const twInp=$("#cfgToolWhitelist"); if(twInp) twInp.value = cfg.toolWhitelist||"";
   const acInp=$("#cfgAgentAutoConfirm"); if(acInp) acInp.checked = cfg.agentAutoConfirm!==false;
+  /* 2026-10-31：自建后端地址 / 增量同步回填。此前这两个字段只有读取方（ui-ge-api / data-rw），没有写入入口 */
+  const abInp=$("#cfgApiBase"); if(abInp) abInp.value = (typeof cfg.apiBase==="string") ? cfg.apiBase : "";
+  const siChk=$("#cfgSyncIncremental"); if(siChk) siChk.checked = cfg.syncIncremental === true;
   // v1.15：场景 sysprompt 编辑器回填（选择器填充 + 当前场景文本加载）
   const spSel=$("#cfgSyspromptScene");
   if(spSel){
@@ -42297,6 +42431,9 @@ async function saveCfg(){
     const ragChk=$("#cfgRagInject"); if(ragChk) cfg.rag = ragChk.checked;
     const twInp=$("#cfgToolWhitelist"); if(twInp){ const v=twInp.value.trim(); cfg.toolWhitelist=v||undefined; if(!v) delete cfg.toolWhitelist; }
     const acInp=$("#cfgAgentAutoConfirm"); if(acInp) cfg.agentAutoConfirm=!!acInp.checked;
+    /* 2026-10-31：自建后端地址 / 增量同步持久化。地址留空 = 删除字段（回到"未配置"，与旧档一致） */
+    const abInp2=$("#cfgApiBase"); if(abInp2){ const v=abInp2.value.trim(); if(v) cfg.apiBase=v; else delete cfg.apiBase; }
+    const siChk2=$("#cfgSyncIncremental"); if(siChk2) cfg.syncIncremental = !!siChk2.checked;
     // v1.15：保存当前场景自定义 sysprompt（空则恢复默认）
     const spTa=$("#cfgSysprompt");
     if(spTa){ setCustomSysprompt(active, spTa.value); }
