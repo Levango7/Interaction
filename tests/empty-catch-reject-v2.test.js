@@ -142,11 +142,15 @@ describe("④ 真实源码上的契约：掉的是误判，留的是真空", () 
     expect(p0Lines("ui-ge-integrations.js")).toContain(246);
   });
 
-  it("全仓 reject 类 P0 共 5 处（26 处 P0 里 21 处是 try/catch）", () => {
+  it("全仓 reject 类 P0 共 4 处（24 处 P0 里 20 处是 try/catch）", () => {
+    /* 5 → 4：**代码改了，不是尺子换了** —— 2026-10-30 Qoder 的 B12 第五片给
+       `render-widgets.js` 的 `restoreFromRecycleBin()` 那句 `persistCfg(cfg).catch(()=>{})`
+       补了落盘失败留痕（两种失败形态都覆盖），该条不再是空处理器，故不再是 P0。
+       其余 4 条 reject 类危险项一个未动（见 ⑤ 的逐个断言）。 */
     let total = 0;
     for (const f of ["ai-loop.js", "ai-tools.js", "render-widgets.js", "ui-backup-stats.js",
       "ui-daily.js", "ui-ge-integrations.js"]) total += p0Lines(f).length;
-    expect(total).toBe(5);
+    expect(total).toBe(4);
   });
 });
 
@@ -189,17 +193,33 @@ describe("⑤ reject 分级用整条 promise 表达式（v3.7.153）：消除 20
         .find((i) => i.kind === "reject" && i.line === line);
       return it ? it.level : null;
     };
+    /* `render-widgets.js` 的行号会被别人的批次挪动（B12 第五片给上面另两处加了留痕，整文件 +8 行），
+       所以这个文件**不拿行号当主键**（正是 triage 文档那句「引用前先重跑 --report」的由来）：
+       按被吞链上的稳定片段定位。 */
+    const lvlBy = (file, needle) => {
+      const it = scanSource(readFileSync(join(SRC, file), "utf8"), file)
+        .find((i) => i.kind === "reject" && String(i.snippet || "").indexOf(needle) > -1);
+      return it ? it.level : null;
+    };
     /* 这 3 处是 200 字符窗口从相邻语句捞来的假 P0 ⇒ 现在应降为 P2/P1 */
     expect(lvl("ai-tools.js", 680)).not.toBe("P0");
     expect(lvl("ui-daily.js", 111)).not.toBe("P0");
     expect(lvl("ui-ge-integrations.js", 260)).not.toBe("P0");
     /* 2515 是块边界 bug 的实证点：不能在修复中反而被误判 P0 */
     expect(lvl("ui-global-events.js", 2515)).not.toBe("P0");
-    /* 这 5 处是链上真有 await / persist* / decode 的危险项 ⇒ 必须仍是 P0，一个都不能漏 */
+    /* 这 4 处是链上真有 await / persist* / decode 的危险项 ⇒ 必须仍是 P0，一个都不能漏。
+       `render-widgets.js:1081` 已从这份清单里**移出**：2026-10-30 B12 第五片给它补了留痕
+       （`persistCfg` 的两种失败形态都上报），该 catch 体不再为空 ⇒ 不再是空 catch，
+       用 `lvl()` 已查不到这一条（返回 null）。**这是代码修好了，不是尺子放宽了。** */
     expect(lvl("ai-loop.js", 328)).toBe("P0");
-    expect(lvl("render-widgets.js", 1081)).toBe("P0");
-    expect(lvl("render-widgets.js", 2983)).toBe("P0");
+    expect(lvlBy("render-widgets.js", "artImg.decode()"), "decode 兜底那条必须仍是 P0").toBe("P0");
     expect(lvl("ui-ge-integrations.js", 246)).toBe("P0");
     expect(lvl("ui-ge-integrations.js", 257)).toBe("P0");
+    /* 已修的那条：**不能只写 `lvl(...,1081) === null`** —— 行号早就不是 1081 了，
+       那种写法在「留痕被删回去」的变异下同样返回 null（空转假绿，实测确认过）。
+       改成两道：① 源码里留痕本身还在（删掉即红）；② 按稳定片段定位后不得再是 P0。 */
+    expect(readFileSync(join(SRC, "render-widgets.js"), "utf8").indexOf("restored AI profile not persisted"),
+      "留痕被删回去了 ⇒ 那条 reject 类空处理器会悄悄复活").toBeGreaterThan(-1);
+    expect(lvlBy("render-widgets.js", "persistCfg(cfg)"), "已修的那条不该再是 reject 类 P0").not.toBe("P0");
   });
 });
