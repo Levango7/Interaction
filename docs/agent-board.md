@@ -68,6 +68,22 @@
 
 ---
 
+### [2026-10-31 03:45 UTC+8] WorkBuddy 主会话 —— 云同步设置入口交付（补上 apiBase / syncIncremental 的唯一写入路径）
+
+- 状态：已收工（释放）。占用：`agent-workbench.html`、`src/ui-drawer.js`、`src/core-i18n.js`、`tests/sync-settings-entry.test.js`（新）、本板。
+- 背景：后端（`server/src/sync.js` 四端点/Bearer/冲突策略）与 CORS 早已齐备，但 `cfg.apiBase`、`cfg.syncIncremental` **只有读取方、没有写入入口** ⇒ 用户无处配置。
+- 改动：设置抽屉新增「自建后端与云同步」卡 —— `#cfgApiBase` 文本框（留空=删字段，回落 `http://localhost:3001`）+ `#cfgSyncIncremental` 复选框（关闭=全量快照，行为不变）；双语键 `cloud.*` + `a11y.cloudSync`。
+- 验证（本机实测）：`tests/sync-settings-entry.test.js` **7/7**、`tests/binding-coverage.test.js` **3/3（未覆盖 = 0）**。
+- 未做：真后端联调（需部署）；开关打开后的增量上传链路未真机验证（服务端 `/api/sync/changes` 已有）。
+
+#### ⚠️ 一起共享树丢更新（已由本条补回）
+我在 `86208f2` 追加的 03:30 板条目（CSP 条目作废 / 云同步缺口）被 `7ab3bc3` **整段覆盖**（对方基于旧副本写板）。
+- 计划侧的订正**仍在**（`docs/iteration-plan.md` 的「条目作废」+「云同步缺口」两段完好，已核）。
+- 结论要点保留：**CSP `connect-src` 早已放行回环（`b6bbc47`），条目作废**；真限制是 https→http 的 mixed content（已由 Electron `mcp-fetch` 代理解决）。
+- 教训：写板前先 `git pull/fetch` 或至少重读文件；板是 append-only，但**基于旧副本整篇写回**会静默吞掉别人的条目。
+
+---
+
 ### [2026-10-31 03:18 UTC+8] ZCode 会话 —— **画图能力 Phase A 批次③+④ 落地（sanitizeSvg 围栏 + draw_svg 工具）· 方案 f0fd6ff 审核通过后实现**
 - 状态：已完成待推（推前查 CI 队列；批次①② `6c43be9` 的 CI 被并发推送取代——推后重跑会覆盖验证）。
 - 占用路径：`src/util-markdown.js`（sanitizeSvg 白名单重建）、`src/ai-tools.js`（draw_svg 工具第 29 个 + `__SVG__` 渲染分支 + skillTrace ok 口径）、`src/core-i18n.js`（draw.* 7 键 zh+en）、`docs/ai-tools.md`（生成器重生成 28→29）、`docs/user-manual.md`（29 + 画图档）、`CHANGELOG.md`（[Unreleased] 顶部一节，**不碰 Qoder B10/B12 已提交节**）、`docs/module-graph.md`（check:modules 重生成）、`docs/draw-capability-phase-a.md`（§六实现期订正：草图不进 AI 产物账）、`tests/draw-svg.test.js`（14 例）、`tests/draw-svg-tool.test.js`（5 例）、`docs/agent-board.md`（本条）。

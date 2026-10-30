@@ -193,6 +193,9 @@ function openDrawer(){ const cfg=getCfg();
   const ragChk=$("#cfgRagInject"); if(ragChk) ragChk.checked = cfg.rag !== false;
   const twInp=$("#cfgToolWhitelist"); if(twInp) twInp.value = cfg.toolWhitelist||"";
   const acInp=$("#cfgAgentAutoConfirm"); if(acInp) acInp.checked = cfg.agentAutoConfirm!==false;
+  /* 2026-10-31：自建后端地址 / 增量同步回填。此前这两个字段只有读取方（ui-ge-api / data-rw），没有写入入口 */
+  const abInp=$("#cfgApiBase"); if(abInp) abInp.value = (typeof cfg.apiBase==="string") ? cfg.apiBase : "";
+  const siChk=$("#cfgSyncIncremental"); if(siChk) siChk.checked = cfg.syncIncremental === true;
   // v1.15：场景 sysprompt 编辑器回填（选择器填充 + 当前场景文本加载）
   const spSel=$("#cfgSyspromptScene");
   if(spSel){
@@ -555,6 +558,9 @@ async function saveCfg(){
     const ragChk=$("#cfgRagInject"); if(ragChk) cfg.rag = ragChk.checked;
     const twInp=$("#cfgToolWhitelist"); if(twInp){ const v=twInp.value.trim(); cfg.toolWhitelist=v||undefined; if(!v) delete cfg.toolWhitelist; }
     const acInp=$("#cfgAgentAutoConfirm"); if(acInp) cfg.agentAutoConfirm=!!acInp.checked;
+    /* 2026-10-31：自建后端地址 / 增量同步持久化。地址留空 = 删除字段（回到"未配置"，与旧档一致） */
+    const abInp2=$("#cfgApiBase"); if(abInp2){ const v=abInp2.value.trim(); if(v) cfg.apiBase=v; else delete cfg.apiBase; }
+    const siChk2=$("#cfgSyncIncremental"); if(siChk2) cfg.syncIncremental = !!siChk2.checked;
     // v1.15：保存当前场景自定义 sysprompt（空则恢复默认）
     const spTa=$("#cfgSysprompt");
     if(spTa){ setCustomSysprompt(active, spTa.value); }

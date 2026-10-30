@@ -5643,6 +5643,27 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <div class="ctl"><input id="cfgAiTemperature" type="number" min="0" max="2" step="0.1" data-i18n-placeholder="ai.config.tempPlaceholder" placeholder="0.7（默认）"></div>
     </div>
   </section>
+  <!-- ===== 自建后端 / 云同步（2026-10-31：此前 cfg.apiBase / cfg.syncIncremental 只读不写，用户无处配置） ===== -->
+  <section class="set-card" id="cloud-sync" aria-label="自建后端与云同步" data-i18n-aria="a11y.cloudSync">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01"/></svg></span>
+      <div>
+        <h3 data-i18n="cloud.title">自建后端与云同步</h3>
+        <p class="set-desc" data-i18n="cloud.desc">填后端地址后，云同步、抓取代理与 SQL 工具改走该后端；留空则全部走本机直连。</p>
+      </div>
+    </header>
+    <div class="set-field">
+      <label for="cfgApiBase" data-i18n="cloud.apiBase">后端地址（apiBase）</label>
+      <div class="ctl"><input id="cfgApiBase" placeholder="http://localhost:3001" maxlength="200" autocomplete="off" data-i18n-placeholder="cloud.apiBasePh"></div>
+    </div>
+    <div class="set-switch">
+      <input type="checkbox" id="cfgSyncIncremental" aria-label="增量同步" data-i18n-aria="cloud.incrementalAria">
+      <div>
+        <div class="sw-label" data-i18n="cloud.incrementalLabel">增量同步（只传变更）</div>
+        <div class="sw-sub" data-i18n="cloud.incrementalSub">开启后按变更日志增量上传；关闭时走全量快照，行为与从前一致。</div>
+      </div>
+    </div>
+  </section>
   <!-- ===== Agent 能力（独立卡，v1.15 与 AI 配置分开） ===== -->
   <section class="set-card ai-section" id="ai-agent" data-ai-tab="ai-agent" aria-label="Agent 能力" data-i18n-aria="a11y.agentAbility">
     <header class="set-head">
