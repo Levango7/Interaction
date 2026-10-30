@@ -7803,6 +7803,12 @@ const MESSAGES = {
     "mermaid.needVendor": "Mermaid 需要完整发行版（vendor/mermaid）才能渲染",
     "mermaid.loading": "正在加载图表引擎（首次约需十余秒）…",
     "mermaid.renderFail": "Mermaid 渲染失败，已保留源码",
+    "draw.exportSvg": "导出 SVG",
+    "draw.exportPng": "导出 PNG",
+    "draw.exported": "已导出",
+    "draw.pngFallback": "PNG 导出不可用，已下载 SVG",
+    "draw.exportNoSvg": "未找到可导出的图",
+    "draw.exportFail": "导出失败",
     "chat.cancel": "取消",
     "chat.placeholder": "问点什么，或让它「建个任务」…",
     "pomo.title": "笃行",
@@ -11922,6 +11928,12 @@ const MESSAGES = {
     "mermaid.needVendor": "Mermaid needs the full distribution (vendor/mermaid) to render",
     "mermaid.loading": "Loading the diagram engine (about ten seconds on first use)…",
     "mermaid.renderFail": "Mermaid render failed; the source is kept",
+    "draw.exportSvg": "Export SVG",
+    "draw.exportPng": "Export PNG",
+    "draw.exported": "Exported",
+    "draw.pngFallback": "PNG export unavailable; the SVG was downloaded instead",
+    "draw.exportNoSvg": "No exportable diagram found",
+    "draw.exportFail": "Export failed",
     "chat.cancel": "Cancel",
     "chat.placeholder": "Ask anything, or let it \"create a task\"…",
     "pomo.title": "Focus",
@@ -17114,10 +17126,7 @@ function renderMermaidBlocks(root){
         const out = await lib.render("mmd-" + (++_mermaidSeq), code.textContent || "");
         const svg = _sanitizeMermaidSvg(out && out.svg);
         if(!svg) throw new Error("empty svg");
-        const fig = document.createElement("div");
-        fig.className = "mermaid-figure";
-        fig.innerHTML = svg; // lint-xss-ok: 已过 _sanitizeMermaidSvg（script/事件/外链已剥离）
-        pre.parentNode.replaceChild(fig, pre);
+        pre.parentNode.replaceChild(_mermaidFigureEl(svg), pre);
       }catch(e){
         code.setAttribute("data-mermaid-state", "fail");
         _mermaidFail(pre, t("mermaid.renderFail", "Mermaid 渲染失败，已保留源码"));
@@ -17129,6 +17138,155 @@ function renderMermaidBlocks(root){
   });
   return _mermaidQueue;
 }
+
+/* ---------- SVG / 图表导出（2026-10-30 画图能力 Phase A · docs/draw-capability-phase-a.md）----------
+ * 三处共用：render_chart 卡（render-entry 的 miniChart）、mermaid 图（上方 renderMermaidBlocks）、
+ * draw_svg 产物卡（ai-tools，批次④接入）。设计决定（方案第四/五节）：
+ *  · 下载 = 既有 createObjectURL + <a download> 先例（ui-backup-stats 同款），零新依赖；
+ *  · PNG = SVG → Image → canvas 2x 白底栅格化，best-effort 如实失败（resolve(null)，调用方降级为
+ *    「已下载 SVG」提示）—— mermaid htmlLabels 的 foreignObject 在部分内核会污染，绝不假装成功（R-37）；
+ *  · 样式内联：mini-chart 用 CSS 变量（var(--accent)）+ 外部类，独立打开会丢样式 —— 导出前克隆并
+ *    把 computedStyle 写回表现属性，变量解析成真值；同时补 xmlns（renderMiniChart 的 SVG 没带）；
+ *  · 绑定 = document 级一次性委托（渲染是 innerHTML 重建，逐个 bind 会被冲掉），window 护栏幂等。 */
+
+/** 导出按钮条。name 进文件名与 data-svgname，可能含标题内容 → 必须过 esc。 */
+function _svgExportBar(name){
+  return '<div class="svg-export-bar">'
+    + '<button type="button" class="svg-exp-btn" data-svgexp="svg" data-svgname="' + esc(name) + '" title="' + t("draw.exportSvg", "导出 SVG") + '">SVG</button>'
+    + '<button type="button" class="svg-exp-btn" data-svgexp="png" data-svgname="' + esc(name) + '" title="' + t("draw.exportPng", "导出 PNG") + '">PNG</button>'
+    + '</div>';
+}
+
+/** mermaid 成功路径的容器（抽出以便无 lib 环境守护测试）：svg + 导出条，容器带 data-svgexport。 */
+function _mermaidFigureEl(svg){
+  const fig = document.createElement("div");
+  fig.className = "mermaid-figure";
+  fig.setAttribute("data-svgexport", "");
+  fig.setAttribute("data-svgname", "mermaid");
+  fig.innerHTML = svg; // lint-xss-ok: 已过 _sanitizeMermaidSvg（script/事件/外链已剥离）
+  fig.insertAdjacentHTML("beforeend", _svgExportBar("mermaid"));
+  return fig;
+}
+
+/** 文件名时间戳：YYYYMMDD-HHmm（本地时区，纯展示用途）。 */
+function _svgStamp(){
+  const d = new Date(), p = function(n){ return (n < 10 ? "0" : "") + n; };
+  return "" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes());
+}
+
+/** 下载一个 Blob（既有 createObjectURL + <a download> 先例的收口）。失败如实返回 false。 */
+function _downloadBlob(blob, name){
+  try{
+    if(!blob || typeof URL === "undefined" || !URL.createObjectURL) return false;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = String(name || "download");
+    document.body.appendChild(a);
+    a.click();
+    if(a.parentNode) a.parentNode.removeChild(a);
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(_e){ /* 已过期无害 */ } }, 4000);
+    return true;
+  }catch(e){
+    try{ pushDiag("warn", "download failed: " + ((e && e.message) || e), { where: "_downloadBlob" }); }catch(_e){ /* 诊断不可用不影响返回值 */ }
+    return false;
+  }
+}
+
+/** 把 computedStyle 写回克隆 SVG 的表现属性（fill/stroke/字体），并把 CSS 变量解析成真值。
+ *  mini-chart 的 var(--accent) 和 .mini-chart-lbl 字体样式离开页面 cascade 就丢 —— 不内联则导出图变黑白默认。 */
+function _inlineSvgStyles(svgEl){
+  const clone = svgEl.cloneNode(true);
+  try{
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    const KEEP = ["fill", "stroke", "stroke-width", "fill-opacity", "stroke-opacity", "font-family", "font-size", "font-weight", "text-anchor"];
+    const src = svgEl.querySelectorAll("*");
+    const dst = clone.querySelectorAll("*");
+    for(let i = 0; i < src.length; i++){
+      let cs = null;
+      try{ cs = window.getComputedStyle ? window.getComputedStyle(src[i]) : null; }catch(_e){ cs = null; }
+      if(!cs || !dst[i]) continue;
+      for(let k = 0; k < KEEP.length; k++){
+        const attr = KEEP[k], raw = src[i].getAttribute(attr);
+        /* 有 var( 引用的属性必内联（脱离 cascade 就丢）；带样式的文字节点也内联（防独立打开变衬线默认） */
+        if((raw && raw.indexOf("var(") !== -1) || (String(src[i].getAttribute("class") || "").indexOf("mini-chart-") !== -1)){
+          const v = cs.getPropertyValue(attr);
+          if(v) dst[i].setAttribute(attr, v);
+        }
+      }
+    }
+  }catch(e){
+    try{ pushDiag("warn", "svg style inline failed: " + ((e && e.message) || e), { where: "_inlineSvgStyles" }); }catch(_e){ /* 诊断不可用，退化为原始样式 */ }
+  }
+  return clone;
+}
+
+/** SVG 字符串 → PNG Blob（2x 白底）。任何一步不可用都 resolve(null) —— 调用方如实降级为 SVG 导出。 */
+function _svgToPngBlob(svgStr, scale){
+  return new Promise(function(resolve){
+    let url = null;
+    const fail = function(){ if(url){ try{ URL.revokeObjectURL(url); }catch(_e){ /* 无害 */ } } resolve(null); };
+    try{
+      if(!svgStr || typeof document === "undefined" || typeof URL === "undefined" || !URL.createObjectURL){ resolve(null); return; }
+      url = URL.createObjectURL(new Blob([String(svgStr)], { type: "image/svg+xml;charset=utf-8" }));
+      const img = new Image();
+      img.onload = function(){
+        try{
+          let w = img.naturalWidth, h = img.naturalHeight;
+          if(!w || !h){ /* viewBox-only 的 SVG 在部分内核 naturalWidth 为 0 —— 从 viewBox 取 */
+            const vb = /viewBox=["']0 0 ([\d.]+) ([\d.]+)/.exec(String(svgStr));
+            w = vb ? parseFloat(vb[1]) : 800; h = vb ? parseFloat(vb[2]) : 600;
+          }
+          const cv = document.createElement("canvas");
+          cv.width = Math.max(1, Math.round(w * (scale || 2)));
+          cv.height = Math.max(1, Math.round(h * (scale || 2)));
+          const ctx = cv.getContext("2d");
+          if(!ctx){ fail(); return; }   // jsdom / 受限环境：无 2d 上下文，如实失败
+          ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, cv.width, cv.height);
+          ctx.drawImage(img, 0, 0, cv.width, cv.height);
+          if(!cv.toBlob){ fail(); return; }
+          cv.toBlob(function(b){ if(url){ try{ URL.revokeObjectURL(url); }catch(_e){ /* 无害 */ } } resolve(b || null); }, "image/png");
+        }catch(e){ fail(); }
+      };
+      img.onerror = function(){ fail(); };
+      img.src = url;
+    }catch(e){ fail(); }
+  });
+}
+
+/** 文档级一次性委托：所有 [data-svgexp] 按钮的导出动作（渲染是 innerHTML 重建，逐个 bind 会被冲掉）。 */
+function _bindSvgExport(){
+  if(typeof document === "undefined" || typeof window === "undefined" || window.__svgExportBound) return;
+  window.__svgExportBound = true;
+  document.addEventListener("click", function(ev){
+    const btn = ev.target && ev.target.closest ? ev.target.closest("[data-svgexp]") : null;
+    if(!btn) return;
+    const box = btn.closest("[data-svgexport]");
+    if(!box) return;
+    const svgEl = box.querySelector("svg");
+    if(!svgEl){ toast(t("draw.exportNoSvg", "未找到可导出的图"), "warn"); return; }
+    const name = (btn.getAttribute("data-svgname") || "draw") + "-" + _svgStamp();
+    const svgStr = new XMLSerializer().serializeToString(_inlineSvgStyles(svgEl));
+    if(btn.getAttribute("data-svgexp") === "svg"){
+      if(_downloadBlob(new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" }), name + ".svg")) toast(t("draw.exported", "已导出"), "ok");
+      else toast(t("draw.exportFail", "导出失败"), "error");
+      return;
+    }
+    btn.disabled = true;
+    _svgToPngBlob(svgStr, 2).then(function(b){
+      btn.disabled = false;
+      if(b){
+        if(_downloadBlob(b, name + ".png")) toast(t("draw.exported", "已导出"), "ok");
+        else toast(t("draw.exportFail", "导出失败"), "error");
+        return;
+      }
+      /* PNG 不可用（jsdom / 受限内核 / foreignObject 污染）→ 如实降级为 SVG；SVG 也失败则报错，不假称成功 */
+      const okSvg = _downloadBlob(new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" }), name + ".svg");
+      toast(okSvg ? t("draw.pngFallback", "PNG 导出不可用，已下载 SVG") : t("draw.exportFail", "导出失败"), okSvg ? "warn" : "error");
+    });
+  });
+}
+_bindSvgExport();
 /*SRC:util-markdown:END*/
 /*SRC:util-perf:BEGIN*/
 // ===== Util Layer (性能优化工具·v1.4-B) =====
@@ -38700,9 +38858,13 @@ function renderMiniChart(chartType, dataArr){
   if(ct === "pie") inner = _miniPieSVG(dataArr);
   else if(ct === "line") inner = _miniLineSVG(dataArr);
   else inner = _miniBarSVG(dataArr);
-  // line 类型自带布局容器，不再包 .mini-chart-wrap 的固定高度（避免双重滚动裁切）
-  if(ct === "line") return '<div class="mini-chart-line-box u-h-120 u-bg-panel2 u-radius-sm u-overflow-hidden">' + inner + "</div>";
-  return '<div class="mini-chart-wrap">' + inner + "</div>";
+  /* 画图能力 Phase A（docs/draw-capability-phase-a.md）：data-svgexport 容器 + 导出条，
+     点击由 util-markdown 的文档级委托（_bindSvgExport）接管 —— 渲染是 innerHTML 重建，不能逐个 bind。 */
+  const name = "chart-" + ct;
+  const bar = _svgExportBar(name);
+  // line 类型自带布局容器，不再包 .mini-chart-wrap 的固定高度（避免双重滚动裁切）；导出条放盒外
+  if(ct === "line") return '<div data-svgexport data-svgname="' + name + '"><div class="mini-chart-line-box u-h-120 u-bg-panel2 u-radius-sm u-overflow-hidden">' + inner + '</div>' + bar + '</div>';
+  return '<div class="mini-chart-wrap" data-svgexport data-svgname="' + name + '">' + inner + bar + '</div>';
 }
 
 /* R-37（2026-10-27）：工具箱里「复制到剪贴板」的**唯一**写法 —— 回执必须等 Promise 落地。
