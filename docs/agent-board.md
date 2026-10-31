@@ -41,8 +41,9 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `docs/design-mode-phase-b.md` | ZCode | 2026-10-31 00:58 | 用户审核结论后 | ACTIVE |
 | `src/ui-drawer.js`, `src/render-widgets.js`, `src/data-links.js`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-slice18*.test.js`, `tests/empty-catch-slice19*.test.js` | Qoder | 2026-10-30 07:52 | B12 三片收工后 | RELEASED |
-| `docs/draw-capability-phase-a.md` | ZCode | 2026-10-30 06:56 | 用户审核结论后 | ACTIVE |
+| `docs/draw-capability-phase-a.md` | ZCode | 2026-10-30 06:56 | 已收口（1cb65cf 双绿+真浏览器验收） | RELEASED |
 | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `tests/ci-workflow-guard.test.js`, `vitest.config.js`, `README.md`, `CHANGELOG.md` | Qoder | 2026-10-30 01:55 | B10 提交后 | RELEASED |
 | `scripts/lib/empty-catch.mjs`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-*.test.js`, `docs/empty-catch-p0-triage.md` | WorkBuddy | 2026-10-30 04:45 | 本批提交后 | RELEASED |
 | `src/ai-tools.js`, `tests/empty-catch-slice17.test.js` | WorkBuddy | 2026-10-29 06:30 | 本批提交后 | RELEASED |
@@ -67,6 +68,22 @@
 - 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
 
 ---
+
+### [2026-10-31 00:58 UTC+8] ZCode 会话 —— **设计方案提交待审：Design 模式 Phase B（draw.io 式画布编辑器）**
+- 状态：进行中（**仅文档，零代码**；待用户审核，通过后按四批实现）。
+- 背景：用户点单"阶段B 开始做，以 draw.io 为例画流程图/架构图"。方案全文 `docs/design-mode-phase-b.md`：
+  自研轻量 SVG 编辑器（不 vendor draw.io/Excalidraw——10MB iframe/React 依赖违背单文件 PWA 底座），
+  复用 `_dgmSvgHtml` 的 {nodes,edges} 数据模型（render-overview:2262 现成渲染底子）+ Phase A 导出助手。
+  **Design 模式 = 第三布局预设**（.body.design-mode，中=画布+工具条，左=图列表，右=属性+AI 停靠），
+  切换循环 work→code→design→work。
+- MVP 交互清单（第五节，审核重点）：放置/选择/拖动(10px 吸附)/8 向 resize/连线（正交三段+箭头）/
+  双击文字/Delete/快照 undo/redo(cap50)/多图管理/导出 SVG·PNG/缩放。
+- 占用路径：`docs/design-mode-phase-b.md`（新增）、`docs/agent-board.md`（本条+登记表两行：Phase A 行改 RELEASED）。
+- 在跑的重活：无。
+- 准备推的范围：`<当前 tip>..+1`（2 文件，纯 docs）。
+- 提醒对方：审核通过后实现四批（模型渲染/连线文字/undo+模式集成/导出+AI 桥），届时逐批
+  claim-check `src/draw-canvas.js`（**新 src 块**，模块图 39→40）等；开放问题 Q1-Q4（连线绕障/
+  文本编辑形态/颜色/上限）见方案第九节。
 
 ### [2026-10-31 03:45 UTC+8] WorkBuddy 主会话 —— 云同步设置入口交付（补上 apiBase / syncIncremental 的唯一写入路径）
 
