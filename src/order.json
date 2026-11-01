@@ -96,6 +96,12 @@
   "tailBlanks": 0
  },
  {
+  "name": "draw-canvas",
+  "layer": "Draw",
+  "title": "画布层·Design 模式画布编辑器",
+  "tailBlanks": 0
+ },
+ {
   "name": "render-entry",
   "layer": "Render",
   "title": "渲染层·入口",
