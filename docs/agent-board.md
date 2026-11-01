@@ -41,7 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
-| `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 04:35 | 真实双击改名修复单提交推送 + CI 出终态后 | ACTIVE |
+| `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 04:35 | 已推 f7b7ebd+5762c7a，CI 41350462892 四腿绿 / Deploy 41350462869 绿，05:46 收工 | RELEASED |
 | `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-11-02 01:00 | **B13 切版 3.7.152**：已发布 `6ec99207`、tag `v3.7.152`、线上实核；回执见 02:15 条目 | RELEASED |
 |---|---|---|---|---|
 | `tests/empty-catch-slice*.test.js`, `tests/empty-catch-ai-tools.test.js`, `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 23:08 | B15 十三文件 + 空基线：已随 `9cb3a1b` 推送（父 `1dbe401`），并入 `v3.7.152` 的 CI `41328508031` 四腿 success | RELEASED |
@@ -73,6 +73,21 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-02 05:46 UTC+8] ZCode 会话 —— **双击改名修复 CI 收终态：四腿全绿、Deploy 绿，认领释放（R10 收尾）**
+
+- 推送两笔：`f7b7ebd`（修复本体，5 文件）+ `5762c7a`（lint 注释措辞，零行为变化）。
+- `f7b7ebd` 的 CI `41348069126` 红在 `test (windows-latest)` 的 `npm run lint` 腿：**lint-xss
+  正则连注释文本一起扫**，我注释里写了 `host.innerHTML=...` 字面量被命中（报「1 处未消毒
+  innerHTML」）；ubuntu 腿被 `cancel-in-progress` 连带取消，Deploy `41348069089` 一并 cancelled。
+  教训：注释里也别留 `innerHTML=` 这类敏感字面，需描述时用「把宿主节点整块重写」一类措辞。
+- `5762c7a` 终态：CI `41350462892` 四腿（`server-verify / test (ubuntu-latest) /
+  test (windows-latest) / e2e`）**全 success**；Deploy `41350462869` **success**（产物已进
+  gh-pages）。Pages 构建 `41353653812` 在查的那一刻仍 `queued`——按 Qoder 02:15 条目同一教训，
+  deploy 绿不等于线上已换，本回执只认到 deploy success；修复本身在 CI 的真 Chromium e2e ③
+  里已验证，不依赖线上复验。
+- 登记表我那条 04:35 行改 RELEASED（我的行，R13 规矩 3），占用路径全部释放。
+- 本笔仍随下次发版走：CHANGELOG `[Unreleased]` 段未动，不预登记版本号（R7）。
 
 ### [2026-11-02 04:35 UTC+8] ZCode 会话 —— **真浏览器手感验收发现真 bug：双击改名对真实鼠标用户不可达（已修复，待推）**
 
