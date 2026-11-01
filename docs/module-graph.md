@@ -62,8 +62,8 @@
 | `getCfg` | `data-links` | 17 |
 | `render` | `render-entry` | 16 |
 | `getActiveTasks` | `data-rw` | 15 |
+| `UI_ICONS` | `core` | 15 |
 | `getTasks` | `data-rw` | 15 |
-| `UI_ICONS` | `core` | 14 |
 | `dangerConfirm` | `core-shared` | 12 |
 | `active` | `data-links` | 12 |
 | `getRec` | `data-rw` | 12 |
