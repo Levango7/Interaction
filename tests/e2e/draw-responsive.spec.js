@@ -22,11 +22,15 @@ test.beforeAll(() => { test.skip(!process.env.E2E, "set E2E=1 to run"); });
 test.describe("Design 模式窄屏", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  /** 切到 Design 模式（循环 work→code→design），返回当前标签文本 */
+  /** 切到 Design 模式（循环 work→code→design）。
+   *  ⚠️ 选择器必须是 `.app > .body`：`.body` 这个类名在正文列表项里也被复用
+   *  （render-overview / render-entry 的 `<div class="body">`），裸 `.body` 在 Playwright
+   *  严格模式下会因命中多个元素而报错 —— 这是本 spec 首轮 CI 的真实红法。 */
+  const SHELL = ".app > .body";
   async function toDesign(page) {
     await page.click("#btnUIMode");
     await page.click("#btnUIMode");
-    await expect(page.locator(".body")).toHaveClass(/design-mode/);
+    await expect(page.locator(SHELL)).toHaveClass(/design-mode/);
     await page.waitForSelector("#drawCanvasHost svg", { state: "attached" });
   }
 
@@ -52,8 +56,12 @@ test.describe("Design 模式窄屏", () => {
         };
       });
       expect(m.scrollWidth, `视口 ${w}px 出现横向溢出`).toBeLessThanOrEqual(m.clientWidth);
-      expect(m.stageW, "画布区必须铺满视口宽度（单栏降级）").toBeGreaterThanOrEqual(m.clientWidth - 2);
-      expect(m.hostW, "画布宿主宽度应随视口收缩").toBeGreaterThanOrEqual(m.clientWidth - 8);
+      /* 画布区铺满视口；宿主再扣掉 #drawStage 的 8px 两侧内边距与 1px 边框。
+         容差写死在这些实测量上，不用「乘以百分比」那种会随视口变宽的松判据。 */
+      expect(m.stageW, `画布区必须铺满视口宽度（单栏降级）；实测 ${m.stageW}/${m.clientWidth}`)
+        .toBeGreaterThanOrEqual(m.clientWidth - 2);
+      expect(m.hostW, `画布宿主宽度应随视口收缩；实测 ${m.hostW}，画布区 ${m.stageW}`)
+        .toBeGreaterThanOrEqual(m.stageW - 20);
       expect(m.hostH, "画布宿主必须有实际高度（否则是一块看不见的 0 高区域）").toBeGreaterThan(120);
       expect(m.dockShown, "窄屏图列表停靠应收起（三栏在 320 上必溢出）").toBe(false);
     });

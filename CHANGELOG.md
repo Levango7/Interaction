@@ -1,4 +1,4 @@
-﻿## [3.7.151] - 2026-10-28
+## [3.7.151] - 2026-10-28
 
 > **假回执门禁（R-37）**：新增 `lint:false-receipt`，抓的是「**异步结果还没落地，代码先把『成功了』告诉用户**」——
 > 原型 `try{ navigator.clipboard.writeText(x); toast("已复制", "ok"); }catch(_){}`：同步 try/catch 抓不到
@@ -150,6 +150,38 @@
   它们没有"必须为空/按下标读"的断言，所以不会假红，**但会假绿**。
   下一步该做的不是逐文件改，而是加一条静态守卫（扫 `tests/*.test.js`：探针包装函数若把条目 push 进
   模块级标识符即判红），让它自带射程后一次覆盖整族。
+
+### 2026-11-01 深夜 · **Design 模式批次④：连线标签、体积预算、窄屏单栏**（Phase B 收口；时间戳区别于同日 B11 条）
+
+> 来源是 WorkBuddy 08:45 那篇审核意见里的四条前置条件与三条门禁提醒。**能当场落的都落了，
+> 落不了的写明为什么**——不是「已知悉」了事。
+
+- **连线标签此前根本没渲染**：数据模型有 `label` 字段、`dcAddEdge` 也写空串，但 `_dcRenderSvg`
+  从头到尾不输出它 —— 也就是说「连线能加文字」这件事在界面上**不存在**。本批补 `_dcEdgeMid()`
+  （与 `_dcEdgePath` 同一套三段几何，取竖直中段中点）与 `text.dedge-label`（`esc` 入库、
+  `pointer-events:none` 不吃连线点击），并新增 `dcSetEdgeLabel()`；双击连线中间那段 12px 透明热区即可编辑。
+- **文本上限**：浮层 input 统一成 `_dcFloatInput()`（节点文字与连线标签共用一个实现），
+  加 `maxLength = DC_TEXT_MAX(80)`，模型侧 `dcAddNode` / `dcSetNodeText` / `dcSetEdgeLabel` 同步 `slice`。
+  只在前端拦长度不够——存储是用户可以绕开的。
+- **字节预算 + 接住 `save()` 的返回值**：新增 `DC_DOC_BYTES_MAX = 128KB` / `DC_ALL_BYTES_MAX = 1MB`，
+  `_dcSaveList()` / `_dcSaveDoc()` 改为**返回 boolean 并透传 `save()` 的 false**。
+  改之前它们把 `save()` 的返回值直接丢掉 —— 而 `save()` 按契约只 `toast` + 返回 `false`、**永不抛**，
+  于是配额耗尽时页面照常显示「画好了」，这正是 `data-links` 那类「假防线」的同款缺陷。
+  条数上限（50 图 / 200 节点）管不住体积：200 个节点各带长文本就能吃满 5MB 配额的大半。
+- **窄屏单栏降级**：`@media (max-width:1023px)` 下 Design 模式退成单栏（图列表停靠收起、
+  画布铺满屏宽、隐藏工作视图与聊天面板）。三栏 `240px / 1fr / 300px` 在 320px 视口必然横向溢出。
+  判据落在真浏览器新增的 `tests/e2e/draw-responsive.spec.js`：320 / 375 / 412 三个宽度零横向溢出、
+  画布区宽度铺满、**真指针放一个节点再拖它，坐标真的变且吸在 10px 网格上** ——
+  jsdom 没有布局引擎，量不出「没溢出」，只测「渲染出了 SVG」的话窄屏给一块死图也能绿。
+- **与 Qoder 代修（`c316697`）的合流**：字号令牌（`--fs-2xs` / `--fs-xs` / `--fs-base`）、
+  `z-index: var(--z-max)`、删除按钮换 `UI_ICONS` 三项在他那一笔里已经修过，**本批不重复改**，
+  冲突处一律取他的口径；本批测试条号顺延为 ⑪⑫，让开他已用的 ⑨⑩。
+- **审核意见里没做的两条**（写明去向，不假装做了）：
+  ① Q3 语义配色（默认 / 强调 / 警示三种节点色）—— 要改 `_dcShapeSvg` 的 fill 来源，与「修红」混一起不好归因，留 Phase C。
+  ② AI 桥「把 AI 画的卡片拖进画布继续编辑」—— 需要动 `ai-tools.js`，留作下一步。
+- **验证**：`draw-canvas` 14 例、draw 族 8 文件 102 例本机全绿；`lint`（0 error）、`lint:icons`（新增 P0 = 0）、
+  `lint:empty-catch`、`lint:layers`（基线外新增 0）、`lint:tokens`、`check:modules`、`build:check`、`src:check`
+  全 exit 0；`user-manual` 补 §3.1「设计模式：画布怎么用」。
 
 ### 2026-11-01 · **B11：空 catch 基线全仓重冻**（604 → 631，纯台账、代码零改动）
 
