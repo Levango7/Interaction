@@ -124,6 +124,64 @@
 
 ## [Unreleased]
 
+### 2026-10-31 · **画图 Phase A 落地后的四处实测缺口**：三张卡其实一张都没渲染出来
+
+> 前提说明：批次①-④ 由 ZCode 会话的 `6c43be9` + `7ab3bc33` 落进 main 且 **CI/Deploy 全绿**。
+> 本批不是新功能，是**在绿门禁之后实测出来的四处"看起来有、其实没有"**——全部先写用例跑出红，再改代码。
+> （同一时间我也在做批次③④的独立实现，撞上 ZCode 已推的那版 ⇒ 我的重复实现**作废**，
+> 只留底在本地 `57c853a` 不推送；本批只并真正缺的那部分。）
+
+- **A｜标记类卡片在真实聊天里一张都不渲染**（图卡 / 草图卡 / 子代理卡，同一处判据的三个受害者）：
+  渲染层按 `_disp.indexOf("__CHART__") === 0` 判标记，而聊天路径写进 `hist` 的 `_disp` 是
+  「工具 X({…}) → <结果>」——**前缀在，判据永远不成立**。
+  实测（jsdom，真实形态）：`.chart-msg` 渲染出 **0 张**，用户在聊天里看到的是 `__CHART__{…}` 原文；
+  A1 的导出按钮就长在图卡里，等于 ① 的聊天侧入口一并落空。
+  修法：消息上另存原始回执 `_raw`（新函数 `_markerRaw()`，**只对标记类结果存**，普通回执不翻倍占存储），
+  渲染层改按 `_raw`（退化到 `content`）判。为什么不用 `content` 当唯一解析源：它被 `_cutToolRes`
+  截到 2400 字，长 SVG 会拦腰断、断掉的 JSON 连解析都失败。
+  ⚠️ **只修新增消息**：改动前已落盘的老历史没有 `_raw`，仍旧按文本显示——不是回归，但也没被这次修好；
+  刻意不加"从 `_disp` 里剖前缀"的兼容垫片（那是第二套真相源）。
+- **B｜围栏把"整张都被剥光"当成功返回**：`<svg>` 里只有脚本标签时，main 实测返回 `<svg xmlns=…/>`
+  （真值）⇒ `execTool` 走出成功分支，用户看到一张**空卡**、模型以为画完了。
+  方案第六节写的口径是"剥完什么都不剩 ⇒ 整体拒绝，不输出半成品"。现按**元素数**判（只按
+  `childNodes` 会被换行文本节点骗过去，实测第二条用例就是抓这个的）。
+- **C｜围栏漏两类外呼**（都先实测复现再修）：
+  1. `url()` 原先只在 `style` 里查，而 `fill`/`stroke`/`filter`/`clip-path` **本身就是白名单属性** ⇒
+     `fill="url(https://evil.example/x.svg#p)"` 原样通过，浏览器会去外部取 paint server。
+  2. 属性名**只要带冒号就整体豁免**白名单 ⇒ `xml:base="http://evil.example/"` 留下，
+     而它把 `<use href="#a">` 这类文档内引用**改基到外部站点**。
+     现在只放行 `xmlns` 声明与名单内的 `xlink:href` / `xml:space`。
+  反向对照也钉住：把 url() 守卫写成"一律剥"会连良性的 `fill="url(#g)"` 一起杀——
+  变异实测同时打红 ZCode 那条「良性草图无损」用例，说明这次收紧没伤到好东西。
+- **D｜导出条全仓没有一条 CSS**：① ② ③ ④ 四批都只写了 markup，实测 `.svg-export-bar` 规则数 = **0**
+  ⇒ 按钮是浏览器默认样式、草图卡没有底色。补齐 7 条规则（全走设计令牌，无裸 hex、字号不低于 `--fs-2xs`）。
+- **顺带三处**：`README.md` 的工具数还停在 **28**（`docs/user-manual.md` 与 `docs/ai-tools.md` 早已是 29，
+  这两处不进机器门禁，纯人工同步漏的）；`__CHART__` 那条 catch 是裸注释静默吞，改 `pushDiag` 留痕后
+  全仓 **P0 24 → 23**（门禁的「无新增 P0」本来就压着这条，本批改了解析源让它的 sig 重计，顺势修掉）。
+  ⚠️ 这次降级**打红了 `tests/empty-catch-slice17.test.js` 的两把锁**（本机全量实测抓出，单跑复绿）：
+  它按 `toBe(4)` 钉 ai-tools 的 P0 条数，同时用 `REASONS` 的**原文**钉住「解析失败回退文本」这条理由注释。
+  处理口径：留痕是**加**在合理降级上、不是把理由删了 ⇒ 「解析失败回退文本」原文一并写回该 catch（`REASONS` 照旧守着），
+  计数锁 **4 → 3** 并在用例标题里写明「尺子换了是因为代码真变好了」；上限锁 `全仓 ≤ 32` 未动，
+  ai-tools 涨回 4 处以上一样红，所以这不是放宽门禁。已在 `docs/agent-board.md` 通知同样在改 `ai-tools.js` 的 ZCode。
+- **自伤记录（写下来防再犯）**：我第一版把 `<script>` 的**字面闭合形态写进了源码注释**。
+  这块源码是内联进 HTML 的 `<script>` 元素的，HTML 解析器看到那个序列就提前结束脚本 ⇒
+  整块应用 JS 不执行，`execTool` / `renderMiniChart` 全部变 `undefined`，表现是"一堆毫不相关的老用例突然红"。
+  `build:check` 的产物自检（按浏览器语义抽真实 `<script>` 块逐个编译）本来就能当场抓住——
+  **我当时只跑了测试、没先跑构建门禁**，等于把门禁顺序倒过来用。注释里现在也标了这条约束。
+- **验证**：新 `tests/draw-marker-render.test.js` 15 例（A1-A7 / B1-B3 / C1-C3 / D1-D2）；
+  ZCode 原有 `tests/draw-svg.test.js`(14) + `draw-svg-tool.test.js`(5) + `draw-export.test.js`(7) 全绿未改判据；
+  变异电池 **9 条全红且各自命中目标用例**（含"渲染层退回 `_disp`"、"`_markerRaw` 恒 undefined / 恒返回"、
+  "去掉剥光拒绝"、"按 childNodes 判"、"去掉 url() 守卫"、"url() 一律剥"、"恢复冒号豁免"、"删整段 CSS"），
+  4 个被改文件跑完按原始字节还原并核对 sha 一致；`lint` / `build:check` / `check:modules` /
+  `check:ai-tools-doc` / `lint:empty-catch` / `lint:layers` / `lint:tokens` / `lint:breakpoints` /
+  `lint:icons` / `lint:false-receipt` / `check:pwa-icons` / `pet:check` / `src:check` 全 exit 0。
+  ⚠️ 真浏览器（Playwright / 线上产物）里"卡片确实看得见"尚未复验——本批判据是 jsdom 的 DOM 形态；
+  `AGENTS.md` §二 已预登记 **3.7.152**（只占号，切版权在用户）。
+- **本机全量首跑的 4 条红，逐条归因（不是"重跑绿了就当没事"）**：2 条是上面那把 slice17 计数锁（真因＝本批留痕，已按口径同步判据）；
+  `confirm-migration-batch6`（回收站确认框）与 `three-state-render` ③ 各 1 条是**负载型 flaky**——前者卡在 `vi.waitFor` 里拿不到
+  元素（整文件 53s），后者直接 `Test timed out in 60000ms`（整文件 519s，且同轮有 6 条 `vitest-worker Timeout calling "onTaskUpdate"`）；
+  两条**单跑均 exit 0**，与本仓既有结论一致（全量负载假红 ⇒ 判据是单文件重跑，不动超时配置凑绿）。
+
 ### 2026-10-30 · **画图能力 Phase A：聊天里长出画图（设计模式后置 Phase B）**
 
 - **起因**：用户点单对标 Trae 加 Design 模式。评估结论（方案 `docs/draw-capability-phase-a.md`）：主流把"画图"当**能力**不当**模式**（Trae 三档切的是自主度，Claude/ChatGPT 的 Artifacts/Canvas 是产物类型，v0/Lovable 整个产品就是画布）；本仓 28 工具无画布/导出/验收闭环，此刻加模式 = 模式级假回执。定 **Phase A 三件事、模式后置**。

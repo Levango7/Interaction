@@ -3421,19 +3421,32 @@ function renderChat(){
   el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
     if(m.role==="tool"){
       var _disp = m._disp || _chatContentToText(m.content);
-      if(typeof _disp === "string" && _disp.indexOf("__CHART__") === 0){
+      /* 标记类/JSON 类回执的**解析源**：优先 `_raw`（execTool 原始返回），退化到 `content`。
+         为什么不能用 `_disp`：它是「工具 X({…}) → <结果>」，**带前缀**，
+         而下面三个分支全按开头判（`__CHART__` / `__SVG__` / `{`）——
+         2026-10-31 实测：真实聊天路径里图表卡、草图卡、子代理卡**一张都没渲染出来过**，
+         用户看到的是标记 JSON 原文。为什么也不直接用 `content`：它被 `_cutToolRes` 截到 2400 字，
+         长 SVG 会拦腰断（断掉的 JSON 连解析都失败）。 */
+      var _mark = (typeof m._raw === "string" && m._raw) ? m._raw : _chatContentToText(m.content);
+      if(typeof _mark === "string" && _mark.indexOf("__CHART__") === 0){
         try{
-          var _spec = JSON.parse(_disp.slice(9));
+          var _spec = JSON.parse(_mark.slice(9));
           return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + AppBridge.miniChart(_spec.type, _spec.data) + '</div>';
-        }catch(_e){ /* 解析失败回退文本 */ }
+        }catch(_e){
+          /* 解析失败回退文本（slice17 用这条原文钉住「判过合理」的理由，删它 = 后人失去判断依据）。
+             与下面 __SVG__ 那条同治：try 里有 JSON.parse，裸注释 catch 会被判新增 P0
+             （本批改了解析源 ⇒ sig 变 ⇒ 原来基线内的那条按新增重计，实测红在 3435）。
+             留痕顺带解决真问题：卡片没出来时得能归因。 */
+          try{ if(typeof pushDiag === "function") pushDiag("warn", "chart msg render failed: " + ((_e && _e.message) || _e), { where: "chatRender" }); }catch(_e2){ /* 诊断不可用不影响回退 */ }
+        }
       }
       /* draw_svg（画图能力 Phase A 批次④）：消毒后的 SVG 在**渲染层再消毒一次**（防御纵深，
          历史消息可能在消毒规则升级前进库），通过后内联 + 同一导出条（_bindSvgExport 接管）。
          catch 用 pushDiag 留痕而非裸注释——try 里有 JSON.parse，裸注释 catch = 新增 P0
          （会撞 slice11/17/18 三把计数锁，079135a 实测）。 */
-      if(typeof _disp === "string" && _disp.indexOf("__SVG__") === 0){
+      if(typeof _mark === "string" && _mark.indexOf("__SVG__") === 0){
         try{
-          var _sp = JSON.parse(_disp.slice(7));
+          var _sp = JSON.parse(_mark.slice(7));
           var _cleanSvg = sanitizeSvg(_sp.svg || "");
           if(_cleanSvg){
             return '<div class="msg tool svg-msg" data-svgexport data-svgname="' + esc(_sp.title || "draw") + '">'
@@ -3444,10 +3457,11 @@ function renderChat(){
           try{ if(typeof pushDiag === "function") pushDiag("warn", "svg msg render failed: " + ((e && e.message) || e), { where: "chatRender" }); }catch(_e2){ /* 诊断不可用不影响回退 */ }
         }
       }
-      /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片 */
-      if(typeof _disp === "string" && _disp.indexOf("{") === 0){
+      /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片
+         （同一处判据：2026-10-31 前按 `_disp` 开头判，带前缀 ⇒ 这张卡也从未渲染过） */
+      if(typeof _mark === "string" && _mark.indexOf("{") === 0){
         var _sa = null;
-        try{ _sa = JSON.parse(_disp); }catch(_e){ _sa = null; }   // 非 JSON（普通工具结果文本）→ 走下方通用渲染
+        try{ _sa = JSON.parse(_mark); }catch(_e){ _sa = null; }   // 非 JSON（普通工具结果文本）→ 走下方通用渲染
         if(_sa && _sa.agentId){
           var _card = _subagentCard(_sa.agentId, _sa.agent);
           if(_card) return _card;

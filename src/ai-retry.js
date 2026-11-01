@@ -183,7 +183,7 @@ async function confirmPendingDanger(){
     let rj=null; try{ rj=JSON.parse(res); }catch(e){ try{ pushDiag("error", "confirm tool result parse error: "+(e&&e.message||e), {where:"confirmExecTool"}); }catch(_){} }
     /* v3.7.72 token 优化：超长工具结果截断 —— 整段 JSON 回填是 token 无底洞，模型只需关键字段 */
     let _res=res; if(typeof _res==="string" && _res.length>2400){ _res=_res.slice(0,2400)+"…(截断，共 "+res.length+" 字符)"; }
-    const tm={role:"tool", tool_call_id:c.id, content:_res, _disp:(rj&&rj.msg)||(t("ai.toolPrefix","工具 ")+c.name)};
+    const tm={role:"tool", tool_call_id:c.id, content:_res, _disp:(rj&&rj.msg)||(t("ai.toolPrefix","工具 ")+c.name), _raw:_markerRaw(res)};
     messages.push(tm); hist.push(tm);
   }
   pendingConfirm=null;
@@ -841,6 +841,15 @@ async function onChatSubmit(e){
 }
 /* v3.7.72 token 优化：超长工具结果截断（>2400 字符取头 + 注明全长），模型只需关键字段 */
 function _cutToolRes(r){ return (typeof r==="string" && r.length>2400) ? r.slice(0,2400)+"…(截断，共 "+r.length+" 字符)" : r; }
+/* 标记类工具回执（__CHART__ / __SVG__）必须原样留在消息上，供渲染层认卡片：
+ *   · `_disp` 带「工具 X({...}) → 」前缀，而渲染层按**开头**判标记 —— 2026-10-31 实测
+ *     真实聊天路径下 `.chart-msg` / `.svg-msg` **一张都没渲染出来**，用户看到的是标记 JSON 原文；
+ *   · `content` 会被 _cutToolRes 截到 2400 字，SVG 草图拦腰断，不能当解析源。
+ * 只在标记类结果上多存一份，普通回执不翻倍占存储。 */
+function _markerRaw(r){
+  if(typeof r !== "string") return undefined;
+  return (r.indexOf("__CHART__")===0 || r.indexOf("__SVG__")===0) ? r : undefined;
+}
 /* B4：软预算提醒的去重档位 —— 同一 level 只说一次，回到 ok 时重置。
    不做硬拦：用户可能就是要把长上下文发出去，拦下来只会逼人关功能。 */
 let _ctxWarnLevel = null;
@@ -969,7 +978,7 @@ async function runChatLoop(messages, hist, sc){
             /* v3.7.52：走统一入口 execToolAuto —— 异步工具（联网/代码/SQL）在 chat 路径也能真正执行 */
             const res=await execToolAuto(c.name, args);
             skillTracePush(skillTrace, c.name, args, res); // v3.7.59 Skills：记录本轮流程
-            const tm={role:"tool", tool_call_id:c.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
+            const tm={role:"tool", tool_call_id:c.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res, _raw:_markerRaw(res)};
             messages.push(tm); hist.push(tm);
           }
           AppBridge.render(); continue;
@@ -997,7 +1006,7 @@ async function runChatLoop(messages, hist, sc){
           const res=await execToolAuto(tc.function.name, args);
           skillTracePush(skillTrace, tc.function.name, args, res); // v3.7.59 Skills：记录本轮流程
           chatProgressUpdate({ current: ti + 1, label: t("chat.progress.toolName", "执行工具：") + tc.function.name });
-          const tm={role:"tool", tool_call_id:tc.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
+          const tm={role:"tool", tool_call_id:tc.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res, _raw:_markerRaw(res)};
           messages.push(tm); hist.push(tm);
         }
         chatProgressEnd();

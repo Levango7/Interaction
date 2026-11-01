@@ -636,8 +636,15 @@ function _pruneSvgNode(node){
     const av = String(a.value || "");
     if(an.indexOf("on") === 0){ node.removeAttribute(a.name); return; }                 // 事件句柄
     if((an === "href" || an === "xlink:href") && !/^\s*#/i.test(av)){ node.removeAttribute(a.name); return; } // 非内部锚点一律去（防外链/数据URI外呼）
-    if(an === "style" && /url\s*\(|expression|@import/i.test(av)){ node.removeAttribute(a.name); return; }
-    if(_SVG_KEEP_ATTRS.indexOf(an) === -1 && an.indexOf(":") === -1){ node.removeAttribute(a.name); return; }
+    /* 2026-10-31 实测补的两道：
+       ① url() 原先只在 style 里查，而 fill/stroke/filter/clip-path/mask **本身就是白名单属性**，
+          于是 `fill="url(https://evil/x.svg#p)"` 原样通过 —— 浏览器会去外部取 paint server；
+       ② 带冒号的属性曾被整体豁免（`an.indexOf(":") === -1` 才算未知），实测 `xml:base="http://evil/"`
+          靠这道豁免留下，而它把 `<use href="#a">` 这类文档内引用**改基到外部站点**。
+          现在只放行 xmlns 与 xlink:href / xml:space（它们本来就在名单里），其余带冒号一律剥。 */
+    if(/url\s*\(/i.test(av) && !/^url\(\s*['"]?#[\w\-.:]*['"]?\s*\)$/i.test(av.trim())){ node.removeAttribute(a.name); return; }
+    if(an === "style" && /expression|@import/i.test(av)){ node.removeAttribute(a.name); return; }
+    if(_SVG_KEEP_ATTRS.indexOf(an) === -1 && an !== "xmlns"){ node.removeAttribute(a.name); return; }
   });
 }
 function sanitizeSvg(svgStr){
@@ -658,5 +665,12 @@ function sanitizeSvg(svgStr){
     });
   })(root);
   _pruneSvgNode(root);
+  /* 剥完什么都不剩 ⇒ 返回空串走拒绝分支。实测（main `1cb65cf`）：只含脚本标签的草图原先返回
+     `<svg xmlns=…/>`（真值），execTool 因此报成功 —— 用户看到一张**空卡**，模型以为画完了。
+     方案第六节的口径是"整体拒绝，不输出半成品"。
+     ⚠️ 本注释里**不许出现脚本标签的字面闭合写法**：这块源码是内联进 HTML 的 `<script>` 元素里的，
+        HTML 解析器见到那个序列就提前结束脚本，整块应用 JS 不再执行（2026-10-31 实测踩中）。
+     只数**元素**：整段被剥光的文档里常还留着换行文本节点，按 childNodes 判会被骗过去。 */
+  if(!root.getElementsByTagName("*").length && !String(root.textContent || "").trim()) return "";
   try{ return new XMLSerializer().serializeToString(root); }catch(_e){ return ""; }
 }

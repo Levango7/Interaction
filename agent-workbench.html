@@ -1900,6 +1900,16 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .mini-chart-legend{font-size:var(--fs-xs);fill:var(--text-dim)}
 .mini-chart-val{font-size:var(--fs-3xs);fill:var(--muted)}
 .mini-chart-lbl{font-size:var(--fs-2xs);fill:var(--text-dim)}
+/* 画图能力 Phase A（2026-10-31）：导出条与卡片容器样式。① ② ③ ④ 四批都只写了 markup，
+   实测全仓 `.svg-export-bar` 规则数 = 0 —— 按钮是浏览器默认样式，草图卡也没有容器底色。 */
+.svg-export-bar{display:flex;justify-content:flex-end;gap:var(--space-1);padding:var(--space-1) 0 0}
+.svg-exp-btn{font-size:var(--fs-2xs);line-height:1.4;padding:var(--space-1) var(--space-2);
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel);color:var(--text-dim);cursor:pointer}
+.svg-exp-btn:hover{border-color:var(--accent);color:var(--accent)}
+.svg-exp-btn:disabled{opacity:.5;cursor:default}
+.svg-msg{background:var(--panel2);border-radius:var(--radius-sm);padding:var(--space-2);overflow:auto}
+.svg-msg svg{display:block;max-width:100%;height:auto}
+.chart-msg-title{font-size:var(--fs-xs);color:var(--text-dim);margin:0 0 var(--space-1)}
 /* v3.0.1 B-3：代码运行器输出区（等宽字体 + panel2 背景） */
 .run-output{margin-top:var(--space-1);padding:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-sm);font-family:"SF Mono","SFMono-Regular",Consolas,monospace;font-size:var(--fs-2xs);color:var(--text);white-space:pre-wrap;word-break:break-all;max-height:180px;overflow:auto}
 .run-output-title{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
