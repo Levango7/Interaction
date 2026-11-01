@@ -81,7 +81,7 @@
 ## 3. 校验结果
 
 - 跨块重复定义：**0** 项
-- 循环依赖：**16** 条（ai-tools → ai-retry → ai-tools；ai-tools → ai-retry → ai-loop → ai-tools；ai-tools → ai-subagent → ai-tools；render-overview → render-scene-sub → render-entry → render-overview；render-entry → render-scene-main → render-entry）
+- 循环依赖：**35** 条（ai-loop → ai-tools → ai-retry → ai-loop；ai-retry → ai-tools → ai-retry；ai-subagent → ai-tools → ai-subagent；draw-canvas → render-widgets → draw-canvas；render-entry → render-overview → render-entry）
 - 逆层依赖（低层用高层符号）：**20** 条（按「块对」计）
 - 逆层依赖（按**符号**计，去重）：**105** 个符号
 

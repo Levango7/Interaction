@@ -27,6 +27,69 @@ const KEYWORDS = new Set(('break case catch class const continue debugger defaul
 
 export const DEFAULT_SHARED_FANOUT = 8;
 
+/**
+ * canonCycle('a → b → c → a') → 该环的**唯一规范串**（起点取字典序最小的旋转，保留闭合回起点）。
+ * 用途：比对基线时把「同一个环被记在不同起点上」这种形态差异抹掉（详见 elementaryCycles 的注释）。
+ * 非环串（节点 < 2）原样返回，便于调用方不必先判形态。
+ */
+export function canonCycle(str){
+  const parts = String(str || '').split(' → ');
+  const nodes = parts.slice(0, -1);
+  if(nodes.length < 2) return str;
+  let best = null;
+  for(let i = 0; i < nodes.length; i++){
+    const rot = nodes.slice(i).concat(nodes.slice(0, i), nodes[i]);
+    const key = rot.join(' → ');
+    if(best === null || key < best) best = key;
+  }
+  return best;
+}
+
+/**
+ * elementaryCycles(nodes, adj) → 有向图**全部初等环**的规范串数组（已排序、无重复）。
+ * ----------------------------------------------------------------------------
+ * 为什么换掉原来的 DFS 找环（2026-11-01）：原实现只报「DFS 树上碰到的回边」所成的环，
+ * **同一个环从哪个起点被枚举出来，取决于遍历顺序** —— 图上多一个块（draw-canvas）就会让一批
+ * 老环换起点、甚至**整条被漏掉**（实测：39 块时 `render-entry ↔ render-scene-main` 这条 2-环
+ * 根本没被枚举出来，40 块时它冒出来，看起来像"新增循环"，其实边一直都在）。
+ * 起点不稳 + 枚举不全 ⇒ 基线比对每加一块就假红一次，而且假红里混着真债，谁都分不清。
+ *
+ * 本实现按「环内编号最小的节点作起点」穷举初等环：
+ *   · 只允许走 index ≥ 起点 的节点 ⇒ 每个环恰好被它的最小节点枚举一次（不重不漏）；
+ *   · 邻接与节点都先排序 ⇒ 结果与插入顺序、文件系统顺序无关；
+ *   · 输出串以最小节点开头并闭合（`a → b → a`），与 module-graph.baseline.json 的既有格式一致。
+ * 复杂度对初等环数量敏感（最坏指数级），本仓 40 块 / 环数十级，实测毫秒级；
+ * 若将来爆到不可接受，正确做法是改判据口径（如只按 SCC 计），不是回到"随机枚举一部分"。
+ *
+ * @param {string[]} nodes 节点名（顺序无关，内部会排序定编号）
+ * @param {Map<string, Iterable<string>>} adj 邻接（只含 nodes 内的边，自环忽略）
+ * @returns {string[]} 规范环串数组
+ */
+export function elementaryCycles(nodes, adj){
+  const sortedNodes = [...new Set(nodes)].sort();
+  const idx = new Map(sortedNodes.map((n, i) => [n, i]));
+  const nbr = new Map();
+  for(const n of sortedNodes){
+    nbr.set(n, [...new Set([...(adj.get(n) || [])].filter((m) => idx.has(m) && m !== n))].sort());
+  }
+  const out = [];
+  for(let s = 0; s < sortedNodes.length; s++){
+    const start = sortedNodes[s];
+    const path = [start];
+    const onPath = new Set([start]);
+    const walk = (cur) => {
+      for(const nxt of nbr.get(cur) || []){
+        if(nxt === start){ out.push(path.concat(start).join(' → ')); continue; }
+        if(idx.get(nxt) < s) continue;   // 只经编号 ≥ 起点的节点 ⇒ 每环只由最小节点枚举一次
+        if(onPath.has(nxt)) continue;    // 初等环：不重复节点
+        path.push(nxt); onPath.add(nxt); walk(nxt); path.pop(); onPath.delete(nxt);
+      }
+    };
+    walk(start);
+  }
+  return [...new Set(out)].sort();
+}
+
 /** 某下标处的花括号深度（输入应为已 strip 的代码） */
 function depthAt(code, idx) {
   let d = 0;
@@ -131,7 +194,7 @@ export function analyze(blocks, opts = {}) {
     }
   }
 
-  /* 循环依赖（DFS 找环，按块名归一，避免同一环的多个起点重复计数） */
+  /* 循环依赖：全部初等环（口径见 elementaryCycles） */
   const depOf = new Map();
   for (const [key] of edges) {
     const [a, o] = key.split('>');
@@ -139,24 +202,12 @@ export function analyze(blocks, opts = {}) {
     depOf.get(a).add(o);
   }
   const idxOf = new Map(blocks.map(b => [b.name, b.idx]));
-  /* 循环记录格式必须与 module-graph.mjs 逐字一致（`a → b → a`，含闭合回起点），
-     否则与 module-graph.baseline.json 的比对会全量误报——基线里存的就是这种串。 */
-  const cycles = [];
-  {
-    const state = new Map();     // 0=未访问 1=在栈 2=完成
-    const stack = [];
-    const visit = (name) => {
-      state.set(name, 1); stack.push(name);
-      for (const next of depOf.get(name) || []) {
-        if (state.get(next) === 1) {
-          const i = stack.indexOf(next);
-          cycles.push(stack.slice(i).concat(next).join(' → '));
-        } else if (!state.get(next)) visit(next);
-      }
-      stack.pop(); state.set(name, 2);
-    };
-    for (const b of blocks) if (!state.get(b.name)) visit(b.name);
-  }
+  /* ⚠️ 2026-11-01 换掉「DFS 回边枚举」：那种写法**同一个环记在哪个起点取决于遍历顺序**，
+     而且会整条漏枚举（实测 39 块时 `render-entry ↔ render-scene-main` 这条 2-环没被报出来，
+     加一个 draw-canvas 后它冒出来 ⇒ 被记成"新增循环"，可那条边一直都在）。
+     现在用 elementaryCycles：与遍历顺序无关、不重不漏，串仍是 `a → b → a`（与基线既有形态一致）。
+     module-graph.mjs 的内联副本必须走同一个函数，否则 dep-graph-parity 会红。 */
+  const cycles = elementaryCycles(blocks.map(b => b.name), depOf);
 
   /* 逆层依赖：早序块用晚序块定义的符号 → 架构倒挂 */
   const upward = [];

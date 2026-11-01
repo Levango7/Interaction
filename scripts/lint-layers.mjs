@@ -28,7 +28,7 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadBlocks, analyze } from "./lib/dep-graph.mjs";
+import { loadBlocks, analyze, canonCycle } from "./lib/dep-graph.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const HTML = readFileSync(join(__dirname, "..", "agent-workbench.html"), "utf8");
@@ -121,7 +121,10 @@ if (existsSync(join(__dirname, "..", "src", "order.json"))) {
   depInfo.shared = cur.shared.length;
   const base = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, "utf8")) : { duplicates: [], cycles: [], upward: [] };
   depInfo.addedUpward = cur.upward.filter(x => !base.upward.includes(x));
-  depInfo.addedCycles = cur.cycles.filter(x => !base.cycles.includes(x));
+  /* 基线侧同样过 canonCycle（与 module-graph.mjs 同一口径）：analyze() 现在返回的是规范串，
+     而历史基线里可能有手记/旧版留下的非规范形态 —— 不归一就会把老环的另一个起点读成「新增」。 */
+  const baseCyclesCanon = base.cycles.map(canonCycle);
+  depInfo.addedCycles = cur.cycles.filter(x => !baseCyclesCanon.includes(x));
   depInfo.addedDup = cur.duplicates.filter(x => !base.duplicates.includes(x));
   depInfo.baseUpward = depInfo.curUpward - depInfo.addedUpward.length;
   depInfo.baseCycles = depInfo.curCycles - depInfo.addedCycles.length;

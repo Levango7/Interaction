@@ -25,6 +25,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stripCommentsAndStrings } from './lib/code-scan.mjs';
+import { canonCycle, elementaryCycles } from './lib/dep-graph.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(root, 'src');
@@ -149,23 +150,14 @@ for (const key of edges.keys()) {
   depOf.get(a).add(o);
 }
 
-/* ---------- 循环依赖（DFS） ---------- */
-const cycles = [];
-{
-  const state = new Map();     // 0=未访问 1=在栈 2=完成
-  const stack = [];
-  const visit = (name) => {
-    state.set(name, 1); stack.push(name);
-    for (const next of depOf.get(name) || []) {
-      if (state.get(next) === 1) {
-        const i = stack.indexOf(next);
-        cycles.push(stack.slice(i).concat(next).join(' → '));
-      } else if (!state.get(next)) visit(next);
-    }
-    stack.pop(); state.set(name, 2);
-  };
-  for (const b of blocks) if (!state.get(b.name)) visit(b.name);
-}
+/* ---------- 循环依赖：全部初等环 ----------
+   口径与 lib/dep-graph.mjs 的 analyze() 必须一致（共用 elementaryCycles）：
+   原 DFS 回边写法有两个缺陷 —— ①「同一个环记在哪个起点」取决于遍历顺序，加一块新块会让老环换起点
+   被精确串比对判成"新增"；②只报 DFS 树上碰到的环，**会整条漏枚举**。
+   2026-11-01 draw-canvas 落地时对同一棵树实测：DFS 报 16 条、初等环实有 35 条；那次报的 8 条"新增"
+   里 2 条是①（老基线已有同一个环，只是起点不同）、5 条是②（早于 draw-canvas 就存在、门一直没看见），
+   只有 1 条（draw-canvas 环）是真新增。判据换成与遍历顺序无关的不重不漏枚举后，这三种形状分开可见。 */
+const cycles = elementaryCycles(blocks.map(b => b.name), depOf);
 
 /* ---------- 逆层依赖（早序块用晚序块定义的符号） ---------- */
 const idxOf = new Map(blocks.map(b => [b.name, b.idx]));
@@ -183,9 +175,10 @@ const current = {
   upward: upward.map(u => u.from + '>' + u.to).sort(),
 };
 const base = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : { duplicates: [], cycles: [], upward: [] };
+/* 基线侧也过一遍 canonCycle：手改/历史遗留的非规范串不会因此误报，`--freeze` 写回的是规范形态（幂等）。 */
 const added = {
   duplicates: current.duplicates.filter(x => !base.duplicates.includes(x)),
-  cycles: current.cycles.filter(x => !base.cycles.includes(x)),
+  cycles: current.cycles.filter(x => !base.cycles.map(canonCycle).includes(x)),
   upward: current.upward.filter(x => !base.upward.includes(x)),
 };
 
