@@ -315,7 +315,7 @@ function _dcOnDown(ev) {
   const edgeEl = ev.target && ev.target.closest ? ev.target.closest(".dedge") : null;
   const d = dcActive(); if (!d) return;
   /* 2026-11-02 双击修复：真实双击不能依赖 dblclick 事件——本函数下面的分支每次都会
-     _dcRenderWorkspace()（host.innerHTML=...）重建 SVG，按下时命中的元素在
+     _dcRenderWorkspace()（把宿主节点整块重写）重建 SVG，按下时命中的元素在
      抬起前已被替换，浏览器因此不合成 click/dblclick，真实用户的双击改名 /
      改连线 label 会完全不可达（线上 v3.7.152 实测确认）。
      判据双轨：detail===2 覆盖真机鼠标（UI 事件层计数）；时间窗覆盖其余情形——
