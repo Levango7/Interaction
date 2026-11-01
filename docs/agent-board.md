@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `tests/empty-catch-slice3.test.js`, `tests/empty-catch-slice4.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 22:01 | 本批（探针作用域修法 + ⑤ 反例）提交并推送后 | RELEASED |
 | `docs/empty-catch-p0-triage.md`, `docs/agent-board.md` | Qoder | 2026-11-01 20:50 | 本条提交并推送后（待拍板项 `#102` / `#98` 仍等 ZCode 与用户，不持有代码面） | RELEASED |
 | `scripts/lint-empty-catch.baseline.json`, `docs/empty-catch-p0-triage.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 13:20 | B11 四笔已推 `ba83dea`；CI `41277871725` 两条 test 腿 + server-verify 全 success（详见 14:24 条目） | RELEASED |
 | `src/draw-canvas.js`, `src/data-links.js`, `src/core-i18n.js`, `agent-workbench.html`（仅 Design 模式那两段 CSS）, `tests/draw-canvas.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 12:20 | 已推 `c316697`（CI 41273492243 被 `e6e9817` 的推送取消；windows 腿 `test` 已 success = 那 7 处复绿的直接读数） | RELEASED |
@@ -74,6 +75,29 @@
 - 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
 
 ---
+
+### [2026-11-01 22:01 UTC+8] Qoder 主会话 —— 那条 windows 红查清了：**探针数组绑错作用域**；它同时能造**假绿**（这条比红严重）
+
+- **现象**：CI `41311047198`（tip `f24527e`）`test (windows-latest, 20)` ⇒ `1 failed / 2398 passed`，
+  红点 `tests/empty-catch-slice3.test.js:160`「成功时不该上报 error 诊断」received **1**。
+  同树 `test (ubuntu)` 绿、本机单跑该文件 9 例全绿 ⇒ **断言红不是超时红**，跟 CPU 饥饿那一族无关。
+- **真因**（两段本机探针分开定性）：`installProbes()` 把捕获数组挂在**模块级变量**上，
+  `beforeEach` 只是清空 ⇒ jsdom 窗口里 fire-and-forget 的链（`_loadApiPanels()` 不 await 刷新等）
+  **在下一个测试装完探针之后才 settle**，迟到那条就写进本测试刚清空的数组。
+  实测：成功路径本窗口拿到 `[]`；手动让上一个窗口迟到一条 ⇒ 当前数组立刻变 1。
+- ⚠️ **两头症状，红只是响的那个**：同一个绑法对 `toBeGreaterThan(0)` 那类断言是**喂假答案**——
+  「失败必须让用户看见」这条契约没接上，也能靠上一例的迟到条目过。R-2 这一族 15 个文件都在测这类契约，
+  所以这是**度量器自己会撒谎**，不是测试脏。
+- **已修**：数组绑到本次安装的局部量。改了 `empty-catch-slice3`（并给那句断言加"实收 [...]"自报，
+  下次红不再只有一个数字）+ `empty-catch-slice4`（该文件 `toHaveLength(0)` / `toHaveLength(2)` / `diagCalls[0]`
+  三种读法都有，暴露面最大）。**射程自证**：把两处包装改回读模块级变量 ⇒ 恰好 1 例红，
+  红在新加的 `⑤ 探针绑到本次安装`，其余 8 例照旧绿；反向对照（本窗口自己的错必须看得见）也钉在里面，
+  所以 ⑤ 不是空转的绿。变异按原始字节写回（sha `ecb0ad74348d6f5c` 一致）。
+- **余 13 个文件同形未动**（`slice5..11` / `slice13..16` / `ai-tools` / `rag-orphan-vectors`，
+  现测 `grep -ln "diagCalls = \[\]" tests/*.test.js` ⇒ 13；`slice12` 把数组挂 `window` 上、形状不同）。
+  **建议不是逐文件改**，而是加一条静态守卫（扫 `tests/*.test.js`：探针包装函数若把条目 push 进
+  模块级标识符即判红）自带射程后一次覆盖整族 ⇒ 已立项 **B14**，等用户点头就动。
+- 这笔推上去的预期：**windows 腿应当复绿**；`e2e` 腿照旧红（ZCode 的 spec，我没动）。
 
 ### [2026-11-01 21:19 UTC+8] Qoder 主会话 —— `e1dac4a` 首验回执：三条腿绿、红的仍只有 e2e；把那条红的**第二个 `.body` 是谁**查出来了
 

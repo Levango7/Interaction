@@ -45,10 +45,16 @@ let win, diagCalls, restoreSetItem;
 
 /** 装探针：捕获 pushDiag 入参（用 defineProperty 更稳，见文件头坑②） */
 function installDiagProbe() {
-  diagCalls = [];
+  // 数组绑在**本次安装**上：上一个 jsdom 窗口里 fire-and-forget 的链可能在这轮之后才 settle，
+  // 闭包若读模块级变量就会把迟到条目写进本用例刚清空的数组 —— 本文件既有
+  // `expect(diagCalls).toHaveLength(0)`（:123）又有 `toHaveLength(2)`（:150）和 `diagCalls[0]`，
+  // 串写会同时造成假红（数不对）和假绿（`>0` 类断言被别人的迟到条目喂饱）。
+  // 同族缺陷 2026-11-01 在 slice3 上真红过一次（CI windows 腿 1 failed / 2398 passed）。
+  const d = [];
+  diagCalls = d;
   Object.defineProperty(win, "pushDiag", {
     configurable: true,
-    value: function (level, msg, ctx) { diagCalls.push({ level, msg, ctx }); },
+    value: function (level, msg, ctx) { d.push({ level, msg, ctx }); },
   });
 }
 

@@ -41,12 +41,21 @@ let win, toastCalls, diagCalls;
 
 /** 装探针：捕获 toast / pushDiag 入参，同时保留原行为（不改变可见性） */
 function installProbes() {
-  toastCalls = [];
-  diagCalls = [];
+  // ⚠️ 数组必须绑在**本次安装**上，不能只靠模块级变量：jsdom 窗口里有 fire-and-forget 的链
+  // （`_loadApiPanels()` 不 await 刷新、启动期异步等），上一个测试的 `pushDiag` 完全可能在这个
+  // 测试装完探针**之后**才 settle。闭包若读模块级变量，迟到条目就会落进本测试刚清空的数组 ——
+  // 实测（2026-11-01 本机三段探针）：成功路径本窗口拿到的是 `[]`，
+  // 而"上一个窗口迟到一条"就能把它变成 1。症状两头都出：**这条断言假红**（CI windows 腿
+  // `1 failed / 2398 passed` 就是这么来的），而写 `toBeGreaterThan(0)` 的那批用例**假绿**
+  // —— 后者更糟：失败反馈没接上也能过。
+  const t = [];
+  const d = [];
+  toastCalls = t;
+  diagCalls = d;
   const origToast = win.toast;
   const origDiag = win.pushDiag;
-  win.toast = function (msg, type) { toastCalls.push({ msg, type }); return origToast && origToast.apply(win, arguments); };
-  win.pushDiag = function (level, msg, ctx) { diagCalls.push({ level, msg, ctx }); return origDiag && origDiag.apply(win, arguments); };
+  win.toast = function (msg, type) { t.push({ msg, type }); return origToast && origToast.apply(win, arguments); };
+  win.pushDiag = function (level, msg, ctx) { d.push({ level, msg, ctx }); return origDiag && origDiag.apply(win, arguments); };
 }
 
 /**
@@ -157,7 +166,9 @@ describe("② 登出设备成功 → 行为与修复前一致（防把修复做�
 
     const failToasts = toastCalls.filter((c) => String(c.msg).includes("删除失败"));
     expect(failToasts.length, "成功时不该弹「删除失败」").toBe(0);
-    expect(diagCalls.length, "成功时不该上报 error 诊断").toBe(0);
+    // 红的时候必须能自报是谁写进来的（2026-11-01 CI windows 腿只给了 count=1，无从归因）
+    const dump = diagCalls.map((d) => `${d.level}:${String(d.msg).slice(0, 40)}@${(d.ctx && d.ctx.where) || "-"}`).join(" | ");
+    expect(diagCalls.length, "成功时不该上报 error 诊断；实收 [" + dump + "]").toBe(0);
   });
 });
 
@@ -214,5 +225,23 @@ describe("④ 契约守卫：危险删除类的空 catch 不得复辟（静态�
     }
     const body = mutated.slice(open + 1, end);
     expect(/toast\s*\(|pushDiag\s*\(/.test(body), "变异后应检不出反馈 → 说明守卫真的会拦").toBe(false);
+  });
+});
+
+describe("⑤ 探针绑到本次安装（防跨用例串写 —— 假红和假绿是同一个源头）", () => {
+  // 2026-11-01 CI windows 腿 `1 failed / 2398 passed` 就红在 ② 那句 `toBe(0)` 上，
+  // 而本机单跑 ② 拿到的确实是 `[]` ⇒ 多出来的那 1 条只可能是**上一个窗口迟到的写入**。
+  // 修法：`installProbes()` 把数组绑成那次安装的局部量，迟到的只写它自己的数组。
+  it("上一个窗口迟到的 pushDiag 不许落进当前用例的数组", async () => {
+    const staleDiag = win.pushDiag;      // 这就是"下一个用例眼里的上一个窗口"
+    installProbes();                     // 模拟下一个用例的 beforeEach：数组在此清空
+    staleDiag("error", "late from previous window", { where: "staleProbe" });
+    expect(diagCalls.length, "迟到条目必须写进它自己那次安装的数组").toBe(0);
+  });
+
+  it("反向对照：本窗口自己报的错必须看得见（否则上面那条就是空转的绿）", () => {
+    win.pushDiag("error", "from this window", { where: "selfProbe" });
+    expect(diagCalls.length, "本窗口的写入必须进当前数组").toBe(1);
+    expect(diagCalls[0].ctx.where).toBe("selfProbe");
   });
 });
