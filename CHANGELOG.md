@@ -222,9 +222,18 @@
 - **审核意见里没做的两条**（写明去向，不假装做了）：
   ① Q3 语义配色（默认 / 强调 / 警示三种节点色）—— 要改 `_dcShapeSvg` 的 fill 来源，与「修红」混一起不好归因，留 Phase C。
   ② AI 桥「把 AI 画的卡片拖进画布继续编辑」—— 需要动 `ai-tools.js`，留作下一步。
-- **验证**：`draw-canvas` 14 例、draw 族 8 文件 102 例本机全绿；`lint`（0 error）、`lint:icons`（新增 P0 = 0）、
+- **验证**：`draw-canvas` 14 例、draw 族 9 文件 128 例本机全绿；`lint`（0 error）、`lint:icons`（新增 P0 = 0）、
   `lint:empty-catch`、`lint:layers`（基线外新增 0）、`lint:tokens`、`check:modules`、`build:check`、`src:check`
   全 exit 0；`user-manual` 补 §3.1「设计模式：画布怎么用」。
+- **真浏览器验收（不止 jsdom）**：`tests/e2e/draw-responsive.spec.js` 4/4 —— 320 / 375 / 412 三个宽度
+  零横向溢出、画布区铺满、**真指针放一个节点再拖它、坐标真的变且吸在 10px 网格上**
+  （「渲染出了 SVG」不算数：那样窄屏给一块死图也能绿）。
+  同轮 `layout-v2` + `three-state-layout` 两个既有 e2e 腿 28/28 未被本次 CSS 改动影响。
+- **收口状态（2026-11-01 深夜，main `b9aefc6`）**：CI 四腿 **success**（e2e / server-verify /
+  ubuntu / windows）。Phase B 由此只剩 **AI 桥「在画布打开」** 一项未做（需动 `ai-tools.js`）。
+  Q3 的语义配色留 Phase C，并且**已查明它的前置缺口**：9 个主题里 `--ok/--warn/--danger` 都各有 9 处
+  定义（可用），但 **`--ok-soft` 全仓 0 处** —— 想给「异常分支」配个底色，得先补这一族令牌，
+  不是改 `_dcShapeSvg` 一处就能完事。
 
 ### 2026-11-01 · **B11：空 catch 基线全仓重冻**（604 → 631，纯台账、代码零改动）
 
