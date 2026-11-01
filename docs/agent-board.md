@@ -41,9 +41,9 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
-| `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-11-02 01:00 | **B13 切版 3.7.152**：bump 已落，发版提交推送后；tag `v3.7.152` 待该轮 CI+Deploy 绿再补打 | ACTIVE |
+| `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-11-02 01:00 | **B13 切版 3.7.152**：已发布 `6ec99207`、tag `v3.7.152`、线上实核；回执见 02:15 条目 | RELEASED |
 |---|---|---|---|---|
-| `tests/empty-catch-slice*.test.js`, `tests/empty-catch-ai-tools.test.js`, `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 23:08 | B15 十三文件 + 空基线：等 `1dbe401` 那轮排队中的 CI 出终态再推（runner 积压期不推，也不取消自己的验证轮） | ACTIVE |
+| `tests/empty-catch-slice*.test.js`, `tests/empty-catch-ai-tools.test.js`, `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 23:08 | B15 十三文件 + 空基线：已随 `9cb3a1b` 推送（父 `1dbe401`），并入 `v3.7.152` 的 CI `41328508031` 四腿 success | RELEASED |
 | `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 22:35 | 已推 `1dbe401f`（rebase 到 ZCode 的 `b9aefc6` 之上，无冲突；本机守卫 9/9 绿） | RELEASED |
 | `tests/empty-catch-slice3.test.js`, `tests/empty-catch-slice4.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 22:01 | 本批（探针作用域修法 + ⑤ 反例）提交并推送后 | RELEASED |
 | `docs/empty-catch-p0-triage.md`, `docs/agent-board.md` | Qoder | 2026-11-01 20:50 | 本条提交并推送后（待拍板项 `#102` / `#98` 仍等 ZCode 与用户，不持有代码面） | RELEASED |
@@ -72,6 +72,27 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-02 02:15 UTC+8 / 2026-11-01 18:15 UTC] Qoder 主会话 —— **B13 收口：v3.7.152 已发布并线上实核（逐字节吻合）**
+
+- 用户条件「确认 deploy 成功再切版」按字面执行，之后才动 tag / release。链路与回执：
+  - 发版提交 `6ec99207`（8 个版本源 + CHANGELOG `[3.7.152]` 摘要 + AGENTS §二 行重写）。
+  - CI `41328508031`：`server-verify / test (ubuntu-latest, 20) / test (windows-latest, 20) / e2e` 四腿 **success**。
+  - Deploy `41328508053`：`verify / ci-e2e-status` success、`e2e` skipped（去重生效）、**`deploy => success`**。
+  - **Deploy success ≠ 线上**：它只是把产物推进 gh-pages（`2f64347`），Pages 构建 `41334124137` 排队约 15 分钟才 success；
+    排队期间线上仍是 3.7.151（Last-Modified `17:30:02Z`），没有拿「deploy 绿」当「已上线」。
+  - tag `v3.7.152` 在**发版提交**上补打（`git show v3.7.152:package.json` = 3.7.152）；远端 `refs/tags/v3.7.152^{}` = `6ec9920707c2855ac9a1b165ea1e9488e07fa6d5`。
+    release：<https://github.com/Levango7/Interaction/releases/tag/v3.7.152>；tag 触发的 Electron 便携版构建 `41334189195` **success**。
+- **线上实测（带 cache-buster，且只在 Pages 构建 success 之后）**：
+  - `agent-workbench.html`：**4,262,004 B · sha256 `536c5b6ca4b24fc725a8258103fb83912cdb66065543c6a5528c2302b7fd40b0`**，
+    与本仓 gh-pages `2f64347` 的 blob **逐字节相同**；`VERSION="3.7.152"` / `BUILD_TAG="20261101a"` / `__TEST_GATE__ = false`（prod 形态）。
+  - `service-worker.js`：`CACHE_VERSION="v3.7.152-20261101175749"`（prod 构建按 UTC 时间戳自动 bump）。
+  - `manifest.json`：`"version": "3.7.152"`；根路径 200（跳到 `agent-workbench.html`）。
+- **一个会误导的数**：`build:check` 报 **4,262,214 B / sha256 `1736fffe4d69a827`**，那是**开发态注入产物**；
+  线上是 prod 产物（只把 `__TEST_GATE__` 换成 `false`，少 6 行 / 210 B）。两者不能互相校验 —— 本机字节数对不上线上不等于部署失败。
+- 顺带留账：#103（B14 守卫）、#104（B15 十三文件清零）已随 `1dbe401` / `9cb3a1b` 进 3.7.152；#98 收口完成；
+  占用行（01:00 版本源、23:08 B15）已改 `RELEASED`。
+- 未做（不属本批）：`layout .body` 与列表项同名的改名（ZCode 明确留作另一笔）；`check:modules` / `lint:layers` 的基线债。
 
 ### [2026-11-02 00:50 UTC+8 / 2026-11-01 16:50 UTC] Qoder 主会话 —— **B13 切版 3.7.152 执行中**：前置已由用户条件验收，bump 已落
 
