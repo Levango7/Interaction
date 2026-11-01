@@ -56,6 +56,9 @@ function dcDelete(id) {
   if (dcActiveId() === id) { save(DC_DIAGRAM_ACTIVE_KEY, list.length ? list[0].id : ""); _dcSel = null; }
   if (typeof _dcRenderDocDock === "function") _dcRenderDocDock();
   _dcRenderWorkspace();
+  /* 回执：删除是本机同步写盘，落完才报"已删除"（不是先报成功再看结果）。
+     字典里这条键此前是死键 —— 消息写了却没接进流程。 */
+  toast(t("draw.doc.deleted", "图已删除"), "ok");
 }
 function dcRename(id, title) {
   const d = dcById(id); if (!d) return;
@@ -348,7 +351,7 @@ function _dcOnDblClick(ev) {
   const input = document.createElement("input");
   input.type = "text";
   input.value = String(n.text || "");
-  input.style.cssText = "position:fixed;left:" + Math.round(rect.left) + "px;top:" + Math.round(rect.top + rect.height / 2 - 14) + "px;width:" + Math.max(120, Math.round(rect.width)) + "px;font-size:14px;padding:4px 6px;border:2px solid var(--accent);border-radius:6px;z-index:10001";
+  input.style.cssText = "position:fixed;left:" + Math.round(rect.left) + "px;top:" + Math.round(rect.top + rect.height / 2 - 14) + "px;width:" + Math.max(120, Math.round(rect.width)) + "px;font-size:var(--fs-sm);padding:4px 6px;border:2px solid var(--accent);border-radius:6px;z-index:var(--z-max)";
   document.body.appendChild(input);
   input.focus(); input.select();
   let done = false;
@@ -480,13 +483,13 @@ function _dcRenderDocDock() {
   const activeId = dcActiveId();
   let html = '<div class="dock-head" style="display:flex;align-items:center;justify-content:space-between;padding:2px 4px 6px">'
     + '<span style="font-weight:600">' + esc(t("draw.doc.list", "图")) + "</span>"
-    + '<button type="button" class="dc-new" style="border:none;background:none;cursor:pointer;font-size:15px" title="' + esc(t("draw.doc.new", "新建图")) + '">＋</button></div>';
+    + '<button type="button" class="dc-new" style="border:none;background:none;cursor:pointer;font-size:var(--fs-base)" title="' + esc(t("draw.doc.new", "新建图")) + '">＋</button></div>';
   html += '<div style="display:flex;flex-direction:column;gap:4px">';
   list.forEach(function (d) {
     const active = d.id === activeId;
     const del = _dcArmDelete === d.id
-      ? '<button type="button" class="dc-del" data-del="' + d.id + '" style="color:var(--danger,#d33);font-weight:700;border:none;background:none;cursor:pointer">✓</button>'
-      : '<button type="button" class="dc-del" data-del="' + d.id + '" style="border:none;background:none;cursor:pointer;opacity:.55">✕</button>';
+      ? '<button type="button" class="dc-del" data-del="' + d.id + '" style="color:var(--danger,#d33);border:none;background:none;cursor:pointer" title="' + esc(t("draw.doc.delConfirm", "确认删除")) + '" aria-label="' + esc(t("draw.doc.delConfirm", "确认删除")) + '">' + UI_ICONS.check + "</button>"
+      : '<button type="button" class="dc-del" data-del="' + d.id + '" style="border:none;background:none;cursor:pointer;opacity:.55" title="' + esc(t("draw.tb.delete", "删除")) + '" aria-label="' + esc(t("draw.tb.delete", "删除")) + '">' + UI_ICONS.trash + "</button>";
     html += '<div class="ditem' + (active ? " active" : "") + '" data-open="' + d.id + '" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;border-radius:8px;cursor:pointer;background:' + (active ? "color-mix(in srgb,var(--accent) 14%,transparent)" : "transparent") + '">'
       + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(d.title) + "</span>" + del + "</div>";
   });

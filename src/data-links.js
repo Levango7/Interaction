@@ -829,6 +829,8 @@ const DATA_KEY_REGISTRY = [
   { key: "task_events", kind: "d", sync: true, backup: true },   // 业务数据
   { key: "chart_canvas", kind: "d", sync: true, backup: true },   // 业务数据
   { key: "diagram", kind: "d", sync: true, backup: true },   // 业务数据
+  { key: "diagrams", kind: "d", sync: true, backup: true },   // 业务数据（Design 模式画布文档数组，cap 50 —— `ead6be6` 落地时漏登记）
+  { key: "diagram_active", kind: "c", sync: true, backup: true },   // 本机控制状态（当前打开的图 id，与 `active` 同口径）
   { key: "plugins", kind: "d", sync: true, backup: true },   // 业务数据
   { key: "scenarios_custom", kind: "d", sync: true, backup: true },   // 业务数据
   { key: "scenarios_overrides", kind: "d", sync: true, backup: true },   // 业务数据

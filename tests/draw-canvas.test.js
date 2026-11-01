@@ -10,6 +10,7 @@
  *  ⑥ _dcRenderSvg：g.dnode + data-node-id + esc 文本 + 正交 path + 箭头 marker；
  *  ⑦ dcSetNodeText：变更压栈，同值不压；
  *  ⑧ 模式三向循环：toggle×2 → .body.design-mode + 「设计」标签 + #diagramDock/#drawStage 就位。
+ *  ⑨⑩（2026-11-01 代修补）：文档条删除按钮走 SVG 且带可读名称；两段式确认 + 真删后落盘并给回执。
  * 运行：npm test -- draw-canvas
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -161,5 +162,51 @@ describe("Design 模式三向循环（批次③ 集成）", () => {
     expect(win.dcActiveId()).toBe(d1.id);
     expect(win.dcUndo(), "undo 栈已清：返回 false").toBe(false);
     expect(win.dcActive().nodes.some(function (m) { return m.id === n.id; })).toBe(true);
+  });
+});
+
+/* ⑨⑩ —— 2026-11-01 代修那批门禁红时补的射程：改动前的文档条用的是裸字形 ✓/✕ 按钮，
+   且删除没有回执（字典里 `draw.doc.deleted` 是死键）。这两条不是"顺手加的测试"，
+   而是**这两处改动本身此前无任何用例覆盖** —— 没有它们，改坏了也不会红。 */
+describe("文档条的删除 affordance 与回执", () => {
+  /** 进 design 模式（work → code → design），让 dock 真渲染出来 */
+  function bootDesign() {
+    const w = boot();
+    w.toggleUIMode();
+    w.toggleUIMode();
+    return w;
+  }
+
+  it("⑨ 删除按钮是 SVG 图标 + 可读名称，不再是裸字形（lint:icons 的 P0 形状不许回流）", () => {
+    win = bootDesign();
+    win.dcCreate("第二张");
+    win._dcRenderDocDock();
+    const btns = [...win.document.querySelectorAll("#diagramDock .dc-del")];
+    expect(btns.length, "每张图各一个删除按钮").toBeGreaterThanOrEqual(2);
+    for (const b of btns) {
+      expect(b.querySelector("svg"), `按钮应是 SVG 图标：${b.outerHTML.slice(0, 70)}`).toBeTruthy();
+      expect(["✓", "✕"].includes(b.textContent.trim()), "按钮内容不该再是裸字形").toBe(false);
+      expect(b.getAttribute("aria-label") || b.getAttribute("title"), "纯图标按钮要有可读名称").toBeTruthy();
+    }
+  });
+
+  it("⑩ 两段式确认：首次点=待确认（不删）、二次点=真删 + 落盘收缩 + 给回执", () => {
+    win = bootDesign();
+    const d = win.dcCreate("要删的图");
+    win._dcRenderDocDock();
+    const before = win.dcList().length;
+    const btn = win.document.querySelector(`#diagramDock .dc-del[data-del="${d.id}"]`);
+    expect(btn, "新建的图应有删除按钮").toBeTruthy();
+    btn.click();
+    expect(win.dcList().length, "第一次点击不许删（两段式确认）").toBe(before);
+    const armed = win.document.querySelector(`#diagramDock .dc-del[data-del="${d.id}"]`);
+    expect(armed.querySelector("svg"), "待确认态同样走 SVG").toBeTruthy();
+    armed.click();
+    expect(win.dcById(d.id), "二次点击后图应消失").toBeNull();
+    expect(win.dcList().length).toBe(before - 1);
+    const persisted = JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]");
+    expect(persisted.length, "落盘要同步收缩（不然重启后那张又回来了）").toBe(before - 1);
+    const texts = [...win.document.querySelectorAll("#toasts .toast")].map((e) => e.textContent).join("|");
+    expect(texts, "删除是同步写盘，落完才报『图已删除』").toContain("图已删除");
   });
 });

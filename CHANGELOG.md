@@ -124,6 +124,44 @@
 
 ## [Unreleased]
 
+### 2026-11-01 · **代修画布块落地的 7 处门禁红**（5 例测试 + 2 处字符图标 P0），main 复绿
+
+> 归属先说清：这 7 处都来自 `ead6be6`（Design 模式 Phase B MVP）落进 main 之后的**门禁口径复查**，
+> 不是本批改动引入的。代修的理由是台账里记过的两条：别人推上 main 的批次要按门禁口径复查；
+> main 长期红会让后面每一批都拿不到干净基线（B11 与 3.7.152 都卡在这儿）。
+> **只修门禁形状，不改画布功能语义**，且单独成笔、不并进环判据那一批。
+
+- **① 存储键漏登记（这处是真隐患，不只是门禁红）**：画布写 `wb_agent_diagrams`（文档数组）与
+  `wb_agent_diagram_active`（当前打开的图），但 `DATA_KEY_REGISTRY` 没有这两条。
+  症状是「**用户画的图悄悄不上云、不进备份，且零报错**」——正是 R-35 那一类静默丢数据。
+  修法：按同表既有口径登记 —— `diagrams` = `kind:"d"`（业务数据，与 `chart_canvas` / `diagram` 同族），
+  `diagram_active` = `kind:"c"`（本机控制状态，与 `active` 同口径）；两条都 `sync:true, backup:true`。
+  反向条目检查（注册表里每条字面量键都得真被用到）一并过 —— 两个键都有真实消费者。
+- **② 死键 `draw.doc.deleted`**：字典里 zh/en 都写了「图已删除」，但删除流程**没有 toast**（消息写了没接上）。
+  按「接线完善优先于删除」处理：`dcDelete()` 在同步落盘**之后**才报「图已删除」
+  （顺序是有意的 —— 先落盘再回执，不是先报成功再看结果，`lint:false-receipt` 也压着这类）。
+  ⚠️ 补这条时**顺带发现**：改动前文档条的删除按钮与删除回执**都没有任何用例覆盖** ⇒
+  给 `tests/draw-canvas.test.js` 补了 ⑨⑩ 两条（裸字形不许回流 + 两段式确认/真删/落盘收缩/回执），
+  没有这两条，把这里改坏也不会红。
+- **③ 裸 `z-index:10001`**（画布内联文本编辑框）⇒ `var(--z-max)`：本仓 z 刻度上限就是 100
+  （`--z-modal:80 / --z-toast:90 / --z-max:100`），10001 是"绕过约定"的写法，换成顶格令牌等价且不漂。
+  同一条 cssText 串里的 `font-size:14px` 一并换成 `var(--fs-sm)`（同值，无视觉变化）。
+- **④ 裸 font-size 三处**：CSS 里 `.dc-btn` 的 `12px`、`.dnode-text` 的 `13px`（SVG 文字），
+  内联 style 里「新建图」按钮的 `15px` ⇒ 分别 `var(--fs-2xs)` / `var(--fs-xs)` / `var(--fs-base)`，
+  **逐个对过令牌值相同**，属纯换写法。
+- **⑤ `lint:icons` 的 2 处 P0**：文档条每行的删除按钮用裸字形 `✓` / `✕` 表意（字形随字体走、跨平台宽度不一，
+  且用户只能靠猜）⇒ 换 `UI_ICONS.check` / `UI_ICONS.trash`，补 `title` + `aria-label`
+  （新增键 `draw.doc.delConfirm` =「确认删除」/ "Confirm delete"，zh/en 同补、当场被消费所以不产死键），
+  并补 `.dc-del svg{width:var(--icon-sm);height:var(--icon-sm)}` —— SVG 不带宽度会撑满容器，
+  尺寸口径与既有 `.del` / `.tbtn` 那批图标按钮一致。
+- 🔴 **为什么这 2 处 P0 之前没人看见**：CI 的 `test` job 里 `Run npm test` 先红，
+  **后面的门禁步骤（含 `lint:icons`）根本没跑到**；本机单独跑才现形 —— 台账记过的「首红掩盖后续红」再次现形。
+  这条不是推测：`0baf401` 那次 CI 的红腿只有 `test (windows)` 的 `Run npm test` 与 `test (ubuntu)` 的 cancelled。
+- **验证**：`tests/data-keys-registry` / `i18n-dead-keys` / `ui-consistency` / `ui-spec-guards`
+  四文件由红转 **67/67 绿**；`tests/draw-canvas` 等 draw 族 44 例绿（另加 ⑨⑩ 两条新用例）；
+  `lint:icons` exit 0；`check:source-state` `src:check` `lint` `lint:tokens` `lint:breakpoints`
+  `lint:empty-catch` `lint:false-receipt` `build:check` 全 exit 0；本机全量与 CI 结果按实跑补在 `docs/agent-board.md`。
+
 ### 2026-11-01 · **环判据换血**：`check:modules` 的「新增循环」有一部分从来不是新账
 
 > 起因是 B11 排期前的一次实测对账：main 在 `f2bcee9` 因 `check:modules` 报「新增 9 项」而红
