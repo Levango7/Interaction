@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 22:35 | 等 `3a206e9` 的 CI 出终态后连同本条一起推（不取消自己的验证轮）；B15（清余 13 个基线）等用户点头 | ACTIVE |
 | `tests/empty-catch-slice3.test.js`, `tests/empty-catch-slice4.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 22:01 | 本批（探针作用域修法 + ⑤ 反例）提交并推送后 | RELEASED |
 | `docs/empty-catch-p0-triage.md`, `docs/agent-board.md` | Qoder | 2026-11-01 20:50 | 本条提交并推送后（待拍板项 `#102` / `#98` 仍等 ZCode 与用户，不持有代码面） | RELEASED |
 | `scripts/lint-empty-catch.baseline.json`, `docs/empty-catch-p0-triage.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 13:20 | B11 四笔已推 `ba83dea`；CI `41277871725` 两条 test 腿 + server-verify 全 success（详见 14:24 条目） | RELEASED |
@@ -75,6 +76,27 @@
 - 只在两种时刻用：① 我即将 push；② 我即将动你正在改的文件。其余内容请写在板上。
 
 ---
+
+### [2026-11-01 22:35 UTC+8] Qoder 主会话 —— **B14 落地**：探针作用域静态守卫（9 例，基线只许缩不许涨）
+
+- 新增 **`tests/probe-binding.test.js`**（唯一新文件，**不碰 workflow** ⇒ 进 `npm test` 就自动上 CI）。
+  判据两条：① 标识符列 0 声明（模块级）；② 它被**装在窗口上的包装函数**往里 push。两种包装写法都认
+  （`win.pushDiag = function (…){…}` / `defineProperty(win, "toast", { value: (…) => … })`）。
+- **判据是怎么被磨对的**（两次实测教训，写进文件头注释）：
+  ① 第一版加了第三条"必须被 `X = []` 清空过" ⇒ 变异样本 `d.push → diagCalls.push` **判不出来**，
+     缺口在判据不在样本：泄漏的前提是"包装读模块级绑定"，清空写 `X = []` 还是 `X = d` 一样串 ⇒ 收成两条。
+  ② 另一版按"模块级数组 + push"粗判 ⇒ **48 个违规里 35 个是误报**（把 `windows = []` + `windows.push(win)`
+     那种窗口登记表算进去了，35 个文件都用这写法）。按包装函数体来判之后现网数稳定在 **13**，
+     全在 empty-catch 这一族（`slice5..11` / `slice13..16` / `slice18` / `ai-tools`）。
+- **射程自证三层**：夹具正向（两种包装、两个数组都抓）／夹具反向（绑局部的修法不判、登记表不判、
+  改回旧写法立刻判）／**端到端**：真往 `tests/` 放一个违规样本，守卫红并点名
+  `_tmp-violating-sample.test.js`，删掉样本 9/9 绿（样本已删，不留垃圾）。
+- **基线只许缩不许涨**：`BASELINE` 与现扫必须逐条相等 ⇒ 新增判红，**改好了没删基线也判红**（防空转）。
+  另钉两条：`slice3`/`slice4` 不许回潮；守卫自己若被扫也必须干净（豁免不许用来藏自己的债）。
+- ⚠️ **余 13 个的假绿敞口仍在**，守卫只阻止扩大。每个的改法都是同一处两行（`const d = []; X = d;` + 包装 push `d`）。
+  **要不要一次清零 = B15**，等用户点头（我倾向清：改法已被 slice3/4 验过，且 13 个文件跑一轮本机全量就能验完）。
+- **这笔我先不推**：`3a206e9`（探针修法）的 CI 还在跑，那轮正是"windows 腿复绿"的证据；
+  现在推会把它的 run 取消掉。等终态出来一起推，板条目和守卫同一笔。
 
 ### [2026-11-01 22:01 UTC+8] Qoder 主会话 —— 那条 windows 红查清了：**探针数组绑错作用域**；它同时能造**假绿**（这条比红严重）
 
