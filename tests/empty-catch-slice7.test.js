@@ -35,8 +35,11 @@ const SRC = path.resolve(process.cwd(), "src", "ui-global-events.js");
 let win, diagCalls, restoreSave;
 
 function installDiagProbe() {
-  diagCalls = [];
-  Object.defineProperty(win, "pushDiag", { configurable: true, value: (level, msg, ctx) => diagCalls.push({ level, msg, ctx }) });
+  // 捕获数组绑在**本次安装**的局部量上：上一个 jsdom 窗口里 fire-and-forget 的链可能在这轮之后才 settle，
+  // 闭包若读模块级变量就会把迟到条目写进本用例刚清空的数组（假红 + 让「失败必须可见」那类断言假绿）。见 tests/probe-binding.test.js。
+  const d = [];
+  diagCalls = d;
+  Object.defineProperty(win, "pushDiag", { configurable: true, value: (level, msg, ctx) => d.push({ level, msg, ctx }) });
 }
 
 /** 只让「cfg / 离线队列」这两类 key 落盘失败，其余（如 saveAiConfig）放行 —— 见文件头坑① */

@@ -124,6 +124,28 @@
 
 ## [Unreleased]
 
+### 2026-11-01 · **B15：把余 13 个探针作用域违规一次清零** ⇒ `probe-binding` 基线转**零容忍**
+
+> 上一条留下的敞口（假绿）今天关掉。`node /tmp` 式机械转换只做一件事，每个文件同一处两行：
+> `X = [];` + 包装 `X.push(…)` ⇒ `const 局部 = []; X = 局部;` + 包装 push `局部`。
+> 现测（同一棵树，扫 224 个 `tests/*.test.js`）：违规 **13 → 0**，`BASELINE` 删空。
+
+- **改的是形状，不是断言**：13 个文件里所有期望值一字未动（`toHaveLength` / `toBeGreaterThan` /
+  `warnOf(where)` 全保留）⇒ 不会出现"改了测试所以更绿"那种自证。真实收益是**迟到写入不再进当前用例的数组**，
+  「失败必须让用户看见」这类契约不会再被上一例的残留喂成假绿。
+- **转换脚本锚点不中就不写**（`F:/tmp/fix-probe-binding.mjs`）：只认"列 0 的顶层函数 + 体内有
+  `  X = [];` 且 `X.push("`"，任一文件没命中就打 `SKIP` 并拒绝猜测 —— 首轮真 SKIP 了一个
+  （`empty-catch-ai-tools` 是 `async function boot()`，正则漏了 `async`），补上才 13/13。
+  **这类"改完先证明每个文件都真落了"的步骤不能省**，否则会把没改的文件当成已改。
+- 两种包装写法都覆盖：`Object.defineProperty(win, "pushDiag", { value: … })`（slice5..11）与
+  `win.pushDiag = function (…){ … }`（slice13..16 / slice18 / ai-tools），后者保留
+  `return origDiag && origDiag.apply(win, arguments)` 原样 ⇒ 探针仍不改变可见性行为。
+- 每个函数留**一条**两行注释说明为什么绑局部（两个数组的文件曾把同一段注释写了两遍，已合并成一条）。
+- 验证：`node --check` 13 个文件全过；`tests/probe-binding.test.js` 9 例在**空基线**下全绿
+  （③-2 是双向对账 —— 现扫非空判红、基线有残留条目也判红，所以基线清空不是"关掉门"）；
+  13 个文件逐个本机跑绿 + CI 三条腿复核。
+- 守卫本身（B14）的判据与射程自证见上一条，没在这批里动。
+
 ### 2026-11-01 · **B14：探针作用域静态守卫**（`tests/probe-binding.test.js`，9 例）——防的是**假绿**
 
 > 上一条修了已经响出来的两处；这条把整族钉住。现测：扫 224 个 `tests/*.test.js` ⇒ 违规 **13** 个，

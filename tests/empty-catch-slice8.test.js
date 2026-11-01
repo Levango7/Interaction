@@ -34,8 +34,11 @@ const SRC = path.resolve(process.cwd(), "src", "ui-drawer.js");
 let win, diagCalls;
 
 function installDiagProbe() {
-  diagCalls = [];
-  Object.defineProperty(win, "pushDiag", { configurable: true, value: (level, msg, ctx) => diagCalls.push({ level, msg, ctx }) });
+  // 捕获数组绑在**本次安装**的局部量上：上一个 jsdom 窗口里 fire-and-forget 的链可能在这轮之后才 settle，
+  // 闭包若读模块级变量就会把迟到条目写进本用例刚清空的数组（假红 + 让「失败必须可见」那类断言假绿）。见 tests/probe-binding.test.js。
+  const d = [];
+  diagCalls = d;
+  Object.defineProperty(win, "pushDiag", { configurable: true, value: (level, msg, ctx) => d.push({ level, msg, ctx }) });
 }
 
 /** 造出 electronAPI（isElectron() 即看它存不存在）；setAiConfig 可设为抛错 */

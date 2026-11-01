@@ -18,8 +18,9 @@
  *   清空语句写成 `X = []` 还是 `X = d` 一样会串（这条是变异实验教出来的，见 ②-3）。
  * 正当形状不误报：`const d = []` 绑在本次安装上、包装 push 的是 `d`（slice3/slice4 的修法）、
  * `windows = []` + `windows.push(win)` 那种窗口登记表（push 点不在包装函数体内）。
- * 现测（2026-11-01 扫 224 个 `tests/*.test.js`）：违规 **13** 个，全在 empty-catch 这一族；
+ * B14 落地时现测（扫 224 个 `tests/*.test.js`）：违规 **13** 个，全在 empty-catch 这一族；
  * 判据从三条收到两条，抓到的还是同一批 13 个 ⇒ 说明抓的是形状而不是字符串巧合。
+ * B15（同日）把这 13 个全部改成"绑在本次安装上"⇒ **现网违规 0，基线空 ⇒ 零容忍**。
  *
  * **不碰 workflow**：本文件进 `npm test` 就自动在 CI 上跑（改 ci.yml = 改断言，须另拍板）。
  * 基线只许缩不许涨：改好一个就把那行从 `BASELINE` 删掉，留着不删也算红（防空转）。
@@ -31,22 +32,9 @@ import path from "node:path";
 const SELF = "probe-binding.test.js";
 const DIR = path.resolve(process.cwd(), "tests");
 
-/** 已知的存量违规（2026-11-01 现测，13 个）。修好一个删一行。 */
-const BASELINE = [
-  "empty-catch-ai-tools.test.js",
-  "empty-catch-slice10.test.js",
-  "empty-catch-slice11.test.js",
-  "empty-catch-slice13.test.js",
-  "empty-catch-slice14.test.js",
-  "empty-catch-slice15.test.js",
-  "empty-catch-slice16.test.js",
-  "empty-catch-slice18.test.js",
-  "empty-catch-slice5.test.js",
-  "empty-catch-slice6.test.js",
-  "empty-catch-slice7.test.js",
-  "empty-catch-slice8.test.js",
-  "empty-catch-slice9.test.js",
-].sort();
+/** 存量违规基线。2026-11-01 B15 已把这 13 个清零 ⇒ 现在是**空基线 = 零容忍**。
+ *  机制留着不是为了豁免，是为了"改好了不许留条目"：见 ③-2 的双向对账。 */
+const BASELINE = [];
 
 /** 列 0 的顶层声明 ⇒ 模块级标识符（缩进声明是函数局部，不算） */
 function moduleLevelNames(src) {

@@ -37,10 +37,13 @@ const readSrc = (f) => fs.readFileSync("src/" + f, "utf8");
 let win, diag;
 function boot(storage) {
   win = loadApp({ storage: storage || {} });
-  diag = [];
+  // 捕获数组绑在**本次安装**的局部量上：上一个 jsdom 窗口里 fire-and-forget 的链可能在这轮之后才 settle，
+  // 闭包若读模块级变量就会把迟到条目写进本用例刚清空的数组（假红 + 让「失败必须可见」那类断言假绿）。见 tests/probe-binding.test.js。
+  const d = [];
+  diag = d;
   const orig = win.pushDiag;
   win.pushDiag = function (level, msg, ctx) {
-    diag.push({ level, msg: String(msg), ctx });
+    d.push({ level, msg: String(msg), ctx });
     return orig && orig.apply(win, arguments);
   };
   return win;
