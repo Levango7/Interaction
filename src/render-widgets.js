@@ -3834,7 +3834,7 @@ try{
  * 状态持久化：wb_agent_uimode（work|code）、wb_agent_agent_dock（各段显隐）。
  * ACP 在本仓无运行时概念（台账已评不适用），右下槽位由「进程/技能/MCP/工作流」承接。 */
 function _uiMode(){
-  try{ const m = load(PREFIX + "uimode", "work"); return m === "code" ? "code" : "work"; }
+  try{ const m = load(PREFIX + "uimode", "work"); return m === "code" ? "code" : m === "design" ? "design" : "work"; }
   catch(e){ return "work"; }
 }
 /** 应用当前模式到壳（幂等）：切 .body.code-mode 类 + 顶栏标签 + 渲染/清空两个 dock */
@@ -3851,10 +3851,13 @@ function _agentDockSignature(){
 function applyUIMode(){
   const body = document.querySelector(".body");
   if(!body) return;
-  const code = _uiMode() === "code";
+  const mode = _uiMode();
+  const code = mode === "code";
+  const design = mode === "design";
   body.classList.toggle("code-mode", code);
+  body.classList.toggle("design-mode", design);
   const lbl = $("#uiModeLbl");
-  if(lbl) lbl.textContent = t(code ? "ui.mode.code" : "ui.mode.work", code ? "代码" : "工作");
+  if(lbl) lbl.textContent = t(mode === "code" ? "ui.mode.code" : mode === "design" ? "ui.mode.design" : "ui.mode.work", mode === "code" ? "代码" : mode === "design" ? "设计" : "工作");
   if(code){
     renderSessionDock(); renderAgentDock();
     _agentDockSig = _agentDockSignature();
@@ -3872,16 +3875,27 @@ function applyUIMode(){
       }, 2500);
     }
   }
+  else if(design){
+    /* Design 模式（画图能力 Phase B）：中=画布编辑器（#drawStage），左=图列表停靠，
+       右=task-rail 照旧（运行与能力可见）。会话停靠清空（与 Code 的 dock 互斥）。 */
+    const sd = $("#sessionDock"); if(sd) sd.innerHTML = "";
+    if(_agentDockTimer){ clearInterval(_agentDockTimer); _agentDockTimer = null; }
+    try{ renderAgentDock(); }catch(e){ /* 能力停靠渲染失败不阻断画布 */ }
+    renderDrawWorkspace();
+  }
   else {
     const sd = $("#sessionDock"); if(sd) sd.innerHTML = "";
     const ad = $("#agentDock"); if(ad) ad.innerHTML = "";
+    const dd = $("#diagramDock"); if(dd) dd.innerHTML = "";
     if(_agentDockTimer){ clearInterval(_agentDockTimer); _agentDockTimer = null; }
   }
 }
 function toggleUIMode(){
-  try{ save(PREFIX + "uimode", _uiMode() === "code" ? "work" : "code"); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((e&&e.message)||e), {where:"toggleUIMode"}); }catch(_e2){} }
+  const cur = _uiMode();
+  const next = cur === "work" ? "code" : cur === "code" ? "design" : "work";
+  try{ save(PREFIX + "uimode", next); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((e&&e.message)||e), {where:"toggleUIMode"}); }catch(_e2){} }
   applyUIMode();
-  try{ toast(t("ui.mode.switchedTo", "已切换到") + " " + t(_uiMode() === "code" ? "ui.mode.code" : "ui.mode.work", _uiMode() === "code" ? "代码模式" : "工作模式"), "ok"); }catch(e){ /* noop */ }
+  try{ toast(t("ui.mode.switchedTo", "已切换到") + " " + t(next === "code" ? "ui.mode.code" : next === "design" ? "ui.mode.design" : "ui.mode.work", next === "code" ? "代码模式" : next === "design" ? "设计模式" : "工作模式"), "ok"); }catch(e){ /* noop */ }
 }
 /** 会话停靠栏（左栏下半）：列表 + 切换 + 新建。重命名/删除留在 设置→会话管理（不做第二套 CRUD）。 */
 function renderSessionDock(){

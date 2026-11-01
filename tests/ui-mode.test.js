@@ -23,7 +23,7 @@ function boot(extra) {
 const bodyEl = (win) => win.document.querySelector(".body");
 
 describe("Code 模式：切换与持久化", () => {
-  it("1: 默认 Work；toggle → code + 持久化；再 toggle 回 Work", () => {
+  it("1: 默认 Work；toggle → code + 持久化；再 toggle → design（三态循环回 Work）", () => {
     const win = boot();
     win.applyUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);
@@ -32,8 +32,14 @@ describe("Code 模式：切换与持久化", () => {
     expect(bodyEl(win).classList.contains("code-mode")).toBe(true);
     expect(win.document.getElementById("uiModeLbl").textContent).toBe("代码");
     expect(JSON.parse(win.localStorage.getItem(PREFIX + "uimode"))).toBe("code");
+    /* 画图能力 Phase B：三态循环 work → code → design → work */
+    win.toggleUIMode();
+    expect(bodyEl(win).classList.contains("design-mode")).toBe(true);
+    expect(win.document.getElementById("uiModeLbl").textContent).toBe("设计");
+    expect(JSON.parse(win.localStorage.getItem(PREFIX + "uimode"))).toBe("design");
     win.toggleUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);
+    expect(bodyEl(win).classList.contains("design-mode")).toBe(false);
     expect(win.document.getElementById("uiModeLbl").textContent).toBe("工作");
   });
 

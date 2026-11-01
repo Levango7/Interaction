@@ -5297,7 +5297,32 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     grid-column:3;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
     background:color-mix(in srgb,var(--panel) 72%,transparent);padding:var(--space-2)}
   .body.code-mode .mob-bar,.body.code-mode .side-sheet,.body.code-mode .side-sheet-backdrop{display:none}
+  /* Design 模式（画图能力 Phase B · docs/design-mode-phase-b.md）：中=画布编辑器，
+     左=图列表停靠（替代会话停靠），右=task-rail 照旧（运行与能力可见）。会话/聊天面板隐藏。 */
+  .body.design-mode{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;
+    grid-template-rows:minmax(0,1fr) auto;min-height:0}
+  .body.design-mode .side{grid-column:1;grid-row:1;width:auto;min-height:0}
+  .body.design-mode .session-dock{display:none}
+  .body.design-mode .diagram-dock{display:flex;flex-direction:column;min-height:0;max-height:38vh;
+    grid-column:1;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
+    background:color-mix(in srgb,var(--panel) 75%,transparent);padding:var(--space-2)}
+  .body.design-mode .main-wrap{grid-column:2;grid-row:1 / span 2;display:flex;overflow:hidden}
+  .body.design-mode .main-wrap>.toolbar-row{display:none}
+  .body.design-mode .main-wrap>.main{display:none}
+  .body.design-mode .main-wrap>.chat-panel{display:none}
+  .body.design-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
+  .body.design-mode .mob-bar,.body.design-mode .side-sheet,.body.design-mode .side-sheet-backdrop{display:none}
 }
+.diagram-dock{display:none}
+#drawStage{display:none;flex-direction:column;gap:6px;padding:8px;min-width:0;min-height:0}
+.body.design-mode #drawStage{display:flex;flex:1;min-width:0;min-height:0}
+.dc-toolbar{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.dc-btn{border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;
+  padding:3px 9px;border-radius:var(--radius-sm,6px);font-size:12px;white-space:nowrap}
+.dc-btn:hover{background:var(--surface-hover)}
+.dc-sep{width:1px;height:16px;background:var(--line);margin:0 4px}
+.dnode-text{fill:var(--text);font-size:13px;pointer-events:none}
+.dedge{pointer-events:visibleStroke}
 .session-dock-head,.adock-head{display:flex;align-items:center;gap:var(--space-1h)}
 .session-dock-head,.adock-title{font-size:var(--fs-sm);font-weight:600;flex:1}
 .sdock-head{margin-bottom:var(--space-1h)}
@@ -7203,6 +7228,8 @@ function sameDay(ts,y,m,d){ const t=new Date(ts); return t.getFullYear()===y&&t.
 /*SRC:ai-retry:END*/
 /*SRC:ai-subagent:BEGIN*/
 /*SRC:ai-subagent:END*/
+/*SRC:draw-canvas:BEGIN*/
+/*SRC:draw-canvas:END*/
 /*SRC:ui-palette:BEGIN*/
 /*SRC:ui-palette:END*/
 /*SRC:ui-daily:BEGIN*/
