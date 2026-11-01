@@ -41,7 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
-| `src/ai-tools.js`, `src/ai-retry.js`, `src/util-markdown.js`, `agent-workbench.html`, `tests/draw-marker-render.test.js`, `tests/empty-catch-slice17.test.js`, `README.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-10-31 22:40 | 画图标记渲染补丁提交后 | ACTIVE |
+| `src/ai-tools.js`, `src/ai-retry.js`, `src/util-markdown.js`, `agent-workbench.html`, `tests/draw-marker-render.test.js`, `tests/empty-catch-slice17.test.js`, `README.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-10-31 22:40 | 已推 `b1f10da`（CI `41259746970` / Deploy `41259747063` 双绿 + 线上探针 8/8） | RELEASED |
 | `docs/design-mode-phase-b.md` | ZCode | 2026-10-31 00:58 | 用户审核结论后 | ACTIVE |
 | `src/ui-drawer.js`, `src/render-widgets.js`, `src/data-links.js`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-slice18*.test.js`, `tests/empty-catch-slice19*.test.js` | Qoder | 2026-10-30 07:52 | B12 三片收工后 | RELEASED |
 | `docs/draw-capability-phase-a.md` | ZCode | 2026-10-30 06:56 | 已收口（1cb65cf 双绿+真浏览器验收） | RELEASED |
@@ -113,12 +113,19 @@
   文本编辑形态/颜色/上限）见方案第九节。
 ### [2026-10-31 22:40 UTC+8] Qoder 主会话 —— 画图标记渲染补丁：三张卡其实**一张都没渲染出来**（含与我自己的撞车说明）
 
-- 状态：本机全量已跑完并逐条归因（见下「全量 4 红」）、slice17 两把锁已按口径同步、真浏览器补验 5/5（见下）⇒ 已 rebase 到 `343e850`，**两笔提交待推**；推前按 R1/R11 复查队列。
+- 状态：**已交付并线上复核通过**（2026-11-01 09:52 UTC+8）—— 推 `5b0ac01..b1f10da`（两笔），
+  CI `41259746970` 四条腿（server-verify / ubuntu test / windows test / e2e）**attempt1 全 success、无重跑**，
+  Deploy `41259747063` success，Pages `built`（`41261253702`）。登记表已改 RELEASED。
+- 线上三面探针（`_probe/live-draw-probe.mjs`，不入库，带 cache-buster 打交付态）**8/8 PASS**：
+  图卡 SVG 548×120 且中心 `elementFromPoint` 命中卡内、草图卡 200×90 可见、界面查不到 `__CHART__` 原文、
+  导出条 computed `12px / 1px solid`（不是浏览器默认样式）、**线上点 PNG 真出文件**（`线上草图-*.png` 4,914 B）、交付态零 JS 报错。
+  ⇒ 本批的"三张卡一张都没渲染出来"在线上确实修好了，Phase A 的"PNG 成功路径留真浏览器验收"也一并销账。
 - 占用路径：见登记表首行（`src/ai-tools.js` `src/ai-retry.js` `src/util-markdown.js`
   `agent-workbench.html` `tests/draw-marker-render.test.js` `tests/empty-catch-slice17.test.js` `README.md` `CHANGELOG.md` `AGENTS.md` 本板）。
 - 在跑的重活：无了 —— 全量 `npm run test:local` 已结束、`src:extract` 已把 HTML 抽回源码态，**这条注入链已释放**，别人可以用了。
-- 准备推的范围：`343e850..+2`（第一笔 10 文件 = 代码/测试/文档；第二笔 = 真浏览器补验后的 A3 订正 + CHANGELOG/本板）。rebase 时本板与 ZCode 那条 11-01 条目相撞，**两侧都留**：
-  登记表两行并存、条目按对方在上、我在下排（对方自报时间戳写的是 10-31 00:58，实际提交在 11-01 01:05 ⇒ 不改动对方原文，只在此说明）。
+- 准备推的范围：**已推完** —— `5b0ac012..b1f10da5`（`ae45042` 内容笔 + `b1f10da` 真机补验/订正笔）。
+  途中两次 rebase（`343e850`、`5b0ac01`）都只撞本板：登记表与条目**两侧都留**；
+  ZCode 那条 11-01 条目自报时间戳写成 `10-31 00:58`（实际提交在 11-01 01:05）⇒ **不改对方原文**，只在此说明排序按提交时间。
 - ⚠️ **撞车说明（我的失误，写成事实免得再犯）**：用户 10-30 放行画图 Phase A ③④ 后我开始实现同一批
   （我自己那版 `sanitizeSvg` 是 `{ok,svg,dropped,reason}` 对象 API）。期间 ZCode 的 `7ab3bc33`
   已把 ③④ 推上 main，而**我开工前没有 `git fetch` 对 `origin/main`** ⇒ 我那版**作废**：
