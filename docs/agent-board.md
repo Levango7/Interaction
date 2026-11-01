@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `docs/empty-catch-p0-triage.md`, `docs/agent-board.md` | Qoder | 2026-11-01 20:50 | 本条提交并推送后（待拍板项 `#102` / `#98` 仍等 ZCode 与用户，不持有代码面） | RELEASED |
 | `scripts/lint-empty-catch.baseline.json`, `docs/empty-catch-p0-triage.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 13:20 | B11 四笔已推 `ba83dea`；CI `41277871725` 两条 test 腿 + server-verify 全 success（详见 14:24 条目） | RELEASED |
 | `src/draw-canvas.js`, `src/data-links.js`, `src/core-i18n.js`, `agent-workbench.html`（仅 Design 模式那两段 CSS）, `tests/draw-canvas.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 12:20 | 已推 `c316697`（CI 41273492243 被 `e6e9817` 的推送取消；windows 腿 `test` 已 success = 那 7 处复绿的直接读数） | RELEASED |
 | `scripts/module-graph.mjs`, `scripts/lib/dep-graph.mjs`, `scripts/lint-layers.mjs`, `scripts/module-graph.baseline.json`, `docs/module-graph.md`, `docs/architecture-layers.md`, `tests/dep-graph-cycles.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 11:34 | 本批提交并推送后 | RELEASED |
@@ -74,6 +75,26 @@
 
 ---
 
+### [2026-11-01 20:50 UTC+8] Qoder 主会话 —— 待命窗口：B11 重冻自洽复核 + 核查表里四处陈旧数订正
+
+- **自洽复核（现测，HEAD `5babb0a`）**：`npm run lint:empty-catch` ⇒ 扫描 40 文件 · 空 catch **631** ·
+  **P0 23 / P1 260 / P2 348** · 基线 631 · **新增 0 · 消失 0** ⇒ 重冻之后没有再和现扫脱钩，
+  「新增 N / 消失 N」这两个读数当下确实是 0，B11 的口径立住了。
+- **顺手抓到四处陈旧数**（都在 `docs/empty-catch-p0-triage.md`，是 11-01 那笔真修之后没人回头改的）：
+  §一 表里「注释已写明理由 **24**」「合计 **24**」和正文「剩下的 **24**」三处，加 §三 标题「**28** 处」。
+  **这是排期风险不是排版**：§一 自己写着「真待修 = 0」，可表里挂 24、第三节标题挂 28，
+  下一个读板的人照这两个数去排「P0 余片」就会白跑一轮（B12 已经把这堆判完了）。
+- 现核对上的数：**清单行数 = 当前 P0 = 23**（逐文件分布已写进 §一：`ui-drawer` 4 / `ui-ge-integrations` 4 /
+  `ai-tools` 3 / `render-widgets` 3 / `render-overview` 2 / `ui-backup-stats` 2 / 其余 5 个文件各 1）。
+  §三 标题补了一句分解：`28 → 26`（尺子纠正 2 条窗口误捞）→ `24`（B12 真修 2）→ `23`（11-01 画图标记补丁真修 1）。
+- **由此定下一条排期判据（写进 §一）**：**P0 这条线已无可排**，别再照这 23 处排切片 —— 23 处是逐条判过、
+  每条都有理由原文的「已判过合理」，动它们等于把 B12 重做一遍。**下一批只能来自 B13（切版）或新的实测缺口。**
+- 本批性质：**纯文档订正**，零代码改动、不动门禁、不动基线、不进 CHANGELOG
+  （`grep -rl empty-catch-p0-triage tests/ scripts/` 为空 ⇒ 该文档无门禁消费者，改它不会打红任何锁）。
+- 待命状态不变：`#102` 等 ZCode 那条 e2e；`#98` 等 main 绿；`#90` 等下一次 rag-hybrid 红。
+- ⚠️ 这笔推送会**取消我自己**在飞的 `41307814424` / `41307814433`（都是 `5babb0a` 那笔纯文档提交触发的），
+  不是取消任何人的验证腿；两笔都不含代码改动，合成一轮 CI 更省。
+
 ### [2026-11-01 14:35 UTC+8] Qoder 主会话 —— **用户裁决两条：那条 e2e 等 ZCode 自己修；3.7.152 先不切**
 
 - **裁决 ①（关于 `draw-responsive.spec.js` 的 strict mode 红）**：owner 选**等 ZCode 本人处理**，
@@ -91,6 +112,9 @@
 - 我这侧**转入待命**：已无依赖这条红的交付项（环判据 / 代修 / B11 都落了 main）。
   这条红在册 = 任务 #102，判据见上面 13:40 条目；ZCode 修完（或他判"这轮窄屏先不发"而临时撤下该 spec）
   之后，我按发布链继续 B13。
+- ⚠️ **本条标题的时间订正**：写「14:35」用的是上一轮读到的钟，这条实际落盘是 **20:38**（`5babb0aa`）。
+  中间隔了 6 小时（会话压缩 + 等待，机器时钟没问题：对照 `a0275a7` 的 author 时间是 14:25）。
+  **板上的时间只当参考，认领/释放的先后一律以 commit 时间为准** —— 别按这个偏移去判谁的认领过期。
 
 ### [2026-11-01 14:24 UTC+8] Qoder 主会话 —— **B11 收口回执：CI 证明剩下只有 ZCode 那条 e2e，我的东西全绿**
 
