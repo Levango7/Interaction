@@ -1900,6 +1900,16 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .mini-chart-legend{font-size:var(--fs-xs);fill:var(--text-dim)}
 .mini-chart-val{font-size:var(--fs-3xs);fill:var(--muted)}
 .mini-chart-lbl{font-size:var(--fs-2xs);fill:var(--text-dim)}
+/* 画图能力 Phase A（2026-10-31）：导出条与卡片容器样式。① ② ③ ④ 四批都只写了 markup，
+   实测全仓 `.svg-export-bar` 规则数 = 0 —— 按钮是浏览器默认样式，草图卡也没有容器底色。 */
+.svg-export-bar{display:flex;justify-content:flex-end;gap:var(--space-1);padding:var(--space-1) 0 0}
+.svg-exp-btn{font-size:var(--fs-2xs);line-height:1.4;padding:var(--space-1) var(--space-2);
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel);color:var(--text-dim);cursor:pointer}
+.svg-exp-btn:hover{border-color:var(--accent);color:var(--accent)}
+.svg-exp-btn:disabled{opacity:.5;cursor:default}
+.svg-msg{background:var(--panel2);border-radius:var(--radius-sm);padding:var(--space-2);overflow:auto}
+.svg-msg svg{display:block;max-width:100%;height:auto}
+.chart-msg-title{font-size:var(--fs-xs);color:var(--text-dim);margin:0 0 var(--space-1)}
 /* v3.0.1 B-3：代码运行器输出区（等宽字体 + panel2 背景） */
 .run-output{margin-top:var(--space-1);padding:var(--space-2);background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-sm);font-family:"SF Mono","SFMono-Regular",Consolas,monospace;font-size:var(--fs-2xs);color:var(--text);white-space:pre-wrap;word-break:break-all;max-height:180px;overflow:auto}
 .run-output-title{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--space-1)}
@@ -17363,8 +17373,15 @@ function _pruneSvgNode(node){
     const av = String(a.value || "");
     if(an.indexOf("on") === 0){ node.removeAttribute(a.name); return; }                 // 事件句柄
     if((an === "href" || an === "xlink:href") && !/^\s*#/i.test(av)){ node.removeAttribute(a.name); return; } // 非内部锚点一律去（防外链/数据URI外呼）
-    if(an === "style" && /url\s*\(|expression|@import/i.test(av)){ node.removeAttribute(a.name); return; }
-    if(_SVG_KEEP_ATTRS.indexOf(an) === -1 && an.indexOf(":") === -1){ node.removeAttribute(a.name); return; }
+    /* 2026-10-31 实测补的两道：
+       ① url() 原先只在 style 里查，而 fill/stroke/filter/clip-path/mask **本身就是白名单属性**，
+          于是 `fill="url(https://evil/x.svg#p)"` 原样通过 —— 浏览器会去外部取 paint server；
+       ② 带冒号的属性曾被整体豁免（`an.indexOf(":") === -1` 才算未知），实测 `xml:base="http://evil/"`
+          靠这道豁免留下，而它把 `<use href="#a">` 这类文档内引用**改基到外部站点**。
+          现在只放行 xmlns 与 xlink:href / xml:space（它们本来就在名单里），其余带冒号一律剥。 */
+    if(/url\s*\(/i.test(av) && !/^url\(\s*['"]?#[\w\-.:]*['"]?\s*\)$/i.test(av.trim())){ node.removeAttribute(a.name); return; }
+    if(an === "style" && /expression|@import/i.test(av)){ node.removeAttribute(a.name); return; }
+    if(_SVG_KEEP_ATTRS.indexOf(an) === -1 && an !== "xmlns"){ node.removeAttribute(a.name); return; }
   });
 }
 function sanitizeSvg(svgStr){
@@ -17385,6 +17402,13 @@ function sanitizeSvg(svgStr){
     });
   })(root);
   _pruneSvgNode(root);
+  /* 剥完什么都不剩 ⇒ 返回空串走拒绝分支。实测（main `1cb65cf`）：只含脚本标签的草图原先返回
+     `<svg xmlns=…/>`（真值），execTool 因此报成功 —— 用户看到一张**空卡**，模型以为画完了。
+     方案第六节的口径是"整体拒绝，不输出半成品"。
+     ⚠️ 本注释里**不许出现脚本标签的字面闭合写法**：这块源码是内联进 HTML 的 `<script>` 元素里的，
+        HTML 解析器见到那个序列就提前结束脚本，整块应用 JS 不再执行（2026-10-31 实测踩中）。
+     只数**元素**：整段被剥光的文档里常还留着换行文本节点，按 childNodes 判会被骗过去。 */
+  if(!root.getElementsByTagName("*").length && !String(root.textContent || "").trim()) return "";
   try{ return new XMLSerializer().serializeToString(root); }catch(_e){ return ""; }
 }
 /*SRC:util-markdown:END*/
@@ -22736,19 +22760,32 @@ function renderChat(){
   el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
     if(m.role==="tool"){
       var _disp = m._disp || _chatContentToText(m.content);
-      if(typeof _disp === "string" && _disp.indexOf("__CHART__") === 0){
+      /* 标记类/JSON 类回执的**解析源**：优先 `_raw`（execTool 原始返回），退化到 `content`。
+         为什么不能用 `_disp`：它是「工具 X({…}) → <结果>」，**带前缀**，
+         而下面三个分支全按开头判（`__CHART__` / `__SVG__` / `{`）——
+         2026-10-31 实测：真实聊天路径里图表卡、草图卡、子代理卡**一张都没渲染出来过**，
+         用户看到的是标记 JSON 原文。为什么也不直接用 `content`：它被 `_cutToolRes` 截到 2400 字，
+         长 SVG 会拦腰断（断掉的 JSON 连解析都失败）。 */
+      var _mark = (typeof m._raw === "string" && m._raw) ? m._raw : _chatContentToText(m.content);
+      if(typeof _mark === "string" && _mark.indexOf("__CHART__") === 0){
         try{
-          var _spec = JSON.parse(_disp.slice(9));
+          var _spec = JSON.parse(_mark.slice(9));
           return '<div class="msg tool chart-msg">' + (_spec.title ? '<div class="chart-msg-title">' + esc(_spec.title) + '</div>' : '') + AppBridge.miniChart(_spec.type, _spec.data) + '</div>';
-        }catch(_e){ /* 解析失败回退文本 */ }
+        }catch(_e){
+          /* 解析失败回退文本（slice17 用这条原文钉住「判过合理」的理由，删它 = 后人失去判断依据）。
+             与下面 __SVG__ 那条同治：try 里有 JSON.parse，裸注释 catch 会被判新增 P0
+             （本批改了解析源 ⇒ sig 变 ⇒ 原来基线内的那条按新增重计，实测红在 3435）。
+             留痕顺带解决真问题：卡片没出来时得能归因。 */
+          try{ if(typeof pushDiag === "function") pushDiag("warn", "chart msg render failed: " + ((_e && _e.message) || _e), { where: "chatRender" }); }catch(_e2){ /* 诊断不可用不影响回退 */ }
+        }
       }
       /* draw_svg（画图能力 Phase A 批次④）：消毒后的 SVG 在**渲染层再消毒一次**（防御纵深，
          历史消息可能在消毒规则升级前进库），通过后内联 + 同一导出条（_bindSvgExport 接管）。
          catch 用 pushDiag 留痕而非裸注释——try 里有 JSON.parse，裸注释 catch = 新增 P0
          （会撞 slice11/17/18 三把计数锁，079135a 实测）。 */
-      if(typeof _disp === "string" && _disp.indexOf("__SVG__") === 0){
+      if(typeof _mark === "string" && _mark.indexOf("__SVG__") === 0){
         try{
-          var _sp = JSON.parse(_disp.slice(7));
+          var _sp = JSON.parse(_mark.slice(7));
           var _cleanSvg = sanitizeSvg(_sp.svg || "");
           if(_cleanSvg){
             return '<div class="msg tool svg-msg" data-svgexport data-svgname="' + esc(_sp.title || "draw") + '">'
@@ -22759,10 +22796,11 @@ function renderChat(){
           try{ if(typeof pushDiag === "function") pushDiag("warn", "svg msg render failed: " + ((e && e.message) || e), { where: "chatRender" }); }catch(_e2){ /* 诊断不可用不影响回退 */ }
         }
       }
-      /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片 */
-      if(typeof _disp === "string" && _disp.indexOf("{") === 0){
+      /* Multi-Agent Phase 2：spawn_agent / spawn_agents_parallel 的结果渲染为子代理卡片
+         （同一处判据：2026-10-31 前按 `_disp` 开头判，带前缀 ⇒ 这张卡也从未渲染过） */
+      if(typeof _mark === "string" && _mark.indexOf("{") === 0){
         var _sa = null;
-        try{ _sa = JSON.parse(_disp); }catch(_e){ _sa = null; }   // 非 JSON（普通工具结果文本）→ 走下方通用渲染
+        try{ _sa = JSON.parse(_mark); }catch(_e){ _sa = null; }   // 非 JSON（普通工具结果文本）→ 走下方通用渲染
         if(_sa && _sa.agentId){
           var _card = _subagentCard(_sa.agentId, _sa.agent);
           if(_card) return _card;
@@ -36610,7 +36648,7 @@ async function confirmPendingDanger(){
     let rj=null; try{ rj=JSON.parse(res); }catch(e){ try{ pushDiag("error", "confirm tool result parse error: "+(e&&e.message||e), {where:"confirmExecTool"}); }catch(_){} }
     /* v3.7.72 token 优化：超长工具结果截断 —— 整段 JSON 回填是 token 无底洞，模型只需关键字段 */
     let _res=res; if(typeof _res==="string" && _res.length>2400){ _res=_res.slice(0,2400)+"…(截断，共 "+res.length+" 字符)"; }
-    const tm={role:"tool", tool_call_id:c.id, content:_res, _disp:(rj&&rj.msg)||(t("ai.toolPrefix","工具 ")+c.name)};
+    const tm={role:"tool", tool_call_id:c.id, content:_res, _disp:(rj&&rj.msg)||(t("ai.toolPrefix","工具 ")+c.name), _raw:_markerRaw(res)};
     messages.push(tm); hist.push(tm);
   }
   pendingConfirm=null;
@@ -37268,6 +37306,15 @@ async function onChatSubmit(e){
 }
 /* v3.7.72 token 优化：超长工具结果截断（>2400 字符取头 + 注明全长），模型只需关键字段 */
 function _cutToolRes(r){ return (typeof r==="string" && r.length>2400) ? r.slice(0,2400)+"…(截断，共 "+r.length+" 字符)" : r; }
+/* 标记类工具回执（__CHART__ / __SVG__）必须原样留在消息上，供渲染层认卡片：
+ *   · `_disp` 带「工具 X({...}) → 」前缀，而渲染层按**开头**判标记 —— 2026-10-31 实测
+ *     真实聊天路径下 `.chart-msg` / `.svg-msg` **一张都没渲染出来**，用户看到的是标记 JSON 原文；
+ *   · `content` 会被 _cutToolRes 截到 2400 字，SVG 草图拦腰断，不能当解析源。
+ * 只在标记类结果上多存一份，普通回执不翻倍占存储。 */
+function _markerRaw(r){
+  if(typeof r !== "string") return undefined;
+  return (r.indexOf("__CHART__")===0 || r.indexOf("__SVG__")===0) ? r : undefined;
+}
 /* B4：软预算提醒的去重档位 —— 同一 level 只说一次，回到 ok 时重置。
    不做硬拦：用户可能就是要把长上下文发出去，拦下来只会逼人关功能。 */
 let _ctxWarnLevel = null;
@@ -37396,7 +37443,7 @@ async function runChatLoop(messages, hist, sc){
             /* v3.7.52：走统一入口 execToolAuto —— 异步工具（联网/代码/SQL）在 chat 路径也能真正执行 */
             const res=await execToolAuto(c.name, args);
             skillTracePush(skillTrace, c.name, args, res); // v3.7.59 Skills：记录本轮流程
-            const tm={role:"tool", tool_call_id:c.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res};
+            const tm={role:"tool", tool_call_id:c.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+c.name+"("+JSON.stringify(args)+") → "+res, _raw:_markerRaw(res)};
             messages.push(tm); hist.push(tm);
           }
           AppBridge.render(); continue;
@@ -37424,7 +37471,7 @@ async function runChatLoop(messages, hist, sc){
           const res=await execToolAuto(tc.function.name, args);
           skillTracePush(skillTrace, tc.function.name, args, res); // v3.7.59 Skills：记录本轮流程
           chatProgressUpdate({ current: ti + 1, label: t("chat.progress.toolName", "执行工具：") + tc.function.name });
-          const tm={role:"tool", tool_call_id:tc.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res};
+          const tm={role:"tool", tool_call_id:tc.id, content:_cutToolRes(res), _disp:t("ai.toolPrefix","工具 ")+tc.function.name+"("+JSON.stringify(args)+") → "+res, _raw:_markerRaw(res)};
           messages.push(tm); hist.push(tm);
         }
         chatProgressEnd();
