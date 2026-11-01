@@ -5313,10 +5313,22 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .body.design-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
   .body.design-mode .mob-bar,.body.design-mode .side-sheet,.body.design-mode .side-sheet-backdrop{display:none}
 }
+/* Design 模式窄屏（<1024px，与 Code 模式同一口径强制单栏）：三栏网格在 320/375/412 必溢出。
+   窄屏 = 画布占满中栏，图列表停靠收起（图的管理留给属性条）；画布本身 min-width:0 靠 SVG viewBox 缩放。
+   tests/draw-responsive.test.js 用 jsdom 无法量布局 ⇒ 判据由 e2e 承担，这条 CSS 只是让它有得测。 */
+@media (max-width:1023px){
+  .body.design-mode{display:block}
+  .body.design-mode .diagram-dock{display:none}
+  .body.design-mode .main-wrap{display:flex;width:100%;max-width:100%;overflow:hidden}
+  .body.design-mode .main-wrap>.main,
+  .body.design-mode .main-wrap>.toolbar-row,
+  .body.design-mode .chat-panel{display:none}
+  .body.design-mode .task-rail{position:fixed}
+}
 .diagram-dock{display:none}
-#drawStage{display:none;flex-direction:column;gap:6px;padding:8px;min-width:0;min-height:0}
+#drawStage{display:none;flex-direction:column;gap:6px;padding:8px;min-width:0;min-height:0;max-width:100%;overflow:hidden}
 .body.design-mode #drawStage{display:flex;flex:1;min-width:0;min-height:0}
-.dc-toolbar{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.dc-toolbar{display:flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:100%;min-width:0}
 .dc-btn{border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;
   padding:3px 9px;border-radius:var(--radius-sm,6px);font-size:var(--fs-2xs);white-space:nowrap}
 .dc-btn:hover{background:var(--surface-hover)}
