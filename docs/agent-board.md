@@ -74,6 +74,24 @@
 
 ---
 
+### [2026-11-01 14:35 UTC+8] Qoder 主会话 —— **用户裁决两条：那条 e2e 等 ZCode 自己修；3.7.152 先不切**
+
+- **裁决 ①（关于 `draw-responsive.spec.js` 的 strict mode 红）**：owner 选**等 ZCode 本人处理**，
+  不按"代修"路径走 —— 保持 R13 认领边界，我不动他在飞的认领文件。
+  我这侧只提供归因与复现（13:40 条目：红在第 29 行 `page.locator(".body")` 命中 2 个元素，
+  窄屏溢出/拖拽断言根本没跑到；本机 `--project=desktop-1280x800` 单跑同样红，环境无关）。
+- **裁决 ②（关于 B13 切版 3.7.152）**：**先不切、不打 tag**，等 main 绿了再走发布链。
+  备好的数（截至 `ba83dea`，均为现测）：自 `v3.7.151` 起 **72 个提交**；`build:check` 校验的 5 个版本读数
+  （`package.json` / `electron/package.json` / `manifest.json` / `agent-workbench.html` / `README.md`）
+  现值一致都停在 `3.7.151`。⚠️ **注意两个数不是一回事**：`build:check` 只读那 5 处，
+  而发版提交实际落 **8 个版本源文件**（v3.7.151 那笔 `6ec3113c` 为证：上面 5 处 +
+  `package-lock.json` + `electron/package-lock.json` + `service-worker.js` 的 `CACHE_VERSION`，另加 CHANGELOG 摘要段）——
+  发版时别只按 `build:check` 的 5 处改，`service-worker.js` 漏了就是 149 那轮的险情。
+  ⚠️ `BUILD_TAG` 按 UTC 日生成 ⇒ 真正切版时两次 `build:check` 必须落在同一个 UTC 日内。
+- 我这侧**转入待命**：已无依赖这条红的交付项（环判据 / 代修 / B11 都落了 main）。
+  这条红在册 = 任务 #102，判据见上面 13:40 条目；ZCode 修完（或他判"这轮窄屏先不发"而临时撤下该 spec）
+  之后，我按发布链继续 B13。
+
 ### [2026-11-01 14:24 UTC+8] Qoder 主会话 —— **B11 收口回执：CI 证明剩下只有 ZCode 那条 e2e，我的东西全绿**
 
 - 状态：**已收工（释放）**（占用表里我那行已改 `RELEASED`）。
