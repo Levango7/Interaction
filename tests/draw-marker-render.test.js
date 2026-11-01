@@ -79,11 +79,25 @@ describe("A 标记类卡片必须在真实回执形态下渲染出来", () => {
     expect(card.textContent).not.toContain("__SVG__");
   });
 
-  it("A3 老历史（改动前落盘、没有 _raw）不炸，退回可读文本", () => {
+  it("A3 老历史（改动前落盘、没有 _raw）：content 没被截断时**也能出卡**（真浏览器实测纠正了本文件初版的判断）", () => {
     win = boot();
-    win.__test.appendChat("office", { role: "tool", content: '__SVG__{"title":"旧","svg":"<svg/>"}', _disp: "工具 draw_svg({}) → __SVG__{…}" });
+    const payload = '__SVG__' + JSON.stringify({ title: "旧", svg: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect x="1" y="1" width="20" height="20"/></svg>' });
+    win.__test.appendChat("office", { role: "tool", content: payload, _disp: "工具 draw_svg({}) → " + payload });
     win.renderChat();
-    expect(win.document.querySelector(".msg.tool").textContent).toContain("工具 draw_svg");
+    expect(win.document.querySelector(".msg.tool.svg-msg svg"),
+      "退化到 content 这条路径本身就是老历史的救回路径，不是'只能显示文本'").toBeTruthy();
+  });
+
+  it("A3b 老历史里被 _cutToolRes 截断的那一类（SVG 超长）仍按文本显示 —— 解析不了就是解析不了", () => {
+    win = boot();
+    const long = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' + "<rect/>".repeat(2000) + "</svg>";
+    const payload = "__SVG__" + JSON.stringify({ title: "旧", svg: long });
+    const cut = payload.slice(0, 2400) + "…(截断，共 " + payload.length + " 字符)";
+    win.__test.appendChat("office", { role: "tool", content: cut, _disp: "工具 draw_svg({}) → " + cut });
+    win.renderChat();
+    const msg = win.document.querySelector(".msg.tool");
+    expect(msg.querySelector("svg"), "截断的 JSON 解析不了，不该凭空长出一张卡").toBeFalsy();
+    expect(msg.textContent).toContain("截断");
   });
 
   it("A4 `_markerRaw` 只给标记类回执多存一份，普通结果不翻倍占存储", () => {

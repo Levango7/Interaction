@@ -113,11 +113,11 @@
   文本编辑形态/颜色/上限）见方案第九节。
 ### [2026-10-31 22:40 UTC+8] Qoder 主会话 —— 画图标记渲染补丁：三张卡其实**一张都没渲染出来**（含与我自己的撞车说明）
 
-- 状态：本机全量已跑完并逐条归因（见下「全量 4 红」），slice17 两把锁已按口径同步 ⇒ **单提交待推**；推送前按 R1/R11 复查队列。
+- 状态：本机全量已跑完并逐条归因（见下「全量 4 红」）、slice17 两把锁已按口径同步、真浏览器补验 5/5（见下）⇒ 已 rebase 到 `343e850`，**两笔提交待推**；推前按 R1/R11 复查队列。
 - 占用路径：见登记表首行（`src/ai-tools.js` `src/ai-retry.js` `src/util-markdown.js`
   `agent-workbench.html` `tests/draw-marker-render.test.js` `tests/empty-catch-slice17.test.js` `README.md` `CHANGELOG.md` `AGENTS.md` 本板）。
 - 在跑的重活：无了 —— 全量 `npm run test:local` 已结束、`src:extract` 已把 HTML 抽回源码态，**这条注入链已释放**，别人可以用了。
-- 准备推的范围：`343e850..+1`（单提交，10 文件）。rebase 时本板与 ZCode 那条 11-01 条目相撞，**两侧都留**：
+- 准备推的范围：`343e850..+2`（第一笔 10 文件 = 代码/测试/文档；第二笔 = 真浏览器补验后的 A3 订正 + CHANGELOG/本板）。rebase 时本板与 ZCode 那条 11-01 条目相撞，**两侧都留**：
   登记表两行并存、条目按对方在上、我在下排（对方自报时间戳写的是 10-31 00:58，实际提交在 11-01 01:05 ⇒ 不改动对方原文，只在此说明）。
 - ⚠️ **撞车说明（我的失误，写成事实免得再犯）**：用户 10-30 放行画图 Phase A ③④ 后我开始实现同一批
   （我自己那版 `sanitizeSvg` 是 `{ok,svg,dropped,reason}` 对象 API）。期间 ZCode 的 `7ab3bc33`
@@ -170,6 +170,15 @@
   `[vitest-worker] Timeout calling "onTaskUpdate"`（ worker RPC 超时，不是断言不等）；
   ③ **本板既有账上它已是第 6 次同一形状**（见本文件 `单跑 45/45 全绿` / `全量 79.5s / 单跑 11.2s` /
   `该文件整轮 615s` / `CPU 饥饿型抖动` 等条目）⇒ 判为机器争用，`npm test` 的本机终态以 CI 为准。
+- **真浏览器补验（11-01 一次性 Playwright 探针，5/5 绿；探针跑完即删，不入库）**：
+  ① `.chart-msg` 有真实尺寸 + 中心 `elementFromPoint` 命中卡内 + 导出条 `1px solid` / 字号 ≥12px（jsdom 无排版引擎，只有真浏览器能证）；
+  ② 草图卡 SVG 真下载；③ **PNG 在 Chromium 里是真成功**（`架构草图-*.png` **34,901 B** + toast「已导出」，不走降级支）
+  ⇒ **ZCode 那边 Phase A 记的"PNG 成功路径留真浏览器验收"可以销账**；④ 渲染出的 SVG 里查不到 `evil.example`。
+- ⚠️ **订正我自己写下的结论（同一条探针打的脸）**：本条与 CHANGELOG 初版都写"老历史没有 `_raw` ⇒ 仍旧按文本显示、
+  这次没修好"。**实测是错的**：`_mark` 会退化到 `content`，而老消息的 `content` 就是标记原文 ⇒ **老消息同样出卡**（探针 ⑤：`chart-msg` = 1）。
+  真正救不回来的只有"`content` 被 `_cutToolRes` 截到 2400 字"那一类（超长草图），已补用例 A3b 钉住。
+  用例文件里的 A3 也按真实行为重写，并补一条窄变异：砍掉 `content` 退化支 ⇒ **只有 A3 红，A1/A2/A3b 全绿**（证明新断言有射程）。
+  ⇒ 本批总数由 15 例改 **16 例**。
 
 ### [2026-10-31 03:45 UTC+8] WorkBuddy 主会话 —— 云同步设置入口交付（补上 apiBase / syncIncremental 的唯一写入路径）
 

@@ -139,8 +139,11 @@
   修法：消息上另存原始回执 `_raw`（新函数 `_markerRaw()`，**只对标记类结果存**，普通回执不翻倍占存储），
   渲染层改按 `_raw`（退化到 `content`）判。为什么不用 `content` 当唯一解析源：它被 `_cutToolRes`
   截到 2400 字，长 SVG 会拦腰断、断掉的 JSON 连解析都失败。
-  ⚠️ **只修新增消息**：改动前已落盘的老历史没有 `_raw`，仍旧按文本显示——不是回归，但也没被这次修好；
-  刻意不加"从 `_disp` 里剖前缀"的兼容垫片（那是第二套真相源）。
+  ⚠️ **订正一处我自己写错的结论**：本条初版写"只修新增消息，改动前落盘的老历史没有 `_raw` ⇒ 仍旧按文本显示"。
+  **真浏览器实测（11-01）判它错了**：老历史没有 `_raw` 时渲染层退化到 `content`，而 `content` 里就是标记原文 ⇒
+  **老消息同样出卡**（探针 ⑤ 实测 `chart-msg` 张数 = 1）。真正救不回来的只有一类：
+  `content` 被 `_cutToolRes` 截到 2400 字的超长草图（JSON 解析不了 ⇒ 按文本显示并留痕，用例 A3b）。
+  刻意不加"从 `_disp` 里剖前缀"的兼容垫片（那是第二套真相源），也不需要——退化路径已经覆盖。
 - **B｜围栏把"整张都被剥光"当成功返回**：`<svg>` 里只有脚本标签时，main 实测返回 `<svg xmlns=…/>`
   （真值）⇒ `execTool` 走出成功分支，用户看到一张**空卡**、模型以为画完了。
   方案第六节写的口径是"剥完什么都不剩 ⇒ 整体拒绝，不输出半成品"。现按**元素数**判（只按
@@ -168,14 +171,19 @@
   整块应用 JS 不执行，`execTool` / `renderMiniChart` 全部变 `undefined`，表现是"一堆毫不相关的老用例突然红"。
   `build:check` 的产物自检（按浏览器语义抽真实 `<script>` 块逐个编译）本来就能当场抓住——
   **我当时只跑了测试、没先跑构建门禁**，等于把门禁顺序倒过来用。注释里现在也标了这条约束。
-- **验证**：新 `tests/draw-marker-render.test.js` 15 例（A1-A7 / B1-B3 / C1-C3 / D1-D2）；
+- **验证**：新 `tests/draw-marker-render.test.js` 16 例（A1-A7 含 A3/A3b / B1-B3 / C1-C3 / D1-D2）；
   ZCode 原有 `tests/draw-svg.test.js`(14) + `draw-svg-tool.test.js`(5) + `draw-export.test.js`(7) 全绿未改判据；
   变异电池 **9 条全红且各自命中目标用例**（含"渲染层退回 `_disp`"、"`_markerRaw` 恒 undefined / 恒返回"、
   "去掉剥光拒绝"、"按 childNodes 判"、"去掉 url() 守卫"、"url() 一律剥"、"恢复冒号豁免"、"删整段 CSS"），
   4 个被改文件跑完按原始字节还原并核对 sha 一致；`lint` / `build:check` / `check:modules` /
   `check:ai-tools-doc` / `lint:empty-catch` / `lint:layers` / `lint:tokens` / `lint:breakpoints` /
   `lint:icons` / `lint:false-receipt` / `check:pwa-icons` / `pet:check` / `src:check` 全 exit 0。
-  ⚠️ 真浏览器（Playwright / 线上产物）里"卡片确实看得见"尚未复验——本批判据是 jsdom 的 DOM 形态；
+  ⚠️ 真浏览器（Playwright / 交付态 HTML）里"卡片确实看得见"已补验（11-01 一次性探针，5/5 绿，探针不入库）：
+  ① `.chart-msg` 有真实尺寸、中心 `elementFromPoint` 落在卡内、导出条按钮 computed 样式为 `1px solid` 且字号 ≥12px
+  （jsdom 没有排版引擎，这条只有真浏览器能证）；② 草图卡点 SVG ⇒ 真下载（>200 B）；
+  ③ **点 PNG 在 Chromium 里是真成功**：下载 `架构草图-<时间戳>.png` **34,901 B** + toast「已导出」，
+  没走 jsdom 那条降级支 —— Phase A 记的"PNG 成功路径留真浏览器验收"到此销账；④ 外链围栏渲染出的 SVG 里查不到 `evil.example`；
+  ⑤ 就是上面那条订正（老历史实测出卡）。另补一条窄变异：**把 `_mark` 的 `content` 退化支砍掉，只有 A3 红、A1/A2/A3b 绿** ⇒ 新断言有射程。
   `AGENTS.md` §二 已预登记 **3.7.152**（只占号，切版权在用户）。
 - **本机全量首跑的 4 条红，逐条归因（不是"重跑绿了就当没事"）**：2 条是上面那把 slice17 计数锁（真因＝本批留痕，已按口径同步判据）；
   `confirm-migration-batch6`（回收站确认框）与 `three-state-render` ③ 各 1 条是**负载型 flaky**——前者卡在 `vi.waitFor` 里拿不到
