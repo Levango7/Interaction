@@ -5,10 +5,13 @@
  * 在 320/375/412 上 jsdom 量不出来（没有布局引擎），CSS 文本存在 ≠ 渲染不溢出
  * （本仓踩过的坑：元素存在≠可见可点，topbar-overflow 同一口径）。
  *
- * 钉两件事：
+ * 钉三件事：
  *   ① ≤1023px 单栏：横向溢出 = 0，且画布真的占满（宽度 ≈ 视口宽），图列表停靠收起；
  *   ② 画布在窄屏仍可用：真指针放一个节点 → 命中 `g.dnode` → 拖动后坐标变化。
  *      只测"渲染出 SVG"不算数 —— 那样窄屏给一块死图也能绿。
+ *   ③ 真实双击改名（2026-11-02 修复）：CDP 双击复现真人双击（Chromium 对注入事件 detail=0，
+ *      故双击判据=同一目标 350ms 内第二击）——修复前画布每次 pointerdown 都重建 SVG，
+ *      真实用户的双击根本触发不了改名。
  *
  * 守护策略同其余 spec：默认跳过，E2E=1 才跑。
  */
@@ -108,5 +111,38 @@ test.describe("Design 模式窄屏", () => {
     /* 10px 吸附：落点必须是 10 的整数倍 */
     expect(after.x % 10, "坐标应吸附到 10px 网格").toBe(0);
     expect(after.y % 10, "坐标应吸附到 10px 网格").toBe(0);
+  });
+
+  test("③ 真实双击改名（同一目标 350ms 内第二击）：弹浮层并回写节点文字", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 700 });
+    await page.goto(APP_URL);
+    await toDesign(page);
+
+    await page.click('.dc-toolbar .dc-btn[data-dshape="rect"]');
+    const node = page.locator("#drawCanvasHost g.dnode").first();
+    await expect(node).toBeVisible();
+    const before = await page.evaluate(() => {
+      const n = dcActive().nodes[0];
+      return { id: n.id, text: n.text };
+    });
+
+    /* 真实双击 = CDP clickCount=2，与真人鼠标走同一管线。
+       修复前这里必红：首击 pointerdown 会触发整画布重渲染（host.innerHTML=...），
+       按下时命中的元素在抬起前已被替换，浏览器因此不合成 click/dblclick，
+       改名浮层对真实鼠标用户永不出现（线上 v3.7.152 真浏览器实测确认）。
+       修复后第二击在重渲染之前由双击判据（detail===2 或 350ms 时间窗）转交改名逻辑。 */
+    await node.dblclick({ delay: 80 });
+
+    /* 浮层 input 直接挂 body（position:fixed，无类名——按位置与类型定位） */
+    const input = page.locator('body > input[type="text"]');
+    await expect(input).toBeVisible();
+    await input.fill("双击改名");
+    await input.press("Enter");
+
+    const after = await page.evaluate((id) => {
+      const n = dcActive().nodes.find((m) => m.id === id);
+      return n.text;
+    }, before.id);
+    expect(after, "双击后节点文字必须回写").toBe("双击改名");
   });
 });

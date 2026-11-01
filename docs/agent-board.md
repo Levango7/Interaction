@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 04:35 | 真实双击改名修复单提交推送 + CI 出终态后 | ACTIVE |
 | `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-11-02 01:00 | **B13 切版 3.7.152**：已发布 `6ec99207`、tag `v3.7.152`、线上实核；回执见 02:15 条目 | RELEASED |
 |---|---|---|---|---|
 | `tests/empty-catch-slice*.test.js`, `tests/empty-catch-ai-tools.test.js`, `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 23:08 | B15 十三文件 + 空基线：已随 `9cb3a1b` 推送（父 `1dbe401`），并入 `v3.7.152` 的 CI `41328508031` 四腿 success | RELEASED |
@@ -51,7 +52,7 @@
 | `src/draw-canvas.js`, `src/data-links.js`, `src/core-i18n.js`, `agent-workbench.html`（仅 Design 模式那两段 CSS）, `tests/draw-canvas.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 12:20 | 已推 `c316697`（CI 41273492243 被 `e6e9817` 的推送取消；windows 腿 `test` 已 success = 那 7 处复绿的直接读数） | RELEASED |
 | `src/draw-canvas.js`, `agent-workbench.html`, `src/core-i18n.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `docs/design-mode-phase-b.md`, `docs/user-manual.md`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-01 12:10 | 已收工释放：Phase B 批次④ 落地 `b9aefc6`（CI 四腿 success）；仅余「AI 桥在画布打开」未做（需另 claim `src/ai-tools.js`） | RELEASED |
 | `scripts/module-graph.mjs`, `scripts/lib/dep-graph.mjs`, `scripts/lint-layers.mjs`, `scripts/module-graph.baseline.json`, `docs/module-graph.md`, `docs/architecture-layers.md`, `tests/dep-graph-cycles.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 11:34 | 本批提交并推送后 | RELEASED |
-| `tests/e2e/draw-responsive.spec.js` | ZCode | 2026-11-01 12:10 | Phase B 批次④ 收工后（画布块本体已与 Qoder 代修合并，见下方条目） | ACTIVE |
+| `tests/e2e/draw-responsive.spec.js` | ZCode | 2026-11-01 12:10 | 批次④ 已随 `b9aefc6` 落地并进 v3.7.152 发布，清旧账 | RELEASED |
 | `src/ai-tools.js`, `src/ai-retry.js`, `src/util-markdown.js`, `agent-workbench.html`, `tests/draw-marker-render.test.js`, `tests/empty-catch-slice17.test.js`, `README.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-10-31 22:40 | 已推 `b1f10da`（CI `41259746970` / Deploy `41259747063` 双绿 + 线上探针 8/8） | RELEASED |
 | `docs/design-mode-phase-b.md` | ZCode | 2026-10-31 00:58 | 用户审核结论后 | ACTIVE |
 | `src/ui-drawer.js`, `src/render-widgets.js`, `src/data-links.js`, `scripts/lint-empty-catch.baseline.json`, `tests/empty-catch-slice18*.test.js`, `tests/empty-catch-slice19*.test.js` | Qoder | 2026-10-30 07:52 | B12 三片收工后 | RELEASED |
@@ -72,6 +73,32 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-02 04:35 UTC+8] ZCode 会话 —— **真浏览器手感验收发现真 bug：双击改名对真实鼠标用户不可达（已修复，待推）**
+
+- 起因：用户从待办列表里点「Code/Design 模式手感反馈」。手感不能只靠嘴说，我对**线上 v3.7.152**
+  跑了一轮真 Chromium 设计模式验收（5 节点发布流程图 + 2 条连线 label + 真指针拖动 + 双击改名 +
+  375 窄屏），8/9 唯一红的就是双击改名——浮层 input 永不出现。
+- **根因三证**：① 事件序列录制：双击只产生 `pointerdown`/`mousedown` 序列，**没有 click、没有 dblclick**；
+  ② 元素身份：一次 `mouse.down()` 后 `getElementById("drawSvg")` 已是**新对象**（按下即整块重建）；
+  ③ 对照：合成 `dispatchEvent(new MouseEvent("dblclick"))` 能正常弹浮层（处理器接线本身没坏）。
+  ⇒ 鼠标按下命中的元素在抬起前已被 `_dcRenderWorkspace()`（`host.innerHTML=...`）替换，
+  浏览器不合成 click/dblclick，**真实用户的双击改名 / 改 label 永不可达**；单测全绿是因为
+  jsdom 直接派发 dblclick，绕开了这条真实路径（典型「jsdom 绿 ≠ 用户可达」）。
+- **修复**（`src/draw-canvas.js` `_dcOnDown`）：双击判据提前到重渲染之前，双轨——
+  `detail===2`（真机鼠标）**或**同一节点/连线 350ms 内第二击。第二轨是实测逼出来的：
+  Chromium 对 CDP/自动化注入的 pointerdown **一律给 `detail=0`**（两击皆 0，单靠 detail 判不住；
+  我第一版只写 detail===2，本地 jsdom 单测绿、真浏览器依旧红，录到 detail 序列才看清）。
+  命中后清空 `_dcLastTap`，第三击不会链式再触发。
+- 守卫：`tests/draw-canvas.test.js` ⑬/⑬b（按真机形态重写：两击同一节点/连线弹浮层回写；
+  换目标的两击不视为双击）；`tests/e2e/draw-responsive.spec.js` ③（真 Chromium `dblclick` 端到端）。
+  本机全量：**单测 225 文件 / 2412 例全绿、e2e 204 全绿**；合并 Qoder B13 发版（`ef55a9a`）后回归过本批。
+- 版本决策：**不 bump、不预登记版本号（R7）**——源码与测试注释一律按日期锚记，不写未上表的号。
+  本笔随下次发版走（CHANGELOG 顶部已新开 `[Unreleased]` 段）。
+- 占用路径：`src/draw-canvas.js`、`tests/draw-canvas.test.js`、`tests/e2e/draw-responsive.spec.js`、
+  `CHANGELOG.md`、`docs/agent-board.md`；另把登记表里我那条 11-01 12:10 的
+  `draw-responsive.spec.js` 旧 ACTIVE 行改 RELEASED（批次④ 早已收工，我的行，按 R13 规矩 3）。
+- 准备推的范围：`ef55a9a..+1`（5 文件单提交，显式路径，R3）。推前查 CI 队列（R1）。
 
 ### [2026-11-02 02:15 UTC+8 / 2026-11-01 18:15 UTC] Qoder 主会话 —— **B13 收口：v3.7.152 已发布并线上实核（逐字节吻合）**
 

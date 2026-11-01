@@ -1,3 +1,16 @@
+## [Unreleased]
+
+- **Design 模式·真实双击改名修复**（2026-11-02）：`_dcOnDown` 的每个分支每次按下都会
+  `_dcRenderWorkspace()`（`host.innerHTML=...`）重建整块 SVG —— 按下时命中的元素在抬起前已被替换，
+  浏览器因此**不合成 click/dblclick**，真实鼠标用户的双击改名 / 改连线 label **完全不可达**
+  （线上 v3.7.152 真浏览器实测：事件序列只到 `pointerdown`/`mousedown`，无 click、无 dblclick）。
+  修复把双击判据提前到重渲染之前，双轨：`detail===2`（真机鼠标）**或**同一节点/连线 350ms 内第二击
+  —— 第二轨是实测逼出来的：Chromium 对 CDP/自动化注入的 pointerdown **一律给 `detail=0`**
+  （两击皆 0，单靠 detail 判不住）。命中后清空暂存 `_dcLastTap`，第三击不会链式再触发。
+  守卫：`tests/draw-canvas.test.js` ⑬/⑬b（两击同一节点/连线弹浮层回写；换目标的两击不视为双击）+
+  `tests/e2e/draw-responsive.spec.js` ③（真 Chromium `dblclick` 端到端弹浮层并回写）。
+  本机：单测 225 文件 / 2412 例全绿、e2e 204 全绿。
+
 ## [3.7.152] - 2026-11-01
 
 > **82 个提交的积压一次放出**（自 `v3.7.151` 起）。四块：

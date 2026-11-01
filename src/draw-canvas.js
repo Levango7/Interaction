@@ -198,6 +198,7 @@ let _dcConnectFrom = null;       // 连线模式：起点节点 id
 let _dcZoom = 1;                 // 1 = 1600x1000 世界
 let _dcTool = "select";          // select | connect
 let _dcDrag = null;              // {mode:"move"|"resize"|"connect", ...}
+let _dcLastTap = null;           // {id:"n:xxx"|"e:xxx", t:ms} 双击时间窗判据（见 _dcOnDown）
 const DC_VIEW_W = 1600, DC_VIEW_H = 1000;
 
 function _dcShapeSvg(n, selected) {
@@ -313,6 +314,22 @@ function _dcOnDown(ev) {
   const nodeEl = ev.target && ev.target.closest ? ev.target.closest(".dnode") : null;
   const edgeEl = ev.target && ev.target.closest ? ev.target.closest(".dedge") : null;
   const d = dcActive(); if (!d) return;
+  /* 2026-11-02 双击修复：真实双击不能依赖 dblclick 事件——本函数下面的分支每次都会
+     _dcRenderWorkspace()（host.innerHTML=...）重建 SVG，按下时命中的元素在
+     抬起前已被替换，浏览器因此不合成 click/dblclick，真实用户的双击改名 /
+     改连线 label 会完全不可达（线上 v3.7.152 实测确认）。
+     判据双轨：detail===2 覆盖真机鼠标（UI 事件层计数）；时间窗覆盖其余情形——
+     Chromium 对 CDP/自动化注入的 pointerdown 一律给 detail=0（实测两击皆 0），
+     故再用「同一节点或连线、350ms 内第二击」判双击。转交时 DOM 尚未重建，
+     节点/连线元素仍可定位；命中双击后清空 _dcLastTap，第三击不会链式再触发。 */
+  const _tapId = nodeEl ? "n:" + nodeEl.getAttribute("data-node-id")
+    : edgeEl ? "e:" + edgeEl.getAttribute("data-edge-id") : null;
+  const _now = Date.now();
+  const _last = _dcLastTap; _dcLastTap = null;
+  if (ev.detail === 2 || (_tapId && _last && _last.id === _tapId && _now - _last.t < 350)) {
+    _dcOnDblClick(ev); return;
+  }
+  _dcLastTap = _tapId ? { id: _tapId, t: _now } : null;
   const p = _dcSvgPoint(ev);
   if (handle && nodeEl) {
     const id = nodeEl.getAttribute("data-node-id");

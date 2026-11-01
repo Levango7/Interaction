@@ -212,6 +212,60 @@ describe("文本与体积上限（审核 Q4：不接 save 返回值 = 静默丢�
   });
 });
 
+describe("真实双击改名（2026-11-02 修复：双击判据=同一目标 350ms 内第二击）", () => {
+  /** 进 design 模式，_dcOnDown 的模式门才会放行 */
+  function bootDesign() {
+    const w = boot();
+    w.toggleUIMode();
+    w.toggleUIMode();
+    return w;
+  }
+  /** jsdom 无 PointerEvent 时 MouseEvent 同型派发同样命中（真实浏览器实测 detail=0） */
+  function fire(win, el) {
+    const EvCtor = typeof win.PointerEvent === "function" ? win.PointerEvent : win.MouseEvent;
+    el.dispatchEvent(new EvCtor("pointerdown", { bubbles: true, detail: 1 }));
+  }
+  it("⑬ 两击同一节点（<350ms）→ body 浮层 input 出现且回写改名", () => {
+    win = bootDesign();
+    win.renderDrawWorkspace();
+    const a = win.dcAddNode("rect", 100, 100, 120, 50, "旧文字");
+    const host = win.document.getElementById("drawCanvasHost");
+    fire(win, host.querySelector("[data-node-id='" + a.id + "']"));
+    expect(win.document.querySelector("body > input[type='text']"), "第一击（单击）不得弹改名浮层").toBeNull();
+    // 第一击已触发整画布重渲染（_dcRenderWorkspace），旧引用已脱离文档，必须重查
+    fire(win, host.querySelector("[data-node-id='" + a.id + "']"));
+    const input = win.document.querySelector("body > input[type='text']");
+    expect(input, "同一节点 350ms 内第二击应弹浮层").toBeTruthy();
+    expect(input.value).toBe("旧文字");
+    input.value = "新文字";
+    input.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(win.dcActive().nodes.find(function (n) { return n.id === a.id; }).text).toBe("新文字");
+  });
+
+  it("⑬b 两击同一连线 → 浮层回写 label；换目标的两击不视为双击", () => {
+    win = bootDesign();
+    win.renderDrawWorkspace();
+    const a = win.dcAddNode("rect", 100, 100, 120, 50, "A");
+    const b = win.dcAddNode("rect", 320, 100, 120, 50, "B");
+    const e = win.dcAddEdge(a.id, b.id);
+    const host = win.document.getElementById("drawCanvasHost");
+    fire(win, host.querySelector("[data-edge-id='" + e.id + "']"));
+    expect(win.document.querySelector("body > input[type='text']"), "连线单击不得弹改名浮层").toBeNull();
+    // 连续快速点击两个不同目标：任何单个目标都只有一击，不得判为双击
+    fire(win, host.querySelector("[data-node-id='" + a.id + "']"));
+    fire(win, host.querySelector("[data-node-id='" + b.id + "']"));
+    expect(win.document.querySelector("body > input[type='text']"), "换目标的两击不弹浮层").toBeNull();
+    // 再对同一连线快速两击（每次重渲染后重查元素）
+    fire(win, host.querySelector("[data-edge-id='" + e.id + "']"));
+    fire(win, host.querySelector("[data-edge-id='" + e.id + "']"));
+    const input = win.document.querySelector("body > input[type='text']");
+    expect(input, "同一连线 350ms 内第二击应弹浮层").toBeTruthy();
+    input.value = "是";
+    input.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(win.dcActive().edges.find(function (x) { return x.id === e.id; }).label).toBe("是");
+  });
+});
+
 describe("Design 模式三向循环（批次③ 集成）", () => {
   it("⑧ toggle×2 → .body.design-mode + 「设计」标签 + dock/画布就位；回 Work 清空 dock", () => {
     win = boot();
