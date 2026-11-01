@@ -41,6 +41,8 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-11-02 01:00 | **B13 切版 3.7.152**：bump 已落，发版提交推送后；tag `v3.7.152` 待该轮 CI+Deploy 绿再补打 | ACTIVE |
+|---|---|---|---|---|
 | `tests/empty-catch-slice*.test.js`, `tests/empty-catch-ai-tools.test.js`, `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 23:08 | B15 十三文件 + 空基线：等 `1dbe401` 那轮排队中的 CI 出终态再推（runner 积压期不推，也不取消自己的验证轮） | ACTIVE |
 | `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 22:35 | 已推 `1dbe401f`（rebase 到 ZCode 的 `b9aefc6` 之上，无冲突；本机守卫 9/9 绿） | RELEASED |
 | `tests/empty-catch-slice3.test.js`, `tests/empty-catch-slice4.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 22:01 | 本批（探针作用域修法 + ⑤ 反例）提交并推送后 | RELEASED |
@@ -70,6 +72,26 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-02 00:50 UTC+8 / 2026-11-01 16:50 UTC] Qoder 主会话 —— **B13 切版 3.7.152 执行中**：前置已由用户条件验收，bump 已落
+
+- **前置（用户 11-01 拍板："确认 deploy 成功再切版"）已满足**：tip `4aeedc0` 的 CI **四腿 success**，
+  Deploy `deploy => success`（run `41323905037`，16:30→~16:45Z 排队后成功）⇒ Pages 真部署过，不是只"没红"。
+- **bump 已执行**：`npm run release 3.7.152` ⇒ 8 个版本源同改并自检通过：
+  `package.json` / `electron/package.json` / `manifest.json` / `agent-workbench.html`（`VERSION=3.7.152` + `BUILD_TAG=20261101a`）/
+  `README.md` 3 处 / `service-worker.js`（`CACHE_VERSION=v3.7.152-20261101a`）/ 两个 `package-lock.json`（仅 version 字段）。
+  `build:check` 自检：**4,262,214 B · sha256:1736fffe4d69a827**。
+- **tag 的处理（脚本自带机制实测）**：`release.mjs` 会先尝试 `git tag -a v3.7.152`，然后校验"tag 那个提交里的 package.json 版本"——
+  这次它指向 `3.7.151` ⇒ **脚本自己把 tag 撤回了**并打印正确顺序。现在 `git tag -l` 里只有 `v3.7.150` / `v3.7.151`，
+  **没有留下错位 tag**；等发版提交推送、CI+Deploy 绿之后我再在发版提交上补打。
+- 发版提交内容：8 个版本源 + `CHANGELOG.md`（新增 `[3.7.152] - 2026-11-01` 摘要块，详细条目仍在下方的 `[Unreleased]` 段）
+  + `AGENTS.md` §二 的 3.7.152 行（**按 82 个提交的实际积压重写**，不再是预登记那句只讲画图标记补丁）。
+- 待办（本会话，顺序不能反）：推发版提交 → 等这轮 CI 四腿 + `deploy success` → 在**该提交**上 `git tag -a v3.7.152` 并推 tag
+  → `gh release create` → 线上带 cache-buster 复核（`VERSION="3.7.152"` / `BUILD_TAG="20261101a"` / 字节数 / sha256）
+  → 把 run 号与线上读数写回 `AGENTS.md` 那一行 + 板。
+- ⚠️ ZCode 仍持 `tests/e2e/draw-responsive.spec.js` 与 `docs/design-mode-phase-b.md` 两处 ACTIVE。
+  这两处与版本源不重叠；但他若在我这轮 CI 跑的时候推新提交，会顶掉我的 Deploy 轮 ⇒ 我会按老规矩：**以发版提交那轮的 Deploy 为准**，
+  被顶掉就等最终 tip 再确认一次，不拿被取消的轮当"已部署"。
 
 ### [2026-11-01 深夜 UTC+8] ZCode 会话 —— **Phase B 批次④ 收口 + e2e 红根因坐实，main `b9aefc6` 四腿 success**
 
