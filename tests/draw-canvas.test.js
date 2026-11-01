@@ -11,6 +11,8 @@
  *  ⑦ dcSetNodeText：变更压栈，同值不压；
  *  ⑧ 模式三向循环：toggle×2 → .body.design-mode + 「设计」标签 + #diagramDock/#drawStage 就位。
  *  ⑨⑩（2026-11-01 代修补）：文档条删除按钮走 SVG 且带可读名称；两段式确认 + 真删后落盘并给回执。
+ *  ⑪ 连线 label：dcSetEdgeLabel 转义入库 + 渲染成 dedge-label（中点锚定）；
+ *  ⑫ 体积/文本上限：DC_TEXT_MAX 截断、单图/总量字节预算（save 返回值必须被接）。
  * 运行：npm test -- draw-canvas
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -131,6 +133,82 @@ describe("渲染序列化（_dcRenderSvg）", () => {
     expect(svg.querySelector("path[marker-end]")).toBeTruthy();                  // 箭头
     const dpath = svg.querySelector("g.dedge path:not([stroke='transparent'])").getAttribute("d");
     expect(dpath).toMatch(/^M\d+ \d+ L\d+/);                                     // 正交折线
+  });
+});
+
+describe("连线 label（批次④ 审核补口）", () => {
+  it("⑪ dcSetEdgeLabel：入库 + 渲染成 dedge-label（中点锚定）+ 文本转义", () => {
+    win = boot();
+    win.renderDrawWorkspace();
+    const a = win.dcAddNode("rect", 100, 100, 100, 50, "A");
+    const b = win.dcAddNode("rect", 500, 400, 100, 50, "B");
+    const e = win.dcAddEdge(a.id, b.id);
+    expect(e.label, "新建连线 label 为空").toBe("");
+    expect(win.dcSetEdgeLabel(e.id, "<b>是</b>"), "写入成功").toBe(true);
+    expect(win.dcById(win.dcActiveId()).edges[0].label).toBe("<b>是</b>");  // 原文入库，渲染时才转义
+    win._dcRenderWorkspace();
+    const svg = win.document.getElementById("drawCanvasHost").querySelector("svg");
+    const lbl = svg.querySelector("text.dedge-label");
+    expect(lbl, "有 label 时必须渲染出标签元素").toBeTruthy();
+    expect(lbl.textContent).toBe("<b>是</b>");                  // textContent 解码实体
+    expect(lbl.querySelector("b"), "注入的 <b> 不得成为真实元素").toBeNull();
+    expect(svg.querySelectorAll("text.dedge-label b").length).toBe(0);
+    expect(lbl.getAttribute("text-anchor")).toBe("middle");
+    expect(lbl.getAttribute("pointer-events"), "标签不能吃掉连接线的点击").toBe("none");
+  });
+
+  it("⑪b 无 label 不渲染标签；空串=清除；同值不压栈", () => {
+    win = boot();
+    win.renderDrawWorkspace();
+    const a = win.dcAddNode("rect", 100, 100, 100, 50, "A");
+    const b = win.dcAddNode("rect", 500, 400, 100, 50, "B");
+    const e = win.dcAddEdge(a.id, b.id);
+    win._dcRenderWorkspace();
+    let svg = win.document.getElementById("drawCanvasHost").querySelector("svg");
+    expect(svg.querySelector("text.dedge-label"), "空 label 不得渲染空标签").toBeNull();
+    win.dcSetEdgeLabel(e.id, "是");
+    /* 同值再写：返回 true（幂等成功）且不改变内容 */
+    expect(win.dcSetEdgeLabel(e.id, "是")).toBe(true);
+    win.dcSetEdgeLabel(e.id, "");
+    expect(win.dcById(win.dcActiveId()).edges[0].label).toBe("");
+    win._dcRenderWorkspace();
+    svg = win.document.getElementById("drawCanvasHost").querySelector("svg");
+    expect(svg.querySelector("text.dedge-label")).toBeNull();
+    expect(win.dcSetEdgeLabel("不存在的 id", "x"), "悬空 id 返回 false，不抛").toBe(false);
+  });
+});
+
+describe("文本与体积上限（审核 Q4：不接 save 返回值 = 静默丢图）", () => {
+  it("⑫ 节点文字与连线 label 都按 DC_TEXT_MAX 截断", () => {
+    win = boot();
+    win.dcCreate();                                              // 先有活动图（dcAddNode 依赖 dcActive）
+    const n = win.dcAddNode("rect", 0, 0, 100, 50, "x".repeat(500));
+    expect(n.text.length).toBe(80);
+    win.dcSetNodeText(n.id, "y".repeat(300));
+    expect(win.dcActive().nodes[0].text.length).toBe(80);
+    const b = win.dcAddNode("rect", 300, 300, 100, 50, "B");
+    const e = win.dcAddEdge(n.id, b.id);
+    win.dcSetEdgeLabel(e.id, "z".repeat(300));
+    expect(win.dcActive().edges[0].label.length).toBe(80);
+  });
+
+  it("⑫b 单图超 128KB 拒写并返回 false（不落盘、不静默丢失）", () => {
+    win = boot();
+    win.dcCreate("大图");
+    const d = win.dcActive();
+    d.title = "T".repeat(130 * 1024);        // 撑过 128KB 预算
+    const ok = win._dcSaveDoc(d);
+    expect(ok, "超单图预算必须如实返回 false").toBe(false);
+    expect(win.dcById(d.id).title.length, "落盘的仍是旧版本（不是半截超预算稿）").toBeLessThan(1024);
+  });
+
+  it("⑫c save 返回 false 时 _dcSaveList 如实传 false（不吞返回值）", () => {
+    win = boot();
+    const real = win.save;
+    win.save = function () { return false; };
+    const ok = win._dcSaveList([{ id: "x", title: "t", nodes: [], edges: [] }]);
+    win.save = real;
+    expect(ok, "存储写失败必须向上报告").toBe(false);
   });
 });
 

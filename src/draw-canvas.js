@@ -22,6 +22,11 @@ const DIAGRAM_MAX = 50;
 const DC_NODE_MAX = 200;
 const DC_SNAP = 10;
 const DC_UNDO_CAP = 50;
+/* 字节上限（localStorage 总配额约 5MB，与其他键共享）：单图 128KB / 全部图 1MB。
+   条数上限（50 图 / 200 节点）管不住体积——200 个节点各带长文本就能轻松吃满配额。 */
+const DC_DOC_BYTES_MAX = 128 * 1024;
+const DC_ALL_BYTES_MAX = 1024 * 1024;
+const DC_TEXT_MAX = 80;
 
 function dcList() {
   const a = load(DC_DIAGRAM_KEY, []);
@@ -32,14 +37,28 @@ function dcById(id) {
 }
 function dcActiveId() { return load(DC_DIAGRAM_ACTIVE_KEY, ""); }
 function dcActive() { return dcById(dcActiveId()); }
-function _dcSaveList(list) { save(DC_DIAGRAM_KEY, list.slice(0, DIAGRAM_MAX)); }
+function _dcBytes(v) { try { return JSON.stringify(v).length; } catch (_e) { return -1; } }
+/** 写列表并接 save() 返回值：save 失败只 toast+return false、**永不抛**，
+ *  不接返回值 = 静默丢图（data-links「假防线」同款缺陷）。返回是否落盘成功。 */
+function _dcSaveList(list) {
+  const cut = list.slice(0, DIAGRAM_MAX);
+  if (_dcBytes(cut) > DC_ALL_BYTES_MAX) {
+    toast(t("draw.quotaAll", "图总量超出本地存储预算（1MB），请删掉一些图"), "warn");
+    return false;
+  }
+  return save(DC_DIAGRAM_KEY, cut) === true;
+}
 function _dcSaveDoc(doc) {
-  if (!doc) return;
+  if (!doc) return false;
   doc.updatedAt = Date.now();
+  if (_dcBytes(doc) > DC_DOC_BYTES_MAX) {
+    toast(t("draw.quotaDoc", "单图体积超出上限（128KB），请精简内容"), "warn");
+    return false;
+  }
   const list = dcList();
   const i = list.findIndex(function (d) { return d && d.id === doc.id; });
   if (i >= 0) list[i] = doc; else list.unshift(doc);
-  _dcSaveList(list);
+  return _dcSaveList(list);
 }
 function dcCreate(title) {
   const d = { id: uid(), title: String(title || t("draw.doc.default", "未命名图")), updatedAt: Date.now(), nodes: [], edges: [] };
@@ -109,7 +128,7 @@ function dcAddNode(type, x, y, w, h, text) {
     type: ["rect", "round", "ellipse", "diamond"].indexOf(type) >= 0 ? type : "rect",
     x: _dcSnapV(x), y: _dcSnapV(y),
     w: Math.max(40, _dcSnapV(w || 140)), h: Math.max(30, _dcSnapV(h || 56)),
-    text: String(text || "")
+    text: String(text || "").slice(0, DC_TEXT_MAX)
   };
   d.nodes.push(n); _dcSaveDoc(d); _dcRenderWorkspace();
   return n;
@@ -129,9 +148,10 @@ function dcResizeNode(id, x, y, w, h) {
 function dcSetNodeText(id, text) {
   const d = dcActive(); if (!d) return;
   const n = d.nodes.find(function (m) { return m.id === id; }); if (!n) return;
-  if (String(n.text || "") === String(text || "")) return;
+  const next = String(text || "").slice(0, DC_TEXT_MAX);
+  if (String(n.text || "") === next) return;
   _dcPushUndo(d);
-  n.text = String(text || ""); _dcSaveDoc(d); _dcRenderWorkspace();
+  n.text = next; _dcSaveDoc(d); _dcRenderWorkspace();
 }
 function dcDeleteSelected() {
   const d = dcActive(); if (!d || !_dcSel) return false;
@@ -154,6 +174,15 @@ function dcAddEdge(from, to) {
   d.edges.push(e); _dcSaveDoc(d); _dcRenderWorkspace();
   _dcSel = { kind: "edge", id: e.id };
   return e;
+}
+function dcSetEdgeLabel(id, label) {
+  const d = dcActive(); if (!d) return false;
+  const e = d.edges.find(function (m) { return m.id === id; }); if (!e) return false;
+  const next = String(label || "").slice(0, DC_TEXT_MAX);
+  if (String(e.label || "") === next) return true;
+  _dcPushUndo(d);
+  e.label = next; _dcSaveDoc(d); _dcRenderWorkspace();
+  return true;
 }
 /** 选中态设置（公开入口）：测试与属性面板都走这里——直接给 win._dcSel 赋值**够不到**
  *  模块级 let 绑定（声明式作用域遮蔽 window 属性，jsdom 实测选中"丢失"）。 */
@@ -209,6 +238,13 @@ function _dcEdgePath(e, byId) {
   const mx = (s.x + t.x) / 2;
   return "M" + s.x + " " + s.y + " L" + mx + " " + s.y + " L" + mx + " " + t.y + " L" + t.x + " " + t.y;
 }
+/** label 落点：三段折线的竖直中段中点（与 _dcEdgePath 同几何，不做绕障）。 */
+function _dcEdgeMid(e, byId) {
+  const a = byId[e.from], b = byId[e.to];
+  if (!a || !b) return null;
+  const s = _dcAnchor(a, b), t = _dcAnchor(b, a);
+  return { x: Math.round((s.x + t.x) / 2), y: Math.round((s.y + t.y) / 2) };
+}
 function _dcRenderSvg() {
   const d = dcActive();
   if (!d) return '<svg id="drawSvg"></svg>';
@@ -224,6 +260,10 @@ function _dcRenderSvg() {
     const hot = e.id === selEdge;
     out += '<g class="dedge" data-edge-id="' + e.id + '"><path d="' + p + '" fill="none" stroke="' + (hot ? "var(--accent)" : "var(--text)") + '" stroke-width="' + (hot ? 2.5 : 1.5) + '" marker-end="url(#darr)"/>'
       + '<path d="' + p + '" fill="none" stroke="transparent" stroke-width="12" style="cursor:pointer"/></g>';
+    if (e.label) {
+      const mid = _dcEdgeMid(e, byId);
+      if (mid) out += '<text class="dedge-label" x="' + mid.x + '" y="' + mid.y + '" text-anchor="middle" dominant-baseline="middle" pointer-events="none">' + esc(e.label) + "</text>";
+    }
   });
   d.nodes.forEach(function (n) {
     out += _dcShapeSvg(n, !!(_dcSel && _dcSel.kind === "node" && _dcSel.id === n.id));
@@ -341,31 +381,61 @@ function _dcOnUp(ev) {
   }
   void p;
 }
-function _dcOnDblClick(ev) {
-  const nodeEl = ev.target && ev.target.closest ? ev.target.closest(".dnode") : null;
-  if (!nodeEl || _uiMode() !== "design") return;
-  const id = nodeEl.getAttribute("data-node-id");
-  const d = dcActive(); if (!d) return;
-  const n = d.nodes.find(function (m) { return m.id === id; }); if (!n) return;
-  const rect = nodeEl.getBoundingClientRect();
+/** 双击编辑的浮层 input（浮层而非 contenteditable：后者带选区与 XSS 双坑）。
+ *  同时服务节点文字与连线 label；maxlength 与模型侧 slice 同界（DC_TEXT_MAX）。 */
+function _dcFloatInput(rect, value, onCommit) {
   const input = document.createElement("input");
   input.type = "text";
-  input.value = String(n.text || "");
+  input.maxLength = DC_TEXT_MAX;
+  input.value = String(value || "");
   input.style.cssText = "position:fixed;left:" + Math.round(rect.left) + "px;top:" + Math.round(rect.top + rect.height / 2 - 14) + "px;width:" + Math.max(120, Math.round(rect.width)) + "px;font-size:var(--fs-sm);padding:4px 6px;border:2px solid var(--accent);border-radius:6px;z-index:var(--z-max)";
   document.body.appendChild(input);
   input.focus(); input.select();
   let done = false;
+  const close = function () { done = true; try { input.parentNode.removeChild(input); } catch (_e) { /* 已移除 */ } };
   const commit = function () {
-    if (done) return; done = true;
-    dcSetNodeText(id, input.value);
-    try { input.parentNode.removeChild(input); } catch (_e) { /* 已移除 */ }
+    if (done) return;
+    const v = input.value;
+    close();
+    onCommit(v);
   };
   input.addEventListener("keydown", function (e2) {
     if (e2.key === "Enter") commit();
-    else if (e2.key === "Escape") { done = true; try { input.parentNode.removeChild(input); } catch (_e) { /* 已移除 */ } }
+    else if (e2.key === "Escape") close();
     e2.stopPropagation();
   });
   input.addEventListener("blur", commit);
+  return input;
+}
+function _dcOnDblClick(ev) {
+  if (_uiMode() !== "design") return;
+  const d = dcActive(); if (!d) return;
+  const nodeEl = ev.target && ev.target.closest ? ev.target.closest(".dnode") : null;
+  if (nodeEl) {
+    const id = nodeEl.getAttribute("data-node-id");
+    const n = d.nodes.find(function (m) { return m.id === id; }); if (!n) return;
+    _dcFloatInput(nodeEl.getBoundingClientRect(), n.text, function (v) { dcSetNodeText(id, v); });
+    return;
+  }
+  /* 连线：双击命中 12px 透明热区（.dedge），编辑 label */
+  const edgeEl = ev.target && ev.target.closest ? ev.target.closest(".dedge") : null;
+  if (!edgeEl) return;
+  const eid = edgeEl.getAttribute("data-edge-id");
+  const e = d.edges.find(function (m) { return m.id === eid; }); if (!e) return;
+  const byId = {}; d.nodes.forEach(function (n) { byId[n.id] = n; });
+  const mid = _dcEdgeMid(e, byId);
+  const svg = document.getElementById("drawSvg");
+  let rect = { left: 0, top: 0, width: 140, height: 24 };
+  if (mid && svg) {
+    /* 把 SVG 内的 label 落点换算回视口坐标（getScreenCTM 缺失时退回外接矩形比例换算） */
+    try {
+      const pt = svg.createSVGPoint(); pt.x = mid.x; pt.y = mid.y;
+      const ctm = svg.getScreenCTM();
+      const sc = ctm ? pt.matrixTransform(ctm) : null;
+      if (sc) rect = { left: sc.x - 70, top: sc.y - 12, width: 140, height: 24 };
+    } catch (_e) { /* 保持默认落点 */ }
+  }
+  _dcFloatInput(rect, e.label, function (v) { dcSetEdgeLabel(eid, v); });
 }
 function _dcOnKey(ev) {
   if (_uiMode() !== "design") return;
@@ -413,11 +483,6 @@ function _dcOnToolbar(ev) {
   const shape = btn.getAttribute("data-dshape");
   const d = dcActive(); if (!d) return;
   if (shape) {
-    const host = document.getElementById("drawCanvasHost");
-    const cx = 0, cy = 0;
-    void cx; void cy;
-    const p = _dcSvgPoint({ clientX: 0, clientY: 0 });
-    void p;
     /* 放置在当前视野中心（viewBox 中心，缩放无关） */
     const vw = Math.round(DC_VIEW_W / _dcZoom), vh = Math.round(DC_VIEW_H / _dcZoom);
     const n = dcAddNode(shape, vw / 2 - 70, vh / 2 - 28, 140, 56, "");
