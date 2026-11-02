@@ -5315,14 +5315,21 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 }
 /* Design 模式窄屏（<1024px，与 Code 模式同一口径强制单栏）：三栏网格在 320/375/412 必溢出。
    窄屏 = 画布占满中栏，图列表停靠收起（图的管理留给属性条）；画布本身 min-width:0 靠 SVG viewBox 缩放。
-   tests/draw-responsive.test.js 用 jsdom 无法量布局 ⇒ 判据由 e2e 承担，这条 CSS 只是让它有得测。 */
+   tests/draw-responsive.test.js 用 jsdom 无法量布局 ⇒ 判据由 e2e 承担，这条 CSS 只是让它有得测。
+   2026-11-02 修复：原 `.body.design-mode{display:block}` 让 main-wrap 高度退化为内容高
+   （宿主 SVG 的 viewBox 固有宽高比），390×844 实测画布仅 242px 高、下方约 42% 屏高空白。
+   改 flex 列：main-wrap flex:1 定高，#drawStage 已有 flex:1 → 宿主真正铺满。
+   DOM 顺序里 mobBar 在 main-wrap 之前，用 order 把画布置顶、底栏压底（rail 夹中间）。 */
 @media (max-width:1023px){
-  .body.design-mode{display:block}
+  .body.design-mode{display:flex;flex-direction:column}
   .body.design-mode .diagram-dock{display:none}
-  .body.design-mode .main-wrap{display:flex;width:100%;max-width:100%;overflow:hidden;
+  .body.design-mode .main-wrap{display:flex;flex:1;min-height:0;order:1;
+    width:100%;max-width:100%;overflow:hidden;
     /* `scrollbar-gutter:stable`（窄屏=单栏唯一的滚动容器）会在右侧常驻约 10px 的空槽，
        实测 412px 视口下画布只拿到 402px —— 单栏模式下这条槽没有意义，收掉。 */
     scrollbar-gutter:auto}
+  .body.design-mode .chat-panel-rail{order:2}
+  .body.design-mode .mob-bar{position:static;order:3}
   .body.design-mode .main-wrap>.main,
   .body.design-mode .main-wrap>.toolbar-row,
   .body.design-mode .chat-panel{display:none}
@@ -38868,17 +38875,21 @@ function renderDrawWorkspace() {
   _dcRenderWorkspace();
   _dcRenderDocDock();
 }
-/** 图列表停靠（.side 内，会话停靠同款交互：单击打开 / ✕ 两击确认删除 / + 新建）。 */
+/** 图列表停靠（design 网格 1/2 网格项，会话停靠同款交互：单击打开 / ✕ 两击确认删除 / + 新建）。 */
 function _dcRenderDocDock() {
   if (_uiMode() !== "design") return;
   let dock = document.getElementById("diagramDock");
   if (!dock) {
-    const side = document.querySelector(".side");
-    if (!side) return;
+    /* 挂点必须是 `.body`：CSS 把本 dock 当作 design 网格的 1/2 网格项
+       （grid-column:1;grid-row:2，与 code 模式会话停靠同款）。2026-11-02 前
+       误挂 nav.side，网格规则全部失效，dock 落进侧栏文档流底部、1440×900
+       首屏只剩约 14px 可见，要滚侧栏才看得见图列表。 */
+    const body = document.querySelector(".body");
+    if (!body) return;
     dock = document.createElement("div");
     dock.className = "diagram-dock";
     dock.id = "diagramDock";
-    side.appendChild(dock);
+    body.appendChild(dock);
   }
   const list = dcList();
   const activeId = dcActiveId();
