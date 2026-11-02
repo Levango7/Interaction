@@ -468,11 +468,18 @@ function renderMermaidBlocks(root){
  *  · 绑定 = document 级一次性委托（渲染是 innerHTML 重建，逐个 bind 会被冲掉），window 护栏幂等。 */
 
 /** 导出按钮条。name 进文件名与 data-svgname，可能含标题内容 → 必须过 esc。 */
-function _svgExportBar(name){
+function _svgExportBar(name, extra){
   return '<div class="svg-export-bar">'
     + '<button type="button" class="svg-exp-btn" data-svgexp="svg" data-svgname="' + esc(name) + '" title="' + t("draw.exportSvg", "导出 SVG") + '">SVG</button>'
     + '<button type="button" class="svg-exp-btn" data-svgexp="png" data-svgname="' + esc(name) + '" title="' + t("draw.exportPng", "导出 PNG") + '">PNG</button>'
-    + '</div>';
+    + (extra || "") + '</div>';
+}
+
+/** AI 桥按钮（Phase B §七「在画布打开」）：这里**只出标记**，点击由 Draw 层的
+ *  dcBindChatBridge 文档级委托接管 —— Util 层不认画布，层界与 _bindSvgExport 同一套分工。 */
+function _svgToCanvasBtn(name){
+  const lbl = t("draw.embed.btn", "在画布打开");
+  return '<button type="button" class="svg-exp-btn dc-embed-btn" data-canvasembed="1" data-svgname="' + esc(name) + '" title="' + esc(lbl) + '">' + esc(lbl) + '</button>';
 }
 
 /** mermaid 成功路径的容器（抽出以便无 lib 环境守护测试）：svg + 导出条，容器带 data-svgexport。 */

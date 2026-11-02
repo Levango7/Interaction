@@ -148,10 +148,74 @@ function dcResizeNode(id, x, y, w, h) {
 function dcSetNodeText(id, text) {
   const d = dcActive(); if (!d) return;
   const n = d.nodes.find(function (m) { return m.id === id; }); if (!n) return;
+  if (n.type === "embed") return;      // 与双击同判据：底稿没有文字维度（公开入口也得守住，别只拦 UI）
   const next = String(text || "").slice(0, DC_TEXT_MAX);
   if (String(n.text || "") === next) return;
   _dcPushUndo(d);
   n.text = next; _dcSaveDoc(d); _dcRenderWorkspace();
+}
+/* ---------- AI 桥：把聊天里的 SVG 产物当**底稿**嵌进当前图（Phase B §七 · 唯一未落地条目） ----------
+ * MVP 口径照设计文档，不在这儿扩大：embed 节点只做「整体移动 / 缩放 / 删除」，
+ * **不做** SVG→图元自动识别（那是 Phase B2）。两条已知边界如实记：
+ *  · 底稿内的 id（marker / gradient / clipPath 等）与画布自身、与别的底稿**共享同一文档 id 空间**，
+ *    同名会互相覆盖 —— 表现为箭头/渐变串色，不动数据；id 前缀隔离留 Phase C。
+ *  · `inner` 是 sanitizeSvg 白名单重建后的串（入库前已过），渲染时按已消毒串直插，与聊天卡同信任级。 */
+const DC_EMBED_W = 320, DC_EMBED_H = 200;   // 视野里的兜底占位框，实际尺寸按 viewBox 宽高比换算
+
+/** 抽出可嵌入的底稿载荷：消毒 → 取定标框（viewBox，退化到 width/height）→ 序列化根的子节点。
+ *  定不了标就返回 null（宁可拒，不静默塞一个会失真的 0×0）。 */
+function dcEmbedPayload(svgStr) {
+  const clean = sanitizeSvg(String(svgStr || ""));
+  if (!clean) return null;
+  let doc = null;
+  try { doc = new DOMParser().parseFromString(clean, "image/svg+xml"); }
+  catch (e) { try { if (typeof pushDiag === "function") pushDiag("warn", "embed parse failed: " + ((e && e.message) || e), { where: "dcEmbedPayload" }); } catch (_e2) { /* 诊断不可用不影响拒绝 */ } return null; }
+  const root = doc && doc.documentElement;
+  if (!root || String(root.nodeName || "").toLowerCase() !== "svg") return null;
+  const vb = String(root.getAttribute("viewBox") || "").trim();
+  const w = parseFloat(root.getAttribute("width")), h = parseFloat(root.getAttribute("height"));
+  let box = vb;
+  if (!box && isFinite(w) && isFinite(h) && w > 0 && h > 0) box = "0 0 " + w + " " + h;
+  if (!box) return null;
+  let inner = "";
+  try {
+    const ser = new XMLSerializer();
+    inner = Array.prototype.slice.call(root.childNodes || []).map(function (k) { return ser.serializeToString(k); }).join("");
+  } catch (e) { try { if (typeof pushDiag === "function") pushDiag("warn", "embed serialize failed: " + ((e && e.message) || e), { where: "dcEmbedPayload" }); } catch (_e2) { /* 同上 */ } return null; }
+  if (!String(inner).trim()) return null;
+  return { vb: box, inner: inner };
+}
+/** 底稿在画布上的初始尺寸：按定标框宽高比塞进 DC_EMBED_W×DC_EMBED_H，两头都不超。 */
+function _dcEmbedSize(vb) {
+  const p = String(vb || "").split(/[\s,]+/).map(Number);
+  if (p.length >= 4 && isFinite(p[2]) && isFinite(p[3]) && p[2] > 0 && p[3] > 0) {
+    const ar = p[2] / p[3];
+    let w = DC_EMBED_W, hh = Math.round(w / ar);
+    if (hh > DC_EMBED_H) { hh = DC_EMBED_H; w = Math.round(hh * ar); }
+    return { w: Math.max(40, w), h: Math.max(30, hh) };
+  }
+  return { w: DC_EMBED_W, h: DC_EMBED_H };
+}
+/** 加底稿节点。**预算在改动之前算**：超了就不碰文档、不压 undo —— 不留半条数据。 */
+function dcAddEmbedNode(payload, x, y, w, h) {
+  const d = dcActive(); if (!d || !payload) return null;
+  if (d.nodes.length >= DC_NODE_MAX) { toast(t("draw.nodeMax", "单图节点已达上限"), "warn"); return null; }
+  const n = {
+    id: uid(), type: "embed",
+    x: _dcSnapV(x), y: _dcSnapV(y),
+    w: Math.max(40, _dcSnapV(w)), h: Math.max(30, _dcSnapV(h)),
+    vb: String(payload.vb), inner: String(payload.inner), text: ""
+  };
+  const probe = { id: d.id, title: d.title, updatedAt: d.updatedAt, nodes: d.nodes.concat([n]), edges: d.edges };
+  if (_dcBytes(probe) > DC_DOC_BYTES_MAX) { toast(t("draw.embed.tooBig", "底稿超出单图 128KB 预算，没放进画布"), "warn"); return null; }
+  _dcPushUndo(d);
+  d.nodes.push(n);
+  if (!_dcSaveDoc(d)) {          // save 只 toast 不抛：接返回值回滚，否则内存有节点、盘上没有（假防线）
+    d.nodes.pop(); _dcUndoStack.pop();
+    return null;
+  }
+  _dcRenderWorkspace();
+  return n;
 }
 function dcDeleteSelected() {
   const d = dcActive(); if (!d || !_dcSel) return false;
@@ -206,7 +270,13 @@ function _dcShapeSvg(n, selected) {
   const fill = "var(--panel)";
   const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
   let shape = "";
-  if (n.type === "ellipse") {
+  if (n.type === "embed") {
+    /* 底稿 = 嵌套 <svg>（自带定标框 → 缩放跟随节点尺寸）+ 虚线框 + 透明热区。
+       热区在最上层，否则点到底稿里的空白处会掉到画布背景上（变成"取消选择"）。 */
+    shape = '<svg x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" viewBox="' + esc(String(n.vb || "")) + '" preserveAspectRatio="xMidYMid meet">' + String(n.inner || "") + "</svg>"
+      + '<rect x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" fill="none" stroke="' + stroke + '" stroke-width="' + (selected ? 2.5 : 1.5) + '" stroke-dasharray="6 4"/>'
+      + '<rect x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" fill="transparent"/>';
+  } else if (n.type === "ellipse") {
     shape = '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + n.w / 2 + '" ry="' + n.h / 2 + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (selected ? 2.5 : 1.5) + '"/>';
   } else if (n.type === "diamond") {
     shape = '<path d="M' + cx + " " + n.y + " L" + (n.x + n.w) + " " + cy + " L" + cx + " " + (n.y + n.h) + " L" + n.x + " " + cy + ' Z" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (selected ? 2.5 : 1.5) + '"/>';
@@ -266,9 +336,10 @@ function _dcRenderSvg() {
       if (mid) out += '<text class="dedge-label" x="' + mid.x + '" y="' + mid.y + '" text-anchor="middle" dominant-baseline="middle" pointer-events="none">' + esc(e.label) + "</text>";
     }
   });
-  d.nodes.forEach(function (n) {
-    out += _dcShapeSvg(n, !!(_dcSel && _dcSel.kind === "node" && _dcSel.id === n.id));
-  });
+  /* 底稿先画、其余后画：embed 的语义是"垫在下面加工"，若按数组顺序后加就盖住手工节点。 */
+  const selId = _dcSel && _dcSel.kind === "node" ? _dcSel.id : "";
+  d.nodes.forEach(function (n) { if (n.type === "embed") out += _dcShapeSvg(n, n.id === selId); });
+  d.nodes.forEach(function (n) { if (n.type !== "embed") out += _dcShapeSvg(n, n.id === selId); });
   if (_dcDrag && _dcDrag.mode === "connect" && _dcDrag.cur) {
     out += '<path d="' + _dcDrag.cur + '" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>';
   }
@@ -277,7 +348,7 @@ function _dcRenderSvg() {
 function _dcRenderWorkspace() {
   const host = document.getElementById("drawCanvasHost");
   if (!host) return;
-  host.innerHTML = _dcRenderSvg(); // lint-xss-ok: 文字经 esc，模型字段受白名单约束（type 枚举/数值 snap）
+  host.innerHTML = _dcRenderSvg(); // lint-xss-ok: 文字经 esc、模型字段受白名单约束（type 枚举/数值 snap）；embed 的 inner 是 sanitizeSvg 白名单重建后的串（dcEmbedPayload 入库前已消毒）
   _dcBindCanvasEvents();
   if (typeof _dcRenderProps === "function") _dcRenderProps();
 }
@@ -431,6 +502,8 @@ function _dcOnDblClick(ev) {
   if (nodeEl) {
     const id = nodeEl.getAttribute("data-node-id");
     const n = d.nodes.find(function (m) { return m.id === id; }); if (!n) return;
+    /* 底稿没有"文字"这个维度：整块是一次性的 AI 产物，改文字会误导成能改图元（MVP 明确不做识别）。 */
+    if (n.type === "embed") { toast(t("draw.embed.locked", "底稿不支持改文字（可整体移动 / 缩放 / 删除）"), "warn"); return; }
     _dcFloatInput(nodeEl.getBoundingClientRect(), n.text, function (v) { dcSetNodeText(id, v); });
     return;
   }
@@ -598,7 +671,54 @@ function _dcRenderProps() {
   const d = dcActive(); if (!d) { el.textContent = ""; return; }
   if (_dcSel && _dcSel.kind === "node") {
     const n = d.nodes.find(function (m) { return m.id === _dcSel.id; });
-    if (n) { el.textContent = t("draw.props", "选中") + ": " + (n.text || n.type) + " · " + n.w + "×" + n.h; return; }
+    if (n) { el.textContent = t("draw.props", "选中") + ": " + (n.text || (n.type === "embed" ? t("draw.embed.kind", "AI 底稿") : n.type)) + " · " + n.w + "×" + n.h; return; }
   }
   el.textContent = d.nodes.length + " " + t("draw.propsNodes", "节点") + " · " + d.edges.length + " " + t("draw.propsEdges", "连线");
 }
+
+/* ---------- AI 桥的入口与聊天侧委托 ---------- */
+/** 把聊天里的一张 SVG 产物作为**底稿**放进当前图，并切到 Design 模式看见它。
+ *  @returns 新建的 embed 节点，失败返回 null（失败原因已由 toast 给出，不再重复播报）。 */
+function dcOpenEmbed(svgStr, title) {
+  const payload = dcEmbedPayload(svgStr);
+  if (!payload) { toast(t("draw.embed.badPayload", "这张 SVG 没有可用的 viewBox 或尺寸，放不进画布"), "warn"); return null; }
+  /* 先建图再切模式：renderDrawWorkspace 里的 dcCreate() 只会给"未命名图"，
+     而这张底稿来自 AI 产物卡，带标题就该用标题命名。 */
+  if (!dcActive()) dcCreate(String(title || "").slice(0, DC_TEXT_MAX));
+  if (_uiMode() !== "design") {
+    try { save(PREFIX + "uimode", "design"); }
+    catch (e) { try { if (typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: " + ((e && e.message) || e), { where: "dcOpenEmbed" }); } catch (_e2) { /* 诊断不可用不影响继续 */ } }
+    if (typeof applyUIMode === "function") applyUIMode();   // 内含 renderDrawWorkspace()：建 #drawStage + 图列表
+  }
+  if (!document.getElementById("drawStage")) renderDrawWorkspace();
+  const d = dcActive();
+  if (!d) { toast(t("draw.embed.noDoc", "画布还没准备好，请再点一次"), "warn"); return null; }
+  const size = _dcEmbedSize(payload.vb);
+  const vw = Math.round(DC_VIEW_W / _dcZoom), vh = Math.round(DC_VIEW_H / _dcZoom);
+  const n = dcAddEmbedNode(payload, vw / 2 - size.w / 2, vh / 2 - size.h / 2, size.w, size.h);
+  if (!n) return null;
+  _dcSel = { kind: "node", id: n.id };
+  _dcRenderWorkspace();
+  toast(t("draw.embed.added", "已把这张图作为底稿放进画布"), "ok");
+  return n;
+}
+/** 文档级一次性委托：产物卡上的 [data-canvasembed] → 取卡内 <svg> 交 dcOpenEmbed。
+ *  绑在 Draw 层（不在 ai-tools）：① 层界 —— AI 层只出标记不出画布逻辑；
+ *  ② 卡片是 innerHTML 重建的，逐个 bind 会被冲掉（与 _bindSvgExport 同一套理由）。 */
+function dcBindChatBridge() {
+  if (typeof document === "undefined" || typeof window === "undefined" || window.__dcEmbedBound) return;
+  window.__dcEmbedBound = true;
+  document.addEventListener("click", function (ev) {
+    const btn = ev.target && ev.target.closest ? ev.target.closest("[data-canvasembed]") : null;
+    if (!btn) return;
+    const box = btn.closest("[data-svgexport]");
+    const svgEl = box && box.querySelector("svg");
+    if (!svgEl) { toast(t("draw.embed.noSvg", "这张卡片里没有可放进画布的图"), "warn"); return; }
+    let str = "";
+    try { str = new XMLSerializer().serializeToString(svgEl); }
+    catch (e) { try { if (typeof pushDiag === "function") pushDiag("warn", "embed serialize failed: " + ((e && e.message) || e), { where: "chatBridge" }); } catch (_e2) { /* 诊断不可用不影响提示 */ } }
+    if (!str) { toast(t("draw.embed.noSvg", "这张卡片里没有可放进画布的图"), "warn"); return; }
+    dcOpenEmbed(str, btn.getAttribute("data-svgname") || "");
+  });
+}
+dcBindChatBridge();

@@ -3451,7 +3451,7 @@ function renderChat(){
           if(_cleanSvg){
             return '<div class="msg tool svg-msg" data-svgexport data-svgname="' + esc(_sp.title || "draw") + '">'
               + (_sp.title ? '<div class="chart-msg-title">' + esc(_sp.title) + '</div>' : '')
-              + _cleanSvg + _svgExportBar(_sp.title || "draw") + '</div>';
+              + _cleanSvg + _svgExportBar(_sp.title || "draw", _svgToCanvasBtn(_sp.title || "draw")) + '</div>';
           }
         }catch(e){
           try{ if(typeof pushDiag === "function") pushDiag("warn", "svg msg render failed: " + ((e && e.message) || e), { where: "chatRender" }); }catch(_e2){ /* 诊断不可用不影响回退 */ }

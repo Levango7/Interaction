@@ -86,7 +86,10 @@ describe("draw_svg 渲染（chat 管线）", () => {
     expect(card.getAttribute("data-svgexport")).not.toBeNull();   // 导出容器（批次①②的委托接管）
     expect(card.querySelector("svg")).toBeTruthy();
     expect(card.textContent).toContain("小横幅");                // 标题入卡
-    expect(card.querySelectorAll(".svg-exp-btn").length).toBe(2); // SVG / PNG 两个导出按钮
+    expect(card.querySelectorAll("[data-svgexp]").length).toBe(2); // SVG / PNG 两个**导出**按钮
+    /* 判据从 .svg-exp-btn 换成 [data-svgexp]：AI 桥按钮（Phase B §七「在画布打开」）复用同一个样式类，
+       按类计数会把"两个导出按钮"读成三个 —— 那条数的是导出，不是按钮总数。 */
+    expect(card.querySelectorAll("[data-canvasembed]").length).toBe(1); // 底稿桥按钮在这张卡上
   });
 
   it("③b 防御纵深：渲染层对脏历史二次消毒（脏样本带不进可执行内容）", () => {

@@ -342,3 +342,135 @@ describe("文档条的删除 affordance 与回执", () => {
     expect(texts, "删除是同步写盘，落完才报『图已删除』").toContain("图已删除");
   });
 });
+
+/* ⑬–⑰ —— AI 桥「在画布打开」（Phase B §七 · 本方案最后一条未落地条目）
+   口径：底稿 = 一次性的整体引用（移动 / 缩放 / 删除），**不做** SVG→图元识别。
+   所以这几条钉的是「拒得对」「放得对」「关得对」，不是"渲染好不好看"。 */
+describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
+  const VB_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect x="10" y="10" width="100" height="60" fill="#abc"/><text x="20" y="40">hi</text></svg>';
+  const WH_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><circle cx="60" cy="40" r="30"/></svg>';
+  const NOBOX_SVG = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>';
+  const DIRTY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="5" height="5" onclick="alert(1)"/><g></g></svg>';
+
+  function bootDesign() { const w = boot(); w.toggleUIMode(); w.toggleUIMode(); return w; }
+  function toastTexts() {
+    return [...win.document.querySelectorAll("#toasts .toast")].map((e) => e.textContent).join("|");
+  }
+
+  it("⑬ dcEmbedPayload：viewBox 优先 → 退化到 width/height → 都定不了标就拒", () => {
+    win = boot();
+    const a = win.dcEmbedPayload(VB_SVG);
+    expect(a.vb).toBe("0 0 400 200");
+    expect(a.inner).toContain("<rect");
+    expect(a.inner, "只取根的子节点：外层 <svg> 由画布自己按节点尺寸重建").not.toMatch(/^<svg/);
+    const b = win.dcEmbedPayload(WH_SVG);
+    expect(b.vb, "无 viewBox 时用 width/height 定标").toBe("0 0 120 80");
+    expect(win.dcEmbedPayload(NOBOX_SVG), "定不了标就不塞（宁可拒，不放一个会失真的 0×0）").toBeNull();
+    expect(win.dcEmbedPayload("这根本不是 SVG")).toBeNull();
+  });
+
+  it("⑬b 底稿入库前已消毒：事件句柄进不了 inner（画布按已消毒串直插，脏了就是自伤）", () => {
+    win = boot();
+    const p = win.dcEmbedPayload(DIRTY_SVG);
+    expect(p, "剥掉句柄后仍有内容 ⇒ 不该整张拒").toBeTruthy();
+    expect(p.inner).not.toMatch(/onclick/i);
+    expect(p.inner).not.toMatch(/<scr/i);
+  });
+
+  it("⑭ dcAddEmbedNode：入文档 + 落盘往返 + 进快照栈（撤销能取消这张底稿）", () => {
+    win = boot();
+    win.dcCreate("底稿图");
+    const n = win.dcAddEmbedNode(win.dcEmbedPayload(VB_SVG), 0, 0, 320, 160);
+    expect(n.type).toBe("embed");
+    expect([n.x, n.y, n.w, n.h]).toEqual([0, 0, 320, 160]);
+    const persisted = JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]");
+    expect(persisted[0].nodes[0].inner, "不落盘 = 刷新就丢").toContain("<rect");
+    expect(win.dcUndo(), "底稿该进 undo 栈").toBe(true);
+    expect(win.dcActive().nodes.length).toBe(0);
+    expect(JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]")[0].nodes.length, "撤销同步落盘").toBe(0);
+  });
+
+  it("⑭b 超预算在**改动之前**拒：文档不长、undo 栈不涨、回执说的是底稿", () => {
+    win = boot();
+    win.dcCreate("预算图");
+    const huge = { vb: "0 0 100 100", inner: '<rect width="100" height="100" data-pad="' + "x".repeat(200 * 1024) + '"/>' };
+    expect(win.dcAddEmbedNode(huge, 0, 0, 100, 100), "128KB 单图预算没过 ⇒ 返回 null").toBeNull();
+    expect(win.dcActive().nodes.length, "预算没过就不该动文档").toBe(0);
+    expect(win.dcUndo(), "也没压快照（撤销栈仍是空的）").toBe(false);
+    expect(toastTexts()).toContain("底稿超出单图 128KB 预算");
+  });
+
+  it("⑮ 渲染：底稿垫在手工节点下面（**后加的也要垫底**）+ 嵌套 <svg> 带定标框 + 虚线框 + 透明热区", () => {
+    win = boot();
+    win.dcCreate("叠放图");
+    /* 顺序按真实用法摆：用户先手工画了节点，才把 AI 图放进来当底稿。
+       —— 变异自证（M2）抓出我初版把底稿先加、节点后加，那样数组顺序与类型顺序一致，
+       删掉"embed 先画"那支也不会红，等于一条空转的断言。 */
+    const r = win.dcAddNode("rect", 400, 400, 140, 56, "手工");
+    const e = win.dcAddEmbedNode(win.dcEmbedPayload(VB_SVG), 0, 0, 320, 160);
+    const out = win._dcRenderSvg();
+    expect(out.indexOf('data-node-id="' + e.id + '"') < out.indexOf('data-node-id="' + r.id + '"'),
+      "底稿后加仍必须画在手工节点之前（语义是「垫在下面加工」）").toBe(true);
+    expect(out).toContain('<svg x="0" y="0" width="320" height="160" viewBox="0 0 400 200"');
+    expect(out).toContain('stroke-dasharray="6 4"');
+    expect(out).toContain('fill="transparent"');
+  });
+
+  it("⑯ 底稿没有文字维度：公开入口静默拒 + 双击给专用回执、不弹输入框", () => {
+    win = bootDesign();
+    const e = win.dcAddEmbedNode(win.dcEmbedPayload(VB_SVG), 0, 0, 320, 160);
+    win.dcSetNodeText(e.id, "改字");
+    expect(win.dcActive().nodes[0].text, "不只拦 UI，dcSetNodeText 也守住").toBe("");
+    win.dcSelect("node", e.id);
+    const host = win.document.getElementById("drawCanvasHost");
+    const nodeEl = host.querySelector('[data-node-id="' + e.id + '"]');
+    expect(nodeEl, "底稿应命中 .dnode 分组").toBeTruthy();
+    nodeEl.dispatchEvent(new win.MouseEvent("dblclick", { bubbles: true }));
+    /* 认浮层自己的形状：**直接挂 body 的 input**（_dcFloatInput 用 appendChild(document.body)）。
+       两个坑都实测过：`input[maxlength]` 会命中右栏表单的 12 个常驻输入框（假红），
+       `[style*="position:fixed"]` 又因为 jsdom 把 cssText 序列化成 "position: fixed"（带空格）而永不命中（假绿）。 */
+    const floated = win.document.querySelectorAll("body > input");
+    const dump = [...floated].map((i) => i.outerHTML.slice(0, 120)).join(" | ");
+    expect(floated.length, "不该弹浮层输入框；实收 [" + dump + "]").toBe(0);
+    expect(toastTexts()).toContain("底稿不支持改文字");
+    /* 反向对照：同一套双击路径对普通节点必须真弹输入框 —— 否则上面那条"没弹"
+       可能只是监听器压根没跑（假绿的形状与假红一模一样）。 */
+    const r2 = win.dcAddNode("rect", 600, 600, 140, 56, "可改字");
+    win.dcSelect("node", r2.id);
+    const rectEl = win.document.querySelector('[data-node-id="' + r2.id + '"]');
+    rectEl.dispatchEvent(new win.MouseEvent("dblclick", { bubbles: true }));
+    expect(win.document.querySelectorAll("body > input").length,
+      "普通节点双击仍要能改字").toBe(1);
+  });
+
+  it("⑰ 端到端：产物卡按钮一点 → 底稿进画布 + 自动切 Design + 属性条说的是 AI 底稿", () => {
+    win = boot();
+    win.document.body.insertAdjacentHTML("beforeend",
+      '<div class="msg tool svg-msg" data-svgexport data-svgname="架构图">'
+      + '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><rect width="200" height="100" fill="#eee"/></svg>'
+      + '<button type="button" class="svg-exp-btn dc-embed-btn" data-canvasembed="1" data-svgname="架构图">在画布打开</button></div>');
+    expect(win._uiMode()).toBe("work");
+    win.document.querySelector("[data-canvasembed]").click();
+    expect(win._uiMode(), "桥的另一端在画布：不放用户留在聊天里").toBe("design");
+    /* 布局壳用 `.app > .body`：裸 `.body` 会被列表项的同名 class 抢先命中
+       （e2e strict mode 那条红就是这么来的，jsdom 里则表现为静默取错元素）。 */
+    expect(win.document.querySelector(".app > .body").classList.contains("design-mode")).toBe(true);
+    const d = win.dcActive();
+    expect(d.title, "新建图用产物标题命名，而不是默认的「未命名图」").toBe("架构图");
+    const e = d.nodes.find((n) => n.type === "embed");
+    expect(e, "文档里应多出一个底稿节点").toBeTruthy();
+    expect(e.vb).toBe("0 0 200 100");
+    expect([e.w, e.h], "按 2:1 定标塞进 320×200 的占位框").toEqual([320, 160]);
+    expect(win.document.getElementById("dcProps").textContent).toContain("AI 底稿");
+    expect(toastTexts()).toContain("已把这张图作为底稿放进画布");
+  });
+
+  it("⑰b 卡里没有 svg（老历史被截断那一类）⇒ 专用回执，且不把人切进空画布", () => {
+    win = boot();
+    win.document.body.insertAdjacentHTML("beforeend",
+      '<div data-svgexport data-svgname="旧"><button type="button" data-canvasembed="1">在画布打开</button></div>');
+    win.document.querySelector("[data-canvasembed]").click();
+    expect(win._uiMode(), "拒的时候就别顺手切模式").toBe("work");
+    expect(toastTexts()).toContain("这张卡片里没有可放进画布的图");
+  });
+});

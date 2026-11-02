@@ -153,6 +153,36 @@
 
 ## [Unreleased]
 
+### 2026-11-02 · **B16：AI 桥「在画布打开」落地** —— `docs/design-mode-phase-b.md` §七 那条唯一未实现条目关闭
+
+- **做法（MVP 口径照设计文档，不扩大）**：聊天 `draw_svg` 产物卡的导出条上多一个按钮，点一下把
+  **卡内那张 SVG** 作为 `type:"embed"` 底稿节点嵌进当前图，并自动切到 Design 模式看见它。
+  底稿可整体移动 / 缩放 / 删除；**不做** SVG→图元自动识别（那是 Phase B2，不承诺）。
+- **层界**：AI 层只出标记（`data-canvasembed`；按钮模板 `_svgToCanvasBtn` 放在 Util 的 `_svgExportBar` 旁），
+  点击委托与画布逻辑全在 Draw 层（`dcBindChatBridge` / `dcOpenEmbed`）—— 委托绑文档级而不是逐个 bind
+  （卡片是 innerHTML 重建的，与 `_bindSvgExport` 同一套理由）。`lint:layers` 基线外 0、`check:modules` 无新环。
+- **安全边界**：`dcEmbedPayload` 入库前先过 `sanitizeSvg`（白名单重建），只取根节点的**子内容** + 定标框；
+  既无 `viewBox` 又无 `width/height` ⇒ 整张拒，不放一张会失真的 0×0。
+  已知限制如实写进 `src/draw-canvas.js` 文件头：底稿内的 `id`（marker / gradient / clipPath）与画布自身、
+  与别的底稿**共享同一文档 id 空间**，同名互相覆盖 ⇒ 表现为箭头/渐变串色、不动数据，id 前缀隔离留 Phase C。
+- **预算与落盘**：字节数**在改动之前**算，超 128KB 单图预算就不碰文档、不压 undo（不给"半条底稿"留机会）；
+  `_dcSaveDoc` 的返回值被接住，写盘失败即回滚内存态。
+- **底稿垫底**：渲染时 embed 先画、手工节点后画 —— 按数组顺序"后加的盖在上面"与"垫在下面加工"的语义相反。
+- **文字维度封在两处**：`dcSetNodeText` 公开入口 + 双击（同判据，不只拦 UI），双击给专用回执。
+- **测试**：`tests/draw-canvas.test.js` 16 → 24 例（新增 ⑬–⑰b 共 8 例）。其中反向对照那条是**自己被抓出来的**：
+  我最初用 `input[maxlength]` 判"没弹浮层"，它命中右栏 12 个常驻输入框（假红）；换成
+  `[style*="position:fixed"]` 又因 jsdom 把 `cssText` 序列化成 `position: fixed`（带空格）而永不命中（假绿）；
+  最终认"直接挂 body 的 input"，并补上"普通节点双击必须真弹"作反向对照。
+- **新增 e2e** `tests/e2e/draw-embed-bridge.spec.js`（2 例，真浏览器）：真点按钮 → 底稿**真有外框尺寸**
+  （jsdom 没有布局引擎，量不出"看得见"）→ 真指针拖动落点吸附 10px → 落盘带回 `inner`；
+  第二例双向下：底稿双击不弹文字浮层且给专用回执，同一条路径对普通矩形必须弹。
+- **旧断言同步一处（有理由，不是刷绿）**：`tests/draw-svg-tool.test.js` ③ 数"导出按钮"从 `.svg-exp-btn`
+  改用 `[data-svgexp]` —— 桥按钮复用了同一个样式类，按类计数会把"两个导出按钮"读成三个；
+  同批加断言"这张卡上有 1 个 `[data-canvasembed]`"。
+- 本机验证：15 条 CI 分条门禁 exit 0（`lint:xss` / `lint:empty-catch` / `lint:icons` / `lint:tokens` /
+  `lint:layers` / `lint:breakpoints` / `lint:appbridge` / `lint:false-receipt` / `check:modules` / `src:check` /
+  `check:source-state` / `check:ai-tools-doc` / `build:check` / `check:pwa-icons` / `pet:check`）；全量单测与 e2e 见下条 CI 回执。
+
 ### 2026-11-01 · **B15：把余 13 个探针作用域违规一次清零** ⇒ `probe-binding` 基线转**零容忍**
 
 > 上一条留下的敞口（假绿）今天关掉。`node /tmp` 式机械转换只做一件事，每个文件同一处两行：

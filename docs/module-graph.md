@@ -20,11 +20,11 @@
 | `data-migrate` | Data | `data-links` | 2 |
 | `data-rw` | Data | `core` `core-i18n` `core-shared` `crypto` `data-links` | 9 |
 | `chain` | Chain | `data-links` `util-markdown` | 2 |
-| `ai-tools` | AI | `ai-retry` `ai-subagent` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `util-markdown` | 28 |
+| `ai-tools` | AI | `ai-retry` `ai-subagent` `chain` `core` `core-i18n` `core-shared` `crypto` `data-idb` `data-links` `data-rw` `util-markdown` | 29 |
 | `ai-loop` | AI | `ai-tools` `chain` `core` `crypto` | 9 |
 | `ai-retry` | AI | `ai-loop` `ai-tools` `core-shared` `data-links` `data-migrate` `util-perf` | 47 |
 | `ai-subagent` | AI | `ai-tools` `data-links` | 3 |
-| `draw-canvas` | Draw | `render-widgets` `util-markdown` | 4 |
+| `draw-canvas` | Draw | `render-widgets` `util-markdown` | 6 |
 | `render-entry` | Render | `ai-retry` `ai-tools` `core-shared` `data-links` `data-rw` `render-overview` `render-scene-main` `render-scene-sub` `render-widgets` `util-markdown` `util-perf` | 63 |
 | `render-scene-sub` | Render | `core-shared` `render-entry` `util-markdown` `util-perf` | 9 |
 | `render-scene-main` | Render | `ai-retry` `ai-tools` `core-shared` `data-idb` `data-links` `data-rw` `render-entry` `render-overview` `render-scene-sub` `util-markdown` `util-perf` | 28 |
@@ -83,13 +83,13 @@
 - 跨块重复定义：**0** 项
 - 循环依赖：**35** 条（ai-loop → ai-tools → ai-retry → ai-loop；ai-retry → ai-tools → ai-retry；ai-subagent → ai-tools → ai-subagent；draw-canvas → render-widgets → draw-canvas；render-entry → render-overview → render-entry）
 - 逆层依赖（低层用高层符号）：**20** 条（按「块对」计）
-- 逆层依赖（按**符号**计，去重）：**105** 个符号
+- 逆层依赖（按**符号**计，去重）：**106** 个符号
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
 | `ai-tools`（AI） | `ai-retry`（AI） | `CHAT_SUGGEST_HTML` `_msgTokens` `renderAiReceipts` |
 | `ai-tools`（AI） | `ai-subagent`（AI） | `getSubAgent` |
-| `draw-canvas`（Draw） | `render-widgets`（Render） | `_uiMode` |
+| `draw-canvas`（Draw） | `render-widgets`（Render） | `_uiMode` `applyUIMode` |
 | `render-entry`（Render） | `render-overview`（Render） | `renderAuthLogin` `renderAuthRegister` `renderAuthReset` `renderAuthWelcome` `renderChainPage` `renderOverview` … |
 | `render-entry`（Render） | `render-scene-main`（Render） | `_featureCardBind` `_hydrateRecImgs` `_miniBarSVG` `_miniLineSVG` `_miniPieSVG` `bindCodeFrontendCard` … |
 | `render-entry`（Render） | `render-scene-sub`（Render） | `getHealthRecs` `parseNum` |

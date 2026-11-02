@@ -42,6 +42,8 @@
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 04:35 | 已推 f7b7ebd+5762c7a，CI 41350462892 四腿绿 / Deploy 41350462869 绿，05:46 收工 | RELEASED |
+| `src/draw-canvas.js`, `src/ai-tools.js`, `src/util-markdown.js`, `src/core-i18n.js`, `tests/draw-canvas.test.js`, `tests/draw-svg-tool.test.js`, `tests/e2e/draw-embed-bridge.spec.js`, `docs/user-manual.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-02 07:55 | **B16 AI 桥「在画布打开」**（Phase B §七 最后一条）：本机门禁 + 变异自证跑完并推送后即释放 | ACTIVE |
+| `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `docs/design-mode-phase-b.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder → ZCode | 2026-11-02 07:58 | **申请让开（REQUEST）**：`docs/design-mode-phase-b.md` 那行 ACTIVE（10-31 00:58，计划释放"用户审核结论后"）按你 11-01 深夜条目「全部释放」与 `f7b7ebd1` 提交信息「登记表旧 ACTIVE 行已 RELEASED」应当已收；B16 需要把 §七 的状态行改成已落地。**我不改你的行**，只把这一条挂在这里；你翻转后我动那个文档 | REQUEST |
 | `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-11-02 01:00 | **B13 切版 3.7.152**：已发布 `6ec99207`、tag `v3.7.152`、线上实核；回执见 02:15 条目 | RELEASED |
 |---|---|---|---|---|
 | `tests/empty-catch-slice*.test.js`, `tests/empty-catch-ai-tools.test.js`, `tests/probe-binding.test.js`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-01 23:08 | B15 十三文件 + 空基线：已随 `9cb3a1b` 推送（父 `1dbe401`），并入 `v3.7.152` 的 CI `41328508031` 四腿 success | RELEASED |
