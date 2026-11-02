@@ -22,7 +22,9 @@ const GOOD_SVG =
   + '<rect x="6" y="6" width="188" height="88" fill="#dbeafe" stroke="#1d4ed8"/>'
   + '<text x="20" y="55">AI 画的架构图</text></svg>';
 
-/** 走真实回执形态把一张 draw_svg 产物塞进聊天（与 draw-marker-render 的单测同一形状）。 */
+/** 走真实回执形态把一张 draw_svg 产物塞进聊天（与 draw-marker-render 的单测同一形状）。
+ *  ⚠️ 还要展开对话坞：面板默认收起（v3.2 的布局决定），卡片在收起的容器里 DOM 有、但不可见 ——
+ *  Playwright 的 toBeVisible 因此判 hidden（本机首轮实测就是这个形状）。 */
 async function seedSvgCard(page) {
   await page.evaluate((svg) => {
     const raw = "__SVG__" + JSON.stringify({ title: "架构图", svg: svg });
@@ -34,7 +36,9 @@ async function seedSvgCard(page) {
       _raw: _markerRaw(raw),
     });
     renderChat();
+    if (typeof window.__aiPanelExpand === "function") window.__aiPanelExpand();
   }, GOOD_SVG);
+  await expect(page.locator("#chatPanel")).toBeVisible();
 }
 
 test.beforeAll(() => { test.skip(!process.env.E2E, "set E2E=1 to run"); });
@@ -53,20 +57,26 @@ test.describe("AI 桥：产物卡 → 画布底稿", () => {
     await btn.click();
 
     await expect(page.locator(SHELL), "桥的另一端在画布：应自动切到 Design").toHaveClass(/design-mode/);
-    const nested = page.locator("#drawCanvasHost g.dnode svg svg").first();
+    /* 先核模型再核几何：DOM 选择器写错时，这条能立刻区分"底稿没进去"与"我没找对元素"。 */
+    const before = await page.evaluate(() => {
+      const n = dcActive().nodes.find((m) => m.type === "embed");
+      return n
+        ? { id: n.id, x: n.x, y: n.y, vb: n.vb, hasInner: String(n.inner || "").indexOf("<rect") >= 0 }
+        : null;
+    });
+    expect(before, "画布里应多出一个 embed 底稿节点").toBeTruthy();
+    expect(before.vb).toBe("0 0 200 100");
+    expect(before.hasInner, "底稿内容入库（不然刷新就丢）").toBe(true);
+
+    /* 嵌套形状：外层是画布根 <svg id="drawSvg">，底稿是 g.dnode 的直接子 <svg> ⇒ 选择器只到一层
+       （首轮我写成 `g.dnode svg svg`，那是"底稿里再套一个 svg"，本机实测恒 not found）。 */
+    const nested = page.locator("#drawCanvasHost g.dnode svg").first();
     await expect(nested, "底稿应作为嵌套 <svg> 出现在某个 dnode 里").toBeAttached();
     const box = await nested.boundingBox();
     expect(box, "底稿必须有真实外框（jsdom 量不到这一步）").not.toBeNull();
     expect(box.width, `底稿宽度应随定标框缩放；实测 ${Math.round(box.width)}×${Math.round(box.height)}`)
       .toBeGreaterThanOrEqual(60);
     expect(box.height).toBeGreaterThanOrEqual(30);
-
-    const before = await page.evaluate(() => {
-      const n = dcActive().nodes.find((m) => m.type === "embed");
-      return { id: n.id, x: n.x, y: n.y, vb: n.vb, hasInner: String(n.inner || "").indexOf("<rect") >= 0 };
-    });
-    expect(before.vb).toBe("0 0 200 100");
-    expect(before.hasInner, "底稿内容入库（不然刷新就丢）").toBe(true);
 
     /* 真指针从底稿中心拖起：命中靠热区 rect，不靠调 API */
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -94,22 +104,26 @@ test.describe("AI 桥：产物卡 → 画布底稿", () => {
     await page.locator('.svg-msg [data-canvasembed]').click();
     await expect(page.locator(SHELL)).toHaveClass(/design-mode/);
 
-    const embed = page.locator("#drawCanvasHost g.dnode svg svg").first();
+    /* 用**增量**判浮层，不判绝对数：对话坞展开后 body 下未必是 0 个 input（首轮就栽过一次），
+       绝对数会把"本来就有一个"读成"弹了两个"。 */
+    const base = await page.evaluate(() => document.querySelectorAll("body > input").length);
+    const embed = page.locator("#drawCanvasHost g.dnode svg").first();
     const ebox = await embed.boundingBox();
     await page.mouse.dblclick(ebox.x + ebox.width / 2, ebox.y + ebox.height / 2);
     const state1 = await page.evaluate(() => ({
       inputs: document.querySelectorAll("body > input").length,
       texts: [...document.querySelectorAll("#toasts .toast")].map((e) => e.textContent).join("|"),
     }));
-    expect(state1.inputs, "底稿没有文字维度：不该弹浮层").toBe(0);
+    expect(state1.inputs, "底稿没有文字维度：不该新增浮层").toBe(base);
     expect(state1.texts, "拒了要说为什么").toContain("底稿不支持改文字");
 
-    /* 反向对照：同一条双击路径对普通矩形必须真弹输入框，否则上面那条"没弹"是空转的绿 */
+    /* 反向对照：同一条双击路径对普通矩形必须真弹**一个**输入框，
+       否则上面那条"没弹"是空转的绿；弹两个则是转交路径与原生 dblclick 各走了一遍。 */
     await page.click('.dc-toolbar .dc-btn[data-dshape="rect"]');
     const rect = page.locator("#drawCanvasHost g.dnode").last();
     const rbox = await rect.boundingBox();
     await page.mouse.dblclick(rbox.x + rbox.width / 2, rbox.y + rbox.height / 2);
     const state2 = await page.evaluate(() => document.querySelectorAll("body > input").length);
-    expect(state2, "普通节点双击仍要能改字").toBe(1);
+    expect(state2, "普通节点双击应恰好弹出一个文字浮层（实收新增 " + (state2 - base) + " 个）").toBe(base + 1);
   });
 });

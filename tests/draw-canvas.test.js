@@ -13,6 +13,9 @@
  *  ⑨⑩（2026-11-01 代修补）：文档条删除按钮走 SVG 且带可读名称；两段式确认 + 真删后落盘并给回执。
  *  ⑪ 连线 label：dcSetEdgeLabel 转义入库 + 渲染成 dedge-label（中点锚定）；
  *  ⑫ 体积/文本上限：DC_TEXT_MAX 截断、单图/总量字节预算（save 返回值必须被接）。
+ *  ⑬/⑬b（ZCode `f7b7ebd1`）：真实双击可达性 —— 两击同一节点/连线弹浮层回写，换目标的两击不算双击。
+ *  ⑭–⑱b（AI 桥一族，2026-11-02）：底稿载荷抽取与拒绝、入库消毒、预算前置拒、垫底渲染顺序、
+ *    文字维度封两处、产物卡按钮端到端；原编号 ⑬–⑰b，因与上一条重号整体后移一位。
  * 运行：npm test -- draw-canvas
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -343,7 +346,7 @@ describe("文档条的删除 affordance 与回执", () => {
   });
 });
 
-/* ⑬–⑰ —— AI 桥「在画布打开」（Phase B §七 · 本方案最后一条未落地条目）
+/* ⑭–⑱b（AI 桥一族）—— 原 ⑬–⑰b，因 ZCode f7b7ebd1 占了 ⑬/⑬b 而整体后移一位 —— AI 桥「在画布打开」（Phase B §七 · 本方案最后一条未落地条目）
    口径：底稿 = 一次性的整体引用（移动 / 缩放 / 删除），**不做** SVG→图元识别。
    所以这几条钉的是「拒得对」「放得对」「关得对」，不是"渲染好不好看"。 */
 describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
@@ -357,7 +360,7 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     return [...win.document.querySelectorAll("#toasts .toast")].map((e) => e.textContent).join("|");
   }
 
-  it("⑬ dcEmbedPayload：viewBox 优先 → 退化到 width/height → 都定不了标就拒", () => {
+  it("⑭ dcEmbedPayload：viewBox 优先 → 退化到 width/height → 都定不了标就拒", () => {
     win = boot();
     const a = win.dcEmbedPayload(VB_SVG);
     expect(a.vb).toBe("0 0 400 200");
@@ -369,7 +372,7 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     expect(win.dcEmbedPayload("这根本不是 SVG")).toBeNull();
   });
 
-  it("⑬b 底稿入库前已消毒：事件句柄进不了 inner（画布按已消毒串直插，脏了就是自伤）", () => {
+  it("⑭b 底稿入库前已消毒：事件句柄进不了 inner（画布按已消毒串直插，脏了就是自伤）", () => {
     win = boot();
     const p = win.dcEmbedPayload(DIRTY_SVG);
     expect(p, "剥掉句柄后仍有内容 ⇒ 不该整张拒").toBeTruthy();
@@ -377,7 +380,7 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     expect(p.inner).not.toMatch(/<scr/i);
   });
 
-  it("⑭ dcAddEmbedNode：入文档 + 落盘往返 + 进快照栈（撤销能取消这张底稿）", () => {
+  it("⑮ dcAddEmbedNode：入文档 + 落盘往返 + 进快照栈（撤销能取消这张底稿）", () => {
     win = boot();
     win.dcCreate("底稿图");
     const n = win.dcAddEmbedNode(win.dcEmbedPayload(VB_SVG), 0, 0, 320, 160);
@@ -390,7 +393,7 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     expect(JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]")[0].nodes.length, "撤销同步落盘").toBe(0);
   });
 
-  it("⑭b 超预算在**改动之前**拒：文档不长、undo 栈不涨、回执说的是底稿", () => {
+  it("⑮b 超预算在**改动之前**拒：文档不长、undo 栈不涨、回执说的是底稿", () => {
     win = boot();
     win.dcCreate("预算图");
     const huge = { vb: "0 0 100 100", inner: '<rect width="100" height="100" data-pad="' + "x".repeat(200 * 1024) + '"/>' };
@@ -400,7 +403,7 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     expect(toastTexts()).toContain("底稿超出单图 128KB 预算");
   });
 
-  it("⑮ 渲染：底稿垫在手工节点下面（**后加的也要垫底**）+ 嵌套 <svg> 带定标框 + 虚线框 + 透明热区", () => {
+  it("⑯ 渲染：底稿垫在手工节点下面（**后加的也要垫底**）+ 嵌套 <svg> 带定标框 + 虚线框 + 透明热区", () => {
     win = boot();
     win.dcCreate("叠放图");
     /* 顺序按真实用法摆：用户先手工画了节点，才把 AI 图放进来当底稿。
@@ -416,7 +419,7 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     expect(out).toContain('fill="transparent"');
   });
 
-  it("⑯ 底稿没有文字维度：公开入口静默拒 + 双击给专用回执、不弹输入框", () => {
+  it("⑰ 底稿没有文字维度：公开入口静默拒 + 双击给专用回执、不弹输入框", () => {
     win = bootDesign();
     const e = win.dcAddEmbedNode(win.dcEmbedPayload(VB_SVG), 0, 0, 320, 160);
     win.dcSetNodeText(e.id, "改字");
@@ -443,7 +446,7 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
       "普通节点双击仍要能改字").toBe(1);
   });
 
-  it("⑰ 端到端：产物卡按钮一点 → 底稿进画布 + 自动切 Design + 属性条说的是 AI 底稿", () => {
+  it("⑱ 端到端：产物卡按钮一点 → 底稿进画布 + 自动切 Design + 属性条说的是 AI 底稿", () => {
     win = boot();
     win.document.body.insertAdjacentHTML("beforeend",
       '<div class="msg tool svg-msg" data-svgexport data-svgname="架构图">'
@@ -465,7 +468,7 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     expect(toastTexts()).toContain("已把这张图作为底稿放进画布");
   });
 
-  it("⑰b 卡里没有 svg（老历史被截断那一类）⇒ 专用回执，且不把人切进空画布", () => {
+  it("⑱b 卡里没有 svg（老历史被截断那一类）⇒ 专用回执，且不把人切进空画布", () => {
     win = boot();
     win.document.body.insertAdjacentHTML("beforeend",
       '<div data-svgexport data-svgname="旧"><button type="button" data-canvasembed="1">在画布打开</button></div>');

@@ -169,19 +169,38 @@
   `_dcSaveDoc` 的返回值被接住，写盘失败即回滚内存态。
 - **底稿垫底**：渲染时 embed 先画、手工节点后画 —— 按数组顺序"后加的盖在上面"与"垫在下面加工"的语义相反。
 - **文字维度封在两处**：`dcSetNodeText` 公开入口 + 双击（同判据，不只拦 UI），双击给专用回执。
-- **测试**：`tests/draw-canvas.test.js` 16 → 24 例（新增 ⑬–⑰b 共 8 例）。其中反向对照那条是**自己被抓出来的**：
+- **测试**：`tests/draw-canvas.test.js` 18 → 26 例（新增 ⑭–⑱b 共 8 例；原编号 ⑬–⑰b，与 ZCode `f7b7ebd1`
+  的双击可达性用例 ⑬/⑬b 重号，整体后移一位）。其中反向对照那条是**自己被抓出来的**：
   我最初用 `input[maxlength]` 判"没弹浮层"，它命中右栏 12 个常驻输入框（假红）；换成
   `[style*="position:fixed"]` 又因 jsdom 把 `cssText` 序列化成 `position: fixed`（带空格）而永不命中（假绿）；
   最终认"直接挂 body 的 input"，并补上"普通节点双击必须真弹"作反向对照。
+- **弱测试被变异抓出来（M2）**：初版 ⑯ 是"先加底稿、再加节点"，那样数组顺序与类型顺序一致 ——
+  把"embed 先画"那支整个删掉也不会红，等于一条空转的断言。改成真实用法（用户先手工画了节点，
+  再把 AI 图放进来当底稿）之后，同一变异立刻红。
 - **新增 e2e** `tests/e2e/draw-embed-bridge.spec.js`（2 例，真浏览器）：真点按钮 → 底稿**真有外框尺寸**
   （jsdom 没有布局引擎，量不出"看得见"）→ 真指针拖动落点吸附 10px → 落盘带回 `inner`；
   第二例双向下：底稿双击不弹文字浮层且给专用回执，同一条路径对普通矩形必须弹。
 - **旧断言同步一处（有理由，不是刷绿）**：`tests/draw-svg-tool.test.js` ③ 数"导出按钮"从 `.svg-exp-btn`
   改用 `[data-svgexp]` —— 桥按钮复用了同一个样式类，按类计数会把"两个导出按钮"读成三个；
   同批加断言"这张卡上有 1 个 `[data-canvasembed]`"。
-- 本机验证：15 条 CI 分条门禁 exit 0（`lint:xss` / `lint:empty-catch` / `lint:icons` / `lint:tokens` /
-  `lint:layers` / `lint:breakpoints` / `lint:appbridge` / `lint:false-receipt` / `check:modules` / `src:check` /
-  `check:source-state` / `check:ai-tools-doc` / `build:check` / `check:pwa-icons` / `pet:check`）；全量单测与 e2e 见下条 CI 回执。
+- **e2e 首轮 4 条红，全是我用例写错、不是产品红**（如实记，因为这三种形状下次还会坑别人）：
+  ① 对话坞**默认收起** ⇒ 卡片在隐藏容器里，`toBeVisible` 判 `hidden`（"元素存在≠可见可点"的又一次实测），
+  要先 `window.__aiPanelExpand()`；② 选择器 `g.dnode svg svg` 多写一层 —— 底稿是 `g.dnode` 的**直接子** `<svg>`；
+  ③ 浮层数量用绝对计数会被"本来就有 input"骗 ⇒ 改基线增量（`base` / `base + 1`）。三处改的都是用例，embed 实现一行没动。
+- **变异自证 6 条窄变异**（脚本 `F:/tmp/mutate-b16b.mjs`，逐条要求"该红的红、别的全绿"，还原按 sha 核对）：
+  M1 预算前置检查 → 红在 ⑮b ｜ M2 垫底顺序 → 红在 ⑯ ｜ M3 公开入口禁改文字 → 红在 ⑰ ｜
+  M4 双击禁改文字 → 红在 ⑰ ｜ M5 卡片桥按钮 → 红在 `draw-svg-tool` ③ ｜ M6 定不了标就拒 → 红在 ⑭。
+  每条恰好红 1 例、其余全绿。
+- 本机验证（最终树 = 要推的 HEAD）：15 条 CI 分条门禁 exit 0（`lint:xss` / `lint:empty-catch` / `lint:icons` /
+  `lint:tokens` / `lint:layers` / `lint:breakpoints` / `lint:appbridge` / `lint:false-receipt` / `check:modules` /
+  `src:check` / `check:source-state` / `check:ai-tools-doc` / `build:check` / `check:pwa-icons` / `pet:check`）；
+  draw 族 6 文件 71 例绿；`draw-embed-bridge` e2e 在 desktop + tablet 两个 project 各跑一遍 = **4 passed / 12.9s**。
+- **全量本机判定的一个新观察（不当代码红，也不当通过）**：rebase 前后连续两轮全量（前轮 2407 passed /
+  后轮 2409 passed，断言失败均 0）都掉在**同一个文件** `tests/execTool.test.js` ——
+  判定器报「断言失败 0 条，但有 1 个文件没报结果」并据此判红，伴随 9 条
+  `vitest-worker Timeout calling "onTaskUpdate"`；该文件单跑**两轮各 26/26 绿**。
+  ⇒ 定性为本机判定通道在这个文件上的全量并发不适（不是随机 CPU 饥饿，因为它两轮同处），
+  权威口径以 CI 两条 test 腿为准；这条留在册（与 #90 同一族：度量器本身要能被否证）。
 
 ### 2026-11-01 · **B15：把余 13 个探针作用域违规一次清零** ⇒ `probe-binding` 基线转**零容忍**
 
