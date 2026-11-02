@@ -622,17 +622,21 @@ function renderDrawWorkspace() {
   _dcRenderWorkspace();
   _dcRenderDocDock();
 }
-/** 图列表停靠（.side 内，会话停靠同款交互：单击打开 / ✕ 两击确认删除 / + 新建）。 */
+/** 图列表停靠（design 网格 1/2 网格项，会话停靠同款交互：单击打开 / ✕ 两击确认删除 / + 新建）。 */
 function _dcRenderDocDock() {
   if (_uiMode() !== "design") return;
   let dock = document.getElementById("diagramDock");
   if (!dock) {
-    const side = document.querySelector(".side");
-    if (!side) return;
+    /* 挂点必须是 `.body`：CSS 把本 dock 当作 design 网格的 1/2 网格项
+       （grid-column:1;grid-row:2，与 code 模式会话停靠同款）。2026-11-02 前
+       误挂 nav.side，网格规则全部失效，dock 落进侧栏文档流底部、1440×900
+       首屏只剩约 14px 可见，要滚侧栏才看得见图列表。 */
+    const body = document.querySelector(".body");
+    if (!body) return;
     dock = document.createElement("div");
     dock.className = "diagram-dock";
     dock.id = "diagramDock";
-    side.appendChild(dock);
+    body.appendChild(dock);
   }
   const list = dcList();
   const activeId = dcActiveId();

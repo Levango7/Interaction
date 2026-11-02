@@ -5,13 +5,16 @@
  * 在 320/375/412 上 jsdom 量不出来（没有布局引擎），CSS 文本存在 ≠ 渲染不溢出
  * （本仓踩过的坑：元素存在≠可见可点，topbar-overflow 同一口径）。
  *
- * 钉三件事：
- *   ① ≤1023px 单栏：横向溢出 = 0，且画布真的占满（宽度 ≈ 视口宽），图列表停靠收起；
- *   ② 画布在窄屏仍可用：真指针放一个节点 → 命中 `g.dnode` → 拖动后坐标变化。
+ * 钉四件事：
+ *  ① ≤1023px 单栏：横向溢出 = 0，且画布真的占满（宽 + 高），图列表停靠收起；
+ *     另守 2026-11-02 布局修复的回归：画布高度不再退化、AI 浮条不盖底部导航。
+ *  ② 画布在窄屏仍可用：真指针放一个节点 → 命中 `g.dnode` → 拖动后坐标变化。
  *      只测"渲染出 SVG"不算数 —— 那样窄屏给一块死图也能绿。
- *   ③ 真实双击改名（2026-11-02 修复）：CDP 双击复现真人双击（Chromium 对注入事件 detail=0，
+ *  ③ 真实双击改名（2026-11-02 修复）：CDP 双击复现真人双击（Chromium 对注入事件 detail=0，
  *      故双击判据=同一目标 350ms 内第二击）——修复前画布每次 pointerdown 都重建 SVG，
  *      真实用户的双击根本触发不了改名。
+ *  ④ 桌面图列表停靠落位（2026-11-02 修复）：必须是 .body 的网格项且完全在视口内
+ *      ——修复前误挂 nav.side，CSS 网格规则全失效、dock 底部越出视口。
  *
  * 守护策略同其余 spec：默认跳过，E2E=1 才跑。
  */
@@ -49,6 +52,10 @@ test.describe("Design 模式窄屏", () => {
         const dock = document.getElementById("diagramDock");
         const sr = stage ? stage.getBoundingClientRect() : null;
         const hr = host ? host.getBoundingClientRect() : null;
+        const rail = document.getElementById("chatPanelRail");
+        const mob = document.getElementById("mobBar");
+        const rr = rail ? rail.getBoundingClientRect() : null;
+        const mr = mob ? mob.getBoundingClientRect() : null;
         return {
           scrollWidth: doc.documentElement.scrollWidth,
           clientWidth: doc.documentElement.clientWidth,
@@ -56,6 +63,8 @@ test.describe("Design 模式窄屏", () => {
           hostW: hr ? Math.round(hr.width) : -1,
           hostH: hr ? Math.round(hr.height) : -1,
           dockShown: dock ? getComputedStyle(dock).display !== "none" : false,
+          railBottom: rr ? Math.round(rr.bottom) : -1,
+          mobTop: mr ? Math.round(mr.top) : -1,
         };
       });
       expect(m.scrollWidth, `视口 ${w}px 出现横向溢出`).toBeLessThanOrEqual(m.clientWidth);
@@ -65,8 +74,15 @@ test.describe("Design 模式窄屏", () => {
         .toBeGreaterThanOrEqual(m.clientWidth - 2);
       expect(m.hostW, `画布宿主宽度应随视口收缩；实测 ${m.hostW}，画布区 ${m.stageW}`)
         .toBeGreaterThanOrEqual(m.stageW - 20);
-      expect(m.hostH, "画布宿主必须有实际高度（否则是一块看不见的 0 高区域）").toBeGreaterThan(120);
+      /* 2026-11-02 修复前 .body.design-mode{display:block} 让 main-wrap 高度退化为
+         SVG viewBox 固有宽高比，700 高视口下画布只有约 200px（844 高视口也只有 242）。
+         修复后实测 320/375/412×700 均为 374；断言 300 留渲染浮动余量。 */
+      expect(m.hostH, `画布宿主必须真正铺满中栏高度；实测 ${m.hostH}`).toBeGreaterThan(300);
       expect(m.dockShown, "窄屏图列表停靠应收起（三栏在 320 上必溢出）").toBe(false);
+      /* 同修复带出的回归守卫：底部导航是 position:fixed，rail 若留在流内底部会与它
+         同层叠互相盖住。修复方案 = 窄屏 design 下底栏改 static 进列布局，rail 落它上方。 */
+      expect(m.railBottom, `AI 浮条不得盖住底部导航；rail bottom=${m.railBottom}, 底栏 top=${m.mobTop}`)
+        .toBeLessThanOrEqual(m.mobTop);
     });
   }
 
@@ -144,5 +160,30 @@ test.describe("Design 模式窄屏", () => {
       return n.text;
     }, before.id);
     expect(after, "双击后节点文字必须回写").toBe("双击改名");
+  });
+
+  test("④ 桌面（≥1024）图列表停靠落位：是 .body 网格项且完全在视口内（2026-11-02 修复）", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(APP_URL);
+    await toDesign(page);
+    const m = await page.evaluate(() => {
+      const dock = document.getElementById("diagramDock");
+      const b = dock ? dock.getBoundingClientRect() : null;
+      return {
+        inSide: dock ? !!dock.closest("nav.side") : true,
+        parentIsBody: dock ? dock.parentElement.classList.contains("body") : false,
+        dockBottom: b ? Math.round(b.bottom) : -1,
+        dockH: b ? Math.round(b.height) : -1,
+        vh: innerHeight,
+      };
+    });
+    /* 修复前 dock 由 side.appendChild 挂进 nav.side：CSS 把它按 .body 的 1/2 网格项写
+       （grid-column:1;grid-row:2），作为 side 后代这些规则全部失效，落点 bottom=971
+       越出 900 视口，头部只有约 14px 可见、要滚侧栏才看得到图列表。 */
+    expect(m.inSide, "图列表不得是 nav.side 的后代（CSS 按它作为 .body 网格项写）").toBe(false);
+    expect(m.parentIsBody, "图列表父节点必须是 .body").toBe(true);
+    expect(m.dockH, "dock 必须有实际高度").toBeGreaterThan(0);
+    expect(m.dockBottom, `dock 必须完全落在视口内；实测 bottom=${m.dockBottom}/vh=${m.vh}`)
+      .toBeLessThanOrEqual(m.vh);
   });
 });

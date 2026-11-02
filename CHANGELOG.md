@@ -1,5 +1,22 @@
 ## [Unreleased]
 
+- **Design 模式·UI 布局 P0 修复**（2026-11-02，真 Chromium 几何审计发现）：
+  - **图列表停靠挂错父节点**：`_dcRenderDocDock` 把 `#diagramDock` `side.appendChild`
+    进 `nav.side`，但 CSS 把它按 `.body` 的 design 网格 1/2 网格项写
+    （`grid-column:1;grid-row:2`，与 code 模式会话停靠同款）——作为 `nav.side` 后代
+    这些规则全部失效，dock 落进侧栏文档流底部：**1440×900 下首屏只剩约 14px 可见**
+    （落点 y=886、视口底 900），要滚侧栏才看得到图列表。改挂 `.body` 后 dock 落
+    y=815、bottom=900 精确贴底。
+  - **窄屏（≤1023）画布被压扁**：`.body.design-mode{display:block}` 让 main-wrap 高度
+    退化为宿主 SVG 的 viewBox 固有宽高比——390×844 视口**画布仅 242px 高**，下方约 42%
+    屏高空白。改 flex 列（main-wrap/`#drawStage` 定高链）后画布 575px（2.4 倍）；
+    320/375/412×700 画布 374px。同修复带出的回归：fixed 底部导航与流内 AI 浮条同层叠
+    互盖（57px），窄屏 design 下底栏改 `position:static` 进列布局、rail 落其上方，消除叠层。
+  - 守卫：`tests/e2e/draw-responsive.spec.js` ① 画布高度断言 120→300 并新增「rail 不得盖底栏」；
+    新增 **④** 桌面断言（dock 非 `nav.side` 后代、父节点为 `.body`、完全在视口内）；
+    `tests/draw-canvas.test.js` ⑧ 加 dock 父节点结构断言。
+    本机：单测 225 文件 / 2420 例全绿、e2e 209 全绿、lint 0 错。
+
 - **Design 模式·真实双击改名修复**（2026-11-02）：`_dcOnDown` 的每个分支每次按下都会
   `_dcRenderWorkspace()`（`host.innerHTML=...`）重建整块 SVG —— 按下时命中的元素在抬起前已被替换，
   浏览器因此**不合成 click/dblclick**，真实鼠标用户的双击改名 / 改连线 label **完全不可达**

@@ -9,7 +9,7 @@
  *  ⑤ dcAddEdge：自环/悬空/重复拒绝；
  *  ⑥ _dcRenderSvg：g.dnode + data-node-id + esc 文本 + 正交 path + 箭头 marker；
  *  ⑦ dcSetNodeText：变更压栈，同值不压；
- *  ⑧ 模式三向循环：toggle×2 → .body.design-mode + 「设计」标签 + #diagramDock/#drawStage 就位。
+ *  ⑧ 模式三向循环：toggle×2 → .body.design-mode + 「设计」标签 + #diagramDock（须挂 .body）/ #drawStage 就位。
  *  ⑨⑩（2026-11-01 代修补）：文档条删除按钮走 SVG 且带可读名称；两段式确认 + 真删后落盘并给回执。
  *  ⑪ 连线 label：dcSetEdgeLabel 转义入库 + 渲染成 dedge-label（中点锚定）；
  *  ⑫ 体积/文本上限：DC_TEXT_MAX 截断、单图/总量字节预算（save 返回值必须被接）。
@@ -280,6 +280,9 @@ describe("Design 模式三向循环（批次③ 集成）", () => {
     expect(body.classList.contains("code-mode")).toBe(false);
     expect(win.document.getElementById("uiModeLbl").textContent).toBe("设计");
     expect(win.document.getElementById("diagramDock")).toBeTruthy();
+    // 2026-11-02：dock 必须挂在 .body 上（CSS 按它作为 design 网格的 1/2 网格项写）；
+    // 曾被 side.appendChild 挂进 nav.side，网格规则全部失效、首屏只剩约 14px 可见。
+    expect(win.document.getElementById("diagramDock").parentElement).toBe(body);
     expect(win.document.getElementById("drawStage")).toBeTruthy();
     expect(win.dcList().length >= 1).toBe(true);                 // 自动建了首图
     win.toggleUIMode();                                          // design → work
