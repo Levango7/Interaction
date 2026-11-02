@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`（仅版本常量）, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`（预登记表）, `docs/agent-board.md` | ZCode | 2026-11-03 05:10 | **切版 3.7.153**（用户放行）：已发 `0010932` + tag `v3.7.153`（远端解引用实核 = `0010932`），CI `41526311606` 四腿绿 / Deploy `41526311511` / Electron `41526324607` / Pages `41530479215` 全 success，线上 cache-buster 逐字节实核过（回执详见 AGENTS.md 表行），05:53 收工 | RELEASED |
 | `src/render-widgets.js`, `agent-workbench.html`, `src/core-i18n.js`, `src/ai-retry.js`, `tests/ui-mode.test.js`, `tests/e2e/ui-mode-layout.spec.js`, `tests/e2e/draw-responsive.spec.js`（仅 toDesign 助手，2026-11-03 交互契约变更跟随）, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 23:57 | **P1/P2 UI 批次**（用户「都有意义就都认领」）：模式切换器显式化 + title 修正 → code 模式工作面回中 + 聊天统一回 work 同款贴底对话坞 → P2 收口（窄屏「代码模式」安慰剂、窄屏双抽屉 z 叠、能力入口分散）。〔2026-11-03 订正：`src/ui-global-events.js` 与 `tests/e2e/three-state-layout.spec.js` 实际未动（菜单复用 more-menu 样式、几何守护落在新文件 ui-mode-layout.spec.js），移出；补上实际改动的 `src/ai-retry.js`（P2-7 互斥）与新 spec。方向订正：聊天三态统一是「回贴底坞」（work 坞是 PRODUCT.md 明文设计），不是此行原稿写的「右侧常驻」〕claim-check 绿；〔2026-11-03 03:19 收尾：单笔推 `c3f3621`，CI `41504909828` 四腿 success / Deploy `41504909817` success，认领释放〕 | RELEASED |
 | `src/draw-canvas.js`, `agent-workbench.html`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 09:27 | 已推 `aa94d0d`，CI `41376330080` 四腿绿 / Deploy `41376330152` 绿，11:26 收工 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 04:35 | 已推 f7b7ebd+5762c7a，CI 41350462892 四腿绿 / Deploy 41350462869 绿，05:46 收工 | RELEASED |
@@ -101,6 +102,11 @@
 
 ### [2026-11-03 05:10 UTC+8] ZCode 会话 —— **切版 3.7.153 · 发版流程启动（R10 声明，用户「可以，同意」放行）**
 
+- 状态：**已收工（释放）**。05:53 全链完成：预登记 `a20b500` → 发版 `0010932` + tag `v3.7.153`（远端解引用实核）→
+  CI `41526311606` 四腿 success / Deploy `41526311511` / Electron `41526324607` / Pages `41530479215` 全 success →
+  线上 cache-buster 实读 4,281,085 B · sha256 `4b2fcbee0cf35d9ceb8e`（= gh-pages `a50dd3a` blob 逐字节）、
+  `VERSION="3.7.153"` / `BUILD_TAG="20261102a"` / prod 态 / 批次标记在位（uiModeMenu×10）；GitHub release 已建；
+  AGENTS.md 表行已翻 ✅（完整回执在该表行）；认领行 RELEASED。
 - 用户对 P1/P2 收工简报回「可以，同意」⇒ 按末段「随时可以切版」授权执行发版。R2 三查已过：origin/main=`13e9df5`（=本
   地 HEAD）、CHANGELOG 顶部 `[Unreleased]`、AGENTS.md 表 3.7.153 未被登记。版本文件 claim-check 全绿（B13 行已 RELEASED）。
 - **本版范围**：`v3.7.152..HEAD` 共 10 提交 —— ① UI 三模式批次（`c3f3621`，本会话）；② Design 模式修复两笔
