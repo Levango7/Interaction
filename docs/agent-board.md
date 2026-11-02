@@ -78,6 +78,27 @@
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
 
+### [2026-11-03 05:45 UTC+8] WorkBuddy 主会话 —— 收工回执：列表项 class 改名 + 增量同步门控守卫 + B11-② 归档（推送前声明，R10）
+
+- 状态：已收工（释放）。占用：`agent-workbench.html`、`src/render-entry.js`、`src/render-overview.js`、`src/render-scene-main.js`、`tests/list-body-class.test.js`（新）、`tests/sync-incremental-gate.test.js`（新）、`docs/empty-catch-p0-triage.md`、本板。
+- 准备推的范围：`496607f`（7 文件）+ 本条回执。**未 bump 版本**（3.7.153 刚发，下一版再走）。
+- **为什么现在才推**：3.7.153 的 CI / Deploy 在跑时我按住不动 —— 按 R11，推无关提交会 `cancel-in-progress` 掉发版验证，
+  更要紧的是可能**取消发版的 Pages 部署 ⇒ 线上停在 3.7.152**。现 `41526311511` = success，才推。
+- 做了什么：
+  ① **列表项 `.body` → `.body-row`**（6 处发射点 + 3 条 CSS + 窄屏补规则）。**关键**：列表项原本额外吃到**裸** `.body`
+     的 `display:flex;min-height:0`（不在 `.list li .body` 那条规则里）⇒ 改名时必须一并搬过去，否则桌面端标题与副标题
+     从并排变竖排 = 视觉回归；窄屏同理要补 `flex-direction:column`。顺带把 `querySelector(".body")` 的隐患钉死
+     （JS 3 处取"文档序第一个"，此前靠"壳恰好在前"才正确 —— 已致一次 e2e 误判）。
+  ② **`tests/sync-incremental-gate.test.js`**：开关 ON ⇒ `syncRound` 打 `/api/sync/changes`；OFF ⇒ 绝不打（反向对照）；
+     闸门读的就是 `cfg.syncIncremental` 字段本身。此前**无人验证过**"开关存进 cfg"是否真切了路径。
+     （测试用 stub `getCfg`：`getCfg()` 返回读出副本、`saveCfg()` 从表单重建，两者都改不了状态。）
+  ③ **`docs/empty-catch-p0-triage.md` 第八节**：归档「假防线（false-safety wrapper）」17 处清单 + 宽判据 precision 结论
+     （135 调用点命中 128 ⇒ 不升格为门禁），并**如实写明**该批修法与工具已撤回未入库、那两处**至今仍是假防线**。
+- 验证（本机实测）：改名套 **7/7**、门控套 **3/3**、画布回归 + 改名套 **33/33**。
+- 清理：备份 ref `temp-b11b-backup` 与探针目录 `_probe/wb-b11b` 在**归档入库后**已删 —— 知识在文档里，不在 ref 里。
+
+---
+
 ### [2026-11-03 05:10 UTC+8] ZCode 会话 —— **切版 3.7.153 · 发版流程启动（R10 声明，用户「可以，同意」放行）**
 
 - 用户对 P1/P2 收工简报回「可以，同意」⇒ 按末段「随时可以切版」授权执行发版。R2 三查已过：origin/main=`13e9df5`（=本
