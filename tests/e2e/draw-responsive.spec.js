@@ -28,14 +28,15 @@ test.beforeAll(() => { test.skip(!process.env.E2E, "set E2E=1 to run"); });
 test.describe("Design 模式窄屏", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  /** 切到 Design 模式（循环 work→code→design）。
+  /** 切到 Design 模式（2026-11-03 起模式按钮不再盲循环，改为显式三态菜单——
+   *  走菜单点「设计」。旧契约的两连击=work→code→design，新契约下只会「开菜单+关菜单」）。
    *  ⚠️ 选择器必须是 `.app > .body`：`.body` 这个类名在正文列表项里也被复用
    *  （render-overview / render-entry 的 `<div class="body">`），裸 `.body` 在 Playwright
    *  严格模式下会因命中多个元素而报错 —— 这是本 spec 首轮 CI 的真实红法。 */
   const SHELL = ".app > .body";
   async function toDesign(page) {
     await page.click("#btnUIMode");
-    await page.click("#btnUIMode");
+    await page.click('#uiModeMenu .ui-mode-item[data-mode="design"]');
     await expect(page.locator(SHELL)).toHaveClass(/design-mode/);
     await page.waitForSelector("#drawCanvasHost svg", { state: "attached" });
   }

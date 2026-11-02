@@ -1248,6 +1248,17 @@ function bindChatPanel(){
     if(open) panel.classList.remove("collapsed");
     const bd=$("#chatBackdrop");
     if(bd){ bd.hidden=!open; bd.classList.toggle("show", open); }
+    /* P2-7（2026-11-02）：窄屏右缘双抽屉互斥——chat（≤767）与 taskRail（≤1023）都从右缘滑出，
+       同时开必互相遮挡（原两侧都 z=70 靠 DOM 顺序分胜负）。开 chat 时收 taskRail；
+       taskRail 那边（render-widgets.js setOpen）对称处理。 */
+    if(open){
+      const tr=document.getElementById("taskRail");
+      if(tr && tr.classList.contains("open")){
+        tr.classList.remove("open");
+        const tbd=document.getElementById("taskRailBackdrop");
+        if(tbd){ tbd.hidden=true; tbd.classList.remove("show"); }
+      }
+    }
   };
   const toggleCollapse=()=>{
     if((window.innerWidth||0) < 768){ setChatDrawer(!panel.classList.contains("show")); return; }

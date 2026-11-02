@@ -1,5 +1,29 @@
 ## [Unreleased]
 
+- **UI 三模式批次：Code 模式「主客颠倒」修复 + 模式切换器显式化**（2026-11-03，用户点单、P1/P2 清单全认领）：
+  - **Code 模式回归「工作面居中、聊天常驻」（P1）**：旧实现 `.body.code-mode .main-wrap>.main{display:none}`
+    + chatPanel `flex:1` 占满中栏，工作面只有点侧栏场景才露出，与 Trae/Cursor 的主客关系相反。
+    现中栏回归 `main-wrap` 基座（列向 + 滚动，与 work 同一只滚动容器），聊天沿用 ≥768 的贴底对话坞
+    （PRODUCT.md 明文设计：贴底、单行可收）——`.code-tool-open` 机制整套删除（CSS 规则 +
+    `setupSideMenu` 分支 + 相关注释）。
+  - **模式切换器显式化（P2-3）**：顶栏按钮从单盲循环改为 `#uiModeMenu` 三态菜单（复用 `.more-menu`
+    锚定关闭范式：外点/Escape 收起、当前项 ✓ 勾选、aria-haspopup/expanded/menuitem 全套）；陈旧
+    title/i18n「切换工作/代码模式」双语订正为三态描述。
+  - **Code 模式能力面归一（P2-5）**：右栏 Agent tab 与 agentDock 同源双显（注释自陈「渲染两份、数据一份」）
+    → CSS 藏 tab + `applyUIMode` 进入时若停在 agent 页切回「今日」，不留渲染中的死面板。
+  - **窄屏双抽屉互斥（P2-7）**：≤1023 `.task-rail` 从 `--z-popover`(70) 降到 `--z-drawer`(60)——原与 ≤767
+    聊天抽屉同层、叠放顺序靠 DOM 位置碰运气；两侧开抽屉路径互斥关闭（ai-retry `setChatDrawer` /
+    taskRail `setOpen`）。
+  - **窄屏「代码模式」安慰剂修复（P2-8）**：三栏网格 CSS 全在 `@media(min-width:1024px)` 内，窄屏切 code
+    只有顶栏标签变。现三层防护：菜单项 `disabled`+说明、`setUIMode("code")` 拒绝并 toast、
+    `toggleUIMode` 循环跳过 code（work → design → work）。
+  - **不动的两条（取证后判定）**：P2-4 场景 `design`/`code` 与模式同名两义 = 命名决策待用户定方向；
+    P2-6 待办双入口 = v1.15 明文设计（预览/详情分工），不动。
+  - 守卫：`tests/ui-mode.test.js` 13 条（菜单状态机/存储契约/Agent tab 让位/窄屏拒绝）；新增
+    `tests/e2e/ui-mode-layout.spec.js` 4 用例 × 2 项目——宽屏 code 几何（`#main` 可见居中、聊天 sticky
+    ≤46vh 贴底、agent tab 消失）、菜单真点击路径（三项齐/勾选/切换/关门）、窄屏禁用+拒绝+循环跳过、
+    z=60 抽屉层 + 双抽屉互斥。
+
 - **Design 模式·UI 布局 P0 修复**（2026-11-02，真 Chromium 几何审计发现）：
   - **图列表停靠挂错父节点**：`_dcRenderDocDock` 把 `#diagramDock` `side.appendChild`
     进 `nav.side`，但 CSS 把它按 `.body` 的 design 网格 1/2 网格项写

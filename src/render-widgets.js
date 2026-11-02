@@ -278,6 +278,9 @@ function renderTaskRail(){
  * MCP 自 2026-10-23 起是真能力（远端工具按勾选注入 + 命名空间路由），但它的发现/勾选/状态都在
  * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。 */
 const RAIL_TABS = ["today", "agent", "files"];
+/** 宽屏判据（>=1024px）：三栏网格（code/design 模式）只在宽屏生效，窄屏强制单栏。
+ *  下面 taskRail 折叠 IIFE 原有一份同名局部（语义相同），统一用这一份避免漂移。 */
+const isWide = ()=> (window.innerWidth || 0) >= 1024;
 function _railTabGet(){
   try{ const v = load(PREFIX + "rail_tab", "today"); return RAIL_TABS.indexOf(v) >= 0 ? v : "today"; }
   catch(_e){ return "today"; }
@@ -414,6 +417,14 @@ function _bindTaskRail(){
     rail.classList.toggle("open", open);
     const bd = $("#taskRailBackdrop");
     if(bd){ bd.hidden = !open; bd.classList.toggle("show", open); }
+    /* P2-7（2026-11-02）：窄屏右缘双抽屉互斥——见 ai-retry.js setChatDrawer 对称注释 */
+    if(open){
+      const cp = $("#chatPanel");
+      if(cp && cp.classList.contains("show")){
+        cp.classList.remove("show");
+        const cbd = $("#chatBackdrop"); if(cbd){ cbd.hidden = true; cbd.classList.remove("show"); }
+      }
+    }
   };
   const collapseDesktop = ()=>{
     if(body) body.classList.add("rail-collapsed");
@@ -425,7 +436,6 @@ function _bindTaskRail(){
     if(app) app.classList.remove("rail-collapsed");
     save(PREFIX + "task_rail_collapsed", "0");
   };
-  const isWide = ()=> (window.innerWidth || 0) >= 1024;
 
   const toggleBtn = $("#btnTaskRail");
   if(toggleBtn) toggleBtn.onclick = ()=>{
@@ -476,15 +486,6 @@ function setupSideMenu(){
     const btn = e.target && e.target.closest ? e.target.closest(".nav-item") : null;
     if(!btn) return;
     const _m = $("#main"); if(_m) _m.scrollTop = 0; const _mw = document.querySelector(".main-wrap"); if(_mw) _mw.scrollTop = 0;
-    /* Code 模式（2026-10-26）：页面型导航（场景/今日/任务/时间轴/联动）在中栏打开工作视图
-       （.code-tool-open：main-wrap 覆盖 chat）；AI 项 = 回到会话（chat 就是代码模式的 AI 面）。
-       抽屉/弹窗类（工具箱/商店/回收站/设置/说明）不动中栏。 */
-    const _cmBody = document.querySelector(".body");
-    if(_cmBody && _cmBody.classList.contains("code-mode") && typeof _uiMode === "function" && _uiMode() === "code"){
-      const _mid = btn.getAttribute("data-menu") || "";
-      if(btn.dataset.aipage) _cmBody.classList.remove("code-tool-open");
-      else if(btn.hasAttribute("data-sc") || ["overview","tasks","timeline","chain"].indexOf(_mid) >= 0) _cmBody.classList.add("code-tool-open");
-    }
     /* caret 点击：只切换展开态 */
     if(e.target && e.target.closest && e.target.closest("[data-caret]")){
       const nodeId = btn.getAttribute("data-menu") || (btn.getAttribute("data-sc") ? "sc-"+btn.getAttribute("data-sc") : null);
@@ -3829,9 +3830,9 @@ try{
 
 /* ---------- Code 模式（2026-10-26）：双模式工作台 ----------
  * Work 模式 = 现有布局（不动）；Code 模式 = agent-first 三栏（≥1024px，CSS 媒体查询外不生效）：
- * 左 = 机制导航（#side）+ 会话停靠（sessionDock）/ 中 = chatPanel 全高（CSS 网格移位，DOM 零移动——
- * 流式输出/工具调用/会话接线零改动，面板输入框即「底部正中聊天框」）/ 右 = taskRail（todo）+ agentDock。
- * 状态持久化：wb_agent_uimode（work|code）、wb_agent_agent_dock（各段显隐）。
+ * 左 = 机制导航（#side）+ 会话停靠（sessionDock）/ 中 = 工作视图 .main（沿用 work 的贴底对话坞，
+ * 2026-11-02 P1：原实现把 .main 藏掉让 chatPanel 占满中栏，主客颠倒，已改回）/ 右 = taskRail（todo）
+ * + agentDock。状态持久化：wb_agent_uimode（work|code|design）、wb_agent_agent_dock（各段显隐）。
  * ACP 在本仓无运行时概念（台账已评不适用），右下槽位由「进程/技能/MCP/工作流」承接。 */
 function _uiMode(){
   try{ const m = load(PREFIX + "uimode", "work"); return m === "code" ? "code" : m === "design" ? "design" : "work"; }
@@ -3859,6 +3860,10 @@ function applyUIMode(){
   const lbl = $("#uiModeLbl");
   if(lbl) lbl.textContent = t(mode === "code" ? "ui.mode.code" : mode === "design" ? "ui.mode.design" : "ui.mode.work", mode === "code" ? "代码" : mode === "design" ? "设计" : "工作");
   if(code){
+    /* P2-5：code 模式的能力面是右下 agentDock（进程/技能/MCP/工作流，2.5s 活轮询）；
+       右栏 Agent tab 渲染的是同一批数据的静态副本——本模式藏掉（CSS），若正停在 agent tab
+       就切回「今日」，避免留一个被藏掉的死面板。 */
+    if(_railTabGet() === "agent") _railTabSet("today");
     renderSessionDock(); renderAgentDock();
     _agentDockSig = _agentDockSignature();
     /* Multi-Agent Phase 2：Code 模式下 2.5s 轮询能力停靠——子代理运行中的步数/状态实时可见
@@ -3892,8 +3897,24 @@ function applyUIMode(){
 }
 function toggleUIMode(){
   const cur = _uiMode();
-  const next = cur === "work" ? "code" : cur === "code" ? "design" : "work";
-  try{ save(PREFIX + "uimode", next); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((e&&e.message)||e), {where:"toggleUIMode"}); }catch(_e2){} }
+  /* 窄屏（<1024）跳过 code：三栏网格在窄屏不生效，循环进去是安慰剂（P2-8） */
+  const next = cur === "work" ? (isWide() ? "code" : "design") : cur === "code" ? "design" : "work";
+  _setUIMode(next);
+}
+/** 显式设置界面模式（P2-3 菜单项调用）。窄屏拒绝 code 并提示——选项已禁用，这里再挡一道，
+ *  防止键盘/外部长按等旁路。同模式调用 = 幂等 no-op（只关菜单）。 */
+function setUIMode(mode){
+  const target = (mode === "code" || mode === "design") ? mode : "work";
+  if(target === "code" && !isWide()){
+    try{ toast(t("ui.mode.codeNarrow", "窄屏（小于 1024px）不启用代码模式：三栏布局需要宽屏"), "warn"); }catch(e){ /* noop */ }
+    return false;
+  }
+  if(target === _uiMode()) return true;
+  _setUIMode(target);
+  return true;
+}
+function _setUIMode(next){
+  try{ save(PREFIX + "uimode", next); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((e&&e.message)||e), {where:"setUIMode"}); }catch(_e2){} }
   applyUIMode();
   try{ toast(t("ui.mode.switchedTo", "已切换到") + " " + t(next === "code" ? "ui.mode.code" : next === "design" ? "ui.mode.design" : "ui.mode.work", next === "code" ? "代码模式" : next === "design" ? "设计模式" : "工作模式"), "ok"); }catch(e){ /* noop */ }
 }
@@ -4009,8 +4030,75 @@ function renderAgentDock(){
     };
   });
 }
-/* Code 模式切换按钮：与 btnTaskRail 同款——渲染层绑定自己的顶栏开关（幂等重绑无害） */
+/* 模式切换按钮（P2-3，2026-11-02）：原来是盲循环单按钮（work→code→design→work，
+   title 还停在「切换工作/代码模式」），用户不知道点一下会到哪。现在点开=三态显式菜单，
+   当前态打勾、窄屏「代码」禁用（P2-8）；toggleUIMode 保留为快捷循环（窄屏同样跳过 code）。 */
+const UI_MODES = ["work", "code", "design"];
+function _toggleUIModeMenu(btn){
+  const menu = $("#uiModeMenu");
+  if(!menu || !btn) return;
+  const wasOpen = menu.style.display !== "none";
+  menu.style.display = "none";
+  if(wasOpen) return;
+  const cur = _uiMode();
+  const wide = isWide();
+  menu.innerHTML = sanitizeHtml(UI_MODES.map(function(m){
+    const on = m === cur;
+    const dis = (m === "code" && !wide);
+    const lbl = t(m === "code" ? "ui.mode.code" : m === "design" ? "ui.mode.design" : "ui.mode.work",
+                  m === "code" ? "代码" : m === "design" ? "设计" : "工作");
+    return '<button type="button" class="tbtn ui-mode-item' + (on ? " is-on" : "") + (dis ? " is-disabled" : "") + '"'
+      + ' data-mode="' + m + '" role="menuitem" aria-checked="' + (on ? "true" : "false") + '"'
+      + (dis ? ' disabled aria-disabled="true" title="' + esc(t("ui.mode.codeNarrow", "窄屏（小于 1024px）不启用代码模式：三栏布局需要宽屏")) + '"' : "")
+      + '><span class="lbl">' + esc(lbl) + '</span>'
+      + (on ? '<span class="ui-mode-check" aria-hidden="true">✓</span>' : "") + '</button>';
+  }).join(""));
+  $$("#uiModeMenu .ui-mode-item").forEach(function(el){
+    el.onclick = function(){
+      if(el.disabled) return;
+      setUIMode(el.getAttribute("data-mode"));
+      _toggleUIModeMenu(btn);   // 选中即关菜单（点菜单内部，外面的 doc 监听故意不关，得自己关）
+      try{ btn.setAttribute("aria-expanded", "false"); }catch(_e5){ /* noop */ }
+    };
+  });
+  menu.style.display = "";
+  const r = btn.getBoundingClientRect();
+  const w = menu.offsetWidth || 180;
+  let left = r.right - w;
+  if(left < 8) left = Math.min(8, Math.max(8, window.innerWidth - w - 8));
+  menu.style.left = left + "px";
+  const top = Math.min(Math.max(8, r.bottom + 6), Math.max(8, window.innerHeight - menu.offsetHeight - 8));
+  menu.style.top = top + "px";
+  try{ btn.setAttribute("aria-expanded", "true"); }catch(e){ /* noop */ }
+}
 (function _bindUIModeBtn(){
   const b = $("#btnUIMode");
-  if(b) b.onclick = toggleUIMode;
+  if(!b || b._menuBound) return;
+  b._menuBound = true;
+  b.setAttribute("aria-haspopup", "menu");
+  b.setAttribute("aria-expanded", "false");
+  b.onclick = function(){
+    const menu = $("#uiModeMenu");
+    const open = menu && menu.style.display !== "none";
+    _toggleUIModeMenu(b);
+    try{ b.setAttribute("aria-expanded", open ? "false" : "true"); }catch(_e3){ /* noop */ }
+  };
 })();
+/* 菜单：点外面 / Esc 关闭（与 tool-pop 同款口径，独立挂 doc 监听，不依赖 render 重建） */
+document.addEventListener("click", function(e3){
+  const menu = $("#uiModeMenu");
+  if(!menu || menu.style.display === "none") return;
+  const t3 = e3.target;
+  if(menu.contains(t3)) return;
+  if(t3 && t3.closest && t3.closest("#btnUIMode")) return;
+  menu.style.display = "none";
+  const b2 = $("#btnUIMode"); if(b2) try{ b2.setAttribute("aria-expanded", "false"); }catch(_e4){ /* noop */ }
+});
+document.addEventListener("keydown", function(e4){
+  if(e4.key !== "Escape") return;
+  const menu = $("#uiModeMenu");
+  if(menu && menu.style.display !== "none"){
+    menu.style.display = "none";
+    const b3 = $("#btnUIMode"); if(b3) try{ b3.setAttribute("aria-expanded", "false"); }catch(_e5){ /* noop */ }
+  }
+});

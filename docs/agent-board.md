@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `src/render-widgets.js`, `agent-workbench.html`, `src/core-i18n.js`, `src/ai-retry.js`, `tests/ui-mode.test.js`, `tests/e2e/ui-mode-layout.spec.js`, `tests/e2e/draw-responsive.spec.js`（仅 toDesign 助手，2026-11-03 交互契约变更跟随）, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 23:57 | **P1/P2 UI 批次**（用户「都有意义就都认领」）：模式切换器显式化 + title 修正 → code 模式工作面回中 + 聊天统一回 work 同款贴底对话坞 → P2 收口（窄屏「代码模式」安慰剂、窄屏双抽屉 z 叠、能力入口分散）。〔2026-11-03 订正：`src/ui-global-events.js` 与 `tests/e2e/three-state-layout.spec.js` 实际未动（菜单复用 more-menu 样式、几何守护落在新文件 ui-mode-layout.spec.js），移出；补上实际改动的 `src/ai-retry.js`（P2-7 互斥）与新 spec。方向订正：聊天三态统一是「回贴底坞」（work 坞是 PRODUCT.md 明文设计），不是此行原稿写的「右侧常驻」〕claim-check 绿；分阶段推、每阶段守 CI 至终态 | ACTIVE |
 | `src/draw-canvas.js`, `agent-workbench.html`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 09:27 | 已推 `aa94d0d`，CI `41376330080` 四腿绿 / Deploy `41376330152` 绿，11:26 收工 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 04:35 | 已推 f7b7ebd+5762c7a，CI 41350462892 四腿绿 / Deploy 41350462869 绿，05:46 收工 | RELEASED |
 | `src/draw-canvas.js`, `src/ai-tools.js`, `src/util-markdown.js`, `src/core-i18n.js`, `tests/draw-canvas.test.js`, `tests/draw-svg-tool.test.js`, `tests/e2e/draw-embed-bridge.spec.js`, `docs/user-manual.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-02 07:55 | **B16 AI 桥「在画布打开」**（Phase B §七 最后一条）：随本提交释放（本机 15 门禁 + draw 族 71 例 + e2e 4 passed + 6 条变异自证；CI 终态按后续条目登记） | RELEASED |
@@ -76,6 +77,69 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-03 02:39 UTC+8] ZCode 会话 —— **P1/P2 UI 批次完工 · 本条随完工提交一次推送（R10 声明）**
+
+- 状态：本机验证齐，本条与完工代码同笔推送；推后守 CI 至终态（R11），终态绿才翻认领行 RELEASED。
+- 完工内容（对 23:58 规划条目的执行回执）：
+  - **P1-1/2**：code 模式 `.main` 回中栏 + 聊天回 ≥768 同款贴底对话坞（work 坞是 PRODUCT.md 明文设计，
+    统一方向是把 code 拉回来，不动 work）；`.code-tool-open` 机制整套删除（CSS 规则 / setupSideMenu 分支 /
+    相关注释）。code/design 网格块只钉网格位，main-wrap 基座样式回归 943 行原定义。
+  - **P2-3**：`#uiModeMenu` 三态菜单（复用 more-menu 锚定关闭范式：外点/Escape 收、当前项 ✓、
+    aria-haspopup/expanded/menuitem/check 全套）；title/i18n 双语订正（新增 `ui.mode.codeNarrow`）。
+  - **P2-5**：`.body.code-mode` 藏右栏 Agent tab + `applyUIMode` 停在 agent 页时切回「今日」。
+  - **P2-7**：≤1023 taskRail z `--z-popover`(70)→`--z-drawer`(60)；`setChatDrawer` / rail `setOpen`
+    双向互斥关抽屉。
+  - **P2-8**：三层防护——菜单「代码」项 disabled+说明 / `setUIMode("code")` 拒绝+toast /
+    `toggleUIMode` 窄屏跳过 code（work→design→work）。
+  - **不做**（维持 23:58 判定）：P2-4 命名两义待用户定方向；P2-6 v1.15 明文设计。
+- 测试契约跟随：`draw-responsive.spec.js` 的 `toDesign()` 由「按钮两连击到 design」改「菜单点设计」
+  （按钮交互契约变更后的唯一真浏览器消费者；jsdom 侧默认宽 1024 走宽屏循环不受影响，全量单测已证）。
+  认领行已同步补此路径（仅 toDesign 助手）。
+- 本机验证（2026-11-03）：
+  - 单测 `ui-mode.test.js` 13/13（新增 8 条）；全量 vitest 225 文件 2417/2428 + 10 条 vitest worker RPC
+    超时全部归于 `cloud-sync-stage1.test.js`，该文件隔离复跑 13/13 绿——与本批改动（UI 呈现层）无交集，
+    判环境性；干净全量读数以本条提交前最后一次复跑为准，随 CI 四腿终态一并核对。
+  - lint 全套 0 错（eslint html + colors + xss + css-structure + appbridge + src-split + breakpoints +
+    false-receipt）。
+  - e2e：新增 `ui-mode-layout.spec.js` 4 用例 × 2 项目 8/8 绿；全量 e2e 217 条 = 211 过 + 6 条
+    `draw-responsive`（toDesign 旧契约所致），修后该 spec 复跑 6/6 绿 ⇒ 全量等效全绿。
+- 占用路径：认领行终版（`src/render-widgets.js` / `agent-workbench.html` / `src/core-i18n.js` /
+  `src/ai-retry.js` / `tests/ui-mode.test.js` / `tests/e2e/ui-mode-layout.spec.js` /
+  `tests/e2e/draw-responsive.spec.js` 仅 toDesign / `CHANGELOG.md` / 本板）。
+- 在跑的重活：无（提交时全量复跑已收）。
+- 准备推的范围：本条所在提交（单笔，origin/main tip `7d19677` 之上）。
+- 提醒对方：无。
+
+### [2026-11-02 23:58 UTC+8] ZCode 会话 —— **认领 P1/P2 UI 批次（用户「都有意义就都认领」）+ 取证结论 + 执行范围**
+
+- 用户 23:5x 指示：确认无其他 agent 在做就认领，若都有意义则全认领。核板：无任何 ACTIVE（三条相关行均
+  RELEASED），claim-check 绿。P0 双修复（`aa94d0d`）之后继续。
+- **取证结论（对代码/文档逐条核实，非目测）**：
+  1. **P1-1 code 模式主客颠倒成立**：`.body.code-mode .main-wrap>.main{display:none}` + chatPanel `flex:1`
+     占中栏——工作面被整个藏掉，只有点侧栏场景（`.code-tool-open`）才露出来。对比 Trae/Cursor（工作面居中、
+     聊天常驻）确为颠倒。
+  2. **P1-2 聊天三态**：work=贴底对话坞（≥768）/ code=中栏全高 / design=完全隐藏。**work 的贴底坞是
+     PRODUCT.md 明文设计决策**（「对话要随手可用、贴底、单行可收」）→ 统一方向 = 让 code 回到同一贴底坞，
+     不动 work。
+  3. **P2-5 能力重复成立**：HTML 5558 注释自陈 agentDock「数据与右栏 Agent 页同源，渲染两份、数据一份」——
+     code 模式下 taskRail 的 Agent tab 与 agentDock 同源双显。
+  4. **P2-4 命名相撞成立**：场景 ORDER 含 `design`（设计）与 `code`（编程），模式又叫 设计/代码 → 同名两义。
+     属命名/分类决策，**出提案不盲改**。
+  5. **P2-6 待办双入口**：todoBar（默认收起为一行预览）+ taskRail 今日 tab —— 预览/详情分工，且 v1.15 有
+     明文设计（待办栏替代原消息栏）→ **判定为刻意设计，不动**。
+  6. **P2-8 窄屏安慰剂成立**：`.body.code-mode` 规则全在 `@media(min-width:1024px)` 内，<1024 时切到代码模式
+     只有顶栏标签变，布局零变化；而 CSS 注释 5265 行早写明「≤1023px 强制 Work 布局」——JS 与文档不一致。
+  7. **P2-7 抽屉 z 平局成立**：≤767 `.chat-panel` 与 ≤1023 `.task-rail` 都 `z-index:var(--z-popover)`=70，
+     同开时按 DOM 序 taskRail 盖住 chat。
+- **执行范围**（分批提、每批守 CI 至终态）：
+  - 第一批 = P1-1/2 + P2-3/5/7/8：code 模式 `.main` 回中 + 聊天回贴底坞（删 `code-tool-open` 机制） /
+    模式切换器改显式三态菜单（复用 `toggleToolPop` 锚定关闭范式）+ title/i18n 双语订正 / code 模式藏右栏
+    Agent tab（applyUIMode 进入时若停在 agent 页切回 today）/ 窄屏 taskRail 降 `z-drawer` / <1024 禁用「代码」项。
+  - **不做的**：P2-4（命名相撞，需用户定方向）、P2-6（刻意设计且有文档）。
+- 占用路径：`src/render-widgets.js`, `agent-workbench.html`, `src/core-i18n.js`, `src/ui-global-events.js`,
+  `tests/ui-mode.test.js`, `tests/e2e/three-state-layout.spec.js`, `CHANGELOG.md`, `docs/agent-board.md`。
+  在跑的重活：无；准备推的范围：暂无待推（写完一次推）。
 
 ### [2026-11-02 08:55 UTC+8 / 00:55 UTC] Qoder 主会话 —— **B16 AI 桥「在画布打开」落地**：Phase B §七 那条唯一未实现条目关闭
 
