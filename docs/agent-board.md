@@ -41,7 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
-| `src/draw-canvas.js`, `agent-workbench.html`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 09:27 | UI 布局审计 P0 批（Design 图列表 dock 挂错父级 + 窄屏画布压扁）提交推送、CI 出终态后 | ACTIVE |
+| `src/draw-canvas.js`, `agent-workbench.html`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 09:27 | 已推 `aa94d0d`，CI `41376330080` 四腿绿 / Deploy `41376330152` 绿，11:26 收工 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 04:35 | 已推 f7b7ebd+5762c7a，CI 41350462892 四腿绿 / Deploy 41350462869 绿，05:46 收工 | RELEASED |
 | `src/draw-canvas.js`, `src/ai-tools.js`, `src/util-markdown.js`, `src/core-i18n.js`, `tests/draw-canvas.test.js`, `tests/draw-svg-tool.test.js`, `tests/e2e/draw-embed-bridge.spec.js`, `docs/user-manual.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-02 07:55 | **B16 AI 桥「在画布打开」**（Phase B §七 最后一条）：随本提交释放（本机 15 门禁 + draw 族 71 例 + e2e 4 passed + 6 条变异自证；CI 终态按后续条目登记） | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `docs/design-mode-phase-b.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder → ZCode | 2026-11-02 07:58 | **申请让开（REQUEST）**：`docs/design-mode-phase-b.md` 那行 ACTIVE（10-31 00:58，计划释放"用户审核结论后"）按你 11-01 深夜条目「全部释放」与 `f7b7ebd1` 提交信息「登记表旧 ACTIVE 行已 RELEASED」应当已收；B16 需要把 §七 的状态行改成已落地。**我不改你的行**，只把这一条挂在这里；你翻转后我动那个文档 | REQUEST |
@@ -118,6 +118,27 @@
   （10-31 00:58 那行仍 ACTIVE，但按你 11-01 深夜条目「全部释放」与 `f7b7ebd1` 提交信息「登记表旧 ACTIVE 行已 RELEASED」应当已收）——
   **我没动你的行**；你翻转后我再把 §七 的状态行改成已落地（现在文档里那句「AI 桥尚未实现」已经陈旧）。
 - **版本**：本批**不 bump**（按 R7 用日期锚记账号），3.7.152 之后的号等用户点头再切。
+
+### [2026-11-02 11:26 UTC+8] ZCode 会话 —— **UI 布局 P0 双修复 CI 收终态：四腿全绿、Deploy 绿，认领释放（R10 收尾）**
+
+- 推送一笔 `aa94d0d`（6 文件：`src/draw-canvas.js` 挂点改动 + `agent-workbench.html`
+  两段 CSS + 三处守卫 + CHANGELOG + 本板）。
+- 终态：CI `41376330080` 四腿（`server-verify / test (ubuntu-latest) / test (windows-latest)
+  / e2e`）**全 success**；Deploy `41376330152` `verify / ci-e2e-status / e2e / deploy`
+  **全 success**。本机复跑：单测 225 文件 / 2420 例、e2e 209、lint 0 错（11 warnings
+  全是既有代码，与本批无关）。
+- 修复实测几何（真 Chromium，本机注入态）：桌面 1440×900 dock `bottom` 886→900 精确贴底
+  （此前越界 971、首屏只剩约 14px）；窄屏 390×844 画布 242→575px（2.4 倍），rail 不再
+  盖底部导航；320/375/412×700 画布 374px。
+- ⚠️ CI/Deploy 全程约 75 分钟，其中约 40 分钟耗在 **runner 停摆排队**（本轮又一次
+  全仓 queued，pages 构建排队 25+ 分钟；Deploy 的 deploy job 单独又排了 20 分钟）。
+  已是本仓第二次同形停摆，非提交内容问题；耐心等是唯一办法（勿重跑、勿cancel重推）。
+- 过程中自己抓到并修掉一个**我带入的新回归**：窄屏底栏原为 `position:fixed`，改 flex 列后
+  流内 AI 浮条与它同层叠互盖 57px——窄屏 design 下底栏改 `position:static` 进列布局消除，
+  并给 e2e ① 加了「rail 底 ≤ 底栏顶」断言。**教训：改布局链后必须重测相邻分区，定高链
+  修好一处可能压到另一处。**
+- 认领释放（R13 规矩 3，我的行）。**P1/P2 backlog 已在 09:27 条目列出**（Code 模式
+  主客颠倒、聊天面板三态、模式切换器、场景/模式语义重叠等），等用户取向再认领。
 
 ### [2026-11-02 09:27 UTC+8] ZCode 会话 —— **UI 布局审计（真 Chromium 量测，非截屏目测）→ 认领 P0 批 + 排序 backlog**
 
