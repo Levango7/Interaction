@@ -41,7 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
-| `src/render-widgets.js`, `agent-workbench.html`, `src/core-i18n.js`, `src/ai-retry.js`, `tests/ui-mode.test.js`, `tests/e2e/ui-mode-layout.spec.js`, `tests/e2e/draw-responsive.spec.js`（仅 toDesign 助手，2026-11-03 交互契约变更跟随）, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 23:57 | **P1/P2 UI 批次**（用户「都有意义就都认领」）：模式切换器显式化 + title 修正 → code 模式工作面回中 + 聊天统一回 work 同款贴底对话坞 → P2 收口（窄屏「代码模式」安慰剂、窄屏双抽屉 z 叠、能力入口分散）。〔2026-11-03 订正：`src/ui-global-events.js` 与 `tests/e2e/three-state-layout.spec.js` 实际未动（菜单复用 more-menu 样式、几何守护落在新文件 ui-mode-layout.spec.js），移出；补上实际改动的 `src/ai-retry.js`（P2-7 互斥）与新 spec。方向订正：聊天三态统一是「回贴底坞」（work 坞是 PRODUCT.md 明文设计），不是此行原稿写的「右侧常驻」〕claim-check 绿；分阶段推、每阶段守 CI 至终态 | ACTIVE |
+| `src/render-widgets.js`, `agent-workbench.html`, `src/core-i18n.js`, `src/ai-retry.js`, `tests/ui-mode.test.js`, `tests/e2e/ui-mode-layout.spec.js`, `tests/e2e/draw-responsive.spec.js`（仅 toDesign 助手，2026-11-03 交互契约变更跟随）, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 23:57 | **P1/P2 UI 批次**（用户「都有意义就都认领」）：模式切换器显式化 + title 修正 → code 模式工作面回中 + 聊天统一回 work 同款贴底对话坞 → P2 收口（窄屏「代码模式」安慰剂、窄屏双抽屉 z 叠、能力入口分散）。〔2026-11-03 订正：`src/ui-global-events.js` 与 `tests/e2e/three-state-layout.spec.js` 实际未动（菜单复用 more-menu 样式、几何守护落在新文件 ui-mode-layout.spec.js），移出；补上实际改动的 `src/ai-retry.js`（P2-7 互斥）与新 spec。方向订正：聊天三态统一是「回贴底坞」（work 坞是 PRODUCT.md 明文设计），不是此行原稿写的「右侧常驻」〕claim-check 绿；〔2026-11-03 03:19 收尾：单笔推 `c3f3621`，CI `41504909828` 四腿 success / Deploy `41504909817` success，认领释放〕 | RELEASED |
 | `src/draw-canvas.js`, `agent-workbench.html`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 09:27 | 已推 `aa94d0d`，CI `41376330080` 四腿绿 / Deploy `41376330152` 绿，11:26 收工 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-responsive.spec.js`, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 04:35 | 已推 f7b7ebd+5762c7a，CI 41350462892 四腿绿 / Deploy 41350462869 绿，05:46 收工 | RELEASED |
 | `src/draw-canvas.js`, `src/ai-tools.js`, `src/util-markdown.js`, `src/core-i18n.js`, `tests/draw-canvas.test.js`, `tests/draw-svg-tool.test.js`, `tests/e2e/draw-embed-bridge.spec.js`, `docs/user-manual.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-02 07:55 | **B16 AI 桥「在画布打开」**（Phase B §七 最后一条）：随本提交释放（本机 15 门禁 + draw 族 71 例 + e2e 4 passed + 6 条变异自证；CI 终态按后续条目登记） | RELEASED |
@@ -80,7 +80,9 @@
 
 ### [2026-11-03 02:39 UTC+8] ZCode 会话 —— **P1/P2 UI 批次完工 · 本条随完工提交一次推送（R10 声明）**
 
-- 状态：本机验证齐，本条与完工代码同笔推送；推后守 CI 至终态（R11），终态绿才翻认领行 RELEASED。
+- 状态：**已收工（释放）**。本条与完工代码同笔推送（`c3f3621`）；CI `41504909828` 四腿 success
+  （server-verify / test-ubuntu / test-windows / e2e——**新 spec 在 CI Linux Chromium 上同样通过**）+
+  Deploy `41504909817` success；认领行已翻 RELEASED。
 - 完工内容（对 23:58 规划条目的执行回执）：
   - **P1-1/2**：code 模式 `.main` 回中栏 + 聊天回 ≥768 同款贴底对话坞（work 坞是 PRODUCT.md 明文设计，
     统一方向是把 code 拉回来，不动 work）；`.code-tool-open` 机制整套删除（CSS 规则 / setupSideMenu 分支 /
