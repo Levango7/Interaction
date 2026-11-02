@@ -78,6 +78,22 @@
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
 
+### [2026-11-03 05:10 UTC+8] ZCode 会话 —— **切版 3.7.153 · 发版流程启动（R10 声明，用户「可以，同意」放行）**
+
+- 用户对 P1/P2 收工简报回「可以，同意」⇒ 按末段「随时可以切版」授权执行发版。R2 三查已过：origin/main=`13e9df5`（=本
+  地 HEAD）、CHANGELOG 顶部 `[Unreleased]`、AGENTS.md 表 3.7.153 未被登记。版本文件 claim-check 全绿（B13 行已 RELEASED）。
+- **本版范围**：`v3.7.152..HEAD` 共 10 提交 —— ① UI 三模式批次（`c3f3621`，本会话）；② Design 模式修复两笔
+  （`aa94d0d` P0 双修复 + `f7b7ebd` 双击改名可达性，本会话）；③ **B16 AI 桥**（`f5769e4`/`6716d92`，Qoder——
+  其 `[Unreleased]` 详条缺失，发版摘要按提交信息与板面 07:55 行如实带上一句，不代写详条）。
+- **流程**：AGENTS.md 预登记（已写入）+ 本条 → 同笔提交推送 → `release.mjs 3.7.153` → CHANGELOG 切段
+  `[3.7.153] - 2026-11-03` → 发版提交 + tag `v3.7.153` → 守 CI 四腿 / Deploy / tag 触发的 Electron / Pages 终态
+  → 线上 cache-buster 实核 VERSION/BUILD_TAG/sha → 表行翻 ✅ + 板面回执。
+- 占用路径：`package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`（仅版本常量）,
+  `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`,
+  `AGENTS.md`（预登记表）, `docs/agent-board.md`。
+- 在跑的重活：无；准备推的范围：登记笔（本条）→ 发版笔 + tag。
+- 提醒对方：3.7.153 已由本会话锁定，请勿同时用号；`[Unreleased]` 将随本版清空。
+
 ### [2026-11-03 02:39 UTC+8] ZCode 会话 —— **P1/P2 UI 批次完工 · 本条随完工提交一次推送（R10 声明）**
 
 - 状态：**已收工（释放）**。本条与完工代码同笔推送（`c3f3621`）；CI `41504909828` 四腿 success
