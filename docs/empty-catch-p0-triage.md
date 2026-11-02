@@ -269,3 +269,29 @@ ui-backup-stats.js:396  await _blobToDataURL(v) …
 
 **读法从此变了**：以后 `新增 N` 里出现 **P0** 就是真新增，`消失 N` 不为零就是"有人改了 catch 没重冻"，
 两列都可直接采信；不必再先猜"大概是漂移"。
+
+---
+
+## 八、附：「假防线（false-safety wrapper）」实测清单（2026-10-31 试点 · **结论已归档，代码未入库**）
+
+与空 catch 同源、但**不在空 catch 口径内**的一类缺陷：包装层看着在防守，实际防不了。
+
+**判定（窄）**：`try{ <只有裸 fallible 调用、返回值全丢弃> }catch(_){}`
+- `save()` 自身不抛（内部 catch 后 `pushDiag` + `toast` + `return false`）⇒ 外层 catch **永不触发**
+- 返回值（`false` = 写入失败）被丢弃 ⇒ 这一层**零观测**
+
+**全仓实测 17 处**：`ai-retry` 5（`:257/258/1252/1333/1424`）、`ui-global-events` 5（`:1396/1765/1846/2107/2182`）、`render-widgets` 2（`:3874/3985`）、`render-overview` 1（`:193`）、`ui-ge-integrations` 1（`:2554`）、`ui-onboarding` 1（`:127`）、`data-links` 2（`:519/521`）。
+
+**为什么不做成门禁**：宽判据「调用方不接 `save()` 的布尔返回值」实测 **135 个调用点命中 128 个** ⇒ precision 太低
+（多数写失败本就无害，且 `save()` 自身已 toast + pushDiag，用户看得到泛告警）。按 iteration-plan B11
+「确认抓得准之前不做全仓门禁」⇒ **只留清单，不升格为门禁**。
+
+**处置现状（诚实记录，勿当成"已修"）**：
+- `data-links.js` 的 `_saveSessions` / `_saveActiveSid` 两处**试点修过并在净副本验证 10/10**
+  （`_probe/wb-b11b/isoB11b`，含射程双向对照与行为反向对照），但**整批按用户决定撤回、未入库**
+  （2026-10-31；该文件 P0 = 0，按 P0 口径不在他人批次范围内）。
+  ⇒ **这两处至今仍是假防线**：外层 catch 永不触发，返回值仍被丢弃。
+- 判定器 `scripts/lib/return-ignored.mjs`（`findFalseSafety`）与守卫 `tests/return-ignored.test.js` 同批撤回、未入库；
+  **本节即它们的替代归档**（结论与数字都在，工具可按此重建）。
+- **命中 ≠ 必须改行为**：`ui-onboarding.js:127` 早已判过「有理由的降级」（存储不可用时退回每次都弹）——
+  对它而言只需承认那条 catch 是死的，不必改行为。**动手前先读该处自己的注释。**

@@ -2927,8 +2927,8 @@ function renderGlob(q){
   }
   let html="";
   if(tasks.length) html+=`<div class="u-fs-xs u-text-muted u-m-1h-0">${t("nav.tasks", "任务")} (${tasks.length})</div><ul class="list">`+
-    tasks.map(t=>`<li><div class="body"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}${t.due?" · "+t.due:""}${(t.tags&&t.tags.length)?" · "+t.tags.map(esc).join("/"):""}</div></div></li>`).join("")+`</ul>`;
+    tasks.map(t=>`<li><div class="body-row"><div class="t">${esc(t.title)}</div><div class="m">${scMeta(t.sc).name} · ${t.status}${t.due?" · "+t.due:""}${(t.tags&&t.tags.length)?" · "+t.tags.map(esc).join("/"):""}</div></div></li>`).join("")+`</ul>`;
   if(recs.length) html+=`<div class="u-fs-xs u-text-muted u-m-1h-0">${t("tool.webSearch.records", "资料")} (${recs.length})</div><ul class="list">`+
-    recs.map(r=>`<li><div class="body"><div class="t">${esc(r.title)}</div><div class="m">${SCENARIOS[r.sc].name}</div></div></li>`).join("")+`</ul>`;
+    recs.map(r=>`<li><div class="body-row"><div class="t">${esc(r.title)}</div><div class="m">${SCENARIOS[r.sc].name}</div></div></li>`).join("")+`</ul>`;
   res.innerHTML=sanitizeHtml(html||renderEmpty("no-search"));
 }

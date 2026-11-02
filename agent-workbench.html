@@ -1594,9 +1594,9 @@ select[name="priority"]{max-width:120px}
   border:1px solid var(--line);border-radius:var(--radius-md);margin-bottom:var(--space-2);
   background:var(--panel);transition:background var(--transition-fast),box-shadow var(--transition-fast)}
 .list li:hover{background:var(--panel2);box-shadow:var(--shadow-1)}
-.list li .body{flex:1;min-width:0}
-.list li .body .t{font-size:var(--fs-base);font-weight:500}
-.list li .body .m{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;word-break:break-all}
+.list li .body-row{flex:1;min-width:0;display:flex;min-height:0}
+.list li .body-row .t{font-size:var(--fs-base);font-weight:500}
+.list li .body-row .m{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;word-break:break-all}
 .tag{display:inline-block;font-size:var(--fs-xs);background:var(--accent-soft);color:var(--accent-text,var(--accent));
   border-radius:var(--radius-sm);padding:2px 8px;margin-right:var(--space-1);font-weight:500}
 .due{font-size:var(--fs-xs);color:var(--muted)}
@@ -3501,6 +3501,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   .tbtn{padding:var(--space-2);flex-shrink:0}
   .tbtn .lbl{display:none}
   .body{flex-direction:column}
+  .list li .body-row{flex-direction:column}
   /* v2.1.0：桌面侧栏（#side）在移动端隐藏，导航改由 .mob-bar 底栏 + .side-sheet 抽屉承载（规则见文件头部移动端导航块） */
   .main{padding:var(--space-3) var(--space-4) calc(72px + var(--safe));font-size:var(--fs-md)}
   .form-row{flex-direction:column}

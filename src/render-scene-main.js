@@ -2099,7 +2099,7 @@ function _renderRecItem(r, rec){
   const imgPh = (imgF && r.img && String(r.img).indexOf("img_") === 0)
     ? `<span class="rec-img-thumb" data-recimg="${esc(r.img)}" role="img" aria-label="${t("field.image","作品图")}">${_imgPhIcon}</span>` : "";
   const titleF = rec.fields.find(f=>f.k==="title") || {k:"title"};
-  return `<li><div class="body"><div class="t">${esc(r[titleF.k])}${imgPh}</div>
+  return `<li><div class="body-row"><div class="t">${esc(r[titleF.k])}${imgPh}</div>
     <div class="m">${meta}</div>${mdContent}${codeBlock}</div>
     <button type="button" class="del" data-rdel="${r.id}" title="${t("a11y.del", "删除")}" aria-label="${t("a11y.del", "删除")}">${UI_ICONS.trash}</button></li>`;
 }

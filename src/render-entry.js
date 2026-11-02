@@ -1100,11 +1100,11 @@ const TOOL_APPS = {
         });
         let html = "";
         if(hits.tasks.length) html += '<h3>' + t("tool.webSearch.tasks", "任务") + ' (' + hits.tasks.length + ')</h3><ul class="list">' + hits.tasks.slice(0,20).map(function(t){
-          return '<li><div class="body"><div class="t">' + esc(t.title) + '</div><div class="m">' + esc(scMeta(t.sc).name) + " · " + t.status + (t.due ? " · " + t.due : "") + "</div></div></li>"; }).join("") + "</ul>";
+          return '<li><div class="body-row"><div class="t">' + esc(t.title) + '</div><div class="m">' + esc(scMeta(t.sc).name) + " · " + t.status + (t.due ? " · " + t.due : "") + "</div></div></li>"; }).join("") + "</ul>";
         if(hits.scenes.length) html += '<h3>' + t("tool.webSearch.scenes", "场景") + '</h3><div class="u-flex u-gap-2 u-flex-wrap">' + hits.scenes.map(function(sc){
           return '<span class="tag">' + esc(SCENARIOS[sc].name) + "</span>"; }).join("") + "</div>";
         if(hits.recs.length) html += '<h3>' + t("tool.webSearch.records", "资料") + ' (' + hits.recs.length + ')</h3><ul class="list">' + hits.recs.slice(0,20).map(function(r){
-          return '<li><div class="body"><div class="t">' + esc(r.title) + '</div><div class="m">' + esc(SCENARIOS[r.sc].name) + "</div></div></li>"; }).join("") + "</ul>";
+          return '<li><div class="body-row"><div class="t">' + esc(r.title) + '</div><div class="m">' + esc(SCENARIOS[r.sc].name) + "</div></div></li>"; }).join("") + "</ul>";
         box.innerHTML = sanitizeHtml(html || renderEmpty("no-search"));
       };
       $("#swGo").onclick = run;
@@ -1122,7 +1122,7 @@ const TOOL_APPS = {
         + '<button type="button" class="addbtn sm" data-sc="muted" id="ccClrOut">' + t("tool.runner.clearOut", "清空输出") + '</button></div>'
         + '<label class="u-mt-3">' + t("tool.runner.output", "输出") + '</label><pre id="ccOut" class="snip u-min-h-120">' + t("tool.runner.outputPlaceholder", "// console 输出显示在这里") + '</pre>'
         + (hist.length ? '<details class="u-mt-3"><summary class="u-pointer u-fs-xs">' + t("tool.runner.history", "历史代码") + ' (' + hist.length + ")</summary>"
-          + '<ul class="list">' + hist.slice(0,10).map(function(h,i){ return '<li class="u-pad-1h-2h"><div class="body"><a href="#" data-cc-hist="' + i + '">' + esc((h.code||"").slice(0,60)) + "…</a></div></li>" }).join("") + "</ul></details>" : "")
+          + '<ul class="list">' + hist.slice(0,10).map(function(h,i){ return '<li class="u-pad-1h-2h"><div class="body-row"><a href="#" data-cc-hist="' + i + '">' + esc((h.code||"").slice(0,60)) + "…</a></div></li>" }).join("") + "</ul></details>" : "")
         + '<p class="sub u-mt-2">' + t("tool.runner.safetyTip", "安全提示：代码在 Web Worker 沙箱中运行，无法访问应用数据、DOM 或 localStorage；最长 10 秒，用 console.log/warn/error 输出。") + '</p>';
     },
     bind: function(){
