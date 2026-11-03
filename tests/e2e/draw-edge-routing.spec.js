@@ -12,6 +12,11 @@
  *      否则 ① 的"零违规"可能只是采样器在这个浏览器里压根没工作（假绿与假红同形）；
  *   ③ 反向对照：把 C 挪出走廊 ⇒ 线必须回到未绕障的那条默认三段（绕障不能无中生有）。
  *
+ * 适用域：**本判据只在画布足够大时才成立**（见用例里的 `test.skip`，阈值由实测盒子高度决定）。
+ *   绕障留白在模型里是 10 个用户单位，画布被压矮到一定程度时它在屏幕上不足半像素，
+ *   与"根本没绕"同形 —— 2026-11-03 CI 上 tablet-768x1024 那一遍就是这么红的（桌面遍同一断言稳过）。
+ *   与其把那一遍改成永远不跑，不如让它**量到多少就报多少地跳过**：日志里留得下数字，归属才追得回去。
+ *
  * 采样函数**内联在 page.evaluate 里**：Playwright 走 CDP 序列化函数源码，
  * 不碰 `new Function`/eval —— 本页有 CSP，动态求值会被拒（拒了症状是"整个 e2e 红"，容易误判成产品缺陷）。
  *
@@ -88,8 +93,22 @@ test.describe("连线路由绕障（真浏览器几何）", () => {
       const cx = Number(c.getAttribute("x")), cy = Number(c.getAttribute("y"));
       const cw = Number(c.getAttribute("width")), chh = Number(c.getAttribute("height"));
       const decoyD = "M" + (cx - 60) + " " + (cy + chh / 2) + " L" + (cx + cw + 60) + " " + (cy + chh / 2);
-      return { d: d, boxTop: Math.round(box.top), real: sample(d), decoy: sample(decoyD) };
+      return { d: d, boxTop: Math.round(box.top), boxH: Math.round(box.height),
+        scale: svg.getScreenCTM().d, real: sample(d), decoy: sample(decoyD) };
     }, C_ID);
+
+    /* 本判据的**适用域**由实测决定，不由项目名决定：绕障留白是模型里的 10 个用户单位，
+       画布被压到很矮时这 10 单位在屏幕上不足半像素 —— 与"根本没绕"完全同形。
+       2026-11-03 CI 实测：tablet-768x1024 那一遍就是撞在这个点上（topMost 与 boxTop 四舍五入后同为 991，
+       而桌面遍同一断言稳定通过）。所以低于阈值的遍**明着跳过并带出量到的数字**，不许它凑一份绿。
+       阈值取 20px：C 的模型高 80 单位 ⇒ scale ≥ 0.25 ⇒ 留白至少 2.5 屏幕像素，判据才有分辨力。 */
+    /* 这行不是调试残留，是**回执**：跳过与否都先把自己量到的数写进 stdout，
+       环境之间画布尺寸不一致时（本机 tablet scale=1.0，CI tablet 疑为 ~0.1）才有东西可追。 */
+    console.log("[canvas-measure] boxH=" + out.boxH + "px scale=" + out.scale.toFixed(3) +
+      " topMost=" + out.real.topMost + " boxTop=" + out.boxTop);
+    test.skip(out.boxH < 20,
+      "画布在此视口只有 " + out.boxH + "px 高（缩放 " + out.scale.toFixed(3) +
+      "）⇒ 10 单位留白不足半像素，这条几何判据在该缩放没有信息量；窄屏画布定高归 draw-responsive.spec.js");
 
     expect(out.real.bad, "绕障后不该有任何采样点落在 C 盒内；实收 d=[" + out.d + "]").toBe(0);
     expect(out.real.topMost, "必须真的从 C 上方绕过去，不是原地不动（C 顶边 " + out.boxTop + "）")

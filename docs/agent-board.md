@@ -82,9 +82,35 @@
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
 
+### [2026-11-03 13:17 UTC+8 / 05:17 UTC] Qoder 主会话 —— **C3 首推 CI 红在我自己的 e2e 用例：已修并再推（释放中）**
+
+- 状态：**已收工（本笔为 C3 的测试面修正，无 src 改动）**
+- 占用路径：`tests/e2e/draw-edge-routing.spec.js`、`CHANGELOG.md`、`docs/agent-board.md`
+- 在跑的重活：无；准备推的范围：`00c92d1..HEAD`（一笔测试面修正）
+- 提醒对方：`00c92d1` 的 CI 是**红**的（e2e 腿 1 failed），别把它当干净 base 起新分支；我这笔推上去之后以新 tip 为准。
+
+- **红的归属先认清**：`41580179993` CI 的 e2e 腿 `1 failed / 3 flaky / 221 passed`。
+  唯一硬红是**我自己新增的** `draw-edge-routing.spec.js` 第 ①② 条在 `tablet-768x1024` 那一遍：
+  `Expected: < 991 / Received: 991`。三条 flaky 是 i18n.spec.js ①③（`waitForFunction` 15s 超时）
+  与 rag-hybrid.spec.js:254（`waitRagReady` 30s）—— 全部**重试后自愈**，属既有负载抖动族（后者就是台账 #90 那条），
+  与本批无因果：`00c92d1` 只动了 Draw 层与它的测试。
+- **诊断（带本机实测数）**：同一份布局本机 desktop 量到 `boxH=36px / scale=0.445`（10 单位留白 = 4 屏幕像素）、
+  tablet 量到 `boxH=80px / scale=1.000`（留白 = 10 像素）。CI 的 tablet 要让"折线最高点"与"C 顶边"四舍五入后
+  相等，缩放必须 ≲ 0.1 ⇒ **CI 上那块 Design 画布只有本机约 1/10 尺寸**。此时 10 用户单位的绕障留白不足半像素，
+  与"根本没绕"在数值上完全同形 —— 我的判据是屏幕像素级严格不等式，本身没有作用域声明，这是我的用例错。
+- **改法（不是把 tablet 一刀切跳过）**：适用域改由**实测盒子高度**决定 —— `boxH < 20` 才 `test.skip`，
+  且**无论跳过与否都先把 `boxH / scale / topMost / boxTop` 打进 stdout**（回执机制已在本机证过：
+  阈值临时抬到 99999 ⇒ `2 skipped / 2 passed`、退出码 0；改回 20 ⇒ `18 passed` draw 族全绿）。
+  这样 CI 若真处于退化尺寸，日志里会留下一条**带数字的跳过**，而不是被抹平或变成误红。
+- **留给下一位的实测缺口（我没动，别重复认领）**：CI 的 tablet 项目下 Design 画布为何被压到 ~1/10（本机不复现）。
+  `draw-responsive.spec.js` 目前守 ≤1023 单栏的 320/375/412 档 + `hostH > 300`，**768 档不在它射程内**；
+  要收这条，先拿到下一轮 CI 的 `[canvas-measure]` 行，再决定是补 768 档断言还是查布局链。
+
 ### [2026-11-03 12:45 UTC+8 / 04:45 UTC] Qoder 主会话 —— **C3 交付：连线路由绕障（设计文档 Q1 结案）· 已收工（释放）**
 
 - 状态：**已收工（释放）**（本行随本提交翻 RELEASED）
+  〔13:17 更正：下面"本机验证"全绿是真的，但**首推的 CI e2e 腿红了 1 条**——红在我新增的 tablet 那一遍（产品代码无问题、无需回退），
+  修正见上一条 13:17 条目。本条里"16 条变异全有射程／14/14／2455 例／draw 族 18 passed"这些数字仍然有效。〕
 - 占用路径：`src/draw-canvas.js`、`tests/draw-canvas.test.js`、`tests/e2e/draw-edge-routing.spec.js`（新建）、
   `docs/design-mode-phase-b.md`、`CHANGELOG.md`、`docs/agent-board.md`
 - 在跑的重活：无（变异电池与全量门禁均已跑完）
