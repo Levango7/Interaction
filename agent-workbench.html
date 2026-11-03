@@ -38749,37 +38749,169 @@ function _dcAnchor(a, b) {
   if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? { x: a.x + a.w, y: acy } : { x: a.x, y: acy };
   return dy >= 0 ? { x: acx, y: a.y + a.h } : { x: acx, y: a.y };
 }
-function _dcEdgePath(e, byId) {
-  const a = byId[e.from], b = byId[e.to];
-  if (!a || !b) return "";
-  const s = _dcAnchor(a, b), t = _dcAnchor(b, a);
-  const mx = (s.x + t.x) / 2;
-  return "M" + s.x + " " + s.y + " L" + mx + " " + s.y + " L" + mx + " " + t.y + " L" + t.x + " " + t.y;
+/* ---------- 连线路由（Phase C3：绕开挡路的第三块节点） ----------
+ * 设计文档 Q1 的 MVP 口径是"直角三段不绕障"，节点一多连线就穿卡片。这里做成**有界搜索**而不是全图 A*：
+ *   ① 先试默认三段 —— 绝大多数边一步就通，输出串与从前**逐字节相同**（成本同阶，回归面收敛到"真撞了"的边）；
+ *   ② 撞了 ⇒ 绕"第一块挡路的"生成两条候选（横段走上/下，竖段走左/右），中间段外扩 gutter 并对齐网格；
+ *   ③ 逐层展开（深度上界 DC_ROUTE_DEPTH），同层里取"不撞且最短"的；前沿条数也设上界。
+ * 全程纯几何：不查 DOM、不读时钟、不分配 id ⇒ 同一份文档每次渲染结果一致（单测能钉形状）。
+ * 兜底：预算用尽仍不通 ⇒ 退回默认三段（不比从前差），不抛错也不 toast（视觉问题不该打断编辑）。 */
+const DC_ROUTE_GUTTER = 10;      // 绕障留白 = 一个网格；贴边不算穿过
+const DC_ROUTE_DEPTH = 3;        // 最多连绕 3 块（候选按层翻倍，调大就是指数）
+const DC_ROUTE_FRONTIER = 8;     // 每层前沿条数上界
+
+/** 轴对齐段是否**穿过**矩形内部（贴边不算，留 1px 容差）。非轴对齐段一律 false —— 路由只产轴对齐段。 */
+function _dcSegHitsRect(x1, y1, x2, y2, r) {
+  const L = r.x + 1, R = r.x + r.w - 1, T = r.y + 1, B = r.y + r.h - 1;
+  if (R <= L || B <= T) return false;                    // 退化框（被缩到没有内部）不管
+  if (y1 === y2) {
+    if (!(y1 > T && y1 < B)) return false;
+    return Math.min(x1, x2) < R && Math.max(x1, x2) > L;
+  }
+  if (x1 === x2) {
+    if (!(x1 > L && x1 < R)) return false;
+    return Math.min(y1, y2) < B && Math.max(y1, y2) > T;
+  }
+  return false;
 }
-/** label 落点：三段折线的竖直中段中点（与 _dcEdgePath 同几何，不做绕障）。 */
-function _dcEdgeMid(e, byId) {
+/** 折线首个穿过的段下标；-1 = 全通。 */
+function _dcFirstHit(pts, obstacles) {
+  for (let i = 0; i + 1 < pts.length; i++) {
+    for (let k = 0; k < obstacles.length; k++) {
+      if (_dcSegHitsRect(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, obstacles[k])) return i;
+    }
+  }
+  return -1;
+}
+function _dcPolyLen(pts) {
+  let n = 0;
+  for (let i = 0; i + 1 < pts.length; i++) n += Math.abs(pts[i + 1].x - pts[i].x) + Math.abs(pts[i + 1].y - pts[i].y);
+  return n;
+}
+/** 去掉重合点与共线中间点（只用于绕障候选；默认三段不进这里，保证与从前逐字节一致）。 */
+function _dcSimplify(pts) {
+  const out = [];
+  pts.forEach(function (p) {
+    const last = out[out.length - 1];
+    if (last && last.x === p.x && last.y === p.y) return;
+    out.push(p);
+  });
+  for (let i = out.length - 2; i > 0; i--) {
+    const a = out[i - 1], b = out[i], c = out[i + 1];
+    if ((a.x === b.x && b.x === c.x) || (a.y === b.y && b.y === c.y)) out.splice(i, 1);
+  }
+  return out;
+}
+/** 把 pts 的第 i 段（p→q）换成 p→a→b→q。 */
+function _dcSplice(pts, i, a, b) {
+  /* pts.slice(i + 1) 从 **q 自己**开始：曾经写成 slice(i + 2) ⇒ 被撞段的终点被吞掉。
+     只在"撞的是最后一段"时才暴露（前面几点共线会被化简掩盖），症状是箭头停在目标卡片外。 */
+  return _dcSimplify(pts.slice(0, i + 1).concat([a, b], pts.slice(i + 1)));
+}
+/** 对当前折线的第一个命中段，绕开挡在它前面的第一块节点，给出两条候选。 */
+function _dcDetours(pts, obstacles) {
+  const i = _dcFirstHit(pts, obstacles);
+  if (i < 0) return [];
+  const p = pts[i], q = pts[i + 1];
+  let blocker = null;
+  for (let k = 0; k < obstacles.length; k++) {
+    if (_dcSegHitsRect(p.x, p.y, q.x, q.y, obstacles[k])) { blocker = obstacles[k]; break; }
+  }
+  if (!blocker) return [];
+  const g = DC_ROUTE_GUTTER;
+  if (p.y === q.y) {
+    const top = _dcSnapV(blocker.y - g), bot = _dcSnapV(blocker.y + blocker.h + g);
+    return [_dcSplice(pts, i, { x: p.x, y: top }, { x: q.x, y: top }),
+      _dcSplice(pts, i, { x: p.x, y: bot }, { x: q.x, y: bot })];
+  }
+  const left = _dcSnapV(blocker.x - g), right = _dcSnapV(blocker.x + blocker.w + g);
+  return [_dcSplice(pts, i, { x: left, y: p.y }, { x: left, y: q.y }),
+    _dcSplice(pts, i, { x: right, y: p.y }, { x: right, y: q.y })];
+}
+/** 路由入口：默认三段通就直接用，不通才做有界搜索。返回折线点列（含首尾）。 */
+function _dcRoutePts(s, t, obstacles) {
+  const mx = (s.x + t.x) / 2;
+  const base = [s, { x: mx, y: s.y }, { x: mx, y: t.y }, t];
+  if (!obstacles || !obstacles.length) return base;
+  if (_dcFirstHit(base, obstacles) < 0) return base;
+  let frontier = [base];
+  const seen = {};
+  seen[_dcPolyD(base)] = true;
+  for (let depth = 0; depth < DC_ROUTE_DEPTH && frontier.length; depth++) {
+    const next = [];
+    let best = null;
+    frontier.forEach(function (pts) {
+      _dcDetours(pts, obstacles).forEach(function (c) {
+        const key = _dcPolyD(c);
+        if (seen[key]) return;
+        seen[key] = true;
+        if (_dcFirstHit(c, obstacles) < 0) {
+          if (!best || _dcPolyLen(c) < _dcPolyLen(best)) best = c;    // 同层取最短，不取"第一个碰到的"
+          return;
+        }
+        next.push(c);
+      });
+    });
+    if (best) return best;
+    next.sort(function (a, b) { return _dcPolyLen(a) - _dcPolyLen(b); });
+    frontier = next.slice(0, DC_ROUTE_FRONTIER);
+  }
+  return base;
+}
+function _dcPolyD(pts) {
+  return pts.map(function (p, i) { return (i === 0 ? "M" : "L") + p.x + " " + p.y; }).join(" ");
+}
+/** 障碍集 = 图上除本条连线两端之外的所有节点框（底稿也算，它视觉上确实占地方）。 */
+function _dcEdgeObstacles(rects, e) {
+  return rects.filter(function (r) { return r.id !== e.from && r.id !== e.to; });
+}
+function _dcEdgePts(e, byId, rects) {
   const a = byId[e.from], b = byId[e.to];
   if (!a || !b) return null;
-  const s = _dcAnchor(a, b), t = _dcAnchor(b, a);
-  return { x: Math.round((s.x + t.x) / 2), y: Math.round((s.y + t.y) / 2) };
+  const obs = rects ? _dcEdgeObstacles(rects, e) : [];
+  return _dcRoutePts(_dcAnchor(a, b), _dcAnchor(b, a), obs);
+}
+function _dcEdgePath(e, byId, rects) {
+  const pts = _dcEdgePts(e, byId, rects);
+  if (!pts) return "";
+  return _dcPolyD(pts);   // 默认三段那一支与从前逐字节相同
+}
+/** label 落点：取折线的**等距中点**（绕障后段数不固定，不能再写死"竖直中段"）。 */
+function _dcPolyMid(pts) {
+  const total = _dcPolyLen(pts);
+  if (!(total > 0)) return { x: pts[0].x, y: pts[0].y };
+  let rest = total / 2;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const seg = Math.abs(pts[i + 1].x - pts[i].x) + Math.abs(pts[i + 1].y - pts[i].y);
+    if (rest > seg) { rest -= seg; continue; }
+    const f = seg ? rest / seg : 0;
+    return { x: Math.round(pts[i].x + (pts[i + 1].x - pts[i].x) * f), y: Math.round(pts[i].y + (pts[i + 1].y - pts[i].y) * f) };
+  }
+  return { x: pts[pts.length - 1].x, y: pts[pts.length - 1].y };
+}
+function _dcEdgeMid(e, byId, rects) {
+  const pts = _dcEdgePts(e, byId, rects);
+  if (!pts) return null;
+  return _dcPolyMid(pts);
 }
 function _dcRenderSvg() {
   const d = dcActive();
   if (!d) return '<svg id="drawSvg"></svg>';
   const byId = {};
   d.nodes.forEach(function (n) { byId[n.id] = n; });
+  const rects = d.nodes.map(function (n) { return { id: n.id, x: n.x, y: n.y, w: n.w, h: n.h }; });
   const vw = Math.round(DC_VIEW_W / _dcZoom), vh = Math.round(DC_VIEW_H / _dcZoom);
   let out = '<svg id="drawSvg" viewBox="0 0 ' + vw + " " + vh + '" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;user-select:none;touch-action:none;background:var(--bg,#fff)">'
     + '<defs><marker id="darr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--text)"/></marker></defs>';
   const selEdge = _dcSel && _dcSel.kind === "edge" ? _dcSel.id : "";
   d.edges.forEach(function (e) {
-    const p = _dcEdgePath(e, byId);
+    const p = _dcEdgePath(e, byId, rects);
     if (!p) return;
     const hot = e.id === selEdge;
     out += '<g class="dedge" data-edge-id="' + e.id + '"><path d="' + p + '" fill="none" stroke="' + (hot ? "var(--accent)" : "var(--text)") + '" stroke-width="' + (hot ? 2.5 : 1.5) + '" marker-end="url(#darr)"/>'
       + '<path d="' + p + '" fill="none" stroke="transparent" stroke-width="12" style="cursor:pointer"/></g>';
     if (e.label) {
-      const mid = _dcEdgeMid(e, byId);
+      const mid = _dcEdgeMid(e, byId, rects);
       if (mid) out += '<text class="dedge-label" x="' + mid.x + '" y="' + mid.y + '" text-anchor="middle" dominant-baseline="middle" pointer-events="none">' + esc(e.label) + "</text>";
     }
   });
@@ -38960,7 +39092,9 @@ function _dcOnDblClick(ev) {
   const eid = edgeEl.getAttribute("data-edge-id");
   const e = d.edges.find(function (m) { return m.id === eid; }); if (!e) return;
   const byId = {}; d.nodes.forEach(function (n) { byId[n.id] = n; });
-  const mid = _dcEdgeMid(e, byId);
+  /* 浮层落点必须和**渲染出来的 label 用同一条路由**，否则绕障后标签在丝线上、输入框弹在旁边。 */
+  const rects = d.nodes.map(function (n) { return { id: n.id, x: n.x, y: n.y, w: n.w, h: n.h }; });
+  const mid = _dcEdgeMid(e, byId, rects);
   const svg = document.getElementById("drawSvg");
   let rect = { left: 0, top: 0, width: 140, height: 24 };
   if (mid && svg) {
