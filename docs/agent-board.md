@@ -82,6 +82,29 @@
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
 
+### [2026-11-03 13:44 UTC+8 / 05:44 UTC] Qoder 主会话 —— **C3 收口：`7fb1d99` CI 四腿 + Deploy 全绿；tablet 画布尺寸差异已量到数（释放）**
+
+- 状态：**已收工（释放）**（本笔只动 `CHANGELOG.md` 与板面，零代码）
+- 占用路径：`CHANGELOG.md`、`docs/agent-board.md`
+- 在跑的重活：无；准备推的范围：`7fb1d99..HEAD`（一笔文档提交）
+- 提醒对方：main 现在是绿的，`7fb1d99` 可以当干净 base 用（`00c92d1` 那轮的 e2e 红已作废，别照它起分支）。
+
+- **CI 终态登记**（补上 12:45 与 13:17 两条里欠的数）：
+  `7fb1d99` CI `41583188750` 四腿 success（test ubuntu / test windows / server-verify / **e2e**）、
+  Deploy `41583188742` success；e2e 明细 `223 passed / 1 skipped / 1 flaky`。
+  对照首推 `00c92d1`：`1 failed / 3 flaky / 221 passed` —— 那 1 条硬红已按 13:17 那笔修掉，
+  3 条 flaky（i18n.spec.js ①③ 的 `waitForFunction` 15s、rag-hybrid.spec.js:254 的 `waitRagReady` 30s）
+  重试即自愈，是既有负载抖动族（后者即台账 #90），**不要把它们读成本批的回归**。
+- **上一笔留的"疑为 ~1/10"现在有实测数了**：跳过机制在 CI 打出
+  `[canvas-measure] boxH=0px scale=0.004 topMost=991 boxTop=991`（tablet-768x1024），
+  而 desktop 那遍 `boxH=36px scale=0.445` 与本机逐位吻合 —— 也就是**同一份种子、同一视口，
+  CI 的 Design 画布被压到几乎没有高度，本机是 1:1**。归属：响应式布局面，不是 Draw 层的几何。
+- **为什么 768 档没人守**（供接手的人少跑一步）：`draw-responsive.spec.js` 守 ≤1023 单栏，但它跑的是
+  320/375/412 三档 + `hostH > 300`，且已在 `playwright.config.js` 的 tablet `testIgnore` 名单里 ⇒
+  **tablet 项目下画布高度没有任何断言在守**。要收这条 #110，先判这是 CI 侧浏览器/默认缩放差异还是布局链真退化
+  （本机 `npm run e2e -- draw-edge-routing` 看 `[canvas-measure]` 那两行即可复现对照）。
+  动 `tests/e2e/draw-responsive.spec.js` 或 `playwright.config.js` 前先核板 —— 那两处是 ZCode 常动的面。
+
 ### [2026-11-03 13:17 UTC+8 / 05:17 UTC] Qoder 主会话 —— **C3 首推 CI 红在我自己的 e2e 用例：已修并再推（释放中）**
 
 - 状态：**已收工（本笔为 C3 的测试面修正，无 src 改动）**
