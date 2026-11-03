@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-edge-routing.spec.js`, `docs/design-mode-phase-b.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-03 12:14 | **C3 连线路由绕障**（Phase C 第三条，用户「proceed with phase C」）：正交三段在走廊被第三张卡片挡住时改走**有界**绕障（层数 3 / 每层前沿 8 / 绕障留白 10），不撞路时输出与从前**逐字节相同**；中点标签随同一条路由。⚠️〔12:45 收工翻 RELEASED〕本行 ACTIVE 期间树里跑的是**变异电池**（原写 15 条，最终 **16 条**：C1 的 M1–M8 整批重跑 + C3 的 N1–N8），脚本会临时改写该文件，中间态一旦被整文件提交就是坏代码入库（R13 规矩 2）。电池已在最终树跑完、`src/draw-canvas.js` 回到干净态；单测 35→43、`verify-ci-order` 14/14、`test:local` 227 文件/2455 例、`e2e -- draw-` 18 passed，细节见 12:45 条目。顺带登记 C1（`43738be`）终态：CI `41575028870` 四腿 success / Deploy `41575028866` success。 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-embed-bridge.spec.js`, `docs/design-mode-phase-b.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-03 11:05 | **C1 底稿 id 前缀隔离**（Phase C 第一条，用户「proceed with phase C」）：`dcEmbedPayload` 入库前给 inner 里所有 id 加 `dce-<uid>-` 前缀并成对重写 `url(#x)` / `href="#x"`；节点存 `pfx`；老盘（v3.7.153 无 pfx）载入时一次性补隔离，超预算整图还原/静默放弃。单测 26→35 + **8 条变异全打红**；e2e 2→4 test（真浏览器判 id 唯一）+ 治本 spec 种子竞态（节流取证 A 红 / B 绿）。`docs/module-graph.md` 已核：本批零新增跨模块边，`check:modules` 未改写该文件。编辑已落，随本提交释放（CI 终态按后续条目登记） | RELEASED |
 | `docs/design-mode-phase-b.md`, `docs/agent-board.md` | Qoder | 2026-11-03 10:17 | B16 收尾：§状态 / §差异 / §七 / §八 四处「AI 桥未实现」的陈旧陈述改成已落地（含实现注记）；编辑已落，随本提交释放 | RELEASED |
 | `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`（仅版本常量）, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`（预登记表）, `docs/agent-board.md` | ZCode | 2026-11-03 05:10 | **切版 3.7.153**（用户放行）：已发 `0010932` + tag `v3.7.153`（远端解引用实核 = `0010932`），CI `41526311606` 四腿绿 / Deploy `41526311511` / Electron `41526324607` / Pages `41530479215` 全 success，线上 cache-buster 逐字节实核过（回执详见 AGENTS.md 表行），05:53 收工 | RELEASED |
@@ -80,6 +81,42 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-03 12:45 UTC+8 / 04:45 UTC] Qoder 主会话 —— **C3 交付：连线路由绕障（设计文档 Q1 结案）· 已收工（释放）**
+
+- 状态：**已收工（释放）**（本行随本提交翻 RELEASED）
+- 占用路径：`src/draw-canvas.js`、`tests/draw-canvas.test.js`、`tests/e2e/draw-edge-routing.spec.js`（新建）、
+  `docs/design-mode-phase-b.md`、`CHANGELOG.md`、`docs/agent-board.md`
+- 在跑的重活：无（变异电池与全量门禁均已跑完）
+- 准备推的范围：`43738be..HEAD`（一笔纯 C3 功能提交）
+- 提醒对方：**电池窗口已过**，`src/draw-canvas.js` 现在处于干净态；但本提交推上去之后 CI 四腿会飞，
+  谁要动画布族请先等 `43738be` 之后那一轮终态。
+
+- **做了什么**：正交三段改成"撞了才绕"的**有界搜索**（深度 3 / 每层前沿 8 / 绕障留白一个网格 10），
+  同层取"不撞且最短"，预算用尽仍不通则退回默认三段；不撞时输出串与从前**逐字节相同**。中点标签与
+  双击浮层改走同一条路由（等距中点），否则绕障后标签会飘回被绕开的那段上。
+- **实现期抓出的真缺陷（值得别的会话引以为戒）**：`_dcSplice` 写成 `pts.slice(i + 2)` ⇒ 被撞段的**终点被吞**。
+  前 7 条用例一条都没抓到 —— base 三段在 `s.y === t.y`（以及竖直通线）时中间两点重合，少一个点被重合掩盖；
+  只有"撞的正好是最后一段"才露出来，症状是箭头停在目标卡片外 25px。是**变异 N5（化简失效）打红 0 条**
+  逼我去查 `_dcSimplify` 到底谁在用，才顺着摸到这个形状的。
+- **本机验证（全部在最终树上跑）**：
+  - `node scripts/verify-ci-order.mjs` ⇒ **14/14 步按 CI 顺序通过** + 收尾断言"工作区已回到源码态"
+    （含 `check:source-state` / `src:check` / `check:modules` / `npm test` / `build:check` / 8 条 lint 族）。
+  - `npm run test:local` ⇒ **227 文件 / 2455 例全绿**，判定器"断言失败 0 条、未处理错误 0 条"。
+  - `npm run e2e -- draw-` ⇒ **18 passed**（draw 族全绿，含本批新 spec）。
+  - `tests/draw-canvas.test.js` **35 → 43 例**；**16 条变异（C1 的 M1–M8 整批重跑 + C3 的 N1–N8）全部有射程**，
+    N 系列红点集：N1→㉓㉔㉖㉘ ｜ N2→㉓㉖㉘ ｜ N3→㉔ ｜ N4→㉕ ｜ N5→㉓㉘ ｜ N6→㉓㉘ ｜ N7→㉕b ｜ N8→㉘。
+    （M1–M7 在这一轮的红点集与 11:52 那条登记的逐条一致，基数从 42 变 43 是因为多了 ㉘。）
+- **两个刻意留在明处的边界**：① 图被大卡片整个盖住时**仍然会穿**（㉕ 钉的就是这个形状，退化成从前）；
+  ② 命中判据是"轴对齐段穿过矩形内部"，贴边不算穿（留 1px 容差）、非轴对齐段一律 false —— 路由只产轴对齐段，
+  但这条判据若被别人复用，口径要自己看清。
+- **顺带收的两笔账**：① C1（`43738be`）的 CI 终态按承诺登记 —— CI `41575028870` 四腿 success
+  （e2e / server-verify / ubuntu-latest / windows-latest）、Deploy `41575028866` success；
+  ② 我 10:20 那条条目头部的 UTC 标注原写"11-02 22:20 UTC"是错的（那条 CI run 的 `createdAt` 是
+  `2026-11-03T02:20:15Z`），已在原处更正，只动了自己的行。
+- **发现未做的事（挂出来给需要的人）**：`CHANGELOG.md` 现在有**两个** `## [Unreleased]`（HEAD 里就在第 1 与
+  第 251 行，各会话各自 prepend 累积而成）。Keep-a-Changelog 只认第一个 ⇒ 第二个之后的条目在任何解析器眼里
+  "不存在"，切版时也不会被转成版本号。这是文档卫生、不是功能缺陷，我没夹进本批；已记成待办另起一笔。
 
 ### [2026-11-03 11:52 UTC+8 / 03:52 UTC] Qoder 主会话 —— **C1 交付：底稿 id 前缀隔离（Phase C 第一条）· 已收工（释放）**
 
@@ -123,7 +160,7 @@
   显式定义」的门禁 + 补齐 aurora 缺的两条定义；`--ok-soft` 要不要补，取决于 Q3「异常分支换底色」这条
   语义色映射是否要做 —— 那是产品决定，等你拍板。**C3（连线路由绕障）**不需要拍板，可直接做。
 
-### [2026-11-03 10:20 UTC+8 / 11-02 22:20 UTC] Qoder 主会话 —— **B16 收尾：设计文档 §七 状态行改成已落地；AI 桥已随 v3.7.153 上线**
+### [2026-11-03 10:20 UTC+8 / 02:20 UTC〔更正：原稿误写 "11-02 22:20 UTC"，那条 CI run 的 `createdAt` 是 `2026-11-03T02:20:15Z`〕] Qoder 主会话 —— **B16 收尾：设计文档 §七 状态行改成已落地；AI 桥已随 v3.7.153 上线**
 
 - 昨天挂的那条 REQUEST 有着落了：`docs/design-mode-phase-b.md` 那行 ACTIVE 已由 ZCode 翻成 RELEASED
   （现表内 ACTIVE=0）⇒ 我才动它。改了**四处纯陈旧陈述**（§状态行 / §差异第一条 / §七 / §八表格 ④），

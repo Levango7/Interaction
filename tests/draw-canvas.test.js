@@ -19,6 +19,11 @@
  *  ⑲–㉒（Phase C1，2026-11-03）：底稿 id 前缀隔离（定义与 url()/href 引用成对改名、与画布
  *    #darr 不再撞、同图两底稿前缀互异、原型键名也改名）、老底稿载入迁移 + 回写、
  *    超预算整图还原/静默放弃、二次载入幂等。
+ *  ㉓–㉗（Phase C3，2026-11-03）：连线路由绕障（有界搜索：横段走上/下、竖段走左/右，同层取最短，
+ *    深度与前沿都设上界）——不撞时输出与从前逐字节相同、绕不过时退回三段、label 落在路由后的折线上、
+ *    200 节点拥挤图上段数不超预算且两次渲染逐字节相同。
+ *  ⚠️ C3 一族在测试里**另写**穿过判定（_tSegCrossesRect），不复用被测的 _dcSegHitsRect：
+ *    共用同一个几何判据时判据本身写错会实现与断言一起错（同义反复的假绿）。
  * 运行：npm test -- draw-canvas
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -622,5 +627,193 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     const after2 = JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]")[0].nodes[0];
     expect(after2.inner).toBe(after1.inner);
     expect(after2.inner, "dce-…-dce-… 就是重入了前缀").not.toMatch(/dce-[a-z0-9]+-dce-/);
+  });
+});
+
+/* ---------- Phase C3：连线路由绕障 ----------
+ * ⚠️ 本族的"穿没穿"判定**在测试里另写一遍**（_tSegCrossesRect），不复用被测的
+ *    `_dcSegHitsRect`：共用同一个几何判据时，判据 itself 写错会让实现与断言一起错（同义反复的假绿）。 */
+function _tParsePoly(d) {
+  return d.trim().split(/\s+(?=[ML])/).map(function (tok) {
+    const m = /^[ML](-?\d+)\s+(-?\d+)$/.exec(tok.trim());
+    if (!m) throw new Error("折线 token 不合法: [" + tok + "] 来自 d=[" + d + "]");
+    return { x: Number(m[1]), y: Number(m[2]) };
+  });
+}
+function _tSegCrossesRect(x1, y1, x2, y2, r) {
+  const L = r.x + 1, R = r.x + r.w - 1, T = r.y + 1, B = r.y + r.h - 1;
+  if (R <= L || B <= T) return false;
+  if (y1 === y2) return y1 > T && y1 < B && Math.min(x1, x2) < R && Math.max(x1, x2) > L;
+  if (x1 === x2) return x1 > L && x1 < R && Math.min(y1, y2) < B && Math.max(y1, y2) > T;
+  return true;   // 出现非轴对齐段就说明路由漏了直角约束
+}
+function _tCrossesAny(d, rects) {
+  const pts = _tParsePoly(d);
+  for (let i = 0; i + 1 < pts.length; i++) {
+    for (const r of rects) {
+      if (_tSegCrossesRect(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, r)) return true;
+    }
+  }
+  return false;
+}
+
+describe("连线路由绕障（Phase C3）", () => {
+  function doc(nodes, edges) {
+    const w = boot();
+    w.dcCreate("路由图");
+    const byTag = {};
+    nodes.forEach(function (n) { byTag[n.tag] = w.dcAddNode("rect", n.x, n.y, n.w, n.h, n.tag); });
+    edges.forEach(function (p) { w.dcAddEdge(byTag[p[0]].id, byTag[p[1]].id); });
+    return { win: w, byTag: byTag };
+  }
+  function edgeD(ctx, fromTag, toTag) {
+    const w = ctx.win;
+    const d = w.dcActive();
+    const byId = {}; d.nodes.forEach(function (n) { byId[n.id] = n; });
+    const rects = d.nodes.map(function (n) { return { id: n.id, x: n.x, y: n.y, w: n.w, h: n.h }; });
+    const e = d.edges.find(function (m) { return m.from === ctx.byTag[fromTag].id && m.to === ctx.byTag[toTag].id; });
+    return { dstr: w._dcEdgePath(e, byId, rects), e: e, byId: byId, rects: rects };
+  }
+
+  it("㉓ 挡在中间的节点会被绕开：路径不穿任何节点，且选更短的一侧", () => {
+    const ctx = doc([
+      { tag: "A", x: 100, y: 100, w: 100, h: 50 },
+      { tag: "B", x: 600, y: 100, w: 100, h: 50 },
+      { tag: "C", x: 300, y: 90, w: 100, h: 80 }
+    ], [["A", "B"]]);
+    const r = edgeD(ctx, "A", "B");
+    expect(r.dstr, "路由要有输出").toBeTruthy();
+    const others = r.rects.filter(function (m) { return m.id !== r.e.from && m.id !== r.e.to; });
+    expect(_tCrossesAny(r.dstr, others), "A→B 不得穿过 C；实收 d=[" + r.dstr + "]").toBe(false);
+    /* 上绕 45+200+45+200=490，下绕 55+200+55+200=510 ⇒ 同层里取最短的那条 */
+    expect(r.dstr).toContain("L200 80");
+    expect(r.dstr, "不该同时出现两侧绕行").not.toContain("L200 180");
+    /* 绕行段必须**离边框留白**（gutter = 一个网格）：贴着边框画技术上"没穿过"，视觉上仍是压在卡片上。 */
+    expect(Math.min.apply(null, _tParsePoly(r.dstr).map(function (p) { return p.y; })),
+      "C 顶边 y=90 ⇒ 绕行沿最多到 80（留 10px 白）；实收 " + r.dstr).toBe(80);
+    /* 绕行串必须是干净的折线（重合点与共线中间点都该被 _dcSimplify 去掉）。
+       注意：这条只判**绕行后**的串 —— 默认三段那支刻意不化简，以保证与从前逐字节相同。 */
+    const pts = _tParsePoly(r.dstr);
+    for (let i = 0; i + 1 < pts.length; i++) {
+      expect(pts[i].x === pts[i + 1].x && pts[i].y === pts[i + 1].y,
+        "绕行路径不该有重合点（第 " + i + " 段；实收 " + r.dstr + "）").toBe(false);
+    }
+    for (let i = 1; i + 1 < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i], c = pts[i + 1];
+      expect((a.x === b.x && b.x === c.x) || (a.y === b.y && b.y === c.y),
+        "绕行路径不该留共线中间点（第 " + i + " 个点；实收 " + r.dstr + "）").toBe(false);
+    }
+  });
+
+  it("㉓b 反向对照：没东西挡路时输出与「未绕障」逐字节相同（①不额外花钱，㉓ 的红也只可能来自绕障）", () => {
+    const ctx = doc([
+      { tag: "A", x: 100, y: 100, w: 100, h: 50 },
+      { tag: "B", x: 600, y: 100, w: 100, h: 50 },
+      { tag: "C", x: 300, y: 500, w: 100, h: 80 }   // 同样的节点，挪到走廊以外
+    ], [["A", "B"]]);
+    const r = edgeD(ctx, "A", "B");
+    expect(r.dstr).toBe("M200 125 L400 125 L400 125 L600 125");
+  });
+
+  it("㉔ 竖段被撞时走左右（不套用横段那支）", () => {
+    const ctx = doc([
+      { tag: "A", x: 100, y: 100, w: 100, h: 50 },
+      { tag: "B", x: 100, y: 600, w: 100, h: 50 },
+      { tag: "C", x: 110, y: 300, w: 80, h: 60 }
+    ], [["A", "B"]]);
+    const r = edgeD(ctx, "A", "B");
+    const others = r.rects.filter(function (m) { return m.id !== r.e.from && m.id !== r.e.to; });
+    expect(_tCrossesAny(r.dstr, others), "A→B 不得穿过 C；实收 d=[" + r.dstr + "]").toBe(false);
+    expect(r.dstr, "竖段该改成左右绕：出现横向偏移段").toMatch(/L\d+ 150 L\d+ 600/);
+  });
+
+  it("㉕ 绕不过时退回默认三段（有界搜索用尽 ⇒ 不比从前差、不抛错、不改形状）", () => {
+    const ctx = doc([
+      { tag: "A", x: 100, y: 100, w: 80, h: 40 },
+      { tag: "B", x: 600, y: 100, w: 80, h: 40 },
+      { tag: "墙", x: 0, y: 0, w: 1200, h: 800 }      // 整幅都被盖住：任何绕法都在墙里
+    ], [["A", "B"]]);
+    const r = edgeD(ctx, "A", "B");
+    expect(r.dstr).toBe("M180 120 L390 120 L390 120 L600 120");
+  });
+
+  it("㉕b 障碍集必须排除本条连线的两端：两块重叠的节点自己不算挡路", () => {
+    const ctx = doc([
+      { tag: "A", x: 100, y: 100, w: 100, h: 100 },
+      { tag: "B", x: 150, y: 150, w: 100, h: 100 }   // 合法状态：用户把 B 直接压在 A 上
+    ], [["A", "B"]]);
+    const r = edgeD(ctx, "A", "B");
+    /* 若端点没排除，A 自己就会被判成障碍（首段从 A 右边出发、沿 y=150 穿过 A 的内部），
+       路由会去绕"自己的两端" —— 那是比不绕障更糟的形状。 */
+    expect(r.dstr, "两端节点必须被排除在障碍集外，否则这条边会被自己触发的绕障改写").toBe(
+      "M200 150 L175 150 L175 200 L150 200");
+  });
+
+  it("㉖ label 落在**路由后的**折线上：等距中点真的在这条 path 上", () => {
+    const ctx = doc([
+      { tag: "A", x: 100, y: 100, w: 100, h: 50 },
+      { tag: "B", x: 600, y: 100, w: 100, h: 50 },
+      { tag: "C", x: 300, y: 90, w: 100, h: 80 }
+    ], [["A", "B"]]);
+    const w = ctx.win;
+    w.dcSetEdgeLabel(w.dcActive().edges[0].id, "是");
+    const r = edgeD(ctx, "A", "B");
+    const mid = w._dcEdgeMid(r.e, r.byId, r.rects);
+    const pts = _tParsePoly(r.dstr);
+    let total = 0;
+    pts.forEach(function (p, i) { if (i) total += Math.abs(p.x - pts[i - 1].x) + Math.abs(p.y - pts[i - 1].y); });
+    /* 点到折线的距离为 0（±1px 取整容差）：label 不能飘在空白里 */
+    const dist = Math.min.apply(null, pts.slice(0, -1).map(function (p, i) {
+      const q = pts[i + 1];
+      if (p.x === q.x) return (mid.y >= Math.min(p.y, q.y) - 1 && mid.y <= Math.max(p.y, q.y) + 1) ? Math.abs(mid.x - p.x) : 1e9;
+      return (mid.x >= Math.min(p.x, q.x) - 1 && mid.x <= Math.max(p.x, q.x) + 1) ? Math.abs(mid.y - p.y) : 1e9;
+    }));
+    expect(dist, "mid 必须在折线上（总长 " + total + "，实收 " + JSON.stringify(mid) + " / " + r.dstr + "）").toBeLessThanOrEqual(1);
+    expect(mid.x, "等距中点应在中间那条绕行段上").toBeGreaterThanOrEqual(200);
+    expect(mid.y, "绕到上方的那段 y=80，不该还留在原走廊 125").toBeLessThan(120);
+    /* 接线判据：函数算得对 ≠ 渲染用了它。标签元素必须落在同一个 mid 上，
+       否则绕障后丝线走了上边、标签还飘在原走廊（用户看到的是"标签脱离连线"）。 */
+    w.renderDrawWorkspace();
+    w._dcRenderWorkspace();
+    const lbl = w.document.querySelector("#drawCanvasHost text.dedge-label");
+    expect(lbl, "有 label 就要渲染出标签元素").toBeTruthy();
+    expect([Number(lbl.getAttribute("x")), Number(lbl.getAttribute("y"))],
+      "标签落点必须等于 _dcEdgeMid 的返回值").toEqual([mid.x, mid.y]);
+  });
+
+  it("㉗ 有界性：200 节点拥挤图 + 一条横穿全图的长边 ⇒ 段数不超预算、两次渲染逐字节相同", () => {
+    const w = boot();
+    w.dcCreate("压力图");
+    const ids = [];
+    for (let i = 0; i < 200; i++) ids.push(w.dcAddNode("rect", (i % 20) * 70, Math.floor(i / 20) * 90, 60, 40, "n" + i).id);
+    w.dcAddEdge(ids[0], ids[199]);
+    const d = w.dcActive();
+    const byId = {}; d.nodes.forEach(function (n) { byId[n.id] = n; });
+    const rects = d.nodes.map(function (n) { return { id: n.id, x: n.x, y: n.y, w: n.w, h: n.h }; });
+    const one = w._dcEdgePath(d.edges[0], byId, rects);
+    const segs = _tParsePoly(one).length;
+    expect(segs, "折线点数 = 搜索深度的上界（深度 3 ⇒ 最多 4 + 2×3 = 10）").toBeLessThanOrEqual(10);
+    expect(w._dcEdgePath(d.edges[0], byId, rects), "纯几何：同一输入两次必须相同").toBe(one);
+    const out1 = w._dcRenderSvg();
+    expect(w._dcRenderSvg()).toBe(out1);
+  });
+
+  it("㉘ 绕障段接在竖直段之后 ⇒ 共线拐点必须化简掉（不留「下了又折回」的竖直小辫）", () => {
+    /* 这个形状是专门给 _dcSimplify 造的：被撞的是**三段折线的最后一段（横）**，而它的起点前面正好
+       是一段竖 ⇒ splice 会在同一 x 上排三个点。不化简就多一段"从 125 走到 175 再退回 150"的废线，
+       字节变长、视觉上是一根扎在卡片边上的小辫。N5 变异（化简直接 return）第一轮就是 42 全绿 ——
+       说明前面 7 条都构造不出这个形状，不是化简没用。
+       化简在几何上安全：合并不是删段而是把 a→b→c（三点共线）收成 a→c，后者永远是前两者的子集，
+       所以不可能因为化简而新撞进某个节点。 */
+    const ctx = doc([
+      { tag: "A", x: 100, y: 100, w: 100, h: 50 },
+      { tag: "B", x: 600, y: 150, w: 100, h: 50 },
+      { tag: "C", x: 450, y: 160, w: 100, h: 60 }     // 只挡最后那段横线（y=175），不挡 x=400 的竖线
+    ], [["A", "B"]]);
+    const r = edgeD(ctx, "A", "B");
+    const others = r.rects.filter(function (m) { return m.id !== r.e.from && m.id !== r.e.to; });
+    expect(_tCrossesAny(r.dstr, others), "A→B 不得穿过 C；实收 d=[" + r.dstr + "]").toBe(false);
+    expect(r.dstr, "上绕后三段共线的拐点必须已被化简").toBe("M200 125 L400 125 L400 150 L600 150 L600 175");
+    expect(_tParsePoly(r.dstr).length, "点数字面：不化简是 6 个").toBe(5);
   });
 });
