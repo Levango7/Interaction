@@ -154,15 +154,56 @@ function dcSetNodeText(id, text) {
   _dcPushUndo(d);
   n.text = next; _dcSaveDoc(d); _dcRenderWorkspace();
 }
-/* ---------- AI 桥：把聊天里的 SVG 产物当**底稿**嵌进当前图（Phase B §七 · 唯一未落地条目） ----------
+/* ---------- AI 桥：把聊天里的 SVG 产物当**底稿**嵌进当前图（Phase B §七，已落地；id 隔离见 C1） ----------
  * MVP 口径照设计文档，不在这儿扩大：embed 节点只做「整体移动 / 缩放 / 删除」，
  * **不做** SVG→图元自动识别（那是 Phase B2）。两条已知边界如实记：
- *  · 底稿内的 id（marker / gradient / clipPath 等）与画布自身、与别的底稿**共享同一文档 id 空间**，
- *    同名会互相覆盖 —— 表现为箭头/渐变串色，不动数据；id 前缀隔离留 Phase C。
+ *  · **id 已隔离**（Phase C1）：底稿里的 id 原与画布自身的 marker#darr、与别的底稿共享同一文档
+ *    id 空间，同名互相覆盖（表现为箭头/渐变串色）。现在入库前给 inner 里所有 id 加本底稿专属
+ *    前缀，并同步重写指向它们的引用；11-03 之前存的无 pfx 老底稿在载入时一次性补隔离。
  *  · `inner` 是 sanitizeSvg 白名单重建后的串（入库前已过），渲染时按已消毒串直插，与聊天卡同信任级。 */
 const DC_EMBED_W = 320, DC_EMBED_H = 200;   // 视野里的兜底占位框，实际尺寸按 viewBox 宽高比换算
+const DC_EMBED_ID_PFX = "dce-";             // 底稿 id 前缀中缀；完整前缀 = dce-<uid>- ，保证同图内多张底稿互不撞
 
-/** 抽出可嵌入的底稿载荷：消毒 → 取定标框（viewBox，退化到 width/height）→ 序列化根的子节点。
+/** 给 root 的**后代**（inner 只存子节点，根自己的 id 本来就丢）里所有 id 加前缀，
+ *  并同步重写两类内部锚点引用：`url(#x)`（含写在 style 里的）与 `href`/`xlink:href="#x"`。
+ *  sanitizeSvg 只放行这两种形式的内部引用，所以这两类覆盖面 = 全部。返回改到的 id 条数。
+ *  @returns {number} 0 = 这张底稿不用 id，串保持原样。 */
+function _dcRewriteSvgIds(root, pfx) {
+  /* 必须 Object.create(null)：用 {} 时 `map["constructor"]` 命中的是 Object.prototype，
+     于是 ① 定义侧 `=== undefined` 判假 ⇒ 这个 id 漏加前缀，② 引用侧判真 ⇒ `url(#constructor)`
+     被改写成 `url(#function constructor() {…})`。底稿里的 id 来自 AI 生成的 SVG，名字不归我们管。 */
+  const map = Object.create(null);
+  (function collect(n) {
+    if (!n || n.nodeType !== 1) return;
+    if (n.getAttribute) {
+      const id = String(n.getAttribute("id") || "");
+      if (id && map[id] === undefined) map[id] = pfx + id;   // 同名多处本就不是合法 SVG，按第一处映射即可
+    }
+    Array.prototype.slice.call(n.childNodes || []).forEach(collect);
+  })(root);
+  if (!Object.keys(map).length) return 0;
+  (function walk(n) {
+    if (!n || n.nodeType !== 1) return;
+    Array.prototype.slice.call(n.attributes || []).forEach(function (a) {
+      const name = String(a.name || "").toLowerCase(), val = String(a.value || "");
+      if (name === "id") { if (map[val] !== undefined) n.setAttribute(a.name, map[val]); return; }
+      if (name === "href" || name === "xlink:href") {
+        const key = /^\s*#(\S*)\s*$/.exec(val);
+        if (key && map[key[1]] !== undefined) n.setAttribute(a.name, "#" + map[key[1]]);
+        return;
+      }
+      if (/url\s*\(/i.test(val)) {
+        const next = val.replace(/(url\(\s*['"]?)#([A-Za-z0-9_\-.:]+)/gi, function (m, head, id) {
+          return map[id] !== undefined ? head + "#" + map[id] : m;
+        });
+        if (next !== val) n.setAttribute(a.name, next);
+      }
+    });
+    Array.prototype.slice.call(n.childNodes || []).forEach(walk);
+  })(root);
+  return Object.keys(map).length;
+}
+/** 抽出可嵌入的底稿载荷：消毒 → 取定标框（viewBox，退化到 width/height）→ id 加前缀 → 序列化根的子节点。
  *  定不了标就返回 null（宁可拒，不静默塞一个会失真的 0×0）。 */
 function dcEmbedPayload(svgStr) {
   const clean = sanitizeSvg(String(svgStr || ""));
@@ -177,13 +218,15 @@ function dcEmbedPayload(svgStr) {
   let box = vb;
   if (!box && isFinite(w) && isFinite(h) && w > 0 && h > 0) box = "0 0 " + w + " " + h;
   if (!box) return null;
+  const pfx = DC_EMBED_ID_PFX + uid() + "-";
+  _dcRewriteSvgIds(root, pfx);
   let inner = "";
   try {
     const ser = new XMLSerializer();
     inner = Array.prototype.slice.call(root.childNodes || []).map(function (k) { return ser.serializeToString(k); }).join("");
   } catch (e) { try { if (typeof pushDiag === "function") pushDiag("warn", "embed serialize failed: " + ((e && e.message) || e), { where: "dcEmbedPayload" }); } catch (_e2) { /* 同上 */ } return null; }
   if (!String(inner).trim()) return null;
-  return { vb: box, inner: inner };
+  return { vb: box, inner: inner, pfx: pfx };
 }
 /** 底稿在画布上的初始尺寸：按定标框宽高比塞进 DC_EMBED_W×DC_EMBED_H，两头都不超。 */
 function _dcEmbedSize(vb) {
@@ -204,7 +247,7 @@ function dcAddEmbedNode(payload, x, y, w, h) {
     id: uid(), type: "embed",
     x: _dcSnapV(x), y: _dcSnapV(y),
     w: Math.max(40, _dcSnapV(w)), h: Math.max(30, _dcSnapV(h)),
-    vb: String(payload.vb), inner: String(payload.inner), text: ""
+    vb: String(payload.vb), inner: String(payload.inner), pfx: String(payload.pfx || ""), text: ""
   };
   const probe = { id: d.id, title: d.title, updatedAt: d.updatedAt, nodes: d.nodes.concat([n]), edges: d.edges };
   if (_dcBytes(probe) > DC_DOC_BYTES_MAX) { toast(t("draw.embed.tooBig", "底稿超出单图 128KB 预算，没放进画布"), "warn"); return null; }
@@ -216,6 +259,48 @@ function dcAddEmbedNode(payload, x, y, w, h) {
   }
   _dcRenderWorkspace();
   return n;
+}
+/** 一次性补隔离（Phase C1）：AI 桥随 v3.7.153 上线时 id 还共享文档空间，那批存盘的底稿没有
+ *  `pfx` 字段 ⇒ 载入时给它们加前缀并回写。判据用"有没有 pfx"而不是"串里有没有裸 id"：
+ *  后者对本来不用 id 的底稿每次载入都要重扫一遍。
+ *  两处刻意不回写：① 补完就超单图 128KB 的图（整图还原成原样，宁可留着已知的串色也不丢数据）；
+ *  ② 补完就超总量 1MB 的列表 —— _dcSaveList 超限是**先 toast 再拒**，启动时弹"图总量超预算"
+ *     会把用户吓成"我图要没了"，所以先在门外判掉，静默放弃这次优化。 */
+function _dcMigrateEmbedIds() {
+  let list;
+  try { list = dcList(); } catch (_e) { return 0; }
+  if (!Array.isArray(list) || !list.length) return 0;
+  let touched = 0;
+  list.forEach(function (d, i) {
+    if (!d || !Array.isArray(d.nodes) || !d.nodes.some(function (n) { return n && n.type === "embed" && !n.pfx; })) return;
+    const before = JSON.stringify(d);
+    let changed = 0;
+    d.nodes.forEach(function (n) {
+      if (!n || n.type !== "embed" || n.pfx) return;
+      const pfx = DC_EMBED_ID_PFX + uid() + "-";
+      let root = null;
+      try {
+        const doc = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + String(n.inner || "") + "</svg>", "image/svg+xml");
+        root = doc && doc.documentElement;
+      } catch (_e) { root = null; }
+      if (!root || String(root.nodeName || "").toLowerCase() !== "svg" || root.querySelector("parsererror")) return;
+      _dcRewriteSvgIds(root, pfx);
+      let inner = "";
+      try {
+        const ser = new XMLSerializer();
+        inner = Array.prototype.slice.call(root.childNodes || []).map(function (k) { return ser.serializeToString(k); }).join("");
+      } catch (_e) { return; }
+      if (!String(inner).trim()) return;
+      n.inner = inner; n.pfx = pfx; changed++;
+    });
+    if (!changed) return;
+    if (_dcBytes(d) > DC_DOC_BYTES_MAX) { list[i] = JSON.parse(before); return; }
+    touched += changed;
+  });
+  if (!touched) return 0;
+  if (_dcBytes(list) > DC_ALL_BYTES_MAX) return touched;
+  _dcSaveList(list);
+  return touched;
 }
 function dcDeleteSelected() {
   const d = dcActive(); if (!d || !_dcSel) return false;
@@ -726,3 +811,4 @@ function dcBindChatBridge() {
   });
 }
 dcBindChatBridge();
+_dcMigrateEmbedIds();

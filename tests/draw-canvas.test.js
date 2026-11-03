@@ -16,6 +16,9 @@
  *  ⑬/⑬b（ZCode `f7b7ebd1`）：真实双击可达性 —— 两击同一节点/连线弹浮层回写，换目标的两击不算双击。
  *  ⑭–⑱b（AI 桥一族，2026-11-02）：底稿载荷抽取与拒绝、入库消毒、预算前置拒、垫底渲染顺序、
  *    文字维度封两处、产物卡按钮端到端；原编号 ⑬–⑰b，因与上一条重号整体后移一位。
+ *  ⑲–㉒（Phase C1，2026-11-03）：底稿 id 前缀隔离（定义与 url()/href 引用成对改名、与画布
+ *    #darr 不再撞、同图两底稿前缀互异、原型键名也改名）、老底稿载入迁移 + 回写、
+ *    超预算整图还原/静默放弃、二次载入幂等。
  * 运行：npm test -- draw-canvas
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -478,5 +481,146 @@ describe("AI 桥：draw_svg 产物作为底稿嵌入画布", () => {
     win.document.querySelector("[data-canvasembed]").click();
     expect(win._uiMode(), "拒的时候就别顺手切模式").toBe("work");
     expect(toastTexts()).toContain("这张卡片里没有可放进画布的图");
+  });
+
+  /* ---- Phase C1：底稿 id 前缀隔离（把 B16 那条已知边界做实） ----
+     底稿与画布自身（marker#darr）、与别的底稿共用一个文档 id 空间，同名互相覆盖 ⇒ 箭头/渐变串色。 */
+  const MARK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">'
+    + '<defs><marker id="darr" viewBox="0 0 10 10"><path d="M0 0L10 5L0 10z"/></marker>'
+    + '<linearGradient id="g1"><stop offset="0" stop-color="#f00"/></linearGradient></defs>'
+    + '<path d="M0 0L50 0" marker-end="url(#darr)" fill="url(#g1)"/>'
+    + '<use href="#sym"/><symbol id="sym"><circle r="3"/></symbol></svg>';
+
+  it("⑲ id 与指向它的引用成对改名：url() 走 fill/marker-end，锚点走 href", () => {
+    win = boot();
+    const p = win.dcEmbedPayload(MARK_SVG);
+    expect(p.pfx).toMatch(/^dce-[a-z0-9]+-$/);
+    ["darr", "g1", "sym"].forEach((id) => {
+      expect(p.inner, "定义侧 " + id + " 该带前缀").toContain('id="' + p.pfx + id + '"');
+      /* 裸名只可能出现在 `#id` 或 `"id"` 之后；改名后那个位置变成前缀，所以这条是"没漏改"的判据。 */
+      expect(p.inner, "引用侧不该留裸名 " + id).not.toMatch(new RegExp('[#"\']' + id + '["\')\\s]'));
+    });
+    expect(p.inner).toContain("url(#" + p.pfx + "darr)");
+    expect(p.inner).toContain("url(#" + p.pfx + "g1)");
+    expect(p.inner).toMatch(/#dce-[a-z0-9]+-sym/);
+  });
+
+  it("⑲b 撞名不再串：底稿里也叫 darr，渲染后画布自己的 marker 仍是唯一 #darr", () => {
+    win = boot();
+    win.dcCreate("撞名图");
+    const a = win.dcAddNode("rect", 0, 0, 100, 60, "A");
+    const b = win.dcAddNode("rect", 300, 0, 100, 60, "B");
+    win.dcAddEdge(a.id, b.id);
+    const n = win.dcAddEmbedNode(win.dcEmbedPayload(MARK_SVG), 0, 200, 320, 160);
+    expect(n.pfx, "前缀写进节点（迁移判据认的就是它）").toBeTruthy();
+    const out = win._dcRenderSvg();
+    expect(out.match(/id="darr"/g) || [], "画布 #darr 只能有一个；底稿那份该已改名").toHaveLength(1);
+    expect(out).toContain('marker-end="url(#darr)"');
+    expect(out).toContain("url(#" + n.pfx + "darr)");
+  });
+
+  it("⑲c 同图两张底稿各用各的前缀（互不覆盖才叫隔离）", () => {
+    win = boot();
+    win.dcCreate("两张底稿");
+    const p1 = win.dcEmbedPayload(MARK_SVG);
+    const p2 = win.dcEmbedPayload(MARK_SVG);
+    expect(p2.pfx).not.toBe(p1.pfx);
+    win.dcAddEmbedNode(p1, 0, 0, 320, 160);
+    win.dcAddEmbedNode(p2, 400, 0, 320, 160);
+    const ids = (win._dcRenderSvg().match(/id="dce-[a-z0-9]+-darr"/g) || []);
+    expect(ids, "两份 marker 定义各自带自己的前缀").toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it("⑲d 原型键名也要改名：映射表用 {} 时 id=constructor 既漏改定义、又把引用写成函数源码", () => {
+    win = boot();
+    const PROTO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">'
+      + '<defs><linearGradient id="constructor"><stop offset="0" stop-color="#0f0"/></linearGradient></defs>'
+      + '<rect width="10" height="10" fill="url(#constructor)"/></svg>';
+    const p = win.dcEmbedPayload(PROTO_SVG);
+    expect(p.inner, "定义侧").toContain('id="' + p.pfx + 'constructor"');
+    expect(p.inner, "引用侧").toContain("url(#" + p.pfx + "constructor)");
+    expect(p.inner, "不许把引用换成 Object.prototype 上的函数源码").not.toMatch(/url\(#function/);
+  });
+
+  it("⑳ 不用 id 的底稿串保持原样（不掺前缀垃圾），但仍带 pfx 标记", () => {
+    win = boot();
+    const p = win.dcEmbedPayload(VB_SVG);
+    expect(p.inner, "没有 id 就不该改串").not.toMatch(/dce-/);
+    expect(p.inner).toContain("<rect");
+    expect(p.pfx, "标记照样打：迁移判据认 pfx 而不是认串，省得每次载入重扫").toMatch(/^dce-/);
+  });
+
+  /** 造一份"v3.7.153 形状"的老底稿：内层裸 id、节点没有 pfx 字段。 */
+  function legacyList(title, svgInner) {
+    return [{
+      id: "doc-legacy-1", title, updatedAt: 1,
+      nodes: [{ id: "n1", type: "embed", x: 0, y: 0, w: 320, h: 160, vb: "0 0 200 100", inner: svgInner, text: "" }],
+      edges: []
+    }];
+  }
+
+  it("㉑ 老底稿（无 pfx）载入即补隔离并回写；已是新格式的图一字不动（反向对照）", () => {
+    const legacy = '<marker id="darr" viewBox="0 0 10 10"/><path d="M0 0L50 0" marker-end="url(#darr)"/>';
+    const fresh = '<marker id="darr" viewBox="0 0 10 10"/><path d="M0 0L50 0" marker-end="url(#dce-keepme-darr)"/>';
+    win = loadApp({
+      storage: {
+        wb_agent_onboarded: "true",
+        wb_agent_diagrams: JSON.stringify([
+          { id: "doc-old", title: "老图", updatedAt: 1, nodes: [{ id: "n1", type: "embed", x: 0, y: 0, w: 320, h: 160, vb: "0 0 200 100", inner: legacy, text: "" }], edges: [] },
+          { id: "doc-new", title: "新图", updatedAt: 1, nodes: [{ id: "n2", type: "embed", x: 0, y: 0, w: 320, h: 160, vb: "0 0 200 100", inner: fresh, pfx: "dce-keepme-", text: "" }], edges: [] }
+        ])
+      }
+    });
+    const list = JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]");
+    const old = list.find((d) => d.id === "doc-old").nodes[0];
+    expect(old.pfx, "老底稿补完要留标记，否则每次载入重扫").toMatch(/^dce-[a-z0-9]+-$/);
+    expect(old.inner).toContain('id="' + old.pfx + 'darr"');
+    expect(old.inner).toContain("url(#" + old.pfx + "darr)");
+    expect(list.find((d) => d.id === "doc-new").nodes[0].inner,
+      "已有 pfx 的图不该被动——迁移把新格式改坏比不迁更糟").toBe(fresh);
+  });
+
+  it("㉑b 补完就放不下 ⇒ 整图还原不写（宁可留着已知的串色，也不在启动时弹「超出预算」）", () => {
+    /* 这条测的是"改之前放得下、改之后放不下"这个形状本身：
+       601 处 dce-<uid>- 前缀 = +10.8KB，把 126KB 的图推过 128KB 单图上限。 */
+    const refs = '<use href="#m"/>'.repeat(600);
+    const inner = '<marker id="m"/>' + refs + '<rect data-pad="' + "x".repeat(115000) + '"/>';
+    const seed = [{ id: "doc-big", title: "大底稿", updatedAt: 1, nodes: [{ id: "n1", type: "embed", x: 0, y: 0, w: 320, h: 160, vb: "0 0 200 100", inner, text: "" }], edges: [] }];
+    expect(JSON.stringify(seed).length, "fixture 若本身就超预算，这条测的是空气").toBeLessThan(128 * 1024);
+    win = loadApp({ storage: { wb_agent_onboarded: "true", wb_agent_diagrams: JSON.stringify(seed) } });
+    const kept = JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]")[0].nodes[0];
+    expect(kept.inner, "超预算的图整图还原：串保持原样").toBe(inner);
+    expect(kept.pfx, "也不留半个 pfx（留了就等于宣告「已隔离」）").toBeUndefined();
+    expect([...win.document.querySelectorAll("#toasts .toast")].map((e) => e.textContent).join("|"),
+      "启动时不该冒出一条存储告警").toBe("");
+  });
+
+  it("㉑c 总量超 1MB ⇒ 静默放弃这次优化（不把「图总量超出预算」冒到启动面上）", () => {
+    /* _dcSaveList 超限是"先 toast 再拒"：迁移是启动时的后台优化，冒这条会让人以为图要没了。
+       所以在门外自己判掉 —— 这条钉的就是"门外的判据真的在门外面"。 */
+    const inner = '<marker id="m"/><use href="#m"/><rect data-pad="' + "x".repeat(6000) + '"/>';
+    const big = { id: "doc-pad", title: "占位图", updatedAt: 1, nodes: [{ id: "p", type: "rect", x: 0, y: 0, w: 10, h: 10, text: "y".repeat(1032 * 1024) }], edges: [] };
+    const legacy = { id: "doc-old", title: "老图", updatedAt: 1, nodes: [{ id: "n1", type: "embed", x: 0, y: 0, w: 320, h: 160, vb: "0 0 200 100", inner, text: "" }], edges: [] };
+    const seed = [legacy, big];
+    expect(JSON.stringify(seed).length, "fixture 得真的过 1MB 总量线，否则这条测的是空气").toBeGreaterThan(1024 * 1024);
+    win = loadApp({ storage: { wb_agent_onboarded: "true", wb_agent_diagrams: JSON.stringify(seed) } });
+    const kept = JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]").find((d) => d.id === "doc-old").nodes[0];
+    expect(kept.inner, "总量超限这次就不回写").toBe(inner);
+    expect(kept.pfx, "更不该留半个 pfx").toBeUndefined();
+    expect([...win.document.querySelectorAll("#toasts .toast")].map((e) => e.textContent).join("|")).toBe("");
+  });
+
+  it("㉒ 迁移幂等：拿迁移后的盘再启一次，不出现二次前缀", () => {
+    const legacy = '<marker id="darr"/><path marker-end="url(#darr)"/>';
+    win = loadApp({ storage: { wb_agent_onboarded: "true", wb_agent_diagrams: JSON.stringify(legacyList("老图", legacy)) } });
+    const once = JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]");
+    const after1 = once[0].nodes[0];
+    expect(after1.pfx, "先确认真迁移过，否则下面的「相等」是两条空转").toMatch(/^dce-[a-z0-9]+-$/);
+    win.close(); win = undefined;
+    win = loadApp({ storage: { wb_agent_onboarded: "true", wb_agent_diagrams: JSON.stringify(once) } });
+    const after2 = JSON.parse(win.localStorage.getItem("wb_agent_diagrams") || "[]")[0].nodes[0];
+    expect(after2.inner).toBe(after1.inner);
+    expect(after2.inner, "dce-…-dce-… 就是重入了前缀").not.toMatch(/dce-[a-z0-9]+-dce-/);
   });
 });

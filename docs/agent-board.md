@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-embed-bridge.spec.js`, `docs/design-mode-phase-b.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-03 11:05 | **C1 底稿 id 前缀隔离**（Phase C 第一条，用户「proceed with phase C」）：`dcEmbedPayload` 入库前给 inner 里所有 id 加 `dce-<uid>-` 前缀并成对重写 `url(#x)` / `href="#x"`；节点存 `pfx`；老盘（v3.7.153 无 pfx）载入时一次性补隔离，超预算整图还原/静默放弃。单测 26→35 + **8 条变异全打红**；e2e 2→4 test（真浏览器判 id 唯一）+ 治本 spec 种子竞态（节流取证 A 红 / B 绿）。`docs/module-graph.md` 已核：本批零新增跨模块边，`check:modules` 未改写该文件。编辑已落，随本提交释放（CI 终态按后续条目登记） | RELEASED |
 | `docs/design-mode-phase-b.md`, `docs/agent-board.md` | Qoder | 2026-11-03 10:17 | B16 收尾：§状态 / §差异 / §七 / §八 四处「AI 桥未实现」的陈旧陈述改成已落地（含实现注记）；编辑已落，随本提交释放 | RELEASED |
 | `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`（仅版本常量）, `README.md`, `package-lock.json`, `electron/package-lock.json`, `service-worker.js`, `CHANGELOG.md`, `AGENTS.md`（预登记表）, `docs/agent-board.md` | ZCode | 2026-11-03 05:10 | **切版 3.7.153**（用户放行）：已发 `0010932` + tag `v3.7.153`（远端解引用实核 = `0010932`），CI `41526311606` 四腿绿 / Deploy `41526311511` / Electron `41526324607` / Pages `41530479215` 全 success，线上 cache-buster 逐字节实核过（回执详见 AGENTS.md 表行），05:53 收工 | RELEASED |
 | `src/render-widgets.js`, `agent-workbench.html`, `src/core-i18n.js`, `src/ai-retry.js`, `tests/ui-mode.test.js`, `tests/e2e/ui-mode-layout.spec.js`, `tests/e2e/draw-responsive.spec.js`（仅 toDesign 助手，2026-11-03 交互契约变更跟随）, `CHANGELOG.md`, `docs/agent-board.md` | ZCode | 2026-11-02 23:57 | **P1/P2 UI 批次**（用户「都有意义就都认领」）：模式切换器显式化 + title 修正 → code 模式工作面回中 + 聊天统一回 work 同款贴底对话坞 → P2 收口（窄屏「代码模式」安慰剂、窄屏双抽屉 z 叠、能力入口分散）。〔2026-11-03 订正：`src/ui-global-events.js` 与 `tests/e2e/three-state-layout.spec.js` 实际未动（菜单复用 more-menu 样式、几何守护落在新文件 ui-mode-layout.spec.js），移出；补上实际改动的 `src/ai-retry.js`（P2-7 互斥）与新 spec。方向订正：聊天三态统一是「回贴底坞」（work 坞是 PRODUCT.md 明文设计），不是此行原稿写的「右侧常驻」〕claim-check 绿；〔2026-11-03 03:19 收尾：单笔推 `c3f3621`，CI `41504909828` 四腿 success / Deploy `41504909817` success，认领释放〕 | RELEASED |
@@ -79,6 +80,48 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-03 11:52 UTC+8 / 03:52 UTC] Qoder 主会话 —— **C1 交付：底稿 id 前缀隔离（Phase C 第一条）· 已收工（释放）**
+
+- 状态：**已收工（释放）**。占用见登记表本批行（`src/draw-canvas.js`、`tests/draw-canvas.test.js`、
+  `tests/e2e/draw-embed-bridge.spec.js`、`docs/design-mode-phase-b.md`、`CHANGELOG.md`、本板）。
+  在跑的重活：无（`npm run test:local` 与 13 步 CI 序预演都已跑完）。待推范围：本批单笔。
+- 用户「proceed with phase C」⇒ 按我上一轮给的排序做 **C1**（B16 唯一在册缺陷）。
+- 实现：`_dcRewriteSvgIds(root, pfx)` 在入库前给 `inner` 里所有 id 加 `dce-<uid>-`，并**成对**重写
+  `url(#x)`（属性值与 style 内）与 `href`/`xlink:href="#x"`；覆盖面即全部，因为 `sanitizeSvg` 只放行
+  这两类内部锚点。`dcEmbedPayload` 返回 `pfx`、节点存下它；`_dcMigrateEmbedIds()` 挂在脚本末尾
+  （先于首绘）给 v3.7.153 那批无 `pfx` 的老底稿补隔离并回写。
+- **两处刻意不回写**（判据都在门外，不靠 `_dcSaveList` 的内部告警）：补完超单图 128KB ⇒ 整图还原；
+  补完超总量 1MB ⇒ 静默放弃这次优化。理由是 `save()` 失败会弹「本地存储写入失败/图总量超出预算」，
+  而迁移失败每次启动都会重犯 ⇒ 变成常驻噪音。**真配额抛错我没有另造静默分支**：那条仍走全应用同一
+  回执，含义是"这次优化没生效"而非"数据丢了"（盘上原串未动）。
+- **自我复核抓到一处我自己写的缺陷**：映射表初版写成 `const map = {}` ⇒ `map["constructor"]` 命中
+  `Object.prototype`，于是 ① 定义侧 `=== undefined` 判假（漏加前缀）、② 引用侧判真
+  （`url(#constructor)` 被写成 `url(#function constructor() {…})`）。已改 `Object.create(null)`，
+  并补 ⑲d 用例（样本 `id="constructor"`）；M8 变异（改回 `{}`）**只**打红 ⑲d ⇒ 这条修正有射程。
+- 验证（本机实测）：
+  - `draw-canvas` **35/35**（26→35）。变异 8 条 M1–M8 逐条红，红集分别 3/1/4/2/2/1/1/1 条且都落在预期例上
+    （原始行 `F:/tmp/c1-mut/report.json`；文件逐字节还原 `diff -q` = IDENTICAL）。
+  - `tests/e2e/draw-embed-bridge.spec.js` **8/8**（desktop+tablet；新增 ④⑤）。
+  - 13 步 **CI 真实步序预演全绿**（`npm run test:local` 那步除外，见下），收尾断言工作区回到源码态。
+  - `docs/module-graph.md` 未改：本批零新增跨模块边（`_dcRewriteSvgIds` / `_dcMigrateEmbedIds` 只用
+    DOMParser/XMLSerializer/uid/同模块符号），`check:modules` 无改写。
+- **全量 `test:local` 两条红，判为本机负载通道**：`danger-confirm > 确认→resolve(true)…`（单例 16.8s）
+  与 `three-state-render > ③ 七个场景空态`（单例 69.9s）；两份**单跑 64/64 全绿**，且都不在画布族、
+  与本批 diff 无交集 ⇒ 按在册口径全量结论以 CI 两条 test 腿为准，不在本机凑绿。
+- 顺带把本 spec 一条**真实的种子竞态**修掉（首轮 ①② 在 desktop 红 4/8 轮、单跑绿）：boot 尾部
+  `render()` 在未启用 AI 时走 `renderChatDisabled()`，它用 `#chat.innerHTML = 问候语` **整体重写**面板，
+  抢在这一帧前 append 的卡被抹掉（症状 element(s) not found 且永不回来）；只在本 worker 首条用例发作。
+  判据换成先等应用把 `#chat` 画过一轮（`children.length > 0`），不是调大超时。
+  ⚠️ 取证过程里我自己踩了一次册子上的坑：`cp 备份 && python 改判据` 里 `cp` 因目标目录不存在失败，
+  `&&` 短路 ⇒ **"退化判据"那次 4/4 绿其实测的是原文件**（我把日志里没有的那行 print 当成了已执行）。
+  重做时先 `mkdir -p` 再改，并 grep 目标行确认改动落地。之后用临时 spec + CDP
+  `setCPUThrottlingRate(6)` 做成确定性样本：**同一节流下 A（不等）红 / B（等）5.2s 绿**，
+  两条只差那个等待 ⇒ 射程已证；临时文件跑完即删、未入库。
+- 下一步（等点名）：**C2 范围我改了**——`--ok-soft` 全仓**零消费者**（`var(--ok-soft)` 0 处），只补令牌
+  等于造死键；`--danger-soft` 24 处、`--warn-soft` 8 处有消费者。所以 C2 应改成「语义软色族每主题必须
+  显式定义」的门禁 + 补齐 aurora 缺的两条定义；`--ok-soft` 要不要补，取决于 Q3「异常分支换底色」这条
+  语义色映射是否要做 —— 那是产品决定，等你拍板。**C3（连线路由绕障）**不需要拍板，可直接做。
 
 ### [2026-11-03 10:20 UTC+8 / 11-02 22:20 UTC] Qoder 主会话 —— **B16 收尾：设计文档 §七 状态行改成已落地；AI 桥已随 v3.7.153 上线**
 
