@@ -5334,7 +5334,58 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
        实测 412px 视口下画布只拿到 402px —— 单栏模式下这条槽没有意义，收掉。 */
     scrollbar-gutter:auto}
   .body.design-mode .chat-panel-rail{order:2}
-  .body.design-mode .mob-bar{position:static;order:3}
+  /* 2026-11-05 缺陷 110 方案乙（用户拍板「类似手机的显示效果」）：768–1023 中间档照手机走 ——
+     侧栏收起、底部导航顶上，把整块高度还给画布。
+     根因见 docs/iteration-plan.md 第 9 条：本块把 .body 改成 flex 列却漏了隐藏 #side，
+     它 flex:0 0 auto 吃掉 874px，main-wrap 只剩 85px ⇒ svgH=0、图被画到视口外。
+     ≤767 档由文件头「v2.1.0 移动端导航」块负责隐藏侧栏/显示底栏，本档不在其射程内。
+     ⚠️ 下面这组是那块导航/抽屉外观的同一份副本：它只在 ≤767 生效，768–1023 必须另给一份，
+     否则底栏只是几个裸按钮、点开抽屉也不显示。改样式时两处同步
+     （后续可重构成共享样式块，本批不扩重构范围）。两端都生效时值相同、重复声明无害，
+     故不新增断点，避开 lint:breakpoints 的断点纪律。 */
+  .body.design-mode .side{display:none}
+  .body.design-mode .mob-bar{display:flex;flex-shrink:0;position:static;order:3;
+    background:var(--panel);border-top:1px solid var(--line);
+    padding:var(--space-1) var(--space-2);padding-bottom:calc(var(--space-1) + var(--safe));
+    gap:var(--space-1)}
+  .body.design-mode .mob-bar-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;min-height:48px;padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);
+    background:transparent;border:none;color:var(--text-dim);font-size:var(--fs-xs);cursor:pointer;
+    transition:background var(--transition-fast),color var(--transition-fast)}
+  .body.design-mode .mob-bar-btn svg{width:var(--icon-md);height:var(--icon-md)}
+  .body.design-mode .mob-bar-btn .nm{font-size:var(--fs-xs)}
+  .body.design-mode .mob-bar-btn.active{color:var(--accent-text,var(--accent));background:var(--accent-soft)}
+  .body.design-mode .side-sheet-backdrop{display:none;position:fixed;inset:0;background:var(--overlay);
+    z-index:var(--z-drawer)}
+  .body.design-mode .side-sheet-backdrop.open{display:block}
+  .body.design-mode .side-sheet{display:none;flex-direction:column;position:fixed;left:0;right:0;bottom:0;
+    z-index:calc(var(--z-drawer) + 1);max-height:70vh;max-height:70dvh;
+    background:var(--panel);border-top:1px solid var(--line);
+    border-radius:var(--radius-xl) var(--radius-xl) 0 0;box-shadow:var(--shadow-3)}
+  .body.design-mode .side-sheet.open{display:flex}
+  .body.design-mode .side-sheet-head{display:flex;align-items:center;justify-content:space-between;
+    padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);flex-shrink:0}
+  .body.design-mode .side-sheet-title{font-size:var(--fs-base);font-weight:600;color:var(--text)}
+  .body.design-mode .side-sheet-close{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--panel);color:var(--text-dim);font-size:var(--fs-base);cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center}
+  .body.design-mode .side-sheet-body{flex:1;min-height:0;overflow-y:auto;
+    padding:var(--space-2) var(--space-3) calc(var(--space-3) + var(--safe));
+    display:flex;flex-direction:column;gap:2px}
+  .body.design-mode .sheet-parent{display:flex;align-items:center;gap:var(--space-2);width:100%;
+    padding:var(--space-2) var(--space-3);min-height:44px;border-radius:var(--radius-md);
+    background:transparent;border:none;color:var(--text);font-size:var(--fs-sm);font-weight:500;
+    cursor:pointer;text-align:left}
+  .body.design-mode .sheet-parent svg{width:var(--icon-md);height:var(--icon-md);color:var(--sc,var(--muted));flex-shrink:0}
+  .body.design-mode .sheet-parent .cnt{margin-left:auto;font-size:var(--fs-xs);background:var(--surface-muted);
+    border-radius:var(--radius-md);padding:1px 8px;color:var(--text-dim)}
+  .body.design-mode .sheet-parent.active{background:var(--sc,var(--accent));color:var(--on-accent)}
+  .body.design-mode .sheet-sub{display:flex;align-items:center;gap:var(--space-2);width:100%;
+    padding:var(--space-2) var(--space-3);padding-left:calc(var(--space-3) + 26px);min-height:40px;
+    border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-dim);
+    font-size:var(--fs-sm);cursor:pointer;text-align:left}
+  .body.design-mode .sheet-sub .sub-dot{width:5px;height:5px;border-radius:50%;background:var(--text-faint);flex-shrink:0}
+  .body.design-mode .sheet-sub.active{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
   .body.design-mode .main-wrap>.main,
   .body.design-mode .main-wrap>.toolbar-row,
   .body.design-mode .chat-panel{display:none}
