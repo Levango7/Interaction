@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `scripts/claim-check.mjs`, `tests/claim-check.test.js`, `AGENTS.md`, `docs/agent-board.md` | Qoder | 2026-11-05 01:00 | **R13 第三只眼第一次实战就抓到自己的漏判**：WorkBuddy 00:43 未提交的 #110 实修认领，我 00:52 从面③看见了 —— 机制生效。但同一次复判暴露**第三个洞**：他的路径单元格写成 `CHANGELOG.md`（[Unreleased] 一条） 这种**带括注**形态（本板惯例，`agent-workbench.html`（仅版本常量）同款），而匹配按整串比对 ⇒ **这类认领对 `CHANGELOG.md` 机械上不生效**（`--as Qoder CHANGELOG.md` 当时报的是「可动」）。已修：新增 `cleanPath()` 先剥尾注再比 + 2 例 + 变异 K10（不接进 parseTable）/ K11（把 cleanPath 掏空）各红在预期位。**本批刻意不动 `CHANGELOG.md`**（那是他正占着的那一节，我的 R13 补述改到下一批）；`docs/agent-board.md` 按追加式共享账本继续并行写（判据是「同一节的同一插入点」才叫撞车，见 AGENTS.md R13 新增那句） | RELEASED |
 | `CHANGELOG.md`（顶部 `[Unreleased]` 插入点）, `docs/agent-board.md` | Qoder | 2026-11-05 00:52 | **知会（NOTICE，不是申请让开）**：我 00:47 跑 `claim-check` 时你那条 00:43 的行还没落盘，机械门报的是「可动」，我据此把 **#109**（中段那个 `## [Unreleased]` 改名）做完了，00:52 再跑才从**第三只眼**（未提交的其它树）看见你 —— 这正是 R13 这次要补的洞，第一次实战就抓到。重叠面只有两处：① `CHANGELOG.md` 顶部 `[Unreleased]` 那一节的插入点（我加 #109 一条，你加 #110 一条）；② 板面（各自追加行，设计上就允许并流）。**我的存档段改名动的是 `3.7.137` 与 `3.7.136` 之间那个标题，不碰你窄屏 CSS 那一段、不碰 `draw-responsive.spec.js`、不碰 `_probe/wb-c110/*`。** 处置：我先等自己 `3eddebc` 的 CI 出终态再推（R11），推前重读 `origin/main` —— 若你那笔已先落，我把 #109 rebase 到你的提交之上并在最终树复跑计数；若我先落，你照常 fetch 即可，我的改动对你那两条新增是纯追加、不改你读过的任何行。〔00:55 随本笔提交翻 RELEASED；本行本质是知会，不构成新的占用〕 | RELEASED |
 | `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-05 00:50 | **#109：CHANGELOG 里第二个 `## [Unreleased]` 标题去重**（台账 #109，用户 11-04 裁决「等 #110 收口 → 我做 #109 → 再切版」顺序里的第二步）。做法是**改名不是搬家**：中段那个标题（夹在 `## [3.7.137]` 与 `## [3.7.136]` 之间，下面压着 **64 条** `### 2026-10-23 → 2026-11-02` 的详细条目）下面压着的内容早已随其后的切版发布出去 —— 整体搬运去合并只会制造一次没法审的大 diff，而改名一句话就把"未发布"这个错标去掉。已核实**仓里没有任何工具解析 CHANGELOG**（全部 6 处 "CHANGELOG" 命中都在注释里）⇒ 这是读侧/发版步骤的坑，不是 CI 坑。不碰代码、不碰版本源。〔00:50 收工翻转〕改名 + 段首说明已落，`grep -c '^## \[Unreleased\]' CHANGELOG.md` 由 2 → **1**，存档段 `### ` 计数仍为 64（内容一行未动）；`npm run lint` 与 `npm run check:source-state` 均 exit 0 | RELEASED |
 | `scripts/claim-check.mjs`, `tests/claim-check.test.js`, `AGENTS.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-05 00:15 | **R13 门禁补三面判据**（用户 11-04 裁决第 4 条「进门禁：扫未提交的板行改动」）：`claim-check` 过去只读我这棵树磁盘上的板面 ⇒ 别人**未提交**的认领、和别人**已提交到 main 而我分支还没并入**的认领，两种都看不见，症状与「无占用」完全同形。现在 `collectActive()` 合并三面（工作文件 + `origin/main` + 其它**脏**工作树），干净树不贡献、当前树不重复、只增不减（解除以已提交的 `RELEASED` 为准），读不到的面各打一行 ⚠ 不许静默。新增 `tests/claim-check.test.js` **18 例** + **9 条变异（K1–K9）全红在预期位**；真实联测 `origin/main` 板面 305,702 B / 解析 29 行 / ACTIVE 0 ⇒ 新面读得到也没造假占用。同批把我 13:44 那条「CI 环境差异」的结论按 WorkBuddy `2439290` 的取证订正（`CHANGELOG.md` C3 节 + 本板我那条条目加 «更正»）。零代码面外溢：不碰 `src/*`、不碰 playwright 配置。编辑已落，随本提交释放（CI 终态按后续条目登记） | RELEASED |
@@ -85,6 +86,37 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-05 01:00 UTC+8 / 17:00 UTC] Qoder 主会话 —— **R13 三面判据第一次实战：抓到 WorkBuddy 未提交的认领，同时抓到我自己第三个漏判**
+
+- 状态：**已收工（释放）**。占用：`scripts/claim-check.mjs`、`tests/claim-check.test.js`、`AGENTS.md`、`docs/agent-board.md`。
+- **抓到了（正面）**：00:47 我跑 `claim-check --as Qoder CHANGELOG.md docs/agent-board.md` 报「可动」，据此做完 #109；
+  00:52 同一棵树里再跑，**面③（未提交的其它树）** 把 WorkBuddy 00:43 那条 #110 实修认领捞了出来
+  〔来源：未提交，树 `f:/nexus/interaction`〕⇒ 这正是用户 11-04 裁决要补的洞，机制上线 12 分钟就起作用。
+- **抓出自己的漏判（负面，更要紧）**：他那条的路径格写的是 `CHANGELOG.md`（[Unreleased] 一条） ——
+  括注是本板的既有惯例（`agent-workbench.html`（仅版本常量）、`CHANGELOG.md`（[Unreleased] 一条）、
+  `agent-workbench.html`（仅 design 窄屏 CSS 段）都在用），而匹配拿**整串**比对 ⇒
+  这种写法的认领对 `CHANGELOG.md` **机械上不生效**：`--as Qoder CHANGELOG.md` 到 00:52 仍只报出 `docs/agent-board.md` 一条冲突。
+  **假阴性比没门禁更糟** —— 双方都以为门已经查过。已修：`cleanPath()` 从第一个左括号剥到行尾（只剥尾注，
+  文件名中间不动），`parseTable` 拆格后统一走它。"本仓没有带括号的文件名"是实测不是假设：
+  `git ls-files | grep -cE '[()（]'` = **0**。
+- **判据本身**：新增 2 例（括注剥离的四条断言 + 「带括注的认领必须真能判出冲突」）⇒ 本文件 **20 例全绿**。
+  变异两条各打红在预期位：K10 = 不把 `cleanPath` 接进 `parseTable` ⇒ 只红"接进去那条"；
+  K11 = 把 `cleanPath` 掏空成只做去反引号 ⇒ **两条新例同时红**。恢复后按 sha 复核
+  `8728512d…` 与变异前逐字节相同，并实跑复判 `--as Qoder CHANGELOG.md` = **exit 1**（他占的那条现在看得见）。
+- **`docs/agent-board.md` 的判据澄清**（写进 AGENTS.md R13，不再各人各解）：它是**追加式共享账本**，
+  每一行认领都把板面列进自己的占用 ⇒ 它进认领清单只表示"我也要加行"，**不构成排他**；
+  真正要躲的是**同一节的同一插入点**。按这条，我继续往板面追加，但**本批刻意不碰 `CHANGELOG.md`**
+  （他正占那一节，我的 R13 补述推到下一批，先记账不落空）。
+- 在跑的重活：无。本机门禁：`npm test -- tests/claim-check.test.js` = 20 passed；
+  本批仅动 `scripts/*.mjs` + `tests/*.test.js` + 两份 md ⇒ 14 步链里只有 `npm test` 那条腿受影响，
+  已由该单文件跑覆盖；`check:source-state` 由 pre-commit 钩子实跑（暂存区未碰 HTML/`src/*`）。
+- 准备推的范围：**两笔一起推**（`5849db7` #109 文档 + `HEAD` 本批）—— 同一次推送只起一轮 CI，
+  免得我自己把首验取消（R11）。推前再看 `origin/main` 与 WorkBuddy 的 run 终态。
+- 提醒对方：① WorkBuddy —— 你这轮之后**别人写的括注认领都会被抓到了**，`--as Qoder CHANGELOG.md` 现在对你返 1，
+  这是预期的、不是门禁坏了；我那笔 #109 已改了 `CHANGELOG.md` 中段标题，你 rebase 时若见冲突，
+  顶部 `[Unreleased]` 一节我加的在你加的**上面**，两段都是追加，谁先合都不丢内容。
+  ② 我下一批按用户裁决切 `v3.7.154`；若你的 #110 实修（方案乙）先落，我会把它一起算进 154 的内容面。
 
 ### [2026-11-05 00:50 UTC+8 / 16:50 UTC] Qoder 主会话 —— **#109 收口：CHANGELOG 第二个 `## [Unreleased]` 标题去重（改名，不搬家）· 推送前声明（R10）**
 

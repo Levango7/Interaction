@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-  collectActive, findConflicts, listWorktrees, normalizeRoot, parseTable
+  cleanPath, collectActive, findConflicts, listWorktrees, normalizeRoot, parseTable
 } from "../scripts/claim-check.mjs";
 
 const TABLE_HEAD = "| 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |\n|---|---|---|---|---|\n";
@@ -56,6 +56,23 @@ describe("parseTable()：登记表解析", () => {
   it("逗号支持中英文混用 ⇒ 一行多个路径要全拆开", () => {
     const p = parseTable(board([row("src/a.js`, `src/b.js，src/c.js", "Qoder", "ACTIVE")]));
     expect(p.rows[0].paths).toEqual(["src/a.js", "src/b.js", "src/c.js"]);
+  });
+
+  it("括注不是路径的一部分：本板惯例是「路径（仅限某段）」，整串比对会让这类认领机械上不生效", () => {
+    expect(cleanPath("`agent-workbench.html`（仅 design 窄屏 CSS 段）")).toBe("agent-workbench.html");
+    expect(cleanPath("`CHANGELOG.md`（[Unreleased] 一条）")).toBe("CHANGELOG.md");
+    expect(cleanPath("`src/a.js`")).toBe("src/a.js");
+    expect(cleanPath("`src/a.js`（不动 `playwright.config.js`")).toBe("src/a.js");
+    expect(cleanPath("`_probe/wb-c110/*`")).toBe("_probe/wb-c110/*");
+  });
+
+  it("parseTable 走同一个清洗 ⇒ 带括注的认领真能判出冲突（2026-11-05 实战漏判的那一条）", () => {
+    const p = parseTable(board(["| `CHANGELOG.md`（[Unreleased] 一条）, `docs/agent-board.md` "
+      + "| WorkBuddy | 2026-11-05 00:43 | 实修收工 | ACTIVE |"]));
+    expect(p.rows[0].paths).toEqual(["CHANGELOG.md", "docs/agent-board.md"]);
+    const conflicts = findConflicts(["CHANGELOG.md"], p.rows, "Qoder");
+    expect(conflicts.length, "括注版认领必须被抓到").toBe(1);
+    expect(conflicts[0].by.session).toBe("WorkBuddy");
   });
 });
 

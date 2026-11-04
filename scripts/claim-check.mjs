@@ -52,6 +52,14 @@ function globToRe(g) {
   return new RegExp("^" + out + "$");
 }
 
+/* 路径单元格里写括注是这块板子的既有惯例（`agent-workbench.html`（仅版本常量）、
+   `CHANGELOG.md`（[Unreleased] 一条）），而匹配按整串比对 ⇒ **这类认领机械上不生效**
+   （2026-11-05 实测：别人这样占的 CHANGELOG 没能报出冲突）。剥掉尾注才谈得上判冲突。
+   只剥"从第一个左括号到行尾"，不碰文件名中间的字 —— 本仓没有带括号的文件名。 */
+export function cleanPath(s) {
+  return String(s).replace(/[`]/g, "").replace(/[（(].*$/, "").trim();
+}
+
 export function parseTable(md) {
   const start = md.indexOf(SECTION);
   if (start < 0) return { found: false, rows: [] };
@@ -69,7 +77,7 @@ export function parseTable(md) {
     if (/^路径/.test(cells[0])) continue;
     const p = cells[0], session = cells[1], claimedAt = cells[2], releaseBy = cells[3], status = cells[4];
     if (!p || !session) continue;
-    const paths = p.split(/[,，]/).map((s) => s.trim().replace(/[`]/g, "")).filter(Boolean);
+    const paths = p.split(/[,，]/).map(cleanPath).filter(Boolean);
     rows.push({ paths, session, claimedAt, releaseBy, status: status.replace(/[^A-Z]/g, "") });
   }
   return { found: true, rows };
