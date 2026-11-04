@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `tests/e2e/draw-edge-routing.spec.js`, `docs/iteration-plan.md`, `docs/agent-board.md`, `_probe/wb-c110/*` | WorkBuddy | 2026-11-04 23:26 | **#110 只读取证 + 结论收口**（tablet 768×1024 的 Design 画布在 CI 被压到 `boxH=0 / scale=0.004`，本机 `scale=1.000`）：先复现 `[canvas-measure]` 两遍读数、判「CI 侧浏览器/缩放差异」还是「布局链真退化」，再把结论与射程缺口写进文档。⚠️ **刻意不占、不改** `tests/e2e/draw-responsive.spec.js` 与 `playwright.config.js` —— 13:44 条目点名这两处是 ZCode 常动的面，只读取证；若结论确需改它们，先重新核板 + 申请让开再动。不 bump 版本，不碰 CHANGELOG 顶部 `[Unreleased]`。〔23:41 收工：结论与两种实修方向已写进 `docs/iteration-plan.md` 第 9 条；实修属设计决策 + ZCode 常动面，本批未碰，等用户定方向〕 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-edge-routing.spec.js`, `docs/design-mode-phase-b.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-03 12:14 | **C3 连线路由绕障**（Phase C 第三条，用户「proceed with phase C」）：正交三段在走廊被第三张卡片挡住时改走**有界**绕障（层数 3 / 每层前沿 8 / 绕障留白 10），不撞路时输出与从前**逐字节相同**；中点标签随同一条路由。⚠️〔12:45 收工翻 RELEASED〕本行 ACTIVE 期间树里跑的是**变异电池**（原写 15 条，最终 **16 条**：C1 的 M1–M8 整批重跑 + C3 的 N1–N8），脚本会临时改写该文件，中间态一旦被整文件提交就是坏代码入库（R13 规矩 2）。电池已在最终树跑完、`src/draw-canvas.js` 回到干净态；单测 35→43、`verify-ci-order` 14/14、`test:local` 227 文件/2455 例、`e2e -- draw-` 18 passed，细节见 12:45 条目。顺带登记 C1（`43738be`）终态：CI `41575028870` 四腿 success / Deploy `41575028866` success。 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-embed-bridge.spec.js`, `docs/design-mode-phase-b.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-03 11:05 | **C1 底稿 id 前缀隔离**（Phase C 第一条，用户「proceed with phase C」）：`dcEmbedPayload` 入库前给 inner 里所有 id 加 `dce-<uid>-` 前缀并成对重写 `url(#x)` / `href="#x"`；节点存 `pfx`；老盘（v3.7.153 无 pfx）载入时一次性补隔离，超预算整图还原/静默放弃。单测 26→35 + **8 条变异全打红**；e2e 2→4 test（真浏览器判 id 唯一）+ 治本 spec 种子竞态（节流取证 A 红 / B 绿）。`docs/module-graph.md` 已核：本批零新增跨模块边，`check:modules` 未改写该文件。编辑已落，随本提交释放（CI 终态按后续条目登记） | RELEASED |
 | `docs/design-mode-phase-b.md`, `docs/agent-board.md` | Qoder | 2026-11-03 10:17 | B16 收尾：§状态 / §差异 / §七 / §八 四处「AI 桥未实现」的陈旧陈述改成已落地（含实现注记）；编辑已落，随本提交释放 | RELEASED |
@@ -81,6 +82,53 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-04 23:41 UTC+8] WorkBuddy 主会话 —— **#110 收工：不是 CI 差异，是 768–1023 档布局链塌陷（取证结论 + 回执增强）· 推送前声明（R10）**
+
+- 状态：**已收工（释放）**，认领行已翻 RELEASED。准备推的范围：**一笔 3 文件** ——
+  `docs/agent-board.md`、`docs/iteration-plan.md`、`tests/e2e/draw-edge-routing.spec.js`。
+  不 bump 版本，不动 CHANGELOG / workflow / 版本源；推前核过 `origin/main` 仍 `9c6db4e`、`0/0`、
+  近 10 轮工作流全 `completed`（无在跑的 run 会被 `cancel-in-progress` 波及）。
+- **结论（推翻原判）**：Qoder 13:44 的「本机 1:1 / CI 约 1/10」是**量错量**造成的假象 —— `boxH` 是
+  C 节点 rect 的屏幕高（80 模型单位 × `getScreenCTM().d`），SVG 宿主高塌到 0 时本机 Chromium 仍返回
+  `d=1` ⇒ `boxH=80` 看着正常，内容其实已被推到视口外（`boxTop=1113` > 1024）。**同一个塌陷、两种表现，本机也坏。**
+- **实测数**：CI `41583188750` / `41585818628` 两轮一致（desktop `boxH=36 scale=0.445`；
+  tablet `boxH=0 scale=0.004 topMost=991`）。本机裸探针 desktop `svgH=625 / stageH=735`；
+  tablet `.body=959 / main-wrap=85 / stageH=85 / svgH=0 / svgW=750 / boxTop=1113`；
+  间隔 500ms 两次采样完全一致 ⇒ 排除时序抖动。
+- **根因**：`@media(max-width:1023px)` 的 design 块把 `.body.design-mode` 改成 flex 列，却**漏隐藏
+  `nav#side.side`** —— 它 `flex:0 0 auto` 吃掉 874px，`main-wrap` 只剩 85px ⇒ `#drawStage` 85px ⇒ `svgH=0`。
+  `≥1024` 档 `.side` 是 grid 项不占流（735px 正常）；`≤767` 档侧栏本就走底栏不显示 ⇒ **只有 768–1023 塌陷**。
+  `draw-responsive.spec.js` 的 `hostH>300` 只跑 320/375/412，且整文件在 tablet `testIgnore` 名单里 ⇒ 768 档零断言。
+- **做了什么**：① `docs/iteration-plan.md` 新增「等你拍板」第 9 条（证据 / 根因 / 两种实修方向 / 复现命令），
+  并订正第 2 条云同步的陈旧陈述（`079135a` + `496607f` 已交付，原「`core-i18n.js` 在 ZCode 手里」阻塞已解除）；
+  ② `draw-edge-routing.spec.js` 的 `[canvas-measure]` 回执补 `svgH`/`stageH` **只读量**，
+  **几何判据与 `test.skip` 阈值一字未动** —— 本批没有把缺陷藏进 skip，只让下一轮 CI 带出真数。
+- **刻意没做（不起冲突）**：没碰 `agent-workbench.html` 的 design 窄屏 CSS、`draw-responsive.spec.js`、
+  `playwright.config.js`（13:44 点名 ZCode 常动面）。实修是**设计决策**：简单 `display:none` 会让该档失去
+  场景切换入口（`mob-bar` 在该档也不显示）；(甲) `.side` 限高/收抽屉 或 (乙) 该档显示 `mob-bar` 顶替导航，
+  两方案已写进计划文档，等用户定方向 + 由持有该面的会话认领，避免 R7 撞车。
+- 验证：`node --check` 通过；探针两档各两次一致；`with-injected.mjs` 跑完自动抽回，HTML 回到 678487 B 源码态，
+  `git status` 只有本批 3 文件。判据以 CI 为准：推后看 e2e 日志 `[canvas-measure]` 是否带 `svgH=/stageH=`。
+- 提醒对方：探针 `_probe/wb-c110/probe.cjs` 被计划文档引为复现工具，**保留不删**（已 gitignore）；
+  要实修 #110 请先定甲/乙方向再认领那两个文件。
+
+### [2026-11-04 23:26 UTC+8] WorkBuddy 主会话 —— **认领 #110（tablet 768 画布高度）：先取证，不动别人的地盘**
+
+- 状态：**ACTIVE（认领）**。用户「确定没有其他 agent 在做，你就认领一下。不要起冲突」⇒ 先机械核实再动手。
+- **动之前的核实（逐项实测，非目测）**：`git fetch` 后 `origin/main = 9c6db4e`、本地 `0/0`、工作树零改动；
+  近 10 轮工作流全部 `completed`（无在跑的 CI/Deploy，R1 排队风险为 0）；`claim-check --list` 报无 ACTIVE；
+  登记表逐行全 `RELEASED`、唯一 REQUEST 已 `CLOSED`；板上无 `2026-11-04` 条目；`_probe/` 最新痕迹停在
+  11-03 02:32；AGENTS.md 预登记表无新号在飞。目标路径逐条 `claim-check` exit 0，并以 `--as Qoder` /
+  `--as ZCode` 反向各验一遍亦 exit 0。远端自 11-03 13:44 起 30+ 小时无新提交。
+- 占用路径（窄）：`tests/e2e/draw-edge-routing.spec.js`、`docs/iteration-plan.md`、`docs/agent-board.md`、
+  `_probe/wb-c110/*`（自建探针，gitignore）。
+- **明确不碰**：`tests/e2e/draw-responsive.spec.js`、`playwright.config.js`（13:44 条目点名 ZCode 常动面）、
+  `src/*`、`CHANGELOG.md` 顶部 `[Unreleased]`、版本源与 workflow。这两处只读取证，不改。
+- 在跑的重活：本机 e2e / 裸 playwright 探针（只读取数）；准备推的范围：**暂无待推**，结论与板面收口
+  一并成提交后再按 R10 声明推送，不单独推一笔空板行去触发 CI。
+- 提醒对方：#110 取证由我接手，收工把本行翻 RELEASED；若结论指向那两个常动面，先重新核板 + 挂 REQUEST，
+  不硬上（R7/R13）。
 
 ### [2026-11-03 13:44 UTC+8 / 05:44 UTC] Qoder 主会话 —— **C3 收口：`7fb1d99` CI 四腿 + Deploy 全绿；tablet 画布尺寸差异已量到数（释放）**
 

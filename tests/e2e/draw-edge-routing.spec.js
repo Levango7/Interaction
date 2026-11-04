@@ -94,7 +94,13 @@ test.describe("连线路由绕障（真浏览器几何）", () => {
       const cw = Number(c.getAttribute("width")), chh = Number(c.getAttribute("height"));
       const decoyD = "M" + (cx - 60) + " " + (cy + chh / 2) + " L" + (cx + cw + 60) + " " + (cy + chh / 2);
       return { d: d, boxTop: Math.round(box.top), boxH: Math.round(box.height),
-        scale: svg.getScreenCTM().d, real: sample(d), decoy: sample(decoyD) };
+        scale: svg.getScreenCTM().d, real: sample(d), decoy: sample(decoyD),
+        /* #110 取证补量：boxH 是「C 节点 rect 的屏幕高度」= 80 模型单位 × scale。
+           SVG 宿主高度塌到 0 时，部分 Chromium 会让 getScreenCTM().d 仍返回 1，
+           于是 boxH=80 看着「画布够大」、其实画布根本没高度（内容已被推到视口外）。
+           判画布有没有得画，要看宿主的真实布局高度，不能只看节点 rect。 */
+        svgH: Math.round(svg.getBoundingClientRect().height),
+        stageH: Math.round((document.getElementById("drawStage") || svg).getBoundingClientRect().height) };
     }, C_ID);
 
     /* 本判据的**适用域**由实测决定，不由项目名决定：绕障留白是模型里的 10 个用户单位，
@@ -103,9 +109,13 @@ test.describe("连线路由绕障（真浏览器几何）", () => {
        而桌面遍同一断言稳定通过）。所以低于阈值的遍**明着跳过并带出量到的数字**，不许它凑一份绿。
        阈值取 20px：C 的模型高 80 单位 ⇒ scale ≥ 0.25 ⇒ 留白至少 2.5 屏幕像素，判据才有分辨力。 */
     /* 这行不是调试残留，是**回执**：跳过与否都先把自己量到的数写进 stdout，
-       环境之间画布尺寸不一致时（本机 tablet scale=1.0，CI tablet 疑为 ~0.1）才有东西可追。 */
+       环境之间画布尺寸不一致时才有东西可追。2026-11-04 #110 取证补 svgH/stageH：
+       实测本机 tablet 是 svgH=0 / stageH=85 / scale=1 / boxH=80（假性正常），
+       CI tablet 是 scale=0.004 / boxH=0 —— 同一个宿主塌陷的两种表现，
+       光看 boxH/scale 会把本机误判成「1:1 正常」。几何判据与 skip 阈值一字未动。 */
     console.log("[canvas-measure] boxH=" + out.boxH + "px scale=" + out.scale.toFixed(3) +
-      " topMost=" + out.real.topMost + " boxTop=" + out.boxTop);
+      " topMost=" + out.real.topMost + " boxTop=" + out.boxTop +
+      " svgH=" + out.svgH + "px stageH=" + out.stageH + "px");
     test.skip(out.boxH < 20,
       "画布在此视口只有 " + out.boxH + "px 高（缩放 " + out.scale.toFixed(3) +
       "）⇒ 10 单位留白不足半像素，这条几何判据在该缩放没有信息量；窄屏画布定高归 draw-responsive.spec.js");

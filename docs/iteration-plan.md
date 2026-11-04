@@ -375,11 +375,17 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
    `agent-workbench.html:21` 的 CSP 已含 `connect-src … http://127.0.0.1:* http://localhost:*`（引入于 `b6bbc47`，注释 `[C-CSP-connect]` 留档，v3.7.56 实测 file:// 跨源 200 且 CSP 零违规）。
    残留的 `script-src 'unsafe-inline'` 是**已登记的有意暂缓**（注释 `[C3]`：依赖 H4 模块化），不是漏项。
    ⚠️ 真限制不在 CSP：https 页面连 `http://127.0.0.1` 属 **mixed content**，浏览器层拦，只能靠 Electron 主进程代理（`mcp-fetch`，v3.7.143 已做）。
-2. 云同步后端选型 —— **工程侧齐备，缺的是客户端设置入口**（2026-10-31 实测）：
-   已具备 `server/src/sync.js` 四端点（snapshot GET/PUT、changes、resolve）+ Bearer 鉴权 + LWW/MV 冲突 + 增量与全量回退；CORS 已接（`server/src/index.js:62`，`*` 默认 + 启动 WARN，v3.7.114 有意为之）；契约测试 6 份在册。
-   **缺口**：`cfg.apiBase` / `cfg.syncIncremental` **只读不写** —— 设置抽屉的配置键里没有它们（`src/ui-drawer.js` 实测仅 activeId/agent*/ai*/base/key/memMax/model/profiles/rag/theme/toolWhitelist），
-   用户没有 UI 能填后端地址或开增量同步 ⇒ 后端跑起来也连不上。**待做**：抽屉加 `apiBase` 输入 + `syncIncremental` 开关 + i18n 双语 + 守卫。
-   ⚠️ 阻塞：文案在 `src/core-i18n.js`，该文件当前在 ZCode 手里（draw 批次在飞）。
+2. ✅ **已交付（2026-11-03，`079135a` + `496607f`）：云同步客户端设置入口** —— 原条目（2026-10-31 实测）
+   记的是「工程侧齐备，缺的是客户端设置入口」：后端四端点（snapshot GET/PUT、changes、resolve）+ Bearer +
+   LWW/MV 冲突 + 增量/全量回退 + CORS 都在（`server/src/sync.js` / `server/src/index.js:62`，契约测试 6 份），
+   但 `cfg.apiBase` / `cfg.syncIncremental` 只读不写、设置抽屉没有入口，后端跑起来也连不上。
+   现设置卡「自建后端与云同步」已补 `apiBase` 输入框 + `syncIncremental` 开关（`src/ui-drawer.js`
+   load/save 两段、`agent-workbench.html` DOM/CSS、`src/core-i18n.js` 中英 8 键），守卫
+   `tests/sync-settings-entry.test.js` 7/7、`tests/binding-coverage.test.js` 3/3；
+   `496607f` 另补 `tests/sync-incremental-gate.test.js` 3/3，证明开关真的切了 `/api/sync/changes`
+   而不是只把字段写进 `cfg`。原写的「⚠️ 阻塞：文案在 `src/core-i18n.js`，该文件当前在 ZCode 手里」已解除
+   （双语文案在对方释放后一并入库）。**仍未做**：真后端联调与增量上传真机验证（要起后端）——
+   已验的是「开关切了路径」，不是「真上传成功」，别把这两件事混为一谈。
 3. 邮箱登录：代码整链已实现（TC3/SMTP 路径都在），只差一份真实 SMTP 配置 —— 配不配、配哪家。
 4. 短信：腾讯云 2025-09 起对个人签名关死 + 要备案截图 ⇒ 资质墙，不是代码问题。
 5. 真机验收只剩 **Jira** 一条要你给凭据（站点 + API token，脚本同款可跑）。
@@ -416,3 +422,31 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
      "已有 toast 的失败"重复计成缺陷。
    - **建议路线**：先只在 data-links 的会话/插件两处**试点**（真实数据丢失面），确认判据抓得准再谈全仓门禁；
      不要一上来做门禁。
+9. **#110：tablet 768×1024 的 Design 画布宿主塌陷（2026-11-04 取证结论，实修等拍板）**
+   - **结论先行：不是「CI 侧浏览器/缩放差异」，是布局链真退化，本机同样复现。**
+     Qoder 13:44 留的「本机 1:1、CI 约 1/10」是**量错了量**造成的假象：`boxH` 是 C 节点 rect 的屏幕高度
+     （80 模型单位 × `getScreenCTM().d`），SVG 宿主高度塌到 0 时本机 Chromium 仍返回 `d=1` ⇒
+     `boxH=80` 看着正常，其实画布根本没高度、内容已被推到视口外（`boxTop=1113` > 视口 1024）。
+   - **证据（两轮 CI 日志读数一致）**：`41583188750` / `41585818628` 均打出 desktop
+     `boxH=36 scale=0.445`、tablet `boxH=0 scale=0.004 topMost=991 boxTop=991`。
+     本机裸探针（`_probe/wb-c110/probe.cjs`，由 `with-injected.mjs` 包装、跑完自动抽回源码态）：
+     desktop `.body` 735 / `main-wrap` 735 / `#drawStage` 735 / `svgH` 625；
+     tablet `.body` 959 / `main-wrap` **85** / `#drawStage` **85** / `svgH` **0** / `svgW` 750 /
+     `svgTop` 1023 / `boxH` 80 / `scale` 1。间隔 500ms 两次采样完全一致 ⇒ **不是时序抖动**。
+   - **根因定位到元素**：`@media (max-width:1023px)` 的 design 块把 `.body.design-mode` 改成
+     `display:flex;flex-direction:column`，却**漏了隐藏 `nav#side.side`**。它作为 `flex:0 0 auto`
+     子项吃掉 **874px**（`min-height:auto`、`display:block`），`main-wrap`（`flex:1 1 0%;min-height:0`）
+     只剩 85px ⇒ `#drawStage` 85px ⇒ `svgH=0`。`≥1024` 档 `.side` 是 grid 项、不占 flex 流（735px 正常），
+     `≤767` 档侧栏本就走底部导航不显示 ⇒ **只有 768–1023 这个中间档塌陷**。
+   - **为什么没人守到**：`draw-responsive.spec.js` 的 `hostH>300` 只跑 320/375/412 三档，
+     且该文件在 `playwright.config.js` 的 tablet `testIgnore` 名单里 ⇒ 768 档零断言。
+   - **本批已收口（不扩面）**：`draw-edge-routing.spec.js` 的 `[canvas-measure]` 回执补 `svgH` /
+     `stageH` 两个**只读量**（几何判据与 `test.skip` 阈值一字未动），下一轮 CI 会直接带出塌陷数，
+     不再靠 `boxH` 单量猜环境差异。
+   - **实修要拍板的是设计决策，不是 CSS 难度**：`.side` 在 design 模式是主导航，简单 `display:none`
+     会让 768–1023 档（该档 `mob-bar` 也不显示）失去场景切换入口。两个方向：(甲) 给 `.side` 限高/收成抽屉，
+     画布拿剩余高度；(乙) 该档把 `mob-bar` 显示出来顶替导航后再隐藏 `.side`。落点在
+     `agent-workbench.html` 的 design 窄屏 CSS 段（ZCode 常动的面），且改完必须给
+     `draw-responsive.spec.js` 补 768 档 `hostH` 断言（同样牵动 tablet `testIgnore`）。
+     **本次认领刻意没碰这两处**：等用户定方向 + 由持有该面的会话认领，避免 R7 撞车。
+   - 复现：`node scripts/with-injected.mjs node _probe/wb-c110/probe.cjs`（探针已 gitignore，全程只读）。
