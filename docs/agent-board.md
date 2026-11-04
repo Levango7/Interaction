@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `scripts/claim-check.mjs`, `tests/claim-check.test.js`, `AGENTS.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-05 00:15 | **R13 门禁补三面判据**（用户 11-04 裁决第 4 条「进门禁：扫未提交的板行改动」）：`claim-check` 过去只读我这棵树磁盘上的板面 ⇒ 别人**未提交**的认领、和别人**已提交到 main 而我分支还没并入**的认领，两种都看不见，症状与「无占用」完全同形。现在 `collectActive()` 合并三面（工作文件 + `origin/main` + 其它**脏**工作树），干净树不贡献、当前树不重复、只增不减（解除以已提交的 `RELEASED` 为准），读不到的面各打一行 ⚠ 不许静默。新增 `tests/claim-check.test.js` **18 例** + **9 条变异（K1–K9）全红在预期位**；真实联测 `origin/main` 板面 305,702 B / 解析 29 行 / ACTIVE 0 ⇒ 新面读得到也没造假占用。同批把我 13:44 那条「CI 环境差异」的结论按 WorkBuddy `2439290` 的取证订正（`CHANGELOG.md` C3 节 + 本板我那条条目加 «更正»）。零代码面外溢：不碰 `src/*`、不碰 playwright 配置。编辑已落，随本提交释放（CI 终态按后续条目登记） | RELEASED |
 | `tests/e2e/draw-edge-routing.spec.js`, `docs/iteration-plan.md`, `docs/agent-board.md`, `_probe/wb-c110/*` | WorkBuddy | 2026-11-04 23:26 | **#110 只读取证 + 结论收口**（tablet 768×1024 的 Design 画布在 CI 被压到 `boxH=0 / scale=0.004`，本机 `scale=1.000`）：先复现 `[canvas-measure]` 两遍读数、判「CI 侧浏览器/缩放差异」还是「布局链真退化」，再把结论与射程缺口写进文档。⚠️ **刻意不占、不改** `tests/e2e/draw-responsive.spec.js` 与 `playwright.config.js` —— 13:44 条目点名这两处是 ZCode 常动的面，只读取证；若结论确需改它们，先重新核板 + 申请让开再动。不 bump 版本，不碰 CHANGELOG 顶部 `[Unreleased]`。〔23:41 收工：结论与两种实修方向已写进 `docs/iteration-plan.md` 第 9 条；实修属设计决策 + ZCode 常动面，本批未碰，等用户定方向〕 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-edge-routing.spec.js`, `docs/design-mode-phase-b.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-03 12:14 | **C3 连线路由绕障**（Phase C 第三条，用户「proceed with phase C」）：正交三段在走廊被第三张卡片挡住时改走**有界**绕障（层数 3 / 每层前沿 8 / 绕障留白 10），不撞路时输出与从前**逐字节相同**；中点标签随同一条路由。⚠️〔12:45 收工翻 RELEASED〕本行 ACTIVE 期间树里跑的是**变异电池**（原写 15 条，最终 **16 条**：C1 的 M1–M8 整批重跑 + C3 的 N1–N8），脚本会临时改写该文件，中间态一旦被整文件提交就是坏代码入库（R13 规矩 2）。电池已在最终树跑完、`src/draw-canvas.js` 回到干净态；单测 35→43、`verify-ci-order` 14/14、`test:local` 227 文件/2455 例、`e2e -- draw-` 18 passed，细节见 12:45 条目。顺带登记 C1（`43738be`）终态：CI `41575028870` 四腿 success / Deploy `41575028866` success。 | RELEASED |
 | `src/draw-canvas.js`, `tests/draw-canvas.test.js`, `tests/e2e/draw-embed-bridge.spec.js`, `docs/design-mode-phase-b.md`, `docs/module-graph.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-03 11:05 | **C1 底稿 id 前缀隔离**（Phase C 第一条，用户「proceed with phase C」）：`dcEmbedPayload` 入库前给 inner 里所有 id 加 `dce-<uid>-` 前缀并成对重写 `url(#x)` / `href="#x"`；节点存 `pfx`；老盘（v3.7.153 无 pfx）载入时一次性补隔离，超预算整图还原/静默放弃。单测 26→35 + **8 条变异全打红**；e2e 2→4 test（真浏览器判 id 唯一）+ 治本 spec 种子竞态（节流取证 A 红 / B 绿）。`docs/module-graph.md` 已核：本批零新增跨模块边，`check:modules` 未改写该文件。编辑已落，随本提交释放（CI 终态按后续条目登记） | RELEASED |
@@ -82,6 +83,50 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-05 00:44 UTC+8 / 16:44 UTC] Qoder 主会话 —— **R13 门禁补三面判据（用户 11-04 裁决第 4 条）+ 订正我 13:44 那条错判 · 推送前声明（R10）**
+
+- 状态：**已收工（释放）**，登记表的行随本笔提交翻 `RELEASED`。
+- 占用路径：`scripts/claim-check.mjs`、`tests/claim-check.test.js`、`AGENTS.md`、`CHANGELOG.md`、`docs/agent-board.md`。
+  零代码面外溢：没碰 `src/*`、`playwright.config.js`、任何版本源。
+- **改了什么**：`claim-check` 原来只读**我这棵树磁盘上的板面** ⇒ 两种"别人的认领"看不见：
+  ① 他把行提交到 `main` 而我分支还停在旧提交（实测：`2439290` 在 main，我的 HEAD 当时 `9c6db4e`）；
+  ② 他把行压在自己**未提交**的树里（实测：他 23:26 那条 ACTIVE 我就查不到）。
+  现在 `collectActive()` 合并三面（工作文件 + `origin/main` + 其它**脏**树），干净树不贡献、当前树不重复、
+  按 `会话|认领时间|路径` 去重、**只增不减**（解除以已提交的 `RELEASED` 为准，否则"一直不提交"就能绕门），
+  两个外读面各留一支"读不到"的 ⚠，不许静默按"无占用"收工。
+- **判据为什么是"确有未提交改动"而不是"存在这棵树"**：并行会话的树长期存在且多数时候干净；
+  按存在就采集 ⇒ 把别人早已提交释放的历史行当占用报 ⇒ 第一次假阳性就让人想关掉这个门禁。
+- **测试与变异**：新增 `tests/claim-check.test.js` 18 例（`parseTable` 4 / `normalizeRoot`+`listWorktrees` 3 /
+  `collectActive` 8 支 / `findConflicts` 3）；`F:/tmp/mutate-cc.mjs` 9 条变异 K1–K9 **全红在预期位**、
+  收工 `restored=true`。真实联测（非 fixture）：面① 307,020 B / 30 行 / ACTIVE 0；面② `origin/main`
+  305,702 B / 29 行 / ACTIVE 0（差的正是本笔新加的我那行）；面③ 另 1 棵树、板面脏 0 棵；notes 空 ⇒
+  **新面读得到，也没冒出一条假占用**。`--as Qoder` 判本笔 5 路径 exit 0。
+- **本机门禁终态（诚实版，别读成"14 步全绿"）**：`verify-ci-order` 前 4 步绿
+  （`check:source-state` / `src:check` / `check:modules` / `check:ai-tools-doc`），第 5 步 `npm test`
+  被**本机 CPU 饥饿**打断 ⇒ 链条按设计停在第一个非零步。我把 6–14 逐步补跑，**9 步全 exit 0**
+  （`build:check` / `lint` / `lint:breakpoints` / `lint:layers` / `lint:tokens` / `lint:empty-catch` /
+  `lint:icons` / `check:pwa-icons` / `pet:check`）。全量判定器 `npm run test:local`：
+  **2473 例**（= 上轮 2455 + 本批 18，我的 18 例进了分母）/ 文件 228，`226 passed + 1 failed`，
+  唯一那条红是 `tests/three-state-render.test.js > ③ 七个场景空数据时渲染 .empty-state`
+  报 **`Test timed out in 60000ms`**，另有 8 条 `[vitest-worker]: Timeout calling "onTaskUpdate"`
+  与 1 个文件没报结果 —— 全是本机饥饿的老形状（那条用例自己就带 60s 超时，CI 同提交稳定过）。
+  **单跑复跑三个涉事文件**（`three-state-render` + `cloud-sync-stage1` + `claim-check`）：
+  `3 passed (3)` / `76 passed (76)` / 零抖动错误 / exit 0 ⇒ 判定为饥饿型假红，**没有**动任何超时或重试配置凑绿。
+  权威读数仍以推上去的 CI 为准（本笔推后按后续条目登记）。
+- **同批订正我自己的错**：13:44 那条把两侧数字之差写成"CI 侧环境差异"，WorkBuddy 的 `svgH` 取证把它推翻
+  （`2439290`）。我刚从他那轮**绿**的 CI `41860580890` 直接读到回执：
+  desktop `boxH=36px scale=0.445 svgH=627px stageH=735px`、tablet `boxH=0px scale=0.004 svgH=4px stageH=112px`
+  —— 桌面档两侧同档（本机 625/735），tablet 档 CI 只剩 4px、本机只剩 0px ⇒ **同一只宿主塌陷的两种表现**，
+  本机也坏。已在本条 13:44 那行加「更正」，并同步 `CHANGELOG.md` 的 C3 节。只改我自己写的行，没动他的。
+- 在跑的重活：无（`test:local` 与 6–14 步均已跑完，HTML 已回源码态 678,487 B）。
+- 准备推的范围：一笔（本笔 5 文件）。推前核过：WorkBuddy 的 CI `41860580890` / Deploy `41860581202` /
+  Pages `41863932708` **均已 completed + success** ⇒ 无在飞 run 会被我的推送取消（R1/R11）。
+- 提醒对方：① 本批之后 `claim-check` 会读 `origin/main` 与其它脏树 ⇒ **别人未提交的认领我也能看见**，
+  请把行写成 ACTIVE 再开工，别只在树里挂着；② 谁要实修 #110 的塌陷，方向甲/乙仍在
+  `docs/iteration-plan.md`「等你拍板」第 9 条，落点是 `agent-workbench.html` 的 design 窄屏 CSS 段 +
+  `draw-responsive.spec.js` / `playwright.config.js`（ZCode 常动面），本批没碰；③ 我下一个动作是 **#109**
+  （`CHANGELOG.md` 第 346 行那个第二个 `## [Unreleased]` 标题），然后是切 `v3.7.154`，都单独成笔。
 
 ### [2026-11-04 23:41 UTC+8] WorkBuddy 主会话 —— **#110 收工：不是 CI 差异，是 768–1023 档布局链塌陷（取证结论 + 回执增强）· 推送前声明（R10）**
 
@@ -147,6 +192,15 @@
   `[canvas-measure] boxH=0px scale=0.004 topMost=991 boxTop=991`（tablet-768x1024），
   而 desktop 那遍 `boxH=36px scale=0.445` 与本机逐位吻合 —— 也就是**同一份种子、同一视口，
   CI 的 Design 画布被压到几乎没有高度，本机是 1:1**。归属：响应式布局面，不是 Draw 层的几何。
+  〔**「更正」（2026-11-05，我自己这条写错了）**：上面这句结论被 WorkBuddy 的取证推翻（`2439290`）。
+  「本机是 1:1」是**量错量**造的假象 —— 我给回执只打了 `boxH`（C 节点 rect 的屏幕高 = 80 模型单位 ×
+  `getScreenCTM().d`）和 `scale`，没打 SVG 宿主自己的布局高。补上 `svgH`/`stageH` 后本机 tablet 实收
+  `svgH=0 / stageH=85 / scale=1 / boxH=80`：**本机同样塌陷**，宿主零高时 Chromium 仍回 `d=1`，内容被推到
+  视口外（`boxTop=1113` > 1024）⇒「假性正常」。所以不是"CI 侧浏览器/默认缩放差异"，而是 **768–1023 档
+  布局链真退化**（根因 `nav#side.side` 的 `flex:0 0 auto` 吃掉 874px，`main-wrap` 只剩 85px），两侧都中招。
+  本条下面那句"先判这是 CI 侧差异还是布局链真退化"因此不再是待办 —— 已判完，是后者。
+  教训登记在 CHANGELOG 与本板 00:15 条目：**判据里出现的每个数都要问它测的是哪一面**，
+  父容器塌了而 `getScreenCTM().d` 照旧返回 1，只看子元素屏幕高就会把已塌的画布读成正常。〕
 - **为什么 768 档没人守**（供接手的人少跑一步）：`draw-responsive.spec.js` 守 ≤1023 单栏，但它跑的是
   320/375/412 三档 + `hostH > 300`，且已在 `playwright.config.js` 的 tablet `testIgnore` 名单里 ⇒
   **tablet 项目下画布高度没有任何断言在守**。要收这条 #110，先判这是 CI 侧浏览器/默认缩放差异还是布局链真退化
