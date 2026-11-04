@@ -422,7 +422,7 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
      "已有 toast 的失败"重复计成缺陷。
    - **建议路线**：先只在 data-links 的会话/插件两处**试点**（真实数据丢失面），确认判据抓得准再谈全仓门禁；
      不要一上来做门禁。
-9. **#110：tablet 768×1024 的 Design 画布宿主塌陷（2026-11-04 取证结论，实修等拍板）**
+9. **#110：tablet 768×1024 的 Design 画布宿主塌陷（2026-11-04 取证结论 → 2026-11-05 方案乙实修）**
    - **结论先行：不是「CI 侧浏览器/缩放差异」，是布局链真退化，本机同样复现。**
      Qoder 13:44 留的「本机 1:1、CI 约 1/10」是**量错了量**造成的假象：`boxH` 是 C 节点 rect 的屏幕高度
      （80 模型单位 × `getScreenCTM().d`），SVG 宿主高度塌到 0 时本机 Chromium 仍返回 `d=1` ⇒
@@ -450,3 +450,20 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
      `draw-responsive.spec.js` 补 768 档 `hostH` 断言（同样牵动 tablet `testIgnore`）。
      **本次认领刻意没碰这两处**：等用户定方向 + 由持有该面的会话认领，避免 R7 撞车。
    - 复现：`node scripts/with-injected.mjs node _probe/wb-c110/probe.cjs`（探针已 gitignore，全程只读）。
+   - ✅ **已拍板并实修（2026-11-05，用户「用类似于手机的显示效果 用方案乙」）** ——
+     上面「实修等拍板 / 本次认领刻意没碰这两处」是 11-04 取证批次的历史判断，至此结案。
+     选**乙**：768–1023 档 design 模式收起 `#side`、显示 `#mobBar` 底部导航，并把 v2.1.0
+     移动端导航 + 抽屉的外观样式在该档补一份（那些规则原本只在 ≤767 生效，光加 `display:flex`
+     会得到几个裸按钮、点了抽屉也不弹）。**不动 JS**（`renderMobBar()` / `setupMobNav()` 本就
+     无条件渲染与绑定）、**不动 `playwright.config.js`**（新 e2e 用例自带
+     `setViewportSize(768×1024)`，desktop project 就能覆盖，无需改 tablet `testIgnore`）、**不新增断点**
+     （新规则放进既有 `@media(max-width:1023px)` design 块，≤767 时值相同、重复声明无害）。
+     - **真 Chromium 三档实测**：desktop `svgH=625` **不变**；tablet 从
+       `sideH=874 / mobShown=false / hostH=2 / svgH=0 / boxTop=1113` →
+       `sideShown=false / mobH=57 / 4 个按钮 / hostH=794 / svgH=792 / boxTop=336`，
+       点底栏按钮抽屉 `display:flex, h=218, 3 行`；mobile `hostH=341 / svgH=339` 未回退。
+     - 守卫：`tests/e2e/draw-responsive.spec.js` 新增 ⑤（侧栏隐藏 / 底栏可见且有按钮 /
+       `hostH` 与 `svgH` > 300 / 零横向溢出 / 真点按钮弹出抽屉），本机 `1 passed`；
+       lint 全套 0 错。判据以 CI 为准。
+     - 留下的技术债（已写进 CSS 注释）：导航/抽屉外观在两处各有一份，改样式需同步；
+       后续可重构成共享样式块，本批不扩重构范围。

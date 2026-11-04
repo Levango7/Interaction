@@ -187,4 +187,39 @@ test.describe("Design 模式窄屏", () => {
     expect(m.dockBottom, `dock 必须完全落在视口内；实测 bottom=${m.dockBottom}/vh=${m.vh}`)
       .toBeLessThanOrEqual(m.vh);
   });
+
+  test("⑤ 768–1023 中间档 Design：侧栏收起、底栏顶上、画布真正铺开（2026-11-05 #110 方案乙）", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto(APP_URL);
+    await toDesign(page);
+    const m = await page.evaluate(() => {
+      const side = document.getElementById("side");
+      const mob = document.getElementById("mobBar");
+      const host = document.getElementById("drawCanvasHost");
+      const svg = document.getElementById("drawSvg");
+      const hr = host ? host.getBoundingClientRect() : null;
+      const sv = svg ? svg.getBoundingClientRect() : null;
+      return {
+        sideShown: side ? getComputedStyle(side).display !== "none" : true,
+        mobShown: mob ? getComputedStyle(mob).display !== "none" : false,
+        mobBtns: mob ? mob.querySelectorAll(".mob-bar-btn").length : 0,
+        hostH: hr ? Math.round(hr.height) : -1,
+        svgH: sv ? Math.round(sv.height) : -1,
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      };
+    });
+    /* 修前 768 档：#side 可见且 flex:0 0 auto 吃掉 874px，main-wrap 只剩 85px
+       ⇒ hostH≈2 / svgH=0、图被画到视口外。下面四条会同时红，是本用例的射程，
+       不是靠「元素存在」蒙绿。320/375/412 三档没有这条问题（侧栏本就走底栏隐藏）。 */
+    expect(m.sideShown, "中间档侧栏必须收起，否则它会吃掉几乎全部高度").toBe(false);
+    expect(m.mobShown, "侧栏收起后必须有底部导航顶替，不能让用户没地方切场景").toBe(true);
+    expect(m.mobBtns, "底栏必须真的有可点按钮").toBeGreaterThan(0);
+    expect(m.hostH, `画布宿主必须真正铺开；实测 ${m.hostH}`).toBeGreaterThan(300);
+    expect(m.svgH, `SVG 必须有真实高度；实测 ${m.svgH}`).toBeGreaterThan(300);
+    expect(m.scrollWidth, "768 档不得出现横向溢出").toBeLessThanOrEqual(m.clientWidth);
+    /* 反向对照：底栏不是摆设，真点一个按钮要能弹出抽屉（抽屉外观也在本档补齐了）。 */
+    await page.locator("#mobBar .mob-bar-btn").first().click();
+    await expect(page.locator("#sideSheet"), "点底栏按钮必须弹出场景抽屉").toBeVisible();
+  });
 });

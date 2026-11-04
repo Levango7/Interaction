@@ -1,5 +1,23 @@
 ## [Unreleased]
 
+### 2026-11-05 · **#110：768–1023 档 Design 画布塌陷修复（方案乙 · 类手机导航）**
+
+- **症状**：宽度落在 768–1023（≥1024 的 grid 三栏、≤767 的手机底栏都正常）时，Design 模式
+  `@media(max-width:1023px)` 把 `.body` 改成 flex 竖列却漏隐藏 `nav#side.side`，
+  它 `flex:0 0 auto` 吃掉 874px，`main-wrap` 只剩 85px ⇒ `#drawStage` 85px、`svgH=0`，
+  图形被画到视口外（CI 表现为 `scale=0.004 / boxH=0`；本机 Chromium 返回 `d=1` 造成
+  `boxH=80` 的假性正常）。320/375/412 三档与 tablet 的 `testIgnore` 都没守到这一档。
+- **修法（用户拍板「类似手机的显示效果 · 方案乙」）**：该档收起 `#side`、显示 `#mobBar`
+  底部导航，并补齐底栏按钮与 `#sideSheet` 抽屉在该档的外观样式；画布拿回 902px。
+  零 JS 改动（`renderMobBar` / `setupMobNav` 本就无条件渲染绑定）、零新断点、
+  不动 `playwright.config.js`。
+- **实测（真 Chromium）**：desktop `svgH=625` 不变；tablet `sideH 874→0`、
+  `mobShown false→true`（57px / 4 个按钮）、`hostH 2→794`、`svgH 0→792`、`boxTop 1113→336`，
+  点底栏按钮抽屉 `display:flex / h=218 / 3 行`；mobile `hostH=341` 未回退。
+- **守卫**：`tests/e2e/draw-responsive.spec.js` 新增 ⑤（含真点按钮开抽屉的反向对照），
+  本机 `1 passed`；`npm run lint` 0 错。取证与结论详见 `docs/iteration-plan.md` 第 9 条。
+  已知技术债：导航/抽屉外观两处各一份，改样式需同步（CSS 注释已标注）。
+
 ### 2026-11-05 · **#109：`CHANGELOG.md` 里第二个 `## [Unreleased]` 标题去重（改名，不搬家）**
 
 - **形状**：文件里曾有**两个** `## [Unreleased]` —— 顶部那节是真的，中段那个（夹在 `## [3.7.137]` 与
