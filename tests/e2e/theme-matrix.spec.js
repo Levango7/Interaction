@@ -77,7 +77,7 @@ test.describe("10 套主题渲染层不变量", () => {
     }
     /* 至少要有若干套主题的 --panel 互不相同 —— 全相同说明 data-theme 选择器没起效 */
     const uniq = new Set(Object.values(seen));
-    expect(uniq.size, "11 套主题只渲染出 " + uniq.size + " 种 --panel，主题选择器疑似失效").toBeGreaterThanOrEqual(5);
+    expect(uniq.size, THEMES.length + " 套主题只渲染出 " + uniq.size + " 种 --panel，主题选择器疑似失效").toBeGreaterThanOrEqual(5);
   });
 
   test("每套主题的关键配对对比度不低于实测基线", async ({ page }) => {
@@ -148,9 +148,10 @@ test.describe("10 套主题渲染层不变量", () => {
         const out = [];
         for (const s of SCENES) out.push({ name: "--sc-" + s, fg: g("--sc-" + s), bg: panel });
         for (const k of SEM) out.push({ name: "--" + k + "-text/panel", fg: g("--" + k + "-text"), bg: panel });
-        /* -text 的实际落点多半是各自的 -soft 浅底（徽章），一并钉住；
-           注意 --ok-soft 全仓未定义（ok 语义色没有浅底配对），故只查有配对的三组 */
-        for (const k of ["accent", "danger", "warn"]) out.push({ name: "--" + k + "-text/" + k + "-soft", fg: g("--" + k + "-text"), bg: g("--" + k + "-soft") });
+        /* -text 的实际落点多半是各自的 -soft 浅底（徽章），一并钉住。
+           四组统一走 SEM 同一份清单：此前 --ok-soft 全仓未定义，这里被写成只有三组的硬编码，
+           ok 语义色因此长期没有「浅底配对」的守护（--ok-soft 补齐后接上，漏配一处即红）。 */
+        for (const k of SEM) out.push({ name: "--" + k + "-text/" + k + "-soft", fg: g("--" + k + "-text"), bg: g("--" + k + "-soft") });
         return out.map((x) => Object.assign(x, { c: window.__vk.contrast(x.fg, x.bg) }));
       }, { SCENES, SEM });
       for (const r of rows) {

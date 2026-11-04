@@ -43,6 +43,9 @@ const PAIRS = [
   ['--accent', ['--on-accent', '--accent-soft']],
   ['--danger', ['--danger-soft', '--danger-border']],
   ['--warn', ['--warn-soft']],
+  /* ok 这组以前不在表里，因为 --ok-soft 全仓压根没定义（e2e theme-matrix 的浅底对比度也因此只查三组）。
+     令牌补齐后接上 ⇒ 任何主题覆盖了 --ok 却漏给浅底，静态这一层就红，不用等 e2e 渲染。 */
+  ['--ok', ['--ok-soft']],
   ['--panel', ['--line', '--text', '--muted']]
 ];
 
