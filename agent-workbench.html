@@ -85,7 +85,7 @@
      深琥珀字 on 浅琥珀底实测 3.26:1 < 4.5）。各主题都自带 --warn，这里只影响浅色；
      加深后同底色实测 4.95:1 ✓，警告横幅/图标同步受益（浅底上更深=更清楚）。
      ⚠️ lint-colors 只放行「--令牌: 值」定义行 —— 注释里不得写裸十六进制色值（已踩第 3 次）。 */
-  --ok:#188038; --accent-soft:#e8f2fe;
+  --ok:#188038; --ok-soft:#e9f5ec; --accent-soft:#e8f2fe;
   /* v3.7.47：--ok 加深（同上：成功 toast 白字 on 绿底实测 3.06:1 < 4.5，
      加深后白字 ≈ 5.0:1 ✓；浅底上的绿色成功文字也一并更清楚）。 */
   /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/联动图标引用） */
@@ -239,7 +239,7 @@
   --danger:#ef6b5e; --danger-soft:#3a1f1a; --danger-border:#5a3028;
   --danger-overdue-bg:#3a201a; --danger-overdue-border:#5a3028;
   --warn:#f0b048; --warn-soft:#3a2e14;
---ok:#50e080; --sc-office:#b6dcfb; --sc-design:#f3cce4; --sc-study:#fcd19f; --sc-data:#46efe0; --sc-code:#aae5ba; --sc-life:#d9d6de; --sc-health:#58f1be; --sc-finance:#ebd799; --accent-text:#8debac; --danger-text:#facdc9; --warn-text:#f7d398; --ok-text:#8debac;
+--ok:#50e080; --ok-soft:#1f3a26; --sc-office:#b6dcfb; --sc-design:#f3cce4; --sc-study:#fcd19f; --sc-data:#46efe0; --sc-code:#aae5ba; --sc-life:#d9d6de; --sc-health:#58f1be; --sc-finance:#ebd799; --accent-text:#8debac; --danger-text:#facdc9; --warn-text:#f7d398; --ok-text:#8debac;
   --scenario-default:#50e080;
   --banner-bg:#12301e; --banner-border:#3a6848; --banner-ink:#c0e8b0; --banner-border-2:#2c5038;
   --kbd-border:#2a5040; --snip-bg:#081a10; --snip-fg:#e0f0e5; --toast-bg:#e0f0e5;
@@ -276,7 +276,7 @@
   --danger:#f08a60; --danger-soft:#4a2820; --danger-border:#7a4a3a;
   --danger-overdue-bg:#4a2820; --danger-overdue-border:#7a4a3a;
   --warn:#ffc060; --warn-soft:#4a3a20;
---ok:#a8d870; --sc-office:#e7f3fd; --sc-design:#f9eef5; --sc-study:#fef0e0; --sc-data:#cffaf6; --sc-code:#e4f7e9; --sc-life:#f2f0f7; --sc-health:#cdfbec; --sc-finance:#f8f2dd; --accent-text:#fbf0d9; --danger-text:#faefea; --warn-text:#fff0da; --ok-text:#eaf6dc;
+--ok:#a8d870; --ok-soft:#2a3a20; --sc-office:#e7f3fd; --sc-design:#f9eef5; --sc-study:#fef0e0; --sc-data:#cffaf6; --sc-code:#e4f7e9; --sc-life:#f2f0f7; --sc-health:#cdfbec; --sc-finance:#f8f2dd; --accent-text:#fbf0d9; --danger-text:#faefea; --warn-text:#fff0da; --ok-text:#eaf6dc;
   --scenario-default:#f0c060;
   --banner-bg:#5a4a2a; --banner-border:#a8904a; --banner-ink:#ffe8a0; --banner-border-2:#8a7a3a;
   --kbd-border:#7a6a3a; --snip-bg:#2a2418; --snip-fg:#fef6d8; --toast-bg:#fef6d8;
@@ -336,7 +336,7 @@
   --danger:#c85a50; --danger-soft:#f8ebe9; --danger-border:#e0c4c0;
   --danger-overdue-bg:#faefec; --danger-overdue-border:#e0c4c0;
   --warn:#c08a3a; --warn-soft:#f8f0e0;
---ok:#2a8a6a; --sc-office:#0966b3; --sc-design:#b42f83; --sc-study:#985404; --sc-data:#0a736a; --sc-code:#327243; --sc-life:#7351bb; --sc-health:#0d7552; --sc-finance:#7c6418; --accent-text:#0a5263; --danger-text:#a1433a; --warn-text:#7d5c2c; --ok-text:#2e6c58;
+--ok:#2a8a6a; --ok-soft:#e6f4ef; --sc-office:#0966b3; --sc-design:#b42f83; --sc-study:#985404; --sc-data:#0a736a; --sc-code:#327243; --sc-life:#7351bb; --sc-health:#0d7552; --sc-finance:#7c6418; --accent-text:#0a5263; --danger-text:#a1433a; --warn-text:#7d5c2c; --ok-text:#2e6c58;
   --scenario-default:#0a5263;
   --banner-bg:#e4eff4; --banner-border:#aac6d2; --banner-ink:#2a4a56; --banner-border-2:#c0d8e2;
   --kbd-border:#aac6d2; --snip-bg:#123844; --snip-fg:#e4f0f6; --toast-bg:#22404a;
@@ -3124,7 +3124,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   --danger:#ff6b6b; --danger-soft:#3a2020; --danger-border:#5a3030;
   --danger-overdue-bg:#3a2020; --danger-overdue-border:#5a3030;
   --warn:#e0a83a; --warn-soft:#3a2e1a;
-  --ok:#4cd964; --accent-soft:#1e3a5f;
+  --ok:#4cd964; --ok-soft:#1e3a24; --accent-soft:#1e3a5f;
   --banner-bg:#3a2e1a; --banner-border:#5a4d29; --banner-ink:#d9c27a; --banner-border-2:#5a4d29;
   --kbd-border:#48484a; --snip-bg:#0e0e10; --snip-fg:#e4e4e8; --toast-bg:#eaeaec;
   --overlay:rgba(0,0,0,.55); --shadow-drawer:rgba(0,0,0,.4);
@@ -3895,7 +3895,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .api-btn.accent:hover{background:var(--accent-soft)}
 .api-status-badge{display:inline-flex;align-items:center;gap:var(--space-1);font-size:var(--fs-xs);padding:var(--space-1) var(--space-2);
   border-radius:var(--radius-full)}
-.api-status-badge.connected{background:var(--accent-soft);color:var(--ok-text,var(--ok))}
+.api-status-badge.connected{background:var(--ok-soft);color:var(--ok-text,var(--ok))}
 .api-status-badge.disconnected{background:var(--surface-muted);color:var(--muted)}
 .api-device-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);
   padding:var(--space-2) var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);margin-bottom:var(--space-2)}
@@ -4078,7 +4078,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --danger:#c0392b; --danger-soft:#f4e0d8; --danger-border:#d8a89a;
   --danger-overdue-bg:#f4e8e0; --danger-overdue-border:#d8a89a;
   --warn:#b8722c; --warn-soft:#f0e0c8;
-  --ok:#5c8a3e; --accent-soft:#f0e0c8;
+  --ok:#5c8a3e; --ok-soft:#e8eed8; --accent-soft:#f0e0c8;
   --sc-office:#0964ae; --sc-design:#b2267f; --sc-study:#945104; --sc-data:#0f6e66; --sc-code:#366e45; --sc-life:#704db9; --sc-health:#1d6f54; --sc-finance:#756020; --accent-text:#835b29; --danger-text:#b33528; --warn-text:#8b5621; --ok-text:#506a40;
   --scenario-default:#d49648;
   --banner-bg:#ede0c8; --banner-border:#c8b890; --banner-ink:#5b4636; --banner-border-2:#d4c4a8;
@@ -4114,7 +4114,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --danger:#c0605a; --danger-soft:#f5eceb; --danger-border:#e0c4c0;
   --danger-overdue-bg:#f8eceb; --danger-overdue-border:#e0c4c0;
   --warn:#c89040; --warn-soft:#f5efe5;
-  --ok:#4a9662; --accent-soft:#d8ece6;
+  --ok:#4a9662; --ok-soft:#eaf3ee; --accent-soft:#d8ece6;
   --sc-office:#0a6cbd; --sc-design:#b83588; --sc-study:#9e5908; --sc-data:#11776e; --sc-code:#377748; --sc-life:#7757ba; --sc-health:#23785c; --sc-finance:#7f681f; --accent-text:#486e67; --danger-text:#a64c47; --warn-text:#8a6128; --ok-text:#447353;
   --scenario-default:#4a8a7e;
   --banner-bg:#e9f3ec; --banner-border:#bcd4c2; --banner-ink:#38443c; --banner-border-2:#ccded2;
@@ -4147,7 +4147,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --danger:#ef4444; --danger-soft:#2a1010; --danger-border:#4a2020;
   --danger-overdue-bg:#2a1010; --danger-overdue-border:#4a2020;
   --warn:#f59e0b; --warn-soft:#2a2000;
-  --ok:#4ade80; --accent-soft:#0a1a0a;
+  --ok:#4ade80; --ok-soft:#0f2a14; --accent-soft:#0a1a0a;
   --sc-office:#1d8ce7; --sc-design:#db59ac; --sc-study:#d97706; --sc-data:#119a8e; --sc-code:#34a853; --sc-life:#927fbb; --sc-health:#14b07c; --sc-finance:#b9972d; --accent-text:#4ade80; --danger-text:#f05252; --warn-text:#f59e0b; --ok-text:#4ade80;
   --scenario-default:#4ade80;
   --banner-bg:#0a1a0a; --banner-border:#2a5a2a; --banner-ink:#4ade80; --banner-border-2:#1a4a1a;
@@ -4190,7 +4190,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --danger:#e0645a; --danger-soft:#2a1412; --danger-border:#4a2420;
   --danger-overdue-bg:#2a1412; --danger-overdue-border:#4a2420;
   --warn:#e0a83a; --warn-soft:#2a2110;
-  --ok:#6fae86;
+  --ok:#6fae86; --ok-soft:#14261c;
   --sc-office:#2386d7; --sc-design:#d94da5; --sc-study:#d97706; --sc-data:#0d9488; --sc-code:#34a853; --sc-life:#8d75c0; --sc-health:#13ac79; --sc-finance:#b89424; --accent-text:#d4af37; --danger-text:#e0645a; --warn-text:#e0a83a; --ok-text:#6fae86;
   --scenario-default:#d4af37;
   --banner-bg:#241d0c; --banner-border:#5a4a1a; --banner-ink:#e8c766; --banner-border-2:#3a3010;
@@ -4898,7 +4898,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   font-weight:600;flex-shrink:0}
 .type-badge-task{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
 .type-badge-record{background:var(--warn-soft);color:var(--warn-text,var(--warn))}
-.type-badge-note{background:var(--surface-muted);color:var(--ok-text,var(--ok))}
+.type-badge-note{background:var(--ok-soft);color:var(--ok-text,var(--ok))}
 .search-highlight{background:var(--warn-soft);color:var(--warn-text,var(--warn));padding:0 2px;border-radius:2px;font-weight:600}
 
 /* 空状态提示（兼容别名，与 .empty-state 视觉对齐：居中、虚线边框、统一表面色） */
