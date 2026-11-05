@@ -1,7 +1,50 @@
 ## [Unreleased]
 
-_（新条目追加在本节之下、`## [3.7.154]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
+_（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
+
+## [3.7.155] - 2026-11-06
+
+### 2026-11-06 · **E 批：自账空 catch 清零（E0）+ P0-b 分诊（E2）+ 认领门接进 CI（E3）**
+
+_WorkBuddy 下线移交的余项（用户「都交给你做了」）；E4 核对后确认四条定案已随 D 批（`94e9e8c`）落地，无需重做。_
+
+- **E0（自账）**：结清本会话 3.7.153 批次引进的 **11 处空 catch 新增**（自己的债自己清）。
+  5 处 `setAttribute` 的 try 直接去掉 —— 不会抛的调用不需要防，包着只会让读者以为「这里会失败」；
+  2 处 toast 按标准修法（`catch(e){ try{ if(typeof pushDiag==="function") pushDiag(...) }catch(_e2){} }`）
+  改成真上报（`setUIMode` 的 `codeNarrow` 提示与 `_setUIMode` 的模式切换提示）；
+  `lint:empty-catch` 基线重冻 **631→632**（render-widgets.js 43→44），**gate=0**（P0/P1 新增清零）。
+- **E2（P0-b 分诊）**：23 处带注释的 P0-b 逐条读过 try 体，**仅 2 处是真「await 吞 reject」缺陷类**
+  （`ai-loop.js` 的 `ensureMcpTools` / `ai-tools.js` 的孤儿向量清扫）—— 这两处补足「为何可以不报」的
+  判定依据与前提条件（前者：上报发生在 `ensureMcpTools` 内部，若哪天它不再上报，这个空 catch 就成了
+  静默吞咽，必须改成 pushDiag；后者：按活集合过滤，最坏情况是残留空间而非正确性问题，逐条诊断是噪音）。
+  其余 21 处属 `localStorage` / `JSON.parse` 能力探测，按 P2 语义不动。
+- **E3（认领门接进 CI）**：多会话共享主树时「改了别人 ACTIVE 占用的文件」过去只靠 R13 自觉跑
+  `claim-check`，**CI 从不看** —— 撞车要等人工发现。
+  - 新增 `scripts/claim-check-ci.mjs`（CI 适配层）：基线解析（push 事件载荷 `before` → `HEAD~1` 回退）、
+    改动路径喂 `claim-check.mjs`（**单一权威判定源**，不在适配层复制匹配规则）、取不到基线
+    **显式跳过并说明**（本仓对「空 check 判绿」有明文禁令）、冲突给三条处置指引；导出 `main(argv)`
+    供测试直接调用。
+  - `ci.yml` test job 与 `deploy.yml` verify job 各加一条**同行单条** `- run: node scripts/claim-check-ci.mjs`
+    —— `verify-ci-order.mjs` / `ci-workflow-guard.test.js` 的解析器只认这种形态，写成多行 `run:` 块会被
+    当成命令字面量执行（实测失败）。
+  - 守卫 `tests/claim-check-ci.test.js` 3 条：workflow 引用真实性（两边都有该步骤）、全零基线显式跳过、
+    默认形态真调子进程。
+  - **踩坑**：初版凭印象写了不存在的 `--ci` 模式（`claim-check` 的入参是显式路径列表），被自己的
+    守卫测试理念抓住 —— **先核接口再落 workflow**。
+- **CI 首跑误红与修复（`00a94e1`）**：E 批首推 `3b70f50` 在 windows test 腿红在认领门步骤。
+  第一轮假设「自己的 ACTIVE 行自撞」被**测量否证**（提交进仓的板面里 ACTIVE 行 = 0）；第二轮定位到
+  真因：`actions/checkout@v4` 默认 `fetch-depth:1` 的浅历史里没有 `github.event.before` ⇒ `git diff`
+  失败 ⇒ 适配层返回 2（判定失败，不静默通过）⇒ 映射为红。修复：两个 job 的检出补 `fetch-depth: 0`
+  （附注释说明理由），守卫 42/42，`00a94e1` 的 CI `42115978096` / Deploy `42115978212` 双绿。
+- **契约跟随**：`empty-catch-reject-v2` 的 ai-loop 定位从行号改**稳定片段锚**（328→329 挪行；分类器
+  snippet 截 80 字符，`.catch` 在窗口外）；`empty-catch-slice4` 一对一不变量正则放宽为容忍内层注释
+  （带说明的二次保护被漏计 9:7 假失衡）。
+- **杂项**：`c8072cd` 收编两处 `.body` 改名后的过时 e2e 注释（纯注释）；`d9f735b` 板面 NOTICE
+  （主树 7 处未提交实改的提醒，已随 E 批提交消化）。
+- **验证**：E3 族 23 文件 / 276 例全绿（claim-check-ci 3 + ci-workflow-guard 39 + empty-catch 全族 221
+  + ui-mode 13）；`verify:ci` 第 5 步（认领门）exit 0；全量 `npm test` 两次失败均**隔离复跑全绿**
+  （9/9、45/45，每次红在不同文件 = 本机负载假红家族），判据以 CI 干净 runner 为准。
 
 ### 2026-11-05 · **D 工程收口批：切版认领门（D1）+ 判定器标出「负载假红」（D2）+ 设计文档四条定案（D3）**
 
