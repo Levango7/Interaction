@@ -118,9 +118,10 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     await page.click('#uiModeMenu .ui-mode-item[data-mode="code"]');
     await expect(menu, "选中后菜单应收起").toBeHidden();
     await expect(page.locator("#btnUIMode"), "菜单收起后触发按钮应回到 aria-expanded=false").toHaveAttribute("aria-expanded", "false");
-    /* 注意选择器：页面里有两个 .body（布局壳 + 卡片模板里的同名类），locator 必须钉住
-       布局壳这一个，否则 Playwright 严格模式会因歧义直接红（page.evaluate 的
-       querySelector 取第一个恰好是布局壳，所以同页探针不受影响）。 */
+    /* 注意选择器：布局壳钉住 `.app > .body`。历史上正文列表项曾复用同名 `.body`，
+       Playwright 严格模式会因歧义直接红（evaluate 的 querySelector 取第一个恰好是
+       布局壳，所以同页探针不受影响）；2026-11-03 那批列表项已改名 `.body-row`
+       （496607f），`.body` 重新唯一，但钉壳选择器留作保险，防将来再有复用。 */
     await expect(page.locator(".app > .body"), "点击「代码」应真的进入 code 模式").toHaveClass(/code-mode/);
 
     /* 再开一次：勾选应跟到 code 上（证明菜单是按当前态重渲染的，不是死标记） */
