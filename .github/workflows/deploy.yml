@@ -99,7 +99,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+      # 与 ci.yml test job 同步：认领门需要基线提交参与 git diff，浅历史会误红（首跑实测）。
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
