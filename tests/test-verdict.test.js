@@ -9,7 +9,12 @@
  * 未知的未处理错误绝不能被放过。
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { verdictOf, formatVerdict } from "../scripts/test-verdict.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /* ---------- 夹具：与真实日志同形 ---------- */
 
@@ -262,5 +267,140 @@ describe("test-verdict：判定器", () => {
     expect(s).toContain("未处理错误");
     expect(s).toContain("结论");
     expect(s).toContain("依据");
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   D2（用户 2026-11-05 拍板形态甲）：把「负载假红」单独标出来，但**只打印**。
+   钉的不是"它能打印一条建议"，而是三条边界：
+     · 只有「无断言失败 + 有文件没报结果 + worker RPC 超时」三者同时成立才标；
+     · 结论与退出码一个字都不改（自动改判＝让判定器自己说服自己绿）；
+     · 建议命令必须是**真能跑**的那条（成对给 minWorkers/maxWorkers）。
+   另一类已知抖动（临时目录写入被拒）刻意**不**触发建议 —— 那不是负载问题，
+   降并发只会白跑一遍，把人的注意力引到错的方向上。 */
+describe("负载假红：标出来但不改判（D2 形态甲）", () => {
+  /* 只有 EPERM 那条抖动、没有 worker 超时 ⇒ 不该建议降并发 */
+  const MISSING_NO_LOAD = `
+ RUN  v2.1.9
+
+\u2500\u2500\u2500\u2500 Unhandled Error \u2500\u2500\u2500\u2500
+Error: EPERM: operation not permitted, open 'C:\\Users\\me\\AppData\\Local\\Temp\\vitest'
+
+ Test Files  163 passed (166)
+      Tests  1839 passed (1859)
+     Errors  1 error
+`;
+  /* 有真断言失败 ⇒ 即使同时有 worker 超时，也不是"负载假红" */
+  const MISSING_WITH_REAL_FAILURE = `
+ RUN  v2.1.9
+
+\u2500\u2500\u2500\u2500 Unhandled Error \u2500\u2500\u2500\u2500
+Error: [vitest-worker]: Timeout calling "onTaskUpdate"
+
+ Test Files  2 failed | 163 passed (166)
+      Tests  1 failed | 1839 passed (1859)
+     Errors  1 error
+`;
+  /* 两条 worker 超时 + 一条 EPERM：两类已知抖动必须分开数 */
+  const MIXED_BENIGN = `
+ RUN  v2.1.9
+
+\u2500\u2500\u2500\u2500 Unhandled Error \u2500\u2500\u2500\u2500
+Error: [vitest-worker]: Timeout calling "onTaskUpdate"
+
+\u2500\u2500\u2500\u2500 Unhandled Rejection \u2500\u2500\u2500\u2500
+Error: [vitest-worker]: Timeout calling "onTaskUpdate"
+
+\u2500\u2500\u2500\u2500 Unhandled Error \u2500\u2500\u2500\u2500
+Error: EPERM: operation not permitted, open 'C:\\Users\\me\\AppData\\Local\\Temp\\vitest'
+
+ Test Files  163 passed (166)
+      Tests  1839 passed (1859)
+     Errors  3 error
+`;
+
+  it("三条同时成立 ⇒ loadSuspected=true，且 reason 点名「负载假红（未判定）」", () => {
+    const v = verdictOf(FILES_MISSING);
+    expect(v.assertionFailed).toBe(0);
+    expect(v.testFilesMissing).toBe(3);
+    expect(v.unhandledBenignLoad, "worker 超时那条要被单独数出来").toBe(1);
+    expect(v.loadSuspected).toBe(true);
+    expect(v.reason).toContain("负载假红（未判定）");
+    expect(v.reason, "既有的「没报结果」措辞不能丢（另一条用例钉着它）").toContain("没报结果");
+  });
+
+  it("结论仍是失败（标出负载假红 ≠ 放行）", () => {
+    expect(verdictOf(FILES_MISSING).verdict, "形态甲的底线：不改判").toBe("fail");
+  });
+
+  it("只有 EPERM、没有 worker 超时 ⇒ 不标（那不是负载问题，降并发只会白跑）", () => {
+    const v = verdictOf(MISSING_NO_LOAD);
+    expect(v.testFilesMissing, "夹具确实是文件数对不上的形状").toBe(3);
+    expect(v.unhandledBenign).toBe(1);
+    expect(v.unhandledBenignLoad).toBe(0);
+    expect(v.loadSuspected).toBe(false);
+    expect(v.verdict).toBe("fail");
+  });
+
+  it("有真断言失败 ⇒ 不标（真红不能被「负载假红」这句话盖过去）", () => {
+    const v = verdictOf(MISSING_WITH_REAL_FAILURE);
+    expect(v.assertionFailed).toBe(1);
+    expect(v.unhandledBenignLoad).toBe(1);
+    expect(v.loadSuspected, "断言失败优先：这不是未判定，这是确定的失败").toBe(false);
+    expect(v.reason).toContain("断言失败");
+  });
+
+  it("文件数自洽时即使有 worker 超时也不标（JITTER_ONLY 是既有夹具）", () => {
+    const v = verdictOf(JITTER_ONLY);
+    expect(v.testFilesMissing).toBe(0);
+    expect(v.loadSuspected).toBe(false);
+    expect(v.verdict, "既有结论不得被本次改动带偏").toBe("pass");
+  });
+
+  it("两类已知抖动分开计数：3 条 benign 里 2 条是 worker 超时", () => {
+    const v = verdictOf(MIXED_BENIGN);
+    expect(v.unhandledBenign).toBe(3);
+    expect(v.unhandledBenignLoad).toBe(2);
+    expect(v.unhandledUnknown).toBe(0);
+    expect(v.loadSuspected).toBe(true);
+  });
+
+  it("打印面：给出**成对**的降并发命令，且结论行仍是 ❌ 失败", () => {
+    const s = formatVerdict(verdictOf(FILES_MISSING));
+    expect(s).toContain("npm run test:local -- --minWorkers=1 --maxWorkers=2");
+    expect(s).toContain("负载假红");
+    expect(s).toContain("❌ 失败");
+    expect(s, "命令必须成对：只给 --maxWorkers 时 vitest 仍按核数起 worker，等于没降")
+      .toContain("--minWorkers=1");
+  });
+
+  it("打印面反向对照：不该标的时候一个 minWorkers 都不出现（否则建议会变成噪声被忽略）", () => {
+    for (const raw of [MISSING_NO_LOAD, MISSING_WITH_REAL_FAILURE, JITTER_ONLY, CLEAN]) {
+      expect(formatVerdict(verdictOf(raw))).not.toContain("--minWorkers");
+    }
+  });
+});
+
+/* 形态甲的另一半是「不自动重跑、退出码照旧」—— 这两条住在 run-tests.mjs 里，
+   纯函数测不到，所以直接钉源码：判据正确 ≠ 判据被照着执行。 */
+describe("run-tests.mjs：不自动重跑、失败仍非零退出", () => {
+  const src = readFileSync(join(root, "scripts/run-tests.mjs"), "utf8");
+  const code = src.split("\n").map((l) => l.replace(/\r$/, ""))
+    .filter((l) => !/^\s*(\*|\/\*|\/\/)/.test(l));
+
+  it("整个脚本只 spawn 一次 vitest（自动重跑会在这里露出第二个 spawn）", () => {
+    expect(code.filter((l) => /\bspawn(Sync)?\(/.test(l)).length).toBe(1);
+  });
+
+  it("verdict=fail ⇒ 退出码非零（不许因为「疑似负载」就返回 0）", () => {
+    expect(code.some((l) => /if \(v\.verdict === "fail"\) process\.exit\(code && code !== 0 \? code : 1\);/.test(l))).toBe(true);
+  });
+
+  it("判定块真的被打印（formatVerdict 不是死码）", () => {
+    expect(code.some((l) => /console\.log\(formatVerdict\(v\)\)/.test(l))).toBe(true);
+  });
+
+  it("通过路径只在「vitest 非零但判定为通过」时返回 0，且如实说明差异来自已知抖动", () => {
+    expect(code.some((l) => /差异来自已知环境抖动/.test(l))).toBe(true);
   });
 });

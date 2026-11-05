@@ -16,6 +16,10 @@
  *   · **文件数对不上**（`Test Files X passed (T)` 且 X 加 failed 小于 T）→ **真失败**：
  *     worker 掉线时文件既不计 passed 也不计 failed，那些文件里的用例**一条都没跑过**，
  *     "没报结果"绝不等于"通过"（2026-10-21 本机全量就是这么被旧版判成通过的）
+ *   · 上面那条**同时**满足「无断言失败 + 未处理错误里有 worker RPC 超时」时，额外标 `loadSuspected`
+ *     并打印「负载假红（未判定）」+ 现成的降并发复跑命令（用户 2026-11-05 拍板的形态甲）：
+ *     **只打印，不改结论、不动退出码、不自动重跑** —— 自动改判等于让判定器自己说服自己绿。
+ *     两条已知抖动必须分开数：临时目录写入被拒不是负载问题，降并发只会白跑一遍。
  *   · 未处理错误若**全部**匹配已知抖动特征（vitest worker 的 RPC 超时、
  *     沙箱/系统临时目录写入被拒）→ 视为抖动，**不改变结论**，但如实打印条数；
  *     Error 块与 Rejection 块**都要抽**（同一签名两种形状，漏一种会把抖动算成未知）
@@ -25,9 +29,14 @@
  * 本模块是**纯函数**，不依赖子进程，因此可直接单测（见 tests/test-verdict.test.js）。
  */
 
+/** 「负载假红」的特征签名：worker ↔ main 的 RPC 超时（并行压力）。
+ *  **只有这一类**能被"降并发复跑"证伪 —— 下面那条临时目录写入被拒不是负载问题，
+ *  降并发只会白跑一遍。所以两条已知抖动必须分开数，不能合成一个 `benign` 就完事。 */
+const LOAD_SIGNATURE = /\[vitest-worker\]:\s*Timeout calling/i;
+
 /** 已知的环境抖动特征（命中即视为噪声） */
 const BENIGN_PATTERNS = [
-  /\[vitest-worker\]:\s*Timeout calling/i,                 // worker ↔ main IPC 超时（并行压力）
+  LOAD_SIGNATURE,
   /EPERM: operation not permitted, open .*[\\/]Temp[\\/]/i, // 临时目录写入被拒（沙箱/权限）
 ];
 
@@ -35,8 +44,8 @@ const BENIGN_PATTERNS = [
  * 解析 vitest 输出，给出判定。
  * @param {string} raw vitest 的完整 stdout+stderr
  * @returns {{assertionFailed:number, testFilesFailed:number, testFilesMissing:number,
- *            unhandledTotal:number,
- *            unhandledBenign:number, unhandledUnknown:number, verdict:"pass"|"fail",
+ *            unhandledTotal:number, unhandledBenign:number, unhandledBenignLoad:number,
+ *            unhandledUnknown:number, loadSuspected:boolean, verdict:"pass"|"fail",
  *            reason:string, benignSamples:string[]}}
  */
 export function verdictOf(raw) {
@@ -102,12 +111,15 @@ export function verdictOf(raw) {
   const blocks = [...out.matchAll(/Unhandled (?:Error|Rejection)(?!s)[^\n]*\n([\s\S]{0,400}?)(?=\n\s*\n|$)/g)]
     .map((m) => m[1].trim());
 
-  let benign = 0, unknown = 0;
+  let benign = 0, unknown = 0, benignLoad = 0;
   const benignSamples = [];
   for (const b of blocks) {
     const hit = BENIGN_PATTERNS.find((re) => re.test(b));
-    if (hit) { benign++; if (benignSamples.length < 3) benignSamples.push(b.split("\n")[0].slice(0, 120)); }
-    else unknown++;
+    if (hit) {
+      benign++;
+      if (LOAD_SIGNATURE.test(b)) benignLoad++;
+      if (benignSamples.length < 3) benignSamples.push(b.split("\n")[0].slice(0, 120));
+    } else unknown++;
   }
   // 汇总计数存在但抽取不到块（格式变动）时，按「未知」计，避免静默放过
   const declared = errCount ? Number(errCount[1]) : 0;
@@ -115,6 +127,12 @@ export function verdictOf(raw) {
   const unhandledTotal = Math.max(declared, blocks.length);
 
   let verdict = "pass", reason = "";
+  /* 「负载假红」= 三条同时成立：无断言失败 + 有文件没报结果 + 未处理错误里有 worker RPC 超时。
+     2026-11-05 本机又撞一回（32 核起 ~31 个 JSDOM worker，文件既不计 passed 也不计 failed）。
+     形态由用户 2026-11-05 拍板为**只打印判据 + 建议命令**：结论仍是失败、退出码仍非零、
+     既不自动重跑也不自动改判 —— 自动改判等于给判定器开一个"自己说服自己绿"的口子，
+     那比没有判定器更糟（本仓已有先例：CHANGELOG 三次写「退出码以 CI 为准」，结果训练所有人忽略本机退出码）。 */
+  const loadSuspected = assertionFailed === 0 && testFilesMissing > 0 && benignLoad > 0;
   if (assertionFailed > 0) {
     verdict = "fail";
     reason = `断言失败 ${assertionFailed} 条（${testFilesFailed} 个文件）—— 这是真失败，需修。`;
@@ -131,7 +149,10 @@ export function verdictOf(raw) {
   } else if (testFilesMissing > 0) {
     verdict = "fail";
     reason = `无断言失败，但有 ${testFilesMissing} 个测试文件**没报结果**（worker 掉线/被中断）—— `
-      + "这些文件里的用例一条都没跑过，不能算通过；要定性请单独复跑那几个文件。";
+      + (loadSuspected
+        ? `同时有 ${benignLoad} 条 vitest worker RPC 超时，形状与本机 CPU 饥饿一致 ⇒ **负载假红（未判定）**。`
+          + "结论不改、退出码仍非零、不自动重跑；要定性请降并发复跑同一条命令（见下）。"
+        : "这些文件里的用例一条都没跑过，不能算通过；要定性请单独复跑那几个文件。");
   } else if (unknown > 0) {
     verdict = "fail";
     reason = `无断言失败，但有 ${unknown} 条**未知**未处理错误 —— 不放过未识别的错误，按失败处理。`;
@@ -144,7 +165,8 @@ export function verdictOf(raw) {
   }
 
   return { assertionFailed, testFilesFailed, testFilesMissing, noTests, noSummary, unhandledTotal,
-           unhandledBenign: benign, unhandledUnknown: unknown, verdict, reason, benignSamples };
+           unhandledBenign: benign, unhandledBenignLoad: benignLoad, unhandledUnknown: unknown,
+           loadSuspected, verdict, reason, benignSamples };
 }
 
 /** 供 CLI 打印的判定块 */
@@ -156,9 +178,18 @@ export function formatVerdict(v) {
     + (v.testFilesMissing ? `；另有 ${v.testFilesMissing} 个文件没报结果` : "")
     + (v.noTests ? "；Tests no tests（用例一条都没收集到）" : "")
     + (v.noSummary ? "；无 Test Files 汇总行" : ""));
-  lines.push(`  未处理错误   ${v.unhandledTotal} 条（已知抖动 ${v.unhandledBenign} · 未知 ${v.unhandledUnknown}）`);
+  lines.push(`  未处理错误   ${v.unhandledTotal} 条（已知抖动 ${v.unhandledBenign}`
+    + (v.unhandledBenignLoad ? `，其中 worker RPC 超时 ${v.unhandledBenignLoad}` : "")
+    + ` · 未知 ${v.unhandledUnknown}）`);
   lines.push(`  结论         ${v.verdict === "pass" ? "✅ 通过" : "❌ 失败"}`);
   lines.push(`  依据         ${v.reason}`);
+  if (v.loadSuspected) {
+    lines.push("  ⚠️ 疑似负载假红（未判定）：判据到此为止 —— 结论不改、退出码仍非零、不自动重跑。");
+    lines.push("     要定性请降并发复跑同一条命令：");
+    lines.push("       npm run test:local -- --minWorkers=1 --maxWorkers=2");
+    lines.push("     （两个参数必须成对：只给 --maxWorkers 时 vitest 仍按核数起 worker，等于没降）");
+    lines.push("     降并发后仍红 ⇒ 不是负载问题，按真失败查那几个没报结果的文件。");
+  }
   if (v.benignSamples.length) {
     lines.push("  抖动的具体内容（供核对）：");
     v.benignSamples.forEach((s) => lines.push(`    · ${s}`));

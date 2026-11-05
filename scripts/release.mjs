@@ -4,10 +4,13 @@
  * --------------------------------------------------
  * 一次性统一 bump 全部版本源，终结"手改版本号导致多源漂移、build:check 必红"。
  *
- * 用法：node scripts/release.mjs <版本号> [--tag 20260816a]
- *   npm run release 1.11.2
+ * 用法：node scripts/release.mjs <版本号> --as <会话名> [--tag 20260816a]
+ *   npm run release 1.11.2 -- --as Qoder
+ *   `--as` 必填（也可用环境变量 WB_SESSION）：v3.7.155 起切版要先过板面认领门，身份靠猜会把
+ *   认领登记到别人名下，所以不给默认值。
  *
  * bump 目标（与 build.mjs --check 的五源门禁一致 + lockfile 同步）：
+ *   0. 前置：板面认领门（他人占用即失败；无冲突则自动登记一行 ACTIVE，见下面第 0 步）
  *   1. package.json / electron/package.json / manifest.json 的 version
  *   2. agent-workbench.html 的 VERSION + BUILD_TAG（未指定 --tag 时按当日日期+序号字母自动生成）
  *   3. service-worker.js 的 CACHE_VERSION = v{版本}-{tag}（保证 SW activate 清旧缓存）
@@ -21,6 +24,8 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { BOARD } from './claim-check.mjs';
+import { RELEASE_PATHS, resolveIdentity, claimBoardForRelease, undeclaredWrites } from './lib/release-claim.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -36,7 +41,47 @@ if (!newVer || !/^\d+\.\d+\.\d+$/.test(newVer)) {
 
 function fail(msg){ console.error('[release] ' + msg); process.exit(1); }
 function read(p){ return readFileSync(join(root, p), 'utf8'); }
-function write(p, s){ writeFileSync(join(root, p), s); }
+/* 记下真实写过的路径，供 4b 的反漂移判据核对（"登记范围 < 改动范围"就是假声明）。
+   ⚠️ 板面自身那次写入**不进**这个集合：它是登记机制本身，不是发版产物。 */
+const written = new Set();
+function write(p, s){ writeFileSync(join(root, p), s); written.add(p); }
+
+/* 0) 板面认领门（铁律第 5 条的机械化 · 2026-11-05 起）
+   切版是全仓共写面最大的一次改动（写 8 个版本源，再按惯例一起提交 CHANGELOG），而铁律第 5 条
+   恰好把这组文件列为「动之前必须先在这里声明一行」。此前只靠记性 ⇒ 实测漏过一次：
+   `0e6b760`（切 v3.7.154）写了 9 个文件、其中 6 个在清单里，板上零声明（对照 ZCode 切 v3.7.153 是有行的）。
+   现在：他人占用即失败；无冲突则由本脚本自己登记一行 ACTIVE，切完随收工提交翻 RELEASED。
+   ⚠️ 判定**复用** scripts/claim-check.mjs（三面：我的工作文件 / origin/main / 其它脏工作树），不另造一套 ——
+   两套判据迟早给出不同答案，那时"门过了"就不再有含义。
+   ⚠️ `docs/agent-board.md` 刻意**不在** RELEASE_PATHS 里：它是追加式共享账本，认领它不等于排他
+   （R13 的口径是"要躲的是同一节的同一插入点"）。若把它算进去，任何会话只要挂一行板面认领就能拦死别人的切版。 */
+const me = resolveIdentity(process.argv.slice(2), process.env);
+if (!me) {
+  fail('缺少会话身份，切版中止。请加 --as <会话名>（或设环境变量 WB_SESSION）：\n'
+     + '         node scripts/release.mjs ' + newVer + ' --as <会话名>\n'
+     + '         npm run release ' + newVer + ' -- --as <会话名>\n'
+     + '       身份靠猜会把认领登记到别人名下 —— 那比不登记更糟（对方以为自己占着，真正的占用者查不到）。');
+}
+const cc = spawnSync(process.execPath, [join(__dirname, 'claim-check.mjs'), '--as', me].concat(RELEASE_PATHS),
+  { stdio: 'inherit' });
+if (cc.status !== 0) {
+  fail('板面认领门未通过（或压根没跑起来，见上方输出）—— 被他人占着就按 R13 沟通/等释放，别硬切。');
+}
+const boardP = join(root, BOARD);
+if (!existsSync(boardP)) fail('找不到 ' + BOARD + ' —— 无法登记，切版中止');
+let claim;
+try {
+  claim = claimBoardForRelease({ md: readFileSync(boardP, 'utf8'), me: me, ver: newVer, now: new Date() });
+} catch (e) {
+  fail('板面登记失败：' + (e && e.message));
+}
+if (claim.appended) {
+  writeFileSync(boardP, claim.md, 'utf8');
+  console.log('[release] 板面已自动登记 ACTIVE 行（会话 ' + me + '，覆盖 ' + RELEASE_PATHS.length + ' 条发版路径）');
+  console.log('[release] ⚠️ 收工提交时请把该行翻成 RELEASED（铁律第 3 条）；本次切版若中途失败也要翻，别留假占用。');
+} else {
+  console.log('[release] 板面已有本会话覆盖发版路径的 ACTIVE 行 ⇒ 跳过登记（幂等，重跑不会追加重复行）');
+}
 
 // build tag 自动生成：当日日期（UTC）+ 序号字母；同日多次发版时在当前字母上递增
 function autoBuildTag(currentTag){
@@ -98,6 +143,17 @@ for (const p of ['package-lock.json', 'electron/package-lock.json']) {
   if (j.packages && j.packages['']) j.packages[''].version = newVer;
   write(p, JSON.stringify(j, null, 2) + '\n');
   console.log(`[release] ${p} → ${newVer}（仅 version 字段）`);
+}
+
+/* 4b) 反漂移：本次实际写过的路径必须都在认领清单里。
+   加了第 9 个版本源却忘了补 RELEASE_PATHS 时，板面上那行认领的范围会**小于**实际改动范围 ——
+   那是"假声明"，比没声明更难发现（别人照着板面判断"他没碰我那个文件"，而其实碰了）。
+   放在写入之后、自检之前：此时版本已写完，失败会留下半截发版状态，所以话要说清怎么收拾。 */
+const undeclared = undeclaredWrites(written);
+if (undeclared.length) {
+  fail('本次写了未在认领清单里的路径：' + undeclared.join(', ')
+    + '\n         请把它补进 scripts/lib/release-claim.mjs 的 RELEASE_PATHS 后重跑；'
+    + '\n         ⚠️ 版本号已写入但板面登记范围不完整，收拾办法：git checkout -- 那 8 个版本源（或直接把清单补上再跑一次，本脚本对同版本号幂等）。');
 }
 
 /* 5) 自检

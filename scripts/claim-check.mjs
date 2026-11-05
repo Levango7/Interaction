@@ -31,8 +31,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
-const BOARD = "docs/agent-board.md";
-const SECTION = "## 文件占用登记表";
+/* 导出给 scripts/lib/release-claim.mjs 用：板面路径与节标题只应有一个出处，
+   第二处硬编码迟早和这里漂移（漂了的症状是"登记写进了没人读的地方"）。 */
+export const BOARD = "docs/agent-board.md";
+export const SECTION = "## 文件占用登记表";
 const BS = String.fromCharCode(92); // 反斜杠：用 charCode 构造，避免被 heredoc / 多层转义吃掉
 
 function die(msg) {
@@ -81,6 +83,41 @@ export function parseTable(md) {
     rows.push({ paths, session, claimedAt, releaseBy, status: status.replace(/[^A-Z]/g, "") });
   }
   return { found: true, rows };
+}
+
+/** 渲染一行登记表行（5 个单元格 ⇒ 恰好 6 个竖线）。
+ *  竖线检查不是洁癖：单元格文本里混进一个 `|` 就把这行切成 6 个单元格，而 parseTable 只取前 5 个
+ *  ⇒ 状态列被挤掉、该行**静默失去 ACTIVE 语义**（谁都以为没被占，机械门也查不到）。 */
+export function renderClaimRow({ paths, session, claimedAt, releaseBy, status }) {
+  const cells = [
+    (Array.isArray(paths) ? paths : [paths]).map((p) => "`" + String(p).replace(/`/g, "") + "`").join(", "),
+    String(session), String(claimedAt), String(releaseBy), String(status),
+  ];
+  for (const c of cells) {
+    if (!c.trim()) throw new Error("认领行有空单元格：" + JSON.stringify(cells));
+    if (c.includes("|")) throw new Error("认领行单元格含竖线，会把表切坏（状态列会被挤掉）：" + c.slice(0, 80));
+  }
+  return "| " + cells.join(" | ") + " |";
+}
+
+/** 把一行插到登记表**表头分隔行之后**（本表惯例：最新的放最上面）。
+ *  ⚠️ 必须取该节里**第一条**分隔行：2026-11-05 实测板面第 62 行还有一条游离的 `|---|…|`
+ *  （`6ec9920` 切 v3.7.152 时的残留）。取最后一条会把新行插进表格中间 —— 而 parseTable 照样读得到它
+ *  （它主动跳过分隔行），所以插错位置**不会报错**，只会让人读表时看不见。
+ *  找不到节 / 找不到分隔行一律抛错：登记不进去就必须让调用方失败，不能静默当作"已登记"。 */
+export function insertClaimRow(md, rowLine) {
+  const nl = String(md).includes("\r\n") ? "\r\n" : "\n";
+  const lines = String(md).split(nl);
+  const start = lines.findIndex((l) => l.startsWith(SECTION));
+  if (start < 0) throw new Error("板面里没有「" + SECTION + "」一节 —— 无法登记（先看板面结构，别硬写）");
+  let sep = -1;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].startsWith("## ")) break;             // 走到下一节还没找到 ⇒ 表头不在
+    if (/^\|[\s:|-]+\|$/.test(lines[i].trim())) { sep = i; break; }
+  }
+  if (sep < 0) throw new Error("找不到「" + SECTION + "」的表头分隔行 —— 无法登记（表结构被改过？）");
+  lines.splice(sep + 1, 0, rowLine);
+  return lines.join(nl);
 }
 
 /* 统一成小写正斜杠、去尾斜杠：`F:/wt/wb140` 与 `F:\\wt\\wb140` 必须认成同一棵树。 */
