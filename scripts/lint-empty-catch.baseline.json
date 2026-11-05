@@ -1,7 +1,7 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
   "updated": "2026-11-05",
-  "count": 632,
+  "count": 636,
   "items": [
     {
       "file": "ai-loop.js",
@@ -1981,7 +1981,33 @@
     },
     {
       "file": "draw-canvas.js",
-      "line": 294,
+      "line": 213,
+      "sig": "719495b4e6",
+      "bhash": "49763a99a3",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 诊断不可用不影响拒绝 */",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"embed parse fail",
+      "kind": "catch"
+    },
+    {
+      "file": "draw-canvas.js",
+      "line": 227,
+      "sig": "152c6b95a6",
+      "bhash": "83ebd8c316",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 同上 */",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"embed serialize ",
+      "kind": "catch"
+    },
+    {
+      "file": "draw-canvas.js",
+      "line": 583,
       "sig": "67b6ce9496",
       "bhash": "e60315e462",
       "occ": 1,
@@ -1994,7 +2020,7 @@
     },
     {
       "file": "draw-canvas.js",
-      "line": 395,
+      "line": 700,
       "sig": "5d3127b8ca",
       "bhash": "a57ffa17ad",
       "occ": 1,
@@ -2007,7 +2033,7 @@
     },
     {
       "file": "draw-canvas.js",
-      "line": 436,
+      "line": 745,
       "sig": "3e25bbef3e",
       "bhash": "0a7085f0f2",
       "occ": 1,
@@ -2016,6 +2042,32 @@
       "bare": false,
       "note": "/* 保持默认落点 */",
       "snippet": "const pt = svg.createSVGPoint(); pt.x = mid.x; pt.y = mid.y; const ctm",
+      "kind": "catch"
+    },
+    {
+      "file": "draw-canvas.js",
+      "line": 913,
+      "sig": "b9ca5a508e",
+      "bhash": "1f4c8a0ddd",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 诊断不可用不影响继续 */",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"uimode persist f",
+      "kind": "catch"
+    },
+    {
+      "file": "draw-canvas.js",
+      "line": 942,
+      "sig": "d1bbb503c3",
+      "bhash": "4010eab094",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 诊断不可用不影响提示 */",
+      "snippet": "if (typeof pushDiag === \"function\") pushDiag(\"warn\", \"embed serialize ",
       "kind": "catch"
     },
     {
