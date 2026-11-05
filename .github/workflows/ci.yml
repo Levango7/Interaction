@@ -39,6 +39,12 @@ jobs:
       # v3.7.41：本脚本此前只读 agent-workbench.html，而仓库恒为源码态 → 恒解析到 0 个工具、
       # 静默 abort（且未接 CI）。修复为双态寻源后正式接入。
       - run: npm run check:ai-tools-doc
+      # v3.7.155（E3）：认领门接进 CI。多会话共享主树时「改了别人 ACTIVE 占用的文件」过去只靠
+      #   R13 自觉跑 claim-check，CI 从不看 —— 撞车要等人工发现。
+      #   ⚠️ 必须写成**同行 `- run:` 且单条命令**：verify-ci-order.mjs 与 ci-workflow-guard.test.js
+      #   的解析器只认这种形态（写成 `run: |` 多行块会被当成命令字面量 `|` 去执行并失败）。
+      #   取基线/改动路径/会话身份的逻辑全在 scripts/claim-check-ci.mjs 里，CI 步骤保持一行。
+      - run: node scripts/claim-check-ci.mjs
       - run: npm ci
       # v3.7.152（2026-10-28 复绿）：tests/server-sms-providers.test.js 直测 server 路由，
       # require 链会走到 server/src/auth.js 顶部的 bcryptjs / jsonwebtoken。根 `npm ci` 不装

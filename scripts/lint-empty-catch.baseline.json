@@ -1,24 +1,11 @@
 {
   "_note": "空 catch 基线（存量）。棘轮：只减不增 —— 改一处该条即消失；新增 P0 会在门禁里失败。",
-  "updated": "2026-11-01",
-  "count": 631,
+  "updated": "2026-11-05",
+  "count": 632,
   "items": [
     {
       "file": "ai-loop.js",
-      "line": 328,
-      "sig": "9bb6ce289a",
-      "bhash": "9c197bd2de",
-      "occ": 1,
-      "level": "P0",
-      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
-      "bare": false,
-      "note": ".catch(function(){}); } const body={ model, messages, te",
-      "snippet": "降级 */ if(typeof ensureMcpTools === \"function\"){ await ensureMcpTools()",
-      "kind": "reject"
-    },
-    {
-      "file": "ai-loop.js",
-      "line": 349,
+      "line": 350,
       "sig": "d34e529b67",
       "bhash": "a1fec4878e",
       "occ": 1,
@@ -31,7 +18,7 @@
     },
     {
       "file": "ai-loop.js",
-      "line": 400,
+      "line": 401,
       "sig": "174b392626",
       "bhash": "037f91f4bd",
       "occ": 1,
@@ -44,7 +31,7 @@
     },
     {
       "file": "ai-loop.js",
-      "line": 442,
+      "line": 443,
       "sig": "73ae096b79",
       "bhash": "385aa11850",
       "occ": 1,
@@ -57,7 +44,7 @@
     },
     {
       "file": "ai-loop.js",
-      "line": 501,
+      "line": 502,
       "sig": "eb80ab188b",
       "bhash": "64c2f65284",
       "occ": 1,
@@ -67,6 +54,19 @@
       "note": "/* toast 不可用时静默降级 */",
       "snippet": "toast(t(\"err.chatException\",\"对话异常：\")+(e&&e.message||t(\"tool.unknownErr",
       "kind": "catch"
+    },
+    {
+      "file": "ai-loop.js",
+      "line": 329,
+      "sig": "e133a069c8",
+      "bhash": "be003e2986",
+      "occ": 1,
+      "level": "P0",
+      "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
+      "bare": false,
+      "note": ".catch(function(){ /* 上报在 ensureMcpTools 内部，见上 */ }); }",
+      "snippet": "g。 */ if(typeof ensureMcpTools === \"function\"){ await ensureMcpTools()",
+      "kind": "reject"
     },
     {
       "file": "ai-retry.js",
@@ -486,19 +486,6 @@
     },
     {
       "file": "ai-tools.js",
-      "line": 694,
-      "sig": "a5a2a29494",
-      "bhash": "5cad978ef4",
-      "occ": 1,
-      "level": "P2",
-      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
-      "bare": false,
-      "note": ".catch(function(){ /* 有的实现不回这条；不影响 tools/list */ }); con",
-      "snippet": "onrpc: \"2.0\", method: \"notifications/initialized\" }, { quiet: true }) ",
-      "kind": "reject"
-    },
-    {
-      "file": "ai-tools.js",
       "line": 702,
       "sig": "026a3d89d0",
       "bhash": "0d5b043e35",
@@ -532,7 +519,7 @@
       "level": "P0",
       "why": "await：异步 reject 被吞，调用方永远等得到\"成功了\"",
       "bare": false,
-      "note": "/* 删不掉也不影响召回 */",
+      "note": "/* 删不掉也不影响召回：孤儿向量已按 live 过滤、永远不会被匹配上；最坏结果是继续占 IndexedDB 空间，不",
       "snippet": "await idbDeleteKey(MEM_VEC_PREFIX + id); }",
       "kind": "catch"
     },
@@ -899,6 +886,19 @@
       "note": "/* 诊断不可用不影响回退 */",
       "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"svg msg render fa",
       "kind": "catch"
+    },
+    {
+      "file": "ai-tools.js",
+      "line": 694,
+      "sig": "a5a2a29494",
+      "bhash": "5cad978ef4",
+      "occ": 1,
+      "level": "P2",
+      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "bare": false,
+      "note": ".catch(function(){ /* 有的实现不回这条；不影响 tools/list */ }); con",
+      "snippet": "onrpc: \"2.0\", method: \"notifications/initialized\" }, { quiet: true }) ",
+      "kind": "reject"
     },
     {
       "file": "chain.js",
@@ -3359,7 +3359,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 361,
+      "line": 364,
       "sig": "f78da20106",
       "bhash": "bd76c552a4",
       "occ": 1,
@@ -3372,7 +3372,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 396,
+      "line": 399,
       "sig": "7092198194",
       "bhash": "e3f0fc254c",
       "occ": 1,
@@ -3385,7 +3385,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 819,
+      "line": 820,
       "sig": "765af61434",
       "bhash": "6bd4fdbc8f",
       "occ": 1,
@@ -3398,7 +3398,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1086,
+      "line": 1087,
       "sig": "c87e18b13c",
       "bhash": "b069a1b05d",
       "occ": 1,
@@ -3411,7 +3411,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1087,
+      "line": 1088,
       "sig": "19305bdda1",
       "bhash": "0f09109898",
       "occ": 1,
@@ -3424,7 +3424,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1173,
+      "line": 1174,
       "sig": "338621b38e",
       "bhash": "815ebc98b8",
       "occ": 1,
@@ -3437,7 +3437,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1198,
+      "line": 1199,
       "sig": "275bfc9bb7",
       "bhash": "1933dc6b21",
       "occ": 1,
@@ -3450,7 +3450,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1202,
+      "line": 1203,
       "sig": "7c39deaec7",
       "bhash": "bad4115f2f",
       "occ": 1,
@@ -3463,7 +3463,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1603,
+      "line": 1604,
       "sig": "77abb6b04d",
       "bhash": "561efee72e",
       "occ": 1,
@@ -3476,7 +3476,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1607,
+      "line": 1608,
       "sig": "a5d0c4b9b4",
       "bhash": "d9b6ea1844",
       "occ": 1,
@@ -3489,7 +3489,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1691,
+      "line": 1692,
       "sig": "a5d0c4b9b4",
       "bhash": "d9b6ea1844",
       "occ": 2,
@@ -3502,7 +3502,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1761,
+      "line": 1762,
       "sig": "aa07fc88f4",
       "bhash": "9768edeb86",
       "occ": 1,
@@ -3515,7 +3515,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1884,
+      "line": 1885,
       "sig": "ac3151ade7",
       "bhash": "b79af7cd18",
       "occ": 1,
@@ -3528,7 +3528,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1887,
+      "line": 1888,
       "sig": "8be05f89b5",
       "bhash": "f47de8eec1",
       "occ": 1,
@@ -3541,20 +3541,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1887,
-      "sig": "27304e4085",
-      "bhash": "e3f274c6a2",
-      "occ": 1,
-      "level": "P1",
-      "why": "try 块含业务逻辑，需人工判断是否该上报",
-      "bare": false,
-      "note": ".catch(function(){}); _beepAlarm._ctx = null; } }catch(_){}",
-      "snippet": "{ const c = _beepAlarm._ctx; if(c){ const t = c.currentTime; c.close()",
-      "kind": "reject"
-    },
-    {
-      "file": "render-widgets.js",
-      "line": 1981,
+      "line": 1982,
       "sig": "a1c0670512",
       "bhash": "9b00465945",
       "occ": 1,
@@ -3567,7 +3554,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 1988,
+      "line": 1989,
       "sig": "cfb5cd3291",
       "bhash": "8fc11cdb17",
       "occ": 1,
@@ -3580,7 +3567,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2118,
+      "line": 2119,
       "sig": "2b7f751a68",
       "bhash": "abfde9a875",
       "occ": 1,
@@ -3593,7 +3580,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2131,
+      "line": 2132,
       "sig": "e4e14b1b2f",
       "bhash": "ac21fd78ef",
       "occ": 1,
@@ -3606,7 +3593,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2342,
+      "line": 2343,
       "sig": "66ae794fb1",
       "bhash": "751331cbfb",
       "occ": 1,
@@ -3619,7 +3606,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2882,
+      "line": 2883,
       "sig": "5f186c36cb",
       "bhash": "9dccb6ac1b",
       "occ": 1,
@@ -3632,7 +3619,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2894,
+      "line": 2895,
       "sig": "5f186c36cb",
       "bhash": "9dccb6ac1b",
       "occ": 2,
@@ -3645,20 +3632,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 2991,
-      "sig": "2e9428fd45",
-      "bhash": "47c74eb160",
-      "occ": 1,
-      "level": "P0",
-      "why": "decode()：资源解码失败，图片/音频静默不显示",
-      "bare": false,
-      "note": ".catch(function(){}); } /* v3.7.49：眨眼/张嘴浮层必须**随宠物尺寸变化重新定",
-      "snippet": "eof artImg.decode === \"function\") artImg.decode().then(placeFaceRetry)",
-      "kind": "reject"
-    },
-    {
-      "file": "render-widgets.js",
-      "line": 3002,
+      "line": 3003,
       "sig": "a43aedf6ec",
       "bhash": "122c08ff81",
       "occ": 1,
@@ -3671,7 +3645,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3006,
+      "line": 3007,
       "sig": "f4ddeef40d",
       "bhash": "077abdfbb9",
       "occ": 1,
@@ -3684,7 +3658,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3111,
+      "line": 3112,
       "sig": "d3db25a41b",
       "bhash": "6710417070",
       "occ": 1,
@@ -3697,7 +3671,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3131,
+      "line": 3132,
       "sig": "adf1ff242d",
       "bhash": "41935ea1cb",
       "occ": 1,
@@ -3710,7 +3684,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3215,
+      "line": 3216,
       "sig": "f3ef0c6141",
       "bhash": "23e8214f66",
       "occ": 1,
@@ -3723,7 +3697,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3236,
+      "line": 3237,
       "sig": "af2cf7ed1f",
       "bhash": "cdac77adc9",
       "occ": 1,
@@ -3736,7 +3710,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3271,
+      "line": 3272,
       "sig": "25b13a3a1e",
       "bhash": "4ca65bfc9c",
       "occ": 1,
@@ -3749,7 +3723,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3283,
+      "line": 3284,
       "sig": "4ca4f12296",
       "bhash": "3228fc38ca",
       "occ": 1,
@@ -3762,7 +3736,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3303,
+      "line": 3304,
       "sig": "3315d9d589",
       "bhash": "37c7233bb0",
       "occ": 1,
@@ -3775,7 +3749,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3412,
+      "line": 3413,
       "sig": "b2afc80171",
       "bhash": "e7b344a532",
       "occ": 1,
@@ -3788,7 +3762,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3818,
+      "line": 3819,
       "sig": "8c26b5f0d4",
       "bhash": "3496d36476",
       "occ": 1,
@@ -3801,7 +3775,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3828,
+      "line": 3829,
       "sig": "4c14703af3",
       "bhash": "98e938c7cc",
       "occ": 1,
@@ -3814,7 +3788,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3874,
+      "line": 3879,
       "sig": "69b28538de",
       "bhash": "57f658b28a",
       "occ": 1,
@@ -3827,7 +3801,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3883,
+      "line": 3888,
       "sig": "69b28538de",
       "bhash": "57f658b28a",
       "occ": 2,
@@ -3840,9 +3814,22 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3896,
-      "sig": "0175d5e3b7",
-      "bhash": "58f2d27cb2",
+      "line": 3912,
+      "sig": "1615d39ebf",
+      "bhash": "c1ca210350",
+      "occ": 1,
+      "level": "P2",
+      "why": "预期降级（仅能力探测），无需改动",
+      "bare": false,
+      "note": "/* 诊断自身不可用：拒绝逻辑照常返回 false，控制流不变 */",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"codeNarrow toast ",
+      "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 3920,
+      "sig": "2c61c7c86e",
+      "bhash": "3b092d9696",
       "occ": 1,
       "level": "P2",
       "why": "预期降级（仅能力探测），无需改动",
@@ -3853,20 +3840,20 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3898,
-      "sig": "bebac71c69",
-      "bhash": "439f11ad33",
+      "line": 3923,
+      "sig": "4615801994",
+      "bhash": "a0c32cbcb0",
       "occ": 1,
       "level": "P2",
-      "why": "仅反馈性调用（诊断/提示自成闭环），属规范写法，勿改",
+      "why": "预期降级（仅能力探测），无需改动",
       "bare": false,
-      "note": "/* noop */",
-      "snippet": "toast(t(\"ui.mode.switchedTo\", \"已切换到\") + \" \" + t(next === \"code\" ? \"ui.",
+      "note": "/* 诊断自身不可用：模式已切换成功，提示失败不改控制流 */",
+      "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"mode-switch toast",
       "kind": "catch"
     },
     {
       "file": "render-widgets.js",
-      "line": 3924,
+      "line": 3948,
       "sig": "8a413f85a0",
       "bhash": "496893db28",
       "occ": 1,
@@ -3879,7 +3866,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 3953,
+      "line": 3977,
       "sig": "d2ea00c44f",
       "bhash": "fe255c1881",
       "occ": 1,
@@ -3892,7 +3879,7 @@
     },
     {
       "file": "render-widgets.js",
-      "line": 4007,
+      "line": 4031,
       "sig": "fac7a07df5",
       "bhash": "a23d83eb9b",
       "occ": 1,
@@ -3902,6 +3889,32 @@
       "note": "",
       "snippet": "if(typeof pushDiag === \"function\") pushDiag(\"warn\", \"agent_dock persis",
       "kind": "catch"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 1888,
+      "sig": "27304e4085",
+      "bhash": "e3f274c6a2",
+      "occ": 1,
+      "level": "P1",
+      "why": "try 块含业务逻辑，需人工判断是否该上报",
+      "bare": false,
+      "note": ".catch(function(){}); _beepAlarm._ctx = null; } }catch(_){}",
+      "snippet": "{ const c = _beepAlarm._ctx; if(c){ const t = c.currentTime; c.close()",
+      "kind": "reject"
+    },
+    {
+      "file": "render-widgets.js",
+      "line": 2992,
+      "sig": "2e9428fd45",
+      "bhash": "47c74eb160",
+      "occ": 1,
+      "level": "P0",
+      "why": "decode()：资源解码失败，图片/音频静默不显示",
+      "bare": false,
+      "note": ".catch(function(){}); } /* v3.7.49：眨眼/张嘴浮层必须**随宠物尺寸变化重新定",
+      "snippet": "eof artImg.decode === \"function\") artImg.decode().then(placeFaceRetry)",
+      "kind": "reject"
     },
     {
       "file": "ui-backup-stats.js",

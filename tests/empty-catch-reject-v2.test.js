@@ -211,7 +211,12 @@ describe("⑤ reject 分级用整条 promise 表达式（v3.7.153）：消除 20
        `render-widgets.js:1081` 已从这份清单里**移出**：2026-10-30 B12 第五片给它补了留痕
        （`persistCfg` 的两种失败形态都上报），该 catch 体不再为空 ⇒ 不再是空 catch，
        用 `lvl()` 已查不到这一条（返回 null）。**这是代码修好了，不是尺子放宽了。** */
-    expect(lvl("ai-loop.js", 328)).toBe("P0");
+    /* 2026-11-06（E0 批）：ai-loop.js 这条由行号定位改为**稳定片段定位**——它自己就被本批的
+       注释合并挪过行（328→329），与本文件顶部「render-widgets 不拿行号当主键」是同一条教训。
+       片段 `ensureMcpTools` 全文件唯一；判据不变：这个吞 reject 的空 catch（带前提说明的 P0-b）
+       必须仍在分类器射程内，一旦它"消失"（比如有人真的补了上报）就是修好了，而不是尺子放宽。 */
+    /* 片段用 `ensureMcpTools`（分类器 snippet 截到 80 字符，`.catch` 在窗口外，实测过）。 */
+    expect(lvlBy("ai-loop.js", "ensureMcpTools"), "ensureMcpTools 那条必须仍是 reject 类 P0").toBe("P0");
     expect(lvlBy("render-widgets.js", "artImg.decode()"), "decode 兜底那条必须仍是 P0").toBe("P0");
     expect(lvl("ui-ge-integrations.js", 246)).toBe("P0");
     expect(lvl("ui-ge-integrations.js", 257)).toBe("P0");

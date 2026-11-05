@@ -114,6 +114,9 @@ jobs:
       - run: npm run src:check
       - run: npm run check:modules
       - run: npm run check:ai-tools-doc
+      # v3.7.155（E3）：与 ci.yml test job 同步补认领门（guard 断言两个 workflow 步骤集逐项一致）。
+      #   同行单条命令，理由见 ci.yml 处注释（verify-ci-order / ci-workflow-guard 的解析器只认这种形态）。
+      - run: node scripts/claim-check-ci.mjs
       - run: npm ci
       # v3.7.152（2026-10-28 复绿）：与 ci.yml test job 同步补装 server 依赖 ——
       # tests/server-sms-providers.test.js 的 require 链会走到 server/src/auth.js 的

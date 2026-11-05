@@ -937,7 +937,7 @@ async function memEnsureVectors(max){
     for(const id of [...cache.keys()]){
       if(live.has(id)) continue;
       cache.delete(id);
-      try{ await idbDeleteKey(MEM_VEC_PREFIX + id); }catch(_){ /* 删不掉也不影响召回 */ }
+      try{ await idbDeleteKey(MEM_VEC_PREFIX + id); }catch(_){ /* 删不掉也不影响召回：孤儿向量已按 live 过滤、永远不会被匹配上；最坏结果是继续占 IndexedDB 空间，不影响正确性。清扫是尽力而为，故不上报（否则每次启动都会为一条陈旧记录刷诊断）。 */ }
     }
     const missing = mems.filter(m => m && m.id && !cache.has(String(m.id)) && String(m.text||"").trim());
     if(!missing.length) return { done: 0, left: 0 };

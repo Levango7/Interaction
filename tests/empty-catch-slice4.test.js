@@ -187,7 +187,10 @@ describe("③ 静态契约：另 3 处（画布 / 闹钟 / 读路径）按分档
   it("二次保护：登记诊断自身也被 try 包住（诊断坏了不能连累业务）", () => {
     const s = src();
     const guards = s.match(/typeof pushDiag === "function"/g) || [];
-    const wrapped = s.match(/catch\(_e2\)\{\}/g) || [];
+    /* 2026-11-06（E0 批）：内层兜底允许带说明文字（`catch(_e2){ /* 为什么可以吞 *\/ }`）——
+       二次保护的性质是"存在且贴着"，不是"必须一字不差"；原文只认空 `{}`，新写的
+       "登记诊断 + 二次保护 + 一句为什么"会被漏计（实测 9 守卫 : 7 兜底的假失衡）。 */
+    const wrapped = s.match(/catch\(_e2\)\{[^{}]*\}/g) || [];
     expect(guards.length).toBeGreaterThanOrEqual(4);   // 地板：只许涨不许降
     /* 2026-10-27 改判据：原写 `expect(wrapped.length).toBe(4)` 是**代理指标** —— 任何人按本文件既有写法
        新增一处"登记诊断 + 二次保护"，总数就会变，测试却把这种**正确扩展**判红（当天就发生了：Code 模式的

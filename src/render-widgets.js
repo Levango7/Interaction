@@ -3906,7 +3906,11 @@ function toggleUIMode(){
 function setUIMode(mode){
   const target = (mode === "code" || mode === "design") ? mode : "work";
   if(target === "code" && !isWide()){
-    try{ toast(t("ui.mode.codeNarrow", "窄屏（小于 1024px）不启用代码模式：三栏布局需要宽屏"), "warn"); }catch(e){ /* noop */ }
+    /* toast 本身可抛（DOM 未就绪/通知层缺失），所以这里仍要接住——但与"空注释式静默"不同：
+       窄屏拒绝是**用户可见的行为**，通知发不出去必须留诊断，否则用户只会觉得"点了没反应"。
+       （注：本行以上不要写行内块注释的闭合字面量，会提前闭合本注释。） */
+    try{ toast(t("ui.mode.codeNarrow", "窄屏（小于 1024px）不启用代码模式：三栏布局需要宽屏"), "warn"); }
+    catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "codeNarrow toast failed: "+((e&&e.message)||e), {where:"setUIMode"}); }catch(_e2){ /* 诊断自身不可用：拒绝逻辑照常返回 false，控制流不变 */ } }
     return false;
   }
   if(target === _uiMode()) return true;
@@ -3916,9 +3920,9 @@ function setUIMode(mode){
 function _setUIMode(next){
   try{ save(PREFIX + "uimode", next); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "uimode persist failed: "+((e&&e.message)||e), {where:"setUIMode"}); }catch(_e2){} }
   applyUIMode();
-  try{ toast(t("ui.mode.switchedTo", "已切换到") + " " + t(next === "code" ? "ui.mode.code" : next === "design" ? "ui.mode.design" : "ui.mode.work", next === "code" ? "代码模式" : next === "design" ? "设计模式" : "工作模式"), "ok"); }catch(e){ /* noop */ }
-}
-/** 会话停靠栏（左栏下半）：列表 + 切换 + 新建。重命名/删除留在 设置→会话管理（不做第二套 CRUD）。 */
+  try{ toast(t("ui.mode.switchedTo", "已切换到") + " " + t(next === "code" ? "ui.mode.code" : next === "design" ? "ui.mode.design" : "ui.mode.work", next === "code" ? "代码模式" : next === "design" ? "设计模式" : "工作模式"), "ok"); }
+  catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "mode-switch toast failed: "+((e&&e.message)||e), {where:"_setUIMode"}); }catch(_e2){ /* 诊断自身不可用：模式已切换成功，提示失败不改控制流 */ } }
+}/** 会话停靠栏（左栏下半）：列表 + 切换 + 新建。重命名/删除留在 设置→会话管理（不做第二套 CRUD）。 */
 function renderSessionDock(){
   const dock = $("#sessionDock");
   if(!dock) return;
@@ -4058,7 +4062,7 @@ function _toggleUIModeMenu(btn){
       if(el.disabled) return;
       setUIMode(el.getAttribute("data-mode"));
       _toggleUIModeMenu(btn);   // 选中即关菜单（点菜单内部，外面的 doc 监听故意不关，得自己关）
-      try{ btn.setAttribute("aria-expanded", "false"); }catch(_e5){ /* noop */ }
+      btn.setAttribute("aria-expanded", "false");   // setAttribute 不会抛（元素可写即可），不需要 try 包着
     };
   });
   menu.style.display = "";
@@ -4069,7 +4073,7 @@ function _toggleUIModeMenu(btn){
   menu.style.left = left + "px";
   const top = Math.min(Math.max(8, r.bottom + 6), Math.max(8, window.innerHeight - menu.offsetHeight - 8));
   menu.style.top = top + "px";
-  try{ btn.setAttribute("aria-expanded", "true"); }catch(e){ /* noop */ }
+  btn.setAttribute("aria-expanded", "true");
 }
 (function _bindUIModeBtn(){
   const b = $("#btnUIMode");
@@ -4081,7 +4085,7 @@ function _toggleUIModeMenu(btn){
     const menu = $("#uiModeMenu");
     const open = menu && menu.style.display !== "none";
     _toggleUIModeMenu(b);
-    try{ b.setAttribute("aria-expanded", open ? "false" : "true"); }catch(_e3){ /* noop */ }
+    b.setAttribute("aria-expanded", open ? "false" : "true");
   };
 })();
 /* 菜单：点外面 / Esc 关闭（与 tool-pop 同款口径，独立挂 doc 监听，不依赖 render 重建） */
@@ -4092,13 +4096,13 @@ document.addEventListener("click", function(e3){
   if(menu.contains(t3)) return;
   if(t3 && t3.closest && t3.closest("#btnUIMode")) return;
   menu.style.display = "none";
-  const b2 = $("#btnUIMode"); if(b2) try{ b2.setAttribute("aria-expanded", "false"); }catch(_e4){ /* noop */ }
+  const b2 = $("#btnUIMode"); if(b2) b2.setAttribute("aria-expanded", "false");
 });
 document.addEventListener("keydown", function(e4){
   if(e4.key !== "Escape") return;
   const menu = $("#uiModeMenu");
   if(menu && menu.style.display !== "none"){
     menu.style.display = "none";
-    const b3 = $("#btnUIMode"); if(b3) try{ b3.setAttribute("aria-expanded", "false"); }catch(_e5){ /* noop */ }
+    const b3 = $("#btnUIMode"); if(b3) b3.setAttribute("aria-expanded", "false");
   }
 });

@@ -323,9 +323,10 @@ async function chatOnce(messages, opts){
     const model=(ap && ap.model) || "gpt-4o-mini";
     const aiParams=getAiParams(); // B8：超时/温度可配置（默认 30s / 0.7）
     /* 2026-10-23：远端工具在会话内首次用到时补一次发现（缓存为空且用户已勾选才真的发请求）；
-       失败不阻断对话——远端连不上时退化成「只有本地工具」，错误由设置页/诊断如实展示。 */
-    /* 发现失败不阻断本轮：错误已在 mcpRefreshServer 落到 mcpRuntimeInfo + pushDiag，这里只降级 */
-    if(typeof ensureMcpTools === "function"){ await ensureMcpTools().catch(function(){}); }
+       失败不阻断对话——远端连不上时退化成「只有本地工具」。接住 reject 是必须的（否则远端连不上
+       会让整轮对话失败）；上报由 ensureMcpTools 内部负责（mcpRuntimeInfo + pushDiag），
+       若将来它不再上报，此 catch 即静默吞错，须改为在此 pushDiag。 */
+    if(typeof ensureMcpTools === "function"){ await ensureMcpTools().catch(function(){ /* 上报在 ensureMcpTools 内部，见上 */ }); }
     const body={ model, messages, temperature:aiParams.temperature };
     /* Multi-Agent Phase 1（2026-10-26）：opts.tools 覆盖——子代理传受限工具集。
        向后兼容：既有调用方不传该参数，行为不变。 */

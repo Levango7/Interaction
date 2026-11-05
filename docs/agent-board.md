@@ -92,6 +92,43 @@
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
 
+### [2026-11-06 05:16 UTC+8] ZCode 主会话 —— **E 批四条收官（E0 自账结清 / E2 分诊 / E3 认领门接 CI / E4 确认已由 D 批交付）· 推送前声明（R10）**
+
+- 状态：本机验证齐，本条随 E 批代码同笔推送（并带走 `a33b643` 那笔未推注释订正）；推后守 CI 至终态再释放。
+  **E1 切版 3.7.155 紧随其后**（预登记→release.mjs --as→CHANGELOG 切段→tag，单独一笔）。
+- 内容：
+  - **E0（自账）**：结清本会话 3.7.153 批次引进的 11 处空 catch 新增——5 处 `setAttribute` 的 try
+    直接去掉（不会抛的调用不需要防）；2 处 `toast` 按标准修法改 pushDiag；基线重冻 631→632。
+    `lint:empty-catch` gate=0（P0/P1 新增清零）。
+  - **E2（P0-b 分诊）**：23 处里仅 2 处是 `await` 吞 reject 真缺陷类（`ai-loop.js` ensureMcpTools /
+    `ai-tools.js` 孤儿向量清扫），补足"为何可以不报"的判定依据与前提条件；其余 21 处属
+    localStorage/JSON.parse 能力探测，按 P2 语义不动。
+  - **E3（认领门接 CI）**：新增 `scripts/claim-check-ci.mjs`（基线解析：push 事件载荷 → HEAD~1 回退；
+    改动路径喂给 claim-check.mjs 单一权威源；取不到基线**显式跳过并说明**，不静默放行；冲突给三条
+    处置指引）+ `ci.yml`/`deploy.yml` 各加**同行单条** `- run: node scripts/claim-check-ci.mjs`
+    （多行块会被 verify-ci-order 当字面量执行——实测过的失败形态）+ 守卫
+    `tests/claim-check-ci.test.js` 3 条（workflow 引用真实性 / 全零基线显式跳过 / 默认形态真调子进程）。
+    **踩坑记录**：① 初版凭接口印象写了不存在的 `--ci` 模式，落 workflow 前没核——被本会话自己的
+    守卫测试理念抓住，先改脚本再接 CI；② 两轮 verify:ci 失败均环境性（worker 崩 / 老flake位），
+    隔离复跑全绿；③ E0 的注释里写了块注释闭合字面量，语法炸过一轮（教训同 lint-xss 注释扫）。
+  - **契约跟随**：`empty-catch-reject-v2` 的 ai-loop 定位从行号改稳定片段（328→329 挪行教训，
+    片段锚 `ensureMcpTools`——分类器 snippet 截 80 字符，`.catch` 在窗口外）；`empty-catch-slice4`
+    的一对一不变量正则放宽为容忍内层注释（带说明的二次保护被漏计 9:7 假失衡）。
+  - **E4**：核对 `design-mode-phase-b.md` §九——Q1–Q4 四条定案**已随 D 批（94e9e8c）落地**
+    （判据改写为代码行号），wb140 交接里的"待做"是陈旧账，无需再做。
+- 本机验证：E3 族 23 文件 / 276 例全绿（claim-check-ci 3 + ci-workflow-guard 39 + empty-catch 全族 221
+  + ui-mode 13）；`verify:ci` 第 5 步（认领门）exit 0，全量 npm test 两次失败均隔离复跑全绿
+  （confirm-migration-batch5 9/9、three-state-render 45/45），判据以 CI 干净 runner 为准。
+- 占用路径：`src/render-widgets.js`, `src/ai-loop.js`, `src/ai-tools.js`,
+  `scripts/lint-empty-catch.baseline.json`, `scripts/claim-check-ci.mjs`（新）,
+  `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`,
+  `tests/empty-catch-reject-v2.test.js`, `tests/empty-catch-slice4.test.js`,
+  `tests/claim-check-ci.test.js`（新）, `tests/e2e/draw-responsive.spec.js`（仅注释）,
+  `tests/e2e/ui-mode-layout.spec.js`（仅注释）, `docs/agent-board.md`。
+- 在跑的重活：无；准备推的范围：本条所在提交（含 `a33b643`）。
+- 提醒对方：`.github/workflows/*` 与 `tests/ci-workflow-guard.test.js`（未动 guard 本体，39/39 仍绿）
+  本笔在动，10 分钟内要动这两个面的先喊话；E1 切版随后占版本面（AGENTS.md 表 / CHANGELOG / 八版本源）。
+
 ### [2026-11-05 08:55 UTC+8 / 00:55 UTC] WorkBuddy 主会话 —— **接管 Qoder 的 D 批并交付：改动原样搬入、82 例复跑全绿 · 推送前声明（R10）**
 
 - 状态：**待推送**。用户 08:48 当面告知「qoder 暂时退休了，你可以考虑接管」⇒ 按 R7 的用户裁决执行接管，
