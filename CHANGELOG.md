@@ -3,6 +3,15 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-06 · **D1×E3 订正：切版登记行生而 RELEASED（v3.7.155 双红事故的机制级修复）**
+
+_v3.7.155 首推 CI/Deploy 双红（`42130755022` / `42130755030`）的根因是：D1 自动登记的 ACTIVE 行写**会话名**，而 E3 接进 CI 的认领门在 CI 里按**提交作者名**取会话身份（本仓全员同为 `Levango7`）⇒ 二者永不匹配，发版提交自己的 9 条 `RELEASE_PATHS` 全被自判为「他人占用」。当时靠补笔把该行翻 `RELEASED` 重推解红（`27d61fe`）；本批把机制改对，让「每发一版必红一次 CI」不再发生。用户「那就做吧」授权。_
+
+- **登记行生而 RELEASED**：`claimBoardForRelease()`（`scripts/lib/release-claim.mjs`）写入的行状态从 `ACTIVE` 改为 **`RELEASED`** —— 声明义务由「落一行」本身履行（铁律第 5 条），不需要它持续占用；`RELEASED` 行任何门都不消费，从根上不可能再发生自判占用。`release.mjs` 的登记日志与提示文案同步更新（不再提醒「收工翻 RELEASED」，因为登记时已是终态）。
+- **幂等判据按版本号对号**：`alreadyClaimed(rows, me, ver)` 改为按 `releaseBy` 里的「`切版 v{ver}`」标记 + 全路径覆盖匹配，与状态无关 —— 只认 `ACTIVE` 会漏掉刚登记的 `RELEASED` 行（重跑会追加重复行），与版本无关又会吃掉下个版本的审计行。每个版本各自留一条审计行。
+- **手动预登记的 ACTIVE 行直接拦截**：若板面已有一条**本会话**的 ACTIVE 行覆盖全部发版路径（v3.7.153 那种旧习惯的手动预登记），`claimBoardForRelease()` 抛错指路（「先把该行翻成 RELEASED 再重跑」）而不是追加 —— 这条 ACTIVE 行随发版提交上 main 就是 v3.7.155 双红的同形重演。拦截发生在任何版本写入之前，`release.mjs` 的门位置不变（写入之前）。
+- **不动的面**：`claim-check.mjs` / `claim-check-ci.mjs` 一字不改 —— 门的严格性是对的（身份只用于豁免、ACTIVE × 路径重叠是硬信号），错在登记侧把声明写成了占用；也不动 workflow、不动版本源、不碰 `src/*`。
+- **测试**（`tests/release-claim-gate.test.js`）：`alreadyClaimed` 5 例按新语义重写（同版本/异版本/无标记/部分覆盖/他人会话）；`claimBoardForRelease` 6 例更新与新增（`RELEASED` 期望、版本标记断言、同版本幂等、跨版本追加、手动 ACTIVE 行抛错双断言、他人 ACTIVE 行不抛错）。接线自证一节（release.mjs 源码锚点）保持全绿：`claim = claimBoardForRelease({` / `if (claim.appended) {` / `writeFileSync(boardP, claim.md` 等锚点均未挪动。
 ### 2026-11-06 · **E4（补做）：`docs/draw-capability-phase-a.md` §十 四条开放问题 → 已定案 + 可复核行号**
 
 - **先更正一笔（这条比正文重要）**：下面 E 批那条写着「E4 核对后确认四条定案已随 D 批（`94e9e8c`）落地，

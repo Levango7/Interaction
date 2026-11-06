@@ -149,25 +149,32 @@ describe("stampUtc8()：与登记表既有行的时间格式一致", () => {
 
 describe("alreadyClaimed()：幂等判据（切版失败后重跑不该追加重复行）", () => {
   const rowsOf = (md) => parseTable(md).rows;
+  /* 登记行生而 RELEASED（v3.7.155 事故订正）后，幂等按「切版 v<版本>」标记 + 全路径覆盖对号，
+     与状态无关：只认 ACTIVE 会漏掉刚登记的那一行，与版本无关又会吃掉下个版本的审计行。 */
+  const relRow = (ver, session, status) =>
+    "| `" + RELEASE_PATHS.join("`, `") + "` | " + session + " | 2026-11-06 04:34 | 切版 v" + ver + "（test） | " + status + " |";
 
-  it("我已有一条 ACTIVE 行覆盖全部发版路径 ⇒ true", () => {
-    const md = board([row(RELEASE_PATHS.join("`, `"), "Qoder", "ACTIVE")]);
-    expect(alreadyClaimed(rowsOf(md), "Qoder")).toBe(true);
+  it("我已有一条**同版本**登记行（状态不限）覆盖全部发版路径 ⇒ true（重跑不重复登记）", () => {
+    expect(alreadyClaimed(rowsOf(board([relRow("3.7.156", "Qoder", "RELEASED")])), "Qoder", "3.7.156")).toBe(true);
+    expect(alreadyClaimed(rowsOf(board([relRow("3.7.156", "Qoder", "ACTIVE")])), "Qoder", "3.7.156")).toBe(true);
   });
 
-  it("只覆盖一部分 ⇒ false（那是另一件事的认领，发版这行仍要写）", () => {
-    const md = board([row("package.json`, `README.md", "Qoder", "ACTIVE")]);
-    expect(alreadyClaimed(rowsOf(md), "Qoder")).toBe(false);
+  it("版本号不同 ⇒ false（下个版本该有自己的审计行，不能靠上一版的行吃掉）", () => {
+    expect(alreadyClaimed(rowsOf(board([relRow("3.7.155", "Qoder", "RELEASED")])), "Qoder", "3.7.156")).toBe(false);
   });
 
-  it("覆盖全但状态是 RELEASED ⇒ false", () => {
+  it("覆盖全部路径但没有版本标记（普通认领行 / 手动预登记）⇒ false（不构成发版幂等）", () => {
     const md = board([row(RELEASE_PATHS.join("`, `"), "Qoder", "RELEASED")]);
-    expect(alreadyClaimed(rowsOf(md), "Qoder")).toBe(false);
+    expect(alreadyClaimed(rowsOf(md), "Qoder", "3.7.156")).toBe(false);
   });
 
-  it("覆盖全且 ACTIVE 但是别人的会话 ⇒ false（那该由冲突门拦，不是幂等门）", () => {
-    const md = board([row(RELEASE_PATHS.join("`, `"), "ZCode", "ACTIVE")]);
-    expect(alreadyClaimed(rowsOf(md), "Qoder")).toBe(false);
+  it("只覆盖一部分路径 ⇒ false（那是另一件事的认领，发版这行仍要写）", () => {
+    const md = board([row("package.json`, `README.md", "Qoder", "ACTIVE")]);
+    expect(alreadyClaimed(rowsOf(md), "Qoder", "3.7.156")).toBe(false);
+  });
+
+  it("覆盖全且带标记但是别人的会话 ⇒ false（那该由冲突门拦，不是幂等门）", () => {
+    expect(alreadyClaimed(rowsOf(board([relRow("3.7.156", "ZCode", "ACTIVE")])), "Qoder", "3.7.156")).toBe(false);
   });
 });
 
@@ -211,7 +218,7 @@ describe("RELEASE_PATHS：清单本身的不变量", () => {
 describe("claimBoardForRelease()：登记 + 自我复核", () => {
   const base = board([row("src/a.js", "ZCode", "RELEASED"), row("src/b.js", "WorkBuddy", "ACTIVE")]);
 
-  it("无自己的行 ⇒ 追加恰好 1 行，ACTIVE、会话正确、覆盖全部发版路径", () => {
+  it("无自己的行 ⇒ 追加恰好 1 行，RELEASED（生而释放）、会话正确、覆盖全部发版路径、releaseBy 带版本标记", () => {
     const now = new Date("2026-11-05T02:00:00Z");
     const r = claimBoardForRelease({ md: base, me: "Qoder", ver: "3.7.155", now });
     expect(r.appended).toBe(true);
@@ -219,18 +226,40 @@ describe("claimBoardForRelease()：登记 + 自我复核", () => {
     expect(after.rows.length).toBe(parseTable(base).rows.length + 1);
     const mine = after.rows.filter((x) => x.session === "Qoder");
     expect(mine.length).toBe(1);
-    expect(mine[0].status).toBe("ACTIVE");
+    expect(mine[0].status).toBe("RELEASED");
     expect(mine[0].claimedAt).toBe("2026-11-05 10:00");
     for (const p of RELEASE_PATHS) expect(mine[0].paths).toContain(p);
-    /* 计划释放格里要点名版本号：翻 RELEASED 时靠它对上是哪一次切版 */
-    expect(mine[0].releaseBy).toContain("3.7.155");
+    /* 版本标记（「切版 v<版本>」）是幂等判据的锚点，改文本时两处要一起改 */
+    expect(mine[0].releaseBy).toContain("切版 v3.7.155");
   });
 
-  it("已有自己的覆盖行 ⇒ 幂等跳过，板面**逐字节不变**", () => {
+  it("同版本重跑 ⇒ 幂等跳过，板面**逐字节不变**", () => {
     const once = claimBoardForRelease({ md: base, me: "Qoder", ver: "3.7.155", now: new Date() });
-    const twice = claimBoardForRelease({ md: once.md, me: "Qoder", ver: "3.7.156", now: new Date() });
+    const twice = claimBoardForRelease({ md: once.md, me: "Qoder", ver: "3.7.155", now: new Date() });
     expect(twice.appended).toBe(false);
     expect(twice.md).toBe(once.md);
+  });
+
+  it("换版本号 ⇒ 追加新行（每版各留一条审计行，不靠上一版的行幂等）", () => {
+    const once = claimBoardForRelease({ md: base, me: "Qoder", ver: "3.7.155", now: new Date() });
+    const next = claimBoardForRelease({ md: once.md, me: "Qoder", ver: "3.7.156", now: new Date() });
+    expect(next.appended).toBe(true);
+    expect(parseTable(next.md).rows.length).toBe(parseTable(once.md).rows.length + 1);
+  });
+
+  it("本会话已有 ACTIVE 行覆盖全部发版路径（手动预登记的旧习惯）⇒ 抛错指路，不追加也不静默放行", () => {
+    /* v3.7.155 形态的重演防御：这条 ACTIVE 行一旦随发版提交上 main，CI 认领门（按提交作者名
+       取身份）会把自己的 9 条路径全判成「他人占用」⇒ 首推双红。门必须在写入版本号之前拦下。 */
+    const manual = board([row(RELEASE_PATHS.join("`, `"), "Qoder", "ACTIVE")]);
+    expect(() => claimBoardForRelease({ md: manual, me: "Qoder", ver: "3.7.156", now: new Date() }))
+      .toThrow(/ACTIVE/);
+    expect(() => claimBoardForRelease({ md: manual, me: "Qoder", ver: "3.7.156", now: new Date() }))
+      .toThrow(/RELEASED/);
+  });
+
+  it("他人的 ACTIVE 行覆盖发版路径 ⇒ 不抛错（那该由 release.mjs 前置的冲突门拦，不是登记器）", () => {
+    const other = board([row(RELEASE_PATHS.join("`, `"), "ZCode", "ACTIVE")]);
+    expect(() => claimBoardForRelease({ md: other, me: "Qoder", ver: "3.7.156", now: new Date() })).not.toThrow();
   });
 
   it("板面里没有登记表这一节 ⇒ 抛错（不许「登记不了也继续切」）", () => {

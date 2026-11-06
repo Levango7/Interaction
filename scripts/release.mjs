@@ -10,7 +10,7 @@
  *   认领登记到别人名下，所以不给默认值。
  *
  * bump 目标（与 build.mjs --check 的五源门禁一致 + lockfile 同步）：
- *   0. 前置：板面认领门（他人占用即失败；无冲突则自动登记一行 ACTIVE，见下面第 0 步）
+ *   0. 前置：板面认领门（他人占用即失败；无冲突则自动登记一行**生而 RELEASED** 的审计行，见下面第 0 步）
  *   1. package.json / electron/package.json / manifest.json 的 version
  *   2. agent-workbench.html 的 VERSION + BUILD_TAG（未指定 --tag 时按当日日期+序号字母自动生成）
  *   3. service-worker.js 的 CACHE_VERSION = v{版本}-{tag}（保证 SW activate 清旧缓存）
@@ -50,7 +50,11 @@ function write(p, s){ writeFileSync(join(root, p), s); written.add(p); }
    切版是全仓共写面最大的一次改动（写 8 个版本源，再按惯例一起提交 CHANGELOG），而铁律第 5 条
    恰好把这组文件列为「动之前必须先在这里声明一行」。此前只靠记性 ⇒ 实测漏过一次：
    `0e6b760`（切 v3.7.154）写了 9 个文件、其中 6 个在清单里，板上零声明（对照 ZCode 切 v3.7.153 是有行的）。
-   现在：他人占用即失败；无冲突则由本脚本自己登记一行 ACTIVE，切完随收工提交翻 RELEASED。
+   现在：他人占用即失败；无冲突则由本脚本自己登记一行**生而 RELEASED** 的审计行。
+   ⚠️ 刻意不登记 ACTIVE：CI 认领门（`claim-check-ci.mjs`）在 CI 里按**提交作者名**取会话身份
+   （本仓全员同为 Levango7），与登记行里写的会话名永不匹配 ⇒ ACTIVE 自登记行会让发版提交把自己
+   的 9 条路径全判成「他人占用」（v3.7.155 首推 CI/Deploy 双红的实证）。声明义务由「落一行」本身
+   履行，不需要它持续占用。
    ⚠️ 判定**复用** scripts/claim-check.mjs（三面：我的工作文件 / origin/main / 其它脏工作树），不另造一套 ——
    两套判据迟早给出不同答案，那时"门过了"就不再有含义。
    ⚠️ `docs/agent-board.md` 刻意**不在** RELEASE_PATHS 里：它是追加式共享账本，认领它不等于排他
@@ -77,10 +81,11 @@ try {
 }
 if (claim.appended) {
   writeFileSync(boardP, claim.md, 'utf8');
-  console.log('[release] 板面已自动登记 ACTIVE 行（会话 ' + me + '，覆盖 ' + RELEASE_PATHS.length + ' 条发版路径）');
-  console.log('[release] ⚠️ 收工提交时请把该行翻成 RELEASED（铁律第 3 条）；本次切版若中途失败也要翻，别留假占用。');
+  console.log('[release] 板面已自动登记一行 RELEASED 审计行（会话 ' + me + '，覆盖 ' + RELEASE_PATHS.length + ' 条发版路径，版本 v' + newVer + '）');
+  console.log('[release] 说明：登记行生而 RELEASED —— ACTIVE 自登记行会让发版提交在 CI 认领门里被自判占用');
+  console.log('[release]   （v3.7.155 双红实证），故该行只作审计、不参与任何门禁；也不用再手动翻状态。');
 } else {
-  console.log('[release] 板面已有本会话覆盖发版路径的 ACTIVE 行 ⇒ 跳过登记（幂等，重跑不会追加重复行）');
+  console.log('[release] 板面已有本会话本次版本（v' + newVer + '）的审计行 ⇒ 跳过登记（幂等，重跑不会追加重复行）');
 }
 
 // build tag 自动生成：当日日期（UTC）+ 序号字母；同日多次发版时在当前字母上递增

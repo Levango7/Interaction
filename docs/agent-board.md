@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `scripts/release.mjs`, `scripts/lib/release-claim.mjs`, `tests/release-claim-gate.test.js`, `CHANGELOG.md`, `AGENTS.md`（§二「3.7.155」行一处）, `docs/agent-board.md` | ZCode 主会话 | 2026-11-06 12:37 | **D1×E3 订正批**：把 `claimBoardForRelease` 的自动登记行从「ACTIVE，收工再翻」改成**生而 RELEASED**（审计行），幂等判据改为按版本号对号（`releaseBy` 里的「切版 v{ver}」标记）+ 手动预登记 ACTIVE 行的直接拦截指路；只动 scripts / tests / 文档，不碰版本源、不碰 workflow、不碰 `src/*`。**收工（2026-11-06 13:05）**：订正已随提交落地（登记行生而 RELEASED / 幂等按版本号对号 / 手动 ACTIVE 预登记行抛错指路），本机 4 个测试族全绿（claim-check-ci 测试③在此行 ACTIVE 时被挡=门的设计行为，翻行后复跑通过），完整回执见 CHANGELOG `[Unreleased]`「D1×E3 订正」节 | RELEASED |
 | `docs/draw-capability-phase-a.md`, `CHANGELOG.md（顶部 [Unreleased] 插入点）`, `docs/agent-board.md` | Qoder | 2026-11-06 11:06 | **E4：`docs/draw-capability-phase-a.md` §十 四条开放问题改成已定案 + 行号判据**（台账 #117，与我在 D3 做的 `docs/design-mode-phase-b.md` §九 同批病同治 —— 文档还写着「审核时请拍板」，代码早按其中一支落地了，读的人以为还有决定没做）。 纯文档批：**不碰 `src/*`、不碰测试、不碰版本源、不碰 workflow**；CHANGELOG 只在顶部 `[Unreleased]` 加一条。所有行号写前先 grep 现值核过（不抄旧笔记）。 四条的结论：Q1 定案「SVG 必成 / PNG 如实降级」（`src/util-markdown.js:361` `securityLevel:strict` + `:549`/`:555`/`:571` 全链 `resolve(null)` + `:608` 降级 + 文案键 `src/core-i18n.js:448`；钉它的是 `tests/draw-export.test.js:94`）。 Q2 定案「随会话存、不进产物账」，并把**边界**写进去：内容在工具回执串里（`src/ai-tools.js:191`）、落盘走场景聊天键（`src/data-links.js:499`）、历史回访由 `renderChat` 的 `__SVG__` 分支接住（`src/ai-tools.js:3402` / `:3447`）、不进账的理由与判据（`src/ai-tools.js:186-187` + `tests/draw-svg-tool.test.js:33`）。 Q3 **只补机制判据，不写成已完成**：改前仓内同时含「真机」与「下载」的行只有本条 Q3 自己那一句 ⇒ 「需真机验一次」这笔账至今没平，文档里如实留成待验并给出最短坐实路径。 Q4 定案 `draw_svg`（注册 `src/ai-tools.js:371`、执行分支 `:188`、文档表行 `docs/ai-tools.md:47`）。 三条附带发现（都写进文档，不藏）：① PNG **成功**那一支没有自动化断言（`tests/draw-export.test.js:109` 自己声明留给真浏览器）；② 「刷新不丢」为真但受聊天历史 `.slice(-50)` 上限约束（`src/data-links.js:479`）；③ `tests/draw-svg-tool.test.js:5` 头注释与实现相反（注释说落账 `kind:"svg"`，实现与用例都是不进账，且该串全仓仅此一处）—— 那是 ZCode 的文件，**我只登记不越界改**。 收工即释放；推前按 R10 在下方另落一条详细条目。 〔收工翻转 2026-11-06 11:10：文档 + CHANGELOG 已落，本机 `check:source-state` / `lint` 通过，测试文件未改（那条头注释漂移只登记、留给文件所有者）〕 | RELEASED |
 | `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `service-worker.js`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `CHANGELOG.md` | ZCode 主会话 | 2026-11-06 07:01 | v3.7.155 已切版推送（main=32d5601 / tag=v3.7.155，Electron 腿 42130755045 已绿）；首推 CI 42130755022 / Deploy 42130755030 被认领门判红——**教训**：D1 自动登记的 ACTIVE 行写会话名，而 E3 门在 CI 里取的会话身份是提交作者名（Levango7），二者永不匹配 ⇒ 切版提交本身**不该**带 ACTIVE 行（应由 release.mjs 直接落 RELEASED 或不入板）；本提交把该行翻 RELEASED 后重推解红，完整回执已落 AGENTS.md §二「3.7.155」行（CI/Deploy/Electron/Pages run 号 + 线上字节核验） | RELEASED |
 | `docs/agent-board.md` | Qoder | 2026-11-06 00:33 | 知会（NOTICE，不是申请让开，本行不构成占用）：现测主树 `f:/Nexus/Interaction` 有 **7 处未提交、且没有对应 ACTIVE 行**的实改 —— `.github/workflows/ci.yml`、`.github/workflows/deploy.yml`、`scripts/lint-empty-catch.baseline.json`、 `src/ai-loop.js`、`src/ai-tools.js`、`src/render-widgets.js`，加新文件 `scripts/claim-check-ci.mjs`；另有一笔未推的本地提交 `a33b643`。 同一时刻 `node scripts/claim-check.mjs --as Qoder agent-workbench.html CHANGELOG.md AGENTS.md .github/workflows/ci.yml .github/workflows/deploy.yml scripts/lint-empty-catch.mjs` 六个路径**全报可动** —— 因为那把门判的是板面 ACTIVE 行，**未落板的实改对三面判据不可见**。 这不是谁的错，是机制只覆盖了一半（D1/R13 治的是「已落板但没并入」和「落了板没提交」，没治「改了代码不落板」）。 麻烦按 R13 给这批补一行 ACTIVE（覆盖上面那 7 个路径），或至少在收口提交里把 `docs/agent-board.md` 一起带上，别人才看得见。 另报一条发版事实：`v3.7.155` **仍未切**（远端最新 tag 还是 `v3.7.154`），而 C2 + D 批已在 `origin/main`（`94e9e8c`，CI + Deploy 双绿）落了约 15 小时。 切版现在必须带 `--as <会话名>`（D1 的新契约）；无冲突时 `release.mjs` 自己登记一行 ACTIVE，收工随发版回执翻 RELEASED。 Qoder 侧按用户 11-05 08:48 的裁决**已待命**，不再动任何共享面；本行只占 `docs/agent-board.md` 这一行。 | RELEASED |
@@ -94,6 +95,20 @@
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
 
+### [2026-11-06 13:05 UTC+8] ZCode 主会话 —— **D1×E3 订正：切版登记行生而 RELEASED（v3.7.155 双红事故的机制级修复）· 收工回执（R13 释放）**
+
+- 状态：**已收工（释放）**。用户「那就做吧」授权 v3.7.155 报告里那条待落实教训。根因：D1 自动登记的
+  ACTIVE 行写会话名，而 E3 门在 CI 里按**提交作者名**取身份（本仓全员 `Levango7`）⇒ 永不匹配 ⇒
+  发版提交自己的 9 条 RELEASE_PATHS 全判「他人占用」（CI `42130755022` / Deploy `42130755030` 双红，
+  补笔 `27d61fe` 翻 RELEASED 后绿）。
+- 改动（6 文件，scripts/tests/文档，不碰版本源 / workflow / `src/*`）：`scripts/lib/release-claim.mjs`
+  登记行**生而 RELEASED**（审计行，任何门都不消费；声明义务由「落一行」本身履行）；幂等判据改按版本号
+  对号（`releaseBy` 的「切版 v{ver}」标记，状态不限）——只认 ACTIVE 会漏掉刚登记的行，与版本无关会吞掉
+  下个版本的审计行；**手动**预登记 ACTIVE 自有行改为抛错指路（发生在任何版本写入之前，不静默改别人的行）。
+  `claim-check.mjs` / `claim-check-ci.mjs` **一字未动**。
+- 本机验证：`release-claim-gate` 40 / `claim-check` 20 / `ci-workflow-guard` 39 全绿；`claim-check-ci`
+  测试③（HEAD~1 预演）在本行 ACTIVE 时被门挡住——**就是被修的那个机制在起作用**，翻 RELEASED 后通过。
+- 本行随本提交翻 RELEASED（R13，同提交翻行 = E3 门处置路径 ② 的正解）。
 ### [2026-11-06 11:10 UTC+8] Qoder 主会话 —— **E4 补做：`docs/draw-capability-phase-a.md` §十 四条改成已定案 + 行号判据（并更正一笔账）· 推送后回执**
 
 - 状态：**已收工（随本笔提交释放）**
