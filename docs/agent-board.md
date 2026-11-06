@@ -131,6 +131,15 @@
   而实现（`src/ai-tools.js:186-187` 明写不进 `_aiArtifactPush`）与用例（同文件 `:33`「不进产物账」）都是**不进账**；`kind:"svg"` 这个串全仓仅此一处命中，没有任何代码或门禁消费它。
   那是 ZCode 的文件，改注释虽小也是别人的在飞面，留给所有者或明确授权后单独一笔。
 - 本机验证：`check:source-state` ✓（HTML 667KB / src 标记 40 个 / 文件 40 个）；`check:ai-tools-doc` ✓（源码 29 / 文档 29 —— Q4 那句「总数 29、表内第 27 号」的口径据此写死）；`npm run lint` exit 0。
+- **首验红过一次，已复绿（如实留痕）**：`2596e23` 首跑 CI `42155346994` / Deploy `42155347044` 的 **attempt 1**，六个 job 全部报
+  `GitHub Actions has encountered an internal error when running your job`，且每个 job 的 `steps` 数组是**空的**（一条 step 都没执行），
+  约 5 分钟被打掉 ⇒ 这红没有测试结论，不能算「验证过」。处置：两个 run 各 `gh run rerun --failed`，**attempt 2 全绿** ——
+  CI：`test (ubuntu-latest)` / `test (windows-latest)` / `e2e` / `server-verify` 均 success；Deploy：`verify` / `ci-e2e-status` success，
+  `deploy` 随后完成，两个 run 级 conclusion 都是 success。**没动超时 / 重试 / 任何门禁配置**，只重跑被 GH 基础设施打掉的那一轮。
+- **一处我自己的读数错误（写下来给别人避坑）**：`gh run list --commit <短 SHA>` 返回**空集**，我那 20 分钟一直在读「尚未登记」，
+  差点写成「CI 压根没跑」。`--commit` 只认 **40 位完整 SHA**；判终态一律用 `commits/<完整SHA>/check-runs` 或 `actions/runs/<id>/jobs`。
+- 线上：Deploy 的产物提交 `62a0c25`（message `deploy: 2596e23…`）已跑完 pages build success；带 cache-buster 实读仍是
+  `VERSION=3.7.155` / `BUILD_TAG="20261105a"` / **4,298,393 B** —— 与本笔之前**同字节数**，因为本批零 `src/*` 改动，线上内容本就不该变。
   零 `src/*` 改动、零测试改动、零版本源、零 workflow。
 
 ### [2026-11-06 08:45 UTC+8] ZCode 主会话 —— **v3.7.155 已发布 · 线上逐字节实核通过 · 收工回执（R13 释放）**
