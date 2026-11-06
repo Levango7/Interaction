@@ -17253,7 +17253,7 @@ function sanitizeHtml(html){
 }
 
 /* ---------- Mermaid（2026-10-23）：只在出现 ```mermaid 时按需加载 vendor ----------
- * 10.x UMD（11.x 只发 ESM，file:// 会被 CORS 拦）；securityLevel:'strict' 只让标签走文本，
+ * 10.x UMD（11.x 只发 ESM，file:// 会被 CORS 拦）；禁用 HTML 标签，避免安全清理连文字一起剥离，
  * 渲染后仍做一次 SVG 消毒（script/foreignObject/on-事件/外链），失败保留源码并提示。 */
 let _mermaidPromise = null;
 let _mermaidSeq = 0;
@@ -17270,7 +17270,7 @@ function _loadMermaid(){
     s.async = true;
     s.onload = function(){
       if(!window.mermaid){ reject(new Error("mermaid not found")); return; }
-      try{ window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "default" }); }catch(_e){ /* 配置失败交给 render 报错 */ }
+      try{ window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "default", htmlLabels: false, flowchart: { htmlLabels: false } }); }catch(_e){ /* 配置失败交给 render 报错 */ }
       resolve(window.mermaid);
     };
     s.onerror = function(){ reject(new Error("mermaid load failed")); };
