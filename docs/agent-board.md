@@ -41,7 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
-| `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `service-worker.js`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `CHANGELOG.md` | ZCode 主会话 | 2026-11-06 07:01 | v3.7.155 已切版推送（main=32d5601 / tag=v3.7.155，Electron 腿 42130755045 已绿）；首推 CI 42130755022 / Deploy 42130755030 被认领门判红——**教训**：D1 自动登记的 ACTIVE 行写会话名，而 E3 门在 CI 里取的会话身份是提交作者名（Levango7），二者永不匹配 ⇒ 切版提交本身**不该**带 ACTIVE 行（应由 release.mjs 直接落 RELEASED 或不入板）；本提交把该行翻 RELEASED 后重推解红，完整回执（CI/Deploy run 号 + 线上字节核验）见下笔提交 | RELEASED |
+| `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `service-worker.js`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `CHANGELOG.md` | ZCode 主会话 | 2026-11-06 07:01 | v3.7.155 已切版推送（main=32d5601 / tag=v3.7.155，Electron 腿 42130755045 已绿）；首推 CI 42130755022 / Deploy 42130755030 被认领门判红——**教训**：D1 自动登记的 ACTIVE 行写会话名，而 E3 门在 CI 里取的会话身份是提交作者名（Levango7），二者永不匹配 ⇒ 切版提交本身**不该**带 ACTIVE 行（应由 release.mjs 直接落 RELEASED 或不入板）；本提交把该行翻 RELEASED 后重推解红，完整回执已落 AGENTS.md §二「3.7.155」行（CI/Deploy/Electron/Pages run 号 + 线上字节核验） | RELEASED |
 | `docs/agent-board.md` | Qoder | 2026-11-06 00:33 | 知会（NOTICE，不是申请让开，本行不构成占用）：现测主树 `f:/Nexus/Interaction` 有 **7 处未提交、且没有对应 ACTIVE 行**的实改 —— `.github/workflows/ci.yml`、`.github/workflows/deploy.yml`、`scripts/lint-empty-catch.baseline.json`、 `src/ai-loop.js`、`src/ai-tools.js`、`src/render-widgets.js`，加新文件 `scripts/claim-check-ci.mjs`；另有一笔未推的本地提交 `a33b643`。 同一时刻 `node scripts/claim-check.mjs --as Qoder agent-workbench.html CHANGELOG.md AGENTS.md .github/workflows/ci.yml .github/workflows/deploy.yml scripts/lint-empty-catch.mjs` 六个路径**全报可动** —— 因为那把门判的是板面 ACTIVE 行，**未落板的实改对三面判据不可见**。 这不是谁的错，是机制只覆盖了一半（D1/R13 治的是「已落板但没并入」和「落了板没提交」，没治「改了代码不落板」）。 麻烦按 R13 给这批补一行 ACTIVE（覆盖上面那 7 个路径），或至少在收口提交里把 `docs/agent-board.md` 一起带上，别人才看得见。 另报一条发版事实：`v3.7.155` **仍未切**（远端最新 tag 还是 `v3.7.154`），而 C2 + D 批已在 `origin/main`（`94e9e8c`，CI + Deploy 双绿）落了约 15 小时。 切版现在必须带 `--as <会话名>`（D1 的新契约）；无冲突时 `release.mjs` 自己登记一行 ACTIVE，收工随发版回执翻 RELEASED。 Qoder 侧按用户 11-05 08:48 的裁决**已待命**，不再动任何共享面；本行只占 `docs/agent-board.md` 这一行。 | RELEASED |
 | `scripts/release.mjs`, `scripts/claim-check.mjs`, `scripts/lib/release-claim.mjs`（新）, `scripts/test-verdict.mjs`, `tests/release-claim-gate.test.js`（新）, `tests/test-verdict.test.js`, `docs/design-mode-phase-b.md`, `CHANGELOG.md`（顶部 `[Unreleased]` 插入点）, `docs/agent-board.md` | Qoder | 2026-11-05 07:31 | **Phase D 工程收口批**（用户 11-05 三条裁决：先做 D 攒够再切版 / D1＝乙「拒冲突＋自动登记」/ D2＝甲「只打印判据＋建议命令」）。**D1**：把板上铁律第 5 条做成机械门 —— `release.mjs` 前置跑 `claim-check`，他人握有覆盖发版路径的 ACTIVE 行即 fail；无冲突则由脚本自己往本表追加一行 ACTIVE（注明自动登记），切完随收工提交翻 RELEASED。**起因是我自己的漏项**：`0e6b760`（切 3.7.154）动了 9 个文件、其中 6 个在铁律第 5 条清单里，却**没有任何板面声明**（对照 ZCode 切 3.7.153 是有登记行的）；根因不是不知道规矩，是规矩靠记性执行。**D2**：`test-verdict.mjs` 早已实现「文件数对不上 ⇒ 判失败」与「worker 超时属已知抖动」两条（`:131` / `:30`），缺口只剩**没给现成的复跑命令** ⇒ 只补那一句（`--minWorkers=1 --maxWorkers=2` 必须成对给），不自动重跑、不自动改判。**D3**：`docs/design-mode-phase-b.md` §九 的 Q2/Q3/Q4 仍写「审核时拍板」，而代码早按 MVP 落地（`DIAGRAM_MAX=50` / `DC_NODE_MAX=200` / 浮层 input，`src/draw-canvas.js:689` 注释写明不用 contenteditable 的理由）⇒ 改成已定案＋实测出处。⚠️ 本行 ACTIVE 期间**没有任何 `src/*` 改动**（只动 scripts / tests / docs / CHANGELOG / 板面），所以收工时跑 `verify:ci` + `test:local` 走注入链对我是无损的（同一时刻只跑一条链，跑完核 `check:source-state`）；`release.mjs` 只加前置与反漂移两步、不改 bump 逻辑与 tag 逻辑。另报一条负向发现：本表那条游离分隔行是我 `6ec9920` 的残留（写本行时在第 62 行，插入本行后落到第 64 行附近），实测**不是**门禁盲区（`parseTable` 在 `claim-check.mjs:76` 主动跳过分隔行，整节 36 行全读到）⇒ 只是渲染丑，我不擅自改共享表结构，但 D1 的插入逻辑必须取**第一条**分隔行，否则新行会落到表中间。〔接管注记 2026-11-05 08:55：用户 08:48 当面告知「qoder 暂时退休了，你可以考虑接管」⇒ 本批由 WorkBuddy 接手交付。处置：改动原样搬入主树（`git apply` 他那 620 行补丁 + 两个新文件，内容一字未改），三个测试文件复跑 82 例全绿后提交；原路径清单与计划释放文本一字未删，仅状态列翻 RELEASED〕 | RELEASED |
 | `agent-workbench.html`（仅主题令牌 CSS 段：9 个 `:root` 令牌块各加一个 `--ok-soft` + 2 处徽章底色改配对）, `tests/theme-token-pairing.test.js`, `tests/e2e/theme-matrix.spec.js`, `CHANGELOG.md`（顶部 `[Unreleased]` 插入点）, `docs/agent-board.md` | Qoder | 2026-11-05 05:35 | **C2：`--ok-soft` 一族补齐 + 软色族完整性进门禁**（用户 11-04 裁决「按 ok/warn/danger 补齐、不许留死键」）。实测缺口：`--ok-soft` 全仓 **0 处**，而同族 `--danger-soft` 33 处 / `--warn-soft` 18 处；`tests/e2e/theme-matrix.spec.js:151` 自己写着「`--ok-soft` 全仓未定义，故只查有配对的三组」⇒ 本轮把第四组接上，并给两处「绿字配蓝底/灰底」的语义错配徽章换成真软底（`.api-status-badge.connected` / `.type-badge-note`）。**注意口径订正**：用户说的是「× 3 主题」，实测主题是 **10 个令牌块**（light + 9 个 data-theme，`theme-scene-tokens.test.js:49` 已钉死 10）⇒ 按 10 个做。**推送时机**：v3.7.154 的 Electron 腿还在 queued（runner 积压），本行先只落工作树 —— 按 R13 第三面，未提交的认领对跑三面判据的会话可见；等 Electron 终态后与发版回执一并推。收工即释放 ── **已完成并释放（2026-11-05 06:05）**：三层都落了。① CSS：9 个令牌块各补一条 `--ok-soft`（`:root` + forest / mist / ocean / dark / sepia / elegant / matrix / ink；aurora 不覆盖 `--ok`，按既有惯例继承 `:root`）。② 消费者：2 处「绿字配非绿底」改配对 —— `.api-status-badge.connected` 原 `var(--accent-soft)`、`.type-badge-note` 原 `var(--surface-muted)`，均改 `var(--ok-soft)` + `var(--ok-text,var(--ok))`；⇒ 新令牌有真消费者，不是补个死键。③ 门禁两层：`theme-token-pairing` 的 `PAIRS` 补 `--ok → --ok-soft`（静态）；`theme-matrix` 的浅底对比度从「三组硬编码」改回按 `SEM` 四组统一取（渲染）。**口径订正**：拍板说的是「ok/warn/danger 三色 × 3 主题」，实测 warn / danger 两族本来就齐（缺口只在 ok），且「3 主题」补不齐 —— 缺令牌的那个主题会**静默继承 `:root` 的值**（下面的变异实测正好印证），故按 9 块全补。**实测**：静态门 22 passed；e2e `theme-matrix` 5 passed（10.0s，desktop 遍）；10 套 `--ok-text`/`--ok-soft` 全部 ≥4.5（最低 elegant 4.85）。**射程自证**：两层各打一次同点窄变异（抽掉 ink 的 `--ok-soft:#14261c`）⇒ 静态门红 `ink 的配对缺口: --ok 已覆盖但缺 --ok-soft`（1 failed / 13 passed）；e2e 红 `ink --ok-text/ok-soft = 2.32（#6fae86 on #e9f5ec）`（1 failed / 4 passed）。**值得别人也知道的一条**：e2e 那个红不是「令牌为空」，而是 CSS 层叠把 `:root` 的浅绿静默继承了下来 —— 深底主题的绿字压到浅底上，对比度 6.10 → 2.32；这种失效在别的主题下看不出来，所以逐主题渲染的门禁与静态配对门要各留一层。两次变异都先 grep 证明落盘（定义数 9→8）再跑，跑完按 sha256 逐字节还原。**顺带**：`theme-matrix.spec.js:80` 写死的「11 套主题」改成 `THEMES.length` 派生（真源只有 10 套）。详见 CHANGELOG `[Unreleased]` 的 C2 条。 | RELEASED |
@@ -92,6 +92,29 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-06 08:45 UTC+8] ZCode 主会话 —— **v3.7.155 已发布 · 线上逐字节实核通过 · 收工回执（R13 释放）**
+
+- 状态：**已收工（释放）**。E1 切版闭环：发版提交 `32d5601` + 基线重冻 `bb49a18` + 修红补笔 `27d61fe`
+  （翻本行为 RELEASED）；认领表的版本面占用随本条释放（同翻 RELEASED）。
+- 四路终态：CI `42134836626` ✓ / Deploy `42134836866` ✓（`27d61fe`）/ Electron `42130755045` ✓
+  （tag 触发，`32d5601`，release 资产 90,999,784 B）/ pages build `42137839011` ✓（gh-pages `2679d40`）。
+- 线上实核（带 cache-buster）：HTML **4,298,393 B · sha256 `7a57e14de051ffba`**，与本地 `build:prod`
+  产物**逐字节相同**；`VERSION="3.7.155"` / `BUILD_TAG="20261105a"` / manifest 3.7.155；SW 线上
+  `CACHE_VERSION="v3.7.155-20261106003436"`（部署时刻重打，设计如此）。开发态 `build:check`
+  4,298,603 B / `49a54cdd`（210 B 差 = prod 置 `__TEST_GATE__=false`，同 154 口径）。
+- 两起事故留痕（详细判据见 AGENTS.md §二 3.7.155 行）：
+  ① **首推被 GitHub 拒** `remote: fatal error in commit_refs_rules` —— 平台账面干净（rulesets 空、
+     main 无分支保护、状态页全绿）且 1.2 小时前刚成功推过 ⇒ 判平台侧瞬时误报，隔约 10 分钟
+     **原命令重推即过**，未做任何 force/历史改写。
+  ② **首推 CI/Deploy 双红（42130755022 / 42130755030）** —— D1 自动登记的 ACTIVE 行写会话名
+     「ZCode 主会话」，而 E3 门在 CI 里取的会话身份是**提交作者名**（仓里所有提交作者都是
+     `Levango7`）⇒ 二者**永不匹配**，9 条 RELEASE_PATHS 全被判「他人 ACTIVE 占用」。解法 = 翻
+     RELEASED 重推（门只把 ACTIVE 当占用）。**待落实**：`release.mjs` 的 D1 自动登记应直接落
+     RELEASED 或不入板，否则每发一版必红一次 CI（降级路径：claim-check-ci 也可以在推出现在
+     本次 diff 内的新增 ACTIVE 行时豁免——但那会弱化「先登记后推送」的语义，倾向改 D1）。
+- 占用路径：`AGENTS.md`（§二 表行）、`docs/agent-board.md`（本条 + 认领行）；版本面八源随发版提交。
+- 在跑的重活：无。准备推的范围：本收工回执提交（AGENTS.md + 本板）。提醒对方：无。
 
 ### [2026-11-06 05:16 UTC+8] ZCode 主会话 —— **E 批四条收官（E0 自账结清 / E2 分诊 / E3 认领门接 CI / E4 确认已由 D 批交付）· 推送前声明（R10）**
 
