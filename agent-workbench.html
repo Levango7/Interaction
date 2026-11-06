@@ -6420,6 +6420,21 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <p class="api-login-hint" id="apiIntegrationsHint" data-i18n="api.loginRequired">请先登录以使用集成功能</p>
   </section>
 
+  <!-- ===== v3.7.156：最近登录记录（审计环 /api/auth/audit 的最小前端消费者） ===== -->
+  <section class="set-card" id="set-api-audit" aria-label="最近登录记录" data-i18n-aria="a11y.apiAudit">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>
+      <div>
+        <h3 data-i18n="api.recentActivityTitle">最近登录记录</h3>
+        <p class="set-desc" data-i18n="api.recentActivityDesc">仅显示本人近期安全事件（注册 / 登录 / 登出 / 登出设备），用于核对是否存在陌生登录。</p>
+      </div>
+    </header>
+    <div class="api-panel" id="apiAuditPanel">
+      <div id="apiAuditList"></div>
+    </div>
+    <p class="api-login-hint" id="apiAuditHint" data-i18n="api.loginRequired">请先登录以查看最近登录记录</p>
+  </section>
+
   <!-- ===== 关于本应用 ===== -->
   <section class="set-card" id="set-about" aria-label="关于本应用" data-i18n-aria="a11y.aboutCompat">
     <header class="set-head">
@@ -10328,6 +10343,17 @@ const MESSAGES = {
     "api.scheduleRemoved": "提醒已删除",
     "api.integrationConnected": "集成已连接",
     "api.integrationDisconnected": "集成已断开",
+    "api.integrationNotConfigured": "部署者未配置该集成的凭据（见 config.example.json 的 integrations 段），无法连接",
+    "api.integrationAuthorizeOpened": "已打开授权页，授权完成后请回到本页查看连接状态",
+    "api.integrationNotConnectedHint": "未连接（凭据已配置，可点「连接」授权）",
+    "api.integrationConnectFailed": "连接未成功，请重试或联系部署者",
+    "api.recentActivityTitle": "最近登录记录",
+    "api.recentActivityDesc": "仅显示本人近期安全事件（注册 / 登录 / 登出 / 登出设备），用于核对是否存在陌生登录。",
+    "api.auditEmpty": "暂无记录",
+    "api.auditEvRegister": "注册",
+    "api.auditEvLogin": "登录",
+    "api.auditEvLogout": "登出",
+    "api.auditEvDeviceDelete": "登出设备",
     "api.offlineMode": "离线模式，数据已保存到本地",
     "api.backOnline": "已恢复在线，正在同步…",
     "api.opFailed": "操作失败，请检查网络后重试",
@@ -10351,6 +10377,8 @@ const MESSAGES = {
     "pwa.installedToDesktop": "已安装到桌面，可从桌面快捷启动",
     "pwa.subscribed": "已订阅推送通知",
     "pwa.subscribeFailedPrefix": "订阅失败：",
+    "pwa.vapidUnavailable": "无法从服务器获取推送公钥，暂不可订阅",
+    "pwa.subscribeUploadFailed": "订阅已创建但未登记到服务器，已撤销，请重试",
     "pwa.unsubscribed": "已取消推送订阅",
     "pwa.unsubscribeFailedPrefix": "取消失败：",
     "pwa.testNotifyFailedPrefix": "测试通知失败：",
@@ -10738,6 +10766,7 @@ const MESSAGES = {
     "a11y.apiAccount": "账号设置",
     "a11y.apiNotify": "通知偏好",
     "a11y.thirdPartyIntegrations": "第三方集成",
+    "a11y.apiAudit": "最近登录记录",
     "a11y.aboutCompat": "关于本应用",
     "a11y.reportType": "报表类型",
     "a11y.returnPrevView": "返回上一视图",
@@ -14572,6 +14601,17 @@ const MESSAGES = {
     "api.scheduleRemoved": "Schedule removed",
     "api.integrationConnected": "Integration connected",
     "api.integrationDisconnected": "Integration disconnected",
+    "api.integrationNotConfigured": "Deployer has not configured this integration's credentials (see the integrations section of config.example.json)",
+    "api.integrationAuthorizeOpened": "Authorization page opened — come back here to check the connection after approving",
+    "api.integrationNotConnectedHint": "Not connected (credentials configured — click Connect to authorize)",
+    "api.integrationConnectFailed": "Connection failed — please retry or contact the deployer",
+    "api.recentActivityTitle": "Recent sign-in activity",
+    "api.recentActivityDesc": "Only your own recent security events (register / sign-in / sign-out / device sign-out), for checking unfamiliar sign-ins.",
+    "api.auditEmpty": "No events yet",
+    "api.auditEvRegister": "Account registered",
+    "api.auditEvLogin": "Sign-in",
+    "api.auditEvLogout": "Sign-out",
+    "api.auditEvDeviceDelete": "Device signed out",
     "api.offlineMode": "Offline, data saved locally",
     "api.backOnline": "Back online, syncing…",
     "api.opFailed": "Operation failed. Check your network and retry.",
@@ -14595,6 +14635,8 @@ const MESSAGES = {
     "pwa.installedToDesktop": "Installed to desktop, launch from desktop shortcut",
     "pwa.subscribed": "Subscribed to push notifications",
     "pwa.subscribeFailedPrefix": "Subscribe failed: ",
+    "pwa.vapidUnavailable": "Cannot fetch the push public key from the server — subscription unavailable",
+    "pwa.subscribeUploadFailed": "Subscription created but not registered with the server — rolled back, please retry",
     "pwa.unsubscribed": "Unsubscribed from push",
     "pwa.unsubscribeFailedPrefix": "Unsubscribe failed: ",
     "pwa.testNotifyFailedPrefix": "Test notification failed: ",
@@ -14980,6 +15022,7 @@ const MESSAGES = {
     "a11y.apiAccount": "Account settings",
     "a11y.apiNotify": "Notification preferences",
     "a11y.thirdPartyIntegrations": "Third-party integrations",
+    "a11y.apiAudit": "Recent sign-in activity",
     "a11y.aboutCompat": "About this app",
     "a11y.reportType": "Report type",
     "a11y.returnPrevView": "Return to previous view",
@@ -30971,7 +31014,9 @@ async function _doAuthRegister(name, email, password, confirm, code) {
   try {
     var r = await window.apiRegister(email, password, name, code);
     if (r.ok) {
-      var lr = await window.apiLogin(email, password);
+      /* v3.7.156：apiRegister 已收下注册即签发的 token；旧后端（响应不带 token）
+         才退回显式登录一次 —— 避免每次注册多开一个 30 天孤儿 session。 */
+      var lr = (r.data && r.data.accessToken) ? { ok: true } : await window.apiLogin(email, password);
       if (lr.ok) {
         try { toast(t("api.registerSuccess", "注册成功"), "ok"); } catch (_) {}
         try { window._updateUserButton(); } catch (_) {}
@@ -31308,7 +31353,9 @@ function _wechatPollStart(){
           }
           if(sr.data.status === "confirmed" && sr.data.accessToken){
             _wechatPollStop();
-            try{ window.apiSetTokens(sr.data.accessToken, sr.data.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
+            /* v3.7.156：读服务端 expiresIn（同 ui-ge-api.js 登录路径修复，不再写死 15 分钟）。 */
+            var ttlMs = (sr.data.expiresIn && sr.data.expiresIn > 0) ? sr.data.expiresIn * 1000 : 15*60*1000;
+            try{ window.apiSetTokens(sr.data.accessToken, sr.data.refreshToken, Date.now() + ttlMs); }catch(_e){}
             var ov = document.getElementById("authSsoOverlay"); if(ov) ov.remove();
             try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
             try{ window._loadApiPanels(); }catch(_e){}
@@ -31363,7 +31410,10 @@ try{
     if(e.source !== session.source || e.origin !== session.origin || d.state !== session.state) return;
     if(typeof d.accessToken !== "string" || !d.accessToken) return;
     _githubAuthSession = null; // 一次性消费，重复消息不得再次切换账号。
-    try{ window.apiSetTokens(d.accessToken, d.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
+    /* v3.7.156：服务端回调页载荷已带 expiresIn（旧消息/ mocked 测试缺该字段时
+       回退 15 分钟 —— 与服务端默认 accessTtlSec=900 一致）。 */
+    var ttlMs = (d.expiresIn && d.expiresIn > 0) ? d.expiresIn * 1000 : 15*60*1000;
+    try{ window.apiSetTokens(d.accessToken, d.refreshToken, Date.now() + ttlMs); }catch(_e){}
     try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
     try{ window._loadApiPanels(); }catch(_e){}
     setActive("overview"); render();
@@ -47235,10 +47285,27 @@ function initInstallPrompt(){
 
 /* ---------- Web Push 订阅框架 ---------- */
 /**
- * VAPID 公钥占位符（真实部署替换为服务器生成的 VAPID 公钥，base64url 编码）。
- * 当前为占位符，订阅会成功但服务器端无法推送（框架模式）。
+ * VAPID 公钥（v3.7.156：从服务端 GET /api/notifications/vapid-public-key 取真值）。
+ * 此前是写死的假公钥（非法 P-256 点 ⇒ pushManager.subscribe 必抛 DataError）——
+ * 订阅开关看着能打开，服务器却永远无法推送。公钥本就是下发给浏览器的公开值，
+ * 无需鉴权；拉取失败则拒绝订阅 —— 不允许回落到假公钥（那只会再制造一次
+ * 「订阅成功」的假象）。调度器推送时也用同一对 VAPID 密钥，两侧天然一致。
  */
-const VAPID_PUBLIC_KEY = "BEl62iUgOK0uOQ5h8J5qI9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT";
+let _vapidPublicKeyCache = null;
+async function _getVapidPublicKey(){
+  if(_vapidPublicKeyCache) return _vapidPublicKeyCache;
+  if(typeof window === "undefined" || typeof window.apiFetch !== "function") return null;
+  try{
+    const r = await window.apiFetch("/api/notifications/vapid-public-key", { method: "GET" });
+    if(r && r.ok && r.data && typeof r.data.publicKey === "string" && r.data.publicKey){
+      _vapidPublicKeyCache = r.data.publicKey;
+      return _vapidPublicKeyCache;
+    }
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "vapid public key fetch failed: "+((e&&e.message)||e), {where:"_getVapidPublicKey"}); }catch(_e2){}
+  }
+  return null;
+}
 
 /**
  * 把 base64url 字符串转为 Uint8Array（PushManager.subscribe 需要 applicationServerKey 为 Uint8Array）。
@@ -47294,14 +47361,34 @@ async function subscribePush(){
     } else if (Notification.permission === "denied") {
       return { ok: false, err: t("pwa.notifyDeniedHint","通知权限被拒绝，请在浏览器设置中允许") };
     }
-    // 2. 调用 pushManager.subscribe
+    // 2. 从服务端取 VAPID 公钥（v3.7.156：此前用写死的假公钥，subscribe 必抛错）
+    const vapidKey = await _getVapidPublicKey();
+    if(!vapidKey) return { ok: false, err: t("pwa.vapidUnavailable","无法从服务器获取推送公钥，暂不可订阅") };
+    // 3. 调用 pushManager.subscribe
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: _base64ToUint8Array(VAPID_PUBLIC_KEY)
+      applicationServerKey: _base64ToUint8Array(vapidKey)
     });
-    // 3. 真实部署应把 sub POST 到服务器 push-subscription endpoint
-    // 框架模式：仅持久化订阅状态到 localStorage
+    // 4. 订阅上报服务端（v3.7.156：此前只写 localStorage，服务端 pushSubs 恒空 ⇒
+    //    定时提醒永远不会推到这台设备）。登记失败 = 三处状态不一致（浏览器已订阅、
+    //    服务器不知道），此时撤销本地订阅并报错 —— 宁可让用户再点一次，
+    //    也不留「已订阅但收不到」的假绿。
+    if(typeof window === "object" && typeof window.apiPushSubscribe === "function"){
+      try{
+        const r = await window.apiPushSubscribe(sub.toJSON());
+        if(!r || !r.ok) throw new Error("server rejected push subscription");
+      }catch(e){
+        try{ await sub.unsubscribe(); }catch(e2){
+          /* 撤销也失败：浏览器侧订阅仍在，但服务器没有登记 —— 推送也不会到达。
+             不吞：留痕， next refreshPushUI 会显示「已订阅」但服务器侧是空的，
+             这条 warn 是此时唯一的排查线索。 */
+          try{ if(typeof pushDiag === "function") pushDiag("error", "push rollback unsubscribe failed: "+((e2&&e2.message)||e2), {where:"subscribePush"}); }catch(_e4){}
+        }
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "push subscribe upload failed: "+((e&&e.message)||e), {where:"subscribePush"}); }catch(_e3){}
+        return { ok: false, err: t("pwa.subscribeUploadFailed","订阅已创建但未登记到服务器，已撤销，请重试") };
+      }
+    }
     /* v3.7.102 第七片：订阅状态落盘失败 → 下次启动显示「未订阅」，与用户直觉不符（订阅其实还在）。 */
     try { save(PREFIX + "push_subscription", { endpoint: sub.endpoint, ts: Date.now() }); } catch(e){
       try{ if(typeof pushDiag === "function") pushDiag("warn", "push subscription persist failed: "+((e&&e.message)||e), {where:"subscribePush"}); }catch(_e2){}
@@ -47320,6 +47407,18 @@ async function unsubscribePush(){
   try {
     const state = await getPushSubscriptionState();
     if (!state.subscription) return { ok: true }; // 本就未订阅
+    // v3.7.156：先通知服务端删登记（endpoint 由服务端按 userId 校验归属）。
+    // 本地取消成功但服务端不知道 ⇒ 服务器继续往死 endpoint 推送（每次发送失败一次）。
+    // 这里是 best-effort：服务端删除失败不阻断本地取消 —— 本地 unsub 成功后
+    // 浏览器不再接收，服务端那条发不出去的订阅会在发送失败侧留痕。
+    if(typeof window === "object" && typeof window.apiPushUnsubscribe === "function"){
+      try{
+        const r = await window.apiPushUnsubscribe(state.subscription.endpoint);
+        if(!r || !r.ok) throw new Error("server rejected push unsubscribe");
+      }catch(e){
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "push unsubscribe upload failed: "+((e&&e.message)||e), {where:"unsubscribePush"}); }catch(_e2){}
+      }
+    }
     const ok = await state.subscription.unsubscribe();
     if (ok) {
       /* v3.7.105（云同步契约 · 阶段1/C1）：改走共享安全删除，语义不变（同样吞异常）；删除进变更日志（门控）。 */
@@ -48160,7 +48259,10 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
       body: JSON.stringify({ email, password, deviceName: _getDeviceLabel() }),
     });
     if(r.ok && r.data && r.data.accessToken){
-      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + 15 * 60 * 1000);
+      /* v3.7.156：与 refresh 路径同口径读服务端 expiresIn（此前写死 15 分钟 ——
+         后端改 accessTtlSec 后客户端会提前/滞后误判过期）。 */
+      const ttlMs = (r.data.expiresIn && r.data.expiresIn > 0) ? r.data.expiresIn * 1000 : 15 * 60 * 1000;
+      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + ttlMs);
       _apiUser = r.data.user || null;
     }
     return r;
@@ -48174,6 +48276,14 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
       method: "POST",
       body: JSON.stringify(payload),
     });
+    /* v3.7.156：注册成功服务端同样签发 token（auth.js 注册路由返 accessToken/
+       expiresIn）—— 此前调用方只拿 r 走「再去登录一次」，服务端那次签发就成了
+       永不被消费的 30 天孤儿 session。现在直接收下，已是登录态就不必再登录。 */
+    if(r.ok && r.data && r.data.accessToken){
+      const ttlMs = (r.data.expiresIn && r.data.expiresIn > 0) ? r.data.expiresIn * 1000 : 15 * 60 * 1000;
+      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + ttlMs);
+      _apiUser = r.data.user || null;
+    }
     return r;
   }
 
@@ -48206,7 +48316,9 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
       body: JSON.stringify(payload),
     });
     if(r.ok && r.data && r.data.accessToken){
-      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + 15 * 60 * 1000);
+      /* v3.7.156：同 apiLogin，读服务端 expiresIn 而非写死 15 分钟。 */
+      const ttlMs = (r.data.expiresIn && r.data.expiresIn > 0) ? r.data.expiresIn * 1000 : 15 * 60 * 1000;
+      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + ttlMs);
       _apiUser = r.data.user || null;
     }
     return r;
@@ -48371,6 +48483,11 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
 
   async function apiDisconnectIntegration(provider){
     return apiFetch("/api/integrations/oauth/" + encodeURIComponent(provider), { method: "DELETE" });
+  }
+
+  // v3.7.156：审计环只读（本人近期安全事件）
+  async function apiGetAudit(){
+    return apiFetch("/api/auth/audit", { method: "GET" });
   }
 
   // ===== 同步状态管理 =====
@@ -48664,8 +48781,10 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
         try{
           const r = await apiRegister(email, password, name);
           if(r.ok){
-            // 注册成功后自动登录
-            const lr = await apiLogin(email, password);
+            /* v3.7.156：注册成功服务端已签发 token（apiRegister 直接收下了）——
+               再调一次 apiLogin 会多开一个 30 天 session（正是此前的孤儿 session 模式）。
+               只有旧后端不在注册响应里带 token 时才退回显式登录一次。 */
+            const lr = (r.data && r.data.accessToken) ? { ok: true } : await apiLogin(email, password);
             if(lr.ok){
               modal.classList.remove("show");
               try{ toast(t("api.registerSuccess", "注册成功"), "ok"); }catch(_){}
@@ -48751,14 +48870,16 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
     _loadSchedules();
     // 加载集成状态
     _loadIntegrations();
+    // v3.7.156：加载最近登录记录（审计环的最小消费者）
+    _loadAuditList();
   }
 
   // 显示/隐藏 API 面板（登录后显示，未登录隐藏）
   function _showApiPanels(){
     if(typeof document === "undefined") return;
     const loggedIn = isApiLoggedIn();
-    const panels = ["apiAccountPanel", "apiNotifyPanel", "apiIntegrationsPanel"];
-    const hints = ["apiAccountHint", "apiNotifyHint", "apiIntegrationsHint"];
+    const panels = ["apiAccountPanel", "apiNotifyPanel", "apiIntegrationsPanel", "apiAuditPanel"];
+    const hints = ["apiAccountHint", "apiNotifyHint", "apiIntegrationsHint", "apiAuditHint"];
     panels.forEach(id => {
       const el = document.getElementById(id);
       if(el){ if(loggedIn) el.classList.add("show"); else el.classList.remove("show"); }
@@ -48877,38 +48998,120 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
   }
 
   // 加载集成状态
+  /* v3.7.156：服务端 status 现在返两块 —— {integrations, providers}。
+     providers 是凭据门控后的 provider 目录（configured + 可用 authorizeUrl），
+     缓存起来给「连接」按钮用：配了凭据才开授权页，没配就如实提示，不再短路空转。 */
+  let _integrationsCatalog = {};
+  /* OAuth 弹窗会话（与 render-overview.js 的 _githubAuthSession 同口径）：
+     只信「自己开的那个弹窗 + 配置的 API 来源」发来的消息。 */
+  let _integrationsAuthSession = null;
+  const _PROVIDER_ELS = {
+    notion: { status: "apiNotionStatus", connect: "btnApiConnectNotion", disconnect: "btnApiDisconnectNotion" },
+    todoist: { status: "apiTodoistStatus", connect: "btnApiConnectTodoist", disconnect: "btnApiDisconnectTodoist" },
+    google: { status: "apiGcalStatus", connect: "btnApiConnectGcal", disconnect: "btnApiDisconnectGcal" },
+  };
   async function _loadIntegrations(){
     try{
       const r = await apiGetIntegrations();
-      if(r.ok && r.data && r.data.integrations){
-        r.data.integrations.forEach(i => {
-          const prov = i.provider;
-          let statusEl, connectBtn, disconnectBtn;
-          if(prov === "notion"){
-            statusEl = document.getElementById("apiNotionStatus");
-            connectBtn = document.getElementById("btnApiConnectNotion");
-            disconnectBtn = document.getElementById("btnApiDisconnectNotion");
-          }else if(prov === "todoist"){
-            statusEl = document.getElementById("apiTodoistStatus");
-            connectBtn = document.getElementById("btnApiConnectTodoist");
-            disconnectBtn = document.getElementById("btnApiDisconnectTodoist");
-          }else if(prov === "google"){
-            statusEl = document.getElementById("apiGcalStatus");
-            connectBtn = document.getElementById("btnApiConnectGcal");
-            disconnectBtn = document.getElementById("btnApiDisconnectGcal");
-          }
+      if(r.ok && r.data){
+        if(r.data.providers) _integrationsCatalog = r.data.providers;
+        const mine = {};
+        (r.data.integrations || []).forEach(i => { mine[i.provider] = i; });
+        /* 目录里的三个 provider 都渲染（哪怕从未连过）—— 此前只在 integrations
+           列表里出现已连的，未连接的那行状态 DOM 永远没人写。 */
+        Object.keys(_PROVIDER_ELS).forEach(prov => {
+          const el = _PROVIDER_ELS[prov];
+          const statusEl = (typeof document !== "undefined") ? document.getElementById(el.status) : null;
+          const connectBtn = (typeof document !== "undefined") ? document.getElementById(el.connect) : null;
+          const disconnectBtn = (typeof document !== "undefined") ? document.getElementById(el.disconnect) : null;
+          const it = mine[prov];
+          /* v3.7.156：服务端字段是 connected（此前客户端读 authorized ——
+             字段名不匹配，面板永远显示「未连接」，连上了也不知道）。 */
+          const isConnected = !!(it && it.connected);
+          const configured = !!(_integrationsCatalog[prov] && _integrationsCatalog[prov].configured);
           if(statusEl){
             statusEl.classList.remove("connected", "disconnected");
-            statusEl.classList.add(i.authorized ? "connected" : "disconnected");
+            statusEl.classList.add(isConnected ? "connected" : "disconnected");
             statusEl.innerHTML = "";
-            statusEl.textContent = i.authorized ? t("api.connected", "已连接") : t("api.notConnected", "未连接");
+            statusEl.textContent = isConnected
+              ? t("api.connected", "已连接")
+              : (configured ? t("api.integrationNotConnectedHint", "未连接（凭据已配置，可点「连接」授权）") : t("api.integrationNotConfigured", "部署者未配置该集成的凭据（见 config.example.json 的 integrations 段），无法连接"));
           }
-          if(connectBtn) connectBtn.classList.toggle("u-hidden", !!i.authorized);
-          if(disconnectBtn) disconnectBtn.classList.toggle("u-hidden", !i.authorized);
+          if(connectBtn) connectBtn.classList.toggle("u-hidden", isConnected);
+          if(disconnectBtn) disconnectBtn.classList.toggle("u-hidden", !isConnected);
         });
       }
     }catch(e){ /* 拉不到集成状态：全部留在"未连接"，而真值可能是已授权（相反结论） */
       try{ if(typeof pushDiag === "function") pushDiag("warn", "integrations load failed: "+((e&&e.message)||e), {where:"_loadIntegrations"}); }catch(_e2){} }
+  }
+
+  /* v3.7.156：集成 OAuth 回调监听。服务端回调页换完 token 后 postMessage
+     「agent-integrations-connected」—— 载荷故意不含 token：本窗口收到后只是
+     **重新拉 /status 取真值**，所以这条消息被伪造最多触发一次重查，无法伪造
+     连接状态本身。验证 session.source / session.origin 与 GitHub 通道同口径。
+     focus 兜底：弹窗被拦截策略挡掉 postMessage、或回调页出错时，弹窗关闭后
+     本窗口重回前台即以服务端为准重拉一次。 */
+  try{
+    window.addEventListener("message", function(e){
+      const d = e && e.data;
+      if(!d || d.type !== "agent-integrations-connected") return;
+      const session = _integrationsAuthSession;
+      if(!session || session.expires < Date.now()) return;
+      if(e.source !== session.source || e.origin !== session.origin) return;
+      _integrationsAuthSession = null; // 一次性消费，重复消息不得重复刷状态
+      const connected = !!d.connected;
+      _loadIntegrations().then(function(){
+        try{ toast(connected ? t("api.integrationConnected", "集成已连接") : t("api.integrationConnectFailed", "连接未成功，请重试或联系部署者"), connected ? "ok" : "warn"); }catch(_){}
+      }).catch(function(){});
+    });
+    window.addEventListener("focus", function(){
+      if(!_integrationsAuthSession) return;
+      if(_integrationsAuthSession.expires < Date.now()){ _integrationsAuthSession = null; return; }
+      _loadIntegrations().catch(function(){});
+    });
+  }catch(_e){ /* noop */ }
+
+  /* v3.7.156：最近登录记录 —— /api/auth/audit 的第一个真实消费者。此前审计环只有
+     服务端自写自读（register/login/logout/device_delete），用户没有任何出口核对
+     「有没有陌生登录」，多方核对缺口。只读展示、不可编辑（写操作在账号面板）。 */
+  const _AUDIT_EV_LABELS = {
+    register: ["api.auditEvRegister", "注册"],
+    login: ["api.auditEvLogin", "登录"],
+    logout: ["api.auditEvLogout", "登出"],
+    device_delete: ["api.auditEvDeviceDelete", "登出设备"],
+  };
+  async function _loadAuditList(){
+    try{
+      const r = await apiGetAudit();
+      const list = document.getElementById("apiAuditList");
+      if(!list) return;
+      if(r.ok && r.data && Array.isArray(r.data.events)){
+        list.textContent = "";
+        if(r.data.events.length === 0){
+          const empty = document.createElement("div");
+          empty.className = "api-device-row";
+          empty.textContent = t("api.auditEmpty", "暂无记录");
+          list.appendChild(empty);
+          return;
+        }
+        r.data.events.forEach(e => {
+          const row = document.createElement("div");
+          row.className = "api-device-row";
+          const lbl = _AUDIT_EV_LABELS[e.ev];
+          const action = lbl ? t(lbl[0], lbl[1]) : String(e.ev || "?");
+          const time = e.at ? new Date(Number(e.at)).toLocaleString() : "—";
+          /* 全部用 textContent —— 审计 ctx 含设备名等外部输入，不进 innerHTML */
+          row.textContent = action + " · " + time;
+          list.appendChild(row);
+        });
+      }
+    }catch(e){ /* 拉不到审计记录：空列表会被读成「账户没有异常」，但真值未知 */
+      try{
+        if(typeof pushDiag === "function") pushDiag("warn", "audit list load failed: "+((e&&e.message)||e), {where:"_loadAuditList"});
+        const el = document.getElementById("apiAuditList");
+        if(el) el.textContent = t("errorState.defaultTitle", "加载失败");
+      }catch(_e2){}
+    }
   }
 
   // 绑定设置面板按钮
@@ -48979,19 +49182,38 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
       };
     }
     // 集成连接/断开按钮
+    /* v3.7.156：连接按钮原先「直接 GET 回调端点且不带 code」—— 回调端点没 code 就
+       400/短路 {ok:false}，按钮点了毫无反馈（既不报错也不开授权页）。正路是打开
+       provider 授权页（URL 来自服务端 status 的 providers 目录，已含 client_id /
+       redirect_uri / scope），用户授权后 provider 跳回**服务端**回调，服务端换完
+       token 渲染结果页 postMessage 通知本窗口重拉状态（载荷不含 token，服务端是
+       唯一权威）。 */
     const connectMap = [
-      ["btnApiConnectNotion", "notion", apiConnectNotion],
-      ["btnApiConnectTodoist", "todoist", apiConnectTodoist],
-      ["btnApiConnectGcal", "google", apiConnectGCalendar],
+      ["btnApiConnectNotion", "notion"],
+      ["btnApiConnectTodoist", "todoist"],
+      ["btnApiConnectGcal", "google"],
     ];
-    connectMap.forEach(([btnId, prov, fn]) => {
+    connectMap.forEach(([btnId, prov]) => {
       const btn = document.getElementById(btnId);
       if(btn){
         btn.onclick = async function(){
           try{
-            // OAuth：打开授权页（此处简化为直接调用回调端点）
-            const r = await fn();
-            if(r.ok){ try{ toast(t("api.integrationConnected", "集成已连接"), "ok"); }catch(_){} _loadIntegrations(); }
+            const cat = _integrationsCatalog[prov];
+            if(!cat || !cat.configured || !cat.authorizeUrl){
+              // 凭据没配：如实告诉用户为什么连不了（而不是假装在连接）。
+              try{ toast(t("api.integrationNotConfigured", "部署者未配置该集成的凭据（见 config.example.json 的 integrations 段），无法连接"), "warn"); }catch(_){}
+              return;
+            }
+            const authorize = new URL(cat.authorizeUrl, location.href);
+            const callback = new URL(window.API_BASE, location.href);
+            if(!/^https?:$/.test(authorize.protocol) || !/^https?:$/.test(callback.protocol)) throw new Error("invalid oauth URL");
+            const w = window.open(authorize.href, "_blank", "width=520,height=680");
+            if(w){
+              _integrationsAuthSession = { source: w, origin: callback.origin, expires: Date.now() + 10*60*1000 };
+              try{ toast(t("api.integrationAuthorizeOpened", "已打开授权页，请在弹窗中完成授权"), "ok"); }catch(_){}
+            }else{
+              location.href = authorize.href; // 弹窗被拦截：同页跳转兜底
+            }
           }catch(e){
             /* v3.7.102 第六片：连接失败静默 → 用户以为连上了。 */
             try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}
