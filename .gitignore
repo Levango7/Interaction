@@ -87,3 +87,8 @@ verify-out/
 # 在修复前该文件**没有任何规则忽略**——用户照 README 建它极易把密钥误提交。
 server/config.json
 _probe/.gh-profile/
+
+# v3.7.156：服务端运行期数据目录（单文件存储 auth.json + 滚动备份 .bak.*）。
+# 含用户凭据 / 会话 token，绝不可进版本库。verify 脚本与本机开发都会写入它——
+# 此前它**没有任何规则忽略**，一次 git add -A 就会把 1.7MB 的 token 明文提交上去。
+server/data/

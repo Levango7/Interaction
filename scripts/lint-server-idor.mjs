@@ -50,17 +50,15 @@ const WHITELIST = [
      （一次性消费 + 10 分钟 TTL + 按邮箱 5 次/分钟限流），等价于"证明自己拥有该邮箱"；
      provider 还限定 `email`（不给 OAuth 账号凭空开密码旁路）。
      为什么不能靠 `req.user.sub`：忘记密码的前提就是**登不进去**，此时没有可用会话。
-     这一条不是"无处可判归属"的缺口（与上面 integrations 那两条性质不同），而是
-     "归属由另一种凭据证明" —— 本门禁是文本级扫描，识别不了这种形态。 */
+     这一条不是“无处可判归属”的缺口（v3.7.156 前的 integrations 那两条是缺口、已修掉），
+     而是"归属由另一种凭据证明" —— 本门禁是文本级扫描，识别不了这种形态。 */
   { file: 'auth.js', path: '/password-reset', reason: '归属由邮箱验证码证明（一次性/短 TTL/按邮箱限流），且被改的 user.id 由 email 反查得出，调用方无法指定' },
-  /* 下面两条**不是**「无需归属」，而是「当前无处可判归属」—— 如实记缺口，勿当放水：
-     实例级集成配置（OAuth app 凭据）语义上属实例而非用户，store 里也确实没有 userId 维度。
-     真正的问题是「谁有权改实例配置」需要一个角色体系，而当前 `server/src` 全局无 admin/role，
-     所有认证用户等价（`server/README.md` 亦自述「可救的开发骨架，不是可交付产品」）。
-     收紧指引：引入 RBAC（或「首个注册用户即 owner」）后，这两条应改为校验调用者是管理员，
-     并从本 WHITELIST 移除。 */
-  { file: 'integrations.js', path: '/oauth/:provider/callback', reason: '实例级集成配置的写入侧：无用户维度可判（已知权限面缺口，见上方注释）' },
-  { file: 'integrations.js', path: '/oauth/:provider', reason: '实例级集成配置的删除侧：同上，是同一缺口的两面' },
+  /* v3.7.156：integrations 的 /oauth/:provider/callback 与 DELETE /oauth/:provider
+     两条已按 req.user.sub 作用域（store.userIntegrations[userId][provider]），
+     随之从本 WHITELIST 移除 —— 它们曾是「自我登记的已知缺口」（实例级、任意登录用户
+     可断全实例集成 + 任意 provider 键可落库），现在 idor-check.cjs [4] 段双向实测。
+     留痕：曾经的两条不是「无需归属」而是「无处可判归属」；若日后引入实例级管理面
+     （OAuth app 凭据的 admin 编辑），新增的实例级路由需要 RBAC 判据，不能加回放水。 */
 ];
 
 const MUTATING = /\bstore\.(?:del|remove|delete|update|set|upsert)[A-Za-z0-9_]*\s*\(/g;

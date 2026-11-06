@@ -364,8 +364,8 @@ function authRouter(cfg, store) {
 
   /* 回调页：浏览器直开（非 apiFetch），因此不带 token、不发 JSON。token 只出现在
      postMessage 的 script 串里 —— 序列化时把 < > & 转义成 \uXXXX，堵掉任何 </script> 逃逸。 */
-  function ghCallbackPage(code, accessToken, refreshToken, targetOrigin) {
-    const payload = JSON.stringify({ type: "agent-github-oauth", state: code, accessToken: accessToken, refreshToken: refreshToken })
+  function ghCallbackPage(code, accessToken, refreshToken, targetOrigin, expiresInSec) {
+    const payload = JSON.stringify({ type: "agent-github-oauth", state: code, accessToken: accessToken, refreshToken: refreshToken, expiresIn: Number(expiresInSec) > 0 ? Number(expiresInSec) : 900 })
       .replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
     const target = JSON.stringify(String(targetOrigin || "*"));
     return "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><title>登录成功</title></head>"
@@ -428,7 +428,10 @@ function authRouter(cfg, store) {
       store.saveSession({ refreshToken: t.refreshToken, userId: user.id, createdAt: Date.now(), expiresAt: Date.now() + (cfg.jwt.refreshTtlSec || 2592000) * 1000, deviceName: "github-oauth" });
       console.log("[auth] github 登录完成 providerId=" + pid + " user=" + user.id);
       const target = (st.data && st.data.origin) || gh.postMessageOrigin || "*";
-      return res.type("html").send(ghCallbackPage(state, t.accessToken, t.refreshToken, target));
+      /* v3.7.156：载荷带上 expiresIn —— 客户端登录路径统一读服务端 TTL（此前四条登录
+         路径里三条写死 15 分钟，github 这条连值都不带）。verify 的正则未锚定末尾，
+         追加字段不破坏既有断言。 */
+      return res.type("html").send(ghCallbackPage(state, t.accessToken, t.refreshToken, target, t.accessTtlSec));
     } catch (e) {
       /* 只记消息不记堆栈敏感面；错误页同样不含细节 */
       console.error("[auth] github 回调异常：" + (e && e.message));

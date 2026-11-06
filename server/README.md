@@ -14,12 +14,12 @@
 
 | 项 | 状态 |
 |---|---|
-| 与客户端（`agent-workbench.html`）联调 | ✅ **契约级 + 真机 UI 双通**：契约级 `verify/client-contract-check.cjs` 29/29；真机 UI `_probe/ui-backend-integration.mjs` 19/19（真 Chromium + 真后端 + 真表单，双 context 当两台设备，注册→上传→回读数据文件→跨设备拉取→错误密码负例）。客户端默认仍指向不存在的 `localhost:3001`，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**第三方登录另见 `verify/oauth-check.cjs` 33/33**（假 GitHub provider 全链路 + 微信演示模式全链路；v3.7.113 起 GitHub 未配凭据 → 503 `github_not_configured`，不再 404） |
-| 自动化测试 | ✅ **十一个**自足验证脚本（`hardening-check` 9/9、`idor-check` 13/13、`client-contract-check` 29/29、`incremental-check` 54/54、`security-check` 25/25、`tools-fetch-check` 17/17、`oauth-check` 33/33、`router-isolation-check` 17/17、`config-check` 22/22、`sms-check` 37/37、`password-reset-check` 42/42，合计 **298**），**已接入 CI**（`ci.yml` 的 `server-verify` job） |
+| 与客户端（`agent-workbench.html`）联调 | ✅ **契约级 + 真机 UI 双通**：契约级 `verify/client-contract-check.cjs` 41/41（v3.7.156 起含 [2b] 段 **body 字段级**契约——三类「状态码 200 但字段整段错位」的残废面板即由该段钉死）；真机 UI `_probe/ui-backend-integration.mjs` 19/19（真 Chromium + 真后端 + 真表单，双 context 当两台设备，注册→上传→回读数据文件→跨设备拉取→错误密码负例）。客户端默认仍指向不存在的 `localhost:3001`，v3.7.103 的 `probeAccountBackend()` 在 UI 如实说明「未检测到账号服务」。**第三方登录另见 `verify/oauth-check.cjs` 33/33**（假 GitHub provider 全链路 + 微信演示模式全链路；v3.7.113 起 GitHub 未配凭据 → 503 `github_not_configured`，不再 404） |
+| 自动化测试 | ✅ **十一个**自足验证脚本（`hardening-check` 9/9、`idor-check` 19/19、`client-contract-check` 41/41、`incremental-check` 54/54、`security-check` 25/25、`tools-fetch-check` 17/17、`oauth-check` 33/33、`router-isolation-check` 17/17、`config-check` 22/22、`sms-check` 37/37、`password-reset-check` 42/42，合计 **316**），**已接入 CI**（`ci.yml` 的 `server-verify` job）；另有仓内 vitest 侧 `tests/server-audit-fixes.test.js`（21 例，直测 cron 解析 / RFC8291 加密往返 / store 损坏抛错与滚动备份 / 调度器核心） |
 | 致命缺陷（P0） | ✅ 已修 3 条（见下） |
-| 越权漏洞（IDOR） | ✅ 已修 2 条：跨用户删定时提醒、跨用户踢设备下线（见下） |
+| 越权漏洞（IDOR） | ✅ 已修 3 条：跨用户删定时提醒、跨用户踢设备下线、实例级集成任意用户可读写（v3.7.156 起 integrations 三条路由全部按 `req.user.sub` 作用域 + provider 白名单；`idor-check.cjs` [4] 段双向实测，对应豁免条目已从 `scripts/lint-server-idor.mjs` 撤除） |
 | 云同步端点 | ✅ 已补 `GET/PUT /api/sync/snapshot` + **增量** `POST /api/sync/changes` / `/resolve`（全量 LWW / 增量含冲突策略，见 `docs/cloud-sync-incremental-contract.md`） |
-| 速率限制 / 审计日志 | ✅ 已有（v3.7.110）：登录/注册/发码按 IP + 同 email 限流（429 + `Retry-After`）；审计环有界、`GET /api/auth/audit` 只读本人 |
+| 速率限制 / 审计日志 | ✅ 已有（v3.7.110）：登录/注册/发码按 IP + 同 email 限流（429 + `Retry-After`）；审计环有界、`GET /api/auth/audit` 只读本人（v3.7.156 起设置页「最近登录记录」段为该端点的最小前端消费者，审计不再零读者） |
 | 生产可用 | 🟡 **骨架可用、直接上线仍否** —— 联调（契约级 + 真机 UI）已通；另见下方已知缺口：refresh token 明文、corsOrigin 默认全开 |
 
 **怎么跑验证**：
@@ -27,16 +27,16 @@
 ```bash
 cd server && npm install
 node verify/hardening-check.cjs        # 期望 9/9   —— 3 条 P0 守卫 + 反向放行
-node verify/idor-check.cjs             # 期望 9/9   —— 跨用户越权必须被拒 + 本人操作必须成功
-node verify/client-contract-check.cjs  # 期望 29/29 —— 客户端契约联调（含 OAuth fail-closed 契约）
+node verify/idor-check.cjs             # 期望 19/19 —— 跨用户越权必须被拒 + 本人操作必须成功（[4] 段：集成 userId 隔离，种子直读写数据文件 + 重启）
+node verify/client-contract-check.cjs  # 期望 41/41 —— 客户端契约联调（[2b] 段为 body 字段级契约：偏好包层/合并写、提醒字段并集与服务端算 when、集成 connected+providers、VAPID 合法点、审计环）
 node verify/incremental-check.cjs      # 期望 54/54 —— 增量协议：幂等/LWW/删除信号/快照相干/剪枝回退/冲突与解决
-node verify/security-check.cjs         # 期望 22/22 —— 速率限制（阈值内正常/超限 429/分桶/可关）+ 审计环（记录/隔离/有界）
+node verify/security-check.cjs         # 期望 25/25 —— 速率限制（阈值内正常/超限 429/分桶/可关）+ 审计环（记录/隔离/有界）
 node verify/tools-fetch-check.cjs      # 期望 17/17 —— 抓取代理：代回原文/拒私网与云元数据/重定向每跳重校/体积与超时/401
 node verify/oauth-check.cjs            # 期望 33/33 —— 第三方登录：假 GitHub 全链路（授权/兑换/签发/审计/负例/限流）+ 微信演示模式全链路
 node verify/router-isolation-check.cjs # 期望 17/17 —— 路由隔离：/api/notifications 与 /api/integrations 各挂各的（交叉路径必须 404 + not_found，合法路由必须仍 200，无 token 必须 401）
-node verify/config-check.cjs           # 期望 19/19 —— 配置加载：config.json 生效/深合并保默认/env 优先级/坏 JSON fail loud
+node verify/config-check.cjs           # 期望 22/22 —— 配置加载：config.json 生效/深合并保默认/env 优先级/坏 JSON fail loud
 ```
-（九个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
+（十一个脚本均已接入 CI 的 `server-verify` job；本地跑法同上。）
 
 **加固后仍存在的已知缺口（部署前必须补齐）**：无登录失败**验证码/锁定**策略
 （已有速率限制，但无限次试错同一口令仍可在线慢速爆破 —— 要彻底堵需账号级失败计数与锁定）、
@@ -78,7 +78,7 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 默认监听 `http://localhost:3001`，数据落在 `server/data/auth.json`。
 ⚠ 本机 3001 常被 Docker Desktop 占用，冲突时改端口：`PORT=4571 npm start`。
 
-健康检查：`GET /api/health` → `{ok:true, version:"3.6.1"}`
+健康检查：`GET /api/health` → `{ok:true, version:<server/package.json 的 version>}`（v3.7.156 前硬编码 `"3.6.1"`，与前端版本漂移数月无人察觉；现读 package.json，漂移由 `verify/hardening-check.cjs` 钉住）
 
 ## 前端如何连上
 
@@ -198,12 +198,15 @@ notify-webhook 同款承重墙：必须 Bearer（不做开放代理）、拒 use
 ### 通知/集成 `/api/notifications`、`/api/integrations`
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET/PUT | /notifications/preferences | 通知偏好 |
-| POST | /notifications/push/subscribe · /notifications/push/unsubscribe | Web Push 订阅 |
-| GET/POST | /notifications/schedules[/:id] | 定时提醒 |
-| GET | /integrations/status | 集成列表 |
-| GET | /integrations/oauth/:provider/callback | 集成 OAuth 回调（占位连接） |
-| DELETE | /integrations/oauth/:provider | 断开集成 |
+| GET/PUT | /notifications/preferences | 通知偏好。**GET 返 `{preferences}` 包层、PUT 合并写**（v3.7.156 修：此前平铺 data 且整体覆盖，面板永远拿到默认值、保存一次丢一次没读过的位） |
+| GET | /notifications/vapid-public-key | Web Push 公钥（**无需鉴权**，base64url、65B 未压缩 P-256 点；客户端订阅前由此取，取代此前写死的假公钥——非法点会让 `pushManager.subscribe` 必抛） |
+| POST | /notifications/push/subscribe · /notifications/push/unsubscribe | Web Push 订阅登记（`{endpoint, keys:{p256dh, auth}}`）与注销（按 `endpoint` + **`req.user.sub`** 联合定位，endpoint 是资源标识不是凭据） |
+| GET/POST | /notifications/schedules · PUT/DELETE /notifications/schedules/:id | 定时提醒。形状 `{id,userId,createdAt,type,cron,enabled,when,title,repeat,note,lastFiredAt}`：**cron 在服务端解析（`src/cron.js`），when 由服务端算**；非法 cron → 400 `bad_cron`，无 cron 无 when → 400 `bad_schedule`；PUT/DELETE 校验归属（404）。**v3.7.156 前的错位**：客户端存 `{type,cron,enabled}`、服务端读 `{title,when,repeat,note}` 且全服务端零调度器 ⇒ 提醒永不触发；现有进程内调度器 `startScheduler`（默认 30s 扫到点 → Web Push + 落审计 + 重排/停用） |
+| GET | /integrations/status | 集成状态：`{integrations:[{provider,connected,createdAt}], providers:{<name>:{configured,authorizeUrl}}}`。**connected↔authorized 已对齐**（v3.7.156 前「占位连接」：回调收下 code 即无条件返 connected:true，面板永远显示已连接但从未有真 token；现在 connected 只在 token 交换成功后置真，凭据未配置如实返 `{connected:false,reason:"not_configured"}`） |
+| GET | /integrations/oauth/:provider/callback | 集成 OAuth 回调：code → token 交换（固定主机注册表，非用户输入）→ 存 `userIntegrations[req.user.sub][provider]` → 渲染结果页 postMessage 通知应用窗刷新（载荷不含 token）。**按用户隔离 + provider 白名单**（notion/todoist/google；非法 → 400 `bad_provider`，此前任意键可落库） |
+| DELETE | /integrations/oauth/:provider | 断开**本人**的集成（按 `req.user.sub` 作用域；v3.7.156 前为实例级，任意登录用户可断全实例的集成） |
+
+> **凭据配置**：`integrations.<provider>.{clientId, clientSecret, redirectUri}`（provider ∈ notion/todoist/google）+ `integrations.postMessageOrigin`（回调结果页 postMessage 的 targetOrigin，默认 `*`；同源部署建议配具体源）。三项均空（仓库基线即如此）时 `providers[name].configured=false`、`authorizeUrl=null`，面板如实提示「部署者未配置该集成的凭据」，不走假装连接。
 
 ## 未配置凭据时的降级行为（重要）
 

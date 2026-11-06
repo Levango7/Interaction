@@ -1166,7 +1166,9 @@ async function _doAuthRegister(name, email, password, confirm, code) {
   try {
     var r = await window.apiRegister(email, password, name, code);
     if (r.ok) {
-      var lr = await window.apiLogin(email, password);
+      /* v3.7.156：apiRegister 已收下注册即签发的 token；旧后端（响应不带 token）
+         才退回显式登录一次 —— 避免每次注册多开一个 30 天孤儿 session。 */
+      var lr = (r.data && r.data.accessToken) ? { ok: true } : await window.apiLogin(email, password);
       if (lr.ok) {
         try { toast(t("api.registerSuccess", "注册成功"), "ok"); } catch (_) {}
         try { window._updateUserButton(); } catch (_) {}
@@ -1503,7 +1505,9 @@ function _wechatPollStart(){
           }
           if(sr.data.status === "confirmed" && sr.data.accessToken){
             _wechatPollStop();
-            try{ window.apiSetTokens(sr.data.accessToken, sr.data.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
+            /* v3.7.156：读服务端 expiresIn（同 ui-ge-api.js 登录路径修复，不再写死 15 分钟）。 */
+            var ttlMs = (sr.data.expiresIn && sr.data.expiresIn > 0) ? sr.data.expiresIn * 1000 : 15*60*1000;
+            try{ window.apiSetTokens(sr.data.accessToken, sr.data.refreshToken, Date.now() + ttlMs); }catch(_e){}
             var ov = document.getElementById("authSsoOverlay"); if(ov) ov.remove();
             try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
             try{ window._loadApiPanels(); }catch(_e){}
@@ -1558,7 +1562,10 @@ try{
     if(e.source !== session.source || e.origin !== session.origin || d.state !== session.state) return;
     if(typeof d.accessToken !== "string" || !d.accessToken) return;
     _githubAuthSession = null; // 一次性消费，重复消息不得再次切换账号。
-    try{ window.apiSetTokens(d.accessToken, d.refreshToken, Date.now() + 15*60*1000); }catch(_e){}
+    /* v3.7.156：服务端回调页载荷已带 expiresIn（旧消息/ mocked 测试缺该字段时
+       回退 15 分钟 —— 与服务端默认 accessTtlSec=900 一致）。 */
+    var ttlMs = (d.expiresIn && d.expiresIn > 0) ? d.expiresIn * 1000 : 15*60*1000;
+    try{ window.apiSetTokens(d.accessToken, d.refreshToken, Date.now() + ttlMs); }catch(_e){}
     try{ toast(t("api.loginSuccess", "登录成功"), "ok"); }catch(_e){}
     try{ window._loadApiPanels(); }catch(_e){}
     setActive("overview"); render();

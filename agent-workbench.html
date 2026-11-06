@@ -6420,6 +6420,21 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <p class="api-login-hint" id="apiIntegrationsHint" data-i18n="api.loginRequired">请先登录以使用集成功能</p>
   </section>
 
+  <!-- ===== v3.7.156：最近登录记录（审计环 /api/auth/audit 的最小前端消费者） ===== -->
+  <section class="set-card" id="set-api-audit" aria-label="最近登录记录" data-i18n-aria="a11y.apiAudit">
+    <header class="set-head">
+      <span class="set-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>
+      <div>
+        <h3 data-i18n="api.recentActivityTitle">最近登录记录</h3>
+        <p class="set-desc" data-i18n="api.recentActivityDesc">仅显示本人近期安全事件（注册 / 登录 / 登出 / 登出设备），用于核对是否存在陌生登录。</p>
+      </div>
+    </header>
+    <div class="api-panel" id="apiAuditPanel">
+      <div id="apiAuditList"></div>
+    </div>
+    <p class="api-login-hint" id="apiAuditHint" data-i18n="api.loginRequired">请先登录以查看最近登录记录</p>
+  </section>
+
   <!-- ===== 关于本应用 ===== -->
   <section class="set-card" id="set-about" aria-label="关于本应用" data-i18n-aria="a11y.aboutCompat">
     <header class="set-head">

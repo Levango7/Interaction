@@ -15,6 +15,9 @@
  *   · `cfg.tools.fetch.allowHosts` 是**显式白名单**（默认空）：只为「内网部署 + 联调」开口子，
  *     列进白名单的主机跳过私网检查 —— 显式 opt-in，默认一切私网目标一律拒绝；
  *   · 响应 ≤ maxBytes、超时、日志只记主机与状态码；不转发任何客户端认证头。
+ *   · v3.7.156：读 `tools.fetch.enabled`（false → 503 tools_fetch_disabled，
+ *     此前端点无视该配置位照常开放）；挂 `cfg.security.rateLimit` 的 IP 桶
+ *     （toolsFetchMax，此前零频次约束 —— 登录用户可无限调用拖干出口流量）。
  */
 "use strict";
 
@@ -36,6 +39,11 @@ function toolsFetchRouter(cfg, store) {
   };
 
   const fcfg = (cfg.tools && cfg.tools.fetch) || {};
+  /* v3.7.156：enabled 位此前**从未被读**（配置谎言 —— 关掉 tools.fetch 后端点照开，
+     配置文件形同虚设）。默认开（与 config.example.json 基线一致）；显式 false 时
+     回 503 tools_fetch_disabled —— 刻意不用 404：这条路由存在、是被管理员主动关掉的，
+     客户端能据此提示「管理员已关闭网页抓取」，而非「端点不存在」。 */
+  const ENABLED = fcfg.enabled !== false;
   const MAX_BYTES = Number(fcfg.maxBytes) || 1024 * 1024;
   const TIMEOUT_MS = Number(fcfg.timeoutMs) || 10000;
   const MAX_REDIRECTS = Number(fcfg.maxRedirects) || 3;
@@ -92,7 +100,20 @@ function toolsFetchRouter(cfg, store) {
     return { url: u };
   }
 
-  router.get("/fetch", am, async (req, res) => {
+  /* v3.7.156：速率限制 —— 此前只有 /api/auth/* 挂了 rlAuth，这个代抓端点
+     **完全没有频次约束**：任何登录用户可以无限次调用（服务端出口流量被单一用户
+     拖干、或被当慢速 DoS 跳板）。复用 auth.js 的同款口径（cfg.security.rateLimit，
+     进程内固定窗口、默认开），独立桶键 toolsFetchMax（默认与 max 同宽 ——
+     正常使用不可能碰到；tools-fetch-check 全脚本约 16 次请求在同一窗口内）。 */
+  const rl = require("./rate-limit");
+  const rlCfg = (cfg.security && cfg.security.rateLimit) || {};
+  const rlEnabled = rlCfg.enabled !== false;
+  const rlTools = rlEnabled
+    ? rl.rateLimit({ windowMs: Number(rlCfg.windowMs) || 60000, max: Number(rlCfg.toolsFetchMax) || Number(rlCfg.max) || 30 })
+    : function (_req, _res, next) { next(); };
+
+  router.get("/fetch", rlTools, am, async (req, res) => {
+    if (!ENABLED) return fail(res, 503, "tools_fetch_disabled", { message: "管理员已关闭网页抓取代理（tools.fetch.enabled=false）" });
     const raw = String((req.query && req.query.url) || "").trim();
     if (!raw) return fail(res, 400, "url_required");
     let cur = checkUrl(raw);

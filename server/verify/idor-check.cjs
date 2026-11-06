@@ -15,7 +15,7 @@
  */
 "use strict";
 const { spawn } = require("node:child_process");
-const { readFileSync } = require("node:fs");
+const { readFileSync, writeFileSync } = require("node:fs");
 const path = require("node:path");
 
 const SRV = path.join(__dirname, "..");
@@ -150,7 +150,60 @@ function check(name, cond, detail) {
   const afterA = subsOf(EP);
   check("对照：A 删自己的订阅应生效（缺此条则「把端点改死」也会绿）", afterA.length === 0, "剩余 " + afterA.length + " 条");
 
+  // ---------- 第三方集成（v3.7.156：userId 维度）----------
+  /* 判据设计：集成没有「他人资源 id」可猜（provider 固定三个、连接落在各自 userId 下），
+     所以测的是隔离本身：A 已连的 provider，B 的 status 里必须看不到；B 的「断开」
+     必须动不了 A 的连接。
+     前置需要一个「已连接」状态 —— OAuth 交换要真凭据 + 真网络，verify 环境两样都没有，
+     于是用与 push 小节同口径的办法：**直读写服务端数据文件**种子 A 的连接
+     （不让被测对象给自己出成绩单）。必须先杀服务端再写：内存态会在任意写时回写磁盘，
+     并行写入会被覆盖。 */
+  console.log("\n[4] 第三方集成：A 的连接对 B 不可见、B 断不开");
   proc.kill();
+  await new Promise((r2) => setTimeout(r2, 300)); // 等端口/进程退出，避免种子被回写覆盖
+  let seeded = false;
+  try {
+    const j = JSON.parse(readFileSync(DATA, "utf8"));
+    if (!j.userIntegrations) j.userIntegrations = {};
+    j.userIntegrations[A.user.id] = { notion: { connected: true, token: "seed-for-idor", createdAt: Date.now() } };
+    writeFileSync(DATA, JSON.stringify(j, null, 2), "utf8");
+    seeded = true;
+  } catch (e) { seeded = false; }
+  PORT = await freePort();
+  BASE = "http://127.0.0.1:" + PORT;
+  const proc2 = await startServer();
+  check("前置：A 的 notion 连接种入数据文件并重启服务端", seeded, "userId=" + A.user.id);
+
+  let r4 = await req("GET", "/api/integrations/status", null, A.accessToken);
+  const aList = r4.json && r4.json.data ? r4.json.data.integrations : null;
+  check("A 的 status 看到自己的 notion 连接（种子生效；不生效则下面全部空转）",
+    Array.isArray(aList) && aList.some((i) => i && i.provider === "notion" && i.connected === true),
+    JSON.stringify(aList));
+
+  r4 = await req("GET", "/api/integrations/status", null, B.accessToken);
+  const bList = r4.json && r4.json.data ? r4.json.data.integrations : null;
+  check("B 的 status 里**不得**出现 A 的连接（userId 隔离）",
+    Array.isArray(bList) && bList.length === 0, JSON.stringify(bList));
+
+  await req("DELETE", "/api/integrations/oauth/notion", null, B.accessToken);
+  r4 = await req("GET", "/api/integrations/status", null, A.accessToken);
+  const aList2 = r4.json && r4.json.data ? r4.json.data.integrations : null;
+  check("B 调 DELETE 后 A 的连接**必须还在**（此前任意登录用户可断全实例的集成）",
+    Array.isArray(aList2) && aList2.some((i) => i && i.provider === "notion" && i.connected === true),
+    JSON.stringify(aList2));
+
+  const rBad = await req("DELETE", "/api/integrations/oauth/evilcorp", null, B.accessToken);
+  check("无效 provider 的 DELETE 应 400（此前任意字符串键可落库污染存储）", rBad.status === 400,
+    "HTTP " + rBad.status + " " + JSON.stringify(rBad.json));
+
+  // 收尾：A 断开自己的种子连接（给数据文件留干净状态；也证「A 能断自己的」这条对照）
+  const rA = await req("DELETE", "/api/integrations/oauth/notion", null, A.accessToken);
+  r4 = await req("GET", "/api/integrations/status", null, A.accessToken);
+  const aList3 = r4.json && r4.json.data ? r4.json.data.integrations : [];
+  check("对照：A 断开自己的连接应生效（缺此条则「把端点改死」也会绿）",
+    rA.status === 200 && Array.isArray(aList3) && aList3.length === 0, "HTTP " + rA.status);
+
+  proc2.kill();
 
   const failed = results.filter((x) => !x.pass);
   console.log("\n=== 汇总：" + (results.length - failed.length) + "/" + results.length + " 通过 ===");

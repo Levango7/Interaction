@@ -152,6 +152,80 @@ function record(group, label, res, expectStatuses, known) {
   r = await hit("GET", "/api/integrations/oauth/notion/callback?code=x", null);
   record("integ", "GET  /api/integrations/oauth/:p/callback", r, [200]);
 
+  console.log("\n[2b] Body 契约（字段级断言：状态码 200 不等于字段对——P0 三类错位全都曾「绿着上线」）");
+  /* 历史：定时提醒 / 通知偏好 / 集成面板三个端点 HTTP 层全是 200，但 body 字段与客户端
+     读取处整段错位（客户端读 data.preferences，服务端把 prefs 平铺当 data；客户端读
+     i.authorized，服务端返 connected；客户端存 {type,cron,enabled}，服务端读 {title,when,…}）。
+     状态码契约挡不住这类「绿却残废」—— 必须逐字段钉。 */
+
+  // --- 偏好：包层 {preferences} + 合并写 ---
+  r = await hit("GET", "/api/notifications/preferences", null);
+  const prefsObj = r.json && r.json.data && r.json.data.preferences;
+  record("body", "偏好 GET：data.preferences 是对象（平铺 bug 时此处为 undefined）",
+    { status: (r.status === 200 && prefsObj && typeof prefsObj === "object") ? 200 : 0, json: null }, [200]);
+  const probeVal = "mp-" + Date.now();
+  await hit("PUT", "/api/notifications/preferences", { mergeProbe: probeVal }, { auth: true });
+  r = await hit("GET", "/api/notifications/preferences", null);
+  const merged = r.json && r.json.data && r.json.data.preferences;
+  record("body", "偏好 PUT 合并写：新位写入、旧位保留（整体覆盖会丢没读过的位）",
+    { status: (merged && merged.enabled !== undefined && merged.mergeProbe === probeVal) ? 200 : 0, json: null }, [200]);
+
+  // --- 定时提醒：字段并集 + 服务端权威 ---
+  r = await hit("GET", "/api/notifications/schedules", null);
+  const scheds = r.json && r.json.data && r.json.data.schedules;
+  const schFieldsOk = r.status === 200 && Array.isArray(scheds) && scheds.length > 0
+    && scheds.every((s) => s && typeof s.id === "string" && typeof s.userId === "string"
+      && typeof s.enabled === "boolean" && (s.when === null || typeof s.when === "number")
+      && (s.type === null || typeof s.type === "string")
+      && typeof s.title === "string" && typeof s.repeat === "string" && typeof s.note === "string");
+  record("body", "提醒 GET：data.schedules[] 字段并集齐全（此前客户端存的字段服务端读取面整段错位）",
+    { status: schFieldsOk ? 200 : 0, json: null }, [200]);
+  r = await hit("POST", "/api/notifications/schedules", { type: "taskDue", cron: "0 9 * * *", title: "每日九点", note: "契约用例" }, { auth: true });
+  const sch = r.json && r.json.data && r.json.data.schedule;
+  record("body", "提醒 POST cron：返 data.schedule 且 when 由服务端算（> 当前时刻）",
+    { status: (r.status === 200 && sch && sch.cron === "0 9 * * *" && typeof sch.when === "number" && sch.when > Date.now() && sch.enabled === true && sch.userId) ? 200 : 0, json: null }, [200]);
+  r = await hit("POST", "/api/notifications/schedules", { cron: "99 * * * *" }, { auth: true });
+  record("body", "提醒 POST 非法 cron → 400 bad_cron（不存一个永不触发的提醒）", r, [400]);
+  r = await hit("POST", "/api/notifications/schedules", { title: "既无 cron 也无 when" }, { auth: true });
+  record("body", "提醒 POST 无 cron 无 when → 400 bad_schedule", r, [400]);
+
+  // --- 集成：integrations + providers 两块、connected 位、provider 白名单 ---
+  r = await hit("GET", "/api/integrations/status", null);
+  const integArr = r.json && r.json.data && r.json.data.integrations;
+  const provs = r.json && r.json.data && r.json.data.providers;
+  const provOk = r.status === 200 && Array.isArray(integArr)
+    && provs && ["notion", "todoist", "google"].every((k) => provs[k]
+      && typeof provs[k].configured === "boolean"
+      && (provs[k].authorizeUrl === null || typeof provs[k].authorizeUrl === "string"));
+  record("body", "集成 GET：data.providers 三 provider 齐全（configured/authorizeUrl）",
+    { status: provOk ? 200 : 0, json: null }, [200]);
+  const connOk = integArr.length === 0 || integArr.every((i) => i && typeof i.provider === "string" && typeof i.connected === "boolean");
+  record("body", "集成 GET：data.integrations[] 每条带 connected（authorized↔connected 错位即此处）",
+    { status: connOk ? 200 : 0, json: null }, [200]);
+  r = await hit("GET", "/api/integrations/oauth/evilcorp/callback?code=x", null);
+  record("body", "集成回调无效 provider → 400 bad_provider（此前任意键可落库污染存储）", r, [400]);
+  r = await hit("DELETE", "/api/integrations/oauth/evilcorp", null);
+  record("body", "集成 DELETE 无效 provider → 400 bad_provider", r, [400]);
+
+  // --- VAPID 公钥：合法 P-256 未压缩点（非法点让 pushManager.subscribe 必抛） ---
+  r = await hit("GET", "/api/notifications/vapid-public-key", null, { auth: false });
+  const pk = r.json && r.json.data && r.json.data.publicKey;
+  let pkOk = r.status === 200 && typeof pk === "string" && /^[A-Za-z0-9_-]+$/.test(pk);
+  if (pkOk) {
+    const raw = Buffer.from(pk, "base64url");
+    pkOk = raw.length === 65 && raw[0] === 0x04;
+  }
+  record("body", "VAPID 公钥：base64url 且 65B 未压缩点（此前客户端写死假公钥 ⇒ 订阅必抛错）",
+    { status: pkOk ? 200 : 0, json: null }, [200]);
+
+  // --- 审计环：本账号注册+登录事件可见 ---
+  r = await hit("GET", "/api/auth/audit", null);
+  const evs = r.json && r.json.data && r.json.data.events;
+  const evOk = r.status === 200 && Array.isArray(evs) && evs.length >= 2
+    && evs.every((e) => e && typeof e.at === "number" && typeof e.ev === "string");
+  record("body", "审计 GET：data.events[] 含 at/ev 且本账号注册+登录已记入（此前零消费者）",
+    { status: evOk ? 200 : 0, json: null }, [200]);
+
   console.log("\n[3] 云同步 / 抓取代理（客户端主链路调用）");
   r = await hit("GET", "/api/sync/snapshot", null);
   record("sync", "GET  /api/sync/snapshot  ← 云同步读", r, [200]);

@@ -81,5 +81,23 @@
       "allowHosts": []
     }
   },
+  "integrations": {
+    "postMessageOrigin": "*",
+    "notion": {
+      "clientId": "",
+      "clientSecret": "",
+      "redirectUri": "http://localhost:3001/api/integrations/oauth/notion/callback"
+    },
+    "todoist": {
+      "clientId": "",
+      "clientSecret": "",
+      "redirectUri": "http://localhost:3001/api/integrations/oauth/todoist/callback"
+    },
+    "google": {
+      "clientId": "",
+      "clientSecret": "",
+      "redirectUri": "http://localhost:3001/api/integrations/oauth/google/callback"
+    }
+  },
   "dataFile": "data/auth.json"
 }

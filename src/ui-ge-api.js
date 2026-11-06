@@ -334,7 +334,10 @@
       body: JSON.stringify({ email, password, deviceName: _getDeviceLabel() }),
     });
     if(r.ok && r.data && r.data.accessToken){
-      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + 15 * 60 * 1000);
+      /* v3.7.156：与 refresh 路径同口径读服务端 expiresIn（此前写死 15 分钟 ——
+         后端改 accessTtlSec 后客户端会提前/滞后误判过期）。 */
+      const ttlMs = (r.data.expiresIn && r.data.expiresIn > 0) ? r.data.expiresIn * 1000 : 15 * 60 * 1000;
+      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + ttlMs);
       _apiUser = r.data.user || null;
     }
     return r;
@@ -348,6 +351,14 @@
       method: "POST",
       body: JSON.stringify(payload),
     });
+    /* v3.7.156：注册成功服务端同样签发 token（auth.js 注册路由返 accessToken/
+       expiresIn）—— 此前调用方只拿 r 走「再去登录一次」，服务端那次签发就成了
+       永不被消费的 30 天孤儿 session。现在直接收下，已是登录态就不必再登录。 */
+    if(r.ok && r.data && r.data.accessToken){
+      const ttlMs = (r.data.expiresIn && r.data.expiresIn > 0) ? r.data.expiresIn * 1000 : 15 * 60 * 1000;
+      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + ttlMs);
+      _apiUser = r.data.user || null;
+    }
     return r;
   }
 
@@ -380,7 +391,9 @@
       body: JSON.stringify(payload),
     });
     if(r.ok && r.data && r.data.accessToken){
-      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + 15 * 60 * 1000);
+      /* v3.7.156：同 apiLogin，读服务端 expiresIn 而非写死 15 分钟。 */
+      const ttlMs = (r.data.expiresIn && r.data.expiresIn > 0) ? r.data.expiresIn * 1000 : 15 * 60 * 1000;
+      apiSetTokens(r.data.accessToken, r.data.refreshToken, Date.now() + ttlMs);
       _apiUser = r.data.user || null;
     }
     return r;
@@ -545,6 +558,11 @@
 
   async function apiDisconnectIntegration(provider){
     return apiFetch("/api/integrations/oauth/" + encodeURIComponent(provider), { method: "DELETE" });
+  }
+
+  // v3.7.156：审计环只读（本人近期安全事件）
+  async function apiGetAudit(){
+    return apiFetch("/api/auth/audit", { method: "GET" });
   }
 
   // ===== 同步状态管理 =====
@@ -838,8 +856,10 @@
         try{
           const r = await apiRegister(email, password, name);
           if(r.ok){
-            // 注册成功后自动登录
-            const lr = await apiLogin(email, password);
+            /* v3.7.156：注册成功服务端已签发 token（apiRegister 直接收下了）——
+               再调一次 apiLogin 会多开一个 30 天 session（正是此前的孤儿 session 模式）。
+               只有旧后端不在注册响应里带 token 时才退回显式登录一次。 */
+            const lr = (r.data && r.data.accessToken) ? { ok: true } : await apiLogin(email, password);
             if(lr.ok){
               modal.classList.remove("show");
               try{ toast(t("api.registerSuccess", "注册成功"), "ok"); }catch(_){}
@@ -925,14 +945,16 @@
     _loadSchedules();
     // 加载集成状态
     _loadIntegrations();
+    // v3.7.156：加载最近登录记录（审计环的最小消费者）
+    _loadAuditList();
   }
 
   // 显示/隐藏 API 面板（登录后显示，未登录隐藏）
   function _showApiPanels(){
     if(typeof document === "undefined") return;
     const loggedIn = isApiLoggedIn();
-    const panels = ["apiAccountPanel", "apiNotifyPanel", "apiIntegrationsPanel"];
-    const hints = ["apiAccountHint", "apiNotifyHint", "apiIntegrationsHint"];
+    const panels = ["apiAccountPanel", "apiNotifyPanel", "apiIntegrationsPanel", "apiAuditPanel"];
+    const hints = ["apiAccountHint", "apiNotifyHint", "apiIntegrationsHint", "apiAuditHint"];
     panels.forEach(id => {
       const el = document.getElementById(id);
       if(el){ if(loggedIn) el.classList.add("show"); else el.classList.remove("show"); }
@@ -1051,38 +1073,120 @@
   }
 
   // 加载集成状态
+  /* v3.7.156：服务端 status 现在返两块 —— {integrations, providers}。
+     providers 是凭据门控后的 provider 目录（configured + 可用 authorizeUrl），
+     缓存起来给「连接」按钮用：配了凭据才开授权页，没配就如实提示，不再短路空转。 */
+  let _integrationsCatalog = {};
+  /* OAuth 弹窗会话（与 render-overview.js 的 _githubAuthSession 同口径）：
+     只信「自己开的那个弹窗 + 配置的 API 来源」发来的消息。 */
+  let _integrationsAuthSession = null;
+  const _PROVIDER_ELS = {
+    notion: { status: "apiNotionStatus", connect: "btnApiConnectNotion", disconnect: "btnApiDisconnectNotion" },
+    todoist: { status: "apiTodoistStatus", connect: "btnApiConnectTodoist", disconnect: "btnApiDisconnectTodoist" },
+    google: { status: "apiGcalStatus", connect: "btnApiConnectGcal", disconnect: "btnApiDisconnectGcal" },
+  };
   async function _loadIntegrations(){
     try{
       const r = await apiGetIntegrations();
-      if(r.ok && r.data && r.data.integrations){
-        r.data.integrations.forEach(i => {
-          const prov = i.provider;
-          let statusEl, connectBtn, disconnectBtn;
-          if(prov === "notion"){
-            statusEl = document.getElementById("apiNotionStatus");
-            connectBtn = document.getElementById("btnApiConnectNotion");
-            disconnectBtn = document.getElementById("btnApiDisconnectNotion");
-          }else if(prov === "todoist"){
-            statusEl = document.getElementById("apiTodoistStatus");
-            connectBtn = document.getElementById("btnApiConnectTodoist");
-            disconnectBtn = document.getElementById("btnApiDisconnectTodoist");
-          }else if(prov === "google"){
-            statusEl = document.getElementById("apiGcalStatus");
-            connectBtn = document.getElementById("btnApiConnectGcal");
-            disconnectBtn = document.getElementById("btnApiDisconnectGcal");
-          }
+      if(r.ok && r.data){
+        if(r.data.providers) _integrationsCatalog = r.data.providers;
+        const mine = {};
+        (r.data.integrations || []).forEach(i => { mine[i.provider] = i; });
+        /* 目录里的三个 provider 都渲染（哪怕从未连过）—— 此前只在 integrations
+           列表里出现已连的，未连接的那行状态 DOM 永远没人写。 */
+        Object.keys(_PROVIDER_ELS).forEach(prov => {
+          const el = _PROVIDER_ELS[prov];
+          const statusEl = (typeof document !== "undefined") ? document.getElementById(el.status) : null;
+          const connectBtn = (typeof document !== "undefined") ? document.getElementById(el.connect) : null;
+          const disconnectBtn = (typeof document !== "undefined") ? document.getElementById(el.disconnect) : null;
+          const it = mine[prov];
+          /* v3.7.156：服务端字段是 connected（此前客户端读 authorized ——
+             字段名不匹配，面板永远显示「未连接」，连上了也不知道）。 */
+          const isConnected = !!(it && it.connected);
+          const configured = !!(_integrationsCatalog[prov] && _integrationsCatalog[prov].configured);
           if(statusEl){
             statusEl.classList.remove("connected", "disconnected");
-            statusEl.classList.add(i.authorized ? "connected" : "disconnected");
+            statusEl.classList.add(isConnected ? "connected" : "disconnected");
             statusEl.innerHTML = "";
-            statusEl.textContent = i.authorized ? t("api.connected", "已连接") : t("api.notConnected", "未连接");
+            statusEl.textContent = isConnected
+              ? t("api.connected", "已连接")
+              : (configured ? t("api.integrationNotConnectedHint", "未连接（凭据已配置，可点「连接」授权）") : t("api.integrationNotConfigured", "部署者未配置该集成的凭据（见 config.example.json 的 integrations 段），无法连接"));
           }
-          if(connectBtn) connectBtn.classList.toggle("u-hidden", !!i.authorized);
-          if(disconnectBtn) disconnectBtn.classList.toggle("u-hidden", !i.authorized);
+          if(connectBtn) connectBtn.classList.toggle("u-hidden", isConnected);
+          if(disconnectBtn) disconnectBtn.classList.toggle("u-hidden", !isConnected);
         });
       }
     }catch(e){ /* 拉不到集成状态：全部留在"未连接"，而真值可能是已授权（相反结论） */
       try{ if(typeof pushDiag === "function") pushDiag("warn", "integrations load failed: "+((e&&e.message)||e), {where:"_loadIntegrations"}); }catch(_e2){} }
+  }
+
+  /* v3.7.156：集成 OAuth 回调监听。服务端回调页换完 token 后 postMessage
+     「agent-integrations-connected」—— 载荷故意不含 token：本窗口收到后只是
+     **重新拉 /status 取真值**，所以这条消息被伪造最多触发一次重查，无法伪造
+     连接状态本身。验证 session.source / session.origin 与 GitHub 通道同口径。
+     focus 兜底：弹窗被拦截策略挡掉 postMessage、或回调页出错时，弹窗关闭后
+     本窗口重回前台即以服务端为准重拉一次。 */
+  try{
+    window.addEventListener("message", function(e){
+      const d = e && e.data;
+      if(!d || d.type !== "agent-integrations-connected") return;
+      const session = _integrationsAuthSession;
+      if(!session || session.expires < Date.now()) return;
+      if(e.source !== session.source || e.origin !== session.origin) return;
+      _integrationsAuthSession = null; // 一次性消费，重复消息不得重复刷状态
+      const connected = !!d.connected;
+      _loadIntegrations().then(function(){
+        try{ toast(connected ? t("api.integrationConnected", "集成已连接") : t("api.integrationConnectFailed", "连接未成功，请重试或联系部署者"), connected ? "ok" : "warn"); }catch(_){}
+      }).catch(function(){});
+    });
+    window.addEventListener("focus", function(){
+      if(!_integrationsAuthSession) return;
+      if(_integrationsAuthSession.expires < Date.now()){ _integrationsAuthSession = null; return; }
+      _loadIntegrations().catch(function(){});
+    });
+  }catch(_e){ /* noop */ }
+
+  /* v3.7.156：最近登录记录 —— /api/auth/audit 的第一个真实消费者。此前审计环只有
+     服务端自写自读（register/login/logout/device_delete），用户没有任何出口核对
+     「有没有陌生登录」，多方核对缺口。只读展示、不可编辑（写操作在账号面板）。 */
+  const _AUDIT_EV_LABELS = {
+    register: ["api.auditEvRegister", "注册"],
+    login: ["api.auditEvLogin", "登录"],
+    logout: ["api.auditEvLogout", "登出"],
+    device_delete: ["api.auditEvDeviceDelete", "登出设备"],
+  };
+  async function _loadAuditList(){
+    try{
+      const r = await apiGetAudit();
+      const list = document.getElementById("apiAuditList");
+      if(!list) return;
+      if(r.ok && r.data && Array.isArray(r.data.events)){
+        list.textContent = "";
+        if(r.data.events.length === 0){
+          const empty = document.createElement("div");
+          empty.className = "api-device-row";
+          empty.textContent = t("api.auditEmpty", "暂无记录");
+          list.appendChild(empty);
+          return;
+        }
+        r.data.events.forEach(e => {
+          const row = document.createElement("div");
+          row.className = "api-device-row";
+          const lbl = _AUDIT_EV_LABELS[e.ev];
+          const action = lbl ? t(lbl[0], lbl[1]) : String(e.ev || "?");
+          const time = e.at ? new Date(Number(e.at)).toLocaleString() : "—";
+          /* 全部用 textContent —— 审计 ctx 含设备名等外部输入，不进 innerHTML */
+          row.textContent = action + " · " + time;
+          list.appendChild(row);
+        });
+      }
+    }catch(e){ /* 拉不到审计记录：空列表会被读成「账户没有异常」，但真值未知 */
+      try{
+        if(typeof pushDiag === "function") pushDiag("warn", "audit list load failed: "+((e&&e.message)||e), {where:"_loadAuditList"});
+        const el = document.getElementById("apiAuditList");
+        if(el) el.textContent = t("errorState.defaultTitle", "加载失败");
+      }catch(_e2){}
+    }
   }
 
   // 绑定设置面板按钮
@@ -1153,19 +1257,38 @@
       };
     }
     // 集成连接/断开按钮
+    /* v3.7.156：连接按钮原先「直接 GET 回调端点且不带 code」—— 回调端点没 code 就
+       400/短路 {ok:false}，按钮点了毫无反馈（既不报错也不开授权页）。正路是打开
+       provider 授权页（URL 来自服务端 status 的 providers 目录，已含 client_id /
+       redirect_uri / scope），用户授权后 provider 跳回**服务端**回调，服务端换完
+       token 渲染结果页 postMessage 通知本窗口重拉状态（载荷不含 token，服务端是
+       唯一权威）。 */
     const connectMap = [
-      ["btnApiConnectNotion", "notion", apiConnectNotion],
-      ["btnApiConnectTodoist", "todoist", apiConnectTodoist],
-      ["btnApiConnectGcal", "google", apiConnectGCalendar],
+      ["btnApiConnectNotion", "notion"],
+      ["btnApiConnectTodoist", "todoist"],
+      ["btnApiConnectGcal", "google"],
     ];
-    connectMap.forEach(([btnId, prov, fn]) => {
+    connectMap.forEach(([btnId, prov]) => {
       const btn = document.getElementById(btnId);
       if(btn){
         btn.onclick = async function(){
           try{
-            // OAuth：打开授权页（此处简化为直接调用回调端点）
-            const r = await fn();
-            if(r.ok){ try{ toast(t("api.integrationConnected", "集成已连接"), "ok"); }catch(_){} _loadIntegrations(); }
+            const cat = _integrationsCatalog[prov];
+            if(!cat || !cat.configured || !cat.authorizeUrl){
+              // 凭据没配：如实告诉用户为什么连不了（而不是假装在连接）。
+              try{ toast(t("api.integrationNotConfigured", "部署者未配置该集成的凭据（见 config.example.json 的 integrations 段），无法连接"), "warn"); }catch(_){}
+              return;
+            }
+            const authorize = new URL(cat.authorizeUrl, location.href);
+            const callback = new URL(window.API_BASE, location.href);
+            if(!/^https?:$/.test(authorize.protocol) || !/^https?:$/.test(callback.protocol)) throw new Error("invalid oauth URL");
+            const w = window.open(authorize.href, "_blank", "width=520,height=680");
+            if(w){
+              _integrationsAuthSession = { source: w, origin: callback.origin, expires: Date.now() + 10*60*1000 };
+              try{ toast(t("api.integrationAuthorizeOpened", "已打开授权页，请在弹窗中完成授权"), "ok"); }catch(_){}
+            }else{
+              location.href = authorize.href; // 弹窗被拦截：同页跳转兜底
+            }
           }catch(e){
             /* v3.7.102 第六片：连接失败静默 → 用户以为连上了。 */
             try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}

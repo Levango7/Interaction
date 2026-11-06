@@ -1,6 +1,6 @@
 /* server/src/store.js
  * 零依赖 JSON 文件持久化（对齐前端 localStorage 的简洁形态）。
- * 数据结构：{ users, codes, sessions, oauthStates, schedules, integrations, pushSubs, notifyPrefs }
+ * 数据结构：{ users, codes, sessions, oauthStates, schedules, integrations(停用), userIntegrations, pushSubs, notifyPrefs, vapid, snapshots, syncIncr }
  * 原子写：先写临时文件再 rename，避免崩溃写坏。
  */
 "use strict";
@@ -20,10 +20,12 @@ class Store {
       codes: {},        // "purpose:address" -> { code, expiresAt, issuedAt, used, purpose }（2026-10-24 起分桶，见 setCode 注释）
       sessions: {},     // refreshToken -> { userId, createdAt, expiresAt, deviceName }
       oauthStates: {},  // state -> { provider, createdAt, data }
-      schedules: {},    // id -> { ... }
-      integrations: {}, // provider -> { connected, meta, createdAt }
+      schedules: {},    // id -> { ... }（定时提醒：type/cron/enabled/when/title/note，见 notifications.js）
+      integrations: {}, // 实例级 provider -> { connected, meta, createdAt }（**已停用**：无用户维度，见 listIntegrations 注释）
+      userIntegrations: {}, // userId -> provider -> { connected, meta, createdAt }（v3.7.155 后的隔离形态）
       pushSubs: [],     // [ { endpoint, userId, createdAt } ]
       notifyPrefs: {},  // userId -> { ... }
+      vapid: null,      // { publicKey, privateKey } base64url —— Web Push 发送方密钥，首次用到时自动生成（公开值可下发客户端）
       snapshots: {},    // userId -> { snapshot, updatedAt, serverUpdatedAt }（云同步，LWW 全量快照）
       syncIncr: {}      // userId -> { keys: {k:{v,ts,seq}}, tomb: {k:{ts,seq}}, watermark, prunedBelow }（增量视图，阶段 2）
     };
@@ -31,13 +33,29 @@ class Store {
   }
 
   _load() {
+    /* 审计修复批：原实现 catch 里写「损坏则重建空库」并继续启动 —— 但 _save() 是
+       原子 rename 覆盖：内存态被重置成空库后，下一次任意写操作就把空库盖回磁盘，
+       全部用户/会话/快照**不可恢复**。「静默重置 + 原子覆盖」合起来就是数据消失的
+       双保险，且服务全程表现正常，无人知晓。
+       现改为 fail fast：解析失败或顶层不是对象就抛错，进程起不来，运维去查同目录
+       .bak.<时间戳> 滚动备份（见 _save）。文件不存在 = 首次启动，不抛。 */
+    if (!fs.existsSync(this.file)) return;
+    let parsed;
     try {
-      if (fs.existsSync(this.file)) {
-        const raw = fs.readFileSync(this.file, "utf8");
-        const parsed = JSON.parse(raw);
-        this._data = Object.assign(this._data, parsed || {});
-      }
-    } catch (e) { /* 损坏则重建空库 */ }
+      parsed = JSON.parse(fs.readFileSync(this.file, "utf8"));
+    } catch (e) {
+      const err = new Error("数据文件损坏（JSON 解析失败），已拒绝启动以免空库覆盖磁盘："
+        + ((e && e.message) || String(e)) + " | file=" + this.file
+        + " | 可从同目录 " + path.basename(this.file) + ".bak.<时间戳> 滚动备份恢复");
+      err.code = "STORE_CORRUPT";
+      throw err;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      const err = new Error("数据文件 JSON 顶层不是对象，已拒绝启动 | file=" + this.file);
+      err.code = "STORE_CORRUPT";
+      throw err;
+    }
+    this._data = Object.assign(this._data, parsed);
   }
 
   _save() {
@@ -51,6 +69,23 @@ class Store {
          目录 0700 / 文件 0600（POSIX；Windows 的 chmod 近乎空操作，不报错也不假装生效，
          权限收紧失败不影响写盘本身，只留一次 WARN）。权限判断见 security-check.cjs。 */
       try { if (dir) fs.chmodSync(dir, 0o700); } catch (e) { this._warnPermOnce("目录"); }
+      /* 审计修复批：写盘前**滚动备份**当前磁盘版本（最多留 3 份 .bak.<时间戳>）。
+         动机是 _load 的 fail fast 兄弟条款：损坏时进程拒绝启动，但「拒启动」只在
+         还有得救时才有意义 —— 没有备份的话运维只能面对一份坏文件。复制用同步 IO、
+         失败不阻塞主写盘流程（备份是韧性项，不是正确性项）。 */
+      try {
+        if (dir && fs.existsSync(this.file)) {
+          fs.copyFileSync(this.file, this.file + ".bak." + Date.now());
+          const pref = path.basename(this.file) + ".bak.";
+          const keep = 3;
+          const baks = fs.readdirSync(dir)
+            .filter(n => n.startsWith(pref))
+            .sort();                                  // 时间戳定长（13 位），字典序=时间序
+          for (const n of baks.slice(0, Math.max(0, baks.length - keep))) {
+            try { fs.unlinkSync(path.join(dir, n)); } catch (e) { /* 旧备份删不掉不阻塞 */ }
+          }
+        }
+      } catch (e) { /* 备份失败不阻塞写盘 */ }
       const tmp = this.file + ".tmp";
       fs.writeFileSync(tmp, JSON.stringify(this._data, null, 2), "utf8");
       try { fs.chmodSync(tmp, 0o600); } catch (e) { this._warnPermOnce("文件"); }
@@ -120,10 +155,20 @@ class Store {
   }
   setCode(addr, code, ttlSec, purpose) {
     const p = purpose || "register";
-    this._data.codes[this._codeKey(addr, p)] = {
+    const key = this._codeKey(addr, p);
+    const now = Date.now();
+    /* 审计修复批：兑现下行那条挂了许久的注释（"在发新码时顺带清同邮箱旧码"）。
+       分桶后同桶直接被覆盖，但**过期**的其它桶仍会无限堆积 —— 发码是天然的
+       低频清扫窗口（比单独开定时器省一个起停点），在此一并清掉。
+       只清 expiresAt 已过的（used 未过期的仍按 TTL 保留，读取侧本就不认过期码）。 */
+    for (const k of Object.keys(this._data.codes)) {
+      const rec = this._data.codes[k];
+      if (k !== key && rec && rec.expiresAt && rec.expiresAt < now) delete this._data.codes[k];
+    }
+    this._data.codes[key] = {
       code, purpose: p,
-      expiresAt: Date.now() + (ttlSec || 600) * 1000,
-      issuedAt: Date.now(),
+      expiresAt: now + (ttlSec || 600) * 1000,
+      issuedAt: now,
       used: false
     };
     this._save();
@@ -135,9 +180,32 @@ class Store {
     const f = this._findCode(addr || "", purpose);
     if (f) { delete this._data.codes[f.key]; this._save(); }
   }
-  // 清理过期码（在发新码时顺带清同邮箱旧码）
+  /** 过期码公开清扫入口（供启动/定时调用）。只在有删除时落盘；返回清掉的条数。 */
+  sweepCodes() {
+    const now = Date.now();
+    let n = 0;
+    for (const k of Object.keys(this._data.codes)) {
+      const rec = this._data.codes[k];
+      if (rec && rec.expiresAt && rec.expiresAt < now) { delete this._data.codes[k]; n++; }
+    }
+    if (n) this._save();
+    return n;
+  }
 
   // ---- sessions ----
+  /** 懒清理过期会话：refresh token 有 TTL（默认 30 天），过期且不再被使用的会话
+   *  otherwise 永远占着（refresh 路径只在有人拿它换新 token 时才顺带删自己那一条）。
+   *  惰性触发 = 启动时扫一次（见 index.js），不引入后台定时器。返回清掉的条数。 */
+  sweepSessions() {
+    const now = Date.now();
+    let n = 0;
+    for (const rt of Object.keys(this._data.sessions)) {
+      const s = this._data.sessions[rt];
+      if (s && s.expiresAt && s.expiresAt < now) { delete this._data.sessions[rt]; n++; }
+    }
+    if (n) this._save();
+    return n;
+  }
   /* v3.7.105：为每个会话生成独立 sid。此前设备 id 借用 refreshToken 前 8 字符，
      而 JWT 的 header 段在所有会话里相同 → 所有设备 id 前缀一致，删设备退化成删任意会话。
      sid 与 refreshToken 解耦：换 token 不影响设备标识，且不暴露 token 片段。 */
@@ -195,16 +263,40 @@ class Store {
   getSchedule(id) { return this._data.schedules[id] || null; }
   upsertSchedule(s) { this._data.schedules[s.id] = s; this._save(); return s; }
   deleteSchedule(id) { if (this._data.schedules[id]) { delete this._data.schedules[id]; this._save(); } }
+  /** 调度器遍历用（notifications.js startScheduler 每 30s 扫一遍）：
+      返回全部提醒、不过滤用户 —— 调度器按 userId 取各自的推送订阅再发。 */
+  listAllSchedules() {
+    return Object.keys(this._data.schedules).map(id => this._data.schedules[id]);
+  }
 
   // ---- integrations ----
-  listIntegrations() {
-    return Object.keys(this._data.integrations).map(p => {
-      const it = this._data.integrations[p];
+  /* 审计修复批：原 listIntegrations/setIntegration/removeIntegration 是**实例级**
+     provider -> meta 字典 —— 任何登录用户都能读、连、断全实例的集成，且 provider
+     是路径段（任意键可污染存储，无界增长）。这是 lint-server-idor.mjs 白名单里
+     自我登记的已知缺口。现按 userId 隔离（与 notifyPrefs / schedules 同维度）。
+     旧字典（this._data.integrations）保留在文件里不再被任何路由读取 —— 那些连接
+     从来没换过真 token（回调只存 code 占位），按"未连接"如实呈现。
+     userId/provider 缺一即拒（漏 userId 就写进去 = 退回实例级）。 */
+  listIntegrations(userId) {
+    const mine = this._data.userIntegrations && this._data.userIntegrations[userId];
+    if (!mine || typeof mine !== "object") return [];
+    return Object.keys(mine).map(p => {
+      const it = mine[p];
       return { provider: p, connected: !!it.connected, createdAt: it.createdAt };
     });
   }
-  setIntegration(provider, meta) { this._data.integrations[provider] = Object.assign({ connected: true, createdAt: Date.now() }, meta || {}); this._save(); }
-  removeIntegration(provider) { if (this._data.integrations[provider]) { delete this._data.integrations[provider]; this._save(); } }
+  setIntegration(userId, provider, meta) {
+    if (!userId || !provider) return null;
+    if (!this._data.userIntegrations) this._data.userIntegrations = {};
+    if (!this._data.userIntegrations[userId]) this._data.userIntegrations[userId] = {};
+    this._data.userIntegrations[userId][provider] = Object.assign({ connected: true, createdAt: Date.now() }, meta || {});
+    this._save();
+    return this._data.userIntegrations[userId][provider];
+  }
+  removeIntegration(userId, provider) {
+    const mine = this._data.userIntegrations && this._data.userIntegrations[userId];
+    if (mine && mine[provider]) { delete mine[provider]; this._save(); }
+  }
 
   // ---- push subs ----
   listPushSubs(userId) { return this._data.pushSubs.filter(s => s.userId === userId); }
@@ -222,6 +314,18 @@ class Store {
   // ---- notify prefs ----
   getNotifyPrefs(userId) { return this._data.notifyPrefs[userId] || null; }
   setNotifyPrefs(userId, prefs) { this._data.notifyPrefs[userId] = prefs || {}; this._save(); }
+
+  // ---- Web Push 发送方密钥（VAPID）----
+  /* 公开值（publicKey）可随意下发给客户端用于订阅；privateKey 是发送方凭据。
+     首次用到时由 web-push.js 自动生成并存到这里 —— 单文件零配置部署不需要
+     运维事先填密钥（与 jwt secret 的"占位即拒"不同：VAPID 是自签的应用密钥，
+     自动生成即可，不是共享密钥）。返回 { publicKey, privateKey }（base64url）。 */
+  getVapidKeys() { return (this._data.vapid && this._data.vapid.publicKey) ? this._data.vapid : null; }
+  setVapidKeys(keys) {
+    if (!keys || !keys.publicKey || !keys.privateKey) return;
+    this._data.vapid = { publicKey: keys.publicKey, privateKey: keys.privateKey };
+    this._save();
+  }
 
   // ---- 审计日志（v3.7.110 生产化）----
   /* 记「谁在什么时候做了什么」。**有界环形**（AUDIT_MAX，默认 200，溢出丢最旧）——

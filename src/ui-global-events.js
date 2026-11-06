@@ -2111,10 +2111,27 @@ function initInstallPrompt(){
 
 /* ---------- Web Push 订阅框架 ---------- */
 /**
- * VAPID 公钥占位符（真实部署替换为服务器生成的 VAPID 公钥，base64url 编码）。
- * 当前为占位符，订阅会成功但服务器端无法推送（框架模式）。
+ * VAPID 公钥（v3.7.156：从服务端 GET /api/notifications/vapid-public-key 取真值）。
+ * 此前是写死的假公钥（非法 P-256 点 ⇒ pushManager.subscribe 必抛 DataError）——
+ * 订阅开关看着能打开，服务器却永远无法推送。公钥本就是下发给浏览器的公开值，
+ * 无需鉴权；拉取失败则拒绝订阅 —— 不允许回落到假公钥（那只会再制造一次
+ * 「订阅成功」的假象）。调度器推送时也用同一对 VAPID 密钥，两侧天然一致。
  */
-const VAPID_PUBLIC_KEY = "BEl62iUgOK0uOQ5h8J5qI9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT8j9hT";
+let _vapidPublicKeyCache = null;
+async function _getVapidPublicKey(){
+  if(_vapidPublicKeyCache) return _vapidPublicKeyCache;
+  if(typeof window === "undefined" || typeof window.apiFetch !== "function") return null;
+  try{
+    const r = await window.apiFetch("/api/notifications/vapid-public-key", { method: "GET" });
+    if(r && r.ok && r.data && typeof r.data.publicKey === "string" && r.data.publicKey){
+      _vapidPublicKeyCache = r.data.publicKey;
+      return _vapidPublicKeyCache;
+    }
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "vapid public key fetch failed: "+((e&&e.message)||e), {where:"_getVapidPublicKey"}); }catch(_e2){}
+  }
+  return null;
+}
 
 /**
  * 把 base64url 字符串转为 Uint8Array（PushManager.subscribe 需要 applicationServerKey 为 Uint8Array）。
@@ -2170,14 +2187,34 @@ async function subscribePush(){
     } else if (Notification.permission === "denied") {
       return { ok: false, err: t("pwa.notifyDeniedHint","通知权限被拒绝，请在浏览器设置中允许") };
     }
-    // 2. 调用 pushManager.subscribe
+    // 2. 从服务端取 VAPID 公钥（v3.7.156：此前用写死的假公钥，subscribe 必抛错）
+    const vapidKey = await _getVapidPublicKey();
+    if(!vapidKey) return { ok: false, err: t("pwa.vapidUnavailable","无法从服务器获取推送公钥，暂不可订阅") };
+    // 3. 调用 pushManager.subscribe
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: _base64ToUint8Array(VAPID_PUBLIC_KEY)
+      applicationServerKey: _base64ToUint8Array(vapidKey)
     });
-    // 3. 真实部署应把 sub POST 到服务器 push-subscription endpoint
-    // 框架模式：仅持久化订阅状态到 localStorage
+    // 4. 订阅上报服务端（v3.7.156：此前只写 localStorage，服务端 pushSubs 恒空 ⇒
+    //    定时提醒永远不会推到这台设备）。登记失败 = 三处状态不一致（浏览器已订阅、
+    //    服务器不知道），此时撤销本地订阅并报错 —— 宁可让用户再点一次，
+    //    也不留「已订阅但收不到」的假绿。
+    if(typeof window === "object" && typeof window.apiPushSubscribe === "function"){
+      try{
+        const r = await window.apiPushSubscribe(sub.toJSON());
+        if(!r || !r.ok) throw new Error("server rejected push subscription");
+      }catch(e){
+        try{ await sub.unsubscribe(); }catch(e2){
+          /* 撤销也失败：浏览器侧订阅仍在，但服务器没有登记 —— 推送也不会到达。
+             不吞：留痕， next refreshPushUI 会显示「已订阅」但服务器侧是空的，
+             这条 warn 是此时唯一的排查线索。 */
+          try{ if(typeof pushDiag === "function") pushDiag("error", "push rollback unsubscribe failed: "+((e2&&e2.message)||e2), {where:"subscribePush"}); }catch(_e4){}
+        }
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "push subscribe upload failed: "+((e&&e.message)||e), {where:"subscribePush"}); }catch(_e3){}
+        return { ok: false, err: t("pwa.subscribeUploadFailed","订阅已创建但未登记到服务器，已撤销，请重试") };
+      }
+    }
     /* v3.7.102 第七片：订阅状态落盘失败 → 下次启动显示「未订阅」，与用户直觉不符（订阅其实还在）。 */
     try { save(PREFIX + "push_subscription", { endpoint: sub.endpoint, ts: Date.now() }); } catch(e){
       try{ if(typeof pushDiag === "function") pushDiag("warn", "push subscription persist failed: "+((e&&e.message)||e), {where:"subscribePush"}); }catch(_e2){}
@@ -2196,6 +2233,18 @@ async function unsubscribePush(){
   try {
     const state = await getPushSubscriptionState();
     if (!state.subscription) return { ok: true }; // 本就未订阅
+    // v3.7.156：先通知服务端删登记（endpoint 由服务端按 userId 校验归属）。
+    // 本地取消成功但服务端不知道 ⇒ 服务器继续往死 endpoint 推送（每次发送失败一次）。
+    // 这里是 best-effort：服务端删除失败不阻断本地取消 —— 本地 unsub 成功后
+    // 浏览器不再接收，服务端那条发不出去的订阅会在发送失败侧留痕。
+    if(typeof window === "object" && typeof window.apiPushUnsubscribe === "function"){
+      try{
+        const r = await window.apiPushUnsubscribe(state.subscription.endpoint);
+        if(!r || !r.ok) throw new Error("server rejected push unsubscribe");
+      }catch(e){
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "push unsubscribe upload failed: "+((e&&e.message)||e), {where:"unsubscribePush"}); }catch(_e2){}
+      }
+    }
     const ok = await state.subscription.unsubscribe();
     if (ok) {
       /* v3.7.105（云同步契约 · 阶段1/C1）：改走共享安全删除，语义不变（同样吞异常）；删除进变更日志（门控）。 */
