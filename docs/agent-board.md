@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `src/util-markdown.js`, `tests/draw-export.test.js`, `tests/draw-svg-tool.test.js`, `tests/e2e/draw-export.spec.js`, `docs/draw-capability-phase-a.md`, `CHANGELOG.md`, `docs/agent-board.md` | Qoder | 2026-11-06 13:30 | 用户要求解决现有问题：补真实 PNG 下载回归、隔离 Electron 下载验收、强化失败回退断言，纠正 E4 对历史 PNG 验收/strict/画布入账/聊天保留的误判及测试注释。不改依赖声明、workflow、权限、版本号；只在 wb140 串行跑注入链，不使用真实用户数据。验证完成后释放；本行在飞期间勿提交上述文件。 〔收工翻转 2026-11-06 14:45：Mermaid 标签丢失已实修（`htmlLabels:false`），单测 4 文件/37 例、Chromium e2e 12 例、Electron e2e 6 例全绿；Electron 用官方 41.10.5 二进制（sha256 与 SHASUMS 一致）+ 独立 profile，`will-download` 全 completed 且 `will-navigate` 零触发；文档/CHANGELOG 四处订正已落。路径清单里的 `scripts/verify-draw-electron.cjs` 最终未采用（能力并进 spec），已从本行删去〕 | RELEASED |
 | `scripts/release.mjs`, `scripts/lib/release-claim.mjs`, `tests/release-claim-gate.test.js`, `CHANGELOG.md`, `AGENTS.md`（§二「3.7.155」行一处）, `docs/agent-board.md` | ZCode 主会话 | 2026-11-06 12:37 | **D1×E3 订正批**：把 `claimBoardForRelease` 的自动登记行从「ACTIVE，收工再翻」改成**生而 RELEASED**（审计行），幂等判据改为按版本号对号（`releaseBy` 里的「切版 v{ver}」标记）+ 手动预登记 ACTIVE 行的直接拦截指路；只动 scripts / tests / 文档，不碰版本源、不碰 workflow、不碰 `src/*`。**收工（2026-11-06 13:05）**：订正已随提交落地（登记行生而 RELEASED / 幂等按版本号对号 / 手动 ACTIVE 预登记行抛错指路），本机 4 个测试族全绿（claim-check-ci 测试③在此行 ACTIVE 时被挡=门的设计行为，翻行后复跑通过），完整回执见 CHANGELOG `[Unreleased]`「D1×E3 订正」节 | RELEASED |
 | `docs/draw-capability-phase-a.md`, `CHANGELOG.md（顶部 [Unreleased] 插入点）`, `docs/agent-board.md` | Qoder | 2026-11-06 11:06 | **E4：`docs/draw-capability-phase-a.md` §十 四条开放问题改成已定案 + 行号判据**（台账 #117，与我在 D3 做的 `docs/design-mode-phase-b.md` §九 同批病同治 —— 文档还写着「审核时请拍板」，代码早按其中一支落地了，读的人以为还有决定没做）。 纯文档批：**不碰 `src/*`、不碰测试、不碰版本源、不碰 workflow**；CHANGELOG 只在顶部 `[Unreleased]` 加一条。所有行号写前先 grep 现值核过（不抄旧笔记）。 四条的结论：Q1 定案「SVG 必成 / PNG 如实降级」（`src/util-markdown.js:361` `securityLevel:strict` + `:549`/`:555`/`:571` 全链 `resolve(null)` + `:608` 降级 + 文案键 `src/core-i18n.js:448`；钉它的是 `tests/draw-export.test.js:94`）。 Q2 定案「随会话存、不进产物账」，并把**边界**写进去：内容在工具回执串里（`src/ai-tools.js:191`）、落盘走场景聊天键（`src/data-links.js:499`）、历史回访由 `renderChat` 的 `__SVG__` 分支接住（`src/ai-tools.js:3402` / `:3447`）、不进账的理由与判据（`src/ai-tools.js:186-187` + `tests/draw-svg-tool.test.js:33`）。 Q3 **只补机制判据，不写成已完成**：改前仓内同时含「真机」与「下载」的行只有本条 Q3 自己那一句 ⇒ 「需真机验一次」这笔账至今没平，文档里如实留成待验并给出最短坐实路径。 Q4 定案 `draw_svg`（注册 `src/ai-tools.js:371`、执行分支 `:188`、文档表行 `docs/ai-tools.md:47`）。 三条附带发现（都写进文档，不藏）：① PNG **成功**那一支没有自动化断言（`tests/draw-export.test.js:109` 自己声明留给真浏览器）；② 「刷新不丢」为真但受聊天历史 `.slice(-50)` 上限约束（`src/data-links.js:479`）；③ `tests/draw-svg-tool.test.js:5` 头注释与实现相反（注释说落账 `kind:"svg"`，实现与用例都是不进账，且该串全仓仅此一处）—— 那是 ZCode 的文件，**我只登记不越界改**。 收工即释放；推前按 R10 在下方另落一条详细条目。 〔收工翻转 2026-11-06 11:10：文档 + CHANGELOG 已落，本机 `check:source-state` / `lint` 通过，测试文件未改（那条头注释漂移只登记、留给文件所有者）〕 | RELEASED |
 | `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `service-worker.js`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `CHANGELOG.md` | ZCode 主会话 | 2026-11-06 07:01 | v3.7.155 已切版推送（main=32d5601 / tag=v3.7.155，Electron 腿 42130755045 已绿）；首推 CI 42130755022 / Deploy 42130755030 被认领门判红——**教训**：D1 自动登记的 ACTIVE 行写会话名，而 E3 门在 CI 里取的会话身份是提交作者名（Levango7），二者永不匹配 ⇒ 切版提交本身**不该**带 ACTIVE 行（应由 release.mjs 直接落 RELEASED 或不入板）；本提交把该行翻 RELEASED 后重推解红，完整回执已落 AGENTS.md §二「3.7.155」行（CI/Deploy/Electron/Pages run 号 + 线上字节核验） | RELEASED |
@@ -95,6 +96,21 @@
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
 
+### [2026-11-06 14:45 UTC+8] Qoder 主会话 —— **画图导出遗留清账：Mermaid 标签丢失真修 + 双端回归 + Electron 下载隔离验收 · 收工回执（R13 释放）**
+
+- 状态：**已收工（随本笔提交释放）**
+- 占用路径：`src/util-markdown.js`、`tests/draw-export.test.js`、`tests/draw-svg-tool.test.js`、`tests/e2e/draw-export.spec.js`（新）、`docs/draw-capability-phase-a.md`、`CHANGELOG.md`、`docs/agent-board.md`
+- 在跑的重活：无。注入链只在 wb140 串行跑（单测 + e2e），跑完 `check:source-state` 复验源码态。
+- **真缺陷（不是补测试顺带）**：vendor mermaid 默认 `htmlLabels:true`，`securityLevel:"strict"` 只禁脚本/外链、**不阻止** foreignObject 生成；渲染后消毒（`src/util-markdown.js:375`）把 `script, foreignObject` 整块删掉时**连标签文字一起删**。修法：初始化补 `htmlLabels:false` + `flowchart:{htmlLabels:false}`（`:361`），并改 `:344` 注释为「禁用 HTML 标签，避免安全清理连文字一起剥离」。
+- **单元**：`tests/draw-export.test.js` ④ 强化（drawImage/toBlob/click 各 1 次、下载名 `t-<日期>-<时间>.svg`、第二次 objectURL 的 MIME 是 `image/svg+xml;charset=utf-8`、不得出现「已导出/ok」），④b 换成可执行用例（`createObjectURL` 抛错 ⇒ 不点击、只报「导出失败」、按钮复位）。实跑 4 文件 **37 例全绿**。
+- **e2e 新增 6 例**：draw_svg PNG（240×120、红/蓝像素各 >5000、白底 >100）、render_chart PNG、SVG 重解析 2 rect、Mermaid 标签（开始/结束/继续）且无 foreignObject、刷新恢复 + 聊天裁剪后画布底稿独立、`toBlob→null` 真下载 SVG。Chromium 按配置 **desktop+tablet 12 例通过**（mobile 的 `testMatch` 不含本文件）。
+- **Electron 验收（`will-download` 与 `will-navigate` 两半都有）**：官方 `electron-v41.10.5-win32-x64.zip`，sha256 `ca3294e6…` 与官方 SHASUMS256 一致；独立 `--user-data-dir` 临时 profile；主进程挂探针，**6/6 通过（40.0s）**，6 次下载全部 `completed` 且落盘非空，导航零触发。口径：官方二进制 + 源码态应用，不是安装包。
+- **三个踩坑（给别人省时间）**：① Playwright 在 Electron 下**不派发** `page 'download'` 事件，必须读主进程 `will-download` 记录；② `electronApplication.evaluate` 第一个参数永远是 `electron` 模块，`n => downloads[n]` 会静默拿到 undefined（实参接第二个形参）；③ 本应用关窗只隐藏到托盘，`app.close()` 会卡到用例超时，收尾要 `app.exit(0)` + 超时兜底再 kill。
+- **文档订正四处**（`docs/draw-capability-phase-a.md` §十 + 审核记录、CHANGELOG E4 条、本板我 11:10 那条已加 «更正»）：① `strict` 不阻止 foreignObject；② 「PNG 成功侧从未验收」不成立（CHANGELOG 970-971 的 34,901 B 实下载），缺的是仓内回归；③ 画布不进 AI 产物账（自持 `wb_agent_diagrams`）；④ `.slice(-50)` 是每场景聊天存储/会话镜像截断，AI 上下文另由 `trimChatHist` 裁剪。
+- **越界修（明写）**：`tests/draw-svg-tool.test.js:5` 是 ZCode 的文件，按用户「把现有的问题都解决一下」一并把头注释改成与实现一致。
+- 不碰：依赖声明、workflow、版本源、其它 `src/*`。
+- 本机验证：`check:source-state` ✓（667KB / 40 块）、`check:ai-tools-doc` ✓（29/29）、`npm run lint` exit 0、单测 37/37、Chromium e2e 12/12、Electron e2e 6/6。
+
 ### [2026-11-06 13:05 UTC+8] ZCode 主会话 —— **D1×E3 订正：切版登记行生而 RELEASED（v3.7.155 双红事故的机制级修复）· 收工回执（R13 释放）**
 
 - 状态：**已收工（释放）**。用户「那就做吧」授权 v3.7.155 报告里那条待落实教训。根因：D1 自动登记的
@@ -130,6 +146,10 @@
 - 提醒对方（**我没动、只登记**）：`tests/draw-svg-tool.test.js:5` 的头注释与实现相反 —— 注释说「产物落账（`kind:"svg"`）——AI 行动统计覆盖」，
   而实现（`src/ai-tools.js:186-187` 明写不进 `_aiArtifactPush`）与用例（同文件 `:33`「不进产物账」）都是**不进账**；`kind:"svg"` 这个串全仓仅此一处命中，没有任何代码或门禁消费它。
   那是 ZCode 的文件，改注释虽小也是别人的在飞面，留给所有者或明确授权后单独一笔。
+- **〔更正 2026-11-06 14:05／我自己的条〕上面第 128 条里有两句是我写错的，以第二批为准**：
+  ① 「PNG 成功那一支无自动化断言」**不成立** —— `CHANGELOG.md` 970-971 记着 2026-10-30 在 Chromium 里实下载 `架构草图-<时间戳>.png` **34,901 B** 并 toast「已导出」，Phase A 那笔"留真浏览器验收"当时就已销账；当时的缺口是**仓内回归**（现在补在 `tests/e2e/draw-export.spec.js`）。
+  ② 「`.slice(-50)` 是聊天历史上限」口径不完整 —— 它是**每场景**聊天存储/会话镜像的截断（`data-links.js:479`/`:498`/`:583`/`:674`/`:693`），AI 上下文另有 `trimChatHist`（`ai-tools.js:3527`，6000 token 预算）。
+  另有两句在正文（第 124、126 条附近暗示的机制）也要收口：`securityLevel:"strict"` **不阻止** foreignObject 生成（它是渲染后 `util-markdown.js:375` 消毒整块删的，连文字一起），源头压法本轮才补成 `htmlLabels:false`（`:361`）；「画布产物进 AI 产物账」**不成立**（画布自持 `wb_agent_diagrams`，`aiArtifacts()` 无画布条目）。
 - 本机验证：`check:source-state` ✓（HTML 667KB / src 标记 40 个 / 文件 40 个）；`check:ai-tools-doc` ✓（源码 29 / 文档 29 —— Q4 那句「总数 29、表内第 27 号」的口径据此写死）；`npm run lint` exit 0。
 - **首验红过一次，已复绿（如实留痕）**：`2596e23` 首跑 CI `42155346994` / Deploy `42155347044` 的 **attempt 1**，六个 job 全部报
   `GitHub Actions has encountered an internal error when running your job`，且每个 job 的 `steps` 数组是**空的**（一条 step 都没执行），

@@ -94,24 +94,43 @@ describe("导出动作（文档级委托）", () => {
   it("④ PNG 失败（toBlob→null）如实降级：下载 SVG + warn 提示 + 按钮复位（不假称 PNG 成功）", async () => {
     win = boot();
     win.toast = vi.fn();
-    win.URL.createObjectURL = function () { return "blob:mock"; };
+    const created = [];
+    win.URL.createObjectURL = function (blob) { created.push(blob); return "blob:mock"; };
     win.URL.revokeObjectURL = function () {};
-    win.Image = class { set src(v) { const self = this; setTimeout(function () { if (self.onload) self.onload(); }, 0); } };
-    /* 环境的 canvas 可能真能出 PNG；要测的是文档承诺的降级分支 —— 强制 toBlob 回 null */
-    vi.spyOn(win.HTMLCanvasElement.prototype, "toBlob").mockImplementation(function (cb) { cb(null); });
+    const w = win;
+    win.Image = class { set src(v) { w.setTimeout(() => this.onload(), 0); } };
+    const drawImage = vi.fn();
+    vi.spyOn(win.HTMLCanvasElement.prototype, "getContext").mockReturnValue({ fillRect: vi.fn(), drawImage });
+    const toBlob = vi.spyOn(win.HTMLCanvasElement.prototype, "toBlob").mockImplementation(function (cb) { cb(null); });
+    const click = vi.spyOn(win.HTMLAnchorElement.prototype, "click").mockImplementation(function () {});
     const box = mountExportBox(win, "t");
     const btn = box.querySelector('[data-svgexp="png"]');
     btn.click();
+    expect(btn.disabled).toBe(true);
     await vi.waitFor(() => expect(btn.disabled).toBe(false));
+    expect(drawImage).toHaveBeenCalledTimes(1);
+    expect(toBlob).toHaveBeenCalledTimes(1);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(click.mock.instances[0].download).toMatch(/^t-\d{8}-\d{4}\.svg$/);
+    expect(created).toHaveLength(2);
+    expect(created[1].type).toBe("image/svg+xml;charset=utf-8");
+    expect(created[1].size).toBeGreaterThan(0);
     expect(win.toast).toHaveBeenCalledWith(expect.stringContaining("SVG"), "warn");
+    expect(win.toast).not.toHaveBeenCalledWith("已导出", "ok");
   });
 
-  it("④b PNG 成功路径不在 jsdom 断言（留真浏览器验收）——但失败降级已由 ④ 钉住", () => {
-    /* 说明：jsdom 的 canvas drawImage 严格校验来源类型，假 Image 会抛错走 fail()，
-       故「toBlob 出真 Blob → 下载 .png + ok 回执」无法在 jsdom 诚实地测；
-       真浏览器验收（Playwright 截图脚本）时以真实 toBlob 链路一并核验。 */
+  it("④b PNG 转换失败且 SVG 下载也失败时，只报导出失败并复位按钮", async () => {
     win = boot();
-    expect(win.__svgExportBound).toBe(true);
+    win.toast = vi.fn();
+    win.URL.createObjectURL = vi.fn(() => { throw new Error("object URL unavailable"); });
+    const click = vi.spyOn(win.HTMLAnchorElement.prototype, "click").mockImplementation(function () {});
+    const btn = mountExportBox(win, "fail").querySelector('[data-svgexp="png"]');
+    btn.click();
+    await vi.waitFor(() => expect(btn.disabled).toBe(false));
+    expect(click).not.toHaveBeenCalled();
+    expect(win.toast).toHaveBeenCalledWith("导出失败", "error");
+    expect(win.toast).not.toHaveBeenCalledWith("已导出", "ok");
+    expect(win.toast).not.toHaveBeenCalledWith(expect.anything(), "warn");
   });
 
   it("⑥ 委托幂等：boot 即绑定一次；点击 SVG 按钮走下载路径", () => {

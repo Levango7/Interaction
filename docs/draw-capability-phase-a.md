@@ -126,18 +126,24 @@ ai-tools-doc 门禁口径（28→29 同步）；⑤ 产物卡渲染含导出按�
 
 > 2026-11-06 订正：这四条当年写的是「审核时请拍板」，而实现早已按其中一支落地并且发了版（随 v3.7.155
 > 及更早的批次）。留着"待拍板"字样会让读的人以为还有决定没做，也让人没法判断哪一支是**故意**选的。
-> 下面每条给的是**可复核的行号**（写前逐条 grep 现值），并如实留下三处**没做到**的地方。
+> 下面每条给的是**可复核的行号**（写前逐条 grep 现值）；当时没做到的边界照原样留着，
+> 本轮补齐/订正的另在 ⚠️ 与审核记录里写明，不把"补过了"说成"当年就没问题"。
 
 - **Q1 PNG 污染** —— 定案「**SVG 必成、PNG 如实降级**」，且不引 resvg-js 那类纯 JS 栅格化。
-  三层判据：① 源头压掉风险 —— mermaid 初始化走 `securityLevel: "strict"`（`src/util-markdown.js:361`），
-  htmlLabels 的 foreignObject 从配置上就不产生，与 `:344` 那条注释是同一套口径；
+  判据分三层，但**别把 `securityLevel:"strict"` 当成压掉 foreignObject 的手段**（2026-11-06 订正：
+  实测 vendor 默认 `htmlLabels:true`，`strict` 只禁脚本/外链，不阻止 foreignObject 生成）：
+  ① 源头 —— mermaid 初始化显式 `htmlLabels:false` + `flowchart:{htmlLabels:false}`
+  （`src/util-markdown.js:361`，本轮补的）；真正的兜底是渲染后 `_sanitizeMermaidSvg`
+  （`:369`/`:375`）把 `script, foreignObject` 整块删除 —— 注意这会**连标签文字一起删**，
+  这正是本轮 e2e 抓到的真实回归（缺 `htmlLabels:false` 时标签全空）；
   ② 转换链**任何一步不可用都 `resolve(null)`**（契约注释 `:465`、函数注释 `:549`、
   无 `document`/`URL.createObjectURL` 时提前返回 `:555`、`ctx.drawImage` 在 `:571`），
   调用方拿到 null 就降级成「已下载 SVG」并如实提示（`:608`，文案键 `draw.pngFallback` = `src/core-i18n.js:448`）；
-  ③ 钉住它的是 `tests/draw-export.test.js:94`（④：`toBlob→null` ⇒ 下载 SVG + warn + 按钮复位，不许假称 PNG 成功）。
-  ⚠️ **没做到的一条**：PNG **成功**那一支至今没有自动化断言 —— `tests/draw-export.test.js:109`（④b）自己写明
-  「成功路径不在 jsdom 断言，留真浏览器验收」，而那笔真浏览器验收没有记录。所以本条定的是**失败侧行为**，
-  成功侧仍属未验，别把它当"PNG 导出已验证"引用。
+  ③ 自动化现在两侧都有：失败侧 `tests/draw-export.test.js` ④（`toBlob→null` ⇒ 真下载 `.svg` + warn + 按钮复位）
+  与 ④b（`createObjectURL` 抛错 ⇒ 只报「导出失败」并复位）；成功侧原以为没有断言，**订正**：
+  CHANGELOG 970-971 记着 2026-10-30 在 Chromium 里真下载过 `架构草图-<时间戳>.png` **34,901 B**
+  （Phase A 的"留真浏览器验收"当时已销账），缺的是**仓内回归** —— 本轮补进
+  `tests/e2e/draw-export.spec.js`（draw_svg / render_chart 各导一张 PNG，并按像素断言红蓝块）。
 
 - **Q2 产物持久化** —— 定案「**随会话存，不进 AI 产物账，不进笔记库/独立画廊**」。
   链路三段都有出处：SVG 源码直接进工具回执串（`src/ai-tools.js:191` 返回 `"__SVG__" + JSON`）⇒
@@ -145,9 +151,13 @@ ai-tools-doc 门禁口径（28→29 同步）；⑤ 产物卡渲染含导出按�
   刷新后由 `renderChat`（`src/ai-tools.js:3402`）里的 `__SVG__` 分支重新渲染成 `.svg-msg` 卡片并挂回导出条
   （`:3447`）。**不进账是刻意的**：账只收「可回访的持久产物」（带真实 refId），草图没有可回访落点，
   进账就是留悬空引用（理由写在 `src/ai-tools.js:186-187`，断言在 `tests/draw-svg-tool.test.js:33`）。
-  ⚠️ **「够吗」的真实答案带一条边界**：刷新不丢是真的，但不是无限留 —— 聊天载入侧按场景
-  `.slice(-50)` 截断（`src/data-links.js:479`，导入后重载同口径 `:693`），草图作为消息内容受同一上限约束。
-  要长期留图请导出文件，或走 Phase B 的画布产物（那一路才进产物账）。
+  ⚠️ **「够吗」的真实答案带两条边界**：① 刷新不丢是真的，但**每个场景的聊天存储只留最近 50 条**
+  （载入 `src/data-links.js:479`/`:693`、写入 `:498`、镜像 Session `:583`/`:674`）—— 这是**每场景
+  工作缓冲/会话镜像的截断**，不是全局消息上限；AI 上下文另有 `trimChatHist`（`src/ai-tools.js:3527`，
+  6000 token 预算、至少留 2 条；条数超 50 时裁到 50 但至少留 12 条）。草图作为聊天消息受前者约束。
+  ② 要长期留图请导出文件；**设计模式画布不在这条链上，也不进 AI 产物账** —— 画布自持
+  `wb_agent_diagrams`（文档数组 cap 50）+ `wb_agent_diagram_active`（`src/draw-canvas.js:9`，
+  另有 200 节点/体积上限 `:26`），`aiArtifacts()`（`src/ai-tools.js:271`）里没有任何画布条目。
 
 - **Q3 Electron 下载** —— **机制侧判据补齐；「需真机验一次」这笔账至今没平，本条不算已完成。**
   已核实的部分：下载收口在 `_downloadBlob`（`src/util-markdown.js:503`，先做能力守卫 `:505` 再
@@ -174,7 +184,13 @@ ai-tools-doc 门禁口径（28→29 同步）；⑤ 产物卡渲染含导出按�
   每批过 CI 后再下一批；安全批③先于工具批④（先有围栏再养动物）。
 - 2026-11-06 §十 四条由「审核时请拍板」改成「已定案 + 可复核行号」（台账 #117，与
   `docs/design-mode-phase-b.md` §九 在 D3 里治的是同一批病）。上面 ZCode 那条**原文一字未改**。
-  顺带三条发现按原样写在 §十 里、不粉饰：① PNG **成功**侧无自动化断言（失败侧有）；② 「随会话存」
-  受聊天历史 `.slice(-50)` 上限约束；③ `tests/draw-svg-tool.test.js:5` 的头注释与实现相反
-  （注释称产物落账 `kind:"svg"`，实现与用例都是**不进账**；该串全仓仅那一处命中）——
-  那是 ZCode 的文件，本轮**只登记不越界改**，改动留给文件所有者或明确授权后另做一笔。
+  顺带三条发现按原样写在 §十 里、不粉饰：① PNG **成功**侧无仓内自动化断言；② 「随会话存」
+  受每场景聊天存储 `.slice(-50)` 约束；③ `tests/draw-svg-tool.test.js:5` 的头注释与实现相反
+  （注释称产物落账 `kind:"svg"`，实现与用例都是**不进账**；该串全仓仅那一处命中）。
+- 2026-11-06（同日第二批，用户「把现有的问题麻烦都解决一下」）把上面三条落到实处、并订正两处写错的判断：
+  ① 原写「PNG 成功从未验收」**不成立** —— CHANGELOG 970-971 记着 2026-10-30 Chromium 实下载 34,901 B，
+  缺的是仓内回归，已补 `tests/e2e/draw-export.spec.js`（像素级断言）；② 原写「`strict` 压掉 foreignObject」
+  **不成立** —— `strict` 只禁脚本/外链，foreignObject 是渲染后消毒 `:375` 删的（连文字一起），
+  本轮补 `htmlLabels:false`（`:361`）从源头消除；③ 原写「画布产物进账」**不成立** —— 画布自持
+  `wb_agent_diagrams`，`aiArtifacts()` 无画布条目；④ `tests/draw-svg-tool.test.js:5` 的头注释已在
+  取得该文件改动后修正（属越界修 ZCode 的文件，在此明写）。

@@ -3,6 +3,18 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-06 · **画图导出遗留清账：Mermaid 标签丢失真修 + PNG 双端回归 + Electron 下载隔离验收 + 文档四处订正**
+
+_用户「把现有的问题麻烦都解决一下」。本批把 E4 里三处写错的判断和两处「没做到」落到可执行证据上，也把「Electron 需真机验一次」这笔挂了很久的账平掉（官方二进制 + 源码态应用，不是安装包）。_
+
+- **真缺陷（新 e2e 抓到的，不是补测试顺带）**：vendor mermaid 默认 `htmlLabels:true`，`securityLevel:"strict"` **不阻止** foreignObject 生成；渲染后 `_sanitizeMermaidSvg`（`src/util-markdown.js:375`）把 `script, foreignObject` 整块删除，**标签文字一起没了**。修：初始化补 `htmlLabels:false` + `flowchart:{htmlLabels:false}`（`:361`），`:344` 注释同步改成「禁用 HTML 标签，避免安全清理连文字一起剥离」。
+- **单元测试 ④/④b 重写**（`tests/draw-export.test.js`）：④ 现在钉住真链路 —— `drawImage` 1 次、`toBlob` 1 次、`<a download>` 1 次且文件名 `t-<日期>-<时间>.svg`、两次 `createObjectURL` 的第二个 MIME 为 `image/svg+xml;charset=utf-8`、**不得**出现「已导出/ok」；④b 由「留白说明」换成可执行用例：`createObjectURL` 抛错 ⇒ 不点击下载、只报「导出失败」并复位按钮。本机 `npm test -- tests/draw-export.test.js tests/draw-svg-tool.test.js tests/draw-marker-render.test.js tests/probe-binding.test.js` **4 文件 / 37 例全绿**。
+- **新增 `tests/e2e/draw-export.spec.js`（6 例）**：draw_svg PNG（240×120，红/蓝像素各 >5000、白底 >100）、render_chart PNG 真栅格化、SVG 可重解析（2 个 rect）、Mermaid 标签保留且无 foreignObject、刷新恢复 + 聊天裁剪后画布底稿独立、`toBlob→null` 时真下载 SVG 而非伪 PNG。Chromium 按现有配置实跑 **desktop+tablet 共 12 例通过**（mobile 项目的 `testMatch` 不含本文件，属配置行为不是跳过）。
+- **Electron 隔离验收（账已平，口径写清）**：官方 `electron-v41.10.5-win32-x64.zip`（sha256 `ca3294e6…ce8491a`，与官方 SHASUMS256 一致），解包后以 `DRAW_ELECTRON_EXECUTABLE` 起真实主进程 + 独立 `--user-data-dir` 临时 profile；主进程挂 `will-download`（`setSavePath` 到测试输出目录）与 `will-navigate` 探针，**6/6 通过（40.0s）**。两半判据都成立：`will-download` 触发且 6 次全部 `completed`、落盘文件非空；`will-navigate` **零触发**。三个踩坑留给后来者：① Playwright 在 Electron 下**不派发** `page 'download'` 事件（首版干等 30s 超时），必须读主进程记录；② `electronApplication.evaluate` 的**第一个参数永远是 electron 模块**，`n => downloads[n]` 会静默取到 `undefined`（实参要从第二个形参接）；③ 本应用关窗只隐藏到托盘，`app.close()` 会卡到测试超时，收尾要 `app.exit(0)` + 超时兜底再 kill。**口径**：验的是官方 Electron 二进制 + 源码态 HTML，不是 electron-builder 产出的安装包。
+- **文档/CHANGELOG 订正（E4 四处）**：① `securityLevel:"strict"` 不阻止 foreignObject（见上）；②「PNG 成功侧从未验收」**不成立** —— CHANGELOG 970-971 记着 2026-10-30 Chromium 实下载 `架构草图-<时间戳>.png` **34,901 B**，缺的是**仓内回归**（本批补上）；③ 画布**不进** AI 产物账（自持 `wb_agent_diagrams` + `wb_agent_diagram_active`，`aiArtifacts()` 里没有画布条目）；④ `.slice(-50)` 是**每场景**聊天存储/会话镜像的截断（`src/data-links.js:479`/`:498`/`:583`/`:674`/`:693`），AI 上下文另由 `trimChatHist`（`src/ai-tools.js:3527`，6000 token 预算）裁剪。`docs/draw-capability-phase-a.md` §十与审核记录、本 CHANGELOG 的 E4 条、板面 E4 回执均已同步。
+- **测试注释漂移收口**：`tests/draw-svg-tool.test.js:5` 头注释改成与实现一致（不进产物账；可救的恶意 SVG 消毒后通过、无根 svg 拒绝）。这是 ZCode 的文件，按用户「把现有的问题都解决一下」一并修，并在文档与板面明写越界。
+- 验证面：`check:source-state` ✓、`check:ai-tools-doc` ✓、`npm run lint` exit 0、上述单测 37/37、Chromium e2e 12/12、Electron e2e 6/6。不改依赖声明、workflow、版本号；未新增运行时依赖（`playwright` 由 `@playwright/test` 传递提供）。
+
 ### 2026-11-06 · **D1×E3 订正：切版登记行生而 RELEASED（v3.7.155 双红事故的机制级修复）**
 
 _v3.7.155 首推 CI/Deploy 双红（`42130755022` / `42130755030`）的根因是：D1 自动登记的 ACTIVE 行写**会话名**，而 E3 接进 CI 的认领门在 CI 里按**提交作者名**取会话身份（本仓全员同为 `Levango7`）⇒ 二者永不匹配，发版提交自己的 9 条 `RELEASE_PATHS` 全被自判为「他人占用」。当时靠补笔把该行翻 `RELEASED` 重推解红（`27d61fe`）；本批把机制改对，让「每发一版必红一次 CI」不再发生。用户「那就做吧」授权。_
@@ -19,15 +31,19 @@ _v3.7.155 首推 CI/Deploy 双红（`42130755022` / `42130755030`）的根因是
   与本文档 §十（Phase A 的 Q1–Q4）是**两份文档、四条不同的问题**，只是长得像。取证两条：
   `git log d9f735b4..HEAD -- docs/draw-capability-phase-a.md` 无输出；改前该节标题实测仍是
   「开放问题（审核时请拍板/知悉）」。同一种病，一份治了、另一份没治，而账上写成了两份都清。
-- **Q1 PNG 污染** 定案「SVG 必成 / PNG 如实降级」：源头 `securityLevel:"strict"`（`util-markdown.js:361`）+
+- **Q1 PNG 污染** 定案「SVG 必成 / PNG 如实降级」：源头 `htmlLabels:false`（`util-markdown.js:361`，第二批补）+
   转换链任何一步不可用都 `resolve(null)`（`:549`/`:555`/`:571`）+ 调用侧如实降级（`:608`，文案键
   `core-i18n.js:448`）；钉它的是 `draw-export.test.js:94`。
-  ⚠️ 同时如实留下**没做到的**：PNG **成功**那一支无自动化断言（`draw-export.test.js:109` 自己声明留给真浏览器，
-  而那笔验收没有记录）⇒ 本条定的是失败侧，别引用成「PNG 导出已验证」。
+  ~~源头 `securityLevel:"strict"` 让 foreignObject「从配置上就不产生」~~ / ~~PNG 成功侧从未验收~~：
+  这两句都是**我写错并已订正**的（见上方 2026-11-06 第二批条目）—— `strict` 只禁脚本/外链，
+  foreignObject 是渲染后消毒 `:375` 删的；PNG 成功侧 2026-10-30 已在 Chromium 实下载 34,901 B。
 - **Q2 产物持久化** 定案「随会话存、不进 AI 产物账」，并把**边界**写进去：内容在回执串里（`ai-tools.js:191`）
   → 落盘走场景聊天键（`data-links.js:499`，写穿镜像 `:659`）→ 回访由 `renderChat` 的 `__SVG__` 分支接住
   （`ai-tools.js:3402`/`:3447`）；不进账的理由与断言（`ai-tools.js:186-187` + `draw-svg-tool.test.js:33`）。
-  「刷新不丢」为真，但不是无限留 —— 载入侧按场景 `.slice(-50)` 截断（`data-links.js:479`/`:693`）。
+  「刷新不丢」为真，但不是无限留 —— **每场景**聊天存储 `.slice(-50)` 截断（载入 `data-links.js:479`/`:693`、
+  写入 `:498`、镜像 Session `:583`/`:674`）；这是工作缓冲/会话镜像的上限，不是全局消息上限
+  （AI 上下文另有 `trimChatHist`，`ai-tools.js:3527`，6000 token 预算）。~~画布产物那一路进产物账~~
+  也是我写错的：画布自持 `wb_agent_diagrams`（`draw-canvas.js:9`），`aiArtifacts()` 里没有画布条目。
 - **Q3 Electron 下载** **只补机制判据，不预支结论**：`_downloadBlob` 的能力守卫与如实失败
   （`util-markdown.js:503-506`）+ 桌面版多年先例（`render-widgets.js:1262`、`ui-backup-stats.js:90`/`:429`/`:1285`）
   + 导航守卫的准确拦截面（`electron/main.js:458`/`:459`/`:464`，`_isInternalUrl` `:434` 不放行 `blob:`），
@@ -37,7 +53,7 @@ _v3.7.155 首推 CI/Deploy 双红（`42130755022` / `42130755030`）的根因是
   对外契约 `docs/ai-tools.md:47`（表内第 27 号，**工具总数 29** —— 「第 29 个」是总数口径，不与序号混）。
 - **顺手登记、不越界改**：`tests/draw-svg-tool.test.js:5` 的头注释与实现相反（注释说产物落账 `kind:"svg"`，
   实现与用例都是不进账；`kind:"svg"` 全仓仅此一处命中）。那是 ZCode 的文件，本轮只在文档与板面留痕，
-  改动留给文件所有者或明确授权后的单独一笔。
+  改动留给文件所有者或明确授权后的单独一笔。（第二批已按用户「把现有的问题麻烦都解决一下」修掉，并在此明写。）
 - 零代码面外溢：不碰 `src/*`、不碰测试、不碰版本源与 workflow；纯文档 + 本条 + 板面一行。
 
 ## [3.7.155] - 2026-11-06
