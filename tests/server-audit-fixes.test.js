@@ -310,16 +310,30 @@ describe("server/src/store.js：损坏抛错、滚动备份、用户隔离、清
 
   it("审计环有界（AUDIT_MAX）且只返回本人", () => {
     process.env.AUDIT_MAX = "5";
-    const st = new Store(tmpStoreFile());
-    for (let i = 0; i < 8; i++) st.addAudit("u1", "login", { i });
-    const evs = st.getAudit("u1");
-    expect(evs).toHaveLength(5); // 丢最旧
-    expect(evs[0].ctx.i).toBe(3);
-    expect(evs[4].ctx.i).toBe(7);
-    expect(st.getAudit("u2")).toEqual([]); // 无入口读他人
-    // since 游标
-    const mid = evs[2].at;
-    expect(st.getAudit("u1", mid)).toHaveLength(2);
+    // 时间戳必须确定：addAudit 用 Date.now() 打 at，紧凑循环在 Linux CI 上会**撞同一毫秒**
+    // （本批首推 ubuntu 实测：8 条事件里 evs[2].at === evs[3].at，since 游标是严格 >，
+    // 同毫秒事件被丢掉 ⇒ 断言随平台漂移）。这里用单调计数桩把 at 钉死，游标语义才可断言。
+    const realNow = Date.now;
+    let t = 1_700_000_000_000;
+    Date.now = () => t++;
+    try {
+      const st = new Store(tmpStoreFile());
+      for (let i = 0; i < 8; i++) st.addAudit("u1", "login", { i });
+      const evs = st.getAudit("u1");
+      expect(evs).toHaveLength(5); // 丢最旧
+      expect(evs[0].ctx.i).toBe(3);
+      expect(evs[4].ctx.i).toBe(7);
+      expect(st.getAudit("u2")).toEqual([]); // 无入口读他人
+      expect(new Set(evs.map((e) => e.at)).size).toBe(5); // at 互不撞毫秒（桩保证）
+      // since 游标语义：严格 >（传入某事件自身的 at ⇒ 该事件及更早全部排除）。
+      // 用事件自身的 at 而非 mid+1：_save/备份路径也调 Date.now，at 值不连续，
+      // 只有「传递真实事件时间戳」这一断言形式与调用次数无关、跨平台稳定。
+      expect(st.getAudit("u1", evs[2].at)).toHaveLength(2); // 只剩 evs[3]、evs[4]
+      expect(st.getAudit("u1", evs[3].at)).toHaveLength(1); // 只剩 evs[4]
+      expect(st.getAudit("u1", evs[4].at)).toHaveLength(0); // 全排除（严格 >，不含等号）
+    } finally {
+      Date.now = realNow;
+    }
   });
 
   it("清扫：过期验证码 / 过期会话 / 陈旧 oauth state", () => {
