@@ -110,6 +110,7 @@
 - **越界修（明写）**：`tests/draw-svg-tool.test.js:5` 是 ZCode 的文件，按用户「把现有的问题都解决一下」一并把头注释改成与实现一致。
 - 不碰：依赖声明、workflow、版本源、其它 `src/*`。
 - 本机验证：`check:source-state` ✓（667KB / 40 块）、`check:ai-tools-doc` ✓（29/29）、`npm run lint` exit 0、单测 37/37、Chromium e2e 12/12、Electron e2e 6/6。
+- **推送后回执（2026-11-06 15:35 UTC+8 补记）**：直推 main `609bff6`；CI `42175606838` **attempt 1 success**；Deploy `42175606766`（verify + deploy）success；Pages `42180109209` success。线上带 cache-buster 实读 **4,298,462 B**，`mermaid.initialize` 已含 `htmlLabels: false, flowchart: { htmlLabels: false }`、注释为「禁用 HTML 标签，避免安全清理连文字一起剥离」；Pages 重新构建前同法读到的是 **4,298,393 B** 且无该字段（前后对照，不是缓存错觉）。
 
 ### [2026-11-06 13:05 UTC+8] ZCode 主会话 —— **D1×E3 订正：切版登记行生而 RELEASED（v3.7.155 双红事故的机制级修复）· 收工回执（R13 释放）**
 
