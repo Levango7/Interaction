@@ -122,17 +122,59 @@ ai-tools-doc 门禁口径（28→29 同步）；⑤ 产物卡渲染含导出按�
 **验收判据（Phase A 完成的定义，即当初立的三条真实任务）**：周报配图（render_chart→PNG 进文档）、
 架构图（mermaid→SVG 导出）、海报草图（draw_svg→SVG/PNG 导出）——三个任务全程不离开聊天。
 
-## 十、开放问题（审核时请拍板/知悉）
+## 十、开放问题（Q1–Q4 均已定案 · 判据落在代码里）
 
-- **Q1 PNG 污染**：mermaid htmlLabels 的 foreignObject 在部分内核 `canvas.drawImage` 会污染或空白。
-  方案取「SVG 必成、PNG 如实降级」，接受吗？（替代：引 resvg-js 之类纯 JS 栅格化，+依赖，不建议）
-- **Q2 产物持久化**：第一版 SVG 随会话存（刷新不丢——聊天消息本就落盘），不进笔记库/独立画廊。够吗？
-- **Q3 Electron 下载**：`<a download>` 在 Electron 内嵌页通常可用，但需真机验一次；不可用则走
-  Electron 主进程保存对话框（一行 IPC，Electron 批再处理）。
-- **Q4 工具名**：`draw_svg` vs `draw_sketch` vs `generate_svg`。倾向 `draw_svg`（名实相符：产出就是
-  SVG 源码，不假装是位图生成）。
+> 2026-11-06 订正：这四条当年写的是「审核时请拍板」，而实现早已按其中一支落地并且发了版（随 v3.7.155
+> 及更早的批次）。留着"待拍板"字样会让读的人以为还有决定没做，也让人没法判断哪一支是**故意**选的。
+> 下面每条给的是**可复核的行号**（写前逐条 grep 现值），并如实留下三处**没做到**的地方。
+
+- **Q1 PNG 污染** —— 定案「**SVG 必成、PNG 如实降级**」，且不引 resvg-js 那类纯 JS 栅格化。
+  三层判据：① 源头压掉风险 —— mermaid 初始化走 `securityLevel: "strict"`（`src/util-markdown.js:361`），
+  htmlLabels 的 foreignObject 从配置上就不产生，与 `:344` 那条注释是同一套口径；
+  ② 转换链**任何一步不可用都 `resolve(null)`**（契约注释 `:465`、函数注释 `:549`、
+  无 `document`/`URL.createObjectURL` 时提前返回 `:555`、`ctx.drawImage` 在 `:571`），
+  调用方拿到 null 就降级成「已下载 SVG」并如实提示（`:608`，文案键 `draw.pngFallback` = `src/core-i18n.js:448`）；
+  ③ 钉住它的是 `tests/draw-export.test.js:94`（④：`toBlob→null` ⇒ 下载 SVG + warn + 按钮复位，不许假称 PNG 成功）。
+  ⚠️ **没做到的一条**：PNG **成功**那一支至今没有自动化断言 —— `tests/draw-export.test.js:109`（④b）自己写明
+  「成功路径不在 jsdom 断言，留真浏览器验收」，而那笔真浏览器验收没有记录。所以本条定的是**失败侧行为**，
+  成功侧仍属未验，别把它当"PNG 导出已验证"引用。
+
+- **Q2 产物持久化** —— 定案「**随会话存，不进 AI 产物账，不进笔记库/独立画廊**」。
+  链路三段都有出处：SVG 源码直接进工具回执串（`src/ai-tools.js:191` 返回 `"__SVG__" + JSON`）⇒
+  落盘走场景聊天键（`src/data-links.js:499`，并由 `:659` 的写穿镜像同步进该场景的激活 Session）⇒
+  刷新后由 `renderChat`（`src/ai-tools.js:3402`）里的 `__SVG__` 分支重新渲染成 `.svg-msg` 卡片并挂回导出条
+  （`:3447`）。**不进账是刻意的**：账只收「可回访的持久产物」（带真实 refId），草图没有可回访落点，
+  进账就是留悬空引用（理由写在 `src/ai-tools.js:186-187`，断言在 `tests/draw-svg-tool.test.js:33`）。
+  ⚠️ **「够吗」的真实答案带一条边界**：刷新不丢是真的，但不是无限留 —— 聊天载入侧按场景
+  `.slice(-50)` 截断（`src/data-links.js:479`，导入后重载同口径 `:693`），草图作为消息内容受同一上限约束。
+  要长期留图请导出文件，或走 Phase B 的画布产物（那一路才进产物账）。
+
+- **Q3 Electron 下载** —— **机制侧判据补齐；「需真机验一次」这笔账至今没平，本条不算已完成。**
+  已核实的部分：下载收口在 `_downloadBlob`（`src/util-markdown.js:503`，先做能力守卫 `:505` 再
+  `createObjectURL` `:506`，失败**如实返回 false** 而不是静默），且同款 `<a download>` 在桌面版已跑了多年
+  （`src/render-widgets.js:1262`、`src/ui-backup-stats.js:90`/`:429`/`:1285`）；Electron 侧唯一的导航守卫在
+  `electron/main.js:458`（`setWindowOpenHandler` `:459` + `will-navigate` `:464`），其 `_isInternalUrl`（`:434`）
+  只放行本应用页面与 `about:`，**blob: 不在放行名单里** —— 这两件事叠起来的含义是：带 `download` 属性的同源
+  blob 走下载通道、不发 `will-navigate`，所以按机制推理不会被拦；但**一旦**某种内核/版本把它降级成导航，
+  守卫会 `preventDefault`，表现就是"点了没反应"。仓里没有 `will-download` 钩子（`session.defaultSession`
+  仅出现在 CSP 安装处 `electron/main.js:150-153`），即默认下载行为未被改写。
+  ⚠️ **未验的正是这一步**：改本笔之前，全仓同时含「真机」与「下载」的行只有本文档 Q3 这一句（原第 130 行），
+  没有任何 Electron 侧记录（本笔之后仓里多出来的那些命中，都是这批新写的文字，不是证据）。**最短坐实路径**（留给有真机窗口的那一批，别在文档里预支结论）：起 Electron + CDP，
+  渲染一张 `draw_svg` 卡，点「导出 SVG」，断言 `will-download` 触发且文件名前缀是 `chart-`/`draw`，
+  同时断言 `will-navigate` **没有**被触发；两半都要有，只有前半说明不了守卫没插手。
+
+- **Q4 工具名** —— 定案 **`draw_svg`**（名实相符：产出就是 SVG 源码，不假装是位图生成）。
+  注册处 `src/ai-tools.js:371`（参数与描述同段 `:372-373`）、执行分支 `:188`、安全检查失败文案走
+  `draw.invalid`（`:190`，键定义 `src/core-i18n.js:451`）；对外契约见 `docs/ai-tools.md:47`
+  （表内第 27 号，**工具总数 29** —— 「第 29 个」是总数口径，别与表内序号混）与 §3.27（`:299`）。
 
 ## 审核记录
 
 - 2026-10-30 起草（ZCode 会话），**待用户审核**：通过 / 修改意见 / 否决。通过后按批次①→④实现，
   每批过 CI 后再下一批；安全批③先于工具批④（先有围栏再养动物）。
+- 2026-11-06 §十 四条由「审核时请拍板」改成「已定案 + 可复核行号」（台账 #117，与
+  `docs/design-mode-phase-b.md` §九 在 D3 里治的是同一批病）。上面 ZCode 那条**原文一字未改**。
+  顺带三条发现按原样写在 §十 里、不粉饰：① PNG **成功**侧无自动化断言（失败侧有）；② 「随会话存」
+  受聊天历史 `.slice(-50)` 上限约束；③ `tests/draw-svg-tool.test.js:5` 的头注释与实现相反
+  （注释称产物落账 `kind:"svg"`，实现与用例都是**不进账**；该串全仓仅那一处命中）——
+  那是 ZCode 的文件，本轮**只登记不越界改**，改动留给文件所有者或明确授权后另做一笔。

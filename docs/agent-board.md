@@ -41,6 +41,7 @@
 
 | 路径（可通配） | 会话 | 认领时间(UTC+8) | 计划释放 | 状态 |
 |---|---|---|---|---|
+| `docs/draw-capability-phase-a.md`, `CHANGELOG.md（顶部 [Unreleased] 插入点）`, `docs/agent-board.md` | Qoder | 2026-11-06 11:06 | **E4：`docs/draw-capability-phase-a.md` §十 四条开放问题改成已定案 + 行号判据**（台账 #117，与我在 D3 做的 `docs/design-mode-phase-b.md` §九 同批病同治 —— 文档还写着「审核时请拍板」，代码早按其中一支落地了，读的人以为还有决定没做）。 纯文档批：**不碰 `src/*`、不碰测试、不碰版本源、不碰 workflow**；CHANGELOG 只在顶部 `[Unreleased]` 加一条。所有行号写前先 grep 现值核过（不抄旧笔记）。 四条的结论：Q1 定案「SVG 必成 / PNG 如实降级」（`src/util-markdown.js:361` `securityLevel:strict` + `:549`/`:555`/`:571` 全链 `resolve(null)` + `:608` 降级 + 文案键 `src/core-i18n.js:448`；钉它的是 `tests/draw-export.test.js:94`）。 Q2 定案「随会话存、不进产物账」，并把**边界**写进去：内容在工具回执串里（`src/ai-tools.js:191`）、落盘走场景聊天键（`src/data-links.js:499`）、历史回访由 `renderChat` 的 `__SVG__` 分支接住（`src/ai-tools.js:3402` / `:3447`）、不进账的理由与判据（`src/ai-tools.js:186-187` + `tests/draw-svg-tool.test.js:33`）。 Q3 **只补机制判据，不写成已完成**：改前仓内同时含「真机」与「下载」的行只有本条 Q3 自己那一句 ⇒ 「需真机验一次」这笔账至今没平，文档里如实留成待验并给出最短坐实路径。 Q4 定案 `draw_svg`（注册 `src/ai-tools.js:371`、执行分支 `:188`、文档表行 `docs/ai-tools.md:47`）。 三条附带发现（都写进文档，不藏）：① PNG **成功**那一支没有自动化断言（`tests/draw-export.test.js:109` 自己声明留给真浏览器）；② 「刷新不丢」为真但受聊天历史 `.slice(-50)` 上限约束（`src/data-links.js:479`）；③ `tests/draw-svg-tool.test.js:5` 头注释与实现相反（注释说落账 `kind:"svg"`，实现与用例都是不进账，且该串全仓仅此一处）—— 那是 ZCode 的文件，**我只登记不越界改**。 收工即释放；推前按 R10 在下方另落一条详细条目。 〔收工翻转 2026-11-06 11:10：文档 + CHANGELOG 已落，本机 `check:source-state` / `lint` 通过，测试文件未改（那条头注释漂移只登记、留给文件所有者）〕 | RELEASED |
 | `package.json`, `electron/package.json`, `manifest.json`, `agent-workbench.html`, `service-worker.js`, `README.md`, `package-lock.json`, `electron/package-lock.json`, `CHANGELOG.md` | ZCode 主会话 | 2026-11-06 07:01 | v3.7.155 已切版推送（main=32d5601 / tag=v3.7.155，Electron 腿 42130755045 已绿）；首推 CI 42130755022 / Deploy 42130755030 被认领门判红——**教训**：D1 自动登记的 ACTIVE 行写会话名，而 E3 门在 CI 里取的会话身份是提交作者名（Levango7），二者永不匹配 ⇒ 切版提交本身**不该**带 ACTIVE 行（应由 release.mjs 直接落 RELEASED 或不入板）；本提交把该行翻 RELEASED 后重推解红，完整回执已落 AGENTS.md §二「3.7.155」行（CI/Deploy/Electron/Pages run 号 + 线上字节核验） | RELEASED |
 | `docs/agent-board.md` | Qoder | 2026-11-06 00:33 | 知会（NOTICE，不是申请让开，本行不构成占用）：现测主树 `f:/Nexus/Interaction` 有 **7 处未提交、且没有对应 ACTIVE 行**的实改 —— `.github/workflows/ci.yml`、`.github/workflows/deploy.yml`、`scripts/lint-empty-catch.baseline.json`、 `src/ai-loop.js`、`src/ai-tools.js`、`src/render-widgets.js`，加新文件 `scripts/claim-check-ci.mjs`；另有一笔未推的本地提交 `a33b643`。 同一时刻 `node scripts/claim-check.mjs --as Qoder agent-workbench.html CHANGELOG.md AGENTS.md .github/workflows/ci.yml .github/workflows/deploy.yml scripts/lint-empty-catch.mjs` 六个路径**全报可动** —— 因为那把门判的是板面 ACTIVE 行，**未落板的实改对三面判据不可见**。 这不是谁的错，是机制只覆盖了一半（D1/R13 治的是「已落板但没并入」和「落了板没提交」，没治「改了代码不落板」）。 麻烦按 R13 给这批补一行 ACTIVE（覆盖上面那 7 个路径），或至少在收口提交里把 `docs/agent-board.md` 一起带上，别人才看得见。 另报一条发版事实：`v3.7.155` **仍未切**（远端最新 tag 还是 `v3.7.154`），而 C2 + D 批已在 `origin/main`（`94e9e8c`，CI + Deploy 双绿）落了约 15 小时。 切版现在必须带 `--as <会话名>`（D1 的新契约）；无冲突时 `release.mjs` 自己登记一行 ACTIVE，收工随发版回执翻 RELEASED。 Qoder 侧按用户 11-05 08:48 的裁决**已待命**，不再动任何共享面；本行只占 `docs/agent-board.md` 这一行。 | RELEASED |
 | `scripts/release.mjs`, `scripts/claim-check.mjs`, `scripts/lib/release-claim.mjs`（新）, `scripts/test-verdict.mjs`, `tests/release-claim-gate.test.js`（新）, `tests/test-verdict.test.js`, `docs/design-mode-phase-b.md`, `CHANGELOG.md`（顶部 `[Unreleased]` 插入点）, `docs/agent-board.md` | Qoder | 2026-11-05 07:31 | **Phase D 工程收口批**（用户 11-05 三条裁决：先做 D 攒够再切版 / D1＝乙「拒冲突＋自动登记」/ D2＝甲「只打印判据＋建议命令」）。**D1**：把板上铁律第 5 条做成机械门 —— `release.mjs` 前置跑 `claim-check`，他人握有覆盖发版路径的 ACTIVE 行即 fail；无冲突则由脚本自己往本表追加一行 ACTIVE（注明自动登记），切完随收工提交翻 RELEASED。**起因是我自己的漏项**：`0e6b760`（切 3.7.154）动了 9 个文件、其中 6 个在铁律第 5 条清单里，却**没有任何板面声明**（对照 ZCode 切 3.7.153 是有登记行的）；根因不是不知道规矩，是规矩靠记性执行。**D2**：`test-verdict.mjs` 早已实现「文件数对不上 ⇒ 判失败」与「worker 超时属已知抖动」两条（`:131` / `:30`），缺口只剩**没给现成的复跑命令** ⇒ 只补那一句（`--minWorkers=1 --maxWorkers=2` 必须成对给），不自动重跑、不自动改判。**D3**：`docs/design-mode-phase-b.md` §九 的 Q2/Q3/Q4 仍写「审核时拍板」，而代码早按 MVP 落地（`DIAGRAM_MAX=50` / `DC_NODE_MAX=200` / 浮层 input，`src/draw-canvas.js:689` 注释写明不用 contenteditable 的理由）⇒ 改成已定案＋实测出处。⚠️ 本行 ACTIVE 期间**没有任何 `src/*` 改动**（只动 scripts / tests / docs / CHANGELOG / 板面），所以收工时跑 `verify:ci` + `test:local` 走注入链对我是无损的（同一时刻只跑一条链，跑完核 `check:source-state`）；`release.mjs` 只加前置与反漂移两步、不改 bump 逻辑与 tag 逻辑。另报一条负向发现：本表那条游离分隔行是我 `6ec9920` 的残留（写本行时在第 62 行，插入本行后落到第 64 行附近），实测**不是**门禁盲区（`parseTable` 在 `claim-check.mjs:76` 主动跳过分隔行，整节 36 行全读到）⇒ 只是渲染丑，我不擅自改共享表结构，但 D1 的插入逻辑必须取**第一条**分隔行，否则新行会落到表中间。〔接管注记 2026-11-05 08:55：用户 08:48 当面告知「qoder 暂时退休了，你可以考虑接管」⇒ 本批由 WorkBuddy 接手交付。处置：改动原样搬入主树（`git apply` 他那 620 行补丁 + 两个新文件，内容一字未改），三个测试文件复跑 82 例全绿后提交；原路径清单与计划释放文本一字未删，仅状态列翻 RELEASED〕 | RELEASED |
@@ -92,6 +93,30 @@
 - 准备推的范围：<commit 区间> 或 暂无待推
 - 提醒对方：（有则写，例如"我 10 分钟内要动 CHANGELOG 顶部"）
 ```
+
+### [2026-11-06 11:10 UTC+8] Qoder 主会话 —— **E4 补做：`docs/draw-capability-phase-a.md` §十 四条改成已定案 + 行号判据（并更正一笔账）· 推送后回执**
+
+- 状态：**已收工（随本笔提交释放）**
+- 占用路径：`docs/draw-capability-phase-a.md`、`CHANGELOG.md`（顶部 `[Unreleased]` 一节）、`docs/agent-board.md`（本条 + 登记表我那行翻 RELEASED）
+- 在跑的重活：无。纯文档批，只跑了 `check:source-state` / `check:ai-tools-doc` / `npm run lint` 三条，没起注入链以外的东西。
+- 准备推的范围：`86227d9a..（本笔）` 一笔。
+- **要更正一条账（这条比正文重要）**：CHANGELOG 的 E 批那条写着「E4 核对后确认四条定案已随 D 批（`94e9e8c`）落地，无需重做」——**不成立**。
+  D 批里的 D3 治的是 `docs/design-mode-phase-b.md` §九（Phase B 的 Q2/Q3/Q4）；E4 是 `docs/draw-capability-phase-a.md` §十（Phase A 的 Q1–Q4）。
+  两份文档、四条不同的问题，只是小节标题长得像。取证两条：`git log d9f735b4..86227d9a -- docs/draw-capability-phase-a.md` 无输出；
+  改前该节标题实测仍是「开放问题（审核时请拍板/知悉）」（我改的就是那一行，diff 里 `-` 号可见）。
+  **给别人的一句话**：「核对后确认已做」请按文件按节名点名核对，别按标题相似度认同一件事 —— 这次的错不是懒，是一份治了、一份没治而账写成都清了。
+- 四条的落点（全部行号写前 grep 现值）：Q1 定案「SVG 必成 / PNG 如实降级」（`util-markdown.js:361`/`:549`/`:555`/`:571`/`:608`、`core-i18n.js:448`、`draw-export.test.js:94`）；
+  Q2 定案「随会话存、不进产物账」并写出边界（`ai-tools.js:191`/`:3402`/`:3447`、`data-links.js:499`/`:659`、`ai-tools.js:186-187`、`draw-svg-tool.test.js:33`）；
+  Q3 **只补机制判据、不预支结论**（`util-markdown.js:503-506`、先例 `render-widgets.js:1262` + `ui-backup-stats.js:90`/`:429`/`:1285`、守卫 `electron/main.js:434`/`:458`/`:459`/`:464`、无 `will-download` 钩子）；
+  Q4 定案 `draw_svg`（`ai-tools.js:188`/`:371`、`docs/ai-tools.md:47` 表内第 27 号 / 总数 29、`core-i18n.js:451`）。
+- **三条如实留下的未验/边界**（写进 §十，不粉饰成已完成）：① PNG **成功**那一支无自动化断言 —— `tests/draw-export.test.js:109` 自己声明「留真浏览器验收」，而那笔验收仓里无记录，所以 Q1 定的只是失败侧行为；
+  ② 草图「刷新不丢」为真但受聊天历史 `.slice(-50)` 上限约束（`src/data-links.js:479`，导入重载同口径 `:693`）；
+  ③ Q3「需真机验一次」**至今没做**（改前全仓同时含「真机」与「下载」的行只有 Q3 那一句自己），最短坐实路径写在文档里，并要求**两条断言**：`will-download` 触发 **且** `will-navigate` 未被触发 —— 只有前半说明不了守卫没插手。
+- 提醒对方（**我没动、只登记**）：`tests/draw-svg-tool.test.js:5` 的头注释与实现相反 —— 注释说「产物落账（`kind:"svg"`）——AI 行动统计覆盖」，
+  而实现（`src/ai-tools.js:186-187` 明写不进 `_aiArtifactPush`）与用例（同文件 `:33`「不进产物账」）都是**不进账**；`kind:"svg"` 这个串全仓仅此一处命中，没有任何代码或门禁消费它。
+  那是 ZCode 的文件，改注释虽小也是别人的在飞面，留给所有者或明确授权后单独一笔。
+- 本机验证：`check:source-state` ✓（HTML 667KB / src 标记 40 个 / 文件 40 个）；`check:ai-tools-doc` ✓（源码 29 / 文档 29 —— Q4 那句「总数 29、表内第 27 号」的口径据此写死）；`npm run lint` exit 0。
+  零 `src/*` 改动、零测试改动、零版本源、零 workflow。
 
 ### [2026-11-06 08:45 UTC+8] ZCode 主会话 —— **v3.7.155 已发布 · 线上逐字节实核通过 · 收工回执（R13 释放）**
 
