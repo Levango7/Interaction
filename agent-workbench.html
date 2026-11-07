@@ -2404,6 +2404,14 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .md-body pre code{display:block;white-space:pre-wrap;background:transparent;color:var(--snip-fg);
   padding:0;border-radius:0;font-size:var(--fs-sm)}
 .md-body pre code.block{display:block}
+/* 2026-11-07：代码卡（语言标签 + 复制）——聊天里的代码块按主流 agent 的产物卡呈现 */
+.md-code{margin:0 0 var(--space-2);border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;background:var(--snip-bg)}
+.md-code .md-code-head{display:flex;align-items:center;gap:var(--space-1);padding:2px var(--space-2);background:var(--surface-muted);border-bottom:1px solid var(--line)}
+.md-code .md-code-lang{font-size:var(--fs-2xs);color:var(--muted);font-family:"SF Mono","SFMono-Regular",Consolas,monospace}
+.md-code .md-code-copy{margin-left:auto;border:0;background:transparent;color:var(--muted);font-size:var(--fs-2xs);
+  padding:2px 6px;border-radius:var(--radius-sm);cursor:pointer;min-height:24px}
+.md-code .md-code-copy:hover{background:var(--surface-hover);color:var(--text)}
+.md-code pre{margin:0;border:0;border-radius:0}
 /* 2026-10-23：mermaid 图（懒加载 vendor；失败保留源码 + 提示） */
 .md-body .mermaid-figure{margin:0 0 var(--space-2);padding:var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);overflow-x:auto}
@@ -5236,6 +5244,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 .rail-item{display:flex;align-items:center;gap:var(--space-1h);padding:var(--space-1h) var(--space-1);
   border-radius:var(--radius-md);font-size:var(--fs-xs)}
 .rail-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 2026-11-07：右栏「会话」页 —— 当前会话高亮 + 新建按钮靠右 */
+.rail-item.is-active{background:var(--accent-soft);border-radius:var(--radius-sm)}
+.rail-sess-new{margin-left:auto;border:0;background:transparent;color:var(--muted);font-size:var(--fs-sm);
+  padding:0 6px;border-radius:var(--radius-sm);cursor:pointer;min-width:24px;min-height:24px}
+.rail-sess-new:hover{background:var(--surface-hover);color:var(--text)}
 .rail-item-meta{font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap}
 
 @media(min-width:1024px){
@@ -5602,6 +5615,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <button type="button" class="task-rail-tab is-on" data-rail-tab="today" role="tab" aria-selected="true" data-i18n="rail.tab.today">今日</button>
           <button type="button" class="task-rail-tab" data-rail-tab="agent" role="tab" aria-selected="false" data-i18n="rail.tab.agent">Agent</button>
           <button type="button" class="task-rail-tab" data-rail-tab="files" role="tab" aria-selected="false" data-i18n="rail.tab.files">文件</button>
+          <button type="button" class="task-rail-tab" data-rail-tab="sessions" role="tab" aria-selected="false" data-i18n="dock.sessions">会话</button>
         </div>
         <span class="task-rail-count" id="taskRailCount">0</span>
         <button type="button" class="task-rail-add" id="taskRailAdd" data-i18n-title="taskRail.add" title="新建任务" data-i18n-aria="taskRail.add" aria-label="新建任务">+</button>
@@ -5613,6 +5627,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       </div>
       <div class="task-rail-pane u-hidden" data-rail-pane="agent" id="railAgentPane"></div>
       <div class="task-rail-pane u-hidden" data-rail-pane="files" id="railFilesPane"></div>
+      <div class="task-rail-pane u-hidden" data-rail-pane="sessions" id="railSessionPane"></div>
     </aside>
     <div class="task-rail-backdrop" id="taskRailBackdrop" hidden></div>
     <!-- Code 模式（2026-10-26）：右栏下半 = 进程/技能/MCP/工作流 停靠栏（仅 .body.code-mode 且 ≥1024px 显示，
@@ -7658,6 +7673,9 @@ const MESSAGES = {
 
     // 消息补充
     "msg.notConfigured": "未配置",
+    "md.copy": "复制",
+    "md.copied": "已复制",
+    "md.copyFail": "复制失败",
     "msg.batchMovedSuffix": "」",
 
     // 场景名称
@@ -9453,6 +9471,12 @@ const MESSAGES = {
     "cmd.quick2": "查总览",
     "cmd.quick3": "统计本周完成了什么",
     "cmd.quick4": "搜索 周报",
+    "cmd.q.code1": "解释一下刚才这段代码为什么报错",
+    "cmd.q.code2": "把这周完成的任务整理成清单",
+    "cmd.q.code3": "画一张这个项目的架构图",
+    "cmd.q.design1": "画一张用户登录流程图",
+    "cmd.q.design2": "把刚才的图放到画布继续编辑",
+    "cmd.q.design3": "画一张海报草图",
     "cmd.shortcuts": "快捷指令",
     "cmd.switchTo": "切到 ",
     "cmd.viewMemory": "查看工作记忆",
@@ -11842,6 +11866,9 @@ const MESSAGES = {
 
     // Messages supplemental
     "msg.notConfigured": "Not configured",
+    "md.copy": "Copy",
+    "md.copied": "Copied",
+    "md.copyFail": "Copy failed",
     "msg.batchMovedSuffix": "\"",
 
     // Scenarios
@@ -13637,6 +13664,12 @@ const MESSAGES = {
     "cmd.quick2": "Show overview",
     "cmd.quick3": "What did I complete this week",
     "cmd.quick4": "Search weekly report",
+    "cmd.q.code1": "Explain why the last code block errors",
+    "cmd.q.code2": "Turn this week's completed tasks into a list",
+    "cmd.q.code3": "Draw an architecture diagram of this project",
+    "cmd.q.design1": "Draw a login flow diagram",
+    "cmd.q.design2": "Open the last diagram on the canvas",
+    "cmd.q.design3": "Sketch a poster",
     "cmd.shortcuts": "Quick Commands",
     "cmd.switchTo": "Switch to ",
     "cmd.viewMemory": "View memory",
@@ -17047,7 +17080,17 @@ function mdToHtml(str){
         buf.push(lines[i]); i++;
       }
       i++;
-      blocks.push({type:"block", html:'<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+buf.join("\n")+'</code></pre>'});
+      /* 代码卡：语言标签 + 复制按钮（2026-11-07，向主流 agent 的产物卡观感靠拢）。
+         内容在文件头已整体 esc（见 mdToHtml 开头的 esc(str)），这里不再二次转义。
+         mermaid 块保持原样：renderMermaidBlocks 依赖 `pre > code.lang-mermaid` 且会整块
+         替换 pre，套卡片头会留下一条空的头栏。 */
+      if(lang === "mermaid"){
+        blocks.push({type:"block", html:'<pre><code class="block lang-mermaid">'+buf.join("\n")+'</code></pre>'});
+        continue;
+      }
+      blocks.push({type:"block", html:'<div class="md-code"><div class="md-code-head"><span class="md-code-lang">'+(lang||"text")+'</span>'
+        + '<button type="button" class="md-code-copy" data-code-copy="1">'+esc(t("md.copy","复制"))+'</button></div>'
+        + '<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+buf.join("\n")+'</code></pre></div>'});
       continue;
     }
     /* 表格：当前行含 |，下一行是分隔行（--- / :---: / ---:）。必须在段落之前判。 */
@@ -23066,7 +23109,7 @@ function renderChat(){
     if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}${usageHtml}</div>`;
     // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
-  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + CHAT_SUGGEST_HTML);
+  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + chatSuggestHtml());
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
   // v1.15：点击消息区任意位置 → 聚焦输入框（聊天面板本身即卡片，不另设输入框卡片）
@@ -25385,6 +25428,7 @@ function renderTaskRail(){
   _bindTaskRail();
   _renderRailAgent();
   _renderRailFiles();
+  _renderRailSessions();
   _applyRailTab();
 }
 
@@ -25392,7 +25436,7 @@ function renderTaskRail(){
  * 只展示真实能力：技能来自 listEnabledSkills（真的注入提示词）、文件来自 getRagFiles；
  * MCP 自 2026-10-23 起是真能力（远端工具按勾选注入 + 命名空间路由），但它的发现/勾选/状态都在
  * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。 */
-const RAIL_TABS = ["today", "agent", "files"];
+const RAIL_TABS = ["today", "agent", "files", "sessions"];
 /** 宽屏判据（>=1024px）：三栏网格（code/design 模式）只在宽屏生效，窄屏强制单栏。
  *  下面 taskRail 折叠 IIFE 原有一份同名局部（语义相同），统一用这一份避免漂移。 */
 const isWide = ()=> (window.innerWidth || 0) >= 1024;
@@ -25479,6 +25523,55 @@ function _renderRailFiles(){
   if(b) b.onclick = function(){ try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 打开失败不阻塞右栏 */ } };
   $$("[data-rail-art]").forEach(function(li){
     li.onclick = function(){ openAiArtifact(li.getAttribute("data-rail-art") || ""); };
+  });
+}
+/**
+ * 右栏「会话」页（2026-11-07）：把会话从弹窗提升为常驻列表（Codex 式）。
+ * 与 code 模式左下 #sessionDock 同源（data-links 的 getSessions/switchSession），
+ * 不另建 CRUD：重命名/删除仍走 设置→会话管理 与 #chatSessionBtn 的弹窗。
+ * @returns {void}
+ */
+function _renderRailSessions(){
+  const el = $("#railSessionPane");
+  if(!el) return;
+  let list = [], act = "";
+  try{ list = getSessions() || []; }catch(_e){ list = []; }
+  try{ act = getActiveSession() || ""; }catch(_e){ act = ""; }
+  let html = '<div class="rail-sec-title">' + esc(t("dock.sessions", "会话"))
+    + ' <span class="task-rail-count">' + list.length + "</span>"
+    + '<button type="button" class="rail-sess-new" id="railSessNew" title="'
+    + esc(t("dock.newSession", "新建会话")) + '" aria-label="' + esc(t("dock.newSession", "新建会话")) + '">＋</button></div>';
+  html += list.length
+    ? '<ul class="rail-list">' + list.slice(0, 10).map(function(s2){
+        const dt = new Date(s2.updatedAt || s2.createdAt || Date.now());
+        const time = (dt.getMonth() + 1) + "/" + dt.getDate() + " " + pad(dt.getHours()) + ":" + pad(dt.getMinutes());
+        return '<li class="rail-item rail-sess' + (s2.id === act ? " is-active" : "") + '" data-rail-sess="' + esc(s2.id) + '">'
+          + '<span class="rail-item-name">' + esc(s2.title || t("sess.new", "新会话")) + "</span>"
+          + '<span class="rail-item-meta">' + ((s2.msgs || []).length) + esc(t("dock.unitMsgs", " 条 · ")) + esc(time) + "</span></li>";
+      }).join("") + "</ul>"
+    : '<p class="task-rail-empty">' + esc(t("dock.noSessions", "暂无会话")) + "</p>";
+  el.innerHTML = sanitizeHtml(html);
+  const nb = $("#railSessNew");
+  if(nb) nb.onclick = function(){
+    let sc = "office";
+    try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(_e){ /* 取不到场景时回 office */ }
+    const ns = createSession(sc, t("sess.new", "新会话"));
+    if(ns && ns.id){
+      switchSession(ns.id);
+      if(typeof renderChat === "function") renderChat();
+      if(typeof scrollChat === "function") scrollChat();
+      if(typeof render === "function") render();
+    }
+  };
+  $$("#railSessionPane [data-rail-sess]").forEach(function(li){
+    li.onclick = function(){
+      const sid = li.getAttribute("data-rail-sess");
+      if(!sid || sid === act) return;
+      switchSession(sid);
+      if(typeof renderChat === "function") renderChat();
+      if(typeof scrollChat === "function") scrollChat();
+      if(typeof render === "function") render();
+    };
   });
 }
 /**
@@ -29009,6 +29102,9 @@ function applyUIMode(){
     const dd = $("#diagramDock"); if(dd) dd.innerHTML = "";
     if(_agentDockTimer){ clearInterval(_agentDockTimer); _agentDockTimer = null; }
   }
+  /* 2026-11-07：空对话的快捷指令随模式变（见 chatSuggestHtml）——模式切换后要重画聊天区，
+     否则用户切到 code/design 仍看到 work 的四条提示。 */
+  try{ if(typeof renderChat === "function") renderChat(); }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
 }
 function toggleUIMode(){
   const cur = _uiMode();
@@ -36597,6 +36693,9 @@ async function chatOnce(messages, opts){
               const decoder = new TextDecoder();
               let buf = "";
               let final = null; const toolCalls = []; let finishReason = "stop"; let usage = null;
+              /* 文本必须在这里累积：最终消息是**合成**的，若 content 留空串，调用方把流式
+                 占位消息删掉后入历史的就只有空内容（实测退化成「(无内容)」）。 */
+              let contentText = "";
               for(;;){
                 const { done, value } = await reader.read();
                 if(done) break;
@@ -36612,6 +36711,7 @@ async function chatOnce(messages, opts){
                   if(!d || !d.choices || !d.choices[0]) continue;
                   const c = d.choices[0];
                   if(c.delta && typeof c.delta.content === "string" && c.delta.content){
+                    contentText += c.delta.content;
                     try{ opts.onChunk(c.delta.content); }catch(_e2){ /* 回调异常不阻断流 */ }
                   }
                   if(c.delta && c.delta.tool_calls){
@@ -36627,9 +36727,8 @@ async function chatOnce(messages, opts){
                   if(d.usage) usage = d.usage;
                 }
               }
-              final = { choices: [{ message: { role: "assistant", content: "" }, finish_reason: finishReason }], usage: usage || undefined };
+              final = { choices: [{ message: { role: "assistant", content: contentText }, finish_reason: finishReason }], usage: usage || undefined };
               if(toolCalls.length) final.choices[0].message.tool_calls = toolCalls.filter(Boolean);
-              // 流式无文字内容时回吐空串占位（上游空响应检查兜底）
               addTokensUsage(final);
               return final;
             }
@@ -37702,15 +37801,17 @@ async function runChatLoop(messages, hist, sc){
       if(chatController && chatController.resetTimeout) chatController.resetTimeout();
       // T5.3 浏览器兼容：chatController.ac 可为 null（AbortController 不可用），此时不传 signal
       const chatSignal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
-      // v3.2 C-档：流式打字机——纯文本轮（无工具调用压力）边收边渲染：流式中先挂一条 _streaming 消息增量更新，
-      // 完成后用真实结果替换。工具调用轮不启用（避免半截 tool_calls 状态污染 hist）。
+      // 流式打字机：所有轮次（含工具调用轮）边收边渲染——流式中先挂一条 _streaming 消息增量更新，
+      // 完成后用真实结果替换。工具轮曾因「半截 tool_calls 污染 hist」保守关闭（v3.2 C-档），
+      // 但占位消息只累积**文本**，tool_calls 始终由 chatOnce 拼好的最终消息携带；
+      // 且 SSE 最终消息的 content 现由 ai-loop.js 侧累积（tool_calls delta 亦已完整拼装），
+      // 所以工具轮开启流式不会把半截状态写进 hist。
       let streamMsg = null;
       let streamReceived = 0;
-      const canStream = !acfg.enabled; // 工具模式（tools 数组在）下走流式需拼 tool_calls delta，先保守关（v3.2 C-档）
-      if(canStream) chatProgressStart("stream", t("chat.progress.generating", "正在生成…"), 0);
+      chatProgressStart("stream", t("chat.progress.generating", "正在生成…"), 0);
       const j = await chatOnce(messages, {
         signal: chatSignal,
-        onChunk: canStream ? function(chunkText){
+        onChunk: function(chunkText){
           try{
             if(!streamMsg){
               streamMsg = { role: "assistant", content: "", _streaming: true, _prompt: turnUserText };
@@ -37721,9 +37822,9 @@ async function runChatLoop(messages, hist, sc){
             chatProgressUpdate({ received: streamReceived });
             AppBridge.render();
           }catch(_e){ /* 渲染异常不阻断流 */ }
-        } : undefined
+        }
       });
-      if(canStream) chatProgressEnd();
+      chatProgressEnd();
       if(streamMsg){
         // 流式占位消息移除，由下方真实 hist.push 接管
         const idx = hist.indexOf(streamMsg);
@@ -37869,15 +37970,36 @@ async function runChatLoop(messages, hist, sc){
 }
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·渲染 ---------- */
 // 快捷指令（v1.9.5：空对话时展示，点击填入输入框）
-const CHAT_SUGGEST = [
-  t("cmd.quick1","建个任务：写周报，明天截止"),
-  t("cmd.quick2","查总览"),
-  t("cmd.quick3","统计本周完成了什么"),
-  t("cmd.quick4","搜索 周报")
-];
-const CHAT_SUGGEST_HTML = `<div class="chat-suggest" aria-label="${t("cmd.shortcuts","快捷指令")}">` +
-  CHAT_SUGGEST.map(p => `<button type="button" class="chip" data-prompt="${esc(p)}">${esc(p)}</button>`).join("") +
-  `</div>`;
+/* 2026-11-07：按模式给默认产物域 —— code 指向代码解释/整理、design 指向画图，
+   work 保持原四条。三模式此前只是布局预设，至少让「进来第一句话」指向各自主产物。 */
+const CHAT_SUGGEST = {
+  work: [
+    t("cmd.quick1","建个任务：写周报，明天截止"),
+    t("cmd.quick2","查总览"),
+    t("cmd.quick3","统计本周完成了什么"),
+    t("cmd.quick4","搜索 周报")
+  ],
+  code: [
+    t("cmd.q.code1","解释一下刚才这段代码为什么报错"),
+    t("cmd.q.code2","把这周完成的任务整理成清单"),
+    t("cmd.q.code3","画一张这个项目的架构图")
+  ],
+  design: [
+    t("cmd.q.design1","画一张用户登录流程图"),
+    t("cmd.q.design2","把刚才的图放到画布继续编辑"),
+    t("cmd.q.design3","画一张海报草图")
+  ]
+};
+function chatSuggestHtml(){
+  /* 读存储键而不是 _uiMode()：后者在 render-widgets（Render 层），AI 层调它是逆层依赖
+     （check:modules 会红）。模式取值域很小，这里按同一契约兜底到 work。 */
+  let mode = "work";
+  try{ const m = load(PREFIX + "uimode", "work"); if(CHAT_SUGGEST[m]) mode = m; }catch(_e){ /* 读不到按 work */ }
+  const list = CHAT_SUGGEST[mode] || CHAT_SUGGEST.work;
+  return `<div class="chat-suggest" aria-label="${t("cmd.shortcuts","快捷指令")}">` +
+    list.map(p => `<button type="button" class="chip" data-prompt="${esc(p)}">${esc(p)}</button>`).join("") +
+    `</div>`;
+}
 
 
 
@@ -37919,6 +38041,33 @@ function bindChatPanel(){
     if(!chip) return;
     const el = $("#chatTextInput");
     if(el){ el.value = chip.getAttribute("data-prompt") || ""; el.focus(); el.dispatchEvent(new Event("input")); }
+  });
+  /* 2026-11-07：代码卡复制（事件委托，代码卡随 renderChat 重建）。
+     clipboard.writeText 是 Promise —— 同步 try/catch 抓不到 rejection，必须等它自己回答，
+     成功/失败都要有回执（与右栏产物复制同一条教训）。 */
+  document.addEventListener("click", function(e){
+    const btn = e.target && e.target.closest ? e.target.closest("#chat [data-code-copy]") : null;
+    if(!btn) return;
+    const card = btn.closest(".md-code");
+    const code = card && card.querySelector("pre code");
+    if(!code) return;
+    const txt = code.textContent || "";
+    const done = function(ok){
+      const old = btn.textContent;
+      btn.textContent = ok ? t("md.copied","已复制") : t("md.copyFail","复制失败");
+      setTimeout(function(){ btn.textContent = old; }, 1200);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      let p = null;
+      try{ p = navigator.clipboard.writeText(txt); }catch(_e){ done(false); return; }
+      if(p && typeof p.then === "function") p.then(function(){ done(true); }, function(){ done(false); });
+      else done(true);
+      return;
+    }
+    try{
+      const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); ta.remove(); done(true);
+    }catch(_e){ done(false); }
   });
   // 模型选择器：复用 cfg.profiles / getActiveProfile()，切换后即时生效（落盘 + 提示）
   const modelSelect=$("#chatModelSelect");
