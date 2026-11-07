@@ -896,15 +896,17 @@ async function runChatLoop(messages, hist, sc){
       if(chatController && chatController.resetTimeout) chatController.resetTimeout();
       // T5.3 浏览器兼容：chatController.ac 可为 null（AbortController 不可用），此时不传 signal
       const chatSignal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
-      // v3.2 C-档：流式打字机——纯文本轮（无工具调用压力）边收边渲染：流式中先挂一条 _streaming 消息增量更新，
-      // 完成后用真实结果替换。工具调用轮不启用（避免半截 tool_calls 状态污染 hist）。
+      // 流式打字机：所有轮次（含工具调用轮）边收边渲染——流式中先挂一条 _streaming 消息增量更新，
+      // 完成后用真实结果替换。工具轮曾因「半截 tool_calls 污染 hist」保守关闭（v3.2 C-档），
+      // 但占位消息只累积**文本**，tool_calls 始终由 chatOnce 拼好的最终消息携带；
+      // 且 SSE 最终消息的 content 现由 ai-loop.js 侧累积（tool_calls delta 亦已完整拼装），
+      // 所以工具轮开启流式不会把半截状态写进 hist。
       let streamMsg = null;
       let streamReceived = 0;
-      const canStream = !acfg.enabled; // 工具模式（tools 数组在）下走流式需拼 tool_calls delta，先保守关（v3.2 C-档）
-      if(canStream) chatProgressStart("stream", t("chat.progress.generating", "正在生成…"), 0);
+      chatProgressStart("stream", t("chat.progress.generating", "正在生成…"), 0);
       const j = await chatOnce(messages, {
         signal: chatSignal,
-        onChunk: canStream ? function(chunkText){
+        onChunk: function(chunkText){
           try{
             if(!streamMsg){
               streamMsg = { role: "assistant", content: "", _streaming: true, _prompt: turnUserText };
@@ -915,9 +917,9 @@ async function runChatLoop(messages, hist, sc){
             chatProgressUpdate({ received: streamReceived });
             AppBridge.render();
           }catch(_e){ /* 渲染异常不阻断流 */ }
-        } : undefined
+        }
       });
-      if(canStream) chatProgressEnd();
+      chatProgressEnd();
       if(streamMsg){
         // 流式占位消息移除，由下方真实 hist.push 接管
         const idx = hist.indexOf(streamMsg);
@@ -1063,15 +1065,36 @@ async function runChatLoop(messages, hist, sc){
 }
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·渲染 ---------- */
 // 快捷指令（v1.9.5：空对话时展示，点击填入输入框）
-const CHAT_SUGGEST = [
-  t("cmd.quick1","建个任务：写周报，明天截止"),
-  t("cmd.quick2","查总览"),
-  t("cmd.quick3","统计本周完成了什么"),
-  t("cmd.quick4","搜索 周报")
-];
-const CHAT_SUGGEST_HTML = `<div class="chat-suggest" aria-label="${t("cmd.shortcuts","快捷指令")}">` +
-  CHAT_SUGGEST.map(p => `<button type="button" class="chip" data-prompt="${esc(p)}">${esc(p)}</button>`).join("") +
-  `</div>`;
+/* 2026-11-07：按模式给默认产物域 —— code 指向代码解释/整理、design 指向画图，
+   work 保持原四条。三模式此前只是布局预设，至少让「进来第一句话」指向各自主产物。 */
+const CHAT_SUGGEST = {
+  work: [
+    t("cmd.quick1","建个任务：写周报，明天截止"),
+    t("cmd.quick2","查总览"),
+    t("cmd.quick3","统计本周完成了什么"),
+    t("cmd.quick4","搜索 周报")
+  ],
+  code: [
+    t("cmd.q.code1","解释一下刚才这段代码为什么报错"),
+    t("cmd.q.code2","把这周完成的任务整理成清单"),
+    t("cmd.q.code3","画一张这个项目的架构图")
+  ],
+  design: [
+    t("cmd.q.design1","画一张用户登录流程图"),
+    t("cmd.q.design2","把刚才的图放到画布继续编辑"),
+    t("cmd.q.design3","画一张海报草图")
+  ]
+};
+function chatSuggestHtml(){
+  /* 读存储键而不是 _uiMode()：后者在 render-widgets（Render 层），AI 层调它是逆层依赖
+     （check:modules 会红）。模式取值域很小，这里按同一契约兜底到 work。 */
+  let mode = "work";
+  try{ const m = load(PREFIX + "uimode", "work"); if(CHAT_SUGGEST[m]) mode = m; }catch(_e){ /* 读不到按 work */ }
+  const list = CHAT_SUGGEST[mode] || CHAT_SUGGEST.work;
+  return `<div class="chat-suggest" aria-label="${t("cmd.shortcuts","快捷指令")}">` +
+    list.map(p => `<button type="button" class="chip" data-prompt="${esc(p)}">${esc(p)}</button>`).join("") +
+    `</div>`;
+}
 
 
 
@@ -1113,6 +1136,33 @@ function bindChatPanel(){
     if(!chip) return;
     const el = $("#chatTextInput");
     if(el){ el.value = chip.getAttribute("data-prompt") || ""; el.focus(); el.dispatchEvent(new Event("input")); }
+  });
+  /* 2026-11-07：代码卡复制（事件委托，代码卡随 renderChat 重建）。
+     clipboard.writeText 是 Promise —— 同步 try/catch 抓不到 rejection，必须等它自己回答，
+     成功/失败都要有回执（与右栏产物复制同一条教训）。 */
+  document.addEventListener("click", function(e){
+    const btn = e.target && e.target.closest ? e.target.closest("#chat [data-code-copy]") : null;
+    if(!btn) return;
+    const card = btn.closest(".md-code");
+    const code = card && card.querySelector("pre code");
+    if(!code) return;
+    const txt = code.textContent || "";
+    const done = function(ok){
+      const old = btn.textContent;
+      btn.textContent = ok ? t("md.copied","已复制") : t("md.copyFail","复制失败");
+      setTimeout(function(){ btn.textContent = old; }, 1200);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      let p = null;
+      try{ p = navigator.clipboard.writeText(txt); }catch(_e){ done(false); return; }
+      if(p && typeof p.then === "function") p.then(function(){ done(true); }, function(){ done(false); });
+      else done(true);
+      return;
+    }
+    try{
+      const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); ta.remove(); done(true);
+    }catch(_e){ done(false); }
   });
   // 模型选择器：复用 cfg.profiles / getActiveProfile()，切换后即时生效（落盘 + 提示）
   const modelSelect=$("#chatModelSelect");

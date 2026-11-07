@@ -92,7 +92,17 @@ function mdToHtml(str){
         buf.push(lines[i]); i++;
       }
       i++;
-      blocks.push({type:"block", html:'<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+buf.join("\n")+'</code></pre>'});
+      /* 代码卡：语言标签 + 复制按钮（2026-11-07，向主流 agent 的产物卡观感靠拢）。
+         内容在文件头已整体 esc（见 mdToHtml 开头的 esc(str)），这里不再二次转义。
+         mermaid 块保持原样：renderMermaidBlocks 依赖 `pre > code.lang-mermaid` 且会整块
+         替换 pre，套卡片头会留下一条空的头栏。 */
+      if(lang === "mermaid"){
+        blocks.push({type:"block", html:'<pre><code class="block lang-mermaid">'+buf.join("\n")+'</code></pre>'});
+        continue;
+      }
+      blocks.push({type:"block", html:'<div class="md-code"><div class="md-code-head"><span class="md-code-lang">'+(lang||"text")+'</span>'
+        + '<button type="button" class="md-code-copy" data-code-copy="1">'+esc(t("md.copy","复制"))+'</button></div>'
+        + '<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+buf.join("\n")+'</code></pre></div>'});
       continue;
     }
     /* 表格：当前行含 |，下一行是分隔行（--- / :---: / ---:）。必须在段落之前判。 */

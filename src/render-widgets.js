@@ -270,6 +270,7 @@ function renderTaskRail(){
   _bindTaskRail();
   _renderRailAgent();
   _renderRailFiles();
+  _renderRailSessions();
   _applyRailTab();
 }
 
@@ -277,7 +278,7 @@ function renderTaskRail(){
  * 只展示真实能力：技能来自 listEnabledSkills（真的注入提示词）、文件来自 getRagFiles；
  * MCP 自 2026-10-23 起是真能力（远端工具按勾选注入 + 命名空间路由），但它的发现/勾选/状态都在
  * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。 */
-const RAIL_TABS = ["today", "agent", "files"];
+const RAIL_TABS = ["today", "agent", "files", "sessions"];
 /** 宽屏判据（>=1024px）：三栏网格（code/design 模式）只在宽屏生效，窄屏强制单栏。
  *  下面 taskRail 折叠 IIFE 原有一份同名局部（语义相同），统一用这一份避免漂移。 */
 const isWide = ()=> (window.innerWidth || 0) >= 1024;
@@ -364,6 +365,55 @@ function _renderRailFiles(){
   if(b) b.onclick = function(){ try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 打开失败不阻塞右栏 */ } };
   $$("[data-rail-art]").forEach(function(li){
     li.onclick = function(){ openAiArtifact(li.getAttribute("data-rail-art") || ""); };
+  });
+}
+/**
+ * 右栏「会话」页（2026-11-07）：把会话从弹窗提升为常驻列表（Codex 式）。
+ * 与 code 模式左下 #sessionDock 同源（data-links 的 getSessions/switchSession），
+ * 不另建 CRUD：重命名/删除仍走 设置→会话管理 与 #chatSessionBtn 的弹窗。
+ * @returns {void}
+ */
+function _renderRailSessions(){
+  const el = $("#railSessionPane");
+  if(!el) return;
+  let list = [], act = "";
+  try{ list = getSessions() || []; }catch(_e){ list = []; }
+  try{ act = getActiveSession() || ""; }catch(_e){ act = ""; }
+  let html = '<div class="rail-sec-title">' + esc(t("dock.sessions", "会话"))
+    + ' <span class="task-rail-count">' + list.length + "</span>"
+    + '<button type="button" class="rail-sess-new" id="railSessNew" title="'
+    + esc(t("dock.newSession", "新建会话")) + '" aria-label="' + esc(t("dock.newSession", "新建会话")) + '">＋</button></div>';
+  html += list.length
+    ? '<ul class="rail-list">' + list.slice(0, 10).map(function(s2){
+        const dt = new Date(s2.updatedAt || s2.createdAt || Date.now());
+        const time = (dt.getMonth() + 1) + "/" + dt.getDate() + " " + pad(dt.getHours()) + ":" + pad(dt.getMinutes());
+        return '<li class="rail-item rail-sess' + (s2.id === act ? " is-active" : "") + '" data-rail-sess="' + esc(s2.id) + '">'
+          + '<span class="rail-item-name">' + esc(s2.title || t("sess.new", "新会话")) + "</span>"
+          + '<span class="rail-item-meta">' + ((s2.msgs || []).length) + esc(t("dock.unitMsgs", " 条 · ")) + esc(time) + "</span></li>";
+      }).join("") + "</ul>"
+    : '<p class="task-rail-empty">' + esc(t("dock.noSessions", "暂无会话")) + "</p>";
+  el.innerHTML = sanitizeHtml(html);
+  const nb = $("#railSessNew");
+  if(nb) nb.onclick = function(){
+    let sc = "office";
+    try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(_e){ /* 取不到场景时回 office */ }
+    const ns = createSession(sc, t("sess.new", "新会话"));
+    if(ns && ns.id){
+      switchSession(ns.id);
+      if(typeof renderChat === "function") renderChat();
+      if(typeof scrollChat === "function") scrollChat();
+      if(typeof render === "function") render();
+    }
+  };
+  $$("#railSessionPane [data-rail-sess]").forEach(function(li){
+    li.onclick = function(){
+      const sid = li.getAttribute("data-rail-sess");
+      if(!sid || sid === act) return;
+      switchSession(sid);
+      if(typeof renderChat === "function") renderChat();
+      if(typeof scrollChat === "function") scrollChat();
+      if(typeof render === "function") render();
+    };
   });
 }
 /**
@@ -3894,6 +3944,9 @@ function applyUIMode(){
     const dd = $("#diagramDock"); if(dd) dd.innerHTML = "";
     if(_agentDockTimer){ clearInterval(_agentDockTimer); _agentDockTimer = null; }
   }
+  /* 2026-11-07：空对话的快捷指令随模式变（见 chatSuggestHtml）——模式切换后要重画聊天区，
+     否则用户切到 code/design 仍看到 work 的四条提示。 */
+  try{ if(typeof renderChat === "function") renderChat(); }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
 }
 function toggleUIMode(){
   const cur = _uiMode();

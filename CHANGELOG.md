@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-07 · **UI 向主流 agent 靠拢（甲案第一批）：流式+工具并行、代码卡、会话常驻列表、三模式产物域**
+
+_用户「项目现状要往主流 agent 的 UI 界面上靠拢，分为 code / work / design 三个模式」，并在形态选项里拍板「甲 · 对话为主+产物卡」。本批不引编辑器/终端/新依赖，先把与主流应用差距最大的四条补齐。_
+
+- **流式 + 工具并行（观感最大缺口）**：工具模式下此前 `canStream = !acfg.enabled` 保守关闭（v3.2 C-档），但 SSE 解析器早已完整拼装 `tool_calls` delta（`src/ai-loop.js:440` 段），占位消息也只累积文本 ⇒ 放开开关后工具轮同样边收边渲染；取消/失败路径的占位清理原有 `finally` 兜底不动。
+- **顺带修掉一个潜在真缺陷**：`chatOnce` 的 SSE 分支最终消息 `content` 恒为空串（文本只走 `onChunk`），调用方删掉占位消息后入历史的只剩空内容 —— 探针实测流式回复完成后历史里是「(无内容)」。修：`ai-loop.js` 累积 `contentText` 放进最终消息；`tests/stream-tools.test.js` 第一条用例钉住（变异 M1 精确变红）。
+- **代码卡**：聊天里的围栏代码块渲染成 `.md-code`（语言标签 + 复制按钮），复制成功/失败都有回执（`writeText` 是 Promise，拒绝不能被同步 try/catch 吞掉）；mermaid 块保持旧标记（`renderMermaidBlocks` 依赖 `pre > code.lang-mermaid` 且整块替换 pre）。
+- **会话常驻列表**：右栏新增「会话」页（第 4 个页签），复用 `getSessions/switchSession`，当前会话高亮、可新建/切换 —— 会话从弹窗升级为常驻可见（Codex 式），不改任何 CRUD。
+- **三模式成为「产物域」而非纯布局预设**：空对话快捷指令随模式切换（work 4 条 / code 3 条指向代码域 / design 3 条指向画图），且 `applyUIMode` 切换后重画聊天区（此前切模式后提示不更新）。
+- **闸门**：新增 `tests/stream-tools.test.js`（3 例）、`tests/ui-artifacts.test.js`（4 例）、`tests/e2e/ui-agent-parity.spec.js`（2 例，真 Chromium）；更新 `tests/rail-tabs.test.js`（3→4 页签 + 会话页用例）。**射程自证**：M1（去掉 contentText）/ M2（恢复 canStream 旧门）/ M3（去掉 `data-code-copy`）/ M4（`RAIL_TABS` 去掉 sessions）四处窄变异各自红在预期用例，对照组（JSON 整包回退、mermaid 块、work 模式 chips）保持绿。`check:modules` 首跑抓到我一处逆层依赖（`ai-retry→render-widgets` 只为读 `_uiMode`）⇒ 改为读存储键，复查「无新增问题」。
+- **未验的边界（如实留账）**：Electron 主进程代理不透传 SSE，桌面版仍是整包返回；流式+工具并行只用本地 mock 的 SSE 夹具验证过，**没有对真实供应商端点跑过**（本机无凭据，凭据只存会话内存）。
 ### 2026-11-07 · **审计 Wave 2 收口：消息中心「永远打不开」真修 + 版本哨兵第六源 + L4b 点击反馈量化审计**
 
 _续上一修复批的 Wave 2（前端量化审计 / 多方核对）。L4b「点击→反馈」审计在仓外副本（`F:\tmp\aw-audit\`，零仓内影响）用真 Chromium 逐控件真点击，3 模式视口共 **127 个可见控件，0 个无反馈**——但审计边界本身抓不到的一类缺陷由源码交叉核实补上：`#btnMessages`。_

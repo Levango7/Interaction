@@ -2404,6 +2404,14 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .md-body pre code{display:block;white-space:pre-wrap;background:transparent;color:var(--snip-fg);
   padding:0;border-radius:0;font-size:var(--fs-sm)}
 .md-body pre code.block{display:block}
+/* 2026-11-07：代码卡（语言标签 + 复制）——聊天里的代码块按主流 agent 的产物卡呈现 */
+.md-code{margin:0 0 var(--space-2);border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;background:var(--snip-bg)}
+.md-code .md-code-head{display:flex;align-items:center;gap:var(--space-1);padding:2px var(--space-2);background:var(--surface-muted);border-bottom:1px solid var(--line)}
+.md-code .md-code-lang{font-size:var(--fs-2xs);color:var(--muted);font-family:"SF Mono","SFMono-Regular",Consolas,monospace}
+.md-code .md-code-copy{margin-left:auto;border:0;background:transparent;color:var(--muted);font-size:var(--fs-2xs);
+  padding:2px 6px;border-radius:var(--radius-sm);cursor:pointer;min-height:24px}
+.md-code .md-code-copy:hover{background:var(--surface-hover);color:var(--text)}
+.md-code pre{margin:0;border:0;border-radius:0}
 /* 2026-10-23：mermaid 图（懒加载 vendor；失败保留源码 + 提示） */
 .md-body .mermaid-figure{margin:0 0 var(--space-2);padding:var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);overflow-x:auto}
@@ -5236,6 +5244,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 .rail-item{display:flex;align-items:center;gap:var(--space-1h);padding:var(--space-1h) var(--space-1);
   border-radius:var(--radius-md);font-size:var(--fs-xs)}
 .rail-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 2026-11-07：右栏「会话」页 —— 当前会话高亮 + 新建按钮靠右 */
+.rail-item.is-active{background:var(--accent-soft);border-radius:var(--radius-sm)}
+.rail-sess-new{margin-left:auto;border:0;background:transparent;color:var(--muted);font-size:var(--fs-sm);
+  padding:0 6px;border-radius:var(--radius-sm);cursor:pointer;min-width:24px;min-height:24px}
+.rail-sess-new:hover{background:var(--surface-hover);color:var(--text)}
 .rail-item-meta{font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap}
 
 @media(min-width:1024px){
@@ -5602,6 +5615,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <button type="button" class="task-rail-tab is-on" data-rail-tab="today" role="tab" aria-selected="true" data-i18n="rail.tab.today">今日</button>
           <button type="button" class="task-rail-tab" data-rail-tab="agent" role="tab" aria-selected="false" data-i18n="rail.tab.agent">Agent</button>
           <button type="button" class="task-rail-tab" data-rail-tab="files" role="tab" aria-selected="false" data-i18n="rail.tab.files">文件</button>
+          <button type="button" class="task-rail-tab" data-rail-tab="sessions" role="tab" aria-selected="false" data-i18n="dock.sessions">会话</button>
         </div>
         <span class="task-rail-count" id="taskRailCount">0</span>
         <button type="button" class="task-rail-add" id="taskRailAdd" data-i18n-title="taskRail.add" title="新建任务" data-i18n-aria="taskRail.add" aria-label="新建任务">+</button>
@@ -5613,6 +5627,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       </div>
       <div class="task-rail-pane u-hidden" data-rail-pane="agent" id="railAgentPane"></div>
       <div class="task-rail-pane u-hidden" data-rail-pane="files" id="railFilesPane"></div>
+      <div class="task-rail-pane u-hidden" data-rail-pane="sessions" id="railSessionPane"></div>
     </aside>
     <div class="task-rail-backdrop" id="taskRailBackdrop" hidden></div>
     <!-- Code 模式（2026-10-26）：右栏下半 = 进程/技能/MCP/工作流 停靠栏（仅 .body.code-mode 且 ≥1024px 显示，

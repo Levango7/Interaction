@@ -19,13 +19,14 @@ function boot() {
 const pane = (win, name) => win.document.querySelector('#taskRail [data-rail-pane="' + name + '"]');
 
 describe("右栏分页", () => {
-  it("默认今日；三个页签都在，Agent/文件默认隐藏", () => {
+  it("默认今日；四个页签都在，Agent/文件/会话默认隐藏", () => {
     const win = boot();
     const tabs = win.document.querySelectorAll("#taskRail [data-rail-tab]");
-    expect(tabs.length).toBe(3);
+    expect(tabs.length).toBe(4);
     expect(pane(win, "today").classList.contains("u-hidden")).toBe(false);
     expect(pane(win, "agent").classList.contains("u-hidden")).toBe(true);
     expect(pane(win, "files").classList.contains("u-hidden")).toBe(true);
+    expect(pane(win, "sessions").classList.contains("u-hidden")).toBe(true);
     expect(win.document.querySelector("#taskRail").textContent).not.toContain("MCP");
   });
 
@@ -52,5 +53,24 @@ describe("右栏分页", () => {
     expect(filesPane.textContent).toContain("块");
     win.document.getElementById("railOpenKb").click();
     expect(win.document.getElementById("knowledgeBaseModal").classList.contains("show")).toBe(true);
+  });
+
+  it("会话页列真实会话，当前高亮，点击即切换（2026-11-07）", () => {
+    const win = boot();
+    const s1 = win.createSession("office", "会话甲");
+    const s2 = win.createSession("office", "会话乙");
+    win.switchSession(s1.id);
+    win.renderTaskRail();
+    win.document.querySelector('[data-rail-tab="sessions"]').click();
+    const sp = win.document.getElementById("railSessionPane");
+    expect(sp.classList.contains("u-hidden"), "点「会话」页签后该页必须可见").toBe(false);
+    expect(sp.textContent).toContain("会话甲");
+    expect(sp.textContent).toContain("会话乙");
+    const activeLi = sp.querySelector(".rail-item.is-active");
+    expect(activeLi ? activeLi.textContent.indexOf("会话甲") >= 0 : false).toBe(true);
+    const target = Array.prototype.slice.call(sp.querySelectorAll("[data-rail-sess]"))
+      .find((x) => x.textContent.indexOf("会话乙") >= 0);
+    target.click();
+    expect(win.getActiveSession()).toBe(s2.id);
   });
 });

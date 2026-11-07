@@ -425,6 +425,9 @@ async function chatOnce(messages, opts){
               const decoder = new TextDecoder();
               let buf = "";
               let final = null; const toolCalls = []; let finishReason = "stop"; let usage = null;
+              /* 文本必须在这里累积：最终消息是**合成**的，若 content 留空串，调用方把流式
+                 占位消息删掉后入历史的就只有空内容（实测退化成「(无内容)」）。 */
+              let contentText = "";
               for(;;){
                 const { done, value } = await reader.read();
                 if(done) break;
@@ -440,6 +443,7 @@ async function chatOnce(messages, opts){
                   if(!d || !d.choices || !d.choices[0]) continue;
                   const c = d.choices[0];
                   if(c.delta && typeof c.delta.content === "string" && c.delta.content){
+                    contentText += c.delta.content;
                     try{ opts.onChunk(c.delta.content); }catch(_e2){ /* 回调异常不阻断流 */ }
                   }
                   if(c.delta && c.delta.tool_calls){
@@ -455,9 +459,8 @@ async function chatOnce(messages, opts){
                   if(d.usage) usage = d.usage;
                 }
               }
-              final = { choices: [{ message: { role: "assistant", content: "" }, finish_reason: finishReason }], usage: usage || undefined };
+              final = { choices: [{ message: { role: "assistant", content: contentText }, finish_reason: finishReason }], usage: usage || undefined };
               if(toolCalls.length) final.choices[0].message.tool_calls = toolCalls.filter(Boolean);
-              // 流式无文字内容时回吐空串占位（上游空响应检查兜底）
               addTokensUsage(final);
               return final;
             }

@@ -87,7 +87,7 @@
 
 | 从（层） | 到（层） | 涉及符号 |
 |---|---|---|
-| `ai-tools`（AI） | `ai-retry`（AI） | `CHAT_SUGGEST_HTML` `_msgTokens` `renderAiReceipts` |
+| `ai-tools`（AI） | `ai-retry`（AI） | `_msgTokens` `chatSuggestHtml` `renderAiReceipts` |
 | `ai-tools`（AI） | `ai-subagent`（AI） | `getSubAgent` |
 | `draw-canvas`（Draw） | `render-widgets`（Render） | `_uiMode` `applyUIMode` |
 | `render-entry`（Render） | `render-overview`（Render） | `renderAuthLogin` `renderAuthRegister` `renderAuthReset` `renderAuthWelcome` `renderChainPage` `renderOverview` … |

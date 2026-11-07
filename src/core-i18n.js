@@ -142,6 +142,9 @@ const MESSAGES = {
 
     // 消息补充
     "msg.notConfigured": "未配置",
+    "md.copy": "复制",
+    "md.copied": "已复制",
+    "md.copyFail": "复制失败",
     "msg.batchMovedSuffix": "」",
 
     // 场景名称
@@ -1937,6 +1940,12 @@ const MESSAGES = {
     "cmd.quick2": "查总览",
     "cmd.quick3": "统计本周完成了什么",
     "cmd.quick4": "搜索 周报",
+    "cmd.q.code1": "解释一下刚才这段代码为什么报错",
+    "cmd.q.code2": "把这周完成的任务整理成清单",
+    "cmd.q.code3": "画一张这个项目的架构图",
+    "cmd.q.design1": "画一张用户登录流程图",
+    "cmd.q.design2": "把刚才的图放到画布继续编辑",
+    "cmd.q.design3": "画一张海报草图",
     "cmd.shortcuts": "快捷指令",
     "cmd.switchTo": "切到 ",
     "cmd.viewMemory": "查看工作记忆",
@@ -4326,6 +4335,9 @@ const MESSAGES = {
 
     // Messages supplemental
     "msg.notConfigured": "Not configured",
+    "md.copy": "Copy",
+    "md.copied": "Copied",
+    "md.copyFail": "Copy failed",
     "msg.batchMovedSuffix": "\"",
 
     // Scenarios
@@ -6121,6 +6133,12 @@ const MESSAGES = {
     "cmd.quick2": "Show overview",
     "cmd.quick3": "What did I complete this week",
     "cmd.quick4": "Search weekly report",
+    "cmd.q.code1": "Explain why the last code block errors",
+    "cmd.q.code2": "Turn this week's completed tasks into a list",
+    "cmd.q.code3": "Draw an architecture diagram of this project",
+    "cmd.q.design1": "Draw a login flow diagram",
+    "cmd.q.design2": "Open the last diagram on the canvas",
+    "cmd.q.design3": "Sketch a poster",
     "cmd.shortcuts": "Quick Commands",
     "cmd.switchTo": "Switch to ",
     "cmd.viewMemory": "View memory",
