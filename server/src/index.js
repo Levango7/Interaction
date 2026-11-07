@@ -16,7 +16,7 @@ const authRouter = require("./auth");
    「复制 config.example.json 为 config.json」那一步**从来没有效果**——
    已实测确认（在 config.json 写入非占位密钥后启动，仍被判定"占位值"拒绝启动）。
    现在 config.json 真正生效，且与基线做**深合并**（不整体替换，保住安全默认值）。 */
-const { loadConfig, USER_PATH } = require("./config");
+const { loadConfig, unsafeProdStartup, USER_PATH } = require("./config");
 /* v3.7.122：原 extrasRouter 同一个实例挂两个前缀（/api/notifications 与 /api/integrations），
    交叉路径全部可达、攻击面翻倍（审计遗留 P2）。现按前缀拆成两个独立工厂各挂各的，
    路由集合以客户端真实调用为准；守护见 verify/router-isolation-check.cjs。 */
@@ -26,6 +26,23 @@ const syncRouter = require("./sync");
 const toolsFetchRouter = require("./tools-fetch");
 
 const cfg = loadConfig();
+
+/* v3.7.157 生产启动守卫：README 里「生产必须 dev.allowUnsafeDevEndpoints=false」
+   从手册规则变成强制门 —— 该开关放行 /wechat/confirm（凭 email 直签 token =
+   完整认证绕过）、/email-code 的 demoCode 回传、GitHub 兑换 loopback/私网目标。
+   与上面的占位密钥守卫同款 fail fast：判生产（NODE_ENV=production）且开关开着
+   ⇒ 直接拒绝启动，不给「忘了改」留静默窗口。
+   判据设计：NODE_ENV 是唯一显式的「这是生产」表达；verify 脚本与本机联调都不设
+   它，守卫不误伤；真生产部署照 README 设 NODE_ENV=production 启动即受保护。
+   本地确需在类生产配置下联调这些开发端点：不设 NODE_ENV=production 启动即可。 */
+if (unsafeProdStartup(cfg, process.env.NODE_ENV)) {
+  console.error("[agent-workbench-auth] 拒绝启动：生产环境（NODE_ENV=production）下不允许开启 dev.allowUnsafeDevEndpoints。");
+  console.error("  该开关放行 /wechat/confirm（凭 email 直签 token = 完整认证绕过）、");
+  console.error("  /email-code 的 demoCode 回传、GitHub 兑换端点指向 loopback/私网。");
+  console.error("  请在 config.json 里改为 false，或取消环境变量 DEV__ALLOWUNSAFEDEVENDPOINTS 后重启。");
+  console.error("  确需联调这些开发端点：不设 NODE_ENV=production 启动（守卫只在生产判据下生效）。");
+  process.exit(1);
+}
 
 /* v3.7.105 加固：config.example.json 里 jwt.accessSecret / refreshSecret 是占位值
    "change-me-*-secret"，而原实现启动时从不校验 —— 运维照 README 跑起来却不改密钥，

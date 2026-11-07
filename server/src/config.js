@@ -52,7 +52,14 @@ function deepMerge(base, over) {
 
 /** 环境变量覆盖（点号路径 -> 大写双下划线）：SERVER__PORT、AUTH__EMAIL__SMTP__HOST ...
  *  语义保持 v3.7.124 之前不变：只覆盖**已存在的键**（不凭空造键），
- *  避免 "GITHUP__CLIENTID" 这类拼错的 env 名悄悄生效。 */
+ *  避免 "GITHUP__CLIENTID" 这类拼错的 env 名悄悄生效。
+ *  v3.7.157 订正：环境变量是**标量**，配置节是**对象**——相撞时整节用字符串覆盖
+ *  从来没有正确语义。真实触发：vitest worker 环境带着 DEV=1（常见 dev 工具也常设
+ *  DEV），applyEnv 旧实现把 `dev` 节替换成字符串 "1"，此后递归也进不去（节已不
+ *  是对象），连 DEV__ALLOWUNSAFEDEVENDPOINTS 叶子覆盖都失效——生产启动守卫在
+ *  恰好导出了 DEV=1 的环境里会看到一个「cfg.dev 被抹掉」的配置，守卫永远不触发，
+ *  开关的读取方（auth.js demoCode 网关）同样失真。节对象一律跳过，只让递归走到
+ *  叶子去覆盖标量；数组保持旧口径（整体替换，env 端无 JSON 结构可解析）。 */
 function applyEnv(obj, prefix) {
   Object.keys(obj).forEach(k => {
     const envKey = (prefix + k).toUpperCase().replace(/\./g, "__");
@@ -60,6 +67,7 @@ function applyEnv(obj, prefix) {
     if (envVal !== undefined) {
       if (typeof obj[k] === "number") obj[k] = Number(envVal);
       else if (typeof obj[k] === "boolean") obj[k] = envVal === "true" || envVal === "1";
+      else if (obj[k] && typeof obj[k] === "object" && !Array.isArray(obj[k])) { /* 节对象：跳过，交给下面的递归处理叶子 */ }
       else obj[k] = envVal;
     }
     if (obj[k] && typeof obj[k] === "object" && !Array.isArray(obj[k])) applyEnv(obj[k], prefix + k + ".");
@@ -99,4 +107,16 @@ function loadConfig() {
   return cfg;
 }
 
-module.exports = { loadConfig, deepMerge, readJson, applyEnv, ROOT, EXAMPLE_PATH, USER_PATH };
+/* v3.7.157 生产启动守卫判据（纯函数，供 index.js 守卫与单测共用）：
+ * dev.allowUnsafeDevEndpoints 是「完整认证绕过」级开关 —— /wechat/confirm 凭 email
+ * 直签 token、/email-code 的 demoCode 回传、GitHub 兑换端点放行 loopback/私网目标。
+ * README 一直写「生产必须为 false」，但此前**只是一条手册规则**：运维忘了改就是
+ * 静默裸奔，无任何机制拦。判据取 NODE_ENV === "production"（唯一显式、跨平台、
+ * 无歧义的「这是生产」表达；verify 脚本 spawn 子进程时不设它，本机联调也不设，
+ * 故守卫只在真声称生产时生效）。开关来自 config.json 还是环境变量不做区分 ——
+ * loadConfig 合并后这里只看最终值。 */
+function unsafeProdStartup(cfg, nodeEnv) {
+  return nodeEnv === "production" && !!(cfg && cfg.dev && cfg.dev.allowUnsafeDevEndpoints === true);
+}
+
+module.exports = { loadConfig, deepMerge, readJson, applyEnv, unsafeProdStartup, ROOT, EXAMPLE_PATH, USER_PATH };

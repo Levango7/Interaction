@@ -14,6 +14,17 @@ _用户「项目现状要往主流 agent 的 UI 界面上靠拢，分为 code / 
 - **三模式成为「产物域」而非纯布局预设**：空对话快捷指令随模式切换（work 4 条 / code 3 条指向代码域 / design 3 条指向画图），且 `applyUIMode` 切换后重画聊天区（此前切模式后提示不更新）。
 - **闸门**：新增 `tests/stream-tools.test.js`（3 例）、`tests/ui-artifacts.test.js`（4 例）、`tests/e2e/ui-agent-parity.spec.js`（2 例，真 Chromium）；更新 `tests/rail-tabs.test.js`（3→4 页签 + 会话页用例）。**射程自证**：M1（去掉 contentText）/ M2（恢复 canStream 旧门）/ M3（去掉 `data-code-copy`）/ M4（`RAIL_TABS` 去掉 sessions）四处窄变异各自红在预期用例，对照组（JSON 整包回退、mermaid 块、work 模式 chips）保持绿。`check:modules` 首跑抓到我一处逆层依赖（`ai-retry→render-widgets` 只为读 `_uiMode`）⇒ 改为读存储键，复查「无新增问题」。
 - **未验的边界（如实留账）**：Electron 主进程代理不透传 SSE，桌面版仍是整包返回；流式+工具并行只用本地 mock 的 SSE 夹具验证过，**没有对真实供应商端点跑过**（本机无凭据，凭据只存会话内存）。
+
+### 2026-11-07 · **Wave 3-A 生产启动守卫（用户拍板）+ 守卫测试撞出的 applyEnv 既有缺陷**
+
+_用户裁「启动守卫做吧」。实现中 spawn 级单测在 vitest worker 环境里撞出 `applyEnv` 的一处既有缺陷，一并修掉。_
+
+- **生产启动守卫（P1，强制门）**：`dev.allowUnsafeDevEndpoints` 放行 `/wechat/confirm`（凭 email 直签 token = 完整认证绕过）、`/email-code` 的 `demoCode` 回传、GitHub 兑换 loopback/私网目标。README 一直写着「生产必须为 false」，但**那只是一条手册规则**——运维忘了改就是静默裸奔，无任何机制拦。现改为与占位 JWT 守卫同款的 fail fast：**`NODE_ENV=production` 且开关开着 ⇒ 进程拒绝启动（exit 1 + 指路报错）**。判据取 NODE_ENV 是因为它是唯一显式、跨平台、无歧义的「这是生产」表达，且 verify 脚本与本机联调都不设它（守卫不误伤）。纯函数 `unsafeProdStartup` 落在 `server/src/config.js` 供守卫与单测共用。
+- **顺带修掉的真 bug（守卫测试实证撞到）**：`applyEnv` 旧实现把**环境变量名与配置节同名相撞时整节用字符串覆盖**——真实触发：vitest worker 环境带 `DEV=1`（常见 dev 工具也常设 `DEV`），`cfg.dev`（对象）被替换成字符串 `"1"`，此后递归也进不去（节已不是对象），**连 `DEV__ALLOWUNSAFEDEVENDPOINTS` 叶子覆盖都失效**。影响不止守卫：任何导出了 `DEV`/`TOOLS`/`SECURITY`/`SYNC`/`EMAIL`/`GITHUB` 等节同名变量的环境，对应配置整节失真（如 `TOOLS=1` 时 `tools.fetch.enabled` 门读到 undefined）。修：节对象一律跳过 env 整体替换，只让递归走到叶子覆盖标量（数组保持旧口径）。
+- **新增 `tests/prod-startup-guard.test.js`（5 例）**：判据矩阵（含非严格 true 不放行）+ applyEnv 回归（DEV=1 环境下节存活、叶先生效、security 递归不受影响）+ **三个真 spawn 子进程**：生产+开关开→非零退出且报错含「拒绝启动」/ 非生产+开关开→正常监听 / 生产+开关关→正常监听。子进程用 `AGENT_WORKBENCH_USER_CONFIG` 隔离钩子屏蔽本机 config.json（真实密钥不混入测试判据），端口与 dataFile 走临时值。
+- **文档**：`server/README.md` 配置表 `dev.allowUnsafeDevEndpoints` 行改述「强制门」；新增「生产部署（必读）」节（NODE_ENV 三道门：dev 开关 / JWT 占位密钥 / corsOrigin WARN）。
+- **验证**：本机全量 vitest **2556 passed**（含本批 5 例）/ 11 个 verify 脚本 rc=0 / `check:source-state` ✓ / lint exit 0。诊断小记：vitest worker 环境带 `DEV=1` 而本机 bash 不带——同一份代码在两种环境行为分裂，正是 spawn 级（而非纯 jsdom）测试的价值所在；纯单元测试永远撞不到这条。
+
 ### 2026-11-07 · **审计 Wave 2 收口：消息中心「永远打不开」真修 + 版本哨兵第六源 + L4b 点击反馈量化审计**
 
 _续上一修复批的 Wave 2（前端量化审计 / 多方核对）。L4b「点击→反馈」审计在仓外副本（`F:\tmp\aw-audit\`，零仓内影响）用真 Chromium 逐控件真点击，3 模式视口共 **127 个可见控件，0 个无反馈**——但审计边界本身抓不到的一类缺陷由源码交叉核实补上：`#btnMessages`。_

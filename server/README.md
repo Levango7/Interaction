@@ -80,6 +80,24 @@ ALLOW_PLACEHOLDER_SECRETS=true npm start
 
 健康检查：`GET /api/health` → `{ok:true, version:<server/package.json 的 version>}`（v3.7.156 前硬编码 `"3.6.1"`，与前端版本漂移数月无人察觉；现读 package.json，漂移由 `verify/hardening-check.cjs` 钉住）
 
+## 生产部署（必读）
+
+以 `NODE_ENV=production` 启动即进入生产判据，三道强制门（v3.7.157 起）：
+
+1. **dev.allowUnsafeDevEndpoints=false**：该开关放行 `/wechat/confirm`（凭 email 直签
+   token = 完整认证绕过）、`/email-code` 的 `demoCode` 回传、GitHub 兑换 loopback/私网。
+   生产判据下它开着 ⇒ **进程直接拒绝启动**（exit 1 + 指路报错）。此前这只是本表里的
+   一条手册规则 —— 「生产必须为 false」，运维忘了改就是静默裸奔，没有任何机制拦。
+   需要联调这些开发端点时：不设 `NODE_ENV=production` 启动即可（守卫只在生产判据下生效）。
+2. **JWT 密钥不得为占位值**（v3.7.105 起，见快速启动的 fail fast）。
+3. **`corsOrigin` 为 `"*"` 时打醒目 WARN**（默认 reflexive，见上表；对外部署应收紧成具体源）。
+
+> 生产部署建议同时核对：`github.postMessageOrigin` 改成回调页源、`sms.provider`
+> 按选型填齐（缺项 fail-closed 503）、`sync.maxSnapshotBytes` 按需调整。
+> 若运行环境里存在与配置节同名的环境变量（如 `DEV`、`TOOLS`、`SECURITY`），
+> applyEnv 只覆盖叶子、不抹节（v3.7.157 订正；早期实现会把整节换成字符串，
+> `DEV=1` 环境下连 `DEV__ALLOWUNSAFEDEVENDPOINTS` 叶子覆盖都失效）。
+
 ## 前端如何连上
 
 前端 `apiClientModule`（agent-workbench.html）默认 `API_BASE = "http://localhost:3001"`。
@@ -129,7 +147,7 @@ config.json（本机用户配置，已在 .gitignore，勿提交）
 config.json 生效 / 深合并保默认 / env 优先级最高 / 数组整份替换 / 坏 JSON fail loud，
 外加一条 HTTP 层差分对照（同一实例下基线回显请求源、配了之后固定回显，证明配置值真到了 express）。
 故障注入反证：把 config.json 分支短路成旧行为 → 6 条转红。
-| dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传（两者都是完整认证绕过），以及 **GitHub 兑换端点指向 loopback/私网**（`verify/oauth-check.cjs` 的假 provider 联调用）。**生产必须为 false** |
+| dev.allowUnsafeDevEndpoints | `DEV__ALLOWUNSAFEDEVENDPOINTS` | **默认 `false`**。开启后才放行：`/wechat/confirm`（凭 email 直接签发 token）与 `/email-code` 的 `demoCode` 回传（两者都是完整认证绕过），以及 **GitHub 兑换端点指向 loopback/私网**（`verify/oauth-check.cjs` 的假 provider 联调用）。**生产必须为 false** —— v3.7.157 起这是**强制门**：以 `NODE_ENV=production` 启动而该开关开着 ⇒ **进程拒绝启动**（见 §生产部署）。另注：环境里若有名为 `DEV` 的变量与该节同名相撞，applyEnv 只覆盖叶子、不抹节（v3.7.157 订正，`tests/prod-startup-guard.test.js` 回归守护） |
 | github.* | `GITHUB__*` | GitHub 登录（v3.7.113）：`enabled/clientId/clientSecret/redirectUri/postMessageOrigin`（targetOrigin 默认 `*`，生产应收紧成应用源）+ `scope`（默认 `read:user`，只读身份）。`authorizeBase/tokenUrl/userUrl` 默认真端点，**仅联调/自建网关才覆盖**；指向 loopback 需另开上面的 dev 开关，否则回调返 `forbidden_host`。`stateTtlSec` 授权票据有效期（默认 600s，一次性消费+过期惰性清扫） |
 | wechat.* | `WECHAT__*` | 微信扫码登录：当前为**演示模式**（无开放平台凭据也可跑通取码→确认→签发全链路；响应带 `demo:true` 自证）。`qrcodeTicketTtlSec` 票据有效期（默认 300s，过期即清）。正式接入见 roadmap 阶段④ |
 | sms.*（其余） | `SMS__*` | `region`（默认 `ap-guangzhou`）/ `endpoint`（**按 provider 兜底**：留空或抄了 example 里的腾讯字面量都没事——`provider:"aliyun"` 时自动改用 `https://dypnsapi.aliyuncs.com`，显式配了别的值则原样尊重；**指向 loopback 需开上面的 dev 开关**，否则 `sms_endpoint_forbidden`）/ `codeTtlSec`（验证码有效期，默认 600s，一次性消费）/ **`resendIntervalSec`（默认 60s：短信按条计费，同一号码冷却期内重发返 429 `sms_code_cooldown` 并带 `retryAfter`——固定窗口限流挡不住窗口边界的突刺，所以这道闸用码的真实签发时刻做判据）** / `timeoutMs`（默认 10000）/ `templateParamCount`（模板参数个数，2 时第二个参数是有效分钟数） |
