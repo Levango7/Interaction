@@ -33,33 +33,38 @@ $("#btnImport").onclick = ()=> $("#fileInput").click();
 $("#fileInput").onchange = e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=""; };
 $("#btnClear").onclick = doClear;
 $("#btnIdbRestore").onclick = doIdbRestore;
-/* 系统级消息中心：顶栏按钮交互（替代 v1.4 banner 横幅） */
+/* 系统级消息中心：顶栏按钮交互（替代 v1.4 banner 横幅）
+ * v3.7.156 修「面板永远打不开」：markup 里 #msgPanel 常驻 u-hidden（display:none），
+ * 旧逻辑却只切内联 style.display —— 内联 "" 压不过 class，面板从第一次打开起就
+ * 一直是 display:none。状态源统一改为 u-hidden 类（与 B5 顶栏溢出面板同口径：
+ * 「面板用 is-open 类开合，不用内联 style」）。 */
 $("#btnMessages").onclick = function(e){
   e.stopPropagation();
   const panel = $("#msgPanel");
   if(!panel) return;
-  if(panel.style.display === "none"){
+  if(panel.classList.contains("u-hidden")){
     renderMsgPanel();
-    // v1.9.7：面板已内联于正文流（.msg-panel-inline 静态定位），无需 JS 计算 top
-    panel.style.display = "";
+    panel.classList.remove("u-hidden");
+    // 万一历史路径留下内联 display:none（内联优先级高于 class），开的时候清掉
+    if(panel.style.display) panel.style.display = "";
     // 打开 1s 后标记所有已读（让用户先看到未读高亮）
     setTimeout(function(){
-      if(panel.style.display !== "none"){
+      if(!panel.classList.contains("u-hidden")){
         markAllMessagesRead();
         renderMsgPanel();
       }
     }, 1000);
   } else {
-    panel.style.display = "none";
+    panel.classList.add("u-hidden");
   }
 };
 // 点击面板外关闭
 document.addEventListener("click", function(e){
   const panel = $("#msgPanel");
   const btn = $("#btnMessages");
-  if(panel && panel.style.display !== "none" && btn){
+  if(panel && !panel.classList.contains("u-hidden") && btn){
     if(!panel.contains(e.target) && !btn.contains(e.target)){
-      panel.style.display = "none";
+      panel.classList.add("u-hidden");
     }
   }
 });
@@ -154,7 +159,7 @@ $("#msgList").addEventListener("click", function(e){
     }
     if(id) markMessageRead(id);
     const panel = $("#msgPanel");
-    if(panel) panel.style.display = "none";
+    if(panel) panel.classList.add("u-hidden"); // v3.7.156：与开合同口径（类，不内联）
   }
 });
 // 启动时刷新角标状态（确保刷新后未读数正确）

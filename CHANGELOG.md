@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-07 · **审计 Wave 2 收口：消息中心「永远打不开」真修 + 版本哨兵第六源 + L4b 点击反馈量化审计**
+
+_续上一修复批的 Wave 2（前端量化审计 / 多方核对）。L4b「点击→反馈」审计在仓外副本（`F:\tmp\aw-audit\`，零仓内影响）用真 Chromium 逐控件真点击，3 模式视口共 **127 个可见控件，0 个无反馈**——但审计边界本身抓不到的一类缺陷由源码交叉核实补上：`#btnMessages`。_
+
+- **P0 真缺陷：顶栏「消息」按钮的面板 100% 打不开**：`#msgPanel` 在 markup 里**常驻 `u-hidden`（display:none）**（`agent-workbench.html:5537`），而开合逻辑只切内联 `style.display`（`src/ui-global-events.js` 三处：toggle / 点外关闭 / 条目动作后关闭）——内联 `""` **压不过** class，第一次点「开」后 class 仍把面板藏住，第二次点又走开分支：**面板在任何一次点击下都从未真正可见**。点测审计的信号是「有 mutation 无视觉变化」（内联 style 写了 `none`，MutationObserver 有记录、视觉零变化）——这正是上一批「绿却残废」家族的前端同型。修：开合状态源统一改为 `u-hidden` 类，三处联动全改 + 打开时清历史内联值。新增 e2e `tests/e2e/messages-panel.spec.js`（2 例 × 双项目）：真浏览器断言「点开真可见（排版尺寸 >0）— 再点真隐藏 — 条目动作后自动关闭」。
+- **P1 版本哨兵恒滞后 → 结构性修**：`/api/health` 自上批起读 `server/package.json` 作单一源，但 `release.mjs` 从不 bump 它（停在 **3.6.1**，前端已 3.7.155）⇒ 健康检查报的版本号对不上任何一次真实发布，且 `build.mjs --check` 的五源门禁**不覆盖它**。修：`server/package.json` 归位 3.7.155；`release.mjs` bump 列表 + `build.mjs --check` 版本源**六源**（新增 server/package.json）——手改一次只是把漂移推迟到下次发版，纳入门禁才是正解。
+- **L4b 量化审计结论（仓外脚本，方法留档）**：最终形态 = 每控件一次干净载入（否则点一个导航按钮切视图后，后续收集的 path 全部指向已脱挂旧元素，脱挂元素 `click()`/`focus()` **全静默**——焦点都不落地，制造大量假 DEAD）+ COLLECT 加**视口相交**过滤（离屏抽屉 `transform` 推出视口的元素 rect 有尺寸但不可见，`elementFromPoint` 视口外返回 null 会被旧逻辑当「无遮挡」误收）+ MutationObserver 观察 **attributes**（「给父元素切 class」型反馈——侧栏折叠 / 面板收起 / 标签激活——只看 childList 会全部漏报）+ 复选框走真 click（focus 拿不到 checked 切换）。假阳性家族：文件选择器（`#btnImport` 系，headless 无弹窗）、Blob 下载（`#btnDownload` / `#btnExport`）、设计态幂等 no-op（已激活标签再点、空输入点发送）。**诚实边界**：attributes 观察让 `#btnMessages` 的「写内联 style」产生了 mutation 记录而通过了点测——这类「有 mutation 无视觉」的缺陷点测天然抓不到，靠源码交叉核实兜底（本批即是对该边界的实证）。
+- **a11y 笔记（不修，记录）**：`a.skip-link`「跳转到主内容」无 JS 处理器、`#main` 无 `tabindex` —— 锚点跳转只滚不聚焦，跳转后焦点仍在顶栏。WCAG 2.4.1 建议跳转后转移焦点；建议给 `#main` 加 `tabindex="-1"` 并在点击处理器中 `focus()`。
+- **验证**：本机全量 vitest **2551 passed**（含上批 21 例）/ `check:source-state` ✓ / lint exit 0 / `build.mjs --check` 六源齐 3.7.155 / client-contract 41/41 / idor 19/19 / security 25/25 / config 22/22 / e2e 新 spec 双项目 4 例绿（E2E=1）。**注入链坑留档**：e2e 的 globalSetup 以 HTML 字节数判注入与否——一次 e2e 后 HTML 停在交付态，此后改 src **不会**被重新注入（探针显示 onclick 仍是旧代码）；且此时跑 `src-split --extract` 会用陈旧 HTML 回写 src、**洗掉新改动**。正确顺序：改 src → 显式 `src-split`（注入）→ 跑 → `--extract` 抽回；两步之间勿混跑。
+- **板面**：本批 R10 声明补于 `docs/agent-board.md`；未触碰 Qoder ACTIVE 的 `agent-workbench.html`（本次修复全在 `src/` 侧完成，markup 的 `u-hidden` 恰是新口径的正确初始态）。
+
 ### 2026-11-07 · **全量健康审计·修复批（用户「找出来并且解决他们」）：10 处实证缺陷 + 契约守护升级**
 
 _用户问「项目做了几个月仍不能转化为生产力」，要求严谨排查后端接口 / 前端页面 / 认证安全 / 数据流并修复。方法：三路 Explore 只读审计 + 逐文件亲验 + 11 个 verify 脚本全跑。**反差结论**：核心链路（注册 / 登录 / OAuth / 短信 / 云同步 / SSRF 代理）是真的硬——298 条 verify 断言在 CI 里跑、IDOR 双向实测、故障注入式守护；但有一层**用户可见功能「绿却残废」**：前后端契约只比 HTTP 状态码、不比 body 字段，三个设置面板（定时提醒 / 通知偏好 / 第三方集成）在 UI 里看得见、**100% 不可用**。这正是「转化不了生产力」的技术面答案。本批修 10 处实证缺陷（P0×3 / P1×4 / P2×3），并把契约守护升级为 body-shape 级，让这类错位不能再「绿着上线」。用户「做吧」授权。板面 R10 声明 2026-11-06 21:49。_

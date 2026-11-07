@@ -9,9 +9,11 @@
  *   `--as` 必填（也可用环境变量 WB_SESSION）：v3.7.155 起切版要先过板面认领门，身份靠猜会把
  *   认领登记到别人名下，所以不给默认值。
  *
- * bump 目标（与 build.mjs --check 的五源门禁一致 + lockfile 同步）：
+ * bump 目标（与 build.mjs --check 的六源门禁一致 + lockfile 同步）：
  *   0. 前置：板面认领门（他人占用即失败；无冲突则自动登记一行**生而 RELEASED** 的审计行，见下面第 0 步）
- *   1. package.json / electron/package.json / manifest.json 的 version
+ *   1. package.json / electron/package.json / manifest.json / server/package.json 的 version
+ *      （v3.7.156 起含 server/package.json：/api/health 的版本哨兵单一源，不随发版
+ *      bump 则哨兵恒滞后，健康检查报的版本对不上任何真实发布）
  *   2. agent-workbench.html 的 VERSION + BUILD_TAG（未指定 --tag 时按当日日期+序号字母自动生成）
  *   3. service-worker.js 的 CACHE_VERSION = v{版本}-{tag}（保证 SW activate 清旧缓存）
  *   3b. README.md 的标题 /「当前版本」/ 页脚示例三处版本号（第五个版本源）
@@ -101,8 +103,8 @@ function autoBuildTag(currentTag){
   return today + 'a';
 }
 
-/* 1) package.json ×2 + manifest.json */
-for (const p of ['package.json', 'electron/package.json', 'manifest.json']) {
+/* 1) package.json ×2 + manifest.json + server/package.json（哨兵单一源） */
+for (const p of ['package.json', 'electron/package.json', 'manifest.json', 'server/package.json']) {
   const j = JSON.parse(read(p));
   j.version = newVer;
   write(p, JSON.stringify(j, null, 2) + '\n');

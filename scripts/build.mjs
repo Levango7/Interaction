@@ -63,16 +63,20 @@ if (CHECK) {
       return cur || h1;
     } catch (e) { return null; }
   })();
+  // v3.7.156 追加 server/package.json 为第六源：/api/health 自 v3.7.156 起读它作版本
+  // 哨兵（单一源），但 release.mjs 从不 bump 它 → 哨兵恒停在 3.6.1，健康检查报的
+  // 版本号对不上任何一次真实发布。同样纳入门禁，否则手改一次只是把漂移推迟到下次发版。
   const vers = {
     'package.json':              readJsonVer(join(root, 'package.json')),
     'electron/package.json':     readJsonVer(join(root, 'electron', 'package.json')),
     'manifest.json':             readJsonVer(join(root, 'manifest.json')),
+    'server/package.json':       readJsonVer(join(root, 'server', 'package.json')),
     'agent-workbench.html':      htmlVer,
     'README.md':                 readmeVer,
   };
   for (const [k,v] of Object.entries(vers)) console.log(`[version] ${k.padEnd(28)} ${v || '(缺失)'}`);
   const vals = Object.values(vers).filter(Boolean);
-  const ok = vals.length === 5 && vals.every(v => v === vals[0]);
+  const ok = vals.length === 6 && vals.every(v => v === vals[0]);
   // 完整性：真相源必须含关键功能区（防误传旧 src 拼接产物）
   const html = readFileSync(TRUTH_HTML, 'utf8');
   const required = ['__TEST_GATE__', 'window.__test', 'scMeta', 'sanitizeHtml'];
