@@ -11,7 +11,7 @@
 | 项 | 规则 |
 |---|---|
 | 编号 | `DL-001…` 连续，只增不改；**别名列**保留旧号（`#110` / `R-40` / `B9` / `OD-001` / `Q3`），不重编号、不搬家 |
-| 关单 | 只追加 + 就地关闭；`DONE` 必须写 **commit**（有 CI 回执更好），`CUT` 必须写**裁定人 + 日期** |
+| 关单 | 只追加 + 就地关闭；`DONE` 必须写 **commit**（有 CI 回执更好），`CUT` 必须写**裁定人 + 日期**。**三档口径（2026-11-08 裁，依据 `_probe/wb-window-2026-11-08/receipts.md`）**：① 单提交事项写单个 hash；② 聚合阶段条目写 **commit 链**（≥2，逐个须在 `origin/main` 祖先链上）或「代表 commit + 批次说明」；③ 裁定 / 发布 / 真机验收类写「**记录落盘 commit + 验收文档出处**」，不强制功能代码 commit。**一律禁止凭印象代填**——`0009b8d` 与 `3fb849a` 同 subject 却不在 main 祖先链，即反例 |
 | 状态枚举 | `OPEN`（可开工）/ `DOING`（带板面 ACTIVE 行）/ `DONE` / `BLOCKED`（外部硬条件，必写「谁能解」）/ `USER-ACTION`（工程已交付，只剩用户去点几下）/ `CUT`（已裁不做）/ `STALE`（超 30 天未复核）/ `OVERTURNED`（被代码事实推翻，不是建议）/ `ORPHAN`（原会话已离线、改动未提交未验证，只做只读保护，不认领源码） |
 | 判据 | 每条必须有**可测判据**；写不出的先去补取证，不进表 |
 | 复核度 | `已核` = 本轮读源码 / 门禁亲验；`仅据文档` = 只按出处记载，未亲验代码 |
@@ -31,23 +31,23 @@
 | ID | 事项 | 来源 / 回执 | 归属 | 判据 | 别名 | 复核度 |
 |---|---|---|---|---|---|---|
 | DL-D01 | 三模式基建 + 显式三态菜单 + Code「主客颠倒」修复 | 板面 11-02 23:57 `c3f3621`；v3.7.153 | 三模式 | `applyUIMode` / `#uiModeMenu` 在位；`ui-mode.test.js` 绿 | — | 已核 |
-| DL-D02 | Design 模式 / 画布 Phase A + B（①–④）+ Phase C1/C3 | `design-mode-phase-b.md:3,144-176`；v3.7.152/153/154 | Design | 四件套交互 + 定案常量 `DIAGRAM_MAX` 等 | Phase A/B/C | 已核 |
+| DL-D02 | Design 模式 / 画布 Phase A + B（①–④）+ Phase C1/C3 | `design-mode-phase-b.md:3,144-176`；链 `6c43be9`(A①②) / `7ab3bc3`(A③④) / `ead6be6`(B MVP) / `fcd0912`+`b9aefc6`(B④) / `f5769e4`(B16) / `43738be`(C1) / `00c92d1`(C3)；v3.7.152/153/154 | Design | 四件套交互 + 定案常量 `DIAGRAM_MAX` 等 | Phase A/B/C | 已核 |
 | DL-D03 | 768–1023 档 Design 画布塌陷 → 方案乙实修 | `iteration-plan.md:453-469`；`9f89e80`；v3.7.154 | Design | `svgH 0→792`、`draw-responsive.spec.js` ⑤ | #110 | 已核 |
 | DL-D04 | CHANGELOG 第二个 `## [Unreleased]` 去重 | 板面 11-05 00:50 `5849db7` | 全局 | `grep -c '^## \[Unreleased\]'` = 1；存档段 64 条未动 | #109 | 已核 |
-| DL-D05 | Phase B §九 Q1–Q4 定案（D3） | `design-mode-phase-b.md:144-176` | Design | 四条均带代码行号判据 | D3 | 已核 |
+| DL-D05 | Phase B §九 Q1–Q4 定案（D3） | `design-mode-phase-b.md:144-176`；`94e9e8c`（D3 定案，stat 含该文档）+ `5b0ac01`（Q1–Q4 审核裁定）+ `00c92d1`（Q1 结案）。注意别与 `2596e23`（改的是 Phase A §十）混淆 | Design | 四条均带代码行号判据 | D3 | 已核 |
 | DL-D06 | Phase A §十 Q1–Q4 定案（E4 补做） | `CHANGELOG.md [Unreleased]` E4；`2596e23` | Design | Q1–Q4 有结论；Q3 如实留「待真机」 | #117 / E4 | 已核 |
 | DL-D07 | 云同步客户端设置入口（`apiBase` + `syncIncremental`） | `iteration-plan.md:378-388`；`079135a` / `496607f` | 全局 | `sync-settings-entry` 7/7、`sync-incremental-gate` 3/3 | 待拍板② | 已核 |
 | DL-D08 | CSP `connect-src` 放行本地后端（条目作废） | `iteration-plan.md:374-377`；`b6bbc47` | 全局 | CSP 含 `127.0.0.1:*` / `localhost:*`；mixed content 另由主进程代理 | #16 | 仅据文档 |
-| DL-D09 | 覆盖率真量 → **定案不做**（前提被证伪） | `iteration-plan.md:394-400` | 全局 | 两条独立障碍已实测记录；README 归因已改正 | 待拍板⑥ | 已核 |
+| DL-D09 | 覆盖率真量 → **定案不做**（前提被证伪） | `iteration-plan.md:394-400`；`eef9692`（撤回错话 + 定案不做真量，stat 改 CHANGELOG / README / iteration-plan） | 全局 | 两条独立障碍已实测记录；README 归因已改正 | 待拍板⑥ | 已核 |
 | DL-D10 | 空 catch 基线全仓对齐（604→631） | `iteration-plan.md:342-349`；`424f974` | 全局 | 新增 46→0 / 消失 19→0 / P0 前后 23 | B11① | 已核 |
-| DL-D11 | R-40 幽灵命中 / R-41 静默 null | `iteration-plan.md:292-311` | 全局 | 单测 + 6 条窄变异；**真浏览器 e2e 仍缺 → DL-O12** | B9 / R-40 / R-41 | 仅据文档 |
-| DL-D12 | B6 MCP 幂等重试 + 延迟读数（含统计页） | `iteration-plan.md:183-206,226-232` | 全局 | 假 MCP 服务器计请求次数；写腿恰好 1 次 | B6 / B8-b | 已核 |
-| DL-D13 | B8-a / B12 空 catch 余片 | `iteration-plan.md:354-364` | 全局 | 全仓 P0 26→24；`ui-drawer:640` 理由订正 | B8-a / B12 | 仅据文档 |
+| DL-D11 | R-40 幽灵命中 / R-41 静默 null | `iteration-plan.md:292-311`；`303ed49`（R-40 真修 + R-41 补痕，stat 含 `src/ai-tools.js` 与 `tests/rag-orphan-vectors.test.js`） | 全局 | 单测 + 6 条窄变异；**真浏览器 e2e 仍缺 → DL-O12** | B9 / R-40 / R-41 | 仅据文档 |
+| DL-D12 | B6 MCP 幂等重试 + 延迟读数（含统计页） | `iteration-plan.md:183-206,226-232`；`eb8bfab`（重试只给幂等腿，tools/call 一次都不重放）/ `c4343bb`（延迟读数上统计页，B8-b 那半）/ `9dcc93e`（手册 §5.5） | 全局 | 假 MCP 服务器计请求次数；写腿恰好 1 次 | B6 / B8-b | 已核 |
+| DL-D13 | B8-a / B12 空 catch 余片 | `iteration-plan.md:354-364`；`b2cad1e`（B12 第五片：P0 26→24）/ `3fb849a`（B8-a 第二片）/ `06e3963`（reject 类 5→4）。**`0009b8d` 同 subject 但不在 main 祖先链（rebase 前副本），不得引用** | 全局 | 全仓 P0 26→24；`ui-drawer:640` 理由订正 | B8-a / B12 | 仅据文档 |
 | DL-D14 | R13 三面判据 + E3 认领门进 CI + D1×E3 订正 | `CHANGELOG [Unreleased]`；`3b70f50` / `00a94e1` / `0679171` | 全局 | 登记行生而 `RELEASED`；`fetch-depth:0` 修浅历史误红 | R13 / E3 / D1 | 已核 |
-| DL-D15 | `v3.7.155` 已发布（CI / Deploy / Electron / Pages / 线上逐字节实核） | `AGENTS.md §二` 首行 | 全局 | 表行含各 run 号与 sha256 回执 | — | 已核 |
-| DL-D16 | 微信演示态诚实化 / 清空全部数据真清空 / 恢复前快照回滚入口 | `OPEN-DECISIONS.md:12,16,18` | 全局 | OD-002 / OD-004 / OD-003 各有守护用例 | OD-002/003/004 | 已核 |
-| DL-D17 | GitHub OAuth（2026-10-19）、Linear（2026-10-11）真机验收 | `roadmap-2026Q4.md:85,127` | 全局 | 两份验收四件套 / 建真 issue 记录 | roadmap ①⑤ | 仅据文档（**别重跑**） |
-| DL-D18 | WebDAV 协议层 + 桌面 UI 8 步中 7 步 | `roadmap-2026Q4.md:128` | 全局 | 协议 11/11；UI 7/8，剩 1 步 → DL-O02 | roadmap ⑥ | 仅据文档 |
+| DL-D15 | `v3.7.155` 已发布（CI / Deploy / Electron / Pages / 线上逐字节实核） | `AGENTS.md §二` 首行；`32d5601`（chore(release) 八版本源 bump）+ `86227d9`（收工回执，表行翻 ✅）+ `27d61fe` / `0679171`（双红事故订正） | 全局 | 表行含各 run 号与 sha256 回执 | — | 已核 |
+| DL-D16 | 微信演示态诚实化 / 清空全部数据真清空 / 恢复前快照回滚入口 | `OPEN-DECISIONS.md:12,16,18`；`7f3b1b4`(OD-002 演示态诚实呈现) / `9ca2058`(OD-004 真清空) / `466816c`(OD-003 回滚入口可消费) / `b6f6c6a`(OD-004 销账) | 全局 | OD-002 / OD-004 / OD-003 各有守护用例 | OD-002/003/004 | 已核 |
+| DL-D17 | GitHub OAuth（2026-10-19）、Linear（2026-10-11）真机验收 | `roadmap-2026Q4.md:85,127`；`21aa46e`（GitHub 四件套验收记录）+ `fcbb17b`（板面收工条）；Linear 侧 `3900179`（验收抓到的必现 bug 修复）+ `f798958`（验收一条命令脚本）——**验收动作在真机，修复 commit ≠ 验收回执** | 全局 | 两份验收四件套 / 建真 issue 记录 | roadmap ①⑤ | 仅据文档（**别重跑**） |
+| DL-D18 | WebDAV 协议层 + 桌面 UI 8 步中 7 步 | `roadmap-2026Q4.md:128`；`f798958`（v3.7.87 WebDAV 载体，协议层）+ `0dd11c3`（B7：roadmap / webdav-verify 按现测改写，「UI 7/8」在此落盘）+ `2dc2073`（坚果云真机抓到的第二个 bug） | 全局 | 协议 11/11；UI 7/8，剩 1 步 → DL-O02 | roadmap ⑥ | 仅据文档 |
 
 ## B · OPEN（工程侧无硬阻塞，可开工）
 
@@ -58,9 +58,9 @@
 | DL-O03 | PNG 导出**成功支**无自动化断言 | `CHANGELOG` E4 附带发现①；`draw-export.test.js:109` | Design | 真浏览器成功导出并断言 blob 尺寸 / 类型 | E4-Q1 | 已核 |
 | DL-O04 | Electron 下载真机验收（Phase A Q3，账未平） | `CHANGELOG` E4 Q3 段；`draw-capability-phase-a.md §十` | Design | **两条断言**：`will-download` 触发 **且** `will-navigate` 未触发 | E4-Q3 | 已核 |
 | DL-O05 | `tests/draw-svg-tool.test.js:5` 头注释与实现相反（说落账 `kind:"svg"`） | `CHANGELOG` E4「顺手登记」 | Design | 注释改到与用例一致；**该文件属 ZCode，需授权后单开一笔** | E4 附带③ | 已核 |
-| DL-O06 | 工具数四处口径打架：`product-scope.md:26-27` 26/7、`README.md` 29/8、手册 26+7、`ai-tools.md:5` 头注仍 `VERSION="3.7.12"` / 最后核对 2026-09-21 | 源码实测 `src/ai-tools.js:303-382` = **29** | 全局 | 四处统一到源码口径；agent 子族按分发边界重数，不抄任一旧数 | — | **已核（源码计数）** |
-| DL-O07 | `PRODUCT.md` 三区定位过期（重写稿已备 `PRODUCT.rewrite.md`） | `PRODUCT.md:10,51-69` | 全局 | 新稿落盘 + README 索引跟随 + 附录 C 联动清单逐项签收 | — | **已核** |
-| DL-O08 | `OPEN-DECISIONS.md:7` 汇总「1 未决 / 3 已决」与 `:11` OD-001 `RESOLVED`、`:78`「维持 OPEN」自相矛盾 | `docs/decisions/OPEN-DECISIONS.md` | 全局 | 汇总改为 0 未决 / 4 已决（或如实列出仍开项），10-22 复核段标为历史 | OD-001 | **已核** |
+| DL-O06（`DONE` 11-08） | 工具数四处口径打架：`product-scope.md:26-27` 26/7、`README.md` 29/8、手册 26+7、`ai-tools.md:5` 头注仍 `VERSION="3.7.12"` / 最后核对 2026-09-21 | 源码实测 `src/ai-tools.js:303-382` = **29** | 全局 | 四处统一到源码口径；agent 子族按分发边界重数，不抄任一旧数。**11-08 复核四处实测**：`README.md:55` 29 / `user-manual.md:103,277` 29+8 / `product-scope.md:26` 29 / `ai-tools.md:5,17` 29（`3.7.155` / 2026-11-07） | — | **已核（源码计数）** |
+| DL-O07（`DONE` 11-08） | `PRODUCT.md` 三区定位过期（重写稿已备 `PRODUCT.rewrite.md`） | `PRODUCT.md:10,51-69` | 全局 | 新稿落盘 + README 索引跟随 + 附录 C 联动清单逐项签收。**`8e68530` 已落盘**（PRODUCT.md 244 行改动 + `README.md` 判读规则第 2 条补 `three-mode-spec`） | — | **已核** |
+| DL-O08（`DONE` 11-08） | `OPEN-DECISIONS.md:7` 汇总「1 未决 / 3 已决」与 `:11` OD-001 `RESOLVED`、`:78`「维持 OPEN」自相矛盾 | `docs/decisions/OPEN-DECISIONS.md` | 全局 | 汇总改为 0 未决 / 4 已决（或如实列出仍开项），10-22 复核段标为历史。**`8e68530` 已改「0 未决 / 4 已决」**，11-08 复核 `:7` 实测一致 | OD-001 | **已核** |
 | DL-O09 | `DESIGN-SYSTEM.md §2.1` 定位依据引用旧闭环「捕获→AI 落手→复核」 | `DESIGN-SYSTEM.md:27-29` | 全局 | 随 PRODUCT 重写同步措辞，**不改断点值** | — | **已核** |
 | DL-O10 | 空 catch 数字三处打架：`roadmap:110` P0 118 处、`iteration-plan:266` 余 49 处 / 21 文件、`empty-catch-p0-triage.md` 记「真待修 0」 | 三份出处 | 全局 | 快照加抬头 + 台账注明「P0 是上界不是待办，引分诊表」 | R-2 | **已核（文档）** |
 | DL-O11 | B11 第二条判据试点「下层已报失败、调用方不接返回值」，**已拍板做、只做 data-links 两处** | `iteration-plan.md:350-352,416-424` | 全局 | 查是否有交付 commit / 用例；未见则保持 OPEN | B11② | 仅据文档 |
@@ -70,11 +70,11 @@
 | DL-O15 | 导航 / 抽屉外观两份 CSS 副本（#110 方案乙技术债） | `iteration-plan.md:468-469` | Design | 抽共享样式块，两档视觉逐像素一致 | #110 尾 | 已核（CSS 注释） |
 | DL-O16 | `E2E=1` 守卫：裸跑 `15 skipped / EXIT=0` 假绿 | `draw-responsive.spec.js`、`ui-mode-layout.spec.js` | 三模式 | 台账 / CHANGELOG 所有 e2e 回执写明 `E2E=1` | — | **已核（15 passed / 36.3s）** |
 | DL-O17 | 三模式 Spec 缺口 S5 / S6（待补断言）、S7 / S8（改人工复核清单） | `three-mode-spec.md §7` | 三模式 | **S5/S6 已收口（2026-11-08，CHANGELOG `[Unreleased]` 同日节 + 提交 hash 见下）**：`tests/ui-mode.test.js` 13→17 例（14/15 断定时器生灭 + 重入必新起，16/17 断切换零业务写入），窄变异 M5（清 OS 定时器不置空标志位 → 15 红）/ M6（`_setUIMode` 夹带 `wb_agent_notes` 写入 → 16 红）均精确抓红；测前预热会话仓 / 画布文档 / `uimode` 到稳态（懒加载首启迁移与 uimode 首次落盘不算切换写入）。**S7/S8 维持 Q-D 裁决**：季度复核清单、不升门禁，仍 OPEN。占用已随本批提交释放（DL-O21 解锁） | Q-D | **已核（17 passed + 窄变异双向）** |
-| DL-O18 | **手册与代码冲突**：`user-manual.md:159` 写「窄屏下**代码模式**与设计模式都退回单栏」，但窄屏 `setUIMode("code")` 直接拒 + toast、菜单 disabled，`toggleUIMode` 也跳过 code；同句「点一次切下一个」是旧循环口径 | `user-manual.md:152-159` vs `render-widgets.js:3898-3916` | 全局 | 手册改为「窄屏不启用代码模式（附原因）；设计模式退回单栏」，与 Spec §3/§5 逐格一致 | — | **已核（逐句比对）** |
-| DL-O19 | README `38 个模块 / 654.2 KB` 与 Phase B 新增 `src/draw-canvas.js` 后的基线不一致 | `README.md:7`、`design-mode-phase-b.md:74` | 全局 | 现跑 `check:modules` / `check:source-state` 取现值再改（本轮 HTML 684,156 B） | — | **已核（HTML 实测量）** |
+| DL-O18（`DONE` 11-08） | **手册与代码冲突**：`user-manual.md:159` 写「窄屏下**代码模式**与设计模式都退回单栏」，但窄屏 `setUIMode("code")` 直接拒 + toast、菜单 disabled，`toggleUIMode` 也跳过 code；同句「点一次切下一个」是旧循环口径 | `user-manual.md:152-159` vs `render-widgets.js:3898-3916` | 全局 | 手册改为「窄屏不启用代码模式（附原因）；设计模式退回单栏」，与 Spec §3/§5 逐格一致。**`8e68530` 已改**，11-08 复核 `user-manual.md:160` 实测「窄屏（<1024px）**不启用代码模式**（三栏布局需要宽屏，菜单项会置灰并给出提示）」 | — | **已核（逐句比对）** |
+| DL-O19（`DONE` 11-08） | README `38 个模块 / 654.2 KB` 与 Phase B 新增 `src/draw-canvas.js` 后的基线不一致 | `README.md:7`、`design-mode-phase-b.md:74` | 全局 | 现跑 `check:modules` / `check:source-state` 取现值再改。**11-08 实测**：`check:modules` 块 **40**、`check:source-state` 40/40、HTML **687,642 B = 671.5 KB**；README 已改 38→**40**、669,894 B→**687,642 B**（3 处） | — | **已核（HTML 实测量）** |
 | DL-O20 | **`scripts/gen-ai-tools-doc.mjs:182-183` 的版本 / 日期回写正则与 `docs/ai-tools.md` 头注格式静默失配**：脚本用 `/适用版本：`VERSION = "…"`/` 与 `/最后核对：\d{4}-\d{2}-\d{2}/`，头注却是 `**适用版本**：` / `**最后核对**：`（粗体 + 冒号位置不同）⇒ 两个 `replace` 从未命中，头注长期停在 `VERSION="3.7.12"` / 2026-09-21。**不是本次落盘引入**；本次只把数字手动更新为现值（`3.7.155` / 2026-11-07），**未改脚本** | 02:39 只读正则实测：版本 `false`、日期 `false`、工具总数 `29` 命中 | 全局 | **探针已备好补丁**（11-08）：`_probe/wb-dlo20/dlo20.patch` 仅 L182/L183 两行，沿用同文件「工具总数」已有的 `\*{0,2}` 粗体容忍写法。`_probe/wb-dlo20/report.md` **12/12 全绿**——改前复现失配、改后逐文件对比仅头注 2 行变化、M1/M2/M3 + 对照组 + `--check` 零写入 + 仓内 4 文件 sha256 未变。**`scripts/*` 在落盘白名单外 ⇒ 单独成批，不混进 13 docs 提交**；应用后跑 `--check` 并复跑探针。注意脚本日期取 UTC、头注此前写本地日，两者可差一天，属口径不是漂移 | — | **已核（探针 12/12）** |
 | DL-O21 | **三模式文档落盘的认领占用（已解除 / `DONE`）**：曾因 ZCode 主会话 11-07 13:05 的未提交 ACTIVE 行占 `docs/three-mode-spec.md` / `docs/demand-ledger.md`，`claim-check` 判 `exit=1` 而按住不推 | **解锁提交 `091f325`**：ZCode 把该行翻 `RELEASED`、提交 S5/S6 断言，并把两份成品一并纳入 main（工作树与 HEAD sha256 逐字节一致）；本批剩余 11 份 `docs/*` 随本次提交落地 | 全局 | **已解除**：`claim-check --list` 无 ACTIVE、板面无他人未提交 diff、13 路径逐条 `✓ 可动`、HEAD == origin/main、CI/Deploy/Pages 全终态 success。按 R13 以本地三面判据为准，**未利用**「CI 读不到未提交 ACTIVE 行」的不对称硬推 | — | **已核（`091f325` + 本次提交）** |
-| DL-O22 | **A 段 10 条 `DONE` 行缺 commit / CI 回执**：`DL-D02` / `D05` / `D09` / `D11` / `D12` / `D13` / `D15` / `D16` / `D17` / `D18` 的来源列只有文档行号或版本号，违反台账「关单：`DONE` 必须写 commit」。**11-07 建台账时从历史快照迁移的既有口径，非本批回归** | `_probe/ledger-review-2026-11-08/report.md`（季度只读复核 11-08：13/14，唯一 FAIL） | 全局 | 后续批次用 `git log --oneline --all -- <对应文件/关键字>` 逐条补**真实** hash，**不凭印象代填**；查不到的就地改 `OPEN` 或标 `仅据文档`。**不通过放宽判据凑绿**；判据射程已由窄变异证明（删 hash 判红 / 补 hash 判绿） | — | **已核（只读脚本 + 窄变异）** |
+| DL-O22（`DONE` 11-08） | **A 段 10 条 `DONE` 行缺 commit / CI 回执**：`DL-D02` / `D05` / `D09` / `D11` / `D12` / `D13` / `D15` / `D16` / `D17` / `D18` 的来源列只有文档行号或版本号，违反台账「关单：`DONE` 必须写 commit」。**11-07 建台账时从历史快照迁移的既有口径，非本批回归** | `_probe/ledger-review-2026-11-08/report.md`（季度只读复核 11-08：13/14，唯一 FAIL） | 全局 | **已按三档补录完毕**：10 条全部找到真实且**在 `origin/main` 祖先链上**的 hash（37 个候选验证通过），逐条证据见仓外 `_probe/wb-window-2026-11-08/receipts.md`；`0009b8d` 同 subject 但不在 main 祖先链（rebase 前副本）已剔除；假 hash `0000000deadbeef` 射程自证判红 | — | **已核（只读脚本 + 窄变异）** |
 
 ## C · BLOCKED / USER-ACTION（硬阻塞，不是工程待办）
 
