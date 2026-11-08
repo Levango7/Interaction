@@ -179,8 +179,8 @@ let ver = '';
   }
 }
 const today = new Date().toISOString().slice(0, 10);
-doc = doc.replace(/适用版本：`VERSION = "[^"]*"`/, '适用版本：`VERSION = "' + (ver || '?') + '"`');
-doc = doc.replace(/最后核对：\d{4}-\d{2}-\d{2}/, '最后核对：' + today);
+doc = doc.replace(/(\*{0,2}适用版本\*{0,2}：\*{0,2}\s*)`VERSION = "[^"]*"`/, '$1`VERSION = "' + (ver || '?') + '"`');
+doc = doc.replace(/(\*{0,2}最后核对\*{0,2}：\*{0,2}\s*)\d{4}-\d{2}-\d{2}/, '$1' + today);
 /* 总览段两处派生文本也由源码驱动 —— 手写必然漂移，且 --check 只比「### 小节名」时红不了。
    本次实测：加到 27/28 号工具后正文仍写「工具总数：26」，check 依旧绿。
    注意 `工具总数` 外面包着 Markdown 加粗（`**工具总数**：26`），正则必须容忍 `**`，
