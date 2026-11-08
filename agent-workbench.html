@@ -5404,23 +5404,30 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .body.design-mode .side-sheet-close{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--line);
     background:var(--panel);color:var(--text-dim);font-size:var(--fs-base);cursor:pointer;
     display:inline-flex;align-items:center;justify-content:center}
+  .body.design-mode .side-sheet-close:hover{background:var(--surface-hover);color:var(--text)}
   .body.design-mode .side-sheet-body{flex:1;min-height:0;overflow-y:auto;
     padding:var(--space-2) var(--space-3) calc(var(--space-3) + var(--safe));
     display:flex;flex-direction:column;gap:2px}
   .body.design-mode .sheet-parent{display:flex;align-items:center;gap:var(--space-2);width:100%;
     padding:var(--space-2) var(--space-3);min-height:44px;border-radius:var(--radius-md);
     background:transparent;border:none;color:var(--text);font-size:var(--fs-sm);font-weight:500;
-    cursor:pointer;text-align:left}
+    cursor:pointer;text-align:left;transition:background var(--transition-fast)}
   .body.design-mode .sheet-parent svg{width:var(--icon-md);height:var(--icon-md);color:var(--sc,var(--muted));flex-shrink:0}
   .body.design-mode .sheet-parent .cnt{margin-left:auto;font-size:var(--fs-xs);background:var(--surface-muted);
     border-radius:var(--radius-md);padding:1px 8px;color:var(--text-dim)}
   .body.design-mode .sheet-parent.active{background:var(--sc,var(--accent));color:var(--on-accent)}
+  .body.design-mode .sheet-parent:hover{background:var(--surface-hover)}
+  .body.design-mode .sheet-parent.active svg{color:var(--on-accent)}
+  .body.design-mode .sheet-parent.active .cnt{background:var(--on-accent-soft);color:var(--on-accent)}
+  .body.design-mode .sheet-parent.has-active{background:var(--surface-hover)}
   .body.design-mode .sheet-sub{display:flex;align-items:center;gap:var(--space-2);width:100%;
     padding:var(--space-2) var(--space-3);padding-left:calc(var(--space-3) + 26px);min-height:40px;
     border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-dim);
-    font-size:var(--fs-sm);cursor:pointer;text-align:left}
+    font-size:var(--fs-sm);cursor:pointer;text-align:left;transition:background var(--transition-fast)}
   .body.design-mode .sheet-sub .sub-dot{width:5px;height:5px;border-radius:50%;background:var(--text-faint);flex-shrink:0}
   .body.design-mode .sheet-sub.active{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+  .body.design-mode .sheet-sub:hover{background:var(--surface-hover);color:var(--text)}
+  .body.design-mode .sheet-sub.active .sub-dot{background:var(--accent)}
   .body.design-mode .main-wrap>.main,
   .body.design-mode .main-wrap>.toolbar-row,
   .body.design-mode .chat-panel{display:none}
