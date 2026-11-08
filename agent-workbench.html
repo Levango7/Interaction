@@ -86,6 +86,9 @@
      加深后同底色实测 4.95:1 ✓，警告横幅/图标同步受益（浅底上更深=更清楚）。
      ⚠️ lint-colors 只放行「--令牌: 值」定义行 —— 注释里不得写裸十六进制色值（已踩第 3 次）。 */
   --ok:#188038; --ok-soft:#e9f5ec; --accent-soft:#e8f2fe;
+  /* 2026-11-08：代码高亮四色。--snip-bg 在各主题下都是深底，故不随主题切换；
+     lint-colors 只放行令牌定义行，用法处一律 var()。 */
+  --tok-key:#c678dd; --tok-str:#98c379; --tok-comment:#8b919a; --tok-num:#d19a66;
   /* v3.7.47：--ok 加深（同上：成功 toast 白字 on 绿底实测 3.06:1 < 4.5，
      加深后白字 ≈ 5.0:1 ✓；浅底上的绿色成功文字也一并更清楚）。 */
   /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/联动图标引用） */
@@ -2243,6 +2246,20 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
 .chat-attach-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent-soft)}
 .chat-attach-btn svg{width:var(--icon-sm);height:var(--icon-sm)}
+/* 2026-11-08：图片附件（待发条 + 消息内缩略图）。缩略图一律 object-fit:cover，
+   尺寸只由 CSS 决定，发送的数据体积由 upload 前的 canvas 压缩负责（见 _shrinkImage）。 */
+.chat-attach-strip{display:flex;gap:var(--space-2);padding:var(--space-2) var(--space-2) 0;flex-wrap:wrap}
+/* display:flex 会盖掉 [hidden] 的 UA 样式（display:none），空条必须显式隐藏 */
+.chat-attach-strip[hidden]{display:none}
+.attach-chip{position:relative;width:52px;height:52px;border-radius:var(--radius-md);overflow:hidden;
+  border:1px solid var(--line);background:var(--panel2)}
+.attach-chip img{width:100%;height:100%;object-fit:cover;display:block}
+.attach-chip-x{position:absolute;top:2px;right:2px;width:20px;height:20px;padding:0;border:0;border-radius:var(--radius-full);
+  background:color-mix(in srgb,var(--panel) 78%,transparent);color:var(--text);font-size:var(--fs-xs);
+  line-height:1;cursor:pointer}
+.attach-chip-x:hover{background:var(--danger);color:#fff}
+.msg-imgs{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-bottom:var(--space-1)}
+.msg-img{max-width:160px;max-height:160px;border-radius:var(--radius-sm);border:1px solid var(--line);display:block}
 /* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹）
    v2.4.0：单行起步（44px）聚焦增高到 96px，上限 200px——空态更轻，长输入仍够用 */
 /* v3.7.37：min-height 44 → 42，与同行的模型下拉/附件/发送按钮（均为 42）统一。
@@ -2412,6 +2429,11 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   padding:2px 6px;border-radius:var(--radius-sm);cursor:pointer;min-height:24px}
 .md-code .md-code-copy:hover{background:var(--surface-hover);color:var(--text)}
 .md-code pre{margin:0;border:0;border-radius:0}
+/* 2026-11-08：语法高亮 token 色（令牌定义见 :root --tok-*） */
+.md-code .tok-k{color:var(--tok-key)}
+.md-code .tok-s{color:var(--tok-str)}
+.md-code .tok-c{color:var(--tok-comment);font-style:italic}
+.md-code .tok-n{color:var(--tok-num)}
 /* 2026-10-23：mermaid 图（懒加载 vendor；失败保留源码 + 提示） */
 .md-body .mermaid-figure{margin:0 0 var(--space-2);padding:var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);overflow-x:auto}
@@ -5590,6 +5612,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <!-- 底部输入区：完整卡片——textarea 占上方，左下角附件 / 右下角模型+发送（v1.15 重排） -->
       <form class="chat-input-area" id="chatForm">
         <textarea class="chat-text-input" name="msg" id="chatTextInput" data-i18n-placeholder="chat.placeholder" placeholder="问点什么，或让它「建个任务」…" autocomplete="off" maxlength="4000" rows="1"></textarea>
+        <!-- 2026-11-08：图片附件的待发条（缩略图 chips 由 _renderAttachStrip 用 DOM 构建） -->
+        <div class="chat-attach-strip" id="chatAttachStrip" hidden></div>
         <div class="chat-input-bar">
           <button class="chat-attach-btn" id="chatAttachBtn" type="button" data-i18n-title="a11y.addAttachment" title="添加文本附件" data-i18n-aria="a11y.addAttachment" aria-label="添加文本附件">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -7907,7 +7931,7 @@ const MESSAGES = {
     "a11y.openSessionMgmt": "打开会话管理",
     "a11y.toggleChatPanel": "折叠/展开聊天面板",
     "a11y.collapseChatPanel": "折叠聊天面板",
-    "a11y.addAttachment": "添加文本附件",
+    "a11y.addAttachment": "添加附件（文本或图片）",
     "a11y.selectModel": "选择 AI 模型",
     "a11y.switchProfile": "切换大模型 Profile",
     "a11y.send": "发送",
@@ -9415,6 +9439,8 @@ const MESSAGES = {
     "ai.genCodeNoKey": "⚠️ 无法生成代码，请先在设置中配置 AI API Key。",
     "ai.generatingCode": "正在生成代码（",
     "ai.imageCount": " [图×",
+    "ai.imageAlt": "图片",
+    "ai.removeImage": "移除图片",
     "ai.nothingToRemember": "没有可记住的内容",
     "ai.opFail": "操作失败：",
     "ai.pendingConfirm": "（待确认）将执行删除/修改操作：「",
@@ -9641,7 +9667,11 @@ const MESSAGES = {
     "label.today": "（今天）",
     "label.unnamed": "(未命名)",
     "msg.addFailed": "添加失败",
-    "msg.addTextAttachment": "添加文本附件（内容追加进输入框）",
+    "msg.addAttachment": "添加附件（文本或图片）",
+    "msg.imageTooMany": "一次最多 3 张图片",
+    "msg.imageBadType": "仅支持 PNG / JPEG / GIF / WebP 图片",
+    "msg.imageTooLarge": "图片过大（>8MB），请先压缩",
+    "msg.imageReadFailed": "图片读取失败（可能是格式不受支持或体积过大）",
     "msg.aiKeyEncrypted": "AI Key 已加密绑定本机，换机后无法解密。如需携带，请勾选「导出时包含 AI Key（明文）」后重试。",
     "msg.aiKeyNotExported": "AI Key 由本机安全存储保管，未随备份导出；换机后请在「设置」重新填写。",
     "msg.backupNoData": "备份中没有可恢复的数据",
@@ -9694,7 +9724,6 @@ const MESSAGES = {
     "msg.idbExported": "IDB 全量备份已导出",
     "msg.idbNoData": "本地库没有可恢复的数据",
     "msg.idbUnavailable": "本地库不可用",
-    "msg.imageAttachmentDisabled": "图片附件已停用（v1.14 移除多模态），仅支持文本文件",
     "msg.importFormatError": "导入文件格式错误，无法解析。",
     "msg.importMissingData": "导入文件缺少 tasks 或 records 数据",
     "msg.importMissingFields": "导入文件缺少必要字段 version 或 exportedAt",
@@ -12100,7 +12129,7 @@ const MESSAGES = {
     "a11y.openSessionMgmt": "Open Session Management",
     "a11y.toggleChatPanel": "Collapse/Expand Chat Panel",
     "a11y.collapseChatPanel": "Collapse Chat Panel",
-    "a11y.addAttachment": "Add Text Attachment",
+    "a11y.addAttachment": "Add attachment (text or image)",
     "a11y.selectModel": "Select AI Model",
     "a11y.switchProfile": "Switch Model Profile",
     "a11y.send": "Send",
@@ -13608,6 +13637,8 @@ const MESSAGES = {
     "ai.genCodeNoKey": "⚠️ Cannot generate code; configure the AI API Key in Settings first",
     "ai.generatingCode": "Generating code (",
     "ai.imageCount": " [img×",
+    "ai.imageAlt": "Image",
+    "ai.removeImage": "Remove image",
     "ai.nothingToRemember": "Nothing to remember",
     "ai.opFail": "Operation failed: ",
     "ai.pendingConfirm": "(pending) About to perform a delete/modify action: \"",
@@ -13833,7 +13864,11 @@ const MESSAGES = {
     "label.today": "(Today)",
     "label.unnamed": "(Unnamed)",
     "msg.addFailed": "Add failed",
-    "msg.addTextAttachment": "Add text attachment (content appended to input)",
+    "msg.addAttachment": "Add attachment (text or image)",
+    "msg.imageTooMany": "Up to 3 images at a time",
+    "msg.imageBadType": "Only PNG / JPEG / GIF / WebP images are supported",
+    "msg.imageTooLarge": "Image too large (>8MB), please compress it first",
+    "msg.imageReadFailed": "Failed to read the image (unsupported format or too large)",
     "msg.aiKeyEncrypted": "The AI Key is encrypted and bound to this machine, so it cannot be decrypted after moving to another device. To carry it over, check \"Include AI Key in export (plaintext)\" and try again",
     "msg.aiKeyNotExported": "The AI Key is kept in local secure storage and was not exported with the backup; re-enter it in \"Settings\" on the new device",
     "msg.backupNoData": "No recoverable data in backup",
@@ -13886,7 +13921,6 @@ const MESSAGES = {
     "msg.idbExported": "IDB full backup exported",
     "msg.idbNoData": "No recoverable data in local DB",
     "msg.idbUnavailable": "Local DB unavailable",
-    "msg.imageAttachmentDisabled": "Image attachment disabled (v1.14 removed multimodal), only text files supported",
     "msg.importFormatError": "Import file format error, cannot parse.",
     "msg.importMissingData": "Import file missing tasks or records data",
     "msg.importMissingFields": "Import file missing required fields version or exportedAt",
@@ -16482,14 +16516,34 @@ function focusTaskTitleInput(){
 }
 
 /* ---------- 历史消息 content 兼容（v1.14 前多模态可能遗留数组格式，渲染时兜底转文本） ---------- */
+/** 只取文本部分（不含「[图×N]」计数标记）—— 会话自动命名用它，别把标记写进标题 */
+function _chatTextOnly(c){
+  if(Array.isArray(c)){
+    return c.filter(function(p){ return p && p.type === "text"; }).map(function(p){ return p.text; }).join("\n");
+  }
+  return c;
+}
 function _chatContentToText(c){
   if(Array.isArray(c)){
-    const txt = c.filter(function(p){ return p && p.type === "text"; }).map(function(p){ return p.text; }).join("\n");
+    const txt = _chatTextOnly(c);
     const imgs = c.filter(function(p){ return p && p.type === "image_url"; }).length;
     return txt + (imgs ? t("ai.imageCount"," [图×") + imgs + "]" : "");
   }
   return c;
 }
+
+/* ---------- 图片附件（2026-11-08）：内联 dataURL 白名单 ----------
+ * 只放行 base64 位图（png/jpeg/gif/webp）。聊天缩略图**不走 innerHTML**：
+ * sanitizeHtml 会剥掉 data: 开头的 URL 属性（安全收敛，历史遗留），所以由 renderChat
+ * 在 innerHTML 之后用 DOM 注入——注入前过这道校验，把「历史消息里被写入奇怪串」的
+ * 面收窄到「已知位图的 base64」。 */
+function _imgDataUrlOk(url){
+  return typeof url === "string" && /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/i.test(url);
+}
+/* 一张图的上下文成本（估算口径，与 OpenAI vision 的低细节档同量级）：
+   历史裁剪（_msgTokens）与发送估算（recordSendEstimate）必须用同一个数，否则
+   「统计说没超预算、裁剪却按超了算」——两处读数会互相打架。 */
+const _IMG_TOKEN_COST = 800;
 
 /* v3.7.78 解耦：自别处下沉（同层序逆层消除） */
 function thisWeekDone(sc){
@@ -17043,6 +17097,118 @@ function _mdSplitRow(line){
   cells.push(cur.trim());
   return cells;
 }
+/* ---------- 代码块语法高亮（2026-11-08，零依赖手写 tokenizer） ----------
+   输入是已过 esc 的文本：先还原原始串，分词后逐 token 重新 esc 输出——span 只带
+   固定 class、无属性，不引入新 XSS 面。未知语言原样返回（不猜）。规则按「最早匹配
+   优先、同位按规则序」扫描；注释/字符串排在关键字前，避免关键字命中串内文字。
+   mermaid 块不走这里（renderMermaidBlocks 依赖原始 pre>code 并整块替换）。 */
+function _hlUnescape(s){
+  return String(s).replace(/&(amp|lt|gt|quot|#39);/g, function(_, n){
+    if(n === "amp") return "&";
+    if(n === "lt") return "<";
+    if(n === "gt") return ">";
+    if(n === "quot") return '"';
+    return "'";
+  });
+}
+function _hlRulesFor(lang){
+  let k = String(lang || "").toLowerCase().trim();
+  const alias = { javascript:"js", jsx:"js", tsx:"js", mjs:"js", cjs:"js", typescript:"ts", py:"python", sh:"bash", shell:"bash", zsh:"bash", rs:"rust", yml:"yaml", "c++":"cpp", h:"c", markup:"html", svg:"html" };
+  k = alias[k] || k;
+  if(k === "js" || k === "ts"){
+    return [
+      { cls:"tok-c", re:/\/\/[^\n]*|\/\*[\s\S]*?\*\//g },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`/g },
+      { cls:"tok-k", re:/\b(?:const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|extends|super|this|typeof|instanceof|import|export|from|default|try|catch|finally|throw|async|await|yield|static|get|set|delete|in|of|void|null|undefined|true|false|interface|type|enum|implements|readonly|as|namespace|declare|abstract|public|private|protected)\b/g },
+      { cls:"tok-n", re:/\b(?:0[xXbBoO][0-9a-fA-F_]+|\d[\d_]*(?:\.\d+)?(?:[eE][+-]?\d+)?n?)\b/g }
+    ];
+  }
+  if(k === "json"){
+    return [
+      { cls:"tok-s", re:/"(?:\\.|[^"\\])*"/g },
+      { cls:"tok-k", re:/\b(?:true|false|null)\b/g },
+      { cls:"tok-n", re:/-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g }
+    ];
+  }
+  if(k === "python"){
+    return [
+      { cls:"tok-c", re:/#[^\n]*/g },
+      { cls:"tok-s", re:/"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/g },
+      { cls:"tok-k", re:/\b(?:def|class|return|if|elif|else|for|while|import|from|as|try|except|finally|raise|with|lambda|pass|break|continue|and|or|not|in|is|None|True|False|global|nonlocal|yield|async|await|del|assert)\b|@[\w.]+/g },
+      { cls:"tok-n", re:/\b\d+(?:\.\d+)?\b/g }
+    ];
+  }
+  if(k === "css" || k === "scss" || k === "less"){
+    return [
+      { cls:"tok-c", re:/\/\*[\s\S]*?\*\//g },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/g },
+      { cls:"tok-k", re:/[\w-]+(?=\s*:)|@[\w-]+/g },
+      { cls:"tok-n", re:/#[0-9a-fA-F]{3,8}\b|-?\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|s|ms|deg|fr|ch)?\b/g }
+    ];
+  }
+  if(k === "html" || k === "xml"){
+    return [
+      { cls:"tok-c", re:/<!--[\s\S]*?-->/g },
+      { cls:"tok-s", re:/"[^"]*"|'[^']*'/g },
+      { cls:"tok-k", re:/<!DOCTYPE[^>]*>|<\/?[a-zA-Z][\w:-]*|\/?>/gi }
+    ];
+  }
+  if(k === "bash"){
+    return [
+      { cls:"tok-c", re:/(?:^|\s)#[^\n]*/gm },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\])*"|'[^']*'/g },
+      { cls:"tok-k", re:/\$\{[^}]*\}|\$[\w?@#]+|\b(?:if|then|else|elif|fi|for|while|until|do|done|case|esac|function|in|echo|exit|return|local|export|source|set|cd|read|shift|eval|exec|trap)\b/g },
+      { cls:"tok-n", re:/\b\d+\b/g }
+    ];
+  }
+  if(k === "sql"){
+    return [
+      { cls:"tok-c", re:/--[^\n]*|\/\*[\s\S]*?\*\//g },
+      { cls:"tok-s", re:/'(?:''|[^'])*'/g },
+      { cls:"tok-k", re:/\b(?:select|from|where|insert|into|values|update|set|delete|create|table|alter|drop|index|join|left|right|inner|outer|on|as|and|or|not|null|order|by|group|having|limit|offset|distinct|union|all|count|sum|avg|min|max|case|when|then|else|end|primary|key|foreign|references|default|constraint|if|exists|begin|commit|rollback)\b/gi },
+      { cls:"tok-n", re:/\b\d+(?:\.\d+)?\b/g }
+    ];
+  }
+  if(k === "yaml"){
+    return [
+      { cls:"tok-c", re:/#[^\n]*/g },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\\n])*"|'[^']*'/g },
+      { cls:"tok-k", re:/[\w.-]+(?=\s*:(?:\s|$))|\b(?:true|false|null|yes|no)\b/gm },
+      { cls:"tok-n", re:/\b\d+(?:\.\d+)?\b/g }
+    ];
+  }
+  if(k === "go" || k === "rust" || k === "java" || k === "c" || k === "cpp"){
+    return [
+      { cls:"tok-c", re:/\/\/[^\n]*|\/\*[\s\S]*?\*\//g },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`/g },
+      { cls:"tok-k", re:/\b(?:func|fn|let|mut|package|import|export|struct|interface|enum|impl|trait|pub|use|mod|match|if|else|for|while|loop|return|break|continue|switch|case|default|class|public|private|protected|static|final|void|int|long|float|double|char|bool|boolean|string|new|delete|try|catch|throw|throws|async|await|go|defer|chan|map|range|type|const|var|val|this|self|super|nil|null|true|false|include|define|ifdef|endif|pragma|sizeof|typedef|unsigned|signed)\b/g },
+      { cls:"tok-n", re:/\b\d+(?:\.\d+)?\b/g }
+    ];
+  }
+  return null;
+}
+function highlightCode(escaped, lang){
+  const rules = _hlRulesFor(lang);
+  if(!rules || !escaped) return escaped;
+  const raw = _hlUnescape(escaped);
+  let out = "", pos = 0;
+  while(pos < raw.length){
+    let best = null, bestCls = "";
+    for(const r of rules){
+      r.re.lastIndex = pos;
+      const m = r.re.exec(raw);
+      if(m && m[0] && (best === null || m.index < best.index)){
+        best = m; bestCls = r.cls;
+        if(m.index === pos) break;
+      }
+    }
+    if(!best){ out += esc(raw.slice(pos)); break; }
+    if(best.index > pos) out += esc(raw.slice(pos, best.index));
+    out += '<span class="' + bestCls + '">' + esc(best[0]) + '</span>';
+    pos = best.index + best[0].length;
+  }
+  return out;
+}
 /**
  * 简单 Markdown 解析器（手写，无外部依赖）。
  * 支持：标题(#/##/###)、粗体(**)、斜体(*)、行内代码(`)、代码块(```)、
@@ -17090,7 +17256,7 @@ function mdToHtml(str){
       }
       blocks.push({type:"block", html:'<div class="md-code"><div class="md-code-head"><span class="md-code-lang">'+(lang||"text")+'</span>'
         + '<button type="button" class="md-code-copy" data-code-copy="1">'+esc(t("md.copy","复制"))+'</button></div>'
-        + '<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+buf.join("\n")+'</code></pre></div>'});
+        + '<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+highlightCode(buf.join("\n"), lang)+'</code></pre></div>'});
       continue;
     }
     /* 表格：当前行含 |，下一行是分隔行（--- / :---: / ---:）。必须在段落之前判。 */
@@ -18795,8 +18961,10 @@ function _mirrorChatToSession(k, v){
     sess.updatedAt = _nowIso();
     // 以首条用户消息自动命名（仅当还是默认名）
     if(sess.title === t("sess.new", "新会话")){
-      const firstUser = sess.msgs.find(function(m){ return m.role === "user" && (m.content || "").trim(); });
-      if(firstUser) sess.title = (firstUser.content || "").trim().slice(0, 20);
+      /* content 可能是 vision 数组（图片附件）—— 直接 .trim() 会抛 TypeError，
+         把整个镜像流程打断（消息写不进会话列表）。标题只取文本，不带「[图×N]」标记。 */
+      const firstUser = sess.msgs.find(function(m){ return m.role === "user" && String(_chatTextOnly(m.content) || "").trim(); });
+      if(firstUser) sess.title = String(_chatTextOnly(firstUser.content) || "").trim().slice(0, 20);
     }
     _saveSessions();
   }
@@ -22400,7 +22568,10 @@ function recordSendEstimate(messages){
       tokens: Array.isArray(messages) ? messages.reduce(function(s, m){
         const c = m && m.content;
         if(typeof c === "string") return s + _estTokens(c);
-        if(Array.isArray(c)) return s + c.reduce(function(n2, p){ return n2 + _estTokens(p && p.text); }, 0);
+        if(Array.isArray(c)) return s + c.reduce(function(n2, p){
+          if(p && p.type === "image_url") return n2 + _IMG_TOKEN_COST;
+          return n2 + _estTokens(p && p.text);
+        }, 0);
         return s + _estTokens((m && m.title) || "");
       }, 0) : 0,
       budget: ctxBudgetTokens(),
@@ -23027,7 +23198,7 @@ function renderChat(){
         + (report ? '<div class="subagent-report">' + report + '</div>' : '') + '</div>';
     }catch(_e){ return null; }
   };
-  el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
+  el.innerHTML = sanitizeHtml(hist.length? hist.map((m, _mi)=>{
     if(m.role==="tool"){
       var _disp = m._disp || _chatContentToText(m.content);
       /* 标记类/JSON 类回执的**解析源**：优先 `_raw`（execTool 原始返回），退化到 `content`。
@@ -23107,9 +23278,29 @@ function renderChat(){
       ? '<span class="msg-usage">' + esc(String(m._usage.total)) + t("chat.usage.unit"," tok") + '（' + esc(String(m._usage.in)) + '+ ' + esc(String(m._usage.out)) + '）</span>'
       : "";
     if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}${usageHtml}</div>`;
-    // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
+    // user 消息 content 可能为 vision 数组——文本（含「[图×N]」标记）+ 缩略图槽
+    if(m.role === "user"){
+      const _nImg = Array.isArray(m.content) ? m.content.filter(function(p){ return p && p.type === "image_url"; }).length : 0;
+      return `<div class="msg ${m.role}">${_nImg ? '<div class="msg-imgs" data-mi="' + _mi + '"></div>' : ""}${esc(_chatContentToText(m.content)||"")}</div>`;
+    }
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
   }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + chatSuggestHtml());
+  /* 图片缩略图在消毒之后补 DOM：sanitizeHtml 会剥 data: URL 属性，
+     且只认 base64 位图白名单（_imgDataUrlOk），坏数据只是不显示，不会变成可执行面。 */
+  Array.prototype.forEach.call(el.querySelectorAll(".msg-imgs[data-mi]"), function(slot){
+    const idx = Number(slot.getAttribute("data-mi"));
+    const msg = hist[idx];
+    if(!msg || !Array.isArray(msg.content)) return;
+    msg.content.forEach(function(p){
+      const url = p && p.type === "image_url" && p.image_url && p.image_url.url;
+      if(!_imgDataUrlOk(url)) return;
+      const im = document.createElement("img");
+      im.className = "msg-img";
+      im.alt = t("ai.imageAlt","图片");
+      im.src = url;
+      slot.appendChild(im);
+    });
+  });
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
   // v1.15：点击消息区任意位置 → 聚焦输入框（聊天面板本身即卡片，不另设输入框卡片）
@@ -36611,6 +36802,20 @@ async function chatOnce(messages, opts){
       // F3：带上当前激活 profile id，主进程按 id 取 base/model/key
 
       if(ap && ap.id) body.profileId = ap.id;
+      /* 2026-11-08：桌面版流式透传。此前 Electron 只能整包等（主进程代理不支持流），
+         现在主进程解析 SSE 并逐段发 "chat-chunk"；这里按 streamId 过滤后喂给 onChunk，
+         请求结束时必须退订，否则每次对话都会多挂一个监听器。
+         旧版 preload 没有 onChatChunk → 自动退回整包，前后版本可混用。 */
+      let _unsubChunk = null;
+      if(opts.onChunk && window.electronAPI && typeof window.electronAPI.onChatChunk === "function"){
+        const sid = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        body.stream = true;
+        body.streamId = sid;
+        _unsubChunk = window.electronAPI.onChatChunk(function(d){
+          if(!d || d.streamId !== sid) return;
+          try{ opts.onChunk(String(d.text || "")); }catch(e){ /* 回调异常不阻断流 */ }
+        });
+      }
       let _userAborted = false;
       if(opts.signal && typeof opts.signal.addEventListener === "function"){
         const onAbort = () => {
@@ -36628,6 +36833,8 @@ async function chatOnce(messages, opts){
           const e2 = new Error("user-cancel"); e2.name = "AbortError"; throw e2;
         }
         throw err;
+      }finally{
+        if(typeof _unsubChunk === "function"){ try{ _unsubChunk(); }catch(e){ /* 退订失败不影响结果 */ } }
       }
     }
 
@@ -37102,7 +37309,12 @@ async function confirmPendingDanger(){
 
 function _msgTokens(m){
   if(typeof m.content === "string") return _estTokens(m.content);
-  if(Array.isArray(m.content)) return m.content.reduce((n,p)=> n + _estTokens(p && p.text), 0);
+  if(Array.isArray(m.content)) return m.content.reduce(function(n,p){
+    /* 图片按固定成本计入预算：content 数组里图片不带文本，只数 p.text 会让
+       「带 3 张图的对话」在裁剪时被当成空消息，图片永远挤不掉、文本先被裁光。 */
+    if(p && p.type === "image_url") return n + _IMG_TOKEN_COST;
+    return n + _estTokens(p && p.text);
+  }, 0);
   return _estTokens(m.title || "");
 }
 /** 裁剪历史到 token 预算内（默认 ~6k）。预算约束下至少保留 2 条（保住最近对话）；
@@ -37297,7 +37509,7 @@ async function maybeSummarizeHistory(hist, sc){
   }
   /* 生成新摘要（覆盖前 want 条）*/
   const folded = hist.slice(0, want).map(function(m){
-    return (m.role === "user" ? "用户" : (m.role === "assistant" ? "助手" : m.role)) + "：" + String(m.content || "").slice(0, 200);
+    return (m.role === "user" ? "用户" : (m.role === "assistant" ? "助手" : m.role)) + "：" + String(_chatContentToText(m.content) || "").slice(0, 200);
   }).join("\n");
   let text = "";
   try{
@@ -37577,10 +37789,140 @@ function sendChatText(text){
   else form.dispatchEvent(new Event("submit", {cancelable:true}));
   return true;
 }
+/* ---------- 图片附件（2026-11-08：恢复多模态，base64 内联） ----------
+ * 三条硬约束：
+ *   ① **只存内存**：待发送（草稿态）的图片不落任何存储键 —— 图片没有"未发送的历史"
+ *      身份，写盘只会让备份/同步多出一份大体积 base64；落盘的唯一时机是随用户消息进 hist。
+ *   ② **先缩后发**：最长边压到 1024，按体积分档降质（png 保真、其余 jpeg），
+ *      dataURL 超 400K 字符再降一级 —— 3 张图也不会把 localStorage 配额挤爆。
+ *   ③ **拦截类指令不吃图**：记忆/建任务/待确认等分支照旧把 user 消息当纯文本，
+ *      待发图片原样留着，用户改完指令仍可发送。
+ * 缩略图**不走 innerHTML**（sanitizeHtml 会剥 data: URL），由 renderChat 于注入后补 DOM。
+ */
+const _IMG_MAX_COUNT = 3;
+const _IMG_MAX_BYTES = 8 * 1024 * 1024;
+const _IMG_MAX_DATAURL = 400 * 1024;
+const _IMG_MAX_SIDE = 1024;
+let _pendingImgs = [];
+
+/** 发送形态：OpenAI 兼容的 content 数组（text 在前，图片随后）。无图时退回纯字符串。 */
+function _chatUserContent(text, imgs){
+  const list = (imgs || []).filter(_imgDataUrlOk);
+  if(!list.length) return text;
+  const parts = [];
+  if(text) parts.push({ type:"text", text:text });
+  list.forEach(function(d){ parts.push({ type:"image_url", image_url:{ url:d } }); });
+  return parts;
+}
+/** 把 content 里的文本部分换成 outbound（技能展开用），图片部分原样保留。 */
+function _withOutboundText(content, outbound){
+  if(!Array.isArray(content)) return outbound;
+  const kept = content.filter(function(p){ return p && p.type === "image_url"; });
+  return [{ type:"text", text:outbound }].concat(kept);
+}
+function pendingImages(){ return _pendingImgs.slice(); }
+function _clearPendingImages(){ _pendingImgs = []; _renderAttachStrip(); }
+function _addPendingImage(dataUrl){
+  if(!_imgDataUrlOk(dataUrl)) return false;
+  if(_pendingImgs.length >= _IMG_MAX_COUNT) return false;
+  _pendingImgs.push(dataUrl);
+  _renderAttachStrip();
+  return true;
+}
+/** 待发图片条：DOM 构建（缩略图 + 移除钮），不拼 innerHTML */
+function _renderAttachStrip(){
+  const strip = $("#chatAttachStrip");
+  if(!strip) return;
+  strip.textContent = "";
+  if(!_pendingImgs.length){ strip.hidden = true; return; }
+  strip.hidden = false;
+  _pendingImgs.forEach(function(d, i){
+    const chip = document.createElement("div");
+    chip.className = "attach-chip";
+    const im = document.createElement("img");
+    im.src = d;
+    im.alt = t("ai.imageAlt","图片");
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "attach-chip-x";
+    x.setAttribute("aria-label", t("ai.removeImage","移除图片"));
+    x.title = t("ai.removeImage","移除图片");
+    x.textContent = "×";
+    x.onclick = function(){ _pendingImgs.splice(i, 1); _renderAttachStrip(); };
+    chip.appendChild(im);
+    chip.appendChild(x);
+    strip.appendChild(chip);
+  });
+}
+function _readAsDataUrl(file){
+  return new Promise(function(resolve, reject){
+    const r = new FileReader();
+    r.onload = function(){ resolve(String(r.result || "")); };
+    r.onerror = function(){ reject(new Error("read")); };
+    r.readAsDataURL(file);
+  });
+}
+function _decodeImage(src){
+  return new Promise(function(resolve, reject){
+    const im = new Image();
+    im.onload = function(){ resolve(im); };
+    im.onerror = function(){ reject(new Error("decode")); };
+    im.src = src;
+  });
+}
+/** 压到最长边 _IMG_MAX_SIDE 并逐档降质，返回仍超限则给空串 */
+function _shrinkImage(src, im){
+  const w = im.naturalWidth || im.width;
+  const h = im.naturalHeight || im.height;
+  if(!w || !h) return "";
+  const k = Math.min(1, _IMG_MAX_SIDE / Math.max(w, h));
+  const cv = document.createElement("canvas");
+  cv.width = Math.max(1, Math.round(w * k));
+  cv.height = Math.max(1, Math.round(h * k));
+  const ctx = cv.getContext && cv.getContext("2d");
+  if(!ctx) return "";
+  ctx.drawImage(im, 0, 0, cv.width, cv.height);
+  const png = /^data:image\/png/i.test(src);
+  const tries = png
+    ? [{ t:"image/png" }, { t:"image/jpeg", q:0.8 }, { t:"image/jpeg", q:0.6 }]
+    : [{ t:"image/jpeg", q:0.85 }, { t:"image/jpeg", q:0.65 }, { t:"image/jpeg", q:0.5 }];
+  let out = "";
+  for(let i = 0; i < tries.length; i++){
+    out = cv.toDataURL(tries[i].t, tries[i].q);
+    if(out.length <= _IMG_MAX_DATAURL) break;
+  }
+  return out.length <= _IMG_MAX_DATAURL ? out : "";
+}
+async function _attachImageFile(f){
+  if(!f) return;
+  if(_pendingImgs.length >= _IMG_MAX_COUNT){
+    try{ toast(t("msg.imageTooMany","一次最多 3 张图片"), "warn"); }catch(_e){ /* toast 不可用不影响已选图片 */ }
+    return;
+  }
+  if(!/^image\/(?:png|jpe?g|gif|webp)$/i.test(String(f.type || ""))){
+    try{ toast(t("msg.imageBadType","仅支持 PNG / JPEG / GIF / WebP 图片"), "warn"); }catch(_e){ /* 同上 */ }
+    return;
+  }
+  if(f.size > _IMG_MAX_BYTES){
+    try{ toast(t("msg.imageTooLarge","图片过大（>8MB），请先压缩"), "warn"); }catch(_e){ /* 同上 */ }
+    return;
+  }
+  let raw = "";
+  try{
+    raw = await _readAsDataUrl(f);
+    const im = await _decodeImage(raw);
+    const shrunk = _shrinkImage(raw, im);
+    if(!shrunk || !_addPendingImage(shrunk)) throw new Error("图片体积超过内联上限");
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "image attach failed: " + ((e && e.message) || e), { where:"imageAttach" }); }catch(_e2){ /* 诊断不可用不影响提示 */ }
+    try{ toast(t("msg.imageReadFailed","图片读取失败（可能是格式不受支持或体积过大）"), "error"); }catch(_e){ /* 同上 */ }
+  }
+}
+
 async function onChatSubmit(e){
  try{
   e.preventDefault();
-  const f=e.target; const text=f.msg.value.trim(); if(!text) return;
+  const f=e.target; const text=f.msg.value.trim(); if(!text && !_pendingImgs.length) return;
   f.msg.value="";
   const sc = active; /* v3.7.71 竞态修复：入口定格场景，长 await 期间切场景不串写 */
   const hist=getChat(sc);
@@ -37588,6 +37930,7 @@ async function onChatSubmit(e){
   if(pendingConfirm){
     if(pendingConfirm.sc!==active){ pendingConfirm=null; closeConfirmModal(); }
     else {
+      if(!text) return; /* 只带了图片：不把空串当成「取消确认」 */
       const yes=/^(确认|确定|执行|yes|confirm|y|ok)$/i.test(text.trim());
       if(yes){ await confirmPendingDanger(); } else { cancelPendingDanger(text); }
       return;
@@ -37598,6 +37941,7 @@ async function onChatSubmit(e){
   if(pendingAgentPlan){
     if(pendingAgentPlan.sc !== active){ pendingAgentPlan = null; }
     else {
+      if(!text) return; /* 同上：空文本 + 图片不得被当成「取消」 */
       const yes = /^(确认执行|确认|确定|执行|yes|confirm|run|y)$/i.test(text.trim());
       if(yes){ await confirmAgentPlan(); } else { cancelAgentPlan(text); }
       return;
@@ -37714,8 +38058,9 @@ async function onChatSubmit(e){
     await handleAiCodeGen(codeGenHit, hist);
     return;
   }
-  // 正常路径（v1.14 多模态已移除，user 消息始终为纯文本）
-  hist.push({role:"user",content:text});
+  // 正常路径：图片拼成 content 数组（无图仍是纯文本，旧行为不变）
+  hist.push({role:"user",content:_chatUserContent(text, _pendingImgs)});
+  _clearPendingImages();
   renderChat(); scrollChat();
   // v3.4.7 批次六：RAG 上下文注入（激活闲置索引资产）——检索任务/记录/笔记/对话历史，
   // 相关片段拼进 system prompt。开关：cfg.rag（设置页 AI→记忆），默认关（防 token 意外膨胀）；
@@ -37738,7 +38083,11 @@ async function onChatSubmit(e){
      hist 里仍存用户原话 —— 界面与历史记录不被一大段指令污染，模型也确实收到"按这个流程做"。 */
   if(outbound !== text){
     for(let mi=messages.length-1; mi>=0; mi--){
-      if(messages[mi] && messages[mi].role === "user"){ messages[mi].content = outbound; break; }
+      if(messages[mi] && messages[mi].role === "user"){
+        /* 带图时 content 是数组：只换文本部分，图片部分必须留着（否则「技能：X」一触发图就丢） */
+        messages[mi].content = _withOutboundText(messages[mi].content, outbound);
+        break;
+      }
     }
   }
   await runChatLoop(messages, hist, sc);
@@ -37794,7 +38143,7 @@ async function runChatLoop(messages, hist, sc){
     const skillTrace = [];
     turnUserText = "";
     for(let mi=messages.length-1; mi>=0; mi--){
-      if(messages[mi] && messages[mi].role === "user"){ turnUserText = String(messages[mi].content || ""); break; }
+      if(messages[mi] && messages[mi].role === "user"){ turnUserText = String(_chatContentToText(messages[mi].content) || ""); break; }
     }
     while(guard++<maxLoops){
       // v3.7.52：每轮重置超时——超时语义应是「单次请求超时」，而不是「整段循环总预算」
@@ -38134,22 +38483,21 @@ function bindChatPanel(){
   }
   // 取消按钮：复用 abortChat
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
-  // 附件按钮：文本文件追加到输入框（v1.14 多模态已移除，不再支持图片附件）
+  // 附件按钮：文本文件追加进输入框；图片走待发条（2026-11-08 恢复多模态）
   const attachBtn=$("#chatAttachBtn");
   if(attachBtn){
     const fileInput=document.createElement("input");
     fileInput.type="file";
-    fileInput.accept=".txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log,text/*";
+    fileInput.accept=".txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log,text/*,image/png,image/jpeg,image/gif,image/webp";
     fileInput.style.display="none";
     document.body.appendChild(fileInput);
     attachBtn.onclick=()=> fileInput.click();
-    attachBtn.title=t("msg.addTextAttachment","添加文本附件（内容追加进输入框）");
+    attachBtn.title=t("msg.addAttachment","添加附件（文本或图片）");
     fileInput.onchange=()=>{
       const f=fileInput.files && fileInput.files[0];
       if(!f) return;
-      // 图片附件已随 v1.14 多模态模块移除，此处给出明确提示（防"点了没反应"）
       if(f.type && f.type.indexOf("image/") === 0){
-        try{ toast(t("msg.imageAttachmentDisabled","图片附件已停用（v1.14 移除多模态），仅支持文本文件"),"warn"); }catch(e){ /* noop */ }
+        _attachImageFile(f);
         fileInput.value="";
         return;
       }
@@ -55671,6 +56019,9 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
     mdToHtml, escapeHtml: esc, safeUrl, inlineMd, sanitizeHtml,
+    /* 2026-11-08 图片附件：内联 dataURL 白名单、content 数组构造、待发条与预算口径 */
+    _imgDataUrlOk, _chatUserContent, _withOutboundText, _msgTokens, _IMG_TOKEN_COST,
+    pendingImages, _addPendingImage, _clearPendingImages, _attachImageFile, _renderAttachStrip,
     /* v3.7.59：图表画布 SVG 生成器（render-overview 的 _dgmSvgHtml）。与 _buildCloudSnapshot
        同理——安全相关的内部函数需要单测入口，否则「id/color 未转义」这类注入只能靠人眼守。
        回归用例见 tests/sanitize-xss-regression.test.js。 */
