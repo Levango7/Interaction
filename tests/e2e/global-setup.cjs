@@ -22,6 +22,22 @@ const INJECT = path.join(ROOT, "scripts", "src-split.mjs");
 const THRESHOLD = 1_200_000;
 
 module.exports = async () => {
+  /* E2E 硬守卫（DL-O16，2026-11-08）：裸跑 `npx playwright test` 时，各 spec 里的
+     `test.skip(!process.env.E2E, "set E2E=1 to run")` 会集体跳过，而 playwright 的
+     退出码**仍是 0** —— 看起来"全部通过"，实际一个用例都没跑（2026-10-12 实测 96 个全 skipped / exit=0）。
+     已有两道防线都只覆盖正式入口：
+       · `npm run e2e` → run-e2e.mjs 注入 E2E=1（安全）；
+       · verify-run.mjs 把「全 skip 且 passed=0」判成 `? / exit=79`，不算通过。
+     唯独人手裸跑没人防，故在此拦死 —— globalSetup 是**任何入口都必经**的一步。
+     注：只列用例（`--list`）不执行 globalSetup，不受影响。 */
+  if (!process.env.E2E) {
+    throw new Error(
+      "[e2e globalSetup] 未设置 E2E：直接 `npx playwright test` 会让所有用例静默 skip，" +
+      "退出码仍是 0（假绿，等于没跑）。\n" +
+      "  正确用法：npm run e2e（脚本自动注入 E2E=1），或 E2E=1 npx playwright test。\n" +
+      "  只想列用例：E2E=1 npx playwright test --list"
+    );
+  }
   let bytes = 0;
   try { bytes = fs.statSync(HTML).size; } catch (e) {
     throw new Error("[e2e globalSetup] 找不到 agent-workbench.html：" + HTML);
