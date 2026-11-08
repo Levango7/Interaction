@@ -285,4 +285,48 @@ test.describe("知识库混合召回（真浏览器）", () => {
     });
     expect(errs, errs.slice(0, 3).join("\n")).toEqual([]);
   });
+
+  /* DL-O12（R-40 真浏览器 e2e）：jsdom 没有 IndexedDB，单测 tests/rag-orphan-vectors.test.js
+     只能覆盖"载入侧过滤"的纯逻辑；「IDB 里真有一条孤儿向量、刷新后载入侧真把它跳过」
+     这件事只有真浏览器能证。做法：
+       ① 先建一条**真实**文档（阳性对照 —— 防"返回空 Map 也算过"的假绿）；
+       ② 再往 IDB 直接写一条**不存在 docId** 的向量，模拟「文档已删、ragVecDelete 的 IDB 删除失败」；
+       ③ 刷新让内存缓存清零 —— 这一步才真正驱动 ragVecLoadAll 的 live 过滤分支；
+       ④ 断言载入结果含 live、不含 ghost，且 diag 留了 orphaned 计数。 */
+  test("R-40：孤儿向量（文档已删、向量仍在 IDB）载入时被跳过，正常向量不受影响", async ({ page }) => {
+    await stubEmbeddings(page);
+    await seedCfg(page);
+
+    const seeded = await page.evaluate(async () => {
+      const vecKeys = async () => (await idbKeys()).filter((k) => String(k).indexOf("ragvec:") === 0);
+      await ragIndexAdd("doc-live", "修复登录页 500 报错", "工作记录");
+      const live = (await vecKeys()).length;
+      /* 注入孤儿：docId 不在 getRagDocs() 里 —— 与「ragVecDelete 只删了内存、IDB 那条没删掉」同形 */
+      await idbMirrorKey("ragvec:ghost-deleted", { m: "bge-m3", v: [0.1, 0.2, 0.3, 0.4] });
+      const after = (await vecKeys()).length;
+      return { live, after, docs: getRagDocs().map((d) => String(d.docId)) };
+    });
+    expect(seeded.live, "真实文档的向量应先落 IDB").toBe(1);
+    expect(seeded.after, "孤儿向量应已写入 IDB（注入成功）").toBe(2);
+    expect(seeded.docs, "doc-live 必须在文档表里，否则阳性对照也成了孤儿").toContain("doc-live");
+    expect(seeded.docs, "ghost-deleted 不得在文档表里").not.toContain("ghost-deleted");
+
+    /* 刷新：内存缓存清零，只剩 IDB —— 载入侧的 live 过滤这一步才被执行 */
+    await page.reload();
+    await page.waitForSelector("#side", { timeout: 20000 });
+    await waitRagReady(page);
+
+    const r = await page.evaluate(async () => {
+      const map = await ragVecLoadAll();
+      const diag = (getDiag() || []).map((x) => String((x && x.msg) || "")).filter((m) => m.indexOf("orphaned") >= 0);
+      const hits = await ragSearch("登录", 5);
+      return { keys: [...map.keys()], diag, hitIds: hits.map((h) => h.docId) };
+    });
+
+    /* 阳性对照先行：若 keys 是空的，下面「不含 ghost」会白送一个真 —— 那正是假绿 */
+    expect(r.keys, "正常文档的向量必须载入").toContain("doc-live");
+    expect(r.keys, "孤儿向量必须被跳过（R-40 的修法）").not.toContain("ghost-deleted");
+    expect(r.diag.join(" | "), "应留下 orphaned 计数痕迹").toContain("orphaned=");
+    expect(r.hitIds, "检索结果不得出现已删文档（否则是空正文幽灵命中）").not.toContain("ghost-deleted");
+  });
 });
