@@ -3,6 +3,15 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-09 · **短信通道两条未钉分支补测 + 本机联调说明（DL-B02 配套）**
+
+_`tests/server-sms-providers.test.js`（2026-10-28 批）已钉「配不全走 demo + demo 码一次性消费」，但两个分支零回归保护：生产姿态 fail-closed、dev 开关不短路真通道。本批补上，并在 `server/README.md` 末加「本机短信联调（免真值）」段（demo 逃生舱 / 假 provider 端点 / 测试层 stub 三档）。零 `src/` / `server/src/` / `scripts/` / HTML 改动。_
+
+- **用例 A（fail-closed 守门）**：sms 配不全 + `dev.allowUnsafeDevEndpoints:false` ⇒ 503 `sms_not_configured`、`data.demoCode` undefined、整串响应不含 6 位连续数字、零出站——防「配不全就把门开成 demo」。
+- **用例 B（开关不短路真通道）**：dev 开关开着 + aliyun 六值配齐 ⇒ 仍出站恰 1 次打 `dypnsapi.aliyuncs.com`、响应无 `demo:true`——防「开开关就把真 provider 短路成 demo」的回归。
+- **窄变异自证**：A 的区分力在「503 + 无 demoCode + 零出站」三判据同时成立（任一 fail-open 即红）；B 的区分力在「出站 1 次 + 阿里 host + 无 demo」（若开关短路则出站 0 次且 `demo:true`）。
+- **验证**：该文件 **9/9 passed**（原 7 + 新 2）/ `npm run lint` exit 0 / `check:source-state` ✓ / `claim-check-ci --warn-only` 预演绿；CI 为权威终态（R9）。
+
 ### 2026-11-08 · **三模式行为契约收口：S5/S6 验收断言补齐（零渲染代码改动）**
 
 _三模式契约（`docs/three-mode-spec.md`，11-07 建立）的公理 M0「模式只改布局，不改数据 / 能力 / 权限」此前只有 e2e 守**几何**，没有守这条公理的断言；§7 验收清单把 S5（离开 Code 必清能力轮询定时器）/ S6（切换模式零业务数据写入）标为「待补断言」（台账 DL-O17），并写明须等占用释放后同批提交。本批在板面三行 RELEASED 后零碰撞补齐：**只补断言、不改渲染代码**（`src/render-widgets.js` 零 diff）。_

@@ -233,3 +233,13 @@ notify-webhook 同款承重墙：必须 Bearer（不做开放代理）、拒 use
 - **GitHub 登录**：未配 clientId 时 `/github` 返回 503 + `github_not_configured`，前端 toast 提示。
 
 真实上线只需在微信开放平台 / GitHub OAuth App / 邮件服务商各注册拿凭据，填入配置即可，前端无需改动。
+
+## 本机短信联调（免真值）
+
+没有真实四值（`secretId` / `secretKey` / `signName` / `templateId`；阿里云路线不要 `sdkAppId`）时，三条路任选，均不需真凭据：
+
+1. **demo 逃生舱**：`sms` 配不全（任一必填留空）且 `dev.allowUnsafeDevEndpoints:true` 时，`POST /api/auth/sms-code` 回 `{demo:true, demoCode:<6 位真随机>, expireIn, message:"sms_not_configured_demo"}`；码照样落库、一次性消费、走冷却，`/api/auth/sms-login` 全链路可测。**生产姿态是 fail-closed**：开关关着（默认）且配不全 ⇒ 503 `sms_not_configured`、不泄 demoCode、零出站——两支都由 `tests/server-sms-providers.test.js` 钉死。
+2. **假 provider 端点**：`sms.endpoint` 指本机起的 HTTP 服务，回 `{"Code":"OK","Success":true,"Model":{"VerifyCode":"123456"}}` 形状即可。loopback / 私网端点仅 dev 开关开着时放行，否则 `sms_endpoint_forbidden`（SSRF 守卫）。
+3. **测试层 stub**：单测里 `vi.stubGlobal("fetch", …)` 拦出站（同文件 aliyun 分支即此写法），CI 与真供应商零耦合。
+
+真实到达（签名审核 / 号码段 / 运营商层）模拟不了，须真四值填 `server/config.json`（gitignored，不入仓）后真机验证（台账 DL-B02）。

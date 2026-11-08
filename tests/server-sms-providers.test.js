@@ -18,7 +18,11 @@
  *      只透出 Code 不透出 Message（响应体里的号码字段不外泄）；
  *   ④ provider 缺省 = tencent：配不全仍走 demo 逃生舱（旧行为不变）；
  *   ⑤ provider=aliyun 而 endpoint 还是腾讯默认字面量 → 按「没改过」处理，
- *      出站打到阿里默认域名（config.example.json 照抄用户的高频脚枪）。
+ *      出站打到阿里默认域名（config.example.json 照抄用户的高频脚枪）；
+ *   ⑥ 生产姿态 fail-closed：sms 没配齐且 dev 开关关着 ⇒ 503 `sms_not_configured`、
+ *      响应零 demoCode、不发出站（防「配不全就把门开成 demo」）；
+ *   ⑦ dev 开关开着 + aliyun 配齐 ⇒ 仍走真通道（出站恰 1 次、不回 `demo:true`），
+ *      防「开开关就把真 provider 短路成 demo」的回归。
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
@@ -249,5 +253,44 @@ describe("provider 缺省 = tencent（旧行为不变）", () => {
     expect(login.status).toBe(200);
     const again = await api(app.port, "POST", "/api/auth/sms-login", { phone: "13800138000", code });
     expect(again.json.error).toBe("code_expired_or_invalid");
+  });
+});
+
+describe("未配短信 fail-closed × dev 开关不短路真通道", () => {
+  it("sms 配不全且 dev 逃生舱关着 ⇒ 503 sms_not_configured，响应零 demoCode、不发出站（fail-closed 守门）", async () => {
+    /* dev 缺省 {allowUnsafeDevEndpoints:false} —— 生产姿态 */
+    app = await startApp(baseCfg({
+      enabled: true, secretId: "AKIDtest123", secretKey: "testsecret456",
+      signName: "某签名", templateId: "1234567",
+      endpoint: "https://sms.tencentcloudapi.com",
+      codeTtlSec: 600, resendIntervalSec: 60, timeoutMs: 2000
+    }));
+    const outbound = vi.fn(okSend("654321"));
+    stubOutbound(outbound);
+
+    const r = await api(app.port, "POST", "/api/auth/sms-code", { phone: "13800138000" });
+    expect(r.status).toBe(503);
+    expect(r.json.ok).toBe(false);
+    expect(r.json.error).toBe("sms_not_configured");
+    expect(r.json.data.demoCode, "fail-closed 不许泄 demo 码").toBeUndefined();
+    /* 反向（有区分力）：整串响应里不许出现任何 6 位连续数字（demo 码的形状） */
+    expect(JSON.stringify(r.json)).not.toMatch(/\d{6}/);
+    expect(outbound, "未配置齐全不该发出站请求").not.toHaveBeenCalled();
+  });
+
+  it("dev 逃生舱开着但 aliyun 已配齐 ⇒ 仍走真通道（出站恰 1 次打阿里默认域名、不回 demo 码）", async () => {
+    app = await startApp(baseCfg(ALIYUN_SMS, { allowUnsafeDevEndpoints: true }));
+    const outbound = vi.fn(okSend("654321"));
+    stubOutbound(outbound);
+
+    const r = await api(app.port, "POST", "/api/auth/sms-code", { phone: "13800138000" });
+    expect(r.status).toBe(200);
+    expect(r.json.ok).toBe(true);
+    expect(r.json.data.demo, "配齐了不许借 dev 开关短路成 demo").toBeUndefined();
+    expect(r.json.data.demoCode).toBeUndefined();
+
+    expect(outbound).toHaveBeenCalledTimes(1);
+    const url = new URL(String(outbound.mock.calls[0][0]));
+    expect(url.host, "真通道应打阿里默认域名").toBe("dypnsapi.aliyuncs.com");
   });
 });
