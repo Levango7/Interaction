@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-08 · **三模式行为契约收口：S5/S6 验收断言补齐（零渲染代码改动）**
+
+_三模式契约（`docs/three-mode-spec.md`，11-07 建立）的公理 M0「模式只改布局，不改数据 / 能力 / 权限」此前只有 e2e 守**几何**，没有守这条公理的断言；§7 验收清单把 S5（离开 Code 必清能力轮询定时器）/ S6（切换模式零业务数据写入）标为「待补断言」（台账 DL-O17），并写明须等占用释放后同批提交。本批在板面三行 RELEASED 后零碰撞补齐：**只补断言、不改渲染代码**（`src/render-widgets.js` 零 diff）。_
+
+- **S5 定时器生灭（test 14/15，`tests/ui-mode.test.js:230-280`）**：模块级 `_agentDockTimer` 不导出到 window ⇒ 断言落在可观测面——包 `win.setInterval/clearInterval` 记账。14：`work→code` 恰起一个 2500ms 轮询、`→design` 后零存活（含 liveCount 归零）；15：切走再切回 code **必须新起**定时器（`pollCreated` 递增 2、3）且活跃数恒为 1 —— 若离开时只 `clearInterval` 不置空 `_agentDockTimer`，`if(!_agentDockTimer)` 守卫会吞掉新定时器，能力停靠将永远不刷新。
+- **S6 切换零业务写入（test 16/17，`tests/ui-mode.test.js:282-350`）**：预置任务 / 笔记 / 聊天 / 会话 / 子代理 / 图 / 配置业务键后拍快照；三模式各切一轮，键值差集必须**恰好** = `{wb_agent_uimode}`，全循环回 work 后快照深等复原；另断 `uimode` 确实被写过（防「啥都没写」假绿）。test 17 是 design-only 往返的同款钉扎。
+- **测前预热是正确测法的关键**（否则必假红）：① `getSessions()` 是**懒加载 + 首启迁移**（无 `ai_sessions` 时从旧 `chats[sc]` 迁默认会话落盘，`src/data-links.js:545-562`）—— 那是首启一次性初始化、不是切换写入，须预置会话仓到稳态；② design 首进时 `renderDrawWorkspace()` 的 `if (!dcActive()) dcCreate()`（`src/draw-canvas.js:828`）同样会建图落盘 ⇒ 预置合法形状活动图（`{id,title,updatedAt,nodes,edges}`，即 `dcCreate` 的产出形状）；③ `uimode` 默认值 `"work"` 是惰性读取未落盘，不预置则切一个来回的首次持久化会被误算成写入。
+- **窄变异自证（断言确实钉住行为，不是只盖绿）**：M5 —— design 分支 `clearInterval` 但不置空 `_agentDockTimer` ⇒ test 15 红（`expected 1 to be 2`）；M6 —— `_setUIMode` 里夹带一笔 `save(PREFIX+"notes",[])` 业务写入 ⇒ test 16 红（`expected [uimode, notes] to deeply equal [uimode]`）。两处变异均在回滚后 17/17 复绿。
+- **文档随批收口**：`docs/three-mode-spec.md §7` 的 S5/S6 行从「待补断言」改为指向新用例（S1 例数 13→17）；§7 注补充预热教训与变异取证，S7/S8 维持 Q-D 裁决（季度复核清单、不升门禁）。台账 DL-O17 关单（S7/S8 仍 OPEN 属裁决不变）。
+- **验证**：`tests/ui-mode.test.js` **17/17 passed**（含新 14–17；src 归零后复跑同绿）/ server `verify/` **11 脚本全 rc=0（316 条断言：contract 41 / config 22 / hardening 9 / idor 19 / incremental 54 / oauth 33 / password-reset 42 / router-isolation 17 / security 25 / sms 37 / tools-fetch 17）** / `check:source-state` ✓ / lint exit 0（11 条既有 warning、0 error，与本批无关）/ `src-split --check` ✓ 40/40。如实留账：本机全量 vitest（`with-injected vitest run`）两次卡在本机已知的 **worker RPC 饿死**家族（32 核起 ~31 worker、主进程 CPU 冻结 50+ 分钟无产出），已停掉并恢复 HTML 源码态；本批为纯 tests+docs（`src/` 零 diff）、CI 是权威终态（R9），故不以本机全量跑结论。板面 R10 声明即本批 ACTIVE 行，随本笔翻 RELEASED（R13）；未触碰 Qoder 在途的 13 个 `docs/*`（DL-O21 随本笔解锁）。
+
 ### 2026-11-07 · **UI 向主流 agent 靠拢（甲案第一批）：流式+工具并行、代码卡、会话常驻列表、三模式产物域**
 
 _用户「项目现状要往主流 agent 的 UI 界面上靠拢，分为 code / work / design 三个模式」，并在形态选项里拍板「甲 · 对话为主+产物卡」。本批不引编辑器/终端/新依赖，先把与主流应用差距最大的四条补齐。_

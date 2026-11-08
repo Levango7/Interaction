@@ -13,6 +13,9 @@
  *  ⑤ agentDock 四段渲染（进程/技能/MCP/工作流）+ 各段显隐持久化（wb_agent_agent_dock）；
  *  ⑥~⑪ P2-3/P2-8：setUIMode 显式三态 + 菜单三态项/当前勾选/窄屏（<1024）禁用「代码」；
  *  ⑫~⑬ P2-5：进 code 时右栏 Agent tab 让位 agentDock（正停在 agent 就切回今日）。
+ *  ⑭~⑮ 三模式契约 S5（three-mode-spec.md §7 / 台账 DL-O17）：离开 code 必清能力轮询
+ *      定时器（含「切走再切回必须新起、不叠加」＝ _agentDockTimer 置空的可观测反证）。
+ *  ⑯~⑰ 三模式契约 S6：切换模式零业务数据写入，localStorage 差集恰好 = {wb_agent_uimode}。
  * CSS 层的几何断言（.main 可见、聊天贴底、tab 藏掉）在 e2e，jsdom 不量布局。
  * 运行：npm test -- ui-mode
  */
@@ -213,3 +216,138 @@ describe("Code 模式：右栏 Agent tab 让位 agentDock（P2-5）", () => {
     expect(win._railTabGet()).toBe("files");
   });
 });
+
+/* ---------- 三模式行为契约 S5/S6（three-mode-spec.md §7 验收清单缺口，DL-O17）
+ * S5：离开 code 必须 clearInterval 并把 _agentDockTimer / _agentDockSig 置空；
+ *     判据取**可观测面**——render-widgets.js 的 setInterval/clearInterval 走 jsdom 全局，
+ *     包一层记账即可数「能力轮询定时器的生灭」；_agentDockSig 是模块内缓存，
+ *     不暴露到 window —— 但「离开后置空」可由「再进 code 必须新起一个定时器」
+ *     反证：若 _agentDockTimer 没置空，`if(!_agentDockTimer)` 守卫会吞掉新定时器，
+ *     定时器计数不增长 ⇒ 断言红（这正是该守卫被设计成的形状，见 :3923）。
+ * S6：切换模式零业务数据写入——契约 §6「切换模式只允许写 wb_agent_uimode 一个键」。
+ * 三模式各切一轮，比对 localStorage 键值快照：中段差集必须恰好 = {uimode}，
+ * 全循环回到原模式后快照必须完全复原（含 uimode 自己）。 */
+describe("三模式契约 S5：离开 code 必清能力轮询定时器", () => {
+  /* 装一个记账器：模式切换发生在 boot 之后、我们的调用之前，
+     故包 win.setInterval 只会看到 applyUIMode 路径上新起的定时器。 */
+  function spyTimers(win) {
+    const live = new Set();
+    const log = [];
+    const origSI = win.setInterval.bind(win);
+    const origCI = win.clearInterval.bind(win);
+    win.setInterval = function (fn, ms) { const id = origSI(fn, ms); live.add(id); log.push({ id, ms, t: "set" }); return id; };
+    win.clearInterval = function (id) { live.delete(id); log.push({ id, t: "clear" }); return origCI(id); };
+    return {
+      liveCount: () => live.size,
+      pollCreated: () => log.filter((e) => e.t === "set" && e.ms === 2500).length,
+      pollLive: () => log.filter((e) => e.t === "set" && e.ms === 2500).map((e) => e.id).filter((id) => live.has(id)).length,
+    };
+  }
+
+  it("14: work→code 起一个 2500ms 轮询；→design 清掉；零泄漏", () => {
+    const win = boot();
+    const sp = spyTimers(win);
+    expect(win.setUIMode("code")).toBe(true);
+    expect(sp.pollCreated()).toBe(1);
+    expect(sp.pollLive()).toBe(1);
+    win.setUIMode("design");
+    expect(sp.pollLive()).toBe(0);
+    expect(sp.liveCount()).toBe(0);
+    win.setUIMode("work");
+    expect(sp.pollLive()).toBe(0);
+  });
+
+  it("15: 切走再切回 code 必须新起定时器（_agentDockTimer 置空的反证），且不叠加", () => {
+    const win = boot();
+    const sp = spyTimers(win);
+    win.setUIMode("code");
+    expect(sp.pollCreated()).toBe(1);
+    win.setUIMode("design");
+    expect(sp.pollLive()).toBe(0);
+    /* 再进 code：若离开时 _agentDockTimer 没置空，`if(!_agentDockTimer)` 不会新起
+       定时器 ⇒ pollCreated 停在 1 ⇒ 断言红（能力停靠将永远不刷新 = 真缺陷） */
+    win.setUIMode("code");
+    expect(sp.pollCreated()).toBe(2);
+    expect(sp.pollLive()).toBe(1);
+    /* 第三次进出仍只一个活的（不叠加） */
+    win.setUIMode("work");
+    win.setUIMode("code");
+    expect(sp.pollCreated()).toBe(3);
+    expect(sp.pollLive()).toBe(1);
+    win.setUIMode("work");
+    expect(sp.pollLive()).toBe(0);
+  });
+});
+
+describe("三模式契约 S6：切换模式零业务数据写入（仅 uimode）", () => {
+  it("16: 三模式各切一轮，localStorage 键值差集 = {wb_agent_uimode}；全循环完全复原", () => {
+    /* 预置业务键（任务/笔记/聊天/会话/子代理/图/配置），覆盖契约 §6 的键空间清单；
+       rail_tab 预置 today，避免「进 code 时 agent tab 让位」这条视图态写入混入差集。
+       ⚠️ ai_sessions / ai_active_session 必须预置：getSessions() 是**懒加载 + 首启迁移**
+       （无键时从旧 chats[sc] 迁出默认会话并落盘，`src/data-links.js:545-562`）——
+       那是**首次渲染时的一次性业务初始化**，不是「切换模式」产生的写入；
+       断言的是「稳态下切模式零写入」这一契约，故先把会话仓预热到稳态。 */
+    const seed = {
+      /* uimode 预置：默认值 "work" 是惰性读取、未落盘；不预置的话切一个来回
+         会把 uimode 首次持久化，那就是契约允许的唯一写入而非违约。预置后基线才真稳态。 */
+      [PREFIX + "uimode"]: JSON.stringify("work"),
+      [PREFIX + "rail_tab"]: JSON.stringify("today"),
+      [PREFIX + "tasks"]: JSON.stringify([{ id: "t1", title: "任务一", done: false }]),
+      [PREFIX + "notes"]: JSON.stringify([{ id: "n1", text: "笔记一" }]),
+      [PREFIX + "chat_office"]: JSON.stringify([{ role: "user", content: "工作缓冲", createdAt: "2026-10-26T10:00:00.000Z" }]),
+      [PREFIX + "ai_sessions"]: JSON.stringify([{ id: "s_pre", sc: "office", title: "预热会话", createdAt: "2026-10-26T09:00:00.000Z", updatedAt: "2026-10-26T09:00:00.000Z", msgs: [] }]),
+      [PREFIX + "ai_active_session"]: JSON.stringify("s_pre"),
+      [PREFIX + "subagents"]: JSON.stringify([{ id: "a1", status: "idle", steps: [] }]),
+      /* diagrams 同理：design 首进时 renderDrawWorkspace() 的 `if (!dcActive()) dcCreate()`
+         会在**无活动图**时建一张「未命名图」落盘（`src/draw-canvas.js:828`）——首启初始化，
+         不是切换写入。预置活动图即进入稳态。 */
+      [PREFIX + "diagrams"]: JSON.stringify([{ id: "d1", title: "图一", updatedAt: 1730000000000, nodes: [], edges: [] }]),
+      [PREFIX + "diagram_active"]: JSON.stringify("d1"),
+      [PREFIX + "cfg"]: JSON.stringify({ theme: "light" }),
+    };
+    const win = boot(seed);
+    const snap = () =>
+      Object.fromEntries(Object.keys(win.localStorage).map((k) => [k, win.localStorage.getItem(k)]));
+    /* 稳态确认：提前触发一次 getSessions 的懒加载（渲染路径会触发，
+       这里显式调一次把「迁移落盘」挡在时间轴之外） */
+    win.getSessions();
+    const steady = snap();
+    /* 中段：切到 code 时，允许且仅允许 uimode 变化 */
+    expect(win.setUIMode("code")).toBe(true);
+    const mid = snap();
+    const changedMid = Object.keys(mid).filter((k) => mid[k] !== steady[k]);
+    expect(changedMid).toEqual([PREFIX + "uimode"]);
+    /* 切到 design：仍只有 uimode（相对稳态也只有 uimode 变回） */
+    expect(win.setUIMode("design")).toBe(true);
+    const mid2 = snap();
+    const changedMid2 = Object.keys(mid2).filter((k) => mid2[k] !== steady[k]);
+    expect(changedMid2).toEqual([PREFIX + "uimode"]);
+    /* 全循环回 work：快照完全复原（含 uimode 自己——写了一个来回） */
+    expect(win.setUIMode("work")).toBe(true);
+    const final = snap();
+    expect(final).toEqual(steady);
+    /* 弱化断言（差集为空）不够：还应证明 uimode 确实被写过（否则「啥都没写」也过） */
+    expect(mid[PREFIX + "uimode"]).toBe(JSON.stringify("code"));
+  });
+
+  it("17: 设计模式出入同样零业务写入（design-only 往返）", () => {
+    /* 与 16 同款预热：ai_sessions 与 diagram_active 各挡掉一条首启初始化写入 */
+    const seed = {
+      [PREFIX + "uimode"]: JSON.stringify("work"),
+      [PREFIX + "ai_sessions"]: JSON.stringify([{ id: "s_pre", sc: "office", title: "预热会话", createdAt: "2026-10-26T09:00:00.000Z", updatedAt: "2026-10-26T09:00:00.000Z", msgs: [] }]),
+      [PREFIX + "ai_active_session"]: JSON.stringify("s_pre"),
+      [PREFIX + "diagrams"]: JSON.stringify([{ id: "d1", title: "图一", updatedAt: 1730000000000, nodes: [], edges: [] }]),
+      [PREFIX + "diagram_active"]: JSON.stringify("d1"),
+    };
+    const win = boot(seed);
+    win.getSessions();
+    const before = Object.fromEntries(Object.keys(win.localStorage).map((k) => [k, win.localStorage.getItem(k)]));
+    expect(win.setUIMode("design")).toBe(true);
+    expect(win.setUIMode("work")).toBe(true);
+    const after = Object.fromEntries(Object.keys(win.localStorage).map((k) => [k, win.localStorage.getItem(k)]));
+    expect(after).toEqual(before);
+    /* 图数据未被画布渲染路径改写（只读渲染） */
+    expect(after[PREFIX + "diagrams"]).toBe(JSON.stringify([{ id: "d1", title: "图一", updatedAt: 1730000000000, nodes: [], edges: [] }]));
+  });
+});
+
