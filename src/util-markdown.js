@@ -55,6 +55,118 @@ function _mdSplitRow(line){
   cells.push(cur.trim());
   return cells;
 }
+/* ---------- 代码块语法高亮（2026-11-08，零依赖手写 tokenizer） ----------
+   输入是已过 esc 的文本：先还原原始串，分词后逐 token 重新 esc 输出——span 只带
+   固定 class、无属性，不引入新 XSS 面。未知语言原样返回（不猜）。规则按「最早匹配
+   优先、同位按规则序」扫描；注释/字符串排在关键字前，避免关键字命中串内文字。
+   mermaid 块不走这里（renderMermaidBlocks 依赖原始 pre>code 并整块替换）。 */
+function _hlUnescape(s){
+  return String(s).replace(/&(amp|lt|gt|quot|#39);/g, function(_, n){
+    if(n === "amp") return "&";
+    if(n === "lt") return "<";
+    if(n === "gt") return ">";
+    if(n === "quot") return '"';
+    return "'";
+  });
+}
+function _hlRulesFor(lang){
+  let k = String(lang || "").toLowerCase().trim();
+  const alias = { javascript:"js", jsx:"js", tsx:"js", mjs:"js", cjs:"js", typescript:"ts", py:"python", sh:"bash", shell:"bash", zsh:"bash", rs:"rust", yml:"yaml", "c++":"cpp", h:"c", markup:"html", svg:"html" };
+  k = alias[k] || k;
+  if(k === "js" || k === "ts"){
+    return [
+      { cls:"tok-c", re:/\/\/[^\n]*|\/\*[\s\S]*?\*\//g },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`/g },
+      { cls:"tok-k", re:/\b(?:const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|extends|super|this|typeof|instanceof|import|export|from|default|try|catch|finally|throw|async|await|yield|static|get|set|delete|in|of|void|null|undefined|true|false|interface|type|enum|implements|readonly|as|namespace|declare|abstract|public|private|protected)\b/g },
+      { cls:"tok-n", re:/\b(?:0[xXbBoO][0-9a-fA-F_]+|\d[\d_]*(?:\.\d+)?(?:[eE][+-]?\d+)?n?)\b/g }
+    ];
+  }
+  if(k === "json"){
+    return [
+      { cls:"tok-s", re:/"(?:\\.|[^"\\])*"/g },
+      { cls:"tok-k", re:/\b(?:true|false|null)\b/g },
+      { cls:"tok-n", re:/-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g }
+    ];
+  }
+  if(k === "python"){
+    return [
+      { cls:"tok-c", re:/#[^\n]*/g },
+      { cls:"tok-s", re:/"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/g },
+      { cls:"tok-k", re:/\b(?:def|class|return|if|elif|else|for|while|import|from|as|try|except|finally|raise|with|lambda|pass|break|continue|and|or|not|in|is|None|True|False|global|nonlocal|yield|async|await|del|assert)\b|@[\w.]+/g },
+      { cls:"tok-n", re:/\b\d+(?:\.\d+)?\b/g }
+    ];
+  }
+  if(k === "css" || k === "scss" || k === "less"){
+    return [
+      { cls:"tok-c", re:/\/\*[\s\S]*?\*\//g },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/g },
+      { cls:"tok-k", re:/[\w-]+(?=\s*:)|@[\w-]+/g },
+      { cls:"tok-n", re:/#[0-9a-fA-F]{3,8}\b|-?\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|vmin|vmax|s|ms|deg|fr|ch)?\b/g }
+    ];
+  }
+  if(k === "html" || k === "xml"){
+    return [
+      { cls:"tok-c", re:/<!--[\s\S]*?-->/g },
+      { cls:"tok-s", re:/"[^"]*"|'[^']*'/g },
+      { cls:"tok-k", re:/<!DOCTYPE[^>]*>|<\/?[a-zA-Z][\w:-]*|\/?>/gi }
+    ];
+  }
+  if(k === "bash"){
+    return [
+      { cls:"tok-c", re:/(?:^|\s)#[^\n]*/gm },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\])*"|'[^']*'/g },
+      { cls:"tok-k", re:/\$\{[^}]*\}|\$[\w?@#]+|\b(?:if|then|else|elif|fi|for|while|until|do|done|case|esac|function|in|echo|exit|return|local|export|source|set|cd|read|shift|eval|exec|trap)\b/g },
+      { cls:"tok-n", re:/\b\d+\b/g }
+    ];
+  }
+  if(k === "sql"){
+    return [
+      { cls:"tok-c", re:/--[^\n]*|\/\*[\s\S]*?\*\//g },
+      { cls:"tok-s", re:/'(?:''|[^'])*'/g },
+      { cls:"tok-k", re:/\b(?:select|from|where|insert|into|values|update|set|delete|create|table|alter|drop|index|join|left|right|inner|outer|on|as|and|or|not|null|order|by|group|having|limit|offset|distinct|union|all|count|sum|avg|min|max|case|when|then|else|end|primary|key|foreign|references|default|constraint|if|exists|begin|commit|rollback)\b/gi },
+      { cls:"tok-n", re:/\b\d+(?:\.\d+)?\b/g }
+    ];
+  }
+  if(k === "yaml"){
+    return [
+      { cls:"tok-c", re:/#[^\n]*/g },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\\n])*"|'[^']*'/g },
+      { cls:"tok-k", re:/[\w.-]+(?=\s*:(?:\s|$))|\b(?:true|false|null|yes|no)\b/gm },
+      { cls:"tok-n", re:/\b\d+(?:\.\d+)?\b/g }
+    ];
+  }
+  if(k === "go" || k === "rust" || k === "java" || k === "c" || k === "cpp"){
+    return [
+      { cls:"tok-c", re:/\/\/[^\n]*|\/\*[\s\S]*?\*\//g },
+      { cls:"tok-s", re:/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`/g },
+      { cls:"tok-k", re:/\b(?:func|fn|let|mut|package|import|export|struct|interface|enum|impl|trait|pub|use|mod|match|if|else|for|while|loop|return|break|continue|switch|case|default|class|public|private|protected|static|final|void|int|long|float|double|char|bool|boolean|string|new|delete|try|catch|throw|throws|async|await|go|defer|chan|map|range|type|const|var|val|this|self|super|nil|null|true|false|include|define|ifdef|endif|pragma|sizeof|typedef|unsigned|signed)\b/g },
+      { cls:"tok-n", re:/\b\d+(?:\.\d+)?\b/g }
+    ];
+  }
+  return null;
+}
+function highlightCode(escaped, lang){
+  const rules = _hlRulesFor(lang);
+  if(!rules || !escaped) return escaped;
+  const raw = _hlUnescape(escaped);
+  let out = "", pos = 0;
+  while(pos < raw.length){
+    let best = null, bestCls = "";
+    for(const r of rules){
+      r.re.lastIndex = pos;
+      const m = r.re.exec(raw);
+      if(m && m[0] && (best === null || m.index < best.index)){
+        best = m; bestCls = r.cls;
+        if(m.index === pos) break;
+      }
+    }
+    if(!best){ out += esc(raw.slice(pos)); break; }
+    if(best.index > pos) out += esc(raw.slice(pos, best.index));
+    out += '<span class="' + bestCls + '">' + esc(best[0]) + '</span>';
+    pos = best.index + best[0].length;
+  }
+  return out;
+}
 /**
  * 简单 Markdown 解析器（手写，无外部依赖）。
  * 支持：标题(#/##/###)、粗体(**)、斜体(*)、行内代码(`)、代码块(```)、
@@ -102,7 +214,7 @@ function mdToHtml(str){
       }
       blocks.push({type:"block", html:'<div class="md-code"><div class="md-code-head"><span class="md-code-lang">'+(lang||"text")+'</span>'
         + '<button type="button" class="md-code-copy" data-code-copy="1">'+esc(t("md.copy","复制"))+'</button></div>'
-        + '<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+buf.join("\n")+'</code></pre></div>'});
+        + '<pre><code class="block'+(lang?" lang-"+lang:"")+'">'+highlightCode(buf.join("\n"), lang)+'</code></pre></div>'});
       continue;
     }
     /* 表格：当前行含 |，下一行是分隔行（--- / :---: / ---:）。必须在段落之前判。 */

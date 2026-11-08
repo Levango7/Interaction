@@ -2007,6 +2007,9 @@ if (typeof window !== "undefined" && __TEST_GATE__ && window.__test) {
     createStore, taskStore, cfgStore, linkStore,
     // T3.5 Markdown 解析器（供测试驱动与断言）
     mdToHtml, escapeHtml: esc, safeUrl, inlineMd, sanitizeHtml,
+    /* 2026-11-08 图片附件：内联 dataURL 白名单、content 数组构造、待发条与预算口径 */
+    _imgDataUrlOk, _chatUserContent, _withOutboundText, _msgTokens, _IMG_TOKEN_COST,
+    pendingImages, _addPendingImage, _clearPendingImages, _attachImageFile, _renderAttachStrip,
     /* v3.7.59：图表画布 SVG 生成器（render-overview 的 _dgmSvgHtml）。与 _buildCloudSnapshot
        同理——安全相关的内部函数需要单测入口，否则「id/color 未转义」这类注入只能靠人眼守。
        回归用例见 tests/sanitize-xss-regression.test.js。 */

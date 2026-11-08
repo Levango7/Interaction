@@ -197,7 +197,12 @@ async function confirmPendingDanger(){
 
 function _msgTokens(m){
   if(typeof m.content === "string") return _estTokens(m.content);
-  if(Array.isArray(m.content)) return m.content.reduce((n,p)=> n + _estTokens(p && p.text), 0);
+  if(Array.isArray(m.content)) return m.content.reduce(function(n,p){
+    /* 图片按固定成本计入预算：content 数组里图片不带文本，只数 p.text 会让
+       「带 3 张图的对话」在裁剪时被当成空消息，图片永远挤不掉、文本先被裁光。 */
+    if(p && p.type === "image_url") return n + _IMG_TOKEN_COST;
+    return n + _estTokens(p && p.text);
+  }, 0);
   return _estTokens(m.title || "");
 }
 /** 裁剪历史到 token 预算内（默认 ~6k）。预算约束下至少保留 2 条（保住最近对话）；
@@ -392,7 +397,7 @@ async function maybeSummarizeHistory(hist, sc){
   }
   /* 生成新摘要（覆盖前 want 条）*/
   const folded = hist.slice(0, want).map(function(m){
-    return (m.role === "user" ? "用户" : (m.role === "assistant" ? "助手" : m.role)) + "：" + String(m.content || "").slice(0, 200);
+    return (m.role === "user" ? "用户" : (m.role === "assistant" ? "助手" : m.role)) + "：" + String(_chatContentToText(m.content) || "").slice(0, 200);
   }).join("\n");
   let text = "";
   try{
@@ -672,10 +677,140 @@ function sendChatText(text){
   else form.dispatchEvent(new Event("submit", {cancelable:true}));
   return true;
 }
+/* ---------- 图片附件（2026-11-08：恢复多模态，base64 内联） ----------
+ * 三条硬约束：
+ *   ① **只存内存**：待发送（草稿态）的图片不落任何存储键 —— 图片没有"未发送的历史"
+ *      身份，写盘只会让备份/同步多出一份大体积 base64；落盘的唯一时机是随用户消息进 hist。
+ *   ② **先缩后发**：最长边压到 1024，按体积分档降质（png 保真、其余 jpeg），
+ *      dataURL 超 400K 字符再降一级 —— 3 张图也不会把 localStorage 配额挤爆。
+ *   ③ **拦截类指令不吃图**：记忆/建任务/待确认等分支照旧把 user 消息当纯文本，
+ *      待发图片原样留着，用户改完指令仍可发送。
+ * 缩略图**不走 innerHTML**（sanitizeHtml 会剥 data: URL），由 renderChat 于注入后补 DOM。
+ */
+const _IMG_MAX_COUNT = 3;
+const _IMG_MAX_BYTES = 8 * 1024 * 1024;
+const _IMG_MAX_DATAURL = 400 * 1024;
+const _IMG_MAX_SIDE = 1024;
+let _pendingImgs = [];
+
+/** 发送形态：OpenAI 兼容的 content 数组（text 在前，图片随后）。无图时退回纯字符串。 */
+function _chatUserContent(text, imgs){
+  const list = (imgs || []).filter(_imgDataUrlOk);
+  if(!list.length) return text;
+  const parts = [];
+  if(text) parts.push({ type:"text", text:text });
+  list.forEach(function(d){ parts.push({ type:"image_url", image_url:{ url:d } }); });
+  return parts;
+}
+/** 把 content 里的文本部分换成 outbound（技能展开用），图片部分原样保留。 */
+function _withOutboundText(content, outbound){
+  if(!Array.isArray(content)) return outbound;
+  const kept = content.filter(function(p){ return p && p.type === "image_url"; });
+  return [{ type:"text", text:outbound }].concat(kept);
+}
+function pendingImages(){ return _pendingImgs.slice(); }
+function _clearPendingImages(){ _pendingImgs = []; _renderAttachStrip(); }
+function _addPendingImage(dataUrl){
+  if(!_imgDataUrlOk(dataUrl)) return false;
+  if(_pendingImgs.length >= _IMG_MAX_COUNT) return false;
+  _pendingImgs.push(dataUrl);
+  _renderAttachStrip();
+  return true;
+}
+/** 待发图片条：DOM 构建（缩略图 + 移除钮），不拼 innerHTML */
+function _renderAttachStrip(){
+  const strip = $("#chatAttachStrip");
+  if(!strip) return;
+  strip.textContent = "";
+  if(!_pendingImgs.length){ strip.hidden = true; return; }
+  strip.hidden = false;
+  _pendingImgs.forEach(function(d, i){
+    const chip = document.createElement("div");
+    chip.className = "attach-chip";
+    const im = document.createElement("img");
+    im.src = d;
+    im.alt = t("ai.imageAlt","图片");
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "attach-chip-x";
+    x.setAttribute("aria-label", t("ai.removeImage","移除图片"));
+    x.title = t("ai.removeImage","移除图片");
+    x.textContent = "×";
+    x.onclick = function(){ _pendingImgs.splice(i, 1); _renderAttachStrip(); };
+    chip.appendChild(im);
+    chip.appendChild(x);
+    strip.appendChild(chip);
+  });
+}
+function _readAsDataUrl(file){
+  return new Promise(function(resolve, reject){
+    const r = new FileReader();
+    r.onload = function(){ resolve(String(r.result || "")); };
+    r.onerror = function(){ reject(new Error("read")); };
+    r.readAsDataURL(file);
+  });
+}
+function _decodeImage(src){
+  return new Promise(function(resolve, reject){
+    const im = new Image();
+    im.onload = function(){ resolve(im); };
+    im.onerror = function(){ reject(new Error("decode")); };
+    im.src = src;
+  });
+}
+/** 压到最长边 _IMG_MAX_SIDE 并逐档降质，返回仍超限则给空串 */
+function _shrinkImage(src, im){
+  const w = im.naturalWidth || im.width;
+  const h = im.naturalHeight || im.height;
+  if(!w || !h) return "";
+  const k = Math.min(1, _IMG_MAX_SIDE / Math.max(w, h));
+  const cv = document.createElement("canvas");
+  cv.width = Math.max(1, Math.round(w * k));
+  cv.height = Math.max(1, Math.round(h * k));
+  const ctx = cv.getContext && cv.getContext("2d");
+  if(!ctx) return "";
+  ctx.drawImage(im, 0, 0, cv.width, cv.height);
+  const png = /^data:image\/png/i.test(src);
+  const tries = png
+    ? [{ t:"image/png" }, { t:"image/jpeg", q:0.8 }, { t:"image/jpeg", q:0.6 }]
+    : [{ t:"image/jpeg", q:0.85 }, { t:"image/jpeg", q:0.65 }, { t:"image/jpeg", q:0.5 }];
+  let out = "";
+  for(let i = 0; i < tries.length; i++){
+    out = cv.toDataURL(tries[i].t, tries[i].q);
+    if(out.length <= _IMG_MAX_DATAURL) break;
+  }
+  return out.length <= _IMG_MAX_DATAURL ? out : "";
+}
+async function _attachImageFile(f){
+  if(!f) return;
+  if(_pendingImgs.length >= _IMG_MAX_COUNT){
+    try{ toast(t("msg.imageTooMany","一次最多 3 张图片"), "warn"); }catch(_e){ /* toast 不可用不影响已选图片 */ }
+    return;
+  }
+  if(!/^image\/(?:png|jpe?g|gif|webp)$/i.test(String(f.type || ""))){
+    try{ toast(t("msg.imageBadType","仅支持 PNG / JPEG / GIF / WebP 图片"), "warn"); }catch(_e){ /* 同上 */ }
+    return;
+  }
+  if(f.size > _IMG_MAX_BYTES){
+    try{ toast(t("msg.imageTooLarge","图片过大（>8MB），请先压缩"), "warn"); }catch(_e){ /* 同上 */ }
+    return;
+  }
+  let raw = "";
+  try{
+    raw = await _readAsDataUrl(f);
+    const im = await _decodeImage(raw);
+    const shrunk = _shrinkImage(raw, im);
+    if(!shrunk || !_addPendingImage(shrunk)) throw new Error("图片体积超过内联上限");
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("warn", "image attach failed: " + ((e && e.message) || e), { where:"imageAttach" }); }catch(_e2){ /* 诊断不可用不影响提示 */ }
+    try{ toast(t("msg.imageReadFailed","图片读取失败（可能是格式不受支持或体积过大）"), "error"); }catch(_e){ /* 同上 */ }
+  }
+}
+
 async function onChatSubmit(e){
  try{
   e.preventDefault();
-  const f=e.target; const text=f.msg.value.trim(); if(!text) return;
+  const f=e.target; const text=f.msg.value.trim(); if(!text && !_pendingImgs.length) return;
   f.msg.value="";
   const sc = active; /* v3.7.71 竞态修复：入口定格场景，长 await 期间切场景不串写 */
   const hist=getChat(sc);
@@ -683,6 +818,7 @@ async function onChatSubmit(e){
   if(pendingConfirm){
     if(pendingConfirm.sc!==active){ pendingConfirm=null; closeConfirmModal(); }
     else {
+      if(!text) return; /* 只带了图片：不把空串当成「取消确认」 */
       const yes=/^(确认|确定|执行|yes|confirm|y|ok)$/i.test(text.trim());
       if(yes){ await confirmPendingDanger(); } else { cancelPendingDanger(text); }
       return;
@@ -693,6 +829,7 @@ async function onChatSubmit(e){
   if(pendingAgentPlan){
     if(pendingAgentPlan.sc !== active){ pendingAgentPlan = null; }
     else {
+      if(!text) return; /* 同上：空文本 + 图片不得被当成「取消」 */
       const yes = /^(确认执行|确认|确定|执行|yes|confirm|run|y)$/i.test(text.trim());
       if(yes){ await confirmAgentPlan(); } else { cancelAgentPlan(text); }
       return;
@@ -809,8 +946,9 @@ async function onChatSubmit(e){
     await handleAiCodeGen(codeGenHit, hist);
     return;
   }
-  // 正常路径（v1.14 多模态已移除，user 消息始终为纯文本）
-  hist.push({role:"user",content:text});
+  // 正常路径：图片拼成 content 数组（无图仍是纯文本，旧行为不变）
+  hist.push({role:"user",content:_chatUserContent(text, _pendingImgs)});
+  _clearPendingImages();
   renderChat(); scrollChat();
   // v3.4.7 批次六：RAG 上下文注入（激活闲置索引资产）——检索任务/记录/笔记/对话历史，
   // 相关片段拼进 system prompt。开关：cfg.rag（设置页 AI→记忆），默认关（防 token 意外膨胀）；
@@ -833,7 +971,11 @@ async function onChatSubmit(e){
      hist 里仍存用户原话 —— 界面与历史记录不被一大段指令污染，模型也确实收到"按这个流程做"。 */
   if(outbound !== text){
     for(let mi=messages.length-1; mi>=0; mi--){
-      if(messages[mi] && messages[mi].role === "user"){ messages[mi].content = outbound; break; }
+      if(messages[mi] && messages[mi].role === "user"){
+        /* 带图时 content 是数组：只换文本部分，图片部分必须留着（否则「技能：X」一触发图就丢） */
+        messages[mi].content = _withOutboundText(messages[mi].content, outbound);
+        break;
+      }
     }
   }
   await runChatLoop(messages, hist, sc);
@@ -889,7 +1031,7 @@ async function runChatLoop(messages, hist, sc){
     const skillTrace = [];
     turnUserText = "";
     for(let mi=messages.length-1; mi>=0; mi--){
-      if(messages[mi] && messages[mi].role === "user"){ turnUserText = String(messages[mi].content || ""); break; }
+      if(messages[mi] && messages[mi].role === "user"){ turnUserText = String(_chatContentToText(messages[mi].content) || ""); break; }
     }
     while(guard++<maxLoops){
       // v3.7.52：每轮重置超时——超时语义应是「单次请求超时」，而不是「整段循环总预算」
@@ -1229,22 +1371,21 @@ function bindChatPanel(){
   }
   // 取消按钮：复用 abortChat
   const cc=$("#chatCancel"); if(cc) cc.onclick=abortChat;
-  // 附件按钮：文本文件追加到输入框（v1.14 多模态已移除，不再支持图片附件）
+  // 附件按钮：文本文件追加进输入框；图片走待发条（2026-11-08 恢复多模态）
   const attachBtn=$("#chatAttachBtn");
   if(attachBtn){
     const fileInput=document.createElement("input");
     fileInput.type="file";
-    fileInput.accept=".txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log,text/*";
+    fileInput.accept=".txt,.md,.json,.js,.ts,.css,.html,.xml,.yml,.yaml,.csv,.log,text/*,image/png,image/jpeg,image/gif,image/webp";
     fileInput.style.display="none";
     document.body.appendChild(fileInput);
     attachBtn.onclick=()=> fileInput.click();
-    attachBtn.title=t("msg.addTextAttachment","添加文本附件（内容追加进输入框）");
+    attachBtn.title=t("msg.addAttachment","添加附件（文本或图片）");
     fileInput.onchange=()=>{
       const f=fileInput.files && fileInput.files[0];
       if(!f) return;
-      // 图片附件已随 v1.14 多模态模块移除，此处给出明确提示（防"点了没反应"）
       if(f.type && f.type.indexOf("image/") === 0){
-        try{ toast(t("msg.imageAttachmentDisabled","图片附件已停用（v1.14 移除多模态），仅支持文本文件"),"warn"); }catch(e){ /* noop */ }
+        _attachImageFile(f);
         fileInput.value="";
         return;
       }

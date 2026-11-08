@@ -521,14 +521,34 @@ function focusTaskTitleInput(){
 }
 
 /* ---------- 历史消息 content 兼容（v1.14 前多模态可能遗留数组格式，渲染时兜底转文本） ---------- */
+/** 只取文本部分（不含「[图×N]」计数标记）—— 会话自动命名用它，别把标记写进标题 */
+function _chatTextOnly(c){
+  if(Array.isArray(c)){
+    return c.filter(function(p){ return p && p.type === "text"; }).map(function(p){ return p.text; }).join("\n");
+  }
+  return c;
+}
 function _chatContentToText(c){
   if(Array.isArray(c)){
-    const txt = c.filter(function(p){ return p && p.type === "text"; }).map(function(p){ return p.text; }).join("\n");
+    const txt = _chatTextOnly(c);
     const imgs = c.filter(function(p){ return p && p.type === "image_url"; }).length;
     return txt + (imgs ? t("ai.imageCount"," [图×") + imgs + "]" : "");
   }
   return c;
 }
+
+/* ---------- 图片附件（2026-11-08）：内联 dataURL 白名单 ----------
+ * 只放行 base64 位图（png/jpeg/gif/webp）。聊天缩略图**不走 innerHTML**：
+ * sanitizeHtml 会剥掉 data: 开头的 URL 属性（安全收敛，历史遗留），所以由 renderChat
+ * 在 innerHTML 之后用 DOM 注入——注入前过这道校验，把「历史消息里被写入奇怪串」的
+ * 面收窄到「已知位图的 base64」。 */
+function _imgDataUrlOk(url){
+  return typeof url === "string" && /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/i.test(url);
+}
+/* 一张图的上下文成本（估算口径，与 OpenAI vision 的低细节档同量级）：
+   历史裁剪（_msgTokens）与发送估算（recordSendEstimate）必须用同一个数，否则
+   「统计说没超预算、裁剪却按超了算」——两处读数会互相打架。 */
+const _IMG_TOKEN_COST = 800;
 
 /* v3.7.78 解耦：自别处下沉（同层序逆层消除） */
 function thisWeekDone(sc){

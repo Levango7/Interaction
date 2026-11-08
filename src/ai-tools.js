@@ -2791,7 +2791,10 @@ function recordSendEstimate(messages){
       tokens: Array.isArray(messages) ? messages.reduce(function(s, m){
         const c = m && m.content;
         if(typeof c === "string") return s + _estTokens(c);
-        if(Array.isArray(c)) return s + c.reduce(function(n2, p){ return n2 + _estTokens(p && p.text); }, 0);
+        if(Array.isArray(c)) return s + c.reduce(function(n2, p){
+          if(p && p.type === "image_url") return n2 + _IMG_TOKEN_COST;
+          return n2 + _estTokens(p && p.text);
+        }, 0);
         return s + _estTokens((m && m.title) || "");
       }, 0) : 0,
       budget: ctxBudgetTokens(),
@@ -3418,7 +3421,7 @@ function renderChat(){
         + (report ? '<div class="subagent-report">' + report + '</div>' : '') + '</div>';
     }catch(_e){ return null; }
   };
-  el.innerHTML = sanitizeHtml(hist.length? hist.map(m=>{
+  el.innerHTML = sanitizeHtml(hist.length? hist.map((m, _mi)=>{
     if(m.role==="tool"){
       var _disp = m._disp || _chatContentToText(m.content);
       /* 标记类/JSON 类回执的**解析源**：优先 `_raw`（execTool 原始返回），退化到 `content`。
@@ -3498,9 +3501,29 @@ function renderChat(){
       ? '<span class="msg-usage">' + esc(String(m._usage.total)) + t("chat.usage.unit"," tok") + '（' + esc(String(m._usage.in)) + '+ ' + esc(String(m._usage.out)) + '）</span>'
       : "";
     if(m.role==="assistant") return `<div class="msg assistant md-body"${promptTip}>${mdToHtml(m.content||"")}${usageHtml}</div>`;
-    // v1.13 [2b]：user 消息 content 可能为 vision 数组——取文本部分 + 图片计数标记
+    // user 消息 content 可能为 vision 数组——文本（含「[图×N]」标记）+ 缩略图槽
+    if(m.role === "user"){
+      const _nImg = Array.isArray(m.content) ? m.content.filter(function(p){ return p && p.type === "image_url"; }).length : 0;
+      return `<div class="msg ${m.role}">${_nImg ? '<div class="msg-imgs" data-mi="' + _mi + '"></div>' : ""}${esc(_chatContentToText(m.content)||"")}</div>`;
+    }
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
   }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + chatSuggestHtml());
+  /* 图片缩略图在消毒之后补 DOM：sanitizeHtml 会剥 data: URL 属性，
+     且只认 base64 位图白名单（_imgDataUrlOk），坏数据只是不显示，不会变成可执行面。 */
+  Array.prototype.forEach.call(el.querySelectorAll(".msg-imgs[data-mi]"), function(slot){
+    const idx = Number(slot.getAttribute("data-mi"));
+    const msg = hist[idx];
+    if(!msg || !Array.isArray(msg.content)) return;
+    msg.content.forEach(function(p){
+      const url = p && p.type === "image_url" && p.image_url && p.image_url.url;
+      if(!_imgDataUrlOk(url)) return;
+      const im = document.createElement("img");
+      im.className = "msg-img";
+      im.alt = t("ai.imageAlt","图片");
+      im.src = url;
+      slot.appendChild(im);
+    });
+  });
   // T3.1 绑定重试按钮
   const rb=$("#chatRetry"); if(rb) rb.onclick=retryChat;
   // v1.15：点击消息区任意位置 → 聚焦输入框（聊天面板本身即卡片，不另设输入框卡片）

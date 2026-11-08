@@ -355,6 +355,68 @@ function isSafeBaseUrl(base){
   }catch(e){ return false; }
 }
 
+/* ---------- 2026-11-08：SSE 流式透传（渲染进程 -> 主进程 -> provider） ----------
+ * 浏览器直连时 SSE 解析在 ai-loop.js chatOnce 里；桌面版请求经主进程代理，
+ * 想拿到同样的打字机效果就必须由主进程解析 SSE、把增量回推渲染进程。
+ * 协议：调用 chat 时带 { stream:true, streamId }，主进程逐段发 "chat-chunk" 事件
+ * { streamId, text }；最终仍由 invoke 返回合成的完整消息（与浏览器流式分支同构，
+ * 调用方拿到的是**同一形状**的 OpenAI 响应，工具轮照常走）。
+ * 取消/超时：reader 读的是同一个带 signal 的响应，AbortController 一断，
+ * reader.read() 立刻抛 AbortError —— 由外层 catch 按既有语义翻译（超时/用户取消）。 */
+async function readChatSse(resp, sender, streamId){
+  if(!resp || !resp.body || typeof resp.body.getReader !== "function") return null;
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let contentText = "";
+  let finishReason = "stop";
+  let usage = null;
+  const toolCalls = [];
+  const pushChunk = (text) => {
+    if(!text) return;
+    try{
+      if(sender && typeof sender.isDestroyed === "function" && sender.isDestroyed()) return;
+      if(sender && typeof sender.send === "function") sender.send("chat-chunk", { streamId, text });
+    }catch(e){ /* 渲染进程已关闭：停止透传，但仍把流读完以返回最终消息 */ }
+  };
+  for(;;){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() || "";
+    for(const line of lines){
+      const s = line.trim();
+      if(!s || !s.startsWith("data:")) continue;
+      const payload = s.slice(5).trim();
+      if(payload === "[DONE]") continue;
+      let d = null;
+      try{ d = JSON.parse(payload); }catch(e){ continue; }
+      if(!d || !d.choices || !d.choices[0]) continue;
+      const c = d.choices[0];
+      if(c.delta && typeof c.delta.content === "string" && c.delta.content){
+        contentText += c.delta.content;
+        pushChunk(c.delta.content);
+      }
+      if(c.delta && c.delta.tool_calls){
+        for(const tc of c.delta.tool_calls){
+          const idx = tc.index || 0;
+          toolCalls[idx] = toolCalls[idx] || { id:"", function:{ name:"", arguments:"" } };
+          if(tc.id) toolCalls[idx].id = tc.id;
+          if(tc.function && tc.function.name) toolCalls[idx].function.name += tc.function.name;
+          if(tc.function && tc.function.arguments) toolCalls[idx].function.arguments += tc.function.arguments;
+        }
+      }
+      if(c.finish_reason) finishReason = c.finish_reason;
+      if(d.usage) usage = d.usage;
+    }
+  }
+  const final = { choices: [{ message: { role: "assistant", content: contentText }, finish_reason: finishReason }] };
+  if(toolCalls.length) final.choices[0].message.tool_calls = toolCalls.filter(Boolean);
+  if(usage) final.usage = usage;
+  return final;
+}
+
 /* ---------- B8/R3：轻量滚动日志（userData/logs/app.log，JSON Lines，上限约 1MB 自动截断） ---------- */
 function formatLogLine(scope, msg){
   return JSON.stringify({ ts: new Date().toISOString(), scope, msg }) + "\n";
@@ -578,6 +640,9 @@ if (!gotLock){
       };
       if(arg && Array.isArray(arg.tools)) body.tools = arg.tools;
       if(arg && arg.tool_choice) body.tool_choice = arg.tool_choice;
+      /* 2026-11-08：渲染进程要流式时（带 streamId），主进程按 SSE 向上游请求并分块回推 */
+      const wantStream = !!(arg && arg.stream === true && typeof arg.streamId === "string" && arg.streamId);
+      if(wantStream) body.stream = true;
       logLine("chat", "request model="+body.model+" temp="+temperature+" timeout="+timeoutSec+"s");
       let lastErr = null;
       const senderId = e.sender && e.sender.id;
@@ -605,15 +670,44 @@ if (!gotLock){
             body: JSON.stringify(body),
             signal: ctrl.signal
           });
-          clearTimeout(timer);
-          finish();
           if(!r.ok){
+            clearTimeout(timer);
+            finish();
             if(r.status === 401) throw new Error("API Key 无效，请检查设置中的 Key");
             if(r.status === 429){ finish(); lastErr = new Error("请求过于频繁，稍后重试"); await sleep(1000 * (attempt + 1)); continue; }
             if(r.status >= 500){ finish(); lastErr = new Error("服务异常，请稍后重试"); await sleep(1000 * (attempt + 1)); continue; }
             throw new Error("API 返回错误：" + r.status);
           }
           logLine("chat", "ok status="+r.status);
+          if(wantStream){
+            const ct = (r.headers && typeof r.headers.get === "function") ? (r.headers.get("content-type") || "") : "";
+            if(ct.indexOf("text/event-stream") >= 0){
+              try{
+                const sseOut = await readChatSse(r, e.sender, arg.streamId);
+                clearTimeout(timer);
+                finish();
+                if(sseOut) return sseOut;
+              }catch(sErr){
+                clearTimeout(timer);
+                finish();
+                /* AbortError（超时或用户取消）交给外层统一翻译 —— 必须原样抛，
+                   否则会在外层被当成网络错误重试 3 轮，表现为「超时后又多等十几秒」。 */
+                if(sErr && sErr.name === "AbortError") throw sErr;
+                /* 流式解析中途异常：回退整包重发一次（与浏览器 chatOnce 同构） */
+                logLine("chat", "stream parse failed, fallback: " + (sErr && sErr.message ? sErr.message : String(sErr)));
+                const r2 = await fetch(base + "/chat/completions", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "Authorization": "Bearer " + prof.key },
+                  body: JSON.stringify(Object.assign({}, body, { stream: false })),
+                  signal: ctrl.signal
+                });
+                if(r2.ok) return await r2.json();
+                throw sErr;
+              }
+            }
+          }
+          clearTimeout(timer);
+          finish();
           return await r.json();
         }catch(err){
           clearTimeout(timer);

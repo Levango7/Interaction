@@ -333,6 +333,112 @@ describe("Electron IPC: AI 配置与 chat 安全（F1-F7）", () => {
     });
   });
 
+  describe("F8 SSE 流式透传（2026-11-08）", () => {
+    const enc = new TextEncoder();
+    const sseChunks = [
+      'data: {"choices":[{"delta":{"content":"你"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"好"},"finish_reason":"stop"}]}\n\n',
+      "data: [DONE]\n\n",
+    ];
+    const sseResponse = (chunks) => ({
+      ok: true, status: 200,
+      headers: { get: (k) => (String(k).toLowerCase() === "content-type" ? "text/event-stream" : "") },
+      body: new ReadableStream({ start(c) { chunks.forEach((x) => c.enqueue(enc.encode(x))); c.close(); } }),
+      json: async () => ({ choices: [{ message: { content: "json-fallback" } }] }),
+    });
+    const evWithSend = () => ({ sender: { id: "s1", send: vi.fn() }, senderFrame: { url: TRUSTED_FILE_URL } });
+    const streamReq = (extra) => chatReq(Object.assign({ stream: true, streamId: "sid-1" }, extra || {}));
+
+    it("SSE 分块回推 + 合成完整消息；上游 body.stream=true", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      const calls = [];
+      vi.stubGlobal("fetch", vi.fn((url, opts) => { calls.push({ url, opts }); return Promise.resolve(sseResponse(sseChunks)); }));
+      const ev = evWithSend();
+      const r = await ipcHandlers["chat"](ev, streamReq());
+      expect(r.choices[0].message.content).toBe("你好");
+      expect(JSON.parse(calls[0].opts.body).stream).toBe(true);
+      expect(ev.sender.send).toHaveBeenCalledWith("chat-chunk", { streamId: "sid-1", text: "你" });
+      expect(ev.sender.send).toHaveBeenCalledWith("chat-chunk", { streamId: "sid-1", text: "好" });
+    });
+
+    it("服务端忽略 stream 回 JSON：不进入 SSE 分支，直接透传 json", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      const jsonResp = {
+        ok: true, status: 200,
+        headers: { get: () => "application/json" },
+        json: async () => ({ choices: [{ message: { content: "plain" } }] }),
+      };
+      vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(jsonResp)));
+      const ev = evWithSend();
+      const r = await ipcHandlers["chat"](ev, streamReq());
+      expect(r.choices[0].message.content).toBe("plain");
+      expect(ev.sender.send).not.toHaveBeenCalled();
+    });
+
+    it("流解析中途失败 → 回退整包重发一次（第二次 stream:false）", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      const broken = {
+        ok: true, status: 200,
+        headers: { get: () => "text/event-stream" },
+        body: new ReadableStream({
+          start(c) {
+            c.enqueue(enc.encode('data: {"choices":[{"delta":{"content":"x"}}]}\n\n'));
+            /* 用 setTimeout 让错误晚一拍：error() 会清空未读队列，
+               同步 error 等于一个分块都没发出去，测不到「已经吐过的分块 + 中途失败」 */
+            setTimeout(() => c.error(new Error("boom")), 0);
+          },
+        }),
+      };
+      const calls = [];
+      vi.stubGlobal("fetch", vi.fn((url, opts) => {
+        calls.push({ url, opts });
+        if (calls.length === 1) return Promise.resolve(broken);
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "fallback-ok" } }] }) });
+      }));
+      const ev = evWithSend();
+      const r = await ipcHandlers["chat"](ev, streamReq());
+      expect(r.choices[0].message.content).toBe("fallback-ok");
+      expect(calls.length).toBe(2);
+      expect(JSON.parse(calls[1].opts.body).stream).toBe(false);
+      expect(ev.sender.send).toHaveBeenCalledTimes(1);
+    });
+
+    /* 流式期间超时/取消：reader 读的是带 signal 的响应，abort 一断 read() 抛 AbortError。
+       这里用「abort 时 c.error」的流模拟真实 fetch 行为，验证映射没有丢。 */
+    const hangingSse = (opts) => ({
+      ok: true, status: 200,
+      headers: { get: () => "text/event-stream" },
+      body: new ReadableStream({
+        start(c) {
+          if (opts && opts.signal) {
+            opts.signal.addEventListener("abort", () => {
+              const e = new Error("aborted"); e.name = "AbortError"; c.error(e);
+            });
+          }
+        },
+      }),
+    });
+
+    it("流式期间超时 → 请求超时", async () => {
+      vi.useFakeTimers();
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      vi.stubGlobal("fetch", vi.fn((url, opts) => Promise.resolve(hangingSse(opts))));
+      const p = ipcHandlers["chat"](evWithSend(), streamReq({ timeoutSec: 5 }));
+      const assertion = expect(p).rejects.toThrow("请求超时");
+      await vi.advanceTimersByTimeAsync(6000);
+      await assertion;
+    });
+
+    it("流式期间用户取消 → __USER_CANCEL__", async () => {
+      freshConfig({ enabled: true, profiles: { p1: { base: "https://api.example.com/v1", model: "m", key: "k" } } });
+      vi.stubGlobal("fetch", vi.fn((url, opts) => Promise.resolve(hangingSse(opts))));
+      const ev = evWithSend();
+      const p = ipcHandlers["chat"](ev, streamReq());
+      ipcHandlers["abort-chat"]({ sender: { id: "s1" }, senderFrame: { url: TRUSTED_FILE_URL } });
+      await expect(p).rejects.toThrow("__USER_CANCEL__");
+    });
+  });
+
   describe("F3/F4 set/get-ai-config", () => {
     it("profiles 结构往返（不含明文 key）", async () => {
       await ipcHandlers["set-ai-config"](trustedEv(), {

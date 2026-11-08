@@ -11,7 +11,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getAiConfig: () => ipcRenderer.invoke("get-ai-config"),
   setAiConfig: (cfg) => ipcRenderer.invoke("set-ai-config", cfg),
   // chat 参数原样透传；F3：新增 profileId 字段（当前激活 profile 的 id，主进程据此取 base/model/key）
+  // 2026-11-08：带 { stream:true, streamId } 时主进程按 SSE 上游请求，并逐段发 "chat-chunk"
   chat: (arg) => ipcRenderer.invoke("chat", arg),
+  // 订阅流式增量：cb({ streamId, text })；返回退订函数（组件卸载/请求结束必须调，防监听器累积）
+  onChatChunk: (cb) => {
+    const handler = (_e, data) => { try { cb(data); } catch (_err) { /* 回调异常不影响后续分块 */ } };
+    ipcRenderer.on("chat-chunk", handler);
+    return () => { try { ipcRenderer.removeListener("chat-chunk", handler); } catch (_err) { /* 已卸载 */ } };
+  },
   // P1-1：取消进行中的 AI 请求（主进程 fetch 对应 AbortController）
   abortChat: () => ipcRenderer.send("abort-chat"),
   // v3.7.66：群机器人 webhook 外发。必须在主进程发 —— 钉钉/企业微信的 webhook 不回 CORS 头，

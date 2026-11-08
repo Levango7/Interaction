@@ -86,6 +86,9 @@
      加深后同底色实测 4.95:1 ✓，警告横幅/图标同步受益（浅底上更深=更清楚）。
      ⚠️ lint-colors 只放行「--令牌: 值」定义行 —— 注释里不得写裸十六进制色值（已踩第 3 次）。 */
   --ok:#188038; --ok-soft:#e9f5ec; --accent-soft:#e8f2fe;
+  /* 2026-11-08：代码高亮四色。--snip-bg 在各主题下都是深底，故不随主题切换；
+     lint-colors 只放行令牌定义行，用法处一律 var()。 */
+  --tok-key:#c678dd; --tok-str:#98c379; --tok-comment:#8b919a; --tok-num:#d19a66;
   /* v3.7.47：--ok 加深（同上：成功 toast 白字 on 绿底实测 3.06:1 < 4.5，
      加深后白字 ≈ 5.0:1 ✓；浅底上的绿色成功文字也一并更清楚）。 */
   /* 场景语义色令牌（与 SCENARIOS[].color 对齐，供模板/帮助文档/联动图标引用） */
@@ -2243,6 +2246,20 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
 .chat-attach-btn:hover{background:var(--surface-hover);color:var(--text);border-color:var(--accent-soft)}
 .chat-attach-btn svg{width:var(--icon-sm);height:var(--icon-sm)}
+/* 2026-11-08：图片附件（待发条 + 消息内缩略图）。缩略图一律 object-fit:cover，
+   尺寸只由 CSS 决定，发送的数据体积由 upload 前的 canvas 压缩负责（见 _shrinkImage）。 */
+.chat-attach-strip{display:flex;gap:var(--space-2);padding:var(--space-2) var(--space-2) 0;flex-wrap:wrap}
+/* display:flex 会盖掉 [hidden] 的 UA 样式（display:none），空条必须显式隐藏 */
+.chat-attach-strip[hidden]{display:none}
+.attach-chip{position:relative;width:52px;height:52px;border-radius:var(--radius-md);overflow:hidden;
+  border:1px solid var(--line);background:var(--panel2)}
+.attach-chip img{width:100%;height:100%;object-fit:cover;display:block}
+.attach-chip-x{position:absolute;top:2px;right:2px;width:20px;height:20px;padding:0;border:0;border-radius:var(--radius-full);
+  background:color-mix(in srgb,var(--panel) 78%,transparent);color:var(--text);font-size:var(--fs-xs);
+  line-height:1;cursor:pointer}
+.attach-chip-x:hover{background:var(--danger);color:#fff}
+.msg-imgs{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-bottom:var(--space-1)}
+.msg-img{max-width:160px;max-height:160px;border-radius:var(--radius-sm);border:1px solid var(--line);display:block}
 /* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹）
    v2.4.0：单行起步（44px）聚焦增高到 96px，上限 200px——空态更轻，长输入仍够用 */
 /* v3.7.37：min-height 44 → 42，与同行的模型下拉/附件/发送按钮（均为 42）统一。
@@ -2412,6 +2429,11 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   padding:2px 6px;border-radius:var(--radius-sm);cursor:pointer;min-height:24px}
 .md-code .md-code-copy:hover{background:var(--surface-hover);color:var(--text)}
 .md-code pre{margin:0;border:0;border-radius:0}
+/* 2026-11-08：语法高亮 token 色（令牌定义见 :root --tok-*） */
+.md-code .tok-k{color:var(--tok-key)}
+.md-code .tok-s{color:var(--tok-str)}
+.md-code .tok-c{color:var(--tok-comment);font-style:italic}
+.md-code .tok-n{color:var(--tok-num)}
 /* 2026-10-23：mermaid 图（懒加载 vendor；失败保留源码 + 提示） */
 .md-body .mermaid-figure{margin:0 0 var(--space-2);padding:var(--space-2);border:1px solid var(--line);
   border-radius:var(--radius-md);background:var(--panel2);overflow-x:auto}
@@ -5590,6 +5612,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <!-- 底部输入区：完整卡片——textarea 占上方，左下角附件 / 右下角模型+发送（v1.15 重排） -->
       <form class="chat-input-area" id="chatForm">
         <textarea class="chat-text-input" name="msg" id="chatTextInput" data-i18n-placeholder="chat.placeholder" placeholder="问点什么，或让它「建个任务」…" autocomplete="off" maxlength="4000" rows="1"></textarea>
+        <!-- 2026-11-08：图片附件的待发条（缩略图 chips 由 _renderAttachStrip 用 DOM 构建） -->
+        <div class="chat-attach-strip" id="chatAttachStrip" hidden></div>
         <div class="chat-input-bar">
           <button class="chat-attach-btn" id="chatAttachBtn" type="button" data-i18n-title="a11y.addAttachment" title="添加文本附件" data-i18n-aria="a11y.addAttachment" aria-label="添加文本附件">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>

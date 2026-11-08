@@ -675,8 +675,10 @@ function _mirrorChatToSession(k, v){
     sess.updatedAt = _nowIso();
     // 以首条用户消息自动命名（仅当还是默认名）
     if(sess.title === t("sess.new", "新会话")){
-      const firstUser = sess.msgs.find(function(m){ return m.role === "user" && (m.content || "").trim(); });
-      if(firstUser) sess.title = (firstUser.content || "").trim().slice(0, 20);
+      /* content 可能是 vision 数组（图片附件）—— 直接 .trim() 会抛 TypeError，
+         把整个镜像流程打断（消息写不进会话列表）。标题只取文本，不带「[图×N]」标记。 */
+      const firstUser = sess.msgs.find(function(m){ return m.role === "user" && String(_chatTextOnly(m.content) || "").trim(); });
+      if(firstUser) sess.title = String(_chatTextOnly(firstUser.content) || "").trim().slice(0, 20);
     }
     _saveSessions();
   }

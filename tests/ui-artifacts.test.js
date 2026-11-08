@@ -29,7 +29,9 @@ describe("① mdToHtml 代码卡", () => {
     expect(withLang).toContain('class="md-code"');
     expect(withLang).toContain('class="md-code-lang">js<');
     expect(withLang).toContain("data-code-copy");
-    expect(withLang).toContain("const x = 1;");
+    /* 2026-11-08 语法高亮后 HTML 被 token span 切开，改为断言可见文本逐字保真（复制语义不变） */
+    const doc = new win.DOMParser().parseFromString(withLang, "text/html");
+    expect(doc.querySelector(".md-code pre code").textContent).toBe("const x = 1;");
     const noLang = mdToHtml("```\nplain\n```");
     expect(noLang).toContain('class="md-code-lang">text<');
   });

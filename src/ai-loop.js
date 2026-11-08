@@ -343,6 +343,20 @@ async function chatOnce(messages, opts){
       // F3：带上当前激活 profile id，主进程按 id 取 base/model/key
 
       if(ap && ap.id) body.profileId = ap.id;
+      /* 2026-11-08：桌面版流式透传。此前 Electron 只能整包等（主进程代理不支持流），
+         现在主进程解析 SSE 并逐段发 "chat-chunk"；这里按 streamId 过滤后喂给 onChunk，
+         请求结束时必须退订，否则每次对话都会多挂一个监听器。
+         旧版 preload 没有 onChatChunk → 自动退回整包，前后版本可混用。 */
+      let _unsubChunk = null;
+      if(opts.onChunk && window.electronAPI && typeof window.electronAPI.onChatChunk === "function"){
+        const sid = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        body.stream = true;
+        body.streamId = sid;
+        _unsubChunk = window.electronAPI.onChatChunk(function(d){
+          if(!d || d.streamId !== sid) return;
+          try{ opts.onChunk(String(d.text || "")); }catch(e){ /* 回调异常不阻断流 */ }
+        });
+      }
       let _userAborted = false;
       if(opts.signal && typeof opts.signal.addEventListener === "function"){
         const onAbort = () => {
@@ -360,6 +374,8 @@ async function chatOnce(messages, opts){
           const e2 = new Error("user-cancel"); e2.name = "AbortError"; throw e2;
         }
         throw err;
+      }finally{
+        if(typeof _unsubChunk === "function"){ try{ _unsubChunk(); }catch(e){ /* 退订失败不影响结果 */ } }
       }
     }
 
