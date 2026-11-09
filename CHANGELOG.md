@@ -3,6 +3,15 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-09 · **截图三问修两问：模式菜单被页内化抽屉盖住（点不到「代码/设计」）+ 导出 CSV 按钮 aria-label 泄漏模板字面量**
+
+_用户 11-09 截图批：「卡片在别的卡片下面 / 切换模式不好切换 / 现有布局太乱」。实测取证后定级：两问是真 bug（本笔修），「布局太乱/主流对比」属产品级重设计，走四件套不定型不动（定稿依据见 ref-workbench-design-refs：对话坞默认收起 + 右栏今日任务轨 ≥1024 常驻 + 沉浸页隐藏坞，10-21 已授权）。_
+
+- **模式切换（`agent-workbench.html` CSS 新增 `body:has(#drawer.drawer-page.open) .topbar` 提级）**：根因是 `.topbar` 自带 `backdrop-filter:blur(18px)`（646-650 行）会自建层叠上下文，`#uiModeMenu` 的 `z-index:70` 只在顶栏内部有效；页内化抽屉 `z-index:auto` 但 DOM 在后，绘制时其 `HEADER.page-head` 盖住模式菜单下半。修前实测（Playwright 探针 `elementFromPoint`）：菜单三项里「代码/设计」中心点命中链 = `HEADER.page-head > drawer.drawer > DIV.main-wrap`，`hitSelf=false`， locator.click 超时 30s，`#uiModeLbl` 停在「工作」；「工作」项因 y=71..119 恰好落在抽屉 top=110 之外才幸免。修后同探针：三项 `hitSelf=true`，点「代码」成功且 `#uiModeLbl`=「代码」。提级只限页内化形态（`:has(#drawer.drawer-page.open)`），fixed 右浮层抽屉仍由 `.overlay(50)/.drawer(60)` 管遮罩不变；toast(90)/modal(80) 仍高于顶栏(61)。
+- **导出 CSV 可访问名（`agent-workbench.html:6153` 静态 HTML）**：`aria-label="${t("export.preview.confirm", "导出 CSV")}"` 是未求值模板字面量（浏览器可访问名直接显示 `${t(...)}` 原文；上一窗口 browser-use 快照取证）。全仓 grep 同类泄漏仅此一处。修法按仓惯例（邻居 `btnExport`/`btnImportCSV` 均为静态中文 aria-label + `data-i18n-aria` 双保险）改为 `aria-label="导出 CSV"` 静态兜底，保留 `data-i18n-aria="dataMgmt.exportCsvAria"`（该键当前未登记，`t()` 缺键返回键名，故静态兜底不可省）。修前读数 = `${t("export.preview.confirm", "导出 CSV")}`；修后同探针 raw/applied/acc 三读数均为「导出 CSV」，`leak=false`，`pageerror` 零。
+- **回归**：`npm run lint` rc=0（0 error；11 个 eqeqeq warning 为存量，行号不在改动面）；`ui-mode-layout` + `draw-responsive` 15 passed；`integration-push` + `workflow` + `nav-pages-smoke` 18 passed；`eslint` / `lint-css-structure` / `src-split --check` 单独复跑 rc=0。`server/src`、workflow、package-lock、node_modules 零改动。
+- **未修（登记不改）**：① toast 堆叠区 fixed 右上，与右栏任务轨顶部几何重叠（截图里绿胶囊压住任务行文字）——toast 限时自消属设计内，但堆叠位置产品级，归布局重设计批次；② 「卡片在别的卡片下面」截图中「←返回+蓝色✓半透明窄条」形态与页内化抽屉页头同族，根因同本笔层叠问题，修后复测同路径。
+
 ### 2026-11-09 · **CI 复绿：e2e job 补装 server 依赖（DL-O01 批首跑红的真因修复）**
 
 _DL-O01 批（`3a5222f` + `0f6ca85`）push 后 CI run `42571687331` / `42571687430` 的 e2e job 红：`2 failed` 全在新增的 `tests/e2e/sync-real-backend.spec.js`，报错 `server exited early code=1 / Cannot find module 'express'`。根因不是用例缺陷，是 e2e job 只根 `npm ci`、不装 server 依赖；本机绿是因工作树有历史遗留的 `server/node_modules`，属「本地有、CI 无」伪绿家族（同 v3.7.152 bcryptjs 那次，配方同款）。_
