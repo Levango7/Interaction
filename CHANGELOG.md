@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-10 · **EOL 收口：electron ^41→^44.9.3 + CI node 20→24 + engines.node（10-06 审计遗留项⑦）**
+
+_审计遗留项⑦「依赖 EOL」：electron 41 出支持窗口（in-window 为 44/43/42）、Node 20 EOL 2026-04-30 已过而 CI 六处仍 pin 20、根 package.json 无 engines。本批只推版本口径，应用代码零改动（`src/` 零 diff）。四笔拆分：`71eae96`（依赖）/ `af6fe54`（CI pin）/ `ae4fbcd`（engines+注释）/ 本笔（回执）。_
+
+- **electron `^41.0.0`→`^44.9.3`**（`electron/package.json:14` + lock 重算，resolved 41.10.5→44.10.2）：44.9.3 已有 wb140 真机 WebDAV 桌面 UI 8 步验收背书；lock 只用 `npm install --package-lock-only` 重算（不装机、二进制不落盘），integrity 与 registry.npmjs.org 元数据逐字核对一致。
+- **CI node 20→24 共 7 处**：ci.yml:21 矩阵 / ci.yml:126 / ci.yml:165 / deploy.yml:108 / deploy.yml:197 / electron-build.yml:37（24=Active LTS，本机 v24.22.1 门禁即 CI 口径）＋清扫扫出 `visual-regression-template/ci/visual-regression.yml.example:35`（复制到他项目的惰性示例，同 pin 同改）。
+- **根 `package.json` 补 `"engines": {"node": ">=22"}`**（最老支持中 LTS）；`tests/overlay-cmd-show.test.js:23` 注释口径同步（代码不动）。
+- **窄变异**：本批无红绿变异对——无任何守卫钉死版本字面量（`tests/ci-workflow-guard.test.js` 只做结构断言，已读确认），证据＝bump 后全部门禁绿；如实登记不硬凑。
+- **验证**：`npm run lint` exit 0 / `npm run build:check` exit 0 / `check:source-state` ✓ 40/40 / `verify:ci` 15/15 按 CI 顺序 ✓ / `tests/ci-workflow-guard.test.js` 隔离复跑绿 / 全量单测三轮零断言失败（第三轮 238/239 文件绿；红面全归环境：① 新 worktree 无 `server/node_modules` → 本副本 `server/` 跑 `npm ci` 补齐后该 2 文件隔离复跑绿；② `prod-startup-guard` 3 例 bootServer 30s 满载超时，隔离绿；③ `cloud-sync-stage2` 工人 RPC timeout 已知噪声家族，隔离绿）。历史决策记录（README/iteration-plan 覆盖率定案段、CHANGELOG 旧节、audit 文档、deploy.yml:158 抖动注释、lock 里依赖自身 `"node": "20 || >=22"`）按冻结口径不动。**高共写面声明**：`src/`/`server/` 源码零改动；根/electron `node_modules` 不装机（仅本副本 `server/` 为复刻 CI 依赖面装过）；占位密钥/账号不落盘；CI 为权威终态（R9），推后核 run。
+
 ### 2026-11-09 · **截图三问修两问：模式菜单被页内化抽屉盖住（点不到「代码/设计」）+ 导出 CSV 按钮 aria-label 泄漏模板字面量**
 
 _用户 11-09 截图批：「卡片在别的卡片下面 / 切换模式不好切换 / 现有布局太乱」。实测取证后定级：两问是真 bug（本笔修），「布局太乱/主流对比」属产品级重设计，走四件套不定型不动（定稿依据见 ref-workbench-design-refs：对话坞默认收起 + 右栏今日任务轨 ≥1024 常驻 + 沉浸页隐藏坞，10-21 已授权）。_
