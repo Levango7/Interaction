@@ -20,7 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// 用仓内既有口径（不用 import.meta.dirname：CI 的 node-version:20 不保证 ≥20.11）
+// 用仓内既有口径（不用 import.meta.dirname：历史 CI node-version:20 不保证 ≥20.11；现 CI node 24 + engines ">=22" 已满足，旧写法保留不动）
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC_DIR = path.join(ROOT, "src");
 
