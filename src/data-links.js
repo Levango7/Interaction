@@ -516,9 +516,9 @@ let _sessions = null;   // 懒加载；getSessions() 才从 LS 读 + 迁移
 let _activeSid = null;  // 当前激活的 session id
 function _nowIso(){ return new Date().toISOString(); }
 function _genSid(){ return "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8); }
-function _saveSessions(){ try{ save(SESSIONS_KEY, _sessions); }catch(_){ /* noop —— 但会话列表没落盘：这段对话刷新后就没了，用户会误以为是「自己没保存」 */
+function _saveSessions(){ try{ return save(SESSIONS_KEY, _sessions); }catch(_){ /* noop —— 但会话列表没落盘：这段对话刷新后就没了，用户会误以为是「自己没保存」 */
   try{ if(typeof pushDiag === "function") pushDiag("warn", "sessions persist failed: "+((_&&_.message)||_), {where:"_saveSessions"}); }catch(_e2){} } }
-function _saveActiveSid(){ try{ save(ACTIVE_SESS_KEY, _activeSid || ""); }catch(_){ /* noop —— 但「当前会话」没记住：刷新后落到别的会话，用户会以为聊天串了 */
+function _saveActiveSid(){ try{ return save(ACTIVE_SESS_KEY, _activeSid || ""); }catch(_){ /* noop —— 但「当前会话」没记住：刷新后落到别的会话，用户会以为聊天串了 */
   try{ if(typeof pushDiag === "function") pushDiag("warn", "active session persist failed: "+((_&&_.message)||_), {where:"_saveActiveSid"}); }catch(_e2){} } }
 /**
  * 从 LocalStorage 读取 Session 列表；首次启动从旧 chats[sc] 迁移

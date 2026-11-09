@@ -21,8 +21,8 @@ function _loadSubAgents(){
   }catch(e){ _subagents = []; }
   return _subagents;
 }
-function _saveSubAgents(){ try{ _saveSubAgentsTick(); }catch(e){ try{ pushDiag("warn", "subagents save failed: "+((e&&e.message)||e), {where:"subagent"}); }catch(_e2){} } }
-function _saveSubAgentsTick(){ save(SUBAGENTS_KEY, _subagents); }
+function _saveSubAgents(){ try{ return _saveSubAgentsTick(); }catch(e){ try{ pushDiag("warn", "subagents save failed: "+((e&&e.message)||e), {where:"subagent"}); }catch(_e2){} } }
+function _saveSubAgentsTick(){ return save(SUBAGENTS_KEY, _subagents); }
 function listSubAgents(){ return _loadSubAgents().slice(); }
 function getSubAgent(id){ return _loadSubAgents().find(function(s){ return s.id === id; }) || null; }
 function _touchSubAgent(id, patch){
