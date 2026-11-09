@@ -3,6 +3,13 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-09 · **CI 复绿：e2e job 补装 server 依赖（DL-O01 批首跑红的真因修复）**
+
+_DL-O01 批（`3a5222f` + `0f6ca85`）push 后 CI run `42571687331` / `42571687430` 的 e2e job 红：`2 failed` 全在新增的 `tests/e2e/sync-real-backend.spec.js`，报错 `server exited early code=1 / Cannot find module 'express'`。根因不是用例缺陷，是 e2e job 只根 `npm ci`、不装 server 依赖；本机绿是因工作树有历史遗留的 `server/node_modules`，属「本地有、CI 无」伪绿家族（同 v3.7.152 bcryptjs 那次，配方同款）。_
+
+- **修法（`e8938ab`，两 workflow 同文同序）**：ci.yml 与 deploy.yml 的 e2e job 在根 `npm ci` 后补 `- run: npm ci` + `working-directory: server`。不动 spec、不动判据、不动超时；tablet 侧 `draw-edge-routing` 那条 `1 flaky`（retry 过）与本批无关，登记不修。
+- **验证**：`tests/ci-workflow-guard.test.js` 39/39 passed（test/verify 步骤集 parity 未破）；`check:source-state` ✓（修前工作树曾被 with-injected 留在注入态，已从 HEAD 还原 HTML、核源码态后才提交）；CI 为权威终态（R9），推后核 run。
+
 ### 2026-11-09 · **云同步真后端联调（DL-O01 关单）+ 第三条静态判据：`save()` 回执不得丢弃**
 
 _用户 11-09 批「① 先做，② 顺带一起批了」。① 补「客户端 → 真后端」增量往返 e2e：此前 mock e2e 不实现 `/api/sync/changes`、服务端 verify 不经客户端、单测 stub `apiFetch`——三层都测不到这段，已验的只是「开关切了路径」，不是「真上传成功」。② 静态判据收 R-37 假回执的同族反向：下层已报失败、调用方不接返回值。_
