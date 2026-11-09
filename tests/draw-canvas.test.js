@@ -286,7 +286,7 @@ describe("Design 模式三向循环（批次③ 集成）", () => {
     const body = win.document.querySelector(".body");
     expect(body.classList.contains("design-mode")).toBe(true);
     expect(body.classList.contains("code-mode")).toBe(false);
-    expect(win.document.getElementById("uiModeLbl").textContent).toBe("设计");
+    expect(win.document.querySelector("#uiModePill .mode-pill-item.is-on").getAttribute("data-mode")).toBe("design");
     expect(win.document.getElementById("diagramDock")).toBeTruthy();
     // 2026-11-02：dock 必须挂在 .body 上（CSS 按它作为 design 网格的 1/2 网格项写）；
     // 曾被 side.appendChild 挂进 nav.side，网格规则全部失效、首屏只剩约 14px 可见。

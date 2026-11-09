@@ -13,6 +13,15 @@ _用户 11-10 批「先开 ICS 明文那条线，顺带把死函数线也排上�
 - **登记不改**：私有 ICS feed URL token 进自动备份/导出＝产品边界（DL-C01 零凭据路线，同 tasks/notes 用户内容口径）；A2（注册表扫描器对 `PREFIX + <常量>` 间接引用的盲区）改的是门禁扫描器误报面，单独评估不随本批。
 - **验证**：定向 `tests/ics-cloud-snapshot-pin.test.js` 3/3 + `tests/data-keys-registry.test.js` 5/5 ✓（变异自证一红一绿）；`npm test` 全量 240 文件 2619 例＝2615 passed / 4 failed，**红面全归环境满载**（`auth-ui-lifecycle` 验证码断网恢复 1 例 14s、`prod-startup-guard` A/B 两例、`three-state-render` ③ 60s timeout——均已知噪声家族；三文件隔离复跑 61/61 绿、零内容红）；`npm run lint` exit 0（eslint + colors/xss/css-structure/appbridge/src-split/breakpoints/false-receipt/save-receipt 八道全过）；`check:source-state` ✓ 40/40（HTML 673KB 源码态）。**高共写面声明**：`src/render-overview.js`/`agent-workbench.html`/workflow/package-lock/server/src/node_modules 零改动；零短信额度消耗。CI 为权威终态（R9），推后核 run。
 
+### 2026-11-10 · **模式切换改左上角胶囊分段开关（用户点单形态）**
+
+_用户 11-10 附图点单：「U 这个形态 我感觉就不错 左上角 模式切换」。原 `#uiModeMenu` 下拉菜单形态改为顶栏常驻胶囊三段（工作/代码/设计），与 Qoder Desktop 左上角 pill 同构；模式语义/三态循环/窄屏拒 code 等行为不变。_
+
+- **静态骨架（`agent-workbench.html`）**：`#uiModePill` 三段按钮（`role="group"` + 每段 `aria-pressed`，避开 radiogroup 箭头键义务）；work 段预置 `is-on` 首屏态；CSS 新增 `.mode-pill`/`.mode-pill-item`/`.is-on`/`.is-disabled`（禁用段 opacity:.45 + cursor:not-allowed）与 `@media (max-width:479px)` 纯图标档（断点四档制 SEGMENT=[520,600,479,359] 内，禁新值）。
+- **渲染同步（`src/render-widgets.js`）**：`_renderUiModePill()` 同步 `is-on`/`is-disabled`/`disabled`/`aria-disabled`/窄屏 title；`_bindUiModePill` 加 resize 防抖 150ms 跟随 1024 阈值（胶囊常驻可见，原「打开菜单才查宽度」不成立；只同步 pill 视觉态，不碰模式状态）。
+- **测试**：`tests/ui-mode.test.js` ⑩ 改走真实 `applyUIMode()→_renderUiModePill` 路径；`tests/e2e/ui-mode-layout.spec.js` 窄屏块断言扩到 `is-disabled` 类。
+- **验证**：定向 5 文件 122 例 + `ui-mode-layout` e2e 8 passed + Playwright 探针（宽屏切换/高亮跟随/persisted `"design"`；窄屏 disabled/aria-disabled/is-disabled 全跟随）+ `npm run lint` rc=0 + `build:check` OK（4342200 B，sha256:c12473df87090e25）。
+
 ### 2026-11-10 · **EOL 收口：electron ^41→^44.9.3 + CI node 20→24 + engines.node（10-06 审计遗留项⑦）**
 
 _审计遗留项⑦「依赖 EOL」：electron 41 出支持窗口（in-window 为 44/43/42）、Node 20 EOL 2026-04-30 已过而 CI 六处仍 pin 20、根 package.json 无 engines。本批只推版本口径，应用代码零改动（`src/` 零 diff）。四笔拆分：`71eae96`（依赖）/ `af6fe54`（CI pin）/ `ae4fbcd`（engines+注释）/ 本笔（回执）。_

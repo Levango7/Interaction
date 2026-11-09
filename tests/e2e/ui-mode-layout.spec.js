@@ -2,7 +2,7 @@
  * ui-mode-layout.spec.js —— 界面模式切换的**几何/呈现层**守护（真实浏览器）
  * ----------------------------------------------------------------------------
  * 与 tests/ui-mode.test.js（vitest/jsdom，13 条）的分工：
- *   · jsdom 侧证的是**契约**：菜单状态机、存储读写、rail tab 让位、窄屏拒绝。
+ *   · jsdom 侧证的是**契约**：模式状态机、存储读写、rail tab 让位、窄屏拒绝。
  *     但 jsdom 没有排版引擎——display:none 生不生效、sticky 贴不贴底、z-index 分不分层，
  *     它一概看不见（getBoundingClientRect 恒 0）。
  *   · 本 spec 证的是**呈现**：P1 修完后 code 模式真的是「工作面居中 + 聊天贴底坞」，
@@ -12,8 +12,8 @@
  * 覆盖（P1-1/2、P2-3/5/7/8 的呈现侧）：
  *   ① 宽屏 1440：code 模式 #main 可见且居中、chat 是 sticky 底坞（非全高）、
  *      sessionDock/agentDock 在位、右栏 Agent tab 消失而「今日」仍在（P2-5）
- *   ② 宽屏：菜单真实点击路径（开 → 三项齐 → 当前勾选 → 点 code 生效 → 关门）
- *   ③ 窄屏 390：菜单「代码」项禁用、setUIMode("code") 返回 false、
+ *   ② 宽屏：胶囊真实点击路径（三段齐 → 当前段高亮 → 点 code 生效 → 高亮跟随）
+ *   ③ 窄屏 390：胶囊「代码」段禁用、setUIMode("code") 返回 false、
  *      toggleUIMode 循环跳过 code（work → design → work）（P2-8）
  *   ④ 窄屏：taskRail 在抽屉层（z=--z-drawer=60，不再是 popover 70），
  *      右缘双抽屉互斥（开聊天关 rail、开 rail 关聊天）（P2-7）
@@ -99,58 +99,49 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     expect(g.dock.y + g.dock.h, "agentDock 不得溢出视口底").toBeLessThanOrEqual(g.vh);
   });
 
-  test("模式菜单真实点击路径：三项齐、当前勾选、点击切换并关门（P2-3）", async ({ page }) => {
+  test("模式胶囊真实点击路径：三段齐、当前段高亮、点段切换且高亮跟随（P2-3）", async ({ page }) => {
     await page.goto(APP_URL);
-    await page.waitForSelector("#btnUIMode", { timeout: 15_000 });
+    await page.waitForSelector("#uiModePill", { timeout: 15_000 });
     await waitMainRendered(page);
 
-    await page.click("#btnUIMode");
-    const menu = page.locator("#uiModeMenu");
-    await expect(menu, "点开关按钮后菜单应可见").toBeVisible();
-    const items = page.locator("#uiModeMenu .ui-mode-item");
-    await expect(items, "菜单应是三项（工作/代码/设计）").toHaveCount(3);
+    const items = page.locator("#uiModePill .mode-pill-item");
+    await expect(items, "胶囊应是三段（工作/代码/设计）").toHaveCount(3);
 
-    /* 宽屏下三项都可点；当前（work）项带勾选态 */
-    await expect(page.locator('#uiModeMenu .ui-mode-item[data-mode="work"]'), "当前模式项应带 is-on").toHaveClass(/is-on/);
-    await expect(page.locator('#uiModeMenu .ui-mode-item[data-mode="work"]'), "当前模式项应 aria-checked=true").toHaveAttribute("aria-checked", "true");
-    await expect(page.locator('#uiModeMenu .ui-mode-item[data-mode="code"]'), "宽屏下「代码」不应禁用").not.toBeDisabled();
+    /* 宽屏下三段都可点；当前（work）段带高亮态 */
+    await expect(page.locator('#uiModePill .mode-pill-item[data-mode="work"]'), "当前模式段应带 is-on").toHaveClass(/is-on/);
+    await expect(page.locator('#uiModePill .mode-pill-item[data-mode="work"]'), "当前模式段应 aria-pressed=true").toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator('#uiModePill .mode-pill-item[data-mode="code"]'), "宽屏下「代码」不应禁用").not.toBeDisabled();
 
-    await page.click('#uiModeMenu .ui-mode-item[data-mode="code"]');
-    await expect(menu, "选中后菜单应收起").toBeHidden();
-    await expect(page.locator("#btnUIMode"), "菜单收起后触发按钮应回到 aria-expanded=false").toHaveAttribute("aria-expanded", "false");
+    await page.click('#uiModePill .mode-pill-item[data-mode="code"]');
     /* 注意选择器：布局壳钉住 `.app > .body`。历史上正文列表项曾复用同名 `.body`，
        Playwright 严格模式会因歧义直接红（evaluate 的 querySelector 取第一个恰好是
        布局壳，所以同页探针不受影响）；2026-11-03 那批列表项已改名 `.body-row`
        （496607f），`.body` 重新唯一，但钉壳选择器留作保险，防将来再有复用。 */
     await expect(page.locator(".app > .body"), "点击「代码」应真的进入 code 模式").toHaveClass(/code-mode/);
 
-    /* 再开一次：勾选应跟到 code 上（证明菜单是按当前态重渲染的，不是死标记） */
-    await page.click("#btnUIMode");
-    await expect(page.locator('#uiModeMenu .ui-mode-item[data-mode="code"]'), "重开后勾选应跟到 code").toHaveAttribute("aria-checked", "true");
-    await page.keyboard.press("Escape");
-    await expect(menu, "Escape 应能关菜单").toBeHidden();
+    /* 高亮应跟到 code 上（证明胶囊是按当前态同步的，不是死标记） */
+    await expect(page.locator('#uiModePill .mode-pill-item[data-mode="code"]'), "点后「代码」段应高亮").toHaveClass(/is-on/);
+    await expect(page.locator('#uiModePill .mode-pill-item[data-mode="code"]'), "点后「代码」段应 aria-pressed=true").toHaveAttribute("aria-pressed", "true");
   });
 });
 
-test.describe("窄屏 390×844 · 菜单禁用与抽屉层（P2-8、P2-7）", () => {
+test.describe("窄屏 390×844 · 胶囊禁用与抽屉层（P2-8、P2-7）", () => {
   test.beforeAll(() => {
     test.skip(!process.env.E2E, "set E2E=1 to run");
   });
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("模式菜单：「代码」项禁用 + setUIMode 拒绝 + 循环跳过 code（P2-8）", async ({ page }) => {
+  test("模式胶囊：「代码」段禁用 + setUIMode 拒绝 + 循环跳过 code（P2-8）", async ({ page }) => {
     await page.goto(APP_URL);
-    await page.waitForSelector("#btnUIMode", { timeout: 15_000 });
+    await page.waitForSelector("#uiModePill", { timeout: 15_000 });
     await waitMainRendered(page);
 
-    await page.click("#btnUIMode");
-    const codeItem = page.locator('#uiModeMenu .ui-mode-item[data-mode="code"]');
-    await expect(codeItem, "「代码」项应可见（禁用不是藏起来）").toBeVisible();
-    await expect(codeItem, "窄屏「代码」项应 disabled").toBeDisabled();
-    await expect(codeItem, "窄屏「代码」项应 aria-disabled=true").toHaveAttribute("aria-disabled", "true");
-    await expect(codeItem, "窄屏「代码」项应带 is-disabled 样式类").toHaveClass(/is-disabled/);
-    await expect(page.locator('#uiModeMenu .ui-mode-item[data-mode="work"]'), "「工作」项不应被连坐禁用").not.toBeDisabled();
-    await page.keyboard.press("Escape");
+    const codeItem = page.locator('#uiModePill .mode-pill-item[data-mode="code"]');
+    await expect(codeItem, "「代码」段应可见（禁用不是藏起来）").toBeVisible();
+    await expect(codeItem, "窄屏「代码」段应 disabled").toBeDisabled();
+    await expect(codeItem, "窄屏「代码」段应 aria-disabled=true").toHaveAttribute("aria-disabled", "true");
+    await expect(codeItem, "窄屏「代码」段应带 is-disabled 样式类").toHaveClass(/is-disabled/);
+    await expect(page.locator('#uiModePill .mode-pill-item[data-mode="work"]'), "「工作」段不应被连坐禁用").not.toBeDisabled();
 
     /* 显式调用也应被拒绝（菜单是防误点，setUIMode 是契约层） */
     const res = await page.evaluate(() => window.setUIMode("code"));

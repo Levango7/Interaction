@@ -11,7 +11,7 @@
  *     见 data-links：场景对齐 → 激活 → 装回 chats[sc]，镜像幂等落盘）；
  *  ④ 新建会话 = 创建 + 激活 + 工作缓冲清空；
  *  ⑤ agentDock 四段渲染（进程/技能/MCP/工作流）+ 各段显隐持久化（wb_agent_agent_dock）；
- *  ⑥~⑪ P2-3/P2-8：setUIMode 显式三态 + 菜单三态项/当前勾选/窄屏（<1024）禁用「代码」；
+ *  ⑥~⑪ P2-3/P2-8：setUIMode 显式三态 + 胶囊三段/当前段高亮/窄屏（<1024）禁用「代码」；
  *  ⑫~⑬ P2-5：进 code 时右栏 Agent tab 让位 agentDock（正停在 agent 就切回今日）。
  *  ⑭~⑮ 三模式契约 S5（three-mode-spec.md §7 / 台账 DL-O17）：离开 code 必清能力轮询
  *      定时器（含「切走再切回必须新起、不叠加」＝ _agentDockTimer 置空的可观测反证）。
@@ -28,26 +28,28 @@ function boot(extra) {
   return loadApp({ storage: Object.assign({ [PREFIX + "onboarded"]: "true" }, extra || {}) });
 }
 const bodyEl = (win) => win.document.querySelector(".body");
+/* 当前模式＝左上角胶囊上 is-on 段的 data-mode（2026-11-10 起模式切换是分段胶囊，不再有 #uiModeLbl） */
+const pillMode = (win) => win.document.querySelector("#uiModePill .mode-pill-item.is-on").getAttribute("data-mode");
 
 describe("Code 模式：切换与持久化", () => {
   it("1: 默认 Work；toggle → code + 持久化；再 toggle → design（三态循环回 Work）", () => {
     const win = boot();
     win.applyUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);
-    expect(win.document.getElementById("uiModeLbl").textContent).toBe("工作");
+    expect(pillMode(win)).toBe("work");
     win.toggleUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(true);
-    expect(win.document.getElementById("uiModeLbl").textContent).toBe("代码");
+    expect(pillMode(win)).toBe("code");
     expect(JSON.parse(win.localStorage.getItem(PREFIX + "uimode"))).toBe("code");
     /* 画图能力 Phase B：三态循环 work → code → design → work */
     win.toggleUIMode();
     expect(bodyEl(win).classList.contains("design-mode")).toBe(true);
-    expect(win.document.getElementById("uiModeLbl").textContent).toBe("设计");
+    expect(pillMode(win)).toBe("design");
     expect(JSON.parse(win.localStorage.getItem(PREFIX + "uimode"))).toBe("design");
     win.toggleUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);
     expect(bodyEl(win).classList.contains("design-mode")).toBe(false);
-    expect(win.document.getElementById("uiModeLbl").textContent).toBe("工作");
+    expect(pillMode(win)).toBe("work");
   });
 
   it("2: Work 模式下两 dock 清空（不占 DOM）", () => {
@@ -115,7 +117,7 @@ describe("Code 模式：能力停靠栏", () => {
  * P1：code 模式中栏回归 .main（工作面居中），聊天沿用 work 的贴底对话坞（CSS 层，几何断言在 e2e）。
  * P2-3：切换器从盲循环单按钮改成显式三态菜单；P2-8：窄屏（<1024）「代码」禁用；
  * P2-5：进 code 时右栏 Agent tab 让位 agentDock（藏 tab + 正停在 agent 就切回今日）。 */
-describe("模式切换器：显式菜单与窄屏保护（P2-3/P2-8）", () => {
+describe("模式切换器：胶囊分段开关与窄屏保护（P2-3/P2-8）", () => {
   it("6: setUIMode 显式三态；同模式调用幂等", () => {
     const win = boot();
     expect(win.setUIMode("design")).toBe(true);
@@ -134,28 +136,22 @@ describe("模式切换器：显式菜单与窄屏保护（P2-3/P2-8）", () => {
     expect(JSON.parse(win.localStorage.getItem(PREFIX + "uimode"))).toBe("work");
   });
 
-  it("8: 菜单点开有三态项 + 当前态打勾 + 选中即切换并关菜单", () => {
+  it("8: 胶囊三段齐、当前段高亮+aria-pressed、点段即切换且高亮跟随", () => {
     const win = boot();
-    const btn = win.document.getElementById("btnUIMode");
-    btn.click();
-    const menu = win.document.getElementById("uiModeMenu");
-    expect(menu.style.display).not.toBe("none");
-    const items = [...menu.querySelectorAll(".ui-mode-item")];
+    const items = [...win.document.querySelectorAll("#uiModePill .mode-pill-item")];
     expect(items.length).toBe(3);
     const modes = items.map((el) => el.getAttribute("data-mode"));
     expect(modes).toEqual(["work", "code", "design"]);
-    /* 默认 work → work 项 is-on */
+    /* 默认 work → work 段 is-on + aria-pressed=true */
     expect(items[0].classList.contains("is-on")).toBe(true);
-    expect(items[0].getAttribute("aria-checked")).toBe("true");
-    /* 点「设计」→ 切换 + 菜单关闭 + aria-expanded 复位 */
+    expect(items[0].getAttribute("aria-pressed")).toBe("true");
+    /* 点「设计」→ 切换 + 高亮跟到「设计」（证明是按当前态同步的，不是死标记） */
     items[2].click();
     expect(bodyEl(win).classList.contains("design-mode")).toBe(true);
-    expect(menu.style.display).toBe("none");
-    expect(btn.getAttribute("aria-expanded")).toBe("false");
-    /* 再点开：当前态勾在「设计」 */
-    btn.click();
-    const items2 = [...win.document.querySelectorAll("#uiModeMenu .ui-mode-item")];
+    const items2 = [...win.document.querySelectorAll("#uiModePill .mode-pill-item")];
     expect(items2[2].classList.contains("is-on")).toBe(true);
+    expect(items2[2].getAttribute("aria-pressed")).toBe("true");
+    expect(items2[0].classList.contains("is-on")).toBe(false);
   });
 
   it("9: 窄屏（<1024）toggleUIMode 跳过 code：work → design → work", () => {
@@ -170,15 +166,15 @@ describe("模式切换器：显式菜单与窄屏保护（P2-3/P2-8）", () => {
     expect(bodyEl(win).classList.contains("design-mode")).toBe(false);
   });
 
-  it("10: 窄屏 setUIMode('code') 拒绝（返回 false、停在当前模式）；菜单里「代码」禁用", () => {
+  it("10: 窄屏 setUIMode('code') 拒绝（返回 false、停在当前模式）；胶囊「代码」段禁用", () => {
     const win = boot();
     win.innerWidth = 800;
+    win.applyUIMode();          /* 窄屏下的禁用态由 applyUIMode→_renderUiModePill 同步（真实 resize 路径同此） */
     expect(win.setUIMode("code")).toBe(false);
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);
     expect(JSON.parse(win.localStorage.getItem(PREFIX + "uimode"))).not.toBe("code");
-    /* 菜单项禁用（disabled 属性 + aria-disabled） */
-    win.document.getElementById("btnUIMode").click();
-    const codeItem = [...win.document.querySelectorAll("#uiModeMenu .ui-mode-item")]
+    /* 「代码」段禁用（disabled 属性 + aria-disabled） */
+    const codeItem = [...win.document.querySelectorAll("#uiModePill .mode-pill-item")]
       .find((el) => el.getAttribute("data-mode") === "code");
     expect(codeItem.disabled).toBe(true);
     expect(codeItem.getAttribute("aria-disabled")).toBe("true");
