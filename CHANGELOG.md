@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-10 · **死代码收口：删孤儿 `setSceneViewMode` + ICS 云快照隐私钉（`cal_ics_subs` 双向不上云）**
+
+_用户 11-10 批「先开 ICS 明文那条线，顺带把死函数线也排上」。ICS 线深核结论＝HEAD 上无缺陷可修（云快照自 v3.7.148 起双向 fail-closed：`cal_ics_subs` 未登记 ⇒ `dataKeySyncAllowed` 判不上云，出站 `_buildCloudSnapshot` 与入站 `_applyCloudSnapshot` 同一判据丢弃，`src/render-overview.js:1603`/`:1728`），只落回归钉防未来误登记 `sync:true` 的隐私回退；死函数线＝`sceneViewMode` 唯一写侧在 v2.1.0 特性拆除后成孤儿。_
+
+- **删死函数 `setSceneViewMode`（`src/data-links.js`，纯删除 14 行）**：全仓零调用（HTML/src/tests grep 实证），其驱动 UI（侧栏「总览 ▸ 任务」三项切换）已不存在 ⇒ v2.1.0 孤儿。**只读侧全保留**（`src/render-scene-main.js:212/220/223/304` calendar/todo 分支 + 标题三元、注册表条目 `src/data-links.js:844`、i18n 键 `view.taskCalendar`/`view.todoList`）⇒ 陈旧 localStorage 值用户行为零变化；读侧残骸是否整簇清除登记为 OD-005 待裁，不顺手删。
+- **ICS 隐私钉（`tests/ics-cloud-snapshot-pin.test.js` 新增 3 例）**：钉「真实键在真实载荷下不上云」——① 注册表层 `dataKeySyncAllowed(cal_ics_subs)===false`；② 出站行为面（键有值含 evs 事件缓存时快照产物不含它、本地值不被误删，业务键阳性对照照常进快照）；③ 入站行为面（云端快照携带该键时 apply 后本机不落，业务键同次照常恢复）。URL 内私有 feed token + 事件明文正是要防的载荷。
+- **窄变异自证**：临时把该键登记成 `sync:true` ⇒ ①②③ 同红（出站泄漏 + 入站落盘同时被抓），还原后复绿 8/8（pin 3 + registry 5）。
+- **登记不改**：私有 ICS feed URL token 进自动备份/导出＝产品边界（DL-C01 零凭据路线，同 tasks/notes 用户内容口径）；A2（注册表扫描器对 `PREFIX + <常量>` 间接引用的盲区）改的是门禁扫描器误报面，单独评估不随本批。
+- **验证**：定向 `tests/ics-cloud-snapshot-pin.test.js` 3/3 + `tests/data-keys-registry.test.js` 5/5 ✓（变异自证一红一绿）；`npm test` 全量 240 文件 2619 例＝2615 passed / 4 failed，**红面全归环境满载**（`auth-ui-lifecycle` 验证码断网恢复 1 例 14s、`prod-startup-guard` A/B 两例、`three-state-render` ③ 60s timeout——均已知噪声家族；三文件隔离复跑 61/61 绿、零内容红）；`npm run lint` exit 0（eslint + colors/xss/css-structure/appbridge/src-split/breakpoints/false-receipt/save-receipt 八道全过）；`check:source-state` ✓ 40/40（HTML 673KB 源码态）。**高共写面声明**：`src/render-overview.js`/`agent-workbench.html`/workflow/package-lock/server/src/node_modules 零改动；零短信额度消耗。CI 为权威终态（R9），推后核 run。
+
 ### 2026-11-10 · **EOL 收口：electron ^41→^44.9.3 + CI node 20→24 + engines.node（10-06 审计遗留项⑦）**
 
 _审计遗留项⑦「依赖 EOL」：electron 41 出支持窗口（in-window 为 44/43/42）、Node 20 EOL 2026-04-30 已过而 CI 六处仍 pin 20、根 package.json 无 engines。本批只推版本口径，应用代码零改动（`src/` 零 diff）。四笔拆分：`71eae96`（依赖）/ `af6fe54`（CI pin）/ `ae4fbcd`（engines+注释）/ 本笔（回执）。_
