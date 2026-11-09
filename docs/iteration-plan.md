@@ -322,7 +322,7 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
   2026-10-29 那次 `rag-hybrid:190` 红了之后**现场完全拿不到**，只能靠本机复现。
   ✅ **2026-10-30 已交付**：两份 workflow 各加一步（`if: failure()`、`retention-days: 7`、两边工件名不同），
   守卫侧新增专项断言组（反向哨兵 + `path`/`if`/工件名/步骤先后四条判据）＋ 6 条真文件变异逐条红。
-  ⚠️ 端到端**尚未验**：工件只在真红时产生，本机造不出 CI 侧落地 ⇒ 以**下一次 e2e 红的 run** 的 artifact 列表为准。
+  ✅ **2026-11-09 端到端已验**：耗材分支 `tmp/dl-o13-red-probe`（`d82f96c`，形态同 DL-O12 先例）注入一条必然失败断言 ⇒ PR #1 走 pull_request 触发面，run `42539789532` e2e 腿真红（conclusion=failure；desktop+tablet 各 3 次尝试全红，CI retries=2）；`gh run download -n e2e-test-results-ci` 核读 artifact 列表可读（error-context.md 逐字 `Expected: 2 / Received: 1` + test-failed-1.png 齐全）。判据四项与所有超时一字未动、未抬任何超时。PR #1 已关、远端分支已删 ⇒ main 零污染。台账 DL-O13（SIMULATED 标注）。
 - **范围 2**：~~`coverage.include` 换成 `["src/**/*.js"]`~~ —— **已撤销，不做**（2026-10-30 实测）。
   前提"换 include 就能出真数"不成立：单测执行的是注入后的 HTML，`src/*.js` 从未被 V8 加载，换完仍全 0%；
   且本机采集本身无数据（对照见待拍板第 6 条）。README 的旧归因已按实测改正。
@@ -332,6 +332,7 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
   超时时改为打印逐项现场（`polls/ready/wantModel/base/keyKind/cfgEnabled/diag`），
   用 `polls` 把"应用真没就绪"与"rAF 轮询器被饿"两类切开；射程用注入的必然失败样本证（红 + `polls:1779`）。
   下一次这条再红时，**按快照读数归因**，别再靠对侧腿间接定性 —— 见台账 R-22 同日两条 ✅ 子条目。
+  ✅ **2026-11-09 已执行**（净副本 CDP `Emulation.setCPUThrottlingRate` 模拟慢时钟；30s 预算与判据四项一字未动、未抬超时）：倍率扫描 8x 绿（4.3s）/ 32x 绿（11.0s）/ 100x 红（39.7s）；100x 红样快照 `{"polls":2,...,"ready":true,"wantModel":"bge-m3","keyKind":"string","cfgEnabled":"true","ok":true}` ⇒ 按行内读法归「条件当场成立但轮询器没被驱动（rAF 被节流饿死）」第二类，非应用问题；合理倍率不红 ⇒ CPU 维度不足以击穿 30s 闸门，历史若真红须按同读法另查网络/IDB/后台标签维度。证据 `F:/tmp/dl-o14-evidence/snapshot-100x.md`。台账 DL-O14（SIMULATED 标注）。
 - **验证**：范围 1 与 `tests/ci-workflow-guard.test.js` 同提交改，并按 `compareJobs()` 的 parity 约束核对
   （`run:` 型步骤要两边同步加，`uses:` 型不进 run 集合）。
   **实测补一句**：正因为 `uses:` 型不进 run 集合，③ 对"两边都加了没"完全隐形 ⇒ 只补一条腿会一路绿灯，
