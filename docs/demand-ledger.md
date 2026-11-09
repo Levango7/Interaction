@@ -53,8 +53,8 @@
 
 | ID | 事项 | 来源 | 归属 | 判据（可测） | 别名 | 复核度 |
 |---|---|---|---|---|---|---|
-| DL-O01 | 云同步**真后端联调 + 增量上传真机验证** | `iteration-plan.md:387-388` | 全局 | 起后端真上传成功且 `/api/sync/changes` 收到增量；区分「开关切了路径」与「真上传成功」 | 待拍板②尾 | 仅据文档 |
-| DL-O02 | WebDAV 桌面 UI 剩「改一条任务再上传」一步 | `roadmap-2026Q4.md:114,128` | 全局 | 探针定位任务行选择器后该步 PASS | roadmap ⑥ | 仅据文档 |
+| DL-O01 | 云同步**真后端联调 + 增量上传真机验证** | `iteration-plan.md:387-388` | 全局 | 起后端真上传成功且 `/api/sync/changes` 收到增量；区分「开关切了路径」与「真上传成功」。**11-09 本机半壁实跑（SIMULATED）：`server/verify/incremental-check.cjs` 54/54 通过（真后端 + 合成输入，证据 `F:/tmp/b-tier-selfcheck/incremental-check.log`）；前端 UI 开关侧未验 ⇒ 不翻 DONE** | 待拍板②尾 | 已核（本机半壁 SIMULATED） |
+| DL-O02 | WebDAV 桌面 UI 剩「改一条任务再上传」一步 | `roadmap-2026Q4.md:114,128` | 全局 | 探针定位任务行选择器后该步 PASS。**11-09 本机协议半实跑（SIMULATED）：`tests/webdav-sync.test.js` 16/16（证据 `F:/tmp/b-tier-selfcheck/webdav-sync-test.log`）；协议层真机 11/11 既有（`docs/webdav-verify.md`），UI 8 步卡用户坚果云应用密码 ⇒ 不翻 DONE** | roadmap ⑥ | 已核（协议层 + 单测；UI 步待用户凭据） |
 | DL-O03（`DONE` 11-09） | PNG 导出**成功支**无自动化断言 | `CHANGELOG` E4 附带发现①；`draw-export.test.js:109` | Design | 真浏览器成功导出并断言 blob 尺寸 / 类型。**已有交付 `609bff6`**（「补齐画图导出双端回归」= Chromium + Electron）：`tests/e2e/draw-export.spec.js:160-169` 断言文件名、PNG 魔数 `89504e47…`、尺寸 `[240,120]`、红/蓝像素各 >5000、toast「已导出」；`:171-176` 另有 `render_chart` 真栅格化；`pngPixels()` 统一校验头/尺寸/白底。11-09 复核确认 | E4-Q1 | **已核（e2e 逐行）** |
 | DL-O04 | Electron 下载真机验收（Phase A Q3，账未平） | `CHANGELOG` E4 Q3 段；`draw-capability-phase-a.md §十` | Design | **两条断言**：`will-download` 触发 **且** `will-navigate` 未触发 | E4-Q3 | 已核 |
 | DL-O05（`DONE` 11-09） | `tests/draw-svg-tool.test.js:5` 头注释与实现相反（说落账 `kind:"svg"`） | `CHANGELOG` E4「顺手登记」 | Design | **11-09 三方复核：已一致，无需改代码** —— 注释第 5 行现为「**不进入**只收可回访引用的产物账」；实现 `src/ai-tools.js:191` 只返回 `__SVG__` 标记、全仓无 `kind:"svg"`；测试 `tests/draw-svg-tool.test.js:42` 断言 `kind === "svg"` 为 **false**。原记录所述「说落账」已不成立（此前批次被动修过，或原判断有误——如实记，不追责） | E4 附带③ | **已核（三方比对）** |
@@ -81,7 +81,7 @@
 | ID | 事项 | 状态 | 谁能解 / 缺什么 | 来源 | 别名 |
 |---|---|---|---|---|---|
 | DL-B01 | 邮箱登录真机（SMTP） | `BLOCKED` | **用户**：一份真实 SMTP 配置，配不配、配哪家 | `iteration-plan.md:389` | 待拍板③ |
-| DL-B02 | 短信验证码：阿里云通道工程侧**已交付**（个人实名免资质、免签名审核，`a2edd9c` + 7 例），只剩开通拿赠送值 + 填 `server/config.json` | **`USER-ACTION`** | **用户**：去阿里云开通并填配置。腾讯云个人签名 2025-09 起是资质墙，但已被该通道绕开 | `OPEN-DECISIONS.md:11`、`iteration-plan.md:390` | OD-001 / 待拍板④ |
+| DL-B02 | 短信验证码：阿里云通道工程侧**已交付**（个人实名免资质、免签名审核，`a2edd9c` + 7 例），只剩开通拿赠送值 + 填 `server/config.json`。**一发入魂准备已就绪（ZCode 11-09，SIMULATED）**：仓外 `F:/tmp/sms-one-shot/sms-one-shot.cjs`（零凭据字面量；BASE_URL 只许 127.0.0.1 回环；`SMS_ONE_SHOT_REAL=1` 闸 + 每进程恰好一发 + 429 不重试）；dry-run 全链路 5/5 绿（`F:/tmp/sms-one-shot/result-dry-run-2026-11-09T03-45-33-516Z.md`）；B 档自检证据 `F:/tmp/b-tier-selfcheck/README-2026-11-09.md`。真发验收 = 用户填齐配置后跑 `--real` 一发（断言：发送 API 200 非 503 非 demo + `/sms-login` 该码 200 + provider=phone + 同码复用 400；手机侧由用户确认） | **`USER-ACTION`** | **用户**：去阿里云开通并填配置。腾讯云个人签名 2025-09 起是资质墙，但已被该通道绕开 | `OPEN-DECISIONS.md:11`、`iteration-plan.md:390` | OD-001 / 待拍板④ |
 | DL-B03 | Jira 真机验收 | `BLOCKED` | **用户**：站点 + API token（`_probe/accept-linear-jira.mjs jira`）；**Linear 已过，别重跑** | `iteration-plan.md:391-392`、`roadmap:127` | roadmap ⑤ |
 | DL-B04 | 微信正式扫码接入 | `BLOCKED` | **商务**：企业主体认证 + ICP 备案域名 + 开放平台审核；演示态已诚实标注 | `roadmap:84,126` | 待拍板⑤ / OD-001 |
 | DL-B05 | Notion 笔记推送 / Linear 反向拉取 / Jira 消费点 / 日历 | `BLOCKED` | **用户拍板**：渠道与产品价值待定；4 家凭据是否随备份走亦未定 | `product-scope.md:180-199`、`roadmap:89` | — |
