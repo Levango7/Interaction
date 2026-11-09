@@ -198,6 +198,12 @@ jobs:
           cache: 'npm'
       - run: npm run check:source-state
       - run: npm ci
+      # 2026-11-09（DL-O01 批 CI 红复绿）：与 ci.yml e2e job 同文同序 —— 本 job 的 e2e 同样会
+      # 跑 tests/e2e/sync-real-backend.spec.js（spawn 真 server，require express）；根 npm ci
+      # 不装 server 依赖时本腿恒红 `Cannot find module 'express'`（实测 run 42571687430）。
+      #   注：guard 目前只比对 test/verify 步骤集，两侧 e2e 的 parity 靠本注释 + ci.yml 同段注释维护。
+      - run: npm ci
+        working-directory: server
       # 2026-10-23：与 ci.yml 的 e2e job 同步改为「缓存 + 两步各带超时」（两边 run 步骤被
       #   tests/ci-workflow-guard.test.js 逐项比对，必须一致）。
       #   依据（实测，2026-10-22）：run 39801024862 attempt 1 的这一步跑了 58m50s 仍未结束，

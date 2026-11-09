@@ -1848,7 +1848,7 @@ let _syncQueueWarned = false;
 function _saveSyncQueue(q){
   /* v3.7.102 第七片：这是**离线操作队列**的落盘，写失败 = 断网期间的操作在刷新后丢失。
      原注释只写「静默」，等于没评估过。补留痕。 */
-  try { save(SYNC_QUEUE_KEY, q); } catch(e){
+  try { return save(SYNC_QUEUE_KEY, q); } catch(e){
     try{ if(!_syncQueueWarned && typeof pushDiag === "function"){ _syncQueueWarned = true; pushDiag("warn", "sync queue persist failed: "+((e&&e.message)||e), {where:"_saveSyncQueue"}); } }catch(_e2){}
   }
 }

@@ -105,7 +105,7 @@ module.exports = defineConfig({
          同 theme-matrix 只在 desktop 跑一次 */
       /* 2026-11-01：draw-responsive 自带 320/375/412 三档 setViewportSize，与所在项目视口无关
          —— 放进 tablet 会让同一批断言白跑一遍（首轮 CI 实测 6 例重复） */
-      testIgnore: /mobile\.spec\.js|theme-matrix\.spec\.js|scene-contract\.spec\.js|thin-pages\.spec\.js|i18n\.spec\.js|sync-contract\.spec\.js|toolbox\.spec\.js|rag-hybrid\.spec\.js|draw-responsive\.spec\.js/,
+      testIgnore: /mobile\.spec\.js|theme-matrix\.spec\.js|scene-contract\.spec\.js|thin-pages\.spec\.js|i18n\.spec\.js|sync-contract\.spec\.js|sync-real-backend\.spec\.js|toolbox\.spec\.js|rag-hybrid\.spec\.js|draw-responsive\.spec\.js/,
     },
     {
       name: "mobile-375x667",
