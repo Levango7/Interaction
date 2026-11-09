@@ -166,6 +166,14 @@ jobs:
           cache: 'npm'
       - run: npm run check:source-state
       - run: npm ci
+      # 2026-11-09（DL-O01 批 CI 红复绿）：tests/e2e/sync-real-backend.spec.js spawn 真 server
+      # 进程（server/src/index.js），require 链走到 express。根 npm ci 不装 server 依赖，e2e job
+      # 本腿恒红 `Cannot find module 'express'`（实测 run 42571687331 / 42571687430：2 failed 全
+      # 在该 spec；server-verify / test 四腿全绿）。本机绿是因工作树有历史遗留 server/node_modules，
+      # 属「本地有、CI 无」伪绿家族（同 v3.7.152 bcryptjs 那次，配方同款）。
+      # ⚠️ deploy.yml 的 e2e job 必须同文同序同改（两侧 e2e 约定 parity；guard 目前只比对 test/verify）。
+      - run: npm ci
+        working-directory: server
       # 2026-10-23：浏览器安装由「一条 --with-deps」改成「缓存 + 两步各带超时」。
       #   依据（实测，2026-10-22）：run 39801024862 attempt 1 的这一步从 15:04:12Z 跑到
       #   16:03:02Z **仍未结束（58m50s）**，其后的 `Run E2E` 被 skipped —— 那一次 e2e 一步没跑，
