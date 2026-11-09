@@ -34,7 +34,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       # 出包前先确认仓库处于源码态（与本仓其他工作流同口径）
       - name: 源码态校验
