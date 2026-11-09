@@ -1158,7 +1158,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    设置页内容偏窄时整页缩到 990px 而 AI 页 1055px——同层级宽度不一致。 */
 #drawer.drawer-page{overflow:visible !important;display:flex !important;flex-direction:column !important;align-items:stretch !important}
 /* 页内化抽屉打开时顶栏整体提级：.topbar 自带 backdrop-filter（自建层叠上下文），
-   其内 .more-menu 的 z-index:70 只在顶栏内部有效；抽屉页头 DOM 在后，绘制时盖住菜单下半，
+   其内 .more-menu 的层级（取 --z-popover）只在顶栏内部有效；抽屉页头 DOM 在后，绘制时盖住菜单下半，
    模式菜单的「代码/设计」项实测点不到（elementFromPoint 命中 HEADER.page-head）。
    只限页内化形态；fixed 右浮层抽屉仍由 .overlay/.drawer(60) 管遮罩，不受本条影响。 */
 body:has(#drawer.drawer-page.open) .topbar{position:relative;z-index:calc(var(--z-drawer) + 1)}
