@@ -1157,6 +1157,11 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    且 CSS 的 width:auto !important + margin:0 auto !important 让 drawer 退化为 fit-content 居中，
    设置页内容偏窄时整页缩到 990px 而 AI 页 1055px——同层级宽度不一致。 */
 #drawer.drawer-page{overflow:visible !important;display:flex !important;flex-direction:column !important;align-items:stretch !important}
+/* 页内化抽屉打开时顶栏整体提级：.topbar 自带 backdrop-filter（自建层叠上下文），
+   其内 .more-menu 的层级（取 --z-popover）只在顶栏内部有效；抽屉页头 DOM 在后，绘制时盖住菜单下半，
+   模式菜单的「代码/设计」项实测点不到（elementFromPoint 命中 HEADER.page-head）。
+   只限页内化形态；fixed 右浮层抽屉仍由 .overlay/.drawer(60) 管遮罩，不受本条影响。 */
+body:has(#drawer.drawer-page.open) .topbar{position:relative;z-index:calc(var(--z-drawer) + 1)}
 /* ===== v3.5.3 全站布局统一标准 ===== */
 :root{--card-gap:var(--space-3)}
 .card,.drawer-ph,.set-card,.stats-card,.cal-widget,.help-page,.recycle-card,.overview-grid,.overview-4cards{margin-bottom:var(--card-gap) !important}
@@ -6150,7 +6155,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <div class="set-subhead" data-i18n="dataMgmt.exportImport">导出 / 导入</div>
     <div class="set-actions">
       <button type="button" class="addbtn min" id="btnExport" data-i18n-aria="dataMgmt.exportJsonAria" aria-label="导出 JSON" data-i18n="dataMgmt.exportJson">导出 JSON</button>
-      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n="data.export.csv" data-i18n-aria="dataMgmt.exportCsvAria" aria-label="${t("export.preview.confirm", "导出 CSV")}" data-sc="accent">导出 CSV</button>
+      <button type="button" class="addbtn min" id="btnExportCSV" data-i18n="data.export.csv" data-i18n-aria="dataMgmt.exportCsvAria" aria-label="导出 CSV" data-sc="accent">导出 CSV</button>
       <button type="button" class="addbtn min" id="btnExportMD" data-i18n-aria="dataMgmt.exportMdAria" aria-label="导出 Markdown" data-sc="accent" data-i18n="dataMgmt.exportMD">导出 MD</button>
       <button type="button" class="addbtn min" id="btnImport" data-i18n-aria="dataMgmt.importRecoverAria" aria-label="导入恢复" data-i18n="dataMgmt.importRecover">导入恢复</button>
       <button type="button" class="addbtn min" id="btnIdbRestore" data-i18n-aria="dataMgmt.idbRestoreAria" aria-label="从本地库恢复" data-i18n="dataMgmt.idbRestoreBtn">本地库恢复</button>
@@ -8357,7 +8362,6 @@ const MESSAGES = {
     "settings.saveBtn": "保存设置",
     "export.preview.title": "导出预览",
     "export.preview.selectFields": "选择导出字段",
-    "export.preview.confirm": "导出 CSV",
     "csvImport.title": "CSV 导入预览",
     "csvImport.preview5": "前 5 条预览",
     "csvImport.confirm": "确认导入",
@@ -12555,7 +12559,6 @@ const MESSAGES = {
     "settings.saveBtn": "Save Settings",
     "export.preview.title": "Export Preview",
     "export.preview.selectFields": "Select Export Fields",
-    "export.preview.confirm": "Export CSV",
     "csvImport.title": "CSV Import Preview",
     "csvImport.preview5": "First 5 Rows Preview",
     "csvImport.confirm": "Confirm Import",
