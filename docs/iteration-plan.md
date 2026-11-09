@@ -388,8 +388,12 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
    `tests/sync-settings-entry.test.js` 7/7、`tests/binding-coverage.test.js` 3/3；
    `496607f` 另补 `tests/sync-incremental-gate.test.js` 3/3，证明开关真的切了 `/api/sync/changes`
    而不是只把字段写进 `cfg`。原写的「⚠️ 阻塞：文案在 `src/core-i18n.js`，该文件当前在 ZCode 手里」已解除
-   （双语文案在对方释放后一并入库）。**仍未做**：真后端联调与增量上传真机验证（要起后端）——
-   已验的是「开关切了路径」，不是「真上传成功」，别把这两件事混为一谈。
+   （双语文案在对方释放后一并入库）。**已做（2026-11-09，DL-O01 关单）**：`tests/e2e/sync-real-backend.spec.js`
+   起真 server 进程（隔离 DATAFILE + 占位密钥 + 屏蔽本机 config.json，配方同 `server/verify/incremental-check.cjs`）
+   前架记录型反代拿请求级证据；增量开例四重证据（POST /changes 的 body.changes 携带种子键且 v 逐字相等 /
+   真服务端 GET /api/sync/snapshot 读回同值 / 客户端 syncToken 推进 + changelog 清空 / 本轮零全量 PUT），
+   增量关对照例证明区分的是开关不是网络。「开关切了路径」与「真上传成功」自此同批用例可区分。
+   窄变异：开关翻关 ⇒ 在证据一精确变红。
 3. 邮箱登录：代码整链已实现（TC3/SMTP 路径都在），只差一份真实 SMTP 配置 —— 配不配、配哪家。
 4. 短信：腾讯云 2025-09 起对个人签名关死 + 要备案截图 ⇒ 资质墙，不是代码问题。
 5. 真机验收只剩 **Jira** 一条要你给凭据（站点 + API token，脚本同款可跑）。
@@ -426,6 +430,12 @@ DANGER_CONFIRM_TOOLS 两个工具恰好覆盖全部破坏性写操作（删任�
      "已有 toast 的失败"重复计成缺陷。
    - **建议路线**：先只在 data-links 的会话/插件两处**试点**（真实数据丢失面），确认判据抓得准再谈全仓门禁；
      不要一上来做门禁。
+   - **11-09 收口（用户批「① 先做，② 顺带一起批了」）**：判据落成 `scripts/lib/save-receipt.mjs`（只盯
+     `_save*` 持久化包装器体内语句位裸 `save(...)`；包装器外不命中，避免 168 处调用面变成基线冻结）
+     + `scripts/lint-save-receipt.mjs` 进 `npm run lint` 链 + `tests/save-receipt.test.js` 6 例判别力单测；
+     实扫 4 处真阳性已修（data-links `_saveSessions`/`_saveActiveSid`、ai-subagent `_saveSubAgents`/
+     `_saveSubAgentsTick` 双层透传、ui-global-events `_saveSyncQueue`），零基线文件零容忍。
+     变异自证：任一处改回裸调 ⇒ CLI exit 1 且单测 ⑤ 红。
 9. **#110：tablet 768×1024 的 Design 画布宿主塌陷（2026-11-04 取证结论 → 2026-11-05 方案乙实修）**
    - **结论先行：不是「CI 侧浏览器/缩放差异」，是布局链真退化，本机同样复现。**
      Qoder 13:44 留的「本机 1:1、CI 约 1/10」是**量错了量**造成的假象：`boxH` 是 C 节点 rect 的屏幕高度

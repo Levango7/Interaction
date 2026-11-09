@@ -3,6 +3,15 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-09 · **云同步真后端联调（DL-O01 关单）+ 第三条静态判据：`save()` 回执不得丢弃**
+
+_用户 11-09 批「① 先做，② 顺带一起批了」。① 补「客户端 → 真后端」增量往返 e2e：此前 mock e2e 不实现 `/api/sync/changes`、服务端 verify 不经客户端、单测 stub `apiFetch`——三层都测不到这段，已验的只是「开关切了路径」，不是「真上传成功」。② 静态判据收 R-37 假回执的同族反向：下层已报失败、调用方不接返回值。_
+
+- **① 真后端联调 e2e（`tests/e2e/sync-real-backend.spec.js`）**：起真 server 进程（隔离配方同 `server/verify/incremental-check.cjs`：`DATAFILE` 隔离 tmp + `ALLOW_PLACEHOLDER_SECRETS` + `AGENT_WORKBENCH_USER_CONFIG` 屏蔽本机 config.json，实况密钥/数据零触碰），前架记录型反代（页面与 API 同 origin，CSP `connect-src 'self'` 放行）拿请求级证据，再静态托管仓根 HTML。增量开例四重证据：`POST /api/sync/changes` 的 body.changes 携带 `wb_agent_tasks` 且 v 与种子逐字相等 / **Node 侧直连真 server 端口**、用应用自己的 `apiGetHeaders().Authorization` 明文头读 `GET /api/sync/snapshot` 读回同值（localStorage 的 token 是密文，直连不能当 Bearer）/ 客户端 syncToken 推进 + lastPushAt + 变更日志清空 / 本轮零全量 `PUT /snapshot`。增量关对照例只有 PUT、其 body.snapshot 含种子值、零 POST /changes ⇒ 区分的是开关不是网络。
+- **② 第三条静态判据（`scripts/lib/save-receipt.mjs` + `scripts/lint-save-receipt.mjs`，进 `npm run lint` 链 ⇒ CI 自动，零容忍无基线文件）**：只盯 `_save*` 持久化包装器体内语句位裸 `save(...)`（丢弃 `false` 返回值）；消费形态（return / 赋值 / await / 短路 / 参数位置 / 条件位置）不判丢弃；包装器外不命中，避免 168 处调用面变成基线冻结。实扫 4 处真阳性已修成 `return save(...)` 透传：`src/data-links.js` `_saveSessions`/`_saveActiveSid`、`src/ai-subagent.js` `_saveSubAgents`/`_saveSubAgentsTick` 双层、`src/ui-global-events.js` `_saveSyncQueue`。
+- **窄变异自证**：e2e 侧开关翻关 ⇒ 在证据一（POST /changes 携带种子键）精确变红；判据侧任一处改回裸调 ⇒ CLI exit 1 精确点名且 `tests/save-receipt.test.js` ⑤ 红（6 例含本仓五形态合成码全识别 / 包装器外不命中 / src/ 全量 0 命中 / 无基线文件零容忍）。两处变异均已还原。
+- **验证**：e2e 2/2 passed（`E2E=1` desktop）/ `tests/save-receipt.test.js` 6/6 / `npm run lint` exit 0 / 全量单测 239 文件 2616 例 passed / `check:source-state` ✓。`server/src`、workflow、package-lock、node_modules 零改动。高共写面声明同板面行。
+
 ### 2026-11-09 · **短信通道两条未钉分支补测 + 本机联调说明（DL-B02 配套）**
 
 _`tests/server-sms-providers.test.js`（2026-10-28 批）已钉「配不全走 demo + demo 码一次性消费」，但两个分支零回归保护：生产姿态 fail-closed、dev 开关不短路真通道。本批补上，并在 `server/README.md` 末加「本机短信联调（免真值）」段（demo 逃生舱 / 假 provider 端点 / 测试层 stub 三档）。零 `src/` / `server/src/` / `scripts/` / HTML 改动。_
