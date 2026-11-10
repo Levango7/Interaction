@@ -747,7 +747,19 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .mode-pill-item svg{width:14px;height:14px;flex-shrink:0}
 .mode-pill-item.is-on{background:var(--accent);color:var(--on-accent);font-weight:600}
 .mode-pill-item.is-disabled{opacity:.45;cursor:not-allowed}
-@media (max-width:479px){.mode-pill-item{padding:3px 8px}.mode-pill-item .lbl{display:none}}
+/* 2026-11-10：pill 宽度预算——文字档 211px 只在 ≥1024 有预算；≤1023 图标化（复用 MAIN 断点 1023，不新增断点值）。
+   480–1023 档 base 本就贴线/微溢（480 实测溢 39 是既有债），图标 pill + 收 logo 文字后回到不溢。 */
+@media (max-width:1023px){
+  .mode-pill{gap:1px;padding:1px}
+  .mode-pill-item{padding:3px 4px;gap:3px}
+  .mode-pill-item svg{width:12px;height:12px}
+  .mode-pill-item .lbl{display:none}
+}
+@media (max-width:479px){
+  .mode-pill{gap:0;padding:0}
+  .mode-pill-item{padding:3px 2px}
+  .mode-pill-item svg{width:11px;height:11px}
+}
 /* v1.9.9：侧栏功能组三大类（图表/组件/应用）popover——竖排子菜单，JS 锚定按钮右侧 */
 .side-pop{position:fixed;background:var(--panel);border:1px solid var(--line);
   border-radius:var(--radius-lg);box-shadow:var(--shadow-3);z-index:var(--z-popover);
@@ -884,11 +896,18 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   .topbar .tbtn{min-width:38px;padding:var(--space-1) 2px}
   .topbar .tbtn .lbl{font-size:var(--fs-3xs);max-width:46px}
   .topbar .tbtn svg{width:var(--icon-sm);height:var(--icon-sm)}
+  /* 2026-11-10：图标 pill（≤1023）+ 品牌文字二选一——480–767 实测 519px 内容装不进 480，
+     收掉品牌文字（保留标记图形）与右 padding，给 pill 让出预算。base 在 480 本就溢 39（既有债），
+     本条把它与本批引入的差额一并收掉。 */
+  .topbar{padding-right:var(--space-2)}
+  .topbar .logo > span:not(.mark){display:none}
 }
 /* B5（2026-10-26）：溢出菜单入口在宽屏不出现（只有窄屏才需要收低频按钮） */
 .topbar .tbtn.topbar-more-btn{display:none}
 @media(max-width:479px){
-  .topbar{gap:1px;padding-left:var(--space-1)}
+  .topbar{gap:1px;padding-left:var(--space-1);padding-right:0}
+  /* 320px 实测还差 7px：标记图形 28→24（品牌字在 767 档已收，这里只剩图形） */
+  .topbar .logo .mark{width:24px;height:24px}
   /* P1-4 余项收口：低频按钮（命令/主题/下载/安装，靠 data-fold 声明）收进溢出菜单，
      把**宽度**命中区从 26px 抬回 44px。2026-10-20 那版只能先保高度 ——
      8 个按钮同时抬到 40px 会让 375px 视口横向溢出 103px；现在窄屏常驻 5 个（搜索/今日/消息/用户/更多）。
