@@ -21,8 +21,9 @@ jobs:
         node-version: [24]
     runs-on: ${{ matrix.os }}
     steps:
-      # 认领门（claim-check-ci）需要基线提交（github.event.before）参与 git diff，
-      # 默认 fetch-depth:1 的浅历史里没有它 ⇒ diff 失败、门禁误红（首跑实测）。
+      # 认领门（claim-check-ci）需要基线提交参与 git diff：pull_request 事件取
+      # pull_request.base.sha（before 是 PR 分支旧 tip，rebase/强推后不可达，实测红过），
+      # push 事件取 event.before。默认 fetch-depth:1 的浅历史里都不可达 ⇒ diff 失败、门禁误红。
       # 只加深本 job 的检出，其余 job 维持默认浅检出。
       - uses: actions/checkout@v4
         with:

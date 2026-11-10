@@ -8,14 +8,17 @@
  * 与被测代码的关系：直接 import { main } 调用（不派生子进程、不经 shell），
  * 用 vi.spyOn(console) 截输出做断言；workflow 侧的形态约束用文本断言钉住。
  *
- * 三条契约：
+ * 四条契约：
  *   ① workflow 两处 `- run:` 引用的脚本真实存在，且都是 verify-ci-order 能解析的单行形态；
  *   ② 取不到基线（--base 给全零串）→ **显式跳过**（返回 0 + 打印原因），不静默放行也不误红；
- *   ③ 默认形态在本仓（HEAD~1..HEAD）可跑通且认领门子进程被真正调起（输出含 claim-check 标记）。
+ *   ③ 默认形态在本仓（HEAD~1..HEAD）可跑通且认领门子进程被真正调起（输出含 claim-check 标记）；
+ *   ④ pull_request 事件基线取 base.sha 而非 before（rebase/强推后 before 不可达，实测红过）。
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, existsSync, writeFileSync, rmSync } from "node:fs";
+import { resolve, join } from "node:path";
+import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
 import { main } from "../scripts/claim-check-ci.mjs";
 
 const ROOT = process.cwd();
@@ -62,5 +65,28 @@ describe("认领门 CI 适配层（claim-check-ci.mjs）", () => {
     const out = logs.join("\n");
     expect(out).toContain("[claim-check-ci] 基线");
     expect(out).toContain("claim-check");   // 子进程的输出标记被透传（认领门真的跑了）
+  });
+
+  it("④ pull_request 事件基线取 base.sha（before 是 PR 分支旧 tip，强推后不可达 —— 2026-11-10 PR #3 实测红）", () => {
+    const baseSha = execFileSync("git", ["rev-parse", "HEAD~1"], { encoding: "utf8" }).trim();
+    const evPath = join(tmpdir(), "claim-check-ci-test-event.json");
+    writeFileSync(evPath, JSON.stringify({
+      action: "synchronize",
+      before: "68fc013472887bc47eed441cf25f530020fe2fb7",  // 强推掉的旧 tip，仓库里不可达
+      pull_request: { base: { sha: baseSha } },
+    }));
+    process.env.GITHUB_EVENT_PATH = evPath;
+    process.env.GITHUB_SHA = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    capture();
+    try {
+      const code = main([]);
+      expect(code).toBe(0);
+      const out = logs.join("\n");
+      expect(out).toContain("pull_request.base.sha");        // 基线来源被钉死
+      expect(out).not.toContain("基线不可达");                 // 旧行为（拿 before 去 diff）在这里 exit 2
+      expect(out).toContain(baseSha);
+    } finally {
+      rmSync(evPath, { force: true });
+    }
   });
 });
