@@ -1,0 +1,299 @@
+<!doctype html>
+<!-- 形态 A 可点原型（IDE 化单栏流）· 独立 HTML 零仓库依赖 · 四件套第 2/4 步 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>形态 A 原型 · IDE 化单栏流</title>
+<style>
+  :root{
+    --z-under:2; --z-sticky:20; --z-sidebar:40; --z-overlay:50; --z-drawer:60; --z-popover:70; --z-modal:80; --z-toast:90; --z-max:100;
+    --bg:#eef1ee; --panel:#f7f9f7; --panel-2:#ffffff; --line:#d8ded8; --ink:#1d2521; --ink-2:#5a655e;
+    --accent:#2f7d5b; --accent-soft:#dcebe2; --danger:#b3402f; --sb:220px; --rr:280px;
+    --mb-h:32px; --tb-h:36px; --st-h:24px; --cmp-h:48px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{font:13px/1.5 system-ui,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); overflow:hidden}
+  #app{height:100vh; display:flex; flex-direction:column}
+  /* 菜单栏 */
+  .menubar{height:var(--mb-h); display:flex; align-items:center; gap:4px; padding:0 8px;
+    background:var(--panel); border-bottom:1px solid var(--line); flex:none}
+  .menubar .navbtn{width:24px;height:22px; border:1px solid var(--line); background:var(--panel-2); border-radius:4px}
+  .menubar .mi{padding:2px 8px; border-radius:4px; color:var(--ink-2); cursor:pointer}
+  .menubar .mi:hover{background:var(--accent-soft)}
+  .menubar .sp{flex:1}
+  .menubar .win{display:flex; gap:8px; color:var(--ink-2)}
+  /* tab 条 */
+  .tabbar{height:var(--tb-h); display:flex; align-items:center; gap:8px; padding:0 8px;
+    background:var(--panel); border-bottom:1px solid var(--line); flex:none}
+  .pill{display:flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; background:var(--panel-2); flex:none}
+  .pill button{border:0; background:transparent; padding:3px 12px; font-size:12px; cursor:pointer; color:var(--ink-2)}
+  .pill button[aria-pressed="true"]{background:var(--accent); color:#fff}
+  .pill button:disabled{opacity:.45; cursor:not-allowed}
+  .tabs{display:flex; gap:4px; flex:1; min-width:0; overflow-x:auto}
+  .tab{display:flex; align-items:center; gap:6px; padding:3px 10px; border:1px solid var(--line);
+    border-radius:6px 6px 0 0; background:var(--panel-2); white-space:nowrap; cursor:pointer; flex:none}
+  .tab[aria-selected="true"]{border-color:var(--accent); color:var(--accent)}
+  .tab .x{border:0; background:transparent; cursor:pointer; color:var(--ink-2)}
+  .tabadd{flex:none; width:24px; height:24px; border:1px dashed var(--line); border-radius:6px; background:transparent; cursor:pointer}
+  .railbtn{display:none; flex:none; border:1px solid var(--line); background:var(--panel-2); border-radius:4px; padding:2px 8px; cursor:pointer}
+  .imbtn{flex:none; border:1px solid var(--line); background:var(--panel-2); border-radius:4px; padding:2px 8px; cursor:pointer}
+  /* 主体三栏 */
+  .body{flex:1; display:flex; min-height:0}
+  .sidebar{width:var(--sb); flex:none; display:flex; flex-direction:column; background:var(--panel);
+    border-right:1px solid var(--line); overflow-y:auto}
+  .sb-sec{padding:8px; border-bottom:1px solid var(--line)}
+  .sb-sec h4{font-size:12px; color:var(--ink-2); font-weight:600; margin:0 0 6px}
+  .row{display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; cursor:pointer; min-width:0}
+  .row:hover{background:var(--accent-soft)}
+  .row.active{background:var(--accent-soft); color:var(--accent)}
+  .row .n{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .row .c{color:var(--ink-2)}
+  .wslist .row{padding-left:22px}
+  .sb-tools{margin-top:auto}
+  .user{padding:8px; border-top:1px solid var(--line); display:flex; gap:8px; align-items:center}
+  .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px}
+  /* 主区 */
+  .main{flex:1; min-width:0; display:flex; flex-direction:column; background:var(--panel-2)}
+  .crumbs{height:32px; flex:none; display:flex; align-items:center; gap:6px; padding:0 12px;
+    border-bottom:1px solid var(--line); color:var(--ink-2); background:var(--panel)}
+  .content{flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px}
+  .card{border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:var(--panel-2)}
+  .card h5{font-size:13px; margin-bottom:4px}
+  .card p{color:var(--ink-2); font-size:12px}
+  .task{display:flex; gap:8px; align-items:center}
+  .task.overdue h5{color:var(--danger)}
+  /* Composer（对话坞新家） */
+  .composer{flex:none; border-top:1px solid var(--line); background:var(--panel)}
+  .cmp-panel{max-height:0; overflow:hidden; transition:max-height .18s ease}
+  .composer.open .cmp-panel{max-height:40vh; overflow-y:auto; border-bottom:1px solid var(--line);
+    display:flex; flex-direction:column; gap:8px; padding:10px 12px}
+  .msg{max-width:72%; padding:6px 10px; border-radius:10px; background:var(--panel-2); border:1px solid var(--line)}
+  .msg.ai{align-self:flex-start; background:var(--accent-soft); border-color:transparent}
+  .msg.me{align-self:flex-end}
+  .cmp-bar{height:var(--cmp-h); display:flex; align-items:center; gap:8px; padding:0 10px}
+  .cmp-bar input{flex:1; min-width:0; height:32px; border:1px solid var(--line); border-radius:8px; padding:0 10px; background:var(--panel-2)}
+  .icobtn{width:32px; height:32px; flex:none; border:1px solid var(--line); border-radius:8px; background:var(--panel-2); cursor:pointer}
+  .modelchip{flex:none; border:1px solid var(--line); border-radius:999px; padding:3px 10px; color:var(--ink-2); background:var(--panel-2); font-size:12px}
+  .send{flex:none; width:32px; height:32px; border:0; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer}
+  /* 右栏 */
+  .rightrail{width:var(--rr); flex:none; display:flex; flex-direction:column; background:var(--panel);
+    border-left:1px solid var(--line); overflow-y:auto}
+  .rr-sec{border-bottom:1px solid var(--line)}
+  .rr-sec > h4{display:flex; align-items:center; gap:6px; padding:8px 10px; font-size:12px; cursor:pointer; user-select:none}
+  .rr-sec > h4::after{content:"▾"; margin-left:auto; color:var(--ink-2)}
+  .rr-sec.closed > h4::after{content:"▸"}
+  .rr-sec.closed .rr-body{display:none}
+  .rr-body{padding:0 10px 10px; display:flex; flex-direction:column; gap:6px}
+  .tk{display:flex; gap:8px; align-items:center; font-size:12px}
+  .tk.overdue{color:var(--danger)}
+  .file{display:flex; gap:8px; align-items:center; font-size:12px; color:var(--ink-2)}
+  /* 状态栏 */
+  .statusbar{height:var(--st-h); flex:none; display:flex; align-items:center; gap:14px; padding:0 10px;
+    background:var(--panel); border-top:1px solid var(--line); color:var(--ink-2); font-size:12px}
+  .statusbar .sp{flex:1}
+  /* 沉浸页：隐藏 tab 条 + Composer + 状态栏 */
+  body.immersive .tabbar, body.immersive .composer, body.immersive .statusbar{display:none}
+  /* toast */
+  #toast{position:fixed; left:50%; bottom:calc(var(--st-h) + 12px); transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:6px 14px; border-radius:999px; z-index:var(--z-toast);
+    opacity:0; pointer-events:none; transition:opacity .15s}
+  #toast.show{opacity:1}
+  /* 断点（复用 1023/767/479，不新增值） */
+  @media (max-width:1023px){
+    .rightrail{position:fixed; top:calc(var(--mb-h) + var(--tb-h)); right:0; bottom:var(--st-h); z-index:var(--z-drawer);
+      transform:translateX(100%); transition:transform .18s ease; box-shadow:-4px 0 12px rgba(0,0,0,.08)}
+    .rightrail.open{transform:none}
+    .railbtn{display:block}
+  }
+  @media (max-width:767px){
+    .sidebar{position:fixed; left:0; top:calc(var(--mb-h) + var(--tb-h)); bottom:var(--st-h); z-index:var(--z-drawer);
+      transform:translateX(-100%); transition:transform .18s ease}
+    .sidebar.open{transform:none}
+    .hamb{display:block}
+    .menubar .mi:not(.imbtn), .menubar .win{display:none}
+    .pill button{padding:3px 8px}
+    .modelchip{display:none}
+  }
+  @media (min-width:768px){ .hamb{display:none} }
+  @media (max-width:479px){
+    .pill button{padding:3px 6px}
+    .crumbs{padding:0 8px; gap:4px}
+  }
+</style>
+<body>
+<div id="app">
+  <header class="menubar">
+    <button class="navbtn hamb" id="hamb" aria-label="打开导航">☰</button>
+    <button class="navbtn" aria-label="后退">←</button>
+    <button class="navbtn" aria-label="前进">→</button>
+    <span class="mi">文件</span><span class="mi">编辑</span><span class="mi">视图</span>
+    <button class="mi imbtn" id="immersive">沉浸页演示</button>
+    <span class="mi">帮助</span>
+    <span class="sp"></span>
+    <span class="win">− ▢ ×</span>
+  </header>
+
+  <div class="tabbar">
+    <div class="pill" role="group" aria-label="模式切换" id="pill">
+      <button data-mode="work" aria-pressed="true">工作</button>
+      <button data-mode="code" aria-pressed="false">代码</button>
+      <button data-mode="design" aria-pressed="false">设计</button>
+    </div>
+    <div class="tabs" id="tabs">
+      <span class="tab" role="tab" aria-selected="true">工作台 <button class="x" aria-label="关闭">×</button></span>
+      <span class="tab" role="tab" aria-selected="false">设计画布 <button class="x" aria-label="关闭">×</button></span>
+    </div>
+    <button class="tabadd" id="tabadd" aria-label="新 tab">＋</button>
+    <button class="railbtn" id="railbtn" aria-label="右栏">▤</button>
+  </div>
+
+  <div class="body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-sec">
+        <div class="row"><span>✎</span><span class="n">新的任务</span></div>
+        <div class="row"><span>⚑</span><span class="n">需要我</span><span class="c">4</span></div>
+        <div class="row"><span>🔍</span><span class="n">搜索</span></div>
+      </div>
+      <div class="sb-sec">
+        <h4>导航</h4>
+        <div class="row active"><span>☀</span><span class="n">今日</span></div>
+        <div class="row"><span>◧</span><span class="n">工作台</span></div>
+        <div class="row"><span>✦</span><span class="n">助手</span></div>
+        <div class="row"><span>⋯</span><span class="n">更多</span></div>
+      </div>
+      <div class="sb-sec wslist">
+        <h4>工作区</h4>
+        <div class="row active"><span class="n">Interaction</span></div>
+        <div class="row"><span class="n">OpsMesh</span></div>
+        <div class="row"><span class="n">Corps</span></div>
+        <div class="row"><span class="n">Modulo</span></div>
+        <div class="row"><span class="n">FlintSpark</span></div>
+      </div>
+      <div class="sb-sec sb-tools">
+        <div class="row"><span>🧰</span><span class="n">工具箱</span></div>
+        <div class="row"><span>🛍</span><span class="n">商店</span></div>
+        <div class="row"><span>🗑</span><span class="n">回收站</span></div>
+        <div class="row"><span>⚙</span><span class="n">设置</span></div>
+      </div>
+      <div class="user"><span class="avatar">L</span><span>Levango7</span></div>
+    </aside>
+
+    <main class="main">
+      <div class="crumbs">工作台 ▸ Interaction ▸ 今日</div>
+      <div class="content">
+        <div class="card task overdue"><input type="checkbox"><div><h5>回执笔 ab91bde6 双 run 核读</h5><p>逾期 · 今天必须销号</p></div></div>
+        <div class="card task"><input type="checkbox"><div><h5>形态 A 原型三断点零溢出</h5><p>今天 · 四件套第 2 步</p></div></div>
+        <div class="card task"><input type="checkbox"><div><h5>设计令牌入 DESIGN-SYSTEM.md</h5><p>有日期 · 四件套第 3 步</p></div></div>
+        <div class="card task"><input type="checkbox"><div><h5>功能设计：绑定覆盖 + 焦点顺序</h5><p>无日期</p></div></div>
+        <div class="card"><h5>AI 落手示例</h5><p>Composer 聚焦后向上长成对话面板；单行即收起态。</p></div>
+      </div>
+      <div class="composer" id="composer">
+        <div class="cmp-panel" id="cmpPanel">
+          <div class="msg ai">形态 A 定位已落 docs/ui-redesign-phase-a.md。</div>
+          <div class="msg me">原型三断点零溢出后给我看截图。</div>
+          <div class="msg ai">六档 docOverflow 全 0，交互可点，存证完成。</div>
+        </div>
+        <div class="cmp-bar">
+          <button class="icobtn" id="cmpToggle" aria-expanded="false" aria-label="展开对话">⌃</button>
+          <input id="cmpInput" placeholder="长按鼠标语音输入文字 / 问 AI 或输入任务…">
+          <button class="icobtn" aria-label="附件">＋</button>
+          <button class="icobtn" aria-label="附件夹">📎</button>
+          <span class="modelchip">ling-3.2-flash 最大</span>
+          <button class="send" aria-label="发送">↑</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="rightrail" id="rightrail">
+      <section class="rr-sec">
+        <h4 id="rrTasks">今日任务轨</h4>
+        <div class="rr-body">
+          <label class="tk overdue"><input type="checkbox"> 回执笔双 run 核读</label>
+          <label class="tk"><input type="checkbox"> 形态 A 原型三断点零溢出</label>
+          <label class="tk"><input type="checkbox"> 设计令牌入 DESIGN-SYSTEM.md</label>
+          <label class="tk"><input type="checkbox"> 功能设计：绑定覆盖 + 焦点顺序</label>
+        </div>
+      </section>
+      <section class="rr-sec">
+        <h4>产出</h4>
+        <div class="rr-body">
+          <div class="file">📄 agent-board.md</div>
+          <div class="file">📄 ui-redesign-phase-a.md</div>
+          <div class="file">📄 ui-form-a.html</div>
+          <div class="file">📄 demand-ledger.md</div>
+        </div>
+      </section>
+      <section class="rr-sec closed">
+        <h4>网页速览</h4>
+        <div class="rr-body"><div class="file">🔗 xn--/df3c37mdoibz0a</div></div>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="statusbar">
+    <span>Interaction</span><span>本地</span><span>100%</span>
+    <span class="sp"></span><span>形态 A 原型 · 零依赖</span>
+  </footer>
+</div>
+<div id="toast" role="status"></div>
+<script>
+(function(){
+  var toast = document.getElementById('toast'), toastT = null;
+  function say(s){ toast.textContent = s; toast.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(function(){ toast.classList.remove('show'); }, 1600); }
+  // pill 三态 + 窄屏拒 code（<1024 代码段 disabled+aria-disabled，#134 判据同真机）
+  var pill = document.getElementById('pill');
+  function syncPill(){
+    var narrow = window.innerWidth < 1024;
+    var code = pill.querySelector('[data-mode="code"]');
+    code.disabled = narrow; code.setAttribute('aria-disabled', String(narrow));
+  }
+  window.addEventListener('resize', syncPill); syncPill();
+  pill.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b || b.disabled) return;
+    pill.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', String(x === b)); });
+  });
+  // tab 加/关/切
+  var tabs = document.getElementById('tabs');
+  tabs.addEventListener('click', function(e){
+    var t = e.target.closest('.tab'); if(!t) return;
+    if (e.target.closest('.x')) { if (tabs.querySelectorAll('.tab').length > 1) t.remove(); return; }
+    tabs.querySelectorAll('.tab').forEach(function(x){ x.setAttribute('aria-selected','false'); });
+    t.setAttribute('aria-selected','true');
+  });
+  var n = 0;
+  document.getElementById('tabadd').addEventListener('click', function(){
+    n++; var s = document.createElement('span'); s.className = 'tab'; s.setAttribute('role','tab');
+    s.setAttribute('aria-selected','true');
+    s.innerHTML = '新 tab ' + n + ' <button class="x" aria-label="关闭">×</button>';
+    tabs.querySelectorAll('.tab').forEach(function(x){ x.setAttribute('aria-selected','false'); });
+    tabs.appendChild(s); s.scrollIntoView({inline:'nearest'});
+  });
+  // Composer 展开/收起（Esc 关）
+  var cmp = document.getElementById('composer'), tg = document.getElementById('cmpToggle');
+  tg.addEventListener('click', function(){
+    var open = cmp.classList.toggle('open'); tg.setAttribute('aria-expanded', String(open));
+    tg.style.transform = open ? 'rotate(180deg)' : '';
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && cmp.classList.contains('open')) { cmp.classList.remove('open'); tg.setAttribute('aria-expanded','false'); }
+  });
+  // 右栏分节折叠
+  document.querySelectorAll('.rr-sec > h4').forEach(function(h){
+    h.addEventListener('click', function(){ h.parentElement.classList.toggle('closed'); });
+  });
+  // 左栏/四区选中态
+  document.querySelectorAll('.sidebar .row').forEach(function(r){
+    r.addEventListener('click', function(){
+      r.parentElement.querySelectorAll('.row').forEach(function(x){ x.classList.remove('active'); });
+      r.classList.add('active');
+    });
+  });
+  // 窄屏抽屉 / 右栏滑出
+  document.getElementById('hamb').addEventListener('click', function(){ document.getElementById('sidebar').classList.toggle('open'); });
+  document.getElementById('railbtn').addEventListener('click', function(){ document.getElementById('rightrail').classList.toggle('open'); });
+  // 沉浸页演示（沉浸页隐藏坞 + tab 条 + 状态栏）
+  document.getElementById('immersive').addEventListener('click', function(){ document.body.classList.toggle('immersive'); });
+})();
+</script>
+</body>

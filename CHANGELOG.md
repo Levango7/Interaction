@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-11 · **UI 形态 A 阶段一：定位 → 原型 → 令牌 → 功能设计四件套落库（#135-#138 文档面，零代码）**
+
+_用户 11-10 点单形态 A「IDE 化单栏流」并附 Qoder Desktop 截图作视觉参照；设计权已下放，定稿约束＝默认收起对话坞 + 右栏今日任务轨 + 沉浸页隐藏。本批只落四件套文档与可点原型，`src/` / `agent-workbench.html` / `server/` / workflow / package-lock 零改动；代码阶段 B1-B5 按 `docs/ui-form-a-functional.md` §6 分批另起。_
+
+- **`docs/ui-redesign-phase-a.md`（新增）**：定位一页纸——桌面为主知识工作者、闭环「捕获 → 委派与执行 → 复核」、三模式布局与断点契约指向 `three-mode-spec.md`。
+- **`docs/prototypes/ui-form-a.html`（新增）**：形态 A 可点原型，独立 HTML 零仓库依赖；六档视口（320/360/375/480/768/1024/1280）`scrollWidth==clientWidth` 零横向溢出、12 项交互逐条可点（pill 三态、tab 加关、Composer 展开/Esc、右栏分节折叠、沉浸页隐藏、窄屏抽屉等），截图存证。
+- **`docs/DESIGN-SYSTEM.md` §2.2 增量**：栏高令牌 `--mb-h:32` / `--tb-h:36` / `--st-h:24` / `--cmp-h:48`、栏宽 `--sb:220` / `--rr:280`；pill 移 tab 条左；断点复用 1023/767/479 不新增值；Composer 收起＝单行输入行常驻、展开 `max-height:40vh`、Esc 收、沉浸页仍隐藏；右栏首节＝今日任务轨。窄屏拒 code 口径校准为真机判据：<1024「代码」段 `disabled`+`aria-disabled`、`setUIMode('code')` 返回 false 双保险（同 #134，`tests/ui-mode.test.js:160-185`）。
+- **`docs/ui-form-a-functional.md`（新增）**：功能设计——视图注册表 `_formATabs`（持久化键 `wb_form_a_tabs` 先登记）、`FORM_A_ACTIONS` 8 个 `data-action` + 新 `scripts/lint-bindings.mjs` 双向包含门禁、焦点顺序与 Esc 栈、沉浸页 `:has()` 族扩展、topbar 退役去向表、B1-B5 分批计划与每批验收口径。
+- **验证**：`lint-tokens` 0 悬空 / `lint-css-structure` 2745 括号配平 / `lint-breakpoints` 9 值登记无新增；六档溢出探针 + 交互双档探针全绿；认领门自验 `--as WorkBuddy` 6 路径 rc=0、`--as ZCode` rc=1（负向对照）。**如实披露**：本仓 `node_modules` 整体缺失，`npx vitest` 不可用，单测本窗口未跑，CI 为权威终态（R9）。
+
 ### 2026-11-10 · **季度台账只读复核脚本 `scripts/ledger-quarterly-review.mjs`（台账规范节 mandate 五项落地）**
 
 _台账「规范」节季度 mandate：五项只读复核（① `DONE` 无 commit ② `OPEN`/`DOING` 超 30 天未复核 ③ `BLOCKED` 缺「谁能解」 ④ `USER-ACTION` 挂超 60 天 ⑤ 别名指向已删除文件）；同节「门禁」条禁给台账装 CI 判定器（#109 教训）⇒ 独立只读脚本，不入 lint 链、不入 `verify:ci`、退出码恒 0（发现不转退出码，出报告由人处置）。用法：`node scripts/ledger-quarterly-review.mjs [台账路径]`。_
@@ -10,7 +20,6 @@ _台账「规范」节季度 mandate：五项只读复核（① `DONE` 无 commi
 - **`scripts/ledger-quarterly-review.mjs`**：解析台账五段表格（`\|` 转义还原）；「最后复核」信号＝行内最新日期（ISO 或 `M-D`，无日期行不定罪、列「数据质量」节）；文件引用按 12 个解析位（根 / docs / docs/decisions / tests / tests/e2e / scripts / scripts/lib / src / server/src / electron / .github / .github/workflows）判存在；引用白名单逐条附理由（仓外母稿 / CI 工件下载物 / 用户待建配置 / gitignore 探查面 `_probe/` `tmp/`），无理由不放行
 - **窄变异自证**：/tmp 副本注入五缺陷（五检各一）⇒ ①9 ②1 ③1 ④1 ⑤3 且逐条点名正确行（DL-D04 / DL-O02 / DL-B01 / DL-B02 / DL-D03）；还原后真账基线 ①8 ②0 ③0 ④0 ⑤2 精确复现；真账 `git diff` 空＝「只报不改」铁证；`node --check` 绿
 - **真账基线（如实登记，处置权在人）**：① 8 处 `DONE` 行无 commit（DL-O05 / O06 / O10 / O14 / O15 / O17 / O19 / O23，其中 DL-O05 系「三方复核已一致、无需改代码」类闭环）；⑤ 2 处悬空引用（`PRODUCT.rewrite.md` / `tests/e2e/dl-o13-red-probe.spec.js` 耗材分支产物）
-
 ### 2026-11-10 · **pill 批（#134）合并闭环：认领门 PR 基线修 + PR #3 squash 合 main `a9768ae`**
 
 _pill 批主体（胶囊开关本体 + 窄屏宽度收口，见下条）已随 PR #3 squash 合入 main。其上首跑 CI 被认领门误红：`claim-check-ci` 在 pull_request synchronize 载荷下取 `event.before` 作 diff 基线，那是 PR 分支的旧 tip，rebase/强推后在新历史里不可达 ⇒ `git diff` 判失败、门禁 exit 1 拖红整条 job（run `42734170786`，windows test 腿红在 claim-check 步）。修法＝`resolveBase()` 对 pull_request / pull_request_target 事件优先取 `pull_request.base.sha`（base 分支 tip，fetch 必达）；push 事件仍走 `event.before`；取不到基线仍显式跳过（exit 0 + 打印原因），基线不可达仍 exit 2，不静默放行。_
