@@ -18737,20 +18737,6 @@ let uiView = "main";
 /* v2.1.0：场景任务视图模式——kanban（看板，默认）/ calendar（日历）/ todo（待办列表）。
    侧栏「总览 ▸ 任务」三项切换；持久化到 localStorage。 */
 let sceneViewMode = load(PREFIX+"sceneViewMode","kanban");
-/**
- * 切换场景任务视图模式并跳转：当前在概览/统计/回收站等非场景视图时回办公场景。
- * @param {string} mode - "kanban" | "calendar" | "todo"
- * @returns {void}
- */
-function setSceneViewMode(mode){
-  if(mode!=="kanban" && mode!=="calendar" && mode!=="todo") mode = "kanban";
-  sceneViewMode = mode;
-  save(PREFIX+"sceneViewMode", mode);
-  _sideActive = "view-"+mode;
-  const nonScene = ["overview","stats","recycle"];
-  if(nonScene.indexOf(active)>=0){ setActive("office"); }
-  markDirty();
-}
 /* v3.0：场景内功能 tab 状态（SCENE_FEATURES 中某场景的 tab id，默认 overview）。
    切换后重渲染主区；切场景时由 render() 复位为 overview。 */
 let sceneFeatureMode = "overview";
