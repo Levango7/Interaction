@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-10 · **pill 批（#134）合并闭环：认领门 PR 基线修 + PR #3 squash 合 main `a9768ae`**
+
+_pill 批主体（胶囊开关本体 + 窄屏宽度收口，见下条）已随 PR #3 squash 合入 main。其上首跑 CI 被认领门误红：`claim-check-ci` 在 pull_request synchronize 载荷下取 `event.before` 作 diff 基线，那是 PR 分支的旧 tip，rebase/强推后在新历史里不可达 ⇒ `git diff` 判失败、门禁 exit 1 拖红整条 job（run `42734170786`，windows test 腿红在 claim-check 步）。修法＝`resolveBase()` 对 pull_request / pull_request_target 事件优先取 `pull_request.base.sha`（base 分支 tip，fetch 必达）；push 事件仍走 `event.before`；取不到基线仍显式跳过（exit 0 + 打印原因），基线不可达仍 exit 2，不静默放行。_
+
+- **`scripts/claim-check-ci.mjs`**：`resolveBase()` 新增 PR 基线优先级（`:48-53`，插在 `ev.before` 取值之前）；身份解析（`--as` → `WB_SESSION` → 作者名）与冲突 exit 1 / 跳过 exit 0 打印原因 / 不可达 exit 2 三档判定全不变。
+- **`tests/claim-check-ci.test.js`**：契约计数三条→四条，新增 ④（合成 pull_request 事件载荷：`before` 给强推掉的旧 tip `68fc0134…`（仓库不可达）、`pull_request.base.sha` 给真实 `HEAD~1` ⇒ 门走 base.sha、exit 0、输出含 `pull_request.base.sha` 与该 sha、不含「基线不可达」）。
+- **`.github/workflows/ci.yml`**：仅 fetch-depth 注释补一句基线语义（pull_request 取 base.sha / push 取 event.before）；`- run: node scripts/claim-check-ci.mjs` 单行形态未动（测试①钉死）。
+- **窄变异自证**：临时把 PR 分支判掉（`if (false && prBase …)`）⇒ ④ 精确红在「基线不可达」断言、其余三条同绿，还原后 4/4。
+- **验证**：定向 `tests/claim-check-ci.test.js` 4/4 + `tests/ci-workflow-guard.test.js` 39/39 + `npm run lint` rc=0 + `verify:ci` 前 5 步全过；真 CI 三态实测＝首跑红 `42734170786`（claim-check 步 exit 1）→ 修后绿 `42761083101` → rebase 绑定 `42763784839` 4/4 腿绿（base==tip `dea170a`）→ squash 合 main `a9768ae` → main 双 run `42766603135`（CI）/`42766603104`（Deploy）全 success。**高共写面声明**：`src/`、`agent-workbench.html`、`server/` 源码、workflow 的 run 步形态零改动；`server/node_modules` 仅本副本为复刻 CI 装过；占位密钥/一次性账号不落盘；零短信额度消耗。
+
 ### 2026-11-10 · **死代码收口：删孤儿 `setSceneViewMode` + ICS 云快照隐私钉（`cal_ics_subs` 双向不上云）**
 
 _用户 11-10 批「先开 ICS 明文那条线，顺带把死函数线也排上」。ICS 线深核结论＝HEAD 上无缺陷可修（云快照自 v3.7.148 起双向 fail-closed：`cal_ics_subs` 未登记 ⇒ `dataKeySyncAllowed` 判不上云，出站 `_buildCloudSnapshot` 与入站 `_applyCloudSnapshot` 同一判据丢弃，`src/render-overview.js:1603`/`:1728`），只落回归钉防未来误登记 `sync:true` 的隐私回退；死函数线＝`sceneViewMode` 唯一写侧在 v2.1.0 特性拆除后成孤儿。_
