@@ -8,9 +8,10 @@
  * （DL-O02 真机 run4 步 6）。两处合并点同判据：
  *   A _applyCloudSnapshot（快照恢复，src/render-overview.js）
  *   B _autoMergeTasksConflict（冲突自动合并，同文件）
- * 六场景：S1 本机删/云端活 ⇒ 复活；S2 本机活/云端删 ⇒ 本机活赢；
+ * 七场景：S1 本机删/云端活 ⇒ 复活；S2 本机活/云端删 ⇒ 本机活赢；
  *        S3 云端新增 id ⇒ 进（!lt 回归）；S4 双方删 ⇒ LWW；S5 双方活 ⇒ LWW；
- *        S6 本机删且 ts 更新/云端活且 ts 更旧 ⇒ 仍云端活赢（活性压过时间戳）。
+ *        S6 本机删且 ts 更新/云端活且 ts 更旧 ⇒ 仍云端活赢（活性压过时间戳）；
+ *        S7 双方都活且本机 ts 更大 ⇒ 同态维持 LWW，本机版赢（同态分支双向钉死）。
  * 注：wb_agent_tasks 启动即被示例数据播种（cloud-sync-stage2.test.js:224 同款坑），
  *     每例先用自有数组覆盖该键再测。
  */
