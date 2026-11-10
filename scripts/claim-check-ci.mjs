@@ -7,8 +7,9 @@
  *      CI 里没人手敲路径，得自己算「这次推了什么」。
  *   ② 它默认会话身份是 WorkBuddy（`WB_SESSION || "WorkBuddy"`）。CI 上没有 WB_SESSION，
  *      不显式传 --as 会把「本会话自己的认领」误判成「他人占用」——身份必须由这里推导。
- *   ③ 改动基线在不同触发形态下不一样（push 有 event.before；workflow_run / 本地没有），
- *      取不到基线时**必须显式跳过并说明**，不能静默放行（本仓对「空 check 判绿」有明文禁令）。
+ *   ③ 改动基线在不同触发形态下不一样（pull_request 取 base.sha；push 有 event.before；
+ *      workflow_run / 本地没有），取不到基线时**必须显式跳过并说明**，不能静默放行
+ *      （本仓对「空 check 判绿」有明文禁令）。
  *
  * 为什么逻辑放脚本而不是 workflow 内联：`scripts/verify-ci-order.mjs` 与
  * `tests/ci-workflow-guard.test.js` 的解析器只认**同行 `- run:` 单条命令**；写成
@@ -44,6 +45,11 @@ function resolveBase(argv, baseArg) {
   if (evPath && fs.existsSync(evPath)) {
     try {
       const ev = JSON.parse(fs.readFileSync(evPath, "utf8"));
+      /* pull_request / pull_request_target：基线取 base 分支 tip。事件载荷的 before 是
+         PR 分支的上一个 tip，rebase/强推后在新历史里不可达 ⇒ diff 直接判失败把整条 job
+         拖红（2026-11-10 PR #3 实测红）；base.sha 是 base 分支 tip，fetch 必达。 */
+      const prBase = ev.pull_request && ev.pull_request.base && ev.pull_request.base.sha;
+      if (prBase && !ZERO.test(prBase)) return { base: prBase, why: "事件载荷 pull_request.base.sha" };
       const b = ev.before || (ev.workflow_run && ev.workflow_run.head_sha) || ev.base_sha || "";
       if (b && !ZERO.test(b)) return { base: b, why: "事件载荷 before" };
       if (b && ZERO.test(b)) return { base: null, why: "事件载荷 before 全零（新建分支/首个推送）" };

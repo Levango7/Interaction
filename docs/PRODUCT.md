@@ -101,7 +101,7 @@
 | 适合 | 日常任务、资料、办公 | 写代码、看子代理跑到第几步 | 画流程图 / 架构图，继续加工 AI 产物 |
 
 **模式状态**：持久化在 `wb_agent_uimode`（`work|code|design`，默认 `work`）；入口**只有顶栏一个**
-（`#btnUIMode` → `#uiModeMenu` 显式三态菜单），`toggleUIMode()` 仍支持循环切换。
+（左上角 `#uiModePill` 胶囊分段开关：当前段高亮、点段即切），`toggleUIMode()` 仍支持循环切换。
 `applyUIMode()` 幂等；切换时必须清理互斥 dock、清掉 Code 模式的轮询定时器，且**不得改动任何业务数据**。
 
 ### 5.2 断点与不可用模式（诚实条款的落点）
@@ -121,7 +121,7 @@
   Code 模式里 Agent tab 与 `#agentDock` 撞车时的处置已有先例（P2-5：隐藏静态副本，只留活数据 dock）。
 - **AI 入口收敛到 2 处**：三模式共用的贴底对话坞 + 命令面板 `>`。
   AI 产物卡上的「在画布打开」是**产物级快捷方式**，不算第三个 AI 入口。
-- **模式切换入口只有 1 处**：顶栏 `#btnUIMode`。
+- **模式切换入口只有 1 处**：顶栏左上角 `#uiModePill` 胶囊分段开关。
 - 设置是能力的**唯一配置面**（MCP 发现 / 勾选 / 状态只在设置 → 扩展；技能在设置 → AI → 扩展），
   右栏轨道不重复列清单，避免两份清单漂移。
 
@@ -189,9 +189,9 @@
 |---|---|
 | `wb_agent_uimode` 三态持久化、`applyUIMode()` / `setUIMode()` / `toggleUIMode()` | `src/render-widgets.js:3837-3923` |
 | Code 模式清 Agent tab、2.5s 指纹轮询、`#agentDock` 渲染 | `src/render-widgets.js:3853-3890`、`:3929`、`:3973` |
-| `#uiModeMenu` 显式三态菜单（含窄屏禁用态） | `src/render-widgets.js:4042-4103` |
+| `#uiModePill` 胶囊分段开关（含窄屏禁用态） | `src/render-widgets.js` `_renderUiModePill` |
 | 宽屏判据 `>= 1024` | `src/render-widgets.js:283` |
-| 顶栏 `#btnUIMode` / `#uiModeLbl` / `#uiModeMenu` DOM | `agent-workbench.html:5458-5461` |
+| 顶栏 `#uiModePill` 胶囊分段开关 DOM | `agent-workbench.html:5497-5507` |
 | `.body.code-mode` / `.body.design-mode` 三栏 CSS；768–1023 方案乙 | `agent-workbench.html:5284-5304`、`:5307-5320`、`:5346-5368` |
 | **29 个工具**（源码实测，非文档口径） | `src/ai-tools.js:303-382` |
 | 「模式 = 布局预设，不 gate 能力」原始定案 | `docs/design-mode-phase-b.md:71-72` |

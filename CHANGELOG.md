@@ -13,6 +13,17 @@ _用户 11-10 批「先开 ICS 明文那条线，顺带把死函数线也排上�
 - **登记不改**：私有 ICS feed URL token 进自动备份/导出＝产品边界（DL-C01 零凭据路线，同 tasks/notes 用户内容口径）；A2（注册表扫描器对 `PREFIX + <常量>` 间接引用的盲区）改的是门禁扫描器误报面，单独评估不随本批。
 - **验证**：定向 `tests/ics-cloud-snapshot-pin.test.js` 3/3 + `tests/data-keys-registry.test.js` 5/5 ✓（变异自证一红一绿）；`npm test` 全量 240 文件 2619 例＝2615 passed / 4 failed，**红面全归环境满载**（`auth-ui-lifecycle` 验证码断网恢复 1 例 14s、`prod-startup-guard` A/B 两例、`three-state-render` ③ 60s timeout——均已知噪声家族；三文件隔离复跑 61/61 绿、零内容红）；`npm run lint` exit 0（eslint + colors/xss/css-structure/appbridge/src-split/breakpoints/false-receipt/save-receipt 八道全过）；`check:source-state` ✓ 40/40（HTML 673KB 源码态）。**高共写面声明**：`src/render-overview.js`/`agent-workbench.html`/workflow/package-lock/server/src/node_modules 零改动；零短信额度消耗。CI 为权威终态（R9），推后核 run。
 
+### 2026-11-10 · **模式切换改左上角胶囊分段开关（用户点单形态）**
+
+_用户 11-10 附图点单：「U 这个形态 我感觉就不错 左上角 模式切换」。原 `#uiModeMenu` 下拉菜单形态改为顶栏常驻胶囊三段（工作/代码/设计），与 Qoder Desktop 左上角 pill 同构；模式语义/三态循环/窄屏拒 code 等行为不变。_
+
+- **静态骨架（`agent-workbench.html`）**：`#uiModePill` 三段按钮（`role="group"` + 每段 `aria-pressed`，避开 radiogroup 箭头键义务）；work 段预置 `is-on` 首屏态；CSS 新增 `.mode-pill`/`.mode-pill-item`/`.is-on`/`.is-disabled`（禁用段 opacity:.45 + cursor:not-allowed）与 `@media (max-width:479px)` 纯图标档（断点四档制 SEGMENT=[520,600,479,359] 内，禁新值）。
+- **渲染同步（`src/render-widgets.js`）**：`_renderUiModePill()` 同步 `is-on`/`is-disabled`/`disabled`/`aria-disabled`/窄屏 title；`_bindUiModePill` 加 resize 防抖 150ms 跟随 1024 阈值（胶囊常驻可见，原「打开菜单才查宽度」不成立；只同步 pill 视觉态，不碰模式状态）。
+- **测试**：`tests/ui-mode.test.js` ⑩ 改走真实 `applyUIMode()→_renderUiModePill` 路径；`tests/e2e/ui-mode-layout.spec.js` 窄屏块断言扩到 `is-disabled` 类。
+- **验证**：定向 5 文件 122 例 + `ui-mode-layout` e2e 8 passed + Playwright 探针（宽屏切换/高亮跟随/persisted `"design"`；窄屏 disabled/aria-disabled/is-disabled 全跟随）+ `npm run lint` rc=0 + `build:check` OK（4342200 B，sha256:c12473df87090e25）。
+- **CI e2e 27 红归因与宽度收口（同批第二笔）**：PR #3 首跑 CI e2e 27 failed（draw-responsive/viewport/three-state-layout/nav-pages-smoke/topbar-overflow 五族），Playwright 探针 + base 净树（`88ff1ef` + node_modules junction）同法对照坐实＝pill 宽度引入：旧 `#btnUIMode` 在 ≤479 占 44px、文字档占 38/48px，而 pill 图标档 100px/文字档 211px，差额与实测溢出逐档吻合（320 溢 54、480 溢 212、768 溢 96；base 同档 0/39 既有债/0）。修法（纯 CSS，复用已有断点值 1023/767/479，断点门禁无新增）：≤1023 pill 图标化（段 20px、pill 66px，文字档 211px 仅 ≥1024 保留）；≤767 收品牌文字与顶栏右 padding（480 档 base 本就溢 39 的既有债一并收掉）；≤479 段再压（pill 47px）+ logo 标记 28→24 + 右 padding 归零。修后探针 10 档（320–1280）docOverflow 全 0、可见 .tbtn 最小 44/48 齐；原 5 条红 spec 本地注入态 65 passed；`ui-mode`/`ui-spec-guards`/`topbar-overflow` 定向单测 61 passed；`npm run lint` 全量 rc=0、`build:check` OK。三档顶栏截图人眼过（宽档文字三段/tablet 与窄档图标三段、当前段 accent 高亮、窄档 logo 收标记）。
+- **变异验证 + 全量对照**：临时回退 ≤479 段压缩（`padding:3px 2px`→`3px 8px`）⇒ 探针 320 溢 33 / 360 溢 7（红），还原后 10 档复归 0——探针对该判定维度有射程，非恒绿假阴性；本机全量单测串行复跑（无并发 with-injected 互踩）2 files/3 tests failed 与 base 净树（`88ff1ef`）**完全同族同数**（`server-sms-providers` 缺 bcryptjs + `prod-startup-guard` 缺 express，两 worktree 均未装 server 依赖的既知环境债），本批零新增；pill 分支首跑那 149 red 已定性＝多个 with-injected 并发互踩「抽回钩子」致 HTML 中途落源码态的假红家族（单跑同文件全绿），非本批引入。
+
 ### 2026-11-10 · **EOL 收口：electron ^41→^44.9.3 + CI node 20→24 + engines.node（10-06 审计遗留项⑦）**
 
 _审计遗留项⑦「依赖 EOL」：electron 41 出支持窗口（in-window 为 44/43/42）、Node 20 EOL 2026-04-30 已过而 CI 六处仍 pin 20、根 package.json 无 engines。本批只推版本口径，应用代码零改动（`src/` 零 diff）。四笔拆分：`71eae96`（依赖）/ `af6fe54`（CI pin）/ `ae4fbcd`（engines+注释）/ 本笔（回执）。_

@@ -3907,8 +3907,7 @@ function applyUIMode(){
   const design = mode === "design";
   body.classList.toggle("code-mode", code);
   body.classList.toggle("design-mode", design);
-  const lbl = $("#uiModeLbl");
-  if(lbl) lbl.textContent = t(mode === "code" ? "ui.mode.code" : mode === "design" ? "ui.mode.design" : "ui.mode.work", mode === "code" ? "代码" : mode === "design" ? "设计" : "工作");
+  _renderUiModePill();
   if(code){
     /* P2-5：code 模式的能力面是右下 agentDock（进程/技能/MCP/工作流，2.5s 活轮询）；
        右栏 Agent tab 渲染的是同一批数据的静态副本——本模式藏掉（CSS），若正停在 agent tab
@@ -4087,75 +4086,36 @@ function renderAgentDock(){
     };
   });
 }
-/* 模式切换按钮（P2-3，2026-11-02）：原来是盲循环单按钮（work→code→design→work，
-   title 还停在「切换工作/代码模式」），用户不知道点一下会到哪。现在点开=三态显式菜单，
-   当前态打勾、窄屏「代码」禁用（P2-8）；toggleUIMode 保留为快捷循环（窄屏同样跳过 code）。 */
-const UI_MODES = ["work", "code", "design"];
-function _toggleUIModeMenu(btn){
-  const menu = $("#uiModeMenu");
-  if(!menu || !btn) return;
-  const wasOpen = menu.style.display !== "none";
-  menu.style.display = "none";
-  if(wasOpen) return;
+/* 模式切换胶囊（2026-11-10：取代原「按钮+三态菜单」）：三段静态 DOM，JS 只同步当前态与
+   窄屏禁用态；点段即调 setUIMode（窄屏拒绝/幂等/持久化/toast 都在那里，不重复实现）。
+   toggleUIMode 保留为快捷循环（窄屏同样跳过 code）。 */
+function _renderUiModePill(){
   const cur = _uiMode();
   const wide = isWide();
-  menu.innerHTML = sanitizeHtml(UI_MODES.map(function(m){
-    const on = m === cur;
+  $$("#uiModePill .mode-pill-item").forEach(function(el){
+    const m = el.getAttribute("data-mode");
     const dis = (m === "code" && !wide);
-    const lbl = t(m === "code" ? "ui.mode.code" : m === "design" ? "ui.mode.design" : "ui.mode.work",
-                  m === "code" ? "代码" : m === "design" ? "设计" : "工作");
-    return '<button type="button" class="tbtn ui-mode-item' + (on ? " is-on" : "") + (dis ? " is-disabled" : "") + '"'
-      + ' data-mode="' + m + '" role="menuitem" aria-checked="' + (on ? "true" : "false") + '"'
-      + (dis ? ' disabled aria-disabled="true" title="' + esc(t("ui.mode.codeNarrow", "窄屏（小于 1024px）不启用代码模式：三栏布局需要宽屏")) + '"' : "")
-      + '><span class="lbl">' + esc(lbl) + '</span>'
-      + (on ? '<span class="ui-mode-check" aria-hidden="true">✓</span>' : "") + '</button>';
-  }).join(""));
-  $$("#uiModeMenu .ui-mode-item").forEach(function(el){
-    el.onclick = function(){
-      if(el.disabled) return;
-      setUIMode(el.getAttribute("data-mode"));
-      _toggleUIModeMenu(btn);   // 选中即关菜单（点菜单内部，外面的 doc 监听故意不关，得自己关）
-      btn.setAttribute("aria-expanded", "false");   // setAttribute 不会抛（元素可写即可），不需要 try 包着
-    };
+    el.classList.toggle("is-on", m === cur);
+    el.setAttribute("aria-pressed", m === cur ? "true" : "false");
+    el.disabled = dis;
+    el.classList.toggle("is-disabled", dis);
+    el.setAttribute("aria-disabled", dis ? "true" : "false");
+    if(dis) el.setAttribute("title", t("ui.mode.codeNarrow", "窄屏（小于 1024px）不启用代码模式：三栏布局需要宽屏"));
+    else el.removeAttribute("title");
   });
-  menu.style.display = "";
-  const r = btn.getBoundingClientRect();
-  const w = menu.offsetWidth || 180;
-  let left = r.right - w;
-  if(left < 8) left = Math.min(8, Math.max(8, window.innerWidth - w - 8));
-  menu.style.left = left + "px";
-  const top = Math.min(Math.max(8, r.bottom + 6), Math.max(8, window.innerHeight - menu.offsetHeight - 8));
-  menu.style.top = top + "px";
-  btn.setAttribute("aria-expanded", "true");
 }
-(function _bindUIModeBtn(){
-  const b = $("#btnUIMode");
-  if(!b || b._menuBound) return;
-  b._menuBound = true;
-  b.setAttribute("aria-haspopup", "menu");
-  b.setAttribute("aria-expanded", "false");
-  b.onclick = function(){
-    const menu = $("#uiModeMenu");
-    const open = menu && menu.style.display !== "none";
-    _toggleUIModeMenu(b);
-    b.setAttribute("aria-expanded", open ? "false" : "true");
-  };
+(function _bindUiModePill(){
+  const pill = $("#uiModePill");
+  if(!pill || pill._pillBound) return;
+  pill._pillBound = true;
+  $$("#uiModePill .mode-pill-item").forEach(function(el){
+    el.addEventListener("click", function(){ setUIMode(el.getAttribute("data-mode")); });
+  });
+  /* 「代码」段禁用态是宽度的函数：resize 跨越 1024 阈值时同步 pill 态。
+     原菜单形态打开时才查宽度，胶囊常驻可见必须跟随窗口；只同步 pill 视觉态，不碰模式状态。 */
+  let rt = 0;
+  window.addEventListener("resize", function(){
+    clearTimeout(rt);
+    rt = setTimeout(_renderUiModePill, 150);
+  });
 })();
-/* 菜单：点外面 / Esc 关闭（与 tool-pop 同款口径，独立挂 doc 监听，不依赖 render 重建） */
-document.addEventListener("click", function(e3){
-  const menu = $("#uiModeMenu");
-  if(!menu || menu.style.display === "none") return;
-  const t3 = e3.target;
-  if(menu.contains(t3)) return;
-  if(t3 && t3.closest && t3.closest("#btnUIMode")) return;
-  menu.style.display = "none";
-  const b2 = $("#btnUIMode"); if(b2) b2.setAttribute("aria-expanded", "false");
-});
-document.addEventListener("keydown", function(e4){
-  if(e4.key !== "Escape") return;
-  const menu = $("#uiModeMenu");
-  if(menu && menu.style.display !== "none"){
-    menu.style.display = "none";
-    const b3 = $("#btnUIMode"); if(b3) b3.setAttribute("aria-expanded", "false");
-  }
-});
