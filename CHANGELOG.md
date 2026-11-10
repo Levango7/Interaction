@@ -11,6 +11,15 @@ _台账「规范」节季度 mandate：五项只读复核（① `DONE` 无 commi
 - **窄变异自证**：/tmp 副本注入五缺陷（五检各一）⇒ ①9 ②1 ③1 ④1 ⑤3 且逐条点名正确行（DL-D04 / DL-O02 / DL-B01 / DL-B02 / DL-D03）；还原后真账基线 ①8 ②0 ③0 ④0 ⑤2 精确复现；真账 `git diff` 空＝「只报不改」铁证；`node --check` 绿
 - **真账基线（如实登记，处置权在人）**：① 8 处 `DONE` 行无 commit（DL-O05 / O06 / O10 / O14 / O15 / O17 / O19 / O23，其中 DL-O05 系「三方复核已一致、无需改代码」类闭环）；⑤ 2 处悬空引用（`PRODUCT.rewrite.md` / `tests/e2e/dl-o13-red-probe.spec.js` 耗材分支产物）
 
+### 2026-11-10 · **DL-O24 关单：软删除 tombstone 活性优先于 LWW（用户 11-10 裁选项②）**
+
+_真机 run4 步 6 发现：软删除只置 `deletedAt` 不 bump `updatedAt`（`src/ui-scene-bind.js:54`），合并判据纯按 `(updatedAt||created)` 的 LWW ⇒ 云端同时间戳的活跃版救不回本机已删任务。用户裁②：合并按 `deletedAt` 判定，云端无 `deletedAt` 的版本优先复活；①③ 弃。_
+
+- **合并判据（`src/render-overview.js` 两处：`_applyCloudSnapshot` 快照恢复 + `_autoMergeTasksConflict` 冲突自动合并，同走新 helper `_taskVersionWins`）**：一方有 `deletedAt` 另一方无 ⇒ 无 `deletedAt`（活跃）版赢，与时间戳无关；双方同态（都删/都活）⇒ 维持原 LWW。`ui-scene-bind.js:54` 删除不 bump `updatedAt` 的现状不动（那是选项①的活，用户未裁）。
+- **钉子（`tests/dl-o24-tombstone-merge.test.js`，7 场景 × 两合并点 = 14 例）**：双向活性优先（S1 本机删/云端活、S2 本机活/云端删、S6 活性压过更新 ts）/ 同态 LWW 两向（S4 双方删、S5 双方活、S7 本机 ts 更大）/ 云端新增 id 回归（S3 `!lt` 不被活性判据误伤）。`wb_agent_tasks` 启动即被示例数据播种，每例先以自有数组覆盖该键。
+- **窄变异三组（注入 ⇒ 精确红 ⇒ 还原 ⇒ sha256 比基线 `69d327c1…`）**：①活性判据反相 ⇒ 6 例红；②同态恒云端赢 ⇒ S7×2 红（同态 LWW 另一向钉死）；③仅 A 点回旧内联判据 ⇒ A 组 S1+S6 红而 B 组绿（两处调用点各自被钉，非一处连带）。三组全还原，终态 14/14 绿 + `cloud-sync-stage2`/`webdav-sync`/`pre-restore-rollback` 49 例回归绿。
+- **验证**：`npm run lint` exit 0；`check:source-state` ✓（HTML 673KB / 40 块标记齐全）。CI 为权威终态（R9）。
+- **高共写面声明**：workflow / package-lock（root+electron）/ server/src / electron/ / 根 node_modules / `server/config.json` / `_probe/` 本批零改动；零短信额度消耗；零凭据落仓（本批无凭据接触）。
 ### 2026-11-10 · **pill 批（#134）合并闭环：认领门 PR 基线修 + PR #3 squash 合 main `a9768ae`**
 
 _pill 批主体（胶囊开关本体 + 窄屏宽度收口，见下条）已随 PR #3 squash 合入 main。其上首跑 CI 被认领门误红：`claim-check-ci` 在 pull_request synchronize 载荷下取 `event.before` 作 diff 基线，那是 PR 分支的旧 tip，rebase/强推后在新历史里不可达 ⇒ `git diff` 判失败、门禁 exit 1 拖红整条 job（run `42734170786`，windows test 腿红在 claim-check 步）。修法＝`resolveBase()` 对 pull_request / pull_request_target 事件优先取 `pull_request.base.sha`（base 分支 tip，fetch 必达）；push 事件仍走 `event.before`；取不到基线仍显式跳过（exit 0 + 打印原因），基线不可达仍 exit 2，不静默放行。_

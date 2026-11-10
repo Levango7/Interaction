@@ -1673,6 +1673,16 @@ async function apiPutSnapshot(snapshot) {
   });
   return !!(r && r.ok);
 }
+/* DL-O24（用户 11-10 裁②）：tombstone 语义 —— 活性优先于 LWW。软删除只置 deletedAt
+   不 bump updatedAt（src/ui-scene-bind.js:54），若纯按时间戳合并，云端同 ts 活跃版救不回
+   本机已删任务（run4 步 6 真发现）。规则：一方有 deletedAt 另一方无 ⇒ 无 deletedAt
+   （活跃）版赢，与时间戳无关；双方同态（都删/都活）⇒ 维持原 LWW。 */
+function _taskVersionWins(rt, lt) {
+  const lDel = !!(lt && lt.deletedAt);
+  const rDel = !!(rt && rt.deletedAt);
+  if (lDel !== rDel) return !rDel;
+  return (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0);
+}
 function _applyCloudSnapshot(data) {
   try {
     const remoteRaw = data[PREFIX + "tasks"];
@@ -1684,7 +1694,7 @@ function _applyCloudSnapshot(data) {
       remoteTasks.forEach(rt => {
         if (!rt || !rt.id) return;
         const lt = map.get(rt.id);
-        if (!lt || (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0)) map.set(rt.id, rt);
+        if (!lt || _taskVersionWins(rt, lt)) map.set(rt.id, rt);
       });
       data[PREFIX + "tasks"] = JSON.stringify(Array.from(map.values()));
     }
@@ -1928,7 +1938,7 @@ async function _autoMergeTasksConflict(c){
   b.forEach(function(rt){
     if (!rt || !rt.id) return;
     const lt = map.get(rt.id);
-    if (!lt || (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0)) map.set(rt.id, rt);
+    if (!lt || _taskVersionWins(rt, lt)) map.set(rt.id, rt);
   });
   const merged = JSON.stringify(Array.from(map.values()));
   try { localStorage.setItem(PREFIX + "tasks", merged); } catch (e) {
