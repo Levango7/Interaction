@@ -19,21 +19,26 @@
  * CSS 层的几何断言（.main 可见、聊天贴底、tab 藏掉）在 e2e，jsdom 不量布局。
  * 运行：npm test -- ui-mode
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
 
 const PREFIX = "wb_agent_";
 
-function boot(extra) {
-  return loadApp({ storage: Object.assign({ [PREFIX + "onboarded"]: "true" }, extra || {}) });
+/* 2026-11-11 布局批L Move A：模式胶囊自顶栏静态块搬入左轨（renderSide 发射），
+   应用初始化是异步的 ⇒ 读 pill 前必须等启动完成（chatPanel._bound，同 ia-three-zones 口径）。
+   Move A 之前 pill 是顶栏静态 DOM，boot 同步即可读到；搬轨后不同步等会拿到空 #side。 */
+async function boot(extra) {
+  const win = loadApp({ storage: Object.assign({ [PREFIX + "onboarded"]: "true" }, extra || {}) });
+  await vi.waitFor(() => expect(win.document.getElementById("chatPanel")._bound).toBe(true));
+  return win;
 }
 const bodyEl = (win) => win.document.querySelector(".body");
 /* 当前模式＝左上角胶囊上 is-on 段的 data-mode（2026-11-10 起模式切换是分段胶囊，不再有 #uiModeLbl） */
 const pillMode = (win) => win.document.querySelector("#uiModePill .mode-pill-item.is-on").getAttribute("data-mode");
 
 describe("Code 模式：切换与持久化", () => {
-  it("1: 默认 Work；toggle → code + 持久化；再 toggle → design（三态循环回 Work）", () => {
-    const win = boot();
+  it("1: 默认 Work；toggle → code + 持久化；再 toggle → design（三态循环回 Work）", async () => {
+    const win = await boot();
     win.applyUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);
     expect(pillMode(win)).toBe("work");
@@ -52,8 +57,8 @@ describe("Code 模式：切换与持久化", () => {
     expect(pillMode(win)).toBe("work");
   });
 
-  it("2: Work 模式下两 dock 清空（不占 DOM）", () => {
-    const win = boot();
+  it("2: Work 模式下两 dock 清空（不占 DOM）", async () => {
+    const win = await boot();
     win.toggleUIMode();          // 先进 code（让 dock 渲染过一次）
     win.toggleUIMode();          // 回 work
     expect(win.document.getElementById("sessionDock").innerHTML).toBe("");
@@ -62,8 +67,8 @@ describe("Code 模式：切换与持久化", () => {
 });
 
 describe("Code 模式：会话停靠栏", () => {
-  it("3: code 下渲染会话列表；点击切换 = 恢复该会话到工作缓冲", () => {
-    const win = boot({
+  it("3: code 下渲染会话列表；点击切换 = 恢复该会话到工作缓冲", async () => {
+    const win = await boot({
       [PREFIX + "chat_office"]: JSON.stringify([{ role: "user", content: "工作缓冲里的消息", createdAt: "2026-10-26T10:00:00.000Z" }]),
     });
     const s1 = win.createSession("office", "会话一");
@@ -82,8 +87,8 @@ describe("Code 模式：会话停靠栏", () => {
     expect(buf.some((m) => String(m.content || "").includes("会话一的消息"))).toBe(true);
   });
 
-  it("4: 新建会话 = 创建 + 激活 + 工作缓冲清空", () => {
-    const win = boot({ [PREFIX + "chat_office"]: JSON.stringify([{ role: "user", content: "旧消息", createdAt: "2026-10-26T10:00:00.000Z" }]) });
+  it("4: 新建会话 = 创建 + 激活 + 工作缓冲清空", async () => {
+    const win = await boot({ [PREFIX + "chat_office"]: JSON.stringify([{ role: "user", content: "旧消息", createdAt: "2026-10-26T10:00:00.000Z" }]) });
     win.toggleUIMode();
     win.document.getElementById("sdockNew").click();
     const sess = win.getActiveSessionObj();
@@ -94,8 +99,8 @@ describe("Code 模式：会话停靠栏", () => {
 });
 
 describe("Code 模式：能力停靠栏", () => {
-  it("5: 四段渲染（进程/技能/MCP/工作流）+ 各段显隐持久化", () => {
-    const win = boot();
+  it("5: 四段渲染（进程/技能/MCP/工作流）+ 各段显隐持久化", async () => {
+    const win = await boot();
     win.toggleUIMode();
     const dock = win.document.getElementById("agentDock");
     for (const t of ["进程", "技能", "MCP", "工作流"]) expect(dock.textContent).toContain(t);
@@ -118,8 +123,8 @@ describe("Code 模式：能力停靠栏", () => {
  * P2-3：切换器从盲循环单按钮改成显式三态菜单；P2-8：窄屏（<1024）「代码」禁用；
  * P2-5：进 code 时右栏 Agent tab 让位 agentDock（藏 tab + 正停在 agent 就切回今日）。 */
 describe("模式切换器：胶囊分段开关与窄屏保护（P2-3/P2-8）", () => {
-  it("6: setUIMode 显式三态；同模式调用幂等", () => {
-    const win = boot();
+  it("6: setUIMode 显式三态；同模式调用幂等", async () => {
+    const win = await boot();
     expect(win.setUIMode("design")).toBe(true);
     expect(bodyEl(win).classList.contains("design-mode")).toBe(true);
     expect(JSON.parse(win.localStorage.getItem(PREFIX + "uimode"))).toBe("design");
@@ -129,15 +134,15 @@ describe("模式切换器：胶囊分段开关与窄屏保护（P2-3/P2-8）", (
     expect(bodyEl(win).classList.contains("design-mode")).toBe(false);
   });
 
-  it("7: 未知/空入参兜底为 work", () => {
-    const win = boot();
+  it("7: 未知/空入参兜底为 work", async () => {
+    const win = await boot();
     win.setUIMode("design");
     expect(win.setUIMode("nonsense")).toBe(true);
     expect(JSON.parse(win.localStorage.getItem(PREFIX + "uimode"))).toBe("work");
   });
 
-  it("8: 胶囊三段齐、当前段高亮+aria-pressed、点段即切换且高亮跟随", () => {
-    const win = boot();
+  it("8: 胶囊三段齐、当前段高亮+aria-pressed、点段即切换且高亮跟随", async () => {
+    const win = await boot();
     const items = [...win.document.querySelectorAll("#uiModePill .mode-pill-item")];
     expect(items.length).toBe(3);
     const modes = items.map((el) => el.getAttribute("data-mode"));
@@ -154,8 +159,8 @@ describe("模式切换器：胶囊分段开关与窄屏保护（P2-3/P2-8）", (
     expect(items2[0].classList.contains("is-on")).toBe(false);
   });
 
-  it("9: 窄屏（<1024）toggleUIMode 跳过 code：work → design → work", () => {
-    const win = boot();
+  it("9: 窄屏（<1024）toggleUIMode 跳过 code：work → design → work", async () => {
+    const win = await boot();
     win.innerWidth = 800;
     win.toggleUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);
@@ -166,8 +171,8 @@ describe("模式切换器：胶囊分段开关与窄屏保护（P2-3/P2-8）", (
     expect(bodyEl(win).classList.contains("design-mode")).toBe(false);
   });
 
-  it("10: 窄屏 setUIMode('code') 拒绝（返回 false、停在当前模式）；胶囊「代码」段禁用", () => {
-    const win = boot();
+  it("10: 窄屏 setUIMode('code') 拒绝（返回 false、停在当前模式）；胶囊「代码」段禁用", async () => {
+    const win = await boot();
     win.innerWidth = 800;
     win.applyUIMode();          /* 窄屏下的禁用态由 applyUIMode→_renderUiModePill 同步（真实 resize 路径同此） */
     expect(win.setUIMode("code")).toBe(false);
@@ -183,8 +188,8 @@ describe("模式切换器：胶囊分段开关与窄屏保护（P2-3/P2-8）", (
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);
   });
 
-  it("11: 宽屏（>=1024）「代码」可正常选择", () => {
-    const win = boot();
+  it("11: 宽屏（>=1024）「代码」可正常选择", async () => {
+    const win = await boot();
     win.innerWidth = 1440;
     expect(win.setUIMode("code")).toBe(true);
     expect(bodyEl(win).classList.contains("code-mode")).toBe(true);
@@ -192,9 +197,9 @@ describe("模式切换器：胶囊分段开关与窄屏保护（P2-3/P2-8）", (
 });
 
 describe("Code 模式：右栏 Agent tab 让位 agentDock（P2-5）", () => {
-  it("12: 停在 agent tab 时进 code → 自动切回「今日」", () => {
+  it("12: 停在 agent tab 时进 code → 自动切回「今日」", async () => {
     /* load() 走 JSON.parse，存储值必须是 JSON 串（见 loadApp 约定） */
-    const win = boot({ [PREFIX + "rail_tab"]: JSON.stringify("agent") });
+    const win = await boot({ [PREFIX + "rail_tab"]: JSON.stringify("agent") });
     expect(win._railTabGet()).toBe("agent");
     win.toggleUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(true);
@@ -206,8 +211,8 @@ describe("Code 模式：右栏 Agent tab 让位 agentDock（P2-5）", () => {
     expect(win._railTabGet()).toBe("agent");
   });
 
-  it("13: 停在今日/文件 tab 时进 code 不改 tab", () => {
-    const win = boot({ [PREFIX + "rail_tab"]: JSON.stringify("files") });
+  it("13: 停在今日/文件 tab 时进 code 不改 tab", async () => {
+    const win = await boot({ [PREFIX + "rail_tab"]: JSON.stringify("files") });
     win.toggleUIMode();
     expect(win._railTabGet()).toBe("files");
   });
@@ -240,8 +245,8 @@ describe("三模式契约 S5：离开 code 必清能力轮询定时器", () => {
     };
   }
 
-  it("14: work→code 起一个 2500ms 轮询；→design 清掉；零泄漏", () => {
-    const win = boot();
+  it("14: work→code 起一个 2500ms 轮询；→design 清掉；零泄漏", async () => {
+    const win = await boot();
     const sp = spyTimers(win);
     expect(win.setUIMode("code")).toBe(true);
     expect(sp.pollCreated()).toBe(1);
@@ -253,8 +258,8 @@ describe("三模式契约 S5：离开 code 必清能力轮询定时器", () => {
     expect(sp.pollLive()).toBe(0);
   });
 
-  it("15: 切走再切回 code 必须新起定时器（_agentDockTimer 置空的反证），且不叠加", () => {
-    const win = boot();
+  it("15: 切走再切回 code 必须新起定时器（_agentDockTimer 置空的反证），且不叠加", async () => {
+    const win = await boot();
     const sp = spyTimers(win);
     win.setUIMode("code");
     expect(sp.pollCreated()).toBe(1);
@@ -276,7 +281,7 @@ describe("三模式契约 S5：离开 code 必清能力轮询定时器", () => {
 });
 
 describe("三模式契约 S6：切换模式零业务数据写入（仅 uimode）", () => {
-  it("16: 三模式各切一轮，localStorage 键值差集 = {wb_agent_uimode}；全循环完全复原", () => {
+  it("16: 三模式各切一轮，localStorage 键值差集 = {wb_agent_uimode}；全循环完全复原", async () => {
     /* 预置业务键（任务/笔记/聊天/会话/子代理/图/配置），覆盖契约 §6 的键空间清单；
        rail_tab 预置 today，避免「进 code 时 agent tab 让位」这条视图态写入混入差集。
        ⚠️ ai_sessions / ai_active_session 必须预置：getSessions() 是**懒加载 + 首启迁移**
@@ -301,7 +306,7 @@ describe("三模式契约 S6：切换模式零业务数据写入（仅 uimode）
       [PREFIX + "diagram_active"]: JSON.stringify("d1"),
       [PREFIX + "cfg"]: JSON.stringify({ theme: "light" }),
     };
-    const win = boot(seed);
+    const win = await boot(seed);
     const snap = () =>
       Object.fromEntries(Object.keys(win.localStorage).map((k) => [k, win.localStorage.getItem(k)]));
     /* 稳态确认：提前触发一次 getSessions 的懒加载（渲染路径会触发，
@@ -326,7 +331,7 @@ describe("三模式契约 S6：切换模式零业务数据写入（仅 uimode）
     expect(mid[PREFIX + "uimode"]).toBe(JSON.stringify("code"));
   });
 
-  it("17: 设计模式出入同样零业务写入（design-only 往返）", () => {
+  it("17: 设计模式出入同样零业务写入（design-only 往返）", async () => {
     /* 与 16 同款预热：ai_sessions 与 diagram_active 各挡掉一条首启初始化写入 */
     const seed = {
       [PREFIX + "uimode"]: JSON.stringify("work"),
@@ -335,7 +340,7 @@ describe("三模式契约 S6：切换模式零业务数据写入（仅 uimode）
       [PREFIX + "diagrams"]: JSON.stringify([{ id: "d1", title: "图一", updatedAt: 1730000000000, nodes: [], edges: [] }]),
       [PREFIX + "diagram_active"]: JSON.stringify("d1"),
     };
-    const win = boot(seed);
+    const win = await boot(seed);
     win.getSessions();
     const before = Object.fromEntries(Object.keys(win.localStorage).map((k) => [k, win.localStorage.getItem(k)]));
     expect(win.setUIMode("design")).toBe(true);

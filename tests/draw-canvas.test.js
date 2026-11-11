@@ -278,8 +278,11 @@ describe("真实双击改名（2026-11-02 修复：双击判据=同一目标 350
 });
 
 describe("Design 模式三向循环（批次③ 集成）", () => {
-  it("⑧ toggle×2 → .body.design-mode + 「设计」标签 + dock/画布就位；回 Work 清空 dock", () => {
+  it("⑧ toggle×2 → .body.design-mode + 「设计」标签 + dock/画布就位；回 Work 清空 dock", async () => {
     win = boot();
+    /* 2026-11-11 布局批L Move A：胶囊自顶栏静态块搬入左轨（renderSide 异步发射），
+       读 is-on 段前必须等应用启动完成（chatPanel._bound 口径）。 */
+    await vi.waitFor(() => expect(win.document.getElementById("chatPanel")._bound).toBe(true));
     win.toggleUIMode();                                          // work → code
     expect(win.document.querySelector(".body").classList.contains("code-mode")).toBe(true);
     win.toggleUIMode();                                          // code → design

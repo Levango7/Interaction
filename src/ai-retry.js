@@ -1260,8 +1260,10 @@ function renderChatDisabled(){
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------
- * 面板内 #chatForm / #chatCancel / #chatThinking / #chatTextInput / #chatAttachBtn / #chatPanelCollapse / #chatPanelRail
+ * 面板内 #chatForm / #chatCancel / #chatThinking / #chatTextInput / #chatAttachBtn / #chatPanelRail
  * 均为静态 HTML（不随 render() 重建），故此函数在启动时调用一次即可。
+ * #chatPanelCollapse 例外：2026-11-11 布局批L Move C 起由 renderSide 发进左轨（随 innerHTML 重发），
+ * 故走 document 委托（见下），不依赖启动时直绑。
  * 复用现有 onChatSubmit / abortChat / retryChat，不引入新数据源（保留 getChat(active) 兼容测试契约）。
  */
 /**
@@ -1431,7 +1433,6 @@ function bindChatPanel(){
     });
   }
   // 折叠/展开按钮：切换 .collapsed 类，同步显示侧边条
-  const collapseBtn=$("#chatPanelCollapse");
   const rail=$("#chatPanelRail");
   /* 窄屏（≤767）面板是右抽屉：#chatPanelCollapse 与外部 AI 入口都走「打开/关闭抽屉」，不是折叠历史 */
   const setChatDrawer=(open)=>{
@@ -1463,7 +1464,12 @@ function bindChatPanel(){
     try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }
     catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "聊天面板折叠偏好写失败: "+((e&&e.message)||e), { where: "toggleCollapse" }); }catch(_e){} }
   };
-  if(collapseBtn) collapseBtn.onclick=toggleCollapse;
+  /* 2026-11-11 布局批L Move C：☰ 搬入左轨后由 renderSide 整体重发，直绑 onclick 会随节点销毁而丢
+     （与 :1276 chips 同一教训）⇒ document 委托，closest 认 ID；renderSide 重发后无需重绑。 */
+  document.addEventListener("click", function(e){
+    const btn = e.target && e.target.closest ? e.target.closest("#chatPanelCollapse") : null;
+    if(btn) toggleCollapse();
+  });
   /* v3.2.1 修复：暴露强制展开函数——给 #phAiAskBtn / data-ai-hint-for 等外部入口调用。
      AI 入口不应受聊天面板折叠态阻挡（用户在窄屏默认折叠时也要能用 AI）。 */
   window.__aiPanelExpand = function(){

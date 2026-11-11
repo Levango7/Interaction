@@ -9,6 +9,32 @@
 const SIDE_TOGGLE_HTML = `<button type="button" class="side-toggle" id="sideToggle" aria-label="${t("side.toggleAria", "折叠或展开侧边栏")}" title="${t("side.toggleTitle", "折叠/展开")}">
   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl" data-i18n="chat.collapseLbl">折叠</span></button>`;
 
+/* 2026-11-11 布局批L Move A（用户裁决 O1）：模式胶囊从顶栏搬入左轨顶。
+   markup 与原顶栏静态块（agent-workbench.html 旧 :5519-5529）逐字一致——三段 data-mode、
+   role=group、data-i18n 标签（applyI18n 在 render 管线 finally 里跑，晚于本发射，首屏即翻译）；
+   is-on/aria-pressed 初值只供首屏前的瞬间，renderSide 尾部 applyUIMode→_renderUiModePill 会按当前态重同步。
+   绑定不在这里：#side 的 innerHTML 每次 renderSide 整体重发，直绑会随节点销毁，直绑改 document 委托（见 _bindUiModePill 原处）。 */
+const UI_MODE_PILL_HTML = `<div class="mode-pill" id="uiModePill" role="group" data-i18n-aria="ui.mode.title" aria-label="切换界面模式（工作/代码/设计）">
+  <button type="button" class="mode-pill-item is-on" data-mode="work" aria-pressed="true">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><path d="M14 5h7M14 10h7M14 15h7"/></svg><span class="lbl" data-i18n="ui.mode.work">工作</span>
+  </button>
+  <button type="button" class="mode-pill-item" data-mode="code" aria-pressed="false">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span class="lbl" data-i18n="ui.mode.code">代码</span>
+  </button>
+  <button type="button" class="mode-pill-item" data-mode="design" aria-pressed="false">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span class="lbl" data-i18n="ui.mode.design">设计</span>
+  </button>
+</div>`;
+
+/* 2026-11-11 布局批L Move C（用户裁决 O1）：对话坞☰自坞头搬入左轨中段（gid work 与 assistant 组之间）。
+   markup 与原坞头静态块（agent-workbench.html 旧 :5638）逐字一致，仅加轨上下文类 side-chat-toggle。
+   箭头 path「M15 18l-6-6 6-6」与方向约定随常量搬来（全站折叠/展开按钮共用此 path，形状来源单一，
+   勿改回 M9 18l-6-6-6-6 之类另一套；方向由 CSS transform 决定，`#chatPanelCollapse svg` rotate(180)
+   随 ID 走仍有效：右侧栏语义＝展开态点击后面板向右收起 → 箭头朝右「>」）。
+   绑定不在这里：#side 的 innerHTML 每次 renderSide 整体重发，直绑会随节点销毁，
+   ai-retry.js 用 document 委托（见 bindChatPanel），toggleCollapse 语义不变。 */
+const SIDE_CHAT_TOGGLE_HTML = `<button type="button" class="chat-panel-collapse chat-ic-btn side-chat-toggle" id="chatPanelCollapse" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`;
+
 /* v2.1.0：两级菜单图标集（顶级项用；子项用 CSS 圆点标记，不配图标） */
 /* v2.1.1 去重：与 UI_ICONS 同形的图标按 key 引用单一真相源；dash 改仪表盘（gauge）与统计柱状图区分 */
 
@@ -199,7 +225,14 @@ function renderSide(){
   /* 2026-11-11 布局批L Move B：mobOnly 节点（说明）桌面侧栏不渲染；renderMobBar/sideSheet 不过滤 */
   const groups = _buildSideMenu().map(g=>({ ...g, nodes:g.nodes.filter(n=>!n.mobOnly) }));
   const groupHtml = (g)=> '<div class="nav-group">'+g.name+'</div>' + g.nodes.map(nodeHtml).join("");
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + groups.map(groupHtml).join(""));
+  /* 布局批L Move A：模式胶囊发在轨顶（#sideToggle 之上），顶栏静态块已删（用户裁决 O1）。
+     状态同步不动：_renderUiModePill 在本函数尾部 applyUIMode() 里按当前模式重刷 is-on/禁用态 */
+  /* 布局批L Move C：☰ 发在 gid work 与 assistant 两组之间=左轨中段（用户裁决 O1）。
+     _buildSideMenu() 树零改动（ia-three-zones 钉 4 gid/17 节点），插入只发生在本拼装层。 */
+  const railHtml = groups.map(function(g){
+    return (g.gid==="assistant" ? SIDE_CHAT_TOGGLE_HTML : "") + groupHtml(g);
+  }).join("");
+  $("#side").innerHTML = sanitizeHtml(UI_MODE_PILL_HTML + SIDE_TOGGLE_HTML + railHtml);
 
   /* 2026-11-11 布局批L Move B：指南桌面入口在顶栏 #btnHelp；与轨内节点同表达式同步高亮。
      renderHelp 先置 uiView="help" 再调本函数，故此处同步即终态（与 helpNode.active 同式） */
@@ -4094,8 +4127,9 @@ function renderAgentDock(){
     };
   });
 }
-/* 模式切换胶囊（2026-11-10：取代原「按钮+三态菜单」）：三段静态 DOM，JS 只同步当前态与
-   窄屏禁用态；点段即调 setUIMode（窄屏拒绝/幂等/持久化/toast 都在那里，不重复实现）。
+/* 模式切换胶囊（2026-11-10：取代原「按钮+三态菜单」；2026-11-11 布局批L Move A：从顶栏静态块
+   搬入左轨顶，改由 renderSide 发 UI_MODE_PILL_HTML）：JS 只同步当前态与窄屏禁用态；
+   点段即调 setUIMode（窄屏拒绝/幂等/持久化/toast 都在那里，不重复实现）。
    toggleUIMode 保留为快捷循环（窄屏同样跳过 code）。 */
 function _renderUiModePill(){
   const cur = _uiMode();
@@ -4112,18 +4146,16 @@ function _renderUiModePill(){
     else el.removeAttribute("title");
   });
 }
-(function _bindUiModePill(){
-  const pill = $("#uiModePill");
-  if(!pill || pill._pillBound) return;
-  pill._pillBound = true;
-  $$("#uiModePill .mode-pill-item").forEach(function(el){
-    el.addEventListener("click", function(){ setUIMode(el.getAttribute("data-mode")); });
-  });
-  /* 「代码」段禁用态是宽度的函数：resize 跨越 1024 阈值时同步 pill 态。
-     原菜单形态打开时才查宽度，胶囊常驻可见必须跟随窗口；只同步 pill 视觉态，不碰模式状态。 */
-  let rt = 0;
-  window.addEventListener("resize", function(){
-    clearTimeout(rt);
-    rt = setTimeout(_renderUiModePill, 150);
-  });
-})();
+/* 布局批L Move A：胶囊 DOM 由 renderSide 发进左轨顶，模块加载时 #uiModePill 尚未存在 ⇒
+   原 IIFE 直绑（pill._pillBound + 逐段 addEventListener）整个失效，连 resize 同步一起丢。
+   改 document 委托（点击冒泡到 document，closest 认段，renderSide 重发后无需重绑）；
+   resize 防抖同步保留——_renderUiModePill 对空查询 no-op，首发前触发也安全。 */
+document.addEventListener("click", function(e){
+  const item = (e.target && e.target.closest) ? e.target.closest("#uiModePill .mode-pill-item") : null;
+  if(item) setUIMode(item.getAttribute("data-mode"));
+});
+let _pillRt = 0;
+window.addEventListener("resize", function(){
+  clearTimeout(_pillRt);
+  _pillRt = setTimeout(_renderUiModePill, 150);
+});

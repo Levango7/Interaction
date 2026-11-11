@@ -28,14 +28,14 @@ test.beforeAll(() => { test.skip(!process.env.E2E, "set E2E=1 to run"); });
 test.describe("Design 模式窄屏", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  /** 切到 Design 模式（2026-11-03 起模式按钮不再盲循环；2026-11-10 起入口是左上角
-   *  胶囊分段开关——直接点「设计」段。旧契约的两连击=work→code→design，早已失效）。
+  /** 切到 Design 模式（2026-11-03 起模式按钮不再盲循环；2026-11-10 起入口是
+   *  胶囊分段开关——直接点「设计」段。旧契约的两连击=work→code→design，早已失效；2026-11-11 布局批L Move A 起胶囊在左轨顶、≤767px 随左轨整体隐藏 ⇒ 本 spec 窄屏档（320/375/412）无真点击入口可用，走 setUIMode 程序化切换——本 spec 射程是画布几何，胶囊真点击路径由 ui-mode-layout.spec.js 宽屏块钉）。
    *  ⚠️ 选择器钉住 `.app > .body`：正文列表项曾复用同名 `.body`，裸 `.body` 在 Playwright
    *  严格模式下会因命中多个元素而报错（本 spec 首轮 CI 的真实红法）；2026-11-03 那批列表项
    *  已改名 `.body-row`（496607f），`.body` 重新唯一，但钉壳选择器留作保险，防将来再有复用。 */
   const SHELL = ".app > .body";
   async function toDesign(page) {
-    await page.click('#uiModePill .mode-pill-item[data-mode="design"]');
+    await page.evaluate(() => window.setUIMode("design"));
     await expect(page.locator(SHELL)).toHaveClass(/design-mode/);
     await page.waitForSelector("#drawCanvasHost svg", { state: "attached" });
   }

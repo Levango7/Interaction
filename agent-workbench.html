@@ -760,6 +760,26 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   .mode-pill-item{padding:3px 2px}
   .mode-pill-item svg{width:11px;height:11px}
 }
+/* 2026-11-11 布局批L Move A：胶囊自顶栏搬入左轨顶后的轨上下文适配。
+   轨宽 200px（768–1023 档 180px），base 规格三段带 label 会溢 ⇒ 轨内整宽、三段均分、
+   label 降一档字号；≤1023 图标化规则（:752-757）照常叠加。
+   折叠态 52px 纯图标轨只留 #sideToggle，胶囊与 .nav-group 同待遇隐藏（:3458）。 */
+.side .mode-pill{width:100%;margin-bottom:var(--space-2)}
+.side .mode-pill-item{flex:1;justify-content:center;gap:3px;padding:3px 2px;font-size:var(--fs-xs)}
+.side.collapsed .mode-pill{display:none}
+/* 2026-11-11 布局批L Move C：对话坞☰自坞头搬入左轨中段（gid work 与 assistant 组之间）。
+   轨内按 nav-item 行距走：整宽行、图标左对齐、悬停同 nav-item；轨折叠态收为 36px 居中图标
+   （同 .side-toggle 折叠态配方）。箭头方向约定随 ID 走：#chatPanelCollapse svg rotate(180)
+   （右侧栏语义：展开态点击后面板向右收起 → 箭头朝右「>」），面板依旧右收，语义不变。 */
+.side .side-chat-toggle{display:flex;align-items:center;justify-content:flex-start;gap:var(--space-2);
+  width:100%;min-height:32px;padding:var(--space-1) var(--space-3);margin-top:var(--space-2);
+  font-size:var(--fs-xs);color:var(--text);background:transparent;border:none;border-radius:var(--radius-md);
+  box-shadow:none;cursor:pointer;text-align:left;
+  transition:background var(--transition-fast),color var(--transition-fast)}
+.side .side-chat-toggle:hover{background:var(--surface-hover);color:var(--accent-text,var(--accent))}
+.side .side-chat-toggle:active{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side .side-chat-toggle svg{width:var(--icon-md);height:var(--icon-md);display:block;flex-shrink:0}
+.side.collapsed .side-chat-toggle{justify-content:center;padding:var(--space-1) 0;width:36px;min-height:28px;height:auto;margin-left:auto;margin-right:auto}
 /* v1.9.9：侧栏功能组三大类（图表/组件/应用）popover——竖排子菜单，JS 锚定按钮右侧 */
 .side-pop{position:fixed;background:var(--panel);border:1px solid var(--line);
   border-radius:var(--radius-lg);box-shadow:var(--shadow-3);z-index:var(--z-popover);
@@ -2145,7 +2165,8 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   background:transparent;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--space-2);}
 .chat-panel-header .chat-panel-title{justify-self:start}
 #chatSessionBtn{justify-self:center}
-#chatPanelCollapse{justify-self:end} /* v1.9.5：头部白底与浅灰消息区区分 */
+/* 2026-11-11 布局批L Move C：#chatPanelCollapse 已搬入左轨，坞头网格第三列空出；
+   其 justify-self:end 规则随元素离坞失效（.side 为块容器，justify-self 本就无效果），一并清除。 */
 .chat-panel-title{font-weight:600;font-size:var(--fs-base);display:flex;align-items:center;gap:var(--space-2);min-width:0}
 /* v1.9.5：标题图标徽章化；v3.6.3 规格并入"展开按钮"标准（36×28、radius-md、accent 12% 芯片） */
 .chat-panel-title .ph-ic{width:36px;min-height:28px;height:auto;border-radius:var(--radius-md);flex-shrink:0;
@@ -5237,9 +5258,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   /* 坞头：标题占满，动作靠右；折叠键在坞里用「上/下」表达展开/收起（原左右箭头是侧栏语义） */
   .chat-panel .chat-panel-header{display:flex;align-items:center;gap:var(--space-1h)}
   .chat-panel .chat-panel-header .chat-panel-title{flex:1;min-width:0}
-  .chat-panel #chatPanelCollapse{justify-self:auto}
-  .chat-panel.collapsed #chatPanelCollapse svg{transform:rotate(-90deg)}
-  .chat-panel:not(.collapsed) #chatPanelCollapse svg{transform:rotate(90deg)}
+  /* 2026-11-11 布局批L Move C：折叠键已搬入左轨（仅桌面可达），坞头不再持有 #chatPanelCollapse，
+     下列「坞内上/下箭头」三规则随搬移死亡，连同其注释一并清除（清死规则，行为零影响——
+     ≤767 本就无轨可藏，开门路是 #phAiAskBtn 等 AI 入口与底栏）。 */
   /* 沉浸页（设置/回收站等整页工作区）隐藏对话坞：这些页面要全高，
      且用户此时在做配置/清理，AI 仍可从命令面板进入。 */
   .main-wrap:has(#drawer.drawer-page) .chat-panel,
@@ -5514,19 +5535,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   <div class="topbar">
     <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多；指南在顶栏（2026-11-11 Move B 起为桌面唯一入口，侧栏底说明项已上移归并） -->
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
-    <!-- 界面模式切换（2026-11-10：左上角胶囊分段开关，取代原「按钮+三态菜单」）：
-         当前段高亮、点段即切；≤1023px「代码」段禁用——三栏网格需要宽屏 -->
-    <div class="mode-pill" id="uiModePill" role="group" data-i18n-aria="ui.mode.title" aria-label="切换界面模式（工作/代码/设计）">
-      <button type="button" class="mode-pill-item is-on" data-mode="work" aria-pressed="true">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><path d="M14 5h7M14 10h7M14 15h7"/></svg><span class="lbl" data-i18n="ui.mode.work">工作</span>
-      </button>
-      <button type="button" class="mode-pill-item" data-mode="code" aria-pressed="false">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span class="lbl" data-i18n="ui.mode.code">代码</span>
-      </button>
-      <button type="button" class="mode-pill-item" data-mode="design" aria-pressed="false">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span class="lbl" data-i18n="ui.mode.design">设计</span>
-      </button>
-    </div>
+    <!-- 界面模式切换胶囊：2026-11-11 布局批L Move A 起由 renderSide 发进左轨顶
+         （UI_MODE_PILL_HTML，src/render-widgets.js），顶栏不再持有；≤767px 随左轨隐藏
+         （移动代价，用户裁决 O1 已接受） -->
     <div class="spacer"></div>
     <!-- 指南按钮：桌面唯一入口（2026-11-11 Move B 起侧栏底说明项上移归并于此）；≤479px CSS 隐藏，移动端入口在底栏/抽屉 #sideBtnHelp -->
     <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
@@ -5633,12 +5644,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
         <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
         <button class="chat-panel-collapse chat-ic-btn u-mr-1" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
-        <!-- v3.6.3：全站折叠/展开按钮共用同一个箭头 path「M15 18l-6-6 6-6」（原生朝左），形状来源单一；
-             方向由 CSS transform 决定，规则是「箭头指向面板的移动方向」，左右互为镜像：
-               左侧栏  展开 → 点击向左收起 → 朝左「<」（不旋转）    折叠 → 点击向右展开 → 朝右「>」（rotate 180）
-               右侧栏  展开 → 点击向右收起 → 朝右「>」（rotate 180） 折叠 → 点击向左展开 → 朝左「<」（不旋转）
-             勿再改回 M9 18l6-6-6-6 之类的另一套 path，否则形状会重新分叉。 -->
-        <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <!-- 2026-11-11 布局批L Move C（用户裁决 O1）：折叠键 #chatPanelCollapse 已自坞头搬入左轨中段
+             （src/render-widgets.js SIDE_CHAT_TOGGLE_HTML，由 renderSide 在 gid work 与 assistant 组之间发射）；
+             箭头 path「M15 18l-6-6 6-6」与「箭头指向面板移动方向、左右镜像」的方向约定随常量走。坞头只留会话管理。 -->
       </div>
       <!-- 运行进度（2026-10-23）：真实状态（流式字数 / 工具批次 / 计划步数），无任务时隐藏 -->
       <div class="chat-progress" id="chatProgress" hidden aria-live="polite">

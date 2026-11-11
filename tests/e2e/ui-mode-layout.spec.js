@@ -131,13 +131,18 @@ test.describe("窄屏 390×844 · 胶囊禁用与抽屉层（P2-8、P2-7）", ()
   });
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("模式胶囊：「代码」段禁用 + setUIMode 拒绝 + 循环跳过 code（P2-8）", async ({ page }) => {
+  test("模式胶囊：窄屏随左轨隐藏（Move A 移动代价）+「代码」段禁用 + setUIMode 拒绝 + 循环跳过 code（P2-8）", async ({ page }) => {
     await page.goto(APP_URL);
-    await page.waitForSelector("#uiModePill", { timeout: 15_000 });
+    /* 布局批L Move A（2026-11-11 用户裁决 O1）：胶囊自顶栏搬入左轨顶。≤767px 左轨整体
+       display:none（agent-workbench.html .side 规则），胶囊随之不可见——移动代价用户已点批。
+       DOM 仍在（attached），禁用语义保留在属性层；可见性断言换成「轨隐 + 胶囊隐」两条，
+       才钉住的是新拓扑而不是旧顶栏记忆。 */
+    await page.waitForSelector("#uiModePill", { state: "attached", timeout: 15_000 });
     await waitMainRendered(page);
+    await expect(page.locator("#side"), "窄屏左轨应整体隐藏").toBeHidden();
+    await expect(page.locator("#uiModePill"), "胶囊随左轨隐藏（≤767px 移动代价，O1 裁决）").toBeHidden();
 
     const codeItem = page.locator('#uiModePill .mode-pill-item[data-mode="code"]');
-    await expect(codeItem, "「代码」段应可见（禁用不是藏起来）").toBeVisible();
     await expect(codeItem, "窄屏「代码」段应 disabled").toBeDisabled();
     await expect(codeItem, "窄屏「代码」段应 aria-disabled=true").toHaveAttribute("aria-disabled", "true");
     await expect(codeItem, "窄屏「代码」段应带 is-disabled 样式类").toHaveClass(/is-disabled/);
