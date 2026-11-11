@@ -120,7 +120,7 @@ describe("① 尾栏「资料 N 条」统计失败 → 必须留痕（此前是�
 
     win.appendFoot();
 
-    expect(main.querySelector(":scope > .foot")).toBeTruthy();
+    expect(main.querySelector(":scope > .foot-bar")).toBeTruthy();
   });
 
   it("统计正常 → 零 diag（反向守护）", () => {

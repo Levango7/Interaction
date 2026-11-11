@@ -198,9 +198,9 @@ describe("UI 一致性 · 页脚 build 标记", () => {
     __test = win.__test;
   });
 
-  it("#main > .foot 文本含 当前版本与构建标记", () => {
+  it("#statusbar > .foot-bar 文本含 当前版本与构建标记", () => {
     __test.render();
-    const foot = win.document.querySelector("#main > .foot");
+    const foot = win.document.querySelector("#statusbar > .foot-bar");
     expect(foot).toBeTruthy();
     expect(foot.textContent).toMatch(/v\d+\.\d+\.\d+ · b\d{8}[a-z]/);
   });
