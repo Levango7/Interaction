@@ -199,7 +199,11 @@
       var belowSpace = botBound - r.bottom - 6;
       var aboveSpace = r.top - topBound - 6;
       var useDown = belowSpace >= aboveSpace;
-      var space = Math.max(120, useDown ? belowSpace : aboveSpace);
+      /* B1-geo（2026-11-11）：statusbar 挤占 .body 底 24px 后，边界触发器从 down 翻 up，
+         暴露 up 路径缺陷——Math.max(120,…) 在 aboveSpace<120 时把列表抬到 120 高，
+         顶出 topBound 被裁切（e2e form-controls ③ clippedTop 红，两轮 retry 同）。
+         上下对称去掉 120 抬升：空间小就矮列表，完整可见优先于最小高度。 */
+      var space = Math.max(0, useDown ? belowSpace : aboveSpace);
       if (useDown) list.classList.remove("up"); else list.classList.add("up");
       list.style.maxHeight = Math.min(264, Math.round(space)) + "px";
       trigger.setAttribute("aria-expanded", "true");

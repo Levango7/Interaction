@@ -962,8 +962,9 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   font-size:var(--fs-3xs);font-weight:600;line-height:16px;text-align:center;pointer-events:none}
 
 /* ===== 系统级消息中心：下拉面板 ===== */
-/* top 兜底值走 --topbar-h 令牌（JS 打开时会锚定到按钮实际下缘，此值仅在 JS 失效时兜底） */
-.msg-panel{position:fixed;top:var(--topbar-h);right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
+/* top 锚 = menubar+tabbar+topbar 下缘（B1 起顶区四壳；JS 只切 u-hidden 类从不设 top，
+   ui-global-events.js —— 旧注释「JS 打开时会锚定到按钮实际下缘」为假）。相对 topbar 的偏移与 B1 前同构。 */
+.msg-panel{position:fixed;top:calc(var(--mb-h) + var(--tb-h) + var(--topbar-h));right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
   max-height:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-3);z-index:var(--z-popover);display:flex;flex-direction:column;overflow:hidden}
 .msg-panel-header{display:flex;align-items:center;justify-content:space-between;
@@ -3327,7 +3328,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
    y=65..110 —— toast 正好盖在「今天 N 件待处理 · 已完成 N 件」这条消息栏上（390px 实测
    toast y=66..103 vs todo-bar y=69..101，右侧文字被胶囊截断）。容器 pointer-events:none
    所以不挡点击，但 3.6s 内读不到消息栏。改锚 --chrome-h（实测 110px）后即落在正文区。 */
-#toasts{position:fixed;top:calc(var(--chrome-h) + var(--space-3));right:var(--space-4);left:auto;
+#toasts{position:fixed;top:calc(var(--mb-h) + var(--tb-h) + var(--chrome-h) + var(--space-3));right:var(--space-4);left:auto;
   transform:none;z-index:var(--z-toast);
   display:flex;flex-direction:column;gap:var(--space-2);align-items:flex-end;pointer-events:none}
 .toast{background:var(--toast-bg);color:var(--on-accent);padding:var(--space-2) var(--space-4);
