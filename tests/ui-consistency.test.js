@@ -138,13 +138,15 @@ describe("UI 一致性 · 侧栏高亮状态机（uiView）", () => {
     expect(h.activeCount).toBe(1);
   });
 
-  it("renderHelp() 后仅 #sideBtnHelp 高亮，gear 与场景均不高亮", () => {
+  it("renderHelp() 后顶栏 #btnHelp 高亮、侧栏零残留高亮（2026-11-11 Move B：说明入口桌面在顶栏）", () => {
     __test.renderHelp();
     const h = highlightState();
-    expect(win.document.getElementById("sideBtnHelp").classList.contains("active")).toBe(true);
+    /* 桌面入口=顶栏 #btnHelp（renderSide 同表达式同步高亮）；桌面侧栏已无说明节点（mobOnly 滤除） */
+    expect(win.document.getElementById("btnHelp").classList.contains("active")).toBe(true);
     expect(h.gear).toBe(false);
     expect(Object.values(h.sc).every((v) => v === false)).toBe(true);
-    expect(h.activeCount).toBe(1);
+    /* 桌面侧栏已无说明节点：轨内高亮数=0（旧钉 1 是说明尚在轨内时的形态） */
+    expect(h.activeCount).toBe(0);
   });
 
   it("指南页点击场景按钮 → gear/help 均不高亮，且场景按钮高亮", () => {
@@ -163,14 +165,17 @@ describe("UI 一致性 · 侧栏高亮状态机（uiView）", () => {
     __test.openDrawer();
     expect(highlightState().gear).toBe(true);
     __test.renderHelp();
+    /* 2026-11-11 Move B：指南桌面入口在顶栏 #btnHelp；轨内已无说明节点（help 恒 false＝无残留） */
+    expect(win.document.getElementById("btnHelp").classList.contains("active")).toBe(true);
     const h1 = highlightState();
-    expect(h1.help).toBe(true);
+    expect(h1.help).toBe(false);
     expect(h1.gear).toBe(false);
     __test.setActive("office");
     __test.render();
     const h2 = highlightState();
     expect(h2.gear).toBe(false);
     expect(h2.help).toBe(false);
+    expect(win.document.getElementById("btnHelp").classList.contains("active")).toBe(false);
     expect(h2.sc.office).toBe(true);
     expect(h2.activeCount).toBe(1);
   });

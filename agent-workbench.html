@@ -877,6 +877,9 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   transition:background var(--transition-fast),color var(--transition-fast)}
 .tbtn:hover{background:var(--surface-hover);color:var(--text)}
 .tbtn:active{background:var(--surface-muted)}
+/* 2026-11-11 布局批L Move B：指南上移顶栏后，当前视图=指南时顶栏按钮高亮。
+   色调仿 toolbar-row hover 习语（accent-soft），不抢轨内 nav-item.active 的实心 accent */
+.topbar .tbtn.active{background:var(--accent-soft);color:var(--accent-text,var(--accent));border-color:var(--accent)}
 .tbtn.danger:hover{background:var(--danger-soft);color:var(--danger-text,var(--danger));border-color:var(--danger-border)}
 .tbtn svg{width:var(--icon-md);height:var(--icon-md)}
 /* 系统级消息按钮角标（红色小圆点 / 未读数） */
@@ -5328,7 +5331,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .task-rail-toggle .lbl{display:none}
 }
 @media(max-width:479px){
-  /* 低频按钮收口（指南→侧栏底部 #sideBtnHelp；导出→设置·数据管理），避免与「今日」入口抢宽 */
+  /* 低频按钮收口（指南→移动底栏/抽屉 #sideBtnHelp；导出→设置·数据管理），避免与「今日」入口抢宽 */
   #btnHelp,#btnDownload{display:none!important}
 }
 
@@ -5509,7 +5512,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 <a href="#main" class="skip-link" data-i18n-aria="a11y.skipToMain" aria-label="跳转到主内容" data-i18n="a11y.skipToMain">跳转到主内容</a>
 <div class="app">
   <div class="topbar">
-    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
+    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多；指南在顶栏（2026-11-11 Move B 起为桌面唯一入口，侧栏底说明项已上移归并） -->
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
     <!-- 界面模式切换（2026-11-10：左上角胶囊分段开关，取代原「按钮+三态菜单」）：
          当前段高亮、点段即切；≤1023px「代码」段禁用——三栏网格需要宽屏 -->
@@ -5525,7 +5528,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       </button>
     </div>
     <div class="spacer"></div>
-    <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
+    <!-- 指南按钮：桌面唯一入口（2026-11-11 Move B 起侧栏底说明项上移归并于此）；≤479px CSS 隐藏，移动端入口在底栏/抽屉 #sideBtnHelp -->
     <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl" data-i18n="top.help">指南</span></button>
     <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->

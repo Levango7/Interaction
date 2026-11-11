@@ -145,8 +145,10 @@ function _buildSideMenu(){
     color:"var(--muted)", cnt:"", extraAttrs:' id="btnGear" data-gear="1"',
     active: !_sideActive && uiView==="settings"
   };
+  /* 2026-11-11 布局批L Move B：说明入口桌面版上移顶栏 #btnHelp（唯一桌面入口）；
+     mobOnly＝桌面侧栏(#side)不渲染本节点，移动底栏/抽屉（renderMobBar/sideSheet 同树）保留，≤767 入口不丢 */
   const helpNode = {
-    id:"sys-help", label:t("side.menu.help", "说明"), icon:(SIDE_MENU_ICONS.doc||"").replace("<svg","<svg aria-hidden=\"true\""), color:"var(--muted)", cnt:"", extraAttrs:' id="sideBtnHelp" data-help="1"',
+    id:"sys-help", label:t("side.menu.help", "说明"), icon:(SIDE_MENU_ICONS.doc||"").replace("<svg","<svg aria-hidden=\"true\""), color:"var(--muted)", cnt:"", extraAttrs:' id="sideBtnHelp" data-help="1"', mobOnly:true,
     active: !_sideActive && uiView==="help"
   };
 
@@ -194,9 +196,15 @@ function renderSide(){
     return `<div class="nav-node">${parentBtn(o)}${kids}</div>`;
   };
 
-  const groups = _buildSideMenu();
+  /* 2026-11-11 布局批L Move B：mobOnly 节点（说明）桌面侧栏不渲染；renderMobBar/sideSheet 不过滤 */
+  const groups = _buildSideMenu().map(g=>({ ...g, nodes:g.nodes.filter(n=>!n.mobOnly) }));
   const groupHtml = (g)=> '<div class="nav-group">'+g.name+'</div>' + g.nodes.map(nodeHtml).join("");
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + groups.map(groupHtml).join(""));
+
+  /* 2026-11-11 布局批L Move B：指南桌面入口在顶栏 #btnHelp；与轨内节点同表达式同步高亮。
+     renderHelp 先置 uiView="help" 再调本函数，故此处同步即终态（与 helpNode.active 同式） */
+  const topHelp = $("#btnHelp");
+  if(topHelp) topHelp.classList.toggle("active", !_sideActive && uiView==="help");
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
