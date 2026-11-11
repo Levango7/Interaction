@@ -5,8 +5,8 @@
  * @returns {void}
  */
 /**
- * 统一尾栏：在 #main 末尾追加页脚（所有页面统一）
- * 幂等：重复调用不会重复追加（先移除已有 foot 再追加）
+ * 统一尾栏：写 #statusbar（形态 A B1 起；此前写 #main 末尾，B5 topbar 退役批同清 .main > .foot 死规）
+ * 幂等：重复调用不会重复追加（先移除已有 .foot-bar 再追加）
  * @returns {void}
  */
 /* 尾栏「资料 N 条」统计失败的一次性标记（尾栏每次切页都渲染，重复报没有增量信息）。
@@ -14,11 +14,11 @@
    同名 let 会直接 SyntaxError。 */
 let _recCountWarnedFoot = false;
 function appendFoot(){
-  const main = $("#main"); if(!main) return;
-  const existing = main.querySelector(":scope > .foot");
+  const sb = $("#statusbar"); if(!sb) return;
+  const existing = sb.querySelector(":scope > .foot-bar");
   if(existing) existing.remove();
   const footEl = document.createElement("div");
-  footEl.className = "foot";
+  footEl.className = "foot-bar";
   const cfg = getCfg();
   const ap = getActiveProfile();
   const model = (ap && ap.model) ? ap.model : "";
@@ -37,12 +37,10 @@ function appendFoot(){
      而产品名在顶栏/标题/关于页已经出现多次，尾栏再放一遍纯属噪音；版本号才是这里有用的东西。
      注：删产品名时别把 `esc()` 一起删掉 —— 它同时是 lint-xss 的**唯一**放行依据
      （openN/recN 是计数，正常是数字，但存储被写坏时可能是别的东西，转义一遍不吃亏）。 */
-  footEl.innerHTML = '<div class="foot-bar">' +
-    '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
+  footEl.innerHTML = '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
     t("p3.html.footTodo","<span class=\"foot-stat\">待办 ") + esc(openN) + t("stat.recordsMid"," · 资料 ") + esc(recN) + t("stat.footStatSuffix"," 条</span>") +
-    '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>' +
-    '</div>';
-  main.appendChild(footEl);
+    '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>';
+  sb.appendChild(footEl);
 }
 
 function renderMetricsStrip(){

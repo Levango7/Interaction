@@ -60,6 +60,9 @@
   /* v3.7.70：等宽字体栈。此前 .int-key-name 等处 var(--font-mono,monospace) 无定义、只吃回退值。
      与 .u-mono（L1389）保持同一栈；字体不随主题变化，故只声明在 :root。 */
   --font-mono:"SF Mono","SFMono-Regular",Consolas,monospace;
+  /* 形态 A B1（2026-11-11）：IDE 化三壳栏高（DESIGN-SYSTEM §2.2）。控件三档 28/36/44 是另一族，
+     栏高≠控件高；--cmp-h 留 B3（Composer 迁移）声明——lint-tokens 守悬空令牌，定义未用会红。 */
+  --mb-h:32px; --tb-h:36px; --st-h:24px;
   /* ===== 亮色画布（Vercel Geist 风格：中性浅灰底、纯白卡、品牌蓝主色；场景色仍走 --sc-*） =====
      v3.2 阶段三：底色加深（原浅灰→更深浅灰），与纯白卡片对比 ~15%（V2 解决） */
   --bg:#e0e0e4; --panel:#ffffff; --panel2:#f5f5f5; --line:#d5d5d5;
@@ -643,6 +646,25 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 单行顶栏：品牌 + spacer + 系统级按钮居右（padding 统一 space-3，各断点高度一致=54px，见 --topbar-h 令牌）
    v1.9.7：背景改 --side-bg（与侧栏同灰）——原 --panel 白与右栏/白卡同色，顶栏/正文/右栏三区不辨界限；
    现为「顶+侧灰框 → 正文浅灰 → 右栏白」三层结构，暗色/高对比度/护眼主题经同名令牌自动同步 */
+ /* 形态 A B1：IDE 化三壳（menubar / tabbar / statusbar），栏高令牌 DESIGN-SYSTEM §2.2。
+   过渡态：topbar 仍在（B5 退役），四横带并存；本批只迁 logo + 模式胶囊，零行为变化。
+   断点允许集 1023/767/479，不新增值。 */
+.menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);
+  padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.menubar .mi{padding:2px var(--space-2);border-radius:var(--radius-md);color:var(--muted);cursor:pointer}
+.menubar .mi:hover{background:var(--accent-soft)}
+.tabbar{height:var(--tb-h);display:flex;align-items:center;gap:var(--space-2);
+  padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.tabs{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;overflow-x:auto}
+.statusbar{height:var(--st-h);display:flex;align-items:center;gap:var(--space-3);
+  padding:0 var(--space-2);background:var(--panel);border-top:1px solid var(--line);
+  color:var(--muted);font-size:var(--fs-xs);flex:none}
+.statusbar .foot-bar{flex:1 1 auto;min-width:0}
+/* ≤767：mi 文字菜单隐藏（B1 mi 容器空，规则先落、B2 填项后生效；复用 MAIN 断点 767，不新增值。
+   窄变异登记：临时删本条 ⇒ 320 档 menubar 溢出，本机无浏览器栈自证，押 CI 窄屏探针）。 */
+@media (max-width:767px){
+  .menubar .mi{display:none}
+}
 .topbar{display:flex;flex-direction:row;align-items:center;gap:var(--space-3);
   padding:var(--space-2) var(--space-6);
   background:color-mix(in srgb,var(--panel) 50%,transparent);
@@ -5508,9 +5530,12 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 <body>
 <a href="#main" class="skip-link" data-i18n-aria="a11y.skipToMain" aria-label="跳转到主内容" data-i18n="a11y.skipToMain">跳转到主内容</a>
 <div class="app">
-  <div class="topbar">
-    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
+  <!-- 形态 A B1：menubar 壳（IDE 化三壳之一）。logo 从 topbar 迁入；mi 文字菜单内容清单＝功能设计 §8 待决②，B1 留空（防空窗假控件）。 -->
+  <header class="menubar">
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
+  </header>
+  <!-- 形态 A B1：tabbar 壳。模式胶囊整块从 topbar 剪贴迁入（id/类名不变 ⇒ _renderUiModePill 零 JS 随行）；tabs 槽由 B2 视图注册表填。 -->
+  <div class="tabbar">
     <!-- 界面模式切换（2026-11-10：左上角胶囊分段开关，取代原「按钮+三态菜单」）：
          当前段高亮、点段即切；≤1023px「代码」段禁用——三栏网格需要宽屏 -->
     <div class="mode-pill" id="uiModePill" role="group" data-i18n-aria="ui.mode.title" aria-label="切换界面模式（工作/代码/设计）">
@@ -5524,6 +5549,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span class="lbl" data-i18n="ui.mode.design">设计</span>
       </button>
     </div>
+    <div class="tabs"></div>
+  </div>
+  <div class="topbar">
+    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
     <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
@@ -5736,6 +5765,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     </span>
   </div>
 </div>
+
+<!-- 形态 A B1：statusbar 壳（IDE 三壳之一）。页脚由 appendFoot 写入（.foot-bar 三列）；
+     原 .main > .foot / .overview-grid > .foot 死规与 .foot 基础样式（drawer 路径仍在用）留 B5 topbar 退役批同清。 -->
+<footer class="statusbar" id="statusbar"></footer>
 
 <!-- v1.15：侧栏功能组恢复为 图表（直接入口）+ 应用（独立页）+ 市场（独立页）。
      应用页含 日历/天气/闹钟/萌宠；指针特效已移入设置页。 -->
