@@ -134,6 +134,7 @@
     wrap.appendChild(list);
 
     var inst = { wrap: wrap, trigger: trigger, list: list, sel: sel };
+    inst.place = place;   /* 模块级 scroll 监听用（见文件末尾 rAF） */
     inst.syncLabel = function(){
       if (EDITABLE) {
         /* 空值选项（如「选时间」）在可编辑模式下应当作 **placeholder**，
@@ -152,16 +153,15 @@
     };
     sel.__ds = inst;
 
-    function open(){
-      if (OPEN && OPEN !== inst) dsClose();
-      /* v3.7.44：触发框若不在视口内，先把它滚进来再定位 ——
-         否则列表整块渲染在视口之外（实测 1080x555 视口、页面未滚到表单时打开：
-         列表 top=695 > 视口高 555，可见高度为 0），用户感知就是"点开了却什么都没有/没法滑"。 */
-      try{
-        const r0 = trigger.getBoundingClientRect();
-        if (r0.bottom < 0 || r0.top > window.innerHeight) trigger.scrollIntoView({ block: "center" });
-      }catch(_e){}
-      list.hidden = false;
+    /* ===== 下拉定位：打开时与「祖先滚动容器滚动后」共用同一判据 =====
+       B1-geo-2（2026-11-12）：B1 四壳让 .main-wrap 变得可滚，而定位原先只在 open()
+       里算一次。真机实测 1280×800：打开时 up/264px（listTop 367，容器顶 133，不裁）；
+       页面滚 234px 后触发框 635→399、列表 367→131，容器顶仍 133 ⇒ clippedTop 超 2px
+       （form-controls.spec.js:254 连红 5 个 main 提交）。按滚动后的几何重算，
+       below 357 > above 260 ⇒ 翻回向下弹，列表 441..705 完整可见、gap 仍 4px。
+       ⚠️ ffd63df 的 Math.max(120,…)→Math.max(0,…) 对这条红无射程：打开时
+       aboveSpace=496，min(264,496) 改前改后都是 264；真红发生在滚动之后。 */
+    function place(){
       /* v3.7.35：向上弹判定修正（第三次修这里，这次是**真根因**）。
          ✗ 旧逻辑：need = Math.max(list.scrollHeight, 44) + 8
            scrollHeight 是**内容全高**，不受 max-height:264px 约束 ——
@@ -199,13 +199,28 @@
       var belowSpace = botBound - r.bottom - 6;
       var aboveSpace = r.top - topBound - 6;
       var useDown = belowSpace >= aboveSpace;
-      /* B1-geo（2026-11-11）：statusbar 挤占 .body 底 24px 后，边界触发器从 down 翻 up，
-         暴露 up 路径缺陷——Math.max(120,…) 在 aboveSpace<120 时把列表抬到 120 高，
-         顶出 topBound 被裁切（e2e form-controls ③ clippedTop 红，两轮 retry 同）。
-         上下对称去掉 120 抬升：空间小就矮列表，完整可见优先于最小高度。 */
+      /* B1-geo（2026-11-11）：去掉 Math.max(120,…) 抬升，空间小就矮列表、
+         完整可见优先于最小高度（上下对称）。注：这一改动对 11-11/11-12 的
+         clippedTop 红**无射程** —— 打开时 aboveSpace=496，min(264,496) 改前
+         改后都是 264；真红发生在祖先滚动容器滚动之后，见 B1-geo-2。 */
       var space = Math.max(0, useDown ? belowSpace : aboveSpace);
       if (useDown) list.classList.remove("up"); else list.classList.add("up");
       list.style.maxHeight = Math.min(264, Math.round(space)) + "px";
+    }
+
+    function open(){
+      if (OPEN && OPEN !== inst) dsClose();
+      /* v3.7.44：触发框若不在视口内，先把它滚进来再定位 ——
+         否则列表整块渲染在视口之外（实测 1080x555 视口、页面未滚到表单时打开：
+         列表 top=695 > 视口高 555，可见高度为 0），用户感知就是"点开了却什么都没有/没法滑"。 */
+      try{
+        const r0 = trigger.getBoundingClientRect();
+        if (r0.bottom < 0 || r0.top > window.innerHeight) trigger.scrollIntoView({ block: "center" });
+      }catch(_e){}
+      list.hidden = false;
+      /* 定位判据（v3.7.35 / v3.7.44 / B1-geo）统一收在上方的 place()，
+         打开与滚动后重定位共用，避免两处判据漂移。 */
+      place();
       trigger.setAttribute("aria-expanded", "true");
       OPEN = inst;
       var cur = list.querySelector(".ds-opt.is-sel") || list.querySelector(".ds-opt");
@@ -373,6 +388,10 @@
     requestAnimationFrame(function(){
       if (!OPEN) return;
       try{
+        /* B1-geo-2：祖先滚动容器滚动后，触发框与列表一起位移，但打开时定的
+           方向/高度是按旧位置算的 ⇒ 先按滚动后的实际几何重定位，再量间距。
+           列表自身的滚动已在上方豁免（v3.7.43 不变量不变）；gap>24 关闭判据不动。 */
+        if (OPEN.place) OPEN.place();
         const tr = OPEN.trigger.getBoundingClientRect();
         const lr = OPEN.list.getBoundingClientRect();
         /* 间距取"列表在触发框下方/上方"两种几何里的实际缝隙；重叠视为 0 */
