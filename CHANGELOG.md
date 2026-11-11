@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-11 · **布局批L（Move B）：说明入口桌面版上移顶栏 `#btnHelp`（侧栏底说明项归并）**
+
+_用户 11-11 附图点单「有些可以去去，有些位置搬迁一下，看看你自己的布局」批三处尾→头搬移（Move A 胶囊 / B 说明 / C 对话坞☰）；本批落地 Move B。A/C 因 `.side{display:none}` ≤767px（`agent-workbench.html:809`）会连带杀掉移动模式切换与抽屉把手、且撞 `ui-mode-layout`/`layout-v2` 的 375px 红钉，登记待产品裁决（选项表见 `docs/agent-board.md` 本批行）；右轨按 layout-v2 理由 KEEP。_
+
+- **`src/render-widgets.js`**：`helpNode` 加 `mobOnly:true`（`:148-151`）；`renderSide()` 桌面轨滤除 mobOnly 节点（`:199-200`）；轨内高亮与顶栏 `#btnHelp` 高亮同表达式同步（`!_sideActive && uiView==="help"`，`:204-207`）——`renderHelp` 先置 `uiView="help"` 再调 `renderSide`，同步即终态；`#btnHelp` 的 id/事件绑定/CSS 选择器零改动
+- **`agent-workbench.html`**：顶栏 `#btnHelp` 升为桌面唯一入口；注记三处更新（`:5512` 按钮顺序 / `:5528` 按钮身份 / `:5331` 低频收口指向）；新增 `.topbar .tbtn.active`（`:879`，accent-soft 习语，不抢轨内 `nav-item.active` 实心 accent）；`:5209`/`:5332` CSS 隐藏规则有意不动（id 保留，≤479px 仍隐藏、移动入口在底栏/抽屉 `#sideBtnHelp`）
+- **移动面不丢**：`renderMobBar`/`openSideSheet` 共用 `_buildSideMenu()` 不过滤 ⇒ ≤767px 底栏与「更多」抽屉仍见「说明」
+- **`tests/ui-consistency.test.js`**：两例翻到新拓扑（`renderHelp()` 后顶栏 `#btnHelp` active + 轨内 `activeCount=0`；全链路切场景清顶栏高亮、轨内场景高亮唯一）
+- **验证**：定向 vitest 4 文件 54 例 + `batch-ops-ui` 隔离 12/12（全量首跑 ① 例红＝满载 waitFor 噪声）；全量 `npm test` 240 文件 2620 例＝2616 passed / 4 failed，4 红全归满载噪声（`notify-webhook` ④ 60s timeout + `prod-startup-guard` A/B/C），两文件隔离复跑 32/32 绿、零内容红；真 chromium 探针（桌面 1440：轨无说明节点 / 顶栏帮助高亮同步且切场景清除 / 轨内 activeCount=0；移动 375：`#btnHelp` 按设计隐藏 + 「更多」抽屉内 `#sideBtnHelp` visible）；e2e 三钉（topbar-overflow / ui-mode-layout / layout-v2）40 passed；`src:check` 40/40。**高共写面声明**：仅动上列 5 文件（HTML/src/单测/CHANGELOG/板面），`src/` 其余模块、`electron/` 副本、workflow、`package.json`、`server/` 源码零改动；`server/node_modules` 仅本隔离副本为复刻 CI 装过；占位密钥/一次性账号不落盘；零短信额度消耗。CI 为权威终态（R9），推后核 run。
+
 ### 2026-11-10 · **季度台账只读复核脚本 `scripts/ledger-quarterly-review.mjs`（台账规范节 mandate 五项落地）**
 
 _台账「规范」节季度 mandate：五项只读复核（① `DONE` 无 commit ② `OPEN`/`DOING` 超 30 天未复核 ③ `BLOCKED` 缺「谁能解」 ④ `USER-ACTION` 挂超 60 天 ⑤ 别名指向已删除文件）；同节「门禁」条禁给台账装 CI 判定器（#109 教训）⇒ 独立只读脚本，不入 lint 链、不入 `verify:ci`、退出码恒 0（发现不转退出码，出报告由人处置）。用法：`node scripts/ledger-quarterly-review.mjs [台账路径]`。_
