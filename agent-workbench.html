@@ -60,6 +60,9 @@
   /* v3.7.70：等宽字体栈。此前 .int-key-name 等处 var(--font-mono,monospace) 无定义、只吃回退值。
      与 .u-mono（L1389）保持同一栈；字体不随主题变化，故只声明在 :root。 */
   --font-mono:"SF Mono","SFMono-Regular",Consolas,monospace;
+  /* 形态 A B1（2026-11-11）：IDE 化三壳栏高（DESIGN-SYSTEM §2.2）。控件三档 28/36/44 是另一族，
+     栏高≠控件高；--cmp-h 留 B3（Composer 迁移）声明——lint-tokens 守悬空令牌，定义未用会红。 */
+  --mb-h:32px; --tb-h:36px; --st-h:24px;
   /* ===== 亮色画布（Vercel Geist 风格：中性浅灰底、纯白卡、品牌蓝主色；场景色仍走 --sc-*） =====
      v3.2 阶段三：底色加深（原浅灰→更深浅灰），与纯白卡片对比 ~15%（V2 解决） */
   --bg:#e0e0e4; --panel:#ffffff; --panel2:#f5f5f5; --line:#d5d5d5;
@@ -643,6 +646,25 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 单行顶栏：品牌 + spacer + 系统级按钮居右（padding 统一 space-3，各断点高度一致=54px，见 --topbar-h 令牌）
    v1.9.7：背景改 --side-bg（与侧栏同灰）——原 --panel 白与右栏/白卡同色，顶栏/正文/右栏三区不辨界限；
    现为「顶+侧灰框 → 正文浅灰 → 右栏白」三层结构，暗色/高对比度/护眼主题经同名令牌自动同步 */
+ /* 形态 A B1：IDE 化三壳（menubar / tabbar / statusbar），栏高令牌 DESIGN-SYSTEM §2.2。
+   过渡态：topbar 仍在（B5 退役），四横带并存；本批只迁 logo + 模式胶囊，零行为变化。
+   断点允许集 1023/767/479，不新增值。 */
+.menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);
+  padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.menubar .mi{padding:2px var(--space-2);border-radius:var(--radius-md);color:var(--muted);cursor:pointer}
+.menubar .mi:hover{background:var(--accent-soft)}
+.tabbar{height:var(--tb-h);display:flex;align-items:center;gap:var(--space-2);
+  padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.tabs{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;overflow-x:auto}
+.statusbar{height:var(--st-h);display:flex;align-items:center;gap:var(--space-3);
+  padding:0 var(--space-2);background:var(--panel);border-top:1px solid var(--line);
+  color:var(--muted);font-size:var(--fs-xs);flex:none}
+.statusbar .foot-bar{flex:1 1 auto;min-width:0}
+/* ≤767：mi 文字菜单隐藏（B1 mi 容器空，规则先落、B2 填项后生效；复用 MAIN 断点 767，不新增值。
+   窄变异登记：临时删本条 ⇒ 320 档 menubar 溢出，本机无浏览器栈自证，押 CI 窄屏探针）。 */
+@media (max-width:767px){
+  .menubar .mi{display:none}
+}
 .topbar{display:flex;flex-direction:row;align-items:center;gap:var(--space-3);
   padding:var(--space-2) var(--space-6);
   background:color-mix(in srgb,var(--panel) 50%,transparent);
@@ -940,8 +962,9 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   font-size:var(--fs-3xs);font-weight:600;line-height:16px;text-align:center;pointer-events:none}
 
 /* ===== 系统级消息中心：下拉面板 ===== */
-/* top 兜底值走 --topbar-h 令牌（JS 打开时会锚定到按钮实际下缘，此值仅在 JS 失效时兜底） */
-.msg-panel{position:fixed;top:var(--topbar-h);right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
+/* top 锚 = menubar+tabbar+topbar 下缘（B1 起顶区四壳；JS 只切 u-hidden 类从不设 top，
+   ui-global-events.js —— 旧注释「JS 打开时会锚定到按钮实际下缘」为假）。相对 topbar 的偏移与 B1 前同构。 */
+.msg-panel{position:fixed;top:calc(var(--mb-h) + var(--tb-h) + var(--topbar-h));right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
   max-height:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-3);z-index:var(--z-popover);display:flex;flex-direction:column;overflow:hidden}
 .msg-panel-header{display:flex;align-items:center;justify-content:space-between;
@@ -3305,7 +3328,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
    y=65..110 —— toast 正好盖在「今天 N 件待处理 · 已完成 N 件」这条消息栏上（390px 实测
    toast y=66..103 vs todo-bar y=69..101，右侧文字被胶囊截断）。容器 pointer-events:none
    所以不挡点击，但 3.6s 内读不到消息栏。改锚 --chrome-h（实测 110px）后即落在正文区。 */
-#toasts{position:fixed;top:calc(var(--chrome-h) + var(--space-3));right:var(--space-4);left:auto;
+#toasts{position:fixed;top:calc(var(--mb-h) + var(--tb-h) + var(--chrome-h) + var(--space-3));right:var(--space-4);left:auto;
   transform:none;z-index:var(--z-toast);
   display:flex;flex-direction:column;gap:var(--space-2);align-items:flex-end;pointer-events:none}
 .toast{background:var(--toast-bg);color:var(--on-accent);padding:var(--space-2) var(--space-4);
@@ -5508,9 +5531,12 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 <body>
 <a href="#main" class="skip-link" data-i18n-aria="a11y.skipToMain" aria-label="跳转到主内容" data-i18n="a11y.skipToMain">跳转到主内容</a>
 <div class="app">
-  <div class="topbar">
-    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
+  <!-- 形态 A B1：menubar 壳（IDE 化三壳之一）。logo 从 topbar 迁入；mi 文字菜单内容清单＝功能设计 §8 待决②，B1 留空（防空窗假控件）。 -->
+  <header class="menubar">
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
+  </header>
+  <!-- 形态 A B1：tabbar 壳。模式胶囊整块从 topbar 剪贴迁入（id/类名不变 ⇒ _renderUiModePill 零 JS 随行）；tabs 槽由 B2 视图注册表填。 -->
+  <div class="tabbar">
     <!-- 界面模式切换（2026-11-10：左上角胶囊分段开关，取代原「按钮+三态菜单」）：
          当前段高亮、点段即切；≤1023px「代码」段禁用——三栏网格需要宽屏 -->
     <div class="mode-pill" id="uiModePill" role="group" data-i18n-aria="ui.mode.title" aria-label="切换界面模式（工作/代码/设计）">
@@ -5524,6 +5550,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span class="lbl" data-i18n="ui.mode.design">设计</span>
       </button>
     </div>
+    <div class="tabs"></div>
+  </div>
+  <div class="topbar">
+    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
     <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
@@ -5736,6 +5766,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     </span>
   </div>
 </div>
+
+<!-- 形态 A B1：statusbar 壳（IDE 三壳之一）。页脚由 appendFoot 写入（.foot-bar 三列）；
+     原 .main > .foot / .overview-grid > .foot 死规与 .foot 基础样式（drawer 路径仍在用）留 B5 topbar 退役批同清。 -->
+<footer class="statusbar" id="statusbar"></footer>
 
 <!-- v1.15：侧栏功能组恢复为 图表（直接入口）+ 应用（独立页）+ 市场（独立页）。
      应用页含 日历/天气/闹钟/萌宠；指针特效已移入设置页。 -->
@@ -31792,6 +31826,16 @@ async function apiPutSnapshot(snapshot) {
   });
   return !!(r && r.ok);
 }
+/* DL-O24（用户 11-10 裁②）：tombstone 语义 —— 活性优先于 LWW。软删除只置 deletedAt
+   不 bump updatedAt（src/ui-scene-bind.js:54），若纯按时间戳合并，云端同 ts 活跃版救不回
+   本机已删任务（run4 步 6 真发现）。规则：一方有 deletedAt 另一方无 ⇒ 无 deletedAt
+   （活跃）版赢，与时间戳无关；双方同态（都删/都活）⇒ 维持原 LWW。 */
+function _taskVersionWins(rt, lt) {
+  const lDel = !!(lt && lt.deletedAt);
+  const rDel = !!(rt && rt.deletedAt);
+  if (lDel !== rDel) return !rDel;
+  return (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0);
+}
 function _applyCloudSnapshot(data) {
   try {
     const remoteRaw = data[PREFIX + "tasks"];
@@ -31803,7 +31847,7 @@ function _applyCloudSnapshot(data) {
       remoteTasks.forEach(rt => {
         if (!rt || !rt.id) return;
         const lt = map.get(rt.id);
-        if (!lt || (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0)) map.set(rt.id, rt);
+        if (!lt || _taskVersionWins(rt, lt)) map.set(rt.id, rt);
       });
       data[PREFIX + "tasks"] = JSON.stringify(Array.from(map.values()));
     }
@@ -32047,7 +32091,7 @@ async function _autoMergeTasksConflict(c){
   b.forEach(function(rt){
     if (!rt || !rt.id) return;
     const lt = map.get(rt.id);
-    if (!lt || (rt.updatedAt || rt.created || 0) > (lt.updatedAt || lt.created || 0)) map.set(rt.id, rt);
+    if (!lt || _taskVersionWins(rt, lt)) map.set(rt.id, rt);
   });
   const merged = JSON.stringify(Array.from(map.values()));
   try { localStorage.setItem(PREFIX + "tasks", merged); } catch (e) {
@@ -40525,8 +40569,8 @@ function stopNotifyScheduler(){
  * @returns {void}
  */
 /**
- * 统一尾栏：在 #main 末尾追加页脚（所有页面统一）
- * 幂等：重复调用不会重复追加（先移除已有 foot 再追加）
+ * 统一尾栏：写 #statusbar（形态 A B1 起；此前写 #main 末尾，B5 topbar 退役批同清 .main > .foot 死规）
+ * 幂等：重复调用不会重复追加（先移除已有 .foot-bar 再追加）
  * @returns {void}
  */
 /* 尾栏「资料 N 条」统计失败的一次性标记（尾栏每次切页都渲染，重复报没有增量信息）。
@@ -40534,11 +40578,11 @@ function stopNotifyScheduler(){
    同名 let 会直接 SyntaxError。 */
 let _recCountWarnedFoot = false;
 function appendFoot(){
-  const main = $("#main"); if(!main) return;
-  const existing = main.querySelector(":scope > .foot");
+  const sb = $("#statusbar"); if(!sb) return;
+  const existing = sb.querySelector(":scope > .foot-bar");
   if(existing) existing.remove();
   const footEl = document.createElement("div");
-  footEl.className = "foot";
+  footEl.className = "foot-bar";
   const cfg = getCfg();
   const ap = getActiveProfile();
   const model = (ap && ap.model) ? ap.model : "";
@@ -40557,12 +40601,10 @@ function appendFoot(){
      而产品名在顶栏/标题/关于页已经出现多次，尾栏再放一遍纯属噪音；版本号才是这里有用的东西。
      注：删产品名时别把 `esc()` 一起删掉 —— 它同时是 lint-xss 的**唯一**放行依据
      （openN/recN 是计数，正常是数字，但存储被写坏时可能是别的东西，转义一遍不吃亏）。 */
-  footEl.innerHTML = '<div class="foot-bar">' +
-    '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
+  footEl.innerHTML = '<span class="foot-id">v' + VERSION + ' · b' + BUILD_TAG + '</span>' +
     t("p3.html.footTodo","<span class=\"foot-stat\">待办 ") + esc(openN) + t("stat.recordsMid"," · 资料 ") + esc(recN) + t("stat.footStatSuffix"," 条</span>") +
-    '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>' +
-    '</div>';
-  main.appendChild(footEl);
+    '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>';
+  sb.appendChild(footEl);
 }
 
 function renderMetricsStrip(){
@@ -45368,6 +45410,7 @@ registerUndoNoticeListener(showUndoToast);
     wrap.appendChild(list);
 
     var inst = { wrap: wrap, trigger: trigger, list: list, sel: sel };
+    inst.place = place;   /* 模块级 scroll 监听用（见文件末尾 rAF） */
     inst.syncLabel = function(){
       if (EDITABLE) {
         /* 空值选项（如「选时间」）在可编辑模式下应当作 **placeholder**，
@@ -45386,16 +45429,15 @@ registerUndoNoticeListener(showUndoToast);
     };
     sel.__ds = inst;
 
-    function open(){
-      if (OPEN && OPEN !== inst) dsClose();
-      /* v3.7.44：触发框若不在视口内，先把它滚进来再定位 ——
-         否则列表整块渲染在视口之外（实测 1080x555 视口、页面未滚到表单时打开：
-         列表 top=695 > 视口高 555，可见高度为 0），用户感知就是"点开了却什么都没有/没法滑"。 */
-      try{
-        const r0 = trigger.getBoundingClientRect();
-        if (r0.bottom < 0 || r0.top > window.innerHeight) trigger.scrollIntoView({ block: "center" });
-      }catch(_e){}
-      list.hidden = false;
+    /* ===== 下拉定位：打开时与「祖先滚动容器滚动后」共用同一判据 =====
+       B1-geo-2（2026-11-12）：B1 四壳让 .main-wrap 变得可滚，而定位原先只在 open()
+       里算一次。真机实测 1280×800：打开时 up/264px（listTop 367，容器顶 133，不裁）；
+       页面滚 234px 后触发框 635→399、列表 367→131，容器顶仍 133 ⇒ clippedTop 超 2px
+       （form-controls.spec.js:254 连红 5 个 main 提交）。按滚动后的几何重算，
+       below 357 > above 260 ⇒ 翻回向下弹，列表 441..705 完整可见、gap 仍 4px。
+       ⚠️ ffd63df 的 Math.max(120,…)→Math.max(0,…) 对这条红无射程：打开时
+       aboveSpace=496，min(264,496) 改前改后都是 264；真红发生在滚动之后。 */
+    function place(){
       /* v3.7.35：向上弹判定修正（第三次修这里，这次是**真根因**）。
          ✗ 旧逻辑：need = Math.max(list.scrollHeight, 44) + 8
            scrollHeight 是**内容全高**，不受 max-height:264px 约束 ——
@@ -45433,9 +45475,28 @@ registerUndoNoticeListener(showUndoToast);
       var belowSpace = botBound - r.bottom - 6;
       var aboveSpace = r.top - topBound - 6;
       var useDown = belowSpace >= aboveSpace;
-      var space = Math.max(120, useDown ? belowSpace : aboveSpace);
+      /* B1-geo（2026-11-11）：去掉 Math.max(120,…) 抬升，空间小就矮列表、
+         完整可见优先于最小高度（上下对称）。注：这一改动对 11-11/11-12 的
+         clippedTop 红**无射程** —— 打开时 aboveSpace=496，min(264,496) 改前
+         改后都是 264；真红发生在祖先滚动容器滚动之后，见 B1-geo-2。 */
+      var space = Math.max(0, useDown ? belowSpace : aboveSpace);
       if (useDown) list.classList.remove("up"); else list.classList.add("up");
       list.style.maxHeight = Math.min(264, Math.round(space)) + "px";
+    }
+
+    function open(){
+      if (OPEN && OPEN !== inst) dsClose();
+      /* v3.7.44：触发框若不在视口内，先把它滚进来再定位 ——
+         否则列表整块渲染在视口之外（实测 1080x555 视口、页面未滚到表单时打开：
+         列表 top=695 > 视口高 555，可见高度为 0），用户感知就是"点开了却什么都没有/没法滑"。 */
+      try{
+        const r0 = trigger.getBoundingClientRect();
+        if (r0.bottom < 0 || r0.top > window.innerHeight) trigger.scrollIntoView({ block: "center" });
+      }catch(_e){}
+      list.hidden = false;
+      /* 定位判据（v3.7.35 / v3.7.44 / B1-geo）统一收在上方的 place()，
+         打开与滚动后重定位共用，避免两处判据漂移。 */
+      place();
       trigger.setAttribute("aria-expanded", "true");
       OPEN = inst;
       var cur = list.querySelector(".ds-opt.is-sel") || list.querySelector(".ds-opt");
@@ -45603,6 +45664,10 @@ registerUndoNoticeListener(showUndoToast);
     requestAnimationFrame(function(){
       if (!OPEN) return;
       try{
+        /* B1-geo-2：祖先滚动容器滚动后，触发框与列表一起位移，但打开时定的
+           方向/高度是按旧位置算的 ⇒ 先按滚动后的实际几何重定位，再量间距。
+           列表自身的滚动已在上方豁免（v3.7.43 不变量不变）；gap>24 关闭判据不动。 */
+        if (OPEN.place) OPEN.place();
         const tr = OPEN.trigger.getBoundingClientRect();
         const lr = OPEN.list.getBoundingClientRect();
         /* 间距取"列表在触发框下方/上方"两种几何里的实际缝隙；重叠视为 0 */
