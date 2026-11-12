@@ -1,0 +1,64 @@
+(node:75304) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+前置：直连 dav.jianguoyun.com PROPFIND / → HTTP 207
+页面：file:///F:/tmp/dl-o02-run2/agent-workbench.html
+
+=== 门控（验收表第 7 步的桌面半边）===
+  ✓ 桌面态渲染出三个输入框 + 保存
+  ✓ 未配置态不出现 测试连接/清除/上传/覆盖（诚实门控，不是点了没反应的死 UI）
+
+=== 前置步 2：填配置 → 保存 ===
+  ✓ 保存后 测试连接/清除/上传快照/用云端覆盖本机 四个动作都出现
+  ✓ 配置落到本机存储  ["wb_agent_webdav_pass","wb_agent_webdav_cfg"]
+  ✓ 存储里搜不到明文应用密码
+
+=== 验收表第 1 步：测试连接 ===
+  状态行/toast：连接成功（应用密码有效） 异步错误：Failed to update a ServiceWorker for scope ('file:///F:/tmp/dl-o02-run2/') with script ('Unknown'): The object is in an invalid state. | 已保存（应用密码加密存储）
+  ✓ 真凭据下显示连接成功  连接成功（应用密码有效） 异步错误：Failed to update a ServiceWorker for scope ('file:///F:/tmp/dl-o02-run2/') with script ('Unknown'): The object is in an invalid state. | 已保存（应
+
+前置：DELETE /agent-workshop-snapshot.json → HTTP 404（204=清掉遗留 / 404=本干净 / 200=服务端口径）
+
+=== 验收表第 2 步：上传快照 ===
+  ✓ toast 报出「已上传快照（N 键）」  已上传快照（15 键） 连接成功（应用密码有效）
+  ✓ 服务端确实有该文件（直连 GET /agent-workshop-snapshot.json → 200）
+  ✓ 读回内容是合法 JSON（不是半个包/错误页）
+  ✓ 服务端键数 15 ≥ 本机快照键数 14（允许运行期新增键）
+  ✓ 本机快照的键名逐个在服务端都存在  wb_agent_last_open,wb_agent_onboarded,wb_agent_ai_sessions,wb_agent_init,wb_agent_rec_study,wb_agent_migrationLog
+  ✓ 本机记下了 etag（v3.7.120 那条 bug 的回归点）  {"etag":"YwuwL2qK62bm0yJTFpSAxw","lastModified":"","path":"/agent-workshop-snapshot.json","ts":1794498006277}
+
+=== 验收表第 3 步：再点一次上传（续传不报假冲突） ===
+  ✓ 第二次上传成功且**没有**误报冲突  已上传快照（15 键）
+  ✓ 服务端仍在（续传没把文件删掉）
+  etag 有 → 有；last-modified ? → ?
+
+=== 验收表第 4 步：改一条任务再上传 ===
+  ✓ 本机快照确实变了（改动没落在原地）
+  ✓ 改后上传成功  已修改：任务 撤销 | 已上传快照（17 键）
+  ✓ 服务端内容跟着变了（不是只改了本机）
+
+=== 验收表第 5 步：用云端覆盖本机 ===
+  ✓ 下行前弹了确认框（dangerConfirm 自绘模态，点「确认执行」）
+  ✓ 确认后 toast「已应用云端快照」  已修改：任务 撤销 | 已应用云端快照
+  ✓ 云端版本赢了：本机那条被覆盖回云端值（title/created 与云端一致，本机旧版记号被顶掉）  {"restored":{"status":"done","created":1794497998819,"title":"修复登录页 500 报错"},"cloud":{"title":"修复登录页 500 报错","created":1794497998819}}
+  ✓ 本机独有键未被下行清掉（「只覆盖云端包含的键」的端到端证据）
+
+=== 验收表第 6 步：恢复被删任务 ===
+  ✓ 删任务弹了确认框（dangerConfirm）
+  ✓ 删后本机确实没了（getActiveTasks 查不到）  {"id":"mwdprxlvn2gyl","sc":"office","title":"提交本周周报"}
+  ✓ 第二次下行也弹了确认框
+  ✓ 确认后 toast「已应用云端快照」  已修改：任务 撤销 | 已应用云端快照
+  ✓ 被删任务被云端版本恢复（数据回来了）  {"title":"提交本周周报","status":"todo"}
+
+=== 验收表第 8 步：清除（本机抹净、云端文件不受影响） ===
+  ✓ 清除前弹了确认框（dangerConfirm 自绘模态）
+  ✓ 清除后本机零 webdav 键  []
+  ✓ 云端文件仍在（直连 GET → 200，清除没碰远端）
+
+=== 日志卫生：只记主机/方法/状态码，绝不记凭据 ===
+  app.log 里 webdav 行 6 条
+  ✓ 日志不含应用密码 / Basic 串 / Authorization 字样
+  ✓ 日志确实记了主机与方法状态码（可诊断性）  {"ts":"2026-11-12T15:40:37.732Z","scope":"webdav","msg":"host=dav.jianguoyun.com method=GET status=200"}
+
+=== 结论：真凭据全量，✗ 0 项，─ 0 项待凭据 ===
+rc=0

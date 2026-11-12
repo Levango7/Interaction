@@ -248,3 +248,13 @@ stderr 原文，不再丢一句「端口没起来」让人猜。
 Playwright 默认 dismiss 原生 `confirm`（表现为「点了清除本机键还在」）、toast 等 7 秒再抓早已消失
 （表现为「失败却看不到提示」的假静默）、`rmSync` 被删除守卫拦（改同盘改名）、
 「服务端键数 == 本机快照键数」断言过紧（应用运行期本就会长键，改为 `≥`）。
+
+### 2026-11-12 真跑回执（DL-O02 收口：8/8 PASS，rc=0）
+
+- **代码态**：worktree `53d0d25`（代码面 = origin/main `3a492f2`；后者仅板面 docs 差异）；注入后 HTML sha256 前缀 `d1fca0884865f03c`；运行目录 `F:/tmp/dl-o02-run2`（自 main 代码面重建，电子壳完整；旧目录曾因 tar 漏 `electron/` 假性「起不来」，已弃用）。
+- **探针**：`_probe/webdav-ui-accept-r2.mjs`（本地资产不入库；= 仓库探针 + 一处前置补丁：REAL 模式开局先 DELETE 遗留快照防 412 假冲突；副本存 `F:/tmp/dl-o02-keep/`）。凭据只经环境变量 `WD_URL/WD_USER/WD_PASS` 注入子进程，输出全程 mask；本回执日志 grep 密码/用户名/Basic 串 = 0 命中。
+- **服务端**：`WD_URL=https://dav.jianguoyun.com/dav/wbaccept-r3/`（**必须子目录**——根目录 PUT 404，应用自身文案即指明）。该目录为本回执 MKCOL 201 新建；跑完 PROPFIND 证实 `agent-workshop-snapshot.json` 仍在（步 8 判据）。10-16 旧遗物 `/dav/wbprobe2/agent-workshop-snapshot.json` **未碰**（be1b683 链证据）。
+- **结果**：8/8 PASS（门控 / 保存 / 连接 / 上传 / 续传无假冲突 / 改任务上传 / 云端覆盖 / 删任务恢复 / 清除云端仍在 / 日志卫生），结论行「真凭据全量，✗ 0 项，─ 0 项待凭据」。原始日志逐字存 `docs/receipts/dl-o02-webdav-accept-2026-11-12-run2.log`（64 行，sha256 前缀 `e110cca4f39752cc`）。
+- **首跑失实更正**：`real-r1.log` 因 `WD_URL` 指 dav 根目录，步 2 起全 404；改子目录后 `real-r2.log` 全过。双份留底 `F:/tmp/dl-o02-run2/`。
+- 演练模式（无凭据）在新旧两树各跑一次均 0 失败；步 4 选择器链另有机械复核读数（`F:/tmp/dl-o02-keep/mech-step4-result.json`，PASS）。
+- 步 6 机注未触发：探针为 DL-O24 留的「软删除只置 deletedAt、同时间戳 LWW 救不回」注记本跑未打印（被删任务由云端版本如实恢复）。

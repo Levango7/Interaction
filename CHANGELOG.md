@@ -251,6 +251,15 @@ _v3.7.155 首推 CI/Deploy 双红（`42130755022` / `42130755030`）的根因是
   改动留给文件所有者或明确授权后的单独一笔。（第二批已按用户「把现有的问题麻烦都解决一下」修掉，并在此明写。）
 - 零代码面外溢：不碰 `src/*`、不碰测试、不碰版本源与 workflow；纯文档 + 本条 + 板面一行。
 
+### 2026-11-12 · **DL-O02 收口：WebDAV「改一条任务再上传」真跑 8/8 PASS（回执落库）**
+
+_用户 11-12 晚再给坚果云应用密码（只经环境变量注入子进程、全程 mask、不落盘），在当前 main 代码态（worktree `53d0d25`，代码面 = origin/main `3a492f2`）用隔离 profile 真机复跑 8 步验收：门控 / 保存 / 连接 / 上传 / 续传无假冲突 / 改任务上传（步 4 判据）/ 云端覆盖 / 删任务恢复 / 清除云端仍在 / 日志卫生全 PASS，rc=0。原始日志逐字存 `docs/receipts/dl-o02-webdav-accept-2026-11-12-run2.log`，正文回执追加在 `docs/webdav-verify.md`。首跑 `WD_URL` 误指 dav 根目录全 404（坚果云根不放文件），改子目录 `/dav/wbaccept-r3/` 复跑全过——双份日志留底。_
+
+- **`docs/demand-ledger.md`**：DL-O02 行 OPEN → `DONE 11-12`（证据绑回执日志 + 板面行）
+- **`docs/agent-board.md`**：DL-O02 认领行 ACTIVE → RELEASED（收工翻转同笔）
+- 服务端副作用披露：新建 `/dav/wbaccept-r3/`（MKCOL 201）+ 快照文件（步 8 判据要求云端文件仍在，设计上不删）；10-16 遗物 `/dav/wbprobe2/agent-workshop-snapshot.json` 未碰
+- 偏离披露：高共写面原列 3 文件，本笔为回执落库扩 `docs/webdav-verify.md` 与 `docs/receipts/`（新目录）；`_probe/` 仍零入库；回执日志被 `.gitignore:46` 的 `*.log` 规则拦，`git add -f` 单文件强纳入（规则未改，仅此一文件）
+
 ## [3.7.155] - 2026-11-06
 
 ### 2026-11-06 · **E 批：自账空 catch 清零（E0）+ P0-b 分诊（E2）+ 认领门接进 CI（E3）**
