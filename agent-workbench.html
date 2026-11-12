@@ -5250,7 +5250,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   /* 对话坞：主列底部，滚内容时贴在视口底，不遮挡正文 */
   .chat-panel{
     position:sticky;bottom:0;z-index:var(--z-sticky);
-    width:auto;max-height:46vh;flex:0 0 auto;
+    width:auto;max-height:40vh;flex:0 0 auto;
     border-left:none;border-top:1px solid var(--line);
     background:color-mix(in srgb,var(--panel) 86%,transparent);
     backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
@@ -5259,7 +5259,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .chat-panel .chat{max-height:30vh;min-height:0}
   .chat-panel .chat-panel-header{padding:var(--space-1) var(--space-4)}
   .chat-panel .chat-input-area{padding:var(--space-2) var(--space-3)}
-  /* 折叠态 = 只留输入行（历史与标题都收起），展开用同一个按钮 */
+  /* 折叠态 = 只收起历史与工具条，标题栏 + 输入行保留（唯一的展开按钮在标题栏上，藏了就打不开） */
   .chat-panel.collapsed{width:auto;max-height:none;overflow:visible;transform:none}
   .chat-panel.collapsed .chat,
   .chat-panel.collapsed .chat-toolbar{display:none}
@@ -5272,9 +5272,20 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .chat-panel.collapsed #chatPanelCollapse svg{transform:rotate(-90deg)}
   .chat-panel:not(.collapsed) #chatPanelCollapse svg{transform:rotate(90deg)}
   /* 沉浸页（设置/回收站等整页工作区）隐藏对话坞：这些页面要全高，
-     且用户此时在做配置/清理，AI 仍可从命令面板进入。 */
-  .main-wrap:has(#drawer.drawer-page) .chat-panel,
-  .main-wrap:has(.main.page-recycle) .chat-panel{display:none}
+     且用户此时在做配置/清理，AI 仍可从命令面板进入。
+     B3（§4）：选择器族扩展——同页隐藏规则追加 .tabbar / .composer / .statusbar
+     （menubar 保留——应用内轻菜单仍可用）。
+     容器用 body 不用 .main-wrap：.tabbar / .statusbar / #drawer 均在 .main-wrap 之外
+     （tabbar 在 .app 内、statusbar/drawer 是 .app 兄弟层），.main-wrap:has() 对它们是死选择器
+     （七档探针真浏览器实测抓到，2026-11-12 B3）；.composer 虽在 .main-wrap 内，六条统一 body 同构。 */
+  body:has(#drawer.drawer-page) .chat-panel,
+  body:has(.main.page-recycle) .chat-panel,
+  body:has(#drawer.drawer-page) .tabbar,
+  body:has(#drawer.drawer-page) .composer,
+  body:has(#drawer.drawer-page) .statusbar,
+  body:has(.main.page-recycle) .tabbar,
+  body:has(.main.page-recycle) .composer,
+  body:has(.main.page-recycle) .statusbar{display:none}
 }
 
 /* 右栏「今日任务」：≥1024 常驻；以下为共享视觉 */
@@ -5666,7 +5677,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       </div>
       <!-- v1.15：更多工具菜单已移除（功能迁移：甘特/导图/仪表盘→图表页，笔记→知识页，协作/分享删除） -->
       <main class="main" id="main"></main>
-    <aside class="chat-panel collapsed" id="chatPanel" data-i18n-aria="a11y.aiPanel" aria-label="AI 助手面板">
+    <aside class="chat-panel composer collapsed" id="chatPanel" data-i18n-aria="a11y.aiPanel" aria-label="AI 助手面板">
       <div class="chat-panel-header">
         <span class="chat-panel-title">
           <span class="ph-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
@@ -5680,7 +5691,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
                左侧栏  展开 → 点击向左收起 → 朝左「<」（不旋转）    折叠 → 点击向右展开 → 朝右「>」（rotate 180）
                右侧栏  展开 → 点击向右收起 → 朝右「>」（rotate 180） 折叠 → 点击向左展开 → 朝左「<」（不旋转）
              勿再改回 M9 18l6-6-6-6 之类的另一套 path，否则形状会重新分叉。 -->
-        <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="chat-panel-collapse chat-ic-btn" id="chatPanelCollapse" type="button" data-action="faCmpToggle" aria-expanded="false" data-i18n-title="a11y.toggleChatPanel" title="折叠/展开聊天面板" data-i18n-aria="a11y.collapseChatPanel" aria-label="折叠聊天面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       </div>
       <!-- 运行进度（2026-10-23）：真实状态（流式字数 / 工具批次 / 计划步数），无任务时隐藏 -->
       <div class="chat-progress" id="chatProgress" hidden aria-live="polite">
@@ -38622,13 +38633,20 @@ function bindChatPanel(){
     const collapsed=panel.classList.contains("collapsed");
     /* v3.5.1：不再替换 textContent（会摧毁 SVG）；箭头方向由 CSS 固定为指右 */
     if(rail) rail.classList.toggle("show", collapsed);
+    /* B3（§3 焦点规则）：展开态焦点落输入行 / 收起态归还折叠键；aria-expanded 与态同步 */
+    if(collapseBtn) collapseBtn.setAttribute("aria-expanded", String(!collapsed));
+    if(collapsed){ if(collapseBtn) collapseBtn.focus(); }
+    else if(_chatTa){ _chatTa.focus(); }
     // 持久化折叠状态
     /* R-2 标准修法（2026-10-27）：写偏好失败过去静默 —— 用户以为记住了折叠态，下个会话就回默认。
        加观测不改控制流：写失败照样继续，只是诊断里留一条。 */
     try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }
     catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "聊天面板折叠偏好写失败: "+((e&&e.message)||e), { where: "toggleCollapse" }); }catch(_e){} }
   };
-  if(collapseBtn) collapseBtn.onclick=toggleCollapse;
+  /* B3：折叠键改走委托表单键（FORM_A_ACTIONS 表键 faCmpToggle），此处不再绑 onclick；
+     toggleCollapse 以 __aiPanelToggle 暴露给委托表调用（与 __aiPanelExpand 同口径保名）。
+     注：注释里不写完整发射字面（data-action= 前缀），免得被 lint-bindings 扫描器当第二处发射。 */
+  window.__aiPanelToggle = toggleCollapse;
   /* v3.2.1 修复：暴露强制展开函数——给 #phAiAskBtn / data-ai-hint-for 等外部入口调用。
      AI 入口不应受聊天面板折叠态阻挡（用户在窄屏默认折叠时也要能用 AI）。 */
   window.__aiPanelExpand = function(){
@@ -38639,7 +38657,10 @@ function bindChatPanel(){
   const _chatBd=$("#chatBackdrop");
   if(_chatBd) _chatBd.onclick=()=> setChatDrawer(false);
   document.addEventListener("keydown",(e)=>{
-    if(e.key==="Escape" && (window.innerWidth||0) < 768 && panel.classList.contains("show")) setChatDrawer(false);
+    if(e.key!=="Escape") return;
+    if((window.innerWidth||0) < 768){ if(panel.classList.contains("show")) setChatDrawer(false); return; }
+    /* B3（§3 Esc 栈）：桌面 composer 开着时 Esc 先收 composer；其余面板既有 Esc 惯例不受影响 */
+    if(!panel.classList.contains("collapsed")) toggleCollapse();
   });
   /* v3.5.4：箭头=展开面板；AI 图标=展开并跳转 AI 页面 */
   const railExpand = $("#chatRailExpand");
@@ -38676,6 +38697,8 @@ function bindChatPanel(){
     panel.classList.remove("collapsed");
     if(rail) rail.classList.remove("show");
   }
+  /* B3：恢复段改完 class 后同步 aria-expanded（HTML 初始值只对默认收起态成立） */
+  if(collapseBtn) collapseBtn.setAttribute("aria-expanded", String(!panel.classList.contains("collapsed")));
   // 窄屏默认隐藏：监听窗口宽度，<768px 时加 .show 才显示（与 .collapsed 区分）
   if(typeof window !== "undefined"){
     const applyResponsive=()=>{
@@ -45974,7 +45997,9 @@ const FORM_A_ACTIONS = {
   faTabSwitch: function(el){ formATabSwitch(el.getAttribute("data-tab-id")); },
   faTabAdd: function(){ formATabAdd(); },
   faTabClose: function(el){ formATabClose(el.getAttribute("data-tab-id")); },
-  faRailToggle: function(){ const b = $("#btnTaskRail"); if(b) b.click(); }
+  faRailToggle: function(){ const b = $("#btnTaskRail"); if(b) b.click(); },
+  /* B3：底部 composer 折叠键（__aiPanelToggle 由 src/ai-retry.js bindChatPanel 暴露） */
+  faCmpToggle: function(){ const t = window.__aiPanelToggle; if(typeof t === "function") t(); }
 };
 document.addEventListener("click", function(e){
   const act = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
