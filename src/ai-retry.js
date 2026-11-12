@@ -1457,13 +1457,20 @@ function bindChatPanel(){
     const collapsed=panel.classList.contains("collapsed");
     /* v3.5.1：不再替换 textContent（会摧毁 SVG）；箭头方向由 CSS 固定为指右 */
     if(rail) rail.classList.toggle("show", collapsed);
+    /* B3（§3 焦点规则）：展开态焦点落输入行 / 收起态归还折叠键；aria-expanded 与态同步 */
+    if(collapseBtn) collapseBtn.setAttribute("aria-expanded", String(!collapsed));
+    if(collapsed){ if(collapseBtn) collapseBtn.focus(); }
+    else if(_chatTa){ _chatTa.focus(); }
     // 持久化折叠状态
     /* R-2 标准修法（2026-10-27）：写偏好失败过去静默 —— 用户以为记住了折叠态，下个会话就回默认。
        加观测不改控制流：写失败照样继续，只是诊断里留一条。 */
     try{ save(PREFIX+"chat_panel_collapsed", collapsed ? "1" : "0"); }
     catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "聊天面板折叠偏好写失败: "+((e&&e.message)||e), { where: "toggleCollapse" }); }catch(_e){} }
   };
-  if(collapseBtn) collapseBtn.onclick=toggleCollapse;
+  /* B3：折叠键改走委托表单键（FORM_A_ACTIONS 表键 faCmpToggle），此处不再绑 onclick；
+     toggleCollapse 以 __aiPanelToggle 暴露给委托表调用（与 __aiPanelExpand 同口径保名）。
+     注：注释里不写完整发射字面（data-action= 前缀），免得被 lint-bindings 扫描器当第二处发射。 */
+  window.__aiPanelToggle = toggleCollapse;
   /* v3.2.1 修复：暴露强制展开函数——给 #phAiAskBtn / data-ai-hint-for 等外部入口调用。
      AI 入口不应受聊天面板折叠态阻挡（用户在窄屏默认折叠时也要能用 AI）。 */
   window.__aiPanelExpand = function(){
@@ -1474,7 +1481,10 @@ function bindChatPanel(){
   const _chatBd=$("#chatBackdrop");
   if(_chatBd) _chatBd.onclick=()=> setChatDrawer(false);
   document.addEventListener("keydown",(e)=>{
-    if(e.key==="Escape" && (window.innerWidth||0) < 768 && panel.classList.contains("show")) setChatDrawer(false);
+    if(e.key!=="Escape") return;
+    if((window.innerWidth||0) < 768){ if(panel.classList.contains("show")) setChatDrawer(false); return; }
+    /* B3（§3 Esc 栈）：桌面 composer 开着时 Esc 先收 composer；其余面板既有 Esc 惯例不受影响 */
+    if(!panel.classList.contains("collapsed")) toggleCollapse();
   });
   /* v3.5.4：箭头=展开面板；AI 图标=展开并跳转 AI 页面 */
   const railExpand = $("#chatRailExpand");
@@ -1511,6 +1521,8 @@ function bindChatPanel(){
     panel.classList.remove("collapsed");
     if(rail) rail.classList.remove("show");
   }
+  /* B3：恢复段改完 class 后同步 aria-expanded（HTML 初始值只对默认收起态成立） */
+  if(collapseBtn) collapseBtn.setAttribute("aria-expanded", String(!panel.classList.contains("collapsed")));
   // 窄屏默认隐藏：监听窗口宽度，<768px 时加 .show 才显示（与 .collapsed 区分）
   if(typeof window !== "undefined"){
     const applyResponsive=()=>{

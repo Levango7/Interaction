@@ -10,7 +10,7 @@
 - 任务轨规则照 §2.1：排序 逾期→今天→有日期→无日期、≤8、勾选 `completeTask`、标题 `openTaskEdit`、
   `+` 走首屏同一新建入口、禁止第二套 CRUD。
 - 坞折叠通则：折叠只收历史与工具条，输入行保留（`agent-workbench.html:5228-5231`）。
-- 沉浸页隐藏坞：纯 CSS `:has()` 路线（`agent-workbench.html:5240-5243`），不增 JS 状态类（避 R-31 病根）。
+- 沉浸页隐藏坞：纯 CSS `:has()` 路线（`agent-workbench.html:5281-5288`），不增 JS 状态类（避 R-31 病根）。
 - 新存储键先登记 `DATA_KEY_REGISTRY`（`src/data-links.js:800`，门 `tests/data-keys-registry.test.js`）。
 - 控件三档 28/36/44；断点允许集 1023/767/479 不新增值；正文 ≥12px；禁止正 tabindex。
 
@@ -42,16 +42,22 @@
 
 - 顺序：menubar → tabbar（pill → tabs → ＋ → railbtn → immersive）→ sidebar → main（面包屑 → 内容 →
   Composer 输入行）→ rightrail → statusbar。靠 DOM 顺序实现，不写正 tabindex。
-- Composer 展开：焦点落 `#cmpInput`；Esc 先关 composer（若开），再走各面板既有 Esc 惯例
-  （`ui-global-events.js:133`、`render-widgets.js:499`、`ai-retry.js:1476`、`ui-drawer.js:410`）；
-  关闭后焦点归还 `#cmpToggle`（复用 `trapFocus` 的归还语义，`src/core-shared.js:418`）。
+- Composer 展开：焦点落 `#chatTextInput`（原型期占位名 `#cmpInput`，B3 落地按壳迁 id 留原则改用真实 id，同义映射、行为不变）；Esc 先关 composer（若开），再走各面板既有 Esc 惯例
+  （`ui-global-events.js:133`、`render-widgets.js:499`、`ai-retry.js:1483`、`ui-drawer.js:410`）；
+  关闭后焦点归还 `#chatPanelCollapse`（原型期占位名 `#cmpToggle`，同义映射；复用 `trapFocus` 的归还语义，`src/core-shared.js:418`）。
 - 沉浸页整壳隐藏，不参与焦点序。
 
 ## 4. 沉浸页隐藏规则（扩展）
 
-- 现有规则隐藏 `.chat-panel`；形态 A 扩展为同选择器族追加隐藏 `.tabbar` / `.composer` / `.statusbar`
-  （menubar 保留——应用内轻菜单仍可用）：
-  `.main-wrap:has(#drawer.drawer-page) .tabbar, .main-wrap:has(.main.page-recycle) .tabbar {display:none}` 等三条。
+- 沉浸页隐藏三壳 `.tabbar` / `.composer` / `.statusbar` + 对话坞 `.chat-panel`（menubar 保留——应用内轻菜单仍可用）：
+  规则块共 8 条选择器：三壳 `.tabbar` / `.composer` / `.statusbar` × 两页壳 `#drawer.drawer-page` / `.main.page-recycle` ＝ 6 条本批新增
+  （`body:has(#drawer.drawer-page) .tabbar, body:has(.main.page-recycle) .tabbar {display:none}` 等）；
+  `.chat-panel` 2 条本批前已存在（`7997e225` 入仓，容器原 `.main-wrap:has()`：drawer-page 案死选择器、page-recycle 案命中），B3 同批迁容器到 `body`。
+  **B3 实测修订**：初版按本节原字面落 `.main-wrap:has(...)`，真浏览器七档探针抓到死选择器——
+  `.tabbar` / `.statusbar` / `#drawer` 均在 `.main-wrap` 之外（tabbar 在 `.app` 内、statusbar/drawer 是 `.app` 兄弟层），
+  `.main-wrap:has()` 对它们永不命中（page-recycle 案仅 `.composer` 命中）；容器改 `body`
+  （同文件 `body:has(#drawer.drawer-page.open) .topbar` 先例），并在 `tests/e2e/ui-mode-layout.spec.js`
+  加真 `:has()` 引擎断言钉死（jsdom 无排版/:has 引擎，静态扫只能兜底字面）。
 
 ## 5. 删除面（旧 topbar 退役）
 
