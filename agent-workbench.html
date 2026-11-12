@@ -656,6 +656,17 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .tabbar{height:var(--tb-h);display:flex;align-items:center;gap:var(--space-2);
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .tabs{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;overflow-x:auto}
+/* 形态 A B2：视图注册表 tab（控件三档 28；栏高 --tb-h:36 是栏高非控件高，DESIGN-SYSTEM §2.2） */
+.tab{display:flex;align-items:center;height:28px;padding:0 20px 0 10px;border:1px solid var(--line);border-radius:var(--radius-md);background:transparent;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;flex:none;white-space:nowrap}
+.tab.is-on{border-color:var(--accent);color:var(--accent)}
+.tab-x{flex:none;width:28px;height:28px;margin-left:-16px;padding:0;border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tab-x svg{width:12px;height:12px}
+.tabadd,.railbtn{flex:none;width:28px;height:28px;border:1px solid var(--line);border-radius:var(--radius-md);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tabadd{border-style:dashed}
+.tabadd svg,.railbtn svg{width:14px;height:14px}
+/* 宽屏右栏常驻，tab 条上的把手冗余；≤1023px 右栏滑出，把手才出现（原型口径，同 .hamb） */
+.railbtn{display:none}
+@media (max-width:1023px){ .railbtn{display:flex} }
 .statusbar{height:var(--st-h);display:flex;align-items:center;gap:var(--space-3);
   padding:0 var(--space-2);background:var(--panel);border-top:1px solid var(--line);
   color:var(--muted);font-size:var(--fs-xs);flex:none}
@@ -5550,7 +5561,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span class="lbl" data-i18n="ui.mode.design">设计</span>
       </button>
     </div>
-    <div class="tabs"></div>
+    <div class="tabs" id="formATabs"></div>
+    <!-- 形态 A B2：＋ 追加默认场景视图 / 右栏把手（行为转发 #btnTaskRail，不重写）。
+         图标一律 SVG（P0 字符图标规）；railbtn 仅 ≤1023px 出现——宽屏右栏常驻、把手冗余（原型口径） -->
+    <button type="button" class="tabadd" data-action="faTabAdd" data-i18n-title="formA.addTab" data-i18n-aria="formA.addTab" title="新建标签页" aria-label="新建标签页"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" class="railbtn" data-action="faRailToggle" data-i18n-title="taskRail.open" data-i18n-aria="taskRail.open" title="今日任务" aria-label="今日任务"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
   </div>
   <div class="topbar">
     <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
@@ -7992,6 +8007,7 @@ const MESSAGES = {
     "a11y.bottomNav": "底部导航",
     "a11y.navMenu": "导航菜单",
     "a11y.closeMenu": "关闭菜单",
+    "a11y.closeTab": "关闭标签页",
     "a11y.topToolbarRow": "正文顶部工具行",
     "a11y.todayTodo": "今日待办",
     "a11y.expandTodayTodo": "展开今日待办",
@@ -8757,6 +8773,8 @@ const MESSAGES = {
     "taskRail.title": "今日",
     "rail.tabsAria": "右栏分页",
     "rail.tab.today": "今日",
+    "formA.tabToday": "今日",
+    "formA.addTab": "新建标签页",
     "rail.tab.agent": "Agent",
     "rail.tab.files": "文件",
     "rail.ai.title": "AI 产出",
@@ -12189,6 +12207,7 @@ const MESSAGES = {
     "a11y.bottomNav": "Bottom Navigation",
     "a11y.navMenu": "Navigation Menu",
     "a11y.closeMenu": "Close Menu",
+    "a11y.closeTab": "Close Tab",
     "a11y.topToolbarRow": "Top Toolbar Row",
     "a11y.todayTodo": "Today's Todos",
     "a11y.expandTodayTodo": "Expand Today's Todos",
@@ -12954,6 +12973,8 @@ const MESSAGES = {
     "taskRail.title": "Today",
     "rail.tabsAria": "Right rail tabs",
     "rail.tab.today": "Today",
+    "formA.tabToday": "Today",
+    "formA.addTab": "New Tab",
     "rail.tab.agent": "Agent",
     "rail.tab.files": "Files",
     "rail.ai.title": "Created by AI",
@@ -19203,6 +19224,10 @@ const DATA_KEY_REGISTRY = [
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "cmd_recent", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "chat_panel_collapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
+  /* 形态 A B2（2026-11-12）：视图注册表 tab 列表。功能设计 §1 裁 sync:false——「布局偏好不上云」，
+     与本表 chat_panel_collapsed 的 registry 实值（sync:true）相反；按 §1 显式字段 +  rationale 裁，
+     偏离已登记板面待文档 owner 核。kind 按 §1 字面 d（用户自建视图标题属业务数据面）。 */
+  { key: "form_a_tabs", kind: "d", sync: false, backup: true },   // 形态 A 视图注册表（tab 列表，布局偏好不上云）
   { key: "task_rail_collapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "sideCollapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "sideExpanded", kind: "c", sync: true, backup: true },   // 本机控制状态
@@ -40635,6 +40660,7 @@ function render(){
     const _help = $("#helpPage"); if(_help) _help.remove();
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     AppBridge.renderSide();
+    renderFormATabs(); // 形态 A B2：tab 条随视图注册表重绘（active 是唯一事实源）
     /* 首次渲染后武装通用撤销：此前（seed/迁移）的快照清掉，也不弹「可撤销」提示 */
     if(typeof armUndo === "function") armUndo();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
@@ -40740,6 +40766,81 @@ function render(){
     /* 放 finally 而非 try 尾部：本函数有 12 条提前 return 的路由，放尾部只有 office 会触发 */
     try{ if(AppBridge.applyI18n) AppBridge.applyI18n(); }catch(_ie){ /* i18n 缺失不阻断渲染 */ }
   }
+}
+
+/* ---------- 形态 A B2：视图注册表（功能设计 docs/ui-form-a-functional.md §1） ----------
+ * _formATabs 是视图壳表：[{id, scene, title}]，默认一个「今日」视图。
+ * 切 tab = setActive(scene) + render()——active 仍是唯一事实源，tab 只是壳，
+ * 不引入第二套场景状态机。+ 追加默认场景视图；× 移除且常驻 ≥1（末 tab 不渲染 ×，
+ * 此处再双保险），关掉活跃项时 setActive 兜底到剩余首项。持久化 form_a_tabs
+ * （data-links 注册表已登记，sync:false——布局偏好不上云）。
+ *
+ * ⚠️ 对 §1 的裁（2026-11-12，板面披露）：§1 字面默认 scene:"today"，但 SCENARIOS
+ *    7 键无 today（core-shared.js:225），render() 通用分支拿 SCENARIOS["today"]
+ *    会崩进「数据异常」兜底卡 —— 默认 tab 一点就白屏。真实落地页是 office
+ *    （data-links.js:437 active 默认 "office"），故默认场景裁为 office，
+ *    id/title 仍按 §1 字面（today/今日）。功能文档同批改齐。
+ */
+const FORM_A_TABS_KEY = PREFIX + "form_a_tabs";
+const FORM_A_DEFAULT_SCENE = "office"; // 真实落地场景（§1 字面 "today" 不存在于 SCENARIOS，见上裁）
+function _formATabsDefault(){ return [{ id:"today", scene:FORM_A_DEFAULT_SCENE, title:t("formA.tabToday","今日") }]; }
+let _formATabs = null;
+function getFormATabs(){
+  if(_formATabs) return _formATabs;
+  let tabs = null;
+  try{ tabs = load(FORM_A_TABS_KEY, null); }catch(e){ tabs = null; }
+  if(!Array.isArray(tabs) || !tabs.length){ tabs = _formATabsDefault(); }
+  else{
+    tabs = tabs.filter(function(x){
+      return x && typeof x.id === "string" && x.id && typeof x.scene === "string" && x.scene && typeof x.title === "string";
+    });
+    if(!tabs.length) tabs = _formATabsDefault();
+  }
+  _formATabs = tabs;
+  return _formATabs;
+}
+/* 留痕口径同 _saveSessions（data-links.js:505）：写失败 = tab 序刷新后丢，pushDiag 留痕、不静默；
+   但不阻断渲染（门是 lint-save-receipt：包装器不得丢弃 save() 回执）。 */
+function _saveFormATabs(){ try{ return save(FORM_A_TABS_KEY, _formATabs); }catch(e){
+  try{ if(typeof pushDiag === "function") pushDiag("warn", "form_a_tabs persist failed: "+((e&&e.message)||e), {where:"_saveFormATabs"}); }catch(_e2){}
+} }
+/* tab 条渲染：与 active 场景匹配的首个 tab 高亮（active 是唯一事实源；重复场景视图只亮首个） */
+function renderFormATabs(){
+  const host = $("#formATabs"); if(!host) return;
+  const tabs = getFormATabs();
+  const multi = tabs.length > 1;
+  let marked = false;
+  host.innerHTML = sanitizeHtml(tabs.map(function(tb){
+    const on = !marked && tb.scene === active;
+    if(on) marked = true;
+    return '<button type="button" class="tab'+(on?' is-on':'')+'" role="tab" aria-selected="'+(on?"true":"false")+'" data-action="faTabSwitch" data-tab-id="'+esc(tb.id)+'">'+esc(tb.title)+'</button>'
+      + (multi ? '<button type="button" class="tab-x" data-action="faTabClose" data-tab-id="'+esc(tb.id)+'" aria-label="'+esc(t("a11y.closeTab","关闭标签页"))+'">'+UI_ICONS.close+'</button>' : '');
+  }).join(""));
+}
+function formATabSwitch(id){
+  const tab = getFormATabs().filter(function(x){ return x.id === id; })[0];
+  if(!tab || active === tab.scene) return;
+  setActive(tab.scene);
+  render();
+}
+function formATabAdd(){
+  const tabs = getFormATabs();
+  const n = tabs.filter(function(x){ return x.scene === FORM_A_DEFAULT_SCENE; }).length + 1;
+  tabs.push({ id:"today-"+Date.now()+"-"+n, scene:FORM_A_DEFAULT_SCENE, title:t("formA.tabToday","今日")+" "+n });
+  _saveFormATabs();
+  if(active !== FORM_A_DEFAULT_SCENE){ setActive(FORM_A_DEFAULT_SCENE); }
+  render();
+}
+function formATabClose(id){
+  const tabs = getFormATabs();
+  if(tabs.length <= 1) return;
+  const idx = tabs.findIndex(function(x){ return x.id === id; });
+  if(idx < 0) return;
+  const closedActive = tabs[idx].scene === active;
+  tabs.splice(idx, 1);
+  _saveFormATabs();
+  if(closedActive){ setActive(tabs[0].scene); }
+  render();
 }
 
 /* v3.7.78 解耦：自别处下沉（同层序逆层消除） */
@@ -45864,6 +45965,22 @@ document.addEventListener("click", function(e){
     if(active==="overview"||active==="stats"||active==="recycle"||active==="tasks"){ setActive("office"); }
     render(); focusTaskTitleInput();
   }
+});
+/* 形态 A B2（功能设计 §2）：data-action 委托表 —— 形态 A 新增控件统一走这张表，
+   既有绑定（data-rail-tab / data-empty-action 等）原路径不动。
+   faRailToggle 不重写行为，只把点击转给原按钮 #btnTaskRail（同仓「行项不重写行为」惯例）。
+   覆盖门禁：scripts/lint-bindings.mjs 扫 HTML＋src 发射并集 ⇄ 本表键集双向包含。 */
+const FORM_A_ACTIONS = {
+  faTabSwitch: function(el){ formATabSwitch(el.getAttribute("data-tab-id")); },
+  faTabAdd: function(){ formATabAdd(); },
+  faTabClose: function(el){ formATabClose(el.getAttribute("data-tab-id")); },
+  faRailToggle: function(){ const b = $("#btnTaskRail"); if(b) b.click(); }
+};
+document.addEventListener("click", function(e){
+  const act = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
+  if(!act) return;
+  const fn = FORM_A_ACTIONS[act.getAttribute("data-action")];
+  if(fn) fn(act, e);
 });
 // 全部已读 / 清空
 $("#msgMarkAllRead").onclick = function(){ markAllMessagesRead(); renderMsgPanel(); };
