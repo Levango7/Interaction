@@ -3,6 +3,20 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-12 · **UI 形态 A B2：视图注册表 + data-action 委托 + lint-bindings 双向包含门禁（首落 4 键）**
+
+_用户 11-12 裁定「这条线归你做」后首个代码批（功能设计 docs/ui-form-a-functional.md §1/§2/§6；B1 几何批已合 main `6f20119`）。视图注册表 `_formATabs` 默认 `[{id:"today",scene:"office",title:"今日"}]`——§1 字面 `scene:"today"` 在 SCENARIOS 7 键中不存在（src/core-shared.js:225），切它会崩进 render() 兜底卡，裁为真实落地页 office（与 src/data-links.js:437 默认 active 同口径），id/title 仍按文档字面；功能文档 §1 同批改齐并披露该裁。_
+
+- **`src/render-entry.js`**：注册表 `getFormATabs()`（load→形状守卫→默认回退→缓存）+ `renderFormATabs()`（tab 条随 active 唯一事实源重绘；role=tab/aria-selected/is-on；× 仅多 tab 时发射，aria-label「关闭标签页」，× 用 UI_ICONS.close SVG——lint-icons 只扫 src，运行时钉住 JS 发射形状）+ `formATabSwitch/Add/Close`（切＝setActive(scene)+render()；＋追默认场景视图「今日 N」；× 删且常驻 ≥1、关活跃项 setActive 兜底剩余首项）+ `_saveFormATabs()` 持久化包装（save 回执交还调用方，失败 pushDiag warn——lint-save-receipt 口径，同 _saveSessions）
+- **`src/ui-global-events.js`**：`FORM_A_ACTIONS` 首落 4 键 faTabSwitch/faTabAdd/faTabClose/faRailToggle + document click 委托 `closest([data-action])`；faRailToggle 转 `$("#btnTaskRail").click()`（行项不重写行为）。faCmpToggle/faRrSec 随 B3/B4 同批、faMenuOpen 待 §8 待决②、faImmersive 应用无沉浸切换行为 ⇒ 零假控件不发射
+- **`src/data-links.js`**：`wb_agent_form_a_tabs` 登记（kind:"d" sync:false backup:true——「布局偏好不上云」裁；功能文档原写 `wb_form_a_tabs` 系简称，实键按 PREFIX 口径；文档自相矛盾处按显式字段裁，偏离披露待文档 owner 核）
+- **`src/core-i18n.js`**：4 键 zh+en（a11y.closeTab / formA.tabToday / formA.addTab 等）
+- **`agent-workbench.html`**：`#formATabs` 容器 + `.tab/.tab.is-on/.tab-x/.tabadd/.railbtn` CSS（28px tier-2，DESIGN-SYSTEM §2.2；railbtn ≤1023px 才出现——宽屏右栏常驻下把手冗余，同 .hamb 原型口径）；＋/把手两静态钮 SVG（P0 字符图标规）+ data-i18n-title/aria 双标注；**两钮不带 id**（形态 A 控件一律 data-action 寻址；死接线门禁口径＝静态控件 id 须在 src/ 有字符串引用，只添 id 不接线＝假接线，首跑即被 dead-wiring-guard 拦下后撤 id）
+- **`scripts/lint-bindings.mjs` + `scripts/lib/bindings-scan.mjs`（新）**：data-action 覆盖门禁——HTML ∪ src 发射并集 ⇄ FORM_A_ACTIONS 键集**双向包含**（发了没 handler＝死控件红 / handler 没人发射＝死键红），进 npm lint 链；判定层纯函数进程内单测（窄变异自证：删 handler / 去发射 / 骨架改名三组必翻红）；偏离披露：§2 字面只扫 agent-workbench.html，tab 条系 JS 动态渲染，扫描面取 HTML ∪ src
+- **`tests/form-a-tabs.test.js`（新，17 例）+ `tests/lint-bindings.test.js`（新，7 例）**：默认/重复场景只亮首/焦点序＝DOM 序/脏存储降级四态/切 tab/＋/×/rail 转发/委托边界/注册表登记 + 门禁双向包含 + 三组窄变异自证（双态仓口径：变异须同时打 src 与 delivered HTML 内联副本，只打一边门不翻红）
+- **验证**：全量 vitest 243 文件 2665/2665 绿（首跑唯一红＝dead-wiring-guard 拦 formARailBtn 零引用死 id——formATabAdd 系函数名撞字符串假过；两钮撤 id 改 data-action 寻址后定向 3 文件 + 全量复跑皆绿）；`npm run lint` rc=0（12 警告与 B1 基线逐条同构、零新增，line 漂移 +21 系本批注入）；lint-bindings 4⇄4；check:source-state ✓ 40/40 680KB 源码态；e2e 三件套 ui-mode/layout-v2/topbar-overflow 32 passed rc=0（零 skip/flake）；七档溢出探针 63/63 rc=0（320/360/375/480/768/1024/1280 × 9 断言：文档级零横向溢出、tab 条不撑破行、railbtn 宽隐窄现、＋/×/切真行为、命中区 ≥28×28）
+- **高共写面声明**：workflow / package-lock（root+electron）/ server/src / electron/ / 根 node_modules / `server/config.json` / `_probe/` 本批零改动；零短信额度消耗；零凭据落盘（本批无凭据接触）
+
 ### 2026-11-11 · **UI 形态 A 阶段一：定位 → 原型 → 令牌 → 功能设计四件套落库（#135-#138 文档面，零代码）**
 
 _用户 11-10 点单形态 A「IDE 化单栏流」并附 Qoder Desktop 截图作视觉参照；设计权已下放，定稿约束＝默认收起对话坞 + 右栏今日任务轨 + 沉浸页隐藏。本批只落四件套文档与可点原型，`src/` / `agent-workbench.html` / `server/` / workflow / package-lock 零改动；代码阶段 B1-B5 按 `docs/ui-form-a-functional.md` §6 分批另起。_

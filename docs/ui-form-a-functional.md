@@ -18,7 +18,10 @@
 
 - 现状：无注册表；`render()` 按全局 active 分发（`src/render-entry.js:61-94`），`setActive` 持久化
   （`src/data-links.js:478`）。
-- 设计：内存视图表 `_formATabs = [{id, scene, title}]`，默认 `[{id:"today", scene:"today", title:今日}]`；
+- 设计：内存视图表 `_formATabs = [{id, scene, title}]`，默认 `[{id:"today", scene:"office", title:今日}]`；
+  （2026-11-12 裁：§1 原字面 `scene:"today"` 无此场景——`SCENARIOS` 7 键无 today，`render()` 通用分支
+  会崩进兜底卡；真实落地页是 office（`active` 默认值，`src/data-links.js:437`），故默认场景裁 office，
+  id/title 仍按字面。实现处 `src/render-entry.js` FORM_A_DEFAULT_SCENE 同注释。）
   tab 条由它渲染。**切 tab = `setActive(scene)` + `render()`**——active 仍是唯一事实源，tab 只是壳，
   不引入第二套场景状态机。`+` 追加默认场景视图；`×` 移除且常驻 ≥1，关掉活跃项时 setActive 兜底到剩余首项。
 - 持久化：`wb_form_a_tabs`（kind:"d"，sync:false——布局偏好不上云，同 `chat_panel_collapsed` 口径），
