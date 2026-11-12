@@ -153,7 +153,9 @@ const FORM_A_ACTIONS = {
   faTabSwitch: function(el){ formATabSwitch(el.getAttribute("data-tab-id")); },
   faTabAdd: function(){ formATabAdd(); },
   faTabClose: function(el){ formATabClose(el.getAttribute("data-tab-id")); },
-  faRailToggle: function(){ const b = $("#btnTaskRail"); if(b) b.click(); }
+  faRailToggle: function(){ const b = $("#btnTaskRail"); if(b) b.click(); },
+  /* B3：底部 composer 折叠键（__aiPanelToggle 由 src/ai-retry.js bindChatPanel 暴露） */
+  faCmpToggle: function(){ const t = window.__aiPanelToggle; if(typeof t === "function") t(); }
 };
 document.addEventListener("click", function(e){
   const act = e.target && e.target.closest ? e.target.closest("[data-action]") : null;

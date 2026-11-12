@@ -79,10 +79,10 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     expect(g.wrap.x + g.wrap.w, `中栏右缘 ${g.wrap.x + g.wrap.w}，应在 300px 右栏之前`).toBeLessThanOrEqual(g.vw - 298);
     expect(g.main.x, `#main 左缘 ${g.main.x} 应落在中栏内`).toBeGreaterThanOrEqual(g.wrap.x - 1);
 
-    /* ---- 聊天 = 贴底坞：sticky、≤46vh、贴视口底、不出中栏 ----
+    /* ---- 聊天 = 贴底坞：sticky、≤40vh（B3 对齐原型 composer 展开口径）、贴视口底、不出中栏 ----
        旧实现（全高中栏） height≈vh 且 position 不是 sticky——两条一起抓。 */
     expect(g.chatPos, `聊天面板 position=${g.chatPos}，应为贴底 sticky`).toBe("sticky");
-    expect(g.chat.h, `聊天面板高 ${g.chat.h}px，超过 46vh 上限（${Math.round(g.vh * 0.46)}px）`).toBeLessThanOrEqual(g.vh * 0.47 + 2);
+    expect(g.chat.h, `聊天面板高 ${g.chat.h}px，超过 40vh 上限（${Math.round(g.vh * 0.40)}px）`).toBeLessThanOrEqual(g.vh * 0.41 + 2);
     expect(g.chat.y, `聊天面板顶缘 ${g.chat.y}，应在视口下半部（贴底坞）`).toBeGreaterThan(g.vh * 0.45);
     expect(g.chat.y + g.chat.h, "聊天坞底缘不得超出视口").toBeLessThanOrEqual(g.vh);
     expect(g.chat.x, "聊天坞应在中栏内（左缘）").toBeGreaterThanOrEqual(g.wrap.x - 1);
@@ -197,5 +197,43 @@ test.describe("窄屏 390×844 · 胶囊禁用与抽屉层（P2-8、P2-7）", ()
     expect(afterRail.railOpen, "taskRail 应已打开").toBe(true);
     expect(afterRail.chatShow, "开 taskRail 应关掉聊天抽屉（互斥）").toBe(false);
     expect(afterRail.chatBdHidden, "聊天遮罩应随抽屉一起隐藏").toBe(true);
+  });
+});
+
+test.describe("沉浸页 :has() 六选择器族（B3 §4，真 :has() 引擎）", () => {
+  test.beforeAll(() => {
+    test.skip(!process.env.E2E, "set E2E=1 to run");
+  });
+
+  test("两页壳 × 三壳全 display:none，撤 class 恢复（jsdom 无 :has 引擎，几何真值只能在这里守）", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#chatPanel", { timeout: 15_000 });
+
+    /* 壳唯一（HTML 内 .tabbar/.composer/.statusbar 各 1 处；evaluate+querySelector 无严格模式歧义）。
+       加 class 模拟真实触发：drawer-page 真实流程是 JS 把 #drawer 移入 .main-wrap 再加 class
+       （src/ui-drawer.js _showDrawerPage），:has() 只看后代关系，体外加 class 与真流程对 CSS 而言等价；
+       page-recycle 真实流程是 $("#main").classList.add("page-recycle")（src/render-widgets.js:770）。
+       容器必须是 body（.tabbar/.statusbar/#drawer 均在 .main-wrap 之外，.main-wrap:has() 是死选择器，
+       2026-11-12 七档探针真浏览器实测抓到，B3 当轮修）。 */
+    const shellsDisplay = () => page.evaluate(() => {
+      const cs = (s) => { const el = document.querySelector(s); return el ? getComputedStyle(el).display : "MISSING"; };
+      return { tabbar: cs(".tabbar"), composer: cs(".composer"), statusbar: cs(".statusbar") };
+    });
+
+    for (const [sel, cls] of [["#drawer", "drawer-page"], [".main", "page-recycle"]]) {
+      await page.evaluate((o) => document.querySelector(o.sel).classList.add(o.c), { sel, c: cls });
+      await page.waitForTimeout(100);
+      const hidden = await shellsDisplay();
+      expect(hidden.tabbar, `[${cls}] .tabbar 应 display:none`).toBe("none");
+      expect(hidden.composer, `[${cls}] .composer 应 display:none`).toBe("none");
+      expect(hidden.statusbar, `[${cls}] .statusbar 应 display:none`).toBe("none");
+
+      await page.evaluate((o) => document.querySelector(o.sel).classList.remove(o.c), { sel, c: cls });
+      await page.waitForTimeout(100);
+      const restored = await shellsDisplay();
+      expect(restored.tabbar, `[${cls}] 撤 class 后 .tabbar 应恢复显示`).not.toBe("none");
+      expect(restored.composer, `[${cls}] 撤 class 后 .composer 应恢复显示`).not.toBe("none");
+      expect(restored.statusbar, `[${cls}] 撤 class 后 .statusbar 应恢复显示`).not.toBe("none");
+    }
   });
 });
