@@ -71,6 +71,7 @@ function render(){
     const _help = $("#helpPage"); if(_help) _help.remove();
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     AppBridge.renderSide();
+    renderFormATabs(); // 形态 A B2：tab 条随视图注册表重绘（active 是唯一事实源）
     /* 首次渲染后武装通用撤销：此前（seed/迁移）的快照清掉，也不弹「可撤销」提示 */
     if(typeof armUndo === "function") armUndo();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
@@ -176,6 +177,81 @@ function render(){
     /* 放 finally 而非 try 尾部：本函数有 12 条提前 return 的路由，放尾部只有 office 会触发 */
     try{ if(AppBridge.applyI18n) AppBridge.applyI18n(); }catch(_ie){ /* i18n 缺失不阻断渲染 */ }
   }
+}
+
+/* ---------- 形态 A B2：视图注册表（功能设计 docs/ui-form-a-functional.md §1） ----------
+ * _formATabs 是视图壳表：[{id, scene, title}]，默认一个「今日」视图。
+ * 切 tab = setActive(scene) + render()——active 仍是唯一事实源，tab 只是壳，
+ * 不引入第二套场景状态机。+ 追加默认场景视图；× 移除且常驻 ≥1（末 tab 不渲染 ×，
+ * 此处再双保险），关掉活跃项时 setActive 兜底到剩余首项。持久化 form_a_tabs
+ * （data-links 注册表已登记，sync:false——布局偏好不上云）。
+ *
+ * ⚠️ 对 §1 的裁（2026-11-12，板面披露）：§1 字面默认 scene:"today"，但 SCENARIOS
+ *    7 键无 today（core-shared.js:225），render() 通用分支拿 SCENARIOS["today"]
+ *    会崩进「数据异常」兜底卡 —— 默认 tab 一点就白屏。真实落地页是 office
+ *    （data-links.js:437 active 默认 "office"），故默认场景裁为 office，
+ *    id/title 仍按 §1 字面（today/今日）。功能文档同批改齐。
+ */
+const FORM_A_TABS_KEY = PREFIX + "form_a_tabs";
+const FORM_A_DEFAULT_SCENE = "office"; // 真实落地场景（§1 字面 "today" 不存在于 SCENARIOS，见上裁）
+function _formATabsDefault(){ return [{ id:"today", scene:FORM_A_DEFAULT_SCENE, title:t("formA.tabToday","今日") }]; }
+let _formATabs = null;
+function getFormATabs(){
+  if(_formATabs) return _formATabs;
+  let tabs = null;
+  try{ tabs = load(FORM_A_TABS_KEY, null); }catch(e){ tabs = null; }
+  if(!Array.isArray(tabs) || !tabs.length){ tabs = _formATabsDefault(); }
+  else{
+    tabs = tabs.filter(function(x){
+      return x && typeof x.id === "string" && x.id && typeof x.scene === "string" && x.scene && typeof x.title === "string";
+    });
+    if(!tabs.length) tabs = _formATabsDefault();
+  }
+  _formATabs = tabs;
+  return _formATabs;
+}
+/* 留痕口径同 _saveSessions（data-links.js:505）：写失败 = tab 序刷新后丢，pushDiag 留痕、不静默；
+   但不阻断渲染（门是 lint-save-receipt：包装器不得丢弃 save() 回执）。 */
+function _saveFormATabs(){ try{ return save(FORM_A_TABS_KEY, _formATabs); }catch(e){
+  try{ if(typeof pushDiag === "function") pushDiag("warn", "form_a_tabs persist failed: "+((e&&e.message)||e), {where:"_saveFormATabs"}); }catch(_e2){}
+} }
+/* tab 条渲染：与 active 场景匹配的首个 tab 高亮（active 是唯一事实源；重复场景视图只亮首个） */
+function renderFormATabs(){
+  const host = $("#formATabs"); if(!host) return;
+  const tabs = getFormATabs();
+  const multi = tabs.length > 1;
+  let marked = false;
+  host.innerHTML = sanitizeHtml(tabs.map(function(tb){
+    const on = !marked && tb.scene === active;
+    if(on) marked = true;
+    return '<button type="button" class="tab'+(on?' is-on':'')+'" role="tab" aria-selected="'+(on?"true":"false")+'" data-action="faTabSwitch" data-tab-id="'+esc(tb.id)+'">'+esc(tb.title)+'</button>'
+      + (multi ? '<button type="button" class="tab-x" data-action="faTabClose" data-tab-id="'+esc(tb.id)+'" aria-label="'+esc(t("a11y.closeTab","关闭标签页"))+'">'+UI_ICONS.close+'</button>' : '');
+  }).join(""));
+}
+function formATabSwitch(id){
+  const tab = getFormATabs().filter(function(x){ return x.id === id; })[0];
+  if(!tab || active === tab.scene) return;
+  setActive(tab.scene);
+  render();
+}
+function formATabAdd(){
+  const tabs = getFormATabs();
+  const n = tabs.filter(function(x){ return x.scene === FORM_A_DEFAULT_SCENE; }).length + 1;
+  tabs.push({ id:"today-"+Date.now()+"-"+n, scene:FORM_A_DEFAULT_SCENE, title:t("formA.tabToday","今日")+" "+n });
+  _saveFormATabs();
+  if(active !== FORM_A_DEFAULT_SCENE){ setActive(FORM_A_DEFAULT_SCENE); }
+  render();
+}
+function formATabClose(id){
+  const tabs = getFormATabs();
+  if(tabs.length <= 1) return;
+  const idx = tabs.findIndex(function(x){ return x.id === id; });
+  if(idx < 0) return;
+  const closedActive = tabs[idx].scene === active;
+  tabs.splice(idx, 1);
+  _saveFormATabs();
+  if(closedActive){ setActive(tabs[0].scene); }
+  render();
 }
 
 /* v3.7.78 解耦：自别处下沉（同层序逆层消除） */

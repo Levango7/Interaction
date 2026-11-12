@@ -656,6 +656,17 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .tabbar{height:var(--tb-h);display:flex;align-items:center;gap:var(--space-2);
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .tabs{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;overflow-x:auto}
+/* 形态 A B2：视图注册表 tab（控件三档 28；栏高 --tb-h:36 是栏高非控件高，DESIGN-SYSTEM §2.2） */
+.tab{display:flex;align-items:center;height:28px;padding:0 20px 0 10px;border:1px solid var(--line);border-radius:var(--radius-md);background:transparent;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;flex:none;white-space:nowrap}
+.tab.is-on{border-color:var(--accent);color:var(--accent)}
+.tab-x{flex:none;width:28px;height:28px;margin-left:-16px;padding:0;border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tab-x svg{width:12px;height:12px}
+.tabadd,.railbtn{flex:none;width:28px;height:28px;border:1px solid var(--line);border-radius:var(--radius-md);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tabadd{border-style:dashed}
+.tabadd svg,.railbtn svg{width:14px;height:14px}
+/* 宽屏右栏常驻，tab 条上的把手冗余；≤1023px 右栏滑出，把手才出现（原型口径，同 .hamb） */
+.railbtn{display:none}
+@media (max-width:1023px){ .railbtn{display:flex} }
 .statusbar{height:var(--st-h);display:flex;align-items:center;gap:var(--space-3);
   padding:0 var(--space-2);background:var(--panel);border-top:1px solid var(--line);
   color:var(--muted);font-size:var(--fs-xs);flex:none}
@@ -5550,7 +5561,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span class="lbl" data-i18n="ui.mode.design">设计</span>
       </button>
     </div>
-    <div class="tabs"></div>
+    <div class="tabs" id="formATabs"></div>
+    <!-- 形态 A B2：＋ 追加默认场景视图 / 右栏把手（行为转发 #btnTaskRail，不重写）。
+         图标一律 SVG（P0 字符图标规）；railbtn 仅 ≤1023px 出现——宽屏右栏常驻、把手冗余（原型口径） -->
+    <button type="button" class="tabadd" data-action="faTabAdd" data-i18n-title="formA.addTab" data-i18n-aria="formA.addTab" title="新建标签页" aria-label="新建标签页"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" class="railbtn" data-action="faRailToggle" data-i18n-title="taskRail.open" data-i18n-aria="taskRail.open" title="今日任务" aria-label="今日任务"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
   </div>
   <div class="topbar">
     <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->

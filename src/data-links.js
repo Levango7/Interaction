@@ -845,6 +845,10 @@ const DATA_KEY_REGISTRY = [
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "cmd_recent", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "chat_panel_collapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
+  /* 形态 A B2（2026-11-12）：视图注册表 tab 列表。功能设计 §1 裁 sync:false——「布局偏好不上云」，
+     与本表 chat_panel_collapsed 的 registry 实值（sync:true）相反；按 §1 显式字段 +  rationale 裁，
+     偏离已登记板面待文档 owner 核。kind 按 §1 字面 d（用户自建视图标题属业务数据面）。 */
+  { key: "form_a_tabs", kind: "d", sync: false, backup: true },   // 形态 A 视图注册表（tab 列表，布局偏好不上云）
   { key: "task_rail_collapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "sideCollapsed", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "sideExpanded", kind: "c", sync: true, backup: true },   // 本机控制状态
