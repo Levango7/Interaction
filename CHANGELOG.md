@@ -3,6 +3,20 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-13 · **UI 对齐批 A：顶栏七钮迁左缘竖轨 #iconRail + 顶栏瘦身为同步/用户 + B5 溢出菜单整删 + 窄屏几何修复**
+
+_用户 11-12 晚裁定「按照你自己 qoder 的 UI 界面来做」→ 双参照截图差异清单 → 选 A＝减法对齐（功能本体零动）→ 11-13 裁「全挪，最贴 Qoder」：顶栏七图标全迁左缘竖轨，顶栏只留同步状态 + 用户；B5 顶栏溢出菜单同批退役（删除非隐藏）。_
+
+- **`agent-workbench.html`**：七钮（btnSearchTop/btnCmd/btnTaskRail/btnMessages/btnTheme/btnDownload/btnInstall）迁入 `#iconRail` 常驻可见，id 全保留；顶栏只留 syncStatus + btnUser；btnMore / #topbarMorePanel / 全部 `data-fold` 声明整删。`.app` 改网格（`auto minmax(0,1fr)` + 6 行模板）并逐壳钉行——menubar/offline-banner 脱流后 `.body` 上挪、statusbar 被挤爆行的行漂移修掉；`footer.statusbar` 移入 `.app` 第 6 行（B1 起它在 `.app` 之外被 100vh 壳折到视口底之下，真浏览器实测 top=vh 整条不可见，IDE 三壳意图恢复）。≤479 sys-ov-grid 4 列 + page-head 换行（修 320 档 42px 横溢；媒体块置于基规则之后，避开「前置 media 输给后置基规」的层叠陷阱）。1024-1120 档优先级字段扩 2 微轨、标签让位 10/13——12 微轨在该档每轨仅 ~27px，装不下优先级下拉最小可用宽 34px（真浏览器量得），同 v3.7.58「窄一点但不能挤成方块」的控件可用性取舍；v3.7.16「优先级 1 微轨」裁定以轨道 ≈60px@1600 为前提，≥1121 不变
+- **`src/core-i18n.js`**：删 `top.more`/`top.moreAria`（随 B5 退役，全仓零消费）；加 `a11y.iconRail`（zh+en）
+- **`src/ui-global-events.js`**：B5 溢出菜单事件块（syncTopbarMoreItems/setTopbarMorePanel/btnMore 接线/面板外点与 Esc 收合）随功能整删；msgPanel 外点关闭逻辑原样保留
+- **`tests/e2e/topbar-overflow.spec.js`**：B5 溢出钉退役，新钉左缘竖轨窄屏几何——四档窄屏整页/轨/顶栏零横溢 + 命中区 ≥44×44 + 安装入口能力门控恒隐藏 + 六常驻钮可见；顶栏 residency（btnUser/syncStatus 留、B5 三件套 DOM 零残留、data-fold 零残留）；轨内点主题真换主题；宽屏 residency（七钮不在顶栏、任务轨切换钮与常驻轨互斥）；今日钮开抽屉 + Esc 收起
+- **`tests/e2e/draw-responsive.spec.js`**：单栏降级口径分母 视口→中栏（轨占 48px 后 stageW 与视口差恒 48，旧口径把真布局判成溢出）
+- **`tests/topbar-overflow.test.js` / `tests/ui-scale-floor.test.js`**：计数随布局变（七钮 7 + 顶栏 2 等），守卫意图不变，随批披露
+- **`probe-7x9.cjs`（工作区探针，收工删）**：探测器口径修正——SVG 元素无 CSS box，Chrome 对其 clientWidth/scrollWidth 返回无规范定义的伪值（实测同一 text 元素 cw=11/sw=14/视觉盒=16 三数互斥），沿用会产假阳；判据域限定 XHTML 命名空间。判据本身零放宽
+- **验证**：`npm run lint` rc=0；`npm test` 2650 passed 零新红（3 failed 经 stash A/B 复现于 pristine HEAD：server-sms-providers 文件级缺 express/bcryptjs、prod-startup-guard 3 例起服务）；`E2E=1` e2e 四件定向（messages-panel/topbar-overflow/ui-mode/layout-v2）44 passed rc=0；七档溢出探针 63/63 rc=0
+- **高共写面声明**：workflow / package-lock（root+electron）/ server/src / electron/ / 根 node_modules / `server/config.json` / `_probe/` 本批零改动；零凭据接触（本批无 WebDAV 操作）
+
 ### 2026-11-12 · **UI 形态 A B2：视图注册表 + data-action 委托 + lint-bindings 双向包含门禁（首落 4 键）**
 
 _用户 11-12 裁定「这条线归你做」后首个代码批（功能设计 docs/ui-form-a-functional.md §1/§2/§6；B1 几何批已合 main `6f20119`）。视图注册表 `_formATabs` 默认 `[{id:"today",scene:"office",title:"今日"}]`——§1 字面 `scene:"today"` 在 SCENARIOS 7 键中不存在（src/core-shared.js:225），切它会崩进 render() 兜底卡，裁为真实落地页 office（与 src/data-links.js:437 默认 active 同口径），id/title 仍按文档字面；功能文档 §1 同批改齐并披露该裁。_
