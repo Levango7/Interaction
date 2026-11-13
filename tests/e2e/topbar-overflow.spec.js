@@ -1,10 +1,10 @@
 /**
- * topbar-overflow.spec.js —— B5：窄屏顶栏溢出菜单（真浏览器量布局）
+ * topbar-overflow.spec.js —— UI 对齐批 A：左缘竖图标轨几何（真浏览器量布局）
  * ----------------------------------------------------------------------------
- * 为什么必须走 e2e：jsdom 没有布局引擎，"44px 命中宽度"和"横向溢出=0"这两个数
- * 在 jsdom 里只能读 CSS 文本，读不到**实际渲染结果**（本仓的老教训：元素存在≠可见可点）。
- * 2026-10-20 那版把宽度压到 26px 就是为了躲溢出；本批用"data-fold 声明的低频按钮收进溢出菜单"
- * 换回 44px，所以这里要同时钉住两件事：**不溢出** 与 **命中区真的够**（少一个就是假修）。
+ * 2026-11-13 用户裁「全挪，最贴 Qoder」：顶栏七图标迁入左缘竖轨 #iconRail，
+ * B5 顶栏溢出菜单（btnMore/#topbarMorePanel/data-fold）同批退役。
+ * 窄屏契约随之反转：不再"收低频钮换不溢出"，而是「七钮常驻可见 + 整页不横溢 + 命中区够」。
+ * jsdom 没有布局引擎，这三个数只能在真浏览器量（本仓老教训：元素存在≠可见可点）。
  *
  * 守护策略同其余 spec：默认跳过，E2E=1 才跑。
  */
@@ -12,103 +12,111 @@ const { test, expect } = require("./_fixture");
 
 const APP_URL = "./agent-workbench.html";
 const NARROW = [320, 360, 375, 412];
+const RAIL_IDS = ["btnSearchTop", "btnCmd", "btnTaskRail", "btnMessages", "btnTheme", "btnDownload", "btnInstall"];
+/* 安装入口受 beforeinstallprompt 能力门控，测试浏览器不触发该事件 ⇒ 恒隐藏 */
+const ALWAYS_ON = ["btnSearchTop", "btnCmd", "btnTaskRail", "btnMessages", "btnTheme", "btnDownload"];
 
 test.beforeAll(() => { test.skip(!process.env.E2E, "set E2E=1 to run"); });
 
-test.describe("窄屏顶栏溢出菜单", () => {
-  test.use({ viewport: { width: 375, height: 667 } });
-
+test.describe("左缘竖图标轨：窄屏几何", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(APP_URL);
-    await page.waitForSelector("#btnMore", { state: "attached" });
+    await page.waitForSelector("#iconRail .rail-btn");
   });
 
   for (const w of NARROW) {
-    test(`① ${w}px 顶栏不产生横向溢出，且可见按钮命中区 ≥44×44`, async ({ page }) => {
+    test(`① ${w}px 整页/轨/顶栏都不横向溢出，轨内可见按钮命中区 ≥44×44`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: 700 });
       const measure = await page.evaluate(() => {
-        const doc = document;
-        const bar = doc.querySelector(".topbar");
-        const visible = Array.from(bar.querySelectorAll(".tbtn")).filter(function (b) {
+        const rail = document.getElementById("iconRail");
+        const bar = document.querySelector(".topbar");
+        const visible = (root) => Array.from(root.querySelectorAll(".tbtn")).filter(function (b) {
           const r = b.getBoundingClientRect();
           return r.width > 0 && r.height > 0;
         });
+        const box = (b) => { const r = b.getBoundingClientRect(); return { id: b.id, w: Math.round(r.width), h: Math.round(r.height) }; };
         return {
-          scrollWidth: doc.documentElement.scrollWidth,
-          clientWidth: doc.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+          railScrollWidth: rail.scrollWidth,
+          railClientWidth: rail.clientWidth,
+          railButtons: visible(rail).map(box),
           barScrollWidth: bar.scrollWidth,
           barClientWidth: bar.clientWidth,
-          buttons: visible.map(function (b) {
-            const r = b.getBoundingClientRect();
-            return { id: b.id, w: Math.round(r.width), h: Math.round(r.height) };
-          }),
+          barButtons: visible(bar).map(box),
         };
       });
       expect(measure.scrollWidth, `视口 ${w}px 出现横向溢出`).toBeLessThanOrEqual(measure.clientWidth);
-      expect(measure.barScrollWidth, `顶栏内部横向溢出 ${measure.barScrollWidth}>${measure.barClientWidth}`)
-        .toBeLessThanOrEqual(measure.barClientWidth + 1);
-      expect(measure.buttons.length, "窄屏应仍有常驻按钮（全被收起=把功能藏没了）").toBeGreaterThanOrEqual(4);
-      /* 「更多」入口本身也必须可点 —— 它掉到 44 以下就等于给用户一个难点中的抽屉把手 */
-      expect(measure.buttons.some((b) => b.id === "btnMore"), "窄屏必须露出溢出入口").toBe(true);
-      for (const b of measure.buttons) {
+      expect(measure.railScrollWidth, `图标轨 ${w}px 内部横向溢出`).toBeLessThanOrEqual(measure.railClientWidth + 1);
+      expect(measure.barScrollWidth, `顶栏 ${w}px 内部横向溢出`).toBeLessThanOrEqual(measure.barClientWidth + 1);
+      expect(measure.railButtons.length, "轨内必须真有可见按钮（全空=迁移把功能弄丢了）").toBeGreaterThanOrEqual(ALWAYS_ON.length);
+      for (const b of measure.railButtons.concat(measure.barButtons)) {
         expect(b.w, `#${b.id} 命中宽度 ${b.w}px < 44`).toBeGreaterThanOrEqual(44);
         expect(b.h, `#${b.id} 命中高度 ${b.h}px < 44`).toBeGreaterThanOrEqual(44);
       }
+      /* 能力门控：没有 beforeinstallprompt 的测试浏览器里安装入口必须保持隐藏 */
+      const visibleIds = measure.railButtons.map((b) => b.id);
+      expect(visibleIds.includes("btnInstall"), "无 beforeinstallprompt 时安装入口不可见（能力缺失即隐藏）").toBe(false);
+      ALWAYS_ON.forEach((id) => {
+        expect(visibleIds.includes(id), `#${id} 窄屏必须在轨可见（常驻，不靠溢出菜单二次进入）`).toBe(true);
+      });
     });
   }
 
-  test("② 低频按钮在窄屏真的不占位（收起，而不是挤成一团）", async ({ page }) => {
+  test("② 顶栏瘦身后常驻件正确：用户在顶栏、七钮不在顶栏、B5 三件套整删", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    const boxes = await page.evaluate(() => {
-      const out = {};
-      ["btnCmd", "btnTheme", "btnDownload", "btnInstall"].forEach(function (id) {
-        const el = document.getElementById(id);
-        const r = el.getBoundingClientRect();
-        out[id] = { w: r.width, h: r.height };
-      });
-      return out;
-    });
-    for (const [id, box] of Object.entries(boxes)) {
-      expect(box.w, `${id} 应被收进溢出菜单，窄屏不该还有宽度`).toBe(0);
-    }
+    const home = await page.evaluate((ids) => {
+      const rail = document.getElementById("iconRail");
+      const bar = document.querySelector(".topbar");
+      const inRail = (id) => { const el = document.getElementById(id); return !!el && rail.contains(el); };
+      const inBar = (id) => { const el = document.getElementById(id); return !!el && bar.contains(el); };
+      return {
+        rail: ids.map(inRail),
+        userInBar: inBar("btnUser"),
+        syncInBar: inBar("syncStatus"),
+        moreGone: !document.getElementById("btnMore") && !document.getElementById("topbarMorePanel"),
+        foldGone: document.querySelectorAll("[data-fold]").length === 0,
+      };
+    }, RAIL_IDS);
+    expect(home.rail, "七钮必须全家在轨").toEqual(RAIL_IDS.map(() => true));
+    expect(home.userInBar, "btnUser 是顶栏常驻件").toBe(true);
+    expect(home.syncInBar, "syncStatus 留顶栏").toBe(true);
+    expect(home.moreGone, "btnMore/#topbarMorePanel 是删除不是隐藏（复活=开倒车）").toBe(true);
+    expect(home.foldGone, "data-fold 声明机制整批退役，DOM 里不许再有").toBe(true);
   });
 
-  test("③ 从「更多」进菜单选「主题」真的换了主题（端到端可点，不是元素存在）", async ({ page }) => {
+  test("③ 轨内点「主题」真的换了主题（行为不随迁移断——旧面板行项转发链的继任钉）", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     const before = await page.evaluate(() => document.documentElement.getAttribute("data-theme") || "light");
-    await page.click("#btnMore");
-    const panel = page.locator("#topbarMorePanel");
-    await expect(panel).toBeVisible();
-    const row = page.locator('#topbarMorePanel [data-fold-target="btnTheme"]');
-    await expect(row).toBeVisible();
-    /* Playwright 的 click 自带 actionability + hit-target 检查；
-       再补一次 elementFromPoint，挡住"被别的层盖住但仍可 JS 点击"这种假通过。 */
-    const box = await row.boundingBox();
-    const topmostIsRow = await page.evaluate(([x, y]) => {
-      const el = document.elementFromPoint(x, y);
-      return !!el && !!el.closest && !!el.closest('[data-fold-target="btnTheme"]');
-    }, [box.x + box.width / 2, box.y + box.height / 2]);
-    expect(topmostIsRow, "行项中心点上最该命中的就是它自己（被遮挡=窄屏上点不到）").toBe(true);
-    await row.click();
-    await expect(panel).toBeHidden();
+    await page.click("#btnTheme");
     const after = await page.evaluate(() => document.documentElement.getAttribute("data-theme") || "light");
-    expect(after, `点「主题」行必须换主题（前后都是 ${before}）`).not.toBe(before);
+    expect(after, `点轨内 #btnTheme 必须换主题（前后都是 ${before}）`).not.toBe(before);
   });
 
-  test("④ 「更多」入口在宽屏收起（否则桌面顶栏凭空多一个按钮）", async ({ page }) => {
+  test("④ 宽屏：轨常驻 + 顶栏只有同步/用户（桌面不凭空多出窄屏专属件）", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await expect(page.locator("#btnMore")).toBeHidden();
-    await expect(page.locator("#btnCmd")).toBeVisible();
-    await expect(page.locator("#btnTheme")).toBeVisible();
+    for (const id of ["btnSearchTop", "btnCmd", "btnMessages", "btnTheme", "btnDownload"]) {
+      await expect(page.locator("#" + id)).toBeVisible();
+    }
+    await expect(page.locator("#btnInstall")).toBeHidden();
+    await expect(page.locator("#btnUser")).toBeVisible();
+    /* 宽屏任务轨常驻 ⇒ 切换钮让位；折叠态反向。二者必居其一，不允许同时可见/同时消失 */
+    const toggleVisible = await page.locator("#btnTaskRail").isVisible();
+    const railVisible = await page.locator("#taskRail").isVisible();
+    expect(toggleVisible, "宽屏任务轨常驻时切换钮必须让位（折叠态才出现）").toBe(!railVisible);
+    /* 顶栏里不再有任何七钮成员 */
+    const stray = await page.evaluate((ids) => {
+      const bar = document.querySelector(".topbar");
+      return ids.filter((id) => bar.contains(document.getElementById(id)));
+    }, RAIL_IDS);
+    expect(stray, "七钮在宽屏也不许回流顶栏").toEqual([]);
   });
 
-  test("⑤ Esc 收起（键盘路径与触屏路径行为一致）", async ({ page }) => {
+  test("⑤ 窄屏高频钮真可点：点「今日」开任务抽屉、Esc 收起（键盘路径不卡死）", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.click("#btnMore");
-    await expect(page.locator("#topbarMorePanel")).toBeVisible();
+    await page.click("#btnTaskRail");
+    await expect(page.locator("#taskRail")).toHaveClass(/open/);
     await page.keyboard.press("Escape");
-    await expect(page.locator("#topbarMorePanel")).toBeHidden();
-    const expanded = await page.getAttribute("#btnMore", "aria-expanded");
-    expect(expanded).toBe("false");
+    await expect(page.locator("#taskRail")).not.toHaveClass(/open/);
   });
 });

@@ -56,9 +56,14 @@ test.describe("Design 模式窄屏", () => {
         const mob = document.getElementById("mobBar");
         const rr = rail ? rail.getBoundingClientRect() : null;
         const mr = mob ? mob.getBoundingClientRect() : null;
+        /* 2026-11-13 UI 对齐批 A：七钮迁左缘竖轨后，单栏降级下中栏 = 视口 − 轨宽(48px)。
+           本用例钉的是「画布占满中栏」（标题口径），分母必须是中栏实宽而非视口宽——
+           改前拿视口当分母，轨占 48px 后 stageW 恒差 48，用例把真布局判成溢出。 */
+        const body = document.querySelector(".app > .body");
         return {
           scrollWidth: doc.documentElement.scrollWidth,
           clientWidth: doc.documentElement.clientWidth,
+          bodyW: body ? body.clientWidth : -1,
           stageW: sr ? Math.round(sr.width) : -1,
           hostW: hr ? Math.round(hr.width) : -1,
           hostH: hr ? Math.round(hr.height) : -1,
@@ -68,10 +73,10 @@ test.describe("Design 模式窄屏", () => {
         };
       });
       expect(m.scrollWidth, `视口 ${w}px 出现横向溢出`).toBeLessThanOrEqual(m.clientWidth);
-      /* 画布区铺满视口；宿主再扣掉 #drawStage 的 8px 两侧内边距与 1px 边框。
+      /* 画布区铺满中栏（单栏降级）；宿主再扣掉 #drawStage 的 8px 两侧内边距与 1px 边框。
          容差写死在这些实测量上，不用「乘以百分比」那种会随视口变宽的松判据。 */
-      expect(m.stageW, `画布区必须铺满视口宽度（单栏降级）；实测 ${m.stageW}/${m.clientWidth}`)
-        .toBeGreaterThanOrEqual(m.clientWidth - 2);
+      expect(m.stageW, `画布区必须铺满中栏宽度（单栏降级，中栏=视口−竖轨）；实测 ${m.stageW}/${m.bodyW}`)
+        .toBeGreaterThanOrEqual(m.bodyW - 2);
       expect(m.hostW, `画布宿主宽度应随视口收缩；实测 ${m.hostW}，画布区 ${m.stageW}`)
         .toBeGreaterThanOrEqual(m.stageW - 20);
       /* 2026-11-02 修复前 .body.design-mode{display:block} 让 main-wrap 高度退化为
