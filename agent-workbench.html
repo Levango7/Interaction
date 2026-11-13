@@ -641,8 +641,27 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* ===== 整体布局：顶栏 / 侧栏 / 主区 ===== */
 /* 100dvh 渐进增强：移动端地址栏收起/展开时视口高度变化，dvh 跟随实际动态视口，消除整页跳动；
    不支持 dvh 的旧内核自动回退到前一行的 100vh */
-.app{display:flex;flex-direction:column;height:100vh;height:100dvh;
+/* UI 对齐批 A（2026-11-13）：flex 纵列改双列网格让左缘竖轨跨全行。第 2 列必须 minmax(0,1fr)——
+   1fr 的 min=auto 会把 tabbar 的 min-content（标签 nowrap 排开 ≈408px）抬成轨道宽，375px 档
+   文档横向溢出 81px（七档探针实测）；minmax(0,1fr) 恢复 flex 列时代的「壳件宽=容器宽、
+   内容 .tabs{overflow-x:auto} 自己滚」行为。 */
+.app{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto auto 1fr auto;
+  height:100vh;height:100dvh;
   background-color:var(--bg);background-image:var(--canvas-glow);background-repeat:no-repeat}
+/* UI 对齐批 A（2026-11-13）：左缘竖轨跨全部行；其余壳件固定第 2 列（auto-flow 行序不变） */
+.icon-rail{grid-column:1;grid-row:1/-1}
+header.menubar,.tabbar,.topbar,.offline-banner,.body,footer.statusbar{grid-column:2}
+/* UI 对齐批 A（2026-11-13）：壳件必须各自钉死行号。auto-flow 只按「在流的项」顺序落行——
+   menubar 在 ≤1023 档 display:none、offline-banner 无离线事件时也 display:none，两者脱流后
+   .body 会上挪到更靠前的 auto 行（内容多高就占多高），footer.statusbar 则被挤进 1fr 行、
+   行高被吃光后整条溢出视口底（1280 实测 statusbar top=800=vh，状态栏完全不可见）。
+   钉行后空行高度为 0，.body 恒占 1fr、statusbar 恒钉底，与壳件显隐解耦。 */
+header.menubar{grid-row:1}
+.tabbar{grid-row:2}
+.topbar{grid-row:3}
+.offline-banner{grid-row:4}
+.body{grid-row:5}
+footer.statusbar{grid-row:6}
 /* 单行顶栏：品牌 + spacer + 系统级按钮居右（padding 统一 space-3，各断点高度一致=54px，见 --topbar-h 令牌）
    v1.9.7：背景改 --side-bg（与侧栏同灰）——原 --panel 白与右栏/白卡同色，顶栏/正文/右栏三区不辨界限；
    现为「顶+侧灰框 → 正文浅灰 → 右栏白」三层结构，暗色/高对比度/护眼主题经同名令牌自动同步 */
@@ -703,12 +722,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .toolbar-row .pomo-actions button,.toolbar-row .tracker-action button{min-height:26px;padding:0 var(--space-2);font-size:var(--fs-xs)}
 /* 三大块之间加竖线分隔符（::before 伪元素，零 HTML 改动），边界一目了然 */
 .toolbar-row > #btnCalendar{margin-left:var(--space-3);position:relative}
-.toolbar-row > #btnSearchTop{margin-left:auto;position:relative}
-.toolbar-row > #btnCalendar::before,
-.toolbar-row > #btnSearchTop::before{content:"";position:absolute;left:-6px;top:50%;
+.toolbar-row > #btnCalendar::before{content:"";position:absolute;left:-6px;top:50%;
   transform:translateY(-50%);width:1px;height:14px;background:var(--line);pointer-events:none}
-/* “更多”按钮：跟随搜索按钮居右，与搜索按钮保持小间距（无竖线分隔，避免视觉过密） */
-.toolbar-row > #btnMore{flex-shrink:0}
+/* （2026-11-13 UI 对齐批 A：#btnSearchTop 迁左缘竖轨 #iconRail、#btnMore 随 B5 溢出菜单退役，
+   两者在 .toolbar-row 的定位/分隔规则同删；#btnCalendar 规则非本批迁移面，原样保留） */
 /* ===== v1.9.7b 正文顶部工具行：折叠 + 消息栏 + 大模型选择器 =====
    旧版（v1.9.7）msg-bar 直接挂在 .toolbar-row 上，新版拆为三段独立子元素 */
 /* ===== v1.15 正文顶部工具行 = 待办栏（原消息栏替换，消息收进顶栏按钮） ===== */
@@ -922,11 +939,25 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   font-size:var(--fs-xs);line-height:1.1;white-space:nowrap}
 .topbar .tbtn .lbl{display:block;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64px;font-size:var(--fs-xs)}
 .topbar .tbtn svg{width:var(--icon-md);height:var(--icon-md);flex-shrink:0}
+/* ===== UI 对齐批 A（2026-11-13）：左缘竖图标轨（Qoder 式 activity bar）=====
+   七钮从顶栏整块迁入（id 原样，事件按 id 寻址不断）；B5 溢出菜单同批退役 ——
+   轨内常驻可见，窄屏不再需要「藏低频钮」换不溢出。44×44 命中区全宽一致。 */
+.icon-rail{display:flex;flex-direction:column;align-items:stretch;gap:2px;
+  width:48px;flex:none;padding:var(--space-1) 0;background:var(--panel);
+  border-right:1px solid var(--line)}
+.icon-rail .rail-btn{flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;min-width:44px;min-height:44px;padding:0}
+.icon-rail .rail-btn .lbl{display:none}   /* 轨内纯图标，label 由 title/aria 兜底 */
+.icon-rail .rail-btn svg{width:var(--icon-md);height:var(--icon-md)}
+.icon-rail .rail-btn:hover{background:var(--surface-hover);color:var(--text)}
 .topbar .tbtn .badge{position:absolute;top:2px;right:6px}
-/* ===== v3.6.5：窄屏顶栏收紧 —— 8 个系统按钮（48px/个）在 380px 视口装不下，横向溢出 ===== */
+/* ===== v3.6.5：窄屏顶栏收紧 —— 8 个系统按钮（48px/个）在 380px 视口装不下，横向溢出
+   2026-11-13 UI 对齐批 A：七钮迁左缘竖轨 #iconRail 后顶栏只剩 btnHelp/syncStatus/btnUser，
+   8 钮挤压的前提消失，min-width 38px 回升 44px（与 base / 479 档的命中区下限对齐）；
+   480–767 实测余量充足不溢出，由七档溢出探针钉住。 */
 @media(max-width:767px){
   .topbar{gap:var(--space-1)}
-  .topbar .tbtn{min-width:38px;padding:var(--space-1) 2px}
+  .topbar .tbtn{min-width:44px;padding:var(--space-1) 2px}
   .topbar .tbtn .lbl{font-size:var(--fs-3xs);max-width:46px}
   .topbar .tbtn svg{width:var(--icon-sm);height:var(--icon-sm)}
   /* 2026-11-10：图标 pill（≤1023）+ 品牌文字二选一——480–767 实测 519px 内容装不进 480，
@@ -935,34 +966,23 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   .topbar{padding-right:var(--space-2)}
   .topbar .logo > span:not(.mark){display:none}
 }
-/* B5（2026-10-26）：溢出菜单入口在宽屏不出现（只有窄屏才需要收低频按钮） */
-.topbar .tbtn.topbar-more-btn{display:none}
 @media(max-width:479px){
   .topbar{gap:1px;padding-left:var(--space-1);padding-right:0}
   /* 320px 实测还差 7px：标记图形 28→24（品牌字在 767 档已收，这里只剩图形） */
   .topbar .logo .mark{width:24px;height:24px}
-  /* P1-4 余项收口：低频按钮（命令/主题/下载/安装，靠 data-fold 声明）收进溢出菜单，
-     把**宽度**命中区从 26px 抬回 44px。2026-10-20 那版只能先保高度 ——
-     8 个按钮同时抬到 40px 会让 375px 视口横向溢出 103px；现在窄屏常驻 5 个（搜索/今日/消息/用户/更多）。
-     溢出=0 与 44px 都由 tests/e2e/topbar-overflow.spec.js 在真浏览器里钉住（jsdom 量不出布局）。 */
-  .topbar .tbtn[data-fold]{display:none}
-  .topbar .tbtn.topbar-more-btn{display:flex}
+  /* UI 对齐批 A（2026-11-13）：七钮已迁左缘竖轨，B5 溢出菜单退役 ——
+     44×44 命中区棘轮随布局迁到轨上（原 .topbar .tbtn[data-fold] 收起规则随之删除）。
+     轨不横溢与 44px 由 tests/e2e/topbar-overflow.spec.js 在真浏览器里钉住（jsdom 量不出布局）。 */
+  .icon-rail .rail-btn{min-width:44px;min-height:44px;padding:0}
   .topbar .tbtn{min-width:44px;min-height:44px;padding:var(--space-1) 0}
   .topbar .tbtn .lbl{display:none}   /* 极窄屏：纯图标 */
-  /* 命中区抬到 44px 后腾出来的钱从 logo 出：320px 实测 5×44+图标+品牌字 = 369（溢出 49px），
-     收掉品牌文字（保留标记图形）后 320/360/375 全部回到 scrollWidth == clientWidth。
-     基线对照实测：origin/main 在同样三个视口都是 0 溢出，所以这条是本批引入、本批负责。 */
+  /* 七钮迁轨后顶栏只剩 1 枚按钮，品牌文字/同步文案在极窄屏纯属占地，收掉（标记图形/圆点保留）；
+     320/360/375 的文档不溢出由 .app 双列 minmax(0,1fr) 兜底（tabbar min-content 不再抬轨道宽） */
   .topbar .logo > span:not(.mark){display:none}
   /* 同步状态文字让位给按钮（圆点仍在，状态由 aria-live 播报） */
   .topbar .sync-text{display:none}
 }
-/* B5：溢出面板 —— 内联展开在顶栏下方（静态定位，不像消息中心那样悬浮遮挡正文） */
-.topbar-more-panel{display:none;flex-wrap:wrap;gap:var(--space-1);
-  padding:var(--space-2) var(--space-3);background:var(--panel2);border-bottom:1px solid var(--line)}
-.topbar-more-panel.is-open{display:flex}
-.topbar-more-item{min-height:44px;padding:var(--space-1) var(--space-3);background:var(--panel);
-  border:1px solid var(--line);border-radius:var(--radius-md);color:var(--text);font-size:var(--fs-xs)}
-.topbar-more-item[hidden]{display:none}
+/* （B5 溢出面板样式随机制退役同删，2026-11-13 UI 对齐批 A） */
 /* 2026-10-20 P1-4：触屏设备放宽命中区（桌面鼠标布局不受影响） */
 @media(pointer:coarse){
   .topbar .tbtn{min-height:44px}
@@ -1323,6 +1343,16 @@ input[type="file"]:hover{border-color:var(--accent)}
    唯一错位的是加号：原先 justify-self:center，右缘 1218 而列3 右缘 1233，差 15px。
    → 改为 end，让加号右缘贴齐列3 右边界，"整行右边界"与看板列右边界成一条线。 */
 #taskForm>.add-wrap{grid-column:12/13;grid-row:1;justify-self:end;align-self:end;z-index:var(--z-under)}
+/* UI 对齐批 A（2026-11-13）：1024-1120 窄 PC 档优先级扩为 2 微轨、标签让位 10/13。
+   v3.7.16「优先级 1 微轨 ≈60px @1600」的裁定以轨道够宽为前提；12 微轨在此档每轨仅
+   ~27px（实测 1024: 容器 410 = 12×26.83 + 11×8），装不下优先级下拉最小可用宽 34px，
+   SELECT 固有宽 34 溢出轨道 7px 吃进标签字段左缘（真浏览器量得，非估）。同 v3.7.58
+   「窄一点但不能挤成方块」的取舍：控件可用宽优先于跨轨咬合；≥1121 轨道 ≥35px 不再触发，
+   ≤1023 走 2 列回退（下方媒体块显式解除钉列），本块双边界不依赖源码顺序。 */
+@media (min-width:1024px) and (max-width:1120px){
+  #taskForm>.fld:nth-child(3){grid-column:8/10}
+  #taskForm>.fld:nth-child(4){grid-column:10/13}
+}
 /* v3.7.62：筛选行 —— 前两字段与任务表单对齐(span 3+3)，标签筛选占满剩余(span 6)。 */
 /* v3.7.19：筛选行改为**与看板三列同构**（4/4/4 = 1/5 · 5/9 · 9/13）。
    原来是 1/4 · 4/7 · 7/13（4/3/6 微轨），中间两个边界都不落在看板列边界上
@@ -1746,6 +1776,10 @@ code.snip{display:block;white-space:pre-wrap;background:var(--snip-bg);color:var
 .sys-ov-ai a{color:var(--accent-text,var(--accent));text-decoration:underline;font-size:var(--fs-xs);display:inline-flex;align-items:center;min-height:24px;padding:0 var(--space-1)}
 .sys-ov-ai a:hover{color:var(--text)}
 .sys-ov-tip{margin-top:var(--space-1);font-size:var(--fs-xs);color:var(--muted);text-align:center}
+/* UI 对齐批 A（2026-11-13）：竖轨占 48px 后中栏 375→327，7 列 min-content(7×34+6×8=286) 撑破容器
+   （标签被挤成 16px 竖排+网格溢 25px，three-state-layout.spec.js 元素级溢出钉住）→ 收 4 列成 4+3 两行。
+   必须写在基础规则 :1742 之后——同特异性媒体块被后到的基础规则覆盖（旧 479 块里的同款写法实测无效）。 */
+@media(max-width:479px){.sys-ov-grid{grid-template-columns:repeat(4,1fr)}}
 
 /* ===== v2.3.0 工具应用卡（TOOL_APPS 落地页） ===== */
 .tool-app-card{padding:var(--space-3)}
@@ -3145,6 +3179,14 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 /* v3.2 IA：场景页标题栏右端"问 AI 助手"入口（核心改变：AI 不再是聊天面板里的机器人，而是与场景并列的一等入口） */
 .sc-page-head{display:flex;align-items:center;gap:var(--space-3)}
 .sc-page-head .ph-tx{flex:1;min-width:0}
+/* UI 对齐批 A（2026-11-13）：竖轨占 48px 后中栏 375→327，动作区宽按钮（商店页「导入插件 JSON」+「← 主页」
+   ≈230px）把 .ph-tx 挤到 3px、标题/副标题元素级溢出（three-state-layout.spec.js 钉住）。
+   页头允许折行 + 文字容器给 220px flex-basis：图标+文字独占一行（文字行内换行），动作落第二行；
+   动作小的页头（单枚返回键 ≈44px）仍留单行，观感不变。必须写在 :3162 之后，同上条同特性级覆盖坑。 */
+@media(max-width:479px){
+  .page-head{flex-wrap:wrap}
+  .page-head .ph-tx{flex:1 1 220px}
+}
 .ph-ai-btn{display:inline-flex;align-items:center;gap:var(--space-1h);flex:0 0 auto;padding:var(--space-1h) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--accent);background:var(--accent-soft,rgba(10,108,189,.08));color:var(--accent-text,var(--accent));font-size:var(--fs-sm);font-weight:500;cursor:pointer;transition:background .15s,transform .1s}
 .ph-ai-btn:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .ph-ai-btn:active{transform:scale(.97)}
@@ -5362,8 +5404,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .task-rail-toggle .lbl{display:none}
 }
 @media(max-width:479px){
-  /* 低频按钮收口（指南→侧栏底部 #sideBtnHelp；导出→设置·数据管理），避免与「今日」入口抢宽 */
-  #btnHelp,#btnDownload{display:none!important}
+  /* 指南占位继续收（真入口在侧栏底部 #sideBtnHelp）。#btnDownload 已于 2026-11-13 UI 对齐批 A
+     迁左缘竖轨 #iconRail —— 轨内七钮常驻可见，不再随窄屏收口（收宽债由轨制本身消除）。 */
+  #btnHelp{display:none!important}
 }
 
 /* ---------- Code 模式（2026-10-26）：agent-first 三栏（≥1024px；≤1023px 强制 Work 布局） ----------
@@ -5542,6 +5585,27 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 <body>
 <a href="#main" class="skip-link" data-i18n-aria="a11y.skipToMain" aria-label="跳转到主内容" data-i18n="a11y.skipToMain">跳转到主内容</a>
 <div class="app">
+  <!-- UI 对齐批 A（2026-11-13，用户裁「全挪，最贴 Qoder」）：左缘竖图标轨（activity bar）。
+       七钮从顶栏整块迁入，id/类/aria/i18n 属性原样 —— 事件绑定按 id 寻址，不随位置变；
+       顶栏 B5 溢出菜单机制同批退役（低频钮不再需要被收纳）。轨内纯图标，label 由 title/aria 兜底。 -->
+  <nav class="icon-rail" id="iconRail" data-i18n-aria="a11y.iconRail" aria-label="快捷操作">
+    <button type="button" class="tbtn rail-btn" id="btnSearchTop" data-i18n-aria="a11y.fullSearch" aria-label="全文搜索">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
+    <button type="button" class="tbtn rail-btn" id="btnCmd" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
+    <button type="button" class="tbtn rail-btn task-rail-toggle" id="btnTaskRail" data-i18n-title="taskRail.open" title="今日任务" data-i18n-aria="taskRail.open" aria-label="今日任务">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+      <span class="badge u-hidden" id="taskRailBadge"></span><span class="lbl" data-i18n="taskRail.title">今日</span></button>
+    <button class="tbtn rail-btn" id="btnMessages" type="button" data-i18n-aria="a11y.messages" aria-label="消息">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="badge u-hidden" id="msgBadge"></span><span class="lbl" data-i18n="top.messages">消息</span></button>
+    <button type="button" class="tbtn rail-btn" id="btnTheme" data-i18n-aria="a11y.toggleTheme" aria-label="切换明暗主题">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl" data-i18n="top.theme">主题</span></button>
+    <button type="button" class="tbtn rail-btn" id="btnDownload" data-i18n-aria="a11y.exportData" aria-label="导出数据">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
+    <button type="button" class="tbtn rail-btn install-btn" id="btnInstall" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
+  </nav>
   <!-- 形态 A B1：menubar 壳（IDE 化三壳之一）。logo 从 topbar 迁入；mi 文字菜单内容清单＝功能设计 §8 待决②，B1 留空（防空窗假控件）。 -->
   <header class="menubar">
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
@@ -5568,54 +5632,19 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <button type="button" class="railbtn" data-action="faRailToggle" data-i18n-title="taskRail.open" data-i18n-aria="taskRail.open" title="今日任务" aria-label="今日任务"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
   </div>
   <div class="topbar">
-    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
+    <!-- UI 对齐批 A（2026-11-13，用户裁「全挪」）：顶栏瘦身——七图标已迁左缘竖轨 #iconRail，B5 溢出菜单同批退役；顶栏常驻＝同步状态 + 用户。btnHelp 占位保留（a11y/事件绑定兼容），真入口仍 #sideBtnHelp。 -->
     <div class="spacer"></div>
     <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
     <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl" data-i18n="top.help">指南</span></button>
-    <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
-    <button type="button" class="tbtn" id="btnSearchTop" data-i18n-aria="a11y.fullSearch" aria-label="全文搜索">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
-    <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
-    <button type="button" class="tbtn" id="btnCmd" data-fold="1" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
-    <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
-    <button type="button" class="tbtn task-rail-toggle" id="btnTaskRail" data-i18n-title="taskRail.open" title="今日任务" data-i18n-aria="taskRail.open" aria-label="今日任务">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
-      <span class="badge u-hidden" id="taskRailBadge"></span><span class="lbl" data-i18n="taskRail.title">今日</span></button>
-    <button class="tbtn" id="btnMessages" type="button" data-i18n-aria="a11y.messages" aria-label="消息">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span class="badge u-hidden" id="msgBadge"></span><span class="lbl" data-i18n="top.messages">消息</span></button>
-    <button type="button" class="tbtn" id="btnTheme" data-fold="1" data-i18n-aria="a11y.toggleTheme" aria-label="切换明暗主题">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl" data-i18n="top.theme">主题</span></button>
-    <button type="button" class="tbtn" id="btnDownload" data-fold="1" data-i18n-aria="a11y.exportData" aria-label="导出数据">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
-    <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
-    <button type="button" class="tbtn install-btn" id="btnInstall" data-fold="1" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
     <!-- 任务235：同步状态指示器（登录后显示，同步中/已同步/离线/错误） -->
     <span class="sync-status u-hidden" id="syncStatus" role="status" aria-live="polite">
       <span class="sync-dot" aria-hidden="true"></span><span class="sync-text" data-i18n="api.syncIdle">已同步</span>
     </span>
-    <!-- B5（2026-10-26）：窄屏溢出菜单入口。≥480px 隐藏，≤479px 顶栏只留 搜索/今日/消息/用户 + 本按钮，
-         把每个可见按钮的命中宽度从 26px 抬回 44px（P1-4 余项，CSS:881 那条注释里自认的"正解"）。 -->
-    <button type="button" class="tbtn topbar-more-btn" id="btnMore" data-i18n-aria="top.moreAria" aria-label="更多操作" aria-expanded="false" aria-controls="topbarMorePanel">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-      <span class="lbl" data-i18n="top.more">更多</span></button>
     <!-- 任务235：用户按钮（未登录显示「登录」，已登录显示头像首字母） -->
     <button type="button" class="tbtn user-btn" id="btnUser" data-i18n-aria="api.login" aria-label="登录">
       <span class="user-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="lbl" data-i18n="api.login">登录</span></button>
     <input type="file" id="fileInput" accept="application/json" class="u-hidden">
-  </div>
-  <!-- B5：窄屏顶栏溢出面板（内联展开，与 #msgPanel 同型 —— 静态定位、不进 flex 排布、不算坐标）。
-       行项只是"入口镜像"：点击转给原按钮，行为与快捷键完全同路，不在这里重写一遍逻辑。
-       目标按钮当前不可见（如 Electron 才有的安装、能力缺失即隐藏的入口）时，行项一起隐掉，
-       避免"点了没反应"。 -->
-  <div class="topbar-more-panel" id="topbarMorePanel" role="menu" data-i18n-aria="top.moreAria" aria-label="更多操作">
-    <button type="button" class="topbar-more-item" role="menuitem" data-fold-target="btnCmd" data-i18n="top.command">命令</button>
-    <button type="button" class="topbar-more-item" role="menuitem" data-fold-target="btnTheme" data-i18n="top.theme">主题</button>
-    <button type="button" class="topbar-more-item" role="menuitem" data-fold-target="btnDownload" data-i18n="top.download">下载</button>
-    <button type="button" class="topbar-more-item" role="menuitem" data-fold-target="btnInstall" data-i18n="top.install">安装</button>
   </div>
 
 
@@ -5752,6 +5781,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   <button type="button" class="rail-btn rail-ai" id="chatRailAi" data-i18n-title="page.ai.title" title="AI 页面" aria-label="打开 AI 页面"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
 </div>
   </div>
+  <!-- 形态 A B1：statusbar 壳（IDE 三壳之一）。页脚由 appendFoot 写入（.foot-bar 三列）；
+       原 .main > .foot / .overview-grid > .foot 死规与 .foot 基础样式（drawer 路径仍在用）留 B5 topbar 退役批同清。
+       UI 对齐批 A（2026-11-13）：移入 .app 末行。B1 起它被放在 .app 之外，100vh 壳把它折到视口底之下
+       （真浏览器实测 top=vh、整条不可见，HEAD 上即是）；本批 .app 改网格并逐壳钉行后，进网格第 6 行才钉得住。 -->
+  <footer class="statusbar" id="statusbar"></footer>
 </div>
 
 <!-- v1.9.7：消息中心面板已迁至正文顶部（#msgBar 下方内联展开），此处原 fixed 下拉已移除 -->
@@ -5781,10 +5815,6 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     </span>
   </div>
 </div>
-
-<!-- 形态 A B1：statusbar 壳（IDE 三壳之一）。页脚由 appendFoot 写入（.foot-bar 三列）；
-     原 .main > .foot / .overview-grid > .foot 死规与 .foot 基础样式（drawer 路径仍在用）留 B5 topbar 退役批同清。 -->
-<footer class="statusbar" id="statusbar"></footer>
 
 <!-- v1.15：侧栏功能组恢复为 图表（直接入口）+ 应用（独立页）+ 市场（独立页）。
      应用页含 日历/天气/闹钟/萌宠；指针特效已移入设置页。 -->

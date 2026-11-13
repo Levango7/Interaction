@@ -185,8 +185,6 @@ const MESSAGES = {
     "top.command": "命令",
     "top.help": "帮助",
     "top.install": "安装应用",
-    "top.more": "更多",
-    "top.moreAria": "更多操作（窄屏收起的低频按钮）",
     "top.theme": "主题",
     "top.search": "搜索",
 
@@ -352,6 +350,7 @@ const MESSAGES = {
 
     // ===== Phase 1 i18n 扩展 =====
     "a11y.skipToMain": "跳转到主内容",
+    "a11y.iconRail": "快捷操作",
     "a11y.guide": "使用指南",
     "a11y.fullSearch": "全文搜索",
     "a11y.commandPalette": "命令面板",
@@ -4385,8 +4384,6 @@ const MESSAGES = {
     "top.command": "Command",
     "top.help": "Help",
     "top.install": "Install App",
-    "top.more": "More",
-    "top.moreAria": "More actions (low-frequency buttons folded on narrow screens)",
     "top.theme": "Theme",
     "top.search": "Search scenario / command / task... (↑↓ select, Enter run, Esc close)",
 
@@ -4552,6 +4549,7 @@ const MESSAGES = {
 
     // ===== Phase 1 i18n extension =====
     "a11y.skipToMain": "Skip to main content",
+    "a11y.iconRail": "Quick actions",
     "a11y.guide": "User Guide",
     "a11y.fullSearch": "Full-text Search",
     "a11y.commandPalette": "Command Palette",
