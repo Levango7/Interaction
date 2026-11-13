@@ -40,11 +40,17 @@ test.describe("主线 agent 观感（2026-11-07）", () => {
   test("右栏「会话」页常驻可开；快捷指令随模式切换", async ({ page }) => {
     await bootWithAi(page);
 
-    const tab = page.locator('#taskRail [data-rail-tab="sessions"]');
-    await expect(tab).toBeVisible();
-    await tab.click();
+    /* B4：会话是常驻一节（默认展开）；点头折叠/展开往返，钉住 faRrSec 真接线。
+       section 与其节头按钮都带 data-rr-sec，locator 必须用 section 标签 + .rr-sec-toggle 收窄 */
+    const sec = page.locator('#taskRail section[data-rr-sec="sessions"]');
+    await expect(sec).toBeVisible();
     await expect(page.locator("#railSessionPane")).toBeVisible();
     await expect(page.locator("#railSessionPane")).toContainText(/会话|暂无会话/);
+    const tgl = sec.locator(".rr-sec-toggle");
+    await tgl.click();
+    await expect(page.locator("#railSessionPane")).toBeHidden();
+    await tgl.click();
+    await expect(page.locator("#railSessionPane")).toBeVisible();
 
     const chips = page.locator("#chat .chat-suggest .chip");
     await expect(chips, "work 模式应有 4 条快捷指令").toHaveCount(4);

@@ -271,40 +271,46 @@ function renderTaskRail(){
   _renderRailAgent();
   _renderRailFiles();
   _renderRailSessions();
-  _applyRailTab();
+  _applyRailSec();
 }
 
-/* ---------- 右栏分页（2026-10-23）：今日 / Agent / 文件 ----------
+/* ---------- 右栏分节（形态 A B4，2026-11-13）：今日 / Agent / 文件 / 会话 四节堆叠 ----------
  * 只展示真实能力：技能来自 listEnabledSkills（真的注入提示词）、文件来自 getRagFiles；
  * MCP 自 2026-10-23 起是真能力（远端工具按勾选注入 + 命名空间路由），但它的发现/勾选/状态都在
- * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。 */
-const RAIL_TABS = ["today", "agent", "files", "sessions"];
+ * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。
+ * 分页（data-rail-tab / data-rail-pane / rail_tab 键）同批退役：节折叠态持久化
+ * form_a_rr_sec（收起的节 id 数组），默认全展开。 */
+const RAIL_SECS = ["today", "agent", "files", "sessions"];
 /** 宽屏判据（>=1024px）：三栏网格（code/design 模式）只在宽屏生效，窄屏强制单栏。
  *  下面 taskRail 折叠 IIFE 原有一份同名局部（语义相同），统一用这一份避免漂移。 */
 const isWide = ()=> (window.innerWidth || 0) >= 1024;
-function _railTabGet(){
-  try{ const v = load(PREFIX + "rail_tab", "today"); return RAIL_TABS.indexOf(v) >= 0 ? v : "today"; }
-  catch(_e){ return "today"; }
+function _railSecClosedSet(){
+  try{
+    const arr = load(PREFIX + "form_a_rr_sec", []);
+    const list = Array.isArray(arr) ? arr : [];
+    return new Set(list.filter(function(id){ return RAIL_SECS.indexOf(id) >= 0; }));
+  }catch(_e){ return new Set(); }
 }
-function _railTabSet(tab){
-  if(RAIL_TABS.indexOf(tab) < 0) return;
-  save(PREFIX + "rail_tab", tab);
-  _applyRailTab();
+function _railSecSetClosed(id, closed){
+  if(RAIL_SECS.indexOf(id) < 0) return;
+  const set = _railSecClosedSet();
+  if(closed) set.add(id); else set.delete(id);
+  save(PREFIX + "form_a_rr_sec", Array.from(set));
+  _applyRailSec();
 }
-function _applyRailTab(){
+/* 表单节折叠按钮（data-action="faRrSec"）的入口：翻转单节并落盘。 */
+function _railSecToggle(id){ _railSecSetClosed(id, !_railSecClosedSet().has(id)); }
+function _applyRailSec(){
   const rail = $("#taskRail");
   if(!rail) return;
-  const tab = _railTabGet();
-  rail.querySelectorAll("[data-rail-tab]").forEach(function(b){
-    const on = b.getAttribute("data-rail-tab") === tab;
-    b.classList.toggle("is-on", on);
-    b.setAttribute("aria-selected", on ? "true" : "false");
+  const closed = _railSecClosedSet();
+  rail.querySelectorAll(".rr-sec").forEach(function(sec){
+    const id = sec.getAttribute("data-rr-sec");
+    const isClosed = closed.has(id);
+    sec.classList.toggle("closed", isClosed);
+    const btn = sec.querySelector("button[data-action='faRrSec']");
+    if(btn) btn.setAttribute("aria-expanded", isClosed ? "false" : "true");
   });
-  rail.querySelectorAll("[data-rail-pane]").forEach(function(p){
-    p.classList.toggle("u-hidden", p.getAttribute("data-rail-pane") !== tab);
-  });
-  const cnt = $("#taskRailCount"); if(cnt) cnt.classList.toggle("u-hidden", tab !== "today");
-  const add = $("#taskRailAdd"); if(add) add.classList.toggle("u-hidden", tab !== "today");
 }
 function _renderRailAgent(){
   const el = $("#railAgentPane");
@@ -454,13 +460,7 @@ function _bindTaskRail(){
   const rail = $("#taskRail");
   if(!rail || rail._bound) return;
   rail._bound = true;
-  const tabWrap = rail.querySelector(".task-rail-tabs");
-  if(tabWrap){
-    tabWrap.addEventListener("click", function(e){
-      const btn = e.target && e.target.closest ? e.target.closest("[data-rail-tab]") : null;
-      if(btn) _railTabSet(btn.getAttribute("data-rail-tab"));
-    });
-  }
+  /* 节折叠（B4 起）：走 ui-global-events.js 的 FORM_A_ACTIONS.faRrSec 全局委托，本块不再绑定 */
   const body = document.querySelector(".body");
   const app = document.querySelector(".app");
   const setOpen = (open)=>{
@@ -3910,9 +3910,8 @@ function applyUIMode(){
   _renderUiModePill();
   if(code){
     /* P2-5：code 模式的能力面是右下 agentDock（进程/技能/MCP/工作流，2.5s 活轮询）；
-       右栏 Agent tab 渲染的是同一批数据的静态副本——本模式藏掉（CSS），若正停在 agent tab
-       就切回「今日」，避免留一个被藏掉的死面板。 */
-    if(_railTabGet() === "agent") _railTabSet("today");
+       右栏 Agent 节渲染的是同一批数据的静态副本——本模式由 CSS 藏掉整节。B4 起不再改
+       任何持久化态（旧「agent tab 让位回今日」的状态栈写入随分页退役）。 */
     renderSessionDock(); renderAgentDock();
     _agentDockSig = _agentDockSignature();
     /* Multi-Agent Phase 2：Code 模式下 2.5s 轮询能力停靠——子代理运行中的步数/状态实时可见
